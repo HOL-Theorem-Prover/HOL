@@ -4,8 +4,8 @@ open HolKernel Parse boolLib simpLib numLib rich_listTheory
 open TotalDefn BasicProvers
 val _ = new_theory "defCNF";
 
-infixr 0 THEN ORELSE THENL ++ || << |-> THENC;
-infixr 1 >> THEN1;
+infixr 0 ++ || << |-> THENC;
+infixr 1 >> ;
 
 val op++ = op THEN;
 val op|| = op ORELSE;
@@ -61,7 +61,7 @@ val CONSISTENCY = store_thm
    HO_MATCH_MP_TAC SNOC_INDUCT THEN
    (CONJ_TAC THEN1 RW_TAC std_ss [DEF_def]) THEN
    RW_TAC std_ss [OKDEF_SNOC, DEF_SNOC] THEN
-   Q.PAT_ASSUM `!n. P n` (MP_TAC o Q.SPEC `n`) THEN
+   Q.PAT_X_ASSUM `!n. P n` (MP_TAC o Q.SPEC `n`) THEN
    RW_TAC std_ss [] THEN
    (Q_TAC SUFF_TAC
     `(!w. (!m. m < n + LENGTH l ==> (w m = v m)) ==> DEF w n l) /\
@@ -75,37 +75,37 @@ val CONSISTENCY = store_thm
     Q.SPEC_TAC (`n`, `n`) THEN
     (Induct_on `l` THEN1 RW_TAC std_ss [DEF_def]) THEN
     RW_TAC std_ss [LENGTH, ADD_CLAUSES, DEF_def, OKDEF_def] THEN
-    Q.PAT_ASSUM `UNIQUE P Q R` MP_TAC THEN
-    Q.PAT_ASSUM `OK P Q` MP_TAC THEN
-    Q.PAT_ASSUM `!n. OKDEF P Q ==> X` (K ALL_TAC) THEN
-    Q.PAT_ASSUM `DEF P Q R` (K ALL_TAC) THEN
-    Q.PAT_ASSUM `OKDEF P Q` (K ALL_TAC) THEN
+    Q.PAT_X_ASSUM `UNIQUE P Q R` MP_TAC THEN
+    Q.PAT_X_ASSUM `OK P Q` MP_TAC THEN
+    Q.PAT_X_ASSUM `!n. OKDEF P Q ==> X` (K ALL_TAC) THEN
+    Q.PAT_X_ASSUM `DEF P Q R` (K ALL_TAC) THEN
+    Q.PAT_X_ASSUM `OKDEF P Q` (K ALL_TAC) THEN
     (Cases_on `h` THEN
      Cases_on `r` THEN
      Cases_on `q'` THEN
      Cases_on `r'` THEN
      RW_TAC std_ss [UNIQUE_def, OK_def]) THENL
-    [Q.PAT_ASSUM `!m. P m`
+    [Q.PAT_X_ASSUM `!m. P m`
      (fn th =>
       MP_TAC (Q.SPEC `n` th) THEN
       MP_TAC (Q.SPEC `x` th) THEN
       MP_TAC (Q.SPEC `x'` th)) THEN
      RW_TAC arith_ss [],
-     Q.PAT_ASSUM `!m. P m`
+     Q.PAT_X_ASSUM `!m. P m`
      (fn th =>
       MP_TAC (Q.SPEC `n` th) THEN
       MP_TAC (Q.SPEC `x` th)) THEN
      RW_TAC arith_ss [],
-     Q.PAT_ASSUM `!m. P m`
+     Q.PAT_X_ASSUM `!m. P m`
      (fn th =>
       MP_TAC (Q.SPEC `n` th) THEN
       MP_TAC (Q.SPEC `x` th)) THEN
      RW_TAC arith_ss [],
-     Q.PAT_ASSUM `!m. P m`
+     Q.PAT_X_ASSUM `!m. P m`
      (fn th =>
       MP_TAC (Q.SPEC `n` th)) THEN
      RW_TAC arith_ss []],
-    Q.PAT_ASSUM `OK P Q` MP_TAC THEN
+    Q.PAT_X_ASSUM `OK P Q` MP_TAC THEN
     POP_ASSUM_LIST (K ALL_TAC) THEN
     (Cases_on `x` THEN
      Cases_on `r` THEN
@@ -130,10 +130,10 @@ val BIGSTEP = store_thm(
   EQ_TAC THENL [
    STRIP_TAC THEN
    EXISTS_TAC ``v:num->bool`` THEN
-   Q.PAT_ASSUM `!v:num->bool. A v` (MP_TAC o Q.SPEC `v`) THEN
+   Q.PAT_X_ASSUM `!v:num->bool. A v` (MP_TAC o Q.SPEC `v`) THEN
    ASM_REWRITE_TAC [],
    STRIP_TAC THEN
-   Q.PAT_ASSUM `!v:num->bool. A v` (MP_TAC o Q.SPEC `v`) THEN
+   Q.PAT_X_ASSUM `!v:num->bool. A v` (MP_TAC o Q.SPEC `v`) THEN
    ASM_REWRITE_TAC [] THEN
    STRIP_TAC THEN
    ASM_REWRITE_TAC [] THEN

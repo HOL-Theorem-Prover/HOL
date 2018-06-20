@@ -9,10 +9,8 @@
 
       1. Generate the dependencies from the current theory hierarchy
       2. Write them to a file ready for processing by "dot"
-      3. Invoke dot to generate the JPEG-format image, the image map
-         information, and a PDF file while we're at it.
-      4. Generate a HTML file to hold the reference to the image, and
-         to contain the map information
+      3. Invoke dot to generate the SVG image
+      4. Generate a HTML file to hold the reference to the image
       5. Generate the html files for each segment in the current
          theory hierarchy.
 
@@ -40,7 +38,10 @@ val HTML_DIR   = Path.toString(Path.fromString(Path.concat
 val SIGOBJ_DIR = Path.toString(Path.fromString(Path.concat
                     (Globals.HOLDIR,"sigobj")));
 
-val DOTPATH = Systeml.DOT_PATH
+val DOTPATH =
+    case Systeml.DOT_PATH of
+        NONE => die "No DOT_PATH in Systeml"
+      | SOME s => s
 
 (*---------------------------------------------------------------------------
      Extract dot-friendly digraph from HOL theory graph.
@@ -62,55 +63,46 @@ end;
 (* manual for tweakables.                                                    *)
 (*---------------------------------------------------------------------------*)
 
-fun pp_dot_file {size,ranksep,nodesep} (dom,pairs) ppstrm =
- let open Portable
-     val {add_string,add_break,begin_block,end_block,
-          add_newline,flush_ppstream,...} = with_ppstream ppstrm
+fun pp_dot_file {size,ranksep,nodesep} (dom,pairs) =
+ let open Portable PP
      fun pp_thy s =
-       (begin_block CONSISTENT 2;
-        add_string s; add_break (1,0);
-        add_string "[URL ="; add_break(1,0);
-        add_string (quote (s^"Theory.html"));
-        add_string "]";
-        end_block())
+       block CONSISTENT 2 [
+        add_string s, add_break (1,0),
+        add_string "[URL =", add_break(1,0),
+        add_string (quote (s^"Theory.html")),
+        add_string "]"
+       ]
      fun pp_pair (x,y) =
-       (begin_block CONSISTENT 0;
-        add_string x;
-        add_string " -> ";
-        add_string y;
-        end_block())
+       block CONSISTENT 0 [add_string x, add_string " -> ", add_string y]
  in
-  begin_block CONSISTENT 0;
-  begin_block CONSISTENT 5;
-  add_string "digraph G {";
-  add_break (1,0);
-
-  add_string "ratio = compress"; add_break(1,0);
-  add_string "size = ";    add_string (quote size); add_break(1,0);
-  add_string "ranksep = "; add_string ranksep;      add_break(1,0);
-  add_string "nodesep = "; add_string nodesep;      add_break(1,0);
-  add_string "node [fontcolor = darkgreen fontsize=30 fontname=Arial]";
-  add_break(1,0);
-  add_newline();
-  begin_block CONSISTENT 0;
-   pr_list pp_thy (fn () => ()) add_newline dom;
-  end_block();
-  add_newline(); add_newline();
-  begin_block CONSISTENT 0;
-   pr_list pp_pair (fn () => ()) add_newline pairs;
-  end_block();
-  end_block();
-  add_newline(); add_string "}"; add_newline();
-  end_block()
+   block CONSISTENT 0 [
+     block CONSISTENT 5 [
+       add_string "digraph G {",
+       add_break (1,0),
+       add_string "bgcolor = transparent", add_break(1,0),
+       add_string "ratio = compress", add_break(1,0),
+       add_string "size = ",    add_string (quote size), add_break(1,0),
+       add_string "ranksep = ", add_string ranksep,      add_break(1,0),
+       add_string "nodesep = ", add_string nodesep,      add_break(1,0),
+       add_string "node [target=_parent style=filled fillcolor=white fontcolor=darkgreen fontsize=30 fontname=Arial]",
+       add_break(1,0),
+       add_newline,
+       block CONSISTENT 0 (pr_list pp_thy [add_newline] dom),
+       add_newline, add_newline,
+       block CONSISTENT 0 (pr_list pp_pair [add_newline] pairs)
+     ],
+     add_newline, add_string "}", add_newline
+   ]
  end;
 
 fun gen_dotfile file node_info =
  let open TextIO
      val ostrm = openOut file
- in  PP.with_pp {consumer=fn s => output(ostrm,s),linewidth=75,
-                 flush=fn () => flushOut ostrm}
-        (pp_dot_file {size="16,16",ranksep="1.0",nodesep="0.30"} node_info);
-     closeOut ostrm
+ in
+   PP.prettyPrint(curry output ostrm, 75)
+                 (pp_dot_file {size="16,16",ranksep="1.0",nodesep="0.30"}
+                              node_info);
+   closeOut ostrm
  end;
 
 (* ----------------------------------------------------------------------
@@ -135,15 +127,11 @@ end
 fun gen_map_file dot node_info name = let
   open TextIO
   val dotfile   = name^".dot"
-  val jpegfile   = name^".jpg"
-  val imapfile  = name^".imap"
+  val svgfile   = name^".svg"
   val mapfile   = name^".html"
-  val pdffile    = name^".pdf"
   val  _        = gen_dotfile dotfile node_info
   val cmdstatus = Systeml.systeml [dot,
-                                   "-Tjpeg", "-o"^jpegfile,
-                                   "-Tcmapx", "-o"^imapfile,
-                                   "-Tpdf", "-o"^pdffile,
+                                   "-Tsvg", "-o"^svgfile,
                                    dotfile]
 in
   if OS.Process.isSuccess cmdstatus then let
@@ -151,16 +139,13 @@ in
       val ostrm = openOut mapfile
       fun out s = output(ostrm, s^"\n")
     in
+      out "<!doctype html>";
       out "<HTML>";
       out "<HEAD><TITLE>HOL Theory Hierarchy</TITLE></HEAD>";
-      out "<BODY bgcolor=linen text=crimson>";
+      out "<BODY bgcolor=linen>";
       out "<H1>HOL Theory Hierarchy (clickable)</H1>";
       out (String.concat
-               ["<IMG src = \"",OS.Path.file jpegfile,"\"",
-                " usemap=\"#G\"",
-                " alt=\"HOL Theory Map\">"]);
-      cat imapfile ostrm;
-      out "</MAP>";
+               ["<object data=\"",OS.Path.file svgfile,"\" type=\"image/svg+xml\">HOL Theory Map</object>"]);
       out "</BODY>";
       out "</HTML>";
       closeOut ostrm
@@ -219,7 +204,6 @@ val ancs = ancestor_nodes "-";
 
 val all_theories = "min"::sys_theories;
 val paths = map(fn s => Path.concat (HTML_DIR,s^"Theory.html")) all_theories;
-val _ = HOLPP.catch_withpp_err := false
 val _ = print "Printing HTML theories to disk ";
 fun appthis i (thy,path) =
     (if i mod 5 = 0 then print "." else ();

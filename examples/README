@@ -31,6 +31,12 @@ Currently here are the following:
        equivalent.  Results include Rice's theorem, and that if a set
        and its complement are r.e., then they are also recursive.
 
+  * CCS
+
+       This directory contains a formalization of the Process Algebra CCS.
+       (Milner's Calculus of Communicating Systems)
+       Author: Monica Nesi (ported from HOL88 by Chun Tian)
+
   * Crypto
 
        This directory holds a formalization of a number of different

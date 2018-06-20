@@ -306,7 +306,7 @@ val LSIZE_strip_seconds = prove(
   THEN1 (EVAL_TAC \\ SIMP_TAC std_ss [])
   \\ ONCE_REWRITE_TAC [strip_seconds_def]
   \\ SIMP_TAC std_ss [isTrue_CLAUSES,isDot_def,CAR_def,LISP_CONS_def,LSIZE_def,CDR_def]
-  \\ REVERSE (`LSIZE (SECOND x) <= LSIZE x` by ALL_TAC) THEN1 DECIDE_TAC
+  \\ `LSIZE (SECOND x) <= LSIZE x` suffices_by DECIDE_TAC
   \\ Cases_on `x` \\ EVAL_TAC
   \\ Cases_on `S0` \\ EVAL_TAC \\ DECIDE_TAC);
 
@@ -317,7 +317,7 @@ val LSIZE_strip_firsts = prove(
   THEN1 (EVAL_TAC \\ SIMP_TAC std_ss [])
   \\ ONCE_REWRITE_TAC [strip_firsts_def]
   \\ SIMP_TAC std_ss [isTrue_CLAUSES,isDot_def,CAR_def,LISP_CONS_def,LSIZE_def,CDR_def]
-  \\ REVERSE (`LSIZE (FIRST x) <= LSIZE x` by ALL_TAC) THEN1 DECIDE_TAC
+  \\ `LSIZE (FIRST x) <= LSIZE x` suffices_by DECIDE_TAC
   \\ Cases_on `x` \\ EVAL_TAC \\ DECIDE_TAC);
 
 val logic_flag_translate_def = pure_extract "LOGIC.FLAG-TRANSLATE" (SOME

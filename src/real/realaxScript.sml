@@ -2,9 +2,6 @@
 (* Construct reals from positive reals                                       *)
 (*===========================================================================*)
 
-structure realaxScript =
-struct
-
 (*
 app load ["hol88Lib",
           "numLib",
@@ -30,70 +27,70 @@ val _ = new_theory "realax";
 (*---------------------------------------------------------------------------*)
 
 val HREAL_RDISTRIB = store_thm("HREAL_RDISTRIB",
-  (--`!x y z. (x hreal_add y) hreal_mul z =
-              (x hreal_mul z) hreal_add (y hreal_mul z)`--),
+  “!x y z. (x hreal_add y) hreal_mul z =
+              (x hreal_mul z) hreal_add (y hreal_mul z)”,
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[HREAL_MUL_SYM] THEN
   MATCH_ACCEPT_TAC HREAL_LDISTRIB);
 
 val HREAL_EQ_ADDR = store_thm("HREAL_EQ_ADDR",
-  (--`!x y. ~(x hreal_add y = x)`--),
+  “!x y. ~(x hreal_add y = x)”,
   REPEAT GEN_TAC THEN MATCH_ACCEPT_TAC HREAL_NOZERO);
 
 val HREAL_EQ_ADDL = store_thm("HREAL_EQ_ADDL",
-  (--`!x y. ~(x = x hreal_add y)`--),
+  “!x y. ~(x = x hreal_add y)”,
   REPEAT GEN_TAC THEN CONV_TAC(RAND_CONV SYM_CONV) THEN
   MATCH_ACCEPT_TAC HREAL_EQ_ADDR);
 
 val HREAL_EQ_LADD = store_thm("HREAL_EQ_LADD",
-  (--`!x y z. (x hreal_add y = x hreal_add z) = (y = z)`--),
+  “!x y z. (x hreal_add y = x hreal_add z) = (y = z)”,
   REPEAT GEN_TAC THEN EQ_TAC THENL
    [REPEAT_TCL DISJ_CASES_THEN ASSUME_TAC
-        (SPECL [(--`y:hreal`--), (--`z:hreal`--)] HREAL_ADD_TOTAL) THENL
+        (SPECL [“y:hreal”, “z:hreal”] HREAL_ADD_TOTAL) THENL
      [DISCH_THEN(K ALL_TAC) THEN POP_ASSUM ACCEPT_TAC, ALL_TAC, ALL_TAC] THEN
-    POP_ASSUM(X_CHOOSE_THEN (--`d:hreal`--) SUBST1_TAC) THEN
+    POP_ASSUM(X_CHOOSE_THEN “d:hreal” SUBST1_TAC) THEN
     REWRITE_TAC[HREAL_ADD_ASSOC, HREAL_EQ_ADDR, HREAL_EQ_ADDL],
     DISCH_THEN SUBST1_TAC THEN REFL_TAC]);
 
 val HREAL_LT_REFL = store_thm("HREAL_LT_REFL",
-  (--`!x. ~(x hreal_lt x)`--),
+  “!x. ~(x hreal_lt x)”,
   GEN_TAC THEN REWRITE_TAC[HREAL_LT] THEN
   REWRITE_TAC[HREAL_EQ_ADDL]);
 
 val HREAL_LT_ADDL = store_thm("HREAL_LT_ADDL",
-  (--`!x y. x hreal_lt (x hreal_add y)`--),
+  “!x y. x hreal_lt (x hreal_add y)”,
   REPEAT GEN_TAC THEN REWRITE_TAC[HREAL_LT] THEN
-  EXISTS_TAC (--`y:hreal`--) THEN REFL_TAC);
+  EXISTS_TAC “y:hreal” THEN REFL_TAC);
 
 val HREAL_LT_NE = store_thm("HREAL_LT_NE",
-  (--`!x y. x hreal_lt y  ==> ~(x = y)`--),
+  “!x y. x hreal_lt y  ==> ~(x = y)”,
   REPEAT GEN_TAC THEN REWRITE_TAC[HREAL_LT] THEN
   DISCH_THEN(CHOOSE_THEN SUBST1_TAC) THEN
   MATCH_ACCEPT_TAC HREAL_EQ_ADDL);
 
 val HREAL_LT_ADDR = store_thm("HREAL_LT_ADDR",
-  (--`!x y. ~((x hreal_add y) hreal_lt x)`--),
+  “!x y. ~((x hreal_add y) hreal_lt x)”,
   REPEAT GEN_TAC THEN REWRITE_TAC[HREAL_LT] THEN
   REWRITE_TAC[GSYM HREAL_ADD_ASSOC, HREAL_EQ_ADDL]);
 
 val HREAL_LT_GT = store_thm("HREAL_LT_GT",
-  (--`!x y. x hreal_lt y  ==> ~(y hreal_lt x)`--),
+  “!x y. x hreal_lt y  ==> ~(y hreal_lt x)”,
   REPEAT GEN_TAC THEN REWRITE_TAC[HREAL_LT] THEN
   DISCH_THEN(CHOOSE_THEN SUBST1_TAC) THEN
   REWRITE_TAC[GSYM HREAL_ADD_ASSOC, HREAL_EQ_ADDL]);
 
 val HREAL_LT_ADD2 = store_thm("HREAL_LT_ADD2",
-  (--`!x1 x2 y1 y2. x1 hreal_lt y1 /\ x2 hreal_lt y2 ==>
-     (x1 hreal_add x2) hreal_lt (y1 hreal_add y2)`--),
+  “!x1 x2 y1 y2. x1 hreal_lt y1 /\ x2 hreal_lt y2 ==>
+     (x1 hreal_add x2) hreal_lt (y1 hreal_add y2)”,
   REPEAT GEN_TAC THEN REWRITE_TAC[HREAL_LT] THEN
-  DISCH_THEN(CONJUNCTS_THEN2 (X_CHOOSE_THEN (--`d1:hreal`--) SUBST1_TAC)
-    (X_CHOOSE_THEN (--`d2:hreal`--) SUBST1_TAC)) THEN
-  EXISTS_TAC (--`d1 hreal_add d2`--) THEN
+  DISCH_THEN(CONJUNCTS_THEN2 (X_CHOOSE_THEN “d1:hreal” SUBST1_TAC)
+    (X_CHOOSE_THEN “d2:hreal” SUBST1_TAC)) THEN
+  EXISTS_TAC “d1 hreal_add d2” THEN
   CONV_TAC(AC_CONV(HREAL_ADD_ASSOC,HREAL_ADD_SYM)));
 
 val HREAL_LT_LADD = store_thm("HREAL_LT_LADD",
-  (--`!x y z. (x hreal_add y) hreal_lt (x hreal_add z) = y hreal_lt z`--),
+  “!x y z. (x hreal_add y) hreal_lt (x hreal_add z) = y hreal_lt z”,
   REPEAT GEN_TAC THEN REWRITE_TAC[HREAL_LT] THEN EQ_TAC THEN
-  DISCH_THEN(X_CHOOSE_THEN (--`d:hreal`--) (curry op THEN (EXISTS_TAC (--`d:hreal`--)) o MP_TAC))
+  DISCH_THEN(X_CHOOSE_THEN “d:hreal” (curry op THEN (EXISTS_TAC “d:hreal”) o MP_TAC))
   THEN REWRITE_TAC[GSYM HREAL_ADD_ASSOC, HREAL_EQ_LADD]);
 
 (*---------------------------------------------------------------------------*)
@@ -206,62 +203,62 @@ val CANCEL_TAC = (C (curry op THEN)
 (*---------------------------------------------------------------------------*)
 
 val treal_0 = new_definition("treal_0",
-  (--`treal_0 = (hreal_1,hreal_1)`--));
+  “treal_0 = (hreal_1,hreal_1)”);
 
 val treal_1 = new_definition("treal_1",
-  (--`treal_1 = (hreal_1 hreal_add hreal_1,hreal_1)`--));
+  “treal_1 = (hreal_1 hreal_add hreal_1,hreal_1)”);
 
 val treal_neg = new_definition("treal_neg",
-  (--`treal_neg (x:hreal,(y:hreal)) = (y,x)`--));
+  “treal_neg (x:hreal,(y:hreal)) = (y,x)”);
 
 val treal_add = new_infixl_definition("treal_add",
-  (--`$treal_add (x1,y1) (x2,y2) = (x1 hreal_add x2, y1 hreal_add y2)`--),500);
+  “$treal_add (x1,y1) (x2,y2) = (x1 hreal_add x2, y1 hreal_add y2)”,500);
 
 val treal_mul = new_infixl_definition("treal_mul",
-  (--`treal_mul (x1,y1) (x2,y2) =
+  “treal_mul (x1,y1) (x2,y2) =
       ((x1 hreal_mul x2) hreal_add (y1 hreal_mul y2),
-       (x1 hreal_mul y2) hreal_add (y1 hreal_mul x2))`--), 600);
+       (x1 hreal_mul y2) hreal_add (y1 hreal_mul x2))”, 600);
 
 val treal_lt = new_definition("treal_lt",
---`treal_lt (x1,y1) (x2,y2) = (x1 hreal_add y2) hreal_lt (x2 hreal_add y1)`--);
+“treal_lt (x1,y1) (x2,y2) = (x1 hreal_add y2) hreal_lt (x2 hreal_add y1)”);
 val _ = temp_set_fixity "treal_lt" (Infix(NONASSOC, 450))
 
 val treal_inv = new_definition("treal_inv",
-  (--`treal_inv (x,y) =
+  “treal_inv (x,y) =
       if (x = y) then treal_0
       else if y hreal_lt x then
         ((hreal_inv (x hreal_sub y)) hreal_add hreal_1,hreal_1)
-      else (hreal_1,(hreal_inv(y hreal_sub x)) hreal_add hreal_1)`--));
+      else (hreal_1,(hreal_inv(y hreal_sub x)) hreal_add hreal_1)”);
 
 (*---------------------------------------------------------------------------*)
 (* Define the equivalence relation and prove it *is* one                     *)
 (*---------------------------------------------------------------------------*)
 
 val treal_eq = new_definition("treal_eq",
-  (--`treal_eq (x1,y1) (x2,y2) = (x1 hreal_add y2 = x2 hreal_add y1)`--));
+  “treal_eq (x1,y1) (x2,y2) = (x1 hreal_add y2 = x2 hreal_add y1)”);
 val _ = temp_set_fixity "treal_eq" (Infix(NONASSOC, 450))
 
 val TREAL_EQ_REFL = store_thm("TREAL_EQ_REFL",
-  (--`!x. x treal_eq x`--),
+  “!x. x treal_eq x”,
   GEN_PAIR_TAC THEN PURE_REWRITE_TAC[treal_eq] THEN REFL_TAC);
 
 val TREAL_EQ_SYM = store_thm("TREAL_EQ_SYM",
-  (--`!x y. x treal_eq y = y treal_eq x`--),
+  “!x y. x treal_eq y = y treal_eq x”,
   REPEAT GEN_PAIR_TAC THEN PURE_REWRITE_TAC[treal_eq] THEN
   CONV_TAC(RAND_CONV SYM_CONV) THEN REFL_TAC);
 
 val TREAL_EQ_TRANS = store_thm("TREAL_EQ_TRANS",
-  (--`!x y z. x treal_eq y /\ y treal_eq z ==> x treal_eq z`--),
+  “!x y z. x treal_eq y /\ y treal_eq z ==> x treal_eq z”,
   REPEAT GEN_PAIR_TAC THEN PURE_REWRITE_TAC[treal_eq] THEN
-  DISCH_THEN(MP_TAC o MK_COMB o (AP_TERM (--`$hreal_add`--) ## I) o CONJ_PAIR)
+  DISCH_THEN(MP_TAC o MK_COMB o (AP_TERM “$hreal_add” ## I) o CONJ_PAIR)
   THEN CANCEL_TAC THEN DISCH_THEN SUBST1_TAC THEN CANCEL_TAC);
 
 val TREAL_EQ_EQUIV = store_thm("TREAL_EQ_EQUIV",
-  (--`!p q. p treal_eq q = ($treal_eq p = $treal_eq q)`--),
+  “!p q. p treal_eq q = ($treal_eq p = $treal_eq q)”,
   REPEAT GEN_TAC THEN CONV_TAC SYM_CONV THEN
-  CONV_TAC (ONCE_DEPTH_CONV (X_FUN_EQ_CONV (--`r:hreal#hreal`--))) THEN
+  CONV_TAC (ONCE_DEPTH_CONV (X_FUN_EQ_CONV “r:hreal#hreal”)) THEN
   EQ_TAC THENL
-     [DISCH_THEN(MP_TAC o SPEC (--`q:hreal#hreal`--)) THEN
+     [DISCH_THEN(MP_TAC o SPEC “q:hreal#hreal”) THEN
       REWRITE_TAC[TREAL_EQ_REFL],
       DISCH_TAC THEN GEN_TAC THEN EQ_TAC THENL
        [RULE_ASSUM_TAC(ONCE_REWRITE_RULE[TREAL_EQ_SYM]), ALL_TAC] THEN
@@ -269,7 +266,7 @@ val TREAL_EQ_EQUIV = store_thm("TREAL_EQ_EQUIV",
       MATCH_ACCEPT_TAC TREAL_EQ_TRANS]);
 
 val TREAL_EQ_AP = store_thm("TREAL_EQ_AP",
-  (--`!p q. (p = q) ==> p treal_eq q`--),
+  “!p q. (p = q) ==> p treal_eq q”,
   REPEAT GEN_TAC THEN DISCH_THEN SUBST1_TAC THEN
   MATCH_ACCEPT_TAC TREAL_EQ_REFL);
 
@@ -278,54 +275,54 @@ val TREAL_EQ_AP = store_thm("TREAL_EQ_AP",
 (*---------------------------------------------------------------------------*)
 
 val TREAL_10 = store_thm("TREAL_10",
-  (--`~(treal_1 treal_eq treal_0)`--),
+  “~(treal_1 treal_eq treal_0)”,
   REWRITE_TAC[treal_1, treal_0, treal_eq, HREAL_NOZERO]);
 
 val TREAL_ADD_SYM = store_thm("TREAL_ADD_SYM",
-  (--`!x y. x treal_add y = y treal_add x`--),
+  “!x y. x treal_add y = y treal_add x”,
   REPEAT GEN_PAIR_TAC THEN PURE_REWRITE_TAC[treal_add] THEN
   GEN_REWR_TAC (RAND_CONV o ONCE_DEPTH_CONV)
                   [HREAL_ADD_SYM] THEN
   REFL_TAC);
 
 val TREAL_MUL_SYM = store_thm("TREAL_MUL_SYM",
-  (--`!x y. x treal_mul y = y treal_mul x`--),
+  “!x y. x treal_mul y = y treal_mul x”,
   REPEAT GEN_PAIR_TAC THEN PURE_REWRITE_TAC[treal_mul] THEN
   GEN_REWR_TAC (RAND_CONV o ONCE_DEPTH_CONV)
                   [HREAL_MUL_SYM] THEN
   REWRITE_TAC[PAIR_EQ] THEN MATCH_ACCEPT_TAC HREAL_ADD_SYM);
 
 val TREAL_ADD_ASSOC = store_thm("TREAL_ADD_ASSOC",
-  (--`!x y z. x treal_add (y treal_add z) = (x treal_add y) treal_add z`--),
+  “!x y z. x treal_add (y treal_add z) = (x treal_add y) treal_add z”,
   REPEAT GEN_PAIR_TAC THEN PURE_REWRITE_TAC[treal_add] THEN
   REWRITE_TAC[HREAL_ADD_ASSOC]);
 
 val TREAL_MUL_ASSOC = store_thm("TREAL_MUL_ASSOC",
-  (--`!x y z. x treal_mul (y treal_mul z) = (x treal_mul y) treal_mul z`--),
+  “!x y z. x treal_mul (y treal_mul z) = (x treal_mul y) treal_mul z”,
   REPEAT GEN_PAIR_TAC THEN PURE_REWRITE_TAC[treal_mul] THEN
   REWRITE_TAC[HREAL_LDISTRIB, HREAL_RDISTRIB, PAIR_EQ, GSYM HREAL_MUL_ASSOC]
   THEN CONJ_TAC THEN CANCEL_TAC);
 
 val TREAL_LDISTRIB = store_thm("TREAL_LDISTRIB",
-  (--`!x y z. x treal_mul (y treal_add z) =
-       (x treal_mul y) treal_add (x treal_mul z)`--),
+  “!x y z. x treal_mul (y treal_add z) =
+       (x treal_mul y) treal_add (x treal_mul z)”,
   REPEAT GEN_PAIR_TAC THEN PURE_REWRITE_TAC[treal_mul, treal_add] THEN
   REWRITE_TAC[HREAL_LDISTRIB, PAIR_EQ] THEN
   CONJ_TAC THEN CANCEL_TAC);
 
 val TREAL_ADD_LID = store_thm("TREAL_ADD_LID",
-  (--`!x. (treal_0 treal_add x) treal_eq x`--),
+  “!x. (treal_0 treal_add x) treal_eq x”,
   GEN_PAIR_TAC THEN PURE_REWRITE_TAC[treal_0, treal_add, treal_eq] THEN
   CANCEL_TAC);
 
 val TREAL_MUL_LID = store_thm("TREAL_MUL_LID",
-  (--`!x. (treal_1 treal_mul x) treal_eq x`--),
+  “!x. (treal_1 treal_mul x) treal_eq x”,
   GEN_PAIR_TAC THEN PURE_REWRITE_TAC[treal_1, treal_mul, treal_eq] THEN
   REWRITE_TAC[HREAL_MUL_LID, HREAL_LDISTRIB, HREAL_RDISTRIB] THEN
   CANCEL_TAC THEN CANCEL_TAC);
 
 val TREAL_ADD_LINV = store_thm("TREAL_ADD_LINV",
-  (--`!x. ((treal_neg x) treal_add x) treal_eq treal_0`--),
+  “!x. ((treal_neg x) treal_add x) treal_eq treal_0”,
   GEN_PAIR_TAC THEN PURE_REWRITE_TAC[treal_neg, treal_add, treal_eq, treal_0]
   THEN CANCEL_TAC);
 
@@ -334,45 +331,45 @@ val TREAL_INV_0 = store_thm("TREAL_INV_0",
   REWRITE_TAC[treal_inv, treal_eq, treal_0]);
 
 val TREAL_MUL_LINV = store_thm("TREAL_MUL_LINV",
-  (--`!x. ~(x treal_eq treal_0) ==>
-              (((treal_inv x) treal_mul x) treal_eq treal_1)`--),
+  “!x. ~(x treal_eq treal_0) ==>
+              (((treal_inv x) treal_mul x) treal_eq treal_1)”,
   GEN_PAIR_TAC THEN PURE_REWRITE_TAC[treal_0, treal_eq, treal_inv] THEN
   CANCEL_TAC THEN DISCH_TAC THEN DISJ_CASES_THEN2
     (fn th => MP_TAC th THEN ASM_REWRITE_TAC[]) (DISJ_CASES_THEN ASSUME_TAC)
-    (SPECL [(--`FST (x:hreal#hreal)`--), (--`SND (x:hreal#hreal)`--)] HREAL_LT_TOTAL) THEN
+    (SPECL [“FST (x:hreal#hreal)”, “SND (x:hreal#hreal)”] HREAL_LT_TOTAL) THEN
   FIRST_ASSUM(ASSUME_TAC o MATCH_MP HREAL_LT_GT) THEN
   PURE_ASM_REWRITE_TAC[COND_CLAUSES, treal_mul, treal_eq, treal_1] THEN
   REWRITE_TAC[HREAL_MUL_LID, HREAL_LDISTRIB, HREAL_RDISTRIB] THEN
   CANCEL_TAC THEN W(SUBST1_TAC o SYM o C SPEC HREAL_MUL_LINV o
-    find_term(fn tm => rator(rator tm) = (--`$hreal_sub`--) handle _ => false) o snd) THEN
+    find_term(fn tm => rator(rator tm) = “$hreal_sub” handle _ => false) o snd) THEN
   REWRITE_TAC[GSYM HREAL_LDISTRIB] THEN AP_TERM_TAC THEN
   FIRST_ASSUM(SUBST1_TAC o MATCH_MP HREAL_SUB_ADD) THEN REFL_TAC);
 
 val TREAL_LT_TOTAL = store_thm("TREAL_LT_TOTAL",
-  (--`!x y. x treal_eq y \/ x treal_lt y \/ y treal_lt x`--),
+  “!x y. x treal_eq y \/ x treal_lt y \/ y treal_lt x”,
   REPEAT GEN_PAIR_TAC THEN PURE_REWRITE_TAC[treal_lt, treal_eq] THEN
   MATCH_ACCEPT_TAC HREAL_LT_TOTAL);
 
 val TREAL_LT_REFL = store_thm("TREAL_LT_REFL",
-  (--`!x. ~(x treal_lt x)`--),
+  “!x. ~(x treal_lt x)”,
   GEN_PAIR_TAC THEN PURE_REWRITE_TAC[treal_lt] THEN
   MATCH_ACCEPT_TAC HREAL_LT_REFL);
 
 val TREAL_LT_TRANS = store_thm("TREAL_LT_TRANS",
-  (--`!x y z. x treal_lt y /\ y treal_lt z ==> x treal_lt z`--),
+  “!x y z. x treal_lt y /\ y treal_lt z ==> x treal_lt z”,
   REPEAT GEN_PAIR_TAC THEN PURE_REWRITE_TAC[treal_lt] THEN
   DISCH_THEN(MP_TAC o MATCH_MP HREAL_LT_ADD2) THEN CANCEL_TAC THEN
   DISCH_TAC THEN GEN_REWR_TAC RAND_CONV  [HREAL_ADD_SYM]
   THEN POP_ASSUM ACCEPT_TAC);
 
 val TREAL_LT_ADD = store_thm("TREAL_LT_ADD",
-  (--`!x y z. (y treal_lt z) ==> (x treal_add y) treal_lt (x treal_add z)`--),
+  “!x y z. (y treal_lt z) ==> (x treal_add y) treal_lt (x treal_add z)”,
   REPEAT GEN_PAIR_TAC THEN PURE_REWRITE_TAC[treal_lt, treal_add] THEN
   CANCEL_TAC);
 
 val TREAL_LT_MUL = store_thm("TREAL_LT_MUL",
-  (--`!x y. treal_0 treal_lt x /\ treal_0 treal_lt y ==>
-           treal_0 treal_lt (x treal_mul y)`--),
+  “!x y. treal_0 treal_lt x /\ treal_0 treal_lt y ==>
+           treal_0 treal_lt (x treal_mul y)”,
   REPEAT GEN_PAIR_TAC THEN PURE_REWRITE_TAC[treal_0, treal_lt, treal_mul] THEN
   CANCEL_TAC THEN DISCH_THEN(CONJUNCTS_THEN
    (CHOOSE_THEN SUBST1_TAC o REWRITE_RULE[HREAL_LT])) THEN
@@ -384,24 +381,24 @@ val TREAL_LT_MUL = store_thm("TREAL_LT_MUL",
 (*---------------------------------------------------------------------------*)
 
 val treal_of_hreal = new_definition("treal_of_hreal",
-  (--`treal_of_hreal x = (x hreal_add hreal_1,hreal_1)`--));
+  “treal_of_hreal x = (x hreal_add hreal_1,hreal_1)”);
 
 val hreal_of_treal = new_definition("hreal_of_treal",
-  (--`hreal_of_treal (x,y) = @d. x = y hreal_add d`--));
+  “hreal_of_treal (x,y) = @d. x = y hreal_add d”);
 
 val TREAL_BIJ = store_thm("TREAL_BIJ",
-  (--`(!h. (hreal_of_treal(treal_of_hreal h)) = h) /\
-   (!r. treal_0 treal_lt r = (treal_of_hreal(hreal_of_treal r)) treal_eq r)`--),
+  “(!h. (hreal_of_treal(treal_of_hreal h)) = h) /\
+   (!r. treal_0 treal_lt r = (treal_of_hreal(hreal_of_treal r)) treal_eq r)”,
   CONJ_TAC THENL
    [GEN_TAC THEN REWRITE_TAC[treal_of_hreal, hreal_of_treal] THEN
     CANCEL_TAC THEN CONV_TAC SYM_CONV THEN
     CONV_TAC(funpow 2 RAND_CONV ETA_CONV) THEN
-    MATCH_MP_TAC SELECT_AX THEN EXISTS_TAC (--`h:hreal`--) THEN REFL_TAC,
+    MATCH_MP_TAC SELECT_AX THEN EXISTS_TAC “h:hreal” THEN REFL_TAC,
     GEN_PAIR_TAC THEN PURE_REWRITE_TAC[treal_0, treal_lt, treal_eq,
       treal_of_hreal, hreal_of_treal] THEN CANCEL_TAC THEN EQ_TAC THENL
      [DISCH_THEN(MP_TAC o MATCH_MP HREAL_SUB_ADD) THEN
       DISCH_THEN(CONV_TAC o RAND_CONV o REWR_CONV o SYM o SELECT_RULE o
-      EXISTS((--`?d. d hreal_add (SND r) = FST r`--), (--`(FST r) hreal_sub (SND r)`--)))
+      EXISTS(“?d. d hreal_add (SND r) = FST r”, “(FST r) hreal_sub (SND r)”))
       THEN AP_THM_TAC THEN AP_TERM_TAC THEN
       GEN_REWR_TAC (RAND_CONV o ONCE_DEPTH_CONV)
                       [HREAL_ADD_SYM] THEN
@@ -409,18 +406,18 @@ val TREAL_BIJ = store_thm("TREAL_BIJ",
       DISCH_THEN(SUBST1_TAC o SYM) THEN CANCEL_TAC]]);
 
 val TREAL_ISO = store_thm("TREAL_ISO",
-  (--`!h i. h hreal_lt i ==> (treal_of_hreal h) treal_lt (treal_of_hreal i)`--),
+  “!h i. h hreal_lt i ==> (treal_of_hreal h) treal_lt (treal_of_hreal i)”,
   REPEAT GEN_TAC THEN REWRITE_TAC[treal_of_hreal, treal_lt] THEN CANCEL_TAC THEN
   CANCEL_TAC);
 
 val TREAL_BIJ_WELLDEF = store_thm("TREAL_BIJ_WELLDEF",
-  (--`!h i. h treal_eq i ==> (hreal_of_treal h = hreal_of_treal i)`--),
+  “!h i. h treal_eq i ==> (hreal_of_treal h = hreal_of_treal i)”,
   REPEAT GEN_PAIR_TAC THEN PURE_REWRITE_TAC[treal_eq, hreal_of_treal] THEN
-  DISCH_TAC THEN AP_TERM_TAC THEN CONV_TAC(X_FUN_EQ_CONV (--`d:hreal`--)) THEN
+  DISCH_TAC THEN AP_TERM_TAC THEN CONV_TAC(X_FUN_EQ_CONV “d:hreal”) THEN
   GEN_TAC THEN BETA_TAC THEN EQ_TAC THENL
-   [DISCH_THEN(MP_TAC o C AP_THM (--`SND(i:hreal#hreal)`--) o AP_TERM (--`$hreal_add`--))
+   [DISCH_THEN(MP_TAC o C AP_THM “SND(i:hreal#hreal)” o AP_TERM “$hreal_add”)
     THEN POP_ASSUM SUBST1_TAC,
-    DISCH_THEN(MP_TAC o C AP_THM (--`SND(h:hreal#hreal)`--) o AP_TERM (--`$hreal_add`--))
+    DISCH_THEN(MP_TAC o C AP_THM “SND(h:hreal#hreal)” o AP_TERM “$hreal_add”)
     THEN POP_ASSUM(SUBST1_TAC o SYM)] THEN
   CANCEL_TAC THEN DISCH_THEN SUBST1_TAC THEN MATCH_ACCEPT_TAC HREAL_ADD_SYM);
 
@@ -429,82 +426,82 @@ val TREAL_BIJ_WELLDEF = store_thm("TREAL_BIJ_WELLDEF",
 (*---------------------------------------------------------------------------*)
 
 val TREAL_NEG_WELLDEF = store_thm("TREAL_NEG_WELLDEF",
-  (--`!x1 x2. x1 treal_eq x2 ==> (treal_neg x1) treal_eq (treal_neg x2)`--),
+  “!x1 x2. x1 treal_eq x2 ==> (treal_neg x1) treal_eq (treal_neg x2)”,
   REPEAT GEN_PAIR_TAC THEN PURE_REWRITE_TAC[treal_neg, treal_eq] THEN
   DISCH_THEN(curry op THEN (ONCE_REWRITE_TAC[HREAL_ADD_SYM]) o SUBST1_TAC) THEN
   REFL_TAC);
 
 val TREAL_ADD_WELLDEFR = store_thm("TREAL_ADD_WELLDEFR",
-  (--`!x1 x2 y. x1 treal_eq x2 ==> (x1 treal_add y) treal_eq (x2 treal_add y)`--),
+  “!x1 x2 y. x1 treal_eq x2 ==> (x1 treal_add y) treal_eq (x2 treal_add y)”,
   REPEAT GEN_PAIR_TAC THEN PURE_REWRITE_TAC[treal_add, treal_eq] THEN
   CANCEL_TAC);
 
 val TREAL_ADD_WELLDEF = store_thm("TREAL_ADD_WELLDEF",
-  (--`!x1 x2 y1 y2. x1 treal_eq x2 /\ y1 treal_eq y2 ==>
-     (x1 treal_add y1) treal_eq (x2 treal_add y2)`--),
+  “!x1 x2 y1 y2. x1 treal_eq x2 /\ y1 treal_eq y2 ==>
+     (x1 treal_add y1) treal_eq (x2 treal_add y2)”,
   REPEAT GEN_TAC THEN DISCH_TAC THEN
-  MATCH_MP_TAC TREAL_EQ_TRANS THEN EXISTS_TAC (--`x1 treal_add y2`--) THEN
+  MATCH_MP_TAC TREAL_EQ_TRANS THEN EXISTS_TAC “x1 treal_add y2” THEN
   CONJ_TAC THENL [ONCE_REWRITE_TAC[TREAL_ADD_SYM], ALL_TAC] THEN
   MATCH_MP_TAC TREAL_ADD_WELLDEFR THEN ASM_REWRITE_TAC[]);
 
 val TREAL_MUL_WELLDEFR = store_thm("TREAL_MUL_WELLDEFR",
-  (--`!x1 x2 y. x1 treal_eq x2 ==> (x1 treal_mul y) treal_eq (x2 treal_mul y)`--),
+  “!x1 x2 y. x1 treal_eq x2 ==> (x1 treal_mul y) treal_eq (x2 treal_mul y)”,
   REPEAT GEN_PAIR_TAC THEN PURE_REWRITE_TAC[treal_mul, treal_eq] THEN
   ONCE_REWRITE_TAC[AC(HREAL_ADD_ASSOC,HREAL_ADD_SYM)
-    (--`(a hreal_add b) hreal_add (c hreal_add d) =
-     (a hreal_add d) hreal_add (b hreal_add c)`--)] THEN
+    “(a hreal_add b) hreal_add (c hreal_add d) =
+     (a hreal_add d) hreal_add (b hreal_add c)”] THEN
   REWRITE_TAC[GSYM HREAL_RDISTRIB] THEN DISCH_TAC THEN
   ASM_REWRITE_TAC[] THEN AP_TERM_TAC THEN
   ONCE_REWRITE_TAC[HREAL_ADD_SYM] THEN POP_ASSUM SUBST1_TAC THEN REFL_TAC);
 
 val TREAL_MUL_WELLDEF = store_thm("TREAL_MUL_WELLDEF",
-  (--`!x1 x2 y1 y2. x1 treal_eq x2 /\ y1 treal_eq y2 ==>
-     (x1 treal_mul y1) treal_eq (x2 treal_mul y2)`--),
+  “!x1 x2 y1 y2. x1 treal_eq x2 /\ y1 treal_eq y2 ==>
+     (x1 treal_mul y1) treal_eq (x2 treal_mul y2)”,
   REPEAT GEN_TAC THEN DISCH_TAC THEN
-  MATCH_MP_TAC TREAL_EQ_TRANS THEN EXISTS_TAC (--`x1 treal_mul y2`--) THEN
+  MATCH_MP_TAC TREAL_EQ_TRANS THEN EXISTS_TAC “x1 treal_mul y2” THEN
   CONJ_TAC THENL [ONCE_REWRITE_TAC[TREAL_MUL_SYM], ALL_TAC] THEN
   MATCH_MP_TAC TREAL_MUL_WELLDEFR THEN ASM_REWRITE_TAC[]);
 
 val TREAL_LT_WELLDEFR = store_thm("TREAL_LT_WELLDEFR",
-  (--`!x1 x2 y. x1 treal_eq x2 ==> (x1 treal_lt y = x2 treal_lt y)`--),
+  “!x1 x2 y. x1 treal_eq x2 ==> (x1 treal_lt y = x2 treal_lt y)”,
   let fun mkc v tm = SYM(SPECL (v::snd(strip_comb tm)) HREAL_LT_LADD) in
   REPEAT GEN_PAIR_TAC THEN PURE_REWRITE_TAC[treal_lt, treal_eq] THEN
-  DISCH_TAC THEN CONV_TAC(RAND_CONV(mkc (--`SND (x1:hreal#hreal)`--))) THEN
-  CONV_TAC(LAND_CONV(mkc (--`SND (x2:hreal#hreal)`--))) THEN
+  DISCH_TAC THEN CONV_TAC(RAND_CONV(mkc “SND (x1:hreal#hreal)”)) THEN
+  CONV_TAC(LAND_CONV(mkc “SND (x2:hreal#hreal)”)) THEN
   ONCE_REWRITE_TAC[AC(HREAL_ADD_ASSOC,HREAL_ADD_SYM)
-    (--`a hreal_add (b hreal_add c) = (b hreal_add a) hreal_add c`--)] THEN
+    “a hreal_add (b hreal_add c) = (b hreal_add a) hreal_add c”] THEN
   POP_ASSUM SUBST1_TAC THEN CANCEL_TAC end);
 
 val TREAL_LT_WELLDEFL = store_thm("TREAL_LT_WELLDEFL",
-  (--`!x y1 y2. y1 treal_eq y2 ==> (x treal_lt y1 = x treal_lt y2)`--),
+  “!x y1 y2. y1 treal_eq y2 ==> (x treal_lt y1 = x treal_lt y2)”,
   let fun mkc v tm = SYM(SPECL (v::snd(strip_comb tm)) HREAL_LT_LADD) in
   REPEAT GEN_PAIR_TAC THEN PURE_REWRITE_TAC[treal_lt, treal_eq] THEN
-  DISCH_TAC THEN CONV_TAC(RAND_CONV(mkc (--`FST (y1:hreal#hreal)`--))) THEN
-  CONV_TAC(LAND_CONV(mkc (--`FST (y2:hreal#hreal)`--))) THEN
+  DISCH_TAC THEN CONV_TAC(RAND_CONV(mkc “FST (y1:hreal#hreal)”)) THEN
+  CONV_TAC(LAND_CONV(mkc “FST (y2:hreal#hreal)”)) THEN
   ONCE_REWRITE_TAC[AC(HREAL_ADD_ASSOC,HREAL_ADD_SYM)
-    (--`a hreal_add (b hreal_add c) = (a hreal_add c) hreal_add b`--)] THEN
+    “a hreal_add (b hreal_add c) = (a hreal_add c) hreal_add b”] THEN
   POP_ASSUM SUBST1_TAC THEN CANCEL_TAC THEN AP_TERM_TAC THEN CANCEL_TAC end);
 
 val TREAL_LT_WELLDEF = store_thm("TREAL_LT_WELLDEF",
-  (--`!x1 x2 y1 y2. x1 treal_eq x2 /\ y1 treal_eq y2 ==>
-     (x1 treal_lt y1 = x2 treal_lt y2)`--),
+  “!x1 x2 y1 y2. x1 treal_eq x2 /\ y1 treal_eq y2 ==>
+     (x1 treal_lt y1 = x2 treal_lt y2)”,
   REPEAT GEN_TAC THEN DISCH_TAC THEN MATCH_MP_TAC EQ_TRANS THEN
-  EXISTS_TAC (--`x1 treal_lt y2`--) THEN CONJ_TAC THENL
+  EXISTS_TAC “x1 treal_lt y2” THEN CONJ_TAC THENL
    [MATCH_MP_TAC TREAL_LT_WELLDEFL, MATCH_MP_TAC TREAL_LT_WELLDEFR] THEN
   ASM_REWRITE_TAC[]);
 
 val TREAL_INV_WELLDEF = store_thm("TREAL_INV_WELLDEF",
-  (--`!x1 x2. x1 treal_eq x2 ==> (treal_inv x1) treal_eq (treal_inv x2)`--),
+  “!x1 x2. x1 treal_eq x2 ==> (treal_inv x1) treal_eq (treal_inv x2)”,
   let val lemma1 = prove
-   ((--`(a hreal_add b' = b hreal_add a') ==>
-        (a' hreal_lt a = b' hreal_lt b)`--),
+   (“(a hreal_add b' = b hreal_add a') ==>
+        (a' hreal_lt a = b' hreal_lt b)”,
     DISCH_TAC THEN EQ_TAC THEN
     DISCH_THEN(CHOOSE_THEN SUBST_ALL_TAC o REWRITE_RULE[HREAL_LT]) THEN
     POP_ASSUM MP_TAC THEN CANCEL_TAC THENL
      [DISCH_THEN(SUBST1_TAC o SYM), DISCH_THEN SUBST1_TAC] THEN CANCEL_TAC)
   val lemma2 = prove
-   ((--`(a hreal_add b' = b hreal_add a') ==>
-        ((a = a') = (b = b'))`--),
+   (“(a hreal_add b' = b hreal_add a') ==>
+        ((a = a') = (b = b'))”,
     DISCH_TAC THEN EQ_TAC THEN DISCH_THEN SUBST_ALL_TAC THEN POP_ASSUM MP_TAC
     THEN CANCEL_TAC THEN DISCH_THEN SUBST1_TAC THEN REFL_TAC) in
   REPEAT GEN_PAIR_TAC THEN PURE_REWRITE_TAC[treal_inv, treal_eq] THEN
@@ -513,16 +510,16 @@ val TREAL_INV_WELLDEF = store_thm("TREAL_INV_WELLDEF",
   REWRITE_TAC[TREAL_EQ_REFL] THEN COND_CASES_TAC THEN REWRITE_TAC[treal_eq]
   THEN CANCEL_TAC THEN CANCEL_TAC THEN AP_TERM_TAC THEN
   W(FREEZE_THEN(CONV_TAC o REWR_CONV) o GSYM o C SPEC HREAL_EQ_LADD o
-    mk_comb o (curry mk_comb (--`$hreal_add`--) ## I) o (rand ## rand) o dest_eq o snd)
+    mk_comb o (curry mk_comb “$hreal_add” ## I) o (rand ## rand) o dest_eq o snd)
   THEN ONCE_REWRITE_TAC[HREAL_ADD_SYM] THEN
   GEN_REWR_TAC (funpow 2 RAND_CONV)  [HREAL_ADD_SYM] THEN
   REWRITE_TAC[HREAL_ADD_ASSOC] THENL
    [RULE_ASSUM_TAC GSYM,
-    MP_TAC(SPECL[(--`FST(x2:hreal#hreal)`--), (--`SND(x2:hreal#hreal)`--)]
+    MP_TAC(SPECL[“FST(x2:hreal#hreal)”, “SND(x2:hreal#hreal)”]
     HREAL_LT_TOTAL) THEN ASM_REWRITE_TAC[] THEN DISCH_TAC THEN
     RULE_ASSUM_TAC(ONCE_REWRITE_RULE[HREAL_ADD_SYM])] THEN
   FIRST_ASSUM(fn th => FIRST_ASSUM(MP_TAC o EQ_MP (MATCH_MP lemma1 th))) THEN
-  FIRST_ASSUM(UNDISCH_TAC o assert(curry op =(--`$hreal_lt`--) o rator o rator) o concl)
+  FIRST_ASSUM(UNDISCH_TAC o assert(curry op =“$hreal_lt” o rator o rator) o concl)
   THEN REPEAT(DISCH_THEN(SUBST1_TAC o MATCH_MP HREAL_SUB_ADD)) THEN
   FIRST_ASSUM SUBST1_TAC THEN REFL_TAC end);
 
@@ -560,6 +557,14 @@ val [REAL_10, REAL_ADD_SYM, REAL_MUL_SYM, REAL_ADD_ASSOC,
                    TREAL_ISO,TREAL_INV_0])}
  end;
 
+val _ =
+   add_rule { block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
+              fixity = Suffix 2100,
+              paren_style = OnlyIfNecessary,
+              pp_elements = [TOK (UnicodeChars.sup_minus ^ UnicodeChars.sup_1)],
+              term_name = "realinv"}
+val _ = overload_on("realinv", ``inv``);
+
 (*---------------------------------------------------------------------------
        Overload arithmetic operations.
  ---------------------------------------------------------------------------*)
@@ -587,74 +592,74 @@ val _ = overload_on ("<", Term`real_lt`);
 (*---------------------------------------------------------------------------*)
 
 val REAL_ISO_EQ = store_thm("REAL_ISO_EQ",
-  (--`!h i. h hreal_lt i = real_of_hreal h < real_of_hreal i`--),
+  “!h i. h hreal_lt i = real_of_hreal h < real_of_hreal i”,
   REPEAT GEN_TAC THEN EQ_TAC THENL
    [MATCH_ACCEPT_TAC REAL_ISO,
     REPEAT_TCL DISJ_CASES_THEN ASSUME_TAC
-     (SPECL [(--`h:hreal`--), (--`i:hreal`--)] HREAL_LT_TOTAL) THEN
+     (SPECL [“h:hreal”, “i:hreal”] HREAL_LT_TOTAL) THEN
     ASM_REWRITE_TAC[REAL_LT_REFL] THEN
     POP_ASSUM(fn th => DISCH_THEN(MP_TAC o CONJ (MATCH_MP REAL_ISO th))) THEN
     DISCH_THEN(MP_TAC o MATCH_MP REAL_LT_TRANS) THEN
     REWRITE_TAC[REAL_LT_REFL]]);
 
 val REAL_POS = store_thm("REAL_POS",
-  (--`!X. real_0 < real_of_hreal X`--),
+  “!X. real_0 < real_of_hreal X”,
   GEN_TAC THEN REWRITE_TAC[REAL_BIJ]);
 
 val SUP_ALLPOS_LEMMA1 = store_thm("SUP_ALLPOS_LEMMA1",
-  (--`!P y. (!x. P x ==> real_0 < x) ==>
+  “!P y. (!x. P x ==> real_0 < x) ==>
             ((?x. P x /\ y < x) =
-            (?X. P(real_of_hreal X) /\ y < (real_of_hreal X)))`--),
+            (?X. P(real_of_hreal X) /\ y < (real_of_hreal X)))”,
   REPEAT GEN_TAC THEN DISCH_TAC THEN EQ_TAC THENL
-   [DISCH_THEN(X_CHOOSE_THEN (--`x:real`--) (fn th => MP_TAC th THEN POP_ASSUM
+   [DISCH_THEN(X_CHOOSE_THEN “x:real” (fn th => MP_TAC th THEN POP_ASSUM
      (SUBST1_TAC o SYM o REWRITE_RULE[REAL_BIJ] o C MATCH_MP (CONJUNCT1 th))))
-    THEN DISCH_TAC THEN EXISTS_TAC (--`hreal_of_real x`--) THEN ASM_REWRITE_TAC[],
-    DISCH_THEN(X_CHOOSE_THEN (--`X:hreal`--) ASSUME_TAC) THEN
-    EXISTS_TAC (--`real_of_hreal X`--) THEN ASM_REWRITE_TAC[]]);
+    THEN DISCH_TAC THEN EXISTS_TAC “hreal_of_real x” THEN ASM_REWRITE_TAC[],
+    DISCH_THEN(X_CHOOSE_THEN “X:hreal” ASSUME_TAC) THEN
+    EXISTS_TAC “real_of_hreal X” THEN ASM_REWRITE_TAC[]]);
 
 val SUP_ALLPOS_LEMMA2 = store_thm("SUP_ALLPOS_LEMMA2",
-  (--`!P X. P(real_of_hreal X) :bool = (\h. P(real_of_hreal h)) X`--),
+  “!P X. P(real_of_hreal X) :bool = (\h. P(real_of_hreal h)) X”,
   REPEAT GEN_TAC THEN BETA_TAC THEN REFL_TAC);
 
 val SUP_ALLPOS_LEMMA3 = store_thm("SUP_ALLPOS_LEMMA3",
-  (--`!P. (!x. P x ==> real_0 < x) /\
+  “!P. (!x. P x ==> real_0 < x) /\
           (?x. P x) /\
           (?z. !x. P x ==> x < z)
            ==> (?X. (\h. P(real_of_hreal h)) X) /\
-               (?Y. !X. (\h. P(real_of_hreal h)) X ==> X hreal_lt Y)`--),
+               (?Y. !X. (\h. P(real_of_hreal h)) X ==> X hreal_lt Y)”,
   GEN_TAC THEN DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC STRIP_ASSUME_TAC) THEN
   CONJ_TAC THENL
-   [EXISTS_TAC (--`hreal_of_real x`--) THEN BETA_TAC THEN
+   [EXISTS_TAC “hreal_of_real x” THEN BETA_TAC THEN
     FIRST_ASSUM(SUBST1_TAC o REWRITE_RULE[REAL_BIJ] o
-                C MATCH_MP (ASSUME (--`(P:real->bool) x`--))) THEN
+                C MATCH_MP (ASSUME “(P:real->bool) x”)) THEN
     FIRST_ASSUM ACCEPT_TAC,
-    EXISTS_TAC (--`hreal_of_real z`--) THEN BETA_TAC THEN GEN_TAC THEN
-    UNDISCH_TAC (--`(P:real->bool) x`--) THEN DISCH_THEN(K ALL_TAC) THEN
+    EXISTS_TAC “hreal_of_real z” THEN BETA_TAC THEN GEN_TAC THEN
+    UNDISCH_TAC “(P:real->bool) x” THEN DISCH_THEN(K ALL_TAC) THEN
     DISCH_THEN(fn th => EVERY_ASSUM(MP_TAC o C MATCH_MP th)) THEN
     POP_ASSUM_LIST(K ALL_TAC) THEN REPEAT DISCH_TAC THEN
     REWRITE_TAC[REAL_ISO_EQ] THEN
-    MP_TAC(SPECL[(--`real_0`--), (--`real_of_hreal X`--), (--`z:real`--)] REAL_LT_TRANS) THEN
+    MP_TAC(SPECL[“real_0”, “real_of_hreal X”, “z:real”] REAL_LT_TRANS) THEN
     ASM_REWRITE_TAC[REAL_BIJ] THEN
     DISCH_THEN SUBST_ALL_TAC THEN FIRST_ASSUM ACCEPT_TAC]);
 
 val SUP_ALLPOS_LEMMA4 = store_thm("SUP_ALLPOS_LEMMA4",
-  (--`!y. ~(real_0 < y) ==> !x. y < (real_of_hreal x)`--),
+  “!y. ~(real_0 < y) ==> !x. y < (real_of_hreal x)”,
   GEN_TAC THEN DISCH_THEN(curry op THEN GEN_TAC o MP_TAC) THEN
   REPEAT_TCL DISJ_CASES_THEN ASSUME_TAC
-   (SPECL [(--`y:real`--), (--`real_0`--)] REAL_LT_TOTAL) THEN
+   (SPECL [“y:real”, “real_0”] REAL_LT_TOTAL) THEN
   ASM_REWRITE_TAC[REAL_POS] THEN DISCH_THEN(K ALL_TAC) THEN
-  POP_ASSUM(MP_TAC o C CONJ (SPEC (--`x:hreal`--) REAL_POS)) THEN
+  POP_ASSUM(MP_TAC o C CONJ (SPEC “x:hreal” REAL_POS)) THEN
   DISCH_THEN(ACCEPT_TAC o MATCH_MP REAL_LT_TRANS));
 
 val REAL_SUP_ALLPOS = store_thm("REAL_SUP_ALLPOS",
-  (--`!P. (!x. P x ==> real_0 < x) /\ (?x. P x) /\ (?z. !x. P x ==> x < z)
-    ==> (?s. !y. (?x. P x /\ y < x) = y < s)`--),
-  let val lemma = TAUT_CONV (--`a /\ b ==> (a = b)`--) in
+  “!P. (!x. P x ==> real_0 < x) /\ (?x. P x) /\ (?z. !x. P x ==> x < z)
+    ==> (?s. !y. (?x. P x /\ y < x) = y < s)”,
+  let val lemma = TAUT_CONV “a /\ b ==> (a = b)” in
   GEN_TAC THEN DISCH_TAC THEN
-  EXISTS_TAC (--`real_of_hreal(hreal_sup(\h. P(real_of_hreal h)))`--) THEN
+  EXISTS_TAC “real_of_hreal(hreal_sup(\h. P(real_of_hreal h)))” THEN
   GEN_TAC THEN
   FIRST_ASSUM(fn th => REWRITE_TAC[MATCH_MP SUP_ALLPOS_LEMMA1(CONJUNCT1 th)]) THEN
-  ASM_CASES_TAC (--`real_0 < y`--) THENL
+  ASM_CASES_TAC “real_0 < y” THENL
    [FIRST_ASSUM(SUBST1_TAC o SYM o REWRITE_RULE[REAL_BIJ]) THEN
     REWRITE_TAC[GSYM REAL_ISO_EQ] THEN
     GEN_REWR_TAC (RATOR_CONV o ONCE_DEPTH_CONV)
@@ -663,8 +668,8 @@ val REAL_SUP_ALLPOS = store_thm("REAL_SUP_ALLPOS",
     THEN ASM_REWRITE_TAC[],
     MATCH_MP_TAC lemma THEN CONJ_TAC THENL
      [FIRST_ASSUM(MP_TAC o MATCH_MP SUP_ALLPOS_LEMMA3) THEN
-      BETA_TAC THEN DISCH_THEN(X_CHOOSE_TAC (--`X:hreal`--) o CONJUNCT1) THEN
-      EXISTS_TAC (--`X:hreal`--) THEN ASM_REWRITE_TAC[], ALL_TAC] THEN
+      BETA_TAC THEN DISCH_THEN(X_CHOOSE_TAC “X:hreal” o CONJUNCT1) THEN
+      EXISTS_TAC “X:hreal” THEN ASM_REWRITE_TAC[], ALL_TAC] THEN
     FIRST_ASSUM(MATCH_ACCEPT_TAC o MATCH_MP SUP_ALLPOS_LEMMA4)] end);
 
 (*---------------------------------------------------------------------------*)
@@ -682,5 +687,3 @@ val _ = map save_thm
   ("REAL_LT_MUL",REAL_LT_MUL),       ("REAL_INV_0",REAL_INV_0)];
 
 val _ = export_theory();
-
-end;

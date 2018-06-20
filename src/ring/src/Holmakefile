@@ -1,0 +1,21 @@
+THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
+TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
+
+all: $(TARGETS)
+
+ifeq ($(KERNELID),otknl)
+ARTFILES = $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
+all: $(ARTFILES)
+
+ring.art: ring.otd
+semi_ring.art: semi_ring.otd
+quote.art: quote.otd
+canonical.art: canonical.otd
+ringNorm.art: ringNorm.otd
+
+hol4-ring-unint.art: hol4-ring-unint.thy $(ARTFILES)
+	opentheory info --article -o $@ $<
+
+hol4-ring.art: hol4-ring.thy hol4-ring-unint.art ../../opentheory/hol4.int
+	opentheory info --article -o $@ $<
+endif

@@ -10,16 +10,12 @@ src/lite
 src/refute
 src/simp/src
 src/metis
-#include sequences/holyhammer
 src/meson/src
 src/IndDef
 src/basicProof
 src/relation
-src/one
-src/pair/src
-src/sum
+src/coretypes
 src/tfl/src
-src/option
 src/num/theories
 src/num/reduce/src
 src/num/arith/src
@@ -35,13 +31,15 @@ src/datatype/equiv
 src/datatype/record
 src/datatype
 !src/datatype/theory_tests
-src/list/src
 src/monad
+src/list/src
 src/quantHeuristics
 src/unwind
+src/pattern_matches
 src/HolSat/vector_def_CNF
 src/boss/ml_evaluation
 src/boss
 # Up to this point is needed for hol (which loads bossLib).
 # (Maybe unwind could be omitted).
 [poly]bin/hol
+!tools/Holmake/tests/Iflag

@@ -45,6 +45,19 @@ sig
 
   val add_persistent_funs : string list -> unit
   val del_persistent_consts : term list -> unit
-  val pp_compset : PP.ppstream -> compset -> unit
+  val pp_compset : compset Parse.pprinter
 
+  type transform = clauses.transform
+
+  val listItems : compset -> ((string * string) * transform list) list
+  val unmapped  : compset -> (string * string) list
+
+  datatype compset_element =
+      Convs of (term * int * conv) list
+    | Defs of thm list
+    | Extenders of (compset -> unit) list
+    | Tys of hol_type list
+
+  val compset_conv: compset -> compset_element list -> conv
+  val extend_compset: compset_element list -> compset -> unit
 end

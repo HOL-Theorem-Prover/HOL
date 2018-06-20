@@ -60,17 +60,20 @@ and both
 }
 
 \COMMENTS
-Though it is possible to abbreviate functions, using quotations such
-as {`f = \n. n + 3`}, in this case {ABBREV_TAC} will not do anything
-more than replace exact copies of the abstraction.  Following
-{ABBREV_TAC} with
+The {bossLib} library provides {qabbrev_tac} as a synonym for {Q.ABBREV_TAC}.
+
+It is possible to abbreviate functions, using quotations such
+as {`f = \n. n + 3`}. When this is done {ABBREV_TAC} will not itself do anything
+more than replace exact copies of the abstraction, but the simplifier will subsequently see occurrences of the pattern and replace them.
+Thus:
 {
-   POP_ASSUM (ASSUME_TAC o GSYM o
-              SIMP_RULE bool_ss [FUN_EQ_THM, markerTheory.Abbrev_def])
+   > (qabbrev_tac `f = \x. x + 1` >> asm_simp_tac bool_ss [])
+        ([], ``3 + 1 = 4 + 1``);
+   val it =
+      ([([``Abbrev (f = (\x. x + 1))``], ``f 3 = f 4``)], fn):
+      goal list * (thm list -> thm)
 }
-will turn the assumption {`Abbrev(f = (\n. n + 3))`} into
-{`!n. n + 3 = f n`} which may find more instances of the desired
-pattern.
+where the simplifier has seen occurrences of the ``{x+1}'' pattern and replaced it with calls to the {f}-abbreviation.
 
 \SEEALSO
 BasicProvers.Abbr, Q.HO_MATCH_ABBREV_TAC, Q.MATCH_ABBREV_TAC, Q.UNABBREV_TAC.

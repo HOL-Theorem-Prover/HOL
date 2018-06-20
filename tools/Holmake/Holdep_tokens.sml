@@ -5,6 +5,7 @@ infix |>
 fun x |> f = f x
 
 exception LEX_ERROR of string
+type result = (string,int) Binarymap.dict
 
 datatype char_reader = CR of {reader : unit -> string,
                               current : char option,
@@ -34,6 +35,8 @@ in
   make (fn () => TextIO.input is) (fn () => TextIO.closeIn is)
 end
 fun fromStream is = make (fn () => TextIO.input is) (fn () => ())
+fun fromReader uc = make (fn () => case uc() of NONE => "" | SOME c => str c)
+                         (fn () => ())
 fun closeCR (CR {closer,...}) = closer()
 
 fun advance (c as CR {pos, buffer, maxpos, reader, current, closer}) =
@@ -47,21 +50,17 @@ fun advance (c as CR {pos, buffer, maxpos, reader, current, closer}) =
 datatype SCR = SCR of {linenum : int,
                        filename : string,
                        colnum : int,
-                       ids : string Binaryset.set,
+                       ids : (string,int) Binarymap.dict,
                        cr : char_reader}
-fun makeSCR fname = let
-  val cr = fromFile fname
-in
-  SCR {linenum = 1, colnum = 0, filename = fname,
-       ids = Binaryset.empty String.compare, cr = cr}
-end
 
-fun SCRfromStream (name, is) = let
-  val cr = fromStream is
-in
-  SCR {linenum = 1, colnum = 0, filename = name,
-       ids = Binaryset.empty String.compare, cr = cr}
-end
+
+fun SCRfromNamedCR (name, cr) =
+  SCR { linenum = 1, colnum = 0, filename = name,
+        ids = Binarymap.mkDict String.compare, cr = cr }
+
+fun makeSCR fname = SCRfromNamedCR (fname, fromFile fname)
+fun SCRfromStream (name, is) = SCRfromNamedCR (name, fromStream is)
+fun SCRfromReader (name, uc) = SCRfromNamedCR (name, fromReader uc)
 
 fun currentChar (SCR{cr,...}) = current cr
 fun closeSCR (SCR{cr,...}) = closeCR cr
@@ -74,7 +73,10 @@ fun newline (SCR{linenum, filename, colnum, ids, cr}) =
         ids = ids, cr = advance cr}
 fun completeID s (SCR{linenum, filename, colnum, ids, cr}) =
     SCR{linenum = linenum, filename = filename, colnum = colnum,
-        ids = Binaryset.add(ids, s), cr = cr}
+        ids = case Binarymap.peek(ids,s) of
+                  NONE => Binarymap.insert(ids, s, linenum)
+                | SOME _ => ids,
+        cr = cr}
 
 fun mem x [] = false
   | mem x (y::ys) = x = y orelse mem x ys
@@ -443,5 +445,6 @@ fun scrdeps scr =
 
 fun file_deps fname = scrdeps (makeSCR fname)
 fun stream_deps p = scrdeps (SCRfromStream p)
+fun reader_deps p = scrdeps (SCRfromReader p)
 
 end (* struct *)

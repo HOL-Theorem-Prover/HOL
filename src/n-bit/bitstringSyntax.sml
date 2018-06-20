@@ -21,7 +21,8 @@ val (w2v_tm, mk_w2v, dest_w2v, is_w2v) = s "w2v"
 val (v2w_tm, mk_v2w, dest_v2w, is_v2w) =
    HolKernel.syntax_fns
    {n = 1,
-    dest = fn tm1 => fn e => fn w => (HolKernel.dest_monop tm1 e w, dim_of w),
+    dest = fn tm1 => fn e => fn w =>
+             (HolKernel.dest_monop tm1 e w, wordsSyntax.dim_of w),
     make = fn tm => fn (v, ty) =>
               Term.mk_comb (Term.inst [Type.alpha |-> ty] tm, v)}
    "bitstring" "v2w"
@@ -67,13 +68,13 @@ val (field_insert_tm, mk_field_insert, dest_field_insert, is_field_insert) =
 (* ----------------------------------------------------------------------- *)
 
 local
-   fun bitlist_to_int a l =
+   fun bitlist_to_num a l =
       case l of
         [] => a
-      | (true::r) => bitlist_to_int (2 * a + 1) r
-      | (false::r) => bitlist_to_int (2 * a) r
+      | (true::r) => bitlist_to_num (Arbnum.plus1 (Arbnum.times2 a)) r
+      | (false::r) => bitlist_to_num (Arbnum.times2 a) r
 in
-   val bitlist_to_int = bitlist_to_int 0
+   val bitlist_to_num = bitlist_to_num Arbnum.zero
 end
 
 local
@@ -83,7 +84,7 @@ local
            let
               val c = [b1, b2, b3, b4]
            in
-              bitlist_to_hex (a ^ Int.fmt StringCvt.HEX (bitlist_to_int c)) r
+              bitlist_to_hex (a ^ Arbnum.toHexString (bitlist_to_num c)) r
            end
        | _ => raise ERR "bitlist_to_hex" "length must be multiple of four"
 in
@@ -101,7 +102,7 @@ val list_of_term = fst o listSyntax.dest_list
 val bitlist_of_term = List.map bool_of_term o list_of_term
 val binstring_of_term = String.implode o List.map char_of_term o list_of_term
 val hexstring_of_term = bitlist_to_hex o bitlist_of_term
-val int_of_term = bitlist_to_int o bitlist_of_term
+val num_of_term = bitlist_to_num o bitlist_of_term
 fun mk_fixedwidth (tm, n) = mk_v2w (tm, fcpSyntax.mk_int_numeric_type n)
 
 (* ----------------------------------------------------------------------- *)
@@ -129,17 +130,15 @@ fun bitvector_of_binstring s = fixedwidth_of_binstring (s, String.size s)
 
 local
    fun boolify a n =
-      if n <= 0 then a else boolify ((n mod 2 = 1) :: a) (n div 2)
+      if n = Arbnum.zero then a
+      else let
+              val (q, r) = Arbnum.divmod (n, Arbnum.two)
+           in
+              boolify ((r = Arbnum.one) :: a) q
+           end
 
    val removeWS =
       String.translate (fn c => if Char.isSpace c then "" else String.str c)
-
-   val err = ERR "bitstring_of_hexstring" "failed to parse HEX"
-
-   fun fromHexString s =
-      case Int.scan StringCvt.HEX Substring.getc (Substring.full s) of
-        SOME (i, r) => if Substring.size r = 0 then i else raise err
-      | _ => raise err
 
    fun hexSize s =
       let
@@ -148,16 +147,16 @@ local
          if String.isPrefix "0x" s then n - 8 else n
       end
 in
-   fun int_to_bitlist n = if n = 0 then [false] else boolify [] n
+   fun num_to_bitlist n = if n = Arbnum.zero then [false] else boolify [] n
 
-   val bitstring_of_int = bitstring_of_bitlist o int_to_bitlist
-   fun fixedwidth_of_int (i, j) = mk_fixedwidth (bitstring_of_int i, j)
-   val bitvector_of_int = bitvector_of_bitlist o int_to_bitlist
+   val bitstring_of_num = bitstring_of_bitlist o num_to_bitlist
+   fun fixedwidth_of_num (i, j) = mk_fixedwidth (bitstring_of_num i, j)
+   val bitvector_of_num = bitvector_of_bitlist o num_to_bitlist
 
    fun bitstring_of_hexstring s =
       let
          val s = removeWS s
-         val l = int_to_bitlist (fromHexString s)
+         val l = num_to_bitlist (Arbnum.fromHexString s)
          val l = List.tabulate (hexSize s - List.length l, K false) @ l
       in
          bitstring_of_bitlist l
@@ -170,9 +169,9 @@ in
       mk_fixedwidth (bitstring_of_hexstring s, i)
 end
 
-fun padded_fixedwidth_of_int (m, n) =
+fun padded_fixedwidth_of_num (m, n) =
    let
-      val u = int_to_bitlist m
+      val u = num_to_bitlist m
       val u = String.implode (List.map (fn true => #"1" | false => #"0") u)
       val p = StringCvt.padLeft #"0" n u
    in

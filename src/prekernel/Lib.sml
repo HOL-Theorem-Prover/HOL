@@ -14,53 +14,8 @@ open Feedback;
 
 val ERR = mk_HOL_ERR "Lib"
 
-datatype frag = datatype Portable.frag
-
-(*---------------------------------------------------------------------------*
- * Combinators                                                               *
- *---------------------------------------------------------------------------*)
-
-fun curry f x y = f (x, y)
-fun uncurry f (x, y) = f x y
-infix 3 ##
-fun (f ## g) (x, y) = (f x, g y)
-fun apfst f (x, y) = (f x, y)
-fun apsnd f (x, y) = (x, f y)
-infix |>
-fun x |> f = f x
-fun C f x y = f y x
-fun I x = x
-fun K x y = x
-fun S f g x = f x (g x)
-fun W f x = f x x
-
-(*---------------------------------------------------------------------------*
- * Curried versions of infixes.                                              *
- *---------------------------------------------------------------------------*)
-
-fun append l1 l2 = l1 @ l2
-fun equal x y = x = y
-val strcat = curry (op ^)
-fun cons a L = a :: L
-fun pair x y = (x, y)
-
-fun rpair x y = (y, x)
-fun swap (x, y) = (y, x)
-fun fst (x, _) = x
-fun snd (_, y) = y
-
-fun triple x y z = (x, y, z)
-fun quadruple x1 x2 x3 x4 = (x1, x2, x3, x4)
-
-(*---------------------------------------------------------------------------*
- * Success and failure. Interrupt has a special status in Standard ML.       *
- *---------------------------------------------------------------------------*)
-
-fun can f x = (f x; true) handle Interrupt => raise Interrupt | _ => false
-
-fun total f x = SOME (f x) handle Interrupt => raise Interrupt | _ => NONE
-
-fun partial e f x = case f x of SOME y => y | NONE => raise e
+open Portable;
+datatype frag = datatype HOLPP.frag
 
 (*---------------------------------------------------------------------------*
  * A version of try that coerces non-HOL_ERR exceptions to be HOL_ERRs.      *
@@ -83,18 +38,11 @@ end
 
 fun try f x = f x handle e => Feedback.Raise e
 
-fun assert_exn P x e = if P x then x else raise e
 fun assert P x = assert_exn P x (ERR "assert" "predicate not true")
-fun with_exn f x e = f x handle Interrupt => raise Interrupt | _ => raise e
 
 (*---------------------------------------------------------------------------*
  *        Common list operations                                             *
  *---------------------------------------------------------------------------*)
-
-fun list_of_singleton a = [a]
-fun list_of_pair (a, b) = [a, b]
-fun list_of_triple (a, b, c) = [a, b, c]
-fun list_of_quadruple (a, b, c, d) = [a, b, c, d]
 
 (* turning lists into tuples *)
 
@@ -148,8 +96,6 @@ fun map2 f L1 L2 =
       mp2 L1 L2 []
    end
 
-val all = List.all
-
 fun all2 P =
    let
       fun every2 [] [] = true
@@ -159,27 +105,12 @@ fun all2 P =
       every2
    end
 
-val exists = List.exists
-
 fun first P =
    let
       fun oneth (a :: rst) = if P a then a else oneth rst
         | oneth [] = raise ERR "first" "unsatisfied predicate"
    in
       oneth
-   end
-
-fun first_opt f =
-   let
-      fun fo n [] = NONE
-        | fo n (a :: rst) =
-            let
-               val vo = f n a handle Interrupt => raise Interrupt | _ => NONE
-            in
-               if isSome vo then vo else fo (n + 1) rst
-            end
-   in
-      fo 0
    end
 
 fun split_after n alist =
@@ -193,8 +124,6 @@ fun split_after n alist =
            end
    else raise ERR "split_after" "negative index"
 
-fun itlist f L base_value = List.foldr (uncurry f) base_value L
-
 fun itlist2 f L1 L2 base_value =
    let
       fun itl ([], []) = base_value
@@ -203,8 +132,6 @@ fun itlist2 f L1 L2 base_value =
    in
       itl (L1, L2)
    end
-
-fun rev_itlist f L base_value = List.foldl (uncurry f) base_value L
 
 fun rev_itlist2 f L1 L2 =
   let
@@ -224,45 +151,16 @@ fun end_itlist f =
       endit
    end
 
-fun foldl_map _ (acc, []) = (acc, [])
-  | foldl_map f (acc, x :: xs) =
-      let
-         val (acc', y) = f (acc, x)
-         val (acc'', ys) = foldl_map f (acc', xs)
-      in
-         (acc'', y :: ys)
-      end
-
-(* separate s [x1, x2, ..., xn] ===> [x1, s, x2, s, ..., s, xn] *)
-
-fun separate s (x :: (xs as _ :: _)) = x :: s :: separate s xs
-  | separate _ xs = xs
-
-val filter = List.filter
-
 fun get_first f l =
    case l of
       [] => NONE
     | h :: t => (case f h of NONE => get_first f t | some => some)
 
-val partition = List.partition
-
 fun zip [] [] = []
   | zip (a :: b) (c :: d) = (a, c) :: zip b d
   | zip _ _ = raise ERR "zip" "different length lists"
 
-val unzip = ListPair.unzip
-
 fun combine (l1, l2) = zip l1 l2
-val split = unzip
-
-fun mapfilter f list =
-   itlist (fn i => fn L => (f i :: L)
-                handle Interrupt => raise Interrupt
-                     | otherwise => L)
-          list []
-
-val flatten = List.concat
 
 fun front_last l =
   let
@@ -300,75 +198,11 @@ fun trypluck f =
       try []
    end
 
-fun trypluck' f list =
-   let
-     fun recurse acc l =
-        case l of
-           [] => (NONE, list)
-         | h :: t => (case f h of
-                         NONE => recurse (h :: acc) t
-                       | SOME v => (SOME v, List.revAppend (acc, t)))
-   in
-      recurse [] list
-   end
-
-fun funpow n f x =
-   let
-      fun iter (0, res) = res
-        | iter (n, res) = iter (n - 1, f res)
-   in
-      if n < 0 then x else iter (n, x)
-   end
-
-fun repeat f =
-   let
-      exception LAST of 'a
-      fun loop x =
-         let
-            val y = (f x handle Interrupt => raise Interrupt
-                              | otherwise => raise (LAST x))
-         in
-            loop y
-         end
-   in
-      fn x => loop x handle (LAST y) => y
-   end
-
-fun enumerate i [] = []
-  | enumerate i (h :: t) = (i, h) :: enumerate (i + 1) t
-
-fun upto b t =
-   let
-      fun up i A = if i > t then A else up (i + 1) (i :: A)
-   in
-      List.rev (up b [])
-   end
-
-fun appi f =
-   let
-      fun recurse n lst =
-         case lst of
-            [] => ()
-          | h :: t => (f n h; recurse (n + 1) t)
-   in
-      recurse 0
-   end
-
 (* apnth : ('a -> 'a) -> int -> 'a list -> 'a list
   apply a function to the nth member of a list *)
 fun apnth f 0 (y :: ys) = f y :: ys
   | apnth f n (y :: ys) = y :: apnth f (n-1) ys
   | apnth f n [] = raise ERR "apnth" "list too short (or -ve index)"
-
-fun mapi f lst =
-   let
-      fun recurse n acc lst =
-         case lst of
-            [] => acc
-          | h :: t => recurse (n + 1) (f n h :: acc) t
-   in
-      List.rev (recurse 0 [] lst)
-   end
 
 fun mapshape [] _ _ =  []
   | mapshape (n :: nums) (f :: funcs) all_args =
@@ -378,54 +212,6 @@ fun mapshape [] _ _ =  []
         f fargs :: mapshape nums funcs rst
      end
   | mapshape _ _ _ = raise ERR "mapshape" "irregular lists"
-
-type 'a cmp = 'a * 'a -> order
-
-fun flip_order LESS = GREATER
-  | flip_order EQUAL = EQUAL
-  | flip_order GREATER = LESS
-
-fun flip_cmp cmp = flip_order o cmp
-
-fun bool_compare (true, true) = EQUAL
-  | bool_compare (true, false) = GREATER
-  | bool_compare (false, true) = LESS
-  | bool_compare (false, false) = EQUAL
-
-fun list_compare cfn =
-   let
-      fun comp ([], []) = EQUAL
-        | comp ([], _) = LESS
-        | comp (_, []) = GREATER
-        | comp (h1 :: t1, h2 :: t2) =
-            case cfn (h1, h2) of EQUAL => comp (t1, t2) | x => x
-   in
-      comp
-   end
-
-fun pair_compare (acmp, bcmp) ((a1, b1), (a2, b2)) =
-   case acmp (a1, a2) of
-      EQUAL => bcmp (b1, b2)
-    | x => x
-
-fun measure_cmp f (x, y) = Int.compare (f x, f y)
-fun inv_img_cmp f c (x, y) = c (f x, f y)
-
-(* streamlined combination of inv_img_cmp and pair_compare *)
-fun lex_cmp (c1, c2) (f1, f2) (x1, x2) =
-   case c1 (f1 x1, f1 x2) of
-      EQUAL => c2 (f2 x1, f2 x2)
-    | x => x
-
-(*---------------------------------------------------------------------------*
- * For loops                                                                 *
- *---------------------------------------------------------------------------*)
-
-fun for base top f =
-   let fun For i = if i > top then [] else f i :: For (i + 1) in For base end
-
-fun for_se base top f =
-   let fun For i = if i > top then () else (f i; For (i + 1)) in For base end
 
 (*---------------------------------------------------------------------------*
  * Assoc lists.                                                              *
@@ -447,43 +233,10 @@ fun rev_assoc item =
       assc
    end
 
-fun assoc1 item =
-   let
-      fun assc ((e as (key, _)) :: rst) =
-            if item = key then SOME e else assc rst
-        | assc [] = NONE
-   in
-      assc
-   end
-
-fun assoc2 item =
-   let
-      fun assc ((e as (_, key)) :: rst) =
-            if item = key then SOME e else assc rst
-        | assc [] = NONE
-   in
-      assc
-   end
-
-(*---------------------------------------------------------------------------*
- * A naive merge sort.                                                       *
- *---------------------------------------------------------------------------*)
-
-fun sort P =
-   let
-      fun merge [] a = a
-        | merge a [] = a
-        | merge (A as (a :: t1)) (B as (b :: t2)) =
-             if P a b then a :: merge t1 B
-                      else b :: merge A t2
-      fun srt [] = []
-        | srt [a] = a
-        | srt (h1 :: h2 :: t) = srt (merge h1 h2 :: t)
-   in
-      srt o (map (fn x => [x]))
-   end
-
-val int_sort = sort (curry (op <= : int * int -> bool))
+fun op_assoc eq_func k l =
+  case l of
+      [] => raise ERR "op_assoc" "not found"
+    | (key,ob) :: rst => if eq_func k key then ob else op_assoc eq_func k rst
 
 (*---------------------------------------------------------------------------*)
 (* Topologically sort a list wrt partial order R.                            *)
@@ -541,144 +294,9 @@ fun dict_topsort deps =
       foldl v [] deps
    end
 
-(* linear time version
-   only works when nodes are integers 0 up to some n
-   deps = vector of adjacency lists *)
-
-fun vector_topsort deps =
-   let
-      open Array
-      val n = Vector.length deps
-      val a = tabulate (n, SOME o (curry Vector.sub deps))
-      fun visit (n, ls) =
-         case sub (a, n) of
-            NONE => ls
-          | SOME dl => let
-                          val _ = update (a, n, NONE)
-                          val ls = List.foldl visit ls dl
-                       in
-                          n :: ls
-                       end
-      fun v (0, ls) = ls
-        | v (n, ls) = v (n - 1, visit (n - 1, ls))
-   in
-      v (n, [])
-   end
-
-(*---------------------------------------------------------------------------*
- * Substitutions.                                                            *
- *---------------------------------------------------------------------------*)
-
-type ('a, 'b) subst = {redex: 'a, residue: 'b} list
-
-fun subst_assoc test =
-   let
-      fun assc [] = NONE
-        | assc ({redex, residue} :: rst) =
-            if test redex then SOME residue else assc rst
-   in
-      assc
-   end
-
-infix 5 |->
-fun (r1 |-> r2) = {redex = r1, residue = r2}
-
-(*---------------------------------------------------------------------------*
- * Sets as lists                                                             *
- *---------------------------------------------------------------------------*)
-
-fun mem i = List.exists (equal i)
-
-fun insert i L = if mem i L then L else i :: L
-
-fun mk_set [] = []
-  | mk_set (a :: rst) = insert a (mk_set rst)
-
-fun union [] S = S
-  | union S [] = S
-  | union (a :: rst) S2 = union rst (insert a S2)
-
-(* Union of a family of sets *)
-
-fun U set_o_sets = itlist union set_o_sets []
-
-(* All the elements in the first set that are not also in the second set. *)
-
-fun set_diff a b = filter (not o C mem b) a
-val subtract = set_diff
-
-fun intersect [] _ = []
-  | intersect _ [] = []
-  | intersect S1 S2 = mk_set (filter (C mem S2) S1)
-
-fun null_intersection _ [] = true
-  | null_intersection [] _ = true
-  | null_intersection (a :: rst) S =
-      not (mem a S) andalso null_intersection rst S
-
-fun set_eq S1 S2 = set_diff S1 S2 = [] andalso set_diff S2 S1 = []
-
-(*---------------------------------------------------------------------------*
- * Opaque type set operations                                                *
- *---------------------------------------------------------------------------*)
-
-fun op_mem eq_func i = List.exists (eq_func i)
-
-fun op_insert eq_func =
-   let
-      val mem = op_mem eq_func
-   in
-      fn i => fn L => if (mem i L) then L else i :: L
-   end
-
-fun op_mk_set eqf =
-   let
-      val insert = op_insert eqf
-      fun mkset [] = []
-        | mkset (a :: rst) = insert a (mkset rst)
-   in
-      mkset
-   end
-
-fun op_union eq_func =
-   let
-      val mem = op_mem eq_func
-      val insert = op_insert eq_func
-      fun un [] [] = []
-        | un a [] = a
-        | un [] a = a
-        | un (a :: b) c = un b (insert a c)
-   in
-      un
-   end
-
-(* Union of a family of sets *)
-
-fun op_U eq_func set_o_sets = itlist (op_union eq_func) set_o_sets []
-
-fun op_intersect eq_func a b =
-   let
-      val mem = op_mem eq_func
-      val in_b = C mem b
-      val mk_set = op_mk_set eq_func
-   in
-      mk_set (filter in_b a)
-   end
-
-(* All the elements in the first set that are not also in the second set. *)
-
-fun op_set_diff eq_func S1 S2 =
-   let
-      val memb = op_mem eq_func
-   in
-      filter (fn x => not (memb x S2)) S1
-   end
-
 (*---------------------------------------------------------------------------*
  * Strings.                                                                  *
  *---------------------------------------------------------------------------*)
-
-val int_to_string = Int.toString
 
 val string_to_int =
    partial (ERR "string_to_int" "not convertable") Int.fromString
@@ -686,21 +304,6 @@ val string_to_int =
 val saying = ref true
 
 fun say s = if !saying then !Feedback.MESG_outstream s else ()
-
-(*---------------------------------------------------------------------------
-   quote puts double quotes around a string. mlquote does this as well,
-   but also quotes all of the characters in the string so that the
-   resulting string could be printed out in a way that would make it a
-   valid ML lexeme  (e.g., newlines turn into \n)
- ---------------------------------------------------------------------------*)
-
-fun mlquote s = String.concat ["\"", String.toString s, "\""]
-
-fun quote s = String.concat ["\"", s, "\""]
-
-val is_substring = String.isSubstring
-
-fun prime s = s ^ "'"
 
 fun unprime s =
    let
@@ -711,50 +314,29 @@ fun unprime s =
       else raise ERR "unprime" "string doesn't end with a prime"
    end
 
-val commafy = separate ", "
-
-fun words2 sep string =
-   snd (itlist (fn ch => fn (chs, tokl) =>
-                   if ch = sep
-                      then if null chs
-                              then ([], tokl)
-                           else ([], Portable.implode chs :: tokl)
-                   else (ch :: chs, tokl))
-               (sep :: Portable.explode string) ([], []))
-
 fun unprefix pfx s =
    if String.isPrefix pfx s
       then String.extract (s, size pfx, NONE)
    else raise ERR "unprefix" "1st argument is not a prefix of 2nd argument"
 
-val str_all = CharVector.all
+fun ppstring pf x = HOLPP.pp_to_string (!Globals.linewidth) pf x
 
-(* like HOLPP.pp_to_string but uses the Globals.linewidth reference to
-   determine linewidth *)
-fun ppstring pp x = HOLPP.pp_to_string (!Globals.linewidth) pp x
-
-(*---------------------------------------------------------------------------*
- * A hash function used for various tasks in the system. It works fairly     *
- * well for our applications, but is not industrial strength. The size       *
- * argument should be a prime. The function then takes a string and          *
- * a pair (i,A) and returns a number < size. "i" is the index in the         *
- * string to start hashing from, and A is an accumulator.  In simple         *
- * cases i=0 and A=0.                                                        *
- *---------------------------------------------------------------------------*)
-
-local
-   open Char String
-in
-   fun hash size =
-      fn s =>
-         let
-            fun hsh (i, A) =
-               hsh (i + 1, (A * 4 + ord (sub (s, i))) mod size)
-               handle Subscript => A
-         in
-            hsh
-         end
-end
+fun delete_trailing_wspace s =
+  let
+    val toks = String.fields (equal #"\n") s
+    fun do1 i s =
+      if i < 0 then ""
+      else if Char.isSpace (String.sub(s,i)) then do1 (i - 1) s
+      else String.extract(s,0,SOME(i + 1))
+    fun remove_rptd_nls i cnt s =
+      if i < 0 then if cnt > 0 then "\n" else ""
+      else if String.sub(s,i) = #"\n" then
+        remove_rptd_nls (i - 1) (cnt + 1) s
+      else String.extract(s,0,SOME(i + 1 + (if cnt > 0 then 1 else 0)))
+    val s1 = String.concatWith "\n" (map (fn s => do1 (size s - 1) s) toks)
+  in
+    remove_rptd_nls (size s1 - 1) 0 s1
+  end
 
 (*---------------------------------------------------------------------------*
  * Timing                                                                    *
@@ -763,31 +345,25 @@ end
 local
    val second = Time.fromReal 1.0
    val minute = Time.fromReal 60.0
-   val hour = Time.fromReal (60.0 * 60.0)
-   fun divmod (x, y) = (x div y, x mod y)
-   fun toStr v u = StringCvt.padLeft #"0" 2 (Int.toString v) ^ u
+   val year0 = Date.year (Date.fromTimeUniv Time.zeroTime)
+   fun to_str i u = if i = 0 then "" else Int.toString i ^ u
 in
-   fun timeToString t =
+   fun time_to_string t =
       if Time.< (t, second)
          then Time.fmt 5 t ^ "s"
       else if Time.< (t, minute)
-         then Time.toString t ^ "s"
+         then Time.fmt 1 t ^ "s"
       else let
-              val (m, s) = divmod (Time.toSeconds t, 60)
+              val d = Date.fromTimeUniv t
+              val years = Date.year d - year0
+              val days = Date.yearDay d
+              val hours = Date.hour d
+              val minutes = Date.minute d
            in
-              if Time.< (t, hour)
-                 then Int.toString m ^ "m" ^ toStr s "s"
-              else let
-                     val (h, m) = divmod (m, 60)
-                     val (d, h) = divmod (h, 24)
-                   in
-                      (if d = 0
-                          then ""
-                       else if d = 1
-                          then "1 day "
-                       else Int.toString d ^ " days ") ^
-                      Int.toString h ^ "h" ^ toStr m "m" ^ toStr s "s"
-                   end
+              if years + days + hours = 0 andalso minutes < 10 then
+                 to_str minutes "m" ^ Date.fmt "%Ss" d
+              else to_str years "y" ^ to_str days "d" ^ to_str hours "h" ^
+                   Date.fmt "%Mm%Ss" d
            end
 end
 
@@ -798,9 +374,9 @@ fun end_time timer =
       val {sys, usr} = Timer.checkCPUTimer timer
       val gc = Timer.checkGCTime timer
    in
-      say ("runtime: " ^ timeToString usr ^ ",\
-       \    gctime: " ^ timeToString gc ^ ", \
-       \    systime: " ^ timeToString sys ^ ".\n")
+      say ("runtime: " ^ time_to_string usr ^ ",\
+       \    gctime: " ^ time_to_string gc ^ ", \
+       \    systime: " ^ time_to_string sys ^ ".\n")
    end
 
 fun time f x =
@@ -824,108 +400,11 @@ fun real_time f x =
       end_real_time timer; y
    end
 
-(*---------------------------------------------------------------------------*
- * Invoking a function with a flag temporarily assigned to the given value.  *
- *---------------------------------------------------------------------------*)
-
-fun with_flag (flag, b) f x =
-   let
-      val fval = !flag
-      val () = flag := b
-      val res = f x handle e => (flag := fval; raise e)
-   in
-      flag := fval; res
-   end
-
-(*---------------------------------------------------------------------------*
- * An abstract type of imperative streams.                                   *
- *---------------------------------------------------------------------------*)
-
-abstype ('a, 'b) istream = STRM of {mutator: 'a -> 'a,
-                                    project: 'a -> 'b,
-                                    state: 'a ref,
-                                    init: 'a}
-with
-   fun mk_istream f i g =
-      STRM {mutator = f, project = g, state = ref i, init = i}
-   fun next (strm as STRM{mutator, state, ...}) =
-      (state := mutator (!state); strm)
-   fun state (STRM {project, state, ...}) = project (!state)
-   fun reset (strm as STRM {state, init, ...}) = (state := init; strm)
-end
-
-(*---------------------------------------------------------------------------
-    A type that can be used for sharing, and some functions for lifting
-    to various type operators (just lists and pairs currently).
- ---------------------------------------------------------------------------*)
-
-datatype 'a delta = SAME | DIFF of 'a
-
-fun delta_apply f x = case f x of SAME => x | DIFF y => y
-
-fun delta_map f =
-   let
-      fun map [] = SAME
-        | map (h :: t) =
-            case (f h, map t) of
-               (SAME, SAME) => SAME
-             | (SAME, DIFF t') => DIFF (h  :: t')
-             | (DIFF h', SAME) => DIFF (h' :: t)
-             | (DIFF h', DIFF t') => DIFF (h' :: t')
-   in
-      map
-   end
-
-fun delta_pair f g (x, y) =
-  case (f x, g y) of
-     (SAME, SAME) => SAME
-   | (SAME, DIFF y') => DIFF (x, y')
-   | (DIFF x', SAME) => DIFF (x', y)
-   | (DIFF x', DIFF y') => DIFF (x', y')
-
-(*---------------------------------------------------------------------------
-    A function that strips leading (nested) comments and whitespace
-    from a string.
- ---------------------------------------------------------------------------*)
-
-fun deinitcomment0 ss n =
-   case Substring.getc ss of
-      NONE => ss
-    | SOME (c, ss') =>
-        if Char.isSpace c
-           then deinitcomment0 ss' n
-        else if c = #"("
-           then case Substring.getc ss' of
-                   NONE => ss
-                 | SOME (c, ss'') =>
-                      if c = #"*"
-                         then deinitcomment0 ss'' (n + 1)
-                      else if n = 0
-                         then ss
-                      else deinitcomment0 ss'' n
-        else if n > 0 andalso c = #"*"
-           then case Substring.getc ss' of
-                   NONE => ss
-                 | SOME (c, ss'') =>
-                      if c = #")"
-                         then deinitcomment0 ss'' (n - 1)
-                      else deinitcomment0 ss'' n
-        else if n = 0
-           then ss
-        else deinitcomment0 ss' n
-
-fun deinitcommentss ss = deinitcomment0 ss 0
-fun deinitcomment s = Substring.string (deinitcomment0 (Substring.full s) 0)
-
-(*---------------------------------------------------------------------------*)
-(* Yet another variant of the sum type, used for the failure monad           *)
-(*---------------------------------------------------------------------------*)
-
-datatype ('a, 'b) verdict = PASS of 'a | FAIL of 'b
-
-fun verdict f c x = PASS (f x) handle e => FAIL (c x, e)
-
-fun ?>(PASS x, f) = f x
-  | ?>(FAIL y, f) = FAIL y
+(* set helpers/abbreviations *)
+type 'a set = 'a HOLset.set
+fun op Un p = HOLset.union p
+fun op Isct p = HOLset.intersection p
+fun op -- p = HOLset.difference p
+fun op IN (e,s) = HOLset.member(s,e)
 
 end (* Lib *)

@@ -221,7 +221,7 @@ STRIP_TAC THEN Induct THEN SRW_TAC [][])
 val noc_if_nvars_nwalkstar = Q.prove(
 `nwfs s ==> !t. v IN nvars (nwalk* s t) ==> noc s t v`,
 DISCH_TAC THEN HO_MATCH_MP_TAC nwalkstar_ind THEN SRW_TAC [][] THEN
-Q.PAT_ASSUM `nwfs s` ASSUME_TAC THEN
+Q.PAT_X_ASSUM `nwfs s` ASSUME_TAC THEN
 Cases_on `t` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
 Cases_on `nvwalk s l n` THEN FULL_SIMP_TAC (srw_ss()) [] THENL [
   (nvwalk_modulo_pi |> Q.SPECL_THEN [`s`,`l`,`n`] MP_TAC) THEN
@@ -244,10 +244,10 @@ val NOT_FDOM_nwalkstar = Q.store_thm(
 `nwfs s ==> !t. v NOTIN FDOM s ==> v IN nvars t ==> v IN nvars (nwalk* s t)`,
 DISCH_TAC THEN HO_MATCH_MP_TAC nwalkstar_ind THEN SRW_TAC [][] THEN
 Cases_on `t` THEN Cases_on `nvwalk s l n` THEN
-Q.PAT_ASSUM `nwfs s` ASSUME_TAC THEN
+Q.PAT_X_ASSUM `nwfs s` ASSUME_TAC THEN
 FULL_SIMP_TAC (srw_ss()) [] THEN
 SRW_TAC [][] THEN
-Q.PAT_ASSUM `n NOTIN FDOM s` ASSUME_TAC THEN
+Q.PAT_X_ASSUM `n NOTIN FDOM s` ASSUME_TAC THEN
 FULL_SIMP_TAC (srw_ss()) [Once nvwalk_def,FLOOKUP_DEF] THEN
 SRW_TAC [][])
 
@@ -262,7 +262,7 @@ val nvars_nwalkstar_ignores_pi = Q.store_thm(
 STRIP_TAC THEN HO_MATCH_MP_TAC nwalkstar_ind THEN
 SRW_TAC [][] THEN
 REVERSE (Cases_on `t`) THEN
-Q.PAT_ASSUM `nwfs s` ASSUME_TAC THEN
+Q.PAT_X_ASSUM `nwfs s` ASSUME_TAC THEN
 FULL_SIMP_TAC (psrw_ss()) [] THEN1 METIS_TAC [] THEN
 (nvwalk_modulo_pi |> Q.SPECL_THEN [`s`,`l`,`n`] MP_TAC) THEN
 (nvwalk_modulo_pi |> Q.SPECL_THEN [`s`,`pi++l`,`n`] MP_TAC) THEN
@@ -281,7 +281,7 @@ Induct_on `t` THEN SRW_TAC [][] THEN1 (
   (nvwalk_modulo_pi |> Q.SPECL_THEN [`s`,`l`,`n`] MP_TAC) THEN
   STRIP_TAC THEN
   Cases_on `nvwalk s [] n` THEN
-  Q.PAT_ASSUM `nwfs s` ASSUME_TAC THEN FULL_SIMP_TAC (srw_ss()) [] THEN1 (
+  Q.PAT_X_ASSUM `nwfs s` ASSUME_TAC THEN FULL_SIMP_TAC (srw_ss()) [] THEN1 (
     IMP_RES_TAC nvwalk_to_var THEN
     IMP_RES_TAC NOT_FDOM_nvwalk THEN
     FULL_SIMP_TAC (srw_ss()) []) THEN
@@ -315,7 +315,7 @@ val nvwalk_EQ_var_nvR = Q.prove(
   IMP_RES_TAC TC_CASES2 THEN
   FULL_SIMP_TAC (srw_ss()) [nvR_def] THEN
   Cases_on `FLOOKUP s u` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
-  Q.PAT_ASSUM `nvwalk s p u = UU` MP_TAC THEN
+  Q.PAT_X_ASSUM `nvwalk s p u = UU` MP_TAC THEN
   SRW_TAC [][Once nvwalk_def] THEN
   Cases_on `x` THEN
   POP_ASSUM MP_TAC THEN
@@ -346,7 +346,7 @@ val nvwalk_EQ_tie_nvR = Q.prove(
 HO_MATCH_MP_TAC TC_STRONG_INDUCT_RIGHT1 THEN SRW_TAC [][] THEN
 FULL_SIMP_TAC (srw_ss()) [nvR_def] THENL [
   Cases_on `FLOOKUP s u` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
-  Q.PAT_ASSUM `nvwalk s p u = XXX` MP_TAC THEN
+  Q.PAT_X_ASSUM `nvwalk s p u = XXX` MP_TAC THEN
   SRW_TAC [][Once nvwalk_def] THEN
   Cases_on `x` THEN FULL_SIMP_TAC (srw_ss()) [] THENL [
     POP_ASSUM MP_TAC THEN
@@ -354,7 +354,7 @@ FULL_SIMP_TAC (srw_ss()) [nvR_def] THENL [
     Q.EXISTS_TAC `v` THEN SRW_TAC [][]
   ],
   Cases_on `FLOOKUP s u'` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
-  Q.PAT_ASSUM `nvwalk s p u' = XXX` MP_TAC THEN
+  Q.PAT_X_ASSUM `nvwalk s p u' = XXX` MP_TAC THEN
   SRW_TAC [][Once nvwalk_def] THEN
   POP_ASSUM MP_TAC THEN
   Cases_on `x` THEN SRW_TAC [][nvwalk_case_thms]
@@ -369,7 +369,7 @@ val nvwalk_EQ_pair_nvR = prove(
   HO_MATCH_MP_TAC TC_STRONG_INDUCT_RIGHT1 THEN SRW_TAC [][] THEN
   FULL_SIMP_TAC (srw_ss()) [nvR_def] THENL [
     Cases_on `FLOOKUP s u` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
-    Q.PAT_ASSUM `nvwalk s p u = XXX` MP_TAC THEN
+    Q.PAT_X_ASSUM `nvwalk s p u = XXX` MP_TAC THEN
     SRW_TAC [][Once nvwalk_def] THEN
     Cases_on `x` THEN FULL_SIMP_TAC (srw_ss()) [] THENL [
       POP_ASSUM MP_TAC THEN
@@ -378,7 +378,7 @@ val nvwalk_EQ_pair_nvR = prove(
       Q.EXISTS_TAC `v` THEN SRW_TAC [][]
     ],
     Cases_on `FLOOKUP s u'` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
-    Q.PAT_ASSUM `nvwalk s p u' = XXX` MP_TAC THEN
+    Q.PAT_X_ASSUM `nvwalk s p u' = XXX` MP_TAC THEN
     SRW_TAC [][Once nvwalk_def] THEN
     POP_ASSUM MP_TAC THEN
     Cases_on `x` THEN SRW_TAC [][nvwalk_case_thms]
@@ -392,7 +392,7 @@ val TC_nvR_nvars_nwalkstar = Q.store_thm(
    !t v u. (nvR s)^+ v u /\ v NOTIN FDOM s /\ u IN nvars t ==>
            v IN nvars (nwalkstar s t)`,
   STRIP_TAC THEN HO_MATCH_MP_TAC nwalkstar_ind THEN SRW_TAC [][] THEN
-  REVERSE (Cases_on `t`) THEN Q.PAT_ASSUM `nwfs s` ASSUME_TAC THEN
+  REVERSE (Cases_on `t`) THEN Q.PAT_X_ASSUM `nwfs s` ASSUME_TAC THEN
   FULL_SIMP_TAC (srw_ss()) [] THEN SRW_TAC [][]
   THEN1 METIS_TAC [] THEN1 METIS_TAC [] THEN1 METIS_TAC [] THEN
   Cases_on `nvwalk s l n` THEN SRW_TAC [][] THENL [
@@ -439,7 +439,7 @@ SRW_TAC [][] THEN
 Q.ID_SPEC_TAC `t` THEN
 HO_MATCH_MP_TAC nwalkstar_ind THEN
 SRW_TAC [][] THEN
-Q.PAT_ASSUM `nwfs s` ASSUME_TAC THEN
+Q.PAT_X_ASSUM `nwfs s` ASSUME_TAC THEN
 Cases_on `nwalk s t` THEN
 FULL_SIMP_TAC (srw_ss()) [] THEN
 Q.MATCH_ABBREV_TAC `X = Y (nwalk* s t)` THEN
@@ -467,7 +467,7 @@ val NOT_FDOM_nwalkstar = Q.store_thm(
 DISCH_TAC THEN HO_MATCH_MP_TAC nwalkstar_ind THEN
 SRW_TAC [][] THEN Cases_on `t` THEN
 FULL_SIMP_TAC (srw_ss()) [] THEN
-Q.PAT_ASSUM `nwfs s` ASSUME_TAC THEN
+Q.PAT_X_ASSUM `nwfs s` ASSUME_TAC THEN
 FULL_SIMP_TAC (srw_ss()) [Once nvwalk_def, nvars_def, FLOOKUP_DEF])
 
 val nwalkstar_nwalk = Q.store_thm(

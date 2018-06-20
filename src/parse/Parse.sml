@@ -2,6 +2,7 @@ structure Parse :> Parse =
 struct
 
 open Feedback HolKernel HOLgrammars GrammarSpecials term_grammar type_grammar
+open term_grammar_dtype
 
 type pp_element = term_grammar.pp_element
 type PhraseBlockStyle = term_grammar.PhraseBlockStyle
@@ -9,6 +10,7 @@ type ParenStyle = term_grammar.ParenStyle
 type block_info = term_grammar.block_info
 type associativity = HOLgrammars.associativity
 type 'a frag = 'a Portable.frag
+type 'a pprinter = 'a -> HOLPP.pretty
 
 val ERROR = mk_HOL_ERR "Parse";
 val ERRORloc = mk_HOL_ERRloc "Parse";
@@ -45,21 +47,8 @@ fun lose_constrec_ty {Name,Thy,Ty} = {Name = Name, Thy = Thy}
     Fixity stuff
  ---------------------------------------------------------------------------*)
 
-datatype fixity
-    = RF of rule_fixity
-    | Binder
-
-fun Infix x = x;  (* namespace hackery *)
-fun Suffix x = x;
-fun Closefix x = x;
-fun Prefix x = x;
-
-val Infix        = fn (a,i) => RF (term_grammar.Infix (a,i))
 val Infixl       = fn i => Infix(LEFT, i)
 val Infixr       = fn i => Infix(RIGHT, i)
-val Suffix       = fn n => RF (term_grammar.Suffix n)
-val Closefix     = RF term_grammar.Closefix
-val Prefix       = fn n => RF (term_grammar.Prefix n)
 
 
 (*---------------------------------------------------------------------------
@@ -102,6 +91,13 @@ val current_backend : PPBackEnd.t ref =
 fun rawterm_pp f x =
     Lib.with_flag(current_backend, PPBackEnd.raw_terminal) f x
 
+fun mlower m =
+  case smpp.lower m term_pp_utils.dflt_pinfo of
+      NONE => raise Fail "p/printer returned NONE!"
+    | SOME(p, _, _) => p
+
+fun ulower fm x = mlower (fm x)
+
 (*---------------------------------------------------------------------------
          local grammars
  ---------------------------------------------------------------------------*)
@@ -111,12 +107,7 @@ val the_ltm_grm = ref term_grammar.stdhol
 fun current_lgrms() = (!the_lty_grm, !the_ltm_grm);
 
 
-fun fixity s =
-  case term_grammar.get_precedence (term_grammar()) s
-   of SOME rf => SOME (RF rf)
-    | NONE => if Lib.mem s (term_grammar.binders (term_grammar()))
-                 then SOME Binder
-                 else NONE
+fun fixity s = term_grammar.get_precedence (term_grammar()) s
 
 (*---------------------------------------------------------------------------
        Mysterious stuff
@@ -149,14 +140,16 @@ fun pp_grammar_term pps t = (!grammar_term_printer) (!current_backend) pps t
 
 val term_printer = ref pp_grammar_term
 
-fun get_term_printer () = (!term_printer)
+fun get_term_printer () = ulower (!term_printer)
 
-fun set_term_printer new_pp_term = let
-  val old_pp_term = !term_printer
-in
-  term_printer := new_pp_term;
-  old_pp_term
-end
+fun set_term_printer new_pp_term =
+  let
+    open smpp
+    val old_pp_term = !term_printer
+  in
+    term_printer := lift new_pp_term;
+    ulower old_pp_term
+  end
 
 
 
@@ -171,52 +164,57 @@ fun update_type_fns () =
   end
   else ()
 
-fun pp_type pps ty = let in
-   update_type_fns();
-   Portable.add_string pps ":";
-   !type_printer (!current_backend) pps ty
- end
+val dflt_pinfo = term_pp_utils.dflt_pinfo
 
+fun pp_type ty =
+  let
+    open smpp
+    val _ = update_type_fns()
+    val mptr = smpp.add_string ":" >> !type_printer (!current_backend) ty
+  in
+    lower mptr dflt_pinfo |> valOf |> #1
+  end
 
 val type_to_string = rawterm_pp (ppstring pp_type)
 val print_type = print o type_to_string
 
-fun type_pp_with_delimiters ppfn pp ty =
-  let open Portable Globals
-  in add_string pp (!type_pp_prefix);
-     ppfn pp ty;
-     add_string pp (!type_pp_suffix)
+fun type_pp_with_delimiters ppfn ty =
+  let
+    open Portable Globals smpp
+  in
+    mlower (
+      add_string (!type_pp_prefix) >>
+      block CONSISTENT (UTF8.size (!type_pp_prefix)) (lift ppfn ty) >>
+      add_string (!type_pp_suffix)
+    )
   end
 
-
-fun pp_with_bquotes ppfn pp x =
-  let open Portable in add_string pp "`"; ppfn pp x; add_string pp "`" end
-
 fun print_from_grammars (tyG, tmG) =
-  (type_pp.pp_type tyG (!current_backend),
-   term_pp.pp_term tmG tyG (!current_backend))
+  (ulower (type_pp.pp_type tyG (!current_backend)),
+   ulower (term_pp.pp_term tmG tyG (!current_backend)))
 
-local open TextIO in
-val print_pp = {consumer = (fn s => output(stdOut, s)),
-                linewidth = !Globals.linewidth,
-                flush = (fn () => flushOut stdOut)}
-end
+fun stdprint x =
+  HOLPP.prettyPrint (TextIO.print, !Globals.linewidth) x
 
-fun print_with_newline add_t = let
-  open PP
-  fun p pps = (begin_block pps CONSISTENT 0 ;
-               add_t pps ;
-               add_newline pps ;
-               end_block pps)
-in with_pp print_pp p end
-
-fun print_term_by_grammar Gs = let
-  val (_, termprinter) = print_from_grammars Gs
-in
-  print_with_newline o (Lib.C termprinter)
+fun print_term_by_grammar Gs t =
+  let
+    val (_, termprinter) = print_from_grammars Gs
+  in
+    stdprint (termprinter t) ;
+    print "\n"
 end
 
 val min_grammars = (type_grammar.min_grammar, term_grammar.min_grammar)
+
+type grammarDB_info = type_grammar.grammar * term_grammar.grammar
+val grammarDB_value =
+    ref (Binarymap.mkDict String.compare :(string,grammarDB_info)Binarymap.dict)
+fun grammarDB s = Binarymap.peek (!grammarDB_value, s)
+fun grammarDB_fold f acc = Binarymap.foldl f acc (!grammarDB_value)
+fun grammarDB_insert (s, i) =
+  grammarDB_value := Binarymap.insert(!grammarDB_value, s, i)
+
+val _ = grammarDB_insert("min", min_grammars)
 
 fun minprint t = let
   fun default t = let
@@ -224,10 +222,10 @@ fun minprint t = let
         with_flag (current_backend, PPBackEnd.raw_terminal)
                   print_from_grammars
                   min_grammars
-    fun printer pps =
-        baseprinter pps
-                    |> trace ("types", 1) |> trace ("Greek tyvars", 0)
-                    |> with_flag (max_print_depth, ~1)
+    val printer =
+        baseprinter
+          |> trace ("types", 1) |> trace ("Greek tyvars", 0)
+          |> with_flag (max_print_depth, ~1)
     val t_str =
         String.toString (PP.pp_to_string 1000000 printer t)
   in
@@ -310,52 +308,19 @@ in
   !the_absyn_parser q
 end
 
-(* ----------------------------------------------------------------------
-      Interlude: ppstream modifications to allow pretty-printers to
-                 respect dynamically changing line-widths
-   ---------------------------------------------------------------------- *)
-
-fun respect_width_ref iref pprinter pps x = let
-  val slist = ref ([] : string list)
-  fun output_slist () =
-    (app (PP.add_string pps) (List.rev (!slist));
-     slist := [])
-  fun flush () = output_slist()
-  fun consume_string s = let
-    open Substring
-    val (pfx, sfx) = splitl (fn c => c <> #"\n") (full s)
-  in
-    if size sfx = 0 then slist := s :: !slist
-    else
-      (output_slist();
-       PP.add_newline pps;
-       if size sfx > 1 then consume_string (string (triml 1 sfx))
-       else ())
-  end
-  val consumer = {consumer = consume_string, linewidth = !iref, flush = flush}
-  val newpps = PP.mk_ppstream consumer
-in
-  PP.begin_block pps PP.INCONSISTENT 0;
-  PP.begin_block newpps PP.INCONSISTENT 0;
-  pprinter newpps x;
-  PP.end_block newpps;
-  PP.flush_ppstream newpps;
-  PP.end_block pps
-end
-
 (* Pretty-print the grammar rules *)
 fun print_term_grammar() = let
   fun tmprint g = snd (print_from_grammars (!the_type_grammar,g))
-  fun ppaction pps () = let
-    open PP
+  fun ppg g = let
+    open smpp
   in
-    begin_block pps CONSISTENT 0;
-    prettyprint_grammar_rules tmprint pps (!the_term_grammar);
-    add_newline pps;
-    end_block pps
+    block PP.CONSISTENT 0 (
+      prettyprint_grammar_rules (lift o tmprint) (ruleset g) >>
+      add_newline
+    )
   end
 in
-  print (HOLPP.pp_to_string (!Globals.linewidth) ppaction ())
+  stdprint (ulower ppg (!the_term_grammar))
 end
 
 
@@ -366,25 +331,23 @@ fun overload_info_for s = let
                         (Overload.remove_overloaded_form s)
                         (!the_term_grammar)
   val (_,ppfn0) = print_from_grammars (!the_type_grammar,g)
-  fun ppfn t pps = Feedback.trace ("types", 1) (ppfn0 pps) t
+  val ppfn = ppfn0 |> Feedback.trace ("types", 1)
   val ppaction = let
     open smpp
   in
     block PP.CONSISTENT 0
      (add_string (s ^ " parses to:") >>
       add_break(1,2) >>
-      block PP.INCONSISTENT 0
-        (pr_list (fn t => liftpp (ppfn t)) add_newline ls1) >>
+      block PP.INCONSISTENT 0 (pr_list (lift ppfn) add_newline ls1) >>
       add_newline >>
       add_string (s ^ " might be printed from:") >>
       add_break(1,2) >>
-      block PP.INCONSISTENT 0
-        (pr_list (fn t => liftpp (ppfn t)) add_newline ls2) >>
+      block PP.INCONSISTENT 0 (pr_list (lift ppfn) add_newline ls2) >>
       add_newline)
   end
   fun act_topp pps a = ignore (a ((), pps))
 in
-  print (HOLPP.pp_to_string (!Globals.linewidth) act_topp ppaction)
+  stdprint (mlower ppaction)
 end
 
 fun pp_term_without_overloads_on ls t = let
@@ -411,59 +374,66 @@ end
     Top-level pretty-printing entry-points
    ---------------------------------------------------------------------- *)
 
-fun pp_style_string ppstrm (st, s) =
+fun pp_style_string (st, s) =
  let open Portable PPBackEnd
-    val {add_string,begin_style,end_style,...} =
-        PPBackEnd.with_ppstream (!current_backend) ppstrm
+    val {add_string,ustyle,...} = (!current_backend)
+    val m = ustyle st (add_string s)
  in
-    begin_style st;
-    add_string s;
-    end_style ()
+   mlower m
  end
 
 fun add_style_to_string st s = ppstring pp_style_string (st, s);
-fun print_with_style st =  print o add_style_to_string st
+fun print_with_style st s = stdprint (pp_style_string (st,s))
 
-
-fun pp_term pps t = (update_term_fns(); !term_printer pps t)
+fun pp_term t = (update_term_fns(); mlower (!term_printer t))
 
 val term_to_string = rawterm_pp (ppstring pp_term)
-val print_term = print o term_to_string
+fun print_term t = stdprint (rawterm_pp pp_term t)
 
-fun term_pp_with_delimiters ppfn pp tm =
-  let open Portable Globals
-  in add_string pp (!term_pp_prefix);
-     ppfn pp tm;
-     add_string pp (!term_pp_suffix)
+fun term_pp_with_delimiters ppfn tm =
+  let
+    open Portable Globals smpp
+  in
+    mlower (
+      add_string (!term_pp_prefix) >>
+      block CONSISTENT (UTF8.size (!term_pp_prefix)) (lift ppfn tm) >>
+      add_string (!term_pp_suffix)
+    )
   end
 
-fun pp_thm ppstrm th =
- let open Portable
-    fun repl ch alist =
-         String.implode (itlist (fn _ => fn chs => (ch::chs)) alist [])
-    val {add_string,add_break,begin_block,end_block,...} = with_ppstream ppstrm
-    val pp_term = pp_term ppstrm
+fun pp_thm th =
+  let
+    open Portable smpp
+    val prt = lift pp_term
+    fun repl ch alist = CharVector.tabulate (length alist, fn _ => ch)
     fun pp_terms b L =
-      (begin_block INCONSISTENT 1; add_string "[";
-       if b then pr_list pp_term (fn () => add_string ",")
-                                 (fn () => add_break(1,0)) L
-       else add_string (repl #"." L); add_string "]";
-       end_block())
- in
-    begin_block INCONSISTENT 0;
-    if !Globals.max_print_depth = 0 then add_string " ... "
-    else let open Globals
-             val (tg,asl,st,sa) = (tag th, hyp th, !show_tags, !show_assums)
-         in if not st andalso not sa andalso null asl then ()
-            else (if st then Tag.pp_tag ppstrm tg else ();
-                  add_break(1,0);
-                  pp_terms sa asl; add_break(1,0)
-                 );
-            add_string "|- ";
-            pp_term (concl th)
-         end;
-    end_block()
- end;
+      block INCONSISTENT 1 (
+        add_string "[" >>
+        (if b then pr_list prt (add_string "," >> add_break(1,0)) L
+         else add_string (repl #"." L)) >>
+        add_string "]"
+      )
+    val m =
+        block INCONSISTENT 0 (
+          if !Globals.max_print_depth = 0 then add_string " ... "
+          else
+            let
+              open Globals
+              val (tg,asl,st,sa) = (tag th, hyp th, !show_tags, !show_assums)
+            in
+              (if not st andalso not sa andalso null asl then nothing
+               else
+                 (if st then lift Tag.pp_tag tg else nothing) >>
+                 add_break(1,0) >> pp_terms sa asl >> add_break(1,0)) >>
+              add_string (!Globals.thm_pp_prefix) >>
+              block CONSISTENT (UTF8.size (!Globals.thm_pp_prefix))
+                    (prt (concl th)) >>
+              add_string (!Globals.thm_pp_suffix)
+            end
+        )
+  in
+    mlower m
+  end;
 
 val thm_to_string = rawterm_pp (ppstring pp_thm)
 val print_thm = print o thm_to_string
@@ -474,7 +444,10 @@ val print_thm = print o thm_to_string
 
 fun absyn_to_preterm a = TermParse.absyn_to_preterm (term_grammar()) a
 
-fun Preterm q = q |> Absyn |> absyn_to_preterm
+fun Preterm q =
+  case (q |> Absyn |> absyn_to_preterm) Pretype.Env.empty of
+      errormonad.Error e => raise Preterm.mkExn e
+    | errormonad.Some (_, pt) => pt
 
 val absyn_to_term =
     TermParse.absyn_to_term (SOME (term_to_string, type_to_string))
@@ -485,8 +458,6 @@ val absyn_to_term =
  ---------------------------------------------------------------------------*)
 
 fun Term q = absyn_to_term (term_grammar()) (Absyn q)
-
-fun -- q x = Term q;
 
 fun typedTerm qtm ty =
    let fun trail s = [QUOTE (s^"):"), ANTIQUOTE(ty_antiq ty), QUOTE""]
@@ -508,17 +479,41 @@ end
     parsing in context
    ---------------------------------------------------------------------- *)
 
+fun smashErrm m =
+  case m Pretype.Env.empty of
+      errormonad.Error e => raise Preterm.mkExn e
+    | errormonad.Some (_, result) => result
+val stdprinters = SOME(term_to_string,type_to_string)
+
 fun parse_in_context FVs q =
-    TermParse.ctxt_preterm_to_term (SOME(term_to_string,type_to_string))
-                                   FVs
-                                   (Preterm q)
+  let
+    open errormonad
+    val m =
+        (q |> Absyn |> absyn_to_preterm) >-
+        TermParse.ctxt_preterm_to_term stdprinters NONE FVs
+  in
+    smashErrm m
+  end
 
-fun grammar_parse_in_context(tyg,tmg) =
-    TermParse.ctxt_term (SOME(term_to_string,type_to_string)) tmg tyg
+fun grammar_parse_in_context(tyg,tmg) ctxt q =
+    TermParse.ctxt_term stdprinters tmg tyg NONE ctxt q |> smashErrm
 
-val parse_preterm_in_context =
-    TermParse.ctxt_preterm_to_term (SOME(term_to_string,type_to_string))
+fun grammar_typed_parses_in_context (tyg,tmg) ty ctxt q =
+  TermParse.ctxt_termS tmg tyg (SOME ty) ctxt q
 
+fun grammar_typed_parse_in_context gs ty ctxt q =
+  case seq.cases (grammar_typed_parses_in_context gs ty ctxt q) of
+      SOME(tm, _) => tm
+    | NONE => raise ERROR "grammar_typed_parse_in_context" "No consistent parse"
+
+fun typed_parse_in_context ty ctxt q =
+  let
+    fun mkA q = Absyn.TYPED(locn.Loc_None, Absyn q, Pretype.fromType ty)
+  in
+    case seq.cases (TermParse.prim_ctxt_termS mkA (term_grammar()) ctxt q) of
+        SOME (tm, _) => tm
+      | NONE => raise ERROR "typed_parse_in_context" "No consistent parse"
+  end
 
 (*---------------------------------------------------------------------------
      Making temporary and persistent changes to the grammars.
@@ -526,23 +521,16 @@ val parse_preterm_in_context =
 
 val grm_updates = ref [] : (string * string * term option) list ref;
 
-fun pending_updates() = !grm_updates
-
 fun update_grms fname (x,y) = grm_updates := ((x,y,NONE) :: !grm_updates);
 fun full_update_grms (x,y,opt) = grm_updates := ((x,y,opt) :: !grm_updates)
 
-fun temp_remove_termtok r = let open term_grammar in
-  the_term_grammar := remove_form_with_tok (term_grammar()) r;
-  term_grammar_changed := true
- end
-
-fun remove_termtok (r as {term_name, tok}) = let in
-   temp_remove_termtok r;
-   update_grms "remove_termtok" ("temp_remove_termtok",
-                                 String.concat
-                                   ["{term_name = ", quote term_name,
-                                    ", tok = ", quote tok, "}"])
- end
+fun apply_udeltas uds =
+  let
+  in
+    term_grammar_changed := true;
+    the_term_grammar :=
+      List.foldl (uncurry term_grammar.add_delta) (term_grammar()) uds
+  end
 
 fun temp_prefer_form_with_tok r = let open term_grammar in
     the_term_grammar := prefer_form_with_tok r (term_grammar());
@@ -566,180 +554,67 @@ in
   type_grammar_changed := true
 end
 
-fun standard_mapped_spacing {term_name,tok,fixity}  = let
-  open term_grammar  (* to get fixity constructors *)
-  val bstyle = (AroundSamePrec, (Portable.INCONSISTENT, 0))
-  val pstyle = OnlyIfNecessary
-  val ppels =
-      case fixity of
-        Infix _ => [HardSpace 1, RE (TOK tok), BreakSpace(1,0)]
-      | Prefix _ => [RE(TOK tok), HardSpace 1]
-      | Suffix _     => [HardSpace 1, RE(TOK tok)]
-      | Closefix  => [RE(TOK tok)]
-in
-  {term_name = term_name, fixity = fixity, pp_elements = ppels,
-   paren_style = pstyle, block_style = bstyle}
-end
-
-fun standard_spacing name fixity =
-    standard_mapped_spacing {term_name = name, tok = name, fixity = fixity}
-
-val std_binder_precedence = 0;
-
 structure Unicode =
 struct
 
-  fun temp_set_term_grammar tmg = temp_set_grammars(type_grammar(), tmg)
-
-  val master_unicode_switch = ref true
-  fun lift0 f = temp_set_term_grammar (f (term_grammar()))
-  fun lift f x = lift0 (f (!master_unicode_switch) x)
-  fun unicode_version r = lift ProvideUnicode.unicode_version r
-  fun uoverload_on r = lift ProvideUnicode.uoverload_on r
-  fun temp_unicode_version r = lift ProvideUnicode.temp_unicode_version r
-  fun temp_uoverload_on r = lift ProvideUnicode.temp_uoverload_on r
-
-  fun fixity_prec f = let
-    open term_grammar
-  in
-    case f of
-      RF (Infix(_, p)) => SOME p
-    | RF (Suffix p) => SOME p
-    | RF (Prefix p) => SOME p
-    | RF Closefix => NONE
-    | Binder => SOME std_binder_precedence
-  end
-
-  fun uset_fixity0 setter s fxty = let
-    open term_grammar
-    val rule =
-      case fxty of
-        Binder => BRULE {tok = s, term_name = s}
-      | RF rf => GRULE (standard_spacing s rf)
-  in
-    lift setter {u = [s], term_name = s, newrule = rule, oldtok = NONE}
-  end
-
-  val temp_uset_fixity = uset_fixity0 ProvideUnicode.temp_uadd_rule
-  val uset_fixity = uset_fixity0 ProvideUnicode.uadd_rule
-
   structure UChar = UnicodeChars
-  fun fupd_lambda f {type_intro,lambda,endbinding,restr_binders,res_quanop} =
-      {type_intro = type_intro, lambda = f lambda, endbinding = endbinding,
-       restr_binders = restr_binders, res_quanop = res_quanop}
+  fun unicode_version r =
+    let
+      open ProvideUnicode
+      val uds = mk_unicode_version r (term_grammar())
+    in
+      apply_udeltas uds;
+      List.app GrammarDeltas.record_tmdelta uds
+    end
 
-
-  fun bare_lambda() =
-      temp_set_term_grammar (fupdate_specials (fupd_lambda (fn _ => ["\\"]))
-                                              (term_grammar()))
-
-  fun unicode_lambda () =
-      temp_set_term_grammar (fupdate_specials (fupd_lambda (cons UChar.lambda))
-                                              (term_grammar()))
-
-  fun traceset n = if n = 0 then
-                     if !master_unicode_switch then
-                       (master_unicode_switch := false;
-                        set_trace "Greek tyvars" 0;
-                        bare_lambda();
-                        lift0 ProvideUnicode.disable_all)
-                     else ()
-                   else if not (!master_unicode_switch) then
-                     (master_unicode_switch := true;
-                      set_trace "Greek tyvars" 1;
-                      unicode_lambda();
-                      lift0 ProvideUnicode.enable_all)
-                   else ()
-  fun traceget () = if !master_unicode_switch then 1 else 0
-
-  val _ = register_ftrace ("Unicode", (traceget, traceset), 1)
-  val _ = unicode_lambda()
-
-  val _ = traceset 1
-
-  val _ = Theory.register_hook
-              ("Parse.ProvideUnicode",
-               (fn TheoryDelta.TheoryLoaded s =>
-                   Feedback.trace("Parse.unicode_trace_off_complaints",0)
-                                 (lift ProvideUnicode.apply_thydata) s
-                 | _ => ()))
+  fun temp_unicode_version r =
+    ProvideUnicode.mk_unicode_version r (term_grammar()) |> apply_udeltas
 
 end
 
-
-
-
-fun temp_add_type s = let open parse_type in
-   the_type_grammar := new_tyop (!the_type_grammar) s;
-   type_grammar_changed := true;
-   term_grammar_changed := true
- end;
-
-fun add_type s = let in
-   temp_add_type s;
-   update_grms "add_type" ("temp_add_type", Lib.quote s)
- end
-
-fun temp_add_infix_type {Name, ParseName, Assoc, Prec} =
- let open parse_type
- in the_type_grammar
-       := new_binary_tyop (!the_type_grammar)
-              {precedence = Prec, infix_form = ParseName,
-               opname = Name, associativity = Assoc};
+fun core_process_tyds f x k =
+  let
+    open type_grammar
+    val tyds = f x
+  in
+    the_type_grammar :=
+      List.foldl (uncurry apply_delta) (!the_type_grammar) tyds;
     type_grammar_changed := true;
-    term_grammar_changed := true
- end
+    term_grammar_changed := true;
+    k tyds
+  end
 
-fun add_infix_type (x as {Name, ParseName, Assoc, Prec}) = let in
-  temp_add_infix_type x;
-  update_grms "add_infix_type"
-              ("temp_add_infix_type",
-               String.concat
-                 ["{Name = ", quote Name,
-                  ", ParseName = ",
-                  case ParseName of NONE => "NONE"
-                                  | SOME s => "SOME "^quote s,
-                  ", Assoc = ", assocToString Assoc,
-                  ", Prec = ", Int.toString Prec, "}"])
- end
+fun mk_temp_tyd f x = core_process_tyds f x (fn uds => ())
+fun mk_perm_tyd f x =
+  core_process_tyds f x (List.app GrammarDeltas.record_tydelta)
+
+fun add_qtype0 kid = [NEW_TYPE kid]
+
+val temp_add_qtype = mk_temp_tyd add_qtype0
+val add_qtype = mk_perm_tyd add_qtype0
+
+fun temp_add_type s = temp_add_qtype {Thy=current_theory(), Name = s}
+fun add_type s = add_qtype {Thy=current_theory(), Name = s}
+
+fun add_infix_type0 {Name,ParseName,Assoc,Prec} =
+  let
+    val pnm = case ParseName of NONE => Name | SOME s => s
+  in
+    [NEW_INFIX{Prec=Prec,ParseName=pnm,Name=Name,Assoc=Assoc}]
+  end
+
+val temp_add_infix_type = mk_temp_tyd add_infix_type0
+val add_infix_type = mk_perm_tyd add_infix_type0
 
 fun replace_exnfn fnm f x =
   f x handle HOL_ERR {message = m, origin_structure = s, ...} =>
              raise HOL_ERR {message = m, origin_function = fnm,
                             origin_structure = s}
 
-fun temp_thytype_abbrev (knm, ty) = let
-  val params = Listsort.sort Type.compare (type_vars ty)
-  val (num_vars, pset) =
-      List.foldl (fn (ty,(i,pset)) => (i + 1, Binarymap.insert(pset,ty,i)))
-                 (0, Binarymap.mkDict Type.compare) params
-  fun mk_structure pset ty =
-      if is_vartype ty then type_grammar.PARAM (Binarymap.find(pset, ty))
-      else let
-          val {Thy,Tyop,Args} = dest_thy_type ty
-        in
-          type_grammar.TYOP {Thy = Thy, Tyop = Tyop,
-                             Args = map (mk_structure pset) Args}
-        end
-in
-  the_type_grammar := type_grammar.new_abbreviation (!the_type_grammar)
-                                                    (knm, mk_structure pset ty);
-  type_grammar_changed := true;
-  term_grammar_changed := true
-end handle GrammarError s => raise ERR "temp_thytype_abbrev" s
+fun thytype_abbrev0 r = [TYABBREV r]
 
-fun thytype_abbrev(knm, ty) = let
-in
-  replace_exnfn "thytype_abbrev" temp_thytype_abbrev (knm, ty);
-  full_update_grms ("temp_thytype_abbrev",
-                    String.concat ["(", KernelSig.name_toMLString knm, ", ",
-                                   PP.pp_to_string (!Globals.linewidth)
-                                                   (TheoryPP.pp_type "U" "T")
-                                                   ty,
-                                   ")"],
-                    SOME (mk_thy_const{Name = "ARB", Thy = "bool", Ty = ty})
-                   )
-end
+val temp_thytype_abbrev = mk_temp_tyd thytype_abbrev0
+val thytype_abbrev = mk_perm_tyd thytype_abbrev0
 
 fun temp_type_abbrev (s, ty) =
   replace_exnfn "temp_type_abbrev" temp_thytype_abbrev
@@ -749,35 +624,13 @@ fun type_abbrev (s, ty) =
   replace_exnfn "type_abbrev" thytype_abbrev
                 ({Thy = Theory.current_theory(), Name = s}, ty)
 
-fun temp_disable_tyabbrev_printing s = let
-  val tyg = the_type_grammar
-in
-  tyg := type_grammar.disable_abbrev_printing s (!tyg);
-  type_grammar_changed := true;
-  term_grammar_changed := true
-end
+fun disable_tyabbrev_printing0 s = [DISABLE_TYPRINT s]
+val temp_disable_tyabbrev_printing = mk_temp_tyd disable_tyabbrev_printing0
+val disable_tyabbrev_printing = mk_perm_tyd disable_tyabbrev_printing0
 
-fun disable_tyabbrev_printing s = let
-in
-  temp_disable_tyabbrev_printing s;
-  update_grms "disable_tyabbrev_printing"
-              ("temp_disable_tyabbrev_printing", mlquote s)
-end
-
-fun temp_remove_type_abbrev s = let
-  val tyg = the_type_grammar
-in
-  tyg := type_grammar.remove_abbreviation (!tyg) s;
-  type_grammar_changed := true;
-  term_grammar_changed := true
-end
-
-fun remove_type_abbrev s = let
-in
-  temp_remove_type_abbrev s;
-  update_grms "remove_type_abbrev" ("temp_remove_type_abbrev", mlquote s)
-end
-
+fun remove_type_abbrev0 s = [RM_TYABBREV s]
+val temp_remove_type_abbrev = mk_temp_tyd remove_type_abbrev0
+val remove_type_abbrev = mk_perm_tyd remove_type_abbrev0
 
 (* Not persistent? *)
 fun temp_set_associativity (i,a) = let in
@@ -785,46 +638,10 @@ fun temp_set_associativity (i,a) = let in
    term_grammar_changed := true
  end
 
-
-fun temp_add_infix(s, prec, associativity) =
- let open term_grammar Portable
- in
-   the_term_grammar
-    := add_rule (!the_term_grammar)
-          {term_name=s, block_style=(AroundSamePrec, (INCONSISTENT,0)),
-           fixity=Infix(associativity, prec),
-           pp_elements = [HardSpace 1, RE(TOK s), BreakSpace(1,0)],
-           paren_style = OnlyIfNecessary}
-   ;
-   term_grammar_changed := true
-  end handle GrammarError s => raise ERROR "add_infix" ("Grammar Error: "^s)
-
-fun add_infix (s, prec, associativity) = let in
-  temp_add_infix(s,prec,associativity);
-  update_grms "add_infix"
-              ("temp_add_infix", String.concat
-                  ["(", quote s, ", ", Int.toString prec, ", ",
-                        assocToString associativity,")"])
- end;
-
-
-local open term_grammar
-in
-fun fixityToString Binder  = "Binder"
-  | fixityToString (RF rf) = term_grammar.rule_fixityToString rf
-
-fun relToString TM = "TM"
-  | relToString (TOK s) = "TOK "^quote s
-end
-
-fun rellistToString [] = ""
-  | rellistToString [x] = relToString x
-  | rellistToString (x::xs) = relToString x ^ ", " ^ rellistToString xs
-
 fun block_infoToString (Portable.CONSISTENT, n) =
-        "(CONSISTENT, "^Int.toString n^")"
+        "(Portable.CONSISTENT, "^Int.toString n^")"
   | block_infoToString (Portable.INCONSISTENT, n) =
-    "(INCONSISTENT, "^Int.toString n^")"
+    "(Portable.INCONSISTENT, "^Int.toString n^")"
 
 fun ParenStyleToString Always = "Always"
   | ParenStyleToString OnlyIfNecessary = "OnlyIfNecessary"
@@ -836,25 +653,6 @@ fun BlockStyleToString AroundSameName = "AroundSameName"
   | BlockStyleToString AroundSamePrec = "AroundSamePrec"
   | BlockStyleToString AroundEachPhrase = "AroundEachPhrase"
   | BlockStyleToString NoPhrasing = "NoPhrasing"
-
-
-fun ppToString pp =
-  case pp
-   of PPBlock(ppels, bi) =>
-      "PPBlock(["^pplistToString ppels^"], "^ block_infoToString bi^")"
-    | EndInitialBlock bi => "EndInitialBlock "^block_infoToString bi
-    | BeginFinalBlock bi => "BeginFinalBlock "^block_infoToString bi
-    | HardSpace n => "HardSpace "^Int.toString n^""
-    | BreakSpace(n,m) => "BreakSpace("^Int.toString n^", "^Int.toString m^")"
-    | RE rel => relToString rel
-    | _ => raise Fail "Don't want to print out First or Last TM values"
-and
-    pplistToString [] = ""
-  | pplistToString [x] = ppToString x
-  | pplistToString (x::xs) = ppToString x ^ ", " ^ pplistToString xs
-
-
-
 
 
 (*---------------------------------------------------------------------------*)
@@ -879,142 +677,70 @@ in
   List.exists (fn RE (TOK s) => includes_unicode s | _ => false)
 end
 
-datatype 'a erroption = Error of string | Some of 'a
-fun prule_to_grule {term_name,fixity,pp_elements,paren_style,block_style} = let
-  open term_grammar
-in
-  case fixity of
-    Binder => let
-    in
-      case rule_elements pp_elements of
-        [TOK s] => Some (BRULE {term_name = term_name, tok = s})
-      | _ => Error "Rules for binders must feature exactly one TOK and no TMs"
-    end
-  | RF rf => Some (GRULE {term_name = term_name, fixity = rf,
-                          pp_elements = pp_elements,
-                          paren_style = paren_style,
-                          block_style = block_style})
-end
-
 val unicode_off_but_unicode_act_complaint = ref true
 val _ = register_btrace("Parse.unicode_trace_off_complaints",
                         unicode_off_but_unicode_act_complaint)
 
-fun temp_add_grule gr = let
-  val uni_on = get_tracefn "Unicode" () > 0
-  val toks = userdelta_toks gr
-in
-  if List.exists includes_unicode toks then let
-    in
-      if uni_on orelse not (!unicode_off_but_unicode_act_complaint) then ()
-      else HOL_WARNING "Parse" "temp_add_rule"
-                       "Adding a Unicode-ish rule without Unicode trace \
-                       \being true";
-      the_term_grammar := ProvideUnicode.temp_uadd_rule uni_on {
-        u = toks, term_name = userdelta_name gr,
-        newrule = gr,
-        oldtok = NONE
-      } (term_grammar());
-      term_grammar_changed := true
-    end
-  else let
-    in
-      the_term_grammar := term_grammar.add_delta gr (!the_term_grammar) ;
-      term_grammar_changed := true
-    end
-end handle GrammarError s => raise ERROR "add_rule" ("Grammar error: "^s)
-
-fun temp_add_rule rule =
-    case prule_to_grule rule of
-      Error s => raise mk_HOL_ERR "Parse" "add_rule" s
-    | Some gr => temp_add_grule gr
-
-fun add_rule (r as {term_name, fixity, pp_elements,
-                    paren_style, block_style = (bs,bi)}) = let in
-  temp_add_rule r;
-  update_grms "add_rule"
-              ("(UTOFF temp_add_rule)",
-               String.concat
-                 ["{term_name = ", quote term_name,
-                  ", fixity = ", fixityToString fixity, ",\n",
-                  "pp_elements = [", pplistToString pp_elements, "],\n",
-                  "paren_style = ", ParenStyleToString paren_style,",\n",
-                  "block_style = (", BlockStyleToString bs, ", ",
-                  block_infoToString bi,")}"])
- end
-
-fun make_temp_overload_on add (s, t) = let
-  val uni_on = get_tracefn "Unicode" () > 0
-in
-  if includes_unicode s then
-    (if not uni_on andalso !unicode_off_but_unicode_act_complaint then
-       HOL_WARNING "Parse" "overload_on"
-                   "Adding a Unicode-ish rule without Unicode trace \
-                   \being true"
-     else
-       term_grammar_changed := true;
-     Unicode.temp_uoverload_on (s,t))
-  else
-    (the_term_grammar := fupdate_overload_info
-                             (add (s, t))
-                             (term_grammar());
-     term_grammar_changed := true)
-end
-
-val temp_overload_on = make_temp_overload_on Overload.add_overloading
-val temp_inferior_overload_on = make_temp_overload_on Overload.add_inferior_overloading
-
-fun make_overload_on temp temps (s, t) = let
-in
-  temp (s, t);
-  full_update_grms
-    ("(UTOFF "^temps^")",
-     String.concat ["(", quote s, ", ", minprint t, ")"],
-    SOME t)
-end
-
-val overload_on = make_overload_on temp_overload_on "temp_overload_on"
-val inferior_overload_on = make_overload_on temp_inferior_overload_on "temp_inferior_overload_on"
-
-fun temp_add_listform x = let open term_grammar in
-    the_term_grammar := add_listform (term_grammar()) x;
+fun make_add_rule gr =
+  let
+  in
+    the_term_grammar := term_grammar.add_delta (GRULE gr) (!the_term_grammar);
     term_grammar_changed := true
+  end handle GrammarError s => raise ERROR "add_rule" ("Grammar error: "^s)
+
+fun core_udprocess f k x =
+  let
+    val uds = f x
+    fun apply_one ud =
+      case ud of
+          GRULE gr => make_add_rule gr
+        | _ => apply_udeltas [ud]
+  in
+    List.app apply_one uds ;
+    k uds
   end
 
-fun add_listform x = let
-  val {separator,leftdelim,rightdelim,cons,nilstr,block_info} = x
-in
-  temp_add_listform x;
-  update_grms "add_listform"
-              ("(UTOFF temp_add_listform)",
-               String.concat
-                 ["{separator = [",   pplistToString separator, "]\n",
-                  ", leftdelim = [",  pplistToString leftdelim, "]\n",
-                  ", rightdelim = [", pplistToString rightdelim, "]\n",
-                  ", cons = ",        quote cons,
-                  ", nilstr = ",      quote nilstr,
-                  ", block_info = ",  block_infoToString block_info,
-                  "}"])
- end
+fun mk_temp f = core_udprocess f (fn uds => ())
+fun mk_perm f = core_udprocess f (List.app GrammarDeltas.record_tmdelta)
 
-fun temp_add_bare_numeral_form x =
- let val _ = Lib.can Term.prim_mk_const{Name="NUMERAL", Thy="arithmetic"}
-             orelse raise ERROR "add_numeral_form"
-            ("Numeral support not present; try load \"arithmeticTheory\"")
- in
-    the_term_grammar := term_grammar.add_numeral_form (term_grammar()) x;
-    term_grammar_changed := true
- end
+fun remove_termtok0 r = [RMTMTOK r]
+val temp_remove_termtok = mk_temp remove_termtok0
+val remove_termtok = mk_perm remove_termtok0
 
-fun add_bare_numeral_form (c, stropt) =
-    (temp_add_bare_numeral_form (c, stropt);
-     update_grms "add_bare_numeral_form"
-                 ("temp_add_bare_numeral_form",
-                  String.concat
-                    ["(#", quote(str c), ", ",
-                     case stropt of
-                       NONE => "NONE"
-                     | SOME s => "SOME "^quote s,")"]));
+
+
+val temp_add_rule = mk_temp (fn x => [GRULE x])
+val add_rule = mk_perm (fn x => [GRULE x])
+
+fun temp_add_infix(s, prec, associativity) =
+   temp_add_rule (standard_spacing s (Infix(associativity, prec)))
+
+fun add_infix (s, prec, associativity) =
+  add_rule (standard_spacing s (Infix(associativity, prec)))
+
+fun make_overload_on add (s, t) =
+  (the_term_grammar := fupdate_overload_info (add (s, t)) (term_grammar());
+   term_grammar_changed := true)
+
+val temp_overload_on =
+    make_overload_on Overload.add_overloading
+val temp_inferior_overload_on =
+    make_overload_on Overload.add_inferior_overloading
+
+fun overload_on p =
+  (make_overload_on Overload.add_overloading p ;
+   GrammarDeltas.record_tmdelta (OVERLOAD_ON p))
+fun inferior_overload_on p =
+  (make_overload_on Overload.add_inferior_overloading p;
+   GrammarDeltas.record_tmdelta (IOVERLOAD_ON p))
+
+fun add_listform0 x = [GRULE (listform_to_rule x)]
+val temp_add_listform = mk_temp add_listform0
+val add_listform = mk_perm add_listform0
+
+fun add_bare_numeral_form0 x = [ADD_NUMFORM x]
+val temp_add_bare_numeral_form = mk_temp add_bare_numeral_form0
+val add_bare_numeral_form = mk_perm add_bare_numeral_form0
 
 fun temp_give_num_priority c = let open term_grammar in
     the_term_grammar := give_num_priority (term_grammar()) c;
@@ -1038,22 +764,15 @@ fun remove_numeral_form c = let in
                                      String.concat ["#", Lib.quote(str c)])
   end
 
-fun temp_associate_restriction (bs, s) =
+fun associate_restriction0 (bs, s) =
  let val lambda = #lambda (specials (term_grammar()))
      val b = if mem bs lambda then NONE else SOME bs
  in
-    the_term_grammar :=
-    term_grammar.associate_restriction (term_grammar())
-                                       {binder = b, resbinder = s};
-    term_grammar_changed := true
+   [ASSOC_RESTR{binder = b, resbinder = s}]
  end
 
-fun associate_restriction (bs, s) = let in
-   temp_associate_restriction (bs, s);
-   update_grms "associate_restriction"
-               ("temp_associate_restriction",
-                String.concat["(", quote bs, ", ", quote s, ")"])
- end
+val temp_associate_restriction = mk_temp associate_restriction0
+val associate_restriction = mk_perm associate_restriction0
 
 fun temp_remove_rules_for_term s = let open term_grammar in
     the_term_grammar := remove_standard_form (term_grammar()) s;
@@ -1062,42 +781,18 @@ fun temp_remove_rules_for_term s = let open term_grammar in
 
 fun remove_rules_for_term s = let in
    temp_remove_rules_for_term s;
-   update_grms "remove_rules_for_term" ("temp_remove_rules_for_term", quote s)
+   GrammarDeltas.record_tmdelta (RMTMNM s)
  end
 
-fun temp_set_mapped_fixity {fixity,term_name,tok} = let
-  val nmtok = {term_name = term_name, tok = tok}
-in
-  temp_remove_termtok nmtok;
-  case fixity of
-    RF rf => temp_add_grule
-                 (GRULE (standard_mapped_spacing {fixity = rf, tok = tok,
-                                                  term_name = term_name}))
-  | Binder => if term_name <> tok then
-                raise ERROR "set_mapped_fixity"
-                            "Can't map binders to different strings"
-              else
-                temp_add_grule (BRULE nmtok)
-end
+fun set_mapped_fixity0 (r as {tok,...}) =
+  [RMTOK tok, r |> standard_mapped_spacing |> GRULE]
+fun set_fixity0 (s, f) = set_mapped_fixity0 {fixity = f, term_name = s, tok = s}
 
-fun set_mapped_fixity (arg as {fixity,term_name,tok}) = let
-in
-  temp_set_mapped_fixity arg;
-  update_grms "set_mapped_fixity"
-              ("(fn () => (temp_set_mapped_fixity {term_name = "^
-               quote term_name^", "^ "tok = "^quote tok^", fixity = "^
-               fixityToString fixity^"}))", "()")
-end
 
-fun temp_set_fixity s f =
-    temp_set_mapped_fixity {fixity = f, term_name = s, tok = s}
-
-fun set_fixity s f = let in
-    temp_set_fixity s f;
-    update_grms "set_fixity"
-                ("(UTOFF (temp_set_fixity "^quote s^"))",
-                 "("^fixityToString f^")")
- end
+val temp_set_mapped_fixity = mk_temp set_mapped_fixity0
+val temp_set_fixity = curry (mk_temp set_fixity0)
+val set_mapped_fixity = mk_perm set_mapped_fixity0
+val set_fixity = curry (mk_perm set_fixity0)
 
 (* ----------------------------------------------------------------------
     Post-processing : adding user transformations to the parse processs.
@@ -1109,127 +804,64 @@ in
   the_term_grammar := new_absyn_postprocessor x (!the_term_grammar)
 end
 
-fun add_absyn_postprocessor (x as (nm,_)) = let
-in
-  temp_add_absyn_postprocessor x;
-  update_grms "add_absyn_postprocessor"
-              ("temp_add_absyn_postprocessor", "(" ^ quote nm ^ ", " ^ nm ^ ")")
-end
+val add_absyn_postprocessor =
+  mk_perm (fn s => [ADD_ABSYN_POSTP {codename = s}])
 
+fun temp_remove_absyn_postprocessor s =
+  let
+    val (g, res) = term_grammar.remove_absyn_postprocessor s (!the_term_grammar)
+  in
+    the_term_grammar := g;
+    res
+  end
+
+fun temp_add_preterm_processor k f =
+  the_term_grammar := term_grammar.new_preterm_processor k f (!the_term_grammar)
+
+fun temp_remove_preterm_processor k =
+  let
+    val (g, res) = term_grammar.remove_preterm_processor k (!the_term_grammar)
+  in
+    the_term_grammar := g;
+    res
+  end
 
 (*-------------------------------------------------------------------------
         Overloading
  -------------------------------------------------------------------------*)
 
-fun temp_overload_on_by_nametype s {Name, Thy} = let
-  open term_grammar
+fun overload_on_by_nametype0 (s, recd as {Name, Thy}) = let
+  val c = prim_mk_const recd handle HOL_ERR _ =>
+              raise ERROR "temp_overload_on_by_nametype"
+                    ("No such constant: "^Thy^"$"^Name)
 in
-  the_term_grammar :=
-    fupdate_overload_info
-    (Overload.add_actual_overloading {opname=s, realname=Name, realthy=Thy})
-    (term_grammar());
-  term_grammar_changed := true
+  [OVERLOAD_ON (s,c)]
 end
 
-fun overload_on_by_nametype s (r as {Name, Thy}) = let in
-   temp_overload_on_by_nametype s r;
-   full_update_grms
-     ("(temp_overload_on_by_nametype "^quote s^")",
-      String.concat
-        [" {Name = ", quote Name, ", ", "Thy = ", quote Thy, "}"],
-      SOME (prim_mk_const r)
-     )
- end
+val temp_overload_on_by_nametype = curry (mk_temp overload_on_by_nametype0)
+val overload_on_by_nametype = curry (mk_perm overload_on_by_nametype0)
 
-fun temp_send_to_back_overload s {Name, Thy} = let
-  open term_grammar
-in
-  the_term_grammar :=
-    fupdate_overload_info
-    (Overload.send_to_back_overloading {opname=s, realname=Name, realthy=Thy})
-    (term_grammar());
-  term_grammar_changed := true
-end
+val temp_send_to_back_overload =
+    curry (mk_temp (fn skid => [MOVE_OVLPOSN{frontp = false, skid = skid}]))
+val send_to_back_overload =
+    curry (mk_perm (fn skid => [MOVE_OVLPOSN{frontp = false, skid = skid}]))
 
-fun send_to_back_overload s (r as {Name, Thy}) = let in
-   temp_send_to_back_overload s r;
-   full_update_grms
-     ("(temp_send_to_back_overload "^quote s^")",
-      String.concat
-        [" {Name = ", quote Name, ", ", "Thy = ", quote Thy, "}"],
-      SOME (prim_mk_const r)
-     )
- end
+val temp_bring_to_front_overload =
+    curry (mk_temp (fn skid => [MOVE_OVLPOSN{frontp = true, skid = skid}]))
+val bring_to_front_overload =
+    curry (mk_perm (fn skid => [MOVE_OVLPOSN{frontp = true, skid = skid}]))
 
-fun temp_bring_to_front_overload s {Name, Thy} = let
-  open term_grammar
-in
-  the_term_grammar :=
-    fupdate_overload_info
-    (Overload.bring_to_front_overloading {opname=s, realname=Name, realthy=Thy})
-    (term_grammar());
-  term_grammar_changed := true
-end
+fun clear_overloads_on0 s =
+  CLR_OVL s :: map (fn t => OVERLOAD_ON(s,t)) (Term.decls s)
+val temp_clear_overloads_on = mk_temp clear_overloads_on0
+val clear_overloads_on = mk_perm clear_overloads_on0
 
-fun bring_to_front_overload s (r as {Name, Thy}) = let in
-   temp_bring_to_front_overload s r;
-   full_update_grms
-     ("(temp_bring_to_front_overload "^quote s^")",
-      String.concat
-        [" {Name = ", quote Name, ", ", "Thy = ", quote Thy, "}"],
-      SOME (prim_mk_const r)
-     )
- end
+fun remove_ovl_mapping0 (s, kid) = [RMOVMAP(s,kid)]
+val temp_remove_ovl_mapping = curry (mk_temp remove_ovl_mapping0)
+val remove_ovl_mapping = curry (mk_perm remove_ovl_mapping0)
 
-
-fun temp_clear_overloads_on s = let
-  open term_grammar
-in
-  the_term_grammar :=
-    #1 (mfupdate_overload_info
-        (Overload.remove_overloaded_form s) (term_grammar()));
-  app (curry temp_overload_on s) (Term.decls s);
-  term_grammar_changed := true
-end
-
-fun clear_overloads_on s = let in
-  temp_clear_overloads_on s;
-  update_grms "clear_overloads_on" ("temp_clear_overloads_on", quote s)
-end
-
-fun temp_remove_ovl_mapping s crec = let open term_grammar in
-  the_term_grammar :=
-    fupdate_overload_info (Overload.remove_mapping s crec) (term_grammar());
-  term_grammar_changed := true
-end
-
-fun remove_ovl_mapping s (crec as {Name,Thy}) = let
-in
-  temp_remove_ovl_mapping s crec;
-  update_grms "remove_ovl_mapping"
-              ("(temp_remove_ovl_mapping "^quote s^")",
-               String.concat
-                 [" {Name = ", quote Name, ", ", "Thy = ", quote Thy, "}"])
-end
-
-fun temp_gen_remove_ovl_mapping s t =
-  let
-    open term_grammar
-  in
-    the_term_grammar :=
-      fupdate_overload_info (Overload.gen_remove_mapping s t) (term_grammar());
-    term_grammar_changed := true
-  end
-
-fun gen_remove_ovl_mapping s t =
-  let
-  in
-    temp_gen_remove_ovl_mapping s t ;
-    update_grms "gen_remove_ovl_mapping"
-                ("(UTOFF (temp_gen_remove_ovl_mapping " ^ quote s ^ "))",
-                 minprint t)
-  end
-
+val temp_gen_remove_ovl_mapping = curry (mk_temp (fn p => [GRMOVMAP p]))
+val gen_remove_ovl_mapping = curry (mk_perm (fn p => [GRMOVMAP p]))
 
 fun primadd_rcdfld f ovopn (fldname, t) = let
   val (d,r) = dom_rng (type_of t)
@@ -1259,7 +891,7 @@ val temp_add_record_fupdate =
     buildfupdt "temp_add_record_fupdate" temp_overload_on
 val add_record_fupdate = buildfupdt "add_record_fupdate" overload_on
 
-fun temp_add_numeral_form (c, stropt) = let
+fun add_numeral_form0 (c, stropt) = let
   val _ =
     Lib.can Term.prim_mk_const{Name="NUMERAL", Thy="arithmetic"}
     orelse
@@ -1267,31 +899,26 @@ fun temp_add_numeral_form (c, stropt) = let
       ("Numeral support not present; try load \"arithmeticTheory\"")
   val num = Type.mk_thy_type {Tyop="num", Thy="num",Args = []}
   val fromNum_type = num --> alpha
-  val const_record =
+  val const =
     case stropt of
-      NONE => {Name = nat_elim_term, Thy = "arithmetic"}
+      NONE => prim_mk_const {Name = nat_elim_term, Thy = "arithmetic"}
     | SOME s =>
         case Term.decls s of
           [] => raise ERROR "add_numeral_form" ("No constant with name "^s)
-        | h::_ => lose_constrec_ty (dest_thy_const h)
+        | h::_ => h
 in
-  temp_add_bare_numeral_form (c, stropt);
-  temp_overload_on_by_nametype fromNum_str const_record;
-  if isSome stropt then
-    temp_overload_on_by_nametype num_injection const_record
-  else ()
+  ADD_NUMFORM (c, stropt) :: OVERLOAD_ON (fromNum_str, const) ::
+  (if isSome stropt then [OVERLOAD_ON (num_injection, const)] else [])
 end
 
-fun add_numeral_form (c, stropt) = let in
-  temp_add_numeral_form (c, stropt);
-  update_grms "add_numeral_form"
-              ("temp_add_numeral_form",
-               String.concat
-               ["(#", quote (str c), ", ",
-                case stropt of NONE => "NONE" | SOME s => "SOME "^quote s, ")"
-               ])
- end
+val temp_add_numeral_form = mk_temp add_numeral_form0
+val add_numeral_form = mk_perm add_numeral_form0
 
+(* to print a term using current grammars,
+  but with "non-trivial" overloads deleted *)
+fun print_without_macros tm =
+  let val (tyG, tmG) = current_grammars () ;
+  in print_term_by_grammar (tyG, term_grammar.clear_overloads tmG) tm end ;
 
 (*---------------------------------------------------------------------------
      Visibility of identifiers
@@ -1366,6 +993,18 @@ end;
   User changes to the printer and parser
   ----------------------------------------------------------------------*)
 
+fun constant_string_printer s : term_grammar.userprinter =
+  let
+    fun result (tyg, tmg) _ _ ppfns (pgr,lgr,rgr) depth tm =
+      let
+        val {add_string,...} = ppfns
+      in
+        add_string s
+      end
+  in
+    result
+  end
+
 fun temp_add_user_printer (name, pattern, pfn) = let
 in
   the_term_grammar :=
@@ -1384,15 +1023,8 @@ in
 end
 
 
-fun add_user_printer(name,pattern,pfn) = let
-in
-  update_grms "add_user_printer"
-              ("temp_add_user_printer",
-               String.concat ["(", quote name, ", ",
-                               minprint pattern, ", ",
-                              name, ")"]);
-  temp_add_user_printer(name, pattern, pfn)
-end;
+val add_user_printer =
+  mk_perm (fn (s,t) => [ADD_UPRINTER {codename=s,pattern=t}])
 
 fun remove_user_printer name = let
 in
@@ -1439,35 +1071,71 @@ in
   the_term_grammar := tmG
 end
 
-fun merge_grm (gname, (tyG0, tmG0)) (tyG1, tmG1) =
-  (type_grammar.merge_grammars (tyG0, tyG1),
-   term_grammar.merge_grammars (tmG0, tmG1)
-  )
-  handle HOLgrammars.GrammarError s
-   => (Feedback.HOL_WARNING "Parse" "mk_local_grms"
-       (String.concat["Error ", s, " while merging grammar ",
-                      gname, "; ignoring it.\n"])
-      ; (tyG1, tmG1));
+fun gparents thyname =
+  case GrammarAncestry.ancestry {thy = thyname} of
+      [] => parents thyname
+    | thys => thys
 
-fun mk_local_grms [] = raise ERROR "mk_local_grms" "no grammars"
-  | mk_local_grms ((n,gg)::t) =
-      let val (ty_grm0,tm_grm0) = itlist merge_grm t gg
-      in the_lty_grm := ty_grm0;
-         the_ltm_grm := tm_grm0
-      end;
+fun gancestry thynm =
+  let
+    fun recurse acc seen worklist =
+      case worklist of
+          [] => acc
+        | thynm :: rest =>
+          let
+            val unseen_ps =
+                List.filter (fn thy => not (HOLset.member(seen,thy)))
+                            (gparents thynm)
+          in
+            recurse (HOLset.add(acc,thynm))
+                    (HOLset.addList(seen, unseen_ps))
+                    (unseen_ps @ rest)
+          end
+    val empty_strset = HOLset.empty String.compare
+  in
+    recurse empty_strset empty_strset (gparents thynm)
+  end
 
-fun parent_grammars () = let
-  open Theory
-  fun echo s = (quote s, s)
-  fun grm_string "min" = echo "min_grammars"
-    | grm_string s     = echo (s^"Theory."^s^"_grammars")
-  val ct = current_theory()
-in
-  case parents ct of
-    [] => raise ERROR "parent_grammars"
-                        ("no parents found for theory "^quote ct)
-  | plist => map grm_string plist
- end;
+fun merge_into (gname, (G, gset)) =
+  let
+    fun apply (tyuds, tmuds) (tyG, tmG) =
+      (type_grammar.apply_deltas tyuds tyG, term_grammar.add_deltas tmuds tmG)
+    datatype action =
+             Visit of string
+           | Apply of type_grammar.delta list * term_grammar.user_delta list
+    fun recurse (G, gset) worklist =
+      case worklist of
+          [] => (G, gset)
+        | Visit thy :: rest =>
+          let
+            val parents0 = gparents thy
+            val parents =
+                List.filter (fn thy => not (HOLset.member(gset,thy))) parents0
+            val uds = GrammarDeltas.thy_deltas {thyname = thy}
+          in
+            recurse (G, HOLset.add(gset, thy))
+                    (map Visit parents @ (Apply uds :: rest))
+          end
+        | Apply uds :: rest => recurse (apply uds G, gset) rest
+  in
+    recurse (G, gset) [Visit gname]
+  end
+
+fun merge_grammars slist =
+  case slist of
+      [] => raise ERROR "merge_grammars" "Empty grammar list"
+    | h::t => List.foldl merge_into (valOf (grammarDB h), gancestry h) t |> #1
+
+fun set_grammar_ancestry slist =
+  let
+    val (tyg,tmg) = merge_grammars slist
+  in
+    GrammarAncestry.set_ancestry slist;
+    the_type_grammar := tyg;
+    the_term_grammar := tmg;
+    type_grammar_changed := true;
+    term_grammar_changed := true
+  end
 
 local fun sig_addn s = String.concat
        ["val ", s, "_grammars : type_grammar.grammar * term_grammar.grammar"]
@@ -1484,71 +1152,75 @@ in
   else ();
   grm_updates := [];
   adjoin_to_theory
-  {sig_ps = SOME (fn pps => Portable.add_string pps (sig_addn thyname)),
-   struct_ps = SOME (fn ppstrm =>
-     let val {add_string,add_break,begin_block,end_block,add_newline,...}
-              = with_ppstream ppstrm
-         val B  = begin_block CONSISTENT
-         val IB = begin_block INCONSISTENT
-         val EB = end_block
+  {sig_ps = SOME (fn _ => PP.add_string (sig_addn thyname)),
+   struct_ps = SOME (fn _ =>
+     let val B  = PP.block CONSISTENT
+         val IB = PP.block INCONSISTENT
+         open PP
          fun pr_sml_list pfun L =
-           (B 0; add_string "["; IB 0;
-               pr_list pfun (fn () => add_string ",")
-                            (fn () => add_break(0,0))  L;
-            EB(); add_string "]"; EB())
+           B 0 [add_string "[",
+                IB 1 (PP.pr_list pfun [add_string ",", add_break(0,0)]  L),
+                add_string "]"]
          fun pp_update(f,x,topt) =
-             if isSome topt andalso
-                not (Theory.uptodate_term (valOf topt))
-             then ()
+             if isSome topt andalso not (Theory.uptodate_term (valOf topt))
+             then B 0 []
              else
-               (B 5;
-                add_string "val _ = update_grms"; add_break(1,0);
-                add_string f; add_break(1,0);
-                B 0; add_string x;  (* can be more fancy *)
-                EB(); EB())
-         fun pp_pair f1 f2 (x,y) =
-              (B 0; add_string"(";
-                    B 0; f1 x;
-                         add_string",";add_break(0,0);
-                         f2 y;
-                    EB(); add_string")"; EB())
-         val (names,rules) = partition (equal"reveal" o #1)
-                                (List.rev(!grm_updates))
-         val reveals = map #2 names
-         val _ = grm_updates := []
+               B 5 [
+                 add_string "val _ = update_grms", add_break(1,0),
+                 add_string f, add_break(1,0),
+                 B 0 [add_string x]
+               ]
      in
-       B 0;
-         add_string "local open Portable GrammarSpecials Parse";
-         add_newline();
+       B 0 [
+         add_string "local open GrammarSpecials Parse",
+         NL,
          add_string "  fun UTOFF f = Feedback.trace(\"Parse.unicode_trace_\
-                    \off_complaints\",0)f";
-         add_newline();
-         add_string "in"; add_newline();
-         add_string "val _ = mk_local_grms [";
-             IB 0; pr_list (pp_pair add_string add_string)
-                          (fn () => add_string ",")
-                          (fn () => add_break(1,0)) (parent_grammars());
-             EB();
-         add_string "]"; add_newline();
-         B 10; add_string "val _ = List.app (update_grms reveal)";
-              add_break(1,0);
-              pr_sml_list add_string reveals;
-         EB(); add_newline();
-         pr_list pp_update (fn () => ()) add_newline rules;
-         add_newline();
+                    \off_complaints\",0)f",
+         NL,
+         add_string "in", NL,
+         add_string ("val " ^thyname ^ "_grammars = merge_grammars ["),
+         IB 0
+            (pr_list (add_string o quote)
+                     [add_string ",", add_break(1,0)]
+                     (gparents (current_theory()))),
+         add_string "]", NL,
+         add_string ("local"),
+         NL,
+         add_string ("val (tyUDs, tmUDs) = "^
+                     "GrammarDeltas.thy_deltas{thyname="^ quote thyname^"}"),
+         NL,
+         add_string ("val addtmUDs = term_grammar.add_deltas tmUDs"),
+         NL,
+         add_string ("val addtyUDs = type_grammar.apply_deltas tyUDs"),
+         NL, add_string ("in"), NL,
+
+         add_string ("val " ^ thyname ^ "_grammars = "), add_break(1,2),
+         add_string ("Portable.## (addtyUDs,addtmUDs) " ^
+                     thyname ^ "_grammars"),
+         NL,
+
          add_string (String.concat
-             ["val ", thyname, "_grammars = Parse.current_lgrms()"]);
-         add_newline();
-         add_string "end"; add_newline();
-       EB()
+             ["val _ = Parse.grammarDB_insert(",Lib.mlquote thyname,",",
+              thyname, "_grammars)"]),
+         NL,
+
+         add_string (String.concat
+             ["val _ = Parse.temp_set_grammars ("^
+              "addtyUDs (Parse.type_grammar()), ",
+              "addtmUDs (Parse.term_grammar()))"]), NL,
+         add_string "end (* addUDs local *)", NL,
+
+         add_string "end", NL
+       ]
      end)}
  end
 end
 
 val _ = let
-  fun rawpp_thm pps =
-      pp_thm pps |> Lib.with_flag (current_backend, PPBackEnd.raw_terminal)
-                 |> trace ("paranoid string literal printing", 1)
+  val rawpp_thm =
+      pp_thm
+        |> Lib.with_flag (current_backend, PPBackEnd.raw_terminal)
+        |> trace ("paranoid string literal printing", 1)
 in
   Theory.pp_thm := rawpp_thm
 end
@@ -1620,14 +1292,16 @@ val TOK = term_grammar.RE o term_grammar.TOK
    ---------------------------------------------------------------------- *)
 
     val _ = initialise_typrinter
-            (fn G => type_pp.pp_type G PPBackEnd.raw_terminal)
+              (fn G => ulower (type_pp.pp_type G PPBackEnd.raw_terminal))
     val _ = let
       open TheoryDelta
+      fun tempchk f nm = if Theory.is_temp_binding nm then ()
+                         else ignore (f nm)
       fun hook ev =
           case ev of
-            NewConstant{Thy,Name} => add_const Name
-          | NewTypeOp{Thy,Name} => add_type Name
-          | DelConstant{Thy,Name} => ignore (hide Name)
+            NewConstant{Thy,Name} => tempchk add_const Name
+          | NewTypeOp{Thy,Name} => tempchk add_type Name
+          | DelConstant{Thy,Name} => tempchk hide Name
           | _ => ()
     in
       Theory.register_hook ("Parse.watch_constants", hook)

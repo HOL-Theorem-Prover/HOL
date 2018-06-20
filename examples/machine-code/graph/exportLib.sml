@@ -19,6 +19,7 @@ val failed_tm_translations = ref ([]:term list);
 (* recording errors *)
 
 local
+  fun head_of t = fst (strip_comb t)
   fun print_ty_fail ty = let
     val _ = print "FAILED to translate type: "
     val _ = print_type ty
@@ -27,7 +28,8 @@ local
   fun print_tm_fail tm = let
     val _ = print "FAILED to translate term: "
     val _ = print_term tm
-    val _ = (print "\n\nwith type: "; print_type (type_of tm); print "\n\n")
+    val _ = (print "\n\nwith head: "; print_term (head_of tm))
+    val _ = (print "\nwith type: "; print_type (type_of tm); print "\n\n")
     in () end;
 in
   fun add_ty_fail ty = let
@@ -175,6 +177,7 @@ val patterns =
       (``word_xor (x:'a word) y``,"BWXOR"),
       (``ShiftLeft (x:'a word) y``,"ShiftLeft"),
       (``ShiftRight (x:'a word) y``,"ShiftRight"),
+      (``SignedShiftRight (x:'a word) y``,"SignedShiftRight"),
       (``x ==> y:bool``,"Implies"),
       (``x /\ y:bool``,"And"),
       (``x \/ y:bool``,"Or"),
@@ -187,6 +190,7 @@ val patterns =
       (``(sw2sw (x:'a word)):'b word``,"WordCastSigned"),
       (``(n:num) + m``,"Plus"),
       (``if b then x else y``,"IfThenElse"),
+      (``word_reverse x``,"WordReverse"),
       (``count_leading_zero_bits (w:'a word)``,"CountLeadingZeroes")];
 
 val last_fail_node_tm = ref T;
@@ -209,11 +213,10 @@ fun export_graph name rhs = let
     | commas [x] = x
     | commas (x::xs) = x ^ " " ^ commas xs
   fun export_list xs = int_to_string (length xs) ^ " " ^ commas xs
-  fun export_type ty =
-    if ty = ``:word64`` then "Word 64" else
-    if ty = ``:word32`` then "Word 32" else
-    if ty = ``:word8`` then "Word 8" else
-    if ty = ``:word32->word8`` then "Mem" else
+  fun export_type ty = case total dest_type ty of
+    SOME ("cart", [_, idx]) => "Word "
+        ^ Arbnum.toString (fcpLib.index_to_num idx)
+  | _ => if ty = ``:word32->word8`` then "Mem" else
     if ty = ``:word32->bool`` then "Dom" else
     if ty = ``:bool`` then "Bool" else
     if ty = ``:num`` then "Word 64" else failwith("type")
@@ -232,7 +235,7 @@ fun export_graph name rhs = let
           in (name,map (subst s1 o inst s2) cs) end
   fun term tm =
     (* Num *)
-    if numSyntax.is_numeral tm then
+    (if numSyntax.is_numeral tm then
       "Num " ^ int_to_string (tm |> numSyntax.int_of_term) ^ " Nat"
     else if wordsSyntax.is_n2w tm then
       let val i = tm |> rand |> numSyntax.int_of_term
@@ -246,7 +249,8 @@ fun export_graph name rhs = let
       val (n,xs) = match_pattern tm patterns
       val ty = export_type (type_of tm)
       in "Op " ^ n ^ " " ^ ty ^ " " ^ export_list (map term xs) end
-    handle HOL_ERR _ => (add_tm_fail tm; fail())
+    ) handle HOL_ERR err => (print (exn_to_string (HOL_ERR err));
+            add_tm_fail tm; fail())
   val types = [``VarNat``,``VarWord8``,``VarWord32``,
                ``VarMem``,``VarDom``,``VarBool``]
   val s_var = mk_var("s",``:state``)
@@ -325,7 +329,7 @@ fun export_graph name rhs = let
      in raise (HOL_ERR e) end) :: my_map f xs
   val _ = my_map (write_graph o export_node) nodes
   val last_line = "EntryPoint " ^ int_to_hex entry ^ "\n"
-  val _ = write_graph last_line
+  val _ = if List.null nodes then () else write_graph last_line
   in () end
 
 

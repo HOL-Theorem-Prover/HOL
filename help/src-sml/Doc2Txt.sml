@@ -8,7 +8,8 @@ val pagewidth = 70;
 val separator = String.implode (List.tabulate(pagewidth, fn _ => #"-"))
 
 fun out(str,s) = TextIO.output(str, s)
-fun warn s = TextIO.output(TextIO.stdErr, s)
+fun warn s = TextIO.output(TextIO.stdErr, s ^ "\n")
+fun die s = (warn s; OS.Process.exit OS.Process.failure)
 
 fun print_type strm ss = out(strm, Substring.string ss ^ "\n\n")
 
@@ -139,13 +140,13 @@ end
 
 fun do_one_file docdir destdir dname = let
   val file = parse_file (OS.Path.concat(docdir, dname ^ ".doc"))
-  val outputstr = TextIO.openOut (OS.Path.concat(destdir, dname ^ ".adoc"))
+  val outputstr = TextIO.openOut (OS.Path.concat(destdir, dname ^ ".txt"))
 in
   print_docpart (file, outputstr);
   app (write_section outputstr) file;
   out(outputstr, separator ^"\n");
   TextIO.closeOut outputstr
-end
+end handle e => die ("Exception raised: " ^ General.exnMessage e)
 
 
 fun main () =

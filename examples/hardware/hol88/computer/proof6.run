@@ -1,0 +1,696 @@
+
+_  _         __        _
+!__!        !  !       !
+!  ! IGHER  !__! RDER  !__ OGIC
+===============================
+(Built on Jun 21)
+
+################() : void
+
+##Theory proof5 loaded
+() : void
+
+##NEXT = 
+|- NEXT(t1,t2)sig =
+   t1 < t2 /\ sig t2 /\ (!t. t1 < t /\ t < t2 ==> ~sig t)
+
+#COMPUTER = 
+|- COMPUTER(t1,t2)(memory,knob,button,switches,pc,acc,idle) =
+   (memory t2,pc t2,acc t2,idle t2 =
+    (idle t1 => 
+     (button t1 => 
+      ((VAL2(knob t1) = 0) => 
+       (memory t1,CUT16_13(switches t1),acc t1,T) | 
+       ((VAL2(knob t1) = 1) => 
+        (memory t1,pc t1,switches t1,T) | 
+        ((VAL2(knob t1) = 2) => 
+         (STORE13(pc t1)(acc t1)(memory t1),pc t1,acc t1,T) | 
+         (memory t1,pc t1,acc t1,F)))) | 
+      (memory t1,pc t1,acc t1,T)) | 
+     (button t1 => 
+      (memory t1,pc t1,acc t1,T) | 
+      EXECUTE(memory t1,pc t1,acc t1))))
+
+#COMPUTER_abs = 
+|- COMPUTER_abs
+   (memory_abs,knob_abs,button_abs,switches_abs,pc_abs,acc_abs,idle_abs) =
+   (!t.
+     memory_abs(t + 1),pc_abs(t + 1),acc_abs(t + 1),idle_abs(t + 1) =
+     (idle_abs t => 
+      (button_abs t => 
+       ((VAL2(knob_abs t) = 0) => 
+        (memory_abs t,CUT16_13(switches_abs t),acc_abs t,T) | 
+        ((VAL2(knob_abs t) = 1) => 
+         (memory_abs t,pc_abs t,switches_abs t,T) | 
+         ((VAL2(knob_abs t) = 2) => 
+          (STORE13(pc_abs t)(acc_abs t)(memory_abs t),pc_abs t,
+           acc_abs t,T) | 
+          (memory_abs t,pc_abs t,acc_abs t,F)))) | 
+       (memory_abs t,pc_abs t,acc_abs t,T)) | 
+      (button_abs t => 
+       (memory_abs t,pc_abs t,acc_abs t,T) | 
+       EXECUTE(memory_abs t,pc_abs t,acc_abs t))))
+
+##CORRECTNESS = 
+|- COMPUTER_IMP
+   (mpc,mar,ir,arg,buf)
+   (memory,knob,button,switches,pc,acc,idle,ready) /\
+   STABLE(t1,t2)switches /\
+   STABLE(t1,t2)knob /\
+   NEXT(t1,t2)ready /\
+   ready t1 ==>
+   COMPUTER(t1,t2)(memory,knob,button,switches,pc,acc,idle)
+
+#infinitely_ready = . |- !t1. ?t2. t1 < t2 /\ ready t2
+
+##########LEAST = |- !P. (?t. P t) ==> (?t. P t /\ (!t'. t' < t ==> ~P t'))
+
+##########abs_zero = |- abs_zero sig = (@t. sig t /\ (!t'. t' < t ==> ~sig t'))
+
+#############abs_non_zero = 
+|- abs_non_zero t'' sig =
+   (@t. sig t /\ t'' < t /\ (!t'. t'' < t' /\ t' < t ==> ~sig t'))
+
+###############abs = 
+|- (abs 0 sig = abs_zero sig) /\
+   (abs(SUC n)sig = abs_non_zero(abs n sig)sig)
+
+#####COMPUTER_IMP_hypth = 
+"COMPUTER_IMP
+ (mpc,mar,ir,arg,buf)
+ (memory,knob,button,switches,pc,acc,idle,ready)"
+: term
+
+####th1 = |- ~(0 = n) ==> 0 < n
+
+#th2 = |- (0 = n) \/ 0 < n
+
+#th3 = . |- (n = 0) \/ 0 < n
+
+#th4 = . |- (n = 0) \/ 0 < n
+
+#lemma1 = |- (n = 0) \/ 0 < n
+
+######th1 = . |- ?t. ready t /\ (!t'. t' < t ==> ~ready t')
+
+#th2 = . |- t1 < t /\ ready t
+
+#th3 = . |- ?t. ready t
+
+#th4 = . |- ?t. ready t /\ (!t'. t' < t ==> ~ready t')
+
+#th5 = . |- ?t. ready t /\ (!t'. t' < t ==> ~ready t')
+
+#th6 = . |- ready(@t. ready t /\ (!t'. t' < t ==> ~ready t'))
+
+#th7 = 
+|- (@t. ready t /\ (!t'. t' < t ==> ~ready t')) =
+   (@t. ready t /\ (!t'. t' < t ==> ~ready t'))
+
+#lemma2 = . |- ready(@t. ready t /\ (!t'. t' < t ==> ~ready t'))
+
+####th1 = . |- b1 ==> ~(b2 /\ b3)
+
+#th2 = .. |- ~(b2 /\ b3)
+
+#th3 = .. |- ~b2 \/ ~b3
+
+#th4 = |- (~b2 = F) = ~~b2
+
+#th5 = |- b2 ==> (~b2 = F)
+
+#th6 = .. |- F \/ ~b3
+
+#th7 = |- F \/ ~b3 = ~b3
+
+#lemma3 = |- !b1 b2 b3. (b1 ==> ~(b2 /\ b3)) ==> b2 /\ b1 ==> ~b3
+
+######th1 = |- (t = 0) \/ (?n. t = SUC n)
+
+#th2 = |- (t = 0) \/ (?m. t = SUC m)
+
+#th3 = |- !n. (n = 0) \/ (?m. n = SUC m)
+
+#th4 = . |- ~(n = 0)
+
+#th5 = |- ~(n = 0) = ((n = 0) = F)
+
+#lemma4 = . |- ?m. n = SUC m
+
+#############th1 = . |- ?t2. (abs m ready) < t2 /\ ready t2
+
+#th2 = 
+|- (?t. (\t2. (abs m ready) < t2 /\ ready t2)t) ==>
+   (?t.
+     (\t2. (abs m ready) < t2 /\ ready t2)t /\
+     (!t'. t' < t ==> ~(\t2. (abs m ready) < t2 /\ ready t2)t'))
+
+#th3 = 
+|- (?t. (abs m ready) < t /\ ready t) ==>
+   (?t.
+     ((abs m ready) < t /\ ready t) /\
+     (!t'. t' < t ==> ~((abs m ready) < t' /\ ready t')))
+
+#th4 = 
+|- (?t2. (abs m ready) < t2 /\ ready t2) =
+   (?t. (abs m ready) < t /\ ready t)
+
+#th5 = 
+. |- ?t.
+      ((abs m ready) < t /\ ready t) /\
+      (!t'. t' < t ==> ~((abs m ready) < t' /\ ready t'))
+
+#th6 = 
+. |- ((abs m ready) < t /\ ready t) /\
+     (!t'. t' < t ==> ~((abs m ready) < t' /\ ready t'))
+
+#th7 = 
+|- (t' < t ==> ~((abs m ready) < t' /\ ready t')) ==>
+   (abs m ready) < t' /\ t' < t ==>
+   ~ready t'
+
+#th8 = . |- !t'. (abs m ready) < t' /\ t' < t ==> ~ready t'
+
+#th9 = |- (abs m ready) < t /\ ready t = ready t /\ (abs m ready) < t
+
+#th10 = . |- ready t /\ (abs m ready) < t
+
+#th11 = 
+. |- ready t /\
+     (abs m ready) < t /\
+     (!t'. (abs m ready) < t' /\ t' < t ==> ~ready t')
+
+#th12 = 
+. |- ?t.
+      ready t /\
+      (abs m ready) < t /\
+      (!t'. (abs m ready) < t' /\ t' < t ==> ~ready t')
+
+#lemma5 = 
+. |- ?t.
+      ready t /\
+      (abs m ready) < t /\
+      (!t'. (abs m ready) < t' /\ t' < t ==> ~ready t')
+
+###########th1 = 
+. |- ready
+     (@t.
+       ready t /\
+       (abs m ready) < t /\
+       (!t'. (abs m ready) < t' /\ t' < t ==> ~ready t'))
+
+#th2 = 
+|- (@t.
+     ready t /\
+     (abs m ready) < t /\
+     (!t'. (abs m ready) < t' /\ t' < t ==> ~ready t')) =
+   (@t.
+     ready t /\
+     (abs m ready) < t /\
+     (!t'. (abs m ready) < t' /\ t' < t ==> ~ready t'))
+
+#lemma6 = 
+. |- ready
+     (@t.
+       ready t /\
+       (abs m ready) < t /\
+       (!t'. (abs m ready) < t' /\ t' < t ==> ~ready t'))
+
+######"ready(abs n ready)"
+    [ "COMPUTER_IMP
+       (mpc,mar,ir,arg,buf)
+       (memory,knob,button,switches,pc,acc,idle,ready)" ]
+
+() : void
+
+##OK..
+2 subgoals
+"ready(abs n ready)"
+    [ "COMPUTER_IMP
+       (mpc,mar,ir,arg,buf)
+       (memory,knob,button,switches,pc,acc,idle,ready)" ]
+    [ "0 < n" ]
+
+"ready(abs n ready)"
+    [ "COMPUTER_IMP
+       (mpc,mar,ir,arg,buf)
+       (memory,knob,button,switches,pc,acc,idle,ready)" ]
+    [ "n = 0" ]
+
+() : void
+
+#OK..
+"ready(abs 0 ready)"
+    [ "COMPUTER_IMP
+       (mpc,mar,ir,arg,buf)
+       (memory,knob,button,switches,pc,acc,idle,ready)" ]
+    [ "n = 0" ]
+
+() : void
+
+#OK..
+"ready(@t. ready t /\ (!t'. t' < t ==> ~ready t'))"
+    [ "COMPUTER_IMP
+       (mpc,mar,ir,arg,buf)
+       (memory,knob,button,switches,pc,acc,idle,ready)" ]
+    [ "n = 0" ]
+
+() : void
+
+##OK..
+goal proved
+. |- ready(@t. ready t /\ (!t'. t' < t ==> ~ready t'))
+. |- ready(abs 0 ready)
+.. |- ready(abs n ready)
+
+Previous subproof:
+"ready(abs n ready)"
+    [ "COMPUTER_IMP
+       (mpc,mar,ir,arg,buf)
+       (memory,knob,button,switches,pc,acc,idle,ready)" ]
+    [ "0 < n" ]
+
+() : void
+
+##OK..
+"ready(abs n ready)"
+    [ "COMPUTER_IMP
+       (mpc,mar,ir,arg,buf)
+       (memory,knob,button,switches,pc,acc,idle,ready)" ]
+    [ "0 < n" ]
+    [ "n = SUC m" ]
+
+() : void
+
+#OK..
+"ready(abs(SUC m)ready)"
+    [ "COMPUTER_IMP
+       (mpc,mar,ir,arg,buf)
+       (memory,knob,button,switches,pc,acc,idle,ready)" ]
+    [ "0 < n" ]
+    [ "n = SUC m" ]
+
+() : void
+
+#OK..
+"ready
+ (@t.
+   ready t /\
+   (abs m ready) < t /\
+   (!t'. (abs m ready) < t' /\ t' < t ==> ~ready t'))"
+    [ "COMPUTER_IMP
+       (mpc,mar,ir,arg,buf)
+       (memory,knob,button,switches,pc,acc,idle,ready)" ]
+    [ "0 < n" ]
+    [ "n = SUC m" ]
+
+() : void
+
+#OK..
+goal proved
+. |- ready
+     (@t.
+       ready t /\
+       (abs m ready) < t /\
+       (!t'. (abs m ready) < t' /\ t' < t ==> ~ready t'))
+. |- ready(abs(SUC m)ready)
+.. |- ready(abs n ready)
+.. |- ready(abs n ready)
+. |- ready(abs n ready)
+
+Previous subproof:
+goal proved
+() : void
+
+##READY_ABS_THM = . |- ready(abs n ready)
+
+###########th1 = 
+. |- (abs m ready) <
+     (@t.
+       ready t /\
+       (abs m ready) < t /\
+       (!t'. (abs m ready) < t' /\ t' < t ==> ~ready t'))
+
+#th2 = 
+|- (@t.
+     ready t /\
+     (abs m ready) < t /\
+     (!t'. (abs m ready) < t' /\ t' < t ==> ~ready t')) =
+   (@t.
+     ready t /\
+     (abs m ready) < t /\
+     (!t'. (abs m ready) < t' /\ t' < t ==> ~ready t'))
+
+#lemma7 = 
+. |- (abs m ready) <
+     (@t.
+       ready t /\
+       (abs m ready) < t /\
+       (!t'. (abs m ready) < t' /\ t' < t ==> ~ready t'))
+
+#######th1 = 
+. |- !t'.
+      (abs m ready) < t' /\
+      t' <
+      (@t.
+        ready t /\
+        (abs m ready) < t /\
+        (!t'. (abs m ready) < t' /\ t' < t ==> ~ready t')) ==>
+      ~ready t'
+
+####tm = 
+"@t.
+  ready t /\
+  (abs m ready) < t /\
+  (!t'. (abs m ready) < t' /\ t' < t ==> ~ready t')"
+: term
+
+#th2 = 
+|- (@t.
+     ready t /\
+     (abs m ready) < t /\
+     (!t'. (abs m ready) < t' /\ t' < t ==> ~ready t')) =
+   (@t.
+     ready t /\
+     (abs m ready) < t /\
+     (!t'. (abs m ready) < t' /\ t' < t ==> ~ready t'))
+
+#th3 = 
+. |- !t'.
+      (abs m ready) < t' /\
+      t' <
+      (@t.
+        ready t /\
+        (abs m ready) < t /\
+        (!t'. (abs m ready) < t' /\ t' < t ==> ~ready t')) ==>
+      ~ready t'
+
+#th4 = 
+. |- !t'. (abs m ready) < t' /\ t' < (abs(SUC m)ready) ==> ~ready t'
+
+#th5 = 
+|- (!t'. (abs m ready) < t' /\ t' < (abs(SUC m)ready) ==> ~ready t') =
+   (!t. (abs m ready) < t /\ t < (abs(SUC m)ready) ==> ~ready t)
+
+#lemma8 = 
+. |- !t. (abs m ready) < t /\ t < (abs(SUC m)ready) ==> ~ready t
+
+#######"NEXT(abs n ready,abs(n + 1)ready)ready"
+    [ "COMPUTER_IMP
+       (mpc,mar,ir,arg,buf)
+       (memory,knob,button,switches,pc,acc,idle,ready)" ]
+
+() : void
+
+##OK..
+"(abs n ready) < (abs(n + 1)ready) /\
+ ready(abs(n + 1)ready) /\
+ (!t. (abs n ready) < t /\ t < (abs(n + 1)ready) ==> ~ready t)"
+    [ "COMPUTER_IMP
+       (mpc,mar,ir,arg,buf)
+       (memory,knob,button,switches,pc,acc,idle,ready)" ]
+
+() : void
+
+#OK..
+"(abs n ready) < (abs(SUC n)ready) /\
+ ready(abs(SUC n)ready) /\
+ (!t. (abs n ready) < t /\ t < (abs(SUC n)ready) ==> ~ready t)"
+    [ "COMPUTER_IMP
+       (mpc,mar,ir,arg,buf)
+       (memory,knob,button,switches,pc,acc,idle,ready)" ]
+
+() : void
+
+##OK..
+2 subgoals
+"ready(abs(SUC n)ready) /\
+ (!t. (abs n ready) < t /\ t < (abs(SUC n)ready) ==> ~ready t)"
+    [ "COMPUTER_IMP
+       (mpc,mar,ir,arg,buf)
+       (memory,knob,button,switches,pc,acc,idle,ready)" ]
+
+"(abs n ready) < (abs(SUC n)ready)"
+    [ "COMPUTER_IMP
+       (mpc,mar,ir,arg,buf)
+       (memory,knob,button,switches,pc,acc,idle,ready)" ]
+
+() : void
+
+#OK..
+"(abs n ready) <
+ (@t.
+   ready t /\
+   (abs n ready) < t /\
+   (!t'. (abs n ready) < t' /\ t' < t ==> ~ready t'))"
+    [ "COMPUTER_IMP
+       (mpc,mar,ir,arg,buf)
+       (memory,knob,button,switches,pc,acc,idle,ready)" ]
+
+() : void
+
+#OK..
+goal proved
+. |- (abs n ready) <
+     (@t.
+       ready t /\
+       (abs n ready) < t /\
+       (!t'. (abs n ready) < t' /\ t' < t ==> ~ready t'))
+. |- (abs n ready) < (abs(SUC n)ready)
+
+Previous subproof:
+"ready(abs(SUC n)ready) /\
+ (!t. (abs n ready) < t /\ t < (abs(SUC n)ready) ==> ~ready t)"
+    [ "COMPUTER_IMP
+       (mpc,mar,ir,arg,buf)
+       (memory,knob,button,switches,pc,acc,idle,ready)" ]
+
+() : void
+
+##OK..
+2 subgoals
+"!t. (abs n ready) < t /\ t < (abs(SUC n)ready) ==> ~ready t"
+    [ "COMPUTER_IMP
+       (mpc,mar,ir,arg,buf)
+       (memory,knob,button,switches,pc,acc,idle,ready)" ]
+
+"ready(abs(SUC n)ready)"
+    [ "COMPUTER_IMP
+       (mpc,mar,ir,arg,buf)
+       (memory,knob,button,switches,pc,acc,idle,ready)" ]
+
+() : void
+
+#OK..
+goal proved
+. |- ready(abs(SUC n)ready)
+
+Previous subproof:
+"!t. (abs n ready) < t /\ t < (abs(SUC n)ready) ==> ~ready t"
+    [ "COMPUTER_IMP
+       (mpc,mar,ir,arg,buf)
+       (memory,knob,button,switches,pc,acc,idle,ready)" ]
+
+() : void
+
+##OK..
+goal proved
+. |- !t. (abs n ready) < t /\ t < (abs(SUC n)ready) ==> ~ready t
+. |- ready(abs(SUC n)ready) /\
+     (!t. (abs n ready) < t /\ t < (abs(SUC n)ready) ==> ~ready t)
+. |- (abs n ready) < (abs(SUC n)ready) /\
+     ready(abs(SUC n)ready) /\
+     (!t. (abs n ready) < t /\ t < (abs(SUC n)ready) ==> ~ready t)
+. |- (abs n ready) < (abs(n + 1)ready) /\
+     ready(abs(n + 1)ready) /\
+     (!t. (abs n ready) < t /\ t < (abs(n + 1)ready) ==> ~ready t)
+. |- NEXT(abs n ready,abs(n + 1)ready)ready
+
+Previous subproof:
+goal proved
+() : void
+
+##NEXT_ABS_THM = . |- NEXT(abs n ready,abs(n + 1)ready)ready
+
+############################th1 = 
+|- COMPUTER_IMP
+   (mpc,mar,ir,arg,buf)
+   (memory,knob,button,switches,pc,acc,idle,ready) /\
+   STABLE(abs n ready,abs(n + 1)ready)switches /\
+   STABLE(abs n ready,abs(n + 1)ready)knob /\
+   NEXT(abs n ready,abs(n + 1)ready)ready /\
+   ready(abs n ready) ==>
+   COMPUTER
+   (abs n ready,abs(n + 1)ready)
+   (memory,knob,button,switches,pc,acc,idle)
+
+################th2 = 
+. |- COMPUTER_IMP
+     (mpc,mar,ir,arg,buf)
+     (memory,knob,button,switches,pc,acc,idle,ready) /\
+     (!n. STABLE(abs n ready,abs(n + 1)ready)switches) /\
+     (!n. STABLE(abs n ready,abs(n + 1)ready)knob) /\
+     (!n.
+       (memory_abs n = memory(abs n ready)) /\
+       (knob_abs n = knob(abs n ready)) /\
+       (button_abs n = button(abs n ready)) /\
+       (switches_abs n = switches(abs n ready)) /\
+       (pc_abs n = pc(abs n ready)) /\
+       (acc_abs n = acc(abs n ready)) /\
+       (idle_abs n = idle(abs n ready)))
+
+##########th3 = 
+. |- COMPUTER_IMP
+     (mpc,mar,ir,arg,buf)
+     (memory,knob,button,switches,pc,acc,idle,ready) /\
+     STABLE(abs n ready,abs(n + 1)ready)switches /\
+     STABLE(abs n ready,abs(n + 1)ready)knob /\
+     NEXT(abs n ready,abs(n + 1)ready)ready /\
+     ready(abs n ready)
+
+##th4 = 
+. |- COMPUTER
+     (abs n ready,abs(n + 1)ready)
+     (memory,knob,button,switches,pc,acc,idle)
+
+#th5 = 
+. |- memory(abs(n + 1)ready),pc(abs(n + 1)ready),acc(abs(n + 1)ready),
+     idle(abs(n + 1)ready) =
+     (idle(abs n ready) => 
+      (button(abs n ready) => 
+       ((VAL2(knob(abs n ready)) = 0) => 
+        (memory(abs n ready),CUT16_13(switches(abs n ready)),
+         acc(abs n ready),T) | 
+        ((VAL2(knob(abs n ready)) = 1) => 
+         (memory(abs n ready),pc(abs n ready),switches(abs n ready),T) | 
+         ((VAL2(knob(abs n ready)) = 2) => 
+          (STORE13
+           (pc(abs n ready))
+           (acc(abs n ready))
+           (memory(abs n ready)),pc(abs n ready),acc(abs n ready),T) | 
+          (memory(abs n ready),pc(abs n ready),acc(abs n ready),F)))) | 
+       (memory(abs n ready),pc(abs n ready),acc(abs n ready),T)) | 
+      (button(abs n ready) => 
+       (memory(abs n ready),pc(abs n ready),acc(abs n ready),T) | 
+       EXECUTE(memory(abs n ready),pc(abs n ready),acc(abs n ready))))
+
+##th6 = 
+. |- !n.
+      (memory_abs n = memory(abs n ready)) /\
+      (knob_abs n = knob(abs n ready)) /\
+      (button_abs n = button(abs n ready)) /\
+      (switches_abs n = switches(abs n ready)) /\
+      (pc_abs n = pc(abs n ready)) /\
+      (acc_abs n = acc(abs n ready)) /\
+      (idle_abs n = idle(abs n ready))
+
+#th8 = 
+. |- memory_abs(n + 1),pc_abs(n + 1),acc_abs(n + 1),idle_abs(n + 1) =
+     (idle(abs n ready) => 
+      (button(abs n ready) => 
+       ((VAL2(knob(abs n ready)) = 0) => 
+        (memory(abs n ready),CUT16_13(switches(abs n ready)),
+         acc(abs n ready),T) | 
+        ((VAL2(knob(abs n ready)) = 1) => 
+         (memory(abs n ready),pc(abs n ready),switches(abs n ready),T) | 
+         ((VAL2(knob(abs n ready)) = 2) => 
+          (STORE13
+           (pc(abs n ready))
+           (acc(abs n ready))
+           (memory(abs n ready)),pc(abs n ready),acc(abs n ready),T) | 
+          (memory(abs n ready),pc(abs n ready),acc(abs n ready),F)))) | 
+       (memory(abs n ready),pc(abs n ready),acc(abs n ready),T)) | 
+      (button(abs n ready) => 
+       (memory(abs n ready),pc(abs n ready),acc(abs n ready),T) | 
+       EXECUTE(memory(abs n ready),pc(abs n ready),acc(abs n ready))))
+
+#th9 = 
+. |- memory_abs(n + 1),pc_abs(n + 1),acc_abs(n + 1),idle_abs(n + 1) =
+     (idle_abs n => 
+      (button_abs n => 
+       ((VAL2(knob_abs n) = 0) => 
+        (memory_abs n,CUT16_13(switches_abs n),acc_abs n,T) | 
+        ((VAL2(knob_abs n) = 1) => 
+         (memory_abs n,pc_abs n,switches_abs n,T) | 
+         ((VAL2(knob_abs n) = 2) => 
+          (STORE13(pc_abs n)(acc_abs n)(memory_abs n),pc_abs n,
+           acc_abs n,T) | 
+          (memory_abs n,pc_abs n,acc_abs n,F)))) | 
+       (memory_abs n,pc_abs n,acc_abs n,T)) | 
+      (button_abs n => 
+       (memory_abs n,pc_abs n,acc_abs n,T) | 
+       EXECUTE(memory_abs n,pc_abs n,acc_abs n)))
+
+##th10 = 
+. |- !n.
+      memory_abs(n + 1),pc_abs(n + 1),acc_abs(n + 1),idle_abs(n + 1) =
+      (idle_abs n => 
+       (button_abs n => 
+        ((VAL2(knob_abs n) = 0) => 
+         (memory_abs n,CUT16_13(switches_abs n),acc_abs n,T) | 
+         ((VAL2(knob_abs n) = 1) => 
+          (memory_abs n,pc_abs n,switches_abs n,T) | 
+          ((VAL2(knob_abs n) = 2) => 
+           (STORE13(pc_abs n)(acc_abs n)(memory_abs n),pc_abs n,
+            acc_abs n,T) | 
+           (memory_abs n,pc_abs n,acc_abs n,F)))) | 
+        (memory_abs n,pc_abs n,acc_abs n,T)) | 
+       (button_abs n => 
+        (memory_abs n,pc_abs n,acc_abs n,T) | 
+        EXECUTE(memory_abs n,pc_abs n,acc_abs n)))
+
+#th11 = 
+. |- !t.
+      memory_abs(t + 1),pc_abs(t + 1),acc_abs(t + 1),idle_abs(t + 1) =
+      (idle_abs t => 
+       (button_abs t => 
+        ((VAL2(knob_abs t) = 0) => 
+         (memory_abs t,CUT16_13(switches_abs t),acc_abs t,T) | 
+         ((VAL2(knob_abs t) = 1) => 
+          (memory_abs t,pc_abs t,switches_abs t,T) | 
+          ((VAL2(knob_abs t) = 2) => 
+           (STORE13(pc_abs t)(acc_abs t)(memory_abs t),pc_abs t,
+            acc_abs t,T) | 
+           (memory_abs t,pc_abs t,acc_abs t,F)))) | 
+        (memory_abs t,pc_abs t,acc_abs t,T)) | 
+       (button_abs t => 
+        (memory_abs t,pc_abs t,acc_abs t,T) | 
+        EXECUTE(memory_abs t,pc_abs t,acc_abs t)))
+
+#th12 = 
+|- COMPUTER_IMP
+   (mpc,mar,ir,arg,buf)
+   (memory,knob,button,switches,pc,acc,idle,ready) /\
+   (!n. STABLE(abs n ready,abs(n + 1)ready)switches) /\
+   (!n. STABLE(abs n ready,abs(n + 1)ready)knob) /\
+   (!n.
+     (memory_abs n = memory(abs n ready)) /\
+     (knob_abs n = knob(abs n ready)) /\
+     (button_abs n = button(abs n ready)) /\
+     (switches_abs n = switches(abs n ready)) /\
+     (pc_abs n = pc(abs n ready)) /\
+     (acc_abs n = acc(abs n ready)) /\
+     (idle_abs n = idle(abs n ready))) ==>
+   COMPUTER_abs
+   (memory_abs,knob_abs,button_abs,switches_abs,pc_abs,acc_abs,idle_abs)
+
+##CORRECTNESS_abs = 
+|- COMPUTER_IMP
+   (mpc,mar,ir,arg,buf)
+   (memory,knob,button,switches,pc,acc,idle,ready) /\
+   (!n. STABLE(abs n ready,abs(n + 1)ready)switches) /\
+   (!n. STABLE(abs n ready,abs(n + 1)ready)knob) /\
+   (!n.
+     (memory_abs n = memory(abs n ready)) /\
+     (knob_abs n = knob(abs n ready)) /\
+     (button_abs n = button(abs n ready)) /\
+     (switches_abs n = switches(abs n ready)) /\
+     (pc_abs n = pc(abs n ready)) /\
+     (acc_abs n = acc(abs n ready)) /\
+     (idle_abs n = idle(abs n ready))) ==>
+   COMPUTER_abs
+   (memory_abs,knob_abs,button_abs,switches_abs,pc_abs,acc_abs,idle_abs)
+
+##() : void
+
+#=> 

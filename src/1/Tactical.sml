@@ -13,7 +13,7 @@
 structure Tactical :> Tactical =
 struct
 
-open Feedback HolKernel Drule boolSyntax Abbrev;
+open Feedback HolKernel Drule Conv boolSyntax Abbrev
 
 val ERR = mk_HOL_ERR "Tactical"
 
@@ -221,6 +221,14 @@ fun op THEN1 (tac1: tactic, tac2: tactic) : tactic =
       end
 
 val op >- = op THEN1
+fun op>>-(tac1, n) tac2 g =
+  op>- (tac1, tac2) g
+  handle e as HOL_ERR {message,origin_structure,origin_function} =>
+    raise HOL_ERR {message = message ^ " (THEN1 on line "^Int.toString n^")",
+                   origin_function = origin_function,
+                   origin_structure = origin_structure}
+fun (f ?? x) = f x
+
 
 (*---------------------------------------------------------------------------
  * NTH_GOAL tac n: A list_tactic that applies tac to the nth goal
@@ -269,8 +277,8 @@ fun ROTATE_LT n [] = ([], Lib.I)
       val fixn = Int.mod (n, lgl) ;
       val (gla, glb) = Lib.split_after fixn gl ;
       fun vf ths =
-	let val (thsb, thsa) = Lib.split_after (lgl - fixn) ths ;
-	in thsa @ thsb end ;
+        let val (thsb, thsa) = Lib.split_after (lgl - fixn) ths ;
+        in thsa @ thsb end ;
     in (glb @ gla, vf) end ;
 
 (*---------------------------------------------------------------------------
@@ -429,8 +437,8 @@ local val validity_tag = "ValidityCheck"
         Lib.filter (fn h => not (Lib.exists (aconv h) asl)) (hyp th) ;
       fun extra_goals_tbp flag th (asl, w) =
         List.map (fn eg => (asl, eg))
-	  (case flag of true => hyps_not_in_goal th (asl, w)
-	    | false => hyp th) ;
+          (case flag of true => hyps_not_in_goal th (asl, w)
+            | false => hyp th) ;
 in
 (* GEN_VALIDATE : bool -> tactic -> tactic *)
 fun GEN_VALIDATE (flag : bool) (tac : tactic) (g as (asl, w) : goal) =
@@ -512,36 +520,6 @@ fun PRED_ASSUM pred thfun (asl, w) =
       SOME (ob, asl') => thfun (ASSUME ob) (asl', w)
     | NONE => raise ERR "PRED_ASSUM" "No suitable assumption found."
 
-(*---------------------------------------------------------------------------
- * Pop the first assumption matching (higher-order match) the given term
- * and give it to a function (tactic).
- *---------------------------------------------------------------------------*)
-
-local
-   fun match_with_constants constants pat ob =
-      let
-         val (tm_inst, ty_inst) = ho_match_term [] empty_tmset pat ob
-         val bound_vars = map #redex tm_inst
-      in
-         null (intersect constants bound_vars)
-      end
-      handle HOL_ERR _ => false
-in
-   fun PAT_ASSUM pat thfun (asl, w) =
-     case List.filter (can (ho_match_term [] empty_tmset pat)) asl of
-        [] => raise ERR "PAT_ASSUM" "No assumptions match the given pattern"
-      | [x] => let
-                  val (ob, asl') = Lib.pluck (Lib.equal x) asl
-               in
-                  thfun (ASSUME ob) (asl', w)
-               end
-      |  _ => let
-                 val fvars = free_varsl (w :: asl)
-                 val (ob, asl') = Lib.pluck (match_with_constants fvars pat) asl
-              in
-                 thfun (ASSUME ob) (asl', w)
-              end
-end
 
 (*-- Tactical quantifiers -- Apply a list of tactics in succession. -------*)
 
@@ -625,6 +603,111 @@ in
 end
 
 (*---------------------------------------------------------------------------
+ * Pop the first assumption matching (higher-order match) the given term
+ * and give it to a function (tactic).
+ *---------------------------------------------------------------------------*)
+
+local
+  fun can_match_with_constants constants pat ob =
+    let
+      val (tm_inst, _) = ho_match_term [] empty_tmset pat ob
+      val bound_vars = map #redex tm_inst
+    in
+      null (intersect constants bound_vars)
+    end handle HOL_ERR _ => false
+
+ (* you might think that one could simply pass the free variable set
+    to ho_match_term, and do without this bogus looking
+    can_match_with_constants function. Unfortunately, this doesn't
+    quite work because the match is higher-order, meaning that a
+    pattern like ``_ x``, where x is a "constant" will match something
+    like ``f y``, where y is of the right type, but manifestly not x.
+    This is because
+
+      ho_match_term [] (some set including x) ``_ x`` ``f y``
+
+    will return an instantiation where _ maps to (\x. y). This
+    respects the request not to bind x, but the intention is bypassed.
+ *)
+
+   fun gen tcl pat thfun (g as (asl,w)) =
+     let
+       val fvs = free_varsl (w::asl)
+     in
+       tcl (thfun o assert (can_match_with_constants fvs pat o concl))
+     end g
+in
+   val PAT_X_ASSUM = gen FIRST_X_ASSUM
+   val PAT_ASSUM = gen FIRST_ASSUM
+end
+
+
+local
+fun hdsym t = (t |> lhs |> strip_comb |> #1)
+              handle HOL_ERR _ => t |> strip_comb |> #1
+fun hdsym_check tm ttac = ttac o assert (same_const tm o hdsym o concl)
+in
+fun hdtm_assum tm ttac = first_assum (hdsym_check tm ttac)
+fun hdtm_x_assum tm ttac = first_x_assum (hdsym_check tm ttac)
+end
+
+fun sing f [x] = f x
+  | sing f _ = raise ERR "sing" "Bind Error"
+
+fun CONV_TAC (conv: conv) : tactic =
+   fn (asl, w) =>
+      let
+         val th = conv w
+         val (_, rhs) = dest_eq (concl th)
+      in
+         if rhs = T
+            then ([], empty (EQ_MP (SYM th) boolTheory.TRUTH))
+         else ([(asl, rhs)], sing (EQ_MP (SYM th)))
+      end
+      handle UNCHANGED =>
+        if w = T (* special case, can happen! *)
+          then ([], empty boolTheory.TRUTH)
+        else ALL_TAC (asl, w)
+
+(*---------------------------------------------------------------------------
+ * Call a thm-tactic on the "assumption" obtained by negating the goal, i.e.,
+   turn an existential goal into a universal assumption. Fix up the resulting
+   new goal if necessary.
+ *---------------------------------------------------------------------------*)
+
+local
+  fun DISCH_THEN ttac (asl,w) =
+   let
+      val (ant, conseq) = dest_imp w
+      val (gl, prf) = ttac (ASSUME ant) (asl, conseq)
+   in
+      (gl, (if is_neg w then NEG_DISCH ant else DISCH ant) o prf)
+   end
+   handle HOL_ERR _ => raise ERR "DISCH_THEN" ""
+  val NOT_NOT_E = boolTheory.NOT_CLAUSES |> CONJUNCT1
+  val NOT_NOT_I = NOT_NOT_E |> GSYM
+  val NOT_IMP_F = IMP_ANTISYM_RULE (SPEC_ALL boolTheory.F_IMP)
+                                   (SPEC_ALL boolTheory.IMP_F)
+  val IMP_F_NOT = NOT_IMP_F |> GSYM
+  val P_IMP_P = boolTheory.IMP_CLAUSES |> SPEC_ALL |> CONJUNCTS |> el 4
+  val NOT_IMP_F_elim =
+      TRANS (AP_TERM boolSyntax.negation (SYM NOT_IMP_F))
+            (boolTheory.NOT_CLAUSES |> CONJUNCT1 |> SPEC_ALL)
+  fun EX_IMP_F_CONV tm =
+    (IFC NOT_EXISTS_CONV (BINDER_CONV EX_IMP_F_CONV) (REWR_CONV NOT_IMP_F)) tm
+  fun undo_conv tm =
+    (IFC NOT_FORALL_CONV
+         (BINDER_CONV undo_conv)
+         (REWR_CONV NOT_IMP_F_elim ORELSEC TRY_CONV (REWR_CONV NOT_NOT_E))) tm
+in
+  fun goal_assum ttac : tactic =
+    CONV_TAC (REWR_CONV NOT_NOT_I THENC RAND_CONV EX_IMP_F_CONV) THEN
+    DISCH_THEN ttac THEN
+    (CONV_TAC (REWR_CONV P_IMP_P) ORELSE
+     TRY (CONV_TAC (REWR_CONV IMP_F_NOT THENC undo_conv)))
+end
+
+(*---------------------------------------------------------------------------
  * Split off a new subgoal and provide it as a theorem to a tactic
  *
  *     SUBGOAL_THEN wa (\tha. tac)
@@ -690,6 +773,31 @@ fun parse_with_goal t (asms, g) =
       Parse.parse_in_context ctxt t
    end
 
-val Q_TAC = fn tac => fn g => W (tac o parse_with_goal g)
+fun Q_TAC0 {traces} tyopt (tac : term -> tactic) q (g as (asl,w)) =
+  let
+    open Parse
+    val ctxt = free_varsl (w::asl)
+    val ab =
+        case tyopt of
+            NONE => Absyn
+          | SOME ty =>
+            fn q => Absyn.TYPED(locn.Loc_None, Absyn q, Pretype.fromType ty)
+    val s = TermParse.prim_ctxt_termS ab (term_grammar()) ctxt q
+    fun cases s = List.foldl
+                    (fn (trpair,f) => Feedback.trace trpair f)
+                    seq.cases
+                    traces
+                    s
+  in
+    case cases s of
+        NONE => raise ERR "Q_TAC" "No parse for quotation"
+      | SOME _ =>
+        (case cases (seq.mapPartial (fn t => total (tac t) g) s) of
+             NONE => raise ERR "Q_TAC" "No parse of quotation leads to success"
+           | SOME (res,_) => res)
+  end
+
+val Q_TAC = Q_TAC0 {traces = []} NONE
+fun QTY_TAC ty = Q_TAC0 {traces = []} (SOME ty)
 
 end (* Tactical *)

@@ -55,24 +55,29 @@ struct
 
   fun buffer_from_tok lexer (tok,locn) nf_rest rest =
       case tok of
-        BT_EOI => new_buffer0 nf_rest rest
+        BT_EOI => new_buffer0 (SOME locn) nf_rest rest
       | _ => (SOME lexer, (tok,locn), nf_rest, rest)
-  and new_buffer0 nf q =
-      case q of
-        [] => (NONE, (BT_EOI,locp(LocPEnd(nf-1))), 0, q)
-      | (QUOTE _ :: _) => let
-          open Lib
-          val (s, nf_rest, rest) = leading_quotes [] nf q
-          val st = base_lexer.UserDeclarations.newstate nf
-          val lexer = (lift_tok ## I) o
-                      (base_lexer.makeLexer (read_from_string s) st)
-          val (t,locn) = lexer ()
-        in
-          buffer_from_tok lexer (t,locn) nf_rest rest
-        end
-      | ANTIQUOTE x :: rest => (NONE, (BT_AQ x,locfrag nf), nf+1, rest)
+  and new_buffer0 locopt nf q =
+      let
+        fun maybe l = case locopt of NONE => l | SOME loc => loc
+      in
+        case q of
+            [] => (NONE, (BT_EOI,maybe (locp(LocPEnd(nf-1)))), 0, q)
+          | (QUOTE _ :: _) => let
+            open Lib
+            val (s, nf_rest, rest) = leading_quotes [] nf q
+            val st = base_lexer.UserDeclarations.newstate nf
+            val lexer = (lift_tok ## I) o
+                        (base_lexer.makeLexer (read_from_string s) st)
+            val (t,locn) = lexer ()
+          in
+            buffer_from_tok lexer (t,locn) nf_rest rest
+          end
+          | ANTIQUOTE x :: rest =>
+              (NONE, (BT_AQ x,maybe (locfrag nf)), nf+1, rest)
+      end
 
-  fun new_buffer q = ref (new_buffer0 0 q)
+  fun new_buffer q = ref (new_buffer0 NONE 0 q)
 
   fun current (ref (_, x, _, _)) = x
 
@@ -82,9 +87,9 @@ struct
           buffer_from_tok lexfn (t,locn) nf_q q
       end
 
-  fun advance (r as ref (lbopt, (curr,_), nf_q, q)) =
+  fun advance (r as ref (lbopt, (curr,cloc), nf_q, q)) =
       case curr of
-          BT_AQ _ => r := new_buffer0 nf_q q
+          BT_AQ _ => r := new_buffer0 (SOME cloc) nf_q q
         | BT_EOI => ()
         | _ => r := buffer_from_lbuf (valOf lbopt) nf_q q
 

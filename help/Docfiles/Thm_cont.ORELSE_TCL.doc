@@ -1,6 +1,6 @@
 \DOC ORELSE_TCL
 
-\TYPE {$ORELSE_TCL : (thm_tactical -> thm_tactical -> thm_tactical)}
+\TYPE {ORELSE_TCL : (thm_tactical * thm_tactical -> thm_tactical)}
 
 \SYNOPSIS
 Applies a theorem-tactical, and if it fails, tries a second.

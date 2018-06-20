@@ -3,13 +3,16 @@ struct
 
 
 open Systeml
+open Holmake_tools_dtype
+
+fun K x y = x
 
 structure Path = OS.Path
 structure FileSys = OS.FileSys
 
+val DEFAULT_OVERLAY = "Overlay.ui"
+
 fun normPath s = OS.Path.toString(OS.Path.fromString s)
-fun itlist f L base =
-   let fun it [] = base | it (a::rst) = f a (it rst) in it L end;
 fun itstrings f [] = raise Fail "itstrings: empty list"
   | itstrings f [x] = x
   | itstrings f (h::t) = f h (itstrings f t);
@@ -26,6 +29,74 @@ fun collapse_bslash_lines s = let
 in
   implode (trans charlist)
 end
+
+val kernelid_fname = Path.concat(HOLDIR, ".kernelidstr")
+fun checkterm pfx s =
+  case OS.Process.getEnv "TERM" of
+      NONE => s
+    | SOME term =>
+      if String.isPrefix "xterm" term then
+        pfx ^ s ^ "\027[0m"
+      else
+        s
+
+val bold = checkterm "\027[1m"
+val boldred = checkterm "\027[31m\027[1m"
+val boldgreen = checkterm "\027[32m\027[1m"
+val boldyellow = checkterm "\027[33m\027[1m"
+val red = checkterm "\027[31m"
+val dim = checkterm "\027[2m"
+val CLR_EOL = "\027[0K" (* ANSI clear to EOL code *)
+
+fun optbind x f =
+  case x of
+      SOME y => f y
+    | _ => NONE
+fun optchoice (opt1, opt2) =
+  case opt1 of
+      NONE => opt2
+    | _ => opt1
+infix ++
+val op++ = optchoice
+fun isc r = Int.scan StringCvt.DEC r
+fun char_reader (s, i) = if size s <= i then NONE
+                         else SOME (String.sub(s,i), (s,i+1))
+fun estbind m f s =
+  case m s of
+      NONE => NONE
+    | SOME(r,s') => f r s'
+
+fun run s =
+  let
+    val outfile = OS.FileSys.tmpName()
+    val res = OS.Process.system (String.concatWith " " [s,"1>",outfile,"2>&1"])
+    val output =
+        let
+          val istrm = TextIO.openIn outfile
+        in
+          TextIO.inputAll istrm before TextIO.closeIn istrm
+        end handle IO.Io _ => ""
+  in
+    if OS.Process.isSuccess res then SOME output else NONE
+  end
+
+fun optassert P x = if P x then SOME x else NONE
+
+fun getWidth0 () =
+  let
+    fun tputresult istr = Int.fromString istr
+    fun sttyresult i2str =
+      Option.map #1
+                 (estbind (isc char_reader) (fn _ => isc char_reader)
+                          (i2str, 0))
+    fun positive m x = optbind (m x) (optassert (fn i => i > 0))
+  in
+    optbind (run "stty size") (positive sttyresult) ++
+    optbind (run "tput cols") (positive tputresult) ++
+    SOME 80
+  end
+
+fun getWidth() = valOf (getWidth0())
 
 fun realspace_delimited_fields s = let
   open Substring
@@ -57,9 +128,11 @@ in
   outword [] (full s)
 end
 
-type output_functions = {warn : string -> unit, info : string -> unit,
+type output_functions = {warn : string -> unit,
+                         info : string -> unit,
+                         chatty : string -> unit,
                          tgtfatal : string -> unit,
-                         diag : string -> unit}
+                         diag : (unit -> string) -> unit}
 
 fun die_with message = let
   open TextIO
@@ -69,25 +142,59 @@ in
   OS.Process.exit OS.Process.failure
 end
 
-fun output_functions {quiet_flag: bool, debug:bool} = let
-  val execname = CommandLine.name()
+fun shorten_name name =
+  if OS.Path.file name = "Holmake" then "Holmake" else name
+
+fun output_functions {usepfx,chattiness=n} = let
+  val execname = if usepfx then shorten_name (CommandLine.name()) ^ ": " else ""
   open TextIO
-  fun msg strm s = (output(strm, execname ^ ": "^s^"\n"); flushOut strm)
+  fun msg strm s =
+    if s = "" then ()
+    else
+      let
+        val ss = Substring.full s
+        val (pfx_ss,sfx_ss) = Substring.splitl Char.isSpace ss
+        val pfx = Substring.string pfx_ss
+        val sfx = Substring.string sfx_ss
+      in
+        output(strm, pfx ^ execname ^ sfx^"\n");
+        flushOut strm
+      end
   fun donothing _ = ()
-  val warn = if not quiet_flag then msg stdErr else donothing
-  val info = if not quiet_flag then msg stdOut else donothing
+  val warn = if n >= 1 then msg stdErr else donothing
+  val info = if n >= 1 then msg stdOut else donothing
+  val chatty = if n >= 2 then msg stdOut else donothing
   val tgtfatal = msg stdErr
-  val diag = if debug then msg stdErr else donothing
+  val diag = if n >= 3 then (fn sf => msg stdErr (sf())) else donothing
 in
-  {warn = warn, diag = diag, tgtfatal = tgtfatal, info = info}
+  {warn = warn, diag = diag, tgtfatal = tgtfatal, info = info, chatty = chatty}
 end
 
 fun exists_readable s = OS.FileSys.access(s, [OS.FileSys.A_READ])
 
+fun check_distrib toolname = let
+  val fpath = fullPath
+  open FileSys
+  fun checkdir () =
+    access ("sigobj", [A_READ, A_EXEC]) andalso
+    isDir "sigobj" andalso
+    access (fpath ["bin", "Holmake"], [A_READ, A_EXEC])
+  fun traverse () = let
+    val d = getDir()
+  in
+    if checkdir() then SOME (fpath [d, "bin", toolname])
+    else if Path.isRoot d then NONE
+    else (chDir Path.parentArc; traverse())
+  end
+  val start = getDir()
+in
+  traverse() before chDir start
+end
+
 fun do_lastmade_checks (ofns : output_functions) {no_lastmakercheck} = let
   val {warn,diag,...} = ofns
   val mypath = find_my_path()
-  val _ = diag ("running "^mypath )
+  val _ = diag (K ("running "^mypath))
   fun write_lastmaker_file () = let
     val outstr = TextIO.openOut ".HOLMK/lastmaker"
   in
@@ -95,31 +202,11 @@ fun do_lastmade_checks (ofns : output_functions) {no_lastmakercheck} = let
     TextIO.closeOut outstr
   end handle IO.Io _ => ()
 
-  fun check_distrib () = let
-    open FileSys
-    val _ = diag "Looking to see if I am in a HOL distribution."
-    fun checkdir () =
-        access ("sigobj", [A_READ, A_EXEC]) andalso
-        isDir "sigobj" andalso
-        access ("bin/Holmake", [A_READ, A_EXEC])
-    fun traverse () = let
-      val d = getDir()
-    in
-      if checkdir() then
-        SOME (Path.concat (d, "bin/Holmake"))
-      else if Path.isRoot d then NONE
-      else (chDir Path.parentArc; traverse())
-    end
-    val start = getDir()
-  in
-    traverse() before chDir start
-  end
-
   fun lmfile() =
       if not no_lastmakercheck andalso
          FileSys.access (".HOLMK/lastmaker", [FileSys.A_READ])
       then let
-          val _ = diag "Found a lastmaker file to look at."
+          val _ = diag (K "Found a lastmaker file to look at.")
           val istrm = TextIO.openIn ".HOLMK/lastmaker"
         in
           case TextIO.inputLine istrm of
@@ -145,41 +232,34 @@ fun do_lastmade_checks (ofns : output_functions) {no_lastmakercheck} = let
         end
       else write_lastmaker_file()
 in
-  case check_distrib() of
+  diag (K "Looking to see if I am in a HOL distribution.");
+  case check_distrib "Holmake" of
     NONE => let
     in
-      diag "Not in a HOL distribution";
+      diag (K "Not in a HOL distribution");
       lmfile()
     end
   | SOME p =>
-    if p = mypath then diag "In the right HOL distribution"
+    if p = mypath then diag (K "In the right HOL distribution")
     else if no_lastmakercheck then
-      diag "In the wrong distribution, but --nolmbc takes precedence."
+      diag (K "In the wrong distribution, but --nolmbc takes precedence.")
     else
       (warn ("*** Switching to execute "^p);
        warn ("*** (As we are in/under its HOLDIR)");
        Systeml.exec (p, p::"--nolmbc"::CommandLine.arguments()))
 end
 
-datatype CodeType =
-         Theory of string
-       | Script of string
-       | Other of string
-
-datatype File =
-         SML of CodeType
-       | SIG of CodeType
-       | UO of CodeType
-       | UI of CodeType
-       | Unhandled of string
-
 fun string_part0 (Theory s) = s
   | string_part0 (Script s) = s
   | string_part0 (Other s) = s
+fun string_part1 (RawArticle s) = s
+  | string_part1 (ProcessedArticle s) = s
 fun string_part (UO c)  = string_part0 c
   | string_part (UI c)  = string_part0 c
   | string_part (SML c) = string_part0 c
   | string_part (SIG c) = string_part0 c
+  | string_part (ART c) = string_part1 c
+  | string_part (DAT s) = s
   | string_part (Unhandled s) = s
 
 fun isProperSuffix s1 s2 =
@@ -199,6 +279,13 @@ in
   end
 end
 
+fun toArticleType s = let
+  val possprefix = isProperSuffix ".ot" s
+in
+  if (isSome possprefix) then ProcessedArticle (valOf possprefix)
+  else RawArticle s
+end
+
 fun toFile s0 = let
   val {base = s, ext} = OS.Path.splitBaseExt s0
 in
@@ -207,8 +294,19 @@ in
   | SOME "sig" => SIG (toCodeType s)
   | SOME "uo"  => UO (toCodeType s)
   | SOME "ui"  => UI (toCodeType s)
+  | SOME "art" => ART (toArticleType s)
+  | SOME "dat" => if String.isSuffix "Theory" s then
+                    DAT (String.extract(s,0,SOME(size s - 6)))
+                  else Unhandled s0
   |    _       => Unhandled s0
 end
+
+fun extract_theory slist =
+  case slist of
+      [] => NONE
+    | s :: rest => (case toFile s of
+                        SML (Theory thy) => SOME thy
+                      | _ => extract_theory rest)
 
 fun codeToString c =
   case c of
@@ -216,13 +314,48 @@ fun codeToString c =
   | Script s => s ^ "Script"
   | Other s  => s
 
+fun articleToString c =
+  case c of
+    RawArticle s => s
+  | ProcessedArticle s => s ^ ".ot"
+
 fun fromFile f =
   case f of
     UO c  => codeToString c ^ ".uo"
   | UI c  => codeToString c ^ ".ui"
   | SIG c => codeToString c ^ ".sig"
   | SML c => codeToString c ^ ".sml"
+  | ART c => articleToString c ^ ".art"
+  | DAT s => s ^ "Theory.dat"
   | Unhandled s => s
+
+fun fromFileNoSuf f =
+  case f of
+    UO c  => codeToString c
+  | UI c  => codeToString c
+  | SIG c => codeToString c
+  | SML c => codeToString c
+  | ART a => articleToString a
+  | DAT s => s
+  | Unhandled s => s
+
+fun member m [] = false
+  | member m (x::xs) = if x = m then true else member m xs
+fun set_union s1 s2 =
+  case s1 of
+    [] => s2
+  | (e::es) => let
+      val s' = set_union es s2
+    in
+      if member e s' then s' else e::s'
+    end
+fun delete m [] = []
+  | delete m (x::xs) = if m = x then delete m xs else x::delete m xs
+fun set_diff s1 s2 = foldl (fn (s2e, s1') => delete s2e s1') s1 s2
+fun remove_duplicates [] = []
+  | remove_duplicates (x::xs) = x::(remove_duplicates (delete x xs))
+
+
 
 fun file_compare (f1, f2) = String.compare (fromFile f1, fromFile f2)
 
@@ -232,6 +365,9 @@ fun primary_dependent f =
     | UI c => SOME (SIG c)
     | SML (Theory s) => SOME (SML (Script s))
     | SIG (Theory s) => SOME (SML (Script s))
+    | DAT s => SOME (SML (Script s))
+    | ART (RawArticle s) => SOME (SML (Script s))
+    | ART (ProcessedArticle s) => SOME (ART (RawArticle s))
     | _ => NONE
 
 fun read_files ds P action =
@@ -241,6 +377,7 @@ fun read_files ds P action =
       (if P nextfile then action nextfile else ();
        read_files ds P action)
 
+fun quiet_remove s = OS.FileSys.remove s handle e => ()
 
 fun clean_dir {extra_cleans} = let
   val cdstream = OS.FileSys.openDir "."
@@ -250,22 +387,30 @@ fun clean_dir {extra_cleans} = let
       | UI _ => true
       | SIG (Theory _) => true
       | SML (Theory _) => true
+      | SML (Script s) =>
+          (case OS.Path.ext s of SOME "art" => true | _ => false)
+      | DAT _ => true
+      | ART _ => true
       | _ => false
-  fun quiet_remove s = OS.FileSys.remove s handle e => ()
 in
   read_files cdstream to_delete quiet_remove;
   app quiet_remove extra_cleans
 end
 
+fun clean_forReloc {holheap} =
+  if Systeml.ML_SYSNAME = "poly" then
+    case holheap of SOME s => quiet_remove s | _ => ()
+  else ()
+
 exception DirNotFound
 fun clean_depdir {depdirname} = let
-  val depds = OS.FileSys.openDir DEPDIR handle
+  val depds = OS.FileSys.openDir depdirname handle
       OS.SysErr _ => raise DirNotFound
 in
   read_files depds
              (fn _ => true)
-             (fn s => OS.FileSys.remove (fullPath [DEPDIR, s]));
-  OS.FileSys.rmDir DEPDIR;
+             (fn s => OS.FileSys.remove (fullPath [depdirname, s]));
+  OS.FileSys.rmDir depdirname;
   true
 end handle OS.SysErr (mesg, _) => let
            in
@@ -308,8 +453,17 @@ fun toString {relpath,absdir} =
 
 fun toAbsPath {relpath,absdir} = absdir
 
+fun pretty_dir d =
+  let
+    val abs = toAbsPath d
+    val abs' = holpathdb.reverse_lookup {path=abs}
+  in
+    if abs = abs' then toString d else abs'
+  end
+
 fun fromPath {origin,path} =
-    if Path.isAbsolute path then {relpath = NONE, absdir = path}
+    if Path.isAbsolute path then
+      {relpath = NONE, absdir = Path.mkCanonical path}
     else
       {relpath = SOME path, absdir = origin + path}
 
@@ -317,7 +471,8 @@ fun extendp {base = {relpath, absdir}, extension} = let
   val relpath_str = case relpath of NONE => "NONE"
                                   | SOME s => "SOME("^s^")"
 in
-  if Path.isAbsolute extension then {relpath = NONE, absdir = extension}
+  if Path.isAbsolute extension then
+    {relpath = NONE, absdir = Path.mkCanonical extension}
   else
       case relpath of
           NONE => {absdir = absdir + extension, relpath = NONE}
@@ -342,122 +497,74 @@ end
 
 end (* hmdir struct *)
 
-type include_info = {includes : string list, preincludes : string list }
-type 'dir holmake_dirinfo = {visited : hmdir.t Binaryset.set, includes : 'dir list,
-                             preincludes : 'dir list}
-type 'dir holmake_result = 'dir holmake_dirinfo option
-
-(* ----------------------------------------------------------------------
-
-    maybe_recurse
-
-    this function doesn't handle all recursion, just one level's
-    worth. In other words, the master Holmake calls this function, and
-    this then arranges the recursive calls into the various include
-    directories that need to happen. The holmake that gets called in
-    those directories (via the hm parameter) will in turn call this
-    function for recursion at that level in the "tree".
-
-    The local_build/k parameter is how the maybe_recurse function
-    finishes off; this parameter is called when all of the necessary
-    recursion has been performed and work should be done in the
-    current ("local") directory.
-
-    Finally, what of the dirinfo?
-
-    This record includes
-          origin: the absolute path to the very first directory
-        includes: the includes that the local directory knows about
-                  (which will have come from the command-line or
-                  INCLUDES lines in the local Holmakefile
-     preincludes: similarly
-         visited: a set of visited directories (with directories
-                  expressed as absolute paths)
-
-    The includes and preincludes are clearly useful when it comes time to
-    do any local work, but also specify how the recursion is to happen.
-
-    Now, the recursion into those directories may result in extra
-    includes and preincludes.
-   ---------------------------------------------------------------------- *)
-fun maybe_recurse {warn,diag,no_prereqs,hm,dirinfo,dir,local_build=k,cleantgt} =
-let
-  val {includes,preincludes,visited} = dirinfo
-  val _ = diag ("maybe_recurse: includes = [" ^
-                String.concatWith ", " includes ^ "]")
-  val _ = diag ("maybe_recurse: preincludes = [" ^
-                String.concatWith ", " preincludes ^ "]")
-  val k = fn ii => (terminal_log ("Holmake: "^nice_dir (hmdir.toString dir));
-                    k ii)
-  val tgts = case cleantgt of SOME s => [s] | NONE => []
-  fun recurse (acc as {visited,includes,preincludes}) newdir = let
-  in
-    if Binaryset.member(visited, newdir) then SOME acc
-    else let
-      val _ = warn ("Recursively calling Holmake in " ^ hmdir.toString newdir)
-      val _ = terminal_log ("Holmake: "^nice_dir (hmdir.toString newdir))
-      val result =
-          case hm {dir = newdir, visited = visited, targets = tgts} of
-              NONE => NONE
-            | SOME {visited,includes = inc0, preincludes = pre0} =>
-              SOME {visited = visited,
-                    includes = hmdir.sort (includes @ inc0),
-                    preincludes = hmdir.sort (preincludes @ pre0)}
-    in
-      warn ("Finished recursive invocation in "^hmdir.toString newdir);
-      terminal_log ("Holmake: "^nice_dir (hmdir.toString dir));
-      FileSys.chDir (hmdir.toAbsPath dir);
-      case result of
-          SOME{includes=incs,preincludes=pre,...} =>
-          (diag ("Recursively computed includes = " ^
-                 String.concatWith ", " (map hmdir.toString incs));
-           diag ("Recursively computed pre-includes = " ^
-                 String.concatWith ", " (map hmdir.toString pre)))
-        | NONE => ();
-      result
-    end
-  end
-  fun do_em (accg as {includes,preincludes,...}) dirs =
-      case dirs of
-          [] =>
-          let
-            val f = map hmdir.toAbsPath
-          in
-            if k {includes=f includes,preincludes=f preincludes} then SOME accg
-            else NONE
-          end
-        | x::xs =>
-          let
-          in
-            case recurse accg x of
-                SOME result => do_em result xs
-              | NONE => NONE
-          end
-  val visited = Binaryset.add(visited, dir)
-  fun canon i = hmdir.extendp {base = dir, extension = i}
-  val canonl = map canon
+fun process_hypat_options s = let
+  open Substring
+  val ss = full s
+  fun recurse (noecho, ignore_error, ss) =
+      if noecho andalso ignore_error then
+        {noecho = true, ignore_error = true,
+         command = string (dropl (fn c => c = #"@" orelse c = #"-") ss)}
+      else
+        case getc ss of
+          NONE => {noecho = noecho, ignore_error = ignore_error,
+                   command = ""}
+        | SOME (c, ss') =>
+          if c = #"@" then recurse (true, ignore_error, ss')
+          else if c = #"-" then recurse (noecho, true, ss')
+          else { noecho = noecho, ignore_error = ignore_error,
+                 command = string ss }
 in
-  if no_prereqs then
-    if k {includes = #includes dirinfo, preincludes = #preincludes dirinfo} then
-      SOME {visited = visited, includes = map canon includes,
-            preincludes = map canon preincludes}
-    else NONE
-  else let
-      fun f idirs = map canon idirs
-      val possible_calls = hmdir.sort (f (preincludes @ includes))
+  recurse (false, false, ss)
+end
+
+local
+  fun split p = let val {base, ext} = OS.Path.splitBaseExt p in (base, ext) end
+in
+  fun target_string l =
+    let
+      val (names, e) = ListPair.unzip (List.map split l)
+      val exts = List.mapPartial (fn x => x) e
+      val n = List.length exts
     in
-      do_em {visited = visited, includes = f includes, preincludes = f preincludes}
-            possible_calls
+      case names of
+         [] => ""
+       | [_] => List.hd l
+       | h :: t => if List.all (fn x => x = h) t andalso List.length e = n
+                     then if n = 2 andalso String.isSuffix "Theory" h
+                            then h
+                          else h ^ ".{" ^ String.concatWith "," exts ^ "}"
+                   else String.concatWith " " l
     end
 end
 
-fun find_files ds P =
-    case OS.FileSys.readDir ds of
-        NONE => (OS.FileSys.closeDir ds; [])
-      | SOME fname => if P fname then fname::find_files ds P
-                      else find_files ds P
+type include_info = {includes : string list, preincludes : string list }
 
-fun generate_all_plausible_targets first_target =
+type include_info = {includes : string list, preincludes : string list}
+type dirset = hmdir.t Binaryset.set
+
+val empty_dirset = Binaryset.empty hmdir.compare
+type incset_pair = {pres : dirset, incs : dirset}
+type incdirmap = (hmdir.t,incset_pair) Binarymap.dict
+val empty_incdirmap = Binarymap.mkDict hmdir.compare
+
+type holmake_dirinfo = {
+  visited : hmdir.t Binaryset.set,
+  incdirmap : incdirmap
+}
+type holmake_result = holmake_dirinfo option
+
+fun find_files ds P =
+  let
+    fun recurse acc =
+      case OS.FileSys.readDir ds of
+          NONE => (OS.FileSys.closeDir ds; List.rev acc)
+        | SOME fname => if P fname then recurse (fname::acc)
+                        else recurse acc
+  in
+    recurse []
+  end
+
+fun generate_all_plausible_targets warn first_target =
     case first_target of
         SOME s => [toFile s]
       | NONE =>
@@ -466,7 +573,19 @@ fun generate_all_plausible_targets first_target =
           fun not_a_dot f = not (String.isPrefix "." f)
           fun ok_file f =
               case (toFile f) of
-                  SIG _ => true
+                  SIG (Theory _) => false
+                | SIG _ => true
+                | SML (Script s) =>
+                  (case OS.Path.ext s of
+                       SOME "art" => false
+                       (* can be generated as temporary by opentheory
+                          machinery *)
+                     | SOME _ =>
+                         (warn ("Theory names (e.g., "^f^
+                                ") can't include '.' characters");
+                          false)
+                     | NONE => true)
+                | SML (Theory _) => false
                 | SML _ => true
                 | _ => false
           val src_files = find_files cds (fn s => ok_file s andalso not_a_dot s)
@@ -487,32 +606,33 @@ fun generate_all_plausible_targets first_target =
 (* dependency analysis *)
 exception HolDepFailed
 fun runholdep {ofs, extras, includes, arg, destination} = let
-  val {info, diag, ...} : output_functions = ofs
-  val _ = info ("Analysing "^fromFile arg)
+  val {chatty, diag, warn, ...} : output_functions = ofs
+  val diagK = diag o K
+  val _ = chatty ("Analysing "^fromFile arg)
   fun buildables s = let
     val f = toFile s
     val files =
         case f of
-          SML (ss as Script t) => [UI ss, UO ss, SML (Theory t),
+          SML (ss as Script t) => [UI ss, UO ss, SML (Theory t), DAT t,
                                    SIG (Theory t), UI (Theory t),
-                                   UO (Theory t), f]
+                                   UO (Theory t), ART (RawArticle t), f]
         | SML ss => [UI ss, UO ss, f]
         | SIG ss => [UI ss, f]
+        | ART (RawArticle s) => [ART (ProcessedArticle s), f]
         | x => [x]
   in
     map fromFile files
   end
   val buildable_extras = List.concat (map buildables extras)
-  val _ = diag ("Running Holdep on "^fromFile arg^" with includes = [" ^
-                String.concatWith ", " includes ^ "], assumes = [" ^
-                String.concatWith ", " buildable_extras ^"]")
+  val _ = diagK ("Running Holdep on "^fromFile arg^" with includes = [" ^
+                 String.concatWith ", " includes ^ "], assumes = [" ^
+                 String.concatWith ", " buildable_extras ^"]")
   val holdep_result =
     Holdep.main {assumes = buildable_extras, diag = diag,
                  includes = includes, fname = fromFile arg}
     handle Holdep.Holdep_Error s =>
-             (info "Holdep failed: s"; raise HolDepFailed)
-         | Interrupt => raise Interrupt
-         | e => (info ("Holdep exception: "^General.exnMessage e);
+             (warn ("Holdep failed: "^s); raise HolDepFailed)
+         | e => (warn ("Holdep exception: "^General.exnMessage e);
                  raise HolDepFailed)
   fun myopen s =
     if FileSys.access(DEPDIR, []) then
@@ -520,7 +640,7 @@ fun runholdep {ofs, extras, includes, arg, destination} = let
       else die_with ("Want to put dependency information in directory "^
                      DEPDIR^", but it already exists as a file")
     else
-     (info ("Trying to create directory "^DEPDIR^" for dependency files");
+     (chatty ("Trying to create directory "^DEPDIR^" for dependency files");
       FileSys.mkDir DEPDIR;
       TextIO.openOut s
      )
@@ -575,6 +695,9 @@ fun holdep_arg (UO c) = SOME (SML c)
   | holdep_arg (UI c) = SOME (SIG c)
   | holdep_arg (SML (Theory s)) = SOME (SML (Script s))
   | holdep_arg (SIG (Theory s)) = SOME (SML (Script s))
+  | holdep_arg (DAT s) = SOME (SML (Script s))
+  | holdep_arg (ART (RawArticle s)) = SOME (SML (Script s))
+  | holdep_arg (ART (ProcessedArticle s)) = SOME (ART (RawArticle s))
   | holdep_arg _ = NONE
 
 fun mk_depfile_name DEPDIR s = fullPath [DEPDIR, s^".d"]
@@ -615,14 +738,15 @@ in
         []
   in
     case f of
-      UO x =>
+        UO (Theory s) => UI (Theory s) :: DAT s :: phase1
+      | UO x =>
         if FileSys.access(fromFile (SIG x), []) andalso
            List.all (fn f => f <> SIG x) phase1
         then
           UI x :: phase1
         else
           phase1
-    | _ => phase1
+      | _ => phase1
   end
   else
     []

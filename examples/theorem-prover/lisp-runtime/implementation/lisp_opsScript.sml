@@ -189,13 +189,13 @@ fun prove_spec th imp def pre_tm post_tm = let
     \\ REWRITE_TAC [SEP_IMP_MOVE_COND]
     \\ REPEAT STRIP_TAC
     \\ IMP_RES_TAC (SIMP_RULE std_ss [] imp)
-    \\ REPEAT (Q.PAT_ASSUM `xx ==> yy` (K ALL_TAC))
+    \\ REPEAT (Q.PAT_X_ASSUM `xx ==> yy` (K ALL_TAC))
     \\ ASM_SIMP_TAC std_ss [LET_DEF,prove_spec_blast]
     \\ SIMP_TAC std_ss [def,SEP_CLAUSES]
     \\ SIMP_TAC std_ss [SEP_IMP_def,SEP_EXISTS_THM]
     \\ REPEAT STRIP_TAC
     \\ FULL_SIMP_TAC (std_ss++sep_cond_ss) [cond_STAR]
-    \\ REPEAT (Q.PAT_ASSUM `!xxx.bbb` (ASSUME_TAC o SPEC_ALL))
+    \\ REPEAT (Q.PAT_X_ASSUM `!xxx.bbb` (ASSUME_TAC o SPEC_ALL))
     \\ AUTO_EXISTS_TAC
     \\ FULL_SIMP_TAC std_ss [prove_spec_eval,prove_spec_blast,EL_UPDATE_NTH]
     \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [w2w_n2w,bitTheory.BITS_THM]
@@ -224,7 +224,7 @@ fun prove_spec th imp def pre_tm post_tm = let
     \\ FULL_SIMP_TAC std_ss []
     \\ IMP_RES_TAC (SIMP_RULE std_ss [] imp)
     \\ FULL_SIMP_TAC std_ss []
-    \\ REPEAT (Q.PAT_ASSUM `xx ==> yy` (K ALL_TAC))
+    \\ REPEAT (Q.PAT_X_ASSUM `xx ==> yy` (K ALL_TAC))
     \\ FULL_SIMP_TAC std_ss []
     \\ FULL_SIMP_TAC (std_ss++star_ss) [] \\ METIS_TAC [])
   val th = MATCH_MP th lemma
@@ -1462,7 +1462,7 @@ val push_lemma = prove(
   SIMP_TAC (std_ss++sep_cond_ss) [zLISP_def,SEP_CLAUSES,GSYM SPEC_PRE_EXISTS,
      SPEC_MOVE_COND,zLISP_ALT_def]
   \\ REPEAT STRIP_TAC
-  \\ Q.PAT_ASSUM `!wsp wi we ds tw2. b1 wsp wi we ds tw2 \/ b2 wsp wi we ds tw2` (STRIP_ASSUME_TAC o SPEC_ALL)
+  \\ Q.PAT_X_ASSUM `!wsp wi we ds tw2. b1 wsp wi we ds tw2 \/ b2 wsp wi we ds tw2` (STRIP_ASSUME_TAC o SPEC_ALL)
   \\ RES_TAC \\ METIS_TAC [SPEC_MERGE_LEMMA]);
 
 val X64_LISP_PUSH_TEST = let
@@ -1936,7 +1936,7 @@ val X64_LISP_INIT = save_thm("X64_LISP_INIT",let
     SIMP_TAC std_ss [SEP_IMP_MOVE_COND,STAR_ASSOC] \\ STRIP_TAC
     \\ IMP_RES_TAC mc_full_init_thm \\ ASM_SIMP_TAC std_ss [LET_DEF,zLISP_def]
     \\ ASM_SIMP_TAC (std_ss++sep_cond_ss) [SEP_IMP_def,SEP_EXISTS_THM,SEP_CLAUSES,cond_STAR]
-    \\ Q.PAT_ASSUM `!qs.bbb` (MP_TAC o SPEC_ALL) \\ STRIP_TAC
+    \\ Q.PAT_X_ASSUM `!qs.bbb` (MP_TAC o SPEC_ALL) \\ STRIP_TAC
     \\ ASM_SIMP_TAC std_ss []
     \\ REPEAT STRIP_TAC \\ AUTO_EXISTS_TAC \\ ASM_SIMP_TAC std_ss []
     \\ FULL_SIMP_TAC (std_ss++star_ss) [EL_UPDATE_NTH])
@@ -2130,7 +2130,7 @@ val X64_LISP_R_ELIM = let
     \\ POP_ASSUM (K ALL_TAC)
     \\ POP_ASSUM (ASSUME_TAC o Q.SPEC `1w`)
     \\ REPEAT STRIP_TAC \\ AUTO_EXISTS_TAC \\ ASM_SIMP_TAC std_ss []
-    \\ `EL 0 (UPDATE_NTH 0 r1 ds) = r1` by ALL_TAC THEN1
+    \\ `EL 0 (UPDATE_NTH 0 r1 ds) = r1` by
       (FULL_SIMP_TAC std_ss [lisp_inv_def]
        \\ Cases_on `ds` \\ FULL_SIMP_TAC std_ss [LENGTH,ADD1]
        \\ ASM_SIMP_TAC std_ss [UPDATE_NTH_def,EL,HD])
@@ -2619,11 +2619,11 @@ val lisp_inv_load_test = prove(
   \\ FULL_SIMP_TAC std_ss [lisp_inv_def]
   \\ FULL_SIMP_TAC std_ss [MAP,CONS_11,isVal_thm,EVERY_DEF,lisp_x_def]
   \\ FULL_SIMP_TAC std_ss [MAP,CONS_11,isVal_thm,EVERY_DEF,lisp_x_def]
-  \\ Q.PAT_ASSUM `s0 = bbb` ASSUME_TAC \\ FULL_SIMP_TAC std_ss [ref_heap_addr_alt]
+  \\ Q.PAT_X_ASSUM `s0 = bbb` ASSUME_TAC \\ FULL_SIMP_TAC std_ss [ref_heap_addr_alt]
   \\ POP_ASSUM MP_TAC \\ POP_ASSUM MP_TAC
   \\ FULL_SIMP_TAC std_ss [getVal_def]
   \\ REPEAT STRIP_TAC
-  \\ Q.PAT_ASSUM `w2w (n2w a) << 2 + 0x1w = w0` (ASSUME_TAC o GSYM)
+  \\ Q.PAT_X_ASSUM `w2w (n2w a) << 2 + 0x1w = w0` (ASSUME_TAC o GSYM)
   \\ FULL_SIMP_TAC std_ss []
   \\ SIMP_TAC (std_ss++SIZES_ss) [w2w_def,WORD_MUL_LSL,word_mul_n2w,
        word_add_n2w,word_lo_n2w,w2n_n2w]
@@ -2643,12 +2643,12 @@ val lisp_inv_load_test_nop = prove(
   \\ FULL_SIMP_TAC std_ss [lisp_inv_def]
   \\ FULL_SIMP_TAC std_ss [MAP,CONS_11,isVal_thm,EVERY_DEF,lisp_x_def]
   \\ FULL_SIMP_TAC std_ss [MAP,CONS_11,isVal_thm,EVERY_DEF,lisp_x_def]
-  \\ Q.PAT_ASSUM `s0 = bbb` ASSUME_TAC \\ FULL_SIMP_TAC std_ss [ref_heap_addr_alt]
+  \\ Q.PAT_X_ASSUM `s0 = bbb` ASSUME_TAC \\ FULL_SIMP_TAC std_ss [ref_heap_addr_alt]
   \\ POP_ASSUM MP_TAC \\ POP_ASSUM MP_TAC
   \\ FULL_SIMP_TAC std_ss [getVal_def]
   \\ REPEAT STRIP_TAC
   \\ POP_ASSUM MP_TAC
-  \\ Q.PAT_ASSUM `w2w (n2w a) << 2 + 0x1w = w0` (ASSUME_TAC o GSYM)
+  \\ Q.PAT_X_ASSUM `w2w (n2w a) << 2 + 0x1w = w0` (ASSUME_TAC o GSYM)
   \\ FULL_SIMP_TAC std_ss []
   \\ SIMP_TAC (std_ss++SIZES_ss) [w2w_def,WORD_MUL_LSL,word_mul_n2w,
        word_add_n2w,word_lo_n2w,w2n_n2w]
@@ -2875,7 +2875,7 @@ val X64_LISP_STRENGTHEN_CODE = save_thm("X64_LISP_STRENGTHEN_CODE",let
     \\ Q.LIST_EXISTS_TAC (map (fn tm => [ANTIQUOTE tm])
          (butlast (list_dest dest_exists (cdr (concl (SPEC_ALL lisp_inv_def))))))
     \\ FULL_SIMP_TAC std_ss [DECIDE ``2*e = e+e:num``]
-    \\ Q.PAT_ASSUM `sp && 3w = 0w` MP_TAC
+    \\ Q.PAT_X_ASSUM `sp && 3w = 0w` MP_TAC
     \\ REPEAT (POP_ASSUM (K ALL_TAC)) \\ blastLib.BBLAST_TAC)
     |> SIMP_RULE std_ss [LET_DEF];
   val th  = Q.INST [`rip`|->`p`] thi

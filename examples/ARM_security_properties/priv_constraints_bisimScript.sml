@@ -130,7 +130,7 @@ val seqT_priv_spsr_constraints_before_thm =
 		  THEN FULL_SIMP_TAC (srw_ss()) []
 		  THEN Cases_on `access_violation b`
 		  (* THEN Q.UNABBREV_TAC `spsr` *)
-		  THEN PAT_ASSUM ``! s s' a c .X ==> Z``
+		  THEN PAT_X_ASSUM ``! s s' a c .X ==> Z``
 		  (fn thm => ASSUME_TAC
 				 (SPECL [``b:arm_state``,``s':arm_state``,
 					 ``a:'b``,``a':'a``] thm))
@@ -160,7 +160,7 @@ val parT_priv_spsr_constraints_before_thm =
 		  THEN Cases_on `f b`
 		  (* THEN Q.UNABBREV_TAC `spsr`  *)
 		  THEN FULL_SIMP_TAC (srw_ss()) []
-		  THEN PAT_ASSUM ``! s s' a  .(f s = ValueState a s') ==> Z`` (fn thm => ASSUME_TAC
+		  THEN PAT_X_ASSUM ``! s s' a. (f s = ValueState a s') ==> Z`` (fn thm => ASSUME_TAC
 		  (SPECL [``b:arm_state``,``b':arm_state``,``a'':'a``] thm))
 		  THEN Cases_on `access_violation b`
 		  THEN Cases_on `access_violation b'`
@@ -187,12 +187,12 @@ val seqT_priv_spsr_constraints_after_thm =
 			FULL_SIMP_TAC (srw_ss()) [] THEN
 			Cases_on `access_violation b`
 			THEN Q.UNABBREV_TAC `spsr`
-			THEN PAT_ASSUM ``! s s' a  .X ==> Z``
+			THEN PAT_X_ASSUM ``! s s' a  .X ==> Z``
 			(fn thm => ASSUME_TAC
 				       (SPECL [``s:arm_state``,``b:arm_state``,
 					       ``a':'a``] thm))
 
-			THEN PAT_ASSUM ``! s1 a c s2. X``
+			THEN PAT_X_ASSUM ``! s1 a c s2. X``
 			(fn thm => ASSUME_TAC
 				       (SPECL [``b:arm_state``,``a':'a``,
 					       ``a:'b``,``s':arm_state``] thm))
@@ -219,10 +219,10 @@ val parT_priv_spsr_constraints_after_thm =
 		  Cases_on `access_violation b'`   THEN
 		  (* Q.UNABBREV_TAC `spsr` THEN *)
 		  FULL_SIMP_TAC (srw_ss()) [] THEN
-		  PAT_ASSUM ``! s a s' .(f s = ValueState a s') ==> Z``
+		  PAT_X_ASSUM ``! s a s' .(f s = ValueState a s') ==> Z``
 		  (fn thm => ASSUME_TAC
 				 (SPECL [``b:arm_state``,``a'':'a``,``b':arm_state``] thm))
-		  THEN PAT_ASSUM ``! s1 c s2. X``
+		  THEN PAT_X_ASSUM ``! s1 c s2. X``
 		  (fn thm => ASSUME_TAC
 				 (SPECL [``s:arm_state``,``b:arm_state``,``a':'b``] thm))
 		  THEN RES_TAC
@@ -242,14 +242,14 @@ val seqT_trans_untouched_thm =
 				  untouched_spsr_def])
 THEN Cases_on `f s`
 		  THEN FULL_SIMP_TAC (let_ss) []
-		  THEN PAT_ASSUM ``! s1 c s2. (f s = ValueState c s') ==> X``
+		  THEN PAT_X_ASSUM ``! s1 c s2. (f _ = ValueState _ _) ==> _``
 		  (fn thm => ASSUME_TAC
 				 (SPECL [``s:arm_state``,``a:'a``,``b:arm_state``] thm))
 		  THEN RES_TAC
 		  THEN Cases_on `access_violation b`
 		  THEN FULL_SIMP_TAC (srw_ss()) []
 		  THEN RW_TAC (srw_ss()) []
-		  THEN PAT_ASSUM ``! s a c s'. X``
+		  THEN PAT_X_ASSUM ``! s a c s'. X``
 		  (fn thm => ASSUME_TAC
 				 (SPECL [``b:arm_state``,``a:'a``,
 					 ``c:'b``,``s':arm_state``] thm))
@@ -270,11 +270,11 @@ val parT_trans_untouched_thm =
 		  THEN Cases_on `g b`
 		  THEN Cases_on `access_violation b'`
 		  THEN FULL_SIMP_TAC (let_ss) []
-		  THEN PAT_ASSUM ``! s c s'. X``
+		  THEN PAT_X_ASSUM ``! s c s'. X``
 		  (fn thm => ASSUME_TAC
 				 (SPECL [``b:arm_state``,``a':'b``,
 					 ``b':arm_state``] thm))
-		  THEN PAT_ASSUM ``! s1 c s2. (f s = ValueState c s') ==> X``
+		  THEN PAT_X_ASSUM ``! s1 c s2. (f _ = ValueState _ _) ==> _``
 		  (fn thm => ASSUME_TAC
 				 (SPECL [``s:arm_state``,``a:'a``,``b:arm_state``] thm))
 		  THEN RES_TAC
@@ -654,7 +654,7 @@ fun prove_take_exception_spsr_constraints te te_def fixed_cpsr_thm fixed_cpsr_th
 						 fixed_cpsr_thm))
 	       THEN FULL_SIMP_TAC (srw_ss()) []
 	       THEN FULL_SIMP_TAC (let_ss) []
-	       THEN PAT_ASSUM ``X=Y`` (fn thm => THROW_AWAY_TAC (concl thm))
+	       THEN PAT_X_ASSUM ``X=Y`` (fn thm => THROW_AWAY_TAC (concl thm))
 	       THEN ASSUME_TAC const_comp_rp_thm
 	       THEN RW_TAC (srw_ss()) [priv_spsr_constraints_def,
 				       priv_spsr_constraints_abs_def]
@@ -665,13 +665,13 @@ fun prove_take_exception_spsr_constraints te te_def fixed_cpsr_thm fixed_cpsr_th
 	       [ RES_TAC
 		    THEN RW_TAC (srw_ss()) []
 		    THEN IMP_RES_TAC hlp_seqT_thm
-		    THEN PAT_ASSUM ``X a' b= ValueState a s'``
+		    THEN PAT_X_ASSUM ``X a' b= ValueState a s'``
 		    (fn thm => ASSUME_TAC (PairRules.PBETA_RULE thm))
 		    THEN
 		    ASSUME_TAC ( SPECL
 				     spec_list  (GEN_ALL  (SIMP_RULE (bool_ss) [priv_spsr_constraints_def]
 								     wp_thm)))
-		    THEN PAT_ASSUM ``X ==> Y`` (fn thm => ASSUME_TAC (PairRules.PBETA_RULE thm))
+		    THEN PAT_X_ASSUM ``X ==> Y`` (fn thm => ASSUME_TAC (PairRules.PBETA_RULE thm))
 		    THEN
 		    ASSUME_TAC (SPECL spec_list2 fixed_cpsr_thm2)
 		    THEN RES_TAC
@@ -685,7 +685,7 @@ fun prove_take_exception_spsr_constraints te te_def fixed_cpsr_thm fixed_cpsr_th
 				       alpha |-> ltype ]
 				      hlp_errorT_thm))
 			   THEN
-			   PAT_ASSUM ``! (s:arm_state) . X ``
+			   PAT_X_ASSUM ``! (s:arm_state) . X ``
 			   (fn thm => ASSUME_TAC (SPEC ``s:arm_state`` thm))
 			   THEN RW_TAC (srw_ss()) []
 			   THEN FULL_SIMP_TAC (srw_ss()) []

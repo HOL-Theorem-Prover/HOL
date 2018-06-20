@@ -408,9 +408,9 @@ used by {\small\verb|REWRITE_TAC|} is {\small\tt |-~(x~=~T)~=~x}.
 being done.
 \begin{session}
 \begin{alltt}
->> expand(PURE_REWRITE_TAC
-           [PARITY_IMP_def, ONE_def, NOT_def, MUX_def, REG_def] >>
-         rpt strip_tac);
+>> e(PURE_REWRITE_TAC [PARITY_IMP_def, ONE_def, NOT_def,
+                       MUX_def, REG_def] >>
+     rpt strip_tac);
 \end{alltt}
 \end{session}
 
@@ -442,14 +442,14 @@ goal it can be seen that it will be solved if its left hand side,
 However, if this assumption is used for rewriting, then all the subterms of the form {\small\verb|out t|} will also be expanded.
 To prevent this, we really want to rewrite with a formula that is specifically about {\small\verb|out (SUC t)|}.
 We want to somehow pull the assumption that we do have out of the list and rewrite with a specialised version of it.
-We can do just this using \ml{qpat\_assum}.
+We can do just this using \ml{qpat\_x\_assum}.
 This tactic is of type \ml{term quotation~->~thm~->~tactic}.
 It selects an assumption that is of the form given by its first argument, and passes it to the second argument, a function which expects a theorem and returns a tactic.
 Here it is in action:
 
 \begin{session}
 \begin{alltt}
->> e (qpat_assum `!t. out t = X t`
+>> e (qpat_x_assum `!t. out t = X t`
        (fn th => REWRITE_TAC [SPEC ``SUC t`` th]));
 \end{alltt}
 \end{session}
@@ -491,7 +491,7 @@ interactively:
                         MUX_def, REG_def] >>
      rpt strip_tac >| [
        metis_tac [],
-       qpat_assum `!t. out t = X t`
+       qpat_x_assum `!t. out t = X t`
                   (fn th => REWRITE_TAC [SPEC ``SUC t`` th]) >>
        rw[]
      ]);
@@ -506,7 +506,7 @@ This will be done in one step using the \ML{} function \ml{prove}.
 \begin{alltt}
 >> val PARITY_CORRECT = prove(
      ``!inp out. PARITY_IMP(inp,out) ==> (!t. out t = PARITY t inp)``,
-     rpt strip_tac >> irule UNIQUENESS_LEMMA >>
+     rpt strip_tac >> match_mp_tac UNIQUENESS_LEMMA >>
      irule PARITY_LEMMA >> rw[]);
 \end{alltt}
 \end{session}

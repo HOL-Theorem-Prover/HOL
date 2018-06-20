@@ -25,8 +25,6 @@ A formalisation of a tool similar to Smallfoot in HOL
 (*   - call "Holmake --qof -k" in directory                               *)
 (*         "examples/separationLogic/src/holfoot" and then in             *)
 (*         "examples/separationLogic/src/holfoot/(yourml)"                *)
-(*   - copy are link "header.ml" from the ML-specific directory to the    *) 
-(*     directory above for the initialisation of interactive examples     *)
 (*   - if using polyML a state-file, the command-line tool and            *)
 (*        the web-interface executable should be in directory poly        *)
 (*   - for instructions on how to use this command-line tool, call        *)
@@ -41,8 +39,7 @@ A formalisation of a tool similar to Smallfoot in HOL
 (* The ml-specific code is in subdirectories called poly and mosml.       *)
 (* Holfoot is mainly build for PolyML and the experimental kernel. For    *)
 (* example the command-line-tool is intended to be compiled by PolyML.    *)
-(* Moreover the initialisation code differs for both systems. Please      *)
-(* copy header.sml from either poly or mosml to the holfoot directory.    *)
+(* Moreover the initialisation code differs for both systems.             *)
 (**************************************************************************)
 
 (**************************************************************************)

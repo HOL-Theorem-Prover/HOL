@@ -28,5 +28,5 @@ the use of {DISCH_THEN} is usually more elegant in such cases.
 If the antecedent already appears in the assumptions, it will be duplicated.
 
 \SEEALSO
-Thm.DISCH, Drule.DISCH_ALL, Thm_cont.DISCH_THEN, Tactic.FILTER_DISCH_TAC, Thm_cont.FILTER_DISCH_THEN, Drule.NEG_DISCH, Tactic.STRIP_TAC, Drule.UNDISCH, Drule.UNDISCH_ALL, Tactic.UNDISCH_TAC.
+Thm.DISCH, Drule.DISCH_ALL, Thm_cont.DISCH_THEN, Tactic.FILTER_DISCH_TAC, Tactic.FILTER_DISCH_THEN, Drule.NEG_DISCH, Tactic.STRIP_TAC, Drule.UNDISCH, Drule.UNDISCH_ALL, Tactic.UNDISCH_TAC.
 \ENDDOC

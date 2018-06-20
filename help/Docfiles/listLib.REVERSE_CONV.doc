@@ -25,7 +25,7 @@ where the right-hand side is the list in the reverse order.
 \EXAMPLE
 Evaluating
 {
-   REVERSE_CONV (--`REVERSE [0;1;2;3;4]`--);
+   REVERSE_CONV “REVERSE [0;1;2;3;4]”;
 }
 returns the following theorem:
 {

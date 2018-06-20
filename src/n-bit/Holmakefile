@@ -8,3 +8,17 @@ selftest.exe: selftest.uo wordsLib.uo wordsSyntax.uo
 	$(HOLMOSMLC) -o $@ $<
 
 EXTRA_CLEANS = selftest.exe
+
+ifeq ($(KERNELID),otknl)
+ARTFILES = $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
+all: $(ARTFILES)
+
+hol4-words-unint.art: hol4-words-unint.thy $(ARTFILES)
+	opentheory info --article -o $@ $<
+
+hol4-words.art: hol4-words.thy hol4-words-unint.art ../opentheory/hol4.int
+	opentheory info --article -o $@ $<
+
+fcp.art: fcp.otd
+
+endif

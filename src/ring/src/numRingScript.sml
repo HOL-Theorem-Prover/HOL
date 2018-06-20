@@ -12,9 +12,9 @@ val _ = new_theory "numRing";
 (* num is a semi-ring: *)
 val num_semi_ring = store_thm
     ("num_semi_ring",
-     --` is_semi_ring (semi_ring 0 1 $+ $* : num semi_ring) `--,
+     “ is_semi_ring (semi_ring 0 1 $+ $* : num semi_ring) ”,
 RW_TAC arith_ss [ is_semi_ring_def, semi_ring_accessors,
-		  RIGHT_ADD_DISTRIB, MULT_ASSOC ] THEN
+                  RIGHT_ADD_DISTRIB, MULT_ASSOC ] THEN
 MATCH_ACCEPT_TAC MULT_SYM);
 
 
@@ -33,6 +33,6 @@ end;
 (* Hack to avoid (semi_ring 0 1 $+ $* ) to be confused with an end
  * of comment.                      ^^^
  *)
-val _ = temp_overload_on("mult",--`$* : num->num->num`--);
+val _ = temp_overload_on("mult",“$* : num->num->num”);
 
 val _ = export_theory();

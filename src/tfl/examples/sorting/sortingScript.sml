@@ -2,13 +2,6 @@
  *                SPECIFICATION OF SORTING                                   *
  *---------------------------------------------------------------------------*)
 
-structure sortingScript =
-struct
-
-(* interactive use:
-app load ["permTheory","bossLib"];
-*)
-
 open HolKernel Parse boolLib bossLib listTheory permTheory;
 
 infix THEN THENL
@@ -73,5 +66,3 @@ Induct_on `L1`
 
 
 val _ = export_theory();
-
-end;

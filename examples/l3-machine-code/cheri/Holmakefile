@@ -1,1 +1,2 @@
 INCLUDES = ../common
+CLINE_OPTIONS = -j1

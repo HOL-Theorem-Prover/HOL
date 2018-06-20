@@ -59,7 +59,7 @@ val RUN_thm = store_thm("RUN_thm",
 
 val RUN_EQ_SPEC = store_thm("RUN_EQ_SPEC",
   ``!x. RUN x p q = SPEC x p {} q``,
-  INIT_TAC \\ `CODE_POOL instr {} = emp` by ALL_TAC
+  INIT_TAC \\ sg `CODE_POOL instr {} = emp`
   \\ ASM_REWRITE_TAC [SEP_CLAUSES,SPEC_def]
   \\ REWRITE_TAC [FUN_EQ_THM,CODE_POOL_def,IMAGE_EMPTY,BIGUNION_EMPTY,emp_def]);
 
@@ -67,7 +67,7 @@ val SPEC_FRAME = store_thm("SPEC_FRAME",
   ``!x p c q. SPEC x p c q ==> !r. SPEC x (p * r) c (q * r)``,
   INIT_TAC \\ SIMP_TAC bool_ss [RUN_def,GSYM STAR_ASSOC,SPEC_def]
   \\ REPEAT STRIP_TAC
-  \\ Q.PAT_ASSUM `!state r. bbb` (ASSUME_TAC o Q.SPECL [`state`,`r * r'`])
+  \\ Q.PAT_X_ASSUM `!state r. bbb` (ASSUME_TAC o Q.SPECL [`state`,`r * r'`])
   \\ FULL_SIMP_TAC std_ss [STAR_ASSOC] \\ METIS_TAC []);
 
 val SPEC_FALSE_PRE = store_thm("SPEC_FALSE_PRE",
@@ -89,7 +89,7 @@ val SPEC_WEAKEN = store_thm("SPEC_WEAKEN",
   ``!x p c q. SPEC x p c q ==> !r. SEP_IMP q r ==> SPEC x p c r``,
   INIT_TAC \\ SIMP_TAC bool_ss [RUN_thm,SPEC_def,GSYM STAR_ASSOC,PULL_FORALL]
   \\ REPEAT STRIP_TAC
-  \\ Q.PAT_ASSUM `!x.bbb` (MP_TAC o Q.SPECL [`state`,`r'`,`seq`])
+  \\ Q.PAT_X_ASSUM `!x.bbb` (MP_TAC o Q.SPECL [`state`,`r'`,`seq`])
   \\ FULL_SIMP_TAC std_ss [] \\ REPEAT STRIP_TAC
   \\ Q.EXISTS_TAC `i` \\ FULL_SIMP_TAC std_ss []
   \\ DISJ1_TAC \\ FULL_SIMP_TAC std_ss [SEP_REFINE_def]
@@ -138,7 +138,8 @@ val SPEC_COMBINE = store_thm("SPEC_COMBINE",
 val SPEC_SUBSET_CODE = store_thm("SPEC_SUBSET_CODE",
   ``!x p c q. SPEC x p c q ==> !c'. c SUBSET c' ==> SPEC x p c' q``,
   REPEAT STRIP_TAC \\ FULL_SIMP_TAC bool_ss [SUBSET_DEF]
-  \\ `c' = c UNION c'` by FULL_SIMP_TAC bool_ss [EXTENSION,IN_UNION]
+  \\ `c' = c UNION c'`
+       by (FULL_SIMP_TAC bool_ss [EXTENSION,IN_UNION] \\ METIS_TAC[])
   \\ METIS_TAC [SPEC_ADD_CODE]);
 
 val SPEC_REFL = store_thm("SPEC_REFL",
@@ -166,11 +167,11 @@ val SPEC_COMPOSE_LEMMA = prove(
   THEN1 (Q.EXISTS_TAC `0` \\ FULL_SIMP_TAC std_ss [rel_sequence_def])
   \\ REVERSE (FULL_SIMP_TAC bool_ss [SEP_CLAUSES,SEP_REFINE_DISJ]) THEN1 METIS_TAC []
   \\ FULL_SIMP_TAC std_ss [PULL_FORALL]
-  \\ Q.PAT_ASSUM `!x.bbb` MP_TAC
-  \\ Q.PAT_ASSUM `!x.bbb` (MP_TAC o Q.SPECL [`state`,`r`,`seq`])
+  \\ Q.PAT_X_ASSUM `!x.bbb` MP_TAC
+  \\ Q.PAT_X_ASSUM `!x.bbb` (MP_TAC o Q.SPECL [`state`,`r`,`seq`])
   \\ FULL_SIMP_TAC std_ss [] \\ REPEAT STRIP_TAC
   \\ TRY (Q.EXISTS_TAC `i` \\ FULL_SIMP_TAC std_ss [] \\ NO_TAC)
-  \\ Q.PAT_ASSUM `!x.bbb` (MP_TAC o Q.SPECL [`seq (i:num)`,`r`,`(\j. seq (i + j))`])
+  \\ Q.PAT_X_ASSUM `!x.bbb` (MP_TAC o Q.SPECL [`seq (i:num)`,`r`,`(\j. seq (i + j))`])
   \\ `rel_sequence next (\j. seq (i + j)) (seq i)` by METIS_TAC [rel_sequence_shift]
   \\ FULL_SIMP_TAC std_ss [] \\ REVERSE STRIP_TAC \\ METIS_TAC [])
 

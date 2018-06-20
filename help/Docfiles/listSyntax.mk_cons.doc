@@ -1,15 +1,15 @@
 \DOC mk_cons
 
-\TYPE {mk_cons : {hd :term, tl :term} -> term}
+\TYPE {mk_cons : term * term -> term}
 
 \SYNOPSIS
 Constructs a {CONS} pair.
 
 \DESCRIBE
-{mk_cons{hd = t, tl = `[t1;...;tn]`}} returns {`[t;t1;...;tn]`}.
+{mk_cons (``t``, ``[t1;...;tn]``)} returns {``[t;t1;...;tn]``}.
 
 \FAILURE
-Fails if {tl} is not a list or if {hd} is not of the same type as
+Fails if the second element is not a list or if the first element is not of the same type as
 the elements of the list.
 
 \SEEALSO

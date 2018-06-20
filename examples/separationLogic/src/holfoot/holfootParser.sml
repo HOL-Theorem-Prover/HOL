@@ -11,7 +11,7 @@ loadPath :=
 map load ["finite_mapTheory", "holfootTheory",
      "Parsetree", "AssembleHolfootParser"];
 
-use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml")
+use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/hfheader.sml")
 
 show_assums := true;
 *)

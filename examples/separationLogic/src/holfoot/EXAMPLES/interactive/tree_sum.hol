@@ -3,7 +3,7 @@
 (******************************************************************************)
 
 (* load the libries
-use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml")
+use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/hfheader.sml")
 *)
 
 
@@ -51,12 +51,23 @@ val tree_sum_depth_TAC =
    REPEAT GEN_TAC THEN
    (*establish fact that trees are not empty*)
    Cases_on `NULL trees` THEN1 HF_SOLVE_TAC THEN
-   xHF_CONTINUE_TAC [use_asms, add_rewrites[LENGTH_EQ_ADD_CONST_compute]] THEN
-   REPEAT STRIP_TAC THEN (
+   xHF_CONTINUE_TAC [use_asms] THEN
+   SIMP_TAC std_ss [quantHeuristicsTheory.LIST_LENGTH_2] THEN
+   xHF_CONTINUE_TAC [use_asms] THEN
+
+   REPEAT STRIP_TAC THENL [
+      Q.EXISTS_TAC `e1_r :: e1_l :: l'` THEN
+      xHF_CONTINUE_TAC [use_asms, add_rewrites [TREE_SUM_REWRITE]],
+
+      Q.EXISTS_TAC `e1_l :: l'` THEN
+      xHF_CONTINUE_TAC [use_asms, add_rewrites [TREE_SUM_REWRITE]],
+
+      Q.EXISTS_TAC `e1_r :: l'` THEN
+      xHF_CONTINUE_TAC [use_asms, add_rewrites [TREE_SUM_REWRITE]],
+
       Q.EXISTS_TAC `l'` THEN
       xHF_CONTINUE_TAC [use_asms, add_rewrites [TREE_SUM_REWRITE]]
-   )
+  ];
 
-val _ = holfoot_tac_verify_spec file2 (SOME []) 
+val _ = holfoot_tac_verify_spec file2 (SOME [])
   [("tree_sum_depth", tree_sum_depth_TAC)]
-

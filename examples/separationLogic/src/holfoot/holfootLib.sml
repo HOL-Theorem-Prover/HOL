@@ -94,7 +94,7 @@ fun holfoot_term_to_string t =
        holfoot_term_to_string (dest_var_res_exp_var t)
    else if (is_holfoot_var t) then
        stringLib.fromHOLstring (dest_holfoot_var t)
-   else term_to_string t;
+   else "x";
 
 
 fun is_no_proper_diseq thm =
@@ -2543,8 +2543,9 @@ struct
         IS_LEAF_REWRITE,
 
         BUTFIRSTN_LENGTH_NIL, DROP_LENGTH_APPEND,
-        TAKE_LENGTH_APPEND, LAST_DROP_THM,
-        FRONT_TAKE_THM, BUTLAST, LAST, NOT_NULL_SNOC,
+        TAKE_LENGTH_APPEND, LAST_DROP_THM, LAST_DROP_THM2,
+        FRONT_TAKE_THM, FRONT_TAKE_THM2,
+        BUTLAST, LAST, NOT_NULL_SNOC,
 
         holfoot_var_res_map_REWRITES,
         holfoot_separation_combinator_def,
@@ -2943,17 +2944,17 @@ let
        else NONE), tacL);
    val _ = if ok then () else (holfoot_set_remaining_goal thm; ())
 in
-   thm
+   (thm, ok)
 end;
 
 fun holfoot_verify_spec file optL =
-  holfoot_interactive_verify_spec true false file (SOME optL) []
+  fst (holfoot_interactive_verify_spec true false file (SOME optL) [])
 
 fun holfoot_tac_verify_spec file optL_opt tacL =
-  holfoot_interactive_verify_spec true false file optL_opt tacL
+  fst (holfoot_interactive_verify_spec true false file optL_opt tacL)
 
 fun holfoot_auto_verify_spec file =
-  holfoot_interactive_verify_spec true true file (SOME [generate_vcs]) []
+  fst (holfoot_interactive_verify_spec true true file (SOME [generate_vcs]) [])
 
 
 (*

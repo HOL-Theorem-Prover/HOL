@@ -36,7 +36,7 @@ Finally, we will start by ``hiding'' the names \holtxt{S} and \holtxt{K} so that
 \setcounter{sessioncount}{0}
 \begin{session}
 \begin{alltt}
->> hide "K"; hide "S";
+>>_ hide "K"; hide "S";
 >> Datatype `cl = K | S | # cl cl`;
 \end{alltt}
 \end{session}
@@ -941,18 +941,15 @@ the work for us:
 \end{alltt}
 \end{session}
 We need to split up assumption 4.  We can get it out of the assumption
-list using the \ml{qpat\_assum} theorem-tactical.
+list using the \ml{qpat\_x\_assum} theorem-tactical.
 We will write
 \begin{alltt}
-##eval qpat_assum `x # y -||-> z`
+##eval qpat_x_assum `_ # _ -||-> _`
          (strip_assume_tac o SIMP_RULE std_ss [x_ap_y_predn])
 \end{alltt}
-The quotation specifies the pattern that we want to match.  The second
-argument specifies how we are going to transform the theorem.  Reading
-the compositions from right to left, first we will simplify with the
-\verb!x_ap_y_predn! theorem and then we will assume the result back
-into the assumptions, stripping disjunctions and existentials as we
-go.\footnote{An alternative to using \ml{qpat\_assum} is to use
+The quotation specifies the pattern that we want to match: we want the term that has an application term reducing, and as there is just one such, we can use ``don't care'' underscore patterns for the various arguments.
+The second argument specifies how we are going to transform the theorem.
+Reading the compositions from right to left, first we will simplify with the \verb!x_ap_y_predn! theorem and then we will assume the result back into the assumptions, stripping disjunctions and existentials as we go.\footnote{An alternative to using \ml{qpat\_x\_assum} is to use
   \texttt{by} instead: you would have to state the four-way
   disjunction yourself, but the proof would be more ``declarative'' in
   style, and though wordier, might be more maintainable.}
@@ -964,7 +961,7 @@ So:
 \begin{session}
 \begin{alltt}
 >>__ set_trace "Goalstack.howmany_printed_subgoals" 1;
->> e (qpat_assum `x # y -||-> z`
+>> e (qpat_x_assum `_ # _ -||-> _`
        (strip_assume_tac o SIMP_RULE (srw_ss()) [x_ap_y_predn]) >>
       rw[]);
 \end{alltt}
@@ -1041,7 +1038,7 @@ The final goal proof can be packaged into:
          Induct_on `x -||-> y` >> rpt conj_tac >| [
            metis_tac [predn_rules],
            rw[] >>
-           qpat_assum `x # y -||-> z`
+           qpat_x_assum `_ # _ -||-> _`
              (strip_assume_tac o SIMP_RULE std_ss [x_ap_y_predn]) >>
            rw[] >| [
              metis_tac[predn_rules],

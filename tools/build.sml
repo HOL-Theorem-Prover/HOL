@@ -18,13 +18,16 @@ prim_val catch_interrupt : bool -> unit = 1 "sys_catch_break";
 val _ = catch_interrupt true;
 
 open buildutils
+val _ = startup_check()
 
 (* ----------------------------------------------------------------------
     Analysing the command-line
    ---------------------------------------------------------------------- *)
 
-val {cmdline,build_theory_graph,do_selftests,SRCDIRS} =
-    process_cline (fn s => s)
+val cline_record = process_cline ()
+val {cmdline,build_theory_graph,selftest_level,...} = cline_record
+val {extra={SRCDIRS},jobcount,relocbuild,debug,...} = cline_record
+
 
 open Systeml;
 
@@ -32,7 +35,11 @@ val Holmake = let
   fun sysl p args = Systeml.systeml (p::args)
   val isSuccess = OS.Process.isSuccess
 in
-  buildutils.Holmake sysl isSuccess (fn () => []) (fn _ => "") do_selftests
+  buildutils.Holmake sysl isSuccess
+                     (fn () => ["-j"^Int.toString jobcount] @
+                               (if debug then ["--dbg"] else []))
+                     (fn _ => "")
+                     selftest_level
 end
 
 (* ----------------------------------------------------------------------
@@ -52,6 +59,11 @@ fun symlink_check() =
     else link
 val default_link = if OS = "winNT" then cp else link
 
+fun mem x [] = false
+  | mem x (y::ys) = x = y orelse mem x ys
+
+fun exns_link exns b s1 s2 =
+  if mem (OS.Path.file s1) exns then () else default_link b s1 s2
 
 (*---------------------------------------------------------------------------
         Transport a compiled directory to another location. The
@@ -68,7 +80,7 @@ fun upload ((src, regulardir), target, symlink) =
              die ("OS error: "^s^" - "^
                   (case erropt of SOME s' => OS.errorMsg s'
                                 | _ => ""))
-    else if do_selftests >= regulardir then
+    else if selftest_level >= regulardir then
       print ("Self-test directory "^src^" built successfully.\n")
     else ()
 
@@ -79,14 +91,23 @@ fun upload ((src, regulardir), target, symlink) =
  ---------------------------------------------------------------------------*)
 
 fun buildDir symlink s =
-    (build_dir Holmake do_selftests s; upload(s,SIGOBJ,symlink));
+    (build_dir Holmake selftest_level s; upload(s,SIGOBJ,symlink));
 
 fun build_src symlink = List.app (buildDir symlink) SRCDIRS
+
+fun upload_holmake_files symlink =
+  upload ((fullPath[HOLDIR, "tools", "Holmake"], 0), SIGOBJ, symlink)
+
+val holmake_exns = [
+  "Systeml.sig", "Systeml.ui", "Systeml.uo"
+]
+
 
 fun build_hol symlink = let
 in
   clean_sigobj();
   setup_logfile();
+  upload_holmake_files (exns_link holmake_exns);
   build_src symlink
     handle Interrupt => (finish_logging false; die "Interrupted");
   finish_logging true;
@@ -123,14 +144,6 @@ end
 val _ =
     case cmdline of
       []            => build_hol default_link
-    | ["-symlink"]  => build_hol (symlink_check()) (* w/ symbolic linking *)
-    | ["-dir",path] => buildDir cp (path, 0)
-    | ["-dir",path,
-       "-symlink"]  => buildDir (symlink_check()) (path, 0)
-    | ["-nosymlink"]=> build_hol cp
-    | ["symlink"]   => build_hol (symlink_check())
-    | ["nosymlink"] => build_hol cp
-    | ["small"]     => build_hol mv
-    | otherwise     => warn help_mesg
+     | _ => die "Not implemented yet"
 
 end (* struct *)

@@ -1,6 +1,3 @@
-structure gcdScript =
-struct
-
 open HolKernel Parse boolLib TotalDefn BasicProvers
      arithmeticTheory dividesTheory simpLib boolSimps
      Induction;
@@ -35,15 +32,15 @@ val IS_GCD_REF = store_thm(
   PROVE_TAC[IS_GCD,DIVIDES_REFL]);
 
 val IS_GCD_SYM = store_thm("IS_GCD_SYM",
-			Term `!a b c. (is_gcd a b c) = is_gcd b a c`,
+                        Term `!a b c. (is_gcd a b c) = is_gcd b a c`,
                         PROVE_TAC[IS_GCD]);
 
 val IS_GCD_0R = store_thm("IS_GCD_0R",
-			Term `!a. is_gcd a 0 a`,
+                        Term `!a. is_gcd a 0 a`,
                         PROVE_TAC[IS_GCD,DIVIDES_REFL,ALL_DIVIDES_0]);
 
 val IS_GCD_0L = store_thm("IS_GCD_0L",
-			Term `!a. is_gcd 0 a a`,
+                        Term `!a. is_gcd 0 a a`,
                         PROVE_TAC[IS_GCD,DIVIDES_REFL,ALL_DIVIDES_0]);
 
 val PRIME_IS_GCD = store_thm("PRIME_IS_GCD",
@@ -85,6 +82,11 @@ val GCD_IS_GCD =
               LESS_EQ_MONO,SUB_MONO_EQ]);
 
 val GCD_THM = REWRITE_RULE [GCD_IS_GCD] (Q.SPECL [`m`,`n`,`gcd m n`] IS_GCD);
+
+val GCD_IS_GREATEST_COMMON_DIVISOR = save_thm(
+  "GCD_IS_GREATEST_COMMON_DIVISOR",
+  REWRITE_RULE [IS_GCD] GCD_IS_GCD)
+
 
 val GCD_REF = store_thm("GCD_REF",
                         Term `!a. gcd a a = a`,
@@ -407,7 +409,7 @@ val GCD_CANCEL_MULT = store_thm("GCD_CANCEL_MULT",
   THEN REWRITE_TAC [GCD_EQ_IS_GCD,IS_GCD,GCD_THM]
   THEN REPEAT STRIP_TAC
   THEN1 (MATCH_MP_TAC divides_IMP THEN REWRITE_TAC [GCD_THM])
-  THEN REVERSE (`divides d n` by ALL_TAC) THEN1 METIS_TAC [GCD_THM]
+  THEN `divides d n` suffices_by METIS_TAC [GCD_THM]
   THEN MATCH_MP_TAC L_EUCLIDES
   THEN Q.EXISTS_TAC `k`
   THEN ASM_REWRITE_TAC []
@@ -422,9 +424,10 @@ val ODD_IMP_GCD_CANCEL_EVEN = prove(
   REPEAT STRIP_TAC
   THEN MATCH_MP_TAC GCD_CANCEL_MULT
   THEN ONCE_REWRITE_TAC [GCD_SYM]
-  THEN REVERSE (`~divides 2 n` by ALL_TAC)
-  THEN1 (MP_TAC (Q.SPEC `n` (MATCH_MP PRIME_GCD PRIME_2))
-         THEN ASM_REWRITE_TAC [])
+  THEN `~divides 2 n` suffices_by
+       (STRIP_TAC
+        THEN MP_TAC (Q.SPEC `n` (MATCH_MP PRIME_GCD PRIME_2))
+        THEN ASM_REWRITE_TAC [])
   THEN REWRITE_TAC [divides_def]
   THEN ONCE_REWRITE_TAC [MULT_COMM]
   THEN REWRITE_TAC [GSYM EVEN_EXISTS]
@@ -441,5 +444,3 @@ val BINARY_GCD = store_thm("BINARY_GCD",
          ONCE_REWRITE_RULE [GCD_SYM] ODD_IMP_GCD_CANCEL_EVEN]);
 
 val _ = export_theory();
-
-end;

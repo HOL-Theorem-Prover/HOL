@@ -1,6 +1,6 @@
 \DOC subst_occs
 
-\TYPE {subst_occs : int list list -> term subst -> term -> term}
+\TYPE {subst_occs : int list list -> (term,term) subst -> term -> term}
 
 \SYNOPSIS
 Substitutes for particular occurrences of subterms of a given term.

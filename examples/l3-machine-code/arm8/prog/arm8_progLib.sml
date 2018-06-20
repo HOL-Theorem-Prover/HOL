@@ -187,7 +187,6 @@ local
        | "arm8_TCR_EL1_TBI0" => 10
        | "arm8_TCR_EL1_TBI1" => 11
        | _ => ~1
-   val int_of_v2w = bitstringSyntax.int_of_term o fst o bitstringSyntax.dest_v2w
    val total_dest_lit = Lib.total wordsSyntax.dest_word_literal
    fun word_compare (w1, w2) =
       case (total_dest_lit w1, total_dest_lit w2) of
@@ -251,7 +250,8 @@ local
    val rwts =
       List.map bitstringLib.v2w_n2w_CONV
          (List.tabulate
-            (32, fn i => bitstringSyntax.padded_fixedwidth_of_int (i, 5)))
+            (32, fn i => bitstringSyntax.padded_fixedwidth_of_num
+                           (Arbnum.fromInt i, 5)))
 in
    val REG_CONV = Conv.QCONV (REWRITE_CONV rwts)
 end
@@ -274,22 +274,19 @@ end
 (* ------------------------------------------------------------------------ *)
 
 local
-   val arm_rename1 =
+   val arm_rmap =
       Lib.total
-        (fn "arm8_prog$arm8_PSTATE_N" => "n"
-          | "arm8_prog$arm8_PSTATE_Z" => "z"
-          | "arm8_prog$arm8_PSTATE_C" => "c"
-          | "arm8_prog$arm8_PSTATE_V" => "v"
-          | "arm8_prog$arm8_SP_EL0" => "sp"
-          | _ => fail())
-   val arm_rename2 =
-      Lib.total
-        (fn "arm8_prog$arm8_REG" =>
-              Lib.curry (op ^) "r" o Int.toString o reg_index
+        (fn "arm8_prog$arm8_PSTATE_N" => K "n"
+          | "arm8_prog$arm8_PSTATE_Z" => K "z"
+          | "arm8_prog$arm8_PSTATE_C" => K "c"
+          | "arm8_prog$arm8_PSTATE_V" => K "v"
+          | "arm8_prog$arm8_SP_EL0" => K "sp"
+          | "arm8_prog$arm8_REG" =>
+              Lib.curry (op ^) "r" o Int.toString o reg_index o List.hd
           | "arm8_prog$arm8_MEM" => K "b"
           | _ => fail())
 in
-   val arm_rename = stateLib.rename_vars (arm_rename1, arm_rename2, ["b"])
+   val arm_rename = stateLib.rename_vars (arm_rmap, ["b"])
 end
 
 local
@@ -436,9 +433,7 @@ local
       Conv.DEPTH_CONV (fn tm => if is_reducible tm then cnv tm else NO_CONV tm)
    val WGROUND_RW_CONV =
       Conv.DEPTH_CONV (utilsLib.cache 10 Term.compare bitstringLib.v2w_n2w_CONV)
-      THENC utilsLib.WALPHA_CONV
       THENC utilsLib.WGROUND_CONV
-      THENC utilsLib.WALPHA_CONV
       THENC SELECTIVE_ARM8_CONV
       THENC REWRITE_CONV [rwt, arm8_stepTheory.ExtendValue_0]
    val cnv =
@@ -462,12 +457,15 @@ in
 end
 
 datatype memory = Flat | Array32 | Array64 | Map8 | Map32 | Map64
-type opt = {gpr_map: bool, mem: memory, temporal: bool}
+type opt = {gpr_map: bool, mem: memory, temporal: bool, newline: bool}
 
 local
+   val newline_options =
+      [["newline"],
+       ["no-newline"]]
    val gpr_map_options =
       [["map-gpr", "gpr-map", "reg-map", "map-reg"],
-       ["no-gpr-map", "no-map-gpr"]]
+       ["no-map-gpr", "no-gpr-map"]]
    val mem_options =
       [["map-mem8", "mem-map8", "mapped8", "map8"],
        ["map-mem32", "mem-map32", "mapped32", "map32"],
@@ -487,11 +485,13 @@ local
        | 4 => Array64
        | 5 => Flat
        | _ => raise ERR "process_rule_options" ""
+   val print_options = utilsLib.print_options NONE
 in
    fun basic_opt () =
-      {gpr_map = false, mem = Flat,
+      {newline = true, gpr_map = false, mem = Flat,
        temporal = stateLib.generate_temporal()}: opt
-   val default_opt = {gpr_map = false, mem = Map8, temporal = false}: opt
+   val default_opt =
+      {newline = true, gpr_map = false, mem = Map8, temporal = false}: opt
    fun proj_opt ({gpr_map, mem, ...}: opt) = (gpr_map, mem)
    fun closeness (target: opt) (opt: opt) =
       (case (#gpr_map opt, #gpr_map target) of
@@ -520,6 +520,9 @@ in
       let
          val l = String.tokens isDelim s
          val l = List.map utilsLib.lowercase l
+         val (newline, l) =
+            utilsLib.process_opt newline_options "Print newlines"
+               (#newline default_opt) l (Lib.equal 0)
          val (gpr_map, l) =
             utilsLib.process_opt gpr_map_options "Introduce GPR map"
                (#gpr_map default_opt) l (Lib.equal 0)
@@ -531,11 +534,17 @@ in
                (#temporal default_opt) l (Lib.equal 0)
       in
          if List.null l
-            then {gpr_map = gpr_map, mem = mem, temporal = temporal}: opt
-         else raise ERR "process_options"
+            then {gpr_map = gpr_map, mem = mem, temporal = temporal,
+                  newline = newline}: opt
+         else ( print_options "Print options" newline_options
+              ; print_options "Register view" gpr_map_options
+              ; print_options "Memory view" mem_options
+              ; print_options "Temporal triple" temporal_options
+              ; raise ERR "process_options"
                     ("Unrecognized option" ^
                      (if List.length l > 1 then "s" else "") ^
                      ": " ^ String.concat (commafy l))
+              )
       end
 end
 
@@ -634,6 +643,7 @@ local
       end
    val string_to_opcode =
       bitstringSyntax.bitstring_of_hexstring o StringCvt.padLeft #"0" 8
+   val nl = ref (fn () => ())
 in
    val list_db = list_db
    fun arm8_config options =
@@ -643,11 +653,11 @@ in
          if #temporal (get_current_opt ()) = #temporal opt
             then ()
          else (reset_specs (); stateLib.set_temporal (#temporal opt))
-         ; set_current_opt opt
+       ; nl := (fn () => if #newline opt then print "\n" else ())
+       ; set_current_opt opt
       end
    fun arm8_spec s =
-      List.map (fn t => (print "+"; basic_spec t)) (pend_spec s) before
-      print "\n"
+      List.map (fn t => (print "+"; basic_spec t)) (pend_spec s) before !nl ()
    fun addInstructionClass s =
       ( print (" " ^ s)
       ; if Redblackset.member (!spec_label_set, s)
@@ -670,7 +680,7 @@ in
               in
                  if List.null l
                     then loop looped opc "failed to find suitable spec" s
-                 else (if new then print "\n" else ();  mk_thm_set l)
+                 else (if new then !nl () else (); mk_thm_set l)
               end
           | NONE => loop looped opc "failed to add suitable spec" s
       end

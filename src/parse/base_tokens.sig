@@ -3,14 +3,8 @@ sig
 
   exception LEX_ERR of string * locn.locn
 
-  type fracinfo = {wholepart: Arbnum.num, fracpart: Arbnum.num, places : int}
-
-  datatype 'a base_token =
-    BT_Ident of string
-  | BT_Numeral of (Arbnum.num * char option)
-  | BT_DecimalFraction of fracinfo
-  | BT_AQ of 'a
-  | BT_EOI
+  type fracinfo = base_tokens_dtype.fracinfo
+  datatype base_token = datatype base_tokens_dtype.base_token
 
   val toString : 'a base_token -> string
 

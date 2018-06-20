@@ -1,6 +1,6 @@
 \DOC is_vartype
 
-\TYPE {is_vartype : type -> bool}
+\TYPE {is_vartype : hol_type -> bool}
 
 \SYNOPSIS
 Tests a type to see if it is a type variable.

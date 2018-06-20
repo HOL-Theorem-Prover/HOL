@@ -149,7 +149,7 @@ fun mkbase (entries : Database.entry list) =
 (*---------------------------------------------------------------------------*)
 
 fun mk_HOLdocfile_entry (dir,s) =
- let val content =String.substring(s,0,size s - 5)
+ let val content =String.substring(s,0,size s - 4)
  in
     {comp=Database.Term(Symbolic.tosymb content, SOME"HOL"),
      file=normPath[dir,s], line=0}
@@ -157,7 +157,7 @@ fun mk_HOLdocfile_entry (dir,s) =
 
 local fun is_adocfile s =
          String.size s>5 andalso
-         String.extract(s, String.size s - 5, NONE) = ".adoc"
+         String.extract(s, String.size s - 4, NONE) = ".txt"
       fun is_docfile s =
          String.size s>4 andalso
          String.extract(s, String.size s - 4, NONE) = ".doc"

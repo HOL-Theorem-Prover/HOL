@@ -14,15 +14,15 @@ local
    fun w_var i = Term.mk_var ("w" ^ Int.toString i, ``:word32``)
    fun word32 w = wordsSyntax.mk_wordi (Arbnum.fromHexString w, 32)
    val ok_rule = PURE_ONCE_REWRITE_RULE [GSYM arm_OK_def]
-   val sbst =
-      [``vfp:bool`` |-> boolSyntax.T, ``arch:Architecture`` |-> ``ARMv7_A``]
+   val sbst = [``vfp:VFPExtension`` |-> ``VFPv3``,
+               ``arch:Architecture`` |-> ``ARMv7_A``]
    fun arm_OK_intro l = ok_rule o Thm.INST (l @ sbst)
    fun format_thm th =
       (th, 4,
        stateLib.get_pc_delta
           (Lib.equal "arm_prog$arm_PC" o fst o boolSyntax.dest_strip_comb) th)
 in
-   val set_opt = arm_progLib.arm_config "vfp"
+   val set_opt = arm_progLib.arm_config "vfpv3"
    fun l3_arm_triples hex =
       case String.tokens (fn c => c = #" ") hex of
          h :: r =>

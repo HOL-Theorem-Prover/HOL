@@ -131,8 +131,8 @@ fun restart (GOALSTACK s) = GOALSTACK (new_history_default (initialValue s))
 (* Prettyprinting of goalstacks and goaltrees.                               *)
 (*---------------------------------------------------------------------------*)
 
-fun pp_proof ppstrm (GOALSTACK s) = project (goalStack.pp_gstk ppstrm) s
-  | pp_proof ppstrm (GOALTREE t) = project(goalTree.pp_gtree ppstrm) t
+fun pp_proof (GOALSTACK s) = project goalStack.pp_gstk s
+  | pp_proof (GOALTREE t) = project goalTree.pp_gtree t
 
 val set_goal_pp = goalStack.set_goal_pp;
 val std_goal_pp = goalStack.std_pp_goal;
@@ -147,63 +147,72 @@ val enum = List.rev o Lib.enumerate 1;
 val inactive_stack = Lib.can goalStack.extract_thm
 val inactive_tree = null o goalTree.all_goals;
 
-fun pp_proofs ppstrm =
-   let val pr_goal = goalStack.pp_goal ppstrm
-       val pr_gtree = goalTree.pp_gtree ppstrm
-       val pr_thm = Parse.pp_thm ppstrm
-       val {add_string, add_break, begin_block, end_block, add_newline, ...} =
-                     Portable.with_ppstream ppstrm
-       fun pr1 (GOALSTACK x) =
+val pp_proofs =
+   let open smpp
+       val pr_goal = lift goalStack.pp_goal
+       val pr_gtree = lift goalTree.pp_gtree
+       val pr_thm = lift Parse.pp_thm
+       fun pr1 ind (GOALSTACK x) =
             if (project inactive_stack x)
-            then (begin_block Portable.CONSISTENT 2;
-                  add_string"Completed goalstack:"; add_break(1,0);
-                  pr_thm (project goalStack.extract_thm x);
-                  end_block())
-            else (begin_block Portable.CONSISTENT 2;
-                  add_string"Incomplete goalstack:"; add_break(1,0);
-                  add_string"Initial goal:"; add_break(1,0);
-                  pr_goal (project goalStack.initial_goal x);
-                  if (project goalStack.is_initial x)
-                  then ()
-                  else (add_newline(); add_string "Current goal:";
-                        add_break(1,0);
-                        pr_goal (project goalStack.top_goal x));
-                  end_block())
-         | pr1 (GOALTREE t) =
+            then block Portable.CONSISTENT (2 + ind) (
+                   add_string"Completed goalstack:" >> add_break(1,0) >>
+                   pr_thm (project goalStack.extract_thm x)
+                 )
+            else
+              block Portable.CONSISTENT (2 + ind) (
+                   add_string"Incomplete goalstack:" >> add_break(1,0) >>
+                   add_string"Initial goal:" >> add_break(1,0) >>
+                   pr_goal (project goalStack.initial_goal x) >>
+                   (if (project goalStack.is_initial x) then nothing
+                    else
+                      add_newline >> add_string "Current goal:" >>
+                      add_break(1,0) >>
+                      pr_goal (project goalStack.top_goal x))
+              )
+         | pr1 ind (GOALTREE t) =
             if (project inactive_tree t)
-            then (begin_block Portable.CONSISTENT 2;
-                  add_string"Completed goaltree:"; add_break(1,0);
-                  project pr_gtree t;
-                  end_block())
-            else (begin_block Portable.CONSISTENT 2;
-                  add_string"Incomplete goaltree:"; add_break(1,0);
-                  add_string"Initial goal:"; add_break(1,0);
-                  pr_gtree (History.initialValue t);
-                  add_newline();
-                  add_string "Current goaltree:";
-                  add_break(1,0);
-                  project pr_gtree t;
-                  end_block())
+            then
+              block Portable.CONSISTENT 2 (
+                   add_string"Completed goaltree:" >> add_break(1,0) >>
+                   project pr_gtree t
+              )
+            else
+              block Portable.CONSISTENT 2 (
+                  add_string"Incomplete goaltree:" >> add_break(1,0) >>
+                  add_string"Initial goal:" >> add_break(1,0) >>
+                  pr_gtree (History.initialValue t) >>
+                  add_newline >>
+                  add_string "Current goaltree:" >>
+                  add_break(1,0) >>
+                  project pr_gtree t
+              )
 
        fun pr (PRFS extants) =
-          let val len = length extants
-          in if len = 0
-             then add_string"There are currently no proofs."
-             else ( begin_block Portable.CONSISTENT 2;
-                    add_string("Proof manager status:");  add_break(1,0);
-                    (case len of 1 => add_string "1 proof."
-                          | n => add_string(int_to_string n^" proofs."));
-                    end_block(); add_newline();
-                    map (fn (i,x) =>
-                          (begin_block Portable.CONSISTENT 0;
-                           add_string(int_to_string i^". ");
-                           pr1 x;
-                          end_block(); add_newline()))
-                        (enum extants);
-                    ())
+          let
+            val len = length extants
+          in
+             if len = 0 then add_string"There are currently no proofs."
+             else
+               block Portable.CONSISTENT 2 (
+                 add_string("Proof manager status:") >> add_break(1,0) >>
+                 (case len of 1 => add_string "1 proof."
+                            | n => add_string(int_to_string n^" proofs."))
+               ) >> add_newline >>
+               List.foldl
+                 (fn ((i,x),m) =>
+                   m >> block Portable.CONSISTENT 0 (
+                     let val num_s = Int.toString i ^ ". "
+                     in
+                       add_string num_s >> pr1 (size num_s) x
+                     end
+                   ) >> add_newline)
+                 nothing
+                 (enum extants)
           end
-   in fn pl => (begin_block Portable.CONSISTENT 0;
-                pr pl; end_block())
+   in
+     fn pl => (block Portable.CONSISTENT 0 (pr pl))
    end;
+
+val pp_proofs = Parse.mlower o pp_proofs
 
 end (* Manager *)

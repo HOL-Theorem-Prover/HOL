@@ -6,7 +6,7 @@ structure arm8_stepLib :> arm8_stepLib =
 struct
 
 open HolKernel boolLib bossLib
-open lcsymtacs arm8Theory arm8_stepTheory arm8AssemblerLib
+open arm8Theory arm8_stepTheory arm8AssemblerLib
 open blastLib
 
 structure Parse =
@@ -375,13 +375,13 @@ local
    val f = UNDISCH o DECIDE o Parse.Term
 
    val lem1 = f `(~wback \/ n <> t \/ (n = 31w: word5)) ==>
-                 ~(((d /\ wback) /\ (n = t)) /\ n <> 31w)`
+                 ~(d /\ wback /\ (n = t) /\ n <> 31w)`
 
    val lem2 = f `(~wback \/ n <> t /\ n <> t2 \/ (n = 31w: word5)) ==>
-                 ~(((d /\ wback) /\ ((n = t) \/ (n = t2))) /\ n <> 31w)`
+                 ~(d /\ wback /\ ((n = t) \/ (n = t2)) /\ n <> 31w)`
 
-   fun w1 i = bitstringSyntax.fixedwidth_of_int (i, 1)
-   fun w2 i = bitstringSyntax.padded_fixedwidth_of_int (i, 2)
+   fun w1 i = bitstringSyntax.fixedwidth_of_num (Arbnum.fromInt i, 1)
+   fun w2 i = bitstringSyntax.padded_fixedwidth_of_num (Arbnum.fromInt i, 2)
 
    val () = setEvConv (Conv.DEPTH_CONV bitstringLib.word_bit_CONV)
 in
@@ -449,7 +449,7 @@ local
             ; intReduce.add_int_compset cmp
             ; computeLib.scrub_thms
                 [wordsTheory.bit_field_insert_def,
-                 wordsTheory.word_sdiv_def,
+                 wordsTheory.word_quot_def,
                  wordsTheory.word_div_def]
                 cmp
             ; computeLib.add_thms
@@ -457,9 +457,9 @@ local
                    [DecodeShift_def, HighestSetBit_def, Ones_def, Zeros_def,
                     Replicate_def, DecodeRegExtend_def, ShiftValue_def,
                     bit_field_insert_thms, ConditionTest, ExtendWord,
-                    DecodeBitMasks_def, LSL_def, LSR_def, ASR_def, ROR_def,
-                    wordsTheory.WORD_AND_CLAUSES, wordsTheory.WORD_OR_CLAUSES,
-                    num2ShiftType_thm, num2ExtendType_thm])
+                    DecodeBitMasks_def, wordsTheory.WORD_AND_CLAUSES,
+                    wordsTheory.WORD_OR_CLAUSES, num2ShiftType_thm,
+                    num2ExtendType_thm])
                 cmp
             ; computeLib.add_conv
                 (bitstringSyntax.v2w_tm, 1, bitstringLib.v2w_n2w_CONV) cmp
@@ -730,8 +730,7 @@ val remove_vacuous = List.filter (not o utilsLib.vacuous)
 local
    val arm8_run = utilsLib.Run_CONV ("arm8", st) o rhsc
    val (_, mk_exception, _, _) = arm8_monop "arm8_state_exception"
-   val arm8_exception =
-      DATATYPE_CONV o mk_exception o snd o pairSyntax.dest_pair o utilsLib.rhsc
+   val arm8_exception = DATATYPE_CONV o mk_exception o utilsLib.rhsc
    val get_next = Term.rator o utilsLib.rhsc o Drule.SPEC_ALL
    val rule = REG_31_RULE o Conv.RIGHT_CONV_RULE DATATYPE_CONV o
               MATCH_MP arm8_stepTheory.NextStateARM8

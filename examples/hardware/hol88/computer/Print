@@ -1,0 +1,12 @@
+pr values.ml \
+computer.ml \
+computer_imp.ml \
+microcode.ml \
+arith.ml \
+next.ml \
+proof1.ml \
+proof2.ml \
+proof3.ml \
+proof4.ml \
+proof5.ml \
+proof6.ml | lpr

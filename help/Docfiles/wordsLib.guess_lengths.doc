@@ -37,6 +37,6 @@ return type of {word_concat} and {word_extract}.
 
 \SEEALSO
 
-wordsLib.inst_word_lengths, wordsLib.notify_word_length_guesses
+wordsLib.inst_word_lengths, wordsLib.notify_on_word_length_guess
 
 \ENDDOC

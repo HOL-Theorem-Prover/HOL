@@ -108,8 +108,8 @@ val lisp_x_word_tree = prove(
    (Q.EXISTS_TAC `XVal (n2w n)`
     \\ REWRITE_TAC [word_tree_def,XSIZE_def,LSIZE_def,XDEPTH_def,LDEPTH_def]
     \\ ASM_SIMP_TAC std_ss [ADDR32_n2w,word_add_n2w,AC MULT_ASSOC MULT_COMM])
-  \\ Q.PAT_ASSUM `!a. bbb` IMP_RES_TAC
-  \\ Q.PAT_ASSUM `!a dm m sym. bbb` IMP_RES_TAC
+  \\ Q.PAT_X_ASSUM `!a. bbb` IMP_RES_TAC
+  \\ Q.PAT_X_ASSUM `!a dm m sym. bbb` IMP_RES_TAC
   \\ Q.EXISTS_TAC `XDot t' t`
   \\ ASM_SIMP_TAC std_ss [word_tree_def,XSIZE_def,LSIZE_def,XDEPTH_def,LDEPTH_def]);
 
@@ -152,7 +152,7 @@ val lisp_inv_cons = store_thm("lisp_inv_cons",
   \\ POP_ASSUM MP_TAC
   \\ SIMP_TAC std_ss [ch_tree_def,LET_DEF]
   \\ STRIP_TAC
-  \\ Q.PAT_ASSUM `a' = a` (fn th => FULL_SIMP_TAC std_ss [th])
+  \\ Q.PAT_X_ASSUM `a' = a` (fn th => FULL_SIMP_TAC std_ss [th])
   \\ Q.EXISTS_TAC `i'` \\ Q.EXISTS_TAC `u'`
   \\ FULL_SIMP_TAC std_ss [word_tree_def,lisp_x_def] \\ METIS_TAC []);
 
@@ -583,8 +583,8 @@ val lisp_inv_test_builtin_lemma = prove(
   \\ FULL_SIMP_TAC std_ss [ALIGNED_INTRO,word_arith_lemma4,
        ALIGNED_ADD_EQ,ALIGNED_ADDR32,ALIGNED_n2w]
   \\ FULL_SIMP_TAC std_ss [WORD_EQ_ADD_RCANCEL,ADDR32_11]
-  \\ Q.PAT_ASSUM `xx IN s` MP_TAC
-  \\ Q.PAT_ASSUM `lisp_symbol_table sss ssss` MP_TAC
+  \\ Q.PAT_X_ASSUM `xx IN s` MP_TAC
+  \\ Q.PAT_X_ASSUM `lisp_symbol_table sss ssss` MP_TAC
   \\ REPEAT (POP_ASSUM (K ALL_TAC)) \\ STRIP_TAC
   \\ IMP_RES_TAC builti_symbols_thm
   \\ REPEAT STRIP_TAC
@@ -664,9 +664,8 @@ val lisp_inv_SUB = store_thm("lisp_inv_SUB",
     lisp_inv (LISP_SUB x1 x2,x2,x3,x4,x5,x6,limit) (w1 - w2 + 2w,w2,w3,w4,w5,w6,a,x,xs,s,rest)``,
   isVal_TAC
   \\ ASM_REWRITE_TAC [LISP_SUB_def,GSYM word_add_n2w,WORD_ADD_ASSOC,WORD_ADD_SUB]
-  \\ REVERSE (`(n2w (4 * a') + 2w - (n2w (4 * a'') + 2w) + 2w:word32 =
-      n2w ((a' - a'') * 4 + 2)) /\ a' < a'' + 1073741824` by ALL_TAC) THEN1
-   (ASM_SIMP_TAC std_ss []
+  \\ `(n2w (4 * a') + 2w - (n2w (4 * a'') + 2w) + 2w:word32 =
+      n2w ((a' - a'') * 4 + 2)) /\ a' < a'' + 1073741824` suffices_by (STRIP_TAC THEN ASM_SIMP_TAC std_ss []
     \\ (MATCH_MP_TAC o GEN_ALL o RW [AND_IMP_INTRO] o DISCH_ALL o SPEC_ALL o UNDISCH) lisp_inv_Val
     \\ ASM_SIMP_TAC std_ss [word_add_n2w] \\ METIS_TAC [])
   \\ REVERSE STRIP_TAC
@@ -683,9 +682,8 @@ val lisp_inv_SUB1 = store_thm("lisp_inv_SUB1",
     lisp_inv (LISP_SUB x1 (Val 1),x2,x3,x4,x5,x6,limit) (w1 - 4w,w2,w3,w4,w5,w6,a,x,xs,s,rest)``,
   isVal_TAC
   \\ ASM_REWRITE_TAC [LISP_SUB_def,GSYM word_add_n2w,WORD_ADD_ASSOC,WORD_ADD_SUB]
-  \\ REVERSE (`(n2w (4 * a') + 2w - 4w:word32 =
-      n2w ((a' - 1) * 4 + 2)) /\ a' < 1073741825` by ALL_TAC) THEN1
-   (ASM_SIMP_TAC std_ss []
+  \\ `(n2w (4 * a') + 2w - 4w:word32 =
+      n2w ((a' - 1) * 4 + 2)) /\ a' < 1073741825` suffices_by (STRIP_TAC THEN ASM_SIMP_TAC std_ss []
     \\ (MATCH_MP_TAC o GEN_ALL o RW [AND_IMP_INTRO] o DISCH_ALL o SPEC_ALL o UNDISCH) lisp_inv_Val
     \\ ASM_SIMP_TAC std_ss [word_add_n2w] \\ METIS_TAC [])
   \\ REVERSE STRIP_TAC
@@ -725,9 +723,8 @@ val lisp_inv_MULT = store_thm("lisp_inv_MULT",
   \\ IMP_RES_TAC lisp_inv_swap2
   \\ IMP_RES_TAC lisp_inv_read_Val
   \\ FULL_SIMP_TAC std_ss []
-  \\ REVERSE (`(n2w (4 * a' + 2) >>> 2 * n2w (4 * a'' + 2) >>> 2) << 2 + 2w:word32 =
-       n2w ((a' * a'') * 4 + 2)` by ALL_TAC) THEN1
-   (ASM_SIMP_TAC std_ss []
+  \\ `(n2w (4 * a' + 2) >>> 2 * n2w (4 * a'' + 2) >>> 2) << 2 + 2w:word32 =
+       n2w ((a' * a'') * 4 + 2)` suffices_by (STRIP_TAC THEN ASM_SIMP_TAC std_ss []
     \\ MATCH_MP_TAC lisp_inv_Val_nil_nil
     \\ ASM_SIMP_TAC std_ss [] \\ METIS_TAC [])
   \\ IMP_RES_TAC LEMMA_MULT_4
@@ -762,7 +759,7 @@ val lisp_inv_DIV = store_thm("lisp_inv_DIV",
   \\ IMP_RES_TAC lisp_inv_read_Val
   \\ FULL_SIMP_TAC std_ss []
   \\ `(n2w (4 * a' + 2) >>> 2 // n2w (4 * a'' + 2) >>> 2) << 2 + 2w:word32 =
-       n2w ((a' DIV a'') * 4 + 2)` by ALL_TAC THEN1
+       n2w ((a' DIV a'') * 4 + 2)` by
    (IMP_RES_TAC LEMMA_MULT_4
     \\ IMP_RES_TAC (SIMP_RULE (std_ss++SIZES_ss) [] (INST_TYPE [``:'a``|->``:32``] word_lsr_n2w))
     \\ ASM_SIMP_TAC std_ss [DIV_MULT]
@@ -800,7 +797,7 @@ val lisp_inv_MOD = store_thm("lisp_inv_MOD",
   \\ IMP_RES_TAC lisp_inv_read_Val
   \\ FULL_SIMP_TAC std_ss []
   \\ `(word_mod (n2w (4 * a' + 2) >>> 2) (n2w (4 * a'' + 2) >>> 2)) << 2 + 2w:word32 =
-       n2w ((a' MOD a'') * 4 + 2)` by ALL_TAC THEN1
+       n2w ((a' MOD a'') * 4 + 2)` by
    (IMP_RES_TAC LEMMA_MULT_4
     \\ IMP_RES_TAC (SIMP_RULE (std_ss++SIZES_ss) [] (INST_TYPE [``:'a``|->``:32``] word_lsr_n2w))
     \\ ASM_SIMP_TAC std_ss [DIV_MULT]
@@ -877,8 +874,8 @@ val word_tree_XDEPTH_LEMMA = prove(
   \\ REPEAT STRIP_TAC \\ REVERSE (Cases_on `t`)
   \\ FULL_SIMP_TAC std_ss [XDEPTH_def,lisp_x_def]
   \\ IMP_RES_TAC word_tree_XDot_IMP
-  \\ REVERSE (`(v = CARD (s DELETE (a:word32))) /\ FINITE (s DELETE a)` by ALL_TAC)
-  THEN1 (METIS_TAC [])
+  \\ `(v = CARD (s DELETE (a:word32))) /\ FINITE (s DELETE a)` suffices_by
+  (STRIP_TAC THEN METIS_TAC [])
   \\ IMP_RES_TAC CARD_DELETE
   \\ ASM_SIMP_TAC std_ss [FINITE_DELETE]);
 

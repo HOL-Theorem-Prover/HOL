@@ -1,18 +1,21 @@
-INCLUDES= ..  
+INCLUDES= ..
 MLYACCLIB = $(protect $(HOLDIR)/tools/mlyacc/mlyacclib/)
 MLYACCLIB_UIS = $(patsubst %,MLY_%.ui,base-sig join lrtable parser2 stream)
 
 EXTRA_CLEANS = holfoot.grm-sig.sml holfoot.grm.sml holfoot.lex.sig \
-               holfoot.lex.sml holfoot.grm.sig 
+               holfoot.lex.sml holfoot.grm.sig
 
 THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
 TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
 
-all: $(TARGETS) holfootLib.ui
+all: $(TARGETS) holfootLib.ui selftest.exe
 .PHONY: all
 
+selftest.exe: selftest.uo
+	$(HOLMOSMLC) -o $@ $<
+
 Parsetree.uo : Parsetree.sml
-	HOLMOSMLC -c Parsetree.sml
+	$(HOLMOSMLC) -c Parsetree.sml
 
 holfoot.grm.sml holfoot.grm-sig.sml: holfoot.grm Parsetree.uo
 	$(protect $(HOLDIR)/tools/mlyacc/src/mlyacc.exe) $<
@@ -21,7 +24,7 @@ holfoot.grm.sml holfoot.grm-sig.sml: holfoot.grm Parsetree.uo
 holfoot.grm-sig.uo: holfoot.grm-sig.sml Parsetree.uo
 	$(HOLMOSMLC) -toplevel -c -I $(MLYACCLIB) $(MLYACCLIB_UIS) $<
 
-holfoot.grm.uo: holfoot.grm.sml holfoot.grm-sig.uo Parsetree.uo 
+holfoot.grm.uo: holfoot.grm.sml holfoot.grm-sig.uo Parsetree.uo
 	$(HOLMOSMLC) -toplevel -c -I $(MLYACCLIB) $(MLYACCLIB_UIS) holfoot.grm-sig.ui $<
 
 holfoot.lex.sml: holfoot.lex Parsetree.uo
@@ -34,11 +37,10 @@ AssembleHolfootParser.uo: AssembleHolfootParser.sml AssembleHolfootParser.ui hol
 	$(HOLMOSMLC) -c -I $(MLYACCLIB) $(MLYACCLIB_UIS) holfoot.grm.ui holfoot.lex.ui $<
 
 holfootLib.uo: holfootLib.sml holfootParser.ui holfootParser.uo holfootParserGenpreds.ui holfootParserGenpreds.uo holfoot_pp_print.uo holfootTheory.uo
-	$(HOLMOSMLC) -I $(protect $(SIGOBJ)) -I .. -c ListConv1.uo treeTheory.uo HolSmtLib.uo treeSyntax.uo finite_mapLib.uo stringSimps.uo listLib.uo bagLib.uo permLib.uo vars_as_resourceBaseFunctor.ui vars_as_resourceFunctor.uo Overlay.ui holfootLib.sml 
+	$(HOLMOSMLC) -I $(protect $(SIGOBJ)) -I .. -c ListConv1.uo treeTheory.uo HolSmtLib.uo treeSyntax.uo finite_mapLib.uo stringSimps.uo listLib.uo bagLib.uo permLib.uo vars_as_resourceBaseFunctor.ui vars_as_resourceFunctor.uo Overlay.ui holfootLib.sml
 
-header.uo: header.sml
+hfheader.uo: hfheader.sml
 
 
 clean-lib:
 	rm -f holfootLib.uo holfootLib.ui
-

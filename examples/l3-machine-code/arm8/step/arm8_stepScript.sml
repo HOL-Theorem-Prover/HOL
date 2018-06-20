@@ -4,7 +4,7 @@
 
 open HolKernel boolLib bossLib
 
-open lcsymtacs utilsLib
+open utilsLib
 open wordsLib blastLib
 open state_transformerTheory updateTheory alignmentTheory arm8Theory
 
@@ -19,15 +19,14 @@ val _ = List.app (fn f => f ())
 
 val NextStateARM8_def = Define`
    NextStateARM8 s0 =
-     let s1 = SND (Next s0) in
-        if s1.exception = NoException then SOME s1 else NONE`
+     let s1 = Next s0 in if s1.exception = NoException then SOME s1 else NONE`
 
 val NextStateARM8 = ustore_thm("NextStateARM8",
   `(s.exception = NoException) ==>
    (Fetch (s with branch_hint := NONE) = (w, s with branch_hint := NONE)) /\
    (Decode w = ast) /\
    (!s. Run ast s = f x s) /\
-   (f x (s with branch_hint := NONE) = ((), s1)) /\
+   (f x (s with branch_hint := NONE) = s1) /\
    (s1.exception = s.exception) ==>
    (NextStateARM8 s = SOME (if s1.branch_hint = NONE then
                                s1 with <| PC := s1.PC + 4w |>
@@ -303,10 +302,8 @@ val SetTheFlags = Theory.save_thm("SetTheFlags",
 (* ------------------------------------------------------------------------ *)
 
 val Replicate_32_64 = Q.store_thm("Replicate_32_64",
-   `(!b. Replicate (if b then [T] else [F]) =
-         if b then 0xFFFFFFFFw else 0w: word32) /\
-    (!b. Replicate (if b then [T] else [F]) =
-         if b then 0xFFFFFFFFFFFFFFFFw else 0w: word64)`,
+   `(!b. Replicate [b] = if b then 0xFFFFFFFFw else 0w: word32) /\
+    (!b. Replicate [b] = if b then 0xFFFFFFFFFFFFFFFFw else 0w: word64)`,
    rw [Replicate_def] \\ EVAL_TAC
    )
 

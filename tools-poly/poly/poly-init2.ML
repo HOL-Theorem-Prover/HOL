@@ -2,7 +2,15 @@
 val _ = use "poly/poly-init.ML";
 
 val _ = use "../tools/Holmake/Systeml.sig";
-val _ = use "Holmake/Systeml.sml";
+val _ = use "Holmake/Systeml.sml"
+
+val _ = use "../tools/Holmake/QuoteFilter.sml";
+val _ = use "../tools/Holmake/HM_SimpleBuffer.sig";
+val _ = use "../tools/Holmake/HM_SimpleBuffer.sml";
+val _ = use "../tools/Holmake/QFRead.sig";
+val _ = use "../tools/Holmake/QFRead.sml";
+val _ = use "poly/quse.sig";
+val _ = use "poly/quse.sml";
 
 local
 
@@ -14,6 +22,11 @@ local
                 TextIO.flushOut TextIO.stdErr)
 
   val redirected_files = ["mlibOmegaint.sml"];
+  val meta_debug = ref false
+
+  fun MDBG s = if !meta_debug then
+                 TextIO.output(TextIO.stdOut, "META_DEBUG: " ^ s() ^ "\n")
+               else ()
 
   (* used to stand for "has double quote", but the same analysis is necessary
      even for files that contain single quotes because of the special
@@ -37,36 +50,26 @@ local
   fun unquote_to file1 file2 =
       systeml [HOLDIR ++ "bin" ++ "unquote", file1, file2];
 
-
 structure FS = OS.FileSys
 
-fun quse s = let
-  fun mkHOLMK () =
-      if FS.access (".HOLMK", [FS.A_READ, FS.A_EXEC]) andalso FS.isDir ".HOLMK"
-      then true
-      else
-        (FS.mkDir ".HOLMK"; true)
-        handle OS.SysErr (msg, _) =>
-               (warn ("Couldn't make .HOLMK directory in " ^
-                      FS.getDir() ^ ": " ^ msg);
-                false)
-  fun holtemp s =
-    if mkHOLMK() then OS.Path.concat(".HOLMK", OS.Path.file s)
-    else OS.FileSys.tmpName()
+val loadpathdb =
+    ref (Binarymap.mkDict String.compare : (string,string) Binarymap.dict)
 
+fun quse s = let
   val _ = if FS.access (s, [FS.A_READ]) then ()
           else die ("Use: non-existent file "^s)
+  val _ = MDBG (fn _ => "Call quse " ^ s)
+  val full = OS.Path.mkCanonical
+               (OS.Path.mkAbsolute{path = s, relativeTo = OS.FileSys.getDir()})
 in
-  if has_dq s then let
-      val filename = holtemp s
-    in
-      (if OS.Process.isSuccess (unquote_to s filename) then
-         (PolyML.use filename; FS.remove filename)
-       else die ("Failed to handle quotations in file: "^s^"\n"))
-      handle e => (try_remove filename; raise e)
-    end
-  else PolyML.use s
+  if has_dq s then QUse.use s else PolyML.use s ;
+  loadpathdb := Binarymap.insert(!loadpathdb,OS.Path.file full,OS.Path.dir full)
 end handle OS.Path.Path => die ("Path exception in quse "^s)
+             | e => (TextIO.output(TextIO.stdErr,
+                                   "error in quse " ^ s ^ " : " ^
+                                   General.exnMessage e ^ "\n");
+                     TextIO.flushOut TextIO.stdErr;
+                     raise e)
 
 fun myuse f =
   let val op ++ = OS.Path.concat
@@ -82,12 +85,13 @@ fun myuse f =
     PolyML.print_depth pd
   end handle OS.Path.Path => die ("Path exception in myuse "^f)
 
-val loadPath : string list ref = ref [];
+val loadPath : string list ref = ref [OS.Path.concat(HOLDIR, "sigobj")];
 
 val loadedMods = ref (Binaryset.empty String.compare);
 val _ =
     loadedMods := Binaryset.addList (!loadedMods,
-              ["Real", "Int", "List", "Binaryset", "Binarymap","Listsort"])
+              ["Real", "Int", "List", "Binaryset", "Binarymap", "Listsort",
+               "Array", "Array2", "Vector"])
 
 fun findUo modPath [] = NONE
   | findUo modPath (search::rest) =
@@ -103,46 +107,61 @@ fun findUo modPath [] = NONE
           findUo modPath rest
       end;
 
-fun loadUo uo modName =
-let val i = TextIO.openIn uo
+val _ = holpathdb.extend_db {vname = "HOLDIR", path = Systeml.HOLDIR}
+
+fun loadUo ps uo =
+  let
+    val i = TextIO.openIn uo
     val files =
       String.tokens (fn c => c = #"\n") (TextIO.inputAll i)
     val _ = TextIO.closeIn i
+    fun str f = ">" ^ f ^ "< -- " ^ String.concatWith " -- " ps
     fun loadOne f =
       (case OS.Path.ext f of
-         SOME "sml" => myuse f
-       | SOME "sig" => myuse f
-       | _ => load f) handle OS.Path.InvalidArc => die ("Invalid arc exception in loading "^f)
-                           | OS.Path.Path => die ("Path exception in loading "^f)
-                           | OS.SysErr(msg,_) => die ("System error '"^msg^"' in loading "^f)
-in
-  List.app loadOne files
-end
-and load modPath =
-let val modName = OS.Path.file modPath;
+         SOME "sml" => myuse (holpathdb.subst_pathvars f)
+       | SOME "sig" => myuse (holpathdb.subst_pathvars f)
+       | _ => load (uo::ps) f)
+      handle
+        OS.Path.InvalidArc => die ("Invalid arc exception in loading "^str f)
+      | OS.Path.Path => die ("Path exception in loading "^str f)
+      | OS.SysErr(msg,_) => die ("System error '"^msg^"' in loading "^str f)
+  in
+    List.app loadOne files
+  end
+and load ps modPath =
+  let
+    val _ = MDBG (fn _ => "Call load " ^ modPath)
+    val modPath = holpathdb.subst_pathvars modPath
+    val modName = OS.Path.file modPath
     fun l ext =
       case findUo (modPath ^ ext) ("."::(!loadPath)) of
-        NONE => die ("Cannot find file " ^ modPath ^ ext)
-      | SOME uo => loadUo uo modName;
-in
-  if Binaryset.member (!loadedMods, modName) then
-    ()
-  else
-    (loadedMods := Binaryset.add (!loadedMods, modName);
-     (l ".ui"; l ".uo")
-     handle e =>
-       (loadedMods := Binaryset.delete (!loadedMods, modName);
-        raise e))
-end;
-
+          NONE => die ("Cannot find file " ^ modPath ^ ext)
+        | SOME uo => loadUo ps uo
+  in
+    if Binaryset.member (!loadedMods, modName) then
+      ()
+    else
+      (loadedMods := Binaryset.add (!loadedMods, modName);
+       (l ".ui"; l ".uo")
+       handle e =>
+              (loadedMods := Binaryset.delete (!loadedMods, modName);
+               raise e))
+  end handle e => (TextIO.output(TextIO.stdErr,
+                                 "error in load " ^ modPath ^ " : " ^
+                                 General.exnMessage e ^ "\n");
+                   TextIO.flushOut TextIO.stdErr;
+                   raise e)
 in
 
   structure Meta = struct
-    val load = load;
+    val meta_debug = meta_debug
+    val load = load []
     val loadPath = loadPath;
     fun loaded () = Binaryset.listItems (!loadedMods);
     fun fakeload s =
         loadedMods := Binaryset.add(!loadedMods,s)
+    fun findMod modname = findUo (modname ^ ".uo") ("." :: !loadPath)
+    fun fileDirMap () = !loadpathdb
   end;
 
 open Meta;

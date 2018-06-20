@@ -11,7 +11,7 @@ sig
 
  val big_record_size : int ref
 
- val tyspecs_of    : hol_type quotation -> tyspec list
+ val tyspecs_of    : type_grammar.grammar -> hol_type quotation -> tyspec list
  val to_tyspecs    : AST list -> tyspec list
 
  (*---------------------------------------------------------------------------*)
@@ -40,11 +40,7 @@ sig
                          -> {induction:thm, recursion:thm}
                            -> tyinfo list
 
- val write_tyinfos : (tyinfo * string) list -> unit
-
- val primHol_datatype : typeBase
-                         -> AST list
-                           -> typeBase * (tyinfo * string) list
+ val primHol_datatype : typeBase -> AST list -> typeBase * tyinfo list
 
  val astHol_datatype  : AST list -> unit
  val Hol_datatype  : hol_type quotation -> unit

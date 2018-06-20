@@ -7,9 +7,9 @@ val _ = catch_interrupt true;
 
 fun read_from_stream is n = TextIO.input is
 
-val (instream, outstream) =
+val (instream, outstream, intp) =
     case CommandLine.arguments() of
-      [] => (TextIO.stdIn, TextIO.stdOut)
+      [] => (TextIO.stdIn, TextIO.stdOut, true)
     | [ifile, ofile] => let
         open TextIO
         val is = TextIO.openIn ifile
@@ -23,34 +23,30 @@ val (instream, outstream) =
                          | NONE => ();
                          exit failure)
       in
-        (is, os)
+        (is, os, false)
       end
     | _ => (TextIO.output(TextIO.stdErr,
                           "Usage:\n  " ^ CommandLine.name() ^
                           " [<inputfile> <outputfile>]\n");
             exit failure)
 
-open filter.UserDeclarations
-val state as QFS args =
-    newstate ((fn s => TextIO.output(outstream, s)),
-              (fn () => TextIO.flushOut outstream))
+open QuoteFilter.UserDeclarations
+val state as QFS args = newstate intp
 
 
 (* with many thanks to Ken Friis Larsen, Peter Sestoft, Claudio Russo and
    Kenn Heinrich who helped me see the light with respect to this code *)
-
-fun loop() = let
-  val lexer = filter.makeLexer (read_from_stream instream) state
-in
-  lexer()
-  handle Interrupt => (let open filter.UserDeclarations
-                       in
-                         #comdepth args := 0;
-                         #pardepth args := 0;
-                         #antiquote args := false;
-                         loop()
-                       end)
-end
+fun loop() =
+  let
+    val lexer = QuoteFilter.makeLexer (read_from_stream instream) state
+    fun coreloop () =
+      case lexer() of
+          "" => ()
+        | s => (TextIO.output(outstream, s); TextIO.flushOut outstream;
+                coreloop())
+  in
+    coreloop() handle Interrupt => (resetstate state; loop())
+  end
 
 val _ = loop()
 val _ = TextIO.closeOut outstream

@@ -3,8 +3,13 @@ val _ = PolyML.Compiler.prompt2:="";
 val _ = PolyML.print_depth 0;
 use "../../tools-poly/poly/Binaryset.sig";
 use "../../tools-poly/poly/Binaryset.sml";
+use "../../tools-poly/poly/Binarymap.sig";
+use "../../tools-poly/poly/Binarymap.sml";
 use "Holdep_tokens.sig";
 use "Holdep_tokens.sml";
+use "QuoteFilter.sml";
+use "QFRead.sig";
+use "QFRead.sml";
 use "holdeptool.sml";
 
 val main = holdeptool.main

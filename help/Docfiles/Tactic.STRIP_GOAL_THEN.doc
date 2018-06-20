@@ -66,5 +66,5 @@ thus obtaining the goal
 stripping outer connectives from a goal) directly, rather than as assumptions.
 
 \SEEALSO
-Tactic.CONJ_TAC, Thm_cont.DISCH_THEN, Thm_cont.FILTER_STRIP_THEN, Tactic.GEN_TAC, Tactic.STRIP_ASSUME_TAC, Tactic.STRIP_TAC.
+Tactic.CONJ_TAC, Thm_cont.DISCH_THEN, Tactic.FILTER_STRIP_THEN, Tactic.GEN_TAC, Tactic.STRIP_ASSUME_TAC, Tactic.STRIP_TAC.
 \ENDDOC

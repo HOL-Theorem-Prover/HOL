@@ -1,6 +1,6 @@
 \DOC THEN_TCL
 
-\TYPE {$THEN_TCL : (thm_tactical -> thm_tactical -> thm_tactical)}
+\TYPE {THEN_TCL : (thm_tactical * thm_tactical -> thm_tactical)}
 
 \SYNOPSIS
 Composes two theorem-tacticals.

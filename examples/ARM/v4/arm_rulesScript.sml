@@ -367,7 +367,7 @@ val WORD_NEG_cor =
   ``~a + b + 1w = b - a``;
 
 val WORD_1COMP_ZERO =
-  METIS_PROVE [WORD_NOT_NOT,WORD_NOT_T] ``!a. (~a = 0w) = (a = Tw)``;
+  METIS_PROVE [WORD_NOT_NOT,WORD_NOT_T] ``!a. (~a = 0w) = (a = UINT_MAXw)``;
 
 val SND_ROR = prove(
   `!a n c. SND (ROR a n c) = a #>> w2n n`,

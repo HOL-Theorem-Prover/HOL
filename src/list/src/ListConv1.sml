@@ -48,7 +48,6 @@ structure Parse =
 struct
  open Parse
  val (Type,Term) = parse_from_grammars rich_listTheory.rich_list_grammars
- fun -- q x = Term q
  fun == q x = Type q
 end
 open Parse
@@ -403,19 +402,19 @@ val EQ_LENGTH_SNOC_INDUCT_TAC =
 
 (*---------------------------------------------------------------------------*)
 (*- Reductions                                                               *)
-(*- FOLDR_CONV conv (--`FOLDR f e [a0,...an]`--) --->                        *)
+(*- FOLDR_CONV conv (“FOLDR f e [a0,...an]”) --->                        *)
 (*    |- FOLDR f e [a0,...an] = tm                                           *)
 (*   FOLDR_CONV evaluates the input expression by iteratively apply          *)
 (*    the function f the successive element of the list starting from        *)
 (*    the end of the list. tm is the result of the calculation.              *)
 (*    FOLDR_CONV returns a theorem stating this fact. During each            *)
-(*    iteration, an expression (--`f e' ai`--) is evaluated. The user        *)
+(*    iteration, an expression (“f e' ai”) is evaluated. The user        *)
 (*    supplied conversion conv is used to derive a theorem                   *)
 (*     |- f e' ai = e'' which is then used to reduce the expression          *)
 (*    to e''. For example,                                                   *)
 (*                                                                           *)
 (*   - FOLDR_CONV ((RATOR_CONV BETA_CONV) THENC BETA_CONV THENC SUC_CONV)    *)
-(*         (--`FOLDR (\l x. SUC x) 0 ([(x0:'a);x1;x2;x3;x4;x5])`--);         *)
+(*         (“FOLDR (\l x. SUC x) 0 ([(x0:'a);x1;x2;x3;x4;x5])”);         *)
 (*   = val it = |- FOLDR (\l x. SUC x) 0 [x0; x1; x2; x3; x4; x5] = 6 : thm  *)
 (*                                                                           *)
 (*   In general, if the function f is an explicit lambda abstraction         *)
@@ -428,7 +427,7 @@ val EQ_LENGTH_SNOC_INDUCT_TAC =
 val FOLDR_CONV  =
  let val (bthm,ithm) = CONJ_PAIR (rich_listTheory.FOLDR) in
   fn conv => fn tm =>
-    let val (f,e,l) = listSyntax.dest_foldl tm
+    let val (f,e,l) = listSyntax.dest_foldr tm
         val ithm' = ISPECL[f,e] ithm
         val (els,lty) =  (dest_list l)
         fun itfn a th =
@@ -437,7 +436,7 @@ val FOLDR_CONV  =
                         | _ => raise ERR "FOLDR_CONV" ""
               val lem = SUBS [th](SPECL[a,l'] ithm')
           in
-            TRANS lem (conv (rhs (concl lem)))
+            TRANS lem (QCONV conv (rhs (concl lem)))
           end
     in
         (itlist itfn els (ISPECL [f,e] bthm))
@@ -446,19 +445,19 @@ val FOLDR_CONV  =
  end;
 
 (*---------------------------------------------------------------------------*)
-(* FOLDL_CONV conv (--`FOLDL f e [a0,...an]`--) --->                         *)
+(* FOLDL_CONV conv (“FOLDL f e [a0,...an]”) --->                         *)
 (*     |- FOLDL f e [a0,...an] = tm                                          *)
 (*   FOLDL_CONV evaluates the input expression by iteratively apply          *)
 (*    the function f the successive element of the list starting from        *)
 (*    the head of the list. tm is the result of the calculation.             *)
 (*    FOLDL_CONV returns a theorem stating this fact. During each            *)
-(*    iteration, an expression (--`f e' ai`--) is evaluated. The user        *)
+(*    iteration, an expression (“f e' ai”) is evaluated. The user        *)
 (*    supplied conversion conv is used to derive a theorem                   *)
 (*     |- f e' ai = e'' which is then used to reduce the expression          *)
 (*    to e''. For example,                                                   *)
 (*                                                                           *)
 (*   - FOLDL_CONV ((RATOR_CONV BETA_CONV) THENC BETA_CONV THENC SUC_CONV)    *)
-(*         (--`FOLDL (\l x. SUC l) 0 ([(x0:'a);x1;x2;x3;x4;x5])`--);         *)
+(*         (“FOLDL (\l x. SUC l) 0 ([(x0:'a);x1;x2;x3;x4;x5])”);         *)
 (*   val it = |- FOLDL (\x l. SUC x) 0 [x0; x1; x2; x3; x4; x5] = 6 : thm    *)
 (*                                                                           *)
 (*   In general, if the function f is an explicit lambda abstraction         *)
@@ -541,9 +540,9 @@ val SUM_CONV =
 
 (*---------------------------------------------------------------------*)
 (* Filter                                                              *)
-(* FILTER_CONV conv (--`FILTER P [a0,...an]`--) --->                   *)
+(* FILTER_CONV conv (“FILTER P [a0,...an]”) --->                   *)
 (*    |- FILTER P [a0,...,an] = [...,ai,...]                           *)
-(*    where conv (--`P ai`--) returns a theorem |- P ai = T for all ai *)
+(*    where conv (“P ai”) returns a theorem |- P ai = T for all ai *)
 (*    in the resulting list.                                           *)
 (*---------------------------------------------------------------------*)
 
@@ -558,7 +557,7 @@ val FILTER_CONV =
                  val (p,ls) = case strip_comb left
                               of (_,[p,ls]) => (p,ls)
                                | _ => raise ERR "FILTER_CONV" ""
-                 val fthm = SPECL [x,ls] ith' and cthm = conv (--`^P ^x`--)
+                 val fthm = SPECL [x,ls] ith' and cthm = conv (“^P ^x”)
              in
                  (CONV_RULE (RAND_CONV COND_CONV) (SUBS[cthm,th]fthm))
              end
@@ -570,7 +569,7 @@ val FILTER_CONV =
 
 (*----------------------------------------------------------------*)
 (* SNOC_CONV : conv                                               *)
-(*   SNOC_CONV (--`SNOC x [x0,...xn]`--) --->                     *)
+(*   SNOC_CONV (“SNOC x [x0,...xn]”) --->                     *)
 (*    |- SNOC x [x0,...xn] = [x0,...,xn,x]                        *)
 (*----------------------------------------------------------------*)
 
@@ -580,7 +579,7 @@ val SNOC_CONV =
     let val (d,lst) = listSyntax.dest_snoc tm
          val ty = type_of lst
          val (lst',ety) = (dest_list lst)
-         val EMP = (--`[]:^(ty_antiq ty)`--)
+         val EMP = (“[]:^(ty_antiq ty)”)
          and CONS = Term`CONS:^(ty_antiq ety)-> ^(ty_antiq ty)->^(ty_antiq ty)`
          fun itfn x (lst,ithm) =
              (mk_comb{Rator=mk_comb{Rator=CONS,Rand=x},Rand=lst},
@@ -594,7 +593,7 @@ val SNOC_CONV =
 
 (*----------------------------------------------------------------*)
 (* REVERSE_CONV : conv                                            *)
-(*   REVERSE_CONV (--`REVERSE [x0,...,xn]`--) --->                *)
+(*   REVERSE_CONV (“REVERSE [x0,...,xn]”) --->                *)
 (*   |- REVERSE [x0,...,xn] = [xn,...,x0]                         *)
 (*----------------------------------------------------------------*)
 
@@ -626,86 +625,85 @@ end
 
 (*----------------------------------------------------------------*)
 (* FLAT_CONV : conv                                               *)
-(*   FLAT_CONV (--`FLAT [[x00,...,x0n],...,[xm0,...xmn]]`--) ---> *)
-(*   |- (--`FLAT [[x00,...,x0n],...,[xm0,...xmn]]`--) =           *)
+(*   FLAT_CONV (“FLAT [[x00,...,x0n],...,[xm0,...xmn]]”) ---> *)
+(*   |- (“FLAT [[x00,...,x0n],...,[xm0,...xmn]]”) =           *)
 (*        [x00,...,x0n,...,xm0,...xmn]                            *)
 (*----------------------------------------------------------------*)
 
 val FLAT_CONV =
-    let val lem = prove((--`APPEND = (\x1 x2:'a list. APPEND x1 x2)`--),
-                        CONV_TAC FUN_EQ_CONV THEN GEN_TAC THEN BETA_TAC
-                        THEN CONV_TAC FUN_EQ_CONV THEN GEN_TAC
-                        THEN BETA_TAC THEN REFL_TAC)
-        val ffthm = rich_listTheory.FLAT_FOLDR
-        val afthm = rich_listTheory.APPEND_FOLDR
-        val fthm = REWRITE_RULE[afthm](SUBS[lem] ffthm)
-        val conv = (RAND_CONV (FOLDR_CONV ((RATOR_CONV BETA_CONV)
-                        THENC BETA_CONV THENC (FOLDR_CONV ALL_CONV))))
+    let
+      val (fnil,fnilcons,fconscons) =
+          case CONJUNCTS listTheory.FLAT_compute of
+              [c1,c2,c3] => (c1,c2,c3)
+            | _ => raise Fail "FLAT_compute of wrong shape"
+      fun doit t =
+        let
+          val arg = dest_flat t
+                    handle HOL_ERR _ => raise ERR "FLAT_CONV" "Not a FLAT term"
+          val (els,listend) = strip_cons arg
+          val _ = (listSyntax.is_nil listend andalso
+                   List.all listSyntax.is_list els) orelse
+                  raise ERR "FLAT_CONV" "Argument to FLAT not a list"
+          fun recurse t =
+            if listSyntax.is_nil (rand t) then REWR_CONV fnil t
+            else
+              let
+                val (h,_) = listSyntax.dest_cons (rand t)
+              in
+                if listSyntax.is_nil h then
+                  (REWR_CONV fnilcons THENC recurse) t
+                else
+                  (REWR_CONV fconscons THENC RAND_CONV recurse) t
+              end
+        in
+          recurse t
+        end
     in
-  fn tm =>
-    (let val lst = listSyntax.dest_flat tm
-         val fthm' = ISPEC lst fthm
-     in
-         CONV_RULE conv fthm'
-     end)
-        handle e => raise wrap_exn "List_conv" "FLAT_CONV" e
-    end;
+      doit
+    end
 
 (*-----------------------------------------------------------------------*)
 (* EL_CONV : conv                                                        *)
 (* The argument to this conversion should be in the form of              *)
-(*   (--`EL k [x0, x1, ..., xk, ..., xn]`--)                             *)
+(*   (“EL k [x0, x1, ..., xk, ..., xn]”)                             *)
 (* It returns a theorem                                                  *)
 (*  |- EL k [x0, x1, ..., xk, ..., xn] = xk                              *)
 (* iff 0 <= k <= n, otherwise failure occurs.                            *)
 (*-----------------------------------------------------------------------*)
 
-val EL_CONV =
-let val (bthm,ithm) = CONJ_PAIR (rich_listTheory.EL);
-    val HD = rich_listTheory.HD;
-    val TL = rich_listTheory.TL;
-    fun dec n = numSyntax.mk_numeral(Arbnum.fromInt(int_of_term n-1))
-    fun tail lst = hd(tl(snd(strip_comb lst)));
-    fun iter ct N bits =
-       let val (n',m',lst') = (ref(ct-1), ref(dec N), ref(tail bits));
-           val sthm = ref(PURE_ONCE_REWRITE_RULE[TL](ISPECL [!m',bits] ithm));
-       in (while (0 < !n') do
-            (n' :=  !n' - 1;
-             sthm := TRANS (RIGHT_CONV_RULE(RATOR_CONV(RAND_CONV num_CONV))
-                                           (!sthm))
-                           (SUBS[ISPECL(snd(strip_comb (!lst')))TL]
-                                (ISPECL[dec (!m'), !lst'] ithm));
-             lst' := tail (!lst');
-             m' := dec (!m'))
-           ;
-            (TRANS (!sthm) (SUBS [ISPECL(snd(strip_comb (!lst')))HD]
-                                 (ISPEC(!lst') bthm))))
-      end;
-in
-fn tm =>
-    let val (N,bits) = listSyntax.dest_el tm
-        val n = int_of_term N;
-        val lst = bits and m = N;
-     in
-        if (n = 0) then
-(* This fix would give purer behaviour. It has been left alone to mirror the
- *   definition EL 0 l == HD l
- *            if (length(#els(dest_list bits)) = 0) then
- *               (raise LIST_CONV_ERR{function="EL_CONV",
- *                                    message=("index too large: 0")})
- *            else
- *)
-             (PURE_ONCE_REWRITE_RULE[HD](ISPEC bits bthm))
-         else if (n < length(#1(dest_list bits))) then
-             (SUBS [SYM (num_CONV N)](iter n N bits))
-              else raise ERR "EL_CONV" ("index too large: "^int_to_string n)
-     end
-     handle e => raise wrap_exn "List_conv" "EL_CONV" e
-end;
+val bcT = CONJUNCT1 bool_case_thm
+val bcF = CONJUNCT2 bool_case_thm
+fun EL_CONV t =
+  let
+    val (N_t,list) = listSyntax.dest_el t
+      handle HOL_ERR _ => raise ERR "EL_CONV" "Arg not of form EL k l"
+    fun len a t =
+      case Lib.total listSyntax.dest_cons t of
+          NONE => if same_const listSyntax.nil_tm t then a
+                  else raise ERR "EL_CONV" "Arg 2 not a concrete list"
+        | SOME (_, t') => len (Arbnum.+(Arbnum.one, a)) t'
+    val length = len Arbnum.zero list
+    val N = numSyntax.dest_numeral N_t
+            handle HOL_ERR _ => raise ERR "EL_CONV" "Arg 1 not a numeral"
+  in
+    if Arbnum.<(N, length) then
+      let
+        val RED = reduceLib.REDUCE_CONV
+        fun recurse t =
+          (REWR_CONV listTheory.EL_compute THENC
+           RATOR_CONV (RATOR_CONV (RAND_CONV RED)) THENC
+           IFC (REWR_CONV bcF)
+               (FORK_CONV (RED, REWR_CONV listTheory.TL) THENC recurse)
+               (REWR_CONV bcT THENC REWR_CONV listTheory.HD)) t
+      in
+        recurse t
+      end
+    else raise ERR "EL_CONV" "Numeric argument too large"
+  end
 
 (*-----------------------------------------------------------------------*)
 (* ELL_CONV : conv                                                       *)
-(* It takes a term of the form (--`ELL k [x(n-1), ... x0]`--) and returns*)
+(* It takes a term of the form (“ELL k [x(n-1), ... x0]”) and returns*)
 (* |- ELL k [x(n-1), ..., x0] = x(k)                                     *)
 (*-----------------------------------------------------------------------*)
 
@@ -755,10 +753,10 @@ val ELL_CONV =
     end;
 
 (* --------------------------------------------------------------------- *)
-(* MAP2_CONV conv (--`MAP2 f [x1,...,xn] [y1,...,yn]`--)                 *)
+(* MAP2_CONV conv (“MAP2 f [x1,...,xn] [y1,...,yn]”)                 *)
 (*                                                                       *)
 (* Returns |- MAP2 f [x1,...,xn] [y1,...,yn] = [r1,...,rn]               *)
-(* where conv (--`f xi yi`--) returns |- f xi yi = ri for 1 <= i <= n    *)
+(* where conv (“f xi yi”) returns |- f xi yi = ri for 1 <= i <= n    *)
 (* --------------------------------------------------------------------- *)
 
 val MAP2_CONV =
@@ -787,9 +785,9 @@ val MAP2_CONV =
 
 (* --------------------------------------------------------------------- *)
 (* ALL_EL_CONV : conv -> conv                                            *)
-(* ALL_EL_CONV conv (--`ALL_EL P [x0,...,xn]`--) --->                    *)
+(* ALL_EL_CONV conv (“ALL_EL P [x0,...,xn]”) --->                    *)
 (* |- ALL_EL P [x0,...,xn] = T                                           *)
-(*                       iff conv (--`P xi`--)---> |- P xi = T for all i *)
+(*                       iff conv (“P xi”)---> |- P xi = T for all i *)
 (* |- ALL_EL P [x0,...,xn] = F otherwise                                 *)
 (* --------------------------------------------------------------------- *)
 
@@ -798,7 +796,7 @@ fun thm_eq th1 th2 = (Thm.dest_thm th1 = Thm.dest_thm th2);
 val ALL_EL_CONV =
     let val (bth,ith) = CONJ_PAIR (rich_listTheory.ALL_EL)
         val AND_THM = op_mk_set thm_eq (flatten(map (CONJ_LIST 5)
-            [(SPEC (--`T`--) AND_CLAUSES),(SPEC (--`F`--) AND_CLAUSES)]))
+            [(SPEC (“T”) AND_CLAUSES),(SPEC (“F”) AND_CLAUSES)]))
     in
   fn conv => fn tm =>
     (let val (P,l) = listSyntax.dest_every tm
@@ -822,16 +820,16 @@ val ALL_EL_CONV =
 
 (* --------------------------------------------------------------------- *)
 (* SOME_EL_CONV : conv -> conv                                           *)
-(* SOME_EL_CONV conv (--`SOME_EL P [x0,...,xn]`--) --->                  *)
+(* SOME_EL_CONV conv (“SOME_EL P [x0,...,xn]”) --->                  *)
 (* |- SOME_EL P [x0,...,xn] = F                                          *)
-(*                        iff conv (--`P xi`--)---> |- P xi = F for all i*)
+(*                        iff conv (“P xi”)---> |- P xi = F for all i*)
 (* |- SOME_EL P [x0,...,xn] = F otherwise                                *)
 (* --------------------------------------------------------------------- *)
 
 val SOME_EL_CONV =
     let val (bth,ith) = CONJ_PAIR (rich_listTheory.SOME_EL)
         val OR_THM = op_mk_set thm_eq (flatten(map (CONJ_LIST 5)
-            [(SPEC (--`T`--) OR_CLAUSES),(SPEC (--`F`--) OR_CLAUSES)]))
+            [(SPEC (“T”) OR_CLAUSES),(SPEC (“F”) OR_CLAUSES)]))
     in
   fn conv => fn tm =>
     (let val (P,l) = listSyntax.dest_exists tm
@@ -842,7 +840,7 @@ val SOME_EL_CONV =
                  val (p,ls) = case strip_comb left
                               of (_,[p,ls]) => (p,ls)
                                | _ => raise ERR "SOME_EL_CONV" ""
-                 val fthm = SPECL [x,ls] ith' and cthm = conv (--`^P ^x`--)
+                 val fthm = SPECL [x,ls] ith' and cthm = conv (“^P ^x”)
              in
                  SUBS OR_THM (SUBS[cthm,th]fthm)
              end
@@ -854,8 +852,8 @@ val SOME_EL_CONV =
 
 (* --------------------------------------------------------------------- *)
 (* IS_EL_CONV : conv -> conv                                             *)
-(* IS_EL_CONV conv (--`IS_EL P [x0,...,xn]`--) --->                      *)
-(* |- IS_EL x [x0,...,xn] = T iff conv (--`x = xi`--) --->               *)
+(* IS_EL_CONV conv (“IS_EL P [x0,...,xn]”) --->                      *)
+(* |- IS_EL x [x0,...,xn] = T iff conv (“x = xi”) --->               *)
 (*                                    |- (x = xi) = F for an i           *)
 (* |- IS_EL x [x0,...,xn] = F otherwise                                  *)
 (* --------------------------------------------------------------------- *)
@@ -874,7 +872,7 @@ val IS_EL_CONV =
 
 (* --------------------------------------------------------------------- *)
 (* LAST_CONV : conv                                                      *)
-(* LAST_CONV (--`LAST [x0,...,xn]`--) ---> |- LAST [x0,...,xn] = xn      *)
+(* LAST_CONV (“LAST [x0,...,xn]”) ---> |- LAST [x0,...,xn] = xn      *)
 (* --------------------------------------------------------------------- *)
 
 val LAST_CONV =
@@ -896,7 +894,7 @@ val LAST_CONV =
 
 (* --------------------------------------------------------------------- *)
 (* BUTLAST_CONV : conv                                                   *)
-(* BUTLAST_CONV (--`BUTLAST [x0,...,xn-1,xn]`--) --->                    *)
+(* BUTLAST_CONV (“BUTLAST [x0,...,xn-1,xn]”) --->                    *)
 (* |- BUTLAST [x0,...,xn-1,xn] = [x0,...,xn-1]                           *)
 (* --------------------------------------------------------------------- *)
 
@@ -927,7 +925,7 @@ fun SUC_CONV tm =
 
 (*---------------------------------------------------------------*)
 (* SEG_CONV : conv                                               *)
-(* SEG_CONV (--`SEG m k [x0,...,xk,...,xm+k,...xn]`--) --->      *)
+(* SEG_CONV (“SEG m k [x0,...,xk,...,xm+k,...xn]”) --->      *)
 (* |- SEG m k [x0,...,xk,...,xm+k,...xn] = [xk,...xm+k-1]        *)
 (*---------------------------------------------------------------*)
 
@@ -965,14 +963,14 @@ val SEG_CONV =
                in
                if (k = 0) then
                  let val (ls,lt) = Lib.split_after m lis
-                     val bthm' = ISPECL[(--`0`--),mk_list{els=lt,ty=lty}] bthm
+                     val bthm' = ISPECL[(“0”),mk_list{els=lt,ty=lty}] bthm
                  in
                    (itlist (mifn mthm') ls bthm')
                  end
                else
                let val (lk,(ls,lt)) = (I##Lib.split_after m)
                                       (Lib.split_after k lis)
-                   val bthm' = ISPECL[(--`0`--),(mk_list{els=lt,ty=lty})] bthm
+                   val bthm' = ISPECL[(“0”),(mk_list{els=lt,ty=lty})] bthm
                    val kthm' = SUBS[SYM(num_CONV M)]
                                 (INST_TYPE[alpha |-> lty]
                                           (SPEC (term_of_int(m-1)) kthm))
@@ -987,7 +985,7 @@ val SEG_CONV =
 
 (*-----------------------------------------------------------------------*)
 (* LASTN_CONV : conv                                                     *)
-(* It takes a term (--`LASTN k [x0, ..., x(n-k), ..., x(n-1)]`--)        *)
+(* It takes a term (“LASTN k [x0, ..., x(n-k), ..., x(n-1)]”)        *)
 (* and returns the following theorem:                                    *)
 (* |- LASTN k [x0, ..., x(n-k), ..., x(n-1)] = [x(n-k), ..., x(n-1)]     *)
 (*-----------------------------------------------------------------------*)
@@ -997,7 +995,7 @@ val LASTN_CONV =
         and bthm = CONJUNCT1 (rich_listTheory.LASTN)
         and ithm = (rich_listTheory.LASTN_LENGTH_ID)
         fun len_conv ty lst = LENGTH_CONV
-           (mk_comb{Rator=(--`LENGTH:(^(ty_antiq ty))list -> num`--),Rand=lst})
+           (mk_comb{Rator=(“LENGTH:(^(ty_antiq ty))list -> num”),Rand=lst})
     in
   fn tm =>
     (let val (N,lst) = rich_listSyntax.dest_lastn tm
@@ -1017,7 +1015,7 @@ val LASTN_CONV =
                  (let val (l1,l2) = (Lib.split_after (len - n) bits)
                       val l1' = mk_list{els=l1,ty=lty}
                       and l2' = mk_list{els=l2,ty=lty}
-                      val APP = (--`APPEND:(^(ty_antiq lty))list -> (^(ty_antiq lty))list -> (^(ty_antiq lty))list`--)
+                      val APP = (“APPEND:(^(ty_antiq lty))list -> (^(ty_antiq lty))list -> (^(ty_antiq lty))list”)
                       val thm2 = len_conv lty l2'
                       val thm3 = APPEND_CONV
                                  (mk_comb{Rator=mk_comb{Rator=APP,Rand=l1'},
@@ -1032,7 +1030,7 @@ val LASTN_CONV =
 
 (*-----------------------------------------------------------------------*)
 (* BUTLASTN_CONV : conv                                                  *)
-(* It takes a term  (--`BUTLASTN k [x0,x1,...,x(n-k),...,x(n-1)]`--)     *)
+(* It takes a term  (“BUTLASTN k [x0,x1,...,x(n-k),...,x(n-1)]”)     *)
 (* and returns the following theorem:                                    *)
 (* |- BUTLASTN k  [x0, x1, ..., x(n-k),...,x(n-1)] = [x0, ..., x(n-k-1)] *)
 (*-----------------------------------------------------------------------*)
@@ -1042,7 +1040,7 @@ val BUTLASTN_CONV =
         val lthm = (rich_listTheory.BUTLASTN_LENGTH_NIL)
         val athm = (rich_listTheory.BUTLASTN_LENGTH_APPEND)
         fun len_conv ty lst = LENGTH_CONV
-           (mk_comb{Rator=(--`LENGTH:(^(ty_antiq ty))list -> num`--),Rand=lst})
+           (mk_comb{Rator=(“LENGTH:(^(ty_antiq ty))list -> num”),Rand=lst})
     in
   fn tm =>
     (let val (N,lst) = rich_listSyntax.dest_butlastn tm
@@ -1065,9 +1063,9 @@ val BUTLASTN_CONV =
                          val l1' = mk_list{els=l1,ty=lty}
                          and l2' = mk_list{els=l2,ty=lty }
                          val APP =
-                             (--`APPEND:(^(ty_antiq lty))list
+                             (“APPEND:(^(ty_antiq lty))list
                                         -> (^(ty_antiq lty))list
-                                         -> (^(ty_antiq lty))list`--)
+                                         -> (^(ty_antiq lty))list”)
                          val thm2 = len_conv lty l2'
                          val thm3 = APPEND_CONV
                              (mk_comb{Rator=mk_comb{Rator=APP, Rand=l1'},
@@ -1082,7 +1080,7 @@ val BUTLASTN_CONV =
 
 (*-----------------------------------------------------------------------*)
 (* BUTFIRSTN_CONV : conv                                                 *)
-(* BUTFIRSTN_CONV (--`BUTFIRSTN k [x0,...,xk,...,xn]`--) --->            *)
+(* BUTFIRSTN_CONV (“BUTFIRSTN k [x0,...,xk,...,xn]”) --->            *)
 (* |- BUTFIRSTN k [x0,...,xk,...,xn] = [xk,...,xn]                       *)
 (*-----------------------------------------------------------------------*)
 
@@ -1118,7 +1116,7 @@ val BUTFIRSTN_CONV =
 
 (*-----------------------------------------------------------------------*)
 (* FIRSTN_CONV : conv                                                    *)
-(* FIRSTN_CONV (--`FIRSTN k [x0,...,xk,...,xn]`--) --->                  *)
+(* FIRSTN_CONV (“FIRSTN k [x0,...,xk,...,xn]”) --->                  *)
 (* |- FIRSTN k [x0,...,xk,...,xn] = [x0,...,xk]                          *)
 (*-----------------------------------------------------------------------*)
 
@@ -1154,9 +1152,9 @@ val FIRSTN_CONV =
 
 (*-----------------------------------------------------------------------*)
 (* SCANL_CONV : conv -> conv                                             *)
-(* SCANL_CONV conv (--`SCANL f e [x0,...,xn]`--) --->                    *)
+(* SCANL_CONV conv (“SCANL f e [x0,...,xn]”) --->                    *)
 (* |- SCANL f e [x0,...,xn] = [e, t0, ..., tn]                           *)
-(* where conv (--`f ei xi`--) ---> |- f ei xi = ti                       *)
+(* where conv (“f ei xi”) ---> |- f ei xi = ti                       *)
 (*-----------------------------------------------------------------------*)
 
 val SCANL_CONV =
@@ -1191,9 +1189,9 @@ val SCANL_CONV =
 
 (*-----------------------------------------------------------------------*)
 (* SCANR_CONV : conv -> conv                                             *)
-(* SCANR_CONV conv (--`SCANR f e [x0,...,xn]`--) --->                    *)
+(* SCANR_CONV conv (“SCANR f e [x0,...,xn]”) --->                    *)
 (* |- SCANR f e [x0,...,xn] = [t0, ..., tn, e]                           *)
-(* where conv (--`f xi ei`--) ---> |- f xi ei = ti                       *)
+(* where conv (“f xi ei”) ---> |- f xi ei = ti                       *)
 (*-----------------------------------------------------------------------*)
 
 val SCANR_CONV =
@@ -1229,7 +1227,7 @@ val SCANR_CONV =
 
 (*-----------------------------------------------------------------------*)
 (* REPLICATE_CONV : conv                                                 *)
-(* REPLICATE conv (--`REPLICATE n x`--) --->                             *)
+(* REPLICATE conv (“REPLICATE n x”) --->                             *)
 (*  |- REPLICATE n x = [x, ..., x]                                       *)
 (*-----------------------------------------------------------------------*)
 
@@ -1264,7 +1262,7 @@ val REPLICATE_CONV  =
 
 (*-----------------------------------------------------------------------*)
 (* GENLIST_CONV : conv -> conv                                           *)
-(* GENLIST conv (--`GENLIST f n`--) --->                                 *)
+(* GENLIST conv (“GENLIST f n”) --->                                 *)
 (*                         |- GENLIST f n = [f 0,f 1, ...,f(n-1)]        *)
 (*-----------------------------------------------------------------------*)
 
@@ -1296,7 +1294,7 @@ val GENLIST_CONV =
 
 (* --------------------------------------------------------------------- *)
 (* AND_EL_CONV : conv                                                    *)
-(* AND_EL_CONV (--`AND_EL [x0,...,xn]`--) --->                           *)
+(* AND_EL_CONV (“AND_EL [x0,...,xn]”) --->                           *)
 (* |- AND_EL [x0,...,xn] = T  iff  |- xi = T for all i                   *)
 (* |- AND_EL [x0,...,xn] = F otherwise                                   *)
 (* --------------------------------------------------------------------- *)
@@ -1306,7 +1304,7 @@ val AND_EL_CONV =
 
 (* --------------------------------------------------------------------- *)
 (* OR_EL_CONV : conv                                                     *)
-(* OR_EL_CONV (--`OR_EL [x0,...,xn]`--) --->                             *)
+(* OR_EL_CONV (“OR_EL [x0,...,xn]”) --->                             *)
 (* |- OR_EL [x0,...,xn] = T  iff  |- xi = T for any i                    *)
 (* |- OR_EL [x0,...,xn] = F otherwise                                    *)
 (* --------------------------------------------------------------------- *)

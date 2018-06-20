@@ -47,14 +47,14 @@ end
     storefn: takes a theorem name and stores the associated theorem into
              the theory data.  Doesn't perform any associated update in
              the run-time memory
-    exportfn: takes a string and a list of theorems and does something with
-              them at runtime (adds them to a simpset, say).  The string is
-              expected to be the name of the theory with which these
-              theorems are associated.
+    exportfn: takes a string and a list of names and theorems and does
+              something with them at runtime (adds them to a simpset,
+              say). The string is expected to be the name of the
+              theory with which these theorems are associated.
    ---------------------------------------------------------------------- *)
 type destfn = data -> (string * thm) list option
 type storefn = string -> unit
-type exportfn = (string -> thm list -> unit) option
+type exportfn = (string -> (string * thm) list -> unit) option
 val data_map = let
   open Binarymap
 in
@@ -89,8 +89,8 @@ end
 
 fun new ty = let
   val (mk,dest) = LoadableThyData.new {merge = set_alist_merge,
-                                       read = read ty,
-                                       write = writeset, thydataty = ty}
+                                       read = Lib.K (read ty), terms = Lib.K [],
+                                       write = Lib.K writeset, thydataty = ty}
   fun foldthis (nm,set) =
       case lookup ty ("<internal>: "^nm) nm of
         SOME r => (nm, r) :: set
@@ -141,7 +141,7 @@ fun new_exporter name addfn = let
       | SOME d => let
           val thms = valOf (dest d)
         in
-          addfn thyname (map #2 thms)
+          addfn thyname thms
         end
   fun revise_data P td =
       case segment_data {thy = current_theory(), thydataty = name} of
@@ -170,9 +170,8 @@ fun new_exporter name addfn = let
     | hook _ = ()
   fun export s = let
     val (data, namedthms) = mk [s]
-    val thms = map #2 namedthms
   in
-    addfn (current_theory()) thms;
+    addfn (current_theory()) namedthms;
     write_data_update {thydataty = name, data = data}
   end
   val store = #2 (Binarymap.find(!data_map,name))
@@ -189,8 +188,8 @@ in
   Theory.adjoin_to_theory {
     sig_ps = NONE,
     struct_ps = SOME
-      (fn pps =>
-          PP.add_string pps
+      (fn _ =>
+          PP.add_string
                  ("val _ = ThmSetData.new_exporter "^Lib.mlquote s^
                   " (fn _ => fn _ => ())\n"))
   }

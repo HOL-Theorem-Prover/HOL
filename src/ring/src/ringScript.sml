@@ -20,7 +20,7 @@ val _ = Hol_datatype `ring = <| R0 : 'a;
                                 RN : 'a -> 'a
                              |>`;
 
-val r = --`r:'a ring`--;
+val r = “r:'a ring”;
 val _ = app (C add_impl_param [r]) ["R0","R1","RP","RM","RN"];
 val _ = app (fn s => overload_on (s, Parse.Term [QUOTE ("ring_"^s)]))
             ["R0","R1","RP","RM","RN"];
@@ -47,7 +47,7 @@ val is_ring_def = Define `
     /\ ^p_distr_left `;
 
 (* We work on an abstract_ring r *)
-val _ = set_assums [ --`is_ring ^r`-- ];
+val _ = set_assums [ “is_ring ^r” ];
 
 
 val ring_proj_tac =
@@ -102,7 +102,7 @@ val ring_is_semi_ring = asm_store_thm
     ("ring_is_semi_ring",
      Term` is_semi_ring semi_ring_of`,
 RW_TAC bool_ss [ semi_ring_of_def, semi_ringTheory.is_semi_ring_def,
-		 semi_ringTheory.semi_ring_accessors] THEN
+                 semi_ringTheory.semi_ring_accessors] THEN
 MAP_FIRST MATCH_ACCEPT_TAC
   [ plus_sym,plus_assoc,mult_sym,mult_assoc,plus_zero_left,mult_one_left,
     mult_zero_left, distr_left ]);
@@ -115,7 +115,7 @@ val { plus_permute, plus_rotate, mult_permute, mult_rotate, distr_right,
     { Vals=[Term`semi_ring_of`],
       Inst=[ring_is_semi_ring],
       Rule=REWRITE_RULE[ semi_ring_of_def,
-			 semi_ringTheory.semi_ring_accessors],
+                         semi_ringTheory.semi_ring_accessors],
       Rename=K NONE }
 ;
 val _ = asm_save_thm("mult_one_right",mult_one_right);

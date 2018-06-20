@@ -1,0 +1,8 @@
+/.hollogs/
+/.HOLMK/
+*.ui
+*.dat
+*.uo
+/heap
+*Theory.*
+*.exe

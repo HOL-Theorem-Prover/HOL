@@ -8,8 +8,13 @@ val auto_import_definitions = ref true;
 (* re-exporting types from clauses *)
 
 type compset = comp_rws;
+type transform = clauses.transform
 
 val new_compset = from_list;
+
+val listItems = clauses.deplist;
+val unmapped  = clauses.no_transform;
+
 
 type cbv_stack =
   ((thm->thm->thm) * (thm * db fterm),
@@ -52,7 +57,7 @@ fun cbv_wk ((th,CLOS{Env, Term=App(a,args)}), stk) =
       cbv_wk ((tha, mk_clos(Env,a)), stka)
       end
   | cbv_wk ((th,CLOS{Env, Term=Abs body}),
-	    Zrator{Rand=(mka,(thb,cl)), Ctx=s'}) =
+            Zrator{Rand=(mka,(thb,cl)), Ctx=s'}) =
       cbv_wk ((beta_thm(mka th thb), mk_clos(cl :: Env, body)), s')
   | cbv_wk ((th,CST cargs), stk) =
       let val (reduced,clos) = reduce_cst (th,cargs) in
@@ -94,11 +99,11 @@ fun strong ((th, CLOS{Env,Term=Abs t}), stk) =
       strong (cbv_wk((thb, mk_clos(NEUTR :: Env, t)), stk'))
       end
   | strong (clos as (_,CLOS _), stk) = raise DEAD_CODE "strong"
-  | strong (hcl as (th,CST {Args,...}), stk) =
-      let val (th',stk') =
- 	if is_skip hcl then (th,stk)
- 	else foldl (push_in_stk snd) (th,stk) Args in
-      strong_up (th',stk')
+  | strong ((th,CST {Skip,Args,...}), stk) =
+      let val (argssk, argsrd) = partition_skip Skip Args
+          val (th',stk') = foldl (push_skip_stk snd) (th,stk) argssk
+          val (th'',stk'') = foldl (push_in_stk snd) (th',stk') argsrd in
+      strong_up (th'',stk'')
       end
   | strong ((th, NEUTR), stk) = strong_up (th,stk)
 
@@ -207,40 +212,60 @@ local
       fst o boolSyntax.strip_comb o boolSyntax.lhs o
       snd o boolSyntax.strip_forall o List.hd o boolSyntax.strip_conj o
       Thm.concl
+   val translate_convs =
+      List.mapPartial
+        (fn {key = SOME ([], t), conv, ...} : simpfrag.convdata =>
+           (case Lib.total boolSyntax.strip_comb t of
+               SOME (f, l) =>
+                 SOME (f, List.length l, conv (Lib.K Conv.ALL_CONV) [])
+             | NONE => NONE)
+          | _ => NONE)
 in
    fun add_datatype_info cs tyinfo =
     let open TypeBasePure Drule
         val size_opt =
-          case size_of0 tyinfo
-           of SOME (_, ORIG def) => [def]
-            | otherwise => []
+          case size_of0 tyinfo of
+             SOME (_, ORIG def) => [def]
+           | _ => []
         val boolify_opt =
-          case encode_of0 tyinfo
-           of SOME (_, ORIG def) => [def]
-            | otherwise => []
+          case encode_of0 tyinfo of
+             SOME (_, ORIG def) => [def]
+           | _ => []
         val case_const = Lib.total case_const_of tyinfo
-        val simpls = #rewrs (simpls_of tyinfo)
+        val {rewrs = simpls, convs} = simpls_of tyinfo
         val (case_thm, simpls) =
            List.partition (fn thm => Lib.total get_f thm = case_const) simpls
         val case_thm = List.map lazyfy_thm case_thm
     in
-      add_thms (size_opt @ boolify_opt @ case_thm @ simpls) cs
+        List.app (fn c => add_conv c cs) (translate_convs convs)
+      ; add_thms (size_opt @ boolify_opt @ case_thm @ simpls) cs
     end
     val write_datatype_info = add_datatype_info the_compset
 end
+
+val _ = TypeBase.register_update_fn
+          (fn tyis => (app write_datatype_info tyis; tyis))
 
 (*---------------------------------------------------------------------------*)
 (* Usage note: call this before export_theory().                             *)
 (*---------------------------------------------------------------------------*)
 
 open LoadableThyData
-val {export,...} = ThmSetData.new_exporter "compute" (K add_funs)
+val {export,...} =
+    ThmSetData.new_exporter "compute"
+                            (fn _ (* thy *) => fn namedthms =>
+                                add_funs (map #2 namedthms))
 val add_persistent_funs = app export
 
 (*---------------------------------------------------------------------------*)
 (* Once we delete a constant from a compset, we will probably want to make   *)
 (* sure that the constant doesn't get re-added when the theory is exported   *)
 (*---------------------------------------------------------------------------*)
+
+fun pr_list_to_ppstream pps f b1 b2 [] = ()
+  | pr_list_to_ppstream pps f b1 b2 [e] = f pps e
+  | pr_list_to_ppstream pps f b1 b2 (e::es) =
+      (f pps e; b1 pps; b2 pps; pr_list_to_ppstream pps f b1 b2 es)
 
 fun del_persistent_consts [] = ()
   | del_persistent_consts clist =
@@ -254,23 +279,44 @@ fun del_persistent_consts [] = ()
        del_consts clist
        ; Theory.adjoin_to_theory
           {sig_ps = NONE,
-           struct_ps = SOME(fn ppstrm =>
-             (PP.begin_block ppstrm CONSISTENT 0;
-              PP.add_string ppstrm "val _ = computeLib.del_consts [";
-              PP.begin_block ppstrm INCONSISTENT 0;
-              pr_list_to_ppstream ppstrm
-                 PP.add_string (C PP.add_string ",")
-                 (C PP.add_break (0,0)) plist'';
-              PP.end_block ppstrm;
-              PP.add_string ppstrm "];";
-              PP.add_break ppstrm (2,0);
-              PP.end_block ppstrm))}
+           struct_ps = SOME(fn _ =>
+             PP.block CONSISTENT 0 [
+               PP.add_string "val _ = computeLib.del_consts [",
+               PP.block INCONSISTENT 0 (
+                 PP.pr_list PP.add_string
+                            [PP.add_string ",", PP.add_break (0,0)] plist''
+               ),
+               PP.add_string "];"
+             ])}
      end
 
 (* ----------------------------------------------------------------------
     compset pretty-printer
    ---------------------------------------------------------------------- *)
 
-fun pp_compset pps c = PP.add_string pps "<compset>"
+fun pp_compset c = HOLPP.add_string "<compset>"
+
+(* ----------------------------------------------------------------------
+   Help for building up compsets and creating new compset based conversions
+   ---------------------------------------------------------------------- *)
+
+datatype compset_element =
+    Convs of (term * int * conv) list
+  | Defs of thm list
+  | Tys of hol_type list
+  | Extenders of (compset -> unit) list
+
+local
+  fun add_datatype cmp = add_datatype_info cmp o Option.valOf o TypeBase.fetch
+in
+  fun extend_compset frags cmp =
+    List.app
+      (fn Convs l => List.app (fn x => add_conv x cmp) l
+        | Defs l => add_thms l cmp
+        | Tys l => List.app (add_datatype cmp) l
+        | Extenders l => List.app (fn f => f cmp) l) frags
+end
+
+fun compset_conv cmp l = (extend_compset l cmp; CBV_CONV cmp)
 
 end

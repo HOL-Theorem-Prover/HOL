@@ -1,0 +1,6 @@
+# -*- mode: snippet -*-
+# name: rewrite theorems only once
+# key: rewrite_tac
+# expand-env: ((yas-indent-line 'fixed))
+# --
+rewrite_tac [${1:theorem list}] $0

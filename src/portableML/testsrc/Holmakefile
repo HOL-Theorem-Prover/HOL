@@ -1,8 +1,10 @@
 ifneq($(OS),winNT)
 
+INCLUDES = $(HOLDIR)/tools/unicode-grep
+
 .PHONY: all
 
 all:
-	if $(HOLDIR)/developers/unicode-grep ; then false ; else true ; fi
+	$(protect $(HOLDIR)/tools/unicode-grep/unicode-grep) $(protect $(HOLDIR)/src) $(protect $(HOLDIR)/help/Docfiles)
 
 endif

@@ -386,7 +386,10 @@ fun mk_case0_heu (heu : pmatch_heuristic) ty_info ty_match FV range_ty =
                            " is a bad pattern (of var type?)")
      in
      if exists Literal.is_pure_literal col0 (* col0 has a literal *) then
-       let val other_var = fresh_var pty
+       let val is_lit_col = all (fn t => Literal.is_literal t orelse is_var t) col0
+           val _ = if is_lit_col then () else
+                   mk_case_fail "case expression mixes literals with non-literals."
+           val other_var = fresh_var pty
            val constructors = rev (mk_set (rev (filter (not o is_var) col0)))
                               @ [other_var]
            val arb = mk_arb range_ty
@@ -412,8 +415,11 @@ fun mk_case0_heu (heu : pmatch_heuristic) ty_info ty_match FV range_ty =
      else
        case List.find (not o is_constructor_var_pat ty_info) col0 of
          NONE => let
-
-           val {case_const,constructors} = Option.valOf(ty_info thy_tyop)
+           val {case_const,constructors} =
+             Lib.with_exn Option.valOf (ty_info thy_tyop)
+               (ERR "mk_case0" ("could not get case constructors for type " ^
+                                Parse.type_to_string pty))
+             handle Option.Option => (print "hello\n"; raise Option)
            val {Name = case_const_name, Thy,...} = dest_thy_const case_const
            val nrows = flatten (map (expand constructors pty) rows)
            val subproblems = divide(constructors, pty, range_ty, nrows)
@@ -453,8 +459,7 @@ fun mk_case0_heu (heu : pmatch_heuristic) ty_info ty_match FV range_ty =
 
 fun mk_case0 ty_info ty_match FV range_ty rows =
 let
-  fun run_heu heu = mk_case0_heu heu ty_info
-    ty_match FV range_ty rows;
+  fun run_heu heu = mk_case0_heu heu ty_info ty_match FV range_ty rows
 
   val (min_fun0, heu_fun) = (!pmatch_heuristic) ()
   fun min_fun ((pL1, dt1), (pL2, dt2)) =
@@ -502,18 +507,21 @@ fun no_repeat_vars pat =
 (*---------------------------------------------------------------------------
      Routines to repair the bound variable names found in cases
  ---------------------------------------------------------------------------*)
+fun pat_match1 fvs pat given_pat =
+ let val (sub_tm, sub_ty) = Term.match_term pat given_pat
+     val _ = if null sub_ty then () else (raise ERR "pat_match1" "no type substitution expected");
 
-fun subst_inst (term_sub,type_sub) tm =
-    Term.subst term_sub (Term.inst type_sub tm);
-
-fun pat_match1 (pat,exp) given_pat =
- let val sub = Term.match_term pat given_pat
- in (subst_inst sub pat, subst_inst sub exp);
-    sub
+     fun is_valid_bound_var v = (is_var v andalso not (List.exists (fn tm => aconv tm v) fvs))
+     val _ = if List.all (fn m => is_valid_bound_var (#residue m)) sub_tm then () else
+           (raise ERR "pat_match1" "expected a bound variable renaming");
+ in sub_tm
  end
 
-fun pat_match2 pat_exps given_pat = tryfind (C pat_match1 given_pat) pat_exps
-                                    handle HOL_ERR _ => ([],[])
+fun pat_match2 fvs pat_exps given_pat = tryfind ((C (pat_match1 fvs) given_pat) o fst) pat_exps
+                                        handle HOL_ERR _ => ([]);
+
+fun subst_to_renaming (s : (term, term) subst) : (term * string) list =
+  map (fn m => (#redex m, fst (dest_var (#residue m)))) s;
 
 fun distinguish fvs pat_tm_mats =
     snd (List.foldr (fn ({redex,residue}, (vs,done)) =>
@@ -534,8 +542,8 @@ fun purge_wildcards term_sub = filter (fn {redex,residue} =>
         handle _ => false) term_sub
 
 fun pat_match3 fvs pat_exps given_pats =
-     (((distinguish fvs) o reduce_mats o purge_wildcards o flatten) ## flatten)
-           (unzip (map (pat_match2 pat_exps) given_pats))
+     ((subst_to_renaming o distinguish fvs o reduce_mats o purge_wildcards o flatten))
+           (map (pat_match2 fvs pat_exps) given_pats);
 
 
 (*---------------------------------------------------------------------------*)
@@ -651,14 +659,13 @@ local fun dest tybase (pat,rhs) =
           in if is_eq exp
              then let val (v,e) = dest_eq exp
                       val fvs = free_vars v
-                      val pat0 = if is_var v then subst [v |-> e] pat
-                                             else e (* fails if pat ~= v *)
                       (* val theta = fst (Term.match_term v e) handle HOL_ERR _ => [] *)
                   in if null (subtract fvs patvars) andalso null (free_vars e)
+                        andalso is_var v
                         (* andalso null_intersection fvs (free_vars (hd rhsides)) *)
                      then flatten
                             (map (dest tybase)
-                               (zip [pat0, pat] rhsides))
+                               (zip [subst [v |-> e] pat, pat] rhsides))
                      else [(pat,rhs)]
                   end
              else let val fvs = free_vars exp
@@ -700,20 +707,17 @@ fun strip_case tybase M =
   end
   else strip_case1 tybase M
 
-
-fun rename_case thy sub cs =
- if not (is_case thy cs) then subst_inst sub cs
- else
-   let val (cnst,arg,pat_exps) = dest_case thy cs
-       val pat_exps' = map (fn (pat,exp) =>
-                            (rename_case thy sub pat,
-                             rename_case thy sub exp))
-                       pat_exps
-       val arg' = rename_case thy sub arg
-       val cs' = mk_case thy (arg', pat_exps')
-   in cs'
-   end
-
+fun rename_top_bound_vars ren cs = (
+ case dest_term cs of
+    VAR _ => cs
+  | CONST _ => cs
+  | COMB (t1, t2) => mk_comb (rename_top_bound_vars ren t1, rename_top_bound_vars ren t2)
+  | LAMB (v, t) =>
+    let val cs' = rename_bvar (Lib.assoc v ren) cs handle HOL_ERR _ => cs
+        val (v', t') = dest_abs cs'
+        val t'' = rename_top_bound_vars ren t'
+    in mk_abs (v', t'') end
+);
 
 local fun paired1{lhs,rhs} = (lhs,rhs)
       and paired2{Rator,Rand} = (Rator,Rand)
@@ -729,9 +733,9 @@ fun mk_functional thy eqs =
      val f  = if is_var f0 then f0 else mk_var(dest_const f0)
      val _  = map no_repeat_vars pats
      val rows = zip (map (fn x => ([]:term list,[x])) pats) (map GIVEN (enumerate R))
-     val fvs = free_varsl (L@R)
-     val a = variant fvs (mk_var("a", type_of(Lib.trye hd pats)))
-     val FV = a::fvs
+     val avs = all_varsl (L@R)
+     val a = variant avs (mk_var("a", type_of(Lib.trye hd pats)))
+     val FV = a::avs
      val range_ty = type_of (Lib.trye hd R)
      val (patts, case_tm) = mk_case0 (match_info thy) (match_type thy)
                                      FV range_ty {path=[a], rows=rows}
@@ -763,20 +767,21 @@ fun mk_functional thy eqs =
              | _ => msg("The following input rows (counting from zero) are\
        \ inaccessible: "^stringize inaccessibles^".\nThey have been ignored.")
      (* The next lines repair bound variable names in the nested case term. *)
-     val (a',case_tm') =
+     val case_tm' =
          let val (_,pat_exps) = strip_case thy case_tm
-             val pat_exps = if null pat_exps then [(a,a)] else pat_exps
              val fvs = free_vars case_tm
-             val sub = pat_match3 fvs pat_exps pats (* better pats than givens patts3 *)
-         in (subst_inst sub a, rename_case thy sub case_tm)
-         end handle HOL_ERR _ => (a,case_tm)
+             val ren = pat_match3 fvs pat_exps pats (* better pats than givens patts3 *)
+         in (rename_top_bound_vars ren case_tm)
+         end handle HOL_ERR _ =>
+           (Feedback.HOL_WARNING "Pmatch" "mk_functional" "SHOULD NOT HAPPEN! RENAMING CASE_TM FAILED!";
+            case_tm)
      (* Ensure that the case test variable is fresh for the rest of the case *)
-     val avs = subtract (all_vars case_tm') [a']
-     val a'' = variant avs a'
-     val case_tm'' = if a'' = a' then case_tm'
-                                 else rename_case thy ([a' |-> a''],[]) case_tm'
+     val avs = subtract (all_vars case_tm') [a]
+     val a' = variant avs a
+     val case_tm'' = if a' = a then case_tm'
+                               else subst ([a |-> a']) case_tm'
  in
-   {functional = list_mk_abs ([f,a''], case_tm''),
+   {functional = list_mk_abs ([f,a'], case_tm''),
     pats = patts3}
  end
 end;

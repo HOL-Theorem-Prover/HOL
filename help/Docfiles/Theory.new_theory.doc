@@ -102,5 +102,5 @@ Theory.current_theory, Theory.new_axiom, Theory.parents,
 boolSyntax.new_binder, Theory.new_constant,
 Definition.new_definition, boolSyntax.new_infix,
 Definition.new_specification, Theory.new_type,
-DB.print_theory, Theory.save_thm, Theory.export_theory.
+Theory.save_thm, Theory.export_theory, Hol_pp.print_theory.
 \ENDDOC

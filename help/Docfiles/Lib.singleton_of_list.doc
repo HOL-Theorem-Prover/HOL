@@ -12,6 +12,6 @@ Turns a single-element list into a singleton.
 Fails if applied to a list that is not of length 1.
 
 \SEEALSO
-Lib.single, Lib.pair_of_list, Lib.triple_of_list, Lib.quadruple_of_list.
+Lib.pair_of_list, Lib.triple_of_list, Lib.quadruple_of_list.
 
 \ENDDOC

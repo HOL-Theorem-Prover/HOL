@@ -68,7 +68,7 @@ val SUBSET_ppc2set = prove(
   \\ FULL_SIMP_TAC std_ss [ppc2set'_def,ppc2set_def,EXTENSION,SUBSET_DEF,IN_IMAGE,
        IN_UNION,GSPECIFICATION,IN_INSERT,NOT_IN_EMPTY,IN_UNIV]
   \\ STRIP_TAC \\ ASM_REWRITE_TAC [] \\ EQ_TAC \\ REPEAT STRIP_TAC THEN1 METIS_TAC []
-  \\ PAT_ASSUM ``!x:'a. b:bool`` (IMP_RES_TAC) \\ FULL_SIMP_TAC std_ss [ppc_el_11,ppc_el_distinct]);
+  \\ PAT_X_ASSUM ``!x:'a. b:bool`` (IMP_RES_TAC) \\ FULL_SIMP_TAC std_ss [ppc_el_11,ppc_el_distinct]);
 
 val SPLIT_ppc2set_EXISTS = prove(
   ``!s u v. SPLIT (ppc2set s) (u,v) = ?y. (u = ppc2set' y s) /\ (v = ppc2set'' y s)``,
@@ -103,13 +103,13 @@ val ppc2set''_11 = prove(
   \\ `?r' m' st'. y' = (r',m',st')` by METIS_TAC [PAIR]
   \\ FULL_SIMP_TAC bool_ss [PAIR_EQ] THENL [
     `?a. ~(a IN r = a IN r')` by METIS_TAC [EXTENSION]
-    \\ `~((?x. pReg a x IN ppc2set'' y s) = (?x. pReg a x IN ppc2set'' y' s'))` by ALL_TAC,
+    \\ sg `~((?x. pReg a x IN ppc2set'' y s) = (?x. pReg a x IN ppc2set'' y' s'))`,
     `?a. ~(a IN m = a IN m')` by METIS_TAC [EXTENSION]
-    \\ `~((?x. pMem a x IN ppc2set'' y s) = (?x. pMem a x IN ppc2set'' y' s'))` by ALL_TAC,
+    \\ sg `~((?x. pMem a x IN ppc2set'' y s) = (?x. pMem a x IN ppc2set'' y' s'))`,
     `?a. ~(a IN st = a IN st')` by METIS_TAC [EXTENSION]
-    \\ `~((?x. pStatus a x IN ppc2set'' y s) = (?x. pStatus a x IN ppc2set'' y' s'))` by ALL_TAC]
+    \\ sg `~((?x. pStatus a x IN ppc2set'' y s) = (?x. pStatus a x IN ppc2set'' y' s'))`]
   \\ REPEAT (FULL_SIMP_TAC bool_ss [IN_ppc2set] \\ METIS_TAC [])
-  \\ Q.PAT_ASSUM `ppc2set'' y' s' = ppc2set'' y s` (K ALL_TAC)
+  \\ Q.PAT_X_ASSUM `ppc2set'' _ _  = ppc2set'' _ _` (K ALL_TAC)
   \\ FULL_SIMP_TAC bool_ss [IN_ppc2set] \\ METIS_TAC []);
 
 val DELETE_ppc2set = prove(``
@@ -176,7 +176,7 @@ val PPC_SPEC_SEMANTICS = store_thm("PPC_SPEC_SEMANTICS",
   SIMP_TAC std_ss [GSYM RUN_EQ_SPEC,RUN_def,PPC_MODEL_def,STAR_def,SEP_REFINE_def]
   \\ REPEAT STRIP_TAC \\ REVERSE EQ_TAC \\ REPEAT STRIP_TAC
   THEN1 (FULL_SIMP_TAC bool_ss [SPLIT_ppc2set_EXISTS] \\ METIS_TAC [])
-  \\ Q.PAT_ASSUM `!s r. b` (STRIP_ASSUME_TAC o UNDISCH o SPEC_ALL o
+  \\ Q.PAT_X_ASSUM `!s r. b` (STRIP_ASSUME_TAC o UNDISCH o SPEC_ALL o
      (fn th => MATCH_MP th (UNDISCH lemma))  o Q.SPECL [`s`,`(\v. v = ppc2set'' y s)`])
   \\ FULL_SIMP_TAC bool_ss [SPLIT_ppc2set_EXISTS]
   \\ IMP_RES_TAC ppc2set''_11 \\ Q.EXISTS_TAC `i` \\ METIS_TAC []);
@@ -316,7 +316,7 @@ val pMEMORY_INSERT = prove(
                      pMEMORY_SET_def,IN_BIGUNION,GSPECIFICATION]
     \\ REWRITE_TAC [GSYM IMP_DISJ_THM] \\ REPEAT STRIP_TAC
     \\ CCONTR_TAC \\ FULL_SIMP_TAC std_ss []
-    \\ Q.PAT_ASSUM `!x. b` (K ALL_TAC)
+    \\ Q.PAT_X_ASSUM `!x. b` (K ALL_TAC)
     \\ `~(a = a')` by METIS_TAC []
     \\ NTAC 2 (FULL_SIMP_TAC bool_ss [pMEMORY_WORD_def,IN_INSERT,
          NOT_IN_EMPTY,ppc_el_11,WORD_EQ_ADD_RCANCEL])
@@ -385,8 +385,7 @@ val pBYTE_MEMORY_INSERT = store_thm("pBYTE_MEMORY_INSERT",
   \\ ASM_SIMP_TAC std_ss [INSERT_SUBSET,EMPTY_SUBSET,DIFF_INSERT,DIFF_EMPTY]
   \\ REWRITE_TAC [DELETE_pBYTE_MEMORY_SET,APPLY_UPDATE_THM]
   \\ REWRITE_TAC [EXTENSION,IN_INSERT,IN_DELETE]
-  \\ REVERSE (`~(pMem a (SOME w) IN pBYTE_MEMORY_SET (df DELETE a) g)` by ALL_TAC)
-  THEN1 METIS_TAC []
+  \\ `~(pMem a (SOME w) IN pBYTE_MEMORY_SET (df DELETE a) g)` suffices_by METIS_TAC []
   \\ SIMP_TAC std_ss [pBYTE_MEMORY_SET_def,GSPECIFICATION,IN_DELETE,ppc_el_11]);
 
 val pBYTE_MEMORY_INTRO = store_thm("pBYTE_MEMORY_INTRO",

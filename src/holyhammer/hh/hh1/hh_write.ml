@@ -7,6 +7,7 @@ open Basics;;
 open Bool;;
 open Equal;;
 open Hl_parser;;
+open Pervasives;;
 open Tactics;;
 open Simp;;
 (*open Theorems;;*)
@@ -36,7 +37,7 @@ let variant_name_map s used =
 
 let print_vartype t =
   let s = String.copy (dest_vartype t) in
-    escape_var s
+  escape_tyvar s 
 
 let os = output_string;;
 let rec oiter oc fn sep = function
@@ -83,7 +84,7 @@ let name_tscs_mono_fold ho (tys, cs, used) tm () =
     let n = variant_name_hash n used in Hashtbl.replace tys ty n
   in
   List.iter name_ty ctys;
-  if Hashtbl.mem cs tm or is_var tm then () else
+  if Hashtbl.mem cs tm || is_var tm then () else
   let n = escape_const (fst (dest_const tm)) in
   let n = variant_name_hash n used in
   Hashtbl.replace cs tm n
@@ -197,7 +198,7 @@ let rec tff_tm oc (bnd, used) cs ts tm =
     let (f, args) = strip_comb tm in
     os oc (Hashtbl.find cs (fst (dest_const f)));
     let insts = inst_const f in
-    if args <> [] or insts <> [] then begin
+    if args <> [] || insts <> [] then begin
       os oc "(";
       oiter oc (fun oc ty -> oty_poly ts 0 oc ty) "," insts;
       (if args <> [] && insts <> [] then os oc "," else ());
@@ -236,7 +237,7 @@ let rec tff_pred oc (bnd, used) cs ts tm =
   else if is_neg tm then
     let t = dest_neg tm in (os oc "~ ("; tff_pred oc (bnd,used) cs ts t; os oc ")")
   else if is_eq tm then let l,r = dest_eq tm in
-    if must_pred l or must_pred r then
+    if must_pred l || must_pred r then
       (os oc "("; tff_pred oc (bnd, used) cs ts l; os oc " <=> ";
       tff_pred oc (bnd, used) cs ts r; os oc ")")
     else
@@ -499,7 +500,7 @@ let rec otff_funtype oc ts t min =
 
 let funtys_of_tm tm =
   let mergel l = setify (List.concat l) in
-  let tys tm = map type_of (find_terms (fun x -> is_var x or is_const x) tm) in
+  let tys tm = map type_of (find_terms (fun x -> is_var x || is_const x) tm) in
   let rec funtypes t =
     if is_vartype t then [] else
     let (s, l) = dest_type t in
@@ -597,7 +598,7 @@ let rec fof_pred oc (bnd, used) cs ts tm =
   else if is_neg tm then
     let t = dest_neg tm in (os oc "~ ("; fof_pred oc (bnd,used) cs ts t; os oc ")")
   else if is_eq tm then let l,r = dest_eq tm in
-    if must_pred l or must_pred r then
+    if must_pred l || must_pred r then
       (os oc "("; fof_pred oc (bnd, used) cs ts l; os oc " <=> ";
       fof_pred oc (bnd, used) cs ts r; os oc ")")
     else

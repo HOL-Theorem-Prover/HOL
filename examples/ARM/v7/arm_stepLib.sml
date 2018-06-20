@@ -46,7 +46,7 @@ val mk_constants =
 (* Things to avoid evaluating *)
 
 val restr_terms = mk_constants
-  [("words",         ["word_div", "word_sdiv", "add_with_carry",
+  [("words",         ["word_div", "word_quot", "add_with_carry",
                       "bit_field_insert", "word_sign_extend"]),
    ("integer_word",  ["w2i", "i2w"]),
    ("arm_coretypes", ["signed_sat_q", "unsigned_sat_q",

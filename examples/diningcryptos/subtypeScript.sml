@@ -50,63 +50,21 @@ val IN_EQ_UNIV_IMP = store_thm
 
 (* Subtype definitions *)
 
-val FUNSET_def = Define
-  `FUNSET (P:'a->bool) (Q:'b->bool) = \f. !x. x IN P ==> f x IN Q`;
+val _ = add_infix("->", 250, HOLgrammars.RIGHT);
 
-val DFUNSET_def = Define
-  `DFUNSET (P:'a->bool) (Q:'a->'b->bool) = \f. !x. x IN P ==> f x IN Q x`;
-
-(* home
 val _ = overload_on
   ("->", ``FUNSET:('a->bool) -> ('b->bool) -> (('a->'b)->bool)``);
-*)
-
-(* work
-*)
-val _ = overload_on
-  (GrammarSpecials.case_arrow_special,
-   ``FUNSET : ('a->bool) -> ('b->bool) -> (('a->'b)->bool)``);
-
 val _ = overload_on
   ("-->", ``DFUNSET : ('a->bool) -> ('a->'b->bool) -> (('a->'b)->bool)``);
 
 val pair_def = Define
   `pair (X : 'a -> bool) (Y : 'b -> bool) = \ (x, y). x IN X /\ y IN Y`;
 
-val IN_FUNSET = store_thm
-  ("IN_FUNSET",
-   ``!(f:'a->'b) P Q. f IN (P -> Q) = !x. x IN P ==> f x IN Q``,
-   RW_TAC std_ss [SPECIFICATION, FUNSET_def]);
-
-val IN_DFUNSET = store_thm
-  ("IN_DFUNSET",
-   ``!(f:'a->'b) (P:'a->bool) Q. f IN (P --> Q) = !x. x IN P ==> f x IN Q x``,
-   RW_TAC std_ss [SPECIFICATION, DFUNSET_def]);
-
 val IN_PAIR = store_thm
   ("IN_PAIR",
    ``!(x : 'a # 'b) X Y. x IN pair X Y = FST x IN X /\ SND x IN Y``,
    Cases
    ++ RW_TAC std_ss [pair_def, SPECIFICATION]);
-
-val FUNSET_THM = store_thm
-  ("FUNSET_THM",
-   ``!s t (f:'a->'b) x. f IN (s -> t) /\ x IN s ==> f x IN t``,
-    RW_TAC std_ss [IN_FUNSET] ++ PROVE_TAC []);
-
-(* Warning: do not add the following as a simplification *)
-val UNIV_FUNSET_UNIV = store_thm
-  ("UNIV_FUNSET_UNIV",
-   ``((UNIV : 'a -> bool) -> (UNIV : 'b -> bool)) = UNIV``,
-   SET_EQ_TAC
-   ++ RW_TAC std_ss [IN_FUNSET, IN_UNIV]);
-
-(* Simplifications *)
-
-val FUNSET_DFUNSET = store_thm
-  ("FUNSET_DFUNSET",
-   ``!(x : 'a -> bool) (y : 'b -> bool). (x -> y) = (x --> K y)``,
-   RW_TAC std_ss [SET_EQ, IN_FUNSET, IN_DFUNSET, K_DEF]);
 
 val PAIR_UNIV = store_thm
   ("PAIR_UNIV",

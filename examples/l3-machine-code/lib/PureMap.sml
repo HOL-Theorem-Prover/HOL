@@ -2,41 +2,41 @@
    Pure Maps
    ------------------------------------------------------------------------- *)
 
-structure PureMap :> PureMap =
+structure PureMap :> Map =
 struct
 
 val arrayBits = 0w16
 val arraySize = IntInf.<< (1, arrayBits)
 val arrayMask = arraySize - 1
 
-fun inRange v = fn NONE => true | SOME s => v < s
+fun inRange v = fn NONE => true | SOME s => IntInf.< (v, s)
 
 datatype 'a map =
      Vector of 'a Vector.vector
-   | VTree of int option * 'a * 'a Vector.vector Ptree.ptree
+   | VTree of IntInf.int option * 'a * 'a Vector.vector Ptree.ptree
 
 fun mkMap (x as (s, d)) =
    case s of
       SOME sz => if sz < arraySize
-                    then Vector (Vector.tabulate (sz, fn _ => d))
+                    then Vector (Vector.tabulate (IntInf.toInt sz, fn _ => d))
                  else VTree (s, d, Ptree.Empty)
     | NONE => VTree (s, d, Ptree.Empty)
 
-fun lookup (Vector a, v) = Vector.sub (a, v)
+fun lookup (Vector a, v) = Vector.sub (a, IntInf.toInt v)
   | lookup (VTree (s, d, t), v) =
       let
          val top = IntInf.~>> (v, arrayBits)
       in
          case Ptree.peek (t, top) of
-            SOME a => Vector.sub (a, IntInf.andb (v, arrayMask))
+            SOME a => Vector.sub (a, IntInf.toInt (IntInf.andb (v, arrayMask)))
           | NONE => if inRange v s then d else raise Subscript
       end
 
-fun update (Vector a, v, d) = Vector (Vector.update (a, v, d))
+fun update (Vector a, v, d) = Vector (Vector.update (a, IntInf.toInt v, d))
   | update (VTree (s, d, t), v, e) =
       let
          val top = IntInf.~>> (v, arrayBits)
-         val bottom = IntInf.andb (v, arrayMask)
+         val bottom = IntInf.toInt (IntInf.andb (v, arrayMask))
       in
          case Ptree.peek (t, top) of
             SOME a =>
@@ -45,7 +45,7 @@ fun update (Vector a, v, d) = Vector (Vector.update (a, v, d))
                        then let
                                val a =
                                   Vector.tabulate
-                                     (arraySize,
+                                     (IntInf.toInt arraySize,
                                       fn i => if i = bottom then e else d)
                             in
                                VTree (s, d, Ptree.add (t, (top, a)))

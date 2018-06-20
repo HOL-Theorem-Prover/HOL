@@ -108,7 +108,7 @@ EQ_TAC >> strip_tac >- (
   fsrw_tac [][] >>
   imp_res_tac is_nat_trans_def >>
   fsrw_tac [][extensional_def,extensional_nat_trans_def] >>
-  qpat_assum `c.map.dom = X` mp_tac >>
+  qpat_x_assum `c.map.dom = X` mp_tac >>
   fsrw_tac [][nat_trans_axioms_def] >>
   strip_tac >>
   conj_tac >- (
@@ -180,8 +180,8 @@ EQ_TAC >> strip_tac >- (
   Q.ISPECL_THEN [`cone_cat d`,`f`] mp_tac mor_obj >>
   fsrw_tac [][cone_cat_def] >>
   fsrw_tac [][is_comma_cat_mor_def] >>
-  qpat_assum `nt1 = nt2` mp_tac >>
-  qpat_assum `X ≈≈> f.cod.map` mp_tac >>
+  qpat_x_assum `nt1 = nt2` mp_tac >>
+  qpat_x_assum `X ≈≈> f.cod.map` mp_tac >>
   `(d = f.dom.map.cod) ∧ (is_nat_trans f.dom.map)` by (
     fsrw_tac [][composable_nts_def] ) >>
   fsrw_tac [][maps_to_in_def] >>
@@ -203,7 +203,7 @@ conj_asm1_tac >- (
   fsrw_tac [][composable_nts_def] >>
   fsrw_tac [][is_comma_cat_obj_def] ) >>
 fsrw_tac [][] >>
-qpat_assum `f.dom.map.cod = d` (assume_tac o SYM) >>
+qpat_x_assum `f.dom.map.cod = d` (assume_tac o SYM) >>
 `(is_nat_trans f.dom.map)` by (
   full_simp_tac std_ss [composable_nts_def] ) >>
 fsrw_tac [][] >>
@@ -697,7 +697,7 @@ val is_functor_product_functor = Q.store_thm(
 "is_functor_product_functor",
 `∀c y. is_category c ∧ has_binary_products c ∧ y ∈ c.obj ⇒ is_functor (product_functor c y)`,
 srw_tac [][product_functor_def] >>
-qpat_assum `has_binary_products c` mp_tac >> srw_tac [][has_binary_products_thm] >>
+qpat_x_assum `has_binary_products c` mp_tac >> srw_tac [][has_binary_products_thm] >>
 srw_tac [][functor_axioms_def] >- (
   imp_res_tac maps_to_obj >>
   imp_res_tac maps_to_in_def >>
@@ -725,7 +725,7 @@ qmatch_abbrev_tac `⟨p o q-:c, r o s-:c⟩-:c = (⟨t,u⟩-:c) o (⟨v,w⟩-:c)
 srw_tac [][Abbr`r`] >>
 qabbrev_tac `a = f.dom` >>
 qabbrev_tac `b = g.dom` >>
-qpat_assum `Abbrev (p = X)` assume_tac >>
+qpat_x_assum `Abbrev (p = X)` assume_tac >>
 fsrw_tac [][] >>
 qspecl_then [`c`,`a`,`y`] mp_tac pi_maps_to >>
 qspecl_then [`c`,`b`,`y`] mp_tac pi_maps_to >>

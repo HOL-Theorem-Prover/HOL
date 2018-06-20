@@ -3,7 +3,8 @@
 \TYPE {SPEC_UNDISCH_EXL : thm -> thm}
 
 \SYNOPSIS
-Strips universal quantifiers and antecedents of implications,
+Strips universal quantifiers and antecedents of implications
+(splitting conjunctive antecedents),
 then where possible replaces the formerly quantified variables
 as existentials in the new hypotheses.
 

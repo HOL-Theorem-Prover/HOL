@@ -1,0 +1,7 @@
+.PHONY: all gen_call_count_test
+all: baseTheory.uo gen_call_count_test
+
+gen_call_count_test:
+	if [ -r one ] ; then touch two ; else touch one ; fi
+
+EXTRA_CLEANS = one two

@@ -99,8 +99,8 @@ val SPEC_X86_MODEL_IN_BYTE_MEM = store_thm("SPEC_X86_MODEL_IN_BYTE_MEM",
   \\ Q.EXISTS_TAC `{(a + n2w n,[EL n xs],T) | n | n < LENGTH xs}`
   \\ ASM_SIMP_TAC std_ss [SUBSET_DEF,GSPECIFICATION,prog_x86Theory.xCODE_SET_def]
   \\ REPEAT STRIP_TAC \\ ASM_SIMP_TAC std_ss [CONS_11]
-  \\ Q.PAT_ASSUM `x = bb` (K ALL_TAC)
-  \\ Q.PAT_ASSUM `SPEC x p c q` (K ALL_TAC)
+  \\ Q.PAT_X_ASSUM `x = bb` (K ALL_TAC)
+  \\ Q.PAT_X_ASSUM `SPEC x p c q` (K ALL_TAC)
   \\ REPEAT (POP_ASSUM MP_TAC)
   \\ Q.SPEC_TAC (`a`,`a`) \\ Q.SPEC_TAC (`n`,`n`) \\ Induct_on `xs`
   \\ SIMP_TAC std_ss [LENGTH,BYTES_IN_MEM_def]
@@ -171,15 +171,15 @@ val X86_SPEC_COMPOSE_CODE = store_thm("X86_SPEC_COMPOSE_CODE",
   SIMP_TAC std_ss [AND_IMP_INTRO] \\ ONCE_REWRITE_TAC [CONJ_COMM]
   \\ SIMP_TAC std_ss [GSYM AND_IMP_INTRO] \\ STRIP_TAC
   \\ ASM_SIMP_TAC std_ss [SPEC_def,X86_MODEL_def]
-  \\ `CODE_POOL X86_INSTR ((a,xs ++ ys,w) INSERT c) =
-      CODE_POOL X86_INSTR ((a,xs,w) INSERT (a + n2w (LENGTH xs),ys,w) INSERT c)` by ALL_TAC
+  \\ sg `CODE_POOL X86_INSTR ((a,xs ++ ys,w) INSERT c) =
+      CODE_POOL X86_INSTR ((a,xs,w) INSERT (a + n2w (LENGTH xs),ys,w) INSERT c)`
   \\ ASM_SIMP_TAC std_ss []
   \\ SIMP_TAC std_ss [CODE_POOL_def]
   \\ MATCH_MP_TAC (METIS_PROVE [] ``(x = y) ==> ((\s. s = x) = (\s. s = y))``)
   \\ SIMP_TAC std_ss [IMAGE_INSERT,BIGUNION_INSERT]
-  \\ REVERSE (`!xs a ys. X86_INSTR (a,xs ++ ys,w) =
-             X86_INSTR (a,xs,w) UNION X86_INSTR (a + n2w (LENGTH xs),ys,w)` by ALL_TAC)
-  THEN1 (ASM_SIMP_TAC std_ss [AC UNION_ASSOC UNION_COMM])
+  \\ `!xs a ys. X86_INSTR (a,xs ++ ys,w) =
+             X86_INSTR (a,xs,w) UNION X86_INSTR (a + n2w (LENGTH xs),ys,w)` suffices_by
+  (STRIP_TAC THEN ASM_SIMP_TAC std_ss [AC UNION_ASSOC UNION_COMM])
   \\ POP_ASSUM (K ALL_TAC) \\ Induct
   \\ ASM_SIMP_TAC std_ss [APPEND,X86_INSTR_def,UNION_EMPTY,LENGTH,WORD_ADD_0]
   \\ SIMP_TAC std_ss [RW1[ADD_COMM]ADD1,GSYM word_add_n2w,WORD_ADD_ASSOC]
@@ -419,7 +419,7 @@ val iEXEC_IMP_SPEC = store_thm("iEXEC_IMP_SPEC",
   \\ Q.EXISTS_TAC `(xJIT_INV s' a * xR EDX edx)`
   \\ REPEAT STRIP_TAC
   THEN1 (METIS_TAC [SPEC_FRAME,iSTEP_IMP_SPEC])
-  \\ Q.PAT_ASSUM `bb ==> cc` MATCH_MP_TAC
+  \\ Q.PAT_X_ASSUM `bb ==> cc` MATCH_MP_TAC
   \\ `?xs l p ns. s = (xs,l,p,ns)` by METIS_TAC [PAIR]
   \\ `?xs2 l2 p2 ns2. s' = (xs2,l2,p2,ns2)` by METIS_TAC [PAIR]
   \\ FULL_SIMP_TAC std_ss [iSTEP_cases,CODE_IN_MEM_def]);
@@ -503,4 +503,3 @@ val execute_code_and_return = let
 val _ = save_thm("execute_code_and_return",execute_code_and_return);
 
 val _ = export_theory();
-

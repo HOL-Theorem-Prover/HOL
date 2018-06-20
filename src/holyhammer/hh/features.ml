@@ -5,6 +5,8 @@
 open Thf1hh1
 open Toolbox
 
+let print_string _ = ();;
+
 (* Optimization for multiple experiments (memorize previous call of get_symbols) *)
 let feature_hash = ref (Hashtbl.create 20000)
 

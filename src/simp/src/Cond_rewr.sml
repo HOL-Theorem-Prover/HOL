@@ -35,10 +35,7 @@ fun size_of_term tm =
        | COMB(Rator,Rand) => size_of_term Rator + size_of_term Rand
        | _ => 1
 
-fun op lex_cmp (cmp1, cmp2) ((a1,b1), (a2,b2)) =
-    case cmp1 (a1, a2) of
-      EQUAL => cmp2 (b1, b2)
-    | x => x
+val op lex_cmp = pair_compare
 infix lex_cmp
 
 fun dest_hd env t =
@@ -149,10 +146,10 @@ fun ac_term_ord(tm1,tm2) =
       fn solver => fn stack => fn tm =>
        (let val conditional_eqn = instth tm
             val (conditions,eqn) = strip_imp (concl conditional_eqn)
-	    val _ = if exists (C (op_mem aconv) stack) conditions
-			then (trace(1, TEXT "looping - cut");
+            val _ = if exists (C (op_mem aconv) stack) conditions
+                        then (trace(1, TEXT "looping - cut");
                               failwith "looping!") else ()
-	    val _ = if length stack + length conditions > (!stack_limit)
+            val _ = if length stack + length conditions > (!stack_limit)
                     then (trace(1, TEXT "looping - stack limit reached");
                           failwith "stack limit") else ()
             val (l,r) = dest_eq eqn
@@ -170,7 +167,7 @@ fun ac_term_ord(tm1,tm2) =
                     else ()
             val _ = if null conditions then ()
                     else trace(if isperm then 2 else 1, REWRITING(tm,th))
-	    val new_stack = conditions@stack
+            val new_stack = conditions@stack
             fun solver' condition =
                  let val _   = trace(2,SIDECOND_ATTEMPT condition)
                      val res = solver new_stack condition
@@ -190,7 +187,7 @@ fun ac_term_ord(tm1,tm2) =
                       then used_rewrites := th :: !used_rewrites
                       else ()
         in trace(if isperm then 3 else 2,PRODUCE(tm,"rewrite",final_thm));
-	    final_thm
+            final_thm
         end
         handle e => WRAP_ERR("COND_REWR_CONV (application)",e))
       end
@@ -202,7 +199,7 @@ val BOUNDED_t = mk_thy_const {Thy = "bool", Name = "BOUNDED",
 fun loops th = let
   val (l,r) = dest_eq (concl th)
 in
-  can (find_term (equal l)) r
+  can (find_term (aconv l)) r
 end handle HOL_ERR _ => failwith "loops"
 
 
@@ -294,17 +291,17 @@ fun IMP_EQ_CANON (thm,bnd) = let
             val (l,r) = dest_eq conc
           in
             if l = truth_tm then
-              if r = false_tm then [(PROVE_HYP thm TF_EQ_F, bnd)]
-              else [(CONV_RULE (REWR_CONV EQ_SYM_EQ) thm, bnd)]
+              if r = false_tm then [(PROVE_HYP undisch_thm TF_EQ_F, bnd)]
+              else [(CONV_RULE (REWR_CONV EQ_SYM_EQ) undisch_thm, bnd)]
             else if l = false_tm then
-              if r = truth_tm then [(PROVE_HYP thm FT_EQ_F,bnd)]
-              else [(CONV_RULE (REWR_CONV EQ_SYM_EQ) thm, bnd)]
+              if r = truth_tm then [(PROVE_HYP undisch_thm FT_EQ_F,bnd)]
+              else [(CONV_RULE (REWR_CONV EQ_SYM_EQ) undisch_thm, bnd)]
             else
               let
                 val base =
                     if null (subtract (free_vars r) (free_varsl (l::hyp thm)))
-		    then undisch_thm
-		    else
+                    then undisch_thm
+                    else
                       (trace(1,IGNORE("rewrite with existential vars (adding \
                                       \EQT version(s))",thm));
                        EQT_INTRO undisch_thm)

@@ -3,9 +3,10 @@ open HolKernel boolLib bossLib Parse
 open prnlistTheory numpairTheory pure_dBTheory
 open enumerationsTheory primrecfnsTheory
 open rich_listTheory arithmeticTheory
-open reductionEval churchnumTheory churchboolTheory
 
-open lcsymtacs
+open reductionEval churchnumTheory churchboolTheory normal_orderTheory
+     dnoreductTheory stepsTheory recursivefnsTheory recfunsTheory
+     churchlistTheory churchDBTheory
 
 fun Store_thm (trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
 
@@ -150,8 +151,7 @@ val TAKE_EQ_GENLIST = store_thm(
   "TAKE_EQ_GENLIST",
   ``n ≤ LENGTH l ⇒ (TAKE n l = GENLIST (λi. l ' i) n)``,
   Q.ID_SPEC_TAC `n` THEN Induct_on `l` THEN SRW_TAC [][GENLIST] THEN
-  `∃m. n = SUC m` by (Cases_on `n` THEN SRW_TAC [][]) THEN
-  FULL_SIMP_TAC (srw_ss()) [GENLIST_CONS, combinTheory.o_DEF]);
+  Cases_on `n` >> simp[GENLIST_CONS, combinTheory.o_DEF]);
 
 val swap2_def = Define`
   (swap2 f [] = f [0; 0]) ∧
@@ -582,7 +582,7 @@ val pr_lift_correct = Store_thm(
 
     FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [] THEN
     Q.UNABBREV_TAC `a` THEN markerLib.RM_ALL_ABBREVS_TAC THEN
-    Q.PAT_ASSUM `prtermrec1 X Y Z L = FOO` (K ALL_TAC) THEN
+    Q.PAT_X_ASSUM `prtermrec1 X Y Z L = FOO` (K ALL_TAC) THEN
     SRW_TAC [][] THEN
     Q.MATCH_ABBREV_TAC `Pr zf sf [M; nlist_of (GENLIST gf M1)] =
                         nlist_of (GENLIST gfr M2)` THEN
@@ -924,7 +924,7 @@ val pr_nsub_correct = Store_thm(
 
     MAP_EVERY Q.RM_ABBREV_TAC [`v`, `a`] THEN
     FULL_SIMP_TAC (srw_ss()) [] THEN
-    REPEAT (Q.PAT_ASSUM `prtermrec1 VV CC AA LL = RR` (K ALL_TAC)) THEN
+    REPEAT (Q.PAT_X_ASSUM `prtermrec1 VV CC AA LL = RR` (K ALL_TAC)) THEN
     SRW_TAC [][Abbr`c`] THEN
     Q.MATCH_ABBREV_TAC `Pr zf sf [M; nlist_of (GENLIST gf1 M1);
                                   nlist_of (GENLIST gf2 M2)] =
@@ -935,14 +935,14 @@ val pr_nsub_correct = Store_thm(
     Induct_on `M` THEN
     SRW_TAC [][Abbr`gf1`, Abbr`gf2`, Abbr`gfr`, Abbr`zf`, Abbr`sf`] THEN
     FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [] THEN
-    Q.PAT_ASSUM `Pr ZZ FF LL = RR` (K ALL_TAC) THEN
+    Q.PAT_X_ASSUM `Pr ZZ FF LL = RR` (K ALL_TAC) THEN
     SRW_TAC [ARITH_ss][GENLIST, ADD_CLAUSES, nel_nlist_of,
                        SNOC_APPEND, nlist_of_append, dBnum_def],
 
     MAP_EVERY Q.RM_ABBREV_TAC [`v`, `c`] THEN
     FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [] THEN
     SRW_TAC [][Abbr`a`] THEN
-    Q.PAT_ASSUM `pretermrec1 VV CC AA LL = RR` (K ALL_TAC) THEN
+    Q.PAT_X_ASSUM `pretermrec1 VV CC AA LL = RR` (K ALL_TAC) THEN
     SRW_TAC [][Once numdB_def, MOD3_thm, DIV3_thm] THEN
     Q.MATCH_ABBREV_TAC `Pr zf sf [M; nlist_of (GENLIST gf M1)] =
                         nlist_of (GENLIST gfr M2)` THEN
@@ -953,7 +953,7 @@ val pr_nsub_correct = Store_thm(
     Q.RM_ABBREV_TAC `M` THEN Induct_on `M` THEN
     SRW_TAC [][Abbr`zf`, Abbr`gf`, Abbr`gfr`, Abbr`sf`] THEN
     FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [] THEN
-    Q.PAT_ASSUM `Pr ZZ SS LL = RR` (K ALL_TAC) THEN
+    Q.PAT_X_ASSUM `Pr ZZ SS LL = RR` (K ALL_TAC) THEN
     SRW_TAC [ARITH_ss][GENLIST, SNOC_APPEND, nlist_of_append, nel_nlist_of] THEN
     SRW_TAC [][GSYM ADD1, FUNPOW_SUC, dBnum_def]
   ]);
@@ -1020,7 +1020,6 @@ val pr_noreduct_def = Define`
       (λabs. 3 * abs ' 1 + 2)
 `;
 
-open normal_orderTheory
 val fv_exists = prove(
   ``∀d. ∃n. ∀m. n < m ⇒ m ∉ dFV d``,
   Induct THEN SRW_TAC [][] THENL [
@@ -1034,7 +1033,6 @@ val bnf_noreduct = prove(
   ``¬bnf t ⇒ ∃u. noreduct t = SOME u``,
   Cases_on `noreduct t` THEN FULL_SIMP_TAC (srw_ss())[noreduct_bnf]);
 
-open dnoreductTheory
 val pr_noreduct_correct = store_thm(
   "pr_noreduct_correct",
   ``pr_noreduct [n] =
@@ -1044,7 +1042,7 @@ val pr_noreduct_correct = store_thm(
   `∃d. n = dBnum d` by METIS_TAC [dBnum_onto] THEN
   ASM_SIMP_TAC (srw_ss()) [] THEN POP_ASSUM SUBST_ALL_TAC THEN
   Induct_on `d` THEN ASM_SIMP_TAC (srw_ss()) [dBnum_def, LET_THM] THENL [
-    REPEAT (Q.PAT_ASSUM `prtermrec0 VV CC AA L = RR` (K ALL_TAC)) THEN
+    REPEAT (Q.PAT_X_ASSUM `prtermrec0 VV CC AA L = RR` (K ALL_TAC)) THEN
     SIMP_TAC (srw_ss()) [pr_is_abs_correct] THEN
     Cases_on `is_dABS d` THEN SRW_TAC [][] THENL [
       `∃d0. d = dABS d0` by (Cases_on `d` THEN
@@ -1109,7 +1107,6 @@ val primrec_steps = Store_thm(
   SRW_TAC [][LET_THM, primrec_rules] THEN
   intro prCOND THEN SRW_TAC [][prCn1, prpred, combinTheory.o_ABS_R, prdbnf]);
 
-open stepsTheory
 val pr_steps_correct = store_thm(
   "pr_steps_correct",
   ``pr_steps [n; t] = dBnum (fromTerm (steps n (toTerm (numdB t))))``,
@@ -1139,7 +1136,6 @@ val pr_steps_correct = store_thm(
     bnf_of (requires minimisation - and thus recursivefnsTheory
    ---------------------------------------------------------------------- *)
 
-open recursivefnsTheory
 val pr_steps_pred_def = Define`
   pr_steps_pred =
   Cn (pr2 $-) [K 1; Cn pr_bnf [pr_steps]]
@@ -1207,7 +1203,6 @@ val recbnf_of_correct = Store_thm(
     METIS_TAC [optionTheory.option_CASES, bnf_steps]
   ]);
 
-open recfunsTheory
 val pr_is_ichurch_def = Define`
   pr_is_ichurch = prtermrec0
                       (Cn pr_eq [proj 0; K 1])
@@ -1478,12 +1473,11 @@ val nel_proj = prove(
   SRW_TAC [ARITH_ss][proj_def, nel_nlist_of] THEN
   POP_ASSUM MP_TAC THEN Q.ID_SPEC_TAC `l` THEN Induct_on `i` THEN
   SRW_TAC [][] THENL [
-    Cases_on `l` THEN FULL_SIMP_TAC (srw_ss()) [nel_def, ndrop_def, nhd_def],
+    FULL_SIMP_TAC (srw_ss()) [nel_def, ndrop_def, nhd_def],
     Cases_on `l` THEN1 SRW_TAC [][nel_def, ndrop_0, nhd_def] THEN
     SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) []
   ]);
 
-open churchlistTheory churchDBTheory
 val cnlist_of_def = Define`
   cnlist_of =
   LAM "ns" (VAR "ns"
@@ -1804,7 +1798,7 @@ val crecPr_consSUC = store_thm(
         asm_simp_tac (bsrw_ss()) [] >>
         asm_simp_tac (bsrw_ss()) [PrSstep_eval, cncons_behaviour] >>
         full_simp_tac (bsrw_ss()) [] >>
-        Q.PAT_ASSUM `bnf_of (PrSstep @@ XX @@ YY @@ ZZ @@ UU @@ VV) = SOME WW`
+        Q.PAT_X_ASSUM `bnf_of (PrSstep @@ _ @@ _ @@ _ @@ _ @@ _) = SOME _`
           MP_TAC >>
         asm_simp_tac (bsrw_ss()) [PrSstep_eval, cncons_behaviour] >>
         Cases_on `Phi s (ncons N (ncons m (nlist_of t)))` >-
@@ -1952,7 +1946,7 @@ val cminimise_succeeds = store_thm(
                                   Once cfindbody_thm, bnf_bnf_of]) >>
   rpt strip_tac >>
   `N < j` by DECIDE_TAC >> RES_TAC >>
-  Q.PAT_ASSUM `Phi i X = SOME r`
+  Q.PAT_X_ASSUM `Phi i X = SOME r`
               (STRIP_ASSUME_TAC o MATCH_MP PhiSOME_cbnf_ofk) >>
   `∀mm res k.
       P @@ church mm @@ res @@ k ==
@@ -2048,10 +2042,10 @@ val recfns_in_Phi = store_thm(
     Cases_on `bnf_of (crecPr @@ church i @@ church i'
                              @@ church (ncons h (nlist_of t)))`
     >- (full_simp_tac (srw_ss()) [] >>
-        Q.PAT_ASSUM `NONE = FOO` (MP_TAC o SYM) >>
+        Q.PAT_X_ASSUM `NONE = FOO` (MP_TAC o SYM) >>
         simp_tac (srw_ss()) []) >>
     full_simp_tac (srw_ss()) [] >>
-    Q.PAT_ASSUM `SOME (force_num XX) = YY` (MP_TAC o SYM) >>
+    Q.PAT_X_ASSUM `SOME (force_num XX) = YY` (MP_TAC o SYM) >>
     simp_tac (srw_ss()) [optionTheory.OPTION_MAP_COMPOSE] >>
     Q_TAC SUFF_TAC `∀nopt:num option. OPTION_MAP I nopt = nopt`
     >- (srw_tac [][] >> metis_tac [nlist_of_def]) >>
@@ -2070,7 +2064,7 @@ val recfns_in_Phi = store_thm(
           `m < x ∨ (x = m) ∨ x < m` by DECIDE_TAC >>
           res_tac >> full_simp_tac (srw_ss() ++ ARITH_ss) []) >>
     full_simp_tac (srw_ss()) [DECIDE ``¬(0 < j) ⇔ (j = 0)``] >>
-    qpat_assum `0 < n` (K ALL_TAC) >>
+    qpat_x_assum `0 < n` (K ALL_TAC) >>
     `∀n. (Phi i (ncons n (nlist_of l)) = SOME 0) ⇒
          ∃m. m < n ∧ (Phi i (ncons m (nlist_of l)) = NONE) ∧
              ∀p. p < m ⇒ ∃r. (Phi i (ncons p (nlist_of l)) = SOME r) ∧ 0 < r`
@@ -2094,7 +2088,7 @@ val recfns_in_Phi = store_thm(
                 full_simp_tac (srw_ss()) [DECIDE ``¬(0 < j) ⇔ (j = 0)``] >>
                 Cases_on `Phi i (ncons p (nlist_of l))`
                   >- (Q_TAC SUFF_TAC `F` >- metis_tac [] >>
-                      Q.PAT_ASSUM `p < JJ` MP_TAC >>
+                      Q.PAT_X_ASSUM `p < JJ` MP_TAC >>
                       POP_ASSUM MP_TAC >> Q.UNABBREV_TAC `JJ` >>
                       numLib.LEAST_ELIM_TAC >> metis_tac []) >>
                 `Phi i (ncons p (nlist_of l)) = SOME 0`

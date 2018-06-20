@@ -1,5 +1,4 @@
 open HolKernel Parse boolLib bossLib
-open lcsymtacs
 open arithmeticTheory whileTheory pairTheory pred_setTheory progTheory;
 
 val _ = new_theory "triple";
@@ -92,21 +91,21 @@ val TRIPLE_TERM_TAILREC = Q.prove(
    >- (fs []
        \\ Cases_on `d (WHILE g f x)`
        \\ fs [TRIPLE_def])
-   \\ qpat_assum `!c. ~bbb` kall_tac
+   \\ qpat_x_assum `!c. ~bbb` kall_tac
    \\ fs []
    \\ pop_assum mp_tac
    \\ Q.SPEC_TAC (`x`, `x`)
    \\ Induct_on `n`
    \\ fs [FUNPOW]
    \\ REPEAT strip_tac
-   >- (qpat_assum `!x.bbb` (MP_TAC o Q.SPEC `x`)
+   >- (qpat_x_assum `!x.bbb` (MP_TAC o Q.SPEC `x`)
        \\ once_rewrite_tac [WHILE]
        \\ fs []
        \\ Cases_on `d x`
        \\ fs []
        \\ REPEAT strip_tac
        \\ fs []
-       \\ REVERSE (`q' /\ (?n. ~g (FUNPOW f n x)) = q'` by all_tac)
+       \\ REVERSE (sg `q' /\ (?n. ~g (FUNPOW f n x)) = q'`)
        \\ fs []
        \\ Cases_on `q'`
        \\ fs []
@@ -117,14 +116,14 @@ val TRIPLE_TERM_TAILREC = Q.prove(
    >- (pop_assum mp_tac
        \\ pop_assum kall_tac
        \\ pop_assum kall_tac
-       \\ qpat_assum `!x.bbb` (MP_TAC o Q.SPEC `x`)
+       \\ qpat_x_assum `!x.bbb` (MP_TAC o Q.SPEC `x`)
        \\ once_rewrite_tac [WHILE]
        \\ fs []
        \\ Cases_on `d x`
        \\ fs []
        \\ REPEAT strip_tac
        \\ fs []
-       \\ REVERSE (`q' /\ (?n. ~g (FUNPOW f n x)) = q'` by all_tac)
+       \\ REVERSE (sg `q' /\ (?n. ~g (FUNPOW f n x)) = q'`)
        \\ fs []
        \\ Cases_on `q'`
        \\ fs []
@@ -137,8 +136,7 @@ val TRIPLE_TERM_TAILREC = Q.prove(
    \\ res_tac
    \\ once_rewrite_tac [WHILE]
    \\ fs []
-   \\ `(?n. ~g (FUNPOW f n (f x))) = (?n. ~g (FUNPOW f n x))` by all_tac
-   >- (REPEAT strip_tac
+   \\ `(?n. ~g (FUNPOW f n (f x))) = (?n. ~g (FUNPOW f n x))` by (REPEAT strip_tac
        \\ eq_tac
        \\ REPEAT strip_tac
        >- (qexists_tac `SUC n'` \\ fs [FUNPOW])

@@ -11,8 +11,15 @@ struct
    val (float_to_fp_tm, mk_float_to_fp, dest_float_to_fp, is_float_to_fp) =
       monop ("float_to_" ^ fp)
 
+   val (int_to_fp_tm, mk_int_to_fp, dest_int_to_fp, is_int_to_fp) =
+      binop ("int_to_" ^ fp)
+
    val (real_to_fp_tm, mk_real_to_fp, dest_real_to_fp, is_real_to_fp) =
       binop ("real_to_" ^ fp)
+
+   val (real_to_fp_with_flags_tm, mk_real_to_fp_with_flags,
+        dest_real_to_fp_with_flags, is_real_to_fp_with_flags) =
+      binop ("real_to_" ^ fp ^ "_with_flags")
 
    fun pre s = fp ^ "_" ^ s
 
@@ -20,11 +27,18 @@ struct
    val monop = monop o pre
    val binop = binop o pre
    val triop = HolKernel.syntax_fns3 thy o pre
+   val quadop = HolKernel.syntax_fns4 thy o pre
 
    val (fp_abs_tm, mk_fp_abs, dest_fp_abs, is_fp_abs) = monop "abs"
    val (fp_add_tm, mk_fp_add, dest_fp_add, is_fp_add) = triop "add"
+   val (fp_add_with_flags_tm, mk_fp_add_with_flags, dest_fp_add_with_flags,
+        is_fp_add_with_flags) = triop "add_with_flags"
    val fp_bottom_tm = const "bottom"
    val (fp_div_tm, mk_fp_div, dest_fp_div, is_fp_div) = triop "div"
+   val (fp_div_with_flags_tm, mk_fp_div_with_flags, dest_fp_div_with_flags,
+        is_fp_div_with_flags) = triop "div_with_flags"
+   val (fp_compare_tm, mk_fp_compare, dest_fp_compare, is_fp_compare) =
+      binop "compare"
    val (fp_equal_tm, mk_fp_equal, dest_fp_equal, is_fp_equal) = binop "equal"
    val (fp_greaterEqual_tm, mk_fp_greaterEqual, dest_fp_greaterEqual,
         is_fp_greaterEqual) = binop "greaterEqual"
@@ -39,6 +53,8 @@ struct
    val (fp_isNan_tm, mk_fp_isNan, dest_fp_isNan, is_fp_isNan) = monop "isNan"
    val (fp_isNormal_tm, mk_fp_isNormal, dest_fp_isNormal, is_fp_isNormal) =
       monop "isNormal"
+   val (fp_isSignallingNan_tm, mk_fp_isSignallingNan, dest_fp_isSignallingNan,
+        is_fp_isSignallingNan) = monop "isSignallingNan"
    val (fp_isSubnormal_tm, mk_fp_isSubnormal, dest_fp_isSubnormal,
         is_fp_isSubnormal) = monop "isSubnormal"
    val (fp_isZero_tm, mk_fp_isZero, dest_fp_isZero, is_fp_isZero) =
@@ -48,6 +64,18 @@ struct
    val (fp_lessThan_tm, mk_fp_lessThan, dest_fp_lessThan, is_fp_lessThan) =
       binop "lessThan"
    val (fp_mul_tm, mk_fp_mul, dest_fp_mul, is_fp_mul) = triop "mul"
+   val (fp_mul_with_flags_tm, mk_fp_mul_with_flags, dest_fp_mul_with_flags,
+        is_fp_mul_with_flags) = triop "mul_with_flags"
+   val (fp_mul_add_tm, mk_fp_mul_add, dest_fp_mul_add, is_fp_mul_add) =
+      quadop "mul_add"
+   val (fp_mul_add_with_flags_tm, mk_fp_mul_add_with_flags,
+        dest_fp_mul_add_with_flags, is_fp_mul_add_with_flags) =
+      quadop "mul_add_with_flags"
+   val (fp_mul_sub_tm, mk_fp_mul_sub, dest_fp_mul_sub, is_fp_mul_sub) =
+      quadop "mul_sub"
+   val (fp_mul_sub_with_flags_tm, mk_fp_mul_sub_with_flags,
+        dest_fp_mul_sub_with_flags, is_fp_mul_sub_with_flags) =
+      quadop "mul_sub_with_flags"
    val fp_neginf_tm = const "negInf"
    val fp_negmin_tm = const "negMin"
    val fp_negzero_tm = const "negZero"
@@ -58,9 +86,16 @@ struct
    val fp_poszero_tm = const "posZero"
    val (fp_roundToIntegral_tm, mk_fp_roundToIntegral, dest_fp_roundToIntegral,
         is_fp_roundToIntegral) = binop "roundToIntegral"
+   val (fp_sqrt_tm, mk_fp_sqrt, dest_fp_sqrt, is_fp_sqrt) = binop "sqrt"
+   val (fp_sqrt_with_flags_tm, mk_fp_sqrt_with_flags, dest_fp_sqrt_with_flags,
+        is_fp_sqrt_with_flags) = binop "sqrt_with_flags"
    val (fp_sub_tm, mk_fp_sub, dest_fp_sub, is_fp_sub) = triop "sub"
+   val (fp_sub_with_flags_tm, mk_fp_sub_with_flags, dest_fp_sub_with_flags,
+        is_fp_sub_with_flags) = triop "sub_with_flags"
    val (fp_to_float_tm, mk_fp_to_float, dest_fp_to_float, is_fp_to_float) =
       monop "to_float"
+   val (fp_to_int_tm, mk_fp_to_int, dest_fp_to_int, is_fp_to_int) =
+      binop "to_int"
    val (fp_to_real_tm, mk_fp_to_real, dest_fp_to_real, is_fp_to_real) =
       monop "to_real"
    val fp_top_tm = const "top"

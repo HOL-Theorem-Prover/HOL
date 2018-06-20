@@ -25,6 +25,6 @@ Identical or alpha-equivalent terms which are repeated in {A, "t1", ..., "tn"}
 will not be duplicated in the hypotheses of the resulting theorem.
 
 \SEEALSO
-Thm.DISCH, Drule.DISCH_ALL, Tactic.DISCH_TAC, Thm_cont.DISCH_THEN, Drule.NEG_DISCH, Tactic.FILTER_DISCH_TAC, Thm_cont.FILTER_DISCH_THEN, Tactic.STRIP_TAC, Drule.UNDISCH, Tactic.UNDISCH_TAC.
+Thm.DISCH, Drule.DISCH_ALL, Tactic.DISCH_TAC, Thm_cont.DISCH_THEN, Drule.NEG_DISCH, Tactic.FILTER_DISCH_TAC, Tactic.FILTER_DISCH_THEN, Tactic.STRIP_TAC, Drule.UNDISCH, Tactic.UNDISCH_TAC.
 
 \ENDDOC

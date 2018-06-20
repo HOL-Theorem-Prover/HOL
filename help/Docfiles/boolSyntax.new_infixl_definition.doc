@@ -46,7 +46,7 @@ that does not occur in the type of {ix}.
 The nand function can be defined as follows.
 {
    - new_infix_definition
-    ("nand", --`$nand in_1 in_2 = ~(in_1 /\ in_2)`--, 500);;
+    ("nand", “$nand in_1 in_2 = ~(in_1 /\ in_2)”, 500);;
    > val it = |- !in_1 in_2. in_1 nand in_2 = ~(in_1 /\ in_2) : thm
 }
 

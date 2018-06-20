@@ -9,8 +9,6 @@ TERMPP = $(dprot $(SIGOBJ)/term_pp.uo)
 DEPS = $(BOOLLIB) $(BOOLTHEORY) $(PRIMREC) $(TERMPP) \
        proofManagerLib.uo History.uo \
        goalStack.uo goalTree.uo Manager.uo \
-       $(dprot $(HOLDIR)/tools-poly/builder0.ML) \
-       $(dprot $(HOLDIR)/tools-poly/poly/poly-init2.ML) \
        $(dprot $(SIGOBJ)/UnicodeChars.uo) \
        $(dprot $(SIGOBJ)/ThmSetData.uo) \
        $(dprot $(SIGOBJ)/Pmatch.uo) \
@@ -18,23 +16,21 @@ DEPS = $(BOOLLIB) $(BOOLTHEORY) $(PRIMREC) $(TERMPP) \
        $(dprot $(SIGOBJ)/TypeBase.uo) \
        $(dprot $(SIGOBJ)/Preterm.uo) \
        $(dprot $(SIGOBJ)/type_pp.uo) \
+       $(dprot $(SIGOBJ)/parse_term.uo) \
        $(dprot $(SIGOBJ)/ParseExtras.uo) \
        $(dprot $(SIGOBJ)/Drule.uo) \
        $(dprot $(SIGOBJ)/TheoryPP.uo) \
        $(dprot $(SIGOBJ)/Conv.uo) \
+       $(dprot $(SIGOBJ)/Tactic.uo) \
+       $(dprot $(SIGOBJ)/Tactical.uo) \
        $(dprot $(SIGOBJ)/ParseDatatype.uo) \
        $(dprot $(SIGOBJ)/type_grammar.uo)
+
+UOARGS = $(protect $(SIGOBJ)/boolLib) proofManagerLib History goalStack
 
 EXTRA_CLEANS = $(TARGET)
 
 $(TARGET): $(DEPS)
-	cd $(protect $(HOLDIR)/tools-poly) && \
-        $(POLY) -q < builder0.ML
-
-all: selftest.exe $(TARGET)
-.PHONY: all
-
-selftest.exe: selftest.uo
-	$(HOLMOSMLC) -o $@ $<
+	$(protect $(HOLDIR)/bin/buildheap) $(DEBUG_FLAG) --poly -o $@ $(UOARGS)
 
 endif

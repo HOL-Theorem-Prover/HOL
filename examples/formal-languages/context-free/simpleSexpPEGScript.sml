@@ -4,52 +4,9 @@ open simpleSexpTheory pegTheory pegLib
 
 val _ = new_theory "simpleSexpPEG";
 
-(* TODO: move? *)
-val pegfail_empty = store_thm(
-  "pegfail_empty[simp]",
-  ``pegfail G (empty r) = F``,
-  simp[Once peg0_cases]);
-
-val peg0_empty = store_thm(
-  "peg0_empty[simp]",
-  ``peg0 G (empty r) = T``,
-  simp[Once peg0_cases]);
-
-val peg0_not = store_thm(
-  "peg0_not[simp]",
-  ``peg0 G (not s r) ⇔ pegfail G s``,
-  simp[Once peg0_cases, SimpLHS]);
-
-val peg0_choice = store_thm(
-  "peg0_choice[simp]",
-  ``peg0 G (choice s1 s2 f) ⇔ peg0 G s1 ∨ pegfail G s1 ∧ peg0 G s2``,
-  simp[Once peg0_cases, SimpLHS]);
-
-val peg0_choicel = store_thm(
-  "peg0_choicel[simp]",
-  ``(peg0 G (choicel []) = F) ∧
-    (peg0 G (choicel (h::t)) ⇔ peg0 G h ∨ pegfail G h ∧ peg0 G (choicel t))``,
-  simp[choicel_def])
-
-val peg0_seq = store_thm(
-  "peg0_seq[simp]",
-  ``peg0 G (seq s1 s2 f) ⇔ peg0 G s1 ∧ peg0 G s2``,
-  simp[Once peg0_cases, SimpLHS])
-
-val peg0_pegf = store_thm(
-  "peg0_pegf[simp]",
-  ``peg0 G (pegf s f) = peg0 G s``,
-  simp[pegf_def])
-
-val peg0_tok = store_thm(
-  "peg0_tok[simp]",
-  ``peg0 G (tok P f) = F``,
-  simp[Once peg0_cases])
-(*--*)
-
 val tokeq_def = Define`tokeq t = tok ((=) t) (K (SX_SYM [t]))`
 val grabWS_def = Define`
-  grabWS s = rpt (tok isSpace ARB) (K ARB) ~> s
+  grabWS s = rpt (tok isSpace (K arb_sexp)) (K arb_sexp) ~> s
 `;
 
 val peg0_tokeq = store_thm(
@@ -65,13 +22,48 @@ val replace_nil_def= Define`
   (replace_nil x y = x)
 `;
 
+(* have to use these versions of choicel and pegf below because the
+   versions from pegTheory use ARB in their definitions.
+   Logically, the ARBs are harmless, but they completely mess with the
+   CakeML translator.
+*)
+val choicel_def = Define`
+  choicel [] = not (empty arb_sexp) arb_sexp ∧
+  choicel (h::t) = choice h (choicel t) (λs. case s of INL x => x | INR y => y)
+`;
+
+val pegf_def = Define`pegf sym f = seq sym (empty arb_sexp) (λl1 l2. f l1)`;
+
+val peg_eval_choicel_NIL = store_thm(
+  "peg_eval_choicel_NIL[simp]",
+  ``peg_eval G (i0, choicel []) x = (x = NONE)``,
+  simp[choicel_def, Once peg_eval_cases]);
+
+val peg_eval_choicel_CONS = store_thm(
+  "peg_eval_choicel_CONS",
+  ``∀x. peg_eval G (i0, choicel (h::t)) x ⇔
+          peg_eval G (i0, h) x ∧ x <> NONE ∨
+          peg_eval G (i0,h) NONE ∧ peg_eval G (i0, choicel t) x``,
+  simp[choicel_def, SimpLHS, Once peg_eval_cases] >>
+  simp[pairTheory.FORALL_PROD, optionTheory.FORALL_OPTION]);
+
+val peg0_choicel = store_thm(
+  "peg0_choicel[simp]",
+  ``(peg0 G (choicel []) = F) ∧
+    (peg0 G (choicel (h::t)) ⇔ peg0 G h ∨ pegfail G h ∧ peg0 G (choicel t))``,
+  simp[choicel_def])
+
+val peg0_pegf = store_thm(
+  "peg0_pegf[simp]",
+  ``peg0 G (pegf s f) = peg0 G s``,
+  simp[pegf_def])
 
 val sexpPEG_def = zDefine`
   sexpPEG : (char, sexpNT, sexp) peg = <|
     start := pnt sxnt_sexp ;
     rules :=
     FEMPTY |++
-    [(mkNT sxnt_sexp, pnt sxnt_WSsexp <~ rpt (tok isSpace ARB) (K ARB));
+    [(mkNT sxnt_sexp, pnt sxnt_WSsexp <~ rpt (tok isSpace (K arb_sexp)) (K arb_sexp));
      (mkNT sxnt_sexp0,
       choicel [
         pnt sxnt_sexpnum ;
@@ -97,7 +89,7 @@ val sexpPEG_def = zDefine`
             SX_CONS
      ]);
      (mkNT sxnt_WSsexp,
-      rpt (tok isSpace ARB) (K ARB) ~> pnt sxnt_sexp0);
+      rpt (tok isSpace (K arb_sexp)) (K arb_sexp) ~> pnt sxnt_sexp0);
      (mkNT sxnt_sexpnum,
         seq (pnt sxnt_digit)
             (rpt (pnt sxnt_digit)
@@ -105,10 +97,10 @@ val sexpPEG_def = zDefine`
                   FOLDL (λ(l,n) d. (10*l, 10*n + destSXNUM d)) (1,0)))
             (λs1. (λ(l,n). SX_NUM (destSXNUM s1 * l + n))
                   o (destSXNUM ## destSXNUM) o destSXCONS)) ;
-     (mkNT sxnt_digit, tok isDigit (λc. SX_NUM (ORD c - ORD #"0"))) ;
+     (mkNT sxnt_digit, tok isDigit (λ(c,l). SX_NUM (ORD c - ORD #"0"))) ;
      (mkNT sxnt_sexpsym,
-      seq (tok valid_first_symchar (λc. SX_SYM [c]))
-          (rpt (tok valid_symchar (λc. SX_SYM [c]))
+      seq (tok valid_first_symchar (λ(c,l). SX_SYM [c]))
+          (rpt (tok valid_symchar (λ(c,l). SX_SYM [c]))
                (SX_SYM o FOLDR (λs a. destSXSYM s ++ a) []))
           (λs1 s2. SX_SYM (destSXSYM s1 ++ destSXSYM s2)));
      (mkNT sxnt_strcontents,
@@ -120,7 +112,7 @@ val sexpPEG_def = zDefine`
       ]);
      (mkNT sxnt_escapedstrchar, choicel [tokeq #"\\"; tokeq #"\""]);
      (mkNT sxnt_normstrchar,
-      tok (λc. isPrint c ∧ c ≠ #"\"" ∧ c ≠ #"\\") (λc. SX_SYM [c]))
+      tok (λc. isPrint c ∧ c ≠ #"\"" ∧ c ≠ #"\\") (λ(c,l). SX_SYM [c]))
     ]
   |>
 `;

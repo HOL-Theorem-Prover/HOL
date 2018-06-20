@@ -31,7 +31,7 @@ base element and {l} a list variable. For example, a suitable theorem for
    |- SUM l = FOLDR $+ 0 l
 }
 Given this theorem, no auxiliary theorems and the term
-{--`SUM (CONS x l)`--}, a call to {PURE_LIST_CONV} returns the theorem:
+{“SUM (CONS x l)”}, a call to {PURE_LIST_CONV} returns the theorem:
 {
    |- SUM (CONS x l) = x + (SUM l)
 }
@@ -41,7 +41,7 @@ with respect to {FOLDR} or {FOLDL}. For example, given the theorem:
 {
    |- MONOID $+ 0
 }
-and given the term {--`SUM (APPEND l1 l2)`--}, a call to
+and given the term {“SUM (APPEND l1 l2)”}, a call to
 {PURE_LIST_CONV} returns the theorem
 {
    |- SUM (APPEND l1 l2) = (SUM l1) + (SUM l2)
@@ -89,14 +89,14 @@ auxiliary theorems needed if {CONST1} is defined in terms of {FOLDL}.
 - val SUM_FOLDR = theorem "list" "SUM_FOLDR";
 val SUM_FOLDR = |- !l. SUM l = FOLDR $+ 0 l
 - PURE_LIST_CONV
-=    {{Fold_thms = [SUM_FOLDR], Aux_thms = []}} (--`SUM (CONS h t)`--);
+=    {{Fold_thms = [SUM_FOLDR], Aux_thms = []}} “SUM (CONS h t)”;
 |- SUM (CONS h t) = h + SUM t
 }
 {
 - val SUM_FOLDL = theorem "list" "SUM_FOLDL";
 val SUM_FOLDL = |- !l. SUM l = FOLDL $+ 0 l
 - PURE_LIST_CONV
-=    {{Fold_thms = [SUM_FOLDL], Aux_thms = []}} (--`SUM (SNOC h t)`--);
+=    {{Fold_thms = [SUM_FOLDL], Aux_thms = []}} “SUM (SNOC h t)”;
 |- SUM (SNOC h t) = SUM t + h
 }
 {
@@ -104,12 +104,12 @@ val SUM_FOLDL = |- !l. SUM l = FOLDL $+ 0 l
 val MONOID_ADD_0 = |- MONOID $+ 0
 - PURE_LIST_CONV
 =    {{Fold_thms = [SUM_FOLDR], Aux_thms = [MONOID_ADD_0]}}
-=    (--`SUM (APPEND l1 l2)`--);
+=    “SUM (APPEND l1 l2)”;
 |- SUM (APPEND l1 l2) = SUM l1 + SUM l2
 }
 {
 - PURE_LIST_CONV
-=    {{Fold_thms = [SUM_FOLDR], Aux_thms = [MONOID_ADD_0]}} (--`SUM (FLAT l)`--);
+=    {{Fold_thms = [SUM_FOLDR], Aux_thms = [MONOID_ADD_0]}} “SUM (FLAT l)”;
 |- SUM (FLAT l) = SUM (MAP SUM l)
 }
 

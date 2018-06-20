@@ -30,15 +30,19 @@ val (_, mk_x64_RIP, _, _) = x64_1 "x64_RIP"
 val (_, mk_x64_EFLAGS, dest_x64_EFLAGS, _) = x64_2 "x64_EFLAGS"
 val (_, mk_x64_MEM, dest_x64_MEM, _) = x64_2 "x64_MEM"
 val (_, mk_x64_REG, dest_x64_REG, _) = x64_2 "x64_REG"
+val (_, mk_x64_XMM_REG, dest_x64_XMM_REG, _) = x64_2 "x64_XMM_REG"
+val (_, mk_x64_MXCSR, dest_x64_MXCSR, _) = x64_1 "x64_MXCSR"
 val (_, mk_x64_mem16, dest_x64_mem16, _) = x64_2 "x64_mem16"
 val (_, mk_x64_mem32, dest_x64_mem32, _) = x64_2 "x64_mem32"
 val (_, mk_x64_mem64, dest_x64_mem64, _) = x64_2 "x64_mem64"
+val (_, mk_x64_mem128, dest_x64_mem128, _) = x64_2 "x64_mem128"
 
 (* -- *)
 
 val x64_select_state_thms =
    List.map (fn t => star_select_state_thm x64_proj_def [] ([], t))
-            (x64_comp_defs @ [x64_mem16_def, x64_mem32_def, x64_mem64_def])
+            (x64_comp_defs @
+             [x64_mem16_def, x64_mem32_def, x64_mem64_def, x64_mem128_def])
 
 local
    val opcs =
@@ -66,11 +70,13 @@ val state_id =
        ["EFLAGS", "RIP"],
        ["MEM", "REG", "RIP"],
        ["MEM", "RIP"],
-       ["REG", "RIP"]
+       ["REG", "RIP"],
+       ["XMM_REG"]
       ]
 
 val x64_frame =
-   stateLib.update_frame_state_thm x64_proj_def ["RIP", "REG", "MEM", "EFLAGS"]
+   stateLib.update_frame_state_thm x64_proj_def
+     ["RIP", "REG", "MEM", "EFLAGS", "MXCSR", "XMM_REG"]
 
 (* -- *)
 
@@ -129,9 +135,11 @@ in
    val x64_write_footprint =
       stateLib.write_footprint x64_1 x64_2
          [("x64$x64_state_REG_fupd", "x64_REG", ``^st.REG``),
+          ("x64$x64_state_XMM_REG_fupd", "x64_XMM_REG", ``^st.XMM_REG``),
           ("x64$x64_state_EFLAGS_fupd", "x64_EFLAGS", ``^st.EFLAGS``)]
          []
-         [("x64$x64_state_RIP_fupd", "x64_RIP")]
+         [("x64$x64_state_RIP_fupd", "x64_RIP"),
+          ("x64$x64_state_MXCSR_fupd", "x64_MXCSR")]
          [("x64$x64_state_MEM_fupd",
              fn (p, q, m) =>
                 let
@@ -145,10 +153,12 @@ in
                                       [mk_x64_mem32 (a, d)]
                               | ("x64_step$write_mem64", [_, a, d]) =>
                                       [mk_x64_mem64 (a, d)]
+                              | ("x64_step$write_mem128", [_, a, d]) =>
+                                      [mk_x64_mem128 (a, d)]
                               |  _ => err ()
                             )
-                       | (l, t) => (t = MEM_tm orelse err ()
-                                    ; List.map mk_x64_MEM l)
+                       | (l, t) => ( t = MEM_tm orelse err ()
+                                   ; List.map mk_x64_MEM l )
                 in
                    (p, l @ q)
                 end)]
@@ -158,8 +168,9 @@ end
 val x64_extras =
    [((``x64_mem16 v``, ``read_mem16 s.MEM v``), I, I),
     ((``x64_mem32 v``, ``read_mem32 s.MEM v``), I, I),
-    ((``x64_mem64 v``, ``read_mem64 s.MEM v``), I, I)]
-   : footprint_extra list
+    ((``x64_mem64 v``, ``read_mem64 s.MEM v``), I, I),
+    ((``x64_mem128 v``, ``read_mem128 s.MEM v``), I, I)
+   ] : footprint_extra list
 
 val x64_mk_pre_post =
    stateLib.mk_pre_post x64_progTheory.X64_MODEL_def x64_comp_defs
@@ -168,12 +179,16 @@ val x64_mk_pre_post =
 (* ------------------------------------------------------------------------ *)
 
 local
-   val lowercase_const = utilsLib.lowercase o fst o Term.dest_const
-   val x64_rename2 =
+   val lowercase_const = utilsLib.lowercase o fst o Term.dest_const o List.hd
+   val xmm =
+     Lib.curry (op ^) "xmm" o Int.toString o wordsSyntax.uint_of_word o List.hd
+   val x64_rmap =
       fn "x64_prog$x64_REG" => SOME lowercase_const
        | "x64_prog$x64_EFLAGS" => SOME lowercase_const
+       | "x64_prog$x64_MXCSR" => SOME (K "mxcsr")
+       | "x64_prog$x64_XMM_REG" => SOME xmm
        | _ => NONE
-   val x64_rename = stateLib.rename_vars (K NONE, x64_rename2, [])
+   val x64_rename = stateLib.rename_vars (x64_rmap, [])
    val byte_mem_intro =
       stateLib.introduce_map_definition
           (x64_progTheory.x64_BYTE_MEMORY_INSERT, Conv.ALL_CONV)
@@ -222,16 +237,16 @@ local
            x64_progTheory.X64_IMP_SPEC
            x64_progTheory.X64_IMP_TEMPORAL
            [x64_stepTheory.read_mem16, x64_stepTheory.read_mem32,
-            x64_stepTheory.read_mem64, combinTheory.I_THM]
+            x64_stepTheory.read_mem64, x64_stepTheory.read_mem128,
+            combinTheory.I_THM]
            [x64_stepTheory.write_mem16_def, x64_stepTheory.write_mem32_def,
-            x64_stepTheory.write_mem64_def]
+            x64_stepTheory.write_mem64_def, x64_stepTheory.write_mem128_def]
            (x64_select_state_thms @ x64_select_state_pool_thms)
            [x64_frame, state_id]
            component_11
            [qword, ``:Zreg``, ``:Zeflags``]
            NO_TAC STATE_TAC
-   val disassemble1 =
-      hd o x64AssemblerLib.x64_disassemble o Lib.list_of_singleton o QUOTE
+   val disassemble1 = x64AssemblerLib.x64_disassemble1
    val x64_spec_trace = ref 0
    val () = Feedback.register_trace ("x64 spec", x64_spec_trace, 2)
 in
@@ -329,16 +344,31 @@ val imp_spec = X64_IMP_SPEC
 val imp_temp = x64_progTheory.X64_IMP_TEMPORAL
 val read_thms =
    [x64_stepTheory.read_mem16, x64_stepTheory.read_mem32,
-    x64_stepTheory.read_mem64, combinTheory.I_THM]
+    x64_stepTheory.read_mem64, x64_stepTheory.read_mem128, combinTheory.I_THM]
 val write_thms =
    [x64_stepTheory.write_mem16_def, x64_stepTheory.write_mem32_def,
-    x64_stepTheory.write_mem64_def]
+    x64_stepTheory.write_mem64_def, x64_stepTheory.write_mem128_def]
 val select_state_thms = x64_select_state_thms @ x64_select_state_pool_thms
 val frame_thms = [x64_frame, state_id]
 val map_tys = [qword, ``:Zreg``, ``:Zeflags``]
 val EXTRA_TAC = NO_TAC
 val step = x64_stepLib.x64_step
 val mk_pre_post = x64_mk_pre_post
+
+fun test path =
+  let
+    val istrm = TextIO.openIn path
+    val s = TextIO.inputAll istrm before TextIO.closeIn istrm
+  in
+    s |> String.tokens (Lib.equal #"\n")
+      |> List.mapPartial
+           (fn s =>
+              if String.size s = 0 orelse
+                 Lib.mem (String.sub (s, 0)) [#".", #"#"]
+              then NONE
+              else SOME (x64_spec_code [QUOTE s])
+                   handle HOL_ERR _ => (print (s ^ "\n"); NONE))
+  end
 
 *)
 

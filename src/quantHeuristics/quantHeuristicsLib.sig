@@ -13,6 +13,7 @@ sig
   val QUANT_INST_ss        : quant_param list -> simpLib.ssfrag;
   val FAST_QUANT_INST_ss   : quant_param list -> simpLib.ssfrag;
   val EXPAND_QUANT_INST_ss : quant_param list -> simpLib.ssfrag;
+  val SIMPLE_QUANT_INST_ss : simpLib.ssfrag;
 
   (* Tactics *)
   val QUANT_INSTANTIATE_TAC          : quant_param list -> tactic;
@@ -20,11 +21,13 @@ sig
   val FAST_QUANT_INSTANTIATE_TAC     : quant_param list -> tactic;
   val FAST_ASM_QUANT_INSTANTIATE_TAC : quant_param list -> tactic;
   val QUANT_INSTANTIATE_CONSEQ_TAC   : quant_param list -> tactic;
+  val SIMPLE_QUANT_INSTANTIATE_TAC   : tactic;
 
   (* Conversions *)
-  val QUANT_INSTANTIATE_CONV      : quant_param list -> conv;
-  val NORE_QUANT_INSTANTIATE_CONV : quant_param list -> conv;
-  val FAST_QUANT_INSTANTIATE_CONV : quant_param list -> conv;
+  val QUANT_INSTANTIATE_CONV        : quant_param list -> conv;
+  val NORE_QUANT_INSTANTIATE_CONV   : quant_param list -> conv;
+  val FAST_QUANT_INSTANTIATE_CONV   : quant_param list -> conv;
+  val SIMPLE_QUANT_INSTANTIATE_CONV : conv;
 
   (* Conversions that do a case split in order to instantiate quantifiers,
      if no equivalence can be proved. Be careful, this will blow up the term size! *)

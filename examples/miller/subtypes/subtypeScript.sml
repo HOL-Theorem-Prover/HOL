@@ -47,12 +47,6 @@ val IN_EQ_UNIV_IMP = store_thm
 
 (* Subtype definitions *)
 
-val FUNSET_def = Define
-  `FUNSET (P:'a->bool) (Q:'b->bool) = \f. !x. x IN P ==> f x IN Q`;
-
-val DFUNSET_def = Define
-  `DFUNSET (P:'a->bool) (Q:'a->'b->bool) = \f. !x. x IN P ==> f x IN Q x`;
-
 val _ = add_infix("->", 250, HOLgrammars.RIGHT);
 
 val _ = overload_on
@@ -63,73 +57,18 @@ val _ = overload_on
 val pair_def = Define
   `pair (X : 'a -> bool) (Y : 'b -> bool) = \ (x, y). x IN X /\ y IN Y`;
 
-val IN_FUNSET = store_thm
-  ("IN_FUNSET",
-   ``!(f:'a->'b) P Q. f IN (P -> Q) = !x. x IN P ==> f x IN Q``,
-   RW_TAC std_ss [SPECIFICATION, FUNSET_def]);
-
-val IN_DFUNSET = store_thm
-  ("IN_DFUNSET",
-   ``!(f:'a->'b) (P:'a->bool) Q. f IN (P --> Q) = !x. x IN P ==> f x IN Q x``,
-   RW_TAC std_ss [SPECIFICATION, DFUNSET_def]);
-
 val IN_PAIR = store_thm
   ("IN_PAIR",
    ``!(x : 'a # 'b) X Y. x IN pair X Y = FST x IN X /\ SND x IN Y``,
    Cases
    ++ RW_TAC std_ss [pair_def, SPECIFICATION]);
 
-val FUNSET_THM = store_thm
-  ("FUNSET_THM",
-   ``!s t (f:'a->'b) x. f IN (s -> t) /\ x IN s ==> f x IN t``,
-    RW_TAC std_ss [IN_FUNSET] ++ PROVE_TAC []);
-
-(* Warning: do not add the following as a simplification *)
-val UNIV_FUNSET_UNIV = store_thm
-  ("UNIV_FUNSET_UNIV",
-   ``((UNIV : 'a -> bool) -> (UNIV : 'b -> bool)) = UNIV``,
-   SET_EQ_TAC
-   ++ RW_TAC std_ss [IN_FUNSET, IN_UNIV]);
-
 (* Simplifications *)
-
-val FUNSET_DFUNSET = store_thm
-  ("FUNSET_DFUNSET",
-   ``!(x : 'a -> bool) (y : 'b -> bool). (x -> y) = (x --> K y)``,
-   RW_TAC std_ss [SET_EQ, IN_FUNSET, IN_DFUNSET, K_DEF]);
 
 val PAIR_UNIV = store_thm
   ("PAIR_UNIV",
    ``pair UNIV UNIV = (UNIV : 'a # 'b -> bool)``,
    RW_TAC std_ss [SET_EQ, IN_PAIR, IN_UNIV]);
-
-val SUBSET_INTER = store_thm
-  ("SUBSET_INTER",
-   ``!(s : 'a -> bool) t u.
-   s SUBSET (t INTER u) = s SUBSET t /\ s SUBSET u``,
-   RW_TAC std_ss [SUBSET_DEF, IN_INTER]
-   ++ PROVE_TAC []);
-
-val K_SUBSET = store_thm
-  ("K_SUBSET",
-   ``!x y. K x SUBSET y = ~x \/ (UNIV SUBSET y)``,
-   RW_TAC std_ss [K_DEF, SUBSET_DEF, IN_UNIV]
-   ++ RW_TAC std_ss [SPECIFICATION]
-   ++ PROVE_TAC []);
-
-val SUBSET_K = store_thm
-  ("SUBSET_K",
-   ``!x y. x SUBSET K y = (x SUBSET EMPTY) \/ y``,
-   RW_TAC std_ss [K_DEF, SUBSET_DEF, NOT_IN_EMPTY]
-   ++ RW_TAC std_ss [SPECIFICATION]
-   ++ PROVE_TAC []);
-
-(* Judgements *)
-
-val SUBSET_THM = store_thm
-  ("SUBSET_THM",
-   ``!(P : 'a -> bool) Q. P SUBSET Q ==> (!x. x IN P ==> x IN Q)``,
-    RW_TAC std_ss [SUBSET_DEF]);
 
 (* Subtypes *)
 
@@ -280,16 +219,6 @@ val PAIRED_BETA_THM = store_thm
    STRIP_TAC
    ++ Cases
    ++ RW_TAC std_ss []);
-
-val EMPTY_FUNSET = store_thm
-  ("EMPTY_FUNSET",
-   ``!s. ({} -> s) = (UNIV : ('a -> 'b) -> bool)``,
-   RW_TAC std_ss [SET_EQ, IN_FUNSET, NOT_IN_EMPTY, IN_UNIV]);
-
-val FUNSET_EMPTY = store_thm
-  ("FUNSET_EMPTY",
-   ``!s (f : 'a -> 'b). f IN (s -> {}) = (s = {})``,
-   RW_TAC std_ss [IN_FUNSET, NOT_IN_EMPTY, SET_EQ]);
 
 (* non-interactive mode
 *)

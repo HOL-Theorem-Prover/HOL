@@ -1,0 +1,41 @@
+## Generate Java files
+
+../regexp2dfa Java test1 'foobar' > Test1.java
+../regexp2dfa Java test2 '\d*' > Test2.java
+../regexp2dfa Java test3 '\w{1,20}' > Test3.java
+../regexp2dfa Java test4 '.*1' > Test4.java
+../regexp2dfa Java test5 '[0-9]' > Test5.java
+../regexp2dfa Java test6 '[0-9]*' > Test6.java
+../regexp2dfa Java test7 '(.*1)(12)*' > Test7.java
+../regexp2dfa Java test8 'b*|b*(a|ab*a)b*' > Test8.java
+../regexp2dfa Java test9 'b*ab*ab*' > Test9.java
+../regexp2dfa Java test10 '[]*|.|..|...' > Test10.java
+../regexp2dfa Java test11 '.|(ab)*|(ba)*' > Test11.java
+../regexp2dfa Java test12 '~((.*aa.*)|(.*bb.*))' > Test12.java
+../regexp2dfa Java test13 '(.*00.*)&~(.*01)' > Test13.java
+../regexp2dfa Java test14 '(.*111.*)&~((.*01)|1*)' > Test14.java
+../regexp2dfa Java test15 '[\010\016-\235]*' > Test15.java
+../regexp2dfa Java test16 '\i{0,17999}' > Test16.java
+../regexp2dfa Java test17 '\i{1,17999}' > Test17.java
+../regexp2dfa Java test18 '\i{0,2500000}' > Test18.java
+../regexp2dfa Java test19 '\i{17999,2500000}' > Test19.java
+../regexp2dfa Java test20 '\i{~4,0}' > Test20.java
+../regexp2dfa Java test21 '\i{~90,0}' > Test21.java
+../regexp2dfa Java test22 '\i{~90,90}' > Test22.java
+../regexp2dfa Java test23 '\i{~180,0}' > Test23.java
+../regexp2dfa Java test24 '\i{~180,180}' > Test24.java
+../regexp2dfa Java test25 '\i{~2500000,2500000}' > Test25.java
+../regexp2dfa Java test26 '\i{~3,300}' > Test26.java
+../regexp2dfa Java test27 '\i{~3,800}' > Test27.java
+../regexp2dfa Java test28 '\i{~17999,0}' > Test28.java
+../regexp2dfa Java test29 '\i{~17999,~123}' > Test29.java
+../regexp2dfa Java test30 '\i{~116535,~23}' > Test30.java
+../regexp2dfa Java test31 '\k{23}' > Test31.java
+../regexp2dfa Java test1800 '\i{1,31}\i{1,12}\i{0,99}\i{0,23}\i{0,59}\i{0,59}\i{0,17999,LSB}' > Test1800.java
+../regexp2dfa Java test1801 '\i{~90,90}\i{0,59}\i{0,5999}\p{(~180,180)(0,59).{1}}\i{0,5999}' > Test1801.java
+../regexp2dfa Java test1802 '\i{0,9999,LSB}\i{0,3599,LSB}.{4}' > Test1802.java
+../regexp2dfa Java test1803 '\i{0,12}\i{0,16}\i{0,999,LSB}\i{0,999,LSB}\i{0,999,LSB}' > Test1803.java
+../regexp2dfa Java test18xx_disj '\i{1,31}\i{1,12}\i{0,99}\i{0,23}\i{0,59}\i{0,59}\i{0,17999,LSB}|\i{~90,90}\i{0,59}\i{0,5999}\p{(~180,180)(0,59).{1}}\i{0,5999}|\i{0,9999,LSB}\i{0,3599,LSB}|\i{0,12}\i{0,16}\i{0,999,LSB}\i{0,999,LSB}\i{0,999,LSB}' > Test18xx_disj.java
+../regexp2dfa Java test18xx_concat '\i{1,31}\i{1,12}\i{0,99}\i{0,23}\i{0,59}\i{0,59}\i{0,17999,LSB}\i{~90,90}\i{0,59}\i{0,5999}\p{(~180,180)(0,59).{1}}\i{0,5999}\i{0,9999,LSB}\i{0,3599,LSB}\i{0,12}\i{0,16}\i{0,999,LSB}\i{0,999,LSB}\i{0,999,LSB}' > Test18xx_concat.java
+../regexp2dfa Java date '(201\d|202[0-5])-([1-9]|1[0-2])-([1-9]|[1-2]\d|3[0-1]) (1?\d|2[0-3]):(\d|[1-5]\d):(\d|[1-5]\d)' > Date.java
+../regexp2dfa Java time '\{"time":"\d{13}:\d{3}","\w{1,20}":\{("\w{1,25}":"\w{1,30}",?)+\}\}' > Time.java

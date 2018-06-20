@@ -2,9 +2,10 @@ open HolKernel boolLib bossLib Parse stringTheory arithmeticTheory
      finite_mapTheory pred_setTheory bagTheory pairTheory relationTheory
      prim_recTheory apply_piTheory ntermTheory nsubstTheory nwalkTheory
      nwalkstarTheory nomsetTheory listTheory dis_setTheory ramanaLib
-     monadsyntax ntermLib
+     ntermLib
 
 val _ = new_theory "nunifDef"
+val _ = monadsyntax.temp_add_monadsyntax()
 val _ = metisTools.limit :=  { time = NONE, infs = SOME 5000 }
 
 val nvR_update = Q.prove(
@@ -158,7 +159,7 @@ Q.ABBREV_TAC `f2 = \n. FST (SND (f n))` THEN
 Q.ABBREV_TAC `f3 = \n. SND (SND (f n))` THEN
 `!n. SND (SND (f n)) = f3 n` by SRW_TAC [][Abbr`f3`] THEN
 FULL_SIMP_TAC (srw_ss()) [] THEN
-REPEAT (Q.PAT_ASSUM `Abbrev B` (K ALL_TAC)) THEN
+REPEAT (Q.PAT_X_ASSUM `Abbrev B` (K ALL_TAC)) THEN
 `!m n. m < n ==>
      sysvars (f1 n) (f2 n) (f3 n) ⊆ sysvars (f1 m) (f2 m) (f3 m)`
   by (Induct THENL
@@ -226,7 +227,7 @@ val nwalkstar_subpair = Q.store_thm(
   npair_count (nwalkstar s t1d) < npair_count (nwalkstar s t1)`,
 SRW_TAC [][nwalk_def] THEN
 Cases_on `t1` THEN
-Q.PAT_ASSUM `nwfs s` ASSUME_TAC THEN
+Q.PAT_X_ASSUM `nwfs s` ASSUME_TAC THEN
 FULL_SIMP_TAC (srw_ss()) [nvwalk_case_thms] THEN
 FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [])
 
@@ -236,7 +237,7 @@ val nwalkstar_subtie = Q.store_thm(
   npair_count (nwalkstar s t1a) < npair_count (nwalkstar s t1)`,
 SRW_TAC [][nwalk_def] THEN
 Cases_on `t1` THEN
-Q.PAT_ASSUM `nwfs s` ASSUME_TAC THEN
+Q.PAT_X_ASSUM `nwfs s` ASSUME_TAC THEN
 FULL_SIMP_TAC (srw_ss()) [nvwalk_case_thms] THEN
 FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [])
 
@@ -255,7 +256,7 @@ val sysvars_SUBSET_pairs = Q.store_thm(
  sysvars s t1d t2d SUBSET sysvars s t1 t2`,
 SRW_TAC [][nwalk_def,sysvars_def] THEN
 Cases_on `t1` THEN Cases_on `t2` THEN
-Q.PAT_ASSUM `nwfs s` ASSUME_TAC THEN
+Q.PAT_X_ASSUM `nwfs s` ASSUME_TAC THEN
 FULL_SIMP_TAC (srw_ss()) [nvwalk_case_thms] THEN
 METIS_TAC [nvars_nvwalk_SUBSET_FRANGE, lemp, SUBSET_TRANS,SUBSET_UNION])
 
@@ -272,7 +273,7 @@ val sysvars_SUBSET_ties = Q.store_thm(
  sysvars s t1a t2a SUBSET sysvars s t1 t2`,
 SRW_TAC [][nwalk_def,sysvars_def] THEN
 Cases_on `t1` THEN Cases_on `t2` THEN
-Q.PAT_ASSUM `nwfs s` ASSUME_TAC THEN
+Q.PAT_X_ASSUM `nwfs s` ASSUME_TAC THEN
 FULL_SIMP_TAC (srw_ss()) [nvwalk_case_thms] THEN
 METIS_TAC [nvars_nvwalk_SUBSET_FRANGE,lemt,SUBSET_TRANS,SUBSET_UNION]);
 
@@ -382,7 +383,7 @@ SRW_TAC [][] THENL [
 
 fun tac1 t1a t2a =
 Cases_on t1a THEN
-Q.PAT_ASSUM `nwfs s` ASSUME_TAC THEN
+Q.PAT_X_ASSUM `nwfs s` ASSUME_TAC THEN
 FULL_SIMP_TAC (srw_ss()) [nvwalk_case_thms] THEN
 SRW_TAC [][sysvars_def] THENL [
   METIS_TAC met1, METIS_TAC met1, METIS_TAC [lem1], METIS_TAC met1,
@@ -408,7 +409,7 @@ METIS_TAC ([FRANGE_FLOOKUP,o_f_FRANGE,nvars_apply_pi]@met2));
 
 fun tac2 t =
 Cases_on t THEN
-Q.PAT_ASSUM `nwfs s` ASSUME_TAC THEN
+Q.PAT_X_ASSUM `nwfs s` ASSUME_TAC THEN
 FULL_SIMP_TAC (srw_ss()) [nvwalk_case_thms] THEN
 SRW_TAC [][sysvars_def] THENL [
   METIS_TAC met1, METIS_TAC met1, METIS_TAC [lem1], METIS_TAC met1,
@@ -422,7 +423,7 @@ SRW_TAC [][sysvars_def] THENL [
 
 fun tac3 t =
 Cases_on `C` THEN
-Q.PAT_ASSUM `nwfs s` ASSUME_TAC THEN
+Q.PAT_X_ASSUM `nwfs s` ASSUME_TAC THEN
 FULL_SIMP_TAC (srw_ss()) [nvwalk_case_thms] THEN
 SRW_TAC [][sysvars_def] THENL [
   `nvars t1d SUBSET (nvars (nPair t1a t1d))` by SRW_TAC [][] THEN
@@ -448,7 +449,7 @@ SRW_TAC [][sysvars_def] THENL [
 
 fun tac5 t1 t2 =
 Cases_on t1 THEN
-Q.PAT_ASSUM `nwfs s` ASSUME_TAC THEN
+Q.PAT_X_ASSUM `nwfs s` ASSUME_TAC THEN
 FULL_SIMP_TAC (srw_ss()) [nvwalk_case_thms] THEN
 SRW_TAC [][sysvars_def] THENL [
   METIS_TAC met1, METIS_TAC met1,
@@ -501,14 +502,14 @@ val nwalkstar_subpair_FUPDATE = Q.store_thm(
 SRW_TAC [][] THEN
 `nwfs (s |+ (v,apply_pi pi t))` by METIS_TAC [nwfs_extend,nvars_nwalkstar_ignores_pi] THEN
 `s SUBMAP (s |+ (v,apply_pi pi t))` by METIS_TAC [SUBMAP_FUPDATE_EQN] THEN
-Q.PAT_ASSUM `nwfs s` ASSUME_TAC THEN
+Q.PAT_X_ASSUM `nwfs s` ASSUME_TAC THEN
 `nwalk (s |+ (v,apply_pi pi t)) t1 = nPair t1a t1d`
   by (Cases_on `t1` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
       (Q.MATCH_ABBREV_TAC `nvwalk sx pn n = nPair t1a t1d` THEN
        Q_TAC SUFF_TAC `nvwalk s pn n = nvwalk sx pn n` THEN1 SRW_TAC [][] THEN
        MATCH_MP_TAC (SIMP_RULE (srw_ss()) [AND_IMP_INTRO] (UNDISCH nvwalk_SUBMAP)) THEN
        SRW_TAC [][Abbr`sx`])) THEN
-Q.PAT_ASSUM `nwfs (s|+x)` ASSUME_TAC THEN
+Q.PAT_X_ASSUM `nwfs (s|+x)` ASSUME_TAC THEN
 Cases_on `t1` THEN FULL_SIMP_TAC (srw_ss()) [nwalk_def,nvwalk_case_thms] THEN
 SRW_TAC [ARITH_ss][nwalkstar_thm]
 )
@@ -569,11 +570,11 @@ STRIP_TAC THEN
 `nwfs (s |+ (v,apply_pi pi t))` by METIS_TAC [nwfs_extend,nvars_nwalkstar_ignores_pi] THEN
 `s SUBMAP (s|+(v,apply_pi pi t))` by METIS_TAC [SUBMAP_FUPDATE_EQN] THEN
 Q.MATCH_ASSUM_RENAME_TAC `nwalk s tt = Sus p v` THEN
-Q.PAT_ASSUM `nwalk s tt = Sus p v`  MP_TAC THEN
+Q.PAT_X_ASSUM `nwalk s tt = Sus p v`  MP_TAC THEN
 Cases_on `tt` THEN SRW_TAC [][nwalk_def] THENL [
   Cases_on `nwalk s t2` THEN Cases_on `t2`,
   Cases_on `nwalk s t1` THEN Cases_on `t1` ] THEN
-Q.PAT_ASSUM `nwfs s` ASSUME_TAC THEN
+Q.PAT_X_ASSUM `nwfs s` ASSUME_TAC THEN
 FULL_SIMP_TAC (srw_ss()) [nwalk_def,nvwalk_case_thms] THEN
 ASM_SIMP_TAC (srw_ss()) [uP_def,sysvars_def] THEN
 METIS_TAC (lem5::met1))
@@ -700,7 +701,7 @@ THEN ASM_SIMP_TAC (srw_ss()) [] THENL [
     MATCH_MP_TAC (SIMP_RULE (srw_ss()) [] (Q.INST[`t`|->`Sus l' n'`] uP_subterm_FUPDATE)) THEN
     SRW_TAC [][] THENL [
       METIS_TAC [nwalk_to_var],
-      Q.PAT_ASSUM `nwfs s` ASSUME_TAC THEN
+      Q.PAT_X_ASSUM `nwfs s` ASSUME_TAC THEN
       Cases_on `t2` THEN
       FULL_SIMP_TAC (srw_ss()) [nwalk_def] THEN
       IMP_RES_TAC nvwalk_to_var THEN

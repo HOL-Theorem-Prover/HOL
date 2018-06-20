@@ -1,0 +1,6 @@
+# -*- mode: snippet -*-
+# name: Perform induction on first variable behind universal quantifier
+# key: Induct
+# expand-env: ((yas-indent-line 'fixed))
+# --
+Induct

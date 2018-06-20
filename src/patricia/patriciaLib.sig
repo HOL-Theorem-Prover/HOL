@@ -50,10 +50,10 @@ sig
   val ptree_of_strings     : string list -> term_ptree
 
   val custom_pp_term_ptree :
-    (ppstream -> bool -> unit) -> (ppstream -> num * term -> unit) -> int ->
-    ppstream -> term_ptree -> unit
+    bool PP.pprinter -> (num * term) PP.pprinter -> int ->
+    term_ptree PP.pprinter
 
-  val pp_term_ptree : ppstream -> term_ptree -> unit
+  val pp_term_ptree : term_ptree PP.pprinter
 
   val PTREE_PEEK_CONV         : conv
   val PTREE_ADD_CONV          : conv

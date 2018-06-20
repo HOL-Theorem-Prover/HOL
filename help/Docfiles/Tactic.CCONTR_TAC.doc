@@ -3,23 +3,23 @@
 \TYPE {CCONTR_TAC : tactic}
 
 \SYNOPSIS
-Prepares for a proof by Classical contradiction.
+Assumes the negation of the conclusion of a goal.
 
 \KEYWORDS
 tactic, contradiction.
 
 \DESCRIBE
-{CCONTR_TAC} takes a theorem {A' |- F} and completely solves the goal.
-This is an invalid tactic unless {A'} is a subset of {A}.
+Given a goal {A ?- t}, {CCONTR_TAC} makes a new goal which is to prove {F}
+by assuming also the negation of the conclusion {t}.
 {
-    A ?- t
-   ========  CCONTR_TAC (A' |- F)
-
+     A ?- t
+   ==========
+   A, -t ?- F
 }
 
 
 \FAILURE
-Fails unless the theorem is contradictory, i.e. has {F} as its conclusion.
+Never fails
 
 \SEEALSO
 Tactic.CHECK_ASSUME_TAC, Thm.CCONTR, Drule.CONTRAPOS, Thm.NOT_ELIM.

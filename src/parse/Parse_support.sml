@@ -15,20 +15,16 @@ val ERRORloc = mk_HOL_ERRloc "Parse_support";
        Parsing environments
  ---------------------------------------------------------------------------*)
 
-type env = {scope : (string * pretype) list,
-            free  : (string * pretype) list,
-            uscore_cnt : int};
+open Parse_supportENV
 
 fun lookup_fvar(s,({free,...}:env)) = assoc s free;
 fun lookup_bvar(s,({scope,...}:env)) = assoc s scope;
-fun add_free(b,{scope,free,uscore_cnt}) =
-    {scope=scope, free=b::free, uscore_cnt = uscore_cnt}
-fun add_scope(b,{scope,free,uscore_cnt}) = {scope=b::scope, free=free,
-                                            uscore_cnt = uscore_cnt};
-fun new_uscore {scope,free,uscore_cnt} =
-    {scope = scope, free = free, uscore_cnt = uscore_cnt + 1}
-
-val empty_env = {scope=[], free=[], uscore_cnt = 0};
+fun add_free(b,{scope,free,uscore_cnt,ptyE}) =
+    {scope=scope, free=b::free, uscore_cnt = uscore_cnt, ptyE = ptyE}
+fun add_scope(b,{scope,free,uscore_cnt,ptyE}) =
+  {scope=b::scope, free=free, uscore_cnt = uscore_cnt, ptyE = ptyE};
+fun new_uscore {scope,free,uscore_cnt,ptyE} =
+    {scope = scope, free = free, uscore_cnt = uscore_cnt + 1, ptyE = ptyE}
 
 type preterm_in_env = env -> Preterm.preterm * env
 
@@ -52,68 +48,74 @@ type binder_in_env = string -> bvar_in_env
  * Top level parse terms                                                     *
  *---------------------------------------------------------------------------*)
 
-fun make_preterm tm_in_e = fst(tm_in_e empty_env)
+fun make_preterm (tm_in_e : preterm_in_env) =
+  fn e => let
+    val (pt, env:env) = tm_in_e (fupd_ptyE (K e) empty_env)
+  in
+    errormonad.Some(#ptyE env, pt)
+  end
 
 (*---------------------------------------------------------------------------*
  *       Antiquotes                                                          *
  *---------------------------------------------------------------------------*)
 
-fun make_aq l tm (e as {scope,free,...}:env) = let
-  open Term Preterm
-  fun from ltm (E as (lscope,scope,free)) =
-    case ltm of
-      VAR (v as (Name,Ty)) => let
-        val pty = Pretype.fromType Ty
-        val v' = {Name=Name, Ty=pty, Locn=l}
-      in
-        if mem v' lscope then (Var v', E)
-        else
-          case assoc1 Name scope of
-            SOME(_,ntv) => (Constrained{Ptm=Var{Name=Name,Ty=ntv,Locn=l},
-                                        Ty=pty, Locn=l}, E)
-          | NONE => let
+fun make_aq l tm (e:env) =
+  let
+    open errormonad
+    fun traverse localbvs t e =
+      case dest_term t of
+          VAR(nm, ty) =>
+          if HOLset.member(localbvs, t) then e
+          else
+            let
+              val pty = Pretype.fromType ty
             in
-              case assoc1 Name free of
-                NONE => (Var v', (lscope,scope, (Name,pty)::free))
-              | SOME(_,ntv) => (Constrained{Ptm=Var{Name=Name,Ty=ntv,Locn=l},
-                                            Ty=pty,Locn=l}, E)
+              case assoc1 nm (#scope e) of
+                  NONE =>
+                  (case assoc1 nm (#free e) of
+                       NONE => fupd_free (cons (nm,pty)) e
+                     | SOME (_, pty') =>
+                       case Pretype.unify pty pty' (#ptyE e) of
+                           Some(ptyE', ()) => fupd_ptyE (K ptyE') e
+                         | Error e => raise AQincompat{
+                                       nm = nm, aqty = ty, loc = l, fv = true,
+                                       unify_error = e })
+               | SOME (_, pty') =>
+                 (case Pretype.unify pty pty' (#ptyE e) of
+                      Some(ptyE', ()) => fupd_ptyE (K ptyE') e
+                    | Error e => raise AQincompat {
+                                  nm = nm, aqty = ty, loc = l, fv = false,
+                                  unify_error = e })
             end
-      end
-    | CONST{Name,Thy,Ty} => (Const{Name=Name,Thy=Thy,Ty=Pretype.fromType Ty,
-                                   Locn=l},E)
-    | COMB(Rator,Rand)   => let
-        val (ptm1,E1) = from (dest_term Rator) E
-        val (ptm2,E2) = from (dest_term Rand) E1
-      in
-        (Comb{Rator=ptm1, Rand=ptm2, Locn=l}, E2)
-      end
-    | LAMB(Bvar,Body) => let
-        val (s,ty) = dest_var Bvar
-        val v' = {Name=s, Ty = Pretype.fromType ty, Locn=l}
-        val (Body',(_,_,free')) = from (dest_term Body)
-                                       (v'::lscope, scope, free)
-      in
-        (Abs{Bvar=Var v', Body=Body', Locn=l}, (lscope,scope,free'))
-      end
-  val (ptm, (_,_,free)) = from (dest_term tm) ([],scope,free)
-in
-  (ptm, {scope=scope,free=free,uscore_cnt = #uscore_cnt e})
-end;
-
+        | CONST _ => e
+        | COMB(f,x) => traverse localbvs x (traverse localbvs f e)
+        | LAMB(bv, bod) => traverse (HOLset.add(localbvs,bv)) bod e
+  in
+    (Preterm.Antiq{Tm = tm, Locn = l}, traverse empty_tmset tm e)
+  end
 
 (*---------------------------------------------------------------------------*
  * Generating fresh constant instances                                       *
  *---------------------------------------------------------------------------*)
 
-fun gen_thy_const l (thy,s) = let
+fun ptylift (m : 'a Pretype.in_env) (e : env) : 'a * env =
+  let
+    open errormonad
+    val {scope,free,uscore_cnt,ptyE} = e
+  in
+    case m ptyE of
+      Error e => raise typecheck_error.mkExn e
+    | Some (e', a) => (a, {scope=scope,free=free,uscore_cnt=uscore_cnt,ptyE=e'})
+  end
+
+
+fun gen_thy_const l (thy,s) E = let
   open Term
   val c = prim_mk_const{Name=s, Thy=thy}
+  val ptym = type_of c |> Pretype.fromType |> Pretype.rename_typevars []
+  val (pty,E') = ptylift ptym E
 in
-  Preterm.Const {Name=s,
-                 Thy=thy,
-                 Locn=l,
-                 Ty=Pretype.rename_typevars []
-                                            (Pretype.fromType (type_of c))}
+  (Preterm.Const {Name=s, Thy=thy, Locn=l, Ty=pty}, E')
 end
 
 (*---------------------------------------------------------------------------
@@ -122,11 +124,11 @@ end
 
 fun make_binding_occ l s E = let
   open Preterm
-  val ntv = Pretype.new_uvar()
-  val E' = add_scope((s,ntv),E)
+  val (ntv,E') = ptylift Pretype.new_uvar E
+  val E'' = add_scope((s,ntv),E')
 in
   ((fn b => Abs{Bvar=Var{Name=s, Ty=ntv, Locn=l},Body=b,
-                Locn=locn.near (Preterm.locn b)}), E')
+                Locn=locn.near (Preterm.locn b)}), E'')
 end
 
 fun make_aq_binding_occ l aq E = let
@@ -153,9 +155,9 @@ end
 fun make_free_var l (s,E) = let
   open Preterm
   fun fresh (s,E) = let
-    val tyv = Pretype.new_uvar()
+    val (tyv, E') = ptylift Pretype.new_uvar E
   in
-    (Var{Name = s, Ty = tyv, Locn = l}, add_free((s,tyv), E))
+    (Var{Name = s, Ty = tyv, Locn = l}, add_free((s,tyv), E'))
   end
 in
   if all_uscores s then fresh ("_"^Int.toString (#uscore_cnt E), new_uscore E)
@@ -173,19 +175,19 @@ fun make_bvar l (s,E) = (Preterm.Var{Name=s, Ty=lookup_bvar(s,E), Locn=l}, E);
      Treatment of overloaded identifiers
  ---------------------------------------------------------------------- *)
 
-fun gen_overloaded_const oinfo l s =
- let open Overload
-     val opinfo = valOf (info_for_name oinfo s)
+fun gen_overloaded_const oinfo l s E =
+ let
+   open Overload Pretype
+   val opinfo = valOf (info_for_name oinfo s)
          handle Option => raise Fail "gen_overloaded_const: invariant failure"
  in
   case #actual_ops opinfo of
-    [t] => let
-    in
+    [t] =>
       if is_const t then let
           val {Name,Thy,Ty} = dest_thy_const t
+          val (pty, E') = ptylift (rename_typevars [] (fromType Ty)) E
         in
-          Preterm.Const{Name=Name, Thy=Thy, Locn=l,
-                        Ty=Pretype.rename_typevars [] (Pretype.fromType Ty)}
+          (Preterm.Const{Name=Name, Thy=Thy, Locn=l, Ty = pty}, E')
         end
       else let
           val fvs = free_vars t
@@ -193,17 +195,17 @@ fun gen_overloaded_const oinfo l s =
                                                            acc)
                                  []
                                  fvs
+          val (ptm, E') =
+              ptylift (Preterm.term_to_preterm (map dest_vartype tyfvs) t) E
         in
-          Preterm.Pattern{Ptm = Preterm.term_to_preterm
-                                  (map dest_vartype tyfvs) t,
-                          Locn = l}
+          (Preterm.Pattern{Ptm = ptm, Locn = l}, E')
         end
-    end
   | otherwise => let
-      val base_pretype0 = Pretype.fromType (#base_type opinfo)
-      val new_pretype = Pretype.rename_typevars [] base_pretype0
+      val base_pretype0 = fromType (#base_type opinfo)
+      val (new_pretype, E') = ptylift (rename_typevars [] base_pretype0) E
     in
-      Preterm.Overloaded{Name = s, Ty = new_pretype, Info = opinfo, Locn = l}
+      (Preterm.Overloaded{Name = s, Ty = new_pretype, Info = opinfo, Locn = l},
+       E')
     end
  end
 
@@ -290,13 +292,12 @@ end (* local *)
     treated as visible.
  ---------------------------------------------------------------------------*)
 
-fun make_qconst l (p as (thy,s)) E = (gen_thy_const l p, E);
+fun make_qconst l (p as (thy,s)) = gen_thy_const l p
 
 fun make_atom oinfo l s E =
  make_bvar l (s,E) handle HOL_ERR _
   =>
-  if Overload.is_overloaded oinfo s then
-    (gen_overloaded_const oinfo l s, E)
+  if Overload.is_overloaded oinfo s then gen_overloaded_const oinfo l s E
   else
     case List.find (fn rfn => String.isPrefix rfn s)
                    [recsel_special, recupd_special, recfupd_special] of
@@ -353,9 +354,9 @@ fun bind_term _ alist tm (E as {scope=scope0,...}:env) : (preterm*env) = let
     (e', f o g)
   end
   val (E',F) = rev_itlist itthis alist (E,I)
-  val (tm',({free=free1,uscore_cnt=uc',...}:env)) = tm E'
+  val (tm',({free=free1,uscore_cnt=uc',ptyE,...}:env)) = tm E'
 in
-  (F tm', {scope=scope0,free=free1,uscore_cnt=uc'})
+  (F tm', {scope=scope0,free=free1,uscore_cnt=uc',ptyE=ptyE})
 end
 
 
@@ -414,9 +415,9 @@ fun make_vstruct oinfo l bvl tyo E = let
     | loop ((v::rst),E) = let
         val (f,e) = v E
         val (F,E') = loop(rst,e)
+        val (uc_t, E'') = gen_overloaded_const oinfo l "UNCURRY" E'
       in
-        ((fn b => Comb{Rator=gen_overloaded_const oinfo l "UNCURRY",
-                       Rand=f(F b),Locn=l}), E')
+        ((fn b => Comb{Rator=uc_t, Rand=f(F b),Locn=l}), E'')
       end
     | loop _ = raise ERRORloc "make_vstruct" l "impl. error, empty vstruct"
 in
@@ -441,16 +442,20 @@ fun make_let oinfo l bindings tm (env:env) = let
   val {body_bvars, args, E} =
       itlist itthis bindings {body_bvars=[], args=[], E=env}
   val (core,E') = bind_term l body_bvars tm E
+  fun rev_itthis arg (core, E) =
+    let
+      val (let_t, E') = gen_overloaded_const oinfo l "LET" E
+    in
+      (Comb{Rator= Comb{Rator=let_t, Rand=core,Locn=l},Rand=arg,Locn=l},
+       E')
+    end
 in
-  ( rev_itlist (fn arg => fn core =>
-            Comb{Rator=Comb{Rator=gen_overloaded_const oinfo l "LET",
-                            Rand=core,Locn=l},Rand=arg,Locn=l})
-           args core, E')
+  rev_itlist rev_itthis args (core, E')
 end
     handle HOL_ERR _ => raise ERRORloc "make_let" l "bad let structure";
 
 fun make_set_const oinfo l fname s E =
- (gen_overloaded_const oinfo l s, E)
+ gen_overloaded_const oinfo l s E
   handle HOL_ERR _
     => raise ERRORloc fname l ("The theory "^Lib.quote "pred_set"^" is not loaded");
 
@@ -466,34 +471,42 @@ fun make_set_const oinfo l fname s E =
  * Warning: apt not to work if you want to "antiquote in" free variables that
  * will subsequently get bound in the set abstraction.
  *---------------------------------------------------------------------------*)
+fun update_ptyE (old:env) = fupd_ptyE (K (#ptyE old))
 
 fun make_set_abs oinfo l (tm1,tm2) (E as {scope=scope0,...}:env) = let
-  val (_,(e1:env)) = tm1 empty_env
-  val (_,(e2:env)) = tm2 empty_env
-  val (_,(e3:env)) = tm2 e1
+  val (_,(e1:env)) = tm1 (update_ptyE E empty_env)
+                     (* used to find names of free vars in tm1, but is also
+                        the basis for calculating the bound vars in the final
+                        preterm so we need its pty-env to be accurate *)
+  val (_,(e2:env)) = tm2 empty_env (* only used to get 2nd set of free vars *)
+  val (_,(e3:env)) = tm2 e1 (* link types and get complete set of free vars *)
   val tm1_fv_names = map fst (#free e1)
   val tm2_fv_names = map fst (#free e2)
   val fv_names = if null tm1_fv_names then tm2_fv_names else
                  if null tm2_fv_names then tm1_fv_names else
                  intersect tm1_fv_names tm2_fv_names
-  val init_fv = #free e3
+  val init_fv = #free e3 (* candidate bound names *)
 in
   case filter (fn (name,_) => mem name fv_names) init_fv of
     [] => raise ERRORloc "make_set_abs" l "no free variables in set abstraction"
-  | quants => let
+  | quants =>
+    let
+      open Preterm
       val quants' = map
                       (fn (bnd as (Name,Ty)) =>
                           fn E =>
-                             ((fn b => Preterm.Abs{Bvar=Preterm.Var{Name=Name,Ty=Ty,Locn=l(*ugh*)},
-                                                   Body=b, Locn=l}),
+                             ((fn b => Abs{Bvar=Var{Name=Name,Ty=Ty,Locn=l},
+                                           Body=b, Locn=l}),
                               add_scope(bnd,E)))
                       (rev quants) (* make_vstruct expects reverse occ. order *)
-      fun comma E = (gen_overloaded_const oinfo l ",", E)
+      fun comma E = gen_overloaded_const oinfo l "," E
     in
       list_make_comb l
                      [(make_set_const oinfo l "make_set_abs" "GSPEC"),
-                      (bind_term l [make_vstruct oinfo l quants' NONE]
-                                 (list_make_comb l [comma,tm1,tm2]))] E
+                      (bind_term l
+                                 [make_vstruct oinfo l quants' NONE]
+                                 (list_make_comb l [comma,tm1,tm2]))]
+                     (update_ptyE e3 E)
     end
 end
 
@@ -504,15 +517,18 @@ end
    ---------------------------------------------------------------------- *)
 
 fun make_case_arrow oinfo loc tm1 tm2 (E : env) = let
-  val (ptm1, e1 : env) = tm1 empty_env
-  val arr = gen_overloaded_const oinfo loc GrammarSpecials.case_arrow_special
+  val (ptm1, e1 : env) = tm1 (fupd_ptyE (K (#ptyE E)) empty_env)
+  val (arr, E') =
+      make_qconst loc
+                  ("bool", GrammarSpecials.case_arrow_special)
+                  (fupd_ptyE (K (#ptyE e1)) E)
   fun mk_bvar (bv as (n,ty)) E = ((fn t => t), add_scope(bv,E))
   val qs = map mk_bvar (#free e1)
-  val (ptm2, E') = bind_term loc qs tm2 E
+  val (ptm2, E'') = bind_term loc qs tm2 E'
 in
   (Preterm.Comb{Rator = Preterm.Comb{Locn=loc,Rator = arr, Rand = ptm1},
                 Rand = ptm2,
-                Locn = loc}, E')
+                Locn = loc}, E'')
 end
 
 

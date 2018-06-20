@@ -56,7 +56,7 @@ val BUSY_WAIT_LEM = prove(
   NTAC 2 STRIP_TAC
     \\ REWRITE_TAC [BUSY_WAIT_def,BUSY_WAIT_DONE_def,CP_INTERRUPT_def]
     \\ STRIP_TAC \\ IMP_RES_TAC whileTheory.LESS_LEAST \\ POP_ASSUM MP_TAC
-    \\ PAT_ASSUM `~IS_RESET i t` MP_TAC
+    \\ PAT_X_ASSUM `~IS_RESET i t` MP_TAC
     \\ SIMP_TAC std_ss [IS_RESET_def,IS_BUSY_def,IS_ABSENT_def,IS_ABORT_def,
          IS_IRQ_def,IS_FIQ_def]
     \\ Cases_on `(t = 0)`
@@ -114,8 +114,8 @@ val COPROC_BUSY_WAIT = store_thm("COPROC_BUSY_WAIT",
          `t < 1 + BUSY_WAIT (onfq,ooonfq,oniq,oooniq,f,i,pipebabt) inp /\
           t < BUSY_WAIT (onfq,ooonfq,oniq,oooniq,f,i,pipebabt) inp`
       by SIMP_TAC arith_ss [th])
-    \\ PAT_ASSUM `!x. a ==> b` IMP_RES_TAC
-    \\ PAT_ASSUM `a ==> b` IMP_RES_TAC
+    \\ PAT_X_ASSUM `!x. a ==> b` IMP_RES_TAC
+    \\ PAT_X_ASSUM `a ==> b` IMP_RES_TAC
     \\ SIMP_TAC arith_ss []
     \\ ASM_SIMP_TAC (std_ss++STATE_INP_ss) [FUNPOW_SUC]
     \\ POP_ASSUM (K ALL_TAC)
@@ -165,7 +165,7 @@ val BUSY_WAIT_COR = prove(
   NTAC 2 STRIP_TAC
     \\ SIMP_TAC std_ss [STRM_ARM6_def,BUSY_WAIT_DONE_def,IN_DEF,IS_RESET_def,
          IS_ABSENT_def,IS_BUSY_def,IS_ABORT_def]
-    \\ STRIP_TAC \\ PAT_ASSUM `!t. PROJ_CPA (i t) ==> PROJ_CPB (i t)`
+    \\ STRIP_TAC \\ PAT_X_ASSUM `!t. PROJ_CPA (i t) ==> PROJ_CPB (i t)`
          (SPEC_THEN `t` ASSUME_TAC)
     \\ Cases_on `t = 0` \\ FULL_SIMP_TAC std_ss []
     << [Cases_on_arm6inp `i 0`,  Cases_on_arm6inp `i (t:num)`]
@@ -426,12 +426,12 @@ val LDC_STC_THM = store_thm("LDC_STC_THM",
     by ASM_SIMP_TAC std_ss [Abbr`w`,markerTheory.Abbrev_def]
     \\ IMP_RES_TAC lem2
     \\ RES_MP_TAC [`w:num` |-> `w':num`] COPROC_BUSY_WAIT2
-    \\ PAT_ASSUM `p + (1 + d) = t` (SUBST_ALL_TAC o SYM)
+    \\ PAT_X_ASSUM `p + (1 + d) = t` (SUBST_ALL_TAC o SYM)
     \\ ONCE_REWRITE_TAC [onestepTheory.FUNPOW_COMP]
     \\ markerLib.RM_ABBREV_TAC "w'"
-    \\ PAT_ASSUM `w' = 1 + d`
+    \\ PAT_X_ASSUM `w' = 1 + d`
          (fn th => (SUBST_ALL_TAC o SYM) th \\ (ASSUME_TAC o Abbrev_wrap) th)
-    \\ PAT_ASSUM `FUNPOW (SNEXT NEXT_ARM6) w' x = q` SUBST1_TAC
+    \\ PAT_X_ASSUM `FUNPOW (SNEXT NEXT_ARM6) w' _ = _` SUBST1_TAC
     \\ ASM_SIMP_TAC std_ss []
     \\ Induct_on `p` >> FULL_SIMP_TAC arith_ss []
     \\ REPEAT STRIP_TAC
@@ -454,7 +454,7 @@ val LDC_STC_THM = store_thm("LDC_STC_THM",
         \\ CONV_TAC (DEPTH_CONV EXISTS_AND_REORDER_CONV)
         \\ FINISH_OFF3,
       `w' < p + w' /\ p + w' <= w` by DECIDE_TAC
-        \\ PAT_ASSUM `q ==> r ==> s` IMP_RES_TAC
+        \\ PAT_X_ASSUM `q ==> r ==> s` IMP_RES_TAC
         \\ ASM_SIMP_TAC (std_ss++STATE_INP_ss) [FUNPOW_SUC]
         \\ POP_ASSUM (K ALL_TAC)
         \\ ASM_SIMP_TAC (arith_ss++STATE_INP_ss)

@@ -8,14 +8,6 @@ open HolKernel boolLib Parse bossLib simpLib listTheory
 
 val _ = new_theory "EncodeVar";
 
-infixr 0 ++ || <<;
-infix 1 >>;
-
-val op ++ = op THEN;
-val op >> = op THEN1;
-val op << = op THENL;
-val op || = op ORELSE;
-
 val Suff = Q_TAC SUFF_TAC;
 val Know = Q_TAC KNOW_TAC;
 
@@ -44,8 +36,8 @@ val fixed_width_univ = store_thm
        ((!x. domain c x ==> phi x) =
         !w :: of_length n. phi (decoder c w))``,
    RW_TAC bool_ss [RES_FORALL_THM, fixed_width_def, of_length_def]
-   ++ REPEAT (STRIP_TAC ORELSE EQ_TAC)
-   ++ PROVE_TAC [wf_coder, wf_coder_closed]);
+   >> REPEAT (STRIP_TAC ORELSE EQ_TAC)
+   >> PROVE_TAC [wf_coder, wf_coder_closed]);
 
 val of_length_univ_suc = store_thm
   ("of_length_univ_suc",
@@ -73,8 +65,8 @@ val fixed_width_exists = store_thm
        ((?x. domain c x /\ phi x) =
         ?w :: of_length n. phi (decoder c w))``,
    RW_TAC bool_ss [RES_EXISTS_THM, fixed_width_def, of_length_def]
-   ++ REPEAT (STRIP_TAC ORELSE EQ_TAC)
-   ++ PROVE_TAC [wf_coder, wf_coder_closed]);
+   >> REPEAT (STRIP_TAC ORELSE EQ_TAC)
+   >> PROVE_TAC [wf_coder, wf_coder_closed]);
 
 val of_length_exists_suc = store_thm
   ("of_length_exists_suc",
@@ -129,13 +121,13 @@ val fixed_width_prod = store_thm
        fixed_width n1 c1 /\ fixed_width n2 c2 ==>
        fixed_width (n1 + n2) (prod_coder c1 c2)``,
    REPEAT GEN_TAC
-   ++ Know `?p1 e1 d1. c1 = (p1, e1, d1)` >> PROVE_TAC [pairTheory.ABS_PAIR_THM]
-   ++ Know `?p2 e2 d2. c2 = (p2, e2, d2)` >> PROVE_TAC [pairTheory.ABS_PAIR_THM]
-   ++ RW_TAC std_ss []
-   ++ REPEAT (POP_ASSUM MP_TAC)
-   ++ RW_TAC std_ss [fixed_width_def, prod_coder_def, domain_def, encoder_def]
-   ++ Cases_on `x`
-   ++ FULL_SIMP_TAC std_ss [lift_prod_def, encode_prod_def, LENGTH_APPEND]);
+   >> Know `?p1 e1 d1. c1 = (p1, e1, d1)` >- PROVE_TAC [pairTheory.ABS_PAIR_THM]
+   >> Know `?p2 e2 d2. c2 = (p2, e2, d2)` >- PROVE_TAC [pairTheory.ABS_PAIR_THM]
+   >> RW_TAC std_ss []
+   >> REPEAT (POP_ASSUM MP_TAC)
+   >> RW_TAC std_ss [fixed_width_def, prod_coder_def, domain_def, encoder_def]
+   >> Cases_on `x`
+   >> FULL_SIMP_TAC std_ss [lift_prod_def, encode_prod_def, LENGTH_APPEND]);
 
 (*---------------------------------------------------------------------------
         Sums
@@ -147,13 +139,13 @@ val fixed_width_sum = store_thm
        fixed_width n c1 /\ fixed_width n c2 ==>
        fixed_width (SUC n) (sum_coder c1 c2)``,
    REPEAT GEN_TAC
-   ++ Know `?p1 e1 d1. c1 = (p1, e1, d1)` >> PROVE_TAC [pairTheory.ABS_PAIR_THM]
-   ++ Know `?p2 e2 d2. c2 = (p2, e2, d2)` >> PROVE_TAC [pairTheory.ABS_PAIR_THM]
-   ++ RW_TAC std_ss []
-   ++ REPEAT (POP_ASSUM MP_TAC)
-   ++ RW_TAC std_ss [fixed_width_def, sum_coder_def, domain_def, encoder_def]
-   ++ Cases_on `x`
-   ++ FULL_SIMP_TAC std_ss [lift_sum_def, encode_sum_def, LENGTH]);
+   >> Know `?p1 e1 d1. c1 = (p1, e1, d1)` >- PROVE_TAC [pairTheory.ABS_PAIR_THM]
+   >> Know `?p2 e2 d2. c2 = (p2, e2, d2)` >- PROVE_TAC [pairTheory.ABS_PAIR_THM]
+   >> RW_TAC std_ss []
+   >> REPEAT (POP_ASSUM MP_TAC)
+   >> RW_TAC std_ss [fixed_width_def, sum_coder_def, domain_def, encoder_def]
+   >> Cases_on `x`
+   >> FULL_SIMP_TAC std_ss [lift_sum_def, encode_sum_def, LENGTH]);
 
 (*---------------------------------------------------------------------------
         Bounded numbers

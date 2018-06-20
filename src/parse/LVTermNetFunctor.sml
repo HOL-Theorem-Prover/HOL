@@ -1,13 +1,11 @@
-signature SET =
+signature LVSET =
 sig
-
   type value
-  type set
-  val empty : set
-  val insert : set * value -> set
-  val fold : (value * 'a -> 'a) -> 'a -> set -> 'a
-  val listItems : set -> value list
-
+  type t
+  val empty : t
+  val insert : t * value -> t
+  val fold : (value * 'a -> 'a) -> 'a -> t -> 'a
+  val listItems : t -> value list
 end
 
 signature LV_TERM_NET =
@@ -18,23 +16,23 @@ sig
   type term = Term.term
   type key = Term.term list * Term.term
   type value
-  type set
+  structure Set : LVSET where type value = value
 
   val empty : lvtermnet
   val insert : (lvtermnet * key * value) -> lvtermnet
-  val find : lvtermnet * key -> set
-  val peek : lvtermnet * key -> set
+  val find : lvtermnet * key -> Set.t
+  val peek : lvtermnet * key -> Set.t
   val match : lvtermnet * term -> (key * value) list
 
-  val delete : lvtermnet * key -> lvtermnet * set
+  val delete : lvtermnet * key -> lvtermnet * Set.t
   val numItems : lvtermnet -> int
   val listItems : lvtermnet -> (key * value) list
-  val app : (key * set -> unit) -> lvtermnet -> unit
+  val app : (key * Set.t -> unit) -> lvtermnet -> unit
   val fold : (key * value * 'b -> 'b) -> 'b -> lvtermnet -> 'b
 
 end
 
-functor LVTermNetFunctor(S : SET) : LV_TERM_NET =
+functor LVTermNetFunctor(S : LVSET) : LV_TERM_NET =
 struct
 
 open HolKernel
@@ -45,7 +43,7 @@ datatype label = V of int
                | LV of string * int
 type key = term list * term
 type value = S.value
-type set = S.set
+structure Set = S
 
 val tlt_compare = pair_compare (list_compare Term.compare, Term.compare)
 
@@ -65,7 +63,7 @@ fun labcmp (p as (l1, l2)) =
     | (_, Lam _) => GREATER
     | (LV p1, LV p2) => pair_compare (String.compare, Int.compare) (p1, p2)
 
-datatype N = LF of (key,S.set) Binarymap.dict
+datatype N = LF of (key,S.t) Binarymap.dict
            | ND of (label,N) Binarymap.dict
 
 type lvtermnet = N * int
@@ -78,9 +76,10 @@ fun ndest_term (fvs, tm) = let
   val args' = map (fn t => (fvs, t)) args
 in
   case dest_term f of
-    VAR(s, ty) => if mem tm fvs then (LV (s, length args), args')
+    VAR(s, ty) => if op_mem aconv f fvs then (LV (s, length args), args')
                   else (V (length args), args')
-  | LAMB(bv, bod) => (Lam (length args), (subtract fvs [bv], bod) :: args')
+  | LAMB(bv, bod) =>
+      (Lam (length args), (op_set_diff aconv fvs [bv], bod) :: args')
   | CONST{Name,Thy,Ty} => (C ({Name=Name,Thy=Thy}, length args), args')
   | COMB _ => raise Fail "impossible"
 end
@@ -173,19 +172,23 @@ fun match ((net,sz), tm) = let
                             NONE => acc
                           | SOME n => trav acc (n, ks0)
           val (lab, rest) = lookup_label k
-          val varhead_result = let
-            val n = length (#2 (strip_comb k))
+          val restn = length rest
+          val varhead_results = let
+            fun recurse acc n =
+              if n = 0 then acc
+              else
+                case Binarymap.peek (d, V n) of
+                    NONE => recurse acc (n - 1)
+                  | SOME m => recurse
+                                (trav acc (m, List.drop(rest, restn - n) @ ks0))
+                                (n - 1)
           in
-            if n = 0 then varresult
-            else
-              case Binarymap.peek (d, V n) of
-                NONE => varresult
-              | SOME n => trav varresult (n, rest @ ks0)
+            recurse varresult (length (#2 (strip_comb k)))
           end
         in
           case Binarymap.peek (d, lab) of
-            NONE => varhead_result
-          | SOME n => trav varhead_result (n, rest @ ks0)
+            NONE => varhead_results
+          | SOME n => trav varhead_results (n, rest @ ks0)
         end
       | _ => raise Fail "LVTermNet.match: catastrophic invariant failure"
 in

@@ -63,6 +63,7 @@ sig
 
   (* subscripts *)
   val sub_plus : string
+  val sub_r : string
 
   (* arrows *)
   val rightarrow : string
@@ -133,6 +134,9 @@ sig
   val setelementof : string
   val not_elementof : string
   val universal_set : string
+
+  (* other operators *)
+  val doubleplus : string
 
   (* wordsTheory *)
   val lo : string

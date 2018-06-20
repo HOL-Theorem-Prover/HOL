@@ -2,7 +2,7 @@ val _ = PolyML.Compiler.prompt1:="";
 val _ = PolyML.Compiler.prompt2:="";
 val _ = PolyML.print_depth 0;
 
-use "filter.sml";
+use "../Holmake/QuoteFilter.sml";
 open OS.Process
 
 fun read_from_stream is n = TextIO.input is
@@ -38,16 +38,19 @@ fun main() = let
 (* with many thanks to Ken Friis Larsen, Peter Sestoft, Claudio Russo and
    Kenn Heinrich who helped me see the light with respect to this code *)
 
-  open filter.UserDeclarations
-  val state as QFS args =
-      newstate ((fn s => TextIO.output(outstream, s)),
-                (fn () => TextIO.flushOut outstream))
+  open QuoteFilter.UserDeclarations
+  val state as QFS args = newstate true
 
-  fun loop() = let
-    val lexer = filter.makeLexer (read_from_stream instream) state
-  in
-    lexer() handle Interrupt => (resetstate state; loop())
-  end
+  fun loop() =
+    let
+      val lexer = QuoteFilter.makeLexer (read_from_stream instream) state
+      fun coreloop () =
+        case lexer() of
+            "" => ()
+          | s => (TextIO.output(outstream, s); coreloop())
+    in
+      coreloop() handle Interrupt => (resetstate state; loop())
+    end
 in
   loop();
   TextIO.closeOut outstream;

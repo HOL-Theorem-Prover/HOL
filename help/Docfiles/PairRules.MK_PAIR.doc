@@ -1,6 +1,6 @@
 \DOC MK_PAIR
 
-\TYPE {MK_PAIR : thm -> thm -> thm}
+\TYPE {MK_PAIR : thm * thm -> thm}
 
 \LIBRARY
 pair

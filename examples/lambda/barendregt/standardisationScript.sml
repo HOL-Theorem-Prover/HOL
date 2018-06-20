@@ -253,7 +253,7 @@ val head_redex_preserved = store_thm(
     FULL_SIMP_TAC (srw_ss()) [labelled_redn_lam],
     `?f x. M = f @@ x` by PROVE_TAC [is_comb_APP_EXISTS] THEN
     SRW_TAC [][] THEN
-    Q.PAT_ASSUM `labelled_redn beta x y z` MP_TAC THEN
+    Q.PAT_X_ASSUM `labelled_redn beta _ _ _` MP_TAC THEN
     ONCE_REWRITE_TAC [labelled_redn_cases] THEN
     FULL_SIMP_TAC (srw_ss()) [is_head_redex_thm, beta_def] THEN
     PROVE_TAC [is_comb_thm]
@@ -964,7 +964,7 @@ val lemma11_4_4 = store_thm(
   REPEAT CONJ_TAC THEN TRY (FIRST_ASSUM ACCEPT_TAC) THENL [
     `okpath (lrcc beta0) (lift_path (last s') s2)`
        by METIS_TAC [lemma11_2_12] THEN
-    Q.PAT_ASSUM `last u = nlabel x y z` (K ALL_TAC) THEN
+    Q.PAT_X_ASSUM `last u = nlabel x y z` (K ALL_TAC) THEN
     Q_TAC SUFF_TAC
           `!s.  okpath (lrcc beta0) s /\ finite s ==>
                (!p n. p IN n_posns n (first s) ==>
@@ -1324,7 +1324,7 @@ val LAMl_ALPHA = store_thm(
        (LAMl vs M = LAMl vs' (M ISUB REVERSE (ZIP(MAP VAR vs', vs))))``,
   Induct THENL [
     SRW_TAC [][] THEN
-    Cases_on `vs'` THEN FULL_SIMP_TAC (srw_ss()) [ISUB_def],
+    FULL_SIMP_TAC (srw_ss()) [ISUB_def],
     SRW_TAC [][] THEN
     Cases_on `vs'` THEN
     FULL_SIMP_TAC (srw_ss()) [DISJ_IMP_THM, FORALL_AND_THM] THEN
@@ -1350,7 +1350,6 @@ val FRESH_lists = store_thm(
        FINITE s ==> ?l'. ALL_DISTINCT l' /\ DISJOINT (LIST_TO_SET l') s /\
                          (LENGTH l' = n)``,
   Induct THEN SRW_TAC [][] THENL [
-    Q.EXISTS_TAC `[]` THEN SRW_TAC [][],
     RES_TAC THEN
     Q_TAC (NEW_TAC "z") `LIST_TO_SET l' UNION s` THEN
     Q.EXISTS_TAC `z::l'` THEN
@@ -1463,7 +1462,7 @@ val i1_reduce_to_LAMl = prove(
     SRW_TAC [][i_reduce_to_LAM_underneath] THEN
     `DISJOINT (LIST_TO_SET vs) (FV M0)`
         by (FULL_SIMP_TAC (srw_ss()) [] THEN
-            Q.PAT_ASSUM `DISJOINT X Y` MP_TAC THEN
+            Q.PAT_X_ASSUM `DISJOINT X Y` MP_TAC THEN
             SRW_TAC [][DISJOINT_DEF, EXTENSION] THEN PROVE_TAC []) THEN
     `?M00. (M0 = LAMl vs M00) /\ M00 i_reduce1 N` by PROVE_TAC [] THEN
     PROVE_TAC [],
@@ -1683,7 +1682,7 @@ val ireduces_to_fold_app = store_thm(
       PROVE_TAC [reduction_rules, labelled_redn_cc, i_reduce1_def],
       RES_TAC THEN
       MAP_EVERY Q.EXISTS_TAC [`t0`, `args0`] THEN SRW_TAC [ARITH_ss][] THEN
-      Q.PAT_ASSUM `EVERY f l` MP_TAC THEN
+      Q.PAT_X_ASSUM `EVERY f l` MP_TAC THEN
       FULL_SIMP_TAC (srw_ss()) [] THEN
       ASM_SIMP_TAC (srw_ss() ++ ARITH_ss)
                    [listTheory.EVERY_MEM, listTheory.MEM_ZIP,
@@ -1957,7 +1956,7 @@ val nth_label_plink_right = store_thm(
   GEN_TAC THEN Q.SPEC_THEN `p1` STRUCT_CASES_TAC path_cases THEN
   SRW_TAC [][length_thm, DECIDE ``y + x <= x = (y = 0)``] THENL [
     FULL_SIMP_TAC (srw_ss()) [finite_length] THEN
-    Q.PAT_ASSUM `length x = SOME y` MP_TAC THEN
+    Q.PAT_X_ASSUM `length x = SOME y` MP_TAC THEN
     DISCH_THEN (fn th => SUBST_ALL_TAC th THEN ASSUME_TAC th) THEN
     FULL_SIMP_TAC (srw_ss()) [] THEN VAR_EQ_TAC THEN
     FULL_SIMP_TAC (srw_ss()) [length_never_zero],
@@ -2100,7 +2099,6 @@ val collect_standard_reductions = prove(
             (first s' = FOLDL APP (first s) args0) /\
             (last s' = FOLDL APP (last s) args)``,
   Induct THEN SRW_TAC [][] THENL [
-    `args = []` by FULL_SIMP_TAC (srw_ss()) [listTheory.LENGTH_NIL] THEN
     FULL_SIMP_TAC (srw_ss()) [] THEN METIS_TAC [],
     FULL_SIMP_TAC (srw_ss()) [listTheory.LENGTH_CONS] THEN VAR_EQ_TAC THEN
     FULL_SIMP_TAC (srw_ss()) [] THEN
@@ -2195,7 +2193,7 @@ val standardisation_theorem = store_thm(
            FULL_SIMP_TAC (srw_ss()) [AND_IMP_INTRO] THEN
            FIRST_X_ASSUM MATCH_MP_TAC THEN
            ASM_SIMP_TAC (srw_ss()) [size_args_foldl_app] THEN
-           Q.PAT_ASSUM `LENGTH x = LENGTH y` ASSUME_TAC THEN
+           Q.PAT_X_ASSUM `LENGTH x = LENGTH y` ASSUME_TAC THEN
            FULL_SIMP_TAC (srw_ss()) [listTheory.MEM_ZIP,
                                      GSYM LEFT_FORALL_IMP_THM]) THEN
     `?sr. standard_reduction sr /\ finite sr /\
@@ -2314,7 +2312,7 @@ val head_reduction_path_uexists = prove(
                 `!p. (?M. p = g M) ==> is_head_reduction p` THEN1
                 METIS_TAC [] THEN
           HO_MATCH_MP_TAC is_head_reduction_coind THEN
-          Q.PAT_ASSUM `!x:term. g x = Z`
+          Q.PAT_X_ASSUM `!x:term. g x = Z`
                           (fn th => SIMP_TAC (srw_ss())
                                              [Once th, SimpL ``(==>)``]) THEN
           REPEAT GEN_TAC THEN STRIP_TAC THEN
@@ -2325,7 +2323,7 @@ val head_reduction_path_uexists = prove(
   `!p. finite p ==> !M. (p = g M) ==> hnf (last p)`
       by (HO_MATCH_MP_TAC finite_path_ind THEN
           SIMP_TAC (srw_ss()) [] THEN CONJ_TAC THEN REPEAT GEN_TAC THENL [
-            Q.PAT_ASSUM `!x:term. g x = Z`
+            Q.PAT_X_ASSUM `!x:term. g x = Z`
                         (fn th => ONCE_REWRITE_TAC [th]) THEN
             Cases_on `head_reduct M` THEN SRW_TAC [][] THEN
             FULL_SIMP_TAC (srw_ss()) [hnf_no_head_redex, head_reduct_NONE,
@@ -2333,13 +2331,13 @@ val head_reduction_path_uexists = prove(
             METIS_TAC [head_redex_is_redex, IN_term_IN_redex_posns,
                        is_redex_occurrence_def],
             STRIP_TAC THEN GEN_TAC THEN
-            Q.PAT_ASSUM `!x:term. g x = Z`
+            Q.PAT_X_ASSUM `!x:term. g x = Z`
                         (fn th => ONCE_REWRITE_TAC [th]) THEN
             Cases_on `head_reduct M` THEN SRW_TAC [][]
           ]) THEN
   SIMP_TAC (srw_ss()) [EXISTS_UNIQUE_THM] THEN CONJ_TAC THENL [
     Q.EXISTS_TAC `g M` THEN
-    Q.PAT_ASSUM `!x:term. g x = Z` (K ALL_TAC) THEN METIS_TAC [],
+    Q.PAT_X_ASSUM `!x:term. g x = Z` (K ALL_TAC) THEN METIS_TAC [],
     REPEAT (POP_ASSUM (K ALL_TAC)) THEN
     REPEAT STRIP_TAC THEN
     ONCE_REWRITE_TAC [path_bisimulation] THEN

@@ -3,8 +3,6 @@
 (* proof of correctness.                                                     *)
 (*===========================================================================*)
 
-structure aesScript =
-struct
 (*
   app load ["RoundOpTheory", "metisLib"];
 *)
@@ -217,5 +215,3 @@ val AES_CORRECT = Q.store_thm
 
 
 val _ = export_theory();
-
-end

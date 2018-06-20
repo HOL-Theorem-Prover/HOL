@@ -26,17 +26,21 @@
 \newcommand{\apost}{\texttt{\textquotesingle}}
 % double back quotes ``
 \newcommand{\dq}{\texttt{\char'140\char'140}}
+\newcommand{\ldquo}{\mbox{\textrm{``}}}
+\newcommand{\rdquo}{\mbox{\textrm{''}}}
+
 %These macros were included by slind:
 
 \newcommand{\holquote}[1]{\dq#1\dq}
+\newcommand{\uholquote}[1]{\mbox{\rmfamily\upshape ``}#1\mbox{\rmfamily\upshape ''}}
 
 \def\HOL{\textsc{Hol}}
 \def\holn{\HOL}  % i.e. hol n(inety-eight), no digits in
                  % macro names is a bit of a pain; deciding to do away
                  % with hol98 nomenclature means that we just want to
                  % write HOL for hol98.
-\def\holnversion{Kananaskis-11}
-\def\holnsversion{Kananaskis~11} % version with space rather than hyphen
+\def\holnversion{Kananaskis-12}
+\def\holnsversion{Kananaskis~12} % version with space rather than hyphen
 \def\LCF{{\small LCF}}
 \def\LCFLSM{{\small LCF{\kern-.2em}{\normalsize\_}{\kern0.1em}LSM}}
 \def\PPL{{\small PP}{\kern-.095em}$\lambda$}
@@ -68,7 +72,8 @@
 \newcommand\vbar{\mid}
 \newcommand\turn{\ \vdash\ } % FIXME: "\ " results in extra space
 \newcommand\hilbert{\varepsilon}
-\newcommand\eqdef{\ \equiv\ }
+\providecommand\eqdef{\ \equiv\ }
+\renewcommand\eqdef{\ \equiv\ }
 
 \newcommand\natnums{\mbox{${\sf N}\!\!\!\!{\sf N}$}}
 \newcommand\bools{\mbox{${\sf T}\!\!\!\!{\sf T}$}}
@@ -116,7 +121,8 @@
 % Abbreviations for particular mathematical constants etc.
 % ---------------------------------------------------------------------
 
-\newcommand\T{\con{T}}
+\providecommand{\T}{\con{T}}
+\renewcommand{\T}{\con{T}}
 \newcommand\F{\con{F}}
 \newcommand\OneOne{\con{One\_One}}
 \newcommand\OntoSubset{\con{Onto\_Subset}}

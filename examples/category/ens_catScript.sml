@@ -216,14 +216,14 @@ srw_tac [][] >- (
   `ff x = gg x` by srw_tac [][] >>
   pop_assum mp_tac >>
   unabbrev_all_tac >>
-  qpat_assum `x ∈ f.cod` mp_tac >>
+  qpat_x_assum `x ∈ f.cod` mp_tac >>
   simp_tac std_ss [] )
 >- (
   qmatch_assum_rename_tac `y ∈ U` >>
   qexists_tac `TypedGraphFun (y,{x}) (K x)` >>
   srw_tac [][] ) >>
 srw_tac [][TypedFun_ext] >>
-rpt (qpat_assum `IsTypedFun X` mp_tac) >>
+rpt (qpat_x_assum `IsTypedFun X` mp_tac) >>
 fsrw_tac [][IsTypedFun_def,HasFunType_def]);
 
 (*

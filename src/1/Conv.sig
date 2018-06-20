@@ -30,6 +30,7 @@ sig
    val ALL_CONV              : conv
    val THENC                 : conv * conv -> conv
    val ORELSEC               : conv * conv -> conv
+   val IFC                   : conv -> conv -> conv -> conv
    val FIRST_CONV            : conv list -> conv
    val EVERY_CONV            : conv list -> conv
    val REPEATC               : conv -> conv
@@ -43,6 +44,7 @@ sig
    val TOP_SWEEP_CONV        : conv -> conv
    val ONCE_DEPTH_CONV       : conv -> conv
    val CONV_RULE             : conv -> thm -> thm
+   val HYP_CONV_RULE         : (term -> bool) -> conv -> thm -> thm
    val BETA_RULE             : thm -> thm
    val UNBETA_CONV           : term -> conv
    val NOT_FORALL_CONV       : conv
@@ -113,4 +115,7 @@ sig
    val PRINT_CONV            : conv
    val MAP_THM               : conv -> thm -> thm
    val PATH_CONV             : string -> conv -> conv
+
+   val memoize : (term -> 'a option) -> ('a, thm) Redblackmap.dict ->
+                 (term -> bool) -> exn -> conv -> conv
 end

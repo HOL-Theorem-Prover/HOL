@@ -110,7 +110,7 @@ Should never fail. Nonetheless, using rewrites with assumptions may
 cause problems when rewriting under abstractions. The following
 example illustrates that issue.
 {
-   - val th = ASSUME (--`0 = x`--);
+   - val th = ASSUME “0 = x”;
    - val tm = Term`\(x:num). x = 0`;
    - val rws = from_list [th];
    - CBV_CONV rws tm;

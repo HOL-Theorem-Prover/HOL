@@ -1,1 +1,7 @@
-OPTIONS = NO_OVERLAY
+CLINE_OPTIONS = --no_overlay
+
+OBJ_FILES = Arbnumcore.uo Arbnumcore.ui \
+            Arbintcore.uo Arbintcore.ui MLSYSPortable.uo PrettyImpl.uo \
+	    CoreReplVARS.uo
+
+all: $(OBJ_FILES)

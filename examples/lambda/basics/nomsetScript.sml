@@ -625,8 +625,7 @@ val supp_def = Define`
 val supp_supports = store_thm(
   "supp_supports",
   ``support pm x (supp pm x)``,
-  ASM_SIMP_TAC (srw_ss()) [support_def, supp_def, pmact_decompose,
-                           INFINITE_DEF] THEN
+  ASM_SIMP_TAC (srw_ss()) [support_def, supp_def, pmact_decompose] THEN
   MAP_EVERY Q.X_GEN_TAC [`a`, `b`] THEN STRIP_TAC THEN
   Q.ABBREV_TAC `aset = {b | ~(pmact pm [(a,b)] x = x)}` THEN
   Q.ABBREV_TAC `bset = {c | ~(pmact pm [(b,c)] x = x)}` THEN
@@ -658,8 +657,7 @@ val setpm_postcompose = store_thm(
 val perm_supp = store_thm(
   "perm_supp",
   ``supp pm (pmact pm p x) = setpm string_pmact p (supp pm x)``,
-  SIMP_TAC (srw_ss()) [EXTENSION, pmact_IN, supp_def, pmact_eql,
-                       INFINITE_DEF] THEN
+  SIMP_TAC (srw_ss()) [EXTENSION, pmact_IN, supp_def, pmact_eql] THEN
   Q.X_GEN_TAC `a` THEN
   `!e x y. pmact pm (REVERSE p) (pmact pm [(x,y)] e) =
            pmact pm [(stringpm (REVERSE p) x, stringpm (REVERSE p) y)]
@@ -719,7 +717,7 @@ val supp_smallest = store_thm(
   `{b | ~(pmact pm [(a,b)] x = x)} SUBSET s`
      by (SRW_TAC [][SUBSET_DEF] THEN METIS_TAC []) THEN
   `FINITE {b | ~(pmact pm [(a,b)] x = x)}` by METIS_TAC [SUBSET_FINITE] THEN
-  FULL_SIMP_TAC (srw_ss()) [supp_def, INFINITE_DEF]);
+  FULL_SIMP_TAC (srw_ss()) [supp_def]);
 
 val notinsupp_I = store_thm(
   "notinsupp_I",
@@ -732,7 +730,7 @@ val lemma0 = prove(
 val lemma = prove(
   ``!s: string set. FINITE s ==> ~FINITE (COMPL s)``,
   HO_MATCH_MP_TAC FINITE_INDUCT THEN SRW_TAC [][lemma0] THEN
-  SRW_TAC [][INFINITE_STR_UNIV, GSYM INFINITE_DEF]);
+  SRW_TAC [][INFINITE_STR_UNIV]);
 
 val supp_unique = store_thm(
   "supp_unique",
@@ -768,7 +766,7 @@ val supp_string = Store_thm(
 val supp_discrete = Store_thm(
   "supp_discrete",
   ``supp discrete_pmact x = {}``,
-  SRW_TAC [][supp_def, INFINITE_DEF]);
+  SRW_TAC [][supp_def]);
 
 val supp_unitfn = store_thm(
   "supp_unitfn",
@@ -789,21 +787,21 @@ val supp_optpm = store_thm(
   "supp_optpm",
   ``(supp (opt_pmact pm) NONE = {}) /\
     (supp (opt_pmact pm) (SOME x) = supp pm x)``,
-  SRW_TAC [][supp_def, pred_setTheory.INFINITE_DEF]);
+  SRW_TAC [][supp_def]);
 val _ = export_rewrites ["supp_optpm"]
 
 (* pairs *)
 val supp_pairpm = Store_thm(
   "supp_pairpm",
   ``(supp (pair_pmact pm1 pm2) (x,y) = supp pm1 x UNION supp pm2 y)``,
-  SRW_TAC [][supp_def, GSPEC_OR, INFINITE_DEF]);
+  SRW_TAC [][supp_def, GSPEC_OR]);
 
 (* lists *)
 val supp_listpm = Store_thm(
   "supp_listpm",
   ``(supp (list_pmact apm) [] = {}) /\
     (supp (list_pmact apm) (h::t) = supp apm h UNION supp (list_pmact apm) t)``,
-  SRW_TAC [][supp_def, INFINITE_DEF, GSPEC_OR]);
+  SRW_TAC [][supp_def, GSPEC_OR]);
 
 val listsupp_APPEND = Store_thm(
   "listsupp_APPEND",
@@ -1145,12 +1143,10 @@ val FAPPLY_eqv_lswapstr = store_thm(
   "FAPPLY_eqv_lswapstr",
   ``d ∈ FDOM fm ⇒ (pmact rpm pi (fm ' d) = fmpm string_pmact rpm pi fm ' (lswapstr pi d))``,
   srw_tac [][fmpm_def] >>
-  qmatch_abbrev_tac `z = (f f_o g) ' x` >>
-  `FINITE {x | g x ∈ FDOM f}` by metis_tac [lemma] >>
-  `FDOM (f f_o g) = {x | g x ∈ FDOM f}` by metis_tac [FDOM_f_o] >>
-  `x ∈ FDOM (f f_o g)` by ( unabbrev_all_tac >> srw_tac [][stringpm_raw] ) >>
-  unabbrev_all_tac >>
-  srw_tac [][FAPPLY_f_o, stringpm_raw]);
+  qmatch_abbrev_tac `z = (f o_f g) ' x` >>
+  `FDOM g = { x | lswapstr pi⁻¹ x ∈ FDOM fm }`
+    by simp[FINITE_PRED_11, FDOM_f_o, Abbr`g`] >>
+  simp[Abbr`g`, FAPPLY_f_o, FINITE_PRED_11, Abbr`x`]);
 
 val fmpm_FEMPTY = store_thm(
   "fmpm_FEMPTY",

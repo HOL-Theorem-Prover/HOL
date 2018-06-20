@@ -1,106 +1,48 @@
-
 signature term_grammar =
 sig
 
-  type ppstream = Portable.ppstream
-  type block_info = Portable.break_style * int
+  type block_info = term_grammar_dtype.block_info
   type overload_info = Overload.overload_info
-  type associativity = HOLgrammars.associativity
+  type associativity = term_grammar_dtype.associativity
+  type grule = term_grammar_dtype.grule
 
-  datatype rule_element
-     = TOK of string
-     | TM
+  datatype rule_element = datatype term_grammar_dtype.rule_element
   val RE_compare : rule_element * rule_element -> order
 
-  datatype pp_element
-     = PPBlock of pp_element list * block_info
-     | EndInitialBlock of block_info
-     | BeginFinalBlock of block_info
-     | HardSpace of int
-     | BreakSpace of (int * int)
-     | RE of rule_element
-     | LastTM
-     | FirstTM   (* these last two only used internally *)
-
-  datatype PhraseBlockStyle
-     = AroundSameName
-     | AroundSamePrec
-     | AroundEachPhrase
-     | NoPhrasing
-
-  datatype ParenStyle
-     = Always
-     | OnlyIfNecessary
-     | NotEvenIfRand
-     | ParoundName
-     | ParoundPrec
+  datatype pp_element = datatype term_grammar_dtype.pp_element
+  datatype PhraseBlockStyle = datatype term_grammar_dtype.PhraseBlockStyle
+  datatype ParenStyle = datatype term_grammar_dtype.ParenStyle
 
   val rule_elements  : pp_element list -> rule_element list
   val pp_elements_ok : pp_element list -> bool
+  val first_rtok : rule_element list -> string
+  val first_tok : pp_element list -> string
 
   val reltoString    : rule_element -> string
 
-  type rule_record = {term_name   : string,
-                      elements    : pp_element list,
-                      timestamp   : int,
-                      block_style : PhraseBlockStyle * block_info,
-                      paren_style : ParenStyle}
-
-  datatype binder
-     = LAMBDA
-     | BinderString of {tok : string, term_name : string, timestamp : int}
-
-  datatype prefix_rule
-     = STD_prefix of rule_record list
-     | BINDER of binder list
-
-  datatype suffix_rule
-     = STD_suffix of rule_record list
-     | TYPE_annotation
-
-  datatype infix_rule
-     = STD_infix of rule_record list * associativity
-     | RESQUAN_OP
-     | VSCONS
-     | FNAPP of rule_record list
-
-  type listspec =
-     {separator  : pp_element list,
-      leftdelim  : pp_element list,
-      rightdelim : pp_element list,
-      block_info : block_info,
-      cons       : string,
-      nilstr     : string}
-
-  datatype grammar_rule
-     = PREFIX of prefix_rule
-     | SUFFIX of suffix_rule
-     | INFIX of infix_rule
-     | CLOSEFIX of rule_record list
-     | LISTRULE of listspec list
+  datatype binder = datatype term_grammar_dtype.binder
+  datatype prefix_rule = datatype term_grammar_dtype.prefix_rule
+  datatype suffix_rule = datatype term_grammar_dtype.suffix_rule
+  datatype infix_rule = datatype term_grammar_dtype.infix_rule
+  datatype grammar_rule = datatype term_grammar_dtype.grammar_rule
+  datatype fixity = datatype term_grammar_dtype.fixity
+  datatype user_delta = datatype term_grammar_dtype.user_delta
+  type listspec = term_grammar_dtype.listspec
+  type rule_record = term_grammar_dtype.rule_record
 
   type grammar
 
-  datatype rule_fixity
-     = Infix of associativity * int
-     | Closefix
-     | Suffix of int
-     | Prefix of int
-
-  datatype user_delta =
-           GRULE of {term_name : string,
-                     fixity : rule_fixity,
-                     pp_elements: pp_element list,
-                     paren_style : ParenStyle,
-                     block_style : PhraseBlockStyle * block_info}
-         | LRULE of listspec
-         | BRULE of {tok : string, term_name : string}
-
-  val userdelta_toks : user_delta -> string list
-  val userdelta_name : user_delta -> string
+  val grule_toks : grule -> string list
+  val grule_name : grule -> string
 
   val stdhol         : grammar
   val min_grammar    : grammar
+
+  val binder_grule   : {term_name : string, tok : string} -> grule
+  val standard_mapped_spacing :
+      {term_name:string,tok:string,fixity:fixity} -> grule
+  val standard_spacing : string -> fixity -> grule
+
   val merge_grammars : grammar * grammar -> grammar
   val fupdate_overload_info :
     (overload_info -> overload_info) -> grammar -> grammar
@@ -119,15 +61,35 @@ sig
   val remove_user_printer :
     string -> grammar -> (grammar * (term * userprinter) option)
   val user_printers :
-    grammar -> (term * string * userprinter)Net.net
+    grammar -> (term * string * userprinter)FCNet.t
 
-  val absyn_postprocessors : grammar ->
-                             (string * (Absyn.absyn -> Absyn.absyn)) list
-  val new_absyn_postprocessor : string * (Absyn.absyn -> Absyn.absyn) ->
-                                grammar -> grammar
+  type absyn_postprocessor = grammar -> Absyn.absyn -> Absyn.absyn
+  type AbPTME = Absyn.absyn -> Parse_supportENV.preterm_in_env
+  type preterm_processor = grammar -> AbPTME -> AbPTME
+
+  structure userSyntaxFns :
+    sig
+      type 'a getter = string -> 'a
+      type 'a setter = {name : string, code : 'a} -> unit
+      val register_userPP : userprinter setter
+      val get_userPP : userprinter getter
+      val get_absynPostProcessor : absyn_postprocessor getter
+      val register_absynPostProcessor : absyn_postprocessor setter
+    end
+
+  val absyn_postprocessors :
+      grammar -> (string * absyn_postprocessor) list
+  val new_absyn_postprocessor :
+      string * absyn_postprocessor -> grammar -> grammar
   val remove_absyn_postprocessor :
-      string -> grammar ->
-      (grammar * (Absyn.absyn -> Absyn.absyn) option)
+      string -> grammar -> (grammar * absyn_postprocessor option)
+
+  val preterm_processor :
+      grammar -> string * int -> preterm_processor option
+  val new_preterm_processor :
+      string * int -> preterm_processor -> grammar -> grammar
+  val remove_preterm_processor :
+      string * int -> grammar -> grammar * preterm_processor option
 
 
   type special_info = {type_intro    : string,
@@ -135,7 +97,12 @@ sig
                        endbinding    : string,
                        restr_binders : (string option * string) list,
                        res_quanop    : string}
+  val fupd_lambda    : (string list -> string list) -> special_info ->
+                       special_info
+
+  type ruleset
   val rules          : grammar -> (int option * grammar_rule) list
+  val ruleset        : grammar -> ruleset
   val grammar_rules  : grammar -> grammar_rule list
   val specials       : grammar -> special_info
   val fupdate_specials : (special_info -> special_info) -> grammar -> grammar
@@ -161,43 +128,17 @@ sig
                               {binder : string option,
                                resbinder : string} -> grammar
 
-  val compatible_listrule : grammar
-                             -> {separator : string,
-                                 leftdelim : string,
-                                 rightdelim : string}
-                             -> {cons : string, nilstr : string} option
-
-  datatype stack_terminal
-     = STD_HOL_TOK of string
-     | BOS
-     | EOS
-     | Id
-     | TypeColon
-     | TypeTok
-     | EndBinding
-     | VS_cons
-     | ResquanOpTok
-  val ST_compare : stack_terminal * stack_terminal -> order
-
-  val STtoString : grammar -> stack_terminal -> string
-
   val grammar_tokens : grammar -> string list
   val rule_tokens : grammar -> grammar_rule -> string list
-  val find_suffix_rhses : grammar -> stack_terminal list
-  val find_prefix_lhses : grammar -> stack_terminal list
 
   val add_binder : {term_name:string,tok:string} -> grammar -> grammar
   val add_listform : grammar -> listspec -> grammar
+  val listform_to_rule : listspec -> grule
 
-  val rule_fixityToString : rule_fixity -> string
-  val add_rule : grammar
-                  -> {term_name : string,
-                      fixity : rule_fixity,
-                      pp_elements: pp_element list,
-                      paren_style : ParenStyle,
-                      block_style : PhraseBlockStyle * block_info}
-                  -> grammar
+  val fixityToString : fixity -> string
+  val add_rule : grule -> grammar -> grammar
   val add_delta : user_delta -> grammar -> grammar
+  val add_deltas : user_delta list -> grammar -> grammar
 
   val add_numeral_form : grammar -> (char * string option) -> grammar
   val give_num_priority : grammar -> char -> grammar
@@ -227,6 +168,12 @@ sig
   val remove_form_with_toklist : {term_name : string, toklist : string list} ->
                                  grammar -> grammar
 
+  (* this one is the nuclear option, and just removes every rule that uses
+     the given token *)
+  val remove_rules_with_tok : string -> grammar -> grammar
+
+  val clear_overloads : grammar -> grammar
+
   (*-----------------------------------------------------------------------*
    * Pretty-printing                                                       *
    *-----------------------------------------------------------------------*)
@@ -238,21 +185,25 @@ sig
 
 
   val set_associativity_at_level : grammar -> int * associativity -> grammar
-  val get_precedence : grammar -> string -> rule_fixity option
+  val get_precedence : grammar -> string -> fixity option
   val rules_for : grammar -> string -> (int * user_delta) list
 
 
   val prettyprint_grammar_rules
-                          : (grammar -> ppstream -> term -> unit) ->
-                            ppstream -> grammar -> unit
-  val prettyprint_grammar : (grammar -> ppstream -> term -> unit) ->
-                            ppstream -> grammar -> unit
+                          : (grammar -> term -> term_pp_types.uprinter) ->
+                            ruleset -> term_pp_types.uprinter
+  val prettyprint_grammar : (grammar -> term -> term_pp_types.uprinter) ->
+                            grammar -> term_pp_types.uprinter
 
-  val grule_reader : grammar_rule Coding.reader
-  val grule_encode : grammar_rule -> string
-  val user_delta_reader : user_delta Coding.reader
-  val user_delta_encode : user_delta -> string
-  val fixity_encode : rule_fixity -> string
-  val fixity_reader : rule_fixity Coding.reader
+  val grammar_rule_reader : grammar_rule Coding.reader
+  val grammar_rule_encode : grammar_rule -> string
+  val user_delta_reader : (string -> term) -> user_delta Coding.reader
+  val user_delta_encode : (term -> string) -> user_delta -> string
+  val fixity_encode : fixity -> string
+  val fixity_reader : fixity Coding.reader
+  val grule_encode : grule -> string
+  val grule_reader : grule Coding.reader
+
+  val debugprint : grammar -> term -> string
 
 end

@@ -325,7 +325,7 @@ val foterm_ind = store_thm(
          qx_gen_tac `i` >> rw[] >> ONCE_REWRITE_TAC [EQ_SYM_EQ] >>
          match_mp_tac term_repabs_pseudo_id >> metis_tac[]) >>
   simp[FN_def'] >> first_x_assum match_mp_tac >>
-  rw[] >> qpat_assum `∀n. n < LENGTH uns ⇒ PP ∧ QQ` mp_tac >>
+  rw[] >> qpat_x_assum `∀n. n < LENGTH uns ⇒ PP ∧ QQ` mp_tac >>
   simp[listTheory.EL_MAP, term_absrep_id] >>
   `∃n. n < LENGTH ts ∧ t = EL n ts` by metis_tac[listTheory.MEM_EL] >>
   simp[])
@@ -374,7 +374,7 @@ val fof_ind = store_thm(
   `∃ts. MAP foterm_REP ts = us`
      by (qexists_tac `MAP foterm_ABS us` >> simp[listTheory.MAP_MAP_o] >>
          match_mp_tac listTheory.LIST_EQ >> simp[] >>
-         qpat_assum `LIST_REL RR XX YY` mp_tac >>
+         qpat_x_assum `LIST_REL RR XX YY` mp_tac >>
          simp[listTheory.LIST_REL_EL_EQN, listTheory.EL_MAP] >>
          rw[] >> match_mp_tac term_repabs_pseudo_id >>
          asm_simp_tac (srw_ss() ++ DNF_ss) [] >>

@@ -1,6 +1,6 @@
 \DOC all2
 
-\TYPE {all2 : : ('a -> 'b -> bool) -> 'a list -> 'b list -> bool}
+\TYPE {all2 : ('a -> 'b -> bool) -> 'a list -> 'b list -> bool}
 
 \SYNOPSIS
 Tests whether a predicate holds pairwise throughout two lists.

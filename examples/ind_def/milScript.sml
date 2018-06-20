@@ -11,9 +11,6 @@
   app load ["IndDefLib", "clTheory"] ;
 *)
 
-structure milScript =
-struct
-
 open HolKernel Parse boolLib bossLib
      IndDefLib IndDefRules clTheory;
 
@@ -101,5 +98,3 @@ val CURRY_HOWARD = Q.store_thm
 (* --------------------------------------------------------------------- *)
 
 val _ = export_theory();
-
-end;

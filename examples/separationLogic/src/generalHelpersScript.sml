@@ -13,7 +13,7 @@ show_assums := true;
 *)
 
 open finite_mapTheory relationTheory pred_setTheory listTheory rich_listTheory arithmeticTheory
-     operatorTheory containerTheory bagTheory stringLib
+     combinTheory containerTheory bagTheory stringLib
      boolSimps ConseqConv sortingTheory quantHeuristicsLib;
 
 (*
@@ -208,13 +208,13 @@ val EL_DISJOINT_FILTER = store_thm ("EL_DISJOINT_FILTER",
    CONJ_TAC THEN1 METIS_TAC[] THEN
    REPEAT STRIP_TAC THEN
 
-   `l = (TAKE (SUC n1) l) ++ (LASTN (LENGTH l - (SUC n1)) l)` by ALL_TAC THEN1 (
+   `l = (TAKE (SUC n1) l) ++ (LASTN (LENGTH l - (SUC n1)) l)` by (
       MATCH_MP_TAC (GSYM APPEND_TAKE_LASTN) THEN
       ASM_SIMP_TAC arith_ss []
    ) THEN
    Q.ABBREV_TAC `l1 = (TAKE (SUC n1) l)` THEN
    Q.ABBREV_TAC `l2 = (LASTN (LENGTH l - (SUC n1)) l)` THEN
-   `(n1 < LENGTH l1) /\ (LENGTH l1 <= n2)` by ALL_TAC THEN1 (
+   `(n1 < LENGTH l1) /\ (LENGTH l1 <= n2)` by (
       bossLib.UNABBREV_ALL_TAC THEN
       ASM_SIMP_TAC list_ss [LENGTH_TAKE]
    ) THEN
@@ -273,10 +273,10 @@ GEN_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
    PROVE_TAC[],
 
    FULL_SIMP_TAC std_ss [MEM_EL] THEN
-   Q.PAT_ASSUM `!n1 n2. X n1 n2` (MP_TAC o Q.SPECL [`0`, `SUC n`]) THEN
+   Q.PAT_X_ASSUM `!n1 n2. X n1 n2` (MP_TAC o Q.SPECL [`0`, `SUC n`]) THEN
    ASM_SIMP_TAC list_ss [],
 
-   Q.PAT_ASSUM `!n1 n2. X n1 n2` (MP_TAC o Q.SPECL [`SUC n1`, `SUC n2`]) THEN
+   Q.PAT_X_ASSUM `!n1 n2. X n1 n2` (MP_TAC o Q.SPECL [`SUC n1`, `SUC n2`]) THEN
    ASM_SIMP_TAC list_ss []
 ]);
 
@@ -467,7 +467,7 @@ CONJ_TAC THENL [
       ) THEN
       ASM_SIMP_TAC arith_ss [] THEN
       Q.ABBREV_TAC `n' = m - SUC n` THEN
-      `m - n = SUC n'` by ALL_TAC THEN1 (
+      `m - n = SUC n'` by (
           Q.UNABBREV_TAC `n'` THEN DECIDE_TAC
       ) THEN
       ASM_SIMP_TAC (list_ss++EQUIV_EXTRACT_ss) [FORALL_LESS_SUC]
@@ -510,14 +510,14 @@ Induct_on `l` THENL [
    ASM_SIMP_TAC list_ss [transitive_def] THEN
    STRIP_TAC THEN
    FULL_SIMP_TAC list_ss [DISJ_IMP_THM, FORALL_AND_THM] THEN
-   `!e. MEM e l ==> e < LENGTH l` by ALL_TAC THEN1 (
+   `!e. MEM e l ==> e < LENGTH l` by (
       REPEAT STRIP_TAC THEN
       RES_TAC THEN
       `~(e = h)` by PROVE_TAC[] THEN
       DECIDE_TAC
    ) THEN
    RES_TAC THEN
-   `h = LENGTH l` by ALL_TAC THEN1 (
+   `h = LENGTH l` by (
       CCONTR_TAC THEN
       `h < LENGTH l` by DECIDE_TAC THEN
       METIS_TAC[]
@@ -536,7 +536,7 @@ val MEM_COMPLETE_NUM_LIST = store_thm("MEM_COMPLETE_NUM_LIST",
 GEN_TAC THEN
 `?l'. l' = QSORT (\n m. m <= n) l` by METIS_TAC[] THEN
 `PERM l l'` by ASM_REWRITE_TAC[QSORT_PERM] THEN
-`SORTED (\n m. m <= n) l'` by ALL_TAC THEN1 (
+`SORTED (\n m. m <= n) l'` by (
    ASM_REWRITE_TAC[] THEN
    MATCH_MP_TAC QSORT_SORTED THEN
    SIMP_TAC arith_ss [transitive_def, total_def]
@@ -623,7 +623,7 @@ Induct_on `l` THENL [
    Cases_on `t` THEN
    SIMP_TAC list_ss [LIST_ZIP_REWRITE] THEN
    REPEAT STRIP_TAC THEN
-   Q.PAT_ASSUM `!t ts. X t ts` MATCH_MP_TAC THEN
+   Q.PAT_X_ASSUM `!t ts. X t ts` MATCH_MP_TAC THEN
    FULL_SIMP_TAC std_ss [EVERY_MEM, MEM_MAP, GSYM LEFT_FORALL_IMP_THM] THEN
    REPEAT STRIP_TAC THEN
    RES_TAC THEN
@@ -649,8 +649,8 @@ Induct_on `l2` THEN
 SIMP_TAC (list_ss++QUANT_INST_ss[list_qp]) [LIST_ZIP_REWRITE, MAP_MAP_o, combinTheory.o_DEF,
                   PAIR_BETA_THM] THEN
 REPEAT GEN_TAC THEN STRIP_TAC THEN
-Tactical.REVERSE (`((MAP (\ (x1,x2). x2) (ZIP (l',l2)) = l2) /\
-                    (MAP (\ (x1,x2). x1) (ZIP (l',l2)) = l'))` by ALL_TAC) THEN1 (
+`((MAP (\ (x1,x2). x2) (ZIP (l',l2)) = l2) /\
+                    (MAP (\ (x1,x2). x1) (ZIP (l',l2)) = l'))` suffices_by (STRIP_TAC THEN
    ASM_REWRITE_TAC[]
 ) THEN
 POP_ASSUM MP_TAC THEN
@@ -693,6 +693,7 @@ val ZIP___LIST_ZIP = store_thm ("ZIP___LIST_ZIP",
 Induct_on `l2` THEN
 ASM_SIMP_TAC (list_ss++QUANT_INST_ss[list_qp]) [LIST_ZIP_REWRITE]);
 
+val _ = type_abbrev ("label", ``:ind``);
 
 val LIST_UNROLL_GIVEN_ELEMENT_NAMES_def = Define `
     LIST_UNROLL_GIVEN_ELEMENT_NAMES l1 (l2:label list) =
@@ -753,7 +754,7 @@ Induct_on `L` THEN1 SIMP_TAC list_ss [] THEN
 SIMP_TAC list_ss [LEFT_AND_OVER_OR, DISJ_IMP_THM, FORALL_AND_THM,
    LIST_TO_FUN_THM] THEN
 REPEAT STRIP_TAC THEN
-`~(FST h = FST x)` by ALL_TAC THEN1 (
+`~(FST h = FST x)` by (
    FULL_SIMP_TAC std_ss [MEM_MAP] THEN
    PROVE_TAC[]
 ) THEN
@@ -761,10 +762,8 @@ ASM_SIMP_TAC std_ss [LIST_TO_FUN_THM]);
 
 
 val NULL_DROP = store_thm ("NULL_DROP",
-``!n l. NULL (DROP n l) = (LENGTH l <= n)``,
-Induct_on `l` THEN (
-   ASM_SIMP_TAC (list_ss++boolSimps.LIFT_COND_ss) []
-));
+  ``!n l. NULL (DROP n l) = (LENGTH l <= n)``,
+  Induct_on `l` >> simp[] >> Cases_on `n` >> simp[])
 
 
 val DROP_TAKE_PRE_LENGTH = store_thm ("DROP_TAKE_PRE_LENGTH",
@@ -781,10 +780,17 @@ val LAST_DROP_THM = store_thm ("LAST_DROP_THM",
  ``!x xs. (if xs = [] then [x] else DROP (LENGTH xs - 1) xs) = [LAST (x::xs)]``,
 SIMP_TAC std_ss [DROP_TAKE_PRE_LENGTH, LAST_DEF, COND_RAND, COND_RATOR]);
 
+val LAST_DROP_THM2 = store_thm ("LAST_DROP_THM2",
+ ``!x xs. DROP (LENGTH xs) (x::xs) = [LAST (x::xs)]``,
+Induct_on `xs` THEN ASM_SIMP_TAC list_ss []);
+
 val FRONT_TAKE_THM = store_thm ("FRONT_TAKE_THM",
  ``!x xs. (if xs = [] then [] else (x::(TAKE (LENGTH xs - 1) xs))) = FRONT (x::xs)``,
 SIMP_TAC std_ss [DROP_TAKE_PRE_LENGTH, FRONT_DEF]);
 
+val FRONT_TAKE_THM2 = store_thm ("FRONT_TAKE_THM2",
+ ``!x xs. TAKE (LENGTH xs) (x::xs) = FRONT (x::xs)``,
+Induct_on `xs` THEN ASM_SIMP_TAC list_ss []);
 
 val SWAP_ELEMENTS_def = Define `
 SWAP_ELEMENTS n m l =
@@ -875,7 +881,7 @@ Cases_on `n2` THEN (
 ) THEN
 SIMP_TAC std_ss [LUPDATE___ALTERNATIVE_DEF] THEN
 REPEAT STRIP_TAC THEN
-`t = TAKE n t ++ (EL n t::(DROP (SUC n) t))` by ALL_TAC THEN1 (
+`t = TAKE n t ++ (EL n t::(DROP (SUC n) t))` by (
    ASM_SIMP_TAC arith_ss [GSYM DROP_CONS_EL, APPEND_FIRSTN_BUTFIRSTN]
 ) THEN
 POP_ASSUM (fn thm => CONV_TAC (RATOR_CONV (RAND_CONV (ONCE_REWRITE_CONV [thm])))) THEN
@@ -1283,23 +1289,22 @@ val FUPDATE_LIST_SUBSUME = store_thm ("FUPDATE_LIST_SUBSUME",
 GEN_TAC THEN
 SIMP_TAC std_ss [GSYM fmap_EQ_THM, FDOM_FUPDATE_LIST] THEN
 REPEAT STRIP_TAC THEN1 (
-   FULL_SIMP_TAC std_ss [EXTENSION, SUBSET_DEF, IN_UNION,
-     IN_LIST_TO_SET] THEN
+   FULL_SIMP_TAC std_ss [EXTENSION, SUBSET_DEF, IN_UNION] THEN
    METIS_TAC[]
 ) THEN
 Tactical.REVERSE (Cases_on `MEM x (MAP FST L2)`) THEN1 (
-   `~(MEM x (MAP FST L1))` by ALL_TAC THEN1 (
-       FULL_SIMP_TAC std_ss [SUBSET_DEF, IN_LIST_TO_SET] THEN
+   `~(MEM x (MAP FST L1))` by (
+       FULL_SIMP_TAC std_ss [SUBSET_DEF] THEN
        PROVE_TAC[]
    ) THEN
    ASM_SIMP_TAC std_ss [FUPDATE_LIST_APPLY_NOT_MEM]
 ) THEN
 REPEAT (POP_ASSUM MP_TAC) THEN
 Tactical.REVERSE (
-`!L1 L2 x. MEM x (MAP FST L2) ==>
-   ((f |++ L1 |++ (REVERSE L2)) ' x =  (f |++ (REVERSE L2)) ' x)` by ALL_TAC) THEN1 (
+sg `!L1 L2 x. MEM x (MAP FST L2) ==>
+   ((f |++ L1 |++ (REVERSE L2)) ' x =  (f |++ (REVERSE L2)) ' x)`) THEN1 (
   REPEAT STRIP_TAC THEN
-  Q.PAT_ASSUM `!L1 L2. X` (MP_TAC o Q.SPECL [`L1`, `REVERSE L2`, `x`]) THEN
+  Q.PAT_X_ASSUM `!L1 L2. X` (MP_TAC o Q.SPECL [`L1`, `REVERSE L2`, `x`]) THEN
   ASM_SIMP_TAC std_ss [MAP_REVERSE, MEM_REVERSE, REVERSE_REVERSE]
 ) THEN
 
@@ -1339,7 +1344,7 @@ Induct_on `L` THEN (
    SIMP_TAC std_ss [FUPDATE_LIST_THM]
 ) THEN
 REPEAT STRIP_TAC THEN
-Q.PAT_ASSUM `!f P. X f P` MATCH_MP_TAC THEN
+Q.PAT_X_ASSUM `!f P. X f P` MATCH_MP_TAC THEN
 Cases_on `h` THEN
 FULL_SIMP_TAC std_ss [listTheory.EVERY_DEF, FEVERY_STRENGTHEN_THM]);
 
@@ -1393,8 +1398,8 @@ Cases_on `q = k` THENL [
    FULL_SIMP_TAC std_ss []
 ] THEN
 FULL_SIMP_TAC list_ss [FILTER_EQ_NIL] THEN
-`~(MEM k (MAP FST kvl))` by ALL_TAC THEN1 (
-      Q.PAT_ASSUM `EVERY X Y` MP_TAC THEN
+`~(MEM k (MAP FST kvl))` by (
+      Q.PAT_X_ASSUM `EVERY X Y` MP_TAC THEN
       REPEAT (POP_ASSUM (K ALL_TAC)) THEN
       Induct_on `kvl` THEN
       ASM_SIMP_TAC list_ss []
@@ -1443,13 +1448,13 @@ val FEVERY_LIST_TO_FMAP_EQ = store_thm ("FEVERY_LIST_TO_FMAP_EQ",
 REPEAT STRIP_TAC THEN EQ_TAC THEN
 SIMP_TAC std_ss [FEVERY_LIST_TO_FMAP] THEN
 ASM_SIMP_TAC std_ss [FEVERY_DEF,
-   FDOM_LIST_TO_FMAP, IN_LIST_TO_SET, MEM_MAP,
+   FDOM_LIST_TO_FMAP, MEM_MAP,
    GSYM RIGHT_EXISTS_AND_THM, GSYM LEFT_EXISTS_AND_THM,
    GSYM LEFT_FORALL_IMP_THM, EVERY_MEM] THEN
 REPEAT STRIP_TAC THEN
 RES_TAC THEN
 Cases_on `e` THEN FULL_SIMP_TAC std_ss [] THEN
-Tactical.REVERSE (`LIST_TO_FMAP L ' q = r` by ALL_TAC) THEN1 (
+`LIST_TO_FMAP L ' q = r` suffices_by (STRIP_TAC THEN
    FULL_SIMP_TAC std_ss []
 ) THEN
 MATCH_MP_TAC LIST_TO_FMAP___ALL_DISTINCT THEN

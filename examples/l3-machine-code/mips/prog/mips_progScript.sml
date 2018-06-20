@@ -1,12 +1,13 @@
 open HolKernel boolLib bossLib
-open lcsymtacs stateLib set_sepTheory progTheory mips_stepTheory
+open stateLib set_sepTheory progTheory mips_stepTheory
 
 val () = new_theory "mips_prog"
 
 (* ------------------------------------------------------------------------ *)
 
 val _ =
-   stateLib.sep_definitions "mips" [["CP0", "Status"], ["CP0", "Config"]] []
+   stateLib.sep_definitions "mips"
+      [["CP0", "Status"], ["CP0", "Config"], ["fcsr"], ["fir"]] []
       mips_stepTheory.NextStateMIPS_def
 
 val mips_instr_def = Define`
@@ -38,23 +39,24 @@ val MIPS_IMP_TEMPORAL = Theory.save_thm ("MIPS_IMP_TEMPORAL",
 (* ------------------------------------------------------------------------ *)
 
 val mips_CONFIG_def = Define`
-   mips_CONFIG be =
+   mips_CONFIG (be, flush_to_zero, rounding_mode, abs2008) =
    mips_exception NoException * mips_exceptionSignalled F *
-   mips_CP0_Status_RE F * mips_CP0_Config_BE be * mips_BranchTo NONE`
+   mips_CP0_Status_CU1 T * mips_CP0_Status_RE F *
+   mips_fcsr_ABS2008 abs2008 * mips_fcsr_FS flush_to_zero *
+   mips_fcsr_RM rounding_mode * mips_CP0_Config_BE be * mips_BranchTo NONE`
 
-val mips_LE_def = Define `mips_LE = mips_CONFIG F`
-val mips_BE_def = Define `mips_BE = mips_CONFIG T`
+val mips_LE_def = Define `mips_LE = mips_CONFIG (F, F, 0w, T)`
+val mips_BE_def = Define `mips_BE = mips_CONFIG (T, F, 0w, T)`
 
 val MIPS_PC_def = Define`
-   MIPS_PC pc =
-   mips_BranchDelay NONE * mips_PC pc * cond ((1 >< 0) pc = 0w: word2)`
+   MIPS_PC pc = mips_BranchDelay NONE * mips_PC pc * cond (aligned 2 pc)`
 
 (* ------------------------------------------------------------------------ *)
 
 val MIPS_PC_INTRO = Q.store_thm("MIPS_PC_INTRO",
    `SPEC m (p1 * MIPS_PC pc) code
            (p2 * mips_BranchDelay NONE * mips_PC pc') ==>
-    (((1 >< 0) pc = 0w: word2) ==> ((1 >< 0) pc' = 0w: word2)) ==>
+    (aligned 2 pc ==> aligned 2 pc') ==>
     SPEC m (p1 * MIPS_PC pc) code (p2 * MIPS_PC pc')`,
    REPEAT STRIP_TAC
    \\ FULL_SIMP_TAC std_ss

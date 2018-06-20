@@ -12,24 +12,13 @@ open term_pp_types
 (* ========================================================================== *)
 
 type t = term_grammar.grammar term_pp_types.ppbackend
-
-(* ========================================================================== *)
-(* with_pp_stream                                                             *)
-(* ========================================================================== *)
-
-fun with_ppstream (t:t) pps =
-    {add_break = #add_break t pps,
-     add_newline = (fn () => #add_newline t pps),
-     add_string = #add_string t pps,
-     add_xstring = #add_xstring t pps,
-     begin_block = #begin_block t pps,
-     end_block = (fn () => #end_block t pps),
-     begin_style = #begin_style t pps,
-     end_style = (fn () => #end_style t pps),
-     clear_ppstream = (fn () => PP.clear_ppstream pps),
-     flush_ppstream = (fn () => PP.flush_ppstream pps)
-    }
-
+type output_colors = {
+    bv    : pp_color,
+    fv    : pp_color,
+    tyv   : pp_color,
+    tyop  : pp_color,
+    tysyn : pp_color
+  }
 
 (* ========================================================================== *)
 (* some auxiliary functions for styles                                        *)
@@ -116,9 +105,8 @@ end;
 
 fun expand_UserStyle b [] = []
   | expand_UserStyle b ((UserStyle st)::styL) =
-    expand_UserStyle b ((lookup_UserStyle b st)@styL)
-  | expand_UserStyle b (st::styL) =
-    (st::(expand_UserStyle b styL))
+      expand_UserStyle b (lookup_UserStyle b st @ styL)
+  | expand_UserStyle b (st::styL) = st::expand_UserStyle b styL
 
 fun user_push_styleL b style_stack styL =
     push_styleL style_stack (expand_UserStyle b styL);
@@ -148,26 +136,23 @@ val _ = Feedback.register_btrace ("PPBackEnd use styles", backend_use_styles)
 val backend_use_css = ref true
 val _ = Feedback.register_btrace ("PPBackEnd use css", backend_use_styles)
 
-fun add_ssz pps (s,sz) =
-  case sz of NONE => PP.add_string pps s
-           | SOME sz => PP.add_stringsz pps (s,sz)
+fun add_ssz (s,sz) =
+  case sz of NONE => smpp.add_string s | SOME sz => smpp.add_stringsz (s,sz)
 
 (* -------------------------------- *)
 (* raw terminal                     *)
 (* -------------------------------- *)
 
 val raw_terminal : t = {
-   name = "raw_terminal",
-   tm_grammar_upd = (fn g => g),
-   ty_grammar_upd = (fn g => g),
-   add_break      = PP.add_break,
-   add_string     = PP.add_string,
-   add_xstring    = (fn pps => fn {s,sz,...} => add_ssz pps (s,sz)),
-   add_newline    = PP.add_newline,
-   begin_block    = PP.begin_block,
-   end_block      = PP.end_block,
-   begin_style    = fn pps => fn sty => (),
-   end_style      = fn pps => ()}
+   extras = {name = "raw_terminal",
+             tm_grammar_upd = (fn g => g),
+             ty_grammar_upd = (fn g => g)},
+   add_break      = smpp.add_break,
+   add_string     = smpp.add_string,
+   add_xstring    = fn {s,sz,...} => add_ssz (s,sz),
+   add_newline    = smpp.add_newline,
+   ublock         = smpp.block,
+   ustyle         = fn sty => fn p => p}
 
 
 (* -------------------------------- *)
@@ -216,53 +201,56 @@ fun full_style_to_vt100 (fg,bg,b,u,_) =
    (* done *)       "m";
 
 
-val vt100_terminal =
+fun ansi_terminal (name : string) (colors : output_colors) : t =
 let
-  val name = "vt100_terminal";
+  open smpp
   val style_stack = ref ([]:pp_full_style list);
-  fun set_style pps fsty =
-      PP.add_stringsz pps (full_style_to_vt100 fsty, 0)
+  fun set_style fsty =
+    smpp.add_stringsz (full_style_to_vt100 fsty, 0)
 
-  fun reset_style pps = set_style pps (top_style style_stack)
+  fun reset_style() = set_style (top_style style_stack)
 
-  fun begin_style pps styL = if not (!backend_use_styles) then () else
-        (user_push_styleL name style_stack styL;
-         reset_style pps);
+  fun ustyle styL p =
+    if not (!backend_use_styles) then nothing
+    else
+      (user_push_styleL name style_stack styL; reset_style()) >> p >>
+      (pop_style style_stack ; reset_style())
 
-  fun end_style pps = if not (!backend_use_styles) then () else
-        (pop_style style_stack;
-         reset_style pps);
+  fun add_color_string c ssz =
+    set_style (SOME c, NONE, false, false, []) >>
+    add_ssz ssz >>
+    reset_style()
 
-  fun add_color_string pps c ssz =
-     (set_style pps (SOME c, NONE, false, false, []);
-      add_ssz pps ssz;
-      reset_style pps);
-
-  fun add_xstring pps {s,sz,ann} =
-      if not (!backend_use_annotations) orelse not (isSome ann)
-      then add_ssz pps (s,sz) else
-
+  fun add_xstring {s,sz,ann} =
+    if not (!backend_use_annotations) orelse not (isSome ann) then
+      add_ssz (s,sz)
+    else
       case valOf ann of
-        FV _    => add_color_string pps Blue (s,sz)
-      | BV _    => add_color_string pps Green (s,sz)
-      | TyV     => add_color_string pps Purple (s,sz)
-      | TyOp _  => add_color_string pps BlueGreen (s,sz)
-      | TySyn _ => add_color_string pps BlueGreen (s,sz)
-      | _ => add_ssz pps (s,sz)
+        FV _    => add_color_string (#fv colors) (s,sz)
+      | BV _    => add_color_string (#bv colors) (s,sz)
+      | TyV     => add_color_string (#tyv colors) (s,sz)
+      | TyOp _  => add_color_string (#tyop colors) (s,sz)
+      | TySyn _ => add_color_string (#tysyn colors) (s,sz)
+      | _ => add_ssz (s,sz)
 in
-  {name           = name,
-   tm_grammar_upd = (fn g => g),
-   ty_grammar_upd = (fn g => g),
+  {extras = {name           = name,
+             tm_grammar_upd = (fn g => g),
+             ty_grammar_upd = (fn g => g)},
    add_break      = #add_break   raw_terminal,
    add_newline    = #add_newline raw_terminal,
-   begin_block    = #begin_block raw_terminal,
-   end_block      = #end_block   raw_terminal,
+   ublock         = #ublock raw_terminal,
    add_string     = #add_string  raw_terminal,
    add_xstring    = add_xstring,
-   begin_style    = begin_style,
-   end_style      = end_style}
+   ustyle         = ustyle}
 end
 
+val vt100_terminal = ansi_terminal "vt100_terminal" {
+  fv = Blue,
+  bv = Green,
+  tyv = Purple,
+  tyop = BlueGreen,
+  tysyn = BlueGreen
+}
 
 (* -------------------------------- *)
 (* emacs terminal                   *)
@@ -300,6 +288,7 @@ fun full_style_to_emacs_string (fg,bg,b,u,_) =
 
 
 val emacs_terminal = let
+  open smpp
   val name = "emacs_terminal";
   fun lazy_string ls = if !add_type_information then (ls ()) else "";
   fun fv s tystr = "(*(*(*FV\000"^(lazy_string tystr)^"\000"^s^"*)*)*)"
@@ -313,56 +302,46 @@ val emacs_terminal = let
     "(*(*(*CO\000" ^ thy' ^ "$" ^ Name ^ " : " ^ lazy_string tyf ^
     "\000" ^ s ^ "*)*)*)"
   end
-  fun add_xstring pps {s, sz, ann} =
+  fun add_xstring {s, sz, ann} =
       if not (!backend_use_annotations) orelse not (isSome ann) then
-        add_ssz pps (s,sz)
+        add_ssz (s,sz)
       else
         let
+          open smpp
           val sz = case sz of NONE => UTF8.size s | SOME sz => sz
         in
           case valOf ann of
-              FV (_,tystr) => PP.add_stringsz pps (fv s tystr, sz)
-            | BV (_,tystr) => PP.add_stringsz pps (bv s tystr, sz)
-            | Const crec => PP.add_stringsz pps (const crec s, sz)
-            | SymConst crec => PP.add_stringsz pps (const crec s, sz)
-            | TyV => PP.add_stringsz pps (tyv s, sz)
-            | TyOp thy => PP.add_stringsz pps (tyop thy s, sz)
-            | TySyn r => PP.add_stringsz pps (tysyn r s, sz)
-            | _ => PP.add_stringsz pps (s,sz)
+              FV (_,tystr) => add_stringsz (fv s tystr, sz)
+            | BV (_,tystr) => add_stringsz (bv s tystr, sz)
+            | Const crec => add_stringsz (const crec s, sz)
+            | SymConst crec => add_stringsz (const crec s, sz)
+            | TyV => add_stringsz (tyv s, sz)
+            | TyOp thy => add_stringsz (tyop thy s, sz)
+            | TySyn r => add_stringsz (tysyn r s, sz)
+            | _ => add_stringsz (s,sz)
         end
 
   val style_stack = ref ([]:pp_full_style list);
-  fun begin_style pps sty =
-     if not (!backend_use_styles) then () else
+  fun ustyle sty p =
+     if not (!backend_use_styles) then nothing else
      let
         val fsty      = user_push_styleL name style_stack sty
         val sty_str   = full_style_to_emacs_string fsty
         val print_str = "(*(*(*ST\000"^sty_str^"\000";
      in
-        PP.add_stringsz pps (print_str, 0)
-     end;
-
-  fun end_style pps =
-     if not (!backend_use_styles) then () else
-     let
-        val _ = pop_style style_stack
-        val print_str = "*)*)*)";
-     in
-        PP.add_stringsz pps (print_str, 0)
+        add_stringsz (print_str, 0) >> p >> add_stringsz ("*)*)*)", 0)
      end;
 
 in
-  {name           = name,
-   tm_grammar_upd = (fn g => g),
-   ty_grammar_upd = (fn g => g),
+  {extras = {name           = name,
+             tm_grammar_upd = (fn g => g),
+             ty_grammar_upd = (fn g => g)},
    add_break      = #add_break   raw_terminal,
    add_newline    = #add_newline raw_terminal,
-   begin_block    = #begin_block raw_terminal,
-   end_block      = #end_block   raw_terminal,
+   ublock         = #ublock raw_terminal,
    add_string     = #add_string  raw_terminal,
    add_xstring    = add_xstring,
-   begin_style    = begin_style,
-   end_style      = end_style}
+   ustyle         = ustyle}
 end;
 
 
@@ -418,47 +397,39 @@ fun html_escape s =
 val html_terminal =
 let
   val name = "html_terminal";
-  fun add_ssz pps (s,sz) = let
+  open smpp
+  fun add_ssz (s,sz) = let
     val sz = case sz of NONE => UTF8.size s | SOME sz => sz
-  in PP.add_stringsz pps (html_escape s, sz) end
+  in add_stringsz (html_escape s, sz) end
 
   val style_stack = ref ([]:pp_full_style list);
-  fun set_style pps fsty =
-      PP.add_stringsz pps ("<span "^(full_style_to_html fsty)^">", 0)
+  fun set_style fsty =
+      add_stringsz ("<span "^(full_style_to_html fsty)^">", 0)
 
-
-  fun reset_style pps = PP.add_stringsz pps ("</span>", 0)
-
-  fun begin_style pps styL =
-      if not (!backend_use_styles) then ()
-      else ((if (!backend_use_css) then push_styleL
-             else user_push_styleL name) style_stack styL;
-            set_style pps (top_style style_stack))
-
-  fun end_style pps =
-      if not (!backend_use_styles) then ()
+  fun ustyle styL p =
+      if not (!backend_use_styles) then p
       else
+        ((if (!backend_use_css) then push_styleL
+          else user_push_styleL name) style_stack styL;
+         set_style (top_style style_stack)) >>
+        p >>
         (pop_style style_stack;
-         PP.add_stringsz pps ("</span>", 0))
+         add_stringsz ("</span>", 0))
 
-  fun add_color_string pps c ssz =
-     (set_style pps (SOME c, NONE, false, false, []);
-      add_ssz pps ssz;
-      reset_style pps);
+  fun add_color_string c ssz =
+     (set_style (SOME c, NONE, false, false, []) >>
+      add_ssz ssz >>
+      add_stringsz ("</span>", 0))
 
 
-  fun add_ann_string_general pps ty ls_opt ssz =
-  let
-     val _ = PP.add_stringsz pps ("<span class=\""^ty^"\"", 0)
-     val _ = if ((!add_type_information) andalso (isSome ls_opt)) then
-               PP.add_stringsz pps (" title=\""^((valOf ls_opt) ())^"\"", 0)
-             else ()
-     val _ = PP.add_stringsz pps (">", 0)
-     val _ = add_ssz pps ssz
-     val _ = PP.add_stringsz pps ("</span>", 0)
-  in
-     ()
-  end;
+  fun add_ann_string_general ty ls_opt ssz =
+     add_stringsz ("<span class=\""^ty^"\"", 0) >>
+     (if ((!add_type_information) andalso (isSome ls_opt)) then
+        add_stringsz (" title=\""^((valOf ls_opt) ())^"\"", 0)
+      else nothing) >>
+     add_stringsz (">", 0) >>
+     add_ssz ssz >>
+     add_stringsz ("</span>", 0)
 
 (* When using CSS you need a style-sheet like
    <style type="text/css">
@@ -468,64 +439,39 @@ let
       span.type     {color: teal}
    </style>
 *)
-  fun add_ann_string___css pps (ssz, ann) =
+  fun add_ann_string___css (ssz, ann) =
       case ann of
-        FV (_,tystr) => add_ann_string_general pps "freevar" (SOME tystr) ssz
-      | BV (_,tystr) => add_ann_string_general pps "boundvar" (SOME tystr) ssz
-      | TyV => add_ann_string_general pps "typevar" NONE ssz
-      | TyOp thy => add_ann_string_general pps "type" (SOME thy) ssz
-      | TySyn r => add_ann_string_general pps "type" (SOME r) ssz
-      | _ => add_ssz pps ssz
+        FV (_,tystr) => add_ann_string_general "freevar" (SOME tystr) ssz
+      | BV (_,tystr) => add_ann_string_general "boundvar" (SOME tystr) ssz
+      | TyV => add_ann_string_general "typevar" NONE ssz
+      | TyOp thy => add_ann_string_general "type" (SOME thy) ssz
+      | TySyn r => add_ann_string_general "type" (SOME r) ssz
+      | _ => add_ssz ssz
 
-  fun add_ann_string___simple pps (ssz, ann) =
+  fun add_ann_string___simple (ssz, ann) =
       case ann of
-        FV _    => add_color_string pps Blue ssz
-      | BV _    => add_color_string pps Green ssz
-      | TyV     => add_color_string pps Purple ssz
-      | TyOp _  => add_color_string pps BlueGreen ssz
-      | TySyn _ => add_color_string pps BlueGreen ssz
-      | _ => add_ssz pps ssz
+        FV _    => add_color_string Blue ssz
+      | BV _    => add_color_string Green ssz
+      | TyV     => add_color_string Purple ssz
+      | TyOp _  => add_color_string BlueGreen ssz
+      | TySyn _ => add_color_string BlueGreen ssz
+      | _ => add_ssz ssz
 
-  fun add_xstring pps {s,sz,ann} =
+  fun add_xstring {s,sz,ann} =
     if not (!backend_use_annotations) orelse not (isSome ann) then
-      add_ssz pps (s,sz)
+      add_ssz (s,sz)
     else (if (!backend_use_css) then add_ann_string___css
-          else add_ann_string___simple) pps ((s,sz), valOf ann)
+          else add_ann_string___simple) ((s,sz), valOf ann)
 in
-  {name           = name,
-   tm_grammar_upd = (fn g => g),
-   ty_grammar_upd = (fn g => g),
+  {extras = {name           = name,
+             tm_grammar_upd = (fn g => g),
+             ty_grammar_upd = (fn g => g)},
    add_break      = #add_break   raw_terminal,
    add_newline    = #add_newline raw_terminal,
-   begin_block    = #begin_block raw_terminal,
-   end_block      = #end_block   raw_terminal,
+   ublock         = #ublock raw_terminal,
    add_string     = add_string,
    add_xstring    = add_xstring,
-   begin_style    = begin_style,
-   end_style      = end_style}
+   ustyle         = ustyle}
 end
-
-val debug_blocks_terminal : t = let
-  fun sty_to_string (PP.CONSISTENT, n) = "C" ^ Int.toString n
-    | sty_to_string (PP.INCONSISTENT, n) = "I" ^ Int.toString n
-in
-  {name = "debug_blocks",
-   tm_grammar_upd = (fn g => g),
-   ty_grammar_upd = (fn g => g),
-   add_break      = PP.add_break,
-   add_string     = PP.add_string,
-   add_xstring    = (fn pps => fn {s,sz,...} => add_ssz pps (s,sz)),
-   add_newline    = PP.add_newline,
-   begin_block    = (fn pps => fn sty => fn i =>
-                        (PP.add_stringsz
-                           pps
-                           (sty_to_string (sty,i) ^ "[", 0);
-                         PP.begin_block pps sty i)),
-   end_block      = (fn pps => (PP.add_stringsz pps ("]", 0);
-                                PP.end_block pps)),
-   begin_style    = fn pps => fn sty => (),
-   end_style      = fn pps => ()}
-end
-
 
 end (* struct *)

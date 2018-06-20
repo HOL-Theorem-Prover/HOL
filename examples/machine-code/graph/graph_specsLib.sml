@@ -437,13 +437,47 @@ fun get_pc_val th = let
   in find_term (can (match_term pc_pat)) p
        |> rand |> rand |> numSyntax.int_of_term end
 
+local
+  val r = ref [""];
+  fun get_index_name name i = let
+    val str = name ^ "_" ^ int_to_string i
+    in if mem str (!r) then get_index_name name (i+1)
+       else(r := str::(!r); str) end
+in
+  fun get_name name =
+    if mem name (!r) then get_index_name name 0
+    else (r := name::(!r); name)
+end
+
 fun derive_insts_for sec_name = let
-  val thms = dervie_specs_for sec_name
+  val thms = derive_specs_for sec_name
   val _ = write_subsection "Proving inst theorems"
   val _ = (writer_prints := false)
   val insts = try_map (fn (_,(th,_,_),_) =>
     add_graph_spec_fail (get_pc_val th) sec_name) make_INST thms
   val _ = (writer_prints := true)
+  val all_ok_chars = explode
+   ("abcdefghijklmonpqrstuvwxyz" ^
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ" ^
+    "0123456789_")
+  fun remove_SKIP_TAG th = let
+    val pos = th |> concl |> rand |> rator |> rator |> rand |> rand
+                 |> numSyntax.dest_numeral
+                 |> Arbnumcore.toHexString
+    val th = MATCH_MP SKIP_TAG_IMP_CALL th
+    val name = find_term (can stringLib.dest_string) (concl th)
+    fun join [] = ""
+      | join [x] = x
+      | join (x::ys) = x ^ "_" ^ join ys
+    fun prefix_instr str = "instruction'" ^ str ^ "_" ^ pos
+    val new_name = stringLib.fromHOLstring name
+                   |> String.tokens (fn c => not (mem c all_ok_chars))
+                   |> join |> prefix_instr |> get_name
+    in th |> SIMP_RULE std_ss []
+          |> SPEC (stringLib.fromMLstring new_name)
+          |> UNDISCH end
+    handle HOL_ERR _ => th
+  val insts = map remove_SKIP_TAG insts
   val inst_count = int_to_string (length insts)
   val _ = write_line (inst_count ^ " inst theorems describe instructions.")
   in insts end;

@@ -1,14 +1,20 @@
+(* ------------------------------------------------------------------------
+   Conversions for evaluating IEEE-754 operations.
+   The evaluation of rounding (to zero and nearest) uses a certification
+   approach, with calculations performed over rational numbers at the ML level.
+   (Rounding to +/-INF is not currently supported.)
+   ------------------------------------------------------------------------ *)
 structure binary_ieeeLib :> binary_ieeeLib =
 struct
 
 open HolKernel Parse boolLib bossLib
-open realLib wordsLib binary_ieeeSyntax machine_ieeeSyntax
+open realLib wordsLib binary_ieeeSyntax
 
 structure Parse =
 struct
   open Parse
   val (Type, Term) =
-     parse_from_grammars machine_ieeeTheory.machine_ieee_grammars
+     parse_from_grammars binary_ieeeTheory.binary_ieee_grammars
 end
 open Parse
 
@@ -16,8 +22,6 @@ val ERR = Feedback.mk_HOL_ERR "binary_ieeeLib"
 
 val lhsc = boolSyntax.lhs o Thm.concl
 val rhsc = boolSyntax.rhs o Thm.concl
-
-fun mk_native_ieee_thm th = Thm.mk_oracle_thm "native_ieee" ([], th)
 
 (* ------------------------------------------------------------------------
    real_to_arbrat
@@ -233,6 +237,7 @@ end
 
 val float_datatype_rwts =
    #rewrs (TypeBase.simpls_of ``:('a, 'b) float``) @
+   #rewrs (TypeBase.simpls_of ``:flags``) @
    #rewrs (TypeBase.simpls_of ``:rounding``)
 
 val FLOAT_DATATYPE_CONV =
@@ -301,15 +306,14 @@ val float_value_CONV =
 
 local
    val mk_real = realSyntax.term_of_int o Arbint.fromInt
-   val mk_large = binary_ieeeSyntax.mk_int_largest
+   val mk_tw = boolSyntax.mk_itself o pairSyntax.mk_prod
+   val mk_large = binary_ieeeSyntax.mk_largest o mk_tw
    val mk_neg_large = realSyntax.mk_negated o mk_large
-   val mk_threshold = binary_ieeeSyntax.mk_int_threshold
+   val mk_threshold = binary_ieeeSyntax.mk_threshold o mk_tw
    val mk_neg_threshold = realSyntax.mk_negated o mk_threshold
-   val mk_ulp = binary_ieeeSyntax.mk_int_ulp
+   val mk_ulp = binary_ieeeSyntax.mk_ulp o mk_tw
    fun mk_ULP (e, t) =
-      binary_ieeeSyntax.mk_ULP
-         (pairSyntax.mk_pair
-            (e, boolSyntax.mk_itself (fcpSyntax.mk_int_numeric_type t)))
+      binary_ieeeSyntax.mk_ULP (pairSyntax.mk_pair (e, boolSyntax.mk_itself t))
    fun mk_abs_diff (x, r) = realSyntax.mk_absval (realSyntax.mk_minus (x, r))
    fun mk_abs_diff_lt (x, r, u) = realSyntax.mk_less (mk_abs_diff (x, r), u)
    val cond_mk_absval = fn true => realSyntax.mk_absval | _ => Lib.I
@@ -330,15 +334,18 @@ local
       |> Drule.EQT_ELIM
    val twm_map =
       ref (Redblackmap.mkDict
-            (Lib.pair_compare (Lib.pair_compare (Int.compare, Int.compare),
+            (Lib.pair_compare (Lib.pair_compare (Type.compare, Type.compare),
                                Term.compare))
-           : ((int * int) * term, (term -> float) * conv) Redblackmap.dict)
-   fun lookup (x as (tw, mode)) =
+           : ((hol_type * hol_type) * term,
+              (term -> float) * conv) Redblackmap.dict)
+   fun lookup (x as (tw as (t, w), mode)) =
       case Redblackmap.peek (!twm_map, x) of
          SOME y => y
        | NONE =>
            let
-              val f = real_to_float x
+              val tn = fcpSyntax.dest_int_numeric_type t
+              val wn = fcpSyntax.dest_int_numeric_type w
+              val f = real_to_float ((tn, wn), mode)
               val thm = if mode = binary_ieeeSyntax.roundTiesToEven_tm
                            then threshold_CONV (mk_threshold tw)
                         else largest_CONV (mk_large tw)
@@ -394,6 +401,10 @@ local
       Drule.MATCH_MP (realLib.REAL_ARITH ``(a <= b = F) ==> b < a: real``)
    val le_thm =
       Drule.MATCH_MP (realLib.REAL_ARITH ``(a < b = F) ==> b <= a: real``)
+   fun mk_w (n, ty) = wordsSyntax.mk_n2w (numLib.mk_numeral n, ty)
+   fun float_of_triple ((t, w), (s, e, f)) =
+     binary_ieeeSyntax.mk_floating_point
+       (wordsSyntax.mk_wordii (if s then 1 else 0, 1), mk_w (e, w), mk_w (f, t))
    (*
    fun EQ_ELIM thm =
       mlibUseful.INL (Drule.EQT_ELIM thm)
@@ -404,8 +415,7 @@ in
    fun round_CONV tm =
    let
       val (mode, x, t, w) = binary_ieeeSyntax.dest_round tm
-      val tw as (t, w) = (fcpSyntax.dest_int_numeric_type t,
-                          fcpSyntax.dest_int_numeric_type w)
+      val tw = (t, w)
       val (r2f, cnv) = lookup (tw, mode)
    in
       (*
@@ -431,7 +441,7 @@ in
                        val t_thm =
                           (EQT_REDUCE (Conv.RAND_CONV cnv))
                              (mk_abs_lt (x, mk_threshold tw))
-                       val y = binary_ieeeSyntax.float_of_triple (tw, sef)
+                       val y = float_of_triple (tw, sef)
                        val r_thm =
                           float_value_CONV (binary_ieeeSyntax.mk_float_value y)
                        val r = binary_ieeeSyntax.dest_float (rhsc r_thm)
@@ -493,7 +503,7 @@ in
                               Drule.EQT_ELIM u_thm
                               handle HOL_ERR _ =>
                                  raise PlusMinusZero (lt_thm u_thm)
-                           val y = binary_ieeeSyntax.float_of_triple (tw, sef)
+                           val y = float_of_triple (tw, sef)
                            val r_thm =
                               float_value_CONV
                                  (binary_ieeeSyntax.mk_float_value y)
@@ -570,8 +580,9 @@ local
         NotZero of Thm.thm
       | Limit of Thm.thm
       | Zero of Thm.thm
-   fun mk_neq_zero tm sz =
-      boolSyntax.mk_neg (boolSyntax.mk_eq (tm, wordsSyntax.mk_wordii (0, sz)))
+   fun mk_neq_zero tm ty =
+      boolSyntax.mk_neg
+        (boolSyntax.mk_eq (tm, wordsSyntax.mk_n2w (numSyntax.zero_tm, ty)))
    fun try_round tm =
       let
          val thm = round_CONV tm
@@ -619,8 +630,6 @@ in
          case try_round (binary_ieeeSyntax.mk_round (mode, x, t, w)) of
             NotZero rnd_thm =>
                let
-                  val t = fcpSyntax.dest_int_numeric_type t
-                  val w = fcpSyntax.dest_int_numeric_type w
                   val (_, e, f) =
                      binary_ieeeSyntax.dest_floating_point (rhsc rnd_thm)
                   val not_zero_tm =
@@ -642,6 +651,26 @@ local
 in
    fun round_CONV tm =
       cnv tm handle PlusMinusZero _ => raise ERR "round_CONV" "+/- 0"
+end
+
+(* -------------------------------------------------------------------------
+   float_round_with_flags_CONV
+   ------------------------------------------------------------------------- *)
+
+local
+  val conv =
+    REAL_REDUCE_CONV
+    THENC FLOAT_DATATYPE_CONV
+    THENC REWRITE_CONV [binary_ieeeTheory.float_components]
+    THENC wordsLib.WORD_EVAL_CONV
+    THENC float_round_CONV
+  fun round_conv tm =
+    (if binary_ieeeSyntax.is_float_round tm then conv else NO_CONV) tm
+in
+  val float_round_with_flags_CONV =
+    Conv.REWR_CONV binary_ieeeTheory.float_round_with_flags_def
+    THENC Conv.RAND_CONV REAL_REDUCE_CONV
+    THENC Conv.DEPTH_CONV round_conv
 end
 
 (* ------------------------------------------------------------------------
@@ -707,7 +736,7 @@ end
    to one of
 
       ``float_round mode toneg (ra + rb)``
-      ``float_some_nan (:10 # 5)``
+      ``float_some_qnan (:10 # 5)``
       ``float_plus_infinity (:10 # 5)``
       ``float_minus_infinity (:10 # 5)``
 
@@ -848,215 +877,44 @@ local
                   (Conv.RAND_CONV float_compare_CONV))))
       THENC FLOAT_COMPARE_CONV
 in
-   val float_compare_CONV = float_compare_CONV
-   val float_equal_CONV =
+   val compare_CONV = float_compare_CONV
+   val equal_CONV =
       Conv.REWR_CONV binary_ieeeTheory.float_equal_def THENC cnv1
-   val float_less_than_CONV =
+   val less_than_CONV =
       Conv.REWR_CONV binary_ieeeTheory.float_less_than_def THENC cnv1
-   val float_less_equal_CONV =
+   val less_equal_CONV =
       Conv.REWR_CONV binary_ieeeTheory.float_less_equal_def THENC cnv2
-   val float_greater_than_CONV =
+   val greater_than_CONV =
       Conv.REWR_CONV binary_ieeeTheory.float_greater_than_def THENC cnv1
-   val float_greater_equal_CONV =
+   val greater_equal_CONV =
       Conv.REWR_CONV binary_ieeeTheory.float_greater_equal_def THENC cnv2
 end
-
-(* -------------------------------------------------------------------------
-   liftNative
-   ------------------------------------------------------------------------- *)
-
-fun withRounding tm f x =
-   let
-      val mode = IEEEReal.getRoundingMode ()
-   in
-      IEEEReal.setRoundingMode
-        (if tm = binary_ieeeSyntax.roundTiesToEven_tm
-            then IEEEReal.TO_NEAREST
-         else if tm = binary_ieeeSyntax.roundTowardZero_tm
-            then IEEEReal.TO_ZERO
-         else if tm = binary_ieeeSyntax.roundTowardNegative_tm
-            then IEEEReal.TO_NEGINF
-         else if tm = binary_ieeeSyntax.roundTowardPositive_tm
-            then IEEEReal.TO_POSINF
-         else raise ERR "setRounding" "not a valid mode")
-     ; f x before IEEEReal.setRoundingMode mode
-   end
-
-fun liftNative1 f dst (tm: term) =
-   case Lib.total dst tm of
-      SOME (mode, a) =>
-        (case Lib.total floatToReal a of
-            SOME ra =>
-               withRounding mode
-                 (fn ra =>
-                    mk_native_ieee_thm
-                       (boolSyntax.mk_eq (tm, realToFloat (f ra)))) ra
-          | _ => raise ERR "liftNative1" "failed to convert to native reals")
-    | NONE => raise ERR "liftNative1" ""
-
-fun liftNative2 f dst (tm: term) =
-   case Lib.total dst tm of
-      SOME (mode, a, b) =>
-        (case (Lib.total floatToReal a, Lib.total floatToReal b) of
-            (SOME ra, SOME rb) =>
-               withRounding mode
-                 (fn (ra, rb) =>
-                    mk_native_ieee_thm
-                       (boolSyntax.mk_eq (tm, realToFloat (f (ra, rb)))))
-                 (ra, rb)
-          | _ => raise ERR "liftNative2" "failed to convert to native reals")
-    | NONE => raise ERR "liftNative2" ""
-
-fun liftNative3 f dst (tm: term) =
-   case Lib.total dst tm of
-      SOME (mode, a, b, c) =>
-        (case (Lib.total floatToReal a,
-               Lib.total floatToReal b,
-               Lib.total floatToReal c) of
-            (SOME ra, SOME rb, SOME rc) =>
-               withRounding mode
-                 (fn (ra, rb, rc) =>
-                    mk_native_ieee_thm
-                       (boolSyntax.mk_eq (tm, realToFloat (f (ra, rb, rc)))))
-                 (ra, rb, rc)
-          | _ => raise ERR "liftNative2" "failed to convert to native reals")
-    | NONE => raise ERR "liftNative2" ""
-
-fun liftNativeOrder f dst (tm: term) =
-   case Lib.total dst tm of
-      SOME (a, b) =>
-        (case (Lib.total floatToReal a, Lib.total floatToReal b) of
-            (SOME ra, SOME rb) =>
-                mk_native_ieee_thm (boolSyntax.mk_eq (tm, f (ra, rb)))
-          | _ => raise ERR "liftNativeOrder"
-                           "failed to convert to native reals")
-    | NONE => raise ERR "liftNativeOrder" ""
-
-(* -------------------------------------------------------------------------
-   lcf_or_native_conv
-   ------------------------------------------------------------------------- *)
-
-fun mk_b true = boolSyntax.T
-  | mk_b false = boolSyntax.F
-
-val mk_float_compare =
-   fn IEEEReal.LESS      => binary_ieeeSyntax.LT_tm
-    | IEEEReal.EQUAL     => binary_ieeeSyntax.EQ_tm
-    | IEEEReal.GREATER   => binary_ieeeSyntax.GT_tm
-    | IEEEReal.UNORDERED => binary_ieeeSyntax.UN_tm
-
-val native_eval = ref 0 (* off by default *)
-val () = Feedback.register_trace ("native ieee", native_eval, 2)
-
-fun lcf_or_native_conv0 (get_ty, lcf_conv: conv, native_conv: conv, level) =
-   fn tm =>
-      if !native_eval = level andalso get_ty tm = native_ty
-         then native_conv tm (* doesn't cover NaN cases *)
-              handle HOL_ERR _ => lcf_conv tm
-      else lcf_conv tm
-
-fun lcf_or_native_conv (lcf_conv, native_conv, level) =
-   let
-      val rnd_conv =
-         REAL_REDUCE_CONV
-         THENC Conv.RATOR_CONV
-                  (Conv.RAND_CONV
-                      (FLOAT_DATATYPE_CONV THENC wordsLib.WORD_EVAL_CONV))
-         THENC float_round_CONV
-      val cnv = lcf_conv THENC TRY_CONV rnd_conv
-   in
-      lcf_or_native_conv0 (Term.type_of, cnv, native_conv, level)
-   end
-
-fun lcf_or_native_order_conv (lcf_conv, native_conv) =
-   lcf_or_native_conv0 (Term.type_of o Term.rand, lcf_conv, native_conv, 2)
-
-val native_float_sqrt_CONV =
-   liftNative1 Math.sqrt binary_ieeeSyntax.dest_float_sqrt
-
-val native_float_add_CONV =
-   liftNative2 Real.+ binary_ieeeSyntax.dest_float_add
-
-val native_float_sub_CONV =
-   liftNative2 Real.- binary_ieeeSyntax.dest_float_sub
-
-(**************************************************************
- NOTE:
-   Poly/ML's multiply isn't fully IEEE compliant on 64-bit machines, which
-   results in some selftest failures
- **************************************************************)
-
-val native_float_mul_CONV =
-   liftNative2 Real.* binary_ieeeSyntax.dest_float_mul
-
-val native_float_div_CONV =
-   liftNative2 Real./ binary_ieeeSyntax.dest_float_div
-
-val native_float_mul_add_CONV =
-   liftNative3 Real.*+ binary_ieeeSyntax.dest_float_mul_add
-
-val native_float_less_than_CONV =
-   liftNativeOrder (mk_b o Real.<) binary_ieeeSyntax.dest_float_less_than
-
-val native_float_less_equal_CONV =
-   liftNativeOrder (mk_b o Real.<=) binary_ieeeSyntax.dest_float_less_equal
-
-val native_float_greater_than_CONV =
-   liftNativeOrder (mk_b o Real.>) binary_ieeeSyntax.dest_float_greater_than
-
-val native_float_greater_equal_CONV =
-   liftNativeOrder (mk_b o Real.>=) binary_ieeeSyntax.dest_float_greater_equal
-
-val native_float_equal_CONV =
-   liftNativeOrder (mk_b o Real.==) binary_ieeeSyntax.dest_float_equal
-
-val native_float_compare_CONV =
-   liftNativeOrder (mk_float_compare o Real.compareReal)
-      binary_ieeeSyntax.dest_float_compare
-
-val sqrt_CONV = lcf_or_native_conv (NO_CONV, native_float_sqrt_CONV, 1)
-
-val add_CONV = lcf_or_native_conv (float_add_CONV, native_float_add_CONV, 2)
-val sub_CONV = lcf_or_native_conv (float_sub_CONV, native_float_sub_CONV, 2)
-val mul_CONV = lcf_or_native_conv (float_mul_CONV, native_float_mul_CONV, 2)
-val div_CONV = lcf_or_native_conv (float_div_CONV, native_float_div_CONV, 2)
-
-(* mul_add_CONV could benefit from a more efficient LCF custom conversion *)
-
-val mul_add_CONV =
-   lcf_or_native_conv
-      (Conv.REWR_CONV binary_ieeeTheory.float_mul_add_def THENC EVAL,
-       native_float_mul_add_CONV, 2)
-
-(**************************************************************
- NOTE:
-   Real.compareReal for Poly/ML < revision 1918 doesn't work for infinities.
- **************************************************************)
-
-val compare_CONV =
-   lcf_or_native_order_conv (float_compare_CONV, native_float_compare_CONV)
-
-val equal_CONV =
-   lcf_or_native_order_conv (float_equal_CONV, native_float_equal_CONV)
-
-val less_than_CONV =
-   lcf_or_native_order_conv (float_less_than_CONV, native_float_less_than_CONV)
-
-val less_equal_CONV =
-   lcf_or_native_order_conv
-      (float_less_equal_CONV, native_float_less_equal_CONV)
-
-val greater_than_CONV =
-   lcf_or_native_order_conv
-      (float_greater_than_CONV, native_float_greater_than_CONV)
-
-val greater_equal_CONV =
-   lcf_or_native_order_conv
-      (float_greater_equal_CONV, native_float_greater_equal_CONV)
 
 (* ------------------------------------------------------------------------
    Add rewrites and conversions to compsets
    ------------------------------------------------------------------------ *)
+
+(* Evaluation conversions *)
+
+fun round_after cnv = cnv THENC TRY_CONV float_round_with_flags_CONV
+
+val add_CONV = round_after float_add_CONV
+val sub_CONV = round_after float_sub_CONV
+val mul_CONV = round_after float_mul_CONV
+val div_CONV =
+  round_after
+    (float_div_CONV THENC wordsLib.WORD_EVAL_CONV THENC REAL_REDUCE_CONV)
+
+(* the following could benefit from a more efficient LCF custom conversion *)
+
+val sqrt_CONV =
+  round_after (Conv.REWR_CONV binary_ieeeTheory.float_sqrt_def THENC EVAL)
+
+val mul_add_CONV =
+  round_after (Conv.REWR_CONV binary_ieeeTheory.float_mul_add_def THENC EVAL)
+
+val mul_sub_CONV =
+  round_after (Conv.REWR_CONV binary_ieeeTheory.float_mul_sub_def THENC EVAL)
 
 val ieee_rewrites =
    let
@@ -1071,7 +929,10 @@ val ieee_rewrites =
        spc float_negate_def, spc float_abs_def, float_plus_zero_def,
        sr0 float_top_def, float_plus_min_def, float_minus_min_def,
        float_minus_zero, sr [float_top_def, float_negate_def] float_bottom_def,
-       float_components
+       float_components, float_round_to_integral_compute, float_to_int_def,
+       real_to_float_def, real_to_float_with_flags_def, float_is_signalling_def,
+       check_for_signalling_def, clear_flags_def, invalidop_flags_def,
+       dividezero_flags_def
        ] @
       List.take (Drule.CONJUNCTS float_values, 3) @ float_datatype_rwts
    end
@@ -1100,7 +961,10 @@ fun add_ieee_to_compset cmp =
          (binary_ieeeSyntax.float_mul_tm, 3, mul_CONV),
          (binary_ieeeSyntax.float_div_tm, 3, div_CONV),
          (binary_ieeeSyntax.float_mul_add_tm, 4, mul_add_CONV),
+         (binary_ieeeSyntax.float_mul_sub_tm, 4, mul_sub_CONV),
          (binary_ieeeSyntax.float_round_tm, 3, float_round_CONV),
+         (binary_ieeeSyntax.float_round_with_flags_tm, 3,
+           float_round_with_flags_CONV),
          (binary_ieeeSyntax.float_compare_tm, 2, compare_CONV),
          (binary_ieeeSyntax.float_equal_tm, 2, equal_CONV),
          (binary_ieeeSyntax.float_less_than_tm, 2, less_than_CONV),

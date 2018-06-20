@@ -205,14 +205,13 @@ val min_ratrs =
               (SPECL [u, mk_div(x,y)] min_def)
 
 local
-   val flr = REWRITE_RULE [GSYM arithmeticTheory.NOT_ZERO_LT_ZERO]
-                (Thm.CONJUNCT2 realTheory.NUM_FLOOR_EQNS)
-   fun iflr x =
-      REWRITE_RULE [num_eq_0] (Q.INST [`n` |-> `NUMERAL n`, `m` |-> x] flr)
+  val (a, b, c, d) =
+    Lib.quadruple_of_list (Drule.CONJUNCTS realTheory.NUM_FLOOR_EQNS)
+  val rule = REWRITE_RULE [GSYM arithmeticTheory.NOT_ZERO_LT_ZERO, num_eq_0]
+  val r1 = rule o Q.INST [`m` |-> `NUMERAL (BIT1 m)`]
+  val r2 = rule o Q.INST [`m` |-> `NUMERAL (BIT2 m)`]
 in
-   val flr = Drule.LIST_CONJ
-               [Thm.CONJUNCT1 realTheory.NUM_FLOOR_EQNS,
-                iflr `NUMERAL (BIT1 m)`, iflr `NUMERAL (BIT2 m)`]
+  val flr = Drule.LIST_CONJ [a, b, r1 c, r2 c, r1 d, r2 d]
 end
 
 val abs1 = SPEC (mk_div(x,y)) realTheory.abs
@@ -225,22 +224,21 @@ val m = mk_var("m", numSyntax.num)
 fun to_numeraln th = INST [n |-> mk_comb(numSyntax.numeral_tm, n),
                            m |-> mk_comb(numSyntax.numeral_tm, m)] th
 
-
-val op_rwts = [to_numeraln mult_ints, to_numeraln add_ints, flr, REAL_DIV_LZERO,
-               REAL_NEGNEG] @
-              transform [(x,posneg0)] (SPEC_ALL REAL_ADD_LID) @
-              transform [(x,posneg)] (SPEC_ALL REAL_ADD_RID) @
-              transform [(x,posneg0)] (SPEC_ALL REAL_MUL_LZERO) @
-              transform [(x,posneg)] (SPEC_ALL REAL_MUL_RZERO) @
-              neg_ths @
-              add_rats @ add_ratls @ add_ratrs @
-              mult_rats @ mult_ratls @ mult_ratrs @
-              sub1 @ sub2 @ sub3 @ sub4 @
-              div_rats @ div_ratls @ div_ratrs @ div_eq_1 @
-              max_ratls @ max_ratrs @ max_rats @ max_ints @
-              min_ratls @ min_ratrs @ min_rats @ min_ints @
-              (realTheory.REAL_ABS_0 :: abs1) @ abs2
-
+val op_rwts =
+  [to_numeraln mult_ints, to_numeraln add_ints, flr, NUM_CEILING_NUM_FLOOR,
+   REAL_DIV_LZERO, REAL_NEGNEG] @
+   transform [(x,posneg0)] (SPEC_ALL REAL_ADD_LID) @
+   transform [(x,posneg)] (SPEC_ALL REAL_ADD_RID) @
+   transform [(x,posneg0)] (SPEC_ALL REAL_MUL_LZERO) @
+   transform [(x,posneg)] (SPEC_ALL REAL_MUL_RZERO) @
+   neg_ths @
+   add_rats @ add_ratls @ add_ratrs @
+   mult_rats @ mult_ratls @ mult_ratrs @
+   sub1 @ sub2 @ sub3 @ sub4 @
+   div_rats @ div_ratls @ div_ratrs @ div_eq_1 @
+   max_ratls @ max_ratrs @ max_rats @ max_ints @
+   min_ratls @ min_ratrs @ min_rats @ min_ints @
+   (realTheory.REAL_ABS_0 :: abs1) @ abs2
 
 fun nat2nat th = let
   val simp = REWRITE_RULE [REAL_INJ, REAL_NEGNEG, REAL_NEG_EQ0, num_eq_0]

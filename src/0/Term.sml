@@ -14,6 +14,8 @@ struct
 
 open Feedback Lib Subst KernelTypes
 
+val kernelid = "stdknl"
+
 type 'a set = 'a HOLset.set;
 
 val ERR = mk_HOL_ERR "Term";
@@ -57,6 +59,7 @@ in
   val imp_id = insert(termsig,{Name = "==>", Thy = "min"}, imp_ty)
 
   val eqc = Const (eq_id,eq_ty)
+  val equality = eqc
   val hil = Const (hil_id,hil_ty)
   val imp = Const (imp_id,imp_ty)
 end
@@ -101,7 +104,7 @@ local fun lookup 0 (ty::_)  = ty
         | ty_of (Const(_,POLY Ty)) _   = Ty
         | ty_of (Bv i) E               = lookup i E
         | ty_of (Comb(Rator, _)) E     = snd(Type.dom_rng(ty_of Rator E))
-	| ty_of (t as Clos _) E        = ty_of (push_clos t) E
+        | ty_of (t as Clos _) E        = ty_of (push_clos t) E
         | ty_of (Abs(Fv(_,Ty),Body)) E = Ty --> ty_of Body (Ty::E)
         | ty_of _ _ = raise ERR "type_of" "term construction"
 in
@@ -160,7 +163,7 @@ fun free_vars_lr tm =
         | FV (Const _::t) A       = FV t A
         | FV (Comb(M,N)::t) A     = FV (M::N::t) A
         | FV (Abs(_,M)::t) A      = FV (M::t) A
-	| FV ((M as Clos _)::t) A = FV (push_clos M::t) A
+        | FV ((M as Clos _)::t) A = FV (push_clos M::t) A
         | FV [] A = rev A
   in
      FV [tm] []
@@ -173,7 +176,7 @@ fun free_vars_lr tm =
 local fun vars (v as Fv _) A        = Lib.insert v A
         | vars (Comb(Rator,Rand)) A = vars Rand (vars Rator A)
         | vars (Abs(Bvar,Body)) A   = vars Body (vars Bvar A)
-	| vars (t as Clos _) A      = vars (push_clos t) A
+        | vars (t as Clos _) A      = vars (push_clos t) A
         | vars _ A = A
 in
 fun all_vars tm = vars tm []
@@ -199,8 +202,10 @@ val empty_varset = HOLset.empty var_compare
     Fv < Bv < Const < Comb < Abs
    ---------------------------------------------------------------------- *)
 
-fun compare p =
-    if Portable.pointer_eq p then EQUAL else
+fun fast_term_eq (t1:term) (t2:term) = Portable.pointer_eq (t1,t2)
+
+fun compare (p as (t1,t2)) =
+    if fast_term_eq t1 t2 then EQUAL else
     case p of
       (t1 as Clos _, t2)     => compare (push_clos t1, t2)
     | (t1, t2 as Clos _)     => compare (t1, push_clos t2)
@@ -273,7 +278,7 @@ fun FVL [] A = A
 fun free_in tm =
    let fun f1 (Comb(Rator,Rand)) = (f2 Rator) orelse (f2 Rand)
          | f1 (Abs(_,Body)) = f2 Body
-	 | f1 (t as Clos _) = f2 (push_clos t)
+         | f1 (t as Clos _) = f2 (push_clos t)
          | f1 _ = false
        and f2 t = term_eq t tm orelse f1 t
    in f2
@@ -463,7 +468,9 @@ fun rename_bvar s t =
     | _ => raise ERR "rename_bvar" "not an abstraction";
 
 
-local val EQ = Portable.pointer_eq
+local
+  fun EQ(t1,t2) = fast_term_eq t1 t2
+  fun subsEQ(s1,s2) = s1 = s2
 in
 fun aconv t1 t2 = EQ(t1,t2) orelse
  case(t1,t2)
@@ -471,7 +478,7 @@ fun aconv t1 t2 = EQ(t1,t2) orelse
    | (Abs(Fv(_,ty1),M),
       Abs(Fv(_,ty2),N)) => ty1=ty2 andalso aconv M N
    | (Clos(e1,b1),
-      Clos(e2,b2)) => (EQ(e1,e2) andalso EQ(b1,b2))
+      Clos(e2,b2)) => (subsEQ(e1,e2) andalso EQ(b1,b2))
                        orelse aconv (push_clos t1) (push_clos t2)
    | (Clos _, _) => aconv (push_clos t1) t2
    | (_, Clos _) => aconv t1 (push_clos t2)
@@ -556,11 +563,11 @@ fun subst [] = I
         fun subs tm =
           case peek(fmap,tm)
            of SOME residue => residue
-	    | NONE =>
+            | NONE =>
               (case tm
                 of Comb(Rator,Rand) => Comb(subs Rator, subs Rand)
                  | Abs(Bvar,Body) => Abs(Bvar,subs Body)
-	         | Clos _        => subs(push_clos tm)
+                 | Clos _        => subs(push_clos tm)
                  |   _         => tm)
     in
       (if b then vsubs else subs)
@@ -823,7 +830,7 @@ val body = snd o dest_abs;
  ---------------------------------------------------------------------------*)
 
 local
-  fun MERR s = raise ERR "raw_match_term error" s
+  fun MERR s = raise ERR "raw_match_term" s
   fun free (Bv i) n             = i<n
     | free (Comb(Rator,Rand)) n = free Rand n andalso free Rator n
     | free (Abs(_,Body)) n      = free Body (n+1)
@@ -840,7 +847,7 @@ in
 fun RM [] theta = theta
   | RM (((v as Fv(n,Ty)),tm,scoped)::rst) ((S1 as (tmS,Id)),tyS)
      = if bound_by_scope scoped tm
-       then MERR "variable bound by scope"
+       then MERR "Attempt to capture bound variable"
        else RM rst
             ((case lookup v Id tmS
                of NONE => if v=tm then (tmS,HOLset.add(Id,v))
@@ -855,7 +862,7 @@ fun RM [] theta = theta
           let val n1 = id_toString c1
               val n2 = id_toString c2
           in
-           MERR ("different constants: "^n1^" matched against "^n2)
+           MERR ("Different constants: "^n1^" and "^n2)
           end
          else
          case (ty1,ty2)
@@ -868,7 +875,7 @@ fun RM [] theta = theta
       = RM ((M,N,true)::rst) (tmS, tymatch ty1 ty2 tyS)
   | RM ((Comb(M,N),Comb(P,Q),s)::rst) S = RM ((M,P,s)::(N,Q,s)::rst) S
   | RM ((Bv i,Bv j,_)::rst) S  = if i=j then RM rst S
-                                 else MERR "Bound var. depth"
+                                 else MERR "Bound var doesn't match"
   | RM (((pat as Clos _),ob,s)::t) S = RM ((push_clos pat,ob,s)::t) S
   | RM ((pat,(ob as Clos _),s)::t) S = RM ((pat,push_clos ob,s)::t) S
   | RM all others                    = MERR "different constructors"
@@ -976,21 +983,25 @@ val app     = "@"
 val lam     = "|"
 val dollar  = "$"
 val percent = "%"
-datatype pptask = ppTM of term | ppLAM | ppAPP
+datatype pptask = ppTM of term | ppLAM | ppAPP of int
 fun pp_raw_term index tm = let
+  fun mkAPP [] = [ppAPP 1]
+    | mkAPP (ppAPP n :: rest) = ppAPP (n + 1) :: rest
+    | mkAPP rest = ppAPP 1 :: rest
   fun pp acc tasklist =
       case tasklist of
           [] => String.concat (List.rev acc)
         | ppTM (Abs(Bvar, Body)) :: rest =>
             pp acc (ppTM Bvar :: ppTM Body :: ppLAM :: rest)
         | ppTM (Comb(Rator, Rand)) :: rest =>
-            pp acc (ppTM Rator :: ppTM Rand :: ppAPP :: rest)
+            pp acc (ppTM Rator :: ppTM Rand :: mkAPP rest)
         | ppTM (Bv i) :: rest =>
             pp (dollar ^ Int.toString i :: acc) rest
         | ppTM a :: rest =>
             pp (percent ^ Int.toString (index a) :: acc) rest
         | ppLAM :: rest => pp (lam :: acc) rest
-        | ppAPP :: rest => pp (app :: acc) rest
+        | ppAPP n :: rest =>
+            pp (app ^ (if n = 1 then "" else Int.toString n) :: acc) rest
 in
   pp [] [ppTM tm]
 end
@@ -1004,7 +1015,7 @@ fun write_raw index tm = pp_raw_term index (norm_clos tm)
 
 local
 datatype lexeme
-   = app
+   = app of int
    | lamb
    | ident of int
    | bvar  of int;
@@ -1029,7 +1040,9 @@ fun lexer ss1 =
         #"|" => SOME(lamb,  ss2)
       | #"%"  => let val (n,ss3) = take_numb ss2 in SOME(ident n, ss3) end
       | #"$"  => let val (n,ss3) = take_numb ss2 in SOME(bvar n,  ss3) end
-      | #"@" => SOME(app, ss2)
+      | #"@" =>
+        (let val (n,ss3) = take_numb ss2 in SOME(app n, ss3) end
+         handle HOL_ERR _ => SOME (app 1, ss2))
       |   _   => raise ERR "raw lexer" "bad character";
 
 in
@@ -1039,13 +1052,19 @@ fun read_raw tmv = let
       case (stk, lexer ss) of
         (_, SOME (bvar n,  rst)) => parse (Bv n::stk,rst)
       | (_, SOME (ident n, rst)) => parse (index n::stk,rst)
-      | (x::f::stk, SOME (app, rst)) => parse (Comb(f,x)::stk, rst)
+      | (stk, SOME (app n, rst)) => doapps n stk rst
       | (bd::bv::stk, SOME(lam,rst)) => parse (Abs(bv,bd)::stk, rst)
-      | (_, SOME(app, _)) => raise ERR "read_raw" "app: small stack"
       | (_, SOME(lam, _)) => raise ERR "read_raw" "lam: small stack"
       | ([tm], NONE) => tm
       | ([], NONE) => raise ERR "read_raw" "eof: empty stack"
       | (_, NONE) => raise ERR "read_raw" "eof: large stack"
+  and doapps n stk rst =
+      if n = 0 then parse (stk,rst)
+      else
+        case stk of
+            x::f::stk => doapps (n - 1) (Comb(f,x)::stk) rst
+          | _ =>  raise ERR "read_raw" "app: small stack"
+
 in
 fn s => parse ([], Substring.full s)
 end
@@ -1075,5 +1094,32 @@ fun uptodate_term t = let
 in
   recurse [t]
 end
+
+datatype lambda =
+     VAR of string * hol_type
+   | CONST of {Name: string, Thy: string, Ty: hol_type}
+   | COMB of term * term
+   | LAMB of term * term
+
+fun dest_term M =
+  case M of
+      Const _ => CONST (dest_thy_const M)
+    | Fv p => VAR p
+    | Comb p => COMB p
+    | Abs _ => LAMB (dest_abs M)
+    | Clos _ => dest_term (push_clos M)
+    | Bv _ => raise Fail "dest_term applied to bound variable"
+
+fun identical t1 t2 =
+  t1 = t2 orelse
+  case (t1,t2) of
+      (Clos _, _) => identical (push_clos t1) t2
+    | (_, Clos _) => identical t1 (push_clos t2)
+    | (Const p1, Const p2) => p1 = p2
+    | (Fv p1, Fv p2) => p1 = p2
+    | (Bv i1, Bv i2) => i1 = i2
+    | (Comb(t1,t2), Comb(ta,tb)) => identical t1 ta andalso identical t2 tb
+    | (Abs(v1,t1), Abs (v2, t2)) => v1 = v2 andalso identical t1 t2
+    | _ => false
 
 end (* Term *)

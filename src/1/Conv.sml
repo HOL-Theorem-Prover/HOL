@@ -13,6 +13,17 @@
 (* TRANSLATOR    : Konrad Slind, University of Calgary                   *)
 (* DATE          : September 11, 1991                                    *)
 (* Many micro-optimizations added, February 24, 1992, KLS                *)
+
+(* This file as a whole is assumed to be under the license in the file
+"COPYRIGHT" in the HOL4 distribution (note added by Mario Castelán         UOK
+Castro).
+
+For the avoidance of legal uncertainty, I (Mario Castelán Castro) hereby   UOK
+place my modifications to this file in the public domain per the Creative
+Commons CC0 1.0 public domain dedication <https://creativecommons.org/publ
+icdomain/zero/1.0/legalcode>. This should not be interpreted as a personal
+endorsement of permissive (non-Copyleft) licenses. *)
+
 (* ===================================================================== *)
 
 structure Conv :> Conv =
@@ -257,12 +268,34 @@ fun CHANGED_CONV conv tm =
 fun QCHANGED_CONV conv tm =
    conv tm handle UNCHANGED => raise ERR "QCHANGED_CONV" "Input term unchanged"
 
+fun testconv (f:conv) x =
+  SOME (SOME (f x))
+  handle UNCHANGED => SOME NONE
+       | HOL_ERR _ => NONE
+       | e => raise e
+
+fun IFC (conv1:conv) conv2 conv3 tm =
+  case testconv conv1 tm of
+    SOME (SOME th) =>
+      (TRANS th (conv2 (rhs (concl th))) handle UNCHANGED => th)
+  | SOME NONE => conv2 tm
+  | NONE => conv3 tm
+
 (*----------------------------------------------------------------------*
  * Apply a conversion zero or more times.                               *
  *----------------------------------------------------------------------*)
 
 fun REPEATC conv tm =
-   ((QCHANGED_CONV conv THENC REPEATC conv) ORELSEC ALL_CONV) tm
+  let
+    fun loop thm =
+      case (testconv conv o rhs o concl) thm of
+          SOME (SOME thm') => loop (TRANS thm thm')
+        | _ => thm
+  in
+    case testconv conv tm of
+        SOME (SOME thm) => loop thm
+      | _ => raise UNCHANGED
+  end
 
 fun TRY_CONV conv = conv ORELSEC ALL_CONV
 
@@ -325,7 +358,7 @@ fun EVERY_CONJ_CONV c tm =
            (REWR_CONV F_and ORELSEC
               (REWR_CONV T_and THENC EVERY_CONJ_CONV c) ORELSEC
                  (RAND_CONV (EVERY_CONJ_CONV c) THENC
-                  TRY_CONV (REWR_CONV and_F ORELSEC REWR_CONV or_T)))
+                  TRY_CONV (REWR_CONV and_F ORELSEC REWR_CONV and_T)))
    else c) tm
 
 fun QUANT_CONV conv  = RAND_CONV (ABS_CONV conv)
@@ -437,6 +470,21 @@ fun TOP_SWEEP_CONV conv tm =
  *------------------------------------------------------------------------*)
 
 fun CONV_RULE conv th = EQ_MP (conv (concl th)) th handle UNCHANGED => th
+
+(*------------------------------------------------------------------------*
+ * Apply a conversion to the hypotheses of a theorem                      *
+ * hypsel selects hypotheses to be dealt with;                             *
+ * error if a conversion fails (as distinct from raising UNCHANGED)        *
+ *------------------------------------------------------------------------*)
+
+fun HYP_CONV_RULE hypsel conv th =
+  let fun get_eq_thm h =
+      if hypsel h then SOME (conv h) handle UNCHANGED => NONE
+      else NONE ;
+    val hyp_eq_thms = List.mapPartial get_eq_thm (hyp th) ;
+    val hyp_imp_thms = map (UNDISCH o #2 o EQ_IMP_RULE) hyp_eq_thms ;
+    val new_th = Lib.itlist PROVE_HYP hyp_imp_thms th ;
+  in new_th end ;
 
 (*------------------------------------------------------------------------*
  * Rule for beta-reducing on all beta-redexes                             *
@@ -2475,6 +2523,30 @@ fun PATH_CONV path c =
                        ("Illegal character '"^str c^ "' in path")
   in
     recurse 0
+  end
+
+(* --------------------------------------------------------------------------
+   Helper function for memoizing conversions through the use of a Redblackmap.
+   -------------------------------------------------------------------------- *)
+
+fun memoize dst tree accept err (cnv: conv) =
+  let
+    val map = ref tree
+  in
+    fn tm =>
+      case dst tm of
+         SOME x =>
+           (case Redblackmap.peek (!map, x) of
+               SOME th => th
+             | NONE =>
+                 let
+                   val th = cnv tm
+                 in
+                   if accept (boolSyntax.rhs (Thm.concl th))
+                      then (map := Redblackmap.insert (!map, x, th); th)
+                   else raise err
+                 end)
+       | NONE => raise err
   end
 
 end (* Conv *)

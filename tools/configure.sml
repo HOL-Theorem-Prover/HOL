@@ -49,7 +49,7 @@ val DEPDIR:string   = ".HOLMK";   (* where Holmake dependencies kept  *)
           END user-settable parameters
  ---------------------------------------------------------------------------*)
 
-val version_number = 11
+val version_number = 12
 val release_string = "Kananaskis"
 
 
@@ -81,6 +81,8 @@ fun fullPath slist = normPath
    (itstrings (fn chunk => fn path => Path.concat (chunk,path)) slist);
 
 fun quote s = String.concat ["\"",String.toString s,"\""]
+fun optquote NONE = "NONE"
+  | optquote (SOME p) = "SOME " ^ quote p
 
 val holmakedir = fullPath [holdir, "tools", "Holmake"];
 val compiler = fullPath [mosmldir, "mosmlc"];
@@ -186,7 +188,7 @@ in
    "val version ="  --> ("val version = "^Int.toString version_number^"\n"),
    "val ML_SYSNAME =" --> "val ML_SYSNAME = \"mosml\"\n",
    "val release ="  --> ("val release = "^quote release_string^"\n"),
-   "val DOT_PATH =" --> ("val DOT_PATH = "^quote DOT_PATH^"\n")
+   "val DOT_PATH =" --> ("val DOT_PATH = "^optquote DOT_PATH^"\n")
   ];
   use destfile
 end;
@@ -354,28 +356,55 @@ val _ =
        systeml (pfx @ b2002comp @ extras @ [srcobj])
      end
   in
+    systeml [mllex, "QuoteFilter"];
+    compile [] "QuoteFilter.sml";
+    compile [] "QFRead.sig";
+    compile [] "QFRead.sml";
+    compile [] "FunctionalRecordUpdate.sml";
+    compile [] "GetOpt.sig";
+    compile [] "GetOpt.sml";
+    compile [] "HM_Core_Cline.sig";
+    compile [] "HM_Core_Cline.sml";
     compile [] "Holdep_tokens.sig";
     compile [] "Holdep_tokens.sml";
     compile [] "holdeptool.sml";
     compile [] "mosml_holdeptool.sml";
     link{extras = [], srcobj = "mosml_holdeptool.uo",
          tgt = fullPath[holdir, "bin", "holdeptool.exe"]};
-    compile [] "Holdep.sig";
-    compile [] "Holdep.sml";
+    compile ["-I", "mosml"] "Holdep.sig";
+    compile ["-I", "mosml"] "Holdep.sml";
     compile [] "regexpMatch.sig";
     compile [] "regexpMatch.sml";
     compile [] "parse_glob.sig";
     compile [] "parse_glob.sml";
     compile [] "internal_functions.sig";
     compile [] "internal_functions.sml";
-    compile [] "Holmake_types.sig";
-    compile [] "Holmake_types.sml";
+    compile [] "Holmake_tools_dtype.sml";
+    compile [] "holpathdb.sig";
+    compile [] "holpathdb.sml";
     compile [] "Holmake_tools.sig";
     compile [] "Holmake_tools.sml";
+    compile [] "Holmake_types.sig";
+    compile [] "Holmake_types.sml";
     compile [] "ReadHMF.sig";
     compile [] "ReadHMF.sml";
-    compile [] "Holmake.sml";
-    link{extras = [], tgt = bin, srcobj = "Holmake.uo"};
+    compile [] "HM_DepGraph.sig";
+    compile [] "HM_DepGraph.sml";
+    compile [] "HM_GraphBuildJ1.sig";
+    compile [] "HM_GraphBuildJ1.sml";
+    FileSys.chDir "mosml";
+    compile ["-I", ".."] "HM_Cline.sig";
+    compile ["-I", ".."] "HM_Cline.sml";
+    compile ["-I", ".."] "HM_BaseEnv.sig";
+    compile ["-I", ".."] "HM_BaseEnv.sml";
+    FileSys.chDir "..";
+    compile ["-I", "mosml"] "BuildCommand.sig";
+    FileSys.chDir "mosml";
+    compile ["-I", ".."] "BuildCommand.sml";
+    FileSys.chDir "..";
+    compile ["-I", "mosml"] "Holmake.sml";
+    compile [] "mosml_Holmake.sml";
+    link{extras = ["-I", "mosml"], tgt = bin, srcobj = "mosml_Holmake.uo"};
     mk_xable bin;
     FileSys.chDir cdir
   end
@@ -413,6 +442,12 @@ val _ = let
   val _ = echo "Making bin/build."
   val cwd = FileSys.getDir()
   val _ = FileSys.chDir (fullPath[holdir, "tools"])
+  (* cline stuff *)
+  val _ = if compile ["-I", holmakedir] "buildcline_dtype.sml" andalso
+             compile ["-I", holmakedir] "buildcline.sig" andalso
+             compile ["-I", holmakedir] "buildcline.sml"
+          then ()
+          else die "Failed to build buildcline module"
   (* utils first *)
   val _ = let
     val utilsig = "buildutils.sig"
@@ -427,10 +462,12 @@ val _ = let
   val target = "build.sml"
   val bin    = fullPath [holdir, "bin/build"]
   val b2002p = if have_basis2002 then [] else ["basis2002.ui"]
+  val command =
+      [compiler, "-o", bin, "-I", holmakedir,
+       "-I", Path.concat(holmakedir, "mosml")] @
+      b2002p @ [target]
 in
-  if Process.isSuccess
-         (systeml ([compiler, "-o", bin, "-I", holmakedir] @ b2002p @ [target]))
-  then ()
+  if Process.isSuccess (systeml command) then ()
   else (print "*** Failed to build build executable.\n";
         Process.exit Process.failure) ;
   FileSys.remove (fullPath [holdir,"tools/build.ui"]);

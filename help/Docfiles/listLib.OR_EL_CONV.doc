@@ -9,10 +9,10 @@ Computes by inference the result of taking the disjunction of the elements of a 
 conversion, list.
 
 \DESCRIBE
-For any object language list of the form {--`[x1;x2;...;xn]`--}, where {x1},
+For any object language list of the form {“[x1;x2;...;xn]”}, where {x1},
 {x2}, ..., {xn} are boolean expressions, the result of evaluating
 {
-   OR_EL_CONV (--`OR_EL [x1;x2;...;xn]`--)
+   OR_EL_CONV “OR_EL [x1;x2;...;xn]”
 }
 is the theorem
 {
@@ -24,19 +24,19 @@ are not boolean constants.
 
 \EXAMPLE
 {
-- OR_EL_CONV (--`OR_EL [T;F;F;T]`--);
+- OR_EL_CONV “OR_EL [T;F;F;T]”;
 |- OR_EL [T;F;F;T] = T
 }
 {
-- OR_EL_CONV (--`OR_EL [F;F;F]`--);
+- OR_EL_CONV “OR_EL [F;F;F]”;
 |- OR_EL [F;F;F] = F
 }
 {
-- OR_EL_CONV (--`OR_EL [F;x;y]`--);
+- OR_EL_CONV “OR_EL [F;x;y]”;
 |- OR_EL [F; x; y] = x \/ y
 }
 {
-- OR_EL_CONV (--`OR_EL [x;T;y]`--);
+- OR_EL_CONV “OR_EL [x;T;y]”;
 |- OR_EL [x; T; y] = T
 }
 

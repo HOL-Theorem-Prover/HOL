@@ -4,11 +4,13 @@
 !examples/MLsyntax
 !examples/set-theory/zfset
 !examples/set-theory/vbg
-!examples/set-theory/hol_sets
 !!examples/category
 !!examples/miller/ho_prover
 !!examples/miller/miller
-!!examples/ARM_security_properties
+!!!examples/ARM_security_properties
+!examples/fun-op-sem/lprefix_lub
+!examples/fun-op-sem/for
+!!examples/logic/ltl
 ## !!examples/fun-op-sem  works only with the standard kernel
 
 # Crypto examples
@@ -16,7 +18,6 @@
 !!examples/Crypto/IDEA
 !!examples/Crypto/MARS
 !!examples/Crypto/RC6
-# the Crypto/Serpent/Reference example causes Poly/ML to crash
 !!examples/Crypto/Serpent/Reference
 !!examples/Crypto/Serpent/Bitslice
 !!examples/Crypto/SHA-1

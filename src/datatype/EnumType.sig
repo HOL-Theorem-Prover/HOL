@@ -17,11 +17,7 @@ sig
        ABS_ONTO : thm,
        REP_ONTO : thm}
 
-  (*  *)
-
-  val enum_type_to_tyinfo : string * string list -> tyinfo * string
-
-  val update_tyinfo : string -> thm -> thm -> tyinfo -> tyinfo
+  val enum_type_to_tyinfo : string * string list -> tyinfo
 
 end
 

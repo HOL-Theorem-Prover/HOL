@@ -66,7 +66,7 @@ val I91_SOME = Q.prove
  METIS_TAC [IS_SOME_I91,IS_SOME_EXISTS]);
 
 val i91_dlem = Q.prove
-(`!d n a. IS_SOME (i91 d n) ==> (i91 d n = i91 (SUC d) n)`,
+(`!d n. IS_SOME (i91 d n) ==> (i91 d n = i91 (SUC d) n)`,
  DLEM_TAC i91_def I91_SOME);
 
 val i91_monotone = Q.prove

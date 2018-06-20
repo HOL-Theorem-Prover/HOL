@@ -5,5 +5,5 @@ TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
 all: $(TARGETS) selftest.exe
 .PHONY: all
 
-selftest.exe: selftest.uo DB.uo
+selftest.exe: selftest.uo $(dprot $(SIGOBJ)/DB.uo)
 	$(HOLMOSMLC) -o $@ $<

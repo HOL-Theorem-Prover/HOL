@@ -7,9 +7,9 @@ open HolKernel boolLib liteLib Trace;
 fun samerel t1 t2 = can (match_term t1) t2
 
 type congproc  = {relation:term,
-		  solver : term -> thm,
-		  freevars: term list,
-		  depther : thm list * term -> conv} -> conv
+                  solver : term -> thm,
+                  freevars: term list,
+                  depther : thm list * term -> conv} -> conv
 
 
 fun WRAP_ERR x = STRUCT_WRAP "Opening" x;
@@ -168,7 +168,7 @@ in fn {relation,solver,depther,freevars} =>
               or a side condition.  If it is two place and the
               head combinator of the rhs is one of the subterms
               in the congruence (see subterms above) then it
-  	      is a congruence condition *)
+              is a congruence condition *)
             val (ho_vars,bdy1) = strip_forall condition
             val (assums,bdy2) = strip_imp_until_rel genvars bdy1
             val (oper,args) = let

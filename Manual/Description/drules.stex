@@ -247,7 +247,7 @@ and \ref{sec:spec}) for instantiating terms.  The definition
 of \ml{REWRITE\_RULE} in \ML\
 also relies on a large number of general and \HOL-oriented
 \ML\ functions.
-%The implementation is partly described in Chapter~\ref{avra_conv}.
+The implementation is partly described in Chapter~\ref{avra-conv}.
 
 In practice, the derived rule \ml{REWRITE\_RULE} plays a central role
 in proofs, because it takes over a very large number of inferences
@@ -339,7 +339,7 @@ that is equivalent to \rul{BETA\_CONV}.%
 \index{theorems, in HOL logic@theorems, in \HOL{} logic!rules inexpressible as}
 \index{beta-conversion, in HOL logic@beta-conversion, in \HOL{} logic!not expressible as a theorem}%
 %
-%(See Chapter~\ref{avra_conv} for further discussion of this point.)
+(See Chapter~\ref{avra-conv} for further discussion of this point.)
 (\ml{UNDISCH} is not a rule of this sort, as it can, in fact, be
 expressed as a theorem.)
 
@@ -373,8 +373,8 @@ or previously derived).
 \noindent Note that the abbreviation \ml{conv} (standing for
 `conversion') is used for the \ML\ type \ml{term ->
   thm}.%
-% \footnote{This stands for `conversion', as explained in
-% Chapter~\ref{avra_conv}.}
+\footnote{This stands for `conversion', as explained in
+Chapter~\ref{avra-conv}.}
 
 \subsection{Adding an assumption}
 \index{derived rules, in HOL logic@derived rules, in \HOL{} logic!list and derivations of some|(}
@@ -582,15 +582,15 @@ $$\Gamma\turn t_1=t_2\over
 
 
 
-\subsection{\T-Introduction}
+\subsection{\T-introduction}
 \label{sec:T}
 
+\begin{holboxed}
 \index{T@\holtxt{T}!rules of inference for|(}
-\begin{hol}
 \begin{verbatim}
-   TRUTH
+   TRUTH : thm
 \end{verbatim}
-\end{hol}
+\end{holboxed}
 
 \vspace{12pt plus2pt minus1pt}
 

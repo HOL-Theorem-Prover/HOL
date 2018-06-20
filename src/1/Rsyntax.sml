@@ -74,10 +74,11 @@ datatype lambda
 local open Feedback
 in
 fun dest_term M =
-  COMB(dest_comb M) handle HOL_ERR _ =>
-  LAMB(dest_abs M)  handle HOL_ERR _ =>
-  VAR (dest_var M)  handle HOL_ERR _ =>
-  CONST(Term.dest_thy_const M)
+  case Term.dest_term M of
+      Term.COMB(t1,t2) => COMB{Rator = t1, Rand = t2}
+    | Term.LAMB(v,b) => LAMB{Bvar = v, Body = b}
+    | Term.CONST r => CONST r
+    | Term.VAR (n,ty) => VAR{Name = n, Ty = ty}
 end;
 
 end (* Rsyntax *)

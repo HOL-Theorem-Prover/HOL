@@ -23,5 +23,5 @@ universally quantified equation, {MK_ABS} returns the theorem
 Fails unless the theorem is a (singly) universally quantified equation.
 
 \SEEALSO
-Thm.ABS, Drule.HALF_MK_ABS, Thm.MK_COMB, Drule.MK_EXISTS.
+Thm.ABS, jrhUtils.HALF_MK_ABS, Thm.MK_COMB, Drule.MK_EXISTS.
 \ENDDOC

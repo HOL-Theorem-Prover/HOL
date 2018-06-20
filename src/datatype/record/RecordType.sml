@@ -158,6 +158,7 @@ fun freshsubst avoids tyvs =
 
 fun prove_recordtype_thms (tyinfo, fields) = let
 
+  val save_thm = Feedback.trace ("Theory.save_thm_reporting", 0) save_thm
   fun store_thm (n, t, tac) = save_thm(n, prove(t,tac))
 
   val app2 = C (curry op^)
@@ -603,17 +604,8 @@ fun prove_recordtype_thms (tyinfo, fields) = let
                        (fields, fupdfn_terms);
           Parse.overload_on(typename, constructor)
         end
-
-  val thm_str_list =
-     map (strcat typename)
-     (["_accessors", "_updates_eq_literal", "_accfupds",
-       "_fupdfupds", "_literal_11", "_fupdfupds_comp"]
-      @
-      (if not(null fupdcanon_thms) then ["_fupdcanon","_fupdcanon_comp"] else []))
-  in
-    (new_tyinfo,
-     "RecordType.update_tyinfo NONE ["^String.concat (Lib.commafy thm_str_list)^
-     "] ")
-  end
+in
+  new_tyinfo
+end
 
 end (* struct *)

@@ -40,7 +40,7 @@ is an infix) will turn into
    APP(APP(IDENT "op", IDENT "x"), IDENT "y")
 }
 and {`tok1 x tok2 y`} (where {tok1 _ tok2} has been declared as a
-{TruePrefix} form for the term {f}) will turn into
+{Prefix} form for the term {f}) will turn into
 {
    APP(APP(IDENT "f", IDENT "x"), IDENT "y")
 }

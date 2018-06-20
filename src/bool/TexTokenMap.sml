@@ -25,10 +25,10 @@ struct
   end
   val tyname = "TexTokenMap"
 
-  val (mk,dest) = Theory.LoadableThyData.new {thydataty = tyname,
-                                              merge = op@,
-                                              read = Coding.lift read_deltas,
-                                              write = write_deltas}
+  val (mk,dest) = Theory.LoadableThyData.new
+                    {thydataty = tyname, merge = op@, terms = K [],
+                     read = K (Coding.lift read_deltas),
+                     write = K write_deltas}
 
 
   val tokmap = ref (Binarymap.mkDict String.compare)
@@ -41,11 +41,13 @@ struct
           fun ttoString (t,i) = "(\"" ^ String.toString t ^ "\", "^
                                 Int.toString i ^ ")"
         in
-          HOL_WARNING "TexTokenMap" "TeX_notation"
-                      (src^" overrides \""^
-                       String.toString hol^"\" (was \""^
-                       ttoString oldt^"\"); now \""^
-                       ttoString TeX^"\"");
+          if oldt <> TeX then
+            HOL_WARNING "TexTokenMap" "TeX_notation"
+                        (src^" overrides \""^
+                         String.toString hol^"\" (was \""^
+                         ttoString oldt^"\"); now \""^
+                         ttoString TeX^"\"")
+          else ();
           tokmap := Binarymap.insert(!tokmap,hol,TeX)
         end
 

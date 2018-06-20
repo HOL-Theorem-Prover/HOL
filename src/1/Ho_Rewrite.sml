@@ -68,7 +68,7 @@ fun add_rewrites (RW{thms,net}) thl =
      net = itlist Ho_Net.enter
      (map (fn th => (HOLset.listItems (hyp_frees th),
                      lhs(concl th), Conv.HO_REWR_CONV th))
-	(itlist (append o mk_rewrites) thl [])) net}
+        (itlist (append o mk_rewrites) thl [])) net}
 
 fun implicit_rewrites() = #thms ((fn (RW x) => x) (!implicit));
 fun set_implicit_rewrites thl = implicit := add_rewrites empty_rewrites thl;
@@ -103,14 +103,14 @@ val _ = add_implicit_rewrites
 end;
 
 (* =====================================================================*)
-(* Main rewriting conversion                         			*)
+(* Main rewriting conversion                                            *)
 (* =====================================================================*)
 
 fun GEN_REWRITE_CONV' rw_func rws thl =
      rw_func (REWRITES_CONV (add_rewrites rws thl));
 
 (* ---------------------------------------------------------------------*)
-(* Rewriting conversions.                        			*)
+(* Rewriting conversions.                                               *)
 (* ---------------------------------------------------------------------*)
 
 val PURE_REWRITE_CONV      = GEN_REWRITE_CONV' TOP_DEPTH_CONV empty_rewrites

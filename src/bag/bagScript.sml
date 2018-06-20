@@ -2,11 +2,11 @@ open HolKernel Parse boolLib boolSimps bossLib
      numLib Prim_rec pred_setTheory BasicProvers
      metisLib dividesTheory arithmeticTheory
 
-open lcsymtacs
-
 fun ARITH q = EQT_ELIM (ARITH_CONV (Parse.Term q));
 
 val _ = new_theory "bag";
+
+val _ = set_grammar_ancestry ["list", "divides"]
 
 val _ = type_abbrev("bag", Type`:'a -> num`)
 val _ = disable_tyabbrev_printing "bag"
@@ -70,7 +70,7 @@ val BAG_INSERT = new_definition (
 val _ = add_listform {cons = "BAG_INSERT", nilstr = "EMPTY_BAG",
                       separator = [TOK ";", BreakSpace(1,0)],
                       leftdelim = [TOK "{|"], rightdelim = [TOK "|}"],
-                      block_info = (PP.INCONSISTENT, 0)};
+                      block_info = (PP.INCONSISTENT, 2)};
 val _ = TeX_notation { hol = "{|", TeX = ("\\HOLTokenBagLeft{}", 1) }
 val _ = TeX_notation { hol = "|}", TeX = ("\\HOLTokenBagRight{}", 1) }
 
@@ -935,7 +935,7 @@ val SET_OF_BAG_MERGE = store_thm (
             SET_OF_BAG b1 UNION SET_OF_BAG b2``,
   ONCE_REWRITE_TAC[EXTENSION] THEN
   SIMP_TAC std_ss [SET_OF_BAG, IN_UNION, IN_ABS,
-		   BAG_IN_BAG_MERGE]);
+                   BAG_IN_BAG_MERGE]);
 
 val SET_OF_BAG_INSERT = Q.store_thm(
   "SET_OF_BAG_INSERT",
@@ -1007,8 +1007,8 @@ val BAG_DISJOINT_BAG_IN = store_thm (
   ``!b1 b2. BAG_DISJOINT b1 b2 =
             !e. ~(BAG_IN e b1) \/ ~(BAG_IN e b2)``,
   SIMP_TAC std_ss [BAG_DISJOINT, DISJOINT_DEF,
- 		   EXTENSION, NOT_IN_EMPTY,
-		   IN_INTER, IN_SET_OF_BAG]);
+                   EXTENSION, NOT_IN_EMPTY,
+                   IN_INTER, IN_SET_OF_BAG]);
 
 val BAG_DISJOINT_BAG_INSERT = store_thm (
   "BAG_DISJOINT_BAG_INSERT",
@@ -1019,7 +1019,7 @@ val BAG_DISJOINT_BAG_INSERT = store_thm (
       BAG_DISJOINT b1 (BAG_INSERT e2 b2) =
       (~(BAG_IN e2 b1) /\ (BAG_DISJOINT b1 b2)))``,
   SIMP_TAC std_ss [BAG_DISJOINT_BAG_IN,
-		   BAG_IN_BAG_INSERT] THEN
+                   BAG_IN_BAG_INSERT] THEN
   METIS_TAC[]);
 
 val BAG_DISJOINT_BAG_UNION = store_thm(
@@ -1334,8 +1334,8 @@ RW_TAC bool_ss []
   THEN `?d. b2 = BAG_UNION b1 d` by PROVE_TAC [SUB_BAG_DIFF_EQ]
   THEN RW_TAC bool_ss []
   THEN `FINITE_BAG d /\ FINITE_BAG b1` by PROVE_TAC [FINITE_BAG_UNION]
-  THEN Q.PAT_ASSUM `SUB_BAG x y` (K ALL_TAC)
-  THEN Q.PAT_ASSUM `FINITE_BAG (BAG_UNION x y)` (K ALL_TAC)
+  THEN Q.PAT_X_ASSUM `SUB_BAG x y` (K ALL_TAC)
+  THEN Q.PAT_X_ASSUM `FINITE_BAG (BAG_UNION x y)` (K ALL_TAC)
   THEN REPEAT (POP_ASSUM MP_TAC)
   THEN Q.ID_SPEC_TAC `d`
   THEN HO_MATCH_MP_TAC STRONG_FINITE_BAG_INDUCT
@@ -1533,7 +1533,7 @@ val BAG_IMAGE_FINITE_UNION = store_thm (
   ``!b1 b2 f. (FINITE_BAG b1 /\ FINITE_BAG b2) ==>
     (BAG_IMAGE f (BAG_UNION b1 b2) = (BAG_UNION (BAG_IMAGE f b1) (BAG_IMAGE f b2)))``,
   REPEAT STRIP_TAC THEN
-  Q.PAT_ASSUM `FINITE_BAG b1` MP_TAC THEN
+  Q.PAT_X_ASSUM `FINITE_BAG b1` MP_TAC THEN
   Q.SPEC_TAC (`b1`, `b1`) THEN
   HO_MATCH_MP_TAC STRONG_FINITE_BAG_INDUCT THEN
   ASM_SIMP_TAC std_ss [BAG_UNION_INSERT, BAG_UNION_EMPTY, BAG_IMAGE_EMPTY,
@@ -1605,7 +1605,7 @@ val BAG_CHOICE_DEF = new_specification
 
 
 (* ===================================================================== *)
-(* The REST of a bag after removing a chosen element.			 *)
+(* The REST of a bag after removing a chosen element.                    *)
 (* ===================================================================== *)
 
 val BAG_REST_DEF = Q.new_definition
@@ -1851,7 +1851,7 @@ val BAG_GEN_PROD_EQ_1 = Q.store_thm
  `!b. FINITE_BAG b ==> !e. (BAG_GEN_PROD b e = 1) ==> (e=1)`,
  HO_MATCH_MP_TAC STRONG_FINITE_BAG_INDUCT THEN REPEAT STRIP_TAC THENL
  [METIS_TAC [BAG_GEN_PROD_EMPTY],
-  Q.PAT_ASSUM `p=q` MP_TAC THEN
+  Q.PAT_X_ASSUM `p=q` MP_TAC THEN
   RW_TAC std_ss [Once BAG_GEN_PROD_TAILREC] THEN
   RES_TAC THEN FULL_SIMP_TAC std_ss []]);
 
@@ -1860,7 +1860,7 @@ val BAG_GEN_PROD_ALL_ONES = Q.store_thm
  `!b. FINITE_BAG b ==> (BAG_GEN_PROD b 1 = 1) ==> !x. BAG_IN x b ==> (x=1)`,
  HO_MATCH_MP_TAC STRONG_FINITE_BAG_INDUCT THEN REPEAT STRIP_TAC THENL
  [METIS_TAC [NOT_IN_EMPTY_BAG],
-  Q.PAT_ASSUM `p=q` MP_TAC THEN
+  Q.PAT_X_ASSUM `p=q` MP_TAC THEN
     RW_TAC std_ss [BAG_GEN_PROD_TAILREC] THEN
     `e=1` by METIS_TAC [BAG_GEN_PROD_EQ_1] THEN RW_TAC std_ss [] THEN
     `!x. BAG_IN x b ==> (x = 1)` by METIS_TAC[] THEN
@@ -1966,7 +1966,7 @@ val BAG_ALL_DISTINCT_BAG_MERGE = store_thm (
         (BAG_ALL_DISTINCT b1 /\  BAG_ALL_DISTINCT b2)``,
   SIMP_TAC std_ss [BAG_ALL_DISTINCT, BAG_MERGE,
                    GSYM FORALL_AND_THM, COND_RAND, COND_RATOR,
-		   COND_EXPAND_IMP] THEN
+                   COND_EXPAND_IMP] THEN
   REPEAT STRIP_TAC THEN
   HO_MATCH_MP_TAC forall_eq_thm THEN
   GEN_TAC THEN bossLib.DECIDE_TAC);
@@ -1979,10 +1979,10 @@ val BAG_ALL_DISTINCT_BAG_UNION = store_thm (
         (BAG_ALL_DISTINCT b1 /\ BAG_ALL_DISTINCT b2 /\
          BAG_DISJOINT b1 b2)``,
   SIMP_TAC std_ss [BAG_ALL_DISTINCT, BAG_UNION,
-		   BAG_DISJOINT, DISJOINT_DEF, EXTENSION,
-		   NOT_IN_EMPTY, IN_INTER,
-		   IN_SET_OF_BAG, BAG_IN,
-     		   BAG_INN, GSYM FORALL_AND_THM] THEN
+                   BAG_DISJOINT, DISJOINT_DEF, EXTENSION,
+                   NOT_IN_EMPTY, IN_INTER,
+                   IN_SET_OF_BAG, BAG_IN,
+                   BAG_INN, GSYM FORALL_AND_THM] THEN
   REPEAT STRIP_TAC THEN
   HO_MATCH_MP_TAC forall_eq_thm THEN
   GEN_TAC THEN bossLib.DECIDE_TAC);
@@ -2037,7 +2037,7 @@ val SUB_BAG_ALL_DISTINCT = store_thm (
 
      REPEAT STRIP_TAC THEN
      Cases_on `n = 0` THEN FULL_SIMP_TAC std_ss [] THEN
-     Q.PAT_ASSUM `!e. b1 e <= 1` (ASSUME_TAC o Q.SPEC `x`) THEN
+     Q.PAT_X_ASSUM `!e. b1 e <= 1` (ASSUME_TAC o Q.SPEC `x`) THEN
      `n = 1` by DECIDE_TAC THEN
      FULL_SIMP_TAC std_ss []
   ]);
@@ -2280,7 +2280,7 @@ val tedious_reasoning = prove(
   SRW_TAC [][] THEN
   POP_ASSUM MP_TAC THEN
   FULL_SIMP_TAC (srw_ss()) [] THEN
-  Q.PAT_ASSUM `FINITE_BAG KK` MP_TAC THEN
+  Q.PAT_X_ASSUM `FINITE_BAG KK` MP_TAC THEN
   Q.ID_SPEC_TAC `KK` THEN
   HO_MATCH_MP_TAC FINITE_BAG_INDUCT THEN SRW_TAC [][] THEN
   `R e a` by SRW_TAC [][] THEN
@@ -2479,7 +2479,7 @@ val mlt_dominates_thm1 = store_thm(
           >- (fs[dominates_def] >>
               metis_tac [BAG_IN_DIFF_E, relationTheory.transitive_def]) >>
           pop_assum mp_tac >>
-          qpat_assum `B2 - X + Y = Res + {|E|}` mp_tac >>
+          qpat_x_assum `B2 - X + Y = Res + {|E|}` mp_tac >>
           simp[BAG_DIFF, FUN_EQ_THM, BAG_UNION, BAG_INSERT, EMPTY_BAG,
                BAG_IN, BAG_INN] >>
           disch_then (fn allth => disch_then
@@ -2490,7 +2490,7 @@ val mlt_dominates_thm1 = store_thm(
       reverse (rpt conj_tac)
       >- (fs[dominates_def] >> metis_tac[])
       >- (pop_assum mp_tac >>
-          qpat_assum `B2 - X + Y = Res + {|E|}` mp_tac >>
+          qpat_x_assum `B2 - X + Y = Res + {|E|}` mp_tac >>
           simp[BAG_DIFF, FUN_EQ_THM, BAG_UNION, BAG_INSERT, EMPTY_BAG,
                BAG_IN, BAG_INN] >>
           disch_then (fn allth => disch_then
@@ -2498,8 +2498,8 @@ val mlt_dominates_thm1 = store_thm(
                                  mp_tac YE)) >>
           COND_CASES_TAC >> simp[]) >>
       pop_assum mp_tac >>
-      qpat_assum `X <= B2` mp_tac >>
-      qpat_assum `B2 - X + Y = Res + {|E|}` mp_tac >>
+      qpat_x_assum `X <= B2` mp_tac >>
+      qpat_x_assum `B2 - X + Y = Res + {|E|}` mp_tac >>
       simp[BAG_DIFF, FUN_EQ_THM, BAG_UNION, BAG_INSERT, EMPTY_BAG,
            BAG_IN, BAG_INN, SUB_BAG_LEQ] >>
       disch_then
@@ -2512,7 +2512,7 @@ val mlt_dominates_thm1 = store_thm(
       COND_CASES_TAC >> simp[]) >>
   rpt strip_tac >> rw[] >>
   `FINITE_BAG x` by metis_tac[FINITE_SUB_BAG] >>
-  fs[] >> map_every (C qpat_assum mp_tac) [
+  fs[] >> map_every (C qpat_x_assum mp_tac) [
     `FINITE_BAG b2`, `FINITE_BAG y`, `bdominates R y x`,
     `x <= b2`, `x <> {||}`] >>
   map_every qid_spec_tac [`b2`, `y`] >> pop_assum mp_tac >>
@@ -2531,7 +2531,7 @@ val mlt_dominates_thm1 = store_thm(
       simp[] >> metis_tac[SUB_BAG_BAG_IN]) >>
   `b2 - BAG_INSERT e x + y =
    b2 - {|e|} + BAG_FILTER (\x. R x e) y - x + BAG_FILTER (\x. ~R x e) y`
-    by (qpat_assum `BAG_INSERT e x <= b2` mp_tac >>
+    by (qpat_x_assum `BAG_INSERT e x <= b2` mp_tac >>
         simp_tac bool_ss [FUN_EQ_THM, SUB_BAG_LEQ, BAG_DIFF, BAG_UNION, EMPTY_BAG,
                           BAG_INSERT, BAG_FILTER_DEF] >> simp[] >>
         strip_tac >> qx_gen_tac `a` >> pop_assum (qspec_then `a` mp_tac) >>
@@ -2596,7 +2596,7 @@ val bdominates_BAG_DIFF = store_thm(
       match_mp_tac BAG_IN_DIFF_I >> simp[]) >>
   pop_assum SUBST_ALL_TAC >>
   `BAG_IN e (x - i)`
-    by (qpat_assum `BAG_INSERT e i <= x` mp_tac >>
+    by (qpat_x_assum `BAG_INSERT e i <= x` mp_tac >>
         simp[BAG_DIFF, BAG_INSERT, SUB_BAG_LEQ, BAG_IN,
              BAG_INN] >> disch_then (qspec_then `e` mp_tac) >>
         simp[]) >>
@@ -2640,7 +2640,7 @@ val mlt_dominates_thm2 = store_thm(
   `~(x <= II)`
     by (strip_tac >>
         `x = II` by simp[SUB_BAG_ANTISYM] >> rw[] >>
-        qspecl_then [`SET_OF_BAG y`, `SET_OF_BAG II`, `R`] mp_tac
+        qspecl_then [`R`, `SET_OF_BAG II`, `SET_OF_BAG y`] mp_tac
            (Q.GENL [`R`, `X`, `Y`] dominates_SUBSET) >> simp[] >>
         fs[SUB_BAG_SET] >> qx_gen_tac `e` >> Cases_on `BAG_IN e II` >>
         simp[] >> metis_tac[relationTheory.WF_NOT_REFL]) >>
@@ -2655,7 +2655,7 @@ val mlt_dominates_thm2 = store_thm(
     by (match_mp_tac (GEN_ALL bdominates_BAG_DIFF) >> simp[] >>
         simp[Abbr`II`] >> metis_tac[FINITE_SUB_BAG, BAG_INTER_FINITE]) >>
   simp[] >>
-  map_every (fn q => qpat_assum q mp_tac)
+  map_every (fn q => qpat_x_assum q mp_tac)
     [`x <= b2`, `II <= x`, `II <= y`] >>
   simp_tac bool_ss [BAG_DIFF, SUB_BAG_LEQ, BAG_UNION, FUN_EQ_THM] >>
   ntac 3 strip_tac >> qx_gen_tac `a` >>
@@ -2675,7 +2675,7 @@ val mlt_INSERT_CANCEL = store_thm(
   simp[mlt_dominates_thm2] >> strip_tac >> eq_tac >> strip_tac >> simp[]
   >- (map_every qexists_tac [`x`, `y`] >> simp[] >>
       `x <= b`
-        by (qpat_assum `x <= BAG_INSERT e b` mp_tac >>
+        by (qpat_x_assum `x <= BAG_INSERT e b` mp_tac >>
             simp[SUB_BAG_LEQ, BAG_INSERT] >> strip_tac >>
             qx_gen_tac `e2` >> pop_assum (qspec_then `e2` mp_tac) >> rw[] >>
             spose_not_then strip_assume_tac >>
@@ -2767,7 +2767,7 @@ val mltLT_SING0 = store_thm(
       Cases_on `BAG_IN 0 b`
       >- (map_every qexists_tac [`b - {|0|}`, `{||}`] >>
           simp[] >>
-          qpat_assum`BAG_IN 0 b` mp_tac >>
+          qpat_x_assum`BAG_IN 0 b` mp_tac >>
           simp[BAG_IN, BAG_INN, FUN_EQ_THM, EMPTY_BAG,
                BAG_INSERT, BAG_DIFF] >> rw[] >> rw[] >>
           simp[]) >>
@@ -2817,21 +2817,13 @@ val BAG_SIZE_INSERT = save_thm
 (* Add multiset type to the TypeBase.                                        *)
 (*---------------------------------------------------------------------------*)
 
-val _ = adjoin_to_theory
-  {sig_ps = NONE,
-   struct_ps = SOME (fn pps =>
-    let fun pp_line s = (PP.add_string pps s; PP.add_newline pps)
-    in
-     app pp_line
-     ["val _ = ",
-      " TypeBase.write",
-      " [TypeBasePure.mk_nondatatype_info",
-      "  (alpha --> numSyntax.num,",
-      "    {nchotomy = SOME BAG_cases,",
-      "     induction = SOME STRONG_FINITE_BAG_INDUCT,",
-      "     size = SOME(Parse.Term`\\(obsize:'a->num) (y:'b). bag$bag_size obsize`,CONJ BAG_SIZE_EMPTY BAG_SIZE_INSERT),",
-      "     encode=NONE})];\n"
-      ] end)};
-
+val _ = TypeBase.export [
+      TypeBasePure.mk_nondatatype_info
+        (“:'a -> num”,
+         {nchotomy = SOME BAG_cases,
+          induction = SOME STRONG_FINITE_BAG_INDUCT,
+          size = NONE,
+          encode=NONE})
+    ]
 
 val _ = export_theory();

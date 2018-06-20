@@ -156,7 +156,7 @@ val MULT_GROUP_INV = store_thm
    ++ S_TAC
    ++ POP_ASSUM K_TAC
    ++ AR_TAC []
-   ++ Q.PAT_ASSUM `a:num * b = c` MP_TAC
+   ++ Q.PAT_X_ASSUM `a:num * b = c` MP_TAC
    ++ POP_ASSUM_LIST K_TAC
    ++ Suff `(g * (q' * x) = g * (q * q'') + 1) ==> (g = 1)`
    >> PROVE_TAC [MULT_ASSOC, MULT_COMM]
@@ -427,7 +427,7 @@ val CHINESE_REMAINDER_WITNESS = store_thm
      R_TAC [MULT_GROUP_OP]
      ++ Suff `(x * y) MOD q = (x * y) MOD (p * q) MOD q` >> R_TAC []
      ++ R_TAC [MOD_MULT_MOD]],
-    R_TAC [BIJ_ALT]
+    R_TAC [BIJ_ALT_RES]
     ++ DISCH_THEN K_TAC
     ++ S_TAC
     ++ POP_ASSUM MP_TAC
@@ -481,14 +481,14 @@ val CHINESE_REMAINDER_WITNESS = store_thm
        ++ S_TAC
        ++ Know `divides a (gcd p q')` >> R_TAC [DIVIDES_GCD]
        ++ R_TAC []],
-      Q.PAT_ASSUM `p * q = n`
+      Q.PAT_X_ASSUM `p * q = n`
         (fn th => ONCE_REWRITE_TAC [ONCE_REWRITE_RULE [MULT_COMM] (SYM th)])
       ++ R_TAC [MOD_MULT_MOD]
       ++ Suff `q' = ((p' * q) * q') MOD p`
       >> METIS_TAC [MULT_COMM, MULT_ASSOC]
       ++ R_TAC [RIGHT_ADD_DISTRIB]
       ++ AR_TAC [ADD_GROUP_SET],
-      Q.PAT_ASSUM `p * q = n` (fn th => ONCE_REWRITE_TAC [SYM th])
+      Q.PAT_X_ASSUM `p * q = n` (fn th => ONCE_REWRITE_TAC [SYM th])
       ++ R_TAC [MOD_MULT_MOD]
       ++ Suff `r = ((p'' * p) * r) MOD q`
       >> METIS_TAC [MULT_COMM, MULT_ASSOC]
@@ -553,9 +553,9 @@ val MULT_GROUP_PRIME_CYCLIC = store_thm
    ++ Q.X_GEN_TAC `x`
    ++ S_TAC
    ++ R_TAC [SPECIFICATION]
-   ++ Q.PAT_ASSUM `!h :: P. Q h` (MP_TAC o Q_RESQ_SPEC `x`)
+   ++ Q.PAT_X_ASSUM `!h :: P. Q h` (MP_TAC o Q_RESQ_SPEC `x`)
    ++ S_TAC
-   >> (Q.PAT_ASSUM `x IN s` MP_TAC
+   >> (Q.PAT_X_ASSUM `x IN s` MP_TAC
        ++ R_TAC [mult_group_def, add_group_def, gset_def]
        ++ R_TAC [SPECIFICATION])
    ++ POP_ASSUM MP_TAC
@@ -710,7 +710,7 @@ val STRONG_MULT_GROUP_PRIME_POWER_CYCLIC = store_thm
    ++ Q.EXISTS_TAC `g + p * x`
    ++ NTAC 2 STRIP_TAC
    ++ STRONG_CONJ_TAC
-   >> (Q.PAT_ASSUM `g IN X` MP_TAC
+   >> (Q.PAT_X_ASSUM `g IN X` MP_TAC
        ++ R_TAC [MULT_GROUP_SET, ADD_GROUP_SET, GCD_1_PRIMEL]
        ++ STRIP_TAC
        ++ ONCE_REWRITE_TAC [GCD_SYM]
@@ -748,7 +748,7 @@ val STRONG_MULT_GROUP_PRIME_POWER_CYCLIC = store_thm
        ++ R_TAC [MULT_GROUP_GPOW, MULT_GROUP_ID]
        ++ Q.SPEC_TAC (`gord (mult_group (p EXP n)) g'`, `m`)
        ++ STRIP_TAC
-       ++ Q.PAT_ASSUM `gg = g'` (REWRITE_TAC o wrap o SYM)
+       ++ Q.PAT_X_ASSUM `gg = g'` (REWRITE_TAC o wrap o SYM)
        ++ R_TAC []
        ++ S_TAC
        ++ Know `((g + p * x) EXP m MOD p EXP n) MOD p = 1 MOD p`
@@ -786,7 +786,7 @@ val STRONG_MULT_GROUP_PRIME_POWER_CYCLIC = store_thm
        ++ Cases_on `n - (k + 1)`
        >> (STRIP_TAC
            ++ Know `n = k + 1` >> DECIDE_TAC
-           ++ Q.PAT_ASSUM `0 < n` MP_TAC
+           ++ Q.PAT_X_ASSUM `0 < n` MP_TAC
            ++ KILL_TAC
            ++ DECIDE_TAC)
        ++ R_TAC [EXP]
@@ -795,11 +795,11 @@ val STRONG_MULT_GROUP_PRIME_POWER_CYCLIC = store_thm
        ++ PROVE_TAC [DIVIDES_DOWNL])
    ++ R_TAC []
    ++ POP_ASSUM (REWRITE_TAC o wrap o SYM)
-   ++ Q.PAT_ASSUM `q = 1 + p * z` (REWRITE_TAC o wrap o SYM)
+   ++ Q.PAT_X_ASSUM `q = 1 + p * z` (REWRITE_TAC o wrap o SYM)
    ++ REWRITE_TAC [ONCE_REWRITE_RULE [MULT_COMM] EXP_MULT]
-   ++ Q.PAT_ASSUM `gord gp g' = q` (REWRITE_TAC o wrap o SYM)
+   ++ Q.PAT_X_ASSUM `gord gp g' = q` (REWRITE_TAC o wrap o SYM)
    ++ Suff `g' EXP gord (mult_group (p EXP n)) g' MOD p EXP n = 1`
-   >> (Q.PAT_ASSUM `q = g'` (REWRITE_TAC o wrap o SYM)
+   >> (Q.PAT_X_ASSUM `q = g'` (REWRITE_TAC o wrap o SYM)
        ++ Q.SPEC_TAC (`gord (mult_group (p EXP n)) ((g + p * x) MOD p EXP n)`,
                       `m`)
        ++ Q.SPEC_TAC (`g + p * x`, `gg`)
@@ -863,13 +863,13 @@ val POWER_IN_MULT_GROUP = store_thm
    >> PROVE_TAC [EXISTS_PRIME_DIVISOR]
    ++ Simplify [DIVIDES_GCD]
    ++ Simplify [GSYM DIVIDES_MOD]
-   ++ Q.PAT_ASSUM `z = y` (ONCE_REWRITE_TAC o wrap o SYM)
-   ++ Q.PAT_ASSUM `divides p n'` MP_TAC
+   ++ Q.PAT_X_ASSUM `z = y` (ONCE_REWRITE_TAC o wrap o SYM)
+   ++ Q.PAT_X_ASSUM `divides p n'` MP_TAC
    ++ REWRITE_TAC [divides_def]
    ++ Strip
    ++ Know `0 < q` >> (Suff `~(q = 0)` >> DECIDE_TAC ++ Strip ++ AR_TAC [])
    ++ POP_ASSUM (REWRITE_TAC o wrap)
-   ++ Q.PAT_ASSUM `divides p x` MP_TAC
+   ++ Q.PAT_X_ASSUM `divides p x` MP_TAC
    ++ Simplify [MOD_MULT_MOD, GSYM DIVIDES_MOD]);
 
 val POWER_ID_IN_MULT_GROUP = store_thm
@@ -919,7 +919,7 @@ val MULT_GROUP_GORD_MINUS_1 = store_thm
    ++ Simplify [TWO, EXP, MINUS_1_SQUARED_MOD]
    ++ Strip
    ++ POP_ASSUM MP_TAC
-   ++ Q.PAT_ASSUM `2 < n` MP_TAC
+   ++ Q.PAT_X_ASSUM `2 < n` MP_TAC
    ++ KILL_TAC
    ++ DECIDE_TAC);
 

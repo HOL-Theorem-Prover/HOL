@@ -104,7 +104,8 @@ in
          open HOLset
          val (l, r) = dest_eq eq
          val rvs = FVL [r] empty_tmset
-         val l' = variant (listItems(union(fv_set, rvs))) l
+         val l' = gen_variant Parse.is_constname ""
+                              (listItems(union(fv_set, rvs))) l
          fun matchr t =
            case raw_match [] fv_set r t ([],[]) of
                ((tmsub, _), (tysub, _)) => (tmsub, tysub)
@@ -149,7 +150,10 @@ val safe_inst_cmp = let
 in
   inv_img_cmp img cmp
 end
-val safe_inst_sort = Listsort.sort safe_inst_cmp
+val safe_inst_sort =
+    List.filter
+      (fn {redex,residue} => String.sub(#1 (dest_var redex),0) <> #"_") o
+    Listsort.sort safe_inst_cmp
 
 fun MATCH_ABBREV_TAC fv_set pattern (g as (asl, w)) = let
   val ctxt = HOLset.listItems fv_set

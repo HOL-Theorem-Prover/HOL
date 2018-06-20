@@ -12,8 +12,6 @@
 (* expressed with constants from relationTheory.                       *)
 (* ******************************************************************* *)
 
-structure wotScript = struct
-
 open HolKernel boolLib Parse bossLib;
 val _ = set_trace "Unicode" 0;
 open pred_setLib pred_setTheory relationTheory;
@@ -100,7 +98,7 @@ REWRITE_TAC [SPECIFICATION]);
 
 (* Now the big move that also starts Zorn's lemma proof in Halmos: *)
 
-val t0_def = Define`t0:'x set set = BIGINTER tower`;
+val t0_def = zDefine`t0:'x set set = BIGINTER tower`;
 
 (* We will prove, in imitation of Halmos/Zermelo/Zorn, chain (t0) . *)
 
@@ -132,7 +130,7 @@ val [t0_succl, t0_uncl] = CONJ_LIST 2 (REWRITE_RULE [tower_def] tower_t0);
 
 (* Try Halmos's "comparable" as a predicate, and not nec. only on t0. *)
 
-val comparable_def = Define`comparable (p:'x set) = !q. q IN t0 ==> p cpl q`;
+val comparable_def = zDefine`comparable (p:'x set) = !q. q IN t0 ==> p cpl q`;
 
 val psub_lem = prove (``!A B:'x set. A PSUBSET B ==> ~(B PSUBSET setsuc A)``,
 REPEAT GEN_TAC THEN
@@ -154,8 +152,8 @@ IMP_RES_TAC cpl_lem);
 
 (* Above, and all about U to follow now, straight steals from Halmos *)
 
-val U_def = Define`U (C:'x set) = { A | A IN t0 /\
-                                        (A SUBSET C \/ setsuc C SUBSET A)}`;
+val U_def = zDefine`U (C:'x set) = { A | A IN t0 /\
+                                         (A SUBSET C \/ setsuc C SUBSET A)}`;
 
 val IN_U = prove (``!C:'x set A. A IN U C <=>
                            A IN t0 /\ (A SUBSET C \/ setsuc C SUBSET A)``,
@@ -291,7 +289,7 @@ cases: If the union of the subsets of everybody in B is itself in B,
 then it is the minimum of B; but if it is a limit set, it may not be in B,
 in which case its successor is the minimum. "lub_sub" is that union. *)
 
-val lub_sub_def = Define`lub_sub (B:'x set set) =
+val lub_sub_def = zDefine`lub_sub (B:'x set set) =
               BIGUNION {y | y IN t0 /\ !x. x IN B ==> y SUBSET x}`;
 
 val lub_sub_in_t0 = prove (
@@ -388,7 +386,7 @@ Cases_on `lub_sub (B:'x set set) IN B` THENL
    To each a in 'x we make correspond that set in t0 into which setsuc
    puts a, definable as the union of the a-less sets in t0. *)
 
-val preds_def = Define
+val preds_def = zDefine
              `preds (a:'x) = BIGUNION {s:'x set | s IN t0 /\ a NOTIN s}`;
 
 val preds_in_t0 = prove (``!a:'x. preds a IN t0``,
@@ -544,5 +542,3 @@ REWRITE_TAC [WellOrd_mex_less, GSYM StrongWellOrder]);
 val _ = delete_const"t0";
 
 val _ = export_theory ();
-
-end;

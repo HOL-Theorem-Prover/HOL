@@ -11,7 +11,7 @@ else
   holdir="../.."
 fi
 
-for path in `find $holdir/src -name "*.sig"`
+for path in `find $holdir/src -name "*.sig" \! -name "*Theory.sig"`
 do
   s=`basename $path .sig`
   echo $s

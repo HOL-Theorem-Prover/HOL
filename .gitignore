@@ -1,9 +1,11 @@
 *Script
 *Theory.sig
 *Theory.sml
+*Theory.dat
 *.uo
 *.ui
 *.o
+.hollogs
 .HOLMK
 *.lex.sml
 *.grm.sig
@@ -36,6 +38,7 @@
 
 config-override
 tools-poly/poly-includes.ML
+.kernelidstr
 
 *~
 build-log
@@ -63,7 +66,7 @@ tools/build-stamp
 tools/lastbuildoptions
 tools/build-logs
 
-help/Docfiles/*.adoc
+help/Docfiles/*.txt
 help/Docfiles/HTML/*
 help/HOLindex.html
 help/HOL.Help
@@ -73,7 +76,7 @@ help/src-sml/index.txt
 help/theorygraph/*.html
 help/theorygraph/theories.dot
 help/theorygraph/theories.imap
-help/theorygraph/theories.jpg
+help/theorygraph/theories.svg
 help/theorygraph/theories.pdf
 
 src/bool/SharingTables.*
@@ -92,7 +95,6 @@ src/num/arith/Manual/arith.pdf
 src/num/arith/Manual/arith.ps
 src/num/termination/numheap
 src/num/termination/numheap.o
-src/pair/help
 src/parse/base_lexer.sml
 src/quotient/examples/*/*.html
 src/quotient/examples/*/*.lst
@@ -102,6 +104,8 @@ src/res_quan/help/thms/
 src/string/help
 src/TeX/holindex-demo.pdf
 src/TeX/holindex-demo.ps
+
+*.art
 
 Manual/*/*.pdf
 Manual/*/*.ps
@@ -117,11 +121,11 @@ examples/muddy/muddyC/Makefile
 examples/muddy/muddyC/buddy/src/libbdd.a
 examples/muddy/muddyC/muddy.so
 
-examples/set-theory/hol_sets/ordinalML.*
-
 examples/theorem-prover/lisp-runtime/bin/*.s
 
 examples/computability/lambda/computability-heap
 
 local-hol-heap
 examples/l3-machine-code/**/*-heap
+
+*_ttt/

@@ -1,0 +1,4 @@
+INCLUDES = $(HOLDIR)/tools/cmp
+
+selftest.exe: selftest.uo
+	$(HOLMOSMLC) -o $@ $<

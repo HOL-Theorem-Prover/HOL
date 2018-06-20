@@ -6,14 +6,12 @@
 (* ========================================================================= *)
 
 open HolKernel Parse boolLib bossLib;
-open lcsymtacs pred_setTheory listTheory
+open pred_setTheory listTheory
 
 val () = new_theory "fcp";
+val _ = set_grammar_ancestry ["list"]
 
 (* ------------------------------------------------------------------------- *)
-
-infix \\
-val op \\ = op THEN;
 
 val qDefine = Feedback.trace ("Define.storage_message", 0) zDefine
 
@@ -336,26 +334,29 @@ val _ = TypeBase.write fcp_tyinfo
 local (* and here the palaver to make this persistent; this should be easier
          (even without the faff I went through with PP-blocks etc to make it
          look pretty) *)
-   fun out pps =
+   fun out _ =
       let
-         val S = PP.add_string pps
-         val Brk = PP.add_break pps
-         val Blk = PP.begin_block pps PP.CONSISTENT
-         fun EBlk() = PP.end_block pps
+         val S = PP.add_string
+         val Brk = PP.add_break
+         val Blk = PP.block PP.CONSISTENT
       in
-         Blk 2; S "val _ = let"; Brk (1,0);
-         Blk 2;
-         S "val tyi = "; Brk (0,0);
-         Blk 2; S "TypeBasePure.gen_datatype_info {"; Brk (0,0);
-         S "ax = fcp_Axiom,"; Brk (1,0);
-         S "ind = fcp_ind,";  Brk (1,0);
-         S "case_defs = [fcp_case_def]"; Brk (1,~2);
-         S "}";
-         EBlk(); EBlk();
-         Brk (1,~2);
-         S "in"; Brk(1,0);
-         S "TypeBase.write tyi"; Brk(1,~2);
-         S "end"; EBlk()
+         Blk 2 [
+           S "val _ = let", Brk (1,0),
+           Blk 2 [
+             S "val tyi = ", Brk (0,0),
+             Blk 2 [
+               S "TypeBasePure.gen_datatype_info {", Brk (0,0),
+               S "ax = fcp_Axiom,", Brk (1,0),
+               S "ind = fcp_ind,",  Brk (1,0),
+               S "case_defs = [fcp_case_def]", Brk (1,~2),
+               S "}"
+             ]
+           ],
+           Brk (1,~2),
+           S "in", Brk(1,0),
+           S "TypeBase.write tyi", Brk(1,~2),
+           S "end"
+         ]
       end
 in
    val _ = adjoin_to_theory {sig_ps = NONE, struct_ps = SOME out}

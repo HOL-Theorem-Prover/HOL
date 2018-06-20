@@ -9,10 +9,10 @@ Computes by inference the result of dropping the initial n elements of a list.
 conversion, list.
 
 \DESCRIBE
-For any object language list of the form {--`[x0;...x(n-k);...;x(n-1)]`--} ,
+For any object language list of the form {“[x0;...x(n-k);...;x(n-1)]”} ,
 the result of evaluating
 {
-   BUTFIRSTN_CONV (--`BUTFIRSTN k [x0;...x(n-k);...;x(n-1)]`--)
+   BUTFIRSTN_CONV “BUTFIRSTN k [x0;...x(n-k);...;x(n-1)]”
 }
 is the theorem
 {

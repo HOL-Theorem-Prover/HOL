@@ -49,13 +49,22 @@ in
       end
 end
 
-val (x64_tools:decompiler_tools) =
-   (x64_triples, fn _ => fail(), x64_ALL_EFLAGS_def, ``x64_PC``)
+fun tools hide =
+   (x64_triples, fn _ => fail(), hide, ``x64_PC``) : decompiler_tools
+
+val x64_tools = tools x64_ALL_EFLAGS_def
+val x64_tools_no_status = tools TRUTH
 
 val x64_decompile = decompilerLib.decompile x64_tools
 
 val x64_decompile_code =
    decompilerLib.decompile_with x64AssemblerLib.x64_code_no_spaces x64_tools
+
+val x64_decompile_no_status = decompilerLib.decompile x64_tools_no_status
+
+val x64_decompile_no_status_code =
+   decompilerLib.decompile_with x64AssemblerLib.x64_code_no_spaces
+     x64_tools_no_status
 
 
 (* Testing:

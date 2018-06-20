@@ -32,14 +32,17 @@ val UPDATE_def = Q.new_definition("UPDATE_def",
 val _ = set_fixity ":>" (Infixl 310);
 val _ = set_fixity "=+" (Infix(NONASSOC, 320));
 val _ = overload_on("=+", ``UPDATE``);
+val _ = Parse.Unicode.unicode_version {tmnm = "o", u = UTF8.chr 0x2218}
 val _ = TeX_notation {hol = "o", TeX = ("\\HOLTokenCompose", 1)}
+val _ = TeX_notation {hol = UTF8.chr 0x2218, TeX = ("\\HOLTokenCompose", 1)}
 
 local open OpenTheoryMap in
+  val _ = OpenTheory_const_name {const={Thy="combin",Name="K"},name=(["Function"],"const")}
+  val _ = OpenTheory_const_name {const={Thy="combin",Name="C"},name=(["Function"],"flip")}
   val _ = OpenTheory_const_name {const={Thy="combin",Name="I"},name=(["Function"],"id")}
   val _ = OpenTheory_const_name {const={Thy="combin",Name="o"},name=(["Function"],"o")}
-  val _ = OpenTheory_const_name {const={Thy="combin",Name="C"},name=(["Function"],"C")}
-  val _ = OpenTheory_const_name {const={Thy="combin",Name="S"},name=(["Function"],"S")}
-  val _ = OpenTheory_const_name {const={Thy="combin",Name="K"},name=(["Function"],"K")}
+  val _ = OpenTheory_const_name {const={Thy="combin",Name="S"},name=(["Function","Combinator"],"s")}
+  val _ = OpenTheory_const_name {const={Thy="combin",Name="W"},name=(["Function","Combinator"],"w")}
 end
 (*---------------------------------------------------------------------------*
  * In I_DEF, the type constraint is necessary in order to meet one of        *
@@ -49,14 +52,14 @@ end
 
 
 val o_THM = store_thm("o_THM",
-   --`!f g x. (f o g) x = f(g x)`--,
+   “!f g x. (f o g) x = f(g x)”,
    REPEAT GEN_TAC
    THEN PURE_REWRITE_TAC [ o_DEF ]
    THEN CONV_TAC (DEPTH_CONV BETA_CONV)
    THEN REFL_TAC);
 
 val o_ASSOC = store_thm("o_ASSOC",
-   --`!f g h. f o (g o h) = (f o g) o h`--,
+   “!f g h. f o (g o h) = (f o g) o h”,
    REPEAT GEN_TAC
    THEN REWRITE_TAC [ o_DEF ]
    THEN CONV_TAC (REDEPTH_CONV BETA_CONV)
@@ -73,14 +76,14 @@ val o_ABS_R = store_thm(
   REWRITE_TAC [FUN_EQ_THM, o_THM] THEN BETA_TAC THEN REWRITE_TAC []);
 
 val K_THM = store_thm("K_THM",
-    --`!x y. K x y = x`--,
+    “!x y. K x y = x”,
     REPEAT GEN_TAC
     THEN PURE_REWRITE_TAC [ K_DEF ]
     THEN CONV_TAC (DEPTH_CONV BETA_CONV)
     THEN REFL_TAC);
 
 val S_THM = store_thm("S_THM",
-   --`!f g x. S f g x = f x (g x)`--,
+   “!f g x. S f g x = f x (g x)”,
    REPEAT GEN_TAC
    THEN PURE_REWRITE_TAC [ S_DEF ]
    THEN CONV_TAC (DEPTH_CONV BETA_CONV)
@@ -97,7 +100,7 @@ val S_ABS_R = store_thm(
   REWRITE_TAC [FUN_EQ_THM, S_THM] THEN BETA_TAC THEN REWRITE_TAC[]);
 
 val C_THM = store_thm("C_THM",
-   --`!f x y. C f x y = f y x`--,
+   “!f x y. C f x y = f y x”,
    REPEAT GEN_TAC
    THEN PURE_REWRITE_TAC [ C_DEF ]
    THEN CONV_TAC (DEPTH_CONV BETA_CONV)
@@ -109,25 +112,25 @@ val C_ABS_L = store_thm(
   REWRITE_TAC [FUN_EQ_THM, C_THM] THEN BETA_TAC THEN REWRITE_TAC []);
 
 val W_THM = store_thm("W_THM",
-   --`!f x. W f x = f x x`--,
+   “!f x. W f x = f x x”,
    REPEAT GEN_TAC
    THEN PURE_REWRITE_TAC [ W_DEF ]
    THEN CONV_TAC (DEPTH_CONV BETA_CONV)
    THEN REFL_TAC);
 
 val I_THM = store_thm("I_THM",
-   --`!x. I x = x`--,
+   “!x. I x = x”,
    REPEAT GEN_TAC
    THEN PURE_REWRITE_TAC [ I_DEF, S_THM, K_THM ]
    THEN CONV_TAC (DEPTH_CONV BETA_CONV)
    THEN REFL_TAC);
 
 val I_o_ID = store_thm("I_o_ID",
-   --`!f. (I o f = f) /\ (f o I = f)`--,
+   “!f. (I o f = f) /\ (f o I = f)”,
    REWRITE_TAC [I_THM, o_THM, FUN_EQ_THM]);
 
 val K_o_THM = store_thm("K_o_THM",
-  --`(!f v. K v o f = K v) /\ (!f v. f o K v = K (f v))`--,
+  “(!f v. K v o f = K v) /\ (!f v. f o K v = K (f v))”,
   REWRITE_TAC [o_THM, K_THM, FUN_EQ_THM]);
 
 val UPDATE_APPLY = Q.store_thm("UPDATE_APPLY",
@@ -286,6 +289,71 @@ val literal_case_FORALL_ELIM = store_thm(
     FIRST_X_ASSUM MATCH_MP_TAC THEN REFL_TAC
   ]);
 
+(* ----------------------------------------------------------------------
+    Predicates on functions
+   ---------------------------------------------------------------------- *)
+
+val ASSOC_DEF = new_definition("ASSOC_DEF",
+  ``
+    ASSOC (f:'a->'a->'a) <=> (!x y z. f x (f y z) = f (f x y) z)
+  ``);
+
+val COMM_DEF = new_definition("COMM_DEF",
+  ``
+     COMM (f:'a->'a->'b) <=> (!x y. f x y = f y x)
+  ``);
+
+val FCOMM_DEF = new_definition("FCOMM_DEF",
+  ``
+    FCOMM (f:'a->'b->'a) (g:'c->'a->'a) <=> (!x y z.  g x (f y z) = f (g x y) z)
+  ``);
+
+val RIGHT_ID_DEF = new_definition("RIGHT_ID_DEF",
+  ``
+    RIGHT_ID (f:'a->'b->'a) e <=> (!x. f x e = x)
+  ``);
+
+val LEFT_ID_DEF = new_definition("LEFT_ID_DEF",
+  ``
+    LEFT_ID (f:'a->'b->'b) e <=> (!x. f e x = x)
+  ``);
+
+val MONOID_DEF = new_definition("MONOID_DEF",
+  ``
+    MONOID (f:'a->'a->'a) e <=>
+             ASSOC f /\ RIGHT_ID f e /\ LEFT_ID f e
+  ``);
+
+(* ======================================================================== *)
+(*  Theorems about operators                                                *)
+(* ======================================================================== *)
+
+val ASSOC_CONJ = store_thm ("ASSOC_CONJ", ``ASSOC $/\``,
+  REWRITE_TAC[ASSOC_DEF,CONJ_ASSOC]);
+
+val ASSOC_SYM = save_thm ("ASSOC_SYM",
+  CONV_RULE
+    (STRIP_QUANT_CONV (RHS_CONV (STRIP_QUANT_CONV SYM_CONV)))
+    ASSOC_DEF);
+
+
+val ASSOC_DISJ = store_thm ("ASSOC_DISJ",
+  ``ASSOC $\/``,
+  REWRITE_TAC[ASSOC_DEF,DISJ_ASSOC]);
+
+val FCOMM_ASSOC = store_thm ("FCOMM_ASSOC",
+  ``!f: 'a->'a->'a. FCOMM f f = ASSOC f``,
+  REWRITE_TAC[ASSOC_DEF,FCOMM_DEF]);
+
+val MONOID_CONJ_T = store_thm ("MONOID_CONJ_T",
+  ``MONOID $/\ T``,
+  REWRITE_TAC[MONOID_DEF,CONJ_ASSOC, LEFT_ID_DEF,ASSOC_DEF,RIGHT_ID_DEF]);
+
+val MONOID_DISJ_F = store_thm ("MONOID_DISJ_F",
+  ``MONOID $\/ F``,
+  REWRITE_TAC[MONOID_DEF,DISJ_ASSOC,
+              LEFT_ID_DEF,ASSOC_DEF,RIGHT_ID_DEF]);
+
 (*---------------------------------------------------------------------------*)
 (*  Tag combinator equal to K. Used in generating ML from HOL                *)
 (*---------------------------------------------------------------------------*)
@@ -297,19 +365,37 @@ val FAIL_THM = Q.store_thm("FAIL_THM", `FAIL x y = x`,
     THEN CONV_TAC (DEPTH_CONV BETA_CONV)
     THEN REFL_TAC);
 
+val _ = remove_ovl_mapping "C" {Name="C", Thy = "combin"}
+
 val _ = adjoin_to_theory
 {sig_ps = NONE,
- struct_ps = SOME (fn ppstrm =>
-  let fun S s = (PP.add_string ppstrm s; PP.add_newline ppstrm) in
-    S "val _ = Parse.hide \"C\";";
-    S "val _ =";
-    S "   let open computeLib";
-    S "       val K_tm = Term.prim_mk_const{Name=\"K\",Thy=\"combin\"}";
-    S "   in add_funs";
-    S "       [K_THM,S_DEF,I_THM,C_DEF,W_DEF,o_THM,K_o_THM,";
-    S "        APP_DEF,APPLY_UPDATE_THM];";
-    S "      set_skip the_compset K_tm (SOME 1)";
-    S "   end;"
-  end)};
+ struct_ps = SOME (fn _ =>
+  let val S = PP.add_string fun SPC n = PP.add_break(1,n)
+      fun B n = PP.block PP.CONSISTENT n
+      fun I n = PP.block PP.INCONSISTENT n
+      val L = PP.pr_list
+  in
+    B 0 [
+      S "val _ =", SPC 2,
+      B 4 [
+        S "let open computeLib", SPC 0,
+        B 2 [
+          S "val K_tm =", SPC 0,
+          S "Term.prim_mk_const{Name=\"K\",Thy=\"combin\"}"
+        ], SPC ~4,
+        S "in", SPC 0,
+        B 2 [
+          S "add_funs", SPC 0,
+          I 1 (S "[" ::
+               L S [S ",", PP.add_break(0,0)] [
+                 "K_THM", "S_DEF", "I_THM", "C_DEF", "W_DEF", "o_THM",
+                 "K_o_THM", "APP_DEF", "APPLY_UPDATE_THM];"
+              ])
+        ], SPC 0,
+        B 2 (L S [SPC 1] ["set_skip", "the_compset", "K_tm", "(SOME 1)"]),
+        SPC ~4, S "end;"
+      ]
+    ]
+  end)}
 
 val _ = export_theory();

@@ -47,7 +47,7 @@ fun tstamp () = pos_tstamp true
 
 structure PMDataSet = struct
   type value = printmap_data
-  type set = value HOLset.set
+  type t = value HOLset.set
   val empty = HOLset.empty pmdata_compare
   val insert = HOLset.add
   val fold = HOLset.foldl
@@ -330,14 +330,6 @@ end
 val add_overloading = add_overloading_with_inserter (op ::) (fn () => pos_tstamp true)
 val add_inferior_overloading = add_overloading_with_inserter (fn (a,l) => l @ [a]) (fn() => pos_tstamp false)
 
-fun add_actual_overloading {opname, realname, realthy} oinfo = let
-  val cnst = prim_mk_const{Name = realname, Thy = realthy}
-      handle HOL_ERR _ =>
-             raise OVERLOAD_ERR ("No such constant: "^realthy^"$"^realname)
-in
-  add_overloading (opname, cnst) oinfo
-end
-
 local
   fun foverloading f {opname, realname, realthy} oinfo = let
     val nthy_rec = {Name = realname, Thy = realthy}
@@ -409,7 +401,7 @@ fun strip_comb ((_, prmap): overload_info) namePred t = let
   fun rearrange (tmi, _, _, (orig, nm)) = let
     val (bvs,basepat) = strip_abs orig
     fun findarg v =
-        case List.find (fn {redex,residue} => redex = v) tmi of
+        case List.find (fn {redex,residue} => aconv redex v) tmi of
           NONE => mk_const("ARB", type_of v)
         | SOME i => #residue i
     val args = map findarg bvs
@@ -448,12 +440,12 @@ fun oi_strip_combP oinfo P t = let
           | SOME (f,x) => recurse (x::acc) f
         end
       | SOME (f,args) => SOME(f, args @ acc)
-  val realf = repeat rator t
+  val (realf, args) = HolKernel.strip_comb t
 in
   if is_var realf andalso
      String.isPrefix GrammarSpecials.fakeconst_special (#1 (dest_var realf))
   then
-    NONE
+    SOME(realf, args)
   else recurse [] t
 end
 

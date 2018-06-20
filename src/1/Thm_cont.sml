@@ -102,27 +102,27 @@ val CONJUNCTS_THEN: thm_tactical = fn ttac => CONJUNCTS_THEN2 ttac ttac
  *---------------------------------------------------------------------------*)
 
 (* -------------------------------------------------------------------------*)
-(* REVISED 22 Oct 1992 by TFM. Bugfix.					    *)
-(*									    *)
-(* The problem was, for example:					    *)
-(*									    *)
-(*  th = |- ?n. ((?n. n = SUC 0) \/ F) /\ (n = 0)			    *)
-(*  set_goal ([], "F");;						    *)
-(*  expandf (STRIP_ASSUME_TAC th);;				 	    *)
-(*  OK..								    *)
-(*  "F"									    *)
-(*     [ "n = SUC 0" ] (n.b. should be n')				    *)
-(*     [ "n = 0" ]						            *)
-(* 								            *)
-(* let DISJ_CASES_THEN2 ttac1 ttac2 disth :tactic  =			    *)
+(* REVISED 22 Oct 1992 by TFM. Bugfix.                                      *)
+(*                                                                          *)
+(* The problem was, for example:                                            *)
+(*                                                                          *)
+(*  th = |- ?n. ((?n. n = SUC 0) \/ F) /\ (n = 0)                           *)
+(*  set_goal ([], "F");;                                                    *)
+(*  expandf (STRIP_ASSUME_TAC th);;                                         *)
+(*  OK..                                                                    *)
+(*  "F"                                                                             *)
+(*     [ "n = SUC 0" ] (n.b. should be n')                                  *)
+(*     [ "n = 0" ]                                                          *)
+(*                                                                          *)
+(* let DISJ_CASES_THEN2 ttac1 ttac2 disth :tactic  =                        *)
 (*     let a1,a2 = dest_disj (concl disth) ? failwith `DISJ_CASES_THEN2` in *)
-(*     \(asl,w).							    *)
-(*      let gl1,prf1 = ttac1 (ASSUME a1) (asl,w)			    *)
-(*      and gl2,prf2 = ttac2 (ASSUME a2) (asl,w)			    *)
-(*      in							            *)
-(*      gl1 @ gl2,							    *)
-(*      \thl. let thl1,thl2 = chop_list (length gl1) thl in		    *)
-(*            DISJ_CASES disth (prf1 thl1) (prf2 thl2);;		    *)
+(*     \(asl,w).                                                            *)
+(*      let gl1,prf1 = ttac1 (ASSUME a1) (asl,w)                            *)
+(*      and gl2,prf2 = ttac2 (ASSUME a2) (asl,w)                            *)
+(*      in                                                                  *)
+(*      gl1 @ gl2,                                                          *)
+(*      \thl. let thl1,thl2 = chop_list (length gl1) thl in                 *)
+(*            DISJ_CASES disth (prf1 thl1) (prf2 thl2);;                    *)
 (* -------------------------------------------------------------------------*)
 
 (*---------------------------------------------------------------------------
@@ -299,7 +299,7 @@ val STRIP_THM_THEN = FIRST_TCL [CONJUNCTS_THEN, DISJ_CASES_THEN, CHOOSE_THEN]
 
 
 (* ---------------------------------------------------------------------*)
-(* Resolve implicative assumptions with an antecedent			*)
+(* Resolve implicative assumptions with an antecedent                   *)
 (* ---------------------------------------------------------------------*)
 
 fun ANTE_RES_THEN ttac ante : tactic =
@@ -307,71 +307,71 @@ fun ANTE_RES_THEN ttac ante : tactic =
       (Tactical.EVERY o (mapfilter (fn imp => ttac (MATCH_MP imp ante))))
 
 (* ---------------------------------------------------------------------*)
-(* Old versions of RESOLVE_THEN etc.			[TFM 90.04.24]  *)
-(* 									*)
-(* letrec RESOLVE_THEN antel ttac impth : tactic =			*)
-(*     let answers = mapfilter (MATCH_MP impth) antel in		*)
-(*     EVERY (mapfilter ttac answers)					*)
-(*     THEN								*)
-(*     (EVERY (mapfilter (RESOLVE_THEN antel ttac) answers));		*)
-(* 									*)
-(* let OLD_IMP_RES_THEN ttac impth =					*)
-(*  ASSUM_LIST								*)
-(*     (\asl. EVERY (mapfilter (RESOLVE_THEN asl ttac) 			*)
-(*		  	      (IMP_CANON impth)));			*)
-(* 									*)
-(* let OLD_RES_THEN ttac = 						*)
-(*     ASSUM_LIST (EVERY o (mapfilter (OLD_IMP_RES_THEN ttac)));	*)
+(* Old versions of RESOLVE_THEN etc.                    [TFM 90.04.24]  *)
+(*                                                                      *)
+(* letrec RESOLVE_THEN antel ttac impth : tactic =                      *)
+(*     let answers = mapfilter (MATCH_MP impth) antel in                *)
+(*     EVERY (mapfilter ttac answers)                                   *)
+(*     THEN                                                             *)
+(*     (EVERY (mapfilter (RESOLVE_THEN antel ttac) answers));           *)
+(*                                                                      *)
+(* let OLD_IMP_RES_THEN ttac impth =                                    *)
+(*  ASSUM_LIST                                                          *)
+(*     (\asl. EVERY (mapfilter (RESOLVE_THEN asl ttac)                          *)
+(*                            (IMP_CANON impth)));                      *)
+(*                                                                      *)
+(* let OLD_RES_THEN ttac =                                              *)
+(*     ASSUM_LIST (EVERY o (mapfilter (OLD_IMP_RES_THEN ttac)));        *)
 (* ---------------------------------------------------------------------*)
 
 
 (* --------------------------------------------------------------------- *)
-(* Definitions of the primitive:					*)
-(*									*)
-(* IMP_RES_THEN: Resolve all assumptions against an implication.	*)
-(*									*)
-(* The definition uses two auxiliary (local)  functions:		*)
-(*									*)
-(*     MATCH_MP     : like the built-in version, but doesn't use GSPEC.	*)
-(*     RESOLVE_THEN : repeatedly resolve an implication			*)
-(* 									*)
-(* This version deleted for HOL version 1.12   		 [TFM 91.01.17]	*)
-(*									*)
-(* begin_section IMP_RES_THEN;						*)
-(*									*)
-(* let MATCH_MP impth =							*)
-(*     let sth = SPEC_ALL impth in					*)
-(*     let pat = fst(dest_imp(concl sth)) in				*)
-(*     let matchfn = match pat in					*)
-(*        (\th. MP (INST_TY_TERM (matchfn (concl th)) sth) th);		*)
-(* 									*)
-(* letrec RESOLVE_THEN antel ttac impth : tactic =			*)
-(*        let answers = mapfilter (MATCH_MP impth) antel in		*)
-(*            EVERY (mapfilter ttac answers) THEN			*)
-(*           (EVERY (mapfilter (RESOLVE_THEN antel ttac) answers));	*)
-(* 									*)
-(* let IMP_RES_THEN ttac impth =					*)
-(*     ASSUM_LIST (\asl. 						*)
-(*      EVERY (mapfilter (RESOLVE_THEN asl ttac) (RES_CANON impth))) ? 	*)
-(*     failwith `IMP_RES_THEN`;						*)
-(*									*)
-(* IMP_RES_THEN;							*)
-(* 									*)
-(* end_section IMP_RES_THEN;						*)
-(* 									*)
-(* let IMP_RES_THEN = it;						*)
+(* Definitions of the primitive:                                        *)
+(*                                                                      *)
+(* IMP_RES_THEN: Resolve all assumptions against an implication.        *)
+(*                                                                      *)
+(* The definition uses two auxiliary (local)  functions:                *)
+(*                                                                      *)
+(*     MATCH_MP     : like the built-in version, but doesn't use GSPEC.         *)
+(*     RESOLVE_THEN : repeatedly resolve an implication                         *)
+(*                                                                      *)
+(* This version deleted for HOL version 1.12                     [TFM 91.01.17]         *)
+(*                                                                      *)
+(* begin_section IMP_RES_THEN;                                          *)
+(*                                                                      *)
+(* let MATCH_MP impth =                                                         *)
+(*     let sth = SPEC_ALL impth in                                      *)
+(*     let pat = fst(dest_imp(concl sth)) in                            *)
+(*     let matchfn = match pat in                                       *)
+(*        (\th. MP (INST_TY_TERM (matchfn (concl th)) sth) th);                 *)
+(*                                                                      *)
+(* letrec RESOLVE_THEN antel ttac impth : tactic =                      *)
+(*        let answers = mapfilter (MATCH_MP impth) antel in             *)
+(*            EVERY (mapfilter ttac answers) THEN                       *)
+(*           (EVERY (mapfilter (RESOLVE_THEN antel ttac) answers));     *)
+(*                                                                      *)
+(* let IMP_RES_THEN ttac impth =                                        *)
+(*     ASSUM_LIST (\asl.                                                *)
+(*      EVERY (mapfilter (RESOLVE_THEN asl ttac) (RES_CANON impth))) ?          *)
+(*     failwith `IMP_RES_THEN`;                                                 *)
+(*                                                                      *)
+(* IMP_RES_THEN;                                                        *)
+(*                                                                      *)
+(* end_section IMP_RES_THEN;                                            *)
+(*                                                                      *)
+(* let IMP_RES_THEN = it;                                               *)
 (* ---------------------------------------------------------------------*)
 
 (* ---------------------------------------------------------------------*)
-(* Definition of the primitive:						*)
-(*									*)
-(* IMP_RES_THEN: Resolve all assumptions against an implication.	*)
-(*									*)
+(* Definition of the primitive:                                                 *)
+(*                                                                      *)
+(* IMP_RES_THEN: Resolve all assumptions against an implication.        *)
+(*                                                                      *)
 (* The definition uses an auxiliary (local) function, MATCH_MP, which is*)
-(* just like the built-in version, but doesn't use GSPEC.		*)
-(* 									*)
+(* just like the built-in version, but doesn't use GSPEC.               *)
+(*                                                                      *)
 (* New implementation for version 1.12: fails if no MP-consequences can *)
-(* be drawn, and does only one-step resolution.		[TFM 90.12.07]  *)
+(* be drawn, and does only one-step resolution.                 [TFM 90.12.07]  *)
 (* ---------------------------------------------------------------------*)
 
 local
@@ -388,14 +388,14 @@ local
       end
 
 (* ---------------------------------------------------------------------*)
-(* check ex l : Fail with ex if l is empty, otherwise return l.		*)
+(* check ex l : Fail with ex if l is empty, otherwise return l.                 *)
 (* ---------------------------------------------------------------------*)
 
    fun check ex [] = raise ex
      | check ex l = l
 
 (* ---------------------------------------------------------------------*)
-(* IMP_RES_THEN  : Resolve an implication against the assumptions.	*)
+(* IMP_RES_THEN  : Resolve an implication against the assumptions.      *)
 (* ---------------------------------------------------------------------*)
 in
    fun IMP_RES_THEN ttac impth =
@@ -419,7 +419,7 @@ in
       end
 
 (* ---------------------------------------------------------------------*)
-(* RES_THEN    : Resolve all implicative assumptions against the rest.	*)
+(* RES_THEN    : Resolve all implicative assumptions against the rest.  *)
 (* ---------------------------------------------------------------------*)
 
    fun RES_THEN ttac (asl,g) =
@@ -434,5 +434,24 @@ in
          Tactical.EVERY tacs (asl,g)
       end
 end
+
+(* ----------------------------------------------------------------------
+    PROVEHYP_THEN ttac th
+
+    th must be of form |- l ==> r
+
+    Application of tactic sets up l as a subgoal, and in the second
+    branch applies ttac to |- r
+   ---------------------------------------------------------------------- *)
+
+fun PROVEHYP_THEN t2tac th g =
+  let
+    val (l, _) = dest_imp (concl th)
+  in
+    Tactical.SUBGOAL_THEN l (fn lth => t2tac lth (MP th lth))
+  end g
+
+val provehyp_then = PROVEHYP_THEN
+
 
 end

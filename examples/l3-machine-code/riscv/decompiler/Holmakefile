@@ -1,0 +1,22 @@
+INCLUDES = ../../common ../prog \
+           $(HOLDIR)/examples/machine-code/hoare-triple \
+           $(HOLDIR)/examples/machine-code/decompiler
+CLINE_OPTIONS = --qof -j1
+
+ifdef POLY
+HOLHEAP = riscv-prog-heap
+EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o
+
+BARE_THYS = ../prog/riscv_progLib
+DEPS = $(patsubst %,%.uo,$(BARE_THYS))
+
+THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
+TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
+
+all: $(TARGETS) $(HOLHEAP)
+.PHONY: all
+
+$(HOLHEAP): $(DEPS)
+	$(protect $(HOLDIR)/bin/buildheap) -b ../prog/riscv-step-heap -o $(HOLHEAP) $(BARE_THYS)
+
+endif

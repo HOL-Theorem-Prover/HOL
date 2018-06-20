@@ -4,46 +4,48 @@
 
 structure Nat :> Nat =
 struct
-   val _ = Int.maxInt = NONE
+   val _ = IntInf.maxInt = NONE
            orelse raise Fail "Arbitrary precision arithmetic not available"
 
-   type nat = int
+   type nat = IntInf.int
 
    fun fromInt i = if i < 0 then raise Domain else i
    fun toInt i = i
+   val fromNativeInt = IntInf.fromInt
+   val toNativeInt = IntInf.toInt
    fun from_int i = if i < 0 then NONE else SOME i
    val fromString = Option.composePartial (from_int, IntExtra.fromString)
    val fromBinString = Option.composePartial (from_int, IntExtra.fromBinString)
    val fromHexString = Option.composePartial (from_int, IntExtra.fromHexString)
-   val toString = Int.toString
+   val toString = IntInf.toString
    val toBinString = IntExtra.toBinString
    val toHexString = IntExtra.toHexString
-   val toWord = Word.fromInt o toInt
+   val toWord = Word.fromLargeInt o toInt
    val fromLit = Option.map fromInt o IntExtra.fromLit
 
-   val fromBool = fn true => 1 | false => 0
+   val fromBool = fn true => 1 | false => 0: IntInf.int
 
-   val compare = Int.compare
+   val compare = IntInf.compare
 
-   val zero = 0
-   val one = 1
-   val two = 2
+   val zero = 0: IntInf.int
+   val one = 1: IntInf.int
+   val two = 2: IntInf.int
 
-   val log2 = IntInf.log2
-   val pow = IntInf.pow
+   val log2 = IntInf.fromInt o IntInf.log2
+   fun pow (x, y) = IntInf.pow (x, IntInf.toInt y)
 
-   val op div = op Int.div
-   val op mod = op Int.mod
-   val op + = op Int.+
-   val op * = op Int.*
-   val op < = op Int.<
-   val op <= = op Int.<=
-   val op > = op Int.>
-   val op >= = op Int.>=
+   val op div = op IntInf.div
+   val op mod = op IntInf.mod
+   val op + = op IntInf.+
+   val op * = op IntInf.*
+   val op < = op IntInf.<
+   val op <= = op IntInf.<=
+   val op > = op IntInf.>
+   val op >= = op IntInf.>=
 
    fun op - (x, y) =
      let
-        val r = Int.- (x, y)
+        val r = IntInf.- (x, y)
      in
         if r < 0 then 0 else r
      end

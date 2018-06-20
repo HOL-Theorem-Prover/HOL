@@ -18,8 +18,8 @@ datatype ('a,'b,'c) stack =
 
 fun RULES_ERR function message =
     HOL_ERR{origin_structure = "compute_rules",
-		      origin_function = function,
-		      message = message};
+                      origin_function = function,
+                      message = message};
 
 (*---------------------------------------------------------------------------
  * Serious anomaly of the code (an internal invariant was broken). We don't
@@ -63,14 +63,14 @@ val evaluate = fst
 fun Mk_comb (t as (thm,_)) =
   let val (tha,thb,mka) = Thm.Mk_comb thm
       fun mka' (_,false) (_,false) = t
-	| mka' (th1,_) (th2,_) = (mka th1 th2, true)
+        | mka' (th1,_) (th2,_) = (mka th1 th2, true)
   in ((tha,false),(thb,false),mka')
   end;
 
 fun Mk_abs (t as (thm,_)) =
   let val (bv,thb,mkl) = Thm.Mk_abs thm
       fun mkl' (_,false) = t
-	| mkl' (th1,_) = (mkl th1, true)
+        | mkl' (th1,_) = (mkl th1, true)
   in (bv,(thb,false),mkl')
   end;
 
@@ -95,6 +95,12 @@ fun try_eta thm = (RIGHT_ETA thm) handle HOL_ERR _ => thm;
 fun push_in_stk f (arg,(th,stk)) =
       let val (tha,thb,mka) = Mk_comb th in
       (tha, Zrator{Rand=(mka,(thb,f arg)), Ctx=stk})
+      end
+;
+
+fun push_skip_stk f (arg,(th,stk)) =
+      let val (tha,thb,mka) = Mk_comb th in
+      (tha, Zrand{Rator=(Lib.C mka,true,(thb,f arg)), Ctx=stk})
       end
 ;
 

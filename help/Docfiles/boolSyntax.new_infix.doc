@@ -54,10 +54,10 @@ precedence.
    - Term`T \/ T orelse F`;
    val it = `T \/ T orelse F` : term
 
-   - --`$orelse T F`--;
+   - “$orelse T F”;
    val it = `T orelse F` : term
 
-   - dest_comb (--`T \/ T orelse F`--);
+   - dest_comb “T \/ T orelse F”;
    > val it = (`$orelse (T \/ T)`,  `F`) : term * term
 }
 

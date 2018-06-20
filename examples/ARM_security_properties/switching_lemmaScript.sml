@@ -117,7 +117,7 @@ val preserve_relation_in_priv_mode_thm_tac =
 			  satisfy_priv_constraints_v3_def,
 			  satisfy_priv_constraints_v2a_def,
 			  satisfy_priv_constraints_v2_def]
-	       THEN PAT_ASSUM ``∀g s1 s2.X`` (fn thm =>
+	       THEN PAT_X_ASSUM ``∀g s1 s2.X`` (fn thm =>
 						 ASSUME_SPECL_TAC
 						     [``g:bool[32]``,``s1:arm_state``,
 						      ``s2:arm_state``] thm)
@@ -128,16 +128,16 @@ val preserve_relation_in_priv_mode_thm_tac =
 	       THEN RW_TAC (srw_ss()) []
 	       THEN RW_TAC (srw_ss()) []
 	       THENL
-	       [PAT_ASSUM ``∀g s1 s2 a  .X``
+	       [PAT_X_ASSUM ``∀g s1 s2 a  .X``
 			  (fn thm =>
 			      ASSUME_SPECL_TAC [``g:bool[32]``,``s1:arm_state``,
 						``s1':arm_state``,``a:'a``] thm) THEN tac,
-		PAT_ASSUM ``∀g s1 s2 a  .X``
+		PAT_X_ASSUM ``∀g s1 s2 a  .X``
 			  (fn thm =>
 			      ASSUME_SPECL_TAC [``g:bool[32]``,``s2:arm_state``,
 						``s2':arm_state``,``a:'a``] thm)
 			  THEN tac,
-		PAT_ASSUM ``∀g s1 s2 a  .X``
+		PAT_X_ASSUM ``∀g s1 s2 a  .X``
 			  (fn thm =>
 			      THROW_AWAY_TAC (concl thm))
 			  THEN FULL_SIMP_TAC (bool_ss) [ARM_MODE_def,ARM_READ_CPSR_def,
@@ -226,12 +226,12 @@ val access_violation_implies_no_mode_changing_thm =
 				  assert_mode_access_violation_def,
 				  ARM_MODE_def,
 				  ARM_READ_CPSR_def]
-		      THEN PAT_ASSUM ``! g s1 s2.X``
+		      THEN PAT_X_ASSUM ``! g s1 s2.X``
 		      (fn thm => ASSUME_SPECL_TAC [``g':bool[32]``,
 						   ``s1:arm_state``,
 						   ``s2:arm_state``] thm)
 		      THEN RES_TAC
-		      THEN PAT_ASSUM ``! s s x.X``
+		      THEN PAT_X_ASSUM ``! s s x.X``
 		      (fn thm =>
 			  ASSUME_SPECL_TAC [``s1:arm_state``,
 					    ``s1':arm_state``,
@@ -268,12 +268,12 @@ val access_violation_implies_no_mode_changing_v1_thm =
 				  assert_mode_access_violation_def,
 				  ARM_MODE_def,
 				  ARM_READ_CPSR_def]
-		      THEN PAT_ASSUM ``! g s1 s2.X``
+		      THEN PAT_X_ASSUM ``! g s1 s2.X``
 		      (fn thm => ASSUME_SPECL_TAC [``g':bool[32]``,
 						   ``s1:arm_state``,
 						   ``s2:arm_state``] thm)
 		      THEN RES_TAC
-		      THEN PAT_ASSUM ``! s s x.X``
+		      THEN PAT_X_ASSUM ``! s s x.X``
 		      (fn thm =>
 			  ASSUME_SPECL_TAC [``s1:arm_state``,
 					    ``s1':arm_state``,
@@ -313,7 +313,7 @@ val user_pr_taut_imp_priv_pr_thm =
  RW_TAC (srw_ss()) [preserve_relation_mmu_def,
 		    assert_mode_def,
 		    tautology_fun_def]
-	THEN	PAT_ASSUM ``! g s1 s2.X``
+	THEN	PAT_X_ASSUM ``! g s1 s2.X``
 	(fn thm => ASSUME_SPECL_TAC [``g:bool[32]``,
 				     ``s1:arm_state``,
 				     ``s2:arm_state``] thm)
@@ -355,7 +355,7 @@ val deduce_pr_from_pr_av_and_pr_no_av_thm =
 	      uf uy
 	   ``,
 	       RW_TAC (srw_ss()) [preserve_relation_mmu_def]
-		      THEN NTAC 2(PAT_ASSUM ``! g s1 s2.X``
+		      THEN NTAC 2(PAT_X_ASSUM ``! g s1 s2.X``
 					    (fn thm =>
 						ASSUME_SPECL_TAC [``g:bool[32]``,
 								  ``s1:arm_state``,
@@ -994,15 +994,15 @@ val TAKE_EXCEPTION_MODE_CHANGING_VALUESTATE_TAC =
 				``scr:CP15scr``,mode] write_scr_cpsr_thm))
 		   THEN RES_TAC
 		   THEN REPEAT (WEAKEN_TAC is_imp)
-		   THEN PAT_ASSUM ``X c s1= ValueState a b``
+		   THEN PAT_X_ASSUM ``X c s1= ValueState a b``
 		   (fn thm => ASSUME_TAC (PairRules.PBETA_RULE thm))
-		   THEN PAT_ASSUM ``X c' s2= ValueState a' b'``
+		   THEN PAT_X_ASSUM ``X c' s2= ValueState a' b'``
 		   (fn thm => ASSUME_TAC (PairRules.PBETA_RULE thm))
-		   THEN PAT_ASSUM ``X c s1= ValueState a b``
+		   THEN PAT_X_ASSUM ``X c s1= ValueState a b``
 		   (fn thm => ASSUME_TAC (PairRules.PBETA_RULE thm))
 		   THEN FULL_SIMP_TAC (srw_ss()) []
 		   THEN IMP_RES_TAC untouched_mmu_setup_lem
-		   THEN PAT_ASSUM ``∀c g s1 s2. X ``
+		   THEN PAT_X_ASSUM ``∀c g s1 s2. X ``
 		   (fn thm => ASSUME_TAC
 				  (SPECL [``a:unit#unit``,``g:bool[32]``,
 					  ``s1':arm_state``,
@@ -1252,14 +1252,14 @@ fun prove_take_exception_nav_thm
 							  const_comp_hlp_thm)
 		   THEN FULL_SIMP_TAC (srw_ss()) [condT_def]
 		   THEN (VALID (NTAC 2 (WEAKEN_TAC is_forall)))
-		   THEN (VALID (PAT_ASSUM ``g a s = g' a s``
+		   THEN (VALID (PAT_X_ASSUM ``g a s = g' a s``
 		   			  (fn thm => THROW_AWAY_TAC (concl thm))))
 		       (*reduced to the right part *)
 		   THEN EVERY_ASSUM (fn thm => ASSUME_TAC (PairRules.PBETA_RULE thm))
 		   THEN IMP_RES_TAC similar_states_have_same_vec_tab_thm
 		   THEN IMP_RES_TAC similar_states_have_same_read_pc_thm
 		   THEN IMP_RES_TAC similar_states_have_same_security_ext_thm
-		   THEN PAT_ASSUM ``similar g s1 s2``
+		   THEN PAT_X_ASSUM ``similar g s1 s2``
 		   (fn thm => FULL_SIMP_TAC (srw_ss())
 					    [REWRITE_RULE [similar_def,
 							   equal_user_register_def
@@ -1636,7 +1636,7 @@ fun prove_take_exception_ut_EE_F_flags_thm mode thm te =
 		       (INST_TYPE [alpha |-> ``:unit``]
 				  downgrade_thm )))
        THEN FULL_SIMP_TAC (bool_ss) [keep_untouched_relation_def]
-       THEN PAT_ASSUM ``∀g s s' a.X``
+       THEN PAT_X_ASSUM ``∀g s s' a.X``
        (fn thm =>
 	   ASSUME_SPECL_TAC [``g:bool[32]``,
 			     ``s1:arm_state``,
@@ -2238,7 +2238,7 @@ preserve_relation_mmu (Z >>= (\x.A))
 	      THEN Cases_on ` Z s1`
 	      THEN Cases_on ` Z s2`
 	      THEN RW_TAC (srw_ss()) [seqT_def]
-	      THEN PAT_ASSUM ``∀g:word32 s1 s2.X`` (fn thm =>
+	      THEN PAT_X_ASSUM ``∀g:word32 s1 s2.X`` (fn thm =>
 						       ASSUME_SPECL_TAC
 							   [``g:bool[32]``,``s1:arm_state``,
 							    ``s2:arm_state``] thm)
@@ -2255,7 +2255,7 @@ preserve_relation_mmu (Z >>= (\x.A))
 	     ,
 	     ASSUME_TAC  seqT_access_violation_thm
 			 THEN FULL_SIMP_TAC (srw_ss()) [seqT_def]
-			 THEN PAT_ASSUM ``∀g:word32 s1 s2.X`` (fn thm =>
+			 THEN PAT_X_ASSUM ``∀g:word32 s1 s2.X`` (fn thm =>
 						 ASSUME_SPECL_TAC
 						     [``g:bool[32]``,``b:arm_state``,
 						      ``b':arm_state``] thm)
@@ -2284,7 +2284,7 @@ preserve_relation_mmu (Z >>= (\x.A))
 					       THEN FULL_SIMP_TAC (srw_ss()) [ARM_MODE_def,ARM_READ_CPSR_def]
 				   ,
 
-				   PAT_ASSUM ``∀ s1:arm_state s2.X`` (fn thm =>
+				   PAT_X_ASSUM ``∀ s1:arm_state s2.X`` (fn thm =>
 									 ASSUME_SPECL_TAC
 									     [``s1:arm_state``,
 									      ``b:arm_state``, ``a:'a``] thm
@@ -2319,7 +2319,7 @@ store_thm ("IT_advance_svc_spsr_thm",
 				 (state0.psrs(0,CPSR)))))``
 	 ,
 	 RW_TAC (srw_ss()) []
-		THEN PAT_ASSUM ``IT_advance <|proc := 0|> state0 = ValueState a state1`` (fn thm => ASSUME_TAC (EVAL_RULE thm))
+		THEN PAT_X_ASSUM ``IT_advance <|proc := 0|> state0 = ValueState a state1`` (fn thm => ASSUME_TAC (EVAL_RULE thm))
 		THEN Cases_on `access_violation state0`
 		THEN FIRST_PROVE
 		[

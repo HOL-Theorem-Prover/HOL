@@ -12,3 +12,8 @@ all: $(TARGETS) selftest.exe
 
 selftest.exe: selftest.uo ind_types.uo Datatype.uo $(dprot $(SIGOBJ)/ParseDatatype.uo) $(dprot $(SIGOBJ)/RecordType.uo)
 	$(HOLMOSMLC) -o $@ $<
+
+ifeq ($(KERNELID),otknl)
+all: $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
+
+endif

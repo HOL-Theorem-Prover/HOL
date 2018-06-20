@@ -32,7 +32,7 @@ sig
    val case_constant_name : {type_name:string} -> string
    val case_constant_defn_name : {type_name:string} -> string
 
-   val INDUCT_THEN                 : thm -> (thm -> tactic) -> tactic
+   val INDUCT_THEN                 : thm -> thm_tactic -> tactic
    val prove_rec_fn_exists         : thm -> term -> thm
    val prove_induction_thm         : thm -> thm
 

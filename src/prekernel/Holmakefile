@@ -1,4 +1,4 @@
-OPTIONS=NO_OVERLAY
+CLINE_OPTIONS=--no_overlay
 
 PORTABLED = $(dprot $(SIGOBJ)/Portable.ui)
 

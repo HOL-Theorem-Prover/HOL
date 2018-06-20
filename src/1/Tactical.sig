@@ -5,6 +5,7 @@ sig
   val TAC_PROOF      : goal * tactic -> thm
   val prove          : term * tactic -> thm
   val store_thm      : string * term * tactic -> thm
+  val CONV_TAC       : conv -> tactic
   val THEN           : ('a,'b) gentactic * tactic -> ('a,'b) gentactic
   val >>             : ('a,'b) gentactic * tactic -> ('a,'b) gentactic
   val \\             : ('a,'b) gentactic * tactic -> ('a,'b) gentactic
@@ -28,6 +29,8 @@ sig
   val THEN_LT        : tactic * list_tactic -> tactic
   val THEN_LT        : list_tactic * list_tactic -> list_tactic
   *)
+  val >>-            : tactic * int -> tactic -> tactic
+  val ??             : ('a -> 'b) * 'a -> 'b
   val TACS_TO_LT     : tactic list -> list_tactic
   val NULL_OK_LT     : list_tactic -> list_tactic
   val ALLGOALS       : tactic -> list_tactic
@@ -75,16 +78,24 @@ sig
   val last_assum     : thm_tactic -> tactic
   val LAST_X_ASSUM   : thm_tactic -> tactic
   val last_x_assum   : thm_tactic -> tactic
+  val goal_assum     : thm_tactic -> tactic
+  val hdtm_assum     : term -> thm_tactic -> tactic
+  val hdtm_x_assum   : term -> thm_tactic -> tactic
+
   val ASSUM_LIST     : (thm list -> tactic) -> tactic
   val POP_ASSUM      : thm_tactic -> tactic
   val pop_assum      : thm_tactic -> tactic
   val PRED_ASSUM     : (term -> bool) -> thm_tactic -> tactic
   val PAT_ASSUM      : term -> thm_tactic -> tactic
+  val PAT_X_ASSUM    : term -> thm_tactic -> tactic
   val POP_ASSUM_LIST : (thm list -> tactic) -> tactic
   val SUBGOAL_THEN   : term -> thm_tactic -> tactic
   val USE_SG_THEN    : thm_tactic -> int -> int -> list_tactic
   val CHANGED_TAC    : tactic -> tactic
-  val Q_TAC          : (term -> tactic) -> term frag list -> tactic
+  val Q_TAC0         : {traces : (string * int) list} -> hol_type option ->
+                       (term -> tactic) -> term quotation -> tactic
+  val Q_TAC          : (term -> tactic) -> term quotation -> tactic
+  val QTY_TAC        : hol_type -> (term -> tactic) -> term quotation -> tactic
 
   val default_prover : term * tactic -> thm
   val set_prover     : (term * tactic -> thm) -> unit

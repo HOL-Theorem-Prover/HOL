@@ -4,14 +4,14 @@
 
 structure IntExtra :> IntExtra =
 struct
-   val toBinString = Int.fmt StringCvt.BIN
-   val toHexString = Int.fmt StringCvt.HEX
+   val toBinString = IntInf.fmt StringCvt.BIN
+   val toHexString = IntInf.fmt StringCvt.HEX
 
-   val fromBool = fn true => 1 | false => 0
+   val fromBool = fn true => 1 | false => 0: IntInf.int
 
    local
       fun scanInt b s =
-         case Int.scan b Substring.getc (Substring.full s) of
+         case IntInf.scan b Substring.getc (Substring.full s) of
            SOME (i, r) => if Substring.size r = 0 then SOME i else NONE
          | _ => NONE
    in
@@ -31,4 +31,6 @@ struct
             | _ => NONE
          end
    end
+
+   fun pow (a, b) = IntInf.pow (a, Int.fromLarge b)
 end (* structure IntExtra *)

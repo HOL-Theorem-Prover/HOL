@@ -69,8 +69,8 @@ val str2sym_aux_LESS_EQ = prove(
   \\ `?z zs. str2sym_aux xs F = (z,zs)` by METIS_TAC [pairTheory.PAIR]
   \\ `?z zs. str2sym_aux xs T = (z,zs)` by METIS_TAC [pairTheory.PAIR]
   \\ FULL_SIMP_TAC std_ss [LENGTH] \\ RES_TAC
-  \\ TRY (Q.PAT_ASSUM `zs = ys` (ASSUME_TAC)) \\ FULL_SIMP_TAC std_ss []
-  \\ TRY (Q.PAT_ASSUM `(if b1 then x1 else y1) = z1` MP_TAC)
+  \\ TRY (Q.PAT_X_ASSUM `zs = ys` (ASSUME_TAC)) \\ FULL_SIMP_TAC std_ss []
+  \\ TRY (Q.PAT_X_ASSUM `(if b1 then x1 else y1) = z1` MP_TAC)
   \\ SRW_TAC [] [] \\ DECIDE_TAC);
 
 val str2sym_LENGTH = prove(
@@ -122,7 +122,7 @@ val LENGTH_SND_sexp_lex_parse = prove(
   ``!cs s r mem. LENGTH (SND (sexp_lex_parse (cs,s,r,mem))) <= LENGTH cs``,
   MATCH_MP_TAC LENGTH_sexp_lex_parse \\ REPEAT STRIP_TAC THEN1
    (ONCE_REWRITE_TAC [sexp_lex_parse_def] \\ SRW_TAC [] [] \\ SRW_TAC [] []
-    \\ Q.PAT_ASSUM `next_token xx = yy` (MP_TAC)
+    \\ Q.PAT_X_ASSUM `next_token xx = yy` (MP_TAC)
     \\ TRY (Cases_on `t`) \\ FULL_SIMP_TAC std_ss [] \\ REPEAT STRIP_TAC
     \\ FULL_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD]
     \\ IMP_RES_TAC next_token_LESS_EQ \\ IMP_RES_TAC LESS_EQ_TRANS)
@@ -146,15 +146,15 @@ val is_eof_F_IMP = prove(
   \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss [PULL_FORALL_IMP]
   \\ POP_ASSUM MP_TAC \\ Cases_on `str` THEN1 EVAL_TAC
   \\ SIMP_TAC std_ss [is_eof_def] \\ SRW_TAC [] [] THEN1
-   (Q.PAT_ASSUM `!x.bbb` (MP_TAC o Q.SPECL [`t`,`str1`])
+   (Q.PAT_X_ASSUM `!x.bbb` (MP_TAC o Q.SPECL [`t`,`str1`])
     \\ FULL_SIMP_TAC std_ss [] \\ MATCH_MP_TAC IMP_IMP
     \\ STRIP_TAC THEN1 (EVAL_TAC \\ DECIDE_TAC)
     \\ REPEAT STRIP_TAC \\ Q.LIST_EXISTS_TAC [`x`,`xs`]
     \\ FULL_SIMP_TAC std_ss [] \\ DECIDE_TAC)
   \\ FULL_SIMP_TAC std_ss [LET_DEF]
   \\ Q.ABBREV_TAC `str2 = SND (read_while (\x. x <> #"\n") t "")`
-  \\ Q.PAT_ASSUM `!x.bbb` (MP_TAC o Q.SPECL [`str2`,`str1`])
-  \\ `LENGTH str2 <= LENGTH t` by ALL_TAC THEN1
+  \\ Q.PAT_X_ASSUM `!x.bbb` (MP_TAC o Q.SPECL [`str2`,`str1`])
+  \\ `LENGTH str2 <= LENGTH t` by
        (Q.UNABBREV_TAC `str2` \\ FULL_SIMP_TAC std_ss [LENGTH_SND_read_while])
   \\ FULL_SIMP_TAC std_ss [] \\ MATCH_MP_TAC IMP_IMP
   \\ STRIP_TAC THEN1 (EVAL_TAC \\ DECIDE_TAC)
@@ -175,7 +175,7 @@ val sexp_parse_stream_PROGRESS = store_thm("sexp_parse_stream_PROGRESS",
     LENGTH str2 < LENGTH str``,
   REPEAT STRIP_TAC \\ IMP_RES_TAC is_eof_F_IMP
   \\ FULL_SIMP_TAC std_ss [sexp_parse_stream_def]
-  \\ Q.PAT_ASSUM `(s,str2) = bb` (MP_TAC o GSYM)
+  \\ Q.PAT_X_ASSUM `(s,str2) = bb` (MP_TAC o GSYM)
   \\ SIMP_TAC std_ss [Once sexp_lex_parse_def]
   \\ `?y1 y2. next_token (STRING x xs) = (y1,y2)` by METIS_TAC [pairTheory.PAIR]
   \\ FULL_SIMP_TAC std_ss [LET_DEF]

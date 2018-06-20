@@ -59,7 +59,7 @@ val syntax_spec =
   constructors =
       [{name = "aexp", arg_info = [being_defined "atexp"]},
        {name = "app_exp", arg_info = [being_defined "exp",
-				     being_defined "atexp"]},
+                                     being_defined "atexp"]},
        {name = "fn_exp", arg_info = [being_defined "match"]}]},
  {type_name = "match",
   constructors =

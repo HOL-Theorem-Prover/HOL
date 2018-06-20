@@ -6,3 +6,11 @@ all: $(TARGETS) selftest.exe
 
 selftest.exe: selftest.uo quotient.uo
 	$(HOLMOSMLC) -o $@ $<
+
+ifeq ($(KERNELID),otknl)
+ARTFILES = $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
+all: $(ARTFILES)
+
+hol4-quotient-unint.art: hol4-quotient-unint.thy $(ARTFILES)
+	opentheory info --article -o $@ $<
+endif

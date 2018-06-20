@@ -41,38 +41,17 @@ val OS :string            =
 
 val _ = PolyML.print_depth 0;
 
+use "tools-poly/poly/Mosml.sml";
+val pkgconfig_info =
+    case Mosml.run "pkg-config" ["--libs", "polyml"] "" of
+        Mosml.Success lstr => SOME (String.tokens Char.isSpace lstr)
+      | _ => NONE
+
+
 val CC:string       = "cc";       (* C compiler                       *)
 val GNUMAKE:string  = "make";     (* for bdd library and SMV          *)
 val DEPDIR:string   = ".HOLMK";   (* where Holmake dependencies kept  *)
 
-local
-   fun assoc item =
-      let
-         fun assc ((key,ob)::rst) = if item=key then ob else assc rst
-           | assc [] = raise Match
-      in
-         assc
-      end
-   val machine_env = Posix.ProcEnv.uname ()
-   val sysname = assoc "sysname" machine_env
-   val intOf = Option.valOf o Int.fromString
-in
-   val machine_flags =
-       if sysname = "Darwin" (* Mac OS X *) then
-         let
-           val number = PolyML.Compiler.compilerVersionNumber
-         in
-           (if number >= 560
-               then ["-lgmp", "-lstdc++", "-Wl,-no_pie", "-w"]
-            else if number >= 551
-               then ["-lpthread", "-lm", "-ldl", "-lstdc++", "-Wl,-no_pie"]
-            else if number >= 550
-               then ["-Wl,-no_pie"]
-            else ["-segprot", "POLY", "rwx", "rwx"]) @
-           (if PolyML.architecture() = "I386" then ["-arch", "i386"] else [])
-         end
-       else []
-end;
 
 fun echo s = (TextIO.output(TextIO.stdOut, s^"\n");
               TextIO.flushOut TextIO.stdOut);
@@ -80,15 +59,6 @@ fun echo s = (TextIO.output(TextIO.stdOut, s^"\n");
 val verbose = false
 
 val echov = if verbose then echo else (fn _ => ())
-
-fun compile systeml exe obj =
-  let
-    val args = [CC, "-o", exe, obj, "-L" ^ polymllibdir,
-                "-lpolymain", "-lpolyml"] @ machine_flags
-  in
-    echov (String.concatWith " " args ^ "\n");
-    systeml args before OS.FileSys.remove obj
-  end
 
 fun liftstatus f x =
   if OS.Process.isSuccess (f x) then ()
@@ -98,7 +68,7 @@ fun liftstatus f x =
           END user-settable parameters
  ---------------------------------------------------------------------------*)
 
-val version_number = 11
+val version_number = 12
 val release_string = "Kananaskis"
 
 (*
@@ -211,6 +181,45 @@ fun optquote NONE = "NONE"
 
 val OSkind = if OS="linux" orelse OS="solaris" orelse OS="macosx" then "unix"
              else OS
+local
+   fun assoc item =
+      let
+         fun assc ((key,ob)::rst) = if item=key then ob else assc rst
+           | assc [] = raise Match
+      in
+         assc
+      end
+   val machine_env = Posix.ProcEnv.uname ()
+   val sysname = assoc "sysname" machine_env
+   val intOf = Option.valOf o Int.fromString
+in
+   val machine_flags =
+       if sysname = "Darwin" (* Mac OS X *) then
+         let
+           val number = PolyML.Compiler.compilerVersionNumber
+           val stdsuffix = ["-Wl,-rpath,"^polymllibdir, "-Wl,-no_pie"]
+         in
+           (if number >= 560 then
+              case pkgconfig_info of
+                  SOME list => list @ stdsuffix
+                | NONE => ["-L"^polymllibdir, "-lpolymain", "-lpolyml",
+                           "-lstdc++"] @ stdsuffix
+            else if number >= 551
+               then ["-lpthread", "-lm", "-ldl", "-lstdc++", "-Wl,-no_pie"]
+            else if number >= 550
+               then ["-Wl,-no_pie"]
+            else ["-segprot", "POLY", "rwx", "rwx"]) @
+           (if PolyML.architecture() = "I386" then ["-arch", "i386"] else [])
+         end
+       else if sysname = "Linux" then
+         case pkgconfig_info of
+             SOME list => list
+           | _ => ["-L" ^ polymllibdir, "-lpolymain", "-lpolyml", "-lpthread",
+                   "-lm", "-ldl", "-lstdc++", "-lgcc_s", "-lgcc"]
+       else []
+end;
+
+
 val _ = let
   (* copy system-specific implementation of Systeml into place *)
   val srcfile = fullPath [holmakedir, OSkind ^"-systeml.sml"]
@@ -227,22 +236,11 @@ in
    "val POLY_LDFLAGS =" --> ("val POLY_LDFLAGS = ["^
                              (String.concatWith
                                   ", "
-                                  (quote ("-L"^polymllibdir)::
-                                   quote "-lpolymain" ::
-                                   quote "-lpolyml" ::
-                                   map quote machine_flags)) ^ "]\n"),
+                                  (map quote machine_flags)) ^ "]\n"),
    "val POLY_LDFLAGS_STATIC =" --> ("val POLY_LDFLAGS_STATIC = ["^
                              (String.concatWith
                                   ", "
-                                  (quote ("-L"^polymllibdir)::
-                                   quote "-lpolymain" ::
-                                   quote "-lpolyml" ::
-                                   quote "-static" ::
-                                   quote "-lpolyml" ::
-                                   quote "-lstdc++" ::
-                                   quote "-lm" ::
-                                   quote "-ldl" ::
-                                   quote "-lpthread" ::
+                                  (quote "-static" ::
                                    map quote machine_flags)) ^ "]\n"),
    "val CC =" --> ("val CC = "^quote CC^"\n"),
    "val OS ="       --> ("val OS = "^quote OS^"\n"),
@@ -252,7 +250,7 @@ in
    "val version ="  --> ("val version = "^Int.toString version_number^"\n"),
    "val ML_SYSNAME =" --> "val ML_SYSNAME = \"poly\"\n",
    "val release ="  --> ("val release = "^quote release_string^"\n"),
-   "val DOT_PATH =" --> ("val DOT_PATH = "^quote DOT_PATH^"\n")
+   "val DOT_PATH =" --> ("val DOT_PATH = "^optquote DOT_PATH^"\n")
 ];
   use destfile
 end;
@@ -271,12 +269,11 @@ let
   val sigfile = fullPath [holdir, "tools", "Holmake", "Systeml.sig"]
   val uifile = fullPath [holdir, "sigobj", "Systeml.ui"]
   fun to_sigobj s = bincopy s (fullPath [holdir, "sigobj", Path.file s])
-  val uifile_content =
-      fullPath [holdir, "sigobj", "Systeml.sig"] ^ "\n"
+  val uifile_content = "$(HOLDIR)/sigobj/Systeml.sig\n"
 in
   if not (canread uifile) orelse
      Time.>(modTime sigfile, modTime uifile) orelse
-     OS.FileSys.fileSize uifile > size uifile_content
+     Position.toInt (OS.FileSys.fileSize uifile) > size uifile_content
      (* if the file is this large it's been generated by Moscow ML, or is
         otherwise wrong *)
   then
@@ -360,7 +357,7 @@ val _ = remove (fullPath [hmakedir, "Parser.grm.sig"]);
 val _ = remove (fullPath [hmakedir, "Parser.grm.sml"]);
 
 
-fun polyc_compile s tgt =
+fun polyc_compile0 s tgt =
   let
     val cline = POLYC ^ " -o " ^ tgt ^ " " ^ s
   in
@@ -368,52 +365,92 @@ fun polyc_compile s tgt =
     system_ps cline
   end
 
+fun mlton_compile mltonp mlbfile_opt s tgt =
+  case mlbfile_opt of
+      NONE => polyc_compile0 s tgt
+    | SOME mlbfile_d =>
+      let
+        val _ = print ("Using mlton to compile "^mlbfile_d^"\n")
+        val _ = print "  (this can be overridden with 'val MLTON = NONE;'\
+                      \ (without single-quotes)\n\
+                      \   in tools-poly/poly-includes.ML)\n"
+        val {dir=mlbdir,file=mlbfile} = OS.Path.splitDirFile mlbfile_d
+        val {base=mlbbase, ...} = OS.Path.splitBaseExt mlbfile
+        val tgt_f = OS.Path.file tgt
+        val _ = tgt_f = mlbbase orelse
+                die ("stem of mlb-file "^mlbfile_d^
+                     " doesn't match file of target: "^ tgt)
+        val cline = mltonp ^ " " ^ mlbfile_d
+        val generated_file =
+            OS.Path.joinDirFile {dir = mlbdir, file = mlbbase}
+      in
+        echov cline ;
+        system_ps cline ;
+        OS.FileSys.rename{old = generated_file, new = tgt}
+      end
+
+val polyc_compile =
+    case MLTON of
+        NONE => (fn _ => polyc_compile0)
+      | SOME p => mlton_compile p
+
 fun work_in_dir tgtname d f =
   (echo ("Making " ^ tgtname); FileSys.chDir d; f(); FileSys.chDir cdir)
-    handle _ => die ("Failed to make "^tgtname)
+    handle e => die ("Failed to make "^tgtname^" ("^General.exnMessage e^")")
 
 (* mllex *)
 val _ = work_in_dir "mllex"
           lexdir
-          (fn () => polyc_compile "poly-mllex.ML" "mllex.exe")
+          (fn () => polyc_compile NONE "poly-mllex.ML" "mllex.exe")
 
 (* mlyacc *)
 val _ = work_in_dir
           "mlyacc" yaccdir
           (fn () => (systeml [lexer, "yacc.lex"];
-                     polyc_compile "poly-mlyacc.ML" "mlyacc.exe"))
+                     polyc_compile NONE "poly-mlyacc.ML" "mlyacc.exe"))
+
+(* Holmake *)
+val _ = work_in_dir
+          "Holmake" (fullPath [HOLDIR, "tools", "Holmake", "poly"])
+          (fn () => (OS.FileSys.chDir "..";
+                     systeml [lexer, "QuoteFilter"] ;
+                     OS.FileSys.chDir "poly";
+                     polyc_compile (SOME "../mlton/Holmake.mlb")
+                                   "poly-Holmake.ML" hmakebin))
 
 (* unquote - the quotation filter *)
 val _ = work_in_dir "unquote." qfdir
-                    (fn () => (systeml [lexer, "filter"];
-                               polyc_compile "poly-unquote.ML" qfbin))
-
-(* Holmake *)
-val _ = work_in_dir "Holmake" hmakedir
-                    (fn () => polyc_compile "poly-Holmake.ML" hmakebin)
+                    (fn () => (polyc_compile NONE "poly-unquote.ML" qfbin))
 
 (* holdeptool *)
 val _ = work_in_dir "holdeptool" (fullPath [HOLDIR, "tools", "Holmake"])
                     (fn () =>
-                        polyc_compile
+                        polyc_compile NONE
                           "poly-holdeptool.ML"
                           (fullPath [HOLDIR, "bin", "holdeptool.exe"]))
 
 (* build *)
 val _ = work_in_dir "build" toolsdir
-                    (fn () => polyc_compile "poly-build.ML" buildbin)
+                    (fn () => polyc_compile (SOME "../tools/build.mlb")
+                                            "poly-build.ML" buildbin)
 
 (* heapname *)
 val _ = work_in_dir
           "heapname" toolsdir
-          (fn () => polyc_compile "heapname.ML"
+          (fn () => polyc_compile NONE "heapname.ML"
                                         (fullPath [HOLDIR,"bin","heapname"]))
 
 (* buildheap *)
 val _ = work_in_dir
           "buildheap" toolsdir
-          (fn () => polyc_compile "buildheap.ML"
+          (fn () => polyc_compile NONE "buildheap.ML"
                                         (fullPath [HOLDIR, "bin", "buildheap"]))
+
+(* genscriptdep *)
+val _ = work_in_dir "genscriptdep"
+                    (fullPath [HOLDIR, "tools", "Holmake", "poly"])
+                    (fn () => polyc_compile NONE "poly-genscriptdep.ML"
+                                 (fullPath [HOLDIR, "bin", "genscriptdep"]))
 
 end (* local *)
 
@@ -487,21 +524,17 @@ val _ =
       val _ = echo "Generating bin/hol."
       val target      = fullPath [holdir, "bin", "hol.bare"]
       val target_boss = fullPath [holdir, "bin", "hol"]
-      val hol0_heap   = "-i " ^ protect(fullPath[HOLDIR,"bin", "hol.state0"])
+      val hol0_heap   = protect(fullPath[HOLDIR,"bin", "hol.state0"])
       val hol_heapcalc=
-          String.concatWith " " [
-            "--gcthreads=1", "-i",
             "$(" ^ protect(fullPath[HOLDIR,"bin","heapname"]) ^ ")"
-          ]
-      val prelude = ["prelude.ML"]
-      val prelude2 = prelude @ ["prelude2.ML"]
+      fun TP s = protect(fullPath[HOLDIR, "tools-poly", s])
+      val prelude = ["Arbint", "Arbrat", TP "prelude.ML"]
+      val prelude2 = prelude @ [TP "prelude2.ML"]
    in
       (* "unquote" scripts use the unquote executable to provide nice
          handling of double-backquote characters *)
-      emit_hol_unquote_script target hol0_heap prelude;
-      emit_hol_unquote_script target_boss hol_heapcalc prelude2;
-      emit_hol_script (target ^ ".noquote") hol0_heap prelude;
-      emit_hol_script (target_boss ^ ".noquote") hol_heapcalc prelude2
+      emit_hol_script target hol0_heap prelude;
+      emit_hol_script target_boss hol_heapcalc prelude2
    end
 
 val _ = print "\nFinished configuration!\n"

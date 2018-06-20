@@ -21,6 +21,8 @@ sig
     | Abs of 'a dterm
 
   val is_skip : 'a * 'b fterm -> bool
+  val partition_skip : int option -> (term * 'b fterm) list ->
+                       (term * 'b fterm) list * (term * 'b fterm) list
   val inst_type_dterm : (hol_type,hol_type) subst * 'a dterm -> 'a dterm
 
 
@@ -51,5 +53,12 @@ sig
   val scrub_thms : thm list -> comp_rws -> unit
   val from_term : comp_rws * term list * term -> db dterm
   val set_skip : comp_rws -> string * string -> int option -> unit
+
+  datatype transform
+    = Conversion of (term -> thm * db fterm)
+    | RRules of thm list
+
+  val deplist : comp_rws -> ((string * string) * transform list) list
+  val no_transform : comp_rws -> (string * string) list
 
 end

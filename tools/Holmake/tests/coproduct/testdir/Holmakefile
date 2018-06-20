@@ -1,0 +1,18 @@
+INCLUDES = ../testdir2
+
+ifdef POLY
+CLINE_OPTIONS = --holstate=$(HOLDIR)/bin/hol.state0
+endif
+
+
+all: secondSimpleTheory.uo master
+.PHONY: all
+
+master: foo bar
+	cat foo bar > $@
+
+foo: *simpleScript.sml
+
+bar: *secondSimpleScript.sml
+
+EXTRA_CLEANS = foo bar master

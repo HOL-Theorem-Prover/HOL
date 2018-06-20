@@ -46,7 +46,7 @@ The conversion for {SUM}, {SUM_CONV} can be implemented as
    val SUM_CONV =
       list_FOLD_CONV (theorem "list" "SUM_FOLDR") Num_lib.ADD_CONV;
 }
-Then, evaluating {SUM_CONV (--`SUM [0;1;2;3]`--)} will return
+Then, evaluating {SUM_CONV “SUM [0;1;2;3]”} will return
 the following theorem:
 {
    |- SUM [0;1;2;3] = 6

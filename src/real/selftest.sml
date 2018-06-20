@@ -1,23 +1,21 @@
 open HolKernel boolLib simpLib Parse realSimps
 
-val _ = set_trace "Unicode" 0
+open testutils
 
 val s = SIMP_CONV (bossLib.std_ss ++ REAL_REDUCE_ss) []
 
 fun test (problem, result) = let
+  val t2s = trace ("Unicode", 0) term_to_string
   val padr = StringCvt.padRight #" "
   val padl = StringCvt.padLeft #" "
-  val p_s = padr 30 (term_to_string problem)
-  val r_s = padl 10 (term_to_string result)
-  val _ = print p_s
+  val p_s = padr 30 (t2s problem)
+  val r_s = padl 10 (t2s result)
+  val _ = tprint (p_s ^ " = " ^ r_s)
   val th = QCONV s problem
   val answer = rhs (concl th)
-  val verdict = if aconv answer result then ("OK", true)
-                else ("FAILED!", false)
 in
-  print (" = " ^ r_s);
-  print (padl 10 (#1 verdict) ^ "\n");
-  #2 verdict
+  if aconv answer result then OK()
+  else die ("FAILED!\n  Got "^term_to_string answer)
 end;
 
 val tests = [(``~~3r``, ``3r``),
@@ -40,5 +38,11 @@ val tests = [(``~~3r``, ``3r``),
              (``1/2 * 0r``, ``0r``),
              (``0r * 1/2``, ``0r``)]
 
-val _ = Process.exit (if List.all test tests then Process.success
-                      else Process.failure)
+val _ = List.app test tests
+
+val _ = List.app
+          (fn (s1,s2) => tpp_expected
+                           {testf=standard_tpp_message, input=s1, output=s2})
+          [("realinv 2", "2⁻¹"), ("inv (TC R)", "R⁺ ᵀ")]
+
+val _ = Process.exit Process.success

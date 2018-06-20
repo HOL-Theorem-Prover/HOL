@@ -2,12 +2,25 @@ signature hhWriter =
 sig
 
   include Abbrev
-  val thm_of_depid     : Dep.depid -> (string * Thm.thm)
 
-  val write_hh_thyl    : string -> string list -> unit
-  val write_conjecture : string -> term -> unit
+  val hh_escape        : string -> string
+  val thm_of_depid     : Dep.depid -> (string * thm)
+  val depl_as_pred     : thm -> (bool * (string * string) list)
+
+  val write_thyl       :
+    string ->
+    (string -> (string * thm) * string -> bool) ->
+    string list ->
+    unit
+  val write_problem    :
+    string ->
+    (string -> (string * thm) * string -> bool) ->
+    (string * thm) list ->
+    string list ->
+    term ->
+    unit
+
   val write_thydep     : string -> string list -> unit
-
-  val reserved_names_escaped : string list
+  val reserved_names   : string list
 
 end

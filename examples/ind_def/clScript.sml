@@ -173,7 +173,7 @@ val predn_diamond_lemma = prove(
   Induct_on `x -||-> y` >> rpt conj_tac >| [
     metis_tac [predn_rules],
     rw[] >>
-    qpat_assum `x # y -||-> z`
+    qpat_x_assum `_ # _ -||-> _`
       (strip_assume_tac o SIMP_RULE std_ss [x_ap_y_predn]) >>
     rw[] >| [
       metis_tac[predn_rules],

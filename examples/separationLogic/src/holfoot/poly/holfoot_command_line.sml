@@ -86,24 +86,21 @@ fun apply_solve_till sp = proofManagerLib.e
        (xHF_SOLVE_TAC [generate_vcs, sp])
 val apply_restart = proofManagerLib.restart
 val apply_backup = proofManagerLib.b
+fun pprint p x = PP.prettyPrint(print, 75) (p x)
 
 fun interactive_verify file =
 let
-   val g = holfoot_set_goal file
-   val out = Portable.stdOut_ppstream ()
-
+  val g = holfoot_set_goal file
    fun print_goal () =  let
        val proof = proofManagerLib.p ()
        val _ = print "\n";
-       val _ = proofManagerLib.pp_proof out proof;
-       val _ = Portable.flush_ppstream out
+       val _ = pprint proofManagerLib.pp_proof proof
        val _ = print "\n";
        in () end;
    fun print_goals () =  let
        val proofs = proofManagerLib.status ()
        val _ = print "\n";
-       val _ = proofManagerLib.pp_proofs out proofs;
-       val _ = Portable.flush_ppstream out
+       val _ = pprint proofManagerLib.pp_proofs proofs
        val _ = print "\n";
        in () end;
    val _ = print_goals ();
@@ -157,12 +154,10 @@ fun web_interface_print_goals gL =
       val nthmL = map (fn g => ("", mk_thm (valOf g))) (filter isSome gL);
       val _ = DiskThms.write_stream Portable.std_out nthmL;
       val _ = Portable.output (Portable.std_out, ("\n\n"));
-      val out = Portable.stdOut_ppstream ();
       fun print_goal (SOME g) =
           (Portable.output (Portable.std_out, ("*************************************\n"));
            Portable.flush_out Portable.std_out;
-           goalStack.pp_goal out g;
-           Portable.flush_ppstream out)
+           pprint goalStack.pp_goal g)
         | print_goal NONE =
           (Portable.output (Portable.std_out, ("*SOLVED******************************\n"));
            Portable.flush_out Portable.std_out)
@@ -286,8 +281,3 @@ fun holfoot_run (full, filemode_command) = let
 in
    ((map check_file args);print_profile())
 end
-
-
-
-
-

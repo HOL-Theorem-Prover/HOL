@@ -196,56 +196,54 @@ fun op string_in_ptree (n, t) = isSome (string_peek t n)
 fun op string_insert_ptree (n, t) = string_add t (n, oneSyntax.one_tm)
 val ptree_of_strings = foldl (op string_insert_ptree) Empty
 
-fun custom_pp_term_ptree pp_empty pp_entry i ppstrm t =
+fun custom_pp_term_ptree pp_empty pp_entry i t =
    let
-      open Portable
-      val {add_break, add_newline,
-           add_string, begin_block, end_block, ...} = with_ppstream ppstrm
-      val pp_empty = pp_empty ppstrm
-      val pp_entry = pp_entry ppstrm
+      open PP
       val l = Listsort.sort (Arbnum.compare o (fst ## fst)) (list_of_ptree t)
       val ll = List.take (l, i) handle Subscript => l
       val ll_len = length ll
       val elided = length l - ll_len
-      fun add_elided () =
-         add_string ("|+ ... " ^ "(" ^ Int.toString elided ^
-                     (if elided = 1 then " entry" else " entries") ^ " elided)")
+      val add_elided =
+          add_string ("|+ ... " ^ "(" ^ Int.toString elided ^
+                      (if elided = 1 then " entry" else " entries") ^
+                      " elided)")
    in
-      if null l
-         then pp_empty true
-      else ( begin_block CONSISTENT 0
-           ; pp_empty false
-           ; begin_block CONSISTENT 0
-           ; if null ll
-                then add_elided ()
-             else ( app (fn x => (pp_entry x; add_break(1,0)))
-                       (List.take(ll, ll_len - 1))
-                  ; pp_entry (last ll) : unit
-                  ; if 0 < elided then (add_newline (); add_elided ()) else ()
-                  )
-           ; end_block ()
-           ; end_block ()
-           )
+     if null l then pp_empty true
+     else
+       block CONSISTENT 0 [
+         pp_empty false,
+         block CONSISTENT 0 (
+           if null ll then [add_elided]
+           else
+             pr_list pp_entry [add_break(1,0)] ll @
+             (if 0 < elided then [add_newline, add_elided] else [])
+         )
+       ]
    end
 
-fun standard_pp_empty ppstrm (b: bool) =
-  ( Portable.add_string ppstrm "Empty"
-  ; if b then () else Portable.add_break ppstrm (1, 1)
+fun standard_pp_empty (b: bool) =
+  PP.block PP.INCONSISTENT 0 (
+    PP.add_string "Empty" ::
+    (if b then [] else [PP.add_break (1, 1)])
   )
 
-fun standard_pp_entry ppstrm (n, tm) =
-  ( Portable.add_string ppstrm "|+ ("
-  ; Arbnum.pp_num ppstrm n
-  ; Portable.add_string ppstrm ", "
-  ; Hol_pp.pp_term ppstrm tm
-  ; Portable.add_string ppstrm ")"
-  )
+fun standard_pp_entry (n, tm) =
+  PP.block PP.INCONSISTENT 0 [
+    PP.add_string "|+ (",
+    PP.block PP.INCONSISTENT 4 [
+      Arbnum.pp_num n,
+      PP.add_string ", ",
+      Hol_pp.pp_term tm,
+      PP.add_string ")"
+    ]
+  ]
 
-fun pp_term_ptree ppstrm t =
-  ( Portable.add_string ppstrm "``"
-  ; custom_pp_term_ptree standard_pp_empty standard_pp_entry 150 ppstrm t
-  ; Portable.add_string ppstrm "``"
-  )
+fun pp_term_ptree t =
+  PP.block PP.INCONSISTENT 2 [
+    PP.add_string "``",
+    custom_pp_term_ptree standard_pp_empty standard_pp_entry 150 t,
+    PP.add_string "``"
+  ]
 
 (* ------------------------------------------------------------------------- *)
 

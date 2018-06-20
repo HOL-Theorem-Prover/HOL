@@ -149,12 +149,7 @@
 
 signature dep_rewrite =
 sig
-type term = Term.term
-type fixity = Parse.fixity
-type thm = Thm.thm
-type tactic  = Abbrev.tactic
-type conv = Abbrev.conv
-type thm_tactic = Abbrev.thm_tactic
+include Abbrev
 
 
 (* ================================================================== *)

@@ -5,15 +5,12 @@
        TFL technology makes an easy job of it.
  ---------------------------------------------------------------------------*)
 
-structure containerScript =
-struct
-
 open HolKernel Parse boolLib pred_setTheory listTheory bagTheory
      Defn TotalDefn BasicProvers sortingTheory finite_mapTheory
      listSimps bossLib;
 
 (* ---------------------------------------------------------------------*)
-(* Create the new theory.						*)
+(* Create the new theory.                                               *)
 (* ---------------------------------------------------------------------*)
 
 val _ = new_theory "container";
@@ -254,12 +251,15 @@ val WF_mlt_list = Q.store_thm
 val _ = adjoin_to_theory
 {sig_ps = NONE,
  struct_ps = SOME
- (fn ppstrm => let
-   val S = (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm))
+ (fn _ => let
+   fun S s = [PP.add_string s, PP.add_newline]
  in
-   S "val _ = TotalDefn.WF_thms := (!TotalDefn.WF_thms @ [WF_mlt_list]);";
-   S "val _ = TotalDefn.termination_simps := (!TotalDefn.termination_simps @ [mlt_list_def]);"
- end)};
+   PP.block PP.CONSISTENT 0 (
+     S "val _ = TotalDefn.WF_thms := (!TotalDefn.WF_thms @ [WF_mlt_list]);" @
+     S "val _ = TotalDefn.termination_simps := \
+         \(!TotalDefn.termination_simps @ [mlt_list_def]);"
+   )
+  end)};
 
 
 (*---------------------------------------------------------------------------
@@ -275,9 +275,9 @@ val BAG_OF_FMAP_THM = store_thm ("BAG_OF_FMAP_THM",
   (!f b k v. (BAG_OF_FMAP f (b |+ (k, v)) =
              BAG_INSERT (f k v) (BAG_OF_FMAP f (b \\ k))))``,
 SIMP_TAC std_ss [BAG_OF_FMAP, FDOM_FEMPTY, NOT_IN_EMPTY, EMPTY_BAG,
-		 combinTheory.K_DEF,
-		 BAG_INSERT, FDOM_FUPDATE, IN_INSERT,
-		 GSYM EMPTY_DEF, CARD_EMPTY] THEN
+                 combinTheory.K_DEF,
+                 BAG_INSERT, FDOM_FUPDATE, IN_INSERT,
+                 GSYM EMPTY_DEF, CARD_EMPTY] THEN
 ONCE_REWRITE_TAC [FUN_EQ_THM] THEN
 REPEAT GEN_TAC THEN SIMP_TAC std_ss [] THEN
 Cases_on `x = f k v` THENL [
@@ -286,23 +286,23 @@ Cases_on `x = f k v` THENL [
      DOMSUB_FAPPLY_THM] THEN
    `(\k'. ((k' = k) \/ k' IN FDOM b) /\
            (f k v = f k' ((if k' = k then v else b ' k')))) =
-           k INSERT (\k'. (k' IN FDOM b /\ ~(k' = k)) /\ (f k v = f k' (b ' k')))` by ALL_TAC THEN1 (
+           k INSERT (\k'. (k' IN FDOM b /\ ~(k' = k)) /\ (f k v = f k' (b ' k')))` by (
      SIMP_TAC std_ss [EXTENSION, IN_INSERT, IN_ABS] THEN
      GEN_TAC THEN Cases_on `x' = k` THEN ASM_REWRITE_TAC[]
    ) THEN
    ASM_REWRITE_TAC [] THEN POP_ASSUM (K ALL_TAC) THEN
    Q.ABBREV_TAC `ks = (\k'. (k' IN FDOM b /\ k' <> k) /\ (f k v = f k' (b ' k')))` THEN
-   `FINITE ks` by ALL_TAC THEN1 (
-      Tactical.REVERSE (`ks = ks INTER FDOM b` by ALL_TAC) THEN1 (
-         ONCE_ASM_REWRITE_TAC[] THEN
+   `FINITE ks` by (
+      `ks = ks INTER FDOM b` suffices_by (
+         STRIP_TAC THEN ONCE_ASM_REWRITE_TAC[] THEN
          MATCH_MP_TAC FINITE_INTER THEN
-	 REWRITE_TAC[FDOM_FINITE]
+         REWRITE_TAC[FDOM_FINITE]
       ) THEN
       Q.UNABBREV_TAC `ks` THEN
       SIMP_TAC std_ss [EXTENSION, IN_INTER, IN_ABS] THEN
       PROVE_TAC[]
    ) THEN
-   `~(k IN ks)` by ALL_TAC THEN1 (
+   `~(k IN ks)` by (
       Q.UNABBREV_TAC `ks` THEN
       SIMP_TAC std_ss [IN_ABS]
    ) THEN
@@ -327,9 +327,9 @@ SIMP_TAC std_ss [BAG_OF_FMAP, BAG_IN, BAG_INN] THEN
 `!X. (X >= (1:num)) = ~(X = 0)` by bossLib.DECIDE_TAC THEN
 ONCE_ASM_REWRITE_TAC[] THEN POP_ASSUM (K ALL_TAC) THEN
 REPEAT GEN_TAC THEN
-`FINITE (\k. k IN FDOM b /\ (x = f k (b ' k)))` by ALL_TAC THEN1 (
+`FINITE (\k. k IN FDOM b /\ (x = f k (b ' k)))` by (
    `(\k. k IN FDOM b /\ (x = f k (b ' k))) =
-    (\k. k IN FDOM b /\ (x = f k (b ' k))) INTER (FDOM b)` by ALL_TAC THEN1 (
+    (\k. k IN FDOM b /\ (x = f k (b ' k))) INTER (FDOM b)` by (
       SIMP_TAC std_ss [EXTENSION, IN_INTER, IN_ABS] THEN
       METIS_TAC[]
    ) THEN
@@ -349,5 +349,3 @@ SIMP_TAC std_ss [BAG_OF_FMAP_THM, FINITE_EMPTY_BAG,
 
 
 val _ = export_theory ();
-
-end;

@@ -41,11 +41,11 @@ val _ = Parse.reveal "B";
 (*lemmas about sums*)
 
 val SUM_SPLIT = store_thm("SUM_SPLIT",
-  (--`!f n p. sum(m,n) f + sum(m + n,p) f = sum(m,n + p) f`--),
+  “!f n p. sum(m,n) f + sum(m + n,p) f = sum(m,n + p) f”,
   REPEAT GEN_TAC THEN GEN_REWRITE_TAC(LAND_CONV o LAND_CONV)[SUM_DIFF][] THEN
   GEN_REWRITE_TAC(LAND_CONV o RAND_CONV)[][SUM_DIFF] THEN CONV_TAC SYM_CONV THEN
   GEN_REWRITE_TAC LAND_CONV [SUM_DIFF][] THEN RW_TAC arith_ss[] THEN
-  SUBGOAL_THEN(--`!a b c. b-a + (c-b)=c-a`--)
+  SUBGOAL_THEN“!a b c. b-a + (c-b)=c-a”
                                 (fn th => ONCE_REWRITE_TAC[GEN_ALL th]) THENL
   [REAL_ARITH_TAC, REWRITE_TAC[]]);
 
@@ -236,10 +236,10 @@ val DIVISION_APPEND_EXPLICIT = store_thm("DIVISION_APPEND_EXPLICIT",
     Term`D1:num->real`, Term`p1:num->real`, Term`D2:num->real`,
     Term`p2:num->real`] THEN
   STRIP_TAC THEN REWRITE_TAC[CONJ_ASSOC] THEN CONJ_TAC THENL
-   [DISJ_CASES_TAC(GSYM (SPEC (--`dsize(D1)`--) LESS_0_CASES)) THENL
+   [DISJ_CASES_TAC(GSYM (SPEC “dsize(D1)” LESS_0_CASES)) THENL
     [ASM_REWRITE_TAC[NOT_LESS_0, SUB_0] THEN
          CONV_TAC(ONCE_DEPTH_CONV ETA_CONV) THEN
-         SUBGOAL_THEN (--`a:real = b`--) (fn th => ASM_REWRITE_TAC[th]) THEN
+         SUBGOAL_THEN “a:real = b” (fn th => ASM_REWRITE_TAC[th]) THEN
          MP_TAC(SPECL [Term`D1:num->real`,Term`a:real`,Term`b:real`]
                         DIVISION_EQ) THEN
          RULE_ASSUM_TAC(REWRITE_RULE[tdiv]) THEN ASM_REWRITE_TAC[], ALL_TAC] THEN
@@ -285,10 +285,10 @@ val DIVISION_APPEND_EXPLICIT = store_thm("DIVISION_APPEND_EXPLICIT",
    [RULE_ASSUM_TAC(REWRITE_RULE[tdiv]) THEN
     REWRITE_TAC[DIVISION_THM] THEN CONJ_TAC THENL
          [BETA_TAC THEN ASM_REWRITE_TAC[] THEN
-          MATCH_MP_TAC DIVISION_LHS THEN EXISTS_TAC (--`b:real`--) THEN
+          MATCH_MP_TAC DIVISION_LHS THEN EXISTS_TAC “b:real” THEN
           ASM_REWRITE_TAC[], ALL_TAC] THEN
-        SUBGOAL_THEN (--`c = (\n. if (n < (dsize D1)) then  D1(n) else D2(n -
-                  (dsize D1))) (dsize(D1) + dsize(D2))`--) SUBST1_TAC THENL
+        SUBGOAL_THEN “c = (\n. if (n < (dsize D1)) then  D1(n) else D2(n -
+                  (dsize D1))) (dsize(D1) + dsize(D2))” SUBST1_TAC THENL
          [BETA_TAC THEN REWRITE_TAC[GSYM NOT_LESS_EQUAL, LESS_EQ_ADD] THEN
          ONCE_REWRITE_TAC[ADD_SYM] THEN REWRITE_TAC[ADD_SUB] THEN
          CONV_TAC SYM_CONV THEN MATCH_MP_TAC DIVISION_RHS THEN
@@ -370,7 +370,7 @@ val integrable = Define`integrable(a,b) f = ?i. Dint(a,b) f i`;
 val integral = Define`integral(a,b) f = @i. Dint(a,b) f i`;
 
 val INTEGRABLE_DINT = store_thm("INTEGRABLE_DINT",
- (--`!f a b. integrable(a,b) f ==> Dint(a,b) f (integral(a,b) f)`--),
+ “!f a b. integrable(a,b) f ==> Dint(a,b) f (integral(a,b) f)”,
   REPEAT GEN_TAC THEN REWRITE_TAC[integrable, integral] THEN
   CONV_TAC(RAND_CONV SELECT_CONV) THEN REWRITE_TAC[]);
 
@@ -379,27 +379,27 @@ val INTEGRABLE_DINT = store_thm("INTEGRABLE_DINT",
 (* ------------------------------------------------------------------------- *)
 
 val DIVISION_BOUNDS = store_thm("DIVISION_BOUNDS",
- (--`!d a b. division(a,b) d ==> !n. a <= d(n) /\ d(n) <= b`--),
+ “!d a b. division(a,b) d ==> !n. a <= d(n) /\ d(n) <= b”,
   MESON_TAC[DIVISION_UBOUND, DIVISION_LBOUND]);
 
 val TDIV_BOUNDS = store_thm("TDIV_BOUNDS",
- (--`!d p a b. tdiv(a,b) (d,p)
-             ==> !n. a <= d(n) /\ d(n) <= b /\ a <= p(n) /\ p(n) <= b`--),
+ “!d p a b. tdiv(a,b) (d,p)
+             ==> !n. a <= d(n) /\ d(n) <= b /\ a <= p(n) /\ p(n) <= b”,
   REWRITE_TAC[tdiv] THEN ASM_MESON_TAC[DIVISION_BOUNDS, REAL_LE_TRANS]);
 
 val TDIV_LE = store_thm("TDIV_LE",
- (--`!d p a b. tdiv(a,b) (d,p) ==> a <= b`--),
+ “!d p a b. tdiv(a,b) (d,p) ==> a <= b”,
   MESON_TAC[tdiv, DIVISION_LE]);
 
 val DINT_WRONG = store_thm("DINT_WRONG",
- (--`!a b f i. b < a ==> Dint(a,b) f i`--),
+ “!a b f i. b < a ==> Dint(a,b) f i”,
   REWRITE_TAC[Dint, gauge] THEN REPEAT STRIP_TAC THEN
-  EXISTS_TAC (--`\x:real. &0`--) THEN
+  EXISTS_TAC “\x:real. &0” THEN
   ASM_SIMP_TAC std_ss[REAL_ARITH ``b < a ==> (a <= x /\ x <= b <=> F)``] THEN
   ASM_MESON_TAC[REAL_NOT_LE, TDIV_LE]);
 
 val DINT_INTEGRAL = store_thm("DINT_INTEGRAL",
- (--`!f a b i. a <= b /\ Dint(a,b) f i ==> (integral(a,b) f = i)`--),
+ “!f a b i. a <= b /\ Dint(a,b) f i ==> (integral(a,b) f = i)”,
   REPEAT STRIP_TAC THEN REWRITE_TAC[integral] THEN
   MATCH_MP_TAC SELECT_UNIQUE THEN ASM_MESON_TAC[DINT_UNIQ]);
 
@@ -408,29 +408,29 @@ val DINT_INTEGRAL = store_thm("DINT_INTEGRAL",
 (* ------------------------------------------------------------------------- *)
 
 val DINT_NEG = store_thm("DINT_NEG",
- (--`!f a b i. Dint(a,b) f i ==> Dint(a,b) (\x. ~f x) (~i)`--),
+ “!f a b i. Dint(a,b) f i ==> Dint(a,b) (\x. ~f x) (~i)”,
   REPEAT GEN_TAC THEN REWRITE_TAC[Dint] THEN
   SIMP_TAC arith_ss[rsum, REAL_MUL_LNEG, SUM_NEG] THEN
   SIMP_TAC arith_ss[REAL_SUB_LNEG, ABS_NEG, real_sub]);
 
 val DINT_0 = store_thm("DINT_0",
- (--`!a b. Dint(a,b) (\x. &0) (&0)`--),
+ “!a b. Dint(a,b) (\x. &0) (&0)”,
   REPEAT GEN_TAC THEN REWRITE_TAC[Dint] THEN GEN_TAC THEN DISCH_TAC THEN
   EXISTS_TAC (Term`\x:real. &1`) THEN REWRITE_TAC[gauge,REAL_LT_01] THEN
   REPEAT STRIP_TAC THEN REWRITE_TAC[REAL_SUB_RZERO] THEN
   REWRITE_TAC[rsum, REAL_MUL_LZERO, SUM_0, ABS_0] THEN RW_TAC arith_ss[]);
 
 val DINT_ADD = store_thm("DINT_ADD",
-(--`!f g a b i j.
+“!f g a b i j.
         Dint(a,b) f i /\ Dint(a,b) g j
-        ==> Dint(a,b) (\x. f x + g x) (i + j)`--),
+        ==> Dint(a,b) (\x. f x + g x) (i + j)”,
         REPEAT GEN_TAC THEN REWRITE_TAC[Dint] THEN STRIP_TAC THEN
         X_GEN_TAC (Term`e:real`) THEN DISCH_TAC THEN
         REPEAT(FIRST_X_ASSUM(MP_TAC o SPEC ``e / &2``)) THEN
         ASM_SIMP_TAC arith_ss[REAL_LT_DIV, REAL_LT] THEN
         DISCH_THEN(X_CHOOSE_THEN (Term`g1:real->real`) STRIP_ASSUME_TAC) THEN
         DISCH_THEN(X_CHOOSE_THEN (Term`g2:real->real`) STRIP_ASSUME_TAC) THEN
-        EXISTS_TAC (--`\x:real. if g1(x) < g2(x) then g1(x) else g2(x)`--) THEN
+        EXISTS_TAC “\x:real. if g1(x) < g2(x) then g1(x) else g2(x)” THEN
         ASM_SIMP_TAC arith_ss[GAUGE_MIN, rsum] THEN REPEAT STRIP_TAC THEN
         SIMP_TAC arith_ss[REAL_ADD_RDISTRIB, SUM_ADD] THEN
         SIMP_TAC arith_ss[REAL_ADD2_SUB2] THEN REWRITE_TAC[GSYM rsum] THEN
@@ -450,20 +450,20 @@ val DINT_ADD = store_thm("DINT_ADD",
             THEN PROVE_TAC [REAL_LET_TRANS]]);
 
 val DINT_SUB = store_thm("DINT_SUB",
- (--`!f g a b i j.
+ “!f g a b i j.
         Dint(a,b) f i /\ Dint(a,b) g j
-        ==> Dint(a,b) (\x. f x - g x) (i - j)`--),
+        ==> Dint(a,b) (\x. f x - g x) (i - j)”,
   SIMP_TAC arith_ss[real_sub, DINT_ADD, DINT_NEG]);
 
 val DSIZE_EQ = store_thm("DSIZE_EQ",
-(--`!a b D. division(a,b) D ==>
-        (sum(0,dsize D)(\n. D(SUC n) - D n) - (b - a) = 0)`--),
+“!a b D. division(a,b) D ==>
+        (sum(0,dsize D)(\n. D(SUC n) - D n) - (b - a) = 0)”,
   REPEAT GEN_TAC THEN STRIP_TAC THEN SIMP_TAC arith_ss[SUM_CANCEL] THEN
   RW_TAC arith_ss[REAL_SUB_0] THEN MP_TAC DIVISION_LHS THEN
   MP_TAC DIVISION_RHS THEN PROVE_TAC []);
 
 val DINT_CONST = store_thm("DINT_CONST",
- (--`!a b c. Dint(a,b) (\x. c) (c * (b - a))`--),
+ “!a b c. Dint(a,b) (\x. c) (c * (b - a))”,
   REPEAT GEN_TAC THEN REWRITE_TAC[Dint] THEN REPEAT STRIP_TAC THEN
   EXISTS_TAC (Term`\x:real. &1`) THEN REWRITE_TAC[gauge,REAL_LT_01] THEN
   REPEAT STRIP_TAC THEN REWRITE_TAC[rsum] THEN
@@ -475,20 +475,20 @@ val DINT_CONST = store_thm("DINT_CONST",
   RW_TAC arith_ss[REAL_MUL_RZERO]);
 
 val DINT_CMUL = store_thm("DINT_CMUL",
-(--`!f a b c i. Dint(a,b) f i ==> Dint(a,b) (\x. c * f x) (c * i)`--),
+“!f a b c i. Dint(a,b) f i ==> Dint(a,b) (\x. c * f x) (c * i)”,
   REPEAT GEN_TAC THEN ASM_CASES_TAC (Term`c = &0`) THENL
    [MP_TAC(SPECL [Term`a:real`, Term`b:real`, Term`c:real`] DINT_CONST) THEN
     ASM_SIMP_TAC arith_ss[REAL_MUL_LZERO],
         REWRITE_TAC[Dint] THEN STRIP_TAC THEN X_GEN_TAC(Term`e:real`) THEN
-        DISCH_TAC THEN  FIRST_X_ASSUM(MP_TAC o SPEC (--`e / abs(c)`--)) THEN
+        DISCH_TAC THEN  FIRST_X_ASSUM(MP_TAC o SPEC “e / abs(c)”) THEN
         SUBGOAL_THEN(Term`0 < abs(c)`) MP_TAC THENL
          [UNDISCH_TAC(Term`c<>0`) THEN SIMP_TAC arith_ss[ABS_NZ],
           ASM_SIMP_TAC arith_ss[REAL_LT_DIV, REAL_LT] THEN STRIP_TAC THEN
           DISCH_THEN(X_CHOOSE_THEN (Term`g1:real->real`) STRIP_ASSUME_TAC) THEN
-          EXISTS_TAC(--`g1:real->real`--) THEN ASM_SIMP_TAC arith_ss[] THEN
+          EXISTS_TAC“g1:real->real” THEN ASM_SIMP_TAC arith_ss[] THEN
           REPEAT STRIP_TAC THEN REWRITE_TAC[rsum] THEN
           RW_TAC arith_ss[ETA_AX] THEN
-          SUBGOAL_THEN(--`!a b c d. a*b*(c-d) = a*(b*(c-d))`--)
+          SUBGOAL_THEN“!a b c d. a*b*(c-d) = a*(b*(c-d))”
                 (fn th => ONCE_REWRITE_TAC[GEN_ALL th]) THENL
            [RW_TAC arith_ss[GSYM REAL_MUL_ASSOC],
             SIMP_TAC arith_ss[SUM_CMUL] THEN
@@ -674,7 +674,7 @@ val INTEGRATION_BY_PARTS = store_thm("INTEGRATION_BY_PARTS",
 (* ------------------------------------------------------------------------- *)
 
 val DIVISION_LE_SUC = store_thm("DIVISION_LE_SUC",
- (--`!d a b. division(a,b) d ==> !n. d(n) <= d(SUC n)`--),
+ “!d a b. division(a,b) d ==> !n. d(n) <= d(SUC n)”,
   REWRITE_TAC[DIVISION_THM, GREATER_EQ] THEN
   MESON_TAC[LESS_CASES, LE, REAL_LE_REFL, REAL_LT_IMP_LE]);
 
@@ -796,25 +796,25 @@ val DINT_COMBINE = store_thm("DINT_COMBINE",
                  ==> (Dint(a,c) f (i + j))``,
   REPEAT GEN_TAC THEN
   NTAC 2(DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) THEN
-  MP_TAC(ASSUME (--`a <= b`--)) THEN REWRITE_TAC[REAL_LE_LT] THEN
-  ASM_CASES_TAC (--`a:real = b`--) THEN ASM_REWRITE_TAC[] THENL
+  MP_TAC(ASSUME “a <= b”) THEN REWRITE_TAC[REAL_LE_LT] THEN
+  ASM_CASES_TAC “a:real = b” THEN ASM_REWRITE_TAC[] THENL
    [ASM_MESON_TAC[INTEGRAL_NULL, DINT_UNIQ, REAL_LE_TRANS, REAL_ADD_LID],
     DISCH_TAC] THEN
-  MP_TAC(ASSUME (--`b <= c`--)) THEN REWRITE_TAC[REAL_LE_LT] THEN
-  ASM_CASES_TAC (--`b:real = c`--) THEN ASM_REWRITE_TAC[] THENL
+  MP_TAC(ASSUME “b <= c”) THEN REWRITE_TAC[REAL_LE_LT] THEN
+  ASM_CASES_TAC “b:real = c” THEN ASM_REWRITE_TAC[] THENL
    [ASM_MESON_TAC[INTEGRAL_NULL, DINT_UNIQ, REAL_LE_TRANS, REAL_ADD_RID],
     DISCH_TAC] THEN
   SIMP_TAC arith_ss[Dint, GSYM FORALL_AND_THM] THEN
-  DISCH_THEN(fn th => X_GEN_TAC (--`e:real`--) THEN DISCH_TAC THEN MP_TAC th) THEN
-  DISCH_THEN(MP_TAC o SPEC (--`e / &2`--)) THEN
+  DISCH_THEN(fn th => X_GEN_TAC “e:real” THEN DISCH_TAC THEN MP_TAC th) THEN
+  DISCH_THEN(MP_TAC o SPEC “e / &2”) THEN
   ASM_SIMP_TAC arith_ss[REAL_LT_DIV, REAL_LT] THEN
   DISCH_THEN(CONJUNCTS_THEN2
-   (X_CHOOSE_THEN (--`g1:real->real`--) STRIP_ASSUME_TAC)
-   (X_CHOOSE_THEN (--`g2:real->real`--) STRIP_ASSUME_TAC)) THEN
+   (X_CHOOSE_THEN “g1:real->real” STRIP_ASSUME_TAC)
+   (X_CHOOSE_THEN “g2:real->real” STRIP_ASSUME_TAC)) THEN
   EXISTS_TAC
-   (--`\x. if x < b then min (g1 x) (b - x)
+   “\x. if x < b then min (g1 x) (b - x)
         else if b < x then min (g2 x) (x - b)
-        else min (g1 x) (g2 x)`--) THEN
+        else min (g1 x) (g2 x)” THEN
   CONJ_TAC THENL
    [REPEAT(FIRST_X_ASSUM(MP_TAC o REWRITE_RULE[gauge])) THEN
     REWRITE_TAC[gauge] THEN BETA_TAC THEN REPEAT STRIP_TAC THEN
@@ -1197,10 +1197,10 @@ val DINT_DELTA_LEFT = store_thm("DINT_DELTA_LEFT",
     EXISTS_TAC ``(\x. e):real->real`` THEN
         ASM_SIMP_TAC arith_ss[REAL_LT_DIV, REAL_LT, gauge,
                                                 fine, rsum, tdiv, REAL_SUB_RZERO] THEN
-    MAP_EVERY X_GEN_TAC[(--`d:num->real`--),(--`p:num->real`--)] THEN
+    MAP_EVERY X_GEN_TAC[“d:num->real”,“p:num->real”] THEN
         STRIP_TAC THEN ASM_CASES_TAC(Term`dsize d = 0`) THEN
         ASM_REWRITE_TAC[sum, ABS_N] THEN
-    SUBGOAL_THEN(--`dsize d = 1 + PRE (dsize d)`--)ASSUME_TAC THENL
+    SUBGOAL_THEN“dsize d = 1 + PRE (dsize d)”ASSUME_TAC THENL
      [ASM_SIMP_TAC arith_ss[PRE_SUB1],
           ONCE_ASM_REWRITE_TAC[] THEN
           REWRITE_TAC[GSYM SUM_SPLIT, SUM_1, ADD_CLAUSES] THEN
@@ -1353,7 +1353,7 @@ val REAL_ARCH_POW2 = store_thm("REAL_ARCH_POW2",
 
 val REAL_POW_LE_1 = store_thm(
   "REAL_POW_LE_1",
-  (--`!(n:num) (x:real). (&1:real) <= x ==> (&1:real) <= x pow n`--),
+  “!(n:num) (x:real). (&1:real) <= x ==> (&1:real) <= x pow n”,
   INDUCT_TAC THENL
    [REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[pow, REAL_LE_REFL],
     GEN_TAC THEN STRIP_TAC THEN REWRITE_TAC [pow] THEN
@@ -1363,22 +1363,22 @@ val REAL_POW_LE_1 = store_thm(
 
 val REAL_POW_MONO = store_thm (
   "REAL_POW_MONO",
-  (--`!(m:num) n x. &1 <= x /\ m <= n ==> x pow m <= x pow n`--),
+  “!(m:num) n x. &1 <= x /\ m <= n ==> x pow m <= x pow n”,
   REPEAT GEN_TAC THEN REWRITE_TAC[LESS_EQ_EXISTS] THEN
   DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
-  DISCH_THEN(X_CHOOSE_THEN (--`d:num`--) SUBST1_TAC) THEN
+  DISCH_THEN(X_CHOOSE_THEN “d:num” SUBST1_TAC) THEN
   REWRITE_TAC[REAL_POW_ADD] THEN
   GEN_REWRITE_TAC LAND_CONV [GSYM REAL_MUL_RID] [] THEN
   MATCH_MP_TAC REAL_LE_LMUL_IMP THEN CONJ_TAC THENL
-   [MATCH_MP_TAC REAL_LE_TRANS THEN EXISTS_TAC (--`&1`--) THEN
+   [MATCH_MP_TAC REAL_LE_TRANS THEN EXISTS_TAC “&1” THEN
     RW_TAC arith_ss [REAL_OF_NUM_LE] THEN
     MATCH_MP_TAC REAL_POW_LE_1 THEN ASM_REWRITE_TAC[],
     MATCH_MP_TAC REAL_POW_LE_1 THEN ASM_REWRITE_TAC[]]);
 
 val REAL_LE_INV2 = store_thm ("REAL_LE_INV2",
-  (--`!x y. (&0:real) < x /\ x <= y ==> inv(y) <= inv(x)`--),
+  “!x y. (&0:real) < x /\ x <= y ==> inv(y) <= inv(x)”,
   REPEAT GEN_TAC THEN REWRITE_TAC[REAL_LE_LT] THEN
-  ASM_CASES_TAC (--`x:real = y`--) THEN ASM_REWRITE_TAC[] THEN
+  ASM_CASES_TAC “x:real = y” THEN ASM_REWRITE_TAC[] THEN
   STRIP_TAC THEN DISJ1_TAC THEN MATCH_MP_TAC REAL_LT_INV THEN
   ASM_REWRITE_TAC[]);
 
@@ -1533,15 +1533,15 @@ val INTEGRABLE_CAUCHY = store_thm("INTEGRABLE_CAUCHY",
 (* ------------------------------------------------------------------------- *)
 
 val SUM_DIFFS = store_thm("SUM_DIFFS",
- (--`!m n. sum(m,n) (\i. d(SUC i) - d(i)) = d(m + n) - d m`--),
+ “!m n. sum(m,n) (\i. d(SUC i) - d(i)) = d(m + n) - d m”,
   GEN_TAC THEN INDUCT_TAC THEN
   ASM_REWRITE_TAC[sum, ADD_CLAUSES, REAL_SUB_REFL] THEN REWRITE_TAC[sum] THEN
   RW_TAC arith_ss[ETA_AX] THEN ASM_REWRITE_TAC[ADD_CLAUSES] THEN
-  SUBGOAL_THEN(--`!a b c d. a-b+(c-a) = -b+a+(c-a)`--)
+  SUBGOAL_THEN“!a b c d. a-b+(c-a) = -b+a+(c-a)”
         (fn th => ONCE_REWRITE_TAC[GEN_ALL th]) THENL
    [REPEAT GEN_TAC THEN REWRITE_TAC[real_sub] THEN
     ASM_SIMP_TAC arith_ss[GSYM REAL_ADD_SYM],
-        SUBGOAL_THEN(--`!a b c d. a+b+(c-b) = a+c`--)
+        SUBGOAL_THEN“!a b c d. a+b+(c-b) = a+c”
           (fn th => ONCE_REWRITE_TAC[GEN_ALL th]) THENL
          [REPEAT GEN_TAC THEN REWRITE_TAC[GSYM REAL_ADD_ASSOC] THEN
           REWRITE_TAC[REAL_EQ_LADD] THEN
@@ -1645,7 +1645,7 @@ val INTEGRABLE_LIMIT = store_thm("INTEGRABLE_LIMIT",
           REPEAT STRIP_TAC THEN
           SUBGOAL_THEN ``abs(rsum(d,p) (g(m:num)) - rsum(d,p) (g n) -
                 (i m - i n)) < e / &2``(fn th => MP_TAC th) THENL
-           [SUBGOAL_THEN(--`!a b c d. a-b-(c-d) = a-c - (b-d)`--)
+           [SUBGOAL_THEN“!a b c d. a-b-(c-d) = a-c - (b-d)”
                 (fn th => ONCE_REWRITE_TAC[GEN_ALL th]) THENL
                 [REAL_ARITH_TAC, ALL_TAC] THEN
                 MATCH_MP_TAC REAL_LET_TRANS THEN
@@ -1739,7 +1739,7 @@ val INTEGRABLE_LIMIT = store_thm("INTEGRABLE_LIMIT",
 (* ------------------------------------------------------------------------- *)
 
 val INTEGRABLE_CONST = store_thm("INTEGRABLE_CONST",
- (--`!a b c. integrable(a,b) (\x. c)`--),
+ “!a b c. integrable(a,b) (\x. c)”,
   REWRITE_TAC[integrable] THEN REPEAT GEN_TAC THEN
   EXISTS_TAC(Term`c*(b-a):real`) THEN SIMP_TAC arith_ss[DINT_CONST]);
 
@@ -2063,27 +2063,27 @@ val INTEGRAL_0 = store_thm("INTEGRAL_0",
   ASM_REWRITE_TAC[DINT_0]);
 
 val INTEGRAL_CONST = store_thm("INTEGRAL_CONST",
- (--`!a b c. a <= b ==> (integral(a,b) (\x. c) = c * (b - a))`--),
+ “!a b c. a <= b ==> (integral(a,b) (\x. c) = c * (b - a))”,
   REPEAT STRIP_TAC THEN MATCH_MP_TAC DINT_INTEGRAL THEN
   ASM_SIMP_TAC arith_ss[DINT_CONST]);
 
 val INTEGRAL_CMUL = store_thm("INTEGRAL_CMUL",
-(--`!f c a b. a <= b /\ integrable(a,b) f
-           ==> (integral(a,b) (\x. c * f(x)) = c * integral(a,b) f)`--),
+“!f c a b. a <= b /\ integrable(a,b) f
+           ==> (integral(a,b) (\x. c * f(x)) = c * integral(a,b) f)”,
         REPEAT STRIP_TAC THEN MATCH_MP_TAC DINT_INTEGRAL THEN
         ASM_SIMP_TAC arith_ss[DINT_CMUL, INTEGRABLE_DINT]);
 
 val INTEGRAL_ADD = store_thm("INTEGRAL_ADD",
-(--`!f g a b. a <= b /\ integrable(a,b) f /\ integrable(a,b) g
+“!f g a b. a <= b /\ integrable(a,b) f /\ integrable(a,b) g
              ==> (integral(a,b) (\x. f(x) + g(x)) =
-                 integral(a,b) f + integral(a,b) g)`--),
+                 integral(a,b) f + integral(a,b) g)”,
         REPEAT STRIP_TAC THEN MATCH_MP_TAC DINT_INTEGRAL THEN
         ASM_SIMP_TAC arith_ss[DINT_ADD, INTEGRABLE_DINT]);
 
 val INTEGRAL_SUB = store_thm("INTEGRAL_SUB",
- (--`!f g a b. a <= b /\ integrable(a,b) f /\ integrable(a,b) g
+ “!f g a b. a <= b /\ integrable(a,b) f /\ integrable(a,b) g
              ==> (integral(a,b) (\x. f(x) - g(x)) =
-                 integral(a,b) f - integral(a,b) g)`--),
+                 integral(a,b) f - integral(a,b) g)”,
   REPEAT STRIP_TAC THEN MATCH_MP_TAC DINT_INTEGRAL THEN
   ASM_SIMP_TAC arith_ss[DINT_SUB, INTEGRABLE_DINT]);
 

@@ -23,13 +23,13 @@ val ERR = mk_HOL_ERR "Mutual";
 val AND = conjunction;
 
 (* ---------------------------------------------------------------------*)
-(* Internal function: 							*)
-(*									*)
+(* Internal function:                                                   *)
+(*                                                                      *)
 (* MOVEQS tys : returns a conversion that, when applied to a term with  *)
-(*		universal quantifications, moves the quantifications    *)
-(*		of variables of types in tys outward, and the others    *)
-(*		inward towards the body; otherwise, order is preserved. *)
-(*									*)
+(*              universal quantifications, moves the quantifications    *)
+(*              of variables of types in tys outward, and the others    *)
+(*              inward towards the body; otherwise, order is preserved. *)
+(*                                                                      *)
 (* ---------------------------------------------------------------------*)
 
 fun MOVEQS tys tm =
@@ -60,11 +60,11 @@ MOVEQS tys tm;
 
 
 (* ---------------------------------------------------------------------*)
-(* Internal function: 							*)
-(*									*)
+(* Internal function:                                                   *)
+(*                                                                      *)
 (* REPAIR th :  returns an induction theorem by repairing th, using     *)
-(*		MOVEQS on the hypotheses of the antecedent.             *)
-(*									*)
+(*              MOVEQS on the hypotheses of the antecedent.             *)
+(*                                                                      *)
 (* ---------------------------------------------------------------------*)
 
 fun REPAIR th =
@@ -84,13 +84,13 @@ REPAIR avexp_induction handle e => (print_HOL_ERR e; raise e);
 
 
 (* ---------------------------------------------------------------------*)
-(* Internal function: 							*)
-(*									*)
+(* Internal function:                                                   *)
+(*                                                                      *)
 (* BETAS "f" tm : returns a conversion that, when applied to a term with*)
-(*		 the same structure as the input term tm, will do a	*)
-(*		 beta reduction at all top-level subterms of tm which	*)
-(*		 are of the form "f <arg>", for some argument <arg>.	*)
-(*									*)
+(*               the same structure as the input term tm, will do a     *)
+(*               beta reduction at all top-level subterms of tm which   *)
+(*               are of the form "f <arg>", for some argument <arg>.    *)
+(*                                                                      *)
 (* ---------------------------------------------------------------------*)
 
 fun BETAS fnns body =
@@ -105,18 +105,18 @@ fun BETAS fnns body =
                       and cnv2 = BETAS fnns Rand
                       fun f (Rator,Rand) = (cnv1 Rator, cnv2 Rand)
                   in
-	          (MK_COMB o (f o dest_comb))
+                  (MK_COMB o (f o dest_comb))
                   end
              end;
 
 (* ---------------------------------------------------------------------*)
-(* Internal function: GTAC						*)
-(*									*)
-(*   !x. tm[x]  							*)
-(*  ------------  GTAC "y"   (primes the "y" if necessary).		*)
-(*     tm[y]								*)
-(*									*)
-(* NB: the x is always a genvar, so optimized for this case.		*)
+(* Internal function: GTAC                                              *)
+(*                                                                      *)
+(*   !x. tm[x]                                                          *)
+(*  ------------  GTAC "y"   (primes the "y" if necessary).             *)
+(*     tm[y]                                                            *)
+(*                                                                      *)
+(* NB: the x is always a genvar, so optimized for this case.            *)
 (* ---------------------------------------------------------------------*)
 
 fun GTAC y (A,g) =
@@ -129,36 +129,36 @@ fun GTAC y (A,g) =
    end;
 
 (* ---------------------------------------------------------------------*)
-(* Internal function: TACF						*)
-(*									*)
-(* TACF is used to generate the subgoals for each case in an inductive 	*)
-(* proof.  The argument tm is formula which states one generalized	*)
+(* Internal function: TACF                                              *)
+(*                                                                      *)
+(* TACF is used to generate the subgoals for each case in an inductive  *)
+(* proof.  The argument tm is formula which states one generalized      *)
 (* case in the induction. For example, the induction theorem for num is:*)
-(*									*)
-(*   |- !P. P 0 /\ (!n. P n ==> P(SUC n)) ==> !n. P n			*)
-(*									*)
-(* In this case, the argument tm will be one of:			*)
-(*									*)
-(*   1:  "P 0"   or   2: !n. P n ==> P(SUC n)				*)
-(*   									*)
+(*                                                                      *)
+(*   |- !P. P 0 /\ (!n. P n ==> P(SUC n)) ==> !n. P n                   *)
+(*                                                                      *)
+(* In this case, the argument tm will be one of:                        *)
+(*                                                                      *)
+(*   1:  "P 0"   or   2: !n. P n ==> P(SUC n)                           *)
+(*                                                                      *)
 (* TACF applied to each these terms to construct a parameterized tactic *)
 (* which will be used to further break these terms into subgoals.  The  *)
 (* resulting tactic takes a variable name x and a user supplied theorem *)
 (* continuation ttac.  For a base case, like case 1 above, the resulting*)
-(* tactic just throws these parameters away and passes the goal on 	*)
+(* tactic just throws these parameters away and passes the goal on      *)
 (* unchanged (i.e. \x ttac. ALL_TAC).  For a step case, like case 2, the*)
 (* tactic applies GTAC x as many times as required.  It then strips off *)
 (* the induction hypotheses and applies ttac to each one.  For example, *)
-(* if tac is the tactic generated by:					*)
-(*									*)
-(*    TACF "!n. P n ==> P(SUC n)" "x:num" ASSUME_TAC			*)
-(*									*)
-(* then applying tac to the goal A,"!n. P[n] ==> P[SUC n] has the same 	*)
-(* effect as applying:							*)
-(*									*)
-(*    GTAC "x:num" THEN DISCH_THEN ASSUME_TAC				*)
-(*									*)
-(* TACF is a strictly local function, used only to define TACS, below.	*)
+(* if tac is the tactic generated by:                                   *)
+(*                                                                      *)
+(*    TACF "!n. P n ==> P(SUC n)" "x:num" ASSUME_TAC                    *)
+(*                                                                      *)
+(* then applying tac to the goal A,"!n. P[n] ==> P[SUC n] has the same  *)
+(* effect as applying:                                                  *)
+(*                                                                      *)
+(*    GTAC "x:num" THEN DISCH_THEN ASSUME_TAC                           *)
+(*                                                                      *)
+(* TACF is a strictly local function, used only to define TACS, below.  *)
 (* ---------------------------------------------------------------------*)
 local
 fun ctacs tm =
@@ -202,20 +202,20 @@ fun TACF tm =
 end;
 
 (* ---------------------------------------------------------------------*)
-(* Internal function: TACS						*)
-(*									*)
+(* Internal function: TACS                                              *)
+(*                                                                      *)
 (* TACS uses TACF to generate a parameterized list of tactics, one for  *)
-(* each conjunct in the hypothesis of an induction theorem.		*)
-(*									*)
+(* each conjunct in the hypothesis of an induction theorem.             *)
+(*                                                                      *)
 (* For example, if tm is the hypothesis of the induction thoerem for the*)
-(* natural numbers---i.e. if:						*)
-(*									*)
-(*   tm = "P 0 /\ (!n. P n ==> P(SUC n))"				*)
-(*									*)
-(* then TACS tm yields the paremterized list of tactics:		*)
-(*									*)
+(* natural numbers---i.e. if:                                           *)
+(*                                                                      *)
+(*   tm = "P 0 /\ (!n. P n ==> P(SUC n))"                               *)
+(*                                                                      *)
+(* then TACS tm yields the paremterized list of tactics:                *)
+(*                                                                      *)
 (*   \x ttac. [TACF "P 0" x ttac; TACF "!n. P n ==> P(SUC n)" x ttac]   *)
-(*									*)
+(*                                                                      *)
 (* TACS is a strictly local function, used only in MUTUAL_INDUCT_THEN.  *)
 (* ---------------------------------------------------------------------*)
 
@@ -229,13 +229,13 @@ and
       end;
 
 (* ---------------------------------------------------------------------*)
-(* Internal function: GOALS						*)
-(*									*)
+(* Internal function: GOALS                                             *)
+(*                                                                      *)
 (* GOALS generates the subgoals (and proof functions) for all the cases *)
 (* in an induction. The argument A is the common assumption list for all*)
-(* the goals, and tacs is a list of tactics used to generate subgoals 	*)
-(* from these goals.							*)
-(*									*)
+(* the goals, and tacs is a list of tactics used to generate subgoals   *)
+(* from these goals.                                                    *)
+(*                                                                      *)
 (* GOALS is a strictly local function, used only in MUTUAL_INDUCT_THEN. *)
 (* ---------------------------------------------------------------------*)
 fun GOALS A [] tm = raise ERR "GOALS" "empty lsit"
@@ -250,9 +250,9 @@ fun GOALS A [] tm = raise ERR "GOALS" "empty lsit"
       end;
 
 (* --------------------------------------------------------------------- *)
-(* Internal function: GALPH						*)
-(* 									*)
-(* GALPH "!x1 ... xn. A ==> B":   alpha-converts the x's to genvars.	*)
+(* Internal function: GALPH                                             *)
+(*                                                                      *)
+(* GALPH "!x1 ... xn. A ==> B":   alpha-converts the x's to genvars.    *)
 (* --------------------------------------------------------------------- *)
 local
 fun rule v =
@@ -378,8 +378,8 @@ fun MUTUAL_INDUCT_THEN1 th =
        => raise ERR "MUTUAL_INDUCT_THEN" "tactic application error"
    end
    handle (e as HOL_ERR
-	           {origin_structure = "Mutual",
-		    origin_function = "MUTUAL_INDUCT_THEN",...}) => raise e
+                   {origin_structure = "Mutual",
+                    origin_function = "MUTUAL_INDUCT_THEN",...}) => raise e
         | _ => raise ERR "MUTUAL_INDUCT_THEN" "ill-formed induction theorem"
 
 in

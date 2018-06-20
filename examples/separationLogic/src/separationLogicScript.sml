@@ -14,7 +14,7 @@ show_assums := true;
 *)
 
 open generalHelpersTheory finite_mapTheory relationTheory bagTheory pred_setTheory congLib sortingTheory
-   listTheory rich_listTheory arithmeticTheory operatorTheory optionTheory latticeTheory
+   listTheory rich_listTheory arithmeticTheory combinTheory optionTheory latticeTheory
    containerTheory boolSimps ConseqConv markerTheory
 open quantHeuristicsLib
 
@@ -149,7 +149,7 @@ val IS_SEPARATION_COMBINATOR_NEUTRAL_ELEMENT_FUNCTION_THM = store_thm (
    FULL_SIMP_TAC std_ss [IS_SEPARATION_COMBINATOR_NEUTRAL_ELEMENT_FUNCTION_def] THEN
    Tactical.REVERSE CONJ_TAC THEN1 METIS_TAC[IS_SEPARATION_COMBINATOR_def, COMM_DEF] THEN
    REPEAT STRIP_TAC THENL [
-      `(f (SOME (uf x1)) (SOME x1) = SOME x1) /\ (f (SOME (uf x2)) (SOME x2) = SOME x2)` by ALL_TAC THEN1 (
+      `(f (SOME (uf x1)) (SOME x1) = SOME x1) /\ (f (SOME (uf x2)) (SOME x2) = SOME x2)` by (
          bossLib.UNABBREV_ALL_TAC THEN METIS_TAC[]
       ) THEN
       EQ_TAC THENL [
@@ -406,7 +406,7 @@ IS_SEPARATION_COMBINATOR_NEUTRAL_ELEMENT_FUNCTION f uf) ==>
 (asl_emp f = (IMAGE uf UNIV))``,
 
 REPEAT STRIP_TAC THEN
-Q.PAT_ASSUM `IS_SEPARATION_COMBINATOR_NEUTRAL_ELEMENT_FUNCTION f uf` MP_TAC THEN
+Q.PAT_X_ASSUM `IS_SEPARATION_COMBINATOR_NEUTRAL_ELEMENT_FUNCTION f uf` MP_TAC THEN
 ASM_SIMP_TAC std_ss [IS_SEPARATION_COMBINATOR_NEUTRAL_ELEMENT_FUNCTION_THM] THEN
 REPEAT STRIP_TAC THEN
 ASM_SIMP_TAC std_ss [EXTENSION, IN_IMAGE, IN_UNIV,
@@ -517,7 +517,7 @@ REPEAT STRIP_TAC THENL [
    EQ_TAC THEN STRIP_TAC THENL [
       SIMP_TAC std_ss [GSYM FORALL_AND_THM] THEN
       REPEAT GEN_TAC THEN
-      Q.PAT_ASSUM `!x y. P x y` (fn thm => MP_TAC (Q.SPECL [`SOME x1`, `SOME x2`] thm)) THEN
+      Q.PAT_X_ASSUM `!x y. P x y` (fn thm => MP_TAC (Q.SPECL [`SOME x1`, `SOME x2`] thm)) THEN
       ASM_SIMP_TAC std_ss [BIN_OPTION_MAP_def] THEN
       Cases_on `c x1 x2` THEN Cases_on `c x2 x1` THEN
       ASM_SIMP_TAC std_ss [],
@@ -531,7 +531,7 @@ REPEAT STRIP_TAC THENL [
    SIMP_TAC std_ss [ASSOC_DEF] THEN
    EQ_TAC THEN STRIP_TAC THENL [
       REPEAT GEN_TAC THEN
-      Q.PAT_ASSUM `!x y z. P x y z` (fn thm => MP_TAC (Q.SPECL [`SOME x1`, `SOME x2`, `SOME x3`] thm)) THEN
+      Q.PAT_X_ASSUM `!x y z. P x y z` (fn thm => MP_TAC (Q.SPECL [`SOME x1`, `SOME x2`, `SOME x3`] thm)) THEN
       ASM_SIMP_TAC std_ss [BIN_OPTION_MAP_def] THEN
       Cases_on `c x1 x2` THEN Cases_on `c x2 x3` THEN
       Cases_on `c (f x1 x2) x3` THEN Cases_on `c x1 (f x2 x3)` THEN
@@ -554,7 +554,7 @@ REPEAT STRIP_TAC THENL [
    SIMP_TAC std_ss [OPTION_IS_LEFT_CANCELLATIVE_def] THEN
    EQ_TAC THEN STRIP_TAC THENL [
       REPEAT GEN_TAC THEN
-      Q.PAT_ASSUM `!x y z. P x y z` (fn thm => MP_TAC (Q.SPECL [`SOME x1`, `SOME x2`, `SOME x3`] thm)) THEN
+      Q.PAT_X_ASSUM `!x y z. P x y z` (fn thm => MP_TAC (Q.SPECL [`SOME x1`, `SOME x2`, `SOME x3`] thm)) THEN
       ASM_SIMP_TAC std_ss [BIN_OPTION_MAP_def],
 
       Cases_on `x1` THEN
@@ -570,7 +570,7 @@ REPEAT STRIP_TAC THENL [
    SIMP_TAC std_ss [OPTION_IS_RIGHT_CANCELLATIVE_def] THEN
    EQ_TAC THEN STRIP_TAC THENL [
       REPEAT GEN_TAC THEN
-      Q.PAT_ASSUM `!x y z. P x y z` (fn thm => MP_TAC (Q.SPECL [`SOME x1`, `SOME x2`, `SOME x3`] thm)) THEN
+      Q.PAT_X_ASSUM `!x y z. P x y z` (fn thm => MP_TAC (Q.SPECL [`SOME x1`, `SOME x2`, `SOME x3`] thm)) THEN
       ASM_SIMP_TAC std_ss [BIN_OPTION_MAP_def],
 
       Cases_on `x1` THEN
@@ -633,8 +633,8 @@ SIMP_TAC std_ss [PreOrder, reflexive_def, transitive_def, ASL_IS_SUBSTATE_def,
 REPEAT STRIP_TAC THENL [
    METIS_TAC[],
 
-   Q.PAT_ASSUM `X = SOME z` (ASSUME_TAC o GSYM) THEN
-   Q.PAT_ASSUM `X = SOME y` (ASSUME_TAC o GSYM) THEN
+   Q.PAT_X_ASSUM `X = SOME z` (ASSUME_TAC o GSYM) THEN
+   Q.PAT_X_ASSUM `X = SOME y` (ASSUME_TAC o GSYM) THEN
    FULL_SIMP_TAC std_ss [ASSOC_SYM] THEN
    Cases_on `f (SOME s1) (SOME s1')` THEN (
       METIS_TAC[]
@@ -894,7 +894,7 @@ SIMP_TAC std_ss [ASL_IS_SUBSTATE_def,
        FUNION_DEF, COND_RATOR,
        COND_RAND] THEN
 REPEAT GEN_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
-   Q.PAT_ASSUM `X = s2` (ASSUME_TAC o GSYM) THEN
+   Q.PAT_X_ASSUM `X = s2` (ASSUME_TAC o GSYM) THEN
    ASM_SIMP_TAC std_ss [FUNION_DEF, SUBSET_UNION],
 
 
@@ -1535,8 +1535,8 @@ REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
    ASM_REWRITE_TAC[] THEN
    REPEAT STRIP_TAC THEN
    `?p' q. (SOME x' = f (SOME p') (SOME q)) /\ p' IN P /\ q IN p` by METIS_TAC[] THEN
-   `q = q'` by ALL_TAC THEN1 (
-      Q.PAT_ASSUM `!x y1 y2. Z x y1 y2` MATCH_MP_TAC THEN
+   `q = q'` by (
+      Q.PAT_X_ASSUM `!x y1 y2. Z x y1 y2` MATCH_MP_TAC THEN
       ASM_SIMP_TAC std_ss [] THEN
       Q.EXISTS_TAC `x'` THEN
       Q.EXISTS_TAC `p'` THEN
@@ -1547,7 +1547,7 @@ REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
    ASM_REWRITE_TAC[],
 
 
-   Q.PAT_ASSUM `!X x. P X x` MP_TAC THEN
+   Q.PAT_X_ASSUM `!X x. P X x` MP_TAC THEN
    SIMP_TAC std_ss [GSYM LEFT_EXISTS_IMP_THM] THEN
    Q.EXISTS_TAC `{{s1};{s1'}}` THEN
    Q.EXISTS_TAC `{s1}` THEN
@@ -1571,27 +1571,27 @@ ASM_REWRITE_TAC[IS_SEPARATION_COMBINATOR_EXPAND_THM] THEN
 SIMP_TAC std_ss [ASL_IS_PRECISE_def, ASL_IS_SUBSTATE_def, GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM,
 GSYM LEFT_EXISTS_IMP_THM, GSYM LEFT_FORALL_IMP_THM, asl_star_def, IN_ABS, ASSOC_SYM] THEN
 REPEAT STRIP_TAC THEN
-REPEAT (Q.PAT_ASSUM `X = SOME x` MP_TAC) THEN
+REPEAT (Q.PAT_X_ASSUM `X = SOME x` MP_TAC) THEN
 ASM_REWRITE_TAC[] THEN
 Cases_on `f (SOME q) (SOME s1)` THEN1 ASM_SIMP_TAC std_ss [] THEN
 Cases_on `f (SOME q') (SOME s1')` THEN1 ASM_SIMP_TAC std_ss [] THEN
 REPEAT STRIP_TAC THEN
-`p' = p` by ALL_TAC THEN1 (
-   Q.PAT_ASSUM `!x y1 y2. X x y1 y2` (K ALL_TAC) THEN
-   Q.PAT_ASSUM `!x y1 y2. X x y1 y2` MATCH_MP_TAC THEN
+`p' = p` by (
+   Q.PAT_X_ASSUM `!x y1 y2. X x y1 y2` (K ALL_TAC) THEN
+   Q.PAT_X_ASSUM `!x y1 y2. X x y1 y2` MATCH_MP_TAC THEN
    Q.EXISTS_TAC `x` THEN
    Q.EXISTS_TAC `x''` THEN
    Q.EXISTS_TAC `x'` THEN
    ASM_REWRITE_TAC[]
 ) THEN
-`SOME x' = SOME x''` by ALL_TAC THEN1 (
-   Q.PAT_ASSUM `OPTION_IS_LEFT_CANCELLATIVE f` (MATCH_MP_TAC o REWRITE_RULE [OPTION_IS_LEFT_CANCELLATIVE_def]) THEN
+`SOME x' = SOME x''` by (
+   Q.PAT_X_ASSUM `OPTION_IS_LEFT_CANCELLATIVE f` (MATCH_MP_TAC o REWRITE_RULE [OPTION_IS_LEFT_CANCELLATIVE_def]) THEN
    Q.EXISTS_TAC `SOME p` THEN
    ASM_SIMP_TAC std_ss [] THEN
    METIS_TAC[]
 ) THEN
-`q' = q` by ALL_TAC THEN1 (
-   Q.PAT_ASSUM `!x y1 y2. X x y1 y2` MATCH_MP_TAC THEN
+`q' = q` by (
+   Q.PAT_X_ASSUM `!x y1 y2. X x y1 y2` MATCH_MP_TAC THEN
    Q.EXISTS_TAC `x'` THEN
    Q.EXISTS_TAC `s1'` THEN
    Q.EXISTS_TAC `s1` THEN
@@ -1666,14 +1666,14 @@ IS_SEPARATION_COMBINATOR (PRODUCT_SEPARATION_COMBINATOR f1 f2)``,
 REPEAT STRIP_TAC THEN
 SIMP_TAC std_ss [IS_SEPARATION_COMBINATOR_def] THEN
 `!x. (PRODUCT_SEPARATION_COMBINATOR f1 f2 NONE x = NONE) /\
-       (PRODUCT_SEPARATION_COMBINATOR f1 f2 x NONE = NONE)` by ALL_TAC THEN1 (
+       (PRODUCT_SEPARATION_COMBINATOR f1 f2 x NONE = NONE)` by (
 
    SIMP_TAC std_ss [PRODUCT_SEPARATION_COMBINATOR_REWRITE]
 ) THEN
 FULL_SIMP_TAC std_ss [IS_SEPARATION_COMBINATOR_EXPAND_THM] THEN
 
 REPEAT STRIP_TAC THENL [
-   `?x1 x2. x = (x1, x2)` by ALL_TAC THEN1 (
+   `?x1 x2. x = (x1, x2)` by (
       Cases_on `x` THEN
       SIMP_TAC std_ss []
    ) THEN
@@ -1741,7 +1741,7 @@ REPEAT STRIP_TAC THENL [
       NOT_NONE_IS_SOME] THEN
    STRIP_TAC THEN
    FULL_SIMP_TAC std_ss [] THEN
-   `!X Y. (IS_SOME X /\ IS_SOME Y) ==> ((THE X = THE Y) = (X = Y))` by ALL_TAC THEN1 (
+   `!X Y. (IS_SOME X /\ IS_SOME Y) ==> ((THE X = THE Y) = (X = Y))` by (
       METIS_TAC[option_CLAUSES]
    ) THEN
    METIS_TAC[OPTION_IS_LEFT_CANCELLATIVE_def, option_CLAUSES]
@@ -1762,14 +1762,14 @@ IS_SEPARATION_COMBINATOR_NEUTRAL_ELEMENT_FUNCTION (PRODUCT_SEPARATION_COMBINATOR
 (!x1 x2. ((uf (x1,x2)) = ((uf1 x1), (uf2 x2))))``,
 
 REPEAT STRIP_TAC THEN
-REPEAT (Q.PAT_ASSUM `IS_SEPARATION_COMBINATOR_NEUTRAL_ELEMENT_FUNCTION X Y` MP_TAC) THEN
+REPEAT (Q.PAT_X_ASSUM `IS_SEPARATION_COMBINATOR_NEUTRAL_ELEMENT_FUNCTION X Y` MP_TAC) THEN
 ASM_SIMP_TAC std_ss [IS_SEPARATION_COMBINATOR_NEUTRAL_ELEMENT_FUNCTION_THM] THEN
 SIMP_TAC std_ss [PRODUCT_SEPARATION_COMBINATOR_REWRITE,
    IS_SEPARATION_COMBINATOR_NEUTRAL_ELEMENT_FUNCTION_def,
    pairTheory.FORALL_PROD, COND_RAND, COND_RATOR, LET_THM] THEN
 REPEAT STRIP_TAC THEN
 `?y1 y2. uf (x1, x2) = (y1, y2)` by PROVE_TAC[pairTheory.PAIR] THEN
-Q.PAT_ASSUM `!x1 x2. P x1 x2` (MP_TAC o (Q.SPECL [`x1`, `x2`])) THEN
+Q.PAT_X_ASSUM `!x1 x2. P x1 x2` (MP_TAC o (Q.SPECL [`x1`, `x2`])) THEN
 ASM_SIMP_TAC std_ss [] THEN
 METIS_TAC[option_CLAUSES])
 
@@ -2067,7 +2067,7 @@ Cases_on `NONE IN M` THEN1 (
 ASM_SIMP_TAC std_ss [fasl_order_THM, SUBSET_DEF,
    IN_BIGUNION, IN_IMAGE, GSYM RIGHT_EXISTS_AND_THM] THEN
 REPEAT STRIP_TAC THENL [
-   `?s1. m = SOME s1` by ALL_TAC THEN1 (
+   `?s1. m = SOME s1` by (
       Cases_on `m` THEN
       FULL_SIMP_TAC std_ss []
    ) THEN
@@ -2079,7 +2079,7 @@ REPEAT STRIP_TAC THENL [
 
    Cases_on `b` THEN ASM_SIMP_TAC std_ss [] THEN
    REPEAT STRIP_TAC THEN
-   `?s1. x'' = SOME s1` by ALL_TAC THEN1 (
+   `?s1. x'' = SOME s1` by (
       Cases_on `x''` THEN
       FULL_SIMP_TAC std_ss []
    ) THEN
@@ -2154,7 +2154,7 @@ REPEAT STRIP_TAC THENL [
       ASM_SIMP_TAC std_ss []
    ],
 
-   `?b'. b = SOME b'` by ALL_TAC THEN1 (
+   `?b'. b = SOME b'` by (
       Cases_on `b` THEN SIMP_TAC std_ss [] THEN
       FULL_SIMP_TAC std_ss [fasl_order_THM] THEN
       METIS_TAC[]
@@ -2195,8 +2195,8 @@ store_thm ("SUP_fasl_order___EQ_INSERT_DIVERGE",
 ((SOME EMPTY INSERT aS2) = (SOME EMPTY INSERT aS1)) ==>
 (SUP_fasl_order aS1 = SUP_fasl_order aS2)``,
 
-Tactical.REVERSE (`
-   !aS. SUP_fasl_order aS = SUP_fasl_order (SOME EMPTY INSERT aS)` by ALL_TAC) THEN1 (
+`
+   !aS. SUP_fasl_order aS = SUP_fasl_order (SOME EMPTY INSERT aS)` suffices_by (STRIP_TAC THEN
    METIS_TAC[]
 ) THEN
 
@@ -2255,12 +2255,12 @@ SIMP_TAC std_ss [ASL_IS_LOCAL_ACTION_def, ASL_IS_SEPARATE_def, IS_SOME_EXISTS, G
    TRANS_REL_FRAME_PROPERTY_def, ASL_IS_SUBSTATE_def] THEN
 REPEAT STRIP_TAC THEN EQ_TAC THENL [
    REPEAT STRIP_TAC THENL [
-      Q.PAT_ASSUM `!s1 s2 y. P s1 s2 y` (MP_TAC o Q.SPECL [`s1`, `s1'`, `s2`]) THEN
+      Q.PAT_X_ASSUM `!s1 s2 y. P s1 s2 y` (MP_TAC o Q.SPECL [`s1`, `s1'`, `s2`]) THEN
       FULL_SIMP_TAC std_ss [fasl_order_THM, fasl_star_REWRITE,
          COND_RAND, COND_RATOR],
 
 
-      Q.PAT_ASSUM `!s1 s2 y. P s1 s2 y` (MP_TAC o Q.SPECL [`s1`, `s2`, `s`]) THEN
+      Q.PAT_X_ASSUM `!s1 s2 y. P s1 s2 y` (MP_TAC o Q.SPECL [`s1`, `s2`, `s`]) THEN
       ASM_SIMP_TAC std_ss [fasl_star_def, BIN_OPTION_MAP_ALL_DEF_THM,
          asl_star_def, IN_SING, IN_ABS] THEN
       SIMP_TAC std_ss [COND_RAND, COND_RATOR, fasl_order_THM, SUBSET_DEF, IN_ABS] THEN
@@ -2408,7 +2408,7 @@ ASSUME_TAC fasl_order_IS_WEAK_ORDER THEN
 FULL_SIMP_TAC std_ss [fasl_action_order_def, HOARE_TRIPLE_def, WeakOrder] THEN
 REPEAT GEN_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
    Cases_on `a2 s` THEN1 SIMP_TAC std_ss [fasl_order_THM] THEN
-   Q.PAT_ASSUM `!P Q. X P Q` (MP_TAC o Q.SPECL [`{s}`, `x`]) THEN
+   Q.PAT_X_ASSUM `!P Q. X P Q` (MP_TAC o Q.SPECL [`{s}`, `x`]) THEN
    FULL_SIMP_TAC std_ss[IN_SING, reflexive_def],
 
    PROVE_TAC[transitive_def]
@@ -2452,7 +2452,7 @@ REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
    Cases_on `a s1` THEN
    ASM_SIMP_TAC std_ss [fasl_star_REWRITE, fasl_order_THM] THEN
    lcsymtacs.rename1 `a s1 = SOME xx` THEN
-   Q.PAT_ASSUM `!P Q. X P Q` (MP_TAC o Q.SPECL [`{s1}`, `xx`]) THEN
+   Q.PAT_X_ASSUM `!P Q. X P Q` (MP_TAC o Q.SPECL [`{s1}`, `xx`]) THEN
    ASM_SIMP_TAC std_ss [IN_SING, SUBSET_REFL, asl_star_def,
       IN_ABS, SUBSET_DEF] THEN
    SIMP_TAC std_ss [GSYM LEFT_EXISTS_IMP_THM] THEN
@@ -2494,11 +2494,11 @@ FULL_SIMP_TAC std_ss [IS_SUPREMUM_def,
    SUP_fasl_action_order_def,
    FORALL_AND_THM] THEN
 REPEAT STRIP_TAC THENL [
-   Q.PAT_ASSUM `!M m. m IN M ==> fasl_order m (SUP_fasl_order M)` MATCH_MP_TAC THEN
+   Q.PAT_X_ASSUM `!M m. m IN M ==> fasl_order m (SUP_fasl_order M)` MATCH_MP_TAC THEN
    SIMP_TAC std_ss [IN_IMAGE] THEN
    METIS_TAC[],
 
-   Q.PAT_ASSUM `!M m. X M m ==> fasl_order (SUP_fasl_order M) m` MATCH_MP_TAC THEN
+   Q.PAT_X_ASSUM `!M m. X M m ==> fasl_order (SUP_fasl_order M) m` MATCH_MP_TAC THEN
    SIMP_TAC std_ss [IN_IMAGE] THEN
    METIS_TAC[]
 ]);
@@ -2684,11 +2684,11 @@ FULL_SIMP_TAC std_ss [IS_INFIMUM_def,
    INF_fasl_action_order_def,
    FORALL_AND_THM] THEN
 REPEAT STRIP_TAC THENL [
-   Q.PAT_ASSUM `!M m. m IN M ==> fasl_order (INF_fasl_order M) m` MATCH_MP_TAC THEN
+   Q.PAT_X_ASSUM `!M m. m IN M ==> fasl_order (INF_fasl_order M) m` MATCH_MP_TAC THEN
    SIMP_TAC std_ss [IN_IMAGE] THEN
    METIS_TAC[],
 
-   Q.PAT_ASSUM `!M m. X M m ==> fasl_order m (INF_fasl_order M)` MATCH_MP_TAC THEN
+   Q.PAT_X_ASSUM `!M m. X M m ==> fasl_order m (INF_fasl_order M)` MATCH_MP_TAC THEN
    SIMP_TAC std_ss [IN_IMAGE] THEN
    METIS_TAC[]
 ]);
@@ -2746,10 +2746,10 @@ REPEAT STRIP_TAC THENL [
       GSYM LEFT_FORALL_IMP_THM] THEN
    REPEAT STRIP_TAC THEN
    `!g. (IS_SOME (g s1) /\ (g IN OP)) ==>
-      ?t'. (SOME t = f (SOME t') (SOME s2)) /\ t' IN (THE (g s1))` by ALL_TAC THEN1 (
+      ?t'. (SOME t = f (SOME t') (SOME s2)) /\ t' IN (THE (g s1))` by (
       REPEAT STRIP_TAC THEN
       `IS_SOME (g s3)` by METIS_TAC[TRANS_FUNC_SAFETY_MONOTONICITY_REWRITE] THEN
-      `?v1 v3. (g s1 = SOME v1) /\ (g s3 = SOME v3) /\ (t IN v3)` by ALL_TAC THEN1 (
+      `?v1 v3. (g s1 = SOME v1) /\ (g s3 = SOME v3) /\ (t IN v3)` by (
          RES_TAC THEN
          FULL_SIMP_TAC std_ss [IS_SOME_EXISTS] THEN
          METIS_TAC[option_CLAUSES]
@@ -2766,12 +2766,12 @@ REPEAT STRIP_TAC THENL [
    REPEAT STRIP_TAC THEN
 
    `?t''. (SOME t = f (SOME t'') (SOME s2)) /\ (t'' IN (THE (f' s1)))` by METIS_TAC[] THEN
-   Tactical.REVERSE (`t' = t''` by ALL_TAC) THEN1 (
+   `t' = t''` suffices_by (STRIP_TAC THEN
       ASM_REWRITE_TAC[]
    ) THEN
    FULL_SIMP_TAC std_ss [IS_SEPARATION_COMBINATOR_EXPAND_THM] THEN
    ONCE_REWRITE_TAC [GSYM SOME_11] THEN
-   Q.PAT_ASSUM `OPTION_IS_RIGHT_CANCELLATIVE f` (MATCH_MP_TAC o REWRITE_RULE [OPTION_IS_RIGHT_CANCELLATIVE_def]) THEN
+   Q.PAT_X_ASSUM `OPTION_IS_RIGHT_CANCELLATIVE f` (MATCH_MP_TAC o REWRITE_RULE [OPTION_IS_RIGHT_CANCELLATIVE_def]) THEN
    Q.EXISTS_TAC `SOME s2` THEN
    METIS_TAC[option_CLAUSES]
 ]);
@@ -2798,7 +2798,7 @@ SIMP_TAC std_ss [IS_COMPLETE_LATTICE_def] THEN
 `rest_WeakOrder (ASL_IS_LOCAL_ACTION f) fasl_action_order` by METIS_TAC[fasl_action_order_IS_WEAK_ORDER,
    rest_WeakOrder_THM] THEN
 ASM_REWRITE_TAC[SUBSET_DEF, IS_SOME_EXISTS] THEN
-`rest_antisymmetric (ASL_IS_LOCAL_ACTION f) fasl_action_order` by ALL_TAC THEN1 (
+`rest_antisymmetric (ASL_IS_LOCAL_ACTION f) fasl_action_order` by (
    FULL_SIMP_TAC std_ss [rest_WeakOrder_def]
 ) THEN
 REPEAT STRIP_TAC THENL [
@@ -2891,7 +2891,7 @@ Cases_on `!s0 s1'. ~(SOME y = f (SOME s0) (SOME s1')) \/ ~(s1' IN P1)` THENL [
    CCONTR_TAC THEN
    FULL_SIMP_TAC std_ss [] THEN
    FULL_SIMP_TAC std_ss [] THEN
-   Q.PAT_ASSUM `!s0 s1. P s0 s1` (MP_TAC o Q.SPECL [`THE (f (SOME (s0:'a)) (SOME (s2:'a)))`, `s1'`]) THEN
+   Q.PAT_X_ASSUM `!s0 s1. P s0 s1` (MP_TAC o Q.SPECL [`THE (f (SOME (s0:'a)) (SOME (s2:'a)))`, `s1'`]) THEN
    `SOME y = f (f (SOME s0) (SOME s2)) (SOME s1')` by METIS_TAC[COMM_DEF, ASSOC_DEF] THEN
    ASM_SIMP_TAC std_ss [] THEN
    Cases_on `f (SOME s0) (SOME s2)` THEN
@@ -2910,12 +2910,12 @@ Cases_on `!s0 s1'. ~(SOME y = f (SOME s0) (SOME s1')) \/ ~(s1' IN P1)` THENL [
       GSYM LEFT_FORALL_IMP_THM, IN_ABS] THEN
    FULL_SIMP_TAC std_ss [] THEN
    REPEAT STRIP_TAC THEN
-   `?p. (SOME x = f (SOME p) (f (SOME s0') (SOME s2))) /\ p IN P2` by ALL_TAC THEN1 (
+   `?p. (SOME x = f (SOME p) (f (SOME s0') (SOME s2))) /\ p IN P2` by (
        `f (SOME s0) (SOME s1') = f (f (SOME s0') (SOME s2)) (SOME s1'')` by METIS_TAC[COMM_DEF, ASSOC_DEF] THEN
       Cases_on `f (SOME s0') (SOME s2)` THEN1 (
          METIS_TAC[option_CLAUSES]
       ) THEN
-      Q.PAT_ASSUM `!s0 s1. P s0 s1` MATCH_MP_TAC THEN
+      Q.PAT_X_ASSUM `!s0 s1. P s0 s1` MATCH_MP_TAC THEN
       METIS_TAC[]
    ) THEN
    ASM_SIMP_TAC std_ss [] THEN
@@ -2926,30 +2926,30 @@ Cases_on `!s0 s1'. ~(SOME y = f (SOME s0) (SOME s1')) \/ ~(s1' IN P1)` THENL [
    REPEAT STRIP_TAC THEN1 (
       METIS_TAC[option_CLAUSES, ASSOC_DEF, COMM_DEF]
    ) THEN
-   Q.PAT_ASSUM `X = SOME x'` (ASSUME_TAC o GSYM) THEN
+   Q.PAT_X_ASSUM `X = SOME x'` (ASSUME_TAC o GSYM) THEN
    ONCE_ASM_REWRITE_TAC[] THEN
 
-   Q.PAT_ASSUM `!s0 s1. P s0 s1` (MP_TAC o Q.SPECL [`THE (f (SOME (s0'':'a)) (SOME (s2:'a)))`, `s1'''`]) THEN
+   Q.PAT_X_ASSUM `!s0 s1. P s0 s1` (MP_TAC o Q.SPECL [`THE (f (SOME (s0'':'a)) (SOME (s2:'a)))`, `s1'''`]) THEN
    Cases_on `f (SOME s0'') (SOME s2)` THEN1 (
       METIS_TAC[option_CLAUSES, COMM_DEF, ASSOC_DEF]
    ) THEN
    MATCH_MP_TAC (prove (``(A /\ (B ==> C)) ==> ((A ==> B) ==> C)``, PROVE_TAC[])) THEN
    CONJ_TAC THENL [
-      Q.PAT_ASSUM `X = SOME x''` (ASSUME_TAC o GSYM) THEN
-      Q.PAT_ASSUM `f (X) Y = f (SOME s0) (SOME s1')` (ASSUME_TAC o GSYM) THEN
+      Q.PAT_X_ASSUM `X = SOME x''` (ASSUME_TAC o GSYM) THEN
+      Q.PAT_X_ASSUM `f (X) Y = f (SOME s0) (SOME s1')` (ASSUME_TAC o GSYM) THEN
       FULL_SIMP_TAC std_ss [] THEN
       FULL_SIMP_TAC std_ss [ASSOC_SYM, COMM_DEF],
 
       STRIP_TAC THEN
       Q.EXISTS_TAC `p'` THEN
-      Q.PAT_ASSUM `X = SOME x''` (ASSUME_TAC o GSYM) THEN
+      Q.PAT_X_ASSUM `X = SOME x''` (ASSUME_TAC o GSYM) THEN
       FULL_SIMP_TAC std_ss [] THEN
-      Q.PAT_ASSUM `f (SOME p') X = f Y Z` MP_TAC THEN
+      Q.PAT_X_ASSUM `f (SOME p') X = f Y Z` MP_TAC THEN
       FULL_SIMP_TAC std_ss [ASSOC_DEF] THEN
       STRIP_TAC THEN
-      Q.PAT_ASSUM `OPTION_IS_RIGHT_CANCELLATIVE f` (MATCH_MP_TAC o REWRITE_RULE [OPTION_IS_RIGHT_CANCELLATIVE_def]) THEN
+      Q.PAT_X_ASSUM `OPTION_IS_RIGHT_CANCELLATIVE f` (MATCH_MP_TAC o REWRITE_RULE [OPTION_IS_RIGHT_CANCELLATIVE_def]) THEN
       Q.EXISTS_TAC `SOME s2` THEN
-      Q.PAT_ASSUM `SOME x = X` (ASSUME_TAC o GSYM) THEN
+      Q.PAT_X_ASSUM `SOME x = X` (ASSUME_TAC o GSYM) THEN
       METIS_TAC[option_CLAUSES]
    ]
 ]);
@@ -2999,7 +2999,7 @@ FULL_SIMP_TAC std_ss [HOARE_TRIPLE_def,
    ASL_IS_LOCAL_ACTION_def, ASL_IS_SEPARATE_def, IS_SOME_EXISTS] THEN
 SIMP_TAC std_ss [COND_RAND, COND_RATOR, FORALL_AND_THM, IMP_CONJ_THM] THEN
 REPEAT STRIP_TAC THEN
-Q.PAT_ASSUM `!s. s IN P ==> X s` MP_TAC THEN
+Q.PAT_X_ASSUM `!s. s IN P ==> X s` MP_TAC THEN
 ASM_SIMP_TAC std_ss [SUBSET_DEF, IN_BIGINTER, IN_IMAGE, IN_INTER, IN_ABS] THEN
 SIMP_TAC std_ss [GSYM RIGHT_EXISTS_AND_THM, GSYM LEFT_FORALL_IMP_THM] THEN
 
@@ -3010,7 +3010,7 @@ SIMP_TAC std_ss [GSYM RIGHT_EXISTS_AND_THM, GSYM LEFT_FORALL_IMP_THM] THEN
 `?t. (g s1 = SOME t) /\ t SUBSET P2` by METIS_TAC[] THEN
 FULL_SIMP_TAC std_ss [BIN_OPTION_MAP_ALL_DEF_THM, fasl_order_THM] THEN
 REPEAT STRIP_TAC THEN
-Q.PAT_ASSUM `!s. s IN P ==> X s` (MP_TAC o Q.SPEC `s`) THEN
+Q.PAT_X_ASSUM `!s. s IN P ==> X s` (MP_TAC o Q.SPEC `s`) THEN
 ASM_SIMP_TAC std_ss [] THEN
 DISCH_TAC THEN POP_ASSUM HO_MATCH_MP_TAC THEN
 REPEAT STRIP_TAC THEN
@@ -3145,7 +3145,7 @@ REPEAT STRIP_TAC THENL [
 
    REPEAT STRIP_TAC THEN
    POP_ASSUM (ASSUME_TAC o (Q.SPEC `x`)) THEN
-   `IS_SOME (best_local_action f (qP1 x) (qP2 x) s)` by ALL_TAC THEN1 (
+   `IS_SOME (best_local_action f (qP1 x) (qP2 x) s)` by (
       SIMP_TAC std_ss [best_local_action_def, LET_THM, IN_ABS, COND_RAND, COND_RATOR,
          INF_fasl_order_def] THEN
       SIMP_TAC std_ss [GSYM LEFT_EXISTS_AND_THM, fasl_star_def, BIN_OPTION_MAP_ALL_DEF_THM] THEN
@@ -3168,7 +3168,7 @@ REPEAT STRIP_TAC THENL [
    Q.ABBREV_TAC `h = (INF_fasl_action_order (\g. ?x:'b. g = best_local_action f (qP1 x) (qP2 x)))` THEN
    FULL_SIMP_TAC std_ss [IS_INFIMUM_def, IS_LOWER_BOUND_def, IN_ABS, IN_UNIV,
       GSYM LEFT_FORALL_IMP_THM] THEN
-   Q.PAT_ASSUM `!b. X b ==> Y b` MATCH_MP_TAC THEN
+   Q.PAT_X_ASSUM `!b. X b ==> Y b` MATCH_MP_TAC THEN
    METIS_TAC[best_local_action_BEST]
 ]);
 
@@ -3387,7 +3387,7 @@ SIMP_TAC std_ss [ASL_IS_INTUITIONISTIC_def, asl_star_def, IN_UNIV,
    ASL_INTUITIONISTIC_NEGATION_REWRITE, IN_ABS, EXTENSION] THEN
 REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
    REPEAT STRIP_TAC THEN
-   `ASL_IS_SUBSTATE f p x` by ALL_TAC THEN1 (
+   `ASL_IS_SUBSTATE f p x` by (
       SIMP_TAC std_ss [ASL_IS_SUBSTATE_def] THEN
       PROVE_TAC[]
    ) THEN
@@ -3446,7 +3446,7 @@ val ASL_IS_INTUITIONISTIC___AND = store_thm ("ASL_IS_INTUITIONISTIC___AND",
 
 
 REPEAT STRIP_TAC THEN
-Q.PAT_ASSUM `IS_SEPARATION_COMBINATOR f` ASSUME_TAC THEN
+Q.PAT_X_ASSUM `IS_SEPARATION_COMBINATOR f` ASSUME_TAC THEN
 FULL_SIMP_TAC std_ss [ASL_IS_INTUITIONISTIC___REWRITE] THEN
 SIMP_TAC std_ss [asl_and_def, IN_ABS] THEN
 METIS_TAC[]);
@@ -3462,7 +3462,7 @@ val ASL_IS_INTUITIONISTIC___OR = store_thm ("ASL_IS_INTUITIONISTIC___OR",
 
 
 REPEAT STRIP_TAC THEN
-Q.PAT_ASSUM `IS_SEPARATION_COMBINATOR f` ASSUME_TAC THEN
+Q.PAT_X_ASSUM `IS_SEPARATION_COMBINATOR f` ASSUME_TAC THEN
 FULL_SIMP_TAC std_ss [ASL_IS_INTUITIONISTIC___REWRITE] THEN
 SIMP_TAC std_ss [asl_or_def, IN_ABS] THEN
 METIS_TAC[]);
@@ -3610,9 +3610,9 @@ REPEAT STRIP_TAC THENL [
    METIS_TAC [OPTION_IS_RIGHT_CANCELLATIVE_def,
       optionTheory.option_CLAUSES],
 
-   Q.PAT_ASSUM `v = X` MP_TAC THEN
+   Q.PAT_X_ASSUM `v = X` MP_TAC THEN
    FULL_SIMP_TAC std_ss [ASL_IS_SUBSTATE_def] THEN
-   `s1 IN v /\ s1' IN v` by ALL_TAC THEN1 (
+   `s1 IN v /\ s1' IN v` by (
       UNABBREV_ALL_TAC THEN
       SIMP_TAC std_ss [IN_ABS] THEN
       `COMM f` by FULL_SIMP_TAC std_ss [IS_SEPARATION_COMBINATOR_EXPAND_THM] THEN
@@ -3689,18 +3689,18 @@ SIMP_TAC std_ss [ASL_IS_LOCAL_ACTION___ALTERNATIVE_EXT_DEF,
    asla_assume_assert_def] THEN
 REPEAT STRIP_TAC THEN
 Cases_on `s3 IN P` THENL [
-   `~(s1 IN ASL_INTUITIONISTIC_NEGATION f P)` by ALL_TAC THEN1 (
+   `~(s1 IN ASL_INTUITIONISTIC_NEGATION f P)` by (
       FULL_SIMP_TAC std_ss [ASL_INTUITIONISTIC_NEGATION_REWRITE,
         IN_ABS] THEN
       METIS_TAC[]
    ) THEN
    FULL_SIMP_TAC std_ss [IN_SING] THEN
-   Q.PAT_ASSUM `X = v1` (ASSUME_TAC o GSYM) THEN
+   Q.PAT_X_ASSUM `X = v1` (ASSUME_TAC o GSYM) THEN
    ASM_SIMP_TAC std_ss [IN_SING],
 
 
-   `~(s1 IN P)` by ALL_TAC THEN1 (
-      Q.PAT_ASSUM `ASL_IS_INTUITIONISTIC f P` MP_TAC THEN
+   `~(s1 IN P)` by (
+      Q.PAT_X_ASSUM `ASL_IS_INTUITIONISTIC f P` MP_TAC THEN
       FULL_SIMP_TAC std_ss [ASL_IS_INTUITIONISTIC___REWRITE] THEN
       METIS_TAC[]
    ) THEN
@@ -3708,7 +3708,7 @@ Cases_on `s3 IN P` THENL [
    `ASL_IS_INTUITIONISTIC f (ASL_INTUITIONISTIC_NEGATION f P)` by
       METIS_TAC[ASL_INTUITIONISTIC_NEGATION___IS_INTUITIONISTIC] THEN
    POP_ASSUM MP_TAC THEN
-   Q.PAT_ASSUM `X = v1` (ASSUME_TAC o GSYM) THEN
+   Q.PAT_X_ASSUM `X = v1` (ASSUME_TAC o GSYM) THEN
    FULL_SIMP_TAC std_ss [ASL_IS_INTUITIONISTIC___REWRITE, NOT_IN_EMPTY] THEN
    METIS_TAC[]
 ]);
@@ -3759,7 +3759,7 @@ SIMP_TAC std_ss [ASL_IS_LOCAL_ACTION___ALTERNATIVE_DEF,
     asla_check_def, COND_RAND, COND_RATOR, IN_SING,
     IS_SEPARATION_COMBINATOR_EXPAND_THM] THEN
 REPEAT STRIP_TAC THEN
-Q.PAT_ASSUM `X = SOME s3` (ASSUME_TAC o GSYM) THEN
+Q.PAT_X_ASSUM `X = SOME s3` (ASSUME_TAC o GSYM) THEN
 ASM_SIMP_TAC std_ss [] THEN
 `f (f (SOME s1') (SOME s2')) (SOME s2) =
   f (f (SOME s1') (SOME s2)) (SOME s2')` by METIS_TAC[COMM_DEF, ASSOC_DEF] THEN
@@ -3768,10 +3768,10 @@ Cases_on `f (SOME s1') (SOME s2)` THEN1 (
 ) THEN
 Q.EXISTS_TAC `x` THEN
 Q.EXISTS_TAC `s2'` THEN
-Q.PAT_ASSUM `X = SOME x` (ASSUME_TAC o GSYM) THEN
+Q.PAT_X_ASSUM `X = SOME x` (ASSUME_TAC o GSYM) THEN
 ASM_SIMP_TAC std_ss [] THEN
 
-Q.PAT_ASSUM `!s1 s2 s3. P s1 s2 s3 ==> IS_SOME (a1 s3)` MATCH_MP_TAC THEN
+Q.PAT_X_ASSUM `!s1 s2 s3. P s1 s2 s3 ==> IS_SOME (a1 s3)` MATCH_MP_TAC THEN
 METIS_TAC[]);
 
 
@@ -3851,15 +3851,15 @@ REPEAT STRIP_TAC THENL [
    SIMP_TAC std_ss [TRANS_FUNC_SAFETY_MONOTONICITY_REWRITE,
       IS_SOME___asla_seq] THEN
    REPEAT STRIP_TAC THEN
-   `?s1. a1 s3 = SOME s1` by ALL_TAC THEN1 (
+   `?s1. a1 s3 = SOME s1` by (
       FULL_SIMP_TAC std_ss [TRANS_FUNC_SAFETY_MONOTONICITY_REWRITE] THEN
       METIS_TAC[option_CLAUSES]
    ) THEN
    ASM_SIMP_TAC std_ss [] THEN
    REPEAT STRIP_TAC THEN
 
-   `?t'. (SOME e = f (SOME t') (SOME s2)) /\ t' IN s1'` by ALL_TAC THEN1 (
-      Q.PAT_ASSUM `TRANS_FUNC_FRAME_PROPERTY f a1`
+   `?t'. (SOME e = f (SOME t') (SOME s2)) /\ t' IN s1'` by (
+      Q.PAT_X_ASSUM `TRANS_FUNC_FRAME_PROPERTY f a1`
          (HO_MATCH_MP_TAC o (REWRITE_RULE [TRANS_FUNC_FRAME_PROPERTY_def])) THEN
       Q.EXISTS_TAC `s1` THEN
       ASM_SIMP_TAC std_ss []
@@ -3874,8 +3874,8 @@ REPEAT STRIP_TAC THENL [
    REPEAT STRIP_TAC THEN
 
    (*get rid of v1 v3*)
-   Q.PAT_ASSUM `v1 = X` (fn thm => FULL_SIMP_TAC std_ss [thm]) THEN
-   Q.PAT_ASSUM `v3 = X` (fn thm => FULL_SIMP_TAC std_ss [thm]) THEN
+   Q.PAT_X_ASSUM `v1 = X` (fn thm => FULL_SIMP_TAC std_ss [thm]) THEN
+   Q.PAT_X_ASSUM `v3 = X` (fn thm => FULL_SIMP_TAC std_ss [thm]) THEN
    FULL_SIMP_TAC std_ss [
       prove (``!x a s. ((x IN BIGUNION (IMAGE THE (IMAGE a s))) = (?e. x IN THE (a e) /\ e IN s))``,
          SIMP_TAC std_ss [IN_BIGUNION, IN_IMAGE, GSYM LEFT_EXISTS_AND_THM,
@@ -3888,16 +3888,16 @@ REPEAT STRIP_TAC THENL [
    FULL_SIMP_TAC std_ss [] THEN
 
 
-   `?e'. (SOME e = f (SOME e') (SOME s2)) /\ e' IN s1'` by ALL_TAC THEN1 (
-      Q.PAT_ASSUM `TRANS_FUNC_FRAME_PROPERTY f a1`
+   `?e'. (SOME e = f (SOME e') (SOME s2)) /\ e' IN s1'` by (
+      Q.PAT_X_ASSUM `TRANS_FUNC_FRAME_PROPERTY f a1`
          (HO_MATCH_MP_TAC o (REWRITE_RULE [TRANS_FUNC_FRAME_PROPERTY_def])) THEN
       Q.EXISTS_TAC `s1` THEN
       ASM_SIMP_TAC std_ss []
    ) THEN
 
    `?a2e'. a2 e' = SOME a2e'` by METIS_TAC[option_CLAUSES] THEN
-   `?e''. (SOME t = f (SOME e'') (SOME s2)) /\ e'' IN a2e'` by ALL_TAC THEN1 (
-      Q.PAT_ASSUM `TRANS_FUNC_FRAME_PROPERTY f a2`
+   `?e''. (SOME t = f (SOME e'') (SOME s2)) /\ e'' IN a2e'` by (
+      Q.PAT_X_ASSUM `TRANS_FUNC_FRAME_PROPERTY f a2`
          (HO_MATCH_MP_TAC o (REWRITE_RULE [TRANS_FUNC_FRAME_PROPERTY_def])) THEN
       Q.EXISTS_TAC `e'` THEN
       Q.EXISTS_TAC `e` THEN
@@ -3955,7 +3955,7 @@ Cases_on `SUP_fasl_order (IMAGE y x'')` THEN1 (
 FULL_SIMP_TAC std_ss [SOME___SUP_fasl_order, IN_IMAGE, GSYM LEFT_FORALL_IMP_THM] THEN
 `(IMAGE (\s. (if y s = NONE then NONE else
   SUP_fasl_order (IMAGE z (THE (y s))))) x'') =
-  (IMAGE (\s. (SUP_fasl_order (IMAGE z (THE (y s))))) x'')` by ALL_TAC THEN1 (
+  (IMAGE (\s. (SUP_fasl_order (IMAGE z (THE (y s))))) x'')` by (
 
    REWRITE_TAC [EXTENSION] THEN
    SIMP_TAC std_ss [IN_IMAGE] THEN
@@ -3977,7 +3977,7 @@ SIMP_TAC std_ss [GSYM IMAGE_COMPOSE, combinTheory.o_DEF] THEN
 
 `(IMAGE (\s. THE (if ?x. (NONE = z x) /\ x IN THE (y s) then  NONE else
        SOME (BIGUNION (IMAGE (\x. THE (z x)) (THE (y s)))))) x'') =
-  (IMAGE (\s. (BIGUNION (IMAGE (\x. THE (z x)) (THE (y s))))) x'')` by ALL_TAC THEN1 (
+  (IMAGE (\s. (BIGUNION (IMAGE (\x. THE (z x)) (THE (y s))))) x'')` by (
 
    REWRITE_TAC [EXTENSION] THEN
    SIMP_TAC std_ss [IN_IMAGE] THEN
@@ -4796,24 +4796,24 @@ SIMP_TAC std_ss [asla_seq_def] THEN
 Cases_on `b1 s = NONE` THEN1 (
    ASM_SIMP_TAC std_ss [fasl_order_THM]
 ) THEN
-`?vb1. b1 s = SOME vb1` by ALL_TAC THEN1 (
+`?vb1. b1 s = SOME vb1` by (
    Cases_on `b1 s` THEN FULL_SIMP_TAC std_ss []
 ) THEN
-`?va1. (a1 s = SOME va1) /\ (va1 SUBSET vb1)` by ALL_TAC THEN1 (
+`?va1. (a1 s = SOME va1) /\ (va1 SUBSET vb1)` by (
    `fasl_order (a1 s) (b1 s)` by PROVE_TAC[] THEN
    POP_ASSUM MP_TAC THEN
-   REPEAT (Q.PAT_ASSUM `!s. X s` (K ALL_TAC)) THEN
+   REPEAT (Q.PAT_X_ASSUM `!s. X s` (K ALL_TAC)) THEN
    ASM_SIMP_TAC std_ss [fasl_order_THM, GSYM LEFT_FORALL_IMP_THM]
 ) THEN
 FULL_SIMP_TAC std_ss [SUP_fasl_order_def] THEN
 Cases_on `NONE IN IMAGE b2 vb1` THEN1 (
    ASM_SIMP_TAC std_ss [fasl_order_THM]
 ) THEN
-`~(NONE IN IMAGE a2 va1)` by ALL_TAC THEN1 (
+`~(NONE IN IMAGE a2 va1)` by (
    FULL_SIMP_TAC std_ss [IN_IMAGE] THEN
    CCONTR_TAC THEN
    FULL_SIMP_TAC std_ss [] THEN
-   `b2 x = NONE` by ALL_TAC THEN1 (
+   `b2 x = NONE` by (
       METIS_TAC[fasl_order_THM, option_CLAUSES]
    ) THEN
    METIS_TAC[SUBSET_DEF]
@@ -4824,18 +4824,18 @@ FULL_SIMP_TAC std_ss [fasl_order_THM, SUBSET_DEF, IN_BIGUNION, IN_IMAGE,
    GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM] THEN
 REPEAT STRIP_TAC THEN
 Q.EXISTS_TAC `x'` THEN
-`?va2. a2 x' = SOME va2` by ALL_TAC THEN1 (
+`?va2. a2 x' = SOME va2` by (
    Cases_on `a2 x'` THENL [
       METIS_TAC[],
       FULL_SIMP_TAC std_ss []
    ]
 ) THEN
-`?vb2. (b2 x' = SOME vb2) /\ (va2 SUBSET vb2)` by ALL_TAC THEN1 (
+`?vb2. (b2 x' = SOME vb2) /\ (va2 SUBSET vb2)` by (
    Cases_on `b2 x'` THEN1 METIS_TAC[] THEN
 
    `fasl_order (a2 x') (b2 x')` by PROVE_TAC[] THEN
    POP_ASSUM MP_TAC THEN
-   REPEAT (Q.PAT_ASSUM `!s. X s` (K ALL_TAC)) THEN
+   REPEAT (Q.PAT_X_ASSUM `!s. X s` (K ALL_TAC)) THEN
    ASM_SIMP_TAC std_ss [fasl_order_THM]
 ) THEN
 FULL_SIMP_TAC std_ss [SUBSET_DEF]);
@@ -4864,7 +4864,7 @@ FULL_SIMP_TAC std_ss [SOME___asla_seq, GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXIS
 `?a1s. a1 s = SOME a1s` by METIS_TAC[] THEN
 ASM_SIMP_TAC std_ss [SUBSET_DEF, IN_BIGUNION, IN_IMAGE, asl_star_def,
    IN_ABS, GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM] THEN
-`!e. e IN a1s ==> ?e'. (SOME e = f (SOME e') (SOME s2)) /\ (e' IN s1')` by ALL_TAC THEN1 (
+`!e. e IN a1s ==> ?e'. (SOME e = f (SOME e') (SOME s2)) /\ (e' IN s1')` by (
    METIS_TAC[]
 ) THEN
 
@@ -4875,7 +4875,7 @@ REPEAT STRIP_TAC THEN
 `?a2x. a2 x''' = SOME a2x` by METIS_TAC[] THEN
 `?e'. (SOME x''' = f (SOME e') (SOME s2)) /\ (e' IN s1')` by METIS_TAC[] THEN
 
-Q.PAT_ASSUM `!s1 s2 s3. P s1 s2 s3` (MP_TAC (*a2*) o Q.SPECL [`s2`, `e'`, `x'''`, `s1''`, `a2x`, `x''`]) THEN
+Q.PAT_X_ASSUM `!s1 s2 s3. P s1 s2 s3` (MP_TAC (*a2*) o Q.SPECL [`s2`, `e'`, `x'''`, `s1''`, `a2x`, `x''`]) THEN
 `f (SOME s2) (SOME e') = f (SOME e') (SOME s2)` by METIS_TAC[COMM_DEF]  THEN
 FULL_SIMP_TAC std_ss [GSYM LEFT_FORALL_IMP_THM] THEN
 REPEAT STRIP_TAC THEN
@@ -4963,7 +4963,7 @@ Q.MATCH_ABBREV_TAC `
 `(!s1 s2.
     SOME s <> f (SOME s1) (SOME s2) \/
     (EVAL_asl_prim_command f pc1 s1 = NONE) \/
-    (EVAL_asl_prim_command f pc2 s2 = NONE)) = ~c` by ALL_TAC THEN1 (
+    (EVAL_asl_prim_command f pc2 s2 = NONE)) = ~c` by (
    Q.UNABBREV_TAC `c` THEN SIMP_TAC std_ss []
 ) THEN
 ASM_SIMP_TAC list_ss [ASL_TRACE_SEM_def, ASL_ATOMIC_ACTION_SEM_def,
@@ -5079,11 +5079,11 @@ Induct_on `t1` THEN1 (
    ASM_SIMP_TAC std_ss [ASL_TRACE_SEM_REWRITE, asla_skip_def, fasl_order_THM,
               INSERT_SUBSET, EMPTY_SUBSET] THEN
    STRIP_TAC THEN
-   Q.PAT_ASSUM `ASL_IS_LOCAL_ACTION f la` (MP_TAC o
+   Q.PAT_X_ASSUM `ASL_IS_LOCAL_ACTION f la` (MP_TAC o
                    Q.SPECL [`s2`, `s1`] o
                    REWRITE_RULE [ASL_IS_LOCAL_ACTION_def]) THEN
    `f (SOME s2) (SOME s1) = SOME s` by PROVE_TAC[IS_SEPARATION_COMBINATOR_def, COMM_DEF] THEN
-   Q.PAT_ASSUM `SOME s = X` (K ALL_TAC) THEN
+   Q.PAT_X_ASSUM `SOME s = X` (K ALL_TAC) THEN
    ASM_SIMP_TAC std_ss [ASL_IS_SEPARATE_def] THEN
    SIMP_TAC std_ss [fasl_order_THM, fasl_star_REWRITE,
           GSYM LEFT_FORALL_IMP_THM] THEN
@@ -5110,16 +5110,16 @@ Induct_on `t2` THEN1 (
    REPEAT STRIP_TAC THEN
    FULL_SIMP_TAC std_ss [IS_SEPARATION_COMBINATOR_EXPAND_THM,
       LOCALITY_CHARACTERISATION] THEN
-   `?las. la s = SOME las` by ALL_TAC THEN1 (
+   `?las. la s = SOME las` by (
       REWRITE_TAC[GSYM IS_SOME_EXISTS] THEN
-      Q.PAT_ASSUM `TRANS_FUNC_SAFETY_MONOTONICITY f la` (MATCH_MP_TAC o REWRITE_RULE[TRANS_FUNC_SAFETY_MONOTONICITY_REWRITE]) THEN
+      Q.PAT_X_ASSUM `TRANS_FUNC_SAFETY_MONOTONICITY f la` (MATCH_MP_TAC o REWRITE_RULE[TRANS_FUNC_SAFETY_MONOTONICITY_REWRITE]) THEN
       Q.EXISTS_TAC `s1` THEN
       Q.EXISTS_TAC `s2` THEN
       ASM_SIMP_TAC std_ss []
    ) THEN
    ASM_SIMP_TAC std_ss [] THEN
    REPEAT STRIP_TAC THEN
-   Q.PAT_ASSUM `TRANS_FUNC_FRAME_PROPERTY f la` (MP_TAC o Q.SPECL [`s1`, `s2`, `s`, `s1'`, `las`, `x`] o REWRITE_RULE[TRANS_FUNC_FRAME_PROPERTY_def]) THEN
+   Q.PAT_X_ASSUM `TRANS_FUNC_FRAME_PROPERTY f la` (MP_TAC o Q.SPECL [`s1`, `s2`, `s`, `s1'`, `las`, `x`] o REWRITE_RULE[TRANS_FUNC_FRAME_PROPERTY_def]) THEN
    ASM_SIMP_TAC std_ss [] THEN
    METIS_TAC[]
 ) THEN
@@ -5138,8 +5138,8 @@ Q.ABBREV_TAC `z3 = IMAGE (\x. h'::x) (ASL_TRACE_ZIP t1 (h::t2)) UNION
               IMAGE (\x. h::x) (ASL_TRACE_ZIP (h'::t1) t2)` THEN
 
 (*forget about the check. It evaluates to skip anyhow*)
-Tactical.REVERSE (`!t3. t3 IN z3 ==> (fasl_order (ASL_TRACE_SEM (f,lock_env) t3 s)
-      (fasl_star f (SOME vq1) (SOME vq2)))` by ALL_TAC) THEN1 (
+`!t3. t3 IN z3 ==> (fasl_order (ASL_TRACE_SEM (f,lock_env) t3 s)
+      (fasl_star f (SOME vq1) (SOME vq2)))` suffices_by (STRIP_TAC THEN
 
    Cases_on `~ASL_IS_PRIM_COMMAND_ATOMIC_ACTION h'` THEN1 METIS_TAC[] THEN
    Cases_on `~ASL_IS_PRIM_COMMAND_ATOMIC_ACTION h` THEN1 METIS_TAC[] THEN
@@ -5151,14 +5151,14 @@ Tactical.REVERSE (`!t3. t3 IN z3 ==> (fasl_order (ASL_TRACE_SEM (f,lock_env) t3 
    Q.EXISTS_TAC `s1` THEN
    Q.EXISTS_TAC `s2` THEN
    ASM_REWRITE_TAC[] THEN
-   Q.PAT_ASSUM `fasl_order X (SOME vq1)` MP_TAC THEN
-   Q.PAT_ASSUM `fasl_order X (SOME vq2)` MP_TAC THEN
+   Q.PAT_X_ASSUM `fasl_order X (SOME vq1)` MP_TAC THEN
+   Q.PAT_X_ASSUM `fasl_order X (SOME vq2)` MP_TAC THEN
    ASM_SIMP_TAC list_ss [ASL_TRACE_SEM_def, fasl_order_THM,
       asla_big_seq_def, SOME___asla_seq, ASL_ATOMIC_ACTION_SEM_def] THEN
    REPEAT STRIP_TAC THEN
    ASM_SIMP_TAC std_ss []
 ) THEN
-Q.PAT_ASSUM `t IN X` (K ALL_TAC) THEN
+Q.PAT_X_ASSUM `t IN X` (K ALL_TAC) THEN
 
 (*second conjunct,
     ((ASL_ATOMIC_ACTION_SEM (env,lock_env) h) = la1)
@@ -5178,7 +5178,6 @@ Q.UNABBREV_TAC `z3` THEN
 ASM_SIMP_TAC std_ss [IN_UNION, IN_IMAGE, DISJ_IMP_THM, FORALL_AND_THM, GSYM LEFT_FORALL_IMP_THM,
     ASL_TRACE_SEM_REWRITE] THEN
 
-Tactical.REVERSE (
 `!la1 la2 la3 vq1 vq2 s s1 s2. (
    (ASL_IS_LOCAL_ACTION f la1) /\
    (ASL_IS_LOCAL_ACTION f la2) /\
@@ -5190,17 +5189,17 @@ Tactical.REVERSE (
       fasl_order (la2 s') (fasl_star f (SOME vq1) q2)))
 
 ==>
-   (fasl_order ((asla_seq la1 la2) s) (fasl_star f (SOME vq1) (SOME vq2)))` by ALL_TAC) THEN1 (
+   (fasl_order ((asla_seq la1 la2) s) (fasl_star f (SOME vq1) (SOME vq2)))` suffices_by (
 
    REPEAT STRIP_TAC THENL [
-      `COMM (fasl_star f)` by ALL_TAC THEN1 (
+      `COMM (fasl_star f)` by (
          SIMP_TAC std_ss [fasl_star_REWRITE] THEN
          METIS_TAC[IS_COMM_MONOID___asl_star_emp, COMM_MONOID_THM]
       ) THEN
       `fasl_star f (SOME vq1) (SOME vq2) =
         fasl_star f (SOME vq2) (SOME vq1)` by METIS_TAC[COMM_DEF] THEN
       ASM_REWRITE_TAC[] THEN
-      Q.PAT_ASSUM `!la1 la2. P la1 la2` MATCH_MP_TAC THEN
+      Q.PAT_X_ASSUM `!la1 la2. P la1 la2` MATCH_MP_TAC THEN
       Q.EXISTS_TAC `ASL_TRACE_SEM (f,lock_env) t1` THEN
       Q.EXISTS_TAC `s2` THEN
       Q.EXISTS_TAC `s1` THEN
@@ -5211,11 +5210,11 @@ Tactical.REVERSE (
          METIS_TAC[ASL_IS_LOCAL_ACTION___ASL_TRACE_SEM],
          METIS_TAC[IS_SEPARATION_COMBINATOR_def, COMM_DEF],
 
-         Q.PAT_ASSUM `!h2'' q1'. P h2'' q1'` (K ALL_TAC) THEN
+         Q.PAT_X_ASSUM `!h2'' q1'. P h2'' q1'` (K ALL_TAC) THEN
          `fasl_star f (SOME vq2) q2' = fasl_star f q2' (SOME vq2)` by METIS_TAC[COMM_DEF] THEN
          ASM_REWRITE_TAC[] THEN
 
-         Q.PAT_ASSUM `!h2'' q1'. P h2'' q1'` HO_MATCH_MP_TAC THEN
+         Q.PAT_X_ASSUM `!h2'' q1'. P h2'' q1'` HO_MATCH_MP_TAC THEN
          Q.EXISTS_TAC `s2'` THEN
          Q.EXISTS_TAC `s2` THEN
          Q.EXISTS_TAC `h::t2` THEN
@@ -5224,7 +5223,7 @@ Tactical.REVERSE (
       ],
 
 
-      Q.PAT_ASSUM `!la1 la2. P la1 la2` MATCH_MP_TAC THEN
+      Q.PAT_X_ASSUM `!la1 la2. P la1 la2` MATCH_MP_TAC THEN
       Q.EXISTS_TAC `ASL_TRACE_SEM (f,lock_env) t2` THEN
       Q.EXISTS_TAC `s1` THEN
       Q.EXISTS_TAC `s2` THEN
@@ -5234,7 +5233,7 @@ Tactical.REVERSE (
          METIS_TAC[ASL_IS_LOCAL_ACTION___ASL_TRACE_SEM],
          METIS_TAC[ASL_IS_LOCAL_ACTION___ASL_TRACE_SEM],
 
-         Q.PAT_ASSUM `!h2'' q1'. P h2'' q1'` HO_MATCH_MP_TAC THEN
+         Q.PAT_X_ASSUM `!h2'' q1'. P h2'' q1'` HO_MATCH_MP_TAC THEN
          Q.EXISTS_TAC `h'` THEN
          Q.EXISTS_TAC `s1` THEN
          Q.EXISTS_TAC `s2'` THEN
@@ -5245,13 +5244,13 @@ Tactical.REVERSE (
 
 
 
-Q.PAT_ASSUM `IS_SEPARATION_COMBINATOR f` MP_TAC THEN
+Q.PAT_X_ASSUM `IS_SEPARATION_COMBINATOR f` MP_TAC THEN
 REPEAT (POP_ASSUM (K ALL_TAC)) THEN
 REPEAT STRIP_TAC THEN
 
 `?vq3. (la1 s2 = SOME vq3) /\
       (!s. s IN vq3 ==> IS_SOME (la3 s)) /\
-      (BIGUNION (IMAGE THE (IMAGE la3 vq3)) SUBSET vq2)` by ALL_TAC THEN1 (
+      (BIGUNION (IMAGE THE (IMAGE la3 vq3)) SUBSET vq2)` by (
 FULL_SIMP_TAC std_ss [fasl_order_THM, SOME___asla_seq] THEN
 METIS_TAC[]) THEN
 
@@ -5259,20 +5258,20 @@ SIMP_TAC std_ss [fasl_star_REWRITE, fasl_order_THM, asl_star_def,
    SUBSET_DEF, IN_ABS, SOME___asla_seq, GSYM LEFT_EXISTS_AND_THM,
    GSYM RIGHT_EXISTS_AND_THM] THEN
 
-`?vq4. (la1 s = SOME vq4) /\ (!x. x IN vq4 ==> ?x0. (SOME x = f (SOME s1) (SOME x0)) /\ (x0 IN vq3))` by ALL_TAC THEN1 (
-   Q.PAT_ASSUM `ASL_IS_LOCAL_ACTION f la1` MP_TAC THEN
+`?vq4. (la1 s = SOME vq4) /\ (!x. x IN vq4 ==> ?x0. (SOME x = f (SOME s1) (SOME x0)) /\ (x0 IN vq3))` by (
+   Q.PAT_X_ASSUM `ASL_IS_LOCAL_ACTION f la1` MP_TAC THEN
    ASM_SIMP_TAC std_ss [ASL_IS_LOCAL_ACTION___ALTERNATIVE_DEF, IS_SOME_EXISTS,
       GSYM LEFT_EXISTS_IMP_THM, GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM,
       GSYM LEFT_FORALL_IMP_THM] THEN
    REPEAT STRIP_TAC THEN
-   Q.PAT_ASSUM  `!s1 s2 s3 y. P s1 s2 s3 y ==> (?y. la1 s3 = SOME y)` (
+   Q.PAT_X_ASSUM  `!s1 s2 s3 y. P s1 s2 s3 y ==> (?y. la1 s3 = SOME y)` (
       MP_TAC o Q.SPECL [`s2`, `s1`, `s`]) THEN
    `f (SOME s2) (SOME s1) = f (SOME s1) (SOME s2)` by METIS_TAC[IS_SEPARATION_COMBINATOR_def, COMM_DEF] THEN
    ASM_SIMP_TAC std_ss [GSYM LEFT_FORALL_IMP_THM] THEN
    REPEAT STRIP_TAC THEN
    lcsymtacs.rename1 `la1 s = SOME y` THEN
    lcsymtacs.rename1 `x IN y` THEN
-   Q.PAT_ASSUM  `!s1 s2 s3 y. P s1 s2 s3 y` (
+   Q.PAT_X_ASSUM  `!s1 s2 s3 y. P s1 s2 s3 y` (
       MP_TAC o Q.SPECL [`s2`, `s1`, `s`, `vq3`, `y`, `x`]) THEN
    ASM_SIMP_TAC std_ss [GSYM LEFT_FORALL_IMP_THM] THEN
    METIS_TAC[IS_SEPARATION_COMBINATOR_def, COMM_DEF]
@@ -5295,9 +5294,9 @@ POP_ASSUM MP_TAC THEN
 ASM_SIMP_TAC std_ss [fasl_star_REWRITE, fasl_order_THM, GSYM LEFT_FORALL_IMP_THM,
    SUBSET_DEF, asl_star_def, IN_ABS] THEN
 REPEAT STRIP_TAC THEN
-Tactical.REVERSE (`!q. q IN vq5 ==> q IN vq2` by ALL_TAC) THEN1 METIS_TAC[] THEN
+`!q. q IN vq5 ==> q IN vq2` suffices_by METIS_TAC[] THEN
 REPEAT STRIP_TAC THEN
-Q.PAT_ASSUM `!x x''. P x x''` MATCH_MP_TAC THEN
+Q.PAT_X_ASSUM `!x x''. P x x''` MATCH_MP_TAC THEN
 Q.EXISTS_TAC `x0` THEN
 ASM_SIMP_TAC std_ss []);
 
@@ -6360,7 +6359,7 @@ REWRITE_TAC [Once EXTENSION] THEN
 SIMP_TAC std_ss [IN_IMAGE, IN_SING, NOT_IN_EMPTY,
    EQ_IMP_THM, GSYM LEFT_FORALL_IMP_THM, FORALL_AND_THM] THEN
 REPEAT STRIP_TAC THEN
-`?pt. pt IN prog`  by ALL_TAC THEN1 (
+`?pt. pt IN prog` by (
    FULL_SIMP_TAC std_ss [EXTENSION, NOT_IN_EMPTY] THEN
    METIS_TAC[]
 ) THEN
@@ -6398,21 +6397,21 @@ FULL_SIMP_TAC std_ss [asla_big_seq_def, asla_seq_skip] THEN
 FULL_SIMP_TAC std_ss [SOME___asla_seq, IS_SOME___asla_seq] THEN
 
 SIMP_TAC std_ss [fasl_order_THM] THEN
-Q.PAT_ASSUM `IS_SEPARATION_COMBINATOR f` ASSUME_TAC THEN
-Q.PAT_ASSUM `ASL_IS_PRECISE f P` ASSUME_TAC THEN
+Q.PAT_X_ASSUM `IS_SEPARATION_COMBINATOR f` ASSUME_TAC THEN
+Q.PAT_X_ASSUM `ASL_IS_PRECISE f P` ASSUME_TAC THEN
 FULL_SIMP_TAC std_ss [asla_annihilation_PRECISE_THM, COND_RAND, COND_RATOR,
    asla_materialisation_THM, LET_THM] THEN
 
-Q.PAT_ASSUM `x = X` (K ALL_TAC) THEN
-Q.PAT_ASSUM `X = s1` (ASSUME_TAC o GSYM) THEN
+Q.PAT_X_ASSUM `x = X` (K ALL_TAC) THEN
+Q.PAT_X_ASSUM `X = s1` (ASSUME_TAC o GSYM) THEN
 FULL_SIMP_TAC std_ss [GSYM MEMBER_NOT_EMPTY, IN_ABS, GSYM LEFT_FORALL_IMP_THM] THEN
 
 `?lax. la x = SOME lax` by METIS_TAC[] THEN
 
-`?las. la s = SOME las` by ALL_TAC THEN1 (
+`?las. la s = SOME las` by (
    REWRITE_TAC [GSYM IS_SOME_EXISTS] THEN
    FULL_SIMP_TAC std_ss [LOCALITY_CHARACTERISATION, TRANS_FUNC_SAFETY_MONOTONICITY_REWRITE] THEN
-   Q.PAT_ASSUM `!s1 s2 s3. X s1 s2 ==> IS_SOME (la s3)` MATCH_MP_TAC THEN
+   Q.PAT_X_ASSUM `!s1 s2 s3. X s1 s2 ==> IS_SOME (la s3)` MATCH_MP_TAC THEN
    Q.EXISTS_TAC `x` THEN
    Q.EXISTS_TAC `s1'` THEN
    ASM_SIMP_TAC std_ss [IS_SOME_EXISTS] THEN
@@ -6431,7 +6430,7 @@ ASM_SIMP_TAC std_ss [IN_BIGUNION, GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AN
    IN_IMAGE, asla_materialisation_THM, asl_star_def, IN_ABS, IN_SING] THEN
 
 FULL_SIMP_TAC std_ss [LOCALITY_CHARACTERISATION] THEN
-Q.PAT_ASSUM `TRANS_FUNC_FRAME_PROPERTY f la` (MP_TAC o Q.SPECL [`x`, `s1'`, `s`, `lax`, `las`, `x'`] o REWRITE_RULE [TRANS_FUNC_FRAME_PROPERTY_def]) THEN
+Q.PAT_X_ASSUM `TRANS_FUNC_FRAME_PROPERTY f la` (MP_TAC o Q.SPECL [`x`, `s1'`, `s`, `lax`, `las`, `x'`] o REWRITE_RULE [TRANS_FUNC_FRAME_PROPERTY_def]) THEN
 
 ASM_SIMP_TAC std_ss [] THEN
 METIS_TAC[IS_SEPARATION_COMBINATOR_def, COMM_DEF]);
@@ -6786,7 +6785,7 @@ Tactical.REVERSE CONJ_TAC THEN1 (
 REPEAT STRIP_TAC THEN
 `?t0 u1. (t = t0 ++ [asl_aa_prolaag l] ++ u1) /\
       (ASL_TRACE_IS_LOCK_FREE {l} t0) /\
-      ASL_TRACE_IS_NUM_LOCK_SYNCHRONISED (SUC n) l (asl_aa_prolaag l::u1)` by ALL_TAC THEN1 (
+      ASL_TRACE_IS_NUM_LOCK_SYNCHRONISED (SUC n) l (asl_aa_prolaag l::u1)` by (
    Induct_on `t` THENL [
       SIMP_TAC list_ss [ASL_TRACE_IS_NUM_LOCK_SYNCHRONISED_def,
          ASL_TRACE_GET_LOCKS_def, LIST_NUM_STAR_def],
@@ -6813,8 +6812,8 @@ Q.EXISTS_TAC `t0` THEN
 ASM_SIMP_TAC std_ss [GSYM APPEND_ASSOC, APPEND_11] THEN
 
 (*t is not needed any more*)
-Q.PAT_ASSUM `t = X` (K ALL_TAC) THEN
-Q.PAT_ASSUM `ASL_TRACE_IS_NUM_LOCK_SYNCHRONISED (SUC n) l t` (K ALL_TAC) THEN
+Q.PAT_X_ASSUM `t = X` (K ALL_TAC) THEN
+Q.PAT_X_ASSUM `ASL_TRACE_IS_NUM_LOCK_SYNCHRONISED (SUC n) l t` (K ALL_TAC) THEN
 
 Induct_on `u1` THENL [
    SIMP_TAC list_ss [ASL_TRACE_IS_NUM_LOCK_SYNCHRONISED_REWRITE],
@@ -7055,7 +7054,7 @@ val ASL_TRACE_IS_NUM_LOCK_SYNCHRONISED___REMOVE_LOCKS_2 = store_thm ("ASL_TRACE_
 SIMP_TAC list_ss [ASL_TRACE_IS_NUM_LOCK_SYNCHRONISED_def,
    ASL_TRACE_GET_REMOVE_LOCKS, LIST_NUM_STAR_def] THEN
 REPEAT STRIP_TAC THEN
-`{l} DIFF L = {l}` by ALL_TAC THEN1 (
+`{l} DIFF L = {l}` by (
    ASM_SIMP_TAC std_ss [EXTENSION, IN_SING, IN_DIFF] THEN
    METIS_TAC[]
 ) THEN
@@ -7093,9 +7092,9 @@ REPEAT STRIP_TAC THEN
 FULL_SIMP_TAC std_ss [ASL_TRACE_IS_NUM_LOCK_SYNCHRONISED_CHARACTERISATION] THEN
 SIMP_TAC std_ss [GSYM ASL_TRACE_INV_LOCK_FLAT_def] THEN
 
-Q.PAT_ASSUM `t = X` (K ALL_TAC) THEN
-Q.PAT_ASSUM `EVERY X tl` MP_TAC THEN
-Q.PAT_ASSUM `LENGTH tl = X` MP_TAC THEN
+Q.PAT_X_ASSUM `t = X` (K ALL_TAC) THEN
+Q.PAT_X_ASSUM `EVERY X tl` MP_TAC THEN
+Q.PAT_X_ASSUM `LENGTH tl = X` MP_TAC THEN
 
 SIMP_TAC std_ss [AND_IMP_INTRO, GSYM CONJ_ASSOC] THEN
 Q.SPEC_TAC (`tl`, `tl`) THEN
@@ -7120,13 +7119,13 @@ completeInduct_on `n` THEN
 
    FULL_SIMP_TAC std_ss [GSYM RIGHT_FORALL_IMP_THM] THEN
    REPEAT STRIP_TAC THEN
-   `?tl0 tl1 tl2. (tl = tl0::tl1::tl2) /\ (LENGTH tl2 = SUC (2 * m))` by ALL_TAC THEN1 (
+   `?tl0 tl1 tl2. (tl = tl0::tl1::tl2) /\ (LENGTH tl2 = SUC (2 * m))` by (
       `LENGTH tl = SUC (SUC (SUC (2 * m)))` by DECIDE_TAC THEN
       POP_ASSUM MP_TAC THEN
       SIMP_TAC list_ss [LENGTH_EQ_NUM, GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM,
          GSYM LEFT_FORALL_IMP_THM]
    ) THEN
-   Q.PAT_ASSUM `!m' tl. P m' tl` (fn thm =>
+   Q.PAT_X_ASSUM `!m' tl. P m' tl` (fn thm =>
       MP_TAC (Q.SPECL [`0`, `[tl0]`] thm) THEN
       MP_TAC (Q.SPECL [`m`, `tl2`] thm)
    ) THEN
@@ -7169,27 +7168,27 @@ Q.ABBREV_TAC `AAC =
 Q.ABBREV_TAC `Z = IMAGE (\x. h'::x) (ASL_TRACE_ZIP t1 (h::t2)) UNION
        IMAGE (\x. h::x) (ASL_TRACE_ZIP (h'::t1) t2)` THEN
 STRIP_TAC THEN
-Tactical.REVERSE (`!u. u IN Z ==>
+`!u. u IN Z ==>
     (LIST_ELEM_COUNT aa u >=
     LIST_ELEM_COUNT aa (h'::t1) + LIST_ELEM_COUNT aa (h::t2) /\
     (~ASL_IS_CHECK_ATOMIC_ACTION aa ==>
      (LIST_ELEM_COUNT aa u =
-      LIST_ELEM_COUNT aa (h'::t1) + LIST_ELEM_COUNT aa (h::t2))))` by ALL_TAC) THEN1 (
+      LIST_ELEM_COUNT aa (h'::t1) + LIST_ELEM_COUNT aa (h::t2))))` suffices_by (STRIP_TAC THEN
    Cases_on `AAC` THENL [
       FULL_SIMP_TAC list_ss [IN_IMAGE] THEN
       RES_TAC THEN
       REPEAT STRIP_TAC THENL [
          `LIST_ELEM_COUNT aa (asl_aa_check (ASL_GET_PRIM_COMMAND_ATOMIC_ACTION h') (ASL_GET_PRIM_COMMAND_ATOMIC_ACTION h)::x) >=
-         LIST_ELEM_COUNT aa x` by ALL_TAC THEN1 (
+         LIST_ELEM_COUNT aa x` by (
             SIMP_TAC list_ss [LIST_ELEM_COUNT_DEF, COND_RAND, COND_RATOR]
          ) THEN
          DECIDE_TAC,
 
 
          `LIST_ELEM_COUNT aa (asl_aa_check (ASL_GET_PRIM_COMMAND_ATOMIC_ACTION h') (ASL_GET_PRIM_COMMAND_ATOMIC_ACTION h)::x) =
-         LIST_ELEM_COUNT aa x` by ALL_TAC THEN1 (
+         LIST_ELEM_COUNT aa x` by (
             SIMP_TAC list_ss [LIST_ELEM_COUNT_DEF, COND_RAND, COND_RATOR] THEN
-            Q.PAT_ASSUM `~(ASL_IS_CHECK_ATOMIC_ACTION aa)` MP_TAC THEN
+            Q.PAT_X_ASSUM `~(ASL_IS_CHECK_ATOMIC_ACTION aa)` MP_TAC THEN
             Cases_on `aa` THEN
             SIMP_TAC std_ss [ASL_IS_CHECK_ATOMIC_ACTION_def,
                asl_atomic_action_distinct]
@@ -7204,10 +7203,10 @@ Tactical.REVERSE (`!u. u IN Z ==>
 bossLib.UNABBREV_ALL_TAC THEN
 SIMP_TAC list_ss [IN_IMAGE, IN_UNION, DISJ_IMP_THM,
    FORALL_AND_THM, GSYM LEFT_FORALL_IMP_THM] THEN
-Q.PAT_ASSUM `t IN X` (K ALL_TAC) THEN
+Q.PAT_X_ASSUM `t IN X` (K ALL_TAC) THEN
 CONJ_TAC THENL [
    GEN_TAC THEN STRIP_TAC THEN
-   Q.PAT_ASSUM `!t aa t2. t IN ASL_TRACE_ZIP t1 t2 ==> X aa t t2`
+   Q.PAT_X_ASSUM `!t aa t2. t IN ASL_TRACE_ZIP t1 t2 ==> X aa t t2`
       (MP_TAC o Q.SPECL [`x`, `aa`, `h::t2`]) THEN
    ASM_SIMP_TAC std_ss [] THEN
    Cases_on `h' = aa` THEN (
@@ -7215,7 +7214,7 @@ CONJ_TAC THENL [
    ),
 
    GEN_TAC THEN STRIP_TAC THEN
-   Q.PAT_ASSUM `!h t aa. t IN ASL_TRACE_ZIP (h::t1) t2 ==> X aa t h`
+   Q.PAT_X_ASSUM `!h t aa. t IN ASL_TRACE_ZIP (h::t1) t2 ==> X aa t h`
       (MP_TAC o Q.SPECL [`h'`, `x`, `aa`]) THEN
    ASM_SIMP_TAC std_ss [] THEN
    Cases_on `h = aa` THEN (
@@ -7286,13 +7285,13 @@ Q.ABBREV_TAC `z = IMAGE (\x. h'::x) (ASL_TRACE_ZIP t1 (h::t2)) UNION
        IMAGE (\x. h::x) (ASL_TRACE_ZIP (h'::t1) t2)` THEN
 REPEAT STRIP_TAC THEN
 
-Tactical.REVERSE (`!t. t IN z ==> ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK l (n1 + n2) t` by ALL_TAC) THEN1 (
+`!t. t IN z ==> ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK l (n1 + n2) t` suffices_by (STRIP_TAC THEN
    Cases_on `aa_cond` THEN (
       FULL_SIMP_TAC list_ss [IN_IMAGE, ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK_THM,
          ASL_IS_SING_LOCK_ATOMIC_ACTION_REWRITE]
    )
 ) THEN
-Q.PAT_ASSUM `t IN X` (K ALL_TAC) THEN
+Q.PAT_X_ASSUM `t IN X` (K ALL_TAC) THEN
 bossLib.UNABBREV_ALL_TAC THEN
 SIMP_TAC std_ss [IN_UNION, IN_IMAGE, DISJ_IMP_THM, FORALL_AND_THM, GSYM LEFT_FORALL_IMP_THM] THEN
 REPEAT STRIP_TAC THENL [
@@ -7361,9 +7360,9 @@ Q.ABBREV_TAC `aa_cond = ASL_IS_PRIM_COMMAND_ATOMIC_ACTION h' /\
             ASL_IS_PRIM_COMMAND_ATOMIC_ACTION h` THEN
 Q.ABBREV_TAC `z = IMAGE (\x. h'::x) (ASL_TRACE_ZIP t1 (h::t2)) UNION
        IMAGE (\x. h::x) (ASL_TRACE_ZIP (h'::t1) t2)` THEN
-Tactical.REVERSE (`!t. t IN z ==> ?t'.
+`!t. t IN z ==> ?t'.
       t' IN ASL_TRACE_ZIP (FILTER P (h'::t1)) (FILTER P (h::t2)) /\
-      (FILTER P t = FILTER P t')` by ALL_TAC) THEN1 (
+      (FILTER P t = FILTER P t')` suffices_by (STRIP_TAC THEN
 
    Cases_on `aa_cond` THEN ASM_REWRITE_TAC[] THEN
    FULL_SIMP_TAC list_ss [IN_IMAGE, GSYM LEFT_FORALL_IMP_THM]
@@ -7378,8 +7377,8 @@ REPEAT STRIP_TAC THENL [
    Q.ABBREV_TAC `t3 = FILTER P t1` THEN
    Q.ABBREV_TAC `t4 = FILTER P (h::t2)` THEN
    NTAC 2 (POP_ASSUM (K ALL_TAC)) THEN
-   Q.PAT_ASSUM `!h t. X h t` (K ALL_TAC) THEN
-   Q.PAT_ASSUM `!t t2. X t t2` (K ALL_TAC) THEN
+   Q.PAT_X_ASSUM `!h t. X h t` (K ALL_TAC) THEN
+   Q.PAT_X_ASSUM `!t t2. X t t2` (K ALL_TAC) THEN
    Cases_on `t4` THEN1 (
       FULL_SIMP_TAC std_ss [ASL_TRACE_ZIP_THM, IN_SING,
          FILTER_COND_REWRITE]
@@ -7405,8 +7404,8 @@ REPEAT STRIP_TAC THENL [
    Q.ABBREV_TAC `t3 = FILTER P (h'::t1)` THEN
    Q.ABBREV_TAC `t4 = FILTER P t2` THEN
    NTAC 2 (POP_ASSUM (K ALL_TAC)) THEN
-   Q.PAT_ASSUM `!h t. X h t` (K ALL_TAC) THEN
-   Q.PAT_ASSUM `!t t2. X t t2` (K ALL_TAC) THEN
+   Q.PAT_X_ASSUM `!h t. X h t` (K ALL_TAC) THEN
+   Q.PAT_X_ASSUM `!t t2. X t t2` (K ALL_TAC) THEN
    Cases_on `t3` THEN1 (
       FULL_SIMP_TAC std_ss [ASL_TRACE_ZIP_THM, IN_SING,
          FILTER_COND_REWRITE]
@@ -7442,9 +7441,9 @@ Q.EXISTS_TAC `t1` THEN
 Q.EXISTS_TAC `t2` THEN
 ASM_SIMP_TAC std_ss [] THEN
 STRIP_TAC THEN
-Tactical.REVERSE (`!t1 t2 t.
+`!t1 t2 t.
 (t IN ASL_TRACE_ZIP (FILTER P t1) (FILTER P t2)) ==>
-(FILTER P t = t)` by ALL_TAC) THEN1 (
+(FILTER P t = t)` suffices_by (STRIP_TAC THEN
    METIS_TAC[]
 ) THEN
 
@@ -7463,7 +7462,7 @@ Cases_on `~(P h')` THEN1 (
 Cases_on `~(P h)` THEN1 (
    PROVE_TAC[FILTER_COND_REWRITE]
 ) THEN
-`~ASL_IS_PRIM_COMMAND_ATOMIC_ACTION h` by ALL_TAC THEN1 (
+`~ASL_IS_PRIM_COMMAND_ATOMIC_ACTION h` by (
    Cases_on `h` THEN
    SIMP_TAC std_ss [ASL_IS_PRIM_COMMAND_ATOMIC_ACTION_def] THEN
    METIS_TAC[]
@@ -7534,7 +7533,7 @@ ONCE_ASM_REWRITE_TAC [GSYM ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK___GET_LOCKS,
    ASL_TRACE_IS_LOCK_SYNCHRONISED_def, LIST_STAR_def] THEN
 REPEAT GEN_TAC THEN STRIP_TAC THEN
 
-`(ASL_TRACE_GET_LOCKS {l} t IN ASL_TRACE_ZIP (ASL_TRACE_GET_LOCKS {l} t1) (ASL_TRACE_GET_LOCKS {l} t2))` by ALL_TAC THEN1 (
+`(ASL_TRACE_GET_LOCKS {l} t IN ASL_TRACE_ZIP (ASL_TRACE_GET_LOCKS {l} t1) (ASL_TRACE_GET_LOCKS {l} t2))` by (
    METIS_TAC  [ASL_TRACE_ZIP___GET_LOCKS]
 ) THEN
 Q.ABBREV_TAC `ft = ASL_TRACE_GET_LOCKS {l} t` THEN
@@ -7544,24 +7543,24 @@ Q.ABBREV_TAC `ft2 = ASL_TRACE_GET_LOCKS {l} t2` THEN
   (ASL_TRACE_GET_LOCKS {l} ft = ft) /\
   (EVERY (ASL_IS_LOCK_ATOMIC_ACTION {l}) ft1) /\
   (EVERY (ASL_IS_LOCK_ATOMIC_ACTION {l}) ft2) /\
-  EVERY (ASL_IS_LOCK_ATOMIC_ACTION {l}) ft` by ALL_TAC THEN1 (
+  EVERY (ASL_IS_LOCK_ATOMIC_ACTION {l}) ft` by (
    bossLib.UNABBREV_ALL_TAC THEN
    SIMP_TAC list_ss [ASL_IS_LOCK_ATOMIC_ACTION_def, ASL_TRACE_GET_LOCKS_def,
       EVERY_FILTER, FILTER_IDEM]
 ) THEN
 FULL_SIMP_TAC std_ss [GSYM ASL_IS_SING_LOCK_ATOMIC_ACTION_def,
    GSYM ASL_TRACE_GET_SING_LOCKS_def] THEN
-`?n1 n2. (LENGTH ft1 = 2*n1) /\ (LENGTH ft2 = 2*n2)` by ALL_TAC THEN1 (
+`?n1 n2. (LENGTH ft1 = 2*n1) /\ (LENGTH ft2 = 2*n2)` by (
    IMP_RES_TAC LENGTH_STRONG_BALANCED_LOCK_TRACE THEN
    FULL_SIMP_TAC arith_ss [] THEN
    METIS_TAC[]
 ) THEN
 NTAC 2 (POP_ASSUM MP_TAC) THEN
-REPEAT (Q.PAT_ASSUM `EVERY X Y` MP_TAC) THEN
-REPEAT (Q.PAT_ASSUM `ASL_TRACE_GET_SING_LOCKS l X = X` MP_TAC) THEN
-Q.PAT_ASSUM `ft IN X` MP_TAC THEN
-Q.PAT_ASSUM `LIST_STAR X Y` MP_TAC THEN
-REPEAT (Q.PAT_ASSUM `ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK l 0 x` MP_TAC) THEN
+REPEAT (Q.PAT_X_ASSUM `EVERY X Y` MP_TAC) THEN
+REPEAT (Q.PAT_X_ASSUM `ASL_TRACE_GET_SING_LOCKS l X = X` MP_TAC) THEN
+Q.PAT_X_ASSUM `ft IN X` MP_TAC THEN
+Q.PAT_X_ASSUM `LIST_STAR X Y` MP_TAC THEN
+REPEAT (Q.PAT_X_ASSUM `ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK l 0 x` MP_TAC) THEN
 REPEAT (POP_ASSUM (K ALL_TAC)) THEN
 SIMP_TAC std_ss [AND_IMP_INTRO, GSYM CONJ_ASSOC] THEN
 Q.SPEC_TAC (`ft1`, `ft1`) THEN
@@ -7595,10 +7594,10 @@ SIMP_TAC list_ss [FORALL_AND_THM, ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK_THM,
    ASL_IS_SING_LOCK_ATOMIC_ACTION_REWRITE] THEN
 REPEAT CONJ_TAC THEN
 REPEAT GEN_TAC THEN STRIP_TAC THENL [
-   Q.PAT_ASSUM `!ft ft2 ft1. X ft ft2 ft1` (K ALL_TAC) THEN
-   Q.PAT_ASSUM `!n2 ft ft2 ft1. X n2 ft ft2 ft1` (K ALL_TAC) THEN
+   Q.PAT_X_ASSUM `!ft ft2 ft1. X ft ft2 ft1` (K ALL_TAC) THEN
+   Q.PAT_X_ASSUM `!n2 ft ft2 ft1. X n2 ft ft2 ft1` (K ALL_TAC) THEN
    SIMP_TAC list_ss [LIST_STAR_REWRITE, asl_atomic_action_distinct] THEN
-   `?ft'. ft = asl_aa_prolaag l::asl_aa_prolaag l::ft'` by ALL_TAC THEN1 (
+   `?ft'. ft = asl_aa_prolaag l::asl_aa_prolaag l::ft'` by (
       FULL_SIMP_TAC list_ss [ASL_TRACE_ZIP_THM, ASL_IS_PRIM_COMMAND_ATOMIC_ACTION_def,
     LET_THM, IN_UNION, IN_IMAGE]
    ) THEN
@@ -7610,8 +7609,8 @@ REPEAT GEN_TAC THEN STRIP_TAC THENL [
       (asl_aa_prolaag l::asl_aa_verhoog l::l''') =
     LIST_STAR [asl_aa_prolaag l; asl_aa_verhoog l] l'''` by SIMP_TAC list_ss [LIST_STAR_REWRITE] THEN
    ASM_REWRITE_TAC[] THEN
-   Q.PAT_ASSUM `!ft ft2 ft1. X ft ft2 ft1` (MATCH_MP_TAC) THEN
-   Q.PAT_ASSUM `!n2 ft ft2 ft1. X n2 ft ft2 ft1` (K ALL_TAC) THEN
+   Q.PAT_X_ASSUM `!ft ft2 ft1. X ft ft2 ft1` (MATCH_MP_TAC) THEN
+   Q.PAT_X_ASSUM `!n2 ft ft2 ft1. X n2 ft ft2 ft1` (K ALL_TAC) THEN
    ASM_SIMP_TAC list_ss [ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK_THM,
       ASL_TRACE_GET_SING_LOCKS_REWRITE, ASL_IS_SING_LOCK_ATOMIC_ACTION_REWRITE] THEN
    FULL_SIMP_TAC list_ss [ASL_TRACE_ZIP_THM, ASL_IS_PRIM_COMMAND_ATOMIC_ACTION_def, LET_THM,
@@ -7620,7 +7619,7 @@ REPEAT GEN_TAC THEN STRIP_TAC THENL [
       ASL_TRACE_ZIP___IN_CONS_NO_CHECK, ASL_IS_CHECK_ATOMIC_ACTION_def,
       ASL_IS_PRIM_COMMAND_ATOMIC_ACTION_def] THEN
    Q.EXISTS_TAC `x'` THEN
-   Q.PAT_ASSUM `ft = X` ASSUME_TAC THEN
+   Q.PAT_X_ASSUM `ft = X` ASSUME_TAC THEN
    FULL_SIMP_TAC list_ss [ASL_TRACE_GET_SING_LOCKS_REWRITE,
       ASL_IS_SING_LOCK_ATOMIC_ACTION_REWRITE],
 
@@ -7630,8 +7629,8 @@ REPEAT GEN_TAC THEN STRIP_TAC THENL [
       (asl_aa_prolaag l::asl_aa_verhoog l::l'') =
     LIST_STAR [asl_aa_prolaag l; asl_aa_verhoog l] l''` by SIMP_TAC list_ss [LIST_STAR_REWRITE] THEN
    ASM_REWRITE_TAC[] THEN
-   Q.PAT_ASSUM `!ft ft2 ft1. X ft ft2 ft1` (K ALL_TAC) THEN
-   Q.PAT_ASSUM `!n2 ft ft2 ft1. X n2 ft ft2 ft1` (MATCH_MP_TAC) THEN
+   Q.PAT_X_ASSUM `!ft ft2 ft1. X ft ft2 ft1` (K ALL_TAC) THEN
+   Q.PAT_X_ASSUM `!n2 ft ft2 ft1. X n2 ft ft2 ft1` (MATCH_MP_TAC) THEN
    Q.EXISTS_TAC `SUC n2` THEN
    ASM_SIMP_TAC list_ss [ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK_THM,
       ASL_TRACE_GET_SING_LOCKS_REWRITE, ASL_IS_SING_LOCK_ATOMIC_ACTION_REWRITE] THEN
@@ -7641,7 +7640,7 @@ REPEAT GEN_TAC THEN STRIP_TAC THENL [
       ASL_TRACE_ZIP___IN_CONS_NO_CHECK, ASL_IS_CHECK_ATOMIC_ACTION_def,
       ASL_IS_PRIM_COMMAND_ATOMIC_ACTION_def] THEN
    Q.EXISTS_TAC `x'` THEN
-   Q.PAT_ASSUM `ft = X` ASSUME_TAC THEN
+   Q.PAT_X_ASSUM `ft = X` ASSUME_TAC THEN
    FULL_SIMP_TAC list_ss [ASL_TRACE_GET_SING_LOCKS_REWRITE,
       ASL_IS_SING_LOCK_ATOMIC_ACTION_REWRITE],
 
@@ -7650,11 +7649,11 @@ REPEAT GEN_TAC THEN STRIP_TAC THENL [
    `?x'. (ft = asl_aa_prolaag l::asl_aa_verhoog l::x') /\
     ((x' IN ASL_TRACE_ZIP l''
        (asl_aa_prolaag l::asl_aa_verhoog l::l''')) \/
-    (x' IN ASL_TRACE_ZIP (asl_aa_prolaag l::asl_aa_verhoog l::l'') l'''))` by ALL_TAC THEN1 (
+    (x' IN ASL_TRACE_ZIP (asl_aa_prolaag l::asl_aa_verhoog l::l'') l'''))` by (
 
 
-      Q.PAT_ASSUM `!ft ft2 ft1. X ft ft2 ft1` (K ALL_TAC) THEN
-      Q.PAT_ASSUM `!n2 ft ft2 ft1. X n2 ft ft2 ft1` (K ALL_TAC) THEN
+      Q.PAT_X_ASSUM `!ft ft2 ft1. X ft ft2 ft1` (K ALL_TAC) THEN
+      Q.PAT_X_ASSUM `!n2 ft ft2 ft1. X n2 ft ft2 ft1` (K ALL_TAC) THEN
       FULL_SIMP_TAC list_ss [ASL_TRACE_ZIP_THM, ASL_IS_PRIM_COMMAND_ATOMIC_ACTION_def, LET_THM,
     IN_IMAGE, IN_UNION] THEN
       FULL_SIMP_TAC list_ss [LIST_STAR_REWRITE, asl_atomic_action_distinct,
@@ -7665,8 +7664,8 @@ REPEAT GEN_TAC THEN STRIP_TAC THENL [
     (asl_aa_prolaag l::asl_aa_verhoog l::l'') =
       LIST_STAR [asl_aa_prolaag l; asl_aa_verhoog l] l''` by SIMP_TAC list_ss [LIST_STAR_REWRITE] THEN
       ASM_REWRITE_TAC[] THEN
-      Q.PAT_ASSUM `!ft ft2 ft1. X ft ft2 ft1` (K ALL_TAC) THEN
-      Q.PAT_ASSUM `!n2 ft ft2 ft1. X n2 ft ft2 ft1` (MATCH_MP_TAC) THEN
+      Q.PAT_X_ASSUM `!ft ft2 ft1. X ft ft2 ft1` (K ALL_TAC) THEN
+      Q.PAT_X_ASSUM `!n2 ft ft2 ft1. X n2 ft ft2 ft1` (MATCH_MP_TAC) THEN
       Q.EXISTS_TAC `SUC n2` THEN
       Q.EXISTS_TAC `x'` THEN
       FULL_SIMP_TAC list_ss [ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK_THM,
@@ -7678,8 +7677,8 @@ REPEAT GEN_TAC THEN STRIP_TAC THENL [
     (asl_aa_prolaag l::asl_aa_verhoog l::l''') =
       LIST_STAR [asl_aa_prolaag l; asl_aa_verhoog l] l'''` by SIMP_TAC list_ss [LIST_STAR_REWRITE] THEN
       ASM_REWRITE_TAC[] THEN
-      Q.PAT_ASSUM `!ft ft2 ft1. X ft ft2 ft1` (MATCH_MP_TAC) THEN
-      Q.PAT_ASSUM `!n2 ft ft2 ft1. X n2 ft ft2 ft1` (K ALL_TAC) THEN
+      Q.PAT_X_ASSUM `!ft ft2 ft1. X ft ft2 ft1` (MATCH_MP_TAC) THEN
+      Q.PAT_X_ASSUM `!n2 ft ft2 ft1. X n2 ft ft2 ft1` (K ALL_TAC) THEN
       Q.EXISTS_TAC `x'` THEN
       FULL_SIMP_TAC list_ss [ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK_THM,
     ASL_TRACE_GET_SING_LOCKS_REWRITE, ASL_IS_SING_LOCK_ATOMIC_ACTION_REWRITE,
@@ -7708,9 +7707,9 @@ Q.ABBREV_TAC `aa_cond = ASL_IS_PRIM_COMMAND_ATOMIC_ACTION h' /\
             ASL_IS_PRIM_COMMAND_ATOMIC_ACTION h` THEN
 Q.ABBREV_TAC `X = IMAGE (\x. h'::x) (ASL_TRACE_ZIP t1 (h::t)) UNION
     IMAGE (\x. h::x) (ASL_TRACE_ZIP (h'::t1) t)` THEN
-Tactical.REVERSE (`?u. u IN X /\
+`?u. u IN X /\
 (ASL_TRACE_REMOVE_CHECKS u =
- ASL_TRACE_REMOVE_CHECKS (h'::(t1 ++ h::t)))` by ALL_TAC) THEN1 (
+ ASL_TRACE_REMOVE_CHECKS (h'::(t1 ++ h::t)))` suffices_by (STRIP_TAC THEN
 
    Cases_on `aa_cond` THEN (
       FULL_SIMP_TAC list_ss [IN_IMAGE,
@@ -7810,7 +7809,7 @@ Induct_on `pt` THEN (
    METIS_TAC[],
 
 
-   `!l. ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK l 0 [asl_aa_fail:('c, 'd) asl_atomic_action]` by ALL_TAC THEN1 (
+   `!l. ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK l 0 [asl_aa_fail:('c, 'd) asl_atomic_action]` by (
       SIMP_TAC std_ss [
          ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK_THM,
          ASL_IS_SING_LOCK_ATOMIC_ACTION_REWRITE,
@@ -7837,13 +7836,13 @@ Induct_on `pt` THEN (
    SIMP_TAC std_ss [ASL_TRACE_GET_REMOVE_LOCKS] THEN
    REPEAT STRIP_TAC THEN
    Cases_on `l' = l` THENL [
-      `{l} DIFF {l} = {}` by ALL_TAC THEN1 (
+      `{l} DIFF {l} = {}` by (
          SIMP_TAC std_ss [EXTENSION, IN_DIFF, NOT_IN_EMPTY]
       ) THEN
       ASM_SIMP_TAC std_ss [ASL_TRACE_GET_LOCKS_REWRITE,
          ASL_TRACE_IS_STRONG_LOCK_BALANCED_LOCK_THM],
 
-      `{l'} DIFF {l} = {l'}` by ALL_TAC THEN1 (
+      `{l'} DIFF {l} = {l'}` by (
          SIMP_TAC std_ss [EXTENSION, IN_DIFF, IN_SING] THEN
          METIS_TAC[]
       ) THEN
@@ -7948,7 +7947,7 @@ Induct_on `n` THENL [
       Q.EXISTS_TAC `SUC n` THEN
       SIMP_TAC list_ss [LIST_NUM_STAR_def]
    ) THEN
-   `?tl1'. tl1 =  asl_aa_prolaag l::asl_aa_verhoog l:: tl1'` by ALL_TAC THEN1 (
+   `?tl1'. tl1 =  asl_aa_prolaag l::asl_aa_verhoog l:: tl1'` by (
       Cases_on `tl1` THEN FULL_SIMP_TAC list_ss [] THEN
       Cases_on `t` THEN FULL_SIMP_TAC list_ss [LIST_ELEM_COUNT_THM,
          asl_atomic_action_distinct]
@@ -7979,7 +7978,7 @@ val ASL_TRACE_IS_NUM_LOCK_SYNCHRONISED___APPEND2 =
 SIMP_TAC std_ss [ASL_TRACE_IS_NUM_LOCK_SYNCHRONISED_def, ASL_TRACE_GET_LOCKS_REWRITE] THEN
 REPEAT STRIP_TAC THEN
 FULL_SIMP_TAC std_ss [] THEN
-Q.PAT_ASSUM `ASL_TRACE_GET_LOCKS {l} t1 = X` (K ALL_TAC) THEN
+Q.PAT_X_ASSUM `ASL_TRACE_GET_LOCKS {l} t1 = X` (K ALL_TAC) THEN
 POP_ASSUM MP_TAC THEN
 Q.ABBREV_TAC `t3 = ASL_TRACE_GET_LOCKS {l} t2` THEN
 POP_ASSUM (K ALL_TAC) THEN
@@ -8009,7 +8008,7 @@ val ASL_TRACE_IS_NUM_LOCK_SYNCHRONISED___APPEND3 =
 REPEAT STRIP_TAC THEN
 IMP_RES_TAC (SIMP_RULE std_ss [ASL_TRACE_IS_LOCK_SYNCHRONISED___NUM]  ASL_TRACE_IS_SYNCHRONISED___IMPLIES___LOCK_BALANCED) THEN
 
-`ASL_TRACE_IS_LOCK_BALANCED_LOCK l t1` by ALL_TAC THEN1 (
+`ASL_TRACE_IS_LOCK_BALANCED_LOCK l t1` by (
    FULL_SIMP_TAC std_ss [ASL_TRACE_IS_LOCK_BALANCED_LOCK_def,
       LIST_ELEM_COUNT_THM] THEN
    DECIDE_TAC
@@ -8017,7 +8016,7 @@ IMP_RES_TAC (SIMP_RULE std_ss [ASL_TRACE_IS_LOCK_SYNCHRONISED___NUM]  ASL_TRACE_
 `ASL_TRACE_IS_LOCK_SYNCHRONISED l t1` by METIS_TAC[ASL_TRACE_IS_LOCK_SYNCHRONISED___BALANCED_APPEND,
       ASL_TRACE_IS_LOCK_SYNCHRONISED___NUM] THEN
 FULL_SIMP_TAC std_ss [ASL_TRACE_IS_LOCK_SYNCHRONISED___NUM] THEN
-Tactical.REVERSE (`m = n + n2` by ALL_TAC) THEN1 (
+`m = n + n2` suffices_by (STRIP_TAC THEN
    Q.EXISTS_TAC `n` THEN
    ASM_REWRITE_TAC[]
 ) THEN
@@ -8096,8 +8095,8 @@ SUP_fasl_action_order (IMAGE SUP_fasl_action_order M)``,
 SIMP_TAC std_ss [SUP_fasl_action_order_def,
    SUP_fasl_order___BIGUNION,
    IMAGE_BIGUNION, GSYM IMAGE_COMPOSE] THEN
-Tactical.REVERSE (`!x. SUP_fasl_order o IMAGE (\f:'a -> ('b -> bool) option. f x) =
-  ((\f. f x) o SUP_fasl_action_order)` by ALL_TAC) THEN1 (
+`!x. SUP_fasl_order o IMAGE (\f:'a -> ('b -> bool) option. f x) =
+  ((\f. f x) o SUP_fasl_action_order)` suffices_by (STRIP_TAC THEN
    METIS_TAC[]
 ) THEN
 SIMP_TAC std_ss [FUN_EQ_THM, SUP_fasl_action_order_def]);
@@ -8111,7 +8110,7 @@ val ASL_PROGRAM_SEM___PROC_THM = store_thm ("ASL_PROGRAM_SEM___PROC_THM",
 
 SIMP_TAC std_ss [ASL_PROGRAM_SEM_def] THEN
 `ASL_PROGRAM_TRACES penv prog =
-  BIGUNION (\tt. ?n. tt = \t. t IN ASL_PROGRAM_TRACES_PROC n penv prog)` by ALL_TAC THEN1 (
+  BIGUNION (\tt. ?n. tt = \t. t IN ASL_PROGRAM_TRACES_PROC n penv prog)` by (
    REWRITE_TAC[Once EXTENSION] THEN
    SIMP_TAC std_ss [ASL_PROGRAM_TRACES___PROC_THM,
       IN_ABS, IN_BIGUNION, GSYM LEFT_EXISTS_AND_THM,
@@ -8133,7 +8132,7 @@ val ASL_PROGRAM_SEM_PROC___PROTO_TRACE_SPLIT = store_thm ("ASL_PROGRAM_SEM_PROC_
    SIMP_TAC std_ss [ASL_PROGRAM_SEM_PROC_def,
       ASL_TRACE_SET_SEM_def] THEN
    `ASL_PROGRAM_TRACES_PROC n penv prog =
-   BIGUNION (IMAGE (\pt. ASL_PROGRAM_TRACES_PROC n penv {pt}) prog)` by ALL_TAC THEN1 (
+   BIGUNION (IMAGE (\pt. ASL_PROGRAM_TRACES_PROC n penv {pt}) prog)` by (
       REWRITE_TAC[Once EXTENSION] THEN
       SIMP_TAC std_ss [ASL_PROGRAM_TRACES_PROC_def,
          IN_ABS, IN_BIGUNION, GSYM LEFT_EXISTS_AND_THM,
@@ -8161,7 +8160,7 @@ Q.ABBREV_TAC `x1 = IMAGE (\f. f s)
   (IMAGE (ASL_TRACE_SEM xenv) (ASL_PROGRAM_TRACES_PROC n penv prog))` THEN
 Q.ABBREV_TAC `x2 = IMAGE (\f. f s)
   (IMAGE (ASL_TRACE_SEM xenv) (ASL_PROGRAM_TRACES_PROC m penv prog))` THEN
-Tactical.REVERSE (`x1 SUBSET x2` by ALL_TAC) THEN1 (
+`x1 SUBSET x2` suffices_by (STRIP_TAC THEN
    Cases_on `NONE IN x1` THEN1 (
       FULL_SIMP_TAC std_ss [SUBSET_DEF, fasl_order_THM]
    ) THEN
@@ -8390,8 +8389,8 @@ Cases_on `NONE IN
           ASL_TRACE_SEM_APPEND] THEN
    SIMP_TAC std_ss [COND_RATOR, COND_RAND] THEN
    Cases_on `xenv` THEN
-   `?X. ASL_TRACE_SEM (q,r) t1 x = SOME X` by ALL_TAC THEN1 (
-      Q.PAT_ASSUM `t2 IN X` (K ALL_TAC) THEN
+   `?X. ASL_TRACE_SEM (q,r) t1 x = SOME X` by (
+      Q.PAT_X_ASSUM `t2 IN X` (K ALL_TAC) THEN
       FULL_SIMP_TAC std_ss [IN_INSERT, ASL_TRACE_SEM_diverge,
              asla_diverge_def] THEN
       Cases_on `ASL_TRACE_SEM (q,r) t1 x` THENL [
@@ -8441,7 +8440,7 @@ Cases_on `NONE IN
     STRIP_TAC THEN
     Cases_on `ASL_TRACE_SEM xenv x''' x` THEN1 METIS_TAC[] THEN
     FULL_SIMP_TAC std_ss [] THEN
-    Q.PAT_ASSUM `x' IN THE Y` MP_TAC THEN
+    Q.PAT_X_ASSUM `x' IN THE Y` MP_TAC THEN
     `~?x'''.
        (NONE = ASL_TRACE_SEM xenv x''' x'') /\
        x''' IN ASL_PROGRAM_TRACES penv prog2` by METIS_TAC[optionTheory.option_CLAUSES] THEN
@@ -8515,7 +8514,7 @@ Q.MATCH_ABBREV_TAC
       (asla_seq (SUP_fasl_action_order M3)
        (SUP_fasl_action_order M4))` THEN
 `~(M4 = EMPTY)` by PROVE_TAC [NOT_EMPTY_SING] THEN
-`(M3 = EMPTY) = (M1 = EMPTY)` by ALL_TAC THEN1 (
+`(M3 = EMPTY) = (M1 = EMPTY)` by (
    Q.UNABBREV_TAC `M1` THEN Q.UNABBREV_TAC `M3` THEN
    SIMP_TAC std_ss [EXTENSION] THEN
    SIMP_TAC std_ss [IN_ABS, NOT_IN_EMPTY] THEN
@@ -8530,7 +8529,7 @@ Cases_on `(M3 = EMPTY)` THEN1 (
          asla_materialisation_THM, COND_RAND, COND_RATOR,
          asla_fail_def, ASL_IS_LOCAL_ACTION___materialisation_annihilation]
 ) THEN
-`~((\a. ?a1 a2. a1 IN M3 /\ a2 IN M4 /\ (a = asla_seq a1 a2)) = EMPTY)` by ALL_TAC THEN1 (
+`~((\a. ?a1 a2. a1 IN M3 /\ a2 IN M4 /\ (a = asla_seq a1 a2)) = EMPTY)` by (
    SIMP_TAC std_ss [EXTENSION, NOT_IN_EMPTY, IN_ABS] THEN
    ASM_SIMP_TAC std_ss [pred_setTheory.MEMBER_NOT_EMPTY,
          LEFT_EXISTS_AND_THM, RIGHT_EXISTS_AND_THM]
@@ -8666,7 +8665,7 @@ Cases_on `ASL_PROGRAM_TRACES penv prog = EMPTY` THEN1 (
    Q.MATCH_ABBREV_TAC `
        SUP_fasl_action_order (IMAGE (ASL_TRACE_SEM xenv) pt1) =
        asla_seq (SUP_fasl_action_order (IMAGE (ASL_TRACE_SEM xenv) pt2)) a` THEN
-   Tactical.REVERSE (`pt1 = EMPTY` by ALL_TAC) THEN1 (
+   `pt1 = EMPTY` suffices_by (STRIP_TAC THEN
       ASM_SIMP_TAC std_ss [IMAGE_EMPTY,
     SUP_fasl_action_order___EMPTY, asla_seq_diverge]
    ) THEN
@@ -8679,7 +8678,7 @@ Cases_on `ASL_PROGRAM_TRACES penv prog = EMPTY` THEN1 (
 
 Q.MATCH_ABBREV_TAC `SUP_fasl_action_order A1 =
    asla_seq (SUP_fasl_action_order A2) (SUP_fasl_action_order A3)` THEN
-`~(A3 = EMPTY)` by ALL_TAC THEN1 (
+`~(A3 = EMPTY)` by (
 
     UNABBREV_ALL_TAC THEN
     SIMP_TAC std_ss [IMAGE_EQ_EMPTY] THEN
@@ -8998,7 +8997,7 @@ SIMP_TAC std_ss [COND_PROP___STRONG_EXISTS_def,
 SIMP_TAC std_ss [fasl_order_THM] THEN
 REPEAT STRIP_TAC THEN
 FULL_SIMP_TAC std_ss [] THEN
-Q.PAT_ASSUM `!x'. x' IN SND P ==> X x'` (MP_TAC o Q.SPEC `s`) THEN
+Q.PAT_X_ASSUM `!x'. x' IN SND P ==> X x'` (MP_TAC o Q.SPEC `s`) THEN
 ASM_SIMP_TAC std_ss [GSYM LEFT_FORALL_IMP_THM, SUBSET_DEF, IN_ABS] THEN
 METIS_TAC[]);
 
@@ -9460,7 +9459,7 @@ prog
 
 REPEAT STRIP_TAC THEN
 FULL_SIMP_TAC std_ss [ASL_PROGRAM_HOARE_TRIPLE_def] THEN
-`ASL_IS_LOCAL_ACTION (FST xenv) (ASL_PROGRAM_SEM xenv penv prog)` by ALL_TAC THEN1 (
+`ASL_IS_LOCAL_ACTION (FST xenv) (ASL_PROGRAM_SEM xenv penv prog)` by (
    MATCH_MP_TAC ASL_IS_LOCAL_ACTION___ASL_PROGRAM_SEM THEN
    ASM_REWRITE_TAC[]
 ) THEN
@@ -9506,7 +9505,7 @@ SIMP_TAC std_ss [ASL_PROGRAM_HOARE_TRIPLE_def,
 HOARE_TRIPLE_def, fasl_order_THM, IN_BIGINTER, IN_IMAGE, GSYM LEFT_EXISTS_AND_THM,
    GSYM RIGHT_EXISTS_AND_THM, GSYM LEFT_FORALL_IMP_THM] THEN
 REPEAT STRIP_TAC THEN
-`?P Q. (P,Q) IN PQ` by ALL_TAC THEN1 (
+`?P Q. (P,Q) IN PQ` by (
    FULL_SIMP_TAC std_ss [GSYM MEMBER_NOT_EMPTY] THEN
    Cases_on `x` THEN METIS_TAC[]
 ) THEN
@@ -9517,7 +9516,7 @@ ASM_SIMP_TAC std_ss [SUBSET_DEF, IN_BIGINTER, IN_IMAGE,
    GSYM LEFT_FORALL_IMP_THM] THEN
 REPEAT STRIP_TAC THEN
 
-`?P2 Q2. (x' = (P2,Q2)) /\ (s IN P2)` by ALL_TAC THEN1 (
+`?P2 Q2. (x' = (P2,Q2)) /\ (s IN P2)` by (
    Cases_on `x'` THEN
    RES_TAC THEN
    FULL_SIMP_TAC std_ss []
@@ -9652,7 +9651,7 @@ EQ_TAC THEN REPEAT STRIP_TAC THENL [
       (``(!e. (X e /\ !x. Y x e)) ==> ((!e. X e) /\ (!x x'. Y x x'))``, METIS_TAC[])) THEN
    GEN_TAC THEN
    Cases_on `x IN P` THEN ASM_REWRITE_TAC[] THEN
-   Q.PAT_ASSUM `!s. s IN P ==> X s` (MP_TAC o Q.SPEC `x`) THEN
+   Q.PAT_X_ASSUM `!s. s IN P ==> X s` (MP_TAC o Q.SPEC `x`) THEN
    ASM_SIMP_TAC std_ss [GSYM LEFT_FORALL_IMP_THM] THEN
    REPEAT STRIP_TAC THENL [
       Q.EXISTS_TAC `x` THEN
@@ -9662,14 +9661,14 @@ EQ_TAC THEN REPEAT STRIP_TAC THENL [
    ],
 
 
-   Q.PAT_ASSUM `!s. s IN P ==> X s` (MP_TAC o Q.SPEC `s`) THEN
+   Q.PAT_X_ASSUM `!s. s IN P ==> X s` (MP_TAC o Q.SPEC `s`) THEN
    ASM_SIMP_TAC std_ss [GSYM LEFT_FORALL_IMP_THM] THEN
    GEN_TAC THEN STRIP_TAC THEN
    HO_MATCH_MP_TAC (prove
       (``(!e. (X e /\ !x. Y x e)) ==> ((!e. X e) /\ (!x x'. Y x x'))``, METIS_TAC[])) THEN
    GEN_TAC THEN
    Cases_on `x' IN s1` THEN ASM_REWRITE_TAC[] THEN
-   Q.PAT_ASSUM `!s. s IN Q ==> X s` (MP_TAC o Q.SPEC `x'`) THEN
+   Q.PAT_X_ASSUM `!s. s IN Q ==> X s` (MP_TAC o Q.SPEC `x'`) THEN
    ASM_SIMP_TAC std_ss [GSYM LEFT_FORALL_IMP_THM]
 ]);
 
@@ -9736,7 +9735,7 @@ SIMP_TAC std_ss [
 REPEAT GEN_TAC THEN
 Q.ABBREV_TAC `ps = ASL_PROGRAM_SEM xenv penv p` THEN
 EQ_TAC THEN REPEAT STRIP_TAC THEN1 (
-   Q.PAT_ASSUM `!n. X n` (MP_TAC o Q.SPEC `SUC 0`) THEN
+   Q.PAT_X_ASSUM `!n. X n` (MP_TAC o Q.SPEC `SUC 0`) THEN
    REWRITE_TAC [asla_repeat_def, asla_seq_skip]
 ) THEN
 
@@ -9749,7 +9748,7 @@ Induct_on `n` THENL [
      GSYM LEFT_EXISTS_AND_THM, SUBSET_DEF, IN_BIGUNION, IN_IMAGE, IN_ABS,
      GSYM LEFT_FORALL_IMP_THM] THEN
   REPEAT STRIP_TAC THEN
-  Q.PAT_ASSUM `!s. s IN P ==> ?s1. (ps s = SOME s1) /\ XXX` (MP_TAC o Q.SPEC `s`) THEN
+  Q.PAT_X_ASSUM `!s. s IN P ==> ?s1. (ps s = SOME s1) /\ XXX` (MP_TAC o Q.SPEC `s`) THEN
   ASM_SIMP_TAC std_ss [GSYM LEFT_FORALL_IMP_THM] THEN
   METIS_TAC[option_CLAUSES]
 ]);
@@ -9779,7 +9778,7 @@ REPEAT STRIP_TAC THEN
 Cases_on `(q1 = NONE) \/ (q2 = NONE)` THEN1 (
    FULL_SIMP_TAC std_ss [fasl_order_THM, fasl_star_REWRITE]
 ) THEN
-`?q1v q2v. (q1 = SOME q1v) /\ (q2 = SOME q2v)` by ALL_TAC THEN1 (
+`?q1v q2v. (q1 = SOME q1v) /\ (q2 = SOME q2v)` by (
    Cases_on `q1` THEN Cases_on `q2` THEN
    FULL_SIMP_TAC std_ss []
 ) THEN
@@ -9828,10 +9827,10 @@ SIMP_TAC list_ss [ASL_PROGRAM_HOARE_TRIPLE_REWRITE,
    ASL_IS_LOCK_ATOMIC_ACTION_def, IN_SING] THEN
 REPEAT STRIP_TAC THEN
 
-Tactical.REVERSE (`?s'.
+`?s'.
       (ASL_TRACE_SEM (f,lock_env)
        (asl_aa_verhoog l::t' ++ [asl_aa_prolaag l]) s =
-       SOME s') /\ s' SUBSET asl_star f Q (lock_env l)` by ALL_TAC) THEN1 (
+       SOME s') /\ s' SUBSET asl_star f Q (lock_env l)` suffices_by (STRIP_TAC THEN
 
 
    MP_TAC (Q.SPECL [`(f,lock_env)`, `l`, `t'`] ASL_TRACE_SYNCHRONISED_ACTION_ORDER) THEN
@@ -9849,7 +9848,7 @@ SIMP_TAC list_ss [ASL_TRACE_SEM_REWRITE,
 ASM_SIMP_TAC std_ss [SOME___asla_seq, GSYM LEFT_EXISTS_AND_THM, GSYM
    RIGHT_EXISTS_AND_THM, ASL_ATOMIC_ACTION_SEM_def] THEN
 
-`?p. (asla_annihilation f (lock_env l) s = SOME p) /\ (p SUBSET P)` by ALL_TAC THEN1 (
+`?p. (asla_annihilation f (lock_env l) s = SOME p) /\ (p SUBSET P)` by (
    FULL_SIMP_TAC std_ss [asla_annihilation_PRECISE_THM, LET_THM, COND_RAND, COND_RATOR,
       asl_star_def, IN_ABS, SUBSET_DEF, GSYM LEFT_FORALL_IMP_THM] THEN
    CONJ_TAC THENL [
@@ -9857,8 +9856,8 @@ ASM_SIMP_TAC std_ss [SOME___asla_seq, GSYM LEFT_EXISTS_AND_THM, GSYM
       METIS_TAC[],
 
       REPEAT STRIP_TAC THEN
-      `s1 = q` by ALL_TAC THEN1 (
-         Q.PAT_ASSUM `ASL_IS_PRECISE f (lock_env l)` (MATCH_MP_TAC o
+      `s1 = q` by (
+         Q.PAT_X_ASSUM `ASL_IS_PRECISE f (lock_env l)` (MATCH_MP_TAC o
          SIMP_RULE std_ss [ASL_IS_PRECISE_def]) THEN
          Q.EXISTS_TAC `s` THEN
          ASM_SIMP_TAC std_ss [ASL_IS_SUBSTATE_def] THEN
@@ -9943,9 +9942,9 @@ ASM_SIMP_TAC std_ss [SOME___asla_seq, asla_annihilation_PRECISE_THM,
 SIMP_TAC std_ss [COND_RAND, COND_RATOR, EXTENSION, NOT_IN_EMPTY, IN_ABS] THEN
 
 `?s1. (ASL_TRACE_SEM (f,lock_env) t' e = SOME s1) /\
-       s1 SUBSET asl_star f Q (lock_env l)` by ALL_TAC THEN1 (
+       s1 SUBSET asl_star f Q (lock_env l)` by (
 
-   Q.PAT_ASSUM `!s' t. X s' t` MATCH_MP_TAC THEN
+   Q.PAT_X_ASSUM `!s' t. X s' t` MATCH_MP_TAC THEN
    ASM_SIMP_TAC std_ss [asl_star_def, IN_ABS] THEN
    Q.EXISTS_TAC `s` THEN
    Q.EXISTS_TAC `p'` THEN
@@ -9953,7 +9952,7 @@ SIMP_TAC std_ss [COND_RAND, COND_RATOR, EXTENSION, NOT_IN_EMPTY, IN_ABS] THEN
 ) THEN
 ASM_SIMP_TAC std_ss [] THEN
 CONJ_TAC THEN1 (
-   Q.PAT_ASSUM `s1 SUBSET X` MP_TAC THEN
+   Q.PAT_X_ASSUM `s1 SUBSET X` MP_TAC THEN
    SIMP_TAC std_ss [SUBSET_DEF, asl_star_def, IN_ABS] THEN
    METIS_TAC[]
 ) THEN
@@ -9961,10 +9960,10 @@ SIMP_TAC std_ss [SUBSET_DEF, IN_BIGUNION, IN_IMAGE,
    GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM,
    GSYM LEFT_FORALL_IMP_THM] THEN
 REPEAT STRIP_TAC THEN
-Q.PAT_ASSUM `x IN X` MP_TAC THEN
+Q.PAT_X_ASSUM `x IN X` MP_TAC THEN
 ASM_SIMP_TAC std_ss [asla_annihilation_PRECISE_THM, LET_THM, COND_RAND, COND_RATOR,
    IN_ABS] THEN
-`~((\s0. ?s1. s1 IN lock_env l /\ (SOME x' = f (SOME s0) (SOME s1))) = {})` by ALL_TAC THEN1 (
+`~((\s0. ?s1. s1 IN lock_env l /\ (SOME x' = f (SOME s0) (SOME s1))) = {})` by (
    SIMP_TAC std_ss [EXTENSION, NOT_IN_EMPTY, IN_ABS] THEN
    FULL_SIMP_TAC std_ss [SUBSET_DEF, asl_star_def, IN_ABS] THEN
    METIS_TAC[]
@@ -9975,13 +9974,13 @@ STRIP_TAC THEN
 FULL_SIMP_TAC std_ss [SUBSET_DEF, asl_star_def, IN_ABS] THEN
 `?p q. (SOME x' = f (SOME p) (SOME q)) /\ p IN Q /\ q IN lock_env l` by METIS_TAC[] THEN
 
-`s1' = q` by ALL_TAC THEN1 (
-   Q.PAT_ASSUM `ASL_IS_PRECISE f X` (MATCH_MP_TAC o REWRITE_RULE [ASL_IS_PRECISE_def]) THEN
+`s1' = q` by (
+   Q.PAT_X_ASSUM `ASL_IS_PRECISE f X` (MATCH_MP_TAC o REWRITE_RULE [ASL_IS_PRECISE_def]) THEN
    Q.EXISTS_TAC `x'` THEN
    ASM_SIMP_TAC std_ss [ASL_IS_SUBSTATE_def] THEN
    METIS_TAC[IS_SEPARATION_COMBINATOR_def, COMM_DEF]
 ) THEN
-`p'' = x` by ALL_TAC THEN1 (
+`p'' = x` by (
    FULL_SIMP_TAC std_ss [IS_SEPARATION_COMBINATOR_EXPAND_THM] THEN
    METIS_TAC[OPTION_IS_RIGHT_CANCELLATIVE_def, option_CLAUSES]
 ) THEN
@@ -10017,7 +10016,7 @@ REPEAT STRIP_TAC THENL [
    SIMP_TAC std_ss [SUBSET_DEF, IN_ABS] THEN
    EQ_TAC THEN1 METIS_TAC[] THEN
    REPEAT STRIP_TAC THEN
-   Q.PAT_ASSUM `!x s t. X x s t` (MP_TAC o Q.GEN `x'` o (Q.SPECL [`x'`, `s`, `t`])) THEN
+   Q.PAT_X_ASSUM `!x s t. X x s t` (MP_TAC o Q.GEN `x'` o (Q.SPECL [`x'`, `s`, `t`])) THEN
    ASM_SIMP_TAC std_ss [] THEN
    Cases_on `ASL_TRACE_SEM xenv t s` THEN (
       SIMP_TAC std_ss []
@@ -10101,7 +10100,7 @@ val ASL_INFERENCE_assert = store_thm ("ASL_INFERENCE_assert",
       (asl_and P (EVAL_asl_predicate (FST xenv) c)))``,
 
 REPEAT GEN_TAC THEN
-`?lock_env f. xenv = (f,lock_env)` by ALL_TAC THEN1 (
+`?lock_env f. xenv = (f,lock_env)` by (
    Cases_on `xenv` THEN SIMP_TAC std_ss []
 ) THEN
 ASM_SIMP_TAC std_ss [ASL_PROGRAM_HOARE_TRIPLE_REWRITE,
@@ -10385,7 +10384,7 @@ ASM_SIMP_TAC std_ss [] THEN ASM_REWRITE_TAC[] THEN
 SIMP_TAC std_ss [] THEN
 DISCH_TAC THEN (POP_ASSUM (K ALL_TAC)) THEN
 
-Q.PAT_ASSUM `!cL prog. (X ==> (Y <=> Z))` (MP_TAC o Q.SPECL [`t`]) THEN
+Q.PAT_X_ASSUM `!cL prog. (X ==> (Y <=> Z))` (MP_TAC o Q.SPECL [`t`]) THEN
 ASM_REWRITE_TAC[] THEN
 SIMP_TAC std_ss []);
 
@@ -10443,7 +10442,7 @@ EQ_TAC THEN STRIP_TAC THENL [
    METIS_TAC[SUBSET_DEF],
 
    FULL_SIMP_TAC std_ss [asl_sp_opt_def, LET_THM] THEN
-   Q.PAT_ASSUM `X = sp` (ASSUME_TAC o GSYM) THEN
+   Q.PAT_X_ASSUM `X = sp` (ASSUME_TAC o GSYM) THEN
    FULL_SIMP_TAC std_ss [GSYM MEMBER_NOT_EMPTY, IN_ABS] THEN
    CONJ_TAC THENL [
        FULL_SIMP_TAC std_ss [ASL_PROGRAM_HOARE_TRIPLE_REWRITE,
@@ -10568,10 +10567,10 @@ Tactical.REVERSE (EQ_TAC THEN STRIP_TAC) THEN1 (
    METIS_TAC[]
 ) THEN
 
-`x' IN (BIGUNION (IMAGE (\prog. THE (asl_sp_opt xenv penv P prog)) pset))` by ALL_TAC THEN1 (
-   Q.PAT_ASSUM `!P'. X P'` MATCH_MP_TAC THEN
+`x' IN (BIGUNION (IMAGE (\prog. THE (asl_sp_opt xenv penv P prog)) pset))` by (
+   Q.PAT_X_ASSUM `!P'. X P'` MATCH_MP_TAC THEN
    REPEAT STRIP_TAC THEN
-   `?sp. asl_sp_opt xenv penv P prog = SOME sp` by ALL_TAC THEN1 (
+   `?sp. asl_sp_opt xenv penv P prog = SOME sp` by (
       RES_TAC THEN
       FULL_SIMP_TAC std_ss [IS_SOME_EXISTS]
    ) THEN
@@ -10588,7 +10587,7 @@ FULL_SIMP_TAC std_ss [IN_BIGUNION, IN_IMAGE] THEN
 Q.EXISTS_TAC `prog` THEN
 ASM_SIMP_TAC std_ss [] THEN
 REPEAT STRIP_TAC THEN
-`asl_sp_opt xenv penv P prog = SOME s` by ALL_TAC THEN1 (
+`asl_sp_opt xenv penv P prog = SOME s` by (
    RES_TAC THEN
    FULL_SIMP_TAC std_ss [IS_SOME_EXISTS]
 ) THEN
@@ -10620,7 +10619,7 @@ ASM_SIMP_TAC std_ss [COND_EXPAND_IMP, asl_predicate_IS_DECIDED_def,
 Q.HO_MATCH_ABBREV_TAC `Y1 /\ (Y2 ==> (qset = Y3))` THEN
 MAP_EVERY Q.UNABBREV_TAC [`Y1`, `Y2`, `Y3`] THEN
 CONJ_TAC THEN STRIP_TAC THENL [
-   `qset = \Q. asl_and P cc SUBSET Q` by ALL_TAC THEN1 (
+   `qset = \Q. asl_and P cc SUBSET Q` by (
        Q.UNABBREV_TAC `qset` THEN
        SIMP_TAC std_ss [EXTENSION, IN_ABS, SUBSET_DEF, asl_bool_EVAL] THEN
        METIS_TAC[]
@@ -10742,7 +10741,7 @@ Tactical.REVERSE EQ_TAC THENL [
       GSYM RIGHT_EXISTS_AND_THM, GSYM LEFT_FORALL_IMP_THM,
       asl_wlp_def, SUBSET_DEF, IN_BIGUNION, IN_ABS] THEN
    REPEAT STRIP_TAC THEN
-   Q.PAT_ASSUM `!s. s IN P ==> X` (MP_TAC o Q.SPEC `s`) THEN
+   Q.PAT_X_ASSUM `!s. s IN P ==> X` (MP_TAC o Q.SPEC `s`) THEN
    ASM_REWRITE_TAC[] THEN STRIP_TAC THEN
    ASM_SIMP_TAC std_ss [] THEN
    REPEAT STRIP_TAC THEN
@@ -10798,7 +10797,7 @@ SIMP_TAC (std_ss++LIFT_COND_ss) [IN_ABS, SUBSET_DEF, IN_SING, NOT_IN_EMPTY,
    EVAL_asl_predicate_def] THEN
 EQ_TAC THENL [
    STRIP_TAC THEN
-   Q.PAT_ASSUM `!s'. X s'` (MP_TAC o Q.SPEC `x`) THEN
+   Q.PAT_X_ASSUM `!s'. X s'` (MP_TAC o Q.SPEC `x`) THEN
    ASM_SIMP_TAC std_ss [COND_EXPAND_OR, DISJ_IMP_THM],
 
    DISCH_TAC THEN
@@ -10987,7 +10986,7 @@ store_thm ("ASLA_PROGRAM_IS_ABSTRACTION___DIVERGE_THM2",
 
 SIMP_TAC std_ss [ASL_PROGRAM_IS_ABSTRACTION_def] THEN
 REPEAT STRIP_TAC THEN
-Q.PAT_ASSUM `X = asla_diverge` ASSUME_TAC THEN
+Q.PAT_X_ASSUM `X = asla_diverge` ASSUME_TAC THEN
 FULL_SIMP_TAC std_ss [fasl_action_order_POINTWISE_DEF, asla_diverge_def,
             fasl_order_THM, SUBSET_EMPTY] THEN
 ASM_SIMP_TAC std_ss [FUN_EQ_THM]);
@@ -11068,7 +11067,7 @@ Q.ABBREV_TAC `a2' = ASL_PROGRAM_SEM xenv penv prog2'` THEN
 FULL_SIMP_TAC std_ss [fasl_action_order_POINTWISE_DEF,
             asla_bin_choice_THM] THEN
 GEN_TAC THEN
-REPEAT (Q.PAT_ASSUM `!s. X s` (MP_TAC o Q.SPEC `s`)) THEN
+REPEAT (Q.PAT_X_ASSUM `!s. X s` (MP_TAC o Q.SPEC `s`)) THEN
 Cases_on `a1' s` THEN1 SIMP_TAC std_ss [fasl_order_THM] THEN
 Cases_on `a2' s` THEN1 SIMP_TAC std_ss [fasl_order_THM] THEN
 
@@ -11216,7 +11215,7 @@ SIMP_TAC std_ss [
    ASL_PROGRAM_SEM___prog_ndet,
    fasl_action_order_POINTWISE_DEF] THEN
 REPEAT STRIP_TAC THEN
-Q.PAT_ASSUM `!s. X s` (MP_TAC o Q.SPEC `s`) THEN
+Q.PAT_X_ASSUM `!s. X s` (MP_TAC o Q.SPEC `s`) THEN
 Cases_on `ASL_PROGRAM_SEM xenv penv prog s` THENL [
    SIMP_TAC std_ss [fasl_order_THM2, NONE___SUP_fasl_action_order,
       IN_IMAGE, GSYM RIGHT_EXISTS_AND_THM, GSYM LEFT_EXISTS_AND_THM] THEN
@@ -11345,22 +11344,22 @@ Q.ABBREV_TAC `p34 = asla_seq p3 p4` THEN
 FULL_SIMP_TAC std_ss [REWRITE_RULE [ASSOC_DEF] asla_seq___ASSOC] THEN
 
 Q.ABBREV_TAC `P12 = asl_prog_seq (asl_prog_assume c) p` THEN
-`p12 = ASL_PROGRAM_SEM xenv penv P12` by ALL_TAC THEN1 (
+`p12 = ASL_PROGRAM_SEM xenv penv P12` by (
    MAP_EVERY Q.UNABBREV_TAC [`P12`, `p12`] THEN
    ASM_SIMP_TAC std_ss [ASL_PROGRAM_SEM___prog_seq]
 ) THEN
 Q.ABBREV_TAC `P34 = asl_prog_block (
      (asl_prog_repeat_num n P12)::
      (asl_prog_assume (asl_pred_neg c))::pL)` THEN
-`p34 = ASL_PROGRAM_SEM xenv penv P34` by ALL_TAC THEN1 (
+`p34 = ASL_PROGRAM_SEM xenv penv P34` by (
    MAP_EVERY Q.UNABBREV_TAC [`P34`, `p34`] THEN
    ASM_SIMP_TAC std_ss [ASL_PROGRAM_SEM___prog_block]
 ) THEN
 FULL_SIMP_TAC std_ss [GSYM ASL_PROGRAM_SEM___prog_seq,
    GSYM ASL_PROGRAM_HOARE_TRIPLE_def] THEN
 
-Tactical.REVERSE (`ASL_PROGRAM_IS_ABSTRACTION xenv penv
-    (asl_prog_seq P12 P34) (asl_prog_seq P12 (asl_prog_quant_best_local_action P Q))` by ALL_TAC) THEN1 (
+`ASL_PROGRAM_IS_ABSTRACTION xenv penv
+    (asl_prog_seq P12 P34) (asl_prog_seq P12 (asl_prog_quant_best_local_action P Q))` suffices_by (STRIP_TAC THEN
    FULL_SIMP_TAC std_ss [ASL_PROGRAM_IS_ABSTRACTION___ALTERNATIVE_DEF]
 ) THEN
 
@@ -11474,7 +11473,7 @@ Cases_on `IS_SEPARATION_COMBINATOR (FST xenv)` THEN ASM_REWRITE_TAC[] THEN
  (!s. s IN ASL_INTUITIONISTIC_NEGATION (FST xenv) p2 ==>
       s IN ASL_INTUITIONISTIC_NEGATION (FST xenv) (asl_and p1 p2)) /\
  (!s. s IN p1 /\ s IN p2 ==>
-      ~(s IN ASL_INTUITIONISTIC_NEGATION (FST xenv) (asl_and p1 p2)))` by ALL_TAC THEN1 (
+      ~(s IN ASL_INTUITIONISTIC_NEGATION (FST xenv) (asl_and p1 p2)))` by (
 
    ASM_SIMP_TAC std_ss [ASL_INTUITIONISTIC_NEGATION_REWRITE,
       IN_ABS, asl_bool_EVAL] THEN
@@ -11578,7 +11577,7 @@ Q.ABBREV_TAC `p12 = asl_or (ASL_INTUITIONISTIC_NEGATION (FST xenv) p1)
             (ASL_INTUITIONISTIC_NEGATION (FST xenv) p2)` THEN
 SIMP_TAC std_ss [asla_assume_def, IN_ABS] THEN
 Cases_on `s IN p12` THEN1 (
-   Tactical.REVERSE (`s IN ASL_INTUITIONISTIC_NEGATION (FST xenv) (asl_and p1 p2)` by ALL_TAC) THEN1 (
+   `s IN ASL_INTUITIONISTIC_NEGATION (FST xenv) (asl_and p1 p2)` suffices_by (STRIP_TAC THEN
       ASM_SIMP_TAC std_ss [fasl_order_THM, SUBSET_REFL]
    ) THEN
    Q.UNABBREV_TAC `p12` THEN
@@ -11588,9 +11587,9 @@ Cases_on `s IN p12` THEN1 (
 Tactical.REVERSE (Cases_on `s IN ASL_INTUITIONISTIC_NEGATION (FST xenv) p12`) THEN (
    ASM_SIMP_TAC std_ss [fasl_order_THM, SUBSET_EMPTY]
 ) THEN
-Tactical.REVERSE (`~(s IN ASL_INTUITIONISTIC_NEGATION (FST xenv) (asl_and p1 p2)) /\
+`~(s IN ASL_INTUITIONISTIC_NEGATION (FST xenv) (asl_and p1 p2)) /\
 s IN (ASL_INTUITIONISTIC_NEGATION (FST xenv)
-      (ASL_INTUITIONISTIC_NEGATION (FST xenv) (asl_and p1 p2)))` by ALL_TAC) THEN1 (
+      (ASL_INTUITIONISTIC_NEGATION (FST xenv) (asl_and p1 p2)))` suffices_by (STRIP_TAC THEN
    ASM_SIMP_TAC std_ss []
 ) THEN
 Q.UNABBREV_TAC `p12` THEN
@@ -11611,7 +11610,7 @@ Q.EXISTS_TAC `s4` THEN
 
 `ASL_IS_SUBSTATE (FST xenv) s2'' s4` by PROVE_TAC[ASL_IS_SUBSTATE___TRANS] THEN
 
-Q.PAT_ASSUM `ASL_IS_INTUITIONISTIC f p1` MP_TAC THEN
+Q.PAT_X_ASSUM `ASL_IS_INTUITIONISTIC f p1` MP_TAC THEN
 ASM_SIMP_TAC std_ss [ASL_IS_INTUITIONISTIC___REWRITE] THEN
 METIS_TAC[]);
 
@@ -11638,7 +11637,7 @@ Q.ABBREV_TAC `p12 = asl_and (ASL_INTUITIONISTIC_NEGATION (FST xenv) p1)
             (ASL_INTUITIONISTIC_NEGATION (FST xenv) p2)` THEN
 SIMP_TAC std_ss [asla_assume_def, IN_ABS] THEN
 Cases_on `s IN p12` THEN1 (
-   Tactical.REVERSE (`s IN ASL_INTUITIONISTIC_NEGATION (FST xenv) (asl_or p1 p2)` by ALL_TAC) THEN1 (
+   `s IN ASL_INTUITIONISTIC_NEGATION (FST xenv) (asl_or p1 p2)` suffices_by (STRIP_TAC THEN
       ASM_SIMP_TAC std_ss [fasl_order_THM, SUBSET_REFL]
    ) THEN
    Q.UNABBREV_TAC `p12` THEN
@@ -11647,9 +11646,9 @@ Cases_on `s IN p12` THEN1 (
 Tactical.REVERSE (Cases_on `s IN ASL_INTUITIONISTIC_NEGATION (FST xenv) p12`) THEN (
    ASM_SIMP_TAC std_ss [fasl_order_THM, SUBSET_EMPTY]
 ) THEN
-Tactical.REVERSE (`~(s IN ASL_INTUITIONISTIC_NEGATION (FST xenv) (asl_or p1 p2)) /\
+`~(s IN ASL_INTUITIONISTIC_NEGATION (FST xenv) (asl_or p1 p2)) /\
 s IN (ASL_INTUITIONISTIC_NEGATION (FST xenv)
-      (ASL_INTUITIONISTIC_NEGATION (FST xenv) (asl_or p1 p2)))` by ALL_TAC) THEN1 (
+      (ASL_INTUITIONISTIC_NEGATION (FST xenv) (asl_or p1 p2)))` suffices_by (STRIP_TAC THEN
    ASM_SIMP_TAC std_ss []
 ) THEN
 Q.UNABBREV_TAC `p12` THEN
@@ -11660,7 +11659,7 @@ CONJ_TAC THEN1 (
    Q.EXISTS_TAC `s` THEN
    ASM_SIMP_TAC std_ss [ASL_IS_SUBSTATE___REFL]
 ) THEN
-Q.PAT_ASSUM `s NOTIN X` (K ALL_TAC) THEN
+Q.PAT_X_ASSUM `s NOTIN X` (K ALL_TAC) THEN
 FULL_SIMP_TAC std_ss [ASL_INTUITIONISTIC_NEGATION_REWRITE, IN_ABS, asl_bool_EVAL] THEN
 METIS_TAC[]);
 
@@ -11803,7 +11802,7 @@ Q.SUBGOAL_THEN
       asla_seq___SUP_fasl_action_order___left,
       IN_IMAGE, GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM] THEN
    Q.HO_MATCH_ABBREV_TAC `asla_seq a1 (SUP_fasl_action_order M) = a2` THEN
-   `~(M = EMPTY)` by ALL_TAC THEN1 (
+   `~(M = EMPTY)` by (
       Q.UNABBREV_TAC `M` THEN
       FULL_SIMP_TAC std_ss [EXTENSION, NOT_IN_EMPTY, IN_ABS] THEN
       METIS_TAC[]
@@ -11819,7 +11818,7 @@ UNABBREV_ALL_TAC THEN
 SIMP_TAC std_ss [ASL_PROGRAM_SEM_def, ASL_TRACE_SET_SEM_def] THEN
 
 Q.MATCH_ABBREV_TAC `fasl_action_order (SUP_fasl_action_order M1) (SUP_fasl_action_order M2)` THEN
-Tactical.REVERSE (`!a. a IN M1 ==> ?a'. a' IN M2 /\ fasl_action_order a a'` by ALL_TAC) THEN1 (
+`!a. a IN M1 ==> ?a'. a' IN M2 /\ fasl_action_order a a'` suffices_by (STRIP_TAC THEN
 
    POP_ASSUM MP_TAC THEN
    ASM_SIMP_TAC std_ss [SUP_fasl_action_order_def, SUP_fasl_order_def,
@@ -11828,7 +11827,7 @@ Tactical.REVERSE (`!a. a IN M1 ==> ?a'. a' IN M2 /\ fasl_action_order a a'` by A
    Cases_on `NONE IN IMAGE (\f. f s) M2` THEN1 (
       ASM_SIMP_TAC std_ss [fasl_order_THM2]
    ) THEN
-   `~(NONE IN IMAGE (\f. f s) M1)` by ALL_TAC THEN1 (
+   `~(NONE IN IMAGE (\f. f s) M1)` by (
        CCONTR_TAC THEN
        FULL_SIMP_TAC std_ss [IN_IMAGE] THEN
        `?a. a IN M2 /\ fasl_order NONE (a s)` by METIS_TAC[] THEN
@@ -11930,7 +11929,7 @@ Induct_on `pt` THENL [
    \t. ?t1 t2.
      (t = t1 ++ t2) /\
      t1 IN ASL_PROGRAM_TRACES_PROC m penv' prog /\
-     t2 IN ASL_PROGRAM_TRACES_PROC m penv' prog'` by ALL_TAC THEN1 (
+     t2 IN ASL_PROGRAM_TRACES_PROC m penv' prog'` by (
       ONCE_REWRITE_TAC [EXTENSION] THEN
       Q.UNABBREV_TAC `prog2` THEN
       ASM_SIMP_TAC std_ss [ASL_PROGRAM_TRACES_PROC_def,
@@ -11958,7 +11957,7 @@ Induct_on `pt` THENL [
       FULL_SIMP_TAC std_ss [ASL_PROGRAM_TRACES_PROC_THM,
          ASL_PROTO_TRACES_EVAL_PROC_IN_THM, NOT_IN_EMPTY]
    ) THEN
-   Q.PAT_ASSUM `!m. m < SUC n'' ==> Q m` (ASSUME_TAC o Q.SPEC `n''`) THEN
+   Q.PAT_X_ASSUM `!m. m < SUC n'' ==> Q m` (ASSUME_TAC o Q.SPEC `n''`) THEN
    FULL_SIMP_TAC std_ss [ASL_PROTO_TRACES_EVAL_PROC_IN_THM] THEN
    Q.EXISTS_TAC `\pt. ?pt' prog. (pt' IN penv ' n' a) /\ (!m penv'. (FDOM penv = FDOM penv') ==>
       (ASL_PROTO_TRACES_EVAL_PROC n'' penv pt' =
@@ -12021,7 +12020,7 @@ REPEAT STRIP_TAC THENL [
    METIS_TAC[ASL_PROTO_TRACES_EVAL_PROC___TO___ASL_PROGRAM_TRACES],
 
    SIMP_TAC std_ss [ASL_PROGRAM_TRACES_PROC_SING_THM, asl_prog_procedure_call_def] THEN
-   Q.PAT_ASSUM `!m penv'. X m penv'` MATCH_MP_TAC THEN
+   Q.PAT_X_ASSUM `!m penv'. X m penv'` MATCH_MP_TAC THEN
    ASM_SIMP_TAC std_ss [ASL_EQUIV_PENV_PROC_def, FDOM_FINITE, FUN_FMAP_DEF]
 ]);
 
@@ -12235,7 +12234,7 @@ Induct_on `n` THEN1 (
       ASL_EQUIV_PENV_PROC___PROGRAM_TRACES,
       ASL_PROGRAM_SEM_def, ASL_PROGRAM_TRACES_PROC_THM] THEN
    REPEAT STRIP_TAC THEN
-   `name IN FDOM penv` by ALL_TAC THEN1 (
+   `name IN FDOM penv` by (
       FULL_SIMP_TAC std_ss [ASL_PROCEDURE_SPEC___wellformed_spec_def,
     EVERY_MEM] THEN
       RES_TAC THEN
@@ -12244,11 +12243,11 @@ Induct_on `n` THEN1 (
    ASM_SIMP_TAC std_ss [GSYM EMPTY_DEF, ASL_TRACE_SET_SEM_def, IMAGE_EMPTY,
      fasl_action_order___SUP_fasl_action_order, NOT_IN_EMPTY]
 ) THEN
-Q.PAT_ASSUM `!penv'. X` (MP_TAC o Q.SPEC `ASL_EQUIV_PENV_PROC n penv`) THEN
+Q.PAT_X_ASSUM `!penv'. X` (MP_TAC o Q.SPEC `ASL_EQUIV_PENV_PROC n penv`) THEN
 ASM_SIMP_TAC std_ss [ASL_EQUIV_PENV_PROC_THM,
   ASL_PROCEDURE_SPEC_def, GSYM RIGHT_FORALL_IMP_THM] THEN
 REPEAT STRIP_TAC THEN
-Q.PAT_ASSUM `!name abst arg. X` (MP_TAC o Q.SPECL [`name`, `abst`, `arg`]) THEN
+Q.PAT_X_ASSUM `!name abst arg. X` (MP_TAC o Q.SPECL [`name`, `abst`, `arg`]) THEN
 ASM_SIMP_TAC std_ss [ASL_PROGRAM_IS_ABSTRACTION_def,
    ASL_PROGRAM_SEM_def, ASL_EQUIV_PENV_PROC___PROGRAM_TRACES,
    ASL_PROGRAM_TRACES_PROC_THM] THEN
@@ -12335,22 +12334,21 @@ Q.EXISTS_TAC `\penv'. ASL_PROCEDURE_SPEC (f,LIST_TO_FUN lock_decls)
    penv' (ASL_proc_specs_spec (MAP SND (FILTER (\x. ~FST x) specs)))` THEN
 REPEAT CONJ_TAC THENL [
    FULL_SIMP_TAC std_ss [ASL_PROCEDURE_SPEC___wellformed_spec_def,
-      FDOM_ASL_proc_specs_penv, IN_LIST_TO_SET,
-      EVERY_MEM, ASL_proc_specs_spec_def, MEM_MAP,
+      FDOM_ASL_proc_specs_penv, EVERY_MEM, ASL_proc_specs_spec_def, MEM_MAP,
       GSYM LEFT_FORALL_IMP_THM, IN_UNION, MEM_FILTER] THEN
    PROVE_TAC[],
 
 
-   Q.PAT_ASSUM `ASL_PROCEDURE_SPEC X Y Z` MP_TAC THEN
+   Q.PAT_X_ASSUM `ASL_PROCEDURE_SPEC X Y Z` MP_TAC THEN
    SIMP_TAC std_ss [ASL_PROCEDURE_SPEC_def] THEN
    REPEAT STRIP_TAC THEN
-   Q.PAT_ASSUM `!name abst. X name abst` (MP_TAC o Q.SPECL [`name`, `abst`]) THEN
+   Q.PAT_X_ASSUM `!name abst. X name abst` (MP_TAC o Q.SPECL [`name`, `abst`]) THEN
    ASM_SIMP_TAC std_ss [GSYM LEFT_EXISTS_IMP_THM] THEN
    Q.EXISTS_TAC `arg` THEN
    Q.ABBREV_TAC `penv' = (ASL_proc_specs_penv penv (MAP SND (FILTER FST specs)))` THEN
-   `asl_prog_IS_PROCCALL_FREE (abst arg)` by ALL_TAC THEN1 (
-      Q.PAT_ASSUM `EVERY P specs` MP_TAC THEN
-      Q.PAT_ASSUM `MEM X Y` MP_TAC THEN
+   `asl_prog_IS_PROCCALL_FREE (abst arg)` by (
+      Q.PAT_X_ASSUM `EVERY P specs` MP_TAC THEN
+      Q.PAT_X_ASSUM `MEM X Y` MP_TAC THEN
       REPEAT (POP_ASSUM (K ALL_TAC)) THEN
       SIMP_TAC std_ss [EVERY_MEM, GSYM RIGHT_FORALL_IMP_THM, GSYM LEFT_EXISTS_IMP_THM,
     ASL_proc_specs_spec_def, MEM_MAP, MEM_FILTER, GSYM RIGHT_EXISTS_AND_THM] THEN
@@ -12359,11 +12357,11 @@ REPEAT CONJ_TAC THENL [
    SIMP_TAC std_ss [ASL_PROGRAM_IS_ABSTRACTION_def] THEN
    Q.MATCH_ABBREV_TAC `(fasl_action_order a11 a12) ==>
              (fasl_action_order a21 a22)` THEN
-   `a22 = a12` by ALL_TAC THEN1 (
+   `a22 = a12` by (
       UNABBREV_ALL_TAC THEN
       METIS_TAC[asl_prog_IS_PROCCALL_FREE_def]
    ) THEN
-   `fasl_action_order a21 a11` by ALL_TAC THEN1 (
+   `fasl_action_order a21 a11` by (
       UNABBREV_ALL_TAC THEN
       SIMP_TAC std_ss [ASL_EQUIV_PENV_PROC___PROGRAM_SEM,
      ASL_PROGRAM_SEM___PROC_THM] THEN
@@ -12375,7 +12373,7 @@ REPEAT CONJ_TAC THENL [
    PROVE_TAC[fasl_action_order_TRANSITIVE],
 
 
-   Q.PAT_ASSUM `ASL_PROCEDURE_SPEC X Y Z` (K ALL_TAC) THEN
+   Q.PAT_X_ASSUM `ASL_PROCEDURE_SPEC X Y Z` (K ALL_TAC) THEN
    FULL_SIMP_TAC std_ss [ASL_proc_specs_penv_def,
       LIST_TO_FMAP___ALL_DISTINCT,
       ASL_PROCEDURE_SPEC_def, EVERY_MEM,
@@ -12384,11 +12382,11 @@ REPEAT CONJ_TAC THENL [
    REPEAT STRIP_TAC THEN
    `(penv |++
     MAP (\x. (FST x,FST (SND x))) (MAP SND (FILTER FST specs))) '
-     (FST (SND y)) = FST (SND (SND y))` by ALL_TAC THEN1 (
+     (FST (SND y)) = FST (SND (SND y))` by (
 
       MATCH_MP_TAC FUPDATE_LIST_APPLY___ALL_DISTINCT THEN
       CONJ_TAC THENL [
-     Q.PAT_ASSUM `ALL_DISTINCT X` MP_TAC THEN
+     Q.PAT_X_ASSUM `ALL_DISTINCT X` MP_TAC THEN
      REPEAT (POP_ASSUM (K ALL_TAC)) THEN
      SIMP_TAC std_ss [MEM_MAP, MAP_MAP_o,
          combinTheory.o_DEF] THEN

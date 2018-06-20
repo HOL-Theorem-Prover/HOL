@@ -51,12 +51,12 @@ val REWRITE_THM = fn th => REWRITE_TAC[th];
 (* --------------------------------------------------------------------- *)
 
 
-val fsequiv = --`fsequiv: 'a list -> 'a list -> bool`--;
+val fsequiv = “fsequiv: 'a list -> 'a list -> bool”;
 
-val fsequiv_patterns = [--`^fsequiv S1 S2`--];
+val fsequiv_patterns = [“^fsequiv S1 S2”];
 
 val fsequiv_rules_tm =
---`
+“
 
 
        (* ------------------------------------------------------ *)
@@ -86,7 +86,7 @@ val fsequiv_rules_tm =
        (* ------------------------------------------------------ *) ==>
                             (^fsequiv A C))
 
-`--;
+”;
 
 val (fsequiv_rules_sat,fsequiv_ind_thm) =
     define_inductive_relations fsequiv_patterns fsequiv_rules_tm;

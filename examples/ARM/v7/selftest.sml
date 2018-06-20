@@ -23,16 +23,6 @@ in
   case res of NONE => die() | _ => ()
 end
 
-fun time_to_minutes e =
-let
-  val s = Time.toSeconds e
-  val minutes = Int.quot (s, 60);
-  val seconds = Int.rem (s, 60);
-in
-  Int.toString minutes ^ "m " ^
-  StringCvt.padLeft #"0" 2 (Int.toString seconds) ^ "s"
-end;
-
 local
   val updates_compare = Lib.pair_compare (Term.compare, Term.compare)
   val updates_empty = Redblackset.empty updates_compare
@@ -755,6 +745,6 @@ val _ = test "arm_steps_from_quote ThumbEE" (arm_steps_from_quote "v7-R,thumb")`
 
 val elapsed = Timer.checkRealTimer tt;
 
-val _ = print ("\nTotal time: " ^ time_to_minutes elapsed ^ "\n");
+val _ = print ("\nTotal time: " ^ Lib.time_to_string elapsed ^ "\n");
 
 val _ = OS.Process.exit OS.Process.success;

@@ -1,6 +1,6 @@
 \DOC
 
-\TYPE {term * term -> term}
+\TYPE {mk_icomb : term * term -> term}
 
 \SYNOPSIS Forms an application term, possibly instantiating the function.
 

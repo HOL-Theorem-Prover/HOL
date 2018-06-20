@@ -1,0 +1,4 @@
+skipthm datatype_bit0
+skipthm bit0_TY_DEF
+skipthm datatype_bit1
+skipthm bit1_TY_DEF

@@ -2,6 +2,7 @@
 
 open Lib;;
 open Hl_parser;;
+open Pervasives;;
 open Tactics;;
 open Simp;;
 open Basics;;
@@ -11,6 +12,9 @@ open Bool;;
 open Equal;;
 (*open Theorems;;*)
 
+(* flag for thf *)
+let main_thf_flag = ref false
+
 (* Given a predicate as an argument of another predicate, the
   conversion pRED_ARG_CONV changes it to an equivalent expression
   that has the predicate only at top level, so it can be encoded
@@ -19,8 +23,8 @@ open Equal;;
 let pRED_ARG_THM = Sequent ([], parse_term "!f a. f a <=> (?v. (v <=> a) /\\ f v)");;
 
 let must_pred tm =
-  is_forall tm or is_exists tm or is_conj tm or is_disj tm or
-  is_imp tm or is_eq tm or is_neg tm or is_abs tm;;
+  is_forall tm || is_exists tm || is_conj tm || is_disj tm ||
+  is_imp tm || is_eq tm || is_neg tm || is_abs tm;;
 
 let rec pRED_ARG_TM build_tm t =
   if must_pred t then
@@ -37,12 +41,12 @@ let rec pRED_ARG_TM build_tm t =
 ;;
 
 let rec pRED_ARG_CONV tm =
-  if is_forall tm or is_exists tm then bINDER_CONV pRED_ARG_CONV tm else
-  if is_conj tm or is_disj tm or is_imp tm then bINOP_CONV pRED_ARG_CONV tm else
+  if is_forall tm || is_exists tm then bINDER_CONV pRED_ARG_CONV tm else
+  if is_conj tm || is_disj tm || is_imp tm then bINOP_CONV pRED_ARG_CONV tm else
   if is_neg tm then rAND_CONV pRED_ARG_CONV tm else
   if is_eq tm then
     let l, r = dest_eq tm in
-    if must_pred l or must_pred r then bINOP_CONV pRED_ARG_CONV tm
+    if must_pred l || must_pred r then bINOP_CONV pRED_ARG_CONV tm
     else
       if find_terms must_pred l <> [] then
         let build_tm subt = mk_eq (subt, r) in
@@ -82,7 +86,7 @@ let rec tOP_SWEEP_QCONV conv tm =
 (* Removes simple lambda-equalities before doing proper lambda-lifting *)
 let eLIM_LAMBDA_EQ tm =
   let (l, r) = dest_eq tm in
-  (if is_abs l or is_abs r then
+  (if is_abs l || is_abs r then
   (tHENC (oNCE_REWRITE_CONV [fUN_EQ_THM]) (tOP_DEPTH_CONV bETA_CONV))
   else aLL_CONV) tm;;
 
@@ -141,7 +145,7 @@ let rec fOL_CONV ((cmin,vmin) as data) tm =
   try let l,r = try dest_forall tm with _ -> try dest_exists tm with _ -> dest_abs tm in
     bINDER_CONV (fOL_CONV (cmin, List.remove_assoc (fst (dest_var l)) vmin)) tm
   with _ ->
-  if is_conj tm or is_disj tm or is_imp tm or is_eq tm then bINOP_CONV (fOL_CONV data) tm else
+  if is_conj tm || is_disj tm || is_imp tm || is_eq tm then bINOP_CONV (fOL_CONV data) tm else
   if is_neg tm then rAND_CONV (fOL_CONV data) tm else
   let op,args = strip_comb tm in
   let th = rev_itlist (ccc (curry mK_COMB)) (map (fOL_CONV data) args) (rEFL op) in
@@ -207,20 +211,25 @@ let is_lowercase c =
 let is_uppercase c = 
   let i = Char.code c in i >= Char.code 'A' && i <= Char.code 'Z'
 let is_letter c =
-  (is_lowercase c) or (is_uppercase c)
+  (is_lowercase c) || (is_uppercase c)
 
 (* We don't have complete control over the names of 
    the type variables so we escape them completely 
    (for example the sytem may name them "'a" which clash with our
     escaping method'word')
 *)
-let escape_var s = 
+let escape_tyvar s = 
   let s1 = escape_to_hex s in "V" ^ s1
 
+let escape_var s = 
+  if !main_thf_flag 
+    then let s1 = escape_to_hex s in "v" ^ s1
+    else let s1 = escape_to_hex s in "V" ^ s1
+    
 let escape_const s = let s1 = escape_to_hex s in "c" ^ s1
 
 let escape_thm s = 
-  if (s.[0] = '\'') or (is_lowercase s.[0]) then s else add_prime s
+  if (s.[0] = '\'') || (is_lowercase s.[0]) then s else add_prime s
  
 (* Less explosive version of pOLY_ASSUME_TAC *)
 let rec fold_cs fn tm sofar =
@@ -283,6 +292,14 @@ let gl_constants tms =
   filter (fun (n, tys) -> List.length (tyvars (get_const_type n)) > 0) (setify consts)
 ;;
 
+let squotify name = "'" ^ name ^ "'"
+let squote_string = "'"
+
+let unsquotify s =
+  if s.[0] = squote_string.[0]
+  then String.sub s 1 (String.length s - 2)
+  else s
+
 let pOLY_ASSUME_TAC names ths (asl,w as gl) =
   let gcs = gl_constants (w :: map (o concl snd) asl) in
   let ths = map (polymorph gcs) ths in
@@ -290,7 +307,10 @@ let pOLY_ASSUME_TAC names ths (asl,w as gl) =
   let map_fun (n, ts) =
     if List.length ts = 1 then [(n, List.hd ts)] else
     let fold_fun (cno, clst) t =
-      (cno + 1, (n ^ "_monomorphized" ^ string_of_int cno, t) :: clst) in
+      (cno + 1, 
+        (squotify (unsquotify n ^ "_monomorphized" ^ string_of_int cno), t) 
+        :: clst) 
+      in
     snd (List.fold_left fold_fun (0, []) ts)
   in
   let ths3 = List.map map_fun ths2 in
@@ -323,17 +343,17 @@ let lAMBDA_ELIM_CONV =
     conv in
   let rec find_lambda tm =
     if is_abs tm then tm
-    else if is_var tm or is_const tm then failwith "find_lambda"
+    else if is_var tm || is_const tm then failwith "find_lambda"
     else if is_abs tm then tm else
-    if is_forall tm or is_exists tm or is_uexists tm
+    if is_forall tm || is_exists tm || is_uexists tm
     then find_lambda (body(rand tm)) else
     let l,r = dest_comb tm in
     try find_lambda l with Failure _ -> find_lambda r in
   let rec eLIM_LAMBDA conv tm =
     try conv tm with Failure _ ->
     if is_abs tm then aBS_CONV (eLIM_LAMBDA conv) tm
-    else if is_var tm or is_const tm then rEFL tm else
-    if is_forall tm or is_exists tm or is_uexists tm
+    else if is_var tm || is_const tm then rEFL tm else
+    if is_forall tm || is_exists tm || is_uexists tm
     then bINDER_CONV (eLIM_LAMBDA conv) tm
     else cOMB_CONV (eLIM_LAMBDA conv) tm in
   let aPPLY_PTH =
@@ -365,17 +385,17 @@ let lAMBDA_ELIM_CONV2 =
     conv in
   let rec find_lambda tm =
     if is_abs tm then tm
-    else if is_var tm or is_const tm then failwith "find_lambda"
+    else if is_var tm || is_const tm then failwith "find_lambda"
     else if is_abs tm then tm else
-    if is_forall tm or is_exists tm or is_uexists tm
+    if is_forall tm || is_exists tm || is_uexists tm
     then find_lambda (body(rand tm)) else
     let l,r = dest_comb tm in
     try find_lambda l with Failure _ -> find_lambda r in
   let rec eLIM_LAMBDA conv tm =
     try conv tm with Failure _ ->
     if is_abs tm then aBS_CONV (eLIM_LAMBDA conv) tm
-    else if is_var tm or is_const tm then rEFL tm else
-    if is_forall tm or is_exists tm or is_uexists tm
+    else if is_var tm || is_const tm then rEFL tm else
+    if is_forall tm || is_exists tm || is_uexists tm
     then bINDER_CONV (eLIM_LAMBDA conv) tm
     else cOMB_CONV (eLIM_LAMBDA conv) tm in
   let aPPLY_PTH =

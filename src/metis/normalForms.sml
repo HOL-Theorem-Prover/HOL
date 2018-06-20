@@ -39,12 +39,9 @@ fun chat s = (Lib.say s; true);
 
 val ERR = mk_HOL_ERR "normalForms";
 
-fun subset [] _ = true
-  | subset _ [] = false
-  | subset s t = all (fn x => mem x t) s;
-
-fun distinct [] = true
-  | distinct (x :: rest) = not (mem x rest) andalso distinct rest;
+fun op_distinct cmp [] = true
+  | op_distinct cmp (x :: rest) =
+      not (op_mem cmp x rest) andalso op_distinct cmp rest
 
 val beq = ``$= : bool->bool->bool``;
 
@@ -244,7 +241,7 @@ val SKI_CONV =
 (* ------------------------------------------------------------------------- *)
 
 val MK_C = prove
-  (``!x y. (\v. (x v) y) = C (x:'a->'b->'c) y``,
+  (``!x y. (\v. (x v) y) = combin$C (x:'a->'b->'c) y``,
    REPEAT STRIP_TAC THEN
    CONV_TAC (FUN_EQ_CONV) THEN
    SIMP_TAC boolSimps.bool_ss
@@ -518,10 +515,12 @@ local
       in
         prove_case d ((a, (false, b) :: path) :: (b, (true, a) :: path) :: rest)
       end
-    else if tm = d then
+    else if aconv tm d then
       foldl (fn ((true, a), th) => DISJ2 a th | ((false, b), th) => DISJ1 th b)
-      (ASSUME d) path
-    else prove_case d rest
+            (ASSUME d)
+            path
+    else
+      prove_case d rest
 
   fun cases_on d tm =
     let
@@ -536,8 +535,9 @@ in
     let
       val (neg, pos) = partition is_neg (disjuncts tm)
     in
-      case intersect (map dest_neg neg) pos of [] => NO_CONV tm
-      | d :: _ => EQT_INTRO (cases_on d tm)
+      case op_intersect aconv (map dest_neg neg) pos of
+          [] => NO_CONV tm
+        | d :: _ => EQT_INTRO (cases_on d tm)
     end
 end;
 
@@ -554,14 +554,14 @@ local
       val a' = mk_neg a
       val b_th = DISCH a' (if b = F then REFL F else contract (a :: asms) b)
     in
-      if mem a asms then UNDISCH (MATCH_MP CONTRACT_DISJ b_th)
+      if op_mem aconv a asms then UNDISCH (MATCH_MP CONTRACT_DISJ b_th)
       else CONV_RULE (TRY_CONV (RAND_CONV simplify_or_f))
            (MATCH_MP DISJ_CONGRUENCE b_th)
     end
 in
   val CONTRACT_CONV = W
     (fn tm =>
-     if distinct (disjuncts tm) then NO_CONV
+     if op_distinct aconv (disjuncts tm) then NO_CONV
      else DEPTH_CONV DISJ_RASSOC_CONV THENC contract []);
 end;
 
@@ -1156,7 +1156,7 @@ local
     end;
 
   fun check_sub vs {redex,residue} =
-    mem redex vs andalso (type_of redex <> bool orelse is_var residue);
+    op_mem aconv redex vs andalso (type_of redex <> bool orelse is_var residue);
 
   fun match_convish vs tm def tm' =
     let

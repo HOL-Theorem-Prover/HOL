@@ -14,9 +14,10 @@ val _ = Parse.current_backend := PPBackEnd.vt100_terminal;
 fun test_conv s conv do_stop quiet (t, r_opt) =
 let
     open PPBackEnd Parse
-    val _ = print (if quiet then "``" else "Testing "^s^" ``");
+    val lq = UnicodeChars.ldquo
+    val _ = print (if quiet then lq else "Testing "^s^" "^lq);
     val _ = print_term t;
-    val _ = print ("``\n   ");
+    val _ = print (UnicodeChars.rdquo ^ "\n   ");
     val ct = Timer.startCPUTimer();
     val thm_opt = SOME (conv t) handle Interrupt => raise Interrupt
                                      | _ => NONE;
@@ -319,6 +320,56 @@ val qh_testCases_context2 =
    (``(!x. P x ==> ISL x) ==> (!x. P x ==> Q x)``, SOME ``(!r. ~((P:('a + 'b)-> bool) (INR r))) ==> (!l. P (INL l) ==> (Q:('a + 'b)-> bool) (INL l))``)]
 
 val _ = map (qh_test_context2 hard_fail quiet) qh_testCases_context2;
+
+
+(******************************************************************************)
+(* simple tests                                                               *)
+(******************************************************************************)
+
+val qh_test_simple = test_conv "SIMPLE_QUANT_INSTANTIATE_CONV" SIMPLE_QUANT_INSTANTIATE_CONV
+
+val qh_testCases_simple =
+  [(``!x. (P x /\ (x = 5) /\ Q x) ==> Z x``, SOME ``(P 5 /\ (5 = 5) /\ Q 5) ==> Z 5``),
+
+   (``?x. (P x /\ (x = 5) /\ Q x)``, SOME ``(P 5 /\ (5 = 5) /\ Q 5)``),
+
+   (``!x. (P x \/ ~(x = 5) \/ Q x)``, SOME ``(P 5 \/ ~(5 = 5) \/ Q 5)``),
+
+   (``?x. (P x /\ x)``, SOME ``P T /\ T``),
+   (``!x. (P x \/ ~x)``, SOME ``P T \/ ~T``),
+
+   (``?x. (x = 5)``, SOME ``5 = 5``),
+   (``!x. ~(5 = x)``, SOME ``~(5 = 5)``),
+
+   (``?!x. (P x /\ (x = 5) /\ Q x)``, SOME ``(P 5 /\ (5 = 5) /\ Q 5)``),
+
+   (``some x. (P x /\ (x = 5) /\ Q x)``, SOME ``if (P 5 /\ (5 = 5) /\ Q 5) then SOME 5 else NONE``),
+
+   (``@x. (P x /\ (x = 5) /\ Q x)``, SOME ``if (P 5 /\ (5 = 5) /\ Q 5) then 5 else @x. F``),
+
+
+   (``!x y z. (P x \/ ~(x = f y z) \/ Q x)``, SOME ``!y:'b z:'c. (P (f y z) \/ ~(f y z = f y z) \/ Q (f y z))``),
+
+
+   (``?x. (P x /\ (5 = x) /\ Q x)``, SOME ``(P 5 /\ (5 = 5) /\ Q 5)``),
+   (``?x. (P x /\ (!z:'a. (5 = x) /\ Q x z))``, SOME ``(P 5 /\ (!z:'a. (5 = 5) /\ Q 5 z))``),
+   (``?x. (P x /\ (?z:'a. (5 = x) /\ Q x z))``, SOME ``(P 5 /\ (?z:'a. (5 = 5) /\ Q 5 z))``),
+
+   (``!x. ~(P x /\ (5 = x) /\ Q x)``, SOME ``~(P 5 /\ (5 = 5) /\ Q 5)``),
+   (``!x. ~(P x /\ (!z:'a. (5 = x) /\ Q x z))``, SOME ``~(P 5 /\ (!z:'a. (5 = 5) /\ Q 5 z))``),
+   (``!x. ~(P x /\ (?z:'a. (5 = x) /\ Q x z))``, SOME ``~(P 5 /\ (?z:'a. (5 = 5) /\ Q 5 z))``),
+
+   (``?x. (x, y) = (X:('a # 'b))``, SOME ``(FST X, y) = (X:('a # 'b))``),
+   (``?x. ((y, x) = (X:('a # 'b)))``, SOME ``(y, SND X) = (X:('a # 'b))``),
+   (``?x. ((3, (y:'a, x:'b), z:'c)) = X``, SOME ``((3,(y:'a,SND (FST (SND X))),z:'c) = X)``),
+   (``?x. (3::4::l = y::x::l')``, SOME ``(3::4::l = y::4::l')``),
+   (``?l'. (3::4::l = y::x::l')``, SOME ``(3::4::l = y::x::l)``),
+   (``?y. (3::4::l = y::x::l')``, SOME ``(3::4::l = 3::x::l')``),
+   (``?x. (SOME x = f)``, SOME ``(SOME (THE f) = f)``)
+]
+
+
+val _ = map (qh_test_simple hard_fail quiet) qh_testCases_simple;
 
 
 val _ = Process.exit Process.success;

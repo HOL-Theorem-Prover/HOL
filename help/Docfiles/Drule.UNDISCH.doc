@@ -25,7 +25,8 @@ hypotheses, it will not be duplicated.
 
 \SEEALSO
 Thm.DISCH, Drule.DISCH_ALL, Tactic.DISCH_TAC, Thm_cont.DISCH_THEN,
-Tactic.FILTER_DISCH_TAC, Thm_cont.FILTER_DISCH_THEN, Drule.NEG_DISCH,
-Tactic.STRIP_TAC, Drule.UNDISCH_ALL, Drule.UNDISCH_TM, Tactic.UNDISCH_TAC.
+Tactic.FILTER_DISCH_TAC, Tactic.FILTER_DISCH_THEN, Drule.NEG_DISCH,
+Tactic.STRIP_TAC, 
+Drule.UNDISCH_ALL, Drule.UNDISCH_SPLIT, Drule.UNDISCH_TM, Tactic.UNDISCH_TAC.
 
 \ENDDOC

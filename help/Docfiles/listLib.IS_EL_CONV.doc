@@ -18,9 +18,9 @@ It returns the theorem
 {
    |- IS_EL x [x0;...xn] = F
 }
-if for every {xi} occurred in the list, {conv (--`x = xi`--)}
+if for every {xi} occurred in the list, {conv “x = xi”}
 returns a theorem {|- P xi = F}, otherwise, if for at least one {xi},
-evaluating {conv (--`P xi`--)} returns the theorem {|- P xi = T}, then it
+evaluating {conv “P xi”} returns the theorem {|- P xi = T}, then it
 returns the theorem
 {
    |- IS_EL P [x0;...xn] = T
@@ -28,12 +28,12 @@ returns the theorem
 
 \FAILURE
 {IS_EL_CONV conv tm} fails if {tm} is not of the form described above, or
-failure occurs when evaluating {conv (--`x = xi`--)} for some {xi}.
+failure occurs when evaluating {conv “x = xi”} for some {xi}.
 
 \EXAMPLE
 Evaluating
 {
-   IS_EL_CONV bool_EQ_CONV (--`IS_EL T [T;F;T]`--);
+   IS_EL_CONV bool_EQ_CONV “IS_EL T [T;F;T]”;
 }
 returns the following theorem:
 {

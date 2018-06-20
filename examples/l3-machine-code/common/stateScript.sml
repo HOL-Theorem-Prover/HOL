@@ -1,5 +1,5 @@
 open HolKernel boolLib bossLib
-open lcsymtacs set_sepTheory progTheory
+open set_sepTheory progTheory
 
 val _ = new_theory "state"
 
@@ -321,7 +321,7 @@ val IMP_R_SPEC = Theory.save_thm ("IMP_R_SPEC",
                `CODE_POOL instr (c: 'd -> bool) * q`]
    |> REWRITE_RULE [STATE_SPEC_CODE]
    |> ONCE_REWRITE_RULE [STAR_COMM]
-   |> Q.GENL [`q`, `p`, `c`, `instr`, `next`, `m`, `r`]
+   |> Q.GENL [`r`, `m`, `next`, `instr`, `c`, `p`, `q`]
    )
 
 val IMP_SPEC = Theory.save_thm ("IMP_SPEC",
@@ -331,7 +331,7 @@ val IMP_SPEC = Theory.save_thm ("IMP_SPEC",
                `CODE_POOL instr (c: 'd -> bool) * q`]
    |> REWRITE_RULE [STATE_SPEC_CODE]
    |> ONCE_REWRITE_RULE [STAR_COMM]
-   |> Q.GENL [`q`, `p`, `c`, `instr`, `next`, `m`]
+   |> Q.GENL [`m`, `next`, `instr`, `c`, `p`, `q`]
    )
 
 val SEP_EQ_SINGLETON = Q.store_thm ("SEP_EQ_SINGLETON",

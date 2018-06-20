@@ -10,10 +10,10 @@ a boolean list.
 conversion, list.
 
 \DESCRIBE
-For any object language list of the form {--`[x1;x2;...;xn]`--}, where {x1},
+For any object language list of the form {“[x1;x2;...;xn]”}, where {x1},
 {x2}, ..., {xn} are boolean expressions, the result of evaluating
 {
-   AND_EL_CONV (--`AND_EL [x1;x2;...;xn]`--)
+   AND_EL_CONV “AND_EL [x1;x2;...;xn]”
 }
 is the theorem
 {
@@ -25,19 +25,19 @@ are not boolean constants.
 
 \EXAMPLE
 {
-- AND_EL_CONV (--`AND_EL [T;F;F;T]`--);
+- AND_EL_CONV “AND_EL [T;F;F;T]”;
 |- AND_EL [T;F;F;T] = F
 }
 {
-- AND_EL_CONV (--`AND_EL [T;T;T]`--);
+- AND_EL_CONV “AND_EL [T;T;T]”;
 |- AND_EL [T;T;T] = T
 }
 {
-- AND_EL_CONV (--`AND_EL [T;x;y]`--);
+- AND_EL_CONV “AND_EL [T;x;y]”;
 |- AND_EL [T; x; y] = x /\ y
 }
 {
-- AND_EL_CONV (--`AND_EL [x;F;y]`--);
+- AND_EL_CONV “AND_EL [x;F;y]”;
 |- AND_EL [x; F; y] = F
 }
 

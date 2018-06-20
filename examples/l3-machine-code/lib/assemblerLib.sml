@@ -7,6 +7,11 @@ struct
 
 open HolKernel boolLib bossLib
 
+local
+  open IntExtra Nat Set L3 Bitstring BitsN FP32 FP64 FPConvert
+in
+end
+
 (* Turns a quote `...` into a list of strings, removing comments *)
 local
    val compressNewlines =
@@ -50,9 +55,9 @@ val printLines: lines -> unit =
 fun dropLastChar "" = ""
   | dropLastChar s = String.substring (s, 0, String.size s - 1)
 
-fun hex w = StringCvt.padLeft #"0" (BitsN.size w div 4)
+fun hex w = StringCvt.padLeft #"0" (Nat.toNativeInt (BitsN.size w) div 4)
               (L3.lowercase (BitsN.toHexString w))
 
-fun word n s = Option.valOf (BitsN.fromHexString (s, n))
+fun word n s = Option.valOf (BitsN.fromHexString (s, Nat.fromNativeInt n))
 
 end

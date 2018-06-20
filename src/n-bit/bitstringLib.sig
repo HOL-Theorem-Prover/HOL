@@ -4,6 +4,10 @@ sig
 
     val add_bitstring_compset : computeLib.compset -> unit
 
+    val BITSTRING_GROUND_CONV : Conv.conv
+    val BITSTRING_GROUND_ss : simpLib.ssfrag
+    val v2w_n2w_ss : simpLib.ssfrag
+
     val Cases_on_v2w : term frag list -> tactic
 
     type bitify_boolify =

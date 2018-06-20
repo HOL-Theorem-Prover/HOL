@@ -61,7 +61,7 @@ val PARITY_LEMMA = prove(
   PURE_REWRITE_TAC [PARITY_IMP_def, ONE_def, NOT_def, MUX_def, REG_def] THEN
   REPEAT STRIP_TAC THENL [
     PROVE_TAC [],
-    PAT_ASSUM ``!t. out t = X t``
+    PAT_X_ASSUM ``!t. out t = X t``
               (fn th => REWRITE_TAC [SPEC ``SUC t`` th]) THEN
     RW_TAC arith_ss []
   ]);

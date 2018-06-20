@@ -17,12 +17,14 @@ fun every P ss =
       NONE => true
     | SOME (c, ss') => P c andalso every P ss'
 
-val verbstr = "%|^$!()*&"
-fun find_verbchar ss = let
+fun mem x l = List.exists (fn e => e = x) l
+
+val verbstr = "|^$!()*&+-@/'\""
+fun find_verbchar avoids ss = let
   fun loop n = let
     val candidate = String.extract(verbstr,n,SOME 1)
   in
-    if occurs candidate ss then loop (n + 1)
+    if occurs candidate ss orelse mem candidate avoids then loop (n + 1)
     else candidate
   end
 in
@@ -30,26 +32,42 @@ in
 end handle Subscript =>
            raise Fail "bracketed string with too many exotic characters!"
 
+fun findvc3 avoids ss =
+  let
+    val c1 = find_verbchar avoids ss
+    val c2 = find_verbchar (c1::avoids) ss
+    val c3 = find_verbchar (c1::c2::avoids) ss
+  in
+    (c1,c2,c3)
+  end
+
 fun print_verb1(ss, ostr) = let
-  val c = find_verbchar ss
+  val vd = find_verbchar [] ss
+  val (com,argl,argr) = findvc3 [vd] ss
+  val verbtheta =
+      map (fn (a,b) => {redex = a, residue = b})
+          [(UnicodeChars.ldquo, com ^ "ldquo" ^ argl ^ argr),
+           (UnicodeChars.rdquo, com ^ "rdquo" ^ argl ^ argr)]
 in
-  out(ostr, "{\\small\\verb" ^ c);
-  out(ostr, Substring.string ss);
-  out(ostr, c ^ "}")
+  out(ostr, "{\\small\\Verb[commandchars=" ^ String.concat [com,argl,argr] ^
+            "]" ^ vd);
+  out(ostr, stringfindreplace.subst verbtheta (Substring.string ss));
+  out(ostr, vd ^ "}")
 end
 
 fun print_verbblock (ss, ostr) =
-    (out(ostr,"\\begin{Verbatim}");
-     out(ostr, Substring.string ss);
-     out(ostr, "\\end{Verbatim}\n"))
-
-(*
-fun print_verbblock (ss, ostr) =
-    (out(ostr, "{\\par\\samepage\\setseps\\small\n");
-     out(ostr,"\\begin{verbatim}");
-     out(ostr, Substring.string ss);
-     out(ostr, "\\end{verbatim}}"))
-*)
+  let
+    val (com,argl,argr) = findvc3 [] ss
+    val verbtheta =
+      map (fn (a,b) => {redex = a, residue = b})
+          [(UnicodeChars.ldquo, com ^ "ldquo" ^ argl ^ argr),
+           (UnicodeChars.rdquo, com ^ "rdquo" ^ argl ^ argr)]
+  in
+    out(ostr,"\\begin{Verbatim}[commandchars=" ^ String.concat[com,argl,argr] ^
+             "]\n");
+    out(ostr, stringfindreplace.subst verbtheta (Substring.string ss));
+    out(ostr, "\\end{Verbatim}\n")
+  end
 
 val lastminute_fixes =
     String.translate (fn #"#" => "\\#"
@@ -138,7 +156,8 @@ fun do_the_work dir dset outstr = let
     print_docpart(file, outstr);
     app (fn s => print_section (s,outstr)) file;
     out(outstr, "\\ENDDOC\n\n")
-  end
+  end handle e => die ("Exception raised (" ^ dnm ^ ".doc): " ^
+                       General.exnMessage e)
 in
   Binaryset.app appthis dset
 end

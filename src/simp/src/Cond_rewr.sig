@@ -36,6 +36,7 @@ sig
 
   include Abbrev
   type controlled_thm = BoundedRewrites.controlled_thm
+  val ac_term_ord    : term * term -> order
   val mk_cond_rewrs  : controlled_thm -> controlled_thm list
   val IMP_EQ_CANON   : controlled_thm -> controlled_thm list
   val COND_REWR_CONV : thm -> bool ->

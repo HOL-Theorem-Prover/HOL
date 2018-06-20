@@ -1,4 +1,4 @@
-open HolKernel boolLib bossLib BasicProvers;
+open HolKernel Parse boolLib bossLib BasicProvers;
 open optionTheory pairTheory stringTheory listTheory arithmeticTheory totoTheory;
 open lcsymtacs;
 
@@ -7,9 +7,9 @@ val _ = new_theory "comparison";
 val _ = temp_tight_equality ();
 val every_case_tac = BasicProvers.EVERY_CASE_TAC;
 
-val comparison_distinct = save_thm("comparison_distinct",cpn_distinct)
-val comparison_case_def = save_thm("comparison_case_def",cpn_case_def)
-val comparison_nchotomy = save_thm("comparison_nchotomy",cpn_nchotomy)
+val comparison_distinct = TypeBase.distinct_of ``:ordering``
+val comparison_case_def = TypeBase.case_def_of ``:ordering``
+val comparison_nchotomy = TypeBase.nchotomy_of ``:ordering``
 val _ = Parse.overload_on("Less",``LESS``)
 val _ = Parse.overload_on("Equal",``EQUAL``)
 val _ = Parse.overload_on("Greater",``GREATER``)
@@ -37,11 +37,9 @@ val good_cmp_thm = Q.store_thm ("good_cmp_thm",
 
 val cmp_thms = save_thm ("cmp_thms", LIST_CONJ [comparison_distinct, comparison_case_def, comparison_nchotomy, good_cmp_def])
 
-val option_cmp_def = Define `
-(option_cmp cmp NONE NONE = Equal) /\
-(option_cmp cmp NONE (SOME x) = Less) /\
-(option_cmp cmp (SOME x) NONE = Greater) /\
-(option_cmp cmp (SOME x) (SOME y) = cmp x y)`;
+val _ = overload_on ("option_cmp", ``option_compare``);
+val option_cmp_def = save_thm("option_cmp_def",
+  ternaryComparisonsTheory.option_compare_def)
 
 val option_cmp2_def = Define`
   (option_cmp2 cmp NONE NONE = Equal) /\
@@ -49,61 +47,43 @@ val option_cmp2_def = Define`
   (option_cmp2 cmp (SOME x) NONE = Less) /\
   (option_cmp2 cmp (SOME x) (SOME y) = cmp x y)`
 
-val list_cmp_def = Define`
-(list_cmp cmp [] [] = Equal) /\
-(list_cmp cmp [] (x::y) = Less) /\
-(list_cmp cmp (x::y) [] = Greater) /\
-(list_cmp cmp (x1::y1) (x2::y2) =
-  case cmp x1 x2 of
-     | Equal => list_cmp cmp y1 y2
-     | Less => Less
-     | Greater => Greater)`
+val _ = overload_on ("list_cmp", ``list_compare``)
+val list_cmp_def = ternaryComparisonsTheory.list_compare_def
+val list_cmp_ind = ternaryComparisonsTheory.list_compare_ind
 
-val list_cmp_ind = fetch "-" "list_cmp_ind";
+val _ = overload_on ("pair_cmp", ``pair_compare``)
+val pair_cmp_def = save_thm(
+  "pair_cmp_def",
+  PART_MATCH lhs ternaryComparisonsTheory.pair_compare_def
+     ``pair_cmp c1 c2 (FST x, SND x) (FST y, SND y)``
+     |> REWRITE_RULE [pairTheory.PAIR]);
 
-val pair_cmp_def = Define`
-pair_cmp cmp1 cmp2 x y =
-  case cmp1 (FST x) (FST y)  of
-     | Equal => cmp2 (SND x) (SND y)
-     | Less => Less
-     | Greater => Greater`;
+val _ = overload_on ("bool_cmp", ``bool_compare``)
+val bool_cmp_def = save_thm(
+  "bool_cmp_def",
+  ternaryComparisonsTheory.bool_compare_def)
 
-val bool_cmp_def = Define `
-(bool_cmp T T = Equal) /\
-(bool_cmp F F = Equal) /\
-(bool_cmp T F = Greater) /\
-(bool_cmp F T = Less)`;
+val _ = overload_on ("num_cmp", ``num_compare``)
+val num_cmp_def = save_thm(
+  "num_cmp_def",
+  ternaryComparisonsTheory.num_compare_def)
 
-val num_cmp_def = Define `
-num_cmp n1 n2 =
-  if n1 = n2 then
-    Equal
-  else if n1 < n2 then
-    Less
-  else
-    Greater`;
+val _ = overload_on ("char_cmp", ``char_compare``);
+val char_cmp_def = save_thm(
+  "char_cmp_def",
+  ternaryComparisonsTheory.char_compare_def);
 
-val char_cmp_def = Define `
-char_cmp c1 c2 = num_cmp (ORD c1) (ORD c2)`;
-
-val string_cmp_def = Define `
-string_cmp = list_cmp char_cmp`;
-
+val _ = overload_on ("string_cmp", ``string_compare``);
+val string_cmp_def = save_thm(
+  "string_cmp_def",
+  ternaryComparisonsTheory.string_compare_def)
 (* relationship to toto *)
 
 val TotOrd_imp_good_cmp = store_thm("TotOrder_imp_good_cmp",
   ``!cmp. TotOrd cmp ==> good_cmp cmp``,
   rw[TotOrd,good_cmp_thm] >> metis_tac[])
 
-val invert_def = Define`
-  invert GREATER = LESS /\
-  invert LESS = GREATER /\
-  invert EQUAL = EQUAL`
-val _ = export_rewrites["invert_def"]
-
-val invert_eq_EQUAL = store_thm("invert_eq_EQUAL[simp]",
-  ``!x. invert x = EQUAL <=> x = EQUAL``,
-  Cases >> simp[])
+val _ = temp_overload_on ("invert", ``ternaryComparisons$invert_comparison``)
 
 val TO_inv_invert = store_thm("TO_inv_invert",
   ``!c. TotOrd c ==> TO_inv c = CURRY (invert o UNCURRY c)``,
@@ -129,9 +109,13 @@ val list_cmp_ListOrd = store_thm("list_cmp_ListOrd",
   BasicProvers.CASE_TAC >>
   metis_tac[cmp_thms])
 
+val TotOrd_list_cmp = store_thm("TotOrd_list_cmp",
+  ``!c. TotOrd c ==> TotOrd (list_cmp c)``,
+  srw_tac[][] >> imp_res_tac list_cmp_ListOrd >> simp[TO_ListOrd])
+
 val pair_cmp_lexTO = store_thm("pair_cmp_lexTO",
   ``!R V. TotOrd R /\ TotOrd V ==> pair_cmp R V = R lexTO V``,
-  simp[FUN_EQ_THM,lexTO_thm,pair_cmp_def])
+  simp[FUN_EQ_THM,lexTO_thm,pair_cmp_def,pairTheory.FORALL_PROD])
 
 val num_cmp_numOrd = store_thm("num_cmp_numOrd",
   ``num_cmp = numOrd``,
@@ -256,7 +240,7 @@ val option_cmp_cong = Q.store_thm ("option_cmp_cong",
   (!x x'. v1' = SOME x /\ v2' = SOME x' ==> cmp x x' = cmp' x x')
   ==>
   option_cmp cmp v1 v2 = option_cmp cmp' v1' v2'`,
- ho_match_mp_tac (fetch "-" "option_cmp_ind") >>
+ ho_match_mp_tac ternaryComparisonsTheory.option_compare_ind >>
  rw [option_cmp_def] >>
  rw [option_cmp_def]);
 
@@ -279,11 +263,7 @@ val pair_cmp_cong = Q.store_thm ("pair_cmp_cong",
   (!a b c d. v1' = (a,b) /\ v2' = (c,d) ==> cmp2 b d = cmp2' b d)
   ==>
   pair_cmp cmp1 cmp2 v1 v2 = pair_cmp cmp1' cmp2' v1' v2'`,
- rw [pair_cmp_def] >>
- every_case_tac >>
- Cases_on `v1` >>
- Cases_on `v2` >>
- fs []);
+ simp [pair_cmp_def, pairTheory.FORALL_PROD]);
 
 val _ = DefnBase.export_cong "list_cmp_cong";
 val _ = DefnBase.export_cong "option_cmp_cong";
@@ -390,5 +370,16 @@ val list_cmp_equal_list_rel = Q.store_thm ("list_cmp_equal_list_rel",
  fs [list_cmp_def] >>
  every_case_tac >>
  fs []);
+
+val TO_of_LinearOrder_LLEX = store_thm("TO_of_LinearOrder_LLEX",
+  ``!R. irreflexive R ==> (TO_of_LinearOrder (LLEX R) = list_cmp (TO_of_LinearOrder R))``,
+  srw_tac[][relationTheory.irreflexive_def] >>
+  simp[FUN_EQ_THM] >>
+  Induct >- (
+    Cases >> simp[list_cmp_def,TO_of_LinearOrder] ) >>
+  gen_tac >> Cases >>
+  simp[list_cmp_def,TO_of_LinearOrder] >>
+  pop_assum(assume_tac o GSYM) >> simp[] >>
+  srw_tac[][TO_of_LinearOrder] >> full_simp_tac(srw_ss())[] >> rev_full_simp_tac(srw_ss())[])
 
 val _ = export_theory ();

@@ -17,7 +17,7 @@ val ERR = mk_HOL_ERR "ratSyntax";
  *--------------------------------------------------------------------------*)
 
 (*val int_ty = intSyntax.int_ty;*)
-(*val rat = mk_thy_type{Tyop = "rat", Thy="rat", Args = []};*)
+val rat = mk_thy_type{Tyop = "rat", Thy="rat", Args = []};
 
 val rat_0_tm = prim_mk_const {Name="rat_0",Thy="rat"};
 val rat_1_tm = prim_mk_const {Name="rat_1",Thy="rat"};
@@ -131,21 +131,21 @@ fun is_literal t =
 
 fun list_rat_add summands =
 let
-	fun recurse acc [] = acc
-	  | recurse acc (x::xs) = recurse (mk_rat_mul(acc, x)) xs
+        fun recurse acc [] = acc
+          | recurse acc (x::xs) = recurse (mk_rat_mul(acc, x)) xs
 in
-	recurse (hd summands) (tl summands)
-	handle List.Empty => raise ERR "list_rat_add" "empty summand list"
+        recurse (hd summands) (tl summands)
+        handle List.Empty => raise ERR "list_rat_add" "empty summand list"
 end;
 
 
 fun list_rat_mul multiplicands =
 let
-	fun recurse acc [] = acc
-	  | recurse acc (x::xs) = recurse (mk_rat_mul(acc, x)) xs
+        fun recurse acc [] = acc
+          | recurse acc (x::xs) = recurse (mk_rat_mul(acc, x)) xs
 in
-	recurse (hd multiplicands) (tl multiplicands)
-	handle List.Empty => raise ERR "list_rat_mul" "empty multiplicand list"
+        recurse (hd multiplicands) (tl multiplicands)
+        handle List.Empty => raise ERR "list_rat_mul" "empty multiplicand list"
 end;
 
 
@@ -155,24 +155,41 @@ end;
 
 fun strip_rat_add tm =
 let
-	fun recurse acc tm =
-	let val (l,r) = dest_rat_add tm in
-		recurse (recurse acc r) l
-	end handle HOL_ERR _ => tm::acc
+        fun recurse acc tm =
+        let val (l,r) = dest_rat_add tm in
+                recurse (recurse acc r) l
+        end handle HOL_ERR _ => tm::acc
 in
-	recurse [] tm
+        recurse [] tm
 end;
 
 
 fun strip_rat_mul tm =
 let
-	fun recurse acc tm =
-	let val (l,r) = dest_rat_mul tm in
-		recurse (recurse acc r) l
-	end handle HOL_ERR _ => tm::acc
+        fun recurse acc tm =
+        let val (l,r) = dest_rat_mul tm in
+                recurse (recurse acc r) l
+        end handle HOL_ERR _ => tm::acc
 in
-	recurse [] tm
+        recurse [] tm
 end;
+
+
+(* into and out of (arbitrary precision) integers *)
+fun int_of_term t =
+  if is_rat_ainv t then Arbint.~ (int_of_term (rand t))
+  else if is_rat_of_num t then Arbint.fromNat (numSyntax.dest_numeral (rand t))
+  else raise mk_HOL_ERR "ratSyntax" "int_of_term" "Term not integral"
+
+fun term_of_int i =
+  let
+    val (n, f) = if Arbint.<(i,Arbint.zero) then (Arbint.~ i, mk_rat_ainv)
+                 else (i, fn t => t)
+  in
+    f (mk_rat_of_num (numSyntax.mk_numeral (Arbint.toNat n)))
+  end
+
+
 
 (*==========================================================================
  * end of structure

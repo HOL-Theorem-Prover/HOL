@@ -112,6 +112,7 @@ sig
   val ssfrags_of      : simpset -> ssfrag list
   val mk_simpset      : ssfrag list -> simpset
   val remove_ssfrags  : simpset -> string list -> simpset
+  val remove_theorems : term list -> simpset -> simpset
   val ssfrag_names_of : simpset -> string list
   val ++              : simpset * ssfrag -> simpset  (* infix *)
   val &&              : simpset * thm list -> simpset  (* infix *)
@@ -206,7 +207,7 @@ sig
    (* Prettyprinters for ssfrags and simpsets.                             *)
    (* ---------------------------------------------------------------------*)
 
-   val pp_ssfrag : ppstream -> ssfrag -> unit
-   val pp_simpset : ppstream -> simpset -> unit
+   val pp_ssfrag : ssfrag Parse.pprinter
+   val pp_simpset : simpset Parse.pprinter
 
 end

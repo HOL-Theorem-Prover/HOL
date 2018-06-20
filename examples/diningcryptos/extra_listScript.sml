@@ -296,7 +296,7 @@ val HD_SUBTYPE = store_thm
    ``!x.  HD IN ((gtlist 0 INTER list x) -> x)``,
    RW_TAC std_ss [IN_FUNSET, IN_INTER, IN_GTLIST]
    ++ Cases_on `x'`
-   >> (Q.PAT_ASSUM `0 < LENGTH []` MP_TAC
+   >> (Q.PAT_X_ASSUM `0 < LENGTH []` MP_TAC
        ++ RW_TAC arith_ss [LENGTH])
    ++ POP_ASSUM MP_TAC
    ++ RW_TAC std_ss [IN_LIST, HD]);
@@ -307,7 +307,7 @@ val TL_SUBTYPE = store_thm
                  (gtlist 1 -> gtlist 0))``,
    RW_TAC std_ss [IN_FUNSET, IN_INTER, IN_GTLIST] <<
    [Cases_on `x'`
-   >> (Q.PAT_ASSUM `0 < LENGTH []` MP_TAC
+   >> (Q.PAT_X_ASSUM `0 < LENGTH []` MP_TAC
        ++ RW_TAC arith_ss [LENGTH])
     ++ POP_ASSUM MP_TAC
     ++ RW_TAC std_ss [IN_LIST, TL],
@@ -354,7 +354,15 @@ val GTLIST1_SUBSET_GTLIST0 = store_thm
    RW_TAC std_ss [SUBSET_DEF, IN_GTLIST]
    ++ DECIDE_TAC);
 
-val REAL_SUM = Define   `(REAL_SUM [] = 0:real) /\    (!x l. REAL_SUM (x::l) = x + REAL_SUM l)`;val REAL_SUM_MAP_CMUL = store_thm  ("REAL_SUM_MAP_CMUL",   ``!f c l. REAL_SUM (MAP (\x. c * f x) l) = c * REAL_SUM (MAP f l)``,   STRIP_TAC ++ STRIP_TAC ++ Induct   ++ RW_TAC real_ss [REAL_SUM, MAP, REAL_ADD_LDISTRIB]);
+val REAL_SUM = Define`
+  (REAL_SUM [] = 0:real) /\
+  (!x l. REAL_SUM (x::l) = x + REAL_SUM l)
+`;
+
+val REAL_SUM_MAP_CMUL = store_thm  ("REAL_SUM_MAP_CMUL",
+  ``!f c l. REAL_SUM (MAP (\x. c * f x) l) = c * REAL_SUM (MAP f l)``,
+  STRIP_TAC ++ STRIP_TAC ++ Induct ++
+  RW_TAC real_ss [REAL_SUM, MAP, REAL_ADD_LDISTRIB]);
 
 val LIST_COMBS = Define  `(LIST_COMBS [] _ = []) /\   (LIST_COMBS (x::xs) l = (MAP (\y. (x, y)) l) ++ (LIST_COMBS xs l))`;val MEM_LIST_COMBS = store_thm  ("MEM_LIST_COMBS",   ``!l l' x. MEM x (LIST_COMBS l l') = (MEM (FST x) l /\ MEM (SND x) l')``,   Induct   ++ RW_TAC list_ss [LIST_COMBS]   ++ `?f s. x = (f, s)` by METIS_TAC [pair_CASES]   ++ RW_TAC list_ss [MEM_MAP, FST, SND]   ++ DECIDE_TAC);val LENGTH_LIST_COMBS = store_thm  ("LENGTH_LIST_COMBS",   ``!x y. LENGTH (LIST_COMBS x y) = LENGTH x * LENGTH y``,   Induct ++ RW_TAC real_ss [LENGTH, LIST_COMBS, LENGTH_APPEND, LENGTH_MAP]   ++ `LENGTH y + LENGTH x * LENGTH y = 1 * LENGTH y + LENGTH x * LENGTH y` by RW_TAC arith_ss []   ++ POP_ORW ++ RW_TAC arith_ss [GSYM RIGHT_ADD_DISTRIB, ADD1]);val LIST_COMBS_EQ_NIL = store_thm  ("LIST_COMBS_EQ_NIL",   ``!x y. (LIST_COMBS x y = []) = ((x = []) \/ (y = []))``,   Induct ++ RW_TAC list_ss [LIST_COMBS]   ++ DECIDE_TAC);
 

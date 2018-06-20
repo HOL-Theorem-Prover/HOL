@@ -9,10 +9,10 @@ Computes by inference the result of stripping the last element of a list.
 conversion, list.
 
 \DESCRIBE
-For any object language list of the form {--`[x0;...x(n-1)]`--} ,
+For any object language list of the form {“[x0;...x(n-1)]”} ,
 the result of evaluating
 {
-   BUTLAST_CONV (--`BUTLAST [x0;...;x(n-1)]`--)
+   BUTLAST_CONV “BUTLAST [x0;...;x(n-1)]”
 }
 is the theorem
 {

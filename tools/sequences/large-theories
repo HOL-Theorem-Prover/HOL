@@ -1,8 +1,10 @@
 src/real
-src/complex
-!!examples/separationLogic/src/
 src/HolQbf
 src/HolSmt
+!!examples/separationLogic/src/
+!!examples/separationLogic/src/holfoot
+[poly]!!examples/separationLogic/src/holfoot/poly
+[mosml]!!examples/separationLogic/src/holfoot/mosml
 !examples/misc
 # these examples require Muddy, which is MoscowML specific
 [mosml]!examples/muddy/muddyC
@@ -18,10 +20,14 @@ src/HolSmt
 !!examples/lambda/typing
 !!examples/computability/lambda
 !!examples/computability/register
+!!examples/computability/turing
 !!examples/balanced_bst
-!examples/pattern_matches
+!!examples/formal-languages/regular
 src/Boolify/src
 src/float
-[poly]src/floating-point
+src/floating-point
+!examples/l3-machine-code/common
+!!examples/l3-machine-code/decompilers
+[poly]src/floating-point/native
 src/probability
 src/temporal/src

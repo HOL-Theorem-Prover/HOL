@@ -103,7 +103,9 @@ sig
    val word_nand_tm : term
    val word_nor_tm : term
    val word_or_tm : term
+   val word_quot_tm : term
    val word_reduce_tm : term
+   val word_rem_tm : term
    val word_replicate_tm : term
    val word_reverse_tm : term
    val word_rol_bv_tm : term
@@ -111,13 +113,10 @@ sig
    val word_ror_bv_tm : term
    val word_ror_tm : term
    val word_rrx_tm : term
-   val word_sdiv_tm : term
    val word_sign_extend_tm : term
    val word_slice_tm : term
    val word_smax_tm : term
    val word_smin_tm : term
-   val word_smod_tm : term
-   val word_srem_tm : term
    val word_sub_tm : term
    val word_to_bin_list_tm : term
    val word_to_bin_string_tm : term
@@ -212,7 +211,9 @@ sig
    val dest_word_nand : term -> term * term
    val dest_word_nor : term -> term * term
    val dest_word_or : term -> term * term
+   val dest_word_quot : term -> term * term
    val dest_word_reduce : term -> term * term
+   val dest_word_rem : term -> term * term
    val dest_word_replicate : term -> term * term
    val dest_word_reverse : term -> term
    val dest_word_rol : term -> term * term
@@ -220,13 +221,10 @@ sig
    val dest_word_ror : term -> term * term
    val dest_word_ror_bv : term -> term * term
    val dest_word_rrx : term -> term * term
-   val dest_word_sdiv : term -> term * term
    val dest_word_sign_extend : term -> term * term
    val dest_word_slice : term -> term * term * term
    val dest_word_smax : term -> term * term
    val dest_word_smin : term -> term * term
-   val dest_word_smod : term -> term * term
-   val dest_word_srem : term -> term * term
    val dest_word_sub : term -> term * term
    val dest_word_to_bin_list : term -> term
    val dest_word_to_bin_string : term -> term
@@ -321,7 +319,9 @@ sig
    val is_word_nand : term -> bool
    val is_word_nor : term -> bool
    val is_word_or : term -> bool
+   val is_word_quot : term -> bool
    val is_word_reduce : term -> bool
+   val is_word_rem : term -> bool
    val is_word_replicate : term -> bool
    val is_word_reverse : term -> bool
    val is_word_rol : term -> bool
@@ -329,13 +329,10 @@ sig
    val is_word_ror : term -> bool
    val is_word_ror_bv : term -> bool
    val is_word_rrx : term -> bool
-   val is_word_sdiv : term -> bool
    val is_word_sign_extend : term -> bool
    val is_word_slice : term -> bool
    val is_word_smax : term -> bool
    val is_word_smin : term -> bool
-   val is_word_smod : term -> bool
-   val is_word_srem : term -> bool
    val is_word_sub : term -> bool
    val is_word_to_bin_list : term -> bool
    val is_word_to_bin_string : term -> bool
@@ -430,7 +427,9 @@ sig
    val mk_word_nand : term * term -> term
    val mk_word_nor : term * term -> term
    val mk_word_or : term * term -> term
+   val mk_word_quot : term * term -> term
    val mk_word_reduce : term * term -> term
+   val mk_word_rem : term * term -> term
    val mk_word_replicate : term * term -> term
    val mk_word_replicate_ty : term * term * hol_type -> term
    val mk_word_reverse : term -> term
@@ -439,13 +438,10 @@ sig
    val mk_word_ror : term * term -> term
    val mk_word_ror_bv : term * term -> term
    val mk_word_rrx : term * term -> term
-   val mk_word_sdiv : term * term -> term
    val mk_word_sign_extend : term * term -> term
    val mk_word_slice : term * term * term -> term
    val mk_word_smax : term * term -> term
    val mk_word_smin : term * term -> term
-   val mk_word_smod : term * term -> term
-   val mk_word_srem : term * term -> term
    val mk_word_sub : term * term -> term
    val mk_word_to_bin_list : term -> term
    val mk_word_to_bin_string : term -> term

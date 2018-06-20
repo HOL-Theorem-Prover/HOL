@@ -1,6 +1,6 @@
 \DOC list_compare
 
-\TYPE {list_compare : ('a * 'a -> order) -> 'a list * 'a list -> order}
+\TYPE {list_compare : 'a cmp -> 'a list cmp}
 
 \SYNOPSIS
 Lifts a comparison function to a lexicographic ordering on lists.

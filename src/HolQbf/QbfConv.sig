@@ -22,7 +22,7 @@ signature QbfConv = sig
   val qbf_prenex_conv : conv
 
   (* simplifies clauses (specialisation of SIMP_CONV). In particular, does the following rewrites:
-    (∀x. x ∨ P) = P, (∀x. ¬x ∨ P) = P, (∀x. x) = F, (∀x. ¬x) = F,
+    (∀x. x ∨ P) = P, (∀x. ¬x ∨ P) = P, (∀x. x) = F, (∀x. ¬x) = F,   (UOK)
     and associativity/commutativity normalisation for conjunction and disjunction *)
   val simp_clauses : conv
 

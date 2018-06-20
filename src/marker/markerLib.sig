@@ -23,6 +23,7 @@ sig
   val unCong : thm -> thm
 
   val ABB                 : term -> term -> tactic
+  val ABB'                : {redex : term, residue : term} -> tactic
   val ABBREV_TAC          : term -> tactic
   val PAT_ABBREV_TAC      : term set -> term -> tactic
   val MATCH_ABBREV_TAC    : term set -> term -> tactic
@@ -39,6 +40,7 @@ sig
   val MK_ABBREVS_OLDSTYLE : tactic
   val Abbr                : term quotation -> thm
   val safe_inst_cmp       : {redex:term,residue:term} Lib.cmp
+  val safe_inst_sort      : (term,term) subst -> (term,term) subst
 
   val MK_LABEL         : string * thm -> thm
   val DEST_LABEL       : thm -> thm

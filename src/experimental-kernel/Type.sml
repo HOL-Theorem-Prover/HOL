@@ -1,7 +1,7 @@
 structure Type :> Type =
 struct
 
-open Feedback Lib
+open Feedback Lib KernelTypes
 
 infix |->
 infixr -->
@@ -41,9 +41,6 @@ val _ = prim_new_type (minseg "bool") 0
 val _ = prim_new_type (minseg "ind") 0
 
 val funref = #1 (KernelSig.find(operator_table, {Thy="min", Name = "fun"}))
-
-datatype hol_type = Tyv of string
-                  | Tyapp of KernelSig.kernelid * hol_type list
 
 fun uptodate_type (Tyv s) = true
   | uptodate_type (Tyapp(info, args)) = KernelSig.uptodate_id info andalso
@@ -124,18 +121,15 @@ fun type_vars_set acc [] = acc
   | type_vars_set acc (Tyapp(_, args) :: rest) =
       type_vars_set acc (args @ rest)
 
-fun compare0 (Tyv s1, Tyv s2) = String.compare(s1, s2)
-  | compare0 (Tyv _, _) = LESS
-  | compare0 (Tyapp _, Tyv _) = GREATER
-  | compare0 (Tyapp(i, iargs), Tyapp(j, jargs)) = let
+fun compare (Tyv s1, Tyv s2) = String.compare(s1, s2)
+  | compare (Tyv _, _) = LESS
+  | compare (Tyapp _, Tyv _) = GREATER
+  | compare (Tyapp(i, iargs), Tyapp(j, jargs)) = let
     in
       case KernelSig.id_compare(i,j) of
-        EQUAL => Lib.list_compare compare0 (iargs, jargs)
+        EQUAL => Lib.list_compare compare (iargs, jargs)
       | x => x
     end
-
-fun compare p = if Portable.pointer_eq p then EQUAL
-                else compare0 p
 
 val empty_tyset = HOLset.empty compare
 

@@ -27,6 +27,8 @@
 (define-prefix-command 'hol-unicode-U-map)
 (define-prefix-command 'hol-unicode-lparen-map)
 (define-prefix-command 'hol-unicode-rparen-map)
+(define-prefix-command 'hol-unicode-shift-map)
+(define-key global-map (kbd "C-S-f") 'hol-unicode-shift-map)
 (define-key global-map (kbd "C-S-p") 'hol-unicode-p-map)
 (define-key global-map (kbd "C-M-S-p") 'hol-unicode-P-map)
 (define-key global-map (kbd "C-M-|") 'hol-unicode-not-map)
@@ -51,13 +53,18 @@
 (global-set-key (kbd "C-S-r") "ρ")
 (global-set-key (kbd "C-S-s") "σ")
 (global-set-key (kbd "C-S-t") "τ")
-(define-key hol-unicode-p-map "h" "φ")
+(global-set-key (kbd "C-S-x") "ξ")
+(define-key hol-unicode-p-map "h" "ϕ")  ; U+03D5
+(define-key hol-unicode-p-map "v" "φ")  ; U+03C6
 (define-key hol-unicode-p-map "s" "ψ")
 
 (global-set-key (kbd "C-S-M-g") "Γ")
 (global-set-key (kbd "C-S-M-d") "Δ")
 (global-set-key (kbd "C-S-M-l") "Λ")
+(global-set-key (kbd "C-S-M-s") "Σ")
+(global-set-key (kbd "C-S-M-t") "Θ")
 (global-set-key (kbd "C-S-M-o") "Ω")
+(global-set-key (kbd "C-S-M-x") "Ξ")
 (define-key hol-unicode-P-map "i" "Π")
 (define-key hol-unicode-P-map "h" "Φ")
 (define-key hol-unicode-P-map "s" "Ψ")
@@ -69,6 +76,8 @@
 (define-key hol-unicode-not-map "<" "≮")
 (define-key hol-unicode-not-map ">" "≯")
 (define-key hol-unicode-not-map (kbd "C-S-q") "≰")
+(define-key hol-unicode-not-map (kbd "C-+") "⇎")
+(define-key hol-unicode-not-map (kbd ",") "◁")
 
 (define-key hol-unicode-subscript-map "1" "₁")
 (define-key hol-unicode-subscript-map "2" "₂")
@@ -80,11 +89,15 @@
 (define-key hol-unicode-subscript-map "8" "₈")
 (define-key hol-unicode-subscript-map "9" "₉")
 (define-key hol-unicode-subscript-map "0" "₀")
+(define-key hol-unicode-subscript-map "r" "ᵣ")
 (define-key hol-unicode-subscript-map "t" "ₜ")
 
-(define-key hol-unicode-superscript-map "1" "¹")
-(define-key hol-unicode-superscript-map "2" "²")
-(define-key hol-unicode-superscript-map "3" "³")
+(define-key hol-unicode-superscript-map "1"
+  (lambda () (interactive) (insert "¹")))
+(define-key hol-unicode-superscript-map "2"
+  (lambda () (interactive) (insert "²")))
+(define-key hol-unicode-superscript-map "3"
+  (lambda () (interactive) (insert "³")))
 (define-key hol-unicode-superscript-map "4" "⁴")
 (define-key hol-unicode-superscript-map "5" "⁵")
 (define-key hol-unicode-superscript-map "6" "⁶")
@@ -150,10 +163,12 @@
 (define-key hol-unicode-zero-map "-" "⊖")
 (define-key hol-unicode-zero-map "." "⊙")
 (define-key hol-unicode-zero-map "/" "⊘")
+(define-key hol-unicode-zero-map "0" "∘") ; U+2218
 
 (define-key hol-unicode-U-map "u" "𝕌")
 (define-key hol-unicode-U-map "+" "⊎") ; U+228E "multiset union"
 (define-key hol-unicode-U-map "<" "⊌") ; U+228C called simply "multiset", used in HOL for FUNION
+(define-key hol-unicode-U-map "p" "Υ") ; Up-silon
 
 ; parenthesis map - for various forms of parenthesis
 (define-key hol-unicode-lparen-map (kbd "C-M-|") "⦇")
@@ -166,3 +181,8 @@
 (define-key hol-unicode-rparen-map (kbd "C-M->") "⟫")
 (define-key hol-unicode-lparen-map (kbd "C-M-^") "⎡")
 (define-key hol-unicode-rparen-map (kbd "C-M-^") "⎤")
+
+; shift map
+(define-key hol-unicode-shift-map (kbd "a") "≫")
+(define-key hol-unicode-shift-map (kbd "l") "≪")
+(define-key hol-unicode-shift-map (kbd "r") "⋙")

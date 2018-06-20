@@ -1,0 +1,167 @@
+\chapter{Writing \HOL{} Terms and Types}
+\label{chap:writing-hol}
+
+\setcounter{sessioncount}{0}
+The \ML{} language is literally the \HOL{} system's \emph{meta-language}.
+We use it to manipulate and interact with the terms, types and theorems of higher-order logic.
+Ultimately this is done with \ML{} functions and values, but a hugely significant part of the user's connection to the logic is \emph{via} the system's parser and pretty-printer.
+
+The parser allows the user to write terms and types in a pleasant textual form (rather than constructing them directly with the kernel's underlying \ML{} API).\footnote{Note that the user cannot write theorem values directly; this would break the prover's guarantee of soundness!}
+The pretty-printer shows the user terms, types and theorems in a pretty way.
+We believe it greatly helps the user experience to see $p \land q$ rather than something like
+\begin{alltt}
+    COMB (COMB (CONST ("bool", "/\bs",
+                       TYPE("min", "fun",
+                            [TYPE("min", "bool", []),
+                             TYPE("min", "fun",
+                                  [TYPE("min", "bool", []),
+                                   TYPE("min", "bool", [])])])),
+                VAR ("p", TYPE("min", "bool", []))),
+          COMB (VAR ("q", TYPE("min", "bool", []))))
+\end{alltt}
+which is a much more accurate picture of what the term really looks like in memory.
+
+\section*{\HOL{} can use Unicode \emph{and} ASCII}
+
+The fundamental logical connectives can usually be parsed and printed in two different ways, with an ASCII notation, or a generally prettier Unicode form.
+By default, the parser will accept either and the printer will choose to use the Unicode form.
+Thus
+\begin{session}
+\begin{alltt}
+>> [“p ∧ q”, ``p /\ q``];
+
+>> [“∀x:α. P x ⇒ ¬Q x”, “!x:'a. P x ⇒ ~Q x”];
+\end{alltt}
+\end{session}
+It is possible to turn Unicode printing off and on by setting the \texttt{PP.avoid_unicode} trace:
+\begin{session}
+\begin{alltt}
+>> set_trace "PP.avoid_unicode" 1;
+>> “x ∈ A”;
+
+>> set_trace "PP.avoid_unicode" 0;
+>> “x ∈ A”;
+\end{alltt}
+\end{session}
+Table~\ref{tab:unicode-equivalents} lists a number of Unicode/ASCII pairs.
+Generation of Unicode code-points is up to the user's environment, but modes assisting this are available for \texttt{emacs} and \texttt{vim}.
+Note also that the encoding for both parsing and printing must be UTF8, which is again the user's responsibility.
+\begin{table}
+\begin{center}
+\begin{tabular}{cc|cc|cc}
+\multicolumn{2}{c|}{Boolean connectives} & \multicolumn{2}{c|}{Set operations} & \multicolumn{2}{c}{Other theories}\\
+\hline
+$\;\forall$ & \texttt{!} & $\;\;\in$ & \texttt{IN} & $\;\;\le$ & \texttt{<=}\\
+$\;\exists$ & \texttt{?} & $\;\;\not\in$ & \texttt{NOTIN} & $\;\;\ge$ & \texttt{>=}\\
+$\;\neg$ & \td & $\;\;\cup$ & \texttt{UNION} \\
+$\;\land$ & \texttt{/\bs} & $\;\;\cap$ & \texttt{INTER}  & \multicolumn{2}{l}{Delimiters}\\
+$\;\lor$ & \texttt{\bs/} & $\;\;\subseteq$ & \texttt{SUBSET} & $\;\;$``\dots'' & \dq\dots\dq\\
+$\;\;\Rightarrow$ & \texttt{==>} & $\;\;\emptyset$ & \texttt{EMPTY} & $\;\;$`\dots' & \texttt{\char'140}\dots\texttt{\char'140}\\
+$\;\;\iff$ & \texttt{<=>} & $\;\;\mathbb{U}(:\alpha)$ & \texttt{univ(:'a)}\\
+$\;\;\mkern14mu\not\mathrel{\mkern-14mu}\iff$ & \texttt{<=/=>} & $\;\;\times$ & \texttt{CROSS}\\
+\end{tabular}
+\end{center}
+\caption{Unicode/ASCII equivalents in \HOL{} syntax. Delimiters are the quotation marks that delimit whole terms or types, separating them from the \ML{} level.}
+\label{tab:unicode-equivalents}
+\end{table}
+
+\section*{\HOL{} looks like ML}
+
+One interesting (and also confusing for beginners) aspect of \HOL{} is that its terms and types look like \ML's.
+For example, the zip function in \ML{} (from the previous chapter) might be characterised by the HOL term that can be written:
+\begin{alltt}
+   zip (l1, l2) = if NULL l1 \(\lor\) NULL l2 then []
+                  else (HD l1, HD l2) :: zip (TL l1, TL l2)
+\end{alltt}
+Apart from the fact that some of the relevant constants have different names (\texttt{NULL} \emph{vs} \texttt{null} for example), and apart from the use of logical disjunction ($\lor$) instead of \texttt{orelse}, the text is identical.
+
+The following session shows the (rather involved) way in which this definition can be made,\footnote{The usual ``\HOL'' way to define this function, with pattern-matching, wouldn't be so complicated.}
+allowing us to see the way the definition theorem is printed back.
+We can also ask the system to print the new constant's type:
+\begin{session}
+\begin{alltt}
+>> val zip_def =
+     tDefine "zip" ‘zip (l1, l2) = if NULL l1 ∨ NULL l2 then []
+                                   else (HD l1, HD l2) :: zip (TL l1, TL l2)’
+         (WF_REL_TAC ‘measure (LENGTH o FST)’ >> Cases_on ‘l1’ >> simp[]);
+
+>> type_of “zip”;
+\end{alltt}
+\end{session}
+Note how the pretty-printer is at liberty to make adjustments to the way the underlying term is rendered as a string: its placement of newline and space characters is not exactly the same as the user's.
+
+\HOL's language of types is also similar but slightly different to \ML's: the \holtxt{\#} symbol is used for the pair type rather than \ml{*}, and the printer uses Greek letters $\alpha$ and $\beta$ rather than \ml{'a} and \ml{'b}.
+
+\subsection*{\HOL{} \emph{vs} ML Traps}
+
+Lists, sets and other types with syntax for enumerating elements use a semicolon rather than a comma to separate elements.
+Thus
+\begin{session}
+\begin{alltt}
+>> [1,2,3,4] (* ML *);
+
+>> “[1;2;3;4] (* HOL *)”;
+>> type_of it;
+\end{alltt}
+\end{session}
+
+\ML{} has three distinct types $\tau_1 \texttt{*} \tau_2 \texttt{*} \tau_3$, $(\tau_1 \texttt{*} \tau_2) \texttt{*} \tau_3$ and $\tau_1 \texttt{*} (\tau_2 \texttt{*} \tau_3)$.
+One might see these as a flat triple, and two flavours of pair with a nested pair as one or other component.
+In \HOL{}, the concrete syntax $\tau_1 \texttt{\#} \tau_2 \texttt{\#} \tau_3$ maps to $\tau_1 \texttt{\#} (\tau_2 \texttt{\#} \tau_3)$ (\emph{i.e.}, the infix \texttt{\#} type operator is right-associative).
+
+\ML{} uses the \texttt{op} keyword to remove infix status from function forms.
+In \HOL{} one can either ``wrap'' the operator in parentheses\footnote{But watch out for the \texttt{*} operator; one can't wrap this in parentheses because the result then looks like comment syntax.} or precede it with a \$-sign.
+Further, infixes in \ML{} take pairs; in \HOL{} they are curried:
+\begin{session}
+\begin{alltt}
+>> op+ (3,4) (* ML *);
+>> map op* [(1,2), (3,4)] (* ML *);
+
+>> EVAL “(+) 3 4 < $* 3 4 (* HOL *)”;
+>> EVAL “MAP (+) [1;2;3]”;
+\end{alltt}
+\end{session}
+
+\ML{} insists that arguments of \texttt{datatype} constructors be tuples (``uncurried''), and that type arguments be provided to new types.
+\HOL{} insists that type arguments be omitted, and allows either form of argument to constructors (though it's generally better practice to \emph{not} use tuples).
+In \ML{}:
+\begin{session}
+\begin{alltt}
+>> datatype 'a tree = Lf | Nd of ('a tree * 'a * 'a tree);
+>> fun size Lf = 0 | size (Nd(l,_,r)) = 1 + size l + size r;
+\end{alltt}
+\end{session}
+In \HOL:
+\begin{session}
+\begin{alltt}
+>> Datatype ‘tree = Lf | Nd tree α tree’;
+
+>> type_of “Nd”;
+
+>> Define ‘(size Lf = 0) ∧ (size (Nd l _ r) = 1 + size l + size r)’;
+\end{alltt}
+\end{session}
+
+\ML{} uses \td{} as the unary negation operator on numeric types.
+\HOL{} allows it in this role (as well as for boolean negation), but also allows \texttt{-} for numeric negation.
+First the \ML{} behaviour:
+\begin{session}
+\begin{alltt}
+>> ~3;
+>>+ -3;
+\end{alltt}
+\end{session}
+In \HOL:
+\begin{session}
+\begin{alltt}
+>>_ load "intLib";
+>> EVAL “~3 + 4”;
+>> EVAL “-3 * 4”;
+\end{alltt}
+\end{session}
+
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "tutorial"
+%%% End:

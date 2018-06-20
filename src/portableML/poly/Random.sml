@@ -32,7 +32,7 @@ fun newgen () =
    let
       val {sec, usec} = getrealtime ()
    in
-      newgenseed (real sec + real usec)
+      newgenseed (Real.fromLargeInt sec + Real.fromLargeInt usec)
    end
 
 fun random {seedref as ref seed} = (seedref := nextrand seed; seed / m)

@@ -25,10 +25,10 @@ let fol_inst_bump offset theta ((p,args) as at:fol_lit) =
 
 let rec istriv env x t =
   match t with
-    Fvar y -> y = x or
+    Fvar y -> y = x ||
   (try let t' = rev_assoc y env in istriv env x t'
    with Failure "find" -> false)
-  | Fnapp(f,args) -> exists (istriv env x) args & failwith "cyclic";;
+  | Fnapp(f,args) -> exists (istriv env x) args && failwith "cyclic";;
 
 let rec fol_unify offset tm1 tm2 sofar =
   match tm1,tm2 with
@@ -108,7 +108,7 @@ let reset_consts,fol_of_const,hol_of_const =
 
 
 let rec fol_of_term cs_are_vars env consts tm =
-  if Fusion.is_var tm & (if cs_are_vars then mem tm consts else not (mem tm consts)) then
+  if Fusion.is_var tm && (if cs_are_vars then mem tm consts else not (mem tm consts)) then
       Fvar(fol_of_var tm)
   else
     let f,args = Basics.strip_comb tm in
@@ -142,10 +142,10 @@ let hol_of_literal (p,args) =
   else hol_of_atom (p,args);;
 
 let rec fol_eq insts tm1 tm2 =
-  tm1 == tm2 or
+  tm1 == tm2 ||
   match tm1,tm2 with
     Fnapp(f,fargs),Fnapp(g,gargs) ->
-      f = g & forall2 (fol_eq insts) fargs gargs
+      f = g && forall2 (fol_eq insts) fargs gargs
   | _,Fvar(x) ->
     (try let tm2' = rev_assoc x insts in
          fol_eq insts tm1 tm2'
@@ -158,7 +158,7 @@ let rec fol_eq insts tm1 tm2 =
        try istriv insts x tm2 with Failure _ -> false);;
 
 let fol_atom_eq insts (p1,args1) (p2,args2) =
-  p1 = p2 & forall2 (fol_eq insts) args1 args2;;
+  p1 = p2 && forall2 (fol_eq insts) args1 args2;;
 
 open Equal;;
 open Simp;;
@@ -215,14 +215,14 @@ let create_equality_axioms =
       itlist (fun e th -> cONV_RULE imp_elim_CONV (dISCH e th)) (hyp th2) th2 in
     fun tms -> let preds,funs = itlist fm_consts tms ([],[]) in
                let eqs0,noneqs = partition
-                  (fun (t,_) -> is_const t & fst(dest_const t) = "=") preds in
+                  (fun (t,_) -> is_const t && fst(dest_const t) = "=") preds in
                if eqs0 = [] then [] else
                let pcongs = map (create_congruence_axiom true) noneqs
                and fcongs = map (create_congruence_axiom false) funs in
                let preds1,_ =
                  itlist fm_consts (map concl (pcongs @ fcongs)) ([],[]) in
                let eqs1 = filter
-                 (fun (t,_) -> is_const t & fst(dest_const t) = "=") preds1 in
+                 (fun (t,_) -> is_const t && fst(dest_const t) = "=") preds1 in
                let eqs = union eqs0 eqs1 in
                let equivs =
                  itlist (o (union' equals_thm) create_equivalence_axioms)

@@ -1,0 +1,4 @@
+skipthm datatype_arm_component
+skipthm arm_component_TY_DEF
+skipthm datatype_arm_data
+skipthm arm_data_TY_DEF

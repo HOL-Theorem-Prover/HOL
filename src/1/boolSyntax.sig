@@ -175,4 +175,14 @@ sig
   val ldistrib_tm : term
   val rdistrib_tm : term
 
+  (* sets and aconv *)
+  val ~~ : term * term -> bool
+  val !~ : term * term -> bool
+  val singt : term -> term HOLset.set
+  val listset : term list -> term HOLset.set
+  val FVs : term -> term HOLset.set
+  val FVLset : term list -> term HOLset.set
+  val ES : term HOLset.set
+
+
 end

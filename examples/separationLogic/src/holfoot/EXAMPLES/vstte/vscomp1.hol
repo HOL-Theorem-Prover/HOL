@@ -13,7 +13,7 @@
 (******************************************************************************)
 
 (* load the libries
-use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml")
+use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/hfheader.sml")
 *)
 
 val _ = HOL_Interactive.toggle_quietdec();
@@ -154,7 +154,7 @@ val vscomp1_loopspec_TAC =
     HF_VC_TAC THEN
 
     (* solve vcs using the simplifier *)
-    SIMP_TAC arith_ss [BUTFIRSTN_LENGTH_LESS, GSYM ADD1,
+    SIMP_TAC arith_ss [DROP_LENGTH_TOO_LONG, GSYM ADD1,
         BUTFIRSTN_CONS_EL, LIST_SUM_def, LIST_MAX_def,
         LIST_MAX_SUM_THM, MAX_DEF]
 

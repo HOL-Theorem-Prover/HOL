@@ -536,8 +536,9 @@ local open Defn
         val s =
            if !auto_tgoal
               then (Defn.tgoal defn
-                    ; Portable.pprint
-                         proofManagerLib.pp_proof (proofManagerLib.p())
+                    ; PP.prettyPrint
+                        (TextIO.print, !Globals.linewidth)
+                        (proofManagerLib.pp_proof (proofManagerLib.p()))
                     ; if !Globals.interactive then msg2 else "")
            else ""
      in
@@ -644,27 +645,11 @@ fun tDefine stem q tac =
 (* Version of Define that supports multiple definitions, failing if any do.  *)
 (*---------------------------------------------------------------------------*)
 
-fun head tm = fst(strip_comb tm);
-
-fun multidefine q =
- let val eqnsl = Defn.parse_quote q
-     val stems = map (fst o dest_var o head o lhs o snd o
-                      strip_forall o hd o strip_conj) eqnsl
- in
-    map (#1 o primDefine) (Defn.mk_defns stems eqnsl)
- end
- handle e =>
-   let val absyn0 = Parse.Absyn q
-       val locn = Absyn.locn_of_absyn absyn0
-   in
-     raise wrap_exn_loc "TotalDefn" "multiDefine" locn e
-   end;
+fun multidefine q = List.map (#1 o primDefine) (Defn.Hol_multi_defns q)
 
 fun multiDefine q =
- Parse.try_grammar_extension
-    (Theory.try_theory_extension multidefine) q
- handle e => Raise e;
-
+  Parse.try_grammar_extension (Theory.try_theory_extension multidefine) q
+  handle e => Raise e;
 
 (*---------------------------------------------------------------------------*)
 (* API for Define                                                            *)
@@ -719,7 +704,7 @@ fun apiDefine guessR tprover (stem,tm) =
 (* Sequence the phases of definition, starting from a quotation              *)
 (*---------------------------------------------------------------------------*)
 
-fun stem eqn = (fst (dest_const (head (lhs eqn))),eqn)
+fun stem eqn = (fst (dest_const (fst (strip_comb (lhs eqn)))),eqn)
 
 fun apiDefineq guessR tprover q =
    PASS q ?> verdict (silent (stem o hd o Defn.parse_quote)) PARSE

@@ -3,6 +3,7 @@ sig
 
   val systeml : string list -> OS.Process.status
   val system_ps : string -> OS.Process.status
+  val systeml_out : {outfile:string} -> string list -> OS.Process.status
   val exec : string * string list -> 'a
   val protect : string -> string
   val xable_string : string -> string
@@ -32,7 +33,7 @@ sig
   val GNUMAKE : string
   val DYNLIB : bool
   val ML_SYSNAME : string
-  val DOT_PATH : string
+  val DOT_PATH : string option
   val DEFAULT_STATE : string
 
   val isUnix : bool
@@ -43,6 +44,7 @@ sig
   val build_log_dir : string
   val build_log_file : string
   val make_log_file : string
+  val build_after_reloc_envvar : string
 
   (* canonical source of version information *)
   val release : string

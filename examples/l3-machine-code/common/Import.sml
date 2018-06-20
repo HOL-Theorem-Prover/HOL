@@ -2,8 +2,9 @@ structure Import :> Import =
 struct
 
 open HolKernel boolLib bossLib
-open state_transformerTheory bitstringLib stringLib machine_ieeeSyntax
-open intSyntax integer_wordSyntax bitstringSyntax state_transformerSyntax
+open state_transformerTheory bitstringLib stringLib binary_ieeeSyntax
+     fp32Syntax fp64Syntax machine_ieeeSyntax intSyntax integer_wordSyntax
+     bitstringSyntax state_transformerSyntax
 
 val ERR = mk_HOL_ERR "Import"
 
@@ -15,6 +16,7 @@ local
    val const_names = ref []
    fun decl s = "val " ^ s
    val typ = "{Thy: string, T: string list, C: string list, N: int list}"
+   val B = PP.block PP.CONSISTENT 0
 in
    fun log_boolify n = boolify_vals := Redblackset.add (!boolify_vals, n)
    fun log_type s = type_names := s :: !type_names
@@ -22,45 +24,46 @@ in
    fun start thy =
       (type_names := []
        ; const_names := []
-       ; Theory.new_theory thy)
+       ; new_theory thy)
    fun finish i =
       (Theory.adjoin_to_theory {
          sig_ps =
-           SOME (fn ppstrm =>
-                   (PP.add_string ppstrm (decl "inventory:")
-                    ; PP.add_break ppstrm (1, 2)
-                    ; PP.add_string ppstrm typ)),
+           SOME (fn _ => B[PP.add_string (decl "inventory:"),
+                           PP.add_break (1, 2),
+                           PP.add_string typ]),
          struct_ps =
-           SOME (fn ppstrm =>
+           SOME (fn _ =>
                     let
                        val name = Lib.quote (Theory.current_theory ())
-                       fun bl f s l =
-                          ( PP.add_break ppstrm (1, 0)
-                          ; PP.add_string ppstrm (s ^ " [")
-                          ; PP.begin_block ppstrm PP.INCONSISTENT 0
-                          ; Portable.pr_list
-                              (PP.add_string ppstrm o f)
-                              (fn () => PP.add_string ppstrm ",")
-                              (fn () => PP.add_break ppstrm (1, 0)) l
-                          ; PP.add_string ppstrm "]"
-                          ; PP.end_block ppstrm)
+                       fun bl f s l = B [
+                           PP.add_break (1, 0),
+                           PP.add_string (s ^ " ["),
+                           PP.block PP.INCONSISTENT 0 (
+                             PP.pr_list (PP.add_string o f)
+                                        [PP.add_string ",", PP.add_break (1, 0)]
+                                        l
+                           ),
+                           PP.add_string "]"
+                         ]
                     in
-                       PP.add_string ppstrm (decl "inventory = {")
-                       ; PP.add_break ppstrm (0, 2)
-                       ; PP.begin_block ppstrm PP.CONSISTENT 0
-                       ; PP.add_string ppstrm ("Thy = " ^ name ^ ",")
-                       ; bl Lib.quote "T =" (!type_names)
-                       ; PP.add_string ppstrm (",")
-                       ; bl Lib.quote "C =" (!const_names)
-                       ; PP.add_string ppstrm (",")
-                       ; bl Int.toString "N ="
-                           (Redblackset.listItems (!boolify_vals))
-                       ; PP.add_string ppstrm "}"
-                       ; PP.end_block ppstrm
-                       ; PP.add_newline ppstrm
+                      B [
+                        PP.add_string (decl "inventory = {"),
+                        PP.add_break (0, 2),
+                        B  [
+                          PP.add_string ("Thy = " ^ name ^ ","),
+                          bl Lib.quote "T =" (!type_names),
+                          PP.add_string (","),
+                          bl Lib.quote "C =" (!const_names),
+                          PP.add_string (","),
+                          bl Int.toString "N ="
+                             (Redblackset.listItems (!boolify_vals)),
+                          PP.add_string "}"
+                        ],
+                        PP.add_newline
+                      ]
                     end)}
        ; Feedback.set_trace "TheoryPP.include_docs" i
-       ; Theory.export_theory ()
+       ; export_theory ()
        ; type_names := []
        ; const_names := [])
 end
@@ -81,6 +84,8 @@ in
    val nTy = mkTy (SOME "num", "num")
    val bTy = mkTy (SOME "min", "bool")
    val rTy = mkTy (SOME "binary_ieee", "rounding")
+   val oTy = mkTy (SOME "binary_ieee", "float_compare")
+   val fTy = mkTy (SOME "binary_ieee", "flags")
    val cTy = mkTy (SOME "string", "char")
    val sTy = mkListTy cTy
    val vTy = mkListTy bTy
@@ -134,13 +139,25 @@ val myDatatype =
           fn s => (log_type
                      (String.extract (s, w, SOME (String.size s - w - 1)))
                    ; s ^ "\n")) o
-       Feedback.trace ("Theory.save_thm_reporting", 0) o
-       Lib.with_flag (Datatype.big_record_size, 30))
+       Feedback.trace ("Theory.save_thm_reporting", 0))
        Datatype.astHol_datatype
    end
 
+val l3_big_record_size = 28 (* HOL default is 20 *)
+
 (* Record type *)
-fun Record (n, l) = myDatatype [(n, ParseDatatype.Record l)]
+fun Record (n, l) =
+   ( if l3_big_record_size < List.length l
+       then Feedback.HOL_WARNING "Import" "Record"
+              ("Defining big record type; size " ^ Int.toString (List.length l))
+     else ()
+   ; Lib.with_flag (Datatype.big_record_size, l3_big_record_size)
+       myDatatype [(n, ParseDatatype.Record l)]
+   )
+
+fun NoBigRecord (n, l) =
+  Lib.with_flag (Datatype.big_record_size, List.length l + 1)
+    myDatatype [(n, ParseDatatype.Record l)]
 
 (* Algebraic type *)
 val Construct = myDatatype o List.map (I ## ParseDatatype.Constructors)
@@ -150,6 +167,8 @@ val Construct = myDatatype o List.map (I ## ParseDatatype.Constructors)
 fun mk_local_const (n, ty) =
    Term.mk_thy_const {Ty = ty, Thy = Theory.current_theory (), Name = n}
 
+fun mk_ieee_const n = Term.prim_mk_const {Name = n, Thy = "binary_ieee"}
+
 (* Literals *)
 
 (* Unit *)
@@ -158,9 +177,9 @@ val LU = oneSyntax.one_tm
 val LT = boolSyntax.T
 val LF = boolSyntax.F
 (* Integer *)
-fun LI i = intSyntax.term_of_int (Arbint.fromInt i)
+fun LI i = intSyntax.term_of_int (Arbint.fromLargeInt i)
 (* Natural *)
-fun LN n = numSyntax.term_of_int n
+fun LN n = numSyntax.mk_numeral (Arbnum.fromLargeInt n)
 (* Char *)
 fun LSC c = stringSyntax.fromMLchar c
 (* String *)
@@ -168,7 +187,7 @@ fun LS s = stringSyntax.fromMLstring s
 (* Bitstring *)
 fun LV v = bitstringSyntax.bitstring_of_binstring v
 (* Fixed-width  *)
-fun LW (i, w) = wordsSyntax.mk_wordii (i, w)
+fun LW (i, w) = wordsSyntax.mk_wordi (Arbnum.fromLargeInt i, w)
 (* N-bit  *)
 fun LY (i, n) = wordsSyntax.mk_n2w (LN i, typevar n)
 (* Enumerated  *)
@@ -181,6 +200,31 @@ fun LE ty = pred_setSyntax.mk_empty (Ty ty)
 fun LNL ty = listSyntax.mk_nil (Ty ty)
 (* UNKNOWN  *)
 fun LX ty = boolSyntax.mk_arb (Ty ty)
+
+val NEGINF32 = fp32Syntax.fp_neginf_tm
+val POSINF32 = fp32Syntax.fp_posinf_tm
+val NEGINF64 = fp64Syntax.fp_neginf_tm
+val POSINF64 = fp64Syntax.fp_posinf_tm
+
+val NEGZERO32 = fp32Syntax.fp_negzero_tm
+val POSZERO32 = fp32Syntax.fp_poszero_tm
+val NEGZERO64 = fp64Syntax.fp_negzero_tm
+val POSZERO64 = fp64Syntax.fp_poszero_tm
+
+val NEGMIN32 = fp32Syntax.fp_negmin_tm
+val POSMIN32 = fp32Syntax.fp_posmin_tm
+val NEGMIN64 = fp64Syntax.fp_negmin_tm
+val POSMIN64 = fp64Syntax.fp_posmin_tm
+
+val NEGMAX32 = fp32Syntax.fp_bottom_tm
+val POSMAX32 = fp32Syntax.fp_top_tm
+val NEGMAX64 = fp64Syntax.fp_bottom_tm
+val POSMAX64 = fp64Syntax.fp_top_tm
+
+val QUIETNAN32  = LW (0x7FC00000, 32)
+val SIGNALNAN32 = LW (0x7F800001, 32)
+val QUIETNAN64  = LW (0x7FF8000000000000, 64)
+val SIGNALNAN64 = LW (0x7FF0000000000001, 64)
 
 (* ------------------------------------------------------------------------ *)
 
@@ -336,7 +380,20 @@ end
 
 (* Record destructor *)
 
-fun Dest (f, ty, tm) = Call (typeName (Term.type_of tm) ^ "_" ^ f, ty, tm)
+fun flag s tm = Term.mk_comb (mk_ieee_const ("flags_" ^ s), tm)
+val ieee_underflow_before = ref false
+fun underflow () =
+  "Underflow_" ^ (if !ieee_underflow_before then "Before" else "After") ^
+  "Rounding"
+
+fun Dest (f, ty, tm) =
+  case f of
+     "DivideByZero" => flag "DivideByZero" tm
+   | "InvalidOp" => flag "InvalidOp" tm
+   | "Overflow" => flag "Overflow" tm
+   | "Precision" => flag "Precision" tm
+   | "Underflow" => flag (underflow()) tm
+   | _ => Call (typeName (Term.type_of tm) ^ "_" ^ f, ty, tm)
 
 (* Record update *)
 
@@ -349,7 +406,15 @@ fun Rupd (f, tm) =
    let
       val (rty, fty) = pairSyntax.dest_prod (Term.type_of tm)
       val typ = Type.--> (Type.--> (fty, fty), Type.--> (rty, rty))
-      val fupd = mk_local_const (typeName rty ^ "_" ^ f ^ "_fupd", typ)
+      val name = typeName rty ^ "_" ^ f ^ "_fupd"
+      val fupd = case f of
+                    "DivideByZero" => mk_ieee_const name
+                  | "InvalidOp" => mk_ieee_const name
+                  | "Overflow" => mk_ieee_const name
+                  | "Precision" => mk_ieee_const name
+                  | "Underflow" =>
+                      mk_ieee_const ("flags_" ^ underflow() ^ "_fupd")
+                  | _ => mk_local_const (name, typ)
       val (x, d) = smart_dest_pair tm
    in
       Term.list_mk_comb (fupd, [combinSyntax.mk_K_1 (d, Term.type_of d), x])
@@ -460,14 +525,41 @@ datatype monop =
    | Difference
    | Drop
    | Element
+   | FP32To64
+   | FP64To32
+   | FP64To32_
    | FPAbs of int
    | FPAdd of int
-   | FPEqual of int
-   | FPIsNaN of int
-   | FPLess of int
+   | FPAdd_ of int
+   | FPCmp of int
+   | FPDiv of int
+   | FPDiv_ of int
+   | FPEq of int
+   | FPFromInt of int
+   | FPGe of int
+   | FPGt of int
+   | FPIsIntegral of int
+   | FPIsFinite of int
+   | FPIsNan of int
+   | FPIsNormal of int
+   | FPIsSignallingNan of int
+   | FPIsSubnormal of int
+   | FPIsZero of int
+   | FPLe of int
+   | FPLt of int
    | FPMul of int
+   | FPMul_ of int
+   | FPMulAdd of int
+   | FPMulAdd_ of int
+   | FPMulSub of int
+   | FPMulSub_ of int
    | FPNeg of int
+   | FPRoundToIntegral of int
+   | FPSqrt of int
+   | FPSqrt_ of int
    | FPSub of int
+   | FPSub_ of int
+   | FPToInt of int
    | Flat
    | Fst
    | Head
@@ -533,7 +625,6 @@ datatype binop =
    | Lsl
    | Lsr
    | Lt
-   | Mdfy
    | Mod
    | Mul
    | Or
@@ -542,6 +633,8 @@ datatype binop =
    | Rep
    | Rol
    | Ror
+   | SDiv
+   | SMod
    | Splitl
    | Splitr
    | Sub
@@ -642,9 +735,11 @@ local
    val mk_drop      = mk_uncurry ``\(x, l:'a list). list$DROP x l``
    val mk_update    = mk_uncurry ``\(e, x, l:'a list). list$LUPDATE e x l``
    val mk_element   = mk_uncurry ``\(x, l:'a list). list$EL x l``
-   val mk_remove    = mk_uncurry ``\(l1, l2). list$FILTER (\x. ~MEM x l1) l2``
-   val mk_remove_e  = mk_uncurry ``\(l1, l2). list$FILTER (\x. MEM x l1) l2``
    val mk_indexof   = mk_uncurry ``\(x:'a, l). list$INDEX_OF x l``
+   val mk_remove    = mk_uncurry ``\(l1:'a list, l2).
+                                      list$FILTER (\x. ~MEM x l1) l2``
+   val mk_remove_e  = mk_uncurry ``\(l1:'a list, l2).
+                                      list$FILTER (\x. MEM x l1) l2``
 
    val mk_word_min  = mk_uncurry ``\(m:'a word, n). words$word_min m n``
    val mk_word_max  = mk_uncurry ``\(m:'a word, n). words$word_max m n``
@@ -677,46 +772,73 @@ local
    fun mk_from_enum ty =
       SOME (Lib.curry Term.mk_comb (enum2num ty)) handle HOL_ERR _ => NONE
 
-   fun mk_fp_binop f =
-      let
-         val ftm = case f of
-                      FPEqual 32 => machine_ieeeSyntax.fp32Syntax.fp_equal_tm
-                    | FPEqual 64 => machine_ieeeSyntax.fp64Syntax.fp_equal_tm
-                    | FPLess 32 => machine_ieeeSyntax.fp32Syntax.fp_lessThan_tm
-                    | FPLess 64 => machine_ieeeSyntax.fp64Syntax.fp_lessThan_tm
-                    | _ => raise ERR "mk_fp_binop" ""
-         val ty = ftm |> Term.type_of |> Type.dom_rng |> fst
-         val b = Term.mk_var ("b", ty)
-         val c = Term.mk_var ("c", ty)
-         val l = [b, c]
+   local
+     val mk_vars =
+       List.rev o snd o
+       List.foldl
+         (fn (ty, (c, l)) =>
+            (Char.succ c, Term.mk_var (String.str c, ty) :: l)) (#"a", [])
+   in
+     fun mk_fp_op f =
+       let
+         val ftm =
+           case f of
+              FPCmp 32 => fp32Syntax.fp_compare_tm
+            | FPCmp 64 => fp64Syntax.fp_compare_tm
+            | FPEq 32 => fp32Syntax.fp_equal_tm
+            | FPEq 64 => fp64Syntax.fp_equal_tm
+            | FPLt 32 => fp32Syntax.fp_lessThan_tm
+            | FPLt 64 => fp64Syntax.fp_lessThan_tm
+            | FPLe 32 => fp32Syntax.fp_lessEqual_tm
+            | FPLe 64 => fp64Syntax.fp_lessEqual_tm
+            | FPGt 32 => fp32Syntax.fp_greaterThan_tm
+            | FPGt 64 => fp64Syntax.fp_greaterThan_tm
+            | FPGe 32 => fp32Syntax.fp_greaterEqual_tm
+            | FPGe 64 => fp64Syntax.fp_greaterEqual_tm
+            | FPRoundToIntegral 32 => fp32Syntax.fp_roundToIntegral_tm
+            | FPRoundToIntegral 64 => fp64Syntax.fp_roundToIntegral_tm
+            | FPSqrt 32 => fp32Syntax.fp_sqrt_tm
+            | FPSqrt 64 => fp64Syntax.fp_sqrt_tm
+            | FPSqrt_ 32 => fp32Syntax.fp_sqrt_with_flags_tm
+            | FPSqrt_ 64 => fp64Syntax.fp_sqrt_with_flags_tm
+            | FPToInt 32 => fp32Syntax.fp_to_int_tm
+            | FPToInt 64 => fp64Syntax.fp_to_int_tm
+            | FPFromInt 32 => fp32Syntax.int_to_fp_tm
+            | FPFromInt 64 => fp64Syntax.int_to_fp_tm
+            | FP64To32 => machine_ieeeSyntax.fp64_to_fp32_tm
+            | FP64To32_ => machine_ieeeSyntax.fp64_to_fp32_with_flags_tm
+            | FPAdd 32 => fp32Syntax.fp_add_tm
+            | FPAdd 64 => fp64Syntax.fp_add_tm
+            | FPAdd_ 32 => fp32Syntax.fp_add_with_flags_tm
+            | FPAdd_ 64 => fp64Syntax.fp_add_with_flags_tm
+            | FPDiv 32 => fp32Syntax.fp_div_tm
+            | FPDiv 64 => fp64Syntax.fp_div_tm
+            | FPDiv_ 32 => fp32Syntax.fp_div_with_flags_tm
+            | FPDiv_ 64 => fp64Syntax.fp_div_with_flags_tm
+            | FPMul 32 => fp32Syntax.fp_mul_tm
+            | FPMul 64 => fp64Syntax.fp_mul_tm
+            | FPMul_ 32 => fp32Syntax.fp_mul_with_flags_tm
+            | FPMul_ 64 => fp64Syntax.fp_mul_with_flags_tm
+            | FPSub 32 => fp32Syntax.fp_sub_tm
+            | FPSub 64 => fp64Syntax.fp_sub_tm
+            | FPSub_ 32 => fp32Syntax.fp_sub_with_flags_tm
+            | FPSub_ 64 => fp64Syntax.fp_sub_with_flags_tm
+            | FPMulAdd 32 => fp32Syntax.fp_mul_add_tm
+            | FPMulAdd 64 => fp64Syntax.fp_mul_add_tm
+            | FPMulAdd_ 32 => fp32Syntax.fp_mul_add_with_flags_tm
+            | FPMulAdd_ 64 => fp64Syntax.fp_mul_add_with_flags_tm
+            | FPMulSub 32 => fp32Syntax.fp_mul_sub_tm
+            | FPMulSub 64 => fp64Syntax.fp_mul_sub_tm
+            | FPMulSub_ 32 => fp32Syntax.fp_mul_sub_with_flags_tm
+            | FPMulSub_ 64 => fp64Syntax.fp_mul_sub_with_flags_tm
+            | _ => raise ERR "mk_fp_op" ""
+         val l = mk_vars (fst (HolKernel.strip_fun (Term.type_of ftm)))
          val p = pairSyntax.list_mk_pair l
          val ptm = pairSyntax.mk_pabs (p, Term.list_mk_comb (ftm, l))
-      in
+       in
          fn tm => pbeta (Term.mk_comb (ptm, tm))
-      end
-
-   fun mk_fp_triop f =
-      let
-         val ftm = case f of
-                      FPAdd 32 => machine_ieeeSyntax.fp32Syntax.fp_add_tm
-                    | FPAdd 64 => machine_ieeeSyntax.fp64Syntax.fp_add_tm
-                    | FPMul 32 => machine_ieeeSyntax.fp32Syntax.fp_mul_tm
-                    | FPMul 64 => machine_ieeeSyntax.fp64Syntax.fp_mul_tm
-                    | FPSub 32 => machine_ieeeSyntax.fp32Syntax.fp_sub_tm
-                    | FPSub 64 => machine_ieeeSyntax.fp64Syntax.fp_sub_tm
-                    | _ => raise ERR "mk_fp_triop" ""
-         val ty = ftm |> Term.type_of
-                      |> Type.dom_rng |> snd
-                      |> Type.dom_rng |> fst
-         val a = Term.mk_var ("a", binary_ieeeSyntax.rounding_ty)
-         val b = Term.mk_var ("b", ty)
-         val c = Term.mk_var ("c", ty)
-         val l = [a, b, c]
-         val p = pairSyntax.list_mk_pair l
-         val ptm = pairSyntax.mk_pabs (p, Term.list_mk_comb (ftm, l))
-      in
-         fn tm => pbeta (Term.mk_comb (ptm, tm))
-      end
+       end
+   end
 
    local
       fun mk_test a b c d = boolSyntax.mk_cond (boolSyntax.mk_eq (a, b), c, d)
@@ -738,6 +860,15 @@ local
       else if tm = boolSyntax.F
          then b
       else boolSyntax.mk_cond x
+
+   fun mk_word_from_bool (tm, ty) =
+      if tm = boolSyntax.T
+         then mk_word1 ty
+      else if tm = boolSyntax.F
+         then mk_word0 ty
+      else bitstringSyntax.mk_v2w
+             (listSyntax.mk_list ([tm], Type.bool),
+              wordsSyntax.dest_word_type ty)
 
    fun pickCast ty2 tm =
       let
@@ -829,16 +960,13 @@ local
                  else Term.mk_comb (string2enum ty2, tm)
          else if ty1 = Type.bool
             then if wordsSyntax.is_word_type ty2
-                    then mk_from_bool (tm, mk_word1 ty2, mk_word0 ty2)
+                    then mk_word_from_bool (tm, ty2)
                  else if ty2 = bitstringSyntax.bitstring_ty
-                    then mk_from_bool (tm,
-                           bitstringSyntax.bitstring_of_binstring "1",
-                           bitstringSyntax.bitstring_of_binstring "0")
+                    then listSyntax.mk_list ([tm], Type.bool)
                  else if ty2 = numSyntax.num
                     then mk_from_bool (tm, one_tm, numSyntax.zero_tm)
                  else if ty2 = intSyntax.int_ty
-                    then mk_from_bool (tm,
-                           intSyntax.one_tm, intSyntax.zero_tm)
+                    then mk_from_bool (tm, intSyntax.one_tm, intSyntax.zero_tm)
                  else if ty2 = stringSyntax.string_ty
                     then mk_from_bool (tm,
                            stringSyntax.fromMLstring "true",
@@ -912,17 +1040,35 @@ in
        | Difference => mk_difference
        | Drop => mk_drop
        | Element => mk_element
-       | FPAbs 32 => machine_ieeeSyntax.fp32Syntax.mk_fp_abs
-       | FPAbs 64 => machine_ieeeSyntax.fp64Syntax.mk_fp_abs
+       | FPAbs 32 => fp32Syntax.mk_fp_abs
+       | FPAbs 64 => fp64Syntax.mk_fp_abs
        | FPAbs i => raise ERR "Mop" ("FPAbs " ^ Int.toString i)
-       | FPEqual _ => mk_fp_binop m
-       | FPIsNaN 32 => machine_ieeeSyntax.fp32Syntax.mk_fp_isNan
-       | FPIsNaN 64 => machine_ieeeSyntax.fp64Syntax.mk_fp_isNan
-       | FPIsNaN i => raise ERR "Mop" ("FPIsNaN " ^ Int.toString i)
-       | FPLess _ => mk_fp_binop m
-       | FPNeg 32 => machine_ieeeSyntax.fp32Syntax.mk_fp_negate
-       | FPNeg 64 => machine_ieeeSyntax.fp64Syntax.mk_fp_negate
+       | FPIsIntegral 32 => fp32Syntax.mk_fp_isIntegral
+       | FPIsIntegral 64 => fp64Syntax.mk_fp_isIntegral
+       | FPIsIntegral i => raise ERR "Mop" ("FPIsIntegral " ^ Int.toString i)
+       | FPIsFinite 32 => fp32Syntax.mk_fp_isFinite
+       | FPIsFinite 64 => fp64Syntax.mk_fp_isFinite
+       | FPIsFinite i => raise ERR "Mop" ("FPIsFinite " ^ Int.toString i)
+       | FPIsNan 32 => fp32Syntax.mk_fp_isNan
+       | FPIsNan 64 => fp64Syntax.mk_fp_isNan
+       | FPIsNan i => raise ERR "Mop" ("FPIsNaN " ^ Int.toString i)
+       | FPIsNormal 32 => fp32Syntax.mk_fp_isNormal
+       | FPIsNormal 64 => fp64Syntax.mk_fp_isNormal
+       | FPIsNormal i => raise ERR "Mop" ("FPIsNormal " ^ Int.toString i)
+       | FPIsSubnormal 32 => fp32Syntax.mk_fp_isSubnormal
+       | FPIsSubnormal 64 => fp64Syntax.mk_fp_isSubnormal
+       | FPIsSubnormal i => raise ERR "Mop" ("FPIsSubnormal " ^ Int.toString i)
+       | FPIsZero 32 => fp32Syntax.mk_fp_isZero
+       | FPIsZero 64 => fp64Syntax.mk_fp_isZero
+       | FPIsZero i => raise ERR "Mop" ("FPIsZero " ^ Int.toString i)
+       | FPIsSignallingNan 32 => fp32Syntax.mk_fp_isSignallingNan
+       | FPIsSignallingNan 64 => fp64Syntax.mk_fp_isSignallingNan
+       | FPIsSignallingNan i =>
+           raise ERR "Mop" ("FPIsSignallingNaN " ^ Int.toString i)
+       | FPNeg 32 => fp32Syntax.mk_fp_negate
+       | FPNeg 64 => fp64Syntax.mk_fp_negate
        | FPNeg i => raise ERR "Mop" ("FPNeg " ^ Int.toString i)
+       | FP32To64 => machine_ieeeSyntax.mk_fp32_to_fp64
        | Flat => listSyntax.mk_flat
        | Fst => pairSyntax.mk_fst
        | Head => listSyntax.mk_hd
@@ -968,7 +1114,7 @@ in
        | Union => mk_union
        | Update => mk_update
        | ValOf => optionSyntax.mk_the
-       | _ => mk_fp_triop m
+       | _ => mk_fp_op m
       ) x
 end
 
@@ -997,7 +1143,6 @@ local
        Term.mk_comb
           (Term.inst [Type.alpha |-> numSyntax.num, Type.beta |-> Type.bool,
                       Type.gamma |-> Type.bool] pairSyntax.curry_tm, tm)
-   fun mk_modify (f, a) = wordsSyntax.mk_word_modify (icurry f, a)
 in
    fun Bop (b : binop, x, y) = (x, y) |>
      (case b of
@@ -1010,7 +1155,6 @@ in
                         SOME bitstringSyntax.mk_bxor, NONE, NONE)
       | In     => pred_setSyntax.mk_in
       | Insert => pred_setSyntax.mk_insert
-      | Mdfy   => mk_modify
       | Or     => boolSyntax.mk_disj
       | Uge    => wordsSyntax.mk_word_hs
       | Ugt    => wordsSyntax.mk_word_hi
@@ -1042,10 +1186,12 @@ in
                       SOME numSyntax.mk_div, SOME intSyntax.mk_div)
       | Mod  => pick (SOME wordsSyntax.mk_word_mod, NONE,
                       SOME numSyntax.mk_mod, SOME intSyntax.mk_mod)
-      | Quot => pick (SOME wordsSyntax.mk_word_sdiv, NONE, NONE,
+      | Quot => pick (SOME wordsSyntax.mk_word_quot, NONE, NONE,
                       SOME intSyntax.mk_quot)
-      | Rem  => pick (SOME wordsSyntax.mk_word_srem, NONE, NONE,
+      | Rem  => pick (SOME wordsSyntax.mk_word_rem, NONE, NONE,
                       SOME intSyntax.mk_rem)
+      | SDiv => integer_wordSyntax.mk_word_sdiv
+      | SMod => integer_wordSyntax.mk_word_smod
       | Exp  => pick (NONE, NONE, SOME numSyntax.mk_exp, SOME intSyntax.mk_exp)
       | Lsl  => pickShift (wordsSyntax.mk_word_lsl_bv, wordsSyntax.mk_word_lsl,
                            bitstringSyntax.mk_shiftl)

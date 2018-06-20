@@ -34,7 +34,7 @@ element and {l} a list variable. For example, a suitable theorem for {SUM} is
 {
    |- SUM l = FOLDR $+ 0 l
 }
-Knowing this theorem and given the term {--`SUM (CONS x l)`--},
+Knowing this theorem and given the term {“SUM (CONS x l)”},
 {X_LIST_CONV} returns the theorem:
 {
    |- SUM (CONS x l) = x + (SUM l)
@@ -45,7 +45,7 @@ knowing the theorem:
 {
    |- MONOID $+ 0
 }
-and given the term {--`SUM (APPEND l1 l2)`--}, {X_LIST_CONV} returns
+and given the term {“SUM (APPEND l1 l2)”}, {X_LIST_CONV} returns
 the theorem
 {
    |- SUM (APPEND l1 l2) = (SUM l1) + (SUM l2)
@@ -108,10 +108,10 @@ elements.
 
 \EXAMPLE
 {
-- val MULTL = new_definition("MULTL",(--`MULTL l = FOLDR $* 1 l`--));
+- val MULTL = new_definition("MULTL",“MULTL l = FOLDR $* 1 l”);
 val MULTL = |- !l. MULTL l = FOLDR $* 1 l : thm
 
-- X_LIST_CONV {{Fold_thms = MULTL, Aux_thms = []}} (--`MULTL (CONS x l)`--);
+- X_LIST_CONV {{Fold_thms = MULTL, Aux_thms = []}} “MULTL (CONS x l)”;
 |- MULTL (CONS x l) = x * MULTL l
 }
 

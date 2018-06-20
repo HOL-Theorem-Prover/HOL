@@ -3,8 +3,6 @@
 (* Uses bt, bl basics from enumeralScript, puts 'a#'b in place of 'a. *)
 (* Revised 13 Dec. 2013 for HOL_Kananaskis 9. *)
 
-structure fmapalScript = struct
-
 open HolKernel boolLib Parse;
 
 (* app load ["totoTheory", "res_quanLib", "enumeralTheory",
@@ -16,6 +14,10 @@ open pairTheory PairRules optionTheory finite_mapTheory;
 open totoTheory bossLib listTheory enumeralTheory;
 
 val _ = new_theory "fmapal";
+
+val cpn_case_def = TypeBase.case_def_of ``:ordering``
+val cpn_distinct = TypeBase.distinct_of ``:ordering``
+val cpn_nchotomy = TypeBase.nchotomy_of ``:ordering``
 
 (* "fmapal" for "numeral-ish finite map", wordplay on "NUMERAL", "enumeral". *)
 (* Temptation to call it "funeralTheory" reluctantly resisted. *)
@@ -448,16 +450,17 @@ CONJ_TAC THEN REPEAT GEN_TAC THEN REWRITE_TAC [ORL] THEN STRIP_TAC THENL
  UNDISCH_TAC (Term`apto cmp a (a:'a) = LESS`)] THEN
 REWRITE_TAC [toto_refl, all_cpn_distinct]);
 
-val ORL_MEM_FST	= maybe_thm ("ORL_MEM_FST",
+val ORL_MEM_FST = maybe_thm ("ORL_MEM_FST",
 ``!cmp l:('a#'b)list. ORL cmp l ==>
     !x y p q. MEM (x,y) l /\ MEM (p,q) l /\ (x = p) ==> (y = q)``,
 GEN_TAC THEN Induct THENL
 [REWRITE_TAC [MEM]
 ,P_PGEN_TAC ``g:'a,h:'b`` THEN SRW_TAC [] [] THENL
-[`~MEM (g,q) l` by MATCH_MP_TAC (CONJUNCT1 ORL_NOT_MEM) THEN
- Q.EXISTS_TAC `cmp` THEN Q.EXISTS_TAC `h` THEN AR
-,`~MEM (g,y) l` by MATCH_MP_TAC (CONJUNCT1 ORL_NOT_MEM) THEN
- Q.EXISTS_TAC `cmp` THEN Q.EXISTS_TAC `h` THEN AR
+[`~MEM (g,q) l`
+   by (MATCH_MP_TAC (CONJUNCT1 ORL_NOT_MEM) THEN
+       Q.EXISTS_TAC `cmp` THEN Q.EXISTS_TAC `h` THEN AR)
+,`~MEM (g,y) l` by (MATCH_MP_TAC (CONJUNCT1 ORL_NOT_MEM) THEN
+                    Q.EXISTS_TAC `cmp` THEN Q.EXISTS_TAC `h` THEN AR)
 ,IMP_RES_TAC ORL_TL THEN `p = p` by REFL_TAC THEN RES_TAC
 ]]);
 
@@ -513,7 +516,7 @@ THEN1 (CONJ_TAC THEN MATCH_MP_TAC merge_ORL THEN AR) THEN
 P_PGEN_TAC ``x:'a,y:'b`` THEN
 REWRITE_TAC [MATCH_MP merge_MEM_thm (CONJ (Q.ASSUME `ORL cmp k`)
                                (Q.ASSUME `ORL cmp (merge cmp l m)`))]
-			       THEN
+                               THEN
 REWRITE_TAC [MATCH_MP merge_MEM_thm (CONJ (Q.ASSUME `ORL cmp l`)
                                            (Q.ASSUME `ORL cmp m`))] THEN
 REWRITE_TAC [MATCH_MP merge_MEM_thm (CONJ (Q.ASSUME `ORL cmp
@@ -1524,10 +1527,11 @@ SRW_TAC [] [fmap_EXT, OU_EMPTY, FDOM_OFU, FAPPLY_OFU, LESS_ALL]);
 
 val FEMPTY_OFU = maybe_thm ("FEMPTY_OFU",
 ``!cmp f:'a|->'b. OFU cmp FEMPTY f = f``,
-SRW_TAC []
- [fmap_EXT, EMPTY_OU, FDOM_OFU, FAPPLY_OFU] THEN
-  `~LESS_ALL cmp x (FDOM f)` by SRW_TAC [] [LESS_ALL]
-  THEN1 (Q.EXISTS_TAC `x` THEN SRW_TAC [] [toto_refl]) THEN AR);
+SRW_TAC [] [fmap_EXT, EMPTY_OU, FDOM_OFU, FAPPLY_OFU] THEN
+`~LESS_ALL cmp x (FDOM f)`
+ by (SRW_TAC [] [LESS_ALL] THEN
+     Q.EXISTS_TAC `x` THEN SRW_TAC [] [toto_refl]) THEN
+AR);
 
 val LESS_ALL_OFU = maybe_thm ("LESS_ALL_OFU",
 ``!cmp x u:'a|->'b v:'a|->'b. LESS_ALL cmp x (FDOM (OFU cmp u v)) <=>
@@ -1892,7 +1896,7 @@ val FST_inter_merge = maybe_thm ("FST_inter_merge",
 ``!cmp l:('a#'b)list m. ORL cmp l /\ OL cmp m ==>
  (set (MAP FST (inter_merge cmp l m)) = set (MAP FST l) INTER set m)``,
 SRW_TAC []
- [inter_merge_MEM_thm, EXTENSION, IN_LIST_TO_SET, MEM_MAP_FST_LEM] THEN
+ [inter_merge_MEM_thm, EXTENSION, MEM_MAP_FST_LEM] THEN
 CONV_TAC (LAND_CONV EXISTS_AND_CONV) THEN REFL_TAC);
 
 val inter_merge_ORL = maybe_thm ("inter_merge_ORL",
@@ -1934,7 +1938,7 @@ STRIP_ASSUME_TAC (ISPEC ``assocv (l:('a#'b)list) x`` option_nchotomy) THENL
               (CONJ (Q.ASSUME `ORL cmp l`) (Q.ASSUME `OL cmp m`))] THEN
  CONJ_TAC THENL
  [METIS_TAC [assocv_MEM_thm]
- ,METIS_TAC [IN_INTER, IN_LIST_TO_SET]
+ ,METIS_TAC [IN_INTER]
 ]]);
 
 (* *** Summary theorems, with and without restricted quantification: **** *)
@@ -2048,7 +2052,7 @@ val FST_diff_merge = maybe_thm ("FST_diff_merge",
 ``!cmp l:('a#'b)list m. ORL cmp l /\ OL cmp m ==>
  (set (MAP FST (diff_merge cmp l m)) = set (MAP FST l) DIFF set m)``,
 SRW_TAC []
- [diff_merge_MEM_thm, EXTENSION, IN_LIST_TO_SET, MEM_MAP_FST_LEM] THEN
+ [diff_merge_MEM_thm, EXTENSION, MEM_MAP_FST_LEM] THEN
 CONV_TAC (LAND_CONV EXISTS_AND_CONV) THEN REFL_TAC);
 
 val diff_merge_ORL = maybe_thm ("diff_merge_ORL",
@@ -2093,7 +2097,7 @@ STRIP_ASSUME_TAC (ISPEC ``assocv (l:('a#'b)list) x`` option_nchotomy) THENL
               (CONJ (Q.ASSUME `ORL cmp l`) (Q.ASSUME `OL cmp m`))] THEN
  CONJ_TAC THENL
  [METIS_TAC [assocv_MEM_thm]
- ,METIS_TAC [IN_DIFF, IN_LIST_TO_SET]
+ ,METIS_TAC [IN_DIFF]
 ]]);
 
 (* *** Summary theorems, with and without restricted quantification: **** *)
@@ -2210,7 +2214,7 @@ val fmap_CONS = maybe_thm ("fmap_CONS",
 SRW_TAC [] [fmap, FUPDATE_LIST_SNOC, FAPPLY_FUPDATE_THM]);
 
 val o_f_FUPDATE_ALT = maybe_thm ("o_f_FUPDATE_ALT",
-``!f:'b->'c fm:'a|->'b k v. f o_f fm |+ (k,v) = (f o_f fm) |+ (k,f v)``,
+``!f:'b->'c fm:'a|->'b k v. f o_f (fm |+ (k,v)) = (f o_f fm) |+ (k,f v)``,
 REPEAT GEN_TAC THEN
 REWRITE_TAC [fmap_EXT, FDOM_o_f, FDOM_FUPDATE] THEN
 GEN_TAC THEN REWRITE_TAC [IN_INSERT, FAPPLY_FUPDATE_THM, o_f_FAPPLY] THEN
@@ -2505,7 +2509,7 @@ GEN_TAC THEN Induct THENL
  ,REWRITE_TAC [FAPPLY_FUPDATE_THM] THEN
   Cases_on `x = h` THEN AR THEN
   `FINITE (set l)` by MATCH_ACCEPT_TAC FINITE_LIST_TO_SET THEN
-  `x IN set l` by ASM_REWRITE_TAC [IN_LIST_TO_SET] THEN
+  `x IN set l` by ASM_REWRITE_TAC [] THEN
   IMP_RES_TAC FUN_FMAP_DEF THEN AR
 ]]);
 
@@ -2516,5 +2520,3 @@ val fmap_ORWL_thm = store_thm ("fmap_ORWL_thm",
 REWRITE_TAC [ORWL, incr_sort_fmap, incr_sort_ORL]);
 
 val _ = export_theory ();
-
-end;

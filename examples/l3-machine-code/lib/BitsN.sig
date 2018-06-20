@@ -8,7 +8,11 @@ sig
    eqtype nbit
    *)
 
-   datatype nbit = B of (int * Nat.nat)
+   datatype nbit = B of (IntInf.int * Nat.nat)
+
+   val BV: IntInf.int * Nat.nat -> nbit
+
+   val allow_resize: bool ref
 
    val compare: nbit * nbit -> order
    val signedCompare: nbit * nbit -> order
@@ -18,8 +22,9 @@ sig
    val fromBitstring: Bitstring.bitstring * Nat.nat -> nbit
    val fromBool: Nat.nat -> bool -> nbit
    val fromHexString: string * Nat.nat -> nbit option
-   val fromInt: int * Nat.nat -> nbit
-   val fromLit: string * int -> nbit option
+   val fromInt: IntInf.int * Nat.nat -> nbit
+   val fromNativeInt: int * int -> nbit
+   val fromLit: string * IntInf.int -> nbit option
    val fromNat: Nat.nat * Nat.nat -> nbit
    val fromNatCheck: Nat.nat * Nat.nat -> nbit
    val fromString: string * Nat.nat -> nbit option
@@ -27,10 +32,10 @@ sig
    val toBinString: nbit -> string
    val toBitstring: nbit -> Bitstring.bitstring
    val toHexString: nbit -> string
-   val toInt: nbit -> int
+   val toInt: nbit -> IntInf.int
    val toNat: nbit -> Nat.nat
    val toString: nbit -> string
-   val toUInt: nbit -> int
+   val toUInt: nbit -> IntInf.int
 
    val #<< : nbit * Nat.nat -> nbit
    val #<<^ : nbit * nbit -> nbit
@@ -58,9 +63,6 @@ sig
    val @@ : nbit * nbit -> nbit
    val || : nbit * nbit -> nbit
    val ~ : nbit -> nbit
-   val INT_MAX: Nat.nat -> nbit
-   val INT_MIN: Nat.nat -> nbit
-   val UINT_MAX: Nat.nat -> nbit
    val abs: nbit -> nbit
    val bit: nbit * Nat.nat -> bool
    val bitFieldInsert: Nat.nat * Nat.nat -> nbit * nbit -> nbit
@@ -73,8 +75,8 @@ sig
    val max: nbit * nbit -> nbit
    val min: nbit * nbit -> nbit
    val mod: nbit * nbit -> nbit
-   val modify: (Nat.nat * bool -> bool) * nbit -> nbit
    val msb: nbit -> bool
+   val nativeSize: nbit -> int
    val neg: nbit -> nbit
    val one: Nat.nat -> nbit
    val quot: nbit * nbit -> nbit
@@ -83,10 +85,12 @@ sig
    val resize: int -> nbit -> nbit
    val resize_replicate: int -> nbit * Nat.nat -> nbit
    val reverse: nbit -> nbit
+   val sdiv: nbit * nbit -> nbit
    val signExtend: Nat.nat -> nbit -> nbit
    val size: nbit -> Nat.nat
    val smax: nbit * nbit -> nbit
    val smin: nbit * nbit -> nbit
+   val smod: nbit * nbit -> nbit
    val tabulate: Nat.nat * (Nat.nat -> bool) -> nbit
    val toList: nbit -> bool list
    val zero: Nat.nat -> nbit

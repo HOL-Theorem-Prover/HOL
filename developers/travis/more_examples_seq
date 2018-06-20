@@ -10,7 +10,7 @@ src/res_quan/src
 src/quotient/src
 src/ring/src
 src/integer
-src/llist
+src/coalgebras
 src/patricia
 src/emit
 !examples/parity
@@ -18,3 +18,4 @@ src/emit
 !examples/set-theory/zfset
 !examples/set-theory/vbg
 !examples/set-theory/hol_sets
+!examples/imperative

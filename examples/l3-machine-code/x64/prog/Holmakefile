@@ -1,11 +1,11 @@
 INCLUDES = ../step ../../common
-OPTIONS = QUIT_ON_FAILURE
+CLINE_OPTIONS = --qof
 
 ifdef POLY
 HOLHEAP = x64-step-heap
 EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o
 
-BARE_THYS = ../step/x64_stepLib
+BARE_THYS = ../step/x64_stepLib ../../common/stateLib
 DEPS = $(patsubst %,%.uo,$(BARE_THYS))
 
 THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))

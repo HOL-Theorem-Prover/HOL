@@ -11,9 +11,6 @@
    app load ["bossLib", "Q", "pred_setTheory", "stringTheory", "dBTheory"];
 *)
 
-structure ncScript =
-struct
-
 open HolKernel Parse boolLib
      bossLib arithmeticTheory pred_setTheory dBTheory
      BasicProvers basic_swapTheory
@@ -340,7 +337,7 @@ GEN_TAC THEN CONV_TAC (DEPTH_CONV EXISTS_UNIQUE_CONV)
      THEN `(\a:'A. (q a, r a):'B#'C) =  \a:'A. (q' a, r' a)` by RES_TAC
      THEN PROVE_TAC [pairTheory.PAIR_EQ,EQ_EXT],
    PROVE_TAC[],
-   Q.PAT_ASSUM `$! M`
+   Q.PAT_X_ASSUM `$! M`
       (MP_TAC o Q.SPECL [`(FST o f, SND o f)`, `(FST o f', SND o f')`])
      THEN RW_TAC std_ss [combinTheory.o_THM, FUN_EQ_THM,ETA_THM]
      THEN PROVE_TAC [pairTheory.PAIR_EQ,pairTheory.PAIR,FUN_EQ_THM]]);
@@ -436,7 +433,7 @@ val pair_lemma = Q.prove(
 CONV_TAC (ONCE_DEPTH_CONV EXISTS_UNIQUE_CONV)
    THEN RW_TAC std_ss [] THENL
    [PROVE_TAC [],
-    Q.PAT_ASSUM `$! M`
+    Q.PAT_X_ASSUM `$! M`
         (MP_TAC o Q.SPECL [`(FST (p:'a#'b),s)`, `(FST (p:'a#'b),s')`])
       THEN RW_TAC std_ss []]);
 
@@ -675,10 +672,10 @@ nc_INDUCT_TAC THEN RW_TAC std_ss [SUB_THM] THENL
      [RW_TAC std_ss [SUB_THM],
       `~(x IN FV (VAR x'))` by RW_TAC std_ss [FV_THM,IN_SING]
         THEN RW_TAC std_ss [SUB_THM]
-        THEN Q.PAT_ASSUM `$! M`
+        THEN Q.PAT_X_ASSUM `$! M`
               (MP_TAC o Q.AP_TERM `LAM x` o Q.SPECL [`x:string`, `x':string`])
         THEN IMP_RES_TAC (el 6 (CONJUNCTS SUB_THM))
-        THEN Q.PAT_ASSUM `$! M` (ASSUME_TAC o GSYM)
+        THEN Q.PAT_X_ASSUM `$! M` (ASSUME_TAC o GSYM)
         THEN RW_TAC std_ss [ALPHA_LEMMA]]]);
 
 (* can now prove a simple version of induction, where you don't want that
@@ -1096,7 +1093,7 @@ val size_isub = store_thm(
     `~(z IN FVS R) /\ ~(z IN DOM R) /\ ~(z IN FV t)`
         by (Q.UNABBREV_TAC `z` THEN Q.UNABBREV_TAC `avds` THEN
             SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) []) THEN
-    REPEAT (Q.PAT_ASSUM `Abbrev X` (K ALL_TAC)) THEN
+    REPEAT (Q.PAT_X_ASSUM `Abbrev X` (K ALL_TAC)) THEN
     `LAM x t = LAM z ([VAR z/x] t)` by SRW_TAC [][SIMPLE_ALPHA] THEN
     SRW_TAC [][ISUB_LAM] THEN
     ASM_SIMP_TAC bool_ss [size_def] THEN
@@ -1120,10 +1117,4 @@ val size_nonzero = store_thm(
   ``!t. 0 < size t``,
   HO_MATCH_MP_TAC nc_INDUCTION THEN SRW_TAC [numSimps.ARITH_ss][size_thm]);
 
-
-
-
-
 val _ = export_theory();
-
-end; (* structure ncScript *)

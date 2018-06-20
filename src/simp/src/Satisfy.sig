@@ -44,6 +44,7 @@ signature Satisfy = sig
   type tactic = Abbrev.tactic
   type factdb = term list * thm list
                (* this may be hidden in the future *)
+   val satisfy : term list -> term list -> term list -> (term,term) Abbrev.subst
    val SATISFY : factdb -> term -> thm
    val SATISFY_CONV : factdb -> conv
    val SATISFY_TAC : tactic

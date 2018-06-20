@@ -3,7 +3,6 @@ sig
    type hol_type = Type.hol_type
    type term     = Term.term
    type thm      = Thm.thm
-   type ppstream = Portable.ppstream
 
    type tyinfo
    type typeBase
@@ -11,23 +10,28 @@ sig
 
    datatype shared_thm = ORIG of thm
                        | COPY of (string * string) * thm
+   type mk_datatype_record =
+        {ax        : shared_thm,
+         induction : shared_thm,
+         case_def  : thm,
+         case_cong : thm,
+         case_eq   : thm,
+         nchotomy  : thm,
+         size      : (term * shared_thm) option,
+         encode    : (term * shared_thm) option,
+         lift      : term option,
+         one_one   : thm option,
+         distinct  : thm option,
+         fields    : (string * hol_type) list,
+         accessors : thm list,
+         updates   : thm list,
+         destructors : thm list,
+         recognizers : thm list}
 
-   val mk_datatype_info
-           : {ax        : shared_thm,
-              induction : shared_thm,
-              case_def  : thm,
-              case_cong : thm,
-              nchotomy  : thm,
-              size      : (term * shared_thm) option,
-              encode    : (term * shared_thm) option,
-              lift      : term option,
-              one_one   : thm option,
-              distinct  : thm option,
-              fields    : (string * hol_type) list,
-              accessors : thm list,
-              updates   : thm list,
-              destructors : thm list,
-              recognizers : thm list} -> tyinfo
+   val mk_datatype_info_no_simpls : mk_datatype_record -> tyinfo
+   val gen_std_rewrs    : tyinfo -> thm list
+   val add_std_simpls   : tyinfo -> tyinfo
+   val mk_datatype_info : mk_datatype_record -> tyinfo
 
    val gen_datatype_info : {ax:thm,ind:thm,case_defs:thm list} -> tyinfo list
 
@@ -38,7 +42,7 @@ sig
               size      : (term * thm) option,
               encode    : (term * thm) option} -> tyinfo
 
-   val pp_tyinfo       : ppstream -> tyinfo -> unit
+   val pp_tyinfo       : tyinfo Parse.pprinter
 
    val ty_of           : tyinfo -> hol_type
    val ty_name_of      : tyinfo -> string * string
@@ -51,6 +55,7 @@ sig
    val case_const_of   : tyinfo -> term
    val case_cong_of    : tyinfo -> thm
    val case_def_of     : tyinfo -> thm
+   val case_eq_of      : tyinfo -> thm
    val nchotomy_of     : tyinfo -> thm
    val distinct_of     : tyinfo -> thm option
    val one_one_of      : tyinfo -> thm option
@@ -61,6 +66,7 @@ sig
    val size_of         : tyinfo -> (term * thm) option
    val encode_of       : tyinfo -> (term * thm) option
    val lift_of         : tyinfo -> term option
+   val extra_of        : tyinfo -> ThyDataSexp.t list
 
    val axiom_of0       : tyinfo -> shared_thm
    val induction_of0   : tyinfo -> shared_thm
@@ -69,6 +75,8 @@ sig
 
    val put_nchotomy    : thm -> tyinfo -> tyinfo
    val put_simpls      : simpfrag -> tyinfo -> tyinfo
+   val add_rewrs       : thm list -> tyinfo -> tyinfo
+   val add_ssfrag_convs: simpfrag.convdata list -> tyinfo -> tyinfo
    val put_induction   : shared_thm -> tyinfo -> tyinfo
    val put_size        : term * shared_thm -> tyinfo -> tyinfo
    val put_encode      : term * shared_thm -> tyinfo -> tyinfo
@@ -78,11 +86,15 @@ sig
    val put_updates     : thm list -> tyinfo -> tyinfo
    val put_destructors : thm list -> tyinfo -> tyinfo
    val put_recognizers : thm list -> tyinfo -> tyinfo
+   val put_extra       : ThyDataSexp.t list -> tyinfo -> tyinfo
+   val add_extra       : ThyDataSexp.t list -> tyinfo -> tyinfo
 
    (* Functional databases of datatype facts and associated operations *)
 
    val empty           : typeBase
    val insert          : typeBase -> tyinfo -> typeBase
+   val fold            : (hol_type * tyinfo * 'b -> 'b) -> 'b -> typeBase ->
+                         'b
 (*   val add             : typeBase -> tyinfo -> typeBase  *)
 
    val fetch           : typeBase -> hol_type -> tyinfo option
@@ -122,5 +134,8 @@ sig
 
    val dest_record_type : typeBase -> hol_type -> (string * hol_type) list
    val is_record_type   : typeBase -> hol_type -> bool
+
+   val toSEXP          : tyinfo -> ThyDataSexp.t
+   val fromSEXP        : ThyDataSexp.t -> tyinfo option
 
 end

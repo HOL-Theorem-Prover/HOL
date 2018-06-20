@@ -8,13 +8,17 @@ signature Parse = sig
   type PhraseBlockStyle = term_grammar.PhraseBlockStyle
   type ParenStyle = term_grammar.ParenStyle
   type block_info = term_grammar.block_info
-  type 'a frag = 'a Portable.frag
-  type ppstream = Portable.ppstream
+  type 'a frag = 'a PP.frag
+  type 'a pprinter = 'a -> HOLPP.pretty
 
-  datatype fixity
-     = RF of term_grammar.rule_fixity
-     | Binder
+  datatype fixity = datatype term_grammar_dtype.fixity
   val fixityToString : fixity -> string
+
+  type grammarDB_info = type_grammar.grammar * term_grammar.grammar
+  val grammarDB_insert : string * grammarDB_info -> unit
+  val grammarDB_fold : (string * grammarDB_info * 'a -> 'a) -> 'a -> 'a
+  val grammarDB : string -> grammarDB_info option
+  val set_grammar_ancestry : string list -> unit
 
   (* Parsing Types *)
 
@@ -23,7 +27,9 @@ signature Parse = sig
   val ==           : hol_type frag list -> 'a -> hol_type
 
   val add_type : string -> unit
+  val add_qtype : {Thy:string,Name:string} -> unit
   val temp_add_type : string -> unit
+  val temp_add_qtype : {Thy:string,Name:string} -> unit
   val add_infix_type : {Prec : int,
                         ParseName : string option,
                         Name : string,
@@ -45,31 +51,34 @@ signature Parse = sig
   (* Parsing terms *)
 
   val post_process_term: (term -> term) ref
-  val add_absyn_postprocessor : (string * (Absyn.absyn->Absyn.absyn)) -> unit
+  val add_absyn_postprocessor : string -> unit
   val temp_add_absyn_postprocessor :
-      (string * (Absyn.absyn->Absyn.absyn)) -> unit
+      (string * term_grammar.absyn_postprocessor) -> unit
+  val temp_remove_absyn_postprocessor :
+      string -> term_grammar.absyn_postprocessor option
+  val temp_add_preterm_processor :
+      string * int -> term_grammar.preterm_processor -> unit
+  val temp_remove_preterm_processor :
+      string * int -> term_grammar.preterm_processor option
+
   val absyn_to_term    : term_grammar.grammar -> Absyn.absyn -> term
-  val absyn_to_preterm : Absyn.absyn -> Preterm.preterm
+  val absyn_to_preterm : Absyn.absyn -> Preterm.preterm Pretype.in_env
   val Absyn            : term frag list -> Absyn.absyn
   val Preterm          : term frag list -> Preterm.preterm
   val Term             : term frag list -> term
-  val --               : term frag list -> 'a -> term
   val typedTerm        : term frag list -> hol_type -> term
   val ty_antiq         : hol_type -> term
   val parse_in_context : term list -> term frag list -> term
-  val parse_preterm_in_context : term list -> Preterm.preterm -> term
-  val grammar_parse_in_context :
-      (type_grammar.grammar * term_grammar.grammar) ->
-      term list -> term frag list -> term
+  val typed_parse_in_context : hol_type -> term list -> term frag list -> term
   val parse_from_grammars :
       (type_grammar.grammar * term_grammar.grammar) ->
       ((hol_type frag list -> hol_type) * (term frag list -> term))
   val print_from_grammars :
       (type_grammar.grammar * term_grammar.grammar) ->
-      ((Portable.ppstream -> hol_type -> unit) *
-       (Portable.ppstream -> term -> unit))
+      (hol_type pprinter * term pprinter)
   val print_term_by_grammar :
         (type_grammar.grammar * term_grammar.grammar) -> term -> unit
+  val print_without_macros : term -> unit
 
   val term_grammar : unit -> term_grammar.grammar
 
@@ -118,15 +127,15 @@ signature Parse = sig
   val overload_info_for : string -> unit
 
   (* printing without overloads or abbreviations *)
-  val pp_term_without_overloads_on : string list -> ppstream -> term -> unit
-  val pp_term_without_overloads : (string * term) list -> ppstream -> term ->
-                                  unit
-  val pp_type_without_abbrevs : string list -> ppstream -> hol_type -> unit
+  val pp_term_without_overloads_on : string list -> term pprinter
+  val pp_term_without_overloads : (string * term) list -> term pprinter
+  val pp_type_without_abbrevs : string list -> hol_type pprinter
 
   (* adding and removing user parsers and printers to the grammar *)
 
-  val add_user_printer : (string * term * term_grammar.userprinter) -> unit
+  val add_user_printer : (string * term) -> unit
   val remove_user_printer : string -> (term * term_grammar.userprinter) option
+  val constant_string_printer : string -> term_grammar.userprinter
 
  (* the following functions affect the grammar, but not so that the
     grammar exported to disk will be modified *)
@@ -178,23 +187,16 @@ signature Parse = sig
   (* Pretty printing *)
   val current_backend : PPBackEnd.t ref
   val interactive_ppbackend : unit -> PPBackEnd.t
-  val pp_term : ppstream -> term -> unit
-  val pp_type : ppstream -> hol_type -> unit
-  val pp_thm : ppstream -> thm -> unit
+  val mlower : (term_pp_types.printing_info,'a)smpp.t -> HOLPP.pretty
+  val pp_term : term pprinter
+  val pp_type : hol_type pprinter
+  val pp_thm : thm pprinter
+  val stdprinters : ((term -> string) * (hol_type -> string)) option
 
-  val pp_with_bquotes :
-    (ppstream -> 'a -> unit) -> (ppstream -> 'a -> unit)
-  val term_pp_with_delimiters :
-    (ppstream -> term -> unit) -> ppstream -> term -> unit
-  val respect_width_ref :
-      int ref -> (ppstream -> 'a -> unit) ->
-      (ppstream -> 'a -> unit)
-  val type_pp_with_delimiters :
-    (ppstream -> hol_type -> unit) ->
-    ppstream -> hol_type -> unit
-  val get_term_printer : unit -> (ppstream -> term -> unit)
-  val set_term_printer : (ppstream -> term -> unit) ->
-                               ppstream -> term -> unit
+  val term_pp_with_delimiters : term pprinter -> term pprinter
+  val type_pp_with_delimiters : hol_type pprinter -> hol_type pprinter
+  val get_term_printer : unit -> term pprinter
+  val set_term_printer : term pprinter -> term pprinter
 
   val minprint               : term -> string
   val rawterm_pp             : ('a -> 'b) -> 'a -> 'b
@@ -210,12 +212,6 @@ signature Parse = sig
 
 
   val export_theorems_as_docfiles : string -> (string * thm) list -> unit
-
-  val update_grms   : ('a -> unit) -> 'a -> unit
-  val pending_updates : unit -> (string * string * term option) list
-  val mk_local_grms
-    : (string * (type_grammar.grammar * term_grammar.grammar)) list -> unit
-
 
   val hide   : string -> ({Name : string, Thy : string} list *
                           {Name : string, Thy : string} list)
@@ -235,10 +231,6 @@ signature Parse = sig
 
   val Infixl     : int -> fixity
   val Infixr     : int -> fixity
-  val Infix      : associativity * int -> fixity
-  val Prefix     : int -> fixity
-  val Closefix   : fixity
-  val Suffix     : int -> fixity
   val fixity     : string -> fixity option
 
   (* more constructors/values that come across from term_grammar *)
@@ -250,6 +242,9 @@ signature Parse = sig
   val BeginFinalBlock  : block_info -> pp_element
   val EndInitialBlock  : block_info -> pp_element
   val PPBlock          : pp_element list * block_info -> pp_element
+  val ListForm         : {separator:pp_element list, cons : string,
+                          nilstr : string, block_info : block_info} ->
+                         pp_element
 
   val OnlyIfNecessary  : ParenStyle
   val ParoundName      : ParenStyle
@@ -263,17 +258,13 @@ signature Parse = sig
   val NoPhrasing       : PhraseBlockStyle
 
   val min_grammars : type_grammar.grammar * term_grammar.grammar
-  val current_lgrms : unit -> type_grammar.grammar * term_grammar.grammar
+  val merge_grammars : string list ->
+                       type_grammar.grammar * term_grammar.grammar
   val current_grammars : unit -> type_grammar.grammar * term_grammar.grammar
 
   structure Unicode : sig
     val unicode_version : {u:string,tmnm:string} -> unit
-    val uoverload_on : string * term -> unit
-    val uset_fixity : string -> fixity -> unit
-
     val temp_unicode_version : {u:string,tmnm:string} -> unit
-    val temp_uoverload_on : string * term -> unit
-    val temp_uset_fixity : string -> fixity -> unit
 
     structure UChar : UnicodeChars
   end

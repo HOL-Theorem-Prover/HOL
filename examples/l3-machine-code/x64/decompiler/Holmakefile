@@ -1,10 +1,10 @@
 INCLUDES = ../prog ../step ../../common \
            $(HOLDIR)/examples/machine-code/hoare-triple \
            $(HOLDIR)/examples/machine-code/decompiler
-OPTIONS = QUIT_ON_FAILURE
+CLINE_OPTIONS = --qof -j1
 
 ifdef POLY
-HOLHEAP = x64-step-heap
+HOLHEAP = x64-prog-heap
 EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o
 
 BARE_THYS = ../prog/x64_progLib

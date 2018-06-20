@@ -55,5 +55,5 @@ A call {define_new_type_bijections{name,ABS,REP,tyax}} fails
 if {tyax} is not a theorem of the form returned by {new_type_definition}.
 
 \SEEALSO
-Definition.new_type_definition, Prim_rec.prove_abs_fn_one_one, Prim_rec.prove_abs_fn_onto, Drule.prove_rep_fn_one_one, Drule.prove_rep_fn_onto.
+Definition.new_type_definition, Drule.prove_abs_fn_one_one, Drule.prove_abs_fn_onto, Drule.prove_rep_fn_one_one, Drule.prove_rep_fn_onto.
 \ENDDOC

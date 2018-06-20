@@ -1,17 +1,20 @@
 signature Holmake_tools =
 sig
 
-  datatype CodeType =
-           Theory of string
-         | Script of string
-         | Other of string
+  datatype CodeType = datatype Holmake_tools_dtype.CodeType
+  datatype ArticleType = datatype Holmake_tools_dtype.ArticleType
+  datatype File = datatype Holmake_tools_dtype.File
+  datatype buildcmds = datatype Holmake_tools_dtype.buildcmds
 
-  datatype File =
-           SML of CodeType
-         | SIG of CodeType
-         | UO of CodeType
-         | UI of CodeType
-         | Unhandled of string
+  (* simple list things *)
+  val member : ''a -> ''a list -> bool
+  val set_union : ''a list -> ''a list -> ''a list
+  val delete : ''a -> ''a list -> ''a list
+  val set_diff : ''a list -> ''a list -> ''a list
+  val remove_duplicates : ''a list -> ''a list
+
+  (* fixed constants *)
+  val DEFAULT_OVERLAY : string
 
   (* string/path manipulations *)
   val normPath : string -> string
@@ -20,15 +23,32 @@ sig
   val nspaces : (string -> unit) -> int -> unit
   val collapse_bslash_lines : string -> string
   val realspace_delimited_fields : string -> string list
+  val kernelid_fname : string
+
+  (* terminal stuff: colouring of strings, getting width *)
+  val red : string -> string
+  val boldred : string -> string
+  val boldgreen : string -> string
+  val boldyellow : string -> string
+  val bold : string -> string
+  val dim : string -> string
+  val CLR_EOL : string
+  val getWidth : unit -> int
 
   (* diagnostics/output *)
-  type output_functions = {warn : string -> unit, info : string -> unit,
+  type output_functions = {warn : string -> unit,
+                           info : string -> unit,
+                           chatty : string -> unit,
                            tgtfatal : string -> unit,
-                           diag : string -> unit}
-  val output_functions : {quiet_flag: bool, debug:bool} -> output_functions
+                           diag : (unit -> string) -> unit}
+  (* 0 : quiet, 1 : normal, 2 : chatty, 3 : everything + debug info *)
+  val output_functions : {chattiness:int,usepfx:bool} -> output_functions
   val die_with : string -> 'a
+  val terminal_log : string -> unit
 
 
+  val check_distrib : string -> string option
+    (* check_distrib s returns SOME(HOLDIR/bin/s) if we are under some HOLDIR.*)
   val do_lastmade_checks: output_functions ->
                           {no_lastmakercheck : bool} ->
                           unit
@@ -39,14 +59,19 @@ sig
   val toCodeType : string -> CodeType
   val toFile : string -> File
   val codeToString : CodeType -> string
+  val articleToString : ArticleType -> string
   val fromFile : File -> string
+  val fromFileNoSuf : File -> string
   val file_compare : File * File -> order
   val primary_dependent : File -> File option
   val exists_readable : string -> bool
-  val generate_all_plausible_targets : string option -> File list
+  val generate_all_plausible_targets :
+      (string -> unit) -> string option -> File list
+  val extract_theory : string list -> string option
 
   val clean_dir : {extra_cleans: string list} -> unit
   val clean_depdir : {depdirname : string} -> bool
+  val clean_forReloc : {holheap : string option} -> unit
 
   structure hmdir : sig
     type t
@@ -54,31 +79,31 @@ sig
     val extend : {base : t, extension : t} -> t
     val toString : t -> string
     val toAbsPath : t -> string
+    val pretty_dir : t -> string (* uses holpathdb abbreviations *)
     val fromPath : {origin: string, path : string} -> t
     val sort : t list -> t list
     val curdir : unit -> t
     val compare : t * t -> order
   end
+  val nice_dir : string -> string (* prints a dir with ~ when HOME is set *)
 
   type include_info = {includes : string list, preincludes : string list}
-  type 'dir holmake_dirinfo = {visited : hmdir.t Binaryset.set,
-                               includes : 'dir list,
-                               preincludes : 'dir list}
-  type 'dir holmake_result = 'dir holmake_dirinfo option
+  type dirset = hmdir.t Binaryset.set
+  type incset_pair = {pres : dirset, incs : dirset}
+  val empty_dirset : dirset
+  type incdirmap = (hmdir.t,incset_pair) Binarymap.dict
+  val empty_incdirmap : incdirmap
+  type holmake_dirinfo = {
+    visited : hmdir.t Binaryset.set,
+    incdirmap : incdirmap
+  }
+  type holmake_result = holmake_dirinfo option
 
-  val maybe_recurse :
-      {warn: string -> unit,
-       diag : string -> unit,
-       no_prereqs : bool,
-       hm: {dir : hmdir.t,
-            visited : hmdir.t Binaryset.set,
-            targets : string list} ->
-           hmdir.t holmake_result,
-       dirinfo : string holmake_dirinfo,
-       dir : hmdir.t,
-       local_build : include_info -> bool,
-       cleantgt : string option} ->
-      hmdir.t holmake_result
+  val process_hypat_options :
+      string -> {noecho : bool, ignore_error : bool, command : string}
+
+  (* nicely format a list of makefile targets *)
+  val target_string : string list -> string
 
   val holdep_arg : File -> File option
 

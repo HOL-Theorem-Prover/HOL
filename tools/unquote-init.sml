@@ -15,7 +15,7 @@ local
             case TextIO.input1 istrm of
               NONE => false
             | SOME #"`" => true
-            | SOME _ => loop()
+            | SOME c => Char.ord c > 127 orelse loop()
       in
         loop() before TextIO.closeIn istrm
       end handle Io _ => false
@@ -38,11 +38,3 @@ fun use s =
     end
   else Meta.use s
 end;
-
-(*---------------------------------------------------------------------------*
- *  Make the pretty-printer print terms and types with `` .... `` syntax.    *
- *---------------------------------------------------------------------------*)
-
-val _ =
-  (term_pp_prefix := "``";   term_pp_suffix := "``";
-  type_pp_prefix  := "``";   type_pp_suffix := "``");

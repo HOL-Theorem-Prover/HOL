@@ -324,6 +324,12 @@ fun EXISTS_TAC t : tactic =
       handle HOL_ERR _ => raise ERR "EXISTS_TAC" ""
 val exists_tac = EXISTS_TAC
 
+fun ID_EX_TAC(g as (_,w)) =
+  EXISTS_TAC (fst(dest_exists w)
+              handle HOL_ERR _ => raise ERR "ID_EX_TAC" "goal not an exists") g;
+
+
+
 (*---------------------------------------------------------------------------*
  * Substitution                                                              *
  *                                                                           *
@@ -449,12 +455,13 @@ fun GEN_COND_CASES_TAC P (asl, w) =
       val (cond, larm, rarm) = dest_cond cond
       val inst = INST_TYPE [Type.alpha |-> type_of larm] COND_CLAUSES
       val (ct, cf) = CONJ_PAIR (SPEC rarm (SPEC larm inst))
+      fun subst_tac th c = SUBST1_TAC th THEN SUBST1_TAC (SUBS [th] c)
    in
       DISJ_CASES_THEN2
         (fn th =>
-           SUBST1_TAC (EQT_INTRO th) THEN SUBST1_TAC ct THEN ASSUME_TAC th)
+           subst_tac (EQT_INTRO th) ct THEN ASSUME_TAC th)
         (fn th =>
-           SUBST1_TAC (EQF_INTRO th) THEN SUBST1_TAC cf THEN ASSUME_TAC th)
+           subst_tac (EQF_INTRO th) cf THEN ASSUME_TAC th)
         (SPEC cond EXCLUDED_MIDDLE)
         (asl, w)
    end
@@ -525,6 +532,8 @@ fun FILTER_STRIP_THEN ttac tm =
 
 fun DISCH_TAC g =
    DISCH_THEN ASSUME_TAC g handle HOL_ERR _ => raise ERR "DISCH_TAC" ""
+
+val disch_tac = DISCH_TAC
 
 val FILTER_DISCH_TAC = FILTER_DISCH_THEN STRIP_ASSUME_TAC
 
@@ -774,26 +783,26 @@ in
             HOLset.intersection (FVL [concl thm] empty_tmset, hyp_frees thm)
         val hyptyvars = HOLset.listItems (hyp_tyvars thm)
         val (gvs, imp) = strip_forall (concl thm)
-        val (ant, conseq) =
-           with_exn dest_imp imp (ERR "MATCH_MP_TAC" "Not an implication")
-        val (cvs, con) = strip_forall conseq
-        val th1 = SPECL cvs (UNDISCH (SPECL gvs thm))
-        val (vs, evs) = partition (C Term.free_in con) gvs
-        val th2 = uncurry DISCH (itlist efn evs (ant, th1))
       in
-         fn (A, g) =>
-            let
-               val (vs, gl) = strip_forall g
-               val ins = match_terml hyptyvars lconsts con gl
-                         handle HOL_ERR _ => raise ERR "MATCH_MP_TAC" "No match"
-               val ith = INST_TY_TERM ins th2
-               val gth = GENL vs (UNDISCH ith)
-                         handle HOL_ERR _ => raise ERR "MATCH_MP_TAC"
-                                                       "Generalized var(s)."
-               val ant = fst (dest_imp (concl ith))
-            in
-               ([(A, ant)], fn thl => MP (DISCH ant gth) (hd thl))
-            end
+          fn (A,g) =>
+             let
+                 val (ant, conseq) =
+                     with_exn dest_imp imp (ERR "MATCH_MP_TAC" "Not an implication")
+                 val (cvs, con) = strip_forall conseq
+                 val th1 = SPECL cvs (UNDISCH (SPECL gvs thm))
+                 val (vs, evs) = partition (C Term.free_in con) gvs
+                 val th2 = uncurry DISCH (itlist efn evs (ant, th1))
+                 val (vs, gl) = strip_forall g
+                 val ins = match_terml hyptyvars lconsts con gl
+                           handle HOL_ERR _ => raise ERR "MATCH_MP_TAC" "No match"
+                 val ith = INST_TY_TERM ins th2
+                 val gth = GENL vs (UNDISCH ith)
+                           handle HOL_ERR _ => raise ERR "MATCH_MP_TAC"
+                                                     "Generalized var(s)."
+                 val ant = fst (dest_imp (concl ith))
+             in
+                 ([(A, ant)], fn thl => MP (DISCH ant gth) (hd thl))
+             end
       end
    val match_mp_tac = MATCH_MP_TAC
 end
@@ -807,7 +816,15 @@ end
  * (3) hypotheses of the theorem provided also become new subgoals           *
  * --------------------------------------------------------------------------*)
 
-fun irule thm = prim_irule (SPEC_UNDISCH_EXL (GEN_ALL thm)) ;
+fun irule thm = let
+  val th' = IRULE_CANON thm
+in
+  if th' |> concl |> strip_forall |> #2 |> is_imp then
+    MATCH_MP_TAC th'
+  else MATCH_ACCEPT_TAC th'
+end
+val IRULE_TAC = irule
+
 
 (* ----------------------------------------------------------------------*
  * Definition of the standard resolution tactics IMP_RES_TAC and RES_TAC *
@@ -865,25 +882,6 @@ infix 8 via;
 fun (tm via tac) =
    THENF (SUBGOAL_THEN tm STRIP_ASSUME_TAC, tac, ALL_TAC)
    handle e as HOL_ERR _ => raise ERR "via" ""
-
-(*--------------------------------------------------------------------------*
- *   Map a conversion to a tactic.                                          *
- *--------------------------------------------------------------------------*)
-
-fun CONV_TAC (conv: conv) : tactic =
-   fn (asl, w) =>
-      let
-         val th = conv w
-         val (_, rhs) = dest_eq (concl th)
-      in
-         if rhs = T
-            then ([], empty (EQ_MP (SYM th) TRUTH))
-         else ([(asl, rhs)], sing (EQ_MP (SYM th)))
-      end
-      handle UNCHANGED =>
-        if w = T (* special case, can happen! *)
-          then ([], empty TRUTH)
-        else ALL_TAC (asl, w)
 
 (*--------------------------------------------------------------------------*
  *   Tactic for beta-reducing a goal.                                       *
@@ -1054,5 +1052,58 @@ fun HINT_EXISTS_TAC g =
     EXISTS_TAC witness g
   end;
 
+(* ----------------------------------------------------------------------
+    part_match_exists_tac : (term -> term) -> term -> tactic
+
+    part_match_exists_tac selfn tm (asl,w)
+
+    w must be of shape ?v1 .. vn. body.
+
+    Apply selfn to body extracting a term that is then matched against
+    tm.  Instantiate the existential variables according to this match.
+
+   ---------------------------------------------------------------------- *)
+
+fun part_match_exists_tac selfn tm (g as (_,w)) =
+  let
+    val (vs,b) = strip_exists w
+    val c = selfn b
+    val cfvs = FVL [c] empty_tmset
+    val constvars = HOLset.difference(cfvs, HOLset.fromList Term.compare vs)
+    val ((tms0,tmfixed),_) = raw_match [] constvars c tm ([], [])
+    val tms =
+        tms0 @ HOLset.foldl
+                 (fn (v,acc) => if Lib.mem v vs then {redex=v,residue=v}::acc
+                                else acc)
+                 [] tmfixed
+    val xs = map #redex tms
+    val ys = map #residue tms
+    fun sorter ls = xs@(List.filter(not o Lib.C Lib.mem xs)ls)
+  in
+    CONV_TAC(RESORT_EXISTS_CONV sorter) >> map_every exists_tac ys
+  end g
+
+val provehyp = provehyp_then (K mp_tac)
+val impl_tac = disch_then provehyp
+val impl_keep_tac =
+  disch_then (provehyp_then (fn lth => fn rth => assume_tac lth >> mp_tac rth))
+
+
+open mp_then
+fun drule ith = first_assum (mp_then (Pos hd) mp_tac ith)
+fun dxrule ith = first_x_assum (mp_then (Pos hd) mp_tac ith)
+fun drule_then k ith = first_assum (mp_then (Pos hd) k ith)
+fun dxrule_then k ith = first_x_assum (mp_then (Pos hd) k ith)
+
+fun isfa_imp th = th |> concl |> strip_forall |> #2 |> is_imp
+fun dall_prim k fa ith0 g =
+  REPEAT_GTCL (fn ttcl => fn th => fa (mp_then (Pos hd) ttcl th))
+              (k o assert (not o isfa_imp))
+              (assert isfa_imp ith0)
+              g
+val drule_all = dall_prim mp_tac first_assum
+val dxrule_all = dall_prim mp_tac first_x_assum
+fun drule_all_then k = dall_prim k first_assum
+fun dxrule_all_then k = dall_prim k first_x_assum
 
 end (* Tactic *)

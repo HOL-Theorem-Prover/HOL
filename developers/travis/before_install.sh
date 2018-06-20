@@ -1,47 +1,46 @@
 #!/bin/bash
 
 set -e
+wget https://raw.github.com/ocaml/opam/master/shell/opam_installer.sh -O - | sudo sh -s /usr/local/bin
+
+opam init -y --comp 4.05.0
+opam install -y num
+opam install -y ocamlfind
 
 cd
 
-if [ -z "$SVNPOLY" ]
+if [ -z "$GITPOLY" ]
 then
 
-wget -q -O polyml5.5.1.tar.gz "http://downloads.sourceforge.net/project/polyml/polyml/5.5.1/polyml.5.5.1.tar.gz?r=http%3A%2F%2Fsourceforge.net%2Fprojects%2Fpolyml%2Ffiles%2Fpolyml%2F5.5.1%2Fpolyml.5.5.1.tar.gz%2Fdownload&ts=1384728510&use_mirror=softlayer-dal"
+wget -q -O polyml.tar.gz https://github.com/polyml/polyml/archive/v5.7.1.tar.gz
 
-tar xzf polyml5.5.1.tar.gz
-cd polyml.5.5.1
+tar xzf polyml.tar.gz
+cd polyml-5.7.1
 if [ -z "$ROOTPOLY" ]
 then
   echo "*** Installing PolyML in home directory"
-  ./configure --prefix=$HOME --enable-shared
+  ./configure --prefix=$HOME
   make
   make install
 else
   echo "*** Installing PolyML in root land directory"
-  ./configure --prefix=/usr/ --enable-shared
+  ./configure --prefix=/usr/
   make
   sudo make install
 fi
 
 else
 
-svn checkout svn://svn.code.sourceforge.net/p/polyml/code/trunk/polyml polyml
+git clone https://github.com/polyml/polyml.git
 cd polyml
-./configure --prefix=$HOME --enable-shared
+./configure --prefix=$HOME
 make
 make compiler
 make install
 
+if [ $(uname) = "Darwin" ]
+then
+    perl -pi -e 's/-R/-rpath /g' $HOME/bin/polyc
 fi
 
-cd
-# installing ocaml
-echo "*** Installing Ocaml ***"
-sudo apt-get install ocaml
-# installing newer g++
-echo "*** Installing newer g++ version ***"
-sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
-sudo apt-get update
-sudo apt-get install g++-4.8
-
+fi

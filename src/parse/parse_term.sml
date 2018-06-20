@@ -3,7 +3,9 @@ struct
 
 open Lib
 open errormonad term_tokens term_grammar HOLgrammars
-open GrammarSpecials
+open GrammarSpecials PrecAnalysis
+open parse_term_dtype
+
 infix >> >- ++ >->
 
 val syntax_error_trace = ref true
@@ -20,7 +22,7 @@ fun noloc s = (s, locn.Loc_None)
 fun qfail x = error (noloc "") x
 fun WARNloc_string loc s = (s, loc)
 
-
+fun PRINT s = print (s ^ "\n")
 
 exception Failloc of (locn.locn * string)
 fun FAILloc locn s = raise Failloc (locn, s)
@@ -82,10 +84,6 @@ exception PrecConflict of stack_terminal * stack_terminal
 
 val complained_already = ref false;
 
-fun first_tok [] = raise Fail "Shouldn't happen: parse_term.first_tok"
-  | first_tok (RE (TOK s)::_) = s
-  | first_tok (_ :: t) = first_tok t
-
 structure Polyhash =
 struct
    fun peek (ref dict) k = Binarymap.peek(dict,k)
@@ -122,11 +120,6 @@ fun left_grabbing_elements rule =
     | SUFFIX TYPE_annotation => [TypeColon]
     | _ => []
 
-datatype mx_src = Ifx | Pfx | MS_Other | MS_Multi
-datatype mx_order = PM_LESS of mx_src
-                  | PM_GREATER of mx_src
-                  | PM_EQUAL
-                  | PM_LG of {pfx:order,ifx:order}
 datatype order_compat_verdict = OK | Multify of mx_order | Bad
 fun order_compat mx1 mx2 =
     case (mx1, mx2) of
@@ -146,8 +139,53 @@ fun mx_order mxo =
     | PM_EQUAL => SOME EQUAL
     | PM_LG _ => NONE
 
+(* turn a rule element list into a list of std_hol_toks *)
+val rel_list_to_toklist =
+  List.mapPartial (fn TOK s => SOME (STD_HOL_TOK s) | _ => NONE)
+
+fun find_suffix_rhses (G : grammar) = let
+  fun select (SUFFIX TYPE_annotation) = [[TypeTok]]
+    | select (SUFFIX (STD_suffix rules)) = let
+      in
+        map (rel_list_to_toklist o rule_elements o #elements) rules
+        end
+    | select (CLOSEFIX rules) =
+        map (rel_list_to_toklist o rule_elements o #elements) rules
+    | select _ = []
+  val suffix_rules = List.concat (map (select o #2) (rules G))
+in
+  Id :: map List.last suffix_rules
+end
+
+fun find_prefix_lhses (G : grammar) = let
+  fun select x = let
+  in
+    case x of
+      PREFIX (STD_prefix rules) =>
+        map (rel_list_to_toklist o rule_elements o #elements) rules
+    | CLOSEFIX rules =>
+        map (rel_list_to_toklist o rule_elements o #elements) rules
+    | _ => []
+  end
+  val prefix_rules = List.concat (map (select o #2) (rules G))
+in
+  Id :: map STD_HOL_TOK (binders G) @ map hd prefix_rules
+end
+
 val ambigrm = ref 1
 val _ = Feedback.register_trace ("ambiguous grammar warning", ambigrm, 2)
+
+fun STtoString (G:grammar) x =
+  case x of
+    STD_HOL_TOK s => s
+  | BOS => "<beginning of input>"
+  | EOS => "<end of input>"
+  | VS_cons => "<gap between varstructs>"
+  | Id => "<identifier>"
+  | TypeColon => #type_intro (specials G)
+  | TypeTok => "<type>"
+  | EndBinding => #endbinding (specials G) ^ " (end binding)"
+  | ResquanOpTok => #res_quanop (specials G)^" (res quan operator)"
 
 fun mk_prec_matrix G = let
   exception NotFound = Binarymap.NotFound
@@ -229,29 +267,13 @@ fun mk_prec_matrix G = let
     | (NONE, _) => ()
   end
   fun insert_eqs rule = let
-    fun insert_oplist list = let
-      fun recurse [] = raise BadTokList
-        | recurse [x] = ()
-        | recurse (TOK s1::(xs as TOK s2::_)) = let
-          in
-            insert ((STD_HOL_TOK s1, false), STD_HOL_TOK s2) PM_EQUAL;
-            recurse xs
-          end
-        | recurse (TOK s1::TM::(xs as TOK s2::_)) = let
-          in
-            insert ((STD_HOL_TOK s1, true), STD_HOL_TOK s2) PM_EQUAL;
-            recurse xs
-          end
-        | recurse l = raise Fail
-                                (String.concat
-                                     ("Bogus rule featuring elements "::
-                                       separate " " (map reltoString l)))
-    in
-      recurse list
-    end
+    fun insert_eqn (tk1,intervening_tm,tk2) =
+      insert((STD_HOL_TOK tk1, intervening_tm), STD_HOL_TOK tk2) PM_EQUAL
+    val insert_eqns = app insert_eqn
+    val equalities = PrecAnalysis.rule_equalities
   in
     case rule of
-      PREFIX (STD_prefix rules) => app (insert_oplist o rule_elements) rules
+      PREFIX (STD_prefix rules) => app (insert_eqns o equalities) rules
     | PREFIX (BINDER slist) => let
         fun bindertok (BinderString {tok, ...}) = [tok]
           | bindertok LAMBDA = lambda
@@ -259,28 +281,13 @@ fun mk_prec_matrix G = let
       in
         app (fn s => insert ((STD_HOL_TOK s, true), EndBinding) PM_EQUAL) btoks
       end
-    | SUFFIX (STD_suffix rules) => app (insert_oplist o rule_elements) rules
+    | SUFFIX (STD_suffix rules) => app (insert_eqns o equalities) rules
     | SUFFIX TYPE_annotation => ()
-    | INFIX (STD_infix (rules, _)) => app (insert_oplist o rule_elements) rules
+    | INFIX (STD_infix (rules, _)) => app (insert_eqns o equalities) rules
     | INFIX RESQUAN_OP => ()
-    | INFIX (FNAPP lst) => app (insert_oplist o rule_elements) lst
+    | INFIX (FNAPP lst) => app (insert_eqns o equalities) lst
     | INFIX VSCONS => ()
-    | CLOSEFIX rules => app (insert_oplist o rule_elements) rules
-    | LISTRULE rlist => let
-        fun process (r:listspec) = let
-          val left = STD_HOL_TOK (first_tok (#leftdelim r))
-          val right = STD_HOL_TOK (first_tok (#rightdelim r))
-          val separator = STD_HOL_TOK (first_tok (#separator r))
-        in
-          insert ((left,false), right) PM_EQUAL;
-          insert ((left,true), right) PM_EQUAL;
-          insert ((left,true), separator) PM_EQUAL;
-          insert ((separator,true), separator) PM_EQUAL;
-          insert ((separator,true), right) PM_EQUAL
-        end
-      in
-        app process rlist
-      end
+    | CLOSEFIX rules => app (insert_eqns o equalities) rules
   end
 
   fun bi_insert (t1,t2) order = (insert ((t1,false), t2) order;
@@ -316,25 +323,17 @@ fun mk_prec_matrix G = let
           | SUFFIX (STD_suffix rules) => map (f o rule_elements) rules
           | PREFIX (STD_prefix rules) => map (f o rule_elements) rules
           | CLOSEFIX rules => map (f o rule_elements) rules
-          | LISTRULE rlist => let
-              fun process (r:listspec) =
-                [f (map (TOK o first_tok)
-                        [#leftdelim r, #separator r, #rightdelim r])]
-            in
-              List.concat (map process rlist)
-            end
           | _ => []
       in
         here @ rest
       end
-  val first_tok = hd o List.mapPartial (fn TOK s => SOME s | _ => NONE)
-  val last_tok = first_tok o List.rev
+  val last_rtok = first_rtok o List.rev
   val all_lhs =
     TypeColon::BOS::VS_cons::ResquanOpTok::Id::
-    map STD_HOL_TOK (fnapp_special::(map_rule first_tok Grules))
+    map STD_HOL_TOK (fnapp_special::(map_rule first_rtok Grules))
   val all_rhs =
     TypeTok::EndBinding::EOS::VS_cons::ResquanOpTok::Id::
-    map STD_HOL_TOK (fnapp_special::(map_rule last_tok Grules))
+    map STD_HOL_TOK (fnapp_special::(map_rule last_rtok Grules))
   (* Between things that are equal, the thing on the left is less than
      all possible left hand sides, and the thing on the right is
      greater than all possible right hand sides. *)
@@ -510,16 +509,21 @@ in
   matrix
 end
 
+(* string is name of term; list of pairs, is list of token-pairs between
+   which a list style reduction is required *)
+type mini_lspec = {cons:string,nilstr:string,sep:string}
+datatype rsfixity = rsInfix | rsPrefix | rsClosefix | rsSuffix
 datatype rule_summary =
-  infix_rule of string | prefix_rule of string | suffix_rule of string |
-  closefix_rule of string | listfix_rule of {cons : string, nilstr : string}
+         RealRule of rsfixity * string
+           (* keyed on, e.g., [TOK "let"; TM; TOK "in"; TM] *)
+       | ListOnly of mini_lspec
+           (* for lists that appear between tokens that are only a part of
+              the rule.  E.g., keyed on [TOK "let"; TOK "in"] *)
+
 fun summary_toString rs =
   case rs of
-    infix_rule s => s
-  | prefix_rule s => s
-  | suffix_rule s => s
-  | closefix_rule s => s
-  | listfix_rule {cons, nilstr = n} => "List : {cons = "^cons^", nil = "^n^"}"
+    RealRule (_, s) => s
+  | ListOnly {cons,nilstr=n,...} => "List : {cons = "^cons^", nil = "^n^"}"
 
 
 (* in addition to all of the rules that you'd expect due to the infix,
@@ -529,51 +533,55 @@ fun summary_toString rs =
    an examination of the grammar when we come to do a reduction to
    spot whether a putative rhs is an instance of a list *)
 
+fun listTM_delimiters rels =
+  case rels of
+      [] => []
+    | [_] => []
+    | TOK tk1 :: ListTM lsp :: (rest as (TOK tk2 :: _)) =>
+        ([TOK tk1,TOK tk2], ListOnly lsp) :: listTM_delimiters rest
+    | (_ :: rest) => listTM_delimiters rest
+
+fun de_listTM rels = map (fn ListTM _ => TM | x => x) rels
+
+fun infix_rule (rels, nm) =
+  (mkrels_infix (de_listTM rels), RealRule(rsInfix, nm))
+fun prefix_rule (rels,nm) =
+  (mkrels_prefix (de_listTM rels), RealRule(rsPrefix, nm))
+fun closefix_rule (rels,nm) =
+  (mkrels_closefix (de_listTM rels), RealRule(rsClosefix, nm))
+fun suffix_rule (rels,nm) =
+  (mkrels_suffix (de_listTM rels), RealRule(rsSuffix, nm))
+
 fun mk_ruledb (G:grammar) = let
   val Grules = term_grammar.grammar_rules G
   val table:(rule_element list, rule_summary)Binarymap.dict ref =
        Polyhash.mkDict (Lib.list_compare RE_compare)
-  fun insert_rule f g (rr:rule_record) =
-    Polyhash.insert table (g (term_grammar.rule_elements (#elements rr)),
-                           f (#term_name rr))
-  fun infix_f elms = TM :: (elms @ [TM])
-  fun suffix_f elms = TM :: elms
-  fun closefix_f elms = elms
-  fun prefix_f elms = elms @ [TM]
+  fun insert_rule mkfix (rr:rule_record) =
+    let
+      val rels = term_grammar.rule_elements (#elements rr)
+      val nm = #term_name rr
+    in
+      (Polyhash.insert table (mkfix (rels,nm));
+       List.app (Polyhash.insert table) (listTM_delimiters rels))
+    end
   fun addrule rule =
     case rule of
-      INFIX (STD_infix(rules, _)) => app (insert_rule infix_rule infix_f) rules
+      INFIX (STD_infix(rules, _)) => app (insert_rule infix_rule) rules
     | INFIX RESQUAN_OP => ()
     | INFIX VSCONS => ()
     | INFIX (FNAPP rules) => let
       in
-        Polyhash.insert table (infix_f [TOK fnapp_special],
-                               infix_rule fnapp_special);
-        app (insert_rule infix_rule infix_f) rules
+        Polyhash.insert table (mkrels_infix [TOK fnapp_special],
+                               RealRule(rsInfix, fnapp_special));
+        app (insert_rule infix_rule) rules
       end
-    | PREFIX (STD_prefix rules) => app (insert_rule prefix_rule prefix_f) rules
+    | PREFIX (STD_prefix rules) =>
+        app (insert_rule prefix_rule) rules
     | PREFIX (BINDER s) => ()
-    | SUFFIX (STD_suffix rules) => app (insert_rule suffix_rule suffix_f) rules
+    | SUFFIX (STD_suffix rules) =>
+        app (insert_rule suffix_rule) rules
     | SUFFIX TYPE_annotation => ()
-    | CLOSEFIX rules => app (insert_rule closefix_rule closefix_f) rules
-    | LISTRULE rlist => let
-        fun process (r:listspec) = let
-          val ldelim = TOK (first_tok (#leftdelim r))
-          val rdelim = TOK (first_tok (#rightdelim r))
-          val sep = TOK (first_tok (#separator r))
-          val nil_pattern =   [ldelim, rdelim]
-          val singleton_pat = [ldelim, TM, rdelim]
-          val doubleton_pat = [ldelim, TM, sep, TM, rdelim]
-          val insert = Polyhash.insert table
-          val summary = listfix_rule {cons = #cons r, nilstr = #nilstr r}
-        in
-          insert (nil_pattern, summary);
-          insert (singleton_pat, summary);
-          insert (doubleton_pat, summary)
-        end
-      in
-        app process rlist
-      end
+    | CLOSEFIX rules => app (insert_rule closefix_rule) rules
 in
   app addrule Grules;
   table
@@ -629,37 +637,37 @@ fun fupd_snd f (x,y) = (x, f y)
 fun fupd_vs0 f (PStack{in_vstruct,lookahead,stack}) =
   PStack{stack = stack, lookahead = lookahead, in_vstruct = f in_vstruct}
 
-fun invstructp (cs, p) = ((cs, p), Some (invstructp0 p))
+fun invstructp (cs, p) = Some ((cs, p), invstructp0 p)
 
-fun inc_paren (cs, p) = ((cs, fupd_vs0 (fupd_hd (fupd_snd (fn n => n + 1))) p),
-                         Some ())
-fun dec_paren (cs, p) = ((cs, fupd_vs0 (fupd_hd (fupd_snd (fn n => n - 1))) p),
-                         Some ())
+fun inc_paren (cs, p) =
+  Some ((cs, fupd_vs0 (fupd_hd (fupd_snd (fn n => n + 1))) p), ())
+fun dec_paren (cs, p) =
+  Some ((cs, fupd_vs0 (fupd_hd (fupd_snd (fn n => n - 1))) p), ())
 fun enter_binder (cs,p) =
-  ((cs, fupd_vs0 (fn rest => (VSRES_VS, 0)::rest) p), Some ())
+  Some ((cs, fupd_vs0 (fn rest => (VSRES_VS, 0)::rest) p), ())
 fun enter_restm (cs, p) =
-  ((cs, fupd_vs0 (fupd_hd (fupd_fst (K VSRES_RESTM))) p), Some ())
+  Some ((cs, fupd_vs0 (fupd_hd (fupd_fst (K VSRES_RESTM))) p), ())
 fun leave_restm (cs, p) =
-  ((cs, fupd_vs0 (fupd_hd (fupd_fst (K VSRES_VS))) p), Some ())
-fun leave_binder (cs, p) = ((cs, fupd_vs0 tl p), Some ())
+  Some ((cs, fupd_vs0 (fupd_hd (fupd_fst (K VSRES_VS))) p), ())
+fun leave_binder (cs, p) = Some ((cs, fupd_vs0 tl p), ())
 
 fun push_pstack p i = upd_stack p (i::pstack p)
 fun top_pstack p = hd (pstack p)
 fun pop_pstack p = upd_stack p (tl (pstack p))
 
-fun push t (cs, p) = ((cs, push_pstack p t), Some ())
+fun push t (cs, p) = Some ((cs, push_pstack p t), ())
 fun topterm (cs, p) =
-  ((cs, p), case List.find (is_terminal o #1) (pstack p) of
-              NONE => Error (noloc "No terminal in stack")
-            | SOME x => Some x)
+  case List.find (is_terminal o #1) (pstack p) of
+      NONE => Error (noloc "No terminal in stack")
+    | SOME x => Some((cs,p), x)
 fun pop (cs, p) =
-    ((cs, pop_pstack p), Some (top_pstack p))
-    handle Empty => ((cs, p), Error (noloc "pop: empty stack"))
-fun getstack (cs, p) = ((cs, p), Some (pstack p))
+    Some ((cs, pop_pstack p), top_pstack p)
+    handle Empty => Error (noloc "pop: empty stack")
+fun getstack (cs, p) = Some ((cs, p), pstack p)
 
 
-fun set_la tt (cs, p) = ((cs, upd_la p tt), Some ())
-fun current_la (cs, p) = ((cs, p), Some (pla p))
+fun set_la tt (cs, p) = Some ((cs, upd_la p tt), ())
+fun current_la (cs, p) = Some ((cs, p), pla p)
 
 fun findpos P [] = NONE
   | findpos P (x::xs) = if P x then SOME(0,x)
@@ -673,32 +681,55 @@ fun get_case_info (G : grammar) = let
       | _ => acc
   fun extract_toks ppels = List.rev (List.foldl extract_tok [] ppels)
   fun rr_foldthis ({term_name,elements,...}, acc) =
-      if term_name <> GrammarSpecials.case_special then acc
-      else extract_toks elements :: acc
+    if GrammarSpecials.is_case_special term_name then
+      case Binarymap.peek(acc, term_name) of
+          NONE => Binarymap.insert(acc, term_name, [extract_toks elements])
+        | SOME els =>
+            Binarymap.insert(acc, term_name, extract_toks elements :: els)
+    else acc
   fun foldthis (gr, acc) =
       case gr of
         PREFIX (STD_prefix rrs) => List.foldl rr_foldthis acc rrs
       | _ => acc
-  val candidates = List.foldl foldthis [] (grammar_rules G)
+  val candidates =
+      List.foldl foldthis (Binarymap.mkDict String.compare) (grammar_rules G)
   val error_case = {casebar = NONE, casecase = NONE, caseof = NONE}
+  fun mapthis (cspecial, candidates) =
+    case Listsort.sort (flip_cmp (measure_cmp length)) candidates of
+        [] => error_case
+      | toks :: _ =>
+        let
+        in
+          if length toks <> 4 orelse last toks <> last (butlast toks) then
+            error_case
+          else {casebar = SOME (last toks), casecase = SOME (hd toks),
+                caseof = SOME (hd (tl toks))}
+        end
+  val specials_to_toks = Binarymap.map mapthis candidates
+  val toks_to_specials = let
+    fun foldthis (k,r,acc) =
+      case #casecase r of
+          NONE => acc
+        | SOME tok =>
+          (case Binarymap.peek(acc,tok) of
+               NONE => Binarymap.insert(acc,tok,k)
+             | SOME k' => raise Fail ("Tok \"" ^ tok ^
+                                      "\" maps to case specials " ^
+                                      valOf (dest_case_special k) ^ " and " ^
+                                      valOf (dest_case_special k')))
+  in
+    Binarymap.foldl foldthis (Binarymap.mkDict String.compare) specials_to_toks
+  end
 in
-  case Listsort.sort (flip_cmp (measure_cmp length)) candidates of
-    [] => error_case
-  | toks :: _ => let
-    in
-      if length toks <> 4 orelse last toks <> last (butlast toks) then
-        error_case
-      else {casebar = SOME (last toks), casecase = SOME (hd toks),
-            caseof = SOME (hd (tl toks))}
-    end
+  (specials_to_toks, toks_to_specials)
 end
 
-fun parse_term (G : grammar) typeparser = let
+fun parse_term (G : grammar) (typeparser : term qbuf -> Pretype.pretype) = let
   val Grules = grammar_rules G
   val {type_intro, lambda, endbinding, restr_binders, res_quanop} = specials G
   val num_info = numeral_info G
   val overload_info = overload_info G
-  val {casebar,caseof,casecase} = get_case_info G
+  val (casespec_to_tok, casetok_to_spec) = get_case_info G
   val closed_lefts = find_prefix_lhses G
   val left_grabbers = List.concat (map left_grabbing_elements Grules)
   val fnapp_closed_lefts = Lib.subtract closed_lefts left_grabbers
@@ -733,10 +764,10 @@ fun parse_term (G : grammar) typeparser = let
   in
     fn (qb, ps) =>
        case ttlex qb of
-         NONE => ((qb, ps), Error (noloc "Token-lexing failed"))
-       | SOME t => ((qb, ps), Some t)
+         NONE => Error (noloc "Token-lexing failed")
+       | SOME t => Some ((qb, ps), t)
   end
-  fun lifted_typeparser (qb, ps) = ((qb, ps), Some (typeparser qb))
+  fun lifted_typeparser (qb, ps) = Some ((qb, ps), typeparser qb)
 
 
   val keyword_table =
@@ -753,10 +784,14 @@ fun parse_term (G : grammar) typeparser = let
       in
         case x of
           Ident s =>
-            if String.sub(s,0) = #"$" then let
+            if String.sub(s,0) = #"$" andalso
+               CharVector.exists (not o equal #"$") s
+            then
+              let
                 val locn = locn.move_start 1 locn
               in
-              (Id, locn, SOME (Token (Ident (String.extract(s,1,NONE))))) end
+                (Id, locn, SOME (Token (Ident (String.extract(s,1,NONE)))))
+              end
             else if s = res_quanop andalso vs_state = VSRES_VS then
               (ResquanOpTok, locn, SOME tt)
             else if s = type_intro then (TypeColon, locn, SOME tt)
@@ -840,63 +875,49 @@ fun parse_term (G : grammar) typeparser = let
        will be list RHSes of length greater than two, as smaller lists will
        have been caught by the insertion of these rules specifically into
        the DB. *)
-    datatype rule_possibility = Normal of rule_summary
-                              | CaseRule
+    datatype rule_possibility = Normal of (rsfixity * string)
+                              | CaseRule of string
 
-    fun handle_listcase_reduction lrlocn pattern = let
+    fun handle_case_reduction lrlocn pattern = let
       val errmsg = "No rule for "^ listtoString reltoString pattern
       fun fail() = FAILloc lrlocn errmsg
       fun badcase() = FAILloc lrlocn "Mal-formed case expression"
-      val _ = length pattern >= 5 orelse fail()
       fun tokstring x = case x of TOK s => SOME s | _ => NONE
       val poss_left = case hd pattern of TOK x => x | _ => fail()
     in
-      if SOME poss_left = casecase then let
-          fun bars_ok l =
+      case Binarymap.peek(casetok_to_spec, poss_left) of
+          SOME cspec =>
+          let
+            val {casecase,casebar,caseof} =
+                Binarymap.find(casespec_to_tok,cspec)
+            fun bars_ok l =
               case l of
-                [TM] => true
-              | TM :: TOK s :: rest => SOME s = casebar andalso bars_ok rest
-              | _ => false
-          fun case_ok l =
+                  [TM] => true
+                | TM :: TOK s :: rest => SOME s = casebar andalso bars_ok rest
+                | _ => false
+            fun case_ok l =
               case l of
-                TM :: TOK ofs :: TOK s :: rest => let
-                in
-                  SOME ofs = caseof andalso SOME s = casebar andalso
-                  bars_ok rest
-                end
-              | TM :: TOK ofs :: rest => SOME ofs = caseof andalso bars_ok rest
-              | _ => false
-        in
-          if case_ok (tl pattern) then CaseRule else badcase()
-        end
-      else let
-          val poss_right =
-              case (List.last pattern) of TOK x => x | _ => fail()
-          val interior = butlast (tl pattern)
-          val poss_sep =
-              case (List.nth(interior, 1)) of TOK x => x | _ => fail()
-          fun list_ok [] = raise Fail "list_ok: shouldn't happen"
-            | list_ok [TM] = true
-            | list_ok (TOK _::_) = false
-            | list_ok (TM :: TOK s :: rest) = s = poss_sep andalso list_ok rest
-            | list_ok (TM :: TM :: _) = false
-          val listrec = {separator = poss_sep, leftdelim = poss_left,
-                         rightdelim = poss_right}
-        in
-          if list_ok interior then
-            case compatible_listrule G listrec of
-              NONE => fail()
-            | SOME r => Normal (listfix_rule r)
-          else
-            fail()
-        end
+                  TM :: TOK ofs :: TOK s :: rest =>
+                  let
+                  in
+                    SOME ofs = caseof andalso SOME s = casebar andalso
+                    bars_ok rest
+                  end
+                | TM :: TOK ofs :: rest => SOME ofs = caseof andalso
+                                           bars_ok rest
+                | _ => false
+          in
+            if case_ok (tl pattern) then CaseRule cspec else badcase()
+          end
+        | NONE => fail()
     end
     fun checkcase r =
         case r of
-          prefix_rule s => if s = GrammarSpecials.case_special then CaseRule
-                           else Normal r
-        | _ => Normal r
-
+          RealRule (r0 as (fx, s)) =>
+            if fx = rsPrefix andalso GrammarSpecials.is_case_special s then
+              CaseRule s
+            else Normal r0
+        | ListOnly _ => raise Fail "checkcase: found ListOnly"
   in
     if List.all ok_item rhs then let
       (* it's important to remember that the left end of the possible
@@ -922,28 +943,32 @@ fun parse_term (G : grammar) typeparser = let
         val ((_,llocn),_) = List.hd rhs
         val lrlocn = locn.between llocn rlocn
         val top_was_tm = hd translated_rhs = TM
-        val rule = let
-        in
-          case Polyhash.peek rule_db translated_rhs of
-            NONE => let
-            in
-              if top_was_tm then let
-                  val drop1 = tl translated_rhs
-                in
-                  case Polyhash.peek rule_db drop1 of
-                    NONE => handle_listcase_reduction lrlocn drop1
-                  | SOME r => checkcase r
-                end
-              else
-                handle_listcase_reduction lrlocn translated_rhs
-            end
-          | SOME r => checkcase r
-        end
+        fun lrcheck (s1,s2) =
+          case Polyhash.peek rule_db [TOK s1, TOK s2] of
+              SOME (ListOnly lsp) => SOME lsp
+            | _ => NONE
+        val listredns = check_for_listreductions lrcheck translated_rhs
+        val (listfixed_rhs, lspinfo) =
+            remove_listrels listredns translated_rhs
+        val rule =
+            case Polyhash.peek rule_db listfixed_rhs of
+                NONE =>
+                  if top_was_tm then
+                    let
+                      val drop1 = tl listfixed_rhs
+                    in
+                      case Polyhash.peek rule_db drop1 of
+                          NONE => handle_case_reduction lrlocn drop1
+                        | SOME r => checkcase r
+                    end
+                  else
+                    handle_case_reduction lrlocn listfixed_rhs
+              | SOME r => checkcase r
         val ignore_top_item =
             case rule of
-              Normal (infix_rule s) => false
-            | Normal (suffix_rule s) => false
-            | _              => top_was_tm
+              Normal (rsInfix, _) => false
+            | Normal (rsSuffix, _) => false
+            | _ => top_was_tm
         (* rhs' is the actual stack segment matched by the rule, and llocn' is
            its left edge, unlike rhs and llocn which may contain a spurious TM
            on the left *)
@@ -954,35 +979,64 @@ fun parse_term (G : grammar) typeparser = let
           (* extract TM items, and locations of right edges of
              maximal initial segments containing them *)
             case (xs,mal) of
-              ((((NonTerminal p,locn),_)::xs), NONE       ) => seglocs xs      als  (SOME((p,locn),locn))
-            | ((((NonTerminal p,locn),_)::xs), SOME al    ) => seglocs xs (al::als) (SOME((p,locn),locn))
-            | ((((_            ,locn),_)::xs), NONE       ) => seglocs xs als mal
-            | ((((_            ,locn),_)::xs), SOME (pl,_)) => seglocs xs als (SOME(pl,locn))
-            | ([]                            , NONE       ) => List.rev als
-            | ([]                            , SOME al    ) => List.rev (al::als)
-        val args_w_seglocs = seglocs rhs' [] NONE
+              ((((NonTerminal p,locn),_)::xs), NONE) =>
+                seglocs xs als (SOME((p,locn),locn))
+            | ((((NonTerminal p,locn),_)::xs), SOME al) =>
+                seglocs xs (al::als) (SOME((p,locn),locn))
+            | ((((_ ,locn),_)::xs), NONE       ) => seglocs xs als mal
+            | ((((_ ,locn),_)::xs), SOME (pl,_)) =>
+                seglocs xs als (SOME(pl,locn))
+            | ([], NONE) => List.rev als
+            | ([], SOME al) => List.rev (al::als)
+        val args_w_seglocs0 = seglocs rhs' [] NONE
         fun CCOMB((x,locn),y) = (COMB(y,x),locn.between (#2 y) locn)
+        fun process_lspinfos A i lspis args =
+          case lspis of
+              [] => List.revAppend(A,args)
+            | ({cons,nilstr,...}, is) :: more_lsps =>
+              let
+                fun mk_list [] = ((VAR nilstr,rlocn), rlocn)
+                  | mk_list ((lpt,l)::xs) =
+                    let
+                      val (ptl, locn) = mk_list xs
+                    in
+                      ((COMB((COMB((VAR cons,#2 lpt), lpt), #2 lpt),
+                             ptl), locn),
+                       locn.between (#2 lpt) rlocn)
+                    end
+              in
+                case is of
+                    [] => process_lspinfos (mk_list []::A) i more_lsps args
+                  | i1 :: _ =>
+                    if i1 = i then
+                      let
+                        val (listtms, rest) = Lib.split_after (length is) args
+                      in
+                        process_lspinfos (mk_list listtms :: A) (i + length is)
+                                         more_lsps
+                                         rest
+                      end
+                    else
+                      process_lspinfos (hd args :: A) (i + 1) lspis (tl args)
+              end
+        val args_w_seglocs = process_lspinfos [] 0 lspinfo args_w_seglocs0
         val newterm =
             case rule of
-              Normal (listfix_rule r) => let
-                fun mk_list [] = (VAR (#nilstr r),rlocn)
-                  | mk_list ((x,_)::xs) = (COMB((COMB((VAR (#cons r),#2 x), x),
-                                                 #2 x),
-                                                mk_list xs),
-                                           locn.between (#2 x) rlocn)
-              in
-                mk_list args_w_seglocs
-              end
-            | Normal rule =>
-              List.foldl CCOMB (VAR (summary_toString rule),llocn')
-                         args_w_seglocs
-            | CaseRule => let
-                fun mkcase1 ((t,loc),_) =
-                    (COMB((VAR GrammarSpecials.case_special, loc), (t,loc)),
-                     loc)
+                Normal (_, s) =>
+                  if term_name_is_lform s then
+                    if length args_w_seglocs <> 1 then
+                      raise Fail
+                            "seglocs extraction: rule with more than one TM"
+                    else #1 (hd (args_w_seglocs))
+                  else List.foldl CCOMB (VAR s,llocn') args_w_seglocs
+            | CaseRule cs => let
+                fun mkcase1 ((t,loc),_) = (COMB((VAR cs, loc), (t,loc)), loc)
                 fun mkbar(((t,loc),_),acc) =
-                    (COMB((COMB((VAR GrammarSpecials.case_split_special, loc),
-                                (t,loc)), loc),
+                    (COMB((COMB((QIDENT("bool",
+                                        GrammarSpecials.case_split_special),
+                                 loc),
+                                (t,loc)),
+                           loc),
                           acc),
                      locn.between loc rlocn)
               in
@@ -1476,13 +1530,15 @@ fun parse_term (G : grammar) typeparser = let
     topterm >-                      (fn top =>
     invstructp >-                   (fn invs =>
     doit (tt, top, invs))))
+  fun notBOS (Terminal BOS) = false
+    | notBOS _ = true
+
 in
   push ((Terminal BOS,locn.Loc_None), XXX) >> get_item >>
   mwhile (current_input >-
           (fn optt => if (isSome optt) then return true
                       else
-                        (topterm >- (fn t =>
-                         return (#1 (#1 t) <> Terminal BOS)))))
+                        topterm >- (fn t => return (notBOS (#1 (#1 t))))))
          basic_action
 end
 

@@ -1,0 +1,17 @@
+OPTIONS = NO_OVERLAY
+EXTRA_CLEANS = unicode-grep
+
+.PHONY: all
+all: unicode-grep
+
+ifdef POLY
+
+unicode-grep: ugrep.sml
+	$(POLYC) $< -o $@
+
+else
+
+unicode-grep: ugrep_mosml.uo ugrep.uo
+	$(MOSMLC) -o $@ $<
+
+endif

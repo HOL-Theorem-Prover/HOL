@@ -12,7 +12,6 @@ structure Parse =
 struct
  open Parse
  val (Type,Term) = parse_from_grammars listTheory.list_grammars
- fun -- q x = Term q
  fun == q x = Type q
 end
 open Parse
@@ -347,16 +346,19 @@ val _ = BasicProvers.augment_srw_ss [LIST_EQ_ss]
  ---------------------------------------------------------------------------*)
 
 val list_rws = computeLib.add_thms
-    [ APPEND, APPEND_NIL, FLAT, HD, TL, LENGTH, MAP, MAP2,
-      NULL_DEF, CONS_11, NOT_CONS_NIL, NOT_NIL_CONS, MEM, EXISTS_DEF, EVERY_DEF,
-      ZIP, UNZIP, TAKE_compute, DROP_compute, PAD_LEFT, PAD_RIGHT, isPREFIX,
-      REVERSE_REV, REV_DEF, SUM_SUM_ACC, SUM_ACC_DEF,
-      FILTER, FOLDL, FOLDR, dropWhile_def,
-      EL_restricted, EL_simp_restricted, SNOC,
-      computeLib.lazyfy_thm list_case_compute,
-      list_size_def, ALL_DISTINCT, FRONT_DEF, LAST_compute,
-      GENLIST_AUX_compute, GENLIST_NUMERALS,
-      LIST_TO_SET_THM, nub_def, INDEX_FIND_def, FIND_def, INDEX_OF_def ]
+  [
+   ALL_DISTINCT, APPEND, APPEND_NIL, CONS_11, DROP_compute, EL_restricted,
+   EL_simp_restricted, EVERY_DEF, EXISTS_DEF, FILTER, FIND_def, FLAT, FOLDL,
+   FOLDR, FRONT_DEF, GENLIST_AUX_compute, GENLIST_NUMERALS, HD, INDEX_FIND_def,
+   INDEX_OF_def, LAST_compute, LENGTH, LEN_DEF, LIST_APPLY_def, LIST_BIND_def,
+   LIST_IGNORE_BIND_def, LIST_LIFT2_def, LIST_TO_SET_THM, LLEX_def, LRC_def,
+   LUPDATE_compute, MAP, MAP2, NOT_CONS_NIL, NOT_NIL_CONS, NULL_DEF, oEL_def,
+   oHD_def,
+   PAD_LEFT, PAD_RIGHT, REVERSE_REV, REV_DEF, SHORTLEX_def, SNOC, SUM_ACC_DEF,
+   SUM_SUM_ACC,
+   TAKE_compute, TL, UNZIP, ZIP, computeLib.lazyfy_thm list_case_compute,
+   dropWhile_def, isPREFIX, list_size_def, nub_def, splitAtPki_def
+  ]
 
 fun list_compset () =
    let

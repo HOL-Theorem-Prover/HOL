@@ -28,5 +28,5 @@ whose left-hand side is a function applied to the quantified pair,
 or if any of the variables in the quantified pair is free in that function.
 
 \SEEALSO
-Drule.HALF_MK_ABS, PairRules.PETA_CONV, PairRules.MK_PABS, PairRules.MK_PEXISTS.
+jrhUtils.HALF_MK_ABS, PairRules.PETA_CONV, PairRules.MK_PABS, PairRules.MK_PEXISTS.
 \ENDDOC

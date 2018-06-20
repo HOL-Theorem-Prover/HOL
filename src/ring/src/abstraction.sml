@@ -6,8 +6,8 @@ infix o |->;
 
 fun ABS_ERR function message =
     HOL_ERR{origin_structure = "abs_tools",
-		      origin_function = function,
-		      message = message};
+                      origin_function = function,
+                      message = message};
 
 val curr_assums = ref ([]:term list);
 val fv_ass = ref ([]:term list);
@@ -85,9 +85,9 @@ fun except_assoc x [] = raise ABS_ERR "except_assoc" ""
   | except_assoc x ((s as {redex,residue})::l) =
       if x=redex then (residue,l)
       else
-	let val (v,nsub) = except_assoc x l in
-	(v,s::nsub)
-	end
+        let val (v,nsub) = except_assoc x l in
+        (v,s::nsub)
+        end
 ;
 
 fun majo NONE o2 = o2
@@ -95,7 +95,7 @@ fun majo NONE o2 = o2
   | majo (SOME x1) (SOME x2) =
       if x1=x2 then (SOME x1)
       else raise ABS_ERR "under_conj"
-	  "vars were instantiated differently in conjuncts"
+          "vars were instantiated differently in conjuncts"
 ;
 
 fun under_conj f th =
@@ -112,11 +112,11 @@ fun under_forall f th =
   case ovars of
     SOME (ivars,ti) =>
       let val (rsub,thm) =
-	foldr (fn (x,(sub,th)) =>
-	  let val (v,nsub) = except_assoc (inst ti x) sub in
-	  (nsub,SPEC v (GEN (inst ti x) th))
-	  end
-	  handle HOL_ERR _ => (sub,GEN (inst ti x) th)) (ivars,rthm) qvars
+        foldr (fn (x,(sub,th)) =>
+          let val (v,nsub) = except_assoc (inst ti x) sub in
+          (nsub,SPEC v (GEN (inst ti x) th))
+          end
+          handle HOL_ERR _ => (sub,GEN (inst ti x) th)) (ivars,rthm) qvars
       in (SOME (rsub,ti), thm)
       end
   | NONE => (NONE,th)
@@ -134,7 +134,7 @@ fun first_match env mfun [] = raise ABS_ERR "first_match" "no match"
   | first_match env mfun (x::l) =
       (let val (vi,ti) = mfun x in
       if exists (fn {redex,residue} => mem redex env) vi then
-	raise ABS_ERR "" ""
+        raise ABS_ERR "" ""
       else (vi,ti)
       end
       handle HOL_ERR _ => first_match env mfun l)
@@ -147,9 +147,9 @@ fun inst_csts inst env tm =
   | COMB(Rator,Rand) =>
       (SOME (first_match env (match_term tm) inst)
        handle HOL_ERR _ =>
-	 (case inst_csts inst env Rand of
-	   SOME i => SOME i
-	 | NONE => inst_csts inst env Rator))
+         (case inst_csts inst env Rand of
+           SOME i => SOME i
+         | NONE => inst_csts inst env Rator))
   | _ => NONE
 ;
 
@@ -165,7 +165,7 @@ fun inst_all ctab thm =
   case osub of
     SOME (sub,ti) =>
       foldl (fn ({redex,residue},th) => SPEC residue (GEN redex th))
-	thm sub
+        thm sub
   | NONE => thm
   end
   handle HOL_ERR _ => thm;
@@ -203,8 +203,8 @@ type cinst_infos =
 fun compute_inst_infos ctab ({Rename,Inst,Rule,...}:inst_infos) =
   let fun mk_def tm =
         case Rename(#Name(dest_thy_const(fst(strip_comb tm)))) of
-	  SOME name => SOME(name^"_def", mk_eq(mk_var(name,type_of tm),tm))
-	| NONE => NONE
+          SOME name => SOME(name^"_def", mk_eq(mk_var(name,type_of tm),tm))
+        | NONE => NONE
       val defs = List.mapPartial mk_def ctab
       val thms = map (GSYM o new_param_definition) defs
   in { Csts=ctab, Defs=thms, Inst=Inst, Rule=Rule }
@@ -217,41 +217,45 @@ fun inst_thm_fun { Inst=inst, Rule=f, Csts=ctab, Defs=thms } =
 
 (* --> abs_tools ? *)
 
-fun pr_list_sep f sep l = Portable.pr_list f sep (fn () => ()) l;
+val pr_list_sep = PP.pr_list
 
 val S = PP.add_string;
 val NL = PP.add_newline;
-fun N strm = PP.add_string strm o int_to_string;
+val N = PP.add_string o int_to_string;
+val SPC = PP.add_break(1,0)
+val B = PP.block PP.CONSISTENT 0
 
 
-
-fun functor_header strm =
-  (S strm "fun IMPORT P =";  NL strm)
+val functor_header = [S "fun IMPORT P =", NL]
 ;
 
-fun compute_cst_arg_map (fv,impargs) strm =
+fun compute_cst_arg_map (fv,impargs) =
   let val thcsts = map (#Name o dest_thy_const) (constants(current_theory()))
       fun is_param_cst (x,iargs) =
         mem x thcsts andalso all (C mem fv) iargs
       val ptab = filter is_param_cst impargs
-      val pr_var = S strm o fst o dest_var
-      fun sep() = (S strm ","; NL strm; S strm "          ")
+      val pr_var = S o fst o dest_var
+      val sep = [S ",", NL, S "          "]
   in
-  S strm "  let open Parse abstraction";                  NL strm;
-  S strm "      fun sing [x] = x | sing _ = raise Match"; NL strm;
-  S strm "      val ";
-    pr_list_sep pr_var (fn() => S strm ",") (!fv_ass);
-    S strm " = sing (#Vals P)"; NL strm;
-  S strm "      val ctab =";    NL strm;
-  S strm "        [ ";
-  pr_list_sep (fn (x,iargs) =>
-      (S strm ("Term`"^x^" ");
-       pr_list_sep (fn v => (S strm "^"; pr_var v)) (fn()=>S strm " ") iargs;
-       S strm "`"))
-    sep ptab;
-  S strm " ]";   NL strm;
-  S strm "      val inst_fun = inst_thm_fun (compute_inst_infos ctab P) in";
-    NL strm
+     B [
+      S "  let open Parse abstraction",              NL,
+      S "      fun sing [x] = x | sing _ = raise Match", NL,
+      S "      val ",
+      B (pr_list_sep pr_var [S","] (!fv_ass)),
+      S " = sing (#Vals P)", NL,
+      S "      val ctab =", NL,
+      S "        [ ",
+      B (pr_list_sep (fn (x,iargs) =>
+                      B [
+                          S ("Term`"^x^" "),
+                          B (pr_list_sep (fn v => S ("^"^fst(dest_var v)))
+                                         [S " "] iargs),
+                          S "`"
+                        ])
+                  sep ptab),
+      S " ]",  NL,
+      S "      val inst_fun = inst_thm_fun (compute_inst_infos ctab P) in",
+      NL]
   end
 ;
 
@@ -259,29 +263,26 @@ fun export_param_theory () = let
   val _ = Theory.scrub()
   val defs = rev (map fst (definitions"-"))
   val thms = rev (map fst (theorems"-"))
-  fun struct_line ppstrm thn =
-      (S ppstrm thn; S ppstrm " = inst_fun "; S ppstrm thn)
-  fun sig_line ppstrm thn =
-      (S ppstrm thn; S ppstrm " : thm")
-  fun sep ppstrm () =
-      (S ppstrm ",";
-       NL ppstrm;
-       S ppstrm "    ")
+  fun struct_line thn = B [S thn, SPC, S "= inst_fun ", S thn]
+  fun sig_line thn = B [S thn, S " : thm"]
+  val sep = [S ",", NL, S "    "]
   val adj = {
     sig_ps =
-      SOME (fn ppstrm =>
-    	       (S ppstrm "val IMPORT : abstraction.inst_infos ->"; NL ppstrm;
-	        S ppstrm "  { ";
-	        pr_list_sep (sig_line ppstrm) (sep ppstrm) (defs@thms);
-	        S ppstrm " }"; NL ppstrm)),
+      SOME (fn _ => B[
+                     S "val IMPORT : abstraction.inst_infos ->", NL,
+                     S "  { ",
+                     B (pr_list_sep sig_line [S ",", SPC] (defs@thms)),
+                     S " }", NL
+                   ]),
     struct_ps =
-      SOME (fn ppstrm =>
-	       (functor_header ppstrm;
-	        compute_cst_arg_map (!fv_ass, !impl_param_cstr) ppstrm;
-	        S ppstrm "  { ";
-	        pr_list_sep (struct_line ppstrm) (sep ppstrm) (defs@thms);
-	        S ppstrm " }"; NL ppstrm;
-	        S ppstrm "  end"; NL ppstrm ))}
+      SOME (fn _ => B (
+                     functor_header @
+                     [compute_cst_arg_map (!fv_ass, !impl_param_cstr),
+                      S "  { ",
+                      B (pr_list_sep struct_line sep (defs@thms)),
+                      S " }", NL,
+                      S "  end", NL]))
+  }
 in
   adjoin_to_theory adj;
   export_theory()

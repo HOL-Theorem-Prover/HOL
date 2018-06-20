@@ -1,4 +1,4 @@
-open HolKernel Parse boolLib bossLib lcsymtacs;
+open HolKernel Parse boolLib bossLib;
 open integerTheory arithmeticTheory bitTheory intLib listTheory;
 
 infix \\
@@ -85,7 +85,7 @@ val num_of_bits_bits_of_num = prove(
   \\ `n DIV 2 < n` by (fs [DIV_LT_X] \\ decide_tac)
   \\ res_tac \\ fs []
   \\ STRIP_ASSUME_TAC (Q.SPEC `n` (MATCH_MP DIVISION (DECIDE ``0<2:num``)))
-  \\ Q.PAT_ASSUM `n = kkk:num` (fn th => CONV_TAC
+  \\ Q.PAT_X_ASSUM `n = kkk:num` (fn th => CONV_TAC
        (RAND_CONV (ONCE_REWRITE_CONV [th])))
   \\ ASSUME_TAC MOD2
   \\ fs []);
@@ -191,11 +191,10 @@ val LAST_bits_of_num = prove(
         EL (LENGTH (bits_of_num n) - 1) (bits_of_num n)``,
   HO_MATCH_MP_TAC (fetch "-" "bits_of_num_ind")
   \\ REPEAT STRIP_TAC \\ ONCE_REWRITE_TAC [bits_of_num_def]
-  \\ Cases_on `n = 0` \\ fs [EVAL ``LENGTH (bits_of_num 0)``]
-  \\ Cases_on `LENGTH (bits_of_num (n DIV 2))` \\ fs []
+  \\ Cases_on `n = 0` \\ fs [EVAL ``bits_of_num 0``]
+  \\ Cases_on `bits_of_num (n DIV 2)` \\ fs []
   \\ Cases_on `n = 1` \\ fs []
-  \\ Q.PAT_ASSUM `kk = 0:num` MP_TAC
-  \\ ONCE_REWRITE_TAC [bits_of_num_def]
+  \\ fs[Once bits_of_num_def]
   \\ `~(n < 2)` by decide_tac
   \\ fs [DIV_EQ_X]);
 
@@ -214,7 +213,7 @@ val bits_of_int_LAST = prove(
   ``!i bs r. (bits_of_int i = (bs,r)) /\ (bs <> []) ==>
              EL (LENGTH bs - 1) bs <> r``,
   srw_tac [] [bits_of_int_def,EL_MAP,LENGTH_MAP]
-  \\ fs [MAP_EQ_NIL] \\ fs [GSYM LENGTH_NIL]
+  \\ fs [MAP_EQ_NIL] \\ full_simp_tac std_ss [GSYM LENGTH_NIL]
   \\ imp_res_tac (DECIDE ``n <> 0 ==> n - 1 < n:num``)
   \\ fs [bits_of_int_def,EL_MAP,LENGTH_MAP]
   \\ match_mp_tac LAST_bits_of_num \\ fs []);
@@ -229,8 +228,8 @@ val int_bit_equiv = store_thm("int_bit_equiv",
                                               LENGTH (q':bool list)`)
          \\ fs [DECIDE ``~(m+n<n) /\ ~(m+n<m:num)``])
   \\ srw_tac [] []
-  \\ REVERSE (`LENGTH q' = LENGTH q` by ALL_TAC)
-  THEN1 (fs [] \\ match_mp_tac LIST_EQ
+  \\ `LENGTH q' = LENGTH q` suffices_by
+  (STRIP_TAC THEN fs [] \\ match_mp_tac LIST_EQ
          \\ fs [] \\ rpt strip_tac
          \\ first_x_assum (mp_tac o Q.SPEC `x`)
          \\ fs [])
@@ -259,7 +258,7 @@ val int_bit_shift_left_lemma2 = prove(
   \\ Cases_on `bits_of_int i`
   \\ fs [LET_DEF,int_bit_int_of_bits]
   \\ `b < n + LENGTH q` by decide_tac \\ fs []
-  \\ qpat_assum `EL n xx` MP_TAC
+  \\ qpat_x_assum `EL _ _` MP_TAC
   \\ fs [rich_listTheory.EL_APPEND1,LENGTH_GENLIST]);
 
 val int_bit_shift_left = store_thm("int_bit_shift_left",

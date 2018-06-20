@@ -4,7 +4,7 @@
 
 open HolKernel boolLib bossLib
 
-open lcsymtacs utilsLib
+open utilsLib
 open wordsLib blastLib
 open state_transformerTheory updateTheory alignmentTheory armTheory
 
@@ -19,8 +19,7 @@ val _ = List.app (fn f => f ())
 
 val NextStateARM_def = Define`
    NextStateARM s0 =
-     let s1 = SND (Next s0) in
-        if s1.exception = NoException then SOME s1 else NONE`
+     let s1 = Next s0 in if s1.exception = NoException then SOME s1 else NONE`
 
 val NextStateARM_arm = ustore_thm("NextStateARM_arm",
   `(s.exception = NoException) ==>
@@ -32,7 +31,7 @@ val NextStateARM_arm = ustore_thm("NextStateARM_arm",
    (!s. Run ast s = f x s) /\
    (f x (s with <| CurrentCondition := c;
                    Encoding := Encoding_ARM;
-                   undefined := F |>) = ((), s1)) /\
+                   undefined := F |>) = s1) /\
    (s1.Encoding = Encoding_ARM) /\
    (s1.exception = s.exception) ==>
    (NextStateARM s = SOME s1)`,
@@ -49,7 +48,7 @@ val NextStateARM_arm0 = ustore_thm("NextStateARM_arm0",
    (!s. Run ast s = f s) /\
    (f (s with <| CurrentCondition := c;
                  Encoding := Encoding_ARM;
-                 undefined := F |>) = ((), s1)) /\
+                 undefined := F |>) = s1) /\
    (s1.Encoding = Encoding_ARM) /\
    (s1.exception = s.exception) ==>
    (NextStateARM s = SOME s1)`,
@@ -66,8 +65,8 @@ val NextStateARM_thumb = ustore_thm("NextStateARM_thumb",
    (!s. Run ast s = f x s) /\
    (f x (s with <| CurrentCondition := c;
                    Encoding := Encoding_Thumb;
-                   undefined := F |>) = ((), s1)) /\
-   (ITAdvance () s1 = ((), s2)) /\
+                   undefined := F |>) = s1) /\
+   (ITAdvance () s1 = s2) /\
    (s2.exception = s.exception) ==>
    (NextStateARM s = SOME s2)`,
    lrw [NextStateARM_def, Next_def, Decode_def]
@@ -213,7 +212,7 @@ val R_x_pc = Q.store_thm("R_x_pc",
    )
 
 val BadMode = Q.prove(
-   `!mode s. GoodMode mode ==> (BadMode mode s = (F, s))`,
+   `!mode s. GoodMode mode ==> (BadMode mode s = F)`,
    rw [BadMode_def, GoodMode_def])
    |> Drule.SPEC_ALL
    |> usave_as "BadMode"
@@ -240,7 +239,7 @@ val R_mode_11 = Q.store_thm("R_mode_11",
    )
 
 val IsSecure = Q.prove(
-   `!s. ~s.Extensions Extension_Security ==> (IsSecure () s = (T, s))`,
+   `!s. ~s.Extensions Extension_Security ==> (IsSecure () s = T)`,
    rw [IsSecure_def, HaveSecurityExt_def, pred_setTheory.SPECIFICATION])
    |> Drule.SPEC_ALL
    |> usave_as "IsSecure"
@@ -262,7 +261,7 @@ val ITAdvance_0 = ustore_thm("ITAdvance_0",
 (* ------------------------------------------------------------------------ *)
 
 val RoudingMode = Q.store_thm("RoundingMode",
-   `!s. FST (RoundingMode s) = DecodeRoundingMode s.FP.FPSCR.RMode`,
+   `!s. RoundingMode s = DecodeRoundingMode s.FP.FPSCR.RMode`,
    rw [DecodeRoundingMode_def, RoundingMode_def]
    \\ blastLib.FULL_BBLAST_TAC
    )
@@ -423,9 +422,9 @@ val CountLeadingZeroBits32 = Q.store_thm("CountLeadingZeroBits32",
    )
 
 val FOLDL_AUG = Q.prove(
-   `!f a l s.
-      (FOLDL (\x i. f x i) a l, s) =
-      FOLDL (\y i. (f (FST y) i, SND y)) (a, s) l`,
+   `!f a l.
+      FOLDL (\x i. f x i) a l =
+      FST (FOLDL (\y i. (f (FST y) i, ())) (a, ()) l)`,
    Induct_on `l` \\ lrw []
    )
 
@@ -435,7 +434,6 @@ val FOLDL_cong = Q.store_thm("FOLDL_cong",
       (!i x. i < LENGTH l ==> (f x (EL i l) = g x (EL i r))) ==>
       (FOLDL f a l = FOLDL g b r)`,
    Induct \\ lrw []
-   >- metis_tac [listTheory.LENGTH_NIL, listTheory.FOLDL]
    \\ Cases_on `r` \\ lfs []
    \\ metis_tac [prim_recTheory.LESS_0, listTheory.EL, listTheory.HD,
                  listTheory.EL_restricted, arithmeticTheory.LESS_MONO_EQ]
@@ -472,23 +470,32 @@ val FOR_FOLDL = Q.store_thm("FOR_FOLDL",
    )
 
 val BitCount = Q.store_thm("BitCount",
-   `!w s. BitCount w s = (bit_count w, s)`,
+   `!w. BitCount w = bit_count w`,
    lrw [BitCount_def, wordsTheory.bit_count_def, wordsTheory.bit_count_upto_def,
         wordsTheory.word_bit_def]
    \\ `0 <= dimindex(:'a) - 1` by lrw []
    \\ simp
        [FOR_FOLDL
         |> Q.ISPECL [`0n`, `dimindex(:'a) - 1`,
-                     `\i state: num # arm_state.
+                     `\i state: num # unit.
                          ((),
                           if i <= dimindex(:'a) - 1 /\ w ' i then
-                             (FST state + 1, SND state)
+                             (FST state + 1, ())
                           else
                              state)`],
-        sum_numTheory.SUM_FOLDL, FOLDL_AUG]
+        sum_numTheory.SUM_FOLDL]
+   \\ REWRITE_TAC
+        [FOLDL_AUG
+         |> Q.ISPECL
+              [`\x:num i. x + if w ' i then 1 else 0`, `0`,
+               `COUNT_LIST (dimindex ((:'a) :'a itself))`]
+         |> SIMP_RULE (srw_ss())[]]
+   \\ MATCH_MP_TAC (METIS_PROVE [] ``(x = y) ==> (FST x = FST y)``)
    \\ MATCH_MP_TAC listTheory.FOLDL_CONG
    \\ lrw [rich_listTheory.MEM_COUNT_LIST,
            DECIDE ``0n < n ==> (n - 1 + 1 = n)``]
+   \\ Cases_on `a`
+   \\ simp []
    )
 
 val bit_count_upto_1 = Q.prove(
@@ -897,6 +904,32 @@ val field32 = Q.store_thm("field32",
     \\ srw_tac [wordsLib.WORD_EXTRACT_ss] []
     )
 
+val fixwidth_w2v = Q.prove(
+  `!w : 'a word. fixwidth (dimindex (:'a)) (w2v w) = w2v w`,
+  simp [])
+
+val field_insert = Q.store_thm("field_insert",
+  `!msb lsb a : word32 b : word32.
+     v2w (field_insert msb lsb (field (msb - lsb) 0 (w2v a)) (w2v b)) : word32 =
+     bit_field_insert msb lsb a b`,
+  simp [bitstringTheory.field_insert_def, wordsTheory.bit_field_insert_def]
+  \\ once_rewrite_tac [GSYM fixwidth_w2v]
+  \\ simp_tac (bool_ss++fcpLib.FCP_ss)
+       [GSYM bitstringTheory.word_modify_v2w, bitstringTheory.v2w_w2v,
+        wordsTheory.WORD_MODIFY_BIT]
+  \\ simp [fixwidth_w2v]
+  \\ rw []
+  \\ `(?p. p + lsb = i)` by metis_tac [arithmeticTheory.LESS_EQ_ADD_EXISTS]
+  \\ pop_assum (SUBST_ALL_TAC o GSYM)
+  \\ fs []
+  \\ `?q. q + (lsb + p) = msb`
+  by metis_tac [arithmeticTheory.LESS_EQ_ADD_EXISTS]
+  \\ pop_assum (SUBST_ALL_TAC o GSYM)
+  \\ `SUC (p + q) - (q + 1) = p` by decide_tac
+  \\ simp [bitstringTheory.testbit, bitstringTheory.el_field,
+           bitstringTheory.el_w2v]
+  )
+
 (* ------------------------------------------------------------------------ *)
 
 val get_bytes = Q.store_thm("get_bytes",
@@ -986,7 +1019,8 @@ fun enumerate_v2w n =
    in
       List.tabulate
          (m, fn i => bitstringLib.v2w_n2w_CONV
-                         (bitstringSyntax.padded_fixedwidth_of_int (i, n)))
+                         (bitstringSyntax.padded_fixedwidth_of_num
+                            (Arbnum.fromInt i, n)))
       |> Drule.LIST_CONJ
    end
 
@@ -1138,52 +1172,38 @@ val FST_SWAP = Q.store_thm("FST_SWAP",
    )
 
 val ArchVersion_rwts = Q.prove(
-   `(!s. FST (ArchVersion () s) < 6 =
+   `(!s. ArchVersion () s < 6 =
          (s.Architecture = ARMv4) \/
          (s.Architecture = ARMv4T) \/
          (s.Architecture = ARMv5T) \/
          (s.Architecture = ARMv5TE)) /\
-    (!s. FST (ArchVersion () s) >= 5 =
+    (!s. ArchVersion () s >= 5 =
          (s.Architecture <> ARMv4) /\
          (s.Architecture <> ARMv4T)) /\
-    (!s. (FST (ArchVersion () s) = 4) =
+    (!s. (ArchVersion () s = 4) =
          ((s.Architecture = ARMv4) \/
           (s.Architecture = ARMv4T))) /\
-    (!s. (FST (ArchVersion () s) >= 6) =
+    (!s. ArchVersion () s >= 6 =
          ((s.Architecture = ARMv6) \/
           (s.Architecture = ARMv6K) \/
           (s.Architecture = ARMv6T2) \/
           (s.Architecture = ARMv7_A) \/
           (s.Architecture = ARMv7_R))) /\
-    (!s. (FST (ArchVersion () s) >= 7) =
+    (!s. ArchVersion () s >= 7 =
          ((s.Architecture = ARMv7_A) \/
           (s.Architecture = ARMv7_R)))`,
     lrw [ArchVersion_def] \\ Cases_on `s.Architecture` \\ lfs [])
     |> SIMP_RULE (srw_ss()) []
     |> save_as "ArchVersion_rwts"
 
-val ISETSTATE_lem = Q.prove(
-   `(!b1 b2.
-       ((if b1 then 1w else 0w : word1) @@
-        (if b2 then 1w else 0w : word1) = 0w:word2) = ~b1 /\ ~b2) /\
-    (!b1 b2.
-       ((if b1 then 1w else 0w : word1) @@
-        (if b2 then 1w else 0w : word1) = 1w:word2) = ~b1 /\ b2) /\
-    (!b1 b2.
-       ((if b1 then 1w else 0w : word1) @@
-        (if b2 then 1w else 0w : word1) = 2w:word2) = b1 /\ ~b2) /\
-    (!b1 b2.
-       ((if b1 then 1w else 0w : word1) @@
-        (if b2 then 1w else 0w : word1) = 3w:word2) = b1 /\ b2)`,
-   lrw [])
-
 val CurrentInstrSet_rwt = Q.prove(
-   `((FST (CurrentInstrSet x s) = InstrSet_ARM) = ~s.CPSR.J /\ ~s.CPSR.T) /\
-    ((FST (CurrentInstrSet x s) = InstrSet_Thumb) = ~s.CPSR.J /\ s.CPSR.T) /\
-    ((FST (CurrentInstrSet x s) = InstrSet_Jazelle) = s.CPSR.J /\ ~s.CPSR.T) /\
-    ((FST (CurrentInstrSet x s) = InstrSet_ThumbEE) = s.CPSR.J /\ s.CPSR.T)`,
-    lrw [CurrentInstrSet_def, ISETSTATE_def, ISETSTATE_lem]
-   \\ ntac 2 (fs []))
+   `((CurrentInstrSet x s = InstrSet_ARM) = ~s.CPSR.J /\ ~s.CPSR.T) /\
+    ((CurrentInstrSet x s = InstrSet_Thumb) = ~s.CPSR.J /\ s.CPSR.T) /\
+    ((CurrentInstrSet x s = InstrSet_Jazelle) = s.CPSR.J /\ ~s.CPSR.T) /\
+    ((CurrentInstrSet x s = InstrSet_ThumbEE) = s.CPSR.J /\ s.CPSR.T)`,
+   lrw [CurrentInstrSet_def, ISETSTATE_def, bitstringTheory.word_concat_v2w]
+   \\ blastLib.FULL_BBLAST_TAC
+   )
 
 fun after_srw tm =
    boolSyntax.rhs (Thm.concl (Conv.QCONV (SIMP_CONV (srw_ss()) []) tm))
@@ -1193,11 +1213,6 @@ val CurrentInstrSet_rwt = Theory.save_thm("CurrentInstrSet_rwt",
      (SIMP_RULE (srw_ss()) [] CurrentInstrSet_rwt))
 
 (* ------------------------------------------------------------------------ *)
-
-val unit_state_cond = Q.store_thm("unit_state_cond",
-   `!b s1 s2. (if b then ((), s1: arm_state) else ((), s2)) =
-              ((), if b then s1 else s2)`,
-   rw [])
 
 val merge_cond = Theory.save_thm("merge_cond",
    METIS_PROVE []

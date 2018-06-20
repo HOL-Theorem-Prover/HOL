@@ -23,9 +23,9 @@ fun restrict_tmenv P E =
 
 fun occ env v =
     let fun f t =
-	exists (fn fv => (fv = v) orelse f (lookup fv env)
-		handle HOL_ERR _ => false) (free_vars t)
-	handle HOL_ERR _ => false
+        exists (fn fv => (fv = v) orelse f (lookup fv env)
+                handle HOL_ERR _ => false) (free_vars t)
+        handle HOL_ERR _ => false
     in f
     end;
 
@@ -62,7 +62,7 @@ fun simp_unify_terms_in_env consts tm1 tm2 env =
              (simp_unify_terms_in_env
                 (subtract consts [fst p1, fst p2]) (snd p1) (snd p2)
                 (restrict_tmenv filt env))
-	    end
+            end
      | otherwise => if tm1' = tm2' then env else failwith "simp_unify_terms"
     end;
 

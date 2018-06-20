@@ -9,14 +9,16 @@ sig
    val compare: bitstring * bitstring -> order
 
    val fromBool: bool -> bitstring
-   val fromInt: int -> bitstring
+   val fromInt: IntInf.int -> bitstring
+   val fromNativeInt: int -> bitstring
    val fromNat: Nat.nat -> bitstring
    val fromBinString: string -> bitstring option
    val fromDecString: string -> bitstring option
    val fromHexString: string -> bitstring option
    val fromLit: string -> bitstring option
 
-   val toInt: bitstring -> int
+   val toInt: bitstring -> IntInf.int
+   val toNativeInt: bitstring -> int
    val toNat: bitstring -> Nat.nat
    val toBinString: bitstring -> string
    val toDecString: bitstring -> string
@@ -26,7 +28,6 @@ sig
    val fromList: bool list -> bitstring
 
    val bitFieldInsert: Nat.nat * Nat.nat -> bitstring * bitstring -> bitstring
-   val modify: (Nat.nat * bool -> bool) -> bitstring -> bitstring
 
    val zero: Nat.nat -> bitstring
    val one: Nat.nat -> bitstring

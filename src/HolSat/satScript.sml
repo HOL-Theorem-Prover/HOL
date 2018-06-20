@@ -9,7 +9,7 @@ val _ = new_theory "sat";
 (* used to bootstrap HolSatLib *)
 fun TT_TAUT_PROVE tm =
     let val (qv,tm) = boolSyntax.strip_forall tm
-	val fv = free_vars tm
+        val fv = free_vars tm
     in GENL qv (prove(tm,(MAP_EVERY BOOL_CASES_TAC fv) THEN REWRITE_TAC [])) end
 
 val AND_IMP = save_thm("AND_IMP",TT_TAUT_PROVE ``!A B C. A /\ B ==> C = A ==> B ==> C``)
@@ -43,11 +43,11 @@ val dc_cond = save_thm("dc_cond",TT_TAUT_PROVE ``(p = (if q then r else s)) =
        (~q \/ r \/ ~p) /\ (q \/ s \/ ~p)``);
 
 val [pth_ni1, pth_ni2, pth_no1, pth_no2, pth_an1, pth_an2, pth_nn] =
-	    (CONJUNCTS o TT_TAUT_PROVE)
-	     ``(~(p ==> q) ==> p)  /\ (~(p ==> q) ==> ~q)
-	    /\ (~(p \/ q)  ==> ~p) /\ (~(p \/ q)  ==> ~q)
-	    /\ ((p /\ q)   ==> p)  /\ ((p /\ q)   ==> q)
-	    /\ ((~ ~p)     ==> p)``
+            (CONJUNCTS o TT_TAUT_PROVE)
+             ``(~(p ==> q) ==> p)  /\ (~(p ==> q) ==> ~q)
+            /\ (~(p \/ q)  ==> ~p) /\ (~(p \/ q)  ==> ~q)
+            /\ ((p /\ q)   ==> p)  /\ ((p /\ q)   ==> q)
+            /\ ((~ ~p)     ==> p)``
 val _ = List.map save_thm (ListPair.zip(["pth_ni1", "pth_ni2", "pth_no1", "pth_no2", "pth_an1", "pth_an2", "pth_nn"],[pth_ni1, pth_ni2, pth_no1, pth_no2, pth_an1, pth_an2, pth_nn]));
 
 val _ = export_theory();

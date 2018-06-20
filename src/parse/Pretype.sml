@@ -1,131 +1,118 @@
 structure Pretype :> Pretype =
 struct
 
-open HolKernel optmonad;
+open HolKernel errormonad Pretype_dtype;
 infix >> >-;
 
 
 val TCERR = mk_HOL_ERR "Pretype";
 
-datatype pretype
-     = Vartype of string
-     | Tyop of {Thy:string,Tyop:string, Args: pretype list}
-     | UVar of pretype option ref
+structure Env =
+struct
+  type t = ((int,pretype) Binarymap.dict * int)
+  fun lookup (d,c) i = Binarymap.peek(d,i)
+  fun update (i,pty) (d,c) = (Binarymap.insert(d,i,pty), c)
+  val empty : t = (Binarymap.mkDict Int.compare, 0)
+  fun new (d,c) = ((d,c+1), c)
+  fun toList (d,c) = List.tabulate(c, fn i => (i, Binarymap.peek(d,i)))
+end
+
+open typecheck_error
+type 'a in_env = (Env.t,'a,error) errormonad.t
+
+fun fail s = error (Misc s, locn.Loc_Unknown)
+
+fun boundcase i (n:'a in_env) (sf : pretype -> 'a in_env) : 'a in_env = fn e =>
+  case Env.lookup e i of
+      NONE => n e
+    | SOME pty => sf pty e
 
 fun tyvars t =
   case t of
-    Vartype s => [s]
+    Vartype s => return [s]
   | Tyop{Args,...} =>
-      List.foldl (fn (t, set) => Lib.union (tyvars t) set) [] Args
-  | UVar (ref NONE) => []
-  | UVar (ref (SOME t')) => tyvars t'
+      List.foldl (fn (t, set) => lift2 Lib.union (tyvars t) set)
+                 (return [])
+                 Args
+  | UVar i => boundcase i (return []) tyvars
 
 fun mk_fun_ty (dom,rng) = Tyop{Thy="min", Tyop="fun", Args = [dom,rng]}
 
-fun new_uvar () = UVar(ref NONE)
+val new_uvar = lift UVar (Some o Env.new)
+fun update arg E =
+  let
+    val E' = Env.update arg E
+  in
+    Some (E', ())
+  end
 
 infix ref_occurs_in
 
-fun r ref_occurs_in value =
+fun (r:int) ref_occurs_in (value:pretype) : bool in_env=
   case value of
-    Vartype _ => false
-  | Tyop {Args = ts,...} => List.exists (fn t => r ref_occurs_in t) ts
-  | UVar (r' as ref NONE) => r = r'
-  | UVar (r' as ref (SOME t)) => r = r' orelse r ref_occurs_in t
+    Vartype _ => return false
+  | Tyop {Args = ts : pretype list,...} => refoccl r ts
+  | UVar i => boundcase i (return (r = i)) (fn pty => r ref_occurs_in pty)
+and refoccl r [] = return false
+  | refoccl r ((t:pretype)::ts) =
+      r ref_occurs_in t >- (fn b => if b then return b else refoccl r ts)
+
 
 infix ref_equiv
 fun r ref_equiv value =
   case value of
-    Vartype _ => false
-  | Tyop _ => false
-  | UVar (r' as ref NONE) => r = r'
-  | UVar (r' as ref (SOME t)) => r = r' orelse r ref_equiv t
+    Vartype _ => return false
+  | Tyop _ => return false
+  | UVar r' => boundcase r'
+                         (return (r = r'))
+                         (fn pty => if r = r' then return true
+                                    else r ref_equiv pty)
 
-fun unsafe_bind f r value =
-  if r ref_equiv value
-  then ok
-  else if r ref_occurs_in value orelse isSome (!r)
-       then fail
-    else (fn acc => (((r, !r)::acc, SOME ()) before r := SOME value))
-
-fun gen_unify bind t1 t2 =
- let val gen_unify = gen_unify bind
- in
-  case (t1, t2) of
-    (UVar (r as ref NONE), t) => bind gen_unify r t
-  | (UVar (r as ref (SOME t1)), t2) => gen_unify t1 t2
-  | (t1, t2 as UVar _) => gen_unify t2 t1
-  | (Vartype s1, Vartype s2) => if s1 = s2 then ok else fail
-  | (Tyop{Tyop = op1, Thy = thy1, Args = args1},
-     Tyop{Tyop = op2, Thy = thy2, Args = args2}) =>
-      if op1 <> op2 orelse thy1 <> thy2 orelse
-         length args1 <> length args2
-      then
-        fail
-      else
-        mmap (fn (t1, t2) => gen_unify t1 t2) (ListPair.zip(args1, args2)) >>
-        return ()
-  | _ => fail
- end
+fun bind i pty : unit in_env =
+  case pty of
+      UVar j => if i = j then ok
+                else boundcase j (update(i,pty)) (bind i)
+    | _ => (i ref_occurs_in pty) >-
+           (fn b => if b then fail "Circular binding in unification"
+                    else update(i,pty))
 
 fun unify t1 t2 =
-  case (gen_unify unsafe_bind t1 t2 [])
-   of (bindings, SOME ()) => ()
-    | (_, NONE) => raise TCERR "unify" "unify failed";
+  case (t1, t2) of
+      (UVar r, _) =>
+        boundcase r (bind r t2) (fn t1' => unify t1' t2)
+    | (_, UVar r) => boundcase r (bind r t1) (fn t2' => unify t1 t2')
+    | (Vartype v1, Vartype v2) =>
+        if v1 = v2 then ok
+        else fail ("Attempt to unify fixed variable types "^v1^" and " ^ v2)
+    | (Vartype v, Tyop {Thy,Tyop=s,...}) =>
+      fail ("Attempt to unify fixed variable type "^v^" with operator "^
+            Thy^"$"^s)
+    | (Tyop {Thy,Tyop=s,...}, Vartype v) =>
+      fail ("Attempt to unify fixed variable type "^v^" with operator "^
+            Thy^"$"^s)
+    | (Tyop{Args=as1, Tyop=op1, Thy=thy1}, Tyop{Args=as2, Tyop=op2, Thy=thy2})=>
+        if thy1 <> thy2 orelse op1 <> op2 then
+          fail ("Attempt to unify different type operators: " ^
+                thy1 ^ "$" ^ op1^ " and " ^ thy2 ^ "$" ^ op2)
+        else unifyl as1 as2
+and unifyl [] [] = ok
+  | unifyl [] _ = fail "Same tyop with different # of arguments?"
+  | unifyl _ [] = fail "Same tyop with different # of arguments?"
+  | unifyl (t1::t1s) (t2::t2s) = unify t1 t2 >> unifyl t1s t2s
 
-fun can_unify t1 t2 =
-  let val (bindings, result) = gen_unify unsafe_bind t1 t2 []
-      val _ = app (fn (r, oldvalue) => r := oldvalue) bindings
-  in isSome result
-  end
+fun can_unify pty1 pty2 : bool in_env = fn e =>
+  case unify pty1 pty2 e of
+      Error _ => Some (e, false)
+    | _ => Some (e, true)
 
-local fun (r ref_equiv value) env =
-       case value
-        of UVar (r' as ref NONE) =>
-              r = r' orelse
-              let in
-                case Lib.assoc1 r' env
-                 of NONE => false
-                  | SOME (_, v) => (r ref_equiv v) env
-              end
-         | UVar (ref (SOME t)) => (r ref_equiv t) env
-         | _ => false
-
-      fun (r ref_occurs_in value) env =
-        case value
-         of UVar (r' as ref NONE) =>
-              r = r' orelse
-              let in
-                case Lib.assoc1 r' env
-                 of NONE => false
-                  | SOME (_, v) => (r ref_occurs_in v) env
-              end
-          | UVar (ref (SOME t)) => (r ref_occurs_in t) env
-          | Vartype _ => false
-          | Tyop{Args=A,...} => List.exists (fn t => (r ref_occurs_in t) env) A
-in
-fun safe_bind unify r value env =
-  case Lib.assoc1 r env
-   of SOME (_, v) => unify v value env
-    | NONE =>
-        if (r ref_equiv value) env then ok env else
-        if (r ref_occurs_in value) env then fail env
-        else ((r,value)::env, SOME ())
-end
-
-
-fun safe_unify t1 t2 = gen_unify safe_bind t1 t2
-
-fun apply_subst subst pty =
+fun apply_subst E pty =
   case pty of
-    Vartype _ => pty
-  | Tyop{Tyop = s, Thy = t, Args = args} =>
-      Tyop{Tyop = s, Thy = t, Args = map (apply_subst subst) args}
-  | UVar (ref (SOME t)) => apply_subst subst t
-  | UVar (r as ref NONE) =>
-      case (Lib.assoc1 r subst) of
-        NONE => UVar r
-      | SOME (_, value) => apply_subst subst value
+      Vartype _ => pty
+    | Tyop{Tyop = s, Thy = t, Args = args} =>
+      Tyop{Tyop = s, Thy = t, Args = map (apply_subst E) args}
+    | UVar i => case Env.lookup E i of
+                    NONE => pty
+                  | SOME pty => apply_subst E pty
 
 (* ----------------------------------------------------------------------
     Passes over a type, turning all of the type variables not in the
@@ -135,14 +122,12 @@ fun apply_subst subst pty =
    ---------------------------------------------------------------------- *)
 
 local
-  fun replace s env =
-      case Lib.assoc1 s env of
-        NONE => let
-          val r = ref NONE
-        in
-          ((s, r)::env, SOME (UVar r))
-        end
-      | SOME (_, r) => (env, SOME (UVar r))
+  fun replace s (env as (E, alist)) =
+    case Lib.assoc1 s alist of
+        NONE => (case new_uvar E of
+                     Some (E', pty) => Some ((E',(s,pty) :: alist), pty)
+                   | Error e => Error e (* should never happen *))
+      | SOME (_, pty) => Some (env, pty)
 in
 fun rename_tv avds ty =
   case ty of
@@ -152,7 +137,11 @@ fun rename_tv avds ty =
       (fn args' => return (Tyop{Tyop = s, Thy = thy, Args = args'}))
   | x => return x
 
-fun rename_typevars avds ty = valOf (#2 (rename_tv avds ty []))
+fun rename_typevars avds ty : pretype in_env = fn e =>
+  case rename_tv avds ty (e, []) of
+      Some ((e', _), pty) => Some (e', pty)
+    | Error e => Error e
+
 end
 
 fun fromType t =
@@ -162,27 +151,31 @@ fun fromType t =
        end
 
 fun remove_made_links ty =
-  case ty
-   of UVar(ref (SOME ty')) => remove_made_links ty'
-    | Tyop{Tyop = s, Thy, Args} => Tyop{Tyop = s, Thy = Thy,
-                                        Args = map remove_made_links Args}
-    | _ => ty
+  case ty of
+      UVar i => boundcase i (return ty) remove_made_links
+    | Tyop{Tyop = s, Thy, Args} =>
+      lift (fn args => Tyop {Tyop = s, Thy = Thy, Args = args})
+           (mmap remove_made_links Args)
+    | _ => return ty
 
 val tyvariant = Lexis.gen_variant Lexis.tyvar_vary
 
-fun generate_new_name r used_so_far =
-  let val result = tyvariant used_so_far "'a"
-      val _ = r := SOME (Vartype result)
-  in
-    (result::used_so_far, SOME ())
-  end
-
-fun replace_null_links ty =
-  case ty
-   of UVar (r as ref NONE) => generate_new_name r
-    | UVar (ref (SOME ty)) => replace_null_links ty
-    | Tyop {Args,...} => mmap replace_null_links Args >> ok
-    | Vartype _ => ok
+fun replace_null_links ty : (Env.t * string list, pretype, error) t =
+  case ty of
+      UVar r => (fn (e,used) =>
+                    case Env.lookup e r of
+                        SOME pty => replace_null_links pty (e,used)
+                      | NONE =>
+                        let
+                          val nm = tyvariant used "'a"
+                          val res = Vartype nm
+                        in
+                          Some ((Env.update (r,res) e, nm::used), res)
+                        end)
+    | Tyop {Args,Thy,Tyop=s} =>
+        lift (fn args => Tyop{Tyop=s,Args=args,Thy=Thy})
+             (mmap replace_null_links Args)
+    | Vartype _ => return ty
 
 fun clean ty =
   case ty of
@@ -191,78 +184,70 @@ fun clean ty =
       Type.mk_thy_type{Tyop = s, Thy = Thy, Args = map clean Args}
   | _ => raise Fail "Don't expect to see links remaining at this stage"
 
-fun toType ty =
-  let val _ = replace_null_links ty (tyvars ty)
-  in
-    clean (remove_made_links ty)
-  end
+fun toTypeM ty : Type.hol_type in_env =
+  remove_made_links ty >-
+  (fn ty => tyvars ty >-
+  (fn vs => lift (clean o #2) (addState vs (replace_null_links ty))))
 
-fun chase (Tyop{Tyop = "fun", Thy = "min", Args = [_, ty]}) = ty
-  | chase (UVar(ref (SOME ty))) = chase ty
-  | chase _ = raise Fail "chase applied to non-function type"
+fun toType pty =
+  case toTypeM pty Env.empty of
+      Error e => raise mkExn e
+    | Some (_, ty) => ty
+
+fun chase (Tyop{Tyop = "fun", Thy = "min", Args = [_, ty]}) = return ty
+  | chase (UVar i) =
+      boundcase i (fail ("chase: uvar "^Int.toString i^" unbound")) chase
+  | chase (Vartype s) = fail ("chase: can't chase variable type "^s)
+  | chase (Tyop{Tyop=s, Thy, ...}) =
+      fail ("chase: can't chase through "^Thy^"$"^s)
 
 
 datatype pp_pty_state = none | left | right | uvar
 
-fun pp_pretype pps pty = let
-  val checkref = Portable.ref_to_int
-  fun pp_pty pps state pty = let
+fun pp_pretype pty = let
+  open HOLPP
+  fun pp_pty state pty = let
   in
     case pty of
-      Vartype s => PP.add_string pps ("V("^s^")")
-    | Tyop {Thy,Tyop = tyop,Args} => let
-        fun qid pps = if Thy = "bool" orelse Thy = "min" then
-                        PP.add_string pps tyop
-                      else PP.add_string pps (Thy ^ "$" ^ tyop)
+      Vartype s => [add_string ("V("^s^")")]
+    | Tyop {Thy,Tyop = tyop,Args} =>
+      let
+        val qid = if Thy = "bool" orelse Thy = "min" then add_string tyop
+                  else add_string (Thy ^ "$" ^ tyop)
       in
-        if Thy = "min" andalso tyop = "fun" then let
+        if Thy = "min" andalso tyop = "fun" then
+          let
+            val wrap =
+                case state of
+                    none => (fn ps => [block INCONSISTENT 0 ps])
+                  | right => I
+                  | _ (* left or uvar *) =>
+                    fn ps => [add_string "(", block INCONSISTENT 0 ps,
+                              add_string ")"]
+            val core =
+                pp_pty left (hd Args) @
+                [add_string " ", add_string "->", add_break (1,0)] @
+                pp_pty right (hd (tl Args))
           in
-            if state = none then PP.begin_block pps PP.INCONSISTENT 0 else ();
-            if state = left orelse state = uvar then
-              (PP.add_string pps "("; PP.begin_block pps PP.INCONSISTENT 0)
-            else ();
-            pp_pty pps left (hd Args);
-            PP.add_string pps " ->";
-            PP.add_break pps (1,0);
-            pp_pty pps right (hd (tl Args));
-            if state = left orelse state = uvar then
-              (PP.end_block pps; PP.add_string pps ")")
-            else ();
-            if state = none then PP.end_block pps else ()
+            wrap core
           end
         else
           case Args of
-            [] => qid pps
-          | _ => let
-            in
-              PP.add_string pps "(";
-              PP.begin_block pps PP.INCONSISTENT 0;
-              Portable.pr_list (fn a => (PP.begin_block pps PP.INCONSISTENT 0;
-                                         pp_pty pps none a;
-                                         PP.end_block pps))
-                               (fn () => PP.add_string pps ",")
-                               (fn () => ())
-                               Args;
-              PP.end_block pps ;
-              PP.add_string pps ")";
-              qid pps
-            end
+            [] => [qid]
+          | _ => [
+              add_string "(",
+              block INCONSISTENT 0 (
+                pr_list (block INCONSISTENT 0 o pp_pty none) [add_string ","]
+                        Args
+              ),
+              add_string ")",
+              qid
+          ]
       end
-    | UVar(r as ref NONE) => let
-      in
-        PP.add_string pps (Int.toString (checkref r) ^ ":*")
-      end
-    | UVar (r as ref (SOME pty')) => let
-      in
-        if state <> uvar then PP.begin_block pps PP.INCONSISTENT 0 else ();
-        PP.add_string pps (Int.toString (checkref r) ^ ":");
-        PP.add_break pps (1,2);
-        pp_pty pps uvar pty';
-        if state <> uvar then PP.end_block pps else ()
-      end
+    | UVar r => [add_string ("U("^Int.toString r^")")]
   end
 in
-  pp_pty pps none pty
+  block INCONSISTENT 0 (pp_pty none pty)
 end
 
 fun remove_ty_aq t =
@@ -289,9 +274,12 @@ val typantiq_constructors =
 
 fun has_unbound_uvar pty =
     case pty of
-      Vartype _ => false
-    | UVar (ref (SOME pty0)) => has_unbound_uvar pty0
-    | UVar (ref NONE) => true
-    | Tyop{Args,...} => List.exists has_unbound_uvar Args
+      Vartype _ => return false
+    | UVar r => boundcase r (return true) has_unbound_uvar
+    | Tyop{Args,...} => huul Args
+and huul [] = return false
+  | huul (ty1 :: tys) =
+     has_unbound_uvar ty1 >- (fn b => if b then return true
+                                      else huul tys)
 
 end;

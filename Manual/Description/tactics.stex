@@ -60,7 +60,7 @@ translating subgoals solutions to solutions of goals.
 %from the ones
 %in Edinburgh \LCF\ \cite{Edinburgh-LCF}).
 
-\section{Tactics, goals and validations}
+\section{Tactics, Goals and Validations}
 \label{tactics}
 
 \index{goal directed proof search!concepts of|(}
@@ -378,7 +378,7 @@ There can be a lot of book-keeping required to support such an activity.
 For this reason, most interactive theorem-proving uses the subgoal or goalstack package described in Section~\ref{sec:goalstack}.
 
 
-\section{Some tactics built into HOL}
+\section{\texorpdfstring{Some Tactics Built into \HOL{}}{Some Tactics Built into HOL}}
 
 This section contains a selection of the more commonly
 \index{tactics!list of some|(}
@@ -916,7 +916,7 @@ $T$ until it fails. It is defined in \ML{} by:
 \index{tacticals!list of some|)}
 \index{tactics!tacticals for|)}
 
-\section{Tactics for manipulating assumptions}
+\section{Tactics for Manipulating Assumptions}
 \label{asm-manip}
 
 \index{tactics!for manipulating assumptions|(}
@@ -1214,18 +1214,26 @@ It is a ``popping'' version of \ml{first\_assum}.
 \index{qpat_assum@\ml{qpat\_assum}}
 The \ml{qpat\_assum} tactical takes a pattern-quotation as its first argument.
 The second \ml{thm\_tactic} parameter is then passed the first assumption that matches this pattern.
-This tactical is also a ``popping'' manipulator of the assumptions, so the matching assumption is not present when the theorem-tactic is applied to the goal.
 
 Thus:
 \begin{hol}
 \begin{alltt}
-   qpat_assum pat \(f\) ([\(t\sb{1}\), \(\ldots\) ,\(t\sb{p}\), \(\ldots\) ,\(t\sb{n}\)], \(t\)) =
+   qpat_assum pat \(f\) ([\(t\sb{1}\), \(\ldots\) ,\(t\sb{p}\), \(\ldots\) ,\(t\sb{n}\)], \(t\)) = f (ASSUME \(t\sb{p}\)) ([\(t\sb{1}\), \(\ldots\), \(t\sb{n}\)], \(t\))
+\end{alltt}
+\end{hol}
+where $t_p$ is the first assumption that matches the pattern \ml{pat}.
+
+Just as with \ml{first\_assum}, there is a ``popping'' version called \ml{qpat\_x\_assum} that removes the matching assumption from the list.
+Thus:
+\begin{hol}
+\begin{alltt}
+   qpat_x_assum pat \(f\) ([\(t\sb{1}\), \(\ldots\) ,\(t\sb{p}\), \(\ldots\) ,\(t\sb{n}\)], \(t\)) =
      f (ASSUME \(t\sb{p}\)) ([\(t\sb{1}\), \(\ldots\) ,\(t\sb{p-1}\),\(t\sb{p+1}\), \(\ldots\) ,\(t\sb{n}\)], \(t\))
 \end{alltt}
 \end{hol}
 where $t_p$ is the first assumption that matches the pattern \ml{pat}.
 
-While \ml{first\_assum} (and \ml{first\_x\_assum}) try to apply their theorem-tactic to every assumption, eventually using the first that succeeds, \ml{qpat\_assum} only applies its theorem-tactic to one assumption (the first that matches).
+While \ml{first\_assum} (and \ml{first\_x\_assum}) try to apply their theorem-tactic to every assumption, eventually using the first that succeeds, \ml{qpat\_assum} (and \ml{qpat\_x\_assum}) only apply their theorem-tactic to one assumption (the first that matches).
 
 
 \subsection{Theorem continuations without popping}

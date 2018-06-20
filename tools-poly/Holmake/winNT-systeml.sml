@@ -68,6 +68,7 @@ val pointer_eq = PolyML.pointerEq
 val build_log_dir = fullPath [HOLDIR, "tools", "build-logs"]
 val build_log_file = fullPath [build_log_dir, "current-build-log"]
 val make_log_file = "current-make-log"
+val build_after_reloc_envvar = "HOL_REBUILD_HEAPS_ONLY"
 
 local
   fun fopen file = (FileSys.remove file handle _ => (); TextIO.openOut file)

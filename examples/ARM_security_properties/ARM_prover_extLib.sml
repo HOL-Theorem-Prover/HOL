@@ -488,7 +488,7 @@ fun prove_const a pred expr cm postfix thms =
 		    let val tac = RW_TAC (srw_ss())
 					 []
 					 THEN FULL_SIMP_TAC (srw_ss()) [readT_def]
-					 THEN PAT_ASSUM ``∀ii reg.X`` (fn thm => ASSUME_TAC (SPECL [``<|proc:=0|>``] thm))
+					 THEN PAT_X_ASSUM ``∀ii reg.X`` (fn thm => ASSUME_TAC (SPECL [``<|proc:=0|>``] thm))
 					 THEN FULL_SIMP_TAC (srw_ss()) [readT_def] THEN (REPEAT (RW_TAC (srw_ss()) []))
 
 			val _ = e (tac)

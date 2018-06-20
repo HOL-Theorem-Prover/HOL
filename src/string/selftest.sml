@@ -1,5 +1,5 @@
 (* tests for string and character parsing *)
-open HolKernel Parse boolLib bossLib
+open HolKernel Parse boolLib bossLib testutils
 fun q (QUOTE s) = "Q\"" ^ String.toString s ^ "\""
   | q (ANTIQUOTE a) = "AQ"
 
@@ -17,11 +17,11 @@ val testdata = [(`#"("`, fromMLchar #"("),
                 (`[#"c"]`, listSyntax.mk_list ([fromMLchar #"c"], ``:char``))]
 
 fun do_test (q,res) = let
-  val _ = print (StringCvt.padRight #" " 40 (printq q))
-  val _ = print (StringCvt.padRight #" " 25 ("``" ^ term_to_string res ^ "``"))
+  val l_s = StringCvt.padRight #" " 40 (printq q)
+  val r_s = StringCvt.padLeft #" " 15 ("``" ^ term_to_string res ^ "``")
+  val _ = tprint (l_s ^ " = " ^ r_s)
 in
-  if aconv (Term q) res then print "OK\n"
-  else (print "FAILED!\n"; OS.Process.exit OS.Process.failure)
+  if aconv (Term q) res then OK() else die "FAILED!"
 end
 
 val _ = app do_test testdata
@@ -66,32 +66,20 @@ val sec_data = [(``"" = ""``, T),
                 (``"abc" = "ab"``, F)]
 
 fun sectest (t1, rest) = let
-  val _ = print (StringCvt.padRight #" " 40 (term_to_string t1))
+  val _ = tprint (StringCvt.padRight #" " 40 (term_to_string t1) ^ " = " ^
+                  StringCvt.padLeft #" " 15 (term_to_string rest))
   val (actual, ok) = let
     val res = rhs (concl (stringLib.string_EQ_CONV t1))
   in
     (term_to_string res, aconv res rest)
   end handle _ => ("EXN", false)
 in
-  print (StringCvt.padRight #" " 25 actual);
-  if ok then print "OK\n" else (print "FAILED!\n";
-                                OS.Process.exit OS.Process.failure)
+  if ok then OK() else die ("FAILED!\n  Got "^actual)
 end
 
 val _ = app sectest sec_data
 
-fun tprint s = print (StringCvt.padRight #" " 65 (s ^ " ... "))
-
 val _ = set_trace "Unicode" 0
-
-fun tpp s = let
-  val t = Parse.Term [QUOTE s]
-  val _ = tprint ("Printing of `"^s^"`")
-  val res = term_to_string t
-in
-  if res = s then print "OK\n"
-  else (print "FAILED!\n"; Process.exit Process.failure)
-end
 
 val _ = app tpp ["P \"a\" /\\ Q",
                  "P (STRCAT a \"b\") /\\ Q",
@@ -104,8 +92,8 @@ val _ = set_trace "paranoid string literal printing" 1
 val t = ``"*)"``
 val _ = tprint "Paranoid printing of ``\"*)\"``"
 val s = term_to_string t
-val _ = if s = "\"\\042)\"" then print "OK\n"
-        else (print "FAILED!\n"; Process.exit Process.failure)
+val _ = if s = "\"\\042)\"" then OK()
+        else die "FAILED!"
 
 
 val _ = OS.Process.exit OS.Process.success

@@ -2,7 +2,9 @@ open HolKernel Parse boolLib bossLib
 
 open boolSimps
 
-open pegTheory
+open pegTheory locationTheory
+
+open rich_listTheory;
 
 val _ = new_theory "pegexec"
 
@@ -11,7 +13,7 @@ val _ = Hol_datatype`
     ksym of ('atok,'bnt,'cvalue) pegsym => kont => kont
   | appf1 of ('cvalue -> 'cvalue) => kont
   | appf2 of ('cvalue -> 'cvalue -> 'cvalue) => kont
-  | returnTo of 'atok list => 'cvalue option list => kont
+  | returnTo of ('atok # locs) list => 'cvalue option list => kont
   | poplist of ('cvalue list -> 'cvalue) => kont
   | listsym of ('atok,'bnt,'cvalue) pegsym =>
                ('cvalue list -> 'cvalue) =>
@@ -34,12 +36,12 @@ val poplistval_def = Define`
 
 val _ = Hol_datatype `
   evalcase = EV of ('atok,'bnt,'cvalue) pegsym =>
-                   'atok list => 'cvalue option list =>
+                   ('atok # locs) list => 'cvalue option list =>
                    ('atok,'bnt,'cvalue) kont =>
                    ('atok,'bnt,'cvalue) kont
            | AP of ('atok,'bnt,'cvalue) kont =>
-                   'atok list => 'cvalue option list
-           | Result of ('atok list # 'cvalue) option
+                   ('atok # locs) list => 'cvalue option list
+           | Result of (('atok # locs) list # 'cvalue) option
            | Looped
 `;
 
@@ -56,7 +58,7 @@ val coreloop_def = zDefine`
                  | EV (tok P tf2) i r k fk =>
                    (case i of
                         [] => AP fk i r
-                      | h::t => if P h then AP k t (SOME (tf2 h)::r)
+                      | h::t => if P (FST h) then AP k t (SOME (tf2 h)::r)
                                 else AP fk i r)
                  | EV (nt n tf3) i r k fk =>
                    if n ∈ FDOM G.rules then
@@ -108,7 +110,6 @@ val applykont_def = zDefine`
                         | NONE => Looped
 `
 
-open lcsymtacs
 val coreloop_result = store_thm(
   "coreloop_result",
   ``coreloop G (Result x) = SOME (Result x)``,
@@ -156,6 +157,7 @@ val better_apply =
 val peg_nt_thm = save_thm(
   "peg_nt_thm",
   peg_exec_thm ([`e` |-> `nt n nfn`], [Once COND_RAND, option_case_COND]))
+
 val peg_exec_thm = save_thm("peg_exec_thm", LIST_CONJ better_peg_execs);
 
 val applykont_thm = save_thm("applykont_thm", LIST_CONJ better_apply);
@@ -299,3 +301,4 @@ val coreloop_total = save_thm(
 
 
 val _ = export_theory()
+

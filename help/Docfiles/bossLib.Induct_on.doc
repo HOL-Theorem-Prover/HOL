@@ -1,6 +1,6 @@
 \DOC Induct_on
 
-\TYPE {Induct_on : term -> tactic}
+\TYPE {Induct_on : term quotation -> tactic}
 
 \SYNOPSIS
 Performs structural induction, using the type of the given term.

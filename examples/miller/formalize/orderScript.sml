@@ -89,8 +89,8 @@ val INSERT_SORTED = store_thm
         ++ ho_PROVE_TAC [])
     ++ S_TAC
     ++ Cases_on `f a x` >> AR_TAC [sorted_def]
-    ++ Q.PAT_ASSUM `!x. P x ==> Q x` (MP_TAC o Q.SPEC `h`)
-    ++ Q.PAT_ASSUM `sorted f (x::h::t)` MP_TAC
+    ++ Q.PAT_X_ASSUM `!x. P x ==> Q x` (MP_TAC o Q.SPEC `h`)
+    ++ Q.PAT_X_ASSUM `sorted f (x::h::t)` MP_TAC
     ++ R_TAC [sorted_def, insert_def]
     ++ Cases_on `f a h`
     ++ R_TAC [sorted_def]
@@ -101,7 +101,7 @@ val INSERT_SORTED = store_thm
     ++ Q.SPEC_TAC (`h`, `x`)
     ++ Induct_on `t` >> R_TAC [sorted_def]
     ++ S_TAC
-    ++ Q.PAT_ASSUM `!x. P x ==> Q x` (MP_TAC o Q.SPEC `h`)
+    ++ Q.PAT_X_ASSUM `!x. P x ==> Q x` (MP_TAC o Q.SPEC `h`)
     ++ NTAC 2 (POP_ASSUM MP_TAC)
     ++ R_TAC [sorted_def, insert_def]
     ++ Cases_on `f a x`

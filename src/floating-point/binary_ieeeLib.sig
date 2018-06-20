@@ -10,7 +10,6 @@ sig
    val compare_CONV: Conv.conv
    val div_CONV: Conv.conv
    val equal_CONV: Conv.conv
-   val float_compare_CONV: Conv.conv
    val float_round_CONV: Conv.conv
    val greater_equal_CONV: Conv.conv
    val greater_than_CONV: Conv.conv

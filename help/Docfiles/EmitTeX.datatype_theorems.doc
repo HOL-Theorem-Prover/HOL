@@ -1,6 +1,6 @@
 \DOC
 
-\TYPE {dataype_theorems : string -> (string * thm) list}
+\TYPE {datatype_theorems : string -> (string * thm) list}
 
 \SYNOPSIS
 All the datatype theorems stored in the named theory.

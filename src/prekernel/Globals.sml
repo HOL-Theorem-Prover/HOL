@@ -67,12 +67,13 @@ val output_HOL_ERR = ref outHOL_ERR_default
 
 val type_pp_prefix = ref "`" and type_pp_suffix = ref "`"
 val term_pp_prefix = ref "`" and term_pp_suffix = ref "`"
+val thm_pp_prefix = ref "|- " and thm_pp_suffix = ref ""
 
 (*---------------------------------------------------------------------------*
  * Tells the prettyprinters how wide the page is.                            *
  *---------------------------------------------------------------------------*)
 
-val linewidth = ref 72
+val linewidth = CoreReplVARS.linewidth
 
 (*---------------------------------------------------------------------------*
  * Controls depth of printing for terms. Since the pp recursively decrements *

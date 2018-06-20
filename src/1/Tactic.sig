@@ -3,7 +3,7 @@ sig
   include Abbrev
 
   val ACCEPT_TAC            : thm_tactic
-  val DISCARD_TAC           : thm -> tactic
+  val DISCARD_TAC           : thm_tactic
   val CONTR_TAC             : thm_tactic
   val CCONTR_TAC            : tactic
   val ASSUME_TAC            : thm_tactic
@@ -30,6 +30,7 @@ sig
   val ID_SPEC_TAC           : term -> tactic
   val EXISTS_TAC            : term -> tactic
   val exists_tac            : term -> tactic
+  val ID_EX_TAC             : tactic
   val GSUBST_TAC            : ((term,term) Lib.subst -> term -> term)
                                -> thm list -> tactic
   val SUBST_TAC             : thm list -> tactic
@@ -53,6 +54,7 @@ sig
   val FILTER_DISCH_THEN     : thm_tactic -> term -> tactic
   val FILTER_STRIP_THEN     : thm_tactic -> term -> tactic
   val DISCH_TAC             : tactic
+  val disch_tac             : tactic
   val DISJ_CASES_TAC        : thm_tactic
   val CHOOSE_TAC            : thm_tactic
   val X_CHOOSE_TAC          : term -> thm_tactic
@@ -76,6 +78,9 @@ sig
   val match_mp_tac          : thm -> tactic
   val prim_irule            : thm -> tactic
   val irule                 : thm -> tactic
+  val IRULE_TAC             : thm -> tactic
+  val impl_tac              : tactic
+  val impl_keep_tac         : tactic
   val HO_MATCH_ACCEPT_TAC   : thm -> tactic
   val HO_BACKCHAIN_TAC      : thm -> tactic
   val HO_MATCH_MP_TAC       : thm -> tactic
@@ -84,6 +89,7 @@ sig
   val imp_res_tac           : thm -> tactic
   val RES_TAC               : tactic
   val res_tac               : tactic
+  val provehyp              : thm_tactic
   val via                   : term * tactic -> tactic
   val CONV_TAC              : conv -> tactic
   val BETA_TAC              : tactic
@@ -96,4 +102,15 @@ sig
 
   val SELECT_ELIM_TAC       : tactic
   val HINT_EXISTS_TAC       : tactic
+  val part_match_exists_tac : (term -> term) -> term -> tactic
+
+  val drule            : thm_tactic
+  val dxrule           : thm_tactic
+  val drule_then       : thm_tactic -> thm_tactic
+  val dxrule_then      : thm_tactic -> thm_tactic
+  val drule_all        : thm_tactic
+  val dxrule_all       : thm_tactic
+  val drule_all_then   : thm_tactic -> thm_tactic
+  val dxrule_all_then  : thm_tactic -> thm_tactic
+
 end

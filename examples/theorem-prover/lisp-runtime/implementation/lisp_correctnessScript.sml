@@ -73,7 +73,7 @@ val IO_WRITE_RW = prove(
 val LENGTH_SND_read_while = prove(
   ``!t p s. STRLEN (SND (read_while p t s)) <= STRLEN t``,
   Induct \\ SIMP_TAC std_ss [read_while_def] \\ SRW_TAC [] []
-  \\ Q.PAT_ASSUM `!p.bbb` (ASSUME_TAC o Q.SPECL [`p`,`STRCAT s (STRING h "")`])
+  \\ Q.PAT_X_ASSUM `!p.bbb` (ASSUME_TAC o Q.SPECL [`p`,`STRCAT s (STRING h "")`])
   \\ DECIDE_TAC);
 
 val is_eof_T_IMP = prove(
@@ -85,7 +85,7 @@ val is_eof_T_IMP = prove(
    (`STRLEN t < STRLEN (STRING h t)` by (EVAL_TAC \\ DECIDE_TAC)
     \\ RES_TAC \\ ASM_SIMP_TAC std_ss [])
   \\ Cases_on `h = #";"` \\ FULL_SIMP_TAC std_ss []
-  \\ Q.PAT_ASSUM `!s.bbb` MATCH_MP_TAC
+  \\ Q.PAT_X_ASSUM `!s.bbb` MATCH_MP_TAC
   \\ MATCH_MP_TAC LESS_EQ_LESS_TRANS \\ Q.EXISTS_TAC `STRLEN t`
   \\ ASM_SIMP_TAC std_ss [LENGTH_SND_read_while] \\ SIMP_TAC std_ss [LENGTH]);
 
@@ -117,7 +117,7 @@ val BC_ONLY_COMPILE_LEMMA = prove(
   STRIP_TAC \\ IMP_RES_TAC BC_REFINES_ONLY_COMPILE
   \\ ASM_SIMP_TAC std_ss [] \\ POP_ASSUM (K ALL_TAC)
   \\ FULL_SIMP_TAC std_ss [BC_ONLY_COMPILE_def]
-  \\ `BC_ev_fun ([],sexp2term exp,bc1) = (code,a2,p2,bc0)` by ALL_TAC THEN1
+  \\ `BC_ev_fun ([],sexp2term exp,bc1) = (code,a2,p2,bc0)` by
       (FULL_SIMP_TAC std_ss [BC_ev_fun_def,BC_EV_HILBERT_LEMMA,MAP,REVERSE_DEF,BC_REFINES_def])
   \\ FULL_SIMP_TAC std_ss [LET_DEF,WRITE_BYTECODE_code_end]
   \\ IMP_RES_TAC BC_ev_fun_CONSTS \\ FULL_SIMP_TAC std_ss []
@@ -169,15 +169,15 @@ val iSTEP_iRETURN = prove(
    (NTAC 2 STRIP_TAC
     \\ `bc_inv bc1 /\ (bc1.code 0 = SOME iRETURN)` by
      (`bc_inv bc1` by METIS_TAC [bc_inv_BC_COMPILE] \\ ASM_SIMP_TAC std_ss []
-      \\ Q.PAT_ASSUM `BC_COMPILE (getSym fname,MAP getSym (sexp2list formals),sexp2term body,bc) = bc1`
+      \\ Q.PAT_X_ASSUM `BC_COMPILE (getSym fname,MAP getSym (sexp2list formals),sexp2term body,bc) = bc1`
            (fn th => ONCE_REWRITE_TAC [GSYM th])
       \\ SIMP_TAC std_ss [BC_COMPILE_def,LET_DEF,LENGTH_MAP]
       \\ Q.ABBREV_TAC `bcA = BC_STORE_COMPILED bc (getSym fname) (bc.code_end,LENGTH (sexp2list formals))`
-      \\ `BC_JUMPS_OK bcA` by ALL_TAC THEN1
+      \\ `BC_JUMPS_OK bcA` by
        (Q.UNABBREV_TAC `bcA`
         \\ FULL_SIMP_TAC (srw_ss()) [BC_STORE_COMPILED_def,BC_JUMPS_OK_def,bc_inv_def]
         \\ EVAL_TAC \\ SIMP_TAC std_ss [])
-      \\ `BC_CODE_OK bcA` by ALL_TAC THEN1
+      \\ `BC_CODE_OK bcA` by
        (Q.UNABBREV_TAC `bcA`
         \\ FULL_SIMP_TAC (srw_ss()) [BC_STORE_COMPILED_def,BC_CODE_OK_def,bc_inv_def]
         \\ EVAL_TAC \\ SIMP_TAC std_ss []
@@ -196,7 +196,7 @@ val BC_ONLY_COMPILE_THM = prove(
         ([s],0,[],bc8) /\ (bc8.code 0 = SOME iRETURN) /\
       BC_REFINES (fns2,io2) bc8 /\ bc_inv bc8 /\ (ok8 = bc8.ok)``,
   REPEAT STRIP_TAC
-  \\ `BC_JUMPS_OK bc1` by ALL_TAC THEN1
+  \\ `BC_JUMPS_OK bc1` by
    (FULL_SIMP_TAC std_ss [bc_inv_def,BC_JUMPS_OK_def]
     \\ EVAL_TAC \\ SIMP_TAC std_ss [])
   \\ `?code a2 p2 bc0. BC_ev T (sexp2term exp,[],bc1.code_end,bc1) (code,a2,p2,bc0)` by METIS_TAC [BC_ev_TOTAL,PAIR]
@@ -267,7 +267,7 @@ val READ_EVAL_PRINT_LOOP_THM = prove(
   \\ FULL_SIMP_TAC std_ss [AND_IMP_INTRO,next_sexp_def,IO_INPUT_APPLY_def,
         REPLACE_INPUT_IO_def,getINPUT_def]
   \\ Cases_on `bc8.ok` \\ FULL_SIMP_TAC std_ss [] THEN1
-   (Q.PAT_ASSUM `!x0.bbb` MATCH_MP_TAC
+   (Q.PAT_X_ASSUM `!x0.bbb` MATCH_MP_TAC
     \\ Q.EXISTS_TAC `IO_STREAMS rest (STRCAT (STRCAT io2 (sexp2string s)) "\n")`
     \\ FULL_SIMP_TAC (srw_ss()) [getINPUT_def,getOUTPUT_def,BC_PRINT_def]
     \\ FULL_SIMP_TAC (srw_ss()) [bc_inv_def,BC_REFINES_def,BC_CODE_OK_def,
@@ -327,7 +327,7 @@ val main_loop_final = let
     \\ Q.EXISTS_TAC `output`
     \\ FULL_SIMP_TAC (srw_ss()) [bc_state_tree_def,flat_alist_def,list2sexp_def,
          APPLY_UPDATE_THM,EVAL ``WRITE_CODE NO_CODE [iRETURN]``]
-    \\ `!h. 0 < LENGTH (bc_ref (0,[]) h)` by ALL_TAC THEN1
+    \\ `!h. 0 < LENGTH (bc_ref (0,[]) h)` by
          (Cases \\ EVAL_TAC \\ Cases_on `l` \\ EVAL_TAC)
     \\ EVAL_TAC \\ ASM_SIMP_TAC std_ss []
     \\ FULL_SIMP_TAC std_ss [SUBSET_DEF,GSPECIFICATION])

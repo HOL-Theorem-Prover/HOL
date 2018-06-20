@@ -4,9 +4,8 @@ sig
   type hol_type  = Type.hol_type
   type term      = Term.term
   type thm       = Thm.thm
-  type ppstream  = Portable.ppstream
-  type thy_addon = {sig_ps    : (ppstream -> unit) option,
-                    struct_ps : (ppstream -> unit) option}
+  type thy_addon = {sig_ps    : (unit -> HOLPP.pretty) option,
+                    struct_ps : (unit -> HOLPP.pretty) option}
   type num = Arbnum.num
 
 (* Create a new theory *)
@@ -17,6 +16,7 @@ sig
 
   val temp_binding       : string -> string
   val is_temp_binding    : string -> bool
+  val dest_temp_binding  : string -> string
   val new_type           : string * int -> unit
   val new_constant       : string * hol_type -> unit
   val new_axiom          : string * term -> thm
@@ -39,23 +39,30 @@ sig
   val current_axioms     : unit -> (string * thm) list
   val current_theorems   : unit -> (string * thm) list
   val current_definitions : unit -> (string * thm) list
+  val current_ML_deps    : unit -> string list
 
 (* Support for persistent theories *)
 
-  val adjoin_to_theory   : thy_addon -> unit
-  val export_theory      : unit -> unit
+  val adjoin_to_theory       : thy_addon -> unit
+  val quote_adjoin_to_theory : string quotation -> string quotation -> unit
+  val export_theory          : unit -> unit
 
 (* Make hooks available so that theory changes can be seen by
    "interested parties" *)
   val register_hook : string * (TheoryDelta.t -> unit) -> unit
   val delete_hook : string -> unit
   val get_hooks : unit -> (string * (TheoryDelta.t -> unit)) list
+  val disable_hook : string -> ('a -> 'b) -> 'a -> 'b
+  val enable_hook : string -> ('a -> 'b) -> 'a -> 'b
 
 (* -- and persistent data added to theories *)
   structure LoadableThyData : sig
     type t
-    val new : {thydataty : string, merge : 'a * 'a -> 'a,
-               read : string -> 'a option, write : 'a -> string} ->
+    val new : {thydataty : string,
+               merge : 'a * 'a -> 'a,
+               terms : 'a -> term list,
+               read : (string -> term) -> string -> 'a option,
+               write : (term -> string) -> 'a -> string} ->
               ('a -> t) * (t -> 'a option)
     val segment_data : {thy: string, thydataty: string} -> t option
 
@@ -70,6 +77,7 @@ sig
        might have been there. *)
 
     val temp_encoded_update : {thy : string, thydataty : string,
+                               read : string -> term,
                                data : string} -> unit
     (* updates segment data using an encoded string *)
   end
@@ -98,9 +106,12 @@ sig
 
   val set_MLname         : string -> string -> unit
 
+(* recording a dependency of the theory on an ML module *)
+  val add_ML_dependency  : string -> unit
+
 (* For internal use *)
 
-  val pp_thm             : (ppstream -> thm -> unit) ref
+  val pp_thm             : (thm -> HOLPP.pretty) ref
   val link_parents       : string*num*num -> (string*num*num) list -> unit
   val incorporate_types  : string -> (string*int) list -> unit
 

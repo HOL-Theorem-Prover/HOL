@@ -13,13 +13,9 @@ val _ = new_theory "ringNorm";
 
 open ringTheory canonicalTheory;
 
-infix ORELSE THEN THENL o |->;
-infix 8 by;
-
-
-val r = --`r:'a ring`--;
-val sr = --`semi_ring_of r`--;
-val _ = set_assums [ --`is_ring ^r`-- ];
+val r = “r:'a ring”;
+val sr = “semi_ring_of r”;
+val _ = set_assums [ “is_ring ^r” ];
 val _ = app (C add_impl_param [r]) ["R0","R1","RP","RM","RN"];
 
 val rth = ringTheory.IMPORT
@@ -40,13 +36,13 @@ val { canonical_sum_merge_ok, canonical_sum_prod_ok,
     { Vals = [sr],
       Inst = [#ring_is_semi_ring rth],
       Rule = REWRITE_RULE[ semi_ring_of_def,
-			   semi_ringTheory.semi_ring_accessors ],
+                           semi_ringTheory.semi_ring_accessors ],
       Rename = fn x => SOME ("r_"^x) };
 
 
 val _ = asm_save_thm("interp_sp_def", interp_sp_def);
 val _ = asm_save_thm("canonical_sum_merge_def",
-		     canonical_sum_merge_def);
+                     canonical_sum_merge_def);
 val _ = asm_save_thm("monom_insert_def", monom_insert_def);
 val _ = asm_save_thm("varlist_insert_def", varlist_insert_def);
 val _ = asm_save_thm("canonical_sum_scalar_def", canonical_sum_scalar_def);
@@ -54,7 +50,7 @@ val _ = asm_save_thm("canonical_sum_scalar2_def", canonical_sum_scalar2_def);
 val _ = asm_save_thm("canonical_sum_scalar3_def", canonical_sum_scalar3_def);
 val _ = asm_save_thm("canonical_sum_prod_def", canonical_sum_prod_def);
 val _ = asm_save_thm("canonical_sum_simplify_def",
-		     canonical_sum_simplify_def);
+                     canonical_sum_simplify_def);
 val _ = asm_save_thm("ivl_aux_def", ivl_aux_def);
 val _ = asm_save_thm("interp_vl_def", interp_vl_def);
 val _ = asm_save_thm("interp_m_def", interp_m_def);
@@ -87,10 +83,10 @@ val polynom_normalize_def = Define `
 /\ (polynom_normalize (Pconst c) = (Cons_monom c [] Nil_monom))
 /\ (polynom_normalize (Pplus pl pr) =
       (r_canonical_sum_merge (polynom_normalize pl)
-      	                       (polynom_normalize pr)))
+                               (polynom_normalize pr)))
 /\ (polynom_normalize (Pmult pl pr) =
       (r_canonical_sum_prod (polynom_normalize pl)
-      	                      (polynom_normalize pr)))
+                              (polynom_normalize pr)))
 /\ (polynom_normalize (Popp p) =
       (r_canonical_sum_scalar3 (RN R1) [] (polynom_normalize p))) `;
 
@@ -110,21 +106,21 @@ val interp_p_def = Define `
 val polynom_normalize_ok = asm_store_thm
     ("polynom_normalize_ok",
      Term` !vm p. r_interp_cs vm (polynom_normalize p)
-			      = interp_p vm p `,
+                              = interp_p vm p `,
 Induct_on `p` THEN REPEAT GEN_TAC THEN
 ARW_TAC [ polynom_normalize_def, interp_cs_def, interp_p_def,
-	  ics_aux_def, canonical_sum_merge_ok, canonical_sum_prod_ok,
-	  canonical_sum_scalar3_ok, interp_m_def, interp_vl_def,
-	  ivl_aux_def, #neg_mult rth ]);
+          ics_aux_def, canonical_sum_merge_ok, canonical_sum_prod_ok,
+          canonical_sum_scalar3_ok, interp_m_def, interp_vl_def,
+          ivl_aux_def, #neg_mult rth ]);
 
 
 val polynom_simplify_ok = asm_store_thm
     ("polynom_simplify_ok",
      Term` !vm p. r_interp_cs vm (polynom_simplify p)
-			      = interp_p vm p `,
+                              = interp_p vm p `,
 ARW_TAC [ polynom_simplify_def,
-	  canonical_sum_simplify_ok,
-	  polynom_normalize_ok ]);
+          canonical_sum_simplify_ok,
+          polynom_normalize_ok ]);
 
 
 val _ = export_param_theory();

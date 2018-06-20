@@ -47,6 +47,8 @@ val take_lemma = prove(
   ``∀l n. 0 < n ∧ n ≤ LENGTH l ⇒ TAKE n l ≠ []``,
   Induct THEN SRW_TAC [ARITH_ss][]);
 
+val _ = augment_srw_ss[rewrites[listTheory.TAKE_def,listTheory.DROP_def]];
+
 val FRONT_TAKE = store_thm(
   "FRONT_TAKE",
   ``∀l n. 0 < n ∧ n ≤ LENGTH l ⇒ (FRONT (TAKE n l) = TAKE (n - 1) l)``,

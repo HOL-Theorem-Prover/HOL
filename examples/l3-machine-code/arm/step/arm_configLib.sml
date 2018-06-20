@@ -50,18 +50,22 @@ val thumb_options =
     ["arm","32-bit","32"]]
 
 val vfp_options = lower
-   [["fp", "vfp", "VFPv3"],
+   [["VFPv4"],
+    ["VFPv3"],
+    ["fp", "vfp", "VFPv2"],
     ["nofp", "novfp"]]
 
 val default_options =
    {arch      = mk_arm_const "ARMv7_A",
     bigendian = false,
     thumb     = false,
-    vfp       = false,
+    vfp       = 3,
     itblock   = wordsSyntax.mk_wordii (0, 8)}
 
 fun isDelim c =
    Char.isPunct c andalso (c <> #"-") andalso (c <> #":") orelse Char.isSpace c
+
+val print_options = utilsLib.print_options (SOME 34)
 
 fun process_options s =
    let
@@ -70,7 +74,7 @@ fun process_options s =
       val (bigendian, l) = process_opt endian_options "Endian"
                               (#bigendian default_options) l (fn i => i <> 0)
       val (vfp, l) =
-         process_opt vfp_options "VFP" (#vfp default_options) l (Lib.equal 0)
+         process_opt vfp_options "VFP" (#vfp default_options) l Lib.I
       val (arch, l) =
          process_opt arch_options "Arch" (#arch default_options) l
             (fn i =>
@@ -98,17 +102,26 @@ fun process_options s =
                thumb = thumb,
                vfp = vfp,
                itblock = itblock}
-      else raise ERR "process_options"
+      else ( print_options "Endianness" endian_options
+           ; print_options "Architecture version" arch_options
+           ; print_options "Thumb mode" thumb_options
+           ; print_options "Floating-point" vfp_options
+           ; raise ERR "process_options"
                  ("Unrecognized option" ^
                   (if List.length l > 1 then "s" else "") ^
                   ": " ^ String.concat (commafy l))
+           )
    end
 
 (* ----------------------------------------------------------------------- *)
 
 local
+   val neg = boolSyntax.mk_neg
    val architecture = ``^st.Architecture``
-   val extension_vfp = ``^st.Extensions Extension_VFP``
+   val no_vfp = ``^st.VFPExtension = NoVFP``
+   val extension_vfp2 = ``^st.VFPExtension = VFPv2``
+   val extension_vfp3 = ``^st.VFPExtension = VFPv3``
+   val extension_vfp4 = ``^st.VFPExtension = VFPv4``
    val cpsr_it = ``^st.CPSR.IT``
    val cpsr_e = ``^st.CPSR.E``
    val cpsr_t = ``^st.CPSR.T``
@@ -116,12 +129,16 @@ in
    fun mk_config_terms s =
       let
          val c = process_options s
-         fun prop f t = if f c then t else boolSyntax.mk_neg t
+         fun prop f t = if f c then t else neg t
          fun eq t f = boolSyntax.mk_eq (t, f c)
       in
          (if #thumb c then [eq cpsr_it (#itblock)] else []) @
+         (case #vfp c of
+             0 => [extension_vfp4]
+           | 1 => [extension_vfp3]
+           | 2 => [extension_vfp2]
+           | _ => [no_vfp]) @
          [eq architecture (#arch),
-          prop #vfp extension_vfp,
           prop #bigendian cpsr_e,
           prop #thumb cpsr_t]
       end

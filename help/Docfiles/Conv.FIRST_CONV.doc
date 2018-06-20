@@ -10,9 +10,9 @@ conversional.
 
 \DESCRIBE
 {FIRST_CONV [c1,...,cn] t} returns the result of applying to the term
-{t} the first conversion {ci} that succeeds when applied to {t}. The
-conversions are tried in the order in which they are given in the
-list.
+{t} the first conversion {ci} that succeeds (or raises {UNCHANGED})
+when applied to {t}. The conversions are tried in the order
+in which they are given in the list.
 
 \FAILURE
 {FIRST_CONV [c1,...,cn] t} fails if all the conversions {c1}, ...,
@@ -20,5 +20,5 @@ list.
 if {cs} is the empty list.
 
 \SEEALSO
-Conv.ORELSEC.
+Conv.ORELSEC, Conv.UNCHANGED.
 \ENDDOC

@@ -1,6 +1,7 @@
 open HolKernel boolLib Parse bossLib stringTheory arithmeticTheory markerLib;
 
 val _ = new_theory "string_num"
+val _ = set_grammar_ancestry ["string"]
 
 val n2s_def = tDefine
  "n2s" `
@@ -114,6 +115,64 @@ val s2n_onto = store_thm(
 
 
 val _ = export_rewrites ["n2s_s2n", "s2n_n2s", "n2s_11", "s2n_11"]
+
+val n2nsum_def = Define`
+  n2nsum n = if ODD n then INL (n DIV 2) else INR (n DIV 2)
+`;
+
+val nsum2n_def = Define`
+  (nsum2n (INL n) = 2 * n + 1) /\
+  (nsum2n (INR n) = 2 * n)
+`;
+val _ = export_rewrites ["nsum2n_def"]
+
+val div_lemma = prove(
+  ``(2 * x DIV 2 = x) /\ ((2 * x + 1) DIV 2 = x)``,
+  `0 < 2 /\ (1 DIV 2 = 0)` by simp[] >>
+  metis_tac[MULT_DIV, ADD_DIV_ADD_DIV, MULT_COMM, ADD_CLAUSES]);
+
+val odd_lemma = prove(
+  ``(ODD x ==> (2 * (x DIV 2) + 1 = x)) /\
+    (~ODD x ==> (2 * (x DIV 2) = x))``,
+  conj_tac
+  >- dsimp[ODD_EXISTS, ADD1, div_lemma]
+  >- dsimp[GSYM EVEN_ODD, EVEN_EXISTS, div_lemma])
+
+val n2nsum_nsum2n = store_thm(
+  "n2nsum_nsum2n[simp]",
+  ``n2nsum (nsum2n ns) = ns``,
+  Cases_on `ns` >> simp[n2nsum_def, div_lemma, ODD_ADD, ODD_MULT]);
+
+val nsum2n_n2nsum = store_thm(
+  "nsum2n_n2nsum[simp]",
+  ``nsum2n (n2nsum n) = n``,
+  rw[n2nsum_def, odd_lemma]);
+
+val s2ssum_def = Define`
+  s2ssum s = (n2s ++ n2s) (n2nsum (s2n s))
+`;
+
+val ssum2s_def = Define`
+  ssum2s sm = n2s (nsum2n ((s2n ++ s2n) sm))
+`;
+
+val sumpp_compose = prove(
+  ``(f ++ g) ((a ++ b) x) = ((f o a) ++ (g o b)) x``,
+  Cases_on `x` >> simp[]);
+
+val sumpp_I = prove(
+  ``((\x. x) ++ (\x. x)) y = y``,
+  Cases_on `y` >> simp[]);
+
+val s2ssum_ssum2s = store_thm(
+  "s2ssum_ssum2s[simp]",
+  ``s2ssum (ssum2s sm) = sm``,
+  simp[s2ssum_def, ssum2s_def, sumpp_compose, combinTheory.o_DEF, sumpp_I]);
+
+val ssum2s_s2ssum = store_thm(
+  "ssum2s_s2ssum[simp]",
+  ``ssum2s (s2ssum s) = s``,
+  simp[s2ssum_def, ssum2s_def, sumpp_compose, combinTheory.o_DEF, sumpp_I]);
 
 
 val _ = export_theory()

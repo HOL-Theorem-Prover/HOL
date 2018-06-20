@@ -217,7 +217,7 @@ val FACTOR_MOD_POLY = store_thm
    ++ POP_ASSUM (ONCE_REWRITE_TAC o wrap o SYM)
    ++ Know `a < x + p` >> DECIDE_TAC
    ++ S_TAC
-   ++ Q.PAT_ASSUM `x = y` K_TAC
+   ++ Q.PAT_X_ASSUM `_ = _` K_TAC
    ++ R_TAC [FACTOR_POLY]
    ++ MATCH_MP_TAC EVAL_MOD_EQ
    ++ R_TAC []);
@@ -245,10 +245,10 @@ val MOD_POLY_ROOTS = store_thm
    ++ S_TAC
    ++ Know `~(eval_poly g x MOD p = 0)`
    >> (S_TAC
-       ++ Q.PAT_ASSUM `!x. P x = Q x` (MP_TAC o Q.SPEC `x`)
+       ++ Q.PAT_X_ASSUM `!x. P x = Q x` (MP_TAC o Q.SPEC `x`)
        ++ R_TAC [])
    ++ S_TAC
-   ++ Q.PAT_ASSUM `!m. P m ==> Q m` (MP_TAC o Q.SPEC `LENGTH (g : num list)`)
+   ++ Q.PAT_X_ASSUM `!m. P m ==> Q m` (MP_TAC o Q.SPEC `LENGTH (g : num list)`)
    ++ ASM_REWRITE_TAC []
    ++ DISCH_THEN (MP_TAC o Q.SPEC `g`)
    ++ REWRITE_TAC []

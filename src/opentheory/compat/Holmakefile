@@ -1,0 +1,25 @@
+boolpkg=bool-1.37
+functionpkg=function-1.55
+relationpkg=relation-1.61
+setpkg=set-1.72
+
+all: HOL4bool.ot.art\
+	HOL4combin.ot.art\
+	$(HOLDIR)/src/HolSat/sat.ot.art\
+	$(HOLDIR)/src/combin/combin.ot.art\
+	$(HOLDIR)/src/relation/relation.ot.art
+.PHONY: all
+
+OpenTheoryBoolScript.sml: $(boolpkg).art
+OpenTheoryFunctionScript.sml: $(functionpkg).art
+OpenTheoryRelationScript.sml: $(relationpkg).art
+OpenTheorySetScript.sml: $(setpkg).art
+
+$(boolpkg).art:
+	opentheory info --theorems -o $@ $(boolpkg)
+$(functionpkg).art:
+	opentheory info --theorems -o $@ $(functionpkg)
+$(relationpkg).art:
+	opentheory info --theorems -o $@ $(relationpkg)
+$(setpkg).art:
+	opentheory info --theorems -o $@ $(setpkg)

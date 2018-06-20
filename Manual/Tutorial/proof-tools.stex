@@ -648,7 +648,7 @@ Once inputs get even a little beyond the clearly trivial, the function
 we have written (at the top-level, \ml{DPLL\_UNIV}) performs considerably
 better than the truth table implementation.  For example, the
 generalisation of the following term, with 29 variables, takes
-our function between three and four seconds to demonstrate as a tautology:
+our function multiple seconds to demonstrate as a tautology:
 \begin{hol}
 \begin{alltt}
 ##eval val t0 = ``
@@ -678,7 +678,7 @@ our function between three and four seconds to demonstrate as a tautology:
 >> val _ = time tautLib.TAUT_PROVE t;
 \end{alltt}
 \end{hol}
-(If you want real speed, the built-in function \ml{tautLib.TAUT\_PROVE} does the above in less than a hundredth of a second, by using  an external tool to generate the proof of unsatisfiability, and then translating that proof back into HOL.)
+(As is apparent from the above, if you want real speed, the built-in \ml{TAUT\_PROVE} function works in less than a hundredth of a second, by using  an external tool to generate the proof of unsatisfiability, and then translating that proof back into HOL.)
 
 \section{Extending our Procedure's Applicability}
 \label{sec:dpll-applicability-extension}

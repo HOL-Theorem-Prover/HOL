@@ -1,11 +1,12 @@
 signature Lib =
 sig
    datatype 'a delta = SAME | DIFF of 'a
-   datatype frag = datatype Portable.frag
+   datatype frag = datatype HOLPP.frag
    datatype ('a, 'b) verdict = PASS of 'a | FAIL of 'b
    type 'a cmp = 'a * 'a -> order
    type ('a, 'b) istream
    type ('a, 'b) subst = {redex: 'a, residue: 'b} list
+   type 'a set = 'a HOLset.set
    val ## : ('a -> 'b) * ('c -> 'd) -> 'a * 'c -> 'b * 'd
    val ?> : ('a, 'c)verdict * ('a -> ('b, 'c)verdict) -> ('b, 'c)verdict
    val |-> : ('a * 'b) -> {redex: 'a, residue: 'b}
@@ -16,6 +17,11 @@ sig
    val S : ('a -> 'b -> 'c) -> ('a -> 'b) -> 'a -> 'c
    val U : ''a list list -> ''a list
    val W : ('a -> 'a -> 'b) -> 'a -> 'b
+   val IN : 'a * 'a set -> bool
+   val Un : 'a set * 'a set -> 'a set
+   val Isct : 'a set * 'a set -> 'a set
+   val -- : 'a set * 'a set -> 'a set
+
    val all2 : ('a -> 'b -> bool) -> 'a list -> 'b list -> bool
    val all : ('a -> bool) -> 'a list -> bool
    val apfst : ('a -> 'b) -> 'a * 'c -> 'b * 'c
@@ -37,6 +43,7 @@ sig
    val curry : ('a * 'b -> 'c) -> 'a -> 'b -> 'c
    val deinitcomment : string -> string
    val deinitcommentss : substring -> substring
+   val delete_trailing_wspace : string -> string
    val delta_apply : ('a -> 'a delta) -> 'a -> 'a
    val delta_map : ('a -> 'a delta) -> 'a list -> 'a list delta
    val delta_pair :
@@ -91,19 +98,22 @@ sig
    val next : ('a, 'b) istream -> ('a, 'b) istream
    val null_intersection : ''a list -> ''a list -> bool
    val op_U : ('a -> 'a -> bool) -> 'a list list -> 'a list
+   val op_assoc : ('a -> 'a -> bool) -> 'a -> ('a * 'b) list -> 'b
+   val op_assoc1 : ('a -> 'a -> bool) -> 'a -> ('a * 'b) list -> 'b option
    val op_insert : ('a -> 'a -> bool) -> 'a -> 'a list -> 'a list
    val op_intersect : ('a -> 'a -> bool) -> 'a list -> 'a list -> 'a list
    val op_mem : ('a -> 'a -> bool) -> 'a -> 'a list -> bool
    val op_mk_set : ('a -> 'a -> bool) -> 'a list -> 'a list
    val op_set_diff : ('a -> 'a -> bool) -> 'a list -> 'a list -> 'a list
    val op_union : ('a -> 'a -> bool) -> 'a list -> 'a list -> 'a list
+   val option_compare : 'a cmp -> 'a option cmp
    val pair : 'a -> 'b -> 'a * 'b
    val pair_compare : ('a cmp * 'b cmp) -> ('a * 'b) cmp
    val pair_of_list : 'a list -> 'a * 'a
    val partial : exn -> ('a -> 'b option) -> 'a -> 'b
    val partition : ('a -> bool) -> 'a list -> 'a list * 'a list
    val pluck : ('a -> bool) -> 'a list -> 'a * 'a list
-   val ppstring : (HOLPP.ppstream -> 'a -> unit) -> 'a -> string
+   val ppstring : ('a -> HOLPP.pretty) -> 'a -> string
    val prime : string -> string
    val quadruple : 'a -> 'b -> 'c -> 'd -> 'a * 'b * 'c * 'd
    val quadruple_of_list : 'a list -> 'a * 'a * 'a * 'a
@@ -135,6 +145,7 @@ sig
    val subtract : ''a list -> ''a list -> ''a list
    val swap : 'a * 'b -> 'b * 'a
    val time : ('a -> 'b) -> 'a -> 'b
+   val time_to_string : Time.time -> string
    val topsort : ('a -> 'a -> bool) -> 'a list -> 'a list
    val total : ('a -> 'b) -> 'a -> 'b option
    val triple : 'a -> 'b -> 'c -> 'a * 'b * 'c

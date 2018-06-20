@@ -420,7 +420,7 @@ val lam_aeq_thm = store_thm(
             `v1 ∈ fvl (ptpml [(v1,z)] t1)` by metis_tac [aeq_fv] THEN
             fsrw_tac [][ptpm_fv, pmact_IN, ptpml_listpm]) >>
     fsrw_tac [][aeql_ptpm_eqn] >>
-    Q.PAT_ASSUM `aeql X (ptpml PPI Y)` MP_TAC THEN
+    Q.PAT_X_ASSUM `aeql X (ptpml PPI Y)` MP_TAC THEN
     SRW_TAC [][swapstr_def, Once ptpml_sing_to_back'] THEN
     MATCH_MP_TAC (MP_CANON (CONJUNCT2 aeq_trans)) THEN
     Q.EXISTS_TAC `ptpml [(v1,v2)] (ptpml [(v1,z)] t2)`  THEN
@@ -868,7 +868,7 @@ val (tmrec_def, tmrec_ind) = Defn.tprove(
   qspec_then `t` FULL_STRUCT_CASES_TAC gterm_cases >>
   fsrw_tac [][some_4_F,gterm_distinct] >>
   fsrw_tac [][GLAM_eq_thm] >>
-  qpat_assum `X = SOME Y` mp_tac >>
+  qpat_x_assum `X = SOME Y` mp_tac >>
   DEEP_INTRO_TAC optionTheory.some_intro >>
   simp_tac (srw_ss()) [pairTheory.EXISTS_PROD, pairTheory.FORALL_PROD] >>
   srw_tac [][gtmsize_thm] >>
@@ -996,7 +996,7 @@ fun ih_commute_tac dir (asl,w) =
          else NO_TAC) (asl,w)
 
 fun sidecond_tac dir =
-  qpat_assum `sidecond AA BB CC DD EE FF GG`
+  qpat_x_assum `sidecond AA BB CC DD EE FF GG`
      (fn th => th |> SIMP_RULE (srw_ss()) [sidecond_def] |> CONJUNCTS
                   |> last |> (fn th' => assume_tac th >> assume_tac th')) >>
   (fn (asl,w) =>
@@ -1052,7 +1052,7 @@ strip_tac >>
 asm_simp_tac (srw_ss()++DNF_ss) [gtpm_thm,IN_GFVl,GFV_thm] >>
 map_every qx_gen_tac [`x`, `y`] >>
 strip_tac >>
-qpat_assum `tmrec A ppm vf lf (GLAM X Y Z WW) p = XX` (K ALL_TAC) >>
+qpat_x_assum `tmrec A ppm vf lf (GLAM X Y Z WW) p = XX` (K ALL_TAC) >>
 srw_tac [][tmrec_GLAM] >>
 DEEP_INTRO_TAC optionTheory.some_intro >>
 asm_simp_tac (srw_ss()++ETA_ss) [pairTheory.FORALL_PROD] >>
@@ -1111,11 +1111,11 @@ srw_tac [][] >>
 rpt VAR_EQ_TAC >>
 sidecond_tac lhs >>
 disch_then (fn th => asm_simp_tac (srw_ss()) [th]) >>
-qpat_assum `GLAM (swapstr x y s') bv Z1 Z2 = Z3` mp_tac >>
+qpat_x_assum `GLAM (swapstr x y s') bv Z1 Z2 = Z3` mp_tac >>
 srw_tac [][GLAM_eq_thm] >>
 qabbrev_tac `u = swapstr x y s'` >>
 fsrw_tac [][gtpml_eqr] >>
-qpat_assum `XX = ts''` (SUBST_ALL_TAC o SYM) >>
+qpat_x_assum `XX = ts''` (SUBST_ALL_TAC o SYM) >>
 `u ∉ A` by srw_tac [][Abbr`u`,swapstr_def] >>
 `u ∉ supp ppm (pmact ppm [(x,y)] p)` by srw_tac [][Abbr`u`,perm_supp] >>
 `s'' ∉ supp (list_pmact gt_pmact) (gtpml [(x,y)] us) ∧
@@ -1149,7 +1149,7 @@ qabbrev_tac `xyus = gtpml [(x,y)] us` >>
        ntac 2 (pop_assum (qspecl_then [`u`, `s''`] mp_tac)) >>
        asm_simp_tac (srw_ss()) [listpm_tMAP] >>
        rpt (disch_then assume_tac) >>
-       qpat_assum `LIST_REL RR (FF (GG ts')) (MAP FFF XX)` mp_tac >>
+       qpat_x_assum `LIST_REL _ (_ (_ ts')) (MAP _ _)` mp_tac >>
        qmatch_abbrev_tac
         `LIST_REL RR TS (MAP f1 TS) ==> LIST_REL RR TS (MAP f2 TS)` >>
        qsuff_tac `MAP f1 TS = MAP f2 TS` >- srw_tac [][] >>

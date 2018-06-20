@@ -1,6 +1,6 @@
 \DOC genvar
 
-\TYPE {genvar : type -> term}
+\TYPE {genvar : hol_type -> term}
 
 \SYNOPSIS
 Returns a variable whose name has not been used previously.

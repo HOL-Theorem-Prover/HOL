@@ -23,6 +23,9 @@ fun (f /\ g) x = f x andalso g x;
 
 open ParseDoc
 
+fun die s = (TextIO.output(TextIO.stdErr, s ^ "\n");
+             OS.Process.exit OS.Process.failure)
+
 fun txt_helper #"<" = SOME "&lt;"
   | txt_helper #">" = SOME "&gt;"
   | txt_helper #"&" = SOME "&amp;"
@@ -180,7 +183,7 @@ fun trans htmldir docdir docname = let
 in
     html (docname, parse_file docfile) ostrm
   ; TextIO.closeOut ostrm
-end
+end handle e => die ("Exception raised: " ^ General.exnMessage e)
 
 fun docdir_to_htmldir docdir htmldir =
  let open OS.FileSys

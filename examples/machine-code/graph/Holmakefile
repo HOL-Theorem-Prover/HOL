@@ -31,5 +31,13 @@ DEPS = $(patsubst %,%.uo,$(BARE_THYS))
 
 $(HOLHEAP): $(DEPS)
 	$(protect $(HOLDIR)/bin/buildheap) -o $(HOLHEAP) $(BARE_THYS)
+endif
 
+ifeq ($(KERNELID),otknl)
+all: machine-code-straightline-unint.art
+
+machine-code-straightline-unint.art: machine-code-straightline-unint.thy straightline.ot.art GraphLang.ot.art
+	opentheory info --article -o $@ $<
+
+GraphLang.art: GraphLang.otd
 endif

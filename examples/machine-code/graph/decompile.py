@@ -30,6 +30,9 @@ import io
 import sys
 import os
 
+def printn(str):
+    sys.stdout.write(str)
+
 def call_input_output(args,input_str,output_file):
   with open('.input.txt',"w") as input:
     input.write(input_str)
@@ -38,7 +41,7 @@ def call_input_output(args,input_str,output_file):
     try:
       ret = subprocess.call(args, stdin=input, stdout=out, stderr=out, universal_newlines=True, shell=True)
     except KeyboardInterrupt:
-      print '\nInterrupted'
+      print('\nInterrupted')
       exit(1)
     return ret
 
@@ -46,7 +49,7 @@ elf = os.path.abspath(args.filename)
 output_file = os.path.abspath(args.filename + '_output.txt')
 
 ml_input = """
-use "writerLib"; load "decompileLib";
+load "decompileLib";
 val _ = decompileLib.decomp "{0}" {1} "{2}";
 """
 
@@ -56,36 +59,36 @@ decompiler_dir = os.path.dirname(sys.argv[0])
 if decompiler_dir:
   os.chdir(decompiler_dir)
 
-print "Building dependancies ...",
+printn("Building dependencies ...")
 sys.stdout.flush()
 ret = call_input_output('Holmake','','hol_output.txt')
 if ret != 0:
-  print "failed!"
-  print "Holmake failed, abandoning."
-  print "Short failure summary:"
+  print("failed!")
+  print("Holmake failed, abandoning.")
+  print("Short failure summary:")
   outp = os.path.abspath('hol_output.txt')
   last_lines = list (open (outp))[-20:]
   for l in ['\n'] + last_lines + ['\n']:
-    print l,
-  print "(more error information in %s )." % outp
+    printn(l)
+  print("(more error information in %s )." % outp)
   exit(1)
-print "done."
+print("done.")
 sys.stdout.flush()
 
-print "Decompiling {0} ... (output in {1})".format(elf,output_file),
+printn("Decompiling {0} ... (output in {1})".format(elf,output_file))
 sys.stdout.flush()
-call_input_output('./local-hol-heap',ml_input,output_file)
+call_input_output('hol',ml_input,output_file)
 last_lines = list (open (output_file))[-20:]
 summaries = [i for (i, l) in enumerate (last_lines) if l.strip() == 'Summary']
 if not summaries:
-  print "failed!"
-  print
-  print "Short failure summary:"
+  print("failed!")
+  print()
+  print("Short failure summary:")
   for l in ['\n'] + last_lines + ['\n']:
-    print l,
-  print "(more information in %s )" % output_file
+    printn(l)
+  print("(more information in %s )" % output_file)
   exit(1)
-print "done."
+print("done.")
 for l in [''] + last_lines[summaries[-1]:]:
-  print l,
+  printn(l)
 sys.stdout.flush()

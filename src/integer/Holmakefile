@@ -1,0 +1,17 @@
+THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
+TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
+
+all: $(TARGETS)
+
+ifeq ($(KERNELID),otknl)
+ARTFILES = $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
+all: $(ARTFILES)
+
+DeepSyntax.art: DeepSyntax.otd
+
+hol4-integer-unint.art: hol4-integer-unint.thy $(ARTFILES)
+	opentheory info --article -o $@ $<
+
+hol4-integer.art: hol4-integer.thy hol4-integer-unint.art ../opentheory/hol4.int
+	opentheory info --article -o $@ $<
+endif

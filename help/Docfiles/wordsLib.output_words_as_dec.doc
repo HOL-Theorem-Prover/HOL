@@ -1,6 +1,6 @@
 \DOC
 
-\TYPE {output_words_as_gec : unit -> unit}
+\TYPE {output_words_as_dec : unit -> unit}
 
 \SYNOPSIS
 

@@ -41,6 +41,7 @@ open HolKernel boolSyntax Abbrev;
 
 val ERR = mk_HOL_ERR "EmitML";
 val WARN = HOL_WARNING "EmitML";
+val type_grammar = Parse.type_grammar
 
 (*---------------------------------------------------------------------------*)
 (* All ref cells.                                                            *)
@@ -249,17 +250,33 @@ fun generic_type_of tm =
         end
    else type_of tm;
 
+
+fun is_supported_PMATCH tm = let
+  val pmi = patternMatchesLib.analyse_pmatch false tm
+in
+  if !emitOcaml then patternMatchesLib.is_ocaml_pmatch pmi
+                else patternMatchesLib.is_sml_pmatch pmi
+end
+
+fun strip_supported_PMATCH tm = let
+  val (i, rows) = patternMatchesSyntax.dest_PMATCH tm
+  fun dest_r r = let
+     val (_, p, g, r) = patternMatchesSyntax.dest_PMATCH_ROW_ABS r
+  in (p, r, g) end
+in
+  (i, List.map dest_r rows)
+end
+
+
 (*---------------------------------------------------------------------------*)
 (* A prettyprinter from HOL to very simple ML, dealing with basic paired     *)
 (* lambda calculus terms, plus literals (strings, nums, ints), notation for  *)
 (* lists, and case expressions.                                              *)
 (*---------------------------------------------------------------------------*)
-
-fun term_to_ML openthys side ppstrm =
- let open Portable
-     val {add_break,add_newline,
-          add_string,begin_block,end_block,...} = with_ppstream ppstrm
-     fun prec_paren p i j = if i >= j then add_string p else ()
+val B = smpp.block PP.CONSISTENT
+fun term_to_ML openthys side =
+ let open Portable PP smpp
+     fun prec_paren p i j = if i >= j then add_string p else nothing
      val lparen = prec_paren "("
      val rparen = prec_paren ")"
      val const_map = const_map openthys
@@ -284,6 +301,8 @@ fun term_to_ML openthys side ppstrm =
      if combinSyntax.is_fail tm then pp_fail i tm else
      if oneSyntax.is_one tm  then pp_one tm else
      if TypeBase.is_record tm then pp_record i (TypeBase.dest_record tm) else
+     if is_supported_PMATCH tm then
+        pp_case_with_guard i (strip_supported_PMATCH tm) else
      if TypeBase.is_case tm then pp_case i (TypeBase.strip_case tm) else
      if is_the_value tm then pp_itself tm else
      if is_const tm then pp_const i tm else
@@ -293,25 +312,22 @@ fun term_to_ML openthys side ppstrm =
   and pp_cond i tm = let
     val (b,a1,a2) = dest_cond tm
     val parens = i >= (if !emitOcaml then minprec else 70)
-    fun conddo b f = if b then f() else ()
+    fun doparens p = if parens then B 1 (add_string "(" >> p >> add_string ")")
+                     else p
   in
-    conddo parens (fn () => (add_string "("; begin_block CONSISTENT 0));
-      begin_block CONSISTENT 0;
-        add_string"if";
-        add_break(1,2);
-        begin_block INCONSISTENT 0; pp 70 b; end_block();
-        add_break(1,0);
-        add_string"then";
-      end_block();
-      add_break(1,2);
-      begin_block INCONSISTENT 0; pp 70 a1; end_block();
-      add_break(1,0);
-      begin_block CONSISTENT 0;
-        add_string"else";
-        add_break(1,2);
-        pp minprec a2;
-      end_block();
-    conddo parens (fn () => (end_block(); add_string ")"))
+    doparens (
+      B 0 (
+        add_string"if" >>
+        add_break(1,2) >>
+        block PP.INCONSISTENT 0 (pp 70 b) >>
+        add_break(1,0) >>
+        add_string"then"
+      ) >>
+      add_break(1,2) >>
+      block INCONSISTENT 0 (pp 70 a1) >>
+      add_break(1,0) >>
+      B 0(add_string"else" >> add_break(1,2) >> pp minprec a2)
+    )
   end
   and pp_num_from_string s =
         if s="0" then
@@ -321,14 +337,14 @@ fun term_to_ML openthys side ppstrm =
         else if s="2" then
           add_string (pick_name openthys "num" (fix "TWO",numML ^ fix "TWO"))
         else
-          (begin_block INCONSISTENT 0
-         ; add_string"("
-         ; add_string (pick_name openthys "num"
-                         ("fromString ", numML ^ "fromString "))
-         ; add_break(0,0)
-         ; add_string (quote s)
-         ; add_string")"
-         ; end_block())
+          block INCONSISTENT 0 (
+             add_string"(" >>
+             add_string (pick_name openthys "num"
+                                   ("fromString ", numML ^ "fromString ")) >>
+             add_break(0,0) >>
+             add_string (quote s) >>
+             add_string")"
+          )
   and pp_num_literal i tm =
       (*------------------------------------------------------------*)
       (* Numeric literals can be built from strings or constructors *)
@@ -344,188 +360,181 @@ fun term_to_ML openthys side ppstrm =
       end
   and pp_int_literal tm =
          let val s = Arbint.toString(!int_of_term_hook tm)
-         in begin_block CONSISTENT 0
-          ; add_string"("; add_break(0,0)
-          ; add_string (pick_name openthys "int"
-              ("fromString", intML ^ "fromString"))
-          ; add_break(0,0)
-          ; add_string (mlquote s)
-          ; add_break(0,0)
-          ; add_string")"
-          ; end_block()
+         in B 0 (
+             add_string"(" >> add_break(0,0) >>
+             add_string (pick_name openthys "int"
+                                   ("fromString", intML ^ "fromString")) >>
+             add_break(0,0) >>
+             add_string (mlquote s) >>
+             add_break(0,0) >>
+             add_string")"
+           )
          end
   and pp_string tm = add_string (mlquote (Literal.relaxed_dest_string_lit tm))
   and pp_list tm =
        let val els = fst (listSyntax.dest_list tm)
-       in begin_block CONSISTENT 0
-        ; add_string "["
-        ; begin_block INCONSISTENT 0
-        ; pr_list (pp minprec)
-                  (fn () => add_string (if !emitOcaml then ";" else ","))
-                  (fn () => add_break(0,0)) els
-        ; end_block()
-        ; add_string "]"
-        ; end_block()
+       in B 0 (
+            add_string "[" >>
+            block INCONSISTENT 0 (
+              pr_list (pp minprec)
+                  (add_string (if !emitOcaml then ";" else ",") >>
+                   add_break(0,0))
+                  els
+            ) >>
+          add_string "]"
+         )
        end
   and pp_binop i tm =
       let val (c,t1,t2) = case strip_comb tm
                           of (c,[t1,t2]) => (c,t1,t2)
                            | _ => raise ERR "term_to_ML" ""
           val j = prec_of c
-      in begin_block CONSISTENT 0
-        ; lparen i j
-        ; begin_block INCONSISTENT 0
-        ; pp (j+1) t1
-        ; add_break(1,0)
-        ; add_string (const_map c)
-        ; add_break(1,0)
-        ; pp j t2
-        ; end_block()
-        ; rparen i j
-        ; end_block()
+      in B 0 (
+           lparen i j >>
+           block INCONSISTENT 0 (
+             pp (j+1) t1 >> add_break(1,0) >>
+             add_string (const_map c) >> add_break(1,0) >>
+             pp j t2
+           ) >>
+           rparen i j
+        )
       end
   and pp_cons i tm =
       let val alist = strip_cons tm
           val j = CONS_PREC
-      in begin_block CONSISTENT 0
-        ; lparen i j
-        ; begin_block INCONSISTENT 0
-        ; pr_list (pp j)
-                  (fn () => add_string "::")
-                  (fn () => add_break(0,0)) alist
-        ; end_block()
-        ; rparen i j
-        ; end_block()
+      in B 0 (
+          lparen i j >>
+          block INCONSISTENT 0 (
+            pr_list (pp j)
+                    (add_string "::" >> add_break(0,0)) alist
+          ) >>
+          rparen i j
+        )
       end
   and pp_mem i (t1, t2) =
-      let
-      in
-        begin_block INCONSISTENT 0
-      ; lparen i maxprec
-      ; add_string (full_name openthys (false,"list","MEM",bool))
-      ; add_break(1,0)
-      ; pr_list (pp maxprec) (fn () => add_break(1,0)) (fn () => ()) [t1, t2]
-      ; rparen i maxprec
-      ; end_block()
-      end
+        block INCONSISTENT 0 (
+          lparen i maxprec >>
+          add_string (full_name openthys (false,"list","MEM",bool)) >>
+          add_break(1,0) >>
+          pr_list (pp maxprec) (add_break(1,0)) [t1, t2] >>
+          rparen i maxprec
+        )
   and pp_pair i tm =
       let val (t1,t2) = pairSyntax.dest_pair tm
           val j = COMMA_PREC
-      in begin_block INCONSISTENT 0
-        ; lparen maxprec i
-        ; begin_block INCONSISTENT 0
-        ; pp (j+1) t1
-        ; add_string ","
-        ; add_break(0,0)
-        ; pp j t2
-        ; end_block()
-        ; rparen maxprec i
-        ; end_block()
+      in block INCONSISTENT 0 (
+           lparen maxprec i >>
+           block INCONSISTENT 0 (
+             pp (j+1) t1 >>
+             add_string "," >> add_break(0,0) >>
+             pp j t2
+           ) >>
+           rparen maxprec i
+        )
       end
   and pp_lets i tm = (* a sequence of lets *)
       let val (blists,body) = pairSyntax.strip_anylet tm
           fun pp_binding (k,(l,r)) =
-               (begin_block INCONSISTENT 4;
-                add_string k; add_break(1,0);
-                pp minprec l; add_break(1,0);
-                add_string "="; add_break(1,0);
-                begin_block CONSISTENT 0;
-                pp minprec r; end_block();
-                end_block())
-      in  begin_block CONSISTENT 0
-        ; if !emitOcaml then
-           (let
+            block INCONSISTENT 4 (
+              add_string k >> add_break(1,0) >>
+              pp minprec l >>add_break(1,0) >>
+              add_string "=" >> add_break(1,0) >>
+              B 0 (pp minprec r)
+            )
+      in  B 0 (
+          if !emitOcaml then
+            let
               fun keyword [] = raise ERR "term_to_ML" "pp_lets"
                 | keyword l = ("let", hd l) :: (map (pair "and") (tl l))
               val blist' = map keyword blists
               fun droplast [] = []
                 | droplast l = List.take(l, length l - 1)
             in
-                lparen i minprec
-              ; begin_block CONSISTENT 0
-              ; app (fn l => (pr_list pp_binding (fn()=>()) add_newline l;
-                     add_break(1,0); add_string "in"; add_break(1,0)))
-                    (droplast blist')
-              ; pr_list pp_binding (fn()=>()) add_newline (last blist')
-              ; add_break(1,0)
-              ; add_string "in"
-              ; add_break(1,3)
-              ; pp minprec body
-              ; end_block()
-              ; rparen i minprec
-            end)
+                lparen i minprec >>
+                B 0 (
+                  mapp (fn l =>
+                           pr_list pp_binding add_newline l >>
+                           add_break(1,0) >> add_string "in" >> add_break(1,0))
+                       (droplast blist') >>
+                  pr_list pp_binding add_newline (last blist') >>
+                  add_break(1,0) >>
+                  add_string "in" >> add_break(1,3) >>
+                  pp minprec body
+                ) >>
+                rparen i minprec
+            end
           else
-           (let
+            let
               fun keyword1 (l,r) = (if is_fn_app l then "fun" else "val", (l,r))
               fun keyword [] = raise ERR "term_to_ML" "pp_lets"
                 | keyword l = map keyword1 l
               val blist' = flatten (map keyword blists)
             in
-                lparen i 5000
-              ; begin_block CONSISTENT 0
-              ; add_string "let "
-              ; begin_block CONSISTENT 0
-              ;   pr_list pp_binding (fn()=>()) add_newline blist'
-              ;    end_block()
-              ; add_break(1,0)
-              ; add_string"in"
-              ; add_break(1,3)
-              ; pp minprec body
-              ; add_break(1,0)
-              ; add_string "end"
-              ; end_block()
-              ; rparen i 5000
-            end)
-        ; end_block()
+                lparen i 5000 >>
+                B 0 (
+                  add_string "let " >>
+                  B 0 (pr_list pp_binding add_newline blist') >>
+                  add_break(1,0) >> add_string"in" >>
+                  add_break(1,3) >> pp minprec body >>
+                  add_break(1,0) >> add_string "end"
+                ) >>
+                rparen i 5000
+            end
+        )
       end
   and pp_case i (a,cases) =
-      ( begin_block CONSISTENT 1
+    pp_case_with_guard i
+      (a, List.map (fn (pat, rhs) => (pat, rhs, T)) cases)
+  and pp_case_with_guard i (a,cases) =
+      B 1 (
                    (* from HOL term grammar *)
-        ; lparen i (if !emitOcaml then minprec else 7)
-        ; begin_block INCONSISTENT 2
-        ; add_string (if !emitOcaml then "match" else "case")
-        ; add_break(1,0)
-        ; pp minprec a
-        ; end_block()
-        ; add_break(1,0)
-        ; begin_block CONSISTENT 1
-        ; add_string (if !emitOcaml then "with " else "of ")
-        ; pp_case_clause (hd cases)
-        ; add_break(1,0)
-        ; pr_list (fn cl => (add_string "| "; pp_case_clause cl))
-                  (fn () => ())
-                  (fn () => add_break(1,0)) (tl cases)
-        ; end_block()
-        ; rparen i (if !emitOcaml then minprec else 7)
-        ; end_block())
-  and pp_case_clause (pat,rhs) =
-        (begin_block CONSISTENT 3
-         ; pp minprec pat
-         ; add_string (if !emitOcaml then " ->" else " =>")
-         ; add_break (1,0)
-         ; pp 7 rhs
-         ; end_block()
-        )
+       lparen i (if !emitOcaml then minprec else 7) >>
+       block INCONSISTENT 2 (
+         add_string (if !emitOcaml then "match" else "case") >>
+         add_break(1,0) >>
+         pp minprec a
+       ) >> add_break(1,0) >>
+       block CONSISTENT 1 (
+          add_string (if !emitOcaml then "with " else "of ") >>
+          pp_case_clause (hd cases) >>
+          add_break(1,0) >>
+          pr_list (fn cl => (add_string "| " >> pp_case_clause cl))
+                  (add_break(1,0)) (tl cases)
+       ) >>
+       rparen i (if !emitOcaml then minprec else 7)
+      )
+  and pp_case_clause (pat,rhs,guard) =
+     B 3 (
+       pp minprec pat >>
+       (if (aconv guard T) then nothing
+        else
+             (* guards only occur for Ocaml *)
+             add_string (" when") >> add_break (1,0) >> pp 7 guard) >>
+       add_string (if !emitOcaml then " ->" else " =>") >>
+       add_break (1,0) >>
+       pp 7 rhs
+     )
   and pp_record i (ty,flds) =
        pp_open_comb i (hd(TypeBase.constructors_of ty), map snd flds)
   and pp_fail i tm =
        let val (f,s,args) = combinSyntax.dest_fail tm
            val fname = fst(dest_const f)
-       in begin_block CONSISTENT 3
-         ; add_string "raise ("
-         ; add_string (if !emitOcaml then "Failure" else "Fail")
-         ; add_break (1,0)
-         ; add_string (Lib.quote (fname^": "^s)^")")
-         ; end_block()
+       in
+         block CONSISTENT 3 (
+            add_string "raise (" >>
+            add_string (if !emitOcaml then "Failure" else "Fail") >>
+            add_break (1,0) >>
+            add_string (Lib.quote (fname^": "^s)^")")
+         )
        end
   and pp_arb i =
-      (lparen i maxprec
-       ; begin_block CONSISTENT 3
-       ; add_string
+      lparen i maxprec >>
+      B 3 (
+       add_string
            (if !emitOcaml then "raise (Failure \"ARB\")"
                           else "raise Fail \"ARB\"")
-       ; end_block()
-       ; rparen i maxprec)
+      ) >>
+      rparen i maxprec
   and pp_itself tm =
     let fun skip1 s = String.extract(s, 1, NONE)
         fun num_type typ =
@@ -536,14 +545,14 @@ fun term_to_ML openthys side ppstrm =
                 type_pp.pp_num_types := pp_n
               end
         fun itself x =
-               (begin_block INCONSISTENT 2
-              ; add_string "("
-              ; add_string
-                  (pick_name openthys "fcp" ("ITSELF", fcpML ^ "ITSELF"))
-              ; add_break (1,0)
-              ; pp_num_from_string x
-              ; add_string ")"
-              ; end_block())
+          block INCONSISTENT 2 (
+            add_string "(" >>
+            add_string
+              (pick_name openthys "fcp" ("ITSELF", fcpML ^ "ITSELF")) >>
+            add_break (1,0) >>
+            pp_num_from_string x >>
+            add_string ")"
+          )
         fun pp_itself_type typ =
          if is_vartype typ then
            add_string (skip1 (dest_vartype typ))
@@ -558,31 +567,35 @@ fun term_to_ML openthys side ppstrm =
            | ("bit1", [a]) => itself (num_type typ)
            | ("string", []) => itself "1"
            | (tyop, [a, b]) =>
-              (begin_block INCONSISTENT 0
-               ; add_string ("(" ^
-                  pick_name openthys "fcp"
-                   (case tyop of
-                      "sum"  => (fix "SUMi", fcpML ^ fix "SUMi")
-                    | "prod" => (fix "MULi", fcpML ^ fix "MULi")
-                    | "cart" => (fix "EXPi", fcpML ^ fix "EXPi")
-                    | _ => raise ERR "term_to_ML" "pp_itself") ^ "(")
-               ; begin_block INCONSISTENT 0
-               ; pp_itself_type a
-               ; add_string ", "
-               ; add_break (0,0)
-               ; pp_itself_type b
-               ; end_block()
-               ; add_string "))"
-               ; end_block())
+                block INCONSISTENT 0 (
+                  add_string (
+                    "(" ^
+                    pick_name openthys "fcp"
+                              (case tyop of
+                                   "sum"  => (fix "SUMi", fcpML ^ fix "SUMi")
+                                 | "prod" => (fix "MULi", fcpML ^ fix "MULi")
+                                 | "cart" => (fix "EXPi", fcpML ^ fix "EXPi")
+                                 | _ => raise ERR "term_to_ML" "pp_itself") ^
+                    "(") >>
+                  block INCONSISTENT 0 (
+                    pp_itself_type a >>
+                    add_string ", " >>
+                    add_break (0,0) >>
+                    pp_itself_type b
+                  ) >> add_string "))"
+                )
            | _ => raise ERR "term_to_ML" "pp_itself"
     in
       (pp_itself_type o hd o snd o dest_type o type_of) tm
     end
+
   and pp_var tm = let val s = fst(dest_var tm)
                       val c = String.sub(s,0)
                   in
                     if c = #"^" then
                       add_string (fix_reserved (String.extract(s,1,NONE)))
+                    else if c = #"_" then
+                      add_string "_"
                     else if !emitOcaml andalso Char.isUpper c then
                       add_string ("_" ^ s)
                     else
@@ -601,9 +614,9 @@ fun term_to_ML openthys side ppstrm =
                case Lib.total ConstMapML.apply f of
                    SOME (true,_,nm,_) => SOME nm
                  | _ => NONE
-       in begin_block CONSISTENT 0
-        ; lparen i maxprec
-        ; if TypeBase.is_constructor f andalso isSome constrname
+       in B 0(
+           lparen i maxprec >>
+           (if TypeBase.is_constructor f andalso isSome constrname
                orelse is_fake_constructor f
             then
               let
@@ -612,21 +625,20 @@ fun term_to_ML openthys side ppstrm =
                               | _ => fst(dest_record_vconstr f)
               in
                 (* instead of: pp maxprec f; *)
-                add_string (fix_name ("", true, fname));
-                add_string "(";
-                begin_block INCONSISTENT 0;
-                pr_list (pp minprec)
-                        (fn () => add_string ",")
-                        (fn () => add_break(0,0)) args;
-                end_block();
-                add_string ")"
-              end
-            else (begin_block INCONSISTENT 2;
-                  pr_list (pp maxprec) (fn () => ())
-                          (fn () => add_break(1,0)) (f::args);
-                  end_block())
-        ; rparen i maxprec
-        ; end_block()
+                add_string (fix_name ("", true, fname)) >>
+                add_string "(" >>
+                block INCONSISTENT 1 (
+                  pr_list (pp minprec)
+                          (add_string "," >> add_break(0,0)) args
+                ) >>
+               add_string ")"
+             end
+           else
+             block INCONSISTENT 2 (
+               pr_list (pp maxprec) (add_break(1,0)) (f::args)
+             )) >>
+           rparen i maxprec
+         )
        end
   and pp_comb i tm =
        let val (h,args) = strip_comb tm
@@ -634,12 +646,10 @@ fun term_to_ML openthys side ppstrm =
        in if length argtys < length args
           then let val (app,rst) = split_after (length argtys) args
                in
-                 lparen i maxprec;
-                 pp maxprec (list_mk_comb(h,app));
-                 add_break (1,0);
-                 pr_list (pp maxprec)
-                       (fn () => ())
-                       (fn () => add_break(1,0)) rst;
+                 lparen i maxprec >>
+                 pp maxprec (list_mk_comb(h,app)) >>
+                 add_break (1,0) >>
+                 pr_list (pp maxprec) (add_break(1,0)) rst >>
                  rparen i maxprec
                end
           else pp_open_comb i (h,args)
@@ -647,22 +657,20 @@ fun term_to_ML openthys side ppstrm =
   and pp_abs i tm =
        let val (vstruct,body) = pairSyntax.dest_pabs tm
        in lparen i (if !emitOcaml then minprec else 5000)
-        ; add_string (if !emitOcaml then "function" else "fn")
-        ; add_break (1,0)
-        ; pp 50 vstruct
-        ; add_break (1,0)
-        ; add_string (if !emitOcaml then "->" else "=>")
-        ; add_break (1,0)
-        ; pp minprec body
-        ; rparen i (if !emitOcaml then minprec else 5000)
+          >> add_string (if !emitOcaml then "function" else "fn")
+          >> add_break (1,0)
+          >> pp 50 vstruct
+          >> add_break (1,0)
+          >> add_string (if !emitOcaml then "->" else "=>")
+          >> add_break (1,0)
+          >> pp minprec body
+          >> rparen i (if !emitOcaml then minprec else 5000)
        end
 
- in fn i => fn M =>
-    (begin_block INCONSISTENT 0 ; pp i M ; end_block ())
+ in fn i => fn M => block INCONSISTENT 0 (pp i M)
  end;
 
-fun pp_term_as_ML openthys side ppstrm M =
-    term_to_ML openthys side ppstrm minprec M;
+fun pp_term_as_ML openthys side M = term_to_ML openthys side minprec M;
 
 fun same_fn eq1 eq2 =
   same_const (fst(strip_comb(lhs eq1))) (fst(strip_comb(lhs eq2)));
@@ -676,80 +684,71 @@ fun partitions P [] = []
      case partition (P h) t
       of (L1,L2) => (h::L1) :: partitions P L2;
 
-fun pp_defn_as_ML openthys ppstrm =
- let open Portable
-     val {add_break,add_newline,
-          add_string,begin_block,end_block,...} = with_ppstream ppstrm
-     val toML = fn ppnumlit => term_to_ML openthys ppnumlit ppstrm
+fun pp_defn_as_ML openthys =
+ let open Portable PP smpp
+     val toML = term_to_ML openthys
      fun pp_clause i eq =
          let val (L,R) = dest_eq eq
-         in begin_block INCONSISTENT 2
-          ; toML LEFT minprec L
-          ; add_break(1,0)
-          ; add_string "="
-          ; add_break(1,0)
-          ; toML RIGHT i R
-          ; end_block()
+         in
+           block INCONSISTENT 2 (
+              toML LEFT minprec L >> add_break(1,0) >> add_string "=" >>
+              add_break(1,0) >>
+              toML RIGHT i R
+           )
          end
      fun pp_clauses (s,els) =
        let val s' = if is_fn_app(lhs(hd els)) then s else "val"
-       in  begin_block CONSISTENT 2
-         ; add_string (s'^" ")
-         ; pp_clause (if length els = 1 then minprec else 100) (hd els)
-         ; add_newline()
-         ; case tl els
-            of [] => ()
-             | els' =>
-                 (pr_list (fn c => (add_string "| "; pp_clause 100 c))
-                    (fn () => ())
-                    (fn () => add_newline()) els';
-                  add_newline())
-         ; end_block()
+       in  B 2 (
+             add_string (s'^" ") >>
+             pp_clause (if length els = 1 then minprec else 100) (hd els) >>
+             add_newline >>
+             (case tl els of
+                  [] => nothing
+                | els' =>
+                    pr_list (fn c => (add_string "| " >> pp_clause 100 c))
+                            add_newline els' >>
+                    add_newline)
+         )
        end
      fun pp tm =
        let val eqns = map (snd o strip_forall)
                           (strip_conj (snd (strip_forall tm)))
            val clauses = partitions same_fn eqns (* term list list *)
            val clauses' = ("fun",hd clauses)::map (pair "and") (tl clauses)
-       in begin_block CONSISTENT 0
-        ; pr_list pp_clauses (fn () => ())
-                  (fn () => (add_newline())) clauses'
-        ; end_block()
+       in
+         B 0 (pr_list pp_clauses add_newline clauses')
        end
  in
     pp
  end;
 
-fun pp_defn_as_OCAML openthys ppstrm =
- let open Portable
+fun pp_defn_as_OCAML openthys =
+ let open Portable PP smpp
      val const_map = const_map openthys
-     val {add_break,add_newline,
-          add_string,begin_block,end_block,...} = with_ppstream ppstrm
-     val toML = fn ppnumlit => term_to_ML openthys ppnumlit ppstrm
+     val toML = term_to_ML openthys
      fun pp_clause i eq =
          let val (L,R) = dest_eq eq
-         in begin_block INCONSISTENT 2
-          ; toML LEFT minprec L
-          ; add_break(1,0)
-          ; add_string "="
-          ; add_break(1,0)
-          ; toML RIGHT i R
-          ; end_block()
+         in block INCONSISTENT 2 (
+             toML LEFT minprec L >>
+             add_break(1,0) >>
+             add_string "=" >>
+             add_break(1,0) >>
+             toML RIGHT i R
+           )
          end
      fun pp_pattern i s (L,R) =
-         (begin_block INCONSISTENT 0
-          ; add_string (fix_reserved s)
-          ; begin_block INCONSISTENT 2
-          ; begin_block INCONSISTENT 0
-          ; pr_list (toML LEFT minprec) (fn () => add_string ",")
-              (fn () => add_break(0,0)) L
-          ; end_block()
-          ; add_string " ->"
-          ; add_break(1,0)
-          ; toML RIGHT i R
-          ; end_block()
-          ; add_newline()
-          ; end_block())
+       block INCONSISTENT 0 (
+         add_string (fix_reserved s) >>
+         block INCONSISTENT 2 (
+           block INCONSISTENT 0 (
+             pr_list (toML LEFT minprec) (add_string "," >> add_break(0,0)) L
+           ) >>
+           add_string " ->" >>
+           add_break(1,0) >>
+           toML RIGHT i R
+         ) >>
+         add_newline
+       )
      fun caml_strip_comb t = let
        val (t1, t2) = listSyntax.dest_mem t
      in
@@ -757,39 +756,38 @@ fun pp_defn_as_OCAML openthys ppstrm =
      end handle _ => apfst const_map (strip_comb t)
      fun clauses_to_patterns els = map (((snd o caml_strip_comb)##I) o dest_eq) els
      fun pp_clauses (s,els) =
-         ( begin_block INCONSISTENT 2
-         ; add_string (s^" ")
-         ; if length els = 1 then
-            (pp_clause minprec (hd els); add_newline())
-           else
-             let
-               val (fname, args) = caml_strip_comb (lhs (hd els))
-               val vs = vars_of_types (map type_of args)
-               val pats = clauses_to_patterns els
-             in
-                 add_string fname
-               ; add_break(1,0)
-               ; pr_list (toML LEFT minprec) (fn () => add_break(1,0)) (fn () => ()) vs
-               ; add_break(1,0)
-               ; add_string "="
-               ; add_break(1,0)
-               ; add_string "match "
-               ; begin_block INCONSISTENT 0
-               ; pr_list (toML LEFT minprec) (fn () => add_string ",")
-                   (fn () => add_break(0,0)) vs
-               ; end_block()
-               ; add_string " with"
-               ; add_break(1,0)
-               ; begin_block INCONSISTENT 0
-               ; pp_pattern 100 "  " (hd pats)
-               ; case tl pats
-                   of [] => ()
-                    | pats' =>
-                        pr_list (pp_pattern 100 "| ") (fn () => ())
-                           (fn () => ()) pats'
-               ; end_block()
-             end
-         ; end_block())
+       block INCONSISTENT 2 (
+         add_string (s^" ") >>
+         (if length els = 1 then
+            pp_clause minprec (hd els) >> add_newline
+          else
+            let
+              val (fname, args) = caml_strip_comb (lhs (hd els))
+              val vs = vars_of_types (map type_of args)
+              val pats = clauses_to_patterns els
+            in
+              add_string fname >> add_break(1,0) >>
+              pr_list (toML LEFT minprec) (add_break(1,0)) vs >>
+              add_break(1,0) >>
+              add_string "=" >>
+              add_break(1,0) >>
+              add_string "match " >>
+              block INCONSISTENT 0 (
+                pr_list (toML LEFT minprec)
+                        (add_string "," >> add_break(0,0))
+                        vs
+              ) >>
+              add_string " with" >>
+              add_break(1,0) >>
+              block INCONSISTENT 0 (
+                pp_pattern 100 "  " (hd pats) >>
+                (case tl pats of
+                     [] => nothing
+                   | pats' =>
+                       pr_list (pp_pattern 100 "| ") nothing pats')
+              )
+             end)
+       )
      fun contains_const c t = can (find_term (same_const c)) t;
      fun contains_consts l t =
            isSome (List.find (fn c => contains_const c t) l);
@@ -805,10 +803,7 @@ fun pp_defn_as_OCAML openthys ppstrm =
                  isSome (List.find (contains_consts lhsides) rhsides)
            val s = if possibly_recursive then "let rec" else "let"
            val clauses' = (s,hd clauses)::map (pair "and") (tl clauses)
-       in begin_block CONSISTENT 0
-        ; pr_list pp_clauses (fn () => ())
-                  (fn () => (add_newline())) clauses'
-        ; end_block()
+       in B 0 (pr_list pp_clauses add_newline clauses')
        end
  in
     pp
@@ -825,7 +820,7 @@ fun adjust_tygram tygram =
                          tygram
                          ["+", "#", "|->", "**"]
  in
-   new_binary_tyop g0 {precedence = 70, infix_form = SOME "*",
+   new_binary_tyop g0 {precedence = 70, infix_form = "*",
                        opname = "prod", associativity = NONASSOC}
  end;
 
@@ -897,17 +892,23 @@ fun gen_updates ty fields =
      fun mk_upd_const (fname,_) =
        let
          val rpty = Pretype.fromType ty
-         fun gv() = Pretype.UVar (ref NONE)
          val op -=> = Pretype.mk_fun_ty infix -=>
-         val upd_pty = gv() -=> (rpty -=> gv())
+         open errormonad
+         val upd_ptyM = lift2 (fn ty1 => fn ty2 => ty1 -=> (rpty -=> ty2))
+                              Pretype.new_uvar Pretype.new_uvar
          val ln = locn.Loc_None
          val qid = Absyn.QIDENT(ln, Thy, Tyop^"_"^fname^"_fupd")
-         val ptm0 = Parse.absyn_to_preterm qid
-         val ptm = Preterm.Constrained{Locn = ln, Ptm = ptm0, Ty = upd_pty}
-         val _ = with_flag (Globals.guessing_tyvars, true)
-                           (Preterm.typecheck_phase1 NONE) ptm
+         val ptm0_M = Parse.absyn_to_preterm qid
+         val ptm_M =
+             lift2 (fn ptm0 => fn upd_pty =>
+                       Preterm.Constrained{Locn = ln, Ptm = ptm0, Ty = upd_pty})
+                   ptm0_M upd_ptyM
+         val toTerm = ptm_M >- (fn pt =>
+                      Preterm.typecheck_phase1 NONE pt >> Preterm.to_term pt)
        in
-         Preterm.to_term ptm
+         with_flag (Globals.guessing_tyvars, true)
+                   (Preterm.smash toTerm)
+                   Pretype.Env.empty
        end
      val upds = map mk_upd_const fields
      val fns = map (fn upd_t => mk_var ("f", #1(dom_rng (type_of upd_t)))) upds
@@ -1027,20 +1028,20 @@ end;
 fun elemi (DEFN th) (cs,il) = (cs,iDEFN (!reshape_thm_hook th) :: il)
   | elemi (DEFN_NOSIG th) (cs,il) = (cs,iDEFN_NOSIG (!reshape_thm_hook th)::il)
   | elemi (DATATYPE q) (cs,il) =
-       let val tyAST = ParseDatatype.hparse q
+       let val tyAST = ParseDatatype.hparse (type_grammar()) q
            val _ = if !emitOcaml then ocaml_type_abbrevs tyAST else ()
            val defs = datatype_silent_defs tyAST
        in (cs, defs @ (iDATATYPE tyAST :: il))
        end
   | elemi (EQDATATYPE(sl,q)) (cs,il) =
-       let val tyAST = ParseDatatype.hparse q
+       let val tyAST = ParseDatatype.hparse (type_grammar()) q
            val _ = if !emitOcaml then ocaml_type_abbrevs tyAST else ()
            val defs = datatype_silent_defs tyAST
        in (cs,defs @ (iEQDATATYPE(sl,tyAST) :: il))
        end
   | elemi (ABSDATATYPE(sl,q)) (cs,il) = (* build rewrites for pseudo constrs *)
      let open ParseDatatype
-         val tyAST = hparse q
+         val tyAST = hparse (type_grammar()) q
          val _ = if !emitOcaml then ocaml_type_abbrevs tyAST else ()
          val pconstrs = constrl tyAST
          val constr_names = flatten(map (map fst o snd) pconstrs)
@@ -1116,76 +1117,70 @@ fun repair_type_decls (iDATATYPE decls) =
   | repair_type_decls (iABSDATATYPE stuff) = repair_type_decls (iEQDATATYPE stuff)
   | repair_type_decls arg = raise ERR "repair_type_decls" "unexpected input";
 
-fun pp_datatype_as_ML ppstrm (tyvars,decls) =
- let open Portable ParseDatatype
-     val {add_break,add_newline,
-          add_string,begin_block,end_block,...} = with_ppstream ppstrm
+fun pp_datatype_as_ML (tyvars,decls) =
+ let open Portable ParseDatatype PP smpp
      val fix_cons = fix_reserved o capitalize
      val fix_type = fix_reserved o lowerize
-     val ppty = pp_type_as_ML ppstrm
+     val ppty = pp_type_as_ML
      fun pp_comp_ty ty =
           if Lib.can dom_rng ty orelse is_pair_type ty
-          then (add_string "("; ppty ty; add_string")")
+          then (add_string "(" >> ppty ty >> add_string")")
           else ppty ty
      fun pp_tyl tyl =
-        (begin_block INCONSISTENT 0
-         ; pr_list pp_comp_ty (fn () => add_string" *")
-                              (fn () => add_break(1,0)) tyl
-         ; end_block())
-     fun pp_tyvars [] = ()
-       | pp_tyvars [v] = (add_string v; add_break(1,0))
+        block INCONSISTENT 0 (
+          pr_list pp_comp_ty (add_string" *" >> add_break(1,0)) tyl
+        )
+     fun pp_tyvars [] = nothing
+       | pp_tyvars [v] = add_string v >> add_break(1,0)
        | pp_tyvars vlist =
-          (begin_block CONSISTENT 0;
-           add_string"(";
-           pr_list add_string (fn () => add_string",") (fn ()=>()) vlist;
-           add_string")";
-           end_block())
+          B 1 (
+           add_string"(" >>
+           pr_list add_string (add_string",") vlist >>
+           add_string")"
+          )
      fun pp_clause r clause =
-       (if !r then (add_string "= "; r:=false) else add_string "| ";
-        case clause
-         of (con,[]) => add_string (fix_cons con)
+       (if !r then (r := false; add_string "= ") else add_string "| ") >>
+       (case clause of
+            (con,[]) => add_string (fix_cons con)
           | (con,args) =>
-              (begin_block INCONSISTENT 0;
-                 begin_block CONSISTENT 0;
-                   add_string (fix_cons con);
-                   add_string " of ";
-                 end_block();
-               pp_tyl (map ParseDatatype.pretypeToType args);
-               end_block()))
+              block INCONSISTENT 0 (
+                 B 0 (add_string (fix_cons con) >> add_string " of ") >>
+                 pp_tyl (map ParseDatatype.pretypeToType args)
+              )
+       )
      fun pp_decl (tyvars,r) (name,Constructors clauselist) =
-         (begin_block CONSISTENT 5;
-          begin_block CONSISTENT 0;
-            if !r then
-              (add_string (if !emitOcaml then "type" else "datatype"); r:=false)
-            else
-              ();
-            add_break(1,0); pp_tyvars tyvars; add_string (fix_type name);
-          end_block();
-          add_break(1,0);
-          begin_block CONSISTENT 0;
-          pr_list (pp_clause (ref true))
-                  (fn () => ())
-                  (fn () => add_break(1,0)) clauselist;
-          end_block(); end_block())
+           B 5 (
+             B 0 (
+               (if !r then
+                  (r := false;
+                   add_string (if !emitOcaml then "type" else "datatype"))
+                else
+                  nothing) >>
+               add_break(1,0) >> pp_tyvars tyvars >> add_string (fix_type name)
+             ) >> add_break(1,0) >>
+             B 0 (
+              pr_list (pp_clause (ref true)) (add_break(1,0)) clauselist
+             )
+           )
        | pp_decl (tyvars,_) (name,Record flist) =
            let open ParseDatatype
                val fields = map (I##pretypeToType) flist
-           in begin_block CONSISTENT 0;
-              add_string (if !emitOcaml then "type" else "datatype");
-              add_break(1,0);
-              pp_tyvars tyvars;
-              add_string(fix_type name^" = ");
-              add_string(fix_cons name^" of ");
-              pp_tyl (map snd fields);
-              end_block()
+           in
+             B 0 (
+               add_string (if !emitOcaml then "type" else "datatype") >>
+               add_break(1,0) >>
+               pp_tyvars tyvars >>
+               add_string(fix_type name^" = ") >>
+               add_string(fix_cons name^" of ") >>
+               pp_tyl (map snd fields)
+             )
            end
  in
-    begin_block CONSISTENT 0
-  ; pr_list (pp_decl (tyvars,ref true))
-            (fn () => (add_newline(); add_string "and"))
-            add_newline
-            decls
-  ; end_block()
+    B 0 (
+      pr_list (pp_decl (tyvars,ref true))
+              (add_newline >> add_string "and" >> add_newline)
+              decls
+    )
  end;
 
 (*---------------------------------------------------------------------------*)
@@ -1212,81 +1207,78 @@ in
   type_of tm
 end;
 
-fun pp_sig strm (s,elems) =
- let open Portable
-    val {add_break,add_newline, add_string,
-         begin_block,end_block,flush_ppstream,...} = with_ppstream strm
-    val ppty = pp_type_as_ML strm
-    val pp_datatype = pp_datatype_as_ML strm
+fun pp_sig (s,elems) =
+ let open Portable PP smpp
+    val ppty = pp_type_as_ML
+    val pp_datatype = pp_datatype_as_ML
     fun pp_eqdatatype b (tyvars,astl) =
      let val tynames = map fst astl
          val tys = map (fn s => (tyvars,s)) tynames
          fun pp_tydec (tyvars,s) =
-           (begin_block CONSISTENT 0;
+           B 0 (
              add_string (if b andalso not (!emitOcaml)
-                         then "eqtype " else "type ");
-             if null tyvars then add_string s else
-             if List.length tyvars = 1
-              then (add_string (hd tyvars); add_string(" "^s))
-              else (add_string "(";
-                    pr_list add_string (fn () => add_string",")
-                                       (fn () => ()) tyvars;
-                    add_string(") "^s));
-            end_block())
-     in begin_block CONSISTENT 0;
-        pr_list pp_tydec (fn () => ()) add_newline (map (pair tyvars) tynames);
-        end_block()
+                         then "eqtype " else "type ") >>
+             (if null tyvars then add_string s
+              else if List.length tyvars = 1 then
+                add_string (hd tyvars) >> add_string(" "^s)
+              else
+                add_string "(" >>
+                pr_list add_string (add_string",") tyvars >>
+                add_string(") "^s))
+           )
+     in
+       block CONSISTENT 0 (
+         pr_list pp_tydec add_newline (map (pair tyvars) tynames)
+       )
      end
     fun pp_valdec c =
      let val (is_type_cons,_,name,ty) = ConstMapML.apply c
          val ty = if !emitOcaml then original_type name ty else ty
-     in begin_block CONSISTENT 3;
-        add_string "val ";
-        add_string (fix_name ("",is_type_cons,name)); add_break(1,0);
-        add_string ": "; ppty ty;
-        end_block()
+     in
+       B 3 (
+        add_string "val " >>
+        add_string (fix_name ("",is_type_cons,name)) >> add_break(1,0) >>
+        add_string ": " >> ppty ty
+       )
      end
     fun pp_el (iDATATYPE astl) = pp_datatype (repair_type_decls (iDATATYPE astl))
       | pp_el (iEQDATATYPE (tyvarsl,astl)) = pp_eqdatatype true (tyvarsl,astl)
       | pp_el (iABSDATATYPE (tyvarsl,astl)) = pp_eqdatatype false (tyvarsl,astl)
       | pp_el (iDEFN thm) =
-            pr_list pp_valdec (fn () => ()) add_newline (consts_of_def thm)
+            pr_list pp_valdec add_newline (consts_of_def thm)
       | pp_el (iMLSIG s) = add_string s
-      | pp_el (iDEFN_NOSIG thm) = ()
-      | pp_el (iMLSTRUCT s) = ()
-      | pp_el (iOPEN slist) = ()
+      | pp_el (iDEFN_NOSIG thm) = nothing
+      | pp_el (iMLSTRUCT s) = nothing
+      | pp_el (iOPEN slist) = nothing
  in
-   begin_block CONSISTENT 0;
+   B 0 (
      add_string ((if !emitOcaml then "module type " else "signature ") ^
-                 ML s ^ " =");
-     add_newline();
-     begin_block CONSISTENT 2;
-       add_string "sig"; add_newline();
-       begin_block CONSISTENT 0;
-         pr_list pp_el (fn () => ()) add_newline
+                 ML s ^ " =") >>
+     add_newline >>
+     B 2 (
+       add_string "sig" >> add_newline >>
+       B 0 (
+         pr_list pp_el add_newline
              (filter (fn (iDEFN_NOSIG _) => false
                        | (iOPEN _) => false
                        | (iMLSTRUCT _) => false
-                       | otherwise => true) elems);
-       end_block();
-     end_block();
-     add_newline();
-     add_string "end"; add_newline();
-   end_block();
-   flush_ppstream()
+                       | otherwise => true) elems)
+       )
+     ) >>
+     add_newline >>
+     add_string "end" >> add_newline
+   )
  end
  handle e => raise wrap_exn "EmitML" "pp_sig" e;
 
 val MLinfixes =
   String.fields Char.isSpace "* / div mod + - ^ @ <> > < >= <= := o before";
 
-fun pp_struct strm (s,elems,cnames) =
- let open Portable
-    val {add_break,add_newline, add_string,
-         begin_block,end_block,flush_ppstream,...} = with_ppstream strm
+fun pp_struct (s,elems,cnames) =
+ let open Portable PP smpp
     val openthys = ref []
     fun opens() = !openthys
-    val pp_datatype = pp_datatype_as_ML strm
+    val pp_datatype = pp_datatype_as_ML
     fun pp_el (iDATATYPE astl) = pp_datatype (repair_type_decls (iDATATYPE astl))
       | pp_el (iEQDATATYPE (tyvarsl,astl)) =
            pp_datatype (repair_type_decls (iEQDATATYPE(tyvarsl,astl)))
@@ -1294,44 +1286,43 @@ fun pp_struct strm (s,elems,cnames) =
            pp_datatype (repair_type_decls (iABSDATATYPE(tyvarsl,astl)))
       | pp_el (iDEFN thm) =
            (if !emitOcaml then pp_defn_as_OCAML else pp_defn_as_ML)
-              (s::opens()) strm (concl thm)
+             (s::opens())
+             (concl thm)
       | pp_el (iDEFN_NOSIG thm) = pp_el (iDEFN thm)
-      | pp_el (iMLSIG s) = ()
-      | pp_el (iMLSTRUCT s) = (add_string s; add_newline ())
+      | pp_el (iMLSIG s) = nothing
+      | pp_el (iMLSTRUCT s) = add_string s >> add_newline
       | pp_el (iOPEN slist) = (openthys := union slist (!openthys);
-                              begin_block CONSISTENT 0;
-                              pr_list (add_string o curry String.^ "open " o ML)
-                                 (fn ()=>()) (fn () => add_newline()) slist;
-                              add_newline();
-                              end_block())
+                               B 0 (
+                                 pr_list
+                                   (add_string o curry String.^ "open " o ML)
+                                   add_newline slist >>
+                                 add_newline
+                               ))
     val (struct_mod, punct) = if !emitOcaml then
                                 ("module ", " : ")
                               else
                                 ("structure ", " :> ")
  in
-   begin_block CONSISTENT 0;
-     add_string (struct_mod ^ ML s ^ punct ^ ML s ^ " =");
-     add_newline();
-     begin_block CONSISTENT 2;
-       add_string "struct"; add_newline();
-       begin_block CONSISTENT 0;
-       if !emitOcaml then () else
-         (begin_block INCONSISTENT 7;
-            add_string"nonfix ";
-            pr_list add_string (fn()=>()) (fn()=> add_break(1,0))
-                    (union cnames MLinfixes);
-            add_string ";";
-          end_block();
-          add_newline());
-       add_newline();
-       pr_list pp_el (fn () =>()) add_newline
-              (filter (fn (iMLSIG _) => false | otherwise => true) elems);
-       end_block();
-     end_block();
-     add_newline();
-     add_string"end"; add_newline();
-   end_block();
-   flush_ppstream()
+   block CONSISTENT 0 (
+     add_string (struct_mod ^ ML s ^ punct ^ ML s ^ " =") >>
+     add_newline >>
+     block CONSISTENT 2 (
+       add_string "struct" >> add_newline >>
+       block CONSISTENT 0 (
+         (if !emitOcaml then nothing
+          else
+            block INCONSISTENT 7 (
+              add_string"nonfix " >>
+              pr_list add_string (add_break(1,0)) (union cnames MLinfixes) >>
+              add_string ";"
+            ) >> add_newline) >>
+         add_newline >>
+         pr_list pp_el add_newline
+           (filter (fn (iMLSIG _) => false | otherwise => true) elems)
+       )
+     ) >> add_newline >>
+     add_string"end" >> add_newline
+   )
  end
  handle e => raise wrap_exn "EmitML" "pp_struct" e;
 
@@ -1460,20 +1451,6 @@ fun install_consts _ [] k = k ([], [])
 
 
 (*---------------------------------------------------------------------------*)
-(* Set up a ppstream to a file. Return the ppstream and the outstream. The   *)
-(* latter has to be closed at the end of prettyprinting to the file.         *)
-(*---------------------------------------------------------------------------*)
-
-fun mk_file_ppstream file =
-  let open Portable
-      val ostrm = TextIO.openOut file
-  in (ostrm,
-      mk_ppstream{consumer = fn s => TextIO.output(ostrm,s),
-                  linewidth = 72,
-                  flush = fn () => TextIO.flushOut ostrm})
-  end;
-
-(*---------------------------------------------------------------------------*)
 (* Append code to the theory file that will load the const map with the      *)
 (* definitions and datatype constructors exported as ML.                     *)
 (*---------------------------------------------------------------------------*)
@@ -1488,75 +1465,77 @@ fun emit_adjoin_call thy (consts,pcs) = let
   fun safetyprint ty = String.toString
                         (trace ("Unicode",0)
                            (HOLPP.pp_to_string 10000
-                              (type_pp.pp_type (fst Parse.min_grammars)
-                                 PPBackEnd.raw_terminal)) ty)
+                              (Parse.mlower o
+                               type_pp.pp_type (fst Parse.min_grammars)
+                                               PPBackEnd.raw_terminal))
+                           ty)
 
-  fun pr3 pps ({Name,Thy,Ty}, (b,s2,ty)) = let
-    open PP
-    val S = add_string pps
-    fun BB() = begin_block pps INCONSISTENT 0
-    fun EB() = end_block pps
-    fun brk n = add_break pps (1,n)
-    fun ppty ty = (BB(); S "typ"; brk 0; S "\""; S (safetyprint Ty); S "\"";
-                   EB())
+  fun pr3 ({Name,Thy,Ty}, (b,s2,ty)) = let
+    open PP smpp
+    val S = add_string
+    val BB = block INCONSISTENT 0
+    fun brk n = add_break (1,n)
+    fun ppty ty =
+      BB (S "typ" >> brk 0 >> S "\"" >> S (safetyprint Ty) >> S "\"")
   in
-    S "("; BB();
-     S "{"; BB();
-       BB(); S "Name ="; brk 0; S (mlquote Name ^ ","); EB(); brk 0;
-       BB(); S "Thy ="; brk 0; S (mlquote Thy ^","); EB(); brk 0;
-       BB(); S "Ty ="; brk 2; ppty Ty; EB();
-     EB(); S "},"; brk 0;
-     S "("; BB();
-       S (Bool.toString b ^ ","); brk 0;
-       S (Lib.mlquote s2 ^ ","); brk 0;
-       ppty ty;
-     EB(); S ")";
-   EB(); S ")"
+    S "(" >> BB (
+      S "{" >> BB (
+        BB (S "Name =" >> brk 0 >> S (mlquote Name ^ ",")) >> brk 0 >>
+        BB (S "Thy =" >> brk 0 >> S (mlquote Thy ^",")) >> brk 0 >>
+        BB (S "Ty =" >> brk 2 >> ppty Ty)
+      )  >> S "}," >> brk 0 >>
+     S "(" >> BB (
+       S (Bool.toString b ^ ",") >> brk 0 >>
+       S (Lib.mlquote s2 ^ ",") >> brk 0 >>
+       ppty ty
+      ) >> S ")"
+    ) >> S ")"
   end
  in
   Theory.adjoin_to_theory
   {sig_ps = NONE,
-   struct_ps = SOME (fn ppstrm =>
+   struct_ps = SOME (fn _ =>
     let open PP
-        val S = add_string ppstrm
-        fun NL() = add_newline ppstrm
-        val BR = add_break ppstrm
+        val S = add_string
+        val BR = add_break
+        val B = PP.block PP.CONSISTENT 0
         fun getdata c = let
           val (b,pfx,s,ty) = ConstMapML.apply c
         in
           (b,s,ty)
         end
     in
-     S "val _ = "; NL();
-     S "   let open Parse"; NL();
-     S "       fun doit (r,(b,s,ty)) = "; NL();
-     S "         let val c = Term.mk_thy_const r"; NL();
-     S ("         in ConstMapML.prim_insert(c,(b,"^Lib.quote thy^",s,ty))");
-     NL();
-     S "         end"; NL();
-     S "       fun typ s = Feedback.trace (\"Vartype Format Complaint\", 0)\n\
-       \                      (#1 (parse_from_grammars min_grammars))\n\
-       \                      [QUOTE (\":\"^s)]"; NL();
-     S "   in"; NL();
-     S "     List.app doit ["; NL();
-     S "       ";
-     begin_block ppstrm INCONSISTENT 0;
-     Portable.pr_list (pr3 ppstrm) (fn () => S",") (fn () => BR(1,0))
-                      (map (fn c => (dest_thy_const c, getdata c)) consts);
-     end_block ppstrm; NL();
-     S "     ]"; NL();
-     S "   end"; NL(); NL();
-     if null pcs then ()
-     else
-     (S "val _ = List.app EmitML.new_pseudo_constr"; NL();
-      S "                 [";
-      begin_block ppstrm INCONSISTENT 0;
-      Portable.pr_list S (fn () => S",")
-                         (fn () => BR(1,0))
-                         (map extern_pc pcs);
-      end_block ppstrm;
-     S"]";
-     NL(); NL())
+      B (
+        [
+        S "val _ = ", NL,
+        S "   let open Parse", NL,
+        S "       fun doit (r,(b,s,ty)) = ", NL,
+        S "         let val c = Term.mk_thy_const r", NL,
+        S ("         in ConstMapML.prim_insert(c,(b,"^Lib.quote thy^",s,ty))"),
+        NL,
+        S "         end", NL,
+        S "       fun typ s = Feedback.trace(\"Vartype Format Complaint\", 0)\n\
+          \                      (#1 (parse_from_grammars min_grammars))\n\
+          \                      [QUOTE (\":\"^s)]", NL,
+        S "   in", NL,
+        S "     List.app doit [", NL,
+        S "       ",
+        block INCONSISTENT 0 (
+          pr_list (Parse.mlower o pr3) [S",", BR(1,0)]
+                  (map (fn c => (dest_thy_const c, getdata c)) consts)
+        ), NL,
+        S "     ]", NL,
+        S "   end", NL, NL] @
+        (if null pcs then []
+         else [
+           S "val _ = List.app EmitML.new_pseudo_constr", NL,
+           S "                 [",
+           block INCONSISTENT 0 (
+             pr_list S [S",", BR(1,0)] (map extern_pc pcs)
+           ),
+           S"]", NL, NL
+         ])
+      )
     end)}
    handle e => raise ERR "emit_adjoin_call" ""
  end;
@@ -1579,12 +1558,14 @@ fun emit_xML (Ocaml,sigSuffix,structSuffix) p (s,elems_0) =
      fun trydelete s = OS.FileSys.remove s handle OS.SysErr _ => ()
      fun cleanFiles() = (trydelete sigfile; trydelete structfile)
  in
-   let val (sigStrm,sigPPstrm) = mk_file_ppstream sigfile
-       val (structStrm,structPPstrm) = mk_file_ppstream structfile
+   let val sigStrm = TextIO.openOut sigfile
+       val structStrm = TextIO.openOut structfile
+       val out = curry TextIO.output
        val (consts, usednames) = install_consts s elems (fn x => x)
    in
-   (pp_sig sigPPstrm (s,elems);
-    pp_struct structPPstrm (s,elems,usednames);
+   (PP.prettyPrint(out sigStrm, 75) (Parse.mlower (pp_sig (s,elems)));
+    PP.prettyPrint(out structStrm, 75)
+                  (Parse.mlower (pp_struct (s,elems,usednames)));
     TextIO.closeOut sigStrm;
     TextIO.closeOut structStrm;
     HOL_MESG ("emitML: " ^ s ^ "{" ^ sigSuffix ^ "," ^ structSuffix ^ "}\n\
@@ -1616,5 +1597,10 @@ fun eCAML d l = with_flag (type_pp.pp_array_types, false)
 
 fun MLSIGSTRUCT ll =
   foldr (fn (x,l) => MLSIG x :: MLSTRUCT x :: l) [] (ll @ [""]);
+
+val pp_datatype_as_ML = fn dty => Parse.mlower (pp_datatype_as_ML dty)
+val pp_defn_as_ML = fn sl => Parse.mlower o pp_defn_as_ML sl
+val pp_term_as_ML = fn sl => fn sd => Parse.mlower o pp_term_as_ML sl sd
+val pp_type_as_ML = Parse.mlower o pp_type_as_ML
 
 end (* struct *)

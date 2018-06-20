@@ -1,8 +1,7 @@
 (* ===================================================================== *)
 (* FILE          : hhWriter.sml                                          *)
 (* DESCRIPTION   : Print objects (constants, types and theorems) and     *)
-(*                 dependencies between conjuncts of theorems for        *)
-(*                 holyHammer.                                           *)
+(*                 dependencies  theorems for holyHammer.                *)
 (* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck        *)
 (* DATE          : 2015                                                  *)
 (* ===================================================================== *)
@@ -11,7 +10,7 @@
 structure hhWriter :> hhWriter =
 struct
 
-open HolKernel boolLib TextIO Tag Dep
+open HolKernel boolLib tttTools TextIO Tag Dep
 
 val ERR = mk_HOL_ERR "hhWriter"
 
@@ -19,85 +18,34 @@ val ERR = mk_HOL_ERR "hhWriter"
    Dictionaries
  ----------------------------------------------------------------------------*)
 
-(* Shorter accessors and constructors *)
-fun dfind k m = Redblackmap.find (m,k)
-fun dmem k m = Lib.can (dfind k) m
-fun dadd i v m = Redblackmap.insert (m,i,v)
-val dempty = Redblackmap.mkDict
-
-val ty_names = ref (dempty KernelSig.name_compare)
-val const_names = ref (dempty KernelSig.name_compare)
-val var_names = ref (dempty Term.compare)
-val tyvar_names = ref (dempty Type.compare)
-
-val writehh_names = ref (dempty depid_compare)
-
-(* Keeping track of which names are already used to prevent clashes. *)
-val used_names = ref (dempty String.compare)
-
 (* reserved names *)
 val hollight_theorems = ["HL_TRUTH", "HL_FALSITY", "HL_BOOL_CASES", "HL_EXT"];
 val conjecture_name = "conjecture"
 val reserved_names = conjecture_name :: hollight_theorems
-fun reserve name = used_names := dadd name 0 (!used_names)
+val reserved_names0 = map (fn x => (x,0)) reserved_names
 
-(* Initialisation *)
-
-fun reset_dicts () =
-(
-  ty_names := dempty KernelSig.name_compare;
-  const_names := dempty KernelSig.name_compare;
-  var_names := dempty Term.compare;
-  tyvar_names := dempty Type.compare;
-  used_names := dempty String.compare; (* contains non escaped names *)
-  app reserve reserved_names;
-  writehh_names := dempty depid_compare
-)
-
-(*---------------------------------------------------------------------------
-   Absolute limit on the size of theorems (to be removed)
- ----------------------------------------------------------------------------*)
-val size_limit = 200
-fun size_of_term t =
-       if is_abs t
-    then let val (v,t') = dest_abs t in 1 + size_of_term t' end
-  else if is_comb t
-    then let val (t1,t2) = dest_comb t in size_of_term t1 + size_of_term t2 end
-  else if is_var t orelse is_const t
-    then 1
-  else raise ERR "size_of_term" ""
-
-fun is_oversized_term t = size_of_term t > size_limit
-
-fun is_oversized_thm thm =
-  let
-    val thml = BODY_CONJUNCTS thm
-    val terml = map (concl o GEN_ALL o DISCH_ALL) thml
-  in
-    exists is_oversized_term terml
-  end
-
-(*---------------------------------------------------------------------------
+(*---_-----------------------------------------------------------------------
    Save new objects in the dictionnaries.
  ----------------------------------------------------------------------------*)
-(* escaping *)
-fun is_alphanumeric s =
- let val l = String.explode s in
-   all (fn x => Char.isAlphaNum x orelse x = #"_") l
- end
 
-(* now additonnally escape quotes for the feature generation algorithm *)
+fun is_tptp_sq_char c =
+  let val n = Char.ord c in
+    (40 <= n andalso n <= 176) andalso
+    (c <> #".") andalso
+    (c <> #"/") andalso
+    (c <> #":") andalso
+    (c <> #"|") andalso
+    (c <> #"\134") (* TODO: why? *)
+  end
+
+(* TODO: use String.translate *)
 fun hh_escape s =
   let
     val l1 = String.explode s
-    fun image x =
-      case x of
-        #"#"  => String.explode "#hash#"
-      | #"/"  => String.explode "#slash#"
-      | #"\"" => String.explode "#quote#"
-      | #"\\" => String.explode "#bslash#"
-      | #"'" => String.explode "#squote#"
-      | _     => [x]
+    fun image c =
+      if is_tptp_sq_char c
+      then [c]
+      else [#"|"] @ String.explode (int_to_string (Char.ord c)) @ [#"|"]
     val l2 = map image l1
   in
     String.implode (List.concat l2)
@@ -106,17 +54,7 @@ fun hh_escape s =
 fun squotify name = "'" ^ name ^ "'"
 fun full_escape name = "'" ^ hh_escape name ^ "'"
 
-
-(* TO BE MOVED *)
-(* use a similar escaping than the holyhammer fof writer *)
-fun reserved_escape name =
-  if is_alphanumeric name andalso Char.isLower (hd (String.explode name))
-  then name
-  else "'" ^ name ^ "'"
-
-val reserved_names_escaped = map reserved_escape reserved_names
-
-
+(* TODO: make robust to empty vartype name *)
 (* nice printing *)
 fun nice_dest_vartype v =
   let
@@ -142,104 +80,107 @@ fun variant_name_dict s used =
   end
   handle NotFound => (full_escape s, dadd s 0 used)
 
-fun store_name name =
-  if dmem name (!used_names)
-  then ()
-  else used_names := dadd name 0 (!used_names)
-
-fun store_name name =
-  if dmem name (!used_names)
-  then ()
-  else used_names := dadd name 0 (!used_names)
+fun store_name state name =
+  let val dict = #used_names state in
+    if dmem name (!dict) then () else dict := dadd name 0 (!dict)
+  end
 
 (* types *)
-fun declare_perm_type dict {Thy,Name} =
+fun declare_perm_type state {Thy,Name} =
   let
-    val name1 = "type/" ^ Thy ^ "/" ^ (hh_escape Name)
+    val name1 = "type." ^ Thy ^ "." ^ (hh_escape Name)
     val name2 = squotify name1
+    val dict = #ty_names state
   in
-    store_name name1;
+    store_name state name1; (* may be deprecated *)
     dict := dadd {Thy=Thy,Name=Name} name2 (!dict);
     name2
   end
 
 (* constants *)
-fun declare_perm_const dict {Thy,Name} =
+fun declare_perm_const state {Thy,Name} =
   let
-    val name1 = "const/" ^ Thy ^ "/" ^ (hh_escape Name)
+    val name1 = "const." ^ Thy ^ "." ^ (hh_escape Name)
     val name2 = squotify name1
+    val dict = #const_names state
   in
-    store_name name1;
+    store_name state name1;
     dict := dadd {Thy=Thy,Name=Name} name2 (!dict);
     name2
   end
 
 (* theorems *)
-fun declare_perm_thm (thy,n) name  =
+fun declare_perm_thm state (thy,n) name  =
   let
-    val name1 = "thm/" ^ thy ^ "/" ^ (hh_escape name)
+    val name1 = "thm." ^ thy ^ "." ^ (hh_escape name)
     val name2 = squotify name1
+    val dict = #thm_names state
   in
-    store_name name1;
-    writehh_names := dadd (thy,n) name2 (!writehh_names);
+    store_name state name1;
+    dict := dadd (thy,n) name2 (!dict);
     name2
   end
 
 (* special constants *)
-fun declare_fixed dict {Thy,Name} name =
+fun declare_fixed state dict {Thy,Name} name =
   (
-  store_name name;
+  store_name state name;
   dict := dadd {Thy=Thy,Name=Name} name (!dict);
   name
   )
 
 (* temporary variables and type variables *)
-fun declare_temp_list get_name dict l =
+fun declare_temp_list state get_name dict l =
   let
     val olddict = !dict
-    val oldused = !used_names
+    val oldused = !(#used_names state)
     fun fold_fun (s,sl) =
-      let val (news, newused) =
-        variant_name_dict (get_name s) (!used_names)
+      let
+        val useddict = #used_names state
+        val (news, newused) = variant_name_dict (get_name s) (!useddict)
       in
-        (dict := dadd s news (!dict);
-         used_names := newused;
-         news :: sl)
+        dict := dadd s news (!dict);
+        useddict := newused;
+        news :: sl
       end
     val sl = foldl fold_fun [] l
+    fun undeclare () =
+      let val usedref = #used_names state in
+        dict := olddict; usedref := oldused
+      end
   in
-    (List.rev sl, fn () => (dict := olddict; used_names := oldused))
+    (List.rev sl, undeclare)
   end
 
 (*---------------------------------------------------------------------------
    Streams. Objects and dependencies are written in different files.
  ----------------------------------------------------------------------------*)
 
-val oc = ref stdOut
-val oc_deps = ref stdOut
-fun os s = output (!oc,s)
+fun os oc s = output (oc,s)
 fun oiter_aux oc sep f =
  fn [] => ()
   | [e] => f e
   | h :: t => (f h; output (oc,sep); oiter_aux oc sep f t)
-fun oiter_deps sep f l = oiter_aux (!oc_deps) sep f l
-fun oiter sep f l = oiter_aux (!oc) sep f l
+fun oiter_deps oc_deps sep f l = oiter_aux oc_deps sep f l
+fun oiter oc sep f l = oiter_aux oc sep f l
 
 (*---------------------------------------------------------------------------
    Printing objects (types, constants, theorems' conjuncts).
  ----------------------------------------------------------------------------*)
 
 (* type *)
-fun oty ty =
-  if is_vartype ty then os (dfind ty (!tyvar_names)
-                            handle _ => raise ERR "dfind" "type")
+fun oty state oc ty =
+  if is_vartype ty
+    then os oc (dfind_err "tyvar" ty (!(#tyvar_names state)))
   else
     let val {Args,Thy,Tyop} = dest_thy_type ty in
-    let val s = dfind {Thy=Thy,Name=Tyop} (!ty_names) in
-      if null Args then os s else
+    let val s = dfind {Thy=Thy,Name=Tyop} (!(#ty_names state)) in
+      if null Args then os oc s else
         if (Thy ="min" andalso Tyop = "fun")
-        then (os "("; oty (hd Args); os " > "; oty (hd (tl Args)); os ")")
-        else (os ("(" ^ s ^ " "); oiter " " oty Args; os ")")
+        then (os oc "("; oty state oc (hd Args); os oc " > ";
+              oty state oc (hd (tl Args)); os oc ")")
+        else (os oc ("(" ^ s ^ " ");
+              oiter oc " " (oty state oc) Args; os oc ")")
     end end
 
 type ('a,'b)substp = {redex : 'a, residue : 'b}
@@ -257,71 +198,80 @@ fun full_match_type t1 t2 =
   end
 
 (* term *)
-fun otm tm =
-  if is_var tm        then os (dfind tm (!var_names)
-                               handle _ => raise ERR "dfind" "var")
+fun otm state oc tm =
+  if is_var tm then os oc (dfind_err "var" tm (!(#var_names state)))
   else if is_const tm then
-    let val {Thy, Name, Ty} = dest_thy_const tm in
-    let val mgty = type_of (prim_mk_const {Thy = Thy, Name = Name}) in
-    let val subst = full_match_type mgty Ty in
-    let val resl = map #residue subst in
-      if null resl then os (dfind {Thy=Thy,Name=Name} (!const_names))
-      else (os "("; os (dfind {Thy=Thy,Name=Name} (!const_names)); os " ";
-            oiter " " oty resl; os ")")
-    end end end end
+    let
+      val {Thy, Name, Ty} = dest_thy_const tm
+      val mgty = type_of (prim_mk_const {Thy = Thy, Name = Name})
+      val subst = full_match_type mgty Ty
+      val resl = map #residue subst
+    in
+      if null resl
+      then os oc (dfind {Thy=Thy,Name=Name} (!(#const_names state)))
+      else (os oc "(";
+            os oc (dfind {Thy=Thy,Name=Name} (!(#const_names state)));
+            os oc " ";
+            oiter oc " " (oty state oc) resl;
+            os oc ")")
+    end
   else if is_eq tm       then
-    (os "("; otm (lhs tm);   os " = ";  otm (rhs tm);  os ")")
+    (os oc "("; otm state oc (lhs tm);   os oc " = ";  otm state oc (rhs tm);  os oc ")")
   else if is_conj tm     then
-    (os "("; otm (lhand tm); os " & ";  otm (rand tm); os ")")
+    (os oc "("; otm state oc (lhand tm); os oc " & ";  otm state oc (rand tm); os oc ")")
   else if is_disj tm     then
-    (os "("; otm (lhand tm); os " | ";  otm (rand tm); os ")")
+    (os oc "("; otm state oc (lhand tm); os oc " | ";  otm state oc (rand tm); os oc ")")
   else if is_imp_only tm then
-    (os "("; otm (lhand tm); os " => "; otm (rand tm); os ")")
-  else if is_neg tm      then (os "(~ "; otm (rand tm); os ")")
-  else if is_forall tm   then hh_binder "!" (strip_forall tm)
-  else if is_exists tm   then hh_binder "?" (strip_exists tm)
-  else if is_abs tm      then hh_binder "^" (strip_abs tm)
+    (os oc "("; otm state oc (lhand tm); os oc " => "; otm state oc (rand tm); os oc ")")
+  else if is_neg tm      then (os oc "(~ "; otm state oc (rand tm); os oc ")")
+  else if is_forall tm   then hh_binder state oc "!" (strip_forall tm)
+  else if is_exists tm   then hh_binder state oc "?" (strip_exists tm)
+  else if is_abs tm      then hh_binder state oc "^" (strip_abs tm)
   else if is_comb tm then
     let val (v,l) = strip_comb tm in
-      (os "("; otm v; app (fn x => (os " "; otm x)) l; os ")")
+      (os oc "("; otm state oc v; app (fn x => (os oc " "; otm state oc x)) l; os oc ")")
     end
   else raise ERR "otm" ""
-and hh_binder s (l,tm) =
-  let val (vl,undeclare) = declare_temp_list (fst o dest_var) var_names l in
-    os ("(" ^ s ^ "[");
-    oiter ", "
-      (fn x => (os (dfind x (!var_names) handle _ => raise ERR "dfind" "var");
-    os " : "; oty (type_of x))) l;
-    os "]: "; otm tm; os ")";
+and hh_binder state oc s (l,tm) =
+  let
+    val (vl,undeclare) =
+      declare_temp_list state (fst o dest_var) (#var_names state) l
+    fun f x =
+      (os oc (dfind_err "var" x (!(#var_names state)));
+       os oc " : "; oty state oc (type_of x))
+  in
+    os oc ("(" ^ s ^ "[");
+    oiter oc ", " f l;
+    os oc "]: "; otm state oc tm; os oc ")";
     undeclare ()
   end
 
 (* type definition *)
-fun hh_tydef thy (s,arity) =
+fun hh_tydef state oc thy (s,arity) =
   case (thy,s) of
-    ("min","bool") => ignore (declare_fixed ty_names {Thy=thy,Name=s} "$o")
-  | ("min","fun")  => ignore (declare_fixed ty_names {Thy=thy,Name=s} "$fun")
+    ("min","bool") =>
+    ignore (declare_fixed state (#ty_names state) {Thy=thy,Name=s} "$o")
+  | ("min","fun")  =>
+    ignore (declare_fixed state (#ty_names state) {Thy=thy,Name=s} "$fun")
   | _  =>
-  let val news = declare_perm_type ty_names {Thy=thy,Name=s} in
-    (
-    os "tt("; os news; os ", ty, ";
-    let fun tyd i = case i of
-        0 => os "$t"
-      | n => (os "$t > "; tyd (n - 1))
-    in
-      (tyd arity; os ").\n")
+    let val news = declare_perm_type state {Thy=thy,Name=s} in
+      os oc "tt("; os oc news; os oc ", ty, ";
+      let fun tyd i = case i of
+          0 => os oc "$t"
+        | n => (os oc "$t > "; tyd (n - 1))
+      in
+        (tyd arity; os oc ").\n")
+      end
     end
-    )
-  end
 
-fun quant_tyvarl l =
+fun quant_tyvarl oc l =
   if null l then ()
-  else (os "!["; oiter ", " (fn x => (os x; os " : $t")) l; os "]: ")
+  else (os oc "!["; oiter oc ", " (fn x => (os oc x; os oc " : $t")) l; os oc "]: ")
 
 (* constant definition *)
-fun hh_constdef thy (s,ty) =
+fun hh_constdef state oc thy (s,ty) =
   let
-    val fix = declare_fixed const_names {Thy=thy,Name=s}
+    val fix = declare_fixed state (#const_names state) {Thy=thy,Name=s}
     val news = case (thy,s) of
     ("min","=")     => fix "$equals"
   | ("bool","!")    => fix "$forall"
@@ -332,38 +282,47 @@ fun hh_constdef thy (s,ty) =
   | ("bool","~")    => fix "$not"
   | ("bool","T")    => fix "$true"
   | ("bool","F")    => fix "$false"
-  | _               => declare_perm_const const_names {Thy=thy,Name=s}
+  | _               => declare_perm_const state {Thy=thy,Name=s}
     val tv = sort less_ty (type_vars ty)
     val (newtvs, undeclare) =
-      declare_temp_list nice_dest_vartype tyvar_names tv
+      declare_temp_list state nice_dest_vartype (#tyvar_names state) tv
   in
     (
-    os "tt("; os news; os ", ty, ";
-    case newtvs of [] => () | l => quant_tyvarl l;
-    oty ty; os ").\n"; undeclare ()
+    os oc "tt("; os oc news; os oc ", ty, ";
+    case newtvs of [] => () | l => quant_tyvarl oc l;
+    oty state oc ty; os oc ").\n"; undeclare ()
     )
   end
 
 (* theorems *)
-fun othm (name,role,tm) =
+fun othm state oc (name,role,tm) =
   let
     fun f x = is_var x orelse is_const x
     val l1 = type_varsl (map type_of (find_terms f tm))
-    val (l2,undeclare) = declare_temp_list nice_dest_vartype tyvar_names l1
+    val (l2, undeclare) =
+      declare_temp_list state nice_dest_vartype (#tyvar_names state) l1
   in
     (
-    os "tt("; os name;
-    os (", " ^ role ^ ", "); quant_tyvarl l2; otm tm; os ").\n";
+    if uptodate_term tm
+    then (os oc "tt("; os oc name;
+          os oc (", " ^ role ^ ", "); quant_tyvarl oc l2;
+          otm state oc tm;
+          os oc ").\n")
+    else ()
+    handle _ => tttTools.debug ("Error: othm: " ^ term_to_string tm)
+                (* TODO: reraise Interrupt *)
+                (* TODO: to be removed for parallelization *)
+    ;
     undeclare ()
     )
   end
 
-fun othm_theorem (name,role,thm) =
-  othm (name,role,concl (GEN_ALL (DISCH_ALL thm)))
+fun othm_theorem state oc (name,role,thm) =
+  othm state oc (name,role,concl (GEN_ALL (DISCH_ALL thm)))
 
 (* conjecture *)
-fun othm_conjecture conjecture =
-  othm (conjecture_name, conjecture_name,
+fun othm_conjecture state oc conjecture =
+  othm state oc (conjecture_name, conjecture_name,
         list_mk_forall (free_vars_lr conjecture,conjecture))
 
 
@@ -381,17 +340,40 @@ fun thm_of_depid (thy,n) =
   in
     tryfind find_number thml
     handle _ => raise ERR "thm_of_depid" "Not found"
+    (* TODO: reraise Interrupt *)
   end
 
 fun exists_depid did = can thm_of_depid did
 
-fun odep (name,dl) =
+fun pred_of_depid (thy,n) =
   let
-    fun os_deps s = output (!oc_deps,s)
-    fun name_did did = dfind did (!writehh_names)
+    val thml = DB.thms thy
+    (* TODO: this function is duplicated above; write it once only *)
+    fun find_number x =
+      if (depnumber_of o depid_of o dep_of o tag o snd) x = n
+      then x
+      else raise ERR "find_number" ""
+  in
+    (thy, fst (tryfind find_number thml))
+    handle _ => raise ERR "thmid_of_depid" "Not found"
+  end
+
+fun depl_as_pred thm =
+  let
+    val d = (dep_of o tag) thm
+    val dl = depidl_of d
+    val idl = mapfilter pred_of_depid dl
+  in
+    (length idl = length dl, idl)
+  end
+
+fun odep state oc_deps (name,dl) =
+  let
+    fun os_deps s = output (oc_deps,s)
+    fun name_did did = dfind_err "thm" did (!(#thm_names state))
   in
     os_deps (name ^ " ");
-    oiter_deps " " os_deps (mapfilter name_did dl);
+    oiter_deps oc_deps " " os_deps (mapfilter name_did dl);
     os_deps "\n"
   end
 
@@ -399,88 +381,119 @@ fun odep (name,dl) =
    Exporting a theorem and its dependencies
  ----------------------------------------------------------------------------*)
 
-fun export_thm ((name,thm),role) =
+fun export_thm state oc oc_deps ((name,thm),role) =
   let
     val d = (dep_of o tag) thm
     val did = depid_of d
     val dl = filter exists_depid (depidl_of d)
-    val name' = declare_perm_thm did name
+    val name' = declare_perm_thm state did name
   in
-    othm_theorem (name',role,thm);
-    odep (name',dl)
+    othm_theorem state oc (name',role,thm);
+    odep state oc_deps (name',dl)
   end
 
 (*---------------------------------------------------------------------------
    Printing theories
  ----------------------------------------------------------------------------*)
 
-fun hh_thy_start folder thy =
-  (
-  oc := openOut (folder ^ "/" ^ thy ^ ".p");
-  oc_deps := openOut (folder ^ "/" ^ thy  ^ ".hd")
-  )
-
-fun hh_thy_end () =
-  (
-  closeOut (!oc); oc := stdOut;
-  closeOut (!oc_deps); oc_deps := stdOut
-  )
-
-fun write_hh_thy folder thy =
-  (
-  hh_thy_start folder thy;
-  let val l = dest_theory thy in
-    case l of THEORY(_,t) =>
-    (
-    app (hh_tydef thy) (#types t);
-    app (hh_constdef thy) (#consts t);
-    let
-      val axl = map (fn x => (x,"ax")) (DB.theorems thy)
-      val defl = map (fn x => (x,"def")) (DB.axioms thy @ DB.definitions thy)
-      fun compare ((_,th1),_) ((_,th2),_) =
-        let val f = depnumber_of o depid_of o dep_of o Thm.tag in
-          f th1 < f th2
-        end
-      (* val thml = filter (fn ((_,x),_) => not (is_oversized_thm x)) *)
-      val thml = sort compare (axl @ defl)
-    in
-      app export_thm thml
-    end
-    )
-  end;
-  hh_thy_end ()
-  )
-
-fun sort_thyl thyl = case thyl of
-    [] => []
-  | thy :: m =>
-      let val (l1,l2) = partition (fn a => mem a (ancestry thy)) m in
-        (sort_thyl l1) @ [thy] @ (sort_thyl l2)
-       end
+(* TODO: use OS.Path.concat *)
+fun write_thy dir filter_f state thy =
+  let
+    val oc = openOut (dir ^ "/" ^ thy ^ ".p")
+    val oc_deps = openOut (dir ^ "/" ^ thy  ^ ".hd")
+    val THEORY(_,t) = dest_theory thy
+    val _ = app (hh_tydef state oc thy) (#types t)
+    val _ = app (hh_constdef state oc thy) (#consts t)
+    val axl = map (fn x => (x,"ax")) (DB.theorems thy) (* TODO: why not (#theorems t) etc.? *)
+    val defl = map (fn x => (x,"def")) (DB.axioms thy @ DB.definitions thy)
+    fun local_compare (((_,th1),_),((_,th2),_)) =
+      let val f = depnumber_of o depid_of o dep_of o Thm.tag in
+        Int.compare (f th1, f th2)
+      end
+    val thml = filter (filter_f thy) (dict_sort local_compare (axl @ defl))
+  in
+    app (export_thm state oc oc_deps) thml;
+    closeOut oc;
+    closeOut oc_deps
+  end
 
 fun write_thydep file thyl =
-  (
-  oc := openOut file;
-  app (fn x => (os x; os " "; oiter " " os (parents x); os "\n")) thyl;
-  closeOut (!oc); oc := stdOut
-  )
+  let
+    val oc = openOut file
+    fun f x = (os oc x; os oc " "; oiter oc " " (os oc) (parents x); os oc "\n")
+  in
+    app f thyl;
+    os oc namespace_tag; os oc " ";
+    oiter oc " " (os oc) [current_theory ()];
+    os oc "\n";
+    closeOut oc
+  end
 
-fun write_hh_thyl folder thyl =
-  (reset_dicts();
-   app (write_hh_thy folder) (sort_thyl thyl))
+fun write_thyl dir filter_f thyl =
+  let
+    val state =
+    {
+    ty_names    = ref (dempty KernelSig.name_compare),
+    const_names = ref (dempty KernelSig.name_compare),
+    var_names   = ref (dempty Term.compare),
+    tyvar_names = ref (dempty Type.compare),
+    used_names  = ref (dnew String.compare reserved_names0),
+    thm_names   = ref (dempty depid_compare)
+    }
+  in
+    app (write_thy dir filter_f state) (sort_thyl thyl)
+  end
 
-
-fun write_conjecture file conjecture = (* TO DO: put it in a subdirectory *)
-  (* if is_oversized_term conjecture
-    then raise ERR "write_conjecture" "too large conjecture"
-  else *)
+fun write_conjecture state file conjecture =
   if type_of conjecture = bool
-    then
-    (
-    oc := openOut file;
-    othm_conjecture conjecture;
-    closeOut (!oc); oc := stdOut
-    )
+  then
+    let val oc = openOut file in
+      othm_conjecture state oc conjecture;
+      closeOut oc
+    end
   else raise ERR "write_conjecture" "conjecture is not a boolean"
+
+(*---------------------------------------------------------------------------
+   Writing theorems from the namespace.
+ ----------------------------------------------------------------------------*)
+
+fun write_ns state dir ns_thml =
+  let
+    val oc = openOut (dir ^ "/" ^ namespace_tag ^ ".p")
+    val oc_deps = openOut (dir ^ "/" ^ namespace_tag ^ ".hd")
+    fun new_name name =
+      let val (thy,nm1) = split_string "Theory." name in
+        squotify ("thm." ^ thy ^ "." ^ hh_escape nm1)
+      end
+    fun f (name,thm) =
+      let val name' = new_name name in
+        othm_theorem state oc (name',"ax",thm);
+        odep state oc_deps (name',[])
+      end
+  in
+    app f ns_thml;
+    closeOut oc;
+    closeOut oc_deps
+  end
+
+fun write_problem dir filter_f ns_thml thyl cj =
+  let
+    fun sort_thyl thyl = topo_sort (map (fn x => (x, ancestry x)) thyl)
+    val state =
+    {
+    ty_names    = ref (dempty KernelSig.name_compare),
+    const_names = ref (dempty KernelSig.name_compare),
+    var_names   = ref (dempty Term.compare),
+    tyvar_names = ref (dempty Type.compare),
+    used_names  = ref (dnew String.compare reserved_names0),
+    thm_names   = ref (dempty depid_compare)
+    }
+  in
+    app (write_thy dir filter_f state) (sort_thyl thyl);
+    write_ns state dir ns_thml;
+    write_conjecture state (dir ^ "/conjecture.fof") cj (* not actually fof *)
+  end
+
+
 
 end

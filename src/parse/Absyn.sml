@@ -10,24 +10,53 @@ type 'a quotation = 'a Portable.quotation
 val ERR = mk_HOL_ERR "Absyn";
 val ERRloc = mk_HOL_ERRloc "Absyn";
 
-   datatype vstruct
-       = VAQ    of locn.locn * term
-       | VIDENT of locn.locn * string
-       | VPAIR  of locn.locn * vstruct * vstruct
-       | VTYPED of locn.locn * vstruct * pretype
-
-   datatype absyn
-       = AQ     of locn.locn * term
-       | IDENT  of locn.locn * string
-       | QIDENT of locn.locn * string * string
-       | APP    of locn.locn * absyn * absyn
-       | LAM    of locn.locn * vstruct * absyn
-       | TYPED  of locn.locn * absyn * pretype
-
+open Absyn_dtype
 
 (*---------------------------------------------------------------------------
         Useful absyn operations.
  ---------------------------------------------------------------------------*)
+
+fun traverse applyp f t = let
+  val traverse = traverse applyp f
+in
+  if applyp t then f traverse t
+  else case t of
+    APP(locn,t1,t2)   => APP(locn,traverse t1, traverse t2)
+  | LAM(locn,vs,t)    => LAM(locn,vs, traverse t)
+  | TYPED(locn,t,pty) => TYPED(locn,traverse t, pty)
+  | allelse           => allelse
+end
+
+fun ultimately s (IDENT (_, s'))      = (s = s')
+  | ultimately s (TYPED (_, t', _))   = ultimately s t'
+  | ultimately s _ = false
+
+fun locn_of_absyn x =
+  case x of
+      AQ    (locn,_)   => locn
+    | IDENT (locn,_)   => locn
+    | QIDENT(locn,_,_) => locn
+    | APP   (locn,_,_) => locn
+    | LAM   (locn,_,_) => locn
+    | TYPED (locn,_,_) => locn
+
+fun locn_of_vstruct x =
+  case x of
+      VAQ    (locn,_)   => locn
+    | VIDENT (locn,_)   => locn
+    | VPAIR  (locn,_,_) => locn
+    | VTYPED (locn,_,_) => locn
+
+fun to_vstruct t =
+  case t of
+      APP(l, APP(_, comma, t1), t2) =>
+        if ultimately "," comma then VPAIR(l, to_vstruct t1, to_vstruct t2)
+        else raise ERRloc "to_vstruct" (locn_of_absyn t)
+                   "Bad variable structure"
+    | AQ p => VAQ p
+    | IDENT p  => VIDENT p
+    | TYPED(l, t, pty) => VTYPED(l, to_vstruct t, pty)
+    | _ => raise ERRloc "to_vstructp" (locn_of_absyn t) "Bad variable-structure"
 
 fun atom_name tm = fst(dest_var tm handle HOL_ERR _ => dest_const tm);
 
@@ -63,22 +92,6 @@ fun dest_pabs tm =
 end;
 
 val nolocn = locn.Loc_None  (* i.e., compiler-generated text *)
-fun locn_of_absyn x
-  = case x of
-        AQ    (locn,_)   => locn
-      | IDENT (locn,_)   => locn
-      | QIDENT(locn,_,_) => locn
-      | APP   (locn,_,_) => locn
-      | LAM   (locn,_,_) => locn
-      | TYPED (locn,_,_) => locn
-
-fun locn_of_vstruct x
-  = case x of
-        VAQ    (locn,_)   => locn
-      | VIDENT (locn,_)   => locn
-      | VPAIR  (locn,_,_) => locn
-      | VTYPED (locn,_,_) => locn
-
 fun mk_AQ x        = AQ   (nolocn,x)
 fun mk_ident s     = IDENT(nolocn,s)
 fun mk_app (M,N)   = APP  (nolocn,M,N)

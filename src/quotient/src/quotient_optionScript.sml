@@ -55,7 +55,7 @@ val POP_TAC = POP_ASSUM (fn th => ALL_TAC);
 
 val OPTION_MAP_I = store_thm
    ("OPTION_MAP_I",
-    (--`OPTION_MAP I = (I : 'a option -> 'a option)`--),
+    (“OPTION_MAP I = (I : 'a option -> 'a option)”),
     CONV_TAC FUN_EQ_CONV
     THEN Cases
     THEN REWRITE_TAC[OPTION_MAP_DEF,I_THM]
@@ -84,7 +84,7 @@ val OPTION_REL_def = store_thm(
 
 val OPTION_REL_EQ = store_thm
    ("OPTION_REL_EQ",
-    (--`(OPTION_REL ($= : 'a->'a->bool)) = $=`--),
+    (“(OPTION_REL ($= : 'a->'a->bool)) = $=”),
     CONV_TAC FUN_EQ_CONV
     THEN CONV_TAC (RAND_CONV (ABS_CONV FUN_EQ_CONV))
     THEN Cases
@@ -94,7 +94,7 @@ val OPTION_REL_EQ = store_thm
 
 val OPTION_EQUIV = store_thm
    ("OPTION_EQUIV",
-    (--`!R:'a -> 'a -> bool. EQUIV R ==> EQUIV (OPTION_REL R)`--),
+    (“!R:'a -> 'a -> bool. EQUIV R ==> EQUIV (OPTION_REL R)”),
     GEN_TAC
     THEN REWRITE_TAC[EQUIV_def]
     THEN DISCH_TAC
@@ -123,8 +123,8 @@ val OPTION_EQUIV = store_thm
 
 val OPTION_QUOTIENT = store_thm
    ("OPTION_QUOTIENT",
-    (--`!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
-         QUOTIENT (OPTION_REL R) (OPTION_MAP abs) (OPTION_MAP rep)`--),
+    (“!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
+         QUOTIENT (OPTION_REL R) (OPTION_MAP abs) (OPTION_MAP rep)”),
     REPEAT GEN_TAC
     THEN STRIP_TAC
     THEN REWRITE_TAC[QUOTIENT_def]
@@ -145,24 +145,24 @@ val OPTION_QUOTIENT = store_thm
 
 val NONE_PRS = store_thm
    ("NONE_PRS",
-    (--`!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
-         (NONE = (OPTION_MAP abs) NONE)`--),
+    (“!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
+         (NONE = (OPTION_MAP abs) NONE)”),
     REPEAT STRIP_TAC
     THEN REWRITE_TAC[OPTION_MAP_DEF]
    );
 
 val NONE_RSP = store_thm
    ("NONE_RSP",
-    (--`!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
-         (OPTION_REL R) NONE NONE`--),
+    (“!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
+         (OPTION_REL R) NONE NONE”),
     REPEAT STRIP_TAC
     THEN REWRITE_TAC[OPTION_REL_def]
    );
 
 val SOME_PRS = store_thm
    ("SOME_PRS",
-    (--`!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
-         (!x. SOME x = (OPTION_MAP abs) (SOME (rep x)))`--),
+    (“!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
+         (!x. SOME x = (OPTION_MAP abs) (SOME (rep x)))”),
     REPEAT STRIP_TAC
     THEN IMP_RES_TAC QUOTIENT_ABS_REP
     THEN ASM_REWRITE_TAC[OPTION_MAP_DEF]
@@ -170,17 +170,17 @@ val SOME_PRS = store_thm
 
 val SOME_RSP = store_thm
    ("SOME_RSP",
-    (--`!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
+    (“!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
          (!x y. R x y ==>
-                (OPTION_REL R) (SOME x) (SOME y))`--),
+                (OPTION_REL R) (SOME x) (SOME y))”),
     REPEAT STRIP_TAC
     THEN ASM_REWRITE_TAC[OPTION_REL_def]
    );
 
 val IS_SOME_PRS = store_thm
    ("IS_SOME_PRS",
-    (--`!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
-         (!x. IS_SOME x = IS_SOME (OPTION_MAP rep x))`--),
+    (“!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
+         (!x. IS_SOME x = IS_SOME (OPTION_MAP rep x))”),
     REPEAT GEN_TAC
     THEN DISCH_TAC
     THEN Cases
@@ -189,9 +189,9 @@ val IS_SOME_PRS = store_thm
 
 val IS_SOME_RSP = store_thm
    ("IS_SOME_RSP",
-    (--`!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
+    (“!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
          (!x y. OPTION_REL R x y ==>
-                (IS_SOME x = IS_SOME y))`--),
+                (IS_SOME x = IS_SOME y))”),
     REPEAT GEN_TAC
     THEN DISCH_TAC
     THEN REPEAT Cases
@@ -200,8 +200,8 @@ val IS_SOME_RSP = store_thm
 
 val IS_NONE_PRS = store_thm
    ("IS_NONE_PRS",
-    (--`!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
-         (!x. IS_NONE x = IS_NONE (OPTION_MAP rep x))`--),
+    (“!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
+         (!x. IS_NONE x = IS_NONE (OPTION_MAP rep x))”),
     REPEAT GEN_TAC
     THEN DISCH_TAC
     THEN Cases
@@ -210,9 +210,9 @@ val IS_NONE_PRS = store_thm
 
 val IS_NONE_RSP = store_thm
    ("IS_NONE_RSP",
-    (--`!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
+    (“!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
          (!x y. OPTION_REL R x y ==>
-                (IS_NONE x = IS_NONE y))`--),
+                (IS_NONE x = IS_NONE y))”),
     REPEAT GEN_TAC
     THEN DISCH_TAC
     THEN REPEAT Cases
@@ -222,11 +222,11 @@ val IS_NONE_RSP = store_thm
 
 val OPTION_MAP_PRS = store_thm
    ("OPTION_MAP_PRS",
-    (--`!R1 (abs1:'a -> 'c) rep1. QUOTIENT R1 abs1 rep1 ==>
+    (“!R1 (abs1:'a -> 'c) rep1. QUOTIENT R1 abs1 rep1 ==>
         !R2 (abs2:'b -> 'd) rep2. QUOTIENT R2 abs2 rep2 ==>
          !a f. OPTION_MAP f a =
                OPTION_MAP abs2
-                    (OPTION_MAP ((abs1 --> rep2) f) (OPTION_MAP rep1 a))`--),
+                    (OPTION_MAP ((abs1 --> rep2) f) (OPTION_MAP rep1 a))”),
     REPEAT (REPEAT GEN_TAC THEN DISCH_TAC)
     THEN Cases
     THEN GEN_TAC
@@ -238,11 +238,11 @@ val OPTION_MAP_PRS = store_thm
 
 val OPTION_MAP_RSP = store_thm
    ("OPTION_MAP_RSP",
-    (--`!R1 (abs1:'a -> 'c) rep1. QUOTIENT R1 abs1 rep1 ==>
+    (“!R1 (abs1:'a -> 'c) rep1. QUOTIENT R1 abs1 rep1 ==>
         !R2 (abs2:'b -> 'd) rep2. QUOTIENT R2 abs2 rep2 ==>
          !a1 a2 f1 f2.
           (R1 ===> R2) f1 f2 /\ (OPTION_REL R1) a1 a2 ==>
-          (OPTION_REL R2) (OPTION_MAP f1 a1) (OPTION_MAP f2 a2)`--),
+          (OPTION_REL R2) (OPTION_MAP f1 a1) (OPTION_MAP f2 a2)”),
     REPEAT GEN_TAC
     THEN DISCH_TAC
     THEN REPEAT GEN_TAC

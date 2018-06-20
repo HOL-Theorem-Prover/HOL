@@ -1,11 +1,11 @@
 CMPDIR = $(protect $(HOLDIR)/tools/cmp)
 
-INCLUDES = $(CMPDIR)
+INCLUDES = $(CMPDIR) ../
 
 THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
 TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
 
-all: check_output check_utyabb_output check_tyabb_output check_gh242 check_gh248 $(TARGETS)
+all: check_output check_utyabb_output check_tyabb_output check_gh242 check_gh248 dupop20171208 $(TARGETS)
 
 check_output: output expected-output
 	$(CMPDIR)/cmp.exe output expected-output
@@ -25,17 +25,20 @@ tyabb_output: tyabb_input tymunge.exe
 utyabb_output: tyabb_input utymunge.exe
 	./utymunge.exe < $< > $@
 
-munge.exe: mdtTheory.uo $(dprot $(HOLDIR)/bin/mkmunge.exe)
+munge.exe: mdtTheory.uo $(dprot $(HOLDIR)/bin/mkmunge.exe) ../EmitTeX.uo
 	$(protect $(HOLDIR)/bin/mkmunge.exe) mdtTheory
 
-tymunge.exe: tyabbrevTheory.uo
+tymunge.exe: tyabbrevTheory.uo ../EmitTeX.uo
 	$(protect $(HOLDIR)/bin/mkmunge.exe) -o $@ tyabbrevTheory
 
-utymunge.exe: untyabbrevTheory.uo
+utymunge.exe: untyabbrevTheory.uo ../EmitTeX.uo
 	$(protect $(HOLDIR)/bin/mkmunge.exe) -o $@ untyabbrevTheory
 
-munge248.exe: pp248Theory.uo
+munge248.exe: pp248Theory.uo ../EmitTeX.uo
 	$(protect $(HOLDIR)/bin/mkmunge.exe) -o $@ pp248Theory
+
+munge_d20171208.exe: dupop20171208bTheory.uo ../EmitTeX.uo
+	$(protect $(HOLDIR)/bin/mkmunge.exe) -o $@ dupop20171208bTheory
 
 check_gh242: gh242_input gh242_expected munge.exe
 	./munge.exe < $< > gh242_output
@@ -45,6 +48,11 @@ check_gh248: gh248_input gh248_expected munge248.exe
 	./munge248.exe < $< > gh248_output
 	$(CMPDIR)/cmp.exe gh248_expected gh248_output
 
-.PHONY: all check_output check_utyabb_output check_tyabb_output check_gh242
+dupop20171208: dupop20171208_input dupop20171208_expected munge_d20171208.exe
+	./munge_d20171208.exe < $< > dupop20171208_output
+	$(CMPDIR)/cmp.exe dupop20171208_expected dupop20171208_output
 
-EXTRA_CLEANS = munge.exe tymunge.exe utymunge.exe output utyabb_output tyabb_output gh242_output
+
+.PHONY: all check_output check_utyabb_output check_tyabb_output check_gh242 dupop20171208
+
+EXTRA_CLEANS = munge.exe tymunge.exe utymunge.exe output utyabb_output tyabb_output gh242_output dupop20171208_output

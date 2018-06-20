@@ -16,7 +16,7 @@ open HolKernel Parse boolLib;
 open bossLib arithmeticTheory dividesTheory gcdTheory
      res_quanTheory pred_setTheory subtypeTheory
      res_quanTools subtypeTools ho_proverTools numContext HurdUseful
-     extra_numTheory ho_basicTools;
+     extra_numTheory ho_basicTools util_probTheory;
 
 (* interactive mode
 quietdec := false;
@@ -293,7 +293,7 @@ val SUC_MOD = store_thm
    ++ Cases_on `n` >> R_TAC []
    ++ R_TAC []
    ++ S_TAC
-   ++ Q.PAT_ASSUM `~divides x y` MP_TAC
+   ++ Q.PAT_X_ASSUM `~divides x y` MP_TAC
    ++ R_TAC [divides_def]
    ++ Q.EXISTS_TAC `SUC (m DIV SUC n')`
    ++ R_TAC [MULT, ADD_CLAUSES]
@@ -452,8 +452,8 @@ val FACTOR_INDUCT = store_thm
         !n. prop n``,
    S_TAC
    ++ completeInduct_on `n`
-   ++ Cases_on `n = 0` >> (Q.PAT_ASSUM `!n p. P n p` K_TAC ++ R_TAC [])
-   ++ Cases_on `n = 1` >> (Q.PAT_ASSUM `!n p. P n p` K_TAC ++ R_TAC [])
+   ++ Cases_on `n = 0` >> (Q.PAT_X_ASSUM `!n p. P n p` K_TAC ++ R_TAC [])
+   ++ Cases_on `n = 1` >> (Q.PAT_X_ASSUM `!n p. P n p` K_TAC ++ R_TAC [])
    ++ MP_TAC (Q.SPEC `n` EXISTS_PRIME_DIVISOR)
    ++ R_TAC []
    ++ S_TAC
@@ -464,10 +464,10 @@ val FACTOR_INDUCT = store_thm
        ++ ASSUME_TAC th)
    ++ ONCE_REWRITE_TAC [MULT_COMM]
    ++ DISCH_THEN (ONCE_REWRITE_TAC o wrap o SYM)
-   ++ Q.PAT_ASSUM `!n p. P n p` MATCH_MP_TAC
+   ++ Q.PAT_X_ASSUM `!n p. P n p` MATCH_MP_TAC
    ++ R_TAC []
    ++ S_TAC
-   ++ Q.PAT_ASSUM `!m. P m` MATCH_MP_TAC
+   ++ Q.PAT_X_ASSUM `!m. P m` MATCH_MP_TAC
    ++ MATCH_MP_TAC DIV_LESS
    ++ Know `~(p = 0) /\ ~(p = 1)` >> PROVE_TAC [NOT_PRIME_0, NOT_PRIME_1]
    ++ DECIDE_TAC);
@@ -483,17 +483,17 @@ val FACTOR_INDUCT_DIV = store_thm
         !n. prop n``,
    S_TAC
    ++ completeInduct_on `n`
-   ++ Cases_on `n = 0` >> (Q.PAT_ASSUM `!n p. P n p` K_TAC ++ R_TAC [])
-   ++ Cases_on `n = 1` >> (Q.PAT_ASSUM `!n p. P n p` K_TAC ++ R_TAC [])
+   ++ Cases_on `n = 0` >> (Q.PAT_X_ASSUM `!n p. P n p` K_TAC ++ R_TAC [])
+   ++ Cases_on `n = 1` >> (Q.PAT_X_ASSUM `!n p. P n p` K_TAC ++ R_TAC [])
    ++ MP_TAC (Q.SPEC `n` EXISTS_PRIME_DIVISOR)
    ++ S_TAC
-   ++ Q.PAT_ASSUM `!n p. P n p` MATCH_MP_TAC
+   ++ Q.PAT_X_ASSUM `!n p. P n p` MATCH_MP_TAC
    ++ AR_TAC []
    ++ S_TAC
    ++ Q.EXISTS_TAC `p`
    ++ R_TAC [DIV_EQ_0, PRIME_SUBSET_GTNUM1]
    ++ S_TAC <<
-   [Q.PAT_ASSUM `!m. P m` MATCH_MP_TAC
+   [Q.PAT_X_ASSUM `!m. P m` MATCH_MP_TAC
     ++ MATCH_MP_TAC DIV_LESS
     ++ Know `~(p = 0) /\ ~(p = 1)` >> PROVE_TAC [NOT_PRIME_0, NOT_PRIME_1]
     ++ DECIDE_TAC,
@@ -581,7 +581,7 @@ val GCD_1_DIVL = store_thm
    >> PROVE_TAC [EXISTS_PRIME_DIVISOR]
    ++ R_TAC [DIVIDES_GCD]
    ++ S_TAC
-   ++ Q.PAT_ASSUM `divides a m` MP_TAC
+   ++ Q.PAT_X_ASSUM `divides a m` MP_TAC
    ++ R_TAC [DIVIDES_ALT]
    ++ S_TAC
    ++ Know `divides p m` >> PROVE_TAC [DIVIDES_MULT, MULT_COMM]
@@ -611,7 +611,7 @@ val DIVIDES_MULT_PRIME = store_thm
        prime p /\ divides a n /\ divides p n /\ ~divides p a ==>
        divides (p * a) n``,
    S_TAC
-   ++ Q.PAT_ASSUM `divides a n` MP_TAC
+   ++ Q.PAT_X_ASSUM `divides a n` MP_TAC
    ++ R_TAC [divides_def]
    ++ S_TAC
    ++ POP_ASSUM (ASSUME_TAC o SYM)
@@ -660,7 +660,7 @@ val GCD_1_LCM = store_thm
     Know `?a'. a = p * a'` >> PROVE_TAC [divides_def, MULT_COMM]
     ++ S_TAC
     ++ AR_TAC [GSYM MULT_ASSOC]
-    ++ Q.PAT_ASSUM `!a. P a` MATCH_MP_TAC
+    ++ Q.PAT_X_ASSUM `!a. P a` MATCH_MP_TAC
     ++ AR_TAC [GCD_1_MULTL]
     ++ PROVE_TAC [L_EUCLIDES],
     Know `?b'. b = p * b'` >> PROVE_TAC [divides_def, MULT_COMM]
@@ -669,11 +669,11 @@ val GCD_1_LCM = store_thm
     ++ Suff `divides (p * (a * b')) (p * n)`
     >> PROVE_TAC [MULT_ASSOC, MULT_COMM]
     ++ R_TAC []
-    ++ Q.PAT_ASSUM `!a. P a` MATCH_MP_TAC
+    ++ Q.PAT_X_ASSUM `!a. P a` MATCH_MP_TAC
     ++ AR_TAC [GCD_1_MULTR]
     ++ PROVE_TAC [L_EUCLIDES, GCD_SYM],
     Suff `divides (a * b) n` >> PROVE_TAC [DIVIDES_MULTL]
-    ++ Q.PAT_ASSUM `!a. P a` MATCH_MP_TAC
+    ++ Q.PAT_X_ASSUM `!a. P a` MATCH_MP_TAC
     ++ AR_TAC [GSYM GCD_1_PRIMEL]
     ++ PROVE_TAC [L_EUCLIDES]]);
 
@@ -716,9 +716,9 @@ val GCD_MULT = store_thm
    ++ EQ_TAC <<
    [S_TAC >> R_TAC [] >> R_TAC []
     ++ Suff `divides (p' * d) (p' * g)`
-    >> (Q.PAT_ASSUM `!s. P s` K_TAC
+    >> (Q.PAT_X_ASSUM `!s. P s` K_TAC
         ++ R_TAC [DIVIDES_CANCEL])
-    ++ Q.PAT_ASSUM `!s. P s` MATCH_MP_TAC
+    ++ Q.PAT_X_ASSUM `!s. P s` MATCH_MP_TAC
     ++ R_TAC [DIVIDES_CANCEL],
     S_TAC >> R_TAC [] >> R_TAC []
     ++ Cases_on `divides p' d` <<
@@ -794,10 +794,10 @@ val LCM_IS_LCM = store_thm
         (fn th => Know `(?a'. a = p * a') /\ (?b'. b = p * b')`
          >> PROVE_TAC [th, MULT_COMM, divides_def])
    ++ STRIP_TAC
-   ++ Q.PAT_ASSUM `!b. P b`
+   ++ Q.PAT_X_ASSUM `!b. P b`
       (fn th => AR_TAC [GCD_MULT] ++ MP_TAC (Q.SPECL [`a'`, `b'`] th))
-   ++ Q.PAT_ASSUM `a = p * a'` K_TAC
-   ++ Q.PAT_ASSUM `b = p * b'` K_TAC
+   ++ Q.PAT_X_ASSUM `a = p * a'` K_TAC
+   ++ Q.PAT_X_ASSUM `b = p * b'` K_TAC
    ++ R_TAC []
    ++ STRIP_TAC
    ++ Know `p * (a' * (p * b')) DIV (p * g) = p * (a' * b' DIV g)`
@@ -862,7 +862,7 @@ val DIV_GCD = store_thm
    Suff
      `!g a b. 0 < a /\ (gcd a b = g) ==> (gcd (a DIV g) (b DIV g) = 1)`
    >> (S_TAC
-       ++ Q.PAT_ASSUM `!g. P g` (MP_TAC o Q_RESQ_SPECL [`gcd a b`, `a`, `b`])
+       ++ Q.PAT_X_ASSUM `!g. P g` (MP_TAC o Q_RESQ_SPECL [`gcd a b`, `a`, `b`])
        ++ R_TAC [])
    ++ HO_MATCH_MP_TAC FACTOR_INDUCT
    ++ R_TAC []
@@ -888,11 +888,11 @@ val PRIME_EXPONENT_EXISTS0 = store_thm
    ++ AR_TAC []
    ++ RES_TAC
    ++ POP_ASSUM K_TAC
-   ++ Q.PAT_ASSUM `!p. P p` K_TAC
+   ++ Q.PAT_X_ASSUM `!p. P p` K_TAC
    ++ Cases_on `p' = p` >> (R_TAC [DIVIDES_CANCEL, EXP] ++ PROVE_TAC [])
    ++ Q.EXISTS_TAC `k`
    ++ S_TAC
-   ++ Q.PAT_ASSUM `~divides x y` MP_TAC
+   ++ Q.PAT_X_ASSUM `~divides x y` MP_TAC
    ++ R_TAC []
    ++ MATCH_MP_TAC L_EUCLIDES
    ++ Q.EXISTS_TAC `p`
@@ -909,7 +909,7 @@ val PRIME_EXPONENT = store_thm
    ++ R_TAC [MINIMAL_EXISTS, exponent_def]
    ++ S_TAC
    ++ Cases_on `minimal (\k. ~divides (p EXP SUC k) n)` >> R_TAC [EXP]
-   ++ Q.PAT_ASSUM `!n''. P n''` (MP_TAC o Q.SPEC `n'`)
+   ++ Q.PAT_X_ASSUM `!n''. P n''` (MP_TAC o Q.SPEC `n'`)
    ++ R_TAC []);
 
 val PRIME_EXPONENT_DIVIDES = store_thm
@@ -930,7 +930,7 @@ val PRIME_EXPONENT_DIVIDES = store_thm
    ++ Know `SUC n' = SUC (exponent p n) + (n' - exponent p n)`
    >> DECIDE_TAC
    ++ S_TAC
-   ++ Q.PAT_ASSUM `divides x y` MP_TAC
+   ++ Q.PAT_X_ASSUM `divides x y` MP_TAC
    ++ R_TAC [EXP_ADD]
    ++ S_TAC
    ++ Know `divides (p EXP SUC (exponent p n)) n`
@@ -1010,7 +1010,7 @@ val PRIME_EXPONENT_1_UNIQUE = store_thm
    ++ Suff `!p. prime p ==> ~divides p n`
    >> PROVE_TAC [EXISTS_PRIME_DIVISOR]
    ++ S_TAC
-   ++ Q.PAT_ASSUM `!p. P p` (MP_TAC o Q.SPEC `p`)
+   ++ Q.PAT_X_ASSUM `!p. P p` (MP_TAC o Q.SPEC `p`)
    ++ R_TAC [IS_PRIME_EXPONENT]
    ++ R_TAC [EXP]);
 
@@ -1037,10 +1037,10 @@ val PRIME_EXPONENTS_EQ = store_thm
    ++ S_TAC
    ++ AR_TAC []
    ++ POP_ASSUM K_TAC
-   ++ Q.PAT_ASSUM `!b. P b /\ Q b ==> R b` MATCH_MP_TAC
+   ++ Q.PAT_X_ASSUM `!b. P b /\ Q b ==> R b` MATCH_MP_TAC
    ++ R_TAC []
    ++ S_TAC
-   ++ Q.PAT_ASSUM `!p'. P p'` (MP_TAC o Q.SPEC `p'`)
+   ++ Q.PAT_X_ASSUM `!p'. P p'` (MP_TAC o Q.SPEC `p'`)
    ++ R_TAC [PRIME_EXPONENT_PRIME_MULT]
    ++ Cases_on `p' = p`
    ++ R_TAC []);
@@ -1158,8 +1158,8 @@ val DIVIDES_SUB_2 = store_thm
    ++ S_TAC
    ++ Q.EXISTS_TAC `q - q'`
    ++ R_TAC [RIGHT_SUB_DISTRIB]
-   ++ Q.PAT_ASSUM `x = y` (ONCE_REWRITE_TAC o wrap o SYM)
-   ++ Q.PAT_ASSUM `x = y` (ONCE_REWRITE_TAC o wrap o SYM)
+   ++ Q.PAT_X_ASSUM `x = y` (ONCE_REWRITE_TAC o wrap o SYM)
+   ++ Q.PAT_X_ASSUM `x = y` (ONCE_REWRITE_TAC o wrap o SYM)
    ++ DECIDE_TAC);
 
 val PRIME_POWER_GE = store_thm
@@ -1249,7 +1249,7 @@ val FACTOR_PRIME_POWER_SANDWICH = store_thm
        divides (p EXP SUC r) n``,
    R_TAC [FACTOR_PRIME_POWER]
    ++ S_TAC
-   ++ Q.PAT_ASSUM `!x. P x` (MP_TAC o Q.SPECL [`r'`, `s'`])
+   ++ Q.PAT_X_ASSUM `!x. P x` (MP_TAC o Q.SPECL [`r'`, `s'`])
    ++ R_TAC []
    ++ S_TAC
    ++ Know `r' = SUC r` >> DECIDE_TAC
@@ -1263,7 +1263,7 @@ val PRIME_POWER_SANDWICH = store_thm
        prime p /\ divides s n /\ divides n (p EXP r * s) ==>
        ?k. k <= r /\ (p EXP k * s = n)``,
    S_TAC
-   ++ Q.PAT_ASSUM `divides s n` MP_TAC
+   ++ Q.PAT_X_ASSUM `divides s n` MP_TAC
    ++ R_TAC [divides_def]
    ++ S_TAC
    ++ POP_ASSUM (AR_TAC o wrap)
@@ -1289,7 +1289,7 @@ val PRIME_EXPONENT_MULT = store_thm
    ++ CONJ_TAC >> R_TAC [PRIME_EXPONENT_1]
    ++ S_TAC
    ++ AR_TAC [GSYM MULT_ASSOC, PRIME_EXPONENT_PRIME_MULT]
-   ++ Q.PAT_ASSUM `!b. P b` (MP_TAC o Q.SPECL [`b`, `p`])
+   ++ Q.PAT_X_ASSUM `!b. P b` (MP_TAC o Q.SPECL [`b`, `p`])
    ++ Cases_on `p' = p`
    ++ R_TAC [ADD_CLAUSES]);
 
@@ -1377,7 +1377,7 @@ val NUM_DECOMPOSE = store_thm
     Know `~divides p q`
     >> (Simplify [divides_def]
         ++ Strip
-        ++ Q.PAT_ASSUM `xx = n` MP_TAC
+        ++ Q.PAT_X_ASSUM `xx = n` MP_TAC
         ++ PURE_ONCE_REWRITE_TAC [MULT_COMM]
         ++ Simplify [GSYM MULT_ASSOC, GSYM EXP]
         ++ PROVE_TAC [divides_def, MULT_COMM])
@@ -1407,7 +1407,7 @@ val MULT_EQ_PRIME = store_thm
    Strip
    ++ Cases_on `a = 1` >> RW_TAC arith_ss []
    ++ Simplify []
-   ++ Q.PAT_ASSUM `prime p` MP_TAC
+   ++ Q.PAT_X_ASSUM `prime p` MP_TAC
    ++ Simplify [prime_def]
    ++ STRIP_TAC
    ++ POP_ASSUM (MP_TAC o Q.SPEC `a`)

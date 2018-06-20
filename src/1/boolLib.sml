@@ -145,7 +145,7 @@ fun save_thm_attrs fname (n, attrs, th) = let
     storefn n;
     case exportfn of
         NONE => ()
-      | SOME ef => ef (current_theory()) [th]
+      | SOME ef => ef (current_theory()) [(n,th)]
   end
 in
   Theory.save_thm(n,th) before app do_attr attrs
@@ -163,5 +163,74 @@ fun save_thm(n0,th) = let
 in
   save_thm_attrs "save_thm" (n,attrs,th)
 end
+
+
+(* ----------------------------------------------------------------------
+    Gets a variant of an arbitrary term instead of a single variable.
+    Besides the resulting term, it returns also the substitution used to
+    get it.
+   ---------------------------------------------------------------------- *)
+
+fun variant_of_term vs t =
+  let
+    open HolKernel
+    val check_vars = free_vars t
+    val (_,sub) =
+        foldl (fn (v, (vs,sub)) =>
+                  let
+                    val v' = variant vs v
+                    val vs' = v'::vs
+                    val sub' = if (aconv v v') then sub else
+                               (v |-> v')::sub
+                  in
+                    (vs',sub')
+                  end) (vs,[]) check_vars
+    val t' = subst sub t
+  in
+    (t', sub)
+  end
+
 end (* local *)
+
+datatype pel = pLeft | pRight | pAbs
+fun term_diff t1 t2 =
+  let
+    open Term HolKernel
+    fun recurse p t1 t2 =
+      if aconv t1 t2 then []
+      else
+        case (dest_term t1, dest_term t2) of
+            (COMB(f1,x1), COMB (f2,x2)) =>
+            if aconv f1 f2 then recurse (pRight :: p) x1 x2
+            else if aconv x1 x2 then recurse (pLeft :: p) f1 f2
+            else recurse (pLeft :: p) f1 f2 @ recurse (pRight :: p) x1 x2
+          | (LAMB(v1,b1), LAMB(v2,b2)) =>
+            if aconv v1 v2 then recurse (pAbs :: p) b1 b2
+            else if Type.compare(type_of v1,type_of v2) = EQUAL then
+              let val v1' = variant (free_vars b2) v1
+              in
+                recurse (pAbs :: p) b1 (subst [v2 |-> v1'] b2)
+              end
+            else recurse (pAbs :: p) b1 b2
+          | (CONST _, CONST _) => if same_const t1 t2 then []
+                                  else [(List.rev p,t1,t2)]
+          | _ => [(List.rev p,t1,t2)]
+  in
+    recurse [] t1 t2
+  end
+
+fun Teq tm = Term.same_const boolSyntax.T tm
+fun Feq tm = Term.same_const boolSyntax.F tm
+fun tmleq tl1 tl2 = ListPair.allEq op~~ (tl1,tl2)
+fun goaleq (tl1,t1) (tl2,t2) = tmleq tl1 tl2 andalso t1 ~~ t2
+fun goals_eq gl1 gl2 = ListPair.allEq (fn (g1,g2) => goaleq g1 g2) (gl1,gl2)
+val tmem = Lib.op_mem Term.aconv
+val tunion = Lib.op_union Term.aconv
+fun tassoc t l = Lib.op_assoc Term.aconv t l
+
+fun tmx_eq (tm1,x1) (tm2,x2) = x1 = x2 andalso Term.aconv tm1 tm2
+fun xtm_eq (x1,tm1) (x2,tm2) = x1 = x2 andalso Term.aconv tm1 tm2
+fun tmp_eq (tm1,tm2) (tma,tmb) = tm1 ~~ tma andalso tm2 ~~ tmb
+
+
 end;

@@ -3,6 +3,11 @@ struct
 
 open HolKernel Parse boolLib hol88Lib jrhUtils limTheory;
 
+structure Parse = struct
+  open Parse
+  val (Type, Term) = parse_from_grammars limTheory.lim_grammars
+end
+open Parse
 
 val xreal    = Term`x:real`;
 val lreal    = Term`l:real`
@@ -22,18 +27,18 @@ val basic_diffs = ref ([]:thm list);
 (* Where the li's are hypothetical derivatives for unknown sub-functions     *)
 (*---------------------------------------------------------------------------*)
 val iths = map TAUT_CONV
-             [(--`(a ==> c) /\ (b ==> d) ==> ((a /\ b) ==> (c /\ d))`--),
-              (--`c /\ (b ==> d) ==> (b ==> (c /\ d))`--),
-              (--`(a ==> c) /\ d ==> (a ==> (c /\ d))`--),
-              (--`c /\ d ==> c /\ d`--)];
+             [(``(a ==> c) /\ (b ==> d) ==> ((a /\ b) ==> (c /\ d))``),
+              (``c /\ (b ==> d) ==> (b ==> (c /\ d))``),
+              (``(a ==> c) /\ d ==> (a ==> (c /\ d))``),
+              (``c /\ d ==> c /\ d``)];
 
 val [DIFF_INV', DIFF_DIV'] =
-   map (ONCE_REWRITE_RULE[TAUT_CONV (--`a /\ b ==> c = a ==> b ==> c`--)])
+   map (ONCE_REWRITE_RULE[TAUT_CONV (``a /\ b ==> c = a ==> b ==> c``)])
           [DIFF_INV, REWRITE_RULE[CONJ_ASSOC] DIFF_DIV];
 
 val comths = [DIFF_ADD, DIFF_MUL, DIFF_SUB, DIFF_DIV', DIFF_NEG, DIFF_INV'];
 
-val CC = TAUT_CONV (--`a ==> b ==> c = a /\ b ==> c`--);
+val CC = TAUT_CONV (``a ==> b ==> c = a /\ b ==> c``);
 
 fun DIFF_CONV tm =
   let val xv = variant (frees tm) xreal

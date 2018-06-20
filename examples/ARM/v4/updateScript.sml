@@ -134,17 +134,8 @@ val LUPDATE_LUPDATE = store_thm("LUPDATE_LUPDATE",
     << [
       Cases_on `w2n b <= w2n a + LENGTH y` \\ ASM_SIMP_TAC std_ss []
         \\ `w2n b - w2n a <= LENGTH y` by DECIDE_TAC
-        \\ Cases_on `LENGTH x = 0`
-        \\ Cases_on `LENGTH y = 0`
-        \\ IMP_RES_TAC LENGTH_NIL
-        \\ FULL_SIMP_TAC list_ss [FUN_EQ_THM,WORD_LS,LUPDATE_def,BUTFIRSTN]
-        >> (`w2n a = w2n b` by DECIDE_TAC \\ ASM_SIMP_TAC std_ss [])
-        \\ NTAC 2 (RW_TAC std_ss [])
-        \\ FULL_SIMP_TAC arith_ss
-             [NOT_LESS,NOT_LESS_EQUAL,EL_APPEND1,EL_APPEND2,EL_BUTFIRSTN]
-        \\ FULL_SIMP_TAC arith_ss []
-        \\ `LENGTH y + w2n a - w2n b <= LENGTH x` by DECIDE_TAC
-        \\ FULL_SIMP_TAC arith_ss [LENGTH_BUTFIRSTN],
+        \\ ntac 2 (rw[LUPDATE_def,WORD_LS,FUN_EQ_THM,EL_DROP,EL_APPEND1,EL_APPEND2,DROP])
+        \\ fs[] \\ rw[] \\ fs[],
       REWRITE_TAC [FUN_EQ_THM] \\ RW_TAC arith_ss []
         << [
           RW_TAC (arith_ss++boolSimps.LET_ss) [WORD_LS,LUPDATE_def,JOIN_def,

@@ -14,6 +14,8 @@ in
   ()
 end
 
+val Datatype = Datatype.Datatype
+
 fun primrec_test ty = let
   val rcd = {nchotomy = TypeBase.nchotomy_of ty,
              case_def = TypeBase.case_def_of ty}
@@ -23,13 +25,23 @@ in
 end
 
 val _ = Hol_datatype `type1 = one_constructor`
+
+val _ = let
+  val _ = tprint "type_to_string immediately after type defn"
+  val s = prim_mk_const{Thy = "scratch", Name = "one_constructor"}
+                       |> type_of |> Parse.type_to_string
+in
+  if s = ":type1" then OK()
+  else die ("\nFAILED: got \"" ^ String.toString s ^ "\"; not \":type1\"")
+end
+
+
 val _ = Hol_datatype `type2 = ##`;
 val _ = Hol_datatype `type3 = /\`;
 val _ = Hol_datatype `type4 = /\ | \/ | feh`;
 val _ = Hol_datatype `type5 = foo of num | bar of 'a`;
 
 val _ = map primrec_test [``:type1``, ``:type4``, ``:'a type5``]
-
 
 val _ = Hol_datatype `foo = NIL | CONS of 'a => foo`;
 val _ = Hol_datatype `list = NIL | :: of 'a => list`;
@@ -102,6 +114,7 @@ val _ = Hol_datatype`
 
 val _ = Hol_datatype`squish_record = <|fld1:bool|>`
 val _ = Hol_datatype`poly_squish_record = <|fld1:'a->'b|>`
+val _ = Datatype.Datatype`parentest1 = C (('a,'b)fun)`
 
 val _ = tprint "Parse polymorphic record literal"
 val r = with_flag (Globals.guessing_tyvars, false) Parse.Term
@@ -113,14 +126,14 @@ val fty = hd args
 val (d,r) = dom_rng fty
 val _ = if type_of rnd = ``:(num, num)poly_squish_record`` andalso
            Type.compare(d,r) = EQUAL
-        then print "OK\n"
+        then OK()
         else die "FAILED!"
 val _ = tprint "TypeBase.mk_record on polymorphic record"
 val _ =
     case Lib.total TypeBase.mk_record
                    (``:(num,num)poly_squish_record``, [("fld1", ``SUC``)]) of
         NONE => die "FAILED!"
-      | SOME _ => print "OK\n"
+      | SOME _ => OK()
 
 val _ = Hol_datatype`K = <| F : 'a -> bool; S : num |>`
 
@@ -209,13 +222,25 @@ val _ = Hol_datatype `u3 = d3 of u4 u2 u1 ;
 val _ = Hol_datatype `foo = fooC of 'a`
 val _ = Hol_datatype `foo = fooC' of num`
 
+(* from uvm-hol, 2016/10/03
+     issue is/was lexing of r-paren/semi-colon agglomerations
+*)
+val _ = Datatype.Datatype `
+  uvmhol1 = uvmholC uvmhol2 num (num -> bool);
+  uvmhol2 = uvmholD1 num | uvmHOLD2 uvmhol1
+`;
+
+val _ = Datatype.Datatype`
+  uvmhol3 = <| uvmfld1 : num # (num -> bool); uvmfld2 : bool |>
+`;
+
 val _ = tprint "Testing independence of case variables"
 val t = Lib.total Parse.Term `case (x:valbind) of
                                 bind p e => 3
                               | bindl p' e p => 4
                               | p => 5`
 val _ = case t of NONE => (print "FAILED!\n"; Process.exit Process.failure)
-                | SOME _ => print "OK\n"
+                | SOME _ => OK()
 
 val _ = set_trace "Unicode" 0
 
@@ -223,8 +248,8 @@ fun pptest (nm, t, expected) = let
   val _ = tprint ("Pretty-printing of "^nm)
   val s = Parse.term_to_string t
 in
-  if s = expected then print "OK\n"
-  else (print "FAILED!\n"; Process.exit Process.failure)
+  if s = expected then OK()
+  else die ("FAILED!\n  Expected \""^expected^"\"; got \""^s^"\"")
 end
 
 fun s t = let open HolKernel boolLib
@@ -235,6 +260,7 @@ fun s t = let open HolKernel boolLib
 val _ = Hol_datatype`ovlrcd = <| id : num ; opn : num -> num |>`
 val _ = overload_on ("ID", ``f.id``)
 val _ = overload_on ("inv", ``f.opn``)
+val _ = overload_on ("ovlfoo", ``\n r:ovlrcd. opn_fupd (K (K n)) r``)
 
 val _ = type_abbrev ("ms", ``:'a -> num``)
 val _ = Hol_datatype`
@@ -246,7 +272,8 @@ val _ = Datatype.Datatype`
 `
 
 val _ = List.app pptest
-        [("field selection", ``r.fld2``, "r.fld2"),
+        [("specific upd overload", ``ovlfoo 2 x``, "ovlfoo 2 x"),
+         ("field selection", ``r.fld2``, "r.fld2"),
          ("field sel. for fn type", ``r.fld1 x``, "r.fld1 x"),
          ("singleton field update",
           ``r with fld1 := (\x. T)``, "r with fld1 := (\\x. T)"),
@@ -290,18 +317,39 @@ val _ = List.app pptest
             "pfld1_fupd f")
          ]
 
+val _ = with_flag (Globals.linewidth, 40) pptest
+                  ("multiline record 1",
+                   ``<|fld1 := a very long expression indeed ;
+                       fld2 := also a long expression|>``,
+                  "<|fld1 := a very long expression indeed;\n\
+                  \  fld2 := also a long expression|>")
+
+val _ = with_flag (Globals.linewidth, 40) pptest
+                  ("multiline record 2",
+                   ``<|fld3 := a very long expression indeed ;
+                       fld4 := also a long expression|>``,
+                  "<|fld3 := a very long expression indeed;\n\
+                  \  fld4 := also a long expression|>")
+
+val _ = app convtest [
+      ("EVAL field K-composition", computeLib.CBV_CONV computeLib.the_compset,
+       ``<| fld1 updated_by K t1 o K t2 |>``,
+       ``<| fld1 := t1 |>``)
+    ]
+
+
 val _ = Feedback.emit_MESG := false
 
 (* a test for Hol_defn that requires a datatype: *)
 (* mutrec defs with sums *)
 val _ = tprint "Mutrec defn with sums"
-val _ = Hol_datatype `foo = F1 of unit | F2 of foo + num`
+val _ = Hol_datatype `foo2 = F1 of unit | F2 of foo2 + num`
 val _ = Defn.Hol_defn "foo"`
 (foo1 (F1 ()) = F1 ()) /\
 (foo1 (F2 sf) = F2 (foo2 sf)) /\
 (foo2 (INR n) = INL (F1 ())) /\
 (foo2 (INL f) = INL (foo1 f))` handle HOL_ERR _ => die "FAILED!"
-val _ = print "OK\n"
+val _ = OK()
 
 val _ = tprint "Non-recursive num"
 val _ = Datatype.Datatype `num = C10 num$num | C11 num | C12 scratch$num`;
@@ -311,30 +359,30 @@ val (d,r) = dom_rng (type_of ``C11``)
 val _ = Type.compare(d, numSyntax.num) <> EQUAL orelse die "FAILED!"
 val (d,r) = dom_rng (type_of ``C12``)
 val _ = Type.compare(d, numSyntax.num) <> EQUAL orelse die "FAILED!"
-val _ = print "OK\n"
+val _ = OK()
 
 val _ = tprint "Datatype and antiquote (should be quick)"
 val num = numSyntax.num
 val _ = Datatype.Datatype `dtypeAQ = C13 ^num bool | C14 (^num -> bool)`
-val _ = print "OK\n"
+val _ = OK()
 
 val _ = tprint "Records with polymorphic fields 1"
 val _ = (``polyrcd_pfld1_fupd :
              ('c ms -> 'e ms) -> ('c,'d) polyrcd -> ('e,'d)polyrcd``;
-         print "OK\n"; true)
+         OK(); true)
         orelse die "FAILED!"
 
 val _ = tprint "Records with polymorphic fields 2"
 val _ = (``polyrcd2_p2fld1_fupd :
              ('a ms -> 'a ms) -> ('a,'b) polyrcd2 -> ('a,'b)polyrcd2``;
-         print "OK\n"; true)
+         OK(); true)
         orelse die "FAILED!"
 
 val _ = tprint "Records with polymorphic fields 3"
 val _ = (``polyrcd2_p2fld2_fupd :
              (('a # 'b -> bool) -> ('a # 'c -> bool)) ->
              ('a,'b) polyrcd2 -> ('a,'c)polyrcd2``;
-         print "OK\n"; true)
+         OK(); true)
         orelse die "FAILED!"
 
 val _ = tprint "Records with polymorphic fields 4"
@@ -343,7 +391,25 @@ val _ =
        `polyrcd2_p2fld1_fupd :
              ('a ms -> 'b ms) -> ('a,'c) polyrcd2 -> ('b,'c)polyrcd2`
   of
-    NONE => print "OK\n"
+    NONE => OK()
   | _ => die "FAILED!";
+
+
+val _ = tprint "Testing overriding calls in mutual recursive style";
+val _ = quiet_warnings (fn () =>
+           (Datatype`a2 = A num ; b = B 'a`;
+            Datatype`a2 = A num ; b = B 'a `;
+            Datatype `foo = Foo`;
+            Datatype`a = A ; b = B `;
+            Datatype`a2 = A ; b = B `;
+            Datatype`a2 = A ; b2 = B `;
+            Datatype `foo = Foo`)) () handle _ => die "FAILED!"
+val _ = OK()
+
+val _ = tprint "Test for prove_case_elim_thm (20171201)";
+val _ = quiet_warnings (fn () =>
+          Datatype `pcet20171201 = C20171201 num | D20171201 (num -> bool)`) ()
+          handle _ => die "FAILED!"
+val _ = OK()
 
 val _ = Process.exit Process.success;

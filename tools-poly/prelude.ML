@@ -1,3 +1,4 @@
+
 (* this is an -*- sml -*- file *)
 val () = PolyML.print_depth 0;
 
@@ -6,28 +7,26 @@ open HolKernel Parse boolLib proofManagerLib
 (* Install pretty-printers *)
 
 local
-  fun pp2polypp (ppfn: PP.ppstream -> 'b -> unit) =
+  fun pp2polypp (ppfn: 'b -> HOLPP.pretty) =
     let
-      fun f pps x = Parse.respect_width_ref Globals.linewidth ppfn pps x
-                    handle e => Raise e
     in
-      fn depth => fn printArgTypes => fn e: 'b =>
-        PolyML.PrettyString (PP.pp_to_string (!Globals.linewidth) f e)
+      fn depth => fn printArgTypes => fn e: 'b => ppfn e
     end
-  fun gprint g pps t =
+  fun gprint g =
     let
       val tyg = Parse.type_grammar ()
       val (_, ppt) = Parse.print_from_grammars (tyg, g)
     in
-      ppt pps t
+      smpp.lift ppt
     end
-  val ppg = term_grammar.prettyprint_grammar gprint
-  fun locpp pps l = PP.add_string pps (locn.toShortString l)
-  fun pp_redblackmap pps (d: ('a,'b) Redblackmap.dict) =
-    PP.add_string pps
+  val ppg = Parse.mlower o term_grammar.prettyprint_grammar gprint
+  val ppgrules = Parse.mlower o term_grammar.prettyprint_grammar_rules gprint
+  fun locpp l = PP.add_string (locn.toShortString l)
+  fun pp_redblackmap (d: ('a,'b) Redblackmap.dict) =
+    PP.add_string
       ("<Redblackmap(" ^ Int.toString (Redblackmap.numItems d) ^ ")>")
-  fun pp_redblackset pps (s: 'a Redblackset.set) =
-    PP.add_string pps
+  fun pp_redblackset (s: 'a Redblackset.set) =
+    PP.add_string
       ("<Redblackset(" ^ Int.toString (Redblackset.numItems s) ^ ")>")
 in
   val () =
@@ -39,7 +38,7 @@ in
       in
         PolyML.addPrettyPrinter pp_typebase
       ; PolyML.addPrettyPrinter pp_seq
-      ; PolyML.addPrettyPrinter (pp2polypp HOLset.pp_holset)
+      ; PolyML.addPrettyPrinter HOLset.pp_holset
       end
     else
       let
@@ -75,7 +74,7 @@ in
               PolyML.PrettyBlock
                 (2, false, [],
                  [PolyML.PrettyString "QUOTE", PolyML.PrettyBreak (1, 0),
-                  PolyML.PrettyString s])
+                  PolyML.prettyRepresentation (s, depth)])
           | HOLPP.ANTIQUOTE a =>
               PolyML.PrettyBlock
                 (2, false, [],
@@ -93,7 +92,9 @@ in
       ; PolyML.addPrettyPrinter pp_frag
       ; PolyML.addPrettyPrinter pp_breakstyle
       end
+  ; PolyML.addPrettyPrinter (pp2polypp HOLPP.pp_pretty)
   ; PolyML.addPrettyPrinter (pp2polypp ppg)
+  ; PolyML.addPrettyPrinter (pp2polypp ppgrules)
   ; PolyML.addPrettyPrinter (pp2polypp locpp)
   ; PolyML.addPrettyPrinter (pp2polypp pp_redblackmap)
   ; PolyML.addPrettyPrinter (pp2polypp pp_redblackset)
@@ -113,6 +114,7 @@ in
   ; PolyML.addPrettyPrinter (pp2polypp Arbnum.pp_num)
   ; PolyML.addPrettyPrinter (pp2polypp Arbint.pp_int)
   ; PolyML.addPrettyPrinter (pp2polypp Arbrat.pp_rat)
+  ; PolyML.addPrettyPrinter (pp2polypp Tag.pp_tag)
   )
 end
 
@@ -179,40 +181,7 @@ end;
  * Set parameters for parsing and help.                                      *
  *---------------------------------------------------------------------------*)
 
-local
-  fun try_remove f = ((OS.FileSys.remove f) handle OS.SysErr _ => ())
-  fun has_dq file =
-    let
-      val istrm = TextIO.openIn file
-      fun loop() =
-        case TextIO.input1 istrm of
-          NONE => false
-        | SOME #"`" => true
-        | SOME _ => loop()
-    in
-      loop() before TextIO.closeIn istrm
-    end handle IO.Io _ => false
-  infix ++
-  val op ++ = OS.Path.concat
-  fun unquote_to file1 file2 =
-    Systeml.systeml [HOLDIR ++ "bin" ++ "unquote", file1, file2];
-in
-  fun use s =
-    if has_dq s then
-      let
-        val filename = OS.FileSys.tmpName()
-      in
-        (if OS.Process.isSuccess (unquote_to s filename) then
-           (PolyML.use filename; OS.FileSys.remove filename)
-         else
-           ( TextIO.output
-               (TextIO.stdOut, ("Failed to translate file: " ^ s ^ "\n"))
-           ; raise Fail "use"
-           ))
-        handle e => (try_remove filename; raise e)
-      end
-    else PolyML.use s
-end; (* local *)
+val use = QUse.use
 
 local
   infix ++
@@ -229,19 +198,12 @@ in
   val () =
     ( hol_use ("help" ++ "src-sml") "Database"
     ; hol_use ("tools-poly" ++ "poly") "Help"
-    ; List.app (hol_use ("tools" ++ "Holmake"))
-        ["regexpMatch", "parse_glob", "internal_functions", "Holmake_types",
-         "ReadHMF"]
-    ; List.app (fn s => PolyML.use (HOLDIR ++ "tools" ++ s))
-        ["makefile-includes.ML", "check-intconfig.sml"]
-    ; List.app Meta.fakeload ["PP", "PolyML"]
+    ; ReadHMF.extend_path_with_includes {quietp = false, lpref = loadPath}
+    ; List.app Meta.fakeload ["PP", "PolyML", "Posix"]
     ; Globals.interactive := true
     ; Parse.current_backend := Parse.interactive_ppbackend ()
-    ; term_pp_prefix := "``"
-    ; term_pp_suffix := "``"
-    ; type_pp_prefix := "``"
-    ; type_pp_suffix := "``"
     ; Feedback.set_trace "pp_annotations" 1
+    ; PolyML.use (HOLDIR ++ "tools" ++ "check-intconfig.sml")
     )
 end;
 
@@ -265,3 +227,6 @@ in
 end
 
 val _ = HOL_Interactive.toggle_quietdec ()
+val _ = List.app holpathdb.extend_db
+                 (holpathdb.search_for_extensions ReadHMF.find_includes
+                                                  [OS.FileSys.getDir()])

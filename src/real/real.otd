@@ -1,0 +1,10 @@
+delconst abs
+delconst max
+delconst min
+delconst pow
+delconst /
+delconst real_ge
+delconst real_gt
+delconst real_lte
+delconst real_of_num
+delconst real_sub

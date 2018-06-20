@@ -16,10 +16,10 @@ struct
 
    val compare = L3.listCompare boolCompare
 
-   fun zero n = List.tabulate (Nat.toInt n, fn _ => false)
+   fun zero n = List.tabulate (Nat.toNativeInt n, fn _ => false)
    fun one n = if n < 1 then [] else zero (n - 1) @ [true]
 
-   val size: bitstring -> Nat.nat = Nat.fromInt o List.length
+   val size: bitstring -> Nat.nat = Nat.fromNativeInt o List.length
 
    local
       fun iter a i =
@@ -38,18 +38,14 @@ struct
          else iter [] i
    end
 
+   val fromNativeInt = fromInt o IntInf.fromInt
+
    val fromNat = fromInt o Nat.toInt
 
-   val toInt =
-      let
-         fun iter (a, v) =
-            fn [] => a
-             | b :: t => iter (if b then a + v else a, 2 * v) t
-      in
-         iter (0, 1) o List.rev
-      end
+   val toInt = List.foldl (fn (true, v) => 2 * v + 1 | (false, v) => 2 * v) 0
 
    val toNat = Nat.fromInt o toInt
+   val toNativeInt = IntInf.toInt o toInt
 
    val fromBool = fn x => [x]
 
@@ -137,18 +133,15 @@ struct
    fun toList l = l
    fun fromList l = l
 
-   fun modify (f: Nat.nat * bool -> bool) a =
-      #1 (List.foldr (fn (b, (l, i)) => (f (i, b) :: l, i + 1)) ([], 0) a)
-
    fun op << (l, s) = l @ zero s
 
-   fun op >>+ (l, s) = List.take (l, List.length l - Nat.toInt s)
+   fun op >>+ (l, s) = List.take (l, List.length l - Nat.toNativeInt s)
                        handle General.Subscript => []
 
    fun op #>> (l, s) =
       let
          val n = List.length l
-         val x = n - s mod n
+         val x = n - (IntInf.toInt s) mod n
       in
          List.drop (l, x) @ List.take (l, x)
       end
@@ -157,7 +150,9 @@ struct
       let
          val n = List.length l
       in
-         if n < s then zero (s - n) @ l else List.drop (l, n - s)
+         if n < s
+           then zero (Nat.fromNativeInt (s - n)) @ l
+         else List.drop (l, n - s)
       end
 
    fun bits (h, l) =
@@ -165,10 +160,14 @@ struct
          val s = Nat.- (Nat.suc h, l)
       in
          fn b =>
-           if s = Nat.zero then [false] else setSize (Nat.toInt s) (b >>+ l)
+           if s = Nat.zero then [false]
+           else setSize (Nat.toNativeInt s) (b >>+ l)
       end
 
    fun bit (a, n) = bits (n, n) a = [true]
+
+   fun modify (f: Nat.nat * bool -> bool) a =
+      #1 (List.foldr (fn (b, (l, i)) => (f (i, b) :: l, i + 1)) ([], 0) a)
 
    fun bitFieldInsert (h,l) (x, y) =
       modify (fn (i, b) => if Nat.<= (l, i) andalso Nat.<= (i, h)
@@ -181,7 +180,7 @@ struct
 
    fun op + (l1, l2) =
       let
-         val r = Int.+ (toInt l1, toInt l2)
+         val r = IntInf.+ (toInt l1, toInt l2)
       in
          setSize (Int.max (log2plus1 r, maxLength (l1, l2))) (fromInt r)
       end
@@ -207,6 +206,7 @@ struct
    fun replicate (a, n) =
       if n = Nat.zero
          then zero n
-      else List.foldl (op @@) a (List.tabulate (Nat.toInt n - 1, fn _ => a))
+      else List.foldl (op @@) a
+             (List.tabulate (Nat.toNativeInt n - 1, fn _ => a))
 
 end (* structure Bitstring *)

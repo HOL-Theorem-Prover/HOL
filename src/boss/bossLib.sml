@@ -15,7 +15,7 @@ structure bossLib :> bossLib =
 struct
 
 open HolKernel Parse boolLib pairLib simpLib metisLib pred_setLib
-     boolSimps quantHeuristicsLib
+     boolSimps quantHeuristicsLib patternMatchesLib
 
 (* This makes the dependency on listTheory and optionTheory explicit.
    Without it, the theories can change, and bossLib won't get recompiled.
@@ -105,11 +105,12 @@ local open sumTheory pred_setTheory
 in
 
 val QI_ss = quantHeuristicsLib.QUANT_INST_ss [std_qp]
+val SQI_ss = quantHeuristicsLib.SIMPLE_QUANT_INST_ss
 val pure_ss = pureSimps.pure_ss
 val bool_ss = boolSimps.bool_ss
-val std_ss = numLib.std_ss
-val arith_ss = numLib.arith_ss
-val old_arith_ss = std_ss ++ numSimps.old_ARITH_ss
+val std_ss = numLib.std_ss ++ PMATCH_SIMP_ss
+val arith_ss = numLib.arith_ss ++ PMATCH_SIMP_ss
+val old_arith_ss = std_ss ++ numSimps.old_ARITH_ss ++ PMATCH_SIMP_ss
 val ARITH_ss = numSimps.ARITH_ss
 val old_ARITH_ss = numSimps.old_ARITH_ss
 val list_ss  = arith_ss ++ listSimps.LIST_ss
@@ -141,6 +142,12 @@ val recInduct = Induction.recInduct
 val Cases_on          = BasicProvers.Cases_on
 val Induct_on         = BasicProvers.Induct_on
 val PairCases_on      = pairLib.PairCases_on;
+val pairarg_tac       = pairLib.pairarg_tac
+val split_pair_case_tac = pairLib.split_pair_case_tac
+val CaseEq            = TypeBase.CaseEq
+val CaseEqs           = TypeBase.CaseEqs
+val AllCaseEqs        = TypeBase.AllCaseEqs
+
 val completeInduct_on = numLib.completeInduct_on
 val measureInduct_on  = numLib.measureInduct_on;
 
@@ -149,6 +156,8 @@ val spose_not_then    = BasicProvers.SPOSE_NOT_THEN
 
 val op by             = BasicProvers.by; (* infix 8 by *)
 val op suffices_by    = BasicProvers.suffices_by
+val sg                = BasicProvers.sg
+val subgoal           = BasicProvers.subgoal
 
 val CASE_TAC          = BasicProvers.CASE_TAC;
 
@@ -200,7 +209,10 @@ val rfs = rfsrw_tac let_arith_list
   val qspec_then : term quotation -> thm_tactic -> thm -> tactic = Q.SPEC_THEN
   val qspecl_then : term quotation list -> thm_tactic -> thm -> tactic =
      Q.SPECL_THEN
+  val qhdtm_assum = Q.hdtm_assum
+  val qhdtm_x_assum = Q.hdtm_x_assum
   val qpat_assum : term quotation -> thm_tactic -> tactic = Q.PAT_ASSUM
+  val qpat_x_assum : term quotation -> thm_tactic -> tactic = Q.PAT_X_ASSUM
   val qpat_abbrev_tac : term quotation -> tactic = Q.PAT_ABBREV_TAC
   val qmatch_abbrev_tac : term quotation -> tactic = Q.MATCH_ABBREV_TAC
   val qho_match_abbrev_tac : term quotation -> tactic = Q.HO_MATCH_ABBREV_TAC
@@ -212,6 +224,8 @@ val rfs = rfsrw_tac let_arith_list
      Q.MATCH_ASSUM_RENAME_TAC
   val qmatch_asmsub_rename_tac = Q.MATCH_ASMSUB_RENAME_TAC
   val qmatch_goalsub_rename_tac = Q.MATCH_GOALSUB_RENAME_TAC
+  val qmatch_asmsub_abbrev_tac = Q.MATCH_ASMSUB_ABBREV_TAC
+  val qmatch_goalsub_abbrev_tac = Q.MATCH_GOALSUB_ABBREV_TAC
   val rename1 = Q.RENAME1_TAC
   val rename = Q.RENAME_TAC
 

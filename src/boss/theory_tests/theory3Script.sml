@@ -6,6 +6,8 @@ open optionTheory
 open monadsyntax
 
 val _ = new_theory "theory3";
+
+val _ = temp_add_monadsyntax()
 val _ = overload_on ("monad_bind", ``OPTION_BIND``)
 
 val _ = Hol_datatype `nt = NT1 | NT2`;

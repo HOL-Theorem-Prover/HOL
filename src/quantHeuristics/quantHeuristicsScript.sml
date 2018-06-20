@@ -1,6 +1,3 @@
-structure quantHeuristicsScript =
-struct
-
 open HolKernel Parse boolLib Drule BasicProvers
      pairTheory listTheory optionTheory metisLib simpLib
      boolSimps pureSimps TotalDefn numLib ConseqConv
@@ -737,6 +734,152 @@ val IMP_NEG_CONTRA = store_thm("IMP_NEG_CONTRA",
 val DISJ_IMP_INTRO  = store_thm ("DISJ_IMP_INTRO",
   ``(!x. P x \/ Q x) ==> ((~(P y) ==> Q y) /\ (~(Q y) ==> P y))``, PROVE_TAC[])
 
+
+(******************************************************************************)
+(* Simple GUESSES                                                             *)
+(******************************************************************************)
+
+val SIMPLE_GUESS_EXISTS_def = Define `
+    SIMPLE_GUESS_EXISTS (v : 'a) (i : 'a) (P : bool) =
+      (P ==> (v = i))`
+
+val SIMPLE_GUESS_EXISTS_ALT_DEF = store_thm ("SIMPLE_GUESS_EXISTS_ALT_DEF",
+  ``(!v. SIMPLE_GUESS_EXISTS (v:'a) i (P v)) <=> (
+    GUESS_EXISTS_GAP ((K i):(unit -> 'a)) (\v. P v))``,
+SIMP_TAC std_ss [SIMPLE_GUESS_EXISTS_def, GUESS_EXISTS_GAP_def]);
+
+
+val SIMPLE_GUESS_FORALL_def = Define `
+    SIMPLE_GUESS_FORALL (v : 'a) (i : 'a) (P : bool) =
+      (~P ==> (v = i))`
+
+val SIMPLE_GUESS_FORALL_ALT_DEF = store_thm ("SIMPLE_GUESS_FORALL_ALT_DEF",
+  ``(!v. SIMPLE_GUESS_FORALL (v:'a) i (P v)) <=> (
+    GUESS_FORALL_GAP ((K i):(unit -> 'a)) (\v. P v))``,
+SIMP_TAC std_ss [SIMPLE_GUESS_FORALL_def, GUESS_FORALL_GAP_def]);
+
+val SIMPLE_GUESS_FORALL_THM = store_thm ("SIMPLE_GUESS_FORALL_THM",
+  ``!i P. (!v. SIMPLE_GUESS_FORALL v i (P v)) ==>
+    ((!v. P v) <=> (P i))``,
+REWRITE_TAC [SIMPLE_GUESS_FORALL_def] THEN
+METIS_TAC[])
+
+val SIMPLE_GUESS_EXISTS_THM = store_thm ("SIMPLE_GUESS_EXISTS_THM",
+  ``!i P. (!v. SIMPLE_GUESS_EXISTS v i (P v)) ==>
+    ((?v. P v) <=> (P i))``,
+REWRITE_TAC [SIMPLE_GUESS_EXISTS_def] THEN
+METIS_TAC[])
+
+val SIMPLE_GUESS_UEXISTS_THM = store_thm ("SIMPLE_GUESS_UEXISTS_THM",
+  ``!i P.
+    (!v. SIMPLE_GUESS_EXISTS v i (P v)) ==>
+    ((?!v. P v) <=> (P i))``,
+SIMP_TAC std_ss [SIMPLE_GUESS_EXISTS_def, EXISTS_UNIQUE_THM] THEN
+METIS_TAC[])
+
+val SIMPLE_GUESS_SELECT_THM = store_thm ("SIMPLE_GUESS_SELECT_THM",
+  ``!i P.
+    (!v. SIMPLE_GUESS_EXISTS v i (P v)) ==>
+    ((@v. P v) = if P i then i else (@v. F))``,
+SIMP_TAC std_ss [SIMPLE_GUESS_EXISTS_def] THEN
+REPEAT STRIP_TAC THEN
+Cases_on `P i` THEN ASM_REWRITE_TAC [] THENL [
+  SELECT_ELIM_TAC THEN
+  METIS_TAC[],
+
+  `!v. P v = F` by METIS_TAC[] THEN
+  ASM_REWRITE_TAC[]
+])
+
+
+val SIMPLE_GUESS_SOME_THM = store_thm ("SIMPLE_GUESS_SOME_THM",
+  ``!i P.
+    (!v. SIMPLE_GUESS_EXISTS v i (P v)) ==>
+    ((some v. P v) = (if P i then SOME i else NONE))``,
+
+SIMP_TAC std_ss [SIMPLE_GUESS_EXISTS_def, some_def] THEN
+REPEAT STRIP_TAC THEN
+Cases_on `?v. P v` THEN (
+  ASM_REWRITE_TAC [] THEN
+  METIS_TAC[]
+))
+
+val SIMPLE_GUESS_TAC =
+  SIMP_TAC std_ss [SIMPLE_GUESS_FORALL_def, SIMPLE_GUESS_EXISTS_def] THEN METIS_TAC[];
+
+val SIMPLE_GUESS_EXISTS_EQ_1 = store_thm ("SIMPLE_GUESS_EXISTS_EQ_1",
+  ``!v:'a i. SIMPLE_GUESS_EXISTS v i (v = i)``,
+  SIMPLE_GUESS_TAC)
+
+val SIMPLE_GUESS_EXISTS_EQ_2 = store_thm ("SIMPLE_GUESS_EXISTS_EQ_2",
+  ``!v:'a i. SIMPLE_GUESS_EXISTS v i (i = v)``,
+  SIMPLE_GUESS_TAC)
+
+val SIMPLE_GUESS_EXISTS_EQ_T = store_thm ("SIMPLE_GUESS_EXISTS_EQ_T",
+  ``!v. SIMPLE_GUESS_EXISTS v T v``,
+  SIMPLE_GUESS_TAC)
+
+val SIMPLE_GUESS_FORALL_NEG = store_thm ("SIMPLE_GUESS_FORALL_NEG",
+  ``!v:'a i P. SIMPLE_GUESS_EXISTS v i P ==> SIMPLE_GUESS_FORALL v i (~P)``,
+  SIMPLE_GUESS_TAC
+)
+
+val SIMPLE_GUESS_EXISTS_NEG = store_thm ("SIMPLE_GUESS_EXISTS_NEG",
+  ``!v:'a i P. SIMPLE_GUESS_FORALL v i P ==> SIMPLE_GUESS_EXISTS v i (~P)``,
+  SIMPLE_GUESS_TAC
+)
+
+val SIMPLE_GUESS_FORALL_OR_1 = store_thm ("SIMPLE_GUESS_FORALL_OR_1",
+  ``!v:'a i P1 P2. SIMPLE_GUESS_FORALL v i P1 ==> SIMPLE_GUESS_FORALL v i (P1 \/ P2)``,
+  SIMPLE_GUESS_TAC);
+
+val SIMPLE_GUESS_FORALL_OR_2 = store_thm ("SIMPLE_GUESS_FORALL_OR_2",
+  ``!v:'a i P1 P2. SIMPLE_GUESS_FORALL v i P2 ==> SIMPLE_GUESS_FORALL v i (P1 \/ P2)``,
+  SIMPLE_GUESS_TAC);
+
+val SIMPLE_GUESS_EXISTS_AND_1 = store_thm ("SIMPLE_GUESS_EXISTS_AND_1",
+  ``!v:'a i P1 P2. SIMPLE_GUESS_EXISTS v i P1 ==> SIMPLE_GUESS_EXISTS v i (P1 /\ P2)``,
+  SIMPLE_GUESS_TAC);
+
+val SIMPLE_GUESS_EXISTS_AND_2 = store_thm ("SIMPLE_GUESS_EXISTS_AND_2",
+  ``!v:'a i P1 P2. SIMPLE_GUESS_EXISTS v i P2 ==> SIMPLE_GUESS_EXISTS v i (P1 /\ P2)``,
+  SIMPLE_GUESS_TAC);
+
+val SIMPLE_GUESS_EXISTS_EXISTS = store_thm ("SIMPLE_GUESS_EXISTS_EXISTS",
+  ``!v:'a i P. (!v2. SIMPLE_GUESS_EXISTS v i (P v2)) ==>
+               SIMPLE_GUESS_EXISTS v i (?v2. P v2)``,
+  SIMPLE_GUESS_TAC)
+
+val SIMPLE_GUESS_EXISTS_FORALL = store_thm ("SIMPLE_GUESS_EXISTS_FORALL",
+  ``!v:'a i P. (!v2. SIMPLE_GUESS_EXISTS v i (P v2)) ==>
+               SIMPLE_GUESS_EXISTS v i (!v2. P v2)``,
+  SIMPLE_GUESS_TAC)
+
+val SIMPLE_GUESS_FORALL_EXISTS = store_thm ("SIMPLE_GUESS_FORALL_EXISTS",
+  ``!v:'a i P. (!v2. SIMPLE_GUESS_FORALL v i (P v2)) ==>
+               SIMPLE_GUESS_FORALL v i (?v2. P v2)``,
+  SIMPLE_GUESS_TAC)
+
+val SIMPLE_GUESS_FORALL_FORALL = store_thm ("SIMPLE_GUESS_FORALL_FORALL",
+  ``!v i P. (!v2. SIMPLE_GUESS_FORALL v i (P v2)) ==>
+            SIMPLE_GUESS_FORALL v i (!v2. P v2)``,
+  SIMPLE_GUESS_TAC)
+
+val SIMPLE_GUESS_FORALL_IMP_1 = store_thm ("SIMPLE_GUESS_FORALL_IMP_1",
+  ``!v:'a i P1 P2. SIMPLE_GUESS_EXISTS v i P1 ==> SIMPLE_GUESS_FORALL v i (P1 ==> P2)``,
+  SIMPLE_GUESS_TAC);
+
+val SIMPLE_GUESS_FORALL_IMP_2 = store_thm ("SIMPLE_GUESS_FORALL_IMP_2",
+  ``!v:'a i P1 P2. SIMPLE_GUESS_FORALL v i P2 ==> SIMPLE_GUESS_FORALL v i (P1 ==> P2)``,
+  SIMPLE_GUESS_TAC);
+
+val SIMPLE_GUESS_EXISTS_EQ_FUN = store_thm ("SIMPLE_GUESS_EXISTS_EQ_FUN",
+  ``!v:'a i t1 t2 f.
+      SIMPLE_GUESS_EXISTS v i (f t1 = f t2) ==>
+      SIMPLE_GUESS_EXISTS v i (t1 = t2)``,
+  SIMPLE_GUESS_TAC)
+
+
 (******************************************************************************)
 (* Removing functions under quantifiers                                       *)
 (******************************************************************************)
@@ -934,7 +1077,152 @@ val LIST_LENGTH_COMPARE_SUC = store_thm ("LIST_LENGTH_COMPARE_SUC",
   ((SUC x = LENGTH l) <=> ?l' e1. (LENGTH l' = x) /\ (l = e1::l'))``,
 SIMP_TAC std_ss [arithmeticTheory.ADD1, LIST_LENGTH_1]);
 
+
+(* Useful rewrites *)
+val HD_TL_EQ_TAC = REPEAT (Cases THEN SIMP_TAC list_ss [] THEN SPEC_ALL_TAC)
+
+val HD_TL_EQ_1 = prove (
+  ``!l. (HD l :: TL l = l) <=> l <> []``,
+HD_TL_EQ_TAC)
+
+val HD_TL_EQ_2 = prove (
+  ``!l. (HD l :: (HD (TL l)) :: (TL (TL l)) = l) <=> (LENGTH l > 1)``,
+HD_TL_EQ_TAC)
+
+val HD_TL_EQ_3 = prove (
+  ``!l. (HD l :: (HD (TL l)) :: (HD (TL (TL l))) :: (TL (TL (TL l))) = l) <=> (LENGTH l > 2)``,
+HD_TL_EQ_TAC)
+
+val HD_TL_EQ_4 = prove (
+  ``!l. (HD l :: (HD (TL l)) :: (HD (TL (TL l))) :: (HD (TL (TL (TL l)))) :: TL (TL (TL (TL l))) = l) <=> (LENGTH l > 3)``,
+HD_TL_EQ_TAC)
+
+val HD_TL_EQ_5 = prove (
+  ``!l. (HD l :: (HD (TL l)) :: (HD (TL (TL l))) :: (HD (TL (TL (TL l)))) ::
+        (HD (TL (TL (TL (TL l))))) :: TL (TL (TL (TL (TL l)))) = l) <=> (LENGTH l > 4)``,
+HD_TL_EQ_TAC)
+
+val HD_TL_EQ_6 = prove (
+  ``!l. (HD l :: (HD (TL l)) :: (HD (TL (TL l))) :: (HD (TL (TL (TL l)))) ::
+        (HD (TL (TL (TL (TL l))))) :: HD (TL (TL (TL (TL (TL l))))) :: TL (TL (TL (TL (TL (TL l))))) = l) <=> (LENGTH l > 5)``,
+HD_TL_EQ_TAC)
+
+val HD_TL_EQ_7 = prove (
+  ``!l. (HD l :: (HD (TL l)) :: (HD (TL (TL l))) :: (HD (TL (TL (TL l)))) ::
+        (HD (TL (TL (TL (TL l))))) :: HD (TL (TL (TL (TL (TL l))))) ::
+        HD (TL (TL (TL (TL (TL (TL l)))))) :: TL (TL (TL (TL (TL (TL (TL l)))))) = l) <=> (LENGTH l > 6)``,
+HD_TL_EQ_TAC)
+
+val HD_TL_EQ_8 = prove (
+  ``!l. (HD l :: (HD (TL l)) :: (HD (TL (TL l))) :: (HD (TL (TL (TL l)))) ::
+        (HD (TL (TL (TL (TL l))))) :: HD (TL (TL (TL (TL (TL l))))) ::
+        HD (TL (TL (TL (TL (TL (TL l)))))) :: HD (TL (TL (TL (TL (TL (TL (TL l))))))) ::
+        TL (TL (TL (TL (TL (TL (TL (TL l))))))) = l) <=> (LENGTH l > 7)``,
+HD_TL_EQ_TAC)
+
+val HD_TL_EQ_9 = prove (
+  ``!l. (HD l :: (HD (TL l)) :: (HD (TL (TL l))) :: (HD (TL (TL (TL l)))) ::
+        (HD (TL (TL (TL (TL l))))) :: HD (TL (TL (TL (TL (TL l))))) ::
+        HD (TL (TL (TL (TL (TL (TL l)))))) :: HD (TL (TL (TL (TL (TL (TL (TL l))))))) ::
+        HD (TL (TL (TL (TL (TL (TL (TL (TL l)))))))) :: TL (TL (TL (TL (TL (TL (TL (TL (TL l)))))))) = l) <=> (LENGTH l > 8)``,
+HD_TL_EQ_TAC)
+
+
+val HD_TL_EQ_NIL_1 = prove (
+  ``!l. (HD l :: [] = l) <=> (LENGTH l = 1)``,
+HD_TL_EQ_TAC)
+
+val HD_TL_EQ_NIL_2 = prove (
+  ``!l. (HD l :: (HD (TL l)) :: [] = l) <=> (LENGTH l = 2)``,
+HD_TL_EQ_TAC)
+
+val HD_TL_EQ_NIL_3 = prove (
+  ``!l. (HD l :: (HD (TL l)) :: (HD (TL (TL l))) :: [] = l) <=> (LENGTH l = 3)``,
+HD_TL_EQ_TAC)
+
+val HD_TL_EQ_NIL_4 = prove (
+  ``!l. (HD l :: (HD (TL l)) :: (HD (TL (TL l))) :: (HD (TL (TL (TL l)))) :: [] = l) <=> (LENGTH l = 4)``,
+HD_TL_EQ_TAC)
+
+val HD_TL_EQ_NIL_5 = prove (
+  ``!l. (HD l :: (HD (TL l)) :: (HD (TL (TL l))) :: (HD (TL (TL (TL l)))) ::
+        (HD (TL (TL (TL (TL l))))) :: [] = l) <=> (LENGTH l = 5)``,
+HD_TL_EQ_TAC)
+
+val HD_TL_EQ_NIL_6 = prove (
+  ``!l. (HD l :: (HD (TL l)) :: (HD (TL (TL l))) :: (HD (TL (TL (TL l)))) ::
+        (HD (TL (TL (TL (TL l))))) :: HD (TL (TL (TL (TL (TL l))))) :: [] = l) <=> (LENGTH l = 6)``,
+HD_TL_EQ_TAC)
+
+val HD_TL_EQ_NIL_7 = prove (
+  ``!l. (HD l :: (HD (TL l)) :: (HD (TL (TL l))) :: (HD (TL (TL (TL l)))) ::
+        (HD (TL (TL (TL (TL l))))) :: HD (TL (TL (TL (TL (TL l))))) ::
+        HD (TL (TL (TL (TL (TL (TL l)))))) :: [] = l) <=> (LENGTH l = 7)``,
+HD_TL_EQ_TAC)
+
+val HD_TL_EQ_NIL_8 = prove (
+  ``!l. (HD l :: (HD (TL l)) :: (HD (TL (TL l))) :: (HD (TL (TL (TL l)))) ::
+        (HD (TL (TL (TL (TL l))))) :: HD (TL (TL (TL (TL (TL l))))) ::
+        HD (TL (TL (TL (TL (TL (TL l)))))) :: HD (TL (TL (TL (TL (TL (TL (TL l))))))) ::
+        [] = l) <=> (LENGTH l = 8)``,
+HD_TL_EQ_TAC)
+
+val HD_TL_EQ_NIL_9 = prove (
+  ``!l. (HD l :: (HD (TL l)) :: (HD (TL (TL l))) :: (HD (TL (TL (TL l)))) ::
+        (HD (TL (TL (TL (TL l))))) :: HD (TL (TL (TL (TL (TL l))))) ::
+        HD (TL (TL (TL (TL (TL (TL l)))))) :: HD (TL (TL (TL (TL (TL (TL (TL l))))))) ::
+        HD (TL (TL (TL (TL (TL (TL (TL (TL l)))))))) :: [] = l) <=> (LENGTH l = 9)``,
+HD_TL_EQ_TAC)
+
+val HD_TL_EQ_THMS_1 = [
+  HD_TL_EQ_1,
+  HD_TL_EQ_2,
+  HD_TL_EQ_3,
+  HD_TL_EQ_4,
+  HD_TL_EQ_5,
+  HD_TL_EQ_6,
+  HD_TL_EQ_7,
+  HD_TL_EQ_8,
+  HD_TL_EQ_9,
+  HD_TL_EQ_NIL_1,
+  HD_TL_EQ_NIL_2,
+  HD_TL_EQ_NIL_3,
+  HD_TL_EQ_NIL_4,
+  HD_TL_EQ_NIL_5,
+  HD_TL_EQ_NIL_6,
+  HD_TL_EQ_NIL_7,
+  HD_TL_EQ_NIL_8,
+  HD_TL_EQ_NIL_9]
+
+val HD_TL_EQ_THMS_2 = map (
+ CONV_RULE (QUANT_CONV (LHS_CONV (REWR_CONV EQ_SYM_EQ)))) HD_TL_EQ_THMS_1
+
+val HD_TL_EQ_THMS = save_thm ("HD_TL_EQ_THMS", LIST_CONJ
+  (HD_TL_EQ_THMS_1 @ HD_TL_EQ_THMS_2))
+
+val SOME_THE_EQ = store_thm ("SOME_THE_EQ",
+  ``!opt. (SOME (THE opt) = opt) <=> IS_SOME opt``,
+Cases THEN SIMP_TAC std_ss [])
+
+val SOME_THE_EQ_SYM = store_thm ("SOME_THE_EQ_SYM",
+  ``!opt. (opt = SOME (THE opt)) <=> IS_SOME opt``,
+Cases THEN SIMP_TAC std_ss [])
+
+val FST_PAIR_EQ = store_thm ("FST_PAIR_EQ",
+``!p p2. ((FST p, p2) = p) <=> (p2 = SND p)``,
+Cases THEN SIMP_TAC std_ss [])
+
+val SND_PAIR_EQ = store_thm ("SND_PAIR_EQ",
+``!p p1. ((p1, SND p) = p) <=> (p1 = FST p)``,
+Cases THEN SIMP_TAC std_ss [])
+
+val FST_PAIR_EQ_SYM = store_thm ("FST_PAIR_EQ_SYM",
+``!p p2. (p = (FST p, p2)) <=> (SND p = p2)``,
+Cases THEN SIMP_TAC std_ss [])
+
+val SND_PAIR_EQ_SYM = store_thm ("SND_PAIR_EQ_SYM",
+``!p p1. (p = (p1, SND p)) <=> (FST p = p1)``,
+Cases THEN SIMP_TAC std_ss [])
+
+
 val _ = export_theory();
-
-
-end

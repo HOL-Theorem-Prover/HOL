@@ -62,8 +62,7 @@ val if_SOME = prove(
   ``(if b then SOME((),x:ppc_state) else SOME((),y)) = SOME ((),if b then x else y)``,
   Cases_on `b` THEN SIMP_TAC std_ss []);
 
-val ss = rewrites [OK_nextinstr_def, PREAD_M_LIST_curried_def,
-  PREAD_M_LIST_tupled_primitive_def, PWRITE_M_LIST_def,
+val ss = rewrites [OK_nextinstr_def, PWRITE_M_LIST_def,
   bit_update_def, const_high_def, const_low_def, const_high_s_def,
   const_low_s_def, effective_address_def, goto_label_def,
   gpr_or_zero_def, load_word_def, no_carry_def, ppc_sint_cmp_def,

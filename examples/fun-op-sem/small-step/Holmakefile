@@ -1,0 +1,2 @@
+INCLUDES = ../for ../lprefix_lub
+OPTIONS = QUIT_ON_FAILURE

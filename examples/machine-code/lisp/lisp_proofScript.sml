@@ -302,7 +302,7 @@ val EVAL_ARGS_LEMMA = prove(
   THEN REPEAT STRIP_TAC
   THENL [
     FULL_SIMP_TAC std_ss [lisp_eval_ok_def]
-    THEN Q.PAT_ASSUM `!x y stack l. ?x'. bbb` (STRIP_ASSUME_TAC o Q.SPECL [`x`,`y`,`
+    THEN Q.PAT_X_ASSUM `!x y stack l. ?x'. bbb` (STRIP_ASSUME_TAC o Q.SPECL [`x`,`y`,`
       Dot (Dot (list2sexp []) (list2sexp xs)) (Dot fn stack)`,`l`])
     THEN ASM_SIMP_TAC std_ss []
     THEN ONCE_REWRITE_TAC [lisp_eval_def]
@@ -314,7 +314,7 @@ val EVAL_ARGS_LEMMA = prove(
     THEN SIMP_TAC std_ss [reverse_exp_thm,HD,lisp_eval_hide_def]
     THEN FULL_SIMP_TAC std_ss [LENGTH_NIL,MAP,REVERSE_DEF],
     FULL_SIMP_TAC std_ss [lisp_eval_ok_def]
-    THEN Q.PAT_ASSUM `!x y stack l. ?x'. bbb` (STRIP_ASSUME_TAC o Q.SPECL [`x`,`y`,`
+    THEN Q.PAT_X_ASSUM `!x y stack l. ?x'. bbb` (STRIP_ASSUME_TAC o Q.SPECL [`x`,`y`,`
       Dot (Dot (list2sexp (term2sexp h'::MAP (\x. term2sexp x) t)) (list2sexp xs)) (Dot fn stack)`,`l`])
     THEN ASM_SIMP_TAC std_ss []
     THEN ONCE_REWRITE_TAC [lisp_eval_def]
@@ -574,7 +574,7 @@ val iR_ev_LEMMA = let
     THEN Cases_on `el = []` THEN1
      (FULL_SIMP_TAC std_ss [list2sexp_def,MAP,isDot_def,LET_DEF]
       THEN FULL_SIMP_TAC std_ss [LENGTH,LENGTH_NIL,list2sexp_def,MAP]
-      THEN Q.PAT_ASSUM `!x.bbb` (STRIP_ASSUME_TAC o Q.SPECL [`y`,`stack`,`l`])
+      THEN Q.PAT_X_ASSUM `!x.bbb` (STRIP_ASSUME_TAC o Q.SPECL [`y`,`stack`,`l`])
       THEN FULL_SIMP_TAC std_ss [LENGTH,LENGTH_NIL,list2sexp_def,MAP]
       THEN (REWRITE_TAC [lisp_eval_hide_def] THEN METIS_TAC []))
     THEN Cases_on `el` THEN FULL_SIMP_TAC std_ss []
@@ -701,7 +701,7 @@ val iR_ev_LEMMA = let
     THEN SIMP_TAC std_ss [CAR_def,CDR_def,isDot_def,isSym_def,list2sexp_def,SExp_11]
     THEN FULL_SIMP_TAC std_ss [IN_INSERT,LET_DEF,CAR_def,CDR_def]
     THEN REWRITE_TAC [alist2sexp_def,LISP_LENGTH_THM,LENGTH_MAP]
-    THEN Q.PAT_ASSUM `LENGTH args = LENGTH xl` (ASSUME_TAC o GSYM)
+    THEN Q.PAT_X_ASSUM `LENGTH args = LENGTH xl` (ASSUME_TAC o GSYM)
     THEN SIMP_TAC std_ss [CAR_def,CDR_def,isDot_def,isSym_def,list2sexp_def,SExp_11]
     THEN ASSUME_TAC (GEN_ALL zip_yz_lemma) THEN helperLib.SEP_I_TAC "zip_yz"
     THEN POP_ASSUM MP_TAC THEN ASM_SIMP_TAC std_ss [LENGTH_MAP]
@@ -712,7 +712,7 @@ val iR_ev_LEMMA = let
              (ZIP (MAP Sym xl,MAP sexpression2sexp args))) ++
            MAP pair2sexp zs) =
           alist2sexp (iVarBind zs xl args)` by
-     (Q.PAT_ASSUM `LENGTH xl = LENGTH args` MP_TAC
+     (Q.PAT_X_ASSUM `LENGTH xl = LENGTH args` MP_TAC
       THEN Q.SPEC_TAC (`xl`,`xs`)
       THEN Q.SPEC_TAC (`args`,`ys`)
       THEN REPEAT (POP_ASSUM (K ALL_TAC))
@@ -726,10 +726,10 @@ val iR_ev_LEMMA = let
     THEN POP_ASSUM MP_TAC
     THEN POP_ASSUM (K ALL_TAC)
     THEN STRIP_TAC
-    THEN Q.PAT_ASSUM `!a2.bbb` (ASSUME_TAC o
+    THEN Q.PAT_X_ASSUM `!a2.bbb` (ASSUME_TAC o
             Q.SPEC `LISP_REDUCE_A (stack,MAP Sym xl,a)`)
     THEN FULL_SIMP_TAC std_ss [FILTER_LISP_REDUCE_A]
-    THEN Q.PAT_ASSUM `!x.bbb` (STRIP_ASSUME_TAC o Q.SPECL
+    THEN Q.PAT_X_ASSUM `!x.bbb` (STRIP_ASSUME_TAC o Q.SPECL
           [`x'`,`list2sexp []`,`Dot (Val (LENGTH (args:sexpression list)))
                                     (LISP_REDUCE_S (stack,MAP Sym xl,a))`,`l`])
     THEN ASM_REWRITE_TAC [] THEN POP_ASSUM (K ALL_TAC)
@@ -851,7 +851,7 @@ val VarBind_EQ = prove(
   Induct THEN SIMP_TAC std_ss [VarBind_def,MEM,LIST_TO_SET_THM]
   THEN1 SRW_TAC [] [DRESTRICT_UNIV] THEN Cases_on `ys`
   THEN SIMP_TAC std_ss [VarBind_def,MEM,LIST_TO_SET_THM]
-  THEN REPEAT STRIP_TAC THEN Q.PAT_ASSUM `!ys. bbb` MATCH_MP_TAC
+  THEN REPEAT STRIP_TAC THEN Q.PAT_X_ASSUM `!ys. bbb` MATCH_MP_TAC
   THEN FULL_SIMP_TAC std_ss [GSYM fmap_EQ_THM,DRESTRICT_DEF,IN_INTER,IN_COMPL,IN_INSERT,EXTENSION,FDOM_FUPDATE,FAPPLY_FUPDATE_THM]
   THEN METIS_TAC []);
 
@@ -860,7 +860,7 @@ val DRESTRICT_list2fmap = prove(
             list2fmap (FILTER (\x. ~MEM (FST x) ys) xs)``,
   Induct THEN SIMP_TAC std_ss [list2fmap_def,FILTER,DRESTRICT_FEMPTY]
   THEN Cases THEN SIMP_TAC std_ss [list2fmap_def,DRESTRICT_FUPDATE]
-  THEN ASM_SIMP_TAC std_ss [IN_COMPL,IN_LIST_TO_SET]
+  THEN ASM_SIMP_TAC std_ss [IN_COMPL]
   THEN Cases_on `MEM q ys` THEN ASM_SIMP_TAC std_ss [list2fmap_def]);
 
 val R_ev_LEMMA = let
@@ -873,7 +873,7 @@ val R_ev_LEMMA = let
   REPEAT STRIP_TAC THEN REWRITE_TAC [iR_ev_rules]
   THEN IMP_RES_TAC iR_ev_rules THEN ASM_SIMP_TAC std_ss []
   THEN FULL_SIMP_TAC std_ss [MEM,IN_INSERT,NOT_IN_EMPTY]
-  THEN REPEAT (Q.PAT_ASSUM `T` (K ALL_TAC))
+  THEN REPEAT (Q.PAT_X_ASSUM `T` (K ALL_TAC))
   THEN RES_TAC
   THEN1
    (FULL_SIMP_TAC std_ss [LIST_LOOKUP_INTRO,iR_PERM_EQ]
@@ -887,7 +887,7 @@ val R_ev_LEMMA = let
    (MATCH_MP_TAC (el 8 (CONJUNCTS iR_ev_rules)) THEN ASM_SIMP_TAC std_ss []
     THEN MATCH_MP_TAC (METIS_PROVE [] ``((c ==> b) /\ c) ==> (b /\ c)``)
     THEN STRIP_TAC THEN1 METIS_TAC [iR_ap_LEMMA]
-    THEN Q.PAT_ASSUM `!xs.bbb` MATCH_MP_TAC
+    THEN Q.PAT_X_ASSUM `!xs.bbb` MATCH_MP_TAC
     THEN FULL_SIMP_TAC std_ss [iR_PERM_def,list2fmap_fmap2list]
     THEN ASM_SIMP_TAC std_ss [FunBind_def,iFunBind_def,list2fmap_def])
   THEN1
@@ -898,7 +898,7 @@ val R_ev_LEMMA = let
     THEN FULL_SIMP_TAC std_ss [FDOM_list2sexp])
   THEN1
    (MATCH_MP_TAC (el 10 (CONJUNCTS iR_ev_rules)) THEN ASM_SIMP_TAC std_ss []
-    THEN REPEAT STRIP_TAC THEN Q.PAT_ASSUM `!xs. bbb ==> bbbb` MATCH_MP_TAC
+    THEN REPEAT STRIP_TAC THEN Q.PAT_X_ASSUM `!xs. bbb ==> bbbb` MATCH_MP_TAC
     THEN FULL_SIMP_TAC std_ss [iR_PERM_EQ,list2fmap_iVarBind]
     THEN MATCH_MP_TAC VarBind_EQ THEN POP_ASSUM MP_TAC
     THEN ASM_SIMP_TAC std_ss [DRESTRICT_list2fmap])

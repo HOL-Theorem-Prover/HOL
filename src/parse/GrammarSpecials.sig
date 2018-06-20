@@ -6,6 +6,8 @@ sig
   val vs_cons_special : string
   val resquan_special : string
   val let_special : string
+  val letcons_special : string
+  val letnil_special : string
   val and_special : string
   val fakeconst_special : string
   val mk_fakeconst_name :
@@ -28,9 +30,15 @@ sig
   val nat_elim_term : string
   val fromNum_str : string
   val num_injection : string
+  val mk_lform_name : {cons:string,nilstr:string} -> string
+  val term_name_is_lform : string -> bool
+  val recd_lform_name : string
 
   (* handling case expressions *)
-  val case_special : string
+  val mk_case_special : string -> string
+  val dest_case_special : string -> string option
+  val is_case_special : string -> bool
+  val core_case_special : string
   val case_split_special : string
   val case_arrow_special : string
 

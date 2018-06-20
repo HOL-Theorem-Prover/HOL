@@ -1,0 +1,4 @@
+skipthm datatype_canonical_sum
+skipthm canonical_sum_TY_DEF
+skipthm datatype_spolynom
+skipthm spolynom_TY_DEF

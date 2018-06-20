@@ -17,8 +17,7 @@ sig
 
   val numErrors : int ref
 
-  val replacement : PP.ppstream ->
-                    {commpos : posn, argpos : posn, command : command,
+  val replacement : {commpos : posn, argpos : posn, command : command,
                      options : optionset, argument : string} ->
-                    unit
+                    PP.pretty
 end

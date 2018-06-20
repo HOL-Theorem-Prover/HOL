@@ -1,13 +1,13 @@
 all: $(patsubst %.sml,%.uo,$(wildcard *.sml))
 .PHONY: all
 mkholdecide: holdecide.uo
-	HOLMOSMLC -o $@ $<
+	$(HOLMOSMLC) -o $@ $<
 holdecide.o: mkholdecide
 	./$<
 holdecide: holdecide.o
 	cc -static -o $@ $< -lpolymain -lpolyml -lstdc++ -lm -ldl -lpthread -lgmp
 mkskico: skico.uo
-	HOLMOSMLC -o $@ $<
+	$(HOLMOSMLC) -o $@ $<
 skico.o: mkskico
 	./$<
 skico: skico.o

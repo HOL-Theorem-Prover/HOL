@@ -1,0 +1,16 @@
+deltype sum
+delconst INL
+delconst INR
+delconst ISL
+delconst ISR
+delconst OUTL
+delconst OUTR
+skipthm INL_DEF
+skipthm INR_DEF
+skipthm sum_TY_DEF
+skipthm sum_ISO_DEF
+delproof sum_axiom
+delproof INL_11
+delproof INR_11
+delproof INR_neq_INL
+skipthm datatype_sum

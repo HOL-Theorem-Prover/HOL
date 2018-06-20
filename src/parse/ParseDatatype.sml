@@ -24,19 +24,7 @@ val ERRloc = Feedback.mk_HOL_ERRloc "ParseDatatype";
 
 open Portable Lib;
 
-datatype pretype
-   = dVartype of string
-   | dTyop of {Tyop : string, Thy : string option, Args : pretype list}
-   | dAQ of Type.hol_type
-
-type field = string * pretype
-type constructor = string * pretype list
-
-datatype datatypeForm
-   = Constructors of constructor list
-   | Record of field list
-
-type AST = string * datatypeForm
+open ParseDatatype_dtype
 
 fun pretypeToType pty =
   case pty of
@@ -70,6 +58,22 @@ in
       ((fn () => qbuf.replace_current (BT_Ident sfx,locn'') qb), pfx, locn')
     end
 end
+
+fun consume_n n (qb,s,locn) =
+  let
+    open base_tokens
+    val pfx = String.substring(s,0,n)
+    val sfx = String.extract(s,n,NONE)
+  in
+    if sfx = "" then ((fn () => qbuf.advance qb), BT_Ident pfx, locn)
+    else
+      let
+        val (locn',locn'') = locn.split_at n locn
+      in
+        ((fn () => qbuf.replace_current (BT_Ident sfx,locn'') qb),
+         BT_Ident pfx, locn')
+      end
+  end
 
 fun okident c = Char.isAlphaNum c orelse c = #"'" orelse c = #"_"
 
@@ -108,25 +112,50 @@ fun ident qb =
                                               base_tokens.toString bt)
 
 
+fun cmem c s =
+  let
+    fun recurse i =
+      i >= 0 andalso (String.sub(s,i) = c orelse recurse (i - 1))
+  in
+    recurse (size s - 1)
+  end
+
+
 fun pdtok_of qb = let
   open base_tokens CharSet
   fun advance () = qbuf.advance qb
 in
   case qbuf.current qb of
-    (t as BT_Ident s,locn) =>
-    if Char.isAlpha (String.sub(s, 0)) then let
-        val (adv,idstr,locn') = consume Char.isAlphaNum (qb,s,locn)
+      (t as BT_Ident s,locn) =>
+      let
+        val c0 = String.sub(s, 0)
       in
-        (adv,BT_Ident idstr,locn')
+        if Char.isAlpha c0 then
+          let
+            val (adv,idstr,locn') = consume Char.isAlphaNum (qb,s,locn)
+          in
+            (adv,BT_Ident idstr,locn')
+          end
+        else if Char.isDigit c0 then
+          let
+            val (adv,idstr,locn') = consume Char.isDigit (qb,s,locn)
+          in
+            (adv, BT_Ident idstr, locn')
+          end
+        else if String.isPrefix "=>" s then consume_n 2 (qb,s,locn)
+        else if cmem c0 "()[]" then consume_n 1 (qb,s,locn)
+        else if String.isPrefix "<|" s then consume_n 2 (qb,s,locn)
+        else if String.isPrefix "|>" s then consume_n 2 (qb,s,locn)
+        else
+          let
+            fun oksym c = Char.isPunct c andalso c <> #"(" andalso c <> #")"
+                          andalso c <> #"'"
+            val (adv,idstr,locn') = consume oksym (qb,s,locn)
+          in
+            (adv,BT_Ident idstr,locn')
+          end
       end
-    else let
-        fun oksym c = Char.isPunct c andalso c <> #"(" andalso c <> #")" andalso
-                      c <> #"'"
-        val (adv,idstr,locn') = consume oksym (qb,s,locn)
-      in
-        (adv,BT_Ident idstr,locn')
-      end
-  | (t,locn) => (advance, t, locn)
+    | (t,locn) => (advance, t, locn)
 end;
 
 
@@ -146,18 +175,20 @@ fun qtyop {Tyop, Thy, Locn, Args} =
     dTyop {Tyop = Tyop, Thy = SOME Thy, Args = Args}
 fun tyop ((s,locn), args) = dTyop {Tyop = s, Thy = NONE, Args = args}
 
-fun parse_type strm =
-  parse_type.parse_type {vartype = dVartype o #1, tyop = tyop, qtyop = qtyop,
-                         antiq = dAQ} true
-  (Parse.type_grammar()) strm
+fun parse_type G strm =
+  parse_type.parse_type
+    {vartype = dVartype o #1, tyop = tyop, qtyop = qtyop, antiq = dAQ}
+    true
+    G
+    strm
 
 val parse_constructor_id = ident
 
-fun parse_record_fld qb = let
+fun parse_record_fld G qb = let
   val fldname = ident qb
   val () = scan ":" qb
 in
-  (fldname, parse_type qb)
+  (fldname, parse_type G qb)
 end
 
 fun sepby1 sepsym p qb = let
@@ -170,21 +201,39 @@ in
   recurse [i1]
 end
 
-fun parse_record_defn qb = let
+fun termsepby1 s term p qb =
+  let
+    val res1 = p qb
+    fun recurse acc =
+      case pdtok_of qb of
+          (adv, base_tokens.BT_Ident t, locn) =>
+            if t = s then (adv(); term_or_continue acc)
+            else List.rev acc
+        | _ => List.rev acc
+    and term_or_continue acc =
+      case pdtok_of qb of
+          (_, tok, _) => if tok = term then List.rev acc
+                         else recurse (p qb :: acc)
+  in
+    recurse [res1]
+  end
+
+fun parse_record_defn G qb = let
   val () = scan "<|" qb
-  val result = sepby1 ";" parse_record_fld qb
+  val result =
+      termsepby1 ";" (base_tokens.BT_Ident "|>") (parse_record_fld G) qb
   val () = scan "|>" qb
 in
   result
 end
 
-fun parse_phrase qb = let
+fun parse_phrase G qb = let
   val constr_id = parse_constructor_id qb
 in
   case pdtok_of qb of
     (_,base_tokens.BT_Ident "of",_) => let
       val _ = qbuf.advance qb
-      val optargs = sepby1 "=>" parse_type qb
+      val optargs = sepby1 "=>" (parse_type G) qb
     in
       (constr_id, optargs)
     end
@@ -196,35 +245,13 @@ fun optscan tok qb =
         (tok',_) => if tok = tok' then (qbuf.advance qb; qb)
                     else qb
 
-fun parse_form qb =
-    case pdtok_of qb of
-      (_,base_tokens.BT_Ident "<|",_) => Record (parse_record_defn qb)
-    | _ => Constructors (sepby1 "|" parse_phrase qb)
-
-fun parse_G qb = let
-  val tyname = ident qb
-  val () = scan "=" qb
-in
-  (tyname, parse_form qb)
-end
-
 fun fragtoString (QUOTE s) = s
   | fragtoString (ANTIQUOTE _) = " ^... "
 
 fun quotetoString [] = ""
   | quotetoString (x::xs) = fragtoString x ^ quotetoString xs
 
-fun parse q = let
-  val strm = qbuf.new_buffer q
-  val result = sepby1 ";" parse_G strm
-in
-  case qbuf.current strm of
-    (base_tokens.BT_EOI,_) => result
-  | (_,locn) => raise ERRloc "parse" locn
-                             "Parse failed"
-end
-
-fun parse_harg qb =
+fun parse_harg G qb =
   case qbuf.current qb of
       (base_tokens.BT_Ident s, _) =>
       if String.sub(s,0) = #"(" then
@@ -232,61 +259,104 @@ fun parse_harg qb =
           val (adv,_,_) = pdtok_of qb
           val _ = adv()
         in
-          parse_type qb before scan ")" qb
+          parse_type G qb before scan ")" qb
         end
       else let
         val qb' = qbuf.new_buffer [QUOTE s]
       in
-        qbuf.advance qb; parse_type qb'
+        qbuf.advance qb; parse_type G qb'
       end
     | (base_tokens.BT_AQ ty, _) => (qbuf.advance qb; dAQ ty)
     | (_, locn) => raise ERRloc "parse_harg" locn
                          "Unexpected token in constructor's argument"
 
-fun parse_hargs qb =
+fun parse_hargs G qb =
   case pdtok_of qb of
       (_, base_tokens.BT_Ident "|", _) => []
     | (_, base_tokens.BT_Ident ";", _) => []
     | (_, base_tokens.BT_EOI, _) => []
     | _ => let
-      val arg = parse_harg qb
-      val args = parse_hargs qb
+      val arg = parse_harg G qb
+      val args = parse_hargs G qb
     in
       arg::args
     end
 
-fun parse_hphrase qb = let
+fun parse_hphrase G qb = let
   val constr_id = parse_constructor_id qb
 in
-  (constr_id, parse_hargs qb)
+  (constr_id, parse_hargs G qb)
 end
 
-fun parse_hform qb =
+fun parse_form G phrase_p qb =
     case pdtok_of qb of
-      (_,base_tokens.BT_Ident "<|",_) => Record (parse_record_defn qb)
+      (_,base_tokens.BT_Ident "<|",_) => Record (parse_record_defn G qb)
     | _ => Constructors (qb |> optscan (base_tokens.BT_Ident "|")
-                            |> sepby1 "|" parse_hphrase)
+                            |> sepby1 "|" (phrase_p G))
 
-fun parse_HG qb = let
+fun extract_tynames q =
+  let
+    val qb = qbuf.new_buffer q
+    fun recurse delims acc =
+      case pdtok_of qb of
+          (adv,t as base_tokens.BT_Ident ";",loc) =>
+            if null delims then (adv(); next_decl acc)
+            else (adv(); recurse delims acc)
+        | (_,base_tokens.BT_EOI, _) =>
+            if null delims then List.rev acc
+            else raise ERR "parse_HG"
+                       ("looking for delimiter match ("^ hd delims^
+                        ") but came to end of input")
+        | (adv,t as base_tokens.BT_Ident "(",locn) =>
+            (adv(); recurse (")" :: delims) acc)
+        | (adv,t as base_tokens.BT_Ident "<|", locn) =>
+            (adv(); recurse ("|>" :: delims) acc)
+        | (adv,t as base_tokens.BT_Ident "[", locn) =>
+            (adv(); recurse ("]" :: delims) acc)
+        | (adv, t as base_tokens.BT_Ident s, locn) =>
+            (case delims of
+                 [] => (adv(); recurse delims acc)
+               | d::ds => if d = s then (adv(); recurse ds acc)
+                          else (adv(); recurse delims acc))
+        | (adv, tok, locn) => (adv(); recurse delims acc)
+    and next_decl acc =
+        case pdtok_of qb of
+            (_, base_tokens.BT_EOI, _) => List.rev acc
+          | _ =>
+            let
+              val tyname = ident qb
+              val () = scan "=" qb
+            in
+              recurse [] (tyname :: acc)
+            end
+  in
+    next_decl []
+  end
+
+fun parse_g G phrase_p qb = let
   val tyname = ident qb
   val () = scan "=" qb
 in
-  (tyname, parse_hform qb)
+  (tyname, parse_form G phrase_p qb)
 end
 
+fun hide_tynames q G0 =
+  List.foldl (uncurry type_grammar.hide_tyop) G0 (extract_tynames q)
 
-fun hparse q = let
-  val strm = qbuf.new_buffer q
-  val result = sepby1 ";" parse_HG strm
-  val qb = optscan (base_tokens.BT_Ident ";") strm
+
+fun core_parse G0 phrase_p q = let
+  val G = hide_tynames q G0
+  val qb = qbuf.new_buffer q
+  val result = termsepby1 ";" base_tokens.BT_EOI (parse_g G phrase_p) qb
 in
   case qbuf.current qb of
       (base_tokens.BT_EOI,_) => result
-    | (_,locn) => raise ERRloc "parse" locn
-                        "Parse failed"
+    | (t,locn) => raise ERRloc "parse" locn
+                        ("Parse failed looking at "^base_tokens.toString t)
 end
 
-
+fun parse G0 = core_parse G0 parse_phrase
+fun hparse G0 = core_parse G0 parse_hphrase
 
 
 end

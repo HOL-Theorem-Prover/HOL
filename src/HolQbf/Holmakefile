@@ -6,9 +6,9 @@ all: $(TARGETS) selftest.exe
 
 
 selftest.exe: selftest.uo
-	HOLMOSMLC -o $@ $<
+	$(HOLMOSMLC) -o $@ $<
 mkholqbf: holqbf.uo
-	HOLMOSMLC -o $@ $<
+	$(HOLMOSMLC) -o $@ $<
 holqbf.o: mkholqbf
 	./$<
 holqbf: holqbf.o

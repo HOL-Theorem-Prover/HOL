@@ -22,5 +22,5 @@ function {rep} is one-to-one, returning the theorem:
 Fails if applied to a theorem not of the form shown above.
 
 \SEEALSO
-Definition.new_type_definition, Drule.define_new_type_bijections, Prim_rec.prove_abs_fn_one_one, Prim_rec.prove_abs_fn_onto, Drule.prove_rep_fn_onto.
+Definition.new_type_definition, Drule.define_new_type_bijections, Drule.prove_abs_fn_one_one, Drule.prove_abs_fn_onto, Drule.prove_rep_fn_onto.
 \ENDDOC

@@ -8,9 +8,8 @@ struct
 open HolKernel boolLib bossLib
 
 local
-   open MutableMap m0 assemblerLib
-in
-end
+   open m0
+in end
 
 val ERR = Feedback.mk_HOL_ERR "m0AssemblerLib"
 
@@ -135,7 +134,7 @@ fun m0_syntax_pass2 (l, ldict) =
             (case Redblackmap.peek (ldict, label) of
                 SOME lpc =>
                  let
-                    val offset = BitsN.fromInt (2 * (lpc - !pc - 2), 32)
+                    val offset = BitsN.fromNativeInt (2 * (lpc - !pc - 2), 32)
                     val chk = check (!pc + 1 <= lpc, label, line)
                  in
                     encode (line, pc, cond, enc,

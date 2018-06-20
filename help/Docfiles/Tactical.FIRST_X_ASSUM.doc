@@ -1,6 +1,6 @@
 \DOC FIRST_X_ASSUM
 
-\TYPE {Tactical.FIRST_X_ASSUM : thm_tactic -> tactic}
+\TYPE {FIRST_X_ASSUM : thm_tactic -> tactic}
 
 \SYNOPSIS
 Maps a theorem-tactic over the assumptions, applying first successful
@@ -49,8 +49,13 @@ assumption list.
 The ``X'' in the name of this tactic is a mnemonic for the ``crossing
 out'' or removal of the assumption found.
 
+By default, the assumption list is printed in reverse order,
+with the head of the list printed last.
+To process the assumption list in the opposite order, use {LAST_X_ASSUM}
+
 \SEEALSO
-Tactical.FIRST_ASSUM, Tactical.ASSUM_LIST, Tactical.EVERY,
+Tactical.FIRST_ASSUM, Tactical.LAST_X_ASSUM, 
+Tactical.ASSUM_LIST, Tactical.EVERY,
 Tactical.PAT_ASSUM, Tactical.EVERY_ASSUM, Tactical.FIRST,
 Tactical.MAP_EVERY, Tactical.MAP_FIRST, Thm_cont.UNDISCH_THEN.
 \ENDDOC

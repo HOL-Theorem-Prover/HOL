@@ -29,5 +29,11 @@ AssembleDiskFiles.uo: AssembleDiskFiles.sml AssembleDiskFiles.ui \
                       DiskFiles.grm.uo DiskFiles.lex.uo DiskFilesHeader.ui
 	$(HOLMOSMLC) -c -I $(MLYACCLIB) $(MLYACCLIB_UIS) DiskFiles.grm.ui DiskFiles.lex.ui $<
 
-selftest.exe: selftest.uo simpfrag.uo $(dprot $(SIGOBJ)/term_pp.uo) testutils.uo
+LVTermNetFunctorApplied.uo: LVTermNetFunctorApplied.sml $(dprot $(SIGOBJ)/LVTermNetFunctor.ui) $(dprot $(SIGOBJ)/HOLset.ui)
+	$(HOLMOSMLC) -c $(protect $(SIGOBJ)/LVTermNetFunctor.ui) $<
+
+selftest.exe: selftest.uo simpfrag.uo $(dprot $(SIGOBJ)/term_pp.uo) \
+              $(dprot $(SIGOBJ)/testutils.uo) $(dprot $(SIGOBJ)/TermParse.uo) \
+              $(dprot $(SIGOBJ)/Preterm.uo) $(dprot $(SIGOBJ)/Parse_support.uo)\
+	      $(dprot $(SIGOBJ)/LVTermNet.uo) LVTermNetFunctorApplied.uo
 	$(HOLMOSMLC) -o $@ $<

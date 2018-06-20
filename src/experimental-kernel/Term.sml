@@ -1,7 +1,9 @@
 structure Term :> Term =
 struct
 
-open Feedback Lib Type
+open Feedback Lib KernelTypes Type
+
+val kernelid = "expknl"
 
 infixr --> |->
 
@@ -24,8 +26,6 @@ fun qcomb2 con (f, g) (x, y) =
 (* apply a function f under "constructor" con, handling Unchanged *)
 fun qcomb con f = qcomb2 con (f, f)
 
-type const_key = KernelSig.kernelname
-type const_info = (KernelSig.kernelid * hol_type)
 type 'a set = 'a HOLset.set
 
 val compare_key = KernelSig.name_compare
@@ -39,11 +39,6 @@ val const_table = KernelSig.new_table()
 fun prim_delete_const kn = ignore (KernelSig.retire_name(const_table, kn))
 
 fun inST s = not (null (KernelSig.listName const_table s))
-
-datatype term = Var of string * hol_type
-              | App of term * term
-              | Const of const_info
-              | Abs of term * term
 
 fun prim_new_const (k as {Thy,Name}) ty = let
   val id = KernelSig.insert(const_table, k, ty)
@@ -324,12 +319,13 @@ fun free_varsl tm_list = itlist (union o free_vars) tm_list []
 fun all_varsl tm_list = itlist (union o all_vars) tm_list []
 
 (* term comparison *)
+fun fast_term_eq t1 t2 = Portable.pointer_eq (t1,t2)
 structure Map = Binarymap
 val empty_env = Map.mkDict var_compare
 fun compare p = let
   open Map
-  fun cmp n (E as (env1, env2)) p =
-      if n = 0 andalso Portable.pointer_eq p then EQUAL
+  fun cmp n (E as (env1, env2)) (p as (t1,t2)) =
+      if n = 0 andalso fast_term_eq t1 t2 then EQUAL
       else
         case p of
           (v1 as Var _, v2 as Var _) => let
@@ -941,7 +937,7 @@ fun RM patobs (theta0 as (tminfo, tyS)) =
           end
         | (Const(c1, ty1), Const(c2, ty2)) =>
           if c1 <> c2 then MERR ("Different constants: "^c2string c1^" and "^
-				 c2string c2)
+                                 c2string c2)
           else RM rest (tminfo, Type.raw_match_type ty1 ty2 tyS)
         | (App(f1, x1), App(f2, x2)) =>
           RM (TMP (f1, f2) :: TMP (x1, x2) :: rest) theta0
@@ -956,7 +952,7 @@ fun RM patobs (theta0 as (tminfo, tyS)) =
                  patbvars = Map.insert(patbvars, x1, n),
                  obbvars = Map.insert(obbvars, x2, n)}, tyS')
           end
-        | _ => MERR "Incompatible term types"
+        | _ => MERR "different constructors"
       end
     | BVrestore{patbvars, obbvars, n} :: rest => let
         val {ids, theta, ...} = tminfo
@@ -1053,6 +1049,24 @@ fun prim_mk_imp t1 t2 = App(App(imp, t1), t2)
 
 (* val prim_mk_imp = (fn t1 => Profile.profile "prim_mk_imp" (prim_mk_imp t1))*)
 
+(* ----------------------------------------------------------------------
+    dest_term and the lambda type
+   ---------------------------------------------------------------------- *)
+
+datatype lambda =
+     VAR of string * hol_type
+   | CONST of {Name: string, Thy: string, Ty: hol_type}
+   | COMB of term * term
+   | LAMB of term * term
+
+fun dest_term M =
+  case M of
+      Const _ => CONST (dest_thy_const M)
+    | Var p => VAR p
+    | App p => COMB p
+    | Abs p => LAMB p
+
+fun identical t1 t2 = t1 = t2
 
 (*---------------------------------------------------------------------------*
  *  Raw syntax prettyprinter for terms.                                      *
@@ -1062,26 +1076,29 @@ val app     = "@"
 val lam     = "|"
 val percent = "%"
 
-datatype pptask = ppTM of term | ppLAM | ppAPP
+datatype pptask = ppTM of term | ppLAM | ppAPP of int
 fun pp_raw_term index tm = let
+  fun mkAPP (ppAPP n :: rest) = ppAPP (n + 1) :: rest
+    | mkAPP rest = ppAPP 1 :: rest
   fun pp acc tasklist =
       case tasklist of
           [] => String.concat (List.rev acc)
         | ppTM (Abs(Bvar, Body)) :: rest =>
             pp acc (ppTM Bvar :: ppTM Body :: ppLAM :: rest)
         | ppTM (App(Rator, Rand)) :: rest =>
-            pp acc (ppTM Rator :: ppTM Rand :: ppAPP :: rest)
+            pp acc (ppTM Rator :: ppTM Rand :: mkAPP rest)
         | ppTM vc :: rest =>
             pp (percent ^ Int.toString (index vc) :: acc) rest
         | ppLAM :: rest => pp ("|" :: acc) rest
-        | ppAPP :: rest => pp ("@" :: acc) rest
+        | ppAPP n :: rest =>
+            pp ("@" ^ (if n = 1 then "" else Int.toString n) :: acc) rest
 in
   pp [] [ppTM tm]
 end
 val write_raw = pp_raw_term
 
 local
-datatype tok = lam | id of int | app
+datatype tok = lam | id of int | app of int
 open StringCvt
 
 fun readtok (c : (char, cs) reader) cs = let
@@ -1090,7 +1107,10 @@ in
   case c cs of
     NONE => NONE
   | SOME (#"|",cs') => SOME (lam,cs')
-  | SOME (#"@",cs') => SOME (app,cs')
+  | SOME (#"@",cs') =>
+      (case intread cs' of
+           NONE => SOME (app 1,cs')
+         | SOME (i,cs'') => SOME (app i, cs''))
   | SOME (c,cs') => (case intread cs' of
                          NONE => NONE
                        | SOME (i,cs'') => SOME(id i, cs''))
@@ -1107,11 +1127,15 @@ fun parse tmv c cs0 = let
         | (body :: bvar :: stk, (SOME lam, cs')) =>
             parse_term (Abs(bvar,body) :: stk) (adv cs')
         | (_, (SOME lam, _)) => raise Fail "raw_parse.abs: short stack"
-        | (x :: f :: stk, (SOME app, cs')) =>
-            parse_term (App(f,x) :: stk) (adv cs')
-        | (_, (SOME app, _)) => raise Fail "raw_parse.app: short stack"
+        | (stk, (SOME (app i), cs')) => doapp i stk cs'
         | (stk, (SOME (id i), cs')) =>
             parse_term (Vector.sub(tmv, i) :: stk) (adv cs')
+  and doapp i stk cs =
+      if i = 0 then parse_term stk (adv cs)
+      else
+        case stk of
+            x :: f :: stk => doapp (i - 1) (App(f,x) :: stk) cs
+          | _ => raise Fail "raw_parse.app: short stack"
 in
   parse_term [] (adv cs0)
 end
@@ -1119,7 +1143,8 @@ end
 
 in
 
-fun read_raw tmv s = valOf (scanString (parse tmv) s)
+fun read_raw tmv s =
+  valOf (scanString (parse tmv) s)
 
 end (* local *)
 

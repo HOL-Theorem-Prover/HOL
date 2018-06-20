@@ -1,0 +1,2 @@
+This file is here to get Holmake not to fire (because a .PHONY
+declaration is missing).

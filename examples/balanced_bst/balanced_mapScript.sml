@@ -58,6 +58,7 @@ val list_rel_lem1 = Q.prove (
      unabbrev_all_tac >>
      decide_tac));
 
+val _ = augment_srw_ss [rewrites [listTheory.TAKE_def]]
 val list_rel_lem2 = Q.prove (
 `!l l'.
   LIST_REL f l l'
@@ -1035,6 +1036,7 @@ val doubleR_thm = Q.prove (
       key_set cmp k ≠ key_set cmp k''`
                    by metis_tac [key_set_eq, cmp_thms] >>
      metis_tac [FUPDATE_COMMUTES, FUNION_ASSOC]));
+val _ = print "Proved doubleR_thm\n";
 
 val rotateR_thm = Q.prove (
 `!k v l r cmp.
@@ -1054,6 +1056,7 @@ val rotateR_thm = Q.prove (
   >- fs [size_def] >>
   rw [size_def, rotateR_def] >>
   metis_tac [singleR_thm, doubleR_thm, ADD_COMM, NOT_ZERO_LT_ZERO, GREATER_DEF]);
+val _ = print "Proved rotateR_thm\n";
 
 val balanceL_balL = Q.prove (
 `!k v l r cmp.
@@ -1078,6 +1081,7 @@ val balanceL_balL = Q.prove (
  fs [invariant_def, doubleR_def, bin_def, size_def] >>
  imp_res_tac structure_size_thm >>
  rw []);
+val _ = print "Proved balanceL_balL\n";
 
 val balanceL_thm = Q.prove (
 `!k v l r cmp.
@@ -1323,6 +1327,15 @@ val insert_thm = Q.store_thm ("insert_thm",
      rw [] >>
      metis_tac [FUPDATE_COMMUTES, cmp_thms, to_fmap_key_set, key_set_cmp_thm]));
 
+val lookup_insert = Q.store_thm("lookup_insert",
+  `good_cmp cmp ∧ invariant cmp t ⇒
+   lookup cmp k (insert cmp k' v t) =
+   if cmp k k' = Equal then SOME v else lookup cmp k t`,
+  rw[] \\ rw[lookup_thm,insert_thm,FLOOKUP_UPDATE] \\
+  metis_tac[key_set_eq,comparisonTheory.cmp_thms]);
+
+val comparison_distinct = TypeBase.distinct_of ``:ordering``
+
 val insertR_thm = Q.store_thm ("insertR_thm",
 `∀t.
   good_cmp cmp ∧
@@ -1456,7 +1469,7 @@ val deleteFindMin_thm = Q.store_thm ("deleteFindMin",
  fs [to_fmap_def, FLOOKUP_UPDATE, key_ordered_def, LET_THM, null_def]
  >- (rw [] >>
      fs [key_ordered_to_fmap] >>
-     rw [fmap_eq_flookup, FLOOKUP_UPDATE, FLOOKUP_DRESTRICT] >>
+     rw [FLOOKUP_EXT, FLOOKUP_UPDATE, FLOOKUP_DRESTRICT, FUN_EQ_THM] >>
      rw [flookup_thm] >>
      fs [] >>
      metis_tac [comparison_distinct, good_cmp_def]) >>
@@ -1490,7 +1503,8 @@ val deleteFindMin_thm = Q.store_thm ("deleteFindMin",
              metis_tac [FCARD_DEF, structure_size_thm, size_thm])) >>
      strip_tac >>
      simp [] >>
-     rw [fmap_eq_flookup, FLOOKUP_UPDATE, FLOOKUP_DRESTRICT, FLOOKUP_FUNION]
+     rw [FLOOKUP_EXT, FLOOKUP_UPDATE, FLOOKUP_DRESTRICT, FLOOKUP_FUNION,
+         FUN_EQ_THM]
      >- (rfs [key_ordered_to_fmap, FDOM_DRESTRICT] >>
          fs [key_ordered_to_fmap, FDOM_DRESTRICT] >>
          rw [] >>
@@ -1546,7 +1560,8 @@ val deleteFindMin_thm = Q.store_thm ("deleteFindMin",
              metis_tac [FCARD_DEF, structure_size_thm, size_thm])) >>
      strip_tac >>
      simp [] >>
-     rw [fmap_eq_flookup, FLOOKUP_UPDATE, FLOOKUP_DRESTRICT, FLOOKUP_FUNION]
+     rw [FLOOKUP_EXT, FLOOKUP_UPDATE, FLOOKUP_DRESTRICT, FLOOKUP_FUNION,
+         FUN_EQ_THM]
      >- (rfs [key_ordered_to_fmap, FDOM_DRESTRICT] >>
          fs [key_ordered_to_fmap, FDOM_DRESTRICT] >>
          rw [] >>
@@ -1583,7 +1598,7 @@ val deleteFindMax_thm = Q.store_thm ("deleteFindMax",
  fs [to_fmap_def, FLOOKUP_UPDATE, key_ordered_def, LET_THM, null_def]
  >- (rw [] >>
      fs [key_ordered_to_fmap] >>
-     rw [fmap_eq_flookup, FLOOKUP_UPDATE, FLOOKUP_DRESTRICT] >>
+     rw [FLOOKUP_EXT, FLOOKUP_UPDATE, FLOOKUP_DRESTRICT, FUN_EQ_THM] >>
      rw [flookup_thm] >>
      fs [] >>
      metis_tac [comparison_distinct, good_cmp_def]) >>
@@ -1617,7 +1632,8 @@ val deleteFindMax_thm = Q.store_thm ("deleteFindMax",
              metis_tac [FCARD_DEF, structure_size_thm, size_thm])) >>
      strip_tac >>
      simp [] >>
-     rw [fmap_eq_flookup, FLOOKUP_UPDATE, FLOOKUP_DRESTRICT, FLOOKUP_FUNION]
+     rw [FLOOKUP_EXT, FLOOKUP_UPDATE, FLOOKUP_DRESTRICT, FLOOKUP_FUNION,
+         FUN_EQ_THM]
      >- (rfs [key_ordered_to_fmap, FDOM_DRESTRICT] >>
          fs [key_ordered_to_fmap, FDOM_DRESTRICT] >>
          rw [] >>
@@ -1672,7 +1688,8 @@ val deleteFindMax_thm = Q.store_thm ("deleteFindMax",
              metis_tac [FCARD_DEF, structure_size_thm, size_thm])) >>
      strip_tac >>
      simp [] >>
-     rw [fmap_eq_flookup, FLOOKUP_UPDATE, FLOOKUP_DRESTRICT, FLOOKUP_FUNION]
+     rw [FLOOKUP_EXT, FLOOKUP_UPDATE, FLOOKUP_DRESTRICT, FLOOKUP_FUNION,
+         FUN_EQ_THM]
     >- (rfs [key_ordered_to_fmap, FDOM_DRESTRICT] >>
          fs [key_ordered_to_fmap, FDOM_DRESTRICT] >>
          rw [] >>
@@ -1685,6 +1702,8 @@ val deleteFindMax_thm = Q.store_thm ("deleteFindMax",
      rw [] >>
      metis_tac [cmp_thms, key_set_eq, key_set_cmp_thm]));
 
+
+val FLOOKUP_EXT' = FLOOKUP_EXT |> SIMP_RULE (srw_ss()) [FUN_EQ_THM]
 val glue_thm = Q.store_thm ("glue_thm",
 `!l r.
   good_cmp cmp ∧
@@ -1717,7 +1736,7 @@ val glue_thm = Q.store_thm ("glue_thm",
      fs [FDOM_DRESTRICT, DELETE_INSERT, FLOOKUP_UPDATE] >>
      fs [DELETE_INTER2] >>
      rw []
-     >- (rw [fmap_eq_flookup, FLOOKUP_FUNION, FLOOKUP_UPDATE, FLOOKUP_DRESTRICT] >>
+     >- (rw [FLOOKUP_EXT', FLOOKUP_FUNION, FLOOKUP_UPDATE, FLOOKUP_DRESTRICT] >>
          every_case_tac >>
          fs [invariant_eq, FLOOKUP_DEF] >>
          metis_tac [good_cmp_def, comparison_distinct])
@@ -1754,7 +1773,7 @@ val glue_thm = Q.store_thm ("glue_thm",
      fs [FDOM_DRESTRICT, DELETE_INSERT, FLOOKUP_UPDATE] >>
      fs [DELETE_INTER2] >>
      rw []
-     >- (rw [fmap_eq_flookup, FLOOKUP_FUNION, FLOOKUP_UPDATE, FLOOKUP_DRESTRICT] >>
+     >- (rw [FLOOKUP_EXT', FLOOKUP_FUNION, FLOOKUP_UPDATE, FLOOKUP_DRESTRICT] >>
          every_case_tac
          >- metis_tac [] >>
          fs [invariant_eq, FLOOKUP_DEF]
@@ -1780,7 +1799,7 @@ val glue_thm = Q.store_thm ("glue_thm",
 
 val to_fmap_tac =
   rw [to_fmap_def] >>
-  rw [fmap_eq_flookup, FLOOKUP_DRESTRICT, FLOOKUP_UPDATE, FLOOKUP_FUNION] >>
+  rw [FLOOKUP_EXT', FLOOKUP_DRESTRICT, FLOOKUP_UPDATE, FLOOKUP_FUNION] >>
   BasicProvers.EVERY_CASE_TAC >>
   fs [FLOOKUP_DEF] >>
   fs [to_fmap_def] >>
@@ -1846,7 +1865,7 @@ val restrict_domain_def = Define `
 val restrict_domain_union = Q.prove (
 `restrict_domain cmp lo hi (FUNION m1 m2) =
   FUNION (restrict_domain cmp lo hi m1) (restrict_domain cmp lo hi m2)`,
- rw [restrict_domain_def, fmap_eq_flookup, FLOOKUP_DRESTRICT, FLOOKUP_FUNION] >>
+ rw [restrict_domain_def, FLOOKUP_EXT', FLOOKUP_DRESTRICT, FLOOKUP_FUNION] >>
  rw [FLOOKUP_DRESTRICT, FLOOKUP_FUNION]);
 
 val restrict_domain_update = Q.prove (
@@ -1857,7 +1876,7 @@ val restrict_domain_update = Q.prove (
      restrict_domain cmp lo hi m1 |+ (key_set cmp k,v)
    else
      restrict_domain cmp lo hi m1`,
- rw [restrict_domain_def, fmap_eq_flookup, FLOOKUP_DRESTRICT, FLOOKUP_FUNION] >>
+ rw [restrict_domain_def, FLOOKUP_EXT', FLOOKUP_DRESTRICT, FLOOKUP_FUNION] >>
  rfs [key_set_eq] >>
  fs [restrict_set_def] >>
  Cases_on `hi` >>
@@ -1892,13 +1911,14 @@ val trim_thm = Q.prove (
  simp [to_fmap_def] >>
  fs [SUBMAP_DEF, restrict_domain_def, DRESTRICTED_FUNION, DRESTRICT_FUPDATE] >>
  rw [invariant_def] >>
- rw [FAPPLY_FUPDATE_THM, FUNION_DEF, fmap_eq_flookup, FLOOKUP_DRESTRICT,
+ rw [FAPPLY_FUPDATE_THM, FUNION_DEF, FLOOKUP_EXT', FLOOKUP_DRESTRICT,
      FLOOKUP_FUNION, FLOOKUP_UPDATE] >>
  rw [] >>
  every_case_tac >>
  fs [flookup_thm, key_ordered_to_fmap, restrict_set_def, option_cmp_def, option_cmp2_def] >>
  rfs [key_ordered_to_fmap] >>
  metis_tac [cmp_thms, key_set_eq, key_set_cmp_thm, to_fmap_key_set]);
+val _ = print "Proved trim_thm\n";
 
 val link_balanced_lem1 = Q.prove (
 `!r rz l.
@@ -2037,6 +2057,7 @@ val link_thm = Q.prove (
      fs [invariant_eq, size_def]
      >- metis_tac [link_balanced_lem3, structure_size_thm, ADD_ASSOC] >>
      to_fmap_tac));
+val _ = print "Proved link_thm\n"
 
 val filter_lt_help_thm = Q.prove (
 `!cmp bound t.
@@ -2067,6 +2088,7 @@ val filter_lt_help_thm = Q.prove (
      fs [invariant_eq] >>
      rw [restrict_domain_def, restrict_set_def, option_cmp2_def, option_cmp_def] >>
      to_fmap_tac));
+val _ = print "Proved filter_lt_help_thm\n"
 
 val filterLt_thm = Q.prove (
 `!cmp bound t.
@@ -2080,11 +2102,12 @@ val filterLt_thm = Q.prove (
  simp [restrict_domain_def, restrict_set_def, option_cmp2_def, option_cmp_def] >>
  rw [] >>
  imp_res_tac filter_lt_help_thm
- >- (rw [fmap_eq_flookup, FLOOKUP_DRESTRICT] >>
+ >- (rw [FLOOKUP_EXT', FLOOKUP_DRESTRICT] >>
      rw [] >>
      fs [FLOOKUP_DEF] >>
      metis_tac [to_fmap_key_set]) >>
  rw [restrict_domain_def, restrict_set_def, option_cmp2_def, option_cmp_def]);
+val _ = print "Proved filterLt_thm\n";
 
 val filter_gt_help_thm = Q.prove (
 `!cmp bound t.
@@ -2115,6 +2138,7 @@ val filter_gt_help_thm = Q.prove (
      fs [invariant_eq] >>
      rw [restrict_domain_def, restrict_set_def, option_cmp2_def, option_cmp_def] >>
      to_fmap_tac));
+val _ = print "Proved filter_gt_help_thm\n";
 
 val filterGt_thm = Q.prove (
 `!cmp bound t.
@@ -2128,11 +2152,12 @@ val filterGt_thm = Q.prove (
  simp [restrict_domain_def, restrict_set_def, option_cmp2_def, option_cmp_def] >>
  rw [] >>
  imp_res_tac filter_gt_help_thm
- >- (rw [fmap_eq_flookup, FLOOKUP_DRESTRICT] >>
+ >- (rw [FLOOKUP_EXT', FLOOKUP_DRESTRICT] >>
      rw [] >>
      fs [FLOOKUP_DEF] >>
      metis_tac [to_fmap_key_set]) >>
  rw [restrict_domain_def, restrict_set_def, option_cmp2_def, option_cmp_def]);
+val _ = print "Proved filterGt_thm\n";
 
 val restrict_domain_partition = Q.prove (
 `!cmp x l h t1 t2.
@@ -2145,16 +2170,17 @@ val restrict_domain_partition = Q.prove (
   ⇒
   FUNION (restrict_domain cmp l h t1) (restrict_domain cmp l h t2) =
     FUNION (restrict_domain cmp l (SOME x) t1) (restrict_domain cmp (SOME x) h t2)`,
- rw [restrict_domain_def, fmap_eq_flookup] >>
+ rw [restrict_domain_def, FLOOKUP_EXT'] >>
  every_case_tac >>
  rw [] >>
  fs [restrict_set_def] >>
- `h = NONE ∨ ?h'. h = SOME h'` by Cases_on `h` >>
- `l = NONE ∨ ?l'. l = SOME l'` by Cases_on `l` >>
+ `h = NONE ∨ ?h'. h = SOME h'` by (Cases_on `h` >> simp[]) >>
+ `l = NONE ∨ ?l'. l = SOME l'` by (Cases_on `l` >> simp[]) >>
  fs [option_cmp_def, option_cmp2_def, SUBMAP_DEF, EXTENSION, FDOM_DRESTRICT, FLOOKUP_DEF,
      DRESTRICT_DEF, FAPPLY_FUPDATE_THM] >>
  fmrw [] >>
  metis_tac [cmp_thms, EXTENSION, key_set_eq]);
+val _ = print "Proved restrict_domain_partition\n";
 
 val restrict_domain_union_swap = Q.prove (
 ` good_cmp cmp
@@ -2169,12 +2195,13 @@ val restrict_domain_union_swap = Q.prove (
  rw [restrict_domain_def] >>
  Cases_on `blo` >>
  Cases_on `bhi` >>
- rw [restrict_set_def, fmap_eq_flookup] >>
+ rw [restrict_set_def, FLOOKUP_EXT'] >>
  fmrw [] >>
  fs [option_cmp_def, option_cmp2_def] >>
  every_case_tac >>
  rw [] >>
  metis_tac [cmp_thms, key_set_eq]);
+val _ = print "Proved restrict_domain_union_swap\n"
 
 val restrict_domain_extend = Q.prove (
 ` good_cmp cmp ∧
@@ -2189,12 +2216,13 @@ val restrict_domain_extend = Q.prove (
  rfs [key_ordered_to_fmap] >>
  Cases_on `blo` >>
  Cases_on `bhi` >>
- rw [restrict_set_def, fmap_eq_flookup] >>
+ rw [restrict_set_def, FLOOKUP_EXT'] >>
  fmrw [] >>
  fs [option_cmp_def, option_cmp2_def, restrict_set_def] >>
  every_case_tac >>
  rw [FLOOKUP_DEF] >>
  metis_tac [cmp_thms, key_set_eq, key_set_cmp_thm, to_fmap_key_set]);
+val _ = print "Proved restrict_domain_extend\n";
 
 val restrict_domain_combine = Q.prove (
 ` good_cmp cmp ∧
@@ -2211,6 +2239,7 @@ val restrict_domain_combine = Q.prove (
  Cases_on `bhi` >>
  fs [restrict_set_def, option_cmp2_def, option_cmp_def, FLOOKUP_DEF] >>
  metis_tac [key_set_eq, cmp_thms, to_fmap_key_set, key_set_cmp_thm]);
+val _ = print "Proved restrict_domain_combine\n";
 
 val bounded_all_def = Define `
 (bounded_all cmp lk hk Tip ⇔ T) ∧
@@ -2265,7 +2294,7 @@ val restrict_domain_empty = Q.prove (
   restrict_domain cmp (SOME kx) bhi (restrict_domain cmp blo (SOME kx) t) = FEMPTY`,
  Cases_on `blo` >>
  Cases_on `bhi` >>
- fmrw [restrict_domain_def, restrict_set_def, option_cmp_def, option_cmp2_def, fmap_eq_flookup] >>
+ fmrw [restrict_domain_def, restrict_set_def, option_cmp_def, option_cmp2_def, FLOOKUP_EXT'] >>
  metis_tac [good_cmp_def, comparison_distinct, key_set_eq]);
 
 val hedgeUnion_thm = Q.prove (
@@ -2305,7 +2334,7 @@ val hedgeUnion_thm = Q.prove (
          fs [restrict_set_def, option_cmp_def, option_cmp2_def]) >>
      `restrict_domain cmp blo bhi FEMPTY = FEMPTY` by rw [restrict_domain_def] >>
      rw [to_fmap_def, restrict_domain_union, restrict_domain_update] >>
-     fmrw [restrict_domain_def, fmap_eq_flookup] >>
+     fmrw [restrict_domain_def, FLOOKUP_EXT'] >>
      rw [] >>
      Cases_on `blo` >>
      Cases_on `bhi` >>
@@ -2316,7 +2345,7 @@ val hedgeUnion_thm = Q.prove (
  >- (inv_mp_tac insertR_thm >>
      imp_res_tac bounded_restrict_id >>
      rw [restrict_domain_union, to_fmap_def, restrict_domain_update] >>
-     rw [restrict_domain_def, fmap_eq_flookup] >>
+     rw [restrict_domain_def, FLOOKUP_EXT'] >>
      fmrw [] >>
      every_case_tac >>
      fs [FLOOKUP_DEF, bounded_root_def]) >|
@@ -2377,7 +2406,7 @@ val hedgeUnion_thm = Q.prove (
  rw [restrict_domain_union_swap] >>
  imp_res_tac restrict_domain_extend >>
  rw [] >>
- simp [fmap_eq_flookup] >>
+ simp [FLOOKUP_EXT'] >>
  rw [FLOOKUP_UPDATE] >>
  REWRITE_TAC [GSYM FUNION_ASSOC] >>
  ONCE_REWRITE_TAC [FLOOKUP_FUNION] >>
@@ -2407,7 +2436,7 @@ val union_thm = Q.store_thm ("union_thm",
  inv_mp_tac hedgeUnion_thm >>
  rw [bounded_all_NONE, bounded_root_def, restrict_set_def, option_cmp_def,
      restrict_domain_def, option_cmp2_def, to_fmap_def] >>
- rw [fmap_eq_flookup] >>
+ rw [FLOOKUP_EXT'] >>
  fmrw [] >>
  every_case_tac >>
  fs [FLOOKUP_DEF, invariant_eq] >>
@@ -2513,6 +2542,33 @@ val toAscList_thm = Q.store_thm ("toAscList_thm",
  qspecl_then [`cmp`, `[]`, `t`] mp_tac toAscList_helper >>
  simp [toAscList_def, lift_key_def]);
 
+(* some useful specialisations of the above theorem *)
+
+val MAP_FST_toAscList = Q.store_thm("MAP_FST_toAscList",
+  `good_cmp cmp ∧ invariant cmp t ⇒
+   SORTED (λx y. cmp x y = Less) (MAP FST (toAscList t)) ∧
+   FDOM (to_fmap cmp t) = IMAGE (key_set cmp) (set (MAP FST (toAscList t)))`,
+  rw[] \\ imp_res_tac toAscList_thm
+  >- (
+    qmatch_goalsub_abbrev_tac`SORTED R` \\
+    imp_res_tac comparisonTheory.good_cmp_trans \\
+    `transitive R` by (
+      fs[relationTheory.transitive_def,FORALL_PROD,Abbr`R`] \\
+      metis_tac[] ) \\
+    rw[sorted_map] \\
+    rw[Abbr`R`,relationTheory.inv_image_def,LAMBDA_PROD] ) \\
+  fs[Once EXTENSION,lift_key_def,MEM_MAP,EXISTS_PROD,FORALL_PROD,FLOOKUP_DEF] \\
+  metis_tac[]);
+
+val MEM_toAscList = Q.store_thm("MEM_toAscList",
+  `good_cmp cmp ∧ invariant cmp t ∧ MEM (k,v) (toAscList t) ⇒
+   FLOOKUP (to_fmap cmp t) (key_set cmp k) = SOME v`,
+  rw[] \\
+  imp_res_tac toAscList_thm \\
+  `(key_set cmp k,v) ∈ lift_key cmp (set (toAscList t))`
+  by (simp_tac std_ss [lift_key_def] \\ simp[EXISTS_PROD] \\ metis_tac[])
+  \\ rfs[]);
+
 val compare_good_cmp = Q.store_thm ("compare_good_cmp",
 `!cmp1 cmp2. good_cmp cmp1 ∧ good_cmp cmp2 ⇒ good_cmp (compare cmp1 cmp2)`,
  rw [] >>
@@ -2575,6 +2631,8 @@ val compare_thm1 = Q.prove (
      qexists_tac `q'` >>
      rw [] >>
      metis_tac [cmp_thms]));
+val _ = print "Proved compare_thm1";
+
 
 val NONE_lem = Q.prove (
 `x = NONE ⇔ ¬?y. x = SOME y`,
@@ -2606,6 +2664,7 @@ val strict_sorted_unique = Q.prove (
  Cases_on `h` >>
  fs [] >>
  res_tac);
+val _ = print "Proved strict_sorted_unique\n"
 
 val strict_sorted_eq_el = Q.prove (
 `!cmp l m n.
@@ -2639,6 +2698,7 @@ val strict_sorted_eq_el = Q.prove (
      Cases_on `EL (PRE m) l` >>
      fs [] >>
      metis_tac [cmp_thms]));
+val _ = print "Proved strict_sorted_eq_el\n";
 
 val compare_lem2 = Q.prove (
 `!cmp1 cmp2 n l1 l2.
@@ -2759,6 +2819,7 @@ val compare_lem2 = Q.prove (
                       fs [] >>
                       metis_tac [cmp_thms]) >>
          metis_tac [cmp_thms])));
+val _ = print "Proved compare_lem2\n";
 
 val compare_thm2 = Q.prove (
 `!cmp1 cmp2 t1 t2.
@@ -2812,6 +2873,7 @@ val compare_thm2 = Q.prove (
      Cases_on `EL n l2` >>
      fs [] >>
      metis_tac [good_cmp_def, pair_cmp_good]));
+val _ = print "Proved compare_thm2\n";
 
 val compare_thm = Q.store_thm ("compare_thm",
 `!cmp1 cmp2 t1 t2.
@@ -2850,7 +2912,7 @@ val map_thm = Q.store_thm ("map_thm",
  >- rfs [key_ordered_to_fmap]
  >- rfs [key_ordered_to_fmap]
  >- fs [FCARD_DEF]
- >- (fmrw [fmap_eq_flookup] >>
+ >- (fmrw [FLOOKUP_EXT'] >>
      fmrw [FLOOKUP_o_f, DOMSUB_FLOOKUP_THM] >>
      every_case_tac >>
      fs []));
@@ -2907,7 +2969,7 @@ val splitLookup_thm = Q.store_thm ("splitLookup_thm",
      rfs [key_ordered_to_fmap] >>
      res_tac >>
      fs [key_set_cmp_def] >>
-     fmrw [fmap_eq_flookup] >>
+     fmrw [FLOOKUP_EXT'] >>
      every_case_tac >>
      fs [] >>
      rw [] >>
@@ -3270,7 +3332,7 @@ val map_keys_thm = Q.store_thm ("map_keys_thm",
  DISCH_TAC >>
  inv_mp_tac fromList_thm >>
  rw [MAP_MAP_o, combinTheory.o_DEF] >>
- rw [fmap_eq_flookup] >>
+ rw [FLOOKUP_EXT'] >>
  `SORTED (λ(x,y) (x',y'). cmp1 x x' = Less) (toAscList t) ∧
   lift_key cmp1 (set (toAscList t)) = set (fmap_to_alist (to_fmap cmp1 t))`
             by metis_tac [toAscList_thm] >>
@@ -3374,7 +3436,7 @@ val map_keys_thm = Q.store_thm ("map_keys_thm",
  inv_mp_tac fromList_thm >>
  rw [MAP_MAP_o, combinTheory.o_DEF] >>
  rw [LAMBDA_PROD] >>
- rw [fmap_eq_flookup] >>
+ rw [FLOOKUP_EXT'] >>
  `SORTED (λ(x,y) (x',y'). cmp1 x x' = Less) (toAscList t) ∧
   lift_key cmp1 (set (toAscList t)) = set (fmap_to_alist (to_fmap cmp1 t))`
             by metis_tac [toAscList_thm] >>

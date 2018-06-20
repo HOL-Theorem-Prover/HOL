@@ -1,23 +1,15 @@
-open HolKernel Parse boolLib bossLib arithmeticTheory numTheory sequenceTheory
+open HolKernel Parse boolLib bossLib;
+open arithmeticTheory numTheory sequenceTheory
      sequenceTools HurdUseful combinTheory;
 
 val _ = new_theory "prob_pseudo";
-
-infixr 0 ++ << || ORELSEC ##;
-infix 1 >> |->;
-nonfix THEN THENL ORELSE;
-
-val op++ = op THEN;
-val op<< = op THENL;
-val op|| = op ORELSE;
-val op>> = op THEN1;
 
 (* ------------------------------------------------------------------------- *)
 (* The definition of the pseudo-random number generator.                     *)
 (* ------------------------------------------------------------------------- *)
 
 val prob_pseudo_def = Define
-  `prob_pseudo a b n = siter EVEN (\x. (a * x + b) MOD (2 * n + 1))`;
+   `prob_pseudo a b n = siter EVEN (\x. (a * x + b) MOD (2 * n + 1))`;
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems to allow pseudo-random bits to be computed.                      *)
@@ -36,7 +28,3 @@ val STL_PROB_PSEUDO = store_thm
    RW_TAC std_ss [prob_pseudo_def, STL_SITER]);
 
 val _ = export_theory ();
-
-
-
-

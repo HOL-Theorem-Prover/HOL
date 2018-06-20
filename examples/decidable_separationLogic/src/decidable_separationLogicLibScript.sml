@@ -382,9 +382,9 @@ Induct_on `n` THENL [
 
       SIMP_TAC std_ss [SAFE_EL_def, REPLACE_ELEMENT_def] THEN
       GEN_TAC THEN
-      Tactical.REVERSE (`!e1:'a e2 e3 e4 l l'.
+      `!e1:'a e2 e3 e4 l l'.
          PERM (e1::e2::l) (e3::e4::l') =
-         PERM (e2::e1::l) (e4::e3::l')` by ALL_TAC) THEN1 (
+         PERM (e2::e1::l) (e4::e3::l')` suffices_by (STRIP_TAC THEN
          METIS_TAC[PERM_MONO]
       ) THEN
       POP_ASSUM (fn thm => ALL_TAC) THEN
@@ -461,7 +461,7 @@ Induct_on `m` THENL [
                SIMP_TAC std_ss [SAFE_DEL_EL_THM, DELETE_ELEMENT_THM] THEN
                GEN_TAC THEN
                `PERM (SAFE_DEL_EL n t ++ h'::h::DELETE_ELEMENT n t)
-                     (h'::(SAFE_DEL_EL n t ++ h::DELETE_ELEMENT n t))` by ALL_TAC THEN1 (
+                     (h'::(SAFE_DEL_EL n t ++ h::DELETE_ELEMENT n t))` by (
                   `h'::h::DELETE_ELEMENT n t =
                    [h'] ++ (h::DELETE_ELEMENT n t)` by METIS_TAC [CONS_APPEND] THEN
                   `h'::SAFE_DEL_EL n t = [h']++SAFE_DEL_EL n t` by METIS_TAC [CONS_APPEND] THEN
@@ -766,7 +766,7 @@ val INFERENCE_SUBSTITUTION___EVAL1 = store_thm ("INFERENCE_SUBSTITUTION___EVAL1"
 SIMP_TAC std_ss [SAFE_DEL_EL___EQ] THEN
 REPEAT STRIP_TAC THEN
 `LIST_DS_ENTAILS (c1, c2) (pfL,sfL) (pfL',sfL') =
- LIST_DS_ENTAILS (c1, c2) (SWAP_TO_POS 0 n pfL,sfL) (pfL',sfL')` by ALL_TAC THEN1 (
+ LIST_DS_ENTAILS (c1, c2) (SWAP_TO_POS 0 n pfL,sfL) (pfL',sfL')` by (
    MATCH_MP_TAC LIST_DS_ENTAILS___PERM THEN
    SIMP_TAC std_ss [PERM_REFL] THEN
    METIS_TAC[PERM___SWAP_TO_POS, PERM_SYM]
@@ -790,13 +790,13 @@ val INFERENCE_SUBSTITUTION___EVAL2 = store_thm ("INFERENCE_SUBSTITUTION___EVAL2"
 SIMP_TAC std_ss [SAFE_DEL_EL___EQ] THEN
 REPEAT STRIP_TAC THEN
 `LIST_DS_ENTAILS (c1,c2) (pfL,sfL) (pfL',sfL') =
- LIST_DS_ENTAILS (c1,c2) (SWAP_TO_POS 0 n pfL,sfL) (pfL',sfL')` by ALL_TAC THEN1 (
+ LIST_DS_ENTAILS (c1,c2) (SWAP_TO_POS 0 n pfL,sfL) (pfL',sfL')` by (
    MATCH_MP_TAC LIST_DS_ENTAILS___PERM THEN
    SIMP_TAC std_ss [PERM_REFL] THEN
    METIS_TAC[PERM___SWAP_TO_POS, PERM_SYM]
 ) THEN
 `LIST_DS_ENTAILS (c1,c2) (pf_equal e (dse_var v)::DELETE_ELEMENT n pfL,sfL) (pfL',sfL') =
- LIST_DS_ENTAILS (c1,c2) (pf_equal (dse_var v) e::DELETE_ELEMENT n pfL,sfL) (pfL',sfL')` by ALL_TAC THEN1 (
+ LIST_DS_ENTAILS (c1,c2) (pf_equal (dse_var v) e::DELETE_ELEMENT n pfL,sfL) (pfL',sfL')` by (
    SIMP_TAC std_ss [LIST_DS_ENTAILS_def, LIST_DS_SEM_EVAL, DS_EXPRESSION_EQUAL_def] THEN
    METIS_TAC[]
 ) THEN
@@ -929,7 +929,7 @@ Induct_on `c2` THENL [
          DISJ2_TAC THEN
          REPEAT STRIP_TAC THEN
          Cases_on `DS_EXPRESSION_EQUAL s e1' e2'` THEN ASM_REWRITE_TAC[] THEN
-         `MEM (e1',e2') (POS_FILTER t (\x. FST x = SND x) c2)` by ALL_TAC THEN1 (
+         `MEM (e1',e2') (POS_FILTER t (\x. FST x = SND x) c2)` by (
             MATCH_MP_TAC MEM_POS_FILTER THEN
             FULL_SIMP_TAC std_ss [DS_EXPRESSION_EQUAL_def] THEN
             METIS_TAC[]
@@ -976,7 +976,7 @@ val INFERENCE_INCONSISTENT_UNEQUAL___EVAL = store_thm ("INFERENCE_INCONSISTENT_U
 SIMP_TAC std_ss [SAFE_DEL_EL___EQ] THEN
 REPEAT STRIP_TAC THEN
 `LIST_DS_ENTAILS (c1, c2) (pfL,sfL) (pfL',sfL') =
- LIST_DS_ENTAILS (c1, c2) (SWAP_TO_POS 0 n pfL,sfL) (pfL',sfL')` by ALL_TAC THEN1 (
+ LIST_DS_ENTAILS (c1, c2) (SWAP_TO_POS 0 n pfL,sfL) (pfL',sfL')` by (
    MATCH_MP_TAC LIST_DS_ENTAILS___PERM THEN
    SIMP_TAC std_ss [PERM_REFL] THEN
    METIS_TAC[PERM___SWAP_TO_POS, PERM_SYM]
@@ -995,7 +995,7 @@ val INFERENCE_INCONSISTENT___NIL_POINTS_TO___EVAL = store_thm ("INFERENCE_INCONS
 SIMP_TAC std_ss [SAFE_DEL_EL___EQ] THEN
 REPEAT STRIP_TAC THEN
 `LIST_DS_ENTAILS (c1, c2) (pfL,sfL) (pfL',sfL') =
- LIST_DS_ENTAILS (c1, c2) (pfL,SWAP_TO_POS 0 n sfL) (pfL',sfL')` by ALL_TAC THEN1 (
+ LIST_DS_ENTAILS (c1, c2) (pfL,SWAP_TO_POS 0 n sfL) (pfL',sfL')` by (
    MATCH_MP_TAC LIST_DS_ENTAILS___PERM THEN
    SIMP_TAC std_ss [PERM_REFL] THEN
    METIS_TAC[PERM___SWAP_TO_POS, PERM_SYM]
@@ -1014,7 +1014,7 @@ val INFERENCE_INCONSISTENT___precondition_POINTS_TO___EVAL = store_thm ("INFEREN
 SIMP_TAC std_ss [SAFE_DEL_EL___EQ] THEN
 REPEAT STRIP_TAC THEN
 `LIST_DS_ENTAILS (c1, c2) (pfL,sfL) (pfL',sfL') =
- LIST_DS_ENTAILS (c1, c2) (pfL,SWAP_TO_POS 0 n sfL) (pfL',sfL')` by ALL_TAC THEN1 (
+ LIST_DS_ENTAILS (c1, c2) (pfL,SWAP_TO_POS 0 n sfL) (pfL',sfL')` by (
    MATCH_MP_TAC LIST_DS_ENTAILS___PERM THEN
    SIMP_TAC std_ss [PERM_REFL] THEN
    METIS_TAC[PERM___SWAP_TO_POS, PERM_SYM]
@@ -1036,7 +1036,7 @@ Cases_on `fL` THEN
 SIMP_TAC std_ss [SAFE_DEL_EL___EQ] THEN
 REPEAT STRIP_TAC THEN
 `LIST_DS_ENTAILS (c1, c2) (pfL,sfL) (pfL',sfL') =
- LIST_DS_ENTAILS (c1, c2) (pfL,SWAP_TO_POS 0 n sfL) (pfL',sfL')` by ALL_TAC THEN1 (
+ LIST_DS_ENTAILS (c1, c2) (pfL,SWAP_TO_POS 0 n sfL) (pfL',sfL')` by (
    MATCH_MP_TAC LIST_DS_ENTAILS___PERM THEN
    SIMP_TAC std_ss [PERM_REFL] THEN
    METIS_TAC[PERM___SWAP_TO_POS, PERM_SYM]
@@ -1209,13 +1209,13 @@ Induct_on `l` THENL [
    Cases_on `f` THEN SIMP_TAC list_ss [HYPOTHESIS_RULE_MAP_def] THEN
    REPEAT STRIP_TAC THEN
    `PF_SEM s h' ==> (LIST_PF_SEM s (HYPOTHESIS_RULE_MAP cL pfL1 (pfL2 ++ h'::l) (SUC n) t l) =
-                     LIST_PF_SEM s l)` by ALL_TAC THEN1 (
-      `(pfL2 ++ (h'::l)) = ((pfL2 ++ [h']) ++ l)` by ALL_TAC THEN1 (
+                     LIST_PF_SEM s l)` by (
+      `(pfL2 ++ (h'::l)) = ((pfL2 ++ [h']) ++ l)` by (
          SIMP_TAC std_ss [APPEND_11, GSYM APPEND_ASSOC, APPEND]
       ) THEN
       ASM_REWRITE_TAC[] THEN
       STRIP_TAC THEN
-      Q.PAT_ASSUM `!s n. P s n` MATCH_MP_TAC THEN
+      Q.PAT_X_ASSUM `!s n. P s n` MATCH_MP_TAC THEN
       ASM_SIMP_TAC list_ss [LIST_PF_SEM_THM] THEN
       METIS_TAC[]
    ) THEN
@@ -1279,7 +1279,7 @@ val INFERENCE_STAR_INTRODUCTION___points_to___EVAL = store_thm ("INFERENCE_STAR_
 SIMP_TAC std_ss [SAFE_DEL_EL___EQ] THEN
 REPEAT STRIP_TAC THEN
 `LIST_DS_ENTAILS (c1, c2) (pfL,sfL) (pfL',sfL') =
- LIST_DS_ENTAILS (c1, c2) (pfL,SWAP_TO_POS 0 n sfL) (pfL',SWAP_TO_POS 0 m sfL')` by ALL_TAC THEN1 (
+ LIST_DS_ENTAILS (c1, c2) (pfL,SWAP_TO_POS 0 n sfL) (pfL',SWAP_TO_POS 0 m sfL')` by (
    MATCH_MP_TAC LIST_DS_ENTAILS___PERM THEN
    SIMP_TAC std_ss [PERM_REFL] THEN
    METIS_TAC[PERM___SWAP_TO_POS, PERM_SYM]
@@ -1303,7 +1303,7 @@ val INFERENCE_STAR_INTRODUCTION___list___EVAL = store_thm ("INFERENCE_STAR_INTRO
 SIMP_TAC std_ss [SAFE_DEL_EL___EQ] THEN
 REPEAT STRIP_TAC THEN
 `LIST_DS_ENTAILS (c1, c2) (pfL,sfL) (pfL',sfL') =
- LIST_DS_ENTAILS (c1, c2) (pfL,SWAP_TO_POS 0 n sfL) (pfL',SWAP_TO_POS 0 m sfL')` by ALL_TAC THEN1 (
+ LIST_DS_ENTAILS (c1, c2) (pfL,SWAP_TO_POS 0 n sfL) (pfL',SWAP_TO_POS 0 m sfL')` by (
    MATCH_MP_TAC LIST_DS_ENTAILS___PERM THEN
    SIMP_TAC std_ss [PERM_REFL] THEN
    METIS_TAC[PERM___SWAP_TO_POS, PERM_SYM]
@@ -1328,7 +1328,7 @@ val INFERENCE_STAR_INTRODUCTION___bin_tree___EVAL = store_thm ("INFERENCE_STAR_I
 SIMP_TAC std_ss [SAFE_DEL_EL___EQ] THEN
 REPEAT STRIP_TAC THEN (
    `LIST_DS_ENTAILS (c1, c2) (pfL,sfL) (pfL',sfL') =
-   LIST_DS_ENTAILS (c1, c2) (pfL,SWAP_TO_POS 0 n sfL) (pfL',SWAP_TO_POS 0 m sfL')` by ALL_TAC THEN1 (
+   LIST_DS_ENTAILS (c1, c2) (pfL,SWAP_TO_POS 0 n sfL) (pfL',SWAP_TO_POS 0 m sfL')` by (
       MATCH_MP_TAC LIST_DS_ENTAILS___PERM THEN
       SIMP_TAC std_ss [PERM_REFL] THEN
       METIS_TAC[PERM___SWAP_TO_POS, PERM_SYM]
@@ -1350,7 +1350,7 @@ val INFERENCE_STAR_INTRODUCTION___EVAL1 = store_thm ("INFERENCE_STAR_INTRODUCTIO
 
 REPEAT STRIP_TAC THEN
 `LIST_DS_ENTAILS (c1, c2) (pfL,sfL++sfL'') (pfL',sfL'++sfL'') =
- LIST_DS_ENTAILS (c1, c2) (pfL,sfL''++sfL) (pfL',sfL''++sfL')` by ALL_TAC THEN1 (
+ LIST_DS_ENTAILS (c1, c2) (pfL,sfL''++sfL) (pfL',sfL''++sfL')` by (
    MATCH_MP_TAC LIST_DS_ENTAILS___PERM THEN
    SIMP_TAC std_ss [PERM_REFL, PERM_APPEND]
 ) THEN
@@ -1372,7 +1372,7 @@ val INFERENCE_STAR_INTRODUCTION___EVAL1 = store_thm ("INFERENCE_STAR_INTRODUCTIO
 
 REPEAT STRIP_TAC THEN
 `LIST_DS_ENTAILS (c1, c2) (pfL,sfL++sfL'') (pfL',sfL'++sfL'') =
- LIST_DS_ENTAILS (c1, c2) (pfL,sfL''++sfL) (pfL',sfL''++sfL')` by ALL_TAC THEN1 (
+ LIST_DS_ENTAILS (c1, c2) (pfL,sfL''++sfL) (pfL',sfL''++sfL')` by (
    MATCH_MP_TAC LIST_DS_ENTAILS___PERM THEN
    SIMP_TAC std_ss [PERM_REFL, PERM_APPEND]
 ) THEN
@@ -1393,7 +1393,7 @@ val INFERENCE_STAR_INTRODUCTION___EVAL2 = store_thm ("INFERENCE_STAR_INTRODUCTIO
 
 REPEAT GEN_TAC THEN
 `LIST_DS_ENTAILS (c1, c2) (pfL,sfL) (pfL',sfL') =
- LIST_DS_ENTAILS (c1, c2) (pfL,SWAP_TO_POS 0 n1 sfL) (pfL',SWAP_TO_POS 0 n2 sfL')` by ALL_TAC THEN1 (
+ LIST_DS_ENTAILS (c1, c2) (pfL,SWAP_TO_POS 0 n1 sfL) (pfL',SWAP_TO_POS 0 n2 sfL')` by (
    MATCH_MP_TAC LIST_DS_ENTAILS___PERM THEN
    SIMP_TAC std_ss [PERM_REFL] THEN
    METIS_TAC[PERM___SWAP_TO_POS, PERM_SYM]
@@ -1471,7 +1471,7 @@ Induct_on `l` THENL [
    Cases_on `SF_POINTS_TO_LIST (h::l) = SF_POINTS_TO_LIST l` THEN1 (
          ASM_SIMP_TAC list_ss [] THEN
          REPEAT STRIP_TAC THEN
-         Q.PAT_ASSUM `!n m. P n m` (fn thm => MP_TAC (Q.ISPECL [`n:num`, `m:num`] thm)) THEN
+         Q.PAT_X_ASSUM `!n m. P n m` (fn thm => MP_TAC (Q.ISPECL [`n:num`, `m:num`] thm)) THEN
          ASM_SIMP_TAC std_ss [] THEN
          STRIP_TAC THEN
          Q.EXISTS_TAC `SUC n'` THEN
@@ -1498,7 +1498,7 @@ Induct_on `l` THENL [
 
 
       FULL_SIMP_TAC list_ss [] THEN
-      Q.PAT_ASSUM `!n m. P n m` (fn thm => MP_TAC (Q.ISPECL [`n'':num`, `n':num`] thm)) THEN
+      Q.PAT_X_ASSUM `!n m. P n m` (fn thm => MP_TAC (Q.ISPECL [`n'':num`, `n':num`] thm)) THEN
       ASM_SIMP_TAC list_ss [] THEN
       STRIP_TAC THEN
       Q.EXISTS_TAC `SUC n'''` THEN
@@ -1608,7 +1608,7 @@ Induct_on `l` THENL [
       ASM_SIMP_TAC list_ss []
    ) THEN
    `?x. (SF_POINTS_TO_LIST_COND_FILTER pfL (h'::t) (h::l)) =
-    x::(SF_POINTS_TO_LIST_COND_FILTER pfL t l)` by ALL_TAC THEN1 (
+    x::(SF_POINTS_TO_LIST_COND_FILTER pfL t l)` by (
       Cases_on `h` THEN
       Cases_on `h'` THEN
       FULL_SIMP_TAC list_ss [SF_POINTS_TO_LIST_COND_FILTER_def, SF_POINTS_TO_LIST_COND_def,
@@ -1656,7 +1656,7 @@ Induct_on `l` THENL [
              (SF_POINTS_TO_LIST_COND_FILTER pfL t l)` THEN1 (
       ASM_SIMP_TAC list_ss [] THEN
       REPEAT STRIP_TAC THEN
-      Q.PAT_ASSUM `!pfL f n m. P n m` (fn thm => MP_TAC (Q.SPECL [`pfL`, `t`, `n:num`, `m:num`] thm)) THEN
+      Q.PAT_X_ASSUM `!pfL f n m. P n m` (fn thm => MP_TAC (Q.SPECL [`pfL`, `t`, `n:num`, `m:num`] thm)) THEN
       ASM_REWRITE_TAC [] THEN
       STRIP_TAC THEN
       Q.EXISTS_TAC `SUC n'` THEN
@@ -1664,7 +1664,7 @@ Induct_on `l` THENL [
       ASM_SIMP_TAC list_ss []
    ) THEN
    `?x. (SF_POINTS_TO_LIST_COND_FILTER pfL (h'::t) (h::l)) =
-    x::(SF_POINTS_TO_LIST_COND_FILTER pfL t l)` by ALL_TAC THEN1 (
+    x::(SF_POINTS_TO_LIST_COND_FILTER pfL t l)` by (
       Cases_on `h` THEN
       Cases_on `h'` THEN
       FULL_SIMP_TAC list_ss [SF_POINTS_TO_LIST_COND_FILTER_def, SF_POINTS_TO_LIST_COND_def,
@@ -1682,7 +1682,7 @@ Induct_on `l` THENL [
       Q.EXISTS_TAC `n''` THEN
       ASM_SIMP_TAC list_ss [] THEN
 
-      Q.PAT_ASSUM `Y = x::Z` MP_TAC THEN
+      Q.PAT_X_ASSUM `Y = x::Z` MP_TAC THEN
       Cases_on `h'` THEN Cases_on `h` THEN (
          SIMP_TAC list_ss [SF_POINTS_TO_LIST_COND___PRED_def, SF_POINTS_TO_LIST_COND_FILTER_def,
             SF_POINTS_TO_LIST_COND_def, ds_spatial_formula_11, ds_spatial_formula_distinct]
@@ -1693,7 +1693,7 @@ Induct_on `l` THENL [
 
       SIMP_TAC std_ss [] THEN
       STRIP_TAC THEN
-      Q.PAT_ASSUM `!pfL f n m. P n m` (fn thm => MP_TAC (Q.SPECL [`pfL`, `t`, `n'':num`, `n':num`] thm)) THEN
+      Q.PAT_X_ASSUM `!pfL f n m. P n m` (fn thm => MP_TAC (Q.SPECL [`pfL`, `t`, `n'':num`, `n':num`] thm)) THEN
       ASM_SIMP_TAC list_ss [] THEN
       STRIP_TAC THEN
       Q.EXISTS_TAC `SUC n'''` THEN
@@ -1732,13 +1732,13 @@ Induct_on `l` THENL [
    SIMP_TAC list_ss [DISJ_IMP_THM, FORALL_AND_THM] THEN
    REPEAT STRIP_TAC THEN
    FULL_SIMP_TAC list_ss [] THEN
-   Q.PAT_ASSUM `Y = LIST_DS_ENTAILS (c1,c2) (pfL, sfL) (pfL', sfL')`
+   Q.PAT_X_ASSUM `Y = LIST_DS_ENTAILS (c1,c2) (pfL, sfL) (pfL', sfL')`
       (fn thm => (ASSUME_TAC (GSYM thm))) THEN
    FULL_SIMP_TAC std_ss [MEM_EL] THEN
-   Q.PAT_ASSUM `Y = EL n sfL` (ASSUME_TAC o GSYM) THEN
+   Q.PAT_X_ASSUM `Y = EL n sfL` (ASSUME_TAC o GSYM) THEN
 
    `!pfL. LIST_DS_ENTAILS (c1, c2) (pfL,sfL) (pfL',sfL') =
-         LIST_DS_ENTAILS (c1, c2) (pfL,SWAP_TO_POS 0 n sfL) (pfL',sfL')` by ALL_TAC THEN1 (
+         LIST_DS_ENTAILS (c1, c2) (pfL,SWAP_TO_POS 0 n sfL) (pfL',sfL')` by (
       GEN_TAC THEN
       MATCH_MP_TAC LIST_DS_ENTAILS___PERM THEN
       SIMP_TAC std_ss [PERM_REFL] THEN
@@ -1916,17 +1916,17 @@ Induct_on `l` THENL [
    Cases_on `h` THEN
    SIMP_TAC list_ss [] THEN
    REPEAT STRIP_TAC THEN
-   Q.PAT_ASSUM `Y ==> (X = Z)` MP_TAC THEN
+   Q.PAT_X_ASSUM `Y ==> (X = Z)` MP_TAC THEN
    ASM_REWRITE_TAC[] THEN
    SIMP_TAC std_ss [Once EQ_SYM_EQ] THEN
    STRIP_TAC THEN
-   `?sfL''. PERM (y1::y2::sfL'') sfL` by ALL_TAC THEN1 (
+   `?sfL''. PERM (y1::y2::sfL'') sfL` by (
       FULL_SIMP_TAC std_ss [SAFE_DEL_EL___EQ] THEN
       METIS_TAC[PERM___TWO_ELEMENTS_TO_FRONT_1]
    ) THEN
    `!pfL.
       LIST_DS_ENTAILS (c1, c2) (pfL,sfL) (pfL',sfL') =
-      LIST_DS_ENTAILS (c1, c2) (pfL,y1::y2::sfL'') (pfL',sfL')` by ALL_TAC THEN1 (
+      LIST_DS_ENTAILS (c1, c2) (pfL,y1::y2::sfL'') (pfL',sfL')` by (
       GEN_TAC THEN
       MATCH_MP_TAC LIST_DS_ENTAILS___PERM THEN
       ASM_SIMP_TAC std_ss [PERM_REFL] THEN
@@ -1944,13 +1944,13 @@ Induct_on `l` THENL [
 
       `!pfL.
          LIST_DS_ENTAILS (c1, c2) (pfL,sf_tree fL es q::sf_points_to r a::sfL'') (pfL',sfL') =
-         LIST_DS_ENTAILS (c1, c2) (pfL,sf_points_to r a::sf_tree fL es q::sfL'') (pfL',sfL')` by ALL_TAC THEN1 (
+         LIST_DS_ENTAILS (c1, c2) (pfL,sf_points_to r a::sf_tree fL es q::sfL'') (pfL',sfL')` by (
          GEN_TAC THEN
          MATCH_MP_TAC LIST_DS_ENTAILS___PERM THEN
          SIMP_TAC std_ss [PERM_REFL, PERM_SWAP_AT_FRONT]
       ) THEN
       `!pfL sfL. LIST_DS_ENTAILS (c1,c2) (pf_unequal q r::pfL, sfL) (pfL', sfL') =
-                 LIST_DS_ENTAILS (c1,c2) (pf_unequal r q::pfL, sfL) (pfL', sfL')` by ALL_TAC THEN1 (
+                 LIST_DS_ENTAILS (c1,c2) (pf_unequal r q::pfL, sfL) (pfL', sfL')` by (
          SIMP_TAC std_ss [LIST_DS_ENTAILS_def, LIST_DS_SEM_EVAL, DS_EXPRESSION_EQUAL_def] THEN
          METIS_TAC[]
       ) THEN
@@ -2018,13 +2018,13 @@ Induct_on `l` THENL [
    Cases_on `h` THEN
    SIMP_TAC list_ss [] THEN
    REPEAT STRIP_TAC THEN
-   Q.PAT_ASSUM `Y ==> (X = Z)` MP_TAC THEN
+   Q.PAT_X_ASSUM `Y ==> (X = Z)` MP_TAC THEN
    ASM_REWRITE_TAC[] THEN
    SIMP_TAC std_ss [Once EQ_SYM_EQ] THEN
    STRIP_TAC THEN
    `!pfL.
       LIST_DS_ENTAILS (c1, c2) (pfL,sfL) (pfL',sfL') =
-      LIST_DS_ENTAILS (c1, c2) (pfL,SWAP_TO_POS 0 n1 sfL) (pfL',sfL')` by ALL_TAC THEN1 (
+      LIST_DS_ENTAILS (c1, c2) (pfL,SWAP_TO_POS 0 n1 sfL) (pfL',sfL')` by (
       GEN_TAC THEN
       MATCH_MP_TAC LIST_DS_ENTAILS___PERM THEN
       SIMP_TAC std_ss [PERM_REFL] THEN
@@ -2104,7 +2104,7 @@ Cases_on `LIST_DS_SEM s h (pfL',sfL')` THEN ASM_REWRITE_TAC[] THEN
 
 REPEAT STRIP_TAC THEN
 `(HEAP_DISTINCT s h c1 c2) =
- (HEAP_DISTINCT s h c1 (SWAP_TO_POS 0 n2 c2))` by ALL_TAC THEN1 (
+ (HEAP_DISTINCT s h c1 (SWAP_TO_POS 0 n2 c2))` by (
    MATCH_MP_TAC HEAP_DISTINCT___PERM THEN
    SIMP_TAC std_ss [PERM_REFL] THEN
    METIS_TAC[PERM___SWAP_TO_POS, PERM_SYM]
@@ -2135,7 +2135,7 @@ Cases_on `LIST_DS_SEM s h (pfL',sfL')` THEN ASM_REWRITE_TAC[] THEN
 
 REPEAT STRIP_TAC THEN
 `(HEAP_DISTINCT s h c1 c2) =
- (HEAP_DISTINCT s h c1 (SWAP_TO_POS 0 n2 c2))` by ALL_TAC THEN1 (
+ (HEAP_DISTINCT s h c1 (SWAP_TO_POS 0 n2 c2))` by (
    MATCH_MP_TAC HEAP_DISTINCT___PERM THEN
    SIMP_TAC std_ss [PERM_REFL] THEN
    METIS_TAC[PERM___SWAP_TO_POS, PERM_SYM]
@@ -2172,11 +2172,11 @@ FULL_SIMP_TAC std_ss [] THEN
 SIMP_TAC std_ss [HEAP_DISTINCT_def] THEN
 `(FILTER (\(e1,e2). ~DS_EXPRESSION_EQUAL s e1 e2)
                   (DELETE_ELEMENT n1 (DELETE_ELEMENT n2 c2))) =
-                  (FILTER (\(e1,e2). ~DS_EXPRESSION_EQUAL s e1 e2) c2)` by ALL_TAC THEN1 (
-   Q.PAT_ASSUM `n1 < n2` MP_TAC THEN
-   REPEAT (Q.PAT_ASSUM `N < LENGTH c2` MP_TAC) THEN
-   REPEAT (Q.PAT_ASSUM `X = (e1,e2)` MP_TAC) THEN
-   Q.PAT_ASSUM `DS_EXPRESSION_EQUAL s e1 e2` MP_TAC THEN
+                  (FILTER (\(e1,e2). ~DS_EXPRESSION_EQUAL s e1 e2) c2)` by (
+   Q.PAT_X_ASSUM `n1 < n2` MP_TAC THEN
+   REPEAT (Q.PAT_X_ASSUM `N < LENGTH c2` MP_TAC) THEN
+   REPEAT (Q.PAT_X_ASSUM `X = (e1,e2)` MP_TAC) THEN
+   Q.PAT_X_ASSUM `DS_EXPRESSION_EQUAL s e1 e2` MP_TAC THEN
    REPEAT (POP_ASSUM (K ALL_TAC)) THEN
    Q.SPEC_TAC (`n2`, `n2`) THEN
    Q.SPEC_TAC (`n1`, `n1`) THEN
@@ -2190,9 +2190,9 @@ SIMP_TAC std_ss [HEAP_DISTINCT_def] THEN
       Cases_on `n2` THEN1 FULL_SIMP_TAC list_ss [] THEN
       Cases_on `n1` THENL [
          FULL_SIMP_TAC list_ss [DELETE_ELEMENT_THM] THEN
-         Q.PAT_ASSUM `n < LENGTH c2` MP_TAC THEN
-         Q.PAT_ASSUM `X = (e1,e2)` MP_TAC THEN
-         Q.PAT_ASSUM `DS_EXPRESSION_EQUAL s e1 e2` MP_TAC THEN
+         Q.PAT_X_ASSUM `n < LENGTH c2` MP_TAC THEN
+         Q.PAT_X_ASSUM `X = (e1,e2)` MP_TAC THEN
+         Q.PAT_X_ASSUM `DS_EXPRESSION_EQUAL s e1 e2` MP_TAC THEN
          REPEAT (POP_ASSUM (K ALL_TAC)) THEN
          Q.SPEC_TAC (`n`, `n`) THEN
          REWRITE_TAC [AND_IMP_INTRO, GSYM CONJ_ASSOC] THEN
@@ -2213,10 +2213,10 @@ SIMP_TAC std_ss [HEAP_DISTINCT_def] THEN
    ]
 ) THEN
 `!e1 e2. ~(DS_EXPRESSION_EQUAL s e1 e2) ==>
-         (MEM (e1,e2) c2 = MEM (e1,e2) (DELETE_ELEMENT n1 (DELETE_ELEMENT n2 c2)))` by ALL_TAC THEN1 (
+         (MEM (e1,e2) c2 = MEM (e1,e2) (DELETE_ELEMENT n1 (DELETE_ELEMENT n2 c2)))` by (
    REPEAT STRIP_TAC THEN
    `!l. MEM (e1', e2') l =
-        MEM (e1', e2') (FILTER (\(e1,e2). ~DS_EXPRESSION_EQUAL s e1 e2) l)` by ALL_TAC THEN1 (
+        MEM (e1', e2') (FILTER (\(e1,e2). ~DS_EXPRESSION_EQUAL s e1 e2) l)` by (
       ASM_SIMP_TAC std_ss [MEM_FILTER]
    ) THEN
    METIS_TAC[]
@@ -2247,14 +2247,14 @@ REWRITE_TAC [] THEN
 SIMP_TAC std_ss [] THEN
 
 `(HEAP_DISTINCT s h c1 c2) =
- (HEAP_DISTINCT s h c1 (SWAP_TO_POS 0 n2 c2))` by ALL_TAC THEN1 (
+ (HEAP_DISTINCT s h c1 (SWAP_TO_POS 0 n2 c2))` by (
    MATCH_MP_TAC HEAP_DISTINCT___PERM THEN
    SIMP_TAC std_ss [PERM_REFL] THEN
    METIS_TAC[PERM___SWAP_TO_POS, PERM_SYM]
 ) THEN
 `!c2.
  (HEAP_DISTINCT s h c1 c2) =
- (HEAP_DISTINCT s h (SWAP_TO_POS 0 n1 c1) c2)` by ALL_TAC THEN1 (
+ (HEAP_DISTINCT s h (SWAP_TO_POS 0 n1 c1) c2)` by (
    GEN_TAC THEN
    MATCH_MP_TAC HEAP_DISTINCT___PERM THEN
    SIMP_TAC std_ss [PERM_REFL] THEN
@@ -2285,7 +2285,7 @@ val INFERENCE___NIL_LIST_EVAL = store_thm ("INFERENCE___NIL_LIST_EVAL",
 SIMP_TAC std_ss [SAFE_DEL_EL___EQ] THEN
 REPEAT STRIP_TAC THEN
 `LIST_DS_ENTAILS (c1, c2) (pfL,sfL) (pfL',sfL') =
-LIST_DS_ENTAILS (c1, c2) (pfL,SWAP_TO_POS 0 n sfL) (pfL',sfL')` by ALL_TAC THEN1 (
+LIST_DS_ENTAILS (c1, c2) (pfL,SWAP_TO_POS 0 n sfL) (pfL',sfL')` by (
    MATCH_MP_TAC LIST_DS_ENTAILS___PERM THEN
    SIMP_TAC std_ss [PERM_REFL] THEN
    METIS_TAC[PERM___SWAP_TO_POS, PERM_SYM]
@@ -2308,7 +2308,7 @@ val INFERENCE___precondition_LIST_EVAL = store_thm ("INFERENCE___precondition_LI
 SIMP_TAC std_ss [SAFE_DEL_EL___EQ] THEN
 REPEAT STRIP_TAC THEN
 `LIST_DS_ENTAILS (c1, c2) (pfL,sfL) (pfL',sfL') =
-LIST_DS_ENTAILS (c1, c2) (pfL,SWAP_TO_POS 0 n2 sfL) (pfL',sfL')` by ALL_TAC THEN1 (
+LIST_DS_ENTAILS (c1, c2) (pfL,SWAP_TO_POS 0 n2 sfL) (pfL',sfL')` by (
    MATCH_MP_TAC LIST_DS_ENTAILS___PERM THEN
    SIMP_TAC std_ss [PERM_REFL] THEN
    METIS_TAC[PERM___SWAP_TO_POS, PERM_SYM]
@@ -2328,7 +2328,7 @@ Cases_on `DS_EXPRESSION_EQUAL s e2 (EL n1 c1)` THENL [
    FULL_SIMP_TAC std_ss [SF_SEM___sf_ls_THM, LET_THM, DS_EXPRESSION_EQUAL_def] THEN
    SIMP_TAC std_ss [SF_SEM___sf_points_to_THM, DS_POINTS_TO_def] THEN
    REPEAT STRIP_TAC THEN
-   `~(GET_DSV_VALUE (DS_EXPRESSION_EVAL s (EL n1 c1)) IN FDOM h)` by ALL_TAC THEN1 (
+   `~(GET_DSV_VALUE (DS_EXPRESSION_EVAL s (EL n1 c1)) IN FDOM h)` by (
       FULL_SIMP_TAC std_ss [HEAP_DISTINCT_def] THEN
       METIS_TAC[MEM_EL]
    ) THEN
@@ -2354,14 +2354,14 @@ val INFERENCE___NON_EMPTY_LS___EVAL = store_thm ("INFERENCE___NON_EMPTY_LS___EVA
 SIMP_TAC std_ss [SAFE_DEL_EL___EQ] THEN
 REPEAT STRIP_TAC THEN
 `LIST_DS_ENTAILS (c1, c2) (pfL,sfL) (pfL',sfL') =
- LIST_DS_ENTAILS (c1, c2) (pfL,SWAP_TO_POS 0 n3 sfL) (pfL',SWAP_TO_POS 0 n1 sfL')` by ALL_TAC THEN1 (
+ LIST_DS_ENTAILS (c1, c2) (pfL,SWAP_TO_POS 0 n3 sfL) (pfL',SWAP_TO_POS 0 n1 sfL')` by (
    MATCH_MP_TAC LIST_DS_ENTAILS___PERM THEN
    SIMP_TAC std_ss [PERM_REFL] THEN
    METIS_TAC[PERM___SWAP_TO_POS, PERM_SYM]
 ) THEN
 `!c1 c2 sfL pfL' sfL'.
  LIST_DS_ENTAILS (c1, c2) (pfL,sfL) (pfL',sfL') =
- LIST_DS_ENTAILS (c1, c2) (SWAP_TO_POS 0 n2 pfL,sfL) (pfL',sfL')` by ALL_TAC THEN1 (
+ LIST_DS_ENTAILS (c1, c2) (SWAP_TO_POS 0 n2 pfL,sfL) (pfL',sfL')` by (
    REPEAT GEN_TAC THEN
    MATCH_MP_TAC LIST_DS_ENTAILS___PERM THEN
    SIMP_TAC std_ss [PERM_REFL] THEN
@@ -2369,7 +2369,7 @@ REPEAT STRIP_TAC THEN
 ) THEN
 `!c1 c2 pfL sfL pfL' sfL'.
  LIST_DS_ENTAILS (c1, c2) ((if b then pf_unequal e1 e3 else pf_unequal e3 e1)::pfL,sfL) (pfL',sfL') =
- LIST_DS_ENTAILS (c1, c2) (pf_unequal e1 e3::pfL,sfL) (pfL',sfL')` by ALL_TAC THEN1 (
+ LIST_DS_ENTAILS (c1, c2) (pf_unequal e1 e3::pfL,sfL) (pfL',sfL')` by (
    REPEAT GEN_TAC THEN
    SIMP_TAC std_ss [LIST_DS_ENTAILS_def, LIST_DS_SEM_THM, COND_RAND, COND_RATOR,
       PF_SEM_def, DS_EXPRESSION_EQUAL_def] THEN
@@ -2399,7 +2399,7 @@ val INFERENCE___NON_EMPTY_BIN_TREE___EVAL = store_thm ("INFERENCE___NON_EMPTY_BI
 SIMP_TAC std_ss [SAFE_DEL_EL___EQ] THEN
 REPEAT STRIP_TAC THEN
 `LIST_DS_ENTAILS (c1, c2) (pfL,sfL) (pfL',sfL') =
- LIST_DS_ENTAILS (c1, c2) (pfL,SWAP_TO_POS 0 n2 sfL) (pfL',SWAP_TO_POS 0 n1 sfL')` by ALL_TAC THEN1 (
+ LIST_DS_ENTAILS (c1, c2) (pfL,SWAP_TO_POS 0 n2 sfL) (pfL',SWAP_TO_POS 0 n1 sfL')` by (
    MATCH_MP_TAC LIST_DS_ENTAILS___PERM THEN
    SIMP_TAC std_ss [PERM_REFL] THEN
    METIS_TAC[PERM___SWAP_TO_POS, PERM_SYM]
@@ -2430,7 +2430,7 @@ val INFERENCE_UNROLL_COLLAPSE_LS___EVAL = store_thm ("INFERENCE_UNROLL_COLLAPSE_
 SIMP_TAC std_ss [SAFE_DEL_EL___EQ] THEN
 REPEAT STRIP_TAC THEN
 `LIST_DS_ENTAILS (c1, c2) (pfL,sfL) (pfL',sfL') =
- LIST_DS_ENTAILS (c1, c2) (pfL,SWAP_TO_POS 0 n sfL) (pfL',sfL')` by ALL_TAC THEN1 (
+ LIST_DS_ENTAILS (c1, c2) (pfL,SWAP_TO_POS 0 n sfL) (pfL',sfL')` by (
    MATCH_MP_TAC LIST_DS_ENTAILS___PERM THEN
    SIMP_TAC std_ss [PERM_REFL] THEN
    METIS_TAC[PERM___SWAP_TO_POS, PERM_SYM]
@@ -2470,14 +2470,14 @@ val INFERENCE_UNROLL_COLLAPSE_LS___NON_EMPTY___EVAL = store_thm    ("INFERENCE_U
 SIMP_TAC std_ss [SAFE_DEL_EL___EQ] THEN
 REPEAT STRIP_TAC THEN
 `LIST_DS_ENTAILS (c1, c2) (pfL,sfL) (pfL',sfL') =
- LIST_DS_ENTAILS (c1, c2) (SWAP_TO_POS 0 n2 pfL,SWAP_TO_POS 0 n sfL) (pfL',sfL')` by ALL_TAC THEN1 (
+ LIST_DS_ENTAILS (c1, c2) (SWAP_TO_POS 0 n2 pfL,SWAP_TO_POS 0 n sfL) (pfL',sfL')` by (
    MATCH_MP_TAC LIST_DS_ENTAILS___PERM THEN
    SIMP_TAC std_ss [PERM_REFL] THEN
    METIS_TAC[PERM___SWAP_TO_POS, PERM_SYM]
 ) THEN
 `!sfL pfL' sfL' h.
  LIST_DS_ENTAILS (c1, c2) (h::pfL,sfL) (pfL',sfL') =
- LIST_DS_ENTAILS (c1, c2) (SWAP_TO_POS 0 (SUC n2) (h::pfL),sfL) (pfL',sfL')` by ALL_TAC THEN1 (
+ LIST_DS_ENTAILS (c1, c2) (SWAP_TO_POS 0 (SUC n2) (h::pfL),sfL) (pfL',sfL')` by (
    REPEAT GEN_TAC THEN
    MATCH_MP_TAC LIST_DS_ENTAILS___PERM THEN
    SIMP_TAC std_ss [PERM_REFL, PERM_CONS_IFF] THEN
@@ -2485,7 +2485,7 @@ REPEAT STRIP_TAC THEN
 ) THEN
 `!pfL sfL sfL' pfL'.
    LIST_DS_ENTAILS (c1,c2) ((if b then pf_unequal e2 e1 else pf_unequal e1 e2)::pfL,sfL) (pfL',sfL') =
-   LIST_DS_ENTAILS (c1,c2) (pf_unequal e1 e2::pfL,sfL) (pfL',sfL')` by ALL_TAC THEN1 (
+   LIST_DS_ENTAILS (c1,c2) (pf_unequal e1 e2::pfL,sfL) (pfL',sfL')` by (
    REPEAT GEN_TAC THEN
    SIMP_TAC std_ss [LIST_DS_ENTAILS_def, LIST_DS_SEM_THM, COND_RAND, COND_RATOR,
       PF_SEM_def, DS_EXPRESSION_EQUAL_def] THEN
@@ -2520,7 +2520,7 @@ val INFERENCE_UNROLL_COLLAPSE_BIN_TREE___EVAL = store_thm ("INFERENCE_UNROLL_COL
 SIMP_TAC std_ss [SAFE_DEL_EL___EQ] THEN
 REPEAT STRIP_TAC THEN
 `LIST_DS_ENTAILS (c1, c2) (pfL,sfL) (pfL',sfL') =
- LIST_DS_ENTAILS (c1, c2) (pfL,SWAP_TO_POS 0 n sfL) (pfL',sfL')` by ALL_TAC THEN1 (
+ LIST_DS_ENTAILS (c1, c2) (pfL,SWAP_TO_POS 0 n sfL) (pfL',sfL')` by (
    MATCH_MP_TAC LIST_DS_ENTAILS___PERM THEN
    SIMP_TAC std_ss [PERM_REFL] THEN
    METIS_TAC[PERM___SWAP_TO_POS, PERM_SYM]
@@ -2545,7 +2545,7 @@ val INFERENCE_APPEND_LIST___nil___EVAL = store_thm ("INFERENCE_APPEND_LIST___nil
 SIMP_TAC std_ss [SAFE_DEL_EL___EQ] THEN
 REPEAT STRIP_TAC THEN
 `LIST_DS_ENTAILS (c1, c2) (pfL,sfL) (pfL',sfL') =
- LIST_DS_ENTAILS (c1, c2) (pfL,SWAP_TO_POS 0 n1 sfL) (pfL',SWAP_TO_POS 0 n2 sfL')` by ALL_TAC THEN1 (
+ LIST_DS_ENTAILS (c1, c2) (pfL,SWAP_TO_POS 0 n1 sfL) (pfL',SWAP_TO_POS 0 n2 sfL')` by (
    MATCH_MP_TAC LIST_DS_ENTAILS___PERM THEN
    SIMP_TAC std_ss [PERM_REFL] THEN
    METIS_TAC[PERM___SWAP_TO_POS, PERM_SYM]
@@ -2573,20 +2573,20 @@ val INFERENCE_APPEND_LIST___precond___EVAL = store_thm ("INFERENCE_APPEND_LIST__
 REPEAT STRIP_TAC THEN
 FULL_SIMP_TAC std_ss [SAFE_DEL_EL___EQ] THEN
 `LIST_DS_ENTAILS (c1, c2) (pfL,sfL) (pfL',sfL') =
- LIST_DS_ENTAILS (c1, c2) (pfL,SWAP_TO_POS 0 n1 sfL) (pfL',SWAP_TO_POS 0 n2 sfL')` by ALL_TAC THEN1 (
+ LIST_DS_ENTAILS (c1, c2) (pfL,SWAP_TO_POS 0 n1 sfL) (pfL',SWAP_TO_POS 0 n2 sfL')` by (
    MATCH_MP_TAC LIST_DS_ENTAILS___PERM THEN
    SIMP_TAC std_ss [PERM_REFL] THEN
    METIS_TAC[PERM___SWAP_TO_POS, PERM_SYM]
 ) THEN
 `!c2 pfL sfL pfL' sfL'.
  LIST_DS_ENTAILS (c1, c2) (pfL,sfL) (pfL',sfL') =
- LIST_DS_ENTAILS (SWAP_TO_POS 0 n3 c1, c2) (pfL,sfL) (pfL',sfL')` by ALL_TAC THEN1 (
+ LIST_DS_ENTAILS (SWAP_TO_POS 0 n3 c1, c2) (pfL,sfL) (pfL',sfL')` by (
    REPEAT GEN_TAC THEN
    MATCH_MP_TAC LIST_DS_ENTAILS___PERM THEN
    SIMP_TAC std_ss [PERM_REFL] THEN
    METIS_TAC[PERM___SWAP_TO_POS, PERM_SYM]
 ) THEN
-`MEM_UNEQ_PF_LIST e1 e3 pfL` by ALL_TAC THEN1 (
+`MEM_UNEQ_PF_LIST e1 e3 pfL` by (
    SIMP_TAC std_ss [MEM_UNEQ_PF_LIST_def] THEN
    METIS_TAC[MEM_EL]
 ) THEN
@@ -2612,7 +2612,7 @@ val INFERENCE_APPEND_LIST___points_to___EVAL = store_thm ("INFERENCE_APPEND_LIST
 SIMP_TAC std_ss [SAFE_DEL_EL___EQ] THEN
 REPEAT STRIP_TAC THEN
 `?sfL''. PERM (EL n1 sfL::EL n3 sfL::sfL'') sfL /\
-         PERM (EL n3 sfL::sfL'') (DELETE_ELEMENT n1 sfL)` by ALL_TAC THEN1 (
+         PERM (EL n3 sfL::sfL'') (DELETE_ELEMENT n1 sfL)` by (
    MATCH_MP_TAC PERM___TWO_ELEMENTS_TO_FRONT_3 THEN
    ASM_SIMP_TAC std_ss [] THEN
    CCONTR_TAC THEN
@@ -2620,14 +2620,14 @@ REPEAT STRIP_TAC THEN
 ) THEN
 
 `LIST_DS_ENTAILS (c1, c2) (pfL,sfL) (pfL',sfL') =
- LIST_DS_ENTAILS (c1, c2) (pfL,EL n1 sfL::EL n3 sfL::sfL'') (pfL',SWAP_TO_POS 0 n2 sfL')` by ALL_TAC THEN1 (
+ LIST_DS_ENTAILS (c1, c2) (pfL,EL n1 sfL::EL n3 sfL::sfL'') (pfL',SWAP_TO_POS 0 n2 sfL')` by (
    MATCH_MP_TAC LIST_DS_ENTAILS___PERM THEN
    SIMP_TAC std_ss [PERM_REFL] THEN
    METIS_TAC[PERM___SWAP_TO_POS, PERM_SYM]
 ) THEN
 ASM_SIMP_TAC std_ss [SWAP_TO_POS___DELETE_ELEMENT] THEN
 
-`MEM_UNEQ_PF_LIST e1 e3 pfL` by ALL_TAC THEN1 (
+`MEM_UNEQ_PF_LIST e1 e3 pfL` by (
    SIMP_TAC std_ss [MEM_UNEQ_PF_LIST_def] THEN
    METIS_TAC[MEM_EL]
 ) THEN
@@ -2659,20 +2659,20 @@ val INFERENCE_APPEND_LIST___tree___EVAL = store_thm ("INFERENCE_APPEND_LIST___tr
 SIMP_TAC std_ss [SAFE_DEL_EL___EQ] THEN
 REPEAT STRIP_TAC THEN
 `?sfL''. PERM (EL n1 sfL::EL n3 sfL::sfL'') sfL /\
-         PERM (EL n3 sfL::sfL'') (DELETE_ELEMENT n1 sfL)` by ALL_TAC THEN1 (
+         PERM (EL n3 sfL::sfL'') (DELETE_ELEMENT n1 sfL)` by (
    MATCH_MP_TAC PERM___TWO_ELEMENTS_TO_FRONT_3 THEN
    ASM_SIMP_TAC std_ss []
 ) THEN
 
 `LIST_DS_ENTAILS (c1, c2) (pfL,sfL) (pfL',sfL') =
- LIST_DS_ENTAILS (c1, c2) (pfL,EL n1 sfL::EL n3 sfL::sfL'') (pfL',SWAP_TO_POS 0 n2 sfL')` by ALL_TAC THEN1 (
+ LIST_DS_ENTAILS (c1, c2) (pfL,EL n1 sfL::EL n3 sfL::sfL'') (pfL',SWAP_TO_POS 0 n2 sfL')` by (
    MATCH_MP_TAC LIST_DS_ENTAILS___PERM THEN
    SIMP_TAC std_ss [PERM_REFL] THEN
    METIS_TAC[PERM___SWAP_TO_POS, PERM_SYM]
 ) THEN
 ASM_SIMP_TAC std_ss [SWAP_TO_POS___DELETE_ELEMENT] THEN
 
-`MEM_UNEQ_PF_LIST e1 e3 pfL /\ MEM_UNEQ_PF_LIST e3 es pfL` by ALL_TAC THEN1 (
+`MEM_UNEQ_PF_LIST e1 e3 pfL /\ MEM_UNEQ_PF_LIST e3 es pfL` by (
    SIMP_TAC std_ss [MEM_UNEQ_PF_LIST_def] THEN
    METIS_TAC[MEM_EL]
 ) THEN
@@ -2707,7 +2707,7 @@ pred_setLib.SET_INDUCT_TAC THENL [
 
    Cases_on `e` THENL [
       GEN_TAC THEN
-      Q.PAT_ASSUM `!X. P X` (fn thm => ASSUME_TAC(Q.SPEC `GET_DSV_VALUE d INSERT X` thm)) THEN
+      Q.PAT_X_ASSUM `!X. P X` (fn thm => ASSUME_TAC(Q.SPEC `GET_DSV_VALUE d INSERT X` thm)) THEN
       STRIP_TAC THEN
       FULL_SIMP_TAC std_ss [FINITE_INSERT] THEN
       Q.EXISTS_TAC `s'` THEN
@@ -2725,7 +2725,7 @@ pred_setLib.SET_INDUCT_TAC THENL [
 
 
       GEN_TAC THEN
-      Q.PAT_ASSUM `!X. P X` (fn thm => ASSUME_TAC(Q.SPEC `X` thm)) THEN
+      Q.PAT_X_ASSUM `!X. P X` (fn thm => ASSUME_TAC(Q.SPEC `X` thm)) THEN
       STRIP_TAC THEN
       FULL_SIMP_TAC std_ss [] THEN
 
@@ -2798,7 +2798,7 @@ pred_setLib.SET_INDUCT_TAC THENL [
 
          `!e. e IN s ==>
               (DS_EXPRESSION_EVAL (\x. (if x = v then dsv_const c else s' x)) e =
-               DS_EXPRESSION_EVAL s' e)` by ALL_TAC THEN1 (
+               DS_EXPRESSION_EVAL s' e)` by (
             REPEAT STRIP_TAC THEN
             Cases_on `e` THENL [
                SIMP_TAC std_ss [DS_EXPRESSION_EVAL_def],
@@ -2856,4 +2856,3 @@ DB.find "SF_POINTS_TO_LIST_def"
 *)
 
 val _ = export_theory();
-

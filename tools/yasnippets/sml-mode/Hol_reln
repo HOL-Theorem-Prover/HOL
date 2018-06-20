@@ -1,0 +1,7 @@
+# -*- mode: snippet -*-
+# name: Inductive Relation in HOl4
+# key: Hol_reln
+# expand-env: ((yas-indent-line 'fixed))
+# --
+val ($1_rules, $1_ind, $1_cases = Hol_reln \`
+  $0\`;

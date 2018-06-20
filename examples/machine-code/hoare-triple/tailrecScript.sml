@@ -35,7 +35,7 @@ val TAILREC_PRE_THM = store_thm("TAILREC_PRE_THM",
      STRIP_TAC THEN1 METIS_TAC [FUNPOW,DECIDE ``~(n < 0)``]
      \\ REVERSE (REPEAT STRIP_TAC)
      THEN1 (Cases_on `n` \\ FULL_SIMP_TAC std_ss [FUNPOW] \\ METIS_TAC [])
-     \\ Q.PAT_ASSUM `!kk. (!m. cc) ==> bb`
+     \\ Q.PAT_X_ASSUM `!kk. (!m. cc) ==> bb`
           (MATCH_MP_TAC o REWRITE_RULE [FUNPOW] o Q.SPEC `SUC k`)
      \\ REPEAT STRIP_TAC
      \\ Cases_on `m` \\ FULL_SIMP_TAC bool_ss [FUNPOW,DECIDE ``SUC m < SUC n = m < n``],
@@ -46,7 +46,7 @@ val TAILREC_PRE_THM = store_thm("TAILREC_PRE_THM",
        \\ METIS_TAC [DECIDE ``0 < SUC n``,FUNPOW],
        RES_TAC \\ REVERSE (REPEAT STRIP_TAC) THEN1 METIS_TAC [FUNPOW]
        \\ Cases_on `k` \\ ASM_SIMP_TAC std_ss [FUNPOW]
-       \\ Q.PAT_ASSUM `!k. (!m. cc) ==> bb` MATCH_MP_TAC
+       \\ Q.PAT_X_ASSUM `!k. (!m. cc) ==> bb` MATCH_MP_TAC
        \\ METIS_TAC [FUNPOW,DECIDE ``SUC m < SUC n = m < n``]]]);
 
 val TAILREC_PRE_INDUCT = store_thm("TAILREC_PRE_INDUCT",
@@ -54,8 +54,8 @@ val TAILREC_PRE_INDUCT = store_thm("TAILREC_PRE_INDUCT",
         (!x. TAILREC_PRE f1 g p x /\ p x /\ ~g x ==> P x) ==>
         (!x. TAILREC_PRE f1 g p x ==> P (x:'a))``,
   NTAC 4 STRIP_TAC \\ `?n. ~g (FUNPOW f1 n x)` by METIS_TAC [TAILREC_PRE_def]
-  \\ Q.PAT_ASSUM `~g (FUNPOW f1 n x)` MP_TAC
-  \\ Q.PAT_ASSUM `TAILREC_PRE f1 g p x` MP_TAC
+  \\ Q.PAT_X_ASSUM `~g (FUNPOW f1 n x)` MP_TAC
+  \\ Q.PAT_X_ASSUM `TAILREC_PRE f1 g p x` MP_TAC
   \\ Q.SPEC_TAC (`x`,`x`) \\ Induct_on `n`
   THEN1 (REWRITE_TAC [FUNPOW] \\ REPEAT STRIP_TAC \\ METIS_TAC [TAILREC_PRE_THM])
   \\ FULL_SIMP_TAC std_ss [FUNPOW] \\ REPEAT STRIP_TAC \\ METIS_TAC [TAILREC_PRE_THM]);
@@ -71,7 +71,7 @@ val TAILREC_PRE_IMP = store_thm("TAILREC_PRE_IMP",
       !x. TAILREC_PRE step guard side x = T``,
   REPEAT STRIP_TAC \\ ASM_SIMP_TAC std_ss [TAILREC_PRE_def]
   \\ FULL_SIMP_TAC std_ss [prim_recTheory.WF_IFF_WELLFOUNDED,prim_recTheory.wellfounded_def]
-  \\ Q.PAT_ASSUM `!x. ?n. bbb` (STRIP_ASSUME_TAC o Q.SPEC `\n. FUNPOW step n x`)
+  \\ Q.PAT_X_ASSUM `!x. ?n. bbb` (STRIP_ASSUME_TAC o Q.SPEC `\n. FUNPOW step n x`)
   \\ FULL_SIMP_TAC std_ss [FUNPOW_SUC]
   \\ Q.EXISTS_TAC `n` \\ METIS_TAC []);
 
@@ -90,5 +90,36 @@ val SHORT_TAILREC_THM = store_thm("SHORT_TAILREC_THM",
   SIMP_TAC std_ss [SHORT_TAILREC_def,SHORT_TAILREC_PRE_def] \\ REPEAT STRIP_TAC
   \\ CONV_TAC (RATOR_CONV (ONCE_REWRITE_CONV [TAILREC_THM,TAILREC_PRE_THM]))
   \\ SIMP_TAC std_ss []);
+
+val SHORT_TAILREC_PRE_INDUCT = store_thm("SHORT_TAILREC_PRE_INDUCT",
+  ``∀P.
+     (!x. SHORT_TAILREC_PRE f x /\
+          SND (f x) /\ (!y. (FST (f x) = INL y) ==> P y) ==>
+          P x) ==>
+     (∀x. SHORT_TAILREC_PRE f x ⇒ P x)``,
+  rewrite_tac [SHORT_TAILREC_PRE_def] \\ ntac 2 strip_tac
+  \\ ho_match_mp_tac TAILREC_PRE_INDUCT \\ rw []
+  \\ res_tac \\ Cases_on `f x` \\ fs [] \\ Cases_on `q` \\ fs []);
+
+val SHORT_TAILREC_SIM = store_thm("SHORT_TAILREC_SIM",
+  ``!f g R P.
+      (!x s q r.
+         R x s /\ (f x = (q,T)) ==>
+         (!y. (q = INL y) ==> ?y1. (g s = (INL y1,T)) /\ R y y1) /\
+         (!y. (q = INR y) ==> ?y1. (g s = (INR y1,T)) /\ P y y1)) ==>
+      !x. SHORT_TAILREC_PRE f x ==>
+          !s. R x s ==>
+              P (SHORT_TAILREC f x) (SHORT_TAILREC g s) /\
+              SHORT_TAILREC_PRE g s``,
+  rpt gen_tac \\ strip_tac
+  \\ ho_match_mp_tac SHORT_TAILREC_PRE_INDUCT \\ rw []
+  \\ Cases_on `f x` \\ fs [] \\ rw []
+  \\ first_assum (qspecl_then [`x`,`s`,`q`] mp_tac)
+  \\ disch_then (strip_assume_tac o UNDISCH o UNDISCH o
+          REWRITE_RULE [GSYM AND_IMP_INTRO])
+   \\ rewrite_tac [SHORT_TAILREC_def]
+  \\ once_rewrite_tac [TAILREC_THM] \\ fs []
+  \\ Cases_on `q` \\ fs [SHORT_TAILREC_def,SHORT_TAILREC_PRE_def]
+  \\ once_rewrite_tac [TAILREC_PRE_THM] \\ fs []);
 
 val _ = export_theory();

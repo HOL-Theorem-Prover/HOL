@@ -53,9 +53,7 @@ local
    val cnv = computeLib.CBV_CONV cmp
 
    val fcp_beta_thm = fcpTheory.FCP_BETA
-                      |> Drule.SPEC_ALL
                       |> Thm.INST_TYPE [Type.alpha |-> Type.bool]
-                      |> Q.GEN `i`
 
    fun mk_index_thms ty =
       case Lib.total fcpSyntax.dest_int_numeric_type ty of
@@ -177,27 +175,21 @@ end
    EVAL_CONV    : General purpose evaluation
    ------------------------------------------------------------------------ *)
 
-local
-  val cmp = reduceLib.num_compset ()
-
-  val () =
-     (computeLib.add_thms
-        [pred_setTheory.NOT_IN_EMPTY, pred_setTheory.IN_INSERT,
-         REWRITE_RULE [GSYM arithmeticTheory.DIV2_def] BIT_SET_def,
-         listTheory.EVERY_DEF, listTheory.FOLDL,
-         numLib.SUC_RULE rich_listTheory.COUNT_LIST_AUX_def,
-         GSYM rich_listTheory.COUNT_LIST_GENLIST,
-         rich_listTheory.COUNT_LIST_compute,
-         numeral_bitTheory.numeral_log2, numeral_bitTheory.numeral_ilog2,
-         numeral_bitTheory.LOG_compute, GSYM DISJ_ASSOC] cmp
-      ; computeLib.add_conv
-            (``fcp$dimindex:'a itself -> num``, 1, wordsLib.SIZES_CONV) cmp
-      ; computeLib.add_conv
-            (``words$word_mod:'a word -> 'a word -> 'a word``, 2,
-             wordsLib.WORD_MOD_BITS_CONV) cmp)
-in
-   val EVAL_CONV = computeLib.CBV_CONV cmp
-end
+val EVAL_CONV =
+  computeLib.compset_conv (reduceLib.num_compset())
+    [computeLib.Defs
+       [pred_setTheory.NOT_IN_EMPTY, pred_setTheory.IN_INSERT,
+        REWRITE_RULE [GSYM arithmeticTheory.DIV2_def] BIT_SET_def,
+        listTheory.EVERY_DEF, listTheory.FOLDL,
+        numLib.SUC_RULE rich_listTheory.COUNT_LIST_AUX_def,
+        GSYM rich_listTheory.COUNT_LIST_GENLIST,
+        rich_listTheory.COUNT_LIST_compute,
+        numeral_bitTheory.numeral_log2, numeral_bitTheory.numeral_ilog2,
+        numeral_bitTheory.LOG_compute, GSYM DISJ_ASSOC],
+     computeLib.Convs
+        [(``fcp$dimindex:'a itself -> num``, 1, wordsLib.SIZES_CONV),
+         (``words$word_mod:'a word -> 'a word -> 'a word``, 2,
+          wordsLib.WORD_MOD_BITS_CONV)]]
 
 (* ------------------------------------------------------------------------ *)
 
@@ -206,10 +198,10 @@ fun INST_b3 t thm =
              ``n:num``, ``b1:bool``, ``b2:bool``] o
    PURE_REWRITE_RULE [thm] o Thm.INST [``b3:bool`` |-> t] o Drule.SPEC_ALL
 
-val BCARRY_mp = Q.prove(
-   `!x y c i n b1 b2 b3.
+val BCARRY_mp = prove(
+   “!x y c i n b1 b2 b3.
       (i = SUC n) /\ (x n = b1) /\ (y n = b2) /\ (BCARRY n x y c = b3) ==>
-      (BCARRY i x y c = bcarry b1 b2 b3)`,
+      (BCARRY i x y c = bcarry b1 b2 b3)”,
    SRW_TAC [] [BCARRY_def])
 
 val BCARRY_mp = REWRITE_RULE [bcarry_def] BCARRY_mp
@@ -225,10 +217,10 @@ fun INST_b3 t thm =
              ``b1:bool``, ``b2:bool``] o
    PURE_REWRITE_RULE [thm] o Thm.INST [``b3:bool`` |-> t] o Drule.SPEC_ALL
 
-val BSUM_mp = Q.prove(
-   `!x y c i b1 b2 b3.
+val BSUM_mp = prove(
+   “!x y c i b1 b2 b3.
       (x i = b1) /\ (y i = b2) /\ (BCARRY i x y c = b3) ==>
-      (BSUM i x y c = bsum b1 b2 b3)`,
+      (BSUM i x y c = bsum b1 b2 b3)”,
    SRW_TAC [] [BSUM_def])
 
 val BSUM_mp = REWRITE_RULE [bsum_def] BSUM_mp
@@ -460,9 +452,9 @@ end
    ------------------------------------------------------------------------ *)
 
 local
-   val FCP_EQ_EVERY = Q.prove(
-      `!a b:'a word.
-         (a = b) = EVERY (\i. a ' i = b ' i) (GENLIST I (dimindex (:'a)))`,
+   val FCP_EQ_EVERY = prove(
+      “!a b:'a word.
+         (a = b) = EVERY (\i. a ' i = b ' i) (GENLIST I (dimindex (:'a)))”,
       SRW_TAC [fcpLib.FCP_ss] [listTheory.EVERY_GENLIST])
 
    val FCP_EQ_EVERY =
@@ -493,62 +485,87 @@ in
 end
 
 (* ------------------------------------------------------------------------
-   SMART_MUL_LSL_CONV : converts ``n2w n * w`` into either
-                        ``w << p1 + ... + w << pn`` or
-                        ``-w << p1 + ... + -w << pn`` depending on
-                        which gives the fewest additions.
-                        NB. ``-w`` is ``~w + 1w``.
+   SMART_MUL_LSL_CONV : converts ``n2w n * w`` into
+                        ``w1 << p1 + ... + wn << pn`` where wi is either w or -w
    ------------------------------------------------------------------------ *)
 
 local
-   val NEG_WORD =
-      Drule.EQT_ELIM (wordsLib.WORD_CONV ``a * b = -a * -b :'a word``)
-   val SYM_WORD_NEG_MUL = GSYM wordsTheory.WORD_NEG_MUL
-   fun boolify sz =
-      (fn l => List.take (l, sz)) o String.explode o StringCvt.padLeft #"0" sz o
-      Arbnum.toBinString
+  val SYM_WORD_NEG_MUL = GSYM wordsTheory.WORD_NEG_MUL
+  fun boolify s =
+    Substring.full o String.implode o (fn l => List.take (l, s)) o
+    String.explode o StringCvt.padLeft #"0" s o Arbnum.toBinString
+  fun pos x = (true, x)
+  fun neg x = (false, x)
+  fun partials a i s =
+    if Substring.isEmpty s
+      then a
+    else let
+           val (zeros, r) = Substring.splitl (Lib.equal #"0") s
+           val (ones, r) = Substring.splitl (Lib.equal #"1") r
+           val j = i - Substring.size zeros
+           val l = Substring.size ones
+         in
+           if l = 0
+             then a
+           else if i = j orelse l < 3
+             then partials (a @ List.tabulate (l, fn x => pos (j - x))) (j - l)
+                    r
+           else partials (a @ [pos (j + 1), neg (j + 1 - l)]) (j - l) r
+         end
+  val partials = partials []
+  val WORD_LSL_CONV =
+    Conv.DEPTH_CONV
+      (Conv.REWR_CONV
+         (SPECL [“w: 'a word”, “arithmetic$NUMERAL a”] WORD_MUL_LSL))
+    THENC wordsLib.WORD_ARITH_CONV
+  fun partials_thm (n, sz) =
+    let
+      val s = Arbnum.toInt sz
+      val p = partials (s - 1) o boolify s
+      val l = p n
+      val nl = p (Arbnum.- (Arbnum.pow (Arbnum.two, sz), n))
+      val pos = List.length l < 2 * List.length nl
+      val l = if pos then l else nl
+      fun mk_lsl x p =
+        if p = 0 then x else wordsSyntax.mk_word_lsl (x, numLib.term_of_int p)
+      val x = Term.mk_var ("x", wordsSyntax.mk_int_word_type s)
+      val nx = wordsSyntax.mk_word_2comp x
+      fun mk (sgn, p) =
+        mk_lsl (if pos = sgn then x else wordsSyntax.mk_word_2comp x) p
+    in
+      List.foldl
+         (fn (x, t) => wordsSyntax.mk_word_add (t, mk x)) (mk (hd l)) (tl l)
+         |> WORD_LSL_CONV
+         |> GSYM
+    end
 in
-   fun SMART_MUL_LSL_CONV tm =
-      let
-         val l = fst (wordsSyntax.dest_word_mul tm)
-      in
-         case Lib.total wordsSyntax.dest_word_2comp l of
-            SOME v =>
-              if Lib.total wordsSyntax.dest_word_literal v = SOME Arbnum.one
-                 then Conv.REWR_CONV SYM_WORD_NEG_MUL tm
-              else raise ERR "SMART_MUL_LSL_CONV" "not -1w * x"
-          | NONE =>
-             let
-                val (N,sz) = wordsSyntax.dest_mod_word_literal l
-                             handle HOL_ERR _ =>
-                                (wordsSyntax.dest_word_literal l, Arbnum.zero)
-             in
-                if sz = Arbnum.zero orelse Arbnum.< (N, Arbnum.fromInt 11)
-                   then wordsLib.WORD_MUL_LSL_CONV tm
-                else let
-                        val sz = Arbnum.toInt sz
-                        val c_pos = N |> boolify sz
-                                      |> List.filter (Lib.equal #"1")
-                                      |> List.length
-                        val c_neg = N |> Arbnum.less1
-                                      |> boolify sz
-                                      |> List.filter (Lib.equal #"0")
-                                      |> List.length
-                     in
-                        if c_pos <= 2 * c_neg + 1
-                           then wordsLib.WORD_MUL_LSL_CONV tm
-                        else (Conv.REWR_CONV NEG_WORD
-                              THENC Conv.RATOR_CONV wordsLib.WORD_EVAL_CONV
-                              THENC wordsLib.WORD_MUL_LSL_CONV) tm
-                     end
-             end
-      end
+  fun SMART_MUL_LSL_CONV tm =
+    let
+       val l = fst (wordsSyntax.dest_word_mul tm)
+    in
+       case Lib.total wordsSyntax.dest_word_2comp l of
+          SOME v =>
+            if Lib.total wordsSyntax.dest_word_literal v = SOME Arbnum.one
+               then Conv.REWR_CONV SYM_WORD_NEG_MUL tm
+            else raise ERR "SMART_MUL_LSL_CONV" "not -1w * x"
+        | NONE =>
+           let
+              val x as (n, sz) =
+                wordsSyntax.dest_mod_word_literal l
+                handle HOL_ERR _ => (Arbnum.zero, Arbnum.zero)
+           in
+              if sz = Arbnum.zero orelse Arbnum.< (n, Arbnum.fromInt 11)
+                 then wordsLib.WORD_MUL_LSL_CONV tm
+              else Conv.REWR_CONV (partials_thm x) tm
+           end
+    end
 end
 
 (* ------------------------------------------------------------------------ *)
 
 local
-    val thm = Q.SPECL [`a`, `n2w (NUMERAL n)`] wordsTheory.WORD_SUM_ZERO
+    val thm =
+        SPECL [“a: 'a words$word”, “n2w (NUMERAL n)”] wordsTheory.WORD_SUM_ZERO
     val WORD_SUM_ZERO_CONV =
        Conv.REWR_CONV thm THENC Conv.RHS_CONV wordsLib.WORD_EVAL_CONV
 
@@ -588,23 +605,23 @@ end
    ------------------------------------------------------------------------ *)
 
 local
-  val word_bits_thm1 = Q.prove(
-     `!l h n w:'a word.
+  val word_bits_thm1 = prove(
+     “!l h n w:'a word.
          l + n < dimindex(:'a) /\ l + n <= h ==>
-         ((h -- l) w ' n = w ' (n + l))`,
+         ((h -- l) w ' n = w ' (n + l))”,
      SRW_TAC [fcpLib.FCP_ss, ARITH_ss] [word_bits_def])
 
-  val word_bits_thm2 = Q.prove(
-     `!l h n w:'a word.
-        n < dimindex(:'a) /\ h < l + n ==> ((h -- l) w ' n = F)`,
+  val word_bits_thm2 = prove(
+     “!l h n w:'a word.
+        n < dimindex(:'a) /\ h < l + n ==> ((h -- l) w ' n = F)”,
      SRW_TAC [fcpLib.FCP_ss, ARITH_ss] [word_bits_def])
 
-  val word_bits_thm3 = word_bits_thm1 |> Q.SPEC `0n` |> SIMP_RULE std_ss []
-  val word_bits_thm4 = word_bits_thm1 |> Q.SPECL [`l`,`dimindex(:'a) - 1`]
+  val word_bits_thm3 = word_bits_thm1 |> SPEC “0n” |> SIMP_RULE std_ss []
+  val word_bits_thm4 = word_bits_thm1 |> SPECL [“l:num”,“dimindex(:'a) - 1”]
                        |> SIMP_RULE (arith_ss++boolSimps.CONJ_ss) []
                        |> GEN_ALL
-  val word_bits_thm5 = word_bits_thm2 |> Q.SPEC `0n` |> SIMP_RULE std_ss []
-  val word_bits_thm6 = word_bits_thm2 |> Q.SPECL [`l`,`dimindex(:'a) - 1`]
+  val word_bits_thm5 = word_bits_thm2 |> SPEC “0n” |> SIMP_RULE std_ss []
+  val word_bits_thm6 = word_bits_thm2 |> SPECL [“l:num”,“dimindex(:'a) - 1”]
                        |> SIMP_RULE (arith_ss++boolSimps.CONJ_ss)
                             [DECIDE ``a < b + (c + 1) = a <= b + c : num``]
                        |> GEN_ALL
@@ -762,25 +779,25 @@ local
    val word_xor = REWRITE_RULE [xor_thm] word_xor_def
    val reduce_xor = REWRITE_RULE [xor_thm] reduce_xor_def
 
-   val word_L_thm = Q.prove(
-      `INT_MINw :'a word = FCP i. i = dimindex (:'a) - 1`,
+   val word_L_thm = prove(
+      “INT_MINw :'a word = FCP i. i = dimindex (:'a) - 1”,
       SRW_TAC [fcpLib.FCP_ss] [word_L])
 
-   val minus1_thm = Q.prove(
-      `-1w = $FCP (K T)`,
+   val minus1_thm = prove(
+      “-1w : 'a word = $FCP (K T)”,
       SRW_TAC [fcpLib.FCP_ss] [REWRITE_RULE [SYM WORD_NEG_1] word_T])
 
-   val w2w_thm = Q.prove(
-      `!w: 'a word. w2w w = FCP i. i < dimindex (:'a) /\ w ' i`,
+   val w2w_thm = prove(
+      “!w: 'a word. w2w w : 'b word = FCP i. i < dimindex (:'a) /\ w ' i”,
       SRW_TAC [fcpLib.FCP_ss] [w2w])
 
-   val sw2sw_thm = Q.prove(
-      `!w: 'a word.
+   val sw2sw_thm = prove(
+      “!w: 'a word.
          sw2sw w :'b word =
          FCP i. if i < dimindex (:'a) \/ dimindex (:'b) < dimindex (:'a) then
                   w ' i
                 else
-                  w ' (dimindex (:'a) - 1)`,
+                  w ' (dimindex (:'a) - 1)”,
       SRW_TAC [fcpLib.FCP_ss] [sw2sw, word_msb_def])
 
    fun WORD_NEG_CONV tm =
@@ -794,10 +811,8 @@ local
           | NONE => ONCE_REWRITE_CONV [WORD_NEG] tm
       end
 
-   val cmp = reduceLib.num_compset ()
-
-   val () =
-     (computeLib.add_thms
+   val cnv = computeLib.compset_conv (reduceLib.num_compset())
+     [computeLib.Defs
         [n2w_def, v2w_def, word_xor, word_or_def, word_and_def,
          word_1comp_def, word_nor_def, word_xnor_def, word_nand_def,
          word_reduce_def, reduce_or_def, reduce_and_def, reduce_xor,
@@ -812,8 +827,8 @@ local
          listTheory.HD, listTheory.TL, listTheory.SNOC, listTheory.FOLDL,
          listTheory.GENLIST_GENLIST_AUX, numLib.SUC_RULE
          listTheory.GENLIST_AUX, combinTheory.o_THM, pairTheory.SND,
-         pairTheory.FST] cmp
-      ; List.app (fn x => computeLib.add_conv x cmp)
+         pairTheory.FST],
+      computeLib.Convs
          [(``fcp$dimindex:'a itself -> num``, 1, wordsLib.SIZES_CONV),
           (``words$dimword:'a itself -> num``, 1, wordsLib.SIZES_CONV),
           (``words$INT_MIN:'a itself -> num``, 1, wordsLib.SIZES_CONV),
@@ -824,11 +839,11 @@ local
           (``words$word_asr_bv:'a word -> 'a word -> 'a word``, 2, ASR_BV_CONV),
           (``words$word_ror_bv:'a word -> 'a word -> 'a word``, 2, ROR_BV_CONV),
           (``words$word_rol_bv:'a word -> 'a word -> 'a word``, 2, ROL_BV_CONV)
-         ])
+         ]]
 in
    val BLAST_CONV =
       PURE_REWRITE_CONV [GSYM word_sub_def, WORD_SUB]
-      THENC computeLib.CBV_CONV cmp
+      THENC cnv
       THENC WORD_LIT_CONV
 end
 
@@ -1036,12 +1051,9 @@ in
 end
 
 local
-  fun TAUT_INDEX_CONV top conv =
-     conv THENC (if top then Conv.ALL_CONV else Conv.TRY_CONV BIT_TAUT_CONV)
-
-  val FCP_NEQ = trace ("metis",0) Q.prove(
-    `!i a b:'a word.
-       i < dimindex (:'a) /\ ((a ' i = b ' i) = F) ==> ((a = b) = F)`,
+  val FCP_NEQ = trace ("metis",0) prove(
+    “!i a b:'a word.
+       i < dimindex (:'a) /\ ((a ' i = b ' i) = F) ==> ((a = b) = F)”,
     SRW_TAC [fcpLib.FCP_ss] []
     THEN METIS_TAC [])
 
@@ -1049,9 +1061,9 @@ local
 
   val toString = Arbnum.toString
 
-  fun bit_theorems top conv (n, l, r) =
+  fun bit_theorems conv (n, l, r) =
      let
-        fun BIT_TAUT_CONV tm = (INDEX_CONV THENC TAUT_INDEX_CONV top conv) tm
+        fun BIT_TAUT_CONV tm = (INDEX_CONV THENC conv) tm
                                handle Conv.UNCHANGED => dummy_thm
         val tr = !blast_trace > 1
         val () = if tr then print ("Checking " ^ toString n ^ " bit word\n")
@@ -1080,7 +1092,7 @@ local
      List.foldr (fn (v,t) => Drule.FORALL_EQ v t) t vars
      |> Conv.RIGHT_CONV_RULE (Rewrite.REWRITE_CONV [])
 in
-  fun BIT_BLAST_CONV top tm =
+  fun BIT_BLAST_CONV tm =
      let
         val _ = is_blastable tm orelse
                 raise ERR "BIT_BLAST_CONV" "term not suited to bit blasting"
@@ -1093,14 +1105,14 @@ in
                 val RW_CONV = PURE_REWRITE_CONV (mk_sums c)
              in
                 if wordsSyntax.is_index tm
-                   then Conv.RIGHT_CONV_RULE (TAUT_INDEX_CONV top RW_CONV) thm
+                   then Conv.RIGHT_CONV_RULE RW_CONV thm
                         handle Conv.UNCHANGED => thm
                 else if wordsSyntax.is_word_lo tm
                    then Conv.RIGHT_CONV_RULE RW_CONV thm
                 else let
                         val (l,r) = boolSyntax.dest_eq c
                      in
-                        case bit_theorems top RW_CONV (dim_of_word l, l, r) of
+                        case bit_theorems RW_CONV (dim_of_word l, l, r) of
                            Lib.PASS thms =>
                              Conv.RIGHT_CONV_RULE
                                 (Conv.REWR_CONV (fcp_eq_thm (Term.type_of l))
@@ -1117,15 +1129,14 @@ in
                      end
              end
      end
-
-  fun BBLAST_CONV top tm =
+  fun BBLAST_CONV tm =
      let
         val _ = Term.type_of tm = Type.bool orelse
                 raise ERR "BBLAST_CONV" "not a bool term"
         val (vars,tm') = boolSyntax.strip_forall tm
         val thm = Conv.QCONV WORD_SIMP_CONV tm'
-        val tms = HolKernel.find_terms is_blastable (rhsc thm)
-        val thms = Lib.mapfilter (BIT_BLAST_CONV top) tms
+        val tms = Lib.mk_set (HolKernel.find_terms is_blastable (rhsc thm))
+        val thms = Lib.mapfilter BIT_BLAST_CONV tms
         val res = FORALL_EQ_RULE vars
                     (Conv.RIGHT_CONV_RULE
                        (Rewrite.ONCE_REWRITE_CONV thms
@@ -1172,10 +1183,10 @@ local
         s2 @ (List.filter (okay o #redex) s1)
      end
 in
-  fun BBLAST_PROVE top tm =
+  fun BBLAST_PROVE tm =
      let
         val (vars,tm') = boolSyntax.strip_exists tm
-        val thm = Conv.QCONV (BBLAST_CONV top) tm'
+        val thm = Conv.QCONV BBLAST_CONV tm'
      in
         if List.null vars
            then Drule.EQT_ELIM thm
@@ -1225,22 +1236,15 @@ in
      end
 end
 
-val BIT_BLAST_CONV = BIT_BLAST_CONV false
-
-val EBLAST_CONV  = BBLAST_CONV false
-val EBLAST_PROVE = BBLAST_PROVE false
-val EBLAST_RULE = Conv.CONV_RULE EBLAST_CONV
-val EBLAST_TAC  = Tactic.CONV_TAC EBLAST_CONV
-
-val BBLAST_CONV  = BBLAST_CONV true
-val BBLAST_PROVE = BBLAST_PROVE true
 val BBLAST_RULE = Conv.CONV_RULE BBLAST_CONV
 val BBLAST_TAC  = Tactic.CONV_TAC BBLAST_CONV
 
-val FULL_BBLAST_TAC =
+val MP_BLASTABLE_TAC =
    REPEAT (Tactical.PRED_ASSUM
-              (Lib.can (HolKernel.find_term full_is_blastable)) MP_TAC)
-   THEN BBLAST_TAC
+            (fn t => not (markerSyntax.is_abbrev t) andalso
+                     Lib.can (HolKernel.find_term full_is_blastable) t) MP_TAC)
+
+val FULL_BBLAST_TAC = MP_BLASTABLE_TAC THEN BBLAST_TAC
 
 fun BBLAST_PROVE_TAC (asl, w) = ACCEPT_TAC (BBLAST_PROVE w) (asl, w)
 

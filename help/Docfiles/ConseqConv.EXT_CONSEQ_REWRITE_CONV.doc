@@ -1,7 +1,7 @@
 \DOC
 
 \BLTYPE
-EXT_CONSEQ_REWRITE_CONV : conv list -> thm list ->
+EXT_CONSEQ_REWRITE_CONV : (thm list -> conv) list -> thm list ->
                           (thm list * thm list * thm list) ->
                           directed_conseq_conv
 \ELTYPE

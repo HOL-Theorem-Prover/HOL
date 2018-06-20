@@ -69,18 +69,18 @@ val RESET_PARITY_CORRECTNESS = store_thm(
   SRW_TAC [][RESET_PARITY_IMP_def, RESET_PARITY_def, MUX_def, NOT_def,
              REG_def, ONE_def]
   THENL [
-    Q.PAT_ASSUM `!t. ro2 t = P` (Q.SPEC_THEN `0` MP_TAC) THEN
+    Q.PAT_X_ASSUM `!t. ro2 t = P` (Q.SPEC_THEN `0` MP_TAC) THEN
     SIMP_TAC (srw_ss()) [] THEN STRIP_TAC THEN
-    Q.PAT_ASSUM `!t. out t = P` (Q.SPEC_THEN `0` MP_TAC) THEN
+    Q.PAT_X_ASSUM `!t. out t = P` (Q.SPEC_THEN `0` MP_TAC) THEN
     SRW_TAC [][],
     `out (t + 1) = mo2 (t + 1)`
-       by (Q.PAT_ASSUM `!t. ro2 t = P` (Q.SPEC_THEN `t + 1` MP_TAC) THEN
+       by (Q.PAT_X_ASSUM `!t. ro2 t = P` (Q.SPEC_THEN `t + 1` MP_TAC) THEN
            SIMP_TAC (srw_ss()) [] THEN
-           Q.PAT_ASSUM `!t. oo t` (fn th => REWRITE_TAC [th]) THEN
-           Q.PAT_ASSUM `!t. out t = P` (Q.SPEC_THEN `t + 1` MP_TAC) THEN
+           Q.PAT_X_ASSUM `!t. oo t` (fn th => REWRITE_TAC [th]) THEN
+           Q.PAT_X_ASSUM `!t. out t = P` (Q.SPEC_THEN `t + 1` MP_TAC) THEN
            SRW_TAC [][]) THEN
     POP_ASSUM SUBST1_TAC THEN
-    Q.PAT_ASSUM `!t. out t = P` (K ALL_TAC) THEN
+    Q.PAT_X_ASSUM `!t. out t = P` (K ALL_TAC) THEN
     SRW_TAC [][]
   ]);
 

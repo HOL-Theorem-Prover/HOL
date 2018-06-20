@@ -1,11 +1,11 @@
 INCLUDES = .. \
            $(HOLDIR)/examples/machine-code/hoare-triple \
            $(HOLDIR)/tools/mlyacc/mlyacclib \
-           $(HOLDIR)/examples/machine-code/instruction-set-models/common \
-           $(HOLDIR)/examples/machine-code/instruction-set-models/x86 \
-           $(HOLDIR)/examples/machine-code/instruction-set-models/x86_64 \
-           $(HOLDIR)/examples/machine-code/instruction-set-models/ppc \
-           $(HOLDIR)/examples/machine-code/instruction-set-models/arm
+           ../../instruction-set-models/common \
+           ../../instruction-set-models/x86 \
+           ../../instruction-set-models/x86_64 \
+           ../../instruction-set-models/ppc \
+           ../../instruction-set-models/arm
 OPTIONS=QUIT_ON_FAILURE
 
 ifdef POLY

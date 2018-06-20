@@ -45,11 +45,7 @@ fun add_missing_sig x = let
   val _ = print ("No signature info for section: " ^ x ^ "\n")
   in (missing_sigs := x :: (!missing_sigs)) end;
 
-fun read_complete_sections filename filename_sigs ignore = let
-  (* helper functions *)
-  fun try_map f [] = []
-    | try_map f (x::xs) = (f x :: try_map f xs) handle HOL_ERR _ => try_map f xs
-  (* read basic section info *)
+fun read_sections filename = let
   val xs = lines_from_file filename
   fun is_hex_char c = mem c (explode "0123456789abcdefABCDEF")
   fun is_hex_string str = every is_hex_char (explode str)
@@ -69,9 +65,55 @@ fun read_complete_sections filename filename_sigs ignore = let
           val ys = drop_until (fn x => x = "\n") ys
           in (sec_name,location,body) :: split_by_sections ys end
           handle HOL_ERR _ => split_by_sections ys)
-  val all_sections = split_by_sections ys
+  in split_by_sections ys end
+
+(* function that cleans names *)
+val remove_dot =
+  String.translate (fn c => if mem c [#".",#" "] then "_" else implode [c])
+
+fun format_line sec_name = let
+  fun find_first i c s = if String.sub(s,i) = c then i else find_first (i+1) c s
+  fun split_at c s =
+    (String.substring(s,0,find_first 0 c s),
+     String.extract(s,find_first 0 c s+1,NONE))
+  fun is_subroutine_call s3 =
+    (String.isPrefix "bl" s3 andalso not (String.isPrefix "bls" s3)
+                             andalso not (String.isPrefix "ble" s3)
+                             andalso not (String.isPrefix "blt" s3)) orelse let
+    val ts = String.tokens (fn c => mem c [#"<",#">"]) s3
+    in 1 < length ts andalso not (el 2 ts = sec_name) andalso
+       length (String.tokens (fn x => x = #"+") (el 2 ts)) < 2 end
+  fun format_line_aux line = let
+    val (s1,s2) = split_at #":" line
+    val s2 = String.extract(s2,1,NONE)
+    val (s2,s3) = split_at #"\t" s2
+    val s3 = String.extract(s3,0,SOME (size s3 - 1))
+    val i = Arbnum.toInt(Arbnum.fromHexString s1)
+    val s2 = if String.isPrefix ".word" s3 then "const:" ^ s2 else s2
+    val s2 = if String.isPrefix "ldrls\tpc," s3 then "switch:" ^ s2 else s2
+    val s2 = ((if is_subroutine_call s3
+               then "call:" ^ remove_dot
+                 (el 2 (String.tokens (fn x => mem x [#"<",#">"]) s3)) ^ ":" ^ s2
+               else s2)
+              handle HOL_ERR _ => s2)
+    val f = String.translate (fn c => if c = #" " then "" else
+              implode [c])
+    in (i,f s2,s3) end
+    handle Subscript => (fail())
+  in format_line_aux end
+
+fun read_complete_sections filename filename_sigs ignore = let
+  (* helper functions *)
+  fun try_map f [] = []
+    | try_map f (x::xs) = (f x :: try_map f xs) handle HOL_ERR _ => try_map f xs
+  (* read basic section info *)
+  val all_sections = read_sections filename
   (* read in signature file *)
   val ss = lines_from_file filename_sigs
+  fun every p [] = true
+    | every p (x::xs) = p x andalso every p xs
+  val is_blank = every (fn c => mem c [#" ",#"\n",#"\t"]) o explode
+  val ss = filter (not o is_blank) ss
   fun process_sig_line line = let
     val ts0 = String.tokens (fn x => mem x [#" ",#"\n"]) line
     val ts = filter (fn s => s <> "struct") ts0
@@ -83,46 +125,15 @@ fun read_complete_sections filename filename_sigs ignore = let
     in (sec_name,(arg_lengths,ret_length,returns_struct)) end
   val ss_alist = map process_sig_line ss
   (* combine section info with signatures *)
-  fun lookup x [] = (add_missing_sig; fail())
+  fun lookup x [] = (add_missing_sig x; fail())
     | lookup x ((y,z)::ys) = if x = y then z else lookup x ys
   fun combine_ss (sec_name,location,body) =
     (sec_name,lookup (hd (String.tokens (fn x => x = #".") sec_name)) ss_alist,location,body)
   val all_sections = try_map combine_ss all_sections
-  (* function that cleans names *)
-  val remove_dot =
-    String.translate (fn c => if mem c [#".",#" "] then "_" else implode [c])
   (* process section bodies *)
-  fun process_body (sec_name,io,location,body) = let
-    val lines = body
-    fun find_first i c s = if String.sub(s,i) = c then i else find_first (i+1) c s
-    fun split_at c s =
-      (String.substring(s,0,find_first 0 c s),
-       String.extract(s,find_first 0 c s+1,NONE))
-    fun is_subroutine_call s3 =
-      (String.isPrefix "bl" s3 andalso not (String.isPrefix "bls" s3)
-                               andalso not (String.isPrefix "ble" s3)
-                               andalso not (String.isPrefix "blt" s3)) orelse let
-      val ts = String.tokens (fn c => mem c [#"<",#">"]) s3
-      in 1 < length ts andalso not (el 2 ts = sec_name) andalso
-         length (String.tokens (fn x => x = #"+") (el 2 ts)) < 2 end
-    fun format_line line = let
-      val (s1,s2) = split_at #":" line
-      val s2 = String.extract(s2,1,NONE)
-      val (s2,s3) = split_at #"\t" s2
-      val s3 = String.extract(s3,0,SOME (size s3 - 1))
-      val i = Arbnum.toInt(Arbnum.fromHexString s1)
-      val s2 = if String.isPrefix ".word" s3 then "const:" ^ s2 else s2
-      val s2 = if String.isPrefix "ldrls\tpc," s3 then "switch:" ^ s2 else s2
-      val s2 = ((if is_subroutine_call s3
-                 then "call:" ^ remove_dot
-                   (el 2 (String.tokens (fn x => mem x [#"<",#">"]) s3)) ^ ":" ^ s2
-                 else s2)
-                handle HOL_ERR _ => s2)
-      val f = String.translate (fn c => if c = #" " then "" else
-                implode [c])
-      in (i,f s2,s3) end
-    in (remove_dot sec_name,io,location,
-        if mem sec_name ignore then [] else map format_line body) end
+  fun process_body (sec_name,io,location,body) =
+    (remove_dot sec_name,io,location,
+        if mem sec_name ignore then [] else try_map (format_line sec_name) body)
   val all_sections = map process_body all_sections
   (* location function *)
   fun update x y f a = if x = a then y else f a
@@ -177,6 +188,7 @@ fun section_length name = length (section_body name) handle HOL_ERR _ => 0
 
 (*
   val base_name = "/Users/mom22/graph-decompiler/loop-m0/example"
+  val ignore = [""]
 *)
 
 fun read_files base_name ignore = let
@@ -194,19 +206,6 @@ fun read_files base_name ignore = let
   val filename_sigs = get_filename ".sigs";
   (* read sections *)
   val () = read_complete_sections filename filename_sigs ignore
-(*
-  (* read md5sum *)
-  val (md5sum,date_now) = let
-    fun drop_newline_char s = let
-      val xs = s |> explode
-      in if last xs = #"\n" then xs |> butlast |> implode else s end
-    val raw = map drop_newline_char (lines_from_file filename_md5)
-    val m = hd raw
-    val d = hd (tl raw)
-    in (m,d) end;
-  val _ = print long_line
-  val _ = print ("  md5: "^md5sum^"\n")
-*)
   (* print stats *)
   val f = print
   val names = section_names ()
@@ -264,7 +263,7 @@ val show_code = show_annotated_code (fn x => fail())
 
 (* tools *)
 
-val () = arm_progLib.arm_config "vfp" "mapped"
+val () = arm_progLib.arm_config "vfpv3" "mapped"
 val arm_tools = arm_decompLib.l3_arm_tools
 val (arm_spec,_,_,_) = arm_tools
 

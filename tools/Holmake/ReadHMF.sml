@@ -304,4 +304,51 @@ fun read fname env =
              Binarymap.mkDict String.compare)
             (empty_condstate, init_buf fname)
 
+fun readlist e vref =
+  map dequote (tokenize (perform_substitution e [VREF vref]))
+
+fun find_includes dirname =
+  let
+    val hm_fname = OS.Path.concat(dirname, "Holmakefile")
+  in
+    if OS.FileSys.access(hm_fname, [OS.FileSys.A_READ]) then
+      let
+        val (e, _, _) = read hm_fname (base_environment())
+        val raw_incs = readlist e "INCLUDES" @ readlist e "PRE_INCLUDES"
+      in
+        map (fn p => OS.Path.mkAbsolute {path = p, relativeTo = dirname})
+            raw_incs
+      end
+    else []
+  end
+
+fun extend {quietp,lpref} envlist s f = let
+  open Holmake_types
+in
+  case envlist s of
+    [] => ()
+  | v => (if not quietp then
+            print ("[extending loadPath with Holmakefile "^s^" variable]\n")
+          else ();
+          lpref := f (!lpref, v))
+end
+
+fun extend_path_with_includes cfg =
+  if OS.FileSys.access ("Holmakefile", [OS.FileSys.A_READ]) then
+    let
+      open Holmake_types
+      val (env, _, _) = read "Holmakefile" (base_environment())
+      fun envlist id =
+        map dequote (tokenize (perform_substitution env [VREF id]))
+    in
+      extend cfg envlist "INCLUDES" (op@);
+      extend cfg envlist "PRE_INCLUDES" (fn (lp, mfv) => mfv @ lp)
+    end handle e => (if not (#quietp cfg) then
+                       (TextIO.output(TextIO.stdErr,
+                                   "[bogus Holmakefile in current directory \
+                                    \- ignoring it]\n");
+                        TextIO.flushOut TextIO.stdErr)
+                     else ())
+  else ();
+
 end (* struct *)

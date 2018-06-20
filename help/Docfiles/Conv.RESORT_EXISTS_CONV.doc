@@ -33,6 +33,6 @@ or if it includes variables that are in the body, but which were not
 originally bound.
 
 \SEEALSO
-Conv.RESORT_FORALL_CONV.
+Conv.RESORT_FORALL_CONV, HolKernel.sort_vars.
 
 \ENDDOC

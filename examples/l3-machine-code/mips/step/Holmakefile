@@ -1,11 +1,11 @@
-INCLUDES = ../model
-OPTIONS = QUIT_ON_FAILURE
+INCLUDES = ../.. ../../lib ../model
+CLINE_OPTIONS = --qof
 
 ifdef POLY
 HOLHEAP = mips-heap
 EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o
 
-BARE_THYS = ../model/mipsLib ../../lib/MutableMap ../model/mips
+BARE_THYS = ../model/mipsLib ../model/mips
 DEPS = $(patsubst %,%.uo,$(BARE_THYS))
 
 THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
@@ -15,6 +15,6 @@ all: $(TARGETS) $(HOLHEAP)
 .PHONY: all
 
 $(HOLHEAP): $(DEPS)
-	$(protect $(HOLDIR)/bin/buildheap) -b ../../base/base-heap -o $(HOLHEAP) $(BARE_THYS)
+	$(protect $(HOLDIR)/bin/buildheap) -b ../../l3-heap -o $(HOLHEAP) $(BARE_THYS)
 
 endif

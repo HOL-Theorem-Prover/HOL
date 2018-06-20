@@ -34,38 +34,18 @@ fun instruction_apply f =
 
 (* Remove whitespace before and after a string *)
 val remove_whitespace =
-   Substring.string o Substring.dropr Char.isSpace o
-   Substring.dropl Char.isSpace o Substring.full
+  Substring.string o Substring.dropr Char.isSpace o
+  Substring.dropl Char.isSpace o Substring.full
 
 (* Turns a quote `...` into a list of strings *)
 local
-   fun strip_comments (d, a) s =
-      if Substring.size s = 0
-         then a
-      else let
-              val (l, r) =
-                 Substring.splitl (fn c => c <> #"(" andalso c <> #"*") s
-              val a' = if 0 < d then a else a @ [l]
-           in
-              if Substring.isPrefix "(*" r
-                 then strip_comments (d + 1, a') (Substring.triml 2 r)
-              else if Substring.isPrefix "*)" r
-                 then strip_comments (d - 1, a') (Substring.triml 2 r)
-              else if Substring.size r = 0
-                 then a'
-              else let
-                      val (r1, r2) = Substring.splitAt (r, 1)
-                   in
-                      strip_comments (d, if 0 < d then a' else a' @ [r1]) r2
-                   end
-           end
-   val lines =
-      List.mapPartial
-         (fn s => case remove_whitespace s of "" => NONE | x => SOME x) o
-      String.tokens (fn c => c = #"\n" orelse c = #"|") o
-      Substring.concat o strip_comments (0, []) o Substring.full
+  val f =
+    List.mapPartial
+       (fn s => case remove_whitespace s of "" => NONE | x => SOME x) o
+    String.tokens (fn c => c = #"\n" orelse c = #"|")
 in
-   val quote_to_strings = fn [QUOTE s] => lines s | _ => raise General.Bind
+  fun quote_to_strings q =
+    f (Portable.quote_to_string (fn _ => raise General.Bind) q)
 end
 
 (* mechanism for printing *)
@@ -1157,7 +1137,7 @@ val SEP_READ_TAC = let
     val (qs,q) = hd (filter (fn (x,y) => mem lhs x) ys)
     val zs = filter (fn x => not (x = lhs)) qs
     val p = list_mk_star zs (type_of lhs)
-    in (EXISTS_TAC p THEN PAT_ASSUM q MP_TAC
+    in (EXISTS_TAC p THEN PAT_X_ASSUM q MP_TAC
         THEN SIMP_TAC (std_ss++star_ss) []) (hs,gs) end
   fun dest_pair_one tm = let
     val (x,y) = dest_comb tm
@@ -1213,7 +1193,7 @@ fun SEP_WRITE_TAC (hs,gs) = let
   val witnesses = map (find_any_match ys) (map fst updates)
   fun foo (w,tac) =
     MATCH_MP_TAC write_fun2set THEN REWRITE_TAC [STAR_ASSOC] THEN EXISTS_TAC w THEN tac
-  fun lift (w,tac) = Q.PAT_ASSUM [ANTIQUOTE w] MP_TAC THEN tac
+  fun lift (w,tac) = Q.PAT_X_ASSUM [ANTIQUOTE w] MP_TAC THEN tac
   val final_tac = foldr lift (SIMP_TAC (bool_ss++star_ss) []) xs
   in (tac THEN foldr foo final_tac witnesses) (hs,gs) end
 
@@ -1256,13 +1236,13 @@ fun STRIP_FORALL_TAC (hs,goal) =
 
 fun VERBOSE_TAC (hs,goal) = let
   val tm = hd (filter (fn tm => is_eq tm andalso is_var(cdr tm)) hs)
-  in Q.PAT_ASSUM [ANTIQUOTE tm] (fn th => FULL_SIMP_TAC pure_ss [GSYM th]) (hs,goal) end
+  in Q.PAT_X_ASSUM [ANTIQUOTE tm] (fn th => FULL_SIMP_TAC pure_ss [GSYM th]) (hs,goal) end
   handle Empty => let
   val tm = hd (filter (fn tm => is_eq tm andalso is_var((cdr o car) tm) andalso (free_vars (cdr tm) = [])) hs)
-  in Q.PAT_ASSUM [ANTIQUOTE tm] (fn th => FULL_SIMP_TAC pure_ss [th]) (hs,goal) end
+  in Q.PAT_X_ASSUM [ANTIQUOTE tm] (fn th => FULL_SIMP_TAC pure_ss [th]) (hs,goal) end
   handle Empty => NO_TAC (hs,goal);
 
-val CLEAN_TAC = REPEAT (Q.PAT_ASSUM `T` (K ALL_TAC))
+val CLEAN_TAC = REPEAT (Q.PAT_X_ASSUM `T` (K ALL_TAC))
 val EXPAND_TAC = REPEAT VERBOSE_TAC THEN CLEAN_TAC
 
 fun star_match fixed_vars tm1 tm2 = let
@@ -1339,9 +1319,9 @@ fun SEP_F_TAC (hs,goal) = let
       | first_filter (q::qs) = (q,star_match vs q fs) handle HOL_ERR _ => first_filter qs
     val (q,ss) = first_filter qs
     val goal1 = subst ss q
-    in Q.PAT_ASSUM [ANTIQUOTE i] (MP_TAC o RW1 [GSYM markerTheory.Abbrev_def] o SUBST_INST ss)
-       THEN [ANTIQUOTE goal1] by ALL_TAC THEN1
-         (Q.PAT_ASSUM [ANTIQUOTE fs] MP_TAC THEN SIMP_TAC (std_ss++star_ss) [SEP_CLAUSES])
+    in Q.PAT_X_ASSUM [ANTIQUOTE i] (MP_TAC o RW1 [GSYM markerTheory.Abbrev_def] o SUBST_INST ss)
+       THEN [ANTIQUOTE goal1] by
+         (Q.PAT_X_ASSUM [ANTIQUOTE fs] MP_TAC THEN SIMP_TAC (std_ss++star_ss) [SEP_CLAUSES])
        THEN POP_ASSUM (fn th => CONV_TAC (RATOR_CONV (REWRITE_CONV [th])))
        THEN CONV_TAC (RATOR_CONV (ONCE_REWRITE_CONV [markerTheory.Abbrev_def])) end
   fun filter_map f [] = []
@@ -1363,7 +1343,7 @@ fun SEP_I_TAC func_name (hs,goal) = let
     val fs = filter (fn x => not (mem x rs) andalso mem x xs) (free_vars t1)
     val s = s @ map (fn x => x |-> x) fs
     val _ = if filter (fn {redex = x,residue = y} => not (mem x xs)) s = [] then () else fail()
-    in Q.PAT_ASSUM [ANTIQUOTE i] (STRIP_ASSUME_TAC o SUBST_INST s) end
+    in Q.PAT_X_ASSUM [ANTIQUOTE i] (STRIP_ASSUME_TAC o SUBST_INST s) end
     handle HOL_ERR _ => ALL_TAC
   in EVERY (map get_tac inds) (hs,goal) end;
 
@@ -1383,7 +1363,7 @@ fun SEP_W_TAC (hs,goal) = let
           replace x y :: ys handle HOL_ERR _ => y :: replace_in_list (x,ys)
     val goal = list_mk_star (foldr replace_in_list qs zs) (type_of (hd qs))
     val goal = mk_comb(goal,subst [f|->up] (cdr x))
-    in ([ANTIQUOTE goal] by ALL_TAC THEN1 SEP_WRITE_TAC) end handle Empty => ALL_TAC
+    in ([ANTIQUOTE goal] by SEP_WRITE_TAC) end handle Empty => ALL_TAC
   in EVERY (map get_tac xs) (hs,goal) end;
 
 fun SEP_R_TAC (hs,goal) = let

@@ -106,7 +106,7 @@ val CONGRUENT_LE_1 = store_thm("CONGRUENT_LE_1",
                         Cases_on `a` THEN ARW[CONGRUENT]
                         THEN SPOSE_NOT_THEN STRIP_ASSUME_TAC
                         THEN `(c-d)*n = 1`
-                          by ASM_REWRITE_TAC[RIGHT_SUB_DISTRIB] THEN ARW[]
+                          by (ASM_REWRITE_TAC[RIGHT_SUB_DISTRIB] THEN ARW[])
                         THEN ARW[RIGHT_SUB_DISTRIB]
                         THEN PROVE_TAC[MULT_EQ_1, LESS_REFL]
                      );

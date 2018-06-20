@@ -25,7 +25,7 @@ variables than shown are allowed.
 {
      A ?- u'
   =========================  irule (A' |- !x. s ==> !y. t ==> u)
-   A ?- ?z. s'   A ?- ?w. t'
+   A ?- (?z. s') /\ ?w. t'
 }
 where {z} and {w} are (type instances of) variables among {x}, {y}
 that do not occur free in {s}, {t}. The assumptions {A'},
@@ -36,26 +36,21 @@ Fails unless the theorem, when stripped of universal quantification and
 antecedents of implications, can be instantiated to match the goal.
 
 \COMMENTS
-The supplied theorem is pre-processed using {SPEC_UNDISCH_EXL}, which
+The supplied theorem is pre-processed using {IRULE_CANON}, which
 removes the universal quantifiers and antecedents of implications, and
-applies {EXISTS_LEFT} which existentially quantifies variables which
-were instantiated but appeared only in the antecedents of
-implications. See {SPEC_UNDISCH_EXL} for details.
+existentially quantifies variables which were instantiated but
+appeared only in the antecedents of implications.
 
-Then {prim_irule} is applied. To avoid this preprocessing just use
-{prim_irule}.
-
-The order of the new subgoals depends on the order in which the hypotheses of
-the pre-processed theorem (before the substitution) are stored.
-See {prim_irule}.
+Then {MATCH_MP_TAC} or {MATCH_ACCEPT_TAC} is applied (depending on
+whether or not the result of the preprocessing is an implication). To
+avoid preprocessing entirely, one can use {prim_irule}.
 
 \EXAMPLE
 With goal {R a (f b)} and theorem {thm} being
 {
-   |- !x u. P u x ==> !y. Q w x y ==> R x (f y)
+   |- !x u. P u x ==> !w y. Q w x y ==> R x (f y)
 }
-the proof step {e (irule thm)} gives new goals {Q w a b} and
-{?u. P u a}.
+the proof step {e (irule thm)} gives new goal {(?u. P u a) /\ ?w. Q w a b}.
 
 With goal {a = b} and theorem {trans}
 {
@@ -67,6 +62,5 @@ the proof step {e (irule trans)} gives new goal
 }
 
 \SEEALSO
-Tactic.MATCH_MP_TAC, Tactic.prim_irule, Drule.SPEC_UNDISCH_EXL,
-Drule.EXISTS_LEFT
+Tactic.MATCH_MP_TAC, Tactic.prim_irule, Drule.IRULE_CANON.
 \ENDDOC

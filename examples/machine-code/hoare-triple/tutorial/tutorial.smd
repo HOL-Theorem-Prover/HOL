@@ -1,0 +1,157 @@
+% fun2set tutorial
+<!--
+>>__ val () = elision_string1 := " (* output elided *)";
+>>__ val _ = loadPath := !loadPath @ [Globals.HOLDIR ^ "/examples/machine-code/hoare-triple"];
+>>__ load "helperLib";
+>>__ open helperLib set_sepTheory;
+>>__ val _ = (Globals.show_assums := false);
+-->
+
+Introduction
+------------
+
+This tutorial is about the tactics and simpset found in
+`helperLib` for dealing with proofs that concerning `fun2set`.
+
+     open helperLib set_sepTheory;
+
+
+fun2set
+-------
+
+What is `fun2set` for? The `fun2set` is used to make
+separation-logic-inspired statements about memory modelling
+functions. Below is an example where we state that there are
+(at least) two addresses in memory domain `dm`. This example
+also states that `m a = x` and `m b = 5`.
+
+     >>- ``(one (a:'a,x) * one (b,5) * frame) (fun2set (m,dm))``
+
+
+SEP_R_TAC
+---------
+
+Now suppose we are in the middle of a proof and encounter a goal
+where we need to use the facts we saw above.
+
+     >>- set_goal([``(one (a:'a,x) * one (b,5) * frame) (fun2set (m,dm))``],``m b < 7 /\ a IN dm /\ b IN dm /\ a <> b:'a``)
+
+Using `SEP_R_TAC` we can rewrite (in goal) with basic facts that can be
+immediately infered from the `fun2set` assumption. The result of an
+application of `SEP_R_TAC` is the following goal:
+
+     >> e SEP_R_TAC;
+
+
+SEP_NEQ_TAC
+-----------
+
+The `SEP_NEQ_TAC` tactic can prove goals of the form `a ≠ b`.
+
+     >> e (`a <> b` by SEP_NEQ_TAC);
+
+Now an application of `fs []` proves the goal.
+
+     >> e (fs []);
+
+>>__ proofManagerLib.drop();
+
+SEP_W_TAC
+---------
+
+Now let's look at a goal where we are modifying the memory `m`.
+In this example, we want to prove that two memory writes will
+achieve a new `fun2set` statement.
+
+     >>- set_goal([``(one (a:'a,x) * one (b,5) * frame) (fun2set (m,dm))``],``(one (a:'a,7) * one (b,x) * frame) (fun2set ((b =+ m a) ((a =+ 7) m),dm))``)
+
+By applying `SEP_W_TAC`, we can derive all immediate consequences
+applying those writes to all of the `fun2set` assumptions.
+
+     >> e SEP_W_TAC;
+
+The resulting goal is easy to finish off with `SEP_R_TAC`:
+
+     >> e (pop_assum mp_tac \\ SEP_R_TAC \\ fs []);
+
+**Known bug:** The `SEP_W_TAC` tactic does not work if `m` and `dm` are
+something other than variables. In case, `m` is `s.memory` then you
+will need to define an abbreviation that turns `s.memory` into a
+variable, similarly for `dm`.
+
+>>__ proofManagerLib.drop();
+
+SEP_F_TAC
+---------
+
+The `SEP_F_TAC` is a rarely used (but occasionally very helpful) tactic for
+instantiating the frame in inductive hypothesis or other assumed statements.
+
+     >>- set_goal(rev [``!r n. (one (a:'a,n) * r) (fun2set (m,dm)) ==> n < 5n``,``(one (b,5n) * one (a:'a,x) * frame) (fun2set (m,dm))``],``x < 7n``)
+
+An application of `SEP_F_TAC` produces the following where the
+two assumptions have been matched and the result of the modus ponens
+has been `mp_tac`-ed onto the goal.
+
+     >> e SEP_F_TAC;
+
+`decide_tac` will get this.
+
+>>__ proofManagerLib.drop ();
+
+Rewrites and simpset fragments
+------------------------------
+
+Here are a number of useful rewrites for general separation-logic reasoning:
+
+     >> SEP_EXISTS_THM;
+
+     >> SEP_CLAUSES;
+
+     >> STAR_ASSOC;
+
+There is also a simpset fragment, called `sep_cond_ss`, that helps
+rearrange `cond`.
+
+     >> SIMP_CONV (bool_ss++sep_cond_ss) [] ``one (a:'a,6) * cond (x < 5) * frame * cond (3 < x)``;
+
+
+Extended example
+----------------
+
+Now let's have a look at an extended example. We'll verify a function
+that essentially does a `map (fn n => n div 2)` on a mutable linked list.
+
+We start by defining what a linked list is:
+
+    >>- val linked_def = Define `(linked a [] = cond (a = 0)) /\ (linked a (x::xs) = SEP_EXISTS b. one (a,x) * one (a+1,b:num) * linked b xs * cond (a <> 0))`;
+
+Next, we define the memory updating function that we are to verify as follows. This function is clocked because it might not terminate for circular lists.
+
+    >>- val update_def = Define `update k a m = if (a = 0) \/ (k = 0) then m else let m = (a =+ m a DIV 2) m in update (k-1) (m (a + 1)) m`;
+
+Now let's prove the correctness:
+
+    >>- set_goal([],``!xs a frame m dm. (linked a xs * frame) (fun2set (m,dm)) ==> (linked a (MAP (\n. n DIV 2) xs) * frame) (fun2set (update (LENGTH xs) a m,dm))``);
+
+    >> e Induct;
+
+    >> e (fs [Once update_def]);
+
+    >> e (fs [linked_def,SEP_CLAUSES,SEP_EXISTS_THM,PULL_EXISTS] \\ rw []);
+
+    >> e (full_simp_tac (std_ss++sep_cond_ss) [cond_STAR] \\ simp [Once update_def]);
+
+    >> e (SEP_W_TAC);
+
+    >> e (SEP_F_TAC);
+
+    >> e (pop_assum mp_tac \\ SEP_R_TAC);
+
+    >> e (rw [] \\ qexists_tac `b` \\ fs []);
+
+    >> e (`a <> a + 1` by SEP_NEQ_TAC \\ fs [combinTheory.APPLY_UPDATE_THM]);
+
+    >> e (SEP_R_TAC);
+
+    >> e (full_simp_tac (std_ss++star_ss) []);

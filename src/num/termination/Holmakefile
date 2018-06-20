@@ -8,21 +8,24 @@ ifdef POLY
 HOLHEAP = numheap
 EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o selftest.exe
 
-# many of these names (Solve, Streams, Theorems) are far too generic;
+# many of these names (Solve, Theorems) are far too generic;
 # there is a name-space pollution issue here I think.
 ARITH_DEPS = Arith_cons Arith Exists_arith Gen_arith   \
 	     Instance Norm_arith Norm_bool Norm_ineqs numSimps Prenex \
              Rationals RJBConv Sol_ranges Solve_ineqs Solve \
-             Streams Sub_and_cond Sup_Inf Term_coeffs Theorems Thm_convs
+             Sub_and_cond Sup_Inf Term_coeffs Theorems Thm_convs
 
-BARE_DEPS = ../theories/numeralTheory ../../tfl/src/Defn ../numLib \
+BARE_DEPS = ../theories/numeralTheory ../../tfl/src/Defn \
+            ../numLib ../../portableML/Streams \
             $(patsubst %,../arith/src/%,$(ARITH_DEPS))
 DEPS = $(patsubst %,%.uo,$(BARE_DEPS))
 
-all: $(HOLHEAP)
+all: $(HOLHEAP) selftest.exe
 
+# -F is reasonable here because all files will be in sigobj directory, so
+# dependency analysis will always find them.
 $(HOLHEAP): $(DEPS) $(dprot $(HOLDIR)/bin/hol.state0)
-	$(protect $(HOLDIR)/bin/buildheap) -o $@ -b $(protect $(HOLDIR)/bin/hol.state0) $(BARE_DEPS)
+	$(protect $(HOLDIR)/bin/buildheap) $(DEBUG_FLAG) -F -o $@ -b $(protect $(HOLDIR)/bin/hol.state0) $(BARE_DEPS)
 else
 EXTRA_CLEANS = selftest.exe
 endif

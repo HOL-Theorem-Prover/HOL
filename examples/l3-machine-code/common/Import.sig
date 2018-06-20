@@ -11,14 +11,41 @@ sig
      | Difference
      | Drop
      | Element
+     | FP32To64
+     | FP64To32
+     | FP64To32_
      | FPAbs of int
      | FPAdd of int
-     | FPEqual of int
-     | FPIsNaN of int
-     | FPLess of int
+     | FPAdd_ of int
+     | FPCmp of int
+     | FPDiv of int
+     | FPDiv_ of int
+     | FPEq of int
+     | FPFromInt of int
+     | FPGe of int
+     | FPGt of int
+     | FPIsIntegral of int
+     | FPIsFinite of int
+     | FPIsNan of int
+     | FPIsNormal of int
+     | FPIsSignallingNan of int
+     | FPIsSubnormal of int
+     | FPIsZero of int
+     | FPLe of int
+     | FPLt of int
      | FPMul of int
+     | FPMul_ of int
+     | FPMulAdd of int
+     | FPMulAdd_ of int
+     | FPMulSub of int
+     | FPMulSub_ of int
      | FPNeg of int
+     | FPRoundToIntegral of int
+     | FPSqrt of int
+     | FPSqrt_ of int
      | FPSub of int
+     | FPSub_ of int
+     | FPToInt of int
      | Flat
      | Fst
      | Head
@@ -84,7 +111,6 @@ sig
      | Lsl
      | Lsr
      | Lt
-     | Mdfy
      | Mod
      | Mul
      | Or
@@ -93,6 +119,8 @@ sig
      | Rep
      | Rol
      | Ror
+     | SDiv
+     | SMod
      | Splitl
      | Splitr
      | Sub
@@ -104,22 +132,27 @@ sig
 
    val start : string -> unit
    val finish : int -> unit
+   val ieee_underflow_before : bool ref
 
-   val Record : string * ParseDatatype.field list -> unit
    val Construct : (string * ParseDatatype.constructor list) list -> unit
+   val NoBigRecord : string * ParseDatatype.field list -> unit
+   val Record : string * ParseDatatype.field list -> unit
+
    val Def : string * Term.term * Term.term -> Theory.thm
+   val Def0 : string * Term.term -> Theory.thm
    val tDef :
       string * Term.term * Term.term * Term.term * Tactic.tactic -> Theory.thm
-   val Def0 : string * Term.term -> Theory.thm
 
-   val bTy : ParseDatatype.pretype
-   val iTy : ParseDatatype.pretype
-   val nTy : ParseDatatype.pretype
-   val rTy : ParseDatatype.pretype
-   val cTy : ParseDatatype.pretype
-   val sTy : ParseDatatype.pretype
-   val uTy : ParseDatatype.pretype
-   val vTy : ParseDatatype.pretype
+   val bTy : ParseDatatype.pretype (* bool *)
+   val cTy : ParseDatatype.pretype (* char *)
+   val fTy : ParseDatatype.pretype (* IEEE flags *)
+   val iTy : ParseDatatype.pretype (* int *)
+   val nTy : ParseDatatype.pretype (* num *)
+   val oTy : ParseDatatype.pretype (* IEEE ordering *)
+   val rTy : ParseDatatype.pretype (* IEEE rounding *)
+   val sTy : ParseDatatype.pretype (* string *)
+   val uTy : ParseDatatype.pretype (* unit/one *)
+   val vTy : ParseDatatype.pretype (* bit-string *)
 
    val CTy : string -> ParseDatatype.pretype
    val VTy : string -> ParseDatatype.pretype
@@ -142,18 +175,39 @@ sig
    val LU : Term.term
    val LT : Term.term
    val LF : Term.term
-   val LI : int -> Term.term
-   val LN : int -> Term.term
+   val LI : IntInf.int -> Term.term
+   val LN : IntInf.int -> Term.term
    val LSC : char -> Term.term
    val LS : string -> Term.term
    val LV : string -> Term.term
-   val LW : int * int -> Term.term
-   val LY : int * string -> Term.term
+   val LW : IntInf.int * int -> Term.term
+   val LY : IntInf.int * string -> Term.term
    val LC : string * ParseDatatype.pretype -> Term.term
    val LE : ParseDatatype.pretype -> Term.term
    val LNL: ParseDatatype.pretype -> Term.term
    val LO : ParseDatatype.pretype -> Term.term
    val LX : ParseDatatype.pretype -> Term.term
+
+   val NEGINF32 : Term.term
+   val NEGINF64 : Term.term
+   val POSINF32 : Term.term
+   val POSINF64 : Term.term
+   val NEGZERO32 : Term.term
+   val NEGZERO64 : Term.term
+   val POSZERO32 : Term.term
+   val POSZERO64 : Term.term
+   val NEGMIN32 : Term.term
+   val NEGMIN64 : Term.term
+   val POSMIN32 : Term.term
+   val POSMIN64 : Term.term
+   val NEGMAX32 : Term.term
+   val NEGMAX64 : Term.term
+   val POSMAX32 : Term.term
+   val POSMAX64 : Term.term
+   val QUIETNAN32 : Term.term
+   val QUIETNAN64 : Term.term
+   val SIGNALNAN32 : Term.term
+   val SIGNALNAN64 : Term.term
 
    val Call : string * ParseDatatype.pretype * Term.term -> Term.term
    val Const : string * ParseDatatype.pretype -> Term.term

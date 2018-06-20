@@ -31,7 +31,7 @@ element and {l} a list variable. For example, a suitable theorem for {SUM} is
 {
    |- SUM l = FOLDR $+ 0 l
 }
-Knowing this theorem and given the term {--`SUM (CONS x l)`--},
+Knowing this theorem and given the term {“SUM (CONS x l)”},
 {LIST_CONV} returns the theorem:
 {
    |- SUM (CONS x l) = x + (SUM l)
@@ -42,7 +42,7 @@ knowing the theorem:
 {
    |- MONOID $+ 0
 }
-and given the term {--`SUM (APPEND l1 l2)`--}, {LIST_CONV} returns
+and given the term {“SUM (APPEND l1 l2)”}, {LIST_CONV} returns
 the theorem
 {
    |- SUM (APPEND l1 l2) = (SUM l1) + (SUM l2)
@@ -100,27 +100,27 @@ auxiliary theorems about their step functions and base elements.
 
 \EXAMPLE
 {
-- LIST_CONV (--`LENGTH ([]:'a list)`--);
+- LIST_CONV “LENGTH ([]:'a list)”;
 |- LENGTH [] = 0
 }
 {
-- LIST_CONV (--`APPEND (CONS h t) (l1:'a list)`--);
+- LIST_CONV “APPEND (CONS h t) (l1:'a list)”;
 |- APPEND (CONS h t) l1 = CONS h (APPEND t l1)
 }
 {
-- LIST_CONV (--`APPEND (l1:'a list) (CONS h t)`--);
+- LIST_CONV “APPEND (l1:'a list) (CONS h t)”;
 |- APPEND l1 (CONS h t) = APPEND (SNOC h l1) t
 }
 {
-- LIST_CONV (--`MAP (P:'a list -> 'a) (SNOC h t)`--);
+- LIST_CONV “MAP (P:'a list -> 'a) (SNOC h t)”;
 |- MAP P (SNOC h t) = SNOC (P h) (MAP P t)
 }
 {
-- LIST_CONV (--`SUM (FLAT l)`--);
+- LIST_CONV “SUM (FLAT l)”;
 |- SUM (FLAT l) = SUM (MAP SUM l)
 }
 {
-- LIST_CONV (--`NULL (REVERSE (l:bool list))`--);
+- LIST_CONV “NULL (REVERSE (l:bool list))”;
 |- NULL (REVERSE l) = NULL l
 }
 

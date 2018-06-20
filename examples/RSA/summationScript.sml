@@ -1,7 +1,3 @@
-(*
-*)
-structure summationScript =
-struct
 open HolKernel Parse boolLib
 
 (* interactive mode
@@ -44,12 +40,10 @@ Induct_on `i`
   THEN `f j:num = f (j+0)` by REWRITE_TAC[ADD_CLAUSES]
   THEN ARW[]
   THEN `!k. k < i ==> (f (SUC j + k):num = g (SUC j + k))`
-     by ARW[ADD_CLAUSES]
-  THENL [
-    `f (SUC (j+k)):num = f (j + SUC k)` by REWRITE_TAC[ADD_CLAUSES]
-       THEN ARW[ADD_CLAUSES],
-    RES_TAC
-  ]);
+     by (ARW[ADD_CLAUSES]
+           THEN `f (SUC (j+k)):num = f (j + SUC k)` by REWRITE_TAC[ADD_CLAUSES]
+           THEN ARW[ADD_CLAUSES])
+  THEN RES_TAC);
 
 
 val SUMMATION_ADD = store_thm("SUMMATION_ADD",
@@ -71,7 +65,7 @@ Term `!i j f P.
        ==>
           P (summation j i f)`,
 Induct_on `i` THEN ARW[SUMMATION]
-  THEN `P (f (j:num):num) : bool` by ALL_TAC
+  THEN sg `P (f (j:num):num) : bool`
   THENL [
    `f j:num = f (j+0)` by REWRITE_TAC[ADD_CLAUSES]
      THEN ASM_REWRITE_TAC[] THEN ARW[],
@@ -99,5 +93,3 @@ Term `!i j f. summation (SUC j) i f = summation j i (\n. f (n + 1))`,
 
 
 val _ = export_theory();
-
-end;

@@ -1,1 +1,17 @@
 OPTIONS=QUIT_ON_FAILURE
+
+THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
+TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
+all: $(TARGETS)
+.PHONY: all
+
+ifeq ($(KERNELID),otknl)
+ARTFILES = $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
+all: $(ARTFILES)
+
+machine-code-hoare-logic-unint.art: machine-code-hoare-logic-unint.thy $(ARTFILES)
+	opentheory info --article -o $@ $<
+
+machine-code-hoare-logic.art: machine-code-hoare-logic.thy machine-code-hoare-logic-unint.art
+	opentheory info --article -o $@ $<
+endif

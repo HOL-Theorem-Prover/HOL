@@ -196,7 +196,9 @@ series of tokens.  For more on lexing, see Section~\ref{HOL-lex}.
   \index{antiquotation, in HOL logic terms@antiquotation, in \HOL{} logic terms}%
 %
   \ml{IDENT} (an identifier); \ml{QIDENT} (a qualified identifier,
-  given as \holtxt{thy\$ident}); \ml{APP} (an application of one form
+  given as \holtxt{thy\$ident}%
+\index{ dollar sign, in HOL logic parser@\ml{\$} (dollar sign, in \HOL{} logic parser)!generating qualified identifiers}%
+); \ml{APP} (an application of one form
   to another); \ml{LAM} (an abstraction of a variable over a body),
   and \ml{TYPED} (a form accompanied by a type constraint\footnote{The
     types in \ml{Absyn} constraints are not full HOL types, but values
@@ -225,7 +227,7 @@ series of tokens.  For more on lexing, see Section~\ref{HOL-lex}.
 
   If the ``quotation'' syntax with a bare dollar is used,%
 %
-\index{ escape, in HOL logic parser@\ml{\$} (escape, in \HOL{} logic parser)}%
+\index{ dollar sign, in HOL logic parser@\ml{\$} (dollar sign, in \HOL{} logic parser)!as escape character}%
 \index{tokens!suppressing parsing behaviour of|(}%
 %
 then this phase of the parser will not treat strings as part of a
@@ -744,7 +746,7 @@ is internally represented as
 Where infixes appear between their arguments, prefixes appear before theirs.
 This might initially appear to be the same thing as happens with normal function application where the symbol on the left simply has no fixity: is $f$ in $f(x)$ not acting as a prefix?
 Actually though, in a term such as $f(x)$, where $f$ and $x$ do not have fixities, the syntax is treated as if there is an invisible infix function application between the two tokens: $f\cdot{}x$.
-This infix operator binds tightly, so that when one writes $f\,x + y$, the parse is $(f\cdot{}x) + y$.\footnote{There are tighter infix operators: the dot in field selection causes $f\,x.fld$ to parse as $f\cdot(x.fld)$.\index{record types!field selection notation}}
+This infix operator binds tightly, so that when one writes $f\,x + y$, the parse is $(f\cdot{}x) + y$.\footnote{There are tighter infix operators: the dot in field selection causes $f\,x.fld$ to parse as $f\cdot(x.fld)$.\index{record types!field selection functions and notation}}
 It is then useful to allow for genuine prefixes so that operators can live at different precedence levels than function application.
 An example of this is \verb+~+, logical negation.
 This is a prefix with lower precedence than function application.
@@ -989,6 +991,7 @@ print depth are printed as \holtxt{...}. For example:
 \setcounter{sessioncount}{0}
 \begin{session}
 \begin{alltt}
+>>__ show_types := false;
 >> arithmeticTheory.ADD_CLAUSES;
 
 >> max_print_depth := 3;
@@ -1046,14 +1049,12 @@ the trivial in size, while backslashes occur in not just the
 representation of $\lambda$, but also the syntax for conjunction and
 disjunction.
 
-If a quotation is to include a back-quote character, then this should
-be done by using the quotation syntax's own escape character, the
-caret (\ml{\^}, ASCII character~94).  To get a bare caret, things are
-slightly more complicated.  If a sequence of carets is followed by
-white-space (including a newline), then that sequence of carets is
-passed to the HOL parser unchanged.  Otherwise, one caret can be
-obtained by writing two in a row. (This last rule is analogous to the
-way in \ML{} string syntax treats the back-slash.) Thus:
+If a quotation is to include a back-quote character, then this should be done by using the quotation syntax's own escape character, the caret (\ml{\^}, ASCII character~94).
+To get a bare caret, things are slightly more complicated.
+If a sequence of carets is followed by white-space (including a newline), then that sequence of carets is passed to the HOL parser unchanged.
+Otherwise, one caret can be obtained by writing two in a row.
+(This last rule is analogous to the way in \ML{} string syntax treats the back-slash.)
+Thus:
 \begin{session}
 \begin{alltt}
 >> ``f ^` x ``;
@@ -1062,19 +1063,13 @@ way in \ML{} string syntax treats the back-slash.) Thus:
 \end{alltt}
 \end{session}
 
-The rule for carets not followed by white-space is illustrated here,
-including an example of what happens when the quoting rule is not
-followed:
+Finally, if a single caret is followed by a ``symbol'' character, then the caret and symbol are passed through to HOL unchanged.
+Thus the following example illustrates two different ways of writing the same thing (in the first input, two carets become one):
 \begin{session}
 \begin{alltt}
 >> ``f ^^+ x``;
 
 >>+ ``f ^+ x``;
-! Toplevel input:
-! (Parse.Term [QUOTE " (*#loc 2 3*)f ", ANTIQUOTE (+),
-!              QUOTE " (*#loc 2 7*) x"]);
-!                                                  ^
-! Ill-formed infix expression
 \end{alltt}
 \end{session}
 
@@ -1853,7 +1848,7 @@ rewrites.  The latter ``advantage'' is based on the assumption that
 of unused rewrites is never a concern: the presence of rewrites that
 do the wrong thing can be a major irritation.
 
-\subsubsection{Abbreviated ``Power'' Tactics}
+\subsubsection{Abbreviated ``Power'' tactics}
 \HOL{}'s \ml{bossLib} module (part of the standard interactive environment) comes with a number of powerful simplification tactics with short lower-case names.
 These do not require or allow for the specification of a particular \simpset{} because they use \ml{srw_ss()} combined with the arithmetic decision procedure for the natural numbers, as well as a \simpset{} fragment that eliminates \holtxt{let}-terms.
 All of the tactics take a list of rewrite theorems as their one argument.
@@ -2594,13 +2589,16 @@ field.
 
 For example, the following \simpset{} fragment will cause
 AC-normalisation of disjunctions
-\begin{hol}
-\begin{verbatim}
-   SSFRAG {ac = [(DISJ_ASSOC, DISJ_COMM)],
-           rewrs = [], filter = NONE, convs = [],
-           dprocs = [], congs = []}
-\end{verbatim}
-\end{hol}
+\begin{session}
+\begin{alltt}
+>>__ load "simpLib";
+>>__ open simpLib;
+##eval[DISJ_ss] SSFRAG { name = NONE,
+           convs = [], rewrs = [], congs = [],
+           filter = NONE, ac = [(DISJ_ASSOC, DISJ_COMM)],
+           dprocs = [] }
+\end{alltt}
+\end{session}
 The pair of provided theorems must state
 \begin{eqnarray*}
 x \oplus y &=& y \oplus x\\
@@ -2613,11 +2611,9 @@ the first component of the pair.  Assuming the \simpset{} fragment
 above is bound to the \ML{} identifier \ml{DISJ\_ss}, its behaviour is
 demonstrated in the following example:
 \begin{session}
-\begin{verbatim}
-- SIMP_CONV (bool_ss ++ DISJ_ss) [] ``p /\ q \/ r \/ P z``;
-<<HOL message: inventing new type variable names: 'a>>
-> val it = |- p /\ q \/ r \/ P z = r \/ P z \/ p /\ q : thm
-\end{verbatim}
+\begin{alltt}
+>> SIMP_CONV (bool_ss ++ DISJ_ss) [] ``p /\ q \/ r \/ P z``;
+\end{alltt}
 \end{session}
 
 \index{arith_ss (simplification set)@\ml{arith\_ss} (simplification set)}
@@ -2633,11 +2629,9 @@ AC theorems can also be added to \simpset{}s via the theorem-list part
 of the tactic and conversion interface, using the special rewrite form
 \ml{AC}:
 \begin{session}
-\begin{verbatim}
-- SIMP_CONV bool_ss [AC DISJ_ASSOC DISJ_COMM] ``p /\ q \/ r \/ P z``;
-<<HOL message: inventing new type variable names: 'a>>
-> val it = |- p /\ q \/ r \/ P z = r \/ P z \/ p /\ q : thm
-\end{verbatim}
+\begin{alltt}
+>> SIMP_CONV bool_ss [AC DISJ_ASSOC DISJ_COMM] ``p /\ q \/ r \/ P z``;
+\end{alltt}
 \end{session}
 See Section~\ref{sec:simp-special-rewrite-forms} for more on special
 rewrite forms.
@@ -3114,13 +3108,13 @@ test. For example, the following definition is provably equal to \holtxt{FACT},
 But the two definitions evaluate completely differently.
 %
 \begin{session}
-\begin{verbatim}
+\begin{alltt}
 >> EVAL ``FACT n``;
 
 > EVAL ``fact n``;
   <.... interrupt key struck ...>
 Interrupted.
-\end{verbatim}
+\end{alltt}
 \end{session}
 %
 The primitive-recursive definition of \holtxt{FACT} does not expand
@@ -3254,6 +3248,10 @@ Also provided is a theory of polynomials, in \theoryimp{polyTheory}.
 A decision procedure for linear arithmetic on the real numbers
 is also provided by \ml{realLib}, under the name \ml{REAL\_ARITH\_CONV}
 and \ml{REAL\_ARITH\_TAC}.
+
+\section{Pattern Matches Library---\texttt{patternMatchesLib}}\label{sec:PatternMatchesLib}
+\input{PatternMatchesLib.tex}
+
 
 \section{Bit Vector Library---\texttt{wordsLib}}
 
@@ -3491,7 +3489,7 @@ There are also bit-blasting tactics: \ml{BBLAST\_TAC} and \ml{FULL\_BBLAST\_TAC}
 \section{The \texttt{Quantifier Heuristics} library}\label{sec:QuantHeuristicsLib}
 \input{QuantHeuristics.tex}
 
-\section{Tree-structured Finite Sets and Finite Maps}\label{sec:enumfset}
+\section{Tree-Structured Finite Sets and Finite Maps}\label{sec:enumfset}
 \input{enumfset.tex}
 
 

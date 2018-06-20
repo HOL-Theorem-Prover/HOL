@@ -92,8 +92,9 @@ val invP_Theorem = Q.store_thm
          ASSUME_TAC invP_Lemma1 THEN RES_TAC THEN RW_TAC arith_ss [decP_Theorem],
          ASSUME_TAC invP_Lemma1 THEN RES_TAC THEN RW_TAC arith_ss [decP_Theorem],
          ASSUME_TAC decP_Theorem THEN RES_TAC THEN RES_TAC THEN
-         `inv (dec (r1,r2,u1,u2,v1,v2))=inv (dec (dec (r1,r2,u1,u2,v1,v2)))` by RES_TAC
-         THENL [RW_TAC arith_ss [invP_Lemma2], RW_TAC arith_ss []]]);
+         `inv (dec (r1,r2,u1,u2,v1,v2))=inv (dec (dec (r1,r2,u1,u2,v1,v2)))`
+           by (RES_TAC THEN RW_TAC arith_ss [invP_Lemma2]) THEN
+         RW_TAC arith_ss []]);
 
 (* A more general case, commented out to use a specific one.
 val i16_Lemma1 = Q.store_thm
@@ -118,9 +119,10 @@ val i16_Lemma3 = Q.store_thm
  FULL_SIMP_TAC arith_ss [int_mod] THEN ASSUME_TAC INT_MOD_COMMON_FACTOR THEN
  RW_TAC arith_ss [INT_ADD_DIV] THEN ASSUME_TAC INT_MOD_ID THEN
  RW_TAC arith_ss [INT_MUL_DIV, INT_DIV_ID, INT_MUL_RID, INT_RDISTRIB, INT_ADD2_SUB2] THEN
- `b * c - b * c = 0` by RES_TAC
- THENL [`b * c = b * c` by DECIDE_TAC THEN RW_TAC arith_ss [INT_SUB_0],
-        RW_TAC arith_ss [INT_ADD_CALCULATE]]);
+ `b * c - b * c = 0`
+   by (RES_TAC THEN
+       `b * c = b * c` by DECIDE_TAC THEN RW_TAC arith_ss [INT_SUB_0]) THEN
+ RW_TAC arith_ss [INT_ADD_CALCULATE]);
 
 val i16_Lemma4 = Q.store_thm
 ("i16_Lemma4",

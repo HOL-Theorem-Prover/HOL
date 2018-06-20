@@ -1,5 +1,5 @@
 open HolKernel boolLib bossLib
-open lcsymtacs set_sepTheory progTheory temporalTheory stateTheory
+open set_sepTheory progTheory temporalTheory stateTheory
 
 val _ = new_theory "temporal_state"
 
@@ -138,7 +138,7 @@ val IMP_TEMPORAL = Theory.save_thm ("IMP_TEMPORAL",
                `p * CODE_POOL instr (c: 'd -> bool)`,
                `q * CODE_POOL instr (c: 'd -> bool)`]
    |> REWRITE_RULE [TEMPORAL_MOVE_CODE]
-   |> Q.GENL [`q`, `p`, `c`, `avoid`, `less`, `instr`, `next`, `m`]
+   |> Q.GENL [`m`, `next`, `instr`, `less`, `avoid`, `c`, `p`, `q`]
    )
 
 (* ------------------------------------------------------------------------ *)

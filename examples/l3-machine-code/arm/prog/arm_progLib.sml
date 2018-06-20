@@ -72,12 +72,18 @@ val fp_id =
    utilsLib.mk_state_id_thm armTheory.FP_component_equality
       [["REG"], ["FPSCR"]]
 
+val PSR_components =
+  ["N", "Z", "C", "V", "Q", "J", "T", "E", "A", "I", "F", "M", "IT", "GE",
+   "psr'rst"]
+
+val FPSCR_components =
+  ["N", "Z", "C", "V", "AHP", "DN", "DZC", "DZE", "FZ", "IDC", "IDE", "IOC",
+   "IOE", "IXC", "IXE", "OFC", "OFE", "QC", "RMode", "UFC", "UFE", "fpscr'rst"]
+
 val arm_frame =
    stateLib.update_frame_state_thm arm_proj_def
-     (List.map (fn s => "CPSR." ^ s)
-         ["N", "Z", "C", "V", "Q", "A", "I", "F", "J", "T", "E", "M", "GE",
-          "IT", "psr'rst"] @
-      List.map (fn s => "FP.FPSCR." ^ s) ["N", "Z", "C", "V"] @
+     (List.map (fn s => "CPSR." ^ s) PSR_components @
+      List.map (fn s => "FP.FPSCR." ^ s) FPSCR_components @
       ["REG", "MEM", "FP.REG"])
 
 val arm_frame_hidden =
@@ -207,11 +213,12 @@ local
       case fst (Term.dest_const (boolSyntax.rator tm)) of
          "cond" => 0
        | "arm_exception" => 1
-       | "arm_CPSR_A" => 2
-       | "arm_CPSR_I" => 3
-       | "arm_CPSR_F" => 4
-       | "arm_CPSR_psr'rst" => 5
-       | "arm_CPSR_IT" => 6
+       | "arm_VFPExtension" => 2
+       | "arm_CPSR_A" => 3
+       | "arm_CPSR_I" => 4
+       | "arm_CPSR_F" => 5
+       | "arm_CPSR_psr'rst" => 6
+       | "arm_CPSR_IT" => 7
        | "arm_CPSR_J" => 10
        | "arm_CPSR_E" => 11
        | "arm_CPSR_T" => 12
@@ -226,8 +233,27 @@ local
        | "arm_FP_FPSCR_Z" => 21
        | "arm_FP_FPSCR_C" => 22
        | "arm_FP_FPSCR_V" => 23
+       | "arm_FP_FPSCR_AHP" => 24
+       | "arm_FP_FPSCR_DN" => 25
+       | "arm_FP_FPSCR_DZC" => 26
+       | "arm_FP_FPSCR_DZE" => 27
+       | "arm_FP_FPSCR_FZ" => 28
+       | "arm_FP_FPSCR_IDC" => 29
+       | "arm_FP_FPSCR_IDE" => 30
+       | "arm_FP_FPSCR_IOC" => 31
+       | "arm_FP_FPSCR_IOE" => 32
+       | "arm_FP_FPSCR_IXC" => 33
+       | "arm_FP_FPSCR_IXE" => 34
+       | "arm_FP_FPSCR_OFC" => 35
+       | "arm_FP_FPSCR_OFE" => 36
+       | "arm_FP_FPSCR_QC" => 37
+       | "arm_FP_FPSCR_RMode" => 38
+       | "arm_FP_FPSCR_UFC" => 39
+       | "arm_FP_FPSCR_UFE" => 40
+       | "arm_FP_FPSCR_fpscr'rst" => 41
        | _ => ~1
-   val int_of_v2w = bitstringSyntax.int_of_term o fst o bitstringSyntax.dest_v2w
+   val int_of_v2w =
+     Arbnum.toInt o bitstringSyntax.num_of_term o fst o bitstringSyntax.dest_v2w
    val total_dest_lit = Lib.total wordsSyntax.dest_word_literal
    fun word_compare (w1, w2) =
       case (total_dest_lit w1, total_dest_lit w2) of
@@ -271,32 +297,16 @@ end
 
 local
    val st = Term.mk_var ("s", ``:arm_state``)
+   fun mk_rec (t, c) = List.map (fn s => ("arm$" ^ t ^ "_" ^ s ^ "_fupd",
+                                          "arm_" ^ c ^ "_" ^ s))
    val cpsr_footprint =
       stateLib.write_footprint arm_1 arm_2 []
-        [("arm$PSR_N_fupd", "arm_CPSR_N"),
-         ("arm$PSR_Z_fupd", "arm_CPSR_Z"),
-         ("arm$PSR_C_fupd", "arm_CPSR_C"),
-         ("arm$PSR_V_fupd", "arm_CPSR_V"),
-         ("arm$PSR_Q_fupd", "arm_CPSR_Q"),
-         ("arm$PSR_J_fupd", "arm_CPSR_J"),
-         ("arm$PSR_T_fupd", "arm_CPSR_T"),
-         ("arm$PSR_E_fupd", "arm_CPSR_E"),
-         ("arm$PSR_A_fupd", "arm_CPSR_A"),
-         ("arm$PSR_I_fupd", "arm_CPSR_I"),
-         ("arm$PSR_F_fupd", "arm_CPSR_F"),
-         ("arm$PSR_M_fupd", "arm_CPSR_M"),
-         ("arm$PSR_IT_fupd", "arm_CPSR_IT"),
-         ("arm$PSR_GE_fupd", "arm_CPSR_GE"),
-         ("arm$PSR_psr'rst_fupd", "arm_CPSR_psr'rst")
-         ] [] []
+        (mk_rec ("PSR", "CPSR") PSR_components) [] []
         (fn (s, l) => s = "arm$arm_state_CPSR" andalso l = [st])
    val fpscr_footprint =
       stateLib.write_footprint arm_1 arm_2 []
-        [("arm$FPSCR_N_fupd", "arm_FP_FPSCR_N"),
-         ("arm$FPSCR_Z_fupd", "arm_FP_FPSCR_Z"),
-         ("arm$FPSCR_C_fupd", "arm_FP_FPSCR_C"),
-         ("arm$FPSCR_V_fupd", "arm_FP_FPSCR_V")] [] []
-        (fn _ => true)
+        (mk_rec ("FPSCR", "FP_FPSCR") FPSCR_components) [] []
+        (fn (s, l) => s = "arm$FP_FPSCR")
    val fp_footprint =
       stateLib.write_footprint arm_1 arm_2
         [("arm$FP_REG_fupd", "arm_FP_REG", ``^st.FP.REG``)] [] []
@@ -347,7 +357,14 @@ in
 end
 
 local
-   val dest_reg = dest_arm_FP_REG
+   fun dest_reg tm =
+     let
+       val x as (r, _) = dest_arm_FP_REG tm
+     in
+       not (wordsSyntax.is_word_add r orelse wordsSyntax.is_word_div r) orelse
+       raise ERR "dest_reg" ""
+     ; x
+     end
    val reg_width = 5
    val proj_reg = NONE
    val reg_conv = REG_CONV
@@ -368,37 +385,42 @@ fun combinations thm_t =
 (* ------------------------------------------------------------------------ *)
 
 local
-   val arm_rename1 =
+   val arm_rmap =
       Lib.total
-        (fn "arm_prog$arm_CPSR_N" => "n"
-          | "arm_prog$arm_CPSR_Z" => "z"
-          | "arm_prog$arm_CPSR_C" => "c"
-          | "arm_prog$arm_CPSR_V" => "v"
-          | "arm_prog$arm_CPSR_Q" => "q"
-          | "arm_prog$arm_CPSR_A" => "a"
-          | "arm_prog$arm_CPSR_F" => "f"
-          | "arm_prog$arm_CPSR_I" => "i"
-          | "arm_prog$arm_CPSR_GE" => "ge"
-          | "arm_prog$arm_CPSR_IT" => "it"
-          | "arm_prog$arm_CPSR_M" => "mode"
-          | "arm_prog$arm_CPSR_psr'rst" => "psr_other"
-          | "arm_prog$arm_FP_FPSCR_N" => "fp_n"
-          | "arm_prog$arm_FP_FPSCR_Z" => "fp_z"
-          | "arm_prog$arm_FP_FPSCR_C" => "fp_c"
-          | "arm_prog$arm_FP_FPSCR_V" => "fp_v"
-          | "arm_prog$arm_FP_FPSCR_RMode" => "rmode"
-          | "arm_prog$arm_CP15" => "cp15"
-          | _ => fail())
-   val arm_rename2 =
-      Lib.total
-        (fn "arm_prog$arm_FP_REG" =>
-              Lib.curry (op ^) "d" o Int.toString o wordsSyntax.uint_of_word
+        (fn "arm_prog$arm_CPSR_N" => K "n"
+          | "arm_prog$arm_CPSR_Z" => K "z"
+          | "arm_prog$arm_CPSR_C" => K "c"
+          | "arm_prog$arm_CPSR_V" => K "v"
+          | "arm_prog$arm_CPSR_Q" => K "q"
+          | "arm_prog$arm_CPSR_A" => K "a"
+          | "arm_prog$arm_CPSR_F" => K "f"
+          | "arm_prog$arm_CPSR_I" => K "i"
+          | "arm_prog$arm_CPSR_GE" => K "ge"
+          | "arm_prog$arm_CPSR_IT" => K "it"
+          | "arm_prog$arm_CPSR_M" => K "mode"
+          | "arm_prog$arm_CPSR_psr'rst" => K "psr_other"
+          | "arm_prog$arm_SPSR_abt" => K "spsr_abt"
+          | "arm_prog$arm_SPSR_fiq" => K "spsr_fiq"
+          | "arm_prog$arm_SPSR_hyp" => K "spsr_hyp"
+          | "arm_prog$arm_SPSR_irq" => K "spsr_irq"
+          | "arm_prog$arm_SPSR_mon" => K "spsr_mon"
+          | "arm_prog$arm_SPSR_svc" => K "spsr_svc"
+          | "arm_prog$arm_SPSR_und" => K "spsr_und"
+          | "arm_prog$arm_FP_FPSCR_N" => K "fp_n"
+          | "arm_prog$arm_FP_FPSCR_Z" => K "fp_z"
+          | "arm_prog$arm_FP_FPSCR_C" => K "fp_c"
+          | "arm_prog$arm_FP_FPSCR_V" => K "fp_v"
+          | "arm_prog$arm_FP_FPSCR_RMode" => K "rmode"
+          | "arm_prog$arm_CP15" => K "cp15"
+          | "arm_prog$arm_FP_REG" =>
+              Lib.curry (op ^) "d" o Int.toString o wordsSyntax.uint_of_word o
+              List.hd
           | "arm_prog$arm_REG" =>
-              Lib.curry (op ^) "r" o Int.toString o reg_index
+              Lib.curry (op ^) "r" o Int.toString o reg_index o List.hd
           | "arm_prog$arm_MEM" => K "b"
           | _ => fail())
 in
-   val arm_rename = stateLib.rename_vars (arm_rename1, arm_rename2, ["b"])
+   val arm_rename = stateLib.rename_vars (arm_rmap, ["b"])
 end
 
 local
@@ -433,8 +455,11 @@ local
       Lib.tryfind (fn thm => MATCH_MP thm th)
          [arm_PC_INTRO, arm_TEMPORAL_PC_INTRO,
           arm_PC_INTRO0, arm_TEMPORAL_PC_INTRO0]
-   val cnv = REWRITE_CONV [alignmentTheory.aligned_numeric,
-                           arm_progTheory.Aligned_Branch]
+   val aligned_cond_rand =
+     utilsLib.mk_cond_rand_thms [``aligned n : 'a word -> bool``]
+   val cnv = REWRITE_CONV [alignmentTheory.aligned_numeric, aligned_cond_rand,
+                           arm_progTheory.Aligned_Branch,
+                           alignmentTheory.aligned_align]
    val arm_PC_bump_intro =
       SPEC_IMP_RULE o
       Conv.CONV_RULE (Conv.LAND_CONV cnv) o
@@ -481,7 +506,7 @@ in
       Conv.CONV_RULE
          (stateLib.PRE_COND_CONV
             (SIMP_CONV (bool_ss++boolSimps.CONJ_ss)
-                [alignmentTheory.aligned_numeric])) o
+                [aligned_cond_rand, alignmentTheory.aligned_numeric])) o
       concat_bytes_rule o
       stateLib.pick_endian_rule
         (is_big_end, be_word_memory_introduction, le_word_memory_introduction)
@@ -544,9 +569,7 @@ local
       if tm = boolSyntax.F then raise FalseTerm else Conv.ALL_CONV tm
    val WGROUND_RW_CONV =
       Conv.DEPTH_CONV (utilsLib.cache 10 Term.compare bitstringLib.v2w_n2w_CONV)
-      THENC utilsLib.WALPHA_CONV
       THENC utilsLib.WGROUND_CONV
-      THENC utilsLib.WALPHA_CONV
    val cnv =
       REG_CONV
       THENC check_unique_reg_CONV
@@ -582,7 +605,8 @@ in
    fun stm_wb_thms base thm =
       let
         val (x3, x4, x5, x6) =
-           utilsLib.padLeft false 4 (bitstringSyntax.int_to_bitlist base)
+           utilsLib.padLeft false 4
+                (bitstringSyntax.num_to_bitlist (Arbnum.fromInt base))
            |> List.map bitstringSyntax.mk_b
            |> Lib.quadruple_of_list
       in
@@ -599,10 +623,10 @@ type opt = {gpr_map: bool, fpr_map: bool, mem: memory, temporal: bool}
 local
    val gpr_map_options =
       [["map-gpr", "gpr-map", "reg-map", "map-reg"],
-       ["no-gpr-map", "no-map-gpr"]]
+       ["no-map-gpr", "no-gpr-map"]]
    val fpr_map_options =
       [["map-fpr", "fpr-map"],
-       ["no-fpr-map", "no-map-fpr"]]
+       ["no-map-fpr", "no-fpr-map"]]
    val mem_options =
       [["map-mem", "mem-map", "mapped"],
        ["map-mem32", "mem-map32", "mapped32"],
@@ -618,6 +642,7 @@ local
        | 2 => Array
        | 3 => Flat
        | _ => raise ERR "process_rule_options" ""
+   val print_options = utilsLib.print_options (SOME 34)
 in
    fun basic_opt () =
       {gpr_map = false, fpr_map = false, mem = Flat,
@@ -675,14 +700,20 @@ in
                   fpr_map = fpr_map,
                   mem = mem,
                   temporal = temporal}: opt
-         else raise ERR "process_options"
+         else ( print_options "GP Register view" gpr_map_options
+              ; print_options "FP register view" fpr_map_options
+              ; print_options "Memory view" mem_options
+              ; print_options "Temproal triple" temporal_options
+              ; raise ERR "process_options"
                     ("Unrecognized option" ^
                      (if List.length l > 1 then "s" else "") ^
                      ": " ^ String.concat (commafy l))
+              )
       end
 end
 
 local
+   val initial_config = "vfp"
    fun thm_eq thm1 thm2 = Term.aconv (Thm.concl thm1) (Thm.concl thm2)
    val mk_thm_set = Lib.op_mk_set thm_eq
    val component_11 =
@@ -695,9 +726,10 @@ local
    val EXTRA_TAC =
       RULE_ASSUM_TAC (REWRITE_RULE [sym_R_x_pc, arm_stepTheory.R_x_pc])
       THEN ASM_REWRITE_TAC [boolTheory.DE_MORGAN_THM]
-   val arm_rwts = tl (utilsLib.datatype_rewrites true "arm"
-                        ["arm_state", "PSR", "FP", "FPSCR"])
-   val STATE_TAC = ASM_REWRITE_TAC arm_rwts
+   fun f l = tl (utilsLib.datatype_rewrites true "arm" l)
+   val arm_rwts = f ["arm_state", "PSR", "FP"]
+   val arm_rwts2 = f ["FPSCR"]
+   val STATE_TAC = ASM_REWRITE_TAC arm_rwts THEN ASM_REWRITE_TAC arm_rwts2
    val basic_spec =
       stateLib.spec
            arm_progTheory.ARM_IMP_SPEC arm_progTheory.ARM_IMP_TEMPORAL
@@ -724,40 +756,36 @@ local
       List.last o pred_setSyntax.strip_set o
       temporal_stateSyntax.dest_code' o
       Thm.concl
-   val rev_endian = ref (Lib.I : term list -> term list)
-   val is_be_tm = Term.aconv ``s.CPSR.E``
-   fun set_endian opt =
-      let
-         val l = arm_configLib.mk_config_terms opt
-      in
-         if List.exists is_be_tm l
-            then rev_endian := utilsLib.rev_endian
-         else rev_endian := Lib.I
-      end
    val (reset_db, set_current_opt, get_current_opt, add1_pending, find_spec,
         list_db) =
       spec_databaseLib.mk_spec_database basic_opt default_opt proj_opt
          closeness convert_opt_rule get_opcode (arm_intro o basic_spec)
-   val current_config = ref "vfp"
+   val current_config = ref (arm_configLib.mk_config_terms initial_config)
    val newline = ref "\n"
-   val the_step = ref (arm_stepLib.arm_step (!current_config))
+   val the_step = ref (arm_stepLib.arm_step initial_config)
    val spec_label_set = ref (Redblackset.empty String.compare)
    fun reset_specs () =
       (reset_db (); spec_label_set := Redblackset.empty String.compare)
+   val rev_endian = ref (Lib.I : term list -> term list)
+   val is_be_tm = Term.aconv ``s.CPSR.E``
+   fun set_endian () =
+      if List.exists is_be_tm (!current_config)
+         then rev_endian := utilsLib.rev_endian
+      else rev_endian := Lib.I
    fun configure config options =
       let
          val opt = process_rule_options options
+         val cfg = arm_configLib.mk_config_terms config
       in
-         if arm_configLib.mk_config_terms (!current_config) =
-            arm_configLib.mk_config_terms config andalso
+         if !current_config = cfg andalso
             #temporal (get_current_opt ()) = #temporal opt
             then ()
          else ( reset_specs ()
-              ; set_endian config
               ; the_step := arm_stepLib.arm_step config
               )
          ; stateLib.set_temporal (#temporal opt)
-         ; current_config := config
+         ; current_config := cfg
+         ; set_endian ()
          ; set_current_opt opt
       end
    fun arm_spec_opt config opt =
@@ -786,7 +814,7 @@ local
                     ; thms_ts
                  end
       end
-   val the_spec = ref (arm_spec_opt (!current_config) "")
+   val the_spec = ref (arm_spec_opt initial_config "")
    fun spec_spec opc thm =
       let
          val thm_opc = get_opcode thm
@@ -943,12 +971,28 @@ set_trace "stateLib.spec" 1
   arm_spec "VMOV (double,reg)";
   arm_spec "VMOV (single,imm)";
   arm_spec "VMOV (double,imm)";
+  arm_spec "VMOV (single from arm)";
+  arm_spec "VMOV (single to arm)";
+  arm_spec "VMOV (double from arm)";
+  arm_spec "VMOV (double to arm)";
   arm_spec "VMRS (nzcv)";
   arm_spec "VMRS";
+  arm_spec "VMSR";
   arm_spec "VCMP (single,zero)";
   arm_spec "VCMP (double,zero)";
   arm_spec "VCMP (single)";
   arm_spec "VCMP (double)";
+
+  arm_spec "VCVT (single,double)";
+  arm_spec "VCVT (double,single,lo)";
+  arm_spec "VCVT (double,single,hi)";
+  arm_spec "VCVT (single,int)";
+  arm_spec "VCVT (double,int,lo)";
+  arm_spec "VCVT (double,int,hi)";
+  (* not yet supported
+  arm_spec "VCVT (int,single)";
+  arm_spec "VCVT (int,double)";
+  *)
 
   arm_spec "VADD (single)";
   arm_spec "VSUB (single)";
@@ -967,6 +1011,9 @@ set_trace "stateLib.spec" 1
   arm_spec "VSTR (single,+imm,pc)";
   arm_spec "VSTR (single,-imm,pc)"
 
+  arm_spec "VABS (double)";
+  arm_spec "VNEG (double)";
+  arm_spec "VSQRT (double)";
   arm_spec "VADD (double)";
   arm_spec "VSUB (double)";
   arm_spec "VMUL (double)";
@@ -1159,6 +1206,10 @@ val pos = ref 0;
 
 val () = List.app (fn s => (addInstructionClass s; Portable.inc pos))
                   (List.drop (l, !pos))
+
+val () =
+  List.app (fn s => (addInstructionClass s
+                     handle HOL_ERR _ => (fails := s::(!fails)))) l
 
 use "arm_tests.sml";
 val l = Lib.mk_set arm_tests

@@ -16,7 +16,7 @@ show_assums := true;
 
 open generalHelpersTheory finite_mapTheory relationTheory pred_setTheory
      sortingTheory listTheory rich_listTheory arithmeticTheory
-     operatorTheory optionTheory separationLogicTheory
+     combinTheory optionTheory separationLogicTheory
      vars_as_resourceTheory pairTheory;
 open stringTheory ConseqConv boolSimps treeTheory
      quantHeuristicsLib bagTheory containerTheory
@@ -61,7 +61,7 @@ SIMP_TAC list_ss []);
 val INFINITE_UNIV_HOLFOOT_TAG = store_thm ("INFINITE_UNIV_HOLFOOT_TAG",
     ``INFINITE (UNIV:holfoot_tag set)``,
 
-`UNIV:holfoot_tag set = IMAGE (holfoot_tag) UNIV` by ALL_TAC THEN1 (
+`UNIV:holfoot_tag set = IMAGE (holfoot_tag) UNIV` by (
       SIMP_TAC std_ss [EXTENSION, IN_UNIV, IN_IMAGE] THEN
       Cases_on `x` THEN
       PROVE_TAC[]
@@ -73,7 +73,7 @@ METIS_TAC[IMAGE_11_INFINITE, INFINITE_UNIV_STRING, holfoot_tag_11]);
 val INFINITE_UNIV_HOLFOOT_VAR = store_thm ("INFINITE_UNIV_HOLFOOT_VAR",
     ``INFINITE (UNIV:holfoot_var set)``,
 
-`UNIV:holfoot_var set = IMAGE (holfoot_var) UNIV` by ALL_TAC THEN1 (
+`UNIV:holfoot_var set = IMAGE (holfoot_var) UNIV` by (
       SIMP_TAC std_ss [EXTENSION, IN_UNIV, IN_IMAGE] THEN
       Cases_on `x` THEN
       PROVE_TAC[]
@@ -359,7 +359,7 @@ REPEAT STRIP_TAC THEN
 Q.EXISTS_TAC `c` THEN
 FULL_SIMP_TAC std_ss [] THEN
 
-Tactical.REVERSE (`e (FST s) = e (FST s2)` by ALL_TAC) THEN1 ASM_REWRITE_TAC[] THEN
+`e (FST s) = e (FST s2)` suffices_by ASM_REWRITE_TAC[] THEN
 MATCH_MP_TAC VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET___EXP_EQ THEN
 FULL_SIMP_TAC std_ss [VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET___REWRITE,
    GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM] THEN
@@ -438,7 +438,7 @@ SIMP_TAC std_ss [holfoot_implies_in_heap_or_null_def,
    holfoot_separation_combinator_def] THEN
 REPEAT STRIP_TAC THEN
 `?st h. s = (st, h)` by (Cases_on `s` THEN SIMP_TAC std_ss []) THEN
-REPEAT (Q.PAT_ASSUM `!st st2 h1 h2. X`
+REPEAT (Q.PAT_X_ASSUM `!st st2 h1 h2. X`
     (MP_TAC o Q.SPEC `h` o CONV_RULE SWAP_FORALL_CONV o Q.SPEC `st`)) THEN
 FULL_SIMP_TAC std_ss [] THEN
 FULL_SIMP_TAC std_ss [
@@ -448,11 +448,11 @@ FULL_SIMP_TAC std_ss [
 REPEAT STRIP_TAC THEN
 `?st1 st2 h1 h2. (p' = (st1, h1)) /\ (q' = (st2, h2))` by
   (Cases_on `p'` THEN Cases_on `q'` THEN SIMP_TAC std_ss []) THEN
-Q.PAT_ASSUM `!st2 h2. X` (MP_TAC o Q.SPECL [`st2`, `h2`]) THEN
-Q.PAT_ASSUM `!st2 h2. X` (MP_TAC o Q.SPECL [`st1`, `h1`]) THEN
+Q.PAT_X_ASSUM `!st2 h2. X` (MP_TAC o Q.SPECL [`st2`, `h2`]) THEN
+Q.PAT_X_ASSUM `!st2 h2. X` (MP_TAC o Q.SPECL [`st1`, `h1`]) THEN
 
 `VAR_RES_STACK_IS_SUBSTATE st1 st /\
- VAR_RES_STACK_IS_SUBSTATE st2 st` by ALL_TAC THEN1 (
+ VAR_RES_STACK_IS_SUBSTATE st2 st` by (
    FULL_SIMP_TAC std_ss [] THEN
    METIS_TAC [VAR_RES_STACK_IS_SUBSTATE_INTRO,
       VAR_RES_STACK_IS_SUBSTATE___TRANS]
@@ -518,16 +518,16 @@ SIMP_TAC std_ss [holfoot_implies_in_heap_or_null_def,
    BAG_UNION_INSERT, BAG_UNION_EMPTY] THEN
 REPEAT STRIP_TAC THEN
 `VAR_RES_IS_STACK_IMPRECISE___USED_VARS (SET_OF_BAG (wpb + rpb))
-       ((var_res_prop_equal DISJOINT_FMAP_UNION e (var_res_exp_const 0)):holfoot_a_proposition)` by ALL_TAC THEN1 (
+       ((var_res_prop_equal DISJOINT_FMAP_UNION e (var_res_exp_const 0)):holfoot_a_proposition)` by (
       MATCH_MP_TAC VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_prop_equal THEN
       ASM_SIMP_TAC std_ss [VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET_def,
          VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___var_res_exp_const,
          EMPTY_SUBSET]
 ) THEN
-Tactical.REVERSE (`!s.
+`!s.
     (var_res_prop___COND DISJOINT_FMAP_UNION (wpb,rpb) (b1 + b2 + b) /\
      s IN var_res_prop___PROP DISJOINT_FMAP_UNION (wpb,rpb) (b1 + b2 + b)) ==>
-        (e (FST s) = SOME 0)` by ALL_TAC) THEN1 (
+        (e (FST s) = SOME 0)` suffices_by (STRIP_TAC THEN
 
    ASM_SIMP_TAC std_ss [var_res_prop___REWRITE,
        var_res_prop___COND_INSERT, var_res_prop___PROP_INSERT] THEN
@@ -541,18 +541,18 @@ Tactical.REVERSE (`!s.
 ) THEN
 
 REPEAT STRIP_TAC THEN
-`s IN var_res_bigstar DISJOINT_FMAP_UNION (b1 + b2 + b)` by ALL_TAC THEN1 (
+`s IN var_res_bigstar DISJOINT_FMAP_UNION (b1 + b2 + b)` by (
    FULL_SIMP_TAC std_ss [var_res_prop___PROP___REWRITE,
      IS_SEPARATION_COMBINATOR___FINITE_MAP, IN_ABS]
 ) THEN
 
 `?st h. s = (st, h)` by (Cases_on `s` THEN SIMP_TAC std_ss []) THEN
-Q.PAT_ASSUM `s IN var_res_prop___PROP f X Z` MP_TAC THEN
+Q.PAT_X_ASSUM `s IN var_res_prop___PROP f X Z` MP_TAC THEN
 FULL_SIMP_TAC std_ss [var_res_prop___COND_UNION,
    var_res_prop___PROP_UNION, IN_ABS] THEN
 REPEAT STRIP_TAC THEN
-Q.PAT_ASSUM `!st st2 h1 h2. X` (MP_TAC o Q.SPECL [`st`, `st`, `h`, `s2'`]) THEN
-Q.PAT_ASSUM `!st st2 h1 h2. X` (MP_TAC o Q.SPECL [`st`, `st`, `h`, `s1'`]) THEN
+Q.PAT_X_ASSUM `!st st2 h1 h2. X` (MP_TAC o Q.SPECL [`st`, `st`, `h`, `s2'`]) THEN
+Q.PAT_X_ASSUM `!st st2 h1 h2. X` (MP_TAC o Q.SPECL [`st`, `st`, `h`, `s1'`]) THEN
 ASM_SIMP_TAC std_ss [VAR_RES_STACK_IS_SUBSTATE___REFL] THEN
 FULL_SIMP_TAC std_ss [var_res_prop___PROP___REWRITE, IS_SEPARATION_COMBINATOR___FINITE_MAP,
    IN_ABS] THEN
@@ -582,7 +582,7 @@ SIMP_TAC std_ss [holfoot_implies_in_heap_pred_def,
 REPEAT GEN_TAC THEN
 Q.HO_MATCH_ABBREV_TAC `((!st st2 h1 h2. PP1 st st2 h1 h2 ==> Q st h1 h2) \/ (!st st2 h1 h2. PP2 st st2 h1 h2 ==> Q st h1 h2)) ==>
                         (!st st2 h1 h2. PP st st2 h1 h2 ==> Q st h1 h2)` THEN
-Tactical.REVERSE (`!st st2 h1 h2. PP st st2 h1 h2 ==> PP1 st st2 h1 h2 /\  PP2 st st2 h1 h2` by ALL_TAC) THEN1 (
+`!st st2 h1 h2. PP st st2 h1 h2 ==> PP1 st st2 h1 h2 /\  PP2 st st2 h1 h2` suffices_by (STRIP_TAC THEN
    METIS_TAC[]
 ) THEN
 UNABBREV_ALL_TAC THEN
@@ -696,11 +696,11 @@ SIMP_TAC (std_ss++CONJ_ss) [holfoot_implies_in_heap_pred_def,
    IS_SEPARATION_COMBINATOR___FINITE_MAP] THEN
 REPEAT GEN_TAC THEN STRIP_TAC THEN
 REPEAT GEN_TAC THEN STRIP_TAC THEN
-Q.PAT_ASSUM `!st st2 h1 h2. X` (MP_TAC o Q.SPECL [
+Q.PAT_X_ASSUM `!st st2 h1 h2. X` (MP_TAC o Q.SPECL [
    `st`,  `FST (p':holfoot_state)`,
    `h1`, `SND (p':holfoot_state)`]) THEN
 `(VAR_RES_STACK_IS_SUBSTATE (FST p') st) /\
-   FDOM (SND p') SUBSET FDOM h2` by ALL_TAC THEN1 (
+   FDOM (SND p') SUBSET FDOM h2` by (
    FULL_SIMP_TAC std_ss [SOME___holfoot_separation_combinator,
       FDOM_FUNION, SUBSET_UNION, GSYM holfoot_separation_combinator_def] THEN
    METIS_TAC[VAR_RES_STACK_IS_SUBSTATE___TRANS, VAR_RES_STACK_IS_SUBSTATE_INTRO]
@@ -761,7 +761,7 @@ FULL_SIMP_TAC std_ss [asl_star_def, IN_ABS,
    COND_NONE_SOME_REWRITES] THEN
 `?st' h'. p' = (st', h')` by (Cases_on `p'` THEN SIMP_TAC std_ss []) THEN
 FULL_SIMP_TAC std_ss [] THEN RES_TAC THEN
-`e st = e st'` by ALL_TAC THEN1 (
+`e st = e st'` by (
    MATCH_MP_TAC
       IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___SUBSTATE_RIGHT THEN
    ASM_SIMP_TAC std_ss [] THEN
@@ -769,7 +769,7 @@ FULL_SIMP_TAC std_ss [] THEN RES_TAC THEN
       VAR_RES_STACK_IS_SUBSTATE___TRANS]
 ) THEN
 FULL_SIMP_TAC std_ss [IN_UNION, FDOM_FUNION] THEN
-Q.PAT_ASSUM `!s1 s2 x. X` MATCH_MP_TAC THEN
+Q.PAT_X_ASSUM `!s1 s2 x. X` MATCH_MP_TAC THEN
 Q.EXISTS_TAC `FDOM h'` THEN
 ASM_SIMP_TAC std_ss [SUBSET_UNION]);
 
@@ -895,22 +895,22 @@ FULL_SIMP_TAC std_ss [] THEN
 
 `!e:holfoot_a_expression. (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET vs e /\
       IS_SOME (e (FST s2))) ==>
-     (e (FST s2) = e (FST s))` by ALL_TAC THEN1 (
+     (e (FST s2) = e (FST s))` by (
    FULL_SIMP_TAC std_ss [VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET___REWRITE,
       VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_REL___REWRITE] THEN
    REPEAT STRIP_TAC THEN
    `vs'' SUBSET FDOM (FST s2)` by METIS_TAC[] THEN
-   `vs'' SUBSET FDOM (FST s)` by ALL_TAC THEN1 (
-      Q.PAT_ASSUM `FDOM (FST s2) INTER X SUBSET Y` MP_TAC THEN
+   `vs'' SUBSET FDOM (FST s)` by (
+      Q.PAT_X_ASSUM `FDOM (FST s2) INTER X SUBSET Y` MP_TAC THEN
       FULL_SIMP_TAC std_ss [SUBSET_DEF, IN_INTER]
    ) THEN
-   Q.PAT_ASSUM `!st1 st2. X st1 st2` MATCH_MP_TAC THEN
+   Q.PAT_X_ASSUM `!st1 st2. X st1 st2` MATCH_MP_TAC THEN
    FULL_SIMP_TAC std_ss [SUBSET_DEF]
 ) THEN
 
 RES_TAC THEN
 FULL_SIMP_TAC std_ss [] THEN
-REPEAT (Q.PAT_ASSUM `FEVERY X L` MP_TAC) THEN
+REPEAT (Q.PAT_X_ASSUM `FEVERY X L` MP_TAC) THEN
 Q.SPEC_TAC (`L`, `L`) THEN
 
 HO_MATCH_MP_TAC fmap_INDUCT THEN
@@ -1084,7 +1084,7 @@ SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [VAR_RES_FRAME_SPLIT___REWRITE_OK_def,
    VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_bool_proposition] THEN
 REPEAT STRIP_TAC THEN
 `FEVERY (\x. VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET
-   (SET_OF_BAG (wpb + rpb)) (SND x)) L'` by ALL_TAC THEN1 (
+   (SET_OF_BAG (wpb + rpb)) (SND x)) L'` by (
    FULL_SIMP_TAC std_ss [FEVERY_DEF] THEN
    METIS_TAC[]
 ) THEN
@@ -1093,13 +1093,13 @@ REPEAT STRIP_TAC THEN
    VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET
    (SET_OF_BAG (wpb + rpb)) (L ' t) /\
    VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET
-   (SET_OF_BAG (wpb + rpb)) (L' ' t)) l'` by ALL_TAC THEN1 (
+   (SET_OF_BAG (wpb + rpb)) (L' ' t)) l'` by (
    FULL_SIMP_TAC std_ss [FEVERY_DEF, EVERY_MEM] THEN
    METIS_TAC[]
 ) THEN
 
 `VAR_RES_IS_STACK_IMPRECISE___USED_VARS (SET_OF_BAG (wpb + rpb))
-      (holfoot_ap_points_to e L')` by ALL_TAC THEN1 (
+      (holfoot_ap_points_to e L')` by (
    MATCH_MP_TAC VAR_RES_IS_STACK_IMPRECISE___USED_VARS___points_to THEN
    FULL_SIMP_TAC std_ss [FEVERY_DEF]
 ) THEN
@@ -1107,7 +1107,7 @@ Q.ABBREV_TAC `eq_pred =
   (asl_bigstar_list holfoot_separation_combinator
      ((MAP (\t. var_res_prop_equal DISJOINT_FMAP_UNION (L ' t) (L' ' t)) l')++
       [var_res_prop_stack_true DISJOINT_FMAP_UNION]))` THEN
-`VAR_RES_IS_STACK_IMPRECISE___USED_VARS (SET_OF_BAG (wpb + rpb)) eq_pred` by ALL_TAC THEN1 (
+`VAR_RES_IS_STACK_IMPRECISE___USED_VARS (SET_OF_BAG (wpb + rpb)) eq_pred` by (
    Q.UNABBREV_TAC `eq_pred` THEN
    REWRITE_TAC [holfoot_separation_combinator_def] THEN
    MATCH_MP_TAC (MP_CANON VAR_RES_IS_STACK_IMPRECISE___USED_VARS___asl_bigstar_list) THEN
@@ -1120,9 +1120,9 @@ Q.ABBREV_TAC `eq_pred =
 ) THEN
 ASM_REWRITE_TAC[] THEN
 `eq_pred = \x. (SND x = FEMPTY) /\ EVERY (\t. (IS_SOME ((L ' t) (FST x))) /\
-   IS_SOME ((L' ' t) (FST x)) /\ (THE ((L ' t) (FST x)) = (THE ((L' ' t) (FST x))))) l'` by ALL_TAC THEN1 (
+   IS_SOME ((L' ' t) (FST x)) /\ (THE ((L ' t) (FST x)) = (THE ((L' ' t) (FST x))))) l'` by (
    Q.UNABBREV_TAC `eq_pred` THEN
-   Q.PAT_ASSUM `EVERY X l'` MP_TAC THEN
+   Q.PAT_X_ASSUM `EVERY X l'` MP_TAC THEN
    REPEAT (POP_ASSUM (K ALL_TAC)) THEN
    SIMP_TAC (list_ss++EQUIV_EXTRACT_ss) [EXTENSION, EVERY_MEM, IN_ABS] THEN
    Induct_on `l'` THEN1 (
@@ -1138,7 +1138,7 @@ ASM_REWRITE_TAC[] THEN
    Q.MATCH_ABBREV_TAC `x IN asl_star holfoot_separation_combinator P1 P2 = XXX` THEN
    Q.UNABBREV_TAC `XXX` THEN
    Tactical.REVERSE (
-      `VAR_RES_IS_STACK_IMPRECISE P1 /\ VAR_RES_IS_STACK_IMPRECISE P2` by ALL_TAC) THEN1 (
+      sg `VAR_RES_IS_STACK_IMPRECISE P1 /\ VAR_RES_IS_STACK_IMPRECISE P2`) THEN1 (
       ASM_SIMP_TAC std_ss [holfoot_separation_combinator_def,
          asl_star___VAR_RES_IS_STACK_IMPRECISE] THEN
       Q.UNABBREV_TAC `P1` THEN
@@ -1160,7 +1160,7 @@ ASM_REWRITE_TAC[] THEN
       MEM_MAP, GSYM LEFT_FORALL_IMP_THM,
       VAR_RES_IS_STACK_IMPRECISE___var_res_prop_equal]
 ) THEN
-Q.PAT_ASSUM `var_res_prop___PROP f X Y s` MP_TAC THEN
+Q.PAT_X_ASSUM `var_res_prop___PROP f X Y s` MP_TAC THEN
 ASM_SIMP_TAC std_ss [var_res_prop___PROP_INSERT,
    var_res_prop___COND_UNION, var_res_prop___COND_INSERT,
    IN_ABS, DISJOINT_FMAP_UNION___FEMPTY,
@@ -1171,7 +1171,7 @@ REDEPTH_CONSEQ_CONV_TAC (K EXISTS_EQ___CONSEQ_CONV) THEN
 SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [] THEN
 REPEAT STRIP_TAC THEN
 
-Q.PAT_ASSUM `(FST s, s1) IN X` MP_TAC THEN
+Q.PAT_X_ASSUM `(FST s, s1) IN X` MP_TAC THEN
 
 ASM_SIMP_TAC std_ss [holfoot_ap_points_to_def,
    IN_ABS, LET_THM] THEN
@@ -1182,11 +1182,11 @@ Tactical.REVERSE (Cases_on `?ve. e (FST s) = SOME ve`) THEN1 (
 FULL_SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [] THEN
 
 REPEAT STRIP_TAC THEN
-`s1' = s1` by ALL_TAC THEN1 (
+`s1' = s1` by (
    ASM_SIMP_TAC std_ss [GSYM fmap_EQ_THM, IN_SING] THEN
    FULL_SIMP_TAC std_ss [DISJOINT_FMAP_UNION___REWRITE] THEN
    `(s1' ' ve = (FUNION s1' s2') ' ve) /\
-    (s1 ' ve = (FUNION s1 s2) ' ve)` by ALL_TAC THEN1 (
+    (s1 ' ve = (FUNION s1 s2) ' ve)` by (
       ASM_SIMP_TAC std_ss [FUNION_DEF, IN_SING]
    ) THEN
    ASM_REWRITE_TAC[]
@@ -1339,7 +1339,7 @@ SIMP_TAC std_ss [GSYM DISJ_IMP_THM, GSYM FORALL_AND_THM,
 REPEAT STRIP_TAC THEN
 SIMP_TAC std_ss [EXTENSION, asl_bool_EVAL, COND_RAND, COND_RATOR] THEN
 CCONTR_TAC THEN FULL_SIMP_TAC std_ss [] THEN
-Q.PAT_ASSUM `x IN X` MP_TAC THEN
+Q.PAT_X_ASSUM `x IN X` MP_TAC THEN
 MATCH_MP_TAC (prove (``(X = asl_false) ==> (x IN X ==> F)``,
                        SIMP_TAC std_ss [asl_false_def, NOT_IN_EMPTY])) THEN
 MATCH_MP_TAC asl_bigstar_list_false THEN
@@ -1351,7 +1351,7 @@ DISJ2_TAC THEN DISJ1_TAC THEN
 FULL_SIMP_TAC std_ss [EXISTS_MEM, MEM_EL] THEN (
    Q.EXISTS_TAC `n'` THEN ASM_REWRITE_TAC [] THEN
    MATCH_MP_TAC EQ_SYM THEN
-   Q.PAT_ASSUM `!tagL' startExp. X` MATCH_MP_TAC THEN
+   Q.PAT_X_ASSUM `!tagL' startExp. X` MATCH_MP_TAC THEN
    PROVE_TAC[]
 ));
 
@@ -1448,7 +1448,7 @@ VAR_RES_IS_STACK_IMPRECISE___USED_VARS vs
 REPEAT STRIP_TAC THEN
 `?dtagL t. data = (dtagL,t)` by (Cases_on `data` THEN SIMP_TAC std_ss []) THEN
 ASM_REWRITE_TAC[] THEN POP_ASSUM (K ALL_TAC) THEN
-Q.PAT_ASSUM `VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET vs X` MP_TAC THEN
+Q.PAT_X_ASSUM `VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET vs X` MP_TAC THEN
 Q.SPEC_TAC (`startExp`, `startExp`) THEN
 Q.SPEC_TAC (`t`, `t`) THEN
 HO_MATCH_MP_TAC tree_INDUCT THEN
@@ -1481,7 +1481,7 @@ REPEAT STRIP_TAC THENL [
          VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET___VAR_CONST_EVAL],
 
 
-   Q.PAT_ASSUM `EVERY X Y` MP_TAC THEN
+   Q.PAT_X_ASSUM `EVERY X Y` MP_TAC THEN
    ASM_SIMP_TAC std_ss [EVERY_MEM, MEM_EL, GSYM LEFT_FORALL_IMP_THM,
       GSYM LEFT_EXISTS_IMP_THM] THEN
    Q.EXISTS_TAC `n'` THEN
@@ -1648,7 +1648,7 @@ REPEAT STRIP_TAC THEN
 Tactical.REVERSE (Cases_on `ALL_DISTINCT (tagL ++ dtagL)`) THEN1 (
    ASM_SIMP_TAC std_ss [] THEN
    Cases_on `tagL` THEN1 FULL_SIMP_TAC list_ss [] THEN
-   `!l t'. holfoot_ap_data_tree (h::t) (var_res_exp_const l) (dtagL,t') = asl_false` by ALL_TAC THEN1 (
+   `!l t'. holfoot_ap_data_tree (h::t) (var_res_exp_const l) (dtagL,t') = asl_false` by (
       Cases_on `t'` THEN
       ASM_SIMP_TAC std_ss [holfoot_ap_data_tree_def, holfoot_ap_data_tree_seg_def,
         asl_exists_ELIM]
@@ -1662,7 +1662,7 @@ Tactical.REVERSE (Cases_on `ALL_DISTINCT (tagL ++ dtagL)`) THEN1 (
 Cases_on `NULL tagL` THEN1 (
    FULL_SIMP_TAC list_ss [NULL_EQ, LENGTH_NIL]
 ) THEN
-`~(NULL x') /\ ~(NULL l)` by ALL_TAC THEN1 (
+`~(NULL x') /\ ~(NULL l)` by (
    Cases_on `tagL` THEN
    FULL_SIMP_TAC list_ss [LENGTH_EQ_NUM]
 ) THEN
@@ -1677,7 +1677,7 @@ Q.MATCH_ABBREV_TAC `x IN asl_star holfoot_separation_combinator
 Q.ABBREV_TAC `treeP = asl_bigstar_list holfoot_separation_combinator treePL` THEN
 Q.ABBREV_TAC `unequalP = asl_bigstar_list holfoot_separation_combinator unequalPL` THEN
 
-`treePL' = treePL` by ALL_TAC THEN1 (
+`treePL' = treePL` by (
    MAP_EVERY Q.UNABBREV_TAC [`treePL`, `treePL'`] THEN
    SIMP_TAC std_ss [pairTheory.ELIM_UNCURRY]
 ) THEN
@@ -1686,7 +1686,7 @@ POP_ASSUM (K ALL_TAC) THEN Q.UNABBREV_TAC `treePL'` THEN
 REWRITE_TAC [holfoot_separation_combinator_def] THEN
 
 `EVERY VAR_RES_IS_STACK_IMPRECISE treePL /\
- EVERY VAR_RES_IS_STACK_IMPRECISE unequalPL` by ALL_TAC THEN1 (
+ EVERY VAR_RES_IS_STACK_IMPRECISE unequalPL` by (
    Q.UNABBREV_TAC `treePL` THEN
    Q.UNABBREV_TAC `unequalPL` THEN
    ASM_SIMP_TAC (std_ss++pairSimps.gen_beta_ss) [EVERY_MAP,
@@ -1696,7 +1696,7 @@ REWRITE_TAC [holfoot_separation_combinator_def] THEN
 ) THEN
 `VAR_RES_IS_STACK_IMPRECISE points_toP /\
  VAR_RES_IS_STACK_IMPRECISE treeP /\
- VAR_RES_IS_STACK_IMPRECISE unequalP` by ALL_TAC THEN1 (
+ VAR_RES_IS_STACK_IMPRECISE unequalP` by (
    Q.UNABBREV_TAC `points_toP` THEN
    Q.UNABBREV_TAC `treeP` THEN
    Q.UNABBREV_TAC `unequalP` THEN
@@ -1723,16 +1723,16 @@ Cases_on `e (FST x) = NONE` THEN1 (
    Q.UNABBREV_TAC `points_toP` THEN
    ASM_SIMP_TAC std_ss [holfoot_ap_points_to_def, IN_ABS, LET_THM]
 ) THEN
-`?ec. e (FST x) = SOME ec` by ALL_TAC THEN1 (
+`?ec. e (FST x) = SOME ec` by (
    Cases_on `e (FST x)` THEN FULL_SIMP_TAC std_ss []
 ) THEN
 `!h. (FST x, h) IN unequalP =
-     (h = FEMPTY) /\ EVERY (\x. ~(x = ec)) x'` by ALL_TAC THEN1 (
+     (h = FEMPTY) /\ EVERY (\x. ~(x = ec)) x'` by (
    Q.UNABBREV_TAC `unequalP` THEN
    Q.UNABBREV_TAC `unequalPL` THEN
-   Q.PAT_ASSUM `IS_SOME (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS e)` MP_TAC THEN
-   Q.PAT_ASSUM `e (FST x) = SOME ec` MP_TAC THEN
-   Q.PAT_ASSUM `~(NULL x')` MP_TAC THEN
+   Q.PAT_X_ASSUM `IS_SOME (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS e)` MP_TAC THEN
+   Q.PAT_X_ASSUM `e (FST x) = SOME ec` MP_TAC THEN
+   Q.PAT_X_ASSUM `~(NULL x')` MP_TAC THEN
    REPEAT (POP_ASSUM (K ALL_TAC)) THEN
    Induct_on `x'` THEN SIMP_TAC list_ss [asl_bigstar_list_REWRITE] THEN
    REPEAT STRIP_TAC THEN
@@ -1744,7 +1744,7 @@ Cases_on `e (FST x) = NONE` THEN1 (
    ) THEN
    Q.ABBREV_TAC `PP = asl_bigstar_list holfoot_separation_combinator
          (MAP (\l. var_res_prop_unequal DISJOINT_FMAP_UNION (var_res_exp_const l) e) (h''::t))` THEN
-   `VAR_RES_IS_STACK_IMPRECISE PP` by ALL_TAC THEN1 (
+   `VAR_RES_IS_STACK_IMPRECISE PP` by (
        Q.UNABBREV_TAC `PP` THEN
        REWRITE_TAC [holfoot_separation_combinator_def] THEN
        MATCH_MP_TAC (MP_CANON VAR_RES_IS_STACK_IMPRECISE___asl_bigstar_list) THEN
@@ -1767,16 +1767,16 @@ REDEPTH_CONSEQ_CONV_TAC (K EXISTS_EQ___CONSEQ_CONV) THEN
 SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [] THEN
 REPEAT STRIP_TAC THEN
 
-`(FDOM es1 = {ec}) /\ ~(ec = 0)` by ALL_TAC THEN1 (
-   Q.PAT_ASSUM `(FST x, es1) IN Y` MP_TAC THEN
+`(FDOM es1 = {ec}) /\ ~(ec = 0)` by (
+   Q.PAT_X_ASSUM `(FST x, es1) IN Y` MP_TAC THEN
    Q.UNABBREV_TAC `points_toP` THEN
    ASM_SIMP_TAC std_ss [holfoot_ap_points_to_def, IN_ABS, LET_THM]
 ) THEN
-`EVERY (\x. ~(x = 0) ==> (x IN FDOM es2)) x'` by ALL_TAC THEN1 (
-   Q.PAT_ASSUM `(FST x, es2) IN treeP` MP_TAC THEN
-   Q.PAT_ASSUM `EVERY X treePL` MP_TAC THEN
+`EVERY (\x. ~(x = 0) ==> (x IN FDOM es2)) x'` by (
+   Q.PAT_X_ASSUM `(FST x, es2) IN treeP` MP_TAC THEN
+   Q.PAT_X_ASSUM `EVERY X treePL` MP_TAC THEN
    `LENGTH l = LENGTH x'` by ASM_REWRITE_TAC[] THEN POP_ASSUM MP_TAC THEN
-   Q.PAT_ASSUM `~NULL x'` MP_TAC THEN
+   Q.PAT_X_ASSUM `~NULL x'` MP_TAC THEN
    Q.UNABBREV_TAC `treeP` THEN
    Q.UNABBREV_TAC `treePL` THEN
    REPEAT (POP_ASSUM (K ALL_TAC)) THEN
@@ -1794,19 +1794,19 @@ REPEAT STRIP_TAC THEN
       METIS_TAC[holfoot_ap_data_tree___implies_in_heap_or_null___SIMPLE_THM]
    ) THEN
    REPEAT GEN_TAC THEN
-   Q.PAT_ASSUM `!l. X l` (ASSUME_TAC o Q.SPEC `l'`) THEN
+   Q.PAT_X_ASSUM `!l. X l` (ASSUME_TAC o Q.SPEC `l'`) THEN
    REPEAT (GEN_TAC ORELSE DISCH_TAC) THEN
    FULL_SIMP_TAC list_ss [holfoot_separation_combinator_def] THEN
    Q.ABBREV_TAC `PP = asl_bigstar_list (VAR_RES_COMBINATOR DISJOINT_FMAP_UNION)
                (MAP (\ (l,t). holfoot_ap_data_tree tagL (var_res_exp_const l)
                     (dtagL,t)) (ZIP (h::t,l')))` THEN
-   `VAR_RES_IS_STACK_IMPRECISE PP` by ALL_TAC THEN1 (
+   `VAR_RES_IS_STACK_IMPRECISE PP` by (
       Q.UNABBREV_TAC `PP` THEN
       MATCH_MP_TAC (MP_CANON VAR_RES_IS_STACK_IMPRECISE___asl_bigstar_list) THEN
       FULL_SIMP_TAC list_ss [MEM_MAP, GSYM LEFT_FORALL_IMP_THM, MAP_EQ_NIL,
         EVERY_MEM, IS_SEPARATION_COMBINATOR___FINITE_MAP, LENGTH_EQ_NUM]
    ) THEN
-   Q.PAT_ASSUM `(FST x, h'') IN X` MP_TAC THEN
+   Q.PAT_X_ASSUM `(FST x, h'') IN X` MP_TAC THEN
    FULL_SIMP_TAC std_ss [asl_star___VAR_RES_IS_STACK_IMPRECISE, IN_ABS,
       GSYM LEFT_FORALL_IMP_THM, DISJOINT_FMAP_UNION___REWRITE, FDOM_FUNION,
       IN_UNION, EVERY_MEM] THEN
@@ -1845,12 +1845,12 @@ SIMP_TAC std_ss [asl_exists_list_def, IN_ABS, GSYM RIGHT_EXISTS_AND_THM,
    GSYM LEFT_EXISTS_AND_THM, asl_exists_def,
    asl_trivial_cond_def, COND_RAND, COND_RATOR, asl_bool_EVAL,
    asl_bigstar_list_REWRITE] THEN
-Tactical.REVERSE (`!l P. asl_bigstar_list holfoot_separation_combinator
+`!l P. asl_bigstar_list holfoot_separation_combinator
    (MAP (\l:num. asl_exists (x:num list tree). P l x) l) =
    asl_exists xL.
    asl_trivial_cond (LENGTH xL = LENGTH l)
       (asl_bigstar_list holfoot_separation_combinator
-          (MAP (\lx. P (FST lx) (SND lx)) (ZIP (l, xL))))` by ALL_TAC) THEN1 (
+          (MAP (\lx. P (FST lx) (SND lx)) (ZIP (l, xL))))` suffices_by (STRIP_TAC THEN
    FULL_SIMP_TAC std_ss [asl_exists_def,
       asl_trivial_cond_def, COND_RAND, COND_RATOR, asl_bool_EVAL] THEN
    SIMP_TAC std_ss [EXTENSION, IN_ABS, asl_star_def,
@@ -1875,7 +1875,7 @@ store_thm ("var_res_prop_varlist_update___holfoot_ap_data_tree",
    (holfoot_ap_data_tree tagL (var_res_exp_varlist_update vcL e) data))``,
 
 NTAC 3 GEN_TAC THEN
-`?dtagL data_tree. data = (dtagL, data_tree)` by ALL_TAC THEN1 (
+`?dtagL data_tree. data = (dtagL, data_tree)` by (
    Cases_on `data` THEN SIMP_TAC std_ss []
 ) THEN
 ASM_REWRITE_TAC[] THEN POP_ASSUM (K ALL_TAC) THEN
@@ -1896,7 +1896,7 @@ REPEAT CONJ_TAC THEN1 (
 REPEAT STRIP_TAC THEN
 `(LENGTH n = LENGTH dtagL) /\
  (LENGTH tL = LENGTH tagL) /\
-  ALL_DISTINCT (tagL ++ dtagL)` by ALL_TAC THEN1 (
+  ALL_DISTINCT (tagL ++ dtagL)` by (
     FULL_SIMP_TAC std_ss [holfoot_ap_data_tree___WELL_FORMED_DATA_def,
       TREE_EVERY_EXISTS_REWRITE, NARY_REWRITE]
 ) THEN
@@ -1913,7 +1913,7 @@ var_res_prop_varlist_update vcL
    (asl_bigstar_list holfoot_separation_combinator pL) =
 (asl_bigstar_list holfoot_separation_combinator pL')` THEN
 
-`pL <> [] /\ (!p. MEM p pL ==> VAR_RES_IS_STACK_IMPRECISE p)` by ALL_TAC THEN1 (
+`pL <> [] /\ (!p. MEM p pL ==> VAR_RES_IS_STACK_IMPRECISE p)` by (
    Q.UNABBREV_TAC `pL` THEN
    ASM_SIMP_TAC list_ss [MEM_MAP, DISJ_IMP_THM, FORALL_AND_THM,
       GSYM LEFT_FORALL_IMP_THM, MEM_ZIP] THEN
@@ -1934,13 +1934,13 @@ AP_TERM_TAC THEN
 
 Q.UNABBREV_TAC `pL` THEN Q.UNABBREV_TAC `pL'` THEN
 FULL_SIMP_TAC list_ss [MEM_MAP, DISJ_IMP_THM, GSYM LEFT_FORALL_IMP_THM,
-   FORALL_AND_THM, MAP_MAP_o, combinTheory.o_DEF, APPEND_11_LENGTH] THEN
+   FORALL_AND_THM, MAP_MAP_o, o_DEF, APPEND_11_LENGTH] THEN
 REPEAT STRIP_TAC THENL [
    ASM_SIMP_TAC std_ss [var_res_prop_varlist_update___holfoot_ap_points_to,
       o_f_LIST_TO_FMAP] THEN
    `LENGTH (tagL ++ dtagL) = LENGTH (lL ++ n)` by ASM_SIMP_TAC list_ss [] THEN
    ASM_SIMP_TAC arith_ss [GSYM MAP_APPEND, ZIP_MAP, MAP_MAP_o,
-      combinTheory.o_DEF, var_res_exp_varlist_update___const_EVAL],
+      o_DEF, var_res_exp_varlist_update___const_EVAL],
 
 
    MATCH_MP_TAC (prove (``!L f f'. (!l t. MEM (l,t) L ==> (f (l, t) = f' (l,t))) ==>
@@ -1948,15 +1948,15 @@ REPEAT STRIP_TAC THENL [
         Induct_on `L` THEN ASM_SIMP_TAC list_ss [DISJ_IMP_THM, FORALL_AND_THM, FORALL_PROD])) THEN
    FULL_SIMP_TAC std_ss [EVERY_MEM, GSYM holfoot_ap_data_tree_def] THEN
    REPEAT STRIP_TAC THEN
-   `MEM t tL` by ALL_TAC THEN1 (
-       Q.PAT_ASSUM `MEM (l,t) (ZIP (lL,tL))` MP_TAC THEN
+   `MEM t tL` by (
+       Q.PAT_X_ASSUM `MEM (l,t) (ZIP (lL,tL))` MP_TAC THEN
        ASM_SIMP_TAC list_ss [MEM_ZIP, GSYM LEFT_FORALL_IMP_THM, EL_IS_EL]
    ) THEN
-   `holfoot_ap_data_tree___WELL_FORMED_DATA tagL (dtagL,t)` by ALL_TAC THEN1 (
+   `holfoot_ap_data_tree___WELL_FORMED_DATA tagL (dtagL,t)` by (
       FULL_SIMP_TAC std_ss [holfoot_ap_data_tree___WELL_FORMED_DATA_def,
          NARY_REWRITE, EVERY_MEM, TREE_EVERY_EXISTS_REWRITE]
    ) THEN
-   Q.PAT_ASSUM `!data_tree. MEM data_tree tL ==> X` (MP_TAC o Q.SPEC `t`) THEN
+   Q.PAT_X_ASSUM `!data_tree. MEM data_tree tL ==> X` (MP_TAC o Q.SPEC `t`) THEN
    ASM_SIMP_TAC std_ss [IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___VAR_CONST_EVAL,
       var_res_exp_varlist_update___const_EVAL],
 
@@ -2074,14 +2074,14 @@ Q.MATCH_ABBREV_TAC `
    var_res_prop_implies_eq DISJOINT_FMAP_UNION (wpb,rpb) sfb1
       (BAG_INSERT (holfoot_ap_data_tree tagL e1 (dtagL,data)) sfb2)
       (BAG_INSERT PP sfb2)` THEN
-`IS_SOME (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS e1)` by ALL_TAC THEN1 (
+`IS_SOME (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS e1)` by (
    FULL_SIMP_TAC std_ss [VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET_def]
 ) THEN
 `VAR_RES_IS_STACK_IMPRECISE___USED_VARS (SET_OF_BAG (BAG_UNION wpb rpb))
-     (holfoot_ap_data_tree tagL e1 (dtagL,data))` by ALL_TAC THEN1 (
+     (holfoot_ap_data_tree tagL e1 (dtagL,data))` by (
    ASM_SIMP_TAC std_ss [VAR_RES_IS_STACK_IMPRECISE___USED_VARS___holfoot_ap_data_tree]
 ) THEN
-`VAR_RES_IS_STACK_IMPRECISE___USED_VARS (SET_OF_BAG (BAG_UNION wpb rpb)) PP` by ALL_TAC THEN1 (
+`VAR_RES_IS_STACK_IMPRECISE___USED_VARS (SET_OF_BAG (BAG_UNION wpb rpb)) PP` by (
    Q.UNABBREV_TAC `PP` THEN
    ASM_SIMP_TAC std_ss [asl_exists_list___ELIM, holfoot_separation_combinator_def] THEN
    CONSEQ_HO_REWRITE_TAC ([], [
@@ -2112,7 +2112,7 @@ Tactical.REVERSE EQ_TAC THEN1 (
    ASM_SIMP_TAC std_ss [holfoot_ap_data_tree___REWRITE, asl_bool_EVAL]
 ) THEN
 STRIP_TAC THEN
-`(x:holfoot_state) IN var_res_prop_weak_unequal e1 (var_res_exp_const 0)` by ALL_TAC THEN1 (
+`(x:holfoot_state) IN var_res_prop_weak_unequal e1 (var_res_exp_const 0)` by (
    MATCH_MP_TAC (ISPECL [``DISJOINT_FMAP_UNION:holfoot_heap bin_option_function``,
        ``e1:holfoot_a_expression``]
        var_res_implies_unequal___var_res_prop___PROP) THEN
@@ -2120,7 +2120,7 @@ STRIP_TAC THEN
       IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___VAR_CONST_EVAL] THEN
    METIS_TAC[]
 ) THEN
-REPEAT (Q.PAT_ASSUM `x IN XXX` MP_TAC) THEN
+REPEAT (Q.PAT_X_ASSUM `x IN XXX` MP_TAC) THEN
 ASM_SIMP_TAC std_ss [BAG_UNION_INSERT, var_res_prop_equal_unequal_EXPAND,
    IN_ABS, var_res_exp_const_def,
    var_res_prop___PROP_INSERT, var_res_prop___COND_UNION,
@@ -2157,14 +2157,14 @@ Q.MATCH_ABBREV_TAC `
    var_res_prop_implies_eq DISJOINT_FMAP_UNION (wpb,rpb) sfb1
       (BAG_INSERT (holfoot_ap_tree tagL e1) sfb2)
       (BAG_INSERT PP sfb2)` THEN
-`IS_SOME (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS e1)` by ALL_TAC THEN1 (
+`IS_SOME (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS e1)` by (
    FULL_SIMP_TAC std_ss [VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET_def]
 ) THEN
 `VAR_RES_IS_STACK_IMPRECISE___USED_VARS (SET_OF_BAG (BAG_UNION wpb rpb))
-     (holfoot_ap_tree tagL e1)` by ALL_TAC THEN1 (
+     (holfoot_ap_tree tagL e1)` by (
    ASM_SIMP_TAC std_ss [VAR_RES_IS_STACK_IMPRECISE___USED_VARS___holfoot_ap_tree]
 ) THEN
-`VAR_RES_IS_STACK_IMPRECISE___USED_VARS (SET_OF_BAG (BAG_UNION wpb rpb)) PP` by ALL_TAC THEN1 (
+`VAR_RES_IS_STACK_IMPRECISE___USED_VARS (SET_OF_BAG (BAG_UNION wpb rpb)) PP` by (
    Q.UNABBREV_TAC `PP` THEN
    ASM_SIMP_TAC std_ss [asl_exists_list___ELIM, holfoot_separation_combinator_def] THEN
    CONSEQ_HO_REWRITE_TAC ([], [
@@ -2195,7 +2195,7 @@ Tactical.REVERSE EQ_TAC THEN1 (
    ASM_SIMP_TAC std_ss [holfoot_ap_tree___REWRITE, asl_bool_EVAL]
 ) THEN
 STRIP_TAC THEN
-`(x:holfoot_state) IN var_res_prop_weak_unequal e1 (var_res_exp_const 0)` by ALL_TAC THEN1 (
+`(x:holfoot_state) IN var_res_prop_weak_unequal e1 (var_res_exp_const 0)` by (
    MATCH_MP_TAC (ISPECL [``DISJOINT_FMAP_UNION:holfoot_heap bin_option_function``,
        ``e1:holfoot_a_expression``]
        var_res_implies_unequal___var_res_prop___PROP) THEN
@@ -2203,7 +2203,7 @@ STRIP_TAC THEN
       IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___VAR_CONST_EVAL] THEN
    METIS_TAC[]
 ) THEN
-REPEAT (Q.PAT_ASSUM `x IN XXX` MP_TAC) THEN
+REPEAT (Q.PAT_X_ASSUM `x IN XXX` MP_TAC) THEN
 ASM_SIMP_TAC std_ss [BAG_UNION_INSERT, var_res_prop_equal_unequal_EXPAND,
    IN_ABS, var_res_exp_const_def,
    var_res_prop___PROP_INSERT, var_res_prop___COND_UNION,
@@ -2269,18 +2269,18 @@ CONJ_TAC THEN1 (
       FULL_SIMP_TAC list_ss [LENGTH_EQ_NUM]
    ) THEN
    MATCH_MP_TAC VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_prop_equal THEN
-   Tactical.REVERSE (`p_1 IN FDOM L` by ALL_TAC) THEN1 (
+   `p_1 IN FDOM L` suffices_by (STRIP_TAC THEN
       FULL_SIMP_TAC std_ss [FEVERY_DEF, VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET___VAR_CONST_EVAL]
    ) THEN
-   Tactical.REVERSE (`MEM p_1 (tagL ++ dtagL)` by ALL_TAC) THEN1 (
-      FULL_SIMP_TAC std_ss [SUBSET_DEF, IN_LIST_TO_SET]
+   `MEM p_1 (tagL ++ dtagL)` suffices_by (STRIP_TAC THEN
+      FULL_SIMP_TAC std_ss [SUBSET_DEF]
    ) THEN
-   Q.PAT_ASSUM `MEM x Y` MP_TAC THEN
+   Q.PAT_X_ASSUM `MEM x Y` MP_TAC THEN
    ASM_SIMP_TAC arith_ss [MEM_ZIP, GSYM LEFT_FORALL_IMP_THM,
        LENGTH_APPEND, EL_IS_EL]
 ) THEN
 STRIP_TAC THEN
-Q.PAT_ASSUM `var_res_prop___PROP DISJOINT_FMAP_UNION f X s` MP_TAC THEN
+Q.PAT_X_ASSUM `var_res_prop___PROP DISJOINT_FMAP_UNION f X s` MP_TAC THEN
 ASM_SIMP_TAC std_ss [var_res_prop___PROP_INSERT,
    var_res_prop___COND_INSERT, var_res_prop___COND_UNION] THEN
 ASM_SIMP_TAC std_ss [IN_ABS, asl_exists_list___ELIM,
@@ -2288,15 +2288,15 @@ ASM_SIMP_TAC std_ss [IN_ABS, asl_exists_list___ELIM,
    DISJOINT_FMAP_UNION___REWRITE,
    asl_bigstar_list_APPEND, IS_SEPARATION_COMBINATOR___holfoot_separation_combinator] THEN
 REPEAT STRIP_TAC THEN
-`?ec. (e (FST s) = SOME ec) /\ ~(ec = 0)` by ALL_TAC THEN1 (
-   Q.PAT_ASSUM `(FST s, _) IN holfoot_ap_points_to e L` MP_TAC THEN
+`?ec. (e (FST s) = SOME ec) /\ ~(ec = 0)` by (
+   Q.PAT_X_ASSUM `(FST s, _) IN holfoot_ap_points_to e L` MP_TAC THEN
    SIMP_TAC std_ss [holfoot_ap_points_to_def, LET_THM, IN_ABS] THEN
    Cases_on `e (FST s)` THEN SIMP_TAC std_ss []
 ) THEN
-`IS_SOME (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS e)` by ALL_TAC THEN1 (
+`IS_SOME (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS e)` by (
    FULL_SIMP_TAC std_ss [VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET_def]
 ) THEN
-`!h. ~((FST s, h:holfoot_heap) IN var_res_prop_equal DISJOINT_FMAP_UNION e (var_res_exp_const 0))` by ALL_TAC THEN1 (
+`!h. ~((FST s, h:holfoot_heap) IN var_res_prop_equal DISJOINT_FMAP_UNION e (var_res_exp_const 0))` by (
    ASM_SIMP_TAC std_ss [var_res_prop_equal_unequal_EXPAND, IN_ABS, var_res_exp_const_def]
 ) THEN
 ASM_SIMP_TAC std_ss [holfoot_ap_data_tree___REWRITE,
@@ -2319,44 +2319,44 @@ Q.ABBREV_TAC `eqP = (asl_bigstar_list holfoot_separation_combinator
            (MAP (\x. var_res_prop_equal DISJOINT_FMAP_UNION (L ' (FST x)) (var_res_exp_const (SND x))) LL))` THEN
 `(ZIP (tagL:holfoot_tag list ++ dtagL,
    ((MAP var_res_exp_const (lL ++ v)):holfoot_a_expression list))) =
- MAP (\x. (FST x, var_res_exp_const (SND x))) LL` by ALL_TAC THEN1 (
+ MAP (\x. (FST x, var_res_exp_const (SND x))) LL` by (
    Q.UNABBREV_TAC `LL` THEN
    ASM_SIMP_TAC list_ss [ZIP_MAP]
 ) THEN
 ASM_REWRITE_TAC[] THEN POP_ASSUM (K ALL_TAC) THEN
 Q.ABBREV_TAC `L' = LIST_TO_FMAP ((MAP (\x. (FST x,var_res_exp_const (SND x))) LL): (holfoot_tag # holfoot_a_expression) list)` THEN
-`EVERY (\x. FST x IN FDOM L) LL` by ALL_TAC THEN1 (
+`EVERY (\x. FST x IN FDOM L) LL` by (
    Q.UNABBREV_TAC `LL` THEN
    FULL_SIMP_TAC arith_ss [EVERY_MEM, MEM_ZIP,
      GSYM LEFT_FORALL_IMP_THM, FEVERY_DEF, SUBSET_DEF,
-     IN_LIST_TO_SET, LENGTH_APPEND, EL_IS_EL]
+     LENGTH_APPEND, EL_IS_EL]
 ) THEN
-`~(NULL LL)` by ALL_TAC THEN1 (
+`~(NULL LL)` by (
    Q.UNABBREV_TAC `LL` THEN
    Cases_on `tagL` THEN FULL_SIMP_TAC list_ss [LENGTH_EQ_NUM]
 ) THEN
 Tactical.REVERSE (Cases_on `ALL_DISTINCT (tagL ++ dtagL)`) THEN1 (
-   Tactical.REVERSE (`treeP = asl_false` by ALL_TAC) THEN1 (
+   `treeP = asl_false` suffices_by (STRIP_TAC THEN
      ASM_SIMP_TAC std_ss [asl_false___asl_star_THM, NOT_IN_asl_false]
    ) THEN
    Q.UNABBREV_TAC `treeP` THEN
    MATCH_MP_TAC asl_bigstar_list_false THEN
    SIMP_TAC (std_ss++pairSimps.gen_beta_ss) [MEM_MAP, GSYM LEFT_FORALL_IMP_THM] THEN
-   `?y. MEM y (ZIP (lL, tL))` by ALL_TAC THEN1 (
+   `?y. MEM y (ZIP (lL, tL))` by (
       Cases_on `tagL` THEN FULL_SIMP_TAC std_ss [LENGTH_EQ_NUM, NULL_DEF, LENGTH] THEN
       SIMP_TAC list_ss [EXISTS_OR_THM]) THEN
    Q.EXISTS_TAC `y` THEN ASM_REWRITE_TAC[holfoot_ap_data_tree_def] THEN
    MATCH_MP_TAC (GSYM holfoot_ap_data_tree_seg___TREE_PROPS) THEN
    ASM_SIMP_TAC std_ss [holfoot_ap_data_tree___WELL_FORMED_DATA_def]
 ) THEN
-`ALL_DISTINCT (MAP FST LL)` by ALL_TAC THEN1 (
+`ALL_DISTINCT (MAP FST LL)` by (
    Q.UNABBREV_TAC `LL` THEN
    ASM_SIMP_TAC list_ss [MAP_ZIP]
 ) THEN
-Q.PAT_ASSUM `Abbrev (LL = _)` (K ALL_TAC) THEN
+Q.PAT_X_ASSUM `Abbrev (LL = _)` (K ALL_TAC) THEN
 `VAR_RES_IS_STACK_IMPRECISE treeP /\
  VAR_RES_IS_STACK_IMPRECISE eqP /\
- VAR_RES_IS_STACK_IMPRECISE (holfoot_ap_points_to e L')` by ALL_TAC THEN1 (
+ VAR_RES_IS_STACK_IMPRECISE (holfoot_ap_points_to e L')` by (
    MAP_EVERY Q.UNABBREV_TAC [`treeP`, `eqP`, `L'`] THEN
    REWRITE_TAC [holfoot_separation_combinator_def] THEN
    CONSEQ_HO_REWRITE_TAC ([], [MP_CANON VAR_RES_IS_STACK_IMPRECISE___asl_bigstar_list,
@@ -2387,7 +2387,7 @@ Tactical.REVERSE (Cases_on `s1'' = s1`) THEN1 (
    POP_ASSUM MP_TAC THEN
    MATCH_MP_TAC (prove (``((A ==> C) /\ (B ==> C)) ==> (~C ==> (A = B))``,
      METIS_TAC [])) THEN
-   Q.PAT_ASSUM `(FST s, s1) IN X` MP_TAC THEN
+   Q.PAT_X_ASSUM `(FST s, s1) IN X` MP_TAC THEN
    ASM_SIMP_TAC std_ss [holfoot_ap_points_to_def,
      IN_ABS, LET_THM, GSYM fmap_EQ_THM, GSYM LEFT_FORALL_IMP_THM,
      FDOM_FUNION, IN_UNION, IN_SING] THEN
@@ -2396,8 +2396,8 @@ Tactical.REVERSE (Cases_on `s1'' = s1`) THEN1 (
       FUNION_DEF, DISJOINT_INSERT, DISJOINT_UNION_BOTH]
 ) THEN
 Q.ABBREV_TAC `lL_v_cond = EVERY (\x. (L ' (FST x)) (FST s) = SOME (SND x)) LL` THEN
-`!h. (FST s, h:holfoot_heap) IN eqP = (h = FEMPTY) /\ lL_v_cond` by ALL_TAC THEN1 (
-   Q.PAT_ASSUM `Abbrev (L' = _)` (K ALL_TAC) THEN
+`!h. (FST s, h:holfoot_heap) IN eqP = (h = FEMPTY) /\ lL_v_cond` by (
+   Q.PAT_X_ASSUM `Abbrev (L' = _)` (K ALL_TAC) THEN
    Q.UNABBREV_TAC `eqP` THEN Q.UNABBREV_TAC `lL_v_cond` THEN
    Induct_on `LL` THEN1 SIMP_TAC list_ss [] THEN
    Cases_on `NULL LL` THEN1 (
@@ -2412,7 +2412,7 @@ Q.ABBREV_TAC `lL_v_cond = EVERY (\x. (L ' (FST x)) (FST s) = SOME (SND x)) LL` T
    FULL_SIMP_TAC list_ss [FEVERY_DEF, asl_bigstar_list_REWRITE] THEN
    Q.MATCH_ABBREV_TAC `(FST s, h') IN asl_star holfoot_separation_combinator
       P1 P2 = XXX` THEN Q.UNABBREV_TAC `XXX` THEN
-   `VAR_RES_IS_STACK_IMPRECISE P1 /\ VAR_RES_IS_STACK_IMPRECISE P2` by ALL_TAC THEN1 (
+   `VAR_RES_IS_STACK_IMPRECISE P1 /\ VAR_RES_IS_STACK_IMPRECISE P2` by (
       MAP_EVERY Q.UNABBREV_TAC [`P1`, `P2`] THEN
       SIMP_TAC std_ss [holfoot_separation_combinator_def] THEN
       CONSEQ_REWRITE_TAC ([], [VAR_RES_IS_STACK_IMPRECISE___var_res_prop_equal,
@@ -2441,7 +2441,7 @@ SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [] THEN
 REPEAT STRIP_TAC THEN
 
 MAP_EVERY Q.UNABBREV_TAC [`L'`, `lL_v_cond`] THEN
-Q.PAT_ASSUM `(FST s, s1) IN X` MP_TAC THEN
+Q.PAT_X_ASSUM `(FST s, s1) IN X` MP_TAC THEN
 ASM_SIMP_TAC std_ss [holfoot_ap_points_to_def, IN_ABS, LET_THM,
    GSYM o_f_LIST_TO_FMAP, FEVERY_LIST_TO_FMAP_EQ,
    FEVERY_o_f, var_res_exp_const_def] THEN
@@ -2450,7 +2450,7 @@ REPEAT STRIP_TAC THEN
 CONSEQ_CONV_TAC (K FORALL_EQ___CONSEQ_CONV) THEN
 SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [] THEN
 REPEAT STRIP_TAC THEN
-Q.PAT_ASSUM `!x. x IN FDOM L ==> X x` (MP_TAC o Q.SPEC `FST (x:(holfoot_tag # num))`) THEN
+Q.PAT_X_ASSUM `!x. x IN FDOM L ==> X x` (MP_TAC o Q.SPEC `FST (x:(holfoot_tag # num))`) THEN
 FULL_SIMP_TAC std_ss [EVERY_MEM, IS_SOME_EXISTS,
   GSYM RIGHT_EXISTS_AND_THM, GSYM LEFT_EXISTS_AND_THM,
   GSYM LEFT_FORALL_IMP_THM] THEN
@@ -2613,18 +2613,18 @@ CONJ_TAC THEN1 (
       FULL_SIMP_TAC list_ss [LENGTH_EQ_NUM]
    ) THEN
    MATCH_MP_TAC VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_prop_equal THEN
-   Tactical.REVERSE (`p_1 IN FDOM L` by ALL_TAC) THEN1 (
+   `p_1 IN FDOM L` suffices_by (STRIP_TAC THEN
       FULL_SIMP_TAC std_ss [FEVERY_DEF, VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET___VAR_CONST_EVAL]
    ) THEN
-   Tactical.REVERSE (`MEM p_1 tagL` by ALL_TAC) THEN1 (
-      FULL_SIMP_TAC std_ss [SUBSET_DEF, IN_LIST_TO_SET]
+   `MEM p_1 tagL` suffices_by (STRIP_TAC THEN
+      FULL_SIMP_TAC std_ss [SUBSET_DEF]
    ) THEN
-   Q.PAT_ASSUM `MEM x Y` MP_TAC THEN
+   Q.PAT_X_ASSUM `MEM x Y` MP_TAC THEN
    ASM_SIMP_TAC arith_ss [MEM_ZIP, GSYM LEFT_FORALL_IMP_THM,
        LENGTH_APPEND, EL_IS_EL]
 ) THEN
 STRIP_TAC THEN
-Q.PAT_ASSUM `var_res_prop___PROP DISJOINT_FMAP_UNION f X s` MP_TAC THEN
+Q.PAT_X_ASSUM `var_res_prop___PROP DISJOINT_FMAP_UNION f X s` MP_TAC THEN
 ASM_SIMP_TAC std_ss [var_res_prop___PROP_INSERT,
    var_res_prop___COND_INSERT, var_res_prop___COND_UNION] THEN
 ASM_SIMP_TAC std_ss [IN_ABS, asl_exists_list___ELIM,
@@ -2632,15 +2632,15 @@ ASM_SIMP_TAC std_ss [IN_ABS, asl_exists_list___ELIM,
    DISJOINT_FMAP_UNION___REWRITE,
    asl_bigstar_list_APPEND, IS_SEPARATION_COMBINATOR___holfoot_separation_combinator] THEN
 REPEAT STRIP_TAC THEN
-`?ec. (e (FST s) = SOME ec) /\ ~(ec = 0)` by ALL_TAC THEN1 (
-   Q.PAT_ASSUM `(FST s, _) IN holfoot_ap_points_to e L` MP_TAC THEN
+`?ec. (e (FST s) = SOME ec) /\ ~(ec = 0)` by (
+   Q.PAT_X_ASSUM `(FST s, _) IN holfoot_ap_points_to e L` MP_TAC THEN
    SIMP_TAC std_ss [holfoot_ap_points_to_def, LET_THM, IN_ABS] THEN
    Cases_on `e (FST s)` THEN SIMP_TAC std_ss []
 ) THEN
-`IS_SOME (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS e)` by ALL_TAC THEN1 (
+`IS_SOME (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS e)` by (
    FULL_SIMP_TAC std_ss [VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET_def]
 ) THEN
-`!h. ~((FST s, h:holfoot_heap) IN var_res_prop_equal DISJOINT_FMAP_UNION e (var_res_exp_const 0))` by ALL_TAC THEN1 (
+`!h. ~((FST s, h:holfoot_heap) IN var_res_prop_equal DISJOINT_FMAP_UNION e (var_res_exp_const 0))` by (
    ASM_SIMP_TAC std_ss [var_res_prop_equal_unequal_EXPAND, IN_ABS, var_res_exp_const_def]
 ) THEN
 ASM_SIMP_TAC std_ss [holfoot_ap_tree___REWRITE,
@@ -2659,44 +2659,44 @@ Q.ABBREV_TAC `eqP = (asl_bigstar_list holfoot_separation_combinator
            (MAP (\x. var_res_prop_equal DISJOINT_FMAP_UNION (L ' (FST x)) (var_res_exp_const (SND x))) LL))` THEN
 `(ZIP (tagL:holfoot_tag list,
    ((MAP var_res_exp_const lL)):holfoot_a_expression list)) =
- MAP (\x. (FST x, var_res_exp_const (SND x))) LL` by ALL_TAC THEN1 (
+ MAP (\x. (FST x, var_res_exp_const (SND x))) LL` by (
    Q.UNABBREV_TAC `LL` THEN
    ASM_SIMP_TAC list_ss [ZIP_MAP]
 ) THEN
 ASM_REWRITE_TAC[] THEN POP_ASSUM (K ALL_TAC) THEN
 Q.ABBREV_TAC `L' = LIST_TO_FMAP ((MAP (\x. (FST x,var_res_exp_const (SND x))) LL): (holfoot_tag # holfoot_a_expression) list)` THEN
-`EVERY (\x. FST x IN FDOM L) LL` by ALL_TAC THEN1 (
+`EVERY (\x. FST x IN FDOM L) LL` by (
    Q.UNABBREV_TAC `LL` THEN
    FULL_SIMP_TAC arith_ss [EVERY_MEM, MEM_ZIP,
      GSYM LEFT_FORALL_IMP_THM, FEVERY_DEF, SUBSET_DEF,
-     IN_LIST_TO_SET, LENGTH_APPEND, EL_IS_EL]
+     LENGTH_APPEND, EL_IS_EL]
 ) THEN
-`~(NULL LL)` by ALL_TAC THEN1 (
+`~(NULL LL)` by (
    Q.UNABBREV_TAC `LL` THEN
    Cases_on `tagL` THEN FULL_SIMP_TAC list_ss [LENGTH_EQ_NUM]
 ) THEN
 Tactical.REVERSE (Cases_on `ALL_DISTINCT tagL`) THEN1 (
-   Tactical.REVERSE (`treeP = asl_false` by ALL_TAC) THEN1 (
+   `treeP = asl_false` suffices_by (STRIP_TAC THEN
      ASM_SIMP_TAC std_ss [asl_false___asl_star_THM, NOT_IN_asl_false]
    ) THEN
    Q.UNABBREV_TAC `treeP` THEN
    MATCH_MP_TAC asl_bigstar_list_false THEN
    SIMP_TAC (std_ss++pairSimps.gen_beta_ss) [MEM_MAP, GSYM LEFT_FORALL_IMP_THM] THEN
-   `?l. MEM l lL` by ALL_TAC THEN1 (
+   `?l. MEM l lL` by (
       Cases_on `tagL` THEN FULL_SIMP_TAC std_ss [LENGTH_EQ_NUM, NULL_DEF, LENGTH] THEN
       SIMP_TAC list_ss [EXISTS_OR_THM]) THEN
    Q.EXISTS_TAC `l` THEN ASM_REWRITE_TAC[] THEN
    MATCH_MP_TAC (GSYM holfoot_ap_tree___TREE_PROPS) THEN
    ASM_REWRITE_TAC[]
 ) THEN
-`ALL_DISTINCT (MAP FST LL)` by ALL_TAC THEN1 (
+`ALL_DISTINCT (MAP FST LL)` by (
    Q.UNABBREV_TAC `LL` THEN
    ASM_SIMP_TAC list_ss [MAP_ZIP]
 ) THEN
-Q.PAT_ASSUM `Abbrev (LL = _)` (K ALL_TAC) THEN
+Q.PAT_X_ASSUM `Abbrev (LL = _)` (K ALL_TAC) THEN
 `VAR_RES_IS_STACK_IMPRECISE treeP /\
  VAR_RES_IS_STACK_IMPRECISE eqP /\
- VAR_RES_IS_STACK_IMPRECISE (holfoot_ap_points_to e L')` by ALL_TAC THEN1 (
+ VAR_RES_IS_STACK_IMPRECISE (holfoot_ap_points_to e L')` by (
    MAP_EVERY Q.UNABBREV_TAC [`treeP`, `eqP`, `L'`] THEN
    REWRITE_TAC [holfoot_separation_combinator_def] THEN
    CONSEQ_HO_REWRITE_TAC ([], [MP_CANON VAR_RES_IS_STACK_IMPRECISE___asl_bigstar_list,
@@ -2727,7 +2727,7 @@ Tactical.REVERSE (Cases_on `s1'' = s1`) THEN1 (
    POP_ASSUM MP_TAC THEN
    MATCH_MP_TAC (prove (``((A ==> C) /\ (B ==> C)) ==> (~C ==> (A = B))``,
      METIS_TAC [])) THEN
-   Q.PAT_ASSUM `(FST s, s1) IN X` MP_TAC THEN
+   Q.PAT_X_ASSUM `(FST s, s1) IN X` MP_TAC THEN
    ASM_SIMP_TAC std_ss [holfoot_ap_points_to_def,
      IN_ABS, LET_THM, GSYM fmap_EQ_THM, GSYM LEFT_FORALL_IMP_THM,
      FDOM_FUNION, IN_UNION, IN_SING] THEN
@@ -2736,8 +2736,8 @@ Tactical.REVERSE (Cases_on `s1'' = s1`) THEN1 (
       FUNION_DEF, DISJOINT_INSERT, DISJOINT_UNION_BOTH]
 ) THEN
 Q.ABBREV_TAC `lL_v_cond = EVERY (\x. (L ' (FST x)) (FST s) = SOME (SND x)) LL` THEN
-`!h. (FST s, h:holfoot_heap) IN eqP = (h = FEMPTY) /\ lL_v_cond` by ALL_TAC THEN1 (
-   Q.PAT_ASSUM `Abbrev (L' = _)` (K ALL_TAC) THEN
+`!h. (FST s, h:holfoot_heap) IN eqP = (h = FEMPTY) /\ lL_v_cond` by (
+   Q.PAT_X_ASSUM `Abbrev (L' = _)` (K ALL_TAC) THEN
    Q.UNABBREV_TAC `eqP` THEN Q.UNABBREV_TAC `lL_v_cond` THEN
    Induct_on `LL` THEN1 SIMP_TAC list_ss [] THEN
    Cases_on `NULL LL` THEN1 (
@@ -2752,7 +2752,7 @@ Q.ABBREV_TAC `lL_v_cond = EVERY (\x. (L ' (FST x)) (FST s) = SOME (SND x)) LL` T
    FULL_SIMP_TAC list_ss [FEVERY_DEF, asl_bigstar_list_REWRITE] THEN
    Q.MATCH_ABBREV_TAC `(FST s, h') IN asl_star holfoot_separation_combinator
       P1 P2 = XXX` THEN Q.UNABBREV_TAC `XXX` THEN
-   `VAR_RES_IS_STACK_IMPRECISE P1 /\ VAR_RES_IS_STACK_IMPRECISE P2` by ALL_TAC THEN1 (
+   `VAR_RES_IS_STACK_IMPRECISE P1 /\ VAR_RES_IS_STACK_IMPRECISE P2` by (
       MAP_EVERY Q.UNABBREV_TAC [`P1`, `P2`] THEN
       SIMP_TAC std_ss [holfoot_separation_combinator_def] THEN
       CONSEQ_REWRITE_TAC ([], [VAR_RES_IS_STACK_IMPRECISE___var_res_prop_equal,
@@ -2781,7 +2781,7 @@ SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [] THEN
 REPEAT STRIP_TAC THEN
 
 MAP_EVERY Q.UNABBREV_TAC [`L'`, `lL_v_cond`] THEN
-Q.PAT_ASSUM `(FST s, s1) IN X` MP_TAC THEN
+Q.PAT_X_ASSUM `(FST s, s1) IN X` MP_TAC THEN
 ASM_SIMP_TAC std_ss [holfoot_ap_points_to_def, IN_ABS, LET_THM,
    GSYM o_f_LIST_TO_FMAP, FEVERY_LIST_TO_FMAP_EQ,
    FEVERY_o_f, var_res_exp_const_def] THEN
@@ -2790,7 +2790,7 @@ REPEAT STRIP_TAC THEN
 CONSEQ_CONV_TAC (K FORALL_EQ___CONSEQ_CONV) THEN
 SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [] THEN
 REPEAT STRIP_TAC THEN
-Q.PAT_ASSUM `!x. x IN FDOM L ==> X x` (MP_TAC o Q.SPEC `FST (x:(holfoot_tag # num))`) THEN
+Q.PAT_X_ASSUM `!x. x IN FDOM L ==> X x` (MP_TAC o Q.SPEC `FST (x:(holfoot_tag # num))`) THEN
 FULL_SIMP_TAC std_ss [EVERY_MEM, IS_SOME_EXISTS,
   GSYM RIGHT_EXISTS_AND_THM, GSYM LEFT_EXISTS_AND_THM,
   GSYM LEFT_FORALL_IMP_THM] THEN
@@ -2865,7 +2865,7 @@ FULL_SIMP_TAC list_ss [
   asl_star___PROPERTIES] THEN
 Q.MATCH_ABBREV_TAC `s IN asl_star holfoot_separation_combinator P1 P2 =
                     s IN asl_star holfoot_separation_combinator P1' P2` THEN
-`VAR_RES_IS_STACK_IMPRECISE P1 /\ VAR_RES_IS_STACK_IMPRECISE P1' /\ VAR_RES_IS_STACK_IMPRECISE P2` by ALL_TAC THEN1 (
+`VAR_RES_IS_STACK_IMPRECISE P1 /\ VAR_RES_IS_STACK_IMPRECISE P1' /\ VAR_RES_IS_STACK_IMPRECISE P2` by (
    MAP_EVERY Q.UNABBREV_TAC [`P1`, `P1'`, `P2`] THEN
    REWRITE_TAC [holfoot_separation_combinator_def] THEN
    CONSEQ_REWRITE_TAC ([],
@@ -2904,16 +2904,16 @@ val holfoot_ap_data_tree___SAME_START = store_thm ("holfoot_ap_data_tree___SAME_
 HO_MATCH_MP_TAC tree_INDUCT THEN
 CONJ_TAC THEN1 (
    REPEAT GEN_TAC THEN STRIP_TAC THEN
-   REPEAT (Q.PAT_ASSUM `X IN Y` MP_TAC) THEN
+   REPEAT (Q.PAT_X_ASSUM `X IN Y` MP_TAC) THEN
    ASM_SIMP_TAC std_ss [holfoot_ap_data_tree___leaf,
       asl_bool_EVAL, var_res_prop_equal_unequal_EXPAND,
       IN_ABS, var_res_exp_const_def] THEN
    STRIP_TAC THEN
-   `e' st = SOME 0` by ALL_TAC THEN1 (
+   `e' st = SOME 0` by (
       Cases_on `e' st` THEN FULL_SIMP_TAC std_ss []
    ) THEN
    `(st,h2) IN holfoot_ap_data_tree tagL e' (dtagL,data') =
-    (st,h2) IN holfoot_ap_data_tree tagL (var_res_exp_const 0) (dtagL,data')` by ALL_TAC THEN1 (
+    (st,h2) IN holfoot_ap_data_tree tagL (var_res_exp_const 0) (dtagL,data')` by (
      MATCH_MP_TAC holfoot_ap_data_tree___REWRITE_EXP THEN
      ASM_SIMP_TAC std_ss [IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___VAR_CONST_EVAL] THEN
      SIMP_TAC std_ss [var_res_exp_const_def]
@@ -2924,15 +2924,15 @@ CONJ_TAC THEN1 (
 ) THEN
 REPEAT (GEN_TAC ORELSE DISCH_TAC) THEN
 FULL_SIMP_TAC std_ss [] THEN
-`ALL_DISTINCT (tagL ++ dtagL)` by ALL_TAC THEN1 (
+`ALL_DISTINCT (tagL ++ dtagL)` by (
    CCONTR_TAC THEN
-   Tactical.REVERSE (`holfoot_ap_data_tree tagL e' (dtagL,data') = asl_false` by ALL_TAC) THEN1 (
+   `holfoot_ap_data_tree tagL e' (dtagL,data') = asl_false` suffices_by (STRIP_TAC THEN
      FULL_SIMP_TAC std_ss [asl_bool_EVAL]
    ) THEN
    MATCH_MP_TAC holfoot_ap_data_tree___TREE_PROPS THEN
    ASM_SIMP_TAC std_ss [holfoot_ap_data_tree___WELL_FORMED_DATA_def]
 ) THEN
-Q.PAT_ASSUM `(st,h1) IN Y` MP_TAC THEN
+Q.PAT_X_ASSUM `(st,h1) IN Y` MP_TAC THEN
 ASM_SIMP_TAC std_ss [holfoot_ap_data_tree___REWRITE,
    asl_bool_EVAL, IS_LEAF_def, tree_11, asl_exists_list___ELIM,
    GSYM RIGHT_EXISTS_AND_THM, GSYM LEFT_FORALL_IMP_THM] THEN
@@ -2945,13 +2945,13 @@ Q.ABBREV_TAC `PL = \lL l. MAP (\lt. holfoot_ap_data_tree tagL
 `(!lL l. MAP (\lt. holfoot_ap_data_tree tagL
          (var_res_exp_const (FST lt)) (dtagL,SND lt)) (ZIP (lL,l)) = PL lL l) /\
 (!a lL e. (holfoot_ap_points_to e
-       (LIST_TO_FMAP (ZIP (tagL ++ dtagL,MAP var_res_exp_const (lL ++ a))))) = P1 a lL e)` by ALL_TAC THEN1 (
+       (LIST_TO_FMAP (ZIP (tagL ++ dtagL,MAP var_res_exp_const (lL ++ a))))) = P1 a lL e)` by (
   Q.UNABBREV_TAC `P1` THEN Q.UNABBREV_TAC `PL` THEN
   SIMP_TAC std_ss []
 ) THEN
 `!a lL e l. IS_SOME (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS e) /\
    (LENGTH a = LENGTH dtagL) /\ (LENGTH lL = LENGTH tagL) ==>
-   EVERY VAR_RES_IS_STACK_IMPRECISE ((P1 a lL e)::(PL lL l))` by ALL_TAC THEN1 (
+   EVERY VAR_RES_IS_STACK_IMPRECISE ((P1 a lL e)::(PL lL l))` by (
    MAP_EVERY Q.UNABBREV_TAC [`P1`, `PL`] THEN
    SIMP_TAC list_ss [EVERY_MEM, DISJ_IMP_THM, FORALL_AND_THM,
      MEM_MAP, GSYM LEFT_FORALL_IMP_THM,
@@ -2966,19 +2966,19 @@ Q.ABBREV_TAC `PL = \lL l. MAP (\lt. holfoot_ap_data_tree tagL
    SIMP_TAC std_ss [EVERY_MEM, MEM_MAP, GSYM LEFT_FORALL_IMP_THM,
       IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___VAR_CONST_EVAL]
 ) THEN
-Q.PAT_ASSUM `(st, h1) IN X` MP_TAC THEN
+Q.PAT_X_ASSUM `(st, h1) IN X` MP_TAC THEN
 ASM_SIMP_TAC std_ss [asl_bigstar_list___VAR_RES_IS_STACK_IMPRECISE,
   holfoot_separation_combinator_def, IS_SEPARATION_COMBINATOR___FINITE_MAP,
   IN_ABS] THEN
 STRIP_TAC THEN
-`?ec. (e st = SOME ec) /\ ~(ec = 0)` by ALL_TAC THEN1 (
+`?ec. (e st = SOME ec) /\ ~(ec = 0)` by (
    Q.UNABBREV_TAC `P1` THEN
    FULL_SIMP_TAC std_ss [holfoot_ap_points_to_def, IN_ABS, LET_THM] THEN
    Cases_on `e st` THEN FULL_SIMP_TAC std_ss [] THEN
    METIS_TAC[]
 ) THEN
 `e' st = SOME ec` by PROVE_TAC[] THEN
-Q.PAT_ASSUM `(st,h2) IN X` MP_TAC THEN
+Q.PAT_X_ASSUM `(st,h2) IN X` MP_TAC THEN
 ASM_SIMP_TAC std_ss [holfoot_ap_data_tree___REWRITE,
    asl_bool_EVAL, asl_exists_list___ELIM,
    GSYM RIGHT_EXISTS_AND_THM, DISJ_IMP_THM,
@@ -2988,19 +2988,19 @@ CONJ_TAC THEN1 (
       var_res_exp_const_def]
 ) THEN
 REPEAT GEN_TAC THEN STRIP_TAC THEN
-Q.PAT_ASSUM `(st,h2) IN X` MP_TAC THEN
+Q.PAT_X_ASSUM `(st,h2) IN X` MP_TAC THEN
 ASM_SIMP_TAC std_ss [asl_bigstar_list___VAR_RES_IS_STACK_IMPRECISE,
   holfoot_separation_combinator_def, IS_SEPARATION_COMBINATOR___FINITE_MAP,
   IN_ABS, tree_11] THEN
 STRIP_TAC THEN
-`(v = n) /\ (lL' = lL) /\ (es1' = es1)` by ALL_TAC THEN1 (
-   Q.PAT_ASSUM `(st, es1') IN X` MP_TAC THEN
-   Q.PAT_ASSUM `(st, es1) IN X` MP_TAC THEN
+`(v = n) /\ (lL' = lL) /\ (es1' = es1)` by (
+   Q.PAT_X_ASSUM `(st, es1') IN X` MP_TAC THEN
+   Q.PAT_X_ASSUM `(st, es1) IN X` MP_TAC THEN
    Q.UNABBREV_TAC `P1` THEN
    Q.ABBREV_TAC `tagL' = tagL++dtagL` THEN
    Q.ABBREV_TAC `lL'' = lL' ++ v` THEN
    Q.ABBREV_TAC `lL''' = lL ++ n` THEN
-   `(LENGTH lL'' = LENGTH tagL') /\ (LENGTH lL''' = LENGTH tagL')` by ALL_TAC THEN1 (
+   `(LENGTH lL'' = LENGTH tagL') /\ (LENGTH lL''' = LENGTH tagL')` by (
       MAP_EVERY Q.UNABBREV_TAC [`lL''`, `lL'''`, `tagL'`] THEN
       ASM_SIMP_TAC list_ss []
    ) THEN
@@ -3010,9 +3010,9 @@ STRIP_TAC THEN
    ASM_SIMP_TAC arith_ss [ZIP_MAP, EVERY_MAP, var_res_exp_const_def,
       LENGTH_MAP, LENGTH_APPEND] THEN
    STRIP_TAC THEN STRIP_TAC THEN
-   `es1' ' ec = es1 ' ec` by ALL_TAC THEN1 (
+   `es1' ' ec = es1 ' ec` by (
       `ASL_IS_SUBSTATE DISJOINT_FMAP_UNION es1 h /\
-       ASL_IS_SUBSTATE DISJOINT_FMAP_UNION es1' h` by ALL_TAC THEN1 (
+       ASL_IS_SUBSTATE DISJOINT_FMAP_UNION es1' h` by (
          METIS_TAC[ASL_IS_SUBSTATE_INTRO, IS_SEPARATION_COMBINATOR___FINITE_MAP,
             ASL_IS_SUBSTATE___TRANS]
       ) THEN
@@ -3020,14 +3020,14 @@ STRIP_TAC THEN
       ASM_SIMP_TAC std_ss [ASL_IS_SUBSTATE___DISJOINT_FMAP_UNION, IN_SING]
    ) THEN
    FULL_SIMP_TAC std_ss [] THEN
-   Tactical.REVERSE (`lL'' = lL'''` by ALL_TAC) THEN1 (
+   `lL'' = lL'''` suffices_by (STRIP_TAC THEN
       POP_ASSUM MP_TAC THEN
       MAP_EVERY Q.UNABBREV_TAC [`lL''`, `lL'''`] THEN
       FULL_SIMP_TAC list_ss [APPEND_11_LENGTH]
    ) THEN
-   REPEAT (Q.PAT_ASSUM `EVERY X (ZIP Y)` MP_TAC) THEN
-   Q.PAT_ASSUM `LENGTH lL'' = X` MP_TAC THEN
-   Q.PAT_ASSUM `LENGTH lL''' = X` MP_TAC THEN
+   REPEAT (Q.PAT_X_ASSUM `EVERY X (ZIP Y)` MP_TAC) THEN
+   Q.PAT_X_ASSUM `LENGTH lL'' = X` MP_TAC THEN
+   Q.PAT_X_ASSUM `LENGTH lL''' = X` MP_TAC THEN
    REPEAT (POP_ASSUM (K ALL_TAC)) THEN
    Q.SPEC_TAC (`tagL'`, `tagL'`) THEN
    Q.SPEC_TAC (`lL''`, `lL''`) THEN
@@ -3037,18 +3037,18 @@ STRIP_TAC THEN
          GSYM LEFT_FORALL_IMP_THM, GSYM RIGHT_FORALL_IMP_THM]
    )
 ) THEN
-Tactical.REVERSE (`(es2' = es2) /\ (tL = tL')` by ALL_TAC) THEN1 (
+`(es2' = es2) /\ (tL = tL')` suffices_by (STRIP_TAC THEN
    FULL_SIMP_TAC std_ss []
 ) THEN
-Q.PAT_ASSUM `(st, es2) IN X` MP_TAC THEN
-Q.PAT_ASSUM `(st, es2') IN X` MP_TAC THEN
-Q.PAT_ASSUM `EVERY P X` MP_TAC THEN
+Q.PAT_X_ASSUM `(st, es2) IN X` MP_TAC THEN
+Q.PAT_X_ASSUM `(st, es2') IN X` MP_TAC THEN
+Q.PAT_X_ASSUM `EVERY P X` MP_TAC THEN
 Q.UNABBREV_TAC `PL` THEN
 ASM_SIMP_TAC std_ss [] THEN
 `(LENGTH tL = LENGTH lL) /\ (LENGTH tL' = LENGTH lL)` by ASM_SIMP_TAC std_ss [] THEN
 NTAC 2 (POP_ASSUM MP_TAC) THEN
 `ASL_IS_SUBSTATE DISJOINT_FMAP_UNION es2 h /\
- ASL_IS_SUBSTATE DISJOINT_FMAP_UNION es2' h` by ALL_TAC THEN1 (
+ ASL_IS_SUBSTATE DISJOINT_FMAP_UNION es2' h` by (
    METIS_TAC[ASL_IS_SUBSTATE_INTRO, IS_SEPARATION_COMBINATOR___FINITE_MAP,
       ASL_IS_SUBSTATE___TRANS]
 ) THEN
@@ -3068,20 +3068,20 @@ SIMP_TAC list_ss [LENGTH_EQ_NUM, GSYM LEFT_FORALL_IMP_THM,
    IS_SEPARATION_COMBINATOR___VAR_RES_COMBINATOR,
    IS_SEPARATION_COMBINATOR___FINITE_MAP] THEN
 REPEAT (GEN_TAC ORELSE DISCH_TAC) THEN
-Q.PAT_ASSUM `(st, es2) IN X` MP_TAC THEN
-Q.PAT_ASSUM `(st, es2') IN X` MP_TAC THEN
+Q.PAT_X_ASSUM `(st, es2) IN X` MP_TAC THEN
+Q.PAT_X_ASSUM `(st, es2') IN X` MP_TAC THEN
 Q.HO_MATCH_ABBREV_TAC `
    (st, es2') IN asl_star f P1 P1L ==>
    (st, es2) IN asl_star f P2 P2L ==>
    XXX` THEN
 Q.UNABBREV_TAC `f` THEN Q.UNABBREV_TAC `XXX` THEN
-Q.PAT_ASSUM `!tL' tL. X` (MP_TAC o Q.SPECL [`l''`, `l'`]) THEN
+Q.PAT_X_ASSUM `!tL' tL. X` (MP_TAC o Q.SPECL [`l''`, `l'`]) THEN
 ASM_SIMP_TAC std_ss [] THEN
 FULL_SIMP_TAC std_ss [GSYM asl_bigstar_list_REWRITE] THEN
 `VAR_RES_IS_STACK_IMPRECISE P1 /\
  VAR_RES_IS_STACK_IMPRECISE P1L /\
  VAR_RES_IS_STACK_IMPRECISE P2 /\
- VAR_RES_IS_STACK_IMPRECISE P2L` by ALL_TAC THEN1 (
+ VAR_RES_IS_STACK_IMPRECISE P2L` by (
    MAP_EVERY Q.UNABBREV_TAC [`P1`, `P2`, `P1L`, `P2L`] THEN
    CONSEQ_REWRITE_TAC ([],
       [VAR_RES_IS_STACK_IMPRECISE___holfoot_ap_data_tree,
@@ -3100,14 +3100,14 @@ FULL_SIMP_TAC std_ss [] THEN
 `ASL_IS_SUBSTATE DISJOINT_FMAP_UNION es1 h /\
  ASL_IS_SUBSTATE DISJOINT_FMAP_UNION es1' h /\
  ASL_IS_SUBSTATE DISJOINT_FMAP_UNION es2'' h /\
- ASL_IS_SUBSTATE DISJOINT_FMAP_UNION es2''' h` by ALL_TAC THEN1 (
+ ASL_IS_SUBSTATE DISJOINT_FMAP_UNION es2''' h` by (
    METIS_TAC[ASL_IS_SUBSTATE_INTRO, IS_SEPARATION_COMBINATOR___FINITE_MAP,
       ASL_IS_SUBSTATE___TRANS]
 ) THEN
 
 `(es2'' = es2''') /\ (l' = l'')` by METIS_TAC[] THEN
 ASM_REWRITE_TAC[] THEN
-Q.PAT_ASSUM `!data' e e' tagL dtagL st h1 h2 h. X`
+Q.PAT_X_ASSUM `!data' e e' tagL dtagL st h1 h2 h. X`
   (MP_TAC o Q.SPECL [`h'''`, `(var_res_exp_const h'):holfoot_a_expression`,
      `(var_res_exp_const h'):holfoot_a_expression`,
      `tagL`, `dtagL`, `st`, `es1'`, `es1`, `h`]) THEN
@@ -3145,7 +3145,7 @@ ASM_SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [var_res_bool_proposition_TF,
    VAR_RES_IS_STACK_IMPRECISE___USED_VARS___asl_false] THEN
 REPEAT STRIP_TAC THEN
 
-REPEAT (Q.PAT_ASSUM `var_res_prop___PROP f x y s` MP_TAC) THEN
+REPEAT (Q.PAT_X_ASSUM `var_res_prop___PROP f x y s` MP_TAC) THEN
 ASM_SIMP_TAC std_ss [var_res_prop___PROP_INSERT,
    var_res_prop___COND_UNION, var_res_prop___COND_INSERT,
    VAR_RES_IS_STACK_IMPRECISE___USED_VARS___holfoot_ap_data_tree] THEN
@@ -3154,7 +3154,7 @@ REPEAT STRIP_TAC THEN CCONTR_TAC THEN FULL_SIMP_TAC std_ss [] THEN
 `IS_SOME (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS e)` by
    FULL_SIMP_TAC std_ss [VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET_def] THEN
 `ASL_IS_SUBSTATE DISJOINT_FMAP_UNION s1  (SND s) /\
- ASL_IS_SUBSTATE DISJOINT_FMAP_UNION s1' (SND s)` by ALL_TAC THEN1 (
+ ASL_IS_SUBSTATE DISJOINT_FMAP_UNION s1' (SND s)` by (
    METIS_TAC [ASL_IS_SUBSTATE_INTRO, IS_SEPARATION_COMBINATOR___FINITE_MAP]) THEN
 METIS_TAC[holfoot_ap_data_tree___SAME_START]);
 
@@ -3236,19 +3236,19 @@ SIMP_TAC (std_ss++boolSimps.CONJ_ss) [holfoot_ap_data_list_seg_num_def, holfoot_
 Cases_on `ALL_DISTINCT (tl::(MAP FST data))` THEN FULL_SIMP_TAC std_ss [ALL_DISTINCT] THEN
 Cases_on `EVERY (\x. ~NULL (SND x)) data` THEN ASM_REWRITE_TAC[] THEN
 ASM_SIMP_TAC (std_ss++pairSimps.gen_beta_ss) [FUN_EQ_THM, asl_bool_EVAL, IN_ABS, asl_star_def, GSYM RIGHT_EXISTS_AND_THM,
-   MAP_MAP_o, combinTheory.o_DEF, ETA_THM] THEN
+   MAP_MAP_o, o_DEF, ETA_THM] THEN
 REPEAT STRIP_TAC THEN
 REDEPTH_CONSEQ_CONV_TAC (K EXISTS_EQ___CONSEQ_CONV) THEN
 SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [] THEN
 REPEAT STRIP_TAC THEN
 SIMP_TAC (list_ss++EQUIV_EXTRACT_ss) [holfoot_ap_points_to_def, IN_ABS, LET_THM,
-   LIST_TO_FMAP_THM, FEVERY_FUPDATE, MAP_MAP_o, combinTheory.o_DEF,
+   LIST_TO_FMAP_THM, FEVERY_FUPDATE, MAP_MAP_o, o_DEF,
    var_res_exp_const_EVAL] THEN
 Q.ABBREV_TAC `dL:holfoot_tag |-> holfoot_a_expression = (LIST_TO_FMAP (ZIP (MAP FST data, MAP (\x. var_res_exp_const (HD (SND x))) data)))` THEN
-`DRESTRICT dL (COMPL {tl}) = dL` by ALL_TAC THEN1 (
+`DRESTRICT dL (COMPL {tl}) = dL` by (
    MATCH_MP_TAC NOT_FDOM_DRESTRICT THEN
    Q.UNABBREV_TAC `dL` THEN
-   ASM_SIMP_TAC list_ss [FDOM_LIST_TO_FMAP, IN_LIST_TO_SET, MAP_ZIP]
+   ASM_SIMP_TAC list_ss [FDOM_LIST_TO_FMAP, MAP_ZIP]
 ) THEN
 ASM_SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [IN_SING]);
 
@@ -3278,11 +3278,11 @@ Induct_on `n` THENL [
    MATCH_MP_TAC (prove (``(Y = asl_false) ==> x NOTIN Y``, SIMP_TAC std_ss [asl_bool_EVAL])) THEN
    MATCH_MP_TAC (prove (``(P2 = asl_false) ==> (asl_star holfoot_separation_combinator P1 P2 = asl_false)``,
                    SIMP_TAC std_ss [asl_false___asl_star_THM])) THEN
-   Q.PAT_ASSUM `!data tl. X` MATCH_MP_TAC THEN
+   Q.PAT_X_ASSUM `!data tl. X` MATCH_MP_TAC THEN
    Induct_on `data` THEN1 SIMP_TAC list_ss [] THEN
-   FULL_SIMP_TAC (list_ss++QUANT_INST_ss[list_qp, pair_default_qp]) [combinTheory.o_DEF] THEN
+   FULL_SIMP_TAC (list_ss++QUANT_INST_ss[list_qp, pair_default_qp]) [o_DEF] THEN
    REPEAT STRIP_TAC THEN
-   FULL_SIMP_TAC list_ss [combinTheory.o_DEF]
+   FULL_SIMP_TAC list_ss [o_DEF]
 ]);
 
 
@@ -3349,9 +3349,9 @@ Induct_on `n` THENL [
    Q.EXISTS_TAC `q` THEN
    ASM_SIMP_TAC std_ss [] THEN
    Tactical.REVERSE CONJ_TAC THENL [
-      Q.PAT_ASSUM `!data data'. X` MATCH_MP_TAC THEN
+      Q.PAT_X_ASSUM `!data data'. X` MATCH_MP_TAC THEN
       Q.EXISTS_TAC `(MAP (\(t,l). (t,TL l)) data)` THEN
-      ASM_SIMP_TAC std_ss [MAP_MAP_o, combinTheory.o_DEF, MEM_MAP, EXISTS_PROD,
+      ASM_SIMP_TAC std_ss [MAP_MAP_o, o_DEF, MEM_MAP, EXISTS_PROD,
                            FORALL_PROD,
                            PAIR_BETA_THM, prove (``(\ (x1,x2). x1) = FST``, SIMP_TAC std_ss [FUN_EQ_THM, FORALL_PROD])] THEN
       METIS_TAC[],
@@ -3362,17 +3362,17 @@ Induct_on `n` THENL [
                (MAP FST data,
                 MAP (\x. var_res_exp_const (HD (SND x))) data))` THEN
       ASM_SIMP_TAC list_ss [MAP_MAP_o, LIST_TO_FMAP_THM,
-         combinTheory.o_DEF, ZIP_MAP, MAP_ZIP_EQ] THEN
+         o_DEF, ZIP_MAP, MAP_ZIP_EQ] THEN
       SIMP_TAC std_ss [SUBMAP_DEF, FDOM_FUPDATE_LIST, IN_INSERT,
-         FDOM_LIST_TO_FMAP, IN_LIST_TO_SET, MEM_MAP, MAP_MAP_o,
-         combinTheory.o_DEF, GSYM RIGHT_EXISTS_AND_THM,
+         FDOM_LIST_TO_FMAP, MEM_MAP, MAP_MAP_o,
+         o_DEF, GSYM RIGHT_EXISTS_AND_THM,
          FDOM_FUPDATE] THEN
       GEN_TAC THEN
       REPEAT STRIP_TAC THEN1 PROVE_TAC[] THEN
 
       MATCH_MP_TAC (prove (``(?z. (X = z) /\ (Y = z)) ==> (X = Y)``, PROVE_TAC[])) THEN
       CONSEQ_REWRITE_TAC ([LIST_TO_FMAP___ALL_DISTINCT], [], []) THEN
-      ASM_SIMP_TAC std_ss [MEM_MAP, MAP_MAP_o, combinTheory.o_DEF, ETA_THM] THEN
+      ASM_SIMP_TAC std_ss [MEM_MAP, MAP_MAP_o, o_DEF, ETA_THM] THEN
       PROVE_TAC[]
     ]
 ]);
@@ -3566,7 +3566,7 @@ Induct_on `n` THENL [
                         VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_prop_weak_unequal] THEN
    REPEAT STRIP_TAC THEN
    MATCH_MP_TAC FEVERY_LIST_TO_FMAP THEN
-   SIMP_TAC list_ss [ZIP_MAP, MAP_MAP_o, combinTheory.o_DEF, MAP_ZIP_EQ] THEN
+   SIMP_TAC list_ss [ZIP_MAP, MAP_MAP_o, o_DEF, MAP_ZIP_EQ] THEN
    SIMP_TAC std_ss[EVERY_MAP, VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET___VAR_CONST_EVAL] THEN
    SIMP_TAC std_ss [EVERY_MEM]
 ]);
@@ -3662,7 +3662,7 @@ CONSEQ_CONV_TAC (K EXISTS_EQ___CONSEQ_CONV) THEN
 GEN_TAC THEN
 
 Q.MATCH_ABBREV_TAC `s IN asl_star holfoot_separation_combinator P1 P2 = X` THEN
-Tactical.REVERSE (`VAR_RES_IS_STACK_IMPRECISE P1 /\ VAR_RES_IS_STACK_IMPRECISE P2` by ALL_TAC) THEN1 (
+`VAR_RES_IS_STACK_IMPRECISE P1 /\ VAR_RES_IS_STACK_IMPRECISE P2` suffices_by (STRIP_TAC THEN
    ASM_SIMP_TAC std_ss [holfoot_separation_combinator_def,
       asl_star___VAR_RES_IS_STACK_IMPRECISE, IN_ABS]
 ) THEN
@@ -3672,7 +3672,7 @@ CONSEQ_REWRITE_TAC ([], [VAR_RES_IS_STACK_IMPRECISE___points_to,
    FEVERY_LIST_TO_FMAP], []) THEN
 ASM_SIMP_TAC list_ss [
    IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___VAR_CONST_EVAL,
-   ZIP_MAP, MAP_MAP_o, combinTheory.o_DEF, EVERY_MAP]);
+   ZIP_MAP, MAP_MAP_o, o_DEF, EVERY_MAP]);
 
 
 
@@ -3711,13 +3711,13 @@ Q.MATCH_ABBREV_TAC `var_res_prop_varlist_update vcL
    (asl_star holfoot_separation_combinator P1 P2) = X` THEN
 Q.UNABBREV_TAC `X` THEN
 
-`VAR_RES_IS_STACK_IMPRECISE P1 /\ VAR_RES_IS_STACK_IMPRECISE P2` by ALL_TAC THEN1 (
+`VAR_RES_IS_STACK_IMPRECISE P1 /\ VAR_RES_IS_STACK_IMPRECISE P2` by (
   Q.UNABBREV_TAC `P1` THEN Q.UNABBREV_TAC `P2` THEN
   CONSEQ_REWRITE_TAC ([], [
       VAR_RES_IS_STACK_IMPRECISE___points_to,
       VAR_RES_IS_STACK_IMPRECISE___data_list_seg_num,
       FEVERY_LIST_TO_FMAP], []) THEN
-  ASM_SIMP_TAC list_ss [MAP_MAP_o, combinTheory.o_DEF, ZIP_MAP,
+  ASM_SIMP_TAC list_ss [MAP_MAP_o, o_DEF, ZIP_MAP,
     EVERY_MAP, VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___var_res_exp_const]
 ) THEN
 Q.UNABBREV_TAC `P1` THEN Q.UNABBREV_TAC `P2` THEN
@@ -3726,7 +3726,7 @@ ASM_SIMP_TAC std_ss [var_res_prop_varlist_update___asl_star,
    var_res_prop_varlist_update___holfoot_ap_points_to,
    VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___var_res_exp_const] THEN
 SIMP_TAC list_ss [o_f_LIST_TO_FMAP, ZIP_MAP,
-   MAP_MAP_o, combinTheory.o_DEF, var_res_exp_varlist_update___const_EVAL]);
+   MAP_MAP_o, o_DEF, var_res_exp_varlist_update___const_EVAL]);
 
 
 
@@ -3850,9 +3850,9 @@ FULL_SIMP_TAC std_ss [var_res_implies_unequal_def,
    holfoot_implies_in_heap_pred_def] THEN
 FULL_SIMP_TAC std_ss [IS_SEPARATION_COMBINATOR___FINITE_MAP] THEN
 REPEAT GEN_TAC THEN STRIP_TAC THEN
-Q.PAT_ASSUM `!s. X` (MP_TAC o Q.SPEC `(st, h1)`) THEN
+Q.PAT_X_ASSUM `!s. X` (MP_TAC o Q.SPEC `(st, h1)`) THEN
 ASM_REWRITE_TAC [] THEN
-Q.PAT_ASSUM `(st2, h2) IN X` MP_TAC THEN
+Q.PAT_X_ASSUM `(st2, h2) IN X` MP_TAC THEN
 ASM_SIMP_TAC std_ss [var_res_prop_equal_unequal_EXPAND,
    var_res_bigstar_REWRITE_EXT,
    IN_ABS, IS_SEPARATION_COMBINATOR___FINITE_MAP,
@@ -3864,7 +3864,7 @@ ASM_SIMP_TAC std_ss [var_res_prop_equal_unequal_EXPAND,
    DISJOINT_FMAP_UNION___FEMPTY] THEN
 SIMP_TAC (std_ss++CONJ_ss) [GSYM LEFT_FORALL_IMP_THM] THEN
 REPEAT GEN_TAC THEN STRIP_TAC THEN
-Tactical.REVERSE (`(e1 st = e1 p_1)  /\ (e2 st = e2 p_1)` by ALL_TAC) THEN1 (
+`(e1 st = e1 p_1)  /\ (e2 st = e2 p_1)` suffices_by (STRIP_TAC THEN
    ASM_SIMP_TAC std_ss []
 ) THEN
 CONSEQ_REWRITE_TAC ([],[
@@ -3967,7 +3967,7 @@ store_thm ("holfoot_ap_data_list_seg___var_res_prop_implies_eq___split",
 
 REPEAT STRIP_TAC THEN
 `IS_SOME (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS e1) /\
- IS_SOME (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS e2)` by ALL_TAC THEN1 (
+ IS_SOME (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS e2)` by (
    FULL_SIMP_TAC std_ss [VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET_def]
 ) THEN
 SIMP_TAC std_ss [var_res_prop_implies_eq_def] THEN
@@ -3976,14 +3976,14 @@ SIMP_TAC std_ss [var_res_prop_implies_eq_def] THEN
  var_res_prop DISJOINT_FMAP_UNION (wpb,rpb)
       (BAG_UNION
        (sfb1 + BAG_INSERT (holfoot_ap_data_list_seg tl e1 data e2) sfb2)
-       {|(var_res_prop_unequal DISJOINT_FMAP_UNION e1 e2)|})` by ALL_TAC THEN1 (
+       {|(var_res_prop_unequal DISJOINT_FMAP_UNION e1 e2)|})` by (
    REWRITE_TAC [GSYM var_res_prop_implies_REWRITE] THEN
    MATCH_MP_TAC (MP_CANON var_res_implies_unequal___prop_implies) THEN
    ASM_REWRITE_TAC[]
 ) THEN
 ASM_REWRITE_TAC[BAG_UNION_INSERT, BAG_UNION_EMPTY] THEN
 POP_ASSUM (K ALL_TAC) THEN
-Q.PAT_ASSUM `var_res_implies_unequal X Y e1 e2` (K ALL_TAC) THEN
+Q.PAT_X_ASSUM `var_res_implies_unequal X Y e1 e2` (K ALL_TAC) THEN
 
 ASM_SIMP_TAC std_ss [
    IS_SEPARATION_COMBINATOR___FINITE_MAP,
@@ -4001,7 +4001,7 @@ CONJ_TAC THEN1 (
        VAR_RES_IS_STACK_IMPRECISE___USED_VARS___data_list_seg,
        FEVERY_LIST_TO_FMAP], []) THEN
    ASM_SIMP_TAC list_ss [VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___var_res_exp_const,
-       ZIP_MAP, MAP_MAP_o, combinTheory.o_DEF,
+       ZIP_MAP, MAP_MAP_o, o_DEF,
        EVERY_MAP, VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET___VAR_CONST_EVAL]
 ) THEN
 REPEAT STRIP_TAC THEN
@@ -4024,7 +4024,7 @@ REDEPTH_CONSEQ_CONV_TAC (K EXISTS_EQ___CONSEQ_CONV) THEN
 SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [] THEN
 
 REPEAT GEN_TAC THEN
-Q.PAT_ASSUM `VAR_RES_IS_STACK_IMPRECISE___USED_VARS XXX ($asl_exists XX)`
+Q.PAT_X_ASSUM `VAR_RES_IS_STACK_IMPRECISE___USED_VARS XXX ($asl_exists XX)`
     (K ALL_TAC) THEN
 Tactical.REVERSE (
    Cases_on `?c1 c2. (e1 (FST x) = SOME c1) /\ (e2 (FST x) = SOME c2) /\ ~(c1 = c2)`) THEN1 (
@@ -4085,7 +4085,7 @@ REPEAT STRIP_TAC THEN
 REDEPTH_CONSEQ_CONV_TAC (K EXISTS_EQ___CONSEQ_CONV) THEN
 SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [] THEN
 REPEAT STRIP_TAC THEN
-Q.PAT_ASSUM `!tl data. X` MATCH_MP_TAC THEN
+Q.PAT_X_ASSUM `!tl data. X` MATCH_MP_TAC THEN
 ASM_SIMP_TAC std_ss [IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___VAR_CONST_EVAL]);
 
 
@@ -4122,12 +4122,12 @@ Induct_on `n` THEN1 (
 SIMP_TAC (std_ss++CONJ_ss) [holfoot_ap_data_list_seg_num___STACK_IMPRECISE___REWRITE, IN_ABS] THEN
 REPEAT GEN_TAC THEN STRIP_TAC THEN
 Q.ABBREV_TAC `data' = MAP (\ (t,l). (t,TL l)) data` THEN
-Q.PAT_ASSUM `!tl data startExp. X` (MP_TAC o Q.SPECL [`tl`, `data'`, `var_res_exp_const n'`, `endExp`, `(FST (s:holfoot_state), s2)`]) THEN
+Q.PAT_X_ASSUM `!tl data startExp. X` (MP_TAC o Q.SPECL [`tl`, `data'`, `var_res_exp_const n'`, `endExp`, `(FST (s:holfoot_state), s2)`]) THEN
 ASM_SIMP_TAC std_ss [IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___VAR_CONST_EVAL] THEN
 
 FULL_SIMP_TAC std_ss [var_res_prop_equal_unequal_EXPAND, IN_ABS] THEN
-Q.PAT_ASSUM `IS_SOME (endExp (FST s))` ASSUME_TAC THEN
-Q.PAT_ASSUM `IS_SOME (startExp (FST s))` ASSUME_TAC THEN
+Q.PAT_X_ASSUM `IS_SOME (endExp (FST s))` ASSUME_TAC THEN
+Q.PAT_X_ASSUM `IS_SOME (startExp (FST s))` ASSUME_TAC THEN
 FULL_SIMP_TAC std_ss [DISJOINT_FMAP_UNION___REWRITE,
    holfoot_not_in_heap_def, IS_SOME_EXISTS,
    FDOM_FUNION, IN_UNION, holfoot_ap_points_to_def, LET_THM,
@@ -4176,14 +4176,14 @@ val holfoot_ap_data_list_seg_num___SPLIT = store_thm ("holfoot_ap_data_list_seg_
 
 Induct_on `n` THEN1 (
    SIMP_TAC (list_ss++boolSimps.ETA_ss) [holfoot_ap_data_list_seg_num_REWRITE, EVERY_MAP,
-      MAP_MAP_o, combinTheory.o_DEF] THEN
+      MAP_MAP_o, o_DEF] THEN
    REPEAT GEN_TAC THEN
    Tactical.REVERSE (Cases_on `ALL_DISTINCT (tl::MAP FST data)`) THEN1 (
       ASM_SIMP_TAC std_ss [GSYM ALL_DISTINCT, asl_false___asl_star_THM] THEN
       SIMP_TAC std_ss [asl_exists_ELIM, asl_bool_REWRITES] THEN
       METIS_TAC[holfoot_ap_data_list_seg_num___DATA_PROPS]
    ) THEN
-   `MAP (\x. x) data = data` by ALL_TAC THEN1 (
+   `MAP (\x. x) data = data` by (
       REPEAT (POP_ASSUM (K ALL_TAC)) THEN
       Induct_on `data` THEN ASM_SIMP_TAC list_ss []
    ) THEN
@@ -4229,18 +4229,18 @@ Induct_on `n` THEN1 (
 REPEAT STRIP_TAC THEN
 Tactical.REVERSE (Cases_on `ALL_DISTINCT (tl::MAP FST data)`) THEN1 (
    ASM_SIMP_TAC (std_ss++boolSimps.ETA_ss) [ADD_CLAUSES, holfoot_ap_data_list_seg_num_REWRITE,
-      MAP_MAP_o, combinTheory.o_DEF, asl_false___asl_star_THM,
+      MAP_MAP_o, o_DEF, asl_false___asl_star_THM,
       asl_exists_ELIM, asl_bool_REWRITES]
 ) THEN
 Q.ABBREV_TAC `data1 = (MAP (\x. (FST x,TAKE (SUC n) (SND x))) data)` THEN
 Q.ABBREV_TAC `data2 = (MAP (\x. (FST x,DROP (SUC n) (SND x))) data)` THEN
-`ALL_DISTINCT (tl::MAP FST data1) /\ ALL_DISTINCT (tl::MAP FST data2)` by ALL_TAC THEN1 (
+`ALL_DISTINCT (tl::MAP FST data1) /\ ALL_DISTINCT (tl::MAP FST data2)` by (
    Q.UNABBREV_TAC `data1` THEN Q.UNABBREV_TAC `data2` THEN
-   ASM_SIMP_TAC (std_ss++boolSimps.ETA_ss) [MAP_MAP_o, combinTheory.o_DEF]
+   ASM_SIMP_TAC (std_ss++boolSimps.ETA_ss) [MAP_MAP_o, o_DEF]
 ) THEN
 `EVERY (\x. LENGTH (SND x) = SUC n + m) data =
  (EVERY (\x. LENGTH (SND x) = SUC n) data1 /\
-  EVERY (\x. LENGTH (SND x) = m) data2)` by ALL_TAC THEN1 (
+  EVERY (\x. LENGTH (SND x) = m) data2)` by (
    Q.UNABBREV_TAC `data1` THEN Q.UNABBREV_TAC `data2` THEN
    REPEAT (POP_ASSUM (K ALL_TAC)) THEN
    Induct_on `data` THEN (
@@ -4269,7 +4269,7 @@ Tactical.REVERSE (Cases_on `EVERY (\x. LENGTH (SND x) = SUC n + m) data`) THEN1 
 FULL_SIMP_TAC std_ss [ADD_CLAUSES, numTheory.NOT_SUC] THEN
 
 `EVERY (\x. ~(NULL (SND x))) data /\
- EVERY (\x. ~(NULL (SND x))) data1` by ALL_TAC THEN1 (
+ EVERY (\x. ~(NULL (SND x))) data1` by (
    FULL_SIMP_TAC std_ss [EVERY_MEM] THEN
    REPEAT STRIP_TAC THEN
    RES_TAC THEN
@@ -4301,12 +4301,12 @@ ASM_SIMP_TAC std_ss [
 SIMP_TAC (std_ss++pairSimps.gen_beta_ss) [IN_ABS, GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM,
    DISJOINT_FMAP_UNION___REWRITE, FDOM_FUNION, DISJOINT_UNION_BOTH,
    asl_bool_EVAL, holfoot_separation_combinator_def,
-   MAP_MAP_o, combinTheory.o_DEF] THEN
+   MAP_MAP_o, o_DEF] THEN
 
 SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [DISJOINT_SYM] THEN
 REPEAT STRIP_TAC THEN
 
-Q.PAT_ASSUM `!m' e1' e2'. X` (K ALL_TAC) THEN
+Q.PAT_X_ASSUM `!m' e1' e2'. X` (K ALL_TAC) THEN
 
 CONV_TAC (LHS_CONV (RESORT_EXISTS_CONV (fn [x1,x2,x3,x4,x5] => [x3,x5,x1,x2,x4]))) THEN
 REDEPTH_CONSEQ_CONV_TAC (K EXISTS_EQ___CONSEQ_CONV) THEN
@@ -4317,14 +4317,15 @@ REPEAT STRIP_TAC THEN
 Q.ABBREV_TAC `L =  LIST_TO_FMAP (ZIP (tl::MAP FST data,
                    MAP (var_res_exp_const:num -> holfoot_a_expression) (n'::MAP (\x. HD (SND x)) data)))` THEN
 `(LIST_TO_FMAP (ZIP (tl::MAP FST data1,
-      MAP var_res_exp_const (n'::MAP (\x. HD (SND x)) data1)))) = L` by ALL_TAC THEN1 (
+      MAP var_res_exp_const (n'::MAP (\x. HD (SND x)) data1)))) = L` by (
    Q.UNABBREV_TAC `L` THEN
    Q.UNABBREV_TAC `data1` THEN
-   SIMP_TAC (std_ss++boolSimps.ETA_ss) [MAP_MAP_o, combinTheory.o_DEF] THEN
-   Tactical.REVERSE (`MAP (\x. HD (TAKE (SUC n) (SND x))) data =
-    MAP (\x. HD (SND x)) data` by ALL_TAC) THEN1 ASM_REWRITE_TAC[] THEN
+   SIMP_TAC (std_ss++boolSimps.ETA_ss) [MAP_MAP_o, o_DEF] THEN
+   `MAP (\x. HD (TAKE (SUC n) (SND x))) data =
+    MAP (\x. HD (SND x)) data`
+      suffices_by (STRIP_TAC THEN ASM_REWRITE_TAC[]) THEN
 
-   Q.PAT_ASSUM `EVERY X data` MP_TAC THEN
+   Q.PAT_X_ASSUM `EVERY X data` MP_TAC THEN
    REPEAT (POP_ASSUM (K ALL_TAC)) THEN
    Induct_on `data` THEN
    ASM_SIMP_TAC list_ss [] THEN
@@ -4335,8 +4336,8 @@ ASM_REWRITE_TAC[] THEN POP_ASSUM (K ALL_TAC) THEN
 
 Q.ABBREV_TAC `data1' = MAP (\ (t,l). (t,TL l)) data1` THEN
 `(MAP (\x. (FST x,TAKE n (TL (SND x)))) data = data1') /\
- (MAP (\x. (FST x,DROP n (TL (SND x)))) data = data2)` by ALL_TAC THEN1 (
-   Q.PAT_ASSUM `EVERY X data` MP_TAC THEN
+ (MAP (\x. (FST x,DROP n (TL (SND x)))) data = data2)` by (
+   Q.PAT_X_ASSUM `EVERY X data` MP_TAC THEN
    Q.UNABBREV_TAC `data1'` THEN Q.UNABBREV_TAC `data1` THEN
    Q.UNABBREV_TAC `data2` THEN
    REPEAT (POP_ASSUM (K ALL_TAC)) THEN
@@ -4359,25 +4360,25 @@ Tactical.REVERSE (Cases_on `?c1 c2. (e1 (FST x) = SOME c1) /\ (e2 (FST x) = SOME
 ) THEN
 FULL_SIMP_TAC std_ss [] THEN
 
-`FDOM s1 = {c1}` by ALL_TAC THEN1 (
+`FDOM s1 = {c1}` by (
    FULL_SIMP_TAC std_ss [holfoot_ap_points_to_def, IN_ABS, LET_THM]
 ) THEN
 FULL_SIMP_TAC std_ss [holfoot_not_in_heap_def, IN_ABS,
    FDOM_FUNION, IN_UNION, IN_SING] THEN
 
-Q.PAT_ASSUM `(FST x, es2) IN X` MP_TAC THEN
+Q.PAT_X_ASSUM `(FST x, es2) IN X` MP_TAC THEN
 Cases_on `m` THENL [
    ASM_SIMP_TAC std_ss [holfoot_ap_data_list_seg_num___STACK_IMPRECISE___REWRITE,
      IN_ABS, var_res_prop_equal_unequal_EXPAND, var_res_exp_const_def],
 
    STRIP_TAC THEN
-   `c IN FDOM es2` by ALL_TAC THEN1 (
+   `c IN FDOM es2` by (
       MP_TAC (Q.SPECL [`n''`, `tl`, `data2`, `var_res_exp_const c`, `e2`, `(FST (x:holfoot_state), es2)`]
            holfoot_ap_data_list_seg_num___START_EXP_IN_FDOM) THEN
       ASM_SIMP_TAC std_ss [IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___VAR_CONST_EVAL] THEN
       SIMP_TAC std_ss [var_res_exp_const_def]
    ) THEN
-   Q.PAT_ASSUM `DISJOINT (FDOM es2) {c1}` MP_TAC THEN
+   Q.PAT_X_ASSUM `DISJOINT (FDOM es2) {c1}` MP_TAC THEN
    ASM_SIMP_TAC std_ss [DISJOINT_DEF, EXTENSION, IN_INTER, NOT_IN_EMPTY,
       IN_SING] THEN
    METIS_TAC[]
@@ -4412,7 +4413,7 @@ Cases_on `n'` THEN (
        IN_ABS, var_res_prop_equal_unequal_EXPAND]
 ) THEN
 REPEAT STRIP_TAC THEN
-`n' = n'''` by ALL_TAC THEN1 (
+`n' = n'''` by (
    `ASL_IS_SUBSTATE DISJOINT_FMAP_UNION s1  h /\
     ASL_IS_SUBSTATE DISJOINT_FMAP_UNION s1' h` by
       METIS_TAC[ASL_IS_SUBSTATE_INTRO, ASL_IS_SUBSTATE___TRANS,
@@ -4425,11 +4426,11 @@ REPEAT STRIP_TAC THEN
    ASM_SIMP_TAC std_ss [ASL_IS_SUBSTATE___DISJOINT_FMAP_UNION, IN_SING]
 ) THEN
 `ASL_IS_SUBSTATE DISJOINT_FMAP_UNION s2  h /\
- ASL_IS_SUBSTATE DISJOINT_FMAP_UNION s2' h`by ALL_TAC THEN1 (
+ ASL_IS_SUBSTATE DISJOINT_FMAP_UNION s2' h` by (
     METIS_TAC[ASL_IS_SUBSTATE_INTRO, ASL_IS_SUBSTATE___TRANS,
        IS_SEPARATION_COMBINATOR___FINITE_MAP]
 ) THEN
-Q.PAT_ASSUM `!n' e1 e2 e1' e2'. X`
+Q.PAT_X_ASSUM `!n' e1 e2 e1' e2'. X`
    (MP_TAC o Q.SPECL [`n''`,
       `var_res_exp_const n'`, `e2`,
       `var_res_exp_const n'''`, `e2'`, `tl`,
@@ -4471,7 +4472,7 @@ Induct_on `n` THEN1 (
 SIMP_TAC (std_ss++CONJ_ss) [holfoot_ap_data_list_seg_num___STACK_IMPRECISE___REWRITE,
    IN_ABS, var_res_prop_equal_unequal_EXPAND, asl_emp_DISJOINT_FMAP_UNION, IN_SING] THEN
 REPEAT GEN_TAC THEN STRIP_TAC THEN
-Q.PAT_ASSUM `!e1 e2 e1' e2'. X` (MP_TAC o
+Q.PAT_X_ASSUM `!e1 e2 e1' e2'. X` (MP_TAC o
    Q.SPECL [`var_res_exp_const n'`, `e2`, `var_res_exp_const n'`,
             `e2'`, `tl`, `MAP (\ (t,l). (t,TL l)) data`,
             `MAP (\ (t,l). (t,TL l)) data'`, `st`, `s2`, `s2'`, `h`]) THEN
@@ -4486,13 +4487,13 @@ FULL_SIMP_TAC std_ss [IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VAR
  ASL_IS_SUBSTATE DISJOINT_FMAP_UNION s2' h` by
       METIS_TAC[ASL_IS_SUBSTATE_INTRO, ASL_IS_SUBSTATE___TRANS,
          IS_SEPARATION_COMBINATOR___FINITE_MAP] THEN
-`(s1 = s1')` by ALL_TAC THEN1 (
-   REPEAT (Q.PAT_ASSUM `ASL_IS_SUBSTATE DISJOINT_FMAP_UNION X h` MP_TAC) THEN
+`(s1 = s1')` by (
+   REPEAT (Q.PAT_X_ASSUM `ASL_IS_SUBSTATE DISJOINT_FMAP_UNION X h` MP_TAC) THEN
    FULL_SIMP_TAC std_ss [holfoot_ap_points_to_def,
       LET_THM, IN_ABS, GSYM fmap_EQ_THM, IN_SING,
       ASL_IS_SUBSTATE___DISJOINT_FMAP_UNION]
 ) THEN
-`n'' = n'` by ALL_TAC THEN1 (
+`n'' = n'` by (
    FULL_SIMP_TAC list_ss [holfoot_ap_points_to_def, LET_THM, IN_ABS,
       LIST_TO_FMAP_THM, FEVERY_DEF, FDOM_FUPDATE, IN_INSERT,
       DISJ_IMP_THM, FORALL_AND_THM, FAPPLY_FUPDATE_THM,
@@ -4507,7 +4508,7 @@ FULL_SIMP_TAC std_ss [] THEN
 REPEAT STRIP_TAC THEN
 `?d_h1 d_tl1 d_h2 d_tl2.
    ((SND x) = d_h1 :: d_tl1) /\
-   ((SND x') = d_h2 :: d_tl2)` by ALL_TAC THEN1 (
+   ((SND x') = d_h2 :: d_tl2)` by (
 
    Cases_on `SND x` THEN
    Cases_on `SND x'` THEN
@@ -4519,15 +4520,15 @@ REPEAT STRIP_TAC THEN
 FULL_SIMP_TAC list_ss [] THEN
 
 FULL_SIMP_TAC list_ss [holfoot_ap_points_to_def, IN_ABS,
-   LET_THM, FEVERY_DEF, FDOM_LIST_TO_FMAP, IN_LIST_TO_SET,
-   ZIP_MAP, MAP_MAP_o, combinTheory.o_DEF, DISJ_IMP_THM, FORALL_AND_THM,
+   LET_THM, FEVERY_DEF, FDOM_LIST_TO_FMAP,
+   ZIP_MAP, MAP_MAP_o, o_DEF, DISJ_IMP_THM, FORALL_AND_THM,
    LIST_TO_FMAP_THM, FAPPLY_FUPDATE_THM, MEM_ZIP_EQ, MEM_MAP,
    GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM,
    GSYM LEFT_FORALL_IMP_THM, IN_INSERT] THEN
 
-Q.PAT_ASSUM `!x''. MEM x'' data' ==> XXX x''`
+Q.PAT_X_ASSUM `!x''. MEM x'' data' ==> XXX x''`
    (MP_TAC o Q.SPEC `x'`) THEN
-Q.PAT_ASSUM `!x''. MEM x'' data ==> XXX x''`
+Q.PAT_X_ASSUM `!x''. MEM x'' data ==> XXX x''`
    (MP_TAC o Q.SPEC `x`) THEN
 
 `~(FST x' = tl)` by METIS_TAC[] THEN
@@ -4541,9 +4542,9 @@ Q.ABBREV_TAC `L' = (MAP (\x''. (FST x'',(var_res_exp_const (HD (SND x''))):holfo
 `ALL_DISTINCT (MAP FST L) /\
  ALL_DISTINCT (MAP FST L') /\
  MEM (FST x', var_res_exp_const d_h1) L /\
- MEM (FST x', var_res_exp_const d_h2) L'` by ALL_TAC THEN1 (
+ MEM (FST x', var_res_exp_const d_h2) L'` by (
    UNABBREV_ALL_TAC THEN
-   ASM_SIMP_TAC (std_ss++boolSimps.ETA_ss) [MAP_MAP_o, combinTheory.o_DEF,
+   ASM_SIMP_TAC (std_ss++boolSimps.ETA_ss) [MAP_MAP_o, o_DEF,
        MEM_MAP, var_res_exp_eq_THM] THEN
    REPEAT STRIP_TAC THENL [
       Q.EXISTS_TAC `x`  THEN ASM_SIMP_TAC list_ss [],
@@ -4551,7 +4552,7 @@ Q.ABBREV_TAC `L' = (MAP (\x''. (FST x'',(var_res_exp_const (HD (SND x''))):holfo
    ]
 ) THEN
 `(LIST_TO_FMAP L ' (FST x') = (var_res_exp_const d_h1)) /\
- (LIST_TO_FMAP L' ' (FST x') = (var_res_exp_const d_h2))` by ALL_TAC THEN1 (
+ (LIST_TO_FMAP L' ' (FST x') = (var_res_exp_const d_h2))` by (
    METIS_TAC [LIST_TO_FMAP___ALL_DISTINCT]
 ) THEN
 ASM_SIMP_TAC std_ss [var_res_exp_const_def]);
@@ -4600,9 +4601,9 @@ REPEAT STRIP_TAC THEN
    VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET
       (SET_OF_BAG (wpb + rpb)) (L ' (FST x))) /\
  VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET
-      (SET_OF_BAG (wpb + rpb)) e3` by ALL_TAC THEN1 (
+      (SET_OF_BAG (wpb + rpb)) e3` by (
 
-   FULL_SIMP_TAC std_ss [SUBSET_DEF, IN_LIST_TO_SET,
+   FULL_SIMP_TAC std_ss [SUBSET_DEF,
       MEM_MAP, GSYM LEFT_FORALL_IMP_THM, FEVERY_DEF] THEN
    METIS_TAC[]
 ) THEN
@@ -4630,13 +4631,13 @@ Q.ABBREV_TAC `sfb_const = sfb_imp + (sfb_rest + sfb_context)` THEN
 ASM_SIMP_TAC std_ss [GSYM ASSOC_BAG_UNION, BAG_UNION_EMPTY,
    BAG_UNION_INSERT] THEN
 
-`var_res_prop___COND DISJOINT_FMAP_UNION (wpb,rpb) sfb_const` by ALL_TAC THEN1 (
+`var_res_prop___COND DISJOINT_FMAP_UNION (wpb,rpb) sfb_const` by (
    Q.UNABBREV_TAC `sfb_const` THEN
    ASM_SIMP_TAC std_ss [var_res_prop___COND_UNION]
 ) THEN
 
 `IS_SOME (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS e1) /\
- IS_SOME (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS e2)` by ALL_TAC THEN1 (
+ IS_SOME (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS e2)` by (
    FULL_SIMP_TAC std_ss [VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET_def]
 ) THEN
 ASM_SIMP_TAC std_ss [var_res_prop___PROP_INSERT,
@@ -4672,10 +4673,10 @@ Q.ABBREV_TAC `eq_props:holfoot_a_proposition = var_res_prop___PROP DISJOINT_FMAP
     ((SND s = FEMPTY) /\
      (!v. v <: wpb ==> var_res_sl___has_write_permission v (FST s)) /\
      (!v. v <: rpb ==> var_res_sl___has_read_permission v (FST s)) /\
-     EVERY (\x. (L ' (FST x) (FST s) = SOME (HD (SND x)))) data)` by ALL_TAC THEN1 (
+     EVERY (\x. (L ' (FST x) (FST s) = SOME (HD (SND x)))) data)` by (
 
-    Q.PAT_ASSUM `FEVERY XXX L` MP_TAC THEN
-    Q.PAT_ASSUM `XXX SUBSET FDOM L` MP_TAC THEN
+    Q.PAT_X_ASSUM `FEVERY XXX L` MP_TAC THEN
+    Q.PAT_X_ASSUM `XXX SUBSET FDOM L` MP_TAC THEN
     Q.UNABBREV_TAC `eq_props` THEN
     REPEAT (POP_ASSUM (K ALL_TAC)) THEN
     REPEAT STRIP_TAC THEN
@@ -4699,7 +4700,7 @@ Q.ABBREV_TAC `eq_props:holfoot_a_proposition = var_res_prop___PROP DISJOINT_FMAP
     Cases_on `h` THEN
     FULL_SIMP_TAC std_ss [] THEN
     Q.MATCH_ABBREV_TAC `x IN asl_star (VAR_RES_COMBINATOR DISJOINT_FMAP_UNION) P1 P2 = X` THEN
-    `(VAR_RES_IS_STACK_IMPRECISE P1) /\ (VAR_RES_IS_STACK_IMPRECISE P2)` by ALL_TAC THEN1 (
+    `(VAR_RES_IS_STACK_IMPRECISE P1) /\ (VAR_RES_IS_STACK_IMPRECISE P2)` by (
        Q.UNABBREV_TAC `P1` THEN
        Q.UNABBREV_TAC `P2` THEN
        CONSEQ_REWRITE_TAC ([], [
@@ -4710,7 +4711,7 @@ Q.ABBREV_TAC `eq_props:holfoot_a_proposition = var_res_prop___PROP DISJOINT_FMAP
            FEVERY_DEF, BAG_EVERY, IN_LIST_TO_BAG, MEM_MAP,
            DISJ_IMP_THM, FORALL_AND_THM, GSYM LEFT_FORALL_IMP_THM,
           VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET_def, FEVERY_DEF,
-          SUBSET_DEF, IN_INSERT, IN_LIST_TO_SET] THEN
+          SUBSET_DEF, IN_INSERT] THEN
        REPEAT STRIP_TAC THEN
        MATCH_MP_TAC VAR_RES_IS_STACK_IMPRECISE___var_res_prop_equal THEN
        ASM_SIMP_TAC std_ss [IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___VAR_CONST_EVAL]
@@ -4744,17 +4745,17 @@ SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [FDOM_FUNION,
    DISJOINT_UNION_BOTH, DISJOINT_SYM] THEN
 REPEAT STRIP_TAC THEN
 `(!v. v <: wpb ==> var_res_sl___has_write_permission v (FST s)) /\
- (!v. v <: rpb ==> var_res_sl___has_read_permission v (FST s))` by ALL_TAC THEN1 (
+ (!v. v <: rpb ==> var_res_sl___has_read_permission v (FST s))` by (
     FULL_SIMP_TAC std_ss [var_res_prop___PROP___REWRITE,
        IS_SEPARATION_COMBINATOR___FINITE_MAP]
 ) THEN
-`FUNION (FUNION s1''' s1'') s2''' = FUNION s1'' (FUNION s1''' s2''')` by ALL_TAC THEN1 (
+`FUNION (FUNION s1''' s1'') s2''' = FUNION s1'' (FUNION s1''' s2''')` by (
     METIS_TAC[FUNION_ASSOC, FUNION_COMM]
 ) THEN
 ASM_SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [] THEN
 
 REPEAT STRIP_TAC THEN
-Q.PAT_ASSUM `var_res_prop___PROP f (wpb,rpb) XX s` MP_TAC THEN
+Q.PAT_X_ASSUM `var_res_prop___PROP f (wpb,rpb) XX s` MP_TAC THEN
 
 ASM_SIMP_TAC std_ss [var_res_prop___PROP_INSERT,
    var_res_prop___COND_INSERT,    var_res_prop___COND_UNION,
@@ -4763,12 +4764,12 @@ REPEAT STRIP_TAC THEN
 Tactical.REVERSE (Cases_on `FDOM s1''' = {c1}`) THEN1 (
    ASM_SIMP_TAC std_ss [holfoot_ap_points_to_def, IN_ABS, LET_THM]
 ) THEN
-`s1 = s1'''` by ALL_TAC THEN1 (
-   Q.PAT_ASSUM `X = SOME c1` ASSUME_TAC THEN
+`s1 = s1'''` by (
+   Q.PAT_X_ASSUM `X = SOME c1` ASSUME_TAC THEN
    REWRITE_TAC[GSYM fmap_EQ_THM] THEN
    FULL_SIMP_TAC std_ss [holfoot_ap_points_to_def,
       IN_ABS, LET_THM, IN_ABS, IN_SING] THEN
-   `s1''' ' c1 = FUNION s1'' (FUNION s1''' s2''') ' c1` by ALL_TAC THEN1 (
+   `s1''' ' c1 = FUNION s1'' (FUNION s1''' s2''') ' c1` by (
        FULL_SIMP_TAC std_ss [FUNION_DEF, IN_SING, DISJOINT_DEF,
            EXTENSION, IN_SING, IN_INTER, NOT_IN_EMPTY]
    ) THEN
@@ -4778,17 +4779,17 @@ Tactical.REVERSE (Cases_on `FDOM s1''' = {c1}`) THEN1 (
 FULL_SIMP_TAC std_ss [] THEN
 
 ASM_SIMP_TAC list_ss [holfoot_ap_points_to_def,
-   LET_THM, IN_ABS, ZIP_MAP, MAP_MAP_o, combinTheory.o_DEF,
+   LET_THM, IN_ABS, ZIP_MAP, MAP_MAP_o, o_DEF,
    LIST_TO_FMAP_THM, FEVERY_DEF] THEN
 ASM_SIMP_TAC (std_ss++CONJ_ss) [FDOM_FUPDATE, IN_INSERT,
-   FDOM_LIST_TO_FMAP, IN_LIST_TO_SET,
-   MAP_MAP_o, combinTheory.o_DEF, IS_SOME_EXISTS,
+   FDOM_LIST_TO_FMAP,
+   MAP_MAP_o, o_DEF, IS_SOME_EXISTS,
    GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM] THEN
 SIMP_TAC std_ss [DISJ_IMP_THM, FORALL_AND_THM,
    MEM_MAP, GSYM LEFT_FORALL_IMP_THM, MEM_ZIP_EQ,
    FAPPLY_FUPDATE_THM, var_res_exp_const_def] THEN
-`c1 <> 0` by ALL_TAC THEN1 (
-   Q.PAT_ASSUM `X = SOME c1` ASSUME_TAC THEN
+`c1 <> 0` by (
+   Q.PAT_X_ASSUM `X = SOME c1` ASSUME_TAC THEN
    FULL_SIMP_TAC std_ss [holfoot_ap_points_to_def,
       IN_ABS, LET_THM]
 ) THEN
@@ -4798,16 +4799,16 @@ SIMP_TAC std_ss [DISJ_IMP_THM, FORALL_AND_THM,
            LIST_TO_FMAP
              (MAP (\x. (FST x,K (SOME (HD (SND x)))))
                 data) ' (FST x'')) (FST s) =
-         SOME (HD (SND x'')))` by ALL_TAC THEN1 (
+         SOME (HD (SND x'')))` by (
    ASM_SIMP_TAC (std_ss++CONJ_ss) [FORALL_PROD, holfoot_ap_points_to_def,
       IN_ABS, LET_THM, FEVERY_DEF, IS_SOME_EXISTS,
       GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM] THEN
    REPEAT STRIP_TAC THEN
    FULL_SIMP_TAC std_ss [ALL_DISTINCT, MEM_MAP, MAP_ZIP_EQ] THEN
    `~(p_1 = tl)` by METIS_TAC[pairTheory.FST] THEN
-   `LIST_TO_FMAP (MAP (\x. (FST x,(K (SOME (HD (SND x)))):holfoot_a_expression)) data) ' p_1 = (K (SOME (HD p_2)))` by ALL_TAC THEN1 (
+   `LIST_TO_FMAP (MAP (\x. (FST x,(K (SOME (HD (SND x)))):holfoot_a_expression)) data) ' p_1 = (K (SOME (HD p_2)))` by (
       MATCH_MP_TAC LIST_TO_FMAP___ALL_DISTINCT THEN
-      SIMP_TAC std_ss [MAP_MAP_o, combinTheory.o_DEF,
+      SIMP_TAC std_ss [MAP_MAP_o, o_DEF,
         MEM_MAP, EXISTS_PROD] THEN
       METIS_TAC[]
    ) THEN
@@ -4818,14 +4819,14 @@ SIMP_TAC std_ss [GSYM EVERY_MEM] THEN
 
 `(EVERY (\x'. HD (SND x') = s1''' ' c1 (FST x')) data =
   EVERY (\x. L ' (FST x) (FST s) = SOME (HD (SND x))) data) /\
- (e3 (FST s) = SOME (s1''' ' c1 tl))` by ALL_TAC THEN1 (
+ (e3 (FST s) = SOME (s1''' ' c1 tl))` by (
    Tactical.REVERSE (
-      `(e3 (FST s) = SOME (s1''' ' c1 tl)) /\
-       EVERY (\x'. L ' (FST x') (FST s) = SOME (s1''' ' c1 (FST x'))) data` by ALL_TAC) THEN1 (
+      sg `(e3 (FST s) = SOME (s1''' ' c1 tl)) /\
+       EVERY (\x'. L ' (FST x') (FST s) = SOME (s1''' ' c1 (FST x'))) data`) THEN1 (
           FULL_SIMP_TAC std_ss [EVERY_MEM, FORALL_PROD] THEN
           METIS_TAC[SOME_11]
    ) THEN
-   Q.PAT_ASSUM `(FST s, s1''') IN XXXX` MP_TAC THEN
+   Q.PAT_X_ASSUM `(FST s, s1''') IN XXXX` MP_TAC THEN
    ASM_SIMP_TAC (std_ss++CONJ_ss) [holfoot_ap_points_to_def, IN_ABS,
      LET_THM, FEVERY_DEF, IS_SOME_EXISTS,
      GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM,
@@ -4833,15 +4834,15 @@ SIMP_TAC std_ss [GSYM EVERY_MEM] THEN
    REPEAT STRIP_TAC THENL [
       METIS_TAC[],
 
-      Tactical.REVERSE (`FST x' IN FDOM L` by ALL_TAC) THEN1 ASM_SIMP_TAC std_ss [] THEN
-      FULL_SIMP_TAC std_ss [SUBSET_DEF, IN_LIST_TO_SET, MEM_MAP, GSYM LEFT_FORALL_IMP_THM]
+      `FST x' IN FDOM L` suffices_by ASM_SIMP_TAC std_ss [] THEN
+      FULL_SIMP_TAC std_ss [SUBSET_DEF,  MEM_MAP, GSYM LEFT_FORALL_IMP_THM]
    ]
 ) THEN
 ASM_SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [] THEN
 REPEAT STRIP_TAC THEN
 
 Q.ABBREV_TAC `data' = (MAP (\ (t,l). (t,TL l)) data)` THEN
-`MAP (\x. (FST x,TL (SND x))) data = data'` by ALL_TAC THEN1 (
+`MAP (\x. (FST x,TL (SND x))) data = data'` by (
    Q.UNABBREV_TAC `data'` THEN
    AP_THM_TAC THEN AP_TERM_TAC THEN
    SIMP_TAC std_ss [FUN_EQ_THM, FORALL_PROD]
@@ -4941,9 +4942,9 @@ REPEAT STRIP_TAC THEN
    VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET
       (SET_OF_BAG (wpb + rpb)) (L ' (FST x))) /\
  VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET
-      (SET_OF_BAG (wpb + rpb)) e3` by ALL_TAC THEN1 (
+      (SET_OF_BAG (wpb + rpb)) e3` by (
 
-   FULL_SIMP_TAC std_ss [SUBSET_DEF, IN_LIST_TO_SET,
+   FULL_SIMP_TAC std_ss [SUBSET_DEF,
       MEM_MAP, GSYM LEFT_FORALL_IMP_THM, FEVERY_DEF] THEN
    METIS_TAC[]
 ) THEN
@@ -4990,7 +4991,7 @@ Q.ABBREV_TAC `sfb_imp' = (BAG_INSERT
 
 
 `var_res_prop___COND DISJOINT_FMAP_UNION (wpb,rpb) sfb_imp' =
- var_res_prop___COND DISJOINT_FMAP_UNION (wpb,rpb) sfb_imp` by ALL_TAC THEN1 (
+ var_res_prop___COND DISJOINT_FMAP_UNION (wpb,rpb) sfb_imp` by (
    Q.UNABBREV_TAC `sfb_imp'`    THEN
    ASM_SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [var_res_prop___COND_INSERT,
        var_res_prop___COND_UNION,
@@ -5017,14 +5018,14 @@ ASM_SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [VAR_RES_FRAME_SPLIT___REWRITE_OK_def,
    BAG_UNION_INSERT, BAG_UNION_EMPTY] THEN
 REPEAT STRIP_TAC THEN
 
-Q.PAT_ASSUM `!sfb_rest s. X` (MP_TAC o Q.SPECL [`sfb_rest`, `s`]) THEN
+Q.PAT_X_ASSUM `!sfb_rest s. X` (MP_TAC o Q.SPECL [`sfb_rest`, `s`]) THEN
 ASM_SIMP_TAC std_ss [] THEN
 
-`?c1 c2. (e1 (FST s) = SOME c1) /\ (e2 (FST s) = SOME c2) /\ ~(c1 = c2)` by ALL_TAC THEN1 (
-   Tactical.REVERSE (`s IN var_res_prop_weak_unequal e1 e2` by ALL_TAC) THEN1 (
+`?c1 c2. (e1 (FST s) = SOME c1) /\ (e2 (FST s) = SOME c2) /\ ~(c1 = c2)` by (
+   `s IN var_res_prop_weak_unequal e1 e2` suffices_by (STRIP_TAC THEN
       FULL_SIMP_TAC std_ss [var_res_prop_equal_unequal_EXPAND, IN_ABS,
          IS_SOME_EXISTS] THEN
-      Q.PAT_ASSUM `~(THE X = THE Y)` MP_TAC THEN
+      Q.PAT_X_ASSUM `~(THE X = THE Y)` MP_TAC THEN
       ASM_SIMP_TAC std_ss []
    ) THEN
    MATCH_MP_TAC var_res_implies_unequal___var_res_prop___PROP THEN
@@ -5053,11 +5054,11 @@ CONJ_TAC THENL [
    Tactical.REVERSE (Cases_on `n`) THEN1 (
       Q.EXISTS_TAC `n'` THEN ASM_REWRITE_TAC[]
    ) THEN
-   `var_res_prop___COND DISJOINT_FMAP_UNION (wpb,rpb) sfb1` by ALL_TAC THEN1 (
+   `var_res_prop___COND DISJOINT_FMAP_UNION (wpb,rpb) sfb1` by (
        Q.UNABBREV_TAC `sfb1` THEN
        ASM_REWRITE_TAC [var_res_prop___COND_UNION]
    ) THEN
-   Q.PAT_ASSUM `s IN X` MP_TAC THEN
+   Q.PAT_X_ASSUM `s IN X` MP_TAC THEN
    MATCH_MP_TAC (prove (``~A ==> (A ==> B)``, SIMP_TAC std_ss [])) THEN
    ASM_SIMP_TAC std_ss [
       holfoot_ap_data_list_seg_num_REWRITE, COND_RAND, COND_RATOR,
@@ -5068,7 +5069,7 @@ CONJ_TAC THENL [
    ASM_SIMP_TAC std_ss [var_res_prop_equal_unequal_EXPAND, IN_ABS],
 
 
-   `var_res_prop___COND DISJOINT_FMAP_UNION (wpb,rpb) sfb2` by ALL_TAC THEN1 (
+   `var_res_prop___COND DISJOINT_FMAP_UNION (wpb,rpb) sfb2` by (
        Q.UNABBREV_TAC `sfb2` THEN
        ASM_SIMP_TAC std_ss [var_res_prop___COND_UNION,
           var_res_prop___COND_INSERT, VAR_RES_IS_STACK_IMPRECISE___USED_VARS___points_to]
@@ -5154,12 +5155,12 @@ REPEAT STRIP_TAC THEN
 Q.ABBREV_TAC `sfb_const = sfb_imp + (sfb_rest + sfb_context)` THEN
 ASM_SIMP_TAC std_ss [GSYM ASSOC_BAG_UNION, BAG_UNION_EMPTY,
    BAG_UNION_INSERT] THEN
-`var_res_prop___COND DISJOINT_FMAP_UNION (wpb,rpb) sfb_const` by ALL_TAC THEN1 (
+`var_res_prop___COND DISJOINT_FMAP_UNION (wpb,rpb) sfb_const` by (
    Q.UNABBREV_TAC `sfb_const` THEN
    ASM_SIMP_TAC std_ss [var_res_prop___COND_UNION]
 ) THEN
 
-Q.PAT_ASSUM `var_res_prop___PROP f X Y s` MP_TAC THEN
+Q.PAT_X_ASSUM `var_res_prop___PROP f X Y s` MP_TAC THEN
 
 ASM_SIMP_TAC std_ss [var_res_prop___PROP_INSERT,
    var_res_prop___COND_INSERT, var_res_prop___COND_UNION,
@@ -5172,7 +5173,7 @@ ASM_SIMP_TAC std_ss [IN_ABS, var_res_bool_proposition_REWRITE,
    DISJOINT_FMAP_UNION___FEMPTY] THEN
 
 REPEAT STRIP_TAC THEN
-`?c1 c2. (e1 (FST s) = SOME c1) /\ (e2 (FST s) = SOME c2)` by ALL_TAC THEN1 (
+`?c1 c2. (e1 (FST s) = SOME c1) /\ (e2 (FST s) = SOME c2)` by (
    IMP_RES_TAC holfoot_ap_data_list_seg_num___EXP_DEFINED THEN
    FULL_SIMP_TAC std_ss [IS_SOME_EXISTS]
 ) THEN
@@ -5197,7 +5198,7 @@ ASM_SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [] THEN
 REPEAT CONJ_TAC THENL [
    CONV_TAC (RENAME_VARS_CONV ["sp1", "sp2"]) THEN
    REPEAT GEN_TAC THEN STRIP_TAC THEN
-   `sp1 = s1` by ALL_TAC THEN1 (
+   `sp1 = s1` by (
        MP_TAC (Q.SPECL [`n`, `e1`, `e2`, `e1`, `e3`, `tl`, `data1`,
                 `data2`, `FST (s:holfoot_state)`, `s1`, `sp1`, `SND (s:holfoot_state)`]
            holfoot_ap_data_list_seg_num___SAME_LENGTH_START) THEN
@@ -5208,7 +5209,7 @@ REPEAT CONJ_TAC THENL [
 
    CONV_TAC (RENAME_VARS_CONV ["sp1", "sp2"]) THEN
    REPEAT GEN_TAC THEN STRIP_TAC THEN
-   `sp1 = s1` by ALL_TAC THEN1 (
+   `sp1 = s1` by (
        MP_TAC (Q.SPECL [`n`, `e1`, `e2`, `e1`, `e2`, `tl`, `data1`,
                 `data1`, `FST (s:holfoot_state)`, `s1`, `sp1`, `SND (s:holfoot_state)`]
            holfoot_ap_data_list_seg_num___SAME_LENGTH_START) THEN
@@ -5225,7 +5226,7 @@ REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
             `data2`, `FST (s:holfoot_state)`, `s1`, `s1`, `s1`]
        holfoot_ap_data_list_seg_num___SAME_LENGTH_START) THEN
    FULL_SIMP_TAC std_ss [VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET_def,
-      ASL_IS_SUBSTATE___REFL, SUBSET_DEF, IN_LIST_TO_SET,
+      ASL_IS_SUBSTATE___REFL, SUBSET_DEF,
        MEM_MAP, GSYM LEFT_FORALL_IMP_THM, EVERY_MEM] THEN
    REPEAT STRIP_TAC THEN
    `?x'. MEM x' data1 /\ (FST x' = FST x) /\ (SND x' = SND x)` by METIS_TAC[] THEN
@@ -5234,7 +5235,7 @@ REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
 
 
    `(FST s,s1) IN holfoot_ap_data_list_seg_num n tl e1 data2 e3 =
-    (FST s,s1) IN holfoot_ap_data_list_seg_num n tl e1 data2 e2` by ALL_TAC THEN1 (
+    (FST s,s1) IN holfoot_ap_data_list_seg_num n tl e1 data2 e2` by (
        MATCH_MP_TAC holfoot_ap_data_list_seg_num___REWRITE_END_EXP THEN
        FULL_SIMP_TAC std_ss [VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET_def]
    ) THEN
@@ -5278,10 +5279,10 @@ ASM_SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [holfoot_ap_data_list_seg_def,
    VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_prop_equal,
    VAR_RES_IS_STACK_IMPRECISE___USED_VARS___data_list_seg_num] THEN
 REPEAT STRIP_TAC THEN
-Q.PAT_ASSUM `!n sfb_rest s. X`
+Q.PAT_X_ASSUM `!n sfb_rest s. X`
    (MP_TAC o Q.SPECL [`sfb_rest`, `s`] o
       (CONV_RULE (RESORT_FORALL_CONV (fn [x1,x2,x3] => [x2,x3,x1])))) THEN
-Q.PAT_ASSUM `var_res_prop___PROP f X Y s` MP_TAC THEN
+Q.PAT_X_ASSUM `var_res_prop___PROP f X Y s` MP_TAC THEN
 ASM_SIMP_TAC std_ss [var_res_prop___PROP_INSERT,
    var_res_prop___COND_INSERT, var_res_prop___COND_UNION,
    VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_bool_proposition,
@@ -5299,7 +5300,7 @@ Q.HO_MATCH_ABBREV_TAC
       ((?s1 s2. P2 s1 s2 n) = (?s1 s2. P1' s1 s2 n))) ==>
  ((?s1 s2 n. P2 s1 s2 n) = (?s1 s2 n. P1'' s1 s2 n))` THEN
 
-`P1'' = P1'` by ALL_TAC THEN1 (
+`P1'' = P1'` by (
    Q.UNABBREV_TAC `P1''` THEN Q.UNABBREV_TAC `P1'` THEN
    SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [FUN_EQ_THM] THEN
    REPEAT STRIP_TAC THEN
@@ -5309,18 +5310,18 @@ Q.HO_MATCH_ABBREV_TAC
 ASM_REWRITE_TAC[] THEN POP_ASSUM (K ALL_TAC) THEN
 Q.UNABBREV_TAC `P1''` THEN
 STRIP_TAC THEN
-Tactical.REVERSE (`
+`
 (!s1 s2 n'. P1 s1 s2 n' ==> (n = n')) /\
 (!s1 s2 n'. P2 s1 s2 n' ==> (n = n')) /\
-(!s1 s2 n'. P1' s1 s2 n' ==> (n = n'))` by ALL_TAC) THEN1 (
+(!s1 s2 n'. P1' s1 s2 n' ==> (n = n'))` suffices_by (STRIP_TAC THEN
    METIS_TAC[]
 ) THEN
 
 Tactical.REVERSE (
-`!s1 s2 n' data.
+sg `!s1 s2 n' data.
     (DISJOINT_FMAP_UNION (SOME s1) (SOME s2) = SOME (SND s)) /\
     (FST s,s1) IN holfoot_ap_data_list_seg_num n' tl e1 data e2 ==>
-    (n' = n)` by ALL_TAC) THEN1 (
+    (n' = n)`) THEN1 (
    UNABBREV_ALL_TAC THEN
    ASM_SIMP_TAC std_ss [] THEN
    METIS_TAC[]
@@ -5401,13 +5402,13 @@ val VAR_RES_FRAME_SPLIT___data_list_seg_num___REMOVE_START___REWRITE = store_thm
 REPEAT STRIP_TAC THEN
 `IS_SOME (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS e1) /\
  IS_SOME (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS e2) /\
- IS_SOME (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS e3)` by ALL_TAC THEN1 (
+ IS_SOME (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS e3)` by (
    FULL_SIMP_TAC std_ss [VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET_def]
 ) THEN
 ASM_SIMP_TAC std_ss [holfoot_ap_data_list_seg_num___SPLIT] THEN
 
 Tactical.REVERSE (Cases_on `ALL_DISTINCT (tl::(MAP FST data1))`) THEN1 (
-   `holfoot_ap_data_list_seg_num n tl e1 data1 e2 = asl_false` by ALL_TAC THEN1 (
+   `holfoot_ap_data_list_seg_num n tl e1 data1 e2 = asl_false` by (
        MATCH_MP_TAC (holfoot_ap_data_list_seg_num___DATA_PROPS) THEN
        ASM_SIMP_TAC std_ss []
    ) THEN
@@ -5436,14 +5437,14 @@ VAR_RES_FRAME_SPLIT___REWRITE_OK DISJOINT_FMAP_UNION (wpb,rpb)
 `(!c. VAR_RES_IS_STACK_IMPRECISE___USED_VARS (SET_OF_BAG (wpb + rpb)) (listP1' c)) /\
  (!c. VAR_RES_IS_STACK_IMPRECISE___USED_VARS (SET_OF_BAG (wpb + rpb)) (listP2' c)) /\
  VAR_RES_IS_STACK_IMPRECISE___USED_VARS (SET_OF_BAG (wpb + rpb)) listP1 /\
- VAR_RES_IS_STACK_IMPRECISE___USED_VARS (SET_OF_BAG (wpb + rpb)) listP2` by ALL_TAC THEN1 (
+ VAR_RES_IS_STACK_IMPRECISE___USED_VARS (SET_OF_BAG (wpb + rpb)) listP2` by (
     UNABBREV_ALL_TAC THEN
     ASM_SIMP_TAC std_ss [VAR_RES_IS_STACK_IMPRECISE___USED_VARS___data_list_seg_num,
        VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET___VAR_CONST_EVAL]
 ) THEN
 
 `(!c. VAR_RES_IS_STACK_IMPRECISE (listP1' c)) /\
- (!c. VAR_RES_IS_STACK_IMPRECISE (listP2' c))` by ALL_TAC THEN1 (
+ (!c. VAR_RES_IS_STACK_IMPRECISE (listP2' c))` by (
     FULL_SIMP_TAC std_ss [VAR_RES_IS_STACK_IMPRECISE___USED_VARS_def]
 ) THEN
 
@@ -5471,18 +5472,18 @@ ASM_SIMP_TAC std_ss [asl_bool_EVAL, holfoot_not_in_heap_def,
    DISJOINT_FMAP_UNION___FEMPTY] THEN
 REPEAT STRIP_TAC THEN
 
-`SET_OF_BAG (wpb + rpb) SUBSET FDOM (FST s)` by ALL_TAC THEN1 (
+`SET_OF_BAG (wpb + rpb) SUBSET FDOM (FST s)` by (
    METIS_TAC [var_res_prop___PROP___VARS, pairTheory.FST, IN_DEF]
 ) THEN
 
-`?c. e3 (FST s) = SOME c` by ALL_TAC THEN1 (
+`?c. e3 (FST s) = SOME c` by (
    SIMP_TAC std_ss [GSYM IS_SOME_EXISTS] THEN
    METIS_TAC [VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET___IS_SOME_IMPL]
 ) THEN
 
 `?s3. ASL_IS_SUBSTATE DISJOINT_FMAP_UNION s3 (SND s) /\
-   (FST s,s3) IN listP1` by ALL_TAC THEN1 (
-   Q.PAT_ASSUM `var_res_prop___PROP f X Y s` MP_TAC THEN
+   (FST s,s3) IN listP1` by (
+   Q.PAT_X_ASSUM `var_res_prop___PROP f X Y s` MP_TAC THEN
    ASM_SIMP_TAC std_ss [var_res_prop___PROP_INSERT,
       var_res_prop___COND_UNION, var_res_prop___COND_INSERT] THEN
    METIS_TAC[ASL_IS_SUBSTATE_INTRO, IS_SEPARATION_COMBINATOR___FINITE_MAP]
@@ -5502,7 +5503,7 @@ EQ_TAC THENL [
          FDOM_FUNION, DISJOINT_UNION_BOTH, IN_UNION] THEN
    STRIP_TAC THEN
    ASM_SIMP_TAC std_ss [DISJOINT_SYM, FUNION_ASSOC] THEN
-   `(e2 (FST s) = SOME c'') /\ (s1 = s3) /\ data2_cond` by ALL_TAC THEN1 (
+   `(e2 (FST s) = SOME c'') /\ (s1 = s3) /\ data2_cond` by (
       MP_TAC (
          Q.SPECL [`n`, `e1`, `e2`, `e1`, `var_res_exp_const c''`, `tl`, `data1`, ` (MAP (\x. (FST x,TAKE n (SND x))) data2)`,
                `FST (s:holfoot_state)`, `s3`, `s1`, `SND (s:holfoot_state)`]
@@ -5515,7 +5516,7 @@ EQ_TAC THENL [
         FUNION_DEF, var_res_exp_const_def, SUBSET_UNION,
         EVERY_MEM, MEM_MAP, GSYM RIGHT_EXISTS_AND_THM,
         GSYM LEFT_EXISTS_AND_THM, GSYM LEFT_FORALL_IMP_THM] THEN
-      FULL_SIMP_TAC std_ss [SUBSET_DEF, IN_LIST_TO_SET, MEM_MAP,
+      FULL_SIMP_TAC std_ss [SUBSET_DEF,  MEM_MAP,
          GSYM LEFT_FORALL_IMP_THM] THEN
       METIS_TAC[pairTheory.FST, pairTheory.SND, pairTheory.PAIR]
    ) THEN
@@ -5536,7 +5537,7 @@ EQ_TAC THENL [
          FDOM_FUNION, DISJOINT_UNION_BOTH, IN_UNION] THEN
    STRIP_TAC THEN
    FULL_SIMP_TAC std_ss [DISJOINT_SYM, FUNION_ASSOC] THEN
-   `?c''. (e2 (FST s) = SOME c'')` by ALL_TAC THEN1 (
+   `?c''. (e2 (FST s) = SOME c'')` by (
       Q.UNABBREV_TAC `listP1` THEN
       FULL_SIMP_TAC std_ss [GSYM IS_SOME_EXISTS] THEN
       METIS_TAC[holfoot_ap_data_list_seg_num___EXP_DEFINED,
@@ -5556,7 +5557,7 @@ EQ_TAC THENL [
       Q.UNABBREV_TAC `listP1` THEN
       Q.UNABBREV_TAC `listP1'` THEN
       FULL_SIMP_TAC std_ss [EVERY_MEM,
-        SUBSET_DEF, IN_LIST_TO_SET, MEM_MAP, GSYM LEFT_FORALL_IMP_THM] THEN
+        SUBSET_DEF,  MEM_MAP, GSYM LEFT_FORALL_IMP_THM] THEN
       MATCH_MP_TAC (MP_LEQ_CANON holfoot_ap_data_list_seg_num___REWRITE_END_EXP) THEN
       Q.EXISTS_TAC `e2` THEN
       ASM_SIMP_TAC std_ss [IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___VAR_CONST_EVAL] THEN
@@ -5565,7 +5566,7 @@ EQ_TAC THENL [
       Q.EXISTS_TAC `data1` THEN
       ASM_SIMP_TAC (std_ss++boolSimps.ETA_ss) [MEM_MAP,
          GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM,
-         GSYM LEFT_FORALL_IMP_THM, MAP_MAP_o, combinTheory.o_DEF],
+         GSYM LEFT_FORALL_IMP_THM, MAP_MAP_o, o_DEF],
 
 
       Q.UNABBREV_TAC `listP2` THEN
@@ -5684,13 +5685,13 @@ Tactical.REVERSE (Cases_on `data2_cond = T`) THEN1 (
      asl_false___asl_star_THM, asl_bool_EVAL]
 ) THEN
 Q.UNABBREV_TAC `data2_cond` THEN
-Tactical.REVERSE (`
+`
    VAR_RES_FRAME_SPLIT___REWRITE_OK DISJOINT_FMAP_UNION (wpb,rpb)
       sfb_context (BAG_INSERT listP1 sfb_split)
       (BAG_INSERT (asl_and (holfoot_not_in_heap e3) listP1)
          (BAG_INSERT listP2 sfb_imp))
       sfb_context (BAG_INSERT listP1 sfb_split)
-      (BAG_INSERT listP1 (BAG_INSERT listP2 sfb_imp))` by ALL_TAC) THEN1 (
+      (BAG_INSERT listP1 (BAG_INSERT listP2 sfb_imp))` suffices_by (STRIP_TAC THEN
    FULL_SIMP_TAC std_ss [var_res_bool_proposition_TF,
       VAR_RES_FRAME_SPLIT___REWRITE_OK___stack_true,
       prove (``BAG_INSERT X (BAG_INSERT (var_res_prop_stack_true f) b) =
@@ -5716,7 +5717,7 @@ SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [holfoot_not_in_heap_def,
 
 REPEAT STRIP_TAC THEN
 
-`?c. (e3 (FST s) = SOME c)` by ALL_TAC THEN1 (
+`?c. (e3 (FST s) = SOME c)` by (
    Q.UNABBREV_TAC `listP2` THEN
    FULL_SIMP_TAC std_ss [GSYM IS_SOME_EXISTS] THEN
    METIS_TAC[holfoot_ap_data_list_seg_num___EXP_DEFINED,
@@ -5727,7 +5728,7 @@ Cases_on `c = 0` THEN1 (
    METIS_TAC[holfoot_ap_data_list_seg_num___NULL_NOT_IN_FDOM,
      pairTheory.SND]
 ) THEN
-Tactical.REVERSE (`c IN FDOM s2` by ALL_TAC) THEN1 (
+`c IN FDOM s2` suffices_by (STRIP_TAC THEN
    FULL_SIMP_TAC std_ss [DISJOINT_DEF, EXTENSION, DISJOINT_FMAP_UNION___REWRITE,
       NOT_IN_EMPTY, IN_INTER, IN_UNION, FDOM_FUNION] THEN
    METIS_TAC[]
@@ -5736,7 +5737,7 @@ Tactical.REVERSE (`c IN FDOM s2` by ALL_TAC) THEN1 (
 `?sfb s22.
      holfoot_implies_in_heap_or_null sfb sfb e3 /\
      ASL_IS_SUBSTATE DISJOINT_FMAP_UNION s22 s2 /\
-     (FST s, s22) IN var_res_bigstar DISJOINT_FMAP_UNION sfb` by ALL_TAC THEN1 (
+     (FST s, s22) IN var_res_bigstar DISJOINT_FMAP_UNION sfb` by (
 
    FULL_SIMP_TAC std_ss [] THENL [
      Q.ABBREV_TAC `sfb = sfb_imp + sfb_context` THEN
@@ -5744,7 +5745,7 @@ Tactical.REVERSE (`c IN FDOM s2` by ALL_TAC) THEN1 (
         METIS_TAC[ASSOC_BAG_UNION, COMM_BAG_UNION] THEN
      FULL_SIMP_TAC std_ss [] THEN
      Q.EXISTS_TAC `sfb` THEN
-     Q.PAT_ASSUM `(FST s, s2') IN X` MP_TAC THEN
+     Q.PAT_X_ASSUM `(FST s, s2') IN X` MP_TAC THEN
      ASM_SIMP_TAC std_ss [var_res_prop___PROP___REWRITE,
        IS_SEPARATION_COMBINATOR___FINITE_MAP,
        IS_SEPARATION_COMBINATOR___VAR_RES_COMBINATOR,
@@ -5753,7 +5754,7 @@ Tactical.REVERSE (`c IN FDOM s2` by ALL_TAC) THEN1 (
          IS_SEPARATION_COMBINATOR___FINITE_MAP] THEN
      REPEAT STRIP_TAC THEN
      `VAR_RES_IS_STACK_IMPRECISE (var_res_bigstar DISJOINT_FMAP_UNION sfb) /\
-      VAR_RES_IS_STACK_IMPRECISE (var_res_bigstar DISJOINT_FMAP_UNION sfb_rest)` by ALL_TAC THEN1 (
+      VAR_RES_IS_STACK_IMPRECISE (var_res_bigstar DISJOINT_FMAP_UNION sfb_rest)` by (
          CONSEQ_REWRITE_TAC ([], [VAR_RES_IS_STACK_IMPRECISE___var_res_bigstar], []) THEN
          ASM_SIMP_TAC std_ss [] THEN
          Q.UNABBREV_TAC `sfb` THEN
@@ -5770,12 +5771,12 @@ Tactical.REVERSE (`c IN FDOM s2` by ALL_TAC) THEN1 (
 
 
 
-     Q.PAT_ASSUM `X s` MP_TAC THEN
+     Q.PAT_X_ASSUM `X s` MP_TAC THEN
      ASM_SIMP_TAC std_ss [var_res_prop___PROP_INSERT,
        var_res_prop___COND_INSERT,
        var_res_prop___COND_UNION] THEN
      REPEAT STRIP_TAC THEN
-     `s1'' = s1` by ALL_TAC THEN1 (
+     `s1'' = s1` by (
         MP_TAC (Q.SPECL [`n`, `e1`, `e2`, `e1`, `e2`, `tl`, `data1`,
                   `data1`, `FST (s:holfoot_state)`, `s1`, `s1''`, `SND (s:holfoot_state)`]
              holfoot_ap_data_list_seg_num___SAME_LENGTH_START) THEN
@@ -5786,19 +5787,19 @@ Tactical.REVERSE (`c IN FDOM s2` by ALL_TAC) THEN1 (
      Q.ABBREV_TAC `sfb = sfb_split + sfb_context` THEN
      Q.EXISTS_TAC `sfb` THEN Q.EXISTS_TAC `s2` THEN
      ASM_SIMP_TAC std_ss [ASL_IS_SUBSTATE___REFL] THEN
-     Q.PAT_ASSUM `(FST s, s2'') IN XXX` MP_TAC THEN
+     Q.PAT_X_ASSUM `(FST s, s2'') IN XXX` MP_TAC THEN
      ASM_SIMP_TAC std_ss [var_res_prop___PROP___REWRITE,
        IS_SEPARATION_COMBINATOR___FINITE_MAP, IN_ABS]
    ]
 ) THEN
-Q.PAT_ASSUM `X \/ Y` (K ALL_TAC) THEN
+Q.PAT_X_ASSUM `X \/ Y` (K ALL_TAC) THEN
 
-Tactical.REVERSE (`c IN FDOM s22` by ALL_TAC) THEN1 (
+`c IN FDOM s22` suffices_by (STRIP_TAC THEN
    FULL_SIMP_TAC std_ss [ASL_IS_SUBSTATE___DISJOINT_FMAP_UNION,
       SUBSET_DEF]
 ) THEN
 
-Q.PAT_ASSUM `holfoot_implies_in_heap_or_null sfb sfb e3` MP_TAC THEN
+Q.PAT_X_ASSUM `holfoot_implies_in_heap_or_null sfb sfb e3` MP_TAC THEN
 ASM_SIMP_TAC std_ss [holfoot_implies_in_heap_or_null_def,
    holfoot_implies_in_heap_pred_def, GSYM LEFT_EXISTS_IMP_THM] THEN
 Q.EXISTS_TAC `FST (s:holfoot_state)` THEN
@@ -5931,7 +5932,7 @@ Q.HO_MATCH_ABBREV_TAC `
 
 `(!n. VAR_RES_IS_STACK_IMPRECISE___USED_VARS (SET_OF_BAG (wpb + rpb)) (listP1 n)) /\
  (!n. VAR_RES_IS_STACK_IMPRECISE___USED_VARS (SET_OF_BAG (wpb + rpb)) (listP2 n)) /\
- (!n. VAR_RES_IS_STACK_IMPRECISE___USED_VARS (SET_OF_BAG (wpb + rpb)) (listP3 n))` by ALL_TAC THEN1 (
+ (!n. VAR_RES_IS_STACK_IMPRECISE___USED_VARS (SET_OF_BAG (wpb + rpb)) (listP3 n))` by (
     UNABBREV_ALL_TAC THEN
     ASM_SIMP_TAC std_ss [VAR_RES_IS_STACK_IMPRECISE___USED_VARS___data_list_seg_num]
 ) THEN
@@ -5941,7 +5942,7 @@ Q.HO_MATCH_ABBREV_TAC `
       (BAG_INSERT (listP2 (n+m)) sfb_imp)
       (BAG_INSERT (listP1 n) sfb_context) sfb_split
       (BAG_INSERT (var_res_bool_proposition DISJOINT_FMAP_UNION data2_cond)
-         (BAG_INSERT (listP3 m) sfb_imp))` by ALL_TAC THEN1 (
+         (BAG_INSERT (listP3 m) sfb_imp))` by (
 
    UNABBREV_ALL_TAC THEN
    REPEAT STRIP_TAC THEN
@@ -5949,13 +5950,13 @@ Q.HO_MATCH_ABBREV_TAC `
        `(EVERY (\x. MEM (FST x,TAKE (LENGTH (SND (HD data1))) (SND x)) data1) data2 =
          EVERY (\x. MEM (FST x,TAKE n (SND x)) data1) data2) /\
         (MAP (\x. (FST x,DROP (LENGTH (SND (HD data1))) (SND x))) data2 =
-         MAP (\x. (FST x,DROP n (SND x))) data2)` by ALL_TAC THEN1 (
+         MAP (\x. (FST x,DROP n (SND x))) data2)` by (
            Cases_on `data2` THEN FULL_SIMP_TAC list_ss []) THEN
        ASM_SIMP_TAC std_ss [] THEN
        MATCH_MP_TAC (MP_CANON VAR_RES_FRAME_SPLIT___data_list_seg_num___REMOVE_START___REWRITE___not_in_heap) THEN
        ASM_REWRITE_TAC[]
    ) THEN
-   `holfoot_ap_data_list_seg_num n tl e1 data1 e2 = asl_false` by ALL_TAC THEN1 (
+   `holfoot_ap_data_list_seg_num n tl e1 data1 e2 = asl_false` by (
       MATCH_MP_TAC holfoot_ap_data_list_seg_num___DATA_PROPS THEN
 
       Cases_on `data2` THEN FULL_SIMP_TAC list_ss [] THEN
@@ -5986,9 +5987,9 @@ SIMP_TAC std_ss [var_res_prop___PROP___asl_exists,
 REPEAT STRIP_TAC THEN
 Tactical.REVERSE EQ_TAC THEN1 (
    REPEAT STRIP_TAC THEN
-   Tactical.REVERSE (`n'' = n` by ALL_TAC) THEN1 (
+   `n'' = n` suffices_by (STRIP_TAC THEN
       Q.EXISTS_TAC `n + n'` THEN
-      Q.PAT_ASSUM `!n m sfb_rest s. X` (MP_TAC o
+      Q.PAT_X_ASSUM `!n m sfb_rest s. X` (MP_TAC o
          Q.SPECL [`n`, `n'`, `sfb_rest`, `s`]) THEN
       ASM_SIMP_TAC std_ss [] THEN
       METIS_TAC[BAG_INSERT_commutes]
@@ -5996,8 +5997,8 @@ Tactical.REVERSE EQ_TAC THEN1 (
    `?s1 s2. (FST s, s1) IN listP1 n /\
             (FST s, s2) IN listP1 n'' /\
             (ASL_IS_SUBSTATE DISJOINT_FMAP_UNION s1 (SND s)) /\
-            (ASL_IS_SUBSTATE DISJOINT_FMAP_UNION s2 (SND s))` by ALL_TAC THEN1 (
-         REPEAT (Q.PAT_ASSUM `var_res_prop___PROP f X Y s` MP_TAC) THEN
+            (ASL_IS_SUBSTATE DISJOINT_FMAP_UNION s2 (SND s))` by (
+         REPEAT (Q.PAT_X_ASSUM `var_res_prop___PROP f X Y s` MP_TAC) THEN
          ASM_SIMP_TAC std_ss [var_res_prop___PROP_INSERT,
            var_res_prop___COND_INSERT, var_res_prop___COND_UNION,
            VAR_RES_IS_STACK_IMPRECISE___USED_VARS___var_res_bool_proposition,
@@ -6021,28 +6022,28 @@ Tactical.REVERSE EQ_TAC THEN1 (
 ) THEN
 REPEAT STRIP_TAC THEN
 Tactical.REVERSE (Cases_on `n' < n`) THEN1 (
-   `?m. n' = n + m` by ALL_TAC THEN1 (
+   `?m. n' = n + m` by (
       Q.EXISTS_TAC `n' - n` THEN
       DECIDE_TAC
    ) THEN
-   Q.PAT_ASSUM `!n m sfb_rest s. X s` (MP_TAC o Q.SPECL
+   Q.PAT_X_ASSUM `!n m sfb_rest s. X s` (MP_TAC o Q.SPECL
       [`n`, `m`, `sfb_rest`, `s`]) THEN
    FULL_SIMP_TAC std_ss [] THEN
    METIS_TAC[BAG_INSERT_commutes]
 ) THEN
-`?m. n = n' + SUC m` by ALL_TAC THEN1 (
+`?m. n = n' + SUC m` by (
    Q.EXISTS_TAC `PRE (n - n')` THEN
    DECIDE_TAC
 ) THEN
 CCONTR_TAC THEN POP_ASSUM (K ALL_TAC) THEN
 
-REPEAT (Q.PAT_ASSUM `var_res_prop___PROP X Y Z s` MP_TAC) THEN
+REPEAT (Q.PAT_X_ASSUM `var_res_prop___PROP X Y Z s` MP_TAC) THEN
 ASM_SIMP_TAC std_ss [var_res_prop___PROP_INSERT,
    var_res_prop___COND_INSERT, var_res_prop___COND_UNION] THEN
 Q.UNABBREV_TAC `listP1` THEN
 `IS_SOME (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS e1) /\
  IS_SOME (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS e2) /\
- IS_SOME (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS e3)` by ALL_TAC THEN1 (
+ IS_SOME (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS e3)` by (
     FULL_SIMP_TAC std_ss [VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET_def]
 ) THEN
 ASM_SIMP_TAC std_ss [holfoot_ap_data_list_seg_num___SPLIT, IN_ABS,
@@ -6054,7 +6055,7 @@ ASM_SIMP_TAC std_ss [asl_star___VAR_RES_IS_STACK_IMPRECISE,
    IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___VAR_CONST_EVAL] THEN
 REPEAT STRIP_TAC THEN
 CCONTR_TAC THEN FULL_SIMP_TAC std_ss [] THEN
-`(e3 (FST s) = SOME c) /\ (s1' = es1)` by ALL_TAC THEN1 (
+`(e3 (FST s) = SOME c) /\ (s1' = es1)` by (
     MP_TAC (Q.SPECL [`n'`, `e1`, `e3`, `e1`, `var_res_exp_const c`, `tl`, `data2`,
              `MAP (\x. (FST x,TAKE n' (SND x))) data1`, `FST (s:holfoot_state)`, `s1'`, `es1`, `SND (s:holfoot_state)`]
              holfoot_ap_data_list_seg_num___SAME_LENGTH_START) THEN
@@ -6065,8 +6066,8 @@ CCONTR_TAC THEN FULL_SIMP_TAC std_ss [] THEN
     METIS_TAC[ASL_IS_SUBSTATE_INTRO, IS_SEPARATION_COMBINATOR___FINITE_MAP,
        ASL_IS_SUBSTATE___TRANS]
 ) THEN
-`~(c = 0) /\ (c IN FDOM es2)` by ALL_TAC THEN1 (
-   Q.PAT_ASSUM `(FST s, es2) IN X` MP_TAC THEN
+`~(c = 0) /\ (c IN FDOM es2)` by (
+   Q.PAT_X_ASSUM `(FST s, es2) IN X` MP_TAC THEN
    FULL_SIMP_TAC std_ss [holfoot_ap_data_list_seg_num___STACK_IMPRECISE___REWRITE,
       IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___VAR_CONST_EVAL,
       IN_ABS, holfoot_ap_points_to_def, LET_THM] THEN
@@ -6074,17 +6075,17 @@ CCONTR_TAC THEN FULL_SIMP_TAC std_ss [] THEN
    FULL_SIMP_TAC std_ss [var_res_exp_const_def, DISJOINT_FMAP_UNION___REWRITE,
       FDOM_FUNION, IN_UNION, IN_SING]
 ) THEN
-Tactical.REVERSE (`c IN FDOM s2` by ALL_TAC) THEN1 (
+`c IN FDOM s2` suffices_by (STRIP_TAC THEN
    FULL_SIMP_TAC std_ss [DISJOINT_FMAP_UNION___REWRITE,
       FDOM_FUNION, DISJOINT_UNION_BOTH] THEN
    FULL_SIMP_TAC std_ss [EXTENSION, DISJOINT_DEF, IN_INTER, NOT_IN_EMPTY] THEN
    METIS_TAC[]
 ) THEN
-Q.PAT_ASSUM `(FST s, s2) IN Y` MP_TAC THEN
+Q.PAT_X_ASSUM `(FST s, s2) IN Y` MP_TAC THEN
 ASM_SIMP_TAC std_ss [var_res_prop___PROP___REWRITE, IN_ABS] THEN
 STRIP_TAC THEN
 
-Q.PAT_ASSUM `holfoot_implies_in_heap_or_null x y e3` MP_TAC THEN
+Q.PAT_X_ASSUM `holfoot_implies_in_heap_or_null x y e3` MP_TAC THEN
 ASM_SIMP_TAC std_ss [holfoot_implies_in_heap_or_null_def,
    holfoot_implies_in_heap_pred_def, GSYM LEFT_EXISTS_IMP_THM] THEN
 
@@ -6206,7 +6207,7 @@ Q.ABBREV_TAC `points_pred = (holfoot_ap_points_to endExp
                  (tl::MAP FST data,
                   MAP var_res_exp_const
                     (0::MAP (\x. LAST (SND x)) data)))))` THEN
-`VAR_RES_IS_STACK_IMPRECISE points_pred` by ALL_TAC THEN1 (
+`VAR_RES_IS_STACK_IMPRECISE points_pred` by (
    Q.UNABBREV_TAC `points_pred` THEN
    CONSEQ_REWRITE_TAC ([],
        [VAR_RES_IS_STACK_IMPRECISE___points_to,
@@ -6226,7 +6227,7 @@ ASM_SIMP_TAC list_ss [holfoot_separation_combinator_def,
    IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___VAR_CONST_EVAL] THEN
 Q.UNABBREV_TAC `points_pred` THEN
 ASM_SIMP_TAC list_ss [var_res_prop_varlist_update___holfoot_ap_points_to,
-  o_f_LIST_TO_FMAP, ZIP_MAP, MAP_MAP_o, combinTheory.o_DEF, MAP_ZIP_EQ,
+  o_f_LIST_TO_FMAP, ZIP_MAP, MAP_MAP_o, o_DEF, MAP_ZIP_EQ,
   var_res_exp_varlist_update___const_EVAL]);
 
 
@@ -6315,7 +6316,7 @@ val holfoot_ap_data_array_MAP_LIST___REWRITE = store_thm ("holfoot_ap_data_array
        (MAP (\tl. (FST tl, TL (SND tl))) data))))``,
 
 SIMP_TAC list_ss [holfoot_ap_data_array_MAP_LIST_def, COUNT_LIST_def] THEN
-SIMP_TAC list_ss [var_res_exp_add_sub_REWRITES, MAP_MAP_o, combinTheory.o_DEF,
+SIMP_TAC list_ss [var_res_exp_add_sub_REWRITES, MAP_MAP_o, o_DEF,
    EL, GSYM arithmeticTheory.ADD1]);
 
 
@@ -6387,8 +6388,8 @@ SIMP_TAC list_ss [holfoot_ap_data_array___CONST, holfoot_ap_data_array_MAP_LIST_
    var_res_map___REWRITES, IS_SEPARATION_COMBINATOR___FINITE_MAP,
    EVERY_MAP] THEN
 SIMP_TAC std_ss [asl_trivial_cond___asl_star, asl_trivial_cond___asl_trivial_cond,
-   GSYM EVERY_CONJ, CONJ_ASSOC, MAP_MAP_o, combinTheory.o_DEF, ETA_THM] THEN
-`!l:num list. (~NULL l /\ (LENGTH (TL l) = n)) = (LENGTH l = SUC n)` by ALL_TAC THEN1 (
+   GSYM EVERY_CONJ, CONJ_ASSOC, MAP_MAP_o, o_DEF, ETA_THM] THEN
+`!l:num list. (~NULL l /\ (LENGTH (TL l) = n)) = (LENGTH l = SUC n)` by (
    Cases_on `l` THEN SIMP_TAC list_ss []
 ) THEN
 ASM_SIMP_TAC std_ss []);
@@ -6407,10 +6408,10 @@ val holfoot_ap_data_array_SNOC = store_thm ("holfoot_ap_data_array_SNOC",
 REPEAT STRIP_TAC THEN
 SIMP_TAC list_ss [holfoot_ap_data_array___CONST, holfoot_ap_data_array_MAP_LIST_def,
    COUNT_LIST_SNOC, MAP_SNOC, var_res_map_SNOC, IS_SEPARATION_COMBINATOR___FINITE_MAP,
-   var_res_map_MAP, combinTheory.o_DEF, EVERY_MAP, MAP_MAP_o] THEN
+   var_res_map_MAP, o_DEF, EVERY_MAP, MAP_MAP_o] THEN
 SIMP_TAC std_ss [asl_trivial_cond___asl_star, asl_trivial_cond___asl_trivial_cond,
    GSYM EVERY_CONJ, CONJ_ASSOC, ETA_THM] THEN
-`!l:num list. (~NULL l /\ (LENGTH (FRONT l) = n)) = (LENGTH l = SUC n)` by ALL_TAC THEN1 (
+`!l:num list. (~NULL l /\ (LENGTH (FRONT l) = n)) = (LENGTH l = SUC n)` by (
    Cases_on `l` THEN SIMP_TAC list_ss [LENGTH_FRONT_CONS]
 ) THEN
 ASM_SIMP_TAC std_ss [] THEN
@@ -6440,7 +6441,7 @@ SIMP_TAC std_ss [CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV holfoot_ap_data_array
 REPEAT STRIP_TAC THEN
 Q.ABBREV_TAC `p = (holfoot_ap_points_to e (LIST_TO_FMAP
         (MAP (\tl. (FST tl,var_res_exp_const (HD (SND tl)))) data)))` THEN
-`VAR_RES_IS_STACK_IMPRECISE p` by ALL_TAC THEN1 (
+`VAR_RES_IS_STACK_IMPRECISE p` by (
    Q.UNABBREV_TAC `p` THEN
    CONSEQ_REWRITE_TAC ([], [VAR_RES_IS_STACK_IMPRECISE___points_to,
       FEVERY_LIST_TO_FMAP], []) THEN
@@ -6449,8 +6450,8 @@ Q.ABBREV_TAC `p = (holfoot_ap_points_to e (LIST_TO_FMAP
 ASM_SIMP_TAC std_ss [asl_trivial_cond___asl_star_var_res_bool_proposition,
    IS_SEPARATION_COMBINATOR___FINITE_MAP, GSYM EVERY_CONJ,
    asl_trivial_cond___asl_trivial_cond, CONJ_ASSOC, MAP_MAP_o,
-   combinTheory.o_DEF, ETA_THM] THEN
-`!l:num list. (~NULL l /\ (NULL (TL l))) = (LENGTH l = 1)` by ALL_TAC THEN1 (
+   o_DEF, ETA_THM] THEN
+`!l:num list. (~NULL l /\ (NULL (TL l))) = (LENGTH l = 1)` by (
    Cases_on `l` THEN SIMP_TAC list_ss [] THEN
    Cases_on `t` THEN SIMP_TAC list_ss []
 ) THEN
@@ -6508,12 +6509,12 @@ SIMP_TAC std_ss [holfoot_ap_data_array_def,
    var_res_prop_varlist_update___var_res_exp_prop,
    var_res_prop_varlist_update___asl_trivial_cond,
    holfoot_ap_data_array_MAP_LIST_def,
-   var_res_map_MAP, combinTheory.o_DEF] THEN
+   var_res_map_MAP, o_DEF] THEN
 REPEAT STRIP_TAC THEN
 AP_TERM_TAC THEN ABS_TAC THEN AP_TERM_TAC THEN
 Q.MATCH_ABBREV_TAC `var_res_prop_varlist_update vcL (var_res_map DISJOINT_FMAP_UNION P l) = XXX` THEN
 Q.UNABBREV_TAC `XXX` THEN
-`!l. VAR_RES_IS_STACK_IMPRECISE (P l)` by ALL_TAC THEN1 (
+`!l. VAR_RES_IS_STACK_IMPRECISE (P l)` by (
    Q.UNABBREV_TAC `P` THEN
    SIMP_TAC std_ss [] THEN
    CONSEQ_REWRITE_TAC ([], [
@@ -6526,7 +6527,7 @@ ASM_SIMP_TAC std_ss [var_res_prop_varlist_update___var_res_map,
    IS_SEPARATION_COMBINATOR___FINITE_MAP] THEN
 AP_THM_TAC THEN AP_TERM_TAC THEN
 Q.UNABBREV_TAC `P` THEN
-ASM_SIMP_TAC std_ss [combinTheory.o_DEF,
+ASM_SIMP_TAC std_ss [o_DEF,
    var_res_prop_varlist_update___holfoot_ap_points_to,
    var_res_exp_varlist_update___var_res_exp_add_sub_EVAL,
    var_res_exp_varlist_update___const_EVAL,
@@ -6547,7 +6548,7 @@ Cases_on `n (FST s)` THEN1 (
    ASM_SIMP_TAC std_ss [holfoot_ap_data_array_def, var_res_exp_prop_def, LET_THM]
 ) THEN
 `holfoot_ap_data_array e n data s =
- holfoot_ap_data_array e (var_res_exp_const x) data s` by ALL_TAC THEN1 (
+ holfoot_ap_data_array e (var_res_exp_const x) data s` by (
    ASM_SIMP_TAC std_ss [holfoot_ap_data_array_def, var_res_exp_prop_def,
       LET_THM, var_res_exp_const_EVAL]
 ) THEN
@@ -6559,7 +6560,7 @@ Cases_on `x` THEN1 (
 ASM_SIMP_TAC arith_ss [holfoot_ap_data_array_SUC, asl_bool_EVAL] THEN
 DISJ2_TAC THEN
 Q.MATCH_ABBREV_TAC `~(s IN asl_star (VAR_RES_COMBINATOR DISJOINT_FMAP_UNION) P1 P2)` THEN
-`VAR_RES_IS_STACK_IMPRECISE P1 /\ VAR_RES_IS_STACK_IMPRECISE P2` by ALL_TAC THEN1 (
+`VAR_RES_IS_STACK_IMPRECISE P1 /\ VAR_RES_IS_STACK_IMPRECISE P2` by (
    UNABBREV_ALL_TAC THEN
    CONSEQ_REWRITE_TAC ([], [
       VAR_RES_IS_STACK_IMPRECISE___points_to,
@@ -6586,7 +6587,7 @@ val holfoot_ap_array___ALTERNATIVE_DEF = store_thm ("holfoot_ap_array___ALTERNAT
            (COUNT_LIST n))``,
 SIMP_TAC list_ss [holfoot_ap_array_def, holfoot_ap_data_array_def,
    holfoot_ap_data_array_MAP_LIST_def, LIST_TO_FMAP_def, asl_trivial_cond_TF,
-   FUPDATE_LIST_THM, var_res_map_MAP, MAP_MAP_o, combinTheory.o_DEF]);
+   FUPDATE_LIST_THM, var_res_map_MAP, MAP_MAP_o, o_DEF]);
 
 val holfoot_ap_array_SNOC = store_thm ("holfoot_ap_array_SNOC",
    ``!e n. holfoot_ap_array e (var_res_exp_const (SUC n)) =
@@ -6612,7 +6613,7 @@ SIMP_TAC list_ss [holfoot_ap_array___ALTERNATIVE_DEF,
    COUNT_LIST_def, var_res_map___REWRITES,
    IS_SEPARATION_COMBINATOR___FINITE_MAP,
    var_res_exp_add_sub_REWRITES, var_res_map_MAP,
-   combinTheory.o_DEF, GSYM arithmeticTheory.ADD1]);
+   o_DEF, GSYM arithmeticTheory.ADD1]);
 
 
 
@@ -6667,7 +6668,7 @@ SIMP_TAC std_ss [var_res_map_SNOC, IS_SEPARATION_COMBINATOR___FINITE_MAP, COUNT_
 REPEAT STRIP_TAC THEN
 Q.MATCH_ABBREV_TAC `asl_star (VAR_RES_COMBINATOR DISJOINT_FMAP_UNION) P1 P2 = XXX` THEN
 Q.UNABBREV_TAC `XXX` THEN
-`VAR_RES_IS_STACK_IMPRECISE P1 /\ VAR_RES_IS_STACK_IMPRECISE P2` by ALL_TAC THEN1 (
+`VAR_RES_IS_STACK_IMPRECISE P1 /\ VAR_RES_IS_STACK_IMPRECISE P2` by (
    MAP_EVERY Q.UNABBREV_TAC [`P1`, `P2`] THEN
    EXT_CONSEQ_REWRITE_TAC [K (DEPTH_CONV BETA_CONV)] [EVERY_MEM] ([], [
       VAR_RES_IS_STACK_IMPRECISE___points_to,
@@ -6701,7 +6702,7 @@ EQ_TAC THEN REPEAT STRIP_TAC THENL [
    Q.ABBREV_TAC `n'' = n + x'` THEN
    Q.EXISTS_TAC `DRESTRICT (SND x) s2` THEN
    Q.EXISTS_TAC `DRESTRICT (SND x) {n''}` THEN
-   `~(n'' IN s2) /\ (s2 INTER {n''} = EMPTY)` by ALL_TAC THEN1 (
+   `~(n'' IN s2) /\ (s2 INTER {n''} = EMPTY)` by (
       UNABBREV_ALL_TAC THEN
       SIMP_TAC std_ss [IN_IMAGE, IN_COUNT, EXTENSION, IN_INTER, NOT_IN_EMPTY,
          IN_SING]
@@ -6740,7 +6741,7 @@ POP_ASSUM (K ALL_TAC) THEN
 CONJ_TAC THEN1 (
    FULL_SIMP_TAC std_ss [EVERY_MEM]
 ) THEN
-Q.PAT_ASSUM `EVERY X data2` (K ALL_TAC) THEN
+Q.PAT_X_ASSUM `EVERY X data2` (K ALL_TAC) THEN
 REPEAT (POP_ASSUM MP_TAC) THEN
 SIMP_TAC std_ss [AND_IMP_INTRO, GSYM CONJ_ASSOC] THEN
 MAP_EVERY (fn x => Q.SPEC_TAC (x,x)) [`data1`, `data2`, `s`, `e`, `cn`] THEN
@@ -6751,9 +6752,9 @@ Induct_on `cn` THEN1 (
 FULL_SIMP_TAC std_ss [holfoot_ap_data_array_MAP_LIST___REWRITE,
    var_res_map_REWRITE, IS_SEPARATION_COMBINATOR___FINITE_MAP] THEN
 REPEAT STRIP_TAC THEN
-Q.PAT_ASSUM `s IN X` MP_TAC THEN
+Q.PAT_X_ASSUM `s IN X` MP_TAC THEN
 Q.MATCH_ABBREV_TAC `s IN asl_star f P1 P2 ==> s IN asl_star f P1' P2'` THEN
-Tactical.REVERSE (`(!s. s IN P1 ==> s IN P1') /\ (!s. s IN P2 ==> s IN P2')` by ALL_TAC) THEN1 (
+`(!s. s IN P1 ==> s IN P1') /\ (!s. s IN P2 ==> s IN P2')` suffices_by (STRIP_TAC THEN
    SIMP_TAC std_ss [asl_star_def, IN_ABS] THEN METIS_TAC[]
 ) THEN
 
@@ -6761,19 +6762,19 @@ UNABBREV_ALL_TAC THEN
 REPEAT STRIP_TAC THENL [
    MATCH_MP_TAC holfoot_ap_points_to___SUBMAP THEN
    Q.EXISTS_TAC `LIST_TO_FMAP (MAP (\tl. (FST tl,var_res_exp_const (HD (SND tl)))) data2)` THEN
-   ASM_SIMP_TAC std_ss [SUBMAP_DEF, FDOM_LIST_TO_FMAP, IN_LIST_TO_SET, MAP_MAP_o,
-      combinTheory.o_DEF, ETA_THM] THEN
+   ASM_SIMP_TAC std_ss [SUBMAP_DEF, FDOM_LIST_TO_FMAP,  MAP_MAP_o,
+      o_DEF, ETA_THM] THEN
    GEN_TAC THEN STRIP_TAC THEN
-   `MEM x (MAP FST data2)` by ALL_TAC THEN1 (
+   `MEM x (MAP FST data2)` by (
        FULL_SIMP_TAC list_ss [MEM_MAP] THEN METIS_TAC[]
    ) THEN
    ASM_REWRITE_TAC[] THEN
    Q.MATCH_ABBREV_TAC `LIST_TO_FMAP L1 ' x = LIST_TO_FMAP L2 ' x` THEN
-   `(MAP FST L1 = MAP FST data1) /\ (MAP FST L2 = MAP FST data2)` by ALL_TAC THEN1 (
+   `(MAP FST L1 = MAP FST data1) /\ (MAP FST L2 = MAP FST data2)` by (
       UNABBREV_ALL_TAC THEN
-      SIMP_TAC std_ss [MAP_MAP_o, combinTheory.o_DEF, ETA_THM]
+      SIMP_TAC std_ss [MAP_MAP_o, o_DEF, ETA_THM]
    ) THEN
-   `?x2. MEM (x,x2) L1 /\ MEM (x,x2) L2` by ALL_TAC THEN1 (
+   `?x2. MEM (x,x2) L1 /\ MEM (x,x2) L2` by (
        UNABBREV_ALL_TAC THEN
        FULL_SIMP_TAC std_ss [MEM_MAP] THEN
        METIS_TAC[]
@@ -6781,10 +6782,10 @@ REPEAT STRIP_TAC THENL [
    METIS_TAC [LIST_TO_FMAP___ALL_DISTINCT],
 
 
-   Q.PAT_ASSUM `!e s data2 data1. X ==> Y` MATCH_MP_TAC THEN
+   Q.PAT_X_ASSUM `!e s data2 data1. X ==> Y` MATCH_MP_TAC THEN
    Q.EXISTS_TAC `MAP (\tl. (FST tl,TL (SND tl))) data2` THEN
    ASM_SIMP_TAC std_ss [MEM_MAP, GSYM LEFT_FORALL_IMP_THM,
-      MAP_MAP_o, combinTheory.o_DEF, ETA_THM, EVERY_MAP] THEN
+      MAP_MAP_o, o_DEF, ETA_THM, EVERY_MAP] THEN
    METIS_TAC[]
 ]);
 
@@ -6814,7 +6815,7 @@ SIMP_TAC std_ss [holfoot_ap_data_array_def] THEN
 REPEAT STRIP_TAC THEN
 `(!n. (EVERY (\tl. LENGTH (SND tl) = n) data2 =
        EVERY (\tl. LENGTH (SND tl) = n) data1)) /\
- (ALL_DISTINCT (MAP FST data2) = ALL_DISTINCT (MAP FST data1))` by ALL_TAC THEN1 (
+ (ALL_DISTINCT (MAP FST data2) = ALL_DISTINCT (MAP FST data1))` by (
 
    REPEAT STRIP_TAC THENL [
       SIMP_TAC std_ss [EVERY_MEM] THEN
@@ -6831,9 +6832,9 @@ ASM_SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [EXTENSION, var_res_exp_prop_def,
 SIMP_TAC (std_ss++CONJ_ss) [IS_SOME_EXISTS, GSYM LEFT_FORALL_IMP_THM,
   GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM] THEN
 REPEAT STRIP_TAC THEN
-Tactical.REVERSE (`
-   (holfoot_ap_data_array_MAP_LIST e y data2 =
-    holfoot_ap_data_array_MAP_LIST e y data1)` by ALL_TAC) THEN1 (
+`
+   (holfoot_ap_data_array_MAP_LIST e x' data2 =
+    holfoot_ap_data_array_MAP_LIST e x' data1)` suffices_by (STRIP_TAC THEN
    ASM_SIMP_TAC std_ss []
 ) THEN
 
@@ -6841,17 +6842,17 @@ SIMP_TAC list_ss [holfoot_ap_data_array_MAP_LIST_def,
    LIST_EQ_REWRITE, LENGTH_COUNT_LIST,
    EL_MAP, EL_COUNT_LIST] THEN
 SIMP_TAC std_ss [GSYM fmap_EQ_THM, FDOM_LIST_TO_FMAP,
-  MAP_MAP_o, combinTheory.o_DEF, ETA_THM, IN_LIST_TO_SET, EXTENSION,
+  MAP_MAP_o, o_DEF, ETA_THM,  EXTENSION,
   MEM_MAP, GSYM LEFT_FORALL_IMP_THM] THEN
 REPEAT STRIP_TAC THENL [
    METIS_TAC[sortingTheory.PERM_MEM_EQ],
 
-   Cases_on `y'` THEN
+   Cases_on `y` THEN
    ASM_SIMP_TAC std_ss [] THEN
    MATCH_MP_TAC (prove (``!c. ((A = c) /\ (B = c)) ==> (A = B)``, SIMP_TAC std_ss [])) THEN
-   Q.EXISTS_TAC `var_res_exp_const (EL x' r)` THEN
+   Q.EXISTS_TAC `var_res_exp_const (EL x'' r)` THEN
    CONSEQ_REWRITE_TAC ([], [LIST_TO_FMAP___ALL_DISTINCT], []) THEN
-   ASM_SIMP_TAC std_ss [MAP_MAP_o, combinTheory.o_DEF, ETA_THM,
+   ASM_SIMP_TAC std_ss [MAP_MAP_o, o_DEF, ETA_THM,
       MEM_MAP, var_res_exp_eq_THM, GSYM RIGHT_EXISTS_AND_THM,
       GSYM LEFT_EXISTS_AND_THM] THEN
    NTAC 2 (Q.EXISTS_TAC `(q, r)`) THEN
@@ -6974,7 +6975,7 @@ SIMP_TAC list_ss [holfoot_ap_data_array_def,
   var_res_exp_const_def, IN_SING] THEN
 SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [] THEN
 REPEAT STRIP_TAC THEN
-Q.PAT_ASSUM `0:num = XXX` (ASSUME_TAC o GSYM) THEN
+Q.PAT_X_ASSUM `0:num = XXX` (ASSUME_TAC o GSYM) THEN
 ASM_SIMP_TAC std_ss [LENGTH_NIL, NULL_EQ_NIL,
    holfoot_ap_data_array_MAP_LIST___REWRITE,
    var_res_map_REWRITE, IS_SEPARATION_COMBINATOR___FINITE_MAP,
@@ -6996,7 +6997,7 @@ asl_star (VAR_RES_COMBINATOR DISJOINT_FMAP_UNION)
 
 Induct_on `n1` THEN1 (
    SIMP_TAC list_ss [holfoot_ap_data_array_0, EVERY_MAP,
-      MAP_MAP_o, combinTheory.o_DEF, ETA_THM, var_res_exp_add_sub_REWRITES] THEN
+      MAP_MAP_o, o_DEF, ETA_THM, var_res_exp_add_sub_REWRITES] THEN
    REPEAT STRIP_TAC THEN
    Cases_on `ALL_DISTINCT (MAP FST data)` THENL [
       ASM_SIMP_TAC std_ss [var_res_bool_proposition_TF,
@@ -7014,7 +7015,7 @@ Induct_on `n1` THEN1 (
 ASM_SIMP_TAC std_ss [holfoot_ap_data_array_SUC, ADD,
    IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___var_res_exp_add_sub] THEN
 REPEAT (POP_ASSUM (K ALL_TAC)) THEN
-SIMP_TAC list_ss [MAP_MAP_o, combinTheory.o_DEF, EVERY_MAP,
+SIMP_TAC list_ss [MAP_MAP_o, o_DEF, EVERY_MAP,
    var_res_exp_add_sub_REWRITES, GSYM ADD1] THEN
 REPEAT STRIP_TAC THEN
 
@@ -7022,7 +7023,7 @@ Q.MATCH_ABBREV_TAC `
     asl_trivial_cond c1 (asl_star f p1 (asl_star f a11 a12)) =
     asl_star f (asl_trivial_cond c1' (asl_star f p1' a11')) a12'` THEN
 
-`c1' = c1` by ALL_TAC THEN1 (
+`c1' = c1` by (
    UNABBREV_ALL_TAC THEN
    AP_THM_TAC THEN AP_TERM_TAC THEN ABS_TAC THEN
    Cases_on `SND tl` THEN SIMP_TAC list_ss []
@@ -7039,13 +7040,13 @@ Cases_on `EVERY (\tl. ~NULL (SND tl)) data` THEN (
  (MAP (\tl. (FST tl,TL (TAKE (SUC n1) (SND tl)))) data =
   MAP (\tl. (FST tl,TAKE n1 (TL (SND tl)))) data) /\
  (MAP (\tl. (FST tl,DROP (SUC n1) (SND tl))) data =
-  MAP (\tl. (FST tl,DROP n1 (TL (SND tl)))) data)` by ALL_TAC THEN1 (
+  MAP (\tl. (FST tl,DROP n1 (TL (SND tl)))) data)` by (
    UNABBREV_ALL_TAC THEN
    FULL_SIMP_TAC list_ss [LIST_EQ_REWRITE, EVERY_MEM, EL_MAP,
      var_res_exp_eq_THM, GSYM FORALL_AND_THM] THEN
    GEN_TAC THEN
    Cases_on `x < LENGTH data` THEN ASM_REWRITE_TAC[] THEN
-   `?n ns. SND (EL x data) = n::ns` by ALL_TAC THEN1 (
+   `?n ns. SND (EL x data) = n::ns` by (
       `MEM (EL x data) data` by METIS_TAC[EL_IS_EL] THEN
       RES_TAC THEN
       Cases_on `SND (EL x data)` THEN
@@ -7085,7 +7086,7 @@ REPEAT STRIP_TAC THEN
 Q.MATCH_ABBREV_TAC `s IN asl_star f P1 P2 = s IN asl_star f P1' P2'` THEN
 
 `VAR_RES_IS_STACK_IMPRECISE P1 /\ VAR_RES_IS_STACK_IMPRECISE P1' /\
- VAR_RES_IS_STACK_IMPRECISE P2 /\ VAR_RES_IS_STACK_IMPRECISE P2'` by ALL_TAC THEN1 (
+ VAR_RES_IS_STACK_IMPRECISE P2 /\ VAR_RES_IS_STACK_IMPRECISE P2'` by (
 
    UNABBREV_ALL_TAC THEN
    CONSEQ_REWRITE_TAC ([], [
@@ -7100,14 +7101,14 @@ Q.UNABBREV_TAC `f` THEN
 ASM_SIMP_TAC std_ss [asl_star___VAR_RES_IS_STACK_IMPRECISE, IN_ABS] THEN
 REDEPTH_CONSEQ_CONV_TAC (K EXISTS_EQ___CONSEQ_CONV) THEN
 REPEAT GEN_TAC THEN
-Tactical.REVERSE (`((FST s, es1) IN P1 = (FST s, es1) IN P1') /\
-                   ((FST s, es2) IN P2 = (FST s, es2) IN P2')` by ALL_TAC) THEN1 (
+`((FST s, es1) IN P1 = (FST s, es1) IN P1') /\
+                   ((FST s, es2) IN P2 = (FST s, es2) IN P2')` suffices_by (STRIP_TAC THEN
    ASM_REWRITE_TAC[]
 ) THEN
 UNABBREV_ALL_TAC THEN
 ASM_SIMP_TAC std_ss [holfoot_ap_points_to_def, IN_ABS, LET_THM] THEN
 
-Q.PAT_ASSUM `!e1 e2 data s. X` MATCH_MP_TAC THEN
+Q.PAT_X_ASSUM `!e1 e2 data s. X` MATCH_MP_TAC THEN
 ASM_SIMP_TAC std_ss [IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___var_res_exp_add_sub] THEN
 ASM_SIMP_TAC std_ss [var_res_exp_add_def, var_res_exp_binop_const_REWRITE]);
 
@@ -7183,7 +7184,7 @@ SIMP_TAC (std_ss++CONJ_ss) [holfoot_ap_data_array_SUC, asl_bool_EVAL,
    var_res_exp_add_sub_REWRITES] THEN
 REPEAT GEN_TAC THEN STRIP_TAC THEN
 
-REPEAT (Q.PAT_ASSUM `s IN asl_star f X Y` MP_TAC) THEN
+REPEAT (Q.PAT_X_ASSUM `s IN asl_star f X Y` MP_TAC) THEN
 
 Q.MATCH_ABBREV_TAC `
    (st, h1) IN asl_star f P1 P2 ==>
@@ -7191,7 +7192,7 @@ Q.MATCH_ABBREV_TAC `
 Q.UNABBREV_TAC `XXX` THEN
 
 `VAR_RES_IS_STACK_IMPRECISE P1 /\ VAR_RES_IS_STACK_IMPRECISE P1' /\
- VAR_RES_IS_STACK_IMPRECISE P2 /\ VAR_RES_IS_STACK_IMPRECISE P2'` by ALL_TAC THEN1 (
+ VAR_RES_IS_STACK_IMPRECISE P2 /\ VAR_RES_IS_STACK_IMPRECISE P2'` by (
 
    UNABBREV_ALL_TAC THEN
    CONSEQ_REWRITE_TAC ([], [
@@ -7209,40 +7210,40 @@ REPEAT GEN_TAC THEN STRIP_TAC THEN
 REPEAT GEN_TAC THEN STRIP_TAC THEN
 
 `(es1' = es1) /\
- !tag dl1 dl2. MEM (tag,dl1) data1 /\ MEM (tag,dl2) data2 ==> (HD dl1 = HD dl2)` by ALL_TAC THEN1 (
-   Q.PAT_ASSUM `(st, es1) IN X` MP_TAC THEN
-   Q.PAT_ASSUM `(st, es1') IN X` MP_TAC THEN
+ !tag dl1 dl2. MEM (tag,dl1) data1 /\ MEM (tag,dl2) data2 ==> (HD dl1 = HD dl2)` by (
+   Q.PAT_X_ASSUM `(st, es1) IN X` MP_TAC THEN
+   Q.PAT_X_ASSUM `(st, es1') IN X` MP_TAC THEN
    UNABBREV_ALL_TAC THEN
    SIMP_TAC std_ss [holfoot_ap_points_to_def, IN_ABS, LET_THM,
      var_res_exp_const_EVAL, GSYM fmap_EQ_THM, IN_SING] THEN
    REPEAT GEN_TAC THEN STRIP_TAC THEN
    REPEAT GEN_TAC THEN STRIP_TAC THEN
-   `(es1' ' e = h ' e) /\ (es1 ' e = h ' e)` by ALL_TAC THEN1 (
+   `(es1' ' e = h ' e) /\ (es1 ' e = h ' e)` by (
       FULL_SIMP_TAC std_ss [ASL_IS_SUBSTATE___DISJOINT_FMAP_UNION,
          FUNION_DEF, IN_SING, IN_UNION, DISJ_IMP_THM, FORALL_AND_THM]
    ) THEN
    ASM_SIMP_TAC std_ss [] THEN
    REPEAT STRIP_TAC THEN
-   REPEAT (Q.PAT_ASSUM `FEVERY X L` MP_TAC) THEN
+   REPEAT (Q.PAT_X_ASSUM `FEVERY X L` MP_TAC) THEN
    ASM_SIMP_TAC (std_ss++CONJ_ss) [FEVERY_DEF, FDOM_LIST_TO_FMAP, MAP_MAP_o,
-         combinTheory.o_DEF, IN_LIST_TO_SET, IS_SOME_EXISTS, ETA_THM,
+         o_DEF,  IS_SOME_EXISTS, ETA_THM,
          MEM_MAP, GSYM LEFT_FORALL_IMP_THM, GSYM LEFT_EXISTS_AND_THM] THEN
    Q.ABBREV_TAC `L1 = MAP (\tl. (FST tl,(var_res_exp_const (HD (SND tl))):holfoot_a_expression)) data1` THEN
    Q.ABBREV_TAC `L2 = MAP (\tl. (FST tl,(var_res_exp_const (HD (SND tl))):holfoot_a_expression)) data2` THEN
    REPEAT STRIP_TAC THEN
    `(LIST_TO_FMAP L1 ' tag st = LIST_TO_FMAP L2 ' tag st)` by
       METIS_TAC[pairTheory.FST] THEN
-   Tactical.REVERSE (`(LIST_TO_FMAP L1 ' tag = var_res_exp_const (HD dl1)) /\
-    (LIST_TO_FMAP L2 ' tag = var_res_exp_const (HD dl2))` by ALL_TAC) THEN1 (
+   `(LIST_TO_FMAP L1 ' tag = var_res_exp_const (HD dl1)) /\
+    (LIST_TO_FMAP L2 ' tag = var_res_exp_const (HD dl2))` suffices_by (STRIP_TAC THEN
       FULL_SIMP_TAC std_ss [var_res_exp_const_EVAL]
    ) THEN
-   `ALL_DISTINCT (MAP FST L1) /\ ALL_DISTINCT (MAP FST L2)` by ALL_TAC THEN1 (
+   `ALL_DISTINCT (MAP FST L1) /\ ALL_DISTINCT (MAP FST L2)` by (
       UNABBREV_ALL_TAC THEN
-      FULL_SIMP_TAC std_ss [MAP_MAP_o, combinTheory.o_DEF, ETA_THM,
+      FULL_SIMP_TAC std_ss [MAP_MAP_o, o_DEF, ETA_THM,
           holfoot_ap_data_array___CONST, asl_bool_EVAL]
    ) THEN
    `MEM (tag, var_res_exp_const (HD dl1)) L1 /\
-    MEM (tag, var_res_exp_const (HD dl2)) L2` by ALL_TAC THEN1 (
+    MEM (tag, var_res_exp_const (HD dl2)) L2` by (
       UNABBREV_ALL_TAC THEN
       ASM_SIMP_TAC std_ss [MEM_MAP, var_res_exp_eq_THM] THEN
       METIS_TAC[pairTheory.FST, pairTheory.SND]
@@ -7252,8 +7253,8 @@ REPEAT GEN_TAC THEN STRIP_TAC THEN
 Q.ABBREV_TAC `data1' = (MAP (\tl. (FST tl,TL (SND tl))) data1)` THEN
 Q.ABBREV_TAC `data2' = (MAP (\tl. (FST tl,TL (SND tl))) data2)` THEN
 `(es2 = es2') /\
- !tag dl1 dl2. MEM (tag,dl1) data1' /\ MEM (tag,dl2) data2' ==> (dl1 = dl2)` by ALL_TAC THEN1 (
-   Q.PAT_ASSUM `!e data1 data2 st h1 h2 h. X` MATCH_MP_TAC THEN
+ !tag dl1 dl2. MEM (tag,dl1) data1' /\ MEM (tag,dl2) data2' ==> (dl1 = dl2)` by (
+   Q.PAT_X_ASSUM `!e data1 data2 st h1 h2 h. X` MATCH_MP_TAC THEN
    MAP_EVERY Q.EXISTS_TAC [`e+1`, `st`, `h`] THEN
    MAP_EVERY Q.UNABBREV_TAC [`P2`, `P2'`] THEN
    ASM_SIMP_TAC std_ss [] THEN
@@ -7262,8 +7263,8 @@ Q.ABBREV_TAC `data2' = (MAP (\tl. (FST tl,TL (SND tl))) data2)` THEN
 
 ASM_SIMP_TAC std_ss [] THEN
 REPEAT STRIP_TAC THEN
-Q.PAT_ASSUM `!e data1 data2 st h1 h2 h. X` (K ALL_TAC) THEN
-`?dl_h dl1_l dl2_l. (dl1 = dl_h::dl1_l) /\ (dl2 = dl_h::dl2_l)` by ALL_TAC THEN1 (
+Q.PAT_X_ASSUM `!e data1 data2 st h1 h2 h. X` (K ALL_TAC) THEN
+`?dl_h dl1_l dl2_l. (dl1 = dl_h::dl1_l) /\ (dl2 = dl_h::dl2_l)` by (
    FULL_SIMP_TAC std_ss [EVERY_MEM] THEN
    RES_TAC THEN
    Cases_on `dl2` THEN Cases_on `dl1` THEN
@@ -7271,7 +7272,7 @@ Q.PAT_ASSUM `!e data1 data2 st h1 h2 h. X` (K ALL_TAC) THEN
 ) THEN
 ASM_SIMP_TAC list_ss [] THEN
 
-Q.PAT_ASSUM `!tag dl1 dl2. X` MATCH_MP_TAC THEN
+Q.PAT_X_ASSUM `!tag dl1 dl2. X` MATCH_MP_TAC THEN
 Q.EXISTS_TAC `tag` THEN
 MAP_EVERY Q.UNABBREV_TAC [`data1'`, `data2'`] THEN
 SIMP_TAC std_ss [MEM_MAP, EXISTS_PROD, GSYM LEFT_EXISTS_AND_THM,
@@ -7316,9 +7317,9 @@ Cases_on `nc` THEN1 (
 Tactical.REVERSE (Cases_on `?ec. e2 st = SOME ec`) THEN1 (
   Cases_on `e2 st` THEN
   FULL_SIMP_TAC std_ss [holfoot_ap_data_array_SUC, asl_bool_EVAL] THEN
-  Q.PAT_ASSUM `(st, h1) IN X` MP_TAC THEN
+  Q.PAT_X_ASSUM `(st, h1) IN X` MP_TAC THEN
   Q.MATCH_ABBREV_TAC `(st, h1) IN asl_star f P1 P2 ==> XXX` THEN
-  `VAR_RES_IS_STACK_IMPRECISE P1 /\ VAR_RES_IS_STACK_IMPRECISE P2` by ALL_TAC THEN1 (
+  `VAR_RES_IS_STACK_IMPRECISE P1 /\ VAR_RES_IS_STACK_IMPRECISE P2` by (
      UNABBREV_ALL_TAC THEN
      CONSEQ_REWRITE_TAC ([],
         [VAR_RES_IS_STACK_IMPRECISE___points_to,
@@ -7385,7 +7386,7 @@ Tactical.REVERSE (Cases_on `s1' = s1`) THEN1 (
    FULL_SIMP_TAC std_ss [
          VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET_def] THEN
    `ASL_IS_SUBSTATE DISJOINT_FMAP_UNION s1 (SND s) /\
-    ASL_IS_SUBSTATE DISJOINT_FMAP_UNION s1' (SND s)` by ALL_TAC THEN1 (
+    ASL_IS_SUBSTATE DISJOINT_FMAP_UNION s1' (SND s)` by (
        METIS_TAC[ASL_IS_SUBSTATE_INTRO, IS_SEPARATION_COMBINATOR___FINITE_MAP]
    ) THEN
    METIS_TAC[holfoot_ap_data_array___SAME_START_LENGTH]
@@ -7394,7 +7395,7 @@ FULL_SIMP_TAC std_ss [] THEN
 EQ_TAC THENL [
    REPEAT STRIP_TAC THEN
    `!tag dl1 dl2.
-       MEM (tag,dl1) data1 /\ MEM (tag,dl2) data2 ==> (dl1 = dl2)` by ALL_TAC THEN1 (
+       MEM (tag,dl1) data1 /\ MEM (tag,dl2) data2 ==> (dl1 = dl2)` by (
       METIS_TAC[holfoot_ap_data_array___SAME_START_LENGTH,
          ASL_IS_SUBSTATE___DISJOINT_FMAP_UNION___REFL,
          VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET_def]
@@ -7402,8 +7403,8 @@ EQ_TAC THENL [
    FULL_SIMP_TAC std_ss [EVERY_MEM] THEN
    REPEAT STRIP_TAC  THEN
    `?tag dl1. x = (tag, dl1)` by (Cases_on `x` THEN SIMP_TAC std_ss []) THEN
-   `?dl2. MEM (tag, dl2) data1` by ALL_TAC THEN1 (
-      FULL_SIMP_TAC std_ss [SUBSET_DEF, IN_LIST_TO_SET,
+   `?dl2. MEM (tag, dl2) data1` by (
+      FULL_SIMP_TAC std_ss [SUBSET_DEF,
          MEM_MAP, GSYM LEFT_FORALL_IMP_THM, EXISTS_PROD] THEN
       METIS_TAC[pairTheory.FST]
    ) THEN
@@ -7523,7 +7524,7 @@ ONCE_REWRITE_TAC[EXTENSION] THEN
 SIMP_TAC std_ss [GSYM FORALL_AND_THM] THEN
 GEN_TAC THEN
 Cases_on `e (FST x)` THEN1 (
-   `!n. var_res_exp_sub e n (FST x) = NONE` by ALL_TAC THEN1 (
+   `!n. var_res_exp_sub e n (FST x) = NONE` by (
       ASM_SIMP_TAC std_ss [var_res_exp_sub_def, var_res_exp_binop_const_REWRITE]
    ) THEN
    ASM_SIMP_TAC std_ss [holfoot_ap_data_array___not_def_start, IN_DEF,
@@ -7620,7 +7621,7 @@ SIMP_TAC std_ss [holfoot_ap_data_interval_def,
 ASM_SIMP_TAC std_ss [] THEN
 Q.ABBREV_TAC `l1 = (e2 + 1) - e1` THEN
 Q.ABBREV_TAC `l2 = (e3 - e2)` THEN
-`((e3 + 1) - e1 = l1 + l2) /\ (e1 + l1 = SUC e2)` by ALL_TAC THEN1 (
+`((e3 + 1) - e1 = l1 + l2) /\ (e1 + l1 = SUC e2)` by (
    UNABBREV_ALL_TAC THEN
    IMP_RES_TAC LESS_EQUAL_ADD THEN
    Cases_on `e1` THEN FULL_SIMP_TAC std_ss [] THEN
@@ -7720,7 +7721,7 @@ val holfoot_ap_data_array_interval___same_start___SPLIT___ai = store_thm (
    "holfoot_ap_data_array_interval___same_start___SPLIT___ai",
 ``!c1 c2 c3 c4 c5 lc data.
 (c1 <= SUC c3) /\ (c3 < c1 + c2) ==>
-((SUC c3 = c4) /\ (c2 − (SUC c3 − c1) = c5) /\ (SUC c3 − c1 = lc)) ==>
+((SUC c3 = c4) /\ (c2 - (SUC c3 - c1) = c5) /\ (SUC c3 - c1 = lc)) ==>
 
 (holfoot_ap_data_array (var_res_exp_const c1) (var_res_exp_const c2) data =
 asl_star (VAR_RES_COMBINATOR DISJOINT_FMAP_UNION)
@@ -7896,8 +7897,8 @@ Cases_on `e1 (FST p)` THEN1 (
        var_res_exp_binop_REWRITE, var_res_exp_add_def,
        var_res_exp_binop_const_REWRITE, IN_ABS, LET_THM]
 ) THEN
-`e1 (FST s) = SOME x` by ALL_TAC THEN1 (
-   Tactical.REVERSE (`e1 (FST s) = e1 (FST p)` by ALL_TAC) THEN1 (
+`e1 (FST s) = SOME x` by (
+   `e1 (FST s) = e1 (FST p)` suffices_by (STRIP_TAC THEN
       ASM_REWRITE_TAC[]
    ) THEN
    MATCH_MP_TAC IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___SUBSTATE_RIGHT THEN
@@ -7906,7 +7907,7 @@ Cases_on `e1 (FST p)` THEN1 (
 ) THEN
 ASM_SIMP_TAC std_ss [] THEN
 STRIP_TAC THEN
-`p IN holfoot_ap_data_interval (var_res_exp_const 0) e2 data` by ALL_TAC THEN1 (
+`p IN holfoot_ap_data_interval (var_res_exp_const 0) e2 data` by (
    MATCH_MP_TAC (MP_LEQ_CANON holfoot_ap_data_interval___EXP_REWRITE) THEN
    MAP_EVERY Q.EXISTS_TAC [`e1`, `e2`] THEN
    ASM_SIMP_TAC std_ss [var_res_exp_const_EVAL,
@@ -7932,11 +7933,11 @@ Cases_on `n (FST x)` THEN1 (
      var_res_exp_prop_def, IN_ABS, LET_THM]
 ) THEN
 `!X. (x IN holfoot_ap_data_array e n X =
-      x IN holfoot_ap_data_array e (var_res_exp_const x') X)` by ALL_TAC THEN1 (
+      x IN holfoot_ap_data_array e (var_res_exp_const x') X)` by (
    METIS_TAC[holfoot_ap_data_array___var_res_exp_const_INTRO]
 ) THEN
 ASM_REWRITE_TAC[] THEN (POP_ASSUM (K ALL_TAC)) THEN
-Q.PAT_ASSUM `~(MEM t X)` MP_TAC THEN
+Q.PAT_X_ASSUM `~(MEM t X)` MP_TAC THEN
 REPEAT (POP_ASSUM (K ALL_TAC)) THEN
 MAP_EVERY Q.SPEC_TAC [(`data`, `data`), (`x`, `s`), (`e`, `e`), (`x'`, `n`)] THEN
 Induct_on `n` THEN1 (
@@ -7952,8 +7953,8 @@ Q.HO_MATCH_ABBREV_TAC
 ?e' l'. s IN asl_star f (P1' e') (P2' l')` THEN
 
 Tactical.REVERSE (
-   `(!s. (s IN P1 = ?e'. s IN P1' e')) /\
-    (!s. (s IN P2 = ?l'. s IN P2' l'))` by ALL_TAC) THEN1 (
+   sg `(!s. (s IN P1 = ?e'. s IN P1' e')) /\
+    (!s. (s IN P2 = ?l'. s IN P2' l'))`) THEN1 (
    SIMP_TAC std_ss [asl_star_def, IN_ABS] THEN
    METIS_TAC[]
 ) THEN
@@ -7969,17 +7970,17 @@ CONJ_TAC THENL [
    DEPTH_CONSEQ_CONV_TAC (K FORALL_EQ___CONSEQ_CONV) THEN
    SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [] THEN
    REPEAT STRIP_TAC THEN
-   `~(x = t)` by ALL_TAC THEN1 (
-      FULL_SIMP_TAC std_ss [FDOM_LIST_TO_FMAP, IN_LIST_TO_SET,
-         MAP_MAP_o, combinTheory.o_DEF, ETA_THM] THEN
+   `~(x = t)` by (
+      FULL_SIMP_TAC std_ss [FDOM_LIST_TO_FMAP,
+         MAP_MAP_o, o_DEF, ETA_THM] THEN
       METIS_TAC[]
    ) THEN
    ASM_SIMP_TAC std_ss [],
 
 
    GEN_TAC THEN
-   Q.PAT_ASSUM `!e s data. X` MATCH_MP_TAC THEN
-   ASM_SIMP_TAC std_ss [MAP_MAP_o, combinTheory.o_DEF, ETA_THM]
+   Q.PAT_X_ASSUM `!e s data. X` MATCH_MP_TAC THEN
+   ASM_SIMP_TAC std_ss [MAP_MAP_o, o_DEF, ETA_THM]
 ]);
 
 
@@ -8119,12 +8120,12 @@ REPEAT GEN_TAC THEN STRIP_TAC THEN REPEAT GEN_TAC THEN STRIP_TAC THEN
 IMP_RES_TAC VAR_RES_WRITE_PERM___SUBSTATE THEN
 FULL_SIMP_TAC std_ss [VAR_RES_COMBINATOR_REWRITE,
    SOME___VAR_RES_STACK_COMBINE, DISJOINT_FMAP_UNION___REWRITE] THEN
-`e (FMERGE VAR_RES_STACK_COMBINE___MERGE_FUNC (FST s1) (FST s2)) = SOME c` by ALL_TAC THEN1 (
+`e (FMERGE VAR_RES_STACK_COMBINE___MERGE_FUNC (FST s1) (FST s2)) = SOME c` by (
    FULL_SIMP_TAC std_ss [IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___REWRITE,
       VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_REL___REWRITE] THEN
    `vs SUBSET FDOM (FST s1)` by PROVE_TAC[IS_SOME_EXISTS] THEN
-   Q.PAT_ASSUM `e (FST s1) = X` (fn thm => REWRITE_TAC [GSYM thm]) THEN
-   Q.PAT_ASSUM `!st1 st2. X ==> (e st1 = e st2)` MATCH_MP_TAC THEN
+   Q.PAT_X_ASSUM `e (FST s1) = X` (fn thm => REWRITE_TAC [GSYM thm]) THEN
+   Q.PAT_X_ASSUM `!st1 st2. X ==> (e st1 = e st2)` MATCH_MP_TAC THEN
    FULL_SIMP_TAC std_ss [FMERGE_DEF, SUBSET_DEF, IN_UNION,
       VAR_RES_STACK_COMBINE___MERGE_FUNC_def, COND_REWRITES]
 ) THEN
@@ -8133,9 +8134,9 @@ ASM_SIMP_TAC std_ss [FUNION_DEF, IN_UNION,
 FULL_SIMP_TAC std_ss [VAR_RES_STACK_IS_SEPARATE_def, IN_DISJOINT,
   FDOM_FUPDATE, IN_INSERT, GSYM fmap_EQ_THM, FMERGE_DEF,
   FAPPLY_FUPDATE_THM] THEN
-`v IN FDOM (FST s1) /\ ~(v IN FDOM (FST s2))` by ALL_TAC THEN1 (
+`v IN FDOM (FST s1) /\ ~(v IN FDOM (FST s2))` by (
     FULL_SIMP_TAC std_ss [var_res_sl___has_write_permission_def] THEN
-    Q.PAT_ASSUM `!x. x IN X1 /\ x IN X2 ==> Y x` (MP_TAC o Q.SPEC `v`) THEN
+    Q.PAT_X_ASSUM `!x. x IN X1 /\ x IN X2 ==> Y x` (MP_TAC o Q.SPEC `v`) THEN
     ASM_SIMP_TAC std_ss [var_res_permission_THM2]) THEN
 REPEAT CONJ_TAC THEN REPEAT GEN_TAC THENL [
    Cases_on `x = v` THEN ASM_SIMP_TAC std_ss [],
@@ -8189,7 +8190,7 @@ CONJ_TAC THEN1 (
       BAG_ALL_DISTINCT_THM, BAG_UNION_INSERT, BAG_UNION_EMPTY,
       BAG_IN_BAG_OF_SET, IN_DELETE, BAG_ALL_DISTINCT_BAG_OF_SET] THEN
 
-   `(SET_OF_BAG (BAG_INSERT v (BAG_OF_SET (vs DELETE v)))) =  v INSERT vs` by ALL_TAC THEN1 (
+   `(SET_OF_BAG (BAG_INSERT v (BAG_OF_SET (vs DELETE v)))) =  v INSERT vs` by (
       ONCE_REWRITE_TAC[EXTENSION] THEN
       SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [IN_INSERT, IN_SET_OF_BAG,
          BAG_IN_BAG_INSERT, BAG_IN_BAG_OF_SET, IN_DELETE]
@@ -8235,25 +8236,25 @@ Cases_on `holfoot_field_lookup_action v e t s = NONE` THEN1 (
       var_res_sl___has_read_permission_def] THEN
    SIMP_TAC (std_ss++CONJ_ss) [] THEN
    CCONTR_TAC THEN
-   Q.PAT_ASSUM `holfoot_field_lookup_action v e t s = NONE` MP_TAC THEN
+   Q.PAT_X_ASSUM `holfoot_field_lookup_action v e t s = NONE` MP_TAC THEN
    FULL_SIMP_TAC std_ss [holfoot_field_lookup_action_def,
       LET_THM, SOME___holfoot_separation_combinator,
       SOME___VAR_RES_STACK_COMBINE,
       holfoot_ap_points_to_def, IN_ABS, COND_NONE_SOME_REWRITES,
       var_res_sl___has_write_permission_def, FMERGE_DEF, FUNION_DEF,
       IN_UNION] THEN
-   Tactical.REVERSE (`~(v IN FDOM (FST s0)) /\
-      (e (FMERGE VAR_RES_STACK_COMBINE___MERGE_FUNC (FST s0) (FST x)) = e (FST x))` by ALL_TAC) THEN1 (
+   `~(v IN FDOM (FST s0)) /\
+      (e (FMERGE VAR_RES_STACK_COMBINE___MERGE_FUNC (FST s0) (FST x)) = e (FST x))` suffices_by (STRIP_TAC THEN
       ASM_SIMP_TAC std_ss [NOT_NONE_IS_SOME, IN_SING]
    ) THEN
    CONJ_TAC THENL [
-      Q.PAT_ASSUM `VAR_RES_STACK_IS_SEPARATE (FST s0) (FST x)` MP_TAC THEN
+      Q.PAT_X_ASSUM `VAR_RES_STACK_IS_SEPARATE (FST s0) (FST x)` MP_TAC THEN
       SIMP_TAC std_ss [VAR_RES_STACK_IS_SEPARATE_def, GSYM LEFT_EXISTS_IMP_THM] THEN
       Q.EXISTS_TAC `v` THEN ASM_SIMP_TAC std_ss [var_res_permission_THM2],
 
 
       MATCH_MP_TAC IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___SUBSTATE_RIGHT THEN
-      Tactical.REVERSE (`VAR_RES_STACK_COMBINE (SOME (FST s0)) (SOME (FST x)) = SOME (FST s)` by ALL_TAC) THEN1 (
+      `VAR_RES_STACK_COMBINE (SOME (FST s0)) (SOME (FST x)) = SOME (FST s)` suffices_by (STRIP_TAC THEN
          ASM_SIMP_TAC std_ss [] THEN
          METIS_TAC [VAR_RES_STACK_IS_SUBSTATE_INTRO]
       ) THEN
@@ -8270,7 +8271,7 @@ DISCH_TAC THEN (POP_ASSUM (K ALL_TAC)) THEN
 REPEAT STRIP_TAC THEN
 
 Q.EXISTS_TAC `var_res_ext_state_var_update (v, (SND s ' ev t)) x'` THEN
-Q.PAT_ASSUM `x' IN X` MP_TAC THEN
+Q.PAT_X_ASSUM `x' IN X` MP_TAC THEN
 FULL_SIMP_TAC std_ss [var_res_prop___PROP_INSERT, IN_ABS,
    var_res_prop___COND_INSERT] THEN
 SIMP_TAC std_ss [var_res_prop___PROP___REWRITE,
@@ -8290,7 +8291,7 @@ SIMP_TAC std_ss [var_res_prop_stack_true_def, var_res_bool_proposition_def,
    var_res_prop_var_update_def, FUPDATE_EQ] THEN
 SIMP_TAC (std_ss++CONJ_ss) [] THEN
 STRIP_TAC THEN
-`(FST x' |+ (v,c,var_res_write_permission)) = FST x'` by ALL_TAC THEN1 (
+`(FST x' |+ (v,c,var_res_write_permission)) = FST x'` by (
    ASM_SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [
       GSYM fmap_EQ_THM, FDOM_FUPDATE, EXTENSION, IN_INSERT,
       FAPPLY_FUPDATE_THM, COND_RAND, COND_RATOR] THEN
@@ -8299,27 +8300,27 @@ STRIP_TAC THEN
 ) THEN
 ASM_SIMP_TAC std_ss [] THEN
 
-Q.PAT_ASSUM `x' IN X` MP_TAC THEN
+Q.PAT_X_ASSUM `x' IN X` MP_TAC THEN
 ASM_SIMP_TAC std_ss [holfoot_ap_points_to_def, IN_ABS, LET_THM,
    FEVERY_DEF] THEN
 STRIP_TAC THEN
-`e (FST x') = SOME ev` by ALL_TAC THEN1 (
-   Tactical.REVERSE (`e (FST x') = e (FST s)` by ALL_TAC) THEN1 ASM_SIMP_TAC std_ss [] THEN
+`e (FST x') = SOME ev` by (
+   `e (FST x') = e (FST s)` suffices_by ASM_SIMP_TAC std_ss [] THEN
    MATCH_MP_TAC IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___SUBSTATE_LEFT THEN
    Cases_on `x'` THEN
    FULL_SIMP_TAC std_ss [SOME___holfoot_separation_combinator,
       holfoot_ap_points_to_def, IN_ABS, LET_THM] THEN
    PROVE_TAC[VAR_RES_STACK_IS_SUBSTATE_INTRO]
 ) THEN
-`SND x' ' ev = SND s ' ev` by ALL_TAC THEN1 (
-   Q.PAT_ASSUM `holfoot_separation_combinator (SOME s0') X = Y` MP_TAC THEN
+`SND x' ' ev = SND s ' ev` by (
+   Q.PAT_X_ASSUM `holfoot_separation_combinator (SOME s0') X = Y` MP_TAC THEN
    ONCE_REWRITE_TAC[holfoot_separation_combinator___COMM] THEN
    ASM_SIMP_TAC std_ss [SOME___holfoot_separation_combinator,
       FUNION_DEF, IN_SING]
 ) THEN
 FULL_SIMP_TAC std_ss [] THEN
-`e' (FST x') = SOME ((SND s) ' ev t)` by ALL_TAC THEN1 (
-   Q.PAT_ASSUM `!x. x IN FDOM L ==> Y` (MP_TAC o Q.SPEC `t`) THEN
+`e' (FST x') = SOME ((SND s) ' ev t)` by (
+   Q.PAT_X_ASSUM `!x. x IN FDOM L ==> Y` (MP_TAC o Q.SPEC `t`) THEN
    ASM_SIMP_TAC (std_ss++CONJ_ss) [
      IS_SOME_EXISTS, GSYM LEFT_EXISTS_AND_THM,
      GSYM LEFT_FORALL_IMP_THM]
@@ -8331,7 +8332,7 @@ Tactical.REVERSE CONJ_TAC THEN1 (
       FAPPLY_FUPDATE_THM, COND_RAND, COND_RATOR]
 ) THEN
 ONCE_REWRITE_TAC [holfoot_separation_combinator___COMM] THEN
-Q.PAT_ASSUM `X = SOME s` MP_TAC THEN
+Q.PAT_X_ASSUM `X = SOME s` MP_TAC THEN
 ASM_SIMP_TAC std_ss [SOME___holfoot_separation_combinator,
    SOME___VAR_RES_STACK_COMBINE, GSYM fmap_EQ_THM] THEN
 ASM_SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [
@@ -8341,8 +8342,8 @@ ASM_SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [
 STRIP_TAC THEN
 SIMP_TAC std_ss [GSYM FORALL_AND_THM] THEN GEN_TAC THEN
 Cases_on `x = v` THEN ASM_SIMP_TAC std_ss [] THEN
-Tactical.REVERSE (`~(v IN FDOM (FST s0))` by ALL_TAC) THEN ASM_SIMP_TAC std_ss [] THEN
-Q.PAT_ASSUM `!x. x IN FDOM (FST s0) /\ x IN Y ==> Z` (MP_TAC o Q.SPEC `v`) THEN
+Tactical.REVERSE (sg `~(v IN FDOM (FST s0))`) THEN ASM_SIMP_TAC std_ss [] THEN
+Q.PAT_X_ASSUM `!x. x IN FDOM (FST s0) /\ x IN Y ==> Z` (MP_TAC o Q.SPEC `v`) THEN
 ASM_SIMP_TAC std_ss [var_res_permission_THM2]);
 
 
@@ -8453,11 +8454,11 @@ ASM_SIMP_TAC std_ss [holfoot_prog_field_lookup_def,
    GSYM holfoot_separation_combinator_def,
    ASL_IS_LOCAL_ACTION___holfoot_field_lookup_action] THEN
 
-Tactical.REVERSE (`e (FST s) = e' (FST s)` by ALL_TAC) THEN1 (
+`e (FST s) = e' (FST s)` suffices_by (STRIP_TAC THEN
    ASM_SIMP_TAC std_ss [holfoot_field_lookup_action_def, LET_THM]
 ) THEN
 
-Q.PAT_ASSUM `s IN X` MP_TAC THEN
+Q.PAT_X_ASSUM `s IN X` MP_TAC THEN
 FULL_SIMP_TAC std_ss [var_res_prop___COND_INSERT,
    var_res_prop___PROP_INSERT] THEN
 SIMP_TAC (std_ss++CONJ_ss) [var_res_prop_equal_unequal_EXPAND, IN_ABS,
@@ -8539,7 +8540,7 @@ ASM_SIMP_TAC std_ss [BAG_IMAGE_FINITE_INSERT,
    var_res_exp_varlist_update___const_EVAL] THEN
 ASM_SIMP_TAC arith_ss [holfoot_ap_data_array___SPLIT,
    IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___VAR_CONST_EVAL,
-   MAP_MAP_o, combinTheory.o_DEF,
+   MAP_MAP_o, o_DEF,
    var_res_exp_add_sub_REWRITES] THEN
 
 Q.MATCH_ABBREV_TAC `XXX ==> VAR_RES_COND_HOARE_TRIPLE DISJOINT_FMAP_UNION
@@ -8555,7 +8556,7 @@ Q.UNABBREV_TAC `XXX` THEN
 
 `VAR_RES_IS_STACK_IMPRECISE___USED_VARS (SET_OF_BAG (wpb + rpb)) array_pred_1 /\
  VAR_RES_IS_STACK_IMPRECISE___USED_VARS (SET_OF_BAG (wpb + rpb)) array_pred_2 /\
- VAR_RES_IS_STACK_IMPRECISE___USED_VARS (SET_OF_BAG (wpb + rpb)) array_pred_3` by ALL_TAC THEN1 (
+ VAR_RES_IS_STACK_IMPRECISE___USED_VARS (SET_OF_BAG (wpb + rpb)) array_pred_3` by (
    UNABBREV_ALL_TAC THEN
    CONSEQ_REWRITE_TAC ([], [VAR_RES_IS_STACK_IMPRECISE___USED_VARS___holfoot_ap_data_array], []) THEN
    SIMP_TAC std_ss [VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET___VAR_CONST_EVAL]
@@ -8565,10 +8566,10 @@ ASM_SIMP_TAC std_ss [prove (``(BAG_INSERT x (BAG_INSERT (asl_star f P1 P2) sfb) 
                  METIS_TAC[BAG_INSERT_commutes]),
     var_res_prop___asl_star___holfoot,
     VAR_RES_IS_STACK_IMPRECISE___USED_VARS___asl_star] THEN
-Q.PAT_ASSUM `Abbrev (array_pred_2 = XXX)` MP_TAC THEN
+Q.PAT_X_ASSUM `Abbrev (array_pred_2 = XXX)` MP_TAC THEN
 FULL_SIMP_TAC list_ss [holfoot_ap_data_array_1,
    IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___VAR_CONST_EVAL,
-   EVERY_MAP, MAP_MAP_o, combinTheory.o_DEF, ETA_THM,
+   EVERY_MAP, MAP_MAP_o, o_DEF, ETA_THM,
    EVERY_MEM, asl_trivial_cond_TF] THEN
 STRIP_TAC THEN
 
@@ -8589,7 +8590,7 @@ Q.ABBREV_TAC `L' = LIST_TO_FMAP (MAP (\tl.
       (HD (DROP dl1 (TAKE (dl1 + 1) (SND tl))))):holfoot_a_expression)) data)` THEN
 
 Tactical.REVERSE (
-   `(t IN FDOM L') /\ (L' ' t = var_res_exp_const (EL (e - ds) tdata))` by ALL_TAC) THEN1 (
+   sg `(t IN FDOM L') /\ (L' ' t = var_res_exp_const (EL (e - ds) tdata))`) THEN1 (
   UNABBREV_ALL_TAC THEN
   ASM_SIMP_TAC std_ss [var_res_exp_varlist_update___const_EVAL,
      VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET___VAR_CONST_EVAL,
@@ -8597,23 +8598,23 @@ Tactical.REVERSE (
      var_res_prop_varlist_update___holfoot_ap_data_array,
      IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___VAR_CONST_EVAL,
      var_res_prop_varlist_update___holfoot_ap_points_to, o_f_LIST_TO_FMAP,
-     MAP_MAP_o, combinTheory.o_DEF]
+     MAP_MAP_o, o_DEF]
 ) THEN
 
 Q.UNABBREV_TAC `L'` THEN
 CONJ_TAC THEN1 (
-  SIMP_TAC std_ss [FDOM_LIST_TO_FMAP, IN_LIST_TO_SET, MEM_MAP,
+  SIMP_TAC std_ss [FDOM_LIST_TO_FMAP,  MEM_MAP,
     GSYM RIGHT_EXISTS_AND_THM] THEN
   Q.EXISTS_TAC `(t, tdata)` THEN
   ASM_SIMP_TAC std_ss []
 ) THEN
 MATCH_MP_TAC LIST_TO_FMAP___ALL_DISTINCT THEN
 
-ASM_SIMP_TAC std_ss [MAP_MAP_o, combinTheory.o_DEF, MEM_MAP,
+ASM_SIMP_TAC std_ss [MAP_MAP_o, o_DEF, MEM_MAP,
    var_res_exp_eq_THM, ETA_THM] THEN
 Q.EXISTS_TAC `(t, tdata)` THEN
 `e - ds = dl1` by DECIDE_TAC THEN
-`LENGTH tdata = dl` by ALL_TAC THEN1 (
+`LENGTH tdata = dl` by (
    RES_TAC THEN
    FULL_SIMP_TAC arith_ss []
 ) THEN
@@ -8686,7 +8687,7 @@ SIMP_TAC std_ss [ASL_IS_LOCAL_ACTION___ALTERNATIVE_EXT_DEF,
    holfoot_field_assign_action_def, LET_THM, COND_NONE_SOME_REWRITES,
    NOT_NONE_IS_SOME, holfoot_separation_combinator_def, IN_SING] THEN
 REPEAT GEN_TAC THEN STRIP_TAC THEN REPEAT GEN_TAC THEN STRIP_TAC THEN
-`(e1 (FST s3) = e1 (FST s1)) /\ (e2 (FST s3) = e2 (FST s1))` by ALL_TAC THEN1 (
+`(e1 (FST s3) = e1 (FST s1)) /\ (e2 (FST s3) = e2 (FST s1))` by (
    CONSEQ_REWRITE_TAC ([IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___SUBSTATE_RIGHT], [], []) THEN
    FULL_SIMP_TAC std_ss [VAR_RES_COMBINATOR_REWRITE] THEN
    PROVE_TAC[VAR_RES_STACK_IS_SUBSTATE_INTRO]
@@ -8698,7 +8699,7 @@ FULL_SIMP_TAC std_ss [VAR_RES_COMBINATOR_REWRITE, SOME___VAR_RES_STACK_COMBINE,
 CONJ_TAC THEN1 METIS_TAC[] THEN
 SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [
    GSYM fmap_EQ_THM, EXTENSION, FUNION_DEF, FDOM_FUPDATE,
-   FAPPLY_FUPDATE_THM, IN_INSERT, IN_UNION, combinTheory.UPDATE_def] THEN
+   FAPPLY_FUPDATE_THM, IN_INSERT, IN_UNION, UPDATE_def] THEN
 GEN_TAC THEN
 Cases_on `x = ev1` THEN ASM_SIMP_TAC std_ss []);
 
@@ -8763,11 +8764,11 @@ Cases_on `holfoot_field_assign_action e1 t e2 s = NONE` THEN1 (
       FUNION_FEMPTY_2, BAG_IN_BAG_OF_SET, var_res_sl___has_read_permission_def,
       GSYM SUBSET_DEF, holfoot_ap_points_to_def, LET_THM] THEN
    CCONTR_TAC THEN
-   Q.PAT_ASSUM `holfoot_field_assign_action e1 t e2 s = NONE` MP_TAC THEN
+   Q.PAT_X_ASSUM `holfoot_field_assign_action e1 t e2 s = NONE` MP_TAC THEN
    FULL_SIMP_TAC std_ss [holfoot_field_assign_action_def,
       LET_THM, SOME___holfoot_separation_combinator,
       IN_ABS, COND_NONE_SOME_REWRITES] THEN
-   Tactical.REVERSE (`(e1 (FST s) = e1 (FST x)) /\ (IS_SOME (e2 (FST s)))` by ALL_TAC) THEN1 (
+   `(e1 (FST s) = e1 (FST x)) /\ (IS_SOME (e2 (FST s)))` suffices_by (STRIP_TAC THEN
       ASM_SIMP_TAC std_ss [NOT_NONE_IS_SOME, FUNION_DEF, IN_UNION, IN_SING]
    ) THEN
    CONJ_TAC THENL [
@@ -8794,7 +8795,7 @@ REPEAT STRIP_TAC THEN
 
 Q.EXISTS_TAC `(FST x',SND x' |+ (ev1,(t =+ ev2) (SND s ' ev1)))` THEN
 
-Q.PAT_ASSUM `x' IN X` MP_TAC THEN
+Q.PAT_X_ASSUM `x' IN X` MP_TAC THEN
 ASM_SIMP_TAC std_ss [VAR_RES_STACK___IS_EQUAL_UPTO_VALUES___REFL,
    var_res_prop___PROP_INSERT] THEN
 ASM_SIMP_TAC std_ss [IN_ABS, var_res_prop___PROP___REWRITE,
@@ -8807,14 +8808,14 @@ ASM_SIMP_TAC std_ss [IN_ABS, var_res_prop___PROP___REWRITE,
    IN_SING, FDOM_FEMPTY, DISJOINT_EMPTY, FUNION_FEMPTY_1, FUNION_FEMPTY_2] THEN
 SIMP_TAC std_ss [holfoot_ap_points_to_def, IN_ABS, LET_THM] THEN
 STRIP_TAC THEN
-`e1 (FST x') = SOME ev1` by ALL_TAC THEN1 (
-   Tactical.REVERSE (`e1 (FST x') = e1 (FST s)` by ALL_TAC) THEN1 ASM_SIMP_TAC std_ss [] THEN
+`e1 (FST x') = SOME ev1` by (
+   `e1 (FST x') = e1 (FST s)` suffices_by ASM_SIMP_TAC std_ss [] THEN
    MATCH_MP_TAC IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___SUBSTATE_LEFT THEN
    FULL_SIMP_TAC std_ss [SOME___holfoot_separation_combinator] THEN
    PROVE_TAC[VAR_RES_STACK_IS_SUBSTATE_INTRO]
 ) THEN
-`e2 (FST x') = SOME ev2` by ALL_TAC THEN1 (
-   Tactical.REVERSE (`e2 (FST x') = e2 (FST s)` by ALL_TAC) THEN1 ASM_SIMP_TAC std_ss [] THEN
+`e2 (FST x') = SOME ev2` by (
+   `e2 (FST x') = e2 (FST s)` suffices_by ASM_SIMP_TAC std_ss [] THEN
    MATCH_MP_TAC IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___SUBSTATE_LEFT THEN
    FULL_SIMP_TAC std_ss [SOME___holfoot_separation_combinator] THEN
    CONJ_TAC THEN1 PROVE_TAC[VAR_RES_STACK_IS_SUBSTATE_INTRO] THEN
@@ -8830,12 +8831,12 @@ CONJ_TAC THENL [
    ASM_SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [
       EXTENSION, FUNION_DEF,
       FDOM_FUPDATE, FAPPLY_FUPDATE_THM, INSERT_INSERT, IN_UNION, IN_INSERT,
-      NOT_IN_EMPTY, combinTheory.UPDATE_def] THEN
+      NOT_IN_EMPTY, UPDATE_def] THEN
    GEN_TAC THEN
    Cases_on `x = ev1` THEN ASM_SIMP_TAC std_ss [],
 
 
-   SIMP_TAC std_ss [FAPPLY_FUPDATE_THM, combinTheory.UPDATE_def] THEN
+   SIMP_TAC std_ss [FAPPLY_FUPDATE_THM, UPDATE_def] THEN
    GEN_TAC THEN
    Cases_on `x = t` THEN ASM_SIMP_TAC std_ss [] THEN
    FULL_SIMP_TAC std_ss [SOME___holfoot_separation_combinator,
@@ -8930,14 +8931,14 @@ Tactical.REVERSE (Cases_on `(LENGTH tdata = dl) /\ EVERY (\tl. LENGTH (SND tl) =
 `e - ds = dl1` by DECIDE_TAC THEN
 ASM_SIMP_TAC std_ss [holfoot_ap_data_array___SPLIT,
    IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___VAR_CONST_EVAL,
-   MAP_MAP_o, combinTheory.o_DEF, MAP,
+   MAP_MAP_o, o_DEF, MAP,
    var_res_exp_add_sub_REWRITES] THEN
 FULL_SIMP_TAC std_ss [] THEN
 ASM_SIMP_TAC arith_ss [TAKE_TAKE, LUPDATE_SEM,
    DROP_LUPDATE, TAKE_LUPDATE] THEN
 FULL_SIMP_TAC list_ss [holfoot_ap_data_array_1,
    IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___VAR_CONST_EVAL,
-   EVERY_MAP, MAP_MAP_o, combinTheory.o_DEF, ETA_THM, EVERY_MEM,
+   EVERY_MAP, MAP_MAP_o, o_DEF, ETA_THM, EVERY_MEM,
    asl_trivial_cond_TF, HD_DROP, EL_TAKE,
    LUPDATE_SEM, LIST_TO_FMAP_THM] THEN
 
@@ -8953,7 +8954,7 @@ Q.UNABBREV_TAC `XXX` THEN
 `VAR_RES_IS_STACK_IMPRECISE___USED_VARS (SET_OF_BAG (wpb + rpb)) array_pred_1 /\
  !cc. VAR_RES_IS_STACK_IMPRECISE___USED_VARS (SET_OF_BAG (wpb + rpb))
    (holfoot_ap_points_to (var_res_exp_const e) (L' |+ (t, var_res_exp_const cc))) /\
- VAR_RES_IS_STACK_IMPRECISE___USED_VARS (SET_OF_BAG (wpb + rpb)) array_pred_3` by ALL_TAC THEN1 (
+ VAR_RES_IS_STACK_IMPRECISE___USED_VARS (SET_OF_BAG (wpb + rpb)) array_pred_3` by (
    UNABBREV_ALL_TAC THEN
    CONSEQ_REWRITE_TAC ([], [VAR_RES_IS_STACK_IMPRECISE___USED_VARS___holfoot_ap_data_array,
         VAR_RES_IS_STACK_IMPRECISE___USED_VARS___points_to, FEVERY_LIST_TO_FMAP, FEVERY_STRENGTHEN_THM], []) THEN
@@ -9028,11 +9029,11 @@ ASM_SIMP_TAC std_ss [holfoot_prog_field_assign_def,
    GSYM holfoot_separation_combinator_def,
    ASL_IS_LOCAL_ACTION___holfoot_field_assign_action] THEN
 
-Tactical.REVERSE (`e1 (FST s) = e1' (FST s)` by ALL_TAC) THEN1 (
+`e1 (FST s) = e1' (FST s)` suffices_by (STRIP_TAC THEN
    ASM_SIMP_TAC std_ss [holfoot_field_assign_action_def, LET_THM]
 ) THEN
 
-Q.PAT_ASSUM `s IN X` MP_TAC THEN
+Q.PAT_X_ASSUM `s IN X` MP_TAC THEN
 FULL_SIMP_TAC std_ss [var_res_prop___COND_INSERT,
    var_res_prop___PROP_INSERT] THEN
 SIMP_TAC (std_ss++CONJ_ss) [var_res_prop_equal_unequal_EXPAND, IN_ABS,
@@ -9070,11 +9071,11 @@ ASM_SIMP_TAC std_ss [holfoot_prog_field_assign_def,
    GSYM holfoot_separation_combinator_def,
    ASL_IS_LOCAL_ACTION___holfoot_field_assign_action] THEN
 
-Tactical.REVERSE (`e1 (FST s) = e1' (FST s)` by ALL_TAC) THEN1 (
+`e1 (FST s) = e1' (FST s)` suffices_by (STRIP_TAC THEN
    ASM_SIMP_TAC std_ss [holfoot_field_assign_action_def, LET_THM]
 ) THEN
 
-Q.PAT_ASSUM `s IN X` MP_TAC THEN
+Q.PAT_X_ASSUM `s IN X` MP_TAC THEN
 FULL_SIMP_TAC std_ss [var_res_prop___COND_INSERT,
    var_res_prop___PROP_INSERT] THEN
 SIMP_TAC (std_ss++CONJ_ss) [var_res_prop_equal_unequal_EXPAND, IN_ABS,
@@ -9127,18 +9128,18 @@ SIMP_TAC std_ss [ASL_IS_LOCAL_ACTION___ALTERNATIVE_EXT_DEF,
    var_res_sl___has_write_permission_def, FMERGE_DEF, IN_UNION,
    FUNION_DEF, VAR_RES_STACK_IS_SEPARATE_def, LET_THM] THEN
 REPEAT GEN_TAC THEN STRIP_TAC THEN
-`~(v IN FDOM (FST s2))` by ALL_TAC THEN1 (
-   Q.PAT_ASSUM `!x. X x` (MP_TAC o Q.SPEC `v`) THEN
+`~(v IN FDOM (FST s2))` by (
+   Q.PAT_X_ASSUM `!x. X x` (MP_TAC o Q.SPEC `v`) THEN
    ASM_SIMP_TAC std_ss [var_res_permission_THM2]
 ) THEN
 `?n. ne (FST s1) = SOME n` by (
    Cases_on `ne (FST s1)` THEN FULL_SIMP_TAC std_ss []) THEN
-`ne (FMERGE VAR_RES_STACK_COMBINE___MERGE_FUNC (FST s1) (FST s2)) = SOME n` by ALL_TAC THEN1 (
+`ne (FMERGE VAR_RES_STACK_COMBINE___MERGE_FUNC (FST s1) (FST s2)) = SOME n` by (
    FULL_SIMP_TAC std_ss [IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___REWRITE,
       VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_REL___REWRITE] THEN
    `vs SUBSET FDOM (FST s1)` by PROVE_TAC[IS_SOME_EXISTS] THEN
-   Q.PAT_ASSUM `ne (FST s1) = X` (fn thm => REWRITE_TAC [GSYM thm]) THEN
-   Q.PAT_ASSUM `!st1 st2. X ==> (ne st1 = ne st2)` MATCH_MP_TAC THEN
+   Q.PAT_X_ASSUM `ne (FST s1) = X` (fn thm => REWRITE_TAC [GSYM thm]) THEN
+   Q.PAT_X_ASSUM `!st1 st2. X ==> (ne st1 = ne st2)` MATCH_MP_TAC THEN
    FULL_SIMP_TAC std_ss [FMERGE_DEF, SUBSET_DEF, IN_UNION,
       VAR_RES_STACK_COMBINE___MERGE_FUNC_def, COND_REWRITES]
 ) THEN
@@ -9150,13 +9151,13 @@ Q.EXISTS_TAC `n'` THEN
 Q.EXISTS_TAC `XL` THEN
 Q.ABBREV_TAC `upL = MAP (\m'. (n' + m',EL m' XL)) (COUNT_LIST n)` THEN
 `ALL_DISTINCT (MAP FST upL) /\
- (!x. (n' <= x /\ x < n' + n) = MEM x (MAP FST upL))` by ALL_TAC THEN1 (
+ (!x. (n' <= x /\ x < n' + n) = MEM x (MAP FST upL))` by (
    Q.UNABBREV_TAC `upL` THEN
-   SIMP_TAC std_ss [MAP_MAP_o, combinTheory.o_DEF] THEN
+   SIMP_TAC std_ss [MAP_MAP_o, o_DEF] THEN
    REPEAT STRIP_TAC THENL [
       REPEAT (POP_ASSUM (K ALL_TAC)) THEN
       Induct_on `n` THEN
-      FULL_SIMP_TAC list_ss [COUNT_LIST_SNOC, MAP_MAP_o, combinTheory.o_DEF,
+      FULL_SIMP_TAC list_ss [COUNT_LIST_SNOC, MAP_MAP_o, o_DEF,
          MAP_SNOC, ALL_DISTINCT_SNOC, MEM_MAP, MEM_COUNT_LIST],
 
 
@@ -9172,16 +9173,16 @@ ASM_SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [
    GSYM fmap_EQ_THM, FUNION_DEF,
    FAPPLY_FUPDATE_THM, FDOM_FUPDATE, IN_INSERT, IN_UNION,
    FMERGE_DEF, EXTENSION,
-   FDOM_FUPDATE_LIST, IN_LIST_TO_SET] THEN
+   FDOM_FUPDATE_LIST] THEN
 REPEAT CONJ_TAC THENL [
-   SIMP_TAC std_ss [DISJOINT_DEF, EXTENSION, NOT_IN_EMPTY, IN_INTER,
-      IN_LIST_TO_SET] THEN METIS_TAC[],
+   SIMP_TAC std_ss [DISJOINT_DEF, EXTENSION, NOT_IN_EMPTY, IN_INTER] THEN
+   METIS_TAC[],
 
    GEN_TAC THEN Cases_on `x = v` THEN ASM_SIMP_TAC std_ss [],
    GEN_TAC THEN Cases_on `x = v` THEN ASM_SIMP_TAC std_ss [],
 
    GEN_TAC THEN Cases_on `MEM x (MAP FST upL)` THENL [
-      `?x2. MEM (x, x2) upL` by ALL_TAC THEN1 (
+      `?x2. MEM (x, x2) upL` by (
           FULL_SIMP_TAC std_ss [MEM_MAP, EXISTS_PROD] THEN
           METIS_TAC[]
       ) THEN
@@ -9273,14 +9274,14 @@ REPEAT GEN_TAC THEN CONJ_TAC THEN1 (
       COND_REWRITES, VAR_RES_STACK_IS_SEPARATE_def,
       BAG_IN_BAG_OF_SET, IN_DELETE] THENL [
 
-      Q.PAT_ASSUM `!x. X x` (MP_TAC o Q.SPEC `v`) THEN
+      Q.PAT_X_ASSUM `!x. X x` (MP_TAC o Q.SPEC `v`) THEN
       ASM_SIMP_TAC std_ss [var_res_permission_THM2],
 
       `~(vs SUBSET (FDOM (FMERGE VAR_RES_STACK_COMBINE___MERGE_FUNC p_1'' p_1')))` by
          METIS_TAC[VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET___IS_SOME_IMPL,
             IS_SOME_DEF] THEN
       POP_ASSUM MP_TAC THEN
-      Tactical.REVERSE (`vs SUBSET FDOM p_1'` by ALL_TAC) THEN1 (
+      `vs SUBSET FDOM p_1'` suffices_by (STRIP_TAC THEN
          FULL_SIMP_TAC std_ss [SUBSET_DEF, FMERGE_DEF, IN_UNION]
       ) THEN
       FULL_SIMP_TAC std_ss [var_res_sl___has_read_permission_def, SUBSET_DEF] THEN
@@ -9296,24 +9297,24 @@ SIMP_TAC std_ss [SUBSET_DEF, IN_ABS, GSYM LEFT_FORALL_IMP_THM,
    GSYM RIGHT_EXISTS_AND_THM, GSYM LEFT_EXISTS_AND_THM] THEN
 REPEAT STRIP_TAC THEN
 
-`(var_res_exp_var v p_1' = SOME c) /\ (v IN FDOM p_1') /\ (FST (p_1' ' v) = c)` by ALL_TAC THEN1 (
+`(var_res_exp_var v p_1' = SOME c) /\ (v IN FDOM p_1') /\ (FST (p_1' ' v) = c)` by (
    FULL_SIMP_TAC std_ss [var_res_exp_var_def, COND_NONE_SOME_REWRITES, COND_RAND, COND_RATOR] THEN
-   Q.PAT_ASSUM `v IN FDOM p_1'` ASSUME_TAC THEN
+   Q.PAT_X_ASSUM `v IN FDOM p_1'` ASSUME_TAC THEN
    FULL_SIMP_TAC std_ss []
 ) THEN
-`?nc. n p_1 = SOME nc` by ALL_TAC THEN1 (
+`?nc. n p_1 = SOME nc` by (
    Cases_on `n p_1` THEN FULL_SIMP_TAC std_ss []
 ) THEN
 FULL_SIMP_TAC std_ss [] THEN
 Q.ABBREV_TAC `upL = MAP (\m'. (n' + m',EL m' XL)) (COUNT_LIST nc)` THEN
 `ALL_DISTINCT (MAP FST upL) /\
- (!x. (n' <= x /\ x < n' + nc) = MEM x (MAP FST upL))` by ALL_TAC THEN1 (
+ (!x. (n' <= x /\ x < n' + nc) = MEM x (MAP FST upL))` by (
    Q.UNABBREV_TAC `upL` THEN
-   SIMP_TAC std_ss [MAP_MAP_o, combinTheory.o_DEF] THEN
+   SIMP_TAC std_ss [MAP_MAP_o, o_DEF] THEN
    REPEAT STRIP_TAC THENL [
       REPEAT (POP_ASSUM (K ALL_TAC)) THEN
       Induct_on `nc` THEN
-      FULL_SIMP_TAC list_ss [COUNT_LIST_SNOC, MAP_MAP_o, combinTheory.o_DEF,
+      FULL_SIMP_TAC list_ss [COUNT_LIST_SNOC, MAP_MAP_o, o_DEF,
          MAP_SNOC, ALL_DISTINCT_SNOC, MEM_MAP, MEM_COUNT_LIST],
 
 
@@ -9334,9 +9335,9 @@ FULL_SIMP_TAC std_ss [SOME___holfoot_separation_combinator,
    var_res_sl___has_write_permission_def, IN_INSERT, NOT_IN_EMPTY,
    IN_DISJOINT, IN_SING, SOME___VAR_RES_STACK_COMBINE,
    FMERGE_DEF, IN_UNION, VAR_RES_STACK_IS_SEPARATE_def,
-   IN_LIST_TO_SET, var_res_sl___has_read_permission_def] THEN
-`~(v IN FDOM p_1'')` by ALL_TAC THEN1 (
-   Q.PAT_ASSUM `!x. Y1 x /\ Y2 x ==> X x` (MP_TAC o Q.SPEC `v`) THEN
+    var_res_sl___has_read_permission_def] THEN
+`~(v IN FDOM p_1'')` by (
+   Q.PAT_X_ASSUM `!x. Y1 x /\ Y2 x ==> X x` (MP_TAC o Q.SPEC `v`) THEN
    ASM_SIMP_TAC std_ss [var_res_permission_THM2]
 ) THEN
 FULL_SIMP_TAC (std_ss++CONJ_ss) [] THEN
@@ -9345,8 +9346,7 @@ SIMP_TAC std_ss [GSYM fmap_EQ_THM, EXTENSION] THEN
 ASM_SIMP_TAC (std_ss++CONJ_ss++EQUIV_EXTRACT_ss) [
    FMERGE_DEF, FDOM_FUPDATE, IN_UNION, IN_INSERT,
    FAPPLY_FUPDATE_THM, FUNION_DEF, FDOM_FEMPTY, NOT_IN_EMPTY,
-   VAR_RES_STACK___IS_EQUAL_UPTO_VALUES_def, FDOM_FUPDATE_LIST,
-   IN_LIST_TO_SET] THEN
+   VAR_RES_STACK___IS_EQUAL_UPTO_VALUES_def, FDOM_FUPDATE_LIST] THEN
 REPEAT (GEN_TAC ORELSE CONJ_TAC) THENL [
    METIS_TAC[],
 
@@ -9364,11 +9364,11 @@ REPEAT (GEN_TAC ORELSE CONJ_TAC) THENL [
       ASM_SIMP_TAC std_ss [FUPDATE_LIST_APPLY_NOT_MEM]
    ],
 
-   `vs SUBSET FDOM p_1'` by ALL_TAC THEN1 (
+   `vs SUBSET FDOM p_1'` by (
        FULL_SIMP_TAC std_ss [BAG_IN_BAG_OF_SET, IN_DELETE, SUBSET_DEF] THEN
        METIS_TAC[]
    ) THEN
-   `(var_res_exp_var_update (v,c) n) (p_1' |+ (v,n',var_res_write_permission)) = n p_1` by ALL_TAC THEN1 (
+   `(var_res_exp_var_update (v,c) n) (p_1' |+ (v,n',var_res_write_permission)) = n p_1` by (
       SIMP_TAC std_ss [var_res_exp_var_update_def] THEN
       MATCH_MP_TAC
          VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET___EXP_EQ THEN
@@ -9377,7 +9377,7 @@ REPEAT (GEN_TAC ORELSE CONJ_TAC) THENL [
         SUBSET_DEF, IN_INSERT, var_res_state_var_update_def] THEN
       REPEAT STRIP_TAC THEN
       `FST ((p_1' |+ (v,n',var_res_write_permission) |+
-         (v,c,var_res_write_permission)) ' v') = FST (p_1' ' v')` by ALL_TAC THEN1 (
+         (v,c,var_res_write_permission)) ' v') = FST (p_1' ' v')` by (
          Cases_on `v' = v` THEN
          ASM_SIMP_TAC std_ss [FAPPLY_FUPDATE_THM]
       ) THEN
@@ -9390,7 +9390,7 @@ REPEAT (GEN_TAC ORELSE CONJ_TAC) THENL [
       LET_THM, IN_ABS, COUNT_LIST_def, FUPDATE_LIST_THM,
       var_res_exp_var_def, FDOM_FUPDATE_LIST, FDOM_FUPDATE, IN_INSERT,
       FDOM_FEMPTY, UNION_EMPTY, FAPPLY_FUPDATE_THM, MAP_MAP_o,
-      combinTheory.o_DEF, LIST_TO_SET_MAP, COUNT_LIST_COUNT,
+      o_DEF, LIST_TO_SET_MAP, COUNT_LIST_COUNT,
       GSYM IMAGE_COMPOSE, var_res_exp_prop_def, COND_RAND, COND_RATOR,
       var_res_prop_stack_true_REWRITE, asl_emp_DISJOINT_FMAP_UNION, IN_SING],
 
@@ -9514,11 +9514,11 @@ ASM_SIMP_TAC std_ss [holfoot_prog_new_def,
    IS_SEPARATION_COMBINATOR___FINITE_MAP,
    ASL_IS_LOCAL_ACTION___holfoot_new_action] THEN
 
-Tactical.REVERSE (`ne (FST s) = ne' (FST s)` by ALL_TAC) THEN1 (
+`ne (FST s) = ne' (FST s)` suffices_by (STRIP_TAC THEN
    ASM_SIMP_TAC std_ss [holfoot_new_action_def, LET_THM]
 ) THEN
 
-Q.PAT_ASSUM `s IN X` MP_TAC THEN
+Q.PAT_X_ASSUM `s IN X` MP_TAC THEN
 FULL_SIMP_TAC std_ss [var_res_prop___COND_INSERT,
    var_res_prop___PROP_INSERT] THEN
 SIMP_TAC (std_ss++CONJ_ss) [var_res_prop_equal_unequal_EXPAND, IN_ABS,
@@ -9545,7 +9545,6 @@ val holfoot_dispose_action_def = Define `
       if (~((IMAGE (\n'. loc + n') (count m)) SUBSET FDOM (SND s)) \/ (loc = 0)) then NONE else
       (SOME {(FST s, DRESTRICT (SND s) (COMPL (IMAGE (\n'. loc + n') (count m))))}))`;
 
-
 val ASL_IS_LOCAL_ACTION___holfoot_dispose_action = store_thm (
 "ASL_IS_LOCAL_ACTION___holfoot_dispose_action",
 ``!ne e.
@@ -9558,18 +9557,17 @@ SIMP_TAC std_ss [ASL_IS_LOCAL_ACTION___ALTERNATIVE_EXT_DEF,
    SOME___holfoot_separation_combinator, NOT_NONE_IS_SOME, IN_SING,
    COND_NONE_SOME_REWRITES, ASL_IS_SUBSTATE_def] THEN
 REPEAT STRIP_TAC THEN
-`?n. ne (FST s1) = SOME n` by ALL_TAC THEN1 (
+`?n. ne (FST s1) = SOME n` by (
    Cases_on `ne (FST s1)` THEN FULL_SIMP_TAC std_ss []
 ) THEN
 `(ne (FST s3) = ne (FST s1))` by METIS_TAC[
    IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___SUBSTATE_LEFT,
    VAR_RES_STACK_IS_SUBSTATE_INTRO, IS_SOME_EXISTS] THEN
-Cases_on `n = 0` THEN (
+Cases_on `n = 0` THEN
    FULL_SIMP_TAC list_ss [COUNT_ZERO, IN_SING] THEN
-   Q.PAT_ASSUM `v1 = X` (ASSUME_TAC o GSYM) THEN
-   FULL_SIMP_TAC std_ss [IN_SING]
-) THEN
-`?ev. e (FST s1) = SOME ev` by ALL_TAC THEN1 (
+   SRW_TAC[][] THEN
+   FULL_SIMP_TAC std_ss [IN_SING] THEN
+`?ev. e (FST s1) = SOME ev` by (
    Cases_on `e (FST s1)` THEN FULL_SIMP_TAC std_ss []
 ) THEN
 `(e (FST s3) = e (FST s1))` by METIS_TAC[
@@ -9703,13 +9701,13 @@ Cases_on `holfoot_dispose_action n e s` THENL [
    Cases_on `nv = 0` THEN1 (
       FULL_SIMP_TAC std_ss [var_res_prop_stack_true_REWRITE, asl_emp_DISJOINT_FMAP_UNION,
         IN_SING, FUNION_FEMPTY_2] THEN
-      Q.PAT_ASSUM `X = x` (ASSUME_TAC o GSYM) THEN
+      Q.PAT_X_ASSUM `X = x` (ASSUME_TAC o GSYM) THEN
       FULL_SIMP_TAC std_ss [IN_SING] THEN
       METIS_TAC[VAR_RES_STACK___IS_EQUAL_UPTO_VALUES___REFL,
                 VAR_RES_STACK_COMBINE___COMM]
    ) THEN
    FULL_SIMP_TAC std_ss [] THEN
-   Q.PAT_ASSUM `X = x` (ASSUME_TAC o GSYM) THEN
+   Q.PAT_X_ASSUM `X = x` (ASSUME_TAC o GSYM) THEN
    `e (FST s) = e (FST x'')` by METIS_TAC[
       IS_SOME___VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS___SUBSTATE_LEFT,
       VAR_RES_STACK_IS_SUBSTATE_INTRO] THEN
@@ -9847,11 +9845,11 @@ ASM_SIMP_TAC std_ss [] THEN
 
 `IS_SOME (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS e)` by
    FULL_SIMP_TAC std_ss [VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS_SUBSET_def] THEN
-`count 1 = {0}` by ALL_TAC THEN1 (
+`count 1 = {0}` by (
    `1 = SUC 0` by DECIDE_TAC THEN
    ASM_REWRITE_TAC[COUNT_SUC, COUNT_ZERO]
 ) THEN
-Q.PAT_ASSUM `X IN holfoot_ap_points_to e L` MP_TAC THEN
+Q.PAT_X_ASSUM `X IN holfoot_ap_points_to e L` MP_TAC THEN
 ASM_SIMP_TAC std_ss [holfoot_ap_array___ALTERNATIVE_DEF2, IN_ABS, LET_THM,
    COUNT_SUC, IMAGE_INSERT, IMAGE_EMPTY, holfoot_ap_points_to_def,
    var_res_exp_prop_def, var_res_exp_const_EVAL]);
@@ -9926,11 +9924,11 @@ ASM_SIMP_TAC std_ss [holfoot_prog_dispose_def,
    GSYM holfoot_separation_combinator_def,
    ASL_IS_LOCAL_ACTION___holfoot_dispose_action] THEN
 
-Tactical.REVERSE (`e (FST s) = e' (FST s)` by ALL_TAC) THEN1 (
+`e (FST s) = e' (FST s)` suffices_by (STRIP_TAC THEN
    ASM_SIMP_TAC std_ss [holfoot_dispose_action_def, LET_THM]
 ) THEN
 
-Q.PAT_ASSUM `s IN X` MP_TAC THEN
+Q.PAT_X_ASSUM `s IN X` MP_TAC THEN
 FULL_SIMP_TAC std_ss [var_res_prop___COND_INSERT,
    var_res_prop___PROP_INSERT] THEN
 SIMP_TAC (std_ss++CONJ_ss) [var_res_prop_equal_unequal_EXPAND, IN_ABS,
@@ -9967,11 +9965,11 @@ ASM_SIMP_TAC std_ss [holfoot_prog_dispose_def,
    GSYM holfoot_separation_combinator_def,
    ASL_IS_LOCAL_ACTION___holfoot_dispose_action] THEN
 
-Tactical.REVERSE (`ne (FST s) = ne' (FST s)` by ALL_TAC) THEN1 (
+`ne (FST s) = ne' (FST s)` suffices_by (STRIP_TAC THEN
    ASM_SIMP_TAC std_ss [holfoot_dispose_action_def, LET_THM]
 ) THEN
 
-Q.PAT_ASSUM `s IN X` MP_TAC THEN
+Q.PAT_X_ASSUM `s IN X` MP_TAC THEN
 FULL_SIMP_TAC std_ss [var_res_prop___COND_INSERT,
    var_res_prop___PROP_INSERT] THEN
 SIMP_TAC (std_ss++CONJ_ss) [var_res_prop_equal_unequal_EXPAND, IN_ABS,

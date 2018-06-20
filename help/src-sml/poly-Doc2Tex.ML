@@ -7,6 +7,12 @@ val _ = use "../../tools-poly/poly/Binaryset.sig";
 val _ = use "../../tools-poly/poly/Binaryset.sml";
 val _ = use "../../tools-poly/poly/Listsort.sig";
 val _ = use "../../tools-poly/poly/Listsort.sml";
+val _ = use "../../src/prekernel/stringfindreplace.sig";
+val _ = use "../../src/prekernel/stringfindreplace.sml";
+val _ = use "../../src/portableML/UTF8.sig";
+val _ = use "../../src/portableML/UTF8.sml";
+val _ = use "../../src/portableML/UnicodeChars.sig";
+val _ = use "../../src/portableML/UnicodeChars.sml";
 
 fun useB f =
   (use (f ^ ".sig");

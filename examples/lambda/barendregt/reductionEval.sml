@@ -67,8 +67,9 @@ val congs = [lameq_APPcong, SPEC_ALL lameq_LAM,
 val user_rewrites = ref (SSFRAG {dprocs = [], ac = [], rewrs = [],
                                  congs = [], filter = NONE,
                                  name = SOME "betasimps", convs = []})
-fun add_rwts ths =
-    user_rewrites := simpLib.merge_ss [!user_rewrites, simpLib.rewrites ths]
+fun add_rwts (ths : (string * thm) list) =
+    user_rewrites :=
+      simpLib.merge_ss [!user_rewrites, simpLib.rewrites (map #2 ths)]
 
 open chap2Theory head_reductionTheory
 val BETA_rsd = {refl = GEN_ALL lameq_refl, trans = lameq_trans,
@@ -94,7 +95,8 @@ fun betafy ss =
   !user_rewrites ++ BETA_CONG_ss
 fun bsrw_ss() = betafy(srw_ss())
 
-val {export = export_betarwt,...} = ThmSetData.new_exporter "betasimp" (K add_rwts)
+val {export = export_betarwt,...} =
+    ThmSetData.new_exporter "betasimp" (K add_rwts)
 fun bstore_thm (trip as (n,t,tac)) = store_thm trip before export_betarwt n
 
 (* ----------------------------------------------------------------------

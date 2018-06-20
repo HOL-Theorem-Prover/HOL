@@ -2,7 +2,7 @@ signature Drule =
 sig
   include Abbrev
 
-  val ETA_CONV         : term -> thm
+  val ETA_CONV         : conv
   val RIGHT_ETA        : thm -> thm
   val EXT              : thm -> thm
   val MK_ABS           : thm -> thm
@@ -15,13 +15,14 @@ sig
   val EQT_INTRO        : thm -> thm
   val GSUBS            : ((term,term)subst -> term -> term)
                            -> thm list -> thm -> thm
-  val SUBST_CONV       : (term,thm)subst -> term -> term -> thm
+  val SUBST_CONV       : (term,thm)subst -> term -> conv
   val ADD_ASSUM        : term -> thm -> thm
   val IMP_TRANS        : thm -> thm -> thm
   val IMP_ANTISYM_RULE : thm -> thm -> thm
   val CONTR            : term -> thm -> thm
   val UNDISCH          : thm -> thm
   val UNDISCH_TM       : thm -> term * thm
+  val UNDISCH_SPLIT    : thm -> thm
   val EQT_ELIM         : thm -> thm
   val SPECL            : term list -> thm -> thm
   val SELECT_INTRO     : thm -> thm
@@ -35,7 +36,7 @@ sig
   val SUBS             : thm list -> thm -> thm
   val SUBS_OCCS        : (int list * thm) list -> thm -> thm
   val RIGHT_BETA       : thm -> thm
-  val LIST_BETA_CONV   : term -> thm
+  val LIST_BETA_CONV   : conv
   val RIGHT_LIST_BETA  : thm -> thm
   val ASSUME_CONJS     : term -> thm
   val CONJUNCTS_AC     : term * term -> thm
@@ -53,6 +54,9 @@ sig
   val UNDISCH_ALL      : thm -> thm
   val SPEC_ALL         : thm -> thm
   val PROVE_HYP        : thm -> thm -> thm
+  val REORDER_ANTS_MOD : (term list -> term list) -> (thm -> thm) -> thm -> thm
+  val REORDER_ANTS     : (term list -> term list) -> thm -> thm
+  val MODIFY_CONS      : (thm -> thm) -> thm -> thm
   val CONJ_PAIR        : thm -> thm * thm
   val LIST_CONJ        : thm list -> thm
   val CONJ_LIST        : int -> thm -> thm list
@@ -69,8 +73,8 @@ sig
   val IMP_ELIM         : thm -> thm
   val DISJ_CASES_UNION : thm -> thm -> thm -> thm
   val DISJ_CASESL      : thm -> thm list -> thm
-  val ALPHA_CONV       : term -> term -> thm
-  val GEN_ALPHA_CONV   : term -> term -> thm
+  val ALPHA_CONV       : term -> conv
+  val GEN_ALPHA_CONV   : term -> conv
   val IMP_CONJ         : thm -> thm -> thm
   val EXISTS_IMP       : term -> thm -> thm
   val INST_TY_TERM     : (term,term)subst * (hol_type,hol_type)subst
@@ -86,6 +90,7 @@ sig
   val HO_PART_MATCH    : (term -> term) -> thm -> term -> thm
   val HO_MATCH_MP      : thm -> thm -> thm
   val RES_CANON        : thm -> thm list
+  val IRULE_CANON      : thm -> thm
 
   val prove_rep_fn_one_one : thm -> thm
   val prove_rep_fn_onto    : thm -> thm

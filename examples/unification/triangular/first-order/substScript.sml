@@ -65,14 +65,14 @@ val wfs_no_cycles = Q.store_thm(
   SRW_TAC [] [wfs_def,WF_IFF_WELLFOUNDED,wellfounded_def] THEN
   SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN
   `!n. (f n) IN FDOM s /\ f (SUC n) IN vars (s ' (f n))` by
-    (STRIP_TAC THEN Q.PAT_ASSUM `!n.vR s (f (SUC n)) (f n)` (Q.SPEC_THEN `n` MP_TAC)
+    (STRIP_TAC THEN Q.PAT_X_ASSUM `!n.vR s (f (SUC n)) (f n)` (Q.SPEC_THEN `n` MP_TAC)
      THEN FULL_SIMP_TAC (srw_ss()) [vR_def] THEN Cases_on `FLOOKUP s (f n)` THEN
-     Q.PAT_ASSUM `FLOOKUP s (f n) = Z` MP_TAC THEN SRW_TAC [] [FLOOKUP_DEF])
+     Q.PAT_X_ASSUM `FLOOKUP s (f n) = Z` MP_TAC THEN SRW_TAC [] [FLOOKUP_DEF])
   THEN
   `!n m. (vR s)^+ (f (SUC (n + m))) (f n)` by
     (REPEAT STRIP_TAC THEN Induct_on `m` THEN1
        (SRW_TAC [] [] THEN METIS_TAC [TC_SUBSET]) THEN
-     Q.PAT_ASSUM `!n. f n IN FDOM s /\ Z` (Q.SPEC_THEN `SUC (n + m)` MP_TAC)
+     Q.PAT_X_ASSUM `!n. f n IN FDOM s /\ Z` (Q.SPEC_THEN `SUC (n + m)` MP_TAC)
      THEN SRW_TAC [] [] THEN
      `(vR s) (f (SUC (SUC (n + m)))) (f (SUC (n + m)))` by METIS_TAC
      [vR_def,FLOOKUP_DEF] THEN METIS_TAC [TC_RULES,ADD_SUC])
@@ -92,13 +92,13 @@ val subst_APPLY_def = Define`
   (subst_APPLY s (Var v) = case FLOOKUP s v of NONE => Var v | SOME t => t) /\
   (subst_APPLY s (Pair t1 t2) = Pair (subst_APPLY s t1) (subst_APPLY s t2)) /\
   (subst_APPLY s (Const c) = Const c)`;
-val _ = set_fixity "''" (Infixr 700);
-val _ = overload_on ("''", ``subst_APPLY``);
+val _ = set_fixity "❜" (Infixr 700);
+val _ = overload_on ("❜", ``subst_APPLY``)
 val _ = export_rewrites["subst_APPLY_def"];
 
 val subst_APPLY_FAPPLY = Q.store_thm(
 "subst_APPLY_FAPPLY",
-`v IN FDOM s ==> (s ' v = s '' (Var v))`,
+`v IN FDOM s ==> (s ' v = s ❜ (Var v))`,
 SRW_TAC [][subst_APPLY_def,FLOOKUP_DEF]);
 
 val noids_def = Define`
@@ -106,13 +106,13 @@ val noids_def = Define`
 
 val subst_APPLY_id = Q.store_thm(
 "subst_APPLY_id",
-`(s '' t = t) <=> !v.v IN (vars t) ∧ v IN FDOM s ⇒ (s ' v = Var v)`,
+`(s ❜ t = t) <=> !v.v IN (vars t) ∧ v IN FDOM s ⇒ (s ' v = Var v)`,
 EQ_TAC THEN
 Induct_on `t` THEN SRW_TAC [][FLOOKUP_DEF] THEN
 FULL_SIMP_TAC (srw_ss()) []);
 
 val idempotent_def = Define`
-  idempotent s = !t.s '' (s '' t) = s '' t`;
+  idempotent s = !t.s ❜ (s ❜ t) = s ❜ t`;
 
 val wfs_noids = Q.store_thm(
 "wfs_noids",
@@ -185,14 +185,14 @@ METIS_TAC [IN_DISJOINT]);
 val _ = set_fixity "s_o_s"(Infixl 740);
 
 val s_o_s_def = Define`
-  s1 s_o_s s2 = FUN_FMAP (($'' s1) o ($'' s2 o Var)) (FDOM s1 ∪ FDOM s2)`;
+  s1 s_o_s s2 = FUN_FMAP (($❜ s1) o ($❜ s2 o Var)) (FDOM s1 ∪ FDOM s2)`;
 
 val selfapp_def = Define`
-  (selfapp s = ($'' s) o_f s)`;
+  (selfapp s = ($❜ s) o_f s)`;
 
 val selfapp_eq_iter_APPLY = Q.store_thm(
 "selfapp_eq_iter_APPLY",
-`∀t. (selfapp s) '' t = s '' (s '' t)`,
+`∀t. (selfapp s) ❜ t = s ❜ (s ❜ t)`,
 Induct THEN SRW_TAC [][selfapp_def,FLOOKUP_DEF]);
 
 val FDOM_selfapp = RWstore_thm(
@@ -208,7 +208,7 @@ Cases_on `x ∈ FDOM s` THEN SRW_TAC [][FUN_FMAP_DEF,NOT_FDOM_FAPPLY_FEMPTY,FLOO
 
 val IN_vars_APPLY = Q.store_thm(
 "IN_vars_APPLY",
-`∀t v. v IN vars (s '' t) ⇔ v NOTIN FDOM s ∧ v IN vars t ∨ ∃x. vR s v x ∧ x IN vars t`,
+`∀t v. v IN vars (s ❜ t) ⇔ v NOTIN FDOM s ∧ v IN vars t ∨ ∃x. vR s v x ∧ x IN vars t`,
 Induct THEN SRW_TAC [][vR_def] THEN
 SRW_TAC [][FLOOKUP_DEF] THEN EQ_TAC THEN
 FULL_SIMP_TAC (srw_ss()) [] THEN SRW_TAC [][] THEN
@@ -390,7 +390,7 @@ RES_TAC);
 
 val idempotent_substeq = Q.store_thm(
 "idempotent_substeq",
-`($'' s1 = $'' s2) ⇒ (idempotent s1 ⇔ idempotent s2)`,
+`($❜ s1 = $❜ s2) ⇒ (idempotent s1 ⇔ idempotent s2)`,
 SRW_TAC [][idempotent_def,EQ_IMP_THM]);
 
 val vR_FUNPOW_selfapp_bound = Q.store_thm(
@@ -550,7 +550,7 @@ this will be a consequence of wfs_IMP_fixpoint above ? ...
 val repeated_selfapp_eq_apply_ts = Q.store_thm(
 "repeated_selfapp_eq_apply_ts", MAYBE n HAS TO DEPEND ON THE TERM !!
 `∃n. apply_ts s = subst_APPLY (FUNPOW selfapp n s)`,
-Q_TAC SUFF_TAC `∀t.∃n. apply_ts s t = (FUNPOW selfapp n s) '' t`
+Q_TAC SUFF_TAC `∀t.∃n. apply_ts s t = (FUNPOW selfapp n s) ❜ t`
 THEN1 (
   SRW_TAC [][FUN_EQ_THM,SKOLEM_THM]
   SKOLEM_THM
@@ -559,12 +559,12 @@ FDOM s INTER BIGUNION (IMAGE vars (FRANGE s))
 
 val wfs_IMP_fixpoint = Q.store_thm(
 "wfs_IMP_fixpoint",
-`wfs s ⇒ ∀t.∃n. (FUNPOW selfapp n s) '' t = apply_ts s t`
+`wfs s ⇒ ∀t.∃n. (FUNPOW selfapp n s) ❜ t = apply_ts s t`
 
 val FUNPOW_APPLY_apply_ts = Q.store_thm(
 "FUNPOW_APPLY_apply_ts",
-`(FUNPOW ($'' s) n t = apply_ts s t) ∧ m >= n ∧ wfs s ⇒
- (FUNPOW ($'' s) m t = apply_ts s t)`,
+`(FUNPOW ($❜ s) n t = apply_ts s t) ∧ m >= n ∧ wfs s ⇒
+ (FUNPOW ($❜ s) m t = apply_ts s t)`,
 Induct_on `m` THEN SRW_TAC [][] THEN1 (
   Cases_on `n` THEN FULL_SIMP_TAC (srw_ss()++ARITH_ss) [] ) THEN
 Cases_on `SUC m = n` THEN1 SRW_TAC [][] THEN
@@ -574,13 +574,13 @@ SRW_TAC [][apply_ts_eq_walkstar,subst_APPLY_walkstar]);
 
 val FUNPOW_APPLY_pair = Q.store_thm(
 "FUNPOW_APPLY_pair",
-`FUNPOW ($'' s) n (Pair t1 t2) = Pair (FUNPOW ($'' s) n t1) (FUNPOW ($'' s) n t2)`,
+`FUNPOW ($❜ s) n (Pair t1 t2) = Pair (FUNPOW ($❜ s) n t1) (FUNPOW ($❜ s) n t2)`,
 Induct_on `n` THEN SRW_TAC [][FUNPOW_SUC] );
 
 val wfs_IMP_fixpoint = Q.store_thm(
 "wfs_IMP_fixpoint",
-`wfs s ⇒ ∃n. idempotent (FUNPOW ($'' s) n)`
-`wfs s ⇒ ∀t.∃n. FUNPOW ($'' s) n t = apply_ts s t`,
+`wfs s ⇒ ∃n. idempotent (FUNPOW ($❜ s) n)`
+`wfs s ⇒ ∀t.∃n. FUNPOW ($❜ s) n t = apply_ts s t`,
 STRIP_TAC THEN HO_MATCH_MP_TAC apply_ts_ind THEN
 SRW_TAC [][] THEN1 (
   Cases_on `FLOOKUP s t` THEN SRW_TAC [][] THENL [
@@ -597,7 +597,7 @@ Q.EXISTS_TAC `0` THEN SRW_TAC [][]);
 
 val fixpoint_IMP_wfs = Q.store_thm(
 "fixpoint_IMP_wfs",
-`(∀t.∃n. FUNPOW ($'' s) n t = FUNPOW ($'' s) (SUC n) t) ∧ noids s ⇒ wfs s`,
+`(∀t.∃n. FUNPOW ($❜ s) n t = FUNPOW ($❜ s) (SUC n) t) ∧ noids s ⇒ wfs s`,
 SRW_TAC [][] THEN
 MATCH_MP_TAC wfs_idempotent THEN
 SRW_TAC [][] THEN
@@ -614,30 +614,30 @@ Cases_on `FLOOKUP s v` THEN FULL_SIMP_TAC (srw_ss()) []
 
 val FUNPOW_APPLY_term_depth = Q.store_thm(
 "FUNPOW_APPLY_term_depth",
-`∀n t. term_depth (FUNPOW ($'' s) n t) ≤ term_depth (FUNPOW ($'' s) (SUC n) t)`,
+`∀n t. term_depth (FUNPOW ($❜ s) n t) ≤ term_depth (FUNPOW ($❜ s) (SUC n) t)`,
 Induct THEN SRW_TAC [][] THEN1 (
   Induct_on `t` THEN SRW_TAC [ARITH_ss][] ) THEN
 FULL_SIMP_TAC (srw_ss()) [FUNPOW]);
 
 val FUNPOW_APPLY_NOT_FDOM = Q.store_thm(
 "FUNPOW_APPLY_NOT_FDOM",
-`v NOTIN FDOM s ⇒ (FUNPOW ($'' s) n (Var v) = Var v)`,
+`v NOTIN FDOM s ⇒ (FUNPOW ($❜ s) n (Var v) = Var v)`,
 STRIP_TAC THEN Induct_on `n` THEN SRW_TAC [][FUNPOW,FLOOKUP_DEF]);
 
 val NOT_FDOM_vars_APPLY = Q.store_thm(
 "NOT_FDOM_vars_APPLY",
-`v NOTIN FDOM s ⇒ v IN vars t ⇒ v IN vars (s '' t)`,
+`v NOTIN FDOM s ⇒ v IN vars t ⇒ v IN vars (s ❜ t)`,
 Induct_on `t` THEN SRW_TAC [][FLOOKUP_DEF] THEN
 FULL_SIMP_TAC (srw_ss()) []);
 
 val term_depth_APPLY = Q.store_thm(
 "term_depth_APPLY",
-`term_depth t ≤ term_depth (s '' t)`,
+`term_depth t ≤ term_depth (s ❜ t)`,
 Induct_on `t` THEN SRW_TAC [ARITH_ss][]);
 
 val APPLY_subterm = Q.store_thm(
 "APPLY_subterm",
-`v IN vars t ∧ t ≠ Var v ⇒ measure term_depth (s '' (Var v)) (s '' t)`,
+`v IN vars t ∧ t ≠ Var v ⇒ measure term_depth (s ❜ (Var v)) (s ❜ t)`,
 Induct_on `t` THEN SRW_TAC [ARITH_ss][measure_thm] THEN
 Cases_on `FLOOKUP s v` THEN SRW_TAC [ARITH_ss][] THEN
 FULL_SIMP_TAC (srw_ss()) [measure_thm] THEN
@@ -648,12 +648,12 @@ THEN SRW_TAC [ARITH_ss][]);
 
 val wfs_iff_fixpoint_exists = Q.store_thm(
 "wfs_iff_fixpoint_exists",
-`wfs s ⇔ noids s ∧ ∀t.∃tt. OWHILE (λt. (s '' t) ≠ t) (subst_APPLY s) t = SOME tt`,
+`wfs s ⇔ noids s ∧ ∀t.∃tt. OWHILE (λt. (s ❜ t) ≠ t) (subst_APPLY s) t = SOME tt`,
 SRW_TAC [][EQ_IMP_THM] THEN1 METIS_TAC [wfs_noids] THENL [
   Q.EXISTS_TAC `walk* s t` THEN SRW_TAC [][OWHILE_def]
 
 val substeq_def = Define`
-  substeq s1 s2 = noids s1 ∧ noids s2 ∧ (∀t. s1 '' t = s2 '' t)`;
+  substeq s1 s2 = noids s1 ∧ noids s2 ∧ (∀t. s1 ❜ t = s2 ❜ t)`;
 
 val substeq_refl = Q.store_thm(
 "substeq_refl",
@@ -735,7 +735,7 @@ SRW_TAC [ARITH_ss][MULT,ADD1]);
 (*
 val collapsable_IMP_wfs = Q.store_thm(
 "collapsable_IMP_wfs",
-`∀s.(∃si. idempotent si ∧ (∀t. si '' t = s '' t)) ⇒ wfs s`,
+`∀s.(∃si. idempotent si ∧ (∀t. si ❜ t = s ❜ t)) ⇒ wfs s`,
 SRW_TAC [][wfs_no_cycles]
 
 val wfs_collapse = Q.store_thm(
@@ -758,11 +758,11 @@ val subst_compose_exists = Q.prove(
 GEN_TAC THEN INDUCT_THEN fmap_INDUCT STRIP_ASSUME_TAC THENL [
   Q.EXISTS_TAC `s2` THEN Induct THEN SRW_TAC [][],
   SRW_TAC [][] THEN
-  Q.EXISTS_TAC `comp |+ (x,s2 '' y)` THEN
+  Q.EXISTS_TAC `comp |+ (x,s2 ❜ y)` THEN
   SRW_TAC [][] THEN
   Induct_on `x'` THEN SRW_TAC [][] THEN
   SRW_TAC [][FLOOKUP_UPDATE] THEN
-  Q.PAT_ASSUM `!x.Z` (Q.SPEC_THEN `Var s` MP_TAC) THEN
+  Q.PAT_X_ASSUM `!x.Z` (Q.SPEC_THEN `Var s` MP_TAC) THEN
   SRW_TAC [][]
 ]);
 
@@ -787,14 +787,14 @@ val collapse_unify_eq_sunify = Q.store_thm(
 "collapse_unify_eq_sunify",
 `!s t1 t2 sx.wfs s /\ (unify s t1 t2 = SOME sx) ==>
    ?ss.(sunify t1 t2 = SOME ss) /\
-       !t.((collapse sx) '' t = (ss oo s) '' t)`,
+       !t.((collapse sx) ❜ t = (ss oo s) ❜ t)`,
 HO_MATCH_MP_TAC unify_ind THEN SRW_TAC [][] THEN
 `wfs sx` by METIS_TAC [unify_uP,uP_def] THEN
 Cases_on `walk s t1` THEN Cases_on `walk s t2` THEN
-Q.PAT_ASSUM `unify X Y Z = D` MP_TAC THEN
+Q.PAT_X_ASSUM `unify X Y Z = D` MP_TAC THEN
 SRW_TAC [][Once unify_def] THENL
 
-`∀t1 t2. (s '' t1 = s '' t2) ⇒ (t1 = t2)`,
+`∀t1 t2. (s ❜ t1 = s ❜ t2) ⇒ (t1 = t2)`,
 Induct THEN SRW_TAC [][] THENL [ false - x -> 3 and y -> 3
   Induct_on `t2` THEN FULL_SIMP_TAC (srw_ss()) []
 Induct_on `t1` THEN SRW_TAC [][] THENL [
@@ -809,13 +809,13 @@ STRIP_TAC THEN Induct_on `n` THEN SRW_TAC [][FUNPOW_SUC]
 
 `∀t1 t2. (λt1 t2. ∃v. (t1  = Var v) ∧ v IN vars t2 ∧ measure term_depth t1 t2) t1 t2 ⇒
 (λt1 t2. ∃v. (t1  = Var v) ∧ v IN vars t2 ∧ measure term_depth t1 t2)
-(FUNPOW ($'' s) n t1) (FUNPOW ($'' s) n t2)`,
+(FUNPOW ($❜ s) n t1) (FUNPOW ($❜ s) n t2)`,
 
 val tmp =
 FUNPOW_extends_mono |>
 Q.INST_TYPE[`:'a`|->`:term`] |>
 Q.INST[`P`|->`(λt1 t2. v IN vars t2 ∧ measure term_depth t1 t2)`,
-       `f`|->`$'' s`]
+       `f`|->`$❜ s`]
 |> SIMP_RULE (srw_ss()) [] |>
 UNDISCH;
 
@@ -830,7 +830,7 @@ Cases_on `FLOOKUP s n` THEN SRW_TAC [][] THENL [
   SRW_TAC [ARITH_ss][],
 
 
-`∀n. v IN vars t ∧ t ≠ Var v ⇒ (measure term_depth) (FUNPOW ($'' s) n (Var v)) (FUNPOW ($'' s) n t)`,
+`∀n. v IN vars t ∧ t ≠ Var v ⇒ (measure term_depth) (FUNPOW ($❜ s) n (Var v)) (FUNPOW ($❜ s) n t)`,
 Induct THEN SRW_TAC [][] THEN1 (
   Induct_on `t` THEN FULL_SIMP_TAC (srw_ss()++ARITH_ss) [measure_thm] ) THEN
 SRW_TAC [][FUNPOW] THEN
@@ -839,10 +839,10 @@ Cases_on `FLOOKUP s v` THEN SRW_TAC [][] THEN1 (
   SRW_TAC [][GSYM FUNPOW] THEN
   SRW_TAC [][FUNPOW_SUC] THEN
   Q.MATCH_ABBREV_TAC `a < b` THEN
-  Q_TAC SUFF_TAC `term_depth (FUNPOW ($'' s) n t) ≤ b` THEN1 (
+  Q_TAC SUFF_TAC `term_depth (FUNPOW ($❜ s) n t) ≤ b` THEN1 (
     FULL_SIMP_TAC (srw_ss()++ARITH_ss) [Abbr`a`,Abbr`b`] ) THEN
   METIS_TAC [term_depth_APPLY] ) THEN
-Q_TAC SUFF_TAC `x = (s '' (Var v))`
+Q_TAC SUFF_TAC `x = (s ❜ (Var v))`
 THEN1 METIS_TAC [APPLY_subterm]
 SRW_TAC [][FUNPOW]
 
@@ -851,11 +851,11 @@ SRW_TAC [][FUNPOW]
 HO_MATCH_MP_TAC FUNPOW_extends_mono THEN
 Induct THEN SRW_TAC [][]
 
-∀t1 t2.(λt1 t2. ∃v. (t1 = Var v) ∧ v IN vars t2 ∧ term_depth) t1 t2 ⇒ (measure term_depth) (FUNPOW ($'' s) n t1) (FUNPOW ($'' s) n t2)`
+∀t1 t2.(λt1 t2. ∃v. (t1 = Var v) ∧ v IN vars t2 ∧ term_depth) t1 t2 ⇒ (measure term_depth) (FUNPOW ($❜ s) n t1) (FUNPOW ($❜ s) n t2)`
 HO_MATCH_MP_TAC FUNPOW_extends_mono THEN
 Induct THEN SRW_TAC [][]
 
-`(FUNPOW ($'' s) n (Var v) = FUNPOW ($'' s) n t) ∧ (t ≠ Var v) ⇒ v NOTIN vars t`,
+`(FUNPOW ($❜ s) n (Var v) = FUNPOW ($❜ s) n t) ∧ (t ≠ Var v) ⇒ v NOTIN vars t`,
 STRIP_TAC THEN SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN
 Cases_on `n` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
 `term_depth (Var v) < term_depth t`
@@ -873,7 +873,7 @@ Cases_on `FLOOKUP s v` THEN FULL_SIMP_TAC (srw_ss()) [] THENL [
 
 val FUNPOW_APPLY_preserves_type = Q.store_thm(
 "FUNPOW_APPLY_preserves_type",
-`∃FUNPOW ($'' s) n (Var v)
+`∃FUNPOW ($❜ s) n (Var v)
 
 val rangevarb_recurses = save_thm(
 "rangevarb_recurses",
@@ -1015,7 +1015,7 @@ CONJ_TAC THEN1 (
     FULL_SIMP_TAC (srw_ss()) [DISJOINT_EMPTY]) THEN
   FIRST_X_ASSUM MATCH_MP_TAC THEN
   Q.EXISTS_TAC `x` THEN SRW_TAC [][] THEN
-  Q.EXISTS_TAC `x''` THEN SRW_TAC [][]) THEN
+  Q.EXISTS_TAC `x❜` THEN SRW_TAC [][]) THEN
 SRW_TAC [][]
 
   `varb b = {||}

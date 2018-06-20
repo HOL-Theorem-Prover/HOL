@@ -3,9 +3,26 @@ struct
 
 open HolKernel Parse boolSyntax
 open Abbrev
-open errormonad
 
 local open grammarTheory in end
+
+datatype fs = datatype errormonad.fs
+type ('a,'b,'c) m = 'a -> ('a * ('b,'c)fs)
+
+fun return (a : 'a) : ('s,'a,'b)m = fn s => (s,Some a)
+fun ok e = return () e
+fun fail0 (m:string) e = (e, Error m)
+fun (m >- f) : ('s,'b,'error) m = fn (s0:'s) =>
+  let
+    val (s1, r) = m s0
+  in
+    case r of
+        Error x => (s1, Error x)
+      | Some v => f v s1
+  end
+fun (m1 >> m2) = m1 >- (fn _ => m2)
+fun mmap f [] = return []
+  | mmap f (h::t) = f h >- (fn h' => mmap f t >- (fn t' => return (h'::t')))
 
 infix >-* >>-* <-
 fun (m >-* cf) = m >- (fn v1 => cf v1 >- (fn v2 => return (v1,v2)))
@@ -15,7 +32,7 @@ fun get s = (s, Some s)
 
 type posn = int * int
 type posnmsg = posn * (posn * string) option
-type 'a tt = (posnmsg * term frag list, 'a, string) t
+type 'a tt = (posnmsg * term frag list, 'a, string) m
 
 fun ((m1 : 'a tt) ++ (m2 : 'a tt)) : 'a tt =
   fn (s0 as ((p0, m0), qb0)) =>
@@ -100,7 +117,7 @@ val startposn :posnmsg = ((0, 1), NONE)
 fun fail s ((p0,m0), i) =
   let
     val msg0 = posn_toString p0 ^ ": " ^ s
-    fun finish m = errormonad.fail msg0 ((p0, SOME m), i)
+    fun finish m = fail0 msg0 ((p0, SOME m), i)
   in
     case m0 of
         NONE => finish (p0,s)

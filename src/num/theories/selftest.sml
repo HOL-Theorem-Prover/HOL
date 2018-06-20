@@ -3,18 +3,18 @@ open arithmeticTheory HolKernel boolLib Parse testutils
 fun fail() = die "FAILED\n"
 
 val _ = tprint "Testing that I can parse num$0"
-val _ = (Parse.Term`num$0`; print "OK\n")
+val _ = (Parse.Term`num$0`; OK())
         handle HOL_ERR _ => fail()
 
 val _ = tprint "Testing that I can't parse num$1"
-val _ = (Parse.Term`num$1`; fail()) handle HOL_ERR _ => print "OK\n";
+val _ = (Parse.Term`num$1`; fail()) handle HOL_ERR _ => OK();
 
 
 val _ = tprint "Testing that bool$0 fails"
-val _ = (Parse.Term`bool$0`; fail()) handle HOL_ERR _ => print "OK\n"
+val _ = (Parse.Term`bool$0`; fail()) handle HOL_ERR _ => OK()
 
 val _ = tprint "Testing that num$01 fails"
-val _ = (Parse.Term`num$01`; fail()) handle HOL_ERR _ => print "OK\n"
+val _ = (Parse.Term`num$01`; fail()) handle HOL_ERR _ => OK()
 
 val _ = let
   val _ = tprint "Anthony's pattern-overloading bug"
@@ -23,7 +23,7 @@ val _ = let
   val res = trace ("PP.catch_withpp_err", 0) term_to_string ``foo(x,y)``
             handle Fail _ => ""
 in
-  if res <> "" then print "OK\n" else fail()
+  if res <> "" then OK() else fail()
 end
 
 val _ = let
@@ -35,9 +35,18 @@ in
   List.app tpp [
     "case e1 of 0 => (case e2 of 0 => 1 | SUC n => n + 1) | SUC m => m * 2",
     "case e1 of 0 => 1 | SUC n => case e2 of 0 => 2 | SUC m => 3",
-    "(case x of 0 => (\\x. x) | SUC n => (\\m. m + n)) y"
-  ]
+    "(case x of 0 => (\\x. x) | SUC n => (\\m. m + n)) y",
+    "!a b c d e f g.\n\
+    \    foo' a b /\\ bar a c /\\ baz a c d /\\ qux f g /\\ foo' f g ==>\n\
+    \    (a + b * c = 10 * d + e + f + g)"
+  ] ;
+  trace ("PP.print_firstcasebar", 1) tpp "case e of | 0 => 1 | SUC n => n + 2";
+  trace ("PP.print_firstcasebar", 1) tpp
+    "case f e n longvarname of\n\
+    \| 0 => superlongvarname * secondsuperlongname + 1\n\
+    \| SUC n => n + 2"
 end
+
 
 
 

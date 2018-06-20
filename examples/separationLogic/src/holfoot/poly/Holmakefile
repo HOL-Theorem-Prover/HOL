@@ -1,25 +1,24 @@
 INCLUDES=..
 
-linux_LIBS = $(POLY_LDFLAGS_STATIC) 
-macosx_LIBS = $(POLY_LDFLAGS)
+EXTRA_CLEANS = holfoot holfoot-web holfoot-full holfoot.state
 
-EXTRA_CLEANS = holfoot.o holfoot holfoot-web.o holfoot-web holfoot-full holfoot-full.o holfoot.state
+.PHONY: all force-tools sample_tests
 
-all: holfoot holfoot-web holfoot-full
-
-holfoot.o: holfoot.state holfoot_command_line.sml
-	hol < build-cl.hol
-
-holfoot.state: ../holfootLib.uo ../holfootLib.ui ../holfootTheory.ui ../AssembleHolfootParser.uo ../AssembleHolfootParser.ui
-	hol < build-state.hol
-
-holfoot: holfoot.o 
-	cc -o $@ $< $($(OS)_LIBS)
-
-holfoot-full: holfoot-full.o 
-	cc -o $@ $< $($(OS)_LIBS)
-
-holfoot-web: holfoot-web.o
-	cc -o $@ $< $($(OS)_LIBS)
-
+all: holfoot holfoot-web holfoot-full sample_tests
 force-tools: holfoot holfoot-web
+
+holfoot.state: build-state.hol ../holfootLib.uo ../holfootLib.ui ../holfootTheory.ui ../AssembleHolfootParser.uo ../AssembleHolfootParser.ui
+	$(HOLDIR)/bin/hol < $<
+
+holfoot: holfoot.ML corecl.ML holfoot.state
+	$(protect $(HOLDIR)/bin/buildheap) -b holfoot.state -o $@ corecl.ML $< --exe main
+
+holfoot-full: holfoot-full.ML corecl.ML holfoot.state
+	$(protect $(HOLDIR)/bin/buildheap) -b holfoot.state -o $@ corecl.ML $< --exe main
+
+holfoot-web: holfoot-web.ML corecl.ML holfoot.state
+	$(protect $(HOLDIR)/bin/buildheap) -b holfoot.state -o $@ corecl.ML $< --exe main
+
+
+sample_tests: holfoot $(wildcard ../EXAMPLES/automatic/*.sf)
+	./holfoot ../EXAMPLES/automatic/*.sf

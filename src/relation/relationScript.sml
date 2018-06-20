@@ -5,9 +5,6 @@
  * are also defined.                                                         *
  *---------------------------------------------------------------------------*)
 
-structure relationScript =
-struct
-
 open HolKernel Parse boolLib QLib tautLib mesonLib metisLib
      simpLib boolSimps BasicProvers;
 
@@ -26,14 +23,17 @@ val transitive_def =
 Q.new_definition
 ("transitive_def",
    `transitive (R:'a->'a->bool) = !x y z. R x y /\ R y z ==> R x z`);
+val _ = OpenTheoryMap.OpenTheory_const_name {const={Thy="relation",Name="transitive"},name=(["Relation"],"transitive")}
 
 val reflexive_def = new_definition(
   "reflexive_def",
   ``reflexive (R:'a->'a->bool) = !x. R x x``);
+val _ = OpenTheoryMap.OpenTheory_const_name {const={Thy="relation",Name="reflexive"},name=(["Relation"],"reflexive")}
 
 val irreflexive_def = new_definition(
   "irreflexive_def",
   ``irreflexive (R:'a->'a->bool) = !x. ~R x x``);
+val _ = OpenTheoryMap.OpenTheory_const_name {const={Thy="relation",Name="irreflexive"},name=(["Relation"],"irreflexive")}
 
 val symmetric_def = new_definition(
   "symmetric_def",
@@ -80,6 +80,7 @@ val _ = Unicode.unicode_version {u = Unicode.UChar.sup_plus, tmnm = "TC"}
 val _ = TeX_notation {hol = Unicode.UChar.sup_plus,
                       TeX = ("\\HOLTokenSupPlus{}", 1)}
 val _ = TeX_notation {hol = "^+", TeX = ("\\HOLTokenSupPlus{}", 1)}
+val _ = OpenTheoryMap.OpenTheory_const_name {const={Thy="relation",Name="TC"},name=(["Relation"],"transitiveClosure")}
 
 
 val RTC_DEF = new_definition(
@@ -406,6 +407,29 @@ val TC_STRONG_INDUCT_RIGHT1 = store_thm(
           (!u v. TC R u v ==> P u v)``,
   REPEAT STRIP_TAC THEN IMP_RES_TAC TC_STRONG_INDUCT_RIGHT1_0);
 
+(* can get inductive principles for properties which do not hold generally
+  but only for particular cases of x or y in TC R x y *)
+
+fun tc_ind_alt_tacs tc_ind_thm tq =
+  REPEAT STRIP_TAC THEN
+  POP_ASSUM (ASSUME_TAC o Ho_Rewrite.REWRITE_RULE [BETA_THM]
+    o Q.SPEC tq o GEN_ALL o MATCH_MP (REORDER_ANTS rev tc_ind_thm)) THEN
+  VALIDATE (POP_ASSUM (ACCEPT_TAC o UNDISCH)) THEN
+  POP_ASSUM (K ALL_TAC) THEN REPEAT STRIP_TAC THEN
+  TRY COND_CASES_TAC THEN
+  FULL_SIMP_TAC bool_ss [TC_SUBSET] THEN
+  RES_TAC THEN IMP_RES_TAC TC_RULES ;
+
+val TC_INDUCT_ALT_LEFT = Q.store_thm ("TC_INDUCT_ALT_LEFT",
+  `!R Q. (!x. R x b ==> Q x) /\ (!x y. R x y /\ Q y ==> Q x) ==>
+    !a. TC R a b ==> Q a`,
+  tc_ind_alt_tacs TC_INDUCT_LEFT1 `\x y. if y = b then Q x else TC R x y`) ;
+
+val TC_INDUCT_ALT_RIGHT = Q.store_thm ("TC_INDUCT_ALT_RIGHT",
+  `!R Q. (!y. R a y ==> Q y) /\ (!x y. Q x /\ R x y ==> Q y) ==>
+    !b. TC R a b ==> Q b`,
+  tc_ind_alt_tacs TC_INDUCT_RIGHT1 `\x y. if x = a then Q y else TC R x y`) ;
+
 val TC_lifts_monotonicities = store_thm(
   "TC_lifts_monotonicities",
   ``(!x y. R x y ==> R (f x) (f y)) ==>
@@ -472,28 +496,50 @@ val TC_RC_EQNS = store_thm(
     HO_MATCH_MP_TAC RTC_INDUCT THEN MESON_TAC [TC_RULES, RC_DEF]
   ]);
 
+(* can get inductive principles for properties which do not hold generally
+  but only for particular cases of x or y in RTC R x y *)
+
+val RTC_ALT_DEF = Q.store_thm ("RTC_ALT_DEF",
+  `!R a b. RTC R a b = !Q. Q b /\ (!x y. R x y /\ Q y ==> Q x) ==> Q a`,
+  REWRITE_TAC [RTC_DEF] THEN REPEAT (STRIP_TAC ORELSE EQ_TAC)
+  THENL [ FIRST_X_ASSUM (ASSUME_TAC o Ho_Rewrite.REWRITE_RULE [BETA_THM] o
+      Q.SPEC `\x y. if y = b then Q x else RTC R x y`),
+    FIRST_X_ASSUM (ASSUME_TAC o Ho_Rewrite.REWRITE_RULE [BETA_THM] o
+      Q.SPEC `\x. P x (b : 'a)`) ] THEN
+  VALIDATE (POP_ASSUM (ACCEPT_TAC o UNDISCH)) THEN
+  POP_ASSUM (K ALL_TAC) THEN REPEAT STRIP_TAC THEN
+  TRY COND_CASES_TAC THEN
+  FULL_SIMP_TAC bool_ss [RTC_REFL] THEN
+  RES_TAC THEN IMP_RES_TAC RTC_RULES) ;
+
+val RTC_ALT_INDUCT = Q.store_thm ("RTC_ALT_INDUCT",
+  `!R Q b. Q b /\ (!x y. R x y /\ Q y ==> Q x) ==> !x. RTC R x b ==> Q x`,
+  REWRITE_TAC [RTC_ALT_DEF] THEN REPEAT STRIP_TAC THEN RES_TAC) ;
+
+val RTC_ALT_RIGHT_DEF = Q.store_thm ("RTC_ALT_RIGHT_DEF",
+  `!R a b. RTC R a b = !Q. Q a /\ (!y z. Q y /\ R y z ==> Q z) ==> Q b`,
+  REWRITE_TAC [RTC_ALT_DEF] THEN REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN
+  FIRST_X_ASSUM (ASSUME_TAC o Q.SPEC `$~ o Q`) THEN
+  REV_FULL_SIMP_TAC bool_ss [combinTheory.o_THM] THEN RES_TAC) ;
+
+val RTC_ALT_RIGHT_INDUCT = Q.store_thm ("RTC_ALT_RIGHT_INDUCT",
+  `!R Q a. Q a /\ (!y z. Q y /\ R y z ==> Q z) ==> !z. RTC R a z ==> Q z`,
+  REWRITE_TAC [RTC_ALT_RIGHT_DEF] THEN REPEAT STRIP_TAC THEN RES_TAC) ;
+
 val RTC_INDUCT_RIGHT1 = store_thm(
   "RTC_INDUCT_RIGHT1",
   ``!R P. (!x. P x x) /\
           (!x y z. P x y /\ R y z ==> P x z) ==>
           (!x y. RTC R x y ==> P x y)``,
-  REPEAT GEN_TAC THEN STRIP_TAC THEN
-  Q.SUBGOAL_THEN `!x y. RTC R x y = RC (TC R) x y`
-    (fn th => ASM_REWRITE_TAC [th])
-  THENL[
-    REWRITE_TAC [TC_RC_EQNS],
-    ALL_TAC
-  ] THEN ASM_SIMP_TAC bool_ss [RC_DEF, DISJ_IMP_THM, FORALL_AND_THM] THEN
-  HO_MATCH_MP_TAC TC_INDUCT_RIGHT1 THEN ASM_MESON_TAC []);
+  REPEAT STRIP_TAC THEN
+  FIRST_X_ASSUM (irule o MATCH_MP (REORDER_ANTS rev RTC_ALT_RIGHT_INDUCT)) THEN
+  ASM_REWRITE_TAC []) ;
 
 val RTC_RULES_RIGHT1 = store_thm(
   "RTC_RULES_RIGHT1",
   ``!R. (!x. RTC R x x) /\ (!x y z. RTC R x y /\ R y z ==> RTC R x z)``,
-  SIMP_TAC bool_ss [RTC_RULES] THEN GEN_TAC THEN
-  Q_TAC SUFF_TAC
-        `!x y. RTC R x y ==> !z. R y z ==> RTC R x z`
-        THEN1 MESON_TAC [] THEN
-  HO_MATCH_MP_TAC RTC_INDUCT THEN MESON_TAC [RTC_RULES]);
+  REWRITE_TAC [RTC_ALT_RIGHT_DEF] THEN
+  REPEAT STRIP_TAC THEN RES_TAC THEN RES_TAC) ;
 
 val RTC_STRONG_INDUCT_RIGHT1 = store_thm(
   "RTC_STRONG_INDUCT_RIGHT1",
@@ -526,7 +572,7 @@ val EXTEND_RTC_TC_EQN = store_thm(
         MESON_TAC [EXTEND_RTC_TC] THEN
   HO_MATCH_MP_TAC TC_INDUCT THEN
   PROVE_TAC[RTC_RULES, RTC_TRANSITIVE, transitive_def,
-	      RTC_RULES_RIGHT1]);
+              RTC_RULES_RIGHT1]);
 
 val reflexive_RC_identity = store_thm(
   "reflexive_RC_identity",
@@ -681,7 +727,7 @@ val EQC_INDUCTION = store_thm(
           (!x y. EQC R x y ==> P x y)``,
   REWRITE_TAC [EQC_DEF] THEN REPEAT STRIP_TAC THEN
   FULL_SIMP_TAC bool_ss [RC_DEF] THEN
-  Q.PAT_ASSUM `TC R x y` MP_TAC THEN
+  Q.PAT_X_ASSUM `TC _ x y` MP_TAC THEN
   MAP_EVERY Q.ID_SPEC_TAC [`y`, `x`] THEN
   HO_MATCH_MP_TAC TC_INDUCT THEN REWRITE_TAC [SC_DEF] THEN
   ASM_MESON_TAC []);
@@ -943,6 +989,10 @@ val EMPTY_REL_DEF =
 Q.new_definition
         ("EMPTY_REL_DEF", `EMPTY_REL (x:'a) (y:'a) = F`);
 val _ = export_rewrites ["EMPTY_REL_DEF"]
+val _ = overload_on ("REMPTY", ``EMPTY_REL``)
+val _ = Unicode.unicode_version {u = UnicodeChars.emptyset ^ UnicodeChars.sub_r,
+                                 tmnm = "EMPTY_REL"}
+
 
 val WF_Empty =
 Q.store_thm
@@ -1258,7 +1308,7 @@ val RESTRICT_FUN_EQ = Q.prove(
 REWRITE_TAC[RESTRICT_DEF,transitive_def] THEN REPEAT STRIP_TAC
   THEN CONV_TAC (Q.X_FUN_EQ_CONV`w`) THEN BETA_TAC THEN GEN_TAC
   THEN COND_CASES_TAC (* on R w v *)
-  THENL [ MATCH_MP_TAC AGREE_BELOW THEN REPEAT Q.ID_EX_TAC
+  THENL [ MATCH_MP_TAC AGREE_BELOW THEN REPEAT ID_EX_TAC
             THEN RES_TAC THEN ASM_REWRITE_TAC[transitive_def],
           Q.UNDISCH_TAC`approx R M v (g:'a->'b)`
             THEN DISCH_THEN(fn th =>
@@ -1522,7 +1572,7 @@ val IND_FIXPOINT_ON_LEMMA = Q.prove
    (M (WFREC R M) x = WFREC R M x) /\ P x (WFREC R M x)`,
  REPEAT GEN_TAC THEN STRIP_TAC
    THEN MATCH_MP_TAC lem
-   THEN Q.ID_EX_TAC
+   THEN ID_EX_TAC
    THEN ASM_REWRITE_TAC [INDUCTIVE_INVARIANT_ON_DEF]
    THEN METIS_TAC [])
 end;
@@ -1538,7 +1588,16 @@ end;
 
 val inv_DEF = new_definition(
   "inv_DEF",
-  ``inv (R:'a->'a->bool) x y = R y x``);
+  ``inv (R:'a->'b->bool) x y = R y x``);
+(* superscript suffix T, for "transpose" *)
+val _ = add_rule { block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
+                   fixity = Suffix 2100,
+                   paren_style = OnlyIfNecessary,
+                   pp_elements = [TOK (UTF8.chr 0x1D40)],
+                   term_name = "relinv"}
+val _ = overload_on("relinv", ``inv``)
+val _ = TeX_notation { hol = (UTF8.chr 0x1D40),
+                       TeX = ("\\HOLTokenRInverse{}", 1) }
 
 val inv_inv = store_thm(
   "inv_inv",
@@ -1696,6 +1755,10 @@ val O_DEF = new_definition(
   "O_DEF",
   ``(O) R1 R2 (x:'g) (z:'k) = ?y:'h. R2 x y /\ R1 y z``);
 val _ = set_fixity "O" (Infixr 800)
+val _ = Unicode.unicode_version {u = UTF8.chr 0x2218 ^ UnicodeChars.sub_r,
+                                 tmnm = "O"}
+val _ = TeX_notation { hol = UTF8.chr 0x2218 ^ UnicodeChars.sub_r,
+                       TeX = ("\\HOLTokenRCompose{}", 1) }
 
 val inv_O = store_thm(
   "inv_O",
@@ -1710,6 +1773,11 @@ val RSUBSET = new_definition(
   "RSUBSET",
   ``(RSUBSET) R1 R2 = !x y. R1 x y ==> R2 x y``);
 val _ = set_fixity "RSUBSET" (Infix(NONASSOC, 450));
+val _ = OpenTheoryMap.OpenTheory_const_name {const={Thy="relation",Name="RSUBSET"},name=(["Relation"],"subrelation")}
+val _ = Unicode.unicode_version {u = UnicodeChars.subset ^ UnicodeChars.sub_r,
+                                 tmnm = "RSUBSET"}
+val _ = TeX_notation { hol = UnicodeChars.subset ^ UnicodeChars.sub_r,
+                       TeX = ("\\HOLTokenRSubset{}", 1) }
 
 val irreflexive_RSUBSET = store_thm(
   "irreflexive_RSUBSET",
@@ -1724,6 +1792,7 @@ val RUNION = new_definition(
   "RUNION",
   ``(RUNION) R1 R2 x y = R1 x y \/ R2 x y``);
 val _ = set_fixity "RUNION" (Infixl 500)
+val _ = OpenTheoryMap.OpenTheory_const_name {const={Thy="relation",Name="RUNION"},name=(["Relation"],"union")}
 
 val RUNION_COMM = store_thm(
   "RUNION_COMM",
@@ -1735,6 +1804,11 @@ val RUNION_ASSOC = store_thm(
   ``R1 RUNION (R2 RUNION R3) = (R1 RUNION R2) RUNION R3``,
   SRW_TAC [][RUNION, FUN_EQ_THM] THEN PROVE_TAC []);
 
+val _ = Unicode.unicode_version {u = UnicodeChars.union ^ UnicodeChars.sub_r,
+                                 tmnm = "RUNION"}
+val _ = TeX_notation { hol = UnicodeChars.union ^ UnicodeChars.sub_r,
+                       TeX = ("\\HOLTokenRUnion{}", 1) }
+
 (* ----------------------------------------------------------------------
     relational intersection
    ---------------------------------------------------------------------- *)
@@ -1743,6 +1817,11 @@ val RINTER = new_definition(
   "RINTER",
   ``(RINTER) R1 R2 x y = R1 x y /\ R2 x y``);
 val _ = set_fixity "RINTER" (Infixl 600)
+val _ = OpenTheoryMap.OpenTheory_const_name {const={Thy="relation",Name="RINTER"},name=(["Relation"],"intersect")}
+val _ = Unicode.unicode_version {u = UnicodeChars.inter ^ UnicodeChars.sub_r,
+                                 tmnm = "RINTER"}
+val _ = TeX_notation { hol = UnicodeChars.inter ^ UnicodeChars.sub_r,
+                       TeX = ("\\HOLTokenRInter{}", 1) }
 
 val RINTER_COMM = store_thm(
   "RINTER_COMM",
@@ -2047,6 +2126,11 @@ val RUNIV = new_definition(
   "RUNIV",
   ``RUNIV x y = T``);
 val _ = export_rewrites ["RUNIV"]
+val _ = OpenTheoryMap.OpenTheory_const_name {const={Thy="relation",Name="RUNIV"},name=(["Relation"],"universe")}
+val _ = Unicode.unicode_version {
+  u = UnicodeChars.universal_set ^ UnicodeChars.sub_r,
+  tmnm = "RUNIV"}
+
 
 val RUNIV_SUBSET = store_thm(
   "RUNIV_SUBSET",
@@ -2054,8 +2138,6 @@ val RUNIV_SUBSET = store_thm(
     (R RSUBSET RUNIV)``,
   SRW_TAC [][RSUBSET, FUN_EQ_THM]);
 val _ = export_rewrites ["RUNIV_SUBSET"]
-
-val _ = overload_on ("REMPTY", ``EMPTY_REL``)
 
 val REMPTY_SUBSET = store_thm(
   "REMPTY_SUBSET",
@@ -2208,7 +2290,4 @@ val Newmans_lemma = store_thm(
   `TC R x x0` by PROVE_TAC [EXTEND_RTC_TC] THEN
   PROVE_TAC [RTC_RTC]);
 
-
 val _ = export_theory();
-
-end

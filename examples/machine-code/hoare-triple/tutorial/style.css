@@ -1,0 +1,23 @@
+#TOC {
+   width: 250px; /* Takes place in body right padding */
+   position: absolute;
+   top: 2em;
+   right: 2em
+}
+#TOC ul { list-style-type: none }
+body {
+   position: relative; /* #TOC positionning with respect to body. */
+   font-family: verdana, sans-serif;
+   max-width: 800px;
+   min-width: 450px;
+   padding-right: 270px; /* Rooms for #TOC and a bit more */
+   margin-top: 3em;
+   margin-left: auto;
+   margin-right: auto
+}
+h1 { color: #1133cc }
+h2 { color: #3355aa }
+a { text-decoration: none }
+a:hover { text-decoration: underline }
+a:link { color: #2244ee }
+a:visited { color: #8866dd }

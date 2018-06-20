@@ -246,18 +246,6 @@ val syntax_fns2 = syntax_fns {n = 2, make = mk_binop, dest = dest_binop}
 val syntax_fns3 = syntax_fns {n = 3, make = mk_triop, dest = dest_triop}
 val syntax_fns4 = syntax_fns {n = 4, make = mk_quadop, dest = dest_quadop}
 
-datatype lambda =
-     VAR of string * hol_type
-   | CONST of {Name: string, Thy: string, Ty: hol_type}
-   | COMB of term * term
-   | LAMB of term * term
-
-fun dest_term M =
-   COMB (dest_comb M) handle HOL_ERR _ =>
-   LAMB (dest_abs M) handle HOL_ERR _ =>
-   VAR (dest_var M) handle HOL_ERR _ =>
-   CONST (dest_thy_const M)
-
 (*---------------------------------------------------------------------------*
  * Used to implement natural deduction style discharging of hypotheses. All  *
  * hypotheses alpha-convertible to the dischargee are removed.               *
@@ -752,5 +740,8 @@ in
 end handle e => raise (wrap_exn "HolKernel" "ho_match_term" e)
 
 end (* local *)
+
+val sort_vars =
+  Portable.pull_prefix o map (fn n => equal n o #1 o dest_var)
 
 end

@@ -303,7 +303,7 @@ let
    val thm1 = CONV_RULE (RHS_CONV (REWRITE_CONV [GSYM (CONJUNCT2 APPEND)])) thm0
 
    val thm2 = CONV_RULE (RHS_CONV (RAND_CONV (
-		 quantHeuristicsLibBase.BOUNDED_REPEATC (length ls) (REWR_CONV APPEND_ASSOC)))) thm1;
+                 quantHeuristicsLibBase.BOUNDED_REPEATC (length ls) (REWR_CONV APPEND_ASSOC)))) thm1;
 
    val thm3 = CONV_RULE (RAND_CONV (RAND_CONV (RAND_CONV LIST_NIL_CONV))) thm2
 in
@@ -329,7 +329,7 @@ let
    val thm1 = MP thm0 thm_l1
    val thm2 = MP thm1 thm_l2
    val thm3 = CONV_RULE (RHS_CONV (REWRITE_CONV [PERM_REFL, PERM_NIL, NOT_CONS_NIL,
-			    APPEND_eq_NIL])) thm2
+                            APPEND_eq_NIL])) thm2
 in
    thm3
 end;
@@ -455,7 +455,7 @@ end;
 val PERM_NORMALISE_CONV = PERM_ELIM_DUPLICATES_CONV THENC
                           PERM_TAKE_DROP_CONV THENC
                           PERM_NO_ELIM_NORMALISE_CONV THENC
-			  PERM_TURN_CONV;
+                          PERM_TURN_CONV;
 
 (*
 val thm = (ASSUME ``PERM l1 [x;y;z]``)

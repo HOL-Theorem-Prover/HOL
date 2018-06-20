@@ -44,14 +44,16 @@
       end
    type lexresult = unit base_token * locn
    fun eof (st:extrastate) = let
-     val lend = Loc(LocPEnd (#nf st), LocPEnd (#nf st))
+     val comment = !(#incommentp st) <> 0
+     val ok = not comment andalso List.null (#2 (!(#stracc st)))
+     val loc = locn.locp (case !(#rcopt st) of
+                              SOME a => LocA a |
+                              _ => LocPEnd (#nf st))
    in
-     if !(#incommentp st) <> 0 then
-       raise LEX_ERR ("eof/antiquote inside comment", lend)
-     else if not (null (#2 (! (#stracc st)))) then
-         raise LEX_ERR ("eof/antiquote inside quote-delimited string", lend)
-     else
-       (BT_EOI, lend)
+     if ok then (BT_EOI, loc)
+     else raise LEX_ERR
+            ("eof/antiquote inside " ^
+             (if comment then "comment" else "quote-delimited string"), loc)
    end
 
    fun check_char (tl as (tok, loc)) =

@@ -11,9 +11,6 @@
   app load ["stringLib"];
 *)
 
-structure algebraScript =
-struct
-
 (* --------------------------------------------------------------------- *)
 (* Open a new theory and load the inductive definitions library and      *)
 (* other libraries.                                                      *)
@@ -295,7 +292,3 @@ val BEQUIV_def =
 (* --------------------------------------------------------------------- *)
 
 val _ = export_theory();
-
-end;
-
-

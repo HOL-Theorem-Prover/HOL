@@ -15,8 +15,9 @@ sig
    | TAILREC of {eqs:thm list, ind:thm, R:term, SV:term list, stem:string}
 
 
-  val pp_defn : PP.ppstream -> defn -> unit
-
+  val pp_defn : defn Parse.pprinter
+  val all_terms : defn -> term list
+    (* conclusions of theorems, SV variables, R *)
 
   (* Used to control context tracking during termination
      condition extraction *)

@@ -310,78 +310,100 @@ in
            LIST_CONJ (map mk_consequence constrs))
 end
 
+fun enum_eq_CONV repth =
+  let
+    val r_rwts = repth |> CONJUNCTS
+    val r_t = r_rwts |> hd |> concl |> lhs |> strip_comb |> #1
+    val (d_ty, _) = dom_rng (type_of r_t)
+    fun cnv t =
+      let
+        val reqn = AP_TERM r_t (ASSUME t)
+        val (r1, r2) = dest_eq (concl reqn)
+        val rth = FIRST_CONV (map REWR_CONV r_rwts)
+        val r1th = rth r1 and r2th = rth r2
+        val num_eqn = TRANS (SYM r1th) (TRANS reqn r2th)
+        val falsity = CONV_RULE numLib.REDUCE_CONV num_eqn
+      in
+        DISCH_ALL falsity |> EQ_MP (SPEC t boolTheory.IMP_F_EQ_F)
+      end
+    fun finalconv _ _ t =
+      let
+        (* keying will have already ensured that t is an equality between two
+           values in the enumerated type *)
+        val (l, r) = boolSyntax.dest_eq t
+      in
+        if Term.is_const l andalso Term.is_const r andalso
+           type_of l = d_ty
+        then cnv t
+        else raise ERR "enum_eq_CONV"
+                   "Equality not between constants of right type"
+      end
+  in
+    {name = #1 (dest_type d_ty) ^ "_enum_neq_conv",
+     key = SOME ([], mk_eq(mk_var("x", d_ty), mk_var("y", d_ty))),
+     trace = 2,
+     conv = finalconv} : simpfrag.convdata
+  end
 
-fun enum_eq_CONV eq_elim_th repth t = let
-  (* keying will have already ensured that t is an equality between two
-     values in the enumerated type *)
-  val (l, r) = dest_eq t
-  val _ = is_const l andalso is_const r orelse
-          raise ERR "enum_eq_CONV" "Equality not between constants"
-in
-  REWR_CONV eq_elim_th THENC REWRITE_CONV [repth] THENC
-  numLib.REDUCE_CONV
-end t
-
-fun update_tyinfo tyname eqth repth tyinfo0 = let
-  open TypeBasePure
-  val ty = type_of (hd (#1 (strip_forall (concl eqth))))
-  val x = mk_var("x", ty) and y = mk_var("y", ty)
-  val {convs, rewrs} = simpls_of tyinfo0
-  val new_conv = {name = tyname ^ "const_eq_CONV",
-                  key = SOME ([], mk_eq(x, y)),
-                  trace = 3,
-                  conv = K (K (enum_eq_CONV eqth repth))}
-in
-  put_simpls {convs = new_conv::convs, rewrs = rewrs} tyinfo0
-end
-
+val _ = simpfrag.register_simpfrag_conv {name = "EnumType", code = enum_eq_CONV}
 
 fun enum_type_to_tyinfo (ty, clist) = let
-  val abs = "num2"^ty
-  val rep = ty^"2num"
-  val (result as {constrs,TYPE,...}) = define_enum_type(ty,clist,abs,rep)
-  val abs_thm = save_thm(abs ^ "_thm", LIST_CONJ (map SYM (#defs result)))
+  val abs = "num2" ^ ty
+  val rep = ty ^ "2num"
+  val (result as {constrs,TYPE,...}) = define_enum_type (ty,clist,abs,rep)
+  val abs_name = abs ^ "_thm"
+  val abs_thm = save_thm (abs_name, LIST_CONJ (map SYM (#defs result)))
   val rep_name = rep ^ "_thm"
-  val rep_thm = save_thm(rep_name,
+  val rep_thm = save_thm (rep_name,
                    LIST_CONJ (num_values (#REP_ABS result) (#defs result)))
-  val eq_elim_name = ty^"_EQ_"^ty
-  val eq_elim_th = save_thm(eq_elim_name, GSYM (#REP_11 result))
+  val eq_elim_name = ty ^ "_EQ_" ^ ty
+  val eq_elim_th = save_thm (eq_elim_name, GSYM (#REP_11 result))
   val simpls = [rep_thm, eq_elim_th]
   val nchotomy = prove_cases_thm (#ABS_ONTO result) (List.rev (#defs result))
   val induction = prove_induction_thm nchotomy
   val size = mk_size_definition TYPE
-  val distinct =
-      if length constrs > 15 then NONE
-      else prove_distinctness_thm simpls constrs
+  val distinct = if length constrs > 15 then NONE
+                 else prove_distinctness_thm simpls constrs
   val initiality = prove_initiality_thm (#REPconst result) TYPE constrs simpls
   val rep_t = rator (lhs (hd (strip_conj (concl rep_thm))))
   val case_def = define_case (ty, rep_t, rep_thm, constrs)
   val case_cong = Prim_rec.case_cong_thm nchotomy case_def
-  open TypeBasePure
+  fun add_rewrs l tyi =
+    let
+      val {convs, rewrs} = TypeBasePure.simpls_of tyi
+    in
+      TypeBasePure.put_simpls {convs=convs, rewrs = rewrs @ l} tyi
+    end
+
   val tyinfo0 =
-      mk_datatype_info
-         {ax = ORIG initiality,
-          induction = ORIG induction,
-          case_def = case_def,
-          case_cong = case_cong,
-          nchotomy = nchotomy,
-          size = size,
-          encode = NONE,
-          lift = NONE,
-          one_one = NONE,
-          fields = [],
-          accessors = [],
-          updates = [],
-          recognizers = [],
-          destructors = [],
-          distinct = distinct }
-  val _ = List.app (fn s => Theory.delete_binding (s ^ "_def")) clist
+    TypeBasePure.mk_datatype_info
+       {ax = TypeBasePure.ORIG initiality,
+        induction = TypeBasePure.ORIG induction,
+        case_def = case_def,
+        case_cong = case_cong,
+        case_eq =
+          Prim_rec.prove_case_eq_thm{case_def = case_def, nchotomy = nchotomy},
+        nchotomy = nchotomy,
+        size = size,
+        encode = NONE,
+        lift = NONE,
+        one_one = NONE,
+        fields = [],
+        accessors = [],
+        updates = [],
+        recognizers = [],
+        destructors = [],
+        distinct = distinct }
+       |> add_rewrs [rep_thm, abs_thm]
+  open ThyDataSexp
 in
-  case distinct of
-    NONE => (update_tyinfo ty eq_elim_th rep_thm tyinfo0,
-             "EnumType.update_tyinfo "^mlquote ty^" "^
-             eq_elim_name^" "^rep_name^" ")
-  | SOME thm => (tyinfo0, "")
+    List.app (fn s => Theory.delete_binding (s ^ "_def")) clist
+  ; Theory.add_ML_dependency "EnumType"
+  ; if isSome distinct then tyinfo0
+    else tyinfo0
+           |> TypeBasePure.add_extra
+               [List [Sym simpfrag.simpfrag_conv_tag,
+                      String "EnumType", Thm rep_thm]]
 end
 
 val _ = Parse.temp_set_grammars ambient_grammars

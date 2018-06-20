@@ -1,4 +1,5 @@
-open HolKernel boolLib bossLib Parse finite_mapTheory listTheory pred_setTheory sortingTheory lcsymtacs
+open HolKernel boolLib bossLib Parse finite_mapTheory listTheory pred_setTheory sortingTheory
+open pairTheory boolSimps relationTheory
 
 val _ = new_theory "alist";
 
@@ -191,14 +192,12 @@ val FUNION_alist_to_fmap = store_thm("FUNION_alist_to_fmap",
 val alist_to_fmap_MAP = store_thm(
 "alist_to_fmap_MAP",
 ``!f1 f2 al. INJ f1 (set (MAP FST al)) UNIV ==>
- (alist_to_fmap (MAP (\(x,y). (f1 x, f2 y)) al) =
+ (alist_to_fmap (MAP (\ (x,y). (f1 x, f2 y)) al) =
   MAP_KEYS f1 (f2 o_f alist_to_fmap al))``,
 NTAC 2 GEN_TAC THEN
 Induct THEN1 SRW_TAC[][] THEN
 Cases THEN SRW_TAC[][INJ_INSERT] THEN
-Q.MATCH_ABBREV_TAC `x = MAP_KEYS f1 ((f o_f (a \\ q)) |+ b)` THEN
-`f o_f (a \\ q) = (f o_f a) \\ q` by SRW_TAC[][] THEN
-POP_ASSUM SUBST1_TAC THEN
+Q.MATCH_ABBREV_TAC `x = MAP_KEYS f1 ((f o_f a) |+ b)` THEN
 UNABBREV_ALL_TAC THEN
 SRW_TAC[][GSYM FUPDATE_PURGE] THEN
 Q.MATCH_ABBREV_TAC `x = MAP_KEYS f1 (fm |+ (k,v))` THEN
@@ -387,7 +386,7 @@ rw[] >>
 qmatch_rename_tac `r1 = r2` >>
 qmatch_assum_rename_tac `(q,r1) = EL n1 afx` >>
 qmatch_assum_rename_tac `(q,r2) = EL n2 afy` >>
-rpt (qpat_assum `(X,Y) = EL N Z` (assume_tac o SYM)) >>
+rpt (qpat_x_assum `(X,Y) = EL N Z` (assume_tac o SYM)) >>
 `LENGTH afy = LENGTH afx` by rw[PERM_LENGTH] >> fs[] >>
 metis_tac[pairTheory.PAIR_EQ,pairTheory.FST])
 
@@ -401,7 +400,6 @@ metis_tac[PERM_TRANS,PERM_SYM,ALL_DISTINCT_PERM,PERM_MAP,alist_to_fmap_to_alist_
 (*---------------------------------------------------------------------------*)
 (* Various lemmas from the CakeML project https://cakeml.org                 *)
 (*---------------------------------------------------------------------------*)
-local open pairTheory boolSimps sortingTheory relationTheory in
 
 val ALOOKUP_ALL_DISTINCT_EL = store_thm("ALOOKUP_ALL_DISTINCT_EL",
   ``!ls n. n < LENGTH ls /\ ALL_DISTINCT (MAP FST ls) ==>
@@ -479,7 +477,8 @@ metis_tac[MAP_KEYS_def,INJ_I,SUBSET_UNIV,combinTheory.I_THM])
 
 val alist_to_fmap_MAP_values = store_thm(
 "alist_to_fmap_MAP_values",
-``!f al. alist_to_fmap (MAP (\(k,v). (k, f v)) al) = f o_f (alist_to_fmap al)``,
+``!f (al:('c,'a) alist).
+   alist_to_fmap (MAP (\(k,v). (k, f v)) al) = f o_f (alist_to_fmap al)``,
 rw[] >>
 Q.ISPECL_THEN [`I:'c->'c`,`f`,`al`] match_mp_tac alist_to_fmap_MAP_matchable >>
 SRW_TAC[][INJ_DEF,SUBSET_DEF,MAP_KEYS_I])
@@ -529,7 +528,7 @@ val fupdate_list_funion = store_thm("fupdate_list_funion",
  rpt GEN_TAC >>
  pop_assum (qspecl_then [`m|+h`] mp_tac) >>
  rw [] >>
- rw [fmap_eq_flookup, FLOOKUP_FUNION] >>
+ rw [FLOOKUP_EXT, FUN_EQ_THM, FLOOKUP_FUNION] >>
  BasicProvers.EVERY_CASE_TAC >>
  PairCases_on `h` >>
  fs [FLOOKUP_UPDATE, flookup_fupdate_list] >>
@@ -601,8 +600,5 @@ val ALOOKUP_ALL_DISTINCT_PERM_same = store_thm("ALOOKUP_ALL_DISTINCT_PERM_same",
     metis_tac[ALL_DISTINCT_PERM]) >>
   imp_res_tac ALOOKUP_ALL_DISTINCT_MEM >>
   metis_tac[])
-
-end
-(* end CakeML lemmas *)
 
 val _ = export_theory ();

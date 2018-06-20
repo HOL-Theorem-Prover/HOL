@@ -1,0 +1,207 @@
+Overview
+========
+
+The code in this directory generates DFAs from regular expressions
+using the technique of Brzozowski derivatives. There is a full formal
+definition and correctness proof of a regexp compiler, along with some
+ML support code.  In particular, there are two mechanisms---meeting a
+single interface---available for compiling regexps to DFAs. 
+
+  1. HOL proof
+  2. SML code with no proofs generated
+
+Both are available through loading regexpLib into HOL4. There is also
+a standalone executable "regexp2dfa" that generates state machines to
+std_out in a variety of programming languages.
+
+
+Concrete syntax of regular expressions
+=======================================
+
+See test.ml and test.hol for examples.
+
+  [...] = character set 
+  [^...] = complement char set
+  .  = any char
+  \d = [0-9]
+  \w = [a-zA-Z0-9_] 
+  \s = whitespace = [ \n\r\t\f]  (* Note the space character! *)
+  \c = escape c, for c in {\,`,.,^,$,*,+,?,|,~,{,},[,],(,)}
+  \ddd = ASCII character given in decimal representation (\000 to \255)
+  \i{lo,hi,dir} = 
+     Interval of numbers between lo and hi inclusive, with dir in {MSB,LSB}. 
+     The "dir" field can be omitted (it defaults to LSB). Numbers can be
+     unsigned (both lo and hi are positive) or signed twos complement
+     (lo is negative, hi can be positive or negative). Currently only 
+     binary representation is supported.
+  \p{e_1 ... e_n} = 
+     "Packed" intervals, where e_i can be either an interval specification
+     (lo,hi) or a padding specification .{n} (meaning "ignore the next n bits").
+     The sum of the widths of the e_i must be a multiple of 8.
+     Packing specifications support scenarios where adjacent intervals
+     don't line up on byte boundaries. For example, suppose one
+     interval needs 9 bits to represent and the adjacent interval
+     needs only 6 to represent. Then the two intervals can be
+     supported in 2 bytes via the \p{...} specification, rather than
+     the 3 bytes needed by the \i{...}\i{...} representation. Also
+     intended to be used for packing multiple intervals into a single
+     byte. 
+    
+  r|s = alternation
+  r&s = intersection
+  r* = Kleene star
+  r+ = rr*
+  r? = "" | r
+  r{n} = r^n
+  r{m,n} = r^m | r^{m+1} | ... | r^n (m<=n)
+  r{m,} = r{m}r*
+  r{,n} = r{0,n}
+  rs  = concatenation
+  ~r = complement
+  (r) = grouping 
+
+Note: For now, as traditional, spaces are significant in regexp
+concrete syntax.
+
+Note: The regexp parser (implemented in Regexp_Type) is external to
+HOL and produces elements of the ML regexp datatype. Maps between the
+ML regexp datatype and HOL terms of type regexp may be found in
+regexpSyntax.
+
+
+
+Directory structure and content
+===============================
+
+The following are the important ML structures and HOL theories.
+
+Regexp_Type
+
+   * SML definition of the type of regular expressions. This lies at
+     the base of both "proof" and "code" paths.
+
+   * The size of the alphabet (default 256) can be set here. Note that
+     large alphabets like Unicode will need a different approach. Also
+     note that the interval regexp support assumes that the alphabet
+     size is 256.
+
+   * There is a regexp parser implementation (entrypoints:
+     fromSubstring, fromString, fromQuote). See above for the concrete
+     syntax. The files test.ml and test.hol have examples. There is
+     also a prettyprinter pp_regexp and associated print_regexp.
+
+Regexp_Match.
+
+   * SML implementation of the regexp match compiler. Does not
+     generate proofs. Is close to the algorithms in regexpTheory and
+     regexp_compilerTheory, having been derived from them. 
+
+   * A version that only runs the search and doesn't post-process to
+     obtain the DFA is in the function domBrz. This is useful for
+     performance debugging, and for visualizing the workings of the
+     algorithm. Visualization is controlled by the "regexp-compiler"
+     trace (default is "on").
+     
+
+charset{Script,Theory}. 
+
+   * The type of regular expressions uses character sets. Since there
+     is more than one way to implement this, we have broken it out
+     into a separate theory.
+
+regexp{Script,Theory}.
+
+   * HOL theory of regexps. Much of the Regexp_Match code has been
+     hand-translated from this theory.
+
+eq_cmp_bmap{Script,Theory}
+
+   * Extension to the balanced_map theory, to support the common case
+     where the set of keys mapping to an element is a singleton. This
+     is used to relate balanced_mapTheory to finite_mapTheory.
+
+vec_map{Script,Theory}
+
+   * Support theory for translating maps into vector format.
+
+regexp_compiler{Script,Theory}.
+
+   * HOL theory proving correctness of derivative-based compiler 
+    from regexps to DFAs.
+
+regexpSyntax.
+
+    * Support for manipulating regexp abstract syntax trees in HOL.
+      Also maps between Regexp_Type.regexp and the HOL regexp type.
+
+regexpLib. 
+
+   * HOL evaluator for the regexp compilation and matching functions
+     defined in regexpTheory.
+
+   * A general matcher which allows choosing deduction or SML.
+
+test.{hol,ml}
+
+   * Examples of the application of the compiler/DFA evaluator, with,
+     and without, proofs.
+
+regexp2dfa
+
+   * Command-line tool for generating programs (Ada,C,Java,ML) from
+     regexps. See codegen/gen_*_files for invocation examples.
+
+codegen
+
+   * Directory of shell scripts demonstrating generation of code from
+     regexps.  Contents: gen_ada_files, gen__c_files, ...
+
+
+Status.
+========
+
+Jan 31. 2017.  
+
+* Added some more optimizations to Regexp_Match that aren't in the
+  corresponding theories. See regexp_compare and build_or. See also
+  the notes in the implementation of domBrz supporting more efficient
+  handling of regexps of the form \w{1,n} (or \d{1,n}), which if left
+  alone, expose an exponential blow-up. The blow-up is not totally
+  defeated, but has been pushed much further away.
+
+* Proved some theorems in regexpScript.sml relating various representations
+  of Sigma*
+
+* Regexp_Type : exploring different ways of generating packed intervals. Not
+  in its final form, or thoroughly tested.
+
+Feb 13. 2017.  
+
+* Moved formalization of charsets to be word64#word64#word64#word64. This
+  will support CakeML translation. However, the implementation of the
+  SML regexp compiler in Regexp_Match still uses IntInf as the representation
+  of charsets. It might be interesting to compare the two representations for
+  efficiency, but that's future work.
+
+* Incorporated in-logic PEG parser for regexps (regexp_parserTheory).
+  This was renamed from reSyntax to be in line with the existing naming
+  scheme (pre-pending things with "regexp").
+
+* Revised packed interval syntax \p{e_1 ... e_n} to get rid of superfluous
+  commas between elements, and to incorporate support for padding.
+
+July 1, 2017
+
+* Converted ML implementation of charsets to
+  word64#word64#word64#word64 in order to better align with the HOL
+  formalization.
+
+* Replaced regexp2{c,java,ml} by an all-inclusive regexp2dfa. Added options
+  for theorem generation and Ada. The usage message looks like
+
+    regexp2dfa: 
+    Usage: regexp2dfa [-dfagen (HOL | SML)] (Ada | C | Java | ML | Thm) <name> '<regexp>'
+
+* Updated syntax for some examples.
+
+* codegen/gen_files split out into separate file generators for each language.

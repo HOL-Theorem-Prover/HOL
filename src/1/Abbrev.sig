@@ -15,13 +15,7 @@ sig
          ['a |-> goal list, 'b -> thm list] gives list_tactic *)
   type thm_tactic   = thm -> tactic
   type thm_tactical = thm_tactic -> thm_tactic
-  type ppstream     = Portable.ppstream
   type 'a quotation = 'a Portable.frag list
   type ('a,'b)subst = ('a,'b) Lib.subst
   type defn         = DefnBase.defn
 end
-
-(*
-   [conv] is the type of conversions: functions of type term -> thm that,
-   given a term t, return a theorem of the form "|- t = t'".
-*)

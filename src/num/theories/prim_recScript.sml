@@ -55,9 +55,6 @@
  * After proving this we prove some standard properties of <.
  *---------------------------------------------------------------------------*)
 
-structure prim_recScript =
-struct
-
 open HolKernel boolLib Prim_rec Parse
 
 type thm = Thm.thm
@@ -66,7 +63,7 @@ val _ = new_theory "prim_rec";
 
 val _ = if !Globals.interactive then () else Feedback.emit_WARNING := false;
 
-(* Added TFM 88.04.02						*)
+(* Added TFM 88.04.02                                           *)
 
 val NOT_SUC     = numTheory.NOT_SUC
 and INV_SUC     = numTheory.INV_SUC
@@ -82,12 +79,12 @@ val _ = TeX_notation {hol = "<", TeX = ("\\HOLTokenLt{}", 1)}
 val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="prim_rec",Name="<"},name=(["Number","Natural"],"<")}
 
 val INV_SUC_EQ = save_thm("INV_SUC_EQ",
-   GENL [--`m:num`--, --`n:num`--]
+   GENL [“m:num”, “n:num”]
         (IMP_ANTISYM_RULE
              (SPEC_ALL INV_SUC)
-             (DISCH (--`m:num = n`--)
-                    (AP_TERM (--`SUC`--)
-                             (ASSUME (--`m:num = n`--))))));
+             (DISCH (“m:num = n”)
+                    (AP_TERM (“SUC”)
+                             (ASSUME (“m:num = n”))))));
 
 (*---------------------------------------------------------------------------
  * First we define a partial inverse to SUC called PRE such that:
@@ -95,17 +92,17 @@ val INV_SUC_EQ = save_thm("INV_SUC_EQ",
  *   (PRE 0 = 0) /\ (!m. PRE(SUC m) = m)
  *---------------------------------------------------------------------------*)
 val PRE_DEF = new_definition("PRE_DEF",
-    --`PRE m = (if (m=0) then 0 else @n. m = SUC n)`--);
+    “PRE m = (if (m=0) then 0 else @n. m = SUC n)”);
 val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="prim_rec",Name="PRE"},name=(["Number","Natural"],"pre")}
 
 val PRE =
  store_thm
   ("PRE",
-   --`(PRE 0 = 0) /\ (!m. PRE(SUC m) = m)`--,
+   “(PRE 0 = 0) /\ (!m. PRE(SUC m) = m)”,
    REPEAT STRIP_TAC
     THEN REWRITE_TAC[PRE_DEF, INV_SUC_EQ, NOT_SUC, SELECT_REFL_2]);
 
-val LESS_REFL = store_thm( "LESS_REFL", --`!n. ~(n < n)`--,
+val LESS_REFL = store_thm( "LESS_REFL", “!n. ~(n < n)”,
    GEN_TAC THEN
    REWRITE_TAC[LESS_DEF, NOT_AND]);
 
@@ -113,41 +110,41 @@ val LESS_REFL = store_thm( "LESS_REFL", --`!n. ~(n < n)`--,
 val SUC_LESS =
  store_thm
    ("SUC_LESS",
-    --`!m n. (SUC m < n) ==>  m < n`--,
+    “!m n. (SUC m < n) ==>  m < n”,
    REWRITE_TAC[LESS_DEF]
     THEN REPEAT STRIP_TAC
-    THEN EXISTS_TAC (--`P:num->bool`--)
+    THEN EXISTS_TAC (“P:num->bool”)
     THEN RES_TAC
     THEN ASM_REWRITE_TAC[]);
 
 val NOT_LESS_0 =
  store_thm
    ("NOT_LESS_0",
-    --`!n. ~(n < 0)`--,
+    “!n. ~(n < 0)”,
    INDUCT_TAC
     THEN REWRITE_TAC[LESS_REFL]
     THEN IMP_RES_TAC(CONTRAPOS
-            (SPECL[--`n:num`--, --`0`--] SUC_LESS))
+            (SPECL[“n:num”, “0”] SUC_LESS))
     THEN ASM_REWRITE_TAC[]);
 
 val LESS_0 = store_thm("LESS_0",
-   --`!n. 0 < (SUC n)`--,
+   “!n. 0 < (SUC n)”,
    GEN_TAC
     THEN REWRITE_TAC[LESS_DEF]
-    THEN EXISTS_TAC (--`\x.x = 0`--)
+    THEN EXISTS_TAC (“\x.x = 0”)
     THEN CONV_TAC(DEPTH_CONV BETA_CONV)
     THEN REWRITE_TAC[NOT_SUC]);
 
 val LESS_0_0 =
  store_thm
   ("LESS_0_0",
-   --`0 < SUC 0`--,
+   “0 < SUC 0”,
    REWRITE_TAC[LESS_0]) ;
 
 val LESS_MONO =
  store_thm
   ("LESS_MONO",
-   --`!m n. (m < n) ==> (SUC m < SUC n)`--,
+   “!m n. (m < n) ==> (SUC m < SUC n)”,
    REWRITE_TAC[LESS_DEF]
     THEN REPEAT STRIP_TAC
     THEN EXISTS_TAC ``\n : num. P (PRE n) : bool``
@@ -159,7 +156,7 @@ val LESS_MONO =
 val LESS_MONO_REV =
  store_thm
   ("LESS_MONO_REV",
-   --`!m n. (SUC m < SUC n) ==> (m < n)`--,
+   “!m n. (SUC m < SUC n) ==> (m < n)”,
    REWRITE_TAC[LESS_DEF]
     THEN REPEAT STRIP_TAC
     THEN EXISTS_TAC ``\n : num. P (SUC n) : bool``
@@ -169,19 +166,19 @@ val LESS_MONO_REV =
 val LESS_MONO_EQ =
  store_thm
   ("LESS_MONO_EQ",
-   --`!m n. (SUC m < SUC n) = (m < n)`--,
+   “!m n. (SUC m < SUC n) = (m < n)”,
    REPEAT GEN_TAC THEN EQ_TAC
     THEN REWRITE_TAC [LESS_MONO, LESS_MONO_REV]) ;
 
 (* now show that < is the transitive closure of the successor relation *)
 
-val TC_LESS_0 = prove ( --`!n. TC (\x y. y = SUC x) 0 (SUC n)`--,
+val TC_LESS_0 = prove ( “!n. TC (\x y. y = SUC x) 0 (SUC n)”,
   INDUCT_TAC
   THENL [ irule relationTheory.TC_SUBSET THEN BETA_TAC THEN REFL_TAC,
     ONCE_REWRITE_TAC [relationTheory.TC_CASES2] THEN DISJ2_TAC
     THEN EXISTS_TAC ``SUC n`` THEN BETA_TAC THEN ASM_REWRITE_TAC [] ]) ;
 
-val TC_NOT_LESS_0 = prove ( --`!n. ~(TC (\x y. y = SUC x) n 0)`--,
+val TC_NOT_LESS_0 = prove ( “!n. ~(TC (\x y. y = SUC x) n 0)”,
   ONCE_REWRITE_TAC [relationTheory.TC_CASES2]
   THEN BETA_TAC THEN REWRITE_TAC [GSYM NOT_SUC] ) ;
 
@@ -217,7 +214,7 @@ val LESS_ALT = store_thm ("LESS_ALT",
 val LESS_SUC_REFL =
  store_thm
   ("LESS_SUC_REFL",
-   --`!n. n < SUC n`--,
+   “!n. n < SUC n”,
    INDUCT_TAC
     THEN REWRITE_TAC[LESS_0_0]
     THEN IMP_RES_TAC LESS_MONO
@@ -226,39 +223,39 @@ val LESS_SUC_REFL =
 val LESS_SUC =
  store_thm
  ("LESS_SUC",
-  --`!m n. (m < n) ==> (m < SUC n)`--,
+  “!m n. (m < n) ==> (m < SUC n)”,
   REWRITE_TAC [LESS_DEF]
    THEN REPEAT STRIP_TAC
-   THEN EXISTS_TAC (--`P:num->bool`--)
+   THEN EXISTS_TAC (“P:num->bool”)
    THEN IMP_RES_TAC
-         (CONTRAPOS(SPEC (--`(n:num)`--)
-                         (ASSUME (--`  !n'. P(SUC n')  ==>  P n'  `--))))
+         (CONTRAPOS(SPEC (“(n:num)”)
+                         (ASSUME (“  !n'. P(SUC n')  ==>  P n'  ”))))
    THEN ASM_REWRITE_TAC[]);
 
 val LESS_LEMMA1 =
  store_thm
   ("LESS_LEMMA1",
-   --`!m n. (m < SUC n) ==> (m = n) \/ (m < n)`--,
+   “!m n. (m < SUC n) ==> (m = n) \/ (m < n)”,
   REWRITE_TAC [LESS_ALT, TC_IM_RTC_SUC, relationTheory.RTC_CASES_TC]) ;
 
 val LESS_LEMMA2 =
  store_thm
   ("LESS_LEMMA2",
-   --`!m n. ((m = n) \/ (m < n)) ==> (m < SUC n)`--,
+   “!m n. ((m = n) \/ (m < n)) ==> (m < SUC n)”,
    REPEAT STRIP_TAC
     THEN (IMP_RES_TAC LESS_SUC)
     THEN ASM_REWRITE_TAC[LESS_SUC_REFL]);
 
 (* |- !m n. m < (SUC n)  =  (m  =  n)  \/  m < n *)
 val LESS_THM = save_thm("LESS_THM",
-    GENL [--`m:num`--, --`n:num`--]
+    GENL [“m:num”, “n:num”]
          (IMP_ANTISYM_RULE(SPEC_ALL LESS_LEMMA1)
                           (SPEC_ALL LESS_LEMMA2)));
 
 val LESS_SUC_IMP =
  store_thm
   ("LESS_SUC_IMP",
-   --`!m n. (m < SUC n) ==> ~(m = n) ==> (m < n)`--,
+   “!m n. (m < SUC n) ==> ~(m = n) ==> (m < n)”,
    REWRITE_TAC[LESS_THM]
     THEN REPEAT STRIP_TAC
     THEN RES_TAC
@@ -267,7 +264,7 @@ val LESS_SUC_IMP =
 val EQ_LESS =
  store_thm
   ("EQ_LESS",
-   --`!n. (SUC m = n) ==> (m < n)`--,
+   “!n. (SUC m = n) ==> (m < n)”,
    INDUCT_TAC
     THEN REWRITE_TAC[NOT_SUC, LESS_THM]
     THEN DISCH_TAC
@@ -277,14 +274,14 @@ val EQ_LESS =
 val SUC_ID =
  store_thm
   ("SUC_ID",
-   --`!n. ~(SUC n = n)`--,
+   “!n. ~(SUC n = n)”,
    INDUCT_TAC
     THEN ASM_REWRITE_TAC[NOT_SUC, INV_SUC_EQ]);
 
 val NOT_LESS_EQ =
  store_thm
   ("NOT_LESS_EQ",
-   --`!m n. (m = n) ==> ~(m < n)`--,
+   “!m n. (m = n) ==> ~(m < n)”,
    REPEAT GEN_TAC
     THEN DISCH_TAC
     THEN ASM_REWRITE_TAC[LESS_REFL]);
@@ -292,11 +289,11 @@ val NOT_LESS_EQ =
 val LESS_NOT_EQ =
  store_thm
   ("LESS_NOT_EQ",
-   --`!m n. (m < n) ==> ~(m = n)`--,
+   “!m n. (m < n) ==> ~(m = n)”,
    REPEAT STRIP_TAC
     THEN IMP_RES_TAC
-          (DISCH_ALL(SUBS[ASSUME (--`(m:num) = n`--)]
-                         (ASSUME (--`m < n`--))))
+          (DISCH_ALL(SUBS[ASSUME (“(m:num) = n”)]
+                         (ASSUME (“m < n”))))
     THEN IMP_RES_TAC LESS_REFL
     THEN RES_TAC
     THEN ASM_REWRITE_TAC[]);
@@ -351,10 +348,10 @@ val SIMP_REC_REL =
                 !m. (m < n) ==> (fun(SUC m) = f(fun m))`);
 
 val SIMP_REC_EXISTS = store_thm("SIMP_REC_EXISTS",
-   --`!x f n. ?fun:num->'a. SIMP_REC_REL fun x f n`--,
+   “!x f n. ?fun:num->'a. SIMP_REC_REL fun x f n”,
    GEN_TAC THEN GEN_TAC THEN INDUCT_THEN INDUCTION STRIP_ASSUME_TAC THEN
    PURE_REWRITE_TAC[SIMP_REC_REL] THENL [
-     EXISTS_TAC (--`\p:num. (x:'a)`--) THEN REWRITE_TAC[NOT_LESS_0],
+     EXISTS_TAC (“\p:num. (x:'a)”) THEN REWRITE_TAC[NOT_LESS_0],
      Q.EXISTS_TAC `\p. if p = SUC n then f (fun n) else fun p` THEN
      BETA_TAC THEN REWRITE_TAC [INV_SUC_EQ, GSYM NOT_SUC] THEN
      POP_ASSUM (STRIP_ASSUME_TAC o REWRITE_RULE [SIMP_REC_REL]) THEN
@@ -398,15 +395,15 @@ val SIMP_REC = new_specification
 val LESS_SUC_SUC =
  store_thm
   ("LESS_SUC_SUC",
-   --`!m. (m < SUC m) /\ (m < SUC(SUC m))`--,
+   “!m. (m < SUC m) /\ (m < SUC(SUC m))”,
    INDUCT_TAC
     THEN ASM_REWRITE_TAC[LESS_THM]);
 
 val SIMP_REC_THM = store_thm (
   "SIMP_REC_THM",
-  --`!(x:'a) f.
+  “!(x:'a) f.
        (SIMP_REC x f 0 = x) /\
-       (!m. SIMP_REC x f (SUC m) = f(SIMP_REC x f m))`--,
+       (!m. SIMP_REC x f (SUC m) = f(SIMP_REC x f m))”,
   REPEAT GEN_TAC THEN
   ASSUME_TAC (SPECL [Term`x:'a`, Term`f:'a -> 'a`] SIMP_REC) THEN
   CONJ_TAC THENL [
@@ -441,15 +438,15 @@ val SIMP_REC_THM = store_thm (
 val PRIM_REC_FUN =
  new_definition
   ("PRIM_REC_FUN",
-   --`PRIM_REC_FUN (x:'a) (f:'a->num->'a) =
-        SIMP_REC (\n:num. x) (\fun n. f(fun(PRE n))n)`--);
+   “PRIM_REC_FUN (x:'a) (f:'a->num->'a) =
+        SIMP_REC (\n:num. x) (\fun n. f(fun(PRE n))n)”);
 
 val PRIM_REC_EQN =
  store_thm
   ("PRIM_REC_EQN",
-   --`!(x:'a) f.
+   “!(x:'a) f.
      (!n. PRIM_REC_FUN x f 0 n = x) /\
-     (!m n. PRIM_REC_FUN x f (SUC m) n = f (PRIM_REC_FUN x f m (PRE n)) n)`--,
+     (!m n. PRIM_REC_FUN x f (SUC m) n = f (PRIM_REC_FUN x f m (PRE n)) n)”,
    REPEAT STRIP_TAC
     THEN REWRITE_TAC [PRIM_REC_FUN, SIMP_REC_THM]
     THEN CONV_TAC(DEPTH_CONV BETA_CONV)
@@ -458,14 +455,14 @@ val PRIM_REC_EQN =
 val PRIM_REC =
  new_definition
   ("PRIM_REC",
-   --`PRIM_REC (x:'a) f m = PRIM_REC_FUN x f m (PRE m)`--);
+   “PRIM_REC (x:'a) f m = PRIM_REC_FUN x f m (PRE m)”);
 
 val PRIM_REC_THM =
  store_thm
   ("PRIM_REC_THM",
-   --`!x f.
+   “!x f.
      (PRIM_REC (x:'a) f 0 = x) /\
-     (!m. PRIM_REC x f (SUC m) = f (PRIM_REC x f m) m)`--,
+     (!m. PRIM_REC x f (SUC m) = f (PRIM_REC x f m) m)”,
    REPEAT STRIP_TAC
     THEN REWRITE_TAC[PRIM_REC, PRIM_REC_FUN, SIMP_REC_THM]
     THEN CONV_TAC(DEPTH_CONV BETA_CONV)
@@ -507,18 +504,18 @@ end;
 
 
 (*----------------------------------------------------------------------*)
-(* Unique existence theorem for prim rec definitions on num.		*)
-(*									*)
-(* ADDED TFM 88.04.02							*)
+(* Unique existence theorem for prim rec definitions on num.            *)
+(*                                                                      *)
+(* ADDED TFM 88.04.02                                                   *)
 (*----------------------------------------------------------------------*)
 
 val num_Axiom_old = store_thm(
   "num_Axiom_old",
-   --`!e:'a. !f. ?! fn1. (fn1 0 = e) /\
-                         (!n. fn1 (SUC n) = f (fn1 n) n)`--,
+   “!e:'a. !f. ?! fn1. (fn1 0 = e) /\
+                         (!n. fn1 (SUC n) = f (fn1 n) n)”,
    REPEAT GEN_TAC THEN
    CONV_TAC EXISTS_UNIQUE_CONV THEN CONJ_TAC THENL
-   [EXISTS_TAC (--`PRIM_REC (e:'a) (f:'a->num->'a)`--) THEN
+   [EXISTS_TAC “PRIM_REC (e:'a) (f:'a->num->'a)” THEN
     REWRITE_TAC [PRIM_REC_THM],
     CONV_TAC (DEPTH_CONV BETA_CONV) THEN
     REPEAT STRIP_TAC THEN
@@ -648,5 +645,3 @@ val measure_thm = Q.store_thm
 val _ = BasicProvers.export_rewrites ["measure_thm"]
 
 val _ = export_theory() ;
-
-end;

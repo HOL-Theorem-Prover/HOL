@@ -7,6 +7,8 @@ open monadsyntax lcsymtacs pegTheory
 
 val _ = new_theory "simpleSexp";
 
+val _ = temp_add_monadsyntax()
+
 val _ = overload_on ("monad_bind", ``OPTION_BIND``)
 val _ = overload_on ("monad_unitbind", ``OPTION_IGNORE_BIND``)
 val _ = temp_overload_on ("return", ``SOME``)
@@ -30,11 +32,6 @@ val _ = Datatype`
 
 val _ = add_numeral_form(#"s", SOME "SX_NUM")
 val _ = overload_on ("nil", ``SX_SYM "nil"``)
-val _ = add_listform { block_info = (PP.INCONSISTENT, 0),
-                       cons = "SX_CONS", leftdelim = [Parse.TOK "⦇"],
-                       nilstr = "nil", rightdelim = [Parse.TOK "⦈"],
-                       separator = [Parse.TOK ";", BreakSpace(1,0)]}
-
 val _ = add_rule { block_style = (AroundEachPhrase, (PP.INCONSISTENT, 0)),
                    fixity = Closefix,
                    paren_style = OnlyIfNecessary,
@@ -42,7 +39,10 @@ val _ = add_rule { block_style = (AroundEachPhrase, (PP.INCONSISTENT, 0)),
                                   Parse.TOK "•", BreakSpace(1, 0), TM,
                                   Parse.TOK "⦈"],
                    term_name = "SX_CONS" }
-
+val _ = add_listform { block_info = (PP.INCONSISTENT, 0),
+                       cons = "SX_CONS", leftdelim = [Parse.TOK "⦇"],
+                       nilstr = "nil", rightdelim = [Parse.TOK "⦈"],
+                       separator = [Parse.TOK ";", BreakSpace(1,0)]}
 
 val _ = overload_on ("’", ``λs. ⦇ SX_SYM "quote" ; s ⦈``)
 
@@ -59,19 +59,25 @@ val valid_symbol_def = Define`
 val valid_sexp_def = Define`
   (valid_sexp (SX_SYM s) ⇔ valid_symbol s) ∧
   (valid_sexp (SX_CONS s1 s2) ⇔ valid_sexp s1 ∧ valid_sexp s2) ∧
+  (valid_sexp (SX_STR s) ⇔ EVERY isPrint s) ∧
   (valid_sexp s ⇔ T)`;
 val _ = export_rewrites["valid_first_symchar_def","valid_symchar_def","valid_symbol_def","valid_sexp_def"];
 
+val arb_sexp_def = Define`arb_sexp = SX_NUM 0`;
+
 val destSXNUM_def = Define`
-  destSXNUM (SX_NUM n) = n
+  destSXNUM (SX_NUM n) = n ∧
+  destSXNUM _ = 0
 `;
 
 val destSXSYM_def = Define`
-  destSXSYM (SX_SYM s) = s
+  destSXSYM (SX_SYM s) = s ∧
+  destSXSYM _ = ""
 `;
 
 val destSXCONS_def = Define`
-  destSXCONS (SX_CONS a d) = (a,d)
+  destSXCONS (SX_CONS a d) = (a,d) ∧
+  destSXCONS _ = (arb_sexp, arb_sexp)
 `;
 
 val strip_sxcons_def = Define`
@@ -152,7 +158,7 @@ val _ = overload_on ("TK", ``TOK : char -> (char,sexpNT)symbol``)
 
 val ptree_digit_def = Define`
   (ptree_digit (Lf _) = NONE) ∧
-  (ptree_digit (Nd ntm args) =
+  (ptree_digit (Nd (ntm,_) args) =
      if ntm ≠ mkNT sxnt_digit then NONE
      else
        case args of
@@ -166,7 +172,7 @@ val ptree_digit_def = Define`
 
 val ptree_sexpnum_def = Define`
   (ptree_sexpnum (Lf _) = NONE) ∧
-  (ptree_sexpnum (Nd ntm args) =
+  (ptree_sexpnum (Nd (ntm,_) args) =
      if ntm ≠ mkNT sxnt_sexpnum then NONE
      else
        case args of
@@ -183,7 +189,7 @@ val ptree_sexpnum_def = Define`
 
 val ptree_WS_def = Define`
   (ptree_WS (Lf _) = NONE) ∧
-  (ptree_WS (Nd ntm args) =
+  (ptree_WS (Nd (ntm,_) args) =
    if ntm ≠ mkNT sxnt_WS then NONE
    else
      case args of
@@ -192,7 +198,7 @@ val ptree_WS_def = Define`
 
 val ptree_grabWS_def = Define`
   (ptree_grabWS (Lf _) = NONE) ∧
-  (ptree_grabWS (Nd ntm args) =
+  (ptree_grabWS (Nd (ntm,_) args) =
    if ntm ≠ mkNT sxnt_grabWS then NONE
    else
      case args of
@@ -206,37 +212,34 @@ val ptree_grabWS_def = Define`
 
 val ptree_normstrchar_def = Define`
   (ptree_normstrchar (Lf _) = NONE) ∧
-  (ptree_normstrchar (Nd ntm args) =
+  (ptree_normstrchar (Nd (ntm,_) args) =
    if ntm ≠ mkNT sxnt_normstrchar then NONE
    else
      case args of
-       [Lf(TK c)] => return c
+       [Lf(TK c,_)] => return c
      | _ => NONE)`;
 
 val ptree_escapablechar_def = Define`
   (ptree_escapablechar (Lf _) = NONE) ∧
-  (ptree_escapablechar (Nd ntm args) =
+  (ptree_escapablechar (Nd (ntm,_) args) =
    if ntm ≠ mkNT sxnt_escapablechar then NONE
    else
      case args of
-       [Lf(TK c)] => return c
+       [Lf(TK c,_)] => return c
      | _ => NONE)`;
 
 val ptree_escapedstrchar_def = Define`
   (ptree_escapedstrchar (Lf _) = NONE) ∧
-  (ptree_escapedstrchar (Nd ntm args) =
+  (ptree_escapedstrchar (Nd (ntm,_) args) =
    if ntm ≠ mkNT sxnt_escapedstrchar then NONE
    else
      case args of
-       [b; c] =>
-         if b = Lf(TK#"\\") then
-           ptree_escapablechar c
-         else NONE
+       [Lf(TK#"\\",_) ; c] => ptree_escapablechar c
      | _      => NONE)`;
 
 val ptree_strchar_def = Define`
   (ptree_strchar (Lf _) = NONE) ∧
-  (ptree_strchar (Nd ntm args) =
+  (ptree_strchar (Nd (ntm,_) args) =
    if ntm ≠ mkNT sxnt_strchar then NONE
    else
      case args of
@@ -245,7 +248,7 @@ val ptree_strchar_def = Define`
 
 val ptree_strcontents_def = Define`
   (ptree_strcontents (Lf _) = NONE) ∧
-  (ptree_strcontents (Nd ntm args) =
+  (ptree_strcontents (Nd (ntm,_) args) =
    if ntm ≠ mkNT sxnt_strcontents then NONE
    else
      case args of
@@ -260,37 +263,34 @@ val ptree_strcontents_def = Define`
 
 val ptree_sexpstr_def = Define`
   (ptree_sexpstr (Lf _) = NONE) ∧
-  (ptree_sexpstr (Nd ntm args) =
+  (ptree_sexpstr (Nd (ntm,_) args) =
    if ntm ≠ mkNT sxnt_sexpstr then NONE
    else
      case args of
-       [lq; s; rq] =>
-       if (lq = Lf(TK#"\"") ∧ rq = Lf(TK#"\"")) then
-         ptree_strcontents s
-       else NONE
+       [Lf(TK#"\"",_) ; s; Lf(TK#"\"",_)] => ptree_strcontents s
      | _ => NONE)`;
 
 val ptree_first_symchar_def = Define`
   (ptree_first_symchar (Lf _) = NONE) ∧
-  (ptree_first_symchar (Nd ntm args) =
+  (ptree_first_symchar (Nd (ntm,_) args) =
    if ntm ≠ mkNT sxnt_first_symchar then NONE
    else
      case args of
-       [Lf(TK c)] => return c
+       [Lf(TK c,_)] => return c
      | _ => NONE)`;
 
 val ptree_symchar_def = Define`
   (ptree_symchar (Lf _) = NONE) ∧
-  (ptree_symchar (Nd ntm args) =
+  (ptree_symchar (Nd (ntm,_) args) =
    if ntm ≠ mkNT sxnt_symchar then NONE
    else
      case args of
-       [Lf(TK c)] => return c
+       [Lf(TK c,_)] => return c
      | _ => NONE)`;
 
 val ptree_symchars_def = Define`
   (ptree_symchars (Lf _) = NONE) ∧
-  (ptree_symchars (Nd ntm args) =
+  (ptree_symchars (Nd (ntm,_) args) =
    if ntm ≠ mkNT sxnt_symchars then NONE
    else
      case args of
@@ -304,7 +304,7 @@ val ptree_symchars_def = Define`
 
 val ptree_sexpsym_def = Define`
   (ptree_sexpsym (Lf _) = NONE) ∧
-  (ptree_sexpsym (Nd ntm args) =
+  (ptree_sexpsym (Nd (ntm,_) args) =
    if ntm ≠ mkNT sxnt_sexpsym then NONE
    else
      case args of
@@ -318,21 +318,21 @@ val ptree_sexpsym_def = Define`
 
 val ptree_sexp_def = Define`
   (ptree_sexp (Lf _) = NONE) ∧
-  (ptree_sexp (Nd ntm args) =
+  (ptree_sexp (Nd (ntm,_) args) =
    if ntm ≠ mkNT sxnt_sexp then NONE
    else
      case args of
          [w; g] => do ptree_grabWS g; ptree_WSsexp w od
      |   _      => NONE) ∧
   (ptree_WSsexp (Lf _) = NONE) ∧
-  (ptree_WSsexp (Nd ntm args) =
+  (ptree_WSsexp (Nd (ntm,_) args) =
    if ntm ≠ mkNT sxnt_WSsexp then NONE
    else
      case args of
        [g; s] => do ptree_grabWS g; ptree_sexp0 s od
      | _      => NONE) ∧
   (ptree_sexp0 (Lf _) = NONE) ∧
-  (ptree_sexp0 (Nd ntm args) =
+  (ptree_sexp0 (Nd (ntm,_) args) =
    if ntm ≠ mkNT sxnt_sexp0 then NONE
    else
      case args of
@@ -340,26 +340,21 @@ val ptree_sexp_def = Define`
          do x <- ptree_sexpsym s; return (SX_SYM x) od ++
          do x <- ptree_sexpnum s; return (SX_NUM x) od ++
          do x <- ptree_sexpstr s; return (SX_STR x) od
-     | [q;w] =>
-       if q = Lf (TK#"'") then ptree_WSsexp w else NONE
-     | [lp; s; g; rp] =>
-       if lp = Lf (TK#"(") ∧ rp = Lf (TK#")") then
+     | [Lf (TK#"'",_) ;w] => ptree_WSsexp w
+     | [Lf (TK#"(",_) ; s; g; Lf (TK#")",_) ] =>
          do
            ptree_grabWS g;
            ptree_sexpseq s
          od
-       else NONE
-     | [lp; sa; dot; sd; rp] =>
-       if lp = Lf (TK#"(") ∧ dot = Lf (TK#".") ∧ rp = Lf (TK#")") then
+     | [Lf (TK#"(",_); sa; Lf (TK#".",_) ; sd; Lf (TK#")",_) ] =>
          do
            a <- ptree_sexp sa;
            d <- ptree_sexp sd;
            return (SX_CONS a d)
          od
-       else NONE
      | _ => NONE) ∧
   (ptree_sexpseq (Lf _) = NONE) ∧
-  (ptree_sexpseq (Nd ntm args) =
+  (ptree_sexpseq (Nd (ntm,_) args) =
    if ntm ≠ mkNT sxnt_sexpseq then NONE
    else
      case args of

@@ -1,4 +1,4 @@
-OPTIONS = NO_OVERLAY
+CLINE_OPTIONS = --no_overlay
 
 UOFILES = $(patsubst %.sml,%.uo,$(wildcard *.sml))
 

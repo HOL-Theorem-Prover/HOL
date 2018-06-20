@@ -183,7 +183,7 @@ val MASK_def = Define`
   MASK nxtic nxtis (mask:word16) (rp:word4) =
     if (nxtic = ldm) \/ (nxtic = stm) then
       if nxtis = t3 then
-        Tw
+        UINT_MAXw
       else
         CLEARBIT (w2n rp) mask
     else ARB`;

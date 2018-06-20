@@ -297,8 +297,10 @@ fun chop_at n frontacc l =
       [] => raise Fail "chop_at"
     | (h::t) => chop_at (n-1) (h::frontacc) t
 
-infix THEN1
-fun ((tac1:tactic) THEN1 (tac2:tactic)) (asl:term list,w:term) = let
+
+infix gTHEN1 (* "gentle" THEN1 : doesn't fail if the tactic for the
+                head goal doesn't completely solve the subgoal. *)
+fun ((tac1:tactic) gTHEN1 (tac2:tactic)) (asl:term list,w:term) = let
   val (subgoals, vf) = tac1 (asl,w)
 in
   case subgoals of
@@ -314,6 +316,7 @@ in
        end))
     end
 end
+
 
 fun eqTRANS new old = let
   (* allow for possibility that old might be labelled *)
@@ -333,32 +336,69 @@ fun labrhs t = (* term is a possibly labelled equality *)
  in if is_eq t then rhs t else rhs (#2 (dest_label t))
  end;
 
-fun (q by tac) (g as (asl,w)) = let
+fun qlinenum q =
+  case q |> qbuf.new_buffer |> qbuf.current |> #2 of
+      locn.Loc(locn.LocA(line, _), _) => SOME (line+1)
+    | _ => NONE
+
+fun by0 k (q, tac) (g as (asl,w)) = let
   val a = trace ("syntax_error", 0) Parse.Absyn q
+  open errormonad
   val (goal_pt, finisher) =
       case Lib.total Absyn.dest_eq a of
         SOME (Absyn.IDENT(_,"_"), r) =>
-        if not (null asl) andalso is_labeq (hd asl) then
-          (Parse.absyn_to_preterm
-             (Absyn.mk_eq(Absyn.mk_AQ (labrhs (hd asl)), r)),
-           POP_ASSUM o eqTRANS)
-        else
-          raise ERR "by" "Top assumption must be an equality"
+          if not (null asl) andalso is_labeq (hd asl) then
+            (Parse.absyn_to_preterm
+               (Absyn.mk_eq(Absyn.mk_AQ (labrhs (hd asl)), r)),
+             POP_ASSUM o eqTRANS)
+          else
+            raise ERR "by" "Top assumption must be an equality"
       | x => (Parse.absyn_to_preterm a, STRIP_ASSUME_TAC)
   val tm = trace ("show_typecheck_errors", 0)
-                 (Parse.parse_preterm_in_context (free_varsl (w::asl))) goal_pt
+                 (Preterm.smash
+                     (goal_pt >-
+                      TermParse.ctxt_preterm_to_term
+                        Parse.stdprinters
+                        (SOME bool)
+                        (free_varsl (w::asl))))
+                 Pretype.Env.empty
+  fun mk_errmsg () =
+    case qlinenum q of
+        SOME l => " on line "^Int.toString l
+      | NONE => ": "^term_to_string tm
 in
-  SUBGOAL_THEN tm finisher THEN1 tac
-end (asl, w)
+  (SUBGOAL_THEN tm finisher gTHEN1 (tac THEN k)) g
+   handle HOL_ERR _ =>
+    raise ERR "by" ("by's tactic failed to prove subgoal"^mk_errmsg())
+end
 
-fun (q suffices_by tac) = Q_TAC SUFF_TAC q THEN1 tac
+val op by = by0 NO_TAC
+val byA = by0 ALL_TAC
+
+fun (q suffices_by tac) g =
+  (Q_TAC SUFF_TAC q gTHEN1 (tac THEN NO_TAC)) g
+  handle e as HOL_ERR {origin_function,...} =>
+         if origin_function = "Q_TAC" then raise e
+         else
+           case qlinenum q of
+               SOME l => raise ERR "suffices_by"
+                               ("suffices_by's tactic failed to prove goal on \
+                                \line "^Int.toString l)
+             | NONE => raise ERR "suffices_by"
+                             "suffices_by's tactic failed to prove goal"
+
+
+
+fun subgoal q = Q.SUBGOAL_THEN q STRIP_ASSUME_TAC
+val sg = subgoal
+
 
 infix on
 fun ((ttac:thm->tactic) on (q:term frag list, tac:tactic)) : tactic =
   (fn (g as (asl:term list, w:term)) => let
     val tm = Parse.parse_in_context (free_varsl (w::asl)) q
   in
-    (SUBGOAL_THEN tm ttac THEN1 tac) g
+    (SUBGOAL_THEN tm ttac gTHEN1 tac) g
   end)
 
 (*===========================================================================*)
@@ -711,13 +751,14 @@ fun new_let_thms thl = let_movement_thms := thl @ !let_movement_thms
 fun tyinfol() = TypeBasePure.listItems (TypeBase.theTypeBase());
 
 fun mkCSET () =
- let val CSET = ref (HOLset.empty
-                      (inv_img_cmp (fn {Thy,Name,Ty} => (Thy,Name))
-                              (pair_compare(String.compare,String.compare))))
-     fun inCSET t = HOLset.member(!CSET, dest_thy_const t)
-     fun addCSET c = (CSET := HOLset.add(!CSET, dest_thy_const c))
-     val _ = List.app
-               (List.app addCSET o TypeBasePure.constructors_of) (tyinfol())
+ let val CSET = (HOLset.empty
+                  (inv_img_cmp (fn {Thy,Name,Ty} => (Thy,Name))
+                          (pair_compare(String.compare,String.compare))))
+     fun add_const (c,CSET) = HOLset.add(CSET, dest_thy_const c)
+     fun add_tyinfo (tyinfo,CSET) =
+       List.foldl add_const CSET (TypeBasePure.constructors_of tyinfo)
+     val CSET = List.foldl add_tyinfo CSET (tyinfol())
+     fun inCSET t = HOLset.member(CSET, dest_thy_const t)
      fun constructed tm =
       let val (lhs,rhs) = dest_eq tm
       in aconv lhs rhs orelse
@@ -919,8 +960,8 @@ open LoadableThyData
 val thy_ssfrags = ref (Binarymap.mkDict String.compare)
 fun thy_ssfrag s = Binarymap.find(!thy_ssfrags, s)
 
-fun add_rewrites thyname thms = let
-  val ssfrag = simpLib.named_rewrites thyname thms
+fun add_rewrites thyname (thms : (string * thm) list) = let
+  val ssfrag = simpLib.named_rewrites thyname (map #2 thms)
   open Binarymap
 in
   augment_srw_ss [ssfrag];

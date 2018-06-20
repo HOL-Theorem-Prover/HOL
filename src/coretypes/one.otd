@@ -1,0 +1,5 @@
+delconst one
+deltype one
+skipthm one_TY_DEF
+delproof one_DEF
+delproof one_axiom

@@ -1,11 +1,11 @@
 INCLUDES = $(HOLDIR)/examples/machine-code/hoare-triple ../step ../../common
-OPTIONS = QUIT_ON_FAILURE
+CLINE_OPTIONS = --qof
 
 ifdef POLY
 HOLHEAP = arm-step-heap
 EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o
 
-BARE_THYS = ../step/arm_stepLib
+BARE_THYS = ../step/arm_stepLib ../../common/stateLib
 DEPS = $(patsubst %,%.uo,$(BARE_THYS))
 
 THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
@@ -17,4 +17,8 @@ all: $(TARGETS) $(HOLHEAP)
 $(HOLHEAP): $(DEPS)
 	$(protect $(HOLDIR)/bin/buildheap) -b ../step/arm-heap -o $(HOLHEAP) $(BARE_THYS)
 
+endif
+
+ifeq($(KERNELID),otknl)
+arm_prog.art: arm_prog.otd
 endif

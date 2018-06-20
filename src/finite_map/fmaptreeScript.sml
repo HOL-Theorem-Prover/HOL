@@ -158,7 +158,7 @@ val ft_ind = store_thm(
   HO_MATCH_MP_TAC wf_strong_ind THEN SRW_TAC [][] THEN
   FIRST_X_ASSUM (Q.SPECL_THEN [`a`, `fromF o_f fm`] MP_TAC) THEN
   SRW_TAC [][o_f_FAPPLY] THEN
-  Q_TAC SUFF_TAC `toF o fromF o_f fm = fm`
+  Q_TAC SUFF_TAC `(toF o fromF) o_f fm = fm`
         THEN1 (DISCH_THEN (SUBST1_TAC o SYM) THEN SRW_TAC [][]) THEN
   SRW_TAC [][fmap_EXT, o_f_FAPPLY] THEN METIS_TAC [fmap_bij_thm]);
 

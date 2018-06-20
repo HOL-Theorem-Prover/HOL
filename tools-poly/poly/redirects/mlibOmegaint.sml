@@ -36,7 +36,7 @@ struct
         in if V.sub (v,0) = 0w0 then k else ~k
         end;
         *)
-   fun hash n = n
+   fun hash n = IntInf.toInt n
 
 
    open I

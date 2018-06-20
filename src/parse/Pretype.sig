@@ -1,50 +1,45 @@
 signature Pretype =
 sig
 
- datatype pretype
-    = Vartype of string
-    | Tyop of {Thy:string,Tyop:string, Args: pretype list}
-    | UVar of pretype option ref
+datatype pretype = datatype Pretype_dtype.pretype
 
-val tyvars : pretype -> string list
-val new_uvar : unit -> pretype
-val ref_occurs_in : pretype option ref * pretype -> bool
-val ref_equiv : pretype option ref * pretype -> bool
-val has_unbound_uvar : pretype -> bool
+structure Env : sig
+  type t
+  val lookup : t -> int -> pretype option
+  val update : (int * pretype) -> t -> t
+  val empty : t
+  val new : t -> t * int
+  val toList : t -> (int * pretype option) list
+end
+
+type error = typecheck_error.error
+type 'a in_env = (Env.t,'a,error) errormonad.t
+
+val tyvars : pretype -> string list in_env
+val new_uvar : pretype in_env
+val ref_occurs_in : int * pretype -> bool in_env
+val ref_equiv : int * pretype -> bool in_env
+val has_unbound_uvar : pretype -> bool in_env
 val mk_fun_ty : pretype * pretype -> pretype
 
-(* first argument is a function which performs a binding between a
-   pretype reference and another pretype, updating some sort of environment
-   (the 'a), returning the new alpha and a unit option, SOME () for a
-   success, and a NONE, if not.
+val unify : pretype -> pretype -> unit in_env
+val can_unify : pretype -> pretype -> bool in_env
 
-   To further complicate things, the bind argument also gets a copy of
-   gen_unify to call, if it should choose.
-*)
-val gen_unify :
-  ((pretype -> pretype -> ('a -> 'a * unit option)) ->
-   (pretype option ref -> (pretype -> ('a -> 'a * unit option)))) ->
-  pretype -> pretype -> ('a -> 'a * unit option)
-val unify : pretype -> pretype -> unit
-val can_unify : pretype -> pretype -> bool
+val apply_subst : Env.t -> pretype -> pretype
 
-val safe_unify :
-  pretype -> pretype ->
-  ((pretype option ref * pretype) list ->
-   (pretype option ref * pretype) list * unit option)
-val apply_subst : (pretype option ref * pretype) list -> pretype -> pretype
-
-val rename_typevars : string list -> pretype -> pretype
-val rename_tv : string list -> pretype -> (string * pretype option ref) list ->
-                (string * pretype option ref) list * pretype option
+val rename_typevars : string list -> pretype -> pretype in_env
+val rename_tv : string list -> pretype ->
+                (Env.t * (string * pretype) list, pretype, error) errormonad.t
 val fromType : Type.hol_type -> pretype
-val remove_made_links : pretype -> pretype
-val replace_null_links : pretype -> (string list -> string list * unit option)
+val remove_made_links : pretype -> pretype in_env
+val replace_null_links :
+    pretype -> (Env.t * string list, pretype, error) errormonad.t
 val clean : pretype -> Type.hol_type
+val toTypeM : pretype -> Type.hol_type in_env
 val toType : pretype -> Type.hol_type
-val chase : pretype -> pretype
+val chase : pretype -> pretype in_env
 
-val pp_pretype : PP.ppstream -> pretype -> unit
+val pp_pretype : pretype -> HOLPP.pretty
 
 val termantiq_constructors : (pretype,Term.term) parse_type.tyconstructors
 val typantiq_constructors : (pretype,Type.hol_type) parse_type.tyconstructors

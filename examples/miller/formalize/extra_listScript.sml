@@ -293,7 +293,7 @@ val HD_SUBTYPE = store_thm
    ``!x.  HD IN ((gtlist 0 INTER list x) -> x)``,
    RW_TAC std_ss [IN_FUNSET, IN_INTER, IN_GTLIST]
    ++ Cases_on `x'`
-   >> (Q.PAT_ASSUM `0 < LENGTH []` MP_TAC
+   >> (Q.PAT_X_ASSUM `0 < LENGTH []` MP_TAC
        ++ RW_TAC arith_ss [LENGTH])
    ++ POP_ASSUM MP_TAC
    ++ RW_TAC std_ss [IN_LIST, HD]);
@@ -304,7 +304,7 @@ val TL_SUBTYPE = store_thm
                  (gtlist 1 -> gtlist 0))``,
    RW_TAC std_ss [IN_FUNSET, IN_INTER, IN_GTLIST] <<
    [Cases_on `x'`
-   >> (Q.PAT_ASSUM `0 < LENGTH []` MP_TAC
+   >> (Q.PAT_X_ASSUM `0 < LENGTH []` MP_TAC
        ++ RW_TAC arith_ss [LENGTH])
     ++ POP_ASSUM MP_TAC
     ++ RW_TAC std_ss [IN_LIST, TL],

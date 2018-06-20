@@ -1044,7 +1044,7 @@ val hlp_seqT4_thm =
 	      ``,
 	       RW_TAC (srw_ss()) [preserve_relation_mmu_abs_def,seqT_def]
 		      THEN RES_TAC
-		      THEN PAT_ASSUM ``!c. X`` (fn thm => ASSUME_TAC (SPEC ``a1:'a`` thm))
+		      THEN PAT_X_ASSUM ``!c. X`` (fn thm => ASSUME_TAC (SPEC ``a1:'a`` thm))
 		      THEN FULL_SIMP_TAC (srw_ss()) [seqT_def]
 	      );
 

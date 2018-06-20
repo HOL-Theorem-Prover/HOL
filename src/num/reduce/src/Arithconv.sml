@@ -227,10 +227,10 @@ val qv = mk_var {Name= "q", Ty=num}
 val rv = mk_var {Name= "r", Ty=num};
 
 local val divt =
-    prove((--`(q * y = p) ==> (p + r = x) ==> (r < y) ==> (x DIV y = q)`--),
-	  REPEAT DISCH_TAC THEN
-	  MATCH_MP_TAC (arithmeticTheory.DIV_UNIQUE) THEN
-	  EXISTS_TAC (--`r:num`--) THEN ASM_REWRITE_TAC[])
+    prove((“(q * y = p) ==> (p + r = x) ==> (r < y) ==> (x DIV y = q)”),
+          REPEAT DISCH_TAC THEN
+          MATCH_MP_TAC (arithmeticTheory.DIV_UNIQUE) THEN
+          EXISTS_TAC (“r:num”) THEN ASM_REWRITE_TAC[])
 in
 fun DIV_CONV tm =
   let open Arbnum
@@ -259,10 +259,10 @@ end;
 (*-----------------------------------------------------------------------*)
 
 local val modt =
-    prove((--`(q * y = p) ==> (p + r = x) ==> (r < y) ==> (x MOD y = r)`--),
-	  REPEAT DISCH_TAC THEN
-	  MATCH_MP_TAC arithmeticTheory.MOD_UNIQUE THEN
-	  EXISTS_TAC (--`q:num`--) THEN ASM_REWRITE_TAC[])
+    prove(“(q * y = p) ==> (p + r = x) ==> (r < y) ==> (x MOD y = r)”,
+          REPEAT DISCH_TAC THEN
+          MATCH_MP_TAC arithmeticTheory.MOD_UNIQUE THEN
+          EXISTS_TAC “q:num” THEN ASM_REWRITE_TAC[])
 in
 fun MOD_CONV tm =
  let open Arbnum

@@ -96,6 +96,35 @@ in
   else "winNT"
 end;
 
+fun findpartial f [] = NONE
+  | findpartial f (h::t) =
+    case f h of NONE => findpartial f t | x => x
+
+fun which arg =
+  let
+    open OS.FileSys
+    val sepc = if OS = "winNT" then #";" else #":"
+    fun check p =
+      let
+        val fname = OS.Path.concat(p, arg)
+      in
+        if access (fname, [A_READ, A_EXEC]) then
+          SOME
+            (OS.Path.mkAbsolute{path = fname, relativeTo = OS.FileSys.getDir()})
+        else NONE
+      end
+  in
+    case OS.Process.getEnv "PATH" of
+        SOME path =>
+        let
+          val paths = (if OS = "winNT" then ["."] else []) @
+                      String.fields (fn c => c = sepc) path
+        in
+          findpartial check paths
+        end
+      | NONE => if OS = "winNT" then check "." else NONE
+  end
+
 val exe_ext = if OS = "winNT" then ".exe" else "";
 determining "mosmldir";
 
@@ -186,7 +215,7 @@ val dynlib_available = (load "Dynlib"; true) handle _ => false;
 
 print "\n";
 
-val DOT_PATH = "/usr/bin/dot"
+val DOT_PATH = SOME "";
 
 val _ = let
   val override = Path.concat(holdir, "config-override")
@@ -197,18 +226,23 @@ in
   else ()
 end;
 
-
+val DOT_PATH = if DOT_PATH = SOME "" then which "dot" else DOT_PATH;
 
 fun verdict (prompt, value) =
     (print (StringCvt.padRight #" " 20 (prompt^":"));
      print value;
      print "\n");
 
+fun optverdict (prompt, optvalue) =
+  (print (StringCvt.padRight #" " 20 (prompt ^ ":"));
+   print (case optvalue of NONE => "NONE" | SOME p => "SOME "^p);
+   print "\n");
+
 verdict ("OS", OS);
 verdict ("mosmldir", mosmldir);
 verdict ("holdir", holdir);
 verdict ("dynlib_available", Bool.toString dynlib_available);
-verdict ("DOT_PATH", DOT_PATH);
+optverdict ("DOT_PATH", DOT_PATH);
 
 val _ = let
   val mosml' = if OS = "winNT" then "mosmlc.exe" else "mosmlc"

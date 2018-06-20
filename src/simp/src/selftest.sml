@@ -1,5 +1,5 @@
 open HolKernel Parse boolLib simpLib
-open testutils boolSimps
+open testutils boolSimps BackchainingLib
 
 val _ = Portable.catch_SIGINT()
 
@@ -10,7 +10,7 @@ fun infloop_protect (startstr : string) (endfn : 'a -> bool)
       val r = f x
     in
       if endfn r then
-        (print "OK\n"; (true, SOME r))
+        (OK(); (true, SOME r))
       else
         die "FAILED\n"
     end handle Interrupt => die "FAILED"
@@ -213,5 +213,15 @@ in
 end
 
 (* ---------------------------------------------------------------------- *)
+
+val _ = let
+  val _ = tprint "Cond_rewr.mk_cond_rewrs on ``hyp ==> (T = e)``"
+in
+  case Lib.total Cond_rewr.mk_cond_rewrs
+                 (ASSUME ``P x ==> (T = Q y)``, BoundedRewrites.UNBOUNDED)
+   of
+      NONE => die "FAILED!"
+    | SOME _ => OK()
+end
 
 val _ = Process.exit Process.success

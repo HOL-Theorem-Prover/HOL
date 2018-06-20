@@ -281,7 +281,6 @@ fun RIGHT_BETA th = TRANS th (BETA_CONV (rhs (concl th)))
 fun post (V, th) =
    let
       fun add_var v th = RIGHT_BETA (AP_THM th v)
-      val cname = fst (dest_const (lhs (concl th)))
    in
       itlist GEN V (rev_itlist add_var V th)
    end
@@ -307,7 +306,7 @@ fun new_binder_definition (s, t) =
    Definition.new_definition (s, t) before Parse.set_fixity (defname t) Binder
 
 fun new_type_definition (name, inhab_thm) =
-   Definition.new_type_definition (name, inhab_thm) before Parse.add_type name
+   Definition.new_type_definition (name, inhab_thm)
 
 fun new_infix (Name, Ty, Prec) =
    Theory.new_constant (Name, Ty)
@@ -461,5 +460,13 @@ val res_exists_tm   = mk "RES_EXISTS"
 val res_exists1_tm  = mk "RES_EXISTS_UNIQUE"
 val res_select_tm   = mk "RES_SELECT"
 val res_abstract_tm = mk "RES_ABSTRACT"
+
+fun op~~(t1,t2) = aconv t1 t2
+fun op!~(t1,t2) = not (t1 ~~ t2)
+val ES = HOLset.empty Term.compare
+fun singt t = HOLset.add(ES, t)
+fun listset ts = HOLset.addList(ES, ts)
+fun FVLset ts = FVL ts ES
+fun FVs t = FVLset [t]
 
 end

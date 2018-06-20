@@ -12,7 +12,7 @@
 (******************************************************************************)
 
 (* load the libries
-use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml")
+use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/hfheader.sml")
 *)
 
 val _ = HOL_Interactive.toggle_quietdec();

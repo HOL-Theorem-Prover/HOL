@@ -1,9 +1,6 @@
 (*---------------------------------------------------------------------------
           Theory of list partitions.
  ---------------------------------------------------------------------------*)
-structure partitionScript =
-struct
-
 (* interactive use:
 app load ["bossLib", "numLib"];
 *)
@@ -108,5 +105,3 @@ Induct_on `L`
   THEN RW_TAC list_ss [MEM] THEN RW_TAC bool_ss []]);
 
 val _ = export_theory();
-
-end;

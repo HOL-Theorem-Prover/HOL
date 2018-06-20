@@ -270,6 +270,79 @@ val fromSet_toSet = store_thm(
   simp[combinTheory.o_DEF, HFS_TYBIJ] >>
   strip_assume_tac (MATCH_MP BIJ_LINV_INV mk_BIJ) >> fs[HFS_TYBIJ]);
 
+val LINV_mk = prove(
+  ``∀s. FINITE s ⇒ (LINV mk { s | FINITE s} (mk s) = s)``,
+  rpt strip_tac >> irule LINV_DEF >> simp[INJ_DEF, mk_11] >>
+  qexists_tac `IMAGE mk {s | FINITE s}` >> simp[]);
+
+val toSet_fromSet = Q.store_thm(
+  "toSet_fromSet",
+  `∀hs. FINITE hs ⇒ (toSet (fromSet hs) = hs)`,
+  Induct_on `FINITE` >> csimp[toSet_def, fromSet_def, LINV_mk, HFS_TYBIJ]);
+
+val fromSet_11 = Q.store_thm(
+  "fromSet_11",
+  `FINITE s1 ∧ FINITE s2 ⇒ ((fromSet s1 = fromSet s2) ⇔ (s1 = s2))`,
+  metis_tac[toSet_fromSet]);
+
+val hINSERT_def = Define`
+  hINSERT h1 h2 = fromSet (h1 INSERT toSet h2)
+`;
+
+val hEMPTY_def = Define`hEMPTY = fromSet ∅`
+
+val hf_CASES = Q.store_thm(
+  "hf_CASES",
+  `∀h. (h = hEMPTY) ∨ ∃h1 h2. h = hINSERT h1 h2`,
+  gen_tac >>
+  simp_tac bool_ss [GSYM toSet_11, hEMPTY_def, hINSERT_def, toSet_fromSet,
+                    FINITE_EMPTY, FINITE_INSERT, FINITE_toSet] >>
+  `toSet h = ∅ ∨ ∃e s. toSet h = e INSERT s` by metis_tac[SET_CASES] >>
+  simp[] >>
+  `FINITE (toSet h)` by simp[] >>
+  `FINITE s` by metis_tac[FINITE_INSERT] >>
+  map_every qexists_tac [`e`, `fromSet s`] >> simp[toSet_fromSet])
+
+val hINSERT_NEQ_hEMPTY = Q.store_thm(
+  "hINSERT_NEQ_hEMPTY[simp]",
+  `hINSERT h hs ≠ hEMPTY`,
+  simp[hINSERT_def, hEMPTY_def, fromSet_11]);
+
+val hINSERT_hINSERT = Q.store_thm(
+  "hINSERT_hINSERT",
+  `hINSERT x (hINSERT x s) = hINSERT x s`,
+  simp[hINSERT_def, toSet_fromSet]);
+
+val hINSERT_COMMUTES = Q.store_thm(
+  "hINSERT_COMMUTES",
+  `hINSERT x (hINSERT y s) = hINSERT y (hINSERT x s)`,
+  simp[hINSERT_def, toSet_fromSet] >> metis_tac[INSERT_COMM]);
+
+val hIN_def = Define`
+  hIN h hs ⇔ (hINSERT h hs = hs)
+`;
+
+val hIN_toSet = Q.store_thm(
+  "hIN_toSet",
+  `hIN h hs ⇔ h ∈ toSet hs`,
+  simp[hIN_def, hINSERT_def] >> eq_tac
+  >- (disch_then (mp_tac o Q.AP_TERM `toSet`) >>
+      simp_tac bool_ss [toSet_fromSet, FINITE_INSERT, FINITE_toSet] >>
+      simp[ABSORPTION]) >>
+  simp[ABSORPTION, fromSet_toSet]);
+
+val hIN_hEMPTY = Q.store_thm(
+  "hIN_hEMPTY[simp]",
+  `¬(hIN h hEMPTY)`,
+  simp[hIN_def]);
+
+val hIN_hINSERT = Q.store_thm(
+  "hIN_hINSERT[simp]",
+  `hIN h1 (hINSERT h2 hs) ⇔ (h1 = h2) ∨ hIN h1 hs`,
+  simp[hIN_def] >> simp[hINSERT_def, fromSet_11, toSet_fromSet] >>
+  simp[GSYM ABSORPTION, EQ_IMP_THM] >> rpt strip_tac >> simp[] >>
+  metis_tac[toSet_11, toSet_fromSet, ABSORPTION, FINITE_INSERT, FINITE_toSet]);
+
 val _ = hide "mk"
 
 val _ = export_theory();

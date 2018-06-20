@@ -6,6 +6,9 @@ structure FileSys = OS.FileSys
 structure Process = OS.Process
 
 
+infix |>
+fun x |> f = f x
+
 (* path manipulation functions *)
 fun normPath s = Path.toString(Path.fromString s)
 fun itstrings f [] = raise Fail "itstrings: empty list"
@@ -16,6 +19,8 @@ fun fullPath slist = normPath
 
 fun quote s = String.concat["\"", s, "\""];
 
+fun safedelete s = FileSys.remove s handle OS.SysErr _ => ()
+
 (* message emission *)
 fun die s =
     let open TextIO
@@ -24,8 +29,21 @@ fun die s =
       flushOut stdErr;
       Process.exit Process.failure
     end
-fun warn s = let open TextIO in output(stdErr, s ^ "\n"); flushOut stdErr end;
+fun warn s =
+  let open TextIO in output(stdErr, "*** " ^ s ^ "\n"); flushOut stdErr end;
 fun I x = x
+
+
+fun startup_check () =
+  let
+    val me = Systeml.find_my_path()
+  in
+    case Holmake_tools.check_distrib "build" of
+        NONE => ()
+      | SOME whereami =>
+        if whereami = me then ()
+        else die "*** Don't run this instance of build in a foreign HOL directory"
+  end
 
 (* values from the Systeml structure, which is created at HOL configuration
    time *)
@@ -39,22 +57,25 @@ val DYNLIB = Systeml.DYNLIB
 fun SYSTEML clist = Process.isSuccess (Systeml.systeml clist)
 
 val dfltbuildseq = fullPath [HOLDIR, "tools", "build-sequence"]
+val dfltjobnum = 4
 
-val help_mesg = let
+val help_header = let
   val istrm = TextIO.openIn (fullPath [HOLDIR, "tools", "buildhelp.txt"])
 in
   TextIO.inputAll istrm before TextIO.closeIn istrm
 end handle IO.Io _ => "\n\n<Build help file missing in action>\n\n"
 
 fun exit_with_help() =
-    (print help_mesg ; Process.exit Process.success)
+    (print (GetOpt.usageInfo {header = help_header,
+                              options = buildcline.cline_opt_descrs});
+     Process.exit Process.success)
 
 fun read_buildsequence {kernelname} bseq_fname = let
   val kernelpath = fullPath [HOLDIR, "src",
     case kernelname of
-        "-stdknl" => "0"
-      | "-expk" => "experimental-kernel"
-      | "-otknl" => "logging-kernel"
+        "stdknl" => "0"
+      | "expk" => "experimental-kernel"
+      | "otknl" => "0"
       | _ => die ("Bad kernelname: "^kernelname)
     ]
   val readline = TextIO.inputLine
@@ -112,7 +133,7 @@ fun read_buildsequence {kernelname} bseq_fname = let
                                       (Binaryset.add(visitedincludes,
                                                      includefname))
                                       (strm,includefname)
-                                      ((fstr,includefname)::oldstreams)
+                                      ((fstr,fname)::oldstreams)
                           | NONE => die ("Couldn't open #include-d file "^
                                          includefname ^
                                          "(included from "^fname^")")
@@ -153,7 +174,7 @@ fun read_buildsequence {kernelname} bseq_fname = let
               open FileSys
             in
               if (mlsys = "" orelse mlsys = Systeml.ML_SYSNAME) andalso
-                 (knl = "" orelse ("-"^knl) = kernelname) then
+                 (knl = "" orelse knl = kernelname) then
                 if access (dirname, [A_READ, A_EXEC]) then
                   if isDir dirname orelse mlsys <> "" then
                     read_file ((dirname,testcount)::acc)
@@ -166,7 +187,7 @@ fun read_buildsequence {kernelname} bseq_fname = let
                          " is not a directory")
                 else die ("** File "^s^" from build sequence file "^fname^
                           " does not \
-                          \exist or is inacessible -- skipping it")
+                          \exist or is inacessible")
               else read_file acc visitedincludes f oldstreams
             end
         end
@@ -177,40 +198,6 @@ fun read_buildsequence {kernelname} bseq_fname = let
 in
   read_file [] (Binaryset.empty String.compare) (bseq_file,bseq_fname) []
 end
-
-fun cline_selftest cmdline = let
-  fun find_slftests (cmdline,counts,resulting_cmdline) =
-      case cmdline of
-        [] => (counts, List.rev resulting_cmdline)
-      | h::t => if h = "-selftest" then
-                  case t of
-                    [] => (1::counts, List.rev resulting_cmdline)
-                  | h'::t' => let
-                    in
-                      case Int.fromString h' of
-                        NONE => find_slftests (t, 1::counts,
-                                               resulting_cmdline)
-                      | SOME i => if i < 0 then
-                                    (warn("** Ignoring negative number spec\
-                                          \ification of test level");
-                                     find_slftests(t', counts,
-                                                   resulting_cmdline))
-                                  else
-                                    find_slftests (t', i::counts,
-                                                   resulting_cmdline)
-                    end
-                else find_slftests (t, counts, h::resulting_cmdline)
-  val (selftest_counts, new_cmdline) = find_slftests (cmdline, [], [])
-in
-  case selftest_counts of
-    [] => (0, new_cmdline)
-  | [h] => (h, new_cmdline)
-  | h::t => (warn ("** Ignoring all but last -selftest spec; result is \
-                   \selftest level "^Int.toString h);
-             (h, new_cmdline))
-end
-
-
 
 val option_filename = fullPath [HOLDIR, "tools", "lastbuildoptions"]
 
@@ -245,36 +232,24 @@ fun setdiff big small =
 
 
 
-fun delseq dflt numseen list = let
+fun findseq dflt numseen list = let
   fun maybewarn () =
       if numseen = 1 then
         warn "Multiple build-sequence options; taking last one\n"
       else ()
 in
   case list of
-    [] => (NONE, [])
-  | ["-seq"] => (warn "Trailing -seq command-line option ignored";
-                 (NONE, []))
-  | "-seq"::fname::t => let
+    [] => NONE
+  | ["--seq"] => (warn "Trailing --seq option in last build info ignored";
+                  NONE)
+  | "--seq"::fname::t => let
       val _ = maybewarn()
-      val (optval, rest) = delseq dflt (numseen + 1) t
     in
-      case optval of
-        SOME v => (optval, rest)
-      | NONE => (SOME fname, rest)
+      case findseq dflt (numseen + 1) t of
+          NONE => SOME fname
+        | v => v
     end
-  | "-fullbuild" :: t => let
-      val _ = maybewarn()
-      val (optval, rest) = delseq dflt (numseen + 1) t
-    in
-      case optval of
-        SOME v => (optval, rest)
-      | NONE => (SOME dflt, rest)
-    end
-  | h :: t => let val (optval, rest) = delseq dflt numseen t
-              in
-                (optval, h::rest)
-              end
+  | h :: t => findseq dflt numseen t
 end
 
 fun orlist slist =
@@ -284,81 +259,111 @@ fun orlist slist =
     | [x,y] => x ^ ", or " ^ y
     | x::xs => x ^ ", " ^ orlist xs
 
+type ircd = {seqname:string,kernelspec:string}
 datatype cline_action =
          Clean of string
-       | Normal of {kernelspec : string,
-                    seqname : string,
-                    rest : string list,
-                    build_theory_graph : bool}
+       | Normal of ircd buildcline_dtype.final_options
 exception DoClean of string
-fun get_cline kmod = let
-  val reader = TextIO.inputLine
-  (* handle -fullbuild vs -seq fname, and -expk vs -otknl vs -stdknl *)
-  val oldopts = read_earlier_options reader
-  val newopts = CommandLine.arguments()
-  fun unary_toggle optname dflt f toggles opts =
-      case inter toggles opts of
-        [x] => (f x, delete x opts)
-      | result as (x::y::_) =>
-        (warn ("*** Specifying multiple "^optname^" options; using "^x);
-         (f x, delete x opts))
-      | [] => let
-          val optvalue =
-              case inter toggles oldopts of
-                [] => dflt
-              | [x] =>
-                (warn ("*** Using "^optname^" option "^x^
-                       " from earlier build command;\n\
-                       \    use " ^ orlist toggles ^ " to override");
-                 f x)
-              | x::y::_ =>
-                (warn ("Cached build options specify multiple "^optname^
-                       " options; using "^x); f x)
-        in
-          (optvalue, opts)
-        end
+
+fun write_kernelid s =
+  let
+    val strm = TextIO.openOut Holmake_tools.kernelid_fname
+  in
+    TextIO.output(strm, s ^ "\n");
+    TextIO.closeOut strm
+  end handle IO.Io _ => die "Couldn't write kernelid to HOLDIR"
+
+fun apply_updates l t =
+  case l of
+      [] => t
+    | {update} :: rest => apply_updates rest (update (warn, t))
+
+fun get_cline () = let
+  open GetOpt
+  val oldopts = read_earlier_options TextIO.inputLine
+  val (opts, rest) = getOpt { argOrder = RequireOrder,
+                              options = buildcline.cline_opt_descrs,
+                              errFn = die } (CommandLine.arguments())
+  val option_record = apply_updates opts buildcline.initial
+  val _ = if #help option_record then exit_with_help() else ()
   val _ =
-      if mem "cleanAll" newopts orelse mem "-cleanAll" newopts then
-        raise DoClean "cleanAll"
-      else if mem "cleanDeps" newopts orelse mem "-cleanDeps" newopts then
-        raise DoClean "cleanDeps"
-      else if mem "clean" newopts orelse mem "-clean" newopts then
-        raise DoClean "clean"
-      else if mem "-h" newopts orelse mem "-?" newopts orelse
-              mem "--help" newopts orelse mem "-help" newopts
-      then
-        exit_with_help()
+      if mem "cleanAll" rest then raise DoClean "cleanAll"
+      else if mem "clean" rest then raise DoClean "clean"
+      else if mem "cleanForReloc" rest then raise DoClean "cleanForReloc"
       else ()
-  val (seqspec, newopts) =
-      case delseq dfltbuildseq 0 newopts of
-        (NONE, new') => let
+  val seqspec =
+      case #seqname option_record of
+        NONE =>
+        let
         in
-          case delseq dfltbuildseq 0 oldopts of
-            (NONE, _) => (dfltbuildseq, new')
-          | (SOME f, _) =>
-            if f = dfltbuildseq then (f, new')
-            else (warn ("*** Using build-sequence file "^f^
+          case findseq dfltbuildseq 0 oldopts of
+            NONE => dfltbuildseq
+          | SOME f =>
+            if f = dfltbuildseq then f
+            else (warn ("Using build-sequence file "^f^
                         " from earlier build command; \n\
-                        \    use -fullbuild option to override");
-                  (f, new'))
+                        \    use -F option to override");
+                  f)
         end
-      | (SOME f, new') => (f, new')
-  val (knlspec, newopts) =
-      unary_toggle "kernel" "-stdknl" I ["-expk", "-otknl", "-stdknl"] newopts
-  val knlspec = kmod knlspec
-  val (buildgraph, newopts) =
-      unary_toggle "theory-graph" true (fn x => x = "-graph")
-                   ["-graph", "-nograph"] newopts
-  val bgoption = if buildgraph then [] else ["-nograph"]
+      | SOME f => if f = "" then dfltbuildseq else f
+  val knlspec =
+      case #kernelspec option_record of
+          SOME s => String.extract(s,2,NONE)
+        | NONE =>
+          (case
+              List.find (fn s => mem s ["--expk", "--otknl", "--stdknl"])oldopts
+             of
+                NONE => "stdknl"
+              | SOME s =>
+                (warn ("Using kernel spec "^s^ " from earlier build command;\n\
+                       \    use one of --expk, --stdknl, --otknl to override");
+                 String.extract(s,2,NONE)))
+  val _ = write_kernelid knlspec
+  val buildgraph =
+      case #build_theory_graph option_record of
+          NONE =>
+          (case List.find (fn s => s = "--graph" orelse s = "--nograph") oldopts
+            of
+               NONE => true
+             | SOME "--graph" =>
+               (warn "Using --graph option from earlier build; \
+                     \use --nograph to override"; true)
+             | SOME "--nograph" =>
+               (warn "Using --nograph option from earlier build; \
+                     \use --graph to override"; false)
+             | SOME _ => raise Fail "Really can't happen")
+        | SOME b => b
+  val bgoption = if buildgraph then [] else ["--nograph"]
+  val jcount =
+      case #jobcount option_record of
+          NONE =>
+            (case List.find (fn s => String.isPrefix "-j" s) oldopts of
+                NONE => dfltjobnum
+              | SOME jns =>
+                (case Int.fromString (String.extract(jns, 2, NONE)) of
+                     NONE => (warn "Bogus -j spec in old build options file";
+                              dfltjobnum)
+                   | SOME jn => if jn = dfltjobnum then jn
+                                else (warn ("Using -j "^Int.toString jn^
+                                            " from earlier build command; \
+                                            \use -j to override");
+                                      jn)))
+        | SOME jn => jn
+  val joption = "-j" ^ Int.toString jcount
   val _ =
       if seqspec = dfltbuildseq then
-        write_options (knlspec::bgoption)
+        write_options ("--"^knlspec::joption::bgoption)
       else
-        write_options (knlspec::"-seq"::seqspec::bgoption)
+        write_options ("--"^knlspec::"--seq"::seqspec::joption::bgoption)
 in
-  Normal {kernelspec = knlspec, seqname = seqspec, rest = newopts,
-          build_theory_graph = buildgraph}
-end handle DoClean s => Clean s
+  Normal {build_theory_graph = buildgraph,
+          cmdline = rest,
+          debug = #debug option_record,
+          selftest_level = #selftest option_record,
+          extra = {seqname = seqspec, kernelspec = knlspec},
+          jobcount = jcount,
+          relocbuild = #relocbuild option_record}
+end handle DoClean s => (Clean s before safedelete Holmake_tools.kernelid_fname)
 
 (* ----------------------------------------------------------------------
    Some useful file-system utility functions
@@ -436,39 +441,49 @@ end
 fun hmakefile_data HOLDIR =
     if OS.FileSys.access ("Holmakefile", [OS.FileSys.A_READ]) then let
         open Holmake_types
-        fun base_env s =
-            case s of
-              "HOLDIR" => [LIT HOLDIR]
-            | "SIGOBJ" => [VREF "HOLDIR", LIT "/sigobj"]
-            | _ => (case OS.Process.getEnv s of
-                      NONE => [LIT ""]
-                    | SOME v => [LIT v])
-        val (env, _, _) = ReadHMF.read "Holmakefile" base_environment
+        val (env, _, _) = ReadHMF.read "Holmakefile" (base_environment())
         fun envlist id =
             map dequote (tokenize (perform_substitution env [VREF id]))
       in
         {includes = envlist "PRE_INCLUDES" @ envlist "INCLUDES",
-         extra_cleans = envlist "EXTRA_CLEANS"}
+         extra_cleans = envlist "EXTRA_CLEANS",
+         holheap = case envlist "HOLHEAP" of
+                       [x] => SOME x
+                     | _ => NONE}
       end
-    else {includes = [], extra_cleans = []}
+    else {includes = [], extra_cleans = [], holheap = NONE}
 
 fun clean0 HOLDIR = let
-  val {includes,extra_cleans} = hmakefile_data HOLDIR
+  val {includes,extra_cleans,...} = hmakefile_data HOLDIR
 in
   Holmake_tools.clean_dir {extra_cleans = extra_cleans} ;
   includes
 end
 
 fun cleanAll0 HOLDIR = let
-  val {includes,extra_cleans} = hmakefile_data HOLDIR
+  val {includes,extra_cleans,...} = hmakefile_data HOLDIR
 in
   Holmake_tools.clean_dir {extra_cleans = extra_cleans};
   Holmake_tools.clean_depdir {depdirname = ".HOLMK"};
+  Holmake_tools.clean_depdir {depdirname = ".hollogs"};
   includes
 end
 
+fun cleanForReloc0 HOLDIR =
+  let
+    val {includes,holheap,...} = hmakefile_data HOLDIR
+  in
+    Holmake_tools.clean_forReloc {holheap = holheap};
+    Holmake_tools.clean_depdir {depdirname = ".HOLMK"};
+    Holmake_tools.clean_depdir {depdirname = ".hollogs"};
+    includes
+  end
+
+
 fun clean HOLDIR dirname = moveTo dirname (fn () => clean0 HOLDIR)
 fun cleanAll HOLDIR dirname = moveTo dirname (fn () => cleanAll0 HOLDIR)
+fun cleanForReloc HOLDIR dirname =
+  moveTo dirname (fn () => cleanForReloc0 HOLDIR)
 
 fun clean_dirs {HOLDIR,action} dirs = let
   val seen = Binaryset.empty String.compare
@@ -494,7 +509,6 @@ end
    ---------------------------------------------------------------------- *)
 
 fun equal x y = (x=y);
-fun mem x l = List.exists (equal x) l;
 val SIGOBJ = fullPath [HOLDIR, "sigobj"];
 
 fun clean_sigobj() = let
@@ -530,7 +544,7 @@ val EXECUTABLE = Systeml.xable_string (fullPath [HOLDIR, "bin", "build"])
 
 fun full_clean (SRCDIRS:(string*int) list)  f =
     clean_sigobj() before
-    (* clean both kernel directories, regardless of which was actually built,
+    (* clean all kernel directories, regardless of which was actually built,
        the help src directory too, and all the src directories, including
        those with ! annotations  *)
     clean_dirs {HOLDIR=HOLDIR, action = f}
@@ -635,7 +649,8 @@ fun build_dir Holmake selftest_level (dir, regulardir) = let
                  else dir
   val now_d = Date.fromTimeLocal (Time.now())
   val now_s = Date.fmt "%d %b, %H:%M:%S" now_d
-  val _ = print ("Building directory "^truncdir^" ["^now_s^"]\n")
+  val bold = Holmake_tools.bold
+  val _ = print (bold ("Building directory "^truncdir^" ["^now_s^"]\n"))
 in
   case #file(OS.Path.splitDirFile dir) of
     "muddyC" => let
@@ -681,35 +696,38 @@ handle OS.SysErr(s, erropt) =>
             (case erropt of SOME s' => OS.errorMsg s' | _ => ""))
      | BuildExit => ()
 
-fun write_theory_graph () = let
-  val dotexec = Systeml.DOT_PATH
-in
-  if not (FileSys.access (dotexec, [FileSys.A_EXEC])) then
-    (* of course, this will likely be the case on Windows *)
-    warn ("*** Can't see dot executable at "^dotexec^"; not generating \
-          \theory-graph\n\
-          \*** You can try reconfiguring and providing an explicit path \n\
-          \*** (val DOT_PATH = \"....\") in\n\
-          \***    tools-poly/poly-includes.ML (Poly/ML)\n\
-          \***  or\n\
-          \***    config-override           (Moscow ML)\n\
-          \***\n\
-          \*** (Under Poly/ML you will have to delete bin/hol.state0 as \
-          \well)\n***\n\
-          \*** (Or: build with -nograph to stop this \
-          \message from appearing again)\n")
-  else let
-      val _ = print "Generating theory-graph and HTML theory signatures; this may take a while\n"
-      val _ = print "  (Use build's -nograph option to skip this step.)\n"
-      val pfp = Systeml.protect o fullPath
-      val result =
-          OS.Process.system(pfp [HOLDIR, "bin", "hol"] ^ " < " ^
-                            pfp [HOLDIR, "help", "src-sml", "DOT"])
-    in
-      if OS.Process.isSuccess result then ()
-      else warn "*** Theory graph construction failed.\n"
-    end
-end
+fun write_theory_graph () =
+  case Systeml.DOT_PATH of
+      SOME dotexec =>
+      if not (FileSys.access (dotexec, [FileSys.A_EXEC])) then
+        (* of course, this will likely be the case on Windows *)
+        warn ("Can't see dot executable at "^dotexec^"; not generating \
+              \theory-graph\n\
+              \*** You can try reconfiguring and providing an explicit path \n\
+              \*** (val DOT_PATH = \"....\") in\n\
+              \***    tools-poly/poly-includes.ML (Poly/ML)\n\
+              \***  or\n\
+              \***    config-override           (Moscow ML)\n\
+              \***\n\
+              \*** (Under Poly/ML you will have to delete bin/hol.state0 as \
+              \well)\n***\n\
+              \*** (Or: build with --nograph to stop this \
+              \message from appearing again)\n")
+      else
+        let
+          val _ = print "Generating theory-graph and HTML theory signatures; \
+                        \this may take a while\n"
+          val _ = print "  (Use build's --nograph option to skip this step.)\n"
+          val pfp = Systeml.protect o fullPath
+          val result =
+              OS.Process.system(pfp [HOLDIR, "bin", "hol"] ^ " < " ^
+                                pfp [HOLDIR, "help", "src-sml", "DOT"])
+        in
+          if OS.Process.isSuccess result then ()
+          else warn "Theory graph construction failed.\n"
+        end
+    | NONE => warn "If you had a copy of the dot tool installed, I might try\n\
+                   \*** to build a theory graph at this point"
 
 fun Poly_compilehelp() = let
   open Systeml
@@ -782,30 +800,95 @@ fun build_help graph =
    else ()
  end
 
-fun process_cline kmod =
-    case get_cline kmod of
-      Clean s => let
-        val action = case s of
-                       "-cleanAll" => cleanAll
-                     | "cleanAll" => cleanAll
-                     | "clean" => clean
-                     | "-clean" => clean
-                     | _ => die ("Clean action = "^s^"???")
+fun cleanDirP P d =
+  let
+    val dstrm = OS.FileSys.openDir d
+    fun getPs acc =
+      case OS.FileSys.readDir dstrm of
+          NONE => (OS.FileSys.closeDir dstrm; acc)
+        | SOME f => if P f then getPs (f::acc)
+                    else getPs acc
+    val Ps = getPs []
+  in
+    List.app (fn s => safedelete (fullPath [d, s])) Ps
+  end
+
+
+
+fun delete_heaps() = let
+  val deletes = let
+    val istrm = TextIO.openIn
+                  (fullPath[HOLDIR, "tools-poly", "rebuild-excludes.txt"])
+    fun chop s = String.substring(s, 0, String.size s - 1)
+    fun recurse acc =
+      case TextIO.inputLine istrm of
+          NONE => (TextIO.closeIn istrm ; acc)
+        | SOME s => recurse (chop s::acc)
+  in
+    recurse []
+  end
+  (* Holmake --relocbuild has already happened in all directories, so can
+     skip the implicit need to recurse into all directories and remove the
+     .HOLMK and .hollogs directories. *)
+  val cd = OS.FileSys.getDir()
+  val _ = OS.FileSys.chDir HOLDIR
+  fun process_dline s =
+    let
+      val fs = internal_functions.wildcard s
+    in
+      List.app safedelete fs
+    end
+in
+  List.app process_dline deletes ;
+  OS.FileSys.chDir cd
+end
+
+fun process_cline () =
+    case get_cline () of
+      Clean s =>
+      let
+        val (per_dir_action, post_action) =
+            case s of
+                "cleanAll" => (cleanAll, fn () => ())
+              | "clean" => (clean, fn () => ())
+              | "cleanForReloc" => (cleanForReloc, delete_heaps)
+              | _ => die ("Clean action = "^s^"???")
+        val knlseq = fullPath [HOLDIR, "tools", "sequences", "kernel"]
         val SRCDIRS =
-            read_buildsequence {kernelname = "-stdknl"} dfltbuildseq
+            let
+              fun add kspec seq s =
+                Binaryset.addList(s,read_buildsequence {kernelname = kspec} seq)
+              fun cmp ((s1,_),(s2,_)) = String.compare(s1,s2)
+              val alldirs =
+                  Binaryset.empty cmp |> add "stdknl" dfltbuildseq
+                                      |> add "expk" knlseq
+                                      |> add "otknl" knlseq
+            in
+              Binaryset.listItems alldirs
+            end
       in
-        (full_clean SRCDIRS action; Process.exit Process.success)
+        full_clean SRCDIRS per_dir_action;
+        post_action();
+        Process.exit Process.success
       end
-    | Normal {kernelspec, seqname, rest, build_theory_graph} => let
-        val (do_selftests, rest) = cline_selftest rest
+    | Normal {extra = {seqname,kernelspec}, cmdline,
+              build_theory_graph, jobcount, relocbuild, debug,
+              selftest_level} =>
+      let
         val SRCDIRS = read_buildsequence {kernelname = kernelspec} seqname
       in
-        if mem "help" rest then
+        if mem "help" cmdline then
           (build_help build_theory_graph;
            Process.exit Process.success)
         else
-          {cmdline=rest,build_theory_graph=build_theory_graph,
-           do_selftests = do_selftests, SRCDIRS = SRCDIRS}
+          {build_theory_graph=build_theory_graph,
+           cmdline=cmdline,
+           debug = debug,
+           selftest_level = selftest_level,
+           extra = {SRCDIRS = SRCDIRS},
+           jobcount = jobcount,
+           relocbuild = relocbuild
+          }
       end
 
 fun make_buildstamp () =
@@ -859,15 +942,15 @@ in
   else ()
 end handle IO.Io _ => warn "Had problems making permanent record of build log"
 
-fun Holmake sysl isSuccess extra_args analyse_failstatus do_selftests dir = let
+fun Holmake sysl isSuccess extra_args analyse_failstatus selftest_level dir = let
   val hmstatus = sysl HOLMAKE ("--qof" :: extra_args())
 in
   if isSuccess hmstatus then
-    if do_selftests > 0 andalso
+    if selftest_level > 0 andalso
        OS.FileSys.access("selftest.exe", [OS.FileSys.A_EXEC])
     then
       (print "Performing self-test...\n";
-       if SYSTEML [dir ^ "/selftest.exe", Int.toString do_selftests]
+       if SYSTEML [dir ^ "/selftest.exe", Int.toString selftest_level]
        then
          print "Self-test was successful\n"
        else

@@ -161,36 +161,8 @@ val _ = BasicProvers.augment_srw_ss [REDUCE_ss, ARITH_RWTS_ss]
 
 datatype lin = LIN of (term * int) list * int;
 
-fun term_ord (t1,t2) =
-    if is_var t1 then
-	if is_var t2 then String.compare (fst(dest_var t1),fst(dest_var t2))
-	else LESS
-    else if is_const t1
-         then if is_var t2 then GREATER
-	      else if is_const t2
-                   then String.compare (fst(dest_const t1),fst(dest_const t2))
-	           else LESS
-    else if is_comb t1 then
-        if is_var t2 orelse is_const t2 then GREATER
-        else if is_comb t2 then
-           case term_ord (rator t1,rator t2) of
-	       EQUAL => term_ord (rand t1,rand t2)
-	     | x => x
-	else LESS
-    else if is_abs t1 then
-        if is_var t2 orelse is_const t2 orelse is_comb t2 then GREATER
-        else if is_comb t2 then
-           case term_ord (bvar t1,bvar t2) of
-	       EQUAL => term_ord (body t1,body t2)
-	     | x => x
-	else LESS
-    else failwith "term_ord";
-
 val mk_lin =
-  let fun tmord ((term1,n1:int),(term2,n2)) =
-            case term_ord (term1,term2)
-             of EQUAL => Arbint.compare(n1,n2)
-              | x => x
+  let val tmord = pair_compare (Term.compare, Arbint.compare)
       val tmlt = lt_of_ord tmord;
       fun shrink_likes ((tm1,k1)::(tm2,k2)::rest) =
         if aconv tm1 tm2 then
@@ -227,19 +199,19 @@ fun term_of_lin (LIN (tms,k)) =
       val const_term = if k > zero then SOME (mk_numeral k) else NONE
   in
       case const_term of
-	  SOME x =>
-	      if (null pos_terms) then
-		  if (null neg_terms) then x
-		  else mk_minus(x,list_mk_plus neg_terms)
-	      else if (null neg_terms) then list_mk_plus(pos_terms@[x])
-		   else mk_minus(list_mk_plus (pos_terms@[x]),
+          SOME x =>
+              if (null pos_terms) then
+                  if (null neg_terms) then x
+                  else mk_minus(x,list_mk_plus neg_terms)
+              else if (null neg_terms) then list_mk_plus(pos_terms@[x])
+                   else mk_minus(list_mk_plus (pos_terms@[x]),
                                  list_mk_plus neg_terms)
-	| NONE =>
-	      if (null pos_terms) then
-		  if (null neg_terms) then zero_tm
-		  else failwith "no positive terms"
-	      else if (null neg_terms) then list_mk_plus pos_terms
-		   else mk_minus(list_mk_plus pos_terms,list_mk_plus neg_terms)
+        | NONE =>
+              if (null pos_terms) then
+                  if (null neg_terms) then zero_tm
+                  else failwith "no positive terms"
+              else if (null neg_terms) then list_mk_plus pos_terms
+                   else mk_minus(list_mk_plus pos_terms,list_mk_plus neg_terms)
   end;
 
 fun negate (x,y:int) = (x,~y);
@@ -310,7 +282,7 @@ and
    if (is_forall tm) then
        (type_of (bvar (rand tm)) = num_ty andalso is_presburger(body(rand tm)))
    else if is_exists tm then
-	(type_of (bvar (rand tm)) = num_ty andalso is_arith (body (rand tm)))
+        (type_of (bvar (rand tm)) = num_ty andalso is_arith (body (rand tm)))
    else if (is_abs tm) then false
    else if (is_geq tm) orelse (is_less tm) orelse
            (is_leq tm) orelse (is_great tm) then  true
@@ -631,11 +603,14 @@ val MOD_ss = let
              rewrs = [MODEQ_NUMERAL, MODEQ_MOD, MODEQ_0]}
   val RSD_ss = relsimp_ss rsd
   val congs = SSFRAG {dprocs = [], ac = [], rewrs = [],
-                      congs = [MODEQ_PLUS_CONG, MODEQ_MULT_CONG],
+                      congs = [MODEQ_PLUS_CONG, MODEQ_MULT_CONG, MODEQ_SUC_CONG,
+                               MODEQ_EXP_CONG],
                       filter = NONE, convs = [], name = NONE}
 in
   merge_ss [RSD_ss, congs] |> name_ss "MOD_ss"
 end
+
+val _ = BasicProvers.augment_srw_ss [MOD_ss]
 
 (* ----------------------------------------------------------------------
     ARITH_NORM_ss

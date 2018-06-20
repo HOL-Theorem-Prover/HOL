@@ -1,0 +1,45 @@
+# INCLUDES = $(HOLDIR)/examples/set-theory/hol_sets
+OPTIONS = QUIT_ON_FAILURE
+# CLINE_OPTIONS = -j1
+
+THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
+TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
+EXTRA_CLEANS = heap munge.exe selftest.exe \
+	$(patsubst %Theory.uo,%Theory.html,$(TARGETS)) \
+	$(patsubst %Theory.uo,%Theory.lst,$(TARGETS))
+
+ifdef POLY
+HOLHEAP = heap
+OBJNAMES = finite_mapTheory llistTheory
+OBJS = $(patsubst %,$(dprot $(SIGOBJ)/%.uo),$(OBJNAMES))
+
+all: $(HOLHEAP)
+
+$(HOLHEAP): $(OBJS) $(dprot $(HOLDIR)/bin/hol.state0)
+	$(protect $(HOLDIR)/bin/buildheap) -o $@ $(OBJNAMES)
+endif
+
+all: $(TARGETS) munge.exe selftest.exe
+
+selftest.exe: selftest.uo CCSConv.uo
+	$(HOLMOSMLC) -o $@ $<
+
+MUNGE_DEPS = CCSTheory StrongEQTheory StrongLawsTheory \
+	     WeakEQTheory WeakLawsTheory ObsCongrTheory ObsCongrLawsTheory \
+	     BisimulationUptoTheory \
+	     CongruenceTheory CoarsestCongrTheory \
+	     TraceTheory ExpansionTheory ContractionTheory \
+	     UniqueSolutionsTheory ExampleTheory
+
+munge.exe: $(patsubst %,%.uo,$(MUNGE_DEPS))
+	$(HOLDIR)/bin/mkmunge.exe $(MUNGE_DEPS)
+
+output: munge.exe
+	echo '\HOLtm{R1 RUNION R2}' | ./munge.exe
+	echo '\HOLtm{L1 ++ L2}' | ./munge.exe
+
+ifeq ($(KERNELID),otknl)
+all: $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
+endif
+
+.PHONY: all output

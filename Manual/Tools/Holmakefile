@@ -1,4 +1,4 @@
-INCLUDES = ../../tools/cmp
+INCLUDES = ../../tools/cmp $(HOLDIR)/examples/misc
 EXTRA_CLEANS = polyscripter testoutput1
 
 .PHONY: all
@@ -6,7 +6,7 @@ EXTRA_CLEANS = polyscripter testoutput1
 all: polyscripter testoutput1
 
 polyscripter: polyscripter.sml $(dprot $(HOLDIR)/bin/hol.state)
-	$(POLYC) $< -o $@
+	$(protect $(HOLDIR)/bin/buildheap) Arbrat $< -o $@ --exe main
 
 testoutput1: testinput1 polyscripter umap expected1 $(dprot ../../tools/cmp/cmp.exe)
 	./polyscripter umap < $< > $@

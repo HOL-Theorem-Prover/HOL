@@ -2,6 +2,7 @@ open Bool;;
 open Fusion;;
 open Lib;;
 open Hl_parser;;
+open Pervasives;;
 open Equal;;
 open Basics;;
 (*open Nets;;*)
@@ -23,7 +24,7 @@ let (instantiate :instantiation->term->term) =
     let args,lam = funpow n (fun (l,t) -> (rand t)::l,rator t) ([],tm) in
     rev_itlist (fun a l -> let v,b = dest_abs l in vsubst[a,v] b) args lam in
   let rec ho_betas bcs pat tm =
-    if is_var pat or is_const pat then fail() else
+    if is_var pat || is_const pat then fail() else
     try let bv,bod = dest_abs tm in
         mk_abs(bv,ho_betas bcs (body pat) bod)
     with Failure _ ->
@@ -53,7 +54,7 @@ let (iNSTANTIATE : instantiation->thm->thm) =
     if n = 1 then tRY_CONV bETA_CONV tm else
     (tHENC (rATOR_CONV (bETAS_CONV (n-1))) (tRY_CONV bETA_CONV)) tm in
   let rec hO_BETAS bcs pat tm =
-    if is_var pat or is_const pat then fail() else
+    if is_var pat || is_const pat then fail() else
     try let bv,bod = dest_abs tm in
         aBS bv (hO_BETAS bcs (body pat) bod)
     with Failure _ ->
@@ -84,7 +85,7 @@ let (iNSTANTIATE : instantiation->thm->thm) =
 
 let (iNSTANTIATE_ALL : instantiation->thm->thm) =
   fun ((_,tmin,tyin) as i) th ->
-    if tmin = [] & tyin = [] then th else
+    if tmin = [] && tyin = [] then th else
     let hyps = hyp th in
     if hyps = [] then iNSTANTIATE i th else
     let tyrel,tyiirel =
@@ -148,7 +149,7 @@ let (term_match:term list -> term -> term -> instantiation) =
         term_pmatch lconsts ((cv,vv)::env) vbod cbod sofar'
     | _ ->
       let vhop = repeat rator vtm in
-      if is_var vhop & not (mem vhop lconsts) &
+      if is_var vhop && not (mem vhop lconsts) &&
                        not (can (rev_assoc vhop) env) then
         let vty = type_of vtm and cty = type_of ctm in
         let insts' =

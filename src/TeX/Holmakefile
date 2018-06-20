@@ -21,8 +21,13 @@ UOFILES = $(patsubst %.sml,%.uo,$(wildcard *.sml))
 all: selftest.exe $(TARGET) $(UOFILES)
 .PHONY: all
 
+ifdef POLY
+$(TARGET): poly-mkmkmunge.ML $(dprot $(HOLDIR)/bin/buildheap)
+	$(protect $(HOLDIR)/bin/buildheap) --poly $<
+else
 $(TARGET): $($(ML_SYSNAME)_MKMUNGE_DEP)
 	$($(ML_SYSNAME)_MKMUNGE_COMM)
+endif
 
 munger.lex.sml: munger.lex
 	$(MLLEX) $<

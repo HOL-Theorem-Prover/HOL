@@ -1,0 +1,8 @@
+# -*- mode: snippet -*-
+# name: Automatic resolution of a theorem until no resolution possible
+# key: resolve
+# expand-env: ((yas-indent-line 'fixed))
+# --
+drule $1
+\\\\ rpt (disch_then drule)
+\\\\ $0

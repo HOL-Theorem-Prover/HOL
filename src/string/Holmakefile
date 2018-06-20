@@ -5,3 +5,15 @@ all: $(TARGETS) selftest.exe
 
 selftest.exe: selftest.uo stringSyntax.uo stringLib.uo stringTheory.uo $(dprot $(SIGOBJ)/term_pp.uo)
 	$(HOLMOSMLC) -o $@ $<
+
+ifeq ($(KERNELID),otknl)
+all: string.ot.art string_num.ot.art ASCIInumbers.ot.art
+endif
+
+hol4-string-unint.art: hol4-string-unint.thy string.ot.art string_num.ot.art ASCIInumbers.ot.art
+	opentheory info --article -o $@ $<
+
+hol4-string.art: hol4-string.thy hol4-string-unint.art ../opentheory/hol4.int
+	opentheory info --article -o $@ $<
+
+string.ot: string.otd

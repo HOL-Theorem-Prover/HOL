@@ -1,25 +1,2 @@
-INCLUDES = $(HOLDIR)/examples/machine-code/decompiler \
-           $(HOLDIR)/examples/machine-code/compiler \
-           $(HOLDIR)/examples/machine-code/hoare-triple \
-           $(HOLDIR)/examples/machine-code/instruction-set-models/common \
-           $(HOLDIR)/examples/machine-code/instruction-set-models/x86_64 \
-           ../x64_compiler
+INCLUDES = $(HOLDIR)/examples/machine-code/hoare-triple
 OPTIONS=QUIT_ON_FAILURE
-
-ifdef POLY
-HOLHEAP = local-hol-heap
-EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o
-
-BARE_THYS = $(HOLDIR)/examples/machine-code/decompiler/decompilerLib \
-            ../x64_compiler/x64_compilerLib
-DEPS = $(patsubst %,%.uo,$(BARE_THYS))
-
-THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
-TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
-
-all: $(TARGETS) $(HOLHEAP)
-.PHONY: all
-
-$(HOLHEAP): $(DEPS)
-	$(protect $(HOLDIR)/bin/buildheap) -o $(HOLHEAP) $(BARE_THYS)
-endif

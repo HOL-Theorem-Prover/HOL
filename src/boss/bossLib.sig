@@ -40,6 +40,11 @@ sig
   val measureInduct_on  : term quotation -> tactic
   val completeInduct_on : term quotation -> tactic
   val CASE_TAC          : tactic
+  val pairarg_tac       : tactic
+  val split_pair_case_tac : tactic
+  val CaseEq            : string -> thm
+  val CaseEqs           : string list -> thm
+  val AllCaseEqs        : unit -> thm
 
   (* Proof automation *)
 
@@ -65,6 +70,7 @@ sig
   val list_ss         : simpset
   val srw_ss          : unit -> simpset
   val QI_ss           : ssfrag
+  val SQI_ss          : ssfrag
   val ARITH_ss        : ssfrag            (* arithmetic d.p. + some rewrites *)
   val old_ARITH_ss    : ssfrag
   val type_rws        : hol_type -> thm list
@@ -106,7 +112,7 @@ sig
   val GEN_EXISTS_TAC : string -> Parse.term Lib.frag list -> tactic
 
   (* Call-by-value evaluation *)
-  val EVAL           : term -> thm
+  val EVAL           : conv
   val EVAL_RULE      : thm -> thm
   val EVAL_TAC       : tactic
 
@@ -117,6 +123,8 @@ sig
   val spose_not_then : (thm -> tactic) -> tactic
   val by             : term quotation * tactic -> tactic   (* infix *)
   val suffices_by    : term quotation * tactic -> tactic   (* infix *)
+  val sg             : term quotation -> tactic
+  val subgoal        : term quotation -> tactic
   val cheat          : tactic
   val kall_tac       : 'a -> tactic
 
@@ -148,7 +156,10 @@ sig
   val qspec_tac : term quotation * term quotation -> tactic
   val qspec_then : term quotation -> thm_tactic -> thm -> tactic
   val qspecl_then : term quotation list -> thm_tactic -> thm -> tactic
+  val qhdtm_assum : term quotation -> thm_tactic -> tactic
+  val qhdtm_x_assum : term quotation -> thm_tactic -> tactic
   val qpat_assum : term quotation -> thm_tactic -> tactic
+  val qpat_x_assum : term quotation -> thm_tactic -> tactic
   val qpat_abbrev_tac : term quotation -> tactic
   val qmatch_abbrev_tac : term quotation -> tactic
   val qho_match_abbrev_tac : term quotation -> tactic
@@ -157,6 +168,8 @@ sig
   val qmatch_assum_rename_tac : term quotation -> tactic
   val qmatch_asmsub_rename_tac : term quotation -> tactic
   val qmatch_goalsub_rename_tac : term quotation -> tactic
+  val qmatch_asmsub_abbrev_tac : term quotation -> tactic
+  val qmatch_goalsub_abbrev_tac : term quotation -> tactic
   val rename1 : term quotation -> tactic
   val rename : term quotation list -> tactic
   val qabbrev_tac : term quotation -> tactic

@@ -121,21 +121,21 @@ fu! HOLExpand()
 endf
 
 fu! HOLSubgoal()
-  keepjumps normal iproofManagerLib.expand(
+  keepjumps normal iproofManagerLib.expand(bossLib.sg(
   silent normal p
   if search(s:delim.'by'.s:delim.'\_.*','cW')
     silent keepjumps normal vG$"_d
   en
-  silent keepjumps normal G$a by ALL_TAC)
+  silent keepjumps normal G$a))
 endf
 
 fu! HOLSuffices()
-  keepjumps normal iproofManagerLib.expand(
+  keepjumps normal iproofManagerLib.expand(bossLib.qsuff_tac(
   silent normal p
   if search(s:delim.'suffices_by'.s:delim.'\_.*','cW')
     silent keepjumps normal vG$"_d
   en
-  silent keepjumps normal G$a suffices_by ALL_TAC)
+  silent keepjumps normal G$a))
 endf
 
 fu! HOLF(f)
@@ -213,10 +213,10 @@ nn <silent> <LocalLeader>d :<C-U>call HOLRepeat("proofManagerLib.drop();")<CR>
 nn <silent> <LocalLeader>p :call HOLCall(function("HOLF"),["proofManagerLib.p()"])<CR>
 nn <silent> <LocalLeader>r :call HOLCall(function("HOLF"),["proofManagerLib.restart()"])<CR>
 nn <silent> <LocalLeader>c :call HOLINT()<CR>
-nn <silent> <LocalLeader>t :call HOLSelect("`","`")<CR>
-nn <silent> <LocalLeader>T :call HOLSelect("``","``")<CR>
-nn <silent> <LocalLeader>j :call HOLCall(function("HOLF"),["Globals.show_types:=not(!Globals.show_types)"])<CR>
-nn <silent> <LocalLeader>n :call HOLCall(function("HOLF"),["Feedback.set_trace \"Unicode\" (1 - Feedback.current_trace \"Unicode\")"])<CR>
+nn <silent> <LocalLeader>t :call HOLSelect('`\\|‘','`\\|’')<CR>
+nn <silent> <LocalLeader>T :call HOLSelect('``\\|“','``\\|”')<CR>
+nn <silent> <LocalLeader>y :call HOLCall(function("HOLF"),["Globals.show_types:=not(!Globals.show_types)"])<CR>
+nn <silent> <LocalLeader>n :call HOLCall(function("HOLF"),["Feedback.set_trace \"PP.avoid_unicode\" (1 - Feedback.current_trace \"PP.avoid_unicode\")"])<CR>
 no <LocalLeader>h h
 
 let b:did_hol = 1

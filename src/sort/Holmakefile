@@ -1,0 +1,18 @@
+THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
+TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
+
+all: $(TARGETS)
+
+ifeq ($(KERNELID),otknl)
+ARTFILES = $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
+all: $(ARTFILES)
+
+ternaryComparisons.art: ternaryComparisons.otd
+
+
+hol4-sort-unint.art: hol4-sort-unint.thy $(ARTFILES)
+	opentheory info --article -o $@ $<
+
+hol4-sort.art: hol4-sort.thy hol4-sort-unint.art ../opentheory/hol4.int
+	opentheory info --article -o $@ $<
+endif

@@ -1,7 +1,15 @@
-THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
-TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
+EXTRA_CLEANS = selftest.exe
+BOOLLIB = $(dprot $(SIGOBJ)/boolLib.ui)
+NUMTHY = $(dprot $(SIGOBJ)/numeralTheory.uo)
 
-all: $(TARGETS)
+THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
+TARGETS0 = $(patsubst %Theory.sml,,$(THYFILES))
+TARGETS = $(patsubst %.sml,%.uo,$(TARGETS0))
+
+all: $(TARGETS) selftest.exe
 .PHONY: all
+
+selftest.exe : selftest.uo ratLib.uo ratTheory.uo ratReduce.uo
+	$(HOLMOSMLC) -o $@ $<
 
 intExtensionTheory.sml: $(dprot $(SIGOBJ)/int_arithTheory.uo)

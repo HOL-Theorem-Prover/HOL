@@ -12,3 +12,8 @@ all: $(TARGETS) selftest.exe
 
 selftest.exe: selftest.uo PFset_conv.uo pred_setTheory.uo
 	$(HOLMOSMLC) -o $@ $<
+
+ifeq ($(KERNELID),otknl)
+all: $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
+
+endif

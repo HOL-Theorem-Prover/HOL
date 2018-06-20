@@ -127,6 +127,7 @@ val sup_gamma =  U 0x02E0
 
 (* subscripts *)
 val sub_plus =   U 0x208A
+val sub_r =      U 0x1D63
 
 (* arithmetic *)
 val leq =   U 0x2264
@@ -158,6 +159,8 @@ val asr = U 0x226B
 val lsr = U 0x22D9
 val rol = U 0x21C6
 val ror = U 0x21C4
+
+val doubleplus = U 0x29FA
 
 fun isAlpha s = let
   val ((_, i), _) = valOf (UTF8.getChar s)

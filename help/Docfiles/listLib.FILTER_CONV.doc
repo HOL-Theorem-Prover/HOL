@@ -18,7 +18,7 @@ It returns the theorem
 {
    |- FILTER P [x0;...xn] = [...xi...]
 }
-where for every {xi} occurring in the right-hand side of the resulting theorem, {conv (--`P xi`--)} returns a theorem {|- P xi = T}.
+where for every {xi} occurring in the right-hand side of the resulting theorem, {conv “P xi”} returns a theorem {|- P xi = T}.
 
 \FAILURE
 {FILTER_CONV conv tm} fails if {tm} is not of the form described above.
@@ -26,7 +26,7 @@ where for every {xi} occurring in the right-hand side of the resulting theorem, 
 \EXAMPLE
 Evaluating
 {
-   FILTER_CONV bool_EQ_CONV (--`FILTER ($= T) [T;F;T]`--);
+   FILTER_CONV bool_EQ_CONV “FILTER ($= T) [T;F;T]”;
 }
 returns the following theorem:
 {

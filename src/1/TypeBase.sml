@@ -16,6 +16,30 @@ val ERR = mk_HOL_ERR "TypeBase";
 
 fun list_compose [] x = x | list_compose (f :: fs) x = list_compose fs (f x);
 
+fun resolve_ssfragconvs tyi =
+  let
+    open ThyDataSexp
+    fun apply_extra s tyi =
+      case s of
+          List [Sym tag, String str, Thm th] =>
+            if tag = simpfrag.simpfrag_conv_tag then
+              case simpfrag.lookup_simpfrag_conv str of
+                  SOME f => SOME (TypeBasePure.add_ssfrag_convs [f th] tyi)
+                | NONE => (HOL_WARNING "TypeBase" "resolve_ssfragconvs"
+                                       ("No function "^str^" registered");
+                           NONE)
+            else NONE
+        | _ => NONE
+    fun apply_all unapplied extras tyi =
+      case extras of
+          [] => TypeBasePure.put_extra (List.rev unapplied) tyi
+        | e::es => (case apply_extra e tyi of
+                        SOME tyi' => apply_all unapplied es tyi'
+                      | NONE => apply_all (e::unapplied) es tyi)
+  in
+    apply_all [] (TypeBasePure.extra_of tyi) tyi
+  end
+
 local val dBase = ref empty
       val update_fns = ref ([]:(tyinfo list -> tyinfo list) list)
 in
@@ -25,9 +49,10 @@ in
   fun write tyinfos =
     let
       fun write1 tyinfo =
-        (dBase := insert (theTypeBase()) tyinfo;
-         Parse.temp_overload_on("case", case_const_of tyinfo)
-         handle HOL_ERR _ => ())
+        dBase := insert (theTypeBase()) tyinfo
+        handle HOL_ERR _ => ()
+      val tyinfos = map resolve_ssfragconvs tyinfos
+      val tyinfos = map add_std_simpls tyinfos
       val tyinfos = list_compose (!update_fns) tyinfos
       val () = app write1 tyinfos
     in
@@ -38,6 +63,76 @@ end;
 fun read {Thy,Tyop} = prim_get (theTypeBase()) (Thy,Tyop);
 
 fun fetch ty = TypeBasePure.fetch (theTypeBase()) ty;
+
+fun load_from_disk {thyname, data} =
+  case data of
+      ThyDataSexp.List tyi_sexps =>
+      let
+        val tyis = List.mapPartial fromSEXP tyi_sexps
+      in
+        if length tyis = length tyi_sexps then
+          ignore (write tyis)
+        else (HOL_WARNING "TypeBase" "load_from_disk"
+                ("{thyname=" ^ thyname ^ "}: " ^
+                 Int.toString (length tyi_sexps - length tyis) ^
+                 "/" ^ Int.toString (length tyi_sexps) ^
+                 " corrupted data entries");
+              ignore (write tyis))
+      end
+    | _ => HOL_WARNING "TypeBase" "load_from_disk"
+                       ("{thyname=" ^ thyname ^ "}: " ^
+                        "data completely corrupted")
+
+fun getTyname d =
+  case TypeBasePure.fromSEXP d of
+      NONE => NONE
+    | SOME tyi =>
+      let
+        val {Thy,Tyop,...} = dest_thy_type (ty_of tyi)
+      in
+        SOME (Thy^"$"^Tyop)
+      end
+
+fun uptodate_check t =
+  case t of
+      ThyDataSexp.List tyis =>
+      let
+        val (good, bad) = partition ThyDataSexp.uptodate tyis
+      in
+        case bad of
+            [] => t
+          | _ =>
+            let
+              val tyinames = List.mapPartial getTyname bad
+            in
+              HOL_WARNING "TypeBase" "uptodate_check"
+                          ("Type information for: " ^
+                           String.concatWith ", " tyinames ^ " discarded");
+              ThyDataSexp.List good
+            end
+      end
+    | _ => raise Fail "TypeBase.uptodate_check : shouldn't happen"
+
+fun check_thydelta (t, tdelta) =
+  let
+    open TheoryDelta
+  in
+    case tdelta of
+        NewConstant _ => uptodate_check t
+      | NewTypeOp _ => uptodate_check t
+      | DelConstant _ => uptodate_check t
+      | DelTypeOp _ => uptodate_check t
+      | _ => t
+  end
+
+val {export = export_tyisexp, segment_data} = ThyDataSexp.new{
+      thydataty = "TypeBase", load = load_from_disk, other_tds = check_thydelta,
+      merge = ThyDataSexp.alist_merge
+    }
+
+fun export tyis =
+  export_tyisexp (ThyDataSexp.List (map TypeBasePure.toSEXP tyis))
+
 
 val elts = listItems o theTypeBase;
 
@@ -66,6 +161,7 @@ fun recognizers_of ty  = TypeBasePure.recognizers_of (pfetch "recognizers_of" ty
 fun case_const_of ty   = TypeBasePure.case_const_of (pfetch "case_const_of" ty)
 fun case_cong_of ty    = TypeBasePure.case_cong_of (pfetch "case_cong_of" ty)
 fun case_def_of ty     = TypeBasePure.case_def_of (pfetch "case_def_of" ty)
+fun case_eq_of ty      = TypeBasePure.case_eq_of (pfetch "case_eq_of" ty)
 fun nchotomy_of ty     = TypeBasePure.nchotomy_of (pfetch "nchotomy_of" ty)
 fun fields_of ty       = TypeBasePure.fields_of (pfetch "fields_of" ty)
 fun accessors_of ty    = TypeBasePure.accessors_of (pfetch "accessors_of" ty)
@@ -96,6 +192,11 @@ val bool_info =
       {ax=ORIG boolTheory.boolAxiom,
        induction = ORIG boolTheory.bool_INDUCT,
        case_def = boolTheory.bool_case_thm,
+       case_eq =
+         Prim_rec.prove_case_eq_thm{
+           case_def = boolTheory.bool_case_thm,
+           nchotomy = boolTheory.BOOL_CASES_AX
+         },
        case_cong = boolTheory.COND_CONG,
        distinct = SOME (CONJUNCT1 boolTheory.BOOL_EQ_DISTINCT),
        nchotomy = boolTheory.BOOL_CASES_AX,
@@ -113,6 +214,48 @@ in
                                   case_defs = [itself_case_thm]}
 end
 val _ = write [itself_info]
+
+fun tyi_from_name s =
+  let
+    open type_grammar
+    fun tyi_from_kid thy nm =
+      case Type.op_arity{Tyop=nm,Thy=thy} of
+          NONE => raise ERR "tyi_from_name" ("No such type: "^thy^"$"^nm)
+        | SOME i =>
+          let
+            val st = TYOP {Args = List.tabulate(i, PARAM), Thy = thy, Tyop = nm}
+          in
+            case fetch (structure_to_type st) of
+                NONE => raise ERR "tyi_from_name" ("No tyinfo for "^thy^"$"^nm)
+              | SOME tyi => tyi
+          end
+  in
+    case String.fields (equal #"$") s of
+        [nm] =>
+        let
+          val tyg = Parse.type_grammar()
+        in
+          case Binarymap.peek(privileged_abbrevs tyg, nm) of
+              NONE => raise ERR "tyi_from_name"
+                            ("Ty-grammar doesn't know name: "^nm)
+            | SOME thy => tyi_from_kid thy nm
+        end
+      | [thy,nm] => tyi_from_kid thy nm
+      | _ => raise ERR "tyi_from_name" ("Malformed tyname: "^s)
+  end
+
+val CaseEq = TypeBasePure.case_eq_of o tyi_from_name
+val CaseEqs = Drule.LIST_CONJ o map CaseEq
+fun AllCaseEqs() =
+  let
+    fun foldthis(ty, tyi, acc) =
+      case Lib.total TypeBasePure.case_eq_of tyi of
+          NONE => acc
+        | SOME th => if aconv (concl acc) boolSyntax.T then th
+                     else CONJ th acc
+  in
+    TypeBasePure.fold foldthis boolTheory.TRUTH (theTypeBase())
+  end
 
 (* ---------------------------------------------------------------------- *
  * Install case transformation function for parser                        *

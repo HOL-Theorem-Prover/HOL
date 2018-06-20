@@ -1,11 +1,11 @@
-INCLUDES = ../../lib ../model
-OPTIONS = QUIT_ON_FAILURE
+INCLUDES = ../.. ../../lib ../model
+CLINE_OPTIONS = --qof
 
 ifdef POLY
 HOLHEAP = arm8-heap
 EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o
 
-BARE_THYS = ../model/arm8Lib ../../lib/MutableMap ../model/arm8 ../model/arm8AssemblerLib
+BARE_THYS = ../model/arm8Lib ../model/arm8AssemblerLib
 DEPS = $(patsubst %,%.uo,$(BARE_THYS))
 
 THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
@@ -15,6 +15,6 @@ all: $(TARGETS) $(HOLHEAP)
 .PHONY: all
 
 $(HOLHEAP): $(DEPS)
-	$(protect $(HOLDIR)/bin/buildheap) -b ../../base/base-heap -o $(HOLHEAP) $(BARE_THYS)
+	$(protect $(HOLDIR)/bin/buildheap) -b ../../l3-heap -o $(HOLHEAP) $(BARE_THYS)
 
 endif

@@ -80,8 +80,8 @@ binary tree, can be defined recursively as shown below:
    - val Leaves = new_recursive_definition
            {name = "Leaves",
             rec_axiom = th,
-            def= --`(Leaves (LEAF (x:'a)) = 1) /\
-                    (Leaves (NODE t1 t2) = (Leaves t1) + (Leaves t2))`--};
+            def= “(Leaves (LEAF (x:'a)) = 1) /\
+                    (Leaves (NODE t1 t2) = (Leaves t1) + (Leaves t2))”};
     > val Leaves =
         |- (!x. Leaves (LEAF x) = 1) /\
            !t1 t2. Leaves (NODE t1 t2) = Leaves t1 + Leaves t2 : thm
@@ -97,8 +97,8 @@ tree:
    - val IsLeaf = new_recursive_definition
            {name = "IsLeaf",
             rec_axiom = th,
-            def = --`(IsLeaf (NODE t1 t2) = F) /\
-                     (IsLeaf (LEAF (x:'a)) = T)`--};
+            def = “(IsLeaf (NODE t1 t2) = F) /\
+                     (IsLeaf (LEAF (x:'a)) = T)”};
 > val IsLeaf = |- (!t1 t2. IsLeaf (NODE t1 t2) = F) /\
                   !x. IsLeaf (LEAF x) = T : thm
 }
@@ -116,7 +116,7 @@ of a function {Label} which extracts the label from a leaf node.  The value of
    - val Label = new_recursive_definition
                    {name = "Label",
                     rec_axiom = th,
-                    def = --`Label (LEAF (x:'a)) = x`--};
+                    def = “Label (LEAF (x:'a)) = x”};
    > val Label = |- !x. Label (LEAF x) = x : thm
 }
 Curried functions can also be defined, and the recursion can be on
@@ -128,11 +128,11 @@ expresses the idea that one tree is a proper subtree of another.
    - val Subtree = new_recursive_definition
            {name = "Subtree",
             rec_axiom = th,
-            def = --`($<< (t:'a bintree) (LEAF (x:'a)) = F) /\
+            def = “($<< (t:'a bintree) (LEAF (x:'a)) = F) /\
                      ($<< t (NODE t1 t2) = (t = t1) \/
                                            (t = t2) \/
                                            ($<< t t1) \/
-                                           ($<< t t2))`--};
+                                           ($<< t t2))”};
    > val Subtree =
        |- (!t x. t << LEAF x = F) /\
           !t t1 t2.

@@ -259,11 +259,24 @@ fun CONTR tm th =
    MP (SPEC tm FALSITY) th handle HOL_ERR _ => raise ERR "CONTR" ""
 
 (*---------------------------------------------------------------------------*
- *  Undischarging                                                            *
+ * "t1 /\ ... /\ tn"   --->   [t1, ..., tn] |- t1 /\ ... /\ tn               *
+ *                                                                           *
+ *  constructs a theorem proving conjunction from individual conjuncts       *
+ *---------------------------------------------------------------------------*)
+
+fun ASSUME_CONJS tm =
+  let val (tm1, tm2) = dest_conj tm ;
+  in CONJ (ASSUME_CONJS tm1) (ASSUME_CONJS tm2) end
+  handle _ => ASSUME tm ;
+
+(*---------------------------------------------------------------------------*
+ *  Undischarging - UNDISCH                                                  *
  *                                                                           *
  *   A |- t1 ==> t2                                                          *
  *   --------------                                                          *
  *    A, t1 |- t2                                                            *
+ *                                                                           *
+ * UNDISCH_TM also returns t1, UNDISCH_SPLIT splits t1 into its conjuncts    *
  *---------------------------------------------------------------------------*)
 
 fun UNDISCH th =
@@ -274,6 +287,11 @@ fun UNDISCH_TM th =
    let val (ant, conseq) = dest_imp (concl th) ;
    in (ant, MP th (ASSUME ant)) end
    handle HOL_ERR _ => raise ERR "UNDISCH_TM" ""
+
+fun UNDISCH_SPLIT th =
+  let val (ant, conseq) = dest_imp (concl th) ;
+  in MP th (ASSUME_CONJS ant) end
+  handle HOL_ERR _ => raise ERR "UNDISCH_SPLIT" ""
 
 (*---------------------------------------------------------------------------*
  * =T elimination                                                            *
@@ -449,17 +467,6 @@ val CONJUNCTS =
    in
       aux []
    end
-
-(*---------------------------------------------------------------------------*
- * "t1 /\ ... /\ tn"   --->   [t1, ..., tn] |- t1 /\ ... /\ tn               *
- *                                                                           *
- *  constructs a theorem proving conjunction from individual conjuncts       *
- *---------------------------------------------------------------------------*)
-
-fun ASSUME_CONJS tm =
-  let val (tm1, tm2) = dest_conj tm ;
-  in CONJ (ASSUME_CONJS tm1) (ASSUME_CONJS tm2) end
-  handle _ => ASSUME tm ;
 
 (*---------------------------------------------------------------------------*
  * |- t1 = t2  if t1 and t2 are equivalent using idempotence, symmetry and   *
@@ -781,6 +788,21 @@ in
          end
       else th
 end
+
+(*---------------------------------------------------------------------------*
+ * !x. A ==> !y. B ==> !z. C ==> !w. D                                       *
+ * -----------------------------------                                       *
+ *     C ==> B ==> A ==> D' (for example)                                    *
+ *                                                                           *
+ * reorders antecedents, modifies the conclusion D                           *
+ *---------------------------------------------------------------------------*)
+
+fun REORDER_ANTS_MOD f g th =
+  let val (ants, uth) = strip_gen_left (UNDISCH_TM o SPEC_ALL) th ;
+  in Lib.itlist DISCH (f ants) (g (SPEC_ALL uth)) end ;
+
+fun REORDER_ANTS f th = REORDER_ANTS_MOD f (fn c => c) th ;
+fun MODIFY_CONS g th = REORDER_ANTS_MOD (fn hs => hs) g th ;
 
 (*---------------------------------------------------------------------------*
  * Use the conclusion of the first theorem to delete a hypothesis of         *
@@ -1270,9 +1292,9 @@ fun PART_MATCH_A partfn th =
     EXISTS_LEFT, EXISTS_LEFT1
     existentially quantifying variables which appear only in the hypotheses
 
-			[x = y, y = z] |- x = z
-	(eg)   -------------------------------- EXISTS_LEFT1 ``y``
-	       [∃y. (x = y) ∧ (y = z)] |- x = z                         (UOK)
+                        [x = y, y = z] |- x = z
+        (eg)   -------------------------------- EXISTS_LEFT1 ``y``
+               [∃y. (x = y) ∧ (y = z)] |- x = z                         (UOK)
 
  * --------------------------------------------------------------------------*)
 
@@ -1299,14 +1321,15 @@ fun EXISTS_LEFT' strict fvs_c hfvs [] th = th
       val (hyps_ctg_fv, hyps_nc) = List.partition hyp_ctns_fv hfvs ;
       (* following raises Bind if fv not in any hypothesis *)
       val _ = not (null hyps_ctg_fv) orelse raise Bind
+      (* select and conjoin the hyps containing fv *)
       val conj_tm = list_mk_conj (map #hyp hyps_ctg_fv) ;
-      val conj_th = ASSUME conj_tm ;
-      (* CONJ_LIST gives original hyps, even if they are conjunctions *)
-      val sep_ths = CONJ_LIST (length hyps_ctg_fv) conj_th ;
+      (* using CONJ_LIST gives original hyps, even if they are conjunctions *)
+      val sep_ths = CONJ_LIST (length hyps_ctg_fv) (ASSUME conj_tm) ;
+      (* replace the previous hyps with the single new one, which is
+        conjunction of the previous ones *)
       val th2 = Lib.itlist PROVE_HYP sep_ths th ;
       val ex_conj_tm = mk_exists (fv, conj_tm) ;
-      val ex_conj_th = ASSUME ex_conj_tm ;
-      val the = CHOOSE (fv, ex_conj_th) th2 ;
+      val the = CHOOSE (fv, ASSUME ex_conj_tm) th2 ;
       val thex = EXISTS_LEFT' strict fvs_c
         ({hyp = ex_conj_tm, fvs = free_vars ex_conj_tm} :: hyps_nc) fvs the ;
     in thex end
@@ -1337,12 +1360,13 @@ fun EXISTS_LEFT1 fv th =
     in EXISTS_LEFT' true fvs_c hfvs [fv] th end ;
 
 (* --------------------------------------------------------------------------*
- * SPEC_UNDISCH_EXL: strips !x, ant ==>, then EXISTS_LEFT for stripped vars  *
+ * SPEC_UNDISCH_EXL: strips !x, ant ==>, (splitting conjuncts of ant)        *
+ * then EXISTS_LEFT for stripped vars                                        *
  * --------------------------------------------------------------------------*)
 
 fun SPEC_UNDISCH_EXL thm =
-  let val (fvs, th1) = strip_gen_left (SPEC_VAR o UNDISCH_ALL) thm ;
-    val th2 = UNDISCH_ALL th1 ;
+  let val (fvs, th1) = strip_gen_left (SPEC_VAR o repeat UNDISCH_SPLIT) thm ;
+    val th2 = repeat UNDISCH_SPLIT th1 ;
     val th3 = EXISTS_LEFT (rev fvs) th2 ;
   in th3 end ;
 
@@ -2016,6 +2040,121 @@ in
                 raise ERR "RES_CANON"
                           "No implication is derivable from input thm"
 end
+
+(* ----------------------------------------------------------------------
+    IRULE_CANON
+
+    Aggressive canonicalisation of introduction rules so that it takes on
+    the form
+
+     |- !vs. cs ==> concl
+
+    where vs all appear in concl, and may appear among cs.
+
+    The cs may not be present at all, but if so is a conjunction of
+    exhyps, where each exhyp is of the form
+
+      ?e1 e2 .. en. c1 /\ c2 /\ .. cm
+
+   ---------------------------------------------------------------------- *)
+
+
+local
+  fun AIMP_RULE th =
+    let
+      val (l, r) = dest_imp (concl th)
+      val (c1, c2) = dest_conj l
+      val cth = CONJ (ASSUME c1) (ASSUME c2)
+    in
+      DISCH c1 (DISCH c2 (MP th cth))
+    end
+
+  fun (s1 - s2) = HOLset.difference(s1,s2)
+  fun norm th =
+    if is_forall (concl th) then norm (SPEC_ALL th)
+    else
+      case Lib.total dest_imp (concl th) of
+          NONE => th
+        | SOME (l,r) =>
+          if is_conj l then norm (AIMP_RULE th)
+          else norm (UNDISCH th)
+
+fun group_hyps gfvs tlist =
+  let
+    fun overlaps fvset (tfvs,_) =
+      not (HOLset.isEmpty (HOLset.intersection(fvset, tfvs)))
+    fun union ((fvset1, tlist1), (fvset2, tlist2)) =
+      (HOLset.union(fvset1, fvset2), tlist1 @ tlist2)
+    fun recurse acc tlist =
+      case tlist of
+          [] => acc
+        | t::ts =>
+          let
+            val tfvs = FVL [t] empty_tmset - gfvs
+          in
+            case List.partition (overlaps tfvs) acc of
+                ([], _) => recurse ((tfvs,[t])::acc) ts
+              | (ovlaps, rest) =>
+                recurse (List.foldl union (tfvs, [t]) ovlaps :: rest) ts
+          end
+  in
+    recurse [] tlist
+  end
+
+fun CHOOSEL vs t th =
+  let
+    fun foldthis (v,(t,th)) =
+      let val ext = mk_exists(v,t)
+      in
+        (ext, CHOOSE (v,ASSUME ext) th)
+      end
+  in
+    List.foldr foldthis (t,th) vs
+  end
+
+fun CONJL ts th = let
+  val c = list_mk_conj ts
+  val cths = CONJUNCTS (ASSUME c)
+in
+  (List.foldl (fn (c,th) => PROVE_HYP c th) th cths, c)
+end
+
+fun reconstitute groups th =
+  let
+    fun recurse acc groups th =
+      case groups of
+          [] => (acc, th)
+        | (fvset, ts) :: rest =>
+          let
+            val (th1,c) = CONJL ts th
+            val (ext, th2) = CHOOSEL (HOLset.listItems fvset) c th1
+          in
+            recurse (ext::acc) rest th2
+          end
+  in
+    recurse [] groups th
+  end
+in
+fun IRULE_CANON th =
+  let
+    val th1 = norm (GEN_ALL th)
+    val orighyps = hypset th
+    val origl = HOLset.listItems orighyps
+    val gfvs = FVL (concl th1 :: origl) empty_tmset
+    val newhyps = hypset th1 - orighyps
+    val grouped = group_hyps gfvs (HOLset.listItems newhyps)
+    val (cs, th2) = reconstitute grouped th1
+  in
+    case cs of
+        [] => GEN_ALL th2
+      | _ =>
+        let
+          val (th3,c) = CONJL cs th2
+        in
+          DISCH c th3 |> GEN_ALL
+        end
+  end
+end (* local *)
 
 (*---------------------------------------------------------------------------*
  *       Routines supporting the definition of types                         *

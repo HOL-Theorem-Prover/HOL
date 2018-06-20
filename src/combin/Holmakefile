@@ -1,0 +1,19 @@
+
+THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
+TARGETS0 = $(patsubst %Theory.sml,,$(THYFILES))
+TARGETS = $(patsubst %.sml,%.uo,$(TARGETS0))
+
+EXTRA_CLEANS = selftest.exe
+
+all: $(TARGETS) selftest.exe
+.PHONY: all
+
+ifeq ($(KERNELID),otknl)
+all: $(patsubst %Script.sml,%.ot.art,$(wildcard *Script.sml))
+
+combin.art: combin.otd
+
+endif
+
+selftest.exe: selftest.uo combinTheory.uo
+	$(HOLMOSMLC) -o $@ $<

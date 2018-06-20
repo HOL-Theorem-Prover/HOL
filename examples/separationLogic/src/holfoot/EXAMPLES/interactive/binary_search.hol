@@ -16,7 +16,7 @@
 (******************************************************************************)
 
 (* load the libries
-use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/header.sml")
+use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/hfheader.sml")
 *)
 
 

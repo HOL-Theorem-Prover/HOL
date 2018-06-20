@@ -264,6 +264,30 @@ fun which arg =
     | NONE => if isUnix then "" else smash (check ".")
   end
 
+fun shell arg =
+  let
+    open Unix
+
+    (* TODO This gets rid of all carriage returns; should only replace
+       those paired with a newline *)
+    fun fix_nls s =
+      let
+        val s = String.translate (fn c => if c = #"\r" then "" else String.str c) s
+        val s = if String.isSuffix "\n" s then
+                  String.substring (s, 0, String.size s - 1)
+                else s
+      in
+        String.map (fn c => if c = #"\n" then #" " else c) s
+      end
+
+    val proc = execute ("/bin/sh", ["-c", arg])
+    val ins = textInstreamOf proc
+    val str = fix_nls (TextIO.inputAll ins)
+  in
+    if OS.Process.isSuccess (reap proc) then str else ""
+  end
+  handle OS.SysErr _ => ""
+
 fun function_call (fnname, args, eval) = let
   open Substring
 in
@@ -334,6 +358,13 @@ in
                   in
                     spacify (wildcard arg_evalled)
                   end
+  | "shell" => if length args <> 1 then
+                 raise Fail "Bad number of arguments to 'shell' function"
+               else let
+                 val arg_evalled = eval (hd args)
+               in
+                  shell arg_evalled
+               end
   | _ => raise Fail ("Unknown function name: "^fnname)
 end
 

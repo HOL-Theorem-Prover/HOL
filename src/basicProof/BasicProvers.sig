@@ -46,9 +46,12 @@ sig
   val spose_not_then    : (thm -> tactic) -> tactic
 
   val by                : term quotation * tactic -> tactic  (* infix *)
+  val byA               : term quotation * tactic -> tactic
   val suffices_by       : term quotation * tactic -> tactic  (* infix *)
   val on                : (thm -> tactic) * (term quotation * tactic) -> tactic
                           (* infix *)
+  val subgoal           : term quotation -> tactic
+  val sg                : term quotation -> tactic
 
   datatype tmkind
       = Free of term

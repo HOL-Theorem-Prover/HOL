@@ -783,7 +783,7 @@ fun myprint Gs backend sys ppfns (pg,lg,rg) d t = let
   open Portable term_pp_types smpp
   infix >>
   val {add_string=strn,add_break=brk,ublock,add_newline,...} =
-      ppfns :ppstream_funs
+      ppfns : ppstream_funs
   val (l,typ) = listSyntax.dest_list t
   val _ = typ = ``:word32`` andalso not (null l) orelse raise UserPP_Failed
   fun delim act =
@@ -795,7 +795,8 @@ fun myprint Gs backend sys ppfns (pg,lg,rg) d t = let
 in
   delim (
     smpp.pr_list
-      (sys (Prec(0, "CONS"), Top, Top) (d - 1))
+      (sys {gravs = (Prec(0, "CONS"), Top, Top),
+            depth = d - 1, binderp = false})
       (strn ";" >> add_newline)
       l)
 end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;

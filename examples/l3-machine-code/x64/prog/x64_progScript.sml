@@ -1,10 +1,7 @@
 open HolKernel boolLib bossLib
-open lcsymtacs set_sepTheory progTheory pred_setTheory stateLib x64_stepTheory
+open set_sepTheory progTheory pred_setTheory stateLib x64_stepTheory
 
 val () = new_theory "x64_prog"
-
-infix \\
-val op \\ = op THEN;
 
 (* ------------------------------------------------------------------------ *)
 
@@ -27,8 +24,14 @@ val x64_mem32_def = Define`
 val v8 = ``[( 7 ><  0) v; (15 ><  8) v; (23 >< 16) v; (31 >< 24) (v:word64);
             (39 >< 32) v; (47 >< 40) v; (55 >< 48) v; (63 >< 56) v]:word8 list``
 
-val x64_mem64_def = Define`
-   x64_mem64 a (v: word64) = { x64_mem a ^v8 }`
+val v16 =
+  ``[(  7 ><  0) v; ( 15 ><   8) v; ( 23 ><  16) v; ( 31 ><  24) (v:word128);
+     ( 39 >< 32) v; ( 47 ><  40) v; ( 55 ><  48) v; ( 63 ><  56) v;
+     ( 71 >< 64) v; ( 79 ><  72) v; ( 87 ><  80) v; ( 95 ><  88) v;
+     (103 >< 96) v; (111 >< 104) v; (119 >< 112) v; (127 >< 120) v]:word8 list``
+
+val x64_mem64_def = Define `x64_mem64 a (v: word64) = { x64_mem a ^v8 }`
+val x64_mem128_def = Define `x64_mem128 a (v: word128) = { x64_mem a ^v16 }`
 
 val X64_MODEL_def = Define`
   X64_MODEL = (STATE x64_proj, NEXT_REL (=) NextStateX64, x64_instr,

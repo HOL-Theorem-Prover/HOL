@@ -330,7 +330,7 @@ val preserve_relation_comb_thm =
 	      comb a b c ==>
 	      preserve_relation_mmu  f d c uf uy``,
 	       RW_TAC (srw_ss()) [preserve_relation_mmu_def,comb_def]
-		      THEN PAT_ASSUM ``∀g s1 s2. X``
+		      THEN PAT_X_ASSUM ``∀g s1 s2. X``
 		      (fn thm => ASSUME_TAC (SPECL [``g:bool[32]``,
 						    ``s1:arm_state``, ``s2:arm_state``] thm))
     THEN RES_TAC
@@ -395,9 +395,9 @@ THEN IMP_RES_TAC untouched_trans
        THEN FULL_SIMP_TAC (srw_ss()) []
 THEN IMP_RES_TAC untouched_mmu_setup_lem
 THEN
-TRY (PAT_ASSUM ``!c g' s1'' s2''. X`` (fn th => ASSUME_TAC (SPECL [``a:'a``, ``g:bool[32]``, ``b:arm_state``, ``b':arm_state``] th)))
+TRY (PAT_X_ASSUM ``!c g' s1'' s2''. X`` (fn th => ASSUME_TAC (SPECL [``a:'a``, ``g:bool[32]``, ``b:arm_state``, ``b':arm_state``] th)))
 THEN
-(TRY (PAT_ASSUM `` ∀g st1 st2 st3. X`` (fn th => ASSUME_TAC (SPECL [ ``g:bool[32]``, ``s1:arm_state``, ``b:arm_state``, ``b'':arm_state``] th) THEN ASSUME_TAC (SPECL [ ``g:bool[32]``, ``s2:arm_state``, ``b':arm_state``, ``b''':arm_state``] th))))
+(TRY (PAT_X_ASSUM `` ∀g st1 st2 st3. X`` (fn th => ASSUME_TAC (SPECL [ ``g:bool[32]``, ``s1:arm_state``, ``b:arm_state``, ``b'':arm_state``] th) THEN ASSUME_TAC (SPECL [ ``g:bool[32]``, ``s2:arm_state``, ``b':arm_state``, ``b''':arm_state``] th))))
  THEN UNDISCH_ALL_TAC
        THEN RW_TAC (srw_ss()) []
        THEN FULL_SIMP_TAC (srw_ss()) [])),
@@ -587,7 +587,7 @@ val write_mem1_ut_thm = store_thm (
        THEN FULL_SIMP_TAC (srw_ss()) [write_mem1_def, seqT_def, writeT_def, readT_def]
        THEN IMP_RES_TAC mmu_requirements_simp
        THEN FULL_SIMP_TAC (srw_ss()) [mmu_requirements_pure_def]
-       THEN PAT_ASSUM ``!(addr:word32) (is_write:bool). X`` (fn th => ASSUME_TAC (SPECL [``addr:word32``, ``T:bool``] th))
+       THEN PAT_X_ASSUM ``!(addr:word32) (is_write:bool). X`` (fn th => ASSUME_TAC (SPECL [``addr:word32``, ``T:bool``] th))
        THEN ASSUME_TAC (SPEC ``addr:word32`` address_complete)
        THEN Cases_on `g=guest1`
        THEN Cases_on `g=guest2`
@@ -621,7 +621,7 @@ val write_mem1_similar_thm = store_thm (
        THEN RES_TAC
        THEN FULL_SIMP_TAC (srw_ss())  [write_mem1_def, seqT_def, readT_def]
        THEN (REPEAT CASE_TAC) THEN FULL_SIMP_TAC (srw_ss()) [writeT_def] THEN IMP_RES_TAC stay_similar_lem
-       THEN PAT_ASSUM ``!(x:word8) (addr:word32). X`` (fn th => (ASSUME_TAC (SPECL [``data:word8``, ``addr:word32``] th)))
+       THEN PAT_X_ASSUM ``!(x:word8) (addr:word32). X`` (fn th => (ASSUME_TAC (SPECL [``data:word8``, ``addr:word32``] th)))
        THEN RW_TAC (srw_ss()) []
        THEN THROW_AWAY_TAC ``similar g a b ==> X``
        THEN FULL_SIMP_TAC (srw_ss()) [similar_def, equal_user_register_def]
@@ -632,7 +632,7 @@ val write_mem1_similar_thm = store_thm (
        THEN (PROTECTED_RW_TAC ``(g:word32) = X`` ORELSE RW_TAC (srw_ss()) [])
        THEN IMP_RES_TAC untouched_mmu_setup_lem
        THEN IMP_RES_TAC mmu_requirement_accesses_update_lem
-       THEN REPEAT (PAT_ASSUM ``!(x:word8) (addr:word32). X`` (fn th => (ASSUME_TAC (SPECL [``data:word8``, ``addr:word32``] th))))
+       THEN REPEAT (PAT_X_ASSUM ``!(x:word8) (addr:word32). X`` (fn th => (ASSUME_TAC (SPECL [``data:word8``, ``addr:word32``] th))))
        THEN ASSUME_TAC (SPECL [``(s1:arm_state) with accesses updated_by CONS (MEM_WRITE (addr:word32) (data:word8))``,
                    ``s1 with  <|memory updated_by (addr =+ data); accesses updated_by CONS (MEM_WRITE addr data)|>``,
                    ``g:word32``] same_setup_same_av_lem)
@@ -693,13 +693,13 @@ val write_mem_pmc_thm = store_thm(
                  THEN ASSUME_TAC reflex_priv_mode_constraints_thm
                  THEN ASSUME_TAC trans_priv_mode_constraints_thm
                  THEN IMP_RES_TAC (SPECL [``(assert_mode 16w):arm_state->bool``, ``priv_mode_constraints``, ``priv_mode_similar``] constT_unit_preserving_lem)
-                 THEN PAT_ASSUM ``preserve_relation_mmu X1 X2 X3 X4 X5`` (fn th => ASSUME_TAC (GEN ``u:(unit list)`` th))
+                 THEN PAT_X_ASSUM ``preserve_relation_mmu X1 X2 X3 X4 X5`` (fn th => ASSUME_TAC (GEN ``u:(unit list)`` th))
                  THEN `(preserve_relation_mmu_abs ((\u:(unit list). return())) (assert_mode 16w) (assert_mode 16w) priv_mode_constraints priv_mode_similar)` by FULL_SIMP_TAC (srw_ss()) [second_abs_lemma]
                  THEN  `!x. preserve_relation_mmu ((λi. write_mem1 <|proc:=0|> ((desc.paddress) + (n2w i)) (EL i value)) x) (assert_mode 16w) (assert_mode 16w) priv_mode_constraints priv_mode_similar` by METIS_TAC [write_mem1_thm]
                  THEN IMP_RES_TAC forT_preserves_user_relation_thm
-                 THEN (REPEAT (PAT_ASSUM ``!l h. X`` (fn th => ASSUME_TAC (SPECL [``0:num``, ``(LENGTH (value:word8 list) - 1):num``] th))))
-                 THEN (REPEAT (PAT_ASSUM ``!x. X`` (fn th => IMP_RES_TAC th)))
-                 THEN (REPEAT (PAT_ASSUM ``~X`` (fn th => IMP_RES_TAC th)))
+                 THEN (REPEAT (PAT_X_ASSUM ``!l h. X`` (fn th => ASSUME_TAC (SPECL [``0:num``, ``(LENGTH (value:word8 list) - 1):num``] th))))
+                 THEN (REPEAT (PAT_X_ASSUM ``!x. X`` (fn th => IMP_RES_TAC th)))
+                 THEN (REPEAT (PAT_X_ASSUM ``~X`` (fn th => IMP_RES_TAC th)))
                  THEN IMP_RES_TAC seqT_preserves_relation_uu_thm]);
 
 
@@ -900,11 +900,10 @@ val mode_mix_const_upgrade = store_thm(
        ==>
           preserve_relation_mmu (A) mode_mix mode_mix uf uy``,
     RW_TAC (srw_ss()) [preserve_relation_mmu_def, assert_mode_def, comb_mode_def, mode_mix_def]
-       THEN `(similar g s1 s2) ==> (ARM_MODE s1 = ARM_MODE s2)` by
-            EVAL_TAC
-               THEN RW_TAC (srw_ss()) []
-               THEN SPEC_ASSUM_TAC (``!(ii:iiid). X``, [``<|proc:=0|>``])
-               THEN FULL_SIMP_TAC (srw_ss()) []
+       THEN `(similar g s1 s2) ==> (ARM_MODE s1 = ARM_MODE s2)`
+              by (EVAL_TAC THEN RW_TAC (srw_ss()) [])
+       THEN SPEC_ASSUM_TAC (``!(ii:iiid). X``, [``<|proc:=0|>``])
+       THEN FULL_SIMP_TAC (srw_ss()) []
        THEN RW_TAC (srw_ss()) []
        THEN METIS_TAC []);
 
@@ -927,5 +926,3 @@ val little_mode_mix_comb_16_thm = store_thm(
 
 
 val _ = export_theory();
-
-

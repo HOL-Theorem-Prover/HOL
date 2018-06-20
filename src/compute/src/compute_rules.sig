@@ -19,6 +19,9 @@ val evaluate  : thm -> Thm.thm
 val push_in_stk :  ('a -> 'b) ->
       'a * (thm * ((thm->thm->thm) * (thm * 'b), 'c, 'd) stack) ->
             thm * ((thm->thm->thm) * (thm * 'b), 'c, 'd) stack
+val push_skip_stk :  ('a -> 'b) ->
+      'a * (thm * ('c, (thm->thm->thm) * bool * (thm * 'b), 'd) stack) ->
+            thm * ('c, (thm->thm->thm) * bool * (thm * 'b), 'd) stack
 val push_lam_in_stk :
       thm * ('a, 'b, thm->thm) stack ->
       thm * ('a, 'b, thm->thm) stack

@@ -10,17 +10,18 @@ structure FileSys = OS.FileSys
 
 fun dquote s = concat ["\"", s, "\""]
 
-fun concat_wspaces munge acc strl =
-    case strl of
-      [] => concat (List.rev acc)
-    | [x] => concat (List.rev (munge x :: acc))
-    | (x::xs) => concat_wspaces munge (" " :: munge x :: acc) xs
+fun concat_wspaces munge strl = String.concatWith " " (map munge strl)
 
 fun systeml l = let
-  val command = "call "^concat_wspaces dquote [] l
+  val command = "call "^concat_wspaces dquote l
 in
   Process.system command
 end
+
+fun systeml_out {outfile} c =
+  Process.system
+    ("call " ^ concat_wspaces dquote c ^ " > " ^ dquote outfile ^ " 2>&1")
+
 
 (* would like to be using Posix.Process.exec, but this seems flakey on
    various machines (and is entirely unavailable on Moscow ML) *)
@@ -108,6 +109,7 @@ end
 val build_log_dir = fullPath [HOLDIR, "tools", "build-logs"]
 val build_log_file = fullPath [build_log_dir, "current-build-log"]
 val make_log_file = "current-make-log"
+val build_after_reloc_envvar = "HOL_REBUILD_HEAPS_ONLY"
 
 local
   fun fopen file = (FileSys.remove file handle _ => (); TextIO.openOut file)

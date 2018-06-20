@@ -134,15 +134,21 @@ fun split_ident mixedset s locn qb = let
   val ID = Ident
 in
   if is_char orelse s0 = #"\"" then (advance(); (ID s, locn))
-  else if s0 = #"$" then let
-      val (tok,locn') = split_ident mixedset
-                                   (String.extract(s, 1, NONE))
-                                   (locn.move_start 1 locn) qb
-    in
-      case tok of
-        Ident s' => (ID ("$" ^ s'), locn.move_start ~1 locn')
-      | _ => raise LEX_ERR ("Can't use $-quoting of this sort of token", locn')
-    end
+  else if s0 = #"$" then
+    if CharVector.all (Lib.equal #"$") s then (advance(); (ID s, locn))
+    else if size s > 1 andalso String.sub(s,1) = #"$" then
+      raise LEX_ERR ("Bad token "^s, locn)
+    else
+      let
+        val (tok,locn') = split_ident mixedset
+                                      (String.extract(s, 1, NONE))
+                                      (locn.move_start 1 locn) qb
+      in
+        case tok of
+            Ident s' => (ID ("$" ^ s'), locn.move_start ~1 locn')
+          | _ => raise LEX_ERR
+                       ("Can't use $-quoting of this sort of token", locn')
+      end
   else if not (mixed s) andalso not (s_has_nonagg_char s) then
     (MkID qb' (s, locn), locn)
   else
@@ -176,7 +182,7 @@ in
                 if size sfx0 <> 0 andalso String.sub(sfx0,0) = #"$" then
                   if size sfx0 > 1 then let
                       val sfx0_1 = String.extract(sfx0, 1, NONE)
-	              val c0 = String.sub(sfx0_1, 0)
+                      val c0 = String.sub(sfx0_1, 0)
                       val rest = String.extract(sfx0_1, 1, NONE)
                     in
                       if c0 = #"0" then
@@ -186,13 +192,13 @@ in
                                                      \ of a constant",
                                             locn)
                       else let
-	                  val (qid2, sfx) =
+                          val (qid2, sfx) =
                               grab (constid_categorise (str c0))
                                    [str c0]
                                    rest
                                    handle Fail s => raise LEX_ERR (s, locn)
-	                in
-	                  stdfinish (QIdent(pfx0,qid2), sfx)
+                        in
+                          stdfinish (QIdent(pfx0,qid2), sfx)
                         end
                     end
                   else

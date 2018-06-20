@@ -26,6 +26,8 @@ replacing the old {g} with a {qt} that is sufficient to prove it.
 A call to {q suffices_by tac} will fail if the quotation {q} does not
 parse to a term of boolean type. This parsing is done in the context
 of the whole goal {(asl,g)}, using the {parse_in_context} function.
+The call will also fail if {tac} does not solve the newly generated
+subgoal.
 
 \EXAMPLE
 If the current goal is

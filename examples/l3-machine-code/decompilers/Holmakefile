@@ -1,0 +1,2 @@
+INCLUDES = .. ../arm/decompiler ../m0/decompiler ../arm8/decompiler \
+           ../x64/decompiler ../mips/decompiler ../riscv/decompiler

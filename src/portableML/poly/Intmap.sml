@@ -20,8 +20,8 @@
  *      University of Southampton
  *   Address:  Electronics & Computer Science
  *             University of Southampton
- *	     Southampton  SO9 5NH
- *	     Great Britian
+ *           Southampton  SO9 5NH
+ *           Great Britian
  *   E-mail:   sra@ecs.soton.ac.uk
  *
  *   Comments:

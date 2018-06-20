@@ -22,12 +22,16 @@ Note that if the conversion {c} returns a theorem with assumptions,
 then the resulting inference rule adds these to the assumptions of the
 theorem it returns.
 
+If {c} raises {UNCHANGED} then {CONV_RULE c th} returns {th}.
+
 \FAILURE
-{CONV_RULE c th} fails if {c} fails when applied to the conclusion of {th}. The
+{CONV_RULE c th} fails if {c} fails (other than by raising {UNCHANGED})
+when applied to the conclusion of {th}. The
 function returned by {CONV_RULE c} will also fail if the ML function
 {c:term->thm} is not, in fact, a conversion (i.e. a function that maps a term
 {t} to a theorem {|- t = t'}).
 
 \SEEALSO
-Tactic.CONV_TAC, Conv.RIGHT_CONV_RULE.
+Abbrev.conv, Conv.UNCHANGED, Tactic.CONV_TAC,
+Conv.HYP_CONV_RULE, Conv.RIGHT_CONV_RULE.
 \ENDDOC

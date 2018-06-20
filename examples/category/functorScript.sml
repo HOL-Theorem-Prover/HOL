@@ -455,7 +455,7 @@ fsrw_tac [][iso_pair_def] >> srw_tac [][] >- (
   srw_tac [][] )
 >- (
   `G##(f o g -:G.dom) = G##(id g.dom -:G.dom)` by srw_tac [][] >>
-  qpat_assum `f o g -:G.dom = X` (K ALL_TAC) >>
+  qpat_x_assum `f o g -:G.dom = X` (K ALL_TAC) >>
   qspecl_then [`G`,`G.dom`,`G.cod`,`g`,`f`] mp_tac morf_comp >>
   qspecl_then [`G`,`G.dom`,`G.cod`,`g.dom`] mp_tac morf_id >>
   qspecl_then [`G`,`G.dom`,`G.cod`,`g`,`g.dom`,`g.cod`,`G@@g.dom`,`G@@g.cod`] mp_tac morf_maps_to >>
@@ -463,7 +463,7 @@ fsrw_tac [][iso_pair_def] >> srw_tac [][] >- (
   imp_res_tac composable_obj >>
   fsrw_tac [][maps_to_in_def,composable_in_def] ) >>
 `G##(g o f -:G.dom) = G##(id f.dom -:G.dom)` by srw_tac [][] >>
-qpat_assum `g o f -:G.dom = X` (K ALL_TAC) >>
+qpat_x_assum `g o f -:G.dom = X` (K ALL_TAC) >>
 qspecl_then [`G`,`G.dom`,`G.cod`,`f`,`g`] mp_tac morf_comp >>
 qspecl_then [`G`,`G.dom`,`G.cod`,`f.dom`] mp_tac morf_id >>
 qspecl_then [`G`,`G.dom`,`G.cod`,`f`,`f.dom`,`f.cod`,`G@@f.dom`,`G@@f.cod`] mp_tac morf_maps_to >>
@@ -648,7 +648,7 @@ map_every qx_gen_tac [`f`,`g`] >>
 EQ_TAC >> strip_tac >- (
   fsrw_tac [][cat_iso_pair_def] >>
   `g.cod = f.dom` by (
-    rpt (qpat_assum `X = id_functor Y` mp_tac) >>
+    rpt (qpat_x_assum `X = id_functor Y` mp_tac) >>
     fsrw_tac [][morphism_component_equality] ) >>
   fsrw_tac [][]  >>
   conj_asm1_tac >- (
@@ -719,11 +719,11 @@ fsrw_tac [][] >> srw_tac [][] >- (
   `h ∈ hm2` by fsrw_tac [][hom_def,Abbr`hm2`] >>
   metis_tac [BIJ_LINV_INV] ) >>
 `(f ◎ g)##(f##h) = (id_functor g.dom)##(f##h)` by srw_tac [][] >>
-qpat_assum `f ◎ g = X` (K ALL_TAC) >>
+qpat_x_assum `f ◎ g = X` (K ALL_TAC) >>
 `f##h :- f@@h.dom → f@@h.cod -:g.dom` by (
   metis_tac [morf_maps_to,maps_to_def,maps_to_in_def] ) >>
 imp_res_tac maps_to_in_def >>
-qpat_assum `(f ◎ g)##X = Y` mp_tac >>
+qpat_x_assum `(f ◎ g)##X = Y` mp_tac >>
 fsrw_tac [][functor_comp_morf] >>
 imp_res_tac maps_to_obj >>
 qsuff_tac `(h ∈ f.dom|h.dom→h.cod|) ∧ (g##(f##h)) ∈ f.dom|h.dom→h.cod|` >- (
@@ -753,7 +753,7 @@ fsrw_tac [][SKOLEM_THM] >>
 qmatch_assum_rename_tac `∀x. x ∈ f.cod.obj ⇒ gob x ∈ f.dom.obj` >>
 pop_assum mp_tac >>
 qho_match_abbrev_tac `(∀a b. P1 a b ⇒ P2 a b ∧ P3 a b ∧ (∀x. x ∈ (f.dom|a→b|) ⇒ (gmo a b (f##x) = x)) ∧ P4 a b) ⇒ P5` >>
-qpat_assum `Abbrev (gmo = X)` (K ALL_TAC) >>
+qpat_x_assum `Abbrev (gmo = X)` (K ALL_TAC) >>
 unabbrev_all_tac >> srw_tac [][] >>
 fsrw_tac [boolSimps.DNF_ss][] >>
 ntac 4 (pop_assum (mp_tac o MP_CANON)) >>
@@ -1024,7 +1024,7 @@ conj_asm2_tac >- (
     first_x_assum match_mp_tac >>
     qexists_tac `f.cod` >>
     fsrw_tac [][] >>
-    qpat_assum `g.cod = X` (mp_tac o SYM) >> srw_tac [][] ) >>
+    qpat_x_assum `g.cod = X` (mp_tac o SYM) >> srw_tac [][] ) >>
   `(f ≈> compose (pre_comma_cat t s).comp g h -:pre_comma_cat t s)` by (
     match_mp_tac maps_to_composable >>
     first_x_assum (qspecl_then [`g`,`h`] mp_tac) >>
@@ -1035,7 +1035,7 @@ conj_asm2_tac >- (
     first_x_assum match_mp_tac >>
     qexists_tac `h.dom` >>
     fsrw_tac [][] >>
-    qpat_assum `g.cod = X` (mp_tac o SYM) >> srw_tac [][] ) >>
+    qpat_x_assum `g.cod = X` (mp_tac o SYM) >> srw_tac [][] ) >>
   srw_tac [][compose_in_thm] >>
   imp_res_tac composable_in_def >>
   srw_tac [][pre_comma_cat_def] >>

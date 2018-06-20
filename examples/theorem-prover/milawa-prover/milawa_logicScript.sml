@@ -593,7 +593,7 @@ val term_ok_sub = store_thm("term_ok_sub",
    (FULL_SIMP_TAC std_ss [term_ok_def,term_sub_def,LENGTH_MAP,logic_term_size_def]
     \\ SIMP_TAC std_ss [EVERY_MEM,MEM_MAP] \\ REPEAT STRIP_TAC
     \\ FULL_SIMP_TAC std_ss [AND_IMP_INTRO]
-    \\ Q.PAT_ASSUM `!a.bbb` MATCH_MP_TAC \\ FULL_SIMP_TAC std_ss []
+    \\ Q.PAT_X_ASSUM `!a.bbb` MATCH_MP_TAC \\ FULL_SIMP_TAC std_ss []
     \\ FULL_SIMP_TAC std_ss [EVERY_MEM]
     \\ POP_ASSUM MP_TAC
     \\ REPEAT (POP_ASSUM (K ALL_TAC))
@@ -601,7 +601,7 @@ val term_ok_sub = store_thm("term_ok_sub",
   \\ FULL_SIMP_TAC std_ss [term_ok_def,term_sub_def,LENGTH_MAP]
   \\ SIMP_TAC std_ss [EVERY_MEM,MEM_MAP] \\ REPEAT STRIP_TAC
   \\ FULL_SIMP_TAC std_ss [AND_IMP_INTRO]
-  \\ Q.PAT_ASSUM `!a.bbb` MATCH_MP_TAC \\ FULL_SIMP_TAC std_ss []
+  \\ Q.PAT_X_ASSUM `!a.bbb` MATCH_MP_TAC \\ FULL_SIMP_TAC std_ss []
   \\ FULL_SIMP_TAC std_ss [EVERY_MEM,logic_term_size_def]
   \\ POP_ASSUM MP_TAC \\ REPEAT (POP_ASSUM (K ALL_TAC))
   \\ Induct_on `l0` \\ SRW_TAC [] [logic_term_size_def] \\ RES_TAC \\ DECIDE_TAC);
@@ -921,7 +921,7 @@ val EvalTerm_sub = prove(
     \\ FULL_SIMP_TAC std_ss [MAP_MAP_o,combinTheory.o_DEF]
     \\ MATCH_MP_TAC IMP_MAP_EQ_MAP \\ SIMP_TAC std_ss [] \\ REPEAT STRIP_TAC
     \\ FULL_SIMP_TAC std_ss [AND_IMP_INTRO]
-    \\ Q.PAT_ASSUM `!x.bbb` MATCH_MP_TAC
+    \\ Q.PAT_X_ASSUM `!x.bbb` MATCH_MP_TAC
     \\ FULL_SIMP_TAC std_ss [term_ok_def,EVERY_MEM,logic_term_size_def]
     \\ FULL_SIMP_TAC std_ss [GSYM EVERY_MEM]
     \\ IMP_RES_TAC MEM_IMP_logic_term_size \\ DECIDE_TAC)
@@ -929,7 +929,7 @@ val EvalTerm_sub = prove(
   \\ FULL_SIMP_TAC std_ss [MAP_MAP_o,combinTheory.o_DEF]
   \\ AP_THM_TAC \\ AP_TERM_TAC \\ AP_THM_TAC \\ AP_TERM_TAC \\ AP_TERM_TAC
   \\ MATCH_MP_TAC IMP_MAP_EQ_MAP \\ SIMP_TAC std_ss [] \\ REPEAT STRIP_TAC
-  \\ Q.PAT_ASSUM `!x.bbb` MATCH_MP_TAC
+  \\ Q.PAT_X_ASSUM `!x.bbb` MATCH_MP_TAC
   \\ FULL_SIMP_TAC std_ss [term_ok_def,EVERY_MEM,logic_term_size_def]
   \\ IMP_RES_TAC MEM_IMP_logic_term_size \\ DECIDE_TAC);
 
@@ -966,14 +966,14 @@ val EvalTerm_CHANGE_INST = prove(
    (SIMP_TAC std_ss [LET_DEF]
     \\ AP_THM_TAC \\ AP_TERM_TAC \\ AP_THM_TAC \\ AP_TERM_TAC \\ AP_TERM_TAC
     \\ MATCH_MP_TAC IMP_MAP_EQ_MAP \\ SIMP_TAC std_ss [] \\ REPEAT STRIP_TAC
-    \\ RES_TAC \\ Q.PAT_ASSUM `!x.bbb` MATCH_MP_TAC
-    \\ REPEAT STRIP_TAC \\ Q.PAT_ASSUM `!x.bbb` MATCH_MP_TAC
+    \\ RES_TAC \\ Q.PAT_X_ASSUM `!x.bbb` MATCH_MP_TAC
+    \\ REPEAT STRIP_TAC \\ Q.PAT_X_ASSUM `!x.bbb` MATCH_MP_TAC
     \\ FULL_SIMP_TAC std_ss [MEM_FLAT]
     \\ Q.EXISTS_TAC `free_vars x'` \\ ASM_SIMP_TAC std_ss [MEM_MAP] \\ METIS_TAC [])
   \\ AP_TERM_TAC \\ AP_TERM_TAC \\ AP_THM_TAC \\ AP_TERM_TAC
   \\ MATCH_MP_TAC IMP_MAP_EQ_MAP \\ SIMP_TAC std_ss [] \\ REPEAT STRIP_TAC
-  \\ RES_TAC \\ Q.PAT_ASSUM `!x.bbb` MATCH_MP_TAC
-  \\ REPEAT STRIP_TAC \\ Q.PAT_ASSUM `!x.bbb` MATCH_MP_TAC
+  \\ RES_TAC \\ Q.PAT_X_ASSUM `!x.bbb` MATCH_MP_TAC
+  \\ REPEAT STRIP_TAC \\ Q.PAT_X_ASSUM `!x.bbb` MATCH_MP_TAC
   \\ FULL_SIMP_TAC std_ss [MEM_FLAT] \\ METIS_TAC [MEM_MAP]) |> SIMP_RULE std_ss [];
 
 val EL_LEMMA = CONJ (EVAL ``EL 0 (x::xs)``) (EVAL ``EL 1 (x::y::xs)``)
@@ -1033,7 +1033,7 @@ val EvalTerm_IGNORE_FunVarBind = prove(
      EvalTerm (a,ctxt) body)``,
   REPEAT STRIP_TAC \\ MATCH_MP_TAC EvalTerm_CHANGE_INST \\ ASM_SIMP_TAC std_ss []
   \\ REPEAT STRIP_TAC
-  \\ `MEM x params` by FULL_SIMP_TAC std_ss [SUBSET_DEF,IN_LIST_TO_SET]
+  \\ `MEM x params` by FULL_SIMP_TAC std_ss [SUBSET_DEF]
   \\ POP_ASSUM MP_TAC
   \\ Q.SPEC_TAC (`x`,`x`) \\ Q.SPEC_TAC (`a`,`a`) \\ Q.SPEC_TAC (`params`,`params`)
   \\ REPEAT (POP_ASSUM (K ALL_TAC))
@@ -1075,12 +1075,12 @@ val EvalTerm_SWAP_INST = prove(
   \\ REPEAT STRIP_TAC THEN1
    (CONV_TAC (DEPTH_CONV ETA_CONV)
     \\ FULL_SIMP_TAC std_ss [MEM_FLAT,MEM_MAP,PULL_EXISTS_IMP]
-    \\ `MAP (EvalTerm (a,ctxt)) args = MAP (EvalTerm (b,ctxt)) args` by ALL_TAC
+    \\ sg `MAP (EvalTerm (a,ctxt)) args = MAP (EvalTerm (b,ctxt)) args`
     \\ FULL_SIMP_TAC std_ss [] \\ MATCH_MP_TAC IMP_MAP_EQ_MAP
     \\ FULL_SIMP_TAC std_ss [EVERY_MEM] \\ METIS_TAC [])
   \\ CONV_TAC (DEPTH_CONV ETA_CONV)
   \\ FULL_SIMP_TAC std_ss [MEM_FLAT,MEM_MAP,PULL_EXISTS_IMP]
-  \\ `MAP (EvalTerm (a,ctxt)) ys = MAP (EvalTerm (b,ctxt)) ys` by ALL_TAC THEN1
+  \\ `MAP (EvalTerm (a,ctxt)) ys = MAP (EvalTerm (b,ctxt)) ys` by
    (FULL_SIMP_TAC std_ss [] \\ MATCH_MP_TAC IMP_MAP_EQ_MAP
     \\ FULL_SIMP_TAC std_ss [EVERY_MEM] \\ METIS_TAC [])
   \\ FULL_SIMP_TAC std_ss []) |> SIMP_RULE std_ss [];
@@ -1115,7 +1115,7 @@ val Milawa_SOUNDESS = store_thm("Milawa_SOUNDESS",
     \\ FULL_SIMP_TAC std_ss [EvalFormula_def,LENGTH_MAP]
     \\ SIMP_TAC std_ss [EvalTerm_def,combinTheory.o_DEF,MAP_MAP_o]
     \\ `MAP (\x. EvalTerm (a,ctxt) (FST x)) ts_list =
-        MAP (\x. EvalTerm (a,ctxt) (SND x)) ts_list` by ALL_TAC THEN1
+        MAP (\x. EvalTerm (a,ctxt) (SND x)) ts_list` by
      (MATCH_MP_TAC IMP_MAP_EQ_MAP \\ Cases
       \\ FULL_SIMP_TAC std_ss [EVERY_MEM] \\ REPEAT STRIP_TAC \\ RES_TAC
       \\ FULL_SIMP_TAC std_ss [])
@@ -1131,7 +1131,7 @@ val Milawa_SOUNDESS = store_thm("Milawa_SOUNDESS",
       EvalFormula_sub,term_ok_def,EvalTerm_def,LET_DEF,EvalTerm_sub]
     \\ FULL_SIMP_TAC std_ss [MAP_SND_ZIP,MAP_FST_ZIP,MAP_o]
     \\ REPEAT STRIP_TAC \\ MATCH_MP_TAC EvalTerm_CHANGE_INST
-    \\ FULL_SIMP_TAC std_ss [SUBSET_DEF,IN_LIST_TO_SET]
+    \\ FULL_SIMP_TAC std_ss [SUBSET_DEF]
     \\ REPEAT STRIP_TAC \\ RES_TAC
     \\ `(MAP (\a''. EvalTerm (a',ctxt) a'') ys) =
         (MAP (EvalTerm (a',ctxt)) ys)` by METIS_TAC []
@@ -1157,7 +1157,7 @@ val Milawa_SOUNDESS = store_thm("Milawa_SOUNDESS",
     \\ FULL_SIMP_TAC std_ss [MAP_MAP_o,combinTheory.o_DEF,EvalTerm_def]
     \\ FULL_SIMP_TAC std_ss [context_ok_def]
     \\ RES_TAC \\ POP_ASSUM MP_TAC
-    \\ REPEAT (Q.PAT_ASSUM `!x.bbb` (K ALL_TAC))
+    \\ REPEAT (Q.PAT_X_ASSUM `!x.bbb` (K ALL_TAC))
     \\ METIS_TAC [])
   THEN1 (* user-defined witness function *)
    (FULL_SIMP_TAC std_ss [MilawaValid_def,formula_ok_def,term_ok_def,
@@ -1167,12 +1167,11 @@ val Milawa_SOUNDESS = store_thm("Milawa_SOUNDESS",
     \\ FULL_SIMP_TAC (srw_ss()) [EvalFormula_def,EvalTerm_def,MAP,EvalApp_def,LET_DEF]
     \\ REPEAT STRIP_TAC \\ Cases_on `EvalTerm (a,ctxt) exp = Sym "NIL"`
     \\ ASM_SIMP_TAC std_ss [MAP_MAP_o,combinTheory.o_DEF,EvalTerm_def]
-    \\ Q.PAT_ASSUM `context_ok ctxt` (fn th => ASSUME_TAC th THEN MP_TAC th)
+    \\ Q.PAT_X_ASSUM `context_ok ctxt` (fn th => ASSUME_TAC th THEN MP_TAC th)
     \\ SIMP_TAC std_ss [context_ok_def] \\ STRIP_TAC \\ RES_TAC
-    \\ REPEAT (Q.PAT_ASSUM `!xx yy zz. bbb` (K ALL_TAC))
+    \\ REPEAT (Q.PAT_X_ASSUM `!xx yy zz. bbb` (K ALL_TAC))
     \\ `?v. isTrue
-      (EvalTerm (FunVarBind (var_name::params) (v::MAP a params),ctxt) exp)` by ALL_TAC
-    THEN1
+      (EvalTerm (FunVarBind (var_name::params) (v::MAP a params),ctxt) exp)` by
      (Q.EXISTS_TAC `a var_name`
       \\ FULL_SIMP_TAC std_ss [LIST_TO_SET_THM,
         EvalTerm_IGNORE_FunVarBind
@@ -1186,7 +1185,7 @@ val Milawa_SOUNDESS = store_thm("Milawa_SOUNDESS",
   THEN1 (* induction *)
    (FULL_SIMP_TAC std_ss [MilawaValid_def,formula_ok_def,term_ok_def,
       EVERY_DEF,func_arity_def,primitive_arity_def,LENGTH,GSYM CONJ_ASSOC]
-    \\ Q.PAT_ASSUM `term_ok ctxt m` ASSUME_TAC \\ FULL_SIMP_TAC std_ss []
+    \\ Q.PAT_X_ASSUM `term_ok ctxt m` ASSUME_TAC \\ FULL_SIMP_TAC std_ss []
     \\ REPEAT STRIP_TAC
     THEN1 (Cases_on `MAP FST qs_ss` \\ FULL_SIMP_TAC std_ss [or_list_def,formula_ok_def])
     \\ FULL_SIMP_TAC (srw_ss()) [EvalFormula_def,EvalTerm_def,
@@ -1204,11 +1203,11 @@ val Milawa_SOUNDESS = store_thm("Milawa_SOUNDESS",
     THEN1 METIS_TAC []
     \\ FULL_SIMP_TAC std_ss [formula_ok_def]
     \\ FULL_SIMP_TAC std_ss [EvalTerm_CLAUSES]
-    \\ `?y z. MEM (y,z) qs_ss /\ EvalFormula (a,ctxt) y` by ALL_TAC THEN1
+    \\ `?y z. MEM (y,z) qs_ss /\ EvalFormula (a,ctxt) y` by
      (`?y. MEM y (MAP FST qs_ss) /\ EvalFormula (a,ctxt) y` by METIS_TAC [EvalFormula_or_list]
       \\ FULL_SIMP_TAC std_ss [MEM_MAP] \\ Cases_on `y'`
       \\ FULL_SIMP_TAC std_ss [] \\ METIS_TAC [])
-    \\ Q.PAT_ASSUM `!q ss. bbb ==> bbbb` IMP_RES_TAC
+    \\ Q.PAT_X_ASSUM `!q ss. bbb ==> bbbb` IMP_RES_TAC
     \\ POP_ASSUM (MP_TAC o Q.SPEC `a`)
     \\ ONCE_REWRITE_TAC [EvalFormula_or_list_swap]
     \\ SIMP_TAC std_ss [or_list_def,EvalFormula_def,IMP_INTRO]
@@ -1216,11 +1215,11 @@ val Milawa_SOUNDESS = store_thm("Milawa_SOUNDESS",
     \\ SIMP_TAC std_ss [EvalFormula_or_list_MAP_Not,AND_IMP_INTRO]
     \\ ASM_SIMP_TAC std_ss [] \\ STRIP_TAC \\ POP_ASSUM MATCH_MP_TAC
     \\ FULL_SIMP_TAC std_ss [EVERY_MEM] \\ REPEAT STRIP_TAC
-    \\ Q.PAT_ASSUM `!q ss s. bbb` (MP_TAC o Q.SPECL [`y`,`z`,`s`])
+    \\ Q.PAT_X_ASSUM `!q ss s. bbb` (MP_TAC o Q.SPECL [`y`,`z`,`s`])
     \\ ASM_SIMP_TAC std_ss [IMP_INTRO] \\ REPEAT STRIP_TAC
     \\ POP_ASSUM (MP_TAC o Q.SPEC `a`) \\ ASM_SIMP_TAC std_ss []
     \\ FULL_SIMP_TAC std_ss [EvalTerm_sub,EvalFormula_sub]
-    \\ STRIP_TAC \\ Q.PAT_ASSUM `!x.bbb` MATCH_MP_TAC
+    \\ STRIP_TAC \\ Q.PAT_X_ASSUM `!x.bbb` MATCH_MP_TAC
     \\ FULL_SIMP_TAC std_ss [ORD_LESS_def]));
 
 (* We now prove a corollary which provides an intuitive
@@ -1252,17 +1251,17 @@ val term_ok_FUPDATE = prove(
   \\ FULL_SIMP_TAC std_ss [] \\ Cases_on `x` \\ FULL_SIMP_TAC std_ss [term_ok_def] THEN1
    (Cases_on `l0` \\ FULL_SIMP_TAC std_ss [func_arity_def]
     \\ FULL_SIMP_TAC std_ss [EVERY_MEM] \\ REPEAT STRIP_TAC THEN1
-     (Q.PAT_ASSUM `!x. b ==> b2 ==> b3` (MATCH_MP_TAC o REWRITE_RULE [AND_IMP_INTRO])
+     (Q.PAT_X_ASSUM `!x. b ==> b2 ==> b3` (MATCH_MP_TAC o REWRITE_RULE [AND_IMP_INTRO])
       \\ FULL_SIMP_TAC std_ss [logic_term_size_def]
       \\ IMP_RES_TAC MEM_logic_term_size_alt_LESS \\ DECIDE_TAC)
     \\ `~(fname = s)` by METIS_TAC []
     \\ FULL_SIMP_TAC std_ss [FDOM_FUPDATE,IN_INSERT,FAPPLY_FUPDATE_THM]
-    \\ Q.PAT_ASSUM `!x. b ==> b2 ==> b3` (MATCH_MP_TAC o REWRITE_RULE [AND_IMP_INTRO])
+    \\ Q.PAT_X_ASSUM `!x. b ==> b2 ==> b3` (MATCH_MP_TAC o REWRITE_RULE [AND_IMP_INTRO])
     \\ FULL_SIMP_TAC std_ss [logic_term_size_def]
     \\ IMP_RES_TAC MEM_logic_term_size_alt_LESS \\ DECIDE_TAC)
   THEN1
    (FULL_SIMP_TAC std_ss [EVERY_MEM] \\ REPEAT STRIP_TAC
-    \\ Q.PAT_ASSUM `!x. b ==> b2 ==> b3` (MATCH_MP_TAC o REWRITE_RULE [AND_IMP_INTRO])
+    \\ Q.PAT_X_ASSUM `!x. b ==> b2 ==> b3` (MATCH_MP_TAC o REWRITE_RULE [AND_IMP_INTRO])
     \\ FULL_SIMP_TAC std_ss [logic_term_size_def]
     \\ IMP_RES_TAC MEM_logic_term_size_alt_LESS \\ DECIDE_TAC));
 
@@ -1279,8 +1278,8 @@ val EvalTerm_FUPDATE = prove(
            (a,ctxt) exp``,
   HO_MATCH_MP_TAC (fetch "-" "EvalTerm_ind") \\ SIMP_TAC std_ss []
   \\ SIMP_TAC std_ss [EvalTerm_def] \\ REVERSE (REPEAT STRIP_TAC) THEN1
-   (`MAP (\a''. EvalTerm (a,ctxt |+ (fname,params,body,sem)) a'') ys =
-     MAP (\a''. EvalTerm (a,ctxt) a'') ys` by ALL_TAC
+   (sg `MAP (\a''. EvalTerm (a,ctxt |+ (fname,params,body,sem)) a'') ys =
+     MAP (\a''. EvalTerm (a,ctxt) a'') ys`
     \\ FULL_SIMP_TAC std_ss [LET_DEF,term_ok_def]
     \\ MATCH_MP_TAC IMP_MAP_EQ_MAP \\ REPEAT STRIP_TAC
     \\ FULL_SIMP_TAC std_ss [term_ok_def] \\ METIS_TAC [EVERY_MEM])
@@ -1333,16 +1332,14 @@ val EvalTerm_IGNORE_BODY = store_thm("EvalTerm_IGNORE_BODY",
   THEN1
    (CONV_TAC (DEPTH_CONV ETA_CONV)
     \\ `MAP (EvalTerm (a,ctxt |+ (name,params,body,sem))) vs =
-        MAP (EvalTerm (a,ctxt |+ (name,params,ARB,sem))) vs` by ALL_TAC
-    THEN1 (MATCH_MP_TAC IMP_MAP_EQ_MAP \\ FULL_SIMP_TAC std_ss [])
+        MAP (EvalTerm (a,ctxt |+ (name,params,ARB,sem))) vs` by (MATCH_MP_TAC IMP_MAP_EQ_MAP \\ FULL_SIMP_TAC std_ss [])
     \\ Cases_on `fc` \\ FULL_SIMP_TAC std_ss [EvalApp_def,LET_DEF,FAPPLY_FUPDATE_THM]
     \\ Cases_on `s = name` \\ FULL_SIMP_TAC std_ss [])
   THEN1 (FULL_SIMP_TAC std_ss [EVERY_MEM])
   THEN1
    (CONV_TAC (DEPTH_CONV ETA_CONV)
     \\ `MAP (EvalTerm (a,ctxt |+ (name,params,body,sem))) zs =
-        MAP (EvalTerm (a,ctxt |+ (name,params,ARB,sem))) zs` by ALL_TAC
-    THEN1 (MATCH_MP_TAC IMP_MAP_EQ_MAP \\ FULL_SIMP_TAC std_ss [])
+        MAP (EvalTerm (a,ctxt |+ (name,params,ARB,sem))) zs` by (MATCH_MP_TAC IMP_MAP_EQ_MAP \\ FULL_SIMP_TAC std_ss [])
     \\ FULL_SIMP_TAC std_ss [EvalApp_def,LET_DEF,FAPPLY_FUPDATE_THM]));
 
 val EvalFormula_IGNORE_BODY = prove(
@@ -1718,7 +1715,7 @@ val callmap_LENGTH = prove(
     \\ FULL_SIMP_TAC std_ss [rich_listTheory.EL_CONS,EL,HD,term_ok_def,EVERY_DEF]
     \\ METIS_TAC [])
   \\ Cases_on `f = mFun name` \\ FULL_SIMP_TAC std_ss []
-  \\ Q.PAT_ASSUM `ctxt ' name = sddd` ASSUME_TAC
+  \\ Q.PAT_X_ASSUM `ctxt ' name = sddd` ASSUME_TAC
   \\ FULL_SIMP_TAC std_ss [MEM,term_ok_def,func_arity_def,MEM_FLAT,MEM_MAP]
   \\ REPEAT STRIP_TAC THEN1 METIS_TAC []
   \\ POP_ASSUM MP_TAC \\ FULL_SIMP_TAC std_ss [] \\ REPEAT STRIP_TAC \\ RES_TAC
@@ -1753,7 +1750,7 @@ val termination_obligations_INDUCT = prove(
        rich_listTheory.EL_CONS,EL,HD,EVERY_MEM]
   \\ FULL_SIMP_TAC std_ss [MEM_MAP,PULL_EXISTS_IMP,pairTheory.FORALL_PROD]
   \\ FULL_SIMP_TAC std_ss [EvalTerm_sub] \\ REPEAT STRIP_TAC
-  \\ Q.PAT_ASSUM `!a. (!b. bbb) ==> P a` MATCH_MP_TAC \\ REPEAT STRIP_TAC
+  \\ Q.PAT_X_ASSUM `!a. (!b. bbb) ==> P a` MATCH_MP_TAC \\ REPEAT STRIP_TAC
   \\ RES_TAC \\ RES_TAC \\ POP_ASSUM MP_TAC
   \\ IMP_RES_TAC callmap_LENGTH \\ IMP_RES_TAC MAP_FST_ZIP \\ IMP_RES_TAC MAP_SND_ZIP
   \\ SIMP_TAC std_ss [GSYM MAP_MAP_o] \\ ASM_REWRITE_TAC []);
@@ -1842,20 +1839,20 @@ val callmap_free_vars = prove(
      (Cases_on `LENGTH xs < 3` \\ FULL_SIMP_TAC std_ss [MEM]
       \\ FULL_SIMP_TAC std_ss [func_arity_def,primitive_arity_def,LENGTH_EQ_3,term_ok_def]
       \\ FULL_SIMP_TAC std_ss [rich_listTheory.EL_CONS,EL,HD]
-      \\ Q.PAT_ASSUM `xs = [x1;x2;x3]` ASSUME_TAC
+      \\ Q.PAT_X_ASSUM `xs = [x1;x2;x3]` ASSUME_TAC
       \\ FULL_SIMP_TAC std_ss [EVERY_DEF]
       \\ FULL_SIMP_TAC std_ss [MEM_APPEND] \\ RES_TAC THEN1
-       (FULL_SIMP_TAC std_ss [free_vars_def,EVERY_MEM,SUBSET_DEF,IN_LIST_TO_SET,
+       (FULL_SIMP_TAC std_ss [free_vars_def,EVERY_MEM,SUBSET_DEF,
           MEM_FLAT,MEM_MAP] \\ REPEAT STRIP_TAC \\ RES_TAC \\ METIS_TAC [MEM])
       THEN1
-       (FULL_SIMP_TAC std_ss [free_vars_def,EVERY_MEM,SUBSET_DEF,IN_LIST_TO_SET,
+       (FULL_SIMP_TAC std_ss [free_vars_def,EVERY_MEM,SUBSET_DEF,
           MEM_FLAT,MEM_MAP] \\ REPEAT STRIP_TAC
         \\ Cases_on `y` \\ FULL_SIMP_TAC std_ss []
         \\ NTAC 2 (POP_ASSUM MP_TAC)
         \\ FULL_SIMP_TAC std_ss [APPEND,MEM]
         \\ STRIP_TAC \\ FULL_SIMP_TAC std_ss [] \\ METIS_TAC [])
       THEN1
-       (FULL_SIMP_TAC std_ss [free_vars_def,EVERY_MEM,SUBSET_DEF,IN_LIST_TO_SET,
+       (FULL_SIMP_TAC std_ss [free_vars_def,EVERY_MEM,SUBSET_DEF,
           MEM_FLAT,MEM_MAP] \\ REPEAT STRIP_TAC
         \\ Cases_on `y` \\ FULL_SIMP_TAC std_ss []
         \\ NTAC 2 (POP_ASSUM MP_TAC)
@@ -1864,19 +1861,19 @@ val callmap_free_vars = prove(
         \\ METIS_TAC []))
     \\ Cases_on `f' = mFun f` \\ FULL_SIMP_TAC std_ss [MEM]
     \\ FULL_SIMP_TAC std_ss [EVERY_MEM,APPEND,free_vars_def]
-    \\ FULL_SIMP_TAC std_ss [free_vars_def,EVERY_MEM,SUBSET_DEF,IN_LIST_TO_SET,
+    \\ FULL_SIMP_TAC std_ss [free_vars_def,EVERY_MEM,SUBSET_DEF,
            MEM_FLAT,MEM_MAP,term_ok_def,EVERY_MEM] \\ METIS_TAC [])
   \\ FULL_SIMP_TAC std_ss [MEM_APPEND] THEN1
-   (FULL_SIMP_TAC std_ss [free_vars_def,EVERY_MEM,SUBSET_DEF,IN_LIST_TO_SET,
+   (FULL_SIMP_TAC std_ss [free_vars_def,EVERY_MEM,SUBSET_DEF,
           MEM_FLAT,MEM_MAP,term_ok_def] \\ REPEAT STRIP_TAC \\ METIS_TAC [])
-  \\ FULL_SIMP_TAC std_ss [free_vars_def,EVERY_MEM,SUBSET_DEF,IN_LIST_TO_SET,
+  \\ FULL_SIMP_TAC std_ss [free_vars_def,EVERY_MEM,SUBSET_DEF,
           MEM_FLAT,MEM_MAP,term_ok_def,callmap_sub_def]
   \\ Cases_on `y` \\ FULL_SIMP_TAC std_ss []
   \\ FULL_SIMP_TAC std_ss [PULL_FORALL_IMP]
   \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss [PULL_EXISTS_CONJ]
   \\ FULL_SIMP_TAC std_ss [GSYM MAP_APPEND,MEM_MAP]
   \\ POP_ASSUM MP_TAC \\ FULL_SIMP_TAC std_ss [] \\ REPEAT STRIP_TAC
-  \\ Q.PAT_ASSUM `!aa bb. bbb` (MP_TAC o Q.SPECL [`q'`,`r'`,`y'`])
+  \\ Q.PAT_X_ASSUM `!aa bb. bbb` (MP_TAC o Q.SPECL [`q'`,`r'`,`y'`])
   \\ FULL_SIMP_TAC std_ss [] \\ POP_ASSUM MP_TAC
   \\ REPEAT STRIP_TAC \\ IMP_RES_TAC free_vars_sub
   \\ POP_ASSUM MP_TAC \\ POP_ASSUM MP_TAC
@@ -1890,7 +1887,7 @@ val EvalTerm_SIMP = prove(
      EvalTerm (FunVarBind l1 ys,ctxt) y)``,
   REPEAT STRIP_TAC \\ MATCH_MP_TAC EvalTerm_CHANGE_INST \\ REPEAT STRIP_TAC
   \\ MATCH_MP_TAC FunVarBindAux_EQ_FunVarBind
-  \\ FULL_SIMP_TAC std_ss [SUBSET_DEF,IN_LIST_TO_SET]);
+  \\ FULL_SIMP_TAC std_ss [SUBSET_DEF]);
 
 val M_ev_SIMP = prove(
   ``set (free_vars y) SUBSET set l1 ==>
@@ -1898,7 +1895,7 @@ val M_ev_SIMP = prove(
      M_ev f (y,FunVarBind l1 ys,ctxt) x)``,
   REPEAT STRIP_TAC \\ MATCH_MP_TAC M_ev_EQ
   \\ REPEAT STRIP_TAC \\ MATCH_MP_TAC FunVarBindAux_EQ_FunVarBind
-  \\ FULL_SIMP_TAC std_ss [SUBSET_DEF,IN_LIST_TO_SET]);
+  \\ FULL_SIMP_TAC std_ss [SUBSET_DEF]);
 
 val M_ev_TERMINATES_STEP = prove(
   ``f IN FDOM ctxt /\ (ctxt ' f = (params,BODY_FUN body,EvalFun f ctxt)) /\
@@ -1925,7 +1922,7 @@ val M_ev_TERMINATES_STEP = prove(
       \\ FULL_SIMP_TAC std_ss [callmap_def,EL,rich_listTheory.EL_CONS,HD,LENGTH,
            EVERY_APPEND,EvalTerm_def,EvalApp_def,EVAL_PRIMITIVE_def,MAP,LISP_IF_def]
       \\ ONCE_REWRITE_TAC [M_ev_cases] \\ SIMP_TAC (srw_ss()) []
-      \\ Q.PAT_ASSUM `!exp.bbb` (fn th => ASSUME_TAC th THEN MP_TAC (Q.SPECL [`x1`,`a`] th))
+      \\ Q.PAT_X_ASSUM `!exp.bbb` (fn th => ASSUME_TAC th THEN MP_TAC (Q.SPECL [`x1`,`a`] th))
       \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC THEN1 (EVAL_TAC \\ DECIDE_TAC)
       \\ FULL_SIMP_TAC std_ss [EVERY_DEF,term_ok_def]
       \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC THEN1 (FULL_SIMP_TAC std_ss [EVERY_MEM,MEM])
@@ -1934,12 +1931,12 @@ val M_ev_TERMINATES_STEP = prove(
       \\ FULL_SIMP_TAC std_ss []
       \\ Cases_on `isTrue (EvalTerm (a,ctxt) x1)`
       \\ FULL_SIMP_TAC std_ss [AND_IMP_INTRO] THEN1
-       (Q.PAT_ASSUM `!exp a.bbb` MATCH_MP_TAC
+       (Q.PAT_X_ASSUM `!exp a.bbb` MATCH_MP_TAC
         \\ STRIP_TAC THEN1 (EVAL_TAC \\ DECIDE_TAC)
         \\ REVERSE STRIP_TAC THEN1 (FULL_SIMP_TAC std_ss [EVERY_MEM,MEM])
         \\ FULL_SIMP_TAC std_ss [EVERY_MAP_CONS,EVERY_DEF,MAP])
       THEN1
-       (Q.PAT_ASSUM `!exp a.bbb` MATCH_MP_TAC
+       (Q.PAT_X_ASSUM `!exp a.bbb` MATCH_MP_TAC
         \\ STRIP_TAC THEN1 (EVAL_TAC \\ DECIDE_TAC)
         \\ REVERSE STRIP_TAC THEN1 (FULL_SIMP_TAC std_ss [EVERY_MEM,MEM])
         \\ FULL_SIMP_TAC std_ss [EVERY_MAP_CONS,EVERY_DEF,MAP,
@@ -1948,10 +1945,10 @@ val M_ev_TERMINATES_STEP = prove(
     \\ ONCE_REWRITE_TAC [M_ev_cases] \\ FULL_SIMP_TAC (srw_ss()) []
     \\ FULL_SIMP_TAC std_ss [EvalTerm_def]
     \\ CONV_TAC (DEPTH_CONV ETA_CONV)
-    \\ `M_evl f (l,a,ctxt) (MAP (EvalTerm (a,ctxt)) l)` by ALL_TAC THEN1
+    \\ `M_evl f (l,a,ctxt) (MAP (EvalTerm (a,ctxt)) l)` by
      (SIMP_TAC std_ss [M_evl_EQ_M_ev] \\ SIMP_TAC std_ss [EVERY_MEM]
       \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss [AND_IMP_INTRO]
-      \\ Q.PAT_ASSUM `!exp a. bbb` MATCH_MP_TAC \\ STRIP_TAC
+      \\ Q.PAT_X_ASSUM `!exp a. bbb` MATCH_MP_TAC \\ STRIP_TAC
       THEN1 (EVAL_TAC \\ IMP_RES_TAC MEM_logic_term_size_alt_LESS \\ DECIDE_TAC)
       \\ IMP_RES_TAC EVERY_IF_CONS
       \\ POP_ASSUM MP_TAC \\ SIMP_TAC std_ss [EVERY_FLAT]
@@ -1976,12 +1973,12 @@ val M_ev_TERMINATES_STEP = prove(
     \\ SIMP_TAC std_ss [M_ev_cases |> SPEC_ALL |> CONJUNCTS |> el 2]
     \\ ASM_SIMP_TAC (srw_ss()) []
     \\ FULL_SIMP_TAC std_ss [term_ok_def,func_arity_def]
-    \\ Q.PAT_ASSUM `ctxt ' f = (params,BODY_FUN body,EvalFun f ctxt)` ASSUME_TAC
+    \\ Q.PAT_X_ASSUM `ctxt ' f = (params,BODY_FUN body,EvalFun f ctxt)` ASSUME_TAC
     \\ FULL_SIMP_TAC std_ss []
     \\ `(!v. MEM v (free_vars body) ==>
              (FunVarBindAux params (MAP (EvalTerm (a,ctxt)) l) a v =
-              FunVarBind params (MAP (EvalTerm (a,ctxt)) l) v))` by ALL_TAC THEN1
-     (REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss [SUBSET_DEF,IN_LIST_TO_SET]
+              FunVarBind params (MAP (EvalTerm (a,ctxt)) l) v))` by
+     (REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss [SUBSET_DEF]
       \\ RES_TAC \\ MATCH_MP_TAC FunVarBindAux_EQ_FunVarBind
       \\ ASM_SIMP_TAC std_ss [LENGTH_MAP]
       \\ FULL_SIMP_TAC std_ss [term_ok_def,func_arity_def]
@@ -1990,10 +1987,10 @@ val M_ev_TERMINATES_STEP = prove(
   THEN1
    (FULL_SIMP_TAC std_ss [callmap_def,EVERY_APPEND]
     \\ SIMP_TAC (srw_ss()) [Once M_ev_cases]
-    \\ `M_evl f (l0,a,ctxt) (MAP (EvalTerm (a,ctxt)) l0)` by ALL_TAC THEN1
+    \\ `M_evl f (l0,a,ctxt) (MAP (EvalTerm (a,ctxt)) l0)` by
      (SIMP_TAC std_ss [M_evl_EQ_M_ev] \\ SIMP_TAC std_ss [EVERY_MEM]
       \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss [AND_IMP_INTRO]
-      \\ Q.PAT_ASSUM `!exp a. bbb` MATCH_MP_TAC \\ STRIP_TAC
+      \\ Q.PAT_X_ASSUM `!exp a. bbb` MATCH_MP_TAC \\ STRIP_TAC
       THEN1 (EVAL_TAC \\ IMP_RES_TAC MEM_logic_term_size_alt_LESS \\ DECIDE_TAC)
       \\ FULL_SIMP_TAC std_ss [EVERY_FLAT]
       \\ FULL_SIMP_TAC std_ss [EVERY_MEM,pairTheory.FORALL_PROD]
@@ -2003,7 +2000,7 @@ val M_ev_TERMINATES_STEP = prove(
     \\ Q.EXISTS_TAC `MAP (EvalTerm (a,ctxt)) l0` \\ ASM_SIMP_TAC std_ss []
     \\ FULL_SIMP_TAC std_ss [term_ok_def,EvalTerm_def,LET_DEF]
     \\ CONV_TAC (DEPTH_CONV ETA_CONV) \\ FULL_SIMP_TAC std_ss [AND_IMP_INTRO]
-    \\ Q.PAT_ASSUM `!x.bbb` MATCH_MP_TAC
+    \\ Q.PAT_X_ASSUM `!x.bbb` MATCH_MP_TAC
     \\ ASM_SIMP_TAC std_ss [logic_term_size_def]
     \\ STRIP_TAC THEN1 DECIDE_TAC
     \\ FULL_SIMP_TAC std_ss [EVERY_MEM] \\ Cases \\ SIMP_TAC std_ss []
@@ -2012,7 +2009,7 @@ val M_ev_TERMINATES_STEP = prove(
     \\ FULL_SIMP_TAC std_ss [PULL_EXISTS_IMP,MEM_MAP,EvalTerm_sub]
     \\ FULL_SIMP_TAC std_ss [MAP_FST_ZIP,GSYM MAP_MAP_o,MAP_SND_ZIP]
     \\ REPEAT STRIP_TAC
-    \\ Q.PAT_ASSUM `!xx yy. bbb` (MP_TAC o Q.SPECL [`q`,`r`])
+    \\ Q.PAT_X_ASSUM `!xx yy. bbb` (MP_TAC o Q.SPECL [`q`,`r`])
     \\ FULL_SIMP_TAC std_ss []
     \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC THEN1
      (REPEAT STRIP_TAC \\ RES_TAC \\ IMP_RES_TAC callmap_free_vars
@@ -2021,14 +2018,14 @@ val M_ev_TERMINATES_STEP = prove(
     \\ SIMP_TAC std_ss [MAP_MAP_o,combinTheory.o_DEF,EvalTerm_sub]
     \\ FULL_SIMP_TAC std_ss [MAP_FST_ZIP,GSYM MAP_MAP_o,MAP_SND_ZIP]
     \\ `(MAP (\x. EvalTerm (a,ctxt) (SND x)) (ZIP (l1,l0))) =
-        (MAP (EvalTerm (a,ctxt)) l0)` by ALL_TAC THEN1
+        (MAP (EvalTerm (a,ctxt)) l0)` by
      (MATCH_MP_TAC EQ_TRANS
       \\ Q.EXISTS_TAC `MAP (EvalTerm (a,ctxt) o SND) (ZIP (l1,l0))`
       \\ STRIP_TAC THEN1 SIMP_TAC std_ss [combinTheory.o_DEF]
       \\ ASM_SIMP_TAC std_ss [GSYM MAP_MAP_o,MAP_SND_ZIP])
     \\ FULL_SIMP_TAC std_ss [] \\ CONV_TAC (DEPTH_CONV ETA_CONV)
     \\ `MAP (EvalTerm (FunVarBindAux l1 (MAP (EvalTerm (a,ctxt)) l0) a,ctxt)) q =
-        MAP (EvalTerm (FunVarBind l1 (MAP (EvalTerm (a,ctxt)) l0),ctxt)) q` by ALL_TAC THEN1
+        MAP (EvalTerm (FunVarBind l1 (MAP (EvalTerm (a,ctxt)) l0),ctxt)) q` by
      (MATCH_MP_TAC IMP_MAP_EQ_MAP \\ REPEAT STRIP_TAC
       \\ RES_TAC \\ IMP_RES_TAC callmap_free_vars
       \\ FULL_SIMP_TAC std_ss [EVERY_MEM] \\ RES_TAC
@@ -2056,7 +2053,7 @@ val M_ev_REMOVE_FunVarBind = prove(
   ``set (free_vars y) SUBSET set xs ==>
     (M_ev f (y,FunVarBind xs (MAP a xs),ctxt) x = M_ev f (y,a,ctxt) x)``,
   REPEAT STRIP_TAC \\ MATCH_MP_TAC M_ev_EQ
-  \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss [SUBSET_DEF,IN_LIST_TO_SET]
+  \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss [SUBSET_DEF]
   \\ RES_TAC \\ POP_ASSUM MP_TAC \\ Q.SPEC_TAC (`xs`,`xs`)
   \\ Induct \\ SIMP_TAC std_ss [MEM,MAP,FunVarBind_def,APPLY_UPDATE_THM]
   \\ REPEAT STRIP_TAC \\ ASM_SIMP_TAC std_ss [MEM,MAP,FunVarBind_def,APPLY_UPDATE_THM]);
@@ -2103,7 +2100,7 @@ val EvalTerm_REDUCE_CTXT = prove(
   MATCH_MP_TAC (fetch "-" "EvalTerm_ind")
   \\ FULL_SIMP_TAC std_ss [EvalTerm_def,LET_DEF] \\ REPEAT STRIP_TAC THEN1
    (`MAP (EvalTerm (a,ctxt |+ (name,params,body,sem))) args =
-     MAP (EvalTerm (a,ctxt)) args` by ALL_TAC THEN1
+     MAP (EvalTerm (a,ctxt)) args` by
      (MATCH_MP_TAC IMP_MAP_EQ_MAP \\ REPEAT STRIP_TAC
       \\ FULL_SIMP_TAC std_ss [term_ok_def,EVERY_MEM])
     \\ CONV_TAC (DEPTH_CONV ETA_CONV) \\ Cases_on `f`
@@ -2111,7 +2108,7 @@ val EvalTerm_REDUCE_CTXT = prove(
     \\ FULL_SIMP_TAC std_ss [FAPPLY_FUPDATE_THM] \\ METIS_TAC [])
   \\ CONV_TAC (DEPTH_CONV ETA_CONV)
   \\ `MAP (EvalTerm (a,ctxt |+ (name,params,body,sem))) ys =
-      MAP (EvalTerm (a,ctxt)) ys` by ALL_TAC THEN1
+      MAP (EvalTerm (a,ctxt)) ys` by
      (MATCH_MP_TAC IMP_MAP_EQ_MAP \\ REPEAT STRIP_TAC
       \\ FULL_SIMP_TAC std_ss [term_ok_def,EVERY_MEM])
   \\ FULL_SIMP_TAC std_ss [term_ok_def] \\ METIS_TAC []) |> SIMP_RULE std_ss [];
@@ -2190,7 +2187,7 @@ val definition_ok_lemma = prove(
     \\ Q.UNABBREV_TAC `witness` \\ FULL_SIMP_TAC std_ss [] \\ METIS_TAC [])
   THEN1
    (`~(name IN FDOM ctxt)` by FULL_SIMP_TAC std_ss [definition_ok_def]
-    \\ Q.PAT_ASSUM `context_ok ctxt` (fn th => MP_TAC th \\ ASSUME_TAC th)
+    \\ Q.PAT_X_ASSUM `context_ok ctxt` (fn th => MP_TAC th \\ ASSUME_TAC th)
     \\ SIMP_TAC std_ss [context_ok_def] \\ STRIP_TAC
     \\ REVERSE (NTAC 2 STRIP_TAC)
     \\ FULL_SIMP_TAC std_ss [PULL_EXISTS_IMP]
@@ -2211,7 +2208,7 @@ val definition_ok_lemma = prove(
         (name,params,BODY_FUN l,
          EvalFun name (ctxt |+ (name,params,BODY_FUN l,ARB)))`
     \\ `EvalFun name (ctxt |+ (name,params,BODY_FUN l,ARB)) =
-        EvalFun name new_ctxt` by ALL_TAC THEN1 (METIS_TAC [EvalFun_IGNORE_SEM])
+        EvalFun name new_ctxt` by (METIS_TAC [EvalFun_IGNORE_SEM])
     \\ FULL_SIMP_TAC std_ss []
     \\ FULL_SIMP_TAC (srw_ss()) [definition_ok_def]
     \\ MP_TAC (BODY_FUN_EXISTS
@@ -2223,12 +2220,9 @@ val definition_ok_lemma = prove(
     \\ STRIP_TAC
     THEN1 (Q.UNABBREV_TAC `new_ctxt` \\ FULL_SIMP_TAC std_ss [term_ok_IGNORE_SEM])
     \\ FULL_SIMP_TAC std_ss [EVERY_MEM] \\ REPEAT STRIP_TAC \\ RES_TAC
-    \\ `MilawaTrue (ctxt |+ (name,params,NO_FUN,EvalFun name new_ctxt)) x` by ALL_TAC
-    THEN1 (FULL_SIMP_TAC std_ss [MilawaTrue_IGNORE_SEM])
-    \\ `context_ok (ctxt |+ (name,params,NO_FUN,EvalFun name new_ctxt))` by ALL_TAC
-    THEN1 (MATCH_MP_TAC context_ok_None \\ FULL_SIMP_TAC std_ss [])
-    \\ `MilawaValid (ctxt |+ (name,params,NO_FUN,EvalFun name new_ctxt)) x` by ALL_TAC
-    THEN1 METIS_TAC [Milawa_SOUNDESS]
+    \\ `MilawaTrue (ctxt |+ (name,params,NO_FUN,EvalFun name new_ctxt)) x` by (FULL_SIMP_TAC std_ss [MilawaTrue_IGNORE_SEM])
+    \\ `context_ok (ctxt |+ (name,params,NO_FUN,EvalFun name new_ctxt))` by (MATCH_MP_TAC context_ok_None \\ FULL_SIMP_TAC std_ss [])
+    \\ `MilawaValid (ctxt |+ (name,params,NO_FUN,EvalFun name new_ctxt)) x` by METIS_TAC [Milawa_SOUNDESS]
     \\ METIS_TAC [MilawaValid_IGNORE_SYNTAX]));
 
 val definition_ok_thm = store_thm("definition_ok_thm",
@@ -2256,4 +2250,3 @@ val definition_ok_BODY_FUN = store_thm("definition_ok_BODY_FUN",
     |> SIMP_RULE (srw_ss()) []) \\ FULL_SIMP_TAC std_ss []);
 
 val _ = export_theory();
-

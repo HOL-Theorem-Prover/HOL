@@ -3,7 +3,7 @@ struct
 
 open HolKernel Parse Feedback
 
-local open state_transformerTheory oneTheory in end
+local open oneTheory in end
 
 val monadseq_special = "__monad_sequence"
 val monad_emptyseq_special = "__monad_emptyseq"
@@ -140,9 +140,9 @@ in
     end
 end
 
-val transform_absyn = clean_do false
+fun transform_absyn G a = clean_do false a
 
-val _ = Parse.temp_add_absyn_postprocessor ("monadsyntax.transform_absyn",
+val _ = Parse.temp_add_absyn_postprocessor ("parmonadsyntax.transform_absyn",
                                             transform_absyn)
 
 
@@ -164,7 +164,7 @@ end handle HOL_ERR _ => NONE
 val dest_par = dest_binop monad_par
 val dest_bind = dest_binop monad_bind
 
-fun print_monads (tyg, tmg) backend sysprinter ppfns (p,l,r) dpth t = let
+fun print_monads (tyg, tmg) backend sysprinter ppfns (p,l,r) depth t = let
   open smpp term_pp_utils
   infix >> >-
   val ppfns = ppfns : term_pp_types.ppstream_funs
@@ -175,6 +175,8 @@ fun print_monads (tyg, tmg) backend sysprinter ppfns (p,l,r) dpth t = let
   fun pend b = if b then strn ")" else nothing
   val (arg1, arg2) = valOf (dest_bind tmg t)
                              handle Option => raise UserPP_Failed
+  fun syspr bp gravs t =
+    sysprinter {gravs = gravs, depth = depth - 1, binderp = bp} t
   fun pr_action (p,l,r) (vopt, action) = let
     fun atomic_assign () = let
       fun check_grav grav =
@@ -188,20 +190,20 @@ fun print_monads (tyg, tmg) backend sysprinter ppfns (p,l,r) dpth t = let
       addbvs bvars >>
       pbegin bracketp >>
       ublock PP.INCONSISTENT 0
-         (sysprinter (prec, l, prec) (dpth - 1) (valOf vopt) >>
+         (syspr true (prec, l, prec) (valOf vopt) >>
           strn " " >> strn "<-" >> brk(1,2) >>
-          sysprinter (prec,prec,r) (dpth - 1) action) >>
+          syspr false (prec,prec,r) action) >>
       pend bracketp
     end
   in
     case vopt of
-      NONE => sysprinter (p,l,r) (dpth - 1) action
+      NONE => syspr false (p,l,r) action
     | SOME v => let
       in
         case dest_par tmg action of
           NONE => let
           in
-            if is_genvar v then sysprinter (p,l,r) (dpth - 1) action
+            if is_genvar v then syspr false (p,l,r) action
             else atomic_assign()
           end
         | SOME (a1, a2) => let

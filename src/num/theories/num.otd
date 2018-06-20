@@ -1,0 +1,10 @@
+deltype num
+delconst SUC
+delconst 0
+skipthm num_TY_DEF
+skipthm num_ISO_DEF
+skipthm SUC_DEF
+skipthm ZERO_DEF
+delproof NOT_SUC
+delproof INV_SUC
+delproof INDUCTION

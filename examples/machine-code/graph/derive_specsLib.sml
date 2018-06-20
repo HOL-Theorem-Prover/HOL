@@ -238,7 +238,7 @@ end
 fun remove_arm_CONFIGURE th =
   if can (find_term (fn tm => tm = ``arm_CONFIG``)) (concl th) then let
     val var = ``var:bool``
-    val pat = ``arm_CONFIG (T,ARMv7_A,F,^var,mode)``
+    val pat = ``arm_CONFIG (VFPv3,ARMv7_A,F,^var,mode)``
     val m = match_term pat
     val n = subst (fst (m (find_term (can m) (concl th)))) var
     val th = DISCH (mk_neg n) th |> SIMP_RULE bool_ss []
@@ -401,7 +401,7 @@ fun derive_individual_specs code = let
   fun remove_switch_prefix s =
     if String.isPrefix "switch:" s
     then remove_switch_prefix (String.substring(s,prefix_len,size s - prefix_len)) else s
-  val bad_insts = ["rfeia","mrc","mcr","mcrr","strex","cpsid"]
+  val bad_insts = ["rfeia","mrc","mcr","mcrr","strex","cpsid","svc"]
   fun bad_instruction asm_name =
     length (filter (fn s => String.isPrefix s asm_name) bad_insts) <> 0
   val white_chars = explode " \t\n"
@@ -479,6 +479,7 @@ fun derive_individual_specs code = let
              (pos+4,(g (pos+4) th2,4,NONE),SOME (g (pos+4) th2a,4,SOME 4)) ::
              (pos+8,(g (pos+8) th3,4*l-8,SOME 4),NONE) ::
                get_specs code end
+        else if String.isPrefix "dmb" asm then failwith("not supported")
         else let
           val g = clean_spec_thm o
                   remove_arm_CONFIGURE o
@@ -667,7 +668,7 @@ fun print_stack_intro_report () =
     (write_line "No stack intro failures."; [])
    else (map print_stack_intro_fail (!stack_intro_fails)))
 
-fun dervie_specs_for sec_name = let
+fun derive_specs_for sec_name = let
   val code = section_body sec_name
   val _ = write_subsection "Deriving specifications"
   val cl = int_to_string (length code)
@@ -688,38 +689,10 @@ fun dervie_specs_for sec_name = let
   in thms end;
 
 (*
-  val base_name = "/Users/mom22/decompiler/graph/new-gcc-O1/kernel"
-  val _ = read_files base_name
+
+  val base_name = ...
+  val _ = read_files base_name []
   val _ = open_current "test"
-  val sec_name = "doNormalTransfer"
-
-  val ths = thms |> map (#1 o #2)
-
-  val all_summaries = map approx_summary (thms1 @ thms2) |> flatten
-
-val all_summaries =
-   [(``4w:word32``, ``T``,
-     [(``r3:word32``,``r13 + 64w:word32``)], NONE,
-     ``8w:word32``),
-
-    (``8w:word32``, ``T``,
-     [(``READ32 (r13 + 12w:word32) m``,``r3:word32``)],
-     SOME ``r13 + 8w:word32``,
-     ``11w:word32``),
-
-    (``11w:word32``, ``T``,
-     [(``r13:word32``,``r13 + 4w:word32``)], NONE,
-     ``12w:word32``),
-
-    (``12w:word32``, ``T``,
-     [(``r12:word32``, ``READ32 (r13 + 8w:word32) m``),
-      (``READ32 (r13 + 60w:word32) m``,``r3:word32``)],
-     SOME ``r13 + 8w:word32``, ``16w:word32``),
-
-    (``16w:word32``, ``T``,
-     [(``r2:word32``, ``READ32 (r12:word32) m``),
-      (``r3:word32``, ``READ32 (r12 + 4w:word32) m``)],
-     SOME ``r12:word32``, ``20w:word32``)]
 
 *)
 

@@ -3,8 +3,7 @@
 \BLTYPE
 print_from_grammars :
   (type_grammar.grammar * term_grammar.grammar) ->
-  ((Portable.ppstream -> hol_type -> unit) *
-   (Portable.ppstream -> term -> unit))
+  (hol_type Parse.pprinter * term Parse.pprinter)
 \ELTYPE
 
 \SYNOPSIS
@@ -41,15 +40,16 @@ is augmented when the theory of arithmetic is loaded.  Printing
 functions based on the grammar of the base theory {bool} can be
 defined:
 {
-   - val (typepp, termpp) = print_from_grammars bool_grammars
-   > val typepp = fn : ppstream -> hol_type -> unit
-     val termpp = fn : ppstream -> term -> unit
+   > val (typepp, termpp) = print_from_grammars bool_grammars;
+   val termpp = fn : term Parse.pprinter
+   val typepp = fn : hol_type Parse.pprinter
 }
 These functions can then be used to print arithmetic terms (note that
 neither the global parser nor printer are disturbed by this activity),
-using the {Portable.pprint} function:
+using the {Portable.pprint} function
+(or {Lib.ppstring}, which returns a string):
 {
-   - Portable.pprint termpp ``3 + x * 4``;
+   > Portable.pprint termpp ``3 + x * 4``;
    arithmetic$+
      (arithmetic$NUMERAL
         (arithmetic$BIT1 (arithmetic$BIT1 arithmetic$ZERO)))
@@ -70,6 +70,7 @@ concrete syntax and overloading, and even the underlying
 representation of numerals.
 
 \SEEALSO
-Parse.parse_from_grammars, Parse.print_term_by_grammar, Parse.Term.
+Parse.parse_from_grammars, Parse.print_term_by_grammar, Parse.Term,
+Portable.pprint, Lib.ppstring.
 
 \ENDDOC

@@ -71,8 +71,8 @@ val Sins = Q.store_thm("Sins",
 val balanced_S = Q.store_thm("balanced_S",
   `∀w n. balanced w n ⇒ S (REPLICATE n a ++ w)`,
   ho_match_mp_tac balanced_ind >>
-  simp[REPLICATE_GENLIST] >> rw[] >> fs[] >- (
-    fs[GENLIST,SNOC_APPEND] >> met[] ) >>
+  asm_simp_tac std_ss [REPLICATE_GENLIST] >> rw[] >> fs[]
+  >- (fs[GENLIST,SNOC_APPEND] >> met[]) >>
   imp_res_tac Sins >>
   first_x_assum(qspec_then`w`mp_tac) >> simp[] >>
   simp[GENLIST,SNOC_APPEND] >> met[])

@@ -1,0 +1,2217 @@
+\chapter{Advanced Definition Principles}\label{HOLdefinitions}
+
+\section{Datatypes}\label{sec:datatype}
+\index{type definitions, in HOL logic@type definitions, in \HOL{} logic!algebraic types}
+\index{Datatype@\ml{Datatype}|(}
+\index{Hol_datatype@\ml{Hol_datatype}|see{\ml{Datatype}}}
+\index{algebraic data types|see{\ml{Datatype}}}
+\index{data types!definition in HOL@definition in \HOL{}}
+\index{data types!definition in HOL@definition in \HOL{}|seealso{\ml{Datatype}}}
+
+Although the \HOL{} logic provides primitive definition principles allowing new types to be introduced, the level of detail is very fine-grained.
+%
+The style of datatype definitions in functional programming languages provides motivation for a high level interface for defining algebraic datatypes.
+
+The \verb+Datatype+ function supports the definition of such data types; the specifications of the types may be recursive, mutually recursive, nested recursive, and involve records.
+%
+The syntax of declarations that \verb+Datatype+ accepts is found in Table~\ref{datatype}.%
+\footnote{\HOL{} also supports another syntax for datatype definition through the \ml{Hol_datatype} entrypoint. %
+For more details on this syntax, see \ml{Hol_datatype}'s entry in \REFERENCE.}
+
+\newcommand{\itelse}[3]{\mbox{$\mathtt{if}\ {#1}\ \mathtt{then}\ {#2}\ \mathtt{else}\ {#3}$}}
+
+\newcommand{\bk}{\char'134}
+\newcommand{\ident}      {\mbox{\it ident}}
+\newcommand{\clause}     {\mbox{\it clause}}
+\newcommand{\type}       {\mbox{\it hol\_type}}
+\newcommand{\tyspec}     {\mbox{\it ty-spec}}
+{
+\newcommand{\binding} {\mbox{\it binding}}
+\newcommand{\recdspec}  {\mbox{\it record-spec}}
+\newcommand{\constr} {\mbox{\it constructor-spec}}
+
+\begin{table}[htbp]
+\begin{center}
+\begin{tabular}{|rcl|}
+\hline
+\multicolumn{3}{|l|}
+{\texttt{Datatype `}[\binding\ \texttt{;}]$^*$ \binding\texttt{`}}\\
+& &\\
+\binding & \verb+::=+ & \ident\ \verb+=+ \constr\\
+         & \verb+|+   & \ident\ \verb+=+ \recdspec\\
+& & \\
+\constr & \verb+::=+ & [\clause{} \verb+|+]$^*$ \clause \\
+& & \\
+\clause & \verb+::=+ & \ident{} \tyspec$^*$\\
+& & \\
+\tyspec & \verb+::=+ & \verb+(+ \type{} \verb+)+ \quad\verb+|+\quad \mbox{\it atomic-type}\\
+& & \\
+\recdspec & \verb+::=+ &
+\verb+<|+ [\ident\ \verb+:+ \type\ \verb+;+]$^*$ \ident\ \verb+:+ \type\
+ \verb+;+$^?$\verb+|>+\\
+\hline
+\end{tabular}
+\caption{Datatype Declaration. An \textit{atomic-type} is a single token that denotes a \type{} (\eg, \holtxt{num}, \holtxt{real}, or \holtxt{'a}).}\label{datatype}
+\end{center}
+\end{table}
+}
+
+
+\index{type definitions, in HOL logic@type definitions, in \HOL{} logic!maintenance of TypeBase@maintenance of \ml{TypeBase}}
+\index{TypeBase@\ml{TypeBase}}
+%
+\HOL{} maintains an underlying database of datatype facts called the
+\ml{TypeBase}.  This database is used to support various high-level
+proof tools (see Section~\ref{sec:bossLib}), and is augmented whenever
+a \verb+Datatype+ declaration is made.  When a datatype is
+defined by \verb+Datatype+, the following information is derived
+and stored in the database.
+
+\begin{itemize}
+\item initiality theorem for the type
+\item injectivity of the constructors
+\item distinctness of the constructors
+\item structural induction theorem
+\item case analysis theorem
+\item definition of the `case' constant for the type
+\item congruence theorem for the case constant
+\item definition of the `size' of the type
+\end{itemize}
+
+When the \HOL{} system
+starts up, the \ml{TypeBase} already contains the relevant entries for
+the types \holtxt{bool}, \holtxt{prod}, \holtxt{num}, \holtxt{option},
+and \holtxt{list}.
+
+\paragraph{Example: Binary trees}
+The following ML declaration of a data type of binary trees
+\begin{hol}
+\begin{verbatim}
+  datatype ('a,'b) btree = Leaf of 'a
+                         | Node of ('a,'b) btree * 'b * ('a,'b) btree
+\end{verbatim}
+\end{hol}
+\noindent would be declared in \HOL{} as
+\begin{hol}
+\begin{verbatim}
+   Datatype `btree = Leaf 'a | Node btree 'b btree`
+\end{verbatim}
+\end{hol}
+\noindent Note that any type parameters for the new type are not
+mentioned: the type variables are always ordered alphabetically.
+
+This subtle point bears repeating: the format of datatype definitions
+does not have enough information to always determine the order of
+arguments to the introduced type operators. Thus, when defining a type
+that is polymorphic in more than one argument, there is a question of
+what the order of the new operator's arguments will be.  For another
+example, if one defines
+%
+\begin{hol}
+\begin{verbatim}
+   Datatype `sum = C1 'left | C2 'right`;
+\end{verbatim}
+\end{hol}
+%
+and then writes \ml{('a,'b)sum}, will the \ml{'a} value be under the
+\ml{C1} or \ml{C2} constructor?
+The system chooses to make the arguments corresponding to variables appear in the order given by the dictionary ordering of the names of the variables occurring in the definition.
+Thus, in the example given, the \ml{'a} of \ml{('a,'b)sum} will be the argument to the \holtxt{C1} constructor because \holtxt{'left} comes before \holtxt{'right} in the standard (ASCII) dictionary ordering.
+
+\subsection{Further examples}
+
+ In the following, we shall give an overview of the kinds of types that
+ may be defined by \ml{Datatype}.
+
+ To start, enumerated types can be defined as in the following example:
+\begin{hol}
+\begin{verbatim}
+  Datatype
+    `enum = A1  | A2  | A3  | A4  | A5
+          | A6  | A7  | A8  | A9  | A10
+          | A11 | A12 | A13 | A14 | A15
+          | A16 | A17 | A18 | A19 | A20
+          | A21 | A22 | A23 | A24 | A25
+          | A26 | A27 | A28 | A29 | A30`
+\end{verbatim}
+\end{hol}
+%
+Other non-recursive types may be defined as well:
+\begin{hol}
+\begin{verbatim}
+  Datatype`foo = N num | B bool | Fn ('a -> 'b) | Pr ('a # 'b)`
+\end{verbatim}
+\end{hol}
+%
+Turning to recursive types, we have already seen a type of binary
+trees having polymorphic values at internal nodes. This time, we will
+declare it in ``paired'' format.
+\begin{hol}
+\begin{verbatim}
+  Datatype `tree = Leaf 'a | Node (tree # 'b # tree)`
+\end{verbatim}
+\end{hol}
+%
+This specification seems closer to the declaration that one might make
+in ML, but can be more difficult to deal with in proof than the curried format
+used above.
+
+The basic syntax of the named lambda calculus is easy to describe:
+%
+\begin{hol}
+\begin{verbatim}
+  Datatype `lambda = Var string
+                   | Const 'a
+                   | Comb lambda lambda
+                   | Abs lambda lambda`
+\end{verbatim}
+\end{hol}
+%
+The syntax for `de Bruijn' terms is roughly similar:
+%
+\begin{hol}
+\begin{verbatim}
+  Datatype `dB = Var string
+               | Const 'a
+               | Bound num
+               | Comb dB dB
+               | Abs dB`
+\end{verbatim}
+\end{hol}
+%
+Arbitrarily branching trees may be defined by allowing a node to hold
+the list of its subtrees. In such a case, leaf nodes do not need to be
+explicitly declared.
+%
+\begin{hol}
+\begin{verbatim}
+  Datatype `ntree = Node 'a (ntree list)`
+\end{verbatim}
+\end{hol}
+%
+A type of `first order terms' can be declared as follows:
+%
+\begin{hol}
+\begin{verbatim}
+  Datatype `term = Var string | Fnapp (string # term list)`
+\end{verbatim}
+\end{hol}
+%
+Mutally recursive types may also be defined. The following, extracted by
+Elsa Gunter from the Definition of Standard ML, captures a subset of
+Core ML.
+%
+\begin{hol}
+\begin{verbatim}
+  Datatype
+    `atexp = var_exp string
+           | let_exp dec exp ;
+
+       exp = aexp    atexp
+           | app_exp exp atexp
+           | fn_exp  match ;
+
+     match = match  rule
+           | matchl rule match ;
+
+      rule = rule pat exp ;
+
+       dec = val_dec   valbind
+           | local_dec dec dec
+           | seq_dec   dec dec ;
+
+   valbind = bind  pat exp
+           | bindl pat exp valbind
+           | rec_bind valbind ;
+
+       pat = wild_pat
+           | var_pat string`
+\end{verbatim}
+\end{hol}
+%
+Simple record types may be introduced using the \holtxt{<| ... |>} notation.
+%
+\begin{hol}
+\begin{verbatim}
+  Datatype
+    `state = <| Reg1 : num; Reg2 : num; Waiting : bool |>`
+\end{verbatim}
+\end{hol}
+%
+The use of record types may be recursive. For example, the following
+declaration could be used to formalize a simple file system.
+%
+\begin{hol}
+\begin{verbatim}
+  Datatype
+    `file = Text string | Dir directory
+       ;
+     directory = <| owner : string ;
+                    files : (string # file) list |>`
+\end{verbatim}
+\end{hol}
+
+\subsection{Type definitions that fail}
+
+ Now we address some types that cannot be declared with \ml{Datatype}.
+In some cases they cannot exist in HOL at all; in others, the type
+can be built in the HOL logic, but \ml{Datatype} is not able to make
+the definition.
+
+First, an empty type is not allowed in HOL, so the following attempt
+is doomed to fail.
+%
+\begin{hol}
+\begin{verbatim}
+  Datatype `foo = A foo`
+\end{verbatim}
+\end{hol}
+%
+So called `nested types', which are occasionally quite useful, cannot
+at present be built with \ml{Datatype}:
+%
+\begin{hol}
+\begin{verbatim}
+  Datatype `btree = Leaf 'a | Node (('a # 'a) btree)`
+\end{verbatim}
+\end{hol}
+%
+Types may not recurse on either side of function arrows.  Recursion on
+the right is consistent (see the theory \theoryimp{inftree}), but
+\ml{Datatype} is not capable of defining algebraic types that
+require it.  Thus, examples such as the following will fail:
+%
+\begin{hol}
+\begin{verbatim}
+  Datatype `flist = Nil | Cons 'a ('b -> flist)`
+\end{verbatim}
+\end{hol}
+%
+Recursion on the left must fail for cardinality reasons. For
+example, HOL does not allow the following attempt to model the untyped
+lambda calculus (note the \holtxt{->} in the clause for the
+\holtxt{Abs} constructor):
+%
+\begin{hol}
+\begin{verbatim}
+  Datatype `lambda = Var string
+                   | Const 'a
+                   | Comb lambda lambda
+                   | Abs (lambda -> lambda)`
+\end{verbatim}
+\end{hol}
+
+\subsection{Theorems arising from a datatype definition}
+
+The consequences of an invocation of \ml{Datatype} are stored in the current theory segment and in \ml{TypeBase}.
+The principal consequences of a datatype definition are the primitive recursion and induction theorems.
+These provide the ability to define simple functions over the type, and an induction principle for the type.
+\index{induction theorems, in HOL logic@induction theorems, in \HOL{} logic!for algebraic data types}
+Thus, for a type named \holtxt{ty}, the primitive recursion theorem is stored under \ml{ty\_Axiom} and the induction theorem is put under \ml{ty\_induction}.
+Other consequences include the distinctness of constructors (\ml{ty\_distinct}), and the injectivity of constructors (\verb+ty_11+).
+A `degenerate' version of \ml{ty\_induction} is also stored under \ml{ty\_nchotomy}: it provides for reasoning by cases on the construction of elements of \ml{ty}.
+Finally, some special-purpose theorems are stored: for example, \ml{ty\_case\_cong} holds a congruence theorem for ``case'' statements on elements of \ml{ty}.
+These case statements are defined by \ml{ty\_case\_def}.
+Also, a definition of the ``size'' of the type is added to the current theory, under the name \ml{ty\_size\_def}.
+
+For example, invoking
+%
+\begin{hol}
+\begin{verbatim}
+  Datatype `tree = Leaf num | Node tree tree`
+\end{verbatim}
+\end{hol}
+%
+results in the definitions
+%
+\begin{hol}
+\begin{verbatim}
+  tree_case_def =
+    |- (!a f f1 a. tree_CASE (Leaf a) f f1 = f a) /\
+       !f f1 a0 a1. tree_CASE (Node a0 a1) f f1 = f1 a0 a1
+
+  tree_size_def
+    |- (!a. tree_size (Leaf a) = 1 + a) /\
+       !a0 a1. tree_size (Node a0 a1) = 1 + (tree_size a0 + tree_size a1)
+\end{verbatim}
+\end{hol}
+%
+being added to the current theory.
+The case constant (here \holtxt{tree_CASE}) allows pretty case expressions; see Section~\ref{CaseExp} below.
+The following theorems about the datatype are also proved and stored in the current theory.
+%
+\begin{hol}
+\begin{verbatim}
+  tree_Axiom
+    |- !f0 f1.
+       ?fn. (!a. fn (Leaf a) = f0 a) /\
+            !a0 a1. fn (Node a0 a1) = f1 a0 a1 (fn a0) (fn a1)
+  tree_induction
+    |- !P. (!n. P (Leaf n)) /\
+           (!t t0. P t /\ P t0 ==> P (Node t t0)) ==> !t. P t
+  tree_nchotomy
+    |- !t. (?n. t = Leaf n) \/ ?t' t0. t = Node t' t0
+  tree_11
+    |- (!a a'. (Leaf a = Leaf a') = (a = a')) /\
+       !a0 a1 a0' a1'. (Node a0 a1 = Node a0' a1') = (a0=a0') /\ (a1=a1')
+  tree_distinct
+    |- !a1 a0 a. ~(Leaf a = Node a0 a1)
+  tree_case_cong
+    |- !M M' f f1.
+        (M = M') /\
+        (!a. (M' = Leaf a) ==> (f a = f' a)) /\
+        (!a0 a1. (M' = Node a0 a1) ==> (f1 a0 a1 = f1' a0 a1))
+          ==>
+        (tree_CASE M f f1 = tree_CASE M' f' f1')
+\end{verbatim}
+\end{hol}
+%
+When a type involving records is defined, many more definitions are
+made and added to the current theory.
+
+A mutually recursive type definition results in the above
+theorems and definitions being added for each of the defined types.
+
+\section{Record Types}\label{sec:records}
+\index{type definitions, in HOL logic@type definitions, in \HOL{} logic!record types}
+\index{record types}
+
+Record types are convenient ways of bundling together a number of
+component types, and giving those components names so as to facilitate
+access to them.  Record types are semantically equivalent to big pair
+(product) types, but the ability to label the fields with names of
+one's own choosing is a great convenience.  Record types as
+implemented in \HOL{} are similar to C's \texttt{struct} types and to
+Pascal's records.
+
+Done correctly, record types provide useful maintainability features.
+If one can always access the {\tt fieldn} field of a record type by
+simply writing {\tt record.fieldn}, then changes to the type that
+result in the addition or deletion of other fields will not invalidate
+this reference.  One failing in SML's record types is that they do not
+allow the same maintainability as far as (functional) updates of
+records are concerned.  The HOL implementation allows one to write
+\begin{hol}
+\begin{verbatim}
+  rec with fieldn := new_value
+\end{verbatim}
+\end{hol}
+which replaces the old value of {\tt fieldn} in the record {\tt rec}
+with {\tt new\_value}.  This expression will not need to be changed if
+another field is added, modified or deleted from the record's original
+definition.
+
+\paragraph{Defining a record type}
+Record types are defined with the function \texttt{Datatype}, as
+previously discussed.  For example, to create a record type called
+{\tt person} with boolean, string and number fields called {\tt
+  employed}, {\tt name} and {\tt age}, one would enter:
+\begin{hol}
+\begin{verbatim}
+  Datatype `person = <| employed : bool ; age : num ; name : string |>`
+\end{verbatim}
+\end{hol}
+The order in which the fields are entered is not significant. As well
+as defining the type (called {\tt person}), the datatype definition
+function also defines two other sets of constants.  These are the
+field access functions and functional update functions.
+
+\index{record types!field selection functions and notation}%
+The \textbf{field access functions} have names of the form
+$\langle$\textsl{record-type\/}$\rangle$\verb|_|$\langle$\textsl{field\/}$\rangle$.
+These functions can be used directly, or one can use standard field
+selection notation to access the values of a record's field.  Thus,
+one would write the expression: \holtxt{bob.employed} in order
+to return the value of {\tt bob}'s {\tt employed} field.  The
+alternative, \holtxt{person\_employed bob}, works, but would be
+printed using the first syntax, with the full-stop.
+
+\index{record types!field update functions}
+The \textbf{functional update functions} are given the names
+\mbox{``$\langle$\textsl{record-type}$\rangle$\texttt{\_}$\langle$\textsl{field}$\rangle$\texttt{\_fupd}''} for each field in the type.
+They take two arguments, a function and a record to be updated.
+The function parameter is an endomorphism on the field type, so that the resulting record is the same as the original, except that the specified field has had the given function applied to it to generate the new value for that field.
+They can be written with the keyword \texttt{with} and the \texttt{updated\_by} operator.  Thus
+%
+\begin{hol}
+\begin{verbatim}
+  bob with employed updated_by $~
+\end{verbatim}
+\end{hol}\noindent
+%
+is a record value identical to the \texttt{bob} except that the
+boolean value in the \texttt{employed} field has been inverted.
+
+Additionally, there is syntactic sugar available to let one write a record with one of its fields replaced by a specific value.
+This is done by using the \holtxt{:=} operator instead of \holtxt{updated\_by}:
+%
+\begin{hol}
+\begin{verbatim}
+  bob with employed := T
+\end{verbatim}
+\end{hol}
+%
+This form is translated at parse-time to be a use of the corresponding
+functional update, along with a use of the \textsf{K}-combinator from
+the \texttt{combin} theory.  Thus, the above example  is really
+%
+\begin{hol}
+\begin{verbatim}
+  bob with employed updated_by (K T)
+\end{verbatim}
+\end{hol}
+%
+which is in turn a pretty form of
+%
+\begin{hol}
+\begin{verbatim}
+  person_employed_fupd (K T) bob
+\end{verbatim}
+\end{hol}
+%
+If a chain of updates is desired, then multiple updates can be
+specified inside \holtxt{<|}-\holtxt{|>} pairs, separated by
+semi-colons, thus:
+%
+\begin{hol}
+\begin{verbatim}
+  bob with <| age := 10; name := "Child labourer" |>
+\end{verbatim}
+\end{hol}
+%
+Both update forms (using \texttt{updated\_by} and \texttt{:=}) can be
+used in a chain of updates.
+
+\paragraph{Specifying record literals}
+
+\index{record types!record literals}%
+The parser accepts lists of field specifications between
+\holtxt{<|}-\holtxt{|>} pairs without the \holtxt{with} keyword.
+These translate to sequences of updates of an arbitrary value
+(literally, the HOL value \holtxt{ARB}), and are treated as literals.
+Thus,
+%
+\begin{hol}
+\begin{verbatim}
+  <| age := 21; employed := F; name := "Layabout" |>
+\end{verbatim}
+\end{hol}
+
+\paragraph{Using the theorems produced by record definition}
+
+As well as defining the type and the functions described above, record
+type definition also proves a suite of useful theorems.  These are all
+are saved (using {\tt save\_thm}) in the current segment.  %
+%
+\index{TypeBase@\ml{TypeBase}}
+%
+Some are also added to the \ml{TypeBase}'s simplifications for the
+type, so they will be automatically applied when simplifying with the
+\ml{srw\_ss()} simpset, or with the tactics \ml{RW\_TAC} and
+\ml{SRW\_TAC} (see Section~\ref{sec:simpLib}).
+
+All of the theorems are saved under names that begin with the name of
+the type.  The list below is a sample of the theorems proved.  The
+identifying strings are suffixes appended to the name of the type in
+order to generate the final name of the theorem.
+
+\newcommand{\rewruse}{This theorem is installed in the \texttt{TypeBase}.}
+\newcommand{\field}[1]{\mbox{\it field}_{#1}}
+\newcommand{\update}{\mbox{\tt\_fupd}}
+
+\begin{description}
+\item[\texttt{\_accessors}] The definitions of the accessor functions.
+  \rewruse
+\item[\texttt{\_fn\_updates}] The definitions of the functional update
+  functions.
+\item[\texttt{\_accfupds}] A theorem that states simpler forms for
+  expressions that are of the form $\field{i}\, (\field{j}\update\;f\; r)$.  If
+  $i = j$, then the RHS is $f (\field{i}(r))$, if not, it is $(\field{i}\;r)$.
+  \rewruse
+\item[\texttt{\_component\_equality}] A theorem stating that $(r_1 =
+  r_2) \equiv \bigwedge_i (\field{i}(r_1) = \field{i}(r_2))$.
+\item[\texttt{\_fupdfupds}] A thereom stating that $\field{i}\update
+  \;f \,(\field{i}\update \;g\;r) = \field{i}\update\;(f \circ g)\;r$.
+  \rewruse
+\item[\texttt{\_fupdcanon}] A theorem that states commutativity results
+  for all possible pairs of field updates.  They are constructed in
+  such a way that if used as rewrites, they will canonicalise
+  sequences of updates. Thus, for all $i < j$, \[
+  \field{j}\update\;f\;(\field{i}\update\;g\;r) =
+  \field{i}\update\;g\;(\field{j}\update\;f\;r)
+  \] is generated.
+ \rewruse
+\end{description}
+
+\paragraph{Big records} The size of certain theorems proved in the
+record type package increases as the square of the number of fields in
+the record.  (In particular, the update canonicalisation and
+\texttt{acc\_fupd} theorems have this property.) To avoid inefficiency
+with big records, the implementation of record types uses a more
+efficient underlying representation when the number of fields grows
+too large.  The exact point at which this optimisation is applied is
+controlled by the reference variable
+\texttt{Datatype.big\_record\_size}.  This value is initialised to 20,
+but users can change it as they choose.
+
+Unfortunately, the big record representation has the drawback that
+every update and accessor function has two forms: different terms that
+are printed the same.  One form is a simple constant, and is the form
+produced when a term is parsed.  The other is more complicated, but
+allows for the use of smaller theorems when record values are
+simplified.  Therefore, it is recommended that new, user-proved
+theorems that mention big records' fields or field updates be passed
+through a phase of simplification (\texttt{SIMP\_RULE}), applying the
+\texttt{TypeBase}'s rewrites, before they are saved.
+
+The pretty-printing of big records can be controlled with the
+\texttt{pp\_bigrecs} trace-flag.
+\index{Datatype@\ml{Datatype}|)}
+
+
+\section{Quotient Types}\label{quotients}
+\index{type definitions, in HOL logic@type definitions, in \HOL{} logic!quotients|(}
+\index{quotient types, definition of}
+
+\HOL{} provides a library for defining new types which are quotients
+of existing types, with respect to partial equivalence relations.
+This library is described in {\it ``Higher Order Quotients in Higher
+Order Logic''} [HOQ], from which the following description is taken.
+
+The quotient library is accessed by opening {\tt quotientLib},
+which makes all its tools and theorems accessable.
+
+The definition of new types corresponding to the quotients of
+existing types by equivalence relations is called ``lifting''
+the types from a lower, more representational level to a higher,
+more abstract level.  Both levels describe similar objects, but
+some details which are apparent at the lower level are no longer
+visible at the higher level.  The logic is simplified.
+
+Simply forming a new type does not complete the quotient operation.
+Rather, one wishes to recreate the
+%significant parts of the
+pre-existing logical environment at the new,
+higher, and more abstract level.  This includes not only the new
+types, but also new versions of the constants that form and
+manipulate values of those types, and also new versions of the
+theorems that describe properties of those constants.  All of these
+%must be recreated at the higher level, in order to
+form a logical layer, above which all the lower representational details
+may be safely and forever forgotten.
+
+This can be done in a single call of the
+main tool of this package.
+
+\begin{hol}
+\begin{verbatim}
+define_quotient_types :
+        {types: {name: string,
+                 equiv: thm} list,
+         defs: {def_name: string,
+                fname: string,
+                func: Term.term,
+                fixity: Parse.fixity} list,
+         tyop_equivs : thm list,
+         tyop_quotients : thm list,
+         tyop_simps : thm list,
+         respects : thm list,
+         poly_preserves : thm list,
+         poly_respects : thm list,
+         old_thms : thm list} ->
+        thm list
+\end{verbatim}
+\end{hol}
+{\tt define\_quotient\_types} takes a single argument which is a
+record with the following fields.
+
+{\it types\/} is a list of records, each of which contains two fields:
+{\it name}, which is the name of a new quotient type to be created, and
+{\it equiv}, which is
+either 1)
+a theorem that a binary relation {\it R\/}
+is an equivalence relation
+(see [HOQ] \S 4)
+of the form
+$$
+\mbox{\tt |-}\
+\forall x\ y.\ R\ x\ y \ \Leftrightarrow \
+                (R\ x = R\ y),
+$$
+or 2)
+a theorem that {\it R\/} is a nonempty partial equivalence relation,
+(see [HOQ] \S 5)
+of the form
+$$
+\mbox{\tt |-}\
+(\exists x.\ R\ x\ x) \ \wedge \
+(\forall x\ y.\ R\ x\ y \ \Leftrightarrow \
+                R\ x\ x \wedge R\ y\ y \wedge (R\ x = R\ y)).
+$$
+The process of forming the new quotient types is described
+in [HOQ] \S 8.
+
+{\it defs\/} is a list of records specifying the constants to be lifted.
+Each record contains the following four fields:
+{\it func\/} is an HOL term, which must be a single constant, which is the
+constant to be lifted.
+{\it fname\/} is the name of the new constant being defined as the lifted version of {\it func}.
+{\it fixity\/} is the HOL fixity of the new constant being created,
+as specified in the HOL structure {\tt Parse}.
+{\it def\_name} is the name under which the new constant definition is to
+be stored in the current theory.
+The
+process of defining lifted constants
+is described in [HOQ] \S 9.
+
+{\it tyop\_equivs\/} is a list of conditional equivalence theorems
+for type operators (see [HOQ] \S 4.1).
+These are used for bringing into regular form
+theorems on new type operators, so that they can be lifted
+(see [HOQ] \S 11 and \S 12).
+
+{\it tyop\_quotients\/} is a list of conditional quotient theorems
+for type operators (see [HOQ] \S 5.2).
+These are used for lifting both constants and theorems.
+
+{\it tyop\_simps\/} is a list of theorems used to simplify type operator
+relations and map functions, e.g.,
+for pairs,
+{\tt |- (\$= \#\#\# \$=) = \$=} and
+{\tt |- (I \#\# I) = I}.
+
+The rest of the arguments refer to the general process of lifting theorems
+over the quotients being defined,
+as described in [HOQ] \S 10.
+
+{\it respects\/} is a list of theorems about the respectfulness of the
+constants being lifted.
+These theorems are described in
+[HOQ] \S 10.1.
+
+{\it poly\_preserves\/} is a list of theorems about the preservation of
+polymorphic constants in the HOL logic
+across a quotient operation.
+%as if they were definitions across the quotient operation.
+In other words, they state that any quotient operation preserves these
+constants as a homomorphism.
+These theorems are described in
+[HOQ] \S 10.2.
+
+{\it poly\_respects\/} is a list of theorems showing the respectfulness
+of the polymorphic constants mentioned in {\it poly\_preserves}.
+These are
+described in
+[HOQ] \S 10.3.
+
+{\it old\_thms\/} is a list of theorems concerning the lower, representative
+types and contants, which are to be automatically lifted and proved at the
+higher, more abstract quotient level.
+These theorems are described in
+[HOQ] \S 10.4.
+
+{\tt define\_quotient\_types} returns a list of theorems, which are the
+lifted versions of the {\it old\_thms}.
+
+A similar function,
+{\tt define\_quotient\_types\_rule}, takes a single argument which is a
+record with the same fields as above except for {\it old\_thms},
+and returns an SML function of type {\tt thm -> thm}.
+This result, typically called {\tt LIFT\_RULE},
+is then used to lift the old theorems individually, one at a time.
+
+For backwards compatibility with
+the excellent quotients package
+{\tt EquivType}
+created by
+John Harrison
+%to whom much credit is due, and
+(which provided much inspiration),
+the following function is also provided:
+
+\begin{hol}
+\begin{verbatim}
+define_equivalence_type :
+        {name: string,
+         equiv: thm,
+         defs: {def_name: string,
+                fname: string,
+                func: Term.term,
+                fixity: Parse.fixity} list,
+         welldefs : thm list,
+         old_thms : thm list} ->
+        thm list
+\end{verbatim}
+\end{hol}
+\noindent
+This function is limited to a single quotient type, but may be
+more convenient when the generality of {\tt define\_quotient\_types}
+is not needed.
+This function is defined in terms of {\tt define\_quotient\_types} as
+
+\begin{hol}
+\begin{verbatim}
+fun define_equivalence_type {name,equiv,defs,welldefs,old_thms} =
+    define_quotient_types
+     {types=[{name=name, equiv=equiv}], defs=defs, tyop_equivs=[],
+      tyop_quotients=[FUN_QUOTIENT],
+      tyop_simps=[FUN_REL_EQ,FUN_MAP_I], respects=welldefs,
+      poly_preserves=[FORALL_PRS,EXISTS_PRS],
+      poly_respects=[RES_FORALL_RSP,RES_EXISTS_RSP],
+      old_thms=old_thms};
+\end{verbatim}
+\end{hol}
+\index{type definitions, in HOL logic@type definitions, in \HOL{} logic!quotients|)}
+
+
+\section{Case Expressions}\label{CaseExp}
+\index{case expressions|(}
+
+\newcommand{\pmatch}{\textsc{Pmatch}}
+Case constructs are an important feature of functional programming languages such as Standard ML.
+They provide a very compact and convenient notation for multi-way selection among the values of several expressions.
+\HOL{} provides such a feature in the form of case expressions.
+Case expressions can simplify the expression of complicated branches between different cases or combinations of cases.
+
+Pattern matching and case expressions are not directly supported by higher order logic.
+Thus, some effort is needed to support them in \HOL{}.
+There are two implementations of case expressions in \HOL{}.
+The parser supports case expressions, which it compiles into decision trees based on if-then-else expressions and case-constants as introduced by datatype definitions.
+The pretty-printer presents these complicated decision trees as nicely readable case expressions again.
+In addition, there is {\tt patternMatchesLib}, which provides a formalisation of case expressions based on Hilbert's choice operator.
+Following the name of the main function, these are called \pmatch{} case expressions.
+
+The benefit of decision-tree case expressions is that the whole semantic complexity is handled by the parser and pretty-printer.
+The resulting terms are simple.
+However, one needs to trust the complicated, lengthy case expression code in the parser and pretty-printer.
+Moreover, the internal structure might differ considerably from the input and is hard to predict.
+In some cases there can be a serious blow-up in size.
+
+\pmatch{} case expressions are simple to parse and pretty-print.
+They support more features than decision-tree ones.
+There are guards, unbound variables in patterns and a wider variety of supported patterns in general.
+There is no size-blowup or surprising internal structure.
+Therefore, code generated from \pmatch{} case expressions tends to be better. However, this comes at the price of a much heavier machinery to reason about \pmatch{} case expressions.
+
+\subsection{Decision-tree case expressions}
+By default, \HOL{} uses decision-tree case expressions.
+Let the non-terminal $\mathit{term}$ stand for any \HOL{} term and the non-terminal $\mathit{cpat}$ represent any constructor pattern, i.e. any \HOL{} term containing only literals, datatype constructors and variables.
+Then, the syntax of decision-tree case expressions is given by
+\[
+\mathit{term} ::= \texttt{case}\;\mathit{term}\;\texttt{of}\;\texttt{|}^?\; \mathit{cpat}\;\texttt{=>}\;\mathit{term}\; (\texttt{|}\;\mathit{cpat}\;\texttt{=>}\;\mathit{term})^*
+\]
+The choice in the rule allows the use of more uniform syntax, where every case is preceded by a vertical bar.
+Omitting the bar, which is what the pretty-printer does when the syntax is printed, conforms to the syntax used by SML.
+If \pmatch{} case expressions have been enabled (see below), then decision-tree case expressions can still be generated by using the \texttt{dtcase} keyword instead of \texttt{case}.
+
+Case expressions consider their list of pattern expressions in sequence to see if they match the test expression.
+Matching means that there is an assignment for the bound variables of that pattern expressions such that it equals the test expression.
+The first pattern which successfully matches causes its associated result expression to be evaluated with the matching variable assignment.
+The resulting value is yielded as the value of the entire case expression.
+If no pattern expression matches, the result of the case expression is \texttt{ARB}.
+Since decision-tree case expressions support only constructor patterns, it is guaranteed that if a pattern expression matches, the resulting variable assignment is uniquely determined.
+
+A simple example of a case expression is
+%
+\begin{hol}
+\begin{alltt}
+>>__ load "stringTheory";
+##parsetm case n of
+              0 => "none"
+            | 1 => "one"
+            | 2 => "two"
+            | _ => "many"
+\end{alltt}
+\end{hol}
+%
+This could have been expressed using several ``if-then-else'' constructs,
+but the case expression is much more compact and clean, with the
+selection between various choices made clearly evident.
+Internally though, it is compiled to nested ``if-then-else'' statements.
+
+In addition to literals as patterns, as above, patterns may be constructor expressions.
+Many standard \HOL{} types have constructors, including \ml{num}, \ml{list}, and \ml{option}.
+A simple example using constructor patterns is (notice the optional bar in front of the first case).
+%
+\begin{hol}
+\begin{alltt}
+##parsetm case spouse(employee) of
+            | NONE   => "single"
+            | SOME s => "married to " ++ name_of s
+\end{alltt}
+\end{hol}
+
+\HOL{} supports a rich structure of case expressions using a single notation.
+The format is related to that of definitions of recursive functions, as described in Section~\ref{TFL}.
+In addition, case expressions may contain literals as patterns, either singly or as elements of deeply nested patterns.
+
+Decision-tree case expressions may test values of any type.
+If the test expression is a type with constructors, then the patterns may be expressed using the constructors applied to arguments, as for example \ml{SOME s} in the example above.
+A free variable within the constructor pattern, for example \ml{s} in the pattern \ml{SOME s}, becomes bound to the corresponding value within the value of the test expression, and can be used within the associated result expression for that pattern.
+
+In addition to the constructors of standard types in \HOL{}, constructor patterns may also be used for types created by use of the datatype definition facility described in Section~\ref{sec:datatype}, including user-defined types.
+
+Whether or not the test expression is a type with constructors, the patterns may be expressed using the appropriate literals of that type, if any such literals exist.
+A complex pattern may contain either or both of literals and constructor
+patterns nested within it.
+However, literals and constructors may not be mixed as alternatives of each other within the same case expression, except insofar as a particular pattern may be both a literal and also a (0-ary) constructor of its type, as for example \ml{0} (zero) is both a literal and a constructor of the type \ml{num}.
+The session in Figure~\ref{fig:case-expr-bad} demonstrates the way in which such an improper mixture is misinterpreted.
+In this pattern, the constructor pattern \ml{SUC m} is given as an alternative to the literal patterns \ml{1} and \ml{2}.
+This makes this attempted case expression invalid.
+Deleting either group of rows would resolve the conflict, and make the expression valid.
+Note that the pattern \ml{0} is acceptable to either group.
+
+
+\begin{figure}
+\begin{session}
+\begin{alltt}
+>>+ “case n of
+        0 => "none"
+      | 1 => "one"
+      | 2 => "two"
+      | SUC m => "many"”;
+\end{alltt}
+\end{session}
+\caption{Decision-tree case expression parsing going wrong}
+\label{fig:case-expr-bad}
+\end{figure}
+
+Patterns can be nested as well, as shown in the first example of Figure~\ref{fig:case-exp-examples}, where the function \ml{parents} returns a pair containing the person's father and/or mother, where each is represented by \ml{NONE} if deceased.
+%
+This shows the nesting of option patterns within a pair pattern, and also the use of a wildcard \ml{\_} to match the cases not given.
+
+%
+\begin{figure}[phbt]
+\quad\begin{minipage}[t]{0.4\textwidth}
+\begin{center}
+\begin{hol}
+\begin{alltt}
+##parsetm case parents(john) of
+             (NONE,NONE) => "orphan"
+           | _ => "not an orphan"
+\end{alltt}
+\end{hol}
+\end{center}
+\end{minipage}%
+\begin{minipage}[t]{0.49\textwidth}
+\begin{center}
+\begin{hol}
+\begin{alltt}
+##parsetm  case a of
+               (1, y, z) => y + z
+             | (x, 2, z) => x - z
+             | (x, y, 3) => x * y
+\end{alltt}
+\end{hol}
+\end{center}
+\end{minipage}
+\caption{Two examples of case expressions}
+\label{fig:case-exp-examples}
+\end{figure}
+
+
+Since decision-tree case expressions are compiled internally to a decision tree, the result of this compilation might look quite different from the input.
+Rows might be reordered or modified, there might be several new rows generated, and new variables or the \ml{ARB} constant may also be introduced to properly represent the case expression.
+Moreover, the exact result depends on complicated heuristics to decide which case-split to perform next in the decision tree.
+For non-trivial case expressions the result can be hard to predict.
+
+For example, consider the second case expression in Figure~\ref{fig:case-exp-examples}.
+%
+Using the default heuristic, this compiles to a reasonably small decision tree that is pretty-printed well.
+The exact combination of equality tests with if-then-else and the case constant for products that this term produces can be seen in the session in Figure~\ref{fig:case-expr-structure}.
+However other heuristics result in more complicated terms as shown in the session in Figure~\ref{fig:case-expr-heuristics}.
+%
+\begin{figure}[phtb]
+\begin{session}
+\begin{alltt}
+>>_ set_trace "pp_cases" 0;
+>> “case a of
+       (1,y,z) => y + z
+     | (x,2,z) => x - z
+     | (x,y,3) => x * y”;
+\end{alltt}
+\end{session}
+\caption{The decision-tree structure underneath a case expression}
+\label{fig:case-expr-structure}
+\end{figure}
+%
+\begin{figure}[phtb]
+\begin{session}
+\begin{alltt}
+>>__ set_trace "pp_cases" 1;
+>>_ Pmatch.set_classic_heuristic ();
+>> “case a of
+       (1,y,z) => y + z
+     | (x,2,z) => x - z
+     | (x,y,3) => x * y”;
+>>_ PmatchHeuristics.set_heuristic PmatchHeuristics.pheu_last_col;
+>> “case a of
+       (1,y,z) => y + z
+     | (x,2,z) => x - z
+     | (x,y,3) => x * y”;
+>>_ Pmatch.set_default_heuristic ();
+>> “case a of
+       (1,y,z) => y + z
+     | (x,2,z) => x - z
+     | (x,y,3) => x * y”;
+\end{alltt}
+\end{session}
+\caption{Effect of different pattern match heuristics}
+\label{fig:case-expr-heuristics}
+\end{figure}
+
+This is just a brief description of some of the expressive capabilities of the case expression with patterns.
+Many more examples of patterns are provided in Section~\ref{TFL} on the definition of recursive functions.
+
+\subsection{\pmatch{} case expressions}\label{sec:pmatch-case-expressions}
+
+The library \texttt{patternMatchesLib} supports another form of case expression.
+After executing \texttt{patternMatchesLib.ENABLE_PMATCH_CASES()}, the case expression syntax introduced above is parsed into \pmatch{}-based terms.%
+\footnote{After parsing \pmatch{} case expressions has been enabled, the keyword \texttt{dtcase} is used for parsing and pretty-printing decision-tree case expressions.}
+If we turn off the library's pretty-printing, we can see how the example expression we used earlier is rendered:
+\begin{session}
+\begin{alltt}
+>>_ patternMatchesLib.ENABLE_PMATCH_CASES();
+>>_ set_trace "use pmatch_pp" 0;
+>> “case a of
+      (1, y, z) => y + z
+    | (x, 2, z) => x - z
+    | (x, y, 3) => x * y”;
+\end{alltt}
+\end{session}
+One can see that in contrast to decision-tree case expressions the internal representation of \pmatch{} case expressions is very close to the input.
+No fancy parsing is required to turn the input into the internal representation, and conversely, printing (when enabled) can easily produce the syntax that the user chose as input.
+
+
+\pmatch{} case expressions are more expressive than decision-tree based ones.
+The syntax allowed for decision-tree case expressions is a subset of the syntax of \pmatch{} ones.
+In addition, \pmatch{} case expressions support guards.
+Moreover, arbitrary terms instead of just ones using literals and constructors can be used as patterns.
+One has full control over the variables bound by patterns.
+Bound variables can even be used more than once in a pattern.
+
+\begin{eqnarray*}
+\mathit{term} & ::= & \texttt{case}\;\mathit{term}\;\texttt{of}\;\texttt{\bfseries|}^?\;\mathit{clause}\;(\texttt{|}\;\mathit{clause})^*\\
+\mathit{clause} & ::= & \mathit{vardecl}^?\;\mathit{term}\; (\texttt{when}\;\mathit{term})^? \;\texttt{=>}\; \mathit{term} \\
+\mathit{vardecl} & ::= & \texttt{(}\mathit{vars}^?\texttt{)}\;\texttt{.|}\;\;\;\mid\;\;\;
+\mathit{vars}\;\texttt{.|}\\
+\mathit{vars} & ::= & \mathit{var}\;\;\;\mid\;\;\;\mathit{var}\;\texttt{,}\;\mathit{vars}
+\end{eqnarray*}
+
+If a \texttt{when}-guard is omitted, it defaults to true (\texttt{T}).
+Omitting the declaration of variables bound by a pattern means that all variables used in the pattern are bound (as with the decision-tree syntax).
+Variables whose names start with an underscore are always bound, no matter whether they appear in the list of bound variables.
+This is convenient for using wildcard notations.
+
+These extensions of the basic case expression syntax allow the expression of some interesting concepts using case expressions.
+One can for example express division with reminder using \pmatch{} case expressions:
+
+\begin{hol}
+\begin{alltt}
+##parsetm !n c.
+            0 < c ==>
+            ((case n of (q,r) .| q * c + r when r < c => (q,r)) =
+             (n DIV c,n MOD c))
+\end{alltt}
+\end{hol}
+Notice that \begin{itemize}
+\item the guard is used to make the match unique;
+\item listing the bound variables of the pattern \texttt{q * c + r} explicitly allows \texttt{c} to not be bound by the pattern; and
+\item the pattern (of form $qc + r$) would not be supported by decision-tree case expressions because it is not a constructor pattern
+\end{itemize}
+
+Another interesting option is to use bound variables multiple times.
+The following case expression states for example that a list \texttt{l} starts with two copies of the same element:
+%
+\begin{hol}
+\begin{alltt}
+##parsetm  case l of | x::x::_ => T | _ => F
+\end{alltt}
+\end{hol}
+
+The price for this increased expressive power and the simpler, more trustworthy parsing and pretty-printing is that the semantic complexity now needs to be dealt with inside the logic.
+The \texttt{patternMatchesLib} library provides the necessary machinery in the form or conversions, rules, simpsets, and other technology.
+For example, \texttt{patternMatchesLib} enhances \texttt{bossLib}'s standard simpsets with the conversions to deal with \pmatch{} case expressions.
+Therefore, in practice \pmatch{} case expressions are as convenient to use as decision-tree based case expressions.
+In fact, the explicit case expression structure provided by
+\pmatch{} case expressions allows simplifications not easily possible for decision-tree case expressions.
+The standard tools can only (partially) evaluate decision-tree case expressions.
+This evaluation usually destroys the case expression view.
+This is illustrated by the example shown in Figure~\ref{fig:case-expr-simplify}, which adds a row that is subsumed by a later one to our running example.
+%
+\begin{figure}[phtb]
+\begin{session}
+\begin{alltt}
+>>__ set_trace "use pmatch_pp" 1
+>>__ SIMP_CONV (srw_ss()) [] ``SUC 0``
+>> SIMP_CONV (srw_ss()) []
+     “case (x,y,z) of
+        (1,y,z) => y + z
+      | (x,2,4) => x - 4  (* subsumed by next row *)
+      | (x,2,z) => x - z
+      | (x,y,3) => x * y”;
+>>__ set_trace "pp_cases" 1;
+>>__ Pmatch.set_default_heuristic ()
+>> SIMP_CONV (srw_ss()) []
+    “dtcase (x,y,z) of
+       (1,y,z) => y + z
+     | (x,2,4) => x - 4
+     | (x,2,z) => x - z
+     | (x,y,3) => x * y”;
+\end{alltt}
+\end{session}
+\caption{Simplification of case expressions}
+\label{fig:case-expr-simplify}
+\end{figure}
+
+There are many more tools for working with \pmatch{} case expressions.
+There are, for example, tools for removing multiple variable binding or guards.
+One can translate between \pmatch{} and decision-tree case expressions.
+There are tools for proving exhaustiveness of \pmatch{} case expressions or for removing redundant rows.
+For more details, please consult the \texttt{patternMatchesLib} documentation in Section~\ref{sec:PatternMatchesLib}.
+\index{case expressions|)}
+
+\section{Recursive Functions}\label{TFL}
+
+\HOL{} provides a function definition mechanism based on the
+wellfounded recursion theorem proved in \theoryimp{relationTheory},
+discussed in Section~\ref{relation}.  \ml{Define} takes a high-level,
+possibly recursive, specification of a function, and attempts to
+define the function in the logic. \ml{Define} may be used to define
+abbreviations, recursive functions, and mutually recursive
+functions. An induction theorem may be generated as a by-product of
+\ml{Define}'s activity. This induction theorem follows the recursion
+structure of the function, and may be useful when proving properties
+of the function. \ml{Define} is not always successful in attempting
+to make the specified definition, usually because an automatic
+termination proof fails; in that case, another entrypoint, \ml{Hol\_defn},
+which defers the termination proof to the user, can be used.
+The technology underlying \ml{Define} and \ml{Hol\_defn} is explained
+in detail in Slind~\cite{slind-thesis}.
+
+
+\index{Define@\ml{Define}}
+
+ In particular, \ml{Define} takes as input a quotation representing a
+conjunction of equations. The specified function(s) may be phrased
+using ML-style pattern-matching. A call
+\ml{Define `}\textit{spec}\ml{`} should conform with the grammar in Table
+\ref{define:syntax}.
+\begin{table}[htbp]
+\begin{center}
+$
+\begin{array}{|rll|}
+\hline
+\mathit{spec} & ::= &  \mathit{eqn} \\
+              & \mid  & (\mathit{eqn}) \land \mathit{spec} \\
+  & & \\
+\mathit{eqn} & ::= & \mathit{alphanumeric}\ \mathit{pat} \ldots \mathit{pat} = \mathit{term} \\
+  & & \\
+  & & \\
+\mathit{pat} & ::= & \mathit{variable} \\
+    & \mid   & \mathit{wildcard} \\
+    & \mid   & \mathit{cname} \\
+    & \mid   & (\mathit{cname}_n\ \mathit{pat}_1 \ldots \mathit{pat}_n) \\
+  & & \\
+\mathit{cname} & ::= & \mathit{alphanumeric} \mid \mathit{symbolic} \\
+  & & \\
+\mathit{wildcard} & ::=  & \_\!\_ \\
+                  & \mid & \_\!\_ \mathit{wildcard} \\
+  & & \\
+\hline
+\end{array}
+$
+\caption{Syntax of Function Declaration}\label{define:syntax}
+\end{center}
+\end{table}
+
+\paragraph{Pattern expansion}
+In general, \ml{Define} attempts to derive exactly the specified
+conjunction of equations. However, the rich syntax of patterns allows
+some ambiguity. For example, the input
+%
+\begin{hol}
+\begin{verbatim}
+  Define `(f 0 _ = 1)
+    /\    (f _ 0 = 2)`
+\end{verbatim}
+\end{hol}
+%
+is ambiguous at \holtxt{f 0 0}: should the result be \holtxt{1} or
+\holtxt{2}?  This ambiguity is dealt with in the usual way for compilers and
+interpreters for functional languages: namely, the conjunction of
+equations is treated as being applied left-conjunct first, followed
+by processing the right conjunct. Therefore, in the example above, the
+value of \holtxt{f 0 0} is \holtxt{1}. In the implementation,
+ambiguities arising from such overlapping patterns are systematically
+translated away in a pre-processing step.
+
+ Another case of ambiguity in patterns is shown above: the specification
+is incomplete since it does not tell how \holtxt{f} should behave when
+applied to two non-zero arguments: e.g., \holtxt{f (SUC m) (SUC n)}. In the
+implementation, such missing clauses are filled in, and have the value
+\holtxt{ARB}. This `pattern-completion` step is a way of turning descriptions
+of partial functions into total functions suitable for \HOL. However,
+since the user has not completely specified the function, the system
+takes that as a hint that the user is not interested in using the
+function at the missing-but-filled-in clauses, and so such clauses are
+dropped from the final theorem.
+
+In summary, \ml{Define} will derive the unambiguous and complete
+equations
+%
+\begin{hol}
+\begin{verbatim}
+  |- (f 0 (SUC v4) = 1) /\
+     (f 0 0 = 1) /\
+     (f (SUC v2) 0 = 2)
+     (f (SUC v2) (SUC v4) = ARB)
+\end{verbatim}
+\end{hol}
+%
+from the above ambiguous and incomplete equations. The odd-looking
+variable names are due to the pre-processing steps described above. The
+above result is only an intermediate value: in the final result returned
+by \ml{Define}, the last equation is droppped since it was not
+specified by the original input.
+\begin{hol}
+\begin{verbatim}
+  |- (f 0 (SUC v4) = 1) /\
+     (f 0 0 = 1) /\
+     (f (SUC v2) 0 = 2)
+\end{verbatim}
+\end{hol}
+
+\paragraph{Termination}
+
+When processing the specification of a recursive function, \ml{Define}
+must perform a termination proof. It automatically constructs
+termination conditions for the function, and invokes a termination
+prover in an attempt to prove the termination conditions.  If the
+function is primitive recursive, in the sense that it exactly follows
+the recursion pattern of a previously declared \HOL{} datatype, then this
+proof always succeeds, and \ml{Define} stores the derived equations in
+the current theory segment.
+Otherwise, the function is not an
+instance of primitive recursion, and the termination prover may
+succeed or fail. If the termination proof fails, then \ml{Define} fails.
+If it succeeds, then \ml{Define} stores the specified equations in the
+current theory segment. An induction theorem customized for the defined
+function is also stored in the current segment. Note, however, that an
+induction theorem is not stored for primitive recursive functions, since
+that theorem would be identical to the induction theorem resulting from
+the declaration of the datatype.
+
+
+\paragraph{Storing definitions in the theory segment}
+
+ \ml{Define} automatically generates names with which to store the
+definition and, (if it exists) the associated induction theorem, in
+the current theory. The name for storing the definition is built by
+concatenating the name of the function with the value of the reference
+variable \ml{Defn.def\_suffix}. The name for storing the induction theorem
+is built by concatenating the name of the function with the value of
+the reference variable \ml{Defn.ind\_suffix}. For mutually recursive
+functions, where there is a choice of names, the name of the function
+in the first clause is taken.
+
+ Since the names used to store elements in the current theory segment
+are transformed into ML bindings after the theory is exported, it is
+required that every invocation of \ml{Define} generate names that are
+valid ML identifiers. For this reason, \ml{Define} requires
+alphanumeric function names. If one wishes to define symbolic
+identifiers, the ML function \ml{xDefine} should be used.
+
+\index{xDefine@\ml{xDefine}}
+\begin{hol}
+\begin{verbatim}
+  xDefine : string -> term quotation -> thm
+\end{verbatim}
+\end{hol}
+The \ml{xDefine} function is identical to
+\ml{Define} except that it takes an explicit name to use when
+storing the definition in the current theory.
+
+\subsection{Function definition examples}
+ We will give a number of examples that display the range of functions
+that may be defined with \ml{Define}. First, we have a recursive function
+that uses ``destructors'' in the recursive call.
+
+\begin{hol}
+\begin{alltt}
+>> Define `fact x = if x = 0 then 1 else x * fact(x-1)`;
+\end{alltt}
+\end{hol}
+%
+Since \holtxt{fact} is not
+primitive recursive, an induction theorem for \holtxt{fact} is generated and
+stored in the current theory.
+%
+\begin{hol}
+\begin{alltt}
+>> DB.fetch "-" "fact_ind";
+\end{alltt}
+\end{hol}
+
+Next we have a recursive function with relatively complex
+pattern-matching. We omit to examine the generated induction
+theorem.
+%
+\begin{hol}
+\begin{alltt}
+>> Define `(flatten  []           = [])
+      /\   (flatten ([]::rst)     = flatten rst)
+      /\   (flatten ((h::t)::rst) = h::flatten(t::rst))`;
+\end{alltt}
+\end{hol}
+
+Next we define a curried recursive function, which uses
+wildcard expansion and pattern-matching pre-processing.
+%
+\begin{hol}
+\begin{alltt}
+>> Define `(min (SUC x) (SUC y) = min x y + 1)
+      /\   (min  ____    ____   = 0)`;
+\end{alltt}
+\end{hol}
+
+Next we make a primitive recursive definition. Note that no
+induction theorem is generated in this case.
+%
+\begin{hol}
+\begin{alltt}
+>> Define `(filter P [] = [])
+     /\    (filter P (h::t) = if P h then h::filter P t else filter P t)`;
+\end{alltt}
+\end{hol}
+
+\ml{Define} may also be used to define mutually recursive functions.
+For example, we can define a datatype of propositions and a function for
+putting a proposition into negation normal form as follows.
+First we define a datatype, named \ml{prop}, of boolean formulas:
+%
+\begin{hol}
+\begin{alltt}
+>> Datatype‘prop = VAR 'a | NOT prop | AND prop prop
+                 | OR  prop prop’;
+\end{alltt}
+\end{hol}
+%
+Then two mutually recursive functions \holtxt{nnfpos} and \holtxt{nnfneg}
+are defined:
+%
+\begin{hol}
+\begin{verbatim}
+  Define
+     `(nnfpos (VAR x)   = VAR x)
+   /\ (nnfpos (NOT p)   = nnfneg p)
+   /\ (nnfpos (AND p q) = AND (nnfpos p) (nnfpos q))
+   /\ (nnfpos (OR p q)  = OR  (nnfpos p) (nnfpos q))
+
+   /\ (nnfneg (VAR x)   = NOT (VAR x))
+   /\ (nnfneg (NOT p)   = nnfpos p)
+   /\ (nnfneg (AND p q) = OR  (nnfneg p) (nnfneg q))
+   /\ (nnfneg (OR p q)  = AND (nnfneg p) (nnfneg q))`
+\end{verbatim}
+\end{hol}
+%
+The system makes the definition and returns the theorem
+%
+\begin{hol}
+\begin{verbatim}
+  |- (nnfpos (VAR x) = VAR x) /\
+     (nnfpos (NOT p) = nnfneg p) /\
+     (nnfpos (AND p q) = AND (nnfpos p) (nnfpos q)) /\
+     (nnfpos (OR p q) = OR (nnfpos p) (nnfpos q)) /\
+     (nnfneg (VAR x) = NOT (VAR x)) /\
+     (nnfneg (NOT p) = nnfpos p) /\
+     (nnfneg (AND p q) = OR (nnfneg p) (nnfneg q)) /\
+     (nnfneg (OR p q) = AND (nnfneg p) (nnfneg q)) : thm
+\end{verbatim}
+\end{hol}
+
+\ml{Define} may also be used to define non-recursive functions.
+%
+\begin{hol}
+\begin{verbatim}
+  Define `f x (y,z) = (x + 1 = y DIV z)`;
+\end{verbatim}
+\end{hol}
+
+\ml{Define} may also be used to define non-recursive functions
+with complex pattern-matching. The pattern-matching pre-processing of
+{Define} can be convenient for this purpose, but can also generate a
+large number of equations. For example:
+%
+\begin{hol}
+\begin{verbatim}
+  Define
+    `(g (0,_,_,_,_) = 1) /\
+     (g (_,0,_,_,_) = 2) /\
+     (g (_,_,0,_,_) = 3) /\
+     (g (_,_,_,0,_) = 4) /\
+     (g (_,_,_,_,0) = 5)`
+\end{verbatim}
+\end{hol}
+%
+yields a definition with thirty-one clauses.
+
+
+\subsection{When termination is not automatically proved}
+
+If the termination proof for a prospective definition
+fails, the invocation of \ml{Define} (or \ml{xDefine}) fails. In such
+situations, the \ML{} function \ml{Hol\_defn} should be used.
+%
+\index{Hol_defn@\ml{Hol\_defn}}
+
+\begin{hol}
+\begin{verbatim}
+  Hol_defn : string -> term quotation -> Defn.defn
+\end{verbatim}
+\end{hol}
+
+\ml{Hol\_defn} makes the requested definition, but defers the proof of
+termination to the user. For setting up termination proofs, there are
+several useful entrypoints, namely
+\begin{hol}
+\begin{verbatim}
+  Defn.tgoal  : Defn.defn -> GoalstackPure.proofs
+  Defn.tprove : Defn.defn * tactic -> thm * thm
+\end{verbatim}
+\end{hol}
+\ml{Defn.tgoal} is analogous to \ml{set\_goal} and \ml{Defn.tprove} is
+analogous to \ml{prove}. Thus, \ml{Defn.tgoal} is used to take the
+result of \ml{Hol\_defn} and set up a goal for proving termination
+of the definition.
+
+\paragraph{Example} An invocation of {\small\verb+Define+} on
+the following equations for Quicksort will currently fail, since the
+termination proof is currently beyond the capabilities of the naive termination
+prover. Instead, we make an application of {\small\verb+Hol_defn+}:
+
+\setcounter{sessioncount}{0}
+\begin{session}
+\begin{verbatim}
+ val qsort_def =
+  Hol_defn "qsort"
+    `(qsort ord [] = []) /\
+     (qsort ord (h::t) =
+         qsort ord (FILTER (\x. ord x h) t)
+         ++ [h] ++
+         qsort ord (FILTER (\x. ~(ord x h)) t))`
+\end{verbatim}
+\end{session}
+which returns the following value of type \ml{defn}, but does not try
+to prove termination.
+\begin{session}
+\begin{verbatim}
+  HOL function definition (recursive)
+
+  Equation(s) :
+   [...] |- qsort ord [] = []
+   [...]
+  |- qsort ord (h::t) =
+     qsort ord (FILTER (\x. ord x h) t) ++ [h] ++
+     qsort ord (FILTER (\x. ~ord x h) t)
+
+  Induction :
+   [...]
+  |- !P.
+       (!ord. P ord []) /\
+       (!ord h t.
+          P ord (FILTER (\x. ~ord x h) t) /\
+          P ord (FILTER (\x. ord x h) t) ==>
+          P ord (h::t)) ==>
+       !v v1. P v v1
+
+  Termination conditions :
+    0. !t h ord. R (ord,FILTER (\x. ~ord x h) t) (ord,h::t)
+    1. !t h ord. R (ord,FILTER (\x. ord x h) t) (ord,h::t)
+    2. WF R
+\end{verbatim}
+\end{session}
+
+The type \ml{defn} has a prettyprinter installed for it: the above
+output is typical, showing the components of a \ml{defn} in an understandable
+format. Although it is possible to directly work with elements of
+type \ml{defn}, it is more convenient to invoke
+\ml{Defn.tgoal}, which sets up a termination proof in a goalstack.
+%
+\begin{session}
+\begin{verbatim}
+  Defn.tgoal qsort_def;
+
+  > val it =
+    Proof manager status: 1 proof.
+    1. Incomplete:
+         Initial goal:
+         ?R.
+           (!t h ord. R (ord,FILTER (\x. ~ord x h) t) (ord,h::t)) /\
+           (!t h ord. R (ord,FILTER (\x. ord x h) t) (ord,h::t)) /\ WF R
+\end{verbatim}
+\end{session}
+%
+The goal is to find a wellfounded relation on the arguments to \holtxt{qsort}
+and show that the arguments to \holtxt{qsort} are in the relation.
+The function \ml{WF\_REL\_TAC} is almost invariably used at this point to
+initiate the termination proof. Clearly, \ml{qsort} terminates because the list
+argument gets shorter. Invoking \ml{WF\_REL\_TAC} with the appropriate
+measure function results in two subgoals, both of which are easy to
+prove.
+
+\begin{session}
+\begin{verbatim}
+  - e (WF_REL_TAC `measure (LENGTH o SND)`);
+  OK..
+  2 subgoals:
+  > val it =
+     !t h ord. LENGTH (FILTER (\x. ord x h) t) < LENGTH (h::t)
+
+     !t h ord. LENGTH (FILTER (\x. ~ord x h) t) < LENGTH (h::t)
+\end{verbatim}
+\end{session}
+%
+Execution of \ml{WF\_REL\_TAC} has automatically proved the
+wellfoundedness of the termination relation
+\holtxt{measure (LENGTH o SND)}
+and the remainder of the goal has been simplified into a
+pair of easy goals. Once both goals are proved, we can encapsulate
+the termination proof with \ml{tDefine}, which takes a quotation
+(representing desired recursion equations) and a tactic $t$,
+defines the specified function, calculates the termination conditions,
+and applies $t$ to them. If the termination conditions are proved by
+$t$ then the recursion equations and induction theorem are stored
+in the current theory segment before the recursion equations are returned:
+
+\begin{session}
+\begin{verbatim}
+  - val qsort_def =  tDefine "qsort"
+     `(qsort ord [] = []) /\
+      (qsort ord (h::t) =
+          qsort ord (FILTER (\x. ord x h) t) ++ [h] ++
+          qsort ord (FILTER (\x. ~(ord x h)) t))`
+     (WF_REL_TAC `measure (LENGTH o SND)` THEN ...);
+
+  > val qsort_def =
+      |- (qsort ord [] = []) /\
+         (qsort ord (h::t) =
+            qsort ord (FILTER (\x. ord x h) t) ++ [h] ++
+            qsort ord (FILTER (\x. ~ord x h) t)) : thm
+\end{verbatim}
+\end{session}
+
+The custom induction theorem for a function can be obtained by using \holtxt{fetch},
+which returns named elements in the specified theory.\footnote{In a call to \texttt{fetch}, the
+first argument denotes a theory; the current theory may be specified by \texttt{"-"}.}
+\begin{session}
+\begin{verbatim}
+  - fetch "-" "qsort_ind";
+  >  val qsort_ind =
+      |- !P.
+           (!ord. P ord []) /\
+           (!ord h t.
+              P ord (FILTER (\x. ~ord x h) t) /\
+              P ord (FILTER (\x. ord x h) t) ==> P ord (h::t))
+            ==>
+           !v v1. P v v1  : thm
+\end{verbatim}
+\end{session}
+
+\noindent The induction theorem produced by \holtxt{Define} and \holtxt{tDefine} can
+be applied by \ml{recInduct}. See Section \ref{sec:bossLib} for details.
+
+\subsubsection{Techniques for proving termination}
+
+There are two problems to deal with when trying to prove termination.
+First, one has to understand, intuitively and then mathematically,
+why the function under consideration terminates. Second, one must
+be able to phrase this in \HOL. In the following, we shall give a few
+examples of how this is done.
+
+There are a number of basic and advanced means of specifying wellfounded
+relations. The most common starting point for dealing with termination
+problems for recursive functions is to find some function, known as a a
+\emph{measure} under which the arguments of a function call are larger
+than the arguments to any recursive calls that result.
+
+For a very simple starter example, consider the following definition
+of a function that computes the greatest common divisor of two
+numbers:
+%
+\setcounter{sessioncount}{0}
+\begin{session}
+\begin{alltt}
+>> val gcd_defn =
+      Hol_defn "gcd"
+         `(gcd (0,n) = n) /\
+          (gcd (m,n) = gcd (n MOD m, m))`;
+
+>> Defn.tgoal gcd_defn;
+\end{alltt}
+\end{session}
+%
+The invocation \holtxt{gcd(m,n)} recurses in its first argument, and
+since we know that \holtxt{m} is not 0, it is the case that
+\holtxt{n MOD m} is smaller than \holtxt{m}. The way to phrase the
+termination of \holtxt{gcd} in \HOL{} is to use a `measure` function
+to map from the domain of \holtxt{gcd}---a pair of numbers---to a number.
+The definition of {measure} in \HOL{} is equivalent to
+%
+\begin{hol}
+\begin{alltt}
+##thm prim_recTheory.measure_thm
+\end{alltt}
+\end{hol}
+%
+Now we must pick out the argument position to measure and
+invoke \ml{WF\_REL\_TAC}:
+\begin{session}
+\begin{alltt}
+>> e (WF_REL_TAC ‘measure FST’);
+>>__ val th = top_thm(); (* throws exn if not all proved *)
+>>__ drop();
+\end{alltt}
+\end{session}
+%
+The built-in reasoning then suffices to prove the remaining goal.
+
+\paragraph{Weighting functions}
+
+Sometimes one needs a measure function that is itself recursive.  For
+example, consider a type of binary trees and a function that
+linearizes trees. The algorithm works by rotating the tree until it
+gets a \holtxt{Leaf} in the left branch, then it recurses into the right
+branch. At the end of execution the tree has been linearized.
+\setcounter{sessioncount}{0}
+\begin{session}
+\begin{alltt}
+>> Datatype `btree = Leaf | Brh btree btree`;
+
+>> val Unbal_defn =
+      Hol_defn "Unbal"
+        `(Unbal Leaf = Leaf)
+     /\  (Unbal (Brh Leaf bt) = Brh Leaf (Unbal bt))
+     /\  (Unbal (Brh (Brh bt1 bt2) bt) = Unbal (Brh bt1 (Brh bt2 bt)))`;
+
+>> Defn.tgoal Unbal_defn;
+\end{alltt}
+\end{session}
+%
+Since the size of the tree is unchanged in the last clause in the
+definition of \holtxt{Unbal}, a simple size measure will not work. Instead, we
+can assign weights to nodes in the tree such that the recursive calls of
+\holtxt{Unbal} decrease the total weight in every case. One such assignment is
+%
+\begin{session}
+\begin{alltt}
+##eval Define
+         `(Weight (Leaf) = 0) /\
+          (Weight (Brh x y) = (2 * Weight x) + (Weight y) + 1)`;
+\end{alltt}
+\end{session}
+%
+Now we can invoke \ml{WF\_REL\_TAC}:
+%
+\begin{session}
+\begin{alltt}
+>> e (WF_REL_TAC `measure Weight`);
+##assert is_conj (#2 (top_goal()))
+\end{alltt}
+\end{session}
+%
+Both conjuncts of this goal are quite easy to prove.
+%
+The technique of `weighting` nodes in a datatype in order to prove
+termination also goes by the name of \emph{polynomial interpretation}. It
+must be admitted that finding the correct weighting for a termination
+proof is more an art than a science. Typically, one makes a guess and
+then tries the termination proof to see if it works.
+
+\paragraph{Lexicographic combinations}
+
+Occasionally, there's a combination of factors that complicate the
+termination argument. For example, the following specification
+describes a naive pattern matching algorithm on strings (represented
+as lists here). The function takes four arguments: the first, $p$,
+is the remainder of the pattern being matched. The second,
+$\mathit{rst}$, is the remainder of the string being searched.  The third
+argument, $p_0$, holds the original pattern to be matched.
+The fourth argument, $s$, is the string being searched.
+%
+\setcounter{sessioncount}{0}
+\begin{session}
+\begin{alltt}
+>>_  val match_defn =
+       Hol_defn "match"
+         `(match [] __ __ __ = T)  /\
+          (match __ [] __ __ = F)  /\
+          (match (a::pp) (b::ss) p0 s =
+            if a=b then match pp ss p0 s
+              else
+            if NULL(s) then F
+              else
+            match p0 (TL s) p0 (TL s))`;
+
+>> val Match_def =
+     Define `Match pat str = match pat str pat str`;
+\end{alltt}
+\end{session}
+%
+The first clause of the definition states that if $p$ becomes exhausted, then a match has
+been found;  the function returns \holtxt{T}. The second clause represents the case
+where $s$ becomes exhausted but $p$ is not, in which case the function returns
+\holtxt{F}. The remaining case is when there's more searching to do; the function
+checks if the head of the pattern $p$ is the same as the head of
+$\mathit{rst}$. If yes, then the search proceeds recursively, using the
+tail of $p$ and the tail of $\mathit{rst}$. If no, that means that $p$ has
+failed to match, so the algorithm advances one character ahead in
+$\mathit{s}$ and starts matching from the beginning of $p_0$. If
+$\mathit{s}$ is empty, however, then we return \holtxt{F}. Note that
+$\mathit{rst}$ and $s$ both represent the string being
+searched: $\mathit{rst}$ is a `local` version of $s$: we recurse into
+$\mathit{rst}$  as long as there are matches with the pattern $p$. However,
+if the search eventually fails, then $s$, which `remembers` where the search
+started from, is used to restart the search.
+
+So much for the behaviour of the function. Why does it terminate? There
+are two recursive calls. The first call reduces the size of $p$ and $\mathit{rst}$, and
+leaves the other arguments unchanged. The second call can increase the
+size of $p$ and $\mathit{rst}$, but reduces the size $s$. This is a classic situation
+in which to use a  lexicographic ordering: some arguments to the function are reduced in
+some recursive calls, and some others are reduced in other recursive calls.
+Recall that \holtxt{LEX} is an infix operator, defined in \ml{pairTheory} as follows:
+%
+\begin{hol}
+\begin{alltt}
+##thm pairTheory.LEX_DEF
+\end{alltt}
+\end{hol}
+%
+In the second recursive call, the length of \holtxt{s} is reduced, and in
+the first it stays the same. This motivates having the length of the
+$s$ be the first component of the lexicographic
+combination, and the length of $\mathit{rst}$ as the second
+component. Formally, we want to map from the four-tuple of
+arguments into a lexicographic combination of relations.
+This is enabled by \holtxt{inv\_image} from \ml{relationTheory}:
+%
+\begin{hol}
+\begin{alltt}
+##thm relationTheory.inv_image_def
+\end{alltt}
+\end{hol}
+%
+The desired relation maps from the four-tuple of arguments into a pair
+of numbers $(m,n)$, where $m$ is the length of the fourth argument, and
+$n$ is the length of the second argument. These lengths are then
+compared lexicographically with respect to less-than ($<$).
+\begin{session}
+\begin{alltt}
+>>_ Defn.tgoal match_defn;
+
+>> e (WF_REL_TAC `inv_image($< LEX $<) (\(w,x,y,z). (LENGTH z,LENGTH x))`);
+\end{alltt}
+\end{session}
+%
+The first conjunct needs a case-split on \holtxt{s} before it is proved by
+rewriting, and the second is also easy to prove by rewriting.
+
+\subsubsection{How termination conditions are synthesized}
+
+\index{congruence rules!in termination analysis|(}
+It is occasionally important to understand, at least in part, how
+\ml{Hol\_defn} constructs termination constraints. In some cases, it is
+even necessary for users to influence this process in order to have correct
+termination constraints extracted. The process is driven by so-called
+\emph{congruence theorems} for particular \HOL{} constants.
+For example, consider the following recursive definition of factorial:
+%
+\begin{hol}
+\begin{verbatim}
+  fact n = if n=0 then 1 else n * fact (n-1)
+\end{verbatim}
+\end{hol}
+%
+In the absence of knowledge of how the `if-then-else` construct
+affects the \emph{context} of recursive calls, \ml{Hol\_defn} would
+extract the termination constraints:
+%
+\begin{hol}
+\begin{verbatim}
+  0. WF R
+  1. !n. R (n - 1) n
+\end{verbatim}
+\end{hol}
+%
+which are unprovable, because the \emph{context} of the recursive call has not
+been taken account of. This example is in fact not a problem for \HOL,
+since the following congruence theorem is known to \ml{Hol\_defn}:
+%
+\begin{hol}
+\begin{verbatim}
+ |- !b b' x x' y y'.
+      (b = b') /\
+      (b' ==> (x = x')) /\
+      (~b' ==> (y = y')) ==>
+       ((if b then x else y) = (if b' then x' else y'))
+\end{verbatim}
+\end{hol}
+%
+This theorem is understood by \ml{Hol\_defn} as an ordered sequence
+of instructions to follow when the termination condition extractor
+hits an `if-then-else`. The theorem is read as follows: when an
+instance `\texttt{if} $B$ \texttt{then} $X$ \texttt{else} $Y$` is
+encountered while the extractor traverses the function definition,
+do the following:
+\begin{enumerate}
+
+\item Traverse $B$ and extract termination conditions
+     $\mathit{TCs}(B)$ from any recursive calls in it.
+     This returns a theorem $\mathit{TCs}(B) \vdash B = B'$.
+
+\item Assume $B'$ and extract termination conditions from any
+  recursive calls in $X$. This returns a theorem
+  $\mathit{TCs}(X) \vdash X = X'$.
+
+\item Assume $\neg B'$ and extract termination conditions from any
+   recursive calls in $Y$. This returns a theorem
+   $\mathit{TCs}(Y) \vdash Y = Y'$.
+
+\item  By equality reasoning with (1), (2), and (3), derive the theorem
+\[\mathit{TCs}(B) \cup \mathit{TCs}(X) \cup \mathit{TCs}(Y)
+  \vdash
+  (\mathtt{if}\ B\ \mathtt{then}\ X\ \mathtt{else}\ Y) =
+  (\mathtt{if}\ B'\ \mathtt{then}\ X'\ \mathtt{else}\ Y')
+\]
+\item Replace \texttt{if} $B$ \texttt{then} $X$ \texttt{else} $Y$ by
+\texttt{if} $B'$ \texttt{then} $X'$ \texttt{else} $Y'$.
+
+\end{enumerate}
+
+
+The termination conditions are accumulated until the
+extraction process finishes, and appear as hypotheses in the final
+result. Thus the extracted termination conditions for \holtxt{fact} are
+%
+\begin{hol}
+\begin{verbatim}
+   0. WF R
+   1. !n. ~(n = 0) ==> R (n - 1) n
+\end{verbatim}
+\end{hol}
+%
+and are easy to prove. The notion of \emph{context} of a recursive call
+is defined by  the set of congruence rules used in extracting termination
+conditions. This set can be obtained by invoking \holtxt{DefnBase.read\_congs},
+and manipulated by \holtxt{DefnBase.add\_cong},
+\holtxt{DefnBase.drop\_cong} and \holtxt{DefnBase.export\_cong}.
+The `add' and `drop' functions only affect the current state of the congruence database; in contrast, the `export' function provides a way for theories to specify that a particular theorem should be added to the congruence database in all descendant theories.
+\index{congruence rules!in termination analysis|)}
+
+
+
+\paragraph{Higher-order recursion and congruence rules}
+
+A `higher-order` recursion is one in which a higher-order function is
+used to apply the recursive function to arguments. In order for the
+correct termination conditions to be proved for such a recursion,
+congruence rules for the higher order function must be known to the
+termination condition extraction mechanism. Congruence rules for
+common higher-order functions, \eg, \holtxt{MAP}, \holtxt{EVERY}, and
+\holtxt{EXISTS} for lists, are already known to the
+mechanism. However, at times, one must manually prove and install a
+congruence theorem for a new user-defined higher-order function.
+
+For example, suppose we define a higher-order function \holtxt{SIGMA} for
+summing the results of a function in a list.
+%
+\setcounter{sessioncount}{0}
+\begin{session}
+\begin{verbatim}
+  Define `(SIGMA f [] = 0) /\
+          (SIGMA f (h::t) = f h + SIGMA f t)`;
+\end{verbatim}
+\end{session}
+%
+We then use \holtxt{SIGMA} in the definition of a function for
+summing the results of a function in a arbitrarily
+(finitely) branching tree.
+%
+\begin{session}
+\begin{verbatim}
+  Datatype `ltree = Node 'a (ltree list)`;
+
+  Defn.Hol_defn
+    "ltree_sigma"
+    `ltree_sigma f (Node v tl) = f v + SIGMA (ltree_sigma f) tl`;
+\end{verbatim}
+\end{session}
+%
+In this definition, \holtxt{SIGMA} is applied to a partial application
+\holtxt{(ltree\_sigma f)} of the function being defined. Such a situation
+is called a \emph{higher-order recursion}. Since the recursive call of
+\holtxt{ltree\_sigma} is not fully applied, special efforts have
+to be made to extract the correct termination conditions. Otherwise,
+the following unhappy situation results:
+%
+\begin{session}
+\begin{verbatim}
+  HOL function definition (recursive)
+
+  Equation(s) :
+    [..] |- ltree_sigma f (Node v tl)
+              = f v + SIGMA (\a. ltree_sigma f a) tl
+
+  Induction :
+    [..] |- !P. (!f v tl. (!a. P f a) ==> P f (Node v tl)) ==> !v v1. P v v1
+
+  Termination conditions :
+    0. WF R
+    1. !tl v f a. R (f,a) (f,Node v tl) : defn
+\end{verbatim}
+\end{session}
+%
+\index{congruence rules!in termination analysis}
+The termination conditions for \holtxt{ltree\_sigma} seem to
+require finding a wellfounded relation \holtxt{R} such that the pair
+\holtxt{(f,a)} is \holtxt{R}-less than
+\holtxt{(f, Node v tl)}. However, this is a hopeless task, since there is no
+relation between \holtxt{a} and \holtxt{Node v tl}, besides the fact
+that they are both \holtxt{ltree}s. The termination condition extractor
+has not performed properly, because it didn't know a congruence rule
+for \holtxt{SIGMA}. Such a congruence theorem is the following:
+%
+\begin{hol}
+\begin{verbatim}
+  SIGMA_CONG =
+   |- !l1 l2 f g.
+       (l1=l2) /\ (!x. MEM x l2 ==> (f x = g x)) ==>
+       (SIGMA f l1 = SIGMA g l2)
+\end{verbatim}
+\end{hol}
+%
+Once \ml{Hol\_defn} has been told about this theorem, via \ml{DefnBase}'s \ml{add\_cong} or \ml{export\_cong} functions, the termination conditions extracted for the definition are now provable, since \holtxt{a} is a proper subterm of \holtxt{Node v tl}.
+%
+\begin{session}
+\begin{verbatim}
+  val _ = DefnBase.add_cong SIGMA_CONG;
+
+  Defn.Hol_defn
+    "ltree_sigma"
+    `ltree_sigma f (Node v tl) = f v + SIGMA (ltree_sigma f) tl`;
+
+  > val it =
+      HOL function definition (recursive)
+
+      Equation(s) :  ...  (* as before *)
+      Induction :    ...  (* as before *)
+
+      Termination conditions :
+        0. WF R
+        1. !v f tl a. MEM a tl ==> R (f,a) (f,Node v tl)
+\end{verbatim}
+\end{session}
+
+\subsection{Recursion schemas}
+
+In higher order logic, very general patterns of recursion, known as
+\emph{recursion schemas} or sometimes \emph{program schemas}, can be
+defined. One example is the following:
+%
+\[
+  \konst{linRec} (x) =
+    \itelse{d(x)}{e(x)}{f(\konst{linRec}(g\; x))}
+\]
+%
+In this specification, the variables $d$, $e$, $f$, and $g$ are
+functions, that, when instantiated in different ways, allow
+\konst{linRec} to implement different recursive functions. In this,
+\konst{linRec} is like many other higher order functions. However,
+notice that if $d(x) = \konst{F}$, $f(x) = x+1$, and
+$g(x) = x$, then the resulting instantiation of
+\konst{linRec} could be used to obtain a contradiction:
+%
+\[
+  \konst{linRec} (x) = \konst{linRec}(x) + 1
+\]
+%
+This is not, however, derivable in \HOL{}, because recursion schemas
+are defined by instantiating the wellfounded recursion theorem, and
+therefore certain abstract termination constraints arise that
+must be satisfied before recursion equations can be used in an
+unfettered manner. The entrypoint for defining a schema is
+\ml{TotalDefn.DefineSchema}. On the \konst{linRec} example it
+behaves as follows (note that the schematic variables should
+only occur on the right-hand side of the definition when making
+the definition of a schema):
+%
+\setcounter{sessioncount}{0}
+\begin{session}
+\begin{verbatim}
+  - TotalDefn.DefineSchema
+      `linRec (x:'a) = if d(x) then e(x) else f(linRec(g x))`;
+
+  <<HOL message: Definition is schematic in the following variables:
+      "d", "e", "f", "g">>
+
+  Equations stored under "linRec_def".
+  Induction stored under "linRec_ind".
+  > val it =
+     [..]
+    |- linRec d e f g x = if d x then e x else f (linRec d e f g (g x))
+\end{verbatim}
+\end{session}
+%
+The hypotheses of the returned theorem hold the abstract termination
+constraints. A similarly constrained induction theorem is also
+stored in the current theory segment.
+%
+\begin{session}
+\begin{verbatim}
+  hyp it;
+  > val it = [``!x. ~d x ==> R (g x) x``, ``WF R``] : term list
+\end{verbatim}
+\end{session}
+%
+These constraints are abstract, since they place termination requirements
+on variables that have not yet been instantiated. Once instantiations
+for the variables are found, then the constraints may be eliminated
+by finding a suitable wellfounded relation for \holtxt{R} and then
+proving the other constraints.
+
+\section{Inductive Relations}
+\index{inductive relations|(}
+
+\index{Hol_reln, defining inductive relations@\ml{Hol\_reln}, defining inductive relations}
+\index{inductive relations!Hol_reln (ML function)@\ml{Hol\_reln} (ML function)}
+Inductive definitions are made with the function \ml{Hol\_reln}, found
+in the \ml{bossLib} structure, and the resulting definitions and
+theorems are handled with functions defined in the library
+\ml{IndDefLib}. The \ml{Hol\_reln} function takes a
+term quotation as input and attempts to define the relations there
+specified.  The input term quotation must parse to a term that
+conforms to the following grammar:
+\newcommand{\nonterm}[1]{\ensuremath{\langle\mathit{#1}\rangle}}
+\begin{eqnarray*}
+   \nonterm{inputFormat} &::=& \nonterm{clause} \;\holtxt{/\bk}\; \nonterm{inputFormat} \;\;|\;\; \nonterm{clause}\\
+   \nonterm{clause}       &::=& (\holtxt{!}x_1 \dots
+   x_n. \;\;\nonterm{hypothesis} \;\holtxt{==>}
+   \;\nonterm{conclusion})\\
+   &|& (\holtxt{!}x_1\dots x_n.\;\;\nonterm{conclusion})\\
+   \nonterm{conclusion}   &::=& \nonterm{con} \;\mathit{sv_1}\; \mathit{sv_2} \dots\\
+   \nonterm{hypothesis}   &::=& \mbox{any term}\\
+   \nonterm{con}          &::=& \mbox{a new relation constant}
+\end{eqnarray*}
+The (optional) $\mathit{sv}_i$ terms that appear after a constant name
+are so-called ``schematic variables''.  The same variables must always
+follow all new constants throughout the definition.  These variables
+and the names of the constants-to-be must not be quantified over in
+each {\nonterm{clause}}.  A {\nonterm{clause}} should have no other
+free variables.  Any that occur will be universally quantified as part
+of the process of definition, and a warning message emitted.
+(Universal quantifiers at the head of the clause can be used to bind
+free variables, but it is also permissible to use existential
+quantification in the hypotheses.  If a clause has no free variables,
+it is permissible to have no universal quantification.)
+
+A successful invocation of \ml{Hol\_reln} returns three theorems
+$(\mathit{rules},\mathit{ind},\mathit{cases})$. Each is also stored in
+the current theory segment.
+\begin{itemize}
+\item $\mathit{rules}$ is a conjunction of implications
+that will be the same as the input term quotation; the theorem is
+saved under the name \ml{<stem>\_rules}, where \ml{<stem>} is the name of the
+first relation defined by the function.
+\item $\mathit{ind}$ is the induction principle for the relations,
+saved under the name \ml{<stem>\_ind}.
+\item $\mathit{cases}$ is the so-called `cases' or `inversion' theorem
+  for the relations, saved under the name \ml{<stem>\_cases}. A cases
+  theorem is of the form
+%
+\begin{verbatim}
+   (!a0 .. an.  R1 a0 .. an = <R1's first rule possibility> \/
+                              <R1's second rule possibility> \/ ...)
+                   /\
+   (!a0 .. am.  R2 a0 .. am = <R2's first rule possibility> \/
+                              <R2's second rule possibility> \/ ...)
+                   /\
+   ...
+\end{verbatim}
+%
+and is used to decompose an element in the relation into the
+possible ways of obtaining it by the rules.
+\end{itemize}
+
+\index{xHol_reln, defining inductive relations@\ml{xHol\_reln}, defining inductive relations}
+\index{inductive relations!xHol_reln (ML function)@\ml{xHol\_reln} (ML function)}
+If the ``stem'' of the first constant defined in a set of clauses is such that resulting \ML{} bindings in an exported theory file will result in illegal \ML{}, then the \ml{xHol\_reln} function should be used.
+The \ml{xHol\_reln} function is analogous to the \ml{xDefine} function for defining recursive functions (see Section~\ref{TFL}).
+
+\paragraph{Strong induction principles}
+So called ``strong'' versions of induction principles (in which instances of the relation being defined appear as extra hypotheses), are automatically proved when a definition is made with \ml{Hol\_reln}. The strong induction principle for a relation is used when the \ml{Induct\_on} tactic is used.
+
+\paragraph{Adding monotone operators}
+\index{inductive relations!monotone operators for}
+New constants may occur recursively throughout rules' hypotheses, as
+long as it can be shown that the rules remain monotone with respect to
+the new constants.  \ml{Hol\_reln} automatically attempts to prove such
+monotonicity results, using a set of theorems held in a reference
+\ml{IndDefLib.the\_monoset}.  Monotonicity theorems must be of the form
+\[
+\mathit{cond}_1 \land \cdots \land \mathit{cond}_m \Rightarrow
+(\mathit{Op}\;\mathit{arg}_1 \dots \mathit{arg}_n \Rightarrow
+\mathit{Op}\;\mathit{arg}'_1 \dots \mathit{arg}'_n)
+\]
+where each $\mathit{arg}$ and $\mathit{arg}'$ term must be a variable,
+and where there must be as many $\mathit{cond}_i$ terms as there are
+arguments to $\mathit{Op}$ that vary.  Each $\mathit{cond}_i$ must be
+of the form \[ \forall \vec{v}. \;\mathit{arg}\;\vec{v} \Rightarrow
+\mathit{arg}'\;\vec{v}
+\]
+where the vector of variables $\vec{v}$ may be empty, and where the
+$\mathit{arg}$ and $\mathit{arg}'$ may actually be reversed (as in the
+rule for negation).
+
+For example, the monotonicity rule for conjunction is
+\[
+(P \Rightarrow P') \land (Q \Rightarrow Q') \Rightarrow (P \land Q
+\Rightarrow P' \land Q')
+\]
+The monotonicity rule for the \holtxt{EVERY} operator in the theory of
+lists (see Section~\ref{sec:list}), is
+\[
+(\forall x. \;P(x) \Rightarrow Q(x)) \Rightarrow
+(\holtxt{EVERY}\;P\;\ell \Rightarrow \holtxt{EVERY}\;Q\;\ell)
+\]
+With a monotonicity result available for an operator such as
+\holtxt{EVERY}, it is then possible to write inductive definitions
+where hypotheses include mention of the new relation as arguments to
+the given operators.
+
+\index{export_mono (ML function)@\ml{export\_mono} (\ML{} function)}
+Monotonicity results that the user derives may be stored in the global
+\ml{the\_monoset} variable by using the \ml{export\_mono} function.
+This function takes a string naming a theorem in the current theory
+segment, and adds that theorem to the monotonicity theorems
+immediately, and in such a way that this situation will also obtain when
+the current theory is subsequently reloaded.
+
+\paragraph{Examples}
+
+A simple example of defining two mutually recursive relations is
+the following:
+%
+\setcounter{sessioncount}{0}
+\begin{session}
+\begin{verbatim}
+  Hol_reln
+    `EVEN 0 /\
+     (!n. ODD n ==> EVEN (n + 1)) /\
+     (!n. EVEN n ==> ODD (n + 1))`;
+\end{verbatim}
+\end{session}
+%
+The result is three theorems
+%
+\begin{session}
+\begin{verbatim}
+  > val it =
+    (|- EVEN 0 /\
+        (!n. ODD n ==> EVEN (n + 1)) /\
+        (!n. EVEN n ==> ODD (n + 1)),
+
+     |- !EVEN' ODD'.
+           EVEN' 0 /\
+           (!n. ODD' n ==> EVEN' (n + 1)) /\
+           (!n. EVEN' n ==> ODD' (n + 1))
+           ==>
+           (!a0. EVEN a0 ==> EVEN' a0) /\
+           (!a1. ODD a1 ==> ODD' a1),
+
+     |- (!a0. EVEN a0 = (a0 = 0) \/
+                        ?n. (a0 = n + 1) /\ ODD n) /\
+        (!a1. ODD a1 = ?n. (a1 = n + 1) /\ EVEN n)
+    ) : thm * thm * thm
+\end{verbatim}
+\end{session}
+%
+The next example shows how to inductively define the reflexive and
+transitive closure of relation $R$. Note that \holtxt{R}, as a
+schematic variable, is not quantified in the rules. This is
+appropriate because it is \holtxt{RTC R} that has the inductive
+characterisation, not \holtxt{RTC} itself.
+%
+\begin{session}
+\begin{verbatim}
+  - Hol_reln `(!x. RTC R x x) /\
+             (!x z. (?y. R x y /\ RTC R y z) ==> RTC R x z)`;
+
+  > val it =
+     (|- !R. (!x. RTC R x x) /\
+             !x z. (?y. R x y /\ RTC R y z) ==> RTC R x z,
+
+      |- !R RTC'.
+           (!x. RTC' x x) /\
+           (!x z. (?y. R x y /\ RTC' y z) ==> RTC' x z)
+           ==>
+           (!a0 a1. RTC R a0 a1 ==> RTC' a0 a1),
+
+      |- !R a0 a1. RTC R a0 a1 = (a1 = a0) \/ ?y. R a0 y /\ RTC R y a1
+     ) : thm * thm * thm
+\end{verbatim}
+\end{session}
+%
+The \ml{Hol\_reln} function may be used to define multiple relations,
+as in the definition of \holtxt{EVEN} and \holtxt{ODD}.  The relations
+may or may not be mutually recursive.  The clauses for each relation
+need not be contiguous.
+
+\subsection{Proofs with inductive relations}
+\index{inductive relations!performing proofs}
+
+The ``rules'' theorem of an inductive relation provides a straightforward way of proving arguments belong to a relation.
+If confronted with a goal of the form \holtxt{R~x~y}, one might make progress by performing a \ml{MATCH\_MP\_TAC} (or perhaps, an \ml{HO\_MATCH\_MP\_TAC}) with one of the implications in the ``rules'' theorem.
+
+The ``cases'' theorem can be used for the same purpose because it is an equality, of the general form \holtxt{R~x~y~$\iff$\dots}.
+Because the right-hand side of this theorem will often include other occurrences of the relation, it is generally not safe to simply rewrite with it.
+\index{SimpLHS@\ml{SimpLHS}}\index{SimpRHS@\ml{SimpRHS}}%
+\index{Once (controlling rewrite applications)@\ml{Once} (controlling rewrite applications)}%
+The rewriting-control directives \ml{Once}, \ml{SimpLHS} and \ml{SimpRHS} can be useful here.
+\index{FULL_SIMP_TAC@\ml{FULL\_SIMP\_TAC}}
+In addition, the ``cases'' theorem can be used as an ``elimination'' form: if one has an assumption of the form \holtxt{R~x~y}, rewriting this (perhaps with \ml{FULL\_SIMP\_TAC} if the term occurs in the goal's assumptions) into the possible ways it may have come about is often a good approach.
+
+Inductive relations naturally also support proof by induction.
+Because an inductive relation is the least relation satisfying the given rules, one can use induction to show goals of the form
+\begin{alltt}
+   \(\forall\)x y. R x y \(\Rightarrow\) P
+\end{alltt}
+where \holtxt{P} is an arbitrary predicate likely including references to variables \holtxt{x} and \holtxt{y}.
+
+The low-level approach to goals of this form is to apply
+\begin{verbatim}
+   HO_MATCH_MP_TAC R_ind
+\end{verbatim}
+\index{Induct_on (ML induction tactic)@\ml{Induct\_on} (\ML{} induction tactic)}
+A slightly more high-level approach is use the \ml{Induct\_on} tactic, which will actually use the automatically generated ``strong'' induction principle.%
+\footnote{Thus, to get the equivalent of the \ml{Induct_on} call, one might write something like \ml{HO_MATCH_MP_TAC~(theorem "R_strongind")}.}
+(This tactic is also used to perform structural inductions over algebraic data types; see Section~\ref{sec:bossLib}.)
+When performing a rule induction, the quotation passed to \ml{Induct\_on} should be of the constant being used.
+For the sake of aesthetics, the constant may also be applied to arguments.
+Thus, one can write
+\begin{verbatim}
+   Induct_on `R`
+\end{verbatim}
+or
+\begin{verbatim}
+   Induct_on `R x y`
+\end{verbatim}
+and the effect will be the same.
+\index{inductive relations|)}
+
+
+%%% Local Variables:
+%%% mode: latex
+%%% mode: visual-line
+%%% TeX-master: "description"
+%%% End:

@@ -2,14 +2,14 @@
  *  General specification of sorting and correctness of quicksort            *
  *---------------------------------------------------------------------------*)
 
-structure sortingScript =
-struct
-
 open HolKernel Parse boolLib bossLib;
 open combinTheory pairTheory relationTheory listTheory
-     markerLib metisLib BasicProvers lcsymtacs ;
+     markerLib metisLib BasicProvers
+
+local open rich_listTheory in end
 
 val _ = new_theory "sorting";
+val _ = set_grammar_ancestry ["rich_list"]
 
 val _ = Defn.def_suffix := "_DEF";
 val _ = Defn.ind_suffix := "_IND";
@@ -157,13 +157,21 @@ val APPEND_PERM_SYM = Q.store_thm
  `!A B C. PERM (APPEND A B) C ==> PERM (APPEND B A) C`,
 PROVE_TAC [PERM_TRANS, PERM_APPEND]);
 
+val PERM_SPLIT_IF = Q.store_thm
+("PERM_SPLIT_IF",
+ `!P Q l. EVERY (\x. P x = ~ Q x) l ==>
+   PERM l (APPEND (FILTER P l) (FILTER Q l))`,
+ Induct_on `l`
+ THEN RW_TAC list_ss [FILTER,PERM_REFL]
+ THEN RES_TAC
+ THEN ASM_SIMP_TAC std_ss [PERM_MONO, CONS_PERM]) ;
+
 val PERM_SPLIT = Q.store_thm
 ("PERM_SPLIT",
  `!P l. PERM l (APPEND (FILTER P l) (FILTER ($~ o P) l))`,
-RW_TAC bool_ss [o_DEF]
- THEN Induct_on `l`
- THEN RW_TAC list_ss [FILTER,PERM_REFL]
- THEN PROVE_TAC [APPEND,PERM_MONO,CONS_PERM]);
+ REPEAT GEN_TAC
+ THEN irule PERM_SPLIT_IF
+ THEN SIMP_TAC list_ss []) ;
 
 (* ----------------------------------------------------------------------
     Alternative definition of PERM
@@ -314,7 +322,7 @@ end
 
 val PERM_IND = save_thm("PERM_IND", remove_eq_asm perm_ind)
 
-val PERM_MONO' = PERM_MONO |> SPEC_ALL |> Q.GENL [`l2`, `l1`, `x`]
+val PERM_MONO' = PERM_MONO |> SPEC_ALL |> Q.GENL [`x`, `l1`, `l2`]
 
 val PERM_SWAP_AT_FRONT = store_thm(
   "PERM_SWAP_AT_FRONT",
@@ -335,7 +343,7 @@ val PERM_SWAP_AT_FRONT = save_thm( "PERM_SWAP_AT_FRONT",
 *)
 
 val PERM_SWAP = PERM_SWAP_AT_FRONT |> EQ_IMP_RULE |> #2
-                                   |> Q.GENL [`l2`, `l1`, `y`, `x`]
+                                   |> Q.GENL [`x`, `y`, `l1`, `l2`]
 
 val PERM_NILNIL = prove(``PERM [][]``, SRW_TAC[][])
 
@@ -534,13 +542,13 @@ val QSORT_IND = fetch "-" "QSORT_IND";
  *           Properties of QSORT                                            *
  *---------------------------------------------------------------------------*)
 
-val QSORT_MEM_STABLE = Q.store_thm
+val QSORT_MEM = Q.store_thm
 ("QSORT_MEM",
  `!R L x. MEM x (QSORT R L) = MEM x L`,
 recInduct QSORT_IND
  THEN RW_TAC bool_ss [QSORT_DEF,PARTITION_DEF]
  THEN RW_TAC list_ss []
- THEN Q.PAT_ASSUM `x = y` (MP_TAC o MATCH_MP PART_MEM o SYM)
+ THEN Q.PAT_X_ASSUM `_ = _` (MP_TAC o MATCH_MP PART_MEM o SYM)
  THEN RW_TAC list_ss [] THEN PROVE_TAC []);
 
 (*---------------------------------------------------------------------------*)
@@ -576,9 +584,9 @@ Q.store_thm
   THEN MATCH_MP_TAC SORTED_APPEND
   THEN POP_ASSUM (ASSUME_TAC o SYM)
   THEN IMP_RES_THEN (fn th => ASM_REWRITE_TAC [th]) SORTED_EQ
-  THEN RW_TAC list_ss [MEM_FILTER,MEM,QSORT_MEM_STABLE]
+  THEN RW_TAC list_ss [MEM_FILTER,MEM,QSORT_MEM]
   THEN ((RES_TAC THEN NO_TAC) ORELSE ALL_TAC)
-  THEN Q.PAT_ASSUM `x = y` (MP_TAC o MATCH_MP
+  THEN Q.PAT_X_ASSUM `_ = _` (MP_TAC o MATCH_MP
         (REWRITE_RULE[PROVE [] (Term `x/\y/\z ==> w = x ==> y/\z ==> w`)]
             PARTS_HAVE_PROP))
   THEN RW_TAC std_ss [MEM]
@@ -680,7 +688,7 @@ val PERM_RTC = store_thm ("PERM_RTC",
     ``PERM = RTC PERM_SINGLE_SWAP``,
 
 REWRITE_TAC[GSYM (CONJUNCT2 (SIMP_RULE std_ss [FORALL_AND_THM] TC_RC_EQNS)),
-	    PERM_TC] THEN
+            PERM_TC] THEN
 AP_TERM_TAC THEN
 SIMP_TAC std_ss [RC_DEF, FUN_EQ_THM] THEN
 PROVE_TAC[PERM_SINGLE_SWAP_REFL]);
@@ -689,7 +697,7 @@ PROVE_TAC[PERM_SINGLE_SWAP_REFL]);
 val PERM_EQC = store_thm ("PERM_EQC",
     ``PERM = EQC PERM_SINGLE_SWAP``,
 
-`SC PERM_SINGLE_SWAP = PERM_SINGLE_SWAP` by ALL_TAC THEN1 (
+`SC PERM_SINGLE_SWAP = PERM_SINGLE_SWAP` by (
    SIMP_TAC std_ss [FUN_EQ_THM, SC_DEF, PERM_SINGLE_SWAP_SYM]
 ) THEN
 ASM_REWRITE_TAC[EQC_DEF, GSYM PERM_TC] THEN
@@ -701,7 +709,7 @@ PROVE_TAC[PERM_REFL]);
 val PERM_lift_TC_RULE =
   (GEN_ALL o
    SIMP_RULE std_ss [GSYM PERM_TC, PERM_SINGLE_SWAP_DEF, GSYM LEFT_FORALL_IMP_THM,
-		     GSYM RIGHT_EXISTS_AND_THM, GSYM LEFT_EXISTS_AND_THM] o
+                     GSYM RIGHT_EXISTS_AND_THM, GSYM LEFT_EXISTS_AND_THM] o
    Q.ISPEC `PERM_SINGLE_SWAP` o
    Q.GEN `R`);
 
@@ -742,7 +750,7 @@ val PERM_EQUIVALENCE_ALT_DEF = store_thm(
 "PERM_EQUIVALENCE_ALT_DEF",
 ``!x y. PERM x y = (PERM x = PERM y)``,
 SIMP_TAC std_ss [GSYM ALT_equivalence,
-		 PERM_EQUIVALENCE]);
+                 PERM_EQUIVALENCE]);
 
 val ALL_DISTINCT_PERM = store_thm ("ALL_DISTINCT_PERM",
    ``!l1 l2. PERM l1 l2 ==> (ALL_DISTINCT l1 = ALL_DISTINCT l2)``,
@@ -809,7 +817,7 @@ SIMP_TAC std_ss [RIGHT_FORALL_IMP_THM] THEN
 GEN_TAC THEN STRIP_TAC THEN
 HO_MATCH_MP_TAC PERM_IND THEN
 SIMP_TAC list_ss [] THEN
-PROVE_TAC[operatorTheory.ASSOC_DEF, operatorTheory.COMM_DEF]);
+PROVE_TAC[ASSOC_DEF, COMM_DEF]);
 
 val PERM_SET_TO_LIST_count_COUNT_LIST = Q.store_thm(
 "PERM_SET_TO_LIST_count_COUNT_LIST",
@@ -953,6 +961,21 @@ val QSORT_eq_if_PERM = store_thm(
   !l1 l2. (QSORT R l1 = QSORT R l2) = PERM l1 l2``,
 PROVE_TAC[QSORT_PERM,QSORT_SORTED,SORTED_PERM_EQ,PERM_TRANS,PERM_SYM])
 
+val SORTED_FILTER = store_thm("SORTED_FILTER",
+  ``!R ls P. transitive R /\ SORTED R ls ==> SORTED R (FILTER P ls)``,
+  ho_match_mp_tac SORTED_IND >>
+  rw[] >> rw[] >> rfs[SORTED_EQ] >> fs[SORTED_EQ] >>
+  first_x_assum(qspec_then`P`mp_tac) >> rw[] >>
+  rfs[SORTED_EQ] >> fs[MEM_FILTER])
+
+val ALL_DISTINCT_SORTED_WEAKEN = Q.store_thm("ALL_DISTINCT_SORTED_WEAKEN",
+  `!R R' ls. (!x y. MEM x ls /\ MEM y ls /\ x <> y ==> (R x y <=> R' x y)) /\
+        ALL_DISTINCT ls /\ SORTED R ls ==> SORTED R' ls`,
+  gen_tac \\ ho_match_mp_tac SORTED_IND \\ rw[]
+  \\ pop_assum mp_tac
+  \\ simp_tac(srw_ss())[SORTED_DEF]
+  \\ metis_tac[]);
+
 (*Perm theorems for the simplication*)
 
 (* was PERM_FUN_APPEND but this name is used again lower down *)
@@ -985,7 +1008,7 @@ val PERM_FUN_SWAP_AT_FRONT = store_thm (
 "PERM_FUN_SWAP_AT_FRONT",
 ``!x y l. PERM (x::y::l) = PERM (y::x::l)``,
 REWRITE_TAC[GSYM PERM_EQUIVALENCE_ALT_DEF,
-	    PERM_SWAP_AT_FRONT, PERM_REFL]);
+            PERM_SWAP_AT_FRONT, PERM_REFL]);
 
 val PERM_FUN_CONS_11_SWAP_AT_FRONT = store_thm (
 "PERM_FUN_CONS_11_SWAP_AT_FRONT",
@@ -1124,10 +1147,10 @@ val PART3_DEF = Define `
     (PART3 R h [] = ([],[],[])) /\
     (PART3 R h (hd::tl) =
          if R h hd /\ R hd h
-	    then (I ## CONS hd ## I) (PART3 R h tl)
-	    else if R hd h
+            then (I ## CONS hd ## I) (PART3 R h tl)
+            else if R hd h
                     then (CONS hd ## I ## I) (PART3 R h tl)
-		    else (I ## I ## CONS hd) (PART3 R h tl))`;
+                    else (I ## I ## CONS hd) (PART3 R h tl))`;
 
 val LENGTH_FILTER =
   prove(``!a. LENGTH (FILTER P a) <= LENGTH a``,
@@ -1158,7 +1181,7 @@ val PART3_FILTER =
 val QSORT3_DEF = tDefine "QSORT3" `
     (QSORT3 R [] = []) /\
     (QSORT3 R (hd::tl) =
-    	let (lo,eq,hi) = PART3 R hd tl
+        let (lo,eq,hi) = PART3 R hd tl
         in QSORT3 R lo ++ (hd::eq) ++ QSORT3 R hi)`
   (WF_REL_TAC `measure (LENGTH o SND)` THEN
    RW_TAC arith_ss [PART3_FILTER, length_lem]);
@@ -1174,7 +1197,7 @@ val PERM3 =
 val PULL_CONV = REPEATC (DEPTH_CONV (RIGHT_IMP_FORALL_CONV ORELSEC AND_IMP_INTRO_CONV));
 val PULL_RULE = CONV_RULE PULL_CONV;
 
-val IND_STEP_TAC = PAT_ASSUM ``!y. P ==> Q`` (MATCH_MP_TAC o PULL_RULE);
+val IND_STEP_TAC = PAT_X_ASSUM ``!y. P ==> Q`` (MATCH_MP_TAC o PULL_RULE);
 
 val tospec =
     Q.GEN `P`
@@ -1303,7 +1326,7 @@ val QSORT3_STABLE =
 (* Various useful theorems from the CakeML project https://cakeml.org.       *)
 (*---------------------------------------------------------------------------*)
 
-local open lcsymtacs rich_listTheory in
+local open rich_listTheory in
 
 val QSORT3_MEM = Q.store_thm ("QSORT3_MEM",
 `!R L x. MEM x (QSORT3 R L) <=> MEM x L`,
@@ -1389,5 +1412,3 @@ val sorted_filter = Q.store_thm("sorted_filter",
 end
 
 val _ = export_theory();
-
-end;

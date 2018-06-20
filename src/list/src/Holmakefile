@@ -12,3 +12,11 @@ all: $(TARGETS) selftest.exe
 
 selftest.exe: selftest.uo rich_listTheory.uo
 	$(HOLMOSMLC) -o $@ $<
+
+ifeq($(KERNELID),otknl)
+
+all: $(patsubst %Script.sml,%.ot.art,$(wildcard *.sml))
+
+list.art: list.otd
+
+endif

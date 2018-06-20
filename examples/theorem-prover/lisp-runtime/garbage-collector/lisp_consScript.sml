@@ -12,7 +12,7 @@ infix \\
 val op \\ = op THEN;
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
-fun SUBGOAL q = REVERSE (q by ALL_TAC)
+fun SUBGOAL q = REVERSE (sg q)
 
 (*
   r9 = temp
@@ -325,7 +325,7 @@ val mc_move_thm = prove(
   \\ `RANGE(0,e)n` by RANGE_TAC
   \\ IMP_RES_TAC ref_mem_RANGE
   \\ POP_ASSUM (ASSUME_TAC o Q.SPECL [`mF`,`r6`])
-  \\ Q.PAT_ASSUM `RANGE (0,e) n` (K ALL_TAC)
+  \\ Q.PAT_X_ASSUM `RANGE (0,e) n` (K ALL_TAC)
   \\ `RANGE(0,e)j` by RANGE_TAC
   \\ IMP_RES_TAC ref_mem_RANGE
   \\ POP_ASSUM (ASSUME_TAC o Q.SPECL [`mT`,`r15`])
@@ -382,11 +382,11 @@ val mc_gc_step_thm = prove(
   \\ `mT i = H_BLOCK (xs,n,())` by
     (Cases_on `mT i` \\ FULL_SIMP_TAC (srw_ss()) [isBLOCK_def,getBLOCK_def])
   \\ `(n = 0) /\ (LENGTH xs = 2)` by METIS_TAC [memory_ok_def]
-  \\ `?x1 x2. xs = [x1;x2]` by ALL_TAC THEN1
+  \\ `?x1 x2. xs = [x1;x2]` by
    (Cases_on `xs` \\ FULL_SIMP_TAC std_ss [LENGTH]
     \\ Cases_on `t` \\ FULL_SIMP_TAC std_ss [LENGTH]
     \\ Cases_on `t'` \\ FULL_SIMP_TAC std_ss [LENGTH,CONS_11,ADD1])
-  \\ Q.PAT_ASSUM `xxx = (T,ys3,j3,mF3,mT3)` (MP_TAC o GSYM)
+  \\ Q.PAT_X_ASSUM `xxx = (T,ys3,j3,mF3,mT3)` (MP_TAC o GSYM)
   \\ ASM_SIMP_TAC std_ss [split_move_list_def]
   \\ `?c5 x5 j5 mF5 mT5. split_move (x1,j,mF,mT,e) = (c5,x5,j5,mF5,mT5)` by METIS_TAC [PAIR]
   \\ `?c6 x6 j6 mF6 mT6. split_move (x2,j5,mF5,mT5,e) = (c6,x6,j6,mF6,mT6)` by METIS_TAC [PAIR]
@@ -394,7 +394,7 @@ val mc_gc_step_thm = prove(
   \\ SIMP_TAC std_ss [RW [ADDR_SIMP] mc_gc_step_def,word_mul_n2w,MULT_ASSOC]
   \\ `(n2w (8 * i) + r15) IN df /\ (n2w (8 * i) + r15 + 4w) IN df /\
       (f (n2w (8 * i) + r15) = ref_heap_addr x1) /\
-      (f (n2w (8 * i) + r15 + 4w) = ref_heap_addr x2)` by ALL_TAC THEN1
+      (f (n2w (8 * i) + r15 + 4w) = ref_heap_addr x2)` by
    (POP_ASSUM MP_TAC
     \\ `RANGE(0,e)i` by RANGE_TAC
     \\ IMP_RES_TAC ref_mem_RANGE
@@ -406,18 +406,18 @@ val mc_gc_step_thm = prove(
   \\ SIMP_TAC std_ss [LET_DEF]
   \\ ASSUME_TAC (GEN_ALL mc_move_thm)
   \\ SEP_I_TAC "mc_move"
-  \\ Q.PAT_ASSUM `split_move (x1,j,mF,mT,e) = (T,x5,j5,mF5,mT5)` MP_TAC
+  \\ Q.PAT_X_ASSUM `split_move (x1,j,mF,mT,e) = (T,x5,j5,mF5,mT5)` MP_TAC
   \\ SEP_I_TAC "split_move"
   \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss []
-  \\ Q.PAT_ASSUM `!p.bbb` (MP_TAC o Q.SPEC `p`)
+  \\ Q.PAT_X_ASSUM `!p.bbb` (MP_TAC o Q.SPEC `p`)
   \\ ASM_SIMP_TAC std_ss [] \\ REPEAT STRIP_TAC
   \\ ASM_SIMP_TAC std_ss [LET_DEF,mc_move2_thm]
   \\ ASSUME_TAC (GEN_ALL (Q.INST [`x2`|->`x99`] mc_move_thm))
   \\ SEP_I_TAC "mc_move"
-  \\ Q.PAT_ASSUM `split_move (x2,j5,mF5,mT5,e) = (T,x6,j6,mF6,mT6)` MP_TAC
+  \\ Q.PAT_X_ASSUM `split_move (x2,j5,mF5,mT5,e) = (T,x6,j6,mF6,mT6)` MP_TAC
   \\ SEP_I_TAC "split_move"
   \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss []
-  \\ Q.PAT_ASSUM `!p.bbb` (MP_TAC o Q.SPEC `p`)
+  \\ Q.PAT_X_ASSUM `!p.bbb` (MP_TAC o Q.SPEC `p`)
   \\ ASM_SIMP_TAC std_ss [] \\ REPEAT STRIP_TAC
   \\ ASM_SIMP_TAC std_ss [memory_ok_BLOCK,LENGTH]
   \\ FULL_SIMP_TAC std_ss [ALIGNED64]
@@ -427,7 +427,7 @@ val mc_gc_step_thm = prove(
   \\ ASM_SIMP_TAC std_ss [w2w_w2w_LEMMA]
   \\ IMP_RES_TAC ref_mem_RANGE
   \\ POP_ASSUM (ASSUME_TAC o Q.SPECL [`mT6`,`r15`])
-  \\ Q.PAT_ASSUM `mT6 i = nnnn` ASSUME_TAC
+  \\ Q.PAT_X_ASSUM `mT6 i = nnnn` ASSUME_TAC
   \\ FULL_SIMP_TAC std_ss [STAR_ASSOC,ref_aux_def,HD,TL]
   \\ FULL_SIMP_TAC std_ss [AC WORD_ADD_ASSOC WORD_ADD_COMM]
   \\ SEP_W_TAC);
@@ -469,22 +469,22 @@ val mc_gc_loop_thm = prove(
   \\ STRIP_TAC \\ POP_ASSUM (MP_TAC o Q.SPEC `p`)
   \\ ASM_SIMP_TAC std_ss [] \\ REPEAT STRIP_TAC
   \\ FULL_SIMP_TAC std_ss []
-  \\ `e - i4 = v` by ALL_TAC THEN1
+  \\ `e - i4 = v` by
    (SUBGOAL `i4 = i+1` THEN1 DECIDE_TAC
-    \\ Q.PAT_ASSUM `split_gc_step xxx = yyyy` (MP_TAC o GSYM)
+    \\ Q.PAT_X_ASSUM `split_gc_step xxx = yyyy` (MP_TAC o GSYM)
     \\ FULL_SIMP_TAC std_ss [split_gc_step_def,LET_DEF]
     \\ CONV_TAC (DEPTH_CONV (helperLib.FORCE_PBETA_CONV))
     \\ ASM_SIMP_TAC std_ss []
     \\ Cases_on `mT i` \\ ASM_SIMP_TAC (srw_ss()) [isBLOCK_def]
     \\ Cases_on `p'` \\ Cases_on `r`
     \\ FULL_SIMP_TAC std_ss [getBLOCK_def] \\ METIS_TAC [memory_ok_def])
-  \\ Q.PAT_ASSUM `!ee ii. bbb` (MP_TAC o Q.SPECL [`e`,`i4`])
+  \\ Q.PAT_X_ASSUM `!ee ii. bbb` (MP_TAC o Q.SPECL [`e`,`i4`])
   \\ ASM_SIMP_TAC std_ss [] \\ STRIP_TAC
-  \\ Q.PAT_ASSUM `split_gc_loop xxx = yyy` MP_TAC
+  \\ Q.PAT_X_ASSUM `split_gc_loop xxx = yyy` MP_TAC
   \\ SEP_I_TAC "split_gc_loop"
   \\ SEP_I_TAC "mc_gc_loop1"
   \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss []
-  \\ Q.PAT_ASSUM `bbb ==> ccc` MP_TAC \\ ASM_SIMP_TAC std_ss []
+  \\ Q.PAT_X_ASSUM `bbb ==> ccc` MP_TAC \\ ASM_SIMP_TAC std_ss []
   \\ REPEAT STRIP_TAC \\ ASM_SIMP_TAC std_ss []
   \\ SIMP_TAC (std_ss++SIZES_ss) [n2w_11]
   \\ `2 * i < 18446744073709551616` by DECIDE_TAC
@@ -545,19 +545,19 @@ val mc_move_list_thm = prove(
   \\ SIMP_TAC std_ss [ref_heap_addr_NOT_ONE32]
   \\ ASSUME_TAC (GEN_ALL mc_move_thm)
   \\ SEP_I_TAC "mc_move"
-  \\ Q.PAT_ASSUM `split_move xxx = yyy` MP_TAC
+  \\ Q.PAT_X_ASSUM `split_move xxx = yyy` MP_TAC
   \\ SEP_I_TAC "split_move"
   \\ REPEAT STRIP_TAC
   \\ FULL_SIMP_TAC std_ss [w2w_0]
-  \\ Q.PAT_ASSUM `!p. bbb ==> ccc`
+  \\ Q.PAT_X_ASSUM `!p. bbb ==> ccc`
        (MP_TAC o Q.SPEC `one (r14,ref_heap_addr h) * ref_stack (r14 + 0x4w) xs * p`)
   \\ FULL_SIMP_TAC (std_ss++star_ss) [] \\ REPEAT STRIP_TAC
   \\ FULL_SIMP_TAC std_ss [STAR_ASSOC,w2w_w2w_LEMMA] \\ SEP_W_TAC
   \\ SEP_I_TAC "mc_move_list1"
-  \\ Q.PAT_ASSUM `split_move_list xxx = yyy` MP_TAC
+  \\ Q.PAT_X_ASSUM `split_move_list xxx = yyy` MP_TAC
   \\ SEP_I_TAC "split_move_list"
   \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss []
-  \\ Q.PAT_ASSUM `!p. bbb ==> ccc`
+  \\ Q.PAT_X_ASSUM `!p. bbb ==> ccc`
        (MP_TAC o Q.SPEC `one (r14,ref_heap_addr h5) * p`)
   \\ FULL_SIMP_TAC (std_ss++star_ss) [ADDR_w2w_ALIGNED] \\ REPEAT STRIP_TAC
   \\ ASM_SIMP_TAC std_ss [] \\ SEP_R_TAC);
@@ -590,33 +590,33 @@ val mc_gc_thm = store_thm("mc_gc_thm",
   \\ SIMP_TAC std_ss [mc_gc_def,LET_DEF,EVAL ``(31 -- 0) (~0x0w):word64``]
   \\ ASSUME_TAC (RW [MULT_CLAUSES] (SUBST_INST [``j:num``|->``0:num``] (GEN_ALL mc_move_list_thm)))
   \\ SEP_I_TAC "mc_move_list"
-  \\ Q.PAT_ASSUM `split_move_list xxx=yyy` MP_TAC
+  \\ Q.PAT_X_ASSUM `split_move_list xxx=yyy` MP_TAC
   \\ SEP_I_TAC "split_move_list"
   \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss []
-  \\ Q.PAT_ASSUM `!p.bb` (MP_TAC o Q.SPEC `p`)
+  \\ Q.PAT_X_ASSUM `!p.bb` (MP_TAC o Q.SPEC `p`)
   \\ FULL_SIMP_TAC std_ss [] \\ REPEAT STRIP_TAC
   \\ ASM_SIMP_TAC std_ss []
   \\ ASSUME_TAC (RW [MULT_CLAUSES] (SUBST_INST [``i:num``|->``0:num``] (GEN_ALL mc_gc_loop_thm)))
   \\ FULL_SIMP_TAC std_ss [mc_gc_loop1_THM]
   \\ SEP_I_TAC "mc_gc_loop"
-  \\ Q.PAT_ASSUM `split_gc_loop xxx=yyy` MP_TAC
+  \\ Q.PAT_X_ASSUM `split_gc_loop xxx=yyy` MP_TAC
   \\ SEP_I_TAC "split_gc_loop"
   \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss []
-  \\ Q.PAT_ASSUM `!r6.bb` (MP_TAC o Q.SPECL [`ref_stack r14 xs6 * p`])
+  \\ Q.PAT_X_ASSUM `!r6.bb` (MP_TAC o Q.SPECL [`ref_stack r14 xs6 * p`])
   \\ FULL_SIMP_TAC (std_ss++star_ss) [] \\ REPEAT STRIP_TAC
   \\ ASM_SIMP_TAC std_ss []
   \\ REPEAT STRIP_TAC
   THEN1 (SIMP_TAC std_ss [memory_ok_def,CUT_EQ] \\ METIS_TAC [memory_ok_def])
-  \\ `(\x. H_EMP) = CUT (0,0) mF7` by ALL_TAC THEN1
+  \\ `(\x. H_EMP) = CUT (0,0) mF7` by
     (SIMP_TAC std_ss [CUT_def,FUN_EQ_THM,IN_DEF,RANGE_def])
   \\ FULL_SIMP_TAC std_ss [STAR_ASSOC]
   \\ `((p * ref_stack r14 xs6 * ref_mem r15 mT7 0 e) *
        ref_mem r6 mF7 0 e) (fun2set (fi',df))` by FULL_SIMP_TAC (std_ss++star_ss) []
   \\ `((p * ref_stack r14 xs6 * ref_mem r15 mT7 0 e) *
-       ref_mem r6 (CUT (0,0) mF7) 0 e) (fun2set (fi',df))` by ALL_TAC THEN1
+       ref_mem r6 (CUT (0,0) mF7) 0 e) (fun2set (fi',df))` by
          (MATCH_MP_TAC ref_mem_CUT \\ FULL_SIMP_TAC (std_ss++star_ss) [])
   \\ `((p * ref_stack r14 xs6 * ref_mem r6 (CUT (0,0) mF7) 0 e) *
-       ref_mem r15 (CUT (0,i7) mT7) 0 e) (fun2set (fi',df))` by ALL_TAC THEN1
+       ref_mem r15 (CUT (0,i7) mT7) 0 e) (fun2set (fi',df))` by
          (MATCH_MP_TAC ref_mem_CUT \\ FULL_SIMP_TAC (std_ss++star_ss) [])
   \\ FULL_SIMP_TAC (std_ss++star_ss) []);
 
@@ -690,8 +690,8 @@ val ok_split_heap = store_thm("ok_split_heap",
     \\ SRW_TAC [] [])
   \\ FULL_SIMP_TAC std_ss [RANGE_def,NOT_LESS]
   \\ Q.EXISTS_TAC `FUN_FMAP (\a. getBLOCK (m a)) (D0 m)`
-  \\ `FINITE (D0 m)` by ALL_TAC THEN1
-   (`D0 m = D0 m INTER RANGE(0,i)` by ALL_TAC THEN1
+  \\ `FINITE (D0 m)` by
+   (`D0 m = D0 m INTER RANGE(0,i)` by
       (SIMP_TAC std_ss [EXTENSION,IN_INTER]
        \\ REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC
        \\ ASM_SIMP_TAC std_ss []

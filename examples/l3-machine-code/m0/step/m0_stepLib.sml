@@ -7,7 +7,7 @@ struct
 
 open HolKernel boolLib bossLib
 
-open lcsymtacs m0Theory m0_stepTheory
+open m0Theory m0_stepTheory
 open state_transformerSyntax blastLib
 
 structure Parse =
@@ -155,14 +155,14 @@ local
       |> Drule.UNDISCH
 in
    val R_name_rwt = r_rwt
-      `n <> 15w ==> (R n ^st = (^st.REG (R_name ^st.CONTROL.SPSEL n), s))`
+      `n <> 15w ==> (R n ^st = ^st.REG (R_name ^st.CONTROL.SPSEL n))`
 
    val write'R_name_rwt = r_rwt
       `n <> 15w ==>
        (write'R (d, n) ^st =
-        ((), ^st with REG :=
-             (R_name ^st.CONTROL.SPSEL n =+
-              if n = 13w then d && 0xFFFFFFFCw else d) ^st.REG))`
+        ^st with REG :=
+        (R_name ^st.CONTROL.SPSEL n =+
+        if n = 13w then d && 0xFFFFFFFCw else d) ^st.REG)`
 
    val RName_LR_rwt = EVAL ``m0_step$R_name x 14w``
 end
@@ -347,7 +347,6 @@ fun unfold_for_loop n thm =
         (PairedLambda.GEN_BETA_CONV
          THENC PairedLambda.let_CONV
          THENC PairedLambda.let_CONV
-         THENC Conv.TRY_CONV PairedLambda.let_CONV
          THENC REWRITE_CONV []
          THENC Conv.ONCE_DEPTH_CONV PairedLambda.GEN_BETA_CONV
         )
@@ -360,7 +359,8 @@ local
    fun cond_true t = let val (_, b, _) = boolSyntax.dest_cond t in b end
    val split_memA =
       GSYM (Q.ISPEC `MemA x s : 'a word # m0_state` pairTheory.PAIR)
-   val split_R = GSYM (Q.ISPEC `R x s` pairTheory.PAIR)
+   val dest_for = (fn (_, _, b) => b) o state_transformerSyntax.dest_for o
+                  Term.rator
 in
    fun simp_for_body thm =
       thm
@@ -368,13 +368,11 @@ in
       |> rhsc |> abs_body
       |> let_body
       |> let_body
-      |> (fn t => let_body t handle HOL_ERR _ => t)
-      |> pairSyntax.dest_pair |> snd
-      |> let_val |> Term.rand |> Term.rator
-      |> state_transformerSyntax.dest_for |> (fn (_, _, b) => b)
+      |> let_val
+      |> Term.rand
+      |> dest_for
       |> abs_body |> abs_body
-      |> (SIMP_CONV bool_ss
-            [Once split_memA, Once split_R, pairTheory.pair_case_thm]
+      |> (SIMP_CONV bool_ss [Once split_memA, pairTheory.pair_case_thm]
           THENC Conv.DEPTH_CONV PairedLambda.GEN_LET_CONV
           THENC SIMP_CONV std_ss [cond_rand_thms])
 end
@@ -484,21 +482,19 @@ local
       |> SIMP_RULE (srw_ss()) []
       |> upto_enumerate 7
 
-   val STM_lem = simp_for_body dfn'StoreMultiple_def
    val STM_thm = unfold_for_loop 7 dfn'StoreMultiple_def
-   val PUSH_lem = simp_for_body dfn'Push_def
-   val PUSH_thm = unfold_for_loop 8 dfn'Push_def
+   val PUSH_thm = Conv.RIGHT_CONV_RULE PairedLambda.let_CONV
+                    (unfold_for_loop 8 dfn'Push_def)
 
    val cond_lsb = Q.prove(
       `i < 8 ==>
        (word_bit (w2n n) r ==>
         (n2w (LowestSetBit (r: word8)) = n: word4)) ==>
        ((if word_bit i r then
-           ((), x1,
-            if (n2w i = n) /\ (i <> LowestSetBit r) then x2 else x3)
+           (x1, if (n2w i = n) /\ (i <> LowestSetBit r) then x2 else x3)
          else
-           ((), x4)) =
-        (if word_bit i r then ((), x1, x3) else ((), x4)))`,
+           x4) =
+        (if word_bit i r then (x1, x3) else x4))`,
       lrw [m0Theory.LowestSetBit_def, wordsTheory.word_reverse_thm,
            CountLeadingZeroBits8]
       \\ lrfs []
@@ -509,13 +505,14 @@ local
    fun FOR_BETA_CONV i tm =
       let
          val b = pairSyntax.dest_snd tm
-         val (b, _, _) = boolSyntax.dest_cond (abs_body (rator b))
+         val (b, _, _) =
+           boolSyntax.dest_cond
+             (snd (pairSyntax.dest_pair (abs_body (rator b))))
          val n = fst (wordsSyntax.dest_word_bit b)
          val _ = numLib.int_of_term n = i orelse raise ERR "FOR_BETA_CONV" ""
       in
          (Conv.RAND_CONV
             (PairedLambda.GEN_BETA_CONV
-             THENC (Conv.REWR_CONV STM_lem ORELSEC Conv.REWR_CONV PUSH_lem)
              THENC utilsLib.INST_REWRITE_CONV [cond_lsb]
              THENC utilsLib.INST_REWRITE_CONV [write'MemA_4_rwt, R_name_rwt]
              THENC REWRITE_CONV [])
@@ -1195,7 +1192,8 @@ in
          val (thm, s) =
              (DecodeThumb,
               state_with_pcinc ``2w:word32`` :: fst (Term.match_term v1 pat))
-             handle HOL_ERR {message = "different constructors", ...} =>
+             handle HOL_ERR {message = "different constructors",
+                             origin_function = "raw_match_term", ...} =>
              (DecodeThumb2,
               state_with_pcinc ``4w:word32`` :: fst (Term.match_term v2 pat))
       in
@@ -1257,7 +1255,7 @@ val thumb_patterns = List.map (I ## utilsLib.pattern)
    ("LDRH (imm)",      "TFFFT___________"),
    ("STR (sp)",        "TFFTF___________"),
    ("LDR (sp)",        "TFFTT___________"),
-   ("ADD (reg,pc)",    "TFTFF___________"),
+(* ("ADD (reg,pc)",    "TFTFF___________"), *)
    ("ADD (sp)",        "TFTFT___________"),
    ("ADD (sp,sp)",     "TFTTFFFFF_______"),
    ("SUB (sp,sp)",     "TFTTFFFFT_______"),
@@ -1292,8 +1290,7 @@ val thumb_patterns = List.map (I ## utilsLib.pattern)
   ]
 
 val thumb2_patterns = List.map (I ## utilsLib.pattern)
-  [("B.W",   "TTTTF___________TF_T____________"),
-   ("BL",    "TTTTF___________TT_T____________")
+  [("BL",    "TTTTF___________TT_T____________")
   ]
 
 (* -- *)
@@ -1374,7 +1371,8 @@ local
                      val l = List.drop (i, 5)
                      val rn = List.take (l, 3)
                               |> List.map bitstringSyntax.dest_b
-                              |> bitstringSyntax.bitlist_to_int
+                              |> bitstringSyntax.bitlist_to_num
+                              |> Arbnum.toInt
                      val registers = List.drop (l, 3)
                      val wb = not (bitstringSyntax.dest_b
                                       (List.nth (registers, 7 - rn)))
@@ -1925,9 +1923,8 @@ end
 local
    val u2 = wordsSyntax.mk_wordii (2, 32)
    val u4 = wordsSyntax.mk_wordii (4, 32)
-   val get_pair = pairSyntax.dest_pair o rhsc
-   val get_val = fst o get_pair
-   val get_state = snd o get_pair
+   val get_val = fst o pairSyntax.dest_pair o rhsc
+   val get_state = rhsc
    val state_exception_tm = mk_arm_const "m0_state_exception"
    fun mk_proj_exception r = Term.mk_comb (state_exception_tm, r)
    val MP_Next1 = Drule.MATCH_MP m0_stepTheory.NextStateM0_thumb

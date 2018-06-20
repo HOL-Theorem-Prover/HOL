@@ -10,16 +10,6 @@ open Q arithmeticTheory listTheory rich_listTheory pred_setTheory
 
 val _ = new_theory "patricia_casts";
 
-(* ------------------------------------------------------------------------- *)
-
-infix \\ << >>
-
-val op \\ = op THEN;
-val op << = op THENL;
-val op >> = op THEN1;
-
-val m = apropos;
-
 val _ = wordsLib.deprecate_word();
 
 (* ------------------------------------------------------------------------- *)
@@ -173,7 +163,7 @@ val EXP_MONO = prove(
     \\ SRW_TAC [ARITH_ss] [EXP]
     \\ Cases_on `m = n`
     \\ SRW_TAC [ARITH_ss] []
-    << [
+    >| [
       `?p. b ** m = p + x` by METIS_TAC [LESS_ADD]
          \\ `?q. b = 1 + (q + 1)` by METIS_TAC [LESS_ADD_1]
          \\ FULL_SIMP_TAC arith_ss [LEFT_ADD_DISTRIB],
@@ -199,15 +189,15 @@ val l2n_11 = store_thm("l2n_11",
       ((l2n b (l1 ++ [1]) = l2n b (l2 ++ [1])) = (l1 = l2))`,
   REPEAT STRIP_TAC \\ EQ_TAC \\ SRW_TAC [] []
     \\ MATCH_MP_TAC LIST_EQ
-    \\ `LENGTH l1 = LENGTH l2` by ALL_TAC
+    \\ sg `LENGTH l1 = LENGTH l2`
     \\ SRW_TAC [] []
-    << [
+    >| [
       SPOSE_NOT_THEN STRIP_ASSUME_TAC
-        \\ PAT_ASSUM `l2n b x = l2n b y` MP_TAC
+        \\ PAT_X_ASSUM `l2n b x = l2n b y` MP_TAC
         \\ ASM_SIMP_TAC (srw_ss()++ARITH_ss) [l2n_APPEND, l2n_b_1]
         \\ `(LENGTH l1 < LENGTH l2) \/ (LENGTH l2 < LENGTH l1)`
         by METIS_TAC [LESS_LESS_CASES]
-        << [MATCH_MP_TAC (DECIDE ``a < b ==> ~(a = b + x)``),
+        >| [MATCH_MP_TAC (DECIDE ``a < b ==> ~(a = b + x)``),
             MATCH_MP_TAC (DECIDE ``b < a ==> ~(a + x = b)``)]
         \\ MATCH_MP_TAC EXP_MONO
         \\ SRW_TAC [] [l2n_LENGTH],
@@ -264,8 +254,8 @@ val TL_REVERSE = prove(
 
 val TL_REVERSE_LAST = prove(
   `!l h. ~(l = []) ==> ((REVERSE l = h :: TL (REVERSE l)) = (h = LAST l))`,
-  Induct \\ SRW_TAC [] [LAST_DEF] >> METIS_TAC []
-    \\ PAT_ASSUM `!h. P` IMP_RES_TAC
+  Induct \\ SRW_TAC [] [LAST_DEF] >- METIS_TAC []
+    \\ PAT_X_ASSUM `!h. P` IMP_RES_TAC
     \\ NTAC 2 (POP_ASSUM (K ALL_TAC))
     \\ POP_ASSUM (SPEC_THEN `h'` (SUBST1_TAC o SYM))
     \\ SRW_TAC [] [TL_REVERSE, TL_APPEND, REVERSE_EQ_NIL]
@@ -293,7 +283,7 @@ val STRING1_SKIP1 = prove(
 val string_to_num_num_to_string = prove(
   `!n. (n = 1) \/ (256 <= n) /\ (n DIV 256 ** LOG 256 n = 1) ==>
        (string_to_num (num_to_string n) = n)`,
-  SRW_TAC [] [string_to_num_def, num_to_string_def] >> EVAL_TAC
+  SRW_TAC [] [string_to_num_def, num_to_string_def] >- EVAL_TAC
     \\ SRW_TAC [] [STRING1_SKIP1, stringTheory.ORD_CHR_RWT, s2n_n2s]);
 
 val s2n_STRING_STRING = prove(
@@ -313,13 +303,13 @@ val IMAGE_string_to_num = store_thm("IMAGE_string_to_num",
   `!n. (n = 1) \/ (256 <= n) /\ (n DIV 256 ** LOG 256 n = 1) =
        n IN IMAGE string_to_num UNIV`,
   SRW_TAC [] [IN_IMAGE] \\ EQ_TAC \\ SRW_TAC [] []
-    << [
+    >| [
        EXISTS_TAC `""` \\ EVAL_TAC,
        METIS_TAC [string_to_num_num_to_string],
        `(x = "") \/ ?c s. x = STRING c s`
        by METIS_TAC [TypeBase.nchotomy_of ``:string``]
        \\ SRW_TAC [] [string_to_num_def, s2n_STRING_STRING1]
-       >> EVAL_TAC
+       >- EVAL_TAC
        \\ DISJ2_TAC
        \\ `LENGTH (MAP ORD (REVERSE s) ++ [ORD c]) = LENGTH s + 1`
        by SRW_TAC [] []

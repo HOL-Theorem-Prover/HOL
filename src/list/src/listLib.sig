@@ -5,6 +5,8 @@ sig
   type tactic = Abbrev.tactic
   type conv  = Abbrev.conv
 
+  val join_EVERY : term -> thm list -> thm
+
   (* listSimps *)
   val LIST_ss  : simpLib.ssfrag
   val LIST_EQ_ss : simpLib.ssfrag
@@ -16,7 +18,12 @@ sig
   val list_compset : unit -> computeLib.compset
 
   (* rich_listSimps *)
+  val add_rich_list_compset : computeLib.compset -> unit
   val RICH_LIST_ss : simpLib.ssfrag
+
+  (* indexedListsSimps *)
+  val add_indexedLists_compset : computeLib.compset -> unit
+  val indexedLists_ss : simpLib.ssfrag
 
   (* ListConv1 *)
   val LIST_INDUCT : thm * thm -> thm

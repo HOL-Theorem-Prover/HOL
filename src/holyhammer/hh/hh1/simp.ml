@@ -2,11 +2,13 @@ open Lib;;
 open Fusion;;
 open Basics;;
 open Hl_parser;;
+open Pervasives;;
 (*open Nets;;*)
 open Equal;;
 open Drule;;
 open Tactics;;
 open Bool;;
+
 
 type term_label = Vnet
                  | Lcnet of (string * int)
@@ -95,7 +97,7 @@ let term_order =
     if l1 = [] then false
     else if l2 = [] then true else
     let h1 = hd l1 and h2 = hd l2 in
-    ord h1 h2 or (h1 = h2 & lexify ord (tl l1) (tl l2)) in
+    ord h1 h2 || (h1 = h2 && lexify ord (tl l1) (tl l2)) in
   let rec dyn_order top tm1 tm2 =
     let f1,args1 = strip_comb tm1
     and f2,args2 = strip_comb tm2 in
@@ -112,25 +114,25 @@ let net_of_thm rep th =
   let matchable = o can (term_match lconsts) in
   match tm with
     Comb(Comb(Const(0,_),(Abs(x,Comb(Var(s,ty) as v,x')) as l)),v')
-         when x' = x & v' = v & not(x = v) ->
+         when x' = x && v' = v && not(x = v) ->
         let conv tm =
           match tm with
-            Abs(y,Comb(t,y')) when y = y' & not(free_in y t) ->
+            Abs(y,Comb(t,y')) when y = y' && not(free_in y t) ->
               iNSTANTIATE(term_match [] v t) th
           | _ -> failwith "REWR_CONV (eTA_AX special case)" in
         enter lconsts (l,(1,conv))
   | Comb(Comb(Const(0,_),l),r) ->
-      if rep & free_in l r then
+      if rep && free_in l r then
         let th' = eQT_INTRO th in
         enter lconsts (l,(1,rEWR_CONV th'))
-      else if rep & matchable l r & matchable r l then
+      else if rep && matchable l r && matchable r l then
         enter lconsts (l,(1,oRDERED_REWR_CONV term_order th))
       else enter lconsts (l,(1,rEWR_CONV th))
   | Comb(Comb(_,t),Comb(Comb(Const(0,_),l),r)) ->
-        if rep & free_in l r then
+        if rep && free_in l r then
           let th' = dISCH t (eQT_INTRO(uNDISCH th)) in
           enter lconsts (l,(3,iMP_REWR_CONV th'))
-        else if rep & matchable l r & matchable r l then
+        else if rep && matchable l r && matchable r l then
           enter lconsts (l,(3,oRDERED_IMP_REWR_CONV term_order th))
         else enter lconsts(l,(3,iMP_REWR_CONV th));;
 let net_of_conv tm conv sofar =
@@ -155,7 +157,7 @@ let mk_rewrites =
     else if is_conj tm then
       split_rewrites oldhyps cf (cONJUNCT1 th)
         (split_rewrites oldhyps cf (cONJUNCT2 th) sofar)
-    else if is_imp tm & cf then
+    else if is_imp tm && cf then
       split_rewrites oldhyps cf (uNDISCH th) sofar
     else if is_eq tm then
       (if cf then collect_condition oldhyps th else th)::sofar

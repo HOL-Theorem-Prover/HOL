@@ -125,7 +125,7 @@ val fresh_THM = prove(
             ~((y,z,fresh h,d) IN ch_set h) /\ ~(fresh h = 0)``,
   SIMP_TAC std_ss [fresh_NOT_IN_FDOM,IN_DEF,ch_set_def,FEVERY_DEF]
   \\ REWRITE_TAC [METIS_PROVE [] ``x \/ ~y = y ==> x:bool``]
-  \\ REPEAT STRIP_TAC \\ RES_TAC \\ Q.PAT_ASSUM `h ' qq = gh` ASSUME_TAC
+  \\ REPEAT STRIP_TAC \\ RES_TAC \\ Q.PAT_X_ASSUM `h ' qq = gh` ASSUME_TAC
   \\ FULL_SIMP_TAC std_ss [SUBSET0_DEF,SUBSET_DEF,IN_INSERT,NOT_IN_EMPTY,IN_DEF]
   \\ METIS_TAC [SIMP_RULE std_ss [IN_DEF] fresh_NOT_IN_FDOM]);
 
@@ -185,7 +185,7 @@ val bijection_apply = prove(
   \\ CCONTR_TAC \\ FULL_SIMP_TAC bool_ss []
   \\ `apply b x1 (g x,g y,g z,d) = apply b x2 (g x,g y,g z,d)` by METIS_TAC []
   \\ FULL_SIMP_TAC bool_ss [apply_def]
-  \\ `!x. b (g x) = x` by ALL_TAC \\ FULL_SIMP_TAC std_ss [FUN_EQ_THM,IN_DEF]);
+  \\ sg `!x. b (g x) = x` \\ FULL_SIMP_TAC std_ss [FUN_EQ_THM,IN_DEF]);
 
 val CARD_EQ_CARD_apply = prove(
   ``!s:('a#'a#'a#'b)set b:'a->'a. FINITE s /\ bijection b ==> (CARD s = CARD (apply b s))``,
@@ -247,11 +247,11 @@ val ok_state_CARD_EQ_lemma = prove(
   ``!j i m. ok_state_part (i,i+j,m) ==> (CARD (basic_abs m) = j)``,
   Induct THENL [
     SIMP_TAC std_ss [ok_state_part_def,LET_DEF,RANGE_lemmas,EMPTY_DEF]
-    \\ REPEAT STRIP_TAC \\ `basic_abs m = {}` by ALL_TAC \\ ASM_REWRITE_TAC [CARD_EMPTY]
+    \\ REPEAT STRIP_TAC \\ sg `basic_abs m = {}` \\ ASM_REWRITE_TAC [CARD_EMPTY]
     \\ SIMP_TAC std_ss[FUN_EQ_THM,EMPTY_DEF]
     \\ Cases \\ Cases_on `r` \\ Cases_on `r'`
     \\ ASM_SIMP_TAC std_ss[basic_abs,heap_type_distinct],
-    REPEAT STRIP_TAC \\ `ok_state_part (i,i+j,(i+j =+ EMP) m)` by ALL_TAC THENL [
+    REPEAT STRIP_TAC \\ sg `ok_state_part (i,i+j,(i+j =+ EMP) m)` THENL [
       FULL_SIMP_TAC std_ss [ok_state_part_def,LET_DEF] \\ REPEAT STRIP_TAC
       \\ Cases_on `RANGE(i,i+j)k` \\ ASM_SIMP_TAC std_ss [UPDATE_def] THENL [
         `~(i + j = k) /\ RANGE(i,i+SUC j)k` by (FULL_SIMP_TAC bool_ss [RANGE_def] \\ DECIDE_TAC)
@@ -263,7 +263,7 @@ val ok_state_CARD_EQ_lemma = prove(
       \\ `RANGE(i,i+SUC j)(i+j)` by (FULL_SIMP_TAC bool_ss [RANGE_def] \\ DECIDE_TAC)
       \\ `?x y d. m (i + j) = DATA(x,y,d)` by METIS_TAC [ok_state_part_def]
       \\ Q.ABBREV_TAC `xxx = basic_abs ((i+j =+ EMP) m)`
-      \\ `(basic_abs m = (i+j,x,y,d) INSERT xxx) /\ ~((i+j,x,y,d) IN xxx)` by ALL_TAC
+      \\ sg `(basic_abs m = (i+j,x,y,d) INSERT xxx) /\ ~((i+j,x,y,d) IN xxx)`
       \\ REWRITE_TAC [METIS_PROVE [PAIR] ``!f g. (f = g) = !x y z d. f (x,y,z,d) = g (x,y,z,d)``]
       \\ Q.UNABBREV_TAC `xxx` THENL [
         SIMP_TAC std_ss [INSERT_THM,IN_DEF,basic_abs,UPDATE_def,heap_type_distinct]
@@ -279,7 +279,7 @@ val ok_state_CARD_EQ = prove(
     \\ `i + p - i = p` by DECIDE_TAC \\ METIS_TAC [ok_state_CARD_EQ_lemma],
     ` (j - i = 0) /\ !k.~RANGE(i,j)k` by (REWRITE_TAC [RANGE_def] \\ DECIDE_TAC)
     \\ ASM_SIMP_TAC bool_ss [ok_state_part_def] \\ STRIP_TAC
-    \\ `basic_abs m = {}` by ALL_TAC \\ ASM_SIMP_TAC bool_ss [CARD_EMPTY]
+    \\ sg `basic_abs m = {}` \\ ASM_SIMP_TAC bool_ss [CARD_EMPTY]
     \\ REWRITE_TAC [METIS_PROVE [PAIR] ``!f g. (f = g) = !x y z d. f (x,y,z,d) = g (x,y,z,d)``]
     \\ ASM_REWRITE_TAC [basic_abs,EMPTY_DEF,heap_type_distinct]]);
 
@@ -312,11 +312,11 @@ val FINITE_set = prove(
   ``!h:num|->num#num#'a. FINITE (ch_set h)``,
   CONV_TAC (QUANT_CONV (UNBETA_CONV ``h:num|->num#num#'a``))
   \\ MATCH_MP_TAC fmap_INDUCT \\ SIMP_TAC bool_ss [] \\ REPEAT STRIP_TAC THENL [
-    `ch_set (FEMPTY:num|->num#num#'a) = {}` by ALL_TAC
+    sg `ch_set (FEMPTY:num|->num#num#'a) = {}`
     \\ ASM_SIMP_TAC bool_ss [FINITE_EMPTY]
     \\ ASM_SIMP_TAC bool_ss [FINITE_EMPTY,ch_set_def,EMPTY_DEF,FDOM_FEMPTY,IN_DEF,
          METIS_PROVE [PAIR] ``!f g. (f = g) = !x y z d. f (x,y,z,d) = g (x,y,z,d)``],
-    `ch_set ((f |+ (x,y)):num|->num#num#'a) = (x,y) INSERT ch_set f` by ALL_TAC
+    sg `ch_set ((f |+ (x,y)):num|->num#num#'a) = (x,y) INSERT ch_set f`
     \\ ASM_SIMP_TAC std_ss [FINITE_INSERT]
     \\ FULL_SIMP_TAC bool_ss [ch_set_def,INSERT_THM,FAPPLY_FUPDATE_THM,FDOM_FUPDATE,IN_DEF,
          METIS_PROVE [PAIR] ``!f g. (f = g) = !x y z d. f (x,y,z,d) = g (x,y,z,d)``]
@@ -333,12 +333,12 @@ val cheney_alloc_gc_spec = store_thm("cheney_alloc_gc_spec",
   \\ `bijection f` by (FULL_SIMP_TAC std_ss [FUN_EQ_THM] \\ METIS_TAC [ONE_ONE_DEF,ONTO_DEF,bijection_def])
   \\ `apply b (reachables r (ch_set h)) = apply f (basic_abs m')` by
    (REWRITE_TAC [METIS_PROVE [PAIR] ``!f g. (f = g) = !x y z d. f (x,y,z,d) = g (x,y,z,d)``]
-    \\ Q.PAT_ASSUM `apply f (reachables c (basic_abs m)) = basic_abs m'`
+    \\ Q.PAT_X_ASSUM `apply f (reachables c (basic_abs m)) = basic_abs m'`
       (fn th => ASM_REWRITE_TAC [GSYM th,apply_apply,apply_I])
     \\ `?k. (b o k = I) /\ (k o b = I) /\ bijection k` by METIS_TAC [bijection_inv]
     \\ IMP_RES_TAC (Q.ISPECL [`r:num list`,`f:num->num`,`g:num->num`,`s:(num#num#num#'a)set`] apply_reachables)
     \\ IMP_RES_TAC MAP_INV \\ FULL_SIMP_TAC bool_ss []
-    \\ REPEAT (Q.PAT_ASSUM `!hj.jk` (K ALL_TAC))
+    \\ REPEAT (Q.PAT_X_ASSUM `!hj.jk` (K ALL_TAC))
     \\ REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC THENL [
       REWRITE_TAC [reachables_def]
       \\ STRIP_TAC THEN1 (FULL_SIMP_TAC bool_ss [SUBSET_DEF,IN_DEF] \\ METIS_TAC [])
@@ -404,8 +404,8 @@ val cheney_alloc_gc_spec = store_thm("cheney_alloc_gc_spec",
     \\ IMP_RES_TAC (Q.ISPECL [`r:num list`,`f:num->num`,`g:num->num`,`s:(num#num#num#'a)set`] apply_reachables)
     \\ ASM_SIMP_TAC std_ss [reachables_reachables,apply_apply,apply_I,SUBSET_REFL]
     \\ `basic_abs m' = apply f (apply b (reachables r (ch_set h)))` by METIS_TAC [apply_switch]
-    \\ Q.PAT_ASSUM `apply b (reachables r (ch_set h)) = apply f (basic_abs m')` (K ALL_TAC)
-    \\ Q.PAT_ASSUM `apply f (reachables c (basic_abs m)) = basic_abs m'` (K ALL_TAC)
+    \\ Q.PAT_X_ASSUM `apply b (reachables r (ch_set h)) = apply f (basic_abs m')` (K ALL_TAC)
+    \\ Q.PAT_X_ASSUM `apply f (reachables c (basic_abs m)) = basic_abs m'` (K ALL_TAC)
     \\ ASM_SIMP_TAC std_ss [GSYM apply_apply]
     \\ METIS_TAC [apply_SUBSET,reachables_SUBSET,SUBSET_REFL]]);
 
@@ -536,7 +536,7 @@ val cheney_alloc_ok = store_thm("cheney_alloc_ok",
   \\ ASM_SIMP_TAC bool_ss [cheney_alloc_aux_def]
   \\ IMP_RES_TAC cheney_collector_spec
   \\ Cases_on `i2 = e2` \\ ASM_SIMP_TAC std_ss [LET_DEF] THEN1
-   (Q.PAT_ASSUM `ok_state (i2,e2,root2,l2,u2,m2)` MP_TAC
+   (Q.PAT_X_ASSUM `ok_state (i2,e2,root2,l2,u2,m2)` MP_TAC
     \\ Cases_on `root2`
     \\ FULL_SIMP_TAC std_ss [MAP,NOT_CONS_NIL,TL]
     \\ REPEAT (POP_ASSUM (K ALL_TAC))
@@ -545,7 +545,7 @@ val cheney_alloc_ok = store_thm("cheney_alloc_ok",
     \\ FULL_SIMP_TAC std_ss [MEM]
     \\ METIS_TAC [])
   \\ `FST (SND (SND (cheney_collector (i,e,t::v::r,l,u,m)))) = root2` by METIS_TAC [PAIR_EQ,PAIR]
-  \\ Q.PAT_ASSUM `FST (SND xx) = yy` (ASSUME_TAC o RW [FST,SND] o
+  \\ Q.PAT_X_ASSUM `FST (SND xx) = yy` (ASSUME_TAC o RW [FST,SND] o
        CONV_RULE (DEPTH_CONV FORCE_PBETA_CONV) o
        SIMP_RULE std_ss [LET_DEF,move_roots_def,cheney_collector_def])
   \\ Cases_on `root2` \\ FULL_SIMP_TAC std_ss [NOT_CONS_NIL]
@@ -594,7 +594,7 @@ val cheney_alloc_spec = store_thm("cheney_alloc_spec",
   \\ SIMP_TAC std_ss [GSYM CONJ_ASSOC,GSYM rich_listTheory.MAP_MAP_o]
   \\ STRIP_TAC THEN1 ASM_SIMP_TAC std_ss [swap_def]
   \\ `(MAP b' (MAP (swap i' (k (fresh h))) t) = t2::ts)` by
-   (Q.PAT_ASSUM `MAP b' t = t2::ts` (ASSUME_TAC o GSYM)
+   (Q.PAT_X_ASSUM `MAP b' t = t2::ts` (ASSUME_TAC o GSYM)
     \\ ASM_SIMP_TAC bool_ss []
     \\ MATCH_MP_TAC (METIS_PROVE [] ``(x = y) ==> (f x = f y)``)
     \\ MATCH_MP_TAC MAP_ID
@@ -676,17 +676,17 @@ val cheney_alloc_spec = store_thm("cheney_alloc_spec",
     \\ `?x' y d. (m' x = DATA (x',y,d)) /\ {x'; y} SUBSET0 RANGE (if u' then 1+l' else 1,i')` by METIS_TAC []
     \\ FULL_SIMP_TAC std_ss [heap_type_11,SUBSET0_DEF,SUBSET_DEF,IN_INSERT]
     \\ FULL_SIMP_TAC std_ss [IN_DEF] \\ `~(y = i') /\ ~(z = i')` by METIS_TAC [RANGE_BORDER]
-    \\ REVERSE (`~(x = k (fresh h)) /\ ~(y = k (fresh h)) /\ ~(z = k (fresh h))` by ALL_TAC)
-    THEN1 (ASM_SIMP_TAC std_ss [swap_def] \\ METIS_TAC [basic_abs])
+    \\ `~(x = k (fresh h)) /\ ~(y = k (fresh h)) /\ ~(z = k (fresh h))` suffices_by
+    (STRIP_TAC THEN ASM_SIMP_TAC std_ss [swap_def] \\ METIS_TAC [basic_abs])
     \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC bool_ss []
     \\ `RANGE (if u' then 1+l' else 1,i') (k (fresh h))` by METIS_TAC []
     \\ `?j1 j2 j3. basic_abs m' (k (fresh h),j1,j2,j3)` by METIS_TAC [basic_abs]
     \\ `apply b' (ch_set h) (k (fresh h),j1,j2,j3)` by METIS_TAC []
     \\ FULL_SIMP_TAC bool_ss [apply_def,IN_DEF] \\ METIS_TAC [])
-  \\ Q.PAT_ASSUM `xxx SUBSET basic_abs m'`
+  \\ Q.PAT_X_ASSUM `xxx SUBSET basic_abs m'`
        (fn th => MATCH_MP_TAC (RW [EXPAND_SUBSET] th) \\ ASSUME_TAC th)
   \\ Q.ABBREV_TAC `xxx = apply b' (reachables (t1::t2::ts) (ch_set h))`
-  \\ Q.PAT_ASSUM `apply (swap i' (k (fresh h))) xxx (x,y,z,d')`
+  \\ Q.PAT_X_ASSUM `apply (swap i' (k (fresh h))) xxx (x,y,z,d')`
        (ASSUME_TAC o SIMP_RULE std_ss [apply_def,IN_DEF])
   \\ FULL_SIMP_TAC bool_ss [EXPAND_SUBSET]
   \\ `basic_abs m' (swap i' (k (fresh h)) x,swap i' (k (fresh h)) y,
@@ -837,7 +837,7 @@ val cheney_move = store_thm("cheney_move",
   \\ IMP_RES_TAC MAP_MEM_ZIP \\ REPEAT STRIP_TAC
   THEN1 METIS_TAC [] THEN1 METIS_TAC [] THEN1 METIS_TAC [] THEN1 METIS_TAC []
   \\ Q.EXISTS_TAC `b` \\ ASM_SIMP_TAC std_ss []
-  \\ `reachables (x::xs) (ch_set h) = reachables xs (ch_set h)` by ALL_TAC
+  \\ sg `reachables (x::xs) (ch_set h) = reachables xs (ch_set h)`
   \\ ASM_SIMP_TAC std_ss []
   \\ MATCH_MP_TAC (METIS_PROVE [PAIR] ``(!x y z q. f (x,y,z,q) = g (x,y,z,q)) ==> (f = g)``)
   \\ SIMP_TAC bool_ss [reachables_def,MEM] \\ METIS_TAC []);
@@ -859,7 +859,7 @@ val cheney_move2 = store_thm("cheney_move2",
   THEN1 METIS_TAC [] THEN1 METIS_TAC [] THEN1 METIS_TAC [] THEN1 METIS_TAC []
   THEN1 METIS_TAC [] THEN1 METIS_TAC []
   \\ Q.EXISTS_TAC `b` \\ ASM_SIMP_TAC std_ss []
-  \\ `reachables (x2::x1::xs) (ch_set h) = reachables xs (ch_set h)` by ALL_TAC
+  \\ sg `reachables (x2::x1::xs) (ch_set h) = reachables xs (ch_set h)`
   \\ ASM_SIMP_TAC std_ss []
   \\ MATCH_MP_TAC (METIS_PROVE [PAIR] ``(!x y z q. f (x,y,z,q) = g (x,y,z,q)) ==> (f = g)``)
   \\ SIMP_TAC bool_ss [reachables_def,MEM] \\ METIS_TAC []);
@@ -875,7 +875,7 @@ val cheney_car_cdr = store_thm("cheney_car_cdr",
   \\ `y IN RANGE ((if u then 1 + l else 1),i)` by METIS_TAC []
   \\ `?x3 y3 d. (m y = DATA (x3,y3,d)) /\ {x3; y3} SUBSET0 RANGE ((if u then 1 + l else 1),i)`
        by METIS_TAC []
-  \\ Q.PAT_ASSUM `!k. ppp ==> ?x. bbb` (K ALL_TAC)
+  \\ Q.PAT_X_ASSUM `!k. ppp ==> ?x. bbb` (K ALL_TAC)
   \\ FULL_SIMP_TAC bool_ss [getDATA_def,FST,SND,FEVERY_DEF]
   \\ (STRIP_TAC THEN1 (FULL_SIMP_TAC std_ss [SUBSET0_DEF,SUBSET_DEF,IN_INSERT,NOT_IN_EMPTY] \\ METIS_TAC []))
   \\ `~(x = 0)` by METIS_TAC [bijection_def,ONE_ONE_DEF]
@@ -887,10 +887,10 @@ val cheney_car_cdr = store_thm("cheney_car_cdr",
   \\ FULL_SIMP_TAC std_ss [IN_DEF]
   \\ `basic_abs m (y,x3,y3,d)` by FULL_SIMP_TAC bool_ss [basic_abs]
   \\ `apply b (ch_set h) (y,x3,y3,d)` by METIS_TAC []
-  \\ Q.PAT_ASSUM `b y = x` ASSUME_TAC
+  \\ Q.PAT_X_ASSUM `b y = x` ASSUME_TAC
   \\ FULL_SIMP_TAC std_ss [apply_def,ch_set_def,IN_DEF]
   \\ REPEAT STRIP_TAC
-  \\ Q.PAT_ASSUM ` !x. apply b (reachables xs (ch_set h)) x ==> basic_abs m x` MATCH_MP_TAC
+  \\ Q.PAT_X_ASSUM ` !x. apply b (reachables xs (ch_set h)) x ==> basic_abs m x` MATCH_MP_TAC
   \\ Cases_on `x'` \\ Cases_on `r` \\ Cases_on `r'`
   \\ (REVERSE (FULL_SIMP_TAC std_ss [apply_def,IN_DEF,reachables_def,MEM]) THEN1 METIS_TAC [])
   \\ Q.EXISTS_TAC `x` \\ ASM_SIMP_TAC bool_ss []
@@ -906,7 +906,7 @@ val cheney_data = store_thm("cheney_data",
   \\ `y IN RANGE ((if u then 1 + l else 1),i)` by METIS_TAC []
   \\ `?x3 y3 d. (m y = DATA (x3,y3,d)) /\ {x3; y3} SUBSET0 RANGE ((if u then 1 + l else 1),i)`
        by METIS_TAC []
-  \\ Q.PAT_ASSUM `!k. ppp ==> ?x. bbb` (K ALL_TAC)
+  \\ Q.PAT_X_ASSUM `!k. ppp ==> ?x. bbb` (K ALL_TAC)
   \\ FULL_SIMP_TAC bool_ss [getDATA_def,FST,SND,FEVERY_DEF]
   \\ `~(x = 0)` by METIS_TAC [bijection_def,ONE_ONE_DEF]
   \\ `(\(x,y,z,d). {y; z} SUBSET0 FDOM h) (x,h ' x)` by METIS_TAC []
@@ -915,7 +915,7 @@ val cheney_data = store_thm("cheney_data",
   \\ FULL_SIMP_TAC std_ss [IN_DEF]
   \\ `basic_abs m (y,x3,y3,d)` by FULL_SIMP_TAC bool_ss [basic_abs]
   \\ `apply b (ch_set h) (y,x3,y3,d)` by METIS_TAC []
-  \\ Q.PAT_ASSUM `b y = x` ASSUME_TAC
+  \\ Q.PAT_X_ASSUM `b y = x` ASSUME_TAC
   \\ FULL_SIMP_TAC std_ss [apply_def,ch_set_def,IN_DEF]);
 
 val ch_set_FUPDATE = prove(
@@ -929,11 +929,11 @@ val FINITE_ch_set = store_thm("FINITE_ch_set",
   ``!h:num|->num#num#'a. FINITE (ch_set h)``,
   CONV_TAC (QUANT_CONV (UNBETA_CONV ``h:num|->num#num#'a``))
   \\ MATCH_MP_TAC fmap_INDUCT \\ SIMP_TAC bool_ss [] \\ REPEAT STRIP_TAC THENL [
-    `ch_set (FEMPTY:num|->num#num#'a) = {}` by ALL_TAC
+    sg `ch_set (FEMPTY:num|->num#num#'a) = {}`
     \\ ASM_SIMP_TAC bool_ss [FINITE_EMPTY]
     \\ ASM_SIMP_TAC bool_ss [FINITE_EMPTY,ch_set_def,EMPTY_DEF,FDOM_FEMPTY,IN_DEF,
          METIS_PROVE [PAIR] ``!f g. (f = g) = !x y z d. f (x,y,z,d) = g (x,y,z,d)``],
-    `ch_set ((f |+ (x,y)):num|->num#num#'a) = (x,y) INSERT ch_set f` by ALL_TAC
+    sg `ch_set ((f |+ (x,y)):num|->num#num#'a) = (x,y) INSERT ch_set f`
     \\ ASM_SIMP_TAC std_ss [FINITE_INSERT]
     \\ FULL_SIMP_TAC bool_ss [ch_set_def,INSERT_THM,FAPPLY_FUPDATE_THM,FDOM_FUPDATE,IN_DEF,
          METIS_PROVE [PAIR] ``!f g. (f = g) = !x y z d. f (x,y,z,d) = g (x,y,z,d)``]
@@ -1009,7 +1009,7 @@ val LEMMA = prove(
     REPEAT STRIP_TAC
     \\ Q.EXISTS_TAC `p`
     \\ Q.EXISTS_TAC `r` \\ ASM_SIMP_TAC bool_ss []
-    \\ Q.PAT_ASSUM `!xs ys. bbb` MP_TAC
+    \\ Q.PAT_X_ASSUM `!xs ys. bbb` MP_TAC
     \\ REPEAT (POP_ASSUM (K ALL_TAC))
     \\ Induct_on `p` \\ SIMP_TAC bool_ss [MEM] \\ METIS_TAC [APPEND,CONS_11],
     REWRITE_TAC [GSYM APPEND_ASSOC,APPEND]

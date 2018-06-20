@@ -9,10 +9,10 @@ defined in for_ndScript.sml and for_nd_semScript.sml. The compiler
 targets a simple assembly-like language. We prove that the compiler
 preserves the top-level observable semantics.
 
-The compiler consists of three passes:
- - the first pass simplifies For loops and removes Dec
- - the second pass compiles expressions into very simple assignments
- - the third pass maps the FOR language into assmembly code
+The compiler consists of three phasees:
+ - the first phase simplifies For loops and removes Dec
+ - the second phase compiles expressions into very simple assignments
+ - the third phase maps the FOR language into assmembly code
 
 *)
 
@@ -26,20 +26,20 @@ val ect = BasicProvers.EVERY_CASE_TAC;
 val IMP_IMP = METIS_PROVE [] ``b /\ (b1 ==> b2) ==> ((b ==> b1) ==> b2)``
 
 
-(* === PASS 1 : simplifies For loops and removes Dec === *)
+(* === PHASE 1 : simplifies For loops and removes Dec === *)
 
 val Loop_def = Define `
   Loop t = For (Num 1) (Num 1) t`;
 
-val pass1_def = Define `
-  (pass1 (Exp e) = Exp e) /\
-  (pass1 (Dec x t) = Seq (Exp (Assign x (Num 0))) (pass1 t)) /\
-  (pass1 (Break) = Break) /\
-  (pass1 (Seq t1 t2) = Seq (pass1 t1) (pass1 t2)) /\
-  (pass1 (If e t1 t2) = If e (pass1 t1) (pass1 t2)) /\
-  (pass1 (For e1 e2 t) = Loop (If e1 (Seq (pass1 t) (Exp e2)) Break))`;
+val phase1_def = Define `
+  (phase1 (Exp e) = Exp e) /\
+  (phase1 (Dec x t) = Seq (Exp (Assign x (Num 0))) (phase1 t)) /\
+  (phase1 (Break) = Break) /\
+  (phase1 (Seq t1 t2) = Seq (phase1 t1) (phase1 t2)) /\
+  (phase1 (If e t1 t2) = If e (phase1 t1) (phase1 t2)) /\
+  (phase1 (For e1 e2 t) = Loop (If e1 (Seq (phase1 t) (Exp e2)) Break))`;
 
-(* Verification of pass 1 *)
+(* Verification of phase 1 *)
 
 val sem_t_Dec = store_thm("sem_t_Dec",
   ``sem_t s (Dec v t) =
@@ -102,19 +102,19 @@ val sem_t_For = store_thm("sem_t_For",
   \\ imp_res_tac sem_t_clock
   \\ decide_tac);
 
-val pass1_correct = store_thm("pass1_correct",
-  ``!t s. sem_t s (pass1 t) = sem_t s t``,
-  Induct \\ fs [pass1_def,sem_t_def_with_stop,GSYM sem_t_For,GSYM sem_t_Dec]
+val phase1_correct = store_thm("phase1_correct",
+  ``!t s. sem_t s (phase1 t) = sem_t s t``,
+  Induct \\ fs [phase1_def,sem_t_def_with_stop,GSYM sem_t_For,GSYM sem_t_Dec]
   \\ REPEAT STRIP_TAC \\ ect \\ fs [STOP_def]
   \\ MATCH_MP_TAC sem_t_For_swap_body \\ fs []);
 
-val pass1_pres = store_thm("pass1_pres",
-  ``!t. semantics (pass1 t) = semantics t``,
+val phase1_pres = store_thm("phase1_pres",
+  ``!t. semantics (phase1 t) = semantics t``,
   REPEAT STRIP_TAC \\ fs [FUN_EQ_THM] \\ Cases_on `x'`
-  \\ fs [semantics_def,pass1_correct]);
+  \\ fs [semantics_def,phase1_correct]);
 
 
-(* === PASS 2 : compiles expressions into very simple assignments === *)
+(* === PHASE 2 : compiles expressions into very simple assignments === *)
 
 val comp_exp_def = Define `
   (comp_exp (Var v) s = Exp (Assign s (Var v))) /\
@@ -155,10 +155,10 @@ val t_max_def = Define `
   (t_max (For e1 e2 t) = MAX (exp_max e1) (MAX (exp_max e2) (t_max t))) /\
   (t_max (If e t1 t2) = MAX (exp_max e) (MAX (t_max t1) (t_max t2)))`;
 
-val pass2_def = Define `
-  pass2 t = flatten_t t ("temp" ++ REPLICATE (t_max t - 3) #"'")`;
+val phase2_def = Define `
+  phase2 t = flatten_t t ("temp" ++ REPLICATE (t_max t - 3) #"'")`;
 
-(* Verification of pass 2 *)
+(* Verification of phase 2 *)
 
 val possible_var_name_def = Define `
   possible_var_name v s = !n. ~(v ++ REPLICATE n #"'" IN FDOM s)`;
@@ -180,6 +180,16 @@ val store_var_def = Define `
 
 val sem_e_def = sem_e_def |> REWRITE_RULE [GSYM store_var_def]
 
+val r_cases_eq = prove_case_eq_thm {
+  case_def = for_nd_semTheory.r_case_def,
+  nchotomy = for_nd_semTheory.r_nchotomy
+};
+
+val pair_cases_eq = Q.prove(
+  ‘(pair_CASE p f = v) ⇔ ∃q r. p = (q,r) ∧ v = f q r’,
+  Cases_on `p` >> simp[] >> metis_tac[]);
+val rveq = rpt BasicProvers.VAR_EQ_TAC
+
 val sem_e_possible_var_name = prove(
   ``!e s i r.
       (sem_e s e = (Rval i,r)) /\ exp_max e < STRLEN k ==>
@@ -189,46 +199,42 @@ val sem_e_possible_var_name = prove(
   THEN1
    (fs [permute_pair_def]
     \\ Cases_on `oracle_get s.non_det_o` \\ fs [LET_DEF]
-    \\ Cases_on `q` \\ fs []
-    THEN1
-     (FIRST_X_ASSUM (MP_TAC o Q.SPEC `s with non_det_o := r'`)
-      \\ Cases_on `sem_e (s with non_det_o := r') e'` \\ fs []
-      \\ FIRST_X_ASSUM (MP_TAC o Q.SPEC `r''`)
-      \\ ect \\ fs [exp_max_def,MAX_LESS,unpermute_pair_def])
-    \\ Q.PAT_ASSUM `!x. bbb` MP_TAC
-    \\ FIRST_X_ASSUM (MP_TAC o Q.SPEC `s with non_det_o := r'`)
-    \\ Cases_on `sem_e (s with non_det_o := r') e` \\ fs []
-    \\ REPEAT STRIP_TAC
-    \\ FIRST_X_ASSUM (MP_TAC o Q.SPEC `r'':state`)
-    \\ ect \\ fs [exp_max_def,MAX_LESS,unpermute_pair_def])
+    \\ rename [‘oracle_get s.non_det_o = (b,bo)’]
+    \\ Cases_on `b` >> fs [] (* 2 subgoals *)
+    \\ fs[r_cases_eq, pair_cases_eq, unpermute_pair_def, exp_max_def,
+          MAX_LESS] >> rveq >>
+    rpt (first_x_assum
+           (first_assum o mp_then.mp_then (mp_then.Pos hd) mp_tac)) >>
+    simp[])
   \\ SRW_TAC [] [] \\ fs [exp_max_def,MAX_LESS,getchar_def]
-  \\ ect \\ fs [LET_DEF] \\ SRW_TAC [] []
-  \\ FIRST_X_ASSUM (fn th => MP_TAC (Q.SPEC `s'` th) THEN
-                             MP_TAC (Q.SPEC `s` th)) \\ fs []
-  \\ fs [store_var_def,possible_var_name_def]
-  \\ REPEAT STRIP_TAC \\ SRW_TAC [] []
-  \\ fs [] \\ DECIDE_TAC);
+  \\ ect \\ fs [LET_DEF] \\ SRW_TAC [] [store_var_def] >>
+  first_x_assum (first_assum o mp_then.mp_then (mp_then.Pos hd) mp_tac) >>
+  simp[] >>
+  simp[possible_var_name_def] >>
+  rpt strip_tac >> SRW_TAC [] [] >>
+  fs []);
 
-val comp_exp_correct = prove(
-  ``!e s t n res s1.
+val comp_exp_correct = store_thm(
+  "comp_exp_correct",
+  “!e s t n res s1.
       sem_e s e = (res,s1) /\ res <> Rfail /\
       possible_var_name n s.store /\
       s.store SUBMAP t.store /\ (t.clock = s.clock) /\
       (s.non_det_o = K F) /\
-      (s.io_trace = t.io_trace) /\
+      (FILTER ISL s.io_trace = FILTER ISL t.io_trace) /\
       (s.input = t.input) /\
       exp_max e < LENGTH n ==>
       ?t1. (sem_t t (comp_exp e n) = (res,t1)) /\
            s1.store SUBMAP t1.store /\ (t1.clock = s1.clock) /\
            (s1.non_det_o = K F) /\
-           (s1.io_trace = t1.io_trace) /\
+           (FILTER ISL s1.io_trace = FILTER ISL t1.io_trace) /\
            (s1.input = t1.input) /\
            (!v. (res = Rval v) ==> FLOOKUP t1.store n = SOME v) /\
            possible_var_name n s1.store /\
            (!k v. possible_var_name k s.store /\
                   exp_max e < LENGTH k /\ LENGTH k < LENGTH n /\
                   FLOOKUP t.store k = SOME v ==>
-                  FLOOKUP t1.store k = SOME v)``,
+                  FLOOKUP t1.store k = SOME v)”,
   Induct \\ fs [sem_e_def,comp_exp_def,sem_t_def,store_var_def]
   \\ REPEAT STRIP_TAC
   THEN1
@@ -244,18 +250,18 @@ val comp_exp_correct = prove(
    (fs [permute_pair_def,oracle_get_def,LET_DEF,unpermute_pair_def]
     \\ `(s with non_det_o := K F) = s` by
           (fs [state_component_equality]) \\ fs [] \\ POP_ASSUM (K ALL_TAC)
-    \\ Cases_on `sem_e s e` \\ Cases_on `q` \\ fs [sem_e_break]
+    \\ Cases_on `sem_e (s with io_trace := s.io_trace ++ [INR F]) e` \\ Cases_on `q` \\ fs [sem_e_break]
     \\ Cases_on `sem_e r e'` \\ Cases_on `q` \\ fs [sem_e_break]
     \\ fs [exp_max_def]
     \\ FIRST_X_ASSUM (MP_TAC o Q.SPEC `r`)
-    \\ FIRST_X_ASSUM (MP_TAC o Q.SPECL [`s`,`t`,`n`])
+    \\ FIRST_X_ASSUM (MP_TAC o Q.SPECL [`s with io_trace := s.io_trace ++ [INR F]`,`t`,`n`])
     \\ `exp_max e < STRLEN n /\
         exp_max e' < STRLEN n /\
         exp_max e' < STRLEN (STRCAT n "'")` by
             (fs [MAX_LESS]  \\ DECIDE_TAC)
-    \\ fs [] \\ REPEAT STRIP_TAC \\ fs []
+    \\ fs [] \\ REPEAT STRIP_TAC \\ fs [FILTER_APPEND_DISTRIB] \\ rfs []
     \\ POP_ASSUM (MP_TAC o Q.SPECL [`t1`,`STRCAT n "'"`])
-    \\ `possible_var_name (STRCAT n "'") r.store` by ALL_TAC THEN1
+    \\ `possible_var_name (STRCAT n "'") r.store` by
      (fs [possible_var_name_def]
       \\ REPEAT STRIP_TAC
       \\ FIRST_X_ASSUM (MP_TAC o Q.SPEC `SUC n'`)
@@ -265,7 +271,7 @@ val comp_exp_correct = prove(
     \\ Q.MATCH_ASSUM_RENAME_TAC `s1.store SUBMAP t2.store`
     \\ `FLOOKUP t2.store n = SOME i` by (FIRST_X_ASSUM MATCH_MP_TAC \\ fs [])
     \\ fs [] \\ SRW_TAC [] []
-    \\ fs [sem_e_def,AC integerTheory.INT_ADD_ASSOC integerTheory.INT_ADD_COMM]
+    \\ fs [sem_e_def,AC integerTheory.INT_ADD_ASSOC integerTheory.INT_ADD_COMM, FILTER_APPEND_DISTRIB]
     \\ `possible_var_name n r'.store` by
           IMP_RES_TAC sem_e_possible_var_name
     \\ REPEAT STRIP_TAC
@@ -276,7 +282,9 @@ val comp_exp_correct = prove(
     \\ POP_ASSUM (fn th => SIMP_TAC std_ss [th])
     \\ FIRST_X_ASSUM MATCH_MP_TAC
     \\ fs [MAX_LESS] \\ REPEAT STRIP_TAC
-    \\ IMP_RES_TAC sem_e_possible_var_name \\ DECIDE_TAC)
+    \\ IMP_RES_TAC sem_e_possible_var_name
+    \\ fs [Q.prove (`!y. (s with io_trace := y).store = s.store`, rw [state_component_equality])]
+    \\ decide_tac)
   THEN1
    (FIRST_X_ASSUM (MP_TAC o Q.SPEC `s'`)
     \\ Cases_on `sem_e s' e` \\ Cases_on `q` \\ fs [sem_e_break]
@@ -295,7 +303,7 @@ val comp_exp_correct = prove(
     \\ SRW_TAC [] [] \\ fs []
     \\ IMP_RES_TAC possible_var_name_IMP_SUBMAP \\ fs []
     \\ fs [FLOOKUP_DEF,SUBMAP_DEF,FAPPLY_FUPDATE_THM]
-    \\ SRW_TAC [] [] \\ fs [])
+    \\ SRW_TAC [] [] \\ fs [FILTER_APPEND_DISTRIB])
   THEN1
    (FIRST_X_ASSUM (MP_TAC o Q.SPEC `s`)
     \\ Cases_on `sem_e s e` \\ Cases_on `q` \\ fs [sem_e_break]
@@ -303,16 +311,16 @@ val comp_exp_correct = prove(
     \\ FIRST_X_ASSUM (MP_TAC o Q.SPECL [`t`,`n`])
     \\ fs [] \\ REPEAT STRIP_TAC \\ fs []
     \\ REPEAT STRIP_TAC
-    \\ fs [SUBMAP_DEF,FAPPLY_FUPDATE_THM,FLOOKUP_DEF]));
+    \\ fs [SUBMAP_DEF,FAPPLY_FUPDATE_THM,FLOOKUP_DEF, FILTER_APPEND_DISTRIB]));
 
-val pass2_subset_def = Define `
-  (pass2_subset (Dec v t) = F) /\
-  (pass2_subset (Exp e) = T) /\
-  (pass2_subset Break = T) /\
-  (pass2_subset (Seq t1 t2) = (pass2_subset t1 /\ pass2_subset t2)) /\
-  (pass2_subset (If e t1 t2) = (pass2_subset t1 /\ pass2_subset t2)) /\
-  (pass2_subset (For e1 e2 t) = ((e1 = Num 1) /\ (e2 = Num 1) /\
-     pass2_subset t))`
+val phase2_subset_def = Define `
+  (phase2_subset (Dec v t) = F) /\
+  (phase2_subset (Exp e) = T) /\
+  (phase2_subset Break = T) /\
+  (phase2_subset (Seq t1 t2) = (phase2_subset t1 /\ phase2_subset t2)) /\
+  (phase2_subset (If e t1 t2) = (phase2_subset t1 /\ phase2_subset t2)) /\
+  (phase2_subset (For e1 e2 t) = ((e1 = Num 1) /\ (e2 = Num 1) /\
+     phase2_subset t))`
 
 val sem_t_possible_var_name = prove(
   ``!s e i r.
@@ -359,24 +367,24 @@ val sem_t_possible_var_name = prove(
 
 val flatten_t_correct = prove(
   ``!s e t n res s1.
-      sem_t s e = (res,s1) /\ res <> Rfail /\ pass2_subset e /\
+      sem_t s e = (res,s1) /\ res <> Rfail /\ phase2_subset e /\
       possible_var_name n s.store /\
       s.store SUBMAP t.store /\ (t.clock = s.clock) /\
       (s.non_det_o = K F) /\
-      (s.io_trace = t.io_trace) /\
+      (FILTER ISL s.io_trace = FILTER ISL t.io_trace) /\
       (s.input = t.input) /\
       t_max e < LENGTH n ==>
       ?t1. (sem_t t (flatten_t e n) = (res,t1)) /\
            s1.store SUBMAP t1.store /\ (t1.clock = s1.clock) /\
            (s1.non_det_o = K F) /\
-           (s1.io_trace = t1.io_trace) /\
+           (FILTER ISL s1.io_trace = FILTER ISL t1.io_trace) /\
            (s1.input = t1.input) /\
            possible_var_name n s1.store /\
            (!k v. possible_var_name k s.store /\
                   t_max e < LENGTH k /\ LENGTH k < LENGTH n /\
                   FLOOKUP t.store k = SOME v ==>
                   FLOOKUP t1.store k = SOME v)``,
-  HO_MATCH_MP_TAC sem_t_ind \\ REPEAT STRIP_TAC \\ fs [pass2_subset_def]
+  HO_MATCH_MP_TAC sem_t_ind \\ REPEAT STRIP_TAC \\ fs [phase2_subset_def]
   THEN1 (* Exp *)
    (fs [flatten_t_def,sem_t_def,t_max_def]
     \\ MP_TAC (SPEC_ALL comp_exp_correct)
@@ -428,11 +436,11 @@ val flatten_t_correct = prove(
     \\ FIRST_X_ASSUM MATCH_MP_TAC \\ fs []
     \\ IMP_RES_TAC sem_t_possible_var_name));
 
-val pass2_correct = flatten_t_correct
+val phase2_correct = flatten_t_correct
   |> Q.SPECL [`s`,`t`,`s3`,`"temp" ++ REPLICATE (t_max t - 3) #"'"`]
   |> DISCH ``s.store = FEMPTY``
   |> DISCH ``s1.store = FEMPTY``
-  |> SIMP_RULE (srw_ss()) [GSYM pass2_def,Once possible_var_name_def,
+  |> SIMP_RULE (srw_ss()) [GSYM phase2_def,Once possible_var_name_def,
        rich_listTheory.LENGTH_REPLICATE,DECIDE ``n < 4 + (n - 3:num)``,
        PULL_FORALL] |> GEN_ALL;
 
@@ -449,20 +457,20 @@ val lemma = prove(
   ``((if b then x1 else x2) <> x2) <=> (x1 <> x2) /\ b``,
   Cases_on `b` \\ fs [])
 
-(* We prove that pass 2 preserves semantics: any behaviour that the
+(* We prove that phase 2 preserves semantics: any behaviour that the
    generated code has must also be behaviour of the input program, if
    the source semantics does not contain Crash (implied by successful
    type check) and if the syntax of the compiler program fits with
-   pass2_subset (i.e. syntax produced by pass1) *)
+   phase2_subset (i.e. syntax produced by phase1) *)
 
-val pass2_pres = store_thm("pass2_pres",
-  ``!t input. ~(Crash IN semantics t input) /\ pass2_subset t ==>
-              semantics (pass2 t) input SUBSET semantics t input``,
+val phase2_pres = store_thm("phase2_pres",
+  ``!t input. ~(Crash IN semantics t input) /\ phase2_subset t ==>
+              semantics (phase2 t) input SUBSET semantics t input``,
   REPEAT STRIP_TAC \\ fs [semantics_def,IN_DEF,SUBSET_DEF]
   \\ Cases \\ fs [semantics_def]
   \\ TRY
    (SRW_TAC [] []
-    \\ MP_TAC (pass2_correct |> Q.SPECL [`t`,`init_st c nd input`,
+    \\ MP_TAC (phase2_correct |> Q.SPECL [`t`,`init_st c nd input`,
          `s_with_clock c input`,`s_with_clock c input`]) \\ fs []
     \\ Cases_on `sem_t (s_with_clock c input) t` \\ fs []
     \\ fs [AND_IMP_INTRO]
@@ -478,25 +486,28 @@ val pass2_pres = store_thm("pass2_pres",
   THEN1
    (POP_ASSUM (K ALL_TAC)
     \\ POP_ASSUM (MP_TAC o Q.SPEC `c`) \\ REPEAT STRIP_TAC
-    \\ MP_TAC (pass2_correct |> Q.SPECL [`t`,`init_st c nd input`,
+    \\ MP_TAC (phase2_correct |> Q.SPECL [`t`,`init_st c nd input`,
          `s_with_clock c input`,`s_with_clock c input`]) \\ fs []
     \\ Cases_on `sem_t (s_with_clock c input) t` \\ fs []
     \\ fs [AND_IMP_INTRO]
     \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC
     THEN1 (fs [s_with_clock_def,init_st_def] \\ METIS_TAC [])
     \\ STRIP_TAC \\ fs [s_with_clock_def,init_st_def])
-  \\ RES_TAC
-  \\ MP_TAC (pass2_correct |> Q.SPECL [`t`,`init_st c nd input`,
-       `s_with_clock c input`,`s_with_clock c input`]) \\ fs []
-  \\ Cases_on `sem_t (s_with_clock c input) t` \\ fs []
-  \\ fs [AND_IMP_INTRO]
-  \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC
-  THEN1 (fs [s_with_clock_def,init_st_def] \\ METIS_TAC [])
-  \\ STRIP_TAC \\ fs [s_with_clock_def,init_st_def]
-  \\ METIS_TAC []);
+  \\ `!c. FILTER ISL (SND (sem_t (init_st c (K F) input) t)).io_trace =
+          FILTER ISL (SND (sem_t (init_st c nd input) (phase2 t))).io_trace` by (
+      rw []
+      \\ first_x_assum (MP_TAC o Q.SPEC `c`) \\ REPEAT STRIP_TAC
+      \\ MP_TAC (phase2_correct |> Q.SPECL [`t`,`init_st c nd input`,
+           `s_with_clock c input`,`s_with_clock c input`]) \\ fs []
+      \\ Cases_on `sem_t (s_with_clock c input) t` \\ fs []
+      \\ fs [AND_IMP_INTRO]
+      \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC
+      THEN1 (fs [s_with_clock_def,init_st_def] \\ METIS_TAC [])
+      \\ STRIP_TAC \\ fs [s_with_clock_def,init_st_def])
+  \\ rw []);
 
 
-(* === PASS 3 : maps the FOR language into assmembly code === *)
+(* === PHASE 3 : maps the FOR language into assmembly code === *)
 
 (* We define the tagert deterministic assembly language *)
 
@@ -511,8 +522,7 @@ instr =
   | Read reg
   | Write reg
   | Jmp num
-  | JmpIf reg num
-  | Halt`;
+  | JmpIf reg num`;
 
 val _ = Datatype `
 state_a = <| state : state; pc : num; instrs : instr list |>`;
@@ -534,7 +544,6 @@ val sem_a_def = tDefine "sem_a" `
 sem_a s =
   if s.pc < LENGTH s.instrs then
     case EL s.pc s.instrs of
-       | Halt => (Rval 0, s)
        | Int (Reg r) i =>
            let (r,st) = sem_e s.state (Assign r (Num i)) in
            let s' = s with state := st in
@@ -581,6 +590,8 @@ sem_a s =
                           | (Rval _, s') => sem_a s'
                           | r => r)
                 | _ => (r, s')
+  else if s.pc = LENGTH s.instrs then
+    (Rval 0, s)
   else
     (Rfail, s)`
   (WF_REL_TAC `inv_image (measure I LEX measure I)
@@ -603,7 +614,7 @@ val asm_semantics_def = Define `
      that gives a value result *)
   ?c i s.
     sem_a (a_state code c input) = (Rval i, s) /\
-    s.state.io_trace = io_trace) /\
+    FILTER ISL s.state.io_trace = io_trace) /\
 (asm_semantics code input Crash =
   (* Crash when there is a clock that gives a non-value, non-timeout
      result *)
@@ -611,24 +622,14 @@ val asm_semantics_def = Define `
     sem_a (a_state code c input) = (r, s) /\
     (r = Rbreak \/ r = Rfail)) /\
 (asm_semantics code input (Diverge io_trace) <=>
-  (* Diverge when all clocks give timeout results. Ensure that the IO
-     trace to the timeout point is a prefix of the whole trace. *)
-    (!c. ?s.
-      sem_a (a_state code c input) = (Rtimeout, s) /\
-      (!n. n < LENGTH s.state.io_trace ==>
-           LNTH n io_trace = SOME (EL n s.state.io_trace))) /\
-    (* Check that the whole IO trace is reachable, but maybe not for
-       just 1 clock value *)
-    (!n x.
-      LNTH n io_trace = SOME x ==>
-      ?c s. sem_a (a_state code c input) = (Rtimeout, s) /\
-            n < LENGTH s.state.io_trace /\ EL n s.state.io_trace = x))`;
+  (!c. ?s. sem_a (a_state code c input) = (Rtimeout, s)) ∧
+    lprefix_lub {fromList (FILTER ISL (SND (sem_a (a_state code c input))).state.io_trace) | c | T} io_trace)`;
 
-(* Definition of pass3 *)
+(* Definition of phase3 *)
 
-val pass3_aux_def = Define `
-  (pass3_aux n (Dec v t) b = []) /\
-  (pass3_aux n (Exp e) b =
+val phase3_aux_def = Define `
+  (phase3_aux n (Dec v t) b = []) /\
+  (phase3_aux n (Exp e) b =
      case e of
      | Assign v (Var x) =>
          if x = v then [] else [Mov (Reg v) (Reg x)]
@@ -637,44 +638,44 @@ val pass3_aux_def = Define `
      | Assign v Getchar => [Read (Reg v)]
      | Putchar (Var v) => [Write (Reg v)]
      | _ => []) /\
-  (pass3_aux n Break b = [Jmp b]) /\
-  (pass3_aux n (Seq t1 t2) b =
-     let c1 = pass3_aux n t1 b in
-     let c2 = pass3_aux (n + LENGTH c1) t2 b in
+  (phase3_aux n Break b = [Jmp b]) /\
+  (phase3_aux n (Seq t1 t2) b =
+     let c1 = phase3_aux n t1 b in
+     let c2 = phase3_aux (n + LENGTH c1) t2 b in
        c1 ++ c2) /\
-  (pass3_aux n (If e t1 t2) b =
-     let c1 = pass3_aux (n + 1) t1 b in
-     let c2 = pass3_aux (n + 2 + LENGTH c1) t2 b in
+  (phase3_aux n (If e t1 t2) b =
+     let c1 = phase3_aux (n + 1) t1 b in
+     let c2 = phase3_aux (n + 2 + LENGTH c1) t2 b in
        [JmpIf (case e of Var v => Reg v | _ => Reg "")
           (n + 2 + LENGTH c1)] ++ c1 ++
        [Jmp (n + 2 + LENGTH c1 + LENGTH c2)] ++ c2) /\
-  (pass3_aux n (For e1 e2 t) b =
-     let c1 = pass3_aux n t 0 in
-     let c2 = pass3_aux n t (n + 1 + LENGTH c1) in
+  (phase3_aux n (For e1 e2 t) b =
+     let c1 = phase3_aux n t 0 in
+     let c2 = phase3_aux n t (n + 1 + LENGTH c1) in
        c2 ++ [Jmp n])`
 
-val pass3_def = Define `
-  pass3 t = pass3_aux 0 t 0 ++ [Halt]`;
+val phase3_def = Define `
+  phase3 t = phase3_aux 0 t 0`;
 
-(* Verification of pass3 *)
+(* Verification of phase3 *)
 
-val LENGTH_pass3_aux = prove(
-  ``!t n b. LENGTH (pass3_aux n t b) = LENGTH (pass3_aux 0 t 0)``,
-  Induct \\ fs [pass3_aux_def,LET_DEF]);
+val LENGTH_phase3_aux = prove(
+  ``!t n b. LENGTH (phase3_aux n t b) = LENGTH (phase3_aux 0 t 0)``,
+  Induct \\ fs [phase3_aux_def,LET_DEF]);
 
-val pass3_subset_def = Define `
-  (pass3_subset (Dec v t) = F) /\
-  (pass3_subset (Exp e) <=>
+val phase3_subset_def = Define `
+  (phase3_subset (Dec v t) = F) /\
+  (phase3_subset (Exp e) <=>
      (?v. e = Assign v (Getchar)) \/
      (?v. e = Putchar (Var v)) \/
      (?v x. e = Assign v (Var x)) \/
      (?v i. e = Assign v (Num i)) \/
      (?v x y. e = Assign v (Add (Var x) (Var y)))) /\
-  (pass3_subset Break = T) /\
-  (pass3_subset (Seq t1 t2) = (pass3_subset t1 /\ pass3_subset t2)) /\
-  (pass3_subset (If e t1 t2) <=>
-     (?w. e = Var w) /\ pass3_subset t1 /\ pass3_subset t2) /\
-  (pass3_subset (For e1 e2 t) = ((e1 = Num 1) /\ (e2 = Num 1) /\ pass3_subset t))`
+  (phase3_subset Break = T) /\
+  (phase3_subset (Seq t1 t2) = (phase3_subset t1 /\ phase3_subset t2)) /\
+  (phase3_subset (If e t1 t2) <=>
+     (?w. e = Var w) /\ phase3_subset t1 /\ phase3_subset t2) /\
+  (phase3_subset (For e1 e2 t) = ((e1 = Num 1) /\ (e2 = Num 1) /\ phase3_subset t))`
 
 val instr_lookup_lemma = prove(
   ``(x.pc = LENGTH xs) /\ (x.instrs = xs ++ [y] ++ ys) ==>
@@ -698,14 +699,15 @@ val EL_LEMMA = prove(
 val state_rel_def = Define `
   state_rel s x = (x.state = s)`;
 
-val pass3_aux_thm = store_thm("pass3_aux_thm",
+local val fs = fsrw_tac[] val rfs = rev_full_simp_tac(srw_ss()) in
+val phase3_aux_thm = store_thm("phase3_aux_thm",
   ``!s1 t res s2 x xs ys b.
-      (sem_t s1 t = (res,s2)) /\ pass3_subset t /\
+      (sem_t s1 t = (res,s2)) /\ phase3_subset t /\
       state_rel s1 x /\
       (x.pc = LENGTH xs) /\
-      (x.instrs = xs ++ pass3_aux (LENGTH xs) t b ++ ys) /\
+      (x.instrs = xs ++ phase3_aux (LENGTH xs) t b ++ ys) /\
       res <> Rfail /\
-      (res = Rbreak ==> (LENGTH (xs ++ pass3_aux (LENGTH xs) t b) <= b)) ==>
+      (res = Rbreak ==> (LENGTH (xs ++ phase3_aux (LENGTH xs) t b) <= b)) ==>
       ?x'.
         (sem_a x = sem_a x') /\
         state_rel s2 x' /\
@@ -714,11 +716,11 @@ val pass3_aux_thm = store_thm("pass3_aux_thm",
          | Rfail => T
          | Rbreak => (x'.pc = b)
          | Rtimeout => (sem_a x' = (Rtimeout,x'))
-         | Rval v => (x'.pc = LENGTH (xs ++ pass3_aux (LENGTH xs) t b)))``,
+         | Rval v => (x'.pc = LENGTH (xs ++ phase3_aux (LENGTH xs) t b)))``,
   REWRITE_TAC [state_rel_def]
-  \\ HO_MATCH_MP_TAC sem_t_ind \\ REPEAT STRIP_TAC \\ fs [pass3_subset_def]
+  \\ HO_MATCH_MP_TAC sem_t_ind \\ REPEAT STRIP_TAC \\ fs [phase3_subset_def]
   THEN1 (* Exp 1 *)
-   (fs [pass3_aux_def,sem_t_def] \\ rfs []
+   (fs [phase3_aux_def,sem_t_def] \\ rfs []
     \\ SIMP_TAC std_ss [Once sem_a_def]
     \\ FULL_SIMP_TAC std_ss [GSYM APPEND_ASSOC,APPEND]
     \\ imp_res_tac (instr_lookup_lemma |> REWRITE_RULE [GSYM APPEND_ASSOC,APPEND])
@@ -731,11 +733,11 @@ val pass3_aux_thm = store_thm("pass3_aux_thm",
         state :=
           store_var v q
             (x.state with
-             <|io_trace := x.state.io_trace ++ [Itag q];
+             <|io_trace := x.state.io_trace ++ [INL (Itag q)];
                input := r|>)))`
     \\ fs [inc_pc_def])
   THEN1 (* Exp 2 *)
-   (fs [pass3_aux_def,sem_t_def] \\ rfs []
+   (fs [phase3_aux_def,sem_t_def] \\ rfs []
     \\ SIMP_TAC std_ss [Once sem_a_def]
     \\ FULL_SIMP_TAC std_ss [GSYM APPEND_ASSOC,APPEND]
     \\ imp_res_tac (instr_lookup_lemma |> REWRITE_RULE [GSYM APPEND_ASSOC,APPEND])
@@ -746,10 +748,10 @@ val pass3_aux_thm = store_thm("pass3_aux_thm",
     \\ Q.EXISTS_TAC `(inc_pc
        (x with
         state :=
-          x.state with io_trace := x.state.io_trace ++ [Otag x']))`
+          x.state with io_trace := x.state.io_trace ++ [INL (Otag x')]))`
     \\ fs [inc_pc_def])
   THEN1 (* Exp 3 *)
-   (fs [pass3_aux_def,sem_t_def] \\ rfs []
+   (fs [phase3_aux_def,sem_t_def] \\ rfs []
     \\ Cases_on `v = x'` \\ fs [] THEN1
      (fs [sem_e_def]
       \\ Cases_on `FLOOKUP s1.store x'` \\ fs [] \\ SRW_TAC [] []
@@ -766,7 +768,7 @@ val pass3_aux_thm = store_thm("pass3_aux_thm",
     \\ Q.EXISTS_TAC `(inc_pc (x with state := store_var v x'' x.state))`
     \\ fs [inc_pc_def])
   THEN1 (* Exp 4 *)
-   (fs [pass3_aux_def,sem_t_def] \\ rfs []
+   (fs [phase3_aux_def,sem_t_def] \\ rfs []
     \\ SIMP_TAC std_ss [Once sem_a_def]
     \\ FULL_SIMP_TAC std_ss [GSYM APPEND_ASSOC,APPEND]
     \\ imp_res_tac (instr_lookup_lemma |> REWRITE_RULE [GSYM APPEND_ASSOC,APPEND])
@@ -775,7 +777,7 @@ val pass3_aux_thm = store_thm("pass3_aux_thm",
     \\ Q.EXISTS_TAC `(inc_pc (x with state := store_var v i x.state))`
     \\ fs [inc_pc_def])
   THEN1 (* Exp 5 *)
-   (fs [pass3_aux_def,sem_t_def] \\ rfs []
+   (fs [phase3_aux_def,sem_t_def] \\ rfs []
     \\ SIMP_TAC std_ss [Once sem_a_def]
     \\ FULL_SIMP_TAC std_ss [GSYM APPEND_ASSOC,APPEND]
     \\ imp_res_tac (instr_lookup_lemma |> REWRITE_RULE [GSYM APPEND_ASSOC,APPEND])
@@ -789,7 +791,7 @@ val pass3_aux_thm = store_thm("pass3_aux_thm",
     \\ Q.EXISTS_TAC `(inc_pc (x with state := store_var v i r))` \\ fs []
     \\ SRW_TAC [] [inc_pc_def])
   THEN1 (* Break *)
-   (fs [sem_t_def] \\ SRW_TAC [] [] \\ fs [pass3_aux_def,LET_DEF]
+   (fs [sem_t_def] \\ SRW_TAC [] [] \\ fs [phase3_aux_def,LET_DEF]
     \\ SIMP_TAC std_ss [Once sem_a_def]
     \\ imp_res_tac instr_lookup_lemma \\ fs [LET_DEF]
     \\ fs [do_jump_def]
@@ -797,10 +799,10 @@ val pass3_aux_thm = store_thm("pass3_aux_thm",
     \\ Q.EXISTS_TAC `x with pc := b`
     \\ fs [] \\ fs [state_component_equality])
   THEN1 (* Seq *)
-   (fs [sem_t_def] \\ SRW_TAC [] [] \\ fs [pass3_aux_def,LET_DEF]
+   (fs [sem_t_def] \\ SRW_TAC [] [] \\ fs [phase3_aux_def,LET_DEF]
     \\ Cases_on `sem_t x.state t` \\ fs []
     \\ FIRST_X_ASSUM (MP_TAC o Q.SPECL [`x`,`xs`,
-         `pass3_aux (LENGTH xs + LENGTH (pass3_aux (LENGTH (xs:instr list)) t b)) t' b
+         `phase3_aux (LENGTH xs + LENGTH (phase3_aux (LENGTH (xs:instr list)) t b)) t' b
           ++ ys`,`b`]) \\ fs []
     \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC
     THEN1 (Cases_on `q` \\ fs [] \\ SRW_TAC [] [] \\ DECIDE_TAC)
@@ -808,7 +810,7 @@ val pass3_aux_thm = store_thm("pass3_aux_thm",
     \\ Q.MATCH_ASSUM_RENAME_TAC `x2.state = r`
     \\ REVERSE (Cases_on `q`) \\ fs [] \\ SRW_TAC [] []
     \\ TRY (Q.EXISTS_TAC `x2` \\ fs [] \\ NO_TAC)
-    \\ FIRST_X_ASSUM (MP_TAC o Q.SPECL [`x2`,`xs ++ pass3_aux (LENGTH xs) t b`,
+    \\ FIRST_X_ASSUM (MP_TAC o Q.SPECL [`x2`,`xs ++ phase3_aux (LENGTH xs) t b`,
          `ys`,`b`]) \\ fs []
     \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC
     THEN1 (REPEAT STRIP_TAC \\ fs [] \\ DECIDE_TAC)
@@ -818,7 +820,7 @@ val pass3_aux_thm = store_thm("pass3_aux_thm",
     \\ fs [ADD_ASSOC])
   THEN1 (* If *)
    (Q.MATCH_ASSUM_RENAME_TAC `sem_t s1 (If e t1 t2) = (res,s2)`
-    \\ fs [pass3_aux_def,sem_t_def]
+    \\ fs [phase3_aux_def,sem_t_def]
     \\ SIMP_TAC std_ss [Once sem_a_def] \\ fs [LET_DEF]
     \\ FULL_SIMP_TAC std_ss [GSYM APPEND_ASSOC]
     \\ imp_res_tac (instr_lookup_lemma |> REWRITE_RULE [GSYM APPEND_ASSOC])
@@ -827,64 +829,64 @@ val pass3_aux_thm = store_thm("pass3_aux_thm",
     \\ REVERSE (Cases_on `q`) \\ fs []
     \\ SRW_TAC [] [] \\ fs [sem_e_break]
     \\ REPEAT (POP_ASSUM MP_TAC)
-    \\ ONCE_REWRITE_TAC [LENGTH_pass3_aux] \\ fs []
+    \\ ONCE_REWRITE_TAC [LENGTH_phase3_aux] \\ fs []
     \\ REPEAT STRIP_TAC
-    \\ Q.ABBREV_TAC `gg = (LENGTH xs + 2 + LENGTH (pass3_aux 0 t1 0) +
-          LENGTH (pass3_aux 0 t2 0))`
+    \\ Q.ABBREV_TAC `gg = (LENGTH xs + 2 + LENGTH (phase3_aux 0 t1 0) +
+          LENGTH (phase3_aux 0 t2 0))`
     \\ REPEAT (POP_ASSUM MP_TAC)
-    \\ ONCE_REWRITE_TAC [LENGTH_pass3_aux] \\ fs []
+    \\ ONCE_REWRITE_TAC [LENGTH_phase3_aux] \\ fs []
     \\ REPEAT STRIP_TAC
     THEN1 (* false case *)
      (FIRST_X_ASSUM (MP_TAC o Q.SPECL [`(inc_pc (x with state := r))`,
          `xs ++ [JmpIf (Reg w) (LENGTH (xs:instr list) + 2 +
-                   LENGTH (pass3_aux 0 t1 0))]`,
-         `[Jmp gg] ++ pass3_aux (LENGTH (xs:instr list) + 2 +
-                   LENGTH (pass3_aux 0 t1 0))
+                   LENGTH (phase3_aux 0 t1 0))]`,
+         `[Jmp gg] ++ phase3_aux (LENGTH (xs:instr list) + 2 +
+                   LENGTH (phase3_aux 0 t1 0))
             t2 b ++ ys`,`b`]) \\ fs []
       \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC
       THEN1 (fs [inc_pc_def] \\ REPEAT STRIP_TAC \\ fs []
-             \\ ONCE_REWRITE_TAC [LENGTH_pass3_aux] \\ fs []
+             \\ ONCE_REWRITE_TAC [LENGTH_phase3_aux] \\ fs []
              \\ DECIDE_TAC)
       \\ REPEAT STRIP_TAC \\ fs []
       \\ Q.MATCH_ASSUM_RENAME_TAC `x2.state = s2`
       \\ REVERSE (Cases_on `res`) \\ fs []
       \\ TRY (Q.EXISTS_TAC `x2` \\ fs [] \\ NO_TAC)
       \\ SIMP_TAC std_ss [Once sem_a_def] \\ fs [LET_DEF]
-      \\ `LENGTH xs + 1 + LENGTH (pass3_aux 0 t1 0) <
-          LENGTH xs + 1 + LENGTH (pass3_aux (LENGTH xs + 1) t1 b) + 1 +
-          LENGTH (pass3_aux (LENGTH xs + 2 + LENGTH (pass3_aux 0 t1 0)) t2 b) +
+      \\ `LENGTH xs + 1 + LENGTH (phase3_aux 0 t1 0) <
+          LENGTH xs + 1 + LENGTH (phase3_aux (LENGTH xs + 1) t1 b) + 1 +
+          LENGTH (phase3_aux (LENGTH xs + 2 + LENGTH (phase3_aux 0 t1 0)) t2 b) +
           LENGTH ys /\
-          (EL (LENGTH xs + 1 + LENGTH (pass3_aux 0 t1 0))
-           (xs ++ [JmpIf (Reg w) (LENGTH xs + 2 + LENGTH (pass3_aux 0 t1 0))] ++
-            pass3_aux (LENGTH xs + 1) t1 b ++ [Jmp gg] ++
-            pass3_aux (LENGTH xs + 2 + LENGTH (pass3_aux 0 t1 0)) t2 b ++ ys) =
-           Jmp gg)` by ALL_TAC THEN1
-      (ONCE_REWRITE_TAC [LENGTH_pass3_aux] \\ fs []
+          (EL (LENGTH xs + 1 + LENGTH (phase3_aux 0 t1 0))
+           (xs ++ [JmpIf (Reg w) (LENGTH xs + 2 + LENGTH (phase3_aux 0 t1 0))] ++
+            phase3_aux (LENGTH xs + 1) t1 b ++ [Jmp gg] ++
+            phase3_aux (LENGTH xs + 2 + LENGTH (phase3_aux 0 t1 0)) t2 b ++ ys) =
+           Jmp gg)` by
+      (ONCE_REWRITE_TAC [LENGTH_phase3_aux] \\ fs []
        \\ REPEAT STRIP_TAC THEN1 DECIDE_TAC
        \\ MATCH_MP_TAC EL_LEMMA
-       \\ fs [] \\ ONCE_REWRITE_TAC [LENGTH_pass3_aux] \\ fs [])
+       \\ fs [] \\ ONCE_REWRITE_TAC [LENGTH_phase3_aux] \\ fs [])
       \\ fs [do_jump_def]
       \\ UNABBREV_ALL_TAC
       \\ SRW_TAC [] []
       \\ TRY (`F` by DECIDE_TAC)
       \\ Q.EXISTS_TAC `(x2 with pc :=
-           LENGTH xs + 2 + LENGTH (pass3_aux 0 t1 0) + LENGTH (pass3_aux 0 t2 0))`
+           LENGTH xs + 2 + LENGTH (phase3_aux 0 t1 0) + LENGTH (phase3_aux 0 t2 0))`
       \\ fs [AC ADD_COMM ADD_ASSOC,ADD1] \\ DECIDE_TAC)
     (* true case *)
     \\ fs [do_jump_def,DECIDE ``n + 2 + m > n:num``]
     \\ FIRST_X_ASSUM (MP_TAC o Q.SPECL [
          `(x with <|state := r; pc := LENGTH (xs:instr list) +
-            2 + LENGTH (pass3_aux 0 t1 0)|>)`,
-         `xs ++ [JmpIf (Reg w) (LENGTH xs + 2 + LENGTH (pass3_aux 0 t1 0))] ++
-          pass3_aux (LENGTH xs + 1) t1 b ++ [Jmp gg]`, `ys`,`b`]) \\ fs []
+            2 + LENGTH (phase3_aux 0 t1 0)|>)`,
+         `xs ++ [JmpIf (Reg w) (LENGTH xs + 2 + LENGTH (phase3_aux 0 t1 0))] ++
+          phase3_aux (LENGTH xs + 1) t1 b ++ [Jmp gg]`, `ys`,`b`]) \\ fs []
     \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC THEN1
      (fs [AC ADD_COMM ADD_ASSOC,DECIDE ``1+(1+n) = 2 + n:num``]
-      \\ ONCE_REWRITE_TAC [LENGTH_pass3_aux] \\ fs []
+      \\ ONCE_REWRITE_TAC [LENGTH_phase3_aux] \\ fs []
       \\ REPEAT STRIP_TAC \\ fs [] \\ DECIDE_TAC)
     \\ REPEAT STRIP_TAC \\ fs []
     \\ Q.MATCH_ASSUM_RENAME_TAC `x2.state = s2`
     \\ REPEAT (POP_ASSUM MP_TAC)
-    \\ ONCE_REWRITE_TAC [LENGTH_pass3_aux] \\ fs []
+    \\ ONCE_REWRITE_TAC [LENGTH_phase3_aux] \\ fs []
     \\ REPEAT STRIP_TAC
     \\ Q.EXISTS_TAC `x2` \\ fs []
     \\ fs [AC ADD_COMM ADD_ASSOC,DECIDE ``1+(1+n) = 2 + n:num``,ADD1]
@@ -894,12 +896,12 @@ val pass3_aux_thm = store_thm("pass3_aux_thm",
     \\ Q.PAT_ASSUM `sem_t x.state (For (Num 1) (Num 1) t) = (res,s2)` MP_TAC
     \\ SIMP_TAC (srw_ss()) [sem_t_def_with_stop,sem_e_def]
     \\ SIMP_TAC std_ss [STOP_def]
-    \\ Cases_on `sem_t x.state t` \\ fs [pass3_aux_def,LET_DEF]
+    \\ Cases_on `sem_t x.state t` \\ fs [phase3_aux_def,LET_DEF]
     \\ STRIP_TAC
     \\ FIRST_X_ASSUM (MP_TAC o Q.SPECL [`x`,`xs`,
          `[Jmp (LENGTH (xs:instr list))] ++ ys`,`(LENGTH (xs:instr list) + 1 +
-             LENGTH (pass3_aux (LENGTH (xs:instr list)) t 0))`]) \\ fs []
-    \\ ONCE_REWRITE_TAC [LENGTH_pass3_aux] \\ fs []
+             LENGTH (phase3_aux (LENGTH (xs:instr list)) t 0))`]) \\ fs []
+    \\ ONCE_REWRITE_TAC [LENGTH_phase3_aux] \\ fs []
     \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC
     THEN1 (REPEAT STRIP_TAC \\ fs [])
     \\ REPEAT STRIP_TAC \\ fs []
@@ -908,14 +910,14 @@ val pass3_aux_thm = store_thm("pass3_aux_thm",
     \\ TRY (Q.EXISTS_TAC `x2` \\ fs [AC ADD_COMM ADD_ASSOC] \\ NO_TAC)
     \\ SIMP_TAC std_ss [Once sem_a_def]
     \\ `x2.pc < LENGTH x2.instrs` by
-      (fs [] \\ ONCE_REWRITE_TAC [LENGTH_pass3_aux] \\ fs [] \\ DECIDE_TAC) \\ fs []
-    \\ `(EL (LENGTH xs + LENGTH (pass3_aux 0 t 0)) (xs ++
-         pass3_aux (LENGTH xs) t (LENGTH xs + 1 + LENGTH (pass3_aux 0 t 0)) ++
+      (fs [] \\ ONCE_REWRITE_TAC [LENGTH_phase3_aux] \\ fs [] \\ DECIDE_TAC) \\ fs []
+    \\ `(EL (LENGTH xs + LENGTH (phase3_aux 0 t 0)) (xs ++
+         phase3_aux (LENGTH xs) t (LENGTH xs + 1 + LENGTH (phase3_aux 0 t 0)) ++
          [Jmp (LENGTH xs)] ++ ys) = Jmp (LENGTH xs))` by
-     (`LENGTH (pass3_aux 0 t 0) =
-       LENGTH (pass3_aux (LENGTH (xs:instr list)) t
-         (LENGTH (xs:instr list) + 1 + LENGTH (pass3_aux 0 t 0)))` by
-           (fs [] \\ ONCE_REWRITE_TAC [LENGTH_pass3_aux] \\ fs [])
+     (`LENGTH (phase3_aux 0 t 0) =
+       LENGTH (phase3_aux (LENGTH (xs:instr list)) t
+         (LENGTH (xs:instr list) + 1 + LENGTH (phase3_aux 0 t 0)))` by
+           (fs [] \\ ONCE_REWRITE_TAC [LENGTH_phase3_aux] \\ fs [])
       \\ POP_ASSUM (fn th => SIMP_TAC std_ss [Once th])
       \\ fs [EL_LENGTH_APPEND_LEMMA])
     \\ fs [do_jump_def,DECIDE ``~(n > n + k:num)``,LET_DEF]
@@ -926,21 +928,22 @@ val pass3_aux_thm = store_thm("pass3_aux_thm",
       \\ ONCE_REWRITE_TAC [sem_a_def]
       \\ fs [do_jump_def,DECIDE ``~(n > n + k:num)``,LET_DEF])
     \\ Q.PAT_ASSUM `!x. bb` MP_TAC
-    \\ ONCE_REWRITE_TAC [LENGTH_pass3_aux] \\ fs []
+    \\ ONCE_REWRITE_TAC [LENGTH_phase3_aux] \\ fs []
     \\ REPEAT STRIP_TAC
     \\ FIRST_X_ASSUM MATCH_MP_TAC
     \\ fs [dec_clock_def]
     \\ REPEAT STRIP_TAC \\ fs []
     \\ Q.PAT_ASSUM `xxx <= b` MP_TAC
-    \\ ONCE_REWRITE_TAC [LENGTH_pass3_aux] \\ fs []))
+    \\ ONCE_REWRITE_TAC [LENGTH_phase3_aux] \\ fs []))
   |> REWRITE_RULE [state_rel_def];
+end
 
-val pass3_correct = store_thm("pass3_correct",
+val phase3_correct = store_thm("phase3_correct",
   ``!s1 t res s2 x xs ys b.
-      (sem_t s1 t = (res,s2)) /\ pass3_subset t /\
+      (sem_t s1 t = (res,s2)) /\ phase3_subset t /\
       (x.state = s1) /\
       (x.pc = 0) /\
-      (x.instrs = pass3 t) /\
+      (x.instrs = phase3 t) /\
       res <> Rfail /\ res <> Rbreak ==>
       ?res' x'.
         (sem_a x = (res', x')) /\
@@ -949,27 +952,31 @@ val pass3_correct = store_thm("pass3_correct",
          | Rval v => (res' = Rval 0)
          | _ => (res' = res))``,
   REPEAT STRIP_TAC
-  \\ MP_TAC (SPEC_ALL pass3_aux_thm
-       |> Q.INST [`xs`|->`[]`,`ys`|->`[Halt]`,`b`|->`0`])
-  \\ fs [pass3_def] \\ REPEAT STRIP_TAC \\ fs []
+  \\ MP_TAC (SPEC_ALL phase3_aux_thm
+       |> Q.INST [`xs`|->`[]`,`ys`|->`[]`,`b`|->`0`])
+  \\ fs [phase3_def] \\ REPEAT STRIP_TAC \\ fs []
   \\ Cases_on `res` \\ fs [rich_listTheory.EL_LENGTH_APPEND]
   \\ SIMP_TAC std_ss [Once sem_a_def]
   \\ fs [rich_listTheory.EL_LENGTH_APPEND]);
 
-(* We prove that pass3 preserves semantics if the source does not
+(* We prove that phase3 preserves semantics if the source does not
    contain Crash and if the syntax fits within the subset defined by
-   pass3_subset. *)
+   phase3_subset. *)
 
-val pass3_pres = store_thm("pass3_pres",
-  ``!t input. ~(Crash IN semantics t input) /\ pass3_subset t ==>
-              asm_semantics (pass3 t) input SUBSET semantics t input``,
+val EVERY_IMP_FILTER = prove(
+  ``!xs. EVERY P xs ==> FILTER P xs = xs``,
+  Induct \\ fs []);
+
+val phase3_pres = store_thm("phase3_pres",
+  ``!t input. ~(Crash IN semantics t input) /\ phase3_subset t ==>
+              asm_semantics (phase3 t) input SUBSET semantics t input``,
   REPEAT STRIP_TAC \\ fs [semantics_def,IN_DEF,SUBSET_DEF]
-  \\ Cases \\ fs [asm_semantics_def]
+  \\ Cases \\ fs [semantics_def,asm_semantics_def]
   \\ TRY
    (SRW_TAC [] []
-    \\ MP_TAC (pass3_correct |> Q.SPECL [`s_with_clock c input`,`t`])
+    \\ MP_TAC (phase3_correct |> Q.SPECL [`s_with_clock c input`,`t`])
     \\ Cases_on `sem_t (s_with_clock c input) t` \\ fs []
-    \\ STRIP_TAC \\ POP_ASSUM (MP_TAC o Q.SPEC `(a_state (pass3 t) c input)`)
+    \\ STRIP_TAC \\ POP_ASSUM (MP_TAC o Q.SPEC `(a_state (phase3 t) c input)`)
     \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC
     THEN1 (fs [a_state_def,init_st_def]
            \\ fs [s_with_clock_def] \\ METIS_TAC [])
@@ -978,15 +985,17 @@ val pass3_pres = store_thm("pass3_pres",
     \\ Cases_on `q` \\ fs [] \\ SRW_TAC [] []
     \\ fs [semantics_def]
     \\ fs [s_with_clock_def,init_st_def,a_state_def]
-    \\ Q.LIST_EXISTS_TAC [`c`,`K F`] \\ fs [] \\ NO_TAC)
+    \\ Q.LIST_EXISTS_TAC [`c`,`K F`] \\ fs []
+    \\ match_mp_tac EVERY_IMP_FILTER
+    \\ fs [] \\ NO_TAC)
   \\ REPEAT STRIP_TAC
   \\ fs [semantics_def] \\ Q.EXISTS_TAC `K F` \\ fs [] \\ REPEAT STRIP_TAC
   THEN1
    (POP_ASSUM (K ALL_TAC)
     \\ POP_ASSUM (MP_TAC o Q.SPEC `c`) \\ REPEAT STRIP_TAC
-    \\ MP_TAC (pass3_correct |> Q.SPECL [`s_with_clock c input`,`t`])
+    \\ MP_TAC (phase3_correct |> Q.SPECL [`s_with_clock c input`,`t`])
     \\ Cases_on `sem_t (s_with_clock c input) t` \\ fs []
-    \\ STRIP_TAC \\ POP_ASSUM (MP_TAC o Q.SPEC `(a_state (pass3 t) c input)`)
+    \\ STRIP_TAC \\ POP_ASSUM (MP_TAC o Q.SPEC `(a_state (phase3 t) c input)`)
     \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC
     THEN1 (fs [a_state_def,init_st_def]
            \\ fs [s_with_clock_def] \\ METIS_TAC [])
@@ -994,43 +1003,46 @@ val pass3_pres = store_thm("pass3_pres",
     \\ Cases_on `q` \\ fs [] \\ SRW_TAC [] []
     \\ fs [s_with_clock_def,init_st_def,a_state_def])
   \\ RES_TAC
-  \\ MP_TAC (pass3_correct |> Q.SPECL [`s_with_clock c input`,`t`])
-  \\ Cases_on `sem_t (s_with_clock c input) t` \\ fs []
-  \\ STRIP_TAC \\ POP_ASSUM (MP_TAC o Q.SPEC `(a_state (pass3 t) c input)`)
-  \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC
-  THEN1 (fs [a_state_def,init_st_def]
-         \\ fs [s_with_clock_def] \\ METIS_TAC [])
-  \\ REPEAT STRIP_TAC \\ SRW_TAC [] []
-  \\ Cases_on `q` \\ fs [] \\ SRW_TAC [] []
-  \\ fs [s_with_clock_def,init_st_def,a_state_def]
-  \\ Q.LIST_EXISTS_TAC [`c`] \\ fs []);
+  \\ sg `!c. FILTER ISL (SND (sem_t (init_st c (K F) input) t)).io_trace =
+          FILTER ISL (SND (sem_a (a_state (phase3 t) c
+              input))).state.io_trace` \\ fs []
+  \\ rw [] \\ first_x_assum (qspec_then `c` mp_tac) \\ rw []
+  \\ qspecl_then [`(init_st c (K F) input)`,`t`] mp_tac phase3_correct
+  \\ Cases_on `sem_t (init_st c (K F) input) t` \\ fs []
+  \\ rw []
+  \\ pop_assum (qspec_then `(a_state (phase3 t) c input)` mp_tac)
+  \\ fs [AND_IMP_INTRO]
+  \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC THEN1
+   (fs [a_state_def,s_with_clock_def,init_st_def]
+    \\ fs [METIS_PROVE [] ``~b\/c <=> (b==>c)``] \\ res_tac \\ fs [])
+  \\ Cases_on `q` \\ fs []);
 
 
 (* === The end-to-end compiler === *)
 
 val compile_def = Define `
-  compile t = pass3 (pass2 (pass1 t))`;
+  compile t = phase3 (phase2 (phase1 t))`;
 
 (* Verification of the compile function *)
 
-val pass2_subset_pass1 = prove(
-  ``!t. pass2_subset (pass1 t)``,
-  Induct \\ fs [pass1_def,pass2_subset_def,Loop_def]);
+val phase2_subset_phase1 = prove(
+  ``!t. phase2_subset (phase1 t)``,
+  Induct \\ fs [phase1_def,phase2_subset_def,Loop_def]);
 
-val pass3_subset_comp_exp = prove(
-  ``!e n. pass3_subset (comp_exp e n)``,
-  Induct \\ fs [pass3_subset_def,comp_exp_def]);
+val phase3_subset_comp_exp = prove(
+  ``!e n. phase3_subset (comp_exp e n)``,
+  Induct \\ fs [phase3_subset_def,comp_exp_def]);
 
-val pass3_subset_flatten_t = prove(
-  ``!t n. pass2_subset t ==> pass3_subset (flatten_t t n)``,
-  Induct \\ fs [pass2_subset_def,flatten_t_def,pass3_subset_def]
-  \\ fs [pass3_subset_comp_exp]);
+val phase3_subset_flatten_t = prove(
+  ``!t n. phase2_subset t ==> phase3_subset (flatten_t t n)``,
+  Induct \\ fs [phase2_subset_def,flatten_t_def,phase3_subset_def]
+  \\ fs [phase3_subset_comp_exp]);
 
-val pass3_subset_pass2_pass1 = prove(
-  ``!t. pass3_subset (pass2 (pass1 t))``,
-  fs [pass2_def] \\ REPEAT STRIP_TAC
-  \\ MATCH_MP_TAC pass3_subset_flatten_t
-  \\ fs [pass2_subset_pass1]);
+val phase3_subset_phase2_phase1 = prove(
+  ``!t. phase3_subset (phase2 (phase1 t))``,
+  fs [phase2_def] \\ REPEAT STRIP_TAC
+  \\ MATCH_MP_TAC phase3_subset_flatten_t
+  \\ fs [phase2_subset_phase1]);
 
 (* Any observable behaviour of the compiled code is also observable
    behaviour of the source code, if Crash is not an observable
@@ -1040,18 +1052,18 @@ val compile_pres = store_thm("compile_pres",
   ``!t input. ~(Crash IN semantics t input) ==>
         asm_semantics (compile t) input SUBSET semantics t input``,
   fs [compile_def]
-  \\ ONCE_REWRITE_TAC [GSYM pass1_pres]
+  \\ ONCE_REWRITE_TAC [GSYM phase1_pres]
   \\ REPEAT STRIP_TAC
   \\ MATCH_MP_TAC SUBSET_TRANS
-  \\ Q.EXISTS_TAC `semantics (pass2 (pass1 t)) input`
+  \\ Q.EXISTS_TAC `semantics (phase2 (phase1 t)) input`
   \\ REPEAT STRIP_TAC
   THEN1
-   (MATCH_MP_TAC pass3_pres
-    \\ fs [pass3_subset_pass2_pass1]
-    \\ IMP_RES_TAC pass2_pres
-    \\ fs [pass2_subset_pass1,SUBSET_DEF]
+   (MATCH_MP_TAC phase3_pres
+    \\ fs [phase3_subset_phase2_phase1]
+    \\ IMP_RES_TAC phase2_pres
+    \\ fs [phase2_subset_phase1,SUBSET_DEF]
     \\ METIS_TAC [])
-  \\ MATCH_MP_TAC pass2_pres \\ fs [pass2_subset_pass1]);
+  \\ MATCH_MP_TAC phase2_pres \\ fs [phase2_subset_phase1]);
 
 (* The simple type checker (defined in for_nd_semScript.sml) ensures
    that the source program cannot Crash. This leads to a cleaner
@@ -1063,6 +1075,8 @@ val syntax_ok_def = Define `
 val compile_correct = store_thm("compile_correct",
   ``!t inp. syntax_ok t ==>
             asm_semantics (compile t) inp SUBSET semantics t inp``,
-  METIS_TAC [type_soundness,syntax_ok_def,compile_pres]);
+  rpt strip_tac \\ match_mp_tac compile_pres \\ fs [syntax_ok_def]
+  \\ imp_res_tac type_soundness
+  \\ fs [semantics_def,IN_DEF,for_nd_semTheory.semantics_with_nd_def]);
 
 val _ = export_theory ();

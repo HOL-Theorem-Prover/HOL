@@ -241,6 +241,21 @@ val nterm_size_def = RWnew_specification ("nterm_size_def",
   CONV_RULE SKOLEM_CONV |>
   SIMP_RULE (srw_ss()) [FORALL_AND_THM]);
 
+val nterm_case_eq = Q.store_thm(
+  "nterm_case_eq",
+  ‘(nterm_CASE n nmf sf tf pf cf = v) ⇔
+     (∃a. (n = Nom a) ∧ (nmf a = v)) ∨
+     (∃p w. (n = Sus p w) ∧ (sf (@p'. p' == p) w = v)) ∨
+     (∃a t. (n = Tie a t) ∧ (tf a t = v)) ∨
+     (∃t1 t2. (n = nPair t1 t2) ∧ (pf t1 t2 = v)) ∨
+     (∃c. (n = nConst c) ∧ (cf c = v))’,
+  Q.ISPEC_THEN ‘n’ STRUCT_CASES_TAC nterm_nchotomy >>
+  simp[nterm_case_rewrites, Sus_case1] >> eq_tac >> rw[]
+  >- (rename [‘(c == _) /\ (_ = _)’] >> qexists_tac ‘c’ >> simp[permeq_refl]) >>
+  rename [‘_ (@p'. p' == c1) _ = _ (@p'. p' == c2) _’] >>
+  ‘∀p. p == c2 <=> p == c1’ suffices_by simp[] >>
+  metis_tac[permeq_def]);
+
 local open TypeBase open TypeBasePure open Drule in
 val _ = write [mk_datatype_info {
   ax = ORIG nterm_rec_exists,
@@ -249,6 +264,7 @@ val _ = write [mk_datatype_info {
   (let val (n::rest) = CONJUNCTS nterm_case_rewrites
    in n::Sus_case1::rest end),
   case_cong = nterm_case_cong,
+  case_eq = nterm_case_eq,
   nchotomy = nterm_nchotomy,
   size = SOME (``nterm_size``,ORIG nterm_size_def),
   encode = NONE,
@@ -264,7 +280,7 @@ val _ = write [mk_datatype_info {
 
 val _ = adjoin_to_theory {
   sig_ps = NONE,
-  struct_ps = SOME (fn pps => PP.add_string pps
+  struct_ps = SOME (fn _ => PP.add_string
 "local open TypeBase open TypeBasePure open Drule in\
 \ val _ = write [mk_datatype_info {\
 \  ax = ORIG nterm_rec_exists,\
@@ -272,7 +288,8 @@ val _ = adjoin_to_theory {
 \  case_def = LIST_CONJ\
 \  (let val (n::rest) = CONJUNCTS nterm_case_rewrites\
 \   in n::Sus_case1::rest end),\
-\  case_cong = nterm_case_cong,\
+\  case_cong = nterm_case_cong,\n\
+\  case_eq = nterm_case_eq,\n\
 \  nchotomy = nterm_nchotomy,\
 \  size = SOME (``nterm_size``,ORIG nterm_size_def),\
 \  encode = NONE,\

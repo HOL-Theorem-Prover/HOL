@@ -72,6 +72,9 @@ val (signed_saturate_add_tm, mk_signed_saturate_add,
 val (signed_saturate_sub_tm, mk_signed_saturate_sub,
      dest_signed_saturate_sub, is_signed_saturate_sub) = s "signed_saturate_sub"
 
+val (word_sdiv_tm, mk_word_sdiv, dest_word_sdiv, is_word_sdiv) = s "word_sdiv"
+val (word_smod_tm, mk_word_smod, dest_word_smod, is_word_smod) = s "word_smod"
+
 (*------------------------------------------------------------------------- *)
 
 end

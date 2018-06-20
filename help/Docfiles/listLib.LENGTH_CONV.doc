@@ -9,10 +9,10 @@ Computes by inference the length of an object-language list.
 conversion, list.
 
 \DESCRIBE
-For any object language list of the form {--`[x1;x2;...;xn]`--}, where {x1},
+For any object language list of the form {“[x1;x2;...;xn]”}, where {x1},
 {x2}, ..., {xn} are arbitrary terms of the same type, the result of evaluating
 {
-   LENGTH_CONV (--`LENGTH [x1;x2;...;xn]`--)
+   LENGTH_CONV “LENGTH [x1;x2;...;xn]”
 }
 is the theorem
 {
@@ -22,7 +22,7 @@ where {n} is the numeral constant that denotes the length of the
 list.
 
 \FAILURE
-{LENGTH_CONV tm} fails if {tm} is not of the form {--`LENGTH [x1;x2;...;xn]`--}
-or {--`LENGTH []`--}.
+{LENGTH_CONV tm} fails if {tm} is not of the form {“LENGTH [x1;x2;...;xn]”}
+or {“LENGTH []”}.
 
 \ENDDOC

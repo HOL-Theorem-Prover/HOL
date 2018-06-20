@@ -54,7 +54,11 @@ local
   end
   local
     fun removeAfterUse tmp =
-      (use tmp handle e => (checkTryRemove tmp; raise e);
+      (QUse.use tmp
+       handle e => (
+         checkTryRemove tmp;
+         TextIO.print ("Exception- " ^ exnMessage e ^ " raised\n");
+         PolyML.Exception.reraise e);
        checkTryRemove tmp)
     open Mutex ConditionVar
   in
@@ -65,13 +69,13 @@ local
         | SOME tmp => (unlock m; removeAfterUse tmp);
        runner ())
   end
-  val rpid = ref (Thread.fork(fn () => (), []))
   val tail = ref (execute("/usr/bin/env",["tail","/dev/null"]))
   val fifo = ref (openString "")
   fun stopTail () = (kill(!tail,Posix.Signal.term); reap (!tail); ())
   fun restartTail () = (stopTail() handle OS.SysErr _ => ();
                         tail := execute("/usr/bin/env", ["tail", "-f", fifoPath]);
                         fifo := textInstreamOf (!tail))
+  val rpid = ref (Thread.fork(fn () => (), []))
   fun poller () = let in
     case inputLine (!fifo) of
       NONE => (warn "Vimhol's tail gave eof\n"; restartTail())

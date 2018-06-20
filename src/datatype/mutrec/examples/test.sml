@@ -35,7 +35,7 @@ open TypeInfo
 val mut_rec_ty_spec =
     [{type_name = "toto1",
       constructors=[{name ="test1", arg_info=[existing(==`:'a`==)]},
-		    {name ="test2", arg_info=[existing(==`:'b`==)]}]},
+                    {name ="test2", arg_info=[existing(==`:'b`==)]}]},
      {type_name = "tutu1",
       constructors=[{name ="test3", arg_info=[]}]}]
 val New_Ty_Existence_Thm_Name = "toto1_existence_thm"

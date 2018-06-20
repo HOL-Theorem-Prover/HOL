@@ -157,7 +157,7 @@ val primrec_nil = store_thm(
     FIRST_X_ASSUM MATCH_MP_TAC THEN DECIDE_TAC,
 
     ONCE_REWRITE_TAC [EQ_SYM_EQ] THEN SRW_TAC [][Cn_def] THEN
-    AP_TERM_TAC THEN Q.PAT_ASSUM `f X = f []` (K ALL_TAC) THEN
+    AP_TERM_TAC THEN Q.PAT_X_ASSUM `f X = f []` (K ALL_TAC) THEN
     Induct_on `gs` THEN SRW_TAC [][],
 
     ONCE_REWRITE_TAC [EQ_SYM_EQ] THEN SRW_TAC [][] THEN
@@ -181,8 +181,8 @@ val primrec_short = store_thm(
 
     ONCE_REWRITE_TAC [EQ_SYM_EQ] THEN SRW_TAC [][Cn_def] THEN
     AP_TERM_TAC THEN
-    Q.PAT_ASSUM `∀l. LENGTH l < N ⇒ (f X = f Y)` (K ALL_TAC) THEN
-    Q.PAT_ASSUM `primrec f N` (K ALL_TAC) THEN
+    Q.PAT_X_ASSUM `∀l. LENGTH l < N ⇒ (f X = f Y)` (K ALL_TAC) THEN
+    Q.PAT_X_ASSUM `primrec f N` (K ALL_TAC) THEN
     Induct_on `gs` THEN SRW_TAC [][],
 
     ONCE_REWRITE_TAC [EQ_SYM_EQ] THEN SRW_TAC [ARITH_ss][] THEN
@@ -456,7 +456,7 @@ val pr_div_thm = Store_thm(
     Q.ABBREV_TAC `q = n DIV m` THEN
     Q.ABBREV_TAC `r = n MOD m` THEN
     markerLib.RM_ALL_ABBREVS_TAC THEN
-    Q.PAT_ASSUM `pr_div X = Y` (K ALL_TAC) THEN
+    Q.PAT_X_ASSUM `pr_div X = Y` (K ALL_TAC) THEN
     SRW_TAC [][] THEN
     ONCE_REWRITE_TAC [EQ_SYM_EQ] THEN MATCH_MP_TAC DIV_UNIQUE THEN
     Q.EXISTS_TAC `r + 1` THEN DECIDE_TAC
@@ -567,7 +567,7 @@ val primrec_invtri = Store_thm(
             SRW_TAC [ARITH_ss][ADD_CLAUSES, ADD1, tri_bounds_lemma]
           ],
 
-          Q.PAT_ASSUM `∀m. (∀p:num. P p) ⇒ Q m` MATCH_MP_TAC THEN
+          Q.PAT_X_ASSUM `∀m. (∀p:num. P p) ⇒ Q m` MATCH_MP_TAC THEN
           SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) [NOT_LESS_EQUAL] THEN
           Cases_on `p = n + 1` THEN1 SRW_TAC [][] THEN
           FIRST_X_ASSUM MATCH_MP_TAC THEN DECIDE_TAC
@@ -812,13 +812,10 @@ val Ackermann_not_primrec = store_thm(
   `primrec g 1` by SRW_TAC [][Abbr`g`, primrec_rules] THEN
   `∃J. ∀n. g [n] < H J n`
      by (IMP_RES_TAC Ackermann_grows_too_fast THEN
-         Q.PAT_ASSUM `∀l. (LENGTH l = 1) ⇒ g l < H X Y`
+         Q.PAT_X_ASSUM `∀l. (LENGTH l = 1) ⇒ g l < H X Y`
                      (Q.SPEC_THEN `[n]` (MP_TAC o Q.GEN `n`)) THEN
          DISCH_THEN (ASSUME_TAC o SIMP_RULE (srw_ss()) []) THEN
          METIS_TAC []) THEN
   POP_ASSUM (Q.SPEC_THEN `J` MP_TAC) THEN SRW_TAC [][]);
 
 val _ = export_theory()
-
-
-

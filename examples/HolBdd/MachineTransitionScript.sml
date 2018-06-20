@@ -1020,14 +1020,14 @@ val MooreReachable1 =
      ==>
      (!s. Reachable (MooreTrans nextfn) B s ==> P s)`,
    RW_TAC std_ss [ReachableMooreTrans,MoorePath]
-    THEN Q.PAT_ASSUM `$! M`
+    THEN Q.PAT_X_ASSUM `$! M`
          (MP_TAC o REWRITE_RULE [PAIR] o BETA_RULE o Q.SPECL
            [`\t. if t=0 then FST (s0:'a#'b) else FST(f t:'a#'b)`,
             `\t. if t=0 then SND (s0:'a#'b) else SND(f t:'a#'b)`])
    THEN RW_TAC std_ss [COND_RAND,COND_RATOR]
    THEN `f:num->'a#'b = \t. if t=0 then s0 else f t`
         by (RW_TAC std_ss [FUN_EQ_THM] THEN PROVE_TAC [Path_def])
-   THEN Q.PAT_ASSUM `Path x y` MP_TAC THEN ONCE_ASM_REWRITE_TAC[]
+   THEN Q.PAT_X_ASSUM `Path x y` MP_TAC THEN ONCE_ASM_REWRITE_TAC[]
    THEN BETA_TAC THEN PROVE_TAC []);
 
 val MooreReachable2 =
@@ -1039,7 +1039,7 @@ val MooreReachable2 =
         B(inputs 0, states 0) /\ Moore nextfn (inputs,states)
         ==> !t. P(inputs t, states t))``,
    RW_TAC std_ss [ReachableMooreTrans,MoorePath]
-    THEN Q.PAT_ASSUM `$! M`
+    THEN Q.PAT_X_ASSUM `$! M`
          (MP_TAC o BETA_RULE
                  o Q.SPECL [`\t. (inputs t,states t)`, `(inputs 0,states 0)`]
                  o Ho_Rewrite.REWRITE_RULE [GSYM LEFT_FORALL_IMP_THM]

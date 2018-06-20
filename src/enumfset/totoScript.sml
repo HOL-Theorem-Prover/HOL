@@ -12,8 +12,6 @@
 (* based on a total order.                                             *)
 (* ******************************************************************  *)
 
-structure totoScript = struct
-
 (* app load ["wotTheory", "stringTheory"]; *)
 
 open HolKernel boolLib Parse;
@@ -22,6 +20,7 @@ val _ = set_trace "Unicode" 0;
 open pred_setLib pred_setTheory relationTheory pairTheory;
 open bossLib PairRules arithmeticTheory numeralTheory Defn;
 open stringTheory listTheory;
+local open ternaryComparisonsTheory in end
 
 val _ = new_theory "toto";
 
@@ -43,8 +42,6 @@ val BigSig = true;
 fun maybe_thm (s, tm, tac) = if BigSig then store_thm (s, tm, tac)
                                        else prove (tm, tac);
 
-val _ = type_abbrev ("reln", Type`:'a->'a->bool`);
-
 (* **************************************************************** *)
 (* Make our one appeal to wotTheory. To condense all its goodness   *)
 (* into one theorem, wotTheory proves that, at any type, some reln. *)
@@ -58,22 +55,21 @@ METIS_TAC [wotTheory.StrongWellOrderExists]);
 
 (* Define cpn: *)
 
-val _ = Hol_datatype `cpn = LESS | EQUAL | GREATER`;
-
-val cpn_distinct = theorem "cpn_distinct";
+val cpn_distinct = TypeBase.distinct_of ``:ordering``
 (*  |- LESS <> EQUAL /\ LESS <> GREATER /\ EQUAL <> GREATER *)
 
-val cpn_case_def = theorem "cpn_case_def";
+val cpn_case_def = TypeBase.case_def_of ``:ordering``
 
 (* cpn_case_def =
 |- (!v0 v1 v2. (case LESS of LESS => v0 | EQUAL => v1 | GREATER => v2) = v0) /\
    (!v0 v1 v2. (case EQUAL of LESS => v0 | EQUAL => v1 | GREATER => v2) = v1) /\
    !v0 v1 v2. (case GREATER of LESS => v0 | EQUAL => v1 | GREATER => v2) = v2 *)
 
-val cpn_nchotomy = theorem "cpn_nchotomy";
+val cpn_nchotomy = TypeBase.nchotomy_of ``:ordering``
 
 (* Define being a (cpn-valued) total order: *)
 
+val _ = temp_type_abbrev ("cpn", ``:ordering``)
 val _ = type_abbrev ("comp", Type`:'a->'a->cpn`);
 
 val TotOrd = Define`TotOrd (c: 'a comp) =
@@ -999,6 +995,15 @@ IMP_RES_THEN SUBST1_TAC TO_apto_TO_IMP THEN REWRITE_TAC [oneOrd]);
 
 (* intto moved to inttoTheory, to avoid always loading intLib *)
 
-val _ = export_theory ();
+val StrongLinearOrder_of_TO_TO_of_LinearOrder = store_thm("StrongLinearOrder_of_TO_TO_of_LinearOrder",
+  ``!R. irreflexive R ==> (StrongLinearOrder_of_TO (TO_of_LinearOrder R) = R)``,
+  srw_tac[][irreflexive_def] >>
+  srw_tac[][FUN_EQ_THM,StrongLinearOrder_of_TO,TO_of_LinearOrder] >>
+  srw_tac[][])
 
-end;
+val TO_of_LinearOrder_LEX = store_thm("TO_of_LinearOrder_LEX",
+  ``!R V. irreflexive R /\ irreflexive V
+    ==> (TO_of_LinearOrder (R LEX V) = (TO_of_LinearOrder R) lexTO (TO_of_LinearOrder V))``,
+  simp[lexTO,StrongLinearOrder_of_TO_TO_of_LinearOrder])
+
+val _ = export_theory ();

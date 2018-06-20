@@ -1,5 +1,6 @@
-INCLUDES = ../model
-OPTIONS = QUIT_ON_FAILURE
+INCLUDES = ../.. ../model \
+           $(HOLDIR)/examples/machine-code/hoare-triple
+CLINE_OPTIONS = --qof
 
 ifdef POLY
 HOLHEAP = x64-heap
@@ -15,6 +16,6 @@ all: $(TARGETS) $(HOLHEAP)
 .PHONY: all
 
 $(HOLHEAP): $(DEPS)
-	$(protect $(HOLDIR)/bin/buildheap) -b ../../base/base-heap -o $(HOLHEAP) $(BARE_THYS)
+	$(protect $(HOLDIR)/bin/buildheap) -b ../../l3-heap -o $(HOLHEAP) $(BARE_THYS)
 
 endif

@@ -92,7 +92,7 @@ val _ = tprint "With Unicode should fail"
 val _ = if (xHol_reln "tr" `
                       (!x. ▷ x Z) /\
                       (!x y. ▷ (SUC x) (SUC y) ==> ▷ x y)
-           ` ; false) handle HOL_ERR _ => true then print "OK\n"
+           ` ; false) handle HOL_ERR _ => true then OK()
         else die "FAILED"
 
 val _ = tprint "Vacuous clause failure"
@@ -102,7 +102,7 @@ val _ = if (with_flag (Feedback.emit_ERR, false)
                       String.isSuffix
                           "Vacuous clause trivialises whole definition"
                           message
-        then print "OK\n"
+        then OK()
         else die "FAILED"
 
 

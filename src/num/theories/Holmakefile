@@ -1,5 +1,7 @@
 EXTRA_CLEANS = selftest.exe
 
+THYCORES = $(patsubst %Script.sml,%,$(wildcard *Script.sml))
+
 THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
 TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
 
@@ -8,3 +10,12 @@ all: $(TARGETS) selftest.exe
 
 selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
+
+ifeq ($(KERNELID),otknl)
+all: $(patsubst %,%.ot.art,$(THYCORES))
+
+num.art: num.otd
+prim_rec.art: prim_rec.otd
+arithmetic.art: arithmetic.otd
+
+endif

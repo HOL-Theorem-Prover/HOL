@@ -10,10 +10,10 @@ tail end.
 conversion, list.
 
 \DESCRIBE
-For any object language list of the form {--`[xn-1;...;xk;...x0]`--} ,
+For any object language list of the form {“[xn-1;...;xk;...x0]”} ,
 the result of evaluating
 {
-   ELL_CONV (--`ELL k [xn-1;...;xk;...;x0]`--)
+   ELL_CONV “ELL k [xn-1;...;xk;...;x0]”
 }
 is the theorem
 {

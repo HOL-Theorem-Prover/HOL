@@ -41,7 +41,7 @@ val new_infix     = boolSyntax.new_infix
 val new_binder    = boolSyntax.new_binder
 
 
-datatype lambda = datatype HolKernel.lambda
+datatype lambda = datatype Term.lambda
 
 val dest_term = HolKernel.dest_term
 

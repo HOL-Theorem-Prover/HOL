@@ -137,7 +137,7 @@ srw_tac [][] >- (
   match_mp_tac comp_assoc >>
   fsrw_tac [][hom_def,composable_in_def,maps_to_in_def] ) >>
 qsuff_tac `F` >- srw_tac [][] >>
-qpat_assum `X ∉ Y` mp_tac >> srw_tac [][] >>
+qpat_x_assum `X ∉ Y` mp_tac >> srw_tac [][] >>
 fsrw_tac [][hom_def,comp_mor_dom_cod] >>
 pop_assum mp_tac >> srw_tac [][comp_mor_dom_cod]);
 val _ = export_rewrites["functor_axioms_pre_hom_functor"];

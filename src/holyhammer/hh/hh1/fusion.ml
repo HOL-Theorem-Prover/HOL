@@ -165,6 +165,7 @@ open Lib;;
     | Const(_,ty) -> ty
     | Comb(s,_) -> hd(tl(snd(dest_type(type_of s))))
     | Abs(Var(_,ty),t) -> Tyapp("fun",[ty;type_of t])
+    | _ -> failwith "type_of"
 
 
 
@@ -265,6 +266,7 @@ open Lib;;
     | Const(_,ty)      -> tyvars ty
     | Comb(s,t)        -> union (type_vars_in_term s) (type_vars_in_term t)
     | Abs(Var(_,ty),t) -> union (tyvars ty) (type_vars_in_term t)
+    | _                -> failwith "type_vars_in_term"
 
 
 
@@ -386,6 +388,7 @@ open Lib;;
     | _,Var(_,_) -> 1
     | Comb(_,_),_ -> -1
     | _,Comb(_,_) -> 1
+    | _ -> failwith "orda"
 
   let alphaorder = orda []
 

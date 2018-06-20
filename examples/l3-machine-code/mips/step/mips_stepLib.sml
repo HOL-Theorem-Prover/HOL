@@ -6,7 +6,7 @@ structure mips_stepLib :> mips_stepLib =
 struct
 
 open HolKernel boolLib bossLib
-open lcsymtacs blastLib mipsTheory mips_stepTheory
+open blastLib mipsTheory mips_stepTheory
 
 local open mips in end
 
@@ -42,12 +42,13 @@ local
    val other_fns =
       [pairSyntax.fst_tm, pairSyntax.snd_tm, bitstringSyntax.v2w_tm,
        optionSyntax.is_some_tm] @
-      utilsLib.update_fns ``:mips_state``
+      utilsLib.update_fns ``:mips_state`` @
+      utilsLib.accessor_fns ``:CP0``
    val extra_fns =
       [wordsSyntax.sw2sw_tm, wordsSyntax.w2w_tm,
        wordsSyntax.word_add_tm, wordsSyntax.word_sub_tm,
        wordsSyntax.word_mul_tm,
-       wordsSyntax.word_srem_tm, wordsSyntax.word_sdiv_tm,
+       wordsSyntax.word_rem_tm, wordsSyntax.word_quot_tm,
        wordsSyntax.word_mod_tm, wordsSyntax.word_div_tm,
        wordsSyntax.word_lo_tm, wordsSyntax.word_lt_tm,
        wordsSyntax.word_ls_tm, wordsSyntax.word_le_tm,
@@ -94,7 +95,7 @@ fun mips_thms thms =
 
 val COND_UPDATE_CONV =
    REWRITE_CONV (utilsLib.mk_cond_update_thms
-                    [``:mips_state``, ``:CP0``, ``:StatusRegister``])
+                    [``:mips_state``, ``:CP0``, ``:FCSR``, ``:StatusRegister``])
    THENC REWRITE_CONV (mips_stepTheory.cond_update_memory :: mips_thms [])
 
 val COND_UPDATE_RULE = Conv.CONV_RULE COND_UPDATE_CONV
@@ -133,7 +134,7 @@ val rule =
 
 val () = utilsLib.resetStepConv ()
 
-fun reg i = bitstringSyntax.padded_fixedwidth_of_int (i, 5)
+fun reg i = bitstringSyntax.padded_fixedwidth_of_num (Arbnum.fromInt i, 5)
 
 val r0 = reg 0
 
@@ -149,7 +150,7 @@ val oEV =
       [dfn'ADDI_def, dfn'DADDI_def, mipsTheory.ExceptionType2num_thm,
        SignalException, ExceptionCode_def, extra_cond_rand_thms]
       [[``rt <> 0w: word5``, ``rs <> 0w: word5``,
-        ``~NotWordValue (^st.gpr (rs))``]]
+        ``~NotWordValue (^st.gpr rs)``]]
       (all_comb [`rt` |-> r0, `rs` |-> r0])
 
 val iEV =
@@ -157,7 +158,7 @@ val iEV =
        dfn'ANDI_def, dfn'ORI_def, dfn'XORI_def, dfn'LUI_def,
        extra_cond_rand_thms]
       [[``rt <> 0w: word5``, ``rs <> 0w: word5``,
-        ``~NotWordValue (^st.gpr (rs))``]]
+        ``~NotWordValue (^st.gpr rs)``]]
       (all_comb [`rt` |-> r0, `rs` |-> r0])
 
 val lEV =
@@ -171,7 +172,7 @@ val pEV =
        dfn'MOVN_def, dfn'MOVZ_def, mipsTheory.ExceptionType2num_thm,
        SignalException, ExceptionCode_def, extra_cond_rand_thms]
       [[``rd <> 0w: word5``, ``rs <> 0w: word5``, ``rt <> 0w: word5``,
-        ``~NotWordValue (^st.gpr (rs))``, ``~NotWordValue (^st.gpr (rt))``]]
+        ``~NotWordValue (^st.gpr rs)``, ``~NotWordValue (^st.gpr rt)``]]
       (all_comb [`rt` |-> r0, `rs` |-> r0, `rd` |-> r0])
 
 val rEV =
@@ -181,7 +182,7 @@ val rEV =
        dfn'DSRAV_def, dfn'MUL_def, write'HI_def, write'LO_def,
        extra_cond_rand_thms]
       [[``rd <> 0w: word5``, ``rs <> 0w: word5``, ``rt <> 0w: word5``,
-        ``~NotWordValue (^st.gpr (rs))``, ``~NotWordValue (^st.gpr (rt))``]]
+        ``~NotWordValue (^st.gpr rs)``, ``~NotWordValue (^st.gpr rt)``]]
       (all_comb [`rt` |-> r0, `rs` |-> r0, `rd` |-> r0])
 
 val sEV =
@@ -189,7 +190,7 @@ val sEV =
        dfn'DSRA_def, dfn'DSLL32_def, dfn'DSRL32_def, dfn'DSRA32_def,
        extra_cond_rand_thms]
       [[``rd <> 0w: word5``, ``rt <> 0w: word5``,
-        ``~NotWordValue (^st.gpr (rt))``]]
+        ``~NotWordValue (^st.gpr rt)``]]
       (all_comb [`rt` |-> r0, `rd` |-> r0])
 
 val hEV =
@@ -206,7 +207,7 @@ val mEV =
           ``(!a:word32 b:word32. (63 >< 32) ((a @@ b) : word64) = a) /\
             (!a:word32 b:word32. (31 ><  0) ((a @@ b) : word64) = b)``]
       [[``rs <> 0w: word5``, ``rt <> 0w: word5``,
-        ``~NotWordValue (^st.gpr (rs))``, ``~NotWordValue (^st.gpr (rt))``,
+        ``~NotWordValue (^st.gpr rs)``, ``~NotWordValue (^st.gpr rt)``,
         ``^st.hi = SOME vHI``, ``^st.lo = SOME vLO``]]
       (all_comb [`rt` |-> r0, `rs` |-> r0])
 
@@ -214,7 +215,7 @@ val dEV =
    EV [dfn'DIV_def, dfn'DIVU_def, dfn'DDIV_def, dfn'DDIVU_def,
        write'HI_def, write'LO_def, extra_cond_rand_thms]
       [[``rt <> 0w: word5``, ``^st.gpr (rt) <> 0w``, ``rs <> 0w: word5``,
-        ``~NotWordValue (^st.gpr (rs))``, ``~NotWordValue (^st.gpr (rt))``]]
+        ``~NotWordValue (^st.gpr rs)``, ``~NotWordValue (^st.gpr rt)``]]
       [[], [`rs` |-> r0]]
 
 val bbEV =
@@ -228,8 +229,40 @@ val bEV =
         dfn'BLTZAL_def, dfn'BGEZAL_def, dfn'BLEZL_def, dfn'BGTZL_def,
         dfn'BLTZL_def, dfn'BGEZL_def, dfn'BLTZALL_def, dfn'BGEZALL_def,
         ConditionalBranch_def, ConditionalBranchLikely_def]
-       [[``^st.BranchDelay = NONE``, ``rs <> 0w: word5``]]
+       [[``^st.CP0.Status.CU1``, ``^st.BranchDelay = NONE``,
+         ``rs <> 0w: word5``]]
        [[], [`rs` |-> r0]]
+
+val jEV =
+  EV [dfn'J_def, dfn'JAL_def, dfn'JR_def,
+      dfn'BC1F_def, dfn'BC1FL_def, dfn'BC1T_def, dfn'BC1TL_def,
+      ConditionalBranch_def, ConditionalBranchLikely_def]
+     [[``^st.CP0.Status.CU1``]]
+     []
+
+val fpEV = EVC
+  [dfn'ABS_D_def, dfn'ABS_S_def, dfn'NEG_D_def, dfn'NEG_S_def,
+   dfn'SQRT_D_def, dfn'SQRT_S_def,
+   dfn'ADD_D_def, dfn'ADD_S_def, dfn'SUB_D_def, dfn'SUB_S_def,
+   dfn'DIV_D_def, dfn'DIV_S_def, dfn'MUL_D_def, dfn'MUL_S_def,
+   dfn'MADD_D_def, dfn'MADD_S_def, dfn'MSUB_D_def, dfn'MSUB_S_def,
+   dfn'MOV_D_def, dfn'MOV_S_def,
+   dfn'MOVF_def, dfn'MOVF_D_def, dfn'MOVF_S_def,
+   dfn'MOVT_def, dfn'MOVT_D_def, dfn'MOVT_S_def,
+   dfn'MOVN_D_def, dfn'MOVN_S_def, dfn'MOVZ_D_def, dfn'MOVZ_S_def,
+   dfn'DMFC1_def, dfn'DMTC1_def, dfn'MFC1_def, dfn'MTC1_def,
+   dfn'C_cond_D_def, dfn'C_cond_S_def,
+   dfn'CEIL_L_D_def, dfn'CEIL_L_S_def, dfn'CEIL_W_D_def, dfn'CEIL_W_S_def,
+   dfn'FLOOR_L_D_def, dfn'FLOOR_L_S_def, dfn'FLOOR_W_D_def, dfn'FLOOR_W_S_def,
+   dfn'ROUND_L_D_def, dfn'ROUND_L_S_def, dfn'ROUND_W_D_def, dfn'ROUND_W_S_def,
+   dfn'TRUNC_L_D_def, dfn'TRUNC_L_S_def, dfn'TRUNC_W_D_def, dfn'TRUNC_W_S_def,
+   dfn'CVT_D_L_def, dfn'CVT_D_S_def, dfn'CVT_D_W_def, dfn'CVT_L_D_def,
+   dfn'CVT_L_S_def, dfn'CVT_S_D_def, dfn'CVT_S_L_def, dfn'CVT_S_W_def,
+   dfn'CVT_W_D_def, dfn'CVT_W_S_def,
+   PostOpF32_def, PostOpF64_def, FP64_Unordered_def, FP32_Unordered_def,
+   (* IntToWordMIPS_def, IntToDWordMIPS_def, *)
+   cond_word2, cond_word3, Rounding_Mode_def, extra_cond_rand_thms]
+  [[``^st.CP0.Status.CU1``, ``~NotWordValue (^st.FGR fs)``]] []
 
 (* ------------------------------------------------------------------------- *)
 
@@ -310,9 +343,9 @@ val DDIVU = dEV ``dfn'DDIVU (rs, rt)``
 
 (* Jumps and Branches *)
 
-val J = EV [dfn'J_def] [] [] ``dfn'J (instr_index)``
-val JAL = EV [dfn'JAL_def] [] [] ``dfn'JAL (instr_index)``
-val JR = EV [dfn'JR_def] [] [] ``dfn'JR (instr_index)``
+val J = jEV ``dfn'J (instr_index)``
+val JAL = jEV ``dfn'JAL (instr_index)``
+val JR = jEV ``dfn'JR (instr_index)``
 val JALR = hEV ``dfn'JALR (rs, rd)``
 val BEQ = bbEV ``dfn'BEQ (rs, rt, offset)``
 val BNE = bbEV ``dfn'BNE (rs, rt, offset)``
@@ -338,60 +371,29 @@ val ERET =
      [dfn'ERET_def, KernelMode_def]
      [[``^st.CP0.Status.EXL``, ``^st.BranchDelay = NONE``]] [] ``dfn'ERET``
 
+val BC1F = jEV ``dfn'BC1F (imm, cc)``
+val BC1FL = jEV ``dfn'BC1FL (imm, cc)``
+val BC1T = jEV ``dfn'BC1T (imm, cc)``
+val BC1TL = jEV ``dfn'BC1TL (imm, cc)``
+
 (* ------------------------------------------------------------------------- *)
 
 (* Load/Store thms and tools *)
 
-val cond_0_1 = Q.prove(
-   `!w: word1 a b c.
-       (if w = 0w then a else if w = 1w then b else c) =
-       (if w = 0w then a else b)`,
-   wordsLib.Cases_word_value \\ simp [])
-
-val cond_0_3 = Q.prove(
-   `!w: word2 a b c d e.
-       (if w = 0w then a
-        else if w = 1w then b
-        else if w = 2w then c
-        else if w = 3w then d
-        else e) =
-       (if w = 0w then a
-        else if w = 1w then b
-        else if w = 2w then c
-        else d)`,
-   wordsLib.Cases_word_value \\ simp [])
-
-val cond_0_7 = Q.prove(
-   `!w: word3 a b c d e f g h i.
-       (if w = 0w then a
-        else if w = 1w then b
-        else if w = 2w then c
-        else if w = 3w then d
-        else if w = 4w then e
-        else if w = 5w then f
-        else if w = 6w then g
-        else if w = 7w then h
-        else i) =
-       (if w = 0w then a
-        else if w = 1w then b
-        else if w = 2w then c
-        else if w = 3w then d
-        else if w = 4w then e
-        else if w = 5w then f
-        else if w = 6w then g
-        else h)`,
-   wordsLib.Cases_word_value \\ simp [])
-
 val mem_thms =
-   [AddressTranslation_def, LoadMemory_def,
-    StoreMemory_byte, storeWord_def, storeDoubleword_def,
-    Drule.UNDISCH StoreMemory_half, Drule.UNDISCH StoreMemory_word,
-    Drule.UNDISCH StoreMemory_doubleword,
-    PSIZE_def, ReverseEndian_def, BigEndianMem_def, BigEndianCPU_def,
+   [AddressTranslation_def, AdjustEndian_def, LoadMemory_def, ReadData_def,
+    Drule.UNDISCH (Drule.SPEC_ALL StoreMemory_byte),
+    storeWord_def, storeDoubleword_def,
+    Drule.UNDISCH_ALL StoreMemory_half, Drule.UNDISCH_ALL StoreMemory_word,
+    Drule.UNDISCH_ALL StoreMemory_doubleword,
+    ReverseEndian_def, BigEndianMem_def, BigEndianCPU_def,
     BYTE_def, HALFWORD_def, WORD_def, DOUBLEWORD_def,
     address_align, address_align2, cond_sign_extend, byte_address, extract_byte,
     wordsTheory.word_concat_0_0, wordsTheory.WORD_XOR_CLAUSES,
-    cond_0_1, cond_0_3, cond_0_7,
+    cond_word1, cond_word2, cond_word3,
+    bitstringLib.v2w_n2w_CONV ``v2w [T] : word1``,
+    bitstringLib.v2w_n2w_CONV ``v2w [F] : word1``,
+    EVAL ``((3w : word2) @@ (0w : word1)) : word3``,
     EVAL ``word_replicate 2 (0w: word1) : word2``,
     EVAL ``word_replicate 2 (1w: word1) : word2``,
     EVAL ``((1w:word1) @@ (0w:word2)) : word3``,
@@ -401,6 +403,7 @@ val mem_thms =
     EVAL ``word_replicate 3 (1w:word1) : word3``]
 
 val select_rule =
+   utilsLib.ALL_HYP_CONV_RULE (REWRITE_CONV [Aligned_thms]) o
    REWRITE_RULE
       [select_byte_le, select_byte_be, byte_address,
        SIMP_RULE (bool_ss++boolSimps.LET_ss) [] select_parts,
@@ -434,14 +437,14 @@ val memcntxts =
    List.map
       (fn l =>
          [``rt <> 0w:word5``,
-          ``~word_bit 0 ^addr``,
           ``~^st.exceptionSignalled``,
-          ``(1 >< 0) ^addr = 0w: word2``,
-          ``(1 >< 0) ^st.PC = 0w: word2``] @ l)
+          ``Aligned (^addr, 1w)``,
+          ``Aligned (^addr, 3w)``,
+          ``Aligned (^st.PC, 3w)``] @ l)
       memcntxts
 
 val dmemcntxts =
-   List.map (fn l => ``(2 >< 0) ^addr = 0w: word3`` :: l) memcntxts
+   List.map (fn l => ``Aligned (^addr, 7w)`` :: l) memcntxts
 
 (*
 fun merge_cases thms =
@@ -479,7 +482,7 @@ fun EVL l tm =
 
 fun store_rule thms =
    utilsLib.ALL_HYP_CONV_RULE
-     (SIMP_CONV std_ss (cond_rand_thms :: mem_thms @ thms))
+     (SIMP_CONV std_ss (Aligned_thms :: cond_rand_thms :: mem_thms @ thms))
 
 (*
 val UserMode_rule =
@@ -506,7 +509,8 @@ val loadWord =
       ``loadWord (link, base, rt, offset, unsigned)``
 
 val loadDoubleword =
-   ev ([loadDoubleword_def, double_aligned] @ mem_thms) dmemcntxts []
+   evr select_rule ([loadDoubleword_def, double_aligned] @ mem_thms)
+      dmemcntxts []
       ``loadDoubleword (link, base, rt, offset)``
 
 val LB  = EVL [loadByte] ``dfn'LB (base, rt, offset) ^st``
@@ -561,6 +565,7 @@ val SD =
    EVR (store_rule []) (dfn'SD_def :: mem_thms) dmemcntxts []
       ``dfn'SD (base, rt, offset)``
 
+(*
 val sc = List.map (fn l => ``^st.LLbit = SOME llbit`` :: l)
 
 val SC =
@@ -572,10 +577,83 @@ val SCD =
    EVR (COND_UPDATE_RULE o store_rule [])
        ([dfn'SCD_def, extract_word] @ mem_thms) (sc dmemcntxts) []
       ``dfn'SCD (base, rt, offset)``
+*)
 
 (* ------------------------------------------------------------------------- *)
 
-(* Coprocessor instructions *)
+(* Floating-point instructions *)
+
+val ABS_D = fpEV ``dfn'ABS_D (fd, fs)``
+val ABS_S = fpEV ``dfn'ABS_S (fd, fs)``
+val ADD_D = fpEV ``dfn'ADD_D (fd, fs, ft)``
+val ADD_S = fpEV ``dfn'ADD_S (fd, fs, ft)``
+val DIV_D = fpEV ``dfn'DIV_D (fd, fs, ft)``
+val DIV_S = fpEV ``dfn'DIV_S (fd, fs, ft)``
+val MADD_D = fpEV ``dfn'MADD_D (fd, fr, fs, ft)``
+val MADD_S = fpEV ``dfn'MADD_S (fd, fr, fs, ft)``
+val MSUB_D = fpEV ``dfn'MSUB_D (fd, fr, fs, ft)``
+val MSUB_S = fpEV ``dfn'MSUB_S (fd, fr, fs, ft)``
+val MUL_D = fpEV ``dfn'MUL_D (fd, fs, ft)``
+val MUL_S = fpEV ``dfn'MUL_S (fd, fs, ft)``
+val NEG_D = fpEV ``dfn'NEG_D (fd, fs)``
+val NEG_S = fpEV ``dfn'NEG_S (fd, fs)``
+val SQRT_D = fpEV ``dfn'SQRT_D (fd, fs)``
+val SQRT_S = fpEV ``dfn'SQRT_S (fd, fs)``
+val SUB_D = fpEV ``dfn'SUB_D (fd, fs, ft)``
+val SUB_S = fpEV ``dfn'SUB_S (fd, fs, ft)``
+
+val C_cond_D = fpEV ``dfn'C_cond_D (fs, ft, cnd, cc)``
+val C_cond_S = fpEV ``dfn'C_cond_S (fs, ft, cnd, cc)``
+
+val CEIL_L_D = fpEV ``dfn'CEIL_L_D (fd, fs)``
+val CEIL_L_S = fpEV ``dfn'CEIL_L_S (fd, fs)``
+val CEIL_W_D = fpEV ``dfn'CEIL_W_D (fd, fs)``
+val CEIL_W_S = fpEV ``dfn'CEIL_W_S (fd, fs)``
+val FLOOR_L_D = fpEV ``dfn'FLOOR_L_D (fd, fs)``
+val FLOOR_L_S = fpEV ``dfn'FLOOR_L_S (fd, fs)``
+val FLOOR_W_D = fpEV ``dfn'FLOOR_W_D (fd, fs)``
+val FLOOR_W_S = fpEV ``dfn'FLOOR_W_S (fd, fs)``
+val ROUND_L_D = fpEV ``dfn'ROUND_L_D (fd, fs)``
+val ROUND_L_S = fpEV ``dfn'ROUND_L_S (fd, fs)``
+val ROUND_W_D = fpEV ``dfn'ROUND_W_D (fd, fs)``
+val ROUND_W_S = fpEV ``dfn'ROUND_W_S (fd, fs)``
+val TRUNC_L_D = fpEV ``dfn'TRUNC_L_D (fd, fs)``
+val TRUNC_L_S = fpEV ``dfn'TRUNC_L_S (fd, fs)``
+val TRUNC_W_D = fpEV ``dfn'TRUNC_W_D (fd, fs)``
+val TRUNC_W_S = fpEV ``dfn'TRUNC_W_S (fd, fs)``
+
+val CVT_D_L = fpEV ``dfn'CVT_D_L (fd, fs)``
+val CVT_D_S = fpEV ``dfn'CVT_D_S (fd, fs)``
+val CVT_D_W = fpEV ``dfn'CVT_D_W (fd, fs)``
+val CVT_L_D = fpEV ``dfn'CVT_L_D (fd, fs)``
+val CVT_L_S = fpEV ``dfn'CVT_L_S (fd, fs)``
+val CVT_S_D = fpEV ``dfn'CVT_S_D (fd, fs)``
+val CVT_S_L = fpEV ``dfn'CVT_S_L (fd, fs)``
+val CVT_S_W = fpEV ``dfn'CVT_S_W (fd, fs)``
+val CVT_W_D = fpEV ``dfn'CVT_W_D (fd, fs)``
+val CVT_W_S = fpEV ``dfn'CVT_W_S (fd, fs)``
+
+val MOV_D = fpEV ``dfn'MOV_D (fd, fs)``
+val MOV_S = fpEV ``dfn'MOV_S (fd, fs)``
+val MOVF = fpEV ``dfn'MOVF (rd, fs, cc)``
+val MOVF_D = fpEV ``dfn'MOVF_D (fd, fs, cc)``
+val MOVF_S = fpEV ``dfn'MOVF_S (fd, fs, cc)``
+val MOVT = fpEV ``dfn'MOVT (rd, fs, cc)``
+val MOVT_D = fpEV ``dfn'MOVT_D (fd, fs, cc)``
+val MOVT_S = fpEV ``dfn'MOVT_S (fd, fs, cc)``
+val MOVN_D = fpEV ``dfn'MOVN_D (fd, fs, cc)``
+val MOVN_S = fpEV ``dfn'MOVN_S (fd, fs, cc)``
+val MOVZ_D = fpEV ``dfn'MOVZ_D (fd, fs, cc)``
+val MOVZ_S = fpEV ``dfn'MOVZ_S (fd, fs, cc)``
+
+val DMFC1 = fpEV ``dfn'DMFC1 (rd, fs)``
+val DMTC1 = fpEV ``dfn'DMTC1 (rd, fs)``
+val MFC1 = fpEV ``dfn'MFC1 (rd, fs)``
+val MTC1 = fpEV ``dfn'MTC1 (rd, fs)``
+
+(* ------------------------------------------------------------------------- *)
+
+(* Coprocessor 0 instructions *)
 
 val cps = mapl (`rd`, List.map reg [23, 26]) : utilsLib.cover
 
@@ -629,7 +707,7 @@ in
       let
          val (l, ty) = listSyntax.dest_list v
          val () = ignore (ty = Type.bool andalso List.length l <= 32 orelse
-                  raise ERR "mk_opcode" "bad opcode")
+                  raise ERR "pad_opcode" "bad opcode")
       in
          utilsLib.padLeft boolSyntax.F 32 l
       end
@@ -660,7 +738,9 @@ local
       |> Thm.SPEC (bitstringSyntax.mk_vec 32 0)
       |> Conv.RIGHT_CONV_RULE
              (
-              REWRITE_CONV [mipsTheory.boolify32_v2w]
+              REWRITE_CONV [mipsTheory.boolify32_v2w, mipsTheory.boolify26_v2w,
+                            mipsTheory.boolify5_v2w,
+                            COP1Decode_def, COP3Decode_def, MOVCIDecode_def]
               THENC Conv.DEPTH_CONV PairedLambda.let_CONV
               THENC Conv.DEPTH_CONV bitstringLib.extract_v2w_CONV
              )
@@ -743,7 +823,9 @@ val mips_rpatterns = List.map (I ## utilsLib.pattern)
     ("DADD",   "FFFFFF_______________FFFFFTFTTFF"),
     ("DADDU",  "FFFFFF_______________FFFFFTFTTFT"),
     ("DSUB",   "FFFFFF_______________FFFFFTFTTTF"),
-    ("DSUBU",  "FFFFFF_______________FFFFFTFTTTT")
+    ("DSUBU",  "FFFFFF_______________FFFFFTFTTTT"),
+    ("MOVF",   "FFFFFF________FF_____FFFFFFFFFFT"),
+    ("MOVT",   "FFFFFF________FT_____FFFFFFFFFFT")
    ]
 
 val mips_jpatterns = List.map (I ## utilsLib.pattern)
@@ -782,7 +864,11 @@ val mips_patterns0 = List.map (I ## utilsLib.pattern)
     ("BGTZ",    "FFFTTT_____FFFFF________________"),
     ("BLEZL",   "FTFTTF_____FFFFF________________"),
     ("BGTZL",   "FTFTTT_____FFFFF________________"),
-    ("JR",      "FFFFFF_____FFFFFFFFFF_____FFTFFF")
+    ("JR",      "FFFFFF_____FFFFFFFFFF_____FFTFFF"),
+    ("MFC1",    "FTFFFTFFFFF__________FFFFFFFFFFF"),
+    ("DMFC1",   "FTFFFTFFFFT__________FFFFFFFFFFF"),
+    ("MTC1",    "FTFFFTFFTFF__________FFFFFFFFFFF"),
+    ("DMTC1",   "FTFFFTFFTFT__________FFFFFFFFFFF")
    ]
 
 val mips_cpatterns = List.map (I ## utilsLib.pattern)
@@ -793,28 +879,88 @@ val mips_cpatterns = List.map (I ## utilsLib.pattern)
 
 val mips_patterns = List.map (I ## utilsLib.pattern)
    [
-    ("J",       "FFFFTF__________________________"),
-    ("JAL",     "FFFFTT__________________________"),
-    ("LDL",     "FTTFTF__________________________"),
-    ("LDR",     "FTTFTT__________________________"),
-    ("LB",      "TFFFFF__________________________"),
-    ("LH",      "TFFFFT__________________________"),
-    ("LWL",     "TFFFTF__________________________"),
-    ("LW",      "TFFFTT__________________________"),
-    ("LBU",     "TFFTFF__________________________"),
-    ("LHU",     "TFFTFT__________________________"),
-    ("LWR",     "TFFTTF__________________________"),
-    ("LWU",     "TFFTTT__________________________"),
-    ("SB",      "TFTFFF__________________________"),
-    ("SH",      "TFTFFT__________________________"),
-    ("SW",      "TFTFTT__________________________"),
-    ("LL",      "TTFFFF__________________________"),
-    ("LLD",     "TTFTFF__________________________"),
-    ("LD",      "TTFTTT__________________________"),
-    ("SC",      "TTTFFF__________________________"),
-    ("SCD",     "TTTTFF__________________________"),
-    ("SD",      "TTTTTT__________________________"),
-    ("ERET",    "FTFFFFTFFFFFFFFFFFFFFFFFFFFTTFFF")
+    ("J",        "FFFFTF__________________________"),
+    ("JAL",      "FFFFTT__________________________"),
+    ("LDL",      "FTTFTF__________________________"),
+    ("LDR",      "FTTFTT__________________________"),
+    ("LB",       "TFFFFF__________________________"),
+    ("LH",       "TFFFFT__________________________"),
+    ("LWL",      "TFFFTF__________________________"),
+    ("LW",       "TFFFTT__________________________"),
+    ("LBU",      "TFFTFF__________________________"),
+    ("LHU",      "TFFTFT__________________________"),
+    ("LWR",      "TFFTTF__________________________"),
+    ("LWU",      "TFFTTT__________________________"),
+    ("SB",       "TFTFFF__________________________"),
+    ("SH",       "TFTFFT__________________________"),
+    ("SW",       "TFTFTT__________________________"),
+    ("LL",       "TTFFFF__________________________"),
+    ("LLD",      "TTFTFF__________________________"),
+    ("LD",       "TTFTTT__________________________"),
+ (* ("SC",       "TTTFFF__________________________"),
+    ("SCD",      "TTTTFF__________________________"), *)
+    ("SD",       "TTTTTT__________________________"),
+    ("ERET",     "FTFFFFTFFFFFFFFFFFFFFFFFFFFTTFFF"),
+    ("BC1F",     "FTFFFTFTFFF___FF________________"),
+    ("BC1T",     "FTFFFTFTFFF___FT________________"),
+    ("BC1FL",    "FTFFFTFTFFF___TF________________"),
+    ("BC1TL",    "FTFFFTFTFFF___TT________________"),
+    ("ADD.S",    "FTFFFTTFFFF_______________FFFFFF"),
+    ("SUB.S",    "FTFFFTTFFFF_______________FFFFFT"),
+    ("MUL.S",    "FTFFFTTFFFF_______________FFFFTF"),
+    ("DIV.S",    "FTFFFTTFFFF_______________FFFFTT"),
+    ("SQRT.S",   "FTFFFTTFFFFFFFFF__________FFFTFF"),
+    ("ABS.S",    "FTFFFTTFFFFFFFFF__________FFFTFT"),
+    ("MOV.S",    "FTFFFTTFFFFFFFFF__________FFFTTF"),
+    ("NEG.S",    "FTFFFTTFFFFFFFFF__________FFFTTT"),
+    ("ROUND.L.S","FTFFFTTFFFFFFFFF__________FFTFFF"),
+    ("TRUNC.L.S","FTFFFTTFFFFFFFFF__________FFTFFT"),
+    ("CEIL.L.S", "FTFFFTTFFFFFFFFF__________FFTFTF"),
+    ("FLOOR.L.S","FTFFFTTFFFFFFFFF__________FFTFTT"),
+    ("ROUND.W.S","FTFFFTTFFFFFFFFF__________FFTTFF"),
+    ("TRUNC.W.S","FTFFFTTFFFFFFFFF__________FFTTFT"),
+    ("CEIL.W.S", "FTFFFTTFFFFFFFFF__________FFTTTF"),
+    ("FLOOR.W.S","FTFFFTTFFFFFFFFF__________FFTTTT"),
+    ("MOVF.S",   "FTFFFTTFFFF___FF__________FTFFFT"),
+    ("MOVT.S",   "FTFFFTTFFFF___FT__________FTFFFT"),
+    ("MOVZ.S",   "FTFFFTTFFFF_______________FTFFTF"),
+    ("MOVN.S",   "FTFFFTTFFFF_______________FTFFTT"),
+    ("C.cond.S", "FTFFFTTFFFF_____________FFTTF___"),
+    ("ADD.D",    "FTFFFTTFFFT_______________FFFFFF"),
+    ("SUB.D",    "FTFFFTTFFFT_______________FFFFFT"),
+    ("MUL.D",    "FTFFFTTFFFT_______________FFFFTF"),
+    ("DIV.D",    "FTFFFTTFFFT_______________FFFFTT"),
+    ("SQRT.D",   "FTFFFTTFFFTFFFFF__________FFFTFF"),
+    ("ABS.D",    "FTFFFTTFFFTFFFFF__________FFFTFT"),
+    ("MOV.D",    "FTFFFTTFFFTFFFFF__________FFFTTF"),
+    ("NEG.D",    "FTFFFTTFFFTFFFFF__________FFFTTT"),
+    ("ROUND.L.D","FTFFFTTFFFTFFFFF__________FFTFFF"),
+    ("TRUNC.L.D","FTFFFTTFFFTFFFFF__________FFTFFT"),
+    ("CEIL.L.D", "FTFFFTTFFFTFFFFF__________FFTFTF"),
+    ("FLOOR.L.D","FTFFFTTFFFTFFFFF__________FFTFTT"),
+    ("ROUND.W.D","FTFFFTTFFFTFFFFF__________FFTTFF"),
+    ("TRUNC.W.D","FTFFFTTFFFTFFFFF__________FFTTFT"),
+    ("CEIL.W.D", "FTFFFTTFFFTFFFFF__________FFTTTF"),
+    ("FLOOR.W.D","FTFFFTTFFFTFFFFF__________FFTTTT"),
+    ("MOVF.D",   "FTFFFTTFFFT___FF__________FTFFFT"),
+    ("MOVT.D",   "FTFFFTTFFFT___FT__________FTFFFT"),
+    ("MOVZ.D",   "FTFFFTTFFFT_______________FTFFTF"),
+    ("MOVN.D",   "FTFFFTTFFFT_______________FTFFTT"),
+    ("C.cond.D", "FTFFFTTFFFT_____________FFTTF___"),
+    ("CVT.S.D",  "FTFFFTTFFFTFFFFF__________TFFFFF"),
+    ("CVT.S.W",  "FTFFFTTFTFFFFFFF__________TFFFFF"),
+    ("CVT.S.L",  "FTFFFTTFTFTFFFFF__________TFFFFF"),
+    ("CVT.D.S",  "FTFFFTTFFFFFFFFF__________TFFFFT"),
+    ("CVT.D.W",  "FTFFFTTFTFFFFFFF__________TFFFFT"),
+    ("CVT.D.L",  "FTFFFTTFTFTFFFFF__________TFFFFT"),
+    ("CVT.W.S",  "FTFFFTTFFFFFFFFF__________TFFTFF"),
+    ("CVT.W.S",  "FTFFFTTFFFTFFFFF__________TFFTFF"),
+    ("CVT.L.S",  "FTFFFTTFFFFFFFFF__________TFFTFT"),
+    ("CVT.L.S",  "FTFFFTTFFFTFFFFF__________TFFTFT"),
+    ("MADD.S",   "FTFFTT____________________TFFFFF"),
+    ("MADD.D",   "FTFFTT____________________TFFFFT"),
+    ("MSUB.S",   "FTFFTT____________________TFTFFF"),
+    ("MSUB.D",   "FTFFTT____________________TFTFFT")
    ]
 
 local
@@ -853,7 +999,8 @@ local
    fun x i = Term.mk_var ("x" ^ Int.toString i, Type.bool)
    fun assign_bits (p, i, n) =
       let
-         val l = (i, n) |> bitstringSyntax.padded_fixedwidth_of_int
+         val l = (i, n) |> (Arbnum.fromInt ## Lib.I)
+                        |> bitstringSyntax.padded_fixedwidth_of_num
                         |> bitstringSyntax.dest_v2w |> fst
                         |> listSyntax.dest_list |> fst
       in
@@ -956,7 +1103,6 @@ in
 end
 
 local
-   val get_state = snd o pairSyntax.dest_pair o rhsc
    fun mk_mips_const n = Term.prim_mk_const {Thy = "mips", Name = n}
    val state_exception_tm = mk_mips_const "mips_state_exception"
    val state_exceptionSignalled_tm =
@@ -969,8 +1115,6 @@ local
    fun mk_proj_BranchDelay r = Term.mk_comb (state_BranchDelay_tm, r)
    fun mk_proj_BranchTo r = Term.mk_comb (state_BranchTo_tm, r)
    val st_BranchDelay_tm = mk_proj_BranchDelay st
-   val ap_snd = Thm.AP_TERM ``SND:unit # mips_state -> mips_state``
-   val snd_conv = Conv.REWR_CONV pairTheory.SND
    val STATE_CONV =
       Conv.QCONV
         (REWRITE_CONV
@@ -1014,10 +1158,7 @@ in
                val thm2 = mips_decode v
                val thm3 = Drule.SPEC_ALL (Run_CONV thm2)
                val ethm = run (rhsc thm3)
-               val thm3 = thm3 |> ap_snd
-                               |> Conv.RIGHT_CONV_RULE
-                                    (Conv.RAND_CONV (Conv.REWR_CONV ethm)
-                                     THENC snd_conv)
+               val thm3 = Conv.RIGHT_CONV_RULE (Conv.REWR_CONV ethm) thm3
                val tm = rhsc thm3
                val thms = List.map (fn f => STATE_CONV (f tm))
                              [mk_proj_exception,
@@ -1072,8 +1213,6 @@ val be = false
 val v = bitstringSyntax.bitstring_of_hexstring "811BAF37"
 val v = bitstringSyntax.bitstring_of_hexstring "00c72820"
 val v = bitstringSyntax.bitstring_of_hexstring "07d00000"
-
-val ths = mips_step_code true "addi $1, $2, 3"
 
 *)
 

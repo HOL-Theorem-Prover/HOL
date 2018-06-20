@@ -810,9 +810,9 @@ val move_correct = store_thm(
                            combinTheory.APPLY_UPDATE_THM] >>
         fsrw_tac [][predOf_def, PCsub_def, REGfRsub_def,
                     combinTheory.APPLY_UPDATE_THM] >>
-        qpat_assum `Q exiti f` mp_tac >>
+        qpat_x_assum `Q exiti f` mp_tac >>
         asm_simp_tac (srw_ss()) [combinTheory.UPDATE_EQ] >>
-        qpat_assum `x + y = z` mp_tac >>
+        qpat_x_assum `x + y = z` mp_tac >>
         asm_simp_tac (srw_ss()) [] >>
         strip_tac >>
         asm_simp_tac (srw_ss()) [Once combinTheory.UPDATE_COMMUTES,
@@ -824,7 +824,7 @@ val move_correct = store_thm(
         fsrw_tac [][predOf_AND_def, PCeq_def]) >>
   asm_simp_tac (srw_ss() ++ ARITH_ss) [RPimp_thm, predOf_AND_thm] >>
   srw_tac [] [predOf_def, PCsub_def, REGfRsub_def] >>
-  qpat_assum `Q s.pc f` mp_tac >>
+  qpat_x_assum `Q s.pc f` mp_tac >>
   asm_simp_tac (srw_ss()) [combinTheory.UPDATE_APPLY_IMP_ID]);
 
 val RPcopy_def = Define`
@@ -916,7 +916,7 @@ val RPcopy_correct = store_thm(
     srw_tac [ARITH_ss][Abbr`Pre`, Abbr`Post`, Abbr`QQ`, RPimp_thm,
                        predOf_AND_thm, REGfRsub_ABS,
                        combinTheory.APPLY_UPDATE_THM] >>
-    qpat_assum `predOf (REGfRsub QQQ rrr fff) s` mp_tac >>
+    qpat_x_assum `predOf (REGfRsub QQQ rrr fff) s` mp_tac >>
     asm_simp_tac (srw_ss()) [predOf_def, REGfRsub_def, PCsub_def,
                              combinTheory.APPLY_UPDATE_THM] >>
     qmatch_abbrev_tac `Q ei f1 ==> Q ei f2` >>
@@ -930,7 +930,7 @@ val RPcopy_correct = store_thm(
     fsrw_tac [ARITH_ss][predOf_def, REGfRsub_def, PCsub_def,
                         combinTheory.APPLY_UPDATE_THM] >>
     pop_assum mp_tac >>
-    qpat_assum `P pccc rrrr` (K ALL_TAC) >>
+    qpat_x_assum `P pccc rrrr` (K ALL_TAC) >>
     asm_simp_tac (srw_ss()) [combinTheory.UPDATE_APPLY_IMP_ID,
                              combinTheory.APPLY_UPDATE_THM],
 
@@ -938,7 +938,7 @@ val RPcopy_correct = store_thm(
     asm_simp_tac (srw_ss()) [RPimp_thm, predOf_AND_thm] >>
     srw_tac [][REGfRsub_def, predOf_def] >>
     fsrw_tac [][] >>
-    qpat_assum `QQ (bi + 3) f2` mp_tac >>
+    qpat_x_assum `QQ (bi + 3) f2` mp_tac >>
     qmatch_abbrev_tac `QQ (bi + 3) f1 ==> QQ (bi + 3) f2` >>
     qsuff_tac `f1 = f2` >- srw_tac [][] >>
     srw_tac [][Abbr`f1`, Abbr`f2`, combinTheory.APPLY_UPDATE_THM,

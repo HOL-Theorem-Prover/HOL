@@ -5,7 +5,7 @@ infix THEN THENL;
 
 val _ = new_theory "quote";
 
-open prelimTheory;
+open ternaryComparisonsTheory;
 
 
 val _ = Hol_datatype
@@ -29,14 +29,14 @@ val index_discr = tl (type_rws ``:index``);
 
 
 val compare_index_equal = store_thm("compare_index_equal",
-  --` !i1 i2. (index_compare i1 i2 = EQUAL) = (i1 = i2) `--,
+  “!i1 i2. (index_compare i1 i2 = EQUAL) = (i1 = i2)”,
 Induct THEN Induct THEN
 RW_TAC bool_ss (index_compare_def :: index_discr));
 
 
-val compare_list_index =
-  save_thm("compare_list_index",
-	   MATCH_MP compare_equal compare_index_equal);
+val compare_list_index = save_thm(
+  "compare_list_index",
+  MATCH_MP compare_equal compare_index_equal);
 
 
 val index_lt_def = Define ` index_lt i1 i2 = (index_compare i1 i2 = LESS) `;

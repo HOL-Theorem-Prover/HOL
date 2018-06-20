@@ -127,25 +127,9 @@ end;
 
 
 
-
-
-
-
 (*---------------------------------------------------------------------------
- * A normal conversion converts a term t to a theorem of
- * the form t = t'. In contrast a CONSEQ_CONV converts it to
- * a theorem of the form t' ==> t, i.e. it tries to strengthen a boolean expression
- *---------------------------------------------------------------------------*)
-
-
-
-(*---------------------------------------------------------------------------
- * Converts a conversion returning theorems of the form
- *    t' ==> t, t = t' or t
- * to a CONSEQ_CONV. Also some checks are performed that the resulting
- * theorem is really of the form t' ==> t with t being the original input
- * and t' not being equal to t
- *---------------------------------------------------------------------------*)
+ - Main types
+ ----------------------------------------------------------------------------*)
 
 datatype CONSEQ_CONV_direction =
          CONSEQ_CONV_STRENGTHEN_direction
@@ -453,13 +437,6 @@ fun EXISTS_CONSEQ_CONV conv t =
          thm3
       end;
 
-
-
-
-
-
-
-
 fun QUANT_CONSEQ_CONV conv t =
     if (is_forall t) then
        FORALL_CONSEQ_CONV conv t
@@ -490,61 +467,8 @@ fun CONSEQ_CONV_DIRECTION_NEGATE CONSEQ_CONV_UNKNOWN_direction = CONSEQ_CONV_UNK
 
 
 (******************************************************************************)
-(* conseq_conv_congruences are used for moving consequence conversions        *)
-(* through boolean terms. They get a system callback and a term.              *)
-(*                                                                            *)
-(* Given the number of already performed step, a direction and a term t       *)
-(* sys n t will return the number of steps it performed and a theorem option. *)
-(* If this option is NULL, nothing could be done (and the returned number of  *)
-(* steps is 0). Otherwise thm_opt is a theorem of the form                    *)
-(* |- t ==> t' or |- t' ==> t                                                 *)
-(*                                                                            *)
-(* The congruence itself get's a term t and is supposed to return a           *)
-(* similar theorem option. Moreover, it has to add up all the steps done by   *)
-(* calling sys and return this sum.                                           *)
+(* asm_marker                                                                 *)
 (******************************************************************************)
-
-
-type conseq_conv_congruence_syscall =
-   term list -> thm list -> int -> CONSEQ_CONV_direction -> term -> (int * thm option)
-
-type conseq_conv_congruence =
-   thm list -> conseq_conv_congruence_syscall ->
-   CONSEQ_CONV_direction -> term -> (int * thm)
-
-
-fun conseq_conv_congruence_EXPAND_THM_OPT (thm_opt,t,ass_opt) =
-  let
-     val thm = if isSome thm_opt then valOf thm_opt else REFL_CONSEQ_CONV t;
-     val thm' = if isSome ass_opt then DISCH (valOf ass_opt) thm else thm
-  in
-     thm'
-  end;
-
-
-(*
-   val sys:conseq_conv_congruence_syscall =
-      fn n => K (K ((n+1), NONE));
-
-   val dir = CONSEQ_CONV_STRENGTHEN_direction
-   val t = ``b1 /\ b2``;
-CONSEQ_CONV_CONGRUENCE___conj sys dir t
-
-*)
-
-fun dir_conv dir =
-   if (dir = CONSEQ_CONV_STRENGTHEN_direction) then
-      (RATOR_CONV o RAND_CONV) else RAND_CONV;
-
-fun check_sys_call sys new_context old_context n dir t =
-   let
-      val (n, thm_opt) = sys new_context old_context n dir t;
-      val _ = if (isSome thm_opt) then () else raise UNCHANGED;
-   in
-      (n, valOf thm_opt)
-   end;
-
-exception CONSEQ_CONV_congruence_exn;
 
 val asm_marker_tm = Term `ASM_MARKER`
 fun dest_asm_marker tt =
@@ -574,6 +498,43 @@ fun asm_marker_ELIM_CONV tt =
 fun asm_marker_INTRO_CONV l tt =
    SPECL [l, tt] (GSYM ASM_MARKER_THM)
 
+
+(******************************************************************************)
+(* DEPTH conv stuff                                                           *)
+(******************************************************************************)
+
+(* -------------------------------------
+   Congruences
+   -------------------------------------*)
+type conseq_conv_congruence_syscall =
+   term list -> thm list -> int -> CONSEQ_CONV_direction -> term -> (int * thm option)
+
+type conseq_conv_congruence =
+   thm list -> conseq_conv_congruence_syscall ->
+   CONSEQ_CONV_direction -> term -> (int * thm)
+
+
+fun conseq_conv_congruence_EXPAND_THM_OPT (thm_opt,t,ass_opt) =
+  let
+     val thm = if isSome thm_opt then valOf thm_opt else REFL_CONSEQ_CONV t;
+     val thm' = if isSome ass_opt then DISCH (valOf ass_opt) thm else thm
+  in
+     thm'
+  end;
+
+fun dir_conv dir =
+   if (dir = CONSEQ_CONV_STRENGTHEN_direction) then
+      (RATOR_CONV o RAND_CONV) else RAND_CONV;
+
+fun check_sys_call sys new_context old_context n dir t =
+   let
+      val (n, thm_opt) = sys new_context old_context n dir t;
+      val _ = if (isSome thm_opt) then () else raise UNCHANGED;
+   in
+      (n, valOf thm_opt)
+   end;
+
+exception CONSEQ_CONV_congruence_exn;
 
 fun CONSEQ_CONV_CONGRUENCE___asm_marker context (sys:conseq_conv_congruence_syscall) dir t =
   let
@@ -918,8 +879,6 @@ fun CONSEQ_CONV_CONGRUENCE___exists context (sys:conseq_conv_congruence_syscall)
   end
 
 
-
-
 val CONSEQ_CONV_CONGRUENCE___basic_list___full_context = [
    CONSEQ_CONV_CONGRUENCE___conj,
    CONSEQ_CONV_CONGRUENCE___disj,
@@ -967,6 +926,11 @@ fun step_opt_allows_steps NONE _ _  = true
   | step_opt_allows_steps (SOME m) n NONE = (n <= m)
   | step_opt_allows_steps (SOME m) n (SOME w) =
         (n < m) andalso (n+w <= m);
+
+
+(* -------------------------------------
+   Context
+   -------------------------------------*)
 
 (*
    some test data for debugging
@@ -1084,6 +1048,9 @@ in
   (n:int, SOME thm)
 end;
 
+(* -----------------------------------
+   Caches
+   ----------------------------------- *)
 
 fun get_cache_result NONE m step_opt dir t = NONE
   | get_cache_result (SOME (cache_ref, _)) m step_opt dir t =
@@ -1137,6 +1104,9 @@ in
 end;
 
 
+(* -----------------------------------------
+   Main part of DEPTH_CONSEQ_CONV
+   ----------------------------------------- *)
 
 fun STEP_CONSEQ_CONV congruence_list convL =
 let
@@ -1312,7 +1282,6 @@ fun DEPTH_CONSEQ_CONV conv =
   CONTEXT_DEPTH_CONSEQ_CONV CONSEQ_CONV_NO_CONTEXT (K conv)
 
 
-
 fun CONTEXT_REDEPTH_CONSEQ_CONV context conv =
    EXT_DEPTH_CONSEQ_CONV (CONSEQ_CONV_get_context_congruences context)
      CONSEQ_CONV_default_cache_opt NONE true [(true,SOME 1,conv)] []
@@ -1351,30 +1320,17 @@ fun REDEPTH_CONSEQ_CONV_TAC conv =
 fun ONCE_DEPTH_CONSEQ_CONV_TAC conv =
     CONSEQ_CONV_TAC (ONCE_DEPTH_CONSEQ_CONV conv)
 
-
-
 fun STRENGTHEN_CONSEQ_CONV conv dir =
     if dir = CONSEQ_CONV_WEAKEN_direction then raise UNCHANGED else conv;
 
 fun WEAKEN_CONSEQ_CONV conv dir =
     if dir = CONSEQ_CONV_STRENGTHEN_direction then raise UNCHANGED else conv;
 
-
-
-
-
-
 fun DEPTH_STRENGTHEN_CONSEQ_CONV conv =
     DEPTH_CONSEQ_CONV (K conv) CONSEQ_CONV_STRENGTHEN_direction;
 
-
 fun REDEPTH_STRENGTHEN_CONSEQ_CONV conv =
     REDEPTH_CONSEQ_CONV (K conv) CONSEQ_CONV_STRENGTHEN_direction;
-
-
-
-
-
 
 
 (*---------------------------------------------------------------------------
@@ -1390,8 +1346,6 @@ fun STRENGTHEN_CONSEQ_CONV_RULE conv thm = let
   end
 
 
-
-
 (*---------------------------------------------------------------------------
  * if conv ``A`` = |- (A' ==> A) then
  * WEAKEN_CONSEQ_CONV_RULE ``(A ==> B)`` = |- (A' ==> B)
@@ -1403,16 +1357,6 @@ fun WEAKEN_CONSEQ_CONV_RULE conv thm = let
   in
    IMP_TRANS thm imp_thm
   end
-
-
-
-
-
-
-
-
-
-
 
 
 (*---------------------------------------------------------------------------
@@ -1445,12 +1389,6 @@ fun CONSEQ_REWR_CONV___with_match ho strengten thm =
 fun CONSEQ_REWR_CONV strengten thm =
     fst (CONSEQ_REWR_CONV___with_match false strengten thm);
 
-
-(*---------------------------------------------------------------------------
- * His one does multiple rewrites, can handle theorems that
- * contain alquantification and multiple conjuncted rewrite rules and
- * goes down into subterms.
- *---------------------------------------------------------------------------*)
 
 fun CONSEQ_TOP_REWRITE_CONV___EQT_EQF_INTRO thm =
    if (is_eq (concl thm) andalso (type_of (lhs (concl thm)) = bool)) then thm else
@@ -1578,6 +1516,18 @@ fun FULL_EXT_CONSEQ_REWRITE_CONV congruence_list cache step_opt redepth ho
             (b,w, (fn context => K (CHANGED_CONV (c context))))) convL)) context;
 
 
+
+val CONSEQ_TOP_REWRITE_CONV =
+    CONSEQ_TOP_REWRITE_CONV___ho_opt false
+
+val CONSEQ_TOP_HO_REWRITE_CONV =
+    CONSEQ_TOP_REWRITE_CONV___ho_opt true
+
+fun CONSEQ_TOP_REWRITE_TAC thmLs =
+    CONSEQ_CONV_TAC (CONSEQ_TOP_REWRITE_CONV thmLs);
+
+fun CONSEQ_TOP_HO_REWRITE_TAC thmLs =
+    CONSEQ_CONV_TAC (CONSEQ_TOP_HO_REWRITE_CONV thmLs);
 
 val CONSEQ_REWRITE_CONV =
     FULL_EXT_CONSEQ_REWRITE_CONV CONSEQ_CONV_CONGRUENCE___basic_list

@@ -1,15 +1,8 @@
 structure base_tokens :> base_tokens =
 struct
 
+open base_tokens_dtype
 exception LEX_ERR of string * locn.locn
-type fracinfo = {wholepart: Arbnum.num, fracpart: Arbnum.num, places : int}
-
-datatype 'a base_token =
-         BT_Ident of string
-       | BT_Numeral of (Arbnum.num * char option)
-       | BT_DecimalFraction of fracinfo
-       | BT_AQ of 'a
-       | BT_EOI
 
 val allow_octal_input = ref false
 val preferred_output_base = ref StringCvt.DEC

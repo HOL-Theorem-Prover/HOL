@@ -1,13 +1,13 @@
 INCLUDES = ../../common ../prog \
            $(HOLDIR)/examples/machine-code/hoare-triple \
            $(HOLDIR)/examples/machine-code/decompiler
-OPTIONS = QUIT_ON_FAILURE
+CLINE_OPTIONS = --qof -j1
 
 ifdef POLY
-HOLHEAP = local-hol-heap
+HOLHEAP = mips-prog-heap
 EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o
 
-BARE_THYS = ../prog/mips_progLib $(HOLDIR)/examples/machine-code/decompiler/decompilerLib
+BARE_THYS = ../prog/mips_progLib
 DEPS = $(patsubst %,%.uo,$(BARE_THYS))
 
 THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))

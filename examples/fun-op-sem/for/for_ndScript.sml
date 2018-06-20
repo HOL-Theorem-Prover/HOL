@@ -63,7 +63,7 @@ val _ = Datatype `
   io_tag = Itag int | Otag int`;
 
 val _ = Datatype `
-  observation = Terminate (io_tag list) | Diverge (io_tag llist) | Crash`;
+  observation = Terminate ((io_tag + bool) list) | Diverge ((io_tag + bool) llist) | Crash`;
 
 val getchar_def = Define `
 getchar stream =

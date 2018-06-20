@@ -10,6 +10,7 @@ open HolKernel Parse boolLib bossLib
 open Q arithmeticTheory;
 
 val _ = new_theory "sum_num";
+val _ = set_grammar_ancestry ["rich_list" (* for COUNT_LIST *) ]
 
 (* ------------------------------------------------------------------------- *)
 

@@ -328,46 +328,37 @@ fun CONG_STEP (RW{cong_net,...}) tm = Lib.trye hd (Net.match tm cong_net) tm;
  *                          Prettyprinting
  *---------------------------------------------------------------------------*)
 
-local open Portable
+local open Portable PP
 in
-fun pp_simpls ppstrm (RW{thms,congs,...}) =
-   let val {add_string,add_break,begin_block,end_block,add_newline,...} =
-         with_ppstream ppstrm
-       val pp_thm = Parse.pp_thm ppstrm
+fun pp_simpls (RW{thms,congs,...}) =
+   let val pp_thm = Parse.pp_thm
        val thms' = mk_simplsl SPEC_ALL (rev(flatten thms))
        val congs' = rev(flatten congs)
        val how_many_thms = length thms'
        val how_many_congs = length congs'
+       val B = block CONSISTENT 0
    in
-      begin_block PP.CONSISTENT 0;
-      if (how_many_thms = 0)
-      then (add_string "<empty simplification set>")
-      else ( add_string"Rewrite Rules:"; add_newline();
-             add_string"--------------"; add_newline();
-             begin_block PP.INCONSISTENT 0;
-             pr_list pp_thm (fn () => add_string";")
-                            (fn () => add_break(2,0))
-                            thms';
-             end_block());
-      add_newline();
-      add_string("Number of rewrite rules = "^Lib.int_to_string how_many_thms);
-      add_newline();
-      if (how_many_congs = 0)
-      then ()
-      else (add_newline();
-            add_string"Congruence Rules"; add_newline();
-            add_string"----------------"; add_newline();
-            begin_block PP.CONSISTENT 0;
-            pr_list pp_thm (fn () => add_string";")
-                           (fn () => add_break(2,0))
-                           congs';
-            end_block();
-            add_newline();
+     block PP.CONSISTENT 0 [
+       if (how_many_thms = 0)
+       then (add_string "<empty simplification set>")
+       else B [add_string"Rewrite Rules:", NL,
+               add_string"--------------", NL,
+               block PP.INCONSISTENT 0 (
+                 pr_list pp_thm [add_string";", add_break(2,0)] thms')
+              ],
+       NL,
+       add_string("Number of rewrite rules = "^Lib.int_to_string how_many_thms),
+       NL,
+       B (if (how_many_congs = 0) then []
+          else [
+            NL,
+            add_string"Congruence Rules", NL,
+            add_string"----------------", NL,
+            B (pr_list pp_thm [add_string";", add_break(2,0)] congs'), NL,
             add_string("Number of congruence rules = "
-                       ^Lib.int_to_string how_many_congs);
-            add_newline());
-
-      end_block()
+                       ^Lib.int_to_string how_many_congs), NL
+         ])
+     ]
    end
 end;
 
@@ -530,6 +521,9 @@ fun add_cntxt ADD = add_rws | add_cntxt DONT_ADD = Lib.K;
 fun no_change V L tm =
   NO_CHANGE (itlist GEN V (itlist DISCH L (REFL tm)))
 
+fun map2_total f (h1::t1) (h2::t2) = f h1 h2 :: map2_total f t1 t2
+  | map2_total f other wise = [];
+
 fun try_cong cnv (cps as {context,prover,simpls}) tm =
  let
  fun simple cnv (cps as {context as (cntxt,b),prover,simpls}) (ant,rst) =
@@ -569,6 +563,11 @@ fun try_cong cnv (cps as {context,prover,simpls}) tm =
     val vstrl = #1(strip_pabs f)
     val vstructs = vstrl_variants (union ant_frees context_frees) vstrl
     val ceqn' = if null vstrl then ceqn else subst (map (op|->) (zip args vstructs)) ceqn
+
+(*    val ceqn' = if null vstrl then ceqn
+                 else subst (map2_total (curry op|->) args vstructs) ceqn
+*)
+
     val (L,(lhs,rhs)) = (I##dest_eq) (strip_imp_only ceqn')
     val outcome =
        if aconv lhs rhs
@@ -601,18 +600,31 @@ fun try_cong cnv (cps as {context,prover,simpls}) tm =
           (* or paired-lambda term f. In that case, the extraction has  *)
           (* first done a beta-reduction and then extraction, so the    *)
           (* derived rhs needs to be "un-beta-expanded" in order that   *)
-          (* the existential var on the rhs be filled in with a thingb  *)
+          (* the existential var on the rhs (g)be filled in with a thing*)
           (* that has function syntax. This will allow the final        *)
           (* MATCH_MP icong ... to  succeed.                            *)
           (*------------------------------------------------------------*)
+         fun drop n list =
+            if n <= 0 orelse null list then list
+            else drop (n-1) (tl list)
+         (*-------------------------------------------------------------*)
+         (* if fewer vstructs than args, this means that the body       *)
+         (* (rcore below) has a function type and will be eta-expanded  *)
+         (*-------------------------------------------------------------*)
+         val unconsumed = drop (length vstructs) args
+         val vstructs' = vstructs @ unconsumed
          fun eta_rhs th =
            let val r = boolSyntax.rhs(concl th)
                val not_lambda_app = null vstrl
                val rcore = if not_lambda_app
                             then fst(dest_combn r nvars)
                             else r
+(*               val g = list_mk_pabs(vstructs',rcore)
+               val gvstructs = list_mk_comb(g,vstructs')
+*)
                val g = list_mk_pabs(vstructs,rcore)
                val gvstructs = list_mk_comb(g,vstructs)
+
                val rhs_eq = if not_lambda_app then REFL gvstructs
                             else SYM(Conv.QCONV (DEPTH_CONV GEN_BETA_CONV) gvstructs)
                val th1 = TRANS th rhs_eq (* |- f vstructs = g vstructs *)
@@ -621,8 +633,9 @@ fun try_cong cnv (cps as {context,prover,simpls}) tm =
             end
          val (g,th1) = eta_rhs th
          val th2 = itlist DISCH L th1
+(*         val pairs = zip args vstructs' handle HOL_ERR _ => [] *)
          val pairs = zip args vstructs handle HOL_ERR _ => []
-          fun generalize v thm =
+         fun generalize v thm =
               case assoc1 v pairs
                of SOME (_,tup) => pairTools.PGEN v tup thm
                 | NONE => GEN v thm
@@ -774,7 +787,6 @@ val add_implicit_congs = fn thl => set_implicit_simpls
                                        (add_congs(implicit_simpls()) thl)
 val add_implicit_simpls = fn s => set_implicit_simpls
                                        (join_simpls s (implicit_simpls()))
-
 
 datatype repetitions
           = Once

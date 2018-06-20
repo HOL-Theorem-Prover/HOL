@@ -1,0 +1,11 @@
+.PHONY: all
+
+INCLUDES = $(protect $(HOLDIR)/tools/cmp/)
+
+DEPS = $(dprot $(HOLDIR)/bin/unquote) input expected
+
+all: $(DEPS)
+	$(protect $(HOLDIR)/bin/unquote) < input > output
+	$(protect $(HOLDIR)/tools/cmp/cmp.exe) output expected
+
+EXTRA_CLEANS = output

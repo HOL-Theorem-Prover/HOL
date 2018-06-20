@@ -32,6 +32,6 @@ stage to the term parser.
 
 \SEEALSO
 
-wordsLib.guess_lengths, wordsLib.notify_word_length_guesses
+wordsLib.guess_lengths, wordsLib.notify_on_word_length_guess
 
 \ENDDOC

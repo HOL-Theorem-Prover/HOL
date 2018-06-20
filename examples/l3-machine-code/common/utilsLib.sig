@@ -8,6 +8,7 @@ sig
    val ALL_HYP_CONV_RULE: conv -> rule
    val ALL_HYP_RULE: rule -> rule
    val BIT_FIELD_INSERT_CONV : string -> string -> conv
+   val CASE_RAND_CONV : term -> conv
    val CHANGE_CBV_CONV: computeLib.compset -> conv
    val ELIM_UNDISCH: rule
    val EXTRACT_CONV: conv
@@ -35,15 +36,17 @@ sig
    val STEP:
       (thm list -> thm list) * term -> thm list -> term list list -> cover ->
       term -> thm list
-   val WALPHA_CONV: conv
+   val STRIP_UNDISCH: rule
    val WGROUND_CONV: conv
    val accessor_fns: hol_type -> term list
+   val accessor_update_fns: hol_type -> (term * term) list
    val add_base_datatypes: computeLib.compset -> unit
    val add_datatypes: hol_type list -> computeLib.compset -> unit
    val add_theory: (thm list * inventory) -> computeLib.compset -> unit
    val add_to_rw_net:
       (thm -> term) -> thm * thm LVTermNet.lvtermnet -> thm LVTermNet.lvtermnet
    val add_to_the_compset: (thm list * inventory) -> unit
+   val adjoin_thms: unit -> unit
    val augment: term frag list * term list -> cover -> cover
    val avoid_name_clashes: term -> term -> term
    val cache: int -> ('a * 'a -> order) -> ('a -> 'b) -> 'a -> 'b
@@ -63,6 +66,7 @@ sig
    val match_subst: {redex: term, residue: term} list -> term -> term
    val maximal: ('a * 'a -> order) -> ('b -> 'a) -> 'b list -> 'b * 'b list
    val minimal: ('a * 'a -> order) -> ('b -> 'a) -> 'b list -> 'b * 'b list
+   val mk_cond_exhaustive_thm: int -> thm
    val mk_cond_rand_thms: term list -> thm
    val mk_cond_update_thms: hol_type list -> thm list
    val mk_negation: term -> term
@@ -75,6 +79,7 @@ sig
    val partitions: 'a list -> 'a list list list
    val pattern: string -> term
    val pick: bool list -> 'a list -> 'a list
+   val print_options: int option -> string -> string list list -> unit
    val process_opt:
       ''a list list -> string -> 'b -> ''a list -> (int -> 'b) -> 'b * ''a list
    val process_option:
@@ -84,16 +89,19 @@ sig
    val qm_tac: thm list -> tactic
    val removeSpaces: string -> string
    val resetStepConv: unit -> unit
+   val reset_thms: unit -> unit
    val rev_endian: 'a list -> 'a list
    val rhsc: thm -> term
    val rng: hol_type -> hol_type
    val save_as: string -> thm -> thm
+   val save_thms: string -> thm list -> thm list
    val setStepConv: conv -> unit
    val specialized: string -> conv * term list -> thm list -> thm list
    val splitAtChar: (char -> bool) -> string -> string * string
    val splitAtPos: int -> string -> string * string
    val split_conditions: thm -> thm list
    val strip_add_or_sub: term -> term * (bool * term) list
+   val strings_to_quote: string list -> string frag list
    val tab_fixedwidth: int -> int -> term list
    val theory_compset: (thm list * inventory) -> computeLib.compset
    val theory_rewrites: (thm list * inventory) -> thm list

@@ -9,7 +9,6 @@
 \usepackage{amssymb}
 %\usepackage{amsbsy}
 %\usepackage{amsthm}
-\usepackage{breakurl}
 \usepackage{makeidx}
 \usepackage{alltt}
 \usepackage{../LaTeX/layout}
@@ -37,10 +36,10 @@
 %\includeonly{system,theories,libraries}
 
 \usepackage[hidelinks,hypertexnames=false,pdftitle={The HOL System DESCRIPTION}]{hyperref}
+\usepackage{breakurl} % it depends on hyperref
 
 \usepackage{centernot}
-\newcommand{\notiff}{%
-  \mathrel{{\ooalign{\hidewidth$\not\phantom{"}$\hidewidth\cr$\iff$}}}}
+\newcommand{\notiff}{\nLeftrightarrow}
 
 \makeindex
 
@@ -86,6 +85,7 @@
 
    \include{system}                      % embedding HOL logic in ML
    \include{drules}                      % derived rules
+   \include{conv}                        % conversions
    \include{tactics}                     % tactics
    \include{theories}
    \include{definitions}
@@ -97,10 +97,9 @@
    % part 3: Theorem Proving with HOL
    % ---------------------------------------------------------------------
 
-%   \part{Theorem Proving with HOL}       % new part
+   %\part{Theorem Proving with HOL}       % new part
 
 %   \include{syntax}
-%   \include{conv}                        % conversions
 %   \include{see}
 
    % ---------------------------------------------------------------------

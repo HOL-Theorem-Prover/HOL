@@ -8,10 +8,6 @@ load "ringLib";
 
 open HolKernel Parse boolLib integerTheory integerRingTheory
 
-infix THEN THENL THENC o;
-infix 8 by;
-
-
 val num_to_int = intSyntax.int_injection;
 val int_0 = intSyntax.zero_tm
 val int_1 = intSyntax.one_tm

@@ -5,12 +5,11 @@
 structure x64AssemblerLib :> x64AssemblerLib =
 struct
 
-open HolKernel boolLib bossLib
+open HolKernel boolLib bossLib wordsSyntax
 
 local
-   open MutableMap x64 assemblerLib
-in
-end
+   open x64
+in end
 
 val ERR = Feedback.mk_HOL_ERR "x64AssemblerLib"
 
@@ -73,7 +72,7 @@ fun x64_syntax_pass1 q =
 
 local
    open x64
-   fun w64 i = BitsN.fromInt (i, 64)
+   fun w64 i = BitsN.fromNativeInt (i, 64)
    fun sub i = fn j => BitsN.- (j, w64 i)
    val s2 = sub 2
    val s5 = sub 5
@@ -128,58 +127,86 @@ val removeWhitespace =
 val x64_code_no_spaces = List.map removeWhitespace o x64_code
 
 local
-   val err = ERR "opcodeToBytes" ""
-   fun iter a =
-      fn h1 :: h2 :: r =>
-        (case IntExtra.fromHexString (String.implode [h1, h2]) of
-            SOME i => iter (BitsN.fromNat (i, 8) :: a) r
-          | NONE => raise err)
-       | [] => List.rev a
-       | _ => raise err
-   fun opcodeToBytes s =
-      let
-         val s = x64.stripSpaces s
-         val t = if String.isPrefix "0x" s
-                    then String.extract (s, 2, NONE)
-                 else s
-      in
-          SOME (iter [] (String.explode t))
-          handle HOL_ERR {origin_function = "opcodeToBytes", ...} =>
-             x64.p_bytes s
-      end
-   fun bytes [] = "encoding error"
-     | bytes l = L3.lowercase (x64.writeBytes l)
-   fun enc s =
-      case x64.instructionFromString s of x64.OK ast => x64.encode ast | _ => []
-   fun check false _ _ = NONE
-     | check true l s =
-         let val l2 = enc s in if l = l2 then NONE else SOME (bytes l2) end
+   val err = ERR "string_to_bytes"
+   fun substring_to_bytes a s =
+     case Substring.getc s of
+        SOME (h1, s2) =>
+          (case Substring.getc s2 of
+              SOME (h2, s3) =>
+                (case IntExtra.fromHexString (String.implode [h1, h2]) of
+                    SOME i => substring_to_bytes (BitsN.fromNat (i, 8) :: a) s3
+                  | NONE => raise err "not hex byte")
+            | NONE => raise err "odd sized string")
+      | NONE => List.rev a
+   fun strip0x s =
+     if String.isPrefix "0x" s then String.extract (s, 2, NONE) else s
+   val w8 = wordsSyntax.mk_int_word_type 8
+   fun toByte b = BitsN.fromNativeInt (wordsSyntax.uint_of_word b, 8)
 in
-   fun decodeToAssembly c s =
-      case opcodeToBytes s of
-         SOME [] => ("", NONE)
-       | SOME l =>
-           let
-              val bs = bytes l
-           in
-              case x64.x64_decode l of
-                 x64.Zfull_inst (_, (ast, [])) =>
-                    let
-                       val s = x64.joinString
-                                 (x64.instructionToString (ast, List.length l))
-                    in
-                       (s, SOME (bs, check c l s))
-                    end
-               |  _ => ("bytes " ^ bs, NONE)
-           end
-       | NONE => raise ERR "decodeToAssembly" "failed to parse bytes"
+   val string_to_bytes =
+      substring_to_bytes [] o Substring.full o String.concat o
+      List.map strip0x o String.tokens Char.isSpace
+  val bytes_to_string =
+    String.concat o Lib.separate " " o List.map (L3.lowercase o x64.s_byte)
+  fun term_to_bytes tm =
+    case Lib.total listSyntax.dest_list tm of
+      SOME (l, ty) =>
+         if ty <> w8 then raise ERR "term_to_bytes" "" else List.map toByte l
+     | NONE => raise ERR "term_to_bytes" ""
 end
 
-val x64_disassemble =
-   List.mapPartial (fn s => case decodeToAssembly true s of
-                               ("", NONE) => NONE
-                             | (v, _) => SOME v) o
-   assemblerLib.quote_to_strings
+local
+   fun decodeStream a =
+      fn [] => List.rev a
+       | l =>
+          let
+             val (h, t) = if List.length l <= 20
+                             then (l, [])
+                          else (List.take (l, 20), List.drop (l, 20))
+          in
+              case x64.x64_decode h of
+                 x64.Zfull_inst (_, (ast, SOME rest)) =>
+                    let
+                       val w = IntInf.fromInt (List.length h - List.length rest)
+                       val s = x64.joinString (x64.instructionToString (ast, w))
+                       val used =
+                          List.take (h, List.length h - List.length rest)
+                       val b = bytes_to_string used
+                    in
+                       decodeStream ((b, s) :: a) (rest @ t)
+                    end
+               | _ => decodeStream ((bytes_to_string [hd l], "") :: a) (tl l)
+          end
+in
+   val decodeByteStream = decodeStream []
+end
+
+val x64_disassemble_string = decodeByteStream o string_to_bytes
+val x64_disassemble_term = decodeByteStream o term_to_bytes
+
+local
+  fun enc s =
+    case x64.instructionFromString s of x64.OK ast => x64.encode ast | _ => []
+  fun check false _ _ = NONE
+    | check true l s =
+        let
+          val l2 = enc s
+        in
+          if l = l2 then NONE else SOME (bytes_to_string l2)
+        end
+in
+  fun decodeToAssembly c s =
+    let
+      val l = string_to_bytes s
+    in
+      case decodeByteStream l of
+         [(bs, "")] => ("bytes " ^ bs, NONE)
+       | [(bs, s)] => (s, SOME (bs, check c l s))
+       | _ => ("bytes " ^ bytes_to_string l, NONE)
+    end
+end
+
+val x64_disassemble1 = fst o decodeToAssembly true
 
 val pad = StringCvt.padRight #" "
 
@@ -253,7 +280,6 @@ print_x64_code
 
 print_x64_code
    `bytes ac ac
-    cpuid
     nop
     mov rax, rbx
     cmpxchg [rax+rbx*8+1000], rcx`

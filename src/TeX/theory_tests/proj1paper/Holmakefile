@@ -1,0 +1,21 @@
+paper.tex : paper.htex munge.exe overrides
+	./munge.exe -m';' overrides < $< > $@
+
+INCLUDES = ../proj1
+
+MAIN = ppLib
+
+munge.exe : $(MAIN).uo ppTheory.uo
+	$(protect $(HOLDIR)/bin/mkmunge.exe) $(MAIN)
+
+HOLHEAP = heap
+EXTRA_CLEANS = $(HOLHEAP) munge.exe paper.tex
+
+BARE_THYS = ../proj1/proj1ATheory
+DEPS = $(patsubst %,%.uo,$(BARE_THYS))
+
+$(HOLHEAP): $(DEPS)
+	$(protect $(HOLDIR)/bin/buildheap) -o $(HOLHEAP) $(BARE_THYS)
+
+holtexbasic.sty: $(HOLDIR)/src/TeX/holtexbasic.sty
+	$(CP) $< $@

@@ -40,8 +40,8 @@ val zLISP_BYTECODE_def = Define `
 
 val SPEC_PULL_EXISTS = prove(
   ``(?x. SPEC m p c (q x)) ==> SPEC m p c (SEP_EXISTS x. q x)``,
-  REPEAT STRIP_TAC \\ REVERSE (`SEP_IMP (q x) ((SEP_EXISTS x. q x))` by ALL_TAC)
-  THEN1 (IMP_RES_TAC SPEC_WEAKEN)
+  REPEAT STRIP_TAC \\ `SEP_IMP (q x) ((SEP_EXISTS x. q x))` suffices_by
+  (STRIP_TAC THEN IMP_RES_TAC SPEC_WEAKEN)
   \\ SIMP_TAC std_ss [SEP_IMP_def,SEP_EXISTS_THM] \\ METIS_TAC []);
 
 val SPEC_REMOVE_POST = prove(
@@ -71,7 +71,7 @@ val UPDATE_NTH_APPEND1 = prove(
   Induct \\ SIMP_TAC std_ss [LENGTH,APPEND,UPDATE_NTH_CONS]
   \\ REPEAT STRIP_TAC \\ Cases_on `n = 0`
   \\ FULL_SIMP_TAC std_ss [APPEND,CONS_11]
-  \\ Q.PAT_ASSUM `!ys.bbb` MATCH_MP_TAC \\ DECIDE_TAC);
+  \\ Q.PAT_X_ASSUM `!ys.bbb` MATCH_MP_TAC \\ DECIDE_TAC);
 
 val code_abbrevs_def = Define `
   code_abbrevs cs =
@@ -84,8 +84,7 @@ val code_abbrevs_def = Define `
 
 val SPEC_CODE_ABBREV = prove(
   ``SPEC m p (c INSERT d) q ==> !d2. d SUBSET d2 ==> SPEC m p (c INSERT d2) q``,
-  REPEAT STRIP_TAC \\ REVERSE (`(c INSERT d2) = (c INSERT d) UNION d2` by ALL_TAC)
-  THEN1 METIS_TAC [SPEC_ADD_CODE]
+  REPEAT STRIP_TAC \\ `(c INSERT d2) = (c INSERT d) UNION d2` suffices_by METIS_TAC [SPEC_ADD_CODE]
   \\ FULL_SIMP_TAC std_ss [EXTENSION,IN_INSERT,IN_UNION,SUBSET_DEF] \\ METIS_TAC []);
 
 val (_,_,sts,_) = prog_x64Lib.x64_tools
@@ -149,7 +148,7 @@ val X64_LISP_iSTEP_DATA = prove(
   \\ FULL_SIMP_TAC (srw_ss()) [CONTAINS_BYTECODE_def]
   THEN1 (FULL_SIMP_TAC std_ss [zLISP_BYTECODE_def,zLISP_def,
             lisp_inv_def,IS_TRUE_def,SEP_CLAUSES,SPEC_REFL])
-  \\ Q.PAT_ASSUM `op_name' = op_name` (fn th => FULL_SIMP_TAC std_ss [th])
+  \\ Q.PAT_X_ASSUM `op_name' = op_name` (fn th => FULL_SIMP_TAC std_ss [th])
   \\ FULL_SIMP_TAC std_ss [zLISP_BYTECODE_def] \\ MATCH_MP_TAC SPEC_PRE_DISJ_INTRO
   \\ FULL_SIMP_TAC std_ss [GSYM SPEC_PRE_EXISTS,SEP_CLAUSES,SPEC_MOVE_COND]
   \\ REPEAT STRIP_TAC
@@ -158,7 +157,7 @@ val X64_LISP_iSTEP_DATA = prove(
   \\ ASM_SIMP_TAC std_ss [bc_ref_def,BC_STEP_def,bc_length_def,LENGTH,
        GSYM word_add_n2w,WORD_ADD_ASSOC]
   \\ FULL_SIMP_TAC std_ss [EVAL_DATA_OP_def]
-  \\ Q.PAT_ASSUM `xxx = f` (fn th => FULL_SIMP_TAC std_ss [GSYM th])
+  \\ Q.PAT_X_ASSUM `xxx = f` (fn th => FULL_SIMP_TAC std_ss [GSYM th])
   \\ IMP_RES_TAC LENGTH_EQ_LEMMA
   \\ FULL_SIMP_TAC std_ss [REVERSE_DEF,LENGTH,APPEND,HD,TL,EL_CONS]
   THEN1
@@ -279,7 +278,7 @@ val ADDRESS_LEMMA = prove(
       INST_TYPE [``:'a``|->``:32``,``:'b``|->``:64``] sw2sw_def
       |> SIMP_RULE (std_ss++SIZES_ss) [] |> GSYM]
   \\ `p1 + k - p2 < 2**31 /\ (p1 + k - p2) < 4294967296` by (SIMP_TAC std_ss [] \\ DECIDE_TAC)
-  \\ `n2w (p1 + k - p2) <+ 0x80000000w:word32` by ALL_TAC THEN1
+  \\ `n2w (p1 + k - p2) <+ 0x80000000w:word32` by
          (FULL_SIMP_TAC (std_ss++SIZES_ss) [word_lo_n2w])
   \\ IMP_RES_TAC sw2sw_2compl \\ ASM_SIMP_TAC std_ss []
   \\ IMP_RES_TAC (Q.SPEC `64` IGNORE_SIGN_EXTEND)
@@ -516,15 +515,15 @@ val code_mem_BOUND = prove(
   \\ POP_ASSUM (ASSUME_TAC o Q.SPEC `BC_CODE ((r =+ SOME h) q,r + bc_length h)`)
   \\ FULL_SIMP_TAC std_ss [code_ptr_def,ADD_ASSOC] \\ REPEAT STRIP_TAC
   \\ RES_TAC \\ SIMP_TAC std_ss [code_mem_def,APPLY_UPDATE_THM]
-  \\ `0 < bc_length h` by ALL_TAC THEN1
+  \\ `0 < bc_length h` by
        (Cases_on `h` \\ EVAL_TAC \\ Cases_on `l` \\ EVAL_TAC)
   \\ `~(r = n)` by DECIDE_TAC \\ FULL_SIMP_TAC std_ss []);
 
 val code_length_LESS = prove(
   ``!bs. (code_mem (WRITE_CODE (BC_CODE ((\x. NONE),0)) bs) p = SOME x) ==>
          p < code_length bs``,
-  REPEAT STRIP_TAC \\ CCONTR_TAC \\ Q.PAT_ASSUM `xx = yy` MP_TAC
-  \\ `code_ptr (BC_CODE ((\x. NONE),0)) + code_length bs <= p` by ALL_TAC THEN1
+  REPEAT STRIP_TAC \\ CCONTR_TAC \\ Q.PAT_X_ASSUM `xx = yy` MP_TAC
+  \\ `code_ptr (BC_CODE ((\x. NONE),0)) + code_length bs <= p` by
         (FULL_SIMP_TAC std_ss [code_ptr_def] \\ DECIDE_TAC)
   \\ IMP_RES_TAC code_mem_BOUND \\ ASM_SIMP_TAC std_ss []
   \\ FULL_SIMP_TAC std_ss [code_mem_def]);
@@ -587,7 +586,7 @@ val SPEC_CODE_UNION = store_thm("SPEC_CODE_UNION",
   \\ FULL_SIMP_TAC std_ss [SPEC_def,RUN_def] \\ REPEAT STRIP_TAC
   \\ MP_TAC (Q.ISPEC `x3:'a->'b->bool` (Q.SPECL [`c`,`d`] (GSYM CODE_POOL_UNION_LEMMA)))
   \\ REPEAT STRIP_TAC
-  \\ Q.PAT_ASSUM `!state. bbb` (MP_TAC o Q.SPECL [`state`,`r * r'`])
+  \\ Q.PAT_X_ASSUM `!state. bbb` (MP_TAC o Q.SPECL [`state`,`r * r'`])
   \\ FULL_SIMP_TAC std_ss [AC STAR_ASSOC STAR_COMM]);
 
 val SPEC_zCODE_SPLIT_UNION = prove(
@@ -635,7 +634,7 @@ val code_mem_SPLIT = prove(
   \\ Cases_on `r = p1` \\ FULL_SIMP_TAC std_ss [] THEN1
    (Q.LIST_EXISTS_TAC [`bs`,`[]`] \\ FULL_SIMP_TAC std_ss [APPEND_NIL]
     \\ IMP_RES_TAC WRITE_CODE_IMP_LENGTH \\ DECIDE_TAC)
-  \\ Q.PAT_ASSUM `!xx.bbb` (MP_TAC o Q.SPECL [`n`,`p1`])
+  \\ Q.PAT_X_ASSUM `!xx.bbb` (MP_TAC o Q.SPECL [`n`,`p1`])
   \\ FULL_SIMP_TAC std_ss [code_mem_def]
   \\ REPEAT STRIP_TAC
   \\ Q.LIST_EXISTS_TAC [`bs1`,`bs2 ++ [x']`]
@@ -676,7 +675,7 @@ val code_heap_IMP = prove(
   \\ FULL_SIMP_TAC std_ss [bs2bytes_APPEND,bs_symbol_ok_APPEND]
   \\ FULL_SIMP_TAC std_ss [one_byte_list_APPEND,LENGTH_APPEND,GSYM word_add_n2w]
   \\ FULL_SIMP_TAC std_ss [WORD_ADD_ASSOC,bs2bytes_def,APPEND_NIL,LENGTH_bs2bytes]
-  \\ Q.PAT_ASSUM `ddd (fun2set (d,dd))` MP_TAC
+  \\ Q.PAT_X_ASSUM `ddd (fun2set (d,dd))` MP_TAC
   \\ SIMP_TAC std_ss [GSYM STAR_ASSOC]
   \\ ONCE_REWRITE_TAC [STAR_COMM]
   \\ SIMP_TAC std_ss [GSYM STAR_ASSOC]
@@ -697,13 +696,13 @@ val zLISP_BYTECODE_MOVE_CODE = prove(
         (code_abbrevs cs)
         (zLISP_BYTECODE (a1,a2,sl,sl1,e,ex,cs,rbp,SOME T,NONE) (xs2,pp2,r2,bc2) (stack,input,xbp,rstack2,amnt,EL 4 cs))``,
   REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss []
-  \\ Q.PAT_ASSUM `!ddd.bb` (ASSUME_TAC o Q.SPEC `NONE`)
+  \\ Q.PAT_X_ASSUM `!ddd.bb` (ASSUME_TAC o Q.SPEC `NONE`)
   \\ FULL_SIMP_TAC std_ss [zLISP_BYTECODE_def,SPEC_PRE_DISJ_REMOVE]
   \\ SIMP_TAC std_ss [Once zLISP_def,Once zCODE_MEMORY_def,Once lisp_inv_def]
   \\ FULL_SIMP_TAC std_ss [SEP_CLAUSES,zCODE_UNCHANGED_def,cond_EXISTS]
   \\ SIMP_TAC std_ss [GSYM SPEC_PRE_EXISTS] \\ REPEAT STRIP_TAC
   \\ SIMP_TAC (std_ss++sep_cond_ss) [SPEC_MOVE_COND] \\ REPEAT STRIP_TAC
-  \\ Q.PAT_ASSUM `!xx.bb` (MP_TAC o Q.SPECL [`INIT_SYMBOLS ++ sym`,`SOME (dd,d)`])
+  \\ Q.PAT_X_ASSUM `!xx.bb` (MP_TAC o Q.SPECL [`INIT_SYMBOLS ++ sym`,`SOME (dd,d)`])
   \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC
   THEN1 (FULL_SIMP_TAC std_ss [code_heap_def] \\ METIS_TAC [bc_symbols_ok_IMP])
   \\ STRIP_TAC \\ FULL_SIMP_TAC std_ss [X64_SPEC_EXLPODE_CODE_LEMMA]
@@ -745,7 +744,7 @@ val zLISP_BYTECODE_MOVE_CODE = prove(
      (REPEAT (POP_ASSUM (K ALL_TAC))
       \\ SIMP_TAC std_ss [SEP_IMP_def,SEP_EXISTS_THM] \\ REPEAT STRIP_TAC
       \\ FULL_SIMP_TAC (std_ss++sep_cond_ss) [cond_STAR]
-      \\ REPEAT (Q.PAT_ASSUM `dddd = ddddd` (fn th => FULL_SIMP_TAC std_ss [GSYM th]))
+      \\ REPEAT (Q.PAT_X_ASSUM `dddd = ddddd` (fn th => FULL_SIMP_TAC std_ss [GSYM th]))
       \\ REPEAT INST_EXISTS_TAC
       \\ FULL_SIMP_TAC (std_ss++star_ss) [SEP_CLAUSES,zCODE_MEMORY_def])
     \\ FULL_SIMP_TAC std_ss [zLISP_FAIL_def]
@@ -753,13 +752,13 @@ val zLISP_BYTECODE_MOVE_CODE = prove(
     \\ REPEAT (POP_ASSUM (K ALL_TAC))
     \\ SIMP_TAC std_ss [SEP_IMP_def,SEP_EXISTS_THM] \\ REPEAT STRIP_TAC
     \\ FULL_SIMP_TAC (std_ss++sep_cond_ss) [cond_STAR]
-    \\ REPEAT (Q.PAT_ASSUM `dddd = ddddd` (fn th => FULL_SIMP_TAC std_ss [th]))
+    \\ REPEAT (Q.PAT_X_ASSUM `dddd = ddddd` (fn th => FULL_SIMP_TAC std_ss [th]))
     \\ Q.LIST_EXISTS_TAC [`SOME T`,`vars`]
     \\ POP_ASSUM MP_TAC \\ Q.SPEC_TAC (`vars`,`x`)
     \\ SIMP_TAC std_ss [FORALL_PROD,zLISP_def,SEP_CLAUSES,SEP_EXISTS_THM]
     \\ REPEAT STRIP_TAC
     \\ FULL_SIMP_TAC (std_ss++sep_cond_ss) [cond_STAR,zCODE_UNCHANGED_def]
-    \\ REPEAT (Q.PAT_ASSUM `dddd = ddddd` (fn th => FULL_SIMP_TAC std_ss [GSYM th]))
+    \\ REPEAT (Q.PAT_X_ASSUM `dddd = ddddd` (fn th => FULL_SIMP_TAC std_ss [GSYM th]))
     \\ REPEAT INST_EXISTS_TAC
     \\ FULL_SIMP_TAC (std_ss++star_ss) [SEP_CLAUSES,zCODE_MEMORY_def])
   \\ SIMP_TAC std_ss [SEP_CLAUSES,zLISP_def,zCODE_UNCHANGED_def]
@@ -920,7 +919,7 @@ val SPEC_zCODE_SET_LEMMA = prove(
   \\ MATCH_MP_TAC (SIMP_RULE std_ss [PULL_FORALL_IMP,AND_IMP_INTRO] SPEC_SUBSET_CODE)
   \\ Q.EXISTS_TAC `{(w + n2w n,[EL n xs]) | n | n < LENGTH xs}`
   \\ ASM_SIMP_TAC std_ss []
-  \\ Q.PAT_ASSUM `one_byte_list w xs (fun2set (d,dd DIFF dx))` MP_TAC
+  \\ Q.PAT_X_ASSUM `one_byte_list w xs (fun2set (d,dd DIFF dx))` MP_TAC
   \\ REPEAT (POP_ASSUM (K ALL_TAC))
   \\ Q.SPEC_TAC (`w`,`w`) \\ Q.SPEC_TAC (`dx`,`dx`) \\ Q.SPEC_TAC (`xs`,`xs`)
   \\ Induct \\ FULL_SIMP_TAC std_ss [LENGTH,GSPECIFICATION,SUBSET_DEF]
@@ -983,7 +982,7 @@ val X64_LISP_iSTEP_CONST_SYM_PART2 = prove(
   \\ `?k. (LIST_FIND 0 s (INIT_SYMBOLS ++ sym) = SOME k) /\ k < 536870912 /\
       ?dx. (one_byte_list (p + 0x17w)
               ([0x41w; 0xB8w] ++ IMMEDIATE32 (n2w (8 * THE (LIST_FIND 0 s ((INIT_SYMBOLS ++ sym))) + 3))))
-          (fun2set (d,dd DIFF dx))` by ALL_TAC THEN1
+          (fun2set (d,dd DIFF dx))` by
    (IMP_RES_TAC code_heap_IMP \\ POP_ASSUM (K ALL_TAC)
     \\ FULL_SIMP_TAC std_ss [bc_symbols_ok_def]
     \\ `?k. (LIST_FIND 0 s (INIT_SYMBOLS ++ sym) = SOME k) /\
@@ -993,7 +992,7 @@ val X64_LISP_iSTEP_CONST_SYM_PART2 = prove(
          SEP_CLAUSES,SEP_EXISTS_THM,cond_STAR]
     \\ STRIP_TAC THEN1 DECIDE_TAC
     \\ FULL_SIMP_TAC std_ss [bc_ref_def,APPEND]
-    \\ Q.PAT_ASSUM `ddd (fun2set (d,dd))` MP_TAC
+    \\ Q.PAT_X_ASSUM `ddd (fun2set (d,dd))` MP_TAC
     \\ ONCE_REWRITE_TAC [STAR_COMM] \\ Q.UNABBREV_TAC `p`
     \\ NTAC 23 (SIMP_TAC std_ss [Once one_byte_list_def,word_arith_lemma1,GSYM ADD_ASSOC])
     \\ SIMP_TAC std_ss [STAR_ASSOC]
@@ -1006,7 +1005,7 @@ val X64_LISP_iSTEP_CONST_SYM_PART2 = prove(
   \\ HO_MATCH_MP_TAC SPEC_PULL_EXISTS \\ Q.EXISTS_TAC `w0n`
   \\ REPEAT (HO_MATCH_MP_TAC SPEC_PULL_EXISTS \\ EX_TAC)
   \\ Q.PAT_ABBREV_TAC `ii = lisp_inv zzz zzzz zzzzzz`
-  \\ `ii` by ALL_TAC THEN1
+  \\ `ii` by
    (Q.UNABBREV_TAC `ii` \\ FULL_SIMP_TAC std_ss [lisp_inv_def]
     \\ Q.EXISTS_TAC `H_DATA (INR (n2w (THE (LIST_FIND 0 s (INIT_SYMBOLS ++ sym)))))`
     \\ REPEAT EX_TAC \\ FULL_SIMP_TAC std_ss []
@@ -1110,7 +1109,7 @@ val X64_LISP_iSTEP = store_thm("X64_LISP_iSTEP",
          lisp_inv_def,IS_TRUE_def,SEP_CLAUSES,SPEC_REFL,SPEC_FALSE_PRE])
   \\ FULL_SIMP_TAC std_ss []
   \\ POP_ASSUM MP_TAC \\ MATCH_MP_TAC zLISP_BYTECODE_MOVE_CODE \\ REPEAT STRIP_TAC
-  \\ `~(bc1.code p1 = NONE)` by ALL_TAC THEN1 (FULL_SIMP_TAC std_ss [])
+  \\ `~(bc1.code p1 = NONE)` by (FULL_SIMP_TAC std_ss [])
   \\ POP_ASSUM MP_TAC \\ MATCH_MP_TAC zLISP_BYTECODE_PC_BOUND
   \\ FULL_SIMP_TAC std_ss [] \\ REPEAT STRIP_TAC
   \\ `bc_ref (p1,syms) xx = bc_ref (p1,syms) (THE (bc1.code p1))` by

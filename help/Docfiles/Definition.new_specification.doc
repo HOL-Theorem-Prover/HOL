@@ -47,8 +47,8 @@ property shown above.
 
 \COMMENTS
 The introduced constants have a prefix parsing status. To alter this,
-use {set_fixity}. Typical fixity values are {Prefix}, {Binder},
-{Infixl n}, {Infixr n}, {Suffix n}, {TruePrefix n} or {Closefix}.
+use {set_fixity}. Typical fixity values are {Binder}, {Infixl n},
+{Infixr n}, {Prefix n}, {Suffix n}, or {Closefix}.
 
 \SEEALSO
 Definition.gen_new_specification,

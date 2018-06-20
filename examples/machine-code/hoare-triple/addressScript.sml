@@ -469,7 +469,7 @@ val ALIGNED_LESS_ADD = store_thm("ALIGNED_LESS_ADD",
   \\ IMP_RES_TAC (RW [GSYM ALIGNED_def] EXISTS_ADDR30)
   \\ FULL_SIMP_TAC std_ss [GSYM ADDR32_SUC,
        ADDR32_LESS,GSYM (EVAL ``ADDR32 0w``),ADDR32_11]
-  \\ Q.PAT_ASSUM `~(y + 1w = 0w)` MP_TAC
+  \\ Q.PAT_X_ASSUM `~(y + 1w = 0w)` MP_TAC
   \\ REPEAT (POP_ASSUM (K ALL_TAC))
   \\ Q.SPEC_TAC (`y`,`y`) \\ Cases_word
   \\ ASM_SIMP_TAC std_ss [word_add_n2w,n2w_11,ZERO_LT_dimword,WORD_LO,w2n_n2w]
@@ -690,7 +690,7 @@ val WORD_DIVISION = store_thm("WORD_DIVISION",
   \\ ASM_SIMP_TAC std_ss [word_add_n2w,word_mul_n2w,WORD_LO,w2n_n2w]
   \\ FULL_SIMP_TAC bool_ss [NOT_ZERO_LT_ZERO]
   \\ IMP_RES_TAC (GSYM DIVISION)
-  \\ REPEAT (Q.PAT_ASSUM `!k. bbb` (ASSUME_TAC o Q.SPEC `n'`))
+  \\ REPEAT (Q.PAT_X_ASSUM `!k. bbb` (ASSUME_TAC o Q.SPEC `n'`))
   \\ IMP_RES_TAC LESS_TRANS
   \\ ASM_SIMP_TAC std_ss []);
 

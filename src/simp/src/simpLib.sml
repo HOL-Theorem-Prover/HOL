@@ -133,16 +133,17 @@ fun merge_names list =
 (*---------------------------------------------------------------------------*)
 
 fun merge_ss (s:ssfrag list) =
-    SSFRAG_CON {name=merge_names (map (#name o D) s),
-                convs=flatten (map (#convs o D) s),
-                rewrs=flatten (map (#rewrs o D) s),
-                filter=SOME (end_foldr (op oo)
-                                       (mapfilter (the o #filter o D) s))
-                       handle HOL_ERR _ => NONE,
-                ac=flatten (map (#ac o D) s),
-	        dprocs=flatten (map (#dprocs o D) s),
-	        congs=flatten (map (#congs o D) s),
-                relsimps = flatten (map (#relsimps o D) s)};
+  SSFRAG_CON
+    { name     = merge_names (map (#name o D) s),
+      convs    = flatten (map (#convs o D) s),
+      rewrs    = flatten (map (#rewrs o D) s),
+      filter   = SOME (end_foldr (op oo) (mapfilter (the o #filter o D) s))
+                 handle HOL_ERR _ => NONE,
+      ac       = flatten (map (#ac o D) s),
+      dprocs   = flatten (map (#dprocs o D) s),
+      congs    = flatten (map (#congs o D) s),
+      relsimps = flatten (map (#relsimps o D) s)
+    }
 
 fun named_rewrites name = (name_ss name) o rewrites;
 fun named_merge_ss name = (name_ss name) o merge_ss;
@@ -503,6 +504,45 @@ fun remove_ssfrags ss names =
        |> snd |> List.rev
        |> mk_simpset
 
+local
+  val lhs_of_thm = boolSyntax.lhs o snd o boolSyntax.strip_forall o Thm.concl
+  fun term_of_thm th =
+    case (Lib.total lhs_of_thm th, Thm.hyp th) of
+       (SOME tm, []) => tm
+     | _ => boolSyntax.T
+  fun match_eq tm1 tm2 =
+    Lib.can (Term.match_term tm1) tm2 andalso Lib.can (Term.match_term tm2) tm1
+  fun exists_match l thm = List.exists (match_eq (term_of_thm thm)) l
+  fun remove_theorems_from_frag f
+    (SSFRAG_CON { name, convs, rewrs, ac, filter, dprocs, congs, relsimps}) =
+      SSFRAG_CON
+        { name = name,
+          convs = convs,
+          rewrs = List.mapPartial (f false) rewrs,
+          ac = let val ok = Option.isSome o (f true) in
+                 List.filter (fn (th1, th2) => ok th1 andalso ok th2) ac
+               end,
+          filter = filter,
+          dprocs = dprocs,
+          congs = congs,
+          relsimps = relsimps
+        }
+in
+  fun remove_theorems avoids (SS {mk_rewrs, ssfrags, ...}) =
+    let
+      fun thm_to_thms thm =
+         List.map fst (mk_rewrs (thm, BoundedRewrites.BOUNDED (ref 1)))
+      val part = List.partition (exists_match avoids)
+      fun f ac thm =
+        let
+          val (l, r) = part (if ac then [thm] else thm_to_thms thm)
+        in
+          if List.null l then SOME thm else Lib.total Drule.LIST_CONJ r
+        end
+    in
+      mk_simpset (List.rev (List.map (remove_theorems_from_frag f) ssfrags))
+    end
+end
 
 (*---------------------------------------------------------------------------*)
 (* SIMP_QCONV : simpset -> thm list -> conv                                  *)
@@ -672,55 +712,50 @@ fun merge_names list =
 fun dest_convdata {name,key as SOME(_,tm),trace,conv} = (name,SOME tm)
   | dest_convdata {name,...} = (name,NONE);
 
-fun pp_ssfrag ppstrm (SSFRAG_CON {name,convs,rewrs,ac,dprocs,congs,...}) =
- let open Portable
+fun pp_ssfrag (SSFRAG_CON {name,convs,rewrs,ac,dprocs,congs,...}) =
+ let open Portable smpp
      val name = (case name of SOME s => s | NONE => "<anonymous>")
      val convs = map dest_convdata convs
      val dps = case merge_names (map (#name o dest_reducer) dprocs)
                 of NONE => []
                  | SOME n => [n]
-     val {add_string,add_break,begin_block,end_block, add_newline,
-          flush_ppstream,...} = Portable.with_ppstream ppstrm
-     val pp_thm = pp_thm ppstrm
-     val pp_term = Parse.term_pp_with_delimiters Hol_pp.pp_term ppstrm
+     val pp_term = lift (Parse.term_pp_with_delimiters Hol_pp.pp_term)
+     val pp_thm = lift pp_thm
      fun pp_thm_pair (th1,th2) =
-        (begin_block CONSISTENT 0;
-         pp_thm th1; add_break(2,0); pp_thm th2;
-         end_block())
+        block CONSISTENT 0 (pp_thm th1 >> add_break(2,0) >> pp_thm th2)
      fun pp_conv_info (n,SOME tm) =
-          (begin_block CONSISTENT 0;
-           add_string (n^", keyed on pattern"); add_break(2,0); pp_term tm;
-           end_block())
+          block CONSISTENT 0 (
+            add_string (n^", keyed on pattern") >> add_break(2,0) >> pp_term tm
+          )
        | pp_conv_info (n,NONE) = add_string n
-     fun nl2() = (add_newline();add_newline())
-     fun vspace l = if null l then () else nl2()
+     val nl2 = add_newline >> add_newline
+     fun vspace l = if null l then nothing else nl2
      fun vblock(header, ob_pr, obs) =
-       if null obs then ()
+       if null obs then nothing
        else
-        ( begin_block CONSISTENT 3;
-          add_string (header^":");
-          add_newline();
-          Portable.pr_list ob_pr
-            (fn () => ()) add_newline obs;
-          end_block();
-          add_break(1,0))
+         block CONSISTENT 3 (
+          add_string (header^":") >>
+          add_newline >>
+          pr_list ob_pr add_newline obs
+         ) >> add_break(1,0)
  in
-  begin_block CONSISTENT 0;
-  add_string ("Simplification set: "^name);
-  add_newline();
-  vblock("Conversions",pp_conv_info,convs);
-  vblock("Decision procedures",add_string,dps);
-  vblock("Congruence rules",pp_thm,congs);
-  vblock("AC rewrites",pp_thm_pair,ac);
-  vblock("Rewrite rules",pp_thm,rewrs);
-  end_block ()
+   block CONSISTENT 0 (
+     add_string ("Simplification set: "^name) >> add_newline >>
+     vblock("Conversions",pp_conv_info,convs) >>
+     vblock("Decision procedures",add_string,dps) >>
+     vblock("Congruence rules",pp_thm,congs) >>
+     vblock("AC rewrites",pp_thm_pair,ac) >>
+     vblock("Rewrite rules",pp_thm,rewrs)
+   )
  end
 
-fun pp_simpset ppstrm ss =
-  let open Portable
-      val pp_ssfrag = pp_ssfrag ppstrm
- in pr_list pp_ssfrag (fn () => ()) (fn () => add_newline ppstrm)
-            (rev (ssfrags_of ss))
- end;
+fun pp_simpset ss =
+  let
+    open Portable smpp
+  in
+    Parse.mlower (pr_list pp_ssfrag add_newline (rev (ssfrags_of ss)))
+  end;
+
+val pp_ssfrag = Parse.mlower o pp_ssfrag
 
 end (* struct *)

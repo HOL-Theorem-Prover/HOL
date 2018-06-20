@@ -1,0 +1,7 @@
+.PHONY: all
+
+all:
+	$(CP) Holmakefile output
+	$(protect $(HOLDIR)/tools/cmp/cmp.exe) Holmakefile output
+
+EXTRA_CLEANS = output

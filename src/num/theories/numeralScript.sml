@@ -55,7 +55,7 @@ val INDUCT_TAC = INDUCT_THEN INDUCTION ASSUME_TAC
 val _ = print "Developing rewrites for numeral addition\n"
 
 val PRE_ADD = prove(
-  --`!n m. PRE (n + SUC m) = n + m`--,
+  “!n m. PRE (n + SUC m) = n + m”,
   INDUCT_TAC THEN SIMP_TAC bool_ss [ADD_CLAUSES, PRE]);
 
 val numeral_suc = store_thm(
@@ -273,11 +273,11 @@ val _ = print "   (includes initiality theorem for bit functions)\n";
 
 val numeral_pre = store_thm(
   "numeral_pre",
-  --`(PRE ZERO = ZERO) /\
+  “(PRE ZERO = ZERO) /\
      (PRE (BIT1 ZERO) = ZERO) /\
      (!n. PRE (BIT1 (BIT1 n)) = BIT2 (PRE (BIT1 n))) /\
      (!n. PRE (BIT1 (BIT2 n)) = BIT2 (BIT1 n)) /\
-     (!n. PRE (BIT2 n) = BIT1 n)`--,
+     (!n. PRE (BIT2 n) = BIT1 n)”,
   SIMP_TAC bool_ss [BIT1, BIT2, PRE, PRE_ADD,
                     ADD_CLAUSES, ADD_ASSOC, PRE, ALT_ZERO]);
 
@@ -326,7 +326,7 @@ val bit_initiality = store_thm(
   REPEAT STRIP_TAC THEN
   ASSUME_TAC
     (MP (INST_TYPE [Type.beta |-> Type.alpha]
-           (ISPEC (--`$<`--) relationTheory.WF_RECURSION_THM))
+           (ISPEC “$<” relationTheory.WF_RECURSION_THM))
         WF_LESS) THEN
   POP_ASSUM (STRIP_ASSUME_TAC o CONJUNCT1 o
              SIMP_RULE bool_ss [EXISTS_UNIQUE_DEF] o

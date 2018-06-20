@@ -1,4 +1,4 @@
-structure KernelTypes :> KernelTypes =
+structure KernelTypes =
 struct
 
 (*---------------------------------------------------------------------------

@@ -62,10 +62,10 @@ val shift_left_lemma = prove(
   THEN REWRITE_TAC [word_add_n2w,GSYM TIMES2]
   THEN SIMP_TAC std_ss [LET_DEF]
   THEN `m - (2 * n) < m - n` by DECIDE_TAC
-  THEN Q.PAT_ASSUM `!m.bbb` (ASSUME_TAC o UNDISCH o Q.SPEC `m - (2 * n)`)
-  THEN Q.PAT_ASSUM `!m.bbb` (ASSUME_TAC o REWRITE_RULE [] o Q.SPECL [`m`,`2*n`])
+  THEN Q.PAT_X_ASSUM `!m.bbb` (ASSUME_TAC o UNDISCH o Q.SPEC `m - (2 * n)`)
+  THEN Q.PAT_X_ASSUM `!m.bbb` (ASSUME_TAC o REWRITE_RULE [] o Q.SPECL [`m`,`2*n`])
   THEN `2 * n < 4294967296 /\ 2 * n <> 0` by DECIDE_TAC
-  THEN Q.PAT_ASSUM `!m.bbb` (STRIP_ASSUME_TAC o UNDISCH_ALL o
+  THEN Q.PAT_X_ASSUM `!m.bbb` (STRIP_ASSUME_TAC o UNDISCH_ALL o
          REWRITE_RULE [GSYM AND_IMP_INTRO] o Q.SPEC `2 * k`)
   THEN Q.EXISTS_TAC `SUC i`
   THEN FULL_SIMP_TAC std_ss [AC MULT_ASSOC MULT_COMM,EXP]);
@@ -143,7 +143,7 @@ val sub_and_shift_lemma = prove(
    (`t < m /\ q * m + t < m * 2 ** SUC k /\ m * 2 ** k < 2 ** 32 /\
        q * m + t < 2 ** 32` by
       (FULL_SIMP_TAC (std_ss++SIZES_ss) [EXP,GSYM NOT_LESS] THEN DECIDE_TAC)
-    THEN Q.PAT_ASSUM `!m l. bbb`
+    THEN Q.PAT_X_ASSUM `!m l. bbb`
       (ASSUME_TAC o GSYM o UNDISCH_ALL o REWRITE_RULE [GSYM AND_IMP_INTRO] o
        Q.SPECL [`m`,`l`,`q`,`t`])
     THEN FULL_SIMP_TAC std_ss []
@@ -161,7 +161,7 @@ val sub_and_shift_lemma = prove(
           m * 2 ** k < 4294967296 /\ (q - 2 * 2 ** k) * m + t < 4294967296` by
      (FULL_SIMP_TAC (std_ss++SIZES_ss) [EXP]
       THEN REPEAT STRIP_TAC THEN REPEAT DECIDE_TAC)
-  THEN Q.PAT_ASSUM `!m l. bbb`
+  THEN Q.PAT_X_ASSUM `!m l. bbb`
     (ASSUME_TAC o UNDISCH_ALL o REWRITE_RULE [GSYM AND_IMP_INTRO] o
      Q.SPECL [`m`,`l + (2 ** k * 2)`,`q - 2 * 2 ** k`,`t`])
   THEN FULL_SIMP_TAC std_ss [AC MULT_ASSOC MULT_COMM]
@@ -170,8 +170,8 @@ val sub_and_shift_lemma = prove(
   THEN REWRITE_TAC [SUB_LEFT_ADD]
   THEN Cases_on `2 * 2 ** k = q` THEN1 ASM_SIMP_TAC std_ss []
   THEN `~(q <= 2 * 2 ** k)` by
-   (Q.PAT_ASSUM `2 * 2 ** k <> q` MP_TAC
-    THEN Q.PAT_ASSUM `2 * 2 ** k <= q` MP_TAC
+   (Q.PAT_X_ASSUM `2 * 2 ** k <> q` MP_TAC
+    THEN Q.PAT_X_ASSUM `2 * 2 ** k <= q` MP_TAC
     THEN REPEAT (POP_ASSUM (K ALL_TAC))
     THEN DECIDE_TAC)
   THEN ASM_SIMP_TAC std_ss []);
@@ -184,7 +184,7 @@ val arm_div_lemma = store_thm("arm_div_lemma",
   SIMP_TAC bool_ss [arm_div_def,arm_div_pre_def,LET_DEF]
   THEN NTAC 3 STRIP_TAC
   THEN IMP_RES_TAC shift_left_lemma
-  THEN Q.PAT_ASSUM `!k.bbb` (STRIP_ASSUME_TAC o Q.SPEC `1`)
+  THEN Q.PAT_X_ASSUM `!k.bbb` (STRIP_ASSUME_TAC o Q.SPEC `1`)
   THEN ASM_SIMP_TAC std_ss []
   THEN `0 < n` by DECIDE_TAC
   THEN IMP_RES_TAC (GSYM DIVISION)
@@ -332,4 +332,3 @@ val _ = save_thm("ppc_div_mod_thm",ppc_div_mod_thm);
 
 
 val _ = export_theory();
-

@@ -9,10 +9,10 @@ Computes by inference the result of indexing an element from a list.
 conversion, list.
 
 \DESCRIBE
-For any object language list of the form {--`[x0;...xk;...;xn]`--} ,
+For any object language list of the form {“[x0;...xk;...;xn]”} ,
 the result of evaluating
 {
-   EL_CONV (--`EL k [x0;...xk;...;xn]`--)
+   EL_CONV “EL k [x0;...xk;...;xn]”
 }
 is the theorem
 {

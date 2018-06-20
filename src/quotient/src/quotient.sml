@@ -61,7 +61,6 @@ struct
   open Parse
   val (Type,Term) = parse_from_grammars(quotient_option_grammars)
   fun == q _ = Type q
-  fun -- q _ = Term q
 end
 open Parse
 
@@ -215,23 +214,23 @@ OR {equiv} is a "partial equivalence theorem", of the form
 
 (* Partial equivalence test case:
 
-val R = --`\x y:'a. Q x /\ Q y /\ (f x = f y :'b)`--;
+val R = “\x y:'a. Q x /\ Q y /\ (f x = f y :'b)”;
 
 val FUN_PEQUIV = store_thm
   ("FUN_PEQUIV",
-   (--`!(f:'a->'b) Q.
+   (“!(f:'a->'b) Q.
          (?x. Q x) ==>
          (?x. ^R x x) /\
          (!x y. ^R x y =
                 ^R x x /\
                 ^R y y /\
-                (^R x = ^R y))`--),
+                (^R x = ^R y))”),
    PROVE_TAC[]
   );
 
 val NONZERO_EXISTS = store_thm
   ("NONZERO_EXISTS",
-   (--`?n. (\n. ~(n = 0)) n`--),
+   (“?n. (\n. ~(n = 0)) n”),
    RW_TAC arith_ss []
   );
 
@@ -293,21 +292,21 @@ fun define_partial_quotient_type tyname abs rep equiv =
         val cty = type_of rcl
         val c = Term.variant (free_vars rcl) (mk_var{Name="c", Ty=cty})
         val c' = prim_variant (c::free_vars rcl) c
-        val P = (--`\ ^c. ?^r. ^Rrr /\ (^c = ^rcl)`--)
+        val P = (“\ ^c. ?^r. ^Rrr /\ (^c = ^rcl)”)
         val x = Term.variant (free_vars P) (mk_var{Name="x", Ty=ty})
         val xcl = mk_comb{Rator=REL, Rand=x}
         val Rxx = mk_comb{Rator=xcl, Rand=x}
         val ty_exists =
             CHOOSE (x,exist)
-              (EXISTS (--`?^c. ^P ^c`--, xcl)
+              (EXISTS (“?^c. ^P ^c”, xcl)
                  (EQ_MP (SYM (BETA_CONV (mk_comb{Rator=P, Rand=xcl})))
-                        (EXISTS (--`?^r. ^Rrr /\ (^xcl = ^rcl)`--, x)
+                        (EXISTS (“?^r. ^Rrr /\ (^xcl = ^rcl)”, x)
                            (CONJ (ASSUME Rxx) (REFL xcl)))))
             handle e => Raise e
 
 (* or, alternatively,
         val ty_exists = TAC_PROOF(([],
-                        --`?^c. ^P ^c`--),
+                        “?^c. ^P ^c”),
                         STRIP_ASSUME_TAC exist
                         THEN FIRST_ASSUM (fn th => EXISTS_TAC(rator(concl th)))
                         THEN CONV_TAC BETA_CONV
@@ -368,9 +367,9 @@ but it could look like
 (*
         val cty_ABS_REP = store_thm
                 (tyname ^ "_ABS_REP_CLASS",
-                 (--`(!a. ^cty_ABS (^cty_REP a) = a) /\
+                 (“(!a. ^cty_ABS (^cty_REP a) = a) /\
                      (!^c. ^(beta_conv (mk_comb{Rator=P, Rand=c})) =
-                           (^cty_REP (^cty_ABS ^c) = ^c))`--),
+                           (^cty_REP (^cty_ABS ^c) = ^c))”),
                  REWRITE_TAC[ty_bijections]
                  THEN REWRITE_TAC[GSYM ty_bijections]
                  THEN BETA_TAC
@@ -420,7 +419,7 @@ but it could look like
                             Ty = mk_type{Tyop="fun", Args=[nty,ty]}}
         val ty_REP_def =
             new_definition(rep ^ "_def",
-               --`^ty_REP a = $@ (^cty_REP a)`--)
+               “^ty_REP a = $@ (^cty_REP a)”)
         val ty_REP = (rator o lhs o #Body o dest_forall o concl) ty_REP_def
 
 (* ===================================================================== *)
@@ -433,7 +432,7 @@ but it could look like
                             Ty = mk_type{Tyop="fun", Args=[ty,nty]}}
         val ty_ABS_def =
             new_definition(abs ^ "_def",
-               --`^ty_ABS r = ^cty_ABS (^REL r)`--)
+               “^ty_ABS r = ^cty_ABS (^REL r)”)
         val ty_ABS = (rator o lhs o #Body o dest_forall o concl) ty_ABS_def
 
 (* ======================= *)
@@ -461,8 +460,8 @@ but it could look like
 *)
 
         val cty_REP_ABS = TAC_PROOF(([],
-            (--`!r. ^REL r r ==>
-                       (^cty_REP (^cty_ABS (^REL r)) = ^REL r)`--)),
+            (“!r. ^REL r r ==>
+                       (^cty_REP (^cty_ABS (^REL r)) = ^REL r)”)),
             GEN_TAC
             THEN DISCH_TAC
             THEN PURE_REWRITE_TAC[GSYM REP_ABS]
@@ -494,9 +493,9 @@ but it could look like
 
 (* Alternative proof:
         val cty_ABS_11 = TAC_PROOF(([],
-            (--`!r r'. ^REL r r ==> ^REL r' r' ==>
+            (“!r r'. ^REL r r ==> ^REL r' r' ==>
                        ((^cty_ABS (^REL r) = ^cty_ABS (^REL r')) =
-                        (^REL r = ^REL r'))`--)),
+                        (^REL r = ^REL r'))”)),
             GEN_TAC THEN GEN_TAC
             THEN DISCH_TAC THEN DISCH_TAC
             THEN EQ_TAC
@@ -520,8 +519,8 @@ but it could look like
 
 (* Prove the quotient type bijection properties for ABS and REP. *)
 
-        val ABS_REP_tm = (--`^ty_ABS (^ty_REP a)`--)
-        val inst = ASSUME (--`^cty_REP a = ^rcl`--)
+        val ABS_REP_tm = (“^ty_ABS (^ty_REP a)”)
+        val inst = ASSUME (“^cty_REP a = ^rcl”)
         val REP_a_tm = mk_comb{Rator=ty_REP, Rand=atm}
 
         val ty_ABS_REP =
@@ -536,7 +535,7 @@ but it could look like
                (PURE_REWRITE_CONV[ty_ABS_def,ty_REP_def] ABS_REP_tm)
 
         val REL_REP_REFL = TAC_PROOF(([],
-            (--`!a. ^REL (^ty_REP a) (^ty_REP a)`--)),
+            (“!a. ^REL (^ty_REP a) (^ty_REP a)”)),
             GEN_TAC
             THEN STRIP_ASSUME_TAC (SPEC atm ty_REP_REL)
             THEN ASM_REWRITE_TAC[ty_REP_def]
@@ -550,8 +549,8 @@ but it could look like
 *)
 
         val equiv_ty_ABS = TAC_PROOF(([],
-            (--`!r r'. ^REL r r' =
-                       ^REL r r /\ ^REL r' r' /\ (^ty_ABS r = ^ty_ABS r')`--)),
+            (“!r r'. ^REL r r' =
+                       ^REL r r /\ ^REL r' r' /\ (^ty_ABS r = ^ty_ABS r')”)),
             GEN_TAC THEN GEN_TAC
             THEN CONV_TAC (LAND_CONV (REWR_CONV pequiv))
             THEN PURE_REWRITE_TAC[ty_ABS_def]
@@ -580,18 +579,18 @@ fun is_match_term tm1 tm2 =
 
 (*
 val equiv_tm =
-    --`!(x:'a) (y:'a). R x y = (R x = R y)`--;
+    “!(x:'a) (y:'a). R x y = (R x = R y)”;
 
 val partial_equiv_tm =
-    --`(?(x:'a). R x x) /\
-       (!(x:'a) (y:'a). R x y = R x x /\ R y y /\ (R x = R y))`--;
+    “(?(x:'a). R x x) /\
+       (!(x:'a) (y:'a). R x y = R x x /\ R y y /\ (R x = R y))”;
 *)
 
 val equiv_tm =
-    --`EQUIV (R :'a -> 'a -> bool)`--;
+    “EQUIV (R :'a -> 'a -> bool)”;
 
 val partial_equiv_tm =
-    --`PARTIAL_EQUIV (R :'a -> 'a -> bool)`--;
+    “PARTIAL_EQUIV (R :'a -> 'a -> bool)”;
 
 fun is_equiv th = is_match_term equiv_tm (concl th);
 
@@ -671,7 +670,7 @@ fun strip_QUOTIENT_cond tm =
             end
             handle _ => ([],[],[],[],[],tm)
 
-val quotient_tm = --`QUOTIENT R (abs:'a -> 'b) rep`--;
+val quotient_tm = “QUOTIENT R (abs:'a -> 'b) rep”;
 
 fun check_tyop_quotient th =
    let val (taus, ksis, Rs, abss, reps, uncond_tm) =
@@ -765,14 +764,14 @@ fun define_quotient_type tyname abs rep equiv =
         val rtm = mk_var{Name="r", Ty=ty}
         val rcl = mk_comb{Rator=REL, Rand=rtm}
         val cty = type_of rcl
-        val P = (--`\c. ?r. c = ^rcl`--)
+        val P = (“\c. ?r. c = ^rcl”)
         val ty_exists =
-            EXISTS (--`?x. ^P x`--, rcl)
+            EXISTS (“?x. ^P x”, rcl)
                    (EQ_MP (SYM (BETA_CONV (mk_comb{Rator=P, Rand=rcl})))
-                          (EXISTS (--`?a. ^rcl = ^REL a`--, rtm) (REFL rcl)))
+                          (EXISTS (“?a. ^rcl = ^REL a”, rtm) (REFL rcl)))
 (* or,
         val ty_exists = TAC_PROOF(([],
-                        --`?x. ^P x`--),
+                        “?x. ^P x”),
                         EXISTS_TAC rcl
                         THEN BETA_TAC
                         THEN EXISTS_TAC rtm
@@ -810,8 +809,8 @@ fun define_quotient_type tyname abs rep equiv =
 (* These bijections can be described more naturally and usefully. *)
         val cty_ABS_REP = store_thm
                 (tyname ^ "_ABS_REP_CLASS",
-                 (--`(!a. ^cty_ABS (^cty_REP a) = a) /\
-                     (!r. ^cty_REP (^cty_ABS (^REL r)) = ^REL r)`--),
+                 (“(!a. ^cty_ABS (^cty_REP a) = a) /\
+                     (!r. ^cty_REP (^cty_ABS (^REL r)) = ^REL r)”),
                  REWRITE_TAC[ty_bijections]
                  THEN REWRITE_TAC[GSYM ty_bijections]
                  THEN BETA_TAC
@@ -852,7 +851,7 @@ fun define_quotient_type tyname abs rep equiv =
                             Ty = mk_type{Tyop="fun", Args=[nty,ty]}}
         val ty_REP_def =
             new_definition(rep ^ "_def",
-               --`^ty_REP a = $@ (^cty_REP a)`--)
+               “^ty_REP a = $@ (^cty_REP a)”)
         val ty_REP = (#Rator o dest_comb o #lhs o dest_eq
                        o #Body o dest_forall o concl) ty_REP_def
 
@@ -866,7 +865,7 @@ fun define_quotient_type tyname abs rep equiv =
                             Ty = mk_type{Tyop="fun", Args=[ty,nty]}}
         val ty_ABS_def =
             new_definition(abs ^ "_def",
-               --`^ty_ABS r = ^cty_ABS (^REL r)`--)
+               “^ty_ABS r = ^cty_ABS (^REL r)”)
         val ty_ABS = (#Rator o dest_comb o #lhs o dest_eq
                        o #Body o dest_forall o concl) ty_ABS_def
 
@@ -915,8 +914,8 @@ fun define_quotient_type tyname abs rep equiv =
 
 (* Alternative proof:
         val cty_ABS_11 = TAC_PROOF(([],
-            (--`!r r'. (^cty_ABS (^REL r) = ^cty_ABS (^REL r')) =
-                       (^REL r = ^REL r')`--)),
+            (“!r r'. (^cty_ABS (^REL r) = ^cty_ABS (^REL r')) =
+                       (^REL r = ^REL r')”)),
             GEN_TAC THEN GEN_TAC
             THEN EQ_TAC
             THENL
@@ -947,8 +946,8 @@ fun define_quotient_type tyname abs rep equiv =
 
 (* Prove the quotient type bijection properties for ABS and REP. *)
 
-        val ABS_REP_tm = (--`^ty_ABS (^ty_REP a)`--)
-        val inst = ASSUME (--`^cty_REP a = ^rcl`--)
+        val ABS_REP_tm = (“^ty_ABS (^ty_REP a)”)
+        val inst = ASSUME (“^cty_REP a = ^rcl”)
         val REP_a_tm = mk_comb{Rator=ty_REP, Rand=atm}
 
         val ty_ABS_REP =
@@ -963,8 +962,8 @@ fun define_quotient_type tyname abs rep equiv =
         val ty_REP_REFL = GEN atm (SPEC REP_a_tm refl)
 
         val equiv_ty_ABS = TAC_PROOF(([],
-            (--`!r r'. ^REL r r' =
-                       ^REL r r /\ ^REL r' r' /\ (^ty_ABS r = ^ty_ABS r')`--)),
+            (“!r r'. ^REL r r' =
+                       ^REL r r /\ ^REL r' r' /\ (^ty_ABS r = ^ty_ABS r')”)),
             GEN_TAC THEN GEN_TAC
             THEN PURE_REWRITE_TAC[EQT_INTRO (SPEC rtm refl)]
             THEN REWRITE_TAC[ty_ABS_def]
@@ -983,7 +982,7 @@ fun define_quotient_type tyname abs rep equiv =
         val equiv_ty_ABS =
             (GEN rtm o GEN r'tm o SYM o
                  REWRITE_CONV[ty_ABS_def,cty_ABS_11,equiv])
-                         (--`^ty_ABS r = ^ty_ABS r'`--)
+                         (“^ty_ABS r = ^ty_ABS r'”)
 *)
 
         val QUOTIENT_thm = REWRITE_RULE[GSYM QUOTIENT_def]
@@ -1442,11 +1441,11 @@ fun define_quotient_lifted_function quot_ths tyops tyop_simps =
               end
 
         fun reptm ((nty,rep)::tyrs) tm =
-              if type_of tm = nty then (--`^rep ^tm`--) else reptm tyrs tm
+              if type_of tm = nty then (“^rep ^tm”) else reptm tyrs tm
           | reptm [] tm = tm
 
         fun abstm ((ty,abs)::tyas) tm =
-              if type_of tm = ty then (--`^abs ^tm`--) else abstm tyas tm
+              if type_of tm = ty then (“^abs ^tm”) else abstm tyas tm
           | abstm [] tm = tm
 
         fun define_fun {def_name, fname, func=tm, fixity} =
@@ -1515,12 +1514,11 @@ fun define_quotient_lifted_function quot_ths tyops tyop_simps =
             (* new_gen_definition(def_name, def, fixity) *)
 
 (* The following notes are to explain the treatment of fixities:
-structure Parse:
-datatype fixity = RF of term_grammar.rule_fixity | Binder
 
 structure term_grammar:
-datatype rule_fixity =
-  Infix of associativity * int | Closefix | Suffix of int | Prefix of int
+datatype fixity =
+  Infix of associativity * int | Closefix | Suffix of int | Prefix of int |
+  Binder
 
 structure HOLgrammars :
 datatype associativity = LEFT | RIGHT | NONASSOC
@@ -1531,13 +1529,11 @@ datatype associativity = LEFT | RIGHT | NONASSOC
                     new_definition(def_name, def)
             | SOME Binder =>
                     new_binder_definition(def_name, def)
-            | SOME (RF rule_fixity) =>
-               (case rule_fixity of
-                  term_grammar.Infix (associativity, priority) =>
+            | SOME (term_grammar.Infix (associativity, priority)) =>
                     Definition.new_definition(def_name, def)
                      before
                     Parse.add_infix(nam, priority, associativity)
-                | term_grammar.Prefix priority =>
+            | SOME (term_grammar.Prefix priority) =>
                     Definition.new_definition(def_name, def)
                      before
                     Parse.add_rule{term_name=nam,
@@ -1546,7 +1542,7 @@ datatype associativity = LEFT | RIGHT | NONASSOC
                                    paren_style=OnlyIfNecessary,
                                    block_style=(AroundEachPhrase,
                                                 (PP.CONSISTENT,0))}
-                | term_grammar.Suffix priority =>
+            | SOME (term_grammar.Suffix priority) =>
                     Definition.new_definition(def_name, def)
                      before
                     Parse.add_rule{term_name=nam,
@@ -1555,7 +1551,7 @@ datatype associativity = LEFT | RIGHT | NONASSOC
                                    paren_style=OnlyIfNecessary,
                                    block_style=(AroundEachPhrase,
                                                 (PP.CONSISTENT,0))}
-                | term_grammar.Closefix =>
+            | SOME term_grammar.Closefix =>
                     Definition.new_definition(def_name, def)
                      before
                     Parse.add_rule{term_name=nam,
@@ -1564,7 +1560,6 @@ datatype associativity = LEFT | RIGHT | NONASSOC
                                    paren_style=OnlyIfNecessary,
                                    block_style=(AroundEachPhrase,
                                                 (PP.CONSISTENT,0))}
-               )
           end
 
 (* An example of use:
@@ -1594,7 +1589,7 @@ fun prove_quotient_equiv_rep_one_one QUOTIENT =
 (* Prove the one-to-one and onto properties of REP and ABS. *)
 
         val equiv_rep_one_one = TAC_PROOF(([],
-            (--`!a a'. (^REL (^rep a) = ^REL (^rep a')) = (a = a')`--)),
+            (“!a a'. (^REL (^rep a) = ^REL (^rep a')) = (a = a')”)),
             GEN_TAC THEN GEN_TAC
             THEN EQ_TAC
             THENL
@@ -1852,7 +1847,7 @@ fun lift_theorem_by_quotients quot_ths equivs tyop_equivs
           let fun prove_EQ_AP refl =
                 let val R = (rator o rator o #Body o dest_forall o concl) refl
                 in  prove
-                      ((--`!p q. (p = q) ==> ^R p q`--),
+                      ((“!p q. (p = q) ==> ^R p q”),
                        REPEAT GEN_TAC THEN DISCH_THEN SUBST1_TAC THEN
                        MATCH_ACCEPT_TAC refl)
                 end
@@ -1863,8 +1858,8 @@ fun lift_theorem_by_quotients quot_ths equivs tyop_equivs
         val EQ_WELLDEFs =
           let fun prove_EQ_WELLDEF (REL,(sym,trans)) =
           prove
-          ((--`!x1 x2 y1 y2. ^REL x1 x2 /\ ^REL y1 y2 ==>
-                             (^REL x1 y1 = ^REL x2 y2)`--),
+          ((“!x1 x2 y1 y2. ^REL x1 x2 /\ ^REL y1 y2 ==>
+                             (^REL x1 y1 = ^REL x2 y2)”),
            REPEAT GEN_TAC THEN STRIP_TAC THEN EQ_TAC THENL
            [ ALL_TAC, POP_ASSUM (ASSUME_TAC o MATCH_MP sym) ] THEN
            DISCH_THEN (fn th => POP_ASSUM (MP_TAC o CONJ th)) THEN
@@ -3160,7 +3155,7 @@ R2 (f[x']) (g[y']).
                   val dom = domain ty
               in
                 if is_rep_ty dom then
-                  (--`RES_ABSTRACT (respects (^(tyREL dom))) ^tm1`--)
+                  (“RES_ABSTRACT (respects (^(tyREL dom))) ^tm1”)
                   handle _ => tm1
                 else tm1
               end
@@ -3182,14 +3177,14 @@ R2 (f[x']) (g[y']).
                           val tm1r = regularize_abs tm1
                           val dom = (fst o dom_rng) ty1
                           val domREL = tyREL dom
-                          val res = (--`respects(^domREL)`--)
+                          val res = (“respects(^domREL)”)
                       in
                         if name = "!" then
-                             (--`RES_FORALL ^res ^tm1r`--)
+                             (“RES_FORALL ^res ^tm1r”)
                         else if name = "?" then
-                             (--`RES_EXISTS ^res ^tm1r`--)
+                             (“RES_EXISTS ^res ^tm1r”)
                         else if name = "?!" then
-                             (--`RES_EXISTS_EQUIV ^domREL ^tm1r`--)
+                             (“RES_EXISTS_EQUIV ^domREL ^tm1r”)
                         else
                              list_mk_comb(opp, map regularize args)
                       end
@@ -3199,9 +3194,9 @@ R2 (f[x']) (g[y']).
                           val elemREL = tyREL ty1
                       in
                         if name = "SUBSET" then
-                             list_mk_comb(--`SUBSETR ^elemREL`--, map regularize args)
+                             list_mk_comb(“SUBSETR ^elemREL”, map regularize args)
                         else if name = "PSUBSET" then
-                             list_mk_comb(--`PSUBSETR ^elemREL`--, map regularize args)
+                             list_mk_comb(“PSUBSETR ^elemREL”, map regularize args)
                         else
                              list_mk_comb(opp, map regularize args)
                       end
@@ -3210,7 +3205,7 @@ R2 (f[x']) (g[y']).
                       let val ty1 = (domain o type_of) opp
                           val elemREL = tyREL ty1
                       in
-                        list_mk_comb(--`INSERTR ^elemREL`--, map regularize args)
+                        list_mk_comb(“INSERTR ^elemREL”, map regularize args)
                       end
                       handle _ => list_mk_comb(opp, map regularize args)
                     else if mem name ["DELETE","DISJOINT"] then
@@ -3218,9 +3213,9 @@ R2 (f[x']) (g[y']).
                           val elemREL = tyREL ty1
                       in
                         if name = "DELETE" then
-                             list_mk_comb(--`DELETER ^elemREL`--, map regularize args)
+                             list_mk_comb(“DELETER ^elemREL”, map regularize args)
                         else if name = "DISJOINT" then
-                             list_mk_comb(--`DISJOINTR ^elemREL`--, map regularize args)
+                             list_mk_comb(“DISJOINTR ^elemREL”, map regularize args)
                         else
                              list_mk_comb(opp, map regularize args)
                       end
@@ -3229,7 +3224,7 @@ R2 (f[x']) (g[y']).
                       let val ty1 = (domain o domain o type_of) opp
                           val elemREL = tyREL ty1
                       in
-                        list_mk_comb(--`FINITER ^elemREL`--, map regularize args)
+                        list_mk_comb(“FINITER ^elemREL”, map regularize args)
                       end
                       handle _ => list_mk_comb(opp, map regularize args)
                     else if mem name ["GSPEC"] then
@@ -3239,7 +3234,7 @@ R2 (f[x']) (g[y']).
                           val bREL = tyREL tya
                           val aREL = tyREL dom
                       in
-                        list_mk_comb(--`GSPECR ^aREL ^bREL`--, map regularize args)
+                        list_mk_comb(“GSPECR ^aREL ^bREL”, map regularize args)
                       end
                       handle _ => list_mk_comb(opp, map regularize args)
                     else if mem name ["IMAGE"] then
@@ -3249,7 +3244,7 @@ R2 (f[x']) (g[y']).
                           val rngREL = tyREL rng
                       in
                         if name = "IMAGE" then
-                             list_mk_comb(--`IMAGER ^domREL ^rngREL`--, map regularize args)
+                             list_mk_comb(“IMAGER ^domREL ^rngREL”, map regularize args)
                         else
                              list_mk_comb(opp, map regularize args)
                       end
@@ -3272,16 +3267,16 @@ R2 (f[x']) (g[y']).
                           val ty1 = type_of tm1
                           val dom = (fst o dom_rng) ty1
                           val res = if ropp = "respects" then restr else
-                              (--`\z. respects(^(tyREL dom)) z /\ ^restr z`--)
+                              (“\z. respects(^(tyREL dom)) z /\ ^restr z”)
                       in
                         if name = "RES_FORALL" then
-                             (--`RES_FORALL ^res ^tm1r`--)
+                             (“RES_FORALL ^res ^tm1r”)
                         else if name = "RES_EXISTS" then
-                             (--`RES_EXISTS ^res ^tm1r`--)
+                             (“RES_EXISTS ^res ^tm1r”)
                         else if name = "RES_EXISTS_UNIQUE" then
-                             (--`RES_EXISTS_EQUIV ^(tyREL dom) ^tm1r`--)
+                             (“RES_EXISTS_EQUIV ^(tyREL dom) ^tm1r”)
                         else if name = "RES_ABSTRACT" then
-                             (--`RES_ABSTRACT ^res ^tm1r`--)
+                             (“RES_ABSTRACT ^res ^tm1r”)
                         else
                              list_mk_comb(opp, map regularize args)
                       end
@@ -3970,7 +3965,7 @@ fun is_ho_match_term tm1 tm2 =
     (ho_match_term [] Term.empty_tmset tm1 tm2; true) handle _ => false;
 
 val inhab_tm =
-    --`?(x:'a). P x`--;
+    “?(x:'a). P x”;
 
 fun is_inhab th = is_ho_match_term inhab_tm (concl th);
 

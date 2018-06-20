@@ -7,6 +7,8 @@ let init_const = Fusion.constants();;
 let (term_hash : (string,Fusion.term) Hashtbl.t ref) = ref (Hashtbl.create 20000)
 let term_of n = Hashtbl.find (!term_hash) n
 
+let print_string _ = ()
+
 (* HH tools *)
 let rec hh_to_string hhterm = match hhterm with
     Abs (a,x,y) -> "Abs " ^ a ^ ":" ^ hh_to_string x ^ "," ^ hh_to_string y

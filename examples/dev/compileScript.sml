@@ -29,6 +29,7 @@ open HolKernel Parse boolLib bossLib;
 ******************************************************************************)
 open metisLib arithmeticTheory pairLib pairTheory PairRules combinTheory
      composeTheory dffTheory tempabsTheory devTheory;
+val op by = BasicProvers.byA
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
