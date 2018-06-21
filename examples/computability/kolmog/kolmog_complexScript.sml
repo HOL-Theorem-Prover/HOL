@@ -227,9 +227,6 @@ val bld_def = Define`(bld [] = (0n,0)) ∧
                      (bld (F::T::t) = let (x,y) = bld t in (2*x+1,y)) ∧
                      (bld (F::F::t) = (0, bl2n t))`
 
-(* Want bl2n append
-bl2n(xs++ys) = bl2n xs + bl2n ys *2**LENGTH xs
- *)
 
 val bl2n_append = Q.store_thm("bl2n_append",
 `∀xs ys. bl2n(xs++ys) = bl2n xs + bl2n ys *2**LENGTH xs`,
@@ -246,8 +243,67 @@ val bldmunge_bld_eq = Q.store_thm("bldmunge_bld_eq",
         >- (Cases_on`h2` >> simp[bld_def,bldemunge_def,bl2n_append] >> Cases_on `bld t` >>
             simp[EXP,bool_list_to_num_def]  ) ) )
 
-(*
+val MAP_CONG' = REWRITE_RULE [GSYM AND_IMP_INTRO] MAP_CONG
+
+val minimise_thm = Q.store_thm("minimise_thm",
+`minimise f l = some n. (f (n::l) = SOME 0) ∧ (∀i. i<n ⇒ ∃m. 0<m ∧ (f (i::l) = SOME m))`,
+simp[minimise_def] >> DEEP_INTRO_TAC optionTheory.some_intro >> rw[] >- (metis_tac[]) >> 
+SELECT_ELIM_TAC >> rw[] >> metis_tac[DECIDE``x:num <y ∨ (x=y) ∨ y<x ``,DECIDE``¬(x:num < x)``,optionTheory.SOME_11])
+
+val recfn_nil = Q.store_thm("recfn_nil",
+`∀f n. recfn f n ⇒ ∀xs. LENGTH xs <= n ==> (f (xs ++ GENLIST (K 0) (n - LENGTH xs)) = f xs)`,
+Induct_on `recfn` >> simp[] >> rpt strip_tac 
+  >- (Cases_on `xs` >> simp[succ_def]) 
+  >- (qid_spec_tac`xs` >> Induct_on `n` >> simp[proj_def] >> rw[] >> rw[] >> simp[EL_APPEND_EQN])
+  >- (simp[recCn_def] >> fs[EVERY_MEM] >> COND_CASES_TAC >> fs[MEM_MAP] 
+    >- (COND_CASES_TAC >-(simp[Cong MAP_CONG']) >> fs[] >> metis_tac[] ) 
+    >- (metis_tac[]) )
+  >- (Cases_on `xs` >> simp_tac (srw_ss ())[]
+    >- (ONCE_REWRITE_TAC[recPr_def] >> Cases_on `n` >> simp[GENLIST_CONS] >> 
+        last_x_assum (qspec_then `[]` mp_tac)>>simp[] ) 
+    >- (fs[] >> Induct_on`h` >> simp[] 
+      >- (ONCE_REWRITE_TAC[recPr_def] >> 
+          last_x_assum (qspec_then `t` mp_tac)>> simp[ADD1]) >> 
+        ONCE_REWRITE_TAC[recPr_def] >> simp[] >> Cases_on`recPr f f' (h::t)`>>simp[] >>
+        first_x_assum(qspec_then `h::x::t`mp_tac) >> simp[ADD1] )  )
+  >- (simp[minimise_thm] >> first_x_assum(qspec_then`j::xs` (mp_tac o Q.GEN`j`) )>> simp[ADD1] ))  
+val recfn_not_zero = Q.store_thm("recfn_not_zero",
+`∀f n. recfn f n ==> 0<n`,
+Induct_on `recfn` >> rw[] >> Cases_on `gs` >> fs[])
+
+val recfn_excess = Q.store_thm("recfn_excess",
+`∀f n. recfn f n ⇒ ∀l. n <= LENGTH l ⇒ (f (TAKE n l) = f l)`,
+Induct_on`recfn` >> simp[] >> rpt strip_tac
+  >- (Cases_on `l` >> fs[succ_def])
+  >- (simp[proj_def,EL_TAKE])
+  >- (simp[recCn_def] >> fs[EVERY_MEM] >> COND_CASES_TAC >> fs[MEM_MAP]
+    >- (COND_CASES_TAC >-(simp[Cong MAP_CONG']) >> fs[] >> metis_tac[])
+    >- (metis_tac[]))
+  >- (`2<=n` by (rpt (dxrule recfn_not_zero) >>simp[]) >> Cases_on `l` >> simp[] >> Induct_on `h` 
+    >- (ONCE_REWRITE_TAC[recPr_def] >> simp[] )
+    >- (ONCE_REWRITE_TAC[recPr_def] >> simp[] >> strip_tac >> 
+        Cases_on `recPr f f' (h::t)` >> simp[] >> rename[`g (h::x::_) = g (h::x::t)`] >> 
+        first_x_assum(qspec_then `h::x::t` mp_tac) >> simp[] )  )
+  >- (simp[minimise_thm] >> first_x_assum(qspec_then`j::l` (mp_tac o Q.GEN`j`) ) >> simp[] ))
+
+val unary_recfn_eq = Q.store_thm("unary_recfn_eq",
+`recfn f 1 ∧ (∀n. f [n] = g n) ⇒ (f = rec1 g)`,
+rw[FUN_EQ_THM] >> Cases_on`x` >> simp[rec1_def] 
+  >- (drule_then (qspec_then `[]` mp_tac) recfn_nil >> simp[])
+  >- (drule_then (qspec_then `h::t` mp_tac) recfn_excess >> simp[] )  )
+
+val recfn_rec1 = Q.store_thm("recfn_rec1",
+` (∃g. recfn g 1 ∧ ∀n. g [n] = f n) ⇒ recfn (rec1 f) 1`,
+metis_tac[unary_recfn_eq])
+
+(** up to here **)
 (* In Process of proving   *)
+
+val bld_n2bl_thm = Q.store_thm("bld_n2bl_thm",
+`∀n. bld (n2bl n) = (something)`,
+completeInduct_on `n` >> rw[Once num_to_bool_list_def,bld_def] 
+  >- (`(n-2) DIV 2 < n` by (intLib.ARITH_TAC) >> simp[] )
+  >- () )
 
 val universal_Phi = Q.store_thm("universal_Phi",
   `pr_is_universal (λn. let bl = n2bl n; (x,y) = bldemunge [] bl in Phi x y)`,
@@ -257,18 +313,21 @@ val universal_Phi = Q.store_thm("universal_Phi",
         `(λ(x:num,y:num).(x,y)) = (λx.x)` by simp[FUN_EQ_THM,pairTheory.FORALL_PROD] >> simp[] >>
         qmatch_abbrev_tac`recfn (rec1 ( λn. Pf (bld (n2bl n)) )) 1` >>
         `(λn. Pf (bld (n2bl n) )) = 
-          λn. recCn recPhi [SOME o nfst;SOME o nsnd] [(UNCURRY npair (bld (n2bl n)) )]`  ) >> 
-    REWRITE_TAC[GSYM recPhi_correct] >> 
+          λn. recCn recPhi [rec1 (SOME o nfst);rec1 (SOME o nsnd)] 
+                           [(UNCURRY npair (bld (n2bl n)) )]` 
+          by (rw[FUN_EQ_THM] >> Cases_on `bld (n2bl n)` >> simp[Abbr`Pf`,recCn_def,rec1_def] ) >>
+        simp[]  ) >> 
+    REWRITE_TAC[GSYM recPhi_correct] >> irule recfn_rec1 >> 
+    simp[bldmunge_bld_eq,bool_list_to_num_def] >> 
+    `(λ(x:num,y:num). (x,y))= λx.x` by simp[FUN_EQ_THM,pairTheory.FORALL_PROD] >> simp[]
+    
+    qexists_tac`recCn recPhi [SOME o pr1 nfst;SOME o pr1 nsnd]`  >> conj_tac
+      >- (irule recfnCn  >> simp[primrec_recfn] >> metis_tac[recfn_recPhi,recPhi_rec2Phi])>>
+    simp[recCn_def,bldmunge_bld_eq,bool_list_to_num_def]
+       )
 
-    qmatch_abbrev_tac`recfn ff 1 ` >> 
-    `ff = recCn recPhi [SOME o pr1 nfst;SOME o pr1 nsnd]` 
-       by (simp[FUN_EQ_THM,Abbr`ff`] >> Cases >> simp[recCn_def,rec1_def]) >> 
-    simp[Abbr`ff`] >> irule recfnCn  >> simp[primrec_recfn] >> 
-    metis_tac[recfn_recPhi,recPhi_rec2Phi] )
 
-(* Up to here *)
-
-
+(*
 (** Lemma 2.1.1 **)
 (**  Use univerality of phi **)
 val additively_exists = Q.store_thm("additively_exists",
