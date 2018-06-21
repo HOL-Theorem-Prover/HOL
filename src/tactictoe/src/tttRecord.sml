@@ -273,8 +273,8 @@ fun end_record_proof name g =
     fun ortho (stac,t,g,gl) =
       [orthogonalize ((stac,t,g,gl), tttFeature.fea_of_goal g)]
     fun f lbl = if !ttt_ortho_flag then ortho lbl else noortho lbl
-    val lbl2 = if !ttt_noabs_flag 
-               then lbl1 
+    val lbl2 = if !ttt_noabs_flag
+               then lbl1
                else List.concat (map f lbl1)
   in
     debug_t ("Saving " ^ int_to_string (length lbl2) ^ " labels")
@@ -302,7 +302,7 @@ fun print_proof name g =
     fun f (stac,t,g,gl) =
       let val (astac, thmll) = pe_abs stac in
         append_file file (stac ^ " stac; ");
-        append_file file (string_of_goal g);
+        append_file file (nnstring_of_goal g);
         append_file file (tree_string_of_goal g);
         append_file file (lamb_string_of_goal g);
         append_file file (astac ^ " abs_tactic; ");

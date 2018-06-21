@@ -350,9 +350,24 @@ fun mk_string_of_goal annot string_of_term (asm,w) =
     s1
   end
 
-val string_of_goal = mk_string_of_goal "goal" nnstring_of_term
+val nnstring_of_goal = mk_string_of_goal "goal" nnstring_of_term
 val tree_string_of_goal = mk_string_of_goal "tgoal" trstring_of_term
 val lamb_string_of_goal = mk_string_of_goal "lgoal" lstring_of_term
+
+fun string_of_goal (asm,w) =
+  let
+    val mem = !show_types
+    val _   = show_types := false
+    val s   =
+      (if asm = []
+         then "[]"
+         else "[``" ^ String.concatWith "``,``" (map term_to_string asm) ^
+              "``]")
+    val s1 = "(" ^ s ^ "," ^ "``" ^ (term_to_string w) ^ "``)"
+  in
+    show_types := mem;
+    s1
+  end
 
 fun string_of_bool b = if b then "T" else "F"
 
