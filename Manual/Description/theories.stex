@@ -2945,7 +2945,7 @@ total relation.
 
 
 
-\subsubsection{Indexed Lists}
+\subsubsection{Indexed lists}
 \label{sec:indexed-lists}
 
 \index{EL, the HOL constant@\holtxt{EL}, the \HOL{} constant|pin}
@@ -2986,7 +2986,7 @@ The basic characterisation of the link between \holtxt{EL} and \holtxt{LUPDATE} 
 \end{alltt}
 \end{hol}
 
-\paragraph{The \ml{indexedLists} Theory} The \ml{indexedLists} theory defines a number of extra constants that are ``aware'' of lists as indexed values.
+\paragraph{The \ml{indexedLists} theory} The \ml{indexedLists} theory defines a number of extra constants that are ``aware'' of lists as indexed values.
 Some of these constants are:
 \begin{hol}
 \begin{verbatim}
@@ -4052,7 +4052,7 @@ where all the elements not in the set have been dropped
 \end{verbatim}
 \end{hol}
 
-\paragraph {Sets and Multisets}
+\paragraph {Sets and multisets}
 
 Moving between bags and sets is accomplished by the following two
 definitions.
@@ -4803,7 +4803,7 @@ Subsequently, the translation from $\mathit{vs}\;\holtxt{\lt-} M_1\holtxt{;}\;M_
 If there is no variable-arrow on the first binding, then $M_1\holtxt{;}\;M_2$ translates to something equivalent to $\holtxt{monad\_bind}\;M_1\;(\holtxt{K}\;M_2)$, where \holtxt{K} is the K-combinator from \ml{combinTheory} (see Section~\ref{sec:combinTheory}).
 Finally, the \holtxt{return} keyword is an overloading for the monad instance's unit function (which will have type $\alpha \to \alpha\,\holtxt{M}$).
 
-\subsection{Declaring Monads}
+\subsection{Declaring monads}
 
 Monad instances have to be declared if the system is to support their parsing and pretty-printing.
 The function responsible is \index{declare_monad@\ml{declare\_monad}}\ml{declare\_monad} in the \ml{monadsyntax} module.
@@ -4877,7 +4877,7 @@ A typical use of \holtxt{assert} might be in a function such as
 \end{alltt}
 where the \holtxt{assert} ensures that the subsequent call to \holtxt{HD} makes sense.
 
-\subsection{Enabling Monad Syntax}
+\subsection{Enabling monad syntax}
 
 There are two steps to being able to use monadic syntax.
 Both steps \emph{persist}, meaning that their effects are preserved for the benefit of descendant theories.
@@ -4948,7 +4948,7 @@ Everything that has been enabled can in turn be disabled, with calls drawn from:
      temp_disable_monadsyntax : unit -> unit
 \end{alltt}
 
-\subsection{Some Built-in Monad Theories}
+\subsection{Some built-in monad theories}
 
 See Figure~\ref{fig:bind-defns} for the bind definitions for a number of different monads that are present in the core HOL set of theories.
 \begin{figure}[hbtp]

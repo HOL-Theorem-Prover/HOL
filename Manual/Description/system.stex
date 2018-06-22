@@ -1,4 +1,4 @@
-\chapter{The \HOL{} Logic in ML}\label{HOLsyschapter}
+\chapter{\texorpdfstring{The \HOL{} Logic in ML}{The HOL Logic in ML}}\label{HOLsyschapter}
 
 In this chapter, the concrete representation of the \HOL{} logic is
 described.  This involves describing the \ML\ functions that comprise
@@ -1071,7 +1071,7 @@ in \LOGIC, \ml{SELECT\_AX}.
 \end{session}
 \index{theorem notation, in HOL logic@theorem notation, in \HOL{} logic|)}
 
-\section{Primitive Rules of Inference of the \HOL{} Logic}
+\section{\texorpdfstring{Primitive Rules of Inference of the \HOL{} Logic}{Primitive Rules of Inference of the HOL Logic}}
 \label{rules}
 
 \index{inference rules, of HOL logic@inference rules, of \HOL{} logic!primitive|(}
@@ -1881,7 +1881,7 @@ the current theory.
 
 \noindent Evaluating
  \ml{new\_definition("$name$", \holquote{$c\ v_1\ \cdots\ v_n\ =\ t$})},
-declares the sequent
+declares the sequent\\
 \ml{(\lb\rb{},$c = \lambda v_1\ \cdots\ v_n.\  t$)} to be a constant definition
 \index{definitions, adding to HOL logic@definitions, adding to \HOL{} logic}
 of the current theory. The name associated with the definition in
