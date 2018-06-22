@@ -456,7 +456,7 @@ end
 
 val bigrec_subdivider_string = GrammarSpecials.bigrec_subdivider_string
 
-val big_record_size = ref 20 (* arbitrary choice *)
+val big_record_size = ref 100 (* arbitrary choice *)
 
 (* these functions generate the "magic" names used to represent big records
    as two level trees of smaller records.  There is a coupling between the
