@@ -93,6 +93,8 @@ sig
 
    val empty           : typeBase
    val insert          : typeBase -> tyinfo -> typeBase
+   val fold            : (hol_type * tyinfo * 'b -> 'b) -> 'b -> typeBase ->
+                         'b
 (*   val add             : typeBase -> tyinfo -> typeBase  *)
 
    val fetch           : typeBase -> hol_type -> tyinfo option

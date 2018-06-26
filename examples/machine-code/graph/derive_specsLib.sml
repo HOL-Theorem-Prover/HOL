@@ -1,13 +1,12 @@
-structure derive_specsLib =
+structure derive_specsLib :> derive_specsLib =
 struct
 
 open HolKernel boolLib bossLib Parse;
-open listTheory wordsTheory pred_setTheory arithmeticTheory wordsLib pairTheory;
-open set_sepTheory progTheory helperLib addressTheory;
-
-open backgroundLib file_readerLib stack_introLib stack_analysisLib writerLib;
-
-infix \\ val op \\ = op THEN;
+open wordsTheory pred_setTheory arithmeticTheory pairSyntax;
+open set_sepTheory progTheory addressTheory;
+open helperLib backgroundLib file_readerLib stack_introLib stack_analysisLib
+open writerLib;
+open GraphLangTheory
 
 fun spec_rule x =
   case !arch_name of
@@ -146,13 +145,13 @@ fun pair_jump_apply (f:int->int) ((th1,x1:int,x2:int option),NONE) = ((th1,x1,ju
 val switch_input = ref (0:int ,[]:string list);
 
 val CARRY_OUT_LEMMA =
-  ``CARRY_OUT x y T``
+  ``CARRY_OUT (x : 'a word) y T``
   |> ONCE_REWRITE_CONV [GSYM WORD_NOT_NOT]
   |> RW [ADD_WITH_CARRY_SUB]
   |> RW [WORD_NOT_NOT]
 
 val OVERFLOW_LEMMA =
-  ``OVERFLOW x y T``
+  ``OVERFLOW (x : 'a word) y T``
   |> ONCE_REWRITE_CONV [GSYM WORD_NOT_NOT]
   |> RW [ADD_WITH_CARRY_SUB]
   |> RW [WORD_NOT_NOT]

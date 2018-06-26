@@ -121,7 +121,7 @@ occasion to construct rewriting tools of their own design, by similar
 methods.  The next section introduces the conversion-building tools in
 general.
 
-\section{Indicating unchangedness}
+\section{Indicating Unchangedness}
 
 All conversions may raise the special exception \ml{Conv.UNCHANGED} on
 an input term \ml{t}, as a ``short-hand'' instead of returning the
@@ -136,7 +136,7 @@ to provide a theorem directly).  \ml{QCONV}'s implementation is
 \end{alltt}
 
 
-\section{Conversion combining operators}
+\section{Conversion Combining Operators}
 \label{avra1}
 
 A term $u$ is said to {\it reduce\/}\index{reduction, by conversions}\index{conversions!reduction by} to a term $v$ by a conversion $c$ if
@@ -459,7 +459,7 @@ that used the second  search strategy could be defined as shown below
 strategy used by the \HOL\ rewriting tools described in Section~\ref{avra3}.
 \index{conversions!operators on|)}
 
-\section{Writing compound conversions}
+\section{Writing Compound Conversions}
 \label{avra2}
 
 \index{conversions!functions for building|(}
@@ -730,7 +730,7 @@ used in the system has been optimised to use failure to avoid
 rebuilding unchanged subterms.
 
 
-\section{Built in conversions}\label{built-in-conv}
+\section{Built-in Conversions}\label{built-in-conv}
 
 
 Many conversions are predefined in \HOL; only those likely to be of
@@ -1033,7 +1033,7 @@ The complete set is:
 \end{verbatim}\end{hol}
 
 
-\section{Rewriting tools}
+\section{Rewriting Tools}
 \label{avra3}
 
 The rewriting tool\index{rewriting!as based on conversions|(}

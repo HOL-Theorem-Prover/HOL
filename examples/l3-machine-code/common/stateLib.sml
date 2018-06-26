@@ -43,7 +43,7 @@ val MOVE_COND_CONV =
 
 local
    val cond_T = Q.prove (
-      `!p. (set_sep$cond T * p = p) /\ (p * set_sep$cond T = p)`,
+      `!p : 'a set set. (set_sep$cond T * p = p) /\ (p * set_sep$cond T = p)`,
       REWRITE_TAC [set_sepTheory.SEP_CLAUSES])
    val rule1 =
       helperLib.PRE_POST_RULE (REWRITE_CONV [cond_T]) o
@@ -204,13 +204,13 @@ end
 
 local
    val EXPAND_lem = Q.prove(
-      `!x y m s c.
+      `!x:'a # 'b y m s:'c c:'d.
           (!c d. (c, d) IN set (x :: y) ==> (m s c = d)) =
           (!c d. ((c, d) = x) ==> (m s c = d)) /\
           (!c d. ((c, d) IN set y) ==> (m s c = d))`,
       SRW_TAC [] [] \\ utilsLib.qm_tac [])
    val EXPAND_lem2 = Q.prove(
-      `!x y m s c.
+      `!x:'a # 'b y m s:'c c:'d.
           (!c d. (c, d) IN x INSERT y ==> (m s c = d)) =
           (!c d. ((c, d) = x) ==> (m s c = d)) /\
           (!c d. ((c, d) IN y) ==> (m s c = d))`,

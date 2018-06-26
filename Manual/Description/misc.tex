@@ -99,7 +99,7 @@ Finally, the \ml{trace} function allows for a trace to be temporarily set while 
 
 
 
-\section{Maintaining \HOL{} Formalizations with \holmake}
+\section{\texorpdfstring{Maintaining \HOL{} Formalizations with \holmake}{Maintaining HOL Formalizations with \holmake}}
 \label{Holmake}
 \index{Holmake@\holmake|(}
 
@@ -160,9 +160,9 @@ a theory, the user should
   the theory file is available for use.
 \end{enumerate}
 
-\subsection{Source Conventions for Script and SML Files}
+\subsection{Source conventions for script and SML files}
 
-\paragraph{Script and Theory Files}
+\paragraph{Script and theory files}
 The file that generates the \HOL{} theory \textit{my}\texttt{Theory} must be called \textit{my}\texttt{Script.sml}.
 After the theory has been successfully generated, it can be \texttt{open}-ed at the head of other developments:
 \begin{alltt}
@@ -237,7 +237,7 @@ Finally, take care not to have the string ``\texttt{Theory}'' appear at the end 
 This will also remove other files with names containing ``\texttt{Theory.sml}'' or ``\texttt{Theory.sig}''.
 For example, if, in your development directory, you had a file of \ML{} code named \texttt{MyTheory.sml} and you were also managing a \HOL{} development there with \holmake, then \texttt{MyTheory.sml} would get deleted if \texttt{Holmake~clean} were invoked.
 
-\paragraph{Other SML Code}
+\paragraph{Other SML code}
 When developing \HOL{} libraries, one should again attempt to follow Moscow~ML's conventions.
 Most importantly, file names should match \texttt{signature} and \texttt{structure} names.
 If this can be done, the automatic dependency analysis done by \holmake{} will work ``out of the box''.
@@ -514,7 +514,7 @@ In particular, this means that hash-characters do \emph{not} start
 comments on command-lines, and such ``comments'' will be passed to the
 shell, which may or may not treat them as comments when it sees them.
 
-\paragraph{Special Targets}
+\paragraph{Special targets}
 Some target names for rules are handled specially by \holmake{}:
 \begin{itemize}
 \item Dependencies associated with the target name \texttt{.PHONY} are taken to be list of other targets in the make-file that are not actually the name of files to be built.
@@ -696,7 +696,7 @@ treated as a reference to an environment variable.  If there is no
 such variable in the environment, then the variable is silently given
 the empty string as its value.
 
-\paragraph{Conditional Parts of Makefiles}
+\paragraph{Conditional parts of makefiles}
 \index{Holmake@\holmake!conditional inclusion of sections}
 As in GNU~\textsf{make}, parts of a \texttt{Holmakefile} can be included or excluded dynamically, depending on tests that can be performed on strings including variables.
 %
@@ -764,7 +764,7 @@ Note that environment variables with non-empty values are also considered to be 
 \index{Holmake@\holmake|)}
 
 
-\section{Generating and Using Heaps in Poly/ML \HOL{}}
+\section{\texorpdfstring{Generating and Using Heaps in Poly/ML \HOL{}}{Generating and Using Heaps in Poly/ML HOL}}
 \label{sec:polyml-heaps}
 
 \index{heaps (in Poly/ML)|(}
@@ -780,7 +780,7 @@ Users can use the same basic technology to ``dump'' heaps of their own.
 Such heaps can be preloaded with source code implementing special-purpose reasoning facilities, and with various necessary background theories.
 This can make developing big mechanisations considerably more pleasant.
 
-\subsection{Generating \HOL{} Heaps}
+\subsection{\texorpdfstring{Generating \HOL{} heaps}{Generating HOL heaps}}
 
 The easiest way to generate a \HOL{} heap is to use the \texttt{buildheap} executable that is built as part of the standard build process for (Poly/ML)~\HOL.
 This program takes a list of object files to include in a heap, an optional heap to build upon (use the \texttt{-b} command-line switch; the default is to use the heap behind the core \texttt{hol} executable), and an optional name for the new heap (the default is the traditional Unix \texttt{a.out}).
@@ -814,7 +814,7 @@ Finally, note how the use of the \texttt{dprot} and \texttt{protect} functions w
 \label{fig:realheap-makefile}
 \end{figure}
 
-\subsection{Using \HOL{} Heaps}
+\subsection{\texorpdfstring{Using \HOL{} heaps}{Using HOL heaps}}
 As just described, if a \texttt{Holmakefile} specifies a \texttt{HOLHEAP}, then files in that directory will be built on top of that heap rather than the default.
 This is also true if the specified heap is in another directory (\ie, the \texttt{HOLHEAP} line might specify a file such as \texttt{otherdir/myheap}).
 In this case, the \texttt{Holmakefile} won't (shouldn't) include instructions on how to build that heap, but the advantages of that heap are still available.
@@ -938,7 +938,7 @@ Total: 165.
 \index{timing of HOL evaluations@timing of \HOL{} evaluations|)}
 
 
-\section{Embedding \HOL{} in \LaTeX{}}
+\section{\texorpdfstring{Embedding \HOL{} in \LaTeX{}}{Embedding HOL in \LaTeX{}}}
 
 \index{LaTeX@\LaTeX!embedding HOL@embedding in \HOL{}|(}
 %
@@ -971,7 +971,7 @@ and then runs \LaTeX{} on \texttt{article.tex}.
 %
 One would probably automate this process with a makefile of course.
 
-\subsection{Munging Commands}
+\subsection{Munging commands}
 \label{sec:munging-commands}
 % need to get backslashes conveniently obscures the real names,
 % preventing the munger from seeing them, which will be useful when we
@@ -979,7 +979,7 @@ One would probably automate this process with a makefile of course.
 \newcommand{\holtm}{\texttt{\bs{}HOLtm}}
 \newcommand{\holty}{\texttt{\bs{}HOLty}}
 \newcommand{\holthm}{\texttt{\bs{}HOLthm}}
-\paragraph{Before Starting} In order to use the munger, one must ``include'' (use the \texttt{\bs{}usepackage} command) the \texttt{holtexbasic.sty} style-file, which is found in the HOL source directory \texttt{src/TeX}.
+\paragraph{Before starting} In order to use the munger, one must ``include'' (use the \texttt{\bs{}usepackage} command) the \texttt{holtexbasic.sty} style-file, which is found in the HOL source directory \texttt{src/TeX}.
 
 \bigskip
 There are then three commands for inserting text corresponding to \HOL{} entities into \LaTeX{} documents: \holtm, \holty{} and \holthm.
@@ -1050,7 +1050,7 @@ By default, the output is \emph{not} wrapped in an \texttt{\bs{}mbox}, making it
 The \texttt{verbatim} environment does the former, but not the latter.)
 \end{description}
 
-\paragraph{Munging Command Options}
+\paragraph{Munging command options}
 \index{munging (producing LaTeX from HOL)@munging (producing \LaTeX{} from \HOL{})!command options}
 There are a great many options for controlling the behaviour of each of these commands.
 %
@@ -1321,7 +1321,7 @@ If printing depends on particular variable name choices, the ``last minute'' man
 The width of the \LaTeX{} string is taken to be the width of the original token $t$.
 \end{description}
 
-\subsection{Math-Mode Munging}
+\subsection{Math-mode munging}
 \label{sec:math-mode-munging}
 \index{munging (producing LaTeX from HOL)@munging (producing \LaTeX{} from \HOL{})!math mode}
 \index{math mode (in the LaTeX munger)@math mode (in the \LaTeX{} munger)}
@@ -1361,7 +1361,7 @@ Occasionally, one will want to arrange blocks of \HOL{} material within a larger
 The \texttt{HOLarray} environment is a simple alias for a single-column left-aligned array that one can use in these situations.
 
 
-\subsection{Creating a Munger}
+\subsection{Creating a munger}
 \label{sec:munger-creation}
 
 \newcommand{\mkmunge}{\texttt{mkmunge.exe}}
@@ -1389,7 +1389,7 @@ Doing so allows for the incorporation of many theories at once, and will be more
 The use of a base heap argument to \mkmunge{} doesn't affect the efficiency of the resulting munging tool.
 
 
-\subsection{Running a Munger}
+\subsection{Running a munger}
 \label{sec:running-munger}
 
 \index{munging (producing LaTeX from HOL)@munging (producing \LaTeX{} from \HOL{})!running a munger}
@@ -1559,7 +1559,7 @@ you to run Holindex using AUCTeX.
 \end{description}
 
 
-\paragraph{Defining and Formatting Terms, Types and Theorems}
+\paragraph{Defining and formatting terms, types and theorems}
 
   Most of the Holindex commands require an identifier of a theorem,
   term or type as arguments. Theorem identifiers of the form
@@ -1684,14 +1684,14 @@ included.
 \end{description}
 
 
-\paragraph{Additional Documentation}
+\paragraph{Additional documentation}
 For more information about Holindex, please refer to
 the demonstration file \texttt{src/TeX/holindex-demo.tex}. This file contains
 documentation for rarely used commands as well as explanations of how to
 customise Holindex.
 
 
-\subsection{Making \HOL{} Theories \LaTeX{}-ready}
+\subsection{\texorpdfstring{Making \HOL{} theories \LaTeX{}-ready}{Making HOL theories \LaTeX{}-ready}}
 \label{sec:holtheories-tex-ready}
 
 Though one might specify all one's desired token-replacements in an \texttt{overrides} file, there is also support for specifying token replacements in the theory where tokens are first ``defined''.

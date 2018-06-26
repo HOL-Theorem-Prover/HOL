@@ -8,8 +8,6 @@ open pred_setTheory arithmeticTheory combinTheory;
 open arm_decompTheory set_sepTheory progTheory addressTheory;
 open m0_decompTheory lcsymtacs;
 
-infix \\ val op \\ = op THEN;
-
 val op by = BasicProvers.byA
 
 val RW1 = ONCE_REWRITE_RULE;

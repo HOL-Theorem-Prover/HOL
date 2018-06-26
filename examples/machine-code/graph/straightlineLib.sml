@@ -8,8 +8,6 @@ open core_decompilerLib tripleTheory derive_specsLib;
 
 open backgroundLib file_readerLib stack_introLib stack_analysisLib writerLib;
 
-infix \\ val op \\ = op THEN;
-
 val add_DO_NOTHING = let
   val c = REWR_CONV (GSYM DO_NOTHING_def)
   in CONV_RULE (POST_CONV c THENC PRE_CONV c) end

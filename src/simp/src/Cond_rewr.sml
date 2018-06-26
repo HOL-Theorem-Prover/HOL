@@ -291,11 +291,11 @@ fun IMP_EQ_CANON (thm,bnd) = let
             val (l,r) = dest_eq conc
           in
             if l = truth_tm then
-              if r = false_tm then [(PROVE_HYP thm TF_EQ_F, bnd)]
-              else [(CONV_RULE (REWR_CONV EQ_SYM_EQ) thm, bnd)]
+              if r = false_tm then [(PROVE_HYP undisch_thm TF_EQ_F, bnd)]
+              else [(CONV_RULE (REWR_CONV EQ_SYM_EQ) undisch_thm, bnd)]
             else if l = false_tm then
-              if r = truth_tm then [(PROVE_HYP thm FT_EQ_F,bnd)]
-              else [(CONV_RULE (REWR_CONV EQ_SYM_EQ) thm, bnd)]
+              if r = truth_tm then [(PROVE_HYP undisch_thm FT_EQ_F,bnd)]
+              else [(CONV_RULE (REWR_CONV EQ_SYM_EQ) undisch_thm, bnd)]
             else
               let
                 val base =

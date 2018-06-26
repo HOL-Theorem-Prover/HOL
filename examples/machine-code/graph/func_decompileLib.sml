@@ -1,14 +1,11 @@
-structure func_decompileLib =
+structure func_decompileLib :> func_decompileLib =
 struct
 
 open HolKernel boolLib bossLib Parse;
-open listTheory wordsTheory pred_setTheory arithmeticTheory wordsLib pairTheory;
-open set_sepTheory progTheory helperLib addressTheory combinTheory;
-
-open GraphLangTheory graph_specsLib exportLib writerLib cond_cleanLib;
-
-
-infix \\ val op \\ = op THEN;
+open listTheory wordsTheory pred_setTheory
+open GraphLangTheory
+open backgroundLib file_readerLib derive_specsLib graph_specsLib exportLib;
+open writerLib cond_cleanLib;
 
 val _ = max_print_depth := ~1;
 val _ = set_trace "Unicode" 0;
@@ -153,7 +150,7 @@ fun prove_funcs_ok names = let
     val all = fs |> map (rand o concl)
     val pat = ``locs (name:string) = SOME (w:word32)``
     fun f tm = subst (fst (match_term pat tm)) ``Func name w []``
-    val extra = try_map (fn x => x) f (flatten (map hyp fs))
+    val extra = graph_specsLib.try_map (fn x => x) f (flatten (map hyp fs))
     val all_rator = map rator all
     val extra = filter (fn ex => not (mem (rator ex) all_rator)) extra
     val r = fs |> hd |> concl |> rator

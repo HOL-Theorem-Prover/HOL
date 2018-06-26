@@ -56,4 +56,8 @@ sig
 
    val dest_record_type   : hol_type -> (string * hol_type) list
    val is_record_type     : hol_type -> bool
+
+   val CaseEq             : string -> thm
+   val CaseEqs            : string list -> thm
+   val AllCaseEqs         : unit -> thm
 end

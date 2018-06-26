@@ -5,6 +5,19 @@ val _ = set_trace "Unicode" 0
 
 val _ = goalStack.chatting := false
 
+val _ = tprint "Itself case-eq properly polymorphic"
+val _ =
+    let
+      open boolLib
+      val cthm = TypeBase.case_eq_of ``:'a itself``
+      val l = cthm |> concl |> lhs |> lhs
+      val (_, args) = strip_comb l
+      val xv = hd args
+    in
+      if xv |> type_of |> Type.polymorphic then OK()
+      else die "FAILED!"
+    end
+
 val _ = tprint "Type parsing with newlines"
 val ty = ``:
    'a
