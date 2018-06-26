@@ -14,9 +14,9 @@ open HolKernel boolLib tttTools TextIO Tag Dep
 
 val ERR = mk_HOL_ERR "hhWriter"
 
-(*---------------------------------------------------------------------------
+(*----------------------------------------------------------------------------
    Dictionaries
- ----------------------------------------------------------------------------*)
+ -----------------------------------------------------------------------------*)
 
 (* reserved names *)
 val hollight_theorems = ["HL_TRUTH", "HL_FALSITY", "HL_BOOL_CASES", "HL_EXT"];
@@ -24,9 +24,9 @@ val conjecture_name = "conjecture"
 val reserved_names = conjecture_name :: hollight_theorems
 val reserved_names0 = map (fn x => (x,0)) reserved_names
 
-(*---_-----------------------------------------------------------------------
+(*---_------------------------------------------------------------------------
    Save new objects in the dictionnaries.
- ----------------------------------------------------------------------------*)
+ -----------------------------------------------------------------------------*)
 
 fun is_tptp_sq_char c =
   let val n = Char.ord c in
@@ -297,8 +297,7 @@ fun hh_constdef state oc thy (s,ty) =
 (* theorems *)
 fun othm state oc (name,role,tm) =
   let
-    fun f x = is_var x orelse is_const x
-    val l1 = type_varsl (map type_of (find_terms f tm))
+    val l1 = type_varsl (map type_of (find_terms is_const tm @ all_vars tm))
     val (l2, undeclare) =
       declare_temp_list state nice_dest_vartype (#tyvar_names state) l1
   in
