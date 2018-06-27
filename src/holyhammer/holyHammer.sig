@@ -45,10 +45,12 @@ sig
   (* Exporting fof problems *)
   val create_fof        : string -> thm -> unit
 
-
   (* State *)
   val clean_cache       : unit -> unit
   val set_timeout       : int -> unit
-
+  
+  (* New holyhammer *)
+  val hh_new_goal : goal -> tactic
+  val hh_new : term -> tactic
 
 end

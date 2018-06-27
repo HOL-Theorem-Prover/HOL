@@ -14,8 +14,10 @@ open HolKernel boolLib Dep Tag tttTools tttExec hhWriter
 
 val ERR = mk_HOL_ERR "hhReconstruct"
 
+val reconstruct_flag = ref true
+
 (*---------------------------------------------------------------------------
-   Unescaping and extracting theorem and theory name.
+   Unescaping and extracting theorem and theory name. (OLD)
  ----------------------------------------------------------------------------*)
 
 (* TODO: use String.translate *)
@@ -55,27 +57,14 @@ fun split_name s = case String.fields (fn c => c = #".") s of
     [_,thy,name] => (thy,name)
   | _       => raise ERR "split_name" ""
 
+
 (*---------------------------------------------------------------------------
    Reading the ATP file.
  ----------------------------------------------------------------------------*)
 
-fun readl path =
-  let
-    val file = TextIO.openIn path
-    fun loop file = case TextIO.inputLine file of
-        SOME line => line :: loop file
-      | NONE => []
-    val l1 = loop file
-    fun rm_last_char s = String.substring (s,0,String.size s - 1)
-    fun is_empty s = s = ""
-    val l2 = map rm_last_char l1 (* removing end line *)
-    val l3 = filter (not o is_empty) l2
-  in
-    (TextIO.closeIn file; l3)
-  end
-
 fun read_status atp_status =
-  remove_white_spaces (hd (readl atp_status)) handle _ => "Unknown" (* TODO: reraise Interrupt *)
+  remove_white_spaces (hd (readl atp_status)) 
+  handle _ => "Unknown" (* TODO: reraise Interrupt *)
 
 (* removing reserverd names: use a similar
    escaping than the holyhammer fof writer *)
@@ -100,10 +89,41 @@ fun read_lemmas atp_out =
     map (split_name o hh_unescape o unsquotify) l'
   end
 
+fun not_reserved_new s = String.isPrefix "thm." s
+
+fun is_dot c = (c = #".")
+
 fun get_lemmas (atp_status,atp_out) =
   let val s = read_status atp_status in
     if s = "Theorem"
     then SOME (read_lemmas atp_out)
+    else NONE
+  end
+
+(*---------------------------------------------------------------------------
+   Reading the ATP file. (NEW)
+ ----------------------------------------------------------------------------*)
+
+fun read_lemmas_new atp_out =
+  let
+    val l1 = readl atp_out
+    val l2 = map hhTptp.unescape l1
+    val l3 = filter not_reserved_new l2
+    fun f s =
+      let 
+        val sl1 = String.fields is_dot s 
+        val sl2 = tl (butlast sl1)
+      in
+        String.concatWith "." sl2
+      end
+  in
+    map ((split_string "Theory.") o f) l3
+  end
+
+fun get_lemmas_new (atp_status,atp_out) =
+  let val s = read_status atp_status in
+    if s = "Theorem"
+    then SOME (read_lemmas_new atp_out)
     else NONE
   end
 
@@ -126,13 +146,16 @@ fun mk_metiscall lemmas =
   end
 
 fun hh_minimize lemmas g =
-  let
-    val stac = mk_metiscall lemmas
-    val newstac = hide_out (tttMinimize.minimize_stac 1.0 stac g) []
-  in
-    print_endline newstac;
-    tactic_of_sml newstac
-  end
+  if not (!reconstruct_flag) 
+  then (print_endline (mk_metiscall lemmas); raise ERR "" "")
+  else
+    let
+      val stac = mk_metiscall lemmas
+      val newstac = hide_out (tttMinimize.minimize_stac 1.0 stac g) []
+    in
+      print_endline newstac;
+      tactic_of_sml newstac
+    end
 
 (*---------------------------------------------------------------------------
    Reconstruction.
@@ -145,12 +168,25 @@ fun reconstruct (atp_status,atp_out) g =
                FAIL_TAC "holyhammer: time out")
     | SOME lemmas => hh_minimize lemmas g
   end
-
+  
 fun reconstruct_stac (atp_status,atp_out) g =
   let val olemmas = get_lemmas (atp_status,atp_out) in
     case olemmas of
       NONE => NONE
     | SOME lemmas => SOME (mk_metiscall lemmas)
   end
+
+(*---------------------------------------------------------------------------
+   Reconstruction. (NEW)
+ ----------------------------------------------------------------------------*)
+
+fun reconstruct_new (atp_status,atp_out) g =
+  let val olemmas = get_lemmas_new (atp_status,atp_out) in
+    case olemmas of
+      NONE => (print_endline "holyhammer: time out";
+               FAIL_TAC "holyhammer: time out")
+    | SOME lemmas => hh_minimize lemmas g
+  end
+
 
 end

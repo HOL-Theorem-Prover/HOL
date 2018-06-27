@@ -61,29 +61,6 @@ unescape (escape "a:@\\x");
 *)
 
 (*----------------------------------------------------------------------------
-   Give variables unique names. Controlling the namespace.
-  ----------------------------------------------------------------------------*)
-
-fun rename_bvarl tm = 
-  let 
-    val i = ref 0
-    fun rename_aux tm = case dest_term tm of
-      VAR(Name,Ty)       => tm
-    | CONST{Name,Thy,Ty} => tm
-    | COMB(Rator,Rand)   => mk_comb (rename_aux Rator, rename_aux Rand)
-    | LAMB(Var,Bod)      => 
-      let 
-        val new_tm = rename_bvar ("V" ^ int_to_string (!i)) tm
-        val (v,bod) = dest_abs new_tm
-        val _ = incr i
-      in
-        mk_abs (v, rename_aux bod)
-      end
-  in
-    rename_aux tm
-  end
-
-(*----------------------------------------------------------------------------
    FOF writer
  -----------------------------------------------------------------------------*)
 
@@ -174,7 +151,8 @@ fun write_pred oc tm =
   else if is_eq tm then 
     let val (l,r) = dest_eq tm in
       if must_pred l orelse must_pred r 
-      then 
+      (* probably an optimization: I would replace it by type_of l = bool *)
+      then
         (os oc "("; write_pred oc l; os oc " <=> "; write_pred oc r; os oc ")")
       else
         (write_term oc l; os oc " = "; write_term oc r)
@@ -186,21 +164,17 @@ fun type_vars_in_term tm =
   type_varsl (map type_of (find_terms is_const tm @ all_vars tm))
 
 fun write_formula oc tm =
-  let 
-    val term1 = list_mk_forall (free_vars_lr tm, tm)
-    val term2 = rename_bvarl term1;
-    val tvl = type_vars_in_term term2
-  in
+  let val tvl = type_vars_in_term tm in
     if null tvl then ()
     else (os oc "!["; oiter oc "," write_type tvl; os oc "]: ");
-    write_pred oc term2
+    write_pred oc tm
   end
 
-(* Todo replace name by thy.name *)
-fun write_ax oc (name,thm) =
+(* todo: replace name by thy.name *)
+fun write_ax oc (name,tm) =
   (
   os oc ("fof(" ^ escape ("thm." ^ name) ^ ", axiom, ");
-  write_formula oc (concl (DISCH_ALL thm));
+  write_formula oc tm;
   os oc ").\n"
   )
 
@@ -211,11 +185,20 @@ fun write_cj oc cj =
   os oc ").\n"
   )
 
-fun write_pb file axl cj =
-  let val oc = TextIO.openOut file in
+(* 
+  Use list_mk_forall and rename_bvarl before using this function to guarantee
+  that all variables have different names 
+*)
+fun write_tptp dir axl cj =
+  let val oc = TextIO.openOut (dir ^ "/atp_in") in
     (app (write_ax oc) axl; write_cj oc cj) handle Interrupt => ();
     TextIO.closeOut oc
   end
+
+(*
+fun write_pb term list * (string * term list) list * term list
+*)
+
 
 (*
   load "holyHammer";

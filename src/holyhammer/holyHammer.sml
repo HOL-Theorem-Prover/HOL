@@ -11,7 +11,7 @@
 structure holyHammer :> holyHammer =
 struct
 
-open HolKernel boolLib hhWriter hhReconstruct tttTools tttExec tttFeature tttPredict tttSetup
+open HolKernel boolLib hhWriter hhReconstruct tttTools tttExec tttFeature tttPredict tttSetup hhTranslate hhTptp
 
 val ERR = mk_HOL_ERR "holyHammer"
 
@@ -190,6 +190,23 @@ fun export_theories dir thyl =
   write_thydep (dir ^ "/thydep.dep") thyl
   )
 
+fun thm_of_name s =
+  let val (a,b) = split_string "Theory." s in 
+    (s, DB.fetch a b)
+  end
+
+fun thml_of_namel sl = 
+  let
+    val (ns1,namel) = partition in_namespace sl
+    fun f s = case thm_of_sml (snd (split_string "Theory." s)) of
+        SOME (_,thm) => SOME (s,thm)
+      | NONE => NONE
+    val ns2  = hide_out (List.mapPartial f) ns1
+    val thml = map thm_of_name namel
+  in
+    ns2 @ thml
+  end
+
 (*---------------------------------------------------------------------------
    Translate from higher-order to first order
  ----------------------------------------------------------------------------*)
@@ -232,6 +249,9 @@ fun launch_atp dir atp tim =
 
 fun reconstruct_dir dir goal = reconstruct (status_dir dir, out_dir dir) goal
 fun reconstruct_atp atp goal = reconstruct (status_of atp, out_of atp) goal
+
+fun reconstruct_atp_new atp goal = 
+  reconstruct_new (status_of atp, out_of atp) goal
 
 fun reconstruct_dir_stac dir goal =
   reconstruct_stac (status_dir dir, out_dir dir) goal
@@ -321,9 +341,9 @@ fun create_fof name thm =
     ()
   end
 
-(*---------------------------------------------------------------------------
+(*----------------------------------------------------------------------------
    Asynchronous calls to holyhammer in tactictoe.
- ----------------------------------------------------------------------------*)
+ -----------------------------------------------------------------------------*)
 
 fun hh_stac pids (symweight,feav,revdict) t goal =
   let
@@ -340,5 +360,54 @@ fun hh_stac pids (symweight,feav,revdict) t goal =
   in
     r
   end
+  
+(*----------------------------------------------------------------------------
+  New HolyHammer (only Eprover for now)
+  ----------------------------------------------------------------------------*)  
 
+fun hh_new_goal goal =
+  let
+    val _ = mkDir_err ttt_search_dir
+    val _ = mkDir_err (ttt_search_dir ^ "/debug")
+    val cj = list_mk_imp goal
+    val (symweight,feav,revdict) = update_thmdata ()
+    val premises = 
+      thmknn_wdep (symweight,feav,revdict) 128 (fea_of_goal goal)
+    val (axl,new_cj) = name_pb (translate_pb (thml_of_namel premises) cj)
+    val _ = write_tptp (provdir_of Eprover) axl new_cj
+    val _ = launch_atp (provdir_of Eprover) Eprover (!timeout_glob)
+  in
+    reconstruct_atp_new Eprover goal
+  end
+
+fun hh_new term = hh_new_goal ([],term)
+
+(*
+  load "hhTranslate";
+  open hhTranslate;
+  val term = ``(1 + 1 = 2) /\ P ($+)``;
+  tttTools.dlist (collect_arity term);
+  all_arity_eq term;
+
+  6) print the list of terms to fof making sure to know where each term came
+  from
+  read the proof from Eprover and reconstruct it.
+
+  load "holyHammer";
+  open holyHammer;
+  open tttTools;
+  open hhReconstruct;
+  reconstruct_flag := false;
+  time hh_new ``1+1=2``;
+  time holyhammer ``1+1=2``;
+
+
+*)
+  
+  
+  
+  
+  
+  
+  
 end
