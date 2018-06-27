@@ -401,7 +401,6 @@ fun hh_new term = hh_new_goal ([],term)
   time hh_new ``1+1=2``;
   time holyhammer ``1+1=2``;
 
-
 *)
   
   

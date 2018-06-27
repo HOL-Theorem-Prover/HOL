@@ -116,8 +116,9 @@ fun read_lemmas_new atp_out =
       in
         String.concatWith "." sl2
       end
+    val l4 = mk_fast_set String.compare (map f l3)
   in
-    map ((split_string "Theory.") o f) l3
+    map (split_string "Theory.") l4
   end
 
 fun get_lemmas_new (atp_status,atp_out) =
