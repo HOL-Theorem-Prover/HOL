@@ -30,6 +30,16 @@ fun log_t s f x =
     r
   end
 
+fun log_st limit s f x =
+  let
+    val _ = log s
+    val (r,t) = add_time f x
+    val _ = if r > limit then log "Warning: slow" else ()
+    val _ = log (s ^ " " ^ Real.toString t)
+  in
+    r
+  end
+
 (*----------------------------------------------------------------------------
    Variable names
   ----------------------------------------------------------------------------*)
@@ -299,13 +309,14 @@ fun prepare_tm tm =
 fun translate_tm tm =
   let 
     val _ = log ("Original term:\n  " ^ term_to_string tm)
-    val tm1 = log_t "prepare_tm:" prepare_tm tm
+    val tm1 = log_st 0.001 "prepare_tm:" prepare_tm tm
     val _ = log ("Renaming variables:\n  " ^ term_to_string tm1)
-    val thml1 = log_t "lift_conv:" RPT_LIFT_CONV tm1
+    val thml1 = log_st 0.001 "lift_conv:" RPT_LIFT_CONV tm1
     val tml1 = map (rand o concl) thml1
     val _ = log ("Lifting lambdas and predicates:\n  " ^ 
       String.concatWith "\n  " (map term_to_string tml1))
-    val thml2 = log_t "let_conv:" (map (TRY_CONV LET_CONV_BVL THENC REFL)) tml1
+    val thml2 = 
+      log_st 0.001 "let_conv:" (map (TRY_CONV LET_CONV_BVL THENC REFL)) tml1
     val tml2 = map (rand o concl) thml2
     val _ = log ("Apply operator for bound variables:\n  " ^ 
       String.concatWith "\n  " (map term_to_string tml2)) 
@@ -326,7 +337,7 @@ fun translate_pb premises cj =
     val ax_tml = map f premises
     val big_tm = 
       list_mk_conj (map list_mk_conj (cj_tml :: (map snd ax_tml)))
-    val ari_thml = log_t "optim_arity" optim_arity_eq big_tm
+    val ari_thml = log_st 0.1 "optim_arity" optim_arity_eq big_tm
     val ari_tml =  map only_concl ari_thml
     val _ = log ("Arity equations:\n  " ^ 
       String.concatWith "\n  " (map term_to_string ari_tml)) 

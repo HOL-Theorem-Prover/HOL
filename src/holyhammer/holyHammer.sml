@@ -374,8 +374,8 @@ fun hh_new_goal goal =
     val premises = 
       thmknn_wdep (symweight,feav,revdict) 128 (fea_of_goal goal)
     val (axl,new_cj) = 
-      name_pb (log_t "translate_pb" (translate_pb (thml_of_namel premises)) cj)
-    val _ = log_t "write_tptp" (write_tptp (provdir_of Eprover) axl) new_cj
+      name_pb (log_st 1.0 "translate_pb" (translate_pb (thml_of_namel premises)) cj)
+    val _ = log_st 0.1 "write_tptp" (write_tptp (provdir_of Eprover) axl) new_cj
     val _ = log_t "launch_atp" 
       (launch_atp (provdir_of Eprover) Eprover) (!timeout_glob)
   in
@@ -397,7 +397,7 @@ fun hh_new term = hh_new_goal ([],term)
   7) detailed debugging of the translation.
   8) Use tactictoe evaluation scheme.  
   
-  hh_new ``1+1=2``;
+
   load "holyHammer";
   open holyHammer;
   open tttTools;
