@@ -392,14 +392,21 @@ fun hh_new term = hh_new_goal ([],term)
   6) print the list of terms to fof making sure to know where each term came
   from
   read the proof from Eprover and reconstruct it.
-
+  7) detailed debugging of the translation.
+  8) Use tactictoe evaluation scheme.  
+  
+  
   load "holyHammer";
   open holyHammer;
   open tttTools;
+  open hhTranslate;
+  log_flag := true;
+  hh_new ``1+1=2``;
+  holyhammer ``1+1=2``;
   open hhReconstruct;
   reconstruct_flag := false;
   time hh_new ``1+1=2``;
-  time holyhammer ``1+1=2``;
+  time 
 
 *)
   

@@ -3,6 +3,8 @@ sig
 
 include Abbrev
 
+  val log_flag : bool ref
+  
   val rename_bvarl : term -> term
   val all_bvar  : term -> term list  
   val must_pred : term -> bool

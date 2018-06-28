@@ -12,6 +12,16 @@ struct
 open HolKernel boolLib tttTools
 
 (*----------------------------------------------------------------------------
+   Debug function
+  ----------------------------------------------------------------------------*)
+
+val hh_dir = HOLDIR ^ "/src/holyhammer"
+val log_flag = ref true
+
+fun log s = 
+  if !log_flag then append_endline (hh_dir ^ "/translate_log") else ()
+
+(*----------------------------------------------------------------------------
    Variable names
   ----------------------------------------------------------------------------*)
 
@@ -44,7 +54,7 @@ fun all_bvar tm =
 (* lifting *)
 local val li = ref 0 in  
   fun genvarl ty = 
-    let val r =  mk_var ("gl" ^ int_to_string (!li), ty) in
+    let val r =  mk_var ("f" ^ int_to_string (!li), ty) in
       incr li; r
     end
   fun reset_gl () = li := 0
@@ -53,7 +63,7 @@ end
 (* arity *)
 local val ai = ref 0 in  
   fun genvara ty = 
-    let val r =  mk_var ("ga" ^ int_to_string (!ai), ty) in
+    let val r =  mk_var ("X" ^ int_to_string (!ai), ty) in
       incr ai; r
     end
   fun reset_ga () = ai := 0
@@ -191,8 +201,8 @@ fun RPT_LIFT_CONV tm =
   val tm = ``!y. y (\x.x) 2 = P (!z.z)``;
   val tm = ``(!h y. y (∀z. h (\x.x) y)) <=> (!x. (\x. x) T)``;
 
-  RPT_LIFT_CONV term;
-  val thm = REPEATC (ATOM_CONV LIFT_CONV) term;
+  val thml = RPT_LIFT_CONV tm;
+  val thm = REPEATC (ATOM_CONV LIFT_CONV) tm;
   ----------------------------------------------------------------------------*)
 
 
@@ -241,7 +251,7 @@ fun mk_arity_eq f n =
     val vl = map genvara tyl
     val t1 = list_mk_comb (f, List.take (vl,n))
   in
-    LET_CONV_AUX t1
+    GENL vl (LET_CONV_AUX t1)
   end
 
 fun all_arity_eq tm =
@@ -277,18 +287,28 @@ fun optim_arity_eq tm =
 fun prepare_tm tm =
   rename_bvarl (list_mk_forall (free_vars_lr tm, tm))
 
-(* Delay the decision on which arity theorem to produce *) 
 fun translate_tm tm =
   let 
+    val _ = log ("Original term:\n  " ^ term_to_string tm)
     val tm1 = prepare_tm tm
+    val _ = log ("Renaming variables:\n  " ^ term_to_string tm1)
     val thml1 = RPT_LIFT_CONV tm1
     val tml1 = map (rand o concl) thml1
+    val _ = log ("Lifting lambdas and predicates:\n  " ^ 
+      String.concatWith "\n" (map term_to_string tml1))
     val thml2 = map (TRY_CONV LET_CONV_BVL THENC REFL) tml1
+    val _ = log ("Apply operator for bound variables:\n  " ^ 
+      String.concatWith "\n" (map term_to_string tml1)) 
     val tml2 = map (rand o concl) thml2
   in
     tml2
   end
 
+fun only_concl x = 
+  let val (a,b) = dest_thm x in
+    if null a then b else raise ERR "only_concl" ""
+  end
+  
 fun translate_pb premises cj =
   let
     val _ = (reset_v(); reset_gl (); reset_ga ())
@@ -297,7 +317,7 @@ fun translate_pb premises cj =
     val ax_tml = map f premises
     val big_tm = 
       list_mk_conj (map list_mk_conj (cj_tml :: (map snd ax_tml)))
-    val ari_tml = map (concl o DISCH_ALL) (optim_arity_eq big_tm)
+    val ari_tml = map only_concl (optim_arity_eq big_tm)
   in
     (ari_tml, ax_tml, cj_tml)
   end
@@ -327,7 +347,7 @@ fun name_pb (ari_tml, ax_tml, cj_tml) =
     (axl1 @ axl2 @ axl3, cj)  
   end
 
-(* 
+(*
   load "hhTranslate";
   open hhTranslate;
   val tm = ``(!f. (f + 0 = 0)) /\ P($+)``;
@@ -342,23 +362,8 @@ fun name_pb (ari_tml, ax_tml, cj_tml) =
 
   tttTools.dlist (collect_arity term);
   all_arity_eq term;
-  
-  1) generalize free variables 
-  2) and rename variables 
-  3) apply translate
-  
-   should produce a list of pairs (name,tml1,tml2)
-  
-  
-  4) generate arity equations for free variables and constants 
-     for the list of terms. (Unoptimized, so it can be local)
-     simple name for arity theorems.
-     
-  6) print the list of terms to fof making sure to know where each term came
-  from
-  read the proof from Eprover and reconstruct it.
-  
-  
+   
+  6) print debug information
 *)
 
 
