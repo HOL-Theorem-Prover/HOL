@@ -7,7 +7,10 @@ sig
   type lbl_t = (string * real * goal * goal list)
   type fea_t = int list
   type feav_t = (lbl_t * fea_t)
-
+  
+  (* Read a list of theorems from strings *)
+  val thml_of_namel : string list -> (string * thm) list
+  
   (* Caching features of theorems *)
   val update_thmdata : unit ->
     (int, real) Redblackmap.dict *

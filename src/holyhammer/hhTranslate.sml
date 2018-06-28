@@ -16,10 +16,10 @@ open HolKernel boolLib tttTools
   ----------------------------------------------------------------------------*)
 
 val hh_dir = HOLDIR ^ "/src/holyhammer"
-val log_flag = ref true
+val log_flag = ref false
 
 fun log s = 
-  if !log_flag then append_endline (hh_dir ^ "/translate_log") else ()
+  if !log_flag then append_endline (hh_dir ^ "/translate_log") s else ()
 
 fun log_t s f x =
   let
@@ -329,7 +329,7 @@ fun translate_pb premises cj =
     val ari_thml = log_t "optim_arity" optim_arity_eq big_tm
     val ari_tml =  map only_concl ari_thml
     val _ = log ("Arity equations:\n  " ^ 
-      String.concatWith "\n  " (map term_to_string ari_thm)) 
+      String.concatWith "\n  " (map term_to_string ari_tml)) 
   in
     (ari_tml, ax_tml, cj_tml)
   end

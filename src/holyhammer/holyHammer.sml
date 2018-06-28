@@ -373,7 +373,8 @@ fun hh_new_goal goal =
     val (symweight,feav,revdict) = update_thmdata ()
     val premises = 
       thmknn_wdep (symweight,feav,revdict) 128 (fea_of_goal goal)
-    val (axl,new_cj) = name_pb (translate_pb (thml_of_namel premises) cj)
+    val (axl,new_cj) = 
+      name_pb (log_t "translate_pb" (translate_pb (thml_of_namel premises)) cj)
     val _ = log_t "write_tptp" (write_tptp (provdir_of Eprover) axl) new_cj
     val _ = log_t "launch_atp" 
       (launch_atp (provdir_of Eprover) Eprover) (!timeout_glob)
@@ -396,13 +397,23 @@ fun hh_new term = hh_new_goal ([],term)
   7) detailed debugging of the translation.
   8) Use tactictoe evaluation scheme.  
   
-  
+  hh_new ``1+1=2``;
   load "holyHammer";
   open holyHammer;
   open tttTools;
   open hhTranslate;
-  log_flag := true;
-  hh_new ``1+1=2``;
+  val hh_dir = HOLDIR ^ "/src/holyhammer";
+  val _ = erase_file (hh_dir ^ "/translate_log");
+  val _ = log_flag := true;
+  val cj = ``MAP f [1;2] = REVERSE (MAP f [2;1])``;
+  holyhammer cj;
+  hh_new cj;
+  
+  val (axl,new_cj) = name_pb (translate_pb (thml_of_namel premises) cj)
+  val _ = log_t "write_tptp" (hhTptp.write_tptp hh_dir) axl new_cj
+ 
+  
+  
   holyhammer ``1+1=2``;
   open hhReconstruct;
   reconstruct_flag := false;
