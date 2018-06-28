@@ -34,7 +34,7 @@ fun log_st limit s f x =
   let
     val _ = log s
     val (r,t) = add_time f x
-    val _ = if r > limit then log "Warning: slow" else ()
+    val _ = if t > limit then log "Warning: slow" else ()
     val _ = log (s ^ " " ^ Real.toString t)
   in
     r
@@ -190,7 +190,7 @@ fun LIFT_CONV tm =
       in
         PROVE_HYP ethm2 cthm 
       end
-    else REWRITE_CONV [thm] tm
+    else PURE_REWRITE_CONV [thm] tm
   end
 
 (* Todo : make a completeness check for this function *)      
@@ -246,7 +246,7 @@ fun LET_CONV_BV bvl tm =
 (* Warning: assumes free variables and bound variables have distinct names *)
 fun LET_CONV_BVL tm =
   let val bvl = all_bvar tm in
-    TOP_DEPTH_CONV (LET_CONV_BV bvl) tm
+    TOP_SWEEP_CONV (LET_CONV_BV bvl) tm
   end
    
 (*----------------------------------------------------------------------------
@@ -308,7 +308,7 @@ fun prepare_tm tm =
 
 fun translate_tm tm =
   let 
-    val _ = log ("Original term:\n  " ^ term_to_string tm)
+    val _ = log ("  " ^ term_to_string tm)
     val tm1 = log_st 0.001 "prepare_tm:" prepare_tm tm
     val _ = log ("Renaming variables:\n  " ^ term_to_string tm1)
     val thml1 = log_st 0.001 "lift_conv:" RPT_LIFT_CONV tm1
@@ -332,7 +332,9 @@ fun only_concl x =
 fun translate_pb premises cj =
   let
     val _ = (reset_v(); reset_gl (); reset_ga ())
-    fun f (name,thm) =  (name, translate_tm (concl (DISCH_ALL thm)))
+    fun f (name,thm) =  
+      (log ("\n" ^ name); (name, translate_tm (concl (DISCH_ALL thm))))
+    val _ = log "\nConjecture"
     val cj_tml = translate_tm cj
     val ax_tml = map f premises
     val big_tm = 

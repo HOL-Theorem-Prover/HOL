@@ -29,12 +29,15 @@ fun remove_white_spaces s =
     String.implode cl'
   end
 
+fun unsquotify s =
+  if String.size s >= 2 andalso 
+     String.sub (s, 0) = #"'" andalso
+     String.sub (s, String.size s - 1) = #"'"
+  then String.substring (s, 1, String.size s - 2)
+  else raise ERR "unsquotify" "" 
+
 (* Assumes the theorem name was single quoted before
    which always happen except for reserved names *)
-fun unsquotify s =
-  if String.size s >= 2
-  then String.substring (s, 1, String.size s - 2)
-  else raise ERR "unsquotify" ""
 
 fun map_half b f l = case l of
     [] => []
@@ -148,14 +151,17 @@ fun mk_metiscall lemmas =
 
 fun hh_minimize lemmas g =
   if not (!reconstruct_flag) 
-  then (print_endline (mk_metiscall lemmas); raise ERR "" "")
+  then (print_endline (mk_metiscall lemmas); raise ERR "hh_minimize" "reconstruction off")
   else
     let
       val stac = mk_metiscall lemmas
       val newstac = hide_out (tttMinimize.minimize_stac 1.0 stac g) []
+      val tac = hide_out tactic_of_sml newstac
     in
       print_endline newstac;
-      tactic_of_sml newstac
+      case app_tac 1.0 tac g of
+        SOME _ => tac 
+      | NONE   => raise ERR "hh_minimize" "reconstruction failed"
     end
 
 (*---------------------------------------------------------------------------

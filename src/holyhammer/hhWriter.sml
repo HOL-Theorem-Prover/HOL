@@ -35,7 +35,7 @@ fun is_tptp_sq_char c =
     (c <> #"/") andalso
     (c <> #":") andalso
     (c <> #"|") andalso
-    (c <> #"\134") (* TODO: why? *)
+    (c <> #"\"")
   end
 
 (* TODO: use String.translate *)

@@ -276,13 +276,12 @@ fun launch_parallel t =
 (* TODO:
      translate when the prover's binary exists.
      terminate when the first prover finds a proof. *)
-fun holyhammer_goal goal =
+
+fun holyhammer_pb premises goal =
   let
     val _ = mkDir_err ttt_search_dir
     val _ = mkDir_err (ttt_search_dir ^ "/debug")
     val term = list_mk_imp goal
-    val (symweight,feav,revdict) = update_thmdata ()
-    val premises = thmknn_wdep (symweight,feav,revdict) 128  (fea_of_goal goal)
     val _ = export_problem (probdir_of Eprover) premises term
     val _ = translate_fof (probdir_of Eprover) (provdir_of Eprover)
     val _ = export_problem (probdir_of Z3) (first_n 32 premises) term
@@ -291,6 +290,16 @@ fun holyhammer_goal goal =
   in
     reconstruct_atp Eprover goal
     handle _ => reconstruct_atp Z3 goal (* TODO: reraise Interrupt *)
+  end
+
+fun holyhammer_goal goal =
+  let
+    val _ = mkDir_err ttt_search_dir
+    val _ = mkDir_err (ttt_search_dir ^ "/debug")
+    val (symweight,feav,revdict) = update_thmdata ()
+    val premises = thmknn_wdep (symweight,feav,revdict) 128  (fea_of_goal goal)
+  in
+    holyhammer_pb premises goal
   end
 
 fun holyhammer term = holyhammer_goal ([],term)
@@ -365,14 +374,10 @@ fun hh_stac pids (symweight,feav,revdict) t goal =
   New HolyHammer (only Eprover for now)
   ----------------------------------------------------------------------------*)  
 
-fun hh_new_goal goal =
+
+fun hh_pb premises goal =
   let
-    val _ = mkDir_err ttt_search_dir
-    val _ = mkDir_err (ttt_search_dir ^ "/debug")
     val cj = list_mk_imp goal
-    val (symweight,feav,revdict) = update_thmdata ()
-    val premises = 
-      thmknn_wdep (symweight,feav,revdict) 128 (fea_of_goal goal)
     val (axl,new_cj) = 
       name_pb (log_st 1.0 "translate_pb" (translate_pb (thml_of_namel premises)) cj)
     val _ = log_st 0.1 "write_tptp" (write_tptp (provdir_of Eprover) axl) new_cj
@@ -380,6 +385,17 @@ fun hh_new_goal goal =
       (launch_atp (provdir_of Eprover) Eprover) (!timeout_glob)
   in
     reconstruct_atp_new Eprover goal
+  end
+
+fun hh_new_goal goal =
+  let
+    val _ = mkDir_err ttt_search_dir
+    val _ = mkDir_err (ttt_search_dir ^ "/debug")
+    val (symweight,feav,revdict) = update_thmdata ()
+    val premises = 
+      thmknn_wdep (symweight,feav,revdict) 128 (fea_of_goal goal)
+  in
+    hh_pb premises goal
   end
 
 fun hh_new term = hh_new_goal ([],term)
@@ -404,11 +420,33 @@ fun hh_new term = hh_new_goal ([],term)
   open hhTranslate;
   val hh_dir = HOLDIR ^ "/src/holyhammer";
   val _ = erase_file (hh_dir ^ "/translate_log");
+  val cj = ``MAP f [1] = REVERSE (MAP f [0])``;
   val _ = log_flag := true;
-  val cj = ``MAP f [1;2] = REVERSE (MAP f [2;1])``;
-  holyhammer cj;
   hh_new cj;
   
+  
+  val premises = ["prim_recTheory.num_Axiom"];
+   val cj = ``0=1``;
+   val goal : goal = ([],cj);
+  hh_pb premises goal;
+  
+  holyhammer_pb premises goal;
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  holyhammer cj;
+  val _ = erase_file (hh_dir ^ "/translate_log");
+  val cj = ``1+1=2``;
+  hh_new cj;
+  
+  
+  holyhammer cj;
   val (axl,new_cj) = name_pb (translate_pb (thml_of_namel premises) cj)
   val _ = log_t "write_tptp" (hhTptp.write_tptp hh_dir) axl new_cj
  
@@ -419,7 +457,8 @@ fun hh_new term = hh_new_goal ([],term)
   reconstruct_flag := false;
   time hh_new ``1+1=2``;
   time 
-
+    
+  hh_new cj;
 *)
   
   

@@ -34,6 +34,7 @@ sig
   val reconstruct_dir   : string -> goal -> tactic
 
   (* Main function and options *)
+  val holyhammer_pb     : string list -> goal -> tactic
   val holyhammer        : term -> tactic
   val hh                : tactic
 
@@ -53,6 +54,7 @@ sig
   val set_timeout       : int -> unit
   
   (* New holyhammer *)
+  val hh_pb : string list -> goal -> tactic
   val hh_new_goal : goal -> tactic
   val hh_new : term -> tactic
 

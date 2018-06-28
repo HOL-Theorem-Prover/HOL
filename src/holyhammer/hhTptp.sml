@@ -12,7 +12,7 @@ struct
 open HolKernel boolLib tttTools hhTranslate
 
 (*----------------------------------------------------------------------------
-   Escaping
+   Escaping (for ATPs than do not support single quotes)
   ----------------------------------------------------------------------------*)
 
 fun escape_char c =
@@ -44,11 +44,27 @@ fun unescape_aux l = case l of
  
 fun unescape s = implode (unescape_aux (explode s))
 
-fun tptp_of_var arity v = fst (dest_var v) ^ "_" ^ int_to_string arity
+(*----------------------------------------------------------------------------
+   Escaping constants , variables and theorems
+  ----------------------------------------------------------------------------*)
+
+val readable_flag = ref false
+
+fun tptp_of_var arity v = 
+  if not (!readable_flag) 
+  then 
+    if arity = 0 
+    then fst (dest_var v)
+    else fst (dest_var v) ^ "_" ^ int_to_string arity
+  else fst (dest_var v)
 
 fun tptp_of_const arity c = 
   let val {Name, Thy, Ty} = dest_thy_const c in
-    escape ("const" ^ int_to_string arity ^ "." ^ Thy ^ "." ^ Name)
+    if not (!readable_flag) 
+    then escape 
+      ("c" ^ (if arity = 0 then "" else int_to_string arity) ^ 
+       "." ^ Thy ^ "." ^ Name)
+    else Name
   end
 
 fun tptp_of_constvar arity tm = 
@@ -56,9 +72,22 @@ fun tptp_of_constvar arity tm =
   else if is_var tm then tptp_of_var arity tm
   else raise raise ERR "tptp_of_constvar" (term_to_string tm)
 
-(* Test 
-unescape (escape "a:@\\x");
-*)
+fun tptp_of_vartype ty = 
+  if not (!readable_flag) 
+  then ("A" ^ (escape (dest_vartype ty)))
+  else dest_vartype ty
+
+fun tptp_of_tyop ty = 
+  let 
+    val {Args, Thy, Tyop} = dest_thy_type ty 
+  in   
+    if not (!readable_flag) 
+    then escape ("ty" ^ "." ^ Thy ^ "." ^ Tyop)
+    else Tyop
+  end
+
+fun tptp_of_thm (name,tm) = 
+  if not (!readable_flag) then escape ("thm." ^ name) else name
 
 (*----------------------------------------------------------------------------
    FOF writer
@@ -75,11 +104,11 @@ fun oiter_aux oc sep f l = case l of
 fun oiter oc sep f l = oiter_aux oc sep f l
 
 fun write_type oc ty =
-  if is_vartype ty then os oc ("A" ^ (escape (dest_vartype ty)))
+  if is_vartype ty then os oc (tptp_of_vartype ty)
   else
     let 
       val {Args, Thy, Tyop} = dest_thy_type ty 
-      val tyops = escape ("type" ^ "." ^ Thy ^ "." ^ Tyop)
+      val tyops = tptp_of_tyop ty
     in
       os oc tyops;
       if null Args then () 
@@ -87,21 +116,16 @@ fun write_type oc ty =
     end
 
 fun write_term oc tm =
-  if is_var tm then 
-    let val (vs, vty) = dest_var tm in
-      os oc "s("; write_type oc vty; os oc ","; os oc vs; os oc ")"
-    end
-  else 
-    let 
-      val (rator,argl) = strip_comb tm 
-    in
-      os oc "s("; write_type oc (type_of tm); os oc ","; 
-      os oc (tptp_of_constvar (length argl) rator);
-      if null argl then ()
-      else (os oc "("; oiter oc "," write_term argl; os oc ")");
-      os oc ")"
-    end
-
+  let 
+    val (rator,argl) = strip_comb tm 
+  in
+    os oc "s("; write_type oc (type_of tm); os oc ","; 
+    os oc (tptp_of_constvar (length argl) rator);
+    if null argl then ()
+    else (os oc "("; oiter oc "," write_term argl; os oc ")");
+    os oc ")"
+  end
+    
 (* Type unsafe version *)
 fun write_term_unsafe oc tm =
   let 
@@ -170,17 +194,18 @@ fun write_formula oc tm =
     write_pred oc tm
   end
 
-(* todo: replace name by thy.name *)
 fun write_ax oc (name,tm) =
   (
-  os oc ("fof(" ^ escape ("thm." ^ name) ^ ", axiom, ");
+  if !readable_flag then os oc "% " else ();
+  os oc ("fof(" ^ tptp_of_thm (name,tm) ^ ", axiom, ");
   write_formula oc tm;
   os oc ").\n"
   )
 
 fun write_cj oc cj =
   (
-  os oc "fof(conjecture , conjecture, ";
+  if !readable_flag then os oc "% " else ();
+  os oc "fof(conjecture, conjecture, ";
   write_formula oc cj;
   os oc ").\n"
   )
@@ -190,7 +215,12 @@ fun write_cj oc cj =
   that all variables have different names 
 *)
 fun write_tptp dir axl cj =
-  let val oc = TextIO.openOut (dir ^ "/atp_in") in
+  let 
+    val oc = TextIO.openOut (dir ^ "/atp_in")
+  in
+    readable_flag := true;
+    (app (write_ax oc) axl; write_cj oc cj) handle Interrupt => ();
+    readable_flag := false;
     (app (write_ax oc) axl; write_cj oc cj) handle Interrupt => ();
     TextIO.closeOut oc
   end
