@@ -21,6 +21,15 @@ val log_flag = ref true
 fun log s = 
   if !log_flag then append_endline (hh_dir ^ "/translate_log") else ()
 
+fun log_t s f x =
+  let
+    val _ = log s
+    val (r,t) = add_time f x
+    val _ = log (s ^ " " ^ Real.toString t)
+  in
+    r
+  end
+
 (*----------------------------------------------------------------------------
    Variable names
   ----------------------------------------------------------------------------*)
@@ -290,16 +299,16 @@ fun prepare_tm tm =
 fun translate_tm tm =
   let 
     val _ = log ("Original term:\n  " ^ term_to_string tm)
-    val tm1 = prepare_tm tm
+    val tm1 = log_t "prepare_tm:" prepare_tm tm
     val _ = log ("Renaming variables:\n  " ^ term_to_string tm1)
-    val thml1 = RPT_LIFT_CONV tm1
+    val thml1 = log_t "lift_conv:" RPT_LIFT_CONV tm1
     val tml1 = map (rand o concl) thml1
     val _ = log ("Lifting lambdas and predicates:\n  " ^ 
-      String.concatWith "\n" (map term_to_string tml1))
-    val thml2 = map (TRY_CONV LET_CONV_BVL THENC REFL) tml1
-    val _ = log ("Apply operator for bound variables:\n  " ^ 
-      String.concatWith "\n" (map term_to_string tml1)) 
+      String.concatWith "\n  " (map term_to_string tml1))
+    val thml2 = log_t "let_conv:" (map (TRY_CONV LET_CONV_BVL THENC REFL)) tml1
     val tml2 = map (rand o concl) thml2
+    val _ = log ("Apply operator for bound variables:\n  " ^ 
+      String.concatWith "\n  " (map term_to_string tml2)) 
   in
     tml2
   end
@@ -312,12 +321,15 @@ fun only_concl x =
 fun translate_pb premises cj =
   let
     val _ = (reset_v(); reset_gl (); reset_ga ())
-    fun f (name,thm) =  (name,translate_tm (concl (DISCH_ALL thm)))
+    fun f (name,thm) =  (name, translate_tm (concl (DISCH_ALL thm)))
     val cj_tml = translate_tm cj
     val ax_tml = map f premises
     val big_tm = 
       list_mk_conj (map list_mk_conj (cj_tml :: (map snd ax_tml)))
-    val ari_tml = map only_concl (optim_arity_eq big_tm)
+    val ari_thml = log_t "optim_arity" optim_arity_eq big_tm
+    val ari_tml =  map only_concl ari_thml
+    val _ = log ("Arity equations:\n  " ^ 
+      String.concatWith "\n  " (map term_to_string ari_thm)) 
   in
     (ari_tml, ax_tml, cj_tml)
   end

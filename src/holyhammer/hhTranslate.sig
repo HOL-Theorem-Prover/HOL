@@ -4,6 +4,8 @@ sig
 include Abbrev
 
   val log_flag : bool ref
+  val log : string -> unit
+  val log_t : string -> int
   
   val rename_bvarl : term -> term
   val all_bvar  : term -> term list  
