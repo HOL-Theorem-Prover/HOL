@@ -374,7 +374,6 @@ fun hh_stac pids (symweight,feav,revdict) t goal =
   New HolyHammer (only Eprover for now)
   ----------------------------------------------------------------------------*)  
 
-
 fun hh_pb premises goal =
   let
     val cj = list_mk_imp goal
@@ -400,71 +399,4 @@ fun hh_new_goal goal =
 
 fun hh_new term = hh_new_goal ([],term)
 
-(*
-  load "hhTranslate";
-  open hhTranslate;
-  val term = ``(1 + 1 = 2) /\ P ($+)``;
-  tttTools.dlist (collect_arity term);
-  all_arity_eq term;
-
-  6) print the list of terms to fof making sure to know where each term came
-  from
-  read the proof from Eprover and reconstruct it.
-  7) detailed debugging of the translation.
-  8) Use tactictoe evaluation scheme.  
-  
-
-  load "holyHammer";
-  open holyHammer;
-  open tttTools;
-  open hhTranslate;
-  val hh_dir = HOLDIR ^ "/src/holyhammer";
-  val _ = erase_file (hh_dir ^ "/translate_log");
-  val cj = ``MAP f [1] = REVERSE (MAP f [0])``;
-  val _ = log_flag := true;
-  hh_new cj;
-  
-  
-  val premises = ["prim_recTheory.num_Axiom"];
-   val cj = ``0=1``;
-   val goal : goal = ([],cj);
-  hh_pb premises goal;
-  
-  holyhammer_pb premises goal;
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  holyhammer cj;
-  val _ = erase_file (hh_dir ^ "/translate_log");
-  val cj = ``1+1=2``;
-  hh_new cj;
-  
-  
-  holyhammer cj;
-  val (axl,new_cj) = name_pb (translate_pb (thml_of_namel premises) cj)
-  val _ = log_t "write_tptp" (hhTptp.write_tptp hh_dir) axl new_cj
- 
-  
-  
-  holyhammer ``1+1=2``;
-  open hhReconstruct;
-  reconstruct_flag := false;
-  time hh_new ``1+1=2``;
-  time 
-    
-  hh_new cj;
-*)
-  
-  
-  
-  
-  
-  
-  
 end

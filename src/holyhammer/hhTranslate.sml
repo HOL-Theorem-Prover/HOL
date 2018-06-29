@@ -211,21 +211,6 @@ fun RPT_LIFT_CONV tm =
   end
 
 (*----------------------------------------------------------------------------
-  load "tttTools";
-  open tttTools;
-  show_assums := true;
-  
-  val tm = “(∀h y. y (h y) z)``;
-  val tm = ``!f2 y. (λx y.x) = f2 y``;
-  val tm = ``!y. y (\x.x) 2 = P (!z.z)``;
-  val tm = ``(!h y. y (∀z. h (\x.x) y)) <=> (!x. (\x. x) T)``;
-
-  val thml = RPT_LIFT_CONV tm;
-  val thm = REPEATC (ATOM_CONV LIFT_CONV) tm;
-  ----------------------------------------------------------------------------*)
-
-
-(*----------------------------------------------------------------------------
   Lowest arity for bound variables. Arity 0. 
   ----------------------------------------------------------------------------*)
 
@@ -347,12 +332,6 @@ fun translate_pb premises cj =
     (ari_tml, ax_tml, cj_tml)
   end
 
-(* todo: optimizations: 
-  0) Rewrite connectives like ?!
-  1) change the left hand side and right hand side of equality
-  2) improve sharing 
-*)
-
 fun name_pb (ari_tml, ax_tml, cj_tml) =
   let
     (* arity *)
@@ -371,26 +350,6 @@ fun name_pb (ari_tml, ax_tml, cj_tml) =
   in
     (axl1 @ axl2 @ axl3, cj)  
   end
-
-(*
-  load "hhTranslate";
-  open hhTranslate;
-  val tm = ``(!f. (f + 0 = 0)) /\ P($+)``;
-  val tm = ``∀z h y. h (\x. z x) y``;
-  val tm = “(∀h y. y (h y) z)``;
-  val tm = ``!f2 y. (λx y.x) = f2 y``;
-  val tm = ``!y. y (\x.x) 2 = P (!z.z)``;
-  val tm = ``(!h y. y (∀z. h (\x.x) y)) <=> (!x. (\x. x) T)``;
-  
-  val r = translate_pb [] tm;
-  val (l,cj) = name_pb r;
-
-  tttTools.dlist (collect_arity term);
-  all_arity_eq term;
-   
-  6) print debug information
-*)
-
 
 
 end
