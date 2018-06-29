@@ -176,7 +176,42 @@ fun system_output2(cmd, args) =
   let val () = debug ("try again")
   in  system_output2(cmd, args)
   end
+
+(* socket communication functions *)
+fun sendStr(sock, str) =
+  let
+    val vec = Word8Vector.tabulate(
+      String.size str + 1,
+      (fn i => Word8.fromInt(Char.ord(String.sub(str, i)))
+               handle Subscript => Word8.fromInt 0))
+    val slice = Word8VectorSlice.slice(vec,0,NONE)
+  in
+    Socket.sendVec(sock, slice)
+  end
+
+fun recvStr(sock, n) =
+  let val datar =
+    Socket.recvVec(sock, n)
+  in
+    CharVector.tabulate(Word8Vector.length datar,
+      (fn i => Char.chr(Word8.toInt(Word8Vector.sub(datar,i)))))
+  end
+
+fun receive(sock) =
+  let
+    fun rec_k(sock, acc) =
+      let val datar = recvStr(sock, 4096) in
+        if String.isSuffix (String.str(Char.chr 0)) datar
+        then String.concat(List.rev(datar::acc))
+        else if Char.contains datar (Char.chr 0)
+             then raise ERR "receive" "found deliminator within response"
+             else rec_k(sock, datar::acc)
+      end
+  in
+    rec_k(sock, [])
+  end
 (* -- *)
+
 
 fun main_tactictoe goal =
   let
@@ -200,6 +235,24 @@ fun main_tactictoe goal =
         val r = map #1 lbll
       in
         tac_cache := dadd g r (!tac_cache); r
+      end
+    fun nn_tacpred_socket(g:goal) =
+      let
+        val sa = INetSock.any 8083;
+        val sock : Socket.active INetSock.stream_sock =
+          let
+            val sock = INetSock.TCP.socket()
+            val () = Socket.connect (sock, sa)
+          in
+            sock
+          end
+        val args = String.concatWith " " (map (fn tm => "`` " ^ tttTools.nnstring_of_term tm ^ " ``") (#2 g :: #1 g))
+        val sending = sendStr(sock, args)
+        val datar = receive(sock)
+        val tactics = String.tokens (equal #"\n") datar
+        val () = Socket.close sock
+      in
+        tactics
       end
     fun nn_tacpred (g:goal) =
       let
