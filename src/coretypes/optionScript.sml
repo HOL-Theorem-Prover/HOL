@@ -459,6 +459,7 @@ val OPTION_BIND_def = Prim_rec.new_recursive_definition
    def = Term`(OPTION_BIND NONE f = NONE) /\
               (OPTION_BIND (SOME x) f = f x)`}
 val _= export_rewrites ["OPTION_BIND_def"]
+val _ = computeLib.add_persistend_funs[OPTION_BIND_def];
 
 val OPTION_BIND_cong = Q.store_thm(
   "OPTION_BIND_cong",
