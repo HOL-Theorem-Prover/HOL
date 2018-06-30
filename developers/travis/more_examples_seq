@@ -17,5 +17,4 @@ src/emit
 !examples/MLsyntax
 !examples/set-theory/zfset
 !examples/set-theory/vbg
-!examples/set-theory/hol_sets
 !examples/imperative
