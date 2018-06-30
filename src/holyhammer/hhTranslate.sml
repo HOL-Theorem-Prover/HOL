@@ -12,6 +12,15 @@ struct
 open HolKernel boolLib tttTools
 
 (*----------------------------------------------------------------------------
+   Tools
+  ----------------------------------------------------------------------------*)
+
+fun only_concl x = 
+  let val (a,b) = dest_thm x in
+    if null a then b else raise ERR "only_concl" ""
+  end
+  
+(*----------------------------------------------------------------------------
    Debug function
   ----------------------------------------------------------------------------*)
 
@@ -39,6 +48,42 @@ fun log_st limit s f x =
   in
     r
   end
+
+(*----------------------------------------------------------------------------
+  Preprocessing of the formula:
+    1 unfolding ?!
+    2 fully applying lambdas if at the top of an equality
+    3 applying beta conversion whenever possible
+  ----------------------------------------------------------------------------*)
+
+fun ELIM_LAMBDA_EQ tm =
+  let val (l, r) = dest_eq tm in
+    (
+    if is_abs l orelse is_abs r 
+    then 
+      CHANGED_CONV (ONCE_REWRITE_CONV [FUN_EQ_THM] THENC 
+      (TRY_CONV (QUANT_CONV (BINOP_CONV BETA_CONV))))
+    else NO_CONV
+    )
+    tm
+  end
+
+fun PREP_CONV tm =
+  (
+  PURE_REWRITE_CONV [EXISTS_UNIQUE_THM, EXISTS_UNIQUE_DEF] THENC
+  TOP_DEPTH_CONV ELIM_LAMBDA_EQ THENC
+  TOP_DEPTH_CONV BETA_CONV
+  )
+  tm
+
+fun prep_rw tm = rand (only_concl (QCONV PREP_CONV tm))
+
+(*----------------------------------------------------------------------------
+  Test:
+    val tm = ``(\x y z.(\z.z) y) = 1``;
+    val tm = ``?! x. x = 1``;
+    PREP_CONV tm;
+  ----------------------------------------------------------------------------*)
 
 (*----------------------------------------------------------------------------
    Variable names
@@ -289,7 +334,9 @@ fun optim_arity_eq tm =
   ----------------------------------------------------------------------------*)
 
 fun prepare_tm tm =
-  rename_bvarl (list_mk_forall (free_vars_lr tm, tm))
+  let val tm' = prep_rw tm in
+    rename_bvarl (list_mk_forall (free_vars_lr tm', tm'))
+  end
 
 fun translate_tm tm =
   let 
@@ -309,11 +356,6 @@ fun translate_tm tm =
     tml2
   end
 
-fun only_concl x = 
-  let val (a,b) = dest_thm x in
-    if null a then b else raise ERR "only_concl" ""
-  end
-  
 fun translate_pb premises cj =
   let
     val _ = (reset_v(); reset_gl (); reset_ga ())

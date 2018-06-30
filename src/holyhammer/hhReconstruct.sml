@@ -16,6 +16,10 @@ val ERR = mk_HOL_ERR "hhReconstruct"
 
 val reconstruct_flag = ref true
 
+val lemmas_ref = ref NONE
+val status_ref = ref false
+val rec_ref = ref false
+
 (*---------------------------------------------------------------------------
    Unescaping and extracting theorem and theory name. (OLD)
  ----------------------------------------------------------------------------*)
@@ -97,9 +101,11 @@ fun not_reserved_new s = String.isPrefix "thm." s
 fun is_dot c = (c = #".")
 
 fun get_lemmas (atp_status,atp_out) =
-  let val s = read_status atp_status in
+  let
+    val s = read_status atp_status 
+  in
     if s = "Theorem"
-    then SOME (read_lemmas atp_out)
+    then (status_ref := true; SOME (read_lemmas atp_out))
     else NONE
   end
 
@@ -127,7 +133,7 @@ fun read_lemmas_new atp_out =
 fun get_lemmas_new (atp_status,atp_out) =
   let val s = read_status atp_status in
     if s = "Theorem"
-    then SOME (read_lemmas_new atp_out)
+    then (status_ref := true; SOME (read_lemmas_new atp_out))
     else NONE
   end
 
@@ -151,7 +157,8 @@ fun mk_metiscall lemmas =
 
 fun hh_minimize lemmas g =
   if not (!reconstruct_flag) 
-  then (print_endline (mk_metiscall lemmas); raise ERR "hh_minimize" "reconstruction off")
+  then (print_endline (mk_metiscall lemmas); 
+        raise ERR "hh_minimize" "reconstruction off")
   else
     let
       val stac = mk_metiscall lemmas
@@ -159,8 +166,8 @@ fun hh_minimize lemmas g =
       val tac = hide_out tactic_of_sml newstac
     in
       print_endline newstac;
-      case app_tac 1.0 tac g of
-        SOME _ => tac 
+      case hide_out (app_tac 1.0 tac) g of
+        SOME _ => (rec_ref := true; tac)
       | NONE   => raise ERR "hh_minimize" "reconstruction failed"
     end
 
@@ -168,16 +175,29 @@ fun hh_minimize lemmas g =
    Reconstruction.
  ----------------------------------------------------------------------------*)
 
+fun concat_lemma (a,b) = a ^ "Theory." ^ b
+fun concat_lemmas ol = case ol of
+    NONE => NONE
+  | SOME l => SOME (map concat_lemma l)
+
+
 fun reconstruct (atp_status,atp_out) g =
-  let val olemmas = get_lemmas (atp_status,atp_out) in
+  let 
+    val _ = lemmas_ref := NONE
+    val _ = status_ref := false
+    val _ = rec_ref := false
+    val olemmas = get_lemmas (atp_status,atp_out) 
+    val _ = lemmas_ref := concat_lemmas olemmas
+  in
     case olemmas of
-      NONE => (print_endline "holyhammer: time out";
-               FAIL_TAC "holyhammer: time out")
+      NONE => raise ERR "reconstruct" "holyhammer failed to prove the goal"
     | SOME lemmas => hh_minimize lemmas g
   end
-  
+   
 fun reconstruct_stac (atp_status,atp_out) g =
-  let val olemmas = get_lemmas (atp_status,atp_out) in
+  let 
+    val olemmas = get_lemmas (atp_status,atp_out) 
+  in
     case olemmas of
       NONE => NONE
     | SOME lemmas => SOME (mk_metiscall lemmas)
@@ -188,10 +208,15 @@ fun reconstruct_stac (atp_status,atp_out) g =
  ----------------------------------------------------------------------------*)
 
 fun reconstruct_new (atp_status,atp_out) g =
-  let val olemmas = get_lemmas_new (atp_status,atp_out) in
+  let 
+    val _ = lemmas_ref := NONE
+    val _ = status_ref := false
+    val _ = rec_ref := false
+    val olemmas = get_lemmas_new (atp_status,atp_out) 
+    val _ = lemmas_ref := concat_lemmas olemmas
+  in
     case olemmas of
-      NONE => (print_endline "holyhammer: time out";
-               FAIL_TAC "holyhammer: time out")
+      NONE => raise ERR "reconstruct" "holyhammer failed to prove the goal"
     | SOME lemmas => hh_minimize lemmas g
   end
 

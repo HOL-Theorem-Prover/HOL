@@ -87,7 +87,12 @@ fun tptp_of_tyop ty =
   end
 
 fun tptp_of_thm (name,tm) = 
-  if not (!readable_flag) then escape ("thm." ^ name) else name
+  if not (!readable_flag) 
+  then 
+    if can (split_string "Theory.") name 
+    then escape ("thm." ^ name) 
+    else escape ("reserved." ^ name)
+  else name
 
 (*----------------------------------------------------------------------------
    FOF writer

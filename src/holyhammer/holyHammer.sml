@@ -15,6 +15,34 @@ open HolKernel boolLib hhWriter hhReconstruct tttTools tttExec tttFeature tttPre
 
 val ERR = mk_HOL_ERR "holyHammer"
 
+(*---------------------------------------------------------------------------
+  Holyhammer log
+  ----------------------------------------------------------------------------*)
+
+val hh_dir = HOLDIR ^ "/src/holyhammer"
+val log_old_dir = hh_dir ^ "/log_old"
+val log_new_dir = hh_dir ^ "/log_new"
+
+val hhlog_flag = ref false
+val hhnew_flag = ref false
+val thy_ref = ref "scratch"
+
+fun log_old s = 
+  if !hhlog_flag then append_endline (log_old_dir ^ "/" ^ !thy_ref) s else ()
+fun log_new s = 
+  if !hhlog_flag then append_endline (log_new_dir ^ "/" ^ !thy_ref) s else ()
+fun log_both s = (log_old s; log_new s)
+fun log_hh s = if !hhnew_flag then log_new s else log_old s
+
+fun log_hht s f x =
+  let
+    val _ = log_hh s
+    val (r,t) = add_time f x
+    val _ = log_hh (s ^ " " ^ Real.toString t)
+  in
+    r
+  end
+
 (* TODO: Use OS to change dir? *)
 fun cmd_in_dir dir cmd = OS.Process.system ("cd " ^ dir ^ "; " ^ cmd)
 
@@ -66,7 +94,6 @@ fun clean_dir dir =
   end
 
 (* TODO: use OS.Path.concat *)
-val hh_dir = HOLDIR ^ "/src/holyhammer"
 val fof_dir = hh_dir ^ "/fof"
 val tt_dir = hh_dir ^ "/tt"
 val hh_bin_dir = hh_dir ^ "/hh"
@@ -80,6 +107,8 @@ fun status_of atp = provdir_of atp ^ "/status"
 
 fun out_dir dir = dir ^ "/out"
 fun status_dir dir = dir ^ "/status"
+
+val eprover_dir_new = provbin_dir ^ "/eprover_files_new"
 
 (* ----------------------------------------------------------------------
    Predicting theorems
@@ -250,8 +279,8 @@ fun launch_atp dir atp tim =
 fun reconstruct_dir dir goal = reconstruct (status_dir dir, out_dir dir) goal
 fun reconstruct_atp atp goal = reconstruct (status_of atp, out_of atp) goal
 
-fun reconstruct_atp_new atp goal = 
-  reconstruct_new (status_of atp, out_of atp) goal
+fun reconstruct_atp_new dir goal = 
+  reconstruct_new (status_dir dir, out_dir dir) goal
 
 fun reconstruct_dir_stac dir goal =
   reconstruct_stac (status_dir dir, out_dir dir) goal
@@ -292,12 +321,41 @@ fun holyhammer_pb premises goal =
     handle _ => reconstruct_atp Z3 goal (* TODO: reraise Interrupt *)
   end
 
+fun report () =
+  (
+  log_hh ("Proof status: " ^ (if !status_ref then "success" else "failure"));
+  log_hh ("Reconstruction: " ^ (if !rec_ref then "success" else "failure"));
+  case !lemmas_ref of
+    NONE => ()
+  | SOME sl => log_hh ("Lemmas: " ^ String.concatWith " " sl)
+  )
+
+
+fun hh_eprover premises goal =
+  let
+    val _ = hhnew_flag := false
+    val _ = mkDir_err ttt_search_dir
+    val _ = mkDir_err (ttt_search_dir ^ "/debug")
+    val term = list_mk_imp goal
+    val _ = log_hht "export_problem"
+      (export_problem (probdir_of Eprover) premises) term
+    val _ = log_hht "translate_fof"
+      (translate_fof (probdir_of Eprover)) (provdir_of Eprover)
+    val _ = log_hht "launch_atp"
+      (launch_atp (provdir_of Eprover) Eprover) (!timeout_glob)
+    val r = log_hht "reconstruction" (reconstruct_atp Eprover) goal
+      handle _ => FAIL_TAC ""
+  in
+    report (); r
+  end
+
+
 fun holyhammer_goal goal =
   let
     val _ = mkDir_err ttt_search_dir
     val _ = mkDir_err (ttt_search_dir ^ "/debug")
     val (symweight,feav,revdict) = update_thmdata ()
-    val premises = thmknn_wdep (symweight,feav,revdict) 128  (fea_of_goal goal)
+    val premises = thmknn_wdep (symweight,feav,revdict) 128 (fea_of_goal goal)
   in
     holyhammer_pb premises goal
   end
@@ -374,16 +432,30 @@ fun hh_stac pids (symweight,feav,revdict) t goal =
   New HolyHammer (only Eprover for now)
   ----------------------------------------------------------------------------*)  
 
+val notfalse = EQT_ELIM (last (CONJ_LIST 3 NOT_CLAUSES))
+
+val extra_premises = 
+  [("truth", TRUTH), ("notfalse", notfalse),
+   ("bool_cases_ax", BOOL_CASES_AX), ("eq_ext", EQ_EXT)]
+
 fun hh_pb premises goal =
   let
+    val _ = hhnew_flag := true
+    val _ = mkDir_err eprover_dir_new
     val cj = list_mk_imp goal
-    val (axl,new_cj) = 
-      name_pb (log_st 1.0 "translate_pb" (translate_pb (thml_of_namel premises)) cj)
-    val _ = log_st 0.1 "write_tptp" (write_tptp (provdir_of Eprover) axl) new_cj
-    val _ = log_t "launch_atp" 
-      (launch_atp (provdir_of Eprover) Eprover) (!timeout_glob)
+    val thml = extra_premises @ thml_of_namel premises
+    val pb = log_hht "translate_pb" 
+      (translate_pb thml) cj
+    val (axl,new_cj) = name_pb pb
+    val _ = log_hht "write_tptp" 
+      (write_tptp eprover_dir_new axl) new_cj
+    val _ = log_hht "launch_atp"
+      (launch_atp eprover_dir_new Eprover) (!timeout_glob)
+    val r = 
+      log_hht "reconstruction" (reconstruct_atp_new eprover_dir_new) goal
+      handle _ => FAIL_TAC ""
   in
-    reconstruct_atp_new Eprover goal
+    report (); r
   end
 
 fun hh_new_goal goal =
@@ -391,12 +463,68 @@ fun hh_new_goal goal =
     val _ = mkDir_err ttt_search_dir
     val _ = mkDir_err (ttt_search_dir ^ "/debug")
     val (symweight,feav,revdict) = update_thmdata ()
-    val premises = 
-      thmknn_wdep (symweight,feav,revdict) 128 (fea_of_goal goal)
+    val premises = thmknn_wdep (symweight,feav,revdict) 128 (fea_of_goal goal)
   in
     hh_pb premises goal
   end
 
 fun hh_new term = hh_new_goal ([],term)
+
+(*----------------------------------------------------------------------------
+  Evaluation
+  ----------------------------------------------------------------------------*)  
+
+fun eval_thm (s,thm) =
+  let
+    val _ = (mkDir_err log_old_dir;
+             mkDir_err log_new_dir; 
+             print_endline s)
+    val _ = log_both ("\nTheorem: " ^ s)
+    val goal = dest_thm thm
+    val (b,premises) = dependencies_of_thm thm
+  in
+    if not b then log_both "broken dependencies" else
+    (
+    ignore (hh_pb premises goal);
+    ignore (hh_eprover premises goal)
+    )
+  end
+    
+fun eval_thy thy = 
+  (
+  thy_ref := thy; 
+  mkDir_err log_old_dir;
+  mkDir_err log_new_dir;
+  erase_file (log_old_dir ^ "/" ^ thy);
+  erase_file (log_new_dir ^ "/" ^ thy);
+  app eval_thm (DB.theorems thy)
+  )
+
+(*----------------------------------------------------------------------------
+  Comparison between hh_new_goal and hh
+  
+  load "holyHammer";
+  open holyHammer;
+  open tttTools;
+
+  val _ = hhlog_flag := true;
+  val thyl = ["list", "measure", "sorting", "probability", "finite_map", 
+              "arithmetic", "real", "complex"];
+  fun f x = x ^ "Theory";
+  val thyl' = map f thyl;
+  app load thyl';
+  app eval_thy thyl;
+  
+  val thm = ("false_imp", false_imp);
+  val _ = erase_file (log_old_dir ^ "/scratch");
+  val _ = erase_file (log_new_dir ^ "/scratch");
+  val _ = hhlog_flag := true;
+  eval_thm thm;
+  
+  ----------------------------------------------------------------------------*)  
+
+
+
+
 
 end

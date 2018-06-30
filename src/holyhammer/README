@@ -16,8 +16,6 @@ Install holyhammer: (done during the build)
   run Holmake in src/holyhammer
   run Holmake in src/holyhammer/hh/hh1
   run Holmake in src/holyhammer/hh
-  run Holmake in src/holyhammer/predict
-  run Holmake in src/holyhammer/predict/mepo
 
 Provers: Eprover(1.8 1.9 2.0), Z3 (4.0)
 

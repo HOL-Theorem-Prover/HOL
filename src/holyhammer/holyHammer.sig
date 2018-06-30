@@ -8,6 +8,15 @@ sig
   type fea_t = int list
   type feav_t = (lbl_t * fea_t)
   
+  (* Directories and files *)
+  val hh_dir : string
+  
+  (* Debugging *)
+  val hhlog_flag : bool ref
+  val hhnew_flag : bool ref
+  val log_old_dir : string
+  val log_new_dir : string
+  
   (* Read a list of theorems from strings *)
   val thml_of_namel : string list -> (string * thm) list
   
@@ -34,10 +43,11 @@ sig
   val reconstruct_dir   : string -> goal -> tactic
 
   (* Main function and options *)
+  val hh_eprover        : string list -> goal -> tactic
   val holyhammer_pb     : string list -> goal -> tactic
   val holyhammer        : term -> tactic
   val hh                : tactic
-
+  
   (* Holyhammer for Tactictoe with parallel calls *)
   val hh_stac           :
     string ->
@@ -57,5 +67,10 @@ sig
   val hh_pb : string list -> goal -> tactic
   val hh_new_goal : goal -> tactic
   val hh_new : term -> tactic
+  
+  (* Evaluation *)
+  val eval_thm : (string * thm) -> unit
+  val eval_thy : string -> unit
+  
 
 end
