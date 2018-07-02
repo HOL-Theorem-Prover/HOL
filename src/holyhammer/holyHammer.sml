@@ -405,7 +405,7 @@ fun export_theories dir thyl =
 (*----------------------------------------------------------------------------
   load "holyHammer";
   open holyHammer;
-  hh_eval_thy [Z3] false "list"; 
+  hh_eval_thy [Eprover] false "list"; 
   ----------------------------------------------------------------------------*)  
 
 end
