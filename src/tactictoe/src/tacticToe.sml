@@ -202,7 +202,9 @@ fun receive(sock) =
     fun rec_k(sock, acc) =
       let val datar = recvStr(sock, 4096) in
         if String.isSuffix (String.str(Char.chr 0)) datar
-        then String.concat(List.rev(datar::acc))
+        then String.concat(List.rev(
+          String.extract(datar, 0, SOME (String.size datar - 1))
+          ::acc))
         else if Char.contains datar (Char.chr 0)
              then raise ERR "receive" "found deliminator within response"
              else rec_k(sock, datar::acc)
