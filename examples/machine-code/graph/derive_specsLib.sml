@@ -385,6 +385,13 @@ fun dest_call_tag tm = let
       if z = T then true else
       if z = F then false else fail()) end
 
+exception NoInstructionSpec
+
+fun wrap_get_spec f asm = f asm
+  handle HOL_ERR e => if #origin_structure e = "arm_progLib"
+  then raise NoInstructionSpec
+  else failwith ("Unable to derive spec for " ^ asm ^ ": " ^ format_ERR e)
+
 fun derive_individual_specs code = let
   val tools = get_tools()
   fun mk_new_var prefix v = let
@@ -456,8 +463,7 @@ fun derive_individual_specs code = let
                   remove_arm_CONFIGURE o
                   inst_pc_rel_const o
                   inst_pc pos o RW [precond_def]
-          val res = f instruction handle HOL_ERR e =>
-                    failwith ("Unable to derive spec for " ^ asm)
+          val res = wrap_get_spec f instruction
           val (x,y) = pair_apply g res
           in (pos,x,y) :: get_specs code end
         else if String.isPrefix "const:" instruction then
@@ -478,17 +484,16 @@ fun derive_individual_specs code = let
              (pos+4,(g (pos+4) th2,4,NONE),SOME (g (pos+4) th2a,4,SOME 4)) ::
              (pos+8,(g (pos+8) th3,4*l-8,SOME 4),NONE) ::
                get_specs code end
-        else if String.isPrefix "dmb" asm then failwith("not supported")
+        else if String.isPrefix "dmb" asm then raise NoInstructionSpec
         else let
           val g = clean_spec_thm o
                   remove_arm_CONFIGURE o
                   inst_pc_rel_const o
                   inst_pc pos o RW [precond_def]
-          val res = f instruction handle HOL_ERR e =>
-                    failwith ("Unable to derive spec for " ^ asm)
+          val res = wrap_get_spec f instruction
           val (x,y) = pair_apply g res
           in (pos,x,y) :: get_specs code end
-      end handle HOL_ERR _ => let
+      end handle NoInstructionSpec => let
         val (thi,x1,x2) = (placeholder_spec asm)
         in (pos,(inst_pc pos thi,x1,x2),NONE) :: get_specs code end
 

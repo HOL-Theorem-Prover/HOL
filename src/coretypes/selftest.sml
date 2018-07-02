@@ -19,7 +19,7 @@ val _ = tpp "case opt of NONE => T | SOME b => b"
 
 (* regression test for OPTION_BIND evaluation *)
 val _ =
-    let val _ = prove (``OPTION_BIND (SOME T) (\x. SOME x) = SOME T``, EVAL_TAC)
+    let val _ = prove (``OPTION_BIND (SOME T) (\x. SOME x) = SOME T``, computeLib.EVAL_TAC)
       handle HOL_ERR msg => die "FAILED testing OPTION_BIND evaluation!";
     in
     OK()
