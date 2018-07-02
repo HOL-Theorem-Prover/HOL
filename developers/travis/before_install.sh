@@ -1,13 +1,6 @@
 #!/bin/bash
 
 set -e
-wget https://raw.github.com/ocaml/opam/master/shell/opam_installer.sh -O - | sudo sh -s /usr/local/bin
-
-opam init -y --comp 4.05.0
-opam install -y num
-opam install -y ocamlfind
-
-cd
 
 if [ -z "$GITPOLY" ]
 then
