@@ -2,14 +2,17 @@ signature hhReconstruct =
 sig
 
   include Abbrev
-  val get_lemmas : (string * string) -> (string * string) list option
-  val get_lemmas_new : (string * string) -> (string * string) list option
-  val reconstruct : (string * string) -> goal -> tactic
-  val reconstruct_stac : (string * string) -> goal -> string option
-  val reconstruct_new : (string * string) -> goal -> tactic
+ 
+  (* Settings *)
   val reconstruct_flag : bool ref
-  val lemmas_ref : string list option ref
-  val status_ref : bool ref
-  val rec_ref    : bool ref
+  val minimization_timeout : real ref
+  val reconstruction_timeout : real ref
   
+  (* Read output of ATP *)
+  val get_lemmas : (string * string) -> string list option
+  
+  (* Reconstruction *)
+  val mk_metis_call  : string list -> string
+  val hh_reconstruct : string list -> goal -> (string * tactic)
+
 end

@@ -1,7 +1,8 @@
 (* ===================================================================== *)
 (* FILE          : hhWriter.sml                                          *)
 (* DESCRIPTION   : Print objects (constants, types and theorems) and     *)
-(*                 dependencies  theorems for holyHammer.                *)
+(*                 dependencies  theorems for                            *)
+(*                 export to the holyHammer framework.                   *)
 (* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck        *)
 (* DATE          : 2015                                                  *)
 (* ===================================================================== *)
@@ -403,7 +404,8 @@ fun write_thy dir filter_f state thy =
     val THEORY(_,t) = dest_theory thy
     val _ = app (hh_tydef state oc thy) (#types t)
     val _ = app (hh_constdef state oc thy) (#consts t)
-    val axl = map (fn x => (x,"ax")) (DB.theorems thy) (* TODO: why not (#theorems t) etc.? *)
+    val axl = map (fn x => (x,"ax")) (DB.theorems thy) 
+      (* TODO: why not (#theorems t) etc.? *)
     val defl = map (fn x => (x,"def")) (DB.axioms thy @ DB.definitions thy)
     fun local_compare (((_,th1),_),((_,th2),_)) =
       let val f = depnumber_of o depid_of o dep_of o Thm.tag in

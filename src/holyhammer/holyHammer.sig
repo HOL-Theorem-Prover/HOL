@@ -2,75 +2,62 @@ signature holyHammer =
 sig
 
   include Abbrev
-  datatype prover = Eprover | Z3 | Satallax
+  datatype prover = Eprover | Z3 | Vampire
 
   type lbl_t = (string * real * goal * goal list)
   type fea_t = int list
   type feav_t = (lbl_t * fea_t)
   
-  (* Directories and files *)
+  (* Directories *)
   val hh_dir : string
+  val hh_eval_dir : string
   
-  (* Debugging *)
-  val hhlog_flag : bool ref
-  val hhnew_flag : bool ref
-  val log_old_dir : string
-  val log_new_dir : string
+  (* Settings *)
+  val set_timeout        : int -> unit
+  val all_atps           : prover list ref 
+    (* atps called by holyhammer if their binary exists *)
   
-  (* Read a list of theorems from strings *)
+  (* Read theorems from their string representataion *)
   val thml_of_namel : string list -> (string * thm) list
   
-  (* Caching features of theorems *)
+  (* Caching features of goals *)
+  val clean_goalfea_cache : unit -> unit
+  
+  (* Updating the database of theorems *)
   val update_thmdata : unit ->
     (int, real) Redblackmap.dict *
     (string * fea_t) list *
     (string, (goal * int list)) Redblackmap.dict
-
-  (* Export a problem to TT files *)
-  val export_problem : string -> string list -> term -> unit
-
-  (* Export theories to TT files *)
-  val export_theories : string -> string list -> unit
-
-  (* Translate the problem from THF to FOF via HOL/Light *)
-  val translate_fof     : string -> string -> Process.status
-  val translate_thf     : string -> string -> Process.status
-
+  
   (* Calling an automated theorem prover such as "eprover" *)
-  val launch_atp        : string -> prover -> int -> Process.status
+  val launch_atp        : string -> prover -> int -> string list option
 
   (* Reconstruct and minimize the proof using Metis *)
-  val reconstruct_dir   : string -> goal -> tactic
+  val hh_reconstruct    : string list -> goal -> (string * tactic)
 
-  (* Main function and options *)
-  val hh_eprover        : string list -> goal -> tactic
-  val holyhammer_pb     : string list -> goal -> tactic
+  (* Main functions *)
+  val hh_pb             : prover list -> string list -> goal -> tactic
+  val clean_goaltac_cache : unit -> unit 
+    (* saving results of the next functions in goaltac_cache *)
+  val hh_goal           : goal -> tactic
+  val hh_fork           : goal -> Thread.Thread.thread
   val holyhammer        : term -> tactic
   val hh                : tactic
   
-  (* Holyhammer for Tactictoe with parallel calls *)
+  (* HolyHammer for TacTicToe parallel calls *)
   val hh_stac           :
     string ->
       (int, real) Redblackmap.dict *
       (string * fea_t) list *
       (string, (goal * int list)) Redblackmap.dict
     -> int -> goal -> string option
-  
-  (* Exporting fof problems *)
-  val create_fof        : string -> thm -> unit
-
-  (* State *)
-  val clean_cache       : unit -> unit
-  val set_timeout       : int -> unit
-  
-  (* New holyhammer *)
-  val hh_pb : string list -> goal -> tactic
-  val hh_new_goal : goal -> tactic
-  val hh_new : term -> tactic
-  
+ 
   (* Evaluation *)
-  val eval_thm : (string * thm) -> unit
-  val eval_thy : string -> unit
-  
+  val hh_eval_thm : prover list -> bool -> (string * thm) -> unit
+  val hh_eval_thy : prover list -> bool -> string -> unit
 
+  (* Export HOL4 library to Holyhammer infrastructure in HOL/Light *)
+  val export_problem  : string -> string list -> term -> unit
+  val export_theories : string -> string list -> unit
+  
 end

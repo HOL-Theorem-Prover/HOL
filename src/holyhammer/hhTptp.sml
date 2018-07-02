@@ -12,39 +12,6 @@ struct
 open HolKernel boolLib tttTools hhTranslate
 
 (*----------------------------------------------------------------------------
-   Escaping (for ATPs than do not support single quotes)
-  ----------------------------------------------------------------------------*)
-
-fun escape_char c =
-  if Char.isAlphaNum c then Char.toString c
-  else if c = #"_" then "__"
-  else 
-    let val hex = Int.fmt StringCvt.HEX (Char.ord c) in
-      StringCvt.padLeft #"_" 3 hex
-    end
-    
-fun escape s = String.translate escape_char s;
-
-fun isCapitalHex c = 
-  Char.ord #"A" <= Char.ord c andalso Char.ord c <= Char.ord #"F"
-
-fun charhex_to_int c = 
-  if Char.isDigit c 
-    then Char.ord c - Char.ord #"0"
-  else if isCapitalHex c
-    then Char.ord c - Char.ord #"A" + 10
-  else raise ERR "charhex_to_int" ""
-
-fun unescape_aux l = case l of
-   [] => []
- | #"_" :: #"_" :: m => #"_" :: unescape_aux m
- | #"_" :: a :: b :: m => 
-   Char.chr (16 * charhex_to_int a + charhex_to_int b) :: unescape_aux m
- | a :: m => a :: unescape_aux m
- 
-fun unescape s = implode (unescape_aux (explode s))
-
-(*----------------------------------------------------------------------------
    Escaping constants , variables and theorems
   ----------------------------------------------------------------------------*)
 
@@ -215,73 +182,20 @@ fun write_cj oc cj =
   os oc ").\n"
   )
 
-(* 
+(* Warning:
   Use list_mk_forall and rename_bvarl before using this function to guarantee
   that all variables have different names 
 *)
+
 fun write_tptp dir axl cj =
-  let 
+  let
+    val _ = clean_dir dir
     val oc = TextIO.openOut (dir ^ "/atp_in")
   in
-    readable_flag := true;
-    (app (write_ax oc) axl; write_cj oc cj) handle Interrupt => ();
-    readable_flag := false;
-    (app (write_ax oc) axl; write_cj oc cj) handle Interrupt => ();
+    ((readable_flag := false; app (write_ax oc) axl; write_cj oc cj)
+    handle Interrupt => ());
     TextIO.closeOut oc
   end
 
-(*
-fun write_pb term list * (string * term list) list * term list
-*)
 
-
-(*
-  load "holyHammer";
-  open holyHammer;
-  load "hhTranslate";
-  open hhTranslate;
-  val hh_dir = HOLDIR ^ "/src/holyhammer";
-  val dir = hh_dir ^ "/provers/eprover_files"
-  val filename = hh_dir ^ "/provers/eprover_files/atp_in";
-  val axl = DB.thms "arithmetic";
-  val cj = ``1+1=2``;
-
-
-  val thm = arithmeticTheory.findq_def;
-  classify thm;
-  fun is_fof thm = 
-    let val (b1,b2,b3) = classify thm in b1 andalso b2 andalso b3 end
-    
-  fun f (a,b) = is_fof b;
-  val axl' = filter f axl;
-  write_pb filename axl' cj;
-  
-  launch_atp dir Eprover 5;
-  
-  length l;
-  val l1 = filter (#1 o snd) l; 
-  val l2 = filter (#2 o snd) l; 
-  val l3 = filter (#3 o snd) l;
-  length l1; length l2;  length l3;
-  
-  unescape "const_2Eprim__rec_2E_3C"; used with arity 0, but registered with arity 2
-  
-*)
-  
-(* Testing metis writer
-  open folTools;
-  open folMapping;
-
-  val term = snd (strip_forall (concl arithmeticTheory.MULT_COMM));
-
-  val [formula] = hol_literals_to_fol {higher_order = false, with_types = false} 
-  ((all_vars term,[]),[term]);
-
-  val hh_dir = HOLDIR ^ "/src/holyhammer";
-
-  mlibTptp.write {filename = hh_dir ^ "/test.tptp"} 
-  (mlibTerm.Imp (mlibTerm.True, mlibTerm.Imp (formula, mlibTerm.False)));
-*)
-  
-
-end
+end (* struct *)

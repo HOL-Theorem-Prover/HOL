@@ -167,12 +167,10 @@ fun insert_namespace thmdict =
   let
     val dict = ref thmdict
     fun f (x,y) = (namespace_tag ^ "Theory." ^ x, y)
-    val l1 = debug_t "namespace_thms" namespace_thms ()
+    val l1 = namespace_thms ()
     val l2 = map f l1
   in
-    debug_t "add_fea" (app (add_fea dict)) l2;
-    debug ("adding " ^ int_to_string (dlength (!dict) - dlength thmdict) ^ 
-      " theorems from the namespace");
+    app (add_fea dict) l2;
     (!dict)
   end
 
@@ -180,7 +178,7 @@ fun all_thmfeav () =
   let
     val newdict =
       if !ttt_namespacethm_flag
-      then debug_t "insert_namespace" insert_namespace (!ttt_thmfea)
+      then insert_namespace (!ttt_thmfea)
       else (!ttt_thmfea)
     val feav = map snd (dlist newdict)
     fun f (g,(name,fea)) = (name,(g,fea))
@@ -241,7 +239,7 @@ fun add_thmdep revdict n l0 =
     val l1 = mk_sameorder_set String.compare (List.concat (map f1 l0))
     fun f2 x = exists_tid x andalso uptodate_tid x andalso dmem x revdict
   in
-    debug_t "add_thmdep: first_test_n" (first_test_n f2 n) l1
+    first_test_n f2 n l1
   end
 
 fun thmknn_wdep (symweight,feav,revdict) n gfea =
@@ -258,7 +256,7 @@ fun desc_lbl_aux rlist rdict ddict (lbl as (stac,_,_,gl)) =
   (
   rlist := lbl :: (!rlist);
   if dmem lbl rdict
-    then debug ("Warning: descendant_of_feav: " ^ stac)
+    then () (* debug ("Warning: descendant_of_feav: " ^ stac) *)
     else
       let
         val new_rdict = dadd lbl () rdict
@@ -304,7 +302,7 @@ fun termknn n ((asl,w):goal) term =
     val symweight = weight_tfidf (fea_o :: (map snd feal) @ thmfeav)
     val pre_sim = case !ttt_termarg_pint of
       1 => pre_sim1 | 2 => pre_sim2 | 3 => pre_sim3 | _ => pre_sim2
-    val l3 = debug_t "pre_sim" pre_sim symweight feal fea_o
+    val l3 = pre_sim symweight feal fea_o
     val r = first_n n (map fst l3)
   in
     r

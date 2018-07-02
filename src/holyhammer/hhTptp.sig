@@ -3,8 +3,6 @@ sig
 
 include Abbrev
 
-  val escape : string -> string
-  val unescape : string -> string
   val write_type : TextIO.outstream -> hol_type -> unit
   val write_term : TextIO.outstream -> term -> unit
   val write_pred : TextIO.outstream -> term -> unit
