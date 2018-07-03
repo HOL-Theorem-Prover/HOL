@@ -3,17 +3,7 @@
 FILE: res_rules.ml       DATE: 1 Aug 92      BY: Wai Wong
 TRANSLATED               DATE: 28 May 93     BY: Paul Curzon
 UPDATED                  DATE: 30 Oct 01     BY: Joe Hurd
-UPDATED                  DATE: 20 Oct 17     BY: Mario Castelán Castro     UOK
-
-This file as a whole is assumed to be under the license in the file
-"COPYRIGHT" in the HOL4 distribution (note added by Mario Castelán         UOK
-Castro).
-
-For the avoidance of legal uncertainty, I (Mario Castelán Castro) hereby   UOK
-place my modifications to this file in the public domain per the Creative
-Commons CC0 public domain dedication <https://creativecommons.org/publicdo
-main/zero/1.0/legalcode>. This should not be interpreted as a personal
-endorsement of permissive (non-Copyleft) licenses.
+UPDATED                  DATE: 20 Oct 17     BY: Mario Castelan Castro
 
 ============================================================================*)
 

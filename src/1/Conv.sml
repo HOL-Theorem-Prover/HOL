@@ -13,17 +13,6 @@
 (* TRANSLATOR    : Konrad Slind, University of Calgary                   *)
 (* DATE          : September 11, 1991                                    *)
 (* Many micro-optimizations added, February 24, 1992, KLS                *)
-
-(* This file as a whole is assumed to be under the license in the file
-"COPYRIGHT" in the HOL4 distribution (note added by Mario Castelán         UOK
-Castro).
-
-For the avoidance of legal uncertainty, I (Mario Castelán Castro) hereby   UOK
-place my modifications to this file in the public domain per the Creative
-Commons CC0 1.0 public domain dedication <https://creativecommons.org/publ
-icdomain/zero/1.0/legalcode>. This should not be interpreted as a personal
-endorsement of permissive (non-Copyleft) licenses. *)
-
 (* ===================================================================== *)
 
 structure Conv :> Conv =
