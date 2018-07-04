@@ -84,5 +84,5 @@ The first subgoal can be solved by {prove_tac [LESS_EQ_CASES, MAX_COMM]};
 Never fails.
 
 \SEEALSO
-BasicProvers.wlog_then
+bossLib.wlog_then
 \ENDDOC

@@ -15,7 +15,7 @@ structure bossLib :> bossLib =
 struct
 
 open HolKernel Parse boolLib pairLib simpLib metisLib pred_setLib
-     boolSimps quantHeuristicsLib patternMatchesLib
+     boolSimps quantHeuristicsLib patternMatchesLib wlogLib
 
 (* This makes the dependency on listTheory and optionTheory explicit.
    Without it, the theories can change, and bossLib won't get recompiled.
@@ -198,6 +198,10 @@ val lrfs = rfsrw_tac let_arith_list
 val rw = srw_tac let_arith_list
 val fs = fsrw_tac let_arith_list
 val rfs = rfsrw_tac let_arith_list
+
+(* Witout loss of generality tactics *)
+val wlog_tac = wlog_tac
+val wlog_then = wlog_then
 
   (* useful quotation-based tactics (from Q) *)
   val qx_gen_tac : term quotation -> tactic = Q.X_GEN_TAC

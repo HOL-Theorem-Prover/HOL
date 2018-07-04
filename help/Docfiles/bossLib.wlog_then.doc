@@ -16,5 +16,5 @@ and only if the user-provided theorem-tactical fails when used as a tactic
 (i.e.: when applied to a theorem and a goal).
 
 \SEEALSO
-BasicProvers.wlog_tac
+bossLib.wlog_tac
 \ENDDOC
