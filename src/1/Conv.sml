@@ -1539,6 +1539,16 @@ fun SYM_CONV tm =
    end
    handle HOL_ERR _ => raise ERR "SYM_CONV" ""
 
+(*-----------------------------------------------------------------------*
+ * GSYM - General symmetry rule                                          *
+ *                                                                       *
+ * Reverses the first equation(s) encountered in a top-down search.      *
+ *                                                                       *
+ * [JRH 92.03.28]                                                        *
+ *-----------------------------------------------------------------------*)
+
+val GSYM = CONV_RULE (ONCE_DEPTH_CONV SYM_CONV)
+
 (*----------------------------------------------------------------------*
  *     A |- t1 = t2                                                     *
  *    --------------   (t2' got from t2 using a conversion)             *
@@ -1672,6 +1682,29 @@ in
       end
       handle HOL_ERR _ => raise ERR "SELECT_CONV" ""
 end
+
+(*----------------------------------------------------------------------*
+ * SPLICE_CONJ_CONV: Normalize to right associativity a conjunction     *
+ * without recursing in the right conjunct.                             *
+ *                                                                      *
+ * SPLICE_CONJ_CONV "(a1 /\ a2 /\ ...) /\ b"                            *
+ * --> |- = "(a1 /\ a2 /\ ...) /\ b = a1 /\ a2 /\ ... /\ b"             *
+ *                                                                      *
+ * Fails if the term is not a conjunction.                              *
+ *----------------------------------------------------------------------*)
+local
+  val conv = REWR_CONV (GSYM CONJ_ASSOC)
+in
+fun SPLICE_CONJ_CONV t =
+  let
+    fun recurse t = IFC conv (RAND_CONV recurse) ALL_CONV t
+  in
+    if is_conj t then
+      recurse t
+    else
+      raise mk_HOL_ERR "Conv" "SPLICE_CONJ_CONV" "Not a conjunction"
+  end
+end (* local *)
 
 (*----------------------------------------------------------------------*
  * CONTRAPOS_CONV: convert an implication to its contrapositive.        *
@@ -2394,16 +2427,6 @@ fun AC_CONV (associative, commutative) =
          end
    end
    handle e => raise (wrap_exn "Conv" "AC_CONV" e)
-
-(*-----------------------------------------------------------------------*
- * GSYM - General symmetry rule                                          *
- *                                                                       *
- * Reverses the first equation(s) encountered in a top-down search.      *
- *                                                                       *
- * [JRH 92.03.28]                                                        *
- *-----------------------------------------------------------------------*)
-
-val GSYM = CONV_RULE (ONCE_DEPTH_CONV SYM_CONV)
 
 (*--------------------------------------------------------------------------*
  * Conversions for messing with bound variables.                            *

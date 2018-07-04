@@ -147,6 +147,11 @@ sig
   val fs : thm list -> tactic
   val rfs : thm list -> tactic
 
+  (* without loss of generality (from wlogLib) *)
+  val wlog_then : term quotation ->
+                  term quotation list -> thm_tactic -> tactic
+  val wlog_tac : term quotation -> term quotation list -> tactic
+
   (* useful quotation-based tactics (from Q) *)
   val qx_gen_tac : term quotation -> tactic
   val qx_choose_then : term quotation -> thm_tactic -> thm_tactic
