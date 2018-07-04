@@ -270,12 +270,24 @@ val SUB_AND_COND_ELIM_CONV =
 (*                                                                           *)
 (*---------------------------------------------------------------------------*)
 
-val COND_ELIM_CONV =
+(*val COND_ELIM_CONV =
    TOP_DEPTH_CONV
      (TB COND_RATOR_CONV ORELSEC
       (fn tm => if same_const (op_of_app tm) COND_t then failwith "fail"
                 else TB COND_RAND_CONV tm) ORELSEC
       TB COND_ABS_CONV) THENC
-   REPEATC ELIM_COND1
+   REPEATC ELIM_COND1 *)
+
+val COND_ELIM_CONV =
+   TOP_DEPTH_CONV
+	(COND_RATOR_CONV ORELSEC
+	(fn tm => if same_const (op_of_app tm) COND_t then failwith "fail"
+		  else COND_RAND_CONV tm) ORELSEC
+	COND_ABS_CONV) THENC
+   REPEATC ELIM_COND1 THENC
+   PURE_REWRITE_CONV []
+
+
+
 
 end
