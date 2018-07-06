@@ -112,7 +112,7 @@ fun stacknn symweight n feal fea_o =
       if !ttt_covdist_flag 
       then dict_sort compare_coverage l1
       else l1
-    val l2 = mk_sameorder_set lbl_compare l1
+    val l2 = mk_sameorder_set lbl_compare l1'
   in
     first_n n l2
   end
