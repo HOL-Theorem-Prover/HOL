@@ -50,6 +50,11 @@ val _ = convtest ("Testing norming of polymorphic num-range constants",
                   “n + dimindex(:'a) + dimindex(:'b) - 1”,
                   “n + (dimindex(:'a) + dimindex(:'b)) - 1”)
 
+val _ = convtest
+("COND_ELIM_CONV", Sub_and_cond.COND_ELIM_CONV,
+ “?!m. ((m = n) \/ g m n) /\ ((if g m n then f m else a) = x)”,
+ “?!m. ((m = n) \/ g m n) /\ (~(g m n) \/ (f m = x)) /\ (g m n \/ (a = x))”)
+
 fun TRUE_ARITH nm t =
   convtest("ARITH_CONV: "^nm, Arith.ARITH_CONV, t, boolSyntax.T)
 

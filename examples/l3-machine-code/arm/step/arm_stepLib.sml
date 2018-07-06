@@ -1872,7 +1872,10 @@ in
                         | NONE => raise ERR "mk_arm_pattern_opcode"
                                             (a ^ "; not found"))
       in
-         (if unconditional c then x else doubleup x, v)
+         (if unconditional c then x
+          else if s = "LoadWord (imm,post)" then
+            [true, true, false]
+          else doubleup x, v)
       end
 end
 
