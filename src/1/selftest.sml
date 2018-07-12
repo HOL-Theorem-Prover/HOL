@@ -946,6 +946,27 @@ end;
 
 
 val _ = let
+  open mp_then
+  val _ = tprint "mp_then (pat) 1"
+  val asl = [``P (x:'a) /\ ~p /\ r ==> ~q``, ``~p:bool``, ``r:bool``]
+  val g = (asl, ``r:bool``)
+  val (res, _) = pop_assum (first_assum o mp_then (Pat `$~`) mp_tac) g
+  val expectedg = ``(P(x:'a) /\ r ==> ~q) ==> r``
+in
+  case res of
+      [(asl', g')] =>
+      (case Lib.list_compare Term.compare ([``~p``, ``r:bool``], asl') of
+           EQUAL => if aconv g' expectedg then OK()
+                    else die ("FAILED\n  Got " ^ term_to_string g'^
+                              "; expected " ^ term_to_string expectedg)
+         | _ => die ("FAILED\n  Got back changed asm list: "^
+                     String.concatWith ", " (map term_to_string asl')))
+    | _ => die ("FAILED\n  Tactic returned wrong number of sub-goals (" ^
+                Int.toString (length res))
+end;
+
+
+val _ = let
   val _ = tprint "drule_all 1"
   val asl = [``!x:ind. P x /\ R x ==> ?y:'a. Q x y``,
              ``P (c:ind):bool``, ``R (d:ind):bool``,
