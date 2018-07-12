@@ -967,6 +967,58 @@ end;
 
 
 val _ = let
+  open mp_then
+  val _ = tprint "mp_then (pat) 2"
+  val asl = [``!x. P (x:'a) /\ ~p /\ r ==> ~q``, ``P(c:'a):bool``, ``r:bool``]
+  val g = (asl, ``r:bool``)
+  val (res, _) =
+      pop_assum (first_assum o mp_then (Pat `P (x:'a) : bool`) mp_tac) g
+  val expectedg = ``(~p /\ r ==> ~q) ==> r``
+in
+  case res of
+      [(asl', g')] =>
+      (case Lib.list_compare Term.compare ([“P(c:'a):bool”, “r:bool”], asl') of
+           EQUAL => if aconv g' expectedg then OK()
+                    else die ("FAILED\n  Got " ^ term_to_string g'^
+                              "; expected " ^ term_to_string expectedg)
+         | _ => die ("FAILED\n  Got back changed asm list: "^
+                     String.concatWith ", " (map term_to_string asl')))
+    | _ => die ("FAILED\n  Tactic returned wrong number of sub-goals (" ^
+                Int.toString (length res))
+end;
+
+val _ = let
+  open mp_then
+  val _ = tprint "mp_then (pat) 3"
+  val _ = new_type("list", 1)
+  val _ = new_type("ti", 0)
+  val _ = hide "foo"
+  val _ = new_constant("EVERY", ``:('a -> bool) -> 'a list -> bool``)
+  val asl = [``EVERY (x:'a -> bool) ls``,
+             ``!x:ti y. foo x y /\ EVERY y (ls:'a list) ==> gg x``,
+             ``foo (a:ti) (x:'a -> bool):bool``, ``bar (x:'a -> bool):bool``]
+  val g = (List.rev asl, ``gg (a:ti):bool``)
+  val (res, _) =
+      first_x_assum (first_assum o mp_then (Pat `EVERY`) mp_tac) g
+  val expectedg = ``(!x':ti. foo x' (x:'a -> bool) ==> gg x') ==> gg a``
+  val expectedasl = [``bar (x:'a -> bool):bool``,
+                     ``foo (a:ti) (x:'a -> bool):bool``,
+                     ``EVERY (x:'a -> bool) ls``]
+in
+  case res of
+      [(asl', g')] =>
+      (case Lib.list_compare Term.compare (expectedasl, asl') of
+           EQUAL => if aconv g' expectedg then OK()
+                    else die ("FAILED\n  Got " ^ term_to_string g'^
+                              "; expected " ^ term_to_string expectedg)
+         | _ => die ("FAILED\n  Got back changed asm list: "^
+                     String.concatWith ", " (map term_to_string asl')))
+    | _ => die ("FAILED\n  Tactic returned wrong number of sub-goals (" ^
+                Int.toString (length res))
+end;
+
+
+val _ = let
   val _ = tprint "drule_all 1"
   val asl = [``!x:ind. P x /\ R x ==> ?y:'a. Q x y``,
              ``P (c:ind):bool``, ``R (d:ind):bool``,
