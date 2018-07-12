@@ -64,7 +64,7 @@ val _ = convtest ("COND_ELIM_CONV(3)", Sub_and_cond.COND_ELIM_CONV,
 
 val _ = convtest ("COND_ELIM_CONV(4)", Sub_and_cond.COND_ELIM_CONV,
    “a + (if P then y else z:num) < x”,
-   “(P ==> x < a + y) /\ (~P ==> x < a + z)”);
+   “(P ==> a + y < x) /\ (~P ==> a + z < x)”);
 
 fun TRUE_ARITH nm t =
   convtest("ARITH_CONV: "^nm, Arith.ARITH_CONV, t, boolSyntax.T)
