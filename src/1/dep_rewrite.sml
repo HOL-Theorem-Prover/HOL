@@ -431,8 +431,11 @@ fun DEP_TAC dep :tactic = fn g0 =>
                                 print_theorem th;
                                 print_newline())
                             else (); *)
-                            prove(gl,REPEAT CONJ_TAC
-                                     THEN FIRST(map ACCEPT_TAC (CONJUNCTS th)))
+                            (* The hyp count check needs to be disabled
+                               to workaround imprecision in gl *)
+                            trace ("TAC_PROOF: skip hyp count check", 1) prove
+                              (gl,REPEAT CONJ_TAC
+                                  THEN FIRST(map ACCEPT_TAC (CONJUNCTS th)))
                             handle _ => failwith "Burden proof failed"
                                                      )]) gls pls
                    | _ => failwith "DEP_TAC");

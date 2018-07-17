@@ -69,8 +69,10 @@ fun satisfy1 (consts,facts) gl =
 
 fun SATISFY (consts,facts) gl =
     let val choices = satisfy1 (consts,map concl facts) gl
-    in TAC_PROOF ((U (map hyp facts),gl),EVERY (map EXISTS_TAC choices) THEN
-                  REPEAT CONJ_TAC THEN FIRST (map MATCH_ACCEPT_TAC facts))
+    in Feedback.trace ("TAC_PROOF: skip hyp count check", 1) TAC_PROOF
+         ((U (map hyp facts),gl),
+          EVERY (map EXISTS_TAC choices) THEN
+          REPEAT CONJ_TAC THEN FIRST (map MATCH_ACCEPT_TAC facts))
     end;
 
 
