@@ -7,13 +7,14 @@ sig
   type fea_t = int list
   type feav_t = (lbl_t * fea_t)
 
-  val dependencies_of_thm : thm -> (bool * string list)
-
   (* tfidf *)
   val learn_tfidf : ('a * int list) list -> (int, real) Redblackmap.dict
 
   (* term *)
   val termknn: int -> goal -> term -> term list
+  val tmknn : int ->
+    (int, real) Redblackmap.dict * ('a * int list) list ->
+    int list -> 'a list
 
   (* tactic *)
   val stacknn:

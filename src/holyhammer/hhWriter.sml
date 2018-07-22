@@ -25,8 +25,8 @@ val conjecture_name = "conjecture"
 val reserved_names = conjecture_name :: hollight_theorems
 val reserved_names0 = map (fn x => (x,0)) reserved_names
 
-(*---_------------------------------------------------------------------------
-   Save new objects in the dictionnaries.
+(*----------------------------------------------------------------------------
+   Escaping
  -----------------------------------------------------------------------------*)
 
 fun is_tptp_sq_char c =
@@ -39,33 +39,22 @@ fun is_tptp_sq_char c =
     (c <> #"\"")
   end
 
-(* TODO: use String.translate *)
 fun hh_escape s =
-  let
-    val l1 = String.explode s
-    fun image c =
-      if is_tptp_sq_char c
-      then [c]
-      else [#"|"] @ String.explode (int_to_string (Char.ord c)) @ [#"|"]
-    val l2 = map image l1
+  let fun image c =
+    if is_tptp_sq_char c
+      then Char.toString c
+      else "|" ^ (int_to_string (Char.ord c)) ^ "|"
   in
-    String.implode (List.concat l2)
+    String.translate image s
   end
 
 fun squotify name = "'" ^ name ^ "'"
 fun full_escape name = "'" ^ hh_escape name ^ "'"
 
-(* TODO: make robust to empty vartype name *)
-(* nice printing *)
-fun nice_dest_vartype v =
-  let
-    val s = dest_vartype v
-    val l = String.explode s
-  in
-    if hd l = #"'" then String.implode (map Char.toUpper (tl l)) else s
-  end
+(*----------------------------------------------------------------------------
+   Renaming
+ -----------------------------------------------------------------------------*)
 
-(* renaming *)
 (* only used for variables *)
 fun variant_name_dict s used =
   let
@@ -286,7 +275,7 @@ fun hh_constdef state oc thy (s,ty) =
   | _               => declare_perm_const state {Thy=thy,Name=s}
     val tv = sort less_ty (type_vars ty)
     val (newtvs, undeclare) =
-      declare_temp_list state nice_dest_vartype (#tyvar_names state) tv
+      declare_temp_list state dest_vartype (#tyvar_names state) tv
   in
     (
     os oc "tt("; os oc news; os oc ", ty, ";
@@ -300,7 +289,7 @@ fun othm state oc (name,role,tm) =
   let
     val l1 = type_varsl (map type_of (find_terms is_const tm @ all_vars tm))
     val (l2, undeclare) =
-      declare_temp_list state nice_dest_vartype (#tyvar_names state) l1
+      declare_temp_list state dest_vartype (#tyvar_names state) l1
   in
     (
     if uptodate_term tm
@@ -309,9 +298,6 @@ fun othm state oc (name,role,tm) =
           otm state oc tm;
           os oc ").\n")
     else ()
-    handle _ => tttTools.debug ("Error: othm: " ^ term_to_string tm)
-                (* TODO: reraise Interrupt *)
-                (* TODO: to be removed for parallelization *)
     ;
     undeclare ()
     )
@@ -329,43 +315,6 @@ fun othm_conjecture state oc conjecture =
 (*---------------------------------------------------------------------------
    Printing dependencies.
  ----------------------------------------------------------------------------*)
-
-fun thm_of_depid (thy,n) =
-  let
-    val thml = DB.thms thy
-    fun find_number x =
-      if (depnumber_of o depid_of o dep_of o tag o snd) x = n
-      then x
-      else raise ERR "find_number" ""
-  in
-    tryfind find_number thml
-    handle _ => raise ERR "thm_of_depid" "Not found"
-    (* TODO: reraise Interrupt *)
-  end
-
-fun exists_depid did = can thm_of_depid did
-
-fun pred_of_depid (thy,n) =
-  let
-    val thml = DB.thms thy
-    (* TODO: this function is duplicated above; write it once only *)
-    fun find_number x =
-      if (depnumber_of o depid_of o dep_of o tag o snd) x = n
-      then x
-      else raise ERR "find_number" ""
-  in
-    (thy, fst (tryfind find_number thml))
-    handle _ => raise ERR "thmid_of_depid" "Not found"
-  end
-
-fun depl_as_pred thm =
-  let
-    val d = (dep_of o tag) thm
-    val dl = depidl_of d
-    val idl = mapfilter pred_of_depid dl
-  in
-    (length idl = length dl, idl)
-  end
 
 fun odep state oc_deps (name,dl) =
   let
@@ -385,7 +334,7 @@ fun export_thm state oc oc_deps ((name,thm),role) =
   let
     val d = (dep_of o tag) thm
     val did = depid_of d
-    val dl = filter exists_depid (depidl_of d)
+    val dl = filter exists_did (depidl_of d)
     val name' = declare_perm_thm state did name
   in
     othm_theorem state oc (name',role,thm);

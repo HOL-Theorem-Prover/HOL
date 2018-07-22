@@ -69,7 +69,9 @@ val hh_eval_flag = ref false
 val thy_ref = ref "scratch"
 
 fun hh_log_eval s = 
-  if !hh_eval_flag then append_endline (hh_eval_dir ^ "/" ^ !thy_ref) s else ()
+  if !hh_eval_flag 
+  then append_endline (hh_eval_dir ^ "/" ^ !thy_ref) s 
+  else ()
 
 fun hh_logt_eval s f x =
   let
@@ -318,6 +320,25 @@ fun holyhammer term = hh_goal ([],term)
 
 fun hh goal = (hh_goal goal) goal
 
+fun metis_auto t n goal = 
+  let
+    val (symweight,feav,revdict) = update_thmdata ()
+    val premises = thmknn_wdep (symweight,feav,revdict) n (fea_of_goal goal)
+    val thml = map snd (thml_of_namel premises)
+    val stac = mk_metis_call premises
+    val tac = hide_out tactic_of_sml stac
+  in
+    case hide_out (app_tac t tac) goal of
+      SOME _ => 
+      let
+        val t1 = !minimization_timeout
+        val newstac = hide_out (tttMinimize.minimize_stac t1 stac goal) []
+      in
+        SOME newstac
+      end
+    | NONE   => NONE    
+  end
+
 (*----------------------------------------------------------------------------
    Asynchronous calls to holyhammer in tactictoe.
    remove references from the translation so that this function
@@ -349,7 +370,7 @@ fun hh_eval_thm atpl bsound (s,thm) =
     val _ = (mkDir_err hh_eval_dir; print_endline s)
     val _ = hh_log_eval ("\nTheorem: " ^ s)
     val goal = if bsound then ([],F) else dest_thm thm
-    val (b,premises) = dependencies_of_thm thm
+    val (b,premises) = depl_of_thm thm
   in
     if not b 
     then hh_log_eval "broken dependencies" 

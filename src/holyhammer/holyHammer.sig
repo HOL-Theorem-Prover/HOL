@@ -43,6 +43,7 @@ sig
   val hh_fork           : goal -> Thread.Thread.thread
   val holyhammer        : term -> tactic
   val hh                : tactic
+  val metis_auto        : real -> int -> goal -> string option
   
   (* HolyHammer for TacTicToe parallel calls *)
   val hh_stac           :

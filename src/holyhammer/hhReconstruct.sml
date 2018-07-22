@@ -63,20 +63,6 @@ fun get_lemmas (atp_status,atp_out) =
    Minimization and pretty-printing
  -----------------------------------------------------------------------------*)
 
-fun string_of_lemma lemma =
-  let val (thy,name) = split_string "Theory." lemma in
-    if thy = namespace_tag
-      then name
-    else if thy = current_theory ()
-      then String.concatWith " " ["DB.fetch", quote thy, quote name]
-    else lemma
-  end
-
-fun mk_metis_call lemmas =
-  let val l = map string_of_lemma lemmas in
-    "metisTools.METIS_TAC [" ^ String.concatWith " , " l ^ "]"
-  end
-
 fun hh_reconstruct lemmas g =
   if not (!reconstruct_flag) 
   then (print_endline (mk_metis_call lemmas); 
