@@ -1949,7 +1949,7 @@ val mw_div_range2 = store_thm( "mw_div_range2",
                                        `0 < l` by METIS_TAC[ZERO_LT_dimword,ZERO_LT_EXP] >>
                                        `0 < q*V` by METIS_TAC[DIV_GT0,ZERO_LESS_MULT] >>
                                        `U - V < q * V + V - V` by METIS_TAC[DIV_thm4,DIV_thm3,LESS_MONO_ADD,SUB_ADD,ADD_COMM,LT_SUB_RCANCEL,ADD_0] >>
-                                       qpat_x_assum `U - V < xxx` (fn x => `U-V < q*V` by metis_tac [x,ADD_SUB]) >>
+                                       qpat_x_assum `U - V < xxx` (fn x => ASSUME_TAC ( METIS_PROVE[x,ADD_SUB] ``U-V < q*V``)) >>
                                        `q' <= (w2n u1 * b + w2n u2) DIV a` by lrw[Abbr`a`,Abbr`q'`] >>
                                        `q' * (a * l) <= (w2n u1 * b + w2n u2) * l` by METIS_TAC[MULT_ASSOC,Abbr`a`,DIV_thm3,LESS_EQ_TRANS,LESS_MONO_MULT,Abbr`q'`] >>
                                        `U = (w2n u1 * b + w2n u2) * l + mw2n (REVERSE us)` by lrw[Abbr`U`,Abbr`b`,Abbr`l`,mw2n_msf,dimwords_dimword,EXP,GSYM ADD1] >>
@@ -2003,7 +2003,7 @@ val mw_div_range2 = store_thm( "mw_div_range2",
                                `2 <= 2 * a` by METIS_TAC[LE_MULT_CANCEL_LBARE,Abbr`a`] >>
                                `q' - 3 <= b - 4` by  METIS_TAC[LE_SUB_RCANCEL,SUB_LESS_EQ,LESS_EQ_TRANS,DECIDE ``x - 1 - 3 = x - 4``] >>
                                `2 * a <= b - 2` by RW_TAC arith_ss [] >>
-                               qpat_x_assum `2*a <= xxx` (fn x => `a <= (b - 2) DIV 2` by METIS_TAC [DIV_LE_MONOTONE, DECIDE ``0<2``, MULT_COMM,MULT_DIV,x]) >>
+                               qpat_x_assum `2*a <= xxx` (ASSUME_TAC o (fn x => (METIS_PROVE [DIV_LE_MONOTONE, DECIDE ``0<2``, MULT_COMM,MULT_DIV,x] ``a <= (b - 2) DIV 2``))) >>
                                `2 <= b` by METIS_TAC[SUB_LESS_EQ, LESS_EQ_TRANS] >>
                                `a <= (b DIV 2 - 1)` by METIS_TAC[DECIDE ``0<2``,MULT_RIGHT_1,DIV_SUB] >>
                                RW_TAC arith_ss [Abbr`b`,ZERO_LT_dimword] ) >>
@@ -2165,7 +2165,7 @@ val mw_div_test_thm = store_thm( "mw_div_test_thm",
     `dimword(:'a) - 1 < dimword(:'a)` by (Cases_on `dimword(:'a)` >> full_simp_tac (srw_ss())[ZERO_LT_dimword]) >>
     `w2n q <= dimword(:'a)-1` by METIS_TAC[w2n_lt,SUB_LESS_OR]  >>
     `w2n q>=Q` by METIS_TAC[Abbr`Q`,mw_div_range1,Abbr `U`, Abbr`V`] >>
-    qpat_x_assum `w2n q >= Q` (fn x => `Q <= w2n q` by metis_tac [x,GREATER_EQ]) >>
+    qpat_x_assum `w2n q >= Q` (fn x => ASSUME_TAC(METIS_PROVE [x,GREATER_EQ] ``Q <= w2n q``)) >>
     `Q <= w2n (mw_div_test q u1 u2 u3 v1 v2)` by METIS_TAC[mw_div_test_lemma2] >>
     `w2n q <= Q + 2` by METIS_TAC[Abbr`Q`,mw_div_range2,Abbr `U`, Abbr`V`] >>
     REV (Cases_on `w2n q = Q + 2`) THEN1
