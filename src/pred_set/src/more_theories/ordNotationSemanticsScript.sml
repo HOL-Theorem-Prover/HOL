@@ -262,9 +262,9 @@ val kexp_lt = let
       |> Q.INST [`a` |-> `omega`, `t` |-> `[(&k,e1)]`, `c` |-> `1`, `e` |-> `e2`]
       |> SIMP_RULE (srw_ss()) [is_polyform_def, ASSUME ``e1:'a ordinal < e2``]
       |> UNDISCH_ALL
-  val eqzero = TAC_PROOF(([``k = 0n``], ``omega ** e1 * &k < omega ** e2``),
-                         simp[ASSUME ``k = 0n``] >> spose_not_then assume_tac >>
-                         fs[ordEXP_EQ_0])
+  val eqzero = prove(``omega ** e1 * &k < omega ** e2``,
+                     simp[ASSUME ``k = 0n``] >> spose_not_then assume_tac >>
+                     fs[ordEXP_EQ_0])
 in
   save_thm("kexp_lt",
            DISJ_CASES zero_ltk_or_eqzero zero_ltk eqzero |> DISCH_ALL)

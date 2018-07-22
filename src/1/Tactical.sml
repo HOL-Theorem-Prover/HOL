@@ -29,30 +29,19 @@ fun empty th [] = th
 
 local
    val unsolved_list = ref ([]: goal list)
-   val skip_hyp_count_check = ref false
-   val () =
-     register_btrace ("TAC_PROOF: skip hyp count check", skip_hyp_count_check)
-   val err = ERR "TAC_PROOF" "Can't alpha convert"
 in
    fun unsolved () = !unsolved_list
    fun TAC_PROOF (g, tac) =
       case tac g of
          ([], p) =>
-              let
-                 val thm = with_exn p [] err
-                 val (thl, c) = dest_thm thm
+             (let
+                 val thm = p []
+                 val c = concl thm
                  val () = unsolved_list := []
-                 val res = if c = snd g then thm else EQ_MP (ALPHA c (snd g)) thm
-                           handle HOL_ERR _ => raise err
-                 val m = List.length thl
-                 val n = List.length (#1 g)
               in
-                 !skip_hyp_count_check orelse m = n orelse
-                 raise ERR "TAC_PROOF"
-                         ("Expecting " ^ Int.toString n ^ " hypotheses, got " ^
-                          Int.toString m)
-               ; res
+                 if c = snd g then thm else EQ_MP (ALPHA c (snd g)) thm
               end
+              handle e => raise ERR "TAC_PROOF" "Can't alpha convert")
        | (l, _) => (unsolved_list := l; raise ERR "TAC_PROOF" "unsolved goals")
 end
 

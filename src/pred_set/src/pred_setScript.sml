@@ -3315,7 +3315,7 @@ val g_finite =
 
 val g_subset =
     TAC_PROOF
-    ((tl gdef, ``!n. !x:'a. x IN (g n) ==> !i. x IN (g (n+i))``),
+    ((gdef, ``!n. !x:'a. x IN (g n) ==> !i. x IN (g (n+i))``),
      REPEAT GEN_TAC THEN DISCH_TAC THEN INDUCT_TAC THEN
      ASM_REWRITE_TAC [ADD_CLAUSES,IN_INSERT]);
 
@@ -3371,7 +3371,7 @@ val z_in_gn =
 
 val in_lemma =
     TAC_PROOF
-    ((tl gdef, (“!n:num. (@x:'a. ~(x IN (g n))) IN (g(SUC n))”)),
+    ((gdef, (“!n:num. (@x:'a. ~(x IN (g n))) IN (g(SUC n))”)),
      ASM_REWRITE_TAC [IN_INSERT]);
 
 (* ---------------------------------------------------------------------*)
