@@ -357,9 +357,13 @@ kolmog_complexity is the Kolmogorov complexity of a
 binary string, and is a function from binary strings to naturals union infinity
 *)
 
-val kolmog_complexity_def = Define`kolmog_complexity x =
-                       if  { p | universal_tm p = SOME x} = {} then NONE
-                       else SOME (MIN_SET {LENGTH p | universal_tm p = SOME x})`;
+val kolmog_complexity_def = Define`kolmog_complexity x U =
+                       if  { p | U p = SOME x} = {} then NONE
+                       else SOME (MIN_SET {LENGTH p | U p = SOME x})`;
+
+val kraft_ineq = Q.store_thm("kraft_ineq",
+`∀P. prefix_free P ==> sum (x in P) (2**LENGTH(x) ) <= 1`,
+Let L(x) = [x*2**LENGTH(x) , x*2**LENGTH(x)+2**LENGTH(x)] >> L(x) are disjoint cus prefix free >> length of L(x) is 2**LENGTH(x) >> L(x) subste of [0,1] for all x >> sum <= length [0,1] =1 )
 
 val leastR_def = Define`leastR R A = @a. a IN A ∧ ∀b. b IN A ==> ~R b a`
 
