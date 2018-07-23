@@ -50,13 +50,46 @@ fun hide_out f x =
    Commands
    -------------------------------------------------------------------------- *)
 
-fun mkDir_err dir = OS.FileSys.mkDir dir handle _ => ()
+fun mkDir_err dir = 
+  OS.FileSys.mkDir dir 
+  handle Interrupt => raise Interrupt
+       | _         => ()
+       
+fun rmDir_err dir = 
+  OS.FileSys.rmDir dir
+  handle Interrupt => raise Interrupt
+       | _         => ()
+
 fun rmDir_rec dir = ignore (OS.Process.system ("rm -r " ^ dir))
+
+fun all_files dir =
+  let
+    val stream = OS.FileSys.openDir dir
+    fun loop acc stream =
+      case OS.FileSys.readDir stream of
+        NONE => acc
+      | SOME s => loop (s :: acc) stream
+    val l = loop [] stream
+  in
+    OS.FileSys.closeDir stream;
+    l
+  end
+
+fun clean_dir dir =
+  let
+    val _ = mkDir_err dir
+    val l0 = all_files dir
+    val l1 = map (fn x => OS.Path.concat (dir,x)) l0
+  in
+    app OS.FileSys.remove l1
+  end
+
 fun run_cmd cmd = ignore (OS.Process.system cmd)
+
+(* TODO: Use OS to change dir? *)
 fun cmd_in_dir dir cmd = run_cmd ("cd " ^ dir ^ "; " ^ cmd)
 
 fun exists_file file = OS.FileSys.access (file, []);
-
 
 (* --------------------------------------------------------------------------
     Dictionaries shortcuts
@@ -216,6 +249,11 @@ fun list_rmax l = case l of
     [] => raise ERR "list_max" ""
   | [a] => a
   | a :: m => Real.max (a,list_rmax m)
+
+fun list_imax l = case l of
+    [] => raise ERR "list_imax" ""
+  | [a] => a
+  | a :: m => Int.max (a,list_imax m)
 
 fun sum_int l = case l of [] => 0 | a :: m => a + sum_int m
 
@@ -521,8 +559,8 @@ val ttt_taccov      = ref (dempty String.compare)
 
 val ttt_thmfea = ref (dempty goal_compare)
 
+(* Warning: causes a problem if a theory is named namespace_tag *)
 val namespace_tag = "namespace_tag"
-(* Warning: causes a problem if you name your theory namespace_tag *)
 
 fun dbfetch_of_string s =
   let val (a,b) = split_string "Theory." s in

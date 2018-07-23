@@ -1,7 +1,8 @@
 (* ===================================================================== *)
 (* FILE          : hhWriter.sml                                          *)
 (* DESCRIPTION   : Print objects (constants, types and theorems) and     *)
-(*                 dependencies  theorems for holyHammer.                *)
+(*                 dependencies  theorems for                            *)
+(*                 export to the holyHammer framework.                   *)
 (* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck        *)
 (* DATE          : 2015                                                  *)
 (* ===================================================================== *)
@@ -14,9 +15,9 @@ open HolKernel boolLib tttTools TextIO Tag Dep
 
 val ERR = mk_HOL_ERR "hhWriter"
 
-(*---------------------------------------------------------------------------
+(*----------------------------------------------------------------------------
    Dictionaries
- ----------------------------------------------------------------------------*)
+ -----------------------------------------------------------------------------*)
 
 (* reserved names *)
 val hollight_theorems = ["HL_TRUTH", "HL_FALSITY", "HL_BOOL_CASES", "HL_EXT"];
@@ -24,9 +25,9 @@ val conjecture_name = "conjecture"
 val reserved_names = conjecture_name :: hollight_theorems
 val reserved_names0 = map (fn x => (x,0)) reserved_names
 
-(*---_-----------------------------------------------------------------------
+(*---_------------------------------------------------------------------------
    Save new objects in the dictionnaries.
- ----------------------------------------------------------------------------*)
+ -----------------------------------------------------------------------------*)
 
 fun is_tptp_sq_char c =
   let val n = Char.ord c in
@@ -35,7 +36,7 @@ fun is_tptp_sq_char c =
     (c <> #"/") andalso
     (c <> #":") andalso
     (c <> #"|") andalso
-    (c <> #"\134") (* TODO: why? *)
+    (c <> #"\"")
   end
 
 (* TODO: use String.translate *)
@@ -297,8 +298,7 @@ fun hh_constdef state oc thy (s,ty) =
 (* theorems *)
 fun othm state oc (name,role,tm) =
   let
-    fun f x = is_var x orelse is_const x
-    val l1 = type_varsl (map type_of (find_terms f tm))
+    val l1 = type_varsl (map type_of (find_terms is_const tm @ all_vars tm))
     val (l2, undeclare) =
       declare_temp_list state nice_dest_vartype (#tyvar_names state) l1
   in
@@ -404,7 +404,8 @@ fun write_thy dir filter_f state thy =
     val THEORY(_,t) = dest_theory thy
     val _ = app (hh_tydef state oc thy) (#types t)
     val _ = app (hh_constdef state oc thy) (#consts t)
-    val axl = map (fn x => (x,"ax")) (DB.theorems thy) (* TODO: why not (#theorems t) etc.? *)
+    val axl = map (fn x => (x,"ax")) (DB.theorems thy) 
+      (* TODO: why not (#theorems t) etc.? *)
     val defl = map (fn x => (x,"def")) (DB.axioms thy @ DB.definitions thy)
     fun local_compare (((_,th1),_),((_,th2),_)) =
       let val f = depnumber_of o depid_of o dep_of o Thm.tag in

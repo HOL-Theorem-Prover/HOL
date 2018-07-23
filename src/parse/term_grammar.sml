@@ -415,6 +415,14 @@ val stdhol : grammar =
   {rules = [(SOME 0, PREFIX (BINDER [LAMBDA])),
             (SOME 4, INFIX RESQUAN_OP),
             (SOME 5, INFIX VSCONS),
+            (SOME 60,
+             INFIX (STD_infix([{term_name = fnapp_special,
+                                elements = [RE (TOK "$")],
+                                timestamp = 0,
+                                (* pp info irrelevant as will never print *)
+                                block_style =
+                                  (AroundEachPhrase, (PP.CONSISTENT, 0)),
+                                paren_style = OnlyIfNecessary}], RIGHT))),
             (SOME 460,
              INFIX (STD_infix([{term_name = recwith_special,
                                 elements = [RE (TOK "with")],

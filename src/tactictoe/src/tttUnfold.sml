@@ -913,6 +913,10 @@ fun output_header oc cthy =
   output_flag oc "tttSetup.ttt_reclet_flag" ttt_reclet_flag;
   output_flag oc "tttSetup.ttt_ortho_flag" ttt_ortho_flag;
   output_flag oc "tttSetup.ttt_printproof_flag" ttt_printproof_flag;
+  output_flag oc "tttSetup.ttt_noabs_flag" ttt_noabs_flag;
+  (* prediction *)
+  output_flag oc "tttSetup.ttt_randdist_flag" ttt_randdist_flag;
+  output_flag oc "tttSetup.ttt_covdist_flag" ttt_covdist_flag;
   (* evaluation *)
   output_flag oc "tttSetup.ttt_eval_flag" ttt_eval_flag;
   output_flag oc "tttSetup.ttt_termarg_flag" ttt_termarg_flag;
@@ -920,6 +924,7 @@ fun output_header oc cthy =
   output_flag oc "tttSetup.ttt_evlet_flag" ttt_evlet_flag;
   output_flag oc "tttSetup.eprover_eval_flag" eprover_eval_flag;
   output_flag oc "tttSetup.eprover_save_flag" eprover_save_flag;
+  output_flag oc "tttSetup.ttt_metis_flag" ttt_metis_flag;
   (* global references *)
   osn oc ("val _ = tttTools.ttt_search_time := Time.fromReal " ^
     Real.toString (Time.toReal (!ttt_search_time)));
@@ -1068,7 +1073,7 @@ fun ttt_rewrite () =
   end
 
 (* ---------------------------------------------------------------------------
-   Extra safety during recording
+    Extra safety during recording (in case of export_theory is not catched)
    -------------------------------------------------------------------------- *)
 
 fun save_file file =
@@ -1076,12 +1081,12 @@ fun save_file file =
     val dir = #dir (OS.Path.splitDirFile file)
     val cmd = "cp -p " ^ file ^ " " ^ (file ^ ".tttsave")
   in
-    cmd_in_dir dir cmd
-  end
+	  cmd_in_dir dir cmd
+	end
 
 fun restore_file file =
   let
-    val dir = #dir (OS.Path.splitDirFile file)
+   val dir = #dir (OS.Path.splitDirFile file)
     val cmd1 = "cp -p " ^ (file ^ ".tttsave") ^ " " ^ file
     val cmd2 = "rm " ^ (file ^ ".tttsave")
   in

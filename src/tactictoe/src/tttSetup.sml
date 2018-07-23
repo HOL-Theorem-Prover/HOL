@@ -21,6 +21,7 @@ val ttt_namespacethm_flag = ref true
 (* Abstraction *)
 val ttt_thmlarg_flag = ref true
 val ttt_thmlarg_radius = ref 16
+val ttt_noabs_flag = ref false
 
 (* ==========================================================================
    Recording
@@ -43,7 +44,14 @@ val ttt_ortho_radius = ref 20
 
 (* Additional parameters *)
 val ttt_recgl_flag = ref true
- 
+
+(* ==========================================================================
+   Predictions
+   ========================================================================== *)
+
+val ttt_randdist_flag = ref false
+val ttt_covdist_flag = ref false
+
 (* ==========================================================================
    Evaluation
    ========================================================================== *)

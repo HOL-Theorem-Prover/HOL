@@ -36,8 +36,7 @@ fun PART_MATCH' f th t =
          (INST_TY_TERM s speccedth)
   end
 
-fun match_subterm pat =
-  can (find_term (can (match_term pat)))
+fun match_subterm pat = find_term (can (match_term pat))
 
 val op$ = Portable.$
 val notT = el 2 (CONJUNCTS NOT_CLAUSES)

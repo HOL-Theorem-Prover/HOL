@@ -28,9 +28,12 @@ sig
   val ttt_proof_dir    : string
   
   val ttt_buildheap_dir : string
-   (* commands *)
+  
+  (* commands *)
   val mkDir_err        : string -> unit
+  val rmDir_err        : string -> unit
   val rmDir_rec        : string -> unit
+  val clean_dir        : string -> unit
   val run_cmd          : string -> unit
   val cmd_in_dir       : string -> string -> unit
   val exists_file      : string -> bool
@@ -100,6 +103,7 @@ sig
   val compare_rmin : (('a * real) * ('a * real)) -> order
   val compare_rmax : (('a * real) * ('a * real)) -> order
   val list_rmax : real list -> real
+  val list_imax : int list -> int
 
   (* time *)
   val add_time : ('a -> 'b) -> 'a -> 'b * real
@@ -158,8 +162,5 @@ sig
   val rm_prefix : string -> string -> string
   val rm_squote : string -> string
   val rm_space  : string -> string
-
-
-
 
 end

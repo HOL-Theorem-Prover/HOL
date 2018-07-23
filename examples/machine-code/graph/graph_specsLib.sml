@@ -1,15 +1,12 @@
-structure graph_specsLib =
+structure graph_specsLib :> graph_specsLib =
 struct
 
 open HolKernel boolLib bossLib Parse;
-open listTheory wordsTheory pred_setTheory arithmeticTheory wordsLib pairTheory;
-open set_sepTheory progTheory helperLib addressTheory combinTheory;
-
-open backgroundLib file_readerLib derive_specsLib stack_introLib writerLib;
+open wordsTheory listTheory combinTheory progTheory;
+open helperLib backgroundLib file_readerLib derive_specsLib stack_introLib
+open writerLib;
 
 open GraphLangTheory
-
-infix \\ val op \\ = op THEN;
 
 val code_case_of = TypeBase.case_def_of ``:code``;
 

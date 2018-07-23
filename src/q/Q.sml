@@ -27,7 +27,7 @@ fun contextTerm ctxt q = Parse.parse_in_context ctxt (normalise_quotation q);
 
 fun ptm_with_ctxtty ctxt ty q = Parse.typed_parse_in_context ty ctxt q
 
-val TC_OFF = trace ("show_typecheck_errors", 0)
+fun TC_OFF f x = trace ("show_typecheck_errors", 0) f x
 fun ptm_with_ctxtty' ctxt ty = TC_OFF (ptm_with_ctxtty ctxt ty)
 
 
@@ -364,6 +364,10 @@ end
 val strip_uscore_bindings = filter (fn {redex,residue} => isnt_uscore_var redex)
 fun redex_map f {redex,residue} = {redex = f redex, residue = residue}
 
+fun PQ (* parser quiet *) f =
+  f |> trace ("notify type variable guesses", 0)
+    |> trace ("show_typecheck_errors", 0)
+
 (* needs to be eta-expanded so that the possible HOL_ERRs are raised
    when applied to a goal, not before, thereby letting FIRST_ASSUM catch
    the exception *)
@@ -380,7 +384,7 @@ fun wholeterm_rename_helper {pats,fvs_set,ERR,kont} tm g = let
       rename_tac THEN kont
     end g
   fun test_parses patseq =
-    case seq.cases patseq of
+    case PQ seq.cases patseq of
         NONE => raise ERR "No match"
       | SOME (pat, rest) => do_one_pat pat handle HOL_ERR _ => test_parses rest
 in
@@ -437,7 +441,7 @@ fun subterm_helper make_tac k {ERR,pats,fvs_set} t g = let
           end
         | NONE => NONE
   fun find_pats patseq =
-    case seq.cases patseq of
+    case PQ seq.cases patseq of
         NONE => raise ERR "No matching sub-term found"
       | SOME (patsz, rest) =>
         (case gen_find_term (test patsz) t of

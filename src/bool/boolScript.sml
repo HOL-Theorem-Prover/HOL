@@ -4119,9 +4119,9 @@ end
     f (:'a) = ...
 *)
 val itself_Axiom = let
-  val witness = “(\x:'b itself. e : 'a)”
-  val fn_behaves = BETA_CONV  (mk_comb(witness, “(:'b)”))
-  val fn_exists = EXISTS (“?f:'b itself -> 'a. f (:'b) = e”, witness)
+  val witness = “(\x:'a itself. e : 'b)”
+  val fn_behaves = BETA_CONV  (mk_comb(witness, “(:'a)”))
+  val fn_exists = EXISTS (“?f:'a itself -> 'b. f (:'a) = e”, witness)
                   fn_behaves
 in
   save_thm("itself_Axiom", GEN_ALL fn_exists)

@@ -214,4 +214,14 @@ end
 
 (* ---------------------------------------------------------------------- *)
 
+val _ = let
+  val _ = tprint "Cond_rewr.mk_cond_rewrs on ``hyp ==> (T = e)``"
+in
+  case Lib.total Cond_rewr.mk_cond_rewrs
+                 (ASSUME ``P x ==> (T = Q y)``, BoundedRewrites.UNBOUNDED)
+   of
+      NONE => die "FAILED!"
+    | SOME _ => OK()
+end
+
 val _ = Process.exit Process.success

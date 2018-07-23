@@ -1,15 +1,10 @@
-structure stack_analysisLib =
+structure stack_analysisLib :> stack_analysisLib =
 struct
 
 open HolKernel boolLib bossLib Parse;
-open listTheory wordsTheory pred_setTheory arithmeticTheory wordsLib pairTheory;
-open set_sepTheory progTheory helperLib addressTheory combinTheory;
-
-open backgroundLib file_readerLib;
-
+open wordsTheory set_sepTheory progTheory helperLib addressTheory combinTheory;
+open backgroundLib file_readerLib writerLib;
 open GraphLangTheory
-
-infix \\ val op \\ = op THEN;
 
 fun stack_offset_in_r0 sec_name = let
   val (_,ret_word_count,_) = section_io sec_name

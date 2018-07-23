@@ -44,12 +44,13 @@ val pats = ["Couldn't find required output file: emptyTheory",
             "Couldn't find required output file: noproductTheory"]
 
 val desc = "failing Holmake with empty/non-producing scripts"
+val holstate_sfx = ["--holstate", Globals.HOLDIR ++ "bin" ++ "hol.state0"]
 val _ = if Systeml.ML_SYSNAME = "poly" then
           let
             val _ = tprint ("Checking parallel "^desc)
             val res = Systeml.systeml_out {outfile="make.log"}
-                            [hm, "--qof", "-k", "-j4", "--holstate",
-                             Globals.HOLDIR ++ "bin" ++ "hol.state0"]
+                                          ([hm, "--qof", "-k", "-j4"] @
+                                           holstate_sfx)
           in
             if OS.Process.isSuccess res then die "Holmake succeeded incorrectly"
             else if grep pats "make.log" then OK()
@@ -59,8 +60,10 @@ val _ = if Systeml.ML_SYSNAME = "poly" then
 
 val _ = tprint ("Checking sequential " ^ desc)
 val res = Systeml.systeml_out {outfile="make.log"}
-                              [hm, "--qof", "-k", "--holstate",
-                               Globals.HOLDIR ++ "bin" ++ "hol.state0", "-j1"]
+                              ([hm, "--qof", "-k", "-j1"] @
+                               (if Systeml.ML_SYSNAME = "poly" then
+                                  holstate_sfx
+                                else []))
 
 val _ = if OS.Process.isSuccess res then die "Holmake succeeded incorrectly"
         else if grep pats "make.log" then OK()

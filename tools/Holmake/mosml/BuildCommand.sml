@@ -158,7 +158,8 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
             in
               isSuccess res2 andalso
               (exists_readable thysmlfile orelse
-               (print ("Script file "^script'^
+               (print ("Couldn't find required output file: "^thysmlfile^ "\n");
+                print ("Script file "^script'^
                        " didn't produce "^thysmlfile^"; \n\
                        \  maybe need export_theory() at end of "^
                        scriptsml^"\n");

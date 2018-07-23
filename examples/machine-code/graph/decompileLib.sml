@@ -1,10 +1,10 @@
-structure decompileLib =
+structure decompileLib :> decompileLib =
 struct
 
-open func_decompileLib;
+open backgroundLib file_readerLib func_decompileLib;
 
 fun decomp base_name fast ignore_names = let
-  val ignore = String.tokens (fn c => mem c [#",",#" "]) ignore_names
+  val ignore = String.tokens (fn c => Lib.mem c [#",",#" "]) ignore_names
   val () = read_files base_name ignore
   val _ = (skip_proofs := fast)
   val names = section_names()

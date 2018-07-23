@@ -591,6 +591,8 @@ type typeBase = tyinfo TypeNet.typenet
 
 val empty : typeBase = TypeNet.empty
 
+val fold = TypeNet.fold
+
 fun next_ty ty = mk_vartype(Lexis.tyvar_vary (dest_vartype ty))
 
 (*---------------------------------------------------------------------------*)

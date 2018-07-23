@@ -13,12 +13,12 @@ OPTIONS = QUIT_ON_FAILURE
 
 THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
 TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
-all: $(TARGETS)
+all: $(TARGETS) selftest.exe
 .PHONY: all
 
 ifdef POLY
 HOLHEAP = local-hol-heap
-EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o
+EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o selftest.exe
 
 BARE_THYS = $(HOLDIR)/examples/l3-machine-code/common/utilsLib \
             $(HOLDIR)/examples/l3-machine-code/common/stateTheory \
@@ -41,3 +41,6 @@ machine-code-straightline-unint.art: machine-code-straightline-unint.thy straigh
 
 GraphLang.art: GraphLang.otd
 endif
+
+selftest.exe: selftest.uo decompileLib.uo
+	$(HOLMOSMLC) -o $@ $<

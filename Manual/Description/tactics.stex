@@ -60,7 +60,7 @@ translating subgoals solutions to solutions of goals.
 %from the ones
 %in Edinburgh \LCF\ \cite{Edinburgh-LCF}).
 
-\section{Tactics, goals and validations}
+\section{Tactics, Goals and Validations}
 \label{tactics}
 
 \index{goal directed proof search!concepts of|(}
@@ -378,7 +378,7 @@ There can be a lot of book-keeping required to support such an activity.
 For this reason, most interactive theorem-proving uses the subgoal or goalstack package described in Section~\ref{sec:goalstack}.
 
 
-\section{Some tactics built into HOL}
+\section{\texorpdfstring{Some Tactics Built into \HOL{}}{Some Tactics Built into HOL}}
 
 This section contains a selection of the more commonly
 \index{tactics!list of some|(}
@@ -916,7 +916,7 @@ $T$ until it fails. It is defined in \ML{} by:
 \index{tacticals!list of some|)}
 \index{tactics!tacticals for|)}
 
-\section{Tactics for manipulating assumptions}
+\section{Tactics for Manipulating Assumptions}
 \label{asm-manip}
 
 \index{tactics!for manipulating assumptions|(}

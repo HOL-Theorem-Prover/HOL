@@ -36,35 +36,46 @@ fun learn_tfidf feavl = weight_tfidf (map snd feavl)
 fun inter_dict dict l = filter (fn x => dmem x dict) l
 fun union_dict dict l = dkeys (daddl (map (fn x => (x,())) l) dict)
 
+val random_gen = Random.newgen ()
+
 fun knn_sim1 symweight dict_o fea_p =
-  let
-    val fea_i   = inter_dict dict_o fea_p
-    fun wf n    = dfind_err "knn_distance" n symweight
-    val weightl = map wf fea_i
-  in
-    sum_real weightl
-  end
+  if !ttt_randdist_flag 
+    then Random.random random_gen
+  else
+    let
+      val fea_i   = inter_dict dict_o fea_p
+      fun wf n    = dfind_err "knn_distance" n symweight
+      val weightl = map wf fea_i
+    in
+      sum_real weightl
+    end
 
 fun knn_sim2 symweight dict_o fea_p =
-  let
-    val fea_i    = inter_dict dict_o fea_p
-    fun wf n     = dfind_err "knn_similarity" n symweight
-    val weightl  = map wf fea_i
-    val tot      = Real.fromInt (dlength dict_o + length fea_p)
-  in
-    sum_real weightl / Math.ln (Math.e + tot)
-  end
+  if !ttt_randdist_flag 
+    then Random.random random_gen
+  else
+    let
+      val fea_i    = inter_dict dict_o fea_p
+      fun wf n     = dfind_err "knn_similarity" n symweight
+      val weightl  = map wf fea_i
+      val tot      = Real.fromInt (dlength dict_o + length fea_p)
+    in
+      sum_real weightl / Math.ln (Math.e + tot)
+    end
 
 fun knn_sim3 symweight dict_o fea_p =
-  let
-    val feai     = inter_dict dict_o fea_p
-    val feau     = union_dict dict_o fea_p
-    fun wf n     = dfind n symweight handle _ => 0.0
-    val weightli = map wf feai
-    val weightlu = map wf feau
-  in
-    sum_real weightli / (sum_real weightlu + 1.0)
-  end
+  if !ttt_randdist_flag 
+    then Random.random random_gen
+  else
+    let
+      val feai     = inter_dict dict_o fea_p
+      val feau     = union_dict dict_o fea_p
+      fun wf n     = dfind n symweight handle _ => 0.0
+      val weightli = map wf feai
+      val weightlu = map wf feau
+    in
+      sum_real weightli / (sum_real weightlu + 1.0)
+    end
 
 (* --------------------------------------------------------------------------
    Ordering prediction with duplicates
@@ -90,14 +101,23 @@ fun pre_sim3 symweight feal fea_o = pre_pred knn_sim3 symweight feal fea_o
    Tactic predictions
    -------------------------------------------------------------------------- *)
 
+(* used for preselection *)
 fun stacknn symweight n feal fea_o =
   let
     val l1 = map fst (pre_sim1 symweight feal fea_o)
-    val l2 = mk_sameorder_set lbl_compare l1
+    fun coverage x = dfind x (!ttt_taccov) handle _ => 0 
+    fun compare_coverage (lbl1,lbl2) = 
+      Int.compare (coverage (#1 lbl2), coverage (#1 lbl1))
+    val l1' = 
+      if !ttt_covdist_flag 
+      then dict_sort compare_coverage l1
+      else l1
+    val l2 = mk_sameorder_set lbl_compare l1'
   in
     first_n n l2
   end
 
+(* used during search *)
 fun stacknn_uniq symweight n feal fea_o =
   let
     val l = stacknn symweight n feal fea_o
@@ -147,12 +167,10 @@ fun insert_namespace thmdict =
   let
     val dict = ref thmdict
     fun f (x,y) = (namespace_tag ^ "Theory." ^ x, y)
-    val l1 = debug_t "namespace_thms" namespace_thms ()
+    val l1 = namespace_thms ()
     val l2 = map f l1
   in
-    debug_t "add_fea" (app (add_fea dict)) l2;
-    debug ("adding " ^ int_to_string (dlength (!dict) - dlength thmdict) ^ 
-      " theorems from the namespace");
+    app (add_fea dict) l2;
     (!dict)
   end
 
@@ -160,7 +178,7 @@ fun all_thmfeav () =
   let
     val newdict =
       if !ttt_namespacethm_flag
-      then debug_t "insert_namespace" insert_namespace (!ttt_thmfea)
+      then insert_namespace (!ttt_thmfea)
       else (!ttt_thmfea)
     val feav = map snd (dlist newdict)
     fun f (g,(name,fea)) = (name,(g,fea))
@@ -221,7 +239,7 @@ fun add_thmdep revdict n l0 =
     val l1 = mk_sameorder_set String.compare (List.concat (map f1 l0))
     fun f2 x = exists_tid x andalso uptodate_tid x andalso dmem x revdict
   in
-    debug_t "add_thmdep: first_test_n" (first_test_n f2 n) l1
+    first_test_n f2 n l1
   end
 
 fun thmknn_wdep (symweight,feav,revdict) n gfea =
@@ -238,7 +256,7 @@ fun desc_lbl_aux rlist rdict ddict (lbl as (stac,_,_,gl)) =
   (
   rlist := lbl :: (!rlist);
   if dmem lbl rdict
-    then debug ("Warning: descendant_of_feav: " ^ stac)
+    then () (* debug ("Warning: descendant_of_feav: " ^ stac) *)
     else
       let
         val new_rdict = dadd lbl () rdict
@@ -284,7 +302,7 @@ fun termknn n ((asl,w):goal) term =
     val symweight = weight_tfidf (fea_o :: (map snd feal) @ thmfeav)
     val pre_sim = case !ttt_termarg_pint of
       1 => pre_sim1 | 2 => pre_sim2 | 3 => pre_sim3 | _ => pre_sim2
-    val l3 = debug_t "pre_sim" pre_sim symweight feal fea_o
+    val l3 = pre_sim symweight feal fea_o
     val r = first_n n (map fst l3)
   in
     r

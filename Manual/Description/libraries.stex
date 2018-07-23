@@ -1848,7 +1848,7 @@ rewrites.  The latter ``advantage'' is based on the assumption that
 of unused rewrites is never a concern: the presence of rewrites that
 do the wrong thing can be a major irritation.
 
-\subsubsection{Abbreviated ``Power'' Tactics}
+\subsubsection{Abbreviated ``Power'' tactics}
 \HOL{}'s \ml{bossLib} module (part of the standard interactive environment) comes with a number of powerful simplification tactics with short lower-case names.
 These do not require or allow for the specification of a particular \simpset{} because they use \ml{srw_ss()} combined with the arithmetic decision procedure for the natural numbers, as well as a \simpset{} fragment that eliminates \holtxt{let}-terms.
 All of the tactics take a list of rewrite theorems as their one argument.
@@ -3489,7 +3489,7 @@ There are also bit-blasting tactics: \ml{BBLAST\_TAC} and \ml{FULL\_BBLAST\_TAC}
 \section{The \texttt{Quantifier Heuristics} library}\label{sec:QuantHeuristicsLib}
 \input{QuantHeuristics.tex}
 
-\section{Tree-structured Finite Sets and Finite Maps}\label{sec:enumfset}
+\section{Tree-Structured Finite Sets and Finite Maps}\label{sec:enumfset}
 \input{enumfset.tex}
 
 

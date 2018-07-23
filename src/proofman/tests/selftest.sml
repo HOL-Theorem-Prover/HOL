@@ -5,12 +5,49 @@ val _ = set_trace "Unicode" 0
 
 val _ = goalStack.chatting := false
 
+val _ = tprint "Itself case-eq properly polymorphic"
+val _ =
+    let
+      open boolLib
+      val cthm = TypeBase.case_eq_of ``:'a itself``
+      val l = cthm |> concl |> lhs |> lhs
+      val (_, args) = strip_comb l
+      val xv = hd args
+    in
+      if xv |> type_of |> Type.polymorphic then OK()
+      else die "FAILED!"
+    end
+
 val _ = tprint "Type parsing with newlines"
 val ty = ``:
    'a
 ``;
 val _ = if Type.compare(ty,Type.alpha) = EQUAL then OK()
         else die ("\nFAILED: got (" ^ type_to_string ty ^ ")")
+
+local
+infixr $
+fun f $ x = mk_comb(f,x)
+val f = mk_var("f", alpha --> alpha)
+val gg = mk_var("g", beta --> gamma --> alpha)
+val g = mk_var("g", gamma --> alpha)
+val x = mk_var("x", gamma)
+val b = mk_var("b", beta)
+val fgx = f $ g $ x
+in
+
+val _ = tprint "Parsing dollar-sign terms (1)"
+val res1 = “^f $ ^g $ x”
+val _ = if aconv res1 fgx then OK() else die "FAILED"
+
+val _ = tprint "Parsing dollar-sign terms (2)"
+val res2 = “^f (^f $ ^g $ ^x)”
+val _ = if aconv res2 (mk_comb(f, fgx)) then OK() else die "FAILED"
+
+val _ = tprint "Parsing dollar-sign terms (3)"
+val res3 = “^f $ ^gg b $ x”
+val _ = if aconv res3 (f $ (gg $ b) $ x) then OK() else die "FAILED"
+end (* dollar-sign tests local *)
 
 val _ = tprint "test of flatn"
 val _ = let

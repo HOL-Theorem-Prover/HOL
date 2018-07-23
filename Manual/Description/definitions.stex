@@ -551,18 +551,16 @@ with big records, the implementation of record types uses a more
 efficient underlying representation when the number of fields grows
 too large.  The exact point at which this optimisation is applied is
 controlled by the reference variable
-\texttt{Datatype.big\_record\_size}.  This value is initialised to 20,
+\texttt{Datatype.big\_record\_size}.  This value is initialised to
+>>__ print (Int.toString (!Datatype.big_record_size) ^ ",\n");
 but users can change it as they choose.
 
-Unfortunately, the big record representation has the drawback that
-every update and accessor function has two forms: different terms that
-are printed the same.  One form is a simple constant, and is the form
-produced when a term is parsed.  The other is more complicated, but
-allows for the use of smaller theorems when record values are
-simplified.  Therefore, it is recommended that new, user-proved
-theorems that mention big records' fields or field updates be passed
-through a phase of simplification (\texttt{SIMP\_RULE}), applying the
-\texttt{TypeBase}'s rewrites, before they are saved.
+Unfortunately, the big record representation has the drawback that every update and accessor function has two forms: different terms that are printed the same.
+One form is a simple constant, and is the form produced when a term is parsed.
+The other is more complicated, but allows for the use of smaller theorems when record values are simplified.
+Therefore, it is recommended that new, user-proved theorems that mention big records' fields or field updates be passed through a phase of simplification (\texttt{SIMP\_RULE}), applying the \texttt{TypeBase}'s rewrites, before they are saved.
+
+Better yet, users should define their own system of hierarchically nested sub-records if their records are getting too large.
 
 The pretty-printing of big records can be controlled with the
 \texttt{pp\_bigrecs} trace-flag.
@@ -1125,7 +1123,7 @@ $
 \end{center}
 \end{table}
 
-\paragraph{Pattern Expansion}
+\paragraph{Pattern expansion}
 In general, \ml{Define} attempts to derive exactly the specified
 conjunction of equations. However, the rich syntax of patterns allows
 some ambiguity. For example, the input
@@ -1385,7 +1383,7 @@ analogous to \ml{prove}. Thus, \ml{Defn.tgoal} is used to take the
 result of \ml{Hol\_defn} and set up a goal for proving termination
 of the definition.
 
-\paragraph{Example.} An invocation of {\small\verb+Define+} on
+\paragraph{Example} An invocation of {\small\verb+Define+} on
 the following equations for Quicksort will currently fail, since the
 termination proof is currently beyond the capabilities of the naive termination
 prover. Instead, we make an application of {\small\verb+Hol_defn+}:
@@ -1576,7 +1574,7 @@ invoke \ml{WF\_REL\_TAC}:
 %
 The built-in reasoning then suffices to prove the remaining goal.
 
-\paragraph{Weighting Functions}
+\paragraph{Weighting functions}
 
 Sometimes one needs a measure function that is itself recursive.  For
 example, consider a type of binary trees and a function that
@@ -1628,7 +1626,7 @@ must be admitted that finding the correct weighting for a termination
 proof is more an art than a science. Typically, one makes a guess and
 then tries the termination proof to see if it works.
 
-\paragraph{Lexicographic Combinations}
+\paragraph{Lexicographic combinations}
 
 Occasionally, there's a combination of factors that complicate the
 termination argument. For example, the following specification
@@ -1811,7 +1809,7 @@ The `add' and `drop' functions only affect the current state of the congruence d
 
 
 
-\paragraph{Higher Order Recursion and Congruence Rules}
+\paragraph{Higher-order recursion and congruence rules}
 
 A `higher-order` recursion is one in which a higher-order function is
 used to apply the recursive function to arguments. In order for the
@@ -2048,10 +2046,10 @@ possible ways of obtaining it by the rules.
 If the ``stem'' of the first constant defined in a set of clauses is such that resulting \ML{} bindings in an exported theory file will result in illegal \ML{}, then the \ml{xHol\_reln} function should be used.
 The \ml{xHol\_reln} function is analogous to the \ml{xDefine} function for defining recursive functions (see Section~\ref{TFL}).
 
-\paragraph{Strong Induction Principles}
+\paragraph{Strong induction principles}
 So called ``strong'' versions of induction principles (in which instances of the relation being defined appear as extra hypotheses), are automatically proved when a definition is made with \ml{Hol\_reln}. The strong induction principle for a relation is used when the \ml{Induct\_on} tactic is used.
 
-\paragraph{Adding Monotone Operators}
+\paragraph{Adding monotone operators}
 \index{inductive relations!monotone operators for}
 New constants may occur recursively throughout rules' hypotheses, as
 long as it can be shown that the rules remain monotone with respect to
@@ -2167,7 +2165,7 @@ as in the definition of \holtxt{EVEN} and \holtxt{ODD}.  The relations
 may or may not be mutually recursive.  The clauses for each relation
 need not be contiguous.
 
-\subsection{Proofs with Inductive Relations}
+\subsection{Proofs with inductive relations}
 \index{inductive relations!performing proofs}
 
 The ``rules'' theorem of an inductive relation provides a straightforward way of proving arguments belong to a relation.

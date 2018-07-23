@@ -11,6 +11,18 @@ warn () {
     echo "$@" >&2
 }
 
+case `uname` in
+    Darwin ) if [ -z `which gtar` ]
+             then
+                die "Need GNU tar on MacOS"
+             else
+                 TAR=gtar
+             fi ;;
+    * ) TAR=tar
+esac
+
+
+
 usage () {
   echo "Usage: releasing-hol [--relname=<name>] [--reuse-checkout] <ref> <ML>" >&2
   echo "  <ref> is a git reference (e.g., HEAD or a tag name)" >&2
@@ -29,6 +41,7 @@ then
     fi
 fi
 
+reusecommit=0
 TEMP=$(getopt -n releasing-hol -o '' -lrelname: -lreuse-checkout -- "$@")
 eval set -- "$TEMP"
 
@@ -79,8 +92,13 @@ localholdir=/tmp/localhol
 
 echo -n "Switching to ${gitref} - "
 (git checkout -f -q ${gitref} && echo "done" || die "failed")
-$ML < tools/smart-configure.sml
-bin/build
+if [ ${reusecommit} -eq 1 ]
+then
+    :
+else
+    $ML < tools/smart-configure.sml
+    bin/build
+fi
 
 texlogs=/tmp/$releasename-latex-logs
 
@@ -112,7 +130,7 @@ fi
 
 
 echo "Archiving from $localholdir to $archive"
-git archive --prefix="hol-$releasename/" $gitref | tar -x -C /tmp
+git archive --prefix="hol-$releasename/" $gitref | ${TAR} -x -C /tmp
 
 if [ ! -r $archive/std.prelude -o ! -d $archive/src ]
 then
@@ -120,10 +138,10 @@ then
 fi
 
 echo -n "Copying various theorems from local installation: "
-for i in pair res_quan string
+for i in coretypes/pair-help res_quan/help string/help
 do
   echo -n "$i "
-  if /bin/cp -R $localholdir/src/$i/help/thms $archive/src/$i/help 2> /dev/null
+  if /bin/cp -R $localholdir/src/$i/thms $archive/src/$i 2> /dev/null
   then
       :
   else
@@ -212,7 +230,7 @@ cd bin
 cd /tmp
 
 echo "Creating tar file"
-tar czf hol-$releasename.tar.gz $(basename $archive)
+${TAR} czf hol-$releasename.tar.gz $(basename $archive)
 echo
 
 echo -n "Release notes in "

@@ -344,7 +344,7 @@ fun testquiet f x =
            (Lib.with_flag (Feedback.MESG_outstream, app) o
             Lib.with_flag (Feedback.ERR_outstream, app) o
             Lib.with_flag (Feedback.WARNING_outstream, app) o
-            Lib.with_flag (Globals.interactive, true)) f x
+            Lib.with_flag (Globals.interactive, true)) (Lib.total f) x
        val _ =
            null (!buf) orelse
            die ("\n  FAILED : buf contains " ^ String.concatWith "\n" (!buf))
@@ -353,24 +353,42 @@ fun testquiet f x =
    end);
 
 val _ = tprint "(Interactive) PAT_ASSUM quiet about tyvar guesses(1)"
-val (sgs, _) = testquiet
+val result = testquiet
                  (Q.PAT_X_ASSUM `gh425a (g x)` mp_tac)
                  ([``gh425a (f T) : bool``], ``p /\ q``)
-val _ = case sgs of
-            [([], t)] => if aconv t ``gh425a (f T) ==> p /\ q`` then OK()
-                         else die "\nFAILED - Incorrect result"
+val _ = case result of
+            SOME ([([], t)],_) =>
+              if aconv t ``gh425a (f T) ==> p /\ q`` then OK()
+              else die "\nFAILED - Incorrect result"
           | _ => die "\nFAILED - Incorrect result"
 
 val _ = tprint "(Interactive) PAT_ASSUM quiet about tyvar guesses(2)"
-val (sgs, _) = testquiet
+val _ = testquiet
                  (Q.PAT_X_ASSUM `gh245 (g x)` mp_tac)
                  ([``gh425a (f T) : bool``], ``p /\ q``)
 val _ = OK()
 
 val _ = tprint "(Interactive) PAT_ASSUM quiet about tyvar guesses(3)"
-val (sgs, _) = testquiet
+val _ = testquiet
                  (Q.PAT_X_ASSUM `gh245 x` mp_tac)
                  ([``gh425b (f T) : bool``], ``p /\ q``)
+val _ = OK()
+
+val _ = tprint "(Interactive) RENAME_TAC quiet about tyvar guesses(1)"
+val _ = testquiet (Q.RENAME_TAC [‘f x /\ _’])
+                  ([], “(gg : num -> bool) n /\ p”)
+val _ = OK()
+
+val _ = tprint "(Interactive) RENAME_TAC quiet about tyvar guesses(2)"
+val _ = testquiet (Q.RENAME_TAC [‘SUC n’]) ([], “p /\ q”)
+val _ = OK()
+
+val _ = tprint "(Interactive) RENAME_TAC quiet about tyvar guesses(3)"
+val _ = testquiet (Q.RENAME_TAC [‘SUC n’]) ([“P (SUC x) ==> Q”], “p /\ q”)
+val _ = OK()
+
+val _ = tprint "(Interactive) RENAME_TAC quiet about tyvar guesses(4)"
+val _ = testquiet (Q.RENAME_TAC [‘SUC n’]) ([“Pr ==> Q”], “P (SUC x) /\ q”)
 val _ = OK()
 
 

@@ -128,5 +128,11 @@ val _ = List.app ct [
   ("FOLDL1", “FOLDL $+ 0 [1;2;3;4]”, “10n”),
   ("FOLDR1", “FOLDR (\n a. (n * 2) :: a) [] [1;2;3;4]”, “[2;4;6;8]”),
   ("GENLIST", “GENLIST (\n. 2 * n + 4) 6”, “[4; 6; 8; 10; 12; 14]”),
-  ("CONS-eq-NIL", “h::t = []”, “F”)
+  ("CONS-eq-NIL", “h::t = []”, “F”),
+  ("LUPDATE(1)", “LUPDATE 9 2 [1;2;3;4]”, “[1;2;9;4]”),
+  ("LUPDATE(2)", “LUPDATE 9 4 [1;2;3;4]”, “[1;2;3;4]”),
+  ("SHORTLEX(1)", “SHORTLEX (<) [1;1] [1;2;3]”, “T”),
+  ("SHORTLEX(2)", “SHORTLEX (<) [1;1;4] [1;1;3]”, “F”),
+  ("SHORTLEX(3)", “SHORTLEX (<) [1;1;4] [1;1]”, “F”),
+  ("LLEX(1)", “LLEX (<) [1;1;1] [1;2]”, “T”)
 ]

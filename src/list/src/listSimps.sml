@@ -352,9 +352,10 @@ val list_rws = computeLib.add_thms
    FOLDR, FRONT_DEF, GENLIST_AUX_compute, GENLIST_NUMERALS, HD, INDEX_FIND_def,
    INDEX_OF_def, LAST_compute, LENGTH, LEN_DEF, LIST_APPLY_def, LIST_BIND_def,
    LIST_IGNORE_BIND_def, LIST_LIFT2_def, LIST_TO_SET_THM, LLEX_def, LRC_def,
-   LUPDATE_def, MAP, MAP2, NOT_CONS_NIL, NOT_NIL_CONS, NULL_DEF, oEL_def,
+   LUPDATE_compute, MAP, MAP2, NOT_CONS_NIL, NOT_NIL_CONS, NULL_DEF, oEL_def,
    oHD_def,
-   PAD_LEFT, PAD_RIGHT, REVERSE_REV, REV_DEF, SNOC, SUM_ACC_DEF, SUM_SUM_ACC,
+   PAD_LEFT, PAD_RIGHT, REVERSE_REV, REV_DEF, SHORTLEX_def, SNOC, SUM_ACC_DEF,
+   SUM_SUM_ACC,
    TAKE_compute, TL, UNZIP, ZIP, computeLib.lazyfy_thm list_case_compute,
    dropWhile_def, isPREFIX, list_size_def, nub_def, splitAtPki_def
   ]

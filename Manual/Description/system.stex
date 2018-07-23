@@ -1,4 +1,4 @@
-\chapter{The \HOL{} Logic in ML}\label{HOLsyschapter}
+\chapter{\texorpdfstring{The \HOL{} Logic in ML}{The HOL Logic in ML}}\label{HOLsyschapter}
 
 In this chapter, the concrete representation of the \HOL{} logic is
 described.  This involves describing the \ML\ functions that comprise
@@ -34,147 +34,6 @@ system thus offers a rich initial environment; users can further enrich
 it by implementing their own application specific tools and building
 their own application specific theories.
 
-
-\section{Lexical Matters}\label{HOL-lex}
-
-\index{identifiers, in HOL logic@identifiers, in \HOL{} logic|(} The name
-of a \HOL{} variable
-%
-\index{tokens|(}%
-\index{variables, in HOL logic@variables, in \HOL{} logic!names of|(}%
-%
-can be any \ML{} string, but the quotation mechanism will parse only
-names that are identifiers (see Section~\ref{ident} below).  Using non-identifiers as variable names is discouraged except in special
-circumstances (for example, when writing derived rules that generate
-variables with names that are guaranteed to be different from existing
-names). The name of a type variable
-%
-\index{type variables, in HOL logic@type variables, in \HOL{} logic!names of}
-%
-in the \HOL{} logic is formed by a prime (\ml{'}) followed by an
-alphanumeric which itself contains no prime (see Section~\ref{tyvars}
-for examples).  The name of a type constant or a term constant in the
-\HOL{} logic can be any identifier, although some names are treated
-specially by the HOL parser and printer and should therefore be
-avoided.
-%
-\index{identifiers, in HOL logic@identifiers, in \HOL{} logic|)}
-
-\subsection{Identifiers}\label{ident}
-
-In addition to special forms already present in the relevant grammar,
-a \HOL{} identifier can be of two forms:
-\begin{myenumerate}
-\item A finite sequence of \emph{alphanumerics} starting with a letter.  The
-  underscore character is considered a digit character, and so can
-  occur after an identifier's first letter.  Greek characters (roughly
-  Unicode range \ml{U+0370} to \ml{U+03FF}) are also letters, except for
-  $\lambda$~(\ml{U+03BB}), which is treated as a symbol. \HOL{} is
-  case-sensitive: upper and lower case letters are considered to be
-  different.
-
-  Digits are the ASCII characters 0--9, the underscore character, and
-  the Unicode subscripts and superscripts.  The apostrophe character
-  is special.%
-  \index{apostrophe, lexical handling of}
-  %
-  It is not a letter, but can appear as part of an alphanumeric term
-  identifier after the first letter.  It must appear at the start of a
-  type variable's name, and can also appear in the term context as a
-  sequence of apostrophes on their own.
-
-\item A \emph{symbolic} identifier, \ie, a finite sequence formed by
-  any combination of the ASCII symbols and the Unicode symbols.  The
-  basic ASCII symbols are
-\begin{verbatim}
-  #  ?  +  *  /  \  =  <  >  &  %  @  !  :  |  -  ^  `
-\end{verbatim}
-
-  Use of the caret and back-tick characters is complicated by the fact that these characters have special meaning in the quotation mechanism; see Section~\ref{sec:quotation-antiquotation}.
-  The dollar-sign (\texttt{\dol})%
-\index{ dollar sign, in HOL logic parser@\ml{\$} (dollar sign, in \HOL{} logic parser)!as identifier-constituent}
-  can also be used to form symbolic identifiers, but only in tokens where it is the only symbol.
-  Thus, \texttt{\dol}, \texttt{\dol\dol}, and \texttt{\dol\dol\dol} will all lex as identifiers.
-
-  This restriction arises because of the other uses to which the dollar sign is put:
-  \begin{itemize}
-    \item The dollar can be used as an escaping mechanism to remove special syntactic treatment of other identifiers.
-      Thus, \holtxt{\dol+} and \holtxt{\dol{}if} are effectively special forms of the tokens \holtxt{+} and \holtxt{if} respectively.%
-      \index{ dollar sign, in HOL logic parser@\ml{\$} (dollar sign, in \HOL{} logic parser)!as escape character}
-    \item Finally, the dollar can also be used as a namespace separator character, giving unambiguous ``long form'' identifiers.
-      For example, the token \holtxt{bool\dol{}COND} is an unambiguous way of writing the \holtxt{COND} constant from theory segment \theoryimp{bool}.
-      \index{ dollar sign, in HOL logic parser@\ml{\$} (dollar sign, in \HOL{} logic parser)!generating qualified identifiers}
-  \end{itemize}
-
-  The ASCII grouping symbols (braces, brackets, and parentheses), and the tilde~(\holtxt{\symbol{126}}), full-stop~(\holtxt{.}), comma~(\holtxt{,}), semi-colon~(\holtxt{;}) and hyphen~(\holtxt{-}) characters are called \emph{non-aggregating} characters. %
-%
-  \index{identifiers, in HOL logic@identifiers, in \HOL{} logic!non-aggregating characters}%
-%
-  Unless the desired token is already present in the grammar, these
-  characters do not combine with themselves or other symbolic
-  characters.  Thus, the string \holtxt{"(("} is viewed as \emph{two}
-  tokens, as are \holtxt{"+;"} and \holtxt{"-+"}.
-
-  \index{tokens!Unicode characters}
-  \index{Unicode}
-  Unicode code characters that are not letters or digits are regarded
-  as symbolic.  None of these are non-aggregating.
-
-\item A \emph{number} is a string of one or more digits. If not the
-  initial digit, an underscore can be used within the sequence to
-  provide spacing. In order to distinguish different kinds of numbers
-  a single character suffix may be used: for example \holtxt{3n} is a
-  natural number while \holtxt{3i} is an integer.  The \holtxt{0x} and
-  \holtxt{0b} prefixes may also be used to change the base of the
-  number. If the \holtxt{0x} prefix is used, hexadecimal `digits'
-  \holtxt{a}--\holtxt{f} and \holtxt{A}--\holtxt{F} can also be
-  used. See also Section~\ref{sec:numerals}.%
-\end{myenumerate}
-\index{variables, in HOL logic@variables, in \HOL{} logic!names of|)}
-
-
-\paragraph{Separators}
-
-The separators used by the \HOL{} lexical analyser are (with ASCII codes in
-brackets):
-
-\bigskip
-
-space (32), carriage return (13), line feed (10), tab ({\verb+^+}I, 9),
-form feed ({\verb+^+}L, 12)
-
-
-\paragraph{Special identifiers}
-
-The following valid identifiers are used by the grammar in the theory
-of booleans, and thus in all descendant theories as well.  They should
-not be used as the name of a variable or a constant unless the user is
-very confident of their ability to mess with grammars.
-%
-\begin{verbatim}
-   let  in  and  \  .  ;  =>  |    :  :=  with  updated_by   case   of
-\end{verbatim}
-
-\paragraph {Type variable names}\label{tyvars}
-
-The name of a type variable in the \HOL{} logic is a string
-beginning with a prime (\ml{'}) followed by an alphanumeric which itself
-contains no prime; for example all of the following are valid type
-variable names except for the last:
-%
-\begin{hol}
-\begin{verbatim}
-   'a   'b   'cat   'A11   'g_a_p   'f'oo
-\end{verbatim}
-\end{hol}
-
-\paragraph{User tokens}
-In general, a \HOL{} user has a great deal of freedom to create their own syntax, involving special tokens quite apart from variables and names for constants.
-For example, the if-then-else syntax for the conditional operator %
-\index{conditionals, in HOL logic@conditionals, in \HOL{} logic!printing of}%
-has special tokens (the ``if'', ``then'' and ``else'') that are not names for variables, nor constants (the underlying constant is actually called \holtxt{COND}).
-In order to make sure that the operations of printing and parsing tokens are suitably inverse to each other, users should not create tokens that include whitespace, or the comment strings (\ml{(*} and \ml{*)}).
-\index{tokens|)}
 
 \section{Types}\index{types, in HOL logic@types, in \HOL{} logic}
 
@@ -436,7 +295,7 @@ performing $\beta$-reduction (\ml{beta\_conv}), $\eta$-reduction
 other common term operations.  See \REFERENCE{} for more details.
 
 
-\section{Quotation}
+\section{Quotations, Parsing and Printing}
 \label{quotation}\label{gen-abs}\label{let}
 \index{type checking, in HOL logic@type checking, in \HOL{} logic!of quotation syntax|(}
 \index{quotation, in HOL logic@quotation, in \HOL{} logic|(}
@@ -511,6 +370,149 @@ Similarly, terms are printed in the form \uholquote{\textit{term}}, as in the se
 The leading colon is used to distinguish a type quotation from a term quotation:
 the former have the form \uholquote{\ml{:}~$\cdots$~} and the latter have
 the form \uholquote{~$\cdots$~}.
+
+\subsection{Lexical Matters}\label{HOL-lex}
+
+\index{identifiers, in HOL logic@identifiers, in \HOL{} logic|(} The name
+of a \HOL{} variable
+%
+\index{tokens|(}%
+\index{variables, in HOL logic@variables, in \HOL{} logic!names of|(}%
+%
+can be any \ML{} string, but the quotation mechanism will parse only
+names that are identifiers (see Section~\ref{ident} below).  Using non-identifiers as variable names is discouraged except in special
+circumstances (for example, when writing derived rules that generate
+variables with names that are guaranteed to be different from existing
+names). The name of a type variable
+%
+\index{type variables, in HOL logic@type variables, in \HOL{} logic!names of}
+%
+in the \HOL{} logic is formed by a prime (\ml{'}) followed by an
+alphanumeric which itself contains no prime (see Section~\ref{tyvars}
+for examples).  The name of a type constant or a term constant in the
+\HOL{} logic can be any identifier, although some names are treated
+specially by the HOL parser and printer and should therefore be
+avoided.
+%
+\index{identifiers, in HOL logic@identifiers, in \HOL{} logic|)}
+
+\subsubsection{Identifiers}\label{ident}
+
+In addition to special forms already present in the relevant grammar,
+a \HOL{} identifier can be of two forms:
+\begin{myenumerate}
+\item A finite sequence of \emph{alphanumerics} starting with a letter.  The
+  underscore character is considered a digit character, and so can
+  occur after an identifier's first letter.  Greek characters (roughly
+  Unicode range \ml{U+0370} to \ml{U+03FF}) are also letters, except for
+  $\lambda$~(\ml{U+03BB}), which is treated as a symbol. \HOL{} is
+  case-sensitive: upper and lower case letters are considered to be
+  different.
+
+  Digits are the ASCII characters 0--9, the underscore character, and
+  the Unicode subscripts and superscripts.  The apostrophe character
+  is special.%
+  \index{apostrophe, lexical handling of}
+  %
+  It is not a letter, but can appear as part of an alphanumeric term
+  identifier after the first letter.  It must appear at the start of a
+  type variable's name, and can also appear in the term context as a
+  sequence of apostrophes on their own.
+
+\item A \emph{symbolic} identifier, \ie, a finite sequence formed by
+  any combination of the ASCII symbols and the Unicode symbols.  The
+  basic ASCII symbols are
+\begin{verbatim}
+  #  ?  +  *  /  \  =  <  >  &  %  @  !  :  |  -  ^  `
+\end{verbatim}
+
+  Use of the caret and back-tick characters is complicated by the fact that these characters have special meaning in the quotation mechanism; see Section~\ref{sec:quotation-antiquotation}.
+  The dollar-sign (\texttt{\dol})%
+\index{ dollar sign, in HOL logic parser@\ml{\$} (dollar sign, in \HOL{} logic parser)!as identifier-constituent}
+  can also be used to form symbolic identifiers, but only in tokens where it is the only symbol.
+  Thus, \texttt{\dol}, \texttt{\dol\dol}, and \texttt{\dol\dol\dol} will all lex as identifiers.
+
+  This restriction arises because of the other uses to which the dollar sign is put:
+  \begin{itemize}
+    \item The dollar can be used as an escaping mechanism to remove special syntactic treatment of other identifiers.
+      Thus, \holtxt{\dol+} and \holtxt{\dol{}if} are effectively special forms of the tokens \holtxt{+} and \holtxt{if} respectively.%
+      \index{ dollar sign, in HOL logic parser@\ml{\$} (dollar sign, in \HOL{} logic parser)!as escape character}
+    \item Finally, the dollar can also be used as a namespace separator character, giving unambiguous ``long form'' identifiers.
+      For example, the token \holtxt{bool\dol{}COND} is an unambiguous way of writing the \holtxt{COND} constant from theory segment \theoryimp{bool}.
+      \index{ dollar sign, in HOL logic parser@\ml{\$} (dollar sign, in \HOL{} logic parser)!generating qualified identifiers}
+  \end{itemize}
+
+  The ASCII grouping symbols (braces, brackets, and parentheses), and the tilde~(\holtxt{\symbol{126}}), full-stop~(\holtxt{.}), comma~(\holtxt{,}), semi-colon~(\holtxt{;}) and hyphen~(\holtxt{-}) characters are called \emph{non-aggregating} characters. %
+%
+  \index{identifiers, in HOL logic@identifiers, in \HOL{} logic!non-aggregating characters}%
+%
+  Unless the desired token is already present in the grammar, these
+  characters do not combine with themselves or other symbolic
+  characters.  Thus, the string \holtxt{"(("} is viewed as \emph{two}
+  tokens, as are \holtxt{"+;"} and \holtxt{"-+"}.
+
+  \index{tokens!Unicode characters}
+  \index{Unicode}
+  Unicode code characters that are not letters or digits are regarded
+  as symbolic.  None of these are non-aggregating.
+
+\item A \emph{number} is a string of one or more digits. If not the
+  initial digit, an underscore can be used within the sequence to
+  provide spacing. In order to distinguish different kinds of numbers
+  a single character suffix may be used: for example \holtxt{3n} is a
+  natural number while \holtxt{3i} is an integer.  The \holtxt{0x} and
+  \holtxt{0b} prefixes may also be used to change the base of the
+  number. If the \holtxt{0x} prefix is used, hexadecimal `digits'
+  \holtxt{a}--\holtxt{f} and \holtxt{A}--\holtxt{F} can also be
+  used. See also Section~\ref{sec:numerals}.%
+\end{myenumerate}
+\index{variables, in HOL logic@variables, in \HOL{} logic!names of|)}
+
+
+\paragraph{Separators}
+
+The separators used by the \HOL{} lexical analyser are (with ASCII codes in
+brackets):
+
+\bigskip
+
+space (32), carriage return (13), line feed (10), tab ({\verb+^+}I, 9),
+form feed ({\verb+^+}L, 12)
+
+
+\paragraph{Special identifiers}
+
+The following valid identifiers are used by the grammar in the theory
+of booleans, and thus in all descendant theories as well.  They should
+not be used as the name of a variable or a constant unless the user is
+very confident of their ability to mess with grammars.
+%
+\begin{verbatim}
+   let  in  and  \  .  ;  =>  |    :  :=  with  updated_by   case   of
+\end{verbatim}
+
+\paragraph {Type variable names}\label{tyvars}
+
+The name of a type variable in the \HOL{} logic is a string
+beginning with a prime (\ml{'}) followed by an alphanumeric which itself
+contains no prime; for example all of the following are valid type
+variable names except for the last:
+%
+\begin{hol}
+\begin{verbatim}
+   'a   'b   'cat   'A11   'g_a_p   'f'oo
+\end{verbatim}
+\end{hol}
+
+\paragraph{User tokens}
+In general, a \HOL{} user has a great deal of freedom to create their own syntax, involving special tokens quite apart from variables and names for constants.
+For example, the if-then-else syntax for the conditional operator %
+\index{conditionals, in HOL logic@conditionals, in \HOL{} logic!printing of}%
+has special tokens (the ``if'', ``then'' and ``else'') that are not names for variables, nor constants (the underlying constant is actually called \holtxt{COND}).
+In order to make sure that the operations of printing and parsing tokens are suitably inverse to each other, users should not create tokens that include whitespace, or the comment strings (\ml{(*} and \ml{*)}).
+\index{tokens|)}
+
+
 
 \subsection{Unicode \emph{vs} ASCII}
 
@@ -596,6 +598,33 @@ This treatment of types within quotations is inherited from \LCF.
 \index{ term quotes, in ML@\ml{\uholquote{$\cdots$}} (term quotes, in \ML)|)}
 \index{type inference!in HOL parser@in \HOL{} parser|)}
 
+\subsection{Parentheses and Precedence}
+As with programming languages, the grammar governing the parsing of terms and types includes a notion of precedence.
+As with standard mathematics, for example, if we write \holtxt{2 + 3 * 6}, we expect this to denote the abstract syntax tree that groups the \holtxt{3} and \holtxt{6} together, giving a value of 20 for the term.
+Again as is usual, to adjust parses in the face of precedence one can use parentheses:
+\begin{session}
+\begin{alltt}
+>> EVAL “2 + 3 * 6”;
+
+>> EVAL “(2 + 3) * 6”;
+\end{alltt}
+\end{session}
+
+Function application can be seen as an invisible high-precedence (or ``tightly binding'') infix operator so that \holtxt{f~x~+~6} is an addition term, with the application of \holtxt{f} to \holtxt{x} being added to \holtxt{6}.
+This makes \HOL{} syntax more like functional programming: one typically doesn't bother to write \holtxt{f(x)} because \holtxt{f~x} suffices.
+Of course, sometimes arguments do need parentheses.
+For example, \holtxt{f(x~+~6)}.
+
+\index{ dollar sign, in HOL logic parser@\ml{\$} (dollar sign, in \HOL{} logic parser)!as infix function application}
+Finally, drawing inspiration from the Haskell programming language, \HOL{} also supports the dollar-sign as a \emph{low} precedence function application symbol.
+In this way, one has an option that can result in needing to write fewer parentheses:
+\begin{session}
+\begin{alltt}
+>> EVAL “FACT $ SUC $ 2 + 3”;
+\end{alltt}
+\end{session}
+\noindent Note that, as above, the pretty-printer will always print terms with the ``invisible'' function application symbol and parentheses as necessary, even if they were input with dollar-signs.
+
 \subsection{Viewing the grammar}
 
 \index{parsing, of HOL logic@parsing, of \HOL{} logic!grammars for}
@@ -607,11 +636,7 @@ to use \HOL{} effectively. One can examine the current grammar used by
 the parser with the functions \verb+type_grammar+ and
 \verb+term_grammar+.
 
-For example, in the following session, we see that the type grammar
-used in the startup context of \HOL{} has the type operators
-\verb+fun+, \verb+sum+, \verb+prod+, \verb+list+, \verb+recspace+,
-\verb+num+, \verb+option+, \verb+one+, \verb+label+, \verb+ind+, and
-\verb+bool+.
+For example, in the following session, we see that the type grammar used in the startup context of \HOL{} has the type operators \verb+fun+, \verb+sum+, \verb+prod+, \verb+list+, \verb+recspace+, \verb+num+, \verb+option+, \verb+one+, \verb+ind+, and \verb+bool+.
 
 \begin{session}
 \begin{alltt}
@@ -1046,7 +1071,7 @@ in \LOGIC, \ml{SELECT\_AX}.
 \end{session}
 \index{theorem notation, in HOL logic@theorem notation, in \HOL{} logic|)}
 
-\section{Primitive Rules of Inference of the \HOL{} Logic}
+\section{\texorpdfstring{Primitive Rules of Inference of the \HOL{} Logic}{Primitive Rules of Inference of the HOL Logic}}
 \label{rules}
 
 \index{inference rules, of HOL logic@inference rules, of \HOL{} logic!primitive|(}
@@ -1856,7 +1881,7 @@ the current theory.
 
 \noindent Evaluating
  \ml{new\_definition("$name$", \holquote{$c\ v_1\ \cdots\ v_n\ =\ t$})},
-declares the sequent
+declares the sequent\\
 \ml{(\lb\rb{},$c = \lambda v_1\ \cdots\ v_n.\  t$)} to be a constant definition
 \index{definitions, adding to HOL logic@definitions, adding to \HOL{} logic}
 of the current theory. The name associated with the definition in

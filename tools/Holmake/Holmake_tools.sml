@@ -80,6 +80,8 @@ fun run s =
     if OS.Process.isSuccess res then SOME output else NONE
   end
 
+fun optassert P x = if P x then SOME x else NONE
+
 fun getWidth0 () =
   let
     fun tputresult istr = Int.fromString istr
@@ -87,9 +89,10 @@ fun getWidth0 () =
       Option.map #1
                  (estbind (isc char_reader) (fn _ => isc char_reader)
                           (i2str, 0))
+    fun positive m x = optbind (m x) (optassert (fn i => i > 0))
   in
-    optbind (run "stty size") sttyresult ++
-    optbind (run "tput cols") tputresult ++
+    optbind (run "stty size") (positive sttyresult) ++
+    optbind (run "tput cols") (positive tputresult) ++
     SOME 80
   end
 

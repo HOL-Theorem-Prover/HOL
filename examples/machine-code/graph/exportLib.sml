@@ -1,12 +1,8 @@
-structure exportLib =
+structure exportLib :> exportLib =
 struct
 
 open HolKernel boolLib bossLib Parse;
-open listTheory wordsTheory pred_setTheory arithmeticTheory wordsLib pairTheory;
-open set_sepTheory progTheory helperLib addressTheory combinTheory;
-
-open graph_specsLib backgroundLib writerLib;
-
+open helperLib graph_specsLib backgroundLib writerLib;
 open GraphLangTheory;
 
 
@@ -189,8 +185,8 @@ val patterns =
       (``(w2w (x:'a word)):'b word``,"WordCast"),
       (``(sw2sw (x:'a word)):'b word``,"WordCastSigned"),
       (``(n:num) + m``,"Plus"),
-      (``if b then x else y``,"IfThenElse"),
-      (``word_reverse x``,"WordReverse"),
+      (``if b then x else y : 'a``,"IfThenElse"),
+      (``word_reverse (x:'a word)``,"WordReverse"),
       (``count_leading_zero_bits (w:'a word)``,"CountLeadingZeroes")];
 
 val last_fail_node_tm = ref T;

@@ -297,7 +297,7 @@ val _ =
     in
       if Lib.set_eq result
                     ["\\", "|>", "<|", ")", "(", ".", ":", "updated_by",
-                     ":=", "with", "let", "in", ";"]
+                     ":=", "with", "let", "in", ";", "$"]
       then OK()
       else die ("\nFAILED ["^
                 String.concatWith "," (map (fn s => "\""^s^"\"") result) ^ "]")
@@ -679,3 +679,35 @@ val _ =
       ("thy$$$", [QIdent("thy", "$$")])
     ]
 end (* open term_tokens local *);
+
+local
+  val pr = PP.pp_to_string 77 type_grammar.prettyprint_grammar
+  fun testvs(testname, fname, g) =
+    let
+      val expected0 = let
+        val istrm = TextIO.openIn fname
+      in
+        TextIO.inputAll istrm before TextIO.closeIn istrm
+      end
+      val expected = if String.sub(expected0, size expected0 - 1) = #"\n" then
+                       String.extract(expected0, 0, SOME (size expected0 - 1))
+                     else expected0
+      val res = delete_trailing_wspace (pr g)
+    in
+      tprint testname;
+      if res = expected then OK() else die ("\nFAILED!\n" ^ res)
+    end
+  open type_grammar
+in
+  val _ = app testvs [
+        ("Testing ty-grammar p/printing (min_grammar)", "tygrammar.txt",
+         min_grammar),
+        ("Testing ty-grammar p/printing (min_grammar with non-printing abbrev)",
+         "noprint_tygrammar.txt",
+         min_grammar |> (fn g =>
+                            new_abbreviation g
+                                             ({Name = "set", Thy = "scratch"},
+                                              alpha --> bool))
+                     |> disable_abbrev_printing "set")
+      ]
+end (* tygrammar p/printing local *)
