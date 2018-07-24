@@ -243,50 +243,17 @@ end m
 fun ELIM_COND1 t = find_celim I t t
 
 fun op_of_app tm = op_of_app (rator tm) handle _ => tm
-val SUB_AND_COND_ELIM_CONV =
+
+val COND_ELIM_CONV =
    TOP_DEPTH_CONV
      (NUM_COND_RATOR_CONV ORELSEC
       (fn tm => if same_const (op_of_app tm) COND_t then failwith "fail"
                 else NUM_COND_RAND_CONV tm) ORELSEC
       TB COND_ABS_CONV) THENC
-   REPEATC ELIM_COND1 THENC
-   NEW_SUB_ELIM_CONV
+   REPEATC ELIM_COND1
 
-
-(*---------------------------------------------------------------------------*)
-(* COND_ELIM_CONV : conv                                                     *)
-(*                                                                           *)
-(* This function eliminates all conditionals in a term that it can. If the   *)
-(* term is a formula, only an abstraction can prevent the elimination, e.g.: *)
-(*                                                                           *)
-(*    COND_ELIM_CONV `(\m. (m = 0) => 0 | (m - 1)) (SUC n) = n` --->         *)
-(*    |- ((\m. ((m = 0) => 0 | m - 1))(SUC n) = n) =                         *)
-(*       ((\m. ((m = 0) => 0 | m - 1))(SUC n) = n)                           *)
-(*                                                                           *)
-(* Care has to be taken with the conditional lifting theorems because they   *)
-(* can loop if they try to move a conditional past another conditional, e.g. *)
-(*                                                                           *)
-(*    b1 => x | (b2 => y | z)                                                *)
-(*                                                                           *)
-(*---------------------------------------------------------------------------*)
-
-(*val COND_ELIM_CONV =
-   TOP_DEPTH_CONV
-     (TB COND_RATOR_CONV ORELSEC
-      (fn tm => if same_const (op_of_app tm) COND_t then failwith "fail"
-                else TB COND_RAND_CONV tm) ORELSEC
-      TB COND_ABS_CONV) THENC
-   REPEATC ELIM_COND1 *)
-
-val COND_ELIM_CONV =
-   TOP_DEPTH_CONV
-	(COND_RATOR_CONV ORELSEC
-	(fn tm => if same_const (op_of_app tm) COND_t then failwith "fail"
-		  else COND_RAND_CONV tm) ORELSEC
-	COND_ABS_CONV) THENC
-   REPEATC ELIM_COND1 THENC
-   PURE_REWRITE_CONV []
-
+val SUB_AND_COND_ELIM_CONV =
+   COND_ELIM_CONV THENC NEW_SUB_ELIM_CONV
 
 
 

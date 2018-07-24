@@ -57,6 +57,7 @@ sig
   val strip_gen_right : ('a -> 'a * 'b) -> 'a -> 'a * 'b list
   val strip_gen_left_opt : ('a -> ('b * 'a) option) -> 'a -> 'b list * 'a
   val strip_gen_left : ('a -> 'b * 'a) -> 'a -> 'b list * 'a
+  val sort_vars: string list -> term list -> term list
   val subst_occs:
      int list list -> {redex: term, residue: term} list -> term -> term
   val syntax_fns:
