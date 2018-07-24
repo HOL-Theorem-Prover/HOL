@@ -43,6 +43,7 @@ val ttt_unfold_dir    = tactictoe_dir ^ "/log_unfold"
 val ttt_eproof_dir    = tactictoe_dir ^ "/proof_E"
 val ttt_proof_dir     = tactictoe_dir ^ "/proof_ttt"
 
+(* do not use this with parallelism *)
 fun hide_out f x =
   hide_in_file (ttt_code_dir ^ "/" ^ current_theory () ^ "_hide_out") f x
 
@@ -699,5 +700,76 @@ fun only_concl x =
   let val (a,b) = dest_thm x in
     if null a then b else raise ERR "only_concl" ""
   end
+
+(*----------------------------------------------------------------------------
+   Parallelism
+  ----------------------------------------------------------------------------*)
+
+fun interruptkill worker =
+   if Thread.Thread.isActive worker
+   then 
+     (
+     Thread.Thread.interrupt worker handle Thread.Thread _ => ();
+     if Thread.Thread.isActive worker
+       then Thread.Thread.kill worker
+       else ()
+     )
+   else ()
+
+fun compare_imin (a,b) = Int.compare (snd a, snd b)
+
+fun par_map ncores forg lorg =
+  let
+    (* input *)
+    val sizeorg = length lorg
+    val lin = List.tabulate (ncores,(fn x => (x, ref NONE)))
+    val din = dnew Int.compare lin
+    fun fi xi x = (x,xi)
+    val queue = ref (mapi fi lorg)
+    (* update process inputs *)
+    fun update_from_queue lineref = 
+      if null (!queue) then ()
+      else (lineref := SOME (hd (!queue)); queue := tl (!queue))
+    fun is_refnone x = (not o isSome o ! o snd) x
+    fun dispatcher () = 
+      app (update_from_queue o snd) (filter is_refnone lin)
+    (* output *)  
+    val lout = List.tabulate (ncores,(fn x => (x, ref [])))
+    val dout = dnew Int.compare lout
+    val lcount = List.tabulate (ncores,(fn x => (x, ref 0)))
+    val dcount = dnew Int.compare lcount
+    (* process *)
+    fun process pi = 
+      let val inref = dfind pi din in
+        case !inref of
+          NONE => process pi
+        | SOME (x,xi) => 
+          let 
+            val oldl = dfind pi dout
+            val oldn = dfind pi dcount
+            val y = forg x 
+          in
+            oldl := (y,xi) :: (!oldl);
+            incr oldn;
+            inref := NONE;
+            process pi
+          end
+      end
+    fun fork_on pi = Thread.Thread.fork (fn () => process pi, [])
+    val threadl = map fork_on (List.tabulate (ncores,I))
+    fun loop () =
+      let val sizecur = sum_int (map (! o snd) lcount) in
+        dispatcher ();
+        if sizecur >= sizeorg
+        then app interruptkill threadl
+        else loop ()
+      end
+  in
+    loop ();
+    map fst (dict_sort compare_imin (List.concat (map (! o snd) lout)))
+  end
+
+fun par_app ncores forg lorg =
+  ignore (par_map ncores forg lorg)
 
 end (* struct *)

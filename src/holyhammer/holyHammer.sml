@@ -338,7 +338,7 @@ fun metis_auto t n goal =
       end
     | NONE   => NONE    
   end
-
+ 
 (*----------------------------------------------------------------------------
    Asynchronous calls to holyhammer in tactictoe.
    remove references from the translation so that this function

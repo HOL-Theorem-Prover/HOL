@@ -174,6 +174,7 @@ sig
   val unescape : string -> string
 
   (* dependency *)
+  val depnumber_of_thm : thm -> int
   val exists_did : (string * int) -> bool
   val tid_of_did : (string * int) -> string option
   val depl_of_thm : thm -> (bool * string list)
@@ -181,6 +182,10 @@ sig
   
   (* theorem *)
   val only_concl : thm -> term
+  
+  (* parallelism *)
+  val par_map : int -> ('a -> 'b) -> 'a list -> 'b list
+  val par_app : int -> ('a -> 'b) -> 'a list -> unit
 
  
 end

@@ -27,5 +27,7 @@ sig
   val eval_subst    : term list ->
     (term,term) subst * int ->
     (term,term) subst * (term * term) list * real
+  val gen_cjl : 
+    (term * int list) list -> term list
  
 end
