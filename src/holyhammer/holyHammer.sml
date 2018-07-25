@@ -266,6 +266,7 @@ val hh_goaltac_cache = ref (dempty goal_compare)
 
 fun hh_pb wanted_atpl premises goal =
   let
+    val _ = mkDir_err ttt_code_dir
     val atpl = filter exists_atp_err wanted_atpl
     val cj = list_mk_imp goal
     val _  = app (translate_write_atp premises cj) atpl
@@ -306,6 +307,7 @@ fun hh_goal goal =
   end
   handle NotFound =>
     let
+      val _ = mkDir_err ttt_code_dir
       val atpl = filter exists_atp (!all_atps)
       val (symweight,feav,revdict) = update_thmdata ()
       val n = list_imax (map npremises_of atpl)
@@ -322,6 +324,7 @@ fun hh goal = (hh_goal goal) goal
 
 fun metis_auto t n goal = 
   let
+    val _ = mkDir_err ttt_code_dir
     val (symweight,feav,revdict) = update_thmdata ()
     val premises = thmknn_wdep (symweight,feav,revdict) n (fea_of_goal goal)
     val thml = map snd (thml_of_namel premises)
