@@ -8,17 +8,29 @@ sig
     Pconst of int
   | Pcomb  of pattern * pattern
   | Plamb  of pattern * pattern
+  
+  (* conceptualization *)
+  val concept_threshold : int ref
+  val concept_flag : bool ref
+  val conceptualize :
+    (term, int) Redblackmap.dict ->
+    (term, term) Redblackmap.dict -> term -> term list
 
+  
+  
   (* pattern *)
   val patternify : term -> pattern * int list
   val p_compare : pattern * pattern -> order
-  val regroup : term list -> (pattern, int list list) Redblackmap.dict
+  val regroup : 
+    term list ->
+      (pattern, int list list) Redblackmap.dict *
+      (term, term) Redblackmap.dict
   val gen_psubst : (pattern, int list list) Redblackmap.dict -> psubst list
   val norm_psubst : psubst -> psubst
   
   (* substitution *)
-  val read_subst  : psubst -> (term,term) subst
-  val check_subst : (term,term) subst -> bool
+  val read_subst  : (term, term) Redblackmap.dict -> 
+                    psubst -> (term,term) subst
   
   (* conjecturing *)
   val int_div : int -> int -> real

@@ -758,12 +758,12 @@ fun par_map ncores forg lorg =
     fun fork_on pi = Thread.Thread.fork (fn () => process pi, [])
     val threadl = map fork_on (List.tabulate (ncores,I))
     fun loop () =
-      let val sizecur = sum_int (map (! o snd) lcount) in
-        dispatcher ();
-        if sizecur >= sizeorg
-        then app interruptkill threadl
-        else loop ()
-      end
+      (      
+      dispatcher ();
+      if null (!queue) andalso sum_int (map (! o snd) lcount) >= sizeorg
+      then app interruptkill threadl
+      else loop ()
+      )
   in
     loop ();
     map fst (dict_sort compare_imin (List.concat (map (! o snd) lout)))

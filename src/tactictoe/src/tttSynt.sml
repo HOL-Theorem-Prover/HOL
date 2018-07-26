@@ -40,6 +40,65 @@ fun fconst c = fconst_loc (fconst_glob c)
 val thyl = ancestry (current_theory ())
 val thml = List.concat (map DB.thms thyl)
 
+(* --------------------------------------------------------------------------
+   Conceptualization
+   -------------------------------------------------------------------------- *)
+
+fun is_varconst x = is_var x orelse is_const x
+  
+fun count_subtm tml = 
+  let
+    val d = ref (dempty Term.compare)
+    fun count tm = 
+      let val oldn = dfind tm (!d) handle NotFound => 0 in
+        d := dadd tm (oldn + 1) (!d)
+      end
+    fun f tm = 
+      let val subl = find_terms (not o is_varconst) tm in
+        app count subl
+      end
+  in
+    app f tml; !d
+  end 
+
+fun var_subtm tml = 
+  let 
+    val d = ref (dempty Term.compare)
+    fun var tm = 
+      if dmem tm (!d) then () else 
+      let val v = mk_var ("C" ^ int_to_string (dlength (!d)), type_of tm) in
+        d := dadd tm v (!d)
+      end
+    fun f tm = 
+      let val subl = find_terms (not o is_varconst) tm in
+        app var subl
+      end
+  in
+    app f tml; !d
+  end 
+
+val concept_threshold = ref 3
+val concept_flag = ref false
+
+fun conceptualize countdict ceptdict tm =
+  let 
+    val subl0 = find_terms (not o is_varconst) tm 
+    fun above_threshold tm = 
+      (dfind tm countdict > !concept_threshold handle NotFound => false)
+    val subl1 = filter above_threshold subl0
+    fun cmp (tm1,tm2) = Int.compare (term_size tm2, term_size tm1)
+    val subl2 = dict_sort cmp subl1
+    fun f i tm = {redex = tm, residue = dfind tm ceptdict}
+    val sub = mapi f subl2 
+    val newtm = Term.subst sub tm
+  in
+    if term_eq newtm tm then [tm] else [tm,newtm]
+  end
+
+(* --------------------------------------------------------------------------
+   Patterns
+   -------------------------------------------------------------------------- *) 
+
 datatype pattern =
     Pconst of int
   | Pcomb  of pattern * pattern
@@ -74,22 +133,31 @@ fun p_compare (p1,p2) = case (p1,p2) of
   | (Plamb(a1,b1),Plamb(a2,b2)) => 
     cpl_compare p_compare p_compare ((a1,b1),(a2,b2))
 
-(* Patterns *)
+(* --------------------------------------------------------------------------
+   Patterns
+   -------------------------------------------------------------------------- *) 
+
 fun regroup tml =
   let 
     val _ = cdict_glob := dempty Term.compare
     val _ = icdict_glob := dempty Int.compare
     val dict = ref (dempty p_compare)
+    val countdict = count_subtm tml
+    val vardict = var_subtm tml
+    val tml1 = 
+      if !concept_flag 
+      then List.concat (map (conceptualize countdict vardict) tml)
+      else tml
+    val tml2 = mk_fast_set Term.compare tml1
     fun f tm = 
       let 
-        val (p,cl) = 
-          (patternify o snd o strip_forall o rename_bvarl (fn _ => "")) tm 
+        val (p,cl) = patternify tm 
         val oldl = dfind p (!dict) handle NotFound => []  
       in
         dict := dadd p (cl :: oldl) (!dict)
       end
   in
-    app f tml; !dict
+    app f tml2; (!dict,vardict)
   end
   
 (* Substitutions *)
@@ -122,9 +190,12 @@ fun gen_psubst dict =
     l2
   end
   
-fun read_subst l = 
-  let fun f (a,b) = 
-    {redex = dfind a (!icdict_glob), residue = dfind b (!icdict_glob)} 
+fun read_subst iceptdict l = 
+  let 
+    fun g tm = dfind tm iceptdict handle NotFound => tm
+    fun f (a,b) = 
+      {redex   = g (dfind a (!icdict_glob)), 
+       residue = g (dfind b (!icdict_glob))} 
   in
     map f l
   end
@@ -173,14 +244,16 @@ fun eval_subst tml (sub,nsub) =
     )
   end
 
-fun check_subst sub =
-  all (fn {redex,residue} => type_of redex = type_of residue) sub
-
+fun inv_dict cmp d = 
+  dnew cmp (map (fn (a,b) => (b,a)) (dlist d))
 
 fun gen_cjl tmfea_org =
   let
-    val tml_org = mk_fast_set Term.compare (map fst tmfea_org)
-    val d0 = regroup tml_org
+    val tml_org0 = mk_fast_set Term.compare (map fst tmfea_org)
+    val tml_org1 = map (snd o strip_forall o rename_bvarl (fn _ => "")) tml_org0
+    val tml_org2 = mk_fast_set Term.compare tml_org1
+    val (d0,ceptdict) = regroup tml_org2
+    val iceptdict = inv_dict Term.compare ceptdict
     val substl = gen_psubst d0
     val d1 =
       count_dict (dempty (list_compare (cpl_compare Int.compare Int.compare))) 
@@ -188,8 +261,8 @@ fun gen_cjl tmfea_org =
     fun compare_snd_ir (a,b) = Int.compare (snd b, snd a)
     val l1 = dict_sort compare_snd_ir (dlist d1)
     val l2 =  filter (fn x => snd x > 2) l1
-    val l3 = map (fn (sub,i) => (read_subst sub,i)) l2
-    val l4 = map (eval_subst tml_org) l3
+    val l3 = map (fn (sub,i) => (read_subst iceptdict sub,i)) l2
+    val l4 = map (eval_subst tml_org2) l3
     fun compare_5 ((_,_,y),(_,_,x)) = Real.compare (x,y)
     val l5 = dict_sort compare_5 l4
     val l6 = map snd (List.concat (map #2 l5))
@@ -200,20 +273,3 @@ fun gen_cjl tmfea_org =
 
 
 end (* struct *)
-
-
-
-
-
-
-  
-  
-  
-  
-  
-  
-  
-  
-  
-
-
