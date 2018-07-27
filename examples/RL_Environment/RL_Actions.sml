@@ -18,9 +18,15 @@ fun get_complete_list Lnil = SOME []
       Option.map (Lib.cons x)
         (Option.mapPartial get_complete_list lso)
 
-fun partial_list_to_string f (NONE) = "{?}"
-  | partial_list_to_string f (SOME Lnil) = "NIL"
-  | partial_list_to_string f (SOME (Lcons (x, ntl))) = (f x) ^ "::" ^ partial_list_to_string f ntl
+fun get_partial_list NONE = []
+  | get_partial_list (SOME (Lcons (x, pl))) = x::(get_partial_list pl)
+  | get_partial_list _ = RL_Lib.die("get_partial_list on completed list")
+
+fun partial_list_to_string _ (NONE) = "{?}"
+  | partial_list_to_string f (SOME pl) =
+    case get_complete_list pl of
+      NONE => String.concat["[", String.concatWith ", " (List.map f (get_partial_list (SOME pl))), ", {?}"]
+    | SOME ls => String.concat["[", String.concatWith ", " (List.map f ls), "]"]
 
 type named_thm = string * HolKernel.thm
 val name_of : named_thm -> string = #1
