@@ -1,22 +1,6 @@
 structure RL_Goal_manager :> RL_Goal_manager = struct
 
-open HolKernel boolLib
-
-(* TODO: move to Lib? *)
-fun rotate_list [] = [] | rotate_list (x::xs) = xs @ [x]
-fun unrotate_list ls = Lib.uncurry (Lib.C Lib.cons) (Lib.front_last ls)
-(*
-rotate_list [1,2,3]
-unrotate_list [1,2,3]
-unrotate_list (rotate_list [1,2,3])
-unrotate_list (rotate_list [2])
-*)
-(* -- *)
-
-(* TODO: move? or take from elsewhere? *)
-fun goal_to_string((asl, w):goal) =
-  "[" ^ (String.concatWith "," (List.map term_to_string asl)) ^ "] ?- " ^ (term_to_string w)
-(* -- *)
+open HolKernel boolLib RL_Lib
 
 datatype goal_term = LEAF of goal
                    | NODE of validation * goal_term list

@@ -6,12 +6,12 @@ datatype 'a partial_list =
 
 fun add_Lnil NONE = SOME Lnil
   | add_Lnil (SOME (Lcons (th,lso))) = SOME (Lcons (th, add_Lnil lso))
-  | add_Lnil (SOME _) = HolKernel.failwith("add_Lnil on completed list")
+  | add_Lnil (SOME _) = RL_Lib.die("add_Lnil on completed list")
 
 fun add_Lcons _ th NONE = SOME (Lcons (th,NONE))
   | add_Lcons assert th (SOME (Lcons (th',lso))) =
       (assert th'; SOME (Lcons (th', add_Lcons assert th lso)))
-  | add_Lcons _ th (SOME Lnil) = HolKernel.failwith("add_Lcons on completed list")
+  | add_Lcons _ th (SOME Lnil) = RL_Lib.die("add_Lcons on completed list")
 
 fun get_complete_list Lnil = SOME []
   | get_complete_list (Lcons (x,lso)) =
@@ -42,21 +42,28 @@ datatype tactic =
 
   | metis_tac of named_thm partial_list option
   | rw of named_thm partial_list option
+  | fs of named_thm partial_list option
+  | rfs of named_thm partial_list option
   (*
-  fs [thm]
-  rfs [thm]
   srw_tac [ss] [thm]
   fsrw_tac [ss] [thm]
   *)
 
   | decide_tac
 
+  | pairarg_tac
+
+  | var_eq_tac
+
+  | strip_tac
+
   | CCONTR_TAC
   (*
   spose_not_then thm_tactic
   *)
+  | rpt of tactic option
   (*
-  rpt tactic (apply tactic repeatedly until it fails)
+  | reverse of tactic option -- probably useless given Rotate
   *)
 
   | Cases
@@ -68,10 +75,6 @@ datatype tactic =
   (*
   qexists_tac tmq
 
-  pairarg_tac
-  var_eq_tac
-
-  strip_tac
   assume_tac thm
   strip_assume_tac thm
 
@@ -119,11 +122,22 @@ fun get_complete_tactic t =
       Option.map bossLib.metis_tac (Option.mapPartial get_complete_named_thm_list lso)
   | rw lso =>
       Option.map bossLib.rw (Option.mapPartial get_complete_named_thm_list lso)
+  | fs lso =>
+      Option.map bossLib.fs (Option.mapPartial get_complete_named_thm_list lso)
+  | rfs lso =>
+      Option.map bossLib.rfs (Option.mapPartial get_complete_named_thm_list lso)
   | mp_tac lso =>
       Option.map (boolLib.mp_tac o List.hd) (Option.mapPartial get_complete_named_thm_list lso)
   | gen_tac => SOME boolLib.gen_tac
   | Induct => SOME bossLib.Induct
   | decide_tac => SOME bossLib.decide_tac
+  | pairarg_tac => SOME bossLib.pairarg_tac
+  | var_eq_tac => SOME BasicProvers.var_eq_tac
+  | rpt to => Option.map boolLib.rpt (Option.mapPartial get_complete_tactic to)
+  (*
+  | reverse to => Option.map boolLib.reverse (Option.mapPartial get_complete_tactic to)
+  *)
+  | strip_tac => SOME boolLib.strip_tac
   | CCONTR_TAC => SOME boolLib.CCONTR_TAC
   | Cases => SOME bossLib.Cases
 
@@ -133,7 +147,18 @@ fun tactic_to_string t =
     | Induct  => "induct"
     | metis_tac ntlo => "metis_tac " ^ partial_list_to_string name_of ntlo
     | rw ntlo => "rw " ^ partial_list_to_string name_of ntlo
+    | fs ntlo => "fs " ^ partial_list_to_string name_of ntlo
+    | rfs ntlo => "rfs " ^ partial_list_to_string name_of ntlo
     | decide_tac => "decide_tac"
+    | pairarg_tac => "pairarg_tac"
+    | var_eq_tac => "var_eq_tac"
+    | rpt NONE => "rpt {?}"
+    | rpt (SOME t) => "rpt " ^ tactic_to_string t
+    (*
+    | reverse NONE => "reverse {?}"
+    | reverse (SOME t) => "reverse " ^ tactic_to_string t
+    *)
+    | strip_tac => "strip_tac"
     | CCONTR_TAC => "CCONTR_TAC"
     | Cases => "Cases"
     | mp_tac ntlo => "mp_tac " ^ partial_list_to_string name_of ntlo
@@ -147,17 +172,25 @@ fun action_to_string(Back) = "Back"
   | action_to_string(Rotate) = "Rotate"
   | action_to_string(Tactic t) = tactic_to_string t
 
+val top_level_tactics =
+  [gen_tac
+  ,Induct
+  ,metis_tac NONE
+  ,rw NONE
+  ,fs NONE
+  ,rfs NONE
+  ,decide_tac
+  ,pairarg_tac
+  ,var_eq_tac
+  ,rpt NONE
+  (* ,reverse NONE *)
+  ,strip_tac
+  ,CCONTR_TAC
+  ,Cases
+  ,mp_tac NONE]
+
 val top_level_actions =
-  List.map Tactic
-    [gen_tac
-    ,Induct
-    ,metis_tac NONE
-    ,rw NONE
-    ,decide_tac
-    ,CCONTR_TAC
-    ,Cases
-    ,mp_tac NONE]
-  @ [Rotate, Back]
+  Back::Rotate::(List.map Tactic top_level_tactics)
 
 local
 
@@ -188,7 +221,7 @@ fun generate_theorem_actions f lso =
 
 fun generate_single_theorem_actions f NONE =
   List.map (fn th => f (SOME (Lcons (th, SOME Lnil)))) all_theorems
-|  generate_single_theorem_actions f _ = [] (* should not happen *)
+|  generate_single_theorem_actions f _ = RL_Lib.die("generate_single_theorem_actions: invariant failure")
 
 in
 
@@ -196,8 +229,12 @@ fun tactic_actions goal_state t =
   case t of
     metis_tac lso => generate_theorem_actions metis_tac lso
   | rw lso => generate_theorem_actions rw lso
+  | fs lso => generate_theorem_actions fs lso
+  | rfs lso => generate_theorem_actions rfs lso
   | mp_tac lso => generate_single_theorem_actions mp_tac lso
-  | _ => [] (* should not happen *)
+  | rpt NONE => List.map (rpt o SOME) top_level_tactics
+  | rpt (SOME t) => List.map (rpt o SOME) (tactic_actions goal_state t)
+  | _ => RL_Lib.die("tactic_actions: invariant failure")
 
 end
 

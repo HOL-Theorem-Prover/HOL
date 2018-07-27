@@ -2,8 +2,7 @@
   A reinforcement learning environment for tactic-based proof in HOL.
   Authors: Fei Wang, Ramana Kumar
 *)
-open HolKernel boolLib bossLib Parse
-     RL_Actions RL_Goal_manager
+open HolKernel RL_Lib RL_Goal_manager RL_Actions
 
 datatype node = Node of {
   goal_state : RL_Goal_manager.goal_state
@@ -15,12 +14,12 @@ fun extract_success (Node{goal_state = RL_Goal_manager.SUCCESS th,...}) = SOME t
   | extract_success _ = NONE
 
 fun next_actions (Node{goal_state=RL_Goal_manager.ERROR msg,...}): action list = [Back]
-  | next_actions (Node{goal_state=RL_Goal_manager.SUCCESS thm,...}): action list = [] (* should not happen *)
+  | next_actions (Node{goal_state=RL_Goal_manager.SUCCESS thm,...}): action list = die("next actions: invariant failure (SUCCESS)")
   | next_actions (Node{partial_action, goal_state, ...}): action list =
     case partial_action of
       NONE => top_level_actions
     | SOME (Tactic t) => List.map Tactic (tactic_actions goal_state t) @ [Back]
-    | SOME _ => [] (* should not happen *)
+    | SOME _ => die("next_actions: invariant failure (partial non-tactic)")
 
 fun take_action (node as Node{partial_action, goal_state, parent}) action =
   case action of
@@ -69,12 +68,13 @@ fun observation_to_string {obs_goals, obs_partial_action, obs_actions} =
     (String.concatWith "\n"
       (Lib.mapi str_of_numbered_action obs_actions))
 
+exception EndInteraction
 fun get_number() =
   let
     val () = TextIO.print("Give me a number: ")
   in
     case TextIO.inputLine(TextIO.stdIn) of
-      NONE => failwith"no input line"
+      NONE => raise EndInteraction
     | SOME line =>
         (case Int.fromString line of
           NONE => 0
@@ -170,11 +170,6 @@ val arguments_help = String.concat[
   "  --help        : print this message and exit\n"
 ]
 
-fun die msg =
-  (TextIO.output(TextIO.stdErr, msg);
-   TextIO.output(TextIO.stdErr, "\n");
-   OS.Process.exit OS.Process.failure)
-
 fun usage name =
   (TextIO.output(TextIO.stdOut, String.concat[name," : Reinforcement Learning environment for HOL4\n\n"]);
    TextIO.output(TextIO.stdOut, String.concat["Arguments: \n"]);
@@ -196,8 +191,16 @@ let
   val port = Option.valOf(Int.fromString port_string)
     handle Option => die ("Unable to parse port: "^port_string)
 in
+  (
   if not (Lib.null_intersection ["--help","-h","-?"] args) then
      usage (CommandLine.name())
-  else if interactive then run goal
-  else sock_run port goal
+    else
+      let
+        val th = (if interactive then run else sock_run port) goal
+      in
+        TextIO.print("You proved: " ^ boolLib.thm_to_string th ^ "\n")
+      end
+      handle EndInteraction =>
+        TextIO.print "Got end of stream. Bye!\n"
+  ) handle e => die("unexpected exception: "^(exnMessage e))
 end
