@@ -1,0 +1,2 @@
+holrlenv.exe: RL_Environment.uo
+	$(protect $(HOLDIR)/bin/buildheap) --defaultout=$@ --exe=main $<
