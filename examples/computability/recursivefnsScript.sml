@@ -51,7 +51,7 @@ val recfnPr = save_thm("recfnPr", List.nth(recfn_rulesl, 4))
 val primrec_recfn = store_thm(
   "primrec_recfn",
   ``∀f n. primrec f n ⇒ recfn (SOME o f) n``,
-  HO_MATCH_MP_TAC strong_primrec_ind THEN SRW_TAC [][recfn_rules] THENL [
+  Induct_on ‘primrec’ >> SRW_TAC [][recfn_rules] THENL [
     `SOME o Cn f gs = recCn (SOME o f) (MAP (λg. SOME o g) gs)`
        by SRW_TAC [][FUN_EQ_THM, recCn_def, LET_THM, MAP_MAP_o,
                      combinTheory.o_ABS_R, EVERY_MAP, Cn_def] THEN
