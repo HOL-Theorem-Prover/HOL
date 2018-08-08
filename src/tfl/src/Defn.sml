@@ -1237,6 +1237,12 @@ fun holexnMessage (HOL_ERR {origin_structure,origin_function,message}) =
       origin_structure ^ "." ^ origin_function ^ ": " ^ message
   | holexnMessage e = General.exnMessage e
 
+fun is_simple_arg t =
+  is_var t orelse
+  (case Lib.total dest_pair t of
+       NONE => false
+     | SOME (l,r) => is_simple_arg l andalso is_simple_arg r)
+
 fun prim_mk_defn stem eqns =
  let
    fun err s = raise ERR "prim_mk_defn" s
@@ -1253,7 +1259,9 @@ fun prim_mk_defn stem eqns =
         let val ((f, args), rhs) = dest_hd_eqn eqns
         in
           if List.length args > 0 then
-            if not (can dest_conj eqns) andalso not (free_in f rhs) then
+            if not (can dest_conj eqns) andalso not (free_in f rhs)  andalso
+               List.all is_simple_arg args
+            then
               (* not recursive, yet failed *)
               raise err ("Simple definition failed with message: "^
                          holexnMessage e)
