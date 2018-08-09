@@ -148,6 +148,7 @@ val OPTION_MAP_DEF = Prim_rec.new_recursive_definition
   Term`(OPTION_MAP (f:'a->'b) (SOME x) = SOME (f x)) /\
        (OPTION_MAP f NONE = NONE)`};
 val _ = export_rewrites ["OPTION_MAP_DEF"]
+val _ = computeLib.add_persistent_funs ["OPTION_MAP_DEF"]
 val _ = ot0 "OPTION_MAP" "map"
 
 val IS_SOME_DEF = Prim_rec.new_recursive_definition
@@ -196,6 +197,7 @@ val OPTION_MAP2_THM = Q.store_thm("OPTION_MAP2_THM",
 val _ = export_rewrites ["OPTION_MAP2_THM"];
 val _ = overload_on("lift2", ``OPTION_MAP2``)
 val _ = overload_on("OPTION_MAP2", ``OPTION_MAP2``)
+val _ = computeLib.add_persistent_funs ["OPTION_MAP2_THM"]
 
 val option_rws = OPTION_MAP2_THM::option_rws;
 
@@ -492,6 +494,7 @@ val OPTION_IGNORE_BIND_thm = store_thm(
     (OPTION_IGNORE_BIND (SOME v) m = m)``,
   SRW_TAC[][OPTION_IGNORE_BIND_def]);
 val _ = export_rewrites ["OPTION_IGNORE_BIND_thm"]
+val _ = computeLib.add_persistent_funs ["OPTION_IGNORE_BIND_thm"]
 
 val OPTION_IGNORE_BIND_EQUALS_OPTION = store_thm(
   "OPTION_IGNORE_BIND_EQUALS_OPTION[simp]",
@@ -507,6 +510,7 @@ val OPTION_GUARD_def = Prim_rec.new_recursive_definition {
   def = ``(OPTION_GUARD T = SOME ()) /\
           (OPTION_GUARD F = NONE)``};
 val _ = export_rewrites ["OPTION_GUARD_def"]
+val _ = computeLib.add_persistent_funs ["OPTION_GUARD_def"]
 (* suggest overloading this to assert when used with other monad syntax. *)
 
 val OPTION_GUARD_COND = store_thm(
@@ -527,6 +531,7 @@ val OPTION_CHOICE_def = Prim_rec.new_recursive_definition
    def = ``(OPTION_CHOICE NONE m2 = m2) /\
            (OPTION_CHOICE (SOME x) m2 = SOME x)``}
 val _ = export_rewrites ["OPTION_CHOICE_def"]
+val _ = computeLib.add_persistent_funs ["OPTION_CHOICE_def"]
 
 val OPTION_CHOICE_EQ_NONE = store_thm(
   "OPTION_CHOICE_EQ_NONE",
@@ -737,7 +742,7 @@ val _ = adjoin_to_theory
     S "val _ = let open computeLib",                            NL,
     S "        in add_funs (map lazyfy_thm",                    NL,
     S "               [NOT_NONE_SOME,NOT_SOME_NONE,SOME_11,",   NL,
-    S "                option_case_def, OPTION_MAP_DEF,",       NL,
+    S "                option_case_def, ",                      NL,
     S "                IS_SOME_DEF,IS_NONE_DEF,THE_DEF,",       NL,
     S "                OPTION_JOIN_DEF])",                      NL,
     S "        end;"])};

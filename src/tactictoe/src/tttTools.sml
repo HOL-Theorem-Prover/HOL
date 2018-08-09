@@ -43,6 +43,7 @@ val ttt_unfold_dir    = tactictoe_dir ^ "/log_unfold"
 val ttt_eproof_dir    = tactictoe_dir ^ "/proof_E"
 val ttt_proof_dir     = tactictoe_dir ^ "/proof_ttt"
 
+(* do not use this with parallelism *)
 fun hide_out f x =
   hide_in_file (ttt_code_dir ^ "/" ^ current_theory () ^ "_hide_out") f x
 
@@ -107,6 +108,7 @@ val dnew       = Redblackmap.fromList
 val dlist      = Redblackmap.listItems
 val dlength    = Redblackmap.numItems
 val dapp       = Redblackmap.app
+val dmap       = Redblackmap.map
 fun dkeys d    = map fst (dlist d)
 
 (* --------------------------------------------------------------------------
@@ -258,6 +260,33 @@ fun list_imax l = case l of
 fun sum_int l = case l of [] => 0 | a :: m => a + sum_int m
 
 fun average_real l = sum_real l / Real.fromInt (length l)
+
+(* --------------------------------------------------------------------------
+   Terms
+   -------------------------------------------------------------------------- *)
+
+fun rename_bvarl f tm = 
+  let 
+    val vi = ref 0
+    fun rename_aux tm = case dest_term tm of
+      VAR(Name,Ty)       => tm
+    | CONST{Name,Thy,Ty} => tm
+    | COMB(Rator,Rand)   => mk_comb (rename_aux Rator, rename_aux Rand)
+    | LAMB(Var,Bod)      => 
+      let 
+        val vs = f (fst (dest_var Var))
+        val new_tm = rename_bvar ("V" ^ int_to_string (!vi) ^ vs) tm
+        val (v,bod) = dest_abs new_tm
+        val _ = incr vi
+      in
+        mk_abs (v, rename_aux bod)
+      end
+  in
+    rename_aux tm
+  end
+
+fun all_bvar tm = 
+  mk_fast_set Term.compare (map (fst o dest_abs) (find_terms is_abs tm))
 
 (* --------------------------------------------------------------------------
    Goal
@@ -596,5 +625,151 @@ fun clean_tttdata () =
   ttt_glfea := dempty (list_compare Int.compare);
   ttt_glfea_cthy := dempty (list_compare Int.compare)
   )
+
+(*----------------------------------------------------------------------------
+   escaping (for ATPs than do not support single quotes)
+  ----------------------------------------------------------------------------*)
+
+fun escape_char c =
+  if Char.isAlphaNum c then Char.toString c
+  else if c = #"_" then "__"
+  else 
+    let val hex = Int.fmt StringCvt.HEX (Char.ord c) in
+      StringCvt.padLeft #"_" 3 hex
+    end
+    
+fun escape s = String.translate escape_char s;
+
+fun isCapitalHex c = 
+  Char.ord #"A" <= Char.ord c andalso Char.ord c <= Char.ord #"F"
+
+fun charhex_to_int c = 
+  if Char.isDigit c 
+    then Char.ord c - Char.ord #"0"
+  else if isCapitalHex c
+    then Char.ord c - Char.ord #"A" + 10
+  else raise ERR "charhex_to_int" ""
+
+fun unescape_aux l = case l of
+   [] => []
+ | #"_" :: #"_" :: m => #"_" :: unescape_aux m
+ | #"_" :: a :: b :: m => 
+   Char.chr (16 * charhex_to_int a + charhex_to_int b) :: unescape_aux m
+ | a :: m => a :: unescape_aux m
+ 
+fun unescape s = implode (unescape_aux (explode s))
+
+(*----------------------------------------------------------------------------
+   Theorems
+  ----------------------------------------------------------------------------*)
+
+fun depnumber_of_thm thm =
+  (Dep.depnumber_of o Dep.depid_of o Tag.dep_of o Thm.tag) thm
+  handle HOL_ERR _ => raise ERR "depnumber_of_thm" ""
+
+fun depidl_of_thm thm =
+  (Dep.depidl_of o Tag.dep_of o Thm.tag) thm
+  handle HOL_ERR _ => raise ERR "depidl_of_thm" ""
+
+fun tid_of_did (thy,n) =
+  let fun has_depnumber n (_,thm) = n = depnumber_of_thm thm in
+    case List.find (has_depnumber n) (DB.thms thy) of
+      SOME (name,_) => SOME (thy ^ "Theory." ^ name)
+    | NONE => NONE
+  end
+
+fun exists_did did = isSome (tid_of_did did)
+
+fun depl_of_thm thm =
+  let
+    fun f x = x = NONE
+    val l = map tid_of_did (depidl_of_thm thm)
+    val l' = filter f l
+  in
+    (null l', mapfilter valOf l)
+  end
+
+fun deplPartial_of_sthm s =
+  let val (a,b) = split_string "Theory." s in
+    if a = namespace_tag
+    then []
+    else List.mapPartial tid_of_did (depidl_of_thm (DB.fetch a b))
+  end
+
+fun only_concl x = 
+  let val (a,b) = dest_thm x in
+    if null a then b else raise ERR "only_concl" ""
+  end
+
+(*----------------------------------------------------------------------------
+   Parallelism
+  ----------------------------------------------------------------------------*)
+
+fun interruptkill worker =
+   if Thread.Thread.isActive worker
+   then 
+     (
+     Thread.Thread.interrupt worker handle Thread.Thread _ => ();
+     if Thread.Thread.isActive worker
+       then Thread.Thread.kill worker
+       else ()
+     )
+   else ()
+
+fun compare_imin (a,b) = Int.compare (snd a, snd b)
+
+fun par_map ncores forg lorg =
+  let
+    (* input *)
+    val sizeorg = length lorg
+    val lin = List.tabulate (ncores,(fn x => (x, ref NONE)))
+    val din = dnew Int.compare lin
+    fun fi xi x = (x,xi)
+    val queue = ref (mapi fi lorg)
+    (* update process inputs *)
+    fun update_from_queue lineref = 
+      if null (!queue) then ()
+      else (lineref := SOME (hd (!queue)); queue := tl (!queue))
+    fun is_refnone x = (not o isSome o ! o snd) x
+    fun dispatcher () = 
+      app (update_from_queue o snd) (filter is_refnone lin)
+    (* output *)  
+    val lout = List.tabulate (ncores,(fn x => (x, ref [])))
+    val dout = dnew Int.compare lout
+    val lcount = List.tabulate (ncores,(fn x => (x, ref 0)))
+    val dcount = dnew Int.compare lcount
+    (* process *)
+    fun process pi = 
+      let val inref = dfind pi din in
+        case !inref of
+          NONE => process pi
+        | SOME (x,xi) => 
+          let 
+            val oldl = dfind pi dout
+            val oldn = dfind pi dcount
+            val y = forg x 
+          in
+            oldl := (y,xi) :: (!oldl);
+            incr oldn;
+            inref := NONE;
+            process pi
+          end
+      end
+    fun fork_on pi = Thread.Thread.fork (fn () => process pi, [])
+    val threadl = map fork_on (List.tabulate (ncores,I))
+    fun loop () =
+      (      
+      dispatcher ();
+      if null (!queue) andalso sum_int (map (! o snd) lcount) >= sizeorg
+      then app interruptkill threadl
+      else loop ()
+      )
+  in
+    loop ();
+    map fst (dict_sort compare_imin (List.concat (map (! o snd) lout)))
+  end
+
+fun par_app ncores forg lorg =
+  ignore (par_map ncores forg lorg)
 
 end (* struct *)

@@ -12,48 +12,6 @@ struct
 open HolKernel boolLib tttTools
 
 (*----------------------------------------------------------------------------
-   Tools
-  ----------------------------------------------------------------------------*)
-
-fun only_concl x = 
-  let val (a,b) = dest_thm x in
-    if null a then b else raise ERR "only_concl" ""
-  end
-
-(*----------------------------------------------------------------------------
-   Escaping (for ATPs than do not support single quotes)
-  ----------------------------------------------------------------------------*)
-
-fun escape_char c =
-  if Char.isAlphaNum c then Char.toString c
-  else if c = #"_" then "__"
-  else 
-    let val hex = Int.fmt StringCvt.HEX (Char.ord c) in
-      StringCvt.padLeft #"_" 3 hex
-    end
-    
-fun escape s = String.translate escape_char s;
-
-fun isCapitalHex c = 
-  Char.ord #"A" <= Char.ord c andalso Char.ord c <= Char.ord #"F"
-
-fun charhex_to_int c = 
-  if Char.isDigit c 
-    then Char.ord c - Char.ord #"0"
-  else if isCapitalHex c
-    then Char.ord c - Char.ord #"A" + 10
-  else raise ERR "charhex_to_int" ""
-
-fun unescape_aux l = case l of
-   [] => []
- | #"_" :: #"_" :: m => #"_" :: unescape_aux m
- | #"_" :: a :: b :: m => 
-   Char.chr (16 * charhex_to_int a + charhex_to_int b) :: unescape_aux m
- | a :: m => a :: unescape_aux m
- 
-fun unescape s = implode (unescape_aux (explode s))
-
-(*----------------------------------------------------------------------------
    Debug functions. Do not use when calling holyhammer in parallel.
   ----------------------------------------------------------------------------*)
 
@@ -116,31 +74,6 @@ fun prep_rw tm = rand (only_concl (QCONV PREP_CONV tm))
 (*----------------------------------------------------------------------------
    Variable names
   ----------------------------------------------------------------------------*)
-
-(* renaming *)
-fun rename_bvarl tm = 
-  let 
-    val vi = ref 0
-    fun rename_aux tm = case dest_term tm of
-      VAR(Name,Ty)       => tm
-    | CONST{Name,Thy,Ty} => tm
-    | COMB(Rator,Rand)   => mk_comb (rename_aux Rator, rename_aux Rand)
-    | LAMB(Var,Bod)      => 
-      let 
-        val vs = escape (fst (dest_var Var))
-        val new_tm = rename_bvar ("V" ^ int_to_string (!vi) ^ vs) tm
-        val (v,bod) = dest_abs new_tm
-        val _ = incr vi
-      in
-        mk_abs (v, rename_aux bod)
-      end
-  in
-    rename_aux tm
-  end
-
-(* find bound variables after renaming *)
-fun all_bvar tm = 
-  mk_fast_set Term.compare (map (fst o dest_abs) (find_terms is_abs tm))
 
 (* lifting *)
 fun genvar_lifting iref ty = 
@@ -421,7 +354,7 @@ val translate_tm_cache = ref (dempty Term.compare)
 
 fun prepare_tm tm =
   let val tm' = prep_rw tm in
-    rename_bvarl (list_mk_forall (free_vars_lr tm', tm'))
+    rename_bvarl escape (list_mk_forall (free_vars_lr tm', tm'))
   end
 
 fun translate_tm iref tm =

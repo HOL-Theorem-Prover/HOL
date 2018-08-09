@@ -6,9 +6,7 @@ include Abbrev
   val log_translate_flag : bool ref
  
   val escape : string -> string
-  val unescape : string -> string
-  val rename_bvarl : term -> term
-  val all_bvar  : term -> term list  
+  val unescape : string -> string 
   val must_pred : term -> bool
   val no_lambda : term -> bool
   val no_pred   : term -> bool

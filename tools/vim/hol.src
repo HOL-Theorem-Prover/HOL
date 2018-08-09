@@ -11,9 +11,10 @@ endif
 let s:holtogglequiet = "val _ = HOL_Interactive.toggle_quietdec();"
 
 new
-set buftype=nofile
-set bufhidden=hide
-set noswapfile
+setlocal buftype=nofile
+setlocal bufhidden=hide
+setlocal nobuflisted
+setlocal noswapfile
 let s:holnr = bufnr("")
 hide
 

@@ -44,7 +44,7 @@ fun knn_sim1 symweight dict_o fea_p =
   else
     let
       val fea_i   = inter_dict dict_o fea_p
-      fun wf n    = dfind_err "knn_distance" n symweight
+      fun wf n    = dfind_err "knn_sim1" n symweight
       val weightl = map wf fea_i
     in
       sum_real weightl
@@ -56,7 +56,7 @@ fun knn_sim2 symweight dict_o fea_p =
   else
     let
       val fea_i    = inter_dict dict_o fea_p
-      fun wf n     = dfind_err "knn_similarity" n symweight
+      fun wf n     = dfind_err "knn_sim2" n symweight
       val weightl  = map wf fea_i
       val tot      = Real.fromInt (dlength dict_o + length fea_p)
     in
@@ -197,45 +197,15 @@ fun thmknn_std n goal =
    Adding theorem dependencies in the predictions
    ---------------------------------------------------------------------- *)
 
-(* Probably uptodate-ness is already verified elsewhere *)
 fun uptodate_tid s =
   let val (a,b) = split_string "Theory." s in
     a = namespace_tag orelse uptodate_thm (DB.fetch a b)
   end
 
-fun depnumber_of_thm thm =
-  (Dep.depnumber_of o Dep.depid_of o Tag.dep_of o Thm.tag) thm
-  handle HOL_ERR _ => raise ERR "depnumber_of_thm" ""
-
-fun depidl_of_thm thm =
-  (Dep.depidl_of o Tag.dep_of o Thm.tag) thm
-  handle HOL_ERR _ => raise ERR "depidl_of_thm" ""
-
-fun has_depnumber n (_,thm) = n = depnumber_of_thm thm
-fun name_of_did (thy,n) =
-  case List.find (has_depnumber n) (DB.thms thy) of
-    SOME (name,_) => SOME (thy ^ "Theory." ^ name)
-  | NONE => NONE
-
-fun dependencies_of_thm thm =
-  let 
-    fun f x = x = NONE
-    val l = map name_of_did (depidl_of_thm thm)
-    val l' = filter f l
-  in
-    (null l', mapfilter valOf l)
-  end
-
-fun dep_of_thm s =
-  let val (a,b) = split_string "Theory." s in
-    if a = namespace_tag
-    then []
-    else List.mapPartial name_of_did (depidl_of_thm (DB.fetch a b))
-  end
-
+(* Uptodate-ness is probably already verified elsewhere *)
 fun add_thmdep revdict n l0 =
   let
-    fun f1 x = x :: dep_of_thm x
+    fun f1 x = x :: deplPartial_of_sthm x
     val l1 = mk_sameorder_set String.compare (List.concat (map f1 l0))
     fun f2 x = exists_tid x andalso uptodate_tid x andalso dmem x revdict
   in
@@ -292,8 +262,7 @@ fun add_stacdesc ddict n l =
 fun termknn n ((asl,w):goal) term =
   let
     fun not_term tm = tm <> term
-    fun togoal t = ([],t)
-    fun f x = (x, fea_of_goal (togoal x))
+    fun f x = (x, fea_of_goal ([],x))
     val l0 = List.concat (map (rev o find_terms not_term) (w :: asl))
     val l1 = mk_sameorder_set Term.compare l0
     val thmfeav = map (snd o snd) (dlist (!ttt_thmfea))
@@ -303,9 +272,18 @@ fun termknn n ((asl,w):goal) term =
     val pre_sim = case !ttt_termarg_pint of
       1 => pre_sim1 | 2 => pre_sim2 | 3 => pre_sim3 | _ => pre_sim2
     val l3 = pre_sim symweight feal fea_o
-    val r = first_n n (map fst l3)
   in
-    r
+    first_n n (map fst l3)
+  end
+  
+(* --------------------------------------------------------------------------
+   Term prediction for conjecturing experiments.
+   Todo: add dependencies between deps.
+   -------------------------------------------------------------------------- *)
+
+fun tmknn n (symweight,tmfea) fea_o =
+  let val l = pre_sim1 symweight tmfea fea_o in
+    first_n n (map fst l)
   end
 
 (* --------------------------------------------------------------------------

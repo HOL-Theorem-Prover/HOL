@@ -75,6 +75,8 @@ sig
   val dlength : ('a, 'b) Redblackmap.dict -> int
   val dapp : ('a * 'b -> unit) -> ('a, 'b) Redblackmap.dict -> unit
   val dkeys : ('a, 'b) Redblackmap.dict -> 'a list
+  val dmap  : ('a * 'b -> 'c) ->
+    ('a, 'b) Redblackmap.dict -> ('a, 'c) Redblackmap.dict
 
   val mk_string_set : string list -> string list
   val count_dict  :
@@ -110,6 +112,10 @@ sig
   val print_time : string -> real -> unit
   val print_endline : string -> unit
   val total_time : real ref -> ('a -> 'b) -> 'a -> 'b
+
+  (* term *)
+  val rename_bvarl : (string -> string) -> term -> term
+  val all_bvar : term -> term list
 
   (* compare *)
   val goal_compare : (goal * goal) -> order
@@ -162,5 +168,24 @@ sig
   val rm_prefix : string -> string -> string
   val rm_squote : string -> string
   val rm_space  : string -> string
+  
+  (* escaping *)
+  val escape : string -> string
+  val unescape : string -> string
 
+  (* dependency *)
+  val depnumber_of_thm : thm -> int
+  val exists_did : (string * int) -> bool
+  val tid_of_did : (string * int) -> string option
+  val depl_of_thm : thm -> (bool * string list)
+  val deplPartial_of_sthm : string -> string list
+  
+  (* theorem *)
+  val only_concl : thm -> term
+  
+  (* parallelism *)
+  val par_map : int -> ('a -> 'b) -> 'a list -> 'b list
+  val par_app : int -> ('a -> 'b) -> 'a list -> unit
+
+ 
 end

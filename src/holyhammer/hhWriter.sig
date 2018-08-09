@@ -3,10 +3,6 @@ sig
 
   include Abbrev
 
-  val hh_escape        : string -> string
-  val thm_of_depid     : Dep.depid -> (string * thm)
-  val depl_as_pred     : thm -> (bool * (string * string) list)
-
   val write_thyl       :
     string ->
     (string -> (string * thm) * string -> bool) ->
