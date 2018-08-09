@@ -267,6 +267,7 @@ Induct_on `recfn` >> simp[] >> rpt strip_tac
         ONCE_REWRITE_TAC[recPr_def] >> simp[] >> Cases_on`recPr f f' (h::t)`>>simp[] >>
         first_x_assum(qspec_then `h::x::t`mp_tac) >> simp[ADD1] )  )
   >- (simp[minimise_thm] >> first_x_assum(qspec_then`j::xs` (mp_tac o Q.GEN`j`) )>> simp[ADD1] ))  
+
 val recfn_not_zero = Q.store_thm("recfn_not_zero",
 `∀f n. recfn f n ==> 0<n`,
 Induct_on `recfn` >> rw[] >> Cases_on `gs` >> fs[])
@@ -296,36 +297,143 @@ val recfn_rec1 = Q.store_thm("recfn_rec1",
 ` (∃g. recfn g 1 ∧ ∀n. g [n] = f n) ⇒ recfn (rec1 f) 1`,
 metis_tac[unary_recfn_eq])
 
-(** up to here **)
-(* In Process of proving   *)
+val bldn_def = tDefine"bldn"`
+  bldn n = if n <= 1 then 0 
+      else if EVEN n then let xy = bldn ((n-2) DIV 2) in npair (2*nfst xy + 2) (nsnd xy)
+      else let t = (n-1) DIV 2 in 
+             if EVEN t then let xy = bldn ((t-2) DIV 2) in npair (2*nfst xy + 1) (nsnd xy) 
+             else npair 0 ((t-1)DIV 2)`
+(WF_REL_TAC`$<` >> reverse (rw[]) >-
+(irule LESS_EQ_LESS_TRANS >> qexists_tac`n DIV 2` >> rw[DIV_LE_MONOTONE,DIV_LESS]) >>
+intLib.ARITH_TAC )
 
-val bld_n2bl_thm = Q.store_thm("bld_n2bl_thm",
-`∀n. bld (n2bl n) = (something)`,
-completeInduct_on `n` >> rw[Once num_to_bool_list_def,bld_def] 
-  >- (`(n-2) DIV 2 < n` by (intLib.ARITH_TAC) >> simp[] )
-  >- () )
+val bldn_equiv_thm = Q.store_thm("bldn_equiv_thm",
+`∀l. UNCURRY npair (bld l) = bldn (bl2n l)`,
+ho_match_mp_tac (theorem"bld_ind") >> simp[bld_def,bool_list_to_num_def] >>rw[]
+  >- (EVAL_TAC)
+  >- (EVAL_TAC)
+  >- (Cases_on `bld l` >> fs[] >> simp[Once bldn_def,EVEN_ADD,EVEN_MULT] >> 
+      metis_tac[nfst_npair,nsnd_npair] )
+  >- (Cases_on `bld l` >> fs[] >> simp[Once bldn_def,EVEN_ADD,EVEN_MULT] >> 
+      metis_tac[nfst_npair,nsnd_npair])
+  >- (simp[Once bldn_def,EVEN_ADD,EVEN_MULT])  )
+
+
+
+val primrec_if_thm = Q.store_thm("primrec_if_thm",
+`(primrec (pr2 (λm n. nB  (p m n))) 2 ∧ primrec (pr2 t) 2 ∧ primrec (pr2 e) 2) ==> 
+  primrec (pr2 (λm n. if p m n then t m n else e m n)) 2`,
+rw[] >> irule primrec_pr2 >> qexists_tac`pr_cond (pr2 (λm n. nB (p m n))) (pr2 t) (pr2 e)` >> simp[] >> simp[pr_cond_def] >> rw[] )
+
+val primrec_npair_thm = Q.store_thm("primrec_npair_thm",
+`(primrec (pr2 t) 2 ∧ primrec (pr2 e) 2) ==> 
+  primrec (pr2 (λm n. npair (t m n)  (e m n))) 2`,
+rw[] >> irule primrec_pr2 >> qexists_tac`Cn (pr2 npair) [(pr2 t); (pr2 e)]` >> simp[primrec_rules] )
+
+val primrec_mult_thm = Q.store_thm("primrec_mult_thm",
+`(primrec (pr2 t) 2 ∧ primrec (pr2 e) 2) ==> 
+  primrec (pr2 (λm n. $* (t m n)  (e m n))) 2`,
+rw[] >> irule primrec_pr2 >> qexists_tac`Cn (pr2 $*) [(pr2 t); (pr2 e)]` >> simp[primrec_rules] )
+
+val primrec_add_thm = Q.store_thm("primrec_add_thm",
+`(primrec (pr2 t) 2 ∧ primrec (pr2 e) 2) ==> 
+  primrec (pr2 (λm n. $+ (t m n)  (e m n))) 2`,
+rw[] >> irule primrec_pr2 >> qexists_tac`Cn (pr2 $+) [(pr2 t); (pr2 e)]` >> simp[primrec_rules] )
+
+val primrec_sub_thm = Q.store_thm("primrec_sub_thm",
+`(primrec (pr2 t) 2 ∧ primrec (pr2 e) 2) ==> 
+  primrec (pr2 (λm n. $- (t m n)  (e m n))) 2`,
+rw[] >> irule primrec_pr2 >> qexists_tac`Cn (pr2 $-) [(pr2 t); (pr2 e)]` >> simp[primrec_rules] )
+
+val primrec_div_thm = Q.store_thm("primrec_div_thm",
+`(primrec (pr2 t) 2 ∧ 0<e) ==> 
+  primrec (pr2 (λm n. $DIV (t m n) e)) 2`,
+rw[] >> irule primrec_pr2 >> qexists_tac`Cn pr_div [(pr2 t); K e]` >> simp[primrec_rules] )
+
+val primrec_mod_thm = Q.store_thm("primrec_mod_thm",
+`(primrec (pr2 t) 2 ∧ 0<e) ==> 
+  primrec (pr2 (λm n. $MOD (t m n) e)) 2`,
+rw[] >> irule primrec_pr2 >> qexists_tac`Cn pr_mod [(pr2 t); K e]` >> simp[primrec_rules] )
+
+val primrec_nfst_thm = Q.store_thm("primrec_nfst_thm",
+`(primrec (pr2 t) 2) ==> 
+  primrec (pr2 (λm n. nfst (t m n) )) 2`,
+rw[] >> irule primrec_pr2 >> qexists_tac`Cn (pr1 nfst) [(pr2 t)]` >> simp[primrec_rules] )
+
+val primrec_nsnd_thm = Q.store_thm("primrec_nsnd_thm",
+`(primrec (pr2 t) 2) ==> 
+  primrec (pr2 (λm n. nsnd (t m n) )) 2`,
+rw[] >> irule primrec_pr2 >> qexists_tac`Cn (pr1 nsnd) [(pr2 t)]` >> simp[primrec_rules] )
+
+val primrec_nel_thm = Q.store_thm("primrec_nel_thm",
+`(primrec (pr2 t) 2 ∧ primrec (pr2 e) 2) ==> 
+  primrec (pr2 (λm n. nel (t m n)  (e m n))) 2`,
+rw[] >> irule primrec_pr2 >> qexists_tac`Cn (pr2 nel) [(pr2 t); (pr2 e)]` >> simp[primrec_rules] )
+
+val primrec_cn = List.nth(CONJUNCTS primrec_rules,3)
+
+val primrec_const = Q.store_thm("primrec_const",
+`primrec (pr2 (λn r. k)) 2`,
+irule primrec_pr2 >> simp[primrec_rules] >> qexists_tac`K k` >> rw[])
+
+val primrec_pr2_fst = Q.store_thm("primrec_pr2_fst",
+`primrec (pr2 (λx y . x)) 2`,
+irule primrec_pr2 >> simp[primrec_rules] >> qexists_tac`proj 0` >> rw[primrec_rules] )
+
+val primrec_pr2_snd = Q.store_thm("primrec_pr2_snd",
+`primrec (pr2 (λx y . y)) 2`,
+irule primrec_pr2 >> simp[primrec_rules] >> qexists_tac`proj 1` >> rw[primrec_rules] )
+
+val awetac = rpt(FIRST (map ho_match_mp_tac [primrec_if_thm,primrec_npair_thm,primrec_mult_thm,primrec_add_thm,primrec_sub_thm,primrec_div_thm,primrec_mod_thm,primrec_nfst_thm,primrec_nsnd_thm,primrec_nel_thm]) >> rw[primrec_const,primrec_pr2_fst,primrec_pr2_snd])
+
+val bldn_primrec = Q.store_thm("bldn_primrec",
+`∃g. primrec g 1 ∧ ∀n. g [n] =  bldn n`,
+qexists_tac`WFM (λf n. if n <= 1 then 0 
+      else if EVEN n then let xy = f ((n-2) DIV 2) in npair (2*nfst xy + 2) (nsnd xy)
+      else let t = (n-1) DIV 2 in 
+             if EVEN t then let xy = f ((t-2) DIV 2) in npair (2*nfst xy + 1) (nsnd xy) 
+             else npair 0 ((t-1)DIV 2) )` >>
+rw[] >- (irule primrec_WFM >> simp[intLib.ARITH_PROVE``(EVEN (m+1) ==> (m − 1) DIV 2 ≤ m) ∧ (¬EVEN (m+1) ∧ EVEN (m DIV 2) ==> (m DIV 2 − 2) DIV 2 ≤ m) ∧ (m+1<= 1 <=> (m=0))``,restr_def] >>  
+         ho_match_mp_tac primrec_if_thm >> rw[] 
+         >- (irule primrec_pr2 >> qexists_tac`Cn pr_eq [proj 0;zerof]` >> simp[primrec_rules])
+         >- (irule primrec_pr2 >> qexists_tac`zerof` >> simp[primrec_rules])
+         >- (ho_match_mp_tac primrec_if_thm >>rw[] 
+             >- (irule primrec_pr2 >> qexists_tac`Cn pr_eq [Cn pr_mod [Cn succ [proj 0];K 2];zerof]` >> 
+                 simp[] >> conj_tac >- (rpt (irule primrec_cn >> simp[primrec_rules])) >> intLib.ARITH_TAC ) 
+             >- (awetac)
+             >- (ho_match_mp_tac primrec_if_thm >>rw[] >> awetac >> irule primrec_pr2 >> 
+                 qexists_tac`Cn pr_eq [Cn pr_mod [Cn pr_div [proj 0;K 2];K 2];zerof]` >> simp[] >> conj_tac
+                 >- (irule primrec_cn >> simp[primrec_rules]) >> intLib.ARITH_TAC ) ) )
+     >- (completeInduct_on `n` >> simp[Once WFM_correct] >> 
+         simp[Once num_to_bool_list_def,SimpLHS] >> simp[Once bldn_def,SimpRHS] >> 
+         `( ¬(n ≤ 1) ==> (n − 2) DIV 2 < n)` by simp[intLib.ARITH_PROVE``( ¬(n ≤ 1) ==> (n − 2) DIV 2 < n)``]>>
+         `( ¬(n ≤ 1) ==> (((n − 1) DIV 2 − 2) DIV 2 < n))` by 
+         simp[intLib.ARITH_PROVE``( ¬(n ≤ 1) ==> (((n − 1) DIV 2 − 2) DIV 2 < n))``]  >> rw[]  ) )
+
+val bldn_rec = Q.store_thm("bldn_rec",
+`recfn (SOME o (pr1 bldn)) 1`,
+`primrec (pr1 bldn) 1` by simp[primrec_pr1,bldn_primrec]>> simp[primrec_recfn])
+
 
 val universal_Phi = Q.store_thm("universal_Phi",
   `pr_is_universal (λn. let bl = n2bl n; (x,y) = bldemunge [] bl in Phi x y)`,
   simp[pr_is_universal_def] >> reverse conj_tac 
     >- (simp[bldemunge_inv] >> qexists_tac `SOME o proj 0` >> 
-        simp[recfn_rules,bldmunge_bld_eq,bool_list_to_num_def] >> 
-        `(λ(x:num,y:num).(x,y)) = (λx.x)` by simp[FUN_EQ_THM,pairTheory.FORALL_PROD] >> simp[] >>
-        qmatch_abbrev_tac`recfn (rec1 ( λn. Pf (bld (n2bl n)) )) 1` >>
-        `(λn. Pf (bld (n2bl n) )) = 
-          λn. recCn recPhi [rec1 (SOME o nfst);rec1 (SOME o nsnd)] 
-                           [(UNCURRY npair (bld (n2bl n)) )]` 
-          by (rw[FUN_EQ_THM] >> Cases_on `bld (n2bl n)` >> simp[Abbr`Pf`,recCn_def,rec1_def] ) >>
-        simp[]  ) >> 
+        simp[recfn_rules,bldmunge_bld_eq,bool_list_to_num_def]) >> 
     REWRITE_TAC[GSYM recPhi_correct] >> irule recfn_rec1 >> 
     simp[bldmunge_bld_eq,bool_list_to_num_def] >> 
-    `(λ(x:num,y:num). (x,y))= λx.x` by simp[FUN_EQ_THM,pairTheory.FORALL_PROD] >> simp[]
-    
-    qexists_tac`recCn recPhi [SOME o pr1 nfst;SOME o pr1 nsnd]`  >> conj_tac
-      >- (irule recfnCn  >> simp[primrec_recfn] >> metis_tac[recfn_recPhi,recPhi_rec2Phi])>>
-    simp[recCn_def,bldmunge_bld_eq,bool_list_to_num_def]
+    `(λ(x:num,y:num). (x,y))= λx.x` by simp[FUN_EQ_THM,pairTheory.FORALL_PROD] >> simp[] >>
+    qexists_tac`recCn recPhi [recCn (SOME o (pr1 nfst)) [SOME o (pr1 bldn)];recCn (SOME o (pr1 nsnd)) [SOME o (pr1 bldn)]]` >> simp[] >> rw[] 
+    >- (irule recfnCn >> rw[bldn_rec] >- (irule recfnCn >> rw[bldn_rec] >> simp[primrec_recfn,primrec_nfst])
+        >- (irule recfnCn >> rw[bldn_rec] >> simp[primrec_recfn,primrec_nsnd]) >> 
+        metis_tac[(GSYM recPhi_rec2Phi),recfn_recPhi])  >> 
+    simp[recCn_def] >> `n = bl2n (n2bl n)` by simp[bool_num_inv] >>
+    pop_assum SUBST1_TAC >> simp[GSYM bldn_equiv_thm] >> simp[pairTheory.UNCURRY]
        )
 
+
+(** up to here **)
+(* In Process of proving   *)
 
 (*
 (** Lemma 2.1.1 **)
@@ -352,18 +460,115 @@ universal_semimeasure M setM =
 (M IN setM) ∧
 (∀mu. (mu IN setM) ==> ∃ c. c>0 ∧ ∀x:bool list. (c * (mu x) <= M x))`
 
+
+
 (*
 kolmog_complexity is the Kolmogorov complexity of a
 binary string, and is a function from binary strings to naturals union infinity
 *)
 
+
+val kraft_ineq = Q.store_thm("kraft_ineq",
+`∀P. prefix_free P ==> sum (x in P) (2**-LENGTH(x) ) <= 1`,
+Let L(x) = [x*2**-LENGTH(x) , x*2**-LENGTH(x)+2**-LENGTH(x)] >> L(x) are disjoint cus prefix free >> length of L(x) is 2**-LENGTH(x) >> L(x) subste of [0,1] for all x >> sum <= length [0,1] =1 )
+
 val kolmog_complexity_def = Define`kolmog_complexity x U =
                        if  { p | U p = SOME x} = {} then NONE
                        else SOME (MIN_SET {LENGTH p | U p = SOME x})`;
 
-val kraft_ineq = Q.store_thm("kraft_ineq",
-`∀P. prefix_free P ==> sum (x in P) (2**LENGTH(x) ) <= 1`,
-Let L(x) = [x*2**LENGTH(x) , x*2**LENGTH(x)+2**LENGTH(x)] >> L(x) are disjoint cus prefix free >> length of L(x) is 2**LENGTH(x) >> L(x) subste of [0,1] for all x >> sum <= length [0,1] =1 )
+val bar_def = Define`bar x = 1**LENGTH(x) ++ [F] ++ x`
+
+val dash_def = Define`dash x = 1**LENGTH(LENGTH(x)) ++ 0 ++ LENGTH(x) ++ x`
+
+val pair_def = Define`pair x y = (dash x) ++ y`
+
+
+val cond_kolmog_complexity_def = Define`cond_kolmog x y U = 
+                       if  { p | U (pair y p) = SOME x} = {} then NONE
+                       else SOME (MIN_SET {LENGTH p | U (pair y p) = SOME x})`
+
+
+val kolmog_def = Define`kolmog x = kolmog_complexity x universal_tm`
+
+val cond_kolmog_def = Define`cond_kolmog x y = cond_kolmog_complexity x y universal_tm`
+
+
+(** Kolmog Theorems **)
+
+val K_upper_bound = Q.store_thm("K_upper_bound",
+`kolmog x <= LENGTH x + 2*log_2 LENGTH x  + O(1)`,
+)
+
+val K_nat_upper_bound = Q.store_thm("K_nat_upper_bound",
+`∀x. let n = number(x) with kolmog x <= log_2 n + 2*log_2 (log (n)) + O(1)`,
+)
+
+
+val K_sum_ineq = Q.store_thm("K_sum_ineq",
+`sum x 2**-kolmog x <= 1`,
+)
+
+val K_lower_bound = Q.store_thm("K_lower_bound",
+`For x in {1,..,N} we have ~(kolmog x >= LENGTH x) for o(N) x's`,
+)
+
+val K_code_sep = Q.store_thm("K_code_sep",
+`cond_kolmog x y <= kolmog x + O(1)`,
+)
+
+
+val K_code_sep_2 = Q.store_thm("K_code_sep_2",
+`kolmog x <= kolmog (pair x y) +O(1)`,
+)
+
+
+val K_concat = Q.store_thm("K_concat",
+`kolmog (x++y) <= kolmog (pair x y) + O(1)`,
+)
+
+
+val K_concat_2 = Q.store_thm("K_concat_2",
+`kolmog (pair x y) <= kolmog x + cond_kolmog x y + O(1)`,
+)
+
+val K_concat_3 = Q.store_thm("K_concat_3",
+`kolmog x + cond_kolmog x y <= kolmog x + kolmog y + O(1)`,
+)
+
+
+val K_sym = Q.store_thm("K_sym",
+`cond_kolmog x (pair y (kolmog y)) + kolmog y =+= kolmog (pair x y)`,
+)
+
+val K_sym_2 = Q.store_thm("K_sym_2",
+`kolmog (pair x y) =+= kolmog (pair y x)`,
+)
+
+val K_sym_3 = Q.store_thm("K_sym_3",
+`kolmog (pair y x) =+= cond_kolmog y (pair x (kolmog x)) + kolmog x`,
+)
+
+
+val K_recfun = Q.store_thm("K_recfun",
+`recfn f ==> K(f(x)) <= K(x) + K(code(f)) + O(1)`,
+)
+
+val K_incomp = Q.store_thm("K_incomp",
+`~∃p. ∀x. universal_tm p x = kolmog x`,
+)
+
+val K_coenum = Q.store_thm("K_coenum",
+`∃p. let phi = universal_tm p in
+ limit as t-> infinity phi x,t = kolmog x ∧ phi x,t<=phi x,t+1`,
+)
+
+
+*)
+
+(** End of Kolmog section **)
+
+
+(*
 
 val leastR_def = Define`leastR R A = @a. a IN A ∧ ∀b. b IN A ==> ~R b a`
 
