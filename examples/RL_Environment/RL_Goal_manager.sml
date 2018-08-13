@@ -75,4 +75,15 @@ fun apply_tactic_goal_term (tactic:bossLib.tactic) (LEAF g) =
 fun apply_tactic (t:bossLib.tactic) (GOAL gtm) = apply_tactic_goal_term t gtm
   | apply_tactic _ _ = failwith("apply tactic to non-goal")
 
+fun terms_of_goal_term ((asl, w): goal) =
+  let val w_set = Term.all_atoms w
+      val asl_sets = List.map (Term.all_atoms) asl
+      val union_of_sets = List.foldl (HOLset.union) w_set asl_sets
+  in HOLset.listItems(union_of_sets)
+  end
+
+fun terms_of_current_goal (GOAL (LEAF g)) = terms_of_goal_term g
+  | terms_of_current_goal (GOAL (NODE (_, gth::gtl))) = terms_of_current_goal(GOAL gth)
+  | terms_of_current_goal (_) = RL_Lib.die("atoms_of_current_goal not GOAL")
+
 end

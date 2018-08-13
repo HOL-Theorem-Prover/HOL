@@ -28,9 +28,98 @@ fun partial_list_to_string _ (NONE) = "{?}"
       NONE => String.concat["[", String.concatWith ", " (List.map f (get_partial_list (SOME pl))), ", {?}"]
     | SOME ls => String.concat["[", String.concatWith ", " (List.map f ls), "]"]
 
-type named_thm = string * HolKernel.thm
+(* fei add *)
+datatype term_type = TypeOf of partial_tree option
+and partial_tree =
+    Comb of (partial_tree option) * (partial_tree option)
+  | Abs  of string * (term_type) * (partial_tree option)
+  | Atom of term
+
+exception Add_To_Complete_Tree
+
+fun add_term t (SOME (Comb (t1, t2))) = (SOME (Comb ((add_term t t1), t2))
+                                        handle Add_To_Complete_Tree
+                                        => SOME (Comb (t1, (add_term t t2))))
+  | add_term t (SOME (Abs (t1, TypeOf t2, t3))) =
+      (SOME (Abs (t1, TypeOf (add_term t t2), t3))
+       handle Add_To_Complete_Tree
+       => SOME (Abs (t1, TypeOf t2, add_term t t3)))
+  | add_term t (SOME (Atom t1)) = raise Add_To_Complete_Tree
+  | add_term t NONE = SOME t
+(* note there is unhandled exception for the whole function *)
+
+fun is_tree_complete (SOME (Comb (t1, t2))) =
+      is_tree_complete(t1) andalso is_tree_complete(t2)
+  | is_tree_complete (SOME (Abs (t1, TypeOf t2, t3))) =
+      is_tree_complete(t2) andalso is_tree_complete(t3)
+  | is_tree_complete (SOME (Atom a)) = true
+  | is_tree_complete NONE = false
+
+fun get_complete_tree (SOME (Comb (t1, t2))) =
+       let val t1' = get_complete_tree t1
+           val t2' = get_complete_tree t2
+       in if (isSome t1' andalso isSome t2')
+          then SOME ("(" ^ (valOf t1') ^ " " ^ (valOf t2') ^ ")")
+          else NONE
+       end
+  | get_complete_tree (SOME (Abs (t1, TypeOf t2, t3))) =
+       let val t2' = get_complete_tree t2
+           val t3' = get_complete_tree t3
+       in if (isSome t2' andalso isSome t3')
+          then SOME ("\\" ^ (t1) ^ ":" ^ (valOf t2') ^ "->" ^ (valOf t3'))
+          else NONE
+       end
+  | get_complete_tree (SOME (Atom a)) =
+       SOME (term_to_string a)
+  | get_complete_tree NONE = NONE
+
+fun partial_tree_to_string f (SOME (Comb (t1, t2))) =
+      let val t1' = partial_tree_to_string f t1
+          val t2' = partial_tree_to_string f t2
+      in "(" ^ t1' ^ " " ^ t2' ^ ")"
+      end
+  | partial_tree_to_string f (SOME (Abs (t1, TypeOf t2, t3))) =
+      let val t2' = partial_tree_to_string f t2
+          val t3' = partial_tree_to_string f t3
+      in "\\" ^ (t1) ^ ":" ^ (t2') ^ "->" ^ t3'
+      end
+  | partial_tree_to_string f (SOME (Atom a)) = (f a)
+  | partial_tree_to_string _ NONE = "?"
+
+(* end fei add *)
+
+(* fei modifies some definitions *)
+
+datatype named_thm = FindThm of partial_tree option | FoundThm of string * thm
+
+(*
+metis_tac NONE
+metis_tac (SOME (Lcons (FindThm NONE, NONE)))  // not needed I think
+metis_tac (SOME (Lcons (FindThm (SOME (Abs (NONE, NONE))), NONE)))
+metis_tac (SOME (Lcons (FindThm (SOME (Abs (SOME (TypeOf NONE), NONE))), NONE)))
+metis_tac (SOME (Lcons
+  (FindThm (SOME (Abs (SOME (TypeOf (SOME (Atom xxx)), NONE)))),
+   NONE)))
+metis_tac (SOME (Lcons
+  (FindThm (SOME (Abs (SOME (TypeOf (SOME (Atom xxx)), SOME (Atom yyy))))),
+   NONE)))
+metis_tac (SOME (Lcons
+  (FoundThm (name,thm),
+   NONE)))
+metis_tac (SOME (Lcons
+  (FoundThm (name,thm),
+   SOME Lnil)))
+
+*)
+
+(*type named_thm = string * HolKernel.thm
 val name_of : named_thm -> string = #1
-val thm_of : named_thm -> HolKernel.thm = #2
+val thm_of : named_thm -> HolKernel.thm = #2*)
+
+fun name_of(FindThm tm) = "IN_SEARCH" ^ (partial_tree_to_string term_to_string tm)
+  | name_of(FoundThm (st, th)) = st
+fun thm_of(FindThm _) = RL_Lib.die("thm_of unknown theorem")
+  | thm_of(FoundThm (st, th)) = th
 
 val get_complete_named_thm_list = Option.map (List.map thm_of) o get_complete_list
 
@@ -46,10 +135,10 @@ datatype tactic =
   Induct_on tmq
   *)
 
-  | metis_tac of named_thm partial_list option
-  | rw of named_thm partial_list option
-  | fs of named_thm partial_list option
-  | rfs of named_thm partial_list option
+  | metis_tac of (named_thm partial_list option)
+  | rw of (named_thm partial_list option)
+  | fs of (named_thm partial_list option)
+  | rfs of (named_thm partial_list option)
   (*
   srw_tac [ss] [thm]
   fsrw_tac [ss] [thm]
@@ -77,7 +166,7 @@ datatype tactic =
   Cases_on tmq
   *)
 
-  | mp_tac of named_thm partial_list option
+  | mp_tac of (named_thm partial_list option)
   (*
   qexists_tac tmq
 
@@ -199,7 +288,7 @@ val top_level_actions =
   Back::Rotate::(List.map Tactic top_level_tactics)
 
 local
-
+(*
 val all_theorems = (* TODO: ... *)
    [("bool.TRUTH",boolTheory.TRUTH),
     ("list.dropWhile_APPEND_EVERY",listTheory.dropWhile_APPEND_EVERY),
@@ -230,7 +319,96 @@ fun generate_single_theorem_actions f NONE =
 |  generate_single_theorem_actions f _ = RL_Lib.die("generate_single_theorem_actions: invariant failure")
 
 in
+  *)
 
+(* fei add here *)
+(* TODO: need filtering non-Thm types? should I use DB.find, which is string->list *)
+fun search_theorem_by_term NONE = RL_Lib.die("search_theorem with incomplete term")
+  | search_theorem_by_term (SOME t) =
+      let val term_string = partial_tree_to_string term_to_string (SOME t)
+          val searches = DB.find(term_string)
+          val top10 = List.take(searches, 10)
+          val namedthms = List.map (fn ((s1, s2),(thm,_)) => (s1 ^ s2, thm)) top10
+      in namedthms
+      end
+
+fun myterm_to_term (NONE) = RL_Lib.die("myterm_to_term on incomplete term")
+  | myterm_to_term (SOME (Atom t)) = t
+  | myterm_to_term (SOME (Comb (t1, t2))) =
+      let val t1' = myterm_to_term t1
+          val t2' = myterm_to_term t2
+      in mk_comb (t1', t2')
+      end
+  | myterm_to_term (SOME (Abs (s, TypeOf t1, t2))) =
+      let val t1' = myterm_to_term t1
+          val t2' = myterm_to_term t2
+      in mk_abs ((mk_var (s, (type_of t1'))), t2')
+      end
+
+(* TODO: generate unique string for var_name *)
+fun generate_term_actions atoms tmo (k: partial_tree option -> tactic) =
+  case tmo of
+     NONE => List.map (fn t => k(SOME t)) (atoms @
+         [Abs ("x1", TypeOf NONE, NONE), Comb (NONE, NONE)])
+   | SOME (Abs (s, TypeOf tm1, tm2)) =>
+       if is_tree_complete tm1
+       then let val para = Atom (mk_var(s, type_of(myterm_to_term tm1)))
+                val new_atoms = atoms @ [para]
+            in generate_term_actions new_atoms tm2
+               (fn tm2' => k(SOME(Abs (s, TypeOf tm1, tm2'))))
+            end
+       else generate_term_actions atoms tm1
+            (fn tm1' => k(SOME(Abs (s, TypeOf tm1', tm2))))
+   | SOME (Comb (tm1, tm2)) =>
+       if is_tree_complete tm1
+       then generate_term_actions atoms tm2
+            (fn tm2' => k(SOME(Comb (tm1, tm2'))))
+       else generate_term_actions atoms tm1
+            (fn tm1' => k(SOME(Comb (tm1', tm2))))
+   | SOME (Atom _) => RL_Lib.die("generate_term_actions reach complete leaf")
+
+fun generate_single_theorem_actions atoms lso (k: named_thm partial_list option -> tactic) =
+  case lso of
+     NONE => (generate_term_actions atoms NONE
+              (fn tmo => k(SOME(Lcons(FindThm tmo, SOME Lnil)))))
+   | SOME Lnil => RL_Lib.die("tactic_actions for complete action")
+   | SOME (Lcons (head, lso')) => case head of
+        FoundThm _ => RL_Lib.die("tactic_actions for complete action")
+      | FindThm tmo => if is_tree_complete tmo
+                       then List.map (fn t => k(SOME(Lcons(FoundThm t, lso')))) (search_theorem_by_term tmo)
+                       else generate_term_actions atoms tmo (fn tmo' => k(SOME(Lcons(FindThm tmo', lso'))))
+
+(* TODO filter out repeted theorems *)
+fun generate_theorem_actions atoms lso (k: named_thm partial_list option -> tactic) =
+  case lso of
+     NONE => (generate_term_actions atoms NONE
+              (fn tmo => k(SOME(Lcons(FindThm tmo, NONE))))) @ [k(SOME Lnil)]
+   | SOME Lnil => RL_Lib.die("tactic_actions for complete action")
+   | SOME (Lcons (head, lso')) => case head of
+        FoundThm _ => generate_theorem_actions atoms lso' (fn t => k(SOME (Lcons (head, t))))
+      | FindThm tmo => if is_tree_complete tmo
+                       then List.map (fn t => k(SOME(Lcons(FoundThm t, lso')))) (search_theorem_by_term tmo)
+                       else generate_term_actions atoms tmo (fn tmo' => k(SOME(Lcons(FindThm tmo', lso'))))
+in
+
+fun tactic_actions goal_state t =
+  let val terms = RL_Goal_manager.terms_of_current_goal goal_state
+      val atoms = List.map (fn t => Atom t) terms
+  in case t of
+       metis_tac lso => generate_theorem_actions atoms lso metis_tac
+     | rw lso => generate_theorem_actions atoms lso rw
+     | fs lso => generate_theorem_actions atoms lso fs
+     | rfs lso => generate_theorem_actions atoms lso rfs
+     | mp_tac lso => generate_single_theorem_actions atoms lso mp_tac
+     | rpt NONE => List.map (rpt o SOME) top_level_tactics
+     | rpt (SOME t) => List.map (rpt o SOME) (tactic_actions goal_state t)
+     | _ => RL_Lib.die("tactic_actions: invariant failure")
+  end
+
+end
+
+(* fei add end here *)
+(*
 fun tactic_actions goal_state t =
   case t of
     metis_tac lso => generate_theorem_actions metis_tac lso
@@ -243,5 +421,5 @@ fun tactic_actions goal_state t =
   | _ => RL_Lib.die("tactic_actions: invariant failure")
 
 end
-
+*)
 end
