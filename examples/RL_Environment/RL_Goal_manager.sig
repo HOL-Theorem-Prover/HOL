@@ -12,5 +12,5 @@ signature RL_Goal_manager = sig
   type observed_goal_state
   val get_observed_goal_state : goal_state -> observed_goal_state
   val observed_goal_state_to_string : observed_goal_state -> string
-  val terms_of_current_goal : goal_state -> term list
+  val terms_of_current_goal : goal_state -> Abbrev.term list
 end
