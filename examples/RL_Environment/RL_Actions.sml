@@ -66,7 +66,7 @@ fun get_complete_tree (SOME (Comb (t1, t2))) =
        let val t2' = get_complete_tree t2
            val t3' = get_complete_tree t3
        in if (isSome t2' andalso isSome t3')
-          then SOME ("\\" ^ (t1) ^ ":" ^ (valOf t2') ^ "->" ^ (valOf t3'))
+          then SOME ("\\" ^ (t1) ^ ":(" ^ (valOf t2') ^ ")=>" ^ (valOf t3'))
           else NONE
        end
   | get_complete_tree (SOME (Atom a)) =
@@ -81,7 +81,7 @@ fun partial_tree_to_string f (SOME (Comb (t1, t2))) =
   | partial_tree_to_string f (SOME (Abs (t1, TypeOf t2, t3))) =
       let val t2' = partial_tree_to_string f t2
           val t3' = partial_tree_to_string f t3
-      in "\\" ^ (t1) ^ ":" ^ (t2') ^ "->" ^ t3'
+      in "\\" ^ (t1) ^ ":(" ^ (t2') ^ ")=>" ^ t3'
       end
   | partial_tree_to_string f (SOME (Atom a)) = (f a)
   | partial_tree_to_string _ NONE = "?"
@@ -90,7 +90,7 @@ fun partial_tree_to_string f (SOME (Comb (t1, t2))) =
 
 (* fei modifies some definitions *)
 
-datatype named_thm = FindThm of partial_tree option
+datatype named_thm = FindThm of (partial_tree option) partial_list option
                    | FoundThm of string * HolKernel.thm
 
 (*
@@ -117,7 +117,8 @@ metis_tac (SOME (Lcons
 val name_of : named_thm -> string = #1
 val thm_of : named_thm -> HolKernel.thm = #2*)
 
-fun name_of(FindThm tm) = "SEARCH_TERM: " ^ (partial_tree_to_string Parse.term_to_string tm)
+fun name_of(FindThm tm) = "SEARCH_TERM: " ^ (partial_list_to_string
+  (partial_tree_to_string Parse.term_to_string) tm)
   | name_of(FoundThm (st, th)) = st
 fun thm_of(FindThm _) = RL_Lib.die("thm_of unknown theorem")
   | thm_of(FoundThm (st, th)) = th
@@ -336,7 +337,7 @@ fun myterm_to_term (NONE) = RL_Lib.die("myterm_to_term on incomplete term")
       in Term.mk_abs ((Term.mk_var (s, (Term.type_of t1'))), t2')
       end
 
-(* TODO: need filtering non-Thm types? I should use DB.match on a term *)
+(* need filtering non-Thm types?
 fun search_theorem_by_term NONE = RL_Lib.die("search_theorem with incomplete term")
   | search_theorem_by_term (SOME t) =
       let val real_term = myterm_to_term (SOME t)
@@ -348,6 +349,40 @@ fun search_theorem_by_term NONE = RL_Lib.die("search_theorem with incomplete ter
          else
            List.map (fn ((s1, s2),(thm,_)) => (s1 ^ "." ^ s2, thm))
            (List.take(searches, 10))
+      end
+      *)
+
+fun search_theorem_by_term_from NONE _ = RL_Lib.die("search_theorem with incomplete term")
+  | search_theorem_by_term_from (SOME t) NONE =
+      let val real_term = myterm_to_term (SOME t)
+      in DB.match [] real_term
+      end
+  | search_theorem_by_term_from (SOME t) (SOME thml) =
+      let val real_term = myterm_to_term (SOME t)
+      in DB.apropos_in real_term thml
+      end
+
+fun search_theorem_by_term_list NONE _ _ = RL_Lib.die("search_theorem with incomplete list of terms")
+  | search_theorem_by_term_list (SOME Lnil) NONE excl =
+      (* this is searching with NO restrictions *)
+      let val all_thms = DB.listDB()
+      in search_theorem_by_term_list (SOME Lnil) (SOME all_thms) excl
+      end
+  | search_theorem_by_term_list (SOME Lnil) (SOME thml) excl =
+      let val filter = fn t => case (#2(#2 t)) of DB.Def => false | _ => true
+          (* filtering Def types, only allow Thm and Axm *)
+          val filter1 = fn ((s1, s2),_) => not (List.exists (fn n => n=s1^"."^s2) excl)
+          (* filtering thms in excl, because they are already in theorem list *)
+          val real_thml = List.filter (fn t => filter t andalso filter1 t) thml
+          val len = List.length real_thml
+          val mapper = (fn ((s1, s2),(thm,_)) => (s1 ^"."^ s2, thm))
+      in if len < 10
+         then List.map mapper real_thml
+         else List.map mapper (List.take (real_thml, 10))
+      end
+  | search_theorem_by_term_list (SOME(Lcons(hd, tl))) thml excl =
+      let val thml' = search_theorem_by_term_from hd thml
+      in search_theorem_by_term_list tl (SOME thml') excl
       end
 
 fun generate_term_actions terms tmo (k: partial_tree option -> tactic) =
@@ -371,32 +406,53 @@ fun generate_term_actions terms tmo (k: partial_tree option -> tactic) =
             (fn tm2' => k(SOME(Comb (tm1, tm2'))))
        else generate_term_actions terms tm1
             (fn tm1' => k(SOME(Comb (tm1', tm2))))
-   | SOME (Atom _) => RL_Lib.die("generate_term_actions reach complete leaf") 
+   | SOME (Atom _) => RL_Lib.die("generate_term_actions reach complete leaf")
+
+fun generate_term_list_actions terms tmlo (k: (partial_tree option) partial_list option -> tactic) =
+  case tmlo of
+     NONE => (generate_term_actions terms NONE (fn t => k(SOME(Lcons(t, NONE)))))
+             @ [k(SOME Lnil)]
+   | SOME Lnil => RL_Lib.die("generate_term_list_actions reach complete list")
+   | SOME (Lcons (tmo, tmlo')) =>
+       if is_tree_complete tmo
+       then generate_term_list_actions terms tmlo' (fn t => k(SOME(Lcons(tmo,t))))
+       else generate_term_actions terms tmo (fn t => k(SOME(Lcons(t,tmlo'))))
+
+fun is_list_complete NONE = false
+  | is_list_complete (SOME l) =
+      case (get_complete_list l) of
+           NONE => false
+         | (SOME _) => true
 
 fun generate_single_theorem_actions terms lso (k: named_thm partial_list option -> tactic) =
   case lso of
-     NONE => (generate_term_actions terms NONE
-              (fn tmo => k(SOME(Lcons(FindThm tmo, SOME Lnil)))))
+     NONE => (generate_term_list_actions terms NONE
+              (fn tmlo => k(SOME(Lcons(FindThm tmlo, SOME Lnil)))))
    | SOME Lnil => RL_Lib.die("tactic_actions for complete action")
    | SOME (Lcons (head, lso')) => case head of
         FoundThm _ => RL_Lib.die("tactic_actions for complete action")
-      | FindThm tmo => if is_tree_complete tmo
-                       then List.map (fn t => k(SOME(Lcons(FoundThm t, lso')))) (search_theorem_by_term tmo)
-                       else generate_term_actions terms tmo (fn tmo' => k(SOME(Lcons(FindThm tmo', lso'))))
+      | FindThm tmlo =>
+          if is_list_complete tmlo
+          then List.map (fn t => k(SOME(Lcons(FoundThm t, lso'))))
+               (search_theorem_by_term_list tmlo NONE [])
+          else generate_term_list_actions terms tmlo (fn tmlo' => k(SOME(Lcons(FindThm tmlo', lso'))))
 
-(* TODO filter out repeted theorems *)
-fun generate_theorem_actions terms lso (k: named_thm partial_list option -> tactic) =
+(* TODO filter out repeated theorems? *)
+fun generate_theorem_actions terms lso excl (k: named_thm partial_list option -> tactic) =
   case lso of
-     NONE => (generate_term_actions terms NONE
-              (fn tmo => k(SOME(Lcons(FindThm tmo, NONE))))) @ [k(SOME Lnil)]
-   | SOME Lnil => RL_Lib.die("tactic_actions for complete action")
+     NONE => (generate_term_list_actions terms NONE
+              (fn tmlo => k(SOME(Lcons(FindThm tmlo, NONE))))) @ [k(SOME Lnil)]
+   | SOME Lnil => RL_Lib.die("generate_theorem_actions for complete action")
    | SOME (Lcons (head, lso')) => case head of
-        FoundThm _ => generate_theorem_actions terms lso' (fn t => k(SOME (Lcons (head, t))))
-      | FindThm tmo => if is_tree_complete tmo
-                       then List.map (fn t => k(SOME(Lcons(FoundThm t, lso')))) (search_theorem_by_term tmo)
-                       else generate_term_actions terms tmo (fn tmo' => k(SOME(Lcons(FindThm tmo', lso'))))
+        FoundThm th => generate_theorem_actions terms lso' (#1 th :: excl)
+                       (fn t => k(SOME (Lcons (head, t))))
+      | FindThm tmlo =>
+          if is_list_complete tmlo
+          then List.map (fn t => k(SOME(Lcons(FoundThm t, lso'))))
+               (search_theorem_by_term_list tmlo NONE excl)
+          else generate_term_list_actions terms tmlo (fn tmlo' => k(SOME(Lcons(FindThm tmlo', lso'))))
 
-(* TODO: generate unique string for var_name 
+(* TODO: generate unique string for var_name
 fun generate_term_actions atoms tmo counter (k: partial_tree option -> tactic) =
   case tmo of
      NONE => List.map (fn t => k(SOME t)) (atoms @
@@ -446,10 +502,10 @@ in
 fun tactic_actions goal_state t =
   let val terms = RL_Goal_manager.terms_of_current_goal goal_state
   in case t of
-       metis_tac lso => generate_theorem_actions terms lso metis_tac
-     | rw lso => generate_theorem_actions terms lso rw
-     | fs lso => generate_theorem_actions terms lso fs
-     | rfs lso => generate_theorem_actions terms lso rfs
+       metis_tac lso => generate_theorem_actions terms lso [] metis_tac
+     | rw lso => generate_theorem_actions terms lso [] rw
+     | fs lso => generate_theorem_actions terms lso [] fs
+     | rfs lso => generate_theorem_actions terms lso [] rfs
      | mp_tac lso => generate_single_theorem_actions terms lso mp_tac
      | rpt NONE => List.map (rpt o SOME) top_level_tactics
      | rpt (SOME t) => List.map (rpt o SOME) (tactic_actions goal_state t)
