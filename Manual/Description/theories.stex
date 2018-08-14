@@ -3178,22 +3178,16 @@ that two \ml{llist} values are equal.  The first states that two
 sequences are equal if they return the same prefixes of length $n$ for
 all possible values of $n$:
 \begin{hol}
-\begin{verbatim}
-   LTAKE_EQ |- (ll1 = ll2) = (!n. LTAKE n ll1 = LTAKE n ll2)
-\end{verbatim}
+\begin{alltt}
+##thm LTAKE_EQ
+\end{alltt}
 \end{hol}
 This theorem is subsequently used to derive the bisimulation
 principle:
 \begin{hol}
-\begin{verbatim}
-   LLIST_BISIMULATION
-            |- (ll1 = ll2) =
-               ?R. R ll1 ll2 /\
-                   !ll3 ll4. R ll3 ll4 ==>
-                             (ll3 = LNIL) /\ (ll4 = LNIL) \/
-                             (LHD ll3 = LHD ll4) /\
-                             R (THE (LTL ll3)) (THE (LTL ll4))
-\end{verbatim}
+\begin{alltt}
+##thm LLIST_BISIMULATION
+\end{alltt}
 \end{hol}
 The principle of bisimulation states that two \ml{llist} values $l_1$
 and $l_2$ are equal if (and only if) it is possible to find a
