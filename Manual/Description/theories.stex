@@ -2702,6 +2702,24 @@ a single list (\holtxt{MAP}) or a function $f : \alpha \to \beta
 The behaviour of \holtxt{MAP2} in the cases when it is given lists of
 unequal lengths is unspecified.
 
+\paragraph{Generating lists from indices}
+\index{GENLIST, the HOL constant@\ml{GENLIST}, the \HOL{} constant}
+
+The \holtxt{GENLIST} constant can be used to generate a list of a particular size, where the value of each element is independently determined by reference to a function that takes natural numbers (the set $\{0\dots n\}$) to element values:
+\begin{hol}
+\begin{alltt}
+##thm GENLIST
+##thm EL_GENLIST
+\end{alltt}
+\end{hol}
+\index{SNOC, the HOL constant@\ml{SNOC}, the \HOL{} constant}
+The \holtxt{SNOC} constant adds an element to the end of a list.
+Working with it, and thus the definition above, can occasionally be awkward, so a characterisation of \holtxt{GENLIST}'s \holtxt{SUC} clause in terms of \holtxt{CONS} can also be useful:
+\begin{hol}
+\begin{alltt}
+##thm GENLIST_CONS
+\end{alltt}
+\end{hol}
 \paragraph {Predicates over lists}
 \index{FILTER, the HOL constant@\ml{FILTER}, the \HOL{} constant}
 \index{EVERY, the HOL constant@\ml{EVERY}, the \HOL{} constant}
