@@ -53,6 +53,10 @@ fun observation (node as Node{partial_action, goal_state, ...}):observation =
   { obs_goals = get_observed_goal_state goal_state
   , obs_partial_action = partial_action
   , obs_actions = (next_actions node)
+  } handle e =>
+  { obs_goals = get_observed_goal_state (RL_Goal_manager.ERROR (exnMessage e))
+  , obs_partial_action = partial_action
+  , obs_actions = [Back]
   }
 
 fun partial_action_to_string (NONE) = "{?}"

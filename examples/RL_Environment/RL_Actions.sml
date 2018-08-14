@@ -324,6 +324,9 @@ in
   *)
 
 (* fei add here *)
+(* NOTE: this function may throw HOL_ERR for ill-typed terms,
+  *      the exception is captured by observation() function in
+  *      RL_Experiment.sml to show the error message *)
 fun myterm_to_term (NONE) = RL_Lib.die("myterm_to_term on incomplete term")
   | myterm_to_term (SOME (Atom t)) = t
   | myterm_to_term (SOME (Comb (t1, t2))) =
@@ -336,6 +339,58 @@ fun myterm_to_term (NONE) = RL_Lib.die("myterm_to_term on incomplete term")
           val t2' = myterm_to_term t2
       in Term.mk_abs ((Term.mk_var (s, (Term.type_of t1'))), t2')
       end
+
+(* datatype Constraint = Tany
+                    | Tarrow of int
+                    | Thol of Abbrev.hol_type
+                    *)
+(* fun arrow_layer ht = use strip_fun function *)
+(*
+fun type_comply _ Tany = true
+  | type_comply (Atom tm) (Tarrow n) = (arrow_layer (Term.type_of tm) >= n)
+  | type_comply _ (Tarrow n) = True
+  | type_comply (Atom tm) (Thol ht) = ((Term.type_of tm) = ht)
+| type_comply (Abs (s, tm1, tm2)) (Thol ht) =
+  *)
+
+fun generate_term_actions terms tmo (k: partial_tree option -> tactic) =
+  case tmo of (* if we need constraint, filter them here *)
+     NONE => List.map (fn t => k(SOME t)) ((List.map Atom terms) @
+             [Abs ("%%%", TypeOf NONE, NONE), Comb (NONE, NONE)])
+   | SOME (Abs (s, TypeOf tm1, tm2)) =>
+       if is_tree_complete tm1
+       then let val tm1' = Term.mk_var(s, Term.type_of(myterm_to_term tm1))
+                val tm1'' = Term.variant (List.filter Term.is_var terms) tm1'
+                val new_terms = terms @ [tm1'']
+                val (name, _) = Term.dest_var tm1''
+            in generate_term_actions new_terms tm2
+               (fn tm2' => k(SOME(Abs(name, TypeOf tm1, tm2'))))
+            end
+       else generate_term_actions terms tm1
+            (fn tm1' => k(SOME(Abs(s, TypeOf tm1', tm2))))
+   | SOME (Comb (tm1, tm2)) =>
+       if is_tree_complete tm1
+       then generate_term_actions terms tm2 (* Constraints: tm2 has to be parameter type of tm1 *)
+            (fn tm2' => k(SOME(Comb (tm1, tm2'))))
+       else generate_term_actions terms tm1 (* Constraints: tm1 has to be function type *)
+            (fn tm1' => k(SOME(Comb (tm1', tm2))))
+   | SOME (Atom _) => RL_Lib.die("generate_term_actions reach complete leaf")
+
+fun generate_term_list_actions terms tmlo (k: (partial_tree option) partial_list option -> tactic) =
+  case tmlo of
+     NONE => (generate_term_actions terms NONE (fn t => k(SOME(Lcons(t, NONE)))))
+             @ [k(SOME Lnil)]
+   | SOME Lnil => RL_Lib.die("generate_term_list_actions reach complete list")
+   | SOME (Lcons (tmo, tmlo')) =>
+       if is_tree_complete tmo
+       then generate_term_list_actions terms tmlo' (fn t => k(SOME(Lcons(tmo,t))))
+       else generate_term_actions terms tmo (fn t => k(SOME(Lcons(t,tmlo'))))
+
+fun is_list_complete NONE = false
+  | is_list_complete (SOME l) =
+      case (get_complete_list l) of
+           NONE => false
+         | (SOME _) => true
 
 (* need filtering non-Thm types?
 fun search_theorem_by_term NONE = RL_Lib.die("search_theorem with incomplete term")
@@ -384,45 +439,6 @@ fun search_theorem_by_term_list NONE _ _ = RL_Lib.die("search_theorem with incom
       let val thml' = search_theorem_by_term_from hd thml
       in search_theorem_by_term_list tl (SOME thml') excl
       end
-
-fun generate_term_actions terms tmo (k: partial_tree option -> tactic) =
-  case tmo of
-     NONE => List.map (fn t => k(SOME t)) ((List.map Atom terms) @
-            [Abs ("%%%", TypeOf NONE, NONE), Comb (NONE, NONE)])
-   | SOME (Abs (s, TypeOf tm1, tm2)) =>
-       if is_tree_complete tm1
-       then let val tm1' = Term.mk_var(s, Term.type_of(myterm_to_term tm1))
-                val tm1'' = Term.variant (List.filter Term.is_var terms) tm1'
-                val new_terms = terms @ [tm1'']
-                val (name, _) = Term.dest_var tm1''
-            in generate_term_actions new_terms tm2
-               (fn tm2' => k(SOME(Abs(name, TypeOf tm1, tm2'))))
-            end
-       else generate_term_actions terms tm1
-            (fn tm1' => k(SOME(Abs(s, TypeOf tm1', tm2))))
-   | SOME (Comb (tm1, tm2)) =>
-       if is_tree_complete tm1
-       then generate_term_actions terms tm2
-            (fn tm2' => k(SOME(Comb (tm1, tm2'))))
-       else generate_term_actions terms tm1
-            (fn tm1' => k(SOME(Comb (tm1', tm2))))
-   | SOME (Atom _) => RL_Lib.die("generate_term_actions reach complete leaf")
-
-fun generate_term_list_actions terms tmlo (k: (partial_tree option) partial_list option -> tactic) =
-  case tmlo of
-     NONE => (generate_term_actions terms NONE (fn t => k(SOME(Lcons(t, NONE)))))
-             @ [k(SOME Lnil)]
-   | SOME Lnil => RL_Lib.die("generate_term_list_actions reach complete list")
-   | SOME (Lcons (tmo, tmlo')) =>
-       if is_tree_complete tmo
-       then generate_term_list_actions terms tmlo' (fn t => k(SOME(Lcons(tmo,t))))
-       else generate_term_actions terms tmo (fn t => k(SOME(Lcons(t,tmlo'))))
-
-fun is_list_complete NONE = false
-  | is_list_complete (SOME l) =
-      case (get_complete_list l) of
-           NONE => false
-         | (SOME _) => true
 
 fun generate_single_theorem_actions terms lso (k: named_thm partial_list option -> tactic) =
   case lso of
