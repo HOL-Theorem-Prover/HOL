@@ -2716,23 +2716,53 @@ is supported by \holtxt{EVERY} and \holtxt{EXISTS}, respectively. The
 elimination of all elements in list not satisfying a given predicate
 is performed by \holtxt{FILTER}.
 \begin{hol}
-\begin{verbatim}
-   EVERY_DEF
-     |- (!P. EVERY P [] = T) /\
-        (!P h t. EVERY P (h::t) = P h /\ EVERY P t)
-   EXISTS_DEF
-     |- (!P. EXISTS P [] = F) /\
-        (!P h t. EXISTS P (h::t) = P h \/ EXISTS P t)
-   FILTER
-     |- (!P. FILTER P [] = []) /\
-        (!P h t. FILTER P (h::t) = if P h then h::FILTER P t else FILTER P t)
-   ALL_DISTINCT
-     |- (ALL_DISTINCT [] = T) /\
-        (!h t. ALL_DISTINCT (h::t) = ~MEM h t /\ ALL_DISTINCT t)
-\end{verbatim}
+\begin{alltt}
+##thm EVERY_DEF
+##thm EXISTS_DEF
+##thm FILTER
+##thm ALL_DISTINCT
+\end{alltt}
 \end{hol}
 The predicate \holtxt{ALL\_DISTINCT} holds on a list just in case no
 element in the list is equal to any other.
+
+\index{EVERY2@\ml{EVERY2}|see{\ml{LIST\_REL}}}
+\index{LIST_REL, the HOL constant@\ml{LIST\_REL}, the \HOL{} constant}
+\paragraph{Relations over lists}
+A binary relation on elements can be ``lifted'' to a relation on lists of such elements with the \holtxt{LIST\_REL} constant:
+\begin{hol}
+\begin{alltt}
+##thm LIST_REL_def
+\end{alltt}
+\end{hol}
+This can be viewed as an application of \holtxt{EVERY}:
+\begin{hol}
+\begin{alltt}
+##thm LIST_REL_EVERY_ZIP
+\end{alltt}
+\end{hol}
+Acknowledging this view, the system overloads the name \holtxt{EVERY2} to map to the same constant.
+\begin{hol}
+\begin{alltt}
+>> “EVERY2 (λm n. EVEN (m + n)) [1;2;3] [3;4;5]”;
+\end{alltt}
+\end{hol}
+Some theorems in \ml{listTheory} have names that reflect this.
+
+Equally, \holtxt{LIST\_REL} can be seen as a test that checks the relation at all relevant indices:
+\begin{hol}
+\begin{alltt}
+##thm LIST_REL_EL_EQN
+\end{alltt}
+\end{hol}
+Finally, there is a natural induction principle for this constant (as \emph{per} Section~\ref{sec:proofs-with-inductive-relations}, the tactic \ml{Induct_on~\bq{}LIST_REL\bq} applies it):
+\begin{hol}
+\begin{alltt}
+##thm LIST_REL_strongind
+\end{alltt}
+\end{hol}
+
+
 
 \paragraph {Folding}
 \index{FOLDL, the HOL constant@\ml{FOLDL}, the \HOL{} constant}
@@ -2744,14 +2774,10 @@ through a list and accumulating the result is known as
 from left-to-right (\holtxt{FOLDL}), and at others the
 right-to-left direction (\holtxt{FOLDR}) is required.
 \begin{hol}
-\begin{verbatim}
-   FOLDL
-     |- (!f e. FOLDL f e [] = e) /\
-        (!f e x l. FOLDL f e (x::l) = FOLDL f (f e x) l)
-   FOLDR
-     |- (!f e. FOLDR f e [] = e) /\
-        (!f e x l. FOLDR f e (x::l) = f x (FOLDR f e l))
-\end{verbatim}
+\begin{alltt}
+##thm FOLDL
+##thm FOLDR
+\end{alltt}
 \end{hol}
 
 \paragraph {List reversal}
@@ -2773,7 +2799,7 @@ counterpart \holtxt{REV} are defined in \theoryimp{list}.
 The \holtxt{nub} function removes all duplicate entries from a list.
 \begin{hol}
 \begin{alltt}
->> listTheory.nub_def;
+##thm nub_def
 \end{alltt}
 \end{hol}
 
