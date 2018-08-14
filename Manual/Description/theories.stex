@@ -2529,20 +2529,14 @@ fundamental theorems about lists are proved and stored in the theory
 \index{axioms!non-primitive, of HOL logic@non-primitive, of \HOL{} logic!for lists}
 \index{induction theorems, in HOL logic@induction theorems, in \HOL{} logic!for lists}
 \index{characterizing theorem!for lists}
-\begin{verbatim}
-   list_Axiom
-     |- !x f. ?fn. (fn [] = x) /\ (!h t. fn (h::t) = f(fn t)h t)
-   list_INDUCT
-     |- !P. P [] /\ (!t. P t ==> (!h. P(h::t))) ==> (!l. P l)
-   list_CASES
-     |- !l. (l = []) \/ (?t h. l = h::t)
-   CONS_11
-     |- !h t h' t'. (h::t = h'::t') = (h = h') /\ (t = t')
-   NOT_NIL_CONS
-     |- !h t. ~([] = h::t)
-   NOT_CONS_NIL
-     |- !h t. ~(h::t = [])
-\end{verbatim}
+\begin{alltt}
+##thm list_Axiom
+##thm list_INDUCT
+##thm list_CASES
+##thm CONS_11
+##thm NOT_NIL_CONS
+##thm NOT_CONS_NIL
+\end{alltt}
 \end{hol}
 
 The theorem \ml{list\_Axiom} shown above is analogous to the primitive
@@ -2611,11 +2605,9 @@ Such an expression is translated to
 $\holtxt{list\_CASE}\ e_1\ e_2\ (\lambda h\; t.\ e_3)$ where the constant
 \holtxt{list\_CASE} is defined as follows:
 \begin{hol}
-\begin{verbatim}
-   list_case_def
-     |- (!v f. list_CASE [] v f = v) /\
-        (!v f a0 a1. list_CASE (a0::a1) v f = f a0 a1)
-\end{verbatim}
+\begin{alltt}
+##thm list_case_def
+\end{alltt}
 \end{hol}
 
 \paragraph{List membership}
@@ -2625,7 +2617,7 @@ Membership in a list, written using the \holtxt{MEM} syntax, is characterised as
 %
 \begin{hol}
 \begin{alltt}
->> listTheory.MEM;
+##thm MEM
 \end{alltt}
 \end{hol}
 
@@ -2633,21 +2625,21 @@ Membership in a list, written using the \holtxt{MEM} syntax, is characterised as
 \index{APPEND, the HOL constant@\ml{APPEND}, the \HOL{} constant}
 \index{concatenation, of lists!in HOL logic@in \HOL{} logic}
 \index{FLAT, the HOL constant@\ml{FLAT}, the \HOL{} constant}
+\index{SNOC, the HOL constant@\ml{SNOC}, the \HOL{} constant}
 
 Binary list concatenation ({\small\verb+APPEND+}) may also be denoted by
 the infix operator {\small\verb|++|}; thus the expression
 {\small\verb|L1 ++ L2|} is translated into {\small\verb+APPEND L1 L2+}.
 The concatenation of a list of lists into a list is achieved by
 {\small\verb+FLAT+}.
+The special case where a single element is appended to the end of a list (the ``opposite'' of \holtxt{CONS}, which adds elements to the front of a list), is implemented by \holtxt{SNOC}.
 %
 \begin{hol}
-\begin{verbatim}
-   APPEND
-     |- (!l. APPEND [] l = l) /\
-        (!l1 l2 h. APPEND (h::l1) l2 = h::APPEND l1 l2)
-   FLAT
-     |- (FLAT [] = []) /\ (!h t. FLAT(h::t) = h ++ FLAT t)
-\end{verbatim}
+\begin{alltt}
+##thm APPEND
+##thm FLAT
+##thm SNOC
+\end{alltt}
 \end{hol}
 
 \paragraph {Numbers and lists}
@@ -2663,23 +2655,35 @@ size of each list element. The alternate length definition
 Numbers can also be used to index into lists, extracting the element at the specified position. %
 \index{EL, the HOL constant@\holtxt{EL}, the \HOL{} constant}%
 \begin{hol}
-\begin{verbatim}
-   LENGTH
-     |- (LENGTH [] = 0) /\ (!h t. LENGTH (h::t) = SUC(LENGTH t))
-   LEN_DEF
-     |- (!n. LEN [] n = n) /\ !h t n. LEN (h::t) n = LEN t (n + 1)
-   list_size_def
-     |- (!f. list_size f [] = 0) /\
-        !f a0 a1. list_size f (a0::a1) = 1 + (f a0 + list_size f a1))
-   EL
-     |- (!l. EL 0 l = HD l) /\ (!l n. EL (SUC n) l = EL n (TL l))
-\end{verbatim}
+\begin{alltt}
+##thm LENGTH
+##thm LEN_DEF
+##thm list_size_def
+##thm EL
+\end{alltt}
 \end{hol}
 
 \noindent
 Note that the extraction of the $n$th element (\holtxt{EL}) of a list starts its indexing from 0.
 If the length of the list $\ell$ is less than or equal to $n$, the result of \holtxt{EL~$n$~$\ell$~} is unspecified.
-For more on the ``indexed'' treatment of lists, see Section~\ref{sec:indexed-lists} below.
+
+\index{GENLIST, the HOL constant@\ml{GENLIST}, the \HOL{} constant}
+The \holtxt{GENLIST} constant can be used to generate a list of a particular size, where the value of each element is independently determined by reference to a function that takes natural numbers (the set $\{0\dots n-1\}$) to element values:
+\begin{hol}
+\begin{alltt}
+##thm GENLIST
+##thm EL_GENLIST
+\end{alltt}
+\end{hol}
+\index{SNOC, the HOL constant@\ml{SNOC}, the \HOL{} constant}
+Working with \holtxt{SNOC}, and thus the definition above, can occasionally be awkward, so a characterisation of \holtxt{GENLIST}'s \holtxt{SUC} clause in terms of \holtxt{CONS} can also be useful:
+\begin{hol}
+\begin{alltt}
+##thm GENLIST_CONS
+\end{alltt}
+\end{hol}
+For more on the ``indexed'' treatment of lists, see
+Section~\ref{sec:indexed-lists} below.
 
 \paragraph {Mapping functions over lists}
 \index{MAP, the HOL constant@\ml{MAP}, the \HOL{} constant}
@@ -2702,24 +2706,6 @@ a single list (\holtxt{MAP}) or a function $f : \alpha \to \beta
 The behaviour of \holtxt{MAP2} in the cases when it is given lists of
 unequal lengths is unspecified.
 
-\paragraph{Generating lists from indices}
-\index{GENLIST, the HOL constant@\ml{GENLIST}, the \HOL{} constant}
-
-The \holtxt{GENLIST} constant can be used to generate a list of a particular size, where the value of each element is independently determined by reference to a function that takes natural numbers (the set $\{0\dots n\}$) to element values:
-\begin{hol}
-\begin{alltt}
-##thm GENLIST
-##thm EL_GENLIST
-\end{alltt}
-\end{hol}
-\index{SNOC, the HOL constant@\ml{SNOC}, the \HOL{} constant}
-The \holtxt{SNOC} constant adds an element to the end of a list.
-Working with it, and thus the definition above, can occasionally be awkward, so a characterisation of \holtxt{GENLIST}'s \holtxt{SUC} clause in terms of \holtxt{CONS} can also be useful:
-\begin{hol}
-\begin{alltt}
-##thm GENLIST_CONS
-\end{alltt}
-\end{hol}
 \paragraph {Predicates over lists}
 \index{FILTER, the HOL constant@\ml{FILTER}, the \HOL{} constant}
 \index{EVERY, the HOL constant@\ml{EVERY}, the \HOL{} constant}
