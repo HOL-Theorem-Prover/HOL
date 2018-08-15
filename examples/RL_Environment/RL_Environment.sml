@@ -13,12 +13,12 @@ datatype node = Node of {
 fun extract_success (Node{goal_state = RL_Goal_manager.SUCCESS th,...}) = SOME th
   | extract_success _ = NONE
 
-fun next_actions (Node{goal_state=RL_Goal_manager.ERROR msg,...}): action list = [Back]
-  | next_actions (Node{goal_state=RL_Goal_manager.SUCCESS thm,...}): action list = die("next actions: invariant failure (SUCCESS)")
-  | next_actions (Node{partial_action, goal_state, ...}): action list =
+fun next_actions (Node{goal_state=RL_Goal_manager.ERROR msg,...}, _): action list = [Back]
+  | next_actions (Node{goal_state=RL_Goal_manager.SUCCESS thm,...}, _): action list = die("next actions: invariant failure (SUCCESS)")
+  | next_actions (Node{partial_action, goal_state, ...}, excl): action list =
     case partial_action of
       NONE => top_level_actions
-    | SOME (Tactic t) => List.map Tactic (tactic_actions goal_state t) @ [Back]
+    | SOME (Tactic t) => List.map Tactic (tactic_actions goal_state t excl) @ [Back]
     | SOME _ => die("next_actions: invariant failure (partial non-tactic)")
 
 fun take_action (node as Node{partial_action, goal_state, parent}) action =
@@ -49,10 +49,10 @@ type observation = {
   , obs_actions : action list
   }
 
-fun observation (node as Node{partial_action, goal_state, ...}):observation =
+fun observation (node as Node{partial_action, goal_state, ...}, excl):observation =
   { obs_goals = get_observed_goal_state goal_state
   , obs_partial_action = partial_action
-  , obs_actions = (next_actions node)
+  , obs_actions = (next_actions (node, excl))
   } handle e => (* most likely term construction type error *)
   { obs_goals = get_observed_goal_state (RL_Goal_manager.ERROR (exnMessage e))
   , obs_partial_action = partial_action
@@ -85,31 +85,31 @@ fun get_number() =
         | SOME n => n)
   end
 
-fun from_node_to_observation(node) =
+fun from_node_to_observation(node, excl) =
   let
-    val obs:observation = observation(node)
+    val obs:observation = observation(node, excl)
     val obs_print:string = observation_to_string(obs)
     val () = TextIO.print(obs_print)
     val () = TextIO.print("\n")
   in
-    from_observation_to_action(node, obs)
+    from_observation_to_action(node, obs, excl)
   end
-and from_observation_to_action(node, obs) =
+and from_observation_to_action(node, obs, excl) =
   let
     val choice = get_number()  (*get human choice from stdin*)
     val action = List.nth(#obs_actions obs, choice)
   in
-    from_action_to_node(node, action)
+    from_action_to_node(node, action, excl)
   end
   handle Subscript => (TextIO.print("Your choice is out of range\n");
-                       from_observation_to_action(node, obs))
-and from_action_to_node(node, action) =
+                       from_observation_to_action(node, obs, excl))
+and from_action_to_node(node, action, excl) =
   let
     val () = TextIO.print("You picked: " ^ action_to_string(action) ^ "\n")
     val new_node = take_action node action
   in
     case extract_success new_node of
-      NONE => from_node_to_observation(new_node)
+      NONE => from_node_to_observation(new_node, excl)
     | SOME th => th
   end
 
@@ -117,39 +117,39 @@ fun initial_node g =
   Node { goal_state = initial_goal_state g,
          partial_action = NONE , parent = NONE}
 
-fun run gtm = from_node_to_observation (initial_node ([],gtm))
+fun run gtm excl = from_node_to_observation (initial_node ([],gtm), excl)
 
 local open RL_Socket in
 
-fun node2observation(node, sock) =
+fun node2observation(node, sock, excl) =
   let
-    val obs:observation = observation(node)
+    val obs:observation = observation(node, excl)
     val obs_print:string = observation_to_string(obs) ^ "\n"
     val sending = sendStr(sock, obs_print)
   in
-    observation2action(node, obs, sock)
+    observation2action(node, obs, sock, excl)
   end
-and observation2action(node, obs, sock) =
+and observation2action(node, obs, sock, excl) =
   let
     val choice = case Int.fromString(receive(sock)) of
                       NONE => raise Subscript
                     | SOME n => n
     val action = List.nth(#obs_actions obs, choice)
   in
-    action2node(node, action, sock)
+    action2node(node, action, sock, excl)
   end
   handle Subscript => (TextIO.print("Your choice is out of range\n");
-                       node2observation(node, sock))
-and action2node(node, action, sock) =
+                       node2observation(node, sock, excl))
+and action2node(node, action, sock, excl) =
   let
     val new_node = take_action node action
   in
     case extract_success new_node of
-      NONE => node2observation(new_node, sock)
+      NONE => node2observation(new_node, sock, excl)
     | SOME th => th
   end
 
-fun sock_run port gtm =
+fun sock_run port gtm excl =
   let
     val node = initial_node([], gtm)
     val sa = INetSock.any port;
@@ -161,7 +161,7 @@ fun sock_run port gtm =
         sock
       end
   in
-    node2observation(node, sock)
+    node2observation(node, sock, excl)
     before Socket.close sock
   end
 
@@ -169,6 +169,7 @@ end
 
 val arguments_help = String.concat[
   "  --goal=s      : parse string s as the initial goal term (default='?x. x > 0')\n",
+  "  --goal_name=s : parse string s as the initial goal term name (default='DEFAULT')\n",
   "  --socket=n    : communicate over socket (default) on port n (default=8012)\n",
   "  --interactive : communicate over stdin/out\n",
   "  --help        : print this message and exit\n"
@@ -195,15 +196,17 @@ fun random_goal_string() =
   let val randInt = Random.range(0, all_goals_length-1)(Random.newgen())
       val () = TextIO.print("pick random goal " ^ Int.toString(randInt) ^ " of "
       ^ Int.toString(all_goals_length) ^ " goals.\n")
-  in Parse.thm_to_string (#2 (List.nth (all_goals, randInt)))
+      val randpick = List.nth (all_goals, randInt)
+  in  ((#1 randpick), (Parse.thm_to_string (#2 randpick)))
   end
 
 fun main() =
 let
   val args = CommandLine.arguments()
-  val goal_string =
-    String.extract(Lib.first (String.isPrefix"--goal=") args, String.size("--goal="), NONE)
-      handle HOL_ERR _ => random_goal_string() (* "?x. x > 0" *)
+  val (goal_name, goal_string) =
+    (String.extract(Lib.first (String.isPrefix"--goal=") args, String.size("--goal="), NONE)
+    ,String.extract(Lib.first (String.isPrefix"--goal_name=") args, String.size("--goal_name="), NONE))
+      handle HOL_ERR _ => random_goal_string() (* ("DEFAULT", "?x. x > 0") *)
   val interactive = Lib.mem "--interactive" args
   val port_string =
     String.extract(Lib.first (String.isPrefix"--socket=") args, String.size("--socket="), NONE)
@@ -218,7 +221,8 @@ in
      usage (CommandLine.name())
     else
       let
-        val th = (if interactive then run else sock_run port) goal
+        (* [goal_name] is the list of goal names to exclude from DB.matchDB when proving *)
+        val th = (if interactive then run else sock_run port) goal [goal_name]
       in
         TextIO.print("You proved: " ^ boolLib.thm_to_string th ^ "\n")
       end

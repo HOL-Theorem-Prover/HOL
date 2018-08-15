@@ -477,7 +477,7 @@ fun search_theorem_by_term_list NONE _ _ = RL_Lib.die("search_theorem with incom
       in search_theorem_by_term_list tl (SOME thml') excl
       end
 
-fun generate_single_theorem_actions terms lso (k: named_thm partial_list option -> tactic) =
+fun generate_single_theorem_actions terms lso excl (k: named_thm partial_list option -> tactic) =
   case lso of
      NONE => (generate_term_list_actions terms NONE
               (fn tmlo => k(SOME(Lcons(FindThm tmlo, SOME Lnil)))))
@@ -487,7 +487,7 @@ fun generate_single_theorem_actions terms lso (k: named_thm partial_list option 
       | FindThm tmlo =>
           if is_list_complete tmlo
           then List.map (fn t => k(SOME(Lcons(FoundThm t, lso'))))
-               (search_theorem_by_term_list tmlo NONE [])
+               (search_theorem_by_term_list tmlo NONE excl)
           else generate_term_list_actions terms tmlo (fn tmlo' => k(SOME(Lcons(FindThm tmlo', lso'))))
 
 fun generate_theorem_actions terms lso excl (k: named_thm partial_list option -> tactic) =
@@ -552,16 +552,16 @@ fun generate_theorem_actions atoms lso (k: named_thm partial_list option -> tact
                        *)
 in
 
-fun tactic_actions goal_state t =
+fun tactic_actions goal_state t excl =
   let val terms = RL_Goal_manager.terms_of_current_goal goal_state
   in case t of
-       metis_tac lso => generate_theorem_actions terms lso [] metis_tac
-     | rw lso => generate_theorem_actions terms lso [] rw
-     | fs lso => generate_theorem_actions terms lso [] fs
-     | rfs lso => generate_theorem_actions terms lso [] rfs
-     | mp_tac lso => generate_single_theorem_actions terms lso mp_tac
+       metis_tac lso => generate_theorem_actions terms lso excl metis_tac
+     | rw lso => generate_theorem_actions terms lso excl rw
+     | fs lso => generate_theorem_actions terms lso excl fs
+     | rfs lso => generate_theorem_actions terms lso excl rfs
+     | mp_tac lso => generate_single_theorem_actions terms lso excl mp_tac
      | rpt NONE => List.map (rpt o SOME) top_level_tactics
-     | rpt (SOME t) => List.map (rpt o SOME) (tactic_actions goal_state t)
+     | rpt (SOME t) => List.map (rpt o SOME) (tactic_actions goal_state t excl)
      | qx_gen_tac tmo => generate_term_actions terms tmo qx_gen_tac
      | qx_genl_tac tmlo => generate_term_list_actions terms tmlo qx_genl_tac
      | Induct_on tmo => generate_term_actions terms tmo Induct_on
