@@ -353,18 +353,29 @@ fun type_comply _ Tany = true
 | type_comply (Abs (s, tm1, tm2)) (Thol ht) =
   *)
 
+fun is_fun ht =
+  let val (htl, _) = boolSyntax.strip_fun ht
+  in not (List.null htl)
+  end
+
 fun generate_term_actions terms tmo (k: partial_tree option -> tactic) =
   case tmo of (* if we need constraint, filter them here *)
      NONE => List.map (fn t => k(SOME t)) ((List.map Atom terms) @
              [Abs ("%%%", TypeOf NONE, NONE), Comb (NONE, NONE)])
    | SOME (Abs (s, TypeOf tm1, tm2)) =>
        if is_tree_complete tm1
-       then let val tm1' = Term.mk_var(s, Term.type_of(myterm_to_term tm1))
+       then let val tm1_type = Term.type_of(myterm_to_term tm1)
+                val tm1' = Term.mk_var(s, tm1_type)
                 val tm1'' = Term.variant (List.filter Term.is_var terms) tm1'
                 val new_terms = terms @ [tm1'']
                 val (name, _) = Term.dest_var tm1''
+                (* possible extra extensions of tm1  *)
+                val extra = if (tm2 = NONE) andalso (is_fun tm1_type)
+                            then [k(SOME(Comb (tm1, NONE)))]
+                            else []
+                val () = TextIO.print("extra is " ^ Int.toString(List.length extra))
             in generate_term_actions new_terms tm2
-               (fn tm2' => k(SOME(Abs(name, TypeOf tm1, tm2'))))
+               (fn tm2' => k(SOME(Abs(name, TypeOf tm1, tm2')))) @ extra
             end
        else generate_term_actions terms tm1
             (fn tm1' => k(SOME(Abs(s, TypeOf tm1', tm2))))
@@ -383,7 +394,13 @@ fun generate_term_list_actions terms tmlo (k: (partial_tree option) partial_list
    | SOME Lnil => RL_Lib.die("generate_term_list_actions reach complete list")
    | SOME (Lcons (tmo, tmlo')) =>
        if is_tree_complete tmo
-       then generate_term_list_actions terms tmlo' (fn t => k(SOME(Lcons(tmo,t))))
+       then let val tmo_type = Term.type_of(myterm_to_term tmo)
+                val extra = if (tmlo' = NONE) andalso (is_fun tmo_type)
+                            then [k(SOME(Lcons(SOME(Comb(tmo, NONE)), tmlo')))]
+                            else []
+            in generate_term_list_actions terms tmlo' (fn t => k(SOME(Lcons(tmo, t))))
+               @ extra
+            end
        else generate_term_actions terms tmo (fn t => k(SOME(Lcons(t,tmlo'))))
 
 fun is_list_complete NONE = false
