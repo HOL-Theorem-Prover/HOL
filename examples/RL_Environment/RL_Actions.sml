@@ -55,6 +55,22 @@ fun is_tree_complete (SOME (Comb (t1, t2))) =
   | is_tree_complete (SOME (Atom a)) = true
   | is_tree_complete NONE = false
 
+(* NOTE: this function may throw HOL_ERR for ill-typed terms,
+  *      the exception is captured by observation() function in
+  *      RL_Experiment.sml to show the error message *)
+fun myterm_to_term (NONE) = RL_Lib.die("myterm_to_term on incomplete term")
+  | myterm_to_term (SOME (Atom t)) = t
+  | myterm_to_term (SOME (Comb (t1, t2))) =
+      let val t1' = myterm_to_term t1
+          val t2' = myterm_to_term t2
+      in Term.mk_comb (t1', t2')
+      end
+  | myterm_to_term (SOME (Abs (s, TypeOf t1, t2))) =
+      let val t1' = myterm_to_term t1
+          val t2' = myterm_to_term t2
+      in Term.mk_abs ((Term.mk_var (s, (Term.type_of t1'))), t2')
+      end
+
 (*
 fun get_complete_tree (SOME (Comb (t1, t2))) =
        let val t1' = get_complete_tree t1
@@ -125,18 +141,16 @@ fun thm_of(FindThm _) = RL_Lib.die("thm_of unknown theorem")
 
 val get_complete_named_thm_list = Option.map (List.map thm_of) o get_complete_list
 
+(* NOTE: alternatively, use tactics that takes a term directly, not a term quotation *)
 datatype tactic =
     gen_tac
+  | qx_gen_tac of (partial_tree option)
   (*
-  qx_gen_tac tmq
-  qx_genl_tac [tmq]
+  * qx_genl_tac [tmq]
   *)
 
   | Induct
-  (*
-  Induct_on tmq
-  *)
-
+  | Induct_on of (partial_tree option)
   | metis_tac of (named_thm partial_list option)
   | rw of (named_thm partial_list option)
   | fs of (named_thm partial_list option)
@@ -164,14 +178,11 @@ datatype tactic =
   *)
 
   | Cases
-  (*
-  Cases_on tmq
-  *)
-
+  | Cases_on of (partial_tree option)
   | mp_tac of (named_thm partial_list option)
-  (*
-  qexists_tac tmq
+  | qexists_tac of (partial_tree option)
 
+  (*
   assume_tac thm
   strip_assume_tac thm
 
@@ -213,6 +224,11 @@ datatype tactic =
   kall_tac thm (does nothing)
   *)
 
+fun option_term_tactic f tmo =
+  if is_tree_complete tmo
+  then SOME(f [(HOLPP.ANTIQUOTE (myterm_to_term tmo))])
+  else NONE
+
 fun get_complete_tactic t =
   case t of
     metis_tac lso =>
@@ -226,7 +242,9 @@ fun get_complete_tactic t =
   | mp_tac lso =>
       Option.map (boolLib.mp_tac o List.hd) (Option.mapPartial get_complete_named_thm_list lso)
   | gen_tac => SOME boolLib.gen_tac
+  | qx_gen_tac tmo => option_term_tactic bossLib.qx_gen_tac tmo
   | Induct => SOME bossLib.Induct
+  | Induct_on tmo => option_term_tactic bossLib.Induct_on tmo
   | decide_tac => SOME bossLib.decide_tac
   | pairarg_tac => SOME bossLib.pairarg_tac
   | var_eq_tac => SOME BasicProvers.var_eq_tac
@@ -237,11 +255,15 @@ fun get_complete_tactic t =
   | strip_tac => SOME boolLib.strip_tac
   | CCONTR_TAC => SOME boolLib.CCONTR_TAC
   | Cases => SOME bossLib.Cases
+  | Cases_on tmo => option_term_tactic bossLib.Cases_on tmo
+  | qexists_tac tmo => option_term_tactic bossLib.qexists_tac tmo
 
 fun tactic_to_string t =
     case t of
       gen_tac => "gen_tac"
+    | qx_gen_tac tmo => "qx_gen_tac " ^ (partial_tree_to_string Parse.term_to_string tmo)
     | Induct  => "induct"
+    | Induct_on tmo => "induct_on " ^ (partial_tree_to_string Parse.term_to_string tmo)
     | metis_tac ntlo => "metis_tac " ^ partial_list_to_string name_of ntlo
     | rw ntlo => "rw " ^ partial_list_to_string name_of ntlo
     | fs ntlo => "fs " ^ partial_list_to_string name_of ntlo
@@ -258,7 +280,9 @@ fun tactic_to_string t =
     | strip_tac => "strip_tac"
     | CCONTR_TAC => "CCONTR_TAC"
     | Cases => "Cases"
+    | Cases_on tmo => "Cases_on " ^ (partial_tree_to_string Parse.term_to_string tmo)
     | mp_tac ntlo => "mp_tac " ^ partial_list_to_string name_of ntlo
+    | qexists_tac tmo => "qexists_tac " ^ (partial_tree_to_string Parse.term_to_string tmo)
 
 datatype action =
     Tactic of tactic
@@ -271,7 +295,9 @@ fun action_to_string(Back) = "Back"
 
 val top_level_tactics =
   [gen_tac
+  ,qx_gen_tac NONE
   ,Induct
+  ,Induct_on NONE
   ,metis_tac NONE
   ,rw NONE
   ,fs NONE
@@ -284,7 +310,9 @@ val top_level_tactics =
   ,strip_tac
   ,CCONTR_TAC
   ,Cases
-  ,mp_tac NONE]
+  ,Cases_on NONE
+  ,mp_tac NONE
+  ,qexists_tac NONE]
 
 val top_level_actions =
   Back::Rotate::(List.map Tactic top_level_tactics)
@@ -325,22 +353,6 @@ in
   *)
 
 (* start fei addition *)
-(* NOTE: this function may throw HOL_ERR for ill-typed terms,
-  *      the exception is captured by observation() function in
-  *      RL_Experiment.sml to show the error message *)
-fun myterm_to_term (NONE) = RL_Lib.die("myterm_to_term on incomplete term")
-  | myterm_to_term (SOME (Atom t)) = t
-  | myterm_to_term (SOME (Comb (t1, t2))) =
-      let val t1' = myterm_to_term t1
-          val t2' = myterm_to_term t2
-      in Term.mk_comb (t1', t2')
-      end
-  | myterm_to_term (SOME (Abs (s, TypeOf t1, t2))) =
-      let val t1' = myterm_to_term t1
-          val t2' = myterm_to_term t2
-      in Term.mk_abs ((Term.mk_var (s, (Term.type_of t1'))), t2')
-      end
-
 (*
 datatype Constraint = Tany
                     | Tarrow of int
@@ -542,6 +554,10 @@ fun tactic_actions goal_state t =
      | mp_tac lso => generate_single_theorem_actions terms lso mp_tac
      | rpt NONE => List.map (rpt o SOME) top_level_tactics
      | rpt (SOME t) => List.map (rpt o SOME) (tactic_actions goal_state t)
+     | qx_gen_tac tmo => generate_term_actions terms tmo qx_gen_tac
+     | Induct_on tmo => generate_term_actions terms tmo Induct_on
+     | Cases_on tmo => generate_term_actions terms tmo Cases_on
+     | qexists_tac tmo => generate_term_actions terms tmo qexists_tac
      | _ => RL_Lib.die("tactic_actions: invariant failure")
   end
 
