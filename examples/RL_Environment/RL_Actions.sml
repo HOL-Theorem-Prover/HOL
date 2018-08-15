@@ -18,6 +18,12 @@ fun get_complete_list Lnil = SOME []
       Option.map (Lib.cons x)
         (Option.mapPartial get_complete_list lso)
 
+fun is_list_complete NONE = false
+  | is_list_complete (SOME l) =
+      case (get_complete_list l) of
+           NONE => false
+         | (SOME _) => true
+
 fun get_partial_list NONE = []
   | get_partial_list (SOME (Lcons (x, pl))) = x::(get_partial_list pl)
   | get_partial_list _ = RL_Lib.die("get_partial_list on completed list")
@@ -27,7 +33,7 @@ fun partial_list_to_string _ (NONE) = "{?}"
     case get_complete_list pl of
       NONE => String.concat["[", String.concatWith ", " (List.map f (get_partial_list (SOME pl))), ", {?}"]
     | SOME ls => String.concat["[", String.concatWith ", " (List.map f ls), "]"]
-
+    
 (* begin fei addition *)
 datatype term_type = TypeOf of partial_tree option
 and partial_tree =
@@ -145,9 +151,7 @@ val get_complete_named_thm_list = Option.map (List.map thm_of) o get_complete_li
 datatype tactic =
     gen_tac
   | qx_gen_tac of (partial_tree option)
-  (*
-  * qx_genl_tac [tmq]
-  *)
+  | qx_genl_tac of (partial_tree option partial_list option)
 
   | Induct
   | Induct_on of (partial_tree option)
@@ -224,10 +228,17 @@ datatype tactic =
   kall_tac thm (does nothing)
   *)
 
-fun option_term_tactic f tmo =
-  if is_tree_complete tmo
-  then SOME(f [(HOLPP.ANTIQUOTE (myterm_to_term tmo))])
-  else NONE
+local
+  fun get_tmq tmo = [(HOLPP.ANTIQUOTE (myterm_to_term tmo))]
+in
+  fun option_term_tactic f tmo =
+    if is_tree_complete tmo
+    then SOME(f (get_tmq tmo))
+    else NONE
+
+  fun option_term_list_tactic f tmlo =
+    Option.map (f o (List.map get_tmq)) (Option.mapPartial get_complete_list tmlo)
+end
 
 fun get_complete_tactic t =
   case t of
@@ -243,6 +254,7 @@ fun get_complete_tactic t =
       Option.map (boolLib.mp_tac o List.hd) (Option.mapPartial get_complete_named_thm_list lso)
   | gen_tac => SOME boolLib.gen_tac
   | qx_gen_tac tmo => option_term_tactic bossLib.qx_gen_tac tmo
+  | qx_genl_tac tmlo => option_term_list_tactic bossLib.qx_genl_tac tmlo
   | Induct => SOME bossLib.Induct
   | Induct_on tmo => option_term_tactic bossLib.Induct_on tmo
   | decide_tac => SOME bossLib.decide_tac
@@ -262,6 +274,8 @@ fun tactic_to_string t =
     case t of
       gen_tac => "gen_tac"
     | qx_gen_tac tmo => "qx_gen_tac " ^ (partial_tree_to_string Parse.term_to_string tmo)
+    | qx_genl_tac tmlo => "qx_genl_tac " ^ (partial_list_to_string
+                          (partial_tree_to_string Parse.term_to_string) tmlo)
     | Induct  => "induct"
     | Induct_on tmo => "induct_on " ^ (partial_tree_to_string Parse.term_to_string tmo)
     | metis_tac ntlo => "metis_tac " ^ partial_list_to_string name_of ntlo
@@ -296,6 +310,7 @@ fun action_to_string(Back) = "Back"
 val top_level_tactics =
   [gen_tac
   ,qx_gen_tac NONE
+  ,qx_genl_tac NONE
   ,Induct
   ,Induct_on NONE
   ,metis_tac NONE
@@ -414,12 +429,6 @@ fun generate_term_list_actions terms tmlo (k: (partial_tree option) partial_list
                else res
             end
        else generate_term_actions terms tmo (fn t => k(SOME(Lcons(t,tmlo'))))
-
-fun is_list_complete NONE = false
-  | is_list_complete (SOME l) =
-      case (get_complete_list l) of
-           NONE => false
-         | (SOME _) => true
 
 (* need filtering non-Thm types?
 fun search_theorem_by_term NONE = RL_Lib.die("search_theorem with incomplete term")
@@ -555,6 +564,7 @@ fun tactic_actions goal_state t =
      | rpt NONE => List.map (rpt o SOME) top_level_tactics
      | rpt (SOME t) => List.map (rpt o SOME) (tactic_actions goal_state t)
      | qx_gen_tac tmo => generate_term_actions terms tmo qx_gen_tac
+     | qx_genl_tac tmlo => generate_term_list_actions terms tmlo qx_genl_tac
      | Induct_on tmo => generate_term_actions terms tmo Induct_on
      | Cases_on tmo => generate_term_actions terms tmo Cases_on
      | qexists_tac tmo => generate_term_actions terms tmo qexists_tac
