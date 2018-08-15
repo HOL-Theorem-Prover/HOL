@@ -33,7 +33,7 @@ fun partial_list_to_string _ (NONE) = "{?}"
     case get_complete_list pl of
       NONE => String.concat["[", String.concatWith ", " (List.map f (get_partial_list (SOME pl))), ", {?}"]
     | SOME ls => String.concat["[", String.concatWith ", " (List.map f ls), "]"]
-    
+
 (* begin fei addition *)
 datatype term_type = TypeOf of partial_tree option
 and partial_tree =
@@ -42,7 +42,6 @@ and partial_tree =
   | Atom of Abbrev.term
 
 (* exception Add_To_Complete_Tree
-
 fun add_term t (SOME (Comb (t1, t2))) = (SOME (Comb ((add_term t t1), t2))
                                         handle Add_To_Complete_Tree
                                         => SOME (Comb (t1, (add_term t t2))))

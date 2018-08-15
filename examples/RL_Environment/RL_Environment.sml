@@ -53,7 +53,7 @@ fun observation (node as Node{partial_action, goal_state, ...}):observation =
   { obs_goals = get_observed_goal_state goal_state
   , obs_partial_action = partial_action
   , obs_actions = (next_actions node)
-  } handle e =>
+  } handle e => (* most likely term construction type error *)
   { obs_goals = get_observed_goal_state (RL_Goal_manager.ERROR (exnMessage e))
   , obs_partial_action = partial_action
   , obs_actions = [Back]
@@ -180,12 +180,30 @@ fun usage name =
    TextIO.output(TextIO.stdOut, arguments_help);
    OS.Process.exit OS.Process.success)
 
+val all_goals =
+  let val () = tacticToe.load_sigobj()
+      val alls = DB.listDB()
+      val phil = fn (_,(_, c)) => case c of Thm => true | _ => false
+      val mapper = fn ((s1,s2),(th,_)) => (s1 ^ "." ^ s2, th)
+      val all_g = List.map mapper (List.filter phil alls)
+  in all_g
+  end
+
+val all_goals_length = List.length(all_goals)
+
+fun random_goal_string() =
+  let val randInt = Random.range(0, all_goals_length-1)(Random.newgen())
+      val () = TextIO.print("pick random goal " ^ Int.toString(randInt) ^ " of "
+      ^ Int.toString(all_goals_length) ^ " goals.\n")
+  in Parse.thm_to_string (#2 (List.nth (all_goals, randInt)))
+  end
+
 fun main() =
 let
   val args = CommandLine.arguments()
   val goal_string =
     String.extract(Lib.first (String.isPrefix"--goal=") args, String.size("--goal="), NONE)
-      handle HOL_ERR _ => "?x. x > 0"
+      handle HOL_ERR _ => random_goal_string() (* "?x. x > 0" *)
   val interactive = Lib.mem "--interactive" args
   val port_string =
     String.extract(Lib.first (String.isPrefix"--socket=") args, String.size("--socket="), NONE)
