@@ -480,15 +480,17 @@ fun search_theorem_by_term_list NONE _ _ = RL_Lib.die("search_theorem with incom
 fun generate_single_theorem_actions terms lso excl (k: named_thm partial_list option -> tactic) =
   case lso of
      NONE => (generate_term_list_actions terms NONE
-              (fn tmlo => k(SOME(Lcons(FindThm tmlo, SOME Lnil)))))
+              (fn tmlo => k(SOME(Lcons(FindThm tmlo, NONE)))))
    | SOME Lnil => RL_Lib.die("tactic_actions for complete action")
    | SOME (Lcons (head, lso')) => case head of
-        FoundThm _ => RL_Lib.die("tactic_actions for complete action")
+      (*  FoundThm _ => RL_Lib.die("tactic_actions for complete action") *)
+        FoundThm _ => [k(SOME(Lcons(head,SOME Lnil)))]
       | FindThm tmlo =>
           if is_list_complete tmlo
           then List.map (fn t => k(SOME(Lcons(FoundThm t, lso'))))
                (search_theorem_by_term_list tmlo NONE excl)
-          else generate_term_list_actions terms tmlo (fn tmlo' => k(SOME(Lcons(FindThm tmlo', lso'))))
+          else generate_term_list_actions terms tmlo
+               (fn tmlo' => k(SOME(Lcons(FindThm tmlo', lso'))))
 
 fun generate_theorem_actions terms lso excl (k: named_thm partial_list option -> tactic) =
   case lso of

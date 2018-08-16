@@ -42,6 +42,12 @@ fun take_action (node as Node{partial_action, goal_state, parent}) action =
                      {partial_action = NONE,
                       goal_state = apply_tactic tactic goal_state,
                       parent = SOME node})
+                      handle e => (* most likely term construction type error *)
+                      Node
+                      {partial_action = SOME action,
+                       goal_state = RL_Goal_manager.ERROR (exnMessage e),
+                       parent = SOME node
+                      }
 
 type observation = {
     obs_goals : observed_goal_state
@@ -117,7 +123,7 @@ fun initial_node g =
   Node { goal_state = initial_goal_state g,
          partial_action = NONE , parent = NONE}
 
-fun run gtm excl = from_node_to_observation (initial_node ([],gtm), excl)
+fun run gtm excl = from_node_to_observation (initial_node gtm, excl)
 
 local open RL_Socket in
 
@@ -151,7 +157,7 @@ and action2node(node, action, sock, excl) =
 
 fun sock_run port gtm excl =
   let
-    val node = initial_node([], gtm)
+    val node = initial_node gtm
     val sa = INetSock.any port;
     val sock: Socket.active INetSock.stream_sock =
       let
@@ -168,11 +174,12 @@ fun sock_run port gtm excl =
 end
 
 val arguments_help = String.concat[
-  "  --goal=s      : parse string s as the initial goal term (default='?x. x > 0')\n",
-  "  --goal_name=s : parse string s as the initial goal term name (default='DEFAULT')\n",
-  "  --socket=n    : communicate over socket (default) on port n (default=8012)\n",
-  "  --interactive : communicate over stdin/out\n",
-  "  --help        : print this message and exit\n"
+  "  --goal=s              : parse string s as the initial goal term (default='?x. x > 0')\n",
+  "  --goal_name=s         : parse string s as the initial goal term name (default='DEFAULT')\n",
+  "  --goal_from_theorem=s : parse string s as the theoryName.theoremName (default=random_selection)\n",
+  "  --socket=n            : communicate over socket (default) on port n (default=8012)\n",
+  "  --interactive         : communicate over stdin/out\n",
+  "  --help                : print this message and exit\n"
 ]
 
 fun usage name =
@@ -192,27 +199,41 @@ val all_goals =
 
 val all_goals_length = List.length(all_goals)
 
-fun random_goal_string() =
-  let val randInt = Random.range(0, all_goals_length-1)(Random.newgen())
-      val () = TextIO.print("pick random goal " ^ Int.toString(randInt) ^ " of "
-      ^ Int.toString(all_goals_length) ^ " goals.\n")
-      val randpick = List.nth (all_goals, randInt)
-  in  ((#1 randpick), (Parse.thm_to_string (#2 randpick)))
-  end
+fun select_goal_from_thm NONE =
+      let val randInt = Random.range(0, all_goals_length-1)(Random.newgen())
+          val () = TextIO.print("pick random goal " ^ Int.toString(randInt) ^ " of "
+          ^ Int.toString(all_goals_length) ^ " goals.\n")
+      in List.nth (all_goals, randInt)
+      end
+  | select_goal_from_thm (SOME name) =
+      let val dd = fn c => c = #"."
+          val thy::thm::_ = String.tokens dd name
+      in (name, (DB.fetch thy thm))
+      end
+      handle Bind => die("goal_from_theorem name should be thy.thm, not " ^ name)
 
 fun main() =
 let
   val args = CommandLine.arguments()
-  val (goal_name, goal_string) =
-    (String.extract(Lib.first (String.isPrefix"--goal=") args, String.size("--goal="), NONE)
-    ,String.extract(Lib.first (String.isPrefix"--goal_name=") args, String.size("--goal_name="), NONE))
-      handle HOL_ERR _ => random_goal_string() (* ("DEFAULT", "?x. x > 0") *)
+  val (goal_name, goal) =
+    if (Lib.mem "--goal" args) (* goal is provided as string *)
+    then let val goal_s = (String.extract(Lib.first (String.isPrefix"--goal=") args, String.size("--goal="), NONE)
+                           handle HOL_ERR _ => "?x. x > 0")
+             val goal_n = (String.extract(Lib.first (String.isPrefix"--goal_name=") args, String.size("--goal_name="), NONE)
+                           handle HOL_ERR _ => "DEFAULT")
+         in (goal_n, ([], Parse.Term[QUOTE goal_s]))
+         end
+    else (* select a goal from theorem lists *)
+         let val thm_no = SOME(String.extract(Lib.first (String.isPrefix"--goal_from_theorem=") args,
+                               String.size("--goal_from_theorem="), NONE))
+                          handle HOL_ERR _ => NONE
+             val find_thm = select_goal_from_thm thm_no
+         in (#1 find_thm, Thm.dest_thm (#2 find_thm))
+         end
   val interactive = Lib.mem "--interactive" args
   val port_string =
     String.extract(Lib.first (String.isPrefix"--socket=") args, String.size("--socket="), NONE)
       handle HOL_ERR _ => "8012"
-  val goal = Parse.Term[QUOTE goal_string]
-    handle HOL_ERR _ => die ("Unable to parse goal term: "^goal_string)
   val port = Option.valOf(Int.fromString port_string)
     handle Option => die ("Unable to parse port: "^port_string)
 in
