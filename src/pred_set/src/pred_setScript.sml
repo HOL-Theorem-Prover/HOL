@@ -22,7 +22,12 @@ open HolKernel Parse boolLib Prim_rec pairLib numLib
 val AP = numLib.ARITH_PROVE
 val ARITH_ss = numSimps.ARITH_ss
 val arith_ss = bool_ss ++ ARITH_ss
+val DECIDE = numLib.ARITH_PROVE
+
+(* don't eta-contract these; that will force tactics to use one fixed version
+   of srw_ss() *)
 fun fs thl = FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) thl
+fun simp thl = ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) thl
 
 fun store_thm(r as(n,t,tac)) = let
   val th = boolLib.store_thm r
@@ -3982,19 +3987,19 @@ val IN_BIGINTER_IMAGE = store_thm (* from util_prob *)
    >> PROVE_TAC []);
 
 val BIGINTER_INSERT = Q.store_thm
-("BIGINTER_INSERT",
+("BIGINTER_INSERT[simp]",
  `!P B. BIGINTER (P INSERT B) = P INTER BIGINTER B`,
   REPEAT GEN_TAC THEN CONV_TAC (REWR_CONV EXTENSION) THEN
   SIMP_TAC bool_ss [IN_BIGINTER, IN_INSERT, IN_INTER, DISJ_IMP_THM,
                     FORALL_AND_THM]);
 
 val BIGINTER_EMPTY = Q.store_thm
-("BIGINTER_EMPTY",
+("BIGINTER_EMPTY[simp]",
  `BIGINTER {} = UNIV`,
   REWRITE_TAC [EXTENSION, IN_BIGINTER, NOT_IN_EMPTY, IN_UNIV]);
 
 val BIGINTER_INTER = Q.store_thm
-("BIGINTER_INTER",
+("BIGINTER_INTER[simp]",
  `!P Q. BIGINTER {P; Q} = P INTER Q`,
   REWRITE_TAC [BIGINTER_EMPTY, BIGINTER_INSERT, INTER_UNIV]);
 
@@ -4020,7 +4025,8 @@ val DISJOINT_BIGINTER = Q.store_thm
 val BIGINTER_UNION = Q.store_thm
 ("BIGINTER_UNION",
  `!s1 s2. BIGINTER (s1 UNION s2) = BIGINTER s1 INTER BIGINTER s2`,
- SIMP_TAC bool_ss [IN_BIGINTER, IN_UNION, IN_INTER, EXTENSION] THEN PROVE_TAC []);
+ SIMP_TAC bool_ss [IN_BIGINTER, IN_UNION, IN_INTER, EXTENSION] THEN
+ PROVE_TAC []);
 
 val BIGINTER_SUBSET = store_thm (* from util_prob *)
   ("BIGINTER_SUBSET", ``!sp s. (!t. t IN s ==> t SUBSET sp)  /\ (~(s = {}))
@@ -4039,14 +4045,21 @@ val DIFF_BIGINTER1 = store_thm
   >> RW_TAC std_ss []
   >> METIS_TAC []);
 
-val DIFF_BIGINTER = store_thm (* from util_prob *)
-   ("DIFF_BIGINTER", ``!sp s. (!t. t IN s ==> t SUBSET sp)  /\ (~(s = {}))
-         ==> ( BIGINTER s = sp DIFF (BIGUNION (IMAGE (\u. sp DIFF u) s)) )``,
+val DIFF_BIGINTER = store_thm( (* from util_prob *)
+  "DIFF_BIGINTER",
+  ``!sp s. (!t. t IN s ==> t SUBSET sp) /\ s <> {} ==>
+           (BIGINTER s = sp DIFF (BIGUNION (IMAGE (\u. sp DIFF u) s)))``,
   RW_TAC std_ss []
   >> `(BIGINTER s SUBSET sp)` by RW_TAC std_ss [BIGINTER_SUBSET]
   >> ASSUME_TAC (Q.SPECL [`sp`,`s`] DIFF_BIGINTER1)
-  >> `sp DIFF (sp DIFF (BIGINTER s)) = (BIGINTER s)` by RW_TAC std_ss [DIFF_DIFF_SUBSET]
+  >> `sp DIFF (sp DIFF (BIGINTER s)) = (BIGINTER s)`
+       by RW_TAC std_ss [DIFF_DIFF_SUBSET]
   >> METIS_TAC []);
+
+val FINITE_BIGINTER = Q.store_thm(
+  "FINITE_BIGINTER",
+  ‘(?s. s IN P /\ FINITE s) ==> FINITE (BIGINTER P)’,
+  simp[PULL_EXISTS, Once DECOMPOSITION, INTER_FINITE]);
 
 (* ====================================================================== *)
 (* Cross product of sets                                                  *)
@@ -5965,23 +5978,13 @@ val DELETE_SUBSET_INSERT = store_thm ("DELETE_SUBSET_INSERT",
 
 
 val IN_INSERT_EXPAND = store_thm ("IN_INSERT_EXPAND",
-``!x y P. x IN y INSERT P =
-  (x = y) \/ (~(x = y) /\ x IN P)``,
-
-SIMP_TAC bool_ss [IN_INSERT] THEN
-METIS_TAC[]);
-
-
+  ``!x y P. x IN y INSERT P = (x = y) \/ x <> y /\ x IN P``,
+  SIMP_TAC bool_ss [IN_INSERT] THEN
+  METIS_TAC[]);
 
 val FINITE_INTER = store_thm ("FINITE_INTER",
-``!s1 s2. ((FINITE s1) \/ (FINITE s2)) ==>
-  FINITE (s1 INTER s2)``,
-
-REPEAT GEN_TAC THEN
-`((s1 INTER s2) SUBSET s1) /\ ((s1 INTER s2) SUBSET s2)` by (
-   SIMP_TAC bool_ss [SUBSET_DEF, IN_INTER]
-) THEN
-METIS_TAC[SUBSET_FINITE]);
+  ``!s1 s2. ((FINITE s1) \/ (FINITE s2)) ==> FINITE (s1 INTER s2)``,
+  METIS_TAC[INTER_COMM, INTER_FINITE]);
 (* END misc thms *)
 
 (*---------------------------------------------------------------------------*)
@@ -6160,12 +6163,45 @@ val IMAGE_PREIMAGE = store_thm (* from miller *)
 
 (* end PREIMAGE lemmas *)
 
+val is_measure_maximal_def = new_definition("is_measure_maximal_def",
+  “is_measure_maximal m s x <=> x IN s /\ !y. y IN s ==> m y <= m x”
+);
+
+val FINITE_is_measure_maximal = Q.store_thm(
+  "FINITE_is_measure_maximal",
+  ‘!s. FINITE s /\ s <> {} ==> ?x. is_measure_maximal m s x’,
+  ‘!s. FINITE s ==> s <> {} ==> ?x. is_measure_maximal m s x’
+    suffices_by METIS_TAC[] >>
+  Induct_on ‘FINITE’ >> simp[] >> rpt strip_tac >> Cases_on ‘s = {}’ >> simp[]
+  >- (Q.RENAME_TAC [‘{e}’] >> Q.EXISTS_TAC ‘e’ >>
+      simp[is_measure_maximal_def]) >>
+  fs[is_measure_maximal_def] >> Q.RENAME_TAC [‘m _ <= m e0’, ‘e NOTIN s’] >>
+  Cases_on ‘m e0 <= m e’
+  >- (Q.EXISTS_TAC ‘e’ >> SRW_TAC[][] >> simp[] >>
+      METIS_TAC[arithmeticTheory.LESS_EQ_TRANS]) >>
+  Q.EXISTS_TAC ‘e0’ >> simp[DISJ_IMP_THM]);
+
+val is_measure_maximal_SING = Q.store_thm(
+  "is_measure_maximal_SING[simp]",
+  ‘is_measure_maximal m {x} y <=> (y = x)’,
+  simp[is_measure_maximal_def, EQ_IMP_THM]);
+
+val is_measure_maximal_INSERT = Q.store_thm(
+  "is_measure_maximal_INSERT",
+  ‘!x s m e y.
+     x IN s /\ m e < m x ==>
+     (is_measure_maximal m (e INSERT s) y <=> is_measure_maximal m s y)’,
+  simp[is_measure_maximal_def] >> rpt strip_tac >> eq_tac >> SRW_TAC[][]
+  >- METIS_TAC[DECIDE “(x <= y /\ y < z ==> x < z) /\ ~(a < a)”]
+  >- METIS_TAC[DECIDE “x < y /\ y <= z ==> x <= z”]
+  >- METIS_TAC[]);
+
 val _ = export_rewrites
     [
      (* BIGUNION/BIGINTER theorems *)
      "IN_BIGINTER", "DISJOINT_BIGUNION",
      "BIGUNION_UNION", "BIGINTER_UNION",
-     "DISJOINT_BIGUNION", "BIGINTER_EMPTY", "BIGINTER_INSERT",
+     "DISJOINT_BIGUNION",
      (* cardinality theorems *)
      "CARD_DIFF", "CARD_EQ_0",
      "CARD_INTER_LESS_EQ", "CARD_DELETE", "CARD_DIFF",
