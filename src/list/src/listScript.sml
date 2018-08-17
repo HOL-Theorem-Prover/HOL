@@ -2222,6 +2222,16 @@ val isPREFIX_THM = store_thm(
   SRW_TAC [] [])
 val _ = export_rewrites ["isPREFIX_THM"]
 
+val isPREFIX_NILR = Q.store_thm(
+  "isPREFIX_NILR[simp]",
+  ‘x <<= [] <=> (x = [])’,
+  Cases_on ‘x’ >> simp[]);
+
+val isPREFIX_CONSR = Q.store_thm(
+  "isPREFIX_CONSR",
+  ‘x <<= y::ys <=> (x = []) \/ ?xs. (x = y::xs) /\ xs <<= ys’,
+  Cases_on ‘x’ >> simp[]);
+
 (* ----------------------------------------------------------------------
     SNOC
    ---------------------------------------------------------------------- *)
