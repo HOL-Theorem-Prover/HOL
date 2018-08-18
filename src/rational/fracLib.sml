@@ -17,6 +17,8 @@ open
         intExtensionTheory intExtensionLib
         jbUtils fracTheory fracUtils fracSyntax;
 
+val ERR = mk_HOL_ERR "fracLib"
+
 (*==========================================================================
  *  equivalence of fractions
  *==========================================================================*)

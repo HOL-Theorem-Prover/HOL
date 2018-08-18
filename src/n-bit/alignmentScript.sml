@@ -8,6 +8,8 @@ open wordsLib
 
 val () = new_theory "alignment";
 
+val ERR = mk_HOL_ERR "alignmentScript"
+
 (* -------------------------------------------------------------------------
    Constant definitions
    ------------------------------------------------------------------------- *)

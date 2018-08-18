@@ -14,6 +14,8 @@ struct
 
 open HolKernel Parse boolLib
 
+val ERR = mk_HOL_ERR "wlogLib"
+
 fun LIST_SPLICE l =
   case l of
   [] => raise ERR "LIST_SPLICE" "Empty list"

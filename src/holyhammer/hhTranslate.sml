@@ -11,6 +11,8 @@ struct
 
 open HolKernel boolLib tttTools
 
+val ERR = mk_HOL_ERR "hhTranslate"
+
 (*----------------------------------------------------------------------------
    Debug functions. Do not use when calling holyhammer in parallel.
   ----------------------------------------------------------------------------*)
