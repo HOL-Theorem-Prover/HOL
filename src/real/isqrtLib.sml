@@ -4,6 +4,8 @@ struct
 open HolKernel Parse boolLib
 open transcSyntax
 
+val ERR = mk_HOL_ERR "isqrtLib"
+
 local
    fun isqrt_square i =
       let

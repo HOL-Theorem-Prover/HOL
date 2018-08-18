@@ -29,6 +29,8 @@ val arith_ss = old_arith_ss
 
 val _ = new_theory "rat";
 
+val ERR = mk_HOL_ERR "ratScript"
+
 (*--------------------------------------------------------------------------*
  *  rat_equiv: definition and proof of equivalence relation
  *--------------------------------------------------------------------------*)

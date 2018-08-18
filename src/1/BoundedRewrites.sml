@@ -5,7 +5,7 @@ struct
   datatype control = UNBOUNDED | BOUNDED of int ref
   type controlled_thm = thm * control
 
-
+  val ERR = mk_HOL_ERR "BoundedRewrites"
 
   fun MK_BOUNDED th n =
       if n<0 then raise ERR "MK_BOUNDED" "negative bound"

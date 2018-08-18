@@ -9,6 +9,8 @@ val _ = set_trace "Unicode" 0
 val _ = set_trace "print blast counterexamples" 0
 val _ = set_trace "bit blast" 0
 
+val ERR = mk_HOL_ERR "selftest"
+
 val prs = StringCvt.padRight #" "
 fun trunc w t = let
   val s = Lib.with_flag (Globals.linewidth, 10000) term_to_string t

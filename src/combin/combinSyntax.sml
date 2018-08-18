@@ -3,6 +3,8 @@ struct
 
 open HolKernel Parse boolLib;  local open combinTheory in end;
 
+val ERR = mk_HOL_ERR "combinSyntax"
+
 val K_tm = prim_mk_const{Name="K", Thy="combin"}
 val S_tm = prim_mk_const{Name="S", Thy="combin"}
 val I_tm = prim_mk_const{Name="I", Thy="combin"}

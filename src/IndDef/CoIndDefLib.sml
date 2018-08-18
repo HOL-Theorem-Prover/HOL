@@ -9,6 +9,7 @@ struct
 
 open HolKernel boolLib liteLib InductiveDefinition IndDefLib
 
+val ERR = mk_HOL_ERR "CoIndDefLib"
 
 (* Prove definitions work for non-schematic relations with canonical rules.  *)
 
