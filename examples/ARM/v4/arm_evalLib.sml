@@ -20,6 +20,8 @@ open Q Parse computeLib combinTheory pairTheory wordsTheory wordsSyntax
      optionTheory rich_listTheory armTheory arm_evalTheory
      updateTheory systemTheory instructionTheory instructionSyntax assemblerML;
 
+val ERR = mk_HOL_ERR "arm_evalLib"
+
 (* ------------------------------------------------------------------------- *)
 (* Some conversions *)
 
