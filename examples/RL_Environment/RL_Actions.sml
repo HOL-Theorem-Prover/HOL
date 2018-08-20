@@ -61,7 +61,7 @@ fun is_tree_complete (SOME (Comb (t1, t2))) =
   | is_tree_complete NONE = false
 
 (* NOTE: this function may throw HOL_ERR for ill-typed terms,
-  *      the exception is captured by observation() function in
+  *      the exception is captured by observation() and next_actions() function in
   *      RL_Experiment.sml to show the error message *)
 fun myterm_to_term (NONE) = RL_Lib.die("myterm_to_term on incomplete term")
   | myterm_to_term (SOME (Atom t)) = t
@@ -226,6 +226,109 @@ datatype tactic =
   all_tac (does nothing)
   kall_tac thm (does nothing)
   *)
+
+datatype sexp = Symbo of string
+              | Sexps of sexp list
+
+fun sexp_of_type ht =
+      if Type.is_vartype ht
+      then Sexps ((Symbo "VarType") :: (Symbo (Type.dest_vartype ht)) :: nil)
+      else let val res = Type.dest_thy_type ht
+               val sexpl = List.map sexp_of_type (#Args res)
+           in Sexps ((Symbo "Type") :: (Symbo (#Thy res)) :: (Symbo (#Tyop res)) :: sexpl)
+           end
+
+fun sexp_of_term term = case (Term.dest_term term) of
+      Term.VAR (s, ht) => Sexps ((Symbo "VAR") :: (Symbo s) :: (sexp_of_type ht) :: nil)
+    | Term.CONST res =>
+        Sexps ((Symbo "CONST") :: (Symbo (#Name res)) :: (Symbo (#Thy res)) :: (sexp_of_type (#Ty res)) :: nil)
+    | Term.COMB (tm1, tm2) => Sexps ((Symbo "COMB") :: (sexp_of_term tm1) :: (sexp_of_term tm2) :: nil)
+    | Term.LAMB (tm1, tm2) => Sexps ((Symbo "LAMB") :: (sexp_of_term tm1) :: (sexp_of_term tm2) :: nil)
+
+fun sexp_of_taco (SOME(gen_tac)) = Symbo "gen_tac"
+  | sexp_of_taco (SOME(qx_gen_tac tmo)) = Sexps ((Symbo "qx_gen_tac")::(sexp_of_tmo tmo)::nil)
+  | sexp_of_taco (SOME(qx_genl_tac tmlo)) = Sexps ((Symbo "qx_genl_tac")::(sexp_of_tmlo tmlo)::nil)
+  | sexp_of_taco (SOME(Induct)) = Symbo "Induct"
+  | sexp_of_taco (SOME(Induct_on tmo)) = Sexps ((Symbo "Induct_on")::(sexp_of_tmo tmo)::nil)
+  | sexp_of_taco (SOME(metis_tac thmlo)) = Sexps ((Symbo "metis_tac")::(sexp_of_thmlo thmlo)::nil)
+  | sexp_of_taco (SOME(rw thmlo)) = Sexps ((Symbo "rw")::(sexp_of_thmlo thmlo)::nil)
+  | sexp_of_taco (SOME(fs thmlo)) = Sexps ((Symbo "fs")::(sexp_of_thmlo thmlo)::nil)
+  | sexp_of_taco (SOME(rfs thmlo)) = Sexps ((Symbo "rfs")::(sexp_of_thmlo thmlo)::nil)
+  | sexp_of_taco (SOME(decide_tac)) = Symbo "decide_tac"
+  | sexp_of_taco (SOME(pairarg_tac)) = Symbo "pairarg"
+  | sexp_of_taco (SOME(var_eq_tac)) = Symbo "var_eq_tac"
+  | sexp_of_taco (SOME(strip_tac)) = Symbo "strip_tac"
+  | sexp_of_taco (SOME(CCONTR_TAC)) = Symbo "CCONTR_TAC"
+  | sexp_of_taco (SOME(rpt taco)) = Sexps ((Symbo "rpt")::(sexp_of_taco taco)::nil)
+  | sexp_of_taco (SOME(Cases)) = Symbo "Cases"
+  | sexp_of_taco (SOME(Cases_on tmo)) = Sexps ((Symbo "Cases_on")::(sexp_of_tmo tmo)::nil)
+  | sexp_of_taco (SOME(mp_tac thmlo)) = Sexps ((Symbo "mp_tac")::(sexp_of_thmlo thmlo)::nil)
+  | sexp_of_taco (SOME(qexists_tac tmo)) = Sexps ((Symbo "qexists_tac")::(sexp_of_tmo tmo)::nil)
+  | sexp_of_taco NONE = Symbo "?"
+and sexp_of_thmlo (SOME(Lcons(nthm, thmlo))) = Sexps ((sexp_of_nthm nthm)::(sexp_of_thmlo thmlo)::nil)
+  | sexp_of_thmlo (SOME Lnil) = Symbo "]"
+  | sexp_of_thmlo NONE = Symbo "?"
+and sexp_of_nthm (FindThm tmlo) = Sexps ((Symbo "FindThm")::(sexp_of_tmlo tmlo)::nil)
+  | sexp_of_nthm (FoundThm (s, thm)) =
+      let val (terml, term) = Thm.dest_thm thm
+          val sexpl = List.map sexp_of_term terml
+      in Sexps ((Symbo "FoundThm") :: (Symbo s) :: (sexp_of_term term) :: sexpl)
+      end
+and sexp_of_tmlo (SOME(Lcons(tmo, tmlo))) = Sexps ((sexp_of_tmo tmo)::(sexp_of_tmlo tmlo)::nil)
+  | sexp_of_tmlo (SOME Lnil) = Symbo "]"
+  | sexp_of_tmlo NONE = Symbo "?"
+and sexp_of_tmo (SOME(Comb(tm1, tm2))) = Sexps ((Symbo "Comb")::(sexp_of_tmo tm1)::(sexp_of_tmo tm2)::nil)
+  | sexp_of_tmo (SOME(Abs(s, TypeOf tm1, tm2))) =
+      Sexps (Sexps((Symbo s) :: (Symbo "TypeOf") :: (sexp_of_tmo tm1)::nil) ::
+      (sexp_of_tmo tm2)::nil)
+  | sexp_of_tmo (SOME(Atom tm)) = sexp_of_term tm
+  | sexp_of_tmo NONE = Symbo "?"
+
+fun sexp_encode(Symbo str) = "0 " ^ str
+  | sexp_encode(Sexps lst) = Int.toString(List.length(lst)) ^ " " ^
+  (String.concatWith " " (List.map sexp_encode lst))
+
+local
+  fun dec1 (nil) = RL_Lib.die("ERROR: dec1 in sexp_decode: dec1 on empty string list")
+    | dec1 ("0" :: nil) = RL_Lib.die("ERROR: dec1 in sexp_decode: 0 followed by empty list")
+    | dec1 ("0" :: sym :: rest) = ((Symbo sym), rest)
+    | dec1 (num :: rest) =
+        case (Int.fromString num) of
+            NONE => RL_Lib.die("ERROR: dec1 in sexp_decode: num is not a number")
+          | SOME n => let val (strlist, sexplist) = decn(n, rest, [])
+                      in ((Sexps (List.rev sexplist)), strlist)
+                      end
+  and decn (n: int, strlist, sexplist) =
+        if (Int.< (n, 0)) then RL_Lib.die("ERROR: decn in sexp_decode: n is negative")
+        else (if (n = 0) then (strlist, sexplist)
+              else let val (sexp, rest) = dec1 strlist
+                   in decn(n-1, rest, sexp :: sexplist)
+                   end)
+in
+  fun sexp_decode str =
+    let val strlist = String.tokens (fn c => c = #" ") str
+        val (sexp, rest) = dec1 strlist
+    in case rest of
+            nil => sexp
+          | _ => RL_Lib.die("ERROR: sexp_decode: has unfinished work but sexp is finished")
+    end
+end
+
+(*
+
+val a = Symbo "a"
+val b = sexp_encode a
+val c = sexp_decode b
+
+val aa = Sexps [Symbo "a", Symbo "b"]
+val bb = sexp_encode aa
+val cc = sexp_decode bb
+
+val aaa = Sexps [Sexps [Symbo "a"], Sexps [Symbo "b", Symbo "c"], Symbo "d"]
+val bbb = sexp_encode aaa
+val ccc = sexp_decode bbb
+
+*)
 
 local
   fun get_tmq tmo = [(HOLPP.ANTIQUOTE (myterm_to_term tmo))]
