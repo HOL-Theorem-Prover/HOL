@@ -6,6 +6,8 @@ open decompilerLib m0_progLib m0_progTheory m0_decompTheory
 
 val () = m0_progLib.set_newline ""
 
+val ERR = mk_HOL_ERR "m0_decompLib"
+
 local
    fun get_length th =
       if sumSyntax.is_inl (m0_progLib.get_code th) then 2 else 4
