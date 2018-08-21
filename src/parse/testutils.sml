@@ -57,10 +57,11 @@ local
     (* 3 for quotations marks and an extra space *)
 in
 fun standard_tpp_message s = let
+  open UTF8
   fun trunc s =
     if size s + pfxsize > output_linewidth - 18 then
       let
-        val s' = String.substring(s,0,output_linewidth - 22 - pfxsize)
+        val s' = substring(s,0,output_linewidth - 22 - pfxsize)
       in
         s' ^ " ..."
       end
