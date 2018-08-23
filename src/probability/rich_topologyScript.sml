@@ -911,7 +911,7 @@ val LINEAR_SUM_MUL = store_thm ("LINEAR_SUM_MUL",
         ==> (f(sum s (\i. c i * v i)) = sum s (\i. c(i) * f(v i)))``,
   SIMP_TAC std_ss [LINEAR_SUM, o_DEF, LINEAR_CMUL]);
 
-val lemma = store_thm ("lemma",
+val lemma = prove (
  ``x = sum (1:num..1:num) (\i. x * &i)``,
   REWRITE_TAC [SUM_SING_NUMSEG] THEN BETA_TAC THEN REAL_ARITH_TAC);
 
@@ -998,7 +998,7 @@ val BILINEAR_RSUB = store_thm ("BILINEAR_RSUB",
  ``!h x y z. bilinear h ==> (h x (y - z) = (h x y) - (h x z))``,
   SIMP_TAC std_ss [real_sub, BILINEAR_RNEG, BILINEAR_RADD]);
 
-val lemma = store_thm ("lemma",
+val lemma = prove (
  ``!s t. s CROSS t = {(x,y) | x IN s /\ y IN t}``,
   REWRITE_TAC [CROSS_DEF] THEN 
   SIMP_TAC std_ss [EXTENSION, GSPECIFICATION, EXISTS_PROD]);
@@ -1021,7 +1021,7 @@ val BILINEAR_SUM = store_thm ("BILINEAR_SUM",
   ASM_SIMP_TAC std_ss [LINEAR_SUM, o_DEF, SUM_SUM_PRODUCT] THEN
   SIMP_TAC std_ss [lemma]);
 
-val lemma = store_thm ("lemma",
+val lemma = prove (
  ``!x. x = sum (1:num..1:num) (\i. x * &i)``,
   REWRITE_TAC [SUM_SING_NUMSEG] THEN BETA_TAC THEN REAL_ARITH_TAC);
 
@@ -5643,7 +5643,7 @@ val FRONTIER_FRONTIER_FRONTIER = store_thm ("FRONTIER_FRONTIER_FRONTIER",
  ``!s:real->bool. frontier(frontier(frontier s)) = frontier(frontier s)``,
   SIMP_TAC std_ss [FRONTIER_FRONTIER, FRONTIER_CLOSED]);
 
-val lemma = store_thm ("lemma",
+val lemma = prove (
  ``!s t x. x IN frontier s /\ x IN interior t ==> x IN frontier(s INTER t)``,
   REWRITE_TAC[FRONTIER_STRADDLE, IN_INTER, IN_INTERIOR, SUBSET_DEF, IN_BALL] THEN
   REPEAT GEN_TAC THEN
@@ -6653,7 +6653,7 @@ val LIM_ADD = store_thm ("LIM_ADD",
   EXISTS_TAC ``dist (f x', l) + dist (g x', m)`` THEN 
   METIS_TAC[REAL_LT_HALF1, REAL_LT_ADD2, DIST_TRIANGLE_ADD, GSYM REAL_HALF_DOUBLE]);
 
-val lemma = store_thm ("lemma",
+val lemma = prove (
  ``abs(x - y) <= abs(a - b) ==> dist(a,b) < e ==> dist(x,y) < e``,
   REWRITE_TAC [dist] THEN REAL_ARITH_TAC);
 
@@ -7248,7 +7248,7 @@ val LIM_CASES_FINITE_SEQUENTIALLY = store_thm ("LIM_CASES_FINITE_SEQUENTIALLY",
   EXISTS_TAC ``N + 1:num`` THEN
   METIS_TAC[ARITH_PROVE ``~(x <= n:num /\ n + 1 <= x)``]);
 
-val lemma = store_thm ("lemma",
+val lemma = prove (
  ``(if p then x else y) = (if ~p then y else x)``,
  RW_TAC std_ss []);
 
@@ -7920,7 +7920,7 @@ val INF_INSERT = store_thm ("INF_INSERT",
 (* Subset and overlapping relations on balls.                                *)
 (* ------------------------------------------------------------------------- *)
 
-val lemma = store_thm ("lemma",
+val lemma = prove (
    ``(!a':real r r'.
        cball(a,r) SUBSET cball(a',r') <=> dist(a,a') + r <= r' \/ r < &0) /\
      (!a':real r r'.
@@ -9145,7 +9145,7 @@ val FRONTIER_SING = store_thm ("FRONTIER_SING",
 (* Finite intersection property. I could make it an equivalence in fact.     *)
 (* ------------------------------------------------------------------------- *)
 
-val lemma = store_thm ("lemma",
+val lemma = prove (
  ``(s = UNIV DIFF t) <=> (UNIV DIFF s = t)``,
   SET_TAC[]);
   
@@ -9858,7 +9858,7 @@ val LINEAR_UNIFORMLY_CONTINUOUS_ON = store_thm ("LINEAR_UNIFORMLY_CONTINUOUS_ON"
   EXISTS_TAC ``B * abs(y - x:real)`` THEN ASM_REWRITE_TAC[] THEN
   ASM_MESON_TAC[REAL_LT_RDIV_EQ, REAL_MUL_SYM]);
 
-val lemma = store_thm ("lemma",
+val lemma = prove (
  ``(!y. ((?x. (y = f x) /\ P x) /\ Q y ==> R y)) <=>
    (!x. P x /\ Q (f x) ==> R (f x))``,
   MESON_TAC[]);
@@ -11479,7 +11479,7 @@ val PROPER_MAP_FROM_COMPOSITION_LEFT = store_thm ("PROPER_MAP_FROM_COMPOSITION_L
   DISCH_TAC THEN ASM_REWRITE_TAC [] THEN POP_ASSUM K_TAC THEN
   MATCH_MP_TAC EQ_IMPLIES THEN AP_TERM_TAC THEN ASM_SET_TAC[]]);
 
-val lemma = store_thm ("lemma",
+val lemma = prove (
  ``!s t. closed_in (subtopology euclidean s) t ==> compact s ==> compact t``,
   MESON_TAC[COMPACT_EQ_BOUNDED_CLOSED, BOUNDED_SUBSET, CLOSED_IN_CLOSED_EQ]);
 
@@ -17613,7 +17613,7 @@ val CONTINUOUS_FINITE_RANGE_CONSTANT = store_thm ("CONTINUOUS_FINITE_RANGE_CONST
 (* Homeomorphism of hyperplanes.                                             *)
 (* ------------------------------------------------------------------------- *)
 
-val lemma = store_thm ("lemma",
+val lemma = prove (
    ``~(a = 0)
      ==> {x:real | a * x = b} homeomorphic {x:real | x = &0}``,
     REPEAT STRIP_TAC THEN SUBGOAL_THEN ``?c:real. a * c = b``
@@ -19280,7 +19280,7 @@ val SERIES_DIRICHLET = store_thm ("SERIES_DIRICHLET",
 (* Rearranging absolutely convergent series.                                 *)
 (* ------------------------------------------------------------------------- *)
 
-val lemma = store_thm ("lemma",
+val lemma = prove (
    ``!f:'a->real s t.
           FINITE s /\ FINITE t
           ==> (sum s f - sum t f = sum (s DIFF t) f - sum (t DIFF s) f)``,
@@ -21056,7 +21056,7 @@ val HAUSDIST_COMPACT_SUMS = store_thm ("HAUSDIST_COMPACT_SUMS",
               ONCE_REWRITE_RULE[CONJ_SYM] UNWIND_THM1] THEN
   SIMP_TAC real_ss [GSYM dist, HAUSDIST_COMPACT_EXISTS]);
 
-val lemma = store_thm ("lemma",
+val lemma = prove (
  ``!s t u:real->bool.
           bounded s /\ bounded t /\ bounded u /\
           ~(s = {}) /\ ~(t = {}) /\ ~(u = {})
@@ -21329,7 +21329,7 @@ val ISOMETRY_IMP_HOMEOMORPHISM_COMPACT = store_thm ("ISOMETRY_IMP_HOMEOMORPHISM_
 (* Urysohn's lemma (for real, where the proof is easy using distances).      *)
 (* ------------------------------------------------------------------------- *)
 
-val lemma = store_thm ("lemma",
+val lemma = prove (
    ``!s t u a b.
           closed_in (subtopology euclidean u) s /\
           closed_in (subtopology euclidean u) t /\
@@ -21640,7 +21640,7 @@ val LOCALLY_INTER = store_thm ("LOCALLY_INTER",
   EXISTS_TAC ``v1 INTER v2:real->bool`` THEN
   ASM_SIMP_TAC std_ss [OPEN_INTER] THEN ASM_SET_TAC[]);
 
-val lemma = store_thm ("lemma",
+val lemma = prove (
   ``!P Q f g. (!s t. P s /\ homeomorphism (s,t) (f,g) ==> Q t)
         ==> (!s:real->bool t:real->bool.
                 locally P s /\ homeomorphism (s,t) (f,g) ==> locally Q t)``,

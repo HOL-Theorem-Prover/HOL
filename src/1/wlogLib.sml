@@ -74,7 +74,10 @@ none then "p_hyp" is just "hyp" else it is the splice of "p" with "hyp". The
 tuple returned is the aforementioned theorem and "P_hyp". *)
 fun wlog_rule vars p hyp t =
   let
-    val the = liteLib.the
+    (* val the = liteLib.the (broken in mosml) *)
+    fun the (SOME x) = x
+      | the _ = failwith "the: can't take \"the\" of NONE"
+
     fun forall vars t = list_mk_forall (vars, t)
     fun implies t1 t2 = mk_imp (t1, t2)
     val new_sg_t = forall vars (implies (case hyp of
