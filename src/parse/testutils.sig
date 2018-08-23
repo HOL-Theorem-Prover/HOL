@@ -17,6 +17,11 @@ val raw_backend : ('a -> 'b) -> 'a -> 'b
 val convtest : (string * (Term.term -> Thm.thm) * Term.term * Term.term) -> unit
 val timed : ('a -> 'b) -> ('b testresult -> unit) -> 'a -> unit
 val exncheck : ('a -> unit) -> 'a testresult -> unit
+val shouldfail : {testfn: 'a -> 'b, printresult: 'b -> string,
+                  printarg : 'a -> string,
+                  checkexn: exn -> bool} -> 'a -> unit
+
+val is_struct_HOL_ERR : string -> exn -> bool
 
 val bold : string -> string
 val boldred : string -> string
