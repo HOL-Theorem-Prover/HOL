@@ -13,6 +13,9 @@
 (*                                                                           *)
 (* Note: This theory has been ported from hol light                          *)
 (*                                                                           *)
+(*              (c) Copyright, John Harrison 1998-2015                       *)
+(*                (c) Copyright, Valentina Bruno 2010                        *)
+(*               (c) Copyright, Marco Maggesi 2014-2015                      *)
 (* ========================================================================= *)
 
 (* set_trace "Unicode" 0; *)
