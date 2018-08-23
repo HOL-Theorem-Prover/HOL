@@ -31,7 +31,7 @@ val ERRloc = Feedback.mk_HOL_ERRloc "Parse" "parse_type"
 
 fun totalify f x = SOME (f x) handle InternalFailure _ => NONE
 
-fun parse_type tyfns allow_unknown_suffixes G = let
+fun parse_type_fns tyfns allow_unknown_suffixes G = let
   val G = rules G and abbrevs = parse_map G
   and privabbs = privileged_abbrevs G
   val {vartype = pVartype, tyop = pType, antiq = pAQ, qtyop} = tyfns
@@ -294,12 +294,27 @@ fun parse_type tyfns allow_unknown_suffixes G = let
       end
   end
 in
-  fn qb => parse_term rules qb
+  ((fn qb => parse_term rules qb
      handle InternalFailure locn =>
             raise ERRloc locn
                   ("Type parsing failure with remaining input: "^
-                   qbuf.toString qb)
+                   qbuf.toString qb)),
+   (fn qb =>
+       case totalify (parse_op suffixes) qb of
+           NONE => (parse_atom qb
+                    handle InternalFailure locn =>
+                           raise ERRloc locn
+                            ("Type-atom parsing failure with remaining input: "^
+                             qbuf.toString qb)
+                   )
+         | SOME tloc => apply_tyop tloc []))
+
 end
 
+fun parse_type tyfns allow_unknown_suffixes G qb =
+  #1 (parse_type_fns tyfns allow_unknown_suffixes G) qb
+
+fun parse_atom tyfns allow_unknown_suffixes G qb =
+  #2 (parse_type_fns tyfns allow_unknown_suffixes G) qb
 
 end; (* struct *)

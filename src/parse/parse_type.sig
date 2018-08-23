@@ -13,6 +13,11 @@ sig
                    type_grammar.grammar ->
                    'b qbuf.qbuf ->
                    'a
+  val parse_atom : ('a,'b) tyconstructors ->
+                   bool ->
+                   type_grammar.grammar ->
+                   'b qbuf.qbuf ->
+                   'a
 
   val ty_antiq      : Type.hol_type -> term
   val dest_ty_antiq : term -> Type.hol_type

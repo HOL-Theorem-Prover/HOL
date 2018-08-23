@@ -578,7 +578,7 @@ val vbool = dTyop{Tyop = "bool", Thy = SOME "min", Args = []}
 fun pdparse s = parse mintyg [QUOTE s]
 fun hdparse s = hparse mintyg [QUOTE s]
 
-fun pdtest (nm, s,expected) =
+fun pdtest0 (nm, s,expected) =
   let
     val _ = tprint (nm ^ ": " ^ s)
     val res = (if nm = "p" then pdparse else hdparse) s
@@ -587,6 +587,21 @@ fun pdtest (nm, s,expected) =
     else die ("FAILED:\n  "^ASTL_toString res)
   end
 infix -=>
+fun nm2parse nm = if nm = "p" then pdparse else hdparse
+fun pdtest (nm, s, expected) =
+  let
+    val _ = tprint (nm ^ ": " ^ s)
+  in
+    timed (nm2parse nm)
+          (exncheck (fn r => if r = expected then OK()
+                             else die ("FAILED:\n  "^ASTL_toString r)))
+          s
+  end
+fun pdfail (nm, s) =
+  shouldfail {printarg = (fn s => nm ^ ": " ^ s ^ " (should fail)"),
+              printresult = ASTL_toString,
+              testfn = nm2parse nm,
+              checkexn = is_struct_HOL_ERR "ParseDatatype"} s
 
 fun vty1 -=> vty2 = dTyop{Tyop = "fun", Thy = SOME "min", Args = [vty1,vty2]}
 fun recop s = dTyop{Thy = NONE, Tyop = s, Args = []}
@@ -598,10 +613,14 @@ fun listnm nm =
   [(nm, Constructors[("N", []), ("C",[dVartype "'a", recop "ty"])])]
 val expected4 = listnm "ty"
 val expected5 = [("C", Constructors[("foo", []), ("bar",[])])]
+val expected6 = [("C", Constructors[("foo", [vbool, vbool])]),
+                 ("D", Constructors[("bar", [vbool]), ("baz", [])])]
 val _ = List.app pdtest [
   ("p", "ty = Cons of bool;", expected1),
   ("h", "ty = Cons bool;", expected1),
   ("h", "ty = Cons1 bool | Cons2 bool (bool -> bool);", expected2),
+  ("h", "ty = Cons1 bool | Cons2 bool (bool->bool);", expected2),
+  ("p", "ty = Cons1 of bool | Cons2 of bool => bool -> bool;", expected2),
   ("h", "ty = <| fld1 : bool ; fld2 : bool -> bool |>;", expected3),
   ("h", "ty = <| fld1 : bool ; fld2 : bool -> bool; |>;", expected3),
   ("h", "ty= <|fld1:bool;fld2:bool->bool; |>;", expected3),
@@ -611,7 +630,12 @@ val _ = List.app pdtest [
   ("h", "ty=N|C 'a ty", expected4),
   ("h", "ty= <|fld1:bool;fld2:bool->bool; |>;ty2=N|C 'a ty",
    expected3 @ listnm "ty2"),
-  ("h", "C = | foo | bar", expected5)
+  ("h", "C = | foo | bar", expected5),
+  ("h", "C = foo bool bool; D = bar bool|baz", expected6)
+]
+
+val _ = List.app pdfail [
+  ("h", "C = foo bool->bool")
 ]
 
 
