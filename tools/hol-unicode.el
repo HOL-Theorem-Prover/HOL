@@ -125,7 +125,7 @@
   (lambda () (interactive) (insert "³")))
 (define-key hol-unicode-superscript-map "4" "⁴")
 (define-key hol-unicode-superscript-map "5" "⁵")
-(define-key hol-unicode-superscript-map "6" ^"⁶")
+(define-key hol-unicode-superscript-map "6" "⁶")
 (define-key hol-unicode-superscript-map "7" "⁷")
 (define-key hol-unicode-superscript-map "8" "⁸")
 (define-key hol-unicode-superscript-map "9" "⁹")
