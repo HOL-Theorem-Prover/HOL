@@ -1363,6 +1363,11 @@ val REST_DEF =
     new_definition
     ("REST_DEF", (“REST (s:'a set) = s DELETE (CHOICE s)”));
 
+val IN_REST = store_thm
+  ("IN_REST",
+  ``!x:'a. !s. x IN (REST s) <=> x IN s /\ ~(x = CHOICE s)``,
+    REWRITE_TAC [REST_DEF, IN_DELETE]);
+
 val CHOICE_NOT_IN_REST =
     store_thm
     ("CHOICE_NOT_IN_REST",
