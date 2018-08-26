@@ -610,7 +610,7 @@ For example, a useful \texttt{CLINE\_OPTIONS} line%
 \footnote{Note that a \texttt{-{}-qof} option in a makefile can't be overridden from the command-line, but that the \texttt{-{}-no\_hmakefile} command-line option will stop the makefile from being consulted at all.} %
 might be
 \begin{alltt}
-    CLINE_OPTIONS = -j1 --qof
+    CLINE_OPTIONS = -j1 --noqof
 \end{alltt}
 Under Poly/ML, the similar \texttt{POLY\_CLINE\_OPTIONS} variable can be used to pass run-time options to the Poly/ML executable that is run during theory construction.
 
