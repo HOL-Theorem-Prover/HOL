@@ -607,7 +607,8 @@ If the \texttt{-r} (``force recursion'') command-line flag is used, these direct
 The \texttt{CLINE\_OPTIONS} variable is used for the specification of command-line switches that are presumably usually appropriate for calls to \holmake{} in the containing directory.
 The options present in \texttt{CLINE\_OPTIONS} are used to build a ``base environment'' of switches; this base environment is then overridden by whatever was actually passed on the command-line.
 For example, a useful \texttt{CLINE\_OPTIONS} line%
-\footnote{Note that a \texttt{-{}-qof} option in a makefile can't be overridden from the command-line, but that the \texttt{-{}-no\_hmakefile} command-line option will stop the makefile from being consulted at all.} %
+\footnote{Note that a \texttt{-{}-noqof} option in a makefile might be overridden from the command-line with the otherwise useless seeming \texttt{-{}-qof} option.
+In addition, the \texttt{-{}-no\_hmakefile} command-line option will stop the makefile from being consulted at all.} %
 might be
 \begin{alltt}
     CLINE_OPTIONS = -j1 --noqof
