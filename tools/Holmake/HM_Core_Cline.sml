@@ -104,7 +104,7 @@ val default_core_options : t =
   no_prereqs = false,
   opentheory = NONE,
   quiet = false,
-  quit_on_failure = false,
+  quit_on_failure = true,
   rebuild_deps = false,
   recursive = false,
   verbose = false
@@ -123,6 +123,8 @@ val setNOHMF =
                      hmakefile = NONE, no_hmf = true})
 fun mkBoolT sel =
   NoArg (fn () => resfn (fn (wn,t) => updateT t (U sel true) $$))
+fun mkBoolF sel =
+  NoArg (fn () => resfn (fn (wn,t) => updateT t (U sel false) $$))
 fun cons_dontmakes x =
   resfn (fn (wn,t) => updateT t (U #dontmakes (x :: #dontmakes t)) $$)
 fun cons_includes x =
@@ -188,6 +190,8 @@ val core_option_descriptions = [
     short = "", desc = mkBoolT #no_overlay },
   { help = "don't build recursively in INCLUDES",
     long = ["no_prereqs"], short = "", desc = mkBoolT #no_prereqs },
+  { help = "don't quit on failure", long = ["noqof"], short = "",
+    desc = mkBoolF #quit_on_failure },
   { help = "use file as opentheory logging .uo",
     long = ["ot"], short = "", desc = ReqArg (set_openthy, "file")},
   { help = "be quieter with output", short = "q", long = ["quiet"],

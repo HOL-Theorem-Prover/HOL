@@ -6,7 +6,7 @@ val _ = tprint "Calling Holmake in testdir"
 
 fun hm s =
   let
-    val res = OS.Process.system ("../../../../../bin/Holmake " ^ s)
+    val res = OS.Process.system ("../../../../../bin/Holmake --noqof " ^ s)
   in
     if not (OS.Process.isSuccess res) then
       die ("Holmake "^s^" failed")
