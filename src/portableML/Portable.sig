@@ -7,6 +7,9 @@ sig
   val apsnd : ('a -> 'b) -> 'c * 'a -> 'c * 'b
   val $  : ('a -> 'b) * 'a -> 'b
   val |> : 'a * ('a -> 'b) -> 'b
+  val |>> : ('a * 'b) * ('a -> 'c) -> ('c * 'b)
+  val ||> : ('a * 'b) * ('b -> 'c) -> ('a * 'c)
+  val ||-> : ('a * 'b) * ('a -> 'b -> 'c) -> 'c
   val C : ('a -> 'b -> 'c) -> 'b -> 'a -> 'c
   val I : 'a -> 'a
   val K : 'a -> 'b -> 'a

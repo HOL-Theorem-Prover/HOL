@@ -36,8 +36,11 @@ infix 3 ##
 fun (f ## g) (x, y) = (f x, g y)
 fun apfst f (x, y) = (f x, y)
 fun apsnd f (x, y) = (x, f y)
-infix |>
+infix |> ||> |>> ||->
 fun x |> f = f x
+fun (x,y) |>> f = (f x, y)
+fun (x,y) ||> f = (x, f y)
+fun (x,y) ||-> f = f x y
 infixr $
 fun f $ x = f x
 fun C f x y = f y x
