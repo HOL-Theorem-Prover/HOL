@@ -431,7 +431,8 @@ fun forks ({name, group, deps, pri, interrupts}: params) es =
     in
       SYNCHRONIZED "enqueue" (fn () =>
         let
-          val (futures, queue') = fold_map enqueue es (! queue);
+          val (queue', futures) =
+              foldl_map (fn (q,e) => swap $ enqueue e q) (! queue, es)
           val _ = queue := queue';
           val minimal = List.all (not o Task_Queue.known_task queue') deps;
           val _ = if minimal then signal work_available else ();
