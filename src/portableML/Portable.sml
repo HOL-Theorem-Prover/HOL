@@ -103,8 +103,10 @@ fun first_opt f =
    end
 
 fun itlist f L base_value = List.foldr (uncurry f) base_value L
+val foldr' = itlist
 
 fun rev_itlist f L base_value = List.foldl (uncurry f) base_value L
+val foldl' = rev_itlist
 
 fun foldl_map _ (acc, []) = (acc, [])
   | foldl_map f (acc, x :: xs) =

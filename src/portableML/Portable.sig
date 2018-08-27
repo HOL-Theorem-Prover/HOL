@@ -46,6 +46,8 @@ sig
   val first_opt : (int -> 'a -> 'b option) -> 'a list -> 'b option
   val itlist : ('a -> 'b -> 'b) -> 'a list -> 'b -> 'b
   val rev_itlist : ('a -> 'b -> 'b) -> 'a list -> 'b -> 'b
+  val foldl' : ('a -> 'b -> 'b) -> 'a list -> 'b -> 'b
+  val foldr' : ('a -> 'b -> 'b) -> 'a list -> 'b -> 'b
   val foldl_map : ('a * 'b -> 'a * 'c) -> 'a * 'b list -> 'a * 'c list
   val separate : 'a -> 'a list -> 'a list
   val filter : ('a -> bool) -> 'a list -> 'a list
