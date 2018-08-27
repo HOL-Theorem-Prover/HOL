@@ -65,7 +65,6 @@ fun ASM_SET_TAC L = REPEAT (POP_ASSUM MP_TAC) THEN SET_TAC L;
 val ASM_ARITH_TAC = REPEAT (POP_ASSUM MP_TAC) THEN ARITH_TAC;
 val ASM_REAL_ARITH_TAC = REPEAT (POP_ASSUM MP_TAC) THEN REAL_ARITH_TAC;
 
-fun K_TAC _ = ALL_TAC;
 val KILL_TAC = POP_ASSUM_LIST K_TAC;
 val Know = Q_TAC KNOW_TAC;
 val Suff = Q_TAC SUFF_TAC;
@@ -457,10 +456,6 @@ val SUM_ABS_TRIANGLE = store_thm ("SUM_ABS_TRIANGLE",
 val IMAGE_SING = store_thm ("IMAGE_SING",
  ``!f a. IMAGE f {a} = {f a}``,
   SET_TAC []);
-
-val EXISTS_IN_IMAGE = store_thm ("EXISTS_IN_IMAGE",
- ``!f s. (?y. y IN IMAGE f s /\ P y) <=> ?x. x IN s /\ P(f x)``,
-  REWRITE_TAC[IN_IMAGE] THEN MESON_TAC[]);
 
 val REAL_WLOG_LE = store_thm ("REAL_WLOG_LE",
  ``(!x y:real. P x y <=> P y x) /\ (!x y. x <= y ==> P x y) ==> !x y. P x y``,
@@ -2542,211 +2537,16 @@ val DIM_SUBSET_UNIV = store_thm ("DIM_SUBSET_UNIV",
   MATCH_MP_TAC DIM_SUBSET THEN REWRITE_TAC[SUBSET_UNIV]);
 
 (* ------------------------------------------------------------------------- *)
-(*                                                                           *)
-(* ------------------------------------------------------------------------- *)
-(*                                                                           *)
-(* ------------------------------------------------------------------------- *)
-(* General notion of a topology.                                             *)
+(* General notion of a topology. (moved to real/topologyTheory)              *)
 (* ------------------------------------------------------------------------- *)
 
-(* ``L univ(:'a)`` has been removed? *)
-val istopology = new_definition("istopology",
- ``!L. istopology L =
-             {} IN L /\
-             (!s t. s IN L /\ t IN L ==> (s INTER t) IN L) /\
-             (!k. k SUBSET L ==> (BIGUNION k) IN L)``);
-
-val topology_tydef = new_type_definition
- ("topology",
-  prove (``?t. istopology t``,
-        EXISTS_TAC ``UNIV:('a->bool)->bool`` THEN
-        REWRITE_TAC[istopology, IN_UNIV]));
-
-val topology_tybij = define_new_type_bijections
-    {name="topology_tybij",
-     ABS="topology", REP="open_in",tyax=topology_tydef};
-
-val ISTOPOLOGY_OPEN_IN = store_thm ("ISTOPOLOGY_OPEN_IN",
- ``istopology(open_in top)``,
-  MESON_TAC[topology_tybij]);
-
-val TOPOLOGY_EQ = store_thm ("TOPOLOGY_EQ",
- ``!top1 top2. (top1 = top2) <=> !s. open_in top1 s <=> open_in top2 s``,
-  REPEAT GEN_TAC THEN GEN_REWR_TAC RAND_CONV [GSYM FUN_EQ_THM] THEN
-  REWRITE_TAC[ETA_AX] THEN MESON_TAC[topology_tybij]);
-
 (* ------------------------------------------------------------------------- *)
-(* Infer the "universe" from union of all sets in the topology.              *)
+(* Open sets. (moved to real/topologyTheory)                                 *)
 (* ------------------------------------------------------------------------- *)
 
-val topspace = new_definition ("topspace",
- ``topspace top = BIGUNION {s | open_in top s}``);
-
 (* ------------------------------------------------------------------------- *)
-(* Main properties of open sets.                                             *)
+(* Closed sets. (moved to real/topologyTheory)                               *)
 (* ------------------------------------------------------------------------- *)
-
-val OPEN_IN_CLAUSES = store_thm ("OPEN_IN_CLAUSES",
- ``!top.
-        open_in top {} /\
-        (!s t. open_in top s /\ open_in top t ==> open_in top (s INTER t)) /\
-        (!k. (!s. s IN k ==> open_in top s) ==> open_in top (BIGUNION k))``,
-  SIMP_TAC std_ss [IN_DEF, SUBSET_DEF, 
-  SIMP_RULE std_ss [istopology, IN_DEF, SUBSET_DEF] ISTOPOLOGY_OPEN_IN]);
-
-val OPEN_IN_SUBSET = store_thm ("OPEN_IN_SUBSET",
- ``!top s. open_in top s ==> s SUBSET (topspace top)``,
-  REWRITE_TAC[topspace] THEN SET_TAC[]);
-
-val OPEN_IN_EMPTY = store_thm ("OPEN_IN_EMPTY",
- ``!top. open_in top {}``,
-  REWRITE_TAC[OPEN_IN_CLAUSES]);
-
-val OPEN_IN_INTER = store_thm ("OPEN_IN_INTER",
- ``!top s t. open_in top s /\ open_in top t ==> open_in top (s INTER t)``,
-  REWRITE_TAC[OPEN_IN_CLAUSES]);
-
-val OPEN_IN_BIGUNION = store_thm ("OPEN_IN_BIGUNION",
- ``!top k. (!s. s IN k ==> open_in top s) ==> open_in top (BIGUNION k)``,
-  REWRITE_TAC[OPEN_IN_CLAUSES]);
-
-val BIGUNION_2 = store_thm ("BIGUNION_2",
- ``BIGUNION {s;t} = s UNION t``,
-  SET_TAC[]);
-
-val OPEN_IN_UNION = store_thm ("OPEN_IN_UNION",
- ``!top s t. open_in top s /\ open_in top t ==> open_in top (s UNION t)``,
-  REPEAT STRIP_TAC THEN REWRITE_TAC[GSYM BIGUNION_2] THEN
-  MATCH_MP_TAC OPEN_IN_BIGUNION THEN REPEAT (POP_ASSUM MP_TAC) THEN SET_TAC[]);
-
-val OPEN_IN_TOPSPACE = store_thm ("OPEN_IN_TOPSPACE",
- ``!top. open_in top (topspace top)``,
-  SIMP_TAC std_ss [topspace, OPEN_IN_BIGUNION, GSPECIFICATION]);
-
-val OPEN_IN_BIGINTER = store_thm ("OPEN_IN_BIGINTER",
- ``!top s:('a->bool)->bool.
-        FINITE s /\ ~(s = {}) /\ (!t. t IN s ==> open_in top t)
-        ==> open_in top (BIGINTER s)``,
-  GEN_TAC THEN REWRITE_TAC[GSYM AND_IMP_INTRO] THEN
-  KNOW_TAC ``!s. (s <> {} ==> (!t. t IN s ==> open_in top t) ==>
-                               open_in top (BIGINTER s)) =
-             (\s. s <> {} ==> (!t. t IN s ==> open_in top t) ==>
-                               open_in top (BIGINTER s)) s`` THENL
-  [FULL_SIMP_TAC std_ss [], ALL_TAC] THEN DISC_RW_KILL THEN
-  MATCH_MP_TAC FINITE_INDUCT THEN BETA_TAC THEN
-  REWRITE_TAC[BIGINTER_INSERT, AND_IMP_INTRO, NOT_INSERT_EMPTY, FORALL_IN_INSERT] THEN
-  SIMP_TAC std_ss [GSYM RIGHT_FORALL_IMP_THM] THEN
-  MAP_EVERY X_GEN_TAC [``f:('a->bool)->bool``, ``s:'a->bool``] THEN
-  ASM_CASES_TAC ``f:('a->bool)->bool = {}`` THEN
-  ASM_SIMP_TAC std_ss [BIGINTER_EMPTY, INTER_UNIV] THEN REPEAT STRIP_TAC THEN
-  MATCH_MP_TAC OPEN_IN_INTER THEN ASM_SIMP_TAC std_ss []);
-
-val OPEN_IN_SUBOPEN = store_thm ("OPEN_IN_SUBOPEN",
- ``!top s:'a->bool.
-        open_in top s <=>
-        !x. x IN s ==> ?t. open_in top t /\ x IN t /\ t SUBSET s``,
-  REPEAT GEN_TAC THEN EQ_TAC THENL [MESON_TAC[SUBSET_REFL], ALL_TAC] THEN
-  SIMP_TAC std_ss [GSYM RIGHT_EXISTS_IMP_THM, SKOLEM_THM] THEN
-  REWRITE_TAC[TAUT `a ==> b /\ c <=> (a ==> b) /\ (a ==> c)`] THEN
-  SIMP_TAC std_ss [FORALL_AND_THM, GSYM LEFT_EXISTS_IMP_THM] THEN
-  ONCE_REWRITE_TAC[GSYM FORALL_IN_IMAGE] THEN REPEAT STRIP_TAC THEN
-  FIRST_X_ASSUM(MP_TAC o MATCH_MP OPEN_IN_BIGUNION) THEN
-  MATCH_MP_TAC EQ_IMPLIES THEN AP_TERM_TAC THEN REPEAT (POP_ASSUM MP_TAC) THEN SET_TAC[]);
-
-(* ------------------------------------------------------------------------- *)
-(* Closed sets.                                                              *)
-(* ------------------------------------------------------------------------- *)
-
-val closed_in = new_definition ("closed_in",
- ``closed_in top s <=>
-        s SUBSET (topspace top) /\ open_in top (topspace top DIFF s)``);
-
-val CLOSED_IN_SUBSET = store_thm ("CLOSED_IN_SUBSET",
- ``!top s. closed_in top s ==> s SUBSET (topspace top)``,
-  MESON_TAC[closed_in]);
-
-val CLOSED_IN_EMPTY = store_thm ("CLOSED_IN_EMPTY",
- ``!top. closed_in top {}``,
-  REWRITE_TAC[closed_in, EMPTY_SUBSET, DIFF_EMPTY, OPEN_IN_TOPSPACE]);
-
-val CLOSED_IN_TOPSPACE = store_thm ("CLOSED_IN_TOPSPACE",
- ``!top. closed_in top (topspace top)``,
-  REWRITE_TAC[closed_in, SUBSET_REFL, DIFF_EQ_EMPTY, OPEN_IN_EMPTY]);
-
-val CLOSED_IN_UNION = store_thm ("CLOSED_IN_UNION",
- ``!top s t. closed_in top s /\ closed_in top t ==> closed_in top (s UNION t)``,
-  SIMP_TAC std_ss [closed_in, UNION_SUBSET, OPEN_IN_INTER,
-           SET_RULE ``u DIFF (s UNION t) = (u DIFF s) INTER (u DIFF t)``]);
-
-val CLOSED_IN_BIGINTER = store_thm ("CLOSED_IN_BIGINTER",
- ``!top k:('a->bool)->bool.
-        ~(k = {}) /\ (!s. s IN k ==> closed_in top s)
-        ==> closed_in top (BIGINTER k)``,
-  REPEAT GEN_TAC THEN REWRITE_TAC[closed_in] THEN REPEAT STRIP_TAC THENL
-   [REPEAT (POP_ASSUM MP_TAC) THEN SET_TAC[], ALL_TAC] THEN
-  SUBGOAL_THEN ``topspace top DIFF BIGINTER k :'a->bool =
-                BIGUNION {topspace top DIFF s | s IN k}`` SUBST1_TAC
-  THENL [ALL_TAC, MATCH_MP_TAC OPEN_IN_BIGUNION THEN REPEAT (POP_ASSUM MP_TAC) THEN SET_TAC[]] THEN
-  GEN_REWR_TAC I [EXTENSION] THEN
-  KNOW_TAC ``{topspace top DIFF s | s IN k} = IMAGE (\s. topspace top DIFF s) k`` THENL
-  [FULL_SIMP_TAC std_ss [GSYM IMAGE_DEF], ALL_TAC] THEN DISC_RW_KILL THEN
-  REWRITE_TAC [IN_BIGUNION, IN_BIGINTER] THEN
-  GEN_REWR_TAC (QUANT_CONV o RAND_CONV o QUANT_CONV o LAND_CONV) [SPECIFICATION] THEN 
-  ONCE_REWRITE_TAC [CONJ_SYM] THEN SIMP_TAC std_ss [EXISTS_IN_IMAGE] THEN
-  REWRITE_TAC [METIS [SPECIFICATION]``(topspace top DIFF s) x = x IN (topspace top DIFF s)``] THEN
-  REWRITE_TAC [IN_DIFF, IN_BIGINTER] THEN MESON_TAC[]);
-
-val BIGINTER_2 = store_thm ("BIGINTER_2",
- ``BIGINTER {s; t} = s INTER t``,
-  SET_TAC []);
-
-val CLOSED_IN_INTER = store_thm ("CLOSED_IN_INTER",
- ``!top s t. closed_in top s /\ closed_in top t ==> closed_in top (s INTER t)``,
-  REPEAT STRIP_TAC THEN REWRITE_TAC[GSYM BIGINTER_2] THEN
-  MATCH_MP_TAC CLOSED_IN_BIGINTER THEN REPEAT (POP_ASSUM MP_TAC) THEN SET_TAC[]);
-
-val OPEN_IN_CLOSED_IN_EQ = store_thm ("OPEN_IN_CLOSED_IN_EQ",
- ``!top s. open_in top s <=>
-           s SUBSET topspace top /\ closed_in top (topspace top DIFF s)``,
-  REWRITE_TAC[closed_in, SET_RULE ``(u DIFF s) SUBSET u``] THEN
-  REWRITE_TAC[SET_RULE ``u DIFF (u DIFF s) = u INTER s``] THEN
-  MESON_TAC[OPEN_IN_SUBSET, SET_RULE ``s SUBSET t ==> (t INTER s = s)``]);
-
-val OPEN_IN_CLOSED_IN = store_thm ("OPEN_IN_CLOSED_IN",
- ``!s. s SUBSET topspace top
-       ==> (open_in top s <=> closed_in top (topspace top DIFF s))``,
-  SIMP_TAC std_ss [OPEN_IN_CLOSED_IN_EQ]);
-
-val OPEN_IN_DIFF = store_thm ("OPEN_IN_DIFF",
- ``!top s t:'a->bool.
-      open_in top s /\ closed_in top t ==> open_in top (s DIFF t)``,
-  REPEAT STRIP_TAC THEN
-  SUBGOAL_THEN ``s DIFF t :'a->bool = s INTER (topspace top DIFF t)``
-  SUBST1_TAC THENL
-   [FIRST_X_ASSUM(MP_TAC o MATCH_MP OPEN_IN_SUBSET) THEN SET_TAC[],
-    MATCH_MP_TAC OPEN_IN_INTER THEN ASM_MESON_TAC[closed_in]]);
-
-val CLOSED_IN_DIFF = store_thm ("CLOSED_IN_DIFF",
- ``!top s t:'a->bool.
-        closed_in top s /\ open_in top t ==> closed_in top (s DIFF t)``,
-  REPEAT STRIP_TAC THEN
-  SUBGOAL_THEN ``s DIFF t :'a->bool = s INTER (topspace top DIFF t)``
-  SUBST1_TAC THENL
-   [FIRST_X_ASSUM(MP_TAC o MATCH_MP CLOSED_IN_SUBSET) THEN SET_TAC[],
-    MATCH_MP_TAC CLOSED_IN_INTER THEN ASM_MESON_TAC[OPEN_IN_CLOSED_IN_EQ]]);
-
-val CLOSED_IN_BIGUNION = store_thm ("CLOSED_IN_BIGUNION",
- ``!top s. FINITE s /\ (!t. t IN s ==> closed_in top t)
-           ==> closed_in top (BIGUNION s)``,
-  GEN_TAC THEN REWRITE_TAC[GSYM AND_IMP_INTRO] THEN
-  KNOW_TAC ``!s. ((!t. t IN s ==> closed_in top t) ==>
-                   closed_in top (BIGUNION s)) =
-             (\s. (!t. t IN s ==> closed_in top t) ==>
-                   closed_in top (BIGUNION s)) s`` THENL
-  [FULL_SIMP_TAC std_ss [], ALL_TAC] THEN DISC_RW_KILL THEN
-  MATCH_MP_TAC FINITE_INDUCT THEN BETA_TAC THEN
-  REWRITE_TAC[BIGUNION_INSERT, BIGUNION_EMPTY, CLOSED_IN_EMPTY, IN_INSERT] THEN
-  MESON_TAC[CLOSED_IN_UNION]);
 
 (* ------------------------------------------------------------------------- *)
 (* Subspace topology.                                                        *)

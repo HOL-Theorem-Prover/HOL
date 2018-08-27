@@ -100,19 +100,6 @@ val FINITE_FINITE_BIGUNION = store_thm ("FINITE_FINITE_BIGUNIONS",
   SIMP_TAC std_ss [IN_INSERT, NOT_IN_EMPTY, BIGUNION_EMPTY, BIGUNION_INSERT] THEN
   SIMP_TAC std_ss [FINITE_UNION, FINITE_EMPTY, FINITE_INSERT] THEN MESON_TAC[]);
 
-val FORALL_IN_BIGUNION = store_thm ("FORALL_IN_BIGUNION",
- ``!P s. (!x. x IN BIGUNION s ==> P x) <=> !t x. t IN s /\ x IN t ==> P x``,
-  SET_TAC[]);
-
-val FORALL_IN_IMAGE = store_thm ("FORALL_IN_IMAGE",
- ``!f s. (!y. y IN IMAGE f s ==> P y) <=> (!x. x IN s ==> P(f x))``,
-  REWRITE_TAC[IN_IMAGE] THEN MESON_TAC[]);
-
-val FORALL_IN_UNION = store_thm ("FORALL_IN_UNION",
- ``!P s t:'a->bool. (!x. x IN s UNION t ==> P x) <=> 
-                    (!x. x IN s ==> P x) /\ (!x. x IN t ==> P x)``,
-  REWRITE_TAC[IN_UNION] THEN MESON_TAC[]);
-
 (* old name IMP_CONJ seems to be a conv function *)
 val CONJ_EQ_IMP = store_thm (
    "CONJ_EQ_IMP",
@@ -952,14 +939,6 @@ val real_INFINITE = store_thm ("real_INFINITE",
   DISCH_THEN(MP_TAC o SPEC ``{x:real | 0:real <= x}`` o
         MATCH_MP(REWRITE_RULE[GSYM AND_IMP_INTRO] SUBSET_FINITE)) THEN
   REWRITE_TAC[FINITE_REAL_INTERVAL, SUBSET_UNIV]);
-
-val FORALL_IN_INSERT = store_thm ("FORALL_IN_INSERT",
- ``!P a s. (!x. x IN (a INSERT s) ==> P x) <=> P a /\ (!x. x IN s ==> P x)``,
-  REWRITE_TAC[IN_INSERT] THEN MESON_TAC[]);
-
-val EXISTS_IN_INSERT = store_thm ("EXISTS_IN_INSERT",
- ``!P a s. (?x. x IN (a INSERT s) /\ P x) <=> P a \/ ?x. x IN s /\ P x``,
-  REWRITE_TAC[IN_INSERT] THEN MESON_TAC[]);
 
 (* ------------------------------------------------------------------------- *)
 (* Choosing a smaller subset of a given size.                                *)
