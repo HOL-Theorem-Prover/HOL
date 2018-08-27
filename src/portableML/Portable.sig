@@ -181,6 +181,7 @@ sig
   val time_max : time * time -> time
   val time_maxl : time list -> time
   val time : ('a -> 'b) -> 'a -> 'b
+  val realtime : ('a -> 'b) -> 'a -> 'b
 
   val getEnv: string -> string option
   val getArgs: unit -> string list

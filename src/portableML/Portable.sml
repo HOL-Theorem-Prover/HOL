@@ -573,6 +573,17 @@ val flush_out      = TextIO.flushOut
 fun input_line is  = case TextIO.inputLine is of NONE => "" | SOME s => s
 val end_of_stream  = TextIO.endOfStream
 
+(*---------------------------------------------------------------------------*)
+(* Yet another variant of the sum type, used for the failure monad           *)
+(*---------------------------------------------------------------------------*)
+
+datatype ('a, 'b) verdict = PASS of 'a | FAIL of 'b
+
+fun verdict f c x = PASS (f x) handle e => FAIL (c x, e)
+
+fun ?>(PASS x, f) = f x
+  | ?>(FAIL y, f) = FAIL y
+
 (*---------------------------------------------------------------------------
     Time
  ---------------------------------------------------------------------------*)
@@ -603,6 +614,17 @@ in
      case l of
          [] => Time.zeroTime
        | h::t => List.foldl time_max h t
+   fun realtime f x =
+     let
+       val timer = Timer.startRealTimer()
+       val result = verdict f (fn x => x) x
+       val t = Timer.checkRealTimer timer
+     in
+       print ("clock time: " ^ Time.toString t ^ "s\n");
+       case result of
+           PASS y => y
+         | FAIL (_, e) => raise e
+     end
 end
 
 (*---------------------------------------------------------------------------*
@@ -697,17 +719,6 @@ fun deinitcomment0 ss n =
 
 fun deinitcommentss ss = deinitcomment0 ss 0
 fun deinitcomment s = Substring.string (deinitcomment0 (Substring.full s) 0)
-
-(*---------------------------------------------------------------------------*)
-(* Yet another variant of the sum type, used for the failure monad           *)
-(*---------------------------------------------------------------------------*)
-
-datatype ('a, 'b) verdict = PASS of 'a | FAIL of 'b
-
-fun verdict f c x = PASS (f x) handle e => FAIL (c x, e)
-
-fun ?>(PASS x, f) = f x
-  | ?>(FAIL y, f) = FAIL y
 
 (*---------------------------------------------------------------------------
     Pretty Printing
