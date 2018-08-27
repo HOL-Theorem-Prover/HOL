@@ -389,7 +389,7 @@ fun remove eq (key, x) tab =
 
 (* simultaneous modifications *)
 
-fun make entries = fold update_new entries empty;
+fun make entries = Portable.foldl' update_new entries empty;
 
 fun join f (table1, table2) =
   let
@@ -419,8 +419,9 @@ fun update_list eq (key, x) =
   modify key (fn NONE => [x] | SOME [] => [x] | SOME (xs as y :: _) =>
     if eq (x, y) then raise SAME else Library.update eq x xs);
 
-fun make_list args = fold_rev cons_list args empty;
-fun dest_list tab = maps (fn (key, xs) => map (pair key) xs) (dest tab);
+fun make_list args = Portable.foldr' cons_list args empty;
+fun dest_list tab =
+  List.concat (map (fn (key, xs) => map (pair key) xs) (dest tab))
 fun merge_list eq = join (fn _ => Library.merge eq);
 
 
@@ -430,7 +431,7 @@ type set = unit table;
 
 fun insert_set x = default (x, ());
 fun remove_set x : set -> set = delete_safe x;
-fun make_set entries = fold insert_set entries empty;
+fun make_set entries = Portable.foldl' insert_set entries empty;
 
 
 (*final declarations of this structure!*)

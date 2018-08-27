@@ -150,7 +150,8 @@ datatype worker_state = Working | Waiting | Sleeping;
 val workers = Unsynchronized.ref ([]: (Thread.thread * worker_state Unsynchronized.ref) list);
 
 fun count_workers state = (*requires SYNCHRONIZED*)
-  fold (fn (_, state_ref) => fn i => if ! state_ref = state then i + 1 else i) (! workers) 0;
+  foldl' (fn (_, state_ref) => fn i => if ! state_ref = state then i + 1 else i)
+         (! workers) 0
 
 
 
@@ -192,7 +193,7 @@ fun worker_exec (task, jobs) =
     val ok =
       Task_Queue.running task (fn () =>
         setmp_worker_task task (fn () =>
-          fold (fn job => fn ok => job valid andalso ok) jobs true) ());
+          foldl' (fn job => fn ok => job valid andalso ok) jobs true) ());
 (*    val _ =
       if ! Multithreading.trace >= 2 then
         Output.try_protocol_message (Markup.task_statistics :: Task_Queue.task_statistics task) []

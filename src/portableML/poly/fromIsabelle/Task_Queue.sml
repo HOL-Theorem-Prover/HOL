@@ -51,7 +51,6 @@ struct
 open Portable Library
 val new_id = Counter.make ();
 
-
 (** nested groups of tasks **)
 
 (* groups *)
@@ -161,7 +160,7 @@ fun waiting task deps =
   update_timing (fn t => fn (a, b, ds) =>
     (a - t, b + t,
       if ! Multithreading.trace > 0
-      then fold (insert (op =) o name_of_task) deps ds else ds)) task;
+      then foldl' (insert (op =) o name_of_task) deps ds else ds)) task;
 
 
 
@@ -208,7 +207,7 @@ fun make_queue groups jobs urgent = Queue {groups = groups, jobs = jobs, urgent 
 val empty = make_queue Inttab.empty Task_Graph.empty 0;
 
 fun group_tasks (Queue {groups, ...}) gs =
-  fold (fn g => fn tasks => Tasks.merge (op =) (tasks, get_tasks groups (group_id g)))
+  foldl' (fn g => fn tasks => Tasks.merge (op =) (tasks, get_tasks groups (group_id g)))
     gs Tasks.empty
   |> Tasks.keys;
 
@@ -315,7 +314,7 @@ fun enqueue name group deps pri job (Queue {groups, jobs, urgent}) =
     val groups' = fold_groups (fn g => add_task (group_id g, task)) group groups;
     val jobs' = jobs
       |> Task_Graph.new_node (task, Job [job])
-      |> fold (add_job task) deps;
+      |> foldl' (add_job task) deps;
     val urgent' = if pri >= urgent_pri then urgent + 1 else urgent;
   in (task, make_queue groups' jobs' urgent') end;
 
@@ -359,7 +358,7 @@ fun dequeue_deps thread deps (queue as Queue {groups, jobs, urgent}) =
           | SOME (_, entry) =>
               (case ready_job (task, entry) of
                 NONE => ready tasks (task :: rest)
-              | some => (some, fold cons rest tasks)));
+              | some => (some, foldl' cons rest tasks)));
 
     fun ready_dep _ [] = NONE
       | ready_dep seen (task :: tasks) =

@@ -74,6 +74,7 @@ open Portable Library
 
 type key = Key.key;
 fun eq_key(k1,k2) = Key.ord(k1,k2) = EQUAL
+val foldl' = Portable.foldl'
 
 structure Table = Table(Key);
 
@@ -143,7 +144,7 @@ fun reachable next xs =
       else Keys.fold_rev reach (next x) (rs, Keys.insert x R) |>> cons x;
     fun reachs x (rss, R) =
       reach x ([], R) |>> (fn rs => rs :: rss);
-  in fold reachs xs ([], Keys.empty) end;
+  in foldl' reachs xs ([], Keys.empty) end;
 
 (*immediate*)
 fun imm_preds G = #1 o #2 o #2 o get_entry G;
@@ -167,7 +168,7 @@ fun map_strong_conn f G =
     fun map' xs =
       fold2 (curry Table.update) xs (f (AList.make (get_node G) xs));
     val tab' = Table.empty
-      |> fold map' xss;
+      |> foldl' map' xss;
   in map_nodes (fn x => fn _ => valOf (Table.lookup tab' x)) G end;
 
 
@@ -234,24 +235,33 @@ fun dest G = fold_graph (fn (x, (i, (_, succs))) => cons ((x, i), Keys.dest succ
 
 fun make entries =
   empty
-  |> fold (new_node o fst) entries
-  |> fold (fn ((x, _), ys) => fold (fn y => add_edge (x, y)) ys) entries;
-
+  |> foldl' (new_node o fst) entries
+  |> foldl'
+       (fn ((x, _), ys) => foldl' (fn y => add_edge (x, y)) ys) entries
 
 (* join and merge *)
 
 fun no_edges (i, _) = (i, (Keys.empty, Keys.empty));
 
 fun join f (G1 as Graph tab1, G2 as Graph tab2) =
-  let fun join_node key ((i1, edges1), (i2, _)) = (f key (i1, i2), edges1) in
+  let
+    fun join_node key ((i1, edges1), (i2, _)) = (f key (i1, i2), edges1)
+  in
     if pointer_eq (G1, G2) then G1
-    else fold add_edge (edges G2) (Graph (Table.join join_node (tab1, Table.map (K no_edges) tab2)))
+    else foldl' add_edge
+           (edges G2)
+           (Graph (Table.join join_node (tab1, Table.map (K no_edges) tab2)))
   end;
 
 fun gen_merge add eq (G1 as Graph tab1, G2 as Graph tab2) =
-  let fun eq_node ((i1, _), (i2, _)) = eq (i1, i2) in
+  let
+    fun eq_node ((i1, _), (i2, _)) = eq (i1, i2)
+  in
     if pointer_eq (G1, G2) then G1
-    else fold add (edges G2) (Graph (Table.merge eq_node (tab1, Table.map (K no_edges) tab2)))
+    else foldl'
+           add
+           (edges G2)
+           (Graph (Table.merge eq_node (tab1, Table.map (K no_edges) tab2)))
   end;
 
 fun merge eq GG = gen_merge add_edge eq GG;
@@ -275,8 +285,11 @@ fun irreducible_paths G (x, y) =
     val (_, X) = reachable (imm_succs G) [x];
     fun paths path z =
       if eq_key (x, z) then cons (z :: path)
-      else fold (paths (z :: path)) (irreducible_preds G X path z);
-  in if eq_key (x, y) andalso not (is_edge G (x, x)) then [[]] else paths [] y [] end;
+      else foldl' (paths (z :: path)) (irreducible_preds G X path z)
+  in
+    if eq_key (x, y) andalso not (is_edge G (x, x)) then [[]]
+    else paths [] y []
+  end;
 
 
 (* maintain acyclic graphs *)
@@ -290,7 +303,8 @@ fun add_edge_acyclic (x, y) G =
       [] => add_edge (x, y) G
     | cycles => raise CYCLES (map (cons x) cycles));
 
-fun add_deps_acyclic (y, xs) = fold (fn x => add_edge_acyclic (x, y)) xs;
+fun add_deps_acyclic (y, xs) =
+  foldl' (fn x => add_edge_acyclic (x, y)) xs;
 
 fun merge_acyclic eq GG = gen_merge add_edge_acyclic eq GG;
 
@@ -307,8 +321,8 @@ fun merge_trans_acyclic eq (G1, G2) =
   if pointer_eq (G1, G2) then G1
   else
     merge_acyclic eq (G1, G2)
-    |> fold add_edge_trans_acyclic (diff_edges G1 G2)
-    |> fold add_edge_trans_acyclic (diff_edges G2 G1);
+    |> foldl' add_edge_trans_acyclic (diff_edges G1 G2)
+    |> foldl' add_edge_trans_acyclic (diff_edges G2 G1);
 
 
 (* schedule acyclic graph *)
@@ -318,7 +332,7 @@ exception DEP of key * key;
 fun schedule f G =
   let
     val xs = topological_order G;
-    val results = (xs, Table.empty) ||-> fold (fn x => fn tab =>
+    val results = (xs, Table.empty) ||-> foldl' (fn x => fn tab =>
       let
         val a = get_node G x;
         val deps = immediate_preds G x |> map (fn y =>

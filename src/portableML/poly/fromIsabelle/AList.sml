@@ -96,7 +96,7 @@ fun join eq f (xs, ys) =
       (case lookup eq xs key of
         NONE => cons y xs
       | SOME value' => update eq (key, f key (value', value)) xs);
-  in fold_rev add ys xs end;
+  in foldr' add ys xs end;
 
 fun merge eq_key eq_val =
   join eq_key (K (fn (yx as (_, x)) => if eq_val yx then x else raise DUP));
@@ -124,6 +124,6 @@ fun coalesce eq =
   in coal end;
 
 fun group eq xs =
-  fold_rev (fn (k, v) => map_default eq (k, []) (cons v)) xs [];
+  foldr' (fn (k, v) => map_default eq (k, []) (cons v)) xs [];
 
 end;

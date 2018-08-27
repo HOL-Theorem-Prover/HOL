@@ -12,7 +12,7 @@ local open Portable in
   fun update eq x xs = cons x (remove eq x xs);
   fun insert eq x xs = if member eq xs x then xs else x :: xs;
   fun merge eq (xs, ys) =
-    if null xs then ys else fold_rev (insert eq) ys xs;
+    if null xs then ys else foldr' (insert eq) ys xs;
   val map_filter = List.mapPartial;
   fun (b ? f) = if b then f else fn x => x
   fun enclose lpar rpar str = lpar ^ str ^ rpar;
@@ -23,7 +23,7 @@ local open Portable in
   fun fold_product f _ [] z = z
     | fold_product f [] _ z = z
     | fold_product f (x :: xs) ys z =
-        z |> fold (f x) ys |> fold_product f xs ys
+        z |> foldl' (f x) ys |> fold_product f xs ys
 
   fun single x = [x]
   fun the_single [x] = x
