@@ -1,26 +1,21 @@
 (*===========================================================================*)
-(* Topologies and metric spaces, including metric on real line               *)
-(*===========================================================================*)
+(*  General Topology (from hol-light)                                        *)
+(*                                                                           *)
+(*              (c) Copyright, John Harrison 1998-2015                       *)
+(*                (c) Copyright, Valentina Bruno 2010                        *)
+(*               (c) Copyright, Marco Maggesi 2014-2015                      *)
+(* ========================================================================= *)
+
+(* NOTE: this script is loaded after "integerTheory", before "realTheory", only
+   general topology theorems without using real numbers should be put here.
+
+   c.f. "rich_topologyTheory" for Elementary topology in Euclidean space.
+ *)
 
 open HolKernel Parse bossLib boolLib BasicProvers boolSimps simpLib mesonLib
-     metisLib jrhUtils pairTheory pairLib pred_setTheory quotientTheory
-     realTheory;
+     metisLib jrhUtils pairTheory pairLib pred_setTheory quotientTheory;
 
 val _ = new_theory "topology";
-
-
-(*---------------------------------------------------------------------------*)
-(* Minimal amount of set notation is convenient                              *)
-(*---------------------------------------------------------------------------*)
-
-val re_intersect = prove(
-   “!P Q. P INTER Q = \x:'a. P x /\ Q x”,
-    PROVE_TAC [INTER_applied, IN_DEF]);
-
-val COMPL_MEM = prove(
-  ``!P:'a->bool. !x. P x = ~(COMPL P x)``,
-  REPEAT GEN_TAC THEN REWRITE_TAC[COMPL_applied, IN_DEF] THEN
-  BETA_TAC THEN REWRITE_TAC[]);
 
 fun MESON ths tm = prove(tm,MESON_TAC ths);
 fun METIS ths tm = prove(tm,METIS_TAC ths);
@@ -38,6 +33,19 @@ fun SET_TAC L =
       GSPECIFICATION, IN_DEF, EXISTS_PROD] THEN METIS_TAC [];
 
 fun SET_RULE tm = prove(tm,SET_TAC []);
+
+(*---------------------------------------------------------------------------*)
+(* Minimal amount of set notation is convenient                              *)
+(*---------------------------------------------------------------------------*)
+
+val re_intersect = prove (
+   “!P Q. P INTER Q = \x:'a. P x /\ Q x”,
+    PROVE_TAC [INTER_applied, IN_DEF]);
+
+val COMPL_MEM = prove (
+  ``!P:'a->bool. !x. P x = ~(COMPL P x)``,
+    REPEAT GEN_TAC THEN REWRITE_TAC[COMPL_applied, IN_DEF] THEN
+    BETA_TAC THEN REWRITE_TAC[]);
 
 (*---------------------------------------------------------------------------*)
 (* Characterize an (alpha)topology                                           *)
@@ -380,270 +388,161 @@ val CLOSED_LIMPT = store_thm
  >> DISCH_THEN (SUBST1_TAC o SYM)
  >> POP_ASSUM ACCEPT_TAC);
 
-(*---------------------------------------------------------------------------*)
-(* Characterize an (alpha)metric                                             *)
-(*---------------------------------------------------------------------------*)
+(* ------------------------------------------------------------------------- *)
+(* A generic notion of "hull" (convex, affine, conic hull and closure).      *)
+(* ------------------------------------------------------------------------- *)
 
-val ismet = new_definition("ismet",
-  “ismet (m:'a#'a->real)
-        =
-      (!x y. (m(x,y) = &0) = (x = y)) /\
-      (!x y z. m(y,z) <= m(x,y) + m(x,z))”);
+val _ = set_fixity "hull" (Infix(NONASSOC, 450));
 
-val metric_tydef = new_type_definition
- ("metric",
-  prove (“?m:('a#'a->real). ismet m”,
-        EXISTS_TAC “\(x:'a,(y:'a)). if (x = y) then &0 else &1” THEN
-        REWRITE_TAC[ismet] THEN
-        CONV_TAC(ONCE_DEPTH_CONV PAIRED_BETA_CONV) THEN
-        CONJ_TAC THEN REPEAT GEN_TAC THENL
-         [BOOL_CASES_TAC “x:'a = y” THEN REWRITE_TAC[REAL_10],
-          REPEAT COND_CASES_TAC THEN
-          ASM_REWRITE_TAC[REAL_ADD_LID, REAL_ADD_RID, REAL_LE_REFL, REAL_LE_01]
-          THEN GEN_REWR_TAC LAND_CONV  [GSYM REAL_ADD_LID] THEN
-          TRY(MATCH_MP_TAC REAL_LE_ADD2) THEN
-          REWRITE_TAC[REAL_LE_01, REAL_LE_REFL] THEN
-          FIRST_ASSUM(UNDISCH_TAC o assert is_neg o concl) THEN
-          EVERY_ASSUM(SUBST1_TAC o SYM) THEN REWRITE_TAC[]]));
+val hull = new_definition ("hull",
+  ``P hull s = BIGINTER {t | P t /\ s SUBSET t}``);
 
-val metric_tybij = define_new_type_bijections
-      {name="metric_tybij",
-       ABS="metric", REP="dist", tyax=metric_tydef};
+val HULL_P = store_thm ("HULL_P",
+ ``!P s. P s ==> (P hull s = s)``,
+  SIMP_TAC std_ss [hull, EXTENSION, IN_BIGINTER, GSPECIFICATION] THEN
+  MESON_TAC[SUBSET_DEF]);
 
-(*---------------------------------------------------------------------------*)
-(* Derive the metric properties                                              *)
-(*---------------------------------------------------------------------------*)
+val P_HULL = store_thm ("P_HULL",
+ ``!P s. (!f. (!s. s IN f ==> P s) ==> P(BIGINTER f)) ==> P(P hull s)``,
+  REWRITE_TAC[hull] THEN SIMP_TAC std_ss [GSPECIFICATION]);
 
-val METRIC_ISMET = store_thm("METRIC_ISMET",
-  “!m:('a)metric. ismet (dist m)”,
-  GEN_TAC THEN REWRITE_TAC[metric_tybij]);
+val HULL_EQ = store_thm ("HULL_EQ",
+ ``!P s. (!f. (!s. s IN f ==> P s) ==> P(BIGINTER f))
+         ==> ((P hull s = s) <=> P s)``,
+  MESON_TAC[P_HULL, HULL_P]);
 
-val METRIC_ZERO = store_thm("METRIC_ZERO",
-  “!m:('a)metric. !x y. ((dist m)(x,y) = &0) = (x = y)”,
-  REPEAT GEN_TAC THEN ASSUME_TAC(SPEC “m:('a)metric” METRIC_ISMET) THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[ismet]) THEN ASM_REWRITE_TAC[]);
+val HULL_HULL = store_thm ("HULL_HULL",
+ ``!P s. P hull (P hull s) = P hull s``,
+  SIMP_TAC std_ss [hull, EXTENSION, IN_BIGINTER, GSPECIFICATION, SUBSET_DEF] THEN
+  METIS_TAC[]);
 
-val METRIC_SAME = store_thm("METRIC_SAME",
-  “!m:('a)metric. !x. (dist m)(x,x) = &0”,
-  REPEAT GEN_TAC THEN REWRITE_TAC[METRIC_ZERO]);
+val HULL_SUBSET = store_thm ("HULL_SUBSET",
+ ``!P s. s SUBSET (P hull s)``,
+  SIMP_TAC std_ss [hull, SUBSET_DEF, IN_BIGINTER, GSPECIFICATION] THEN MESON_TAC[]);
 
-val METRIC_POS = store_thm("METRIC_POS",
-  “!m:('a)metric. !x y. &0 <= (dist m)(x,y)”,
-  REPEAT GEN_TAC THEN ASSUME_TAC(SPEC “m:('a)metric” METRIC_ISMET) THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[ismet]) THEN
-  FIRST_ASSUM(MP_TAC o
-             SPECL [“x:'a”, “y:'a”, “y:'a”] o CONJUNCT2) THEN
-  REWRITE_TAC[REWRITE_RULE[]
-             (SPECL [“m:('a)metric”, “y:'a”, “y:'a”]
-                    METRIC_ZERO)]
-  THEN CONV_TAC CONTRAPOS_CONV THEN REWRITE_TAC[REAL_NOT_LE] THEN
-  DISCH_THEN(MP_TAC o MATCH_MP REAL_LT_ADD2 o W CONJ) THEN
-  REWRITE_TAC[REAL_ADD_LID]);
+val HULL_MONO = store_thm ("HULL_MONO",
+ ``!P s t. s SUBSET t ==> (P hull s) SUBSET (P hull t)``,
+   SIMP_TAC std_ss [hull, SUBSET_DEF, IN_BIGINTER, GSPECIFICATION] THEN 
+   METIS_TAC[]);
 
-val METRIC_SYM = store_thm("METRIC_SYM",
-  “!m:('a)metric. !x y. (dist m)(x,y) = (dist m)(y,x)”,
-  REPEAT GEN_TAC THEN ASSUME_TAC(SPEC “m:('a)metric” METRIC_ISMET) THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[ismet]) THEN FIRST_ASSUM
-   (MP_TAC o GENL [“y:'a”, “z:'a”] o SPECL [“z:'a”, “y:'a”, “z:'a”] o CONJUNCT2)
-  THEN REWRITE_TAC[METRIC_SAME, REAL_ADD_RID] THEN
-  DISCH_TAC THEN ASM_REWRITE_TAC[GSYM REAL_LE_ANTISYM]);
+val HULL_ANTIMONO = store_thm ("HULL_ANTIMONO",
+ ``!P Q s. P SUBSET Q ==> (Q hull s) SUBSET (P hull s)``,
+  SIMP_TAC std_ss [SUBSET_DEF, hull, IN_BIGINTER, GSPECIFICATION] THEN 
+  MESON_TAC[IN_DEF]);
 
-val METRIC_TRIANGLE = store_thm("METRIC_TRIANGLE",
-  “!m:('a)metric. !x y z. (dist m)(x,z) <= (dist m)(x,y) + (dist m)(y,z)”,
-  REPEAT GEN_TAC THEN ASSUME_TAC(SPEC “m:('a)metric” METRIC_ISMET) THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[ismet]) THEN
-  GEN_REWR_TAC (RAND_CONV o LAND_CONV)  [METRIC_SYM] THEN
-  ASM_REWRITE_TAC[]);
+val HULL_MINIMAL = store_thm ("HULL_MINIMAL",
+ ``!P s t. s SUBSET t /\ P t ==> (P hull s) SUBSET t``,
+  SIMP_TAC std_ss [hull, SUBSET_DEF, IN_BIGINTER, GSPECIFICATION] THEN METIS_TAC[]);
 
-val METRIC_NZ = store_thm("METRIC_NZ",
-  “!m:('a)metric. !x y. ~(x = y) ==> &0 < (dist m)(x,y)”,
+val SUBSET_HULL = store_thm ("SUBSET_HULL",
+ ``!P s t. P t ==> ((P hull s) SUBSET t <=> s SUBSET t)``,
+  SIMP_TAC std_ss [hull, SUBSET_DEF, IN_BIGINTER, GSPECIFICATION] THEN METIS_TAC[]);
+
+val HULL_UNIQUE = store_thm ("HULL_UNIQUE",
+ ``!P s t. s SUBSET t /\ P t /\ (!t'. s SUBSET t' /\ P t' ==> t SUBSET t')
+           ==> (P hull s = t)``,
+  REPEAT STRIP_TAC THEN MATCH_MP_TAC SUBSET_ANTISYM THEN
+  SIMP_TAC std_ss [hull, SUBSET_DEF, IN_BIGINTER, GSPECIFICATION] THEN
+  ASM_MESON_TAC[SUBSET_HULL, SUBSET_DEF]);
+
+val HULL_UNION_SUBSET = store_thm ("HULL_UNION_SUBSET",
+ ``!P s t. (P hull s) UNION (P hull t) SUBSET (P hull (s UNION t))``,
+  SIMP_TAC std_ss [UNION_SUBSET, HULL_MONO, SUBSET_UNION]);
+
+val HULL_UNION = store_thm ("HULL_UNION",
+ ``!P s t. P hull (s UNION t) = P hull ((P hull s) UNION (P hull t))``,
+  REPEAT STRIP_TAC THEN ONCE_REWRITE_TAC[hull] THEN
+  AP_TERM_TAC THEN SIMP_TAC std_ss [EXTENSION, GSPECIFICATION, UNION_SUBSET] THEN
+  METIS_TAC[SUBSET_HULL]);
+
+val HULL_UNION_LEFT = store_thm ("HULL_UNION_LEFT",
+ ``!P s t:'a->bool.
+        P hull (s UNION t) = P hull ((P hull s) UNION t)``,
+  REPEAT STRIP_TAC THEN ONCE_REWRITE_TAC[hull] THEN
+  AP_TERM_TAC THEN SIMP_TAC std_ss [EXTENSION, GSPECIFICATION, UNION_SUBSET] THEN
+  METIS_TAC[SUBSET_HULL]);
+
+val HULL_UNION_RIGHT = store_thm ("HULL_UNION_RIGHT",
+ ``!P s t:'a->bool.
+        P hull (s UNION t) = P hull (s UNION (P hull t))``,
+  REPEAT STRIP_TAC THEN ONCE_REWRITE_TAC[hull] THEN
+  AP_TERM_TAC THEN SIMP_TAC std_ss [EXTENSION, GSPECIFICATION, UNION_SUBSET] THEN
+  MESON_TAC[SUBSET_HULL]);
+
+val HULL_REDUNDANT_EQ = store_thm ("HULL_REDUNDANT_EQ",
+ ``!P a s. a IN (P hull s) <=> (P hull (a INSERT s) = P hull s)``,
+  REWRITE_TAC[hull] THEN SET_TAC[]);
+
+val HULL_REDUNDANT = store_thm ("HULL_REDUNDANT",
+ ``!P a s. a IN (P hull s) ==> (P hull (a INSERT s) = P hull s)``,
+  REWRITE_TAC[HULL_REDUNDANT_EQ]);
+
+val HULL_INDUCT = store_thm ("HULL_INDUCT",
+ ``!P p s. (!x:'a. x IN s ==> p x) /\ P {x | p x}
+           ==> !x. x IN P hull s ==> p x``,
   REPEAT GEN_TAC THEN
-  SUBST1_TAC(SYM(SPECL [“m:('a)metric”, “x:'a”, “y:'a”] METRIC_ZERO)) THEN
-  ONCE_REWRITE_TAC[TAUT_CONV “~a ==> b = b \/ a”] THEN
-  CONV_TAC(RAND_CONV SYM_CONV) THEN
-  REWRITE_TAC[GSYM REAL_LE_LT, METRIC_POS]);
+  MP_TAC(ISPECL [``P:('a->bool)->bool``, ``s:'a->bool``, ``{x:'a | p x}``]
+                HULL_MINIMAL) THEN
+  SIMP_TAC std_ss [SUBSET_DEF, GSPECIFICATION]);
 
-(*---------------------------------------------------------------------------*)
-(* Now define metric topology and prove equivalent definition of "open"      *)
-(*---------------------------------------------------------------------------*)
+val HULL_INC = store_thm ("HULL_INC",
+ ``!P s x. x IN s ==> x IN P hull s``,
+  MESON_TAC[REWRITE_RULE[SUBSET_DEF] HULL_SUBSET]);
 
-val mtop = new_definition("mtop",
-  “!m:('a)metric. mtop m =
-    topology(\S'. !x. S' x ==> ?e. &0 < e /\ (!y. (dist m)(x,y) < e ==> S' y))”);
+val HULL_IMAGE_SUBSET = store_thm ("HULL_IMAGE_SUBSET",
+ ``!P f s. (P (P hull s)) /\ (!s. P s ==> P(IMAGE f s))
+           ==> (P hull (IMAGE f s)) SUBSET ((IMAGE f (P hull s)))``,
+  REPEAT STRIP_TAC THEN MATCH_MP_TAC HULL_MINIMAL THEN
+  ASM_SIMP_TAC std_ss [IMAGE_SUBSET, HULL_SUBSET]);
 
-val mtop_istopology = store_thm("mtop_istopology",
-  ``!m:('a)metric.
-      istopology (\S'. !x. S' x ==>
-                           ?e. &0 < e /\
-                               (!y. (dist m)(x,y) < e ==> S' y))``,
-  GEN_TAC THEN
-  SIMP_TAC bool_ss [istopology, EMPTY_DEF, UNIV_DEF, BIGUNION_applied,
-                    re_intersect, SUBSET_applied, IN_DEF] THEN
-  REVERSE (REPEAT STRIP_TAC) THENL (* 2 subgoals *)
-  [ (* goal 1 (of 2) *)
-    RES_TAC >> Q.EXISTS_TAC `e` >> ASM_REWRITE_TAC [] \\
-    rpt STRIP_TAC \\
-    Q.EXISTS_TAC `s` >> ASM_REWRITE_TAC [] >> RES_TAC,
-    (* goal 2 (of 2) *)
-    RES_TAC \\
-    REPEAT_TCL DISJ_CASES_THEN MP_TAC
-        (SPECL [“e:real”, “e':real”] REAL_LT_TOTAL) >|
-    [ (* goal 2.1 (of 3) *)
-      DISCH_THEN SUBST_ALL_TAC THEN EXISTS_TAC “e':real” THEN
-      ASM_REWRITE_TAC [] THEN GEN_TAC THEN
-      DISCH_TAC >> PROVE_TAC [],
-      (* goal 2.2 (of 3) *)
-      DISCH_THEN(curry op THEN (EXISTS_TAC “e:real”) o MP_TAC) THEN
-      ASM_REWRITE_TAC [] THEN
-      DISCH_THEN (fn th2 => GEN_TAC THEN DISCH_THEN (fn th1 =>
-                  ASSUME_TAC th1 THEN ASSUME_TAC (MATCH_MP REAL_LT_TRANS (CONJ th1 th2))))
-      >> PROVE_TAC [],
-      (* goal 2.3 (of 3) *)
-      DISCH_THEN(curry op THEN (EXISTS_TAC “e':real”) o MP_TAC) THEN
-      ASM_REWRITE_TAC [] THEN
-      DISCH_THEN (fn th2 => GEN_TAC THEN DISCH_THEN(fn th1 =>
-                  ASSUME_TAC th1 THEN ASSUME_TAC (MATCH_MP REAL_LT_TRANS (CONJ th1 th2))))
-      >> PROVE_TAC [] ] ]);
+val HULL_IMAGE_GALOIS = store_thm ("HULL_IMAGE_GALOIS",
+ ``!P f g s. (!s. P(P hull s)) /\
+             (!s. P s ==> P(IMAGE f s)) /\ (!s. P s ==> P(IMAGE g s)) /\
+             (!s t. s SUBSET IMAGE g t <=> IMAGE f s SUBSET t)
+             ==> (P hull (IMAGE f s) = IMAGE f (P hull s))``,
+  REPEAT STRIP_TAC THEN MATCH_MP_TAC SUBSET_ANTISYM THEN
+  ASM_SIMP_TAC std_ss [HULL_IMAGE_SUBSET] THEN
+  FIRST_ASSUM(fn th => GEN_REWR_TAC I [GSYM th]) THEN
+  MATCH_MP_TAC HULL_MINIMAL THEN
+  ASM_SIMP_TAC std_ss [HULL_SUBSET]);
 
-val MTOP_OPEN = store_thm("MTOP_OPEN",
-  “!S' (m:('a)metric). open_in(mtop m) S' =
-      (!x. S' x ==> ?e. &0 < e /\ (!y. (dist m(x,y)) < e ==> S' y))”,
-  GEN_TAC THEN REWRITE_TAC[mtop] THEN
-  REWRITE_TAC[REWRITE_RULE[topology_tybij] mtop_istopology] THEN
-  BETA_TAC THEN REWRITE_TAC[]);
+val HULL_IMAGE = store_thm ("HULL_IMAGE",
+ ``!P f s. (!s. P(P hull s)) /\ (!s. P(IMAGE f s) <=> P s) /\
+           (!x y:'a. (f x = f y) ==> (x = y)) /\ (!y. ?x. f x = y)
+           ==> (P hull (IMAGE f s) = IMAGE f (P hull s))``,
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  POP_ASSUM MP_TAC THEN POP_ASSUM MP_TAC THEN
+  REWRITE_TAC [AND_IMP_INTRO] THEN
+  SIMP_TAC std_ss [SET_RULE ``!f. (!x y. (f x = f y) ==> (x = y)) /\ 
+   (!y. ?x. f x = y) <=> ?g. (!y. f (g y) = y) /\ !x. g (f x) = x``] THEN
+  DISCH_THEN(X_CHOOSE_THEN ``g:'a->'a`` STRIP_ASSUME_TAC) THEN
+  MATCH_MP_TAC HULL_IMAGE_GALOIS THEN EXISTS_TAC ``g:'a->'a`` THEN
+  ASM_REWRITE_TAC[] THEN CONJ_TAC THENL [ALL_TAC, REPEAT (POP_ASSUM MP_TAC) THEN
+  SET_TAC[]] THEN X_GEN_TAC ``s:'a->bool`` THEN
+  FIRST_X_ASSUM(fn th => GEN_REWR_TAC RAND_CONV [GSYM th]) THEN
+  MATCH_MP_TAC EQ_IMPLIES THEN AP_TERM_TAC THEN REPEAT (POP_ASSUM MP_TAC) THEN SET_TAC[]);
 
-(*---------------------------------------------------------------------------*)
-(* Define open ball in metric space + prove basic properties                 *)
-(*---------------------------------------------------------------------------*)
+val IS_HULL = store_thm ("IS_HULL",
+ ``!P s. (!f. (!s. s IN f ==> P s) ==> P(BIGINTER f))
+         ==> (P s <=> ?t. s = P hull t)``,
+  MESON_TAC[HULL_P, P_HULL]);
 
-val ball = new_definition("ball",
-  “!m:('a)metric. !x e. B(m)(x,e) = \y. (dist m)(x,y) < e”);
+val HULLS_EQ = store_thm ("HULLS_EQ",
+ ``!P s t.
+        (!f. (!s. s IN f ==> P s) ==> P (BIGINTER f)) /\
+        s SUBSET (P hull t) /\ t SUBSET (P hull s)
+        ==> (P hull s = P hull t)``,
+  REPEAT STRIP_TAC THEN MATCH_MP_TAC SUBSET_ANTISYM THEN
+  CONJ_TAC THEN MATCH_MP_TAC HULL_MINIMAL THEN
+  ASM_SIMP_TAC std_ss [P_HULL]);
 
-val BALL_OPEN = store_thm("BALL_OPEN",
-  “!m:('a)metric. !x e. &0 < e ==> open_in(mtop(m))(B(m)(x,e))”,
-  REPEAT GEN_TAC THEN DISCH_TAC THEN REWRITE_TAC[MTOP_OPEN] THEN
-  X_GEN_TAC “z:'a” THEN REWRITE_TAC[ball] THEN BETA_TAC THEN
-  DISCH_THEN(ASSUME_TAC o ONCE_REWRITE_RULE[GSYM REAL_SUB_LT]) THEN
-  EXISTS_TAC “e - dist(m:('a)metric)(x,z)” THEN ASM_REWRITE_TAC[] THEN
-  X_GEN_TAC “y:'a” THEN REWRITE_TAC[REAL_LT_SUB_LADD] THEN
-  ONCE_REWRITE_TAC[REAL_ADD_SYM] THEN DISCH_TAC THEN
-  MATCH_MP_TAC REAL_LET_TRANS THEN
-  EXISTS_TAC “dist(m)(x:'a,z) + dist(m)(z,y)” THEN
-  ASM_REWRITE_TAC[METRIC_TRIANGLE]);
-
-val BALL_NEIGH = store_thm("BALL_NEIGH",
-  “!m:('a)metric. !x e. &0 < e ==> neigh(mtop(m))(B(m)(x,e),x)”,
-  REPEAT GEN_TAC THEN DISCH_TAC THEN
-  REWRITE_TAC[neigh] THEN EXISTS_TAC “B(m)(x:'a,e)” THEN
-  REWRITE_TAC[SUBSET_REFL] THEN CONJ_TAC THENL
-   [MATCH_MP_TAC BALL_OPEN,
-    REWRITE_TAC[ball] THEN BETA_TAC THEN REWRITE_TAC[METRIC_SAME]] THEN
-  POP_ASSUM ACCEPT_TAC);
-
-(*---------------------------------------------------------------------------*)
-(* Characterize limit point in a metric topology                             *)
-(*---------------------------------------------------------------------------*)
-
-val MTOP_LIMPT = store_thm("MTOP_LIMPT",
-  “!m:('a)metric. !x S'. limpt(mtop m) x S' =
-      !e. &0 < e ==> ?y. ~(x = y) /\ S' y /\ (dist m)(x,y) < e”,
-  REPEAT GEN_TAC THEN REWRITE_TAC[limpt] THEN EQ_TAC THENL
-   [DISCH_THEN(curry op THEN (GEN_TAC THEN DISCH_TAC) o MP_TAC o SPEC “B(m)(x:'a,e)”)
-    THEN FIRST_ASSUM(fn th => REWRITE_TAC[MATCH_MP BALL_NEIGH th]) THEN
-    REWRITE_TAC[ball] THEN BETA_TAC THEN DISCH_THEN ACCEPT_TAC,
-    DISCH_TAC THEN GEN_TAC THEN REWRITE_TAC[neigh] THEN
-    DISCH_THEN(X_CHOOSE_THEN “P:'a->bool”
-      (CONJUNCTS_THEN2 MP_TAC STRIP_ASSUME_TAC)) THEN
-    REWRITE_TAC[MTOP_OPEN] THEN
-    DISCH_THEN(MP_TAC o SPEC “x:'a”) THEN ASM_REWRITE_TAC[] THEN
-    DISCH_THEN(X_CHOOSE_THEN “e:real” (CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) THEN
-    FIRST_ASSUM(UNDISCH_TAC o assert is_forall o concl) THEN
-    DISCH_THEN(MP_TAC o SPEC “e:real”) THEN ASM_REWRITE_TAC[] THEN
-    DISCH_THEN(X_CHOOSE_THEN “y:'a” STRIP_ASSUME_TAC) THEN
-    DISCH_THEN(MP_TAC o SPEC “y:'a”) THEN ASM_REWRITE_TAC[] THEN
-    DISCH_TAC THEN EXISTS_TAC “y:'a” THEN ASM_REWRITE_TAC[] THEN
-    UNDISCH_TAC “(P:'a->bool) SUBSET N” THEN
-    REWRITE_TAC[SUBSET_applied] THEN DISCH_THEN MATCH_MP_TAC THEN
-    FIRST_ASSUM ACCEPT_TAC]);
-
-(*---------------------------------------------------------------------------*)
-(* Define the usual metric on the real line                                  *)
-(*---------------------------------------------------------------------------*)
-
-val ISMET_R1 = store_thm("ISMET_R1",
-  “ismet (\(x,y). abs(y - x:real))”,
-  REWRITE_TAC[ismet] THEN CONV_TAC(ONCE_DEPTH_CONV PAIRED_BETA_CONV) THEN
-  CONJ_TAC THEN REPEAT GEN_TAC THENL
-   [REWRITE_TAC[ABS_ZERO, REAL_SUB_0] THEN
-    CONV_TAC(RAND_CONV SYM_CONV) THEN REFL_TAC,
-    SUBST1_TAC(SYM(SPECL [“x:real”, “y:real”] REAL_NEG_SUB)) THEN
-    REWRITE_TAC[ABS_NEG] THEN
-     SUBGOAL_THEN “z - y:real = (x - y) + (z - x)”
-      (fn th => SUBST1_TAC th THEN MATCH_ACCEPT_TAC ABS_TRIANGLE) THEN
-    REWRITE_TAC[real_sub] THEN
-    ONCE_REWRITE_TAC[AC(REAL_ADD_ASSOC,REAL_ADD_SYM)
-      “(a + b) + (c + d) = (d + a) + (c + b):real”] THEN
-    REWRITE_TAC[REAL_ADD_LINV, REAL_ADD_LID]]);
-
-val mr1 = new_definition("mr1",
-  “mr1 = metric(\(x,y). abs(y - x))”);
-
-val MR1_DEF = store_thm("MR1_DEF",
-  “!x y. (dist mr1)(x,y) = abs(y - x)”,
-  REPEAT GEN_TAC THEN REWRITE_TAC[mr1, REWRITE_RULE[metric_tybij] ISMET_R1]
-  THEN CONV_TAC(ONCE_DEPTH_CONV PAIRED_BETA_CONV) THEN REFL_TAC);
-
-val MR1_ADD = store_thm("MR1_ADD",
-  “!x d. (dist mr1)(x,x + d) = abs(d)”,
-  REPEAT GEN_TAC THEN REWRITE_TAC[MR1_DEF, REAL_ADD_SUB]);
-
-val MR1_SUB = store_thm("MR1_SUB",
-  “!x d. (dist mr1)(x,x - d) = abs(d)”,
-  REPEAT GEN_TAC THEN REWRITE_TAC[MR1_DEF, REAL_SUB_SUB, ABS_NEG]);
-
-val MR1_ADD_LE = store_thm("MR1_ADD_POS",
-  “!x d. &0 <= d ==> ((dist mr1)(x,x + d) = d)”,
-  REPEAT GEN_TAC THEN DISCH_TAC THEN ASM_REWRITE_TAC[MR1_ADD, abs]);
-
-val MR1_SUB_LE = store_thm("MR1_SUB_LE",
-  “!x d. &0 <= d ==> ((dist mr1)(x,x - d) = d)”,
-  REPEAT GEN_TAC THEN DISCH_TAC THEN ASM_REWRITE_TAC[MR1_SUB, abs]);
-
-val MR1_ADD_LT = store_thm("MR1_ADD_LT",
-  “!x d. &0 < d ==> ((dist mr1)(x,x + d) = d)”,
-  REPEAT GEN_TAC THEN DISCH_THEN(MP_TAC o MATCH_MP REAL_LT_IMP_LE) THEN
-  MATCH_ACCEPT_TAC MR1_ADD_LE);
-
-val MR1_SUB_LT = store_thm("MR1_SUB_LT",
-  “!x d. &0 < d ==> ((dist mr1)(x,x - d) = d)”,
-   REPEAT GEN_TAC THEN DISCH_THEN(MP_TAC o MATCH_MP REAL_LT_IMP_LE) THEN
-  MATCH_ACCEPT_TAC MR1_SUB_LE);
-
-val MR1_BETWEEN1 = store_thm("MR1_BETWEEN1",
-  “!x y z. x < z /\ (dist mr1)(x,y) < (z - x) ==> y < z”,
-  REPEAT GEN_TAC THEN REWRITE_TAC[MR1_DEF, ABS_BETWEEN1]);
-
-(*---------------------------------------------------------------------------*)
-(* Every real is a limit point of the real line                              *)
-(*---------------------------------------------------------------------------*)
-
-val MR1_LIMPT = store_thm("MR1_LIMPT",
-  ``!x. limpt(mtop mr1) x univ(:real)``,
-  GEN_TAC THEN REWRITE_TAC[MTOP_LIMPT, UNIV_DEF] THEN
-  X_GEN_TAC “e:real” THEN DISCH_TAC THEN
-  EXISTS_TAC “x + (e / &2)” THEN
-  REWRITE_TAC[MR1_ADD] THEN
-  SUBGOAL_THEN “&0 <= (e / &2)” ASSUME_TAC THENL
-   [MATCH_MP_TAC REAL_LT_IMP_LE THEN
-    ASM_REWRITE_TAC[REAL_LT_HALF1], ALL_TAC] THEN
-  ASM_REWRITE_TAC[abs, REAL_LT_HALF2] THEN
-  CONV_TAC(RAND_CONV SYM_CONV) THEN
-  REWRITE_TAC[REAL_ADD_RID_UNIQ] THEN
-  CONV_TAC(RAND_CONV SYM_CONV) THEN
-  MATCH_MP_TAC REAL_LT_IMP_NE THEN
-  ASM_REWRITE_TAC[REAL_LT_HALF1]);
-
-
-val _ = remove_ovl_mapping "B" {Name = "B", Thy = "topology"};
+val HULL_P_AND_Q = store_thm ("HULL_P_AND_Q",
+ ``!P Q. (!f. (!s. s IN f ==> P s) ==> P(BIGINTER f)) /\
+         (!f. (!s. s IN f ==> Q s) ==> Q(BIGINTER f)) /\
+         (!s. Q s ==> Q(P hull s))
+         ==> ((\x. P x /\ Q x) hull s = P hull (Q hull s))``,
+  REPEAT STRIP_TAC THEN
+  MATCH_MP_TAC HULL_UNIQUE THEN ASM_SIMP_TAC std_ss [HULL_INC, SUBSET_HULL] THEN
+  ASM_MESON_TAC[P_HULL, HULL_SUBSET, SUBSET_TRANS]);
 
 val _ = export_theory();

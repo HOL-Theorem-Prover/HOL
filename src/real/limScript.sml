@@ -11,7 +11,7 @@ app load ["numLib",
 
 open HolKernel Parse boolLib hol88Lib numLib reduceLib pairLib
      pairTheory arithmeticTheory numTheory prim_recTheory
-     jrhUtils realTheory topologyTheory netsTheory seqTheory;
+     jrhUtils realTheory metricTheory netsTheory seqTheory;
 
 infix THEN THENL ORELSE ORELSEC ##;
 
