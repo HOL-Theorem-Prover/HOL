@@ -9,7 +9,7 @@ app load ["numLib",
           "numLib",
           "PairedLambda",
           "jrhUtils",
-          "topologyTheory",
+          "metricTheory",
           "netsTheory",
           "seqTheory",
           "limTheory"];
@@ -17,7 +17,7 @@ app load ["numLib",
 
 open HolKernel Parse boolLib hol88Lib numLib reduceLib pairLib
      pairTheory arithmeticTheory numTheory prim_recTheory
-     jrhUtils realTheory topologyTheory netsTheory seqTheory limTheory;
+     jrhUtils realTheory metricTheory netsTheory seqTheory limTheory;
 
 infix THEN THENL ORELSE ORELSEC ##;
 

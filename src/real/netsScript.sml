@@ -9,14 +9,14 @@ app load ["hol88Lib",
           "pairTheory",
           "PairedLambda",
           "jrhUtils",
-          "topologyTheory"];
+          "metricTheory"];
 *)
 
 (*
 *)
 open HolKernel Parse boolLib hol88Lib numLib reduceLib pairLib
      pairTheory arithmeticTheory numTheory prim_recTheory
-     jrhUtils realTheory topologyTheory;
+     jrhUtils realTheory topologyTheory metricTheory;
 
 val re_subset = REWRITE_RULE [pred_setTheory.SPECIFICATION]
                              pred_setTheory.SUBSET_DEF
