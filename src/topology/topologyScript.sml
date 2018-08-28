@@ -1,10 +1,16 @@
 (*===========================================================================*)
-(*  Abstract Topologies (from hol-light)                                     *)
+(*  General Topology (from hol-light)                                        *)
 (*                                                                           *)
 (*              (c) Copyright, John Harrison 1998-2015                       *)
 (*                (c) Copyright, Valentina Bruno 2010                        *)
 (*               (c) Copyright, Marco Maggesi 2014-2015                      *)
 (* ========================================================================= *)
+
+(* NOTE: this script is loaded after "integerTheory", before "realTheory", only
+   general topology theorems without using real numbers should be put here.
+
+   c.f. "rich_topologyTheory" for Elementary topology in Euclidean space.
+ *)
 
 open HolKernel Parse bossLib boolLib BasicProvers boolSimps simpLib mesonLib
      metisLib jrhUtils pairTheory pairLib pred_setTheory quotientTheory;
