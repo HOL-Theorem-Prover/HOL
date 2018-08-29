@@ -77,6 +77,9 @@ fun total f x = SOME (f x) handle Interrupt => raise Interrupt | _ => NONE
 
 fun partial e f x = case f x of SOME y => y | NONE => raise e
 
+fun these (SOME x) = x
+  | these NONE = []
+
 (* ----------------------------------------------------------------------
     Lists
    ---------------------------------------------------------------------- *)
@@ -452,6 +455,13 @@ fun op_set_diff eq_func S1 S2 =
    in
       filter (fn x => not (memb x S2)) S1
    end
+
+fun op_remove eq x list =
+  if op_mem eq x list then
+    filter (fn y => not (eq x y)) list
+  else list
+
+fun op_update eq x xs = cons x (op_remove eq x xs)
 
 (*---------------------------------------------------------------------------
    quote puts double quotes around a string. mlquote does this as well,

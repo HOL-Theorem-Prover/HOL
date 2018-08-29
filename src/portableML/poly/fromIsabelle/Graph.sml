@@ -22,7 +22,8 @@ sig
   val empty: 'a T
   val is_empty: 'a T -> bool
   val keys: 'a T -> key list
-  val get_first: (key * ('a * (Keys.T * Keys.T)) -> 'b option) -> 'a T -> 'b option
+  val get_first: (key * ('a * (Keys.T * Keys.T)) -> 'b option) -> 'a T ->
+                 'b option
   val fold: (key * ('a * (Keys.T * Keys.T)) -> 'b -> 'b) -> 'a T -> 'b -> 'b
   val get_entry: 'a T -> key -> key * ('a * (Keys.T * Keys.T))        (*exception UNDEF*)
   val get_node: 'a T -> key -> 'a                                     (*exception UNDEF*)
@@ -41,28 +42,30 @@ sig
   val is_minimal: 'a T -> key -> bool
   val is_maximal: 'a T -> key -> bool
   val is_isolated: 'a T -> key -> bool
-  val new_node: key * 'a -> 'a T -> 'a T                              (*exception DUP*)
+  val new_node: key * 'a -> 'a T -> 'a T                             (*exn DUP*)
   val default_node: key * 'a -> 'a T -> 'a T
-  val del_node: key -> 'a T -> 'a T                                   (*exception UNDEF*)
+  val del_node: key -> 'a T -> 'a T                                (*exn UNDEF*)
   val is_edge: 'a T -> key * key -> bool
-  val add_edge: key * key -> 'a T -> 'a T                             (*exception UNDEF*)
-  val del_edge: key * key -> 'a T -> 'a T                             (*exception UNDEF*)
+  val add_edge: key * key -> 'a T -> 'a T                          (*exn UNDEF*)
+  val del_edge: key * key -> 'a T -> 'a T                          (*exn UNDEF*)
   val restrict: (key -> bool) -> 'a T -> 'a T
   val dest: 'a T -> ((key * 'a) * key list) list
-  val make: ((key * 'a) * key list) list -> 'a T                      (*exception DUP | UNDEF*)
-  val merge: ('a * 'a -> bool) -> 'a T * 'a T -> 'a T                 (*exception DUP*)
+  val make: ((key * 'a) * key list) list -> 'a T             (*exn DUP | UNDEF*)
+  val merge: ('a -> 'a -> bool) -> 'a T * 'a T -> 'a T               (*exn DUP*)
   val join: (key -> 'a * 'a -> 'a) (*exception DUP/SAME*) ->
-    'a T * 'a T -> 'a T                                               (*exception DUP*)
+            'a T * 'a T -> 'a T                                      (*exn DUP*)
   val irreducible_paths: 'a T -> key * key -> key list list
   exception CYCLES of key list list
-  val add_edge_acyclic: key * key -> 'a T -> 'a T                     (*exception UNDEF | CYCLES*)
-  val add_deps_acyclic: key * key list -> 'a T -> 'a T                (*exception UNDEF | CYCLES*)
-  val merge_acyclic: ('a * 'a -> bool) -> 'a T * 'a T -> 'a T         (*exception CYCLES*)
+  val add_edge_acyclic: key * key -> 'a T -> 'a T         (*exn UNDEF | CYCLES*)
+  val add_deps_acyclic: key * key list -> 'a T -> 'a T    (*exn UNDEF | CYCLES*)
+  val merge_acyclic: ('a -> 'a -> bool) -> 'a T * 'a T -> 'a T    (*exn CYCLES*)
   val topological_order: 'a T -> key list
-  val add_edge_trans_acyclic: key * key -> 'a T -> 'a T               (*exception UNDEF | CYCLES*)
-  val merge_trans_acyclic: ('a * 'a -> bool) -> 'a T * 'a T -> 'a T   (*exception CYCLES*)
+  val add_edge_trans_acyclic: key * key -> 'a T -> 'a T   (*exn UNDEF | CYCLES*)
+  val merge_trans_acyclic: ('a -> 'a -> bool) -> 'a T * 'a T -> 'a T
+                                                                  (*exn CYCLES*)
   exception DEP of key * key
-  val schedule: ((key * 'b) list -> key * 'a -> 'b) -> 'a T -> 'b list  (*exception DEP*)
+  val schedule: ((key * 'b) list -> key * 'a -> 'b) -> 'a T -> 'b list
+                                                                     (*exn DEP*)
 end;
 
 functor Graph(Key: KEY): GRAPH =
@@ -73,8 +76,7 @@ open Portable Library
 (* keys *)
 
 type key = Key.key;
-fun eq_key(k1,k2) = Key.ord(k1,k2) = EQUAL
-val foldl' = Portable.foldl'
+fun eq_key k1 k2 = Key.ord(k1,k2) = EQUAL
 
 structure Table = Table(Key);
 
@@ -88,7 +90,8 @@ val empty = Keys Table.empty;
 fun is_empty (Keys tab) = Table.is_empty tab;
 
 fun member (Keys tab) = Table.defined tab;
-fun insert x (Keys tab) = Keys (Table.insert (K true) (x, ()) tab);
+fun insert x (Keys tab) =
+  Keys (Table.insert (fn _ => fn _ => true) (x, ()) tab);
 fun remove x (Keys tab) = Keys (Table.delete_safe x tab);
 
 fun fold f (Keys tab) = Table.fold (f o #1) tab;
@@ -164,12 +167,15 @@ fun strong_conn G =
 
 fun map_strong_conn f G =
   let
-    val xss = strong_conn G;
-    fun map' xs =
-      fold2 (curry Table.update) xs (f (AList.make (get_node G) xs));
-    val tab' = Table.empty
-      |> foldl' map' xss;
-  in map_nodes (fn x => fn _ => valOf (Table.lookup tab' x)) G end;
+    val xss = strong_conn G
+    fun map' xs A =
+      ListPair.foldl (fn (k,v,t) => Table.update(k,v) t)
+                     A
+                     (xs, f (AList.make (get_node G) xs))
+    val tab' = Table.empty |> foldl' map' xss
+  in
+    map_nodes (fn x => fn _ => valOf (Table.lookup tab' x)) G
+  end
 
 
 (* minimal and maximal elements *)
@@ -255,7 +261,7 @@ fun join f (G1 as Graph tab1, G2 as Graph tab2) =
 
 fun gen_merge add eq (G1 as Graph tab1, G2 as Graph tab2) =
   let
-    fun eq_node ((i1, _), (i2, _)) = eq (i1, i2)
+    fun eq_node (i1, _) (i2, _) = eq i1 i2
   in
     if pointer_eq (G1, G2) then G1
     else foldl'
@@ -271,11 +277,12 @@ fun merge eq GG = gen_merge add_edge eq GG;
 
 fun irreducible_preds G X path z =
   let
-    fun red x x' = is_edge G (x, x') andalso not (eq_key (x', z));
+    fun red x x' = is_edge G (x, x') andalso not (eq_key x' z);
     fun irreds [] xs' = xs'
       | irreds (x :: xs) xs' =
-          if not (Keys.member X x) orelse eq_key (x, z) orelse member eq_key path x orelse
-            exists (red x) xs orelse exists (red x) xs'
+          if not (Keys.member X x) orelse eq_key x z orelse
+             op_mem eq_key x path orelse
+             exists (red x) xs orelse exists (red x) xs'
           then irreds xs xs'
           else irreds xs (x :: xs');
   in irreds (immediate_preds G z) [] end;
@@ -284,10 +291,10 @@ fun irreducible_paths G (x, y) =
   let
     val (_, X) = reachable (imm_succs G) [x];
     fun paths path z =
-      if eq_key (x, z) then cons (z :: path)
+      if eq_key x z then cons (z :: path)
       else foldl' (paths (z :: path)) (irreducible_preds G X path z)
   in
-    if eq_key (x, y) andalso not (is_edge G (x, x)) then [[]]
+    if eq_key x y andalso not (is_edge G (x, x)) then [[]]
     else paths [] y []
   end;
 
@@ -349,5 +356,13 @@ val fold = fold_graph;
 
 end;
 
-structure Graph = Graph(type key = string val ord = String.compare);
-structure Int_Graph = Graph(type key = int val ord = Int.compare);
+structure Graph = Graph(
+  type key = string
+  val ord = String.compare
+  val pp = HOLPP.add_string o Portable.mlquote
+);
+structure Int_Graph = Graph(
+  type key = int
+  val ord = Int.compare
+  val pp = HOLPP.add_string o Int.toString
+);

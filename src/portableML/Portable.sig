@@ -32,6 +32,7 @@ sig
   val can : ('a -> 'b) -> 'a -> bool
   val total : ('a -> 'b) -> 'a -> 'b option
   val partial : exn -> ('a -> 'b option) -> 'a -> 'b
+  val these : 'a list option -> 'a list
 
   val assert_exn : ('a -> bool) -> 'a -> exn -> 'a
   val with_exn : ('a -> 'b) -> 'a -> exn -> 'b
@@ -114,6 +115,8 @@ sig
   val op_U : ('a -> 'a -> bool) -> 'a list list -> 'a list
   val op_intersect : ('a -> 'a -> bool) -> 'a list -> 'a list -> 'a list
   val op_set_diff : ('a -> 'a -> bool) -> 'a list -> 'a list -> 'a list
+  val op_remove : ('a -> 'b -> bool) -> 'a -> 'b list -> 'b list
+  val op_update : ('a -> 'a -> bool) -> 'a -> 'a list -> 'a list
 
   val int_to_string : int -> string
   val quote : string -> string

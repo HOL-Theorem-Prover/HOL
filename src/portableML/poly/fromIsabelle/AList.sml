@@ -48,10 +48,13 @@ fun find_index eq xs key =
 
 fun map_index eq key f_none f_some xs =
   let
-    val i = find_index eq xs key;
+    val i = find_index eq xs key
     fun mapp 0 (x::xs) = f_some x xs
-      | mapp i (x::xs) = x :: mapp (i-1) xs;
-  in (if i = ~1 then f_none else mapp i) xs end;
+      | mapp i (x::xs) = x :: mapp (i-1) xs
+      | mapp _ _ = raise Fail "Impossible case - AList.map_index.mapp"
+  in
+    (if i = ~1 then f_none else mapp i) xs
+  end;
 
 fun lookup _ [] _ = NONE
   | lookup eq ((key, value)::xs) key' =
@@ -85,7 +88,8 @@ fun map_entry_yield eq key f xs =
           in (SOME r, (key, value') :: xs) end
       | mapp i (x::xs) =
           let val (r, xs') = mapp (i-1) xs
-          in (r, x::xs') end;
+          in (r, x::xs') end
+      | mapp _ _ = raise Fail "Impossible case - AList.map_entry_yield"
   in if i = ~1 then (NONE, xs) else mapp i xs end;
 
 exception DUP;

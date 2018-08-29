@@ -144,8 +144,13 @@ fun task_ord (Task{id=id1, pri=pri1, ...},Task{id = id2, pri = pri2, ...}) =
                  ((pri1, id1), (pri2, id2))
 end;
 
-structure Tasks = Table(type key = task val ord = task_ord);
-structure Task_Graph = Graph(type key = task val ord = task_ord);
+structure TaskKEY = struct
+  type key = task
+  val ord = task_ord
+  fun pp t = PolyML.prettyRepresentation(t,~1)
+end
+structure Tasks = Table(TaskKEY);
+structure Task_Graph = Graph(TaskKEY);
 
 
 (* timing *)
@@ -207,9 +212,10 @@ fun make_queue groups jobs urgent = Queue {groups = groups, jobs = jobs, urgent 
 val empty = make_queue Inttab.empty Task_Graph.empty 0;
 
 fun group_tasks (Queue {groups, ...}) gs =
-  foldl' (fn g => fn tasks => Tasks.merge (op =) (tasks, get_tasks groups (group_id g)))
-    gs Tasks.empty
-  |> Tasks.keys;
+  foldl' (fn g => fn tasks =>
+             Tasks.merge equal (tasks, get_tasks groups (group_id g)))
+         gs Tasks.empty
+         |> Tasks.keys;
 
 fun known_task (Queue {jobs, ...}) task = can (Task_Graph.get_entry jobs) task;
 
