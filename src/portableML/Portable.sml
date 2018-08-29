@@ -36,8 +36,11 @@ infix 3 ##
 fun (f ## g) (x, y) = (f x, g y)
 fun apfst f (x, y) = (f x, y)
 fun apsnd f (x, y) = (x, f y)
-infix |>
+infix |> ||> |>> ||->
 fun x |> f = f x
+fun (x,y) |>> f = (f x, y)
+fun (x,y) ||> f = (x, f y)
+fun (x,y) ||-> f = f x y
 infixr $
 fun f $ x = f x
 fun C f x y = f y x
@@ -74,6 +77,9 @@ fun total f x = SOME (f x) handle Interrupt => raise Interrupt | _ => NONE
 
 fun partial e f x = case f x of SOME y => y | NONE => raise e
 
+fun these (SOME x) = x
+  | these NONE = []
+
 (* ----------------------------------------------------------------------
     Lists
    ---------------------------------------------------------------------- *)
@@ -100,8 +106,10 @@ fun first_opt f =
    end
 
 fun itlist f L base_value = List.foldr (uncurry f) base_value L
+val foldr' = itlist
 
 fun rev_itlist f L base_value = List.foldl (uncurry f) base_value L
+val foldl' = rev_itlist
 
 fun foldl_map _ (acc, []) = (acc, [])
   | foldl_map f (acc, x :: xs) =
@@ -448,6 +456,13 @@ fun op_set_diff eq_func S1 S2 =
       filter (fn x => not (memb x S2)) S1
    end
 
+fun op_remove eq x list =
+  if op_mem eq x list then
+    filter (fn y => not (eq x y)) list
+  else list
+
+fun op_update eq x xs = cons x (op_remove eq x xs)
+
 (*---------------------------------------------------------------------------
    quote puts double quotes around a string. mlquote does this as well,
    but also quotes all of the characters in the string so that the
@@ -568,6 +583,17 @@ val flush_out      = TextIO.flushOut
 fun input_line is  = case TextIO.inputLine is of NONE => "" | SOME s => s
 val end_of_stream  = TextIO.endOfStream
 
+(*---------------------------------------------------------------------------*)
+(* Yet another variant of the sum type, used for the failure monad           *)
+(*---------------------------------------------------------------------------*)
+
+datatype ('a, 'b) verdict = PASS of 'a | FAIL of 'b
+
+fun verdict f c x = PASS (f x) handle e => FAIL (c x, e)
+
+fun ?>(PASS x, f) = f x
+  | ?>(FAIL y, f) = FAIL y
+
 (*---------------------------------------------------------------------------
     Time
  ---------------------------------------------------------------------------*)
@@ -598,6 +624,17 @@ in
      case l of
          [] => Time.zeroTime
        | h::t => List.foldl time_max h t
+   fun realtime f x =
+     let
+       val timer = Timer.startRealTimer()
+       val result = verdict f (fn x => x) x
+       val t = Timer.checkRealTimer timer
+     in
+       print ("clock time: " ^ Time.toString t ^ "s\n");
+       case result of
+           PASS y => y
+         | FAIL (_, e) => raise e
+     end
 end
 
 (*---------------------------------------------------------------------------*
@@ -692,17 +729,6 @@ fun deinitcomment0 ss n =
 
 fun deinitcommentss ss = deinitcomment0 ss 0
 fun deinitcomment s = Substring.string (deinitcomment0 (Substring.full s) 0)
-
-(*---------------------------------------------------------------------------*)
-(* Yet another variant of the sum type, used for the failure monad           *)
-(*---------------------------------------------------------------------------*)
-
-datatype ('a, 'b) verdict = PASS of 'a | FAIL of 'b
-
-fun verdict f c x = PASS (f x) handle e => FAIL (c x, e)
-
-fun ?>(PASS x, f) = f x
-  | ?>(FAIL y, f) = FAIL y
 
 (*---------------------------------------------------------------------------
     Pretty Printing

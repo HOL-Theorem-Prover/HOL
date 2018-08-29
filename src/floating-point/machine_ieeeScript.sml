@@ -7,33 +7,12 @@ val () = new_theory "machine_ieee";
    Bit-vector Encodings
    ------------------------------------------------------------------------ *)
 
-local
-   val mtch = DB.match [Theory.current_theory()] o Thm.concl
-   fun get_thm_name thm =
-      case mtch thm of
-         [((_, name), _)] => (thm, name)
-       | _ => raise Feedback.mk_HOL_ERR "machine_ieee" "get_thm_name" ""
-in
-  fun mk_machine (x as (_, y, _, _)) =
-    (List.map get_thm_name o
-     (if y = 52 then (* native *) fn l => List.drop (l, 11) else Lib.I) o
-     machine_ieeeLib.mk_fp_encoding) x
-end
-
 (* 16-bit, 32-bit and 64-bit encodings *)
 
-val thms =
+val thms = (List.concat o List.map machine_ieeeLib.mk_fp_encoding)
    [("fp16", 10, 5, SOME "half"),
     ("fp32", 23, 8, SOME "single"),
-    ("fp64", 52, 11, SOME "double")]
-   |> List.map mk_machine
-   |> List.concat
-   |> (fn l =>
-         let
-            val (thms, names) = ListPair.unzip l
-         in
-            computeLib.add_persistent_funs names; thms
-         end)
+    ("fp64", 52, 11, SOME "double")];
 
 (* ------------------------------------------------------------------------
    Encoding conversions

@@ -1,7 +1,7 @@
 structure testutils :> testutils =
 struct
 
-open Lib
+open Lib Feedback
 
 datatype 'a testresult = Normal of 'a | Exn of exn
 
@@ -57,10 +57,11 @@ local
     (* 3 for quotations marks and an extra space *)
 in
 fun standard_tpp_message s = let
+  open UTF8
   fun trunc s =
     if size s + pfxsize > output_linewidth - 18 then
       let
-        val s' = String.substring(s,0,output_linewidth - 22 - pfxsize)
+        val s' = substring(s,0,output_linewidth - 22 - pfxsize)
       in
         s' ^ " ..."
       end
@@ -120,6 +121,21 @@ fun convtest (nm,conv,tm,expected) =
       end
   in
     timed conv (exncheck c) tm
+  end
+
+fun is_struct_HOL_ERR st (HOL_ERR {origin_structure = st',...}) = st' = st
+  | is_struct_HOL_ERR _ _ = false
+
+fun shouldfail {printarg,testfn,printresult,checkexn} arg =
+  let
+    val _ = tprint (printarg arg)
+    fun handle_result (Normal r) =
+          die ("FAILED\n  got: " ^ printresult r)
+      | handle_result (Exn e) =
+          if checkexn e then OK()
+          else die ("FAILED\n  unexpected exception: " ^ General.exnMessage e)
+  in
+    timed testfn handle_result arg
   end
 
 end (* struct *)

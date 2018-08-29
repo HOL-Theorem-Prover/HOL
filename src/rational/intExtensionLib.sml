@@ -23,6 +23,8 @@ open
         ringLib integerRingTheory integerRingLib
         intExtensionTheory;
 
+val ERR = mk_HOL_ERR "intExtensionLib"
+
 (*--------------------------------------------------------------------------
  *  INT_SGN_CASES_TAC: term -> tactic
  *

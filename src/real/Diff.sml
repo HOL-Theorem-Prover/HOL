@@ -9,6 +9,8 @@ structure Parse = struct
 end
 open Parse
 
+val ERR = mk_HOL_ERR "Diff"
+
 val xreal    = Term`x:real`;
 val lreal    = Term`l:real`
 val diffl_tm = Term`$diffl`;

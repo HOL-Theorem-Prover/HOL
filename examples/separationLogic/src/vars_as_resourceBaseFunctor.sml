@@ -93,6 +93,8 @@ open bagLib
 open separationLogicLib
 open ConseqConv
 
+val ERR = mk_HOL_ERR "vars_as_resourceBase"
+
 (*
 quietdec := false;
 *)

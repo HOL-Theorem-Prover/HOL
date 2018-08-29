@@ -13,6 +13,8 @@ open numposrepTheory ASCIInumbersTheory
 val () = new_theory "words"
 val _ = set_grammar_ancestry ["ASCIInumbers", "numeral_bit", "fcp", "sum_num"]
 
+val ERR = mk_HOL_ERR "wordsScript"
+
 val fcp_ss = std_ss ++ fcpLib.FCP_ss
 
 val WL = ``dimindex (:'a)``

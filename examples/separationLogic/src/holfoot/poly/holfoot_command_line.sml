@@ -4,6 +4,8 @@ use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/poly/header.sml");
 
 val _ = load "DiskThms";
 
+val ERR = mk_HOL_ERR "holfoot_command_line"
+
 val build_date = Date.toString (Date.fromTimeLocal (Time.now()));
 
 fun print_help full =

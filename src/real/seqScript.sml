@@ -12,15 +12,41 @@ app load ["hol88Lib",
 *)
 
 
-open HolKernel Parse boolLib hol88Lib numLib reduceLib pairLib
+open HolKernel Parse boolLib bossLib numLib reduceLib pairLib
      pairTheory arithmeticTheory numTheory prim_recTheory
-     jrhUtils realTheory topologyTheory netsTheory BasicProvers;
+     jrhUtils realTheory realSimps metricTheory netsTheory BasicProvers;
+
+open combinTheory pred_setTheory res_quanTools realSimps RealArith;
 
 infix THEN THENL ORELSE ORELSEC ##;
 
 val _ = new_theory "seq";
 
 val num_EQ_CONV = Arithconv.NEQ_CONV;
+
+val S_TAC = rpt (POP_ASSUM MP_TAC) >> rpt RESQ_STRIP_TAC;
+val Strip = S_TAC;
+
+fun K_TAC _ = ALL_TAC;
+val KILL_TAC = POP_ASSUM_LIST K_TAC;
+val Know = Q_TAC KNOW_TAC;
+val Suff = Q_TAC SUFF_TAC;
+val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
+
+val Cond =
+  MATCH_MP_TAC (PROVE [] ``!a b c. a /\ (b ==> c) ==> ((a ==> b) ==> c)``)
+  >> CONJ_TAC;
+
+local
+  val th = prove (``!a b. a /\ (a ==> b) ==> a /\ b``, PROVE_TAC [])
+in
+  val STRONG_CONJ_TAC :tactic = MATCH_MP_TAC th >> CONJ_TAC
+end;
+
+fun wrap a = [a];
+val Rewr = DISCH_THEN (REWRITE_TAC o wrap);
+val Rewr' = DISCH_THEN (ONCE_REWRITE_TAC o wrap);
+val std_ss' = std_ss ++ boolSimps.ETA_ss
 
 val _ = add_implicit_rewrites pairTheory.pair_rws;
 
@@ -1441,5 +1467,662 @@ val SEQ_LE_MONO = store_thm
    REPEAT GEN_TAC
    THEN MP_TAC (Q.SPECL [`\n. ~f n`, `~x`, `n`] SEQ_MONO_LE)
    THEN RW_TAC boolSimps.bool_ss [GSYM SEQ_NEG, REAL_LE_NEG]);
+
+(* ****************************************************** *)
+(* Useful Theorems on Real Sequences from util_probTheory *)
+(* ****************************************************** *)
+
+val mono_increasing_def = Define
+   `mono_increasing (f:num->real) = !m n. m <= n ==> f m <= f n`;
+
+val mono_increasing_suc = store_thm
+  ("mono_increasing_suc", ``!(f:num->real). mono_increasing f <=> !n. f n <= f (SUC n)``,
+    RW_TAC std_ss [mono_increasing_def]
+    >> EQ_TAC
+    >- RW_TAC real_ss []
+    >> RW_TAC std_ss []
+    >> Know `?d. n = m + d` >- PROVE_TAC [LESS_EQ_EXISTS]
+    >> RW_TAC std_ss []
+    >> Induct_on `d` >- RW_TAC real_ss []
+    >> RW_TAC std_ss []
+    >> Q.PAT_X_ASSUM `!n. f n <= f (SUC n)` (MP_TAC o Q.SPEC `m + d`)
+    >> METIS_TAC [REAL_LE_TRANS, ADD_CLAUSES, LESS_EQ_ADD]);
+
+val mono_decreasing_def = Define
+   `mono_decreasing (f:num->real) = !m n. m <= n ==> f n <= f m`;
+
+val mono_decreasing_suc = store_thm
+  ("mono_decreasing_suc", ``!(f:num->real). mono_decreasing f <=> !n. f (SUC n) <= f n``,
+    RW_TAC std_ss [mono_decreasing_def]
+    >> EQ_TAC
+    >- RW_TAC real_ss []
+    >> RW_TAC std_ss []
+    >> Know `?d. n = m + d` >- PROVE_TAC [LESS_EQ_EXISTS]
+    >> RW_TAC std_ss []
+    >> Induct_on `d` >- RW_TAC real_ss []
+    >> RW_TAC std_ss []
+    >> Q.PAT_X_ASSUM `!n. f (SUC n) <= f n` (MP_TAC o Q.SPEC `m + d`)
+    >> METIS_TAC [REAL_LE_TRANS, ADD_CLAUSES, LESS_EQ_ADD]);
+
+val mono_increasing_converges_to_sup = store_thm
+  ("mono_increasing_converges_to_sup",
+   ``!f r. mono_increasing f /\ f --> r ==>
+           (r = sup (IMAGE f UNIV))``,
+   RW_TAC std_ss [mono_increasing_def]
+   >> Suff `f --> sup (IMAGE f UNIV)`
+   >- METIS_TAC [SEQ_UNIQ]
+   >> RW_TAC std_ss [SEQ]
+   >> (MP_TAC o Q.ISPECL [`IMAGE (f:num->real) UNIV`,`e:real/2`]) SUP_EPSILON
+   >> SIMP_TAC std_ss [REAL_LT_HALF1]
+   >> `!y x z. IMAGE f UNIV x = x IN IMAGE f UNIV` by RW_TAC std_ss [IN_DEF]
+   >> POP_ORW
+   >> Know `(?z. !x. x IN IMAGE f UNIV ==> x <= z)`
+   >- (Q.EXISTS_TAC `r` >> RW_TAC std_ss [IN_IMAGE, IN_UNIV]
+            >> MATCH_MP_TAC SEQ_MONO_LE
+            >> RW_TAC std_ss [DECIDE ``!n:num. n <= n + 1``])
+   >> SIMP_TAC std_ss [] >> STRIP_TAC >> POP_ASSUM (K ALL_TAC)
+   >> RW_TAC std_ss [IN_IMAGE, IN_UNIV, GSYM ABS_BETWEEN, GREATER_EQ]
+   >> Q.EXISTS_TAC `x'`
+   >> RW_TAC std_ss [REAL_LT_SUB_RADD]
+   >- (MATCH_MP_TAC REAL_LET_TRANS >> Q.EXISTS_TAC `f x' + e / 2`
+       >> RW_TAC std_ss [] >> MATCH_MP_TAC REAL_LET_TRANS
+       >> Q.EXISTS_TAC `f n + e / 2` >> RW_TAC std_ss [REAL_LE_ADD2, REAL_LE_REFL]
+       >> MATCH_MP_TAC REAL_LT_IADD >> RW_TAC std_ss [REAL_LT_HALF2])
+   >> MATCH_MP_TAC REAL_LET_TRANS >> Q.EXISTS_TAC `sup (IMAGE f UNIV)`
+   >> RW_TAC std_ss [REAL_LT_ADDR]
+   >> Suff `!y. (\y. y IN IMAGE f UNIV) y ==> y <= sup (IMAGE f UNIV)`
+   >- METIS_TAC [IN_IMAGE, IN_UNIV]
+   >> SIMP_TAC std_ss [IN_DEF]
+   >> MATCH_MP_TAC REAL_SUP_UBOUND_LE
+   >> `!y x z. IMAGE f UNIV x = x IN IMAGE f UNIV` by RW_TAC std_ss [IN_DEF]
+   >> POP_ORW
+   >> RW_TAC std_ss [IN_IMAGE, IN_UNIV]
+   >> Q.EXISTS_TAC `r`
+   >> RW_TAC std_ss []
+   >> MATCH_MP_TAC SEQ_MONO_LE
+   >> RW_TAC std_ss [DECIDE ``!n:num. n <= n + 1``]);
+
+val INCREASING_SEQ = store_thm
+  ("INCREASING_SEQ",
+   ``!f l.
+       (!n. f n <= f (SUC n)) /\
+       (!n. f n <= l) /\
+       (!e. 0 < e ==> ?n. l < f n + e) ==>
+       f --> l``,
+   RW_TAC std_ss [SEQ, GREATER_EQ]
+   >> Q.PAT_X_ASSUM `!e. P e` (MP_TAC o Q.SPEC `e`)
+   >> RW_TAC std_ss []
+   >> Q.EXISTS_TAC `n`
+   >> ONCE_REWRITE_TAC [ABS_SUB]
+   >> REVERSE (RW_TAC std_ss [abs])
+   >- (Q.PAT_X_ASSUM `~x` MP_TAC
+       >> Q.PAT_X_ASSUM `!n. P n` (MP_TAC o Q.SPEC `n'`)
+       >> REAL_ARITH_TAC)
+   >> Know `?d. n' = n + d` >- PROVE_TAC [LESS_EQ_EXISTS]
+   >> RW_TAC std_ss []
+   >> Suff `l < f (n + d) + e` >- REAL_ARITH_TAC
+   >> NTAC 2 (POP_ASSUM K_TAC)
+   >> Induct_on `d` >- RW_TAC arith_ss []
+   >> RW_TAC std_ss [ADD_CLAUSES]
+   >> Q.PAT_X_ASSUM `!n. f n <= f (SUC n)` (MP_TAC o Q.SPEC `n + d`)
+   >> POP_ASSUM MP_TAC
+   >> REAL_ARITH_TAC);
+
+(* TODO: move the following 4 lemmas to arithmeticTheory *)
+val MAX_LE_X = store_thm
+  ("MAX_LE_X",
+   ``!m n k. MAX m n <= k = m <= k /\ n <= k``,
+   RW_TAC arith_ss [MAX_DEF]);
+
+val X_LE_MAX = store_thm
+  ("X_LE_MAX",
+   ``!m n k. k <= MAX m n = k <= m \/ k <= n``,
+   RW_TAC arith_ss [MAX_DEF]);
+
+val TRANSFORM_2D_NUM = store_thm
+  ("TRANSFORM_2D_NUM",
+   ``!P. (!m n : num. P m n ==> P n m) /\ (!m n. P m (m + n)) ==> (!m n. P m n)``,
+   Strip
+   >> Know `m <= n \/ n <= m` >- DECIDE_TAC
+   >> RW_TAC std_ss [LESS_EQ_EXISTS]
+   >> PROVE_TAC []);
+
+val TRIANGLE_2D_NUM = store_thm
+  ("TRIANGLE_2D_NUM",
+   ``!P. (!d n. P n (d + n)) ==> (!m n : num. m <= n ==> P m n)``,
+   RW_TAC std_ss [LESS_EQ_EXISTS]
+   >> PROVE_TAC [ADD_COMM]);
+
+val SEQ_SANDWICH = store_thm
+  ("SEQ_SANDWICH",
+   ``!f g h l.
+       f --> l /\ h --> l /\ (!n. f n <= g n /\ g n <= h n) ==> g --> l``,
+   RW_TAC std_ss [SEQ, GREATER_EQ]
+   >> Q.PAT_X_ASSUM `!e. P e ==> Q e` (MP_TAC o Q.SPEC `e`)
+   >> Q.PAT_X_ASSUM `!e. P e ==> Q e` (MP_TAC o Q.SPEC `e`)
+   >> RW_TAC std_ss []
+   >> Q.EXISTS_TAC `MAX N N'`
+   >> RW_TAC std_ss [MAX_LE_X]
+   >> Q.PAT_X_ASSUM `!e. P e ==> Q e` (MP_TAC o Q.SPEC `n`)
+   >> Q.PAT_X_ASSUM `!e. P e ==> Q e` (MP_TAC o Q.SPEC `n`)
+   >> RW_TAC std_ss []
+   >> REPEAT (POP_ASSUM MP_TAC)
+   >> DISCH_THEN (MP_TAC o Q.SPEC `n`)
+   >> RW_TAC std_ss [abs]
+   >> REPEAT (POP_ASSUM MP_TAC)
+   >> REAL_ARITH_TAC);
+
+val SER_POS = store_thm
+  ("SER_POS",
+   ``!f. summable f /\ (!n. 0 <= f n) ==> 0 <= suminf f``,
+   RW_TAC std_ss []
+   >> MP_TAC (Q.SPECL [`f`, `0`] SER_POS_LE)
+   >> RW_TAC std_ss [sum]);
+
+val SER_POS_MONO = store_thm
+  ("SER_POS_MONO",
+   ``!f. (!n. 0 <= f n) ==> mono (\n. sum (0, n) f)``,
+   RW_TAC std_ss [mono]
+   >> DISJ1_TAC
+   >> HO_MATCH_MP_TAC TRIANGLE_2D_NUM
+   >> Induct >- RW_TAC arith_ss [REAL_LE_REFL]
+   >> RW_TAC std_ss [ADD_CLAUSES]
+   >> MATCH_MP_TAC REAL_LE_TRANS
+   >> Q.EXISTS_TAC `sum (0, d + n) f`
+   >> RW_TAC real_ss [sum]
+   >> Q.PAT_X_ASSUM `!n. 0 <= f n` (MP_TAC o Q.SPEC `d + n`)
+   >> REAL_ARITH_TAC);
+
+val POS_SUMMABLE = store_thm
+  ("POS_SUMMABLE",
+   ``!f. (!n. 0 <= f n) /\ (?x. !n. sum (0, n) f <= x) ==> summable f``,
+   RW_TAC std_ss [summable, sums, GSYM convergent]
+   >> MATCH_MP_TAC SEQ_BCONV
+   >> RW_TAC std_ss [SER_POS_MONO, netsTheory.MR1_BOUNDED]
+   >> Q.EXISTS_TAC `x + 1`
+   >> Q.EXISTS_TAC `N`
+   >> RW_TAC arith_ss []
+   >> RW_TAC std_ss [abs, SUM_POS]
+   >> Q.PAT_X_ASSUM `!n. P n` (MP_TAC o Q.SPEC `n`)
+   >> REAL_ARITH_TAC);
+
+val SUMMABLE_LE = store_thm
+  ("SUMMABLE_LE",
+   ``!f x. summable f /\ (!n. sum (0, n) f <= x) ==> suminf f <= x``,
+   Strip
+   >> Suff `0 < suminf f - x ==> F` >- REAL_ARITH_TAC
+   >> Strip
+   >> Know `(\n. sum (0, n) f) --> suminf f`
+   >- RW_TAC std_ss [GSYM sums, SUMMABLE_SUM]
+   >> RW_TAC std_ss [SEQ]
+   >> Q.EXISTS_TAC `suminf f - x`
+   >> RW_TAC std_ss []
+   >> Q.EXISTS_TAC `N`
+   >> Q.PAT_X_ASSUM `!n. P n` (MP_TAC o Q.SPEC `N`)
+   >> RW_TAC real_ss []
+   >> ONCE_REWRITE_TAC [ABS_SUB]
+   >> Know `0 <= suminf f - sum (0, N) f`
+   >- (rpt (POP_ASSUM MP_TAC)
+       >> REAL_ARITH_TAC)
+   >> RW_TAC std_ss [abs]
+   >> rpt (POP_ASSUM MP_TAC)
+   >> REAL_ARITH_TAC);
+
+val SUMS_EQ = store_thm
+  ("SUMS_EQ",
+   ``!f x. f sums x = summable f /\ (suminf f = x)``,
+   PROVE_TAC [SUM_SUMMABLE, SUM_UNIQ, summable]);
+
+val SUMINF_POS = store_thm
+  ("SUMINF_POS",
+   ``!f. (!n. 0 <= f n) /\ summable f ==> 0 <= suminf f``,
+   RW_TAC std_ss []
+   >> Know `0 = sum (0, 0) f` >- RW_TAC std_ss [sum]
+   >> DISCH_THEN (ONCE_REWRITE_TAC o wrap)
+   >> MATCH_MP_TAC SER_POS_LE
+   >> RW_TAC std_ss []);
+
+ val SUM_PICK = store_thm
+  ("SUM_PICK",
+   ``!n k x. sum (0, n) (\m. if m = k then x else 0) = if k < n then x else 0``,
+   Induct >- RW_TAC arith_ss [sum]
+   >> RW_TAC arith_ss [sum, REAL_ADD_RID, REAL_ADD_LID]
+   >> Suff `F` >- PROVE_TAC []
+   >> NTAC 2 (POP_ASSUM MP_TAC)
+   >> DECIDE_TAC);
+
+val SUM_LT = store_thm
+  ("SUM_LT",
+   ``!f g m n.
+       (!r. m <= r /\ r < n + m ==> f r < g r) /\ 0 < n ==>
+       sum (m,n) f < sum (m,n) g``,
+   RW_TAC std_ss []
+   >> POP_ASSUM MP_TAC
+   >> Cases_on `n` >- RW_TAC arith_ss []
+   >> RW_TAC arith_ss []
+   >> Induct_on `n'` >- RW_TAC arith_ss [sum, REAL_ADD_LID]
+   >> ONCE_REWRITE_TAC [sum]
+   >> Strip
+   >> MATCH_MP_TAC REAL_LT_ADD2
+   >> CONJ_TAC
+   >- (Q.PAT_X_ASSUM `a ==> b` MATCH_MP_TAC
+       >> RW_TAC arith_ss [])
+   >> RW_TAC arith_ss []);
+
+val SUM_CONST_R = store_thm
+  ("SUM_CONST_R",
+   ``!n r. sum (0,n) (K r) = &n * r``,
+   Induct >- RW_TAC real_ss [sum]
+   >> RW_TAC bool_ss [sum, ADD1, K_THM, GSYM REAL_ADD, REAL_ADD_RDISTRIB]
+   >> RW_TAC real_ss []);
+
+val SUMS_ZERO = store_thm
+  ("SUMS_ZERO",
+   ``(K 0) sums 0``,
+   RW_TAC real_ss [sums, SEQ, SUM_CONST_R, abs, REAL_SUB_REFL, REAL_LE_REFL]);
+
+val LT_SUC = store_thm
+  ("LT_SUC", ``!a b. a < SUC b = a < b \/ (a = b)``, DECIDE_TAC);
+
+val LE_SUC = store_thm
+  ("LE_SUC", ``!a b. a <= SUC b = a <= b \/ (a = SUC b)``, DECIDE_TAC);
+
+val K_PARTIAL = store_thm
+  ("K_PARTIAL", ``!x. K x = \z. x``, RW_TAC std_ss [K_DEF]);
+
+val HALF_POS = store_thm
+  ("HALF_POS", ``0:real < 1/2``,
+   PROVE_TAC [REAL_ARITH ``0:real < 1``, REAL_LT_HALF1]);
+
+val HALF_LT_1 = store_thm
+  ("HALF_LT_1", ``1 / 2 < 1:real``,
+   ONCE_REWRITE_TAC [GSYM REAL_INV_1OVER, GSYM REAL_INV1]
+   >> MATCH_MP_TAC REAL_LT_INV
+   >> RW_TAC arith_ss [REAL_LT]);
+
+val HALF_CANCEL = store_thm
+  ("HALF_CANCEL", ``2 * (1 / 2) = 1:real``,
+   Suff `2 * inv 2 = 1:real` >- PROVE_TAC [REAL_INV_1OVER]
+   >> PROVE_TAC [REAL_MUL_RINV, REAL_ARITH ``~(2:real = 0)``]);
+
+val X_HALF_HALF = store_thm
+  ("X_HALF_HALF", ``!x:real. 1/2 * x + 1/2 * x = x``,
+   STRIP_TAC
+   >> MATCH_MP_TAC (REAL_ARITH ``(2 * (a:real) = 2 * b) ==> (a = b)``)
+   >> RW_TAC std_ss [REAL_ADD_LDISTRIB, REAL_MUL_ASSOC, HALF_CANCEL]
+   >> REAL_ARITH_TAC);
+
+val ONE_MINUS_HALF = store_thm
+  ("ONE_MINUS_HALF", ``(1:real) - 1 / 2 = 1 / 2``,
+   MP_TAC (Q.SPEC `1` X_HALF_HALF)
+   >> RW_TAC real_ss []
+   >> MATCH_MP_TAC (REAL_ARITH ``((x:real) + 1 / 2 = y + 1 / 2) ==> (x = y)``)
+   >> RW_TAC std_ss [REAL_SUB_ADD]);
+
+(* from util_probTheory, TODO: move to pred_setTheory *)
+val NUM_2D_BIJ_BIG_SQUARE = store_thm
+  ("NUM_2D_BIJ_BIG_SQUARE",
+   ``!(f : num -> num # num) N.
+       BIJ f UNIV (UNIV CROSS UNIV) ==>
+       ?k. IMAGE f (count N) SUBSET count k CROSS count k``,
+   RW_TAC std_ss [IN_CROSS, IN_COUNT, SUBSET_DEF, IN_IMAGE, IN_COUNT]
+   >> Induct_on `N` >- RW_TAC arith_ss []
+   >> Strip
+   >> Cases_on `f N`
+   >> REWRITE_TAC [prim_recTheory.LESS_THM]
+   >> Q.EXISTS_TAC `SUC (MAX k (MAX q r))`
+   >> Know `!a b. a < SUC b = a <= b`
+   >- (KILL_TAC
+       >> DECIDE_TAC)
+   >> RW_TAC std_ss []
+   >> RW_TAC std_ss []
+   >> PROVE_TAC [X_LE_MAX, LESS_EQ_REFL, LESS_IMP_LESS_OR_EQ]);
+
+(* from util_probTheory, TODO: move to pred_setTheory *)
+val NUM_2D_BIJ_SMALL_SQUARE = store_thm
+  ("NUM_2D_BIJ_SMALL_SQUARE",
+   ``!(f : num -> num # num) k.
+       BIJ f UNIV (UNIV CROSS UNIV) ==>
+       ?N. count k CROSS count k SUBSET IMAGE f (count N)``,
+   Strip
+   >> (MP_TAC o
+       Q.SPECL [`f`, `UNIV CROSS UNIV`, `count k CROSS count k`] o
+       INST_TYPE [``:'a`` |-> ``:num # num``]) BIJ_FINITE_SUBSET
+   >> RW_TAC std_ss [CROSS_SUBSET, SUBSET_UNIV, FINITE_CROSS, FINITE_COUNT]
+   >> Q.EXISTS_TAC `N`
+   >> RW_TAC std_ss [SUBSET_DEF, IN_IMAGE, IN_COUNT]
+   >> Q.PAT_X_ASSUM `BIJ a b c` MP_TAC
+   >> RW_TAC std_ss [BIJ_DEF, SURJ_DEF, IN_UNIV, IN_CROSS]
+   >> POP_ASSUM (MP_TAC o Q.SPEC `x`)
+   >> RW_TAC std_ss []
+   >> Q.EXISTS_TAC `y`
+   >> RW_TAC std_ss []
+   >> Suff `~(N <= y)` >- DECIDE_TAC
+   >> PROVE_TAC []);
+
+val SUMINF_ADD = store_thm
+  ("SUMINF_ADD",
+   ``!f g.
+       summable f /\ summable g ==>
+       summable (\n. f n + g n) /\
+       (suminf f + suminf g = suminf (\n. f n + g n))``,
+    RW_TAC std_ss []
+ >> ( Know `f sums suminf f /\ g sums suminf g` >- PROVE_TAC [SUMMABLE_SUM]
+   >> STRIP_TAC
+   >> Know `(\n. f n + g n) sums (suminf f + suminf g)`
+   >- RW_TAC std_ss [SER_ADD]
+   >> RW_TAC std_ss [SUMS_EQ] ));
+
+val SUMINF_2D = store_thm
+  ("SUMINF_2D",
+   ``!f g h.
+       (!m n. 0 <= f m n) /\ (!n. f n sums g n) /\ summable g /\
+       BIJ h UNIV (UNIV CROSS UNIV) ==>
+       (UNCURRY f o h) sums suminf g``,
+   RW_TAC std_ss []
+   >> RW_TAC std_ss [sums]
+   >> Know `g sums suminf g` >- PROVE_TAC [SUMMABLE_SUM]
+   >> Q.PAT_X_ASSUM `!n. P n` MP_TAC
+   >> RW_TAC std_ss [SUMS_EQ, FORALL_AND_THM]
+   >> MATCH_MP_TAC INCREASING_SEQ
+   >> CONJ_TAC
+   >- (RW_TAC std_ss [sum, o_THM, ADD_CLAUSES]
+       >> Cases_on `h n`
+       >> RW_TAC std_ss [UNCURRY_DEF]
+       >> Q.PAT_X_ASSUM `!m n. 0 <= f m n` (MP_TAC o Q.SPECL [`q`, `r`])
+       >> REAL_ARITH_TAC)
+   >> Know `!m. 0 <= g m`
+   >- (STRIP_TAC
+       >> Suff `0 <= suminf (f m)` >- PROVE_TAC []
+       >> MATCH_MP_TAC SER_POS
+       >> PROVE_TAC [])
+   >> STRIP_TAC
+   >> CONJ_TAC
+   >- (RW_TAC std_ss []
+       >> MP_TAC (Q.SPECL [`h`, `n`] NUM_2D_BIJ_BIG_SQUARE)
+       >> ASM_REWRITE_TAC []
+       >> STRIP_TAC
+       >> MATCH_MP_TAC REAL_LE_TRANS
+       >> Q.EXISTS_TAC `sum (0,k) g`
+       >> REVERSE CONJ_TAC
+       >- (MATCH_MP_TAC SER_POS_LE
+           >> PROVE_TAC [])
+       >> MATCH_MP_TAC REAL_LE_TRANS
+       >> Q.EXISTS_TAC `sum (0,k) (\m. sum (0,k) (f m))`
+       >> REVERSE CONJ_TAC
+       >- (MATCH_MP_TAC SUM_LE
+           >> RW_TAC std_ss []
+           >> Q.PAT_X_ASSUM `!n. suminf (f n) = g n` (REWRITE_TAC o wrap o GSYM)
+           >> MATCH_MP_TAC SER_POS_LE
+           >> PROVE_TAC [])
+       >> Suff
+          `!j.
+             j <= n ==>
+             (sum (0, j) (UNCURRY f o h) =
+              sum (0, k)
+              (\m. sum (0, k)
+               (\n. if (?i. i < j /\ (h i = (m, n))) then f m n else 0)))`
+       >- (DISCH_THEN (MP_TAC o Q.SPEC `n`)
+           >> REWRITE_TAC [LESS_EQ_REFL]
+           >> DISCH_THEN (ONCE_REWRITE_TAC o wrap)
+           >> MATCH_MP_TAC SUM_LE
+           >> RW_TAC std_ss []
+           >> MATCH_MP_TAC SUM_LE
+           >> RW_TAC std_ss [REAL_LE_REFL])
+       >> Induct >- RW_TAC arith_ss [sum, SUM_0]
+       >> RW_TAC std_ss [sum]
+       >> Q.PAT_X_ASSUM `p ==> q` MP_TAC
+       >> RW_TAC arith_ss []
+       >> Know
+          `!m n.
+             (?i. i < SUC j /\ (h i = (m,n))) =
+             (?i. i < j /\ (h i = (m,n))) \/ (h j = (m, n))`
+       >- (RW_TAC std_ss []
+           >> Suff `!i. i < SUC j = i < j \/ (i = j)`
+           >- PROVE_TAC []
+           >> DECIDE_TAC)
+       >> DISCH_THEN (REWRITE_TAC o wrap)
+       >> Know
+          `!m n.
+             (if (?i. i < j /\ (h i = (m,n))) \/ (h j = (m,n)) then f m n
+              else 0) =
+             (if (?i. i < j /\ (h i = (m,n))) then f m n else 0) +
+             (if (h j = (m,n)) then f m n else 0)`
+       >- (Strip
+           >> Suff `(?i. i < j /\ (h i = (m,n'))) ==> ~(h j = (m,n'))`
+           >- PROVE_TAC [REAL_ADD_LID, REAL_ADD_RID]
+           >> RW_TAC std_ss []
+           >> Q.PAT_X_ASSUM `BIJ a b c` MP_TAC
+           >> RW_TAC std_ss [BIJ_DEF, INJ_DEF, IN_UNIV, IN_CROSS]
+           >> PROVE_TAC [prim_recTheory.LESS_REFL])
+       >> DISCH_THEN (ONCE_REWRITE_TAC o wrap)
+       >> RW_TAC std_ss [SUM_ADD]
+       >> POP_ASSUM K_TAC
+       >> Suff
+          `(UNCURRY f o h) j =
+           sum (0,k)
+           (\m. sum (0,k) (\n. (if h j = (m,n) then f m n else 0)))`
+       >- (KILL_TAC
+           >> Q.SPEC_TAC
+              (`(sum (0,k)
+                 (\m.
+                  sum (0,k)
+                  (\n. if ?i. i < j /\ (h i = (m,n)) then f m n else 0)))`,
+               `r1`)
+           >> Q.SPEC_TAC
+              (`sum (0,k)
+                (\m. sum (0,k) (\n. (if h j = (m,n) then f m n else 0)))`,
+               `r2`)
+           >> RW_TAC std_ss [])
+       >> Cases_on `h j`
+       >> RW_TAC std_ss [o_THM, UNCURRY_DEF]
+       >> Know
+          `!m n.
+             (if (q = m) /\ (r = n) then f m n else 0) =
+             (if (n = r) then if (m = q) then f m n else 0 else 0)`
+       >- PROVE_TAC []
+       >> DISCH_THEN (REWRITE_TAC o wrap)
+       >> Q.PAT_X_ASSUM `a SUBSET b` MP_TAC
+       >> RW_TAC std_ss [SUBSET_DEF, IN_IMAGE, IN_COUNT, IN_CROSS]
+       >> Suff `q < k /\ r < k`
+       >- RW_TAC std_ss [SUM_PICK]
+       >> POP_ASSUM (MP_TAC o Q.SPEC `h (j:num)`)
+       >> Suff `j < n`
+       >- (RW_TAC std_ss []
+           >> PROVE_TAC [])
+       >> DECIDE_TAC)
+   >> RW_TAC std_ss []
+   >> Know `?M. 0 < M /\ suminf g < sum (0, M) g + e / 2`
+   >- (Know `g sums suminf g` >- PROVE_TAC [SUMMABLE_SUM]
+       >> RW_TAC std_ss [sums, SEQ]
+       >> POP_ASSUM (MP_TAC o Q.SPEC `e / 2`)
+       >> RW_TAC std_ss [REAL_LT_HALF1, GREATER_EQ]
+       >> POP_ASSUM (MP_TAC o Q.SPEC `SUC N`)
+       >> ONCE_REWRITE_TAC [ABS_SUB]
+       >> Know `sum (0, SUC N) g <= suminf g`
+       >- (MATCH_MP_TAC SER_POS_LE
+           >> RW_TAC std_ss [])
+       >> REVERSE (RW_TAC arith_ss [abs])
+       >- (Suff `F` >- PROVE_TAC []
+           >> POP_ASSUM K_TAC
+           >> POP_ASSUM MP_TAC
+           >> POP_ASSUM MP_TAC
+           >> REAL_ARITH_TAC)
+       >> Q.EXISTS_TAC `SUC N`
+       >> CONJ_TAC >- DECIDE_TAC
+       >> POP_ASSUM MP_TAC
+       >> REAL_ARITH_TAC)
+   >> RW_TAC std_ss []
+   >> Suff `?k. sum (0, M) g < sum (0, k) (UNCURRY f o h) + e / 2`
+   >- (Strip
+       >> Q.EXISTS_TAC `k`
+       >> Know
+          `sum (0, M) g + e / 2 < sum (0, k) (UNCURRY f o h) + (e / 2 + e / 2)`
+       >- (POP_ASSUM MP_TAC
+           >> REAL_ARITH_TAC)
+       >> POP_ASSUM K_TAC
+       >> POP_ASSUM MP_TAC
+       >> REWRITE_TAC [REAL_HALF_DOUBLE]
+       >> REAL_ARITH_TAC)
+   >> POP_ASSUM K_TAC
+   >> Know `!m. ?N. g m < sum (0, N) (f m) + (e / 2) / & M`
+   >- (Know `!m. f m sums g m`
+       >- RW_TAC std_ss [SUMS_EQ]
+       >> RW_TAC std_ss [sums, SEQ]
+       >> POP_ASSUM (MP_TAC o Q.SPECL [`m`, `(e / 2) / & M`])
+       >> Know `0 < (e / 2) / & M`
+       >- RW_TAC arith_ss [REAL_LT_DIV, REAL_NZ_IMP_LT]
+       >> DISCH_THEN (REWRITE_TAC o wrap)
+       >> RW_TAC std_ss [GREATER_EQ]
+       >> POP_ASSUM (MP_TAC o Q.SPEC `N`)
+       >> ONCE_REWRITE_TAC [ABS_SUB]
+       >> Know `sum (0, N) (f m) <= g m`
+       >- (Q.PAT_X_ASSUM `!n. P n = Q n` (REWRITE_TAC o wrap o GSYM)
+           >> MATCH_MP_TAC SER_POS_LE
+           >> RW_TAC std_ss [])
+       >> REVERSE (RW_TAC arith_ss [abs])
+       >- (POP_ASSUM K_TAC
+           >> Suff `F` >- PROVE_TAC []
+           >> NTAC 2 (POP_ASSUM MP_TAC)
+           >> REAL_ARITH_TAC)
+       >> Q.EXISTS_TAC `N`
+       >> POP_ASSUM MP_TAC
+       >> REAL_ARITH_TAC)
+   >> DISCH_THEN (MP_TAC o CONV_RULE SKOLEM_CONV)
+   >> RW_TAC std_ss []
+   >> Know `?c. M <= c /\ !m. m < M ==> N m <= c`
+   >- (KILL_TAC
+       >> Induct_on `M` >- RW_TAC arith_ss []
+       >> Strip
+       >> Q.EXISTS_TAC `MAX (SUC c) (N M)`
+       >> RW_TAC arith_ss [X_LE_MAX, LT_SUC]
+       >> PROVE_TAC [LESS_EQ_REFL, LE])
+   >> Strip
+   >> MP_TAC (Q.SPECL [`h`, `c`] NUM_2D_BIJ_SMALL_SQUARE)
+   >> ASM_REWRITE_TAC []
+   >> DISCH_THEN (Q.X_CHOOSE_TAC `k`)
+   >> Q.EXISTS_TAC `k`
+   >> MATCH_MP_TAC REAL_LTE_TRANS
+   >> Q.EXISTS_TAC `sum (0, M) (\m. sum (0, N m) (f m) + e / 2 / &M)`
+   >> CONJ_TAC
+   >- (MATCH_MP_TAC SUM_LT
+       >> RW_TAC arith_ss [])
+   >> RW_TAC std_ss [SUM_ADD, GSYM K_PARTIAL, SUM_CONST_R]
+   >> Know `!x:real. & M * (x / & M) = x`
+   >- (RW_TAC std_ss [real_div]
+       >> Suff `(& M * inv (& M)) * x = x`
+       >- PROVE_TAC [REAL_MUL_ASSOC, REAL_MUL_SYM]
+       >> Suff `~(& M = 0:real)` >- RW_TAC std_ss [REAL_MUL_RINV, REAL_MUL_LID]
+       >> RW_TAC arith_ss [REAL_INJ])
+   >> DISCH_THEN (REWRITE_TAC o wrap)
+   >> RW_TAC std_ss [REAL_LE_RADD]
+   >> Suff
+      `sum (0,M) (\m. sum (0,N m) (f m)) =
+       sum (0, k)
+       (\k.
+          if ?m n. m < M /\ n < N m /\ (h k = (m, n)) then (UNCURRY f o h) k
+          else 0)`
+   >- (RW_TAC std_ss []
+       >> MATCH_MP_TAC SUM_LE
+       >> RW_TAC std_ss [o_THM, REAL_LE_REFL]
+       >> Cases_on `h r`
+       >> RW_TAC std_ss [UNCURRY_DEF])
+   >> NTAC 3 (POP_ASSUM MP_TAC)
+   >> Q.PAT_X_ASSUM `BIJ h a b` MP_TAC
+   >> KILL_TAC
+   >> RW_TAC std_ss []
+   >> Induct_on `M` >- RW_TAC arith_ss [sum, SUM_ZERO]
+   >> RW_TAC arith_ss [sum, LT_SUC]
+   >> Q.PAT_X_ASSUM `a ==> b` K_TAC
+   >> Know
+      `!k'.
+         (?m n. (m < M \/ (m = M)) /\ n < N m /\ (h k' = (m, n))) =
+         (?m n. m < M /\ n < N m /\ (h k' = (m, n))) \/
+         (?n. n < N M /\ (h k' = (M, n)))`
+   >- PROVE_TAC []
+   >> DISCH_THEN (REWRITE_TAC o wrap)
+   >> Know
+      `!k'.
+         (if (?m n. m < M /\ n < N m /\ (h k' = (m,n))) \/
+             (?n. n < N M /\ (h k' = (M,n)))
+          then UNCURRY f (h k')
+          else 0) =
+         (if (?m n. m < M /\ n < N m /\ (h k' = (m,n))) then UNCURRY f (h k')
+          else 0) +
+         (if (?n. n < N M /\ (h k' = (M,n))) then UNCURRY f (h k')
+          else 0)`
+   >- (STRIP_TAC
+       >> Suff
+          `(?m n. m < M /\ n < N m /\ (h k' = (m,n))) ==>
+           ~(?n. n < N M /\ (h k' = (M,n)))`
+       >- PROVE_TAC [REAL_ADD_RID, REAL_ADD_LID]
+       >> Cases_on `h k'`
+       >> RW_TAC arith_ss [])
+   >> DISCH_THEN (REWRITE_TAC o wrap)
+   >> RW_TAC std_ss [SUM_ADD, REAL_EQ_LADD]
+   >> Know `N M <= c` >- PROVE_TAC []
+   >> POP_ASSUM K_TAC
+   >> Q.SPEC_TAC (`N M`, `l`)
+   >> Induct >- RW_TAC real_ss [sum, SUM_0]
+   >> RW_TAC arith_ss [sum, LT_SUC]
+   >> Q.PAT_X_ASSUM `a ==> b` K_TAC
+   >> Know
+      `!k'.
+         (?n. (n < l \/ (n = l)) /\ (h k' = (M,n))) =
+         (?n. n < l /\ (h k' = (M,n))) \/ (h k' = (M, l))`
+   >- PROVE_TAC []
+   >> DISCH_THEN (REWRITE_TAC o wrap)
+   >> Know
+      `!k'.
+         (if (?n. n < l /\ (h k' = (M,n))) \/ (h k' = (M, l)) then
+            UNCURRY f (h k')
+          else 0) =
+         (if (?n. n < l /\ (h k' = (M,n))) then UNCURRY f (h k') else 0) +
+         (if (h k' = (M, l)) then UNCURRY f (h k') else 0)`
+   >- (STRIP_TAC
+       >> Suff `(?n. n < l /\ (h k' = (M,n))) ==> ~(h k' = (M, l))`
+       >- PROVE_TAC [REAL_ADD_LID, REAL_ADD_RID]
+       >> Cases_on `h k'`
+       >> RW_TAC arith_ss [])
+   >> DISCH_THEN (REWRITE_TAC o wrap)
+   >> RW_TAC std_ss [SUM_ADD, REAL_EQ_LADD]
+   >> Q.PAT_X_ASSUM `a SUBSET b` MP_TAC
+   >> RW_TAC std_ss [SUBSET_DEF, IN_CROSS, IN_COUNT, IN_IMAGE]
+   >> POP_ASSUM (MP_TAC o Q.SPEC `(M, l)`)
+   >> RW_TAC arith_ss []
+   >> Suff `!k'. (h k' = (M, l)) = (k' = x')`
+   >- (RW_TAC std_ss [SUM_PICK, o_THM]
+       >> Q.PAT_X_ASSUM `(M,l) = a` (REWRITE_TAC o wrap o GSYM)
+       >> RW_TAC std_ss [UNCURRY_DEF])
+   >> Q.PAT_X_ASSUM `BIJ h a b` MP_TAC
+   >> RW_TAC std_ss [BIJ_DEF, INJ_DEF, IN_UNIV, IN_CROSS]
+   >> PROVE_TAC []);
+
+val POW_HALF_SER = store_thm
+  ("POW_HALF_SER",
+   ``(\n. (1 / 2) pow (n + 1)) sums 1``,
+   Know `(\n. (1 / 2) pow n) sums inv (1 - (1 / 2))`
+   >- (MATCH_MP_TAC GP
+       >> RW_TAC std_ss [abs, HALF_POS, REAL_LT_IMP_LE, HALF_LT_1])
+   >> RW_TAC std_ss [ONE_MINUS_HALF, REAL_INV_INV, GSYM REAL_INV_1OVER,
+                     GSYM ADD1, pow]
+   >> Know `1 = inv 2 * 2:real`
+   >- RW_TAC arith_ss [REAL_MUL_LINV, REAL_INJ]
+   >> DISCH_THEN (ONCE_REWRITE_TAC o wrap)
+   >> HO_MATCH_MP_TAC SER_CMUL
+   >> RW_TAC std_ss []);
+
+val SER_POS_COMPARE = store_thm
+  ("SER_POS_COMPARE",
+   ``!f g.
+       (!n. 0 <= f n) /\ summable g /\ (!n. f n <= g n) ==>
+       summable f /\ suminf f <= suminf g``,
+   REVERSE (rpt (STRONG_CONJ_TAC ORELSE STRIP_TAC))
+   >- PROVE_TAC [SER_LE]
+   >> MATCH_MP_TAC SER_COMPAR
+   >> Q.EXISTS_TAC `g`
+   >> RW_TAC std_ss []
+   >> Q.EXISTS_TAC `0`
+   >> RW_TAC arith_ss [abs]);
 
 val _ = export_theory();

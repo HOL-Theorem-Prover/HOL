@@ -22,7 +22,12 @@ open HolKernel Parse boolLib Prim_rec pairLib numLib
 val AP = numLib.ARITH_PROVE
 val ARITH_ss = numSimps.ARITH_ss
 val arith_ss = bool_ss ++ ARITH_ss
+val DECIDE = numLib.ARITH_PROVE
+
+(* don't eta-contract these; that will force tactics to use one fixed version
+   of srw_ss() *)
 fun fs thl = FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) thl
+fun simp thl = ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) thl
 
 fun store_thm(r as(n,t,tac)) = let
   val th = boolLib.store_thm r
@@ -392,6 +397,9 @@ val SUBSET_THM = store_thm (* from util_prob *)
    ``!(P : 'a -> bool) Q. P SUBSET Q ==> (!x. x IN P ==> x IN Q)``,
     RW_TAC std_ss [SUBSET_DEF]);
 
+val SUBSET_applied = save_thm
+  ("SUBSET_applied", SIMP_RULE bool_ss [IN_DEF] SUBSET_DEF);
+
 val SUBSET_TRANS = store_thm
     ("SUBSET_TRANS",
      (“!(s:'a set) t u. s SUBSET t /\ t SUBSET u ==> s SUBSET u”),
@@ -447,6 +455,13 @@ val EQ_SUBSET_SUBSET = store_thm (* from util_prob *)
   ("EQ_SUBSET_SUBSET",
    ``!(s :'a -> bool) t. (s = t) ==> s SUBSET t /\ t SUBSET s``,
    RW_TAC std_ss [SUBSET_DEF, EXTENSION]);
+
+val SUBSET_ANTISYM_EQ = store_thm (* from topology *)
+  ("SUBSET_ANTISYM_EQ",
+   “!(s:'a set) t. (s SUBSET t) /\ (t SUBSET s) <=> (s = t)”,
+   REPEAT GEN_TAC THEN EQ_TAC THENL
+  [REWRITE_TAC [SUBSET_ANTISYM],
+   REWRITE_TAC [EQ_SUBSET_SUBSET]]);
 
 val SUBSET_ADD = store_thm (* from util_prob *)
   ("SUBSET_ADD",
@@ -608,7 +623,12 @@ val EMPTY_UNION = store_thm("EMPTY_UNION",
      REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN RES_TAC);
 val _ = export_rewrites ["EMPTY_UNION"]
 
-
+(* from probability/iterateTheory *)
+val FORALL_IN_UNION = store_thm
+  ("FORALL_IN_UNION",
+  ``!P s t:'a->bool. (!x. x IN s UNION t ==> P x) <=> 
+                     (!x. x IN s ==> P x) /\ (!x. x IN t ==> P x)``,
+    REWRITE_TAC [IN_UNION] THEN PROVE_TAC []);
 
 (* ===================================================================== *)
 (* Intersection                                                          *)
@@ -1138,6 +1158,17 @@ val UNIV_BOOL = store_thm(
   SRW_TAC [][EXTENSION]);
 val _ = export_rewrites ["UNIV_BOOL"]
 
+(* from probability/iterateTheory *)
+val FORALL_IN_INSERT = store_thm
+  ("FORALL_IN_INSERT",
+  ``!P a s. (!x. x IN (a INSERT s) ==> P x) <=> P a /\ (!x. x IN s ==> P x)``,
+    REWRITE_TAC [IN_INSERT] THEN PROVE_TAC []);
+
+val EXISTS_IN_INSERT = store_thm
+  ("EXISTS_IN_INSERT",
+  ``!P a s. (?x. x IN (a INSERT s) /\ P x) <=> P a \/ ?x. x IN s /\ P x``,
+    REWRITE_TAC [IN_INSERT] THEN PROVE_TAC []);
+
 (* ===================================================================== *)
 (* Removal of an element                                                 *)
 (* ===================================================================== *)
@@ -1357,6 +1388,11 @@ val _ = ot0 "CHOICE" "choice"
 val REST_DEF =
     new_definition
     ("REST_DEF", (“REST (s:'a set) = s DELETE (CHOICE s)”));
+
+val IN_REST = store_thm
+  ("IN_REST",
+  ``!x:'a. !s. x IN (REST s) <=> x IN s /\ ~(x = CHOICE s)``,
+    REWRITE_TAC [REST_DEF, IN_DELETE]);
 
 val CHOICE_NOT_IN_REST =
     store_thm
@@ -1678,6 +1714,18 @@ val IMAGE_IMAGE = store_thm
    ``!f g s. IMAGE f (IMAGE g s) = IMAGE (f o g) s``,
    RW_TAC std_ss [EXTENSION, IN_IMAGE, o_THM]
    >> PROVE_TAC []);
+
+(* from probability/iterateTheory *)
+val FORALL_IN_IMAGE = store_thm
+  ("FORALL_IN_IMAGE",
+  ``!P f s. (!y. y IN IMAGE f s ==> P y) <=> (!x. x IN s ==> P(f x))``,
+    REWRITE_TAC [IN_IMAGE] THEN PROVE_TAC []);
+
+(* from probability/rich_topologyTheory *)
+val EXISTS_IN_IMAGE = store_thm
+  ("EXISTS_IN_IMAGE",
+  ``!P f s. (?y. y IN IMAGE f s /\ P y) <=> ?x. x IN s /\ P(f x)``,
+    REWRITE_TAC [IN_IMAGE] THEN PROVE_TAC []);
 
 (* ===================================================================== *)
 (* Injective functions on a set.                                         *)
@@ -3961,6 +4009,12 @@ val DISJOINT_COUNT = store_thm (* from util_prob *)
    >> Know `~(x':num = n)` >- DECIDE_TAC
    >> PROVE_TAC []);
 
+(* from probability/iterateTheory *)
+val FORALL_IN_BIGUNION = store_thm
+  ("FORALL_IN_BIGUNION",
+  ``!P s. (!x. x IN BIGUNION s ==> P x) <=> !t x. t IN s /\ x IN t ==> P x``,
+    REWRITE_TAC [IN_BIGUNION] THEN PROVE_TAC []);
+
 (* ----------------------------------------------------------------------
     BIGINTER (intersection of a set of sets)
    ---------------------------------------------------------------------- *)
@@ -3982,19 +4036,19 @@ val IN_BIGINTER_IMAGE = store_thm (* from util_prob *)
    >> PROVE_TAC []);
 
 val BIGINTER_INSERT = Q.store_thm
-("BIGINTER_INSERT",
+("BIGINTER_INSERT[simp]",
  `!P B. BIGINTER (P INSERT B) = P INTER BIGINTER B`,
   REPEAT GEN_TAC THEN CONV_TAC (REWR_CONV EXTENSION) THEN
   SIMP_TAC bool_ss [IN_BIGINTER, IN_INSERT, IN_INTER, DISJ_IMP_THM,
                     FORALL_AND_THM]);
 
 val BIGINTER_EMPTY = Q.store_thm
-("BIGINTER_EMPTY",
+("BIGINTER_EMPTY[simp]",
  `BIGINTER {} = UNIV`,
   REWRITE_TAC [EXTENSION, IN_BIGINTER, NOT_IN_EMPTY, IN_UNIV]);
 
 val BIGINTER_INTER = Q.store_thm
-("BIGINTER_INTER",
+("BIGINTER_INTER[simp]",
  `!P Q. BIGINTER {P; Q} = P INTER Q`,
   REWRITE_TAC [BIGINTER_EMPTY, BIGINTER_INSERT, INTER_UNIV]);
 
@@ -4020,7 +4074,8 @@ val DISJOINT_BIGINTER = Q.store_thm
 val BIGINTER_UNION = Q.store_thm
 ("BIGINTER_UNION",
  `!s1 s2. BIGINTER (s1 UNION s2) = BIGINTER s1 INTER BIGINTER s2`,
- SIMP_TAC bool_ss [IN_BIGINTER, IN_UNION, IN_INTER, EXTENSION] THEN PROVE_TAC []);
+ SIMP_TAC bool_ss [IN_BIGINTER, IN_UNION, IN_INTER, EXTENSION] THEN
+ PROVE_TAC []);
 
 val BIGINTER_SUBSET = store_thm (* from util_prob *)
   ("BIGINTER_SUBSET", ``!sp s. (!t. t IN s ==> t SUBSET sp)  /\ (~(s = {}))
@@ -4039,14 +4094,21 @@ val DIFF_BIGINTER1 = store_thm
   >> RW_TAC std_ss []
   >> METIS_TAC []);
 
-val DIFF_BIGINTER = store_thm (* from util_prob *)
-   ("DIFF_BIGINTER", ``!sp s. (!t. t IN s ==> t SUBSET sp)  /\ (~(s = {}))
-         ==> ( BIGINTER s = sp DIFF (BIGUNION (IMAGE (\u. sp DIFF u) s)) )``,
+val DIFF_BIGINTER = store_thm( (* from util_prob *)
+  "DIFF_BIGINTER",
+  ``!sp s. (!t. t IN s ==> t SUBSET sp) /\ s <> {} ==>
+           (BIGINTER s = sp DIFF (BIGUNION (IMAGE (\u. sp DIFF u) s)))``,
   RW_TAC std_ss []
   >> `(BIGINTER s SUBSET sp)` by RW_TAC std_ss [BIGINTER_SUBSET]
   >> ASSUME_TAC (Q.SPECL [`sp`,`s`] DIFF_BIGINTER1)
-  >> `sp DIFF (sp DIFF (BIGINTER s)) = (BIGINTER s)` by RW_TAC std_ss [DIFF_DIFF_SUBSET]
+  >> `sp DIFF (sp DIFF (BIGINTER s)) = (BIGINTER s)`
+       by RW_TAC std_ss [DIFF_DIFF_SUBSET]
   >> METIS_TAC []);
+
+val FINITE_BIGINTER = Q.store_thm(
+  "FINITE_BIGINTER",
+  ‘(?s. s IN P /\ FINITE s) ==> FINITE (BIGINTER P)’,
+  simp[PULL_EXISTS, Once DECOMPOSITION, INTER_FINITE]);
 
 (* ====================================================================== *)
 (* Cross product of sets                                                  *)
@@ -5965,23 +6027,13 @@ val DELETE_SUBSET_INSERT = store_thm ("DELETE_SUBSET_INSERT",
 
 
 val IN_INSERT_EXPAND = store_thm ("IN_INSERT_EXPAND",
-``!x y P. x IN y INSERT P =
-  (x = y) \/ (~(x = y) /\ x IN P)``,
-
-SIMP_TAC bool_ss [IN_INSERT] THEN
-METIS_TAC[]);
-
-
+  ``!x y P. x IN y INSERT P = (x = y) \/ x <> y /\ x IN P``,
+  SIMP_TAC bool_ss [IN_INSERT] THEN
+  METIS_TAC[]);
 
 val FINITE_INTER = store_thm ("FINITE_INTER",
-``!s1 s2. ((FINITE s1) \/ (FINITE s2)) ==>
-  FINITE (s1 INTER s2)``,
-
-REPEAT GEN_TAC THEN
-`((s1 INTER s2) SUBSET s1) /\ ((s1 INTER s2) SUBSET s2)` by (
-   SIMP_TAC bool_ss [SUBSET_DEF, IN_INTER]
-) THEN
-METIS_TAC[SUBSET_FINITE]);
+  ``!s1 s2. ((FINITE s1) \/ (FINITE s2)) ==> FINITE (s1 INTER s2)``,
+  METIS_TAC[INTER_COMM, INTER_FINITE]);
 (* END misc thms *)
 
 (*---------------------------------------------------------------------------*)
@@ -6160,12 +6212,45 @@ val IMAGE_PREIMAGE = store_thm (* from miller *)
 
 (* end PREIMAGE lemmas *)
 
+val is_measure_maximal_def = new_definition("is_measure_maximal_def",
+  “is_measure_maximal m s x <=> x IN s /\ !y. y IN s ==> m y <= m x”
+);
+
+val FINITE_is_measure_maximal = Q.store_thm(
+  "FINITE_is_measure_maximal",
+  ‘!s. FINITE s /\ s <> {} ==> ?x. is_measure_maximal m s x’,
+  ‘!s. FINITE s ==> s <> {} ==> ?x. is_measure_maximal m s x’
+    suffices_by METIS_TAC[] >>
+  Induct_on ‘FINITE’ >> simp[] >> rpt strip_tac >> Cases_on ‘s = {}’ >> simp[]
+  >- (Q.RENAME_TAC [‘{e}’] >> Q.EXISTS_TAC ‘e’ >>
+      simp[is_measure_maximal_def]) >>
+  fs[is_measure_maximal_def] >> Q.RENAME_TAC [‘m _ <= m e0’, ‘e NOTIN s’] >>
+  Cases_on ‘m e0 <= m e’
+  >- (Q.EXISTS_TAC ‘e’ >> SRW_TAC[][] >> simp[] >>
+      METIS_TAC[arithmeticTheory.LESS_EQ_TRANS]) >>
+  Q.EXISTS_TAC ‘e0’ >> simp[DISJ_IMP_THM]);
+
+val is_measure_maximal_SING = Q.store_thm(
+  "is_measure_maximal_SING[simp]",
+  ‘is_measure_maximal m {x} y <=> (y = x)’,
+  simp[is_measure_maximal_def, EQ_IMP_THM]);
+
+val is_measure_maximal_INSERT = Q.store_thm(
+  "is_measure_maximal_INSERT",
+  ‘!x s m e y.
+     x IN s /\ m e < m x ==>
+     (is_measure_maximal m (e INSERT s) y <=> is_measure_maximal m s y)’,
+  simp[is_measure_maximal_def] >> rpt strip_tac >> eq_tac >> SRW_TAC[][]
+  >- METIS_TAC[DECIDE “(x <= y /\ y < z ==> x < z) /\ ~(a < a)”]
+  >- METIS_TAC[DECIDE “x < y /\ y <= z ==> x <= z”]
+  >- METIS_TAC[]);
+
 val _ = export_rewrites
     [
      (* BIGUNION/BIGINTER theorems *)
      "IN_BIGINTER", "DISJOINT_BIGUNION",
      "BIGUNION_UNION", "BIGINTER_UNION",
-     "DISJOINT_BIGUNION", "BIGINTER_EMPTY", "BIGINTER_INSERT",
+     "DISJOINT_BIGUNION",
      (* cardinality theorems *)
      "CARD_DIFF", "CARD_EQ_0",
      "CARD_INTER_LESS_EQ", "CARD_DELETE", "CARD_DIFF",

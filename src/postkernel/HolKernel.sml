@@ -11,7 +11,9 @@ struct
 
 infixr -->;  infix |->;
 
-val ERR = mk_HOL_ERR "HolKernel"
+local
+  val ERR = mk_HOL_ERR "HolKernel"
+in
 
 (*---------------------------------------------------------------------------
           General term operations
@@ -744,4 +746,5 @@ end (* local *)
 val sort_vars =
   Portable.pull_prefix o map (fn n => equal n o #1 o dest_var)
 
+end
 end

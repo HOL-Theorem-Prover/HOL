@@ -9,14 +9,14 @@ app load ["hol88Lib",
           "pairTheory",
           "PairedLambda",
           "jrhUtils",
-          "topologyTheory"];
+          "metricTheory"];
 *)
 
 (*
 *)
 open HolKernel Parse boolLib hol88Lib numLib reduceLib pairLib
      pairTheory arithmeticTheory numTheory prim_recTheory
-     jrhUtils realTheory topologyTheory;
+     jrhUtils realTheory topologyTheory metricTheory;
 
 val re_subset = REWRITE_RULE [pred_setTheory.SPECIFICATION]
                              pred_setTheory.SUBSET_DEF
@@ -130,7 +130,7 @@ val MTOP_TENDS = store_thm("MTOP_TENDS",
     GEN_REWR_TAC (RAND_CONV o ONCE_DEPTH_CONV) [METRIC_SYM] THEN REWRITE_TAC[],
     GEN_TAC THEN REWRITE_TAC[neigh] THEN
     DISCH_THEN(X_CHOOSE_THEN “P:'a->bool” STRIP_ASSUME_TAC) THEN
-    UNDISCH_TAC “open(mtop(d)) (P:'a->bool)” THEN
+    UNDISCH_TAC “open_in(mtop(d)) (P:'a->bool)” THEN
     REWRITE_TAC[MTOP_OPEN] THEN DISCH_THEN(MP_TAC o SPEC “x0:'a”) THEN
     ASM_REWRITE_TAC[] THEN
     DISCH_THEN(X_CHOOSE_THEN “d:real” STRIP_ASSUME_TAC) THEN

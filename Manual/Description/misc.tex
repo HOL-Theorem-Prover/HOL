@@ -369,10 +369,11 @@ Do not recursively attempt to build ``include'' directories before working in th
   This option implies \texttt{--no\_overlay}.
 \item[\texttt{--overlay <file>}] Use the given file as the overlay
   rather than the default.
-\item[\texttt{--qof}] Standing for ``quit on failure''.  If a tactic
-  fails to prove a theorem, quit the build.  The default is to use
-  \texttt{mk\_thm} to assert that the failed goal is true so that the
-  build can continue and other theorems proved.
+\item[\texttt{--qof},\texttt{--noqof}]
+  Where q-o-f stands for ``quit on failure''.
+  By default, if a tactic fails to prove a theorem, the running script exits with a failure.
+  Depending on the presence or absence of the \texttt{-k} flag, this failure to build a theory may cause \holmake{} to also exit (with a failure).
+  With the \texttt{--noqof} option, \holmake{} will cause the running script to use \texttt{mk\_thm} to assert the failed goal, allowing the build to continue and other theorems to be proved.
 \item[\texttt{--quiet}] Minimise the amount of output produced by
   \holmake{}.  Fatal error messages will still be written to the
   standard error stream.  Note that other programs called by \holmake{} will not
@@ -606,10 +607,11 @@ If the \texttt{-r} (``force recursion'') command-line flag is used, these direct
 The \texttt{CLINE\_OPTIONS} variable is used for the specification of command-line switches that are presumably usually appropriate for calls to \holmake{} in the containing directory.
 The options present in \texttt{CLINE\_OPTIONS} are used to build a ``base environment'' of switches; this base environment is then overridden by whatever was actually passed on the command-line.
 For example, a useful \texttt{CLINE\_OPTIONS} line%
-\footnote{Note that a \texttt{-{}-qof} option in a makefile can't be overridden from the command-line, but that the \texttt{-{}-no\_hmakefile} command-line option will stop the makefile from being consulted at all.} %
+\footnote{Note that a \texttt{-{}-noqof} option in a makefile might be overridden from the command-line with the otherwise useless seeming \texttt{-{}-qof} option.
+In addition, the \texttt{-{}-no\_hmakefile} command-line option will stop the makefile from being consulted at all.} %
 might be
 \begin{alltt}
-    CLINE_OPTIONS = -j1 --qof
+    CLINE_OPTIONS = -j1 --noqof
 \end{alltt}
 Under Poly/ML, the similar \texttt{POLY\_CLINE\_OPTIONS} variable can be used to pass run-time options to the Poly/ML executable that is run during theory construction.
 

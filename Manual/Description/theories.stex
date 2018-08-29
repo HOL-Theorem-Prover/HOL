@@ -2529,20 +2529,14 @@ fundamental theorems about lists are proved and stored in the theory
 \index{axioms!non-primitive, of HOL logic@non-primitive, of \HOL{} logic!for lists}
 \index{induction theorems, in HOL logic@induction theorems, in \HOL{} logic!for lists}
 \index{characterizing theorem!for lists}
-\begin{verbatim}
-   list_Axiom
-     |- !x f. ?fn. (fn [] = x) /\ (!h t. fn (h::t) = f(fn t)h t)
-   list_INDUCT
-     |- !P. P [] /\ (!t. P t ==> (!h. P(h::t))) ==> (!l. P l)
-   list_CASES
-     |- !l. (l = []) \/ (?t h. l = h::t)
-   CONS_11
-     |- !h t h' t'. (h::t = h'::t') = (h = h') /\ (t = t')
-   NOT_NIL_CONS
-     |- !h t. ~([] = h::t)
-   NOT_CONS_NIL
-     |- !h t. ~(h::t = [])
-\end{verbatim}
+\begin{alltt}
+##thm list_Axiom
+##thm list_INDUCT
+##thm list_CASES
+##thm CONS_11
+##thm NOT_NIL_CONS
+##thm NOT_CONS_NIL
+\end{alltt}
 \end{hol}
 
 The theorem \ml{list\_Axiom} shown above is analogous to the primitive
@@ -2611,11 +2605,9 @@ Such an expression is translated to
 $\holtxt{list\_CASE}\ e_1\ e_2\ (\lambda h\; t.\ e_3)$ where the constant
 \holtxt{list\_CASE} is defined as follows:
 \begin{hol}
-\begin{verbatim}
-   list_case_def
-     |- (!v f. list_CASE [] v f = v) /\
-        (!v f a0 a1. list_CASE (a0::a1) v f = f a0 a1)
-\end{verbatim}
+\begin{alltt}
+##thm list_case_def
+\end{alltt}
 \end{hol}
 
 \paragraph{List membership}
@@ -2625,7 +2617,7 @@ Membership in a list, written using the \holtxt{MEM} syntax, is characterised as
 %
 \begin{hol}
 \begin{alltt}
->> listTheory.MEM;
+##thm MEM
 \end{alltt}
 \end{hol}
 
@@ -2633,21 +2625,21 @@ Membership in a list, written using the \holtxt{MEM} syntax, is characterised as
 \index{APPEND, the HOL constant@\ml{APPEND}, the \HOL{} constant}
 \index{concatenation, of lists!in HOL logic@in \HOL{} logic}
 \index{FLAT, the HOL constant@\ml{FLAT}, the \HOL{} constant}
+\index{SNOC, the HOL constant@\ml{SNOC}, the \HOL{} constant}
 
 Binary list concatenation ({\small\verb+APPEND+}) may also be denoted by
 the infix operator {\small\verb|++|}; thus the expression
 {\small\verb|L1 ++ L2|} is translated into {\small\verb+APPEND L1 L2+}.
 The concatenation of a list of lists into a list is achieved by
 {\small\verb+FLAT+}.
+The special case where a single element is appended to the end of a list (the ``opposite'' of \holtxt{CONS}, which adds elements to the front of a list), is implemented by \holtxt{SNOC}.
 %
 \begin{hol}
-\begin{verbatim}
-   APPEND
-     |- (!l. APPEND [] l = l) /\
-        (!l1 l2 h. APPEND (h::l1) l2 = h::APPEND l1 l2)
-   FLAT
-     |- (FLAT [] = []) /\ (!h t. FLAT(h::t) = h ++ FLAT t)
-\end{verbatim}
+\begin{alltt}
+##thm APPEND
+##thm FLAT
+##thm SNOC
+\end{alltt}
 \end{hol}
 
 \paragraph {Numbers and lists}
@@ -2663,23 +2655,35 @@ size of each list element. The alternate length definition
 Numbers can also be used to index into lists, extracting the element at the specified position. %
 \index{EL, the HOL constant@\holtxt{EL}, the \HOL{} constant}%
 \begin{hol}
-\begin{verbatim}
-   LENGTH
-     |- (LENGTH [] = 0) /\ (!h t. LENGTH (h::t) = SUC(LENGTH t))
-   LEN_DEF
-     |- (!n. LEN [] n = n) /\ !h t n. LEN (h::t) n = LEN t (n + 1)
-   list_size_def
-     |- (!f. list_size f [] = 0) /\
-        !f a0 a1. list_size f (a0::a1) = 1 + (f a0 + list_size f a1))
-   EL
-     |- (!l. EL 0 l = HD l) /\ (!l n. EL (SUC n) l = EL n (TL l))
-\end{verbatim}
+\begin{alltt}
+##thm LENGTH
+##thm LEN_DEF
+##thm list_size_def
+##thm EL
+\end{alltt}
 \end{hol}
 
 \noindent
 Note that the extraction of the $n$th element (\holtxt{EL}) of a list starts its indexing from 0.
 If the length of the list $\ell$ is less than or equal to $n$, the result of \holtxt{EL~$n$~$\ell$~} is unspecified.
-For more on the ``indexed'' treatment of lists, see Section~\ref{sec:indexed-lists} below.
+
+\index{GENLIST, the HOL constant@\ml{GENLIST}, the \HOL{} constant}
+The \holtxt{GENLIST} constant can be used to generate a list of a particular size, where the value of each element is independently determined by reference to a function that takes natural numbers (the set $\{0\dots n-1\}$) to element values:
+\begin{hol}
+\begin{alltt}
+##thm GENLIST
+##thm EL_GENLIST
+\end{alltt}
+\end{hol}
+\index{SNOC, the HOL constant@\ml{SNOC}, the \HOL{} constant}
+Working with \holtxt{SNOC}, and thus the definition above, can occasionally be awkward, so a characterisation of \holtxt{GENLIST}'s \holtxt{SUC} clause in terms of \holtxt{CONS} can also be useful:
+\begin{hol}
+\begin{alltt}
+##thm GENLIST_CONS
+\end{alltt}
+\end{hol}
+For more on the ``indexed'' treatment of lists, see
+Section~\ref{sec:indexed-lists} below.
 
 \paragraph {Mapping functions over lists}
 \index{MAP, the HOL constant@\ml{MAP}, the \HOL{} constant}
@@ -2716,23 +2720,53 @@ is supported by \holtxt{EVERY} and \holtxt{EXISTS}, respectively. The
 elimination of all elements in list not satisfying a given predicate
 is performed by \holtxt{FILTER}.
 \begin{hol}
-\begin{verbatim}
-   EVERY_DEF
-     |- (!P. EVERY P [] = T) /\
-        (!P h t. EVERY P (h::t) = P h /\ EVERY P t)
-   EXISTS_DEF
-     |- (!P. EXISTS P [] = F) /\
-        (!P h t. EXISTS P (h::t) = P h \/ EXISTS P t)
-   FILTER
-     |- (!P. FILTER P [] = []) /\
-        (!P h t. FILTER P (h::t) = if P h then h::FILTER P t else FILTER P t)
-   ALL_DISTINCT
-     |- (ALL_DISTINCT [] = T) /\
-        (!h t. ALL_DISTINCT (h::t) = ~MEM h t /\ ALL_DISTINCT t)
-\end{verbatim}
+\begin{alltt}
+##thm EVERY_DEF
+##thm EXISTS_DEF
+##thm FILTER
+##thm ALL_DISTINCT
+\end{alltt}
 \end{hol}
 The predicate \holtxt{ALL\_DISTINCT} holds on a list just in case no
 element in the list is equal to any other.
+
+\index{EVERY2@\ml{EVERY2}|see{\ml{LIST\_REL}}}
+\index{LIST_REL, the HOL constant@\ml{LIST\_REL}, the \HOL{} constant}
+\paragraph{Relations over lists}
+A binary relation on elements can be ``lifted'' to a relation on lists of such elements with the \holtxt{LIST\_REL} constant:
+\begin{hol}
+\begin{alltt}
+##thm LIST_REL_def
+\end{alltt}
+\end{hol}
+This can be viewed as an application of \holtxt{EVERY}:
+\begin{hol}
+\begin{alltt}
+##thm LIST_REL_EVERY_ZIP
+\end{alltt}
+\end{hol}
+Acknowledging this view, the system overloads the name \holtxt{EVERY2} to map to the same constant.
+\begin{hol}
+\begin{alltt}
+>> “EVERY2 (λm n. EVEN (m + n)) [1;2;3] [3;4;5]”;
+\end{alltt}
+\end{hol}
+Some theorems in \ml{listTheory} have names that reflect this.
+
+Equally, \holtxt{LIST\_REL} can be seen as a test that checks the relation at all relevant indices:
+\begin{hol}
+\begin{alltt}
+##thm LIST_REL_EL_EQN
+\end{alltt}
+\end{hol}
+Finally, there is a natural induction principle for this constant (as \emph{per} Section~\ref{sec:proofs-with-inductive-relations}, the tactic \ml{Induct_on~\bq{}LIST_REL\bq} applies it):
+\begin{hol}
+\begin{alltt}
+##thm LIST_REL_strongind
+\end{alltt}
+\end{hol}
+
+
 
 \paragraph {Folding}
 \index{FOLDL, the HOL constant@\ml{FOLDL}, the \HOL{} constant}
@@ -2744,14 +2778,10 @@ through a list and accumulating the result is known as
 from left-to-right (\holtxt{FOLDL}), and at others the
 right-to-left direction (\holtxt{FOLDR}) is required.
 \begin{hol}
-\begin{verbatim}
-   FOLDL
-     |- (!f e. FOLDL f e [] = e) /\
-        (!f e x l. FOLDL f e (x::l) = FOLDL f (f e x) l)
-   FOLDR
-     |- (!f e. FOLDR f e [] = e) /\
-        (!f e x l. FOLDR f e (x::l) = f x (FOLDR f e l))
-\end{verbatim}
+\begin{alltt}
+##thm FOLDL
+##thm FOLDR
+\end{alltt}
 \end{hol}
 
 \paragraph {List reversal}
@@ -2773,7 +2803,7 @@ counterpart \holtxt{REV} are defined in \theoryimp{list}.
 The \holtxt{nub} function removes all duplicate entries from a list.
 \begin{hol}
 \begin{alltt}
->> listTheory.nub_def;
+##thm nub_def
 \end{alltt}
 \end{hol}
 
@@ -3148,22 +3178,16 @@ that two \ml{llist} values are equal.  The first states that two
 sequences are equal if they return the same prefixes of length $n$ for
 all possible values of $n$:
 \begin{hol}
-\begin{verbatim}
-   LTAKE_EQ |- (ll1 = ll2) = (!n. LTAKE n ll1 = LTAKE n ll2)
-\end{verbatim}
+\begin{alltt}
+##thm LTAKE_EQ
+\end{alltt}
 \end{hol}
 This theorem is subsequently used to derive the bisimulation
 principle:
 \begin{hol}
-\begin{verbatim}
-   LLIST_BISIMULATION
-            |- (ll1 = ll2) =
-               ?R. R ll1 ll2 /\
-                   !ll3 ll4. R ll3 ll4 ==>
-                             (ll3 = LNIL) /\ (ll4 = LNIL) \/
-                             (LHD ll3 = LHD ll4) /\
-                             R (THE (LTL ll3)) (THE (LTL ll4))
-\end{verbatim}
+\begin{alltt}
+##thm LLIST_BISIMULATION
+\end{alltt}
 \end{hol}
 The principle of bisimulation states that two \ml{llist} values $l_1$
 and $l_2$ are equal if (and only if) it is possible to find a

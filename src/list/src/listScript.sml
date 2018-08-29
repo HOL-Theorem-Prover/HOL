@@ -37,6 +37,8 @@ open HolKernel Parse boolLib Num_conv Prim_rec BasicProvers mesonLib
      simpLib boolSimps pairTheory pred_setTheory TotalDefn metisLib
      relationTheory combinTheory
 
+val ERR = mk_HOL_ERR "listScript"
+
 val arith_ss = bool_ss ++ numSimps.ARITH_ss ++ numSimps.REDUCE_ss
 fun simp l = ASM_SIMP_TAC (srw_ss()++boolSimps.LET_ss++numSimps.ARITH_ss) l
 
@@ -2221,6 +2223,16 @@ val isPREFIX_THM = store_thm(
     ((h1::t1:'a list) <<= h2::t2 = (h1 = h2) /\ isPREFIX t1 t2)``,
   SRW_TAC [] [])
 val _ = export_rewrites ["isPREFIX_THM"]
+
+val isPREFIX_NILR = Q.store_thm(
+  "isPREFIX_NILR[simp]",
+  ‘x <<= [] <=> (x = [])’,
+  Cases_on ‘x’ >> simp[]);
+
+val isPREFIX_CONSR = Q.store_thm(
+  "isPREFIX_CONSR",
+  ‘x <<= y::ys <=> (x = []) \/ ?xs. (x = y::xs) /\ xs <<= ys’,
+  Cases_on ‘x’ >> simp[]);
 
 (* ----------------------------------------------------------------------
     SNOC

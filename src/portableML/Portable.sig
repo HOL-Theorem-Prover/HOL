@@ -7,6 +7,9 @@ sig
   val apsnd : ('a -> 'b) -> 'c * 'a -> 'c * 'b
   val $  : ('a -> 'b) * 'a -> 'b
   val |> : 'a * ('a -> 'b) -> 'b
+  val |>> : ('a * 'b) * ('a -> 'c) -> ('c * 'b)
+  val ||> : ('a * 'b) * ('b -> 'c) -> ('a * 'c)
+  val ||-> : ('a * 'b) * ('a -> 'b -> 'c) -> 'c
   val C : ('a -> 'b -> 'c) -> 'b -> 'a -> 'c
   val I : 'a -> 'a
   val K : 'a -> 'b -> 'a
@@ -29,6 +32,7 @@ sig
   val can : ('a -> 'b) -> 'a -> bool
   val total : ('a -> 'b) -> 'a -> 'b option
   val partial : exn -> ('a -> 'b option) -> 'a -> 'b
+  val these : 'a list option -> 'a list
 
   val assert_exn : ('a -> bool) -> 'a -> exn -> 'a
   val with_exn : ('a -> 'b) -> 'a -> exn -> 'b
@@ -43,6 +47,8 @@ sig
   val first_opt : (int -> 'a -> 'b option) -> 'a list -> 'b option
   val itlist : ('a -> 'b -> 'b) -> 'a list -> 'b -> 'b
   val rev_itlist : ('a -> 'b -> 'b) -> 'a list -> 'b -> 'b
+  val foldl' : ('a -> 'b -> 'b) -> 'a list -> 'b -> 'b
+  val foldr' : ('a -> 'b -> 'b) -> 'a list -> 'b -> 'b
   val foldl_map : ('a * 'b -> 'a * 'c) -> 'a * 'b list -> 'a * 'c list
   val separate : 'a -> 'a list -> 'a list
   val filter : ('a -> bool) -> 'a list -> 'a list
@@ -109,6 +115,8 @@ sig
   val op_U : ('a -> 'a -> bool) -> 'a list list -> 'a list
   val op_intersect : ('a -> 'a -> bool) -> 'a list -> 'a list -> 'a list
   val op_set_diff : ('a -> 'a -> bool) -> 'a list -> 'a list -> 'a list
+  val op_remove : ('a -> 'b -> bool) -> 'a -> 'b list -> 'b list
+  val op_update : ('a -> 'a -> bool) -> 'a -> 'a list -> 'a list
 
   val int_to_string : int -> string
   val quote : string -> string
@@ -176,6 +184,7 @@ sig
   val time_max : time * time -> time
   val time_maxl : time list -> time
   val time : ('a -> 'b) -> 'a -> 'b
+  val realtime : ('a -> 'b) -> 'a -> 'b
 
   val getEnv: string -> string option
   val getArgs: unit -> string list

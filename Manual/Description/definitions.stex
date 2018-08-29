@@ -2166,6 +2166,7 @@ may or may not be mutually recursive.  The clauses for each relation
 need not be contiguous.
 
 \subsection{Proofs with inductive relations}
+\label{sec:proofs-with-inductive-relations}
 \index{inductive relations!performing proofs}
 
 The ``rules'' theorem of an inductive relation provides a straightforward way of proving arguments belong to a relation.

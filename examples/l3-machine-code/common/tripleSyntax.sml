@@ -4,6 +4,8 @@ struct
 open Abbrev HolKernel
 open tripleTheory
 
+val ERR = mk_HOL_ERR "tripleSyntax"
+
 (* ----------------------------------------------------------------------- *)
 
 val (triple_tm, mk_triple, dest_triple, is_triple) =

@@ -172,7 +172,10 @@ in
     i = 0xB5 (* Latin-1 mu *) orelse
     i = 0xBA (* ordinal o *) orelse
     0xC0 <= i andalso i <= 0xFF andalso i <> 0xD7 andalso i <> 0xF7
-    (* Latin-1 *)
+     (* Latin-1 *) orelse
+    0x1D400 <= i andalso i <= 0x1D7CB
+     (* beyond BMP "Math Alphanumeric Symbols", excluding digits starting at
+        U+1D7CE *)
 end
 
 fun isDigit s = let

@@ -3,6 +3,8 @@ struct
 
 open HolKernel boolLib bossLib finite_mapSyntax
 
+val ERR = mk_HOL_ERR "flookupLib"
+
 (* ------------------------------------------------------------------------- *)
 
 fun memoize size cmp f =

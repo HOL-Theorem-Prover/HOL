@@ -26,6 +26,7 @@ src/n-bit
 !!examples/ARM/arm6-verification/correctness
 src/ring/src
 src/integer
+src/topology
 src/enumfset
 !examples/rings
 src/coalgebras

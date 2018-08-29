@@ -15,6 +15,8 @@ open HolKernel boolLib tttTools hhTranslate
    Escaping constants , variables and theorems
   ----------------------------------------------------------------------------*)
 
+val ERR = mk_HOL_ERR "hhTptp"
+
 val readable_flag = ref false
 
 fun tptp_of_var arity v = 
