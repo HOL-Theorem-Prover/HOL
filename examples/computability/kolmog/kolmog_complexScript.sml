@@ -11,8 +11,11 @@ open measureTheory;
 open recfunsTheory;
 open extNatTheory;
 open prtermTheory;
+open pred_setTheory;
+open extrealTheory;
+open realTheory;
 val _ = new_theory "kolmog_complex";
-
+val _ =ParseExtras.tight_equality();
 
 val _ = intLib.deprecate_int()
 
@@ -431,9 +434,7 @@ val universal_Phi = Q.store_thm("universal_Phi",
     pop_assum SUBST1_TAC >> simp[GSYM bldn_equiv_thm] >> simp[pairTheory.UNCURRY]
        )
 
-
-(** up to here **)
-(* In Process of proving   *)
+val universal_tm_def = Define`universal_tm = (λbl. let (x,y) = bldemunge [] bl in Phi x y)`
 
 (*
 (** Lemma 2.1.1 **)
@@ -468,36 +469,166 @@ binary string, and is a function from binary strings to naturals union infinity
 *)
 
 
+ *)
+
+val _ = set_mapped_fixity{fixity = Infix(NONASSOC,450),term_name = "prefix",tok="≺"}
+
+val prefix_refl = Q.store_thm("prefix_refl[simp]",
+`¬(l ≺ l)`,
+simp[prefix_def])
+
+val prefix_free_def = Define`prefix_free (s:α list set) = ∀a b. a ∈ s ∧ b∈s ==> ¬(a≺ b)∧¬(b≺ a) `
+
+val prefix_free_empty = Q.store_thm("prefix_free_empty[simp]",
+`prefix_free ∅`,
+rw[prefix_free_def])
+
+val prefix_free_sing = Q.store_thm("prefix_free_sing[simp]",
+`prefix_free {l}`,
+rw[prefix_free_def])
+
+val len_fun_def = Define`len_fun (A:bool list set) n = let strs = {s | (LENGTH s = n) ∧ s ∈ A} in EXTREAL_SUM_IMAGE (λs. Normal (2 rpow (- &(LENGTH s)))) strs`
+
+val extreal_sum_image_finite_corr = Q.store_thm("extreal_sum_image_finite_corr",
+`∀P. FINITE P ⇒ ∀f x. (∀y. (y ∈ P) ==> (f y = x)) ⇒ (SIGMA f P = &CARD P * x)`,
+   REPEAT STRIP_TAC
+   >> (MP_TAC o Q.SPECL [`P`]) extrealTheory.EXTREAL_SUM_IMAGE_FINITE_SAME
+   >> RW_TAC std_ss []
+   >> POP_ASSUM (MP_TAC o (Q.SPECL [`f`]))
+   >> RW_TAC std_ss []
+   >> (MP_TAC o Q.SPECL [`P`]) SET_CASES
+   >> RW_TAC std_ss [] >-  rw[extrealTheory.EXTREAL_SUM_IMAGE_THM, CARD_EMPTY, extrealTheory.mul_lzero]
+   >> POP_ASSUM (K ALL_TAC)
+   >> POP_ASSUM MATCH_MP_TAC
+   >> Q.EXISTS_TAC `x'` >> RW_TAC std_ss [IN_INSERT])
+
+
+val bl2n_11 = Q.store_thm("bl2n_11[simp]",
+`bl2n x = bl2n y <=> x = y`,
+metis_tac[num_bool_inv])
+
+val finite_bool_list_n = Q.store_thm("finite_bool_list_n[simp]",
+`FINITE {s|LENGTH (s:bool list) = n}`,
+irule (INST_TYPE[beta|->``:num``] FINITE_INJ) >> qexists_tac`bool_list_to_num` >>
+          qexists_tac`count (2**(n+1)-1)` >> simp[INJ_DEF] >> qid_spec_tac`n` >> Induct_on`x`>>
+          simp[bool_list_to_num_def] >> pop_assum(qspec_then`LENGTH x` MP_TAC) >>rw[] >> 
+          simp[GSYM ADD1,Once EXP] >> irule (DECIDE``n<=2n ∧ b<x-1 ==> 2*b+n<2*x-1``) >> rw[ADD1])
+
+val bool_list_card = Q.store_thm("bool_list_card[simp]",
+`CARD {s | LENGTH (s:bool list) = n} = 2**n`,
+Induct_on`n`>>simp[LENGTH_CONS] >> qmatch_abbrev_tac`CARD s = 2**(SUC n)`>> 
+`s = IMAGE (CONS T) {s | LENGTH s = n} UNION IMAGE (CONS F) {s | LENGTH s = n}` by 
+  (simp[Abbr`s`,EXTENSION,EQ_IMP_THM] >> rw[] ) >> simp[CARD_UNION_EQN,CARD_INJ_IMAGE,EXP] >> 
+qmatch_abbrev_tac`(x:num)-y=x` >> `y=0`suffices_by simp[] >> simp[Abbr`y`,EXTENSION] >>Cases>>simp[]>>
+metis_tac[]  )
+
+val len_fun_eq1 = Q.store_thm("len_fun_eq1",
+`SIGMA (λs. Normal (2 rpow -&LENGTH s)) {s | (LENGTH (s:bool list) = n)} = 1`,
+irule EQ_TRANS >>qexists_tac`&CARD {s | LENGTH (s:bool list) = n} * Normal(2 rpow (-&n))` >> conj_tac
+  >- (irule extreal_sum_image_finite_corr >> rw[])
+  >- (simp[extreal_of_num_def,extreal_mul_def,GSYM realTheory.REAL_OF_NUM_POW,transcTheory.GEN_RPOW,
+	   GSYM transcTheory.RPOW_ADD,transcTheory.RPOW_0 ] ))
+
+val len_fun_le1 = Q.store_thm("len_fun_le1",
+`len_fun A n <= 1`,
+rw[len_fun_def] >> `{s | LENGTH s = n ∧ s ∈ A}⊆{s|LENGTH s = n}` by simp[SUBSET_DEF] >> 
+`FINITE {s | LENGTH s = n ∧ s ∈ A}` by metis_tac[SUBSET_FINITE_I,finite_bool_list_n] >> 
+ASSUME_TAC len_fun_eq1 >> pop_assum(SUBST1_TAC o SYM)>> irule EXTREAL_SUM_IMAGE_MONO_SET >> 
+simp[finite_bool_list_n] >> rw[extreal_of_num_def,extreal_le_def] >> 
+`0r < 2 `suffices_by(strip_tac >> drule transcTheory.RPOW_POS_LT >> simp[realTheory.REAL_LE_LT]) >>
+simp[] )
+
+(* Traditional bool list to num *)
+val tbl2n_def = Define`tbl2n [] = 0n ∧ tbl2n (T::t) = 2*tbl2n t + 1 ∧ tbl2n (F::t) = 2*tbl2n t`
+
+val interval_bl_def = Define`interval_bl l = (&(tbl2n l) *(2 rpow -&LENGTH l),(2 rpow -&LENGTH l))`
+
+val disjoint_interval_def = Define`disjoint_interval ((m:real),i) (n,j) <=> 
+                                   DISJOINT {r|m<=r ∧ r<m+i} {r|n<=r ∧ r<n+j}`
+
+val disjoint_prefix_free = Q.store_thm("disjoint_prefix_free",
+`prefix_free P <=> let is = IMAGE interval_bl P in ∀i1 i2. i1 ∈ is ∧ i2∈is ∧ i1<>i2 ==> disjoint_interval i1 i2`,
+rw[EQ_IMP_THM] 
+>- (rename[`interval_bl i = interval_bl j`] >> 
+    `¬(i ≺ j) ∧ ¬(j ≺ i)∧ i<>j` by metis_tac[prefix_free_def] >> 
+    fs[interval_bl_def,disjoint_interval_def,DISJOINT_DEF,EXTENSION] >> 
+    rw[GSYM DISJ_ASSOC] >> rw[DECIDE``¬p∨q ⇔ p⇒q``] >> strip_tac >> 
+    `LENGTH i <> LENGTH j` by (strip_tac >> fs[] >> qabbrev_tac`M = 2 rpow -&LENGTH j` >> 
+      `&tbl2n i * M < &tbl2n j * M + M` by metis_tac[REAL_LET_TRANS] >>
+      `&tbl2n j * M < &tbl2n i * M + M` by metis_tac[REAL_LET_TRANS] >>
+      `&tbl2n i * M + M = (&tbl2n i + 1) * M` by metis_tac[REAL_ADD_RDISTRIB,REAL_MUL_LID] >>  
+      `&tbl2n j * M + M = (&tbl2n j + 1) * M` by metis_tac[REAL_ADD_RDISTRIB,REAL_MUL_LID] >> fs[] >>
+      `(0:real)<2` by fs[] >> `0<M` by metis_tac[transcTheory.RPOW_POS_LT]
+      `((&tbl2n i) :real) < &(tbl2n j + 1)` by fs[REAL_LT_RMUL] >> 
+      `((&tbl2n j):real) < &(tbl2n i + 1)` by fs[REAL_LT_RMUL] >> fs[] ) >> 
+    Cases_on`LENGTH i < LENGTH j` >> rw[]
+      >- ()
+      >- () ) )
+
 val kraft_ineq = Q.store_thm("kraft_ineq",
-`∀P. prefix_free P ==> sum (x in P) (2**-LENGTH(x) ) <= 1`,
+`∀P. prefix_free P <=> SIGMA (λs. Normal (2 rpow -&LENGTH s)) {s | s ∈ P} <= 1`,
 Let L(x) = [x*2**-LENGTH(x) , x*2**-LENGTH(x)+2**-LENGTH(x)] >> L(x) are disjoint cus prefix free >> length of L(x) is 2**-LENGTH(x) >> L(x) subste of [0,1] for all x >> sum <= length [0,1] =1 )
+ 
+
+
+(* Have done initial Kolmog stuff *)
+
+val prefix_machine_def = Define`prefix_machine (U:bool list -> extnat) = 
+                                ∃P. prefix_free P∧(∀x. x ∈ P <=> ∃y. U x = SOME y)`
+
+val monotone_machine_def = Define`monotone_machine (U:bool list -> extnat) = 
+                     ∀p1 p2. ∃x1 x2. (U p1 = (SOME x1)) ∧ (U p2 = (SOME x2)) ==> (p1 ≼ p2 ==> (n2bl x1 ≼ n2bl x2 ∨ n2bl x2 ≼ n2bl x1) )`
 
 val kolmog_complexity_def = Define`kolmog_complexity x U =
                        if  { p | U p = SOME x} = {} then NONE
                        else SOME (MIN_SET {LENGTH p | U p = SOME x})`;
 
-val bar_def = Define`bar x = 1**LENGTH(x) ++ [F] ++ x`
+val prefix_kolmog_complexity_def = Define`pkolmog_complexity x U = 
+                                if prefix_machine U then kolmog_complexity x U else NONE`
 
-val dash_def = Define`dash x = 1**LENGTH(LENGTH(x)) ++ 0 ++ LENGTH(x) ++ x`
+(* Mono def not working right now  *)
+val monotone_kolmog_complexity_def = Define`mkolmog_complexity x U = 
+                                if monotone_machine U then 
+                                  if ∀y. { p | (U p = SOME y) ∧ (x ≼ (n2bl y)) } = {} then NONE
+                                   else SOME (MIN_SET {LENGTH p |∃y. (U p = SOME y) ∧(x ≼ n2bl y)}) 
+                                else NONE`
+
+val kolmog_def = Define`kolmog x = kolmog_complexity x universal_tm`
+
+
+
+
+
+val Tpow_def = Define`Tpow n = GENLIST (K T) n`
+
+val Fpow_def = Define`Fpow n = GENLIST (K F) n`
+
+val bar_def = Define`bar x = (Tpow (LENGTH x)) ++ [F] ++ x`
+
+val bl_len_def = Define`bl_len bl = n2bl (LENGTH bl)`
+
+val dash_def = Define`dash x = (Tpow (LENGTH (bl_len x))) ++ [F] ++ (bl_len x) ++ x`
 
 val pair_def = Define`pair x y = (dash x) ++ y`
 
-
-val cond_kolmog_complexity_def = Define`cond_kolmog x y U = 
+val cond_kolmog_complexity_def = Define`cond_kolmog_complexity x y U = 
                        if  { p | U (pair y p) = SOME x} = {} then NONE
                        else SOME (MIN_SET {LENGTH p | U (pair y p) = SOME x})`
-
-
-val kolmog_def = Define`kolmog x = kolmog_complexity x universal_tm`
 
 val cond_kolmog_def = Define`cond_kolmog x y = cond_kolmog_complexity x y universal_tm`
 
 
+(** up to here **)
+(* In Process of proving   *)
+
 (** Kolmog Theorems **)
 
+(* 
 val K_upper_bound = Q.store_thm("K_upper_bound",
-`kolmog x <= LENGTH x + 2*log_2 LENGTH x  + O(1)`,
+`∃c. kolmog x <= LENGTH x + 2*log_2 LENGTH x  + c`,
 )
+
+
 
 val K_nat_upper_bound = Q.store_thm("K_nat_upper_bound",
 `∀x. let n = number(x) with kolmog x <= log_2 n + 2*log_2 (log (n)) + O(1)`,
