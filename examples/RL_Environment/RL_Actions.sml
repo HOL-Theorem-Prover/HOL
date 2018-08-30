@@ -245,6 +245,11 @@ fun sexp_of_term term = case (Term.dest_term term) of
     | Term.COMB (tm1, tm2) => Sexps ((Symbo "COMB") :: (sexp_of_term tm1) :: (sexp_of_term tm2) :: nil)
     | Term.LAMB (tm1, tm2) => Sexps ((Symbo "LAMB") :: (sexp_of_term tm1) :: (sexp_of_term tm2) :: nil)
 
+fun sexp_of_goal (goal) =
+  case goal of
+      ([], tm) => sexp_of_term tm
+    | (ls, tm) => Sexps [Sexps (List.map sexp_of_term ls), sexp_of_term tm]
+
 fun sexp_of_taco (SOME(gen_tac)) = Symbo "gen_tac"
   | sexp_of_taco (SOME(qx_gen_tac tmo)) = Sexps ((Symbo "qx_gen_tac")::(sexp_of_tmo tmo)::nil)
   | sexp_of_taco (SOME(qx_genl_tac tmlo)) = Sexps ((Symbo "qx_genl_tac")::(sexp_of_tmlo tmlo)::nil)

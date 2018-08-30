@@ -18,7 +18,7 @@ fun next_actions (Node{goal_state=RL_Goal_manager.ERROR msg,...}, _): action lis
   | next_actions (Node{partial_action, goal_state, ...}, excl): action list =
     case partial_action of
       NONE => top_level_actions
-    | SOME (Tactic t) => List.map Tactic (tactic_actions goal_state t excl) @ [Back]
+    | SOME (Tactic t) => Back :: (List.map Tactic (tactic_actions goal_state t excl))
     | SOME _ => die("next_actions: invariant failure (partial non-tactic)")
 
 fun take_action (node as Node{partial_action, goal_state, parent}) action =
@@ -78,6 +78,24 @@ fun observation_to_string {obs_goals, obs_partial_action, obs_actions} =
     (String.concatWith "\n"
       (Lib.mapi str_of_numbered_action obs_actions))
 
+fun observed_goal_state_to_sexp(Observed_goals gs) = Sexps (List.map sexp_of_goal gs)
+  | observed_goal_state_to_sexp(Observed_success _) = Symbo "SUCCESS"
+  | observed_goal_state_to_sexp(Observed_error msg) = Sexps [Symbo "ERROR",
+  Symbo (String.map (fn c => case c of #" " => #"@" | _ => c) msg)]
+
+fun observed_action_to_sexp (Tactic tac) = sexp_of_taco (SOME tac)
+  | observed_action_to_sexp (Rotate) = Symbo "Rotate"
+  | observed_action_to_sexp (Back) = Symbo "Back"
+
+fun observation_to_sexp {obs_goals, obs_partial_action, obs_actions} =
+  let val obs_goals_sexp = observed_goal_state_to_sexp obs_goals
+      val obs_act = case obs_partial_action of
+            NONE => Symbo "?"
+          | SOME tac => observed_action_to_sexp tac
+      val obs_acts = List.map observed_action_to_sexp obs_actions
+  in Sexps [obs_goals_sexp, obs_act, Sexps obs_acts]
+  end
+
 exception EndInteraction
 fun get_number() =
   let
@@ -130,8 +148,9 @@ local open RL_Socket in
 fun node2observation(node, sock, excl) =
   let
     val obs:observation = observation(node, excl)
-    val obs_print:string = observation_to_string(obs) ^ "\n"
-    val sending = sendStr(sock, obs_print)
+    val obs_sexp = observation_to_sexp obs
+    val obs_str = (sexp_encode obs_sexp) ^ "\n"
+    val sending = sendStr(sock, obs_str)
   in
     observation2action(node, obs, sock, excl)
   end

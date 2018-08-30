@@ -9,7 +9,10 @@ signature RL_Goal_manager = sig
   val rotate_goal_state : goal_state -> goal_state option
   val apply_tactic : bossLib.tactic -> goal_state -> goal_state
 
-  type observed_goal_state
+  datatype observed_goal_state =
+      Observed_goals of Abbrev.goal list
+    | Observed_success of HolKernel.thm
+    | Observed_error of string
   val get_observed_goal_state : goal_state -> observed_goal_state
   val observed_goal_state_to_string : observed_goal_state -> string
   val terms_of_current_goal : goal_state -> Abbrev.term list
