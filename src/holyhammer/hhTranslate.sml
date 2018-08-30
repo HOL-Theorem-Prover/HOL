@@ -359,8 +359,9 @@ fun prepare_tm tm =
     rename_bvarl escape (list_mk_forall (free_vars_lr tm', tm'))
   end
 
-fun translate_tm iref tm =
-  dfind tm (!translate_tm_cache) handle NotFound =>
+fun translate_tm cache_flag iref tm =
+  (if cache_flag then dfind tm (!translate_tm_cache) else raise Redblackmap.NotFound)
+  handle Redblackmap.NotFound =>
   let    
     val _ = log_translate ("  " ^ term_to_string tm)
     val tm1 = log_translate_st 0.001 "prepare_tm:" prepare_tm tm
@@ -375,17 +376,19 @@ fun translate_tm iref tm =
     val _ = log_translate ("Apply operator for bound variables:\n  " ^ 
       String.concatWith "\n  " (map term_to_string tml2))
   in
-    translate_tm_cache := dadd tm tml2 (!translate_tm_cache);
+    if cache_flag 
+      then translate_tm_cache := dadd tm tml2 (!translate_tm_cache)
+      else ();
     tml2
   end
 
-fun translate_pb premises cj =
+fun translate_pb cache_flag premises cj =
   let
     val iref = ref 0 (* names for lifted variables *)
     fun f (name,thm) = (log_translate ("\n" ^ name); 
-      (name, translate_tm iref (concl (DISCH_ALL thm))))
+      (name, translate_tm cache_flag iref (concl (DISCH_ALL thm))))
     val _ = log_translate "\nConjecture"
-    val cj_tml = translate_tm iref cj
+    val cj_tml = translate_tm cache_flag iref cj
     val ax_tml = map f premises
     val big_tm = 
       list_mk_conj (map list_mk_conj (cj_tml :: (map snd ax_tml)))
@@ -415,11 +418,6 @@ fun name_pb (ari_tml, ax_tml, cj_tml) =
   in
     (axl1 @ axl2 @ axl3, cj)  
   end
-
-
-
-
-
 
 
 end

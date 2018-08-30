@@ -4,7 +4,7 @@ sig
   include Abbrev
   
   datatype role = Axiom | Theorem | Reproven | Conjecture
-  datatype usage = Irrelevant | Predicted | Useful of term list
+  datatype usage = Irrelevant | Predicted of term list | Useful of term list
   
   val dict_glob :
     (int list, (term * int list) * role) Redblackmap.dict ref
@@ -25,7 +25,7 @@ sig
   
   val eval_cjl  : real -> (term * term list) list -> (usage * term) list
   
-  val reprove : real -> int list * ((term * int list) * role) -> unit
+  val reprove : real -> int list * ((term * int list) * role) -> bool
   
   val init_n_thy : int -> unit
   

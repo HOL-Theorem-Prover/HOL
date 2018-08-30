@@ -55,6 +55,8 @@ val hh_dir         = pathl [HOLDIR,"src","holyhammer"];
 val hh_eval_dir    = pathl [hh_dir,"eval"];
 val provbin_dir    = pathl [hh_dir,"provers"];
 fun provdir_of atp = pathl [provbin_dir, name_of atp ^ "_files"]
+val parallel_dir   = pathl [provbin_dir,"eprover_parallel"];
+
 fun out_of atp     = pathl [provdir_of atp,"out"]
 fun status_of atp  = pathl [provdir_of atp,"status"]
 fun out_dir dir    = pathl [dir,"out"]
@@ -214,6 +216,16 @@ fun parallel_call t fl =
 
 val atp_ref = ref ""
 
+fun launch_atp_mute dir atp t =
+  let 
+    val cmd = "sh " ^ name_of atp ^ ".sh " ^ int_to_string t ^ " " ^ 
+      dir ^ " > /dev/null 2> /dev/null"
+    val _ = cmd_in_dir provbin_dir cmd   
+    val r = get_lemmas (dir ^ "/status", dir ^ "/out")
+  in
+    r
+  end
+
 fun launch_atp dir atp t =
   let 
     val cmd = "sh " ^ name_of atp ^ ".sh " ^ int_to_string t ^ " " ^ 
@@ -247,7 +259,7 @@ fun translate_write_atp premises cj atp =
   let     
     val new_premises = first_n (npremises_of atp) premises
     val thml = extra_premises @ thml_of_namel new_premises           
-    val pb = hh_logt_eval "translate_pb" (translate_pb thml) cj
+    val pb = hh_logt_eval "translate_pb" (translate_pb true thml) cj
     val (axl,new_cj) = name_pb pb
   in
     write_tptp (provdir_of atp) axl new_cj
@@ -343,9 +355,34 @@ fun metis_auto t n goal =
   end
  
 (*----------------------------------------------------------------------------
+   Multiple instances of the "eprover" function can be called in parallel.
+   Include mk_thm only because of type constraints.
+ -----------------------------------------------------------------------------*)
+
+fun translate_write_parallelsafe dir thml0 cj =
+  let
+    val thml = extra_premises @ thml0       
+    val pb = translate_pb false thml cj
+    val (axl,new_cj) = name_pb pb
+  in
+    write_tptp dir axl new_cj
+  end
+
+fun eprover t dir terml cj =
+  let
+    val terml1 = number_list 0 terml
+    val terml2 = map (fn (i,x) => ("noTheory." ^ int_to_string i, x)) terml1
+    val d = dnew String.compare terml2
+    val thml = map (fn (s,x) => (s, mk_thm ([],x))) terml2 
+    val _  = translate_write_parallelsafe dir thml cj 
+  in
+    case launch_atp_mute dir Eprover t of
+      SOME l => SOME (map (fn x => dfind x d) l)
+    | NONE   => NONE
+  end
+
+(*----------------------------------------------------------------------------
    Asynchronous calls to holyhammer in tactictoe.
-   remove references from the translation so that this function
-   can be run in parallel.
  -----------------------------------------------------------------------------*)
 
 fun hh_stac pids (symweight,feav,revdict) t goal =
@@ -355,10 +392,10 @@ fun hh_stac pids (symweight,feav,revdict) t goal =
       thmknn_wdep (symweight,feav,revdict) 128 (fea_of_goal goal)
     val provdir = pathl [provbin_dir,pids]
     val thml = extra_premises @ thml_of_namel premises
-    val pb = translate_pb thml cj
+    val pb = translate_pb false thml cj
     val (axl,new_cj) = name_pb pb
     val _ = write_tptp provdir axl new_cj
-    val olemmas = launch_atp provdir Eprover t
+    val olemmas = launch_atp_mute provdir Eprover t
     val _ = (clean_dir provdir; rmDir_err provdir)
   in
     Option.map mk_metis_call olemmas

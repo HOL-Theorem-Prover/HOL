@@ -25,8 +25,8 @@ include Abbrev
   val optim_arity_eq : term -> thm list
   val all_arity_eq : term -> thm list
   
-  val translate_tm       : int ref -> term -> term list
-  val translate_pb       : (string * thm) list -> term -> 
+  val translate_tm       : bool -> int ref -> term -> term list
+  val translate_pb       : bool -> (string * thm) list -> term -> 
     term list * (string * term list) list * term list
   val name_pb : 
     term list * (string * term list) list * term list ->
