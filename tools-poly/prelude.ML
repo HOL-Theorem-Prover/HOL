@@ -85,12 +85,21 @@ in
             (case b of
                HOLPP.CONSISTENT => "CONSISTENT"
              | HOLPP.INCONSISTENT => "INCONSISTENT")
+        fun pp_symtab d printArgTypes (t : 'a Symtab.table) =
+          Symtab.pp (fn a => printArgTypes(a,d-1)) t
+        fun pp_inttab d printArgTypes (t : 'a Inttab.table) =
+          Inttab.pp (fn a => printArgTypes(a,d-1)) t
+        fun pp_knametab d printArgTypes (t : 'a KNametab.table) =
+          KNametab.pp (fn a => printArgTypes(a,d-1)) t
       in
         PolyML.addPrettyPrinter pp_db
       ; PolyML.addPrettyPrinter pp_delta
       ; PolyML.addPrettyPrinter pp_verdict
       ; PolyML.addPrettyPrinter pp_frag
       ; PolyML.addPrettyPrinter pp_breakstyle
+      ; PolyML.addPrettyPrinter pp_symtab
+      ; PolyML.addPrettyPrinter pp_inttab
+      ; PolyML.addPrettyPrinter pp_knametab
       end
   ; PolyML.addPrettyPrinter (pp2polypp HOLPP.pp_pretty)
   ; PolyML.addPrettyPrinter (pp2polypp ppg)
