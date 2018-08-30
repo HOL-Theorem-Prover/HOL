@@ -397,6 +397,9 @@ val SUBSET_THM = store_thm (* from util_prob *)
    ``!(P : 'a -> bool) Q. P SUBSET Q ==> (!x. x IN P ==> x IN Q)``,
     RW_TAC std_ss [SUBSET_DEF]);
 
+val SUBSET_applied = save_thm
+  ("SUBSET_applied", SIMP_RULE bool_ss [IN_DEF] SUBSET_DEF);
+
 val SUBSET_TRANS = store_thm
     ("SUBSET_TRANS",
      (“!(s:'a set) t u. s SUBSET t /\ t SUBSET u ==> s SUBSET u”),
@@ -452,6 +455,13 @@ val EQ_SUBSET_SUBSET = store_thm (* from util_prob *)
   ("EQ_SUBSET_SUBSET",
    ``!(s :'a -> bool) t. (s = t) ==> s SUBSET t /\ t SUBSET s``,
    RW_TAC std_ss [SUBSET_DEF, EXTENSION]);
+
+val SUBSET_ANTISYM_EQ = store_thm (* from topology *)
+  ("SUBSET_ANTISYM_EQ",
+   “!(s:'a set) t. (s SUBSET t) /\ (t SUBSET s) <=> (s = t)”,
+   REPEAT GEN_TAC THEN EQ_TAC THENL
+  [REWRITE_TAC [SUBSET_ANTISYM],
+   REWRITE_TAC [EQ_SUBSET_SUBSET]]);
 
 val SUBSET_ADD = store_thm (* from util_prob *)
   ("SUBSET_ADD",
@@ -613,7 +623,12 @@ val EMPTY_UNION = store_thm("EMPTY_UNION",
      REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN RES_TAC);
 val _ = export_rewrites ["EMPTY_UNION"]
 
-
+(* from probability/iterateTheory *)
+val FORALL_IN_UNION = store_thm
+  ("FORALL_IN_UNION",
+  ``!P s t:'a->bool. (!x. x IN s UNION t ==> P x) <=> 
+                     (!x. x IN s ==> P x) /\ (!x. x IN t ==> P x)``,
+    REWRITE_TAC [IN_UNION] THEN PROVE_TAC []);
 
 (* ===================================================================== *)
 (* Intersection                                                          *)
@@ -1142,6 +1157,17 @@ val UNIV_BOOL = store_thm(
   ``univ(:bool) = {T; F}``,
   SRW_TAC [][EXTENSION]);
 val _ = export_rewrites ["UNIV_BOOL"]
+
+(* from probability/iterateTheory *)
+val FORALL_IN_INSERT = store_thm
+  ("FORALL_IN_INSERT",
+  ``!P a s. (!x. x IN (a INSERT s) ==> P x) <=> P a /\ (!x. x IN s ==> P x)``,
+    REWRITE_TAC [IN_INSERT] THEN PROVE_TAC []);
+
+val EXISTS_IN_INSERT = store_thm
+  ("EXISTS_IN_INSERT",
+  ``!P a s. (?x. x IN (a INSERT s) /\ P x) <=> P a \/ ?x. x IN s /\ P x``,
+    REWRITE_TAC [IN_INSERT] THEN PROVE_TAC []);
 
 (* ===================================================================== *)
 (* Removal of an element                                                 *)
@@ -1688,6 +1714,18 @@ val IMAGE_IMAGE = store_thm
    ``!f g s. IMAGE f (IMAGE g s) = IMAGE (f o g) s``,
    RW_TAC std_ss [EXTENSION, IN_IMAGE, o_THM]
    >> PROVE_TAC []);
+
+(* from probability/iterateTheory *)
+val FORALL_IN_IMAGE = store_thm
+  ("FORALL_IN_IMAGE",
+  ``!P f s. (!y. y IN IMAGE f s ==> P y) <=> (!x. x IN s ==> P(f x))``,
+    REWRITE_TAC [IN_IMAGE] THEN PROVE_TAC []);
+
+(* from probability/rich_topologyTheory *)
+val EXISTS_IN_IMAGE = store_thm
+  ("EXISTS_IN_IMAGE",
+  ``!P f s. (?y. y IN IMAGE f s /\ P y) <=> ?x. x IN s /\ P(f x)``,
+    REWRITE_TAC [IN_IMAGE] THEN PROVE_TAC []);
 
 (* ===================================================================== *)
 (* Injective functions on a set.                                         *)
@@ -3970,6 +4008,12 @@ val DISJOINT_COUNT = store_thm (* from util_prob *)
    >> RW_TAC std_ss []
    >> Know `~(x':num = n)` >- DECIDE_TAC
    >> PROVE_TAC []);
+
+(* from probability/iterateTheory *)
+val FORALL_IN_BIGUNION = store_thm
+  ("FORALL_IN_BIGUNION",
+  ``!P s. (!x. x IN BIGUNION s ==> P x) <=> !t x. t IN s /\ x IN t ==> P x``,
+    REWRITE_TAC [IN_BIGUNION] THEN PROVE_TAC []);
 
 (* ----------------------------------------------------------------------
     BIGINTER (intersection of a set of sets)

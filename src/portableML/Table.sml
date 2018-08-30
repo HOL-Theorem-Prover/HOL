@@ -9,6 +9,7 @@ signature KEY =
 sig
   type key
   val ord: key * key -> order
+  val pp : key HOLPP.pprinter
 end;
 
 signature TABLE =
@@ -35,37 +36,42 @@ sig
   val lookup: 'a table -> key -> 'a option
   val defined: 'a table -> key -> bool
   val update: key * 'a -> 'a table -> 'a table
-  val update_new: key * 'a -> 'a table -> 'a table                     (*exception DUP*)
+  val update_new: key * 'a -> 'a table -> 'a table                  (* exn DUP*)
   val default: key * 'a -> 'a table -> 'a table
   val map_entry: key -> ('a -> 'a) (*exception SAME*) -> 'a table -> 'a table
   val map_default: key * 'a -> ('a -> 'a) -> 'a table -> 'a table
-  val make: (key * 'a) list -> 'a table                                (*exception DUP*)
+  val make: (key * 'a) list -> 'a table                             (* exn DUP*)
   val join: (key -> 'a * 'a -> 'a) (*exception SAME*) ->
-    'a table * 'a table -> 'a table                                    (*exception DUP*)
-  val merge: ('a * 'a -> bool) -> 'a table * 'a table -> 'a table      (*exception DUP*)
-  val delete: key -> 'a table -> 'a table                              (*exception UNDEF*)
+            'a table * 'a table -> 'a table                         (* exn DUP*)
+  val merge: ('a -> 'a -> bool) -> 'a table * 'a table -> 'a table  (* exn DUP*)
+  val delete: key -> 'a table -> 'a table                         (* exn UNDEF*)
   val delete_safe: key -> 'a table -> 'a table
-  val member: ('b * 'a -> bool) -> 'a table -> key * 'b -> bool
-  val insert: ('a * 'a -> bool) -> key * 'a -> 'a table -> 'a table    (*exception DUP*)
-  val remove: ('b * 'a -> bool) -> key * 'b -> 'a table -> 'a table
+  val member: ('b -> 'a -> bool) -> 'a table -> key * 'b -> bool
+  val insert: ('a -> 'a -> bool) -> key * 'a -> 'a table -> 'a table(* exn DUP*)
+  val remove: ('b -> 'a -> bool) -> key * 'b -> 'a table -> 'a table
   val lookup_list: 'a list table -> key -> 'a list
   val cons_list: key * 'a -> 'a list table -> 'a list table
-  val insert_list: ('a * 'a -> bool) -> key * 'a -> 'a list table -> 'a list table
-  val remove_list: ('b * 'a -> bool) -> key * 'b -> 'a list table -> 'a list table
-  val update_list: ('a * 'a -> bool) -> key * 'a -> 'a list table -> 'a list table
+  val insert_list: ('a -> 'a -> bool) -> key * 'a -> 'a list table ->
+                   'a list table
+  val remove_list: ('b -> 'a -> bool) -> key * 'b -> 'a list table ->
+                   'a list table
+  val update_list: ('a -> 'a -> bool) -> key * 'a -> 'a list table ->
+                   'a list table
   val make_list: (key * 'a) list -> 'a list table
   val dest_list: 'a list table -> (key * 'a) list
-  val merge_list: ('a * 'a -> bool) -> 'a list table * 'a list table -> 'a list table
+  val merge_list: ('a -> 'a -> bool) -> 'a list table * 'a list table ->
+                  'a list table
   type set = unit table
   val insert_set: key -> set -> set
   val remove_set: key -> set -> set
   val make_set: key list -> set
+  val pp : 'a HOLPP.pprinter -> 'a table HOLPP.pprinter
 end;
 
-functor Table(Key: KEY): TABLE =
+functor Table(Key: KEY) : TABLE =
 struct
 
-
+open Portable
 (* datatype table *)
 
 type key = Key.key;
@@ -318,14 +324,16 @@ fun del (SOME k) Empty = raise UNDEF k
           Branch2 (rl, rp, rr) =>
             (true, Branch3 (l', p, rl, rp, rr))
         | Branch3 (rl, rp, rm, rq, rr) => (false, Branch2
-            (Branch2 (l', p, rl), rp, Branch2 (rm, rq, rr)))))
+            (Branch2 (l', p, rl), rp, Branch2 (rm, rq, rr)))
+        | _ => raise Fail "Impossible case - table.del Branch2-LESS"))
     | ord => (case del (if_eq ord NONE k) r of
         (p', (false, r')) => (p', (false, Branch2 (l, if_eq ord p' p, r')))
       | (p', (true, r')) => (p', case l of
           Branch2 (ll, lp, lr) =>
             (true, Branch3 (ll, lp, lr, if_eq ord p' p, r'))
         | Branch3 (ll, lp, lm, lq, lr) => (false, Branch2
-            (Branch2 (ll, lp, lm), lq, Branch2 (lr, if_eq ord p' p, r'))))))
+            (Branch2 (ll, lp, lm), lq, Branch2 (lr, if_eq ord p' p, r')))
+        | _ => raise Fail "Impossible case - table.del Branch2-<any>")))
   | del k (Branch3 (l, p, m, q, r)) = (case compare k q of
       LESS => (case compare k p of
         LESS => (case del k l of
@@ -337,7 +345,8 @@ fun del (SOME k) Empty = raise UNDEF k
               Branch3 (Branch2 (l', p, ml), mp, Branch2 (mm, mq, mr), q, r)
           | (Branch2 (ml, mp, mr), Branch3 (rl, rp, rm, rq, rr)) =>
               Branch3 (Branch2 (l', p, ml), mp, Branch2 (mr, q, rl), rp,
-                Branch2 (rm, rq, rr)))))
+                Branch2 (rm, rq, rr))
+          | _ => raise Fail "Impossible case - Table.del LESS-LESS")))
       | ord => (case del (if_eq ord NONE k) m of
           (p', (false, m')) =>
             (p', (false, Branch3 (l, if_eq ord p' p, m', q, r)))
@@ -349,7 +358,8 @@ fun del (SOME k) Empty = raise UNDEF k
                 Branch2 (lr, if_eq ord p' p, m'), q, r)
           | (_, Branch3 (rl, rp, rm, rq, rr)) =>
               Branch3 (l, if_eq ord p' p, Branch2 (m', q, rl), rp,
-                Branch2 (rm, rq, rr))))))
+                Branch2 (rm, rq, rr))
+          | _ => raise Fail "Impossible case - Table.del LESS-<any>"))))
     | ord => (case del (if_eq ord NONE k) r of
         (q', (false, r')) =>
           (q', (false, Branch3 (l, p, m, if_eq ord q' q, r')))
@@ -361,7 +371,9 @@ fun del (SOME k) Empty = raise UNDEF k
               Branch2 (mr, if_eq ord q' q, r'))
         | (Branch3 (ll, lp, lm, lq, lr), Branch2 (ml, mp, mr)) =>
             Branch3 (Branch2 (ll, lp, lm), lq, Branch2 (lr, p, ml), mp,
-              Branch2 (mr, if_eq ord q' q, r'))))));
+              Branch2 (mr, if_eq ord q' q, r'))
+        | _ => raise Fail "Impossible case - Table.del <any>"))))
+  | del _ _ = raise Fail "Impossible case - Table.del <topmost defn>";
 
 in
 
@@ -374,17 +386,17 @@ end;
 (* membership operations *)
 
 fun member eq tab (key, x) =
-  (case lookup tab key of
-    NONE => false
-  | SOME y => eq (x, y));
+  case lookup tab key of NONE => false | SOME y => eq x y
 
 fun insert eq (key, x) =
-  modify key (fn NONE => x | SOME y => if eq (x, y) then raise SAME else raise DUP key);
+  modify key
+         (fn NONE => x
+           | SOME y => if eq x y then raise SAME else raise DUP key)
 
 fun remove eq (key, x) tab =
-  (case lookup tab key of
+  case lookup tab key of
     NONE => tab
-  | SOME y => if eq (x, y) then delete key tab else tab);
+  | SOME y => if eq x y then delete key tab else tab
 
 
 (* simultaneous modifications *)
@@ -393,13 +405,15 @@ fun make entries = Portable.foldl' update_new entries empty;
 
 fun join f (table1, table2) =
   let
-    fun add (key, y) tab = modify key (fn NONE => y | SOME x => f key (x, y)) tab;
+    fun add (key, y) tab =
+      modify key (fn NONE => y | SOME x => f key (x, y)) tab;
   in
     if is_empty table1 then table2
     else fold_table add table2 table1
-  end;
+  end
 
-fun merge eq = join (fn key => fn xy => if eq xy then raise SAME else raise DUP key);
+fun merge eq =
+  join (fn key => fn (x,y) => if eq x y then raise SAME else raise DUP key)
 
 
 (* list tables *)
@@ -409,20 +423,21 @@ fun lookup_list tab key = these (lookup tab key);
 fun cons_list (key, x) tab = modify key (fn NONE => [x] | SOME xs => x :: xs) tab;
 
 fun insert_list eq (key, x) =
-  modify key (fn NONE => [x] | SOME xs => if Library.member eq xs x then raise SAME else x :: xs);
+  modify key (fn NONE => [x]
+               | SOME xs => if op_mem eq x xs then raise SAME else x :: xs)
 
 fun remove_list eq (key, x) tab =
-  map_entry key (fn xs => (case Library.remove eq x xs of [] => raise UNDEF key | ys => ys)) tab
+  map_entry key (fn xs => (case op_remove eq x xs of [] => raise UNDEF key | ys => ys)) tab
   handle UNDEF _ => delete key tab;
 
 fun update_list eq (key, x) =
   modify key (fn NONE => [x] | SOME [] => [x] | SOME (xs as y :: _) =>
-    if eq (x, y) then raise SAME else Library.update eq x xs);
+    if eq x y then raise SAME else op_update eq x xs);
 
 fun make_list args = Portable.foldr' cons_list args empty;
 fun dest_list tab =
   List.concat (map (fn (key, xs) => map (pair key) xs) (dest tab))
-fun merge_list eq = join (fn _ => Library.merge eq);
+fun merge_list eq = join (fn _ => uncurry (op_union eq));
 
 
 (* unit tables *)
@@ -433,6 +448,20 @@ fun insert_set x = default (x, ());
 fun remove_set x : set -> set = delete_safe x;
 fun make_set entries = Portable.foldl' insert_set entries empty;
 
+(* pretty-printing *)
+fun pp vpp tab =
+  let
+    open HOLPP
+    fun ppi (k,v) =
+      block CONSISTENT 0 [Key.pp k, add_string " |->", add_break(1,2), vpp v]
+  in
+    block CONSISTENT 0 [
+      add_string "Table{",
+      block INCONSISTENT 6
+            (pr_list ppi [add_string ",", add_break(1,0)] (dest tab)),
+      add_string "}"
+    ]
+  end
 
 (*final declarations of this structure!*)
 val map = map_table;
@@ -440,10 +469,3 @@ val fold = fold_table;
 val fold_rev = fold_rev_table;
 
 end;
-
-structure Inttab = Table(type key = int val ord = Int.compare);
-structure Symtab = Table(type key = string val ord = String.compare);
-structure Symreltab = Table(
-  type key = string * string
-  val ord = Portable.pair_compare (String.compare, String.compare)
-);

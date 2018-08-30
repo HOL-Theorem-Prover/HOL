@@ -1,205 +1,21 @@
 (*===========================================================================*)
-(* Topologies and metric spaces, including metric on real line               *)
+(* Metric spaces, including metric on real line                              *)
 (*===========================================================================*)
 
-(*
-app load ["hol88Lib",
-          "numLib",
-          "PairedLambda",
-          "jrhUtils",
-          "realTheory"];
-*)
+open HolKernel Parse bossLib boolLib BasicProvers boolSimps simpLib mesonLib
+     metisLib jrhUtils pairTheory pairLib pred_setTheory quotientTheory
+     realTheory topologyTheory;
 
-open HolKernel Parse boolLib
-open BasicProvers boolSimps simpLib metisLib
-open hol88Lib pairLib jrhUtils realTheory;
-
-val _ = new_theory "topology";
+val _ = new_theory "metric";
 
 
 (*---------------------------------------------------------------------------*)
 (* Minimal amount of set notation is convenient                              *)
 (*---------------------------------------------------------------------------*)
 
-val _ = temp_overload_on ("re_Union", ``BIGUNION``)
-val _ = temp_overload_on ("BIGUNION", ``BIGUNION``)
-
-val re_Union = pred_setTheory.BIGUNION_applied
-
-
-val re_union = new_infixl_definition("re_union",
-  “$re_union P Q = \x:'a. P x \/ Q x”, 500);
-
-val re_intersect = new_infixl_definition("re_intersect",
-  “$re_intersect P Q = \x:'a. P x /\ Q x”, 600);
-
-val re_null = pred_setTheory.EMPTY_DEF
-
-val re_universe = pred_setTheory.UNIV_DEF
-
-val _ = temp_overload_on ("re_subset", ``(SUBSET)``)
-val _ = temp_overload_on ("SUBSET", ``(SUBSET)``)
-val _ = temp_set_fixity "re_subset" (Infix(NONASSOC, 450))
-val re_subset = SIMP_RULE bool_ss [IN_DEF] pred_setTheory.SUBSET_DEF
-
-val re_compl = prove(
-  ``COMPL P = \x:'a. ~P x``,
-  SIMP_TAC (srw_ss()) [FUN_EQ_THM, pred_setTheory.SPECIFICATION]);
-
-val SUBSET_REFL = pred_setTheory.SUBSET_REFL
-
-val COMPL_MEM = prove(
-  ``!P:'a->bool. !x. P x = ~(COMPL P x)``,
-  REPEAT GEN_TAC THEN REWRITE_TAC[re_compl] THEN
-  BETA_TAC THEN REWRITE_TAC[]);
-
-val SUBSET_ANTISYM = prove(
-  ``!P:'a->bool. !Q. P re_subset Q /\ Q re_subset P = (P = Q)``,
-  REPEAT STRIP_TAC THEN EQ_TAC THEN
-  ASM_SIMP_TAC (srw_ss()) [pred_setTheory.SUBSET_ANTISYM])
-
-val SUBSET_TRANS = pred_setTheory.SUBSET_TRANS
-
-(*---------------------------------------------------------------------------*)
-(* Characterize an (alpha)topology                                           *)
-(*---------------------------------------------------------------------------*)
-
-val istopology = new_definition("istopology",
-  “!L. istopology L =
-              L {} /\
-              L univ(:'a) /\
-             (!a b. L a /\ L b ==> L (a re_intersect b)) /\
-             (!P. P re_subset L ==> L (re_Union P))”);
-
-val topology_tydef = new_type_definition
- ("topology",
-  prove (“?t. istopology t”,
-        EXISTS_TAC ``univ(:'a->bool)`` THEN
-        REWRITE_TAC[istopology, re_universe]));
-
-val topology_tybij = define_new_type_bijections
-    {name="topology_tybij",
-     ABS="topology", REP="open",tyax=topology_tydef};
-
-val TOPOLOGY = store_thm("TOPOLOGY",
-  “!L. open(L) {} /\
-          open(L) univ(:'a) /\
-          (!x y. open(L) x /\ open(L) y ==> open(L) (x re_intersect y)) /\
-          (!P. P re_subset (open L) ==> open(L) (re_Union P))”,
-  GEN_TAC THEN REWRITE_TAC[GSYM istopology] THEN
-  REWRITE_TAC[topology_tybij]);
-
-val TOPOLOGY_UNION = store_thm("TOPOLOGY_UNION",
-  “!L. !P. P re_subset (open L) ==> open(L) (re_Union P)”,
-  REWRITE_TAC[TOPOLOGY]);
-
-
-(*---------------------------------------------------------------------------*)
-(* Characterize a neighbourhood of a point relative to a topology            *)
-(*---------------------------------------------------------------------------*)
-
-val neigh = new_definition("neigh",
-  “neigh(top)(N,(x:'a)) = ?P. open(top) P /\ P re_subset N /\ P x”);
-
-(*---------------------------------------------------------------------------*)
-(* Prove various properties / characterizations of open sets                 *)
-(*---------------------------------------------------------------------------*)
-
-val OPEN_OWN_NEIGH = store_thm("OPEN_OWN_NEIGH",
-  “!S' top. !x:'a. open(top) S' /\ S' x ==> neigh(top)(S',x)”,
-  REPEAT GEN_TAC THEN DISCH_TAC THEN REWRITE_TAC[neigh] THEN
-  EXISTS_TAC “S':'a->bool” THEN ASM_REWRITE_TAC[SUBSET_REFL]);
-
-val OPEN_UNOPEN = store_thm(
-  "OPEN_UNOPEN",
-  ``!S' top.
-       open(top) S' <=>
-       (re_Union { P | open(top) P /\ P re_subset S' } = S')``,
-  REPEAT GEN_TAC THEN EQ_TAC THENL
-   [DISCH_TAC THEN ONCE_REWRITE_TAC[GSYM SUBSET_ANTISYM] THEN
-    ASM_SIMP_TAC (srw_ss()) [re_Union, re_subset] THEN CONJ_TAC THEN
-    GEN_TAC THENL [
-      DISCH_THEN(Q.X_CHOOSE_THEN `s` STRIP_ASSUME_TAC) THEN
-      FIRST_ASSUM MATCH_MP_TAC THEN
-      FULL_SIMP_TAC (srw_ss()) [IN_DEF],
-      DISCH_TAC THEN EXISTS_TAC ``S':'a->bool`` THEN
-      ASM_SIMP_TAC(srw_ss())[IN_DEF]
-    ],
-    DISCH_THEN(SUBST1_TAC o SYM) THEN
-    MATCH_MP_TAC TOPOLOGY_UNION THEN
-    SIMP_TAC (srw_ss()) [re_subset]
-  ])
-
-val OPEN_SUBOPEN = store_thm("OPEN_SUBOPEN",
-  ``!S' top. open(top) S' <=>
-             !x:'a. S' x ==> ?P. P x /\ open(top) P /\ P re_subset S'``,
-  REPEAT GEN_TAC THEN EQ_TAC THENL [
-    DISCH_TAC THEN GEN_TAC THEN DISCH_TAC THEN
-    EXISTS_TAC “S':'a->bool” THEN ASM_REWRITE_TAC[SUBSET_REFL],
-    DISCH_TAC THEN C SUBGOAL_THEN SUBST1_TAC
-     ``S' = re_Union { P | open(top) P /\ P re_subset S'}`` THENL
-     [ONCE_REWRITE_TAC[GSYM SUBSET_ANTISYM] THEN CONJ_TAC THENL
-       [ONCE_REWRITE_TAC[re_subset] THEN
-        ASM_SIMP_TAC (srw_ss()) [] THEN
-        ASM_SIMP_TAC (srw_ss()) [IN_DEF],
-        SIMP_TAC (srw_ss()) [re_subset] THEN REPEAT STRIP_TAC THEN
-        FULL_SIMP_TAC (srw_ss()) [IN_DEF]],
-      MATCH_MP_TAC TOPOLOGY_UNION THEN ONCE_REWRITE_TAC[re_subset] THEN
-      SIMP_TAC (srw_ss()) []]]);
-
-val OPEN_NEIGH = store_thm("OPEN_NEIGH",
-  “!S' top. open(top) S' = !x:'a. S' x ==> ?N. neigh(top)(N,x) /\ N re_subset S'”,
-  REPEAT GEN_TAC THEN EQ_TAC THENL
-   [DISCH_TAC THEN GEN_TAC THEN DISCH_TAC THEN EXISTS_TAC “S':'a->bool” THEN
-    REWRITE_TAC[SUBSET_REFL, neigh] THEN
-    EXISTS_TAC “S':'a->bool” THEN ASM_REWRITE_TAC[SUBSET_REFL],
-    DISCH_TAC THEN ONCE_REWRITE_TAC[OPEN_SUBOPEN] THEN
-    GEN_TAC THEN DISCH_THEN(fn th => FIRST_ASSUM(MP_TAC o C MATCH_MP th)) THEN
-    DISCH_THEN(X_CHOOSE_THEN “N:'a->bool” (CONJUNCTS_THEN2 MP_TAC ASSUME_TAC))
-    THEN REWRITE_TAC[neigh] THEN
-    DISCH_THEN(X_CHOOSE_THEN “P:'a->bool” STRIP_ASSUME_TAC) THEN
-    EXISTS_TAC “P:'a->bool” THEN ASM_REWRITE_TAC[] THEN
-    MATCH_MP_TAC SUBSET_TRANS THEN EXISTS_TAC “N:'a->bool” THEN
-    ASM_REWRITE_TAC[]]);
-
-(*---------------------------------------------------------------------------*)
-(* Characterize closed sets in a topological space                           *)
-(*---------------------------------------------------------------------------*)
-
-val closed = new_definition("closed",
-  “closed(L:('a)topology) S' = open(L)(COMPL S')”);
-
-(*---------------------------------------------------------------------------*)
-(* Define limit point in topological space                                   *)
-(*---------------------------------------------------------------------------*)
-
-val limpt = new_definition("limpt",
-  “limpt(top) x S' =
-      !N:'a->bool. neigh(top)(N,x) ==> ?y. ~(x = y) /\ S' y /\ N y”);
-
-(*---------------------------------------------------------------------------*)
-(* Prove that a set is closed iff it contains all its limit points           *)
-(*---------------------------------------------------------------------------*)
-
-val CLOSED_LIMPT = store_thm("CLOSED_LIMPT",
-  “!top S'. closed(top) S' = (!x:'a. limpt(top) x S' ==> S' x)”,
-  REPEAT GEN_TAC THEN CONV_TAC(ONCE_DEPTH_CONV CONTRAPOS_CONV) THEN
-  REWRITE_TAC[closed, limpt] THEN
-  CONV_TAC(ONCE_DEPTH_CONV NOT_FORALL_CONV) THEN
-  FREEZE_THEN (fn th => ONCE_REWRITE_TAC[th]) (SPEC “S':'a->bool” COMPL_MEM) THEN
-  REWRITE_TAC[] THEN
-  SPEC_TAC(“COMPL(S':'a->bool)”,“S':'a->bool”) THEN
-  GEN_TAC THEN REWRITE_TAC[NOT_IMP] THEN
-  CONV_TAC(ONCE_DEPTH_CONV NOT_EXISTS_CONV) THEN
-  REWRITE_TAC[DE_MORGAN_THM] THEN
-  REWRITE_TAC[OPEN_NEIGH, re_subset] THEN
-  AP_TERM_TAC THEN ABS_TAC THEN
-  ASM_CASES_TAC “(S':'a->bool) x” THEN ASM_REWRITE_TAC[] THEN
-  REWRITE_TAC[TAUT_CONV “a \/ b \/ ~c = c ==> a \/ b”] THEN
-  EQUAL_TAC THEN
-  REWRITE_TAC[TAUT_CONV “(a = b \/ a) = b ==> a”] THEN
-  DISCH_THEN(SUBST1_TAC o SYM) THEN
-  POP_ASSUM ACCEPT_TAC);
+val re_intersect = prove(
+   “!P Q. P INTER Q = \x:'a. P x /\ Q x”,
+    PROVE_TAC [INTER_applied, IN_DEF]);
 
 (*---------------------------------------------------------------------------*)
 (* Characterize an (alpha)metric                                             *)
@@ -298,33 +114,36 @@ val mtop_istopology = store_thm("mtop_istopology",
                            ?e. &0 < e /\
                                (!y. (dist m)(x,y) < e ==> S' y))``,
   GEN_TAC THEN
-  SIMP_TAC bool_ss [istopology, re_null, re_universe, re_Union,
-                    re_intersect, re_subset] THEN
-  REPEAT CONJ_TAC THENL
-   [EXISTS_TAC “&1” THEN MATCH_ACCEPT_TAC REAL_LT_01,
-    REPEAT GEN_TAC THEN DISCH_TAC THEN GEN_TAC THEN
-    DISCH_THEN(fn th => POP_ASSUM(CONJUNCTS_THEN(MP_TAC o SPEC “x:'a”))
-                    THEN REWRITE_TAC[th]) THEN
-    DISCH_THEN(X_CHOOSE_TAC “e1:real”) THEN
-    DISCH_THEN(X_CHOOSE_TAC “e2:real”) THEN
+  SIMP_TAC bool_ss [istopology, EMPTY_DEF, UNIV_DEF, BIGUNION_applied,
+                    re_intersect, SUBSET_applied, IN_DEF] THEN
+  REVERSE (REPEAT STRIP_TAC) THENL (* 2 subgoals *)
+  [ (* goal 1 (of 2) *)
+    RES_TAC >> Q.EXISTS_TAC `e` >> ASM_REWRITE_TAC [] \\
+    rpt STRIP_TAC \\
+    Q.EXISTS_TAC `s` >> ASM_REWRITE_TAC [] >> RES_TAC,
+    (* goal 2 (of 2) *)
+    RES_TAC \\
     REPEAT_TCL DISJ_CASES_THEN MP_TAC
-        (SPECL [“e1:real”, “e2:real”] REAL_LT_TOTAL) THENL
-     [DISCH_THEN SUBST_ALL_TAC THEN EXISTS_TAC “e2:real” THEN
-      ASM_REWRITE_TAC[] THEN GEN_TAC THEN
-      DISCH_THEN(fn th => EVERY_ASSUM(ASSUME_TAC o C MATCH_MP th o CONJUNCT2))
-      THEN ASM_REWRITE_TAC[],
-      DISCH_THEN(curry op THEN (EXISTS_TAC “e1:real”) o MP_TAC),
-      DISCH_THEN(curry op THEN (EXISTS_TAC “e2:real”) o MP_TAC)] THEN
-    ASM_REWRITE_TAC[] THEN DISCH_THEN(fn th2 => GEN_TAC THEN DISCH_THEN(fn th1 =>
-      ASSUME_TAC th1 THEN ASSUME_TAC (MATCH_MP REAL_LT_TRANS (CONJ th1 th2))))
-    THEN CONJ_TAC THEN FIRST_ASSUM (MATCH_MP_TAC o CONJUNCT2)
-    THEN FIRST_ASSUM ACCEPT_TAC,
-    GEN_TAC THEN DISCH_TAC THEN GEN_TAC THEN
-    FULL_SIMP_TAC bool_ss [IN_DEF] THEN METIS_TAC[]
-  ]);
+        (SPECL [“e:real”, “e':real”] REAL_LT_TOTAL) >|
+    [ (* goal 2.1 (of 3) *)
+      DISCH_THEN SUBST_ALL_TAC THEN EXISTS_TAC “e':real” THEN
+      ASM_REWRITE_TAC [] THEN GEN_TAC THEN
+      DISCH_TAC >> PROVE_TAC [],
+      (* goal 2.2 (of 3) *)
+      DISCH_THEN(curry op THEN (EXISTS_TAC “e:real”) o MP_TAC) THEN
+      ASM_REWRITE_TAC [] THEN
+      DISCH_THEN (fn th2 => GEN_TAC THEN DISCH_THEN (fn th1 =>
+                  ASSUME_TAC th1 THEN ASSUME_TAC (MATCH_MP REAL_LT_TRANS (CONJ th1 th2))))
+      >> PROVE_TAC [],
+      (* goal 2.3 (of 3) *)
+      DISCH_THEN(curry op THEN (EXISTS_TAC “e':real”) o MP_TAC) THEN
+      ASM_REWRITE_TAC [] THEN
+      DISCH_THEN (fn th2 => GEN_TAC THEN DISCH_THEN(fn th1 =>
+                  ASSUME_TAC th1 THEN ASSUME_TAC (MATCH_MP REAL_LT_TRANS (CONJ th1 th2))))
+      >> PROVE_TAC [] ] ]);
 
 val MTOP_OPEN = store_thm("MTOP_OPEN",
-  “!S' (m:('a)metric). open(mtop m) S' =
+  “!S' (m:('a)metric). open_in(mtop m) S' =
       (!x. S' x ==> ?e. &0 < e /\ (!y. (dist m(x,y)) < e ==> S' y))”,
   GEN_TAC THEN REWRITE_TAC[mtop] THEN
   REWRITE_TAC[REWRITE_RULE[topology_tybij] mtop_istopology] THEN
@@ -338,7 +157,7 @@ val ball = new_definition("ball",
   “!m:('a)metric. !x e. B(m)(x,e) = \y. (dist m)(x,y) < e”);
 
 val BALL_OPEN = store_thm("BALL_OPEN",
-  “!m:('a)metric. !x e. &0 < e ==> open(mtop(m))(B(m)(x,e))”,
+  “!m:('a)metric. !x e. &0 < e ==> open_in(mtop(m))(B(m)(x,e))”,
   REPEAT GEN_TAC THEN DISCH_TAC THEN REWRITE_TAC[MTOP_OPEN] THEN
   X_GEN_TAC “z:'a” THEN REWRITE_TAC[ball] THEN BETA_TAC THEN
   DISCH_THEN(ASSUME_TAC o ONCE_REWRITE_RULE[GSYM REAL_SUB_LT]) THEN
@@ -380,8 +199,8 @@ val MTOP_LIMPT = store_thm("MTOP_LIMPT",
     DISCH_THEN(X_CHOOSE_THEN “y:'a” STRIP_ASSUME_TAC) THEN
     DISCH_THEN(MP_TAC o SPEC “y:'a”) THEN ASM_REWRITE_TAC[] THEN
     DISCH_TAC THEN EXISTS_TAC “y:'a” THEN ASM_REWRITE_TAC[] THEN
-    UNDISCH_TAC “(P:'a->bool) re_subset N” THEN
-    REWRITE_TAC[re_subset] THEN DISCH_THEN MATCH_MP_TAC THEN
+    UNDISCH_TAC “(P:'a->bool) SUBSET N” THEN
+    REWRITE_TAC[SUBSET_applied] THEN DISCH_THEN MATCH_MP_TAC THEN
     FIRST_ASSUM ACCEPT_TAC]);
 
 (*---------------------------------------------------------------------------*)
@@ -447,7 +266,7 @@ val MR1_BETWEEN1 = store_thm("MR1_BETWEEN1",
 
 val MR1_LIMPT = store_thm("MR1_LIMPT",
   ``!x. limpt(mtop mr1) x univ(:real)``,
-  GEN_TAC THEN REWRITE_TAC[MTOP_LIMPT, re_universe] THEN
+  GEN_TAC THEN REWRITE_TAC[MTOP_LIMPT, UNIV_DEF] THEN
   X_GEN_TAC “e:real” THEN DISCH_TAC THEN
   EXISTS_TAC “x + (e / &2)” THEN
   REWRITE_TAC[MR1_ADD] THEN
@@ -461,7 +280,6 @@ val MR1_LIMPT = store_thm("MR1_LIMPT",
   MATCH_MP_TAC REAL_LT_IMP_NE THEN
   ASM_REWRITE_TAC[REAL_LT_HALF1]);
 
-
-val _ = remove_ovl_mapping "B" {Name = "B", Thy = "topology"};
+val _ = remove_ovl_mapping "B" {Name = "B", Thy = "metric"};
 
 val _ = export_theory();

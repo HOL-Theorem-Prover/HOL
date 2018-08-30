@@ -14,7 +14,7 @@ app load ["hol88Lib",
 
 open HolKernel Parse boolLib bossLib numLib reduceLib pairLib
      pairTheory arithmeticTheory numTheory prim_recTheory
-     jrhUtils realTheory realSimps topologyTheory netsTheory BasicProvers;
+     jrhUtils realTheory realSimps metricTheory netsTheory BasicProvers;
 
 open combinTheory pred_setTheory res_quanTools realSimps RealArith;
 

@@ -1118,7 +1118,7 @@ fun astHol_datatype astl =
  in
   persistent_tyinfo tyinfos;
   HOL_MESG message
- end handle ? as HOL_ERR _ => Raise (wrap_exn "Datatype" "Hol_datatype" ?);
+ end handle e as HOL_ERR _ => Raise (wrap_exn "Datatype" "Hol_datatype" e);
 
 fun Hol_datatype q = astHol_datatype (ParseDatatype.parse (type_grammar()) q)
 fun Datatype q = astHol_datatype (ParseDatatype.hparse (type_grammar()) q)

@@ -12,7 +12,7 @@ main {
   import: poly
   import: real-sigma
   import: seq
-  import: topology
+  import: metric
   import: lim
   import: nets
 }
@@ -54,23 +54,23 @@ real-sigma {
 }
 seq {
   import: real
-  import: topology
+  import: metric
   import: nets
   article: "seq.ot.art"
 }
-topology {
+metric {
   import: real
-  article: "topology.ot.art"
+  article: "metric.ot.art"
 }
 lim {
   import: real
-  import: topology
+  import: metric
   import: nets
   import: seq
   article: "lim.ot.art"
 }
 nets {
   import: real
-  import: topology
+  import: metric
   article: "nets.ot.art"
 }

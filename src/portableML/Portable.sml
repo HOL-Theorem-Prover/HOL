@@ -41,8 +41,9 @@ fun x |> f = f x
 fun (x,y) |>> f = (f x, y)
 fun (x,y) ||> f = (x, f y)
 fun (x,y) ||-> f = f x y
-infixr $
+infixr $ ?
 fun f $ x = f x
+fun (b ? f) x = if b then f x else x
 fun C f x y = f y x
 fun I x = x
 fun K x y = x
@@ -76,6 +77,9 @@ fun can f x = (f x; true) handle Interrupt => raise Interrupt | _ => false
 fun total f x = SOME (f x) handle Interrupt => raise Interrupt | _ => NONE
 
 fun partial e f x = case f x of SOME y => y | NONE => raise e
+
+fun these (SOME x) = x
+  | these NONE = []
 
 (* ----------------------------------------------------------------------
     Lists
@@ -123,6 +127,7 @@ fun separate s (x :: (xs as _ :: _)) = x :: s :: separate s xs
   | separate _ xs = xs
 
 val filter = List.filter
+fun filter_out P = filter (not o P)
 
 val partition = List.partition
 
@@ -453,6 +458,13 @@ fun op_set_diff eq_func S1 S2 =
       filter (fn x => not (memb x S2)) S1
    end
 
+fun op_remove eq x list =
+  if op_mem eq x list then
+    filter (fn y => not (eq x y)) list
+  else list
+
+fun op_update eq x xs = cons x (op_remove eq x xs)
+
 (*---------------------------------------------------------------------------
    quote puts double quotes around a string. mlquote does this as well,
    but also quotes all of the characters in the string so that the
@@ -469,6 +481,8 @@ val is_substring = String.isSubstring
 fun prime s = s ^ "'"
 
 val commafy = separate ", "
+
+fun enclose ld rd s = ld ^ s ^ rd
 
 val str_all = CharVector.all
 
