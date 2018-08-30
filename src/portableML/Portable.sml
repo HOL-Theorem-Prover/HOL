@@ -41,8 +41,9 @@ fun x |> f = f x
 fun (x,y) |>> f = (f x, y)
 fun (x,y) ||> f = (x, f y)
 fun (x,y) ||-> f = f x y
-infixr $
+infixr $ ?
 fun f $ x = f x
+fun (b ? f) x = if b then f x else x
 fun C f x y = f y x
 fun I x = x
 fun K x y = x
@@ -126,6 +127,7 @@ fun separate s (x :: (xs as _ :: _)) = x :: s :: separate s xs
   | separate _ xs = xs
 
 val filter = List.filter
+fun filter_out P = filter (not o P)
 
 val partition = List.partition
 
@@ -479,6 +481,8 @@ val is_substring = String.isSubstring
 fun prime s = s ^ "'"
 
 val commafy = separate ", "
+
+fun enclose ld rd s = ld ^ s ^ rd
 
 val str_all = CharVector.all
 

@@ -8,7 +8,7 @@
 
 infix ++ && |-> THEN THEN1 THENL THEN_LT THENC ORELSE ORELSE_LT ORELSEC
   THEN_TCL ORELSE_TCL ?> |> |>> ||> ||->
-infixr ## $
+infixr ## $ ?
 infixr 3 -->;
 infix 8 via by suffices_by
 

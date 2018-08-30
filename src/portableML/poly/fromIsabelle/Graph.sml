@@ -72,8 +72,15 @@ functor Graph(Key: KEY): GRAPH =
 struct
 
 
-open Portable Library
+open Portable
 (* keys *)
+
+infix ?
+fun fold_product f _ [] z = z
+  | fold_product f [] _ z = z
+  | fold_product f (x :: xs) ys z =
+      z |> foldl' (f x) ys |> fold_product f xs ys
+
 
 type key = Key.key;
 fun eq_key k1 k2 = Key.ord(k1,k2) = EQUAL
