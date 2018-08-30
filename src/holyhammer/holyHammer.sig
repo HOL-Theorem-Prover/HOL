@@ -45,7 +45,7 @@ sig
   val hh                : tactic
   
   (* Other functions *)
-  val eprover           : int -> string -> term list -> term -> term list option
+  val eprover           : string -> int -> term list -> term -> term list option
   val metis_auto        : real -> int -> goal -> string option
   
   (* HolyHammer for TacTicToe parallel calls *)

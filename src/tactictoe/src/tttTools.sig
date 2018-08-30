@@ -184,8 +184,9 @@ sig
   val only_concl : thm -> term
   
   (* parallelism *)
-  val par_map : int -> ('a -> 'b) -> 'a list -> 'b list
-  val par_app : int -> ('a -> 'b) -> 'a list -> unit
+  val parmap : int -> ('a -> 'b) -> 'a list -> 'b list
+  val parmap_dir : int -> ((string * 'a) -> 'b) -> 'a list -> 'b list
+  val parapp : int -> ('a -> 'b) -> 'a list -> unit
 
  
 end

@@ -14,11 +14,10 @@ val ERR = mk_HOL_ERR "tttSyntEval"
 
 fun feai_of_term x = tttFeature.fea_of_goal ([],x)
 
-val ncores = 32
-
 (* --------------------------------------------------------------------------
    Global dictionaries.
    -------------------------------------------------------------------------- *)
+
 datatype role = Axiom | Theorem | Reproven | Conjecture
 
 val id_compare = list_compare Int.compare
@@ -82,47 +81,18 @@ fun insert_cj (cj,lemmas) =
   end
 
 (* --------------------------------------------------------------------------
-   Proving conjectures
-   todo parallelize proving
+   Proving
    -------------------------------------------------------------------------- *) 
 
-fun mprove t premises tm =
-  let
-    val goal = ([], tm)
-    fun mk_goal x = ([],x)
-    val thml = map (mk_thm o mk_goal) premises
-    val tac = METIS_TAC thml
-  in
-    can tac goal
+fun prove prover t (symweight_org,tmfea_org) (pids,cj) =
+  let val tml = tmknn 16 (symweight_org,tmfea_org) (feai_of_term cj) in
+    (cj, prover pids t tml cj)
   end
 
-fun minimize_aux t l1 l2 tm = case l2 of
-    []     => l1
-  | a :: m => 
-    if mprove t (l1 @ m) tm 
-    then minimize_aux t l1 m tm
-    else minimize_aux t (a :: l1) m tm
-    
-fun miniprove t tml tm = 
-  let
-    fun cmp (a,b) = id_compare (id_of_term a, id_of_term b)
-    val tml' = dict_sort cmp tml 
-  in
-    if mprove t tml' tm 
-    then SOME (minimize_aux t [] tml' tm)
-    else NONE
-  end
-
-fun prove_cj t (symweight_org,tmfea_org) cj =
-  let 
-    val tml = tmknn 16 (symweight_org,tmfea_org) (feai_of_term cj)
-    val ro = miniprove t tml cj
-  in
-    case ro of
-      SOME []     => NONE (* trivial *)
-    | NONE        => NONE
-    | SOME lemmas => SOME (cj,lemmas)
-  end
+fun filter_nontrivial (a,b) = case b of
+    SOME [] => NONE
+  | NONE => NONE
+  | _    => SOME (a,valOf b)
 
 (* --------------------------------------------------------------------------
    Evaluating conjectures
@@ -130,6 +100,7 @@ fun prove_cj t (symweight_org,tmfea_org) cj =
 
 datatype usage = Irrelevant | Predicted of term list | Useful of term list
 
+(*
 fun reprove t (tmid,((tm,fea),role)) =
   if role <> Theorem then true else
   let
@@ -142,11 +113,11 @@ fun reprove t (tmid,((tm,fea),role)) =
   in
     mprove t tml tm
   end
+*)
 
-fun eval t (tmid,((tm,fea),role)) =
+fun eval t prover l0 (pids,(tmid,((tm,fea),role))) =
   if role <> Theorem then NONE else
   let
-    val l0 = dlist (!dict_glob)
     fun is_older (x,_) = id_compare (x,tmid) = LESS
     val l1 = filter is_older l0
     val tmfea = map (fst o snd) l1
@@ -155,22 +126,22 @@ fun eval t (tmid,((tm,fea),role)) =
     val cjl = filter (fn x => role_of_term x = Conjecture) tml
     val r =
       if null cjl then (Irrelevant, tm) else
-      if not (mprove t tml tm) then (Predicted cjl, tm) else
-      let 
-        val mintml1 = minimize_aux t [] tml tm 
-        val mintml2 = filter (fn x => role_of_term x = Conjecture) mintml1
-      in
-        (Useful mintml2, tm)
+      case prove prover t (symweight,tmfea) (pids,tm) of
+        (_,NONE) => (Predicted cjl, tm)
+      | (_,SOME l) => 
+      let val mintml = filter (fn x => role_of_term x = Conjecture) l in
+        (Useful mintml, tm)
       end
   in
     SOME r
   end
 
-fun eval_cjl t cjl =
+fun parallel_eval prover ncores t cjl =
   let 
     val rl = ref []
     val _ = app insert_cj cjl
-    val lo = par_map ncores (eval t) (dlist (!dict_glob))
+    val l0 = dlist (!dict_glob)
+    val lo = parmap_dir ncores (eval t prover l0) (dlist (!dict_glob))
   in
     List.mapPartial I lo
   end
@@ -195,88 +166,44 @@ fun is_predicted x = case x of
     Predicted _ => true
   | _ => false  
 
-fun all_in_one ncores tim cjlimit =
-  let 
-    val _ = mlibUseful.trace_level := 0
-    val _ = init_n_thy 1000
-    val _ = par_app ncores (reprove tim) (dlist (!dict_glob))
-    val tmfea_org = map (fst o snd) (dlist (!dict_glob))
-    val symweight_org = learn_tfidf tmfea_org
-    val cjl0 = gen_cjl tmfea_org
-    val cjl1 = first_n cjlimit cjl0;
-    val cjlp0 = par_map ncores (prove_cj tim (symweight_org,tmfea_org)) cjl1
-    val cjlp1 = List.mapPartial I cjlp0
-    val rl = eval_cjl 0.1 cjlp1
-    val rl1 = filter (is_useful o fst) rl
-  in
-    rl1
-  end  
-
-fun batch_n n l =
-  let val (l1,l2) = part_n n l in
-     if null l2 then [l1] else l1 :: batch_n n l2
-  end
-
 end (* struct *)
 
 (*
-load "tttSyntEval";
-open tttPredict tttTools tttSynt tttSyntEval;
-mlibUseful.trace_level := 0;
-limit := {infs = NONE, time = SOME 0.1};
+load "tttSyntEval"; load "holyHammer";
+open tttPredict tttTools tttSynt tttSyntEval holyHammer;
 
 (* Initialization *)
 val ncores = 32;
-val _ = init_n_thy 1000; print "end";
-val _ = print_endline (int_to_string (dlength (!dict_glob)) ^ " theorems")
+val timelimit = 5;
+val _ = init_n_thy 1000;
+val norg = dlength (!dict_glob);
+val _ = print_endline (int_to_string norg ^ " theorems");
 
 (* Generating conjectures *)
 val tmfea_org = map (fst o snd) (dlist (!dict_glob))
 val symweight_org = learn_tfidf tmfea_org
 val cjl0 = gen_cjl tmfea_org
-val _ = print_endline (int_to_string (length cjl0) ^ " generated conjectures")
+val cjl1 = first_n 1000000 cjl0;
+val _ = print_endline (int_to_string (length cjl0) ^ " generated conjectures");
 
 (* Proving conjectures *)
-val cjlp' = par_map ncores (prove_cj 0.2 (symweight_org,tmfea_org)) cjl0;
-val cjlp = List.mapPartial I cjlp';
-val _ = print_endline (int_to_string (length cjlp) ^ " proven conjectures")
+val cjlp0 = 
+  parmap_dir ncores (prove eprover timelimit (symweight_org,tmfea_org)) cjl1;
+val cjlp1 = List.mapPartial filter_nontrivial cjlp0;
+val _ = print_endline (int_to_string (length cjlp1) ^ " proven conjectures");
 
 (* Evaluate conjectures *)
-val rl = eval_cjl 0.2 cjlp;
+val rl = parallel_eval eprover ncores timelimit cjlp1;
 val rl0 = filter (is_predicted o fst) rl;
 val rl1 = filter (is_useful o fst) rl;
-val _ = print_endline (int_to_string (length rl1) ^ " useful conjectures");
 
 (* Summary *)
 val _ = 
   (
-  print_endline (int_to_string (dlength (!dict_glob)) ^ " theorems");
+  print_endline (int_to_string norg ^ " theorems");
   print_endline (int_to_string (length cjl0) ^ " generated conjectures");
-  print_endline (int_to_string (length cjlp) ^ " proven conjectures");
+  print_endline (int_to_string (length cjlp1) ^ " proven conjectures");
+  print_endline (int_to_string (length rl0) ^ " predicted conjectures");
   print_endline (int_to_string (length rl1) ^ " useful conjectures")
   );
-*)
-
-
-(* test 
-load "tttSyntEval";
-open tttPredict tttTools tttSynt tttSyntEval tttFeature;
-mlibUseful.trace_level := 0;
-limit := {infs = NONE, time = SOME 0.1};
-
-fun f () = METIS_TAC (map snd (DB.thms "arithmetic")) ([],``1+1=2``);
-
-val l0 = List.tabulate (100, fn _ => ());
-val (l1,t) = add_time (map f) l0;
-val (l1,t) = add_time (par_map 3 f) l0;
-
-*)
-
-(* 
-val _ = par_app ncores (reprove 0.1) (dlist (!dict_glob))
-val reprovenl = filter (fn x => snd (snd x) = Reproven) (dlist (!dict_glob))
-val _ = print_endline (int_to_string (length reprovenl) ^ " reproven theorems")
-*)
-(*
-fun f () = METIS_TAC (map snd (DB.thms "arithmetic")) ([],``1+1=2``);
 *)

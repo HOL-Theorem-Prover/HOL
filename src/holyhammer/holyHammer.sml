@@ -368,15 +368,16 @@ fun translate_write_parallelsafe dir thml0 cj =
     write_tptp dir axl new_cj
   end
 
-fun eprover t dir terml cj =
+fun eprover pids t terml cj =
   let
+    val provdir = pathl [provbin_dir,pids]
     val terml1 = number_list 0 terml
     val terml2 = map (fn (i,x) => ("noTheory." ^ int_to_string i, x)) terml1
     val d = dnew String.compare terml2
     val thml = map (fn (s,x) => (s, mk_thm ([],x))) terml2 
-    val _  = translate_write_parallelsafe dir thml cj 
+    val _  = translate_write_parallelsafe provdir thml cj 
   in
-    case launch_atp_mute dir Eprover t of
+    case launch_atp_mute provdir Eprover t of
       SOME l => SOME (map (fn x => dfind x d) l)
     | NONE   => NONE
   end

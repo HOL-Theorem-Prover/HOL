@@ -718,7 +718,7 @@ fun interruptkill worker =
 
 fun compare_imin (a,b) = Int.compare (snd a, snd b)
 
-fun par_map ncores forg lorg =
+fun parmap ncores forg lorg =
   let
     (* input *)
     val sizeorg = length lorg
@@ -769,7 +769,13 @@ fun par_map ncores forg lorg =
     map fst (dict_sort compare_imin (List.concat (map (! o snd) lout)))
   end
 
-fun par_app ncores forg lorg =
-  ignore (par_map ncores forg lorg)
+fun parapp ncores f l = ignore (parmap ncores f l)
+
+fun parmap_dir ncores f lorg =
+  let 
+    val l1 = map (fn (i,x) => (int_to_string i, x)) (number_list 0 lorg)  
+  in
+    parmap ncores f l1
+  end
 
 end (* struct *)
