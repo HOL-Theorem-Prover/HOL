@@ -1,0 +1,29 @@
+Goals
+  - Random selection of goals from the DB, to a separate file.
+  - A goal should be deleted from the DB of the environment
+    when trying to prove it.
+  - TODO(RK): environment to delete goal from DB if it is there
+  - TODO(RK): write a function to produce a goals.txt file of all goal statements
+  - TODO(FW): random sample from goals.txt, and pass each one to the environment on reset
+
+Terms
+  - subterms of current goal? which subterms?
+    - all constants? all constants and variables (Term.all_atoms produces this)?
+  - arbitrary term construction?
+    - pick subterm
+    - mk_comb
+    - mk_abs
+    - mk_genvar
+    - mk_const (long list of all constants?)
+    - mk_var (unnecessary, given subterm and genvar?)
+  - type construction (for mk_const/var/genvar)
+    - same type as another term
+    - mk_type (not initially..)
+    - mk_vartype (probably unnecessary)
+
+Theorems
+  - top N (10) theorems from searching DB for a term,
+        or a list of terms (intersection)?
+  - (needs term-input interface, as above)
+  - (if the desired theorem is not there, search for a more specific subterm)
+  - long list (possibly with paging)?
