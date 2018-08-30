@@ -705,6 +705,19 @@ fun only_concl x =
    Parallelism
   ----------------------------------------------------------------------------*)
 
+datatype 'a result = Res of 'a | Exn of exn;
+
+fun capture f x = Res (f x) handle e => Exn e
+
+fun release (Res y) = y
+  | release (Exn x) = raise x
+
+fun is_res (Res y) = true
+  | is_res (Exn x) = false
+
+fun is_exn (Res y) = false
+  | is_exn (Exn x) = true
+
 fun interruptkill worker =
    if Thread.Thread.isActive worker
    then 
@@ -718,7 +731,7 @@ fun interruptkill worker =
 
 fun compare_imin (a,b) = Int.compare (snd a, snd b)
 
-fun parmap ncores forg lorg =
+fun parmap_err ncores forg lorg =
   let
     (* input *)
     val sizeorg = length lorg
@@ -747,7 +760,7 @@ fun parmap ncores forg lorg =
           let 
             val oldl = dfind pi dout
             val oldn = dfind pi dcount
-            val y = forg x 
+            val y = capture forg x 
           in
             oldl := (y,xi) :: (!oldl);
             incr oldn;
@@ -768,6 +781,9 @@ fun parmap ncores forg lorg =
     loop ();
     map fst (dict_sort compare_imin (List.concat (map (! o snd) lout)))
   end
+
+fun parmap ncores f l = 
+  map release (parmap_err ncores f l)
 
 fun parapp ncores f l = ignore (parmap ncores f l)
 
