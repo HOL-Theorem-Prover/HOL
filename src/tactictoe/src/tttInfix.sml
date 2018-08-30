@@ -88,17 +88,19 @@ fun infix_pair infixity = case infixity of
 
 (*----------------------------------------------------------------------------
   Infixity from Overlay.sml. To add to the README to keep up-to-date.
+  TacticToe automatically recognize infix tokens if they are declared within   
+  the file it is reading. 
+  So it is not necessary to declare these infix tokens here 
+  (* ">> >- >| \\\\ >>> >>- ??",
+     "~~ !~ Un Isct -- IN" *)
   ----------------------------------------------------------------------------*)
 
-(* becareful to escape \\ to \\\\ in the following list *)
 val l0 = String.tokens Char.isSpace
   (
   String.concatWith " "
   [
    "++ && |-> THEN THEN1 THENL THEN_LT THENC ORELSE ORELSE_LT ORELSEC",
-   "THEN_TCL ORELSE_TCL ?> |>",
-   ">> >- >| \\\\ >>> >>- ??",
-   "~~ !~ Un Isct -- IN"
+   "THEN_TCL ORELSE_TCL ?> |> |>> ||> ||->"
   ]
   )
 val l1 = String.tokens Char.isSpace "## $"
