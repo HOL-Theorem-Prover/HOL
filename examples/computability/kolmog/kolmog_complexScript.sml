@@ -546,6 +546,10 @@ val interval_bl_def = Define`interval_bl l = (&(tbl2n l) *(2 rpow -&LENGTH l),(2
 val disjoint_interval_def = Define`disjoint_interval ((m:real),i) (n,j) <=> 
                                    DISJOINT {r|m<=r ∧ r<m+i} {r|n<=r ∧ r<n+j}`
 
+val disjoint_pf_lem1 = Q.store_thm("disjoint_pf_lem1",
+`¬(i ≺ j) ∧ (LENGTH i < LENGTH j) ==> &tbl2n j * 2 rpow -&LENGTH j + 2 rpow -&LENGTH j < &tbl2n i * 2 rpow -&LENGTH i`,
+rw[] >>  )
+
 val disjoint_prefix_free = Q.store_thm("disjoint_prefix_free",
 `prefix_free P <=> let is = IMAGE interval_bl P in ∀i1 i2. i1 ∈ is ∧ i2∈is ∧ i1<>i2 ==> disjoint_interval i1 i2`,
 rw[EQ_IMP_THM] 
@@ -562,7 +566,10 @@ rw[EQ_IMP_THM]
       `((&tbl2n i) :real) < &(tbl2n j + 1)` by fs[REAL_LT_RMUL] >> 
       `((&tbl2n j):real) < &(tbl2n i + 1)` by fs[REAL_LT_RMUL] >> fs[] ) >> 
     Cases_on`LENGTH i < LENGTH j` >> rw[]
-      >- ()
+      (* We want to show that either i2^-li+2^-li < j2^-lj or j2^-lj+2^-lj<i2^-li *)
+      >- (`&tbl2n j * 2 rpow -&LENGTH j + 2 rpow -&LENGTH j < &tbl2n i * 2 rpow -&LENGTH i` by 
+          (simp[disjoint_pf_lem1]) >> 
+          fs[] )
       >- () ) )
 
 val kraft_ineq = Q.store_thm("kraft_ineq",
