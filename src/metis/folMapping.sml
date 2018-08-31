@@ -3,14 +3,6 @@
 (* Created by Joe Hurd, October 2001                                         *)
 (* ========================================================================= *)
 
-(*
-loadPath := "../mlib" :: "../normalize" :: !loadPath;
-app load
-["tautLib", "mlibUseful", "mlibTerm", "mlibMatch", "mlibThm", "matchTools"];
-*)
-
-(*
-*)
 structure folMapping :> folMapping =
 struct
 

@@ -6,8 +6,6 @@
 structure mlibUseful :> mlibUseful =
 struct
 
-infixr 0 oo ## |-> ==;
-
 (* ------------------------------------------------------------------------- *)
 (* Exceptions, profiling and tracing.                                        *)
 (* ------------------------------------------------------------------------- *)
@@ -100,8 +98,6 @@ fun K x y = x;
 fun S f g x = f x (g x);
 
 fun W f x = f x x;
-
-fun f oo g = fn x => f o (g x);
 
 fun funpow 0 _ x = x | funpow n f x = funpow (n - 1) f (f x);
 
@@ -683,8 +679,6 @@ fun tree_partial_foldl f_b f_l =
 (* ------------------------------------------------------------------------- *)
 (* mlibUseful impure features                                                    *)
 (* ------------------------------------------------------------------------- *)
-
-fun op== (x,y) = mlibPortable.pointer_eq x y;
 
 fun memoize f = let val s = Susp.delay f in fn () => Susp.force s end;
 

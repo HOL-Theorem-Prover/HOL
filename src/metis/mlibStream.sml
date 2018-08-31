@@ -8,8 +8,6 @@ struct
 
 open mlibUseful;
 
-infixr 0 oo ##;
-
 (* ------------------------------------------------------------------------- *)
 (* The datatype declaration encapsulates all the primitive operations        *)
 (* ------------------------------------------------------------------------- *)

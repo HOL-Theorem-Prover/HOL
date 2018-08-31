@@ -16,8 +16,6 @@ struct
 
 open mlibUseful mlibTerm mlibThm mlibMeter mlibSolver;
 
-infix |-> ::> @> oo ## ::* ::@;
-
 structure M = mlibMeson; local open mlibMeson in end;
 structure R = mlibResolution; local open mlibResolution in end;
 

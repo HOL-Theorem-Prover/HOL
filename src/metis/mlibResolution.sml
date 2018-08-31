@@ -16,8 +16,6 @@ struct
 
 open mlibUseful mlibTerm mlibMeter mlibSolver;
 
-infix |-> ::> @> oo ## ::* ::@;
-
 structure I = Intset; local open Intset in end;
 structure S = mlibStream; local open mlibStream in end;
 

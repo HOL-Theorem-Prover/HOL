@@ -3,18 +3,12 @@
 (* Copyright (c) 2001-2004 Joe Hurd.                                         *)
 (* ========================================================================= *)
 
-(*
-app load ["mlibUseful", "mlibTerm", "mlibKernel", "mlibMatch"];
-*)
-
-(*
-*)
 structure mlibThm :> mlibThm =
 struct
 
 open mlibUseful mlibTerm mlibKernel mlibMatch;
 
-infixr |-> ::> oo ##;
+infixr ::>
 
 structure T = mlibTermnet; local open mlibTermnet in end;
 

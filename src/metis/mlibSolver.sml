@@ -14,8 +14,6 @@ struct
 
 open mlibUseful mlibTerm mlibMatch mlibThm mlibMeter;
 
-infix |-> ::> @> oo ##;
-
 structure S = mlibStream; local open mlibStream in end;
 structure U = mlibUnits; local open mlibUnits in end;
 

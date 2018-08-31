@@ -29,7 +29,6 @@ val I      : 'a -> 'a
 val K      : 'a -> 'b -> 'a
 val S      : ('a -> 'b -> 'c) -> ('a -> 'b) -> 'a -> 'c
 val W      : ('a -> 'a -> 'b) -> 'a -> 'b
-val oo     : ('a -> 'b) * ('c -> 'd -> 'a) -> 'c -> 'd -> 'b
 val ##     : ('a -> 'c) * ('b -> 'd) -> 'a * 'b -> 'c * 'd
 val funpow : int -> ('a -> 'a) -> 'a -> 'a
 
@@ -178,7 +177,6 @@ val tree_partial_foldl :
   ('a->'c->'c option) -> ('b->'c->'d option) -> 'c -> ('a,'b) tree -> 'd list
 
 (* mlibUseful impure features *)
-val ==        : 'a * 'a -> bool  (* pointer equality *)
 val memoize   : (unit -> 'a) -> unit -> 'a
 val new_int   : unit -> int
 val new_ints  : int -> int list

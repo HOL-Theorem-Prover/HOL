@@ -8,10 +8,9 @@ struct
 
 open mlibParser mlibUseful;
 
-infixr 8 ++;
-infixr 7 >>;
-infixr 6 ||;
-infixr |-> ::> @> oo ##;
+infixr 8 ++
+infixr 7 >>
+infixr 6 ||
 
 (* ------------------------------------------------------------------------- *)
 (* Datatypes for storing first-order terms and formulas.                     *)

@@ -3,19 +3,10 @@
 (* Copyright (c) 2001-2004 Joe Hurd.                                         *)
 (* ========================================================================= *)
 
-(*
-app load
- ["mlibUseful", "Mosml", "mlibTerm", "mlibThm", "mlibCanon", "mlibMatch"];
-*)
-
-(*
-*)
 structure mlibUnits :> mlibUnits =
 struct
 
 open mlibUseful mlibTerm mlibThm mlibMatch;
-
-infix |-> ::> @> oo ##;
 
 structure N = mlibLiteralnet; local open mlibLiteralnet in end;
 
