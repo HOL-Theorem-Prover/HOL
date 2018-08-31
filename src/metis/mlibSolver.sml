@@ -14,8 +14,6 @@ struct
 
 open mlibUseful mlibTerm mlibMatch mlibThm mlibMeter;
 
-infix |-> ::> @> oo ##;
-
 structure S = mlibStream; local open mlibStream in end;
 structure U = mlibUnits; local open mlibUnits in end;
 
@@ -30,7 +28,7 @@ val op ::> = mlibSubst.::>;
 (* ------------------------------------------------------------------------- *)
 
 val module = "mlibSolver";
-val () = traces := {module = module, alignment = I} :: !traces;
+val () = add_trace {module = module, alignment = I}
 fun chatting l = tracing {module = module, level = l};
 fun chat s = (trace s; true)
 

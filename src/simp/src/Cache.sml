@@ -71,8 +71,8 @@ end
 
 fun clear_cache cache = (cache := new_table())
 
-fun cache_values (ref (cache : table)) = let
-  val items = Redblackmap.listItems (!cache)
+fun cache_values (cache : table ref) = let
+  val items = Redblackmap.listItems (!(!cache))
   fun tolist (set, thmopt) = (HOLset.listItems set, thmopt)
   fun ToList (k, stlist) = (k, map tolist stlist)
 in

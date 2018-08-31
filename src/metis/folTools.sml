@@ -3,14 +3,6 @@
 (* Created by Joe Hurd, October 2001                                         *)
 (* ========================================================================= *)
 
-(*
-loadPath := ["../basic", "../fol", "../metis", "../normalize"] @ !loadPath;
-app load
-["mlibUseful", "mlibSolver", "normalForms", "normalFormsTheory", "folMapping"];
-*)
-
-(*
-*)
 structure folTools :> folTools =
 struct
 
@@ -22,8 +14,6 @@ structure Parse = struct
   val (Type,Term) = parse_from_grammars normalFormsTheory.normalForms_grammars
 end
 open Parse
-
-infix THEN ORELSE THENC ##;
 
 type 'a pp       = 'a mlibUseful.pp;
 type 'a stream   = 'a mlibStream.stream;
@@ -42,7 +32,7 @@ local
   open mlibUseful;
   val module = "folTools";
 in
-  val () = traces := {module = module, alignment = I} :: !traces;
+  val () = add_trace {module = module, alignment = I}
   fun chatting l = tracing {module = module, level = l};
   fun chat s = (trace s; true)
   val ERR = mk_HOL_ERR module;

@@ -23,7 +23,7 @@ structure W = Word; local open Word in end;
 (* ------------------------------------------------------------------------- *)
 
 val module = "mlibModel";
-val () = traces := {module = module, alignment = I} :: !traces;
+val () = add_trace {module = module, alignment = I}
 fun chatting l = tracing {module = module, level = l};
 fun chat s = (trace s; true)
 

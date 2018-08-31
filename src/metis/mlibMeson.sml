@@ -16,14 +16,11 @@ struct
 
 open mlibUseful mlibTerm mlibMatch mlibThm mlibCanon mlibMeter mlibSolver;
 
-infix |-> ::> @> oo ##;
-
 structure S = mlibStream; local open mlibStream in end;
 structure N = mlibLiteralnet; local open mlibLiteralnet in end;
 structure U = mlibUnits; local open mlibUnits in end;
 
 val |<>|          = mlibSubst.|<>|;
-val op ::>        = mlibSubst.::>;
 val formula_subst = mlibSubst.formula_subst;
 
 (* ------------------------------------------------------------------------- *)
@@ -31,7 +28,7 @@ val formula_subst = mlibSubst.formula_subst;
 (* ------------------------------------------------------------------------- *)
 
 val module = "mlibMeson";
-val () = traces := {module = module, alignment = I} :: !traces;
+val () = add_trace {module = module, alignment = I}
 fun chatting l = tracing {module = module, level = l};
 fun chat s = (trace s; true)
 
@@ -362,7 +359,10 @@ fun cache_cont c ({offset, ...} : state) =
         fun p (n', l') = n <= n' andalso l = l'
       in
         if List.exists p (!mem) then raise Error "cache_cut: repetition"
-        else (mem := (n, l) :: (!mem); update_env (K (mlibSubst.from_maplets l)) s)
+        else (
+          mem := (n, l) :: (!mem);
+          update_env (K (mlibSubst.from_maplets l)) s
+        )
       end
   in
     c o purify

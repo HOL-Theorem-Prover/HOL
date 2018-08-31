@@ -44,9 +44,9 @@ type stdconvdata = { name: string,
 
 (* boolean argument to c is whether or not the rewrite is bounded *)
 fun appconv (c,UNBOUNDED) solver stk tm = c false solver stk tm
-  | appconv (c,BOUNDED(ref 0)) _ _ _    = failwith "exceeded rewrite bound"
-  | appconv (c,BOUNDED r) solver stk tm = c true solver stk tm before
-                                          Portable.dec r
+  | appconv (c,BOUNDED r) solver stk tm = if !r = 0 then failwith "exceeded rewrite bound"
+                                          else c true solver stk tm before
+                                            Portable.dec r
 
 fun mk_rewr_convdata (thm,tag) = let
   val th = SPEC_ALL thm
@@ -386,10 +386,12 @@ datatype simpset =
      val _ =
          trace(7, LZ_TEXT (fn () => "Attempting rewrite: "^thm_to_string th))
      fun dec() = case bound of
-                   BOUNDED (r as ref n) =>
-                     if n > 0 then r := n - 1
-                     else raise ERR ("mk_reducer.applythm",
-                                     "Bound exceeded on rwt.")
+                   BOUNDED r =>
+                     let val n = !r in
+                       if n > 0 then r := n - 1
+                       else raise ERR ("mk_reducer.applythm",
+                                       "Bound exceeded on rwt.")
+                     end
                  | UNBOUNDED => ()
      val matched = PART_MATCH (rator o #2 o strip_imp) th t
      open Trace

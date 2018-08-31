@@ -87,7 +87,7 @@ fun comb_ct {Head,Args,Rws=NeedArg tail, Skip} arg =
 
 fun mk_clos(env,t) =
   case t of
-    Cst (hc,ref(db,b)) => CST{Head=hc, Args=[], Rws= db, Skip = b}
+    Cst (hc,r) => let val (db,b) = !r in CST{Head=hc, Args=[], Rws= db, Skip = b} end
   | Bv i => List.nth(env,i)
   | Fv => NEUTR
   | _ => CLOS{Env=env, Term=t}

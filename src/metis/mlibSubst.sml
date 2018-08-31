@@ -3,21 +3,12 @@
 (* Copyright (c) 2002-2004 Joe Hurd.                                         *)
 (* ========================================================================= *)
 
-(*
-app load ["Binarymap", "mlibUseful", "mlibTerm"];
-*)
-
-(*
-*)
 structure mlibSubst :> mlibSubst =
 struct
 
 open mlibUseful mlibTerm;
 
-infixr 8 ++;
-infixr 7 >>;
-infixr 6 ||;
-infixr |-> ::> @> oo ##;
+infix @> ::>
 
 structure M = Binarymap; local open Binarymap in end;
 

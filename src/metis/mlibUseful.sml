@@ -6,8 +6,6 @@
 structure mlibUseful :> mlibUseful =
 struct
 
-infixr 0 oo ## |-> ==;
-
 (* ------------------------------------------------------------------------- *)
 (* Exceptions, profiling and tracing.                                        *)
 (* ------------------------------------------------------------------------- *)
@@ -69,6 +67,9 @@ val trace_level = ref 1;
 
 val traces : {module : string, alignment : int -> int} list ref = ref [];
 
+fun add_trace t = traces := t :: !traces
+fun set_traces ts = traces := ts
+
 local
   val MAX = 10;
   fun query m l =
@@ -97,8 +98,6 @@ fun K x y = x;
 fun S f g x = f x (g x);
 
 fun W f x = f x x;
-
-fun f oo g = fn x => f o (g x);
 
 fun funpow 0 _ x = x | funpow n f x = funpow (n - 1) f (f x);
 
@@ -681,8 +680,6 @@ fun tree_partial_foldl f_b f_l =
 (* mlibUseful impure features                                                    *)
 (* ------------------------------------------------------------------------- *)
 
-fun op== (x,y) = mlibPortable.pointer_eq x y;
-
 fun memoize f = let val s = Susp.delay f in fn () => Susp.force s end;
 
 local
@@ -732,37 +729,11 @@ fun cached cmp f =
 (* Environment.                                                              *)
 (* ------------------------------------------------------------------------- *)
 
-val host = Option.getOpt (OS.Process.getEnv "HOSTNAME", "unknown");
-
-val date = Date.fmt "%H:%M:%S %d/%m/%Y" o Date.fromTimeLocal o Time.now;
-
-val today = Date.fmt "%d/%m/%Y" o Date.fromTimeLocal o Time.now;
-
 local
   fun err x s = TextIO.output (TextIO.stdErr, x ^ ": " ^ s ^ "\n");
 in
   val warn = err "WARNING";
   fun die s = (err "\nFATAL ERROR" s; OS.Process.exit OS.Process.failure);
 end
-
-fun read_textfile {filename} =
-  let
-    open TextIO
-    val h = openIn filename
-    val contents = inputAll h
-    val () = closeIn h
-  in
-    contents
-  end;
-
-fun write_textfile {filename,contents} =
-  let
-    open TextIO
-    val h = openOut filename
-    val () = output (h,contents)
-    val () = closeOut h
-  in
-    ()
-  end;
 
 end
