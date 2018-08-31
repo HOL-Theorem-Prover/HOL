@@ -87,9 +87,7 @@ fun infix_pair infixity = case infixity of
      "ttt_infixr" ^ Int.toString n ^ "_close")
 
 (*----------------------------------------------------------------------------
-  Infixity from Overlay.sml. To add to the README to keep up-to-date.
-  TacticToe automatically recognize infix tokens if they are declared within   
-  the file it is reading. 
+  Infixity from src/thm/Overlay.sml.
   ----------------------------------------------------------------------------*)
 
 val l0 = String.tokens Char.isSpace
@@ -98,8 +96,6 @@ val l0 = String.tokens Char.isSpace
   [
    "++ && |-> THEN THEN1 THENL THEN_LT THENC ORELSE ORELSE_LT ORELSEC",
    "THEN_TCL ORELSE_TCL ?> |> |>> ||> ||->",
-  (* The next two lines of infix characters  are probably determined using
-     PolyML.Namespace and isInfix function *)
    ">> >- >| \\\\ >>> >>- ??", 
    "~~ !~ Un Isct -- IN"
   ]
