@@ -787,11 +787,4 @@ fun parmap ncores f l =
 
 fun parapp ncores f l = ignore (parmap ncores f l)
 
-fun parmap_dir ncores f lorg =
-  let 
-    val l1 = map (fn (i,x) => (int_to_string i, x)) (number_list 0 lorg)  
-  in
-    parmap ncores f l1
-  end
-
 end (* struct *)

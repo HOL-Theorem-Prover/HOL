@@ -45,7 +45,10 @@ sig
   val hh                : tactic
   
   (* Other functions *)
-  val eprover           : string -> int -> term list -> term -> term list option
+  val trans_write_tmlcj : 
+    int -> term list * term -> int * (term * (string, term) Redblackmap.dict)
+  val launch_eprover_parallel: 
+    int -> int list -> int -> (int * string list option) list
   val metis_auto        : real -> int -> goal -> string option
   
   (* HolyHammer for TacTicToe parallel calls *)

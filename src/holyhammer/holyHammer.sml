@@ -226,6 +226,25 @@ fun launch_atp_mute dir atp t =
     r
   end
 
+fun dir_of_pid i = provbin_dir ^ "/parallel/" ^ int_to_string i
+
+fun launch_eprover_parallel ncores pidl t =
+  let
+    val dirl = map dir_of_pid pidl
+    val file = provbin_dir ^ "/parallel_file"
+    val _ = writel file dirl
+    val cmd = 
+      "cat " ^ file ^ " | parallel -j " ^ int_to_string ncores ^ 
+      " sh eprover.sh " ^ 
+      int_to_string t ^ " {} "
+    val _ = cmd_in_dir provbin_dir cmd
+    fun f pid = 
+      (pid,
+       get_lemmas (dir_of_pid pid ^ "/status", dir_of_pid pid ^ "/out"))
+  in  
+    map f pidl
+  end
+
 fun launch_atp dir atp t =
   let 
     val cmd = "sh " ^ name_of atp ^ ".sh " ^ int_to_string t ^ " " ^ 
@@ -355,31 +374,21 @@ fun metis_auto t n goal =
   end
  
 (*----------------------------------------------------------------------------
-   Multiple instances of the "eprover" function can be called in parallel.
-   Include mk_thm only because of type constraints.
+   Writing problem for tttSyntEval.sml
  -----------------------------------------------------------------------------*)
 
-fun translate_write_parallelsafe dir thml0 cj =
+fun trans_write_tmlcj pid (tml,cj) =
   let
-    val thml = extra_premises @ thml0       
-    val pb = translate_pb false thml cj
+    val tml1 = number_list 0 tml
+    val tml2 = map (fn (i,x) => ("noTheory." ^ int_to_string i, x)) tml1 
+    val thml0 = map (fn (s,x) => (s, mk_thm ([],x))) tml2  
+    val thml1 = extra_premises @ thml0
+    val pb = translate_pb true thml1 cj
     val (axl,new_cj) = name_pb pb
+    val dir = dir_of_pid pid
   in
-    write_tptp dir axl new_cj
-  end
-
-fun eprover pids t terml cj =
-  let
-    val provdir = pathl [provbin_dir,pids]
-    val terml1 = number_list 0 terml
-    val terml2 = map (fn (i,x) => ("noTheory." ^ int_to_string i, x)) terml1
-    val d = dnew String.compare terml2
-    val thml = map (fn (s,x) => (s, mk_thm ([],x))) terml2 
-    val _  = translate_write_parallelsafe provdir thml cj 
-  in
-    case launch_atp_mute provdir Eprover t of
-      SOME l => SOME (map (fn x => dfind x d) l)
-    | NONE   => NONE
+    write_tptp dir axl new_cj;
+    (pid, (cj, dnew String.compare tml2))
   end
 
 (*----------------------------------------------------------------------------

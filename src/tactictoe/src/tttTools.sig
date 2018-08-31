@@ -187,7 +187,6 @@ sig
   datatype 'a result = Res of 'a | Exn of exn
   val parmap_err : int -> ('a -> 'b) -> 'a list -> 'b result list
   val parmap : int -> ('a -> 'b) -> 'a list -> 'b list
-  val parmap_dir : int -> ((string * 'a) -> 'b) -> 'a list -> 'b list
   val parapp : int -> ('a -> 'b) -> 'a list -> unit
 
  
