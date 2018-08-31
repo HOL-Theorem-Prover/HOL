@@ -186,12 +186,7 @@ val with_flag : 'r ref * ('r -> 'r) -> ('a -> 'b) -> 'a -> 'b
 val cached    : 'a ordering -> ('a -> 'b) -> 'a -> 'b
 
 (* The environment *)
-val host           : string
-val date           : unit -> string
-val today          : unit -> string
 val warn           : string -> unit
 val die            : string -> unit
-val read_textfile  : {filename : string} -> string
-val write_textfile : {filename : string, contents : string} -> unit
 
 end
