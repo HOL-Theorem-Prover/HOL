@@ -69,6 +69,9 @@ val trace_level = ref 1;
 
 val traces : {module : string, alignment : int -> int} list ref = ref [];
 
+fun add_trace t = traces := t :: !traces
+fun set_traces ts = traces := ts
+
 local
   val MAX = 10;
   fun query m l =

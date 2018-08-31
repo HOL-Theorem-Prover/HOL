@@ -45,8 +45,8 @@ val aligned_traces =
    {module = "mlibSupport",    alignment = I},
    {module = "mlibResolution", alignment = I}];
 
-val () = trace_level := 1;
-val () = traces := aligned_traces;
+val () = trace_level := 1
+val () = set_traces aligned_traces
 
 (* ------------------------------------------------------------------------- *)
 (* Helper functions                                                          *)

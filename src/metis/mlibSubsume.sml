@@ -38,7 +38,7 @@ val formula_subst = mlibSubst.formula_subst;
 (* ------------------------------------------------------------------------- *)
 
 val module = "mlibSubsume";
-val () = traces := {module = module, alignment = I} :: !traces;
+val () = add_trace {module = module, alignment = I}
 fun chatting l = tracing {module = module, level = l};
 fun chat s = (trace s; true)
 

@@ -30,7 +30,7 @@ val op ::> = mlibSubst.::>;
 (* ------------------------------------------------------------------------- *)
 
 val module = "mlibSolver";
-val () = traces := {module = module, alignment = I} :: !traces;
+val () = add_trace {module = module, alignment = I}
 fun chatting l = tracing {module = module, level = l};
 fun chat s = (trace s; true)
 

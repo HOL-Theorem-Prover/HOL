@@ -40,9 +40,9 @@ local
      {module = "folTools",       alignment = I},
      {module = "metisTools",     alignment = I},
      {module = "metisLib",       alignment = I}];
-  val () = register_trace ("metis", trace_level, 10);
-  val () = trace_level := (if !Globals.interactive then 1 else 0);
-  val () = traces := aligned_traces;
+  val () = register_trace ("metis", trace_level, 10)
+  val () = trace_level := (if !Globals.interactive then 1 else 0)
+  val () = set_traces aligned_traces
 in
   fun chatting l = tracing {module = module, level = l};
   fun chat s = (trace s; true)
