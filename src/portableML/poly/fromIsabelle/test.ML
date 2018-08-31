@@ -31,7 +31,11 @@ fun fact (n:IntInf.int) = if n <= 2 then 1 else n * fact (n - 1)
 
 val large_facts = realtime (cmap HOLfact) (countl 40)
 
-val _ = Multithreading.max_threads_update 1;
+val _ = print "\nMetis calls serially\n"
+fun f () = METIS_PROVE (map snd (DB.thms "arithmetic")) “1+1=2”;
+
+val metis_results =
+    realtime Future.joins (Future.forks Future.default_params [f,f])
 
 val _ = print "\nNow trying in multi-threaded mode\n";
 val _ = Multithreading.max_threads_update 0;
@@ -43,3 +47,5 @@ val results = realtime Future.joins (Future.forks Future.default_params args);
 val _ = print "\nFactorials\n"
 
 val large_facts' = realtime (cmap HOLfact) (countl 40)
+val metis_results =
+    realtime Future.joins (Future.forks Future.default_params [f,f])
