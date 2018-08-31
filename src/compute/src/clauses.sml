@@ -188,13 +188,15 @@ fun assoc_clause (RWS rws) cst =
 ;
 
 fun add_in_db_upd rws (name,arity,hcst) act =
-  let val (rl as ref(db,sk)) = assoc_clause rws name
+  let val rl = assoc_clause rws name
+    val (db, sk) = !rl
   in rl := (add_in_db (arity,hcst,act,db), sk)
   end
 ;
 
 fun set_skip (rws as RWS htbl) p sk =
-  let val (rl as ref(db,_)) = assoc_clause rws p
+  let val rl = assoc_clause rws p
+    val (db,_) = !rl
   in rl := (db,sk)
   end;
 
@@ -301,9 +303,9 @@ fun scrub_thms lthm rws =
 (* Support for analysis of compsets                                          *)
 (*---------------------------------------------------------------------------*)
 
-fun rws_of (RWS (ref rbmap)) =
- let val thinglist = Redblackmap.listItems rbmap
-     fun db_of_entry (ss, ref (db,opt)) = db
+fun rws_of (RWS rrbmap) =
+ let val rbmap = !rrbmap val thinglist = Redblackmap.listItems rbmap
+     fun db_of_entry (ss, r) = let val (db,opt) = !r in db end
      val dblist = List.map db_of_entry thinglist
      fun get_actions db =
       case db
@@ -331,9 +333,10 @@ datatype transform
 (* to make all the dependencies explicit.                                    *)
 (*---------------------------------------------------------------------------*)
 
-fun deplist (RWS (ref rbmap)) =
- let val thinglist = Redblackmap.listItems rbmap
-     fun db_of_entry (ss, ref (db,opt)) = (ss,db)
+fun deplist (RWS rrbmap) =
+ let val rbmap = !rrbmap
+     val thinglist = Redblackmap.listItems rbmap
+     fun db_of_entry (ss, r) = let val (db,opt) = !r in (ss,db) end
      val dblist = List.map db_of_entry thinglist
      fun get_actions db =
       case db

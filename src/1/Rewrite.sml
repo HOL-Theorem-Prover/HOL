@@ -86,8 +86,7 @@ with
 fun add_rewrites (RW{thms,net}) thl =
  let val rewrites = itlist (append o local_mk_rewrites) thl []
      fun appconv (c,UNBOUNDED) tm     = c tm
-       | appconv (c,BOUNDED(ref 0)) _ = failwith "exceeded bound"
-       | appconv (c,BOUNDED r) tm     = c tm before Portable.dec r
+       | appconv (c,BOUNDED r) tm     = if !r = 0 then failwith "exceeded bound" else c tm before Portable.dec r
  in
    RW{thms = thms@thl,
        net = itlist Net.insert

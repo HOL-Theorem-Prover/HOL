@@ -86,14 +86,16 @@ val complained_already = ref false;
 
 structure Polyhash =
 struct
-   fun peek (ref dict) k = Binarymap.peek(dict,k)
-   fun peekInsert (r as ref dict) (k,v) =
-       case Binarymap.peek(dict,k) of
-         NONE => (r := Binarymap.insert(dict,k,v); NONE)
-       | x => x
-   fun insert (r as ref dict) (k,v) =
-       r := Binarymap.insert(dict,k,v)
-   fun listItems (ref dict) = Binarymap.listItems dict
+   fun peek (dict) k = Binarymap.peek(!dict,k)
+   fun peekInsert r (k,v) =
+       let val dict = !r in
+         case Binarymap.peek(dict,k) of
+           NONE => (r := Binarymap.insert(dict,k,v); NONE)
+         | x => x
+       end
+   fun insert r (k,v) =
+       r := Binarymap.insert(!r,k,v)
+   fun listItems dict = Binarymap.listItems (!dict)
    fun mkDict cmp = let
      val newref = ref (Binarymap.mkDict cmp)
    in
