@@ -179,7 +179,8 @@ fun processSig db version bgcolor HOLpath SRCFILES sigfile htmlfile =
            end
 
         val aliasStrName =
-           fn "FinalType" => "Type"
+           fn "DefinitionDoc" => "Definition"
+            | "FinalType" => "Type"
             | "FinalTerm" => "Term"
             | "FinalThm" => "Thm"
             | "HolKernelDoc" => "HolKernel"
