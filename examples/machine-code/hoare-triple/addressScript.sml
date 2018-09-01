@@ -24,9 +24,6 @@ val DUMMY_EQ_def = Define `DUMMY_EQ x y = (x = y:'a)`;
 
 val SING_SET_def = Define `SING_SET x = {x}`;
 
-val word_mod_def = Define `
-  word_mod (v:'a word) (w:'a word) = n2w (w2n v MOD w2n w):'a word`;
-
 
 (* theorems *)
 
