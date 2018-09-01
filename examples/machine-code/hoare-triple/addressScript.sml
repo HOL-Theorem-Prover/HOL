@@ -679,18 +679,6 @@ val WORD_SUB_INTRO = store_thm("WORD_SUB_INTRO",
      (x + y * (-1w) = x - y)``,
   SIMP_TAC (std_ss++wordsLib.WORD_ss) []);
 
-val WORD_DIVISION = store_thm("WORD_DIVISION",
-  ``!w. w <> 0w ==> !v. (v = (v // w) * w + word_mod v w) /\ word_mod v w <+ w``,
-  Cases_word \\ ASM_SIMP_TAC std_ss [n2w_11,ZERO_LT_dimword]
-  \\ STRIP_TAC \\ Cases_word
-  \\ ASM_SIMP_TAC std_ss [word_mod_def,word_div_def,w2n_n2w]
-  \\ ASM_SIMP_TAC std_ss [word_add_n2w,word_mul_n2w,WORD_LO,w2n_n2w]
-  \\ FULL_SIMP_TAC bool_ss [NOT_ZERO_LT_ZERO]
-  \\ IMP_RES_TAC (GSYM DIVISION)
-  \\ REPEAT (Q.PAT_X_ASSUM `!k. bbb` (ASSUME_TAC o Q.SPEC `n'`))
-  \\ IMP_RES_TAC LESS_TRANS
-  \\ ASM_SIMP_TAC std_ss []);
-
 val WORD_ADD_LEMMA = prove(
   ``!(x:'a word) n. x + n2w n * x = n2w (n + 1) * x``,
   Cases_word
