@@ -37,7 +37,6 @@ abstype 'a queue = QUEUE of {elems: 'a array, (* the contents *)
 with
 
   fun is_empty (QUEUE{front=f, back=b,...}) = (!f = ~1 andalso !b = ~1)
-    | is_empty _ = false
 
   fun mk_queue n init_val =
       if (n < 2)
@@ -340,7 +339,6 @@ fun pointers_coincide(PPS{left_index,right_index,the_token_buffer,...}) =
     (case (the_token_buffer sub (!left_index))
        of (BB {Pblocks = Pb, Ublocks = Ub}) => (case (!Pb, !Ub) of ([], []) => true | _ => false)
         | (E {Pend = Pe, Uend = Ue}) => !Pe = 0 andalso !Ue = 0
-        | (E _) => false
         | _ => true)
 
 fun advance_left (ppstrm as PPS{consumer,left_index,left_sum,
