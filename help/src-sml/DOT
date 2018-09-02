@@ -139,8 +139,9 @@ in
       val ostrm = openOut mapfile
       fun out s = output(ostrm, s^"\n")
     in
-      out "<!doctype html>";
+      out "<!DOCTYPE html>";
       out "<HTML>";
+      out "<META CHARSET=\"utf-8\">";
       out "<HEAD><TITLE>HOL Theory Hierarchy</TITLE></HEAD>";
       out "<BODY bgcolor=linen>";
       out "<H1>HOL Theory Hierarchy (clickable)</H1>";
