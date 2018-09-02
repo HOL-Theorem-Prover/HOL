@@ -263,7 +263,7 @@ fun print_BB (PPS {the_indent_stack,linewidth,space_left,...}, {Pblocks, Ublocks
 end
 
 (* Uend should always be 0 when print_E is called. *)
-fun print_E (istack,{Pend, Uend, ...}) =
+fun print_E (istack,{Pend, Uend}) =
   if !Pend = 0 andalso !Uend = 0
   then raise Fail "PP-error: print_E"
   else let fun pop_n_times 0 = ()
