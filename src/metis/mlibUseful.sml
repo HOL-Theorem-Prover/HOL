@@ -709,22 +709,6 @@ fun with_flag (r,update) f x =
     y
   end;
 
-fun cached cmp f =
-    let
-      val cache = ref (Binarymap.mkDict cmp)
-    in
-      fn x =>
-      case Binarymap.peek (!cache,x) of
-        SOME y => y
-      | NONE =>
-        let
-          val y = f x
-          val () = cache := Binarymap.insert (!cache,x,y)
-        in
-          y
-        end
-    end;
-
 (* ------------------------------------------------------------------------- *)
 (* Environment.                                                              *)
 (* ------------------------------------------------------------------------- *)

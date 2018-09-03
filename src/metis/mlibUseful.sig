@@ -183,7 +183,6 @@ val new_ints  : int -> int list
 val uniform   : unit -> real
 val coin_flip : unit -> bool
 val with_flag : 'r ref * ('r -> 'r) -> ('a -> 'b) -> 'a -> 'b
-val cached    : 'a ordering -> ('a -> 'b) -> 'a -> 'b
 
 (* The environment *)
 val warn           : string -> unit
