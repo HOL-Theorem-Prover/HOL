@@ -16,8 +16,8 @@ include Abbrev
   val prepare_tm    : term -> term
   
   val ATOM_CONV     : conv -> conv
-  val LIFT_CONV     : int ref -> conv
-  val RPT_LIFT_CONV : int ref -> term -> thm list
+  val LIFT_CONV     : conv (* depends on global variable counter *)
+  val RPT_LIFT_CONV : term -> thm list (* depends on global variable counter *)
   val LET_CONV_BVL  : conv
 
   val strip_type  : hol_type -> (hol_type list * hol_type)
@@ -25,7 +25,9 @@ include Abbrev
   val optim_arity_eq : term -> thm list
   val all_arity_eq : term -> thm list
   
-  val translate_tm       : bool -> int ref -> term -> term list
+  (* depends on global variable counter *)
+  val translate_tm       : bool -> term -> term list
+  (* depends on global variable counter *)
   val translate_pb       : bool -> (string * thm) list -> term -> 
     term list * (string * term list) list * term list
   val name_pb : 

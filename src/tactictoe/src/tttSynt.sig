@@ -4,42 +4,44 @@ sig
   include Abbrev
   
   type psubst = (int * int) list
+  type tsubst = (term * term) list
+
   datatype pattern =
     Pconst of int
   | Pcomb  of pattern * pattern
   | Plamb  of pattern * pattern
   
-  (* conceptualization *)
+  (* global *)
+  val freq_limit : int ref
+
+  (* debugging *)
+  val ttt_synt_dir : string
+  val log_synt     : string -> unit 
+  val log_synt_file : string -> string -> unit
+  val msg_synt     : 'a list -> string -> unit 
+  
+  (* concept *)
   val concept_threshold : int ref
   val concept_flag : bool ref
   val conceptualize :
     (term, int) Redblackmap.dict ->
     (term, term) Redblackmap.dict -> term -> term list
 
-  
-  
   (* pattern *)
   val patternify : term -> pattern * int list
   val p_compare : pattern * pattern -> order
-  val regroup : 
-    term list ->
-      (pattern, int list list) Redblackmap.dict *
-      (term, term) Redblackmap.dict
-  val gen_psubst : (pattern, int list list) Redblackmap.dict -> psubst list
+  val regroup : term list -> (pattern, int list list) Redblackmap.dict
+  val gen_psubst : 
+    (pattern, int list list) Redblackmap.dict -> (psubst * int) list
   val norm_psubst : psubst -> psubst
   
   (* substitution *)
-  val read_subst  : (term, term) Redblackmap.dict -> 
-                    psubst -> (term,term) subst
+  val read_subst : psubst -> tsubst
   
   (* conjecturing *)
-  val int_div : int -> int -> real
-  val subst_changed : {redex: term, residue: term} list -> term -> 
-    (term * term) option
-  val eval_subst    : term list ->
-    (term,term) subst * int ->
-    (term,term) subst * (term * term) list * real
-  val gen_cjl : 
-    (term * int list) list -> term list
+  val gen_cjl : term list -> 
+    term list *
+    ((term * term) list, term list * real) Redblackmap.dict *
+    (term, ((term * term) list * term) list) Redblackmap.dict
  
 end

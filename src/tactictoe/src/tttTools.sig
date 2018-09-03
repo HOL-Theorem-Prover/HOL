@@ -33,6 +33,7 @@ sig
   val mkDir_err        : string -> unit
   val rmDir_err        : string -> unit
   val rmDir_rec        : string -> unit
+  val cleanDir_rec     : string -> unit
   val clean_dir        : string -> unit
   val run_cmd          : string -> unit
   val cmd_in_dir       : string -> string -> unit
@@ -77,12 +78,15 @@ sig
   val dkeys : ('a, 'b) Redblackmap.dict -> 'a list
   val dmap  : ('a * 'b -> 'c) ->
     ('a, 'b) Redblackmap.dict -> ('a, 'c) Redblackmap.dict
-
+  val dfoldl : ('a * 'b * 'c -> 'c) -> 'c -> ('a, 'b) Redblackmap.dict -> 'c
   val mk_string_set : string list -> string list
   val count_dict  :
     ('a, int) Redblackmap.dict -> 'a list -> ('a, int) Redblackmap.dict
 
   (* list *)
+  val map_snd : ('a -> 'b) -> ('c * 'a) list -> ('c * 'b) list
+  val map_fst : ('a -> 'b) -> ('a * 'c) list -> ('b * 'c) list 
+  val map_assoc : ('a -> 'b) -> 'a list -> ('a * 'b) list
   val findSome : ('a -> 'b option) -> 'a list -> 'b option
   val first_n : int -> 'a list -> 'a list
   val first_test_n : ('a -> bool) -> int -> 'a list -> 'a list
@@ -104,6 +108,8 @@ sig
   val sum_int : int list -> int
   val compare_rmin : (('a * real) * ('a * real)) -> order
   val compare_rmax : (('a * real) * ('a * real)) -> order
+  val compare_imin : (('a * int) * ('a * int)) -> order
+  val compare_imax : (('a * int) * ('a * int)) -> order
   val list_rmax : real list -> real
   val list_imax : int list -> int
 

@@ -63,6 +63,12 @@ fun rmDir_err dir =
 
 fun rmDir_rec dir = ignore (OS.Process.system ("rm -r " ^ dir))
 
+fun cleanDir_rec dir =
+  (
+  rmDir_rec dir;
+  mkDir_err dir
+  )
+
 fun all_files dir =
   let
     val stream = OS.FileSys.openDir dir
@@ -109,6 +115,7 @@ val dlist      = Redblackmap.listItems
 val dlength    = Redblackmap.numItems
 val dapp       = Redblackmap.app
 val dmap       = Redblackmap.map
+val dfoldl     = Redblackmap.foldl
 fun dkeys d    = map fst (dlist d)
 
 (* --------------------------------------------------------------------------
@@ -144,6 +151,10 @@ fun is_reserved s =
 (* --------------------------------------------------------------------------
    List
    -------------------------------------------------------------------------- *)
+
+fun map_snd f l   = map (fn (a,b) => (a, f b)) l
+fun map_fst f l   = map (fn (a,b) => (f a, b)) l
+fun map_assoc f l = map (fn a => (a, f a)) l
 
 fun findSome f l = case l of
     [] => NONE
@@ -312,6 +323,9 @@ fun string_of_bool b = if b then "T" else "F"
 (* --------------------------------------------------------------------------
    Comparisons
    -------------------------------------------------------------------------- *)
+
+fun compare_imax ((_,r2),(_,r1)) = Int.compare (r1,r2)
+fun compare_imin ((_,r1),(_,r2)) = Int.compare (r1,r2)
 
 fun compare_rmax ((_,r2),(_,r1)) = Real.compare (r1,r2)
 fun compare_rmin ((_,r1),(_,r2)) = Real.compare (r1,r2)

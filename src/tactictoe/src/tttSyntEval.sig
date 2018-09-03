@@ -4,37 +4,48 @@ sig
   include Abbrev
   
   datatype role = Axiom | Theorem | Conjecture
-
-  type idict_t = (int * (term * (string, term) Redblackmap.dict))  
+  
+  type idict_t = int * (term * (string, term) Redblackmap.dict)
 
   (* initialization *)
-  val dict_glob :
-    (int list, (term * int list) * role) Redblackmap.dict ref
-  val revtm_glob : (term, int list * (string * thm) * role) 
-    Redblackmap.dict ref
-  val update_dict : (string, int) Redblackmap.dict -> string -> unit
-  val init_n_thy : int -> unit
+  val init_dicts : int ->
+    (int list, term) Redblackmap.dict *
+      (term, int list) Redblackmap.dict * 
+      (term, role) Redblackmap.dict
   
+  (* statistics on conjecture generation *)
+  val write_subdict : 
+    ((term * term) list, term list * real) Redblackmap.dict -> unit
+  val write_origindict :
+    (term, ((term * term) list * term) list) Redblackmap.dict -> unit
+
   (* proving conjectures *)
-  val pred_trans_write_cjl : 
-    (int, real) Redblackmap.dict * (term * int list) list ->
-    (int -> term list * term -> idict_t) -> 
-    term list -> 
-    idict_t list
+  val prove_main : int -> int ->     
+    (int -> term list * term -> idict_t) ->
+    (int -> int list -> int -> (int * string list option) list) ->
+    term list -> (* theorems *)
+    term list -> (* conjectures *)
+    (term * term list) list
   
+  (* updating dictionnaries *)
+  val insert_cjl : 
+    (int list, term) Redblackmap.dict * 
+      (term, int list) Redblackmap.dict *
+      (term, role) Redblackmap.dict ->
+    (term * term list) list ->
+    (int list, term) Redblackmap.dict * 
+      (term, int list) Redblackmap.dict *
+      (term, role) Redblackmap.dict
+
   (* evaluating conjecture *)
-  val eval_pred_trans_write : 
-    (int -> term list * term -> idict_t) -> 
-    (term * term list) list -> 
-    idict_t list
+  val eval_main : int -> int ->
+    (int list, term) Redblackmap.dict * 
+      (term, int list) Redblackmap.dict *
+      (term, role) Redblackmap.dict ->
+    (int -> term list * term -> idict_t) ->
+    (int -> int list -> int -> (int * string list option) list) ->
+    (term * term list) list
 
-  (* test *)
-  val is_conjecture : term -> bool
-  val is_nontrivial : 'a list option -> bool
+ 
 
-  (* *)
-  val read_result : 
-    (int * (term * (string, term) Redblackmap.dict)) list ->
-    (int * string list option) list -> (term * term list option) list
-  
 end

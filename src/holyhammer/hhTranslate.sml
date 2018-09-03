@@ -13,6 +13,10 @@ open HolKernel boolLib tttTools
 
 val ERR = mk_HOL_ERR "hhTranslate"
 
+val liftvarn_glob = ref 0 (* names for lifted variables 
+                             should be changed for parallel use
+                           *)
+
 (*----------------------------------------------------------------------------
    Debug functions. Do not use when calling holyhammer in parallel.
   ----------------------------------------------------------------------------*)
@@ -46,7 +50,7 @@ fun log_translate_st limit s f x =
 
 (*----------------------------------------------------------------------------
   Preprocessing of the formula:
-    1 unfolding ?!
+    (* 1 unfolding ?! *)
     2 fully applying lambdas if at the top of an equality
     3 applying beta conversion whenever possible
   ----------------------------------------------------------------------------*)
@@ -65,7 +69,9 @@ fun ELIM_LAMBDA_EQ tm =
 
 fun PREP_CONV tm =
   (
-  PURE_REWRITE_CONV [EXISTS_UNIQUE_THM, EXISTS_UNIQUE_DEF] THENC
+  (* PURE_REWRITE_CONV [EXISTS_UNIQUE_THM, EXISTS_UNIQUE_DEF] THENC 
+     Commented out because it can create very large term.
+   *)
   TOP_DEPTH_CONV ELIM_LAMBDA_EQ THENC
   REDEPTH_CONV BETA_CONV
   )
@@ -78,9 +84,9 @@ fun prep_rw tm = rand (only_concl (QCONV PREP_CONV tm))
   ----------------------------------------------------------------------------*)
 
 (* lifting *)
-fun genvar_lifting iref ty = 
-  let val r = mk_var ("f" ^ int_to_string (!iref), ty) in
-    incr iref; r
+fun genvar_lifting ty = 
+  let val r = mk_var ("f" ^ int_to_string (!liftvarn_glob), ty) in
+    incr liftvarn_glob; r
   end
 
 (* arity *)
@@ -172,12 +178,12 @@ fun FUN_EQ_CONVL vl eq = case vl of
     [] => REFL eq
   | a :: m => (STRIP_QUANT_CONV (X_FUN_EQ_CONV a) THENC FUN_EQ_CONVL m) eq
   
-fun LIFT_CONV iref tm =
+fun LIFT_CONV tm =
   let 
     fun test x = must_pred x orelse is_abs x
     val subtm = find_term test tm handle _ => raise ERR "LIFT_CONV" ""
     val fvl = free_vars_lr subtm
-    val v = genvar_lifting iref (type_of (list_mk_abs (fvl,subtm)))
+    val v = genvar_lifting (type_of (list_mk_abs (fvl,subtm)))
     val rep = list_mk_comb (v,fvl)
     val eq  = list_mk_forall (fvl, (mk_eq (subtm,rep)))
     val thm = ASSUME eq
@@ -194,16 +200,16 @@ fun LIFT_CONV iref tm =
     else PURE_REWRITE_CONV [thm] tm
   end
  
-fun RPT_LIFT_CONV iref tm =
+fun RPT_LIFT_CONV tm =
   let  
-    val thmo = SOME (REPEATC (ATOM_CONV (TRY_CONV (LIFT_CONV iref))) tm) 
+    val thmo = SOME (REPEATC (ATOM_CONV (TRY_CONV LIFT_CONV)) tm) 
     handle UNCHANGED => NONE
   in
     case thmo of
       SOME thm =>  
       let
         val (asl,w) = dest_thm thm
-        val thml1 = List.concat (map (RPT_LIFT_CONV iref) asl)
+        val thml1 = List.concat (map RPT_LIFT_CONV asl)
       in
         thm :: thml1
       end
@@ -349,24 +355,26 @@ fun monomorphize tml cj =
   end
   
 (*----------------------------------------------------------------------------
-  Full FOF translation
+  Full FOF translation.
+  
   ----------------------------------------------------------------------------*)
 
 val translate_tm_cache = ref (dempty Term.compare)
 
+(* Guarantees that there are no free variables in the term *)
 fun prepare_tm tm =
   let val tm' = prep_rw tm in
     rename_bvarl escape (list_mk_forall (free_vars_lr tm', tm'))
   end
 
-fun translate_tm cache_flag iref tm =
+fun translate_tm_aux cache_flag tm =
   (if cache_flag then dfind tm (!translate_tm_cache) else raise Redblackmap.NotFound)
   handle Redblackmap.NotFound =>
   let    
     val _ = log_translate ("  " ^ term_to_string tm)
     val tm1 = log_translate_st 0.001 "prepare_tm:" prepare_tm tm
     val _ = log_translate ("Renaming variables:\n  " ^ term_to_string tm1)
-    val thml1 = log_translate_st 0.001 "lift_conv:" (RPT_LIFT_CONV iref) tm1
+    val thml1 = log_translate_st 0.001 "lift_conv:" RPT_LIFT_CONV tm1
     val tml1 = map (rand o concl) thml1
     val _ = log_translate ("Lifting lambdas and predicates:\n  " ^ 
       String.concatWith "\n  " (map term_to_string tml1))
@@ -382,13 +390,28 @@ fun translate_tm cache_flag iref tm =
     tml2
   end
 
+fun translate_tm cache_flag tm =
+  let 
+    val r = 
+      tttTimeout.timeOut 20.0 (translate_tm_aux cache_flag) tm 
+      handle _ => 
+      (
+      log_translate_flag := true;
+      tttTimeout.timeOut 20.0 (translate_tm_aux cache_flag) tm;
+      log_translate_flag := false;
+      raise ERR "translate_tm is to slow or looping on: " 
+      (term_to_string tm)
+      )
+  in
+    r
+  end
+
 fun translate_pb cache_flag premises cj =
   let
-    val iref = ref 0 (* names for lifted variables *)
     fun f (name,thm) = (log_translate ("\n" ^ name); 
-      (name, translate_tm cache_flag iref (concl (DISCH_ALL thm))))
+      (name, translate_tm cache_flag (concl (DISCH_ALL thm))))
     val _ = log_translate "\nConjecture"
-    val cj_tml = translate_tm cache_flag iref cj
+    val cj_tml = translate_tm cache_flag cj
     val ax_tml = map f premises
     val big_tm = 
       list_mk_conj (map list_mk_conj (cj_tml :: (map snd ax_tml)))
