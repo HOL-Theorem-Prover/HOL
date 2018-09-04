@@ -3,13 +3,6 @@
 (* Created by Joe Hurd, October 2001                                         *)
 (* ========================================================================= *)
 
-(*
-app load ["simpLib", "combinTheory", "boolSimps"];
-guessing_tyvars := true;
-*)
-
-(*
-*)
 structure normalForms :> normalForms =
 struct
 

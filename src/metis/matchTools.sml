@@ -10,8 +10,6 @@ struct
 
 open HolKernel Parse boolLib;
 
-infix THENR ## |->;
-
 type tySubst = (hol_type, hol_type) subst;
 type Subst   = (term, term) subst * tySubst;
 

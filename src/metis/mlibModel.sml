@@ -12,8 +12,6 @@ app load ["mlibHeap", "mlibTerm", "mlibSubst", "mlibMatch", "mlibThm", "mlibTerm
 structure mlibModel :> mlibModel =
 struct
 
-infix ## |->;
-
 open mlibUseful mlibTerm;
 
 structure W = Word; local open Word in end;
