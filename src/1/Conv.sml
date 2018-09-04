@@ -36,6 +36,10 @@ exception UNCHANGED
 fun QCONV c tm = c tm handle UNCHANGED => REFL tm
 
 val ERR = mk_HOL_ERR "Conv"
+fun w nm c t = c t handle UNCHANGED => raise UNCHANGED
+                   | e as HOL_ERR _ => Portable.reraise e
+                   | Fail s => raise Fail (s ^ " --> " ^ nm)
+                   | e => raise Fail (nm ^ ": " ^ General.exnMessage e)
 
 (*----------------------------------------------------------------------*
  * Conversion for rewrite rules of the form |- !x1 ... xn. t == u       *
@@ -258,6 +262,8 @@ fun CHANGED_CONV conv tm =
          then raise ERR "CHANGED_CONV" "Input term unchanged"
       else th
    end
+
+(* val CHANGED_CONV = fn c => w "Conv.CHANGED_CONV" (CHANGED_CONV c) *)
 
 (*----------------------------------------------------------------------*
  *  Cause a failure if the conversion causes the UNCHANGED exception to *
@@ -1497,6 +1503,7 @@ in
                          {origin_structure = "Conv",
                           origin_function = "X_SKOLEM_CONV", ...} => raise e
                  | HOL_ERR _ => err ""
+   (* val X_SKOLEM_CONV = w "X_SKOLEM_CONV" X_SKOLEM_CONV *)
 end
 
 (*----------------------------------------------------------------------*
@@ -1522,6 +1529,7 @@ in
          X_SKOLEM_CONV (variant (free_vars tm) fv) tm
       end
       handle HOL_ERR _ => raise ERR "SKOLEM_CONV" ""
+   (* val SKOLEM_CONV = w "SKOLEM_CONV" SKOLEM_CONV *)
 end
 
 (*----------------------------------------------------------------------*
