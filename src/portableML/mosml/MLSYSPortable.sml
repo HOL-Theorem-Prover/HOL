@@ -30,6 +30,8 @@ end
 
 structure HOLSusp = Susp
 
+fun reraise e = raise e
+
 fun make_counter {inc,init} =
   let
     val n = ref init
@@ -45,4 +47,5 @@ fun syncref init =
       upd = fn f => let val (res,nv) = f (!r) in r := nv; res end
     }
   end
+
 end (* struct *)

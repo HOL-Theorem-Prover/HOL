@@ -58,6 +58,8 @@ fun time f x =
 
 structure HOLSusp = Susp
 
+fun reraise e = PolyML.Exception.reraise e
+
 fun make_counter {inc,init} =
   let
     val counter = Synchronized.var "counter" init

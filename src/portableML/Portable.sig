@@ -234,4 +234,6 @@ sig
     val delay : (unit -> 'a) -> 'a susp
     val force : 'a susp -> 'a
   end
+
+  val reraise : exn -> 'a
 end
