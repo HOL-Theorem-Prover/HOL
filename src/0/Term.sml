@@ -693,13 +693,6 @@ local fun peel f (t as Clos _) A = peel f (push_clos t) A
          if HOLset.member(viset,vi) then viset else HOLset.add(viset,vi)
       fun trypush_clos (x as Clos _) = push_clos x
         | trypush_clos t = t
-      val AV = ref (Redblackmap.mkDict String.compare) : ((string,occtype)Redblackmap.dict) ref
-      fun peekInsert (key,data) =
-        let open Redblackmap
-        in case peek (!AV,key)
-            of SOME data' => SOME data'
-             | NONE       => (AV := insert(!AV,key,data); NONE)
-        end
 in
 fun strip_binder opt =
  let val f =
@@ -713,12 +706,19 @@ fun strip_binder opt =
                                        else NONE
                                     end handle HOL_ERR _ => NONE)
  in fn tm =>
-   let val (prefixl,body) = peel f tm []
+   let
+     val (prefixl,body) = peel f tm []
+     val AV = ref (Redblackmap.mkDict String.compare) : ((string,occtype)Redblackmap.dict) ref
+     fun peekInsert (key,data) =
+        let open Redblackmap
+        in case peek (!AV,key)
+            of SOME data' => SOME data'
+             | NONE       => (AV := insert(!AV,key,data); NONE)
+        end
      val prefix = Array.fromList prefixl
      val vmap = curry Array.sub prefix
      val (insertAVbody,insertAVprefix,lookAV,dupls) =
         let open Redblackmap  (* AV is red-black map  of (var,occtype) elems *)
-            val _ = AV := mkDict String.compare
             fun insertl [] _ dupls = dupls
               | insertl (x::rst) i dupls =
                   let val n = fst(dest_var x)
