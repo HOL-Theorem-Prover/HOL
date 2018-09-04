@@ -1390,13 +1390,10 @@ fun MIN_CNF ths =
 (* Quick testing
 val Term = Parse.Term;
 val Type = Parse.Type;
-(*show_assums := true;*)
-Globals.guessing_tyvars := true;
-Globals.priming := SOME "";
+Globals.guessing_tyvars := true; (* OK *)
+Globals.priming := SOME ""; (* OK *)
 app load ["numLib", "arithmeticTheory", "pred_setTheory", "bossLib"];
-quietdec := true;
 open numLib arithmeticTheory pred_setTheory bossLib;
-quietdec := false;
 Parse.reveal "C";
 
 (*
@@ -1548,10 +1545,6 @@ val p34 =
 time CNF_CONV (mk_neg p34);
 
 (* Large formulas *)
-load "UNLINK";
-quietdec := true;
-open UNLINK;
-quietdec := false;
 
 val DEF_CNF_CONV' =
   time DEF_NNF_CONV THENC

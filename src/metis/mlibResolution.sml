@@ -246,7 +246,7 @@ fun resolution_stream slice_ref units_ref =
 
     fun shove res = new_units (!units_ref) res
 
-    fun swipe res = units_ref := units res
+    fun swipe res = units_ref := units res (* OK *)
 
     fun record infs = record_infs (!slice_ref) infs
 

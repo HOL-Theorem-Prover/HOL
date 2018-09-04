@@ -41,8 +41,16 @@ val pp_fp = pp_map
   (fn (f,a) => Fn (f, map (fn n => Fn (int_to_string n, [])) a)) pp_term;
 
 fun cached c f k =
-  case Binarymap.peek (!c,k) of SOME v => v
-  | NONE => let val v = f k val () = c := Binarymap.insert (!c,k,v) in v end;
+  case Binarymap.peek (!c,k) of
+      SOME v => v
+    | NONE =>
+      let
+        val v = f k
+        val () = c := Binarymap.insert (!c,k,v)  (* OK *)
+                                       (* - caches are private per model *)
+      in
+        v
+      end;
 
 fun log2_int 1 = 0 | log2_int n = 1 + log2_int (n div 2);
 

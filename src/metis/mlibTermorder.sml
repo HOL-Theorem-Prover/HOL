@@ -504,7 +504,6 @@ val null = tnull;
 
 (* Quick testing
 app load ["mlibThm"];
-val () = quotation := true;
 val T = parse_term;
 val F = parse_formula;
 installPP pp_termorder;

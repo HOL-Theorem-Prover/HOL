@@ -224,7 +224,6 @@ fun subsumes1' vlits flits =
 fun pp_subsume pp = pp_map size pp_int pp;
 
 (* Quick testing
-quotation := true;
 installPP pp_formula;
 installPP pp_term;
 installPP pp_subst;
