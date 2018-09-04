@@ -6,10 +6,6 @@ CoreLib.uo: CoreLib.sml
 
 Library.uo: CoreLib.uo
 
-Task_Queue.uo: CoreLib2.uo
+Task_Queue.uo: $(SIGOBJ)/ConcIsaLib.uo
 
-CoreLib2.uo: Graph.uo Thread_Attributes.uo Thread_data.uo
-
-Multithreading.uo: CoreLib2.uo
-
-Standard_Thread.uo: CoreLib2.uo
+Standard_Thread.uo: $(SIGOBJ)/ConcIsaLib.uo

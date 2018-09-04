@@ -733,12 +733,12 @@ fun is_exn (Res y) = false
   | is_exn (Exn x) = true
 
 fun interruptkill worker =
-   if Thread.Thread.isActive worker
-   then 
+   if Thread.isActive worker
+   then
      (
-     Thread.Thread.interrupt worker handle Thread.Thread _ => ();
-     if Thread.Thread.isActive worker
-       then Thread.Thread.kill worker
+     Thread.interrupt worker handle Thread _ => ();
+     if Thread.isActive worker
+       then Thread.kill worker
        else ()
      )
    else ()
@@ -782,10 +782,10 @@ fun parmap_err ncores forg lorg =
             process pi
           end
       end
-    fun fork_on pi = Thread.Thread.fork (fn () => process pi, [])
+    fun fork_on pi = Thread.fork (fn () => process pi, [])
     val threadl = map fork_on (List.tabulate (ncores,I))
     fun loop () =
-      (      
+      (
       dispatcher ();
       if null (!queue) andalso sum_int (map (! o snd) lcount) >= sizeorg
       then app interruptkill threadl

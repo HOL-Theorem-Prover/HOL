@@ -30,7 +30,7 @@ exception NoNextTac
 datatype async_result_t =
   HSuccess of (string * goal) |
   HFailure |
-  HRunning of Thread.Thread.thread |
+  HRunning of Thread.thread |
   HVoid
 
 (* 100000 is the maximum number of nodes *)
@@ -52,9 +52,9 @@ fun init_async () =
   else ()
 
 fun terminate_thread pid thread =
-  while (Thread.Thread.isActive thread)
+  while (Thread.isActive thread)
   do (debug_search ("terminate thread " ^ int_to_string pid);
-      Thread.Thread.interrupt thread)
+      Thread.interrupt thread)
 
 fun terminate_async_pid pid =
   if !ttt_eprover_flag then
@@ -714,7 +714,7 @@ fun fork_hammer () =
     val _ = debug_search ("new thread " ^ int_to_string pid)
     val file = ttt_code_dir ^ "/hammer" ^ int_to_string (!hammer_ref)
     val thread =
-      Thread.Thread.fork (fn () => hammer_call pid (current_goal pid), [])
+      Thread.fork (fn () => hammer_call pid (current_goal pid), [])
   in
     running_async := dadd pid thread (!running_async);
     Array.update (async_result,pid,HRunning thread)
@@ -725,7 +725,7 @@ fun open_async () =
   then
     let
       val n = dlength (!running_async)
-      val m = length (filter (Thread.Thread.isActive o snd)
+      val m = length (filter (Thread.isActive o snd)
         (dlist (!running_async)))
     in
       debug_search (int_to_string n ^ " running thread");
