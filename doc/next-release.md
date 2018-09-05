@@ -40,6 +40,8 @@ Incompatibilities:
     We think this will be less confusing for new users.
     Experts who *do* want to have script files continue past such errors can use the `--noqof` option to enable the old behaviour.
 
+*   When running with Poly/ML, we now require at least version 5.7.0.
+
 * * * * *
 
 <div class="footer">
