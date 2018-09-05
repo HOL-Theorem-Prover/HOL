@@ -238,7 +238,7 @@ end;
 local fun num2name s i = s^Lib.int_to_string i
       fun subscripts x s =
         let val project = num2name (s^x)
-            val cnt = Portable.make_counter{init=0,inc=1}
+            val cnt = Portable.make_counter{init=1,inc=1}
             fun incr() = project (cnt())
         in
           incr
