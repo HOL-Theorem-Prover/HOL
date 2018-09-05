@@ -26,6 +26,16 @@ Bugs fixed:
 New theories:
 -------------
 
+*   Now HOL4 has a rather complete Elementary Topology in Euclidean
+    Space (`rich_topologyTheory`), ported by Muhammad Qasim and Osman
+    Hasan from HOL light (up to 2015). The part of General Topology
+    (independent of `realTheory`) is now at `topologyTheory` (HOL4's
+    old `topologyTheory` is renamed to `metricTheory`).
+
+    There is a minor backwards-incompatibility: old proof scripts using
+    the metric-related stuff in previous `topologyTheory` should now
+    open `metricTheory` instead. (Thanks to Chun Tian for this work.)
+
 New tools:
 ----------
 
