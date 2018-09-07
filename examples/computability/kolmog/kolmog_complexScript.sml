@@ -471,6 +471,10 @@ binary string, and is a function from binary strings to naturals union infinity
 
  *)
 
+val Tpow_def = Define`Tpow n = GENLIST (K T) n`
+
+val Fpow_def = Define`Fpow n = GENLIST (K F) n`
+
 val _ = set_mapped_fixity{fixity = Infix(NONASSOC,450),term_name = "prefix",tok="≺"}
 
 val prefix_refl = Q.store_thm("prefix_refl[simp]",
@@ -539,16 +543,116 @@ simp[finite_bool_list_n] >> rw[extreal_of_num_def,extreal_le_def] >>
 simp[] )
 
 (* Traditional bool list to num *)
+val rev_fpow = Q.store_thm("rev_fpow[simp]",
+`REVERSE (Fpow n) = Fpow n`,
+simp[Fpow_def,listTheory.REVERSE_GENLIST,combinTheory.K_DEF])
+
+val rev_tpow = Q.store_thm("rev_tpow[simp]",
+`REVERSE (Tpow n) = Tpow n`,
+simp[Tpow_def,listTheory.REVERSE_GENLIST,combinTheory.K_DEF])
+
+
 val tbl2n_def = Define`tbl2n [] = 0n ∧ tbl2n (T::t) = 2*tbl2n t + 1 ∧ tbl2n (F::t) = 2*tbl2n t`
 
-val interval_bl_def = Define`interval_bl l = (&(tbl2n l) *(2 rpow -&LENGTH l),(2 rpow -&LENGTH l))`
+val _ = export_rewrites["tbl2n_def"]
+
+val _ = overload_on("TBL2N",``λl. tbl2n (REVERSE l)``)
+
+val inv_tbl2n_def = tDefine"inv_tbl2n"`inv_tbl2n 0n = [] ∧ 
+                           inv_tbl2n a = if EVEN a 
+                                         then [F]++(inv_tbl2n (a DIV 2))
+                                         else [T]++(inv_tbl2n ((a-1) DIV 2 ))`
+(WF_REL_TAC`$<` >> rw[]>>
+irule LESS_EQ_LESS_TRANS >> qexists_tac`v` >> `0<2n` by simp[] >> rw[DIV_LE_MONOTONE,DIV_LESS,DIV_LESS_EQ])
+
+val tbl2n_inv_tbl2n = Q.store_thm("tbl2n_inv_tbl2n",
+`tbl2n (inv_tbl2n n) = n`,
+completeInduct_on `n` >> Cases_on`n` >> simp[tbl2n_def,inv_tbl2n_def] >> Cases_on`EVEN (SUC n')` >> 
+simp[tbl2n_def] 
+  >- (`2 * (SUC n' DIV 2) =  (SUC n' DIV 2)*2` by simp[MULT_COMM] >> `0<2n` by simp[] >> 
+       `SUC n' MOD 2=0` by metis_tac[EVEN_MOD2] >>
+       `SUC n' DIV 2 * 2 + SUC n' MOD 2 = SUC n'` by metis_tac[GSYM DIVISION] >> fs[])
+  >- (`0<2n` by simp[] >> `n' DIV 2 <= n'` by simp[DIV_LESS_EQ] >> `n' DIV 2 < SUC n'` by 
+        simp[LESS_EQ_IMP_LESS_SUC] >> fs[] >> `EVEN n'` by metis_tac[ODD,EVEN_OR_ODD] >>  
+       `2 * (n' DIV 2) =  (n' DIV 2)*2` by simp[MULT_COMM] >> `0<2n` by simp[] >> 
+       `n' MOD 2=0` by metis_tac[EVEN_MOD2] >>
+       `n' DIV 2 * 2 + n' MOD 2 = n'` by metis_tac[GSYM DIVISION] >> fs[] ) )
+
+val interval_bl_def = Define`interval_bl l = (&(TBL2N l) *(2 rpow -&LENGTH l),(2 rpow -&LENGTH l))`
 
 val disjoint_interval_def = Define`disjoint_interval ((m:real),i) (n,j) <=> 
                                    DISJOINT {r|m<=r ∧ r<m+i} {r|n<=r ∧ r<n+j}`
 
+
+
+val tbl2n_exp2 = Q.store_thm("tbl2n_exp2",
+`tbl2n i * 2 ** n = tbl2n ((Fpow n)++i)`,
+rw[Fpow_def] >> Induct_on`n` >> simp[tbl2n_def,EXP,GENLIST_CONS])
+
+val TBL2N_exp2 = Q.store_thm("TBL2N_exp2",
+`TBL2N i * 2 ** n = TBL2N (i++(Fpow n))`,
+simp[REVERSE_APPEND] >> rw[Fpow_def] >> Induct_on`n` >> simp[tbl2n_def,EXP,GENLIST_CONS])
+
+
+val tbl2n_lead0s = Q.store_thm("tbl2n_lead0s[simp]",
+`tbl2n (x ++ Fpow n) = tbl2n x`,
+Induct_on`x` >> simp[tbl2n_def] 
+  >- (`tbl2n (Fpow n ++ []) = tbl2n (Fpow n )` by simp[] >> 
+      `tbl2n (Fpow n ++ []) = (tbl2n []) *2**n` by metis_tac[GSYM tbl2n_exp2] >> fs[tbl2n_def])
+  >- (Cases_on `h` >> simp[tbl2n_def])  )
+
+val tbl2n_fpow = Q.store_thm("tbl2n_fpow[simp]",
+`tbl2n (Fpow n) = 0`,
+simp[Fpow_def] >> Induct_on`n` >> simp[GENLIST_CONS])
+
+val len_fpow = Q.store_thm("len_fpow[simp]",
+`LENGTH (Fpow n) = n`,
+simp[Fpow_def])
+
+val TBL2N_lead0s = Q.store_thm("TBL2N_lead0s[simp]",
+`TBL2N (Fpow n ++ x) = TBL2N x`,
+simp[REVERSE_APPEND]  )
+
+val tbl2n_append_1 = Q.store_thm("tbl2n_append_1",
+`tbl2n (x++[e]) = if e then 2**(LENGTH x) + (tbl2n x) else tbl2n x`,
+Induct_on`x` >> simp[] >- (Cases_on`e` >> simp[]) >> Cases_on`h` >> simp[] >> rw[] >> simp[EXP] )
+
+val tbl2n_append_full = Q.store_thm("tbl2n_append_full",
+`∀y. tbl2n (x++y) = tbl2n x + 2**(LENGTH x) * tbl2n y`,
+Induct_on`x` >> simp[] >> Cases_on`h` >> simp[EXP])
+
+val tbl2n_ub = Q.store_thm("tbl2n_ub",
+`tbl2n l < 2**(LENGTH l)`,
+Induct_on`l` >> simp[] >> Cases_on`h` >> simp[EXP])
+
+val TBL2N_inj_len = Q.store_thm("TBL2N_inj_len",
+`∀x y.(LENGTH x = LENGTH y) ==> (TBL2N x = TBL2N y <=> x=y)`,
+Induct_on`x` >> simp[] >> Cases_on`y` >> simp[] >> rw[tbl2n_append_1] >> 
+`TBL2N t < 2** LENGTH t` by  (metis_tac[tbl2n_ub,LENGTH_REVERSE]) >>  
+`TBL2N x < 2** LENGTH t` by  (metis_tac[tbl2n_ub,LENGTH_REVERSE]) >>fs[] )
+
+val TBL2N_lem1 = Q.store_thm("TBL2N_lem1",
+`∀δ. δ<2**Δ ==> ∃l. TBL2N l = δ ∧ LENGTH l = Δ ∧ TBL2N (i++Fpow Δ) +δ = TBL2N (i++l)`,
+Induct_on`Δ` >- simp[Fpow_def] >> rw[EXP] >> Cases_on`δ<2**Δ` >> fs[]
+  >- (res_tac >> qexists_tac`F::l` >> simp[] >> fs[REVERSE_APPEND] >> simp[tbl2n_append_full])
+  >- (qabbrev_tac`δ0=δ-2**Δ` >> `δ0 < 2**Δ` by simp[Abbr`δ0`] >> res_tac >> qexists_tac`T::l` >>
+      simp[] >>fs[REVERSE_APPEND] >> simp[tbl2n_append_full] >> simp[Abbr`δ0`] ) )
+
+val prefix_lem1 = Q.store_thm("prefix_lem1",
+`0<LENGTH b  ==> (a++b = c ==> a ≺c )`,
+simp[prefix_def,rich_listTheory.IS_PREFIX_APPEND] >> rw[] >- (qexists_tac`b` >> simp[]) >> rw[]>>
+metis_tac[listTheory.NOT_NIL_EQ_LENGTH_NOT_0]  )
+
 val disjoint_pf_lem1 = Q.store_thm("disjoint_pf_lem1",
-`¬(i ≺ j) ∧ (LENGTH i < LENGTH j) ==> &tbl2n j * 2 rpow -&LENGTH j + 2 rpow -&LENGTH j < &tbl2n i * 2 rpow -&LENGTH i`,
-rw[] >>  )
+`(TBL2N i * 2 ** (LENGTH j - LENGTH i) <= TBL2N j) ∧ (TBL2N j < (TBL2N i + 1) * 2 ** (LENGTH j - LENGTH i)) ∧ (LENGTH i < LENGTH j) ==> i ≺ j`,
+rw[TBL2N_exp2] >> qabbrev_tac`Δ=LENGTH j − LENGTH i` >> 
+`TBL2N (i ++ Fpow Δ) + (TBL2N j-TBL2N (i ++ Fpow Δ)) = TBL2N j` by simp[] >> 
+qabbrev_tac`δ=TBL2N j-TBL2N (i ++ Fpow Δ)` >> `δ<2**Δ` by (fs[RIGHT_ADD_DISTRIB] >> 
+  `TBL2N j - TBL2N i * 2 ** Δ < 2 ** Δ` by simp[] >> 
+  `TBL2N j − TBL2N (i ++ Fpow Δ) < 2**Δ` by simp[GSYM TBL2N_exp2] >> fs[Abbr`δ`] ) >> 
+`∃l. TBL2N l = δ ∧ LENGTH l = Δ ∧ TBL2N (i++Fpow Δ) +δ = TBL2N (i++l)` by simp[TBL2N_lem1] >> 
+`TBL2N (i ++ l) = TBL2N j` by simp[] >> `LENGTH (i++l) = LENGTH j` by simp[Abbr`Δ`] >> 
+`i++l = j` by metis_tac[TBL2N_inj_len] >> `0<LENGTH l` by simp[Abbr`Δ`] >> metis_tac[prefix_lem1] )
 
 val disjoint_prefix_free = Q.store_thm("disjoint_prefix_free",
 `prefix_free P <=> let is = IMAGE interval_bl P in ∀i1 i2. i1 ∈ is ∧ i2∈is ∧ i1<>i2 ==> disjoint_interval i1 i2`,
@@ -558,19 +662,54 @@ rw[EQ_IMP_THM]
     fs[interval_bl_def,disjoint_interval_def,DISJOINT_DEF,EXTENSION] >> 
     rw[GSYM DISJ_ASSOC] >> rw[DECIDE``¬p∨q ⇔ p⇒q``] >> strip_tac >> 
     `LENGTH i <> LENGTH j` by (strip_tac >> fs[] >> qabbrev_tac`M = 2 rpow -&LENGTH j` >> 
-      `&tbl2n i * M < &tbl2n j * M + M` by metis_tac[REAL_LET_TRANS] >>
-      `&tbl2n j * M < &tbl2n i * M + M` by metis_tac[REAL_LET_TRANS] >>
-      `&tbl2n i * M + M = (&tbl2n i + 1) * M` by metis_tac[REAL_ADD_RDISTRIB,REAL_MUL_LID] >>  
-      `&tbl2n j * M + M = (&tbl2n j + 1) * M` by metis_tac[REAL_ADD_RDISTRIB,REAL_MUL_LID] >> fs[] >>
-      `(0:real)<2` by fs[] >> `0<M` by metis_tac[transcTheory.RPOW_POS_LT]
-      `((&tbl2n i) :real) < &(tbl2n j + 1)` by fs[REAL_LT_RMUL] >> 
-      `((&tbl2n j):real) < &(tbl2n i + 1)` by fs[REAL_LT_RMUL] >> fs[] ) >> 
+      `&TBL2N i * M < &TBL2N j * M + M` by metis_tac[REAL_LET_TRANS] >>
+      `&TBL2N j * M < &TBL2N i * M + M` by metis_tac[REAL_LET_TRANS] >>
+      `&TBL2N i * M + M = (&TBL2N i + 1) * M` by metis_tac[REAL_ADD_RDISTRIB,REAL_MUL_LID] >>  
+      `&TBL2N j * M + M = (&TBL2N j + 1) * M` by metis_tac[REAL_ADD_RDISTRIB,REAL_MUL_LID] >> fs[] >>
+      `(0:real)<2` by fs[] >> `0<M` by metis_tac[transcTheory.RPOW_POS_LT] >>
+      `((&TBL2N i) :real) < &(TBL2N j + 1)` by fs[REAL_LT_RMUL] >> 
+      `((&TBL2N j):real) < &(TBL2N i + 1)` by fs[REAL_LT_RMUL] >> fs[] ) >> 
     Cases_on`LENGTH i < LENGTH j` >> rw[]
-      (* We want to show that either i2^-li+2^-li < j2^-lj or j2^-lj+2^-lj<i2^-li *)
-      >- (`&tbl2n j * 2 rpow -&LENGTH j + 2 rpow -&LENGTH j < &tbl2n i * 2 rpow -&LENGTH i` by 
-          (simp[disjoint_pf_lem1]) >> 
-          fs[] )
-      >- () ) )
+      >- (`&TBL2N i * 2 rpow -&LENGTH i < &TBL2N j * 2 rpow -&LENGTH j + 2 rpow -&LENGTH j` by 
+            metis_tac[REAL_LET_TRANS]>> 
+          `&TBL2N i * 2 rpow -&LENGTH i < (&TBL2N j +1) * 2 rpow -&LENGTH j` by 
+            metis_tac[REAL_ADD_RDISTRIB,REAL_MUL_LID] >> `(0:real)<2` by fs[] >>
+          `&TBL2N i * 2 rpow  -&LENGTH i * 2 rpow &LENGTH j < 
+           (&TBL2N j +1)  * 2 rpow -&LENGTH j  * 2 rpow &LENGTH j` by 
+             metis_tac[transcTheory.RPOW_POS_LT,REAL_LT_RMUL] >> 
+          fs[GSYM REAL_MUL_ASSOC,GSYM transcTheory.RPOW_ADD,transcTheory.RPOW_0,add_ints] >> rfs[]>>
+          `&TBL2N j * 2 rpow -&LENGTH j < &TBL2N i * 2 rpow -&LENGTH i + 2 rpow -&LENGTH i` by 
+            metis_tac[REAL_LET_TRANS] >>
+          `&TBL2N j * 2 rpow -&LENGTH j < (&TBL2N i +1) * 2 rpow -&LENGTH i` by 
+            metis_tac[REAL_ADD_RDISTRIB,REAL_MUL_LID] >> `(0:real)<2` by fs[] >>
+          `&TBL2N j * 2 rpow  -&LENGTH j * 2 rpow &LENGTH j < 
+           (&TBL2N i +1)  * 2 rpow -&LENGTH i  * 2 rpow &LENGTH j` by 
+             metis_tac[transcTheory.RPOW_POS_LT,REAL_LT_RMUL] >>
+          fs[GSYM REAL_MUL_ASSOC,GSYM transcTheory.RPOW_ADD,transcTheory.RPOW_0,add_ints] >> rfs[] >>
+          qabbrev_tac`Δ=LENGTH j − LENGTH i` >> qabbrev_tac`ii= TBL2N i` >> 
+          qabbrev_tac`jj= TBL2N j` >> fs[GSYM transcTheory.GEN_RPOW,REAL_OF_NUM_POW] >> 
+          fs[disjoint_pf_lem1])
+      >- (`&TBL2N j * 2 rpow -&LENGTH j < &TBL2N i * 2 rpow -&LENGTH i + 2 rpow -&LENGTH i` by 
+            metis_tac[REAL_LET_TRANS]>> 
+          `&TBL2N j * 2 rpow -&LENGTH j < (&TBL2N i +1) * 2 rpow -&LENGTH i` by 
+            metis_tac[REAL_ADD_RDISTRIB,REAL_MUL_LID] >> `(0:real)<2` by fs[] >>
+          `&TBL2N j * 2 rpow  -&LENGTH j * 2 rpow &LENGTH i < 
+           (&TBL2N i +1)  * 2 rpow -&LENGTH i  * 2 rpow &LENGTH i` by 
+             metis_tac[transcTheory.RPOW_POS_LT,REAL_LT_RMUL] >> 
+          fs[GSYM REAL_MUL_ASSOC,GSYM transcTheory.RPOW_ADD,transcTheory.RPOW_0,add_ints] >> rfs[]>>
+          `&TBL2N i * 2 rpow -&LENGTH i < &TBL2N j * 2 rpow -&LENGTH j + 2 rpow -&LENGTH j` by 
+            metis_tac[REAL_LET_TRANS] >>
+          `&TBL2N i * 2 rpow -&LENGTH i < (&TBL2N j +1) * 2 rpow -&LENGTH j` by 
+            metis_tac[REAL_ADD_RDISTRIB,REAL_MUL_LID] >> `(0:real)<2` by fs[] >>
+          `&TBL2N i * 2 rpow  -&LENGTH i * 2 rpow &LENGTH i < 
+           (&TBL2N j +1)  * 2 rpow -&LENGTH j  * 2 rpow &LENGTH i` by 
+             metis_tac[transcTheory.RPOW_POS_LT,REAL_LT_RMUL] >>
+          fs[GSYM REAL_MUL_ASSOC,GSYM transcTheory.RPOW_ADD,transcTheory.RPOW_0,add_ints] >> rfs[] >>
+          qabbrev_tac`Δ=LENGTH i − LENGTH j` >> qabbrev_tac`ii= TBL2N j` >> 
+          qabbrev_tac`jj= TBL2N i` >> fs[GSYM transcTheory.GEN_RPOW,REAL_OF_NUM_POW] >> 
+          fs[disjoint_pf_lem1]) )
+>- (fs[interval_bl_def,disjoint_interval_def,DISJOINT_DEF,EXTENSION] >> 
+    rw[GSYM DISJ_ASSOC] >> )  )
 
 val kraft_ineq = Q.store_thm("kraft_ineq",
 `∀P. prefix_free P <=> SIGMA (λs. Normal (2 rpow -&LENGTH s)) {s | s ∈ P} <= 1`,
@@ -602,13 +741,6 @@ val monotone_kolmog_complexity_def = Define`mkolmog_complexity x U =
 
 val kolmog_def = Define`kolmog x = kolmog_complexity x universal_tm`
 
-
-
-
-
-val Tpow_def = Define`Tpow n = GENLIST (K T) n`
-
-val Fpow_def = Define`Fpow n = GENLIST (K F) n`
 
 val bar_def = Define`bar x = (Tpow (LENGTH x)) ++ [F] ++ x`
 
