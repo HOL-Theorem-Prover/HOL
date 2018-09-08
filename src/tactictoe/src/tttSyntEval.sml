@@ -171,11 +171,12 @@ fun is_nontrivial x = case x of
 fun prove_predict (symweight,tmfea) cj =
   (tmknn (!nb_premises) (symweight,tmfea) (fea_of_term_cached cj), cj)
 
-fun prove_write pdir exportf tml cjl =
+fun prove_write pdir transf exportf tml cjl =
   let
     val tmfea = time_synt "generating features" assoc_fea tml
     val symweight = learn_tfidf tmfea
     val pbl = time_synt "predict" (map (prove_predict (symweight,tmfea))) cjl
+    val _ = time_synt "translate" (map transf) tml
   in
     time_synt "export" (mapi (exportf pdir)) pbl
   end
@@ -191,11 +192,12 @@ fun prove_result rdict pl0 =
     map (fn (a,b) => (a, valOf b)) (map snd pl2)
   end
  
-fun prove_main rdict pdir ncores timelimit exportf launchf tml cjl =
+fun prove_main rdict pdir ncores timelimit 
+    transf exportf launchf tml cjl =
   let
     val _ = cleanDir_rec pdir
     val _ = msg_synt tml "terms to select from"
-    val pid_idict_list = prove_write pdir exportf tml cjl 
+    val pid_idict_list = prove_write pdir transf exportf tml cjl 
     val pidl = map fst pid_idict_list
     val _    = msg_synt pidl "proving tasks"
     val pid_result_list = time_synt "launchf" 
@@ -220,12 +222,13 @@ fun eval_predict (odict,tdict,rdict) tm =
     val predl = tmknn (!nb_premises) (symweight,tmfea) (fea_of_term_cached tm)
     val cjl = filter (fn x => dfind x rdict = Conjecture) predl
   in
-    (* if null cjl then NONE else *) SOME (predl,tm)
+    SOME (predl,tm)
   end
 
-fun eval_write pdir dicts exportf tml =
+fun eval_write pdir dicts transf exportf tml =
   let
     val pbl = time_synt "predict" (List.mapPartial (eval_predict dicts)) tml
+    val _ = time_synt "translate" (map transf) tml (* update the cache *)
   in
     time_synt "export" (mapi (exportf pdir)) pbl
   end
@@ -257,14 +260,15 @@ fun write_usefulcj el =
     writel (!ttt_synt_dir ^ "/useful_conjectures") (map string_of_ecjl ecjl1)
   end
 
-fun eval_main pdir ncores timelimit (odict,tdict,rdict) exportf launchf =
+fun eval_main pdir ncores timelimit (odict,tdict,rdict) 
+    transf exportf launchf =
   let
     val _ = cleanDir_rec pdir
     val tml0 = dkeys tdict
     val tml1 = filter (fn x => dfind x rdict = Theorem) tml0  
     val _ = msg_synt tml1 "theorems to be proven"
     val pid_idict_list = 
-      eval_write pdir (odict,tdict,rdict) exportf tml1
+      eval_write pdir (odict,tdict,rdict) transf exportf tml1
     val pidl = map fst pid_idict_list
     val pid_result_list = time_synt "launchf" 
       (launchf pdir ncores pidl) timelimit
@@ -291,6 +295,7 @@ val pdir_prove = provers_dir ^ "/parallel_prove";
 val pdir_baseline = provers_dir ^ "/parallel_baseline";
 val exportf  = export_pb;
 val launchf  = eprover_parallel;
+val transf   = hhTranslate.cached_translate;
 
 (* Parameters *)
 val _ = show_types := true;
@@ -301,15 +306,14 @@ val _ = concept_flag := false;
 val _ = concept_threshold := 4;
 val ncj_max  = 1000;
   (* proving *)
-val nthy_max = 1000; 
+val nthy_max = 2; 
 val _ = nb_premises := 128;
-val ncores    = 40;
+val ncores    = 3;
 val timelimit = 5;
   (* output *)
 val run_id = "baseline";
 val _ = ttt_synt_dir := tactictoe_dir ^ "/log_synt/" ^ run_id;
 val _ = mkDir_err (tactictoe_dir ^ "/log_synt");
-
 
 (* Initialization *)
 val dicts_org as (odict_org, tdict_org, rdict_org)  = init_dicts nthy_max;
@@ -317,10 +321,10 @@ val tmlorg = dkeys tdict_org;
 
 (* Baseline *)
 val (eluseful, proven, unproven) = 
-  eval_main pdir_eval ncores timelimit dicts_org exportf launchf;
+  eval_main pdir_eval ncores timelimit dicts_org transf exportf launchf;
 val _ = export_tml (!ttt_synt_dir ^ "/proven_thms") proven;
 val _ = export_tml (!ttt_synt_dir ^ "/unproven_thms") unproven;
-val tml = import_tml (!ttt_synt_dir ^ "/proven_thms");
+
 
 (* Generating conjectures *)
 val cjl0 = conjecture tmlorg;
@@ -343,14 +347,14 @@ val cj = subst [{redex = ``$\/``,residue = ``$/\``}] tm;
 val d = trans_write_tmlcj 0 ([tm],cj);
 val e = launch_eprover_parallel 1 [0] 5;
 
+load "hhTranslate";
+open hhTranslate tttTools;
 val tml = map (concl o DISCH_ALL o GEN_ALL o snd) (DB.thms "list");
 val tml' = first_n 100 tml;
 val ntml' = number_list 0 tml';
-load "hhTranslate";
-open hhTranslate;
+val (r,t) = add_time (parallel_translate 3) tml';
+val (r',t') = add_time (map translate) ntml';
 
-val (r,t) = add_time (parallel_translate 3) tml'
-val (r',t') = add_time (map translate) ntml'
 
 
 2) Increase the matching possibility from patterns.

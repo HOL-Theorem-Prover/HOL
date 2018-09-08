@@ -24,6 +24,7 @@ sig
   val prove_main : 
     (term, role) Redblackmap.dict ->
     string -> int -> int ->     
+    (term -> term list) ->
     (string -> int -> term list * term -> idict_t) ->
     (string -> int -> int list -> int -> (int * string list option) list) ->
     term list -> (* theorems *)
@@ -45,6 +46,7 @@ sig
     (int list, term) Redblackmap.dict * 
       (term, int list) Redblackmap.dict *
       (term, role) Redblackmap.dict ->
+    (term -> term list) ->
     (string -> int -> term list * term -> idict_t) ->
     (string -> int -> int list -> int -> (int * string list option) list) ->
     ((term * term list) list * term list * term list)

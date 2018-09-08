@@ -33,20 +33,10 @@ fun log_translate s =
   then append_endline (hh_dir ^ "/translate_log") s 
   else ()
 
-fun log_translate_t s f x =
+fun time_translate s f x =
   let
     val _ = log_translate s
     val (r,t) = add_time f x
-    val _ = log_translate (s ^ " " ^ Real.toString t)
-  in
-    r
-  end
-
-fun log_translate_st limit s f x =
-  let
-    val _ = log_translate s
-    val (r,t) = add_time f x
-    val _ = if t > limit then log_translate "Warning: slow" else ()
     val _ = log_translate (s ^ " " ^ Real.toString t)
   in
     r
@@ -268,6 +258,20 @@ fun mk_arity_eq f n =
     GENL vl (LET_CONV_AUX t1)
   end
 
+fun optim_arity_eq tm =
+  let 
+    val l = dlist (collect_arity tm)
+    fun g x = x <> 0
+    fun f (tm,nl) = 
+      if is_abs tm orelse is_comb tm then raise ERR "optim_arity_eq" ""
+      else 
+        if length nl >= 2 
+        then map (mk_arity_eq tm) (filter g nl)
+        else []
+  in
+    List.concat (map f l)
+  end
+
 fun all_arity_eq tm =
   let
     val l = dlist (collect_arity tm)
@@ -360,14 +364,13 @@ fun debug_translate (tmn,tm) =
   let    
     val iref = ref (tmn,0)
     val _ = log_translate ("  " ^ term_to_string tm)
-    val tm1 = log_translate_st 0.001 "prepare_tm:" prepare_tm tm
+    val tm1 = time_translate "prepare_tm" prepare_tm tm
     val _ = log_translate ("Renaming variables:\n  " ^ term_to_string tm1)
-    val thml1 = log_translate_st 0.001 "lift_conv:" 
-      RPT_LIFT_CONV iref tm1
+    val thml1 = time_translate "RPT_LIFT_CONV" RPT_LIFT_CONV iref tm1
     val tml1 = map (rand o concl) thml1
     val _ = log_translate ("Lifting lambdas and predicates:\n  " ^ 
       String.concatWith "\n  " (map term_to_string tml1))
-    val thml2 = log_translate_st 0.001 "let_conv:" 
+    val thml2 = time_translate "LET_CONV" 
       (map (TRY_CONV LET_CONV_BVL THENC REFL)) tml1
     val tml2 = map (rand o concl) thml2
   in
@@ -413,15 +416,12 @@ fun translate_pb premises cj =
   let
     fun f (name,thm) = (log_translate ("\n" ^ name); 
       (name, cached_translate (concl (DISCH_ALL thm))))
-    val _ = log_translate "\nConjecture"
     val cj_tml = cached_translate cj
     val ax_tml = map f premises
     val big_tm = 
       list_mk_conj (map list_mk_conj (cj_tml :: (map snd ax_tml)))
-    val ari_thml = log_translate_st 0.1 "all_arity" all_arity_eq big_tm
+    val ari_thml = time_translate "optim_arity" optim_arity_eq big_tm
     val ari_tml =  map only_concl ari_thml
-    val _ = log_translate ("Arity equations:\n  " ^ 
-      String.concatWith "\n  " (map term_to_string ari_tml)) 
   in
     (ari_tml, ax_tml, cj_tml)
   end
