@@ -306,9 +306,9 @@ val _ = concept_flag := false;
 val _ = concept_threshold := 4;
 val ncj_max  = 1000;
   (* proving *)
-val nthy_max = 2; 
+val nthy_max = 1000; 
 val _ = nb_premises := 128;
-val ncores    = 3;
+val ncores    = 40;
 val timelimit = 5;
   (* output *)
 val run_id = "baseline";
@@ -325,10 +325,8 @@ val (eluseful, proven, unproven) =
 val _ = export_tml (!ttt_synt_dir ^ "/proven_thms") proven;
 val _ = export_tml (!ttt_synt_dir ^ "/unproven_thms") unproven;
 
-
 (* Generating conjectures *)
 val cjl0 = conjecture tmlorg;
-
 val cjl1 = first_n ncj_max cjl0;
 
 (* Proving conjectures *)
@@ -340,43 +338,6 @@ val dicts_new as (odict_new, tdict_new, rdict_new) = insert_cjl dicts_org pl;
 
 (* Evaluate conjectures *)
 val el = eval_main pdir_eval ncores timelimit dicts_new exportf launchf;
-
-Debug 
-val tm = concl pred_setTheory.UNION_DEF;
-val cj = subst [{redex = ``$\/``,residue = ``$/\``}] tm;
-val d = trans_write_tmlcj 0 ([tm],cj);
-val e = launch_eprover_parallel 1 [0] 5;
-
-load "hhTranslate";
-open hhTranslate tttTools;
-val tml = map (concl o DISCH_ALL o GEN_ALL o snd) (DB.thms "list");
-val tml' = first_n 100 tml;
-val ntml' = number_list 0 tml';
-val (r,t) = add_time (parallel_translate 3) tml';
-val (r',t') = add_time (map translate) ntml';
-
-
-
-2) Increase the matching possibility from patterns.
-   Think of including subterms match.
-
-1) Increase the coverage using generalization techniques.
-   Do statistics from the point of view of patterns.
-2) Only allow N conjectures per theorems.
-   Try most frequent subsitutions first. Then when applicable 
-   the ratio of conjecture / Theorem should guide the choice of the 
-   substitution and theorems.
-
-   
-2) Try to prove theorems without conjectures.
-   Do the re-ordering on the theorems proven.
-3) Think about how to implement the feedback loop. 
-   (features and machine learning)
-4) Issue: too many proving tasks?
-
-5) Add conceptualization.
-
-6) Authorizes in the creation only things that come from the past
 
 *)
 
