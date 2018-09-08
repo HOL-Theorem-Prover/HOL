@@ -15,21 +15,14 @@
 (*                                                                           *)
 (* ========================================================================= *)
 
-(* set_trace "Unicode" 0; *)
-
-(*app load ["HolKernel", "Parse", "boolLib", "bossLib", "numLib", "unwindLib", 
-"tautLib", "Arith", "prim_recTheory", "combinTheory", "quotientTheory", 
-"arithmeticTheory", "realTheory", "hrealTheory", "realaxTheory", "realLib",  
-"jrhUtils", "pairTheory", "seqTheory", "limTheory", "transcTheory", "listTheory", 
-"mesonLib", "boolTheory", "pred_setTheory", "util_probTheory", 
-"optionTheory", "numTheory", "sumTheory", "InductiveDefinition", "ind_typeTheory"]; *)
-
 open HolKernel Parse boolLib bossLib numLib unwindLib tautLib Arith 
 prim_recTheory combinTheory quotientTheory arithmeticTheory hrealTheory 
 realaxTheory realTheory realLib jrhUtils pairTheory seqTheory limTheory 
 transcTheory listTheory mesonLib boolTheory pred_setTheory 
 util_probTheory optionTheory numTheory sumTheory InductiveDefinition 
 ind_typeTheory;
+
+open cardinalTheory;
 
 val _ = new_theory "iterate";
 
@@ -43,10 +36,6 @@ fun METIS ths tm = prove(tm,METIS_TAC ths);
 
 val DISC_RW_KILL = DISCH_TAC THEN ONCE_ASM_REWRITE_TAC [] THEN 
                    POP_ASSUM K_TAC;
-				   
-val IN_REST = store_thm ("IN_REST",
- ``!x:'a. !s. x IN (REST s) <=> x IN s /\ ~(x = CHOICE s)``,
-  REWRITE_TAC[REST_DEF, IN_DELETE]);
 
 fun SET_TAC L = 
     POP_ASSUM_LIST(K ALL_TAC) THEN REPEAT COND_CASES_TAC THEN
@@ -82,10 +71,6 @@ val RIGHT_IMP_EXISTS_THM = store_thm ("RIGHT_IMP_EXISTS_THM",
 val RIGHT_IMP_FORALL_THM = store_thm ("RIGHT_IMP_FORALL_THM", 
  ``!P Q. P ==> (!x. Q x) <=> (!x. P ==> Q x)``,
  REWRITE_TAC [GSYM RIGHT_FORALL_IMP_THM]);
-
-val FINITE_SUBSET = store_thm ("FINITE_SUBSET",
- ``!s t. FINITE t /\ s SUBSET t ==> FINITE s``,
- METIS_TAC [SUBSET_FINITE]);
 
 val LE_0 = store_thm ("LE_0",
   ``!n:num. 0 <= n``,
@@ -549,8 +534,9 @@ val SET_RECURSION_LEMMA = store_thm ("SET_RECURSION_LEMMA",
       REPEAT AP_TERM_TAC THEN UNDISCH_TAC ``~(x:'a IN s)`` THEN DISCH_TAC THEN 
       EVAL_TAC THEN FULL_SIMP_TAC std_ss [DELETE_NON_ELEMENT, SUBSET_REFL]]]);
 
+(* TODO: re-define it as theorem of "ITSET" in pred_setTheory *)
 val ITSET = Define
-  `ITSET f s b = (@g. (g {} = b) /\ !x s. FINITE s
+   `ITSET f s b = (@g. (g {} = b) /\ !x s. FINITE s
                   ==> (g (x INSERT s) = if x IN s then g s else f x (g s))) s`;
 
 val FINITE_RECURSION = store_thm ("FINITE_RECURSION",
@@ -660,10 +646,10 @@ val CARD_SUBSET_EQ = store_thm ("CARD_SUBSET_EQ",
   REPEAT STRIP_TAC THEN
   MP_TAC(SPECL [``a:'a->bool``] CARD_UNION) THEN
   SUBGOAL_THEN ``FINITE(a:'a->bool)`` ASSUME_TAC THENL
-   [METIS_TAC[FINITE_SUBSET], ALL_TAC] THEN ASM_REWRITE_TAC [] THEN 
+   [METIS_TAC[SUBSET_FINITE_I], ALL_TAC] THEN ASM_REWRITE_TAC [] THEN 
   DISCH_THEN (MP_TAC o SPEC ``b DIFF (a:'a->bool)``) THEN
   SUBGOAL_THEN ``FINITE(b:'a->bool DIFF a)`` ASSUME_TAC THENL
-   [MATCH_MP_TAC FINITE_SUBSET THEN EXISTS_TAC ``b:'a->bool`` THEN
+   [MATCH_MP_TAC SUBSET_FINITE_I THEN EXISTS_TAC ``b:'a->bool`` THEN
     ASM_REWRITE_TAC[] THEN SET_TAC[], ALL_TAC] THEN
   SUBGOAL_THEN ``a:'a->bool INTER (b DIFF a) = EMPTY`` ASSUME_TAC THENL
    [SET_TAC[], ALL_TAC] THEN
@@ -820,7 +806,7 @@ val INFINITE_DIFF_FINITE = store_thm ("INFINITE_DIFF_FINITE",
   REPEAT GEN_TAC THEN
   MATCH_MP_TAC(TAUT `(b /\ ~c ==> ~a) ==> a /\ b ==> c`) THEN
   REWRITE_TAC [] THEN STRIP_TAC THEN
-  MATCH_MP_TAC FINITE_SUBSET THEN
+  MATCH_MP_TAC SUBSET_FINITE_I THEN
   EXISTS_TAC ``(t:'a->bool) UNION (s DIFF t)`` THEN
   ASM_REWRITE_TAC[FINITE_UNION] THEN SET_TAC[]);
   
@@ -978,31 +964,63 @@ val CHOOSE_SUBSET = store_thm ("CHOOSE_SUBSET",
   MESON_TAC[CHOOSE_SUBSET_STRONG]);
 
 (* ------------------------------------------------------------------------- *)
-(* Cardinal comparisons (more theory in Examples/card.ml)                    *)
+(* Cardinal comparisons (more theory in real_cardinalTheory                  *)
 (* ------------------------------------------------------------------------- *)
 
-val _ = set_fixity "<=_c" (Infix(NONASSOC, 450));
-val _ = set_fixity "<_c" (Infix(NONASSOC, 450));
-val _ = set_fixity ">=_c" (Infix(NONASSOC, 450));
-val _ = set_fixity ">_c" (Infix(NONASSOC, 450));
-val _ = set_fixity "=_c" (Infix(NONASSOC, 450));
+val _ = set_fixity "<=_c" (Infix(NONASSOC, 450)); (* for cardleq *)
+val _ = overload_on("<=_c", ``cardleq``);         (* defined in cardinalTheory *)
+val _ = overload_on("<<=",  ``$<=_c``);           (* defined in pred_setTheory *)
 
-val le_c = new_definition ("le_c",
- ``s <=_c t <=> ?f. (!x. x IN s ==> f(x) IN t) /\
-  (!x y. x IN s /\ y IN s /\ (f(x) = f(y)) ==> (x = y))``);
+val _ = set_fixity "<_c" (Infix(NONASSOC, 450));  (* for cardlt *)
+val _ = overload_on("<_c", ``cardlt``);           (* defined in cardinalTheory *)
+val _ = overload_on("<</=", ``$<_c``);            (* defined in cardinalTheory *)
 
-val lt_c = new_definition ("lt_c",
- ``s <_c t <=> s <=_c t /\ ~(t <=_c s)``);
+val _ = set_fixity ">=_c" (Infix(NONASSOC, 450)); (* for cardgeq *)
+val _ = Unicode.unicode_version {u = UTF8.chr 0x227D, tmnm = ">=_c"};
+val _ = TeX_notation {hol = ">=_c",          TeX = ("\\ensuremath{\\succcurlyeq}", 1)};
+val _ = TeX_notation {hol = UTF8.chr 0x227D, TeX = ("\\ensuremath{\\succcurlyeq}", 1)};
 
-val eq_c = new_definition ("eq_c",
- ``s =_c t <=> ?f. (!x. x IN s ==> f(x) IN t) /\
- !y. y IN t ==> ?!x. x IN s /\ (f x = y)``);
+val _ = set_fixity ">_c" (Infix(NONASSOC, 450));  (* for cardgt *)
+val _ = Unicode.unicode_version {u = UTF8.chr 0x227B, tmnm = ">_c"};
+val _ = TeX_notation {hol = ">_c",           TeX = ("\\ensuremath{\\succ}", 1)};
+val _ = TeX_notation {hol = UTF8.chr 0x227B, TeX = ("\\ensuremath{\\succ}", 1)};
 
-val ge_c = new_definition ("ge_c",
- ``s >=_c t <=> t <=_c s``);
+val _ = set_fixity "=_c" (Infix(NONASSOC, 450));  (* for cardeq *)
+val _ = overload_on("=_c", ``cardeq``);
+val _ = overload_on("=~",  ``$=_c``);
 
-val gt_c = new_definition ("gt_c", 
- ``s >_c t <=> t <_c s``);
+val le_c = store_thm ("le_c",
+  ``!s t. s <=_c t <=> ?f. (!x. x IN s ==> f(x) IN t) /\
+                           (!x y. x IN s /\ y IN s /\ (f(x) = f(y)) ==> (x = y))``,
+    rpt GEN_TAC
+ >> REWRITE_TAC [cardleq_def, INJ_DEF]
+ >> PROVE_TAC []);
+
+val lt_c = store_thm ("lt_c",
+  ``!s t. s <_c t <=> s <=_c t /\ ~(t <=_c s)``,
+    rpt GEN_TAC
+ >> EQ_TAC >> STRIP_TAC
+ >> PROVE_TAC [cardlt_lenoteq]);
+
+val eq_c = store_thm ("eq_c",
+  ``!s t. s =_c t <=> ?f. (!x. x IN s ==> f(x) IN t) /\
+                          !y. y IN t ==> ?!x. x IN s /\ (f x = y)``,
+    rpt GEN_TAC
+ >> REWRITE_TAC [cardeq_def, BIJ_ALT, IN_FUNSET]
+ >> `!f x y. (f x = y) = (y = f x)` by PROVE_TAC [EQ_SYM]
+ >> ASM_REWRITE_TAC []);
+
+val cardgeq_def = Define
+   `cardgeq s t = cardleq t s`;
+
+val _ = overload_on (">=_c", ``cardgeq``);
+val ge_c = save_thm ("ge_c",   cardgeq_def);
+
+val cardgt_def = Define
+   `cardgt s t = cardlt t s`;
+
+val _ = overload_on (">_c",  ``cardgt``);
+val gt_c = save_thm ("gt_c",   cardgt_def);
 
 val LE_C = store_thm ("LE_C",
  ``!s t. s <=_c t <=> ?g. !x. x IN s ==> ?y. y IN t /\ (g y = x)``,
@@ -1014,8 +1032,11 @@ val GE_C = store_thm ("GE_C",
  ``!s t. s >=_c t <=> ?f. !y. y IN t ==> ?x. x IN s /\ (y = f x)``,
   REWRITE_TAC[ge_c, LE_C] THEN MESON_TAC[]);
 
-val COUNTABLE = new_definition ("COUNTABLE",
- ``COUNTABLE t <=> univ(:num) >=_c t``);
+val _ = overload_on ("COUNTABLE", ``countable``);
+
+val COUNTABLE = store_thm
+  ("COUNTABLE", ``!t. COUNTABLE t <=> univ(:num) >=_c t``,
+    REWRITE_TAC [countable_def, cardgeq_def, cardleq_def]);
 
 (* ------------------------------------------------------------------------- *)
 (* REAL_COMPLETE                                                             *)

@@ -15,21 +15,13 @@
 (*                                                                           *)
 (* ========================================================================= *)
 
-(* set_trace "Unicode" 0; *)
-
-(*app load ["HolKernel", "Parse", "boolLib", "bossLib", "numLib", "unwindLib", 
-"tautLib", "Arith", "prim_recTheory", "combinTheory", "quotientTheory", 
-"arithmeticTheory", "realTheory", "hrealTheory", "realaxTheory", "realLib",  
-"jrhUtils", "pairTheory", "seqTheory", "limTheory", "transcTheory", "listTheory", 
-"mesonLib", "boolTheory", "pred_setTheory", "util_probTheory",  
-"optionTheory", "numTheory", "sumTheory", "InductiveDefinition", "ind_typeTheory",
-"iterate_hvgTheory", "card_hvgTheory"];*)
-
 open HolKernel Parse boolLib bossLib numLib unwindLib tautLib Arith prim_recTheory 
 combinTheory quotientTheory arithmeticTheory hrealTheory realaxTheory realTheory 
 realLib jrhUtils pairTheory seqTheory limTheory transcTheory listTheory mesonLib 
 boolTheory pred_setTheory util_probTheory optionTheory numTheory 
-sumTheory InductiveDefinition ind_typeTheory iterateTheory cardTheory;
+sumTheory InductiveDefinition ind_typeTheory;
+
+open iterateTheory rich_cardinalTheory;
 
 val _ = new_theory "product";
 

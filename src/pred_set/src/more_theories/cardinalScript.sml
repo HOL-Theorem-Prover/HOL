@@ -8,14 +8,12 @@ val _ = new_theory "cardinal"
 val cardeq_def = Define`
   cardeq s1 s2 <=> ?f. BIJ f s1 s2
 `
-
-val _ = set_fixity "=~" (Infix(NONASSOC, 450))
-val _ = set_mapped_fixity {tok = "≈", term_name = "=~",  (* UOK *)
-                           fixity = Infix(NONASSOC, 450)}
+val _ = set_fixity "=~" (Infix(NONASSOC, 450));
+val _ = Unicode.unicode_version {u = UTF8.chr 0x2248, tmnm = "=~"};
+val _ = TeX_notation {hol = "=~",            TeX = ("\\ensuremath{\\approx}", 1)};
+val _ = TeX_notation {hol = UTF8.chr 0x2248, TeX = ("\\ensuremath{\\approx}", 1)};
 
 val _ = overload_on("=~", ``cardeq``)
-val _ = TeX_notation {hol = "≈", TeX = ("\\ensuremath{\\approx}", 1)}  (* UOK *)
-
 
 val cardeq_REFL = store_thm(
   "cardeq_REFL",
@@ -245,26 +243,28 @@ val cardleq_dichotomy = store_thm(
     fs[BIJ_DEF, INJ_DEF, SUBSET_DEF]
   ]);
 
-val _ = set_fixity "≺" (Infix(NONASSOC, 450)) (* UOK *)
-val _ = set_mapped_fixity {tok = "<</=", fixity = Infix(NONASSOC, 450),
-                           term_name = "≺"} (* UOK *)
-val _ = overload_on ("≺", ``\(s1:'a set) s2. ~(s2 <<= s1)``) (* UOK *)
+val _ = set_fixity "<</=" (Infix(NONASSOC, 450));
 
-val _ = TeX_notation {hol = "≺", TeX = ("\\ensuremath{\\prec}", 1)} (* UOK *)
+val _ = Unicode.unicode_version {u = UTF8.chr 0x227A, tmnm = "<</="};
+val _ = TeX_notation {hol = "<</=",          TeX = ("\\ensuremath{\\prec}", 1)};
+val _ = TeX_notation {hol = UTF8.chr 0x227A, TeX = ("\\ensuremath{\\prec}", 1)};
+
+val _ = overload_on ("cardlt", ``\s1 s2. ~(cardleq s2 s1)``); (* cardlt *)
+val _ = overload_on ("<</=", ``cardlt``);
 
 val cardleq_lteq = store_thm(
   "cardleq_lteq",
-  ``s1 <<= s2 <=> s1 <</= s2 \/ (s1 =~ s2)``,
+  ``!s1 s2. s1 <<= s2 <=> s1 <</= s2 \/ (s1 =~ s2)``,
   metis_tac [cardleq_ANTISYM, cardleq_dichotomy, CARDEQ_SUBSET_CARDLEQ]);
 
 val cardlt_REFL = store_thm(
   "cardlt_REFL",
-  ``~(s <</= s)``,
+  ``!s. ~(s <</= s)``,
   simp[cardleq_REFL]);
 
 val cardlt_lenoteq = store_thm(
   "cardlt_lenoteq",
-  ``s <</= t <=> s <<= t /\ ~(s =~ t)``,
+  ``!s t. s <</= t <=> s <<= t /\ ~(s =~ t)``,
   metis_tac [cardleq_dichotomy, CARDEQ_SUBSET_CARDLEQ, cardeq_SYM,
              cardleq_ANTISYM, cardeq_REFL]);
 
@@ -285,7 +285,7 @@ val cardleq_lt_trans = store_thm("cardleq_lt_trans",
   metis_tac[CARDEQ_CARDLEQ,cardeq_REFL,cardleq_ANTISYM])
 
 val cardleq_empty = store_thm("cardleq_empty",
-  ``x <<= {} <=> (x = {})``,
+  ``!x. x <<= {} <=> (x = {})``,
   simp[cardleq_lteq,CARDEQ_0])
 
 val better_BIJ = BIJ_DEF |> SIMP_RULE (srw_ss() ++ CONJ_ss) [INJ_DEF, SURJ_DEF]

@@ -18,23 +18,13 @@
 (*               (c) Copyright, Marco Maggesi 2014-2015                      *)
 (* ========================================================================= *)
 
-(* set_trace "Unicode" 0; *)
-
-(*app load ["HolKernel", "Parse", "boolLib", "bossLib", "numLib", "unwindLib", 
-"tautLib", "Arith", "prim_recTheory", "combinTheory", "quotientTheory", 
-"arithmeticTheory", "realTheory", "hrealTheory", "realaxTheory", "realLib",  
-"jrhUtils", "pairTheory", "seqTheory", "limTheory", "transcTheory", "listTheory", 
-"mesonLib", "boolTheory", "topologyTheory", "pred_setTheory", "util_probTheory", 
-"optionTheory", "numTheory", "sumTheory", "InductiveDefinition", "ind_typeTheory",
-"iterateTheory", "cardTheory", "productTheory"];*)
-
 open HolKernel Parse boolLib bossLib numLib unwindLib tautLib Arith prim_recTheory
 combinTheory quotientTheory arithmeticTheory hrealTheory realaxTheory realTheory
 jrhUtils pairTheory boolTheory pred_setTheory optionTheory numTheory
 sumTheory InductiveDefinition ind_typeTheory listTheory mesonLib
 seqTheory limTheory transcTheory realLib topologyTheory;
 
-open util_probTheory iterateTheory cardTheory productTheory;
+open util_probTheory iterateTheory rich_cardinalTheory productTheory;
 
 val _ = new_theory "rich_topology";
 
@@ -1864,7 +1854,7 @@ val INDEPENDENT_SPAN_BOUND = store_thm ("INDEPENDENT_SPAN_BOUND",
          ==> FINITE s /\ CARD(s) <= CARD(t)``,
   REPEAT GEN_TAC THEN DISCH_TAC THEN
   FIRST_ASSUM(MP_TAC o MATCH_MP EXCHANGE_LEMMA) THEN
-  ASM_MESON_TAC[HAS_SIZE, CARD_SUBSET, FINITE_SUBSET]);
+  ASM_MESON_TAC[HAS_SIZE, CARD_SUBSET, SUBSET_FINITE_I]);
 
 val INDEPENDENT_BOUND = store_thm ("INDEPENDENT_BOUND",
  ``!s:real->bool.
@@ -6112,7 +6102,7 @@ val LIMPT_SEQUENTIAL = store_thm ("LIMPT_SEQUENTIAL",
 
 val INFINITE_SUPERSET = store_thm ("INFINITE_SUPERSET",
  ``!s t. INFINITE s /\ s SUBSET t ==> INFINITE t``,
-  REWRITE_TAC[] THEN MESON_TAC[FINITE_SUBSET]);
+  REWRITE_TAC[] THEN MESON_TAC[SUBSET_FINITE_I]);
 
 val LIMPT_INFINITE_OPEN_BALL_CBALL = store_thm ("LIMPT_INFINITE_OPEN_BALL_CBALL",
  ``(!s x:real.
@@ -6127,7 +6117,7 @@ val LIMPT_INFINITE_OPEN_BALL_CBALL = store_thm ("LIMPT_INFINITE_OPEN_BALL_CBALL"
   REPEAT CONJ_TAC THENL
    [REWRITE_TAC[limit_point_of, SET_RULE
      ``(?y. ~(y = x) /\ y IN s /\ y IN t) <=> ~(s INTER t SUBSET {x})``] THEN
-    MESON_TAC[FINITE_SUBSET, FINITE_SING],
+    MESON_TAC[SUBSET_FINITE_I, FINITE_SING],
     MESON_TAC[INFINITE_SUPERSET, BALL_SUBSET_CBALL,
               SET_RULE ``t SUBSET u ==> s INTER t SUBSET s INTER u``],
     MESON_TAC[INFINITE_SUPERSET, OPEN_CONTAINS_CBALL,
@@ -8278,7 +8268,7 @@ val HEINE_BOREL_IMP_BOLZANO_WEIERSTRASS = store_thm
      (!x. x IN s ==> ?s'. x IN s' /\ ?x. x IN s /\ (s' = f x))`` THENL
   [METIS_TAC[], DISCH_TAC THEN ASM_REWRITE_TAC []] THEN
   DISCH_THEN(X_CHOOSE_THEN ``g:(real->bool)->bool`` STRIP_ASSUME_TAC) THEN
-  MATCH_MP_TAC FINITE_SUBSET THEN
+  MATCH_MP_TAC SUBSET_FINITE_I THEN
   EXISTS_TAC ``{x:real | x IN t /\ (f(x):real->bool) IN g}`` THEN
   CONJ_TAC THENL
   [MATCH_MP_TAC FINITE_IMAGE_INJ_GENERAL THEN ASM_MESON_TAC[SUBSET_DEF],
@@ -8657,7 +8647,7 @@ val COMPACT_BIGINTER = store_thm ("COMPACT_BIGINTER",
 
 val FINITE_IMP_CLOSED = store_thm ("FINITE_IMP_CLOSED",
  ``!s. FINITE s ==> closed s``,
-  MESON_TAC[BOLZANO_WEIERSTRASS_IMP_CLOSED, FINITE_SUBSET]);
+  MESON_TAC[BOLZANO_WEIERSTRASS_IMP_CLOSED, SUBSET_FINITE_I]);
 
 val FINITE_IMP_CLOSED_IN = store_thm ("FINITE_IMP_CLOSED_IN",
  ``!s t. FINITE s /\ s SUBSET t ==> closed_in (subtopology euclidean t) s``,
@@ -17050,7 +17040,7 @@ val EMPTY_INTERIOR_FINITE = store_thm ("EMPTY_INTERIOR_FINITE",
   REPEAT STRIP_TAC THEN MP_TAC(ISPEC ``s:real->bool`` OPEN_INTERIOR) THEN
   ONCE_REWRITE_TAC[MONO_NOT_EQ] THEN
   MATCH_MP_TAC(REWRITE_RULE[CONJ_EQ_IMP] FINITE_IMP_NOT_OPEN) THEN
-  MATCH_MP_TAC FINITE_SUBSET THEN EXISTS_TAC ``s:real->bool`` THEN
+  MATCH_MP_TAC SUBSET_FINITE_I THEN EXISTS_TAC ``s:real->bool`` THEN
   ASM_REWRITE_TAC[INTERIOR_SUBSET]);
 
 val FINITE_CBALL = store_thm ("FINITE_CBALL",
@@ -17182,7 +17172,7 @@ val CONTINUOUS_DISCONNECTED_DISCRETE_FINITE_RANGE_CONSTANT_EQ = store_thm ("CONT
                    (\x. if (\x. x IN t) x then (\x. 0) x else (\x. 1) x)``] THEN
       MATCH_MP_TAC CONTINUOUS_ON_CASES_LOCAL THEN
       ASM_SIMP_TAC std_ss [CONTINUOUS_ON_CONST] THEN ASM_SET_TAC [],
-      MATCH_MP_TAC FINITE_SUBSET THEN EXISTS_TAC ``{0:real;1:real}`` THEN
+      MATCH_MP_TAC SUBSET_FINITE_I THEN EXISTS_TAC ``{0:real;1:real}`` THEN
       REWRITE_TAC[FINITE_INSERT, FINITE_EMPTY] THEN SET_TAC[],
       SUBGOAL_THEN ``?a b:real. a IN s /\ a IN t /\ b IN s /\ ~(b IN t)``
       STRIP_ASSUME_TAC THENL
@@ -17859,7 +17849,7 @@ val SUMS_LIM = store_thm ("SUMS_LIM",
 
 val FINITE_INTER_NUMSEG = store_thm ("FINITE_INTER_NUMSEG",
  ``!s m n. FINITE(s INTER (m..n))``,
-  MESON_TAC[FINITE_SUBSET, FINITE_NUMSEG, INTER_SUBSET]);
+  MESON_TAC[SUBSET_FINITE_I, FINITE_NUMSEG, INTER_SUBSET]);
 
 val SERIES_FROM = store_thm ("SERIES_FROM",
  ``!f l k. (f sums l) (from k) = ((\n. sum(k..n) f) --> l) sequentially``,
@@ -18441,7 +18431,7 @@ val SUMMABLE_FROM_ELSEWHERE = store_thm ("SUMMABLE_FROM_ELSEWHERE",
  ``!f m n. summable (from m) f ==> summable (from n) f``,
   REPEAT GEN_TAC THEN
   MATCH_MP_TAC(REWRITE_RULE[CONJ_EQ_IMP] SUMMABLE_EQ_COFINITE) THEN
-  MATCH_MP_TAC FINITE_SUBSET THEN EXISTS_TAC ``(0:num)..(m+n)`` THEN
+  MATCH_MP_TAC SUBSET_FINITE_I THEN EXISTS_TAC ``(0:num)..(m+n)`` THEN
   SIMP_TAC std_ss [FINITE_NUMSEG, SUBSET_DEF, IN_NUMSEG, IN_UNION, IN_DIFF, IN_FROM] THEN
   ARITH_TAC);
 
@@ -22297,7 +22287,7 @@ val SUBORDINATE_PARTITION_OF_UNITY = store_thm ("SUBORDINATE_PARTITION_OF_UNITY"
     X_GEN_TAC ``x:real`` THEN DISCH_TAC THEN
     EXISTS_TAC ``ball(x:real,&1)`` THEN
     REWRITE_TAC[OPEN_BALL, CENTRE_IN_BALL, REAL_LT_01] THEN
-    MATCH_MP_TAC FINITE_SUBSET THEN EXISTS_TAC ``{u:real->bool}`` THEN
+    MATCH_MP_TAC SUBSET_FINITE_I THEN EXISTS_TAC ``{u:real->bool}`` THEN
     SIMP_TAC std_ss [FINITE_SING, SUBSET_DEF, GSPECIFICATION, IN_SING] THEN
     X_GEN_TAC ``v:real->bool`` THEN
     ASM_CASES_TAC ``v:real->bool = u`` THEN ASM_REWRITE_TAC[],
@@ -22317,7 +22307,7 @@ val SUBORDINATE_PARTITION_OF_UNITY = store_thm ("SUBORDINATE_PARTITION_OF_UNITY"
     POP_ASSUM MP_TAC THEN
     REPEAT(DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) THEN
     ASM_REWRITE_TAC[] THEN
-    MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT] FINITE_SUBSET) THEN
+    MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT] SUBSET_FINITE_I) THEN
     SIMP_TAC std_ss [SUBSET_DEF, GSPECIFICATION] THEN X_GEN_TAC ``u:real->bool`` THEN
     ASM_CASES_TAC ``(u:real->bool) IN c`` THENL [ALL_TAC, METIS_TAC []] THEN
     ASM_REWRITE_TAC [] THEN ONCE_REWRITE_TAC[MONO_NOT_EQ] THEN DISCH_TAC THEN
@@ -22351,7 +22341,7 @@ val SUBORDINATE_PARTITION_OF_UNITY = store_thm ("SUBORDINATE_PARTITION_OF_UNITY"
      [FIRST_X_ASSUM(MP_TAC o SPEC ``x:real``) THEN ASM_REWRITE_TAC[] THEN
       DISCH_THEN(CHOOSE_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) THEN
       DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
-      MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT] FINITE_SUBSET) THEN
+      MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT] SUBSET_FINITE_I) THEN
       SIMP_TAC std_ss [SUBSET_DEF, GSPECIFICATION] THEN X_GEN_TAC ``u:real->bool`` THEN
       ASM_CASES_TAC ``(x:real) IN u`` THEN
       ASM_SIMP_TAC std_ss [SETDIST_SING_IN_SET, IN_DIFF] THEN ASM_SET_TAC[],

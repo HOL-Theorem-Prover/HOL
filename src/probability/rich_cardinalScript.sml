@@ -1,6 +1,6 @@
 (* ========================================================================= *)
 (*                                                                           *)
-(*                            Cardinal Theory                                *)
+(*               HOL-light's Cardinal Theory (Library/card.ml)               *)
 (*                                                                           *)
 (*        (c) Copyright 2015                                                 *)
 (*                       Muhammad Qasim,                                     *)
@@ -10,31 +10,18 @@
 (*                                                                           *)
 (*            Contact:  <m_qasi@ece.concordia.ca>                            *)
 (*                                                                           *)
-(*                                                                           *)
-(* Note: This theory has been ported from hol light                          *)
-(*                                                                           *)
 (* ========================================================================= *)
-
-(* ========================================================================= *)
-(* Basic notions of cardinal arithmetic.                                     *)
-(* ========================================================================= *)
-
-(* set_trace "Unicode" 0; *)
-
-(*app load ["HolKernel", "Parse", "boolLib", "bossLib", "numLib", "unwindLib", 
-"tautLib", "Arith", "prim_recTheory", "combinTheory", "quotientTheory", 
-"arithmeticTheory", "realTheory", "hrealTheory", "realaxTheory", "realLib", 
-"jrhUtils", "pairTheory", "seqTheory", "limTheory", "transcTheory", "listTheory", 
-"mesonLib", "boolTheory", "pred_setTheory", "set_relationTheory", "util_probTheory", "optionTheory", "numTheory", "sumTheory", "InductiveDefinition", "ind_typeTheory", "iterate_hvgTheory"];*)
 
 open HolKernel Parse boolLib bossLib numLib unwindLib tautLib Arith prim_recTheory 
 combinTheory quotientTheory arithmeticTheory hrealTheory realaxTheory realTheory 
 realLib jrhUtils pairTheory seqTheory limTheory transcTheory listTheory mesonLib 
 boolTheory pred_setTheory set_relationTheory util_probTheory 
-optionTheory numTheory sumTheory InductiveDefinition ind_typeTheory iterateTheory;
+optionTheory numTheory sumTheory InductiveDefinition ind_typeTheory;
 
-(* TODO: incompatible with posetTheory; merged into cardinalTheory *)
-val _ = new_theory "card";
+(* now based on definitions from HOL4's cardinalTheory *)
+open iterateTheory cardinalTheory;
+
+val _ = new_theory "rich_cardinal";
 
 (* ------------------------------------------------------------------------- *)
 (* MESON, METIS, SET_TAC, SET_RULE, ASSERT_TAC, ASM_ARITH_TAC                *)
@@ -78,7 +65,7 @@ val INFINITE_IMAGE_INJ = store_thm ("INFINITE_IMAGE_INJ",
             ==> !s. INFINITE s ==> INFINITE(IMAGE f s)``,
   GEN_TAC THEN DISCH_TAC THEN GEN_TAC THEN
   ONCE_REWRITE_TAC[GSYM MONO_NOT_EQ] THEN DISCH_TAC THEN
-  MATCH_MP_TAC FINITE_SUBSET THEN
+  MATCH_MP_TAC SUBSET_FINITE_I THEN
   EXISTS_TAC ``{x | f(x) IN IMAGE (f:'a->'b) s}`` THEN CONJ_TAC THENL
    [MATCH_MP_TAC FINITE_IMAGE_INJ THEN ASM_REWRITE_TAC[],
     SIMP_TAC std_ss [SUBSET_DEF, GSPECIFICATION, IMAGE_DEF] THEN MESON_TAC[]]);
@@ -198,26 +185,26 @@ val _ = overload_on ("chain",``Chain``);
 (* HAUSDORFF MAXIMAL PRINCIPLE ==> ZORN'S LEMMA                             *)
 (* ======================================================================== *)
 
-val lemma1 = store_thm ("lemma1",
+val lemma1 = prove (
  ``!r:'a#'a->bool. (?y:'a. fl(r) y /\ !x. r(y,x) ==> (y = x)) = 
                    (?x:'a. x IN maximal_elements (\x. fl r x) r)``,
   REWRITE_TAC [maximal_elements_def, fl] THEN SET_TAC []);
 
-val lemma2 = store_thm ("lemma2",
+val lemma2 = prove (
  ``!P r:'a#'a->bool. (?y. fl r y /\ !x. P x ==> r (x,y)) = (upper_bounds P r <> {})``,
   REWRITE_TAC [upper_bounds_def, fl, range_def] THEN SET_TAC []);
 
-val lemma3 = store_thm ("lemma3",
+val lemma3 = prove (
   ``!r:'a#'a->bool s:'a->bool. chain r s = chain s r``,
   REWRITE_TAC [chain, chain_def] THEN SET_TAC []);
 
-val lemma4 = store_thm ("lemma4",
+val lemma4 = prove (
  ``!r:'a#'a->bool. poset r = partial_order r (\x. fl r x)``,
   REWRITE_TAC [partial_order_def, poset, fl] THEN
   REWRITE_TAC [domain_def, range_def, transitive_def, reflexive_def, antisym_def] THEN
   SET_TAC []);
    
-val lemma5 = store_thm ("lemma5",
+val lemma5 = prove (
  ``!r:'a#'a->bool.
      ((\x. fl r x) <> {} /\ partial_order r (\x. fl r x) /\
       (!P. chain P r ==> upper_bounds P r <> {}) ==>
@@ -227,6 +214,12 @@ val lemma5 = store_thm ("lemma5",
         ?y. fl(r) y /\ !x. r(y,x) ==> (y = x))``,
     SIMP_TAC std_ss [lemma1, lemma2, lemma3, lemma4] THEN SET_TAC []);
 
+(* val zorns_lemma = Q.store_thm ("zorns_lemma",
+`!r s. (s <> {}) /\ partial_order r s /\
+  (!t. chain t r ==> upper_bounds t r <> {})
+  ==>
+  (?x. x IN maximal_elements s r)`,
+ *)
 val ZL = store_thm ("ZL",
  ``!l:'a#'a->bool. poset l /\ (?x. (\x. fl l x) x) /\
            (!P. chain(l) P ==> (?y. fl(l) y /\ !x. P x ==> l(x,y))) ==>
@@ -394,12 +387,13 @@ val CARD_LE_TRANS = store_thm ("CARD_LE_TRANS",
 
 val CARD_LT_REFL = store_thm ("CARD_LT_REFL",
  ``!s:'a->bool. ~(s <_c s)``,
-  MESON_TAC[lt_c, CARD_LE_REFL]);
+  MESON_TAC [CARD_LE_REFL]);
 
 val CARD_LET_TRANS = store_thm ("CARD_LET_TRANS",
  ``!s:'a->bool t:'b->bool u:'c->bool.
        s <=_c t /\ t <_c u ==> s <_c u``,
-  REPEAT GEN_TAC THEN REWRITE_TAC[lt_c] THEN
+  REPEAT GEN_TAC THEN
+  ONCE_REWRITE_TAC [lt_c] THEN
   MATCH_MP_TAC(TAUT `(a /\ b ==> c) /\ (c' /\ a ==> b')
                      ==> a /\ b /\ ~b' ==> c /\ ~c'`) THEN
   REWRITE_TAC[CARD_LE_TRANS]);
@@ -407,7 +401,7 @@ val CARD_LET_TRANS = store_thm ("CARD_LET_TRANS",
 val CARD_LTE_TRANS = store_thm ("CARD_LTE_TRANS",
  ``!s:'a->bool t:'b->bool u:'c->bool.
        s <_c t /\ t <=_c u ==> s <_c u``,
-  REPEAT GEN_TAC THEN REWRITE_TAC[lt_c] THEN
+  REPEAT GEN_TAC THEN ONCE_REWRITE_TAC [lt_c] THEN
   MATCH_MP_TAC(TAUT `(a /\ b ==> c) /\ (b /\ c' ==> a')
                      ==> (a /\ ~a') /\ b ==> c /\ ~c'`) THEN
   REWRITE_TAC[CARD_LE_TRANS]);
@@ -434,10 +428,11 @@ val CARD_EQ_IMP_LE = store_thm ("CARD_EQ_IMP_LE",
 
 val CARD_LT_IMP_LE = store_thm ("CARD_LT_IMP_LE",
  ``!s t. s <_c t ==> s <=_c t``,
-  SIMP_TAC std_ss [lt_c]);
+  ONCE_REWRITE_TAC [lt_c]
+  THEN SIMP_TAC std_ss []);
 
 val CARD_LE_RELATIONAL = store_thm ("CARD_LE_RELATIONAL",
- ``!R:'a->'b->bool.
+ ``!(R:'a->'b->bool) s.
         (!x y y'. x IN s /\ R x y /\ R x y' ==> (y = y'))
         ==> {y | ?x. x IN s /\ R x y} <=_c s``,
   REPEAT STRIP_TAC THEN REWRITE_TAC[le_c] THEN
@@ -575,31 +570,31 @@ val CARD_LE_TOTAL = store_thm ("CARD_LE_TOTAL",
 
 val CARD_LET_TOTAL = store_thm ("CARD_LET_TOTAL",
  ``!s:'a->bool t:'b->bool. s <=_c t \/ t <_c s``,
-  REWRITE_TAC[lt_c] THEN MESON_TAC[CARD_LE_TOTAL]);
+  ONCE_REWRITE_TAC [lt_c] THEN MESON_TAC[CARD_LE_TOTAL]);
 
 val CARD_LTE_TOTAL = store_thm ("CARD_LTE_TOTAL",
  ``!s:'a->bool t:'b->bool. s <_c t \/ t <=_c s``,
-  REWRITE_TAC[lt_c] THEN MESON_TAC[CARD_LE_TOTAL]);
+  ONCE_REWRITE_TAC [lt_c] THEN MESON_TAC[CARD_LE_TOTAL]);
 
 val CARD_LT_TOTAL = store_thm ("CARD_LT_TOTAL",
  ``!s:'a->bool t:'b->bool. (s =_c t) \/ s <_c t \/ t <_c s``,
-  REWRITE_TAC[lt_c, GSYM CARD_LE_ANTISYM] THEN MESON_TAC[CARD_LE_TOTAL]);
+  REWRITE_TAC[Once lt_c, GSYM CARD_LE_ANTISYM] THEN MESON_TAC[CARD_LE_TOTAL]);
 
 val CARD_NOT_LE = store_thm ("CARD_NOT_LE",
  ``!s:'a->bool t:'b->bool. ~(s <=_c t) <=> t <_c s``,
-  REWRITE_TAC[lt_c] THEN MESON_TAC[CARD_LE_TOTAL]);
+  ONCE_REWRITE_TAC [lt_c] THEN MESON_TAC[CARD_LE_TOTAL]);
 
 val CARD_NOT_LT = store_thm ("CARD_NOT_LT",
  ``!s:'a->bool t:'b->bool. ~(s <_c t) <=> t <=_c s``,
-  REWRITE_TAC[lt_c] THEN MESON_TAC[CARD_LE_TOTAL]);
+  ONCE_REWRITE_TAC [lt_c] THEN MESON_TAC[CARD_LE_TOTAL]);
 
 val CARD_LT_LE = store_thm ("CARD_LT_LE",
  ``!s t. s <_c t <=> s <=_c t /\ ~(s =_c t)``,
-  REWRITE_TAC[lt_c, GSYM CARD_LE_ANTISYM] THEN TAUT_TAC);
+  REWRITE_TAC[Once lt_c, GSYM CARD_LE_ANTISYM] THEN TAUT_TAC);
 
 val CARD_LE_LT = store_thm ("CARD_LE_LT",
  ``!s t. s <=_c t <=> s <_c t \/ s =_c t``,
-  REPEAT GEN_TAC THEN REWRITE_TAC[GSYM CARD_NOT_LT] THEN
+  REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[GSYM CARD_NOT_LT] THEN
   GEN_REWR_TAC (LAND_CONV o RAND_CONV) [CARD_LT_LE] THEN
   METIS_TAC [DE_MORGAN_THM, CARD_NOT_LE, CARD_EQ_SYM]);
 
@@ -618,7 +613,7 @@ val CARD_LE_CONG = store_thm ("CARD_LE_CONG",
 val CARD_LT_CONG = store_thm ("CARD_LT_CONG",
  ``!s:'a->bool s':'b->bool t:'c->bool t':'d->bool.
       s =_c s' /\ t =_c t' ==> (s <_c t <=> s' <_c t')``,
-  REPEAT STRIP_TAC THEN REWRITE_TAC[GSYM CARD_NOT_LE] THEN
+  REPEAT STRIP_TAC THEN
   AP_TERM_TAC THEN MATCH_MP_TAC CARD_LE_CONG THEN
   ASM_REWRITE_TAC[]);
 
@@ -648,7 +643,7 @@ val INFINITE_CARD_LE = store_thm ("INFINITE_CARD_LE",
     REWRITE_TAC[le_c, IN_UNIV] THEN REPEAT STRIP_TAC THEN
     FIRST_ASSUM(MP_TAC o MATCH_MP INFINITE_IMAGE_INJ) THEN
     DISCH_THEN(MP_TAC o C MATCH_MP num_INFINITE) THEN SIMP_TAC std_ss [] THEN
-    MATCH_MP_TAC FINITE_SUBSET THEN EXISTS_TAC ``s:'a->bool`` THEN
+    MATCH_MP_TAC SUBSET_FINITE_I THEN EXISTS_TAC ``s:'a->bool`` THEN
     ASM_SIMP_TAC std_ss [SUBSET_DEF, IN_IMAGE, IN_UNIV, LEFT_IMP_EXISTS_THM]] THEN
   DISCH_TAC THEN
   SUBGOAL_THEN ``?f:num->'a. !n. f(n) = @x. x IN (s DIFF IMAGE f {m | m < n})``
@@ -672,7 +667,7 @@ val INFINITE_CARD_LE = store_thm ("INFINITE_CARD_LE",
 val FINITE_CARD_LT = store_thm ("FINITE_CARD_LT",
  ``!s:'a->bool. FINITE s <=> s <_c (UNIV:num->bool)``,
   ONCE_REWRITE_TAC[TAUT `(a <=> b) <=> (~a <=> ~b)`] THEN
-  REWRITE_TAC [GSYM CARD_NOT_LT, INFINITE_CARD_LE]);
+  REWRITE_TAC [Once (GSYM CARD_NOT_LT), INFINITE_CARD_LE]);
 
 val CARD_LE_SUBSET = store_thm ("CARD_LE_SUBSET",
  ``!s:'a->bool t. s SUBSET t ==> s <=_c t``,
@@ -709,7 +704,7 @@ val CARD_FINITE_CONG = store_thm ("CARD_FINITE_CONG",
 
 val CARD_LE_FINITE = store_thm ("CARD_LE_FINITE",
  ``!s:'a->bool t:'b->bool. FINITE t /\ s <=_c t ==> FINITE s``,
-  ASM_MESON_TAC[CARD_LE_EQ_SUBSET, FINITE_SUBSET, CARD_FINITE_CONG]);
+  ASM_MESON_TAC[CARD_LE_EQ_SUBSET, SUBSET_FINITE_I, CARD_FINITE_CONG]);
 
 val CARD_EQ_FINITE = store_thm ("CARD_EQ_FINITE",
  ``!s t:'a->bool. FINITE t /\ s =_c t ==> FINITE s``,
@@ -721,7 +716,7 @@ val CARD_LE_INFINITE = store_thm ("CARD_LE_INFINITE",
 
 val CARD_LT_FINITE_INFINITE = store_thm ("CARD_LT_FINITE_INFINITE",
  ``!s:'a->bool t:'b->bool. FINITE s /\ INFINITE t ==> s <_c t``,
-  REWRITE_TAC[GSYM CARD_NOT_LE] THEN MESON_TAC[CARD_LE_FINITE]);
+  ONCE_REWRITE_TAC[GSYM CARD_NOT_LE] THEN MESON_TAC[CARD_LE_FINITE]);
 
 val CARD_LE_CARD_IMP = store_thm ("CARD_LE_CARD_IMP",
  ``!s:'a->bool t:'b->bool. FINITE t /\ s <=_c t ==> CARD s <= CARD t``,
@@ -750,7 +745,7 @@ val CARD_LE_CARD = store_thm ("CARD_LE_CARD",
   REPEAT STRIP_TAC THEN
   MATCH_MP_TAC(TAUT `(a ==> b) /\ (~a ==> ~b) ==> (a <=> b)`) THEN
   ASM_SIMP_TAC std_ss [CARD_LE_CARD_IMP] THEN
-  REWRITE_TAC[CARD_NOT_LE, NOT_LESS_EQUAL] THEN REWRITE_TAC[lt_c, LT_LE] THEN
+  REWRITE_TAC[NOT_LESS_EQUAL] THEN REWRITE_TAC[Once lt_c, LT_LE] THEN
   ASM_SIMP_TAC std_ss [CARD_LE_CARD_IMP] THEN
   MATCH_MP_TAC(TAUT `(c ==> a ==> b) ==> a /\ ~b ==> ~c`) THEN
   DISCH_TAC THEN GEN_REWR_TAC LAND_CONV [CARD_LE_EQ_SUBSET] THEN
@@ -768,7 +763,7 @@ val CARD_EQ_CARD = store_thm ("CARD_EQ_CARD",
 val CARD_LT_CARD = store_thm ("CARD_LT_CARD",
  ``!s:'a->bool t:'b->bool.
         FINITE s /\ FINITE t ==> (s <_c t <=> CARD s < CARD t)``,
-  SIMP_TAC std_ss [CARD_LE_CARD, GSYM NOT_LESS_EQUAL, GSYM CARD_NOT_LE]);
+  SIMP_TAC std_ss [CARD_LE_CARD, GSYM NOT_LESS_EQUAL]);
 
 val CARD_HAS_SIZE_CONG = store_thm ("CARD_HAS_SIZE_CONG",
  ``!s:'a->bool t:'b->bool n. s HAS_SIZE n /\ s =_c t ==> t HAS_SIZE n``,
@@ -802,8 +797,23 @@ val _ = set_fixity "*_c" (Infix(NONASSOC, 450));
 val add_c = new_definition ("add_c",
   ``s +_c t = {INL x | x IN s} UNION {INR y | y IN t}``);
 
-val mul_c = new_definition ("mul_c",
-  ``s *_c t = {(x,y) | x IN s /\ y IN t}``);
+val _ = overload_on ("+", ``$+_c``);
+
+val _ = overload_on ("*_c", ``$CROSS``); (* defined in pred_setTheory *)
+val _ = Unicode.unicode_version {tmnm = "*_c", u = UTF8.chr 0xD7};
+val _ = TeX_notation {hol = "*_c", TeX = ("\\ensuremath{\\times}", 1)};
+
+val mul_c = store_thm ("mul_c",
+  ``!s t. s *_c t = {(x,y) | x IN s /\ y IN t}``,
+    NTAC 2 GEN_TAC
+ >> REWRITE_TAC [CROSS_DEF, EXTENSION, GSPECIFICATION]
+ >> GEN_TAC >> BETA_TAC
+ >> REWRITE_TAC [PAIR_EQ]
+ >> EQ_TAC >> STRIP_TAC
+ >| [ (* goal 1 (of 2) *)
+      Q.EXISTS_TAC `(FST x, SND x)` >> RW_TAC std_ss [],
+      (* goal 2 (of 2) *)
+      Cases_on `x'` >> fs [] ]);
 
 (* ------------------------------------------------------------------------- *)
 (* Congruence properties for the arithmetic operators.                       *)
@@ -1046,7 +1056,7 @@ val CARD_DISJOINT_UNION = store_thm ("CARD_DISJOINT_UNION",
 (* The key to arithmetic on infinite cardinals: k^2 = k.                     *)
 (* ------------------------------------------------------------------------- *)
 
-val lemma = store_thm ("lemma",
+val lemma = prove (
    ``INFINITE(s:'a->bool) /\ s SUBSET k /\
      (!x y. R(x,y) ==> x IN (s *_c s) /\ y IN s) /\
      (!x. x IN (s *_c s) ==> ?!y. y IN s /\ R(x,y)) /\
@@ -1130,7 +1140,7 @@ val CARD_SQUARE_INFINITE = store_thm ("CARD_SQUARE_INFINITE",
     DISCH_THEN(MP_TAC o SPEC ``s:('a#'a)#'a->bool``) THEN
     ASM_REWRITE_TAC[GSYM MONO_NOT_EQ] THEN
     MATCH_MP_TAC(ONCE_REWRITE_RULE[TAUT `a /\ b ==> c <=> b ==> a ==> c`]
-                      FINITE_SUBSET) THEN
+                      SUBSET_FINITE_I) THEN
     ONCE_REWRITE_TAC [METIS [SPECIFICATION]
        ``BIGUNION c ((x1,y1),z) = ((x1,y1),z) IN BIGUNION c``] THEN
     SIMP_TAC std_ss [SUBSET_DEF, GSPECIFICATION, BIGUNION] THEN ASM_MESON_TAC[IN_DEF],
@@ -1356,15 +1366,18 @@ val CARD_ADD_ABSORB = store_thm ("CARD_ADD_ABSORB",
 val CARD_ADD2_ABSORB_LT = store_thm ("CARD_ADD2_ABSORB_LT",
  ``!s:'a->bool t:'b->bool u:'c->bool.
         INFINITE u /\ s <_c u /\ t <_c u ==> (s +_c t) <_c u``,
-  REPEAT STRIP_TAC THEN
+  REPEAT GEN_TAC THEN
+  STRIP_TAC THEN
   ASM_CASES_TAC ``FINITE((s:'a->bool) +_c (t:'b->bool))`` THEN
   ASM_SIMP_TAC std_ss [CARD_LT_FINITE_INFINITE] THEN
   DISJ_CASES_TAC(ISPECL [``s:'a->bool``, ``t:'b->bool``] CARD_LE_TOTAL) THENL
-   [ASM_CASES_TAC ``FINITE(t:'b->bool)`` THENL
+   [(* goal 1 (of 2) *)
+    ASM_CASES_TAC ``FINITE(t:'b->bool)`` THENL
      [ASM_MESON_TAC[CARD_LE_FINITE, CARD_ADD_FINITE],
       KNOW_TAC ``(s +_c t) <=_c (t:'b->bool) /\
                  (t:'b->bool) <_c u`` THENL
       [ALL_TAC, METIS_TAC [CARD_LET_TRANS]]],
+    (* goal 2 (of 2) *)
     ASM_CASES_TAC ``FINITE(s:'a->bool)`` THENL
      [ASM_MESON_TAC[CARD_LE_FINITE, CARD_ADD_FINITE],
       KNOW_TAC ``(s +_c t) <=_c (s:'a->bool) /\
@@ -1377,7 +1390,8 @@ val CARD_ADD2_ABSORB_LT = store_thm ("CARD_ADD2_ABSORB_LT",
 val CARD_LT_ADD = store_thm ("CARD_LT_ADD",
  ``!s:'a->bool s':'b->bool t:'c->bool t':'d->bool.
         s <_c s' /\ t <_c t' ==> (s +_c t) <_c (s' +_c t')``,
-  REPEAT STRIP_TAC THEN
+  REPEAT GEN_TAC THEN
+  STRIP_TAC THEN
   ASM_CASES_TAC ``FINITE((s':'b->bool) +_c (t':'d->bool))`` THENL
    [FIRST_X_ASSUM(STRIP_ASSUME_TAC o REWRITE_RULE
       [CARD_ADD_FINITE_EQ]) THEN
@@ -1425,7 +1439,7 @@ val CARD_MUL_LT_INFINITE = store_thm ("CARD_MUL_LT_INFINITE",
 
 val CANTOR_THM = store_thm ("CANTOR_THM",
  ``!s:'a->bool. s <_c {t | t SUBSET s}``,
-  GEN_TAC THEN REWRITE_TAC[lt_c] THEN CONJ_TAC THENL
+  GEN_TAC THEN ONCE_REWRITE_TAC [lt_c] THEN CONJ_TAC THENL
    [REWRITE_TAC[le_c] THEN EXISTS_TAC ``(=):'a->'a->bool`` THEN
     SIMP_TAC std_ss [FUN_EQ_THM] THEN 
     SIMP_TAC std_ss [GSPECIFICATION,  SUBSET_DEF, IN_DEF],
@@ -1439,7 +1453,11 @@ val CANTOR_THM_UNIV = store_thm ("CANTOR_THM_UNIV",
   MP_TAC(ISPEC ``UNIV:'a->bool`` CANTOR_THM) THEN
   MATCH_MP_TAC EQ_IMPLIES THEN AP_TERM_TAC THEN
   SIMP_TAC std_ss [EXTENSION, SUBSET_DEF, IN_UNIV, GSPECIFICATION] THEN
-  METIS_TAC []);
+  SUFF_TAC ``{t | T} = (UNIV:('a->bool)->bool)``
+  THEN1 ( DISCH_TAC THEN ASM_REWRITE_TAC [] ) THEN
+  ONCE_REWRITE_TAC [GSYM EQ_UNIV] THEN
+  RW_TAC std_ss [GSPECIFICATION]);
+
 
 (* ------------------------------------------------------------------------- *)
 (* Lemmas about countability.                                                *)
@@ -1454,8 +1472,10 @@ val COUNTABLE_ALT = store_thm ("COUNTABLE_ALT",
   REWRITE_TAC[COUNTABLE, ge_c]);
 
 val COUNTABLE_CASES = store_thm ("COUNTABLE_CASES",
- ``!s. COUNTABLE s <=> FINITE s \/ s =_c univ(:num)``,
-  REWRITE_TAC[COUNTABLE_ALT, FINITE_CARD_LT, CARD_LE_LT]);
+  ``!s. COUNTABLE s <=> FINITE s \/ s =_c univ(:num)``,
+    GEN_TAC
+ >> ONCE_REWRITE_TAC[COUNTABLE_ALT, FINITE_CARD_LT]
+ >> METIS_TAC [CARD_LE_LT]);
 
 val CARD_LE_COUNTABLE = store_thm ("CARD_LE_COUNTABLE",
  ``!s:'a->bool t:'a->bool. COUNTABLE t /\ s <=_c t ==> COUNTABLE s``,
@@ -1489,7 +1509,7 @@ val COUNTABLE_RESTRICT = store_thm ("COUNTABLE_RESTRICT",
 
 val FINITE_IMP_COUNTABLE = store_thm ("FINITE_IMP_COUNTABLE",
  ``!s. FINITE s ==> COUNTABLE s``,
-  SIMP_TAC std_ss [FINITE_CARD_LT, lt_c, COUNTABLE, ge_c]);
+  SIMP_TAC std_ss [FINITE_CARD_LT, Once lt_c, COUNTABLE, ge_c]);
 
 val COUNTABLE_IMAGE = store_thm ("COUNTABLE_IMAGE",
  ``!f:'a->'b s. COUNTABLE s ==> COUNTABLE (IMAGE f s)``,
@@ -1582,9 +1602,14 @@ val COUNTABLE_DIFF_FINITE = store_thm ("COUNTABLE_DIFF_FINITE",
            COUNTABLE_DELETE]);
 
 val COUNTABLE_CROSS = store_thm ("COUNTABLE_CROSS",
- ``!s t. COUNTABLE s /\ COUNTABLE t ==> COUNTABLE(s CROSS t)``,
-  SIMP_TAC std_ss [COUNTABLE, ge_c, CROSS_DEF, GSYM mul_c, LAMBDA_PROD] THEN
-  SIMP_TAC std_ss [CARD_MUL2_ABSORB_LE, num_INFINITE]);
+  ``!s t. COUNTABLE s /\ COUNTABLE t ==> COUNTABLE(s CROSS t)``,
+    rpt GEN_TAC
+ >> REWRITE_TAC [COUNTABLE, ge_c]
+ >> STRIP_TAC
+ >> MATCH_MP_TAC (Q.SPEC `UNIV`
+                   (INST_TYPE [``:'c`` |-> ``:num``]
+                     (ISPECL [``s :'a set``, ``t :'b set``] CARD_MUL2_ABSORB_LE)))
+ >> ASM_REWRITE_TAC [num_INFINITE]);
 
 val COUNTABLE_AS_IMAGE_SUBSET = store_thm ("COUNTABLE_AS_IMAGE_SUBSET",
  ``!s. COUNTABLE s ==> ?f. s SUBSET (IMAGE f univ(:num))``,
@@ -1665,7 +1690,7 @@ val COUNTABLE_PRODUCT_DEPENDENT = store_thm ("COUNTABLE_PRODUCT_DEPENDENT",
 (* any dependence on the theories of analysis.                               *)
 (* ------------------------------------------------------------------------- *)
 
-val lemma = store_thm ("lemma",
+val lemma = prove (
    ``!s m n. sum (s INTER (m..n)) (\i. inv(&3 pow i)) < &3 / &2 / &3 pow m``,
     REPEAT GEN_TAC THEN MATCH_MP_TAC REAL_LET_TRANS THEN
     EXISTS_TAC ``sum (m..n) (\i. inv(&3 pow i))`` THEN CONJ_TAC THENL
@@ -1710,9 +1735,9 @@ val lemma = store_thm ("lemma",
           [MATCH_MP_TAC REAL_POW_LT THEN REAL_ARITH_TAC, DISCH_TAC] THEN
        ASM_SIMP_TAC real_ss [REAL_LT_RDIV_EQ, REAL_MUL_LINV, REAL_LT_IMP_NE])]);
 
-val CARD_EQ_REAL = store_thm ("CARD_EQ_REAL",
- ``univ(:real) =_c univ(:num->bool)``,
-  REWRITE_TAC[GSYM CARD_LE_ANTISYM] THEN CONJ_TAC THENL
+val CARD_EQ_REAL = store_thm
+  ("CARD_EQ_REAL", ``univ(:real) =_c univ(:num->bool)``,
+  REWRITE_TAC [GSYM CARD_LE_ANTISYM] THEN CONJ_TAC THENL
   [ (* goal 1 (of 2) *)
     KNOW_TAC ``univ(:real) <=_c (univ(:num) *_c univ(:num->bool)) /\
                (univ(:num) *_c univ(:num->bool)) <=_c univ(:num -> bool)`` THENL
@@ -1743,7 +1768,7 @@ val CARD_EQ_REAL = store_thm ("CARD_EQ_REAL",
     SIMP_TAC std_ss [GSYM FORALL_PROD, INJECTIVE_LEFT_INVERSE] THEN
     SIMP_TAC std_ss [LEFT_IMP_EXISTS_THM]
 
-THEN
+    THEN
     MAP_EVERY X_GEN_TAC [``Pair:num#num->num``, ``Unpair:num->num#num``] THEN
     DISCH_TAC THEN
     EXISTS_TAC ``\x:real n:num. &(FST(Unpair n)) * x <= &(SND(Unpair n))`` THEN
@@ -1756,7 +1781,7 @@ THEN
       (x = y)) x y`` THENL
     [ALL_TAC, METIS_TAC []]
 
-THEN
+    THEN
     MATCH_MP_TAC REAL_WLOG_LT THEN SIMP_TAC std_ss [GSPECIFICATION, FUN_EQ_THM] THEN
     CONJ_TAC THENL [SIMP_TAC std_ss [EQ_SYM_EQ, CONJ_ACI], ALL_TAC] THEN
     MAP_EVERY X_GEN_TAC [``x:real``, ``y:real``] THEN REPEAT STRIP_TAC THEN
@@ -1779,7 +1804,7 @@ THEN
     ASM_SIMP_TAC std_ss [REAL_LE_MUL, REAL_POS,
       REAL_ARITH ``x:real < &0 <=> ~(&0 <= x)``]
 
-THEN
+    THEN
     X_GEN_TAC ``q:num`` THEN REWRITE_TAC[GSYM REAL_OF_NUM_SUC] THEN
     DISCH_THEN(K ALL_TAC) THEN STRIP_TAC THEN
     FIRST_X_ASSUM(MP_TAC o SPEC ``q:num``) THEN
@@ -1872,7 +1897,7 @@ THEN
 
 val UNCOUNTABLE_REAL = store_thm ("UNCOUNTABLE_REAL",
  ``~COUNTABLE univ(:real)``,
-  REWRITE_TAC[COUNTABLE, CARD_NOT_LE, ge_c] THEN
+  REWRITE_TAC[COUNTABLE, ge_c] THEN
   KNOW_TAC ``univ(:num) <_c univ(:num->bool) /\
              univ(:num->bool) <=_c univ(:real)`` THENL
   [ALL_TAC, METIS_TAC [CARD_LTE_TRANS]] THEN

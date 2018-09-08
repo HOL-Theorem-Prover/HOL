@@ -67,6 +67,7 @@ val ADD = new_recursive_definition
 
 val _ = set_fixity "+" (Infixl 500);
 val _ = ot "+"
+val _ = TeX_notation { hol = "+", TeX = ("\\ensuremath{+}", 1) };
 
 (*---------------------------------------------------------------------------*
  * Define NUMERAL, a tag put on numeric literals, and the basic constructors *

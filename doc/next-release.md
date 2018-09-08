@@ -26,15 +26,21 @@ Bugs fixed:
 New theories:
 -------------
 
-*   HOL4 now has a rather complete theory of Elementary Topology in Euclidean
-    Space (`rich_topologyTheory`), ported by Muhammad Qasim and Osman
-    Hasan from HOL light (up to 2015). The part of General Topology
+*   `rich_topologyTheory`: a rather complete theory of Elementary
+    Topology in Euclidean Space, ported by Muhammad Qasim and Osman
+    Hasan from HOL-light (up to 2015). The part of General Topology
     (independent of `realTheory`) is now available at
-    `topologyTheory`; the old `topologyTheory` is renamed to `metricTheory`.
+    `topologyTheory`; the old `topologyTheory` is renamed to
+    `metricTheory`.
 
     There is a minor backwards-incompatibility: old proof scripts using
     the metric-related results in previous `topologyTheory` should now
     open `metricTheory` instead. (Thanks to Chun Tian for this work.)
+
+*   `rich_cardinalTheory`: a port of HOL-light's `Library/card.ml` (by
+    Muhammad Qasim and Osman Hasan) as extensions of HOL4's existing
+    `cardinalTheory` with more operators and cardinality results on
+    real sets.
 
 New tools:
 ----------
