@@ -964,7 +964,7 @@ val CHOOSE_SUBSET = store_thm ("CHOOSE_SUBSET",
   MESON_TAC[CHOOSE_SUBSET_STRONG]);
 
 (* ------------------------------------------------------------------------- *)
-(* Cardinal comparisons (more theory in real_cardinalTheory                  *)
+(* Cardinal comparisons (more theory in rich_cardinalTheory                  *)
 (* ------------------------------------------------------------------------- *)
 
 val _ = set_fixity "<=_c" (Infix(NONASSOC, 450)); (* for cardleq *)

@@ -903,7 +903,8 @@ val UNION_LE_ADD_C = store_thm ("UNION_LE_ADD_C",
    DISJ2_TAC THEN EXISTS_TAC ``x:'a`` THEN ASM_REWRITE_TAC [] THEN BETA_TAC THEN
    COND_CASES_TAC THENL [METIS_TAC [OUTR], METIS_TAC []]]);
 
-val CARD_UNION_ = store_thm ("CARD_UNOIN_",
+val CARD_DISJOINT_UNION = store_thm
+  ("CARD_DISJOINT_UNION",
   ``!s t.
          FINITE s /\ FINITE t /\ (s INTER t = {})
          ==> (CARD (s UNION t) = CARD s + CARD t)``,
@@ -913,7 +914,7 @@ val CARD_UNION_ = store_thm ("CARD_UNOIN_",
 val CARD_ADD_C = store_thm ("CARD_ADD_C",
  ``!s t. FINITE s /\ FINITE t ==> (CARD(s +_c t) = CARD s + CARD t)``,
   REPEAT STRIP_TAC THEN REWRITE_TAC[add_c] THEN
-  W(MP_TAC o PART_MATCH (lhs o rand) CARD_UNION_ o lhand o snd) THEN
+  W(MP_TAC o PART_MATCH (lhs o rand) CARD_DISJOINT_UNION o lhand o snd) THEN
   ASM_SIMP_TAC real_ss [GSYM IMAGE_DEF, IMAGE_FINITE] THEN
   REWRITE_TAC[SET_RULE ``(IMAGE f s INTER IMAGE g t = {}) <=>
                         !x y. x IN s /\ y IN t ==> ~(f x = g y)``] THEN
