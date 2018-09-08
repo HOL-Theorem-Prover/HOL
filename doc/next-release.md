@@ -26,6 +26,16 @@ Bugs fixed:
 New theories:
 -------------
 
+*   HOL4 now has a rather complete theory of Elementary Topology in Euclidean
+    Space (`rich_topologyTheory`), ported by Muhammad Qasim and Osman
+    Hasan from HOL light (up to 2015). The part of General Topology
+    (independent of `realTheory`) is now available at
+    `topologyTheory`; the old `topologyTheory` is renamed to `metricTheory`.
+
+    There is a minor backwards-incompatibility: old proof scripts using
+    the metric-related results in previous `topologyTheory` should now
+    open `metricTheory` instead. (Thanks to Chun Tian for this work.)
+
 New tools:
 ----------
 
@@ -39,6 +49,8 @@ Incompatibilities:
     This means that script files which have a tactic failure occur will cause the building of the corresponding theory to fail, rather than having the build continue with the theorem “cheated”.
     We think this will be less confusing for new users.
     Experts who *do* want to have script files continue past such errors can use the `--noqof` option to enable the old behaviour.
+
+*   When running with Poly/ML, we now require at least version 5.7.0.
 
 * * * * *
 

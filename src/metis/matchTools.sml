@@ -10,8 +10,6 @@ struct
 
 open HolKernel Parse boolLib;
 
-infix THENR ## |->;
-
 type tySubst = (hol_type, hol_type) subst;
 type Subst   = (term, term) subst * tySubst;
 
@@ -214,9 +212,7 @@ fun vunifyl (tmvarP, tyvarP) =
 fun vunify varP = vunifyl varP ([], []) o chain;
 
 local
-  val uniq = ref 0;
-  fun new_num () = let val n = !uniq val () = uniq := (n + 1) in n end;
-  fun new_name () = "XXfrozenXX" ^ int_to_string (new_num ())
+  fun new_name () = "XXfrozenXX" ^ int_to_string (mlibUseful.new_int ())
   fun correspond tmvarP = map (fn n => (n, new_name ())) o vfree_names tmvarP;
   fun revc c = map (fn (a, b) => (b, a)) c;
   fun csub c tm =

@@ -5,3 +5,7 @@ UOFILES = $(patsubst %.sml,%.uo,$(wildcard *.sml))
 all: $(UOFILES)
 
 MLSYSPortable.uo: Susp.ui
+
+Multithreading.uo: ConcIsaLib.uo
+
+ConcIsaLib.uo: Exn.uo Thread_Attributes.uo Thread_Data.uo

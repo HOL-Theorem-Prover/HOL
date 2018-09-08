@@ -88,7 +88,7 @@ fun new_inference_meter () =
     val infs = ref 0
     fun read () = !infs
   in
-    (read, fn n => infs := !infs + n)
+    (read, fn n => infs := !infs + n) (* OK *)
   end;
 
 fun new_meter lim : meter =

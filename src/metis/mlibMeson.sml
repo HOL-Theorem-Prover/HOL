@@ -360,7 +360,7 @@ fun cache_cont c ({offset, ...} : state) =
       in
         if List.exists p (!mem) then raise Error "cache_cut: repetition"
         else (
-          mem := (n, l) :: (!mem);
+          mem := (n, l) :: (!mem); (* OK *)
           update_env (K (mlibSubst.from_maplets l)) s
         )
       end
@@ -380,7 +380,7 @@ fun grab_unit units (s as {proof = th :: _, ...} : state) =
   let
     val u = !units
     val th = U.demod u th
-    val () = units := U.add th u
+    val () = units := U.add th u (* OK *)
   in
     update_proof (cons th o tl) s
   end
@@ -492,7 +492,7 @@ fun meson_expand {parm : parameters, rules, cut, meter, saturated} =
         val depth = depth - #asmn r
         val () =
           if 0 <= depth then ()
-          else (saturated := false; raise Error "meson: too deep")
+          else (saturated := false; raise Error "meson: too deep") (* OK *)
         val (r',offset) = freshen_rule r offset
         val (th,asms,env) = next_state state_simplify env r' g
         val asms = if 2 <= sort_literals then sort_lits asms else asms
@@ -578,7 +578,8 @@ fun meson' (name,parm) =
         "--#rules=" ^ int_to_string (num_rules ruls) ^
         "--#initial_rules=" ^ int_to_string (num_initial_rules ruls) ^ ".\n")
      val system as {saturated = b, ...} = mk_system parm units slice ruls
-     fun d n = if !b then S.NIL else (b := true; S.CONS (n, fn () => d (n + 1)))
+     fun d n = if !b then S.NIL
+               else (b := true; S.CONS (n, fn () => d (n + 1))) (* OK *)
      fun f q d =
        (chatting 1 andalso chat ("-" ^ int_to_string d);
         raw_meson system q d)
@@ -606,7 +607,8 @@ fun delta' (name,parm) =
         "--#delta_goals=" ^ int_to_string (length dgoals) ^ ".\n")
      val system as {saturated = b, ...} = mk_system parm units slice ruls
      val delta_goals = S.from_list dgoals
-     fun d n = if !b then S.NIL else (b := true; S.CONS (n, fn () => d (n + 1)))
+     fun d n = if !b then S.NIL
+               else (b := true; S.CONS (n, fn () => d (n + 1))) (* OK *)
      fun f d g =
        (chatting 1 andalso chat "+";
         S.map (K NONE) (raw_meson system [g] d))

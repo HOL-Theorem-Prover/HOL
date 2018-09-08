@@ -40,7 +40,7 @@ sig
   val clean_goaltac_cache : unit -> unit 
     (* saving results of the next functions in goaltac_cache *)
   val hh_goal           : goal -> tactic
-  val hh_fork           : goal -> Thread.Thread.thread
+  val hh_fork           : goal -> Thread.thread
   val holyhammer        : term -> tactic
   val hh                : tactic
   

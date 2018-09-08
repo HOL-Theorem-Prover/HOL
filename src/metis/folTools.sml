@@ -194,10 +194,12 @@ type fol_problem = {thms : thm1 list, hyps : thm1 list, query : formula1 list};
 
 val recent_fol_problems : fol_problem list option ref = ref NONE;
 
+(* no code actually sets this reference to SOME, but it may of course be useful
+   for debugging *)
 fun save_fol_problem (t, h, q) =
   case !recent_fol_problems of NONE => ()
   | SOME l
-    => recent_fol_problems := SOME ({thms = t, hyps = h, query = q} :: l);
+    => recent_fol_problems := SOME ({thms = t, hyps = h, query = q} :: l);(*OK*)
 
 (* ------------------------------------------------------------------------- *)
 (* Logic maps manage the interface between HOL and first-order logic.        *)

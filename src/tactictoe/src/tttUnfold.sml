@@ -1168,12 +1168,12 @@ fun split_thyl n thyl =
 fun parallel_thy f n thyl =
   let
     val thyll = split_thyl n thyl
-    fun rec_fork x = Thread.Thread.fork (fn () => app f x, [])
+    fun rec_fork x = Thread.fork (fn () => app f x, [])
     val threadl = map rec_fork thyll
     fun loop () =
       (
       OS.Process.sleep (Time.fromReal 1.0);
-      if exists Thread.Thread.isActive threadl
+      if exists Thread.isActive threadl
       then loop ()
       else print_endline "Parallel call ended"
       )
@@ -1192,12 +1192,12 @@ fun ttt_record_parallel n =
   let
     val thyl = ttt_rewrite ()
     val thyll = split_thyl n thyl
-    fun rec_fork thyl = Thread.Thread.fork (fn () => ttt_record_thyl thyl, [])
+    fun rec_fork thyl = Thread.fork (fn () => ttt_record_thyl thyl, [])
     val threadl = map rec_fork thyll
     fun loop () =
       (
       OS.Process.sleep (Time.fromReal 1.0);
-      if exists Thread.Thread.isActive threadl
+      if exists Thread.isActive threadl
       then loop ()
       else print_endline "Recording is successful"
       )

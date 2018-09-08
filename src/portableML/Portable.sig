@@ -80,6 +80,8 @@ sig
 
   val for : int -> int -> (int -> 'a) -> 'a list
   val for_se : int -> int -> (int -> unit) -> unit
+  val make_counter : {init:int,inc:int} -> unit -> int
+  val syncref : 'a -> {get:unit -> 'a, upd:('a -> 'b * 'a) -> 'b}
 
   val assoc1 : ''a -> (''a * 'b) list -> (''a * 'b) option
   val assoc2 : ''a -> ('b * ''a) list -> ('b * ''a) option
@@ -232,4 +234,6 @@ sig
     val delay : (unit -> 'a) -> 'a susp
     val force : 'a susp -> 'a
   end
+
+  val reraise : exn -> 'a
 end

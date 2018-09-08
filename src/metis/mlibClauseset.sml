@@ -600,7 +600,7 @@ val pp_clauseset = pp_bracket "C<" ">" (pp_map ssize pp_int);
 val size = ssize;
 
 (* Quick testing
-quotation := true;
+quotation := true; (* OK *)
 installPP pp_formula;
 installPP pp_term;
 installPP pp_subst;

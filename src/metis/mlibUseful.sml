@@ -683,13 +683,12 @@ fun tree_partial_foldl f_b f_l =
 fun memoize f = let val s = Susp.delay f in fn () => Susp.force s end;
 
 local
-  val generator = ref 0
+  val generator = Portable.make_counter{inc=1,init=0}
 in
-  fun new_int () = let val n = !generator val () = generator := n + 1 in n end;
+  fun new_int () = generator()
 
   fun new_ints 0 = []
-    | new_ints k =
-    let val n = !generator val () = generator := n + k in interval n k end;
+    | new_ints k = generator() :: new_ints (k - 1)
 end;
 
 local
@@ -708,22 +707,6 @@ fun with_flag (r,update) f x =
   in
     y
   end;
-
-fun cached cmp f =
-    let
-      val cache = ref (Binarymap.mkDict cmp)
-    in
-      fn x =>
-      case Binarymap.peek (!cache,x) of
-        SOME y => y
-      | NONE =>
-        let
-          val y = f x
-          val () = cache := Binarymap.insert (!cache,x,y)
-        in
-          y
-        end
-    end;
 
 (* ------------------------------------------------------------------------- *)
 (* Environment.                                                              *)

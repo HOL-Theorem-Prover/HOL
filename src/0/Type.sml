@@ -300,10 +300,10 @@ fun compare (Tyv s1, Tyv s2) = String.compare (s1,s2)
  ---------------------------------------------------------------------------*)
 
 local val gen_tyvar_prefix = "%%gen_tyvar%%"
-      fun num2name i = gen_tyvar_prefix^Lib.int_to_string i
-      val nameStrm   = Lib.mk_istream (fn x => x+1) 0 num2name
+      fun num2name i = gen_tyvar_prefix ^ Int.toString i
+      val nameStrm   = Portable.make_counter{inc=1,init=0}
 in
-fun gen_tyvar () = Tyv(state(next nameStrm))
+fun gen_tyvar () = Tyv(num2name(nameStrm()))
 
 fun is_gen_tyvar (Tyv name) = String.isPrefix gen_tyvar_prefix name
   | is_gen_tyvar _ = false;
