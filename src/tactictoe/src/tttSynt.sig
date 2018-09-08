@@ -11,37 +11,21 @@ sig
   | Pcomb  of pattern * pattern
   | Plamb  of pattern * pattern
   
-  (* global *)
-  val freq_limit : int ref
+  (* globals *)
+  val conjecture_limit : int ref
+  val patsub_flag : bool ref  
+  val concept_threshold : int ref
+  val concept_flag : bool ref  
 
   (* debugging *)
-  val ttt_synt_dir : string
-  val log_synt     : string -> unit 
+  val ttt_synt_dir  : string ref
+  val log_synt      : string -> unit 
   val log_synt_file : string -> string -> unit
-  val msg_synt     : 'a list -> string -> unit 
-  
-  (* concept *)
-  val concept_threshold : int ref
-  val concept_flag : bool ref
-  val conceptualize :
-    (term, int) Redblackmap.dict ->
-    (term, term) Redblackmap.dict -> term -> term list
-
-  (* pattern *)
-  val patternify : term -> pattern * int list
-  val p_compare : pattern * pattern -> order
-  val regroup : term list -> (pattern, int list list) Redblackmap.dict
-  val gen_psubst : 
-    (pattern, int list list) Redblackmap.dict -> (psubst * int) list
-  val norm_psubst : psubst -> psubst
-  
-  (* substitution *)
-  val read_subst : psubst -> tsubst
+  val msg_synt      : 'a list -> string -> unit
+  val time_synt     : string -> ('a -> 'b) -> 'a -> 'b
+  val writel_synt   : string -> string list -> unit
   
   (* conjecturing *)
-  val gen_cjl : term list -> 
-    term list *
-    ((term * term) list, term list * real) Redblackmap.dict *
-    (term, ((term * term) list * term) list) Redblackmap.dict
+  val conjecture : term list -> term list
  
 end

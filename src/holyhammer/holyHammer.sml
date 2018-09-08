@@ -226,25 +226,6 @@ fun launch_atp_mute dir atp t =
     r
   end
 
-fun dir_of_pid i = provbin_dir ^ "/parallel/" ^ int_to_string i
-
-fun launch_eprover_parallel ncores pidl t =
-  let
-    val dirl = map dir_of_pid pidl
-    val file = provbin_dir ^ "/parallel_file"
-    val _ = writel file dirl
-    val cmd = 
-      "cat " ^ file ^ " | parallel -j " ^ int_to_string ncores ^ 
-      " sh eprover.sh " ^ 
-      int_to_string t ^ " {} "
-    val _ = cmd_in_dir provbin_dir cmd
-    fun f pid = 
-      (pid,
-       get_lemmas (dir_of_pid pid ^ "/status", dir_of_pid pid ^ "/out"))
-  in  
-    map f pidl
-  end
-
 fun launch_atp dir atp t =
   let 
     val cmd = "sh " ^ name_of atp ^ ".sh " ^ int_to_string t ^ " " ^ 
@@ -278,7 +259,7 @@ fun translate_write_atp premises cj atp =
   let     
     val new_premises = first_n (npremises_of atp) premises
     val thml = extra_premises @ thml_of_namel new_premises           
-    val pb = hh_logt_eval "translate_pb" (translate_pb true thml) cj
+    val pb = hh_logt_eval "translate_pb" (translate_pb thml) cj
     val (axl,new_cj) = name_pb pb
   in
     write_tptp (provdir_of atp) axl new_cj
@@ -374,25 +355,43 @@ fun metis_auto t n goal =
   end
  
 (*----------------------------------------------------------------------------
-   Writing problem for tttSyntEval.sml
+   For tttSyntEval.sml
  -----------------------------------------------------------------------------*)
 
-fun trans_write_tmlcj pid (tml,cj) =
+fun export_pb dir pid (tml,cj) =
   let
     val tml1 = number_list 0 tml
     val tml2 = map (fn (i,x) => ("noTheory." ^ int_to_string i, x)) tml1 
     val thml0 = map (fn (s,x) => (s, mk_thm ([],x))) tml2  
     val thml1 = extra_premises @ thml0
-    val pb = translate_pb true thml1 cj
+    val pb = translate_pb thml1 cj
     val (axl,new_cj) = name_pb pb
-    val dir = dir_of_pid pid
   in
-    write_tptp dir axl new_cj;
+    write_tptp (dir ^ "/" ^ int_to_string pid) axl new_cj;
     (pid, (cj, dnew String.compare tml2))
+  end
+
+fun eprover_parallel dir ncores pidl t =
+  let
+    fun dir_of_pid i = dir ^ "/" ^ int_to_string i
+    val dirl = map dir_of_pid pidl
+    val file = provbin_dir ^ "/parallel_files"
+    val _ = writel file dirl
+    val cmd = 
+      "cat " ^ file ^ " | parallel -j " ^ int_to_string ncores ^ 
+      " sh eprover.sh " ^ 
+      int_to_string t ^ " {} "
+    val _ = cmd_in_dir provbin_dir cmd
+    fun f pid = 
+      (pid,
+       get_lemmas (dir_of_pid pid ^ "/status", dir_of_pid pid ^ "/out"))
+  in  
+    map f pidl
   end
 
 (*----------------------------------------------------------------------------
    Asynchronous calls to holyhammer in tactictoe.
+   To be updated.
  -----------------------------------------------------------------------------*)
 
 fun hh_stac pids (symweight,feav,revdict) t goal =
@@ -402,7 +401,7 @@ fun hh_stac pids (symweight,feav,revdict) t goal =
       thmknn_wdep (symweight,feav,revdict) 128 (fea_of_goal goal)
     val provdir = pathl [provbin_dir,pids]
     val thml = extra_premises @ thml_of_namel premises
-    val pb = translate_pb false thml cj
+    val pb = translate_pb thml cj
     val (axl,new_cj) = name_pb pb
     val _ = write_tptp provdir axl new_cj
     val olemmas = launch_atp_mute provdir Eprover t

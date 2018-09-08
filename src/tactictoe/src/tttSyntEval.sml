@@ -8,13 +8,20 @@
 structure tttSyntEval :> tttSyntEval =
 struct
 
-open HolKernel boolLib Abbrev tttTools tttSynt tttPredict tttExec
+open HolKernel boolLib Abbrev tttTools tttSynt tttPredict 
+  tttExec tttTermData
 
 val ERR = mk_HOL_ERR "tttSyntEval"
 
 type idict_t = (int * (term * (string, term) Redblackmap.dict)) 
 
-val parallel_dir = HOLDIR ^ "/src/holyhammer/provers/parallel"
+val provers_dir = HOLDIR ^ "/src/holyhammer/provers"
+
+(* --------------------------------------------------------------------------
+   Globals
+   -------------------------------------------------------------------------- *)
+
+val nb_premises = ref 128
 
 (* --------------------------------------------------------------------------
    Features of term
@@ -68,7 +75,7 @@ fun init_dicts_thy state (nthy,thy) =
 
 fun init_dicts n =
   let
-    val _ = clean_dir ttt_synt_dir
+    val _ = clean_dir (!ttt_synt_dir)
     val order_dict = ref (dempty id_compare)
     val term_dict  = ref (dempty Term.compare)
     val role_dict  = ref (dempty Term.compare)
@@ -126,8 +133,17 @@ fun read_result pid_idict_list pid_result_list =
     map read_result_one pid_idict_list
   end
 
-fun write_result file l = 
-  let 
+fun roleterm_to_string rdict tm = 
+  (
+  case dfind tm rdict of
+    Conjecture => "Conjecture"
+  | Theorem    => "Theorem"
+  | Axiom      => "Axiom"
+  ) 
+  ^ ": " ^ term_to_string tm
+
+fun write_result rdict file l = 
+  let
     val _ = log_synt ("writing result in " ^ file)
     fun f (pid,(cj,ro)) = 
       "Pid: " ^ int_to_string pid ^ "\n" ^
@@ -135,7 +151,8 @@ fun write_result file l =
       (
       case ro of
         SOME l => 
-        "Proof:\n  " ^ String.concatWith "\n  " (map term_to_string l) ^ "\n"
+        "Proof:\n  " ^ String.concatWith "\n  "
+         (map (roleterm_to_string rdict) l) ^ "\n"
       | NONE => "Failure\n"
       )
   in
@@ -152,48 +169,40 @@ fun is_nontrivial x = case x of
    -------------------------------------------------------------------------- *) 
 
 fun prove_predict (symweight,tmfea) cj =
-  (tmknn 16 (symweight,tmfea) (fea_of_term_cached cj), cj)
+  (tmknn (!nb_premises) (symweight,tmfea) (fea_of_term_cached cj), cj)
 
-fun prove_write exportf tml cjl =
+fun prove_write pdir exportf tml cjl =
   let
-    val _ = log_synt "generating features"
-    val tmfea = assoc_fea tml
+    val tmfea = time_synt "generating features" assoc_fea tml
     val symweight = learn_tfidf tmfea
-    val _ = log_synt "predict"
-    val tmlcjl = map (prove_predict (symweight,tmfea)) cjl
-    val _ = log_synt "export"
-    fun f i x =
-      (  
-      log_synt_file "log_prove_write" 
-        ((int_to_string i) ^ " " ^ term_to_string (snd x));
-      exportf i x
-      ) 
+    val pbl = time_synt "predict" (map (prove_predict (symweight,tmfea))) cjl
   in
-    mapi f tmlcjl
+    time_synt "export" (mapi (exportf pdir)) pbl
   end
 
-fun prove_result pl0 = 
+fun prove_result rdict pl0 = 
   let 
-    val pl1 = filter (isSome o snd) pl0;
+    val pl1 = filter (isSome o snd o snd) pl0;
     val _ = msg_synt pl1 "proven conjectures";
-    val pl2 = filter (is_nontrivial o snd) pl0;
+    val pl2 = filter (is_nontrivial o snd o snd) pl0;
     val _ = msg_synt pl2 "nontrivial conjectures";
+    val _ = write_result rdict (!ttt_synt_dir ^ "/prove_nontrivial") pl2
   in
-    map (fn (a,b) => (a, valOf b)) pl2
+    map (fn (a,b) => (a, valOf b)) (map snd pl2)
   end
  
-fun prove_main ncores timelimit exportf launchf tml cjl =
+fun prove_main rdict pdir ncores timelimit exportf launchf tml cjl =
   let
-    val _ = cleanDir_rec parallel_dir
+    val _ = cleanDir_rec pdir
     val _ = msg_synt tml "terms to select from"
-    val pid_idict_list = prove_write exportf tml cjl 
+    val pid_idict_list = prove_write pdir exportf tml cjl 
     val pidl = map fst pid_idict_list
     val _    = msg_synt pidl "proving tasks"
-    val pid_result_list = launchf ncores pidl timelimit
+    val pid_result_list = time_synt "launchf" 
+      (launchf pdir ncores pidl) timelimit
     val pl0 = read_result pid_idict_list pid_result_list
-    val _ = write_result (ttt_synt_dir ^ "/proofs_prove") pl0
   in
-    prove_result (map snd pl0)
+    prove_result rdict pl0
   end
 
 (* --------------------------------------------------------------------------
@@ -208,114 +217,65 @@ fun eval_predict (odict,tdict,rdict) tm =
     val tml1 = filter is_older tml0
     val tmfea = assoc_fea tml1
     val symweight = learn_tfidf tmfea
-    val predl = tmknn 16 (symweight,tmfea) (fea_of_term_cached tm)
+    val predl = tmknn (!nb_premises) (symweight,tmfea) (fea_of_term_cached tm)
     val cjl = filter (fn x => dfind x rdict = Conjecture) predl
   in
-    if null cjl then NONE else SOME (predl,tm)
+    (* if null cjl then NONE else *) SOME (predl,tm)
   end
 
-fun eval_write dicts exportf tml =
+fun eval_write pdir dicts exportf tml =
   let
-    val _   = log_synt "predict"
-    val pbl = List.mapPartial (eval_predict dicts) tml
-    val _   = log_synt "export"
-    fun f i x =
-      (  
-      log_synt_file "log_eval_write" 
-        ((int_to_string i) ^ " " ^ term_to_string (snd x));
-      exportf i x
-      )
+    val pbl = time_synt "predict" (List.mapPartial (eval_predict dicts)) tml
   in
-    mapi exportf pbl
+    time_synt "export" (mapi (exportf pdir)) pbl
   end
 
 fun eval_result rdict el0 =
   let
-    val el1 = filter (isSome o snd) el0
+    val el1 = filter (isSome o snd o snd) el0
     val _ = msg_synt el1 "proven theorems"
-    val el2 = filter (is_nontrivial o snd) el0
+    val el2 = filter (is_nontrivial o snd o snd) el0
     val _ = msg_synt el2 "nontrivial theorems"
+    val _   = write_result rdict (!ttt_synt_dir ^ "/" ^ "eval_nontrivial") el0
     fun is_conjecture x = dfind x rdict = Conjecture
-    fun f (a,b) = (a, filter is_conjecture (valOf b))
+    fun f (i,(a,b)) = (i,(a, filter is_conjecture (valOf b)))
     val el3 = map f el2
-    val _ = msg_synt el3 "theorems proven using at least one conjecture"
+    val el4 = filter (not o null o snd o snd) el3
+    val _ = msg_synt el4 "theorems proven using at least one conjecture"
   in
-    el3
+    (map snd el4, map (fst o snd) el1)
   end
 
 fun write_usefulcj el =
   let
     val ecjl0 = List.concat (map snd el)
-    val ecjl1 = dict_sort compare_imax (dlist (count_dict (dempty Term.compare) ecjl0))
-    fun string_of_ecjl (tm,n) = int_to_string n ^ "\n" ^ term_to_string tm ^ "\n"
+    val ecjl1 = 
+      dict_sort compare_imax (dlist (count_dict (dempty Term.compare) ecjl0))
+    fun string_of_ecjl (tm,n) = 
+      int_to_string n ^ "\n" ^ term_to_string tm ^ "\n"
   in
-    writel (ttt_synt_dir ^ "/useful_conjectures") (map string_of_ecjl ecjl1)
+    writel (!ttt_synt_dir ^ "/useful_conjectures") (map string_of_ecjl ecjl1)
   end
 
-fun eval_main ncores timelimit (odict,tdict,rdict) exportf launchf =
+fun eval_main pdir ncores timelimit (odict,tdict,rdict) exportf launchf =
   let
-    val _ = cleanDir_rec parallel_dir
+    val _ = cleanDir_rec pdir
     val tml0 = dkeys tdict
     val tml1 = filter (fn x => dfind x rdict = Theorem) tml0  
     val _ = msg_synt tml1 "theorems to be proven"
-    val pid_idict_list = eval_write (odict,tdict,rdict) exportf tml1
+    val pid_idict_list = 
+      eval_write pdir (odict,tdict,rdict) exportf tml1
     val pidl = map fst pid_idict_list
-    val _ = msg_synt pidl "theorems with conjectures as predictions"
-    val pid_result_list = launchf ncores pidl timelimit
+    val pid_result_list = time_synt "launchf" 
+      (launchf pdir ncores pidl) timelimit
     val el0 = read_result pid_idict_list pid_result_list
-    val _   = write_result (ttt_synt_dir ^ "/" ^ "proofs_eval") el0
-    val el1 = eval_result rdict (map snd el0)
+    val (el1, proven) = eval_result rdict el0
+    val rate = approx 2 (int_div (length proven) (length tml1) * 100.0)
+    val _ = log_synt (Real.toString rate ^ " success rate")
+    val provendict = count_dict (dempty Term.compare) proven
+    val unproven = filter (fn x => not (dmem x provendict)) tml1
   in
-    write_usefulcj el1; el1
-  end
-
-(* --------------------------------------------------------------------------
-   Statistics
-   -------------------------------------------------------------------------- *) 
-
-fun string_of_tml tml =
-  ("  " ^ String.concatWith "\n  " (map term_to_string tml) ^ "\n")
-
-fun string_of_subst sub = 
-  let fun f (a,b) = "(" ^ term_to_string a ^ ", " ^ term_to_string b ^ ")" in
-    "[" ^ String.concatWith ", " (map f sub) ^ "]"
-  end
-
-fun write_subdict subdict =
-  let
-    val _ = 
-     log_synt ("writing subdict " ^ (int_to_string (dlength subdict)))
-    val l = dlist subdict
-    fun f (sub, (cjl,score)) = String.concatWith "\n" 
-      [
-      "Substitution:",
-      string_of_subst sub,
-      "  Score: " ^ Real.toString score,
-      "  Conjectures:",
-      string_of_tml cjl
-      ]
-  in
-    writel (ttt_synt_dir ^ "/subdict") (map f l)
-  end
-       
-fun write_origindict origindict = 
-  let
-    val _ = 
-      log_synt ("writing origindict " ^ (int_to_string (dlength origindict)))
-    val l = dlist origindict
-    fun g (sub,tm) = String.concatWith "\n  "
-      [
-      "  Substitution:",
-      string_of_subst sub,
-      "From: ",
-      term_to_string tm
-      ] 
-    fun f (cj,subtml) = String.concatWith "\n" 
-       (["Conjecture:",
-        term_to_string cj] @
-        map g subtml)  
-  in
-    writel (ttt_synt_dir ^ "/origindict") (map f l)
+    write_usefulcj el1; (el1, proven, unproven)
   end
 
 end (* struct *)
@@ -324,42 +284,95 @@ end (* struct *)
 load "tttSyntEval"; load "holyHammer";
 open tttPredict tttTools tttSynt tttSyntEval holyHammer;
 
+(* Fixed parameters *)
+val provers_dir = HOLDIR ^ "/src/holyhammer/provers"
+val pdir_eval = provers_dir ^ "/parallel_eval";
+val pdir_prove = provers_dir ^ "/parallel_prove";
+val pdir_baseline = provers_dir ^ "/parallel_baseline";
+val exportf  = export_pb;
+val launchf  = eprover_parallel;
+
 (* Parameters *)
-val ncores = 40; val timelimit = 5;
-val nthy = 1000; val ncj = 100000;
-val exportf = trans_write_tmlcj;
-val launchf = launch_eprover_parallel;
-val _ = freq_limit := 4;
+val _ = show_types := true;
+  (* conjecturing *)
+val _ = conjecture_limit := 100000;
+val _ = patsub_flag := false;
+val _ = concept_flag := false;
+val _ = concept_threshold := 4;
+val ncj_max  = 1000;
+  (* proving *)
+val nthy_max = 1000; 
+val _ = nb_premises := 128;
+val ncores    = 40;
+val timelimit = 5;
+  (* output *)
+val run_id = "baseline";
+val _ = ttt_synt_dir := tactictoe_dir ^ "/log_synt/" ^ run_id;
+val _ = mkDir_err (tactictoe_dir ^ "/log_synt");
+
 
 (* Initialization *)
-val dicts_org as (odict_org, tdict_org, rdict_org)  = init_dicts nthy;
+val dicts_org as (odict_org, tdict_org, rdict_org)  = init_dicts nthy_max;
 val tmlorg = dkeys tdict_org;
 
+(* Baseline *)
+val (eluseful, proven, unproven) = 
+  eval_main pdir_eval ncores timelimit dicts_org exportf launchf;
+val _ = export_tml (!ttt_synt_dir ^ "/proven_thms") proven;
+val _ = export_tml (!ttt_synt_dir ^ "/unproven_thms") unproven;
+val tml = import_tml (!ttt_synt_dir ^ "/proven_thms");
+
 (* Generating conjectures *)
-val (cjl0, subdict, origindict) = gen_cjl tmlorg;
-val _ = write_subdict subdict;
-val _ = write_origindict origindict;
-val cjl1 = first_n ncj cjl0;
+val cjl0 = conjecture tmlorg;
+
+val cjl1 = first_n ncj_max cjl0;
 
 (* Proving conjectures *)
-val pl = prove_main ncores timelimit exportf launchf tmlorg cjl1;
+val pl = prove_main rdict_org pdir_prove 
+  ncores timelimit exportf launchf tmlorg cjl1;
 
 (* Updating the dictionnaries *)
 val dicts_new as (odict_new, tdict_new, rdict_new) = insert_cjl dicts_org pl;
 
 (* Evaluate conjectures *)
-val el = eval_main ncores timelimit dicts_new exportf launchf;
+val el = eval_main pdir_eval ncores timelimit dicts_new exportf launchf;
 
-(* Todo 
-+ make separate directories for parallel calls.
-+ make a simple function for testing eprover translation on some input.
-*)
-
-(* Debug 
+Debug 
 val tm = concl pred_setTheory.UNION_DEF;
 val cj = subst [{redex = ``$\/``,residue = ``$/\``}] tm;
 val d = trans_write_tmlcj 0 ([tm],cj);
 val e = launch_eprover_parallel 1 [0] 5;
-*)
+
+val tml = map (concl o DISCH_ALL o GEN_ALL o snd) (DB.thms "list");
+val tml' = first_n 100 tml;
+val ntml' = number_list 0 tml';
+load "hhTranslate";
+open hhTranslate;
+
+val (r,t) = add_time (parallel_translate 3) tml'
+val (r',t') = add_time (map translate) ntml'
+
+
+2) Increase the matching possibility from patterns.
+   Think of including subterms match.
+
+1) Increase the coverage using generalization techniques.
+   Do statistics from the point of view of patterns.
+2) Only allow N conjectures per theorems.
+   Try most frequent subsitutions first. Then when applicable 
+   the ratio of conjecture / Theorem should guide the choice of the 
+   substitution and theorems.
+
+   
+2) Try to prove theorems without conjectures.
+   Do the re-ordering on the theorems proven.
+3) Think about how to implement the feedback loop. 
+   (features and machine learning)
+4) Issue: too many proving tasks?
+
+5) Add conceptualization.
+
+6) Authorizes in the creation only things that come from the past
+
 *)
 

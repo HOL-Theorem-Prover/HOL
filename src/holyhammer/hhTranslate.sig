@@ -15,25 +15,30 @@ include Abbrev
 
   val prepare_tm    : term -> term
   
+  (* conversions *)
   val ATOM_CONV     : conv -> conv
-  val LIFT_CONV     : conv (* depends on global variable counter *)
-  val RPT_LIFT_CONV : term -> thm list (* depends on global variable counter *)
+  val LIFT_CONV     : (int * int) ref -> conv
+  val RPT_LIFT_CONV : (int * int) ref -> term -> thm list
   val LET_CONV_BVL  : conv
-
+  
+  (* arity equations *)
   val strip_type  : hol_type -> (hol_type list * hol_type)
   val mk_arity_eq : term -> int -> thm
-  val optim_arity_eq : term -> thm list
   val all_arity_eq : term -> thm list
   
-  (* depends on global variable counter *)
-  val translate_tm       : bool -> term -> term list
-  (* depends on global variable counter *)
-  val translate_pb       : bool -> (string * thm) list -> term -> 
+  (* translation *)
+  val debug_translate    : int * term -> term list
+  val translate          : int * term -> term list
+  val cached_translate   : term -> term list
+  val parallel_translate : int -> term list -> term list list
+  
+  (* problem *)
+  val translate_pb  : (string * thm) list -> term -> 
     term list * (string * term list) list * term list
   val name_pb : 
     term list * (string * term list) list * term list ->
     (string * term) list * term
-    
+  
   (* monomorphization *)
   val regroup_cid : term list -> (string * hol_type list) list
   val inst_mono_one : hol_type -> hol_type list -> 

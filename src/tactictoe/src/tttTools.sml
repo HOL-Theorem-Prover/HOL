@@ -118,6 +118,8 @@ val dmap       = Redblackmap.map
 val dfoldl     = Redblackmap.foldl
 fun dkeys d    = map fst (dlist d)
 
+fun inv_dict cmp d = dnew cmp (map (fn (a,b) => (b,a)) (dlist d))
+
 (* --------------------------------------------------------------------------
    References
    -------------------------------------------------------------------------- *)
@@ -155,6 +157,9 @@ fun is_reserved s =
 fun map_snd f l   = map (fn (a,b) => (a, f b)) l
 fun map_fst f l   = map (fn (a,b) => (f a, b)) l
 fun map_assoc f l = map (fn a => (a, f a)) l
+
+fun cartesian_product l1 l2 = 
+  List.concat (map (fn x => map (fn y => (x,y)) l2) l1)
 
 fun findSome f l = case l of
     [] => NONE
@@ -271,6 +276,18 @@ fun list_imax l = case l of
 fun sum_int l = case l of [] => 0 | a :: m => a + sum_int m
 
 fun average_real l = sum_real l / Real.fromInt (length l)
+
+fun int_div n1 n2 = 
+   (if n2 = 0 then 0.0 else Real.fromInt n1 / Real.fromInt n2) 
+
+fun pow (x:real) (n:int) =
+  if n <= 0 then 1.0 else x * (pow x (n-1))
+
+fun approx n r = 
+  let val mult = pow 10.0 n in
+    Real.fromInt (Real.round (r * mult)) / mult 
+  end
+
 
 (* --------------------------------------------------------------------------
    Terms
