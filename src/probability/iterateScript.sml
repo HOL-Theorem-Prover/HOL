@@ -88,18 +88,18 @@ val FINITE_FINITE_BIGUNION = store_thm ("FINITE_FINITE_BIGUNIONS",
 (* old name IMP_CONJ seems to be a conv function *)
 val CONJ_EQ_IMP = store_thm (
    "CONJ_EQ_IMP",
-  `` p /\ q ==> r <=> p ==> q ==> r``,
+  ``!p q. p /\ q ==> r <=> p ==> q ==> r``,
   REWRITE_TAC [AND_IMP_INTRO]);
 
 val IMP_CONJ_ALT = store_thm ("IMP_CONJ_ALT",
-  `` p /\ q ==> r <=> q ==> p ==> r``,
+  ``!p q. p /\ q ==> r <=> q ==> p ==> r``,
   METIS_TAC [AND_IMP_INTRO]);
 
 val LT_SUC_LE = store_thm ("LT_SUC_LE",
  ``!m n. (m < SUC n) <=> (m <= n)``,
   ARITH_TAC);
 
-val lemma = store_thm ("lemma",
+val lemma = prove (
   ``(!x. x IN s ==> (g(f(x)) = x)) <=>
     (!y x. x IN s /\ (y = f x) ==> (g y = x))``,
  MESON_TAC []);
@@ -1042,7 +1042,7 @@ val COUNTABLE = store_thm
 (* REAL_COMPLETE                                                             *)
 (* ------------------------------------------------------------------------- *)
 
-val lemma1 = store_thm ("lemma1",
+val lemma1 = prove (
  ``!P s. (!x:real. P x ==> x <= s) = (!y:real. (?x. P x /\ y < x) ==> y < s)``,
   REPEAT GEN_TAC THEN EQ_TAC THENL
   [DISCH_TAC THEN GEN_TAC THEN STRIP_TAC THEN
@@ -1053,7 +1053,7 @@ val lemma1 = store_thm ("lemma1",
    STRIP_TAC THEN EXISTS_TAC ``x':real`` THEN ASM_REWRITE_TAC [REAL_LE_LT] THEN
    EXISTS_TAC ``x:real`` THEN ASM_REWRITE_TAC []]);
 
-val lemma2 = store_thm ("lemma2",
+val lemma2 = prove (
  ``!P s. (!M:real. (!x. P x ==> x <= M) ==> s <= M) = (!y. y < s ==> (?x. P x /\ y < x))``,
   REPEAT GEN_TAC THEN EQ_TAC THENL
   [ONCE_REWRITE_TAC [MONO_NOT_EQ] THEN
@@ -1064,12 +1064,12 @@ val lemma2 = store_thm ("lemma2",
    ONCE_REWRITE_TAC [MONO_NOT_EQ] THEN RW_TAC std_ss [REAL_NOT_LE, REAL_NOT_LT] THEN
    EXISTS_TAC ``M:real`` THEN METIS_TAC []]);
 
-val lemma3 = store_thm ("lemma3",
+val lemma3 = prove (
  ``(?s:real. !y. (?x. P x /\ y < x) <=> y < s) = 
    (?M:real. (!x. P x ==> x <= M) /\ (!M'. (!x. P x ==> x <= M') ==> M <= M'))``,
  SIMP_TAC std_ss [lemma1, lemma2] THEN METIS_TAC []);
 
-val lemma4 = store_thm ("lemma4",
+val lemma4 = prove (
  ``!P:real->bool. 
     ((?x. P x) /\ (?z. !x. P x ==> x < z) ==>
      (?s. !y. (?x. P x /\ y < x) = y < s)) ==>
@@ -1867,7 +1867,7 @@ val ITERATE_UNION_GEN = store_thm ("ITERATE_UNION_GEN",
   ONCE_REWRITE_TAC[GSYM ITERATE_SUPPORT] THEN
   SIMP_TAC std_ss [SUPPORT_CLAUSES, ITERATE_UNION]);
 
-val lemma = store_thm ("lemma",
+val lemma = prove (
  ``!t s. t SUBSET s ==> (s = (s DIFF t) UNION t) /\ DISJOINT (s DIFF t) t``,
   REPEAT STRIP_TAC THENL [SIMP_TAC std_ss [UNION_DEF, DIFF_DEF, EXTENSION, GSPECIFICATION]
   THEN GEN_TAC THEN EQ_TAC THENL [FULL_SIMP_TAC std_ss [], STRIP_TAC THEN 
@@ -1892,13 +1892,13 @@ val ITERATE_DIFF_GEN = store_thm ("ITERATE_DIFF_GEN",
   SIMP_TAC std_ss [SUPPORT_CLAUSES, ITERATE_DIFF]);
 
 
-val lemma1 = store_thm ("lemma1",
+val lemma1 = prove (
  ``!a b. a UNION b = ((a DIFF b) UNION (b DIFF a)) UNION (a INTER b)``,
   REPEAT GEN_TAC THEN REWRITE_TAC [UNION_DEF, DIFF_DEF, INTER_DEF] 
   THEN SIMP_TAC std_ss [EXTENSION, GSPECIFICATION] THEN GEN_TAC THEN 
   EQ_TAC THEN STRIP_TAC THEN RW_TAC std_ss []);
  
-val lemma2 = store_thm ("lemma2",
+val lemma2 = prove (
  ``!s t f. op (iterate op s f) (iterate op t f) = 
            op (iterate op (s DIFF t UNION s INTER t) f)
               (iterate op (t DIFF s UNION s INTER t) f)``,
@@ -1911,7 +1911,7 @@ val lemma2 = store_thm ("lemma2",
   GEN_TAC THEN EQ_TAC THENL [RW_TAC std_ss [], RW_TAC std_ss []]],
   DISCH_TAC THEN METIS_TAC []]);
 
-val lemma3 = store_thm ("lemma3",
+val lemma3 = prove (
   ``!s t. DISJOINT (s DIFF t UNION t DIFF s) (s INTER s') /\
             DISJOINT (s DIFF t) (t DIFF s) /\
             DISJOINT (s DIFF t) (t INTER s) /\
@@ -2007,7 +2007,7 @@ val ITERATE_DELTA = store_thm ("ITERATE_DELTA",
   ASM_SIMP_TAC std_ss [ITERATE_CLAUSES] THEN REWRITE_TAC[SUPPORT_CLAUSES] THEN
   COND_CASES_TAC THEN ASM_SIMP_TAC std_ss [ITERATE_CLAUSES, ITERATE_SING]);
 
-val lemma = store_thm ("lemma", 
+val lemma = prove (
  ``(a <=> a') /\ (a' ==> (b = b'))
       ==> ((if a then b else c) = (if a' then b' else c))``,
   METIS_TAC []);
@@ -2047,11 +2047,11 @@ val ITERATE_BIJECTION = store_thm ("ITERATE_BIJECTION",
    [AP_THM_TAC THEN AP_TERM_TAC THEN SIMP_TAC std_ss[EXTENSION, IN_IMAGE] THEN METIS_TAC [],
     METIS_TAC[ITERATE_IMAGE]]);
 
-val lemma1 = store_thm ("lemma1",
+val lemma1 = prove (
  ``{a,b | F} = {}``,
   SRW_TAC [][EXTENSION]);
 
-val lemma2 = store_thm ("lemma2",
+val lemma2 = prove (
  ``{i,j | i IN a INSERT s /\ j IN t i} =
             IMAGE (\j. a,j) (t a) UNION {i,j | i IN s /\ j IN t i}``,
   SRW_TAC [][EXTENSION] THEN SET_TAC []);
@@ -2225,7 +2225,7 @@ val ITERATE_IMAGE_NONZERO = store_thm ("ITERATE_IMAGE_NONZERO",
   SUBGOAL_THEN ``(g:'b->'c) ((f:'a->'b) a) = neutral op`` SUBST1_TAC THEN
   ASM_MESON_TAC[MONOIDAL_AC]]);
 
-val lemma = store_thm ("lemma",
+val lemma = prove (
   ``!s. DISJOINT {x | x IN s /\ P x} {x | x IN s /\ ~P x}``,
   GEN_TAC THEN SIMP_TAC std_ss [DISJOINT_DEF, INTER_DEF, EXTENSION, GSPECIFICATION] 
   THEN GEN_TAC THEN EQ_TAC THENL 
