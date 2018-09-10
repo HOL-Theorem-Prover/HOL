@@ -85,6 +85,7 @@ fun new_time_meter () =
 
 fun new_inference_meter () =
   let
+    open Unsynchronized
     val infs = ref 0
     fun read () = !infs
   in

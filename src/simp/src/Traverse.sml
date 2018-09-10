@@ -219,30 +219,30 @@ fun TRAVERSE_IN_CONTEXT limit rewriters dprocs travrules stack ctxt tm = let
   val TRAVRULES {relations,congprocs,weakenprocs,...} = travrules
   val add_context' = add_context rewriters dprocs
   val change_relation' = change_relation travrules
-  val lim_r = ref limit
-  fun check r = case !r of NONE => ()
+  val lim_r = Unsynchronized.ref limit
+  fun check r = case Unsynchronized.!r of NONE => ()
     | SOME n => if n <= 0 then
                                (trace(2,TEXT "Limit exhausted");
                                 raise ERR "TRAVERSE_IN_CONTEXT"
                                           "Limit exhausted")
                              else ()
-  fun dec r = case !r of NONE => ()
-    | SOME n => r := SOME (n - 1)
+  fun dec r = case Unsynchronized.!r of NONE => ()
+    | SOME n => Unsynchronized.:=(r, SOME (n - 1))
 
   fun trav stack context  = let
     val TSTATE {contexts1,contexts2, freevars,
                 relation_info = relation, relation = relname} = context
     fun ctxt_solver stack tm = let
-      val old = !lim_r
+      val old = Unsynchronized.!lim_r
     in
       EQT_ELIM (trav stack (change_relation' (context,equality)) tm)
-      handle e as HOL_ERR _ => (lim_r := old ; raise e)
+      handle e as HOL_ERR _ => (Unsynchronized.:=(lim_r, old) ; raise e)
     end
     fun ctxt_conv stack tm = let
-      val old = !lim_r
+      val old = Unsynchronized.!lim_r
     in
       trav stack (change_relation' (context,equality)) tm
-      handle e as HOL_ERR _ => (lim_r := old ; raise e)
+      handle e as HOL_ERR _ => (Unsynchronized.:=(lim_r, old) ; raise e)
     end
     fun mkrefl t = let
       val PREORDER(_, _, irefl) = relation

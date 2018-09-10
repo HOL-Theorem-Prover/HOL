@@ -717,6 +717,7 @@ fun strip_binder opt =
                                     end handle HOL_ERR _ => NONE)
  in fn tm =>
    let
+     open Unsynchronized
      val (prefixl,body) = peel f tm []
      val AV = ref (Redblackmap.mkDict String.compare) : ((string,occtype)Redblackmap.dict) ref
      fun peekInsert (key,data) =

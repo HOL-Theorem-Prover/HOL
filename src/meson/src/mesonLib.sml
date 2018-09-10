@@ -398,13 +398,13 @@ fun fol_atom_eq insts (p1,args1) (p2,args2) =
 
 fun cacheconts f =
  if !cache
- then let val memory = ref []
+ then let val memory = Unsynchronized.ref []
       in fn input as (gg, (insts,offset,(size:int))) =>
            if exists (fn (_,(insts',_,size')) =>
                        insts=insts' andalso (size <= size' orelse !depth))
-                     (!memory)
+                     (Unsynchronized.!memory)
            then failwith "cachecont"
-           else (memory := input::(!memory); f input)
+           else (Unsynchronized.:=(memory,input::(Unsynchronized.!memory)); f input)
       end
  else f;;
 

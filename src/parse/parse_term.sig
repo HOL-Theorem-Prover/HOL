@@ -21,6 +21,6 @@ sig
   datatype mx_order = datatype parse_term_dtype.mx_order
   val mk_prec_matrix :
       term_grammar.grammar ->
-      ((stack_terminal * bool) * stack_terminal, mx_order) Binarymap.dict ref
+      ((stack_terminal * bool) * stack_terminal, mx_order) Binarymap.dict Unsynchronized.ref
 
 end

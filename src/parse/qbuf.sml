@@ -1,7 +1,7 @@
 structure qbuf :> qbuf =
 struct
 
-  open base_tokens locn Portable Lib
+  open base_tokens locn Portable Lib Unsynchronized
 
 (* For SML/NJ *)
 

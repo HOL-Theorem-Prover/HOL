@@ -49,6 +49,7 @@ struct
 
   exception GETOUT
 
+  local open Unsynchronized in
   fun update (set as (compare, tree, n), key, data) =
       let val addone = ref true
           fun ins LEAF = RED(key,data NONE,LEAF,LEAF)
@@ -67,6 +68,7 @@ struct
                 RED x => BLACK x
               | tree  => tree
           , if !addone then n+1 else n) end
+  end
 
   local fun K x _ = x in
     fun insert (set, key, data) = update (set, key, K data)

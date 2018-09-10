@@ -529,6 +529,7 @@ fun user_split_ident keywords = let
   val split = split_ident mixedset (!base_tokens.allow_octal_input)
 in
   fn s => let
+       open Unsynchronized
        val pushback = ref ""
        fun rc (btid, _) =
            case btid of

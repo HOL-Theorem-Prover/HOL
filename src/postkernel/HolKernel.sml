@@ -356,6 +356,7 @@ fun bvk_find_term P k =
 
 fun find_terms P =
    let
+      open Unsynchronized
       val tms = ref []
       fun find_tms tm =
          (if P tm then tms := tm :: (!tms) else ()

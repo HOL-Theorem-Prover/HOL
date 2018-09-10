@@ -86,6 +86,7 @@ val complained_already = ref false;
 
 structure Polyhash =
 struct
+  open Unsynchronized
    fun peek (dict) k = Binarymap.peek(!dict,k)
    fun peekInsert r (k,v) =
        let val dict = !r in
@@ -193,7 +194,7 @@ fun mk_prec_matrix G = let
   exception NotFound = Binarymap.NotFound
   exception BadTokList
   type dict = ((stack_terminal * bool) * stack_terminal,
-               mx_order) Binarymap.dict ref
+               mx_order) Binarymap.dict Unsynchronized.ref
   val {lambda, endbinding, type_intro, restr_binders, ...} = specials G
   val specs = grammar_tokens G
   val Grules = term_grammar.grammar_rules G
@@ -556,7 +557,7 @@ fun suffix_rule (rels,nm) =
 
 fun mk_ruledb (G:grammar) = let
   val Grules = term_grammar.grammar_rules G
-  val table:(rule_element list, rule_summary)Binarymap.dict ref =
+  val table:(rule_element list, rule_summary)Binarymap.dict Unsynchronized.ref =
        Polyhash.mkDict (Lib.list_compare RE_compare)
   fun insert_rule mkfix (rr:rule_record) =
     let
