@@ -21,7 +21,7 @@ realLib jrhUtils pairTheory seqTheory limTheory transcTheory listTheory mesonLib
 boolTheory pred_setTheory util_probTheory optionTheory numTheory 
 sumTheory InductiveDefinition ind_typeTheory;
 
-open cardinalTheory iterateTheory rich_cardinalTheory;
+open cardinalTheory iterateTheory;
 
 val _ = new_theory "product";
 

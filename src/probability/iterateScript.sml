@@ -3040,10 +3040,6 @@ val FORALL_IN_GSPEC = store_thm ("FORALL_IN_GSPEC",
           (!w x y. P w x y ==> Q(f w x y)))``,
    SRW_TAC [][] THEN SET_TAC []);
 
-val IN_ELIM_PAIR_THM = store_thm ("IN_ELIM_PAIR_THM",
- ``!P a b. (a,b) IN {(x,y) | P x y} <=> P a b``,
-  SRW_TAC [][]);
-
 val REAL_SUB_POLYFUN = store_thm ("REAL_SUB_POLYFUN",
  ``!a x y n. 1 <= n
     ==> (sum(0:num..n) (\i. a i * x pow i) - 

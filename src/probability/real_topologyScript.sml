@@ -25,7 +25,7 @@ sumTheory InductiveDefinition ind_typeTheory listTheory mesonLib
 seqTheory limTheory transcTheory realLib topologyTheory;
 
 open wellorderTheory cardinalTheory;
-open util_probTheory iterateTheory rich_cardinalTheory productTheory;
+open util_probTheory iterateTheory productTheory;
 
 val _ = new_theory "real_topology";
 
