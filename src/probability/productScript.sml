@@ -21,7 +21,7 @@ realLib jrhUtils pairTheory seqTheory limTheory transcTheory listTheory mesonLib
 boolTheory pred_setTheory util_probTheory optionTheory numTheory 
 sumTheory InductiveDefinition ind_typeTheory;
 
-open iterateTheory rich_cardinalTheory;
+open cardinalTheory iterateTheory rich_cardinalTheory;
 
 val _ = new_theory "product";
 
@@ -179,7 +179,7 @@ val NPRODUCT_LE = store_thm ("NPRODUCT_LE",
   nproduct s f <= nproduct s g) s``] THEN
   MATCH_MP_TAC FINITE_INDUCT THEN BETA_TAC THEN
   SIMP_TAC std_ss [IN_INSERT, NPRODUCT_CLAUSES, NOT_IN_EMPTY, LESS_EQ_REFL] THEN
-  MESON_TAC[LESS_MONO_MULT2, LE_0]);
+  MESON_TAC[LESS_MONO_MULT2, ZERO_LESS_EQ]);
 
 val NPRODUCT_LE_NUMSEG = store_thm ("NPRODUCT_LE_NUMSEG",
  ``!f m n. (!i. m <= i /\ i <= n ==> 0 <= f(i) /\ f(i) <= g(i))

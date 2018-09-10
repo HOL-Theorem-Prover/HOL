@@ -1,9 +1,38 @@
-open HolKernel Parse boolLib bossLib
+open HolKernel Parse boolLib bossLib mesonLib
 
-open boolSimps pred_setTheory set_relationTheory
-open lcsymtacs
+open boolSimps pred_setTheory set_relationTheory lcsymtacs jrhUtils tautLib
+open prim_recTheory arithmeticTheory numTheory numLib pairTheory quotientTheory
 
-val _ = new_theory "cardinal"
+val _ = new_theory "cardinal";
+
+(* ------------------------------------------------------------------------- *)
+(* MESON, METIS, SET_TAC, SET_RULE, ASSERT_TAC, ASM_ARITH_TAC                *)
+(* ------------------------------------------------------------------------- *)
+
+fun K_TAC _ = ALL_TAC;
+fun MESON ths tm = prove(tm,MESON_TAC ths);
+fun METIS ths tm = prove(tm,METIS_TAC ths);
+
+val DISC_RW_KILL = DISCH_TAC THEN ONCE_ASM_REWRITE_TAC [] THEN 
+                   POP_ASSUM K_TAC;
+
+fun SET_TAC L = 
+    POP_ASSUM_LIST(K ALL_TAC) THEN REPEAT COND_CASES_TAC THEN
+    REWRITE_TAC (append [EXTENSION, SUBSET_DEF, PSUBSET_DEF, DISJOINT_DEF,
+    SING_DEF] L) THEN
+    SIMP_TAC std_ss [NOT_IN_EMPTY, IN_UNIV, IN_UNION, IN_INTER, IN_DIFF, 
+      IN_INSERT, IN_DELETE, IN_REST, IN_BIGINTER, IN_BIGUNION, IN_IMAGE, 
+      GSPECIFICATION, IN_DEF, EXISTS_PROD] THEN METIS_TAC [];
+
+fun ASSERT_TAC tm = SUBGOAL_THEN tm STRIP_ASSUME_TAC;
+fun SET_RULE tm = prove(tm,SET_TAC []);
+fun ASM_SET_TAC L = REPEAT (POP_ASSUM MP_TAC) THEN SET_TAC L;
+
+val ASM_ARITH_TAC = REPEAT (POP_ASSUM MP_TAC) THEN ARITH_TAC;
+
+(* ------------------------------------------------------------------------- *)
+(* Cardinal comparisons                                                      *)
+(* ------------------------------------------------------------------------- *)
 
 val cardeq_def = Define`
   cardeq s1 s2 <=> ?f. BIJ f s1 s2
@@ -1443,5 +1472,624 @@ val bijections_cardeq = Q.store_thm(
   Cases_on `a IN ss1` >> simp[]
   >- (first_x_assum (qspecl_then [‘T’, ‘a’] mp_tac) >> simp[] >> rw[])
   >- (first_x_assum (qspecl_then [‘F’, ‘a’] mp_tac) >> simp[] >> rw[]));
+
+(* ========================================================================= *)
+(*                                                                           *)
+(*               HOL-light's Cardinal Theory (Library/card.ml)               *)
+(*                                                                           *)
+(*        (c) Copyright 2015                                                 *)
+(*                       Muhammad Qasim,                                     *)
+(*                       Osman Hasan,                                        *)
+(*                       Hardware Verification Group,                        *)
+(*                       Concordia University                                *)
+(*                                                                           *)
+(*            Contact:  <m_qasi@ece.concordia.ca>                            *)
+(*                                                                           *)
+(*      (merged into HOL4's cardinalTheory by Chun Tian <ctian@fbk.eu>)      *)
+(* ========================================================================= *)
+
+(* ------------------------------------------------------------------------- *)
+(* misc.                                                                     *)
+(* ------------------------------------------------------------------------- *)
+
+val LEFT_IMP_EXISTS_THM = store_thm ("LEFT_IMP_EXISTS_THM",
+ ``!P Q. (?x. P x) ==> Q <=> (!x. P x ==> Q)``,
+ SIMP_TAC std_ss [PULL_EXISTS]);
+
+val LEFT_IMP_FORALL_THM = store_thm ("LEFT_IMP_FORALL_THM",
+ ``!P Q. (!x. P x) ==> Q <=> (?x. P x ==> Q)``,
+  METIS_TAC [GSYM LEFT_FORALL_IMP_THM]);
+
+val RIGHT_IMP_EXISTS_THM = store_thm ("RIGHT_IMP_EXISTS_THM",
+ ``!P Q. P ==> (?x. Q x) <=> (?x. P ==> Q x)``,
+ REWRITE_TAC [GSYM RIGHT_EXISTS_IMP_THM]);
+
+val RIGHT_IMP_FORALL_THM = store_thm ("RIGHT_IMP_FORALL_THM", 
+ ``!P Q. P ==> (!x. Q x) <=> (!x. P ==> Q x)``,
+ REWRITE_TAC [GSYM RIGHT_FORALL_IMP_THM]);
+
+val FINITE_FINITE_BIGUNION = store_thm ("FINITE_FINITE_BIGUNIONS",
+ ``!s. FINITE(s) ==> (FINITE(BIGUNION s) <=> (!t. t IN s ==> FINITE(t)))``,
+  ONCE_REWRITE_TAC [METIS []
+   ``!s. (FINITE (BIGUNION s) <=> !t. t IN s ==> FINITE t) =
+     (\s. FINITE (BIGUNION s) <=> !t. t IN s ==> FINITE t) s``] THEN
+  MATCH_MP_TAC FINITE_INDUCT THEN BETA_TAC THEN
+  SIMP_TAC std_ss [IN_INSERT, NOT_IN_EMPTY, BIGUNION_EMPTY, BIGUNION_INSERT] THEN
+  SIMP_TAC std_ss [FINITE_UNION, FINITE_EMPTY, FINITE_INSERT] THEN MESON_TAC[]);
+
+(* old name IMP_CONJ seems to be a conv function *)
+val CONJ_EQ_IMP = store_thm ("CONJ_EQ_IMP",
+  ``!p q. p /\ q ==> r <=> p ==> q ==> r``,
+  REWRITE_TAC [AND_IMP_INTRO]);
+
+val IMP_CONJ_ALT = store_thm ("IMP_CONJ_ALT",
+  ``!p q. p /\ q ==> r <=> q ==> p ==> r``,
+  METIS_TAC [AND_IMP_INTRO]);
+
+val LT_SUC_LE = store_thm ("LT_SUC_LE",
+ ``!m n. (m < SUC n) <=> (m <= n)``,
+  ARITH_TAC);
+
+val lemma = prove (
+  ``(!x. x IN s ==> (g(f(x)) = x)) <=>
+    (!y x. x IN s /\ (y = f x) ==> (g y = x))``,
+ MESON_TAC []);
+
+val INJECTIVE_ON_LEFT_INVERSE = store_thm
+  ("INJECTIVE_ON_LEFT_INVERSE",
+ ``!f s. (!x y. x IN s /\ y IN s /\ (f x = f y) ==> (x = y)) <=>
+         (?g. !x. x IN s ==> (g(f(x)) = x))``,
+  REWRITE_TAC[lemma] THEN SIMP_TAC std_ss [GSYM SKOLEM_THM] THEN METIS_TAC[]);
+
+val SURJECTIVE_ON_RIGHT_INVERSE = store_thm
+  ("SURJECTIVE_ON_RIGHT_INVERSE",
+ ``!f t. (!y. y IN t ==> ?x. x IN s /\ (f(x) = y)) <=>
+   (?g. !y. y IN t ==> g(y) IN s /\ (f(g(y)) = y))``,
+  SIMP_TAC std_ss [GSYM RIGHT_EXISTS_IMP_THM, SKOLEM_THM]);
+
+val SURJECTIVE_RIGHT_INVERSE = store_thm
+  ("SURJECTIVE_RIGHT_INVERSE",
+ ``(!y. ?x. f(x) = y) <=> (?g. !y. f(g(y)) = y)``,
+  MESON_TAC[SURJECTIVE_ON_RIGHT_INVERSE, IN_UNIV]);
+
+val FINITE_IMAGE_INJ_GENERAL = store_thm ("FINITE_IMAGE_INJ_GENERAL",
+ ``!(f:'a->'b) A s.
+        (!x y. x IN s /\ y IN s /\ (f(x) = f(y)) ==> (x = y)) /\
+        FINITE A
+        ==> (FINITE {x | x IN s /\ f(x) IN A})``,
+  REPEAT STRIP_TAC THEN
+  FULL_SIMP_TAC std_ss [INJECTIVE_ON_LEFT_INVERSE] THEN ASSUME_TAC SUBSET_FINITE
+  THEN POP_ASSUM (MP_TAC o Q.SPEC `IMAGE (g:'b->'a) A`) THEN 
+  KNOW_TAC ``FINITE (IMAGE g A)`` THENL [METIS_TAC [IMAGE_FINITE], DISCH_TAC
+  THEN FULL_SIMP_TAC std_ss [] THEN DISCH_TAC THEN 
+  POP_ASSUM (MP_TAC o Q.SPEC `{x | x IN s /\ f x IN A}`) THEN DISCH_TAC
+  THEN KNOW_TAC ``{x | x IN s /\ f x IN A} SUBSET IMAGE g A`` THENL 
+  [REWRITE_TAC [IMAGE_DEF, SUBSET_DEF] THEN GEN_TAC THEN 
+  SIMP_TAC std_ss [GSPECIFICATION] THEN METIS_TAC [] , METIS_TAC []]]);
+
+val FINITE_IMAGE_INJ_EQ = store_thm ("FINITE_IMAGE_INJ_EQ",
+ ``!(f:'a->'b) s. (!x y. x IN s /\ y IN s /\ (f(x) = f(y)) ==> (x = y))
+                ==> (FINITE(IMAGE f s) <=> FINITE s)``,
+  REPEAT STRIP_TAC THEN EQ_TAC THEN ASM_SIMP_TAC std_ss [IMAGE_FINITE] THEN
+  POP_ASSUM MP_TAC THEN REWRITE_TAC[AND_IMP_INTRO] THEN
+  DISCH_THEN(MP_TAC o MATCH_MP FINITE_IMAGE_INJ_GENERAL) THEN
+  MATCH_MP_TAC EQ_IMPLIES THEN AP_TERM_TAC THEN 
+  SIMP_TAC std_ss [EXTENSION, GSPECIFICATION, IN_IMAGE] THEN METIS_TAC []);
+
+val FINITE_PRODUCT_DEPENDENT = store_thm ("FINITE_PRODUCT_DEPENDENT",
+ ``!f:'a->'b->'c s t.
+        FINITE s /\ (!x. x IN s ==> FINITE(t x))
+        ==> FINITE {f x y | x IN s /\ y IN (t x)}``,
+  REPEAT STRIP_TAC THEN KNOW_TAC ``{f x y | x IN s /\ y IN (t x)} SUBSET 
+   IMAGE (\(x,y). (f:'a->'b->'c) x y) {x,y | x IN s /\ y IN t x}`` THENL
+  [SRW_TAC [][SUBSET_DEF, IN_IMAGE, EXISTS_PROD], ALL_TAC] THEN
+  KNOW_TAC ``FINITE (IMAGE (\(x,y). (f:'a->'b->'c) x y) 
+                    {x,y | x IN s /\ y IN t x})`` THENL
+  [MATCH_MP_TAC IMAGE_FINITE THEN MAP_EVERY UNDISCH_TAC
+   [``!x:'a. x IN s ==> FINITE(t x :'b->bool)``, ``FINITE(s:'a->bool)``]
+  THEN MAP_EVERY (fn t => SPEC_TAC(t,t)) [``t:'a->'b->bool``, ``s:'a->bool``]
+  THEN SIMP_TAC std_ss [RIGHT_FORALL_IMP_THM] THEN GEN_TAC THEN
+  KNOW_TAC ``(!(t:'a->'b->bool). (!x. x IN s ==> FINITE (t x)) ==>
+             FINITE {(x,y) | x IN s /\ y IN t x}) = 
+         (\s. !(t:'a->'b->bool). (!x. x IN s ==> FINITE (t x)) ==>
+             FINITE {(x,y) | x IN s /\ y IN t x}) (s:'a->bool)`` THENL
+  [FULL_SIMP_TAC std_ss [], ALL_TAC] THEN DISCH_TAC THEN 
+  ONCE_ASM_REWRITE_TAC [] THEN MATCH_MP_TAC FINITE_INDUCT THEN BETA_TAC
+  THEN CONJ_TAC THENL [GEN_TAC THEN
+  SUBGOAL_THEN ``{(x:'a,y:'b) | x IN {} /\ y IN (t x)} = {}``
+     (fn th => REWRITE_TAC[th, FINITE_EMPTY]) THEN SRW_TAC [][],
+  SIMP_TAC std_ss [GSYM RIGHT_FORALL_IMP_THM] THEN REPEAT GEN_TAC THEN
+  SUBGOAL_THEN ``{(x:'a, y:'b) | x IN (e INSERT s') /\ y IN (t x)} =
+    IMAGE (\y. e,y) (t e) UNION {(x,y) | x IN s' /\ y IN (t x)}``
+   (fn th => ASM_SIMP_TAC std_ss [IN_INSERT, IMAGE_FINITE, FINITE_UNION, th])
+  THEN SRW_TAC [][EXTENSION, IN_IMAGE, IN_INSERT, IN_UNION] THEN MESON_TAC[]],
+  PROVE_TAC [SUBSET_FINITE]]);
+
+val FINITE_PRODUCT = store_thm ("FINITE_PRODUCT",
+ ``!s t. FINITE s /\ FINITE t ==> FINITE {(x:'a,y:'b) | x IN s /\ y IN t}``,
+  SIMP_TAC std_ss [FINITE_PRODUCT_DEPENDENT]);
+
+val SURJECTIVE_IMAGE_THM = store_thm ("SURJECTIVE_IMAGE_THM",
+ ``!f:'a->'b. (!y. ?x. f x = y) <=> (!P. IMAGE f {x | P(f x)} = {x | P x})``,
+  GEN_TAC THEN SIMP_TAC std_ss [EXTENSION, IN_IMAGE, GSPECIFICATION] THEN
+  EQ_TAC THENL [ALL_TAC, DISCH_THEN(MP_TAC o SPEC ``\y:'b. T``)] THEN
+  METIS_TAC[]);
+
+val SURJECTIVE_ON_IMAGE = store_thm ("SURJECTIVE_ON_IMAGE",
+ ``!f:'a->'b u v.
+        (!t. t SUBSET v ==> ?s. s SUBSET u /\ (IMAGE f s = t)) <=>
+        (!y. y IN v ==> ?x. x IN u /\ (f x = y))``,
+  REPEAT GEN_TAC THEN EQ_TAC THENL
+   [DISCH_TAC THEN X_GEN_TAC ``y:'b`` THEN DISCH_TAC THEN
+    FIRST_X_ASSUM(MP_TAC o SPEC ``{y:'b}``) THEN ASM_SET_TAC[],
+    DISCH_TAC THEN X_GEN_TAC ``t:'b->bool`` THEN DISCH_TAC THEN
+    EXISTS_TAC ``{x | x IN u /\ (f:'a->'b) x IN t}`` THEN ASM_SET_TAC[]]);;
+
+val SURJECTIVE_IMAGE = store_thm ("SURJECTIVE_IMAGE",
+ ``!f:'a->'b. (!t. ?s. IMAGE f s = t) <=> (!y. ?x. f x = y)``,
+  GEN_TAC THEN
+  MP_TAC (ISPECL [``f:'a->'b``,``univ(:'a)``,``univ(:'b)``] SURJECTIVE_ON_IMAGE) THEN
+  SIMP_TAC std_ss [IN_UNIV, SUBSET_UNIV]);
+
+(* TODO: they're in seqTheory; prove them manually and move to numTheory *)
+val LT_SUC = prove (``!a b. a < SUC b = a < b \/ (a = b)``, DECIDE_TAC);
+val LE_SUC = prove (``!a b. a <= SUC b = a <= b \/ (a = SUC b)``, DECIDE_TAC);
+
+val CARD_LE_INJ = store_thm ("CARD_LE_INJ",
+ ``!s t. FINITE s /\ FINITE t /\ CARD s <= CARD t
+   ==> ?f:'a->'b. (IMAGE f s) SUBSET t /\
+                !x y. x IN s /\ y IN s /\ (f x = f y) ==> (x = y)``,
+  REWRITE_TAC[CONJ_EQ_IMP] THEN SIMP_TAC std_ss [RIGHT_FORALL_IMP_THM] THEN
+  ONCE_REWRITE_TAC [METIS [] 
+    ``!s. (!t. FINITE t ==> CARD s <= CARD t ==>
+    ?f. IMAGE (f:'a->'b) s SUBSET t /\
+      !x. x IN s ==> !y. y IN s ==> (f x = f y) ==> (x = y)) =
+     (\s. (!t. FINITE t ==> CARD s <= CARD t ==>
+    ?f. IMAGE (f:'a->'b) s SUBSET t /\
+      !x. x IN s ==> !y. y IN s ==> (f x = f y) ==> (x = y))) s``] THEN
+  MATCH_MP_TAC FINITE_INDUCT THEN BETA_TAC THEN
+  SIMP_TAC std_ss [IMAGE_EMPTY, IMAGE_INSERT, EMPTY_SUBSET, NOT_IN_EMPTY] THEN
+  SIMP_TAC std_ss [CARD_EMPTY, CARD_INSERT] THEN
+  SIMP_TAC std_ss [RIGHT_IMP_FORALL_THM] THEN
+  MAP_EVERY X_GEN_TAC [``s:'a->bool``, ``x:'a``] THEN
+  SIMP_TAC std_ss [RIGHT_FORALL_IMP_THM] THEN STRIP_TAC THEN DISCH_TAC THEN
+  ONCE_REWRITE_TAC [METIS []
+   ``!t. (SUC (CARD s) <= CARD t ==>
+  ?f. f x INSERT IMAGE (f:'a->'b) s SUBSET t /\
+    !x'. x' IN x INSERT s ==>
+      !y. y IN x INSERT s ==> (f x' = f y) ==> (x' = y)) =
+     (\t. SUC (CARD s) <= CARD t ==>
+  ?f. f x INSERT IMAGE (f:'a->'b) s SUBSET t /\
+    !x'. x' IN x INSERT s ==>
+      !y. y IN x INSERT s ==> (f x' = f y) ==> (x' = y)) t``] THEN
+  MATCH_MP_TAC FINITE_INDUCT THEN BETA_TAC THEN
+  SIMP_TAC std_ss [CARD_EMPTY, CARD_INSERT, LE, NOT_SUC] THEN  
+  SIMP_TAC std_ss [RIGHT_IMP_FORALL_THM] THEN
+  MAP_EVERY X_GEN_TAC [``t:'b->bool``, ``y:'b``] THEN
+  SIMP_TAC std_ss [CARD_EMPTY, CARD_INSERT] THEN
+  STRIP_TAC THEN POP_ASSUM K_TAC THEN DISCH_TAC THEN
+  REWRITE_TAC[LE_SUC] THEN STRIP_TAC THEN
+  FIRST_X_ASSUM(MP_TAC o SPEC ``t:'b->bool``) THEN ASM_REWRITE_TAC[] THEN
+  DISCH_THEN(X_CHOOSE_THEN ``f:'a->'b`` STRIP_ASSUME_TAC) THEN
+  EXISTS_TAC ``\z:'a. if z = x then (y:'b) else f(z)`` THEN
+  SIMP_TAC std_ss [IN_INSERT, SUBSET_DEF, IN_IMAGE] THEN
+  METIS_TAC[SUBSET_DEF, IN_IMAGE]);
+
+val CARD_IMAGE_INJ = store_thm ("CARD_IMAGE_INJ",
+ ``!(f:'a->'b) s. (!x y. x IN s /\ y IN s /\ (f(x) = f(y)) ==> (x = y)) /\
+                FINITE s ==> (CARD (IMAGE f s) = CARD s)``,
+  GEN_TAC THEN ONCE_REWRITE_TAC [CONJ_SYM] THEN
+  REWRITE_TAC[GSYM AND_IMP_INTRO] THEN GEN_TAC THEN
+  KNOW_TAC ``(!(x :'a) (y :'a).
+       x IN s ==> y IN s ==> ((f :'a -> 'b) x = f y) ==> (x = y)) ==>
+    (CARD (IMAGE f s) = CARD s) = (\s. (!(x :'a) (y :'a).
+       x IN s ==> y IN s ==> ((f :'a -> 'b) x = f y) ==> (x = y)) ==>
+    (CARD (IMAGE f s) = CARD s)) (s:'a->bool)`` THENL
+  [FULL_SIMP_TAC std_ss[], DISCH_TAC THEN ONCE_ASM_REWRITE_TAC [] 
+  THEN MATCH_MP_TAC FINITE_INDUCT THEN BETA_TAC THEN
+  REWRITE_TAC[NOT_IN_EMPTY, IMAGE_EMPTY, IMAGE_INSERT] THEN
+  REPEAT STRIP_TAC THENL
+  [ASM_SIMP_TAC std_ss [CARD_DEF, IMAGE_FINITE, IN_IMAGE],
+  ASM_SIMP_TAC std_ss [CARD_DEF, IMAGE_FINITE, IN_IMAGE] THEN
+  COND_CASES_TAC THENL [ASM_MESON_TAC[IN_INSERT], ASM_MESON_TAC[IN_INSERT]]]]);
+
+val CARD_IMAGE_LE = store_thm ("CARD_IMAGE_LE",
+ ``!(f:'a->'b) s. FINITE s ==> CARD(IMAGE f s) <= CARD s``,
+  REPEAT GEN_TAC THEN KNOW_TAC``(CARD (IMAGE f s) <= CARD (s:'a->bool)) = 
+  ((\s.  CARD (IMAGE f s) <= CARD s) s)`` THENL [FULL_SIMP_TAC std_ss[], 
+  DISCH_TAC THEN ONCE_ASM_REWRITE_TAC [] THEN MATCH_MP_TAC FINITE_INDUCT  
+  THEN BETA_TAC THEN SIMP_TAC std_ss [IMAGE_EMPTY, IMAGE_INSERT, CARD_DEF, 
+  IMAGE_FINITE, LESS_EQ_REFL] THEN REPEAT STRIP_TAC THEN COND_CASES_TAC THENL
+  [MATCH_MP_TAC LESS_EQ_TRANS THEN EXISTS_TAC ``CARD (s' :'a -> bool)``
+  THEN FULL_SIMP_TAC std_ss [], FULL_SIMP_TAC std_ss [LESS_EQ_MONO]]]);
+
+val SURJECTIVE_IFF_INJECTIVE_GEN = store_thm ("SURJECTIVE_IFF_INJECTIVE_GEN",
+ ``!s t f:'a->'b.
+        FINITE s /\ FINITE t /\ (CARD s = CARD t) /\ (IMAGE f s) SUBSET t
+        ==> ((!y. y IN t ==> ?x. x IN s /\ (f x = y)) <=>
+             (!x y. x IN s /\ y IN s /\ (f x = f y) ==> (x = y)))``,
+  REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL
+  [ASM_CASES_TAC ``x:'a = y`` THENL [ASM_REWRITE_TAC[],
+  SUBGOAL_THEN ``CARD s <= CARD (IMAGE (f:'a->'b) (s DELETE y))`` MP_TAC THENL
+  [ASM_REWRITE_TAC[] THEN KNOW_TAC  ``(!(s :'b -> bool).
+            FINITE s ==> !(t :'b -> bool). t SUBSET s ==> CARD t <= CARD s)``
+  THENL [METIS_TAC [CARD_SUBSET], DISCH_TAC THEN 
+  POP_ASSUM (MP_TAC o Q.SPEC `IMAGE (f:'a->'b) ((s:'a->bool) DELETE y)`) THEN
+  KNOW_TAC ``FINITE (IMAGE (f :'a -> 'b) ((s :'a -> bool) DELETE (y :'a)))``
+  THENL [FULL_SIMP_TAC std_ss [IMAGE_FINITE, FINITE_DELETE], DISCH_TAC
+  THEN FULL_SIMP_TAC std_ss [] THEN DISCH_TAC THEN POP_ASSUM (MP_TAC o Q.SPEC `t:'b->bool`)
+  THEN KNOW_TAC ``(t :'b -> bool) SUBSET IMAGE (f :'a -> 'b) ((s :'a -> bool) DELETE (y :'a))``
+  THENL [REWRITE_TAC[SUBSET_DEF, IN_IMAGE, IN_DELETE] THEN ASM_MESON_TAC[], ASM_MESON_TAC[]]]],
+  FULL_SIMP_TAC std_ss [] THEN REWRITE_TAC[NOT_LESS_EQUAL] THEN 
+  MATCH_MP_TAC LESS_EQ_LESS_TRANS THEN EXISTS_TAC ``CARD(s DELETE (y:'a))`` THEN
+  CONJ_TAC THENL [ASM_SIMP_TAC std_ss [CARD_IMAGE_LE, FINITE_DELETE], 
+  KNOW_TAC ``!x. x - 1 < x:num <=> ~(x = 0)`` THENL [ARITH_TAC, DISCH_TAC
+  THEN ASM_SIMP_TAC std_ss [CARD_DELETE] THEN 
+  ASM_MESON_TAC[CARD_EQ_0, MEMBER_NOT_EMPTY]]]]],
+  SUBGOAL_THEN ``IMAGE (f:'a->'b) s = t`` MP_TAC THENL
+  [ALL_TAC, ASM_MESON_TAC[EXTENSION, IN_IMAGE]] THEN
+  METIS_TAC [CARD_IMAGE_INJ, SUBSET_EQ_CARD, IMAGE_FINITE]]);
+
+val SURJECTIVE_IFF_INJECTIVE = store_thm ("SURJECTIVE_IFF_INJECTIVE",
+ ``!s f:'a->'a. FINITE s /\ (IMAGE f s) SUBSET s
+     ==> ((!y. y IN s ==> ?x. x IN s /\ (f x = y)) <=>
+     (!x y. x IN s /\ y IN s /\ (f x = f y) ==> (x = y)))``,
+  SIMP_TAC std_ss [SURJECTIVE_IFF_INJECTIVE_GEN]);
+
+val CARD_EQ_BIJECTION = store_thm ("CARD_EQ_BIJECTION",
+ ``!s t. FINITE s /\ FINITE t /\ (CARD s = CARD t)
+   ==> ?f:'a->'b. (!x. x IN s ==> f(x) IN t) /\
+                  (!y. y IN t ==> ?x. x IN s /\ (f x = y)) /\
+                  !x y. x IN s /\ y IN s /\ (f x = f y) ==> (x = y)``,
+  MP_TAC CARD_LE_INJ THEN DISCH_TAC THEN GEN_TAC THEN GEN_TAC THEN
+  POP_ASSUM (MP_TAC o SPECL [``s:'a->bool``,``t:'b->bool``]) THEN
+  DISCH_THEN(fn th => STRIP_TAC THEN MP_TAC th) THEN
+  ASM_REWRITE_TAC[LESS_EQ_REFL] THEN DISCH_THEN (X_CHOOSE_TAC ``f:'a->'b``) THEN
+  EXISTS_TAC ``f:'a->'b`` THEN POP_ASSUM MP_TAC THEN
+  ASM_SIMP_TAC std_ss [SURJECTIVE_IFF_INJECTIVE_GEN] THEN
+  MESON_TAC[SUBSET_DEF, IN_IMAGE]);
+
+val CARD_EQ_BIJECTIONS = store_thm ("CARD_EQ_BIJECTIONS",
+ ``!s t. FINITE s /\ FINITE t /\ (CARD s = CARD t)
+   ==> ?f:'a->'b g. (!x. x IN s ==> f(x) IN t /\ (g(f x) = x)) /\
+                    (!y. y IN t ==> g(y) IN s /\ (f(g y) = y))``,
+  REPEAT GEN_TAC THEN DISCH_THEN(MP_TAC o MATCH_MP CARD_EQ_BIJECTION) THEN
+  DISCH_THEN (X_CHOOSE_TAC ``f:'a->'b``) THEN
+  EXISTS_TAC ``f:'a->'b`` THEN POP_ASSUM MP_TAC THEN
+  SIMP_TAC std_ss [SURJECTIVE_ON_RIGHT_INVERSE] THEN
+  SIMP_TAC std_ss [GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM] THEN
+  METIS_TAC[]);
+ 
+val SING_SUBSET = store_thm ("SING_SUBSET",
+ ``!s x. {x} SUBSET s <=> x IN s``,
+  SET_TAC[]);
+
+val INJECTIVE_ON_IMAGE = store_thm ("INJECTIVE_ON_IMAGE",
+ ``!f:'a->'b u. (!s t. s SUBSET u /\ t SUBSET u /\ 
+                (IMAGE f s = IMAGE f t) ==> (s = t)) <=> 
+      (!x y. x IN u /\ y IN u /\ (f x = f y) ==> (x = y))``,
+  REPEAT GEN_TAC THEN EQ_TAC THENL 
+  [DISCH_TAC, SET_TAC[]] THEN MAP_EVERY X_GEN_TAC [``x:'a``, ``y:'a``] THEN 
+   STRIP_TAC THEN FIRST_X_ASSUM(MP_TAC o SPECL [``{x:'a}``, ``{y:'a}``]) THEN 
+   ASM_REWRITE_TAC[SING_SUBSET, IMAGE_EMPTY, IMAGE_INSERT] THEN SET_TAC[]);
+
+val INJECTIVE_IMAGE = store_thm ("INJECTIVE_IMAGE",
+ ``!f:'a->'b. (!s t. (IMAGE f s = IMAGE f t) ==> (s = t)) <=> 
+              (!x y. (f x = f y) ==> (x = y))``,
+  GEN_TAC THEN MP_TAC(ISPECL [``f:'a->'b``, ``univ(:'a)``] INJECTIVE_ON_IMAGE) THEN 
+  REWRITE_TAC[IN_UNIV, SUBSET_UNIV]);
+
+val FINITE_FINITE_BIGUNION = store_thm
+  ("FINITE_FINITE_BIGUNION",
+ ``!s. FINITE(s) ==> (FINITE(BIGUNION s) <=> (!t. t IN s ==> FINITE(t)))``,
+  ONCE_REWRITE_TAC [METIS []
+   ``!s. (FINITE (BIGUNION s) <=> !t. t IN s ==> FINITE t) =
+     (\s. FINITE (BIGUNION s) <=> !t. t IN s ==> FINITE t) s``] THEN
+  MATCH_MP_TAC FINITE_INDUCT THEN BETA_TAC THEN
+  SIMP_TAC std_ss [IN_INSERT, NOT_IN_EMPTY, BIGUNION_EMPTY, BIGUNION_INSERT] THEN
+  SIMP_TAC std_ss [FINITE_UNION, FINITE_EMPTY, FINITE_INSERT] THEN MESON_TAC[]);
+
+(* ------------------------------------------------------------------------- *)
+(* Relational form is often more useful.                                     *)
+(* ------------------------------------------------------------------------- *)
+
+val _ = set_fixity "HAS_SIZE" (Infix(NONASSOC, 450));
+
+val HAS_SIZE = new_definition ("HAS_SIZE",
+ ``s HAS_SIZE n <=> FINITE s /\ (CARD s = n)``);
+
+val HAS_SIZE_CARD = store_thm ("HAS_SIZE_CARD",
+``!s n. s HAS_SIZE n ==> (CARD s = n)``,
+  SIMP_TAC std_ss [HAS_SIZE]);
+
+val HAS_SIZE_0 = store_thm ("HAS_SIZE_0",
+ ``!(s:'a->bool). s HAS_SIZE 0:num <=> (s = {})``,
+  REPEAT GEN_TAC THEN REWRITE_TAC[HAS_SIZE] THEN
+  EQ_TAC THEN DISCH_TAC THEN
+  ASM_REWRITE_TAC[FINITE_EMPTY, FINITE_INSERT, CARD_DEF] THEN
+  FIRST_ASSUM(MP_TAC o CONJUNCT2) THEN
+  FIRST_ASSUM(MP_TAC o CONJUNCT1) THEN
+  SPEC_TAC(``s:'a->bool``,``s:'a->bool``) THEN GEN_TAC THEN
+  
+  KNOW_TAC ``(CARD s' = 0:num) ==> (s' = {}) = 
+       (\s'. (CARD s' = 0:num) ==> (s' = {})) s'`` THENL
+  [FULL_SIMP_TAC std_ss [], ALL_TAC] THEN DISCH_TAC THEN
+  ONCE_ASM_REWRITE_TAC [] THEN 
+  MATCH_MP_TAC FINITE_INDUCT THEN BETA_TAC THEN
+  REWRITE_TAC[NOT_INSERT_EMPTY] THEN
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  FIRST_ASSUM(fn th => REWRITE_TAC[MATCH_MP (CONJUNCT2 CARD_DEF) th]) THEN
+  FULL_SIMP_TAC std_ss [GSYM SUC_NOT]);
+
+val HAS_SIZE_SUC = store_thm ("HAS_SIZE_SUC",
+ ``!(s:'a->bool) n. s HAS_SIZE (SUC n) <=>
+   ~(s = {}) /\ !a. a IN s ==> (s DELETE a) HAS_SIZE n``,
+  REPEAT GEN_TAC THEN REWRITE_TAC[HAS_SIZE] THEN
+  ASM_CASES_TAC ``s:'a->bool = {}`` THEN
+  ASM_REWRITE_TAC[CARD_DEF, FINITE_EMPTY, FINITE_INSERT, 
+  NOT_IN_EMPTY, SUC_NOT] THEN REWRITE_TAC[FINITE_DELETE] THEN
+  ASM_CASES_TAC ``FINITE(s:'a->bool)`` THEN
+  RW_TAC std_ss[NOT_FORALL_THM, MEMBER_NOT_EMPTY] THEN
+  EQ_TAC THEN REPEAT STRIP_TAC THENL
+  [ASM_SIMP_TAC std_ss [CARD_DELETE],
+  KNOW_TAC ``?x. x IN s`` THENL 
+  [FULL_SIMP_TAC std_ss [MEMBER_NOT_EMPTY], ALL_TAC] THEN 
+  DISCH_THEN(X_CHOOSE_TAC ``a:'a``) THEN ASSUME_TAC CARD_INSERT THEN
+  POP_ASSUM (MP_TAC o Q.SPEC `s DELETE a`) THEN
+  FULL_SIMP_TAC std_ss [FINITE_DELETE] THEN STRIP_TAC THEN
+  POP_ASSUM (MP_TAC o Q.SPEC `a`) THEN
+  FULL_SIMP_TAC std_ss [INSERT_DELETE] THEN ASM_REWRITE_TAC[IN_DELETE]]);
+
+val FINITE_HAS_SIZE = store_thm ("FINITE_HAS_SIZE",
+ ``!s. FINITE s <=> s HAS_SIZE CARD s``,
+  REWRITE_TAC[HAS_SIZE]);
+
+(* ------------------------------------------------------------------------- *)
+(* This is often more useful as a rewrite.                                   *)
+(* ------------------------------------------------------------------------- *)
+
+val lemma = SET_RULE ``!a s. a IN s ==> (s = a INSERT (s DELETE a))``;
+
+val HAS_SIZE_CLAUSES = store_thm ("HAS_SIZE_CLAUSES",
+ ``!s. (s HAS_SIZE 0 <=> (s = {})) /\
+       (s HAS_SIZE (SUC n) <=>
+        ?a t. t HAS_SIZE n /\ ~(a IN t) /\ (s = a INSERT t))``,
+  REWRITE_TAC[HAS_SIZE_0] THEN REPEAT STRIP_TAC THEN EQ_TAC THENL
+   [REWRITE_TAC[HAS_SIZE_SUC, GSYM MEMBER_NOT_EMPTY] THEN
+    MESON_TAC[lemma, IN_DELETE],
+    SIMP_TAC std_ss [LEFT_IMP_EXISTS_THM, HAS_SIZE, CARD_EMPTY, CARD_INSERT, 
+     FINITE_INSERT]]);
+
+val CARD_SUBSET_EQ = store_thm ("CARD_SUBSET_EQ",
+ ``!(a:'a->bool) b. FINITE b /\ a SUBSET b /\ (CARD a = CARD b) ==> (a = b)``,
+  REPEAT STRIP_TAC THEN
+  MP_TAC(SPECL [``a:'a->bool``] CARD_UNION) THEN
+  SUBGOAL_THEN ``FINITE(a:'a->bool)`` ASSUME_TAC THENL
+   [METIS_TAC[SUBSET_FINITE_I], ALL_TAC] THEN ASM_REWRITE_TAC [] THEN 
+  DISCH_THEN (MP_TAC o SPEC ``b DIFF (a:'a->bool)``) THEN
+  SUBGOAL_THEN ``FINITE(b:'a->bool DIFF a)`` ASSUME_TAC THENL
+   [MATCH_MP_TAC SUBSET_FINITE_I THEN EXISTS_TAC ``b:'a->bool`` THEN
+    ASM_REWRITE_TAC[] THEN SET_TAC[], ALL_TAC] THEN
+  SUBGOAL_THEN ``a:'a->bool INTER (b DIFF a) = EMPTY`` ASSUME_TAC THENL
+   [SET_TAC[], ALL_TAC] THEN
+  ASM_REWRITE_TAC[] THEN
+  SUBGOAL_THEN ``a UNION (b:'a->bool DIFF a) = b`` ASSUME_TAC THENL
+   [UNDISCH_TAC ``a:'a->bool SUBSET b`` THEN SET_TAC[], ALL_TAC] THEN
+  ASM_REWRITE_TAC[] THEN
+  REWRITE_TAC[ARITH_PROVE ``(a = a + b) <=> (b = 0:num)``] THEN DISCH_TAC THEN
+  SUBGOAL_THEN ``b:'a->bool DIFF a = EMPTY`` MP_TAC THENL
+   [REWRITE_TAC[GSYM HAS_SIZE_0] THEN
+    FULL_SIMP_TAC std_ss [HAS_SIZE, CARD_EMPTY],
+    UNDISCH_TAC ``a:'a->bool SUBSET b`` THEN SET_TAC[]]);
+
+val HAS_SIZE_INDEX = store_thm ("HAS_SIZE_INDEX",
+ ``!s n. s HAS_SIZE n
+   ==> ?f:num->'a. (!m. m < n ==> f(m) IN s) /\
+   (!x. x IN s ==> ?!m. m < n /\ (f m = x))``,
+
+  KNOW_TAC ``(!(s:'a->bool) (n:num). s HAS_SIZE n ==> 
+       ?f. (!m. m < n ==> f m IN s) /\ !x. x IN s ==> ?!m. m < n /\ (f m = x)) =
+             (!(n:num) (s:'a->bool). s HAS_SIZE n ==> 
+       ?f. (!m. m < n ==> f m IN s) /\ !x. x IN s ==> ?!m. m < n /\ (f m = x))``
+  THENL [EQ_TAC THENL [FULL_SIMP_TAC std_ss [], FULL_SIMP_TAC std_ss []], ALL_TAC]
+  THEN DISCH_TAC THEN ONCE_ASM_REWRITE_TAC [] THEN
+  INDUCT_TAC THEN SIMP_TAC std_ss [HAS_SIZE_0, HAS_SIZE_SUC, NOT_IN_EMPTY,
+  ARITH_PROVE ``(!m. m < 0:num <=> F) /\ (!m n. m < SUC n <=> (m = n) \/ m < n)``] THEN
+  X_GEN_TAC ``s:'a->bool`` THEN REWRITE_TAC[EXTENSION, NOT_IN_EMPTY] THEN
+  SIMP_TAC std_ss [NOT_FORALL_THM] THEN
+  DISCH_THEN(CONJUNCTS_THEN2 (X_CHOOSE_TAC ``a:'a``) (MP_TAC o SPEC ``a:'a``)) THEN
+  ASM_REWRITE_TAC[] THEN DISCH_TAC THEN
+  FIRST_X_ASSUM(MP_TAC o SPEC ``s DELETE (a:'a)``) THEN ASM_REWRITE_TAC[] THEN
+  DISCH_THEN(X_CHOOSE_THEN ``f:num->'a`` STRIP_ASSUME_TAC) THEN
+  EXISTS_TAC ``\m:num. if m < n then f(m) else a:'a`` THEN BETA_TAC THEN CONJ_TAC THENL
+  [GEN_TAC THEN REWRITE_TAC[] THEN COND_CASES_TAC THEN
+  ASM_MESON_TAC[IN_DELETE], ALL_TAC] THEN
+  X_GEN_TAC ``x:'a`` THEN DISCH_TAC THEN ASM_REWRITE_TAC[] THEN
+  FIRST_X_ASSUM(MP_TAC o SPEC ``x:'a``) THEN
+  ASM_REWRITE_TAC[IN_DELETE] THEN
+  DISCH_TAC THEN
+  Cases_on `x <> a` THEN1 METIS_TAC [] THEN
+  METIS_TAC [LESS_REFL, IN_DELETE]);
+
+val CARD_BIGUNION_LE = store_thm ("CARD_BIGUNION_LE",
+ ``!s t:'a->'b->bool m n.
+        s HAS_SIZE m /\ (!x. x IN s ==> FINITE(t x) /\ CARD(t x) <= n)
+        ==> CARD(BIGUNION {t(x) | x IN s}) <= m * n``,
+  GEN_REWR_TAC (funpow 4 BINDER_CONV o funpow 2 LAND_CONV) [HAS_SIZE] THEN
+  REWRITE_TAC[GSYM CONJ_ASSOC] THEN
+  ONCE_REWRITE_TAC[CONJ_EQ_IMP] THEN SIMP_TAC std_ss [RIGHT_FORALL_IMP_THM] THEN
+  GEN_TAC THEN ONCE_REWRITE_TAC [METIS [] 
+    ``(!(t :'a -> 'b -> bool) (n :num).
+  (!(x :'a). x IN s ==> FINITE (t x) /\ CARD (t x) <= n) ==>
+  CARD (BIGUNION {t x | x IN s}) <= CARD s * n) =
+      (\s. !(t :'a -> 'b -> bool) (n :num).
+  (!(x :'a). x IN s ==> FINITE (t x) /\ CARD (t x) <= n) ==>
+  CARD (BIGUNION {t x | x IN s}) <= CARD s * n) s``] THEN
+  MATCH_MP_TAC FINITE_INDUCT THEN BETA_TAC THEN CONJ_TAC THEN
+  SIMP_TAC std_ss [SET_RULE ``BIGUNION {t x | x IN {}} = {}``, 
+                   CARD_EMPTY, CARD_INSERT, ZERO_LESS_EQ] THEN
+  REPEAT GEN_TAC THEN STRIP_TAC THEN 
+  SIMP_TAC std_ss [GSYM RIGHT_FORALL_IMP_THM] THEN REPEAT GEN_TAC THEN
+  ASM_SIMP_TAC std_ss [CARD_EMPTY, CARD_INSERT, FINITE_EMPTY, FINITE_INSERT] THEN
+  DISCH_TAC THEN DISCH_TAC THEN
+  REWRITE_TAC[SET_RULE
+   ``BIGUNION {t x | x IN a INSERT s} = t(a) UNION BIGUNION {t x | x IN s}``] THEN
+  MATCH_MP_TAC LESS_EQ_TRANS THEN EXISTS_TAC
+   ``CARD((t:'a->'b->bool) e) + CARD(BIGUNION {(t:'a->'b->bool) x | x IN s})`` THEN
+  CONJ_TAC THENL
+   [MATCH_MP_TAC CARD_UNION_LE THEN ASM_SIMP_TAC std_ss [IN_INSERT] THEN
+    REWRITE_TAC[SET_RULE ``{t x | x IN s} = IMAGE t s``] THEN
+    ASM_SIMP_TAC std_ss [FINITE_FINITE_BIGUNION, IMAGE_FINITE, FORALL_IN_IMAGE,
+                 IN_INSERT],
+    REWRITE_TAC [ADD1] THEN
+    MATCH_MP_TAC(ARITH_PROVE ``a <= n /\ b <= x * n ==> a + b <= (x + 1:num) * n``) THEN
+    ASM_SIMP_TAC arith_ss [IN_INSERT]]);
+
+(* ------------------------------------------------------------------------- *)
+(* Cardinality of type bool.                                                 *)
+(* ------------------------------------------------------------------------- *)
+
+val HAS_SIZE_BOOL = store_thm ("HAS_SIZE_BOOL",
+ ``univ(:bool) HAS_SIZE 2``,
+  SUBGOAL_THEN ``univ(:bool) = {F;T}`` SUBST1_TAC THENL
+   [REWRITE_TAC[EXTENSION, IN_UNIV, IN_INSERT] THEN TAUT_TAC,
+    SIMP_TAC arith_ss [HAS_SIZE, CARD_INSERT, CARD_EMPTY, FINITE_INSERT, FINITE_EMPTY,
+             IN_SING, NOT_IN_EMPTY]]);
+
+val CARD_BOOL = store_thm ("CARD_BOOL",
+ ``CARD univ(:bool) = 2``,
+  MESON_TAC[HAS_SIZE_BOOL, HAS_SIZE]);
+
+val FINITE_BOOL = store_thm ("FINITE_BOOL",
+ ``FINITE univ(:bool)``,
+  MESON_TAC[HAS_SIZE_BOOL, HAS_SIZE]);
+
+(* ------------------------------------------------------------------------- *)
+(* More cardinality results for whole universe.                              *)
+(* ------------------------------------------------------------------------- *)
+
+val HAS_SIZE_CART_UNIV = store_thm ("HAS_SIZE_CART_UNIV",
+ ``!m. univ(:'a) HAS_SIZE m ==> univ(:'a) HAS_SIZE m EXP (1:num)``,
+  REWRITE_TAC [EXP_1]);
+
+val CARD_CART_UNIV = store_thm ("CARD_CART_UNIV",
+ ``FINITE univ(:'a) ==> (CARD univ(:'a) = CARD univ(:'a) EXP (1:num))``,
+  MESON_TAC[HAS_SIZE_CART_UNIV, HAS_SIZE]);
+
+val FINITE_CART_UNIV = store_thm ("FINITE_CART_UNIV",
+ ``FINITE univ(:'a) ==> FINITE univ(:'a)``,
+  MESON_TAC[HAS_SIZE_CART_UNIV, HAS_SIZE]);
+
+(* ------------------------------------------------------------------------- *)
+
+val HAS_SIZE_NUMSEG_LT = store_thm ("HAS_SIZE_NUMSEG_LT",
+ ``!n. {m | m < n} HAS_SIZE n``,
+  INDUCT_TAC THENL
+   [SUBGOAL_THEN ``{m:num | m < 0} = {}``
+       (fn th => REWRITE_TAC[HAS_SIZE_0, th]) THEN
+    SIMP_TAC std_ss [EXTENSION, NOT_IN_EMPTY, GSPECIFICATION, LESS_THM, NOT_LESS_0],
+    SUBGOAL_THEN ``{m | m < SUC n} = n INSERT {m | m < n}`` SUBST1_TAC THENL
+     [SIMP_TAC std_ss [EXTENSION, GSPECIFICATION, IN_INSERT] THEN ARITH_TAC,
+      ALL_TAC] THEN
+    RULE_ASSUM_TAC(REWRITE_RULE[HAS_SIZE]) THEN
+    ASM_SIMP_TAC std_ss [HAS_SIZE, CARD_EMPTY, CARD_INSERT, FINITE_INSERT] THEN
+    SIMP_TAC std_ss [GSPECIFICATION, LESS_REFL]]);
+
+val FINITE_NUMSEG_LT = store_thm ("FINITE_NUMSEG_LT",
+ ``!n:num. FINITE {m | m < n}``,
+  REWRITE_TAC[REWRITE_RULE[HAS_SIZE] HAS_SIZE_NUMSEG_LT]);
+
+val HAS_SIZE_NUMSEG_LE = store_thm ("HAS_SIZE_NUMSEG_LE",
+ ``!n. {m | m <= n} HAS_SIZE (n + 1)``,
+  REWRITE_TAC[GSYM LT_SUC_LE, HAS_SIZE_NUMSEG_LT, ADD1]);
+
+val FINITE_NUMSEG_LE = store_thm ("FINITE_NUMSEG_LE",
+ ``!n:num. FINITE {m | m <= n}``,
+ SIMP_TAC std_ss [REWRITE_RULE[HAS_SIZE] HAS_SIZE_NUMSEG_LE]);
+
+val INFINITE_DIFF_FINITE = store_thm ("INFINITE_DIFF_FINITE",
+ ``!s:'a->bool t. INFINITE(s) /\ FINITE(t) ==> INFINITE(s DIFF t)``,
+  REPEAT GEN_TAC THEN
+  MATCH_MP_TAC(TAUT `(b /\ ~c ==> ~a) ==> a /\ b ==> c`) THEN
+  REWRITE_TAC [] THEN STRIP_TAC THEN
+  MATCH_MP_TAC SUBSET_FINITE_I THEN
+  EXISTS_TAC ``(t:'a->bool) UNION (s DIFF t)`` THEN
+  ASM_REWRITE_TAC[FINITE_UNION] THEN SET_TAC[]);
+
+(* ------------------------------------------------------------------------- *)
+(* Cardinal comparisons (in HOL-light's notations)                           *)
+(* ------------------------------------------------------------------------- *)
+
+val _ = set_fixity "<=_c" (Infix(NONASSOC, 450)); (* for cardleq *)
+val _ = overload_on("<=_c", ``cardleq``);
+val _ = overload_on("<<=",  ``$<=_c``);           (* defined in pred_setTheory *)
+
+val _ = set_fixity "<_c" (Infix(NONASSOC, 450));  (* for cardlt *)
+val _ = overload_on("<_c", ``cardlt``);
+val _ = overload_on("<</=", ``$<_c``);
+
+val _ = set_fixity ">=_c" (Infix(NONASSOC, 450)); (* for cardgeq *)
+val _ = Unicode.unicode_version {u = UTF8.chr 0x227D, tmnm = ">=_c"};
+val _ = TeX_notation {hol = ">=_c",          TeX = ("\\ensuremath{\\succcurlyeq}", 1)};
+val _ = TeX_notation {hol = UTF8.chr 0x227D, TeX = ("\\ensuremath{\\succcurlyeq}", 1)};
+
+val _ = set_fixity ">_c" (Infix(NONASSOC, 450));  (* for cardgt *)
+val _ = Unicode.unicode_version {u = UTF8.chr 0x227B, tmnm = ">_c"};
+val _ = TeX_notation {hol = ">_c",           TeX = ("\\ensuremath{\\succ}", 1)};
+val _ = TeX_notation {hol = UTF8.chr 0x227B, TeX = ("\\ensuremath{\\succ}", 1)};
+
+val _ = set_fixity "=_c" (Infix(NONASSOC, 450));  (* for cardeq *)
+val _ = overload_on("=_c", ``cardeq``);
+val _ = overload_on("=~",  ``$=_c``);
+
+val le_c = store_thm ("le_c",
+  ``!s t. s <=_c t <=> ?f. (!x. x IN s ==> f(x) IN t) /\
+                           (!x y. x IN s /\ y IN s /\ (f(x) = f(y)) ==> (x = y))``,
+    rpt GEN_TAC
+ >> REWRITE_TAC [cardleq_def, INJ_DEF]
+ >> PROVE_TAC []);
+
+val lt_c = store_thm ("lt_c",
+  ``!s t. s <_c t <=> s <=_c t /\ ~(t <=_c s)``,
+    rpt GEN_TAC
+ >> EQ_TAC >> STRIP_TAC
+ >> PROVE_TAC [cardlt_lenoteq]);
+
+val eq_c = store_thm ("eq_c",
+  ``!s t. s =_c t <=> ?f. (!x. x IN s ==> f(x) IN t) /\
+                          !y. y IN t ==> ?!x. x IN s /\ (f x = y)``,
+    rpt GEN_TAC
+ >> REWRITE_TAC [cardeq_def, BIJ_ALT, IN_FUNSET]
+ >> `!f x y. (f x = y) = (y = f x)` by PROVE_TAC [EQ_SYM]
+ >> ASM_REWRITE_TAC []);
+
+val cardgeq_def = Define
+   `cardgeq s t = cardleq t s`;
+
+val _ = overload_on (">=_c", ``cardgeq``);
+val ge_c = save_thm ("ge_c",   cardgeq_def);
+
+val cardgt_def = Define
+   `cardgt s t = cardlt t s`;
+
+val _ = overload_on (">_c",  ``cardgt``);
+val gt_c = save_thm ("gt_c",   cardgt_def);
+
+val LE_C = store_thm ("LE_C",
+ ``!s t. s <=_c t <=> ?g. !x. x IN s ==> ?y. y IN t /\ (g y = x)``,
+  SIMP_TAC std_ss [le_c, INJECTIVE_ON_LEFT_INVERSE, SURJECTIVE_ON_RIGHT_INVERSE,
+  GSYM RIGHT_EXISTS_IMP_THM, SKOLEM_THM, GSYM RIGHT_EXISTS_AND_THM] THEN
+  MESON_TAC[]);
+
+val GE_C = store_thm ("GE_C",
+ ``!s t. s >=_c t <=> ?f. !y. y IN t ==> ?x. x IN s /\ (y = f x)``,
+  REWRITE_TAC[ge_c, LE_C] THEN MESON_TAC[]);
+
+val _ = overload_on ("COUNTABLE", ``countable``);
+
+val COUNTABLE = store_thm
+  ("COUNTABLE", ``!t. COUNTABLE t <=> univ(:num) >=_c t``,
+    REWRITE_TAC [countable_def, cardgeq_def, cardleq_def]);
+
 
 val _ = export_theory()

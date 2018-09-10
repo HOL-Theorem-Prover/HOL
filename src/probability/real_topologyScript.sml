@@ -24,6 +24,7 @@ jrhUtils pairTheory boolTheory pred_setTheory optionTheory numTheory
 sumTheory InductiveDefinition ind_typeTheory listTheory mesonLib
 seqTheory limTheory transcTheory realLib topologyTheory;
 
+open cardinalTheory;
 open util_probTheory iterateTheory rich_cardinalTheory productTheory;
 
 val _ = new_theory "real_topology";
@@ -406,7 +407,7 @@ val REAL_INV_1_LE = store_thm ("REAL_INV_1_LE",
 val SUM_GP_BASIC = store_thm ("SUM_GP_BASIC",
  ``!x:real n:num. (&1 - x) * sum((0:num)..n) (\i. x pow i) = &1 - x pow (SUC n)``,
   GEN_TAC THEN INDUCT_TAC THEN SIMP_TAC std_ss [SUM_CLAUSES_NUMSEG] THEN
-  SIMP_TAC std_ss [pow, REAL_MUL_RID, LE_0, POW_1] THEN
+  SIMP_TAC std_ss [pow, REAL_MUL_RID, ZERO_LESS_EQ, POW_1] THEN
   ASM_REWRITE_TAC[REAL_ADD_LDISTRIB, pow] THEN REAL_ARITH_TAC);
 
 val SUM_GP_MULTIPLIED = store_thm ("SUM_GP_MULTIPLIED",
@@ -7893,7 +7894,7 @@ val compact = new_definition ("compact",
 val MONOTONE_BIGGER = store_thm ("MONOTONE_BIGGER",
  ``!r. (!m n. m < n ==> r(m) < r(n)) ==> !n:num. n <= r(n)``,
   GEN_TAC THEN DISCH_TAC THEN INDUCT_TAC THEN
-  METIS_TAC[LE_0, ARITH_PROVE ``n <= m /\ m < p ==> SUC n <= p``, LT]);
+  METIS_TAC[ZERO_LESS_EQ, ARITH_PROVE ``n <= m /\ m < p ==> SUC n <= p``, LT]);
 
 val LIM_SUBSEQUENCE = store_thm ("LIM_SUBSEQUENCE",
  ``!s r l. (!m n. m < n ==> r(m) < r(n)) /\ (s --> l) sequentially
@@ -8081,7 +8082,7 @@ val COMPACT_IMP_COMPLETE = store_thm ("COMPACT_IMP_COMPLETE",
   UNDISCH_TAC ``cauchy f`` THEN GEN_REWR_TAC LAND_CONV [cauchy] THEN
   SIMP_TAC std_ss [GE, LIM, SEQUENTIALLY, dist, REAL_SUB_RZERO] THEN
   SUBGOAL_THEN ``!n:num. n <= r(n)`` MP_TAC THENL [INDUCT_TAC, ALL_TAC] THEN
-  ASM_MESON_TAC[LESS_EQ_TRANS, LESS_EQ_REFL, LT, LESS_EQ_LESS_TRANS, LE_0, LE_SUC_LT]);
+  ASM_MESON_TAC[LESS_EQ_TRANS, LESS_EQ_REFL, LT, LESS_EQ_LESS_TRANS, ZERO_LESS_EQ, LE_SUC_LT]);
 
 val COMPLETE_UNIV = store_thm ("COMPLETE_UNIV",
  ``complete univ(:real)``,
@@ -8403,7 +8404,7 @@ val LIMPT_OF_SEQUENCE_SUBSEQUENCE = store_thm ("LIMPT_OF_SEQUENCE_SUBSEQUENCE",
    X_GEN_TAC ``n:num`` THEN ASM_REWRITE_TAC[] THEN
    FIRST_X_ASSUM(MP_TAC o SPECL
     [``(r:num->num) n``, ``(nn:num->num)(r(n:num))``]) THEN
-   ASM_SIMP_TAC arith_ss [IN_NUMSEG, LE_0, REAL_LT_REFL],
+   ASM_SIMP_TAC arith_ss [IN_NUMSEG, ZERO_LESS_EQ, REAL_LT_REFL],
    DISCH_THEN(ASSUME_TAC o MATCH_MP MONOTONE_BIGGER)] THEN
   REWRITE_TAC[LIM_SEQUENTIALLY] THEN
   X_GEN_TAC ``e:real`` THEN GEN_REWR_TAC LAND_CONV [REAL_ARCH_INV] THEN
@@ -8869,7 +8870,7 @@ val BOUNDED_CLOSED_NEST = store_thm ("BOUNDED_CLOSED_NEST",
   REWRITE_TAC[compact] THEN
   DISCH_THEN(MP_TAC o SPEC ``a:num->real``) THEN
   KNOW_TAC ``(!n:num. a n IN s (0:num):real->bool)`` THENL
-  [ASM_MESON_TAC[SUBSET_DEF, LE_0],
+  [ASM_MESON_TAC[SUBSET_DEF, ZERO_LESS_EQ],
    DISCH_TAC THEN ASM_REWRITE_TAC []] THEN
   DISCH_THEN (X_CHOOSE_TAC ``l:real``) THEN
   EXISTS_TAC ``l:real`` THEN POP_ASSUM MP_TAC THEN
@@ -16949,14 +16950,242 @@ val HOMEOMORPHIC_OPEN_INTERVAL_UNIV = store_thm ("HOMEOMORPHIC_OPEN_INTERVAL_UNI
         ASM_REWRITE_TAC [] THEN REAL_ARITH_TAC]]]]);
 
 (* ------------------------------------------------------------------------- *)
+(* Cardinality of the reals. This is done in a rather laborious way to avoid *)
+(* any dependence on the theories of analysis.                               *)
+(* ------------------------------------------------------------------------- *)
+
+val lemma = prove (
+   ``!s m n. sum (s INTER (m..n)) (\i. inv(&3 pow i)) < &3 / &2 / &3 pow m``,
+    REPEAT GEN_TAC THEN MATCH_MP_TAC REAL_LET_TRANS THEN
+    EXISTS_TAC ``sum (m..n) (\i. inv(&3 pow i))`` THEN CONJ_TAC THENL
+    [ (* goal 1 (of 2) *)
+      MATCH_MP_TAC SUM_SUBSET_SIMPLE THEN
+      SIMP_TAC std_ss [FINITE_NUMSEG, INTER_SUBSET, REAL_LE_INV_EQ,
+               POW_POS, REAL_POS],
+      (* goal 2 (of 2) *)
+      completeInduct_on `n - m:num` THEN GEN_TAC THEN GEN_TAC THEN
+      DISCH_TAC THEN FULL_SIMP_TAC std_ss [] THEN POP_ASSUM K_TAC THEN
+      KNOW_TAC ``(!m'. m' < n - m ==>
+        !n m''. (m' = n - m'') ==>
+          sum (m'' .. n) (\i. inv (3 pow i)) < 3 / 2 / 3 pow m'') ==>
+       (!n' m''. (n' - m'' < n - m) ==>
+          sum (m'' .. n') (\i. inv (3 pow i)) < 3 / 2 / 3 pow m'')`` THENL
+      [ METIS_TAC [], ASM_REWRITE_TAC [] THEN POP_ASSUM K_TAC THEN DISCH_TAC ] THEN
+      ASM_CASES_TAC ``m:num <= n`` THENL
+      [ (* goal 2.1 (of 2) *)
+        ASM_SIMP_TAC std_ss [SUM_CLAUSES_LEFT] THEN ASM_CASES_TAC ``m + 1 <= n:num`` THENL
+        [ (* goal 2.1.1 (of 2) *)
+          FIRST_X_ASSUM (MP_TAC o SPECL [``n:num``, ``SUC m``]) THEN 
+          KNOW_TAC ``n - SUC m < n - m`` THENL
+          [ASM_ARITH_TAC, DISCH_TAC THEN ASM_REWRITE_TAC [] THEN POP_ASSUM K_TAC THEN
+           ASM_SIMP_TAC arith_ss [ADD1, REAL_POW_ADD]] THEN
+          MATCH_MP_TAC (REAL_ARITH
+			``a + j:real <= k ==> x < j ==> a + x < k:real``) THEN
+          KNOW_TAC ``3 pow m <> 0:real`` THENL
+          [MATCH_MP_TAC POW_NZ THEN REAL_ARITH_TAC, DISCH_TAC] THEN
+          ASM_SIMP_TAC real_ss [real_div, REAL_INV_MUL, POW_1] THEN
+          ONCE_REWRITE_TAC [REAL_MUL_SYM] THEN 
+          GEN_REWR_TAC (LAND_CONV o LAND_CONV) [GSYM REAL_MUL_RID] THEN
+          REWRITE_TAC [GSYM REAL_ADD_LDISTRIB, GSYM REAL_MUL_ASSOC] THEN
+          MATCH_MP_TAC REAL_LE_LMUL_IMP THEN CONJ_TAC THENL
+          [REWRITE_TAC [REAL_LE_INV_EQ] THEN MATCH_MP_TAC POW_POS THEN
+           REAL_ARITH_TAC, ALL_TAC] THEN REWRITE_TAC [GSYM real_div] THEN
+           SIMP_TAC real_ss [REAL_LE_RDIV_EQ, REAL_ADD_RDISTRIB, real_div] THEN
+           REWRITE_TAC [REAL_MUL_ASSOC] THEN SIMP_TAC real_ss [REAL_MUL_LINV],
+          ALL_TAC], ALL_TAC] THEN
+      RULE_ASSUM_TAC (REWRITE_RULE[NOT_LESS_EQUAL, GSYM NUMSEG_EMPTY]) THEN
+      ASM_REWRITE_TAC [SUM_CLAUSES, REAL_ADD_RID] THEN
+      (KNOW_TAC ``0:real < 3 pow m`` THENL
+          [MATCH_MP_TAC REAL_POW_LT THEN REAL_ARITH_TAC, DISCH_TAC] THEN
+       ASM_SIMP_TAC real_ss [REAL_LT_RDIV_EQ, REAL_MUL_LINV, REAL_LT_IMP_NE])]);
+
+val CARD_EQ_REAL = store_thm
+  ("CARD_EQ_REAL", ``univ(:real) =_c univ(:num->bool)``,
+  REWRITE_TAC [GSYM CARD_LE_ANTISYM] THEN CONJ_TAC THENL
+  [ (* goal 1 (of 2) *)
+    KNOW_TAC ``univ(:real) <=_c (univ(:num) *_c univ(:num->bool)) /\
+               (univ(:num) *_c univ(:num->bool)) <=_c univ(:num -> bool)`` THENL
+    [ALL_TAC, METIS_TAC [CARD_LE_TRANS]] THEN
+    CONJ_TAC THENL
+     [ALL_TAC,
+      MATCH_MP_TAC CARD_MUL2_ABSORB_LE THEN REWRITE_TAC[INFINITE_CARD_LE] THEN
+      SIMP_TAC std_ss [CANTOR_THM_UNIV, CARD_LT_IMP_LE, CARD_LE_REFL]] THEN
+    KNOW_TAC ``univ(:real) <=_c (univ(:num) *_c {x:real | &0 <= x}) /\
+               (univ(:num) *_c {x:real | &0 <= x}) <=_c 
+               (univ(:num) *_c univ(:num -> bool))`` THENL
+    [ALL_TAC, METIS_TAC [CARD_LE_TRANS]] THEN
+    CONJ_TAC THENL
+     [SIMP_TAC std_ss [LE_C, mul_c, EXISTS_PROD, IN_ELIM_PAIR_THM, IN_UNIV] THEN
+      EXISTS_TAC ``\(n,x:real). -(&1) pow n * x`` THEN X_GEN_TAC ``x:real`` THEN
+      KNOW_TAC ``?(p_2 :real). (p_2 IN {x | (0 :real) <= x} /\
+       ((\((n :num),(x :real)). -(1 :real) pow n * x) (0,p_2) = (x :real))) \/
+                               (p_2 IN {x | (0 :real) <= x} /\   
+       ((\((n :num),(x :real)). -(1 :real) pow n * x) (1,p_2) = (x :real)))`` THENL
+      [ALL_TAC, METIS_TAC [OR_EXISTS_THM]] THEN EXISTS_TAC ``abs x:real`` THEN
+      SIMP_TAC std_ss [GSPECIFICATION, pow, POW_1] THEN REAL_ARITH_TAC,
+      ALL_TAC] THEN
+    MATCH_MP_TAC CARD_LE_MUL THEN SIMP_TAC std_ss [CARD_LE_REFL] THEN
+    MP_TAC(ISPECL [``univ(:num)``, ``univ(:num)``] CARD_MUL_ABSORB_LE) THEN
+    SIMP_TAC std_ss [CARD_LE_REFL, num_INFINITE] THEN
+    SIMP_TAC std_ss [le_c, mul_c, IN_UNIV, FORALL_PROD, IN_ELIM_PAIR_THM] THEN
+    REWRITE_TAC [GSYM PAIR_EQ] THEN 
+    SIMP_TAC std_ss [GSYM FORALL_PROD, INJECTIVE_LEFT_INVERSE] THEN
+    SIMP_TAC std_ss [LEFT_IMP_EXISTS_THM]
+
+    THEN
+    MAP_EVERY X_GEN_TAC [``Pair:num#num->num``, ``Unpair:num->num#num``] THEN
+    DISCH_TAC THEN
+    EXISTS_TAC ``\x:real n:num. &(FST(Unpair n)) * x <= &(SND(Unpair n))`` THEN
+    SIMP_TAC std_ss [] THEN
+    KNOW_TAC ``!(x :real) (y :real). (\x y.
+      x IN {x | (0 :real) <= x} /\ y IN {x | (0 :real) <= x} /\
+     ((\(n :num). ((&FST ((Unpair :num -> num # num) n)) :real) * x <=
+                  ((&SND (Unpair n)) :real)) =
+     (\(n :num). ((&FST (Unpair n)) :real) * y <= ((&SND (Unpair n)) :real))) ==>
+      (x = y)) x y`` THENL
+    [ALL_TAC, METIS_TAC []]
+
+    THEN
+    MATCH_MP_TAC REAL_WLOG_LT THEN SIMP_TAC std_ss [GSPECIFICATION, FUN_EQ_THM] THEN
+    CONJ_TAC THENL [SIMP_TAC std_ss [EQ_SYM_EQ, CONJ_ACI], ALL_TAC] THEN
+    MAP_EVERY X_GEN_TAC [``x:real``, ``y:real``] THEN REPEAT STRIP_TAC THEN
+    FIRST_X_ASSUM(MP_TAC o GENL [``p:num``, ``q:num``] o
+      SPEC ``(Pair:num#num->num) (p,q)``) THEN
+    ASM_REWRITE_TAC[] THEN MATCH_MP_TAC(TAUT `~p ==> p ==> q`) THEN
+    MP_TAC(SPEC ``y - x:real`` REAL_ARCH) THEN
+    ASM_SIMP_TAC std_ss [REAL_SUB_LT, NOT_FORALL_THM] THEN
+    DISCH_THEN(MP_TAC o SPEC ``&2:real``) THEN
+    DISCH_THEN (X_CHOOSE_TAC ``p:num``) THEN EXISTS_TAC ``p:num`` THEN
+    MP_TAC(ISPEC ``&p * x:real`` REAL_BIGNUM) THEN
+    ONCE_REWRITE_TAC [METIS [] ``(?n. &p * x < &n:real) = (?n. (\n. &p * x < &n) n)``] THEN
+    DISCH_THEN (MP_TAC o MATCH_MP WOP) THEN SIMP_TAC std_ss [] THEN
+    DISCH_THEN (X_CHOOSE_TAC ``n:num``) THEN EXISTS_TAC ``n:num`` THEN
+    POP_ASSUM MP_TAC THEN SPEC_TAC (``n:num``,``n:num``) THEN
+    KNOW_TAC ``!n. (\n. &p * x < &n:real /\ (!m. m < n ==> ~(&p * x < &m)) ==>
+                      ~(&p * x <= &n <=> &p * y <= &n:real)) n`` THENL
+    [ALL_TAC, METIS_TAC []] THEN MATCH_MP_TAC INDUCTION THEN
+
+    ASM_SIMP_TAC std_ss [REAL_LE_MUL, REAL_POS,
+      REAL_ARITH ``x:real < &0 <=> ~(&0 <= x)``]
+
+    THEN
+    X_GEN_TAC ``q:num`` THEN REWRITE_TAC[GSYM REAL_OF_NUM_SUC] THEN
+    DISCH_THEN(K ALL_TAC) THEN STRIP_TAC THEN
+    FIRST_X_ASSUM(MP_TAC o SPEC ``q:num``) THEN
+    SIMP_TAC arith_ss [LT] THEN POP_ASSUM MP_TAC THEN
+    POP_ASSUM MP_TAC THEN POP_ASSUM MP_TAC THEN
+    POP_ASSUM MP_TAC THEN POP_ASSUM MP_TAC THEN REAL_ARITH_TAC,
+
+    (* goal 2 (of 2) *)
+    REWRITE_TAC[le_c, IN_UNIV] THEN
+    EXISTS_TAC ``\s:num->bool. sup { sum (s INTER ((0:num)..n)) (\i. inv(&3 pow i)) |
+                                    n IN univ(:num) }`` THEN
+    MAP_EVERY X_GEN_TAC [``x:num->bool``, ``y:num->bool``] THEN
+    ONCE_REWRITE_TAC[MONO_NOT_EQ] THEN
+    SIMP_TAC std_ss [EXTENSION, NOT_FORALL_THM] THEN
+    ONCE_REWRITE_TAC [METIS [] ``(?x':num. x' IN x <=/=> x' IN y) =
+                           (?x'. (\x'. x' IN x <=/=> x' IN y) x')``] THEN
+    DISCH_THEN (MP_TAC o MATCH_MP WOP) THEN SIMP_TAC std_ss [] THEN
+    MAP_EVERY (fn w => SPEC_TAC(w,w)) [``y:num->bool``, ``x:num->bool``] THEN
+    KNOW_TAC ``!x y.
+     (?n. ~(n IN x <=> n IN y) /\ (\x y n. !m. m < n ==> (m IN x <=> m IN y)) x y n) ==>
+     (\x y. sup {sum (x INTER (0 .. n)) (\i. inv (3 pow i)) | n IN univ(:num)} <>
+            sup {sum (y INTER (0 .. n)) (\i. inv (3 pow i)) | n IN univ(:num)}) x y`` THENL
+    [ALL_TAC, METIS_TAC []] THEN
+    MATCH_MP_TAC(MESON[]
+     ``((!P Q n. R P Q n <=> R Q P n) /\ (!P Q. SS P Q <=> SS Q P)) /\
+       (!P Q. (?n. n IN P /\ ~(n IN Q) /\ R P Q n) ==> SS P Q)
+       ==> !P Q. (?n:num. ~(n IN P <=> n IN Q) /\ R P Q n) ==> SS P Q``) THEN
+    SIMP_TAC std_ss [] THEN CONJ_TAC THENL 
+    [ONCE_REWRITE_TAC[EQ_SYM_EQ] THEN METIS_TAC [], SIMP_TAC std_ss []] THEN
+    MAP_EVERY X_GEN_TAC [``x:num->bool``, ``y:num->bool``] THEN
+    DISCH_THEN(X_CHOOSE_THEN ``n:num`` STRIP_ASSUME_TAC) THEN
+    MATCH_MP_TAC(REAL_ARITH ``!z:real. y < z /\ z <= x ==> ~(x = y)``) THEN
+
+    EXISTS_TAC ``sum (x INTER ((0:num)..n)) (\i. inv(&3 pow i))`` THEN CONJ_TAC THENL
+    [ (* goal 2.1 (of 2) *)
+      MATCH_MP_TAC REAL_LET_TRANS THEN
+      EXISTS_TAC
+       ``sum (y INTER ((0:num)..n)) (\i. inv(&3 pow i)) +
+         &3 / &2 / &3 pow (SUC n)`` THEN
+
+      CONJ_TAC THENL
+       [MATCH_MP_TAC REAL_SUP_LE_S THEN
+        CONJ_TAC THENL [SET_TAC[], SIMP_TAC std_ss [FORALL_IN_GSPEC, IN_UNIV]] THEN
+        X_GEN_TAC ``p:num`` THEN ASM_CASES_TAC ``n:num <= p`` THENL
+         [MATCH_MP_TAC(REAL_ARITH
+           ``!d. (s:real = t + d) /\ d <= e ==> s <= t + e``) THEN
+          EXISTS_TAC ``sum(y INTER (n+(1:num)..p)) (\i. inv (&3 pow i))`` THEN
+          CONJ_TAC THENL
+           [ONCE_REWRITE_TAC[INTER_COMM] THEN
+            SIMP_TAC std_ss [INTER_DEF, SUM_RESTRICT_SET] THEN
+            ASM_SIMP_TAC std_ss [SUM_COMBINE_R, ZERO_LESS_EQ],
+            SIMP_TAC std_ss [ADD1, lemma, REAL_LT_IMP_LE]],
+          MATCH_MP_TAC(REAL_ARITH ``y:real <= x /\ &0 <= d ==> y <= x + d``) THEN
+          SIMP_TAC real_ss [REAL_LE_DIV, REAL_POS, POW_POS] THEN
+          MATCH_MP_TAC SUM_SUBSET_SIMPLE THEN
+          SIMP_TAC real_ss [REAL_LE_INV_EQ, POW_POS, REAL_POS] THEN
+          SIMP_TAC std_ss [FINITE_INTER, FINITE_NUMSEG] THEN MATCH_MP_TAC
+           (SET_RULE ``s SUBSET t ==> u INTER s SUBSET u INTER t``) THEN
+          REWRITE_TAC[SUBSET_NUMSEG] THEN ASM_SIMP_TAC arith_ss []],
+        ONCE_REWRITE_TAC[INTER_COMM] THEN
+        SIMP_TAC std_ss [INTER_DEF, SUM_RESTRICT_SET] THEN ASM_CASES_TAC ``n = 0:num`` THENL
+         [FIRST_X_ASSUM SUBST_ALL_TAC THEN
+          FULL_SIMP_TAC real_ss [SUM_SING, NUMSEG_SING, pow] THEN
+          SIMP_TAC real_ss [REAL_LT_LDIV_EQ, REAL_INV1] THEN REAL_ARITH_TAC,
+          ASM_SIMP_TAC std_ss [SUM_CLAUSES_RIGHT, LE_1, ZERO_LESS_EQ, REAL_ADD_RID] THEN
+          MATCH_MP_TAC(REAL_ARITH ``(s:real = t) /\ d < e ==> s + d < t + e``) THEN
+          CONJ_TAC THENL
+           [MATCH_MP_TAC SUM_EQ_NUMSEG THEN
+            ASM_SIMP_TAC std_ss [ARITH_PROVE ``~(n = 0:num) /\ m <= n - 1 ==> m < n``],
+            SIMP_TAC real_ss [pow, real_div, REAL_INV_MUL, REAL_MUL_ASSOC] THEN
+            KNOW_TAC ``3 pow n <> 0:real`` THENL
+            [MATCH_MP_TAC POW_NZ THEN REAL_ARITH_TAC, DISCH_TAC] THEN
+            KNOW_TAC ``0:real < 3 pow n`` THENL
+            [MATCH_MP_TAC REAL_POW_LT THEN REAL_ARITH_TAC, DISCH_TAC] THEN
+            ASM_SIMP_TAC real_ss [REAL_INV_MUL, REAL_MUL_ASSOC] THEN
+            GEN_REWR_TAC RAND_CONV [GSYM REAL_MUL_LID] THEN
+            MATCH_MP_TAC REAL_LT_RMUL_IMP THEN ASM_SIMP_TAC real_ss [REAL_LT_INV_EQ] THEN
+            ONCE_REWRITE_TAC [REAL_MUL_SYM] THEN  
+            SIMP_TAC real_ss [REAL_MUL_ASSOC, REAL_MUL_LINV] THEN 
+            SIMP_TAC real_ss [REAL_INV_1OVER, REAL_LT_LDIV_EQ]]]],
+      MP_TAC(ISPEC ``{ sum (x INTER ((0:num)..n)) (\i. inv(&3 pow i)) | n IN univ(:num) }``
+          SUP) THEN SIMP_TAC std_ss [FORALL_IN_GSPEC, IN_UNIV] THEN
+      KNOW_TAC ``{sum (x INTER (0 .. n)) (\i. inv (3 pow i)) | n | T} <> {} /\
+         (?b. !n. sum (x INTER (0 .. n)) (\i. inv (3 pow i)) <= b)`` THENL
+      [ALL_TAC, DISCH_TAC THEN ASM_REWRITE_TAC [] THEN POP_ASSUM K_TAC THEN
+       SIMP_TAC std_ss []] THEN
+      CONJ_TAC THENL [SET_TAC[], ALL_TAC] THEN
+      EXISTS_TAC ``&3 / &2 / (&3:real) pow 0`` THEN
+      SIMP_TAC std_ss [lemma, REAL_LT_IMP_LE]]]);
+
+val UNCOUNTABLE_REAL = store_thm ("UNCOUNTABLE_REAL",
+ ``~COUNTABLE univ(:real)``,
+  REWRITE_TAC[COUNTABLE, ge_c] THEN
+  KNOW_TAC ``univ(:num) <_c univ(:num->bool) /\
+             univ(:num->bool) <=_c univ(:real)`` THENL
+  [ALL_TAC, METIS_TAC [CARD_LTE_TRANS]] THEN
+  REWRITE_TAC[CANTOR_THM_UNIV] THEN MATCH_MP_TAC CARD_EQ_IMP_LE THEN
+  ONCE_REWRITE_TAC[CARD_EQ_SYM] THEN REWRITE_TAC[CARD_EQ_REAL]);
+
+val CARD_EQ_REAL_IMP_UNCOUNTABLE = store_thm ("CARD_EQ_REAL_IMP_UNCOUNTABLE",
+ ``!s:real->bool. s =_c univ(:real) ==> ~COUNTABLE s``,
+  GEN_TAC THEN STRIP_TAC THEN
+  DISCH_THEN (MP_TAC o SPEC ``univ(:real)`` o MATCH_MP
+    (SIMP_RULE std_ss [CONJ_EQ_IMP] CARD_EQ_COUNTABLE)) THEN
+  REWRITE_TAC[UNCOUNTABLE_REAL] THEN ASM_MESON_TAC[CARD_EQ_SYM]);
+
+(* ------------------------------------------------------------------------- *)
 (* Cardinalities of various useful sets.                                     *)
 (* ------------------------------------------------------------------------- *)
 
+(* TODO: maybe the original theorem is about R^N spaces *)
 val CARD_EQ_EUCLIDEAN = store_thm ("CARD_EQ_EUCLIDEAN",
  ``univ(:real) =_c univ(:real)``,
   REWRITE_TAC [eq_c, IN_UNIV] THEN EXISTS_TAC ``(\x. x:real)`` THEN
   METIS_TAC []);
 
+(* TODO: maybe the original theorem is about R^N spaces *)
 val UNCOUNTABLE_EUCLIDEAN = store_thm ("UNCOUNTABLE_EUCLIDEAN",
  ``~COUNTABLE univ(:real)``,
   MATCH_MP_TAC CARD_EQ_REAL_IMP_UNCOUNTABLE THEN
@@ -17066,7 +17295,8 @@ val FINITE_BALL = store_thm ("FINITE_BALL",
 (* is smaller than R, or countable, or finite, or disconnected, or discrete. *)
 (* ------------------------------------------------------------------------- *)
 
-val CONTINUOUS_DISCONNECTED_DISCRETE_FINITE_RANGE_CONSTANT_EQ = store_thm ("CONTINUOUS_DISCONNECTED_DISCRETE_FINITE_RANGE_CONSTANT_EQ",
+val CONTINUOUS_DISCONNECTED_DISCRETE_FINITE_RANGE_CONSTANT_EQ = store_thm
+  ("CONTINUOUS_DISCONNECTED_DISCRETE_FINITE_RANGE_CONSTANT_EQ",
   ``(!s. connected s <=>
          !f:real->real t.
             f continuous_on s /\ IMAGE f s SUBSET t /\
@@ -17182,7 +17412,8 @@ val CONTINUOUS_DISCONNECTED_DISCRETE_FINITE_RANGE_CONSTANT_EQ = store_thm ("CONT
                            MP_TAC(SPEC ``b:real`` th)) THEN
       ASM_REWRITE_TAC[] THEN REAL_ARITH_TAC]]);
 
-val CONTINUOUS_DISCONNECTED_RANGE_CONSTANT_EQ = store_thm ("CONTINUOUS_DISCONNECTED_RANGE_CONSTANT_EQ",
+val CONTINUOUS_DISCONNECTED_RANGE_CONSTANT_EQ = store_thm
+  ("CONTINUOUS_DISCONNECTED_RANGE_CONSTANT_EQ",
  ``(!s. connected s <=>
          !f:real->real t.
             f continuous_on s /\ IMAGE f s SUBSET t /\
@@ -17190,7 +17421,8 @@ val CONTINUOUS_DISCONNECTED_RANGE_CONSTANT_EQ = store_thm ("CONTINUOUS_DISCONNEC
             ==> ?a. !x. x IN s ==> (f x = a))``,
   REWRITE_TAC [CONTINUOUS_DISCONNECTED_DISCRETE_FINITE_RANGE_CONSTANT_EQ]);
 
-val CONTINUOUS_DISCRETE_RANGE_CONSTANT_EQ = store_thm ("CONTINUOUS_DISCRETE_RANGE_CONSTANT_EQ",
+val CONTINUOUS_DISCRETE_RANGE_CONSTANT_EQ = store_thm
+  ("CONTINUOUS_DISCRETE_RANGE_CONSTANT_EQ",
  ``(!s. connected s <=>
          !f:real->real.
             f continuous_on s /\
@@ -17200,14 +17432,16 @@ val CONTINUOUS_DISCRETE_RANGE_CONSTANT_EQ = store_thm ("CONTINUOUS_DISCRETE_RANG
             ==> ?a. !x. x IN s ==> (f x = a)) ``,
   METIS_TAC [CONTINUOUS_DISCONNECTED_DISCRETE_FINITE_RANGE_CONSTANT_EQ]);
 
-val CONTINUOUS_FINITE_RANGE_CONSTANT_EQ = store_thm ("CONTINUOUS_FINITE_RANGE_CONSTANT_EQ",
+val CONTINUOUS_FINITE_RANGE_CONSTANT_EQ = store_thm
+  ("CONTINUOUS_FINITE_RANGE_CONSTANT_EQ",
  ``(!s. connected s <=>
          !f:real->real.
             f continuous_on s /\ FINITE(IMAGE f s)
             ==> ?a. !x. x IN s ==> (f x = a))``,
   METIS_TAC [CONTINUOUS_DISCONNECTED_DISCRETE_FINITE_RANGE_CONSTANT_EQ]);
 
-val CONTINUOUS_DISCONNECTED_RANGE_CONSTANT = store_thm ("CONTINUOUS_DISCONNECTED_RANGE_CONSTANT",
+val CONTINUOUS_DISCONNECTED_RANGE_CONSTANT = store_thm
+  ("CONTINUOUS_DISCONNECTED_RANGE_CONSTANT",
  ``!f:real->real s.
         connected s /\
         f continuous_on s /\ IMAGE f s SUBSET t /\
@@ -17215,7 +17449,8 @@ val CONTINUOUS_DISCONNECTED_RANGE_CONSTANT = store_thm ("CONTINUOUS_DISCONNECTED
         ==> ?a. !x. x IN s ==> (f x = a)``,
   MESON_TAC[CONTINUOUS_DISCONNECTED_RANGE_CONSTANT_EQ]);
 
-val CONTINUOUS_DISCRETE_RANGE_CONSTANT = store_thm ("CONTINUOUS_DISCRETE_RANGE_CONSTANT",
+val CONTINUOUS_DISCRETE_RANGE_CONSTANT = store_thm
+  ("CONTINUOUS_DISCRETE_RANGE_CONSTANT",
  ``!f:real->real s.
         connected s /\
         f continuous_on s /\
@@ -17234,7 +17469,8 @@ val CONTINUOUS_DISCRETE_RANGE_CONSTANT = store_thm ("CONTINUOUS_DISCRETE_RANGE_C
   SIMP_TAC std_ss [RIGHT_FORALL_IMP_THM, CONJ_EQ_IMP] THEN
   SIMP_TAC std_ss [AND_IMP_INTRO, GSYM CONTINUOUS_DISCRETE_RANGE_CONSTANT_EQ]);
 
-val CONTINUOUS_FINITE_RANGE_CONSTANT = store_thm ("CONTINUOUS_FINITE_RANGE_CONSTANT",
+val CONTINUOUS_FINITE_RANGE_CONSTANT = store_thm
+  ("CONTINUOUS_FINITE_RANGE_CONSTANT",
  ``!f:real->real s.
         connected s /\
         f continuous_on s /\
@@ -17288,7 +17524,8 @@ val HOMEOMORPHIC_HYPERPLANES = store_thm ("HOMEOMORPHIC_HYPERPLANES",
   ASM_SIMP_TAC std_ss [lemma] THEN ONCE_REWRITE_TAC[HOMEOMORPHIC_SYM] THEN
   ASM_SIMP_TAC std_ss [lemma]);
 
-val HOMEOMORPHIC_HYPERPLANE_STANDARD_HYPERPLANE = store_thm ("HOMEOMORPHIC_HYPERPLANE_STANDARD_HYPERPLANE",
+val HOMEOMORPHIC_HYPERPLANE_STANDARD_HYPERPLANE = store_thm
+  ("HOMEOMORPHIC_HYPERPLANE_STANDARD_HYPERPLANE",
  ``!a:real b c.
         ~(a = 0)
         ==> {x | a * x = b} homeomorphic {x:real | x = c}``,
@@ -17297,7 +17534,8 @@ val HOMEOMORPHIC_HYPERPLANE_STANDARD_HYPERPLANE = store_thm ("HOMEOMORPHIC_HYPER
   THENL [ASM_SIMP_TAC real_ss [], MATCH_MP_TAC HOMEOMORPHIC_HYPERPLANES] THEN
   ASM_SIMP_TAC real_ss []);
 
-val HOMEOMORPHIC_STANDARD_HYPERPLANE_HYPERPLANE = store_thm ("HOMEOMORPHIC_STANDARD_HYPERPLANE_HYPERPLANE",
+val HOMEOMORPHIC_STANDARD_HYPERPLANE_HYPERPLANE = store_thm
+  ("HOMEOMORPHIC_STANDARD_HYPERPLANE_HYPERPLANE",
  ``!a:real b c.
         ~(a = 0)
         ==> {x:real | x = c} homeomorphic {x | a * x = b}``,
@@ -17901,7 +18139,7 @@ val SERIES_FINITE = store_thm ("SERIES_FINITE",
   X_GEN_TAC ``m:num`` THEN DISCH_TAC THEN
   SUBGOAL_THEN ``s INTER ((0:num)..m) = s``
    (fn th => ASM_REWRITE_TAC[th, DIST_REFL]) THEN
-  SIMP_TAC std_ss [EXTENSION, IN_INTER, IN_NUMSEG, LE_0] THEN
+  SIMP_TAC std_ss [EXTENSION, IN_INTER, IN_NUMSEG, ZERO_LESS_EQ] THEN
   METIS_TAC[LESS_EQ_TRANS]);
 
 val SERIES_LINEAR = store_thm ("SERIES_LINEAR",
@@ -17959,7 +18197,7 @@ val SERIES_FINITE_SUPPORT = store_thm ("SERIES_FINITE_SUPPORT",
   SUBGOAL_THEN ``sum (k INTER ((0:num)..n)) (f:num->real) = sum(s INTER k) f``
    (fn th => ASM_SIMP_TAC std_ss [DIST_REFL, th]) THEN
   MATCH_MP_TAC SUM_SUPERSET THEN
-  ASM_SIMP_TAC std_ss [SUBSET_DEF, IN_INTER, IN_NUMSEG, LE_0] THEN
+  ASM_SIMP_TAC std_ss [SUBSET_DEF, IN_INTER, IN_NUMSEG, ZERO_LESS_EQ] THEN
   METIS_TAC[IN_INTER, LESS_EQ_TRANS]);
 
 val SERIES_COMPONENT = store_thm ("SERIES_COMPONENT",
@@ -18299,7 +18537,7 @@ val PARTIAL_SUMS_COMPONENT_LE_INFSUM = store_thm ("PARTIAL_SUMS_COMPONENT_LE_INF
   ASM_REWRITE_TAC[] THEN ONCE_REWRITE_TAC[ADD_SYM] THEN
   KNOW_TAC ``sum (s INTER ((0:num)..n)) f <=
               sum (s INTER ((0:num)..n) UNION s INTER (n + (1:num)..n + N)) f`` THENL
-  [ALL_TAC, SIMP_TAC std_ss [GSYM NUMSEG_ADD_SPLIT, LE_0, GSYM UNION_OVER_INTER]] THEN
+  [ALL_TAC, SIMP_TAC std_ss [GSYM NUMSEG_ADD_SPLIT, ZERO_LESS_EQ, GSYM UNION_OVER_INTER]] THEN
   KNOW_TAC ``(sum (s INTER ((0:num)..n) UNION s INTER (n + (1:num)..n + N)) f =
               sum (s INTER ((0:num)..n)) f + sum (s INTER (n + (1:num)..n + N)) f)`` THENL
   [MATCH_MP_TAC SUM_UNION THEN
@@ -18512,7 +18750,7 @@ val SUMMABLE_IMP_TOZERO = store_thm ("SUMMABLE_IMP_TOZERO",
   ABBREV_TAC ``m = n - 1:num`` THEN
   SUBGOAL_THEN ``n = SUC m`` SUBST1_TAC THENL
    [ASM_ARITH_TAC, ALL_TAC] THEN
-  SIMP_TAC std_ss [SUM_CLAUSES_NUMSEG, LE_0, dist] THEN
+  SIMP_TAC std_ss [SUM_CLAUSES_NUMSEG, ZERO_LESS_EQ, dist] THEN
   SIMP_TAC std_ss [REAL_ARITH ``abs(x - 0) = abs x:real``] THEN
   COND_CASES_TAC THEN ASM_SIMP_TAC std_ss [ABS_0] THEN
   SIMP_TAC std_ss [REAL_LT_RDIV_EQ, REAL_ARITH ``0 < 2:real``] THEN
@@ -18860,7 +19098,7 @@ val SERIES_DIRICHLET_BILINEAR = store_thm ("SERIES_DIRICHLET_BILINEAR",
     ``summable (from p) ((\n. C * B * abs(g(n + 1) - g(n):real)))``
   MP_TAC THENL [ASM_SIMP_TAC std_ss [o_DEF, SUMMABLE_CMUL], ALL_TAC] THEN
   MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT] SUMMABLE_COMPARISON) THEN
-  EXISTS_TAC ``0:num`` THEN REWRITE_TAC[IN_FROM, GE, LE_0] THEN
+  EXISTS_TAC ``0:num`` THEN REWRITE_TAC[IN_FROM, GE, ZERO_LESS_EQ] THEN
   REPEAT STRIP_TAC THEN MATCH_MP_TAC REAL_LE_TRANS THEN EXISTS_TAC
    ``C * abs(g(n + 1:num) - g(n):real) * abs(sum ((1:num)..n) f:real)`` THEN
   ASM_SIMP_TAC std_ss [REAL_LE_LMUL] THEN
@@ -18947,7 +19185,7 @@ val SERIES_INJECTIVE_IMAGE_STRONG = store_thm ("SERIES_INJECTIVE_IMAGE_STRONG",
   FIRST_ASSUM(MP_TAC o REWRITE_RULE [INJECTIVE_ON_LEFT_INVERSE]) THEN
   DISCH_THEN(X_CHOOSE_TAC ``g:num->num``) THEN
   MP_TAC(ISPECL [``g:num->num``, ``((0:num)..N)``] UPPER_BOUND_FINITE_SET) THEN
-  REWRITE_TAC[FINITE_NUMSEG, IN_NUMSEG, LE_0] THEN
+  REWRITE_TAC[FINITE_NUMSEG, IN_NUMSEG, ZERO_LESS_EQ] THEN
   DISCH_THEN(X_CHOOSE_TAC ``P:num``) THEN
   EXISTS_TAC ``MAX N P:num`` THEN X_GEN_TAC ``n:num`` THEN
   REWRITE_TAC [MAX_DEF] THEN
@@ -18983,14 +19221,14 @@ val SERIES_INJECTIVE_IMAGE_STRONG = store_thm ("SERIES_INJECTIVE_IMAGE_STRONG",
      ``(!x. x IN s /\ f(x) IN n /\ ~(x IN m) ==> f x IN t)
       ==> (IMAGE f s INTER n) DIFF (IMAGE f (s INTER m)) SUBSET
           IMAGE f s INTER t``) THEN
-    ASM_SIMP_TAC std_ss [IN_NUMSEG, LE_0, NOT_LESS_EQUAL] THEN
+    ASM_SIMP_TAC std_ss [IN_NUMSEG, ZERO_LESS_EQ, NOT_LESS_EQUAL] THEN
     X_GEN_TAC ``i:num`` THEN STRIP_TAC THEN
     MATCH_MP_TAC LESS_IMP_LESS_OR_EQ THEN ONCE_REWRITE_TAC[GSYM NOT_LESS_EQUAL] THEN
     UNDISCH_TAC ``!(x :num). x <= (N :num) ==> (g :num -> num) x <= (P :num)`` THEN 
     DISCH_TAC THEN POP_ASSUM(MATCH_MP_TAC o ONCE_REWRITE_RULE [MONO_NOT_EQ]) THEN
     ASM_SIMP_TAC arith_ss [],
     MP_TAC(ISPECL [``f:num->num``, ``((0:num)..n)``] UPPER_BOUND_FINITE_SET) THEN
-    REWRITE_TAC[FINITE_NUMSEG, IN_NUMSEG, LE_0] THEN
+    REWRITE_TAC[FINITE_NUMSEG, IN_NUMSEG, ZERO_LESS_EQ] THEN
     DISCH_THEN(X_CHOOSE_TAC ``p:num``) THEN
     EXISTS_TAC
      ``sum(IMAGE (f:num->num) s INTER (N..p)) (\i. abs(x i :real))`` THEN
@@ -19002,7 +19240,7 @@ val SERIES_INJECTIVE_IMAGE_STRONG = store_thm ("SERIES_INJECTIVE_IMAGE_STRONG",
      ``(!x. x IN s /\ x IN n /\ ~(f x IN m) ==> f x IN t)
       ==> (IMAGE f (s INTER n) DIFF (IMAGE f s) INTER m) SUBSET
           (IMAGE f s INTER t)``) THEN
-    ASM_SIMP_TAC arith_ss [IN_NUMSEG, LE_0]]);
+    ASM_SIMP_TAC arith_ss [IN_NUMSEG, ZERO_LESS_EQ]]);
 
 val SERIES_INJECTIVE_IMAGE = store_thm ("SERIES_INJECTIVE_IMAGE",
  ``!x:num->real s f l.
@@ -19118,7 +19356,7 @@ val BANACH_FIX = store_thm ("BANACH_FIX",
   X_GEN_TAC ``e:real`` THEN DISCH_TAC THEN
   ASM_CASES_TAC ``(z:num->real) 0 = z 1`` THENL
    [FIRST_X_ASSUM SUBST_ALL_TAC THEN EXISTS_TAC ``0:num`` THEN
-    REWRITE_TAC[GE, LE_0] THEN X_GEN_TAC ``n:num`` THEN
+    REWRITE_TAC[GE, ZERO_LESS_EQ] THEN X_GEN_TAC ``n:num`` THEN
     FIRST_X_ASSUM(MP_TAC o SPECL [``0:num``, ``n:num``]) THEN
     REWRITE_TAC[ADD_CLAUSES, DIST_REFL, REAL_MUL_LZERO, REAL_MUL_RZERO] THEN
     ONCE_REWRITE_TAC[MONO_NOT_EQ] THEN
