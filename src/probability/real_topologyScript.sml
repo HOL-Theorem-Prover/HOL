@@ -26,7 +26,7 @@ seqTheory limTheory transcTheory realLib topologyTheory;
 
 open util_probTheory iterateTheory rich_cardinalTheory productTheory;
 
-val _ = new_theory "rich_topology";
+val _ = new_theory "real_topology";
 
 (* ------------------------------------------------------------------------- *)
 (* MESON, METIS, SET_TAC, SET_RULE, ASSERT_TAC, ASM_ARITH_TAC                *)
