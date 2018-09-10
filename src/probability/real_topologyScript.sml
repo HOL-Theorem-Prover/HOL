@@ -24,7 +24,7 @@ jrhUtils pairTheory boolTheory pred_setTheory optionTheory numTheory
 sumTheory InductiveDefinition ind_typeTheory listTheory mesonLib
 seqTheory limTheory transcTheory realLib topologyTheory;
 
-open cardinalTheory;
+open wellorderTheory cardinalTheory;
 open util_probTheory iterateTheory rich_cardinalTheory productTheory;
 
 val _ = new_theory "real_topology";

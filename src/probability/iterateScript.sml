@@ -22,7 +22,7 @@ transcTheory listTheory mesonLib boolTheory pred_setTheory
 util_probTheory optionTheory numTheory sumTheory InductiveDefinition 
 ind_typeTheory;
 
-open cardinalTheory;
+open wellorderTheory cardinalTheory;
 
 val _ = new_theory "iterate";
 
@@ -279,30 +279,6 @@ METIS_TAC[SUBSET_RESTRICT, SUBSET_FINITE]);
 (* ------------------------------------------------------------------------- *)
 (* Non-trivial intervals of reals are infinite.                              *)
 (* ------------------------------------------------------------------------- *)
-
-val num_FINITE = store_thm ("num_FINITE",
- ``!s:num->bool. FINITE s <=> ?a. !x. x IN s ==> x <= a``,
-  GEN_TAC THEN EQ_TAC THENL
-   [SPEC_TAC(``s:num->bool``,``s:num->bool``) THEN GEN_TAC THEN
-   KNOW_TAC ``(?a. !x. x IN s ==> x <= a) = 
-          (\s. ?a. !x. x IN s ==> x <= a) (s:num->bool)`` THENL
-    [FULL_SIMP_TAC std_ss [], ALL_TAC] THEN DISC_RW_KILL THEN
-    MATCH_MP_TAC FINITE_INDUCT THEN BETA_TAC THEN
-    REWRITE_TAC[IN_INSERT, NOT_IN_EMPTY] THEN MESON_TAC[LESS_EQ_CASES, LESS_EQ_TRANS],
-    DISCH_THEN(X_CHOOSE_TAC ``n:num``) THEN 
-    KNOW_TAC ``s SUBSET {m:num | m <= n}`` THENL [REWRITE_TAC [SUBSET_DEF] THEN
-    RW_TAC std_ss [GSPECIFICATION], ALL_TAC] THEN MATCH_MP_TAC SUBSET_FINITE THEN
-    KNOW_TAC ``{m:num | m <= n} = {m | m < n} UNION {n}``
-    THENL [SIMP_TAC std_ss [UNION_DEF, EXTENSION, GSPECIFICATION, IN_SING, LESS_OR_EQ],
-    SIMP_TAC std_ss [FINITE_UNION, FINITE_SING, GSYM count_def, FINITE_COUNT]]]);
-
-val num_FINITE_AVOID = store_thm ("num_FINITE_AVOID",
- ``!s:num->bool. FINITE(s) ==> ?a. ~(a IN s)``,
-  MESON_TAC[num_FINITE, LESS_THM, NOT_LESS]);
-
-val num_INFINITE = store_thm ("num_INFINITE",
- ``INFINITE univ(:num)``,
-  MESON_TAC[num_FINITE_AVOID, IN_UNIV]);
 
 val FINITE_REAL_INTERVAL = store_thm ("FINITE_REAL_INTERVAL",
  ``(!a. ~FINITE {x:real | a < x}) /\
@@ -759,129 +735,6 @@ val REAL_SUP_EQ_INF = store_thm ("REAL_SUP_EQ_INF",
 val INF_SING = store_thm ("INF_SING",
  ``!a. inf {a} = a``,
   SIMP_TAC std_ss [INF_INSERT_FINITE, FINITE_EMPTY]);
-
-(* ------------------------------------------------------------------------- *)
-(*                                                                           *)
-(* ------------------------------------------------------------------------- *)
-
-val _ = set_fixity "<<" (Infix(NONASSOC, 450));
-
-val WF = new_definition ("WF",
-  ``WF(<<) <=> !P:'a->bool. (?x. P(x)) ==> (?x. P(x) /\ !y. y << x ==> ~P(y))``);
-
-(* ------------------------------------------------------------------------- *)
-(* Strengthen it to equality.                                                *)
-(* ------------------------------------------------------------------------- *)
-
-val WF_EQ = store_thm ("WF_EQ",
- ``WF(<<) <=> !P:'a->bool. (?x. P(x)) <=> (?x. P(x) /\ !y. y << x ==> ~P(y))``,
-  REWRITE_TAC[WF] THEN MESON_TAC[]);
-
-(* ------------------------------------------------------------------------- *)
-(* Equivalence of wellfounded induction.                                     *)
-(* ------------------------------------------------------------------------- *)
-
-val WF_IND = store_thm ("WF_IND",
- ``WF(<<) <=> !P:'a->bool. (!x. (!y. y << x ==> P(y)) ==> P(x)) ==> !x. P(x)``,
-  REWRITE_TAC[WF] THEN EQ_TAC THEN DISCH_TAC THEN GEN_TAC THEN
-  POP_ASSUM(MP_TAC o SPEC ``\x:'a. ~(P:'a->bool)(x)``) THEN REWRITE_TAC[] THEN MESON_TAC[]);
-
-(* ------------------------------------------------------------------------- *)
-(* Equivalence of the "infinite descending chains" version.                  *)
-(* ------------------------------------------------------------------------- *)
-
-val WF_DCHAIN = store_thm ("WF_DCHAIN",
- ``WF(<<) <=> ~(?s:num->'a. !n. s(SUC n) << s(n))``,
-  SIMP_TAC std_ss [WF, TAUT `(a <=> ~b) <=> (~a <=> b)`, NOT_FORALL_THM] THEN
-  EQ_TAC THEN DISCH_THEN CHOOSE_TAC THENL
-   [POP_ASSUM(MP_TAC o REWRITE_RULE[NOT_IMP]) THEN
-    DISCH_THEN(CONJUNCTS_THEN2 (X_CHOOSE_TAC ``a:'a``) ASSUME_TAC) THEN
-    SUBGOAL_THEN ``!x:'a. ?y. P(x) ==> P(y) /\ y << x`` MP_TAC THENL
-     [ASM_MESON_TAC[], SIMP_TAC std_ss [SKOLEM_THM]] THEN
-    DISCH_THEN(X_CHOOSE_THEN ``f:'a->'a`` STRIP_ASSUME_TAC) THEN
-    KNOW_TAC ``?s. (s (0:num) = a) /\ (!n. s (SUC n) = f (s n))`` THENL
-    [ASSUME_TAC num_Axiom_old THEN 
-     POP_ASSUM (MP_TAC o Q.SPECL [`a:'a`, `(\m n. f m)`]) THEN
-     METIS_TAC [], STRIP_TAC] THEN
-    EXISTS_TAC ``s:num->'a`` THEN ASM_REWRITE_TAC[] THEN
-    SUBGOAL_THEN ``!n. P(s n) /\ s(SUC n):'a << s(n)``
-      (fn th => ASM_MESON_TAC[th]) THEN
-    INDUCT_TAC THEN ASM_REWRITE_TAC[] THEN ASM_MESON_TAC[],
-    EXISTS_TAC ``\y:'a. ?n:num. y = s(n)`` THEN REWRITE_TAC[] THEN
-    ASM_MESON_TAC[]]);
-
-(* ------------------------------------------------------------------------- *)
-(* Equivalent to just *uniqueness* part of recursion.                        *)
-(* ------------------------------------------------------------------------- *)
-
-val WF_UREC = store_thm ("WF_UREC",
- ``WF(<<) ==>
-       !H. (!f g x. (!z. z << x ==> (f z = g z)) ==> (H f x = H g x))
-            ==> !(f:'a->'b) g. (!x. f x = H f x) /\ (!x. g x = H g x)
-                              ==> (f = g)``,
-  REWRITE_TAC[WF_IND] THEN REPEAT STRIP_TAC THEN REWRITE_TAC [FUN_EQ_THM] THEN
-  UNDISCH_TAC `` !(P :'a -> bool).
-            (!(x :'a). (!(y :'a). y << x ==> P y) ==> P x) ==> !(x :'a). P x`` THEN
-  DISCH_TAC THEN POP_ASSUM (MP_TAC o Q.SPEC `(\x. (f:'a->'b) x = g x)`) THEN
-  SIMP_TAC std_ss [] THEN
-  DISCH_TAC THEN FIRST_ASSUM MATCH_MP_TAC THEN GEN_TAC THEN
-  DISCH_THEN(ANTE_RES_THEN MP_TAC) THEN ASM_REWRITE_TAC[]);
-
-val WF_UREC_WF = store_thm ("WF_UREC_WF",
- ``(!H. (!f g x. (!z. z << x ==> (f z = g z)) ==> (H f x = H g x))
-        ==> !(f:'a->bool) g. (!x. f x = H f x) /\ (!x. g x = H g x)
-                          ==> (f = g)) ==> WF(<<)``,
-  REWRITE_TAC[WF_IND] THEN DISCH_TAC THEN GEN_TAC THEN DISCH_TAC THEN
-  FIRST_X_ASSUM(MP_TAC o SPEC ``\f x. P(x:'a) \/ !z:'a. z << x ==> f(z)``) THEN
-  BETA_TAC THEN
-  W(C SUBGOAL_THEN (fn t => REWRITE_TAC[t]) o funpow 2 lhand o snd) THENL
-   [MESON_TAC[], DISCH_THEN(MP_TAC o SPECL [``P:'a->bool``, ``\x:'a. T``]) THEN
-    REWRITE_TAC[FUN_EQ_THM] THEN ASM_MESON_TAC[]]);
-
-(* ------------------------------------------------------------------------- *)
-(* Stronger form of recursion with "inductive invariant" (Krstic/Matthews).  *)
-(* ------------------------------------------------------------------------- *)
-
-val lemma = prove_nonschematic_inductive_relations_exist bool_monoset
-   ``!f:'a->'b x. (!z. z << x ==> R z (f z)) ==> R x (H f x)``;
-	
-val WF_REC_INVARIANT = store_thm ("WF_REC_INVARIANT",
- ``WF(<<)
-   ==> !H S. (!f g x. (!z. z << x ==> (f z = g z) /\ S z (f z))
-                      ==> (H f x = H g x) /\ S x (H f x))
-             ==> ?f:'a->'b. !x. (f x = H f x)``,
-  REWRITE_TAC[WF_IND] THEN REPEAT STRIP_TAC THEN
-  X_CHOOSE_THEN ``R:'a->'b->bool`` STRIP_ASSUME_TAC lemma THEN
-  SUBGOAL_THEN ``!x:'a. ?!y:'b. R x y`` (fn th => ASM_MESON_TAC[th]) THEN
-  ONCE_REWRITE_TAC [METIS [] ``(?!y. R x y) = (\x. ?!y. R x y) x``] THEN
-  FIRST_X_ASSUM MATCH_MP_TAC THEN BETA_TAC THEN REPEAT STRIP_TAC THEN
-  FIRST_X_ASSUM(fn th => GEN_REWR_TAC BINDER_CONV [th]) THEN
-  SUBGOAL_THEN ``!x:'a y:'b. R x y ==> S' x y`` MP_TAC THEN METIS_TAC[]);;
-
-(* ------------------------------------------------------------------------- *)
-(* Equivalent to just *existence* part of recursion.                         *)
-(* ------------------------------------------------------------------------- *)
-
-val WF_REC = store_thm ("WF_REC",
- ``WF(<<)
-   ==> !H. (!f g x. (!z. z << x ==> (f z = g z)) ==> (H f x = H g x))
-           ==> ?f:'a->'b. !x. f x = H f x``,
-  REPEAT STRIP_TAC THEN
-  FIRST_X_ASSUM(MATCH_MP_TAC o MATCH_MP WF_REC_INVARIANT) THEN
-  EXISTS_TAC ``\x:'a y:'b. T`` THEN ASM_REWRITE_TAC[]);
-
-(* ------------------------------------------------------------------------- *)
-(* Wellfoundedness properties of natural numbers.                            *)
-(* ------------------------------------------------------------------------- *)
-
-val WF_num = store_thm ("WF_num",
- ``WF((<):num->num->bool)``,
-  REWRITE_TAC[WF_IND, COMPLETE_INDUCTION]);
-
-val WF_REC_num = store_thm ("WF_REC_num",
- ``!H. (!f g n. (!m. m < n ==> (f m = g m)) ==> (H f n = H g n))
-        ==> ?f:num->'a. !n. f n = H f n``,
-  MATCH_ACCEPT_TAC(MATCH_MP WF_REC WF_num));
 
 (* ------------------------------------------------------------------------- *)
 (* A natural notation for segments of the naturals.                          *)
