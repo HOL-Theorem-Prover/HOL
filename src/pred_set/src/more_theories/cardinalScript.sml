@@ -209,13 +209,14 @@ val _ = export_rewrites ["INFINITE_UNIV_INF"]
 
 val IMAGE_cardleq = store_thm(
   "IMAGE_cardleq",
-  ``IMAGE f s <<= s``,
+  ``!f s. IMAGE f s <<= s``,
   simp[cardleq_def] >> metis_tac [SURJ_IMAGE, SURJ_INJ_INV]);
 val _ = export_rewrites ["IMAGE_cardleq"]
 
 val CARDLEQ_CROSS_CONG = store_thm(
   "CARDLEQ_CROSS_CONG",
-  ``x1 <<= x2 /\ y1 <<= y2 ==> x1 CROSS y1 <<= x2 CROSS y2``,
+  ``!x1 x2 y1 y2. x1 <<= x2 /\ y1 <<= y2 ==> x1 CROSS y1 <<= x2 CROSS y2``,
+  rpt gen_tac \\
   simp[cardleq_def] >>
   disch_then (CONJUNCTS_THEN2 (Q.X_CHOOSE_THEN `f1` assume_tac)
                               (Q.X_CHOOSE_THEN `f2` assume_tac)) >>
@@ -225,30 +226,31 @@ val CARDLEQ_CROSS_CONG = store_thm(
 
 val SUBSET_CARDLEQ = store_thm(
   "SUBSET_CARDLEQ",
-  ``x SUBSET y ==> x <<= y``,
+  ``!x y. x SUBSET y ==> x <<= y``,
+  rpt gen_tac \\
   simp[SUBSET_DEF, cardleq_def] >> strip_tac >> qexists_tac `I` >>
   simp[INJ_DEF]);
 
 val IMAGE_cardleq_rwt = store_thm(
   "IMAGE_cardleq_rwt",
-  ``s <<= t ==> IMAGE f s <<= t``,
+  ``!s t. s <<= t ==> IMAGE f s <<= t``,
   metis_tac [cardleq_TRANS, IMAGE_cardleq]);
 
 val countable_thm = store_thm(
   "countable_thm",
-  ``countable s <=> s <<= univ(:num)``,
+  ``!s. countable s <=> s <<= univ(:num)``,
   simp[countable_def, cardleq_def]);
 
 val countable_cardeq = store_thm(
   "countable_cardeq",
-  ``s =~ t ==> (countable s <=> countable t)``,
+  ``!s t. s =~ t ==> (countable s <=> countable t)``,
   simp[countable_def, cardeq_def, EQ_IMP_THM] >>
   metis_tac [INJ_COMPOSE, BIJ_DEF, BIJ_LINV_BIJ]);
 
-open wellorderTheory
 val cardleq_dichotomy = store_thm(
   "cardleq_dichotomy",
-  ``s <<= t \/ t <<= s``,
+  ``!s t. s <<= t \/ t <<= s``,
+  rpt gen_tac \\
   `(?w1. elsOf w1 = s) /\ (?w2. elsOf w2 = t)`
     by metis_tac [allsets_wellorderable] >>
   `orderlt w1 w2 \/ orderiso w1 w2 \/ orderlt w2 w1`
@@ -375,9 +377,9 @@ fun PRINT_TAC s gl = (print ("** " ^ s ^ "\n"); ALL_TAC gl)
 
 val SET_SQUARED_CARDEQ_SET = store_thm(
   "SET_SQUARED_CARDEQ_SET",
-  ``INFINITE s ==> (s CROSS s =~ s)``,
+  ``!s. INFINITE s ==> (s CROSS s =~ s)``,
   PRINT_TAC "beginning s CROSS s =~ s proof" >>
-  strip_tac >>
+  rpt strip_tac >>
   qabbrev_tac `A = { (As,f) | INFINITE As /\ As SUBSET s /\ BIJ f As (As CROSS As) /\
                               !x. x NOTIN As ==> (f x = ARB) }` >>
   qabbrev_tac `
@@ -2353,114 +2355,18 @@ val CARD_EQ_EMPTY = store_thm ("CARD_EQ_EMPTY",
 (* Antisymmetry (the Schroeder-Bernstein theorem).                           *)
 (* ------------------------------------------------------------------------- *)
 
-val CARD_LE_ANTISYM = store_thm ("CARD_LE_ANTISYM",
- ``!s:'a->bool t:'b->bool. s <=_c t /\ t <=_c s <=> (s =_c t)``,
-  REPEAT GEN_TAC THEN EQ_TAC THENL
-   [ALL_TAC,
-    SIMP_TAC std_ss [CARD_EQ_IMP_LE] THEN ONCE_REWRITE_TAC[CARD_EQ_SYM] THEN
-    SIMP_TAC std_ss [CARD_EQ_IMP_LE]] THEN
-  ASM_CASES_TAC ``s:'a->bool = EMPTY`` THEN ASM_CASES_TAC ``t:'b->bool = EMPTY`` THEN
-  ASM_SIMP_TAC std_ss [CARD_LE_EMPTY, CARD_EQ_EMPTY] THEN
-  RULE_ASSUM_TAC(SIMP_RULE std_ss [EXTENSION, NOT_IN_EMPTY, NOT_FORALL_THM]) THEN
-  ASM_SIMP_TAC std_ss [le_c, eq_c] THEN
-  DISCH_THEN(CONJUNCTS_THEN2  
-   (X_CHOOSE_THEN ``i:'a->'b`` (CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) 
-   (X_CHOOSE_THEN ``j:'b->'a`` (CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)))  THEN
-  KNOW_TAC ``(!(x :'a) (y :'a).
-       x IN (s :'a -> bool) /\ y IN s /\ ((i :'a -> 'b) x = i y) ==> (x = y)) =
-	    (?(g :'b -> 'a).
-          (!(y:'b). y IN (t :'b -> bool) ==> g y IN s) /\
-          !(x :'a). x IN s ==> (g (i x) = x))`` THENL
-  [ASM_SIMP_TAC std_ss [INJECTIVE_LEFT_INVERSE_NONEMPTY], DISC_RW_KILL] THEN
-  KNOW_TAC `` (!(x :'b) (y :'b).
-       x IN (t :'b -> bool) /\ y IN t /\ ((j :'b -> 'a) x = j y) ==> (x = y)) =
-	     (?(g :'a -> 'b).
-          (!(y:'a). y IN (s :'a -> bool) ==> g y IN t) /\
-          !(x :'b). x IN t ==> (g (j x) = x))`` THENL
-  [ASM_SIMP_TAC std_ss [INJECTIVE_LEFT_INVERSE_NONEMPTY], DISC_RW_KILL] THEN
-  DISCH_THEN (X_CHOOSE_THEN ``j':'a->'b`` STRIP_ASSUME_TAC) THEN
-  DISCH_THEN (X_CHOOSE_THEN ``i':'b->'a`` STRIP_ASSUME_TAC) THEN
-  MP_TAC(ISPEC
-    ``\a. s DIFF (IMAGE (j:'b->'a) (t DIFF (IMAGE (i:'a->'b) a)))``
-    TARSKI_SET) THEN
-  SIMP_TAC std_ss [] THEN
-  KNOW_TAC ``(!(s' :'a -> bool) (t' :'a -> bool).
-        s' SUBSET t' ==>
-        (s :'a -> bool) DIFF
-        IMAGE (j :'b -> 'a)
-          ((t :'b -> bool) DIFF IMAGE (i :'a -> 'b) s') SUBSET
-        s DIFF IMAGE j (t DIFF IMAGE i t'))`` THENL
-   [REWRITE_TAC[SUBSET_DEF, IN_DIFF, IN_IMAGE] THEN MESON_TAC[],
-    DISCH_TAC THEN ASM_REWRITE_TAC [] THEN POP_ASSUM K_TAC] THEN
-  DISCH_THEN(X_CHOOSE_THEN ``a:'a->bool`` ASSUME_TAC) THEN
-  SIMP_TAC std_ss [BIJECTIVE_INVERSES] THEN SIMP_TAC std_ss [GSYM RIGHT_EXISTS_AND_THM] THEN
-  EXISTS_TAC ``\x. if x IN a then (i:'a->'b)(x) else j'(x)`` THEN
-  EXISTS_TAC ``\y. if y IN (IMAGE (i:'a->'b) a) then i'(y) else (j:'b->'a)(y)`` THEN
-  SIMP_TAC std_ss [FUN_EQ_THM, combinTheory.o_THM] THEN
-  ONCE_REWRITE_TAC[TAUT `a /\ b /\ c /\ d <=> (a /\ d) /\ (b /\ c)`] THEN
-  SIMP_TAC std_ss [GSYM FORALL_AND_THM] THEN
-  REWRITE_TAC[TAUT `(a ==> b) /\ (a ==> c) <=> a ==> b /\ c`] THEN
-  CONJ_TAC THENL
-   [X_GEN_TAC ``x:'a`` THEN ASM_CASES_TAC ``x:'a IN a``,
-    X_GEN_TAC ``y:'b`` THEN ASM_CASES_TAC ``y IN IMAGE (i:'a->'b) a``] THEN
-  ASM_REWRITE_TAC [] THEN COND_CASES_TAC THEN ASM_SIMP_TAC std_ss [] THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[EXTENSION, IN_UNIV, IN_DIFF, IN_IMAGE]) THENL
-  [METIS_TAC [],
-   TRY(FIRST_X_ASSUM(fn th => MP_TAC(SPEC ``x:'a`` th) THEN
-      ASM_REWRITE_TAC[] THEN ASSUME_TAC th)) THEN METIS_TAC[],
-   METIS_TAC [], METIS_TAC [], METIS_TAC [], METIS_TAC []]);
+val CARD_LE_ANTISYM = store_thm
+  ("CARD_LE_ANTISYM",
+  ``!s:'a->bool t:'b->bool. s <=_c t /\ t <=_c s <=> (s =_c t)``,
+    rpt GEN_TAC >> EQ_TAC
+ >- PROVE_TAC [cardleq_ANTISYM]
+ >> PROVE_TAC [CARD_EQ_IMP_LE, CARD_EQ_SYM]);
 
 (* ------------------------------------------------------------------------- *)
 (* Totality (cardinal comparability).                                        *)
 (* ------------------------------------------------------------------------- *)
 
-val CARD_LE_TOTAL = store_thm ("CARD_LE_TOTAL",
- ``!s:'a->bool t:'b->bool. s <=_c t \/ t <=_c s``,
-  REPEAT GEN_TAC THEN
-  ABBREV_TAC
-   ``P = \R. (!x:'a y:'b. R(x,y) ==> x IN s /\ y IN t) /\
-             (!x y y'. R(x,y) /\ R(x,y') ==> (y = y')) /\
-             (!x x' y. R(x,y) /\ R(x',y) ==> (x = x'))`` THEN
-  MP_TAC(ISPEC ``P:(('a#'b)->bool)->bool`` ZL_SUBSETS_BIGUNION) THEN
-  KNOW_TAC ``(!(c :('a # 'b -> bool) -> bool).
-    (!(x :'a # 'b -> bool).
-       x IN c ==> (P :('a # 'b -> bool) -> bool) x) /\
-    (!(x :'a # 'b -> bool) (y :'a # 'b -> bool).
-       x IN c /\ y IN c ==> x SUBSET y \/ y SUBSET x) ==>
-    P (BIGUNION c))`` THENL
-   [GEN_TAC THEN EXPAND_TAC "P" THEN
-    SIMP_TAC std_ss [BIGUNION, GSPECIFICATION] THEN
-    SIMP_TAC std_ss [SUBSET_DEF, IN_DEF] THEN
-    ONCE_REWRITE_TAC [METIS [SPECIFICATION]
-      ``{x | ?s. c s /\ s x} (x',y) = (x',y) IN {x | ?s. c s /\ s x}``] THEN
-    SIMP_TAC std_ss [GSPECIFICATION] THEN METIS_TAC[],
-    DISCH_TAC THEN ASM_REWRITE_TAC [] THEN POP_ASSUM K_TAC] THEN
-  FIRST_X_ASSUM(SUBST1_TAC o SYM) THEN BETA_TAC THEN
-  DISCH_THEN(X_CHOOSE_THEN ``R:'a#'b->bool`` STRIP_ASSUME_TAC) THEN
-  ASM_CASES_TAC ``(!x:'a. x IN s ==> ?y:'b. y IN t /\ R(x,y)) \/
-                  (!y:'b. y IN t ==> ?x:'a. x IN s /\ R(x,y))``
-  THENL
-   [FIRST_X_ASSUM(K ALL_TAC o SPEC ``\(x:'a,y:'b). T``) THEN
-    FIRST_X_ASSUM(DISJ_CASES_THEN MP_TAC) THEN
-    SIMP_TAC std_ss [RIGHT_IMP_EXISTS_THM, SKOLEM_THM, le_c] THEN METIS_TAC[],
-    FIRST_X_ASSUM(MP_TAC o REWRITE_RULE [DE_MORGAN_THM]) THEN
-    ONCE_REWRITE_TAC [METIS [] 
-     ``( x IN (s :'a -> bool) ==>
-    ?(y :'b). y IN (t :'b -> bool) /\ (R :'a # 'b -> bool) (x,y)) = 
-       (\x.  x IN (s :'a -> bool) ==>
-    ?(y :'b). y IN (t :'b -> bool) /\ (R :'a # 'b -> bool) (x,y)) x``] THEN
-    ONCE_REWRITE_TAC [METIS [] 
-     ``( y IN (t :'b -> bool) ==> 
-    ?(x :'a). x IN (s :'a -> bool) /\ (R :'a # 'b -> bool) (x,y)) = 
-       (\y.  y IN (t :'b -> bool) ==> 
-    ?(x :'a). x IN (s :'a -> bool) /\ (R :'a # 'b -> bool) (x,y)) y``] THEN
-    REWRITE_TAC [NOT_FORALL_THM] THEN BETA_TAC THEN REWRITE_TAC [NOT_IMP] THEN
-    DISCH_THEN(CONJUNCTS_THEN2 (X_CHOOSE_TAC ``a:'a``) (X_CHOOSE_TAC ``b:'b``)) THEN
-    FIRST_X_ASSUM(MP_TAC o SPEC
-      ``\(x:'a,y:'b). (x = a) /\ (y = b) \/ R(x,y)``) THEN
-    SIMP_TAC std_ss [SUBSET_DEF, FORALL_PROD, IN_DEF, EXTENSION] THEN
-    RULE_ASSUM_TAC(REWRITE_RULE [IN_DEF]) THEN
-    RULE_ASSUM_TAC(BETA_RULE) THEN ASM_MESON_TAC[]]);
+val CARD_LE_TOTAL = save_thm ("CARD_LE_TOTAL", cardleq_dichotomy);
 
 (* ------------------------------------------------------------------------- *)
 (* Other variants like "trichotomy of cardinals" now follow easily.          *)
@@ -2955,235 +2861,8 @@ val CARD_DISJOINT_UNION = store_thm ("CARD_DISJOINT_UNION",
 (* The key to arithmetic on infinite cardinals: k^2 = k.                     *)
 (* ------------------------------------------------------------------------- *)
 
-val lemma = prove (
-   ``INFINITE(s:'a->bool) /\ s SUBSET k /\
-     (!x y. R(x,y) ==> x IN (s *_c s) /\ y IN s) /\
-     (!x. x IN (s *_c s) ==> ?!y. y IN s /\ R(x,y)) /\
-     (!y:'a. y IN s ==> ?!x. x IN (s *_c s) /\ R(x,y))
-     ==> (s = {z | ?p. R(p,z)})``,
-    SIMP_TAC std_ss [EXTENSION, GSPECIFICATION] THEN MESON_TAC[]);
-
-val CARD_SQUARE_INFINITE = store_thm ("CARD_SQUARE_INFINITE",
- ``!k:'a->bool. INFINITE k ==> ((k *_c k) =_c k)``,
-  REPEAT STRIP_TAC THEN
-  ABBREV_TAC
-   ``P = \R. ?s. INFINITE(s:'a->bool) /\ s SUBSET k /\
-                 (!x y. R(x,y) ==> x IN (s *_c s) /\ y IN s) /\
-                 (!x. x IN (s *_c s) ==> ?!y. y IN s /\ R(x,y)) /\
-                 (!y. y IN s ==> ?!x. x IN (s *_c s) /\ R(x,y))`` THEN
-  MP_TAC(ISPEC ``P:(('a#'a)#'a->bool)->bool`` ZL_SUBSETS_BIGUNION_NONEMPTY) THEN
-  KNOW_TAC ``(?(x :('a # 'a) # 'a -> bool).
-    (P :(('a # 'a) # 'a -> bool) -> bool) x) /\
- (!(c :(('a # 'a) # 'a -> bool) -> bool).
-    (?(x :('a # 'a) # 'a -> bool). x IN c) /\
-    (!(x :('a # 'a) # 'a -> bool). x IN c ==> P x) /\
-    (!(x :('a # 'a) # 'a -> bool) (y :('a # 'a) # 'a -> bool).
-       x IN c /\ y IN c ==> x SUBSET y \/ y SUBSET x) ==>
-    P (BIGUNION c))`` THENL
-   [CONJ_TAC THENL
-     [FIRST_X_ASSUM(SUBST1_TAC o SYM) THEN SIMP_TAC std_ss [] THEN
-      KNOW_TAC ``?(s :'a -> bool) (x :('a # 'a) # 'a -> bool).
-       INFINITE s /\ s SUBSET (k :'a -> bool) /\
-       (!(x' :'a # 'a) (y :'a). x (x',y) ==> x' IN s *_c s /\ y IN s) /\
-       (!(x' :'a # 'a). x' IN s *_c s ==> ?!(y :'a). y IN s /\ x (x',y)) /\
-        !(y :'a). y IN s ==> ?!(x' :'a # 'a). x' IN s *_c s /\ x (x',y)`` THENL
-      [ALL_TAC, STRIP_TAC THEN EXISTS_TAC ``(x :('a # 'a) # 'a -> bool)`` THEN
-       EXISTS_TAC ``(s :'a -> bool)`` THEN METIS_TAC []] THEN
-      SIMP_TAC std_ss [RIGHT_EXISTS_AND_THM, GSYM EQ_C] THEN
-      FIRST_X_ASSUM(MP_TAC o REWRITE_RULE [INFINITE_CARD_LE]) THEN
-      SIMP_TAC std_ss [CARD_LE_EQ_SUBSET] THEN
-      DISCH_THEN (X_CHOOSE_TAC ``s:'a->bool``) THEN EXISTS_TAC ``s:'a->bool`` THEN
-      POP_ASSUM MP_TAC THEN STRIP_TAC THEN ASM_REWRITE_TAC[] THEN CONJ_TAC THENL
-       [ASM_MESON_TAC[num_INFINITE, CARD_INFINITE_CONG], ALL_TAC] THEN
-      FIRST_ASSUM(fn th =>
-       MP_TAC(MATCH_MP CARD_MUL_CONG (CONJ th th))) THEN
-      GEN_REWR_TAC LAND_CONV [CARD_EQ_SYM] THEN
-      DISCH_THEN(MP_TAC o C CONJ CARD_SQUARE_NUM) THEN
-      DISCH_THEN(MP_TAC o MATCH_MP CARD_EQ_TRANS) THEN
-      FIRST_ASSUM(fn th =>
-        DISCH_THEN(ACCEPT_TAC o MATCH_MP CARD_EQ_TRANS o C CONJ th)),
-      ALL_TAC] THEN
-    SUBGOAL_THEN
-     ``P = \R. INFINITE {z | ?x y. R((x,y),z)} /\
-              (!x:'a y z. R((x,y),z) ==> x IN k /\ y IN k /\ z IN k) /\
-              (!x y. (?u v. R((u,v),x)) /\ (?u v. R((u,v),y))
-                     ==> ?z. R((x,y),z)) /\
-              (!x y. (?z. R((x,y),z))
-                     ==> (?u v. R((u,v),x)) /\ (?u v. R((u,v),y))) /\
-              (!x y z1 z2. R((x,y),z1) /\ R((x,y),z2) ==> (z1 = z2)) /\
-              (!x1 y1 x2 y2 z. R((x1,y1),z) /\ R((x2,y2),z)
-                               ==> (x1 = x2) /\ (y1 = y2))``
-    SUBST1_TAC THENL
-     [FIRST_X_ASSUM(SUBST1_TAC o SYM) THEN SIMP_TAC std_ss [] THEN
-      ONCE_REWRITE_TAC[MATCH_MP(TAUT `(a ==> b) ==> (a <=> b /\ a)`) lemma] THEN
-      SIMP_TAC std_ss [UNWIND_THM2] THEN SIMP_TAC std_ss [FUN_EQ_THM] THEN
-      SIMP_TAC std_ss [IN_CARD_MUL, EXISTS_PROD, SUBSET_DEF, FUN_EQ_THM,
-                       GSPECIFICATION, FORALL_PROD, EXISTS_UNIQUE_THM,
-                       BIGUNION, PAIR_EQ] THEN
-      GEN_TAC THEN AP_TERM_TAC THEN MESON_TAC[],
-      ALL_TAC] THEN
-    FIRST_X_ASSUM(K ALL_TAC o SYM) THEN SIMP_TAC std_ss [] THEN GEN_TAC THEN
-    GEN_REWR_TAC (LAND_CONV o ONCE_DEPTH_CONV)
-     [TAUT `a ==> b /\ c <=> (a ==> b) /\ (a ==> c)`] THEN
-    DISCH_THEN (MP_TAC o SIMP_RULE std_ss [FORALL_AND_THM]) THEN
-    MATCH_MP_TAC(TAUT
-     `(c /\ d ==> f) /\ (a /\ b ==> e)
-      ==> (a /\ (b /\ c) /\ d ==> e /\ f)`) THEN
-    CONJ_TAC THENL
-     [ONCE_REWRITE_TAC [METIS [SPECIFICATION]
-       ``BIGUNION c ((x1,y1),z) = ((x1,y1),z) IN BIGUNION c``] THEN
-      SIMP_TAC std_ss [BIGUNION, GSPECIFICATION] THEN
-      SIMP_TAC std_ss [SUBSET_DEF, IN_DEF] THEN MESON_TAC[],
-      ALL_TAC] THEN
-    DISCH_THEN(CONJUNCTS_THEN2 (X_CHOOSE_TAC ``s:('a#'a)#'a->bool``) MP_TAC) THEN
-    DISCH_THEN(MP_TAC o SPEC ``s:('a#'a)#'a->bool``) THEN
-    ASM_REWRITE_TAC[GSYM MONO_NOT_EQ] THEN
-    MATCH_MP_TAC(ONCE_REWRITE_RULE[TAUT `a /\ b ==> c <=> b ==> a ==> c`]
-                      SUBSET_FINITE_I) THEN
-    ONCE_REWRITE_TAC [METIS [SPECIFICATION]
-       ``BIGUNION c ((x1,y1),z) = ((x1,y1),z) IN BIGUNION c``] THEN
-    SIMP_TAC std_ss [SUBSET_DEF, GSPECIFICATION, BIGUNION] THEN ASM_MESON_TAC[IN_DEF],
-    DISCH_TAC THEN ASM_REWRITE_TAC [] THEN POP_ASSUM K_TAC] THEN
-  FIRST_X_ASSUM(SUBST1_TAC o SYM) THEN SIMP_TAC std_ss [] THEN
-  DISCH_THEN(X_CHOOSE_THEN ``R:('a#'a)#'a->bool``
-   (CONJUNCTS_THEN2 (X_CHOOSE_TAC ``s:'a->bool``) ASSUME_TAC)) THEN
-  SUBGOAL_THEN ``((s:'a->bool) *_c s) =_c s`` ASSUME_TAC THENL
-   [REWRITE_TAC[EQ_C] THEN EXISTS_TAC ``R:('a#'a)#'a->bool`` THEN METIS_TAC [],
-    ALL_TAC] THEN
-  SUBGOAL_THEN ``(s +_c s) <=_c (s:'a->bool)`` ASSUME_TAC THENL
-   [KNOW_TAC ``(s +_c s) <=_c ((s:'a->bool) *_c s) /\ ((s:'a->bool) *_c s) <=_c s`` THENL
-    [ALL_TAC, METIS_TAC [CARD_LE_TRANS]] THEN
-    ASM_SIMP_TAC std_ss [CARD_EQ_IMP_LE, CARD_ADD_LE_MUL_INFINITE],
-    ALL_TAC] THEN
-  SUBGOAL_THEN ``(s:'a->bool) INTER (k DIFF s) = EMPTY`` ASSUME_TAC THENL
-   [REWRITE_TAC[EXTENSION, IN_INTER, IN_DIFF, NOT_IN_EMPTY] THEN MESON_TAC[],
-    ALL_TAC] THEN
-  DISJ_CASES_TAC(ISPECL [``k DIFF (s:'a->bool)``, ``s:'a->bool``] CARD_LE_TOTAL)
-  THENL
-   [SUBGOAL_THEN ``k = (s:'a->bool) UNION (k DIFF s)`` SUBST1_TAC THENL
-     [FIRST_ASSUM(MP_TAC o CONJUNCT1 o CONJUNCT2) THEN
-      REWRITE_TAC[SUBSET_DEF, EXTENSION, IN_INTER, NOT_IN_EMPTY,
-                  IN_UNION, IN_DIFF] THEN
-      MESON_TAC[],
-      ALL_TAC] THEN
-    SIMP_TAC std_ss [GSYM CARD_LE_ANTISYM, CARD_LE_SQUARE] THEN
-    KNOW_TAC ``(s UNION (k DIFF s) *_c s UNION (k DIFF s)) <=_c 
-               (((s:'a->bool) +_c (k DIFF s:'a->bool)) *_c (s +_c k DIFF s)) /\
-               (((s:'a->bool) +_c (k DIFF s:'a->bool)) *_c (s +_c k DIFF s)) <=_c
-                s UNION (k DIFF s)`` THENL
-    [ALL_TAC, METIS_TAC [CARD_LE_TRANS]] THEN
-    ASM_SIMP_TAC std_ss [CARD_DISJOINT_UNION, CARD_EQ_IMP_LE, CARD_MUL_CONG] THEN
-    KNOW_TAC ``((s +_c k DIFF s) *_c (s +_c k DIFF s)) <=_c 
-               (((s:'a->bool) +_c s) *_c (s +_c s)) /\
-               (((s:'a->bool) +_c s) *_c (s +_c s)) <=_c s UNION (k DIFF s)`` THENL
-    [ALL_TAC, METIS_TAC [CARD_LE_TRANS]] THEN
-    ASM_SIMP_TAC std_ss [CARD_LE_ADD, CARD_LE_MUL, CARD_LE_REFL] THEN
-    KNOW_TAC ``((s +_c s) *_c (s +_c s)) <=_c ((s:'a->bool) *_c s) /\
-               ((s:'a->bool) *_c s) <=_c (s UNION (k DIFF s))`` THENL
-    [ALL_TAC, METIS_TAC [CARD_LE_TRANS]] THEN
-    ASM_SIMP_TAC std_ss [CARD_LE_MUL] THEN
-    KNOW_TAC ``(s *_c s) <=_c (s:'a->bool) /\ (s:'a->bool) <=_c s UNION (k DIFF s)`` THENL
-    [ALL_TAC, METIS_TAC [CARD_LE_TRANS]] THEN
-    ASM_SIMP_TAC std_ss [CARD_EQ_IMP_LE] THEN
-    SIMP_TAC std_ss [CARD_LE_EQ_SUBSET] THEN EXISTS_TAC ``s:'a->bool`` THEN
-    SIMP_TAC std_ss [CARD_EQ_REFL, SUBSET_DEF, IN_UNION],
-    ALL_TAC] THEN
-  UNDISCH_TAC ``s:'a->bool <=_c k DIFF s`` THEN
-  SIMP_TAC std_ss [CARD_LE_EQ_SUBSET] THEN
-  DISCH_THEN(X_CHOOSE_THEN ``d:'a->bool`` STRIP_ASSUME_TAC) THEN
-  SUBGOAL_THEN ``(s:'a->bool *_c d) UNION (d *_c s) UNION (d *_c d) =_c d``
-  MP_TAC THENL
-   [KNOW_TAC ``(s *_c d) UNION (d *_c s) UNION (d *_c d) =_c 
-               (((s:'a->bool) *_c (d:'a->bool)) +_c ((d *_c s) +_c (d *_c d))) /\ 
-               (((s:'a->bool) *_c (d:'a->bool)) +_c ((d *_c s) +_c (d *_c d))) =_c d`` THENL
-    [ALL_TAC, METIS_TAC [CARD_EQ_TRANS]] THEN CONJ_TAC THENL
-     [KNOW_TAC ``(s *_c d) UNION (d *_c s) UNION (d *_c d) =_c
-                 (((s:'a->bool) *_c d) +_c ((d *_c s) UNION (d *_c d))) /\
-                 (((s:'a->bool) *_c d) +_c ((d *_c s) UNION (d *_c d))) =_c
-                 ((s *_c d) +_c ((d *_c s) +_c (d *_c d)))`` THENL
-      [ALL_TAC, METIS_TAC [CARD_EQ_TRANS]] THEN
-      CONJ_TAC THENL
-       [ALL_TAC,
-        MATCH_MP_TAC CARD_ADD_CONG THEN SIMP_TAC std_ss [CARD_EQ_REFL]] THEN
-      REWRITE_TAC [GSYM UNION_ASSOC] THEN
-      MATCH_MP_TAC CARD_DISJOINT_UNION THEN
-      UNDISCH_TAC ``s INTER (k DIFF s:'a->bool) = {}`` THEN
-      UNDISCH_TAC ``d SUBSET (k DIFF s:'a->bool)`` THEN
-      SIMP_TAC std_ss [EXTENSION, SUBSET_DEF, FORALL_PROD, NOT_IN_EMPTY,
-                  IN_INTER, IN_UNION, IN_CARD_MUL, IN_DIFF] THEN MESON_TAC[],
-      ALL_TAC] THEN
-    KNOW_TAC ``(((s *_c d) +_c (((d:'a->bool) *_c s) +_c (d *_c d))) =_c s) /\ 
-               ((s:'a->bool) =_c d)`` THENL
-    [ALL_TAC, METIS_TAC [CARD_EQ_TRANS]] THEN ASM_SIMP_TAC std_ss [] THEN
-    KNOW_TAC ``(((s *_c d) +_c ((d *_c s) +_c (d *_c (d:'a->bool)))) =_c 
-               ((s:'a->bool *_c s) +_c ((s *_c s) +_c (s *_c s)))) /\
-               (((s:'a->bool *_c s) +_c ((s *_c s) +_c (s *_c s))) =_c s)`` THENL
-    [ALL_TAC, METIS_TAC [CARD_EQ_TRANS]] THEN CONJ_TAC THENL
-     [REPEAT(MATCH_MP_TAC CARD_ADD_CONG THEN CONJ_TAC) THEN
-      MATCH_MP_TAC CARD_MUL_CONG THEN ASM_REWRITE_TAC[CARD_EQ_REFL] THEN
-      ONCE_REWRITE_TAC[CARD_EQ_SYM] THEN ASM_REWRITE_TAC[],
-      ALL_TAC] THEN
-    KNOW_TAC ``(((s *_c s) +_c ((s *_c s) +_c (s *_c s))) =_c 
-               ((s:'a->bool) +_c (s +_c s))) /\ 
-               (((s:'a->bool) +_c (s +_c s)) =_c s)`` THENL
-    [ALL_TAC, METIS_TAC [CARD_EQ_TRANS]] THEN CONJ_TAC THENL
-     [REPEAT(MATCH_MP_TAC CARD_ADD_CONG THEN ASM_REWRITE_TAC[]),
-      ALL_TAC] THEN
-    REWRITE_TAC[GSYM CARD_LE_ANTISYM, CARD_LE_ADDR] THEN
-    KNOW_TAC ``(s +_c (s +_c s)) <=_c ((s:'a->bool) +_c s) /\
-               ((s:'a->bool) +_c s) <=_c s`` THENL
-    [ALL_TAC, METIS_TAC [CARD_LE_TRANS]] THEN
-    ASM_SIMP_TAC std_ss [CARD_LE_ADD, CARD_LE_REFL],
-    ALL_TAC] THEN
-  FIRST_X_ASSUM(CONJUNCTS_THEN ASSUME_TAC) THEN
-  FIRST_X_ASSUM(CONJUNCTS_THEN ASSUME_TAC) THEN
-  SIMP_TAC std_ss [EQ_C, IN_UNION] THEN
-  DISCH_THEN(X_CHOOSE_TAC ``SS:('a#'a)#'a->bool``) THEN
-  FIRST_X_ASSUM(MP_TAC o SPEC ``\x:('a#'a)#'a. R(x) \/ SS(x)``) THEN
-  ONCE_REWRITE_TAC[MONO_NOT_EQ] THEN DISCH_THEN(K ALL_TAC) THEN
-  SIMP_TAC std_ss [NOT_IMP] THEN REPEAT CONJ_TAC THENL
-   [EXISTS_TAC ``(s:'a->bool) UNION d``,
-    SIMP_TAC std_ss [SUBSET_DEF, IN_DEF],
-    SUBGOAL_THEN ``~(d:'a->bool = {})`` MP_TAC THENL
-     [DISCH_THEN(MP_TAC o AP_TERM ``FINITE:('a->bool)->bool``) THEN
-      SIMP_TAC std_ss [FINITE_EMPTY, FINITE_INSERT] THEN
-      ASM_MESON_TAC[CARD_INFINITE_CONG],
-      ALL_TAC] THEN
-    REWRITE_TAC[GSYM MEMBER_NOT_EMPTY] THEN DISCH_THEN(X_CHOOSE_TAC ``a:'a``) THEN
-    FIRST_ASSUM(MP_TAC o C MATCH_MP
-     (ASSUME ``a:'a IN d``) o last o CONJUNCTS) THEN
-    DISCH_THEN(MP_TAC o EXISTENCE) THEN
-    DISCH_THEN(X_CHOOSE_THEN ``b:'a#'a`` (CONJUNCTS_THEN ASSUME_TAC)) THEN
-    SIMP_TAC std_ss [EXTENSION, NOT_FORALL_THM] THEN
-    EXISTS_TAC ``(b:'a#'a,a:'a)`` THEN ASM_SIMP_TAC std_ss [IN_DEF] THEN
-    DISCH_THEN(fn th => FIRST_ASSUM
-     (MP_TAC o CONJUNCT2 o C MATCH_MP th o CONJUNCT1)) THEN
-    MAP_EVERY UNDISCH_TAC
-     [``a:'a IN d``, ``(d:'a->bool) SUBSET (k DIFF s)``] THEN
-    REWRITE_TAC[SUBSET_DEF, IN_DIFF] THEN MESON_TAC[]] THEN
-  SIMP_TAC std_ss [FINITE_UNION, DE_MORGAN_THM] THEN
-  ASM_REWRITE_TAC[] THEN CONJ_TAC THENL
-   [MAP_EVERY UNDISCH_TAC
-     [``(d:'a->bool) SUBSET (k DIFF s)``, ``(s:'a->bool) SUBSET k``] THEN
-    REWRITE_TAC[SUBSET_DEF, IN_UNION, IN_DIFF] THEN MESON_TAC[],
-    ALL_TAC] THEN
-  POP_ASSUM MP_TAC THEN POP_ASSUM MP_TAC THEN
-  SIMP_TAC std_ss [FORALL_PROD, EXISTS_UNIQUE_THM, EXISTS_PROD,
-              IN_CARD_MUL, IN_UNION, PAIR_EQ] THEN
-  MAP_EVERY UNDISCH_TAC
-   [``(s:'a->bool) SUBSET k``,
-    ``(d:'a->bool) SUBSET (k DIFF s)``] THEN
-  REWRITE_TAC[SUBSET_DEF, EXTENSION, NOT_IN_EMPTY, IN_INTER, IN_DIFF] THEN
-  POP_ASSUM_LIST(K ALL_TAC) THEN
-  REPEAT DISCH_TAC THEN REPEAT CONJ_TAC THENL
-   [ASM_MESON_TAC[], ASM_MESON_TAC[], ALL_TAC] THEN
-  GEN_TAC THEN DISCH_THEN(DISJ_CASES_THEN MP_TAC) THENL
-   [ASM_MESON_TAC[], ALL_TAC] THEN
-  DISCH_THEN(fn th => CONJ_TAC THEN MP_TAC th) THENL
-   [ALL_TAC, ASM_MESON_TAC[]] THEN
-  DISCH_THEN(fn th =>
-   FIRST_ASSUM(MP_TAC o C MATCH_MP th o last o CONJUNCTS)) THEN
-  MESON_TAC[]);
+val CARD_SQUARE_INFINITE = save_thm
+  ("CARD_SQUARE_INFINITE", SET_SQUARED_CARDEQ_SET);
 
 (* ------------------------------------------------------------------------- *)
 (* Preservation of finiteness.                                               *)
@@ -3203,8 +2882,6 @@ val CARD_ADD_FINITE_EQ = store_thm ("CARD_ADD_FINITE_EQ",
 val CARD_MUL_FINITE = store_thm ("CARD_MUL_FINITE",
  ``!s t. FINITE s /\ FINITE t ==> FINITE(s *_c t)``,
   SIMP_TAC std_ss [mul_c, FINITE_PRODUCT]);
-
-
 
 (* ------------------------------------------------------------------------- *)
 (* Hence the "absorption laws" for arithmetic with an infinite cardinal.     *)
