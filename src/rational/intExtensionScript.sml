@@ -176,16 +176,19 @@ val INT_SGN_NOTPOSNEG = store_thm("INT_SGN_NOTPOSNEG", ``!x. ~(SGN x = ~1) ==> ~
 (*--------------------------------------------------------------------------
    INT_SGN_CASES : thm
    |- !x P.
-        ((SGN x=~1) /\ (x<0) ==> P) /\
-        ((SGN x=0i) /\ (x=0) ==> P) /\
-        ((SGN x=1i) /\ (0<x) ==> P) ==> P
+        ((SGN x = ~1) /\ (x < 0) ==> P) /\
+        ((SGN x = 0i) /\ (x = 0) ==> P) /\
+        ((SGN x = 1i) /\ (0 < x) ==> P) ==> P
  *--------------------------------------------------------------------------*)
 
-val INT_SGN_CASES = store_thm("INT_SGN_CASES", ``!x P. ((SGN x=~1) /\ (x<0) ==> P) /\ ((SGN x=0i) /\ (x=0) ==> P) /\ ((SGN x=1i) /\ (0<x) ==> P) ==> P``,
+val INT_SGN_CASES = store_thm
+  ("INT_SGN_CASES", ``!x P. ((SGN x = ~1) /\ (x < 0) ==> P) /\
+                            ((SGN x = 0i) /\ (x = 0) ==> P) /\
+                            ((SGN x = 1i) /\ (0 < x) ==> P) ==> P``,
         REPEAT GEN_TAC THEN
-        ASM_CASES_TAC ``(SGN x=~1) /\ (x<0)`` THEN
+        ASM_CASES_TAC ``(SGN x = ~1) /\ (x < 0)`` THEN
         UNDISCH_HD_TAC THEN
-        ASM_CASES_TAC ``(SGN x=1i) /\ (0<x)`` THEN
+        ASM_CASES_TAC ``(SGN x = 1i) /\ (0 < x)`` THEN
         UNDISCH_HD_TAC THEN
         REWRITE_TAC[SGN_def] THEN
         REWRITE_TAC[DE_MORGAN_THM] THEN
