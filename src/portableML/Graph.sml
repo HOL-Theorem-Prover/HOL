@@ -75,7 +75,7 @@ struct
 open Portable
 (* keys *)
 
-infix ?
+infix ? |> |>> ||->
 fun fold_product f _ [] z = z
   | fold_product f [] _ z = z
   | fold_product f (x :: xs) ys z =
@@ -367,9 +367,4 @@ structure Graph = Graph(
   type key = string
   val ord = String.compare
   val pp = HOLPP.add_string o Portable.mlquote
-);
-structure Int_Graph = Graph(
-  type key = int
-  val ord = Int.compare
-  val pp = HOLPP.add_string o Int.toString
 );

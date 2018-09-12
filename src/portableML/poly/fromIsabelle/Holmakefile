@@ -1,6 +1,4 @@
-Future.uo: Future.sml Graph.uo
-
-Graph.uo: Graph.sml AList.uo CoreLib.uo
+Future.uo: Future.sml $(SIGOBJ)/Graph.uo
 
 CoreLib.uo: CoreLib.sml
 
