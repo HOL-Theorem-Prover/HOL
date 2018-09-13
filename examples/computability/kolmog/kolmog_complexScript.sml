@@ -481,7 +481,7 @@ val prefix_refl = Q.store_thm("prefix_refl[simp]",
 `¬(l ≺ l)`,
 simp[prefix_def])
 
-val prefix_free_def = Define`prefix_free (s:α list set) = ∀a b. a ∈ s ∧ b∈s ==> ¬(a≺ b)∧¬(b≺ a) `
+val prefix_free_def = Define`prefix_free (s:α list set) = ∀a b. a ∈ s ∧ b∈s ==> ¬(a≺ b) `
 
 val prefix_free_empty = Q.store_thm("prefix_free_empty[simp]",
 `prefix_free ∅`,
@@ -621,9 +621,14 @@ val tbl2n_append_full = Q.store_thm("tbl2n_append_full",
 `∀y. tbl2n (x++y) = tbl2n x + 2**(LENGTH x) * tbl2n y`,
 Induct_on`x` >> simp[] >> Cases_on`h` >> simp[EXP])
 
-val tbl2n_ub = Q.store_thm("tbl2n_ub",
+val tbl2n_ub = Q.store_thm("tbl2n_ub[simp]",
 `tbl2n l < 2**(LENGTH l)`,
 Induct_on`l` >> simp[] >> Cases_on`h` >> simp[EXP])
+
+val TBL2N_ub = Q.store_thm("TBL2N_ub[simp]",
+`TBL2N l < 2**(LENGTH l)`,
+metis_tac[tbl2n_ub,LENGTH_REVERSE])
+
 
 val TBL2N_inj_len = Q.store_thm("TBL2N_inj_len",
 `∀x y.(LENGTH x = LENGTH y) ==> (TBL2N x = TBL2N y <=> x=y)`,
@@ -654,6 +659,23 @@ qabbrev_tac`δ=TBL2N j-TBL2N (i ++ Fpow Δ)` >> `δ<2**Δ` by (fs[RIGHT_ADD_DIST
 `TBL2N (i ++ l) = TBL2N j` by simp[] >> `LENGTH (i++l) = LENGTH j` by simp[Abbr`Δ`] >> 
 `i++l = j` by metis_tac[TBL2N_inj_len] >> `0<LENGTH l` by simp[Abbr`Δ`] >> metis_tac[prefix_lem1] )
 
+val prefix_length_lt = Q.store_thm("prefix_length_lt",
+`a ≺ b ==> LENGTH a < LENGTH b`,
+rw[prefix_def] >> `LENGTH a <= LENGTH b` by fs[rich_listTheory.IS_PREFIX_LENGTH] >> 
+Cases_on`LENGTH a = LENGTH b` >> simp[] >> metis_tac[rich_listTheory.IS_PREFIX_LENGTH_ANTI])
+
+val tbl2n_append = Q.store_thm("tbl2n_append",
+`tbl2n (p++s) = 2**LENGTH p * (tbl2n s) +tbl2n p`,
+Induct_on`p` >> simp[] >> Cases_on`h` >> simp[ADD1,EXP_ADD,LEFT_ADD_DISTRIB])
+
+val TBL2N_append = Q.store_thm("TBL2N_append",
+`TBL2N (p++s) = 2**LENGTH s * (TBL2N p) +TBL2N s`,
+simp[REVERSE_APPEND,tbl2n_append])
+
+val prefix_append= Q.store_thm("prefix_append",
+`a ≺ b <=> ∃s. b=a++s ∧ s<>[]`,
+simp[prefix_def] >> rw[rich_listTheory.IS_PREFIX_APPEND,EQ_IMP_THM] >> metis_tac[APPEND_NIL,APPEND_EQ_SELF])
+
 val disjoint_prefix_free = Q.store_thm("disjoint_prefix_free",
 `prefix_free P <=> let is = IMAGE interval_bl P in ∀i1 i2. i1 ∈ is ∧ i2∈is ∧ i1<>i2 ==> disjoint_interval i1 i2`,
 rw[EQ_IMP_THM] 
@@ -669,47 +691,48 @@ rw[EQ_IMP_THM]
       `(0:real)<2` by fs[] >> `0<M` by metis_tac[transcTheory.RPOW_POS_LT] >>
       `((&TBL2N i) :real) < &(TBL2N j + 1)` by fs[REAL_LT_RMUL] >> 
       `((&TBL2N j):real) < &(TBL2N i + 1)` by fs[REAL_LT_RMUL] >> fs[] ) >> 
-    Cases_on`LENGTH i < LENGTH j` >> rw[]
-      >- (`&TBL2N i * 2 rpow -&LENGTH i < &TBL2N j * 2 rpow -&LENGTH j + 2 rpow -&LENGTH j` by 
-            metis_tac[REAL_LET_TRANS]>> 
-          `&TBL2N i * 2 rpow -&LENGTH i < (&TBL2N j +1) * 2 rpow -&LENGTH j` by 
-            metis_tac[REAL_ADD_RDISTRIB,REAL_MUL_LID] >> `(0:real)<2` by fs[] >>
-          `&TBL2N i * 2 rpow  -&LENGTH i * 2 rpow &LENGTH j < 
-           (&TBL2N j +1)  * 2 rpow -&LENGTH j  * 2 rpow &LENGTH j` by 
-             metis_tac[transcTheory.RPOW_POS_LT,REAL_LT_RMUL] >> 
-          fs[GSYM REAL_MUL_ASSOC,GSYM transcTheory.RPOW_ADD,transcTheory.RPOW_0,add_ints] >> rfs[]>>
-          `&TBL2N j * 2 rpow -&LENGTH j < &TBL2N i * 2 rpow -&LENGTH i + 2 rpow -&LENGTH i` by 
-            metis_tac[REAL_LET_TRANS] >>
-          `&TBL2N j * 2 rpow -&LENGTH j < (&TBL2N i +1) * 2 rpow -&LENGTH i` by 
-            metis_tac[REAL_ADD_RDISTRIB,REAL_MUL_LID] >> `(0:real)<2` by fs[] >>
-          `&TBL2N j * 2 rpow  -&LENGTH j * 2 rpow &LENGTH j < 
-           (&TBL2N i +1)  * 2 rpow -&LENGTH i  * 2 rpow &LENGTH j` by 
-             metis_tac[transcTheory.RPOW_POS_LT,REAL_LT_RMUL] >>
-          fs[GSYM REAL_MUL_ASSOC,GSYM transcTheory.RPOW_ADD,transcTheory.RPOW_0,add_ints] >> rfs[] >>
-          qabbrev_tac`Δ=LENGTH j − LENGTH i` >> qabbrev_tac`ii= TBL2N i` >> 
-          qabbrev_tac`jj= TBL2N j` >> fs[GSYM transcTheory.GEN_RPOW,REAL_OF_NUM_POW] >> 
-          fs[disjoint_pf_lem1])
-      >- (`&TBL2N j * 2 rpow -&LENGTH j < &TBL2N i * 2 rpow -&LENGTH i + 2 rpow -&LENGTH i` by 
-            metis_tac[REAL_LET_TRANS]>> 
-          `&TBL2N j * 2 rpow -&LENGTH j < (&TBL2N i +1) * 2 rpow -&LENGTH i` by 
-            metis_tac[REAL_ADD_RDISTRIB,REAL_MUL_LID] >> `(0:real)<2` by fs[] >>
-          `&TBL2N j * 2 rpow  -&LENGTH j * 2 rpow &LENGTH i < 
-           (&TBL2N i +1)  * 2 rpow -&LENGTH i  * 2 rpow &LENGTH i` by 
-             metis_tac[transcTheory.RPOW_POS_LT,REAL_LT_RMUL] >> 
-          fs[GSYM REAL_MUL_ASSOC,GSYM transcTheory.RPOW_ADD,transcTheory.RPOW_0,add_ints] >> rfs[]>>
-          `&TBL2N i * 2 rpow -&LENGTH i < &TBL2N j * 2 rpow -&LENGTH j + 2 rpow -&LENGTH j` by 
-            metis_tac[REAL_LET_TRANS] >>
-          `&TBL2N i * 2 rpow -&LENGTH i < (&TBL2N j +1) * 2 rpow -&LENGTH j` by 
-            metis_tac[REAL_ADD_RDISTRIB,REAL_MUL_LID] >> `(0:real)<2` by fs[] >>
-          `&TBL2N i * 2 rpow  -&LENGTH i * 2 rpow &LENGTH i < 
-           (&TBL2N j +1)  * 2 rpow -&LENGTH j  * 2 rpow &LENGTH i` by 
-             metis_tac[transcTheory.RPOW_POS_LT,REAL_LT_RMUL] >>
-          fs[GSYM REAL_MUL_ASSOC,GSYM transcTheory.RPOW_ADD,transcTheory.RPOW_0,add_ints] >> rfs[] >>
-          qabbrev_tac`Δ=LENGTH i − LENGTH j` >> qabbrev_tac`ii= TBL2N j` >> 
-          qabbrev_tac`jj= TBL2N i` >> fs[GSYM transcTheory.GEN_RPOW,REAL_OF_NUM_POW] >> 
-          fs[disjoint_pf_lem1]) )
->- (fs[interval_bl_def,disjoint_interval_def,DISJOINT_DEF,EXTENSION] >> 
-    rw[GSYM DISJ_ASSOC] >> )  )
+    wlog_tac `LENGTH i < LENGTH j` [`i`,`j`,`x`] >- (`LENGTH j < LENGTH i` by simp[] >> metis_tac[])>>
+    `&TBL2N i * 2 rpow -&LENGTH i < &TBL2N j * 2 rpow -&LENGTH j + 2 rpow -&LENGTH j` by 
+      metis_tac[REAL_LET_TRANS]>> 
+    `&TBL2N i * 2 rpow -&LENGTH i < (&TBL2N j +1) * 2 rpow -&LENGTH j` by 
+      metis_tac[REAL_ADD_RDISTRIB,REAL_MUL_LID] >> `(0:real)<2` by fs[] >>
+    `&TBL2N i * 2 rpow  -&LENGTH i * 2 rpow &LENGTH j < 
+     (&TBL2N j +1)  * 2 rpow -&LENGTH j  * 2 rpow &LENGTH j` by 
+       metis_tac[transcTheory.RPOW_POS_LT,REAL_LT_RMUL] >> 
+    fs[GSYM REAL_MUL_ASSOC,GSYM transcTheory.RPOW_ADD,transcTheory.RPOW_0,add_ints] >> rfs[]>>
+    `&TBL2N j * 2 rpow -&LENGTH j < &TBL2N i * 2 rpow -&LENGTH i + 2 rpow -&LENGTH i` by 
+      metis_tac[REAL_LET_TRANS] >>
+    `&TBL2N j * 2 rpow -&LENGTH j < (&TBL2N i +1) * 2 rpow -&LENGTH i` by 
+      metis_tac[REAL_ADD_RDISTRIB,REAL_MUL_LID] >> `(0:real)<2` by fs[] >>
+    `&TBL2N j * 2 rpow  -&LENGTH j * 2 rpow &LENGTH j < 
+     (&TBL2N i +1)  * 2 rpow -&LENGTH i  * 2 rpow &LENGTH j` by 
+       metis_tac[transcTheory.RPOW_POS_LT,REAL_LT_RMUL] >>
+    fs[GSYM REAL_MUL_ASSOC,GSYM transcTheory.RPOW_ADD,transcTheory.RPOW_0,add_ints] >> rfs[] >>
+    qabbrev_tac`Δ=LENGTH j − LENGTH i` >> qabbrev_tac`ii= TBL2N i` >> 
+    qabbrev_tac`jj= TBL2N j` >> fs[GSYM transcTheory.GEN_RPOW,REAL_OF_NUM_POW] >> 
+    fs[disjoint_pf_lem1])
+>- (fs[prefix_free_def,PULL_EXISTS] >>rw[] >>
+  strip_tac >>`interval_bl a <> interval_bl b` by 
+   (fs[interval_bl_def] >> rw[] >> `LENGTH a < LENGTH b` by simp[prefix_length_lt]>> 
+    `real_of_num (LENGTH a) < real_of_num (LENGTH b)` by fs[REAL_LT] >> 
+    `-(real_of_num (LENGTH b)) < -(real_of_num(LENGTH a))` by fs[REAL_LT_NEG] >> 
+    `1<(2:real)` by simp[]>>`2 rpow -&LENGTH b < 2 rpow -&LENGTH a` by fs[transcTheory.RPOW_LT]>>
+    fs[REAL_LT_IMP_NE])>>
+  first_x_assum drule_all >>
+  fs[interval_bl_def,disjoint_interval_def] >> rw[DISJOINT_DEF,EXTENSION] >> 
+  qexists_tac`&TBL2N b * 2 rpow -&LENGTH b` >> rw[]
+    >- (`0<2 rpow &LENGTH b` by fs[transcTheory.RPOW_POS_LT] >> 
+        drule_then (ONCE_REWRITE_TAC o list_of_singleton o GSYM) REAL_LE_RMUL >> 
+        fs[GSYM REAL_MUL_ASSOC,GSYM transcTheory.RPOW_ADD,transcTheory.RPOW_0,add_ints]>>
+        drule_then assume_tac prefix_length_lt >> simp[] >>
+        fs[GSYM transcTheory.GEN_RPOW,REAL_OF_NUM_POW] >> fs[prefix_append,TBL2N_append]  )
+    >- (`0<2 rpow &LENGTH b` by fs[transcTheory.RPOW_POS_LT] >> 
+        drule_then (ONCE_REWRITE_TAC o list_of_singleton o GSYM) REAL_LT_RMUL >>
+        drule_then assume_tac prefix_length_lt >>
+        fs[GSYM REAL_MUL_ASSOC,GSYM transcTheory.RPOW_ADD,transcTheory.RPOW_0,add_ints,
+           REAL_ADD_RDISTRIB,GSYM transcTheory.GEN_RPOW,REAL_OF_NUM_POW] >>
+        fs[prefix_append,TBL2N_append] )
+    >- (rw[REAL_LT_ADDR] >> `0<(2:real)` by simp[] >> fs[transcTheory.RPOW_POS_LT]) ))
 
 val kraft_ineq = Q.store_thm("kraft_ineq",
 `∀P. prefix_free P <=> SIGMA (λs. Normal (2 rpow -&LENGTH s)) {s | s ∈ P} <= 1`,
