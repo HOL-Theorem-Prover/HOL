@@ -48,7 +48,7 @@ In the following examples assume {arithmeticTheory} is open.
 {
 > g(`ABS_DIFF x y + ABS_DIFF y z <= ABS_DIFF x z`);
 ...
-> e(var_wlog_tac `x <= z` []);
+> e(wlog_tac `x <= z` []);
 val it =
    ABS_DIFF x y + ABS_DIFF y z <= ABS_DIFF x z
    ------------------------------------
@@ -66,7 +66,7 @@ The first subgoal can be solved by
 {
 > g`MAX x y <= z <=> x <= z /\ y <= z`
 ...
-> e(var_wlog_tac `x <= y` []);
+> e(wlog_tac `x <= y` []);
 val it =
    MAX x y <= z <=> x <= z /\ y <= z
    ------------------------------------
