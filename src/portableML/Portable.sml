@@ -86,6 +86,11 @@ fun these (SOME x) = x
    ---------------------------------------------------------------------- *)
 
 fun list_of_singleton a = [a]
+fun single a = [a]
+fun the_single [x] = x
+  | the_single _ = raise List.Empty;
+fun singleton f x = the_single (f [x])
+
 fun list_of_pair (a, b) = [a, b]
 fun list_of_triple (a, b, c) = [a, b, c]
 fun list_of_quadruple (a, b, c, d) = [a, b, c, d]

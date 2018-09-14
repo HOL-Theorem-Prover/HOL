@@ -17,10 +17,5 @@ local open Portable in
     | fold2 f (x :: xs) (y :: ys) z = fold2 f xs ys (f x y z)
     | fold2 _ _ _ _ = raise ListPair.UnequalLengths;
 
-  fun single x = [x]
-  fun the_single [x] = x
-    | the_single _ = raise List.Empty;
-  fun singleton f x = the_single (f [x])
-
 end (* local *)
 end;

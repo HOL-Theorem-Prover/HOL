@@ -39,6 +39,10 @@ sig
   val with_exn : ('a -> 'b) -> 'a -> exn -> 'b
 
   val list_of_singleton : 'a -> 'a list
+  val single : 'a -> 'a list (* synonym of list_of_singleton *)
+  val the_single : 'a list -> 'a        (* exn List.Empty if list length <> 1 *)
+  val singleton : ('a list -> 'b list) -> 'a -> 'b
+                (* singleton f x raises exn List.Empty if length (f [x]) <> 1 *)
   val list_of_pair : 'a * 'a -> 'a list
   val list_of_triple : 'a * 'a * 'a -> 'a list
   val list_of_quadruple : 'a * 'a * 'a * 'a -> 'a list
