@@ -60,16 +60,13 @@ fun rtrunc n s =
     "... " ^ String.substring(s, String.size s - (n - 4), n - 4)
   else StringCvt.padRight #" " n s
 
+fun trashsfxes sfxes s =
+  case List.find (fn sfx => String.isSuffix sfx s) sfxes of
+      NONE => s
+    | SOME sfx => substring(s,0,size s - size sfx)
+
 fun polish0 tag =
-  if String.isSuffix "Theory" tag then
-    String.substring(tag,0,String.size tag - 6)
-  else if String.isSuffix "Theory.sig" tag then
-    String.substring(tag,0,String.size tag - 10)
-  else if String.isSuffix "Theory.sml" tag then
-    String.substring(tag,0,String.size tag - 10)
-  else if String.isSuffix "Theory.dat" tag then
-    String.substring(tag,0,String.size tag - 10)
-  else tag
+  trashsfxes ["Theory", "Theory.sig", "Theory.sml", "Theory.dat"] tag
 
 fun truncate width s =
   if String.size s > width then
