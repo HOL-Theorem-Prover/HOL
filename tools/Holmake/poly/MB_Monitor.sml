@@ -39,14 +39,6 @@ fun nextchar #"|" = #"/"
   | nextchar #"\\" = #"|"
   | nextchar c = c
 
-fun stallstr "|" = "!"
-  | stallstr ":" = "|"
-  | stallstr "." = ":"
-  | stallstr "!" = "!!"
-  | stallstr "!!" = "!!!"
-  | stallstr "!!!" = red "!!!"
-  | stallstr s = s
-
 datatype monitor_status = MRunning of char
                         | Stalling of Time.time
 (* statusString is always 3 characters; with a nonspace rightmost *)
