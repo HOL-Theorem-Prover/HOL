@@ -255,7 +255,7 @@ fun try_tac thmpred read_dicts gldict n g stacl =
           then (save_stac tac newstac g gl; p "solved")
           else
             (
-            if mem g gl
+            if mem g gl (* should test for alpha equivalence here *)
             then (print "."; continue (dadd gl () gldict) n)
             else (save_stac tac newstac g gl;
                   app (p o string_of_goal) gl;

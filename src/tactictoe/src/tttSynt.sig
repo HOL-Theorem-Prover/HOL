@@ -3,19 +3,15 @@ sig
 
   include Abbrev
   
-  type psubst = (int * int) list
-  type tsubst = (term * term) list
-
   datatype pattern =
     Pconst of int
   | Pcomb  of pattern * pattern
   | Plamb  of pattern * pattern
   
   (* globals *)
-  val conjecture_limit : int ref
-  val patsub_flag : bool ref  
   val concept_threshold : int ref
-  val concept_flag : bool ref  
+  val concept_flag : bool ref
+  val tycheck_flag : bool ref
 
   (* debugging *)
   val ttt_synt_dir  : string ref
@@ -26,6 +22,6 @@ sig
   val writel_synt   : string -> string list -> unit
   
   (* conjecturing *)
-  val conjecture : term list -> term list
+  val conjecture : int -> term list -> term list
  
 end

@@ -16,9 +16,8 @@ val ERR = mk_HOL_ERR "tttSynt"
    Globals
    -------------------------------------------------------------------------- *)
 
-val conjecture_limit = ref 100000
-val patsub_flag = ref false
-val type_errors = ref 0
+val tycheck_flag     = ref false
+val type_errors      = ref 0
 
 (* --------------------------------------------------------------------------
    Tools
@@ -36,6 +35,18 @@ fun alpha_equal_or_error tm tm' =
 fun unvalid_change tm tm' =
   alpha_equal_or_error tm tm' orelse
   (type_of tm' <> bool handle HOL_ERR _ => true) 
+
+fun gnuplotcmd filein fileout = 
+  let
+    val plotcmd = "\"" ^ String.concatWith "; " [ 
+      "set term postscript",
+      "set output " ^ "'" ^ fileout ^ "'",
+      "plot " ^ "'" ^ filein ^ "'"] 
+      ^ "\""
+    val cmd = "gnuplot -p -e " ^ plotcmd ^ " > " ^ fileout
+  in
+    cmd_in_dir tactictoe_dir cmd
+  end
 
 (* --------------------------------------------------------------------------
    Debugging
@@ -194,7 +205,7 @@ fun read_cept iceptdict c =
     dfind tm iceptdict handle NotFound => tm
   end
 
-fun read_subst iceptdict sub = 
+fun read_sub iceptdict sub = 
   let fun f (a,b) = (read_cept iceptdict a, read_cept iceptdict b) in
     map f sub
   end
@@ -225,7 +236,29 @@ fun patternify_one tm =
   in
     (p, map fst l2)
   end
-  
+ 
+fun match_pattern_aux d p tm = 
+  case (dest_term tm, p) of
+    (_, Pconst i) =>
+    (
+    if dmem i (!d) 
+    then Term.compare (dfind i (!d),tm) = EQUAL
+    else (d := dadd i tm (!d); true)
+    )
+  | (COMB(Rator,Rand), Pcomb (p1,p2)) => 
+    match_pattern_aux d p1 Rator andalso match_pattern_aux d p2 Rand
+  | (LAMB(Var,Bod), Plamb (p1,p2)) => 
+    match_pattern_aux d p1 Var andalso match_pattern_aux d p2 Bod
+  | _ => false
+
+fun match_pattern p tm =
+  let 
+    val dref = ref (dempty Int.compare)
+    val b = match_pattern_aux dref p tm 
+  in
+    if b then SOME (!dref) else NONE
+  end
+
 fun pattern_compare (p1,p2) = case (p1,p2) of
     (Pconst i1,Pconst i2) => Int.compare (i1,i2)
   | (Pconst _,_) => LESS
@@ -314,8 +347,16 @@ fun term_of_pat idict (p,cl) = case p of
   | Plamb (p1,p2) =>
     mk_abs (term_of_pat idict (p1,cl), term_of_pat idict (p2,cl))
 
+fun term_of_pat2 (p,cl) = case p of
+    Pconst i => List.nth (cl,i)
+  | Pcomb (p1,p2) => 
+    mk_comb (term_of_pat2 (p1,cl), term_of_pat2 (p2,cl))
+  | Plamb (p1,p2) =>
+    mk_abs (term_of_pat2 (p1,cl), term_of_pat2 (p2,cl))
+
+
 (* --------------------------------------------------------------------------
-   Concept substitutions.
+   Concept substitutions. Weighted frequency.
    -------------------------------------------------------------------------- *) 
 
 fun compare_kimin (a,b) = Int.compare (fst a, fst b)
@@ -330,21 +371,36 @@ fun pair_sub cll =
     val cll' = mk_fast_set (list_compare Int.compare) cll
     val cpl  = cartesian_product cll' cll'
     val cpl' = filter (fn (x,y) => x <> y) cpl
+    val freq = 1.0 / Real.fromInt (length cpl')
+    fun add_freq sub = (sub,freq)
+    val r = map (add_freq o norm_sub o combine) cpl'
   in
-    map combine cpl'
+    r
+  end
+
+fun welltyped_sub sub = 
+  let fun f (a,b) = type_of a = type_of b in
+    all f sub
   end
 
 fun create_sub iceptdict patceptdict = 
   let 
     fun f (p,cll) = pair_sub cll 
-    val l1  = List.concat (map f (dlist patceptdict))
-    val l2  = map norm_sub l1
-    val cmp = list_compare (cpl_compare Int.compare Int.compare)
-    val dfreq = count_dict (dempty cmp) l2 
-    val _   = msgd_synt dfreq "concept substitutions"
-    val l3  = dict_sort compare_imax (dlist dfreq)
+    val l1        = List.concat (map f (dlist patceptdict))
+    val cmp       = list_compare (cpl_compare Int.compare Int.compare)
+    val dref      = ref (dempty cmp)
+    fun update_d (sub,freq) =
+      let val oldfreq = dfind sub (!dref) handle NotFound => 0.0 in
+        dref := dadd sub (oldfreq + freq) (!dref)
+      end
+    val dfreq     = (app update_d l1; !dref)
+    val _         = msgd_synt dfreq "concept substitutions"
+    val l3        = dict_sort compare_rmax (dlist dfreq)
+    val l4        = (map (read_sub iceptdict)) (map fst l3)
   in
-    (map (read_subst iceptdict)) (map fst l3)
+    if !tycheck_flag 
+    then filter welltyped_sub l4
+    else l4
   end
 
 fun unsafe_sub sub tm = 
@@ -368,47 +424,7 @@ fun apply_sub sub tm =
   handle HOL_ERR _ => (incr type_errors; NONE)
 
 (* --------------------------------------------------------------------------
-   Pattern substitutions
-   -------------------------------------------------------------------------- *) 
-
-fun pair_patsub pl = 
-  let 
-    val l1 = mk_fast_set pattern_compare pl
-    val cpl = cartesian_product l1 l1
-    val cpl' = filter (fn (x,y) => x <> y) cpl
-  in
-    cpl'
-  end
-
-fun create_patsub ceptpatdict = 
-  let 
-    fun f (cl,pl) = pair_patsub pl 
-    val cpl       = List.concat (map f (dlist ceptpatdict))
-    val cmp       = cpl_compare pattern_compare pattern_compare
-    val dfreq     = count_dict (dempty cmp) cpl
-    val _         = msgd_synt dfreq "pattern substitutions"
-  in
-    map fst (dict_sort compare_imax (dlist dfreq))
-  end
-
-fun apply_patsub thmpatdict iceptdict (p1,p2) tm =
-  let 
-    val patl = dfind tm thmpatdict 
-    fun same_pat x (p,cl) = pattern_compare (p,x) = EQUAL
-  in
-    case List.find (same_pat p1) patl of
-      NONE => NONE
-    | SOME (p,cl) => 
-      (
-      let val tm' = term_of_pat iceptdict (p2,cl) in
-        if unvalid_change tm tm' then NONE else SOME (my_gen_all tm')
-      end
-      handle HOL_ERR _ => (incr type_errors; NONE)
-      )
-  end
-
-(* --------------------------------------------------------------------------
-   Conjecturing
+   Conjecturing by substitutions.
    -------------------------------------------------------------------------- *) 
 
 
@@ -417,17 +433,17 @@ fun update_genthmdict gencjdict genthmdict x =
   genthmdict := dadd x (dlength (!gencjdict), dlength (!genthmdict)) 
   (!genthmdict)
 
-fun update_gencjdict gencjdict x =
-  if dlength (!gencjdict) >= (!conjecture_limit) orelse dmem x (!gencjdict) 
+fun update_gencjdict cjlim gencjdict x =
+  if dlength (!gencjdict) >= cjlim orelse dmem x (!gencjdict) 
   then ()
   else gencjdict := dadd x (dlength (!gencjdict)) (!gencjdict)
 
-fun update_gendict covdict genthmdict gencjdict x =
+fun update_gendict cjlim covdict genthmdict gencjdict x =
   if dmem x covdict 
   then update_genthmdict gencjdict genthmdict x
-  else update_gencjdict gencjdict x
+  else update_gencjdict cjlim gencjdict x
 
-fun conjecture_sub covdict tml subl =
+fun conjecture_sub cjlim covdict tml subl =
   let
     val gencjdict = ref (dempty Term.compare)
     val genthmdict = ref (dempty Term.compare)
@@ -440,13 +456,13 @@ fun conjecture_sub covdict tml subl =
         NONE => try_nsub (n - 1) (tm, nsub + 1)     
       | SOME tm' => 
         (
-        update_gendict covdict genthmdict gencjdict tm';
+        update_gendict cjlim covdict genthmdict gencjdict tm';
         (tm, nsub + 1)
         )
       )
     val mem = ref (~1) 
     fun loop tmnl =
-       if dlength (!gencjdict) >= (!conjecture_limit) orelse 
+       if dlength (!gencjdict) >= cjlim orelse 
           !mem >= dlength (!gencjdict)
        then () else
          let 
@@ -459,52 +475,6 @@ fun conjecture_sub covdict tml subl =
   in 
     loop tmnl;
     (!gencjdict,!genthmdict)
-  end
-
-fun conjecture_patsub thmpatdict iceptdict covdict tml patsubl =
-  let
-    val gencjdict = ref (dempty Term.compare)
-    val genthmdict = ref (dempty Term.compare)
-    val dsub = dnew Int.compare (number_list 0 patsubl) 
-    val tmnl = map (fn x => (x,0)) tml
-    fun try_nsub n (tm,nsub) =
-      if not (dmem nsub dsub) orelse n <= 0 then (tm,nsub) else
-      (
-      case apply_patsub thmpatdict iceptdict (dfind nsub dsub) tm of
-        NONE => try_nsub (n - 1) (tm, nsub + 1)     
-      | SOME tm' => 
-        (
-        update_gendict covdict genthmdict gencjdict tm';
-        (tm, nsub + 1)
-        )
-      )
-    val mem = ref (~1) 
-    fun loop tmnl =
-       if dlength (!gencjdict) >= (!conjecture_limit) orelse 
-          !mem >= dlength (!gencjdict)
-       then () else
-         let 
-           val _ = mem := dlength (!gencjdict)
-           val _ = print_endline (int_to_string (!mem) ^ " conjectures")
-           val newtmnl = map (try_nsub 100) tmnl 
-         in
-           loop newtmnl
-         end
-  in 
-    loop tmnl;
-    (!gencjdict,!genthmdict)
-  end
-
-fun gnuplotcmd filein fileout = 
-  let
-    val plotcmd = "\"" ^ String.concatWith "; " [ 
-      "set term postscript",
-      "set output " ^ "'" ^ fileout ^ "'",
-      "plot " ^ "'" ^ filein ^ "'"] 
-      ^ "\""
-    val cmd = "gnuplot -p -e " ^ plotcmd ^ " > " ^ fileout
-  in
-    cmd_in_dir tactictoe_dir cmd
   end
 
 fun write_graph ntot genthmdict = 
@@ -528,7 +498,7 @@ fun write_graph ntot genthmdict =
     gnuplotcmd filein fileout
   end
 
-fun conjecture tml =
+fun conjecture cjlim tml =
   let
     val _     = init_synt ()
     val tml0 = mk_fast_set Term.compare tml
@@ -546,23 +516,76 @@ fun conjecture tml =
 
     (* conjecture generation from substitutions *)
     val (gencjdict,genthmdict) = 
-      if !patsub_flag 
-      then 
-        let val patsubl = create_patsub ceptpatdict in
-          time_synt "conjecture_patsub"
-          (conjecture_patsub thmpatdict iceptdict covdict tml2) patsubl
-        end
-      else
-        let val subl = create_sub iceptdict patceptdict in
-          time_synt "conjecture_sub"
-          (conjecture_sub covdict tml2) subl
-        end
-    val _ = write_graph ntot genthmdict
+      let val subl = create_sub iceptdict patceptdict in
+        time_synt "conjecture_sub"
+        (conjecture_sub cjlim covdict tml2) subl
+      end
+    (* val _ = write_graph ntot genthmdict *)
     val _ = log_synt (int_to_string (!type_errors) ^ " type errors")
-    val _     = msgd_synt gencjdict "generated conjectures"
+    val _ = msgd_synt gencjdict "generated conjectures"
     val igencjdict = inv_dict Int.compare gencjdict
   in
     map snd (dlist igencjdict)
   end
 
 end (* struct *)
+
+
+(* --------------------------------------------------------------------------
+   Term synthesis from common parse.
+   -------------------------------------------------------------------------- 
+
+On-demand creation of concepts.
+Make the program more complete.
+
+Start modifying towards the conjecture or
+towards its selected premises.
+
+
+Search for a decrease probability.
+
+A conjecture is a closed term of type bool.
+
+
+transition probability.
+
+a list of tokens [a;b;c;d;e].
+Probability skewed toward the neighborhood. 1 1/2 ... 1/...
+
+Arity 0 concepts.
+
+f x => A (f,x)
+
+What is the probability of them mating?
+
+At depth 0. Pretty common.
+At depth 1.
+
+Max (P(big), P (small) * P (small))
+
+every subterm represent multiple transition.
+greedy manner.
+
+ 0 x   SUC (SUC 0) > (SUC x)
+ x > SUC
+
+grow trees.  Taking a set of concepts as input (only mating)
+
+< 0 
+*)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
