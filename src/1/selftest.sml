@@ -391,6 +391,15 @@ in
   temp_clear_overloads_on "⊤"
 end
 
+val _ = print "** Tests with Unicode on\n"
+val _ = let
+  open testutils
+  fun md f = trace ("Unicode", 1) f
+in
+  app (md tpp) ["¬¬p", "¬p"]
+end
+
+
 val _ = print "** Tests with pp_dollar_escapes = 0.\n"
 val _ = set_trace "pp_dollar_escapes" 0
 val _ = app tpp ["(/\\)", "(if)"]

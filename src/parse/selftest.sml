@@ -735,3 +735,25 @@ in
                      |> disable_abbrev_printing "set")
       ]
 end (* tygrammar p/printing local *)
+
+local
+  open term_tokens
+  fun test (s, expected) =
+    let
+      val _ = tprint ("Non-aggregating lex-test on "^s)
+      fun check (Normal (SOME (r, _))) =
+            (case r of
+                Ident s' => if s' = expected then OK()
+                            else die ("FAILED\n  Got " ^ s')
+              | _ => die ("FAILED\n  Got "^token_string r))
+        | check (Normal NONE) =
+            die ("FAILED\n  term_tokens.lex returned NONE")
+        | check (Exn e) =
+            die ("FAILED\n  lex retruned exn " ^ General.exnMessage e)
+    in
+      timed (lex []) check (qbuf.new_buffer [QUOTE s])
+    end
+in
+val _ = List.app test [("aa(", "aa"), ("((a", "("), ("¬¬", "¬"),
+                       ("¬¬p", "¬")]
+end (* local open term_tokens *)
