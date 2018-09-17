@@ -33,6 +33,15 @@ quietdec := false;
 
 val _ = new_theory "ctl_star";
 
+val Know = Q_TAC KNOW_TAC;
+val Suff = Q_TAC SUFF_TAC;
+
+local
+  val th = prove (``!a b. a /\ (a ==> b) ==> a /\ b``, PROVE_TAC [])
+in
+  val STRONG_CONJ_TAC :tactic = MATCH_MP_TAC th >> CONJ_TAC
+end;
+
 val ctl_star_def =
  Hol_datatype
   `ctl_star = CTL_STAR_PROP       of 'a prop_logic               (* boolean expression      *)
@@ -353,7 +362,7 @@ val CTL_STAR_SEM___FAIRNESS =
       Tactical.REVERSE (BINOP_TAC) THEN1 ASM_REWRITE_TAC[] THEN
       REPEAT WEAKEN_HD_TAC THEN
       EQ_TAC THEN REPEAT STRIP_TAC THENL [
-        SUBGOAL_TAC `?t1. t1 >= t /\ t1 > t0` THEN1 (
+        Know `?t1. t1 >= t /\ t1 > t0` THEN1 (
           Cases_on `t > t0` THENL [
             EXISTS_TAC ``t:num`` THEN
             ASM_SIMP_TAC arith_ss [],
@@ -361,7 +370,7 @@ val CTL_STAR_SEM___FAIRNESS =
             EXISTS_TAC ``SUC t0`` THEN
             FULL_SIMP_TAC arith_ss []
           ]
-        ) THEN
+        ) THEN STRIP_TAC THEN
         SPECL_NO_ASSUM 2 [``t1:num``] THEN
         UNDISCH_HD_TAC THEN ASM_REWRITE_TAC[] THEN REPEAT STRIP_TAC THEN
         EXISTS_TAC ``k':num`` THEN
@@ -686,7 +695,7 @@ val FAIR_CTL_SEM_THM___A_EVENTUAL_ALWAYS = prove(
     PROVE_TAC[]);
 
 
-
+(* TODO *)
 val FAIR_CTL_SEM_THM___A_SUNTIL = prove(
     ``!M f1 f2 FC s.
    (FAIR_CTL_SEM M (FAIR_CTL_A_SUNTIL FC (f1, f2)) s = (!p. (IS_FAIR_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M FC p /\
@@ -709,10 +718,10 @@ val FAIR_CTL_SEM_THM___A_SUNTIL = prove(
       ASM_REWRITE_TAC[] THEN
       REPEAT STRIP_TAC THEN
       RIGHT_DISJ_TAC THEN
-      SPECL_NO_ASSUM 2 [``j'':num``] THEN
+      SPECL_NO_ASSUM 2 [``j':num``] THEN
       FULL_SIMP_TAC std_ss [] THENL [
         PROVE_TAC[],
-        `j''' < j` by DECIDE_TAC THEN PROVE_TAC[]
+        `j'' < j` by DECIDE_TAC THEN PROVE_TAC[]
       ],
 
       Cases_on `k' < k` THENL [
