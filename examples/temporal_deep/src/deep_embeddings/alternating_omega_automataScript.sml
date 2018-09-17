@@ -29,6 +29,8 @@ quietdec := false;
 
 val _ = new_theory "alternating_omega_automata";
 
+val Know = Q_TAC KNOW_TAC;
+val Suff = Q_TAC SUFF_TAC;
 
 (*****************************************************************************)
 (* symbolic representation of alternating automata                 *)
@@ -362,13 +364,11 @@ val ALTERNATING_RUN___ALTERNATING_MIN_RUN_EXISTS =
             `IS_REACHABLE_BY_RUN (s, n) r` by PROVE_TAC[SUBRUN_REACHABLE_STATES] THEN
             RES_TAC THEN
             ASM_REWRITE_TAC[alternating_run_R] THEN
+            BETA_TAC THEN
             SELECT_ELIM_TAC THEN
             REPEAT STRIP_TAC THENL [
                 PROVE_TAC[P_SEM_MIN_MODEL_EXISTS],
-
-                SELECT_ELIM_TAC THEN
-                REPEAT STRIP_TAC THEN
-                PROVE_TAC[]
+                fs []
             ],
 
             ASM_REWRITE_TAC[]
@@ -901,9 +901,9 @@ val NDET_MIN_RUN_REACHABLE =
                 EXISTS_TAC ``x:'b`` THEN
                 EXISTS_TAC ``s:'b`` THEN
                 ASM_REWRITE_TAC [IN_SING],
-
-                `s' = s` by PROVE_TAC[] THEN
-                `s'' = s` by PROVE_TAC[] THEN
+                (* TODO: check on std kernel *)
+                `s'' = s` by PROVE_TAC[] THEN  (* was: `s' = s` *)
+                `s''' = s` by PROVE_TAC[] THEN (* was: `s'' = s` *)
                 `x' = x` by PROVE_TAC[IN_SING] THEN
                 `y = x` by PROVE_TAC[IN_SING] THEN
                 ASM_REWRITE_TAC[]
@@ -1004,22 +1004,23 @@ val ALT_SEM_S0_AND_SPLIT___INITIAL =
                 (if ~(IS_REACHABLE_BY_RUN (s, n) r) then r'.R s n else (
                 (if ~(IS_REACHABLE_BY_RUN (s, n) r') then r.R s n else (
                     r.R s n UNION r'.R s n)))))))` by METIS_TAC[] THEN
-        SUBGOAL_TAC `!s n. IS_REACHABLE_BY_RUN (s, n) (ru:'b alternating_run) ==>
+
+        Know `!s n. IS_REACHABLE_BY_RUN (s, n) (ru:'b alternating_run) ==>
             (IS_REACHABLE_BY_RUN (s, n) r \/ IS_REACHABLE_BY_RUN (s, n) r')` THEN1 (
             Induct_on `n` THENL [
                 ASM_SIMP_TAC std_ss [IS_REACHABLE_BY_RUN_def, alternating_run_S0, IN_UNION],
 
                 ASM_SIMP_TAC std_ss [IS_REACHABLE_BY_RUN_def, alternating_run_R] THEN
                 REPEAT STRIP_TAC THEN
-                Cases_on `P s' n` THEN1 METIS_TAC[] THEN
-                Cases_on `P' s' n` THEN1 METIS_TAC[] THEN
+                Cases_on `P s'' n` THEN1 METIS_TAC[] THEN  (* was: `P s' n` *)
+                Cases_on `P' s'' n` THEN1 METIS_TAC[] THEN (* was: `P' s'' n` *)
                 FULL_SIMP_TAC std_ss [] THEN
-                `IS_REACHABLE_BY_RUN (s',n) ru` by FULL_SIMP_TAC std_ss [] THEN
-                Cases_on `~(IS_REACHABLE_BY_RUN (s', n) r)` THEN1 METIS_TAC[] THEN
-                Cases_on `~(IS_REACHABLE_BY_RUN (s', n) r')` THEN1 METIS_TAC[] THEN
+                `IS_REACHABLE_BY_RUN (s'',n) ru` by FULL_SIMP_TAC std_ss [] THEN
+                Cases_on `~(IS_REACHABLE_BY_RUN (s'', n) r)` THEN1 METIS_TAC[] THEN
+                Cases_on `~(IS_REACHABLE_BY_RUN (s'', n) r')` THEN1 METIS_TAC[] THEN
                 FULL_SIMP_TAC std_ss [] THEN
                 PROVE_TAC[IN_UNION]
-            ]) THEN
+            ]) THEN DISCH_TAC THEN
 
         EXISTS_TAC ``ru:'b alternating_run`` THEN
         FULL_SIMP_TAC std_ss [alternating_run_S0, alternating_run_R,
@@ -1170,20 +1171,20 @@ val ALTERNATING_AUTOMATA_CONJUNCTION =
 
     REPEAT GEN_TAC THEN
     STRIP_TAC THEN
-    SUBGOAL_TAC `IS_VALID_ALTERNATING_SEMI_AUTOMATON A.A` THEN1 (
+    Know `IS_VALID_ALTERNATING_SEMI_AUTOMATON A.A` THEN1 (
         FULL_SIMP_TAC std_ss [IS_VALID_ALTERNATING_SEMI_AUTOMATON_def,
             alternating_automaton_REWRITES, IS_POSITIVE_PROP_FORMULA_SUBSET_def,
             FINITE_UNION, P_USED_VARS_def, UNION_SUBSET,
             IS_POSITIVE_PROP_FORMULA_def, INTER_FINITE] THEN
         METIS_TAC[SUBSET_TRANS, SUBSET_UNION]
-    ) THEN
+    ) THEN DISCH_TAC THEN
     ASM_SIMP_TAC std_ss [ALT_SEM_def, ALTERNATING_RUN_def, P_SEM_THM,
         alternating_automaton_REWRITES, IN_INTER, FORALL_AND_THM] THEN
     REPEAT CONJ_EQ_STRIP_TAC THEN
     EQ_TAC THEN REPEAT STRIP_TAC THENL [
         `?ru. ru = alternating_run ((r:'b alternating_run).S0 UNION r'.S0) (\s n.
             (if s IN A1.A.S then r.R s n else r'.R s n))` by PROVE_TAC[] THEN
-        SUBGOAL_TAC `!w. (IS_PATH_THROUGH_RUN w (ru:'b alternating_run)) =
+        Know `!w. (IS_PATH_THROUGH_RUN w (ru:'b alternating_run)) =
             (IS_PATH_THROUGH_RUN w r \/ IS_PATH_THROUGH_RUN w r')` THEN1 (
 
             ASM_SIMP_TAC std_ss [IS_PATH_THROUGH_RUN_def, alternating_run_S0, alternating_run_R,
@@ -1208,9 +1209,9 @@ val ALTERNATING_AUTOMATA_CONJUNCTION =
                     Cases_on `n` THEN METIS_TAC[SUBSET_DEF, IN_DISJOINT]
                 ]
             ]
-        ) THEN
+        ) THEN DISCH_TAC THEN
 
-        SUBGOAL_TAC `!s n. (IS_REACHABLE_BY_RUN (s, n) (ru:'b alternating_run)) =
+        Know `!s n. (IS_REACHABLE_BY_RUN (s, n) (ru:'b alternating_run)) =
             (IS_REACHABLE_BY_RUN (s,n) r \/ IS_REACHABLE_BY_RUN (s,n) r')` THEN1 (
 
             Induct_on `n` THENL [
@@ -1230,7 +1231,7 @@ val ALTERNATING_AUTOMATA_CONJUNCTION =
                         ALTERNATING_PRERUN_def, IN_DISJOINT]
                 ]
             ]
-        ) THEN
+        ) THEN DISCH_TAC THEN
 
         EXISTS_TAC ``ru : 'b alternating_run`` THEN
         FULL_SIMP_TAC std_ss [alternating_run_S0, alternating_run_R, IS_VALID_ALTERNATING_SEMI_AUTOMATON_def, UNION_SUBSET] THEN
@@ -1245,18 +1246,18 @@ val ALTERNATING_AUTOMATA_CONJUNCTION =
             METIS_TAC[REACHABLE_STATES_IN_STATES_SET, IN_DISJOINT,
                 ALTERNATING_PRERUN_def],
 
-            SUBGOAL_TAC `!n. w n IN A1.A.S` THEN1 (
+            Know `!n. w n IN A1.A.S` THEN1 (
                 FULL_SIMP_TAC std_ss [IS_PATH_THROUGH_RUN_def] THEN
                 Cases_on `n` THEN
                 PROVE_TAC[SUBSET_DEF]
-            ) THEN
+            ) THEN DISCH_TAC THEN
             METIS_TAC[],
 
-            SUBGOAL_TAC `!n. w n IN A2.A.S` THEN1 (
+            Know `!n. w n IN A2.A.S` THEN1 (
                 FULL_SIMP_TAC std_ss [IS_PATH_THROUGH_RUN_def] THEN
                 Cases_on `n` THEN
                 PROVE_TAC[SUBSET_DEF]
-            ) THEN
+            ) THEN DISCH_TAC THEN
             METIS_TAC[]
         ],
 
@@ -1272,18 +1273,18 @@ val ALTERNATING_AUTOMATA_CONJUNCTION =
         REPEAT STRIP_TAC THENL [
             PROVE_TAC[P_USED_VARS_INTER_SUBSET_THM],
 
-            SUBGOAL_TAC `s IN A1.A.S` THEN1 (
+            Know `s IN A1.A.S` THEN1 (
                 Cases_on `n` THEN
                 FULL_SIMP_TAC std_ss [IS_REACHABLE_BY_RUN_def, alternating_run_S0, alternating_run_R, IN_INTER]
-            ) THEN
+            ) THEN DISCH_TAC THEN
             METIS_TAC[SUBRUN_REACHABLE_STATES, P_USED_VARS_INTER_SUBSET_THM],
 
-            SUBGOAL_TAC `!n. w n IN A1.A.S` THEN1 (
+            Know `!n. w n IN A1.A.S` THEN1 (
                 FULL_SIMP_TAC std_ss [IS_PATH_THROUGH_RUN_def, alternating_run_S0,
                     alternating_run_R, IN_INTER] THEN
                 Cases_on `n` THEN
                 ASM_REWRITE_TAC[]
-            ) THEN
+            ) THEN DISCH_TAC THEN
             PROVE_TAC[IS_PATH_THROUGH_SUBRUN_THM]
         ],
 
@@ -1299,19 +1300,19 @@ val ALTERNATING_AUTOMATA_CONJUNCTION =
         REPEAT STRIP_TAC THENL [
             PROVE_TAC[P_USED_VARS_INTER_SUBSET_THM],
 
-            SUBGOAL_TAC `s IN A2.A.S` THEN1 (
+            Know `s IN A2.A.S` THEN1 (
                 Cases_on `n` THEN
                 FULL_SIMP_TAC std_ss [IS_REACHABLE_BY_RUN_def, alternating_run_S0, alternating_run_R, IN_INTER]
-            ) THEN
+            ) THEN DISCH_TAC THEN
             `~(s IN A1.A.S)` by PROVE_TAC[IN_DISJOINT] THEN
             METIS_TAC[SUBRUN_REACHABLE_STATES, P_USED_VARS_INTER_SUBSET_THM],
 
-            SUBGOAL_TAC `!n. w n IN A2.A.S` THEN1 (
+            Know `!n. w n IN A2.A.S` THEN1 (
                 FULL_SIMP_TAC std_ss [IS_PATH_THROUGH_RUN_def, alternating_run_S0,
                     alternating_run_R, IN_INTER] THEN
                 Cases_on `n` THEN
                 ASM_REWRITE_TAC[]
-            ) THEN
+            ) THEN DISCH_TAC THEN
             PROVE_TAC[IS_PATH_THROUGH_SUBRUN_THM]
         ]
     ]);
@@ -1332,13 +1333,13 @@ val ALTERNATING_AUTOMATA_DISJUNCTION =
 
     REPEAT GEN_TAC THEN
     STRIP_TAC THEN
-    SUBGOAL_TAC `IS_VALID_ALTERNATING_SEMI_AUTOMATON A.A` THEN1 (
+    Know `IS_VALID_ALTERNATING_SEMI_AUTOMATON A.A` THEN1 (
         FULL_SIMP_TAC std_ss [IS_VALID_ALTERNATING_SEMI_AUTOMATON_def,
             alternating_automaton_REWRITES, IS_POSITIVE_PROP_FORMULA_SUBSET_def,
             FINITE_UNION, P_USED_VARS_def, P_OR_def, UNION_SUBSET,
             IS_POSITIVE_PROP_FORMULA_def, INTER_FINITE] THEN
         METIS_TAC[SUBSET_TRANS, SUBSET_UNION]
-    ) THEN
+    ) THEN DISCH_TAC THEN
     ASM_SIMP_TAC std_ss [ALT_SEM_def, ALTERNATING_RUN_def, P_SEM_THM,
         alternating_automaton_REWRITES, IN_INTER, FORALL_AND_THM] THEN
     EQ_TAC THEN REPEAT STRIP_TAC THENL [
@@ -1351,11 +1352,11 @@ val ALTERNATING_AUTOMATA_DISJUNCTION =
             PROVE_TAC[SUBSET_TRANS, SUBSET_UNION],
             METIS_TAC[REACHABLE_STATES_IN_STATES_SET, ALTERNATING_PRERUN_def],
 
-            SUBGOAL_TAC `!n. w n IN A1.A.S` THEN1 (
+            Know `!n. w n IN A1.A.S` THEN1 (
                 FULL_SIMP_TAC std_ss [IS_PATH_THROUGH_RUN_def] THEN
                 Cases_on `n` THEN
                 PROVE_TAC[SUBSET_DEF]
-            ) THEN
+            ) THEN DISCH_TAC THEN
             METIS_TAC[]
         ],
 
@@ -1369,11 +1370,11 @@ val ALTERNATING_AUTOMATA_DISJUNCTION =
             METIS_TAC[REACHABLE_STATES_IN_STATES_SET, ALTERNATING_PRERUN_def,
                 IN_DISJOINT],
 
-            SUBGOAL_TAC `!n. w n IN A2.A.S` THEN1 (
+            Know `!n. w n IN A2.A.S` THEN1 (
                 FULL_SIMP_TAC std_ss [IS_PATH_THROUGH_RUN_def] THEN
                 Cases_on `n` THEN
                 PROVE_TAC[SUBSET_DEF]
-            ) THEN
+            ) THEN DISCH_TAC THEN
             METIS_TAC[]
         ],
 
@@ -1415,19 +1416,19 @@ val ALTERNATING_AUTOMATA_DISJUNCTION =
         REPEAT STRIP_TAC THENL [
             PROVE_TAC[P_USED_VARS_INTER_SUBSET_THM],
 
-            SUBGOAL_TAC `s IN A2.A.S` THEN1 (
+            Know `s IN A2.A.S` THEN1 (
                 Cases_on `n` THEN
                 FULL_SIMP_TAC std_ss [IS_REACHABLE_BY_RUN_def, alternating_run_S0, alternating_run_R, IN_INTER]
-            ) THEN
+            ) THEN DISCH_TAC THEN
             `~(s IN A1.A.S)` by PROVE_TAC[IN_DISJOINT] THEN
             METIS_TAC[SUBRUN_REACHABLE_STATES, P_USED_VARS_INTER_SUBSET_THM],
 
-            SUBGOAL_TAC `!n. w n IN A2.A.S` THEN1 (
+            Know `!n. w n IN A2.A.S` THEN1 (
                 FULL_SIMP_TAC std_ss [IS_PATH_THROUGH_RUN_def, alternating_run_S0,
                     alternating_run_R, IN_INTER] THEN
                 Cases_on `n` THEN
                 ASM_REWRITE_TAC[]
-            ) THEN
+            ) THEN DISCH_TAC THEN
             PROVE_TAC[IS_PATH_THROUGH_SUBRUN_THM]
          ]
     ]);
@@ -1449,15 +1450,15 @@ val ALT_AUTOMATON_NEG_COMMON_PATH_THROUGH_RUNS_EXISTS =
     ASM_SIMP_TAC std_ss [] THEN
     `?r''. r'' = alternating_run (r.S0 INTER r'.S0)  (\s n. (r.R s n INTER r'.R s n))` by METIS_TAC[] THEN
 
-    REMAINS_TAC `?w. IS_PATH_THROUGH_RUN w (r'':'b alternating_run)` THEN1 (
-
+    Suff `?w. IS_PATH_THROUGH_RUN w (r'':'b alternating_run)` THEN1 (
+        STRIP_TAC THEN
         EXISTS_TAC ``w:num->'b`` THEN
         UNDISCH_HD_TAC THEN
         FULL_SIMP_TAC std_ss [IS_PATH_THROUGH_RUN_def, alternating_run_S0,
                 alternating_run_R, IN_INTER]
     ) THEN
 
-    REMAINS_TAC `NO_EMPTY_SET_IN_RUN (r'':'b alternating_run)` THEN1 (
+    Suff `NO_EMPTY_SET_IN_RUN (r'':'b alternating_run)` THEN1 (
         PROVE_TAC[NO_EMPTY_SET_IN_RUN___PATH_THROUGH_RUN_EXISTS]
     ) THEN
 
@@ -1469,7 +1470,7 @@ val ALT_AUTOMATON_NEG_COMMON_PATH_THROUGH_RUNS_EXISTS =
         PROVE_TAC[IS_POSITIVE_NEGATIVE_PROP_FORMULA_SEM],
 
 
-        SUBGOAL_TAC `!n (s:'b). (IS_REACHABLE_BY_RUN (s, n) r'') ==> (IS_REACHABLE_BY_RUN (s, n) r /\
+        Know `!n (s:'b). (IS_REACHABLE_BY_RUN (s, n) r'') ==> (IS_REACHABLE_BY_RUN (s, n) r /\
                 IS_REACHABLE_BY_RUN (s, n) r')` THEN1 (
             Induct_on `n` THENL [
                 ASM_SIMP_TAC std_ss [IS_REACHABLE_BY_RUN_def, alternating_run_S0, IN_INTER],
@@ -1477,7 +1478,7 @@ val ALT_AUTOMATON_NEG_COMMON_PATH_THROUGH_RUNS_EXISTS =
                 ASM_SIMP_TAC std_ss [IS_REACHABLE_BY_RUN_def, alternating_run_R, IN_INTER] THEN
                 PROVE_TAC[]
             ]
-        ) THEN
+        ) THEN DISCH_TAC THEN
         REPEAT GEN_TAC THEN STRIP_TAC THEN
         RES_TAC THEN
         ASM_SIMP_TAC std_ss [alternating_run_R] THEN
@@ -1555,8 +1556,8 @@ val NDET_TRUE___NDET_WEAK_CO_BUECHI =
     REPEAT STRIP_TAC THEN
     `IS_UNIVERSALLY_TOTAL_ALTERNATING_SEMI_AUTOMATON A.A` by PROVE_TAC[
         NONDETERMINISTIC_IS_UNIVERSALLY_TOTAL, IS_NONDETERMINISTIC_AUTOMATON_def] THEN
-    `?B.  (B = alternating_automaton (alternating_semi_automaton A.A.S A.A.I A.A.S0
-                    (\s i. (if s IN S' then P_FALSE else A.A.R s i)))
+    `?B. (B = alternating_automaton (alternating_semi_automaton A.A.S A.A.I A.A.S0
+                    (\s i. (if s IN S then P_FALSE else A.A.R s i)))
                  TRUE) /\ IS_VALID_ALTERNATING_AUTOMATON B /\
               ALT_AUTOMATON_EQUIV A B` by METIS_TAC[A_TRUE___A_UNIVERSALLY_TOTAL_WEAK_CO_BUECHI] THEN
     EXISTS_TAC ``B:('input, 'states) alternating_automaton`` THEN
@@ -1565,7 +1566,7 @@ val NDET_TRUE___NDET_WEAK_CO_BUECHI =
         alternating_automaton_A, IS_NONDETERMINISTIC_SEMI_AUTOMATON_def,
         alternating_semi_automaton_S0, alternating_semi_automaton_R] THEN
     REPEAT STRIP_TAC THEN
-    Cases_on `s IN S'` THEN ASM_REWRITE_TAC[] THEN
+    Cases_on `s IN S` THEN ASM_REWRITE_TAC[] THEN
     REWRITE_TAC[IS_PROP_DISJUNCTION_def] THEN
     PROVE_TAC[P_PROP_DISJUNCTION_def]);
 

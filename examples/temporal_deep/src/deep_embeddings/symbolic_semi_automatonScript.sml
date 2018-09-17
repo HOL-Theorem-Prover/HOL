@@ -12,8 +12,9 @@ map load
    "containerTheory", "prim_recTheory", "tuerk_tacticsLib", "temporal_deep_mixedTheory"];
 *)
 
-open infinite_pathTheory pred_setTheory listTheory pairTheory xprop_logicTheory containerTheory prop_logicTheory set_lemmataTheory prim_recTheory
-     tuerk_tacticsLib temporal_deep_mixedTheory;
+open infinite_pathTheory pred_setTheory listTheory pairTheory xprop_logicTheory containerTheory prop_logicTheory set_lemmataTheory prim_recTheory;
+
+open term_grammar tuerk_tacticsLib temporal_deep_mixedTheory;
 
 val _ = hide "S";
 val _ = hide "K";
@@ -30,7 +31,8 @@ quietdec := false;
 
 val _ = new_theory "symbolic_semi_automaton";
 
-
+val Know = Q_TAC KNOW_TAC;
+val Suff = Q_TAC SUFF_TAC;
 
 (*****************************************************************************)
 (* symbolic representation of non deterministic semi automata                 *)
@@ -139,8 +141,12 @@ val EXISTS_AT_MOST_ONE_def =
   ("EXISTS_AT_MOST_ONE_def", Term `EXISTS_AT_MOST_ONE = \P:'a->bool.
                                       !x y. P x /\ P y ==> (x=y)`);
 
-val _ = (add_binder ("EXISTS_AT_MOST_ONE", std_binder_precedence); add_const "EXISTS_AT_MOST_ONE")
+val _ = set_fixity "EXISTS_AT_MOST_ONE" Binder;
 
+(* old way:
+val _ = (add_binder ("EXISTS_AT_MOST_ONE", std_binder_precedence);
+         add_const "EXISTS_AT_MOST_ONE")
+ *)
 
 val IS_DET_SYMBOLIC_SEMI_AUTOMATON_def =
  Define
@@ -210,10 +216,10 @@ val IS_SYMBOLIC_RUN_THROUGH_SIMPLE_SEMI_AUTOMATON_THM =
                     PATH_SUBSET_def] THEN
     REPEAT STRIP_TAC THEN
     BOOL_EQ_STRIP_TAC THEN
-    SUBGOAL_TAC `!n. (w n UNION (i n DIFF A.S)) INTER A.S = w n` THEN1 (
+    Know `!n. (w n UNION (i n DIFF A.S)) INTER A.S = w n` THEN1 (
       SIMP_ALL_TAC std_ss [EXTENSION, IN_UNION, IN_INTER, IN_DIFF, SUBSET_DEF] THEN
       METIS_TAC[]
-    ) THEN
+    ) THEN DISCH_TAC THEN
     PROVE_TAC[P_USED_VARS_INTER_SUBSET_THM, XP_USED_VARS_INTER_SUBSET_THM]);
 
 
@@ -454,7 +460,7 @@ val PRODUCT_SEMI_AUTOMATON_RUN =
     SIMP_TAC std_ss [INPUT_RUN_PATH_UNION_def, IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON_def, SEMI_AUTOMATON_USED_INPUT_VARS_def, PATH_UNION_def, INPUT_RUN_STATE_UNION_def,
       PRODUCT_SEMI_AUTOMATON_REWRITES] THEN
     REPEAT ((REPEAT GEN_TAC) THEN (DISCH_THEN STRIP_ASSUME_TAC)) THEN
-    SUBGOAL_TAC `!n. ((w1 n UNION w2 n UNION (i n DIFF (A1.S UNION A2.S))) INTER (COMPL A2.S) =
+    Know `!n. ((w1 n UNION w2 n UNION (i n DIFF (A1.S UNION A2.S))) INTER (COMPL A2.S) =
                   (w1 n UNION (i n DIFF A1.S)) INTER (COMPL A2.S)) /\
                 ((w1 n UNION w2 n UNION (i n DIFF (A1.S UNION A2.S))) INTER (COMPL A1.S) =
                   (w2 n UNION (i n DIFF A2.S)) INTER (COMPL A1.S))` THEN1 (
@@ -463,29 +469,29 @@ val PRODUCT_SEMI_AUTOMATON_RUN =
       FULL_SIMP_TAC std_ss [GSYM SUBSET_COMPL_DISJOINT, SUBSET_DEF, IN_COMPL, IN_UNION, IN_DIFF, PATH_SUBSET_def] THEN
       REPEAT STRIP_TAC THEN REPEAT BOOL_EQ_STRIP_TAC THEN
       PROVE_TAC[]
-    ) THEN
+    ) THEN DISCH_TAC THEN
     REPEAT STRIP_TAC THENL [
       FULL_SIMP_TAC std_ss [PATH_SUBSET_def, PRODUCT_SEMI_AUTOMATON_REWRITES, UNION_SUBSET] THEN
       PROVE_TAC[SUBSET_UNION, SUBSET_TRANS],
 
 
       SIMP_TAC std_ss [P_SEM_def] THEN
-      SUBGOAL_TAC `(P_USED_VARS A1.S0) SUBSET (COMPL A2.S) /\
+      Know `(P_USED_VARS A1.S0) SUBSET (COMPL A2.S) /\
                    (P_USED_VARS A2.S0) SUBSET (COMPL A1.S)` THEN1 (
         FULL_SIMP_TAC std_ss [GSYM SUBSET_COMPL_DISJOINT, SUBSET_DEF, IN_COMPL, IN_UNION, IN_DIFF] THEN
         PROVE_TAC[]
-      ) THEN
+      ) THEN STRIP_TAC THEN
       PROVE_TAC[P_USED_VARS_INTER_SUBSET_THM],
 
 
       FULL_SIMP_TAC std_ss [IS_TRANSITION_def, PRODUCT_SEMI_AUTOMATON_REWRITES, XP_SEM_def,
         INPUT_RUN_STATE_UNION_def] THEN
 
-      SUBGOAL_TAC `(XP_USED_VARS A1.R SUBSET COMPL A2.S) /\
+      Know `(XP_USED_VARS A1.R SUBSET COMPL A2.S) /\
                    (XP_USED_VARS A2.R SUBSET COMPL A1.S)` THEN1 (
         FULL_SIMP_TAC std_ss [GSYM SUBSET_COMPL_DISJOINT, SUBSET_DEF, IN_COMPL, IN_UNION, IN_DIFF, XP_USED_VARS_def] THEN
         PROVE_TAC[]
-      ) THEN
+      ) THEN STRIP_TAC THEN
       PROVE_TAC[XP_USED_VARS_INTER_SUBSET_BOTH_THM]
     ]);
 
@@ -506,31 +512,31 @@ val PRODUCT_SEMI_AUTOMATON_RUN2___FIRST =
            PRODUCT_SEMI_AUTOMATON_REWRITES, P_SEM_def, XP_SEM_def] THEN
          REPEAT ((REPEAT GEN_TAC) THEN (DISCH_THEN STRIP_ASSUME_TAC)) THEN
 
-         SUBGOAL_TAC `!n. ((INPUT_RUN_STATE_UNION A1 (i n) (PATH_RESTRICT w A1.S n)) INTER (COMPL A2.S)) =
+         Know `!n. ((INPUT_RUN_STATE_UNION A1 (i n) (PATH_RESTRICT w A1.S n)) INTER (COMPL A2.S)) =
             ((INPUT_RUN_STATE_UNION (PRODUCT_SEMI_AUTOMATON A1 A2) (i n) (w n)) INTER (COMPL A2.S))` THEN1 (
            SIMP_TAC std_ss [INPUT_RUN_STATE_UNION_def, EXTENSION, IN_INTER, IN_COMPL, IN_UNION,
              PRODUCT_SEMI_AUTOMATON_REWRITES, IN_DIFF, PATH_RESTRICT_def, PATH_MAP_def] THEN
            REPEAT GEN_TAC THEN REPEAT BOOL_EQ_STRIP_TAC THEN
            FULL_SIMP_TAC std_ss [PATH_SUBSET_def, GSYM SUBSET_COMPL_DISJOINT, SUBSET_DEF, IN_UNION, IN_COMPL] THEN
            PROVE_TAC[]
-         ) THEN
+         ) THEN DISCH_TAC THEN
 
          REPEAT STRIP_TAC THENL [
             SIMP_TAC std_ss [PATH_SUBSET_def, PATH_RESTRICT_def, PATH_MAP_def, INTER_SUBSET],
 
-            SUBGOAL_TAC `P_USED_VARS A1.S0 SUBSET COMPL A2.S` THEN1 (
+            Know `P_USED_VARS A1.S0 SUBSET COMPL A2.S` THEN1 (
               FULL_SIMP_TAC std_ss [PATH_SUBSET_def, GSYM SUBSET_COMPL_DISJOINT, SUBSET_DEF, IN_UNION, IN_COMPL,
                  SEMI_AUTOMATON_USED_INPUT_VARS_def, IN_UNION, IN_DIFF] THEN
               PROVE_TAC[]
-            ) THEN
+            ) THEN DISCH_TAC THEN
             PROVE_TAC[P_USED_VARS_INTER_SUBSET_THM],
 
 
-            SUBGOAL_TAC `XP_USED_VARS A1.R SUBSET COMPL A2.S` THEN1 (
+            Know `XP_USED_VARS A1.R SUBSET COMPL A2.S` THEN1 (
               FULL_SIMP_TAC std_ss [PATH_SUBSET_def, GSYM SUBSET_COMPL_DISJOINT, SUBSET_DEF, IN_UNION, IN_COMPL,
                  SEMI_AUTOMATON_USED_INPUT_VARS_def, IN_UNION, IN_DIFF, XP_USED_VARS_def] THEN
               PROVE_TAC[]
-            ) THEN
+            ) THEN DISCH_TAC THEN
             PROVE_TAC[XP_USED_VARS_INTER_SUBSET_BOTH_THM]
          ]);
 
@@ -555,13 +561,13 @@ val SEMI_AUTOMATON_USED_INPUT_VARS_INTER_SUBSET_THM =
         SEMI_AUTOMATON_USED_INPUT_VARS_def, DIFF_SUBSET_ELIM, UNION_SUBSET] THEN
       REPEAT STRIP_TAC THEN
       REPEAT CONJ_EQ_STRIP_TAC THEN
-      SUBGOAL_TAC `!n. ((INPUT_RUN_STATE_UNION A (i n) (w n)) INTER (S UNION A.S)) =
+      Know `!n. ((INPUT_RUN_STATE_UNION A (i n) (w n)) INTER (S UNION A.S)) =
                        ((INPUT_RUN_STATE_UNION A (PATH_RESTRICT i S n) (w n)) INTER (S UNION A.S))` THEN1 (
          SIMP_TAC std_ss [INPUT_RUN_STATE_UNION_def, EXTENSION, IN_INTER, IN_UNION, IN_DIFF, PATH_RESTRICT_def, PATH_MAP_def] THEN
          REPEAT GEN_TAC THEN
          REPEAT BOOL_EQ_STRIP_TAC THEN
          PROVE_TAC[]
-      ) THEN
+      ) THEN DISCH_TAC THEN
       BINOP_TAC THENL [
         PROVE_TAC[P_USED_VARS_INTER_SUBSET_THM],
         PROVE_TAC[XP_USED_VARS_INTER_SUBSET_BOTH_THM]
@@ -605,16 +611,16 @@ val IS_SIMPLIFIED_SYMBOLIC_SEMI_AUTOMATON___RUN_INPUT_VARS =
     UNDISCH_HD_TAC THEN
     ASM_SIMP_TAC std_ss [] THEN
 
-    SUBGOAL_TAC `~(f i' IN i n /\
+    Know `~(f i' IN i n /\
         (!x. ~(f i' = f x) \/ ~(x IN SEMI_AUTOMATON_USED_INPUT_VARS A')))` THEN1 (
       METIS_TAC[]
-    ) THEN
-    SUBGOAL_TAC `~(i' IN w n) /\ (~(i' IN A'.S) /\
+    ) THEN DISCH_TAC THEN
+    Know `~(i' IN w n) /\ (~(i' IN A'.S) /\
         !x. ~(i' = f x) \/ ~(x IN SEMI_AUTOMATON_USED_INPUT_VARS A'))` THEN1 (
       WEAKEN_HD_TAC THEN
       FULL_SIMP_TAC std_ss [SEMI_AUTOMATON_USED_INPUT_VARS_def, IN_DIFF, PATH_SUBSET_def, SUBSET_DEF, IN_UNION, IN_IMAGE] THEN
       METIS_TAC[]
-    ) THEN
+    ) THEN STRIP_TAC THEN
     ASM_SIMP_TAC std_ss []);
 
 
@@ -695,7 +701,7 @@ val IS_SIMPLIFIED_SYMBOLIC_SEMI_AUTOMATON___RUNS =
                       INPUT_RUN_STATE_UNION_def,
                       IS_TRANSITION_def] THEN
     `?f'. (\x. (if x IN A'.S then x else f x)) = f'` by METIS_TAC[] THEN
-    SUBGOAL_TAC `!n. (w n UNION IMAGE f (i n INTER SEMI_AUTOMATON_USED_INPUT_VARS A')) =
+    Know `!n. (w n UNION IMAGE f (i n INTER SEMI_AUTOMATON_USED_INPUT_VARS A')) =
                       IMAGE f' (w n UNION (i n INTER SEMI_AUTOMATON_USED_INPUT_VARS A'))` THEN1 (
       ASM_SIMP_TAC std_ss [EXTENSION, IN_UNION, IMAGE_UNION] THEN
       REPEAT STRIP_TAC THEN
@@ -710,26 +716,26 @@ val IS_SIMPLIFIED_SYMBOLIC_SEMI_AUTOMATON___RUNS =
         REPEAT BOOL_EQ_STRIP_TAC THEN
         METIS_TAC[]
       ]
-    ) THEN
-    SUBGOAL_TAC `INJ f' (SEMI_AUTOMATON_USED_VARS A') UNIV` THEN1 (
+    ) THEN DISCH_TAC THEN
+    Know `INJ f' (SEMI_AUTOMATON_USED_VARS A') UNIV` THEN1 (
       SIMP_ALL_TAC std_ss [INJ_DEF, IN_UNIV, SEMI_AUTOMATON_USED_VARS_def,
         SEMI_AUTOMATON_USED_INPUT_VARS_def, IN_UNION, IN_DIFF, IN_IMAGE, IN_SING] THEN
       METIS_TAC[]
-    ) THEN
+    ) THEN DISCH_TAC THEN
 
     SIMP_ALL_TAC std_ss [PATH_SUBSET_def, SUBSET_DEF] THEN
     BINOP_TAC THENL [
-        SUBGOAL_TAC `P_SEM (IMAGE f' (w 0 UNION i 0 INTER SEMI_AUTOMATON_USED_INPUT_VARS A'))
+        Know `P_SEM (IMAGE f' (w 0 UNION i 0 INTER SEMI_AUTOMATON_USED_INPUT_VARS A'))
             (P_VAR_RENAMING f' A'.S0) = P_SEM (w 0 UNION i 0 INTER SEMI_AUTOMATON_USED_INPUT_VARS A') A'.S0` THEN1 (
-            SUBGOAL_TAC `(w 0 UNION i 0 INTER SEMI_AUTOMATON_USED_INPUT_VARS A') UNION (P_USED_VARS A'.S0) SUBSET
+            Know `(w 0 UNION i 0 INTER SEMI_AUTOMATON_USED_INPUT_VARS A') UNION (P_USED_VARS A'.S0) SUBSET
                           (SEMI_AUTOMATON_USED_VARS A')` THEN1 (
               FULL_SIMP_TAC std_ss [SEMI_AUTOMATON_USED_VARS_def, SUBSET_DEF, IN_UNION,
                                     IN_INTER, SEMI_AUTOMATON_USED_INPUT_VARS_def,
                                     IN_DIFF, PATH_SUBSET_def] THEN
               METIS_TAC[]
-            ) THEN
+            ) THEN STRIP_TAC THEN
             METIS_TAC[INJ_SUBSET, P_SEM___VAR_RENAMING]
-        ) THEN
+        ) THEN STRIP_TAC THEN
         FULL_SIMP_TAC std_ss [] THEN
         ONCE_REWRITE_TAC [P_USED_VARS_INTER_THM] THEN
         MK_COMB_TAC THEN SIMP_TAC std_ss [] THEN
@@ -741,7 +747,7 @@ val IS_SIMPLIFIED_SYMBOLIC_SEMI_AUTOMATON___RUNS =
 
         ASM_SIMP_TAC std_ss [] THEN
         FORALL_EQ_STRIP_TAC THEN
-        SUBGOAL_TAC `XP_SEM (XP_VAR_RENAMING f' A'.R)
+        Know `XP_SEM (XP_VAR_RENAMING f' A'.R)
                       (IMAGE f'
                         (w n UNION i n INTER SEMI_AUTOMATON_USED_INPUT_VARS A') UNION
                       (i n DIFF (A'.S UNION IMAGE f (SEMI_AUTOMATON_USED_INPUT_VARS A'))),
@@ -754,7 +760,7 @@ val IS_SIMPLIFIED_SYMBOLIC_SEMI_AUTOMATON___RUNS =
                       IMAGE f'
                         (w (SUC n) UNION
                           i (SUC n) INTER SEMI_AUTOMATON_USED_INPUT_VARS A'))` THEN1 (
-          SUBGOAL_TAC `XP_USED_CURRENT_VARS (XP_VAR_RENAMING f' A'.R) SUBSET
+          Know `XP_USED_CURRENT_VARS (XP_VAR_RENAMING f' A'.R) SUBSET
                       (A'.S UNION IMAGE f (SEMI_AUTOMATON_USED_INPUT_VARS A'))` THEN1 (
             SIMP_TAC std_ss [XP_VAR_RENAMING___USED_CURRENT_VARS,
                             SUBSET_DEF, IN_UNION,
@@ -762,17 +768,17 @@ val IS_SIMPLIFIED_SYMBOLIC_SEMI_AUTOMATON___RUNS =
                             IN_IMAGE, IN_DIFF, IN_UNION,
                             XP_USED_VARS_def] THEN
             METIS_TAC[]
-          ) THEN
-          SUBGOAL_TAC `!S1 S2 S3 S4. (S1 UNION (S2 DIFF S3)) INTER S3 =
+          ) THEN STRIP_TAC THEN
+          Know `!S1 S2 S3 S4. (S1 UNION (S2 DIFF S3)) INTER S3 =
                                   (S1 INTER S3)` THEN1 (
             SIMP_TAC std_ss [EXTENSION, IN_INTER, IN_UNION, IN_DIFF] THEN
             PROVE_TAC[]
-          ) THEN
+          ) THEN DISCH_TAC THEN
           METIS_TAC[XP_USED_VARS_INTER_SUBSET_THM]
-        ) THEN
+        ) THEN DISCH_TAC THEN
         ASM_SIMP_TAC std_ss [] THEN WEAKEN_HD_TAC THEN
 
-        SUBGOAL_TAC ` XP_SEM (XP_VAR_RENAMING f' A'.R)
+        Know ` XP_SEM (XP_VAR_RENAMING f' A'.R)
                         (IMAGE f' (w n UNION i n INTER  SEMI_AUTOMATON_USED_INPUT_VARS A'),
                         IMAGE f' (w (SUC n) UNION i (SUC n) INTER SEMI_AUTOMATON_USED_INPUT_VARS A')) =
                       XP_SEM A'.R
@@ -786,7 +792,7 @@ val IS_SIMPLIFIED_SYMBOLIC_SEMI_AUTOMATON___RUNS =
           FULL_SIMP_TAC std_ss [SUBSET_DEF, IN_UNION, IN_INTER, SEMI_AUTOMATON_USED_VARS_def,
             PATH_SUBSET_def, SEMI_AUTOMATON_USED_INPUT_VARS_def, IN_DIFF] THEN
           METIS_TAC[]
-        ) THEN
+        ) THEN DISCH_TAC THEN
 
         FULL_SIMP_TAC std_ss [] THEN
         ONCE_REWRITE_TAC[XP_USED_VARS_INTER_THM] THEN
@@ -801,7 +807,7 @@ val IS_SIMPLIFIED_SYMBOLIC_SEMI_AUTOMATON___RUNS =
 
 
 
-
+(* TODO *)
 val IS_SIMPLIFIED_SYMBOLIC_SEMI_AUTOMATON___RUNS2 =
  store_thm
   ("IS_SIMPLIFIED_SYMBOLIC_SEMI_AUTOMATON___RUNS2",

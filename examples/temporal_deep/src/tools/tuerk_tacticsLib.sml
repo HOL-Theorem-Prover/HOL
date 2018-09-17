@@ -4,6 +4,7 @@ struct
 
   open HolKernel boolLib bossLib Abbrev metisLib pred_setTheory numLib schneiderUtils
 
+   val ERR = mk_HOL_ERR "tuerk_tacticsLib";
 
    val SET_INDUCT_TAC = PSet_ind.SET_INDUCT_TAC FINITE_INDUCT;
 

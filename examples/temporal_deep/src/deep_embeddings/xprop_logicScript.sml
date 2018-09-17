@@ -28,6 +28,9 @@ quietdec := false;
 
 val _ = new_theory "xprop_logic";
 
+val Know = Q_TAC KNOW_TAC;
+val Suff = Q_TAC SUFF_TAC;
+
 val xprop_logic =
  Hol_datatype
   `xprop_logic = XP_PROP of 'a                          (* atomic proposition       *)
@@ -971,7 +974,7 @@ val XP_SEM___VAR_RENAMING =
 
       FULL_SIMP_TAC std_ss [XP_SEM_def, XP_VAR_RENAMING_def, XP_USED_VARS_def, XP_USED_CURRENT_VARS_def,
         XP_USED_X_VARS_def] THEN
-      SUBGOAL_TAC `(s1 UNION s2 UNION (XP_USED_CURRENT_VARS p UNION XP_USED_X_VARS p)) SUBSET
+      Know `(s1 UNION s2 UNION (XP_USED_CURRENT_VARS p UNION XP_USED_X_VARS p)) SUBSET
              (s1 UNION s2 UNION (XP_USED_CURRENT_VARS p UNION XP_USED_CURRENT_VARS p' UNION
               (XP_USED_X_VARS p UNION XP_USED_X_VARS p'))) /\
 
@@ -981,7 +984,7 @@ val XP_SEM___VAR_RENAMING =
 
         SIMP_TAC std_ss [SUBSET_DEF, IN_UNION] THEN
         PROVE_TAC[]
-      ) THEN
+      ) THEN STRIP_TAC THEN
       PROVE_TAC[INJ_SUBSET]
    ]);
 

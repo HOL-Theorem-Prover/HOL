@@ -31,6 +31,8 @@ quietdec := false;
 
 val _ = new_theory "infinite_path";
 
+val Know = Q_TAC KNOW_TAC;
+val Suff = Q_TAC SUFF_TAC;
 
 (******************************************************************************
 * Elementary functions and predicates on temporal_paths
@@ -732,10 +734,10 @@ val PATH_VAR_RENAMING___ORIG_PATH_EXISTS =
 
    SIMP_TAC std_ss [IMAGE_DEF, PATH_SUBSET_def, PATH_VAR_RENAMING_def, PATH_MAP_def, SUBSET_DEF, GSPECIFICATION] THEN
    REPEAT STRIP_TAC THEN
-   SUBGOAL_TAC `?w'. !x n. x IN (w' n) = ((f x) IN w n /\ x IN S)` THEN1 (
+   Know `?w'. !x n. x IN (w' n) = ((f x) IN w n /\ x IN S)` THEN1 (
      Q_TAC EXISTS_TAC `\n:num x. (f x) IN w n /\ x IN S` THEN
      SIMP_TAC std_ss [IN_DEF]
-   ) THEN
+   ) THEN STRIP_TAC THEN
    Q_TAC EXISTS_TAC `w'` THEN
    REPEAT STRIP_TAC THENL [
       PROVE_TAC[],
