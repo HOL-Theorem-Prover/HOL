@@ -51,3 +51,5 @@ src/datatype/inftree
 src/search
 !examples/CCS
 !examples/formal-languages/lambek
+!examples/PSL/1.01/executable-semantics
+!examples/PSL/1.1/official-semantics

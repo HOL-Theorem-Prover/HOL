@@ -60,6 +60,12 @@ val _ = intLib.deprecate_int();
 ******************************************************************************)
 val _ = new_theory "RewritesProperties";
 
+local
+  val th = prove (``!a b. a /\ (a ==> b) ==> a /\ b``, PROVE_TAC [])
+in
+  val STRONG_CONJ_TAC :tactic = MATCH_MP_TAC th >> CONJ_TAC
+end;
+
 (******************************************************************************
 * A simpset fragment to rewrite away quantifiers restricted with :: (a to b)
 ******************************************************************************)
@@ -168,7 +174,7 @@ val fl_induct =
         PROVE[]``(!x y. P x ==> Q(x,y)) = !x. P x ==> !y. Q(x,y)``,
         PROVE[]``(!x y. P y ==> Q(x,y)) = !y. P y ==> !x. Q(x,y)``]
        (Q.SPECL
-         [`P`,`\(f1,f2). P f1 /\ P f2`,`\(r,f). P f`,`\(f,b). P f`]
+         [`P`,`\ (f,b). P f`,`\ (r,f). P f`,`\ (f1,f2). P f1 /\ P f2`]
          (TypeBase.induction_of ``:'a fl``)))));
 
 val LS_LE_X =
@@ -506,7 +512,7 @@ val UF_SEM_F_F =
        THEN FULL_SIMP_TAC list_ss [LS,GSYM RESTN_FINITE,ELEM_RESTN]
        THEN `j <= LENGTH l` by DECIDE_TAC
        THEN IMP_RES_TAC LIST_LENGTH_RESTN_0
-       THEN TRY DECIDE_TAC
+       THEN TRY DECIDE_TAC >- fs []
        THEN PROVE_TAC[B_SEM_def],
       Q.EXISTS_TAC `i`
        THEN RW_TAC arith_ss []
@@ -515,8 +521,8 @@ val UF_SEM_F_F =
        THEN `j <= LENGTH l` by DECIDE_TAC
        THEN IMP_RES_TAC LIST_LENGTH_RESTN_0
        THEN RW_TAC std_ss []
-       THEN Cases_on `LENGTH l = j`
-       THEN RW_TAC std_ss []
+       THEN Cases_on `LENGTH l = j` (* 2 subgoals *)
+       THEN RW_TAC std_ss [] >- fs []
        THEN `~(ELEM (FINITE l) j = BOTTOM)` by PROVE_TAC[]
        THEN Cases_on `ELEM (FINITE l) j`
        THEN RW_TAC std_ss [B_SEM_def],
@@ -1080,7 +1086,7 @@ val F_NEXT_CLOCK_COMP_IMP2 =
         [Q.EXISTS_TAC `j`
           THEN RW_TAC list_ss []
           THEN Q.EXISTS_TAC `j + (j' + 1)`
-          THEN RW_TAC list_ss []
+          THEN STRONG_CONJ_TAC THEN RW_TAC list_ss []
           THENL
            [Cases_on `v`
              THEN RW_TAC list_ss
@@ -1094,39 +1100,15 @@ val F_NEXT_CLOCK_COMP_IMP2 =
                    by PROVE_TAC[FinitePathTheory.LENGTH_RESTN]
              THEN DECIDE_TAC,
             RW_TAC list_ss [EL_SEL_THM]
-             THEN `j + (j' + 1) < LENGTH v`
-                  by (Cases_on `v`
-                       THEN RW_TAC std_ss [LS,LENGTH_def]
-                       THEN FULL_SIMP_TAC list_ss
-                             [LENGTH_def,LS,RESTN_FINITE,xnum_11,GT])
-             THENL
-              [`LENGTH(RESTN l j) = LENGTH l - j`
-                by PROVE_TAC[FinitePathTheory.LENGTH_RESTN]
-                THEN `j + 1 < LENGTH l` by DECIDE_TAC
-                THEN `LENGTH(RESTN l (j + 1)) = LENGTH l - (j + 1)`
-                      by PROVE_TAC[FinitePathTheory.LENGTH_RESTN]
-                THEN DECIDE_TAC,
-               `?l. (LENGTH l = j + (j' + 1)) /\ (v = FINITE l)`
+            THEN `?l. (LENGTH l = j + (j' + 1)) /\ (v = FINITE l)`
                 by PROVE_TAC[PATH_FINITE_LENGTH_RESTN_0_COR]
-                THEN RW_TAC std_ss []
-                THEN FULL_SIMP_TAC list_ss [LENGTH_def,LS]],
+            THEN RW_TAC std_ss []
+            THEN FULL_SIMP_TAC list_ss [LENGTH_def,LS],
             RW_TAC list_ss [EL_SEL_THM]
-             THEN `j + (j' + 1) < LENGTH v`
-                  by (Cases_on `v`
-                       THEN RW_TAC std_ss [LS,LENGTH_def]
-                       THEN FULL_SIMP_TAC list_ss
-                             [LENGTH_def,LS,RESTN_FINITE,xnum_11,GT])
-             THENL
-              [`LENGTH(RESTN l j) = LENGTH l - j`
-                by PROVE_TAC[FinitePathTheory.LENGTH_RESTN]
-                THEN `j + 1 < LENGTH l` by DECIDE_TAC
-                THEN `LENGTH(RESTN l (j + 1)) = LENGTH l - (j + 1)`
-                      by PROVE_TAC[FinitePathTheory.LENGTH_RESTN]
-                THEN DECIDE_TAC,
-               `?l. (LENGTH l = j + (j' + 1)) /\ (v = FINITE l)`
+            THEN `?l. (LENGTH l = j + (j' + 1)) /\ (v = FINITE l)`
                 by PROVE_TAC[PATH_FINITE_LENGTH_RESTN_0_COR]
-                THEN RW_TAC std_ss []
-                THEN FULL_SIMP_TAC list_ss [LENGTH_def,LS]]],
+            THEN RW_TAC std_ss []
+            THEN FULL_SIMP_TAC list_ss [LENGTH_def,LS]],
          Q.EXISTS_TAC `j`
           THEN RW_TAC list_ss []
           THEN Q.EXISTS_TAC `j + (j' + 1)`
