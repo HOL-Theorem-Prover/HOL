@@ -893,7 +893,7 @@ val contracts_SUBST_GCONTEXT = store_thm (
 
 val contracts_precongruence = store_thm (
    "contracts_precongruence", ``precongruence1 $contracts``,
-    PROVE_TAC [precongruence1_def, contracts_SUBST_GCONTEXT]);
+    PROVE_TAC [precongruence1_def, contracts_PreOrder, contracts_SUBST_GCONTEXT]);
 
 (******************************************************************************)
 (*                                                                            *)
@@ -1009,6 +1009,15 @@ val contracts_AND_TRACE_tau = store_thm (
  >> MP_TAC (Q.SPECL [`E`, `xs`, `E1`] contracts_AND_TRACE_tau_lemma)
  >> RW_TAC std_ss []);
 
+(* the version shown in the paper using P and Q *)
+val contracts_AND_TRACE_tau' = store_thm (
+   "contracts_AND_TRACE_tau'",
+  ``!P Q. P contracts Q ==>
+	!xs P'. TRACE P xs P' /\ NO_LABEL xs ==>
+	    ?xs' Q'. TRACE Q xs' Q' /\ P' contracts Q' /\
+		(LENGTH xs' <= LENGTH xs) /\ NO_LABEL xs'``,
+    METIS_TAC [contracts_AND_TRACE_tau]);
+
 val contracts_AND_TRACE_label_lemma = Q.prove (
    `!E xs E1. TRACE E xs E1 ==> !l. UNIQUE_LABEL (label l) xs ==>
 	!E'. E contracts E' ==>
@@ -1053,6 +1062,15 @@ val contracts_AND_TRACE_label = store_thm (
     NTAC 2 (rpt GEN_TAC >> STRIP_TAC)
  >> MP_TAC (Q.SPECL [`E`, `xs`, `E1`] contracts_AND_TRACE_label_lemma)
  >> RW_TAC std_ss []);
+
+(* the version shown in the paper using P and Q *)
+val contracts_AND_TRACE_label' = store_thm (
+   "contracts_AND_TRACE_label'",
+  ``!P Q. P contracts Q ==>
+	!xs l P'. TRACE P xs P' /\ UNIQUE_LABEL (label l) xs ==>
+	    ?xs' Q'. TRACE Q xs' Q' /\ P contracts Q /\
+		(LENGTH xs' <= LENGTH xs) /\ UNIQUE_LABEL (label l) xs'``,
+    METIS_TAC [contracts_AND_TRACE_label]);
 
 (******************************************************************************)
 (*                                                                            *)
@@ -1597,7 +1615,8 @@ val OBS_contracts_SUBST_CONTEXT = store_thm (
 
 val OBS_contracts_precongruence = store_thm (
    "OBS_contracts_precongruence", ``precongruence OBS_contracts``,
-    PROVE_TAC [precongruence_def, OBS_contracts_SUBST_CONTEXT]);
+    PROVE_TAC [precongruence_def, OBS_contracts_PreOrder,
+	       OBS_contracts_SUBST_CONTEXT]);
 
 (******************************************************************************)
 (*                                                                            *)
@@ -1713,7 +1732,7 @@ val C_contracts_thm = save_thm (
 
 val C_contracts_precongruence = store_thm (
    "C_contracts_precongruence", ``precongruence $C_contracts``,
-    REWRITE_TAC [C_contracts, CC_precongruence]);
+    PROVE_TAC [C_contracts, CC_precongruence, contracts_PreOrder]);
 
 val OBS_contracts_IMP_C_contracts = store_thm (
    "OBS_contracts_IMP_C_contracts", ``!p q. OBS_contracts p q ==> C_contracts p q``,
@@ -1857,6 +1876,10 @@ val SUM_contracts_IMP_OBS_contracts = store_thm (
 	  `TRANS p (label a) E1` by RW_TAC std_ss [] \\
 	  POP_ASSUM (ASSUME_TAC o (MATCH_MP TRANS_IMP_WEAK_TRANS)) \\
 	  RES_TAC ] ] ]);			(* initial assumption of `p` is used here *)
+
+val COARSEST_PRECONGR_RL = save_thm (
+   "COARSEST_PRECONGR_RL",
+    BETA_RULE (REWRITE_RULE [SUM_contracts] SUM_contracts_IMP_OBS_contracts));
 
 (* Assuming p & q have free actions, OBS_contracts is the coarsest precongruence
    contained in `contracts`! *)

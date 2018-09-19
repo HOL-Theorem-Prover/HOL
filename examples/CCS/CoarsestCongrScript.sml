@@ -850,6 +850,10 @@ val COARSEST_CONGR_FINITE = store_thm ((* NEW *)
  >> MP_TAC (Q.SPECL [`p`, `q`] KLOP_LEMMA_FINITE)
  >> RW_TAC std_ss [PROP3_COMMON]);
 
+(* unused *)
+val KLOP_INF_def = Define `
+    KLOP_INF X a = rec X (sum (var X) (prefix (label a) (var X)))`;
+
 (** Bibliography:
 
 [Den07] Y. Deng, “A simple completeness proof for the axiomatisations of weak behavioural

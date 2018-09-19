@@ -123,7 +123,7 @@ val STRONG_UNIQUE_SOLUTION_LEMMA = store_thm (
       CONJ_TAC >- ( MATCH_MP_TAC CONTEXT7 >> art [] ) \\
       GEN_TAC >> MATCH_MP_TAC RELABELING >> art [] ]);
 
-(* Proposition 3.14 in Milner's book [1]:
+(* Proposition 4.14 in Milner's book [1]:
    Let the expression E contains at most the variable X, and let X be weakly guarded in E,
    then:
 	If P ~ E{P/X} and Q ~ E{Q/X} then P ~ Q.
