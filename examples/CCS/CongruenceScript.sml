@@ -4,8 +4,9 @@
 (*                                                                            *)
 (* THESIS        : A Formalization of Unique Solutions of Equations in        *)
 (*                 Process Algebra                                            *)
-(* AUTHOR        : (c) Chun Tian, University of Bologna                       *)
-(* DATE          : 2017                                                       *)
+(* AUTHOR        : (c) 2017 Chun Tian, University of Bologna, Italy           *)
+(*                 (c) 2018 Chun Tian, Fondazione Bruno Kessler (FBK)         *)
+(* DATE          : 2017-2018                                                  *)
 (* ========================================================================== *)
 
 open HolKernel Parse boolLib bossLib;
@@ -14,9 +15,25 @@ open pred_setTheory relationTheory combinTheory arithmeticTheory;
 open CCSLib CCSTheory;
 open StrongEQTheory StrongLawsTheory WeakEQTheory WeakLawsTheory;
 open ObsCongrTheory ObsCongrLib ObsCongrLawsTheory ObsCongrConv;
+open BisimulationUptoTheory;
 
 val _ = new_theory "Congruence";
 val _ = temp_loose_equality ();
+
+(******************************************************************************)
+(*                                                                            *)
+(*                STRONG_EQ is preserved by recursive definition              *)
+(*                                                                            *)
+(******************************************************************************)
+
+(*
+val STRONG_EQUIV_SUBST_REC = store_thm (
+   "STRONG_EQUIV_SUBST_REC",
+  ``!E E' X A B. ({X} = FV E) /\ ({X} = FV E') /\ STRONG_EQUIV E E' ==>
+    STRONG_EQUIV (rec A (CCS_Subst E  (var A) X))
+		 (rec B (CCS_Subst E' (var B) X))``,
+    cheat);
+ *)
 
 (******************************************************************************)
 (*                                                                            *)
@@ -280,34 +297,38 @@ val WEAK_EQUIV_SUBST_GCONTEXT = store_thm (
 (******************************************************************************)
 
 val precongruence_def = Define `
-    precongruence R = !x y ctx. CONTEXT ctx ==> R x y ==> R (ctx x) (ctx y)`;
+    precongruence R = PreOrder R /\
+	!x y ctx. CONTEXT ctx ==> R x y ==> R (ctx x) (ctx y)`;
 
 (* a special version of precongruence with only guarded sums *)
 val precongruence1_def = Define `
-    precongruence1 R = !x y ctx. GCONTEXT ctx ==> R x y ==> R (ctx x) (ctx y)`;
+    precongruence1 R = PreOrder R /\
+	!x y ctx. GCONTEXT ctx ==> R x y ==> R (ctx x) (ctx y)`;
 
 (* The definition of congruence for CCS, TODO: use precongruence *)
 val congruence_def = Define `
-    congruence R = equivalence R /\ precongruence R`;
+    congruence R = equivalence R /\
+	!x y ctx. CONTEXT ctx ==> R x y ==> R (ctx x) (ctx y)`;
 
 (* a special version of congruence with only guarded sums *)
 val congruence1_def = Define `
-    congruence1 R = equivalence R /\ precongruence1 R`;
+    congruence1 R = equivalence R /\
+	!x y ctx. GCONTEXT ctx ==> R x y ==> R (ctx x) (ctx y)`;
 
 val STRONG_EQUIV_congruence = store_thm (
    "STRONG_EQUIV_congruence", ``congruence STRONG_EQUIV``,
     REWRITE_TAC [congruence_def, STRONG_EQUIV_equivalence]
- >> PROVE_TAC [precongruence_def, STRONG_EQUIV_SUBST_CONTEXT]);
+ >> PROVE_TAC [STRONG_EQUIV_SUBST_CONTEXT]);
 
 val WEAK_EQUIV_congruence = store_thm (
    "WEAK_EQUIV_congruence", ``congruence1 WEAK_EQUIV``,
     REWRITE_TAC [congruence1_def, WEAK_EQUIV_equivalence]
- >> PROVE_TAC [precongruence1_def, WEAK_EQUIV_SUBST_GCONTEXT]);
+ >> PROVE_TAC [WEAK_EQUIV_SUBST_GCONTEXT]);
 
 val OBS_CONGR_congruence = store_thm (
    "OBS_CONGR_congruence", ``congruence OBS_CONGR``,
     REWRITE_TAC [congruence_def, OBS_CONGR_equivalence]
- >> PROVE_TAC [precongruence_def, OBS_CONGR_SUBST_CONTEXT]);
+ >> PROVE_TAC [OBS_CONGR_SUBST_CONTEXT]);
 
 (* Building (pre)congruence closure from any relation on CCS *)
 val CC_def = Define `
@@ -317,16 +338,28 @@ val GCC_def = Define `
     GCC R = (\g h. !c. GCONTEXT c ==> R (c g) (c h))`;
 
 val CC_precongruence = store_thm (
-   "CC_precongruence", ``!R. precongruence (CC R)``,
+   "CC_precongruence", ``!R. PreOrder R ==> precongruence (CC R)``,
     REWRITE_TAC [precongruence_def, CC_def]
  >> RW_TAC std_ss []
- >> `CONTEXT (c o ctx)` by PROVE_TAC [CONTEXT_combin]
- >> RES_TAC >> FULL_SIMP_TAC std_ss [o_THM]);
+ >| [ (* goal 1 (of 2) *)
+      REWRITE_TAC [PreOrder] \\
+      rpt STRIP_TAC >| (* 2 sub-goals here *)
+      [ (* goal 1.1 (of 2) *)
+        REWRITE_TAC [reflexive_def] >> BETA_TAC \\
+        rpt STRIP_TAC \\
+        PROVE_TAC [PreOrder, reflexive_def],
+        (* goal 1.2 (of 2) *)
+        REWRITE_TAC [transitive_def] >> BETA_TAC \\
+        rpt STRIP_TAC >> RES_TAC \\
+        PROVE_TAC [PreOrder, transitive_def] ],
+      (* goal 2 (of 2) *)
+      `CONTEXT (c o ctx)` by PROVE_TAC [CONTEXT_combin] \\
+      RES_TAC >> FULL_SIMP_TAC std_ss [o_THM] ]);
 
 (* The built relation is indeed congruence *)
 val CC_congruence = store_thm (
    "CC_congruence", ``!R. equivalence R ==> congruence (CC R)``,
-    REWRITE_TAC [congruence_def, precongruence_def, CC_def]
+    REWRITE_TAC [congruence_def, CC_def]
  >> RW_TAC std_ss [] (* 2 sub-goals here *)
  >| [ (* goal 1 (of 2) *)
       REWRITE_TAC [equivalence_def] \\
@@ -363,7 +396,7 @@ val CC_is_finer = store_thm (
 val CC_is_coarsest = store_thm (
    "CC_is_coarsest",
   ``!R R'. congruence R' /\ R' RSUBSET R ==> R' RSUBSET (CC R)``,
-    REWRITE_TAC [congruence_def, precongruence_def, RSUBSET, CC_def]
+    REWRITE_TAC [congruence_def, RSUBSET, CC_def]
  >> RW_TAC std_ss []);
 
 val CC_is_coarsest' = store_thm (
