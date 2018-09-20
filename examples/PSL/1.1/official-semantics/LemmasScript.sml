@@ -222,6 +222,7 @@ val S_CLOCK_FREE_def =
 (******************************************************************************
 * Structural induction rule for SEREs
 ******************************************************************************)
+
 val sere_induct = save_thm
   ("sere_induct",
    Q.GEN
@@ -234,7 +235,7 @@ val sere_induct = save_thm
         PROVE[]``(!x y. P x ==> Q(x,y)) = !x. P x ==> !y. Q(x,y)``,
         PROVE[]``(!x y. P y ==> Q(x,y)) = !y. P y ==> !x. Q(x,y)``]
        (Q.SPECL
-         [`P`,`\(r1,r2). P r1 /\ P r2`,`\(r,b). P r`]
+         [`P`,`\ (r,b). P r`, `\ (r1,r2). P r1 /\ P r2`]
          (TypeBase.induction_of ``:'a sere``)))));
 
 val LAST_APPEND_CONS =
@@ -816,7 +817,7 @@ val Lemma7 =
              THEN Q.EXISTS_TAC `l`
              THEN RW_TAC arith_ss [SEL_APPEND3,APPEND_LEFT_CANCEL,GSYM APPEND_ASSOC]
              THEN ASSUM_LIST
-                   (fn thl => ASSUME_TAC(Q.SPEC `k - (LENGTH v1 + 1)` (el 2 thl)))
+                   (fn thl => ASSUME_TAC(Q.SPEC `k - (LENGTH (v1 :'a letter list) + 1)` (el 2 thl)))
              THEN FULL_SIMP_TAC std_ss [LENGTH,LENGTH_APPEND]
              THEN `LENGTH [l] = 1` by RW_TAC list_ss []
              THEN IMP_RES_TAC

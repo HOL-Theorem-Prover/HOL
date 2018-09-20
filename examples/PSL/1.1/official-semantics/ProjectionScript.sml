@@ -1018,19 +1018,15 @@ val LENGTH_FILTER_FIRSTN =
       (LENGTH(FILTER P (FIRSTN (LENGTH (TAKE_FIRSTN P n l)) l)) = n)``,
    RW_TAC list_ss [FIRSTN_TAKE_FIRSTN,GSYM FIRSTN_FILTER_TAKE_FIRSTN,LENGTH_FIRSTN]);
 
-val SPLIT_APPEND =
- store_thm
+val SPLIT_APPEND = store_thm
   ("SPLIT_APPEND",
-   ``!u1 u2 v1 v2:'a list.
+  ``!u1 u2 v1 v2:'a list.
       (u1 <> u2 = v1 <> v2) /\ (LENGTH u1 = LENGTH v1) ==> (u2 = v2)``,
-   Induct
-    THEN RW_TAC list_ss []
-    THENL
-     [`v1 = []` by PROVE_TAC[LENGTH_NIL]
-       THEN RW_TAC list_ss [],
-      Cases_on `v1`
-       THEN RW_TAC list_ss []
-       THEN FULL_SIMP_TAC list_ss []]);
+    Induct
+ >> RW_TAC list_ss []
+ >> Cases_on `v1`
+ >> RW_TAC list_ss []
+ >> FULL_SIMP_TAC list_ss []);
 
 val S_PROJ_S_BOOL =
  store_thm
@@ -1918,7 +1914,7 @@ val HD_RESTN_TL =
    ``!n l. HD (RESTN (TL l) n) = EL n (TL l)``,
    Induct
     THEN RW_TAC list_ss
-          [FinitePathTheory.RESTN_def,FinitePathTheory.REST_def]);
+          [FinitePathTheory.RESTN_def,FinitePathTheory.REST_def,EL]);
 
 val ELEM_FINITE =
  store_thm
@@ -1928,7 +1924,7 @@ val ELEM_FINITE =
     THEN RW_TAC list_ss
           [ELEM_def,HEAD_def,RESTN_def,
            FinitePathTheory.RESTN_def,FinitePathTheory.REST_def,
-           REST_def,RESTN_FINITE,HD_RESTN_TL]);
+           REST_def,RESTN_FINITE,HD_RESTN_TL,EL]);
 
 val ELEM_INFINITE =
  store_thm
