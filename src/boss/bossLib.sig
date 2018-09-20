@@ -26,7 +26,7 @@ sig
   val export_mono  : string -> unit
 
   (* Derived rule for specifying new constants.
-    (Should have the same effect as Thm.new_specification.) *)
+     Should have the same effect as Theory.Definition.new_specification. *)
   val new_specification : string * string list * thm -> thm
 
   (* Case-splitting and induction operations *)
