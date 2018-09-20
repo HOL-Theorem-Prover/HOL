@@ -320,12 +320,6 @@ fun IMP_EQ_CANON (thm,bnd) = let
                 else [(base,bnd)]
               end
           end
-      else if is_conj conc then
-        undisch_thm |> CONJ_PAIR
-                    |> (IMP_EQ_CANONb ## IMP_EQ_CANONb)
-                    |> op @
-      else if is_forall conc then
-        undisch_thm |> SPEC_VAR |> snd |> IMP_EQ_CANONb
       else if is_neg conc then
         let
           val n = dest_neg conc
@@ -354,7 +348,8 @@ fun IMP_EQ_CANON (thm,bnd) = let
               val base_eqns = bth |> SYM |> IMP_EQ_CANONb
             in
               if is_abs (rhs rnd) then
-                base_eqns @ (bth |> CONV_RULE funeqconv |> IMP_EQ_CANONb)
+                base_eqns @
+                (bth |> CONV_RULE funeqconv |> SPEC_ALL |> IMP_EQ_CANONb)
               else
                 base_eqns
             end
