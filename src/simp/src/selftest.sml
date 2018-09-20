@@ -224,4 +224,29 @@ in
     | SOME _ => OK()
 end
 
+local
+fun testb (s, thm, c) =
+  let
+    val _ = tprint ("Cond_rewr.mk_cond_rewrs on "^s)
+  in
+    case Lib.total Cond_rewr.mk_cond_rewrs(thm, BoundedRewrites.UNBOUNDED)
+     of
+        NONE => die "FAILED!"
+      | SOME l => if length l = c then OK()
+                  else die ("\n  FAILED!  Incorrectly generated rewrites\n  " ^
+                            String.concatWith "\n  "
+                                              (map (thm_to_string o #1) l))
+  end
+val lem1 = prove(“a <> b ==> (a = ~b)”,
+                 ASM_CASES_TAC “a:bool” THEN ASM_REWRITE_TAC[])
+in
+val _ = app testb [
+  ("“hyp ==> b”", ASSUME “(!b x y. (P x y = b) ==> b)”, 0),
+  ("“hyp ==> ~b”", ASSUME “(!b x y. (p x y = b) ==> ~b)”, 0),
+  ("“hyp ==> b=e”", ASSUME “(!b:bool x y. (p x y = b) ==> (b = e))”, 2),
+  ("“a <> b ==> (a = ~b)", lem1, 2)
+]
+
+end (* local fun testb ... *)
+
 val _ = Process.exit Process.success

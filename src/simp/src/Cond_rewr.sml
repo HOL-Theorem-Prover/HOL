@@ -278,6 +278,7 @@ val FT_EQ_F = PROVE_HYP (UNDISCH_ALL (NOT_ELIM (CONJUNCT2 BOOL_EQ_DISTINCT)))
 
 fun IMP_EQ_CANON (thm,bnd) = let
   val conditions = #1 (strip_imp (concl thm))
+  val hypfvs = hyp_frees thm
   val undisch_thm = UNDISCH_ALL thm
   val conc = concl undisch_thm
   fun IMP_EQ_CANONb th = IMP_EQ_CANON (th, bnd)
@@ -298,11 +299,14 @@ fun IMP_EQ_CANON (thm,bnd) = let
               else [(CONV_RULE (REWR_CONV EQ_SYM_EQ) undisch_thm, bnd)]
             else
               let
+                fun safelhs t = not (is_var t) orelse type_of t <> bool orelse
+                                t IN hypfvs
                 val base =
                     if null (subtract (free_vars r) (free_varsl (l::hyp thm)))
+                       andalso safelhs l
                     then undisch_thm
                     else
-                      (trace(1,IGNORE("rewrite with existential vars (adding \
+                      (trace(1,IGNORE("rewrite with bad vars (adding \
                                       \EQT version(s))",thm));
                        EQT_INTRO undisch_thm)
                 val flip_eqp = let val (l,r) = dest_eq (concl base)
@@ -323,9 +327,16 @@ fun IMP_EQ_CANON (thm,bnd) = let
       else if is_forall conc then
         undisch_thm |> SPEC_VAR |> snd |> IMP_EQ_CANONb
       else if is_neg conc then
-        if is_eq (dest_neg conc) then
-          [(EQF_INTRO undisch_thm, bnd), (EQF_INTRO (GSYM undisch_thm), bnd)]
-        else [(EQF_INTRO undisch_thm, bnd)]
+        let
+          val n = dest_neg conc
+        in
+          if is_eq n then
+            [(EQF_INTRO undisch_thm, bnd), (EQF_INTRO (GSYM undisch_thm), bnd)]
+          else if is_var n andalso not (n IN hypfvs) then
+            (trace(1, IGNORE ("boolean variable conclusion", thm)); [])
+          else
+            [(EQF_INTRO undisch_thm, bnd)]
+        end
       else if conc = truth_tm then
         (trace(2,IGNORE ("pointless rewrite",thm)); [])
       else if conc = false_tm then [(MP x_eq_false undisch_thm, bnd)]
@@ -349,7 +360,10 @@ fun IMP_EQ_CANON (thm,bnd) = let
             end
           else []
         end
-      else [(EQT_INTRO undisch_thm, bnd)]
+      else if is_var conc andalso not (conc IN hypfvs) then
+        (trace(1, IGNORE ("boolean variable conclusion", thm)); [])
+      else
+        [(EQT_INTRO undisch_thm, bnd)]
 in
   map (fn (th,bnd) => (CONJ_DISCH conditions th, bnd)) undisch_rewrites
 end handle e => WRAP_ERR("IMP_EQ_CANON",e);
