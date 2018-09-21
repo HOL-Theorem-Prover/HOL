@@ -16,8 +16,7 @@ val ERR = mk_HOL_ERR "tttSynt"
    Globals
    -------------------------------------------------------------------------- *)
 
-val tycheck_flag     = ref false
-val type_errors      = ref 0
+val type_errors = ref 0
 
 (* --------------------------------------------------------------------------
    Tools
@@ -126,8 +125,6 @@ type tsubst = (term * term) list
 val cdict_glob = ref (dempty Term.compare)
 val icdict_glob = ref (dempty Int.compare)
 val cdict_loc = ref (dempty Int.compare)
-val cjinfo_glob =ref (dempty Term.compare)
-
 
 fun fconst_glob c =
   dfind c (!cdict_glob) handle NotFound =>
@@ -150,12 +147,11 @@ fun init_synt () =
   (
   cdict_glob := dempty Term.compare;
   icdict_glob := dempty Int.compare;
-  cjinfo_glob := dempty Term.compare;
   type_errors := 0
   )
 
 (* --------------------------------------------------------------------------
-   Conceptualization
+   Conceptualization. Should be done on demand.
    -------------------------------------------------------------------------- *)
 
 val concept_threshold = ref 4
@@ -357,9 +353,11 @@ fun term_of_pat2 (p,cl) = case p of
 
 (* --------------------------------------------------------------------------
    Concept substitutions. Weighted frequency.
-   -------------------------------------------------------------------------- *) 
+   -------------------------------------------------------------------------- *)
 
 fun compare_kimin (a,b) = Int.compare (fst a, fst b)
+
+val sub_compare = list_compare (cpl_compare Term.compare Term.compare)
 
 fun norm_sub l = 
   let val l1 = filter (fn (x,y) => x <> y) l in
@@ -398,12 +396,12 @@ fun create_sub iceptdict patceptdict =
     val l3        = dict_sort compare_rmax (dlist dfreq)
     val l4        = (map (read_sub iceptdict)) (map fst l3)
   in
-    if !tycheck_flag 
-    then filter welltyped_sub l4
-    else l4
+    filter welltyped_sub l4
   end
 
-fun unsafe_sub sub tm = 
+val sub_cache = ref (dempty (cpl_compare sub_compare Term.compare))
+
+fun unsafe_sub sub tm =
   let val redreso = List.find (fn (red,res) => red = tm) sub in
     if isSome redreso then snd (valOf (redreso)) else
       (
@@ -417,16 +415,25 @@ fun unsafe_sub sub tm =
       )
   end
 
-fun apply_sub sub tm = 
-  let val tm' = unsafe_sub sub tm in
-    if unvalid_change tm tm' then NONE else SOME (my_gen_all tm')
-  end
+fun unsafe_sub_option sub tm = 
+  SOME (unsafe_sub sub tm) 
   handle HOL_ERR _ => (incr type_errors; NONE)
+
+
+fun unsafe_sub_cached sub tm =
+  dfind (sub,tm) (!sub_cache) handle NotFound =>
+  let val r = unsafe_sub_option sub tm in
+    sub_cache := dadd (sub,tm) r (!sub_cache); r
+  end
+
+fun apply_sub sub tm = case unsafe_sub_cached sub tm of
+    NONE => NONE
+  | SOME tm' => 
+    if unvalid_change tm tm' then NONE else SOME (my_gen_all tm')
 
 (* --------------------------------------------------------------------------
    Conjecturing by substitutions.
    -------------------------------------------------------------------------- *) 
-
 
 fun update_genthmdict gencjdict genthmdict x =
   if dmem x (!genthmdict) then () else 
@@ -500,7 +507,7 @@ fun write_graph ntot genthmdict =
 
 fun conjecture cjlim tml =
   let
-    val _     = init_synt ()
+    val _    = init_synt ()
     val tml0 = mk_fast_set Term.compare tml
     val tml1 = map (snd o strip_forall o rename_bvarl (fn _ => "")) tml0
     val tml2 = mk_fast_set Term.compare tml1
@@ -528,51 +535,162 @@ fun conjecture cjlim tml =
     map snd (dlist igencjdict)
   end
 
-end (* struct *)
-
-
 (* --------------------------------------------------------------------------
-   Term synthesis from common parse.
+   Brute force conjecturing
    -------------------------------------------------------------------------- 
-
-On-demand creation of concepts.
-Make the program more complete.
-
-Start modifying towards the conjecture or
-towards its selected premises.
-
-
-Search for a decrease probability.
-
-A conjecture is a closed term of type bool.
-
-
-transition probability.
-
-a list of tokens [a;b;c;d;e].
-Probability skewed toward the neighborhood. 1 1/2 ... 1/...
-
-Arity 0 concepts.
-
-f x => A (f,x)
-
-What is the probability of them mating?
-
-At depth 0. Pretty common.
-At depth 1.
-
-Max (P(big), P (small) * P (small))
-
-every subterm represent multiple transition.
-greedy manner.
-
- 0 x   SUC (SUC 0) > (SUC x)
- x > SUC
-
-grow trees.  Taking a set of concepts as input (only mating)
-
-< 0 
 *)
+
+fun all_split (a,b) =
+  if b < 1 then [] else (a,b) :: all_split (a+1,b-1)
+
+fun is_applicable (ty1,ty2) =
+  let fun apply ty1 ty2 =
+    mk_comb (mk_var ("x",ty1), mk_var ("y",ty2))
+  in
+    can (apply ty1) ty2
+  end
+
+fun all_mk_comb d1 d2 (ty1,ty2) =
+  let 
+    val tml1 = dfind ty1 d1
+    val tml2 = dfind ty2 d2
+    val l = cartesian_product tml1 tml2
+  in
+    map mk_comb l  
+  end
+
+fun all_abs tml =
+  let fun f tm = 
+    let val vl = free_vars_lr in
+      map (fun x => mk_abs (x,tm))) vl
+    end
+  in
+    List.concat (map f tml)
+  end
+
+fun all_forall tml =
+  let fun f tm = 
+    let val vl = free_vars_lr in
+      map (fun x => mk_forall (x,tm))) vl
+    end
+  in
+    List.concat (map f tml)
+  end
+
+fun all_exists tml =
+  let fun f tm = 
+    let val vl = free_vars_lr in
+      map (fun x => mk_forall (x,tm))) vl
+    end
+  in
+    List.concat (map f tml)
+  end
+
+
+val (gen_size_cache :  (int, (hol_type, term list) Redblackmap.dict) Redblackmap.dict ref) = ref (tttTools.dempty Int.compare)
+
+
+fun init_gen_size tml =
+  let
+    val _    = gen_size_cache := dempty Int.compare
+    val tml' = map (fn x => (type_of x, x)) tml
+    val r    = dregroup Type.compare tml'
+  in
+    gen_size_cache := dadd 1 r (!gen_size_cache)
+  end
+
+fun gen_size filterf n =
+  (if n <= 0 then raise ERR "gen_size" "" else 
+   dfind n (!gen_size_cache)) 
+  handle NotFound =>
+  let 
+    val l = all_split (1,n-1)   
+    fun all_comb (n1,n2) = 
+      let 
+        val d1 = gen_size filterf n1
+        val d2 = gen_size filterf n2
+        val tytyl  = cartesian_product (dkeys d1) (dkeys d2)
+        val tytyl' = filter is_applicable tytyl
+      in
+        List.concat (map (all_mk_comb d1 d2) tytyl')
+      end
+    val combl = List.concat (map all_comb l)
+    val tml1 = filterf combl
+    val tml2 =  map (fn x => (type_of x, x)) tml1
+    val r    = dregroup Type.compare tml2
+  in
+    gen_size_cache := dadd n r (!gen_size_cache);
+    log_synt ("gen_size " ^ int_to_string n ^ ": " ^ 
+              int_to_string (length tml0));
+    r
+  end
+
+
+
+fun report_rank cjl predl target =
+  let 
+    val cjnl = mapi (fn i => fn cj => (cj,i)) cjl
+    val d    = dnew Term.compare cjnl
+    fun f p  = int_to_string (dfind p d) handle NotFound => "_"
+    val s = String.concatWith " " (map f predl)
+    fun g p = SOME (dfind p d) handle NotFound => NONE
+    val l = List.mapPartial g predl
+    fun h y = length (filter (fn x => x < y) l)
+  in
+    log_synt ("Target: " ^ f target);
+    log_synt ("Prediction: " ^ s);
+    log_synt 
+      ("Coverage(" ^ int_to_string (length predl) ^ "): " ^ 
+      String.concatWith " " (map (int_to_string o h) [10,100,1000,10000]))
+  end
+
+fun cjenum depth maxperdepth filterf predl target = 
+  let
+    (* val _ = log_synt ("maxperdepth:" ^ int_to_string maxperdepth) *) 
+    val newfilterf = filterf maxperdepth
+    fun is_vc x = is_var x orelse is_const x
+    val vcl = List.concat (map (find_terms is_vc) (target :: predl))
+    val vcset = mk_fast_set Term.compare vcl
+    val _ = init_gen_size vcset
+    val _ = gen_size newfilterf depth
+    val dictl = 
+      List.tabulate (depth, fn x => gen_size newfilterf (x+1))
+    fun closify_err x = 
+      SOME (list_mk_forall (free_vars_lr x, x)) handle HOL_ERR _ => NONE
+    fun extract_thml dict =
+      if dmem bool dict 
+      then mk_fast_set Term.compare (List.mapPartial closify_err (dfind bool dict))  
+      else []
+    val cjl = List.concat (map extract_thml dictl)
+    val _    = msg_synt cjl "conjectures"
+    val ordered_cjl = filterf (length cjl) cjl
+    val _    = 
+      log_synt ("Closest conjecture: " ^ term_to_string (hd ordered_cjl))
+  in
+    (* report_rank ordered_cjl predl target; *)
+    ordered_cjl
+  end
+
+fun aimcj depth maxperdepth filterf predl target = 
+  let
+    val newfilterf = filterf maxperdepth
+    fun is_vc x = is_var x orelse is_const x
+    val vcl = List.concat (map (find_terms is_vc) (target :: predl))
+    val vcset = mk_fast_set Term.compare vcl
+    val _ = init_gen_size vcset
+    val _ = gen_size newfilterf depth
+    val dictl = 
+      List.tabulate (depth, fn x => gen_size newfilterf (x+1))
+    fun extract_terml dict =
+      if dmem alpha dict 
+      then mk_fast_set Term.compare (dfind alpha dict)  
+      else []
+    val cjl = List.concat (map extract_terml dictl)
+  in
+    cjl
+  end
+
+end (* struct *)
 
 
 

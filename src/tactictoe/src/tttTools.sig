@@ -85,8 +85,10 @@ sig
   val inv_dict : 
     ('a * 'a -> order) ->
     ('b, 'a) Redblackmap.dict -> ('a, 'b) Redblackmap.dict
+  val dregroup : ('a * 'a -> order) -> ('a * 'b) list -> ('a, 'b list) Redblackmap.dict 
 
   (* list *)
+  val shuffle : 'a list -> 'a list
   val map_snd : ('a -> 'b) -> ('c * 'a) list -> ('c * 'b) list
   val map_fst : ('a -> 'b) -> ('a * 'c) list -> ('b * 'c) list 
   val map_assoc : ('a -> 'b) -> 'a list -> ('a * 'b) list

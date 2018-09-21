@@ -39,43 +39,13 @@ fun union_dict dict l = dkeys (daddl (map (fn x => (x,())) l) dict)
 val random_gen = Random.newgen ()
 
 fun knn_sim1 symweight dict_o fea_p =
-  if !ttt_randdist_flag 
-    then Random.random random_gen
-  else
-    let
-      val fea_i   = inter_dict dict_o fea_p
-      fun wf n    = dfind_err "knn_sim1" n symweight
-      val weightl = map wf fea_i
-    in
-      sum_real weightl
-    end
-
-fun knn_sim2 symweight dict_o fea_p =
-  if !ttt_randdist_flag 
-    then Random.random random_gen
-  else
-    let
-      val fea_i    = inter_dict dict_o fea_p
-      fun wf n     = dfind_err "knn_sim2" n symweight
-      val weightl  = map wf fea_i
-      val tot      = Real.fromInt (dlength dict_o + length fea_p)
-    in
-      sum_real weightl / Math.ln (Math.e + tot)
-    end
-
-fun knn_sim3 symweight dict_o fea_p =
-  if !ttt_randdist_flag 
-    then Random.random random_gen
-  else
-    let
-      val feai     = inter_dict dict_o fea_p
-      val feau     = union_dict dict_o fea_p
-      fun wf n     = dfind n symweight handle _ => 0.0
-      val weightli = map wf feai
-      val weightlu = map wf feau
-    in
-      sum_real weightli / (sum_real weightlu + 1.0)
-    end
+  let
+    val fea_i   = inter_dict dict_o fea_p
+    fun wf n    = dfind_err "knn_sim1" n symweight
+    val weightl = map wf fea_i
+  in
+    sum_real weightl
+  end
 
 (* --------------------------------------------------------------------------
    Ordering prediction with duplicates
@@ -94,8 +64,6 @@ fun pre_pred dist symweight (feal: ('a * int list) list) fea_o =
   end
 
 fun pre_sim1 symweight feal fea_o = pre_pred knn_sim1 symweight feal fea_o
-fun pre_sim2 symweight feal fea_o = pre_pred knn_sim2 symweight feal fea_o
-fun pre_sim3 symweight feal fea_o = pre_pred knn_sim3 symweight feal fea_o
 
 (* --------------------------------------------------------------------------
    Tactic predictions
@@ -269,8 +237,7 @@ fun termknn n ((asl,w):goal) term =
     val feal = map f l1
     val fea_o = tttFeature.fea_of_goal ([],term)
     val symweight = weight_tfidf (fea_o :: (map snd feal) @ thmfeav)
-    val pre_sim = case !ttt_termarg_pint of
-      1 => pre_sim1 | 2 => pre_sim2 | 3 => pre_sim3 | _ => pre_sim2
+    val pre_sim = pre_sim1
     val l3 = pre_sim symweight feal fea_o
   in
     first_n n (map fst l3)
@@ -278,7 +245,6 @@ fun termknn n ((asl,w):goal) term =
   
 (* --------------------------------------------------------------------------
    Term prediction for conjecturing experiments.
-   Todo: add dependencies between deps.
    -------------------------------------------------------------------------- *)
 
 fun tmknn n (symweight,tmfea) fea_o =
@@ -292,8 +258,7 @@ fun tmknn n (symweight,tmfea) fea_o =
 
 fun mcknn symweight radius feal fea =
   let
-    val pre_sim = case !ttt_mcev_pint of
-      1 => pre_sim1 | 2 => pre_sim2 | 3 => pre_sim3 | _ => pre_sim2
+    val pre_sim = pre_sim1
     val bnl = map fst (first_n radius (pre_sim symweight feal fea))
     fun ispos (b,n) = b
     fun isneg (b,n) = not b

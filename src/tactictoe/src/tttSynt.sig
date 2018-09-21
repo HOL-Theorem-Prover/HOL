@@ -11,7 +11,6 @@ sig
   (* globals *)
   val concept_threshold : int ref
   val concept_flag : bool ref
-  val tycheck_flag : bool ref
 
   (* debugging *)
   val ttt_synt_dir  : string ref
@@ -23,5 +22,15 @@ sig
   
   (* conjecturing *)
   val conjecture : int -> term list -> term list
- 
+  val cjenum     : 
+    int -> int ->
+    (int -> term list -> term list) -> 
+    term list -> 
+    term -> 
+    term list
+
+  val aimcj : 
+    int -> int ->
+    (int -> term list -> term list) -> term list -> term -> term list
+
 end

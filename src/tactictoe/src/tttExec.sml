@@ -199,6 +199,7 @@ fun string_of_sml s =
   end
 
 val ttt_term_glob = ref T
+val ttt_termlist_glob = ref [T]
 
 fun is_stype s =
   let
@@ -216,8 +217,19 @@ fun term_of_sml s =
   in
     if b
     then !ttt_term_glob
-    else raise ERR "string_of_sml" s
+    else raise ERR "term_of_sml" s
   end
+
+fun hol4terml_of_sml i s =
+  let
+    val b = exec_sml ("hol4terml_of_sml" ^ int_to_string i)
+      ("val _ = tttExec.ttt_termlist_glob := " ^ s)
+  in
+    if b
+    then !ttt_termlist_glob
+    else raise ERR "hol4term_of_sml" s
+  end
+
 
 (* -----------------------------------------------------------------------------
    Read metis and hh from the future

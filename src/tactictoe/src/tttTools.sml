@@ -120,6 +120,17 @@ fun dkeys d    = map fst (dlist d)
 
 fun inv_dict cmp d = dnew cmp (map (fn (a,b) => (b,a)) (dlist d))
 
+fun dregroup cmp l = 
+  let 
+    val d = ref (dempty cmp)
+    fun update (k,v) =
+      let val oldl = dfind k (!d) handle NotFound => [] in
+        d := dadd k (v :: oldl) (!d)
+      end
+  in
+    app update l; !d
+  end
+
 (* --------------------------------------------------------------------------
    References
    -------------------------------------------------------------------------- *)
@@ -346,6 +357,14 @@ fun compare_imin ((_,r1),(_,r2)) = Int.compare (r1,r2)
 
 fun compare_rmax ((_,r2),(_,r1)) = Real.compare (r1,r2)
 fun compare_rmin ((_,r1),(_,r2)) = Real.compare (r1,r2)
+
+val new_real = Random.newgen ()
+
+fun shuffle l =
+  let
+    val l' = map (fn x => (x, Random.random new_real)) l in
+    map fst (dict_sort compare_rmin l')
+  end
 
 fun goal_compare ((asm1,w1), (asm2,w2)) =
   list_compare Term.compare (w1 :: asm1, w2 :: asm2)

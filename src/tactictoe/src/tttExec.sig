@@ -32,8 +32,10 @@ sig
   val exec_sml         : string -> string -> bool
 
   val ttt_term_glob    : term ref
+  val ttt_termlist_glob : term list ref
   val is_stype         : string -> bool
   val term_of_sml      : string -> term
+  val hol4terml_of_sml  : int -> string -> term list
   val ttt_thm          : thm ref
   val ttt_thml         : thm list ref
   val is_thm           : string -> bool

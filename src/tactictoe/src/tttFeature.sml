@@ -101,6 +101,19 @@ fun zeroed_term tm =
     end
   else raise ERR "zeroed_term" ""
 
+
+fun notype_term tm =
+  if is_var tm then fst (dest_var tm)
+  else if is_const tm then string_of_const tm
+  else if is_comb tm then
+    "(" ^ notype_term (rator tm) ^ " " ^ notype_term (rand tm) ^ ")"
+  else if is_abs tm then
+    let val (v,t) = dest_abs tm in
+      "(Abs " ^ notype_term t ^ ")"
+    end
+  else raise ERR "notype_term" ""
+
+
 val top_sl : string list ref = ref []
 
 fun string_of_top tm =
@@ -187,6 +200,22 @@ in
         hsh (0,0) s
      end
 end
+
+fun syntfea_of_term tm =
+  let
+    val typel          = all_types tm
+    val type_sl        = List.concat (map zeroed_type typel)
+    val subterml       = find_terms (fn _ => true) tm
+    val subterm_sl     = map notype_term subterml
+    val d              = 
+      count_dict (dempty (String.compare)) (type_sl @ subterm_sl)
+    fun f (s,n) = 
+      (s ^ ".e" ^ int_to_string n) ::
+      List.tabulate (n, fn i => s ^ "." ^ int_to_string i)
+   val final_sl = List.concat (map f (dlist d))
+  in
+    mk_fast_set Int.compare (map hash_string final_sl)
+  end
 
 fun fea_of_goal (asl,w) =
   let
