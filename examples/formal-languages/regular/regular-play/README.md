@@ -4,8 +4,8 @@
 
 This is an SML library for regular expression matching. Its three implementations are verified in the HOL4 theorem prover and exported to SML using HOL's EmitML. Furthermore, unified wrappers for each of the implementations, including a reference which is part of the HOL4 source code, are provided. The three implementations use a straight forward functional implementation, an implementation with position marking, and an implementation with position marking and property caching respectively.
 
-We implemented the three regular expression implementations proposed in the beginning of the following work ([link](http://dl.acm.org/citation.cfm?id=1863594)):<br />
-Fischer, Sebastian, Frank Huch, and Thomas Wilke. "A play on regular expressions: functional pearl." ACM Sigplan Notices. Vol. 45. No. 9. ACM, 2010.
+We implemented the three regular expression implementations proposed at the beginning of
+[Fischer, Sebastian, Frank Huch, and Thomas Wilke. *“A play on regular expressions: functional pearl.”* ACM Sigplan Notices. Vol. 45. No. 9. ACM, 2010](http://dl.acm.org/citation.cfm?id=1863594).
 
 An extendable test and benchmark library is used for conformance testing in the typical HOL4 selftest style. Both, test and benchmark can be started individually by using the corresponding test and benchmark suite scripts after compilation.
 
@@ -24,10 +24,9 @@ The regular expression data structure only allows epsilon, a symbol of type α, 
 
 ## How to compile
 
-<!-- 1. Clone the repository using `git clone https://gitr.sys.kth.se/lindnera/itp2017-regexproj.git`. -->
 1. Compile the example by:
   * running `Holmake` in this directory, or
-  * build HOL using selftest level 2 by using `bin/build -t2` (HOL's `tools/build-sequence` file guides the build process here as usual).
+  * build HOL using selftest level 1 by using `bin/build -t` (HOL's `tools/build-sequence` file guides the build process here as usual).
 1. Run a selftest using `./selftest.exe` to check for conformance of the emitted code with respect to the reference library.
 1. Run a performance test by running `hol < test/performance.sml > test/performance.log` in the project root directory.
 
@@ -38,7 +37,7 @@ The regular expression data structure only allows epsilon, a symbol of type α, 
 * `emit` - Appears after compiling `src`, then contains the emitted libraries.
 * `lib`  - Contains the wrapper libraries around the emitted code and the HOL4 `regexpMatch` module. Uses `emit`.
 * `test` - Contains the test case library and the benchmark script. Uses the wrapper libraries in `lib`.
-* `selftest.sml` - HOL4 style selftest script. Runs conformance tests on the emitted code. Uses the wrapper libraries in `lib` and the test cases in `test`.
+* `selftest.sml` - HOL4 style selftest script. After a call to `Holmake`, generates `selftest.exe`, which runs conformance tests on the emitted code. Uses the wrapper libraries in `lib` and the test cases in `test`.
 
 
 ## Performance results
@@ -57,6 +56,3 @@ For the simple test suite, runtime of the four implementations is not big enough
 With the same regular expression performance suite and an input size of about 100000 characters, the reference SML implementation `_ref` is still not in a measurable range, while the code from emitML using marking and caching takes around 2s. The code that implements caching (2.2s) is even slower than the code that does not implement this (2.1s). This is most likely due to the chosen regular expression and input data.
 
 When we increase the size of the regular expression that we feed into the implementations, the two implementations using marking and caching outperform the reference implementation. When providing an input string of length 10000 and a regex sequence of 600 characters, the reference implementation takes 13.2s while both implementations using marked expression and also caching use around 0.4s. When we increase the input to a 100000 character string and a regex which is a 10000 character sequence, it takes 53.4s and 44.6s for marked and cached expression matching respectively.
-
-
-
