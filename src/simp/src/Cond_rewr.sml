@@ -299,8 +299,9 @@ fun IMP_EQ_CANON (thm,bnd) = let
               else [(CONV_RULE (REWR_CONV EQ_SYM_EQ) undisch_thm, bnd)]
             else
               let
-                fun safelhs t = not (is_var t) orelse type_of t <> bool orelse
-                                t IN hypfvs
+                fun safelhs t =
+                  not (is_var t) orelse type_of t <> bool orelse
+                  t IN hypfvs orelse bnd <> BoundedRewrites.UNBOUNDED
                 val base =
                     if null (subtract (free_vars r) (free_varsl (l::hyp thm)))
                        andalso safelhs l
