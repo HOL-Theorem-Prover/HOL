@@ -53,7 +53,24 @@ val monadtpp_test2 =
     ("do m1; m2 od",
      concat ["do ", free "m1", "; ", free "m2", " od"])
 
-val _ = app tpp [monadtpp_test1, monadtpp_test2]
+val monadtpp_test3 = ("x", free "x") (*
+  ("do x <- m1; y <- m2; \
+   \if my_very_long_guard then m3 else do a <- m4; b <- m5; M7 od od",
+   String.concat [
+    "do\n  ",
+      bx, " <- ", free "m1;\n  ",
+      bound "y", " <- ", free "m2;\n  ",
+      "if ", free "my_very_long_guard", " then\n    ",
+        free "m3", "\n  ",
+      "else\n    ",
+        "do\n      ",                               (* 6 *)
+          free "a", " <- ", free "m4", ";\n      ", (* 6 *)
+          free "b", " <- ", free "m5", ";\n      ", (* 6 *)
+          free "M7", ";\n    ",                     (* 4 *)
+        "od\n",                                     (* 0 *)
+    "od"])*)
+
+val _ = app tpp [monadtpp_test1, monadtpp_test2, monadtpp_test3]
 
 val _ = clear_overloads_on "monad_bind"
 
