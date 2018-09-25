@@ -1,5 +1,5 @@
 language: c
-before_script: developers/travis/before_install.sh
+before_script: developers/install-poly.sh
 script: eval `opam config env` && poly < tools/smart-configure.sml && bin/build $BUILDOPTS --nograph
 notifications:
   email:
@@ -15,20 +15,20 @@ env:
   global:
     - PATH=$PATH:$HOME/bin LD_LIBRARY_PATH=$HOME/lib
   matrix:
-    - ROOTPOLY= BUILDOPTS=
-    - ROOTPOLY= BUILDOPTS=--expk
-    - ROOTPOLY= BUILDOPTS="--seq=developers/travis/selftestseq -t1"
-    - ROOTPOLY= BUILDOPTS="--expk --seq=developers/travis/selftestseq -t1"
-    - ROOTPOLY= BUILDOPTS="--seq=developers/travis/more_examples_seq -t1"
-    - ROOTPOLY= BUILDOPTS="--expk --seq=developers/travis/more_examples_seq -t1"
-    - ROOTPOLY= GITPOLY=1 BUILDOPTS="--seq=developers/travis/selftestseq"
+    - BUILDOPTS=
+    - BUILDOPTS=--expk
+    - BUILDOPTS="--seq=developers/travis/selftestseq -t1"
+    - BUILDOPTS="--expk --seq=developers/travis/selftestseq -t1"
+    - BUILDOPTS="--seq=developers/travis/more_examples_seq -t1"
+    - BUILDOPTS="--expk --seq=developers/travis/more_examples_seq -t1"
+    - POLY_GIT=T BUILDOPTS="--seq=developers/travis/selftestseq"
 
 matrix:
   include:
     - os: osx
-      env: ROOTPOLY= BUILDOPTS=
-    - env: ROOTPOLY=1 BUILDOPTS="--seq developers/travis/selftestseq"
+      env: BUILDOPTS=
+    - env: POLY_ROOT=T BUILDOPTS="--seq developers/travis/selftestseq"
       sudo: true
   allow_failures:
     - os: osx
-    - env: ROOTPOLY= GITPOLY=1 BUILDOPTS="--seq=developers/travis/selftestseq"
+    - env: POLY_GIT=T BUILDOPTS="--seq=developers/travis/selftestseq"
