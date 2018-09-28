@@ -14,6 +14,9 @@ open prtermTheory;
 open pred_setTheory;
 open extrealTheory;
 open realTheory;
+open real_sigmaTheory;
+open lebesgueTheory;
+open transcTheory;
 val _ = new_theory "kolmog_complex";
 val _ =ParseExtras.tight_equality();
 
@@ -530,8 +533,8 @@ val len_fun_eq1 = Q.store_thm("len_fun_eq1",
 `SIGMA (λs. Normal (2 rpow -&LENGTH s)) {s | (LENGTH (s:bool list) = n)} = 1`,
 irule EQ_TRANS >>qexists_tac`&CARD {s | LENGTH (s:bool list) = n} * Normal(2 rpow (-&n))` >> conj_tac
   >- (irule extreal_sum_image_finite_corr >> rw[])
-  >- (simp[extreal_of_num_def,extreal_mul_def,GSYM realTheory.REAL_OF_NUM_POW,transcTheory.GEN_RPOW,
-	   GSYM transcTheory.RPOW_ADD,transcTheory.RPOW_0 ] ))
+  >- (simp[extreal_of_num_def,extreal_mul_def,GSYM realTheory.REAL_OF_NUM_POW,GEN_RPOW,
+	   GSYM RPOW_ADD,RPOW_0 ] ))
 
 val len_fun_le1 = Q.store_thm("len_fun_le1",
 `len_fun A n <= 1`,
@@ -539,7 +542,7 @@ rw[len_fun_def] >> `{s | LENGTH s = n ∧ s ∈ A}⊆{s|LENGTH s = n}` by simp[S
 `FINITE {s | LENGTH s = n ∧ s ∈ A}` by metis_tac[SUBSET_FINITE_I,finite_bool_list_n] >> 
 ASSUME_TAC len_fun_eq1 >> pop_assum(SUBST1_TAC o SYM)>> irule EXTREAL_SUM_IMAGE_MONO_SET >> 
 simp[finite_bool_list_n] >> rw[extreal_of_num_def,extreal_le_def] >> 
-`0r < 2 `suffices_by(strip_tac >> drule transcTheory.RPOW_POS_LT >> simp[realTheory.REAL_LE_LT]) >>
+`0r < 2 `suffices_by(strip_tac >> drule RPOW_POS_LT >> simp[realTheory.REAL_LE_LT]) >>
 simp[] )
 
 (* Traditional bool list to num *)
@@ -688,7 +691,7 @@ rw[EQ_IMP_THM]
       `&TBL2N j * M < &TBL2N i * M + M` by metis_tac[REAL_LET_TRANS] >>
       `&TBL2N i * M + M = (&TBL2N i + 1) * M` by metis_tac[REAL_ADD_RDISTRIB,REAL_MUL_LID] >>  
       `&TBL2N j * M + M = (&TBL2N j + 1) * M` by metis_tac[REAL_ADD_RDISTRIB,REAL_MUL_LID] >> fs[] >>
-      `(0:real)<2` by fs[] >> `0<M` by metis_tac[transcTheory.RPOW_POS_LT] >>
+      `(0:real)<2` by fs[] >> `0<M` by metis_tac[RPOW_POS_LT] >>
       `((&TBL2N i) :real) < &(TBL2N j + 1)` by fs[REAL_LT_RMUL] >> 
       `((&TBL2N j):real) < &(TBL2N i + 1)` by fs[REAL_LT_RMUL] >> fs[] ) >> 
     wlog_tac `LENGTH i < LENGTH j` [`i`,`j`,`x`] >- (`LENGTH j < LENGTH i` by simp[] >> metis_tac[])>>
@@ -698,46 +701,140 @@ rw[EQ_IMP_THM]
       metis_tac[REAL_ADD_RDISTRIB,REAL_MUL_LID] >> `(0:real)<2` by fs[] >>
     `&TBL2N i * 2 rpow  -&LENGTH i * 2 rpow &LENGTH j < 
      (&TBL2N j +1)  * 2 rpow -&LENGTH j  * 2 rpow &LENGTH j` by 
-       metis_tac[transcTheory.RPOW_POS_LT,REAL_LT_RMUL] >> 
-    fs[GSYM REAL_MUL_ASSOC,GSYM transcTheory.RPOW_ADD,transcTheory.RPOW_0,add_ints] >> rfs[]>>
+       metis_tac[RPOW_POS_LT,REAL_LT_RMUL] >> 
+    fs[GSYM REAL_MUL_ASSOC,GSYM RPOW_ADD,RPOW_0,add_ints] >> rfs[]>>
     `&TBL2N j * 2 rpow -&LENGTH j < &TBL2N i * 2 rpow -&LENGTH i + 2 rpow -&LENGTH i` by 
       metis_tac[REAL_LET_TRANS] >>
     `&TBL2N j * 2 rpow -&LENGTH j < (&TBL2N i +1) * 2 rpow -&LENGTH i` by 
       metis_tac[REAL_ADD_RDISTRIB,REAL_MUL_LID] >> `(0:real)<2` by fs[] >>
     `&TBL2N j * 2 rpow  -&LENGTH j * 2 rpow &LENGTH j < 
      (&TBL2N i +1)  * 2 rpow -&LENGTH i  * 2 rpow &LENGTH j` by 
-       metis_tac[transcTheory.RPOW_POS_LT,REAL_LT_RMUL] >>
-    fs[GSYM REAL_MUL_ASSOC,GSYM transcTheory.RPOW_ADD,transcTheory.RPOW_0,add_ints] >> rfs[] >>
+       metis_tac[RPOW_POS_LT,REAL_LT_RMUL] >>
+    fs[GSYM REAL_MUL_ASSOC,GSYM RPOW_ADD,RPOW_0,add_ints] >> rfs[] >>
     qabbrev_tac`Δ=LENGTH j − LENGTH i` >> qabbrev_tac`ii= TBL2N i` >> 
-    qabbrev_tac`jj= TBL2N j` >> fs[GSYM transcTheory.GEN_RPOW,REAL_OF_NUM_POW] >> 
+    qabbrev_tac`jj= TBL2N j` >> fs[GSYM GEN_RPOW,REAL_OF_NUM_POW] >> 
     fs[disjoint_pf_lem1])
 >- (fs[prefix_free_def,PULL_EXISTS] >>rw[] >>
   strip_tac >>`interval_bl a <> interval_bl b` by 
    (fs[interval_bl_def] >> rw[] >> `LENGTH a < LENGTH b` by simp[prefix_length_lt]>> 
     `real_of_num (LENGTH a) < real_of_num (LENGTH b)` by fs[REAL_LT] >> 
     `-(real_of_num (LENGTH b)) < -(real_of_num(LENGTH a))` by fs[REAL_LT_NEG] >> 
-    `1<(2:real)` by simp[]>>`2 rpow -&LENGTH b < 2 rpow -&LENGTH a` by fs[transcTheory.RPOW_LT]>>
+    `1<(2:real)` by simp[]>>`2 rpow -&LENGTH b < 2 rpow -&LENGTH a` by fs[RPOW_LT]>>
     fs[REAL_LT_IMP_NE])>>
   first_x_assum drule_all >>
   fs[interval_bl_def,disjoint_interval_def] >> rw[DISJOINT_DEF,EXTENSION] >> 
   qexists_tac`&TBL2N b * 2 rpow -&LENGTH b` >> rw[]
-    >- (`0<2 rpow &LENGTH b` by fs[transcTheory.RPOW_POS_LT] >> 
+    >- (`0<2 rpow &LENGTH b` by fs[RPOW_POS_LT] >> 
         drule_then (ONCE_REWRITE_TAC o list_of_singleton o GSYM) REAL_LE_RMUL >> 
-        fs[GSYM REAL_MUL_ASSOC,GSYM transcTheory.RPOW_ADD,transcTheory.RPOW_0,add_ints]>>
+        fs[GSYM REAL_MUL_ASSOC,GSYM RPOW_ADD,RPOW_0,add_ints]>>
         drule_then assume_tac prefix_length_lt >> simp[] >>
-        fs[GSYM transcTheory.GEN_RPOW,REAL_OF_NUM_POW] >> fs[prefix_append,TBL2N_append]  )
-    >- (`0<2 rpow &LENGTH b` by fs[transcTheory.RPOW_POS_LT] >> 
+        fs[GSYM GEN_RPOW,REAL_OF_NUM_POW] >> fs[prefix_append,TBL2N_append]  )
+    >- (`0<2 rpow &LENGTH b` by fs[RPOW_POS_LT] >> 
         drule_then (ONCE_REWRITE_TAC o list_of_singleton o GSYM) REAL_LT_RMUL >>
         drule_then assume_tac prefix_length_lt >>
-        fs[GSYM REAL_MUL_ASSOC,GSYM transcTheory.RPOW_ADD,transcTheory.RPOW_0,add_ints,
-           REAL_ADD_RDISTRIB,GSYM transcTheory.GEN_RPOW,REAL_OF_NUM_POW] >>
+        fs[GSYM REAL_MUL_ASSOC,GSYM RPOW_ADD,RPOW_0,add_ints,
+           REAL_ADD_RDISTRIB,GSYM GEN_RPOW,REAL_OF_NUM_POW] >>
         fs[prefix_append,TBL2N_append] )
-    >- (rw[REAL_LT_ADDR] >> `0<(2:real)` by simp[] >> fs[transcTheory.RPOW_POS_LT]) ))
+    >- (rw[REAL_LT_ADDR] >> `0<(2:real)` by simp[] >> fs[RPOW_POS_LT]) ))
 
-val kraft_ineq = Q.store_thm("kraft_ineq",
-`∀P. prefix_free P <=> SIGMA (λs. Normal (2 rpow -&LENGTH s)) {s | s ∈ P} <= 1`,
+
+val size_of_interval_bl = Q.store_thm("size_of_interval_bl",
+`Normal (SND (interval_bl y))  = Normal (2 rpow -&LENGTH y)`,
+rw[interval_bl_def])
+
+val TBL2N_append_sing_ub = Q.store_thm("TBL2N_append_sing_ub",
+`&(TBL2N (a++[h]) + 1)*2 rpow (-1) <= &(TBL2N a + 1)`,
+`&(2 * TBL2N a + 2) * 2 rpow -1 ≤ &(TBL2N a + 1)` by  
+  (`&(2 * TBL2N a + 2) * 2 rpow -1 = &(2*(TBL2N a + 1)) * 2 rpow -1` by fs[GSYM LEFT_ADD_DISTRIB]>> 
+   `_ = 2 * &(TBL2N a + 1) * 2 rpow -1` by fs[REAL_MUL] >> 
+   `_ = &(TBL2N a + 1)*(2 rpow 1 * 2 rpow -1)`by 
+     fs[AC REAL_MUL_ASSOC REAL_MUL_COMM,RPOW_1]>>
+   `_ = &(TBL2N a + 1) * 2 rpow (1+ -1)` by fs[RPOW_ADD] >>
+   fs[RPOW_0,REAL_ADD_RINV]  ) >>
+Cases_on`h` >> rw[TBL2N_append] >> 
+`&(2 * TBL2N a + 1) * 2 rpow -1 <= &(2 * TBL2N a + 2) * 2 rpow -1` by 
+  (irule REAL_LE_RMUL_IMP >> rw[RPOW_POS_LT,REAL_LE_LT]) >> 
+irule REAL_LE_TRANS >> qexists_tac`&(2 * TBL2N a + 2) * 2 rpow -1` >> rw[] )
+
+val interval_bl_bounds = Q.store_thm("interval_bl_bounds",
+`0<= FST (interval_bl a) ∧ FST (interval_bl a) + SND (interval_bl a) <= 1`,
+rw[] >- (fs[interval_bl_def] >> `(0:real)<= &TBL2N a` by fs[tbl2n_def] >> `(0:real)<2` by simp[] >>
+         `0<2 rpow -&LENGTH a` by fs[RPOW_POS_LT] >> 
+         metis_tac[util_probTheory.REAL_LE_LT_MUL] )
+     >- (fs[interval_bl_def] >>
+         `&TBL2N a * 2 rpow -&LENGTH a + 2 rpow -&LENGTH a = (&TBL2N a +1)* 2 rpow -&LENGTH a` by 
+         fs[REAL_RDISTRIB] >> pop_assum SUBST1_TAC >>  
+         `0<2 rpow &LENGTH a` by fs[RPOW_POS_LT] >> 
+        drule_then (ONCE_REWRITE_TAC o list_of_singleton o GSYM) REAL_LE_RMUL >> 
+        simp[GSYM REAL_MUL_ASSOC,GSYM RPOW_ADD,RPOW_0,GSYM GEN_RPOW,REAL_OF_NUM_POW] >> 
+        (TBL2N_ub |> Q.INST [`l`|->`a`] |> assume_tac) >> simp[]  ) )
+
+val bls_size_def = Define`bls_size (P:bool list -> bool) n = SIGMA (λs. (2 rpow -&LENGTH s)) {x|x ∈ P ∧ LENGTH x < n }`
+
+val finite_bool_list_lt_n = Q.store_thm("finite_bool_list_lt_n",
+`FINITE {(s:bool list) | LENGTH s < n}`,
+Induct_on`n` >> simp[finite_bool_list_n] >> 
+`FINITE {(s:bool list)|LENGTH s = n}` by fs[finite_bool_list_n] >> 
+`FINITE ({(s:bool list) | LENGTH s < n ∨ LENGTH s = n}) ` by simp[FINITE_UNION,GSPEC_OR] >> 
+`{(s:bool list) | LENGTH s < SUC n} = {s | LENGTH s < n ∨ LENGTH s = n}` by rw[EXTENSION] >>fs[])
+
+val finite_and = Q.store_thm("finite_and",
+`FINITE {s| P s} ==> FINITE {s|  Q s ∧ P s}`,
+rw[] >> `{s | Q s ∧ P s} = {s | Q s}  ∩ {s | P s}` by fs[INTER_DEF] >> fs[FINITE_INTER])
+
+val interval_bl_sigma = Q.store_thm("interval_bl_sigma",
+`FINITE  {x | x ∈ P} ==> 
+SIGMA (λa. SND (interval_bl a)) {x | x ∈ P} = SIGMA (λa. 2 rpow -&LENGTH a) {x | x ∈ P} `,
+rw[] >> irule REAL_SUM_IMAGE_EQ >> rw[] >> simp[interval_bl_def])
+
+val disjoint_interval_thm = Q.store_thm("disjoint_interval_thm",
+`disjoint_interval (interval_bl i) (interval_bl j) ==> 
+FST (interval_bl i) + SND (interval_bl i) <= FST (interval_bl j) ∨ 
+FST (interval_bl j) + SND (interval_bl j) <= FST (interval_bl i)`,
+rw[interval_bl_def,disjoint_interval_def,DISJOINT_DEF,EXTENSION] >> 
+Cases_on` &TBL2N i * 2 rpow -&LENGTH i + 2 rpow -&LENGTH i < &TBL2N j * 2 rpow -&LENGTH j` >> simp[]>>
+qmatch_abbrev_tac`jj+jd<ii:real` >> qabbrev_tac`id=2 rpow -&LENGTH i` >> spose_not_then assume_tac >>
+fs[REAL_NOT_LT,REAL_NOT_LE]  >> 
+first_x_assum(fn th => qspec_then`jj` assume_tac th >> qspec_then`ii` assume_tac th) >> fs[] >>
+>- (`id<= 0` by metis_tac[REAL_LE_LADD,REAL_ADD_RID] >> 
+    `0<id` suffices_by metis_tac[REAL_LET_TRANS,REAL_LT_REFL] >> simp[Abbr`id`,RPOW_POS_LT])
+>- (full_simp_tac(srw_ss () ++ realSimps.REAL_ARITH_ss)[])
+>- (`id<=0` by full_simp_tac(srw_ss () ++ realSimps.REAL_ARITH_ss)[])  )
+
+
+(* Take the set of pair and return the bounds of this set  *)
+val exten_def = Define`exten s = ()`
+
+val exten_bound = Q.store_thm("exten_bound",
+`∀s. FINITE s ==> 0<= FST (exten s) ∧ SND (exten s) <= 1`,
+)
+
+val lemma11 = Q.prove("lemma11",
+`∀s. FINITE s ==> (∀x dx y dy. (x,dx)∈s ∧ (y,dy) ∈ s ∧ x<>y ==> x+dx<=y ∨ y+dy<=x) ∧
+              (∀x d. (x,d)∈s ==> 0r<d) ∧ (∀x d. (x,d)∈s ==> 0<= x ∧ x+d <=1) 
+          ==> SIGMA SND s <= 1`,
+Induct_on`FINITE` >> simp[] >> rw[REAL_SUM_IMAGE_THM] >> fs[] >> simp[DELETE_NON_ELEMENT_RWT] >> 
+Cases_on`e` >> fs[] >> `∀x d. (x,d)∈s ==> 0<d` by metis_tac[] >> 
+`∀x d. (x,d)∈s ==> 0<=x` by metis_tac[] >> `SIGMA SND s <= 1` by metis_tac[] >> 
+`0<=q ∧ 0<r` by metis_tac[] >>  )
+
+val lemma1 = Q.prove("lemma1",
+`(let is = IMAGE interval_bl P in ∀i1 i2. i1 ∈ is ∧ i2∈is ∧ i1<>i2 ==> disjoint_interval i1 i2)
+ ==>(∀n. bls_size P n <= 1)`,
+rw[EQ_IMP_THM,PULL_EXISTS] >> fs[bls_size_def] >> Induct_on`n` >> simp[] >> Cases_on`` ) 
+
+
+val kraft_ineq1 = Q.store_thm("kraft_ineq1",
+`∀P. prefix_free P ==> ∃y0. y0<=1 ∧ bls_size P --> y0`,
+(* `∀P. prefix_free P <=> suminf bls_size P <= SOME 1`  *)
 Let L(x) = [x*2**-LENGTH(x) , x*2**-LENGTH(x)+2**-LENGTH(x)] >> L(x) are disjoint cus prefix free >> length of L(x) is 2**-LENGTH(x) >> L(x) subste of [0,1] for all x >> sum <= length [0,1] =1 )
  
+val numl_size_def = Define`numl_size L n = SIGMA (λs. (2 rpow -&s)) {x|x ∈ L ∧ x < n }`
+
+val kraft_ineq_conv = Q.store_thm("kraft_ineq_conv",
+`∀L. (∃y0. y0<=1 ∧ numl_size L --> y0) ==> 
+(∃P. prefix_free P ∧ (∀p. p∈P ==> ∃l. l∈L ∧ LENGTH p = l) ∧ (∀l. l∈L ==> ∃p. p∈P ∧ LENGTH p=l ) )`,
+)
 
 
 (* Have done initial Kolmog stuff *)
