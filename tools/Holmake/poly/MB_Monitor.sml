@@ -39,28 +39,26 @@ fun nextchar #"|" = #"/"
   | nextchar #"\\" = #"|"
   | nextchar c = c
 
-fun stallstr "|" = "!"
-  | stallstr ":" = "|"
-  | stallstr "." = ":"
-  | stallstr "!" = "!!"
-  | stallstr "!!" = "!!!"
-  | stallstr "!!!" = red "!!!"
-  | stallstr s = s
-
 datatype monitor_status = MRunning of char
                         | Stalling of Time.time
-(* statusString is always 3 characters; with a nonspace rightmost *)
+(* statusString is always 3 characters; with a nonspace rightmost, except
+   if it's showing exactly 3 space characters *)
 fun statusString (MRunning c) = StringCvt.padLeft #" " 3 (str c)
   | statusString (Stalling t) =
     let
       val numSecs = Time.toSeconds t
-      val n_s = LargeInt.toString numSecs
+      open LargeInt
+      val n_s = toString numSecs
     in
       if numSecs < 5 then "   "
       else if numSecs < 10 then "  " ^ n_s
       else if numSecs < 30 then " " ^ boldyellow n_s
       else if numSecs < 1000 then red (StringCvt.padLeft #" " 3 n_s)
-      else red "!!!"
+      else if numSecs < 100 * 60 then
+        red (StringCvt.padLeft #" " 2 (toString (numSecs div 60) ^ "m"))
+      else if numSecs <= 4 * 24 * 60 * 60 then
+        red (StringCvt.padLeft #" " 2 (toString (numSecs div 3600) ^ "h"))
+      else red ">4d"
     end
 
 fun rtrunc n s =
@@ -68,16 +66,13 @@ fun rtrunc n s =
     "... " ^ String.substring(s, String.size s - (n - 4), n - 4)
   else StringCvt.padRight #" " n s
 
+fun trashsfxes sfxes s =
+  case List.find (fn sfx => String.isSuffix sfx s) sfxes of
+      NONE => s
+    | SOME sfx => substring(s,0,size s - size sfx)
+
 fun polish0 tag =
-  if String.isSuffix "Theory" tag then
-    String.substring(tag,0,String.size tag - 6)
-  else if String.isSuffix "Theory.sig" tag then
-    String.substring(tag,0,String.size tag - 10)
-  else if String.isSuffix "Theory.sml" tag then
-    String.substring(tag,0,String.size tag - 10)
-  else if String.isSuffix "Theory.dat" tag then
-    String.substring(tag,0,String.size tag - 10)
-  else tag
+  trashsfxes ["Theory", "Theory.sig", "Theory.sml", "Theory.dat"] tag
 
 fun truncate width s =
   if String.size s > width then

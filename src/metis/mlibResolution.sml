@@ -16,8 +16,6 @@ struct
 
 open mlibUseful mlibTerm mlibMeter mlibSolver;
 
-infix |-> ::> @> oo ## ::* ::@;
-
 structure I = Intset; local open Intset in end;
 structure S = mlibStream; local open mlibStream in end;
 
@@ -29,7 +27,7 @@ type distance = mlibSupport.distance;
 (* ------------------------------------------------------------------------- *)
 
 val module = "mlibResolution";
-val () = traces := {module = module, alignment = I} :: !traces;
+val () = add_trace {module = module, alignment = I}
 fun chatting l = tracing {module = module, level = l};
 fun chat s = (trace s; true)
 
@@ -248,7 +246,7 @@ fun resolution_stream slice_ref units_ref =
 
     fun shove res = new_units (!units_ref) res
 
-    fun swipe res = units_ref := units res
+    fun swipe res = units_ref := units res (* OK *)
 
     fun record infs = record_infs (!slice_ref) infs
 

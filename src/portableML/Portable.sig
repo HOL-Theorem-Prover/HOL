@@ -6,6 +6,7 @@ sig
   val apfst : ('a -> 'b) -> 'a * 'c -> 'b * 'c
   val apsnd : ('a -> 'b) -> 'c * 'a -> 'c * 'b
   val $  : ('a -> 'b) * 'a -> 'b
+  val ?  : (bool * ('a -> 'a)) -> 'a -> 'a
   val |> : 'a * ('a -> 'b) -> 'b
   val |>> : ('a * 'b) * ('a -> 'c) -> ('c * 'b)
   val ||> : ('a * 'b) * ('b -> 'c) -> ('a * 'c)
@@ -38,6 +39,10 @@ sig
   val with_exn : ('a -> 'b) -> 'a -> exn -> 'b
 
   val list_of_singleton : 'a -> 'a list
+  val single : 'a -> 'a list (* synonym of list_of_singleton *)
+  val the_single : 'a list -> 'a        (* exn List.Empty if list length <> 1 *)
+  val singleton : ('a list -> 'b list) -> 'a -> 'b
+                (* singleton f x raises exn List.Empty if length (f [x]) <> 1 *)
   val list_of_pair : 'a * 'a -> 'a list
   val list_of_triple : 'a * 'a * 'a -> 'a list
   val list_of_quadruple : 'a * 'a * 'a * 'a -> 'a list
@@ -52,6 +57,7 @@ sig
   val foldl_map : ('a * 'b -> 'a * 'c) -> 'a * 'b list -> 'a * 'c list
   val separate : 'a -> 'a list -> 'a list
   val filter : ('a -> bool) -> 'a list -> 'a list
+  val filter_out : ('a -> bool) -> 'a list -> 'a list
   val partition : ('a -> bool) -> 'a list -> 'a list * 'a list
   val unzip : ('a * 'b) list -> 'a list * 'b list
   val split : ('a * 'b) list -> 'a list * 'b list
@@ -78,6 +84,8 @@ sig
 
   val for : int -> int -> (int -> 'a) -> 'a list
   val for_se : int -> int -> (int -> unit) -> unit
+  val make_counter : {init:int,inc:int} -> unit -> int
+  val syncref : 'a -> {get:unit -> 'a, upd:('a -> 'b * 'a) -> 'b}
 
   val assoc1 : ''a -> (''a * 'b) list -> (''a * 'b) option
   val assoc2 : ''a -> ('b * ''a) list -> ('b * ''a) option
@@ -121,6 +129,7 @@ sig
   val int_to_string : int -> string
   val quote : string -> string
   val mlquote : string -> string
+  val enclose : string -> string -> string -> string (* enclose ld rd mid *)
   val is_substring : string -> string -> bool
   val prime : string -> string
   val commafy : string list -> string list
@@ -229,4 +238,6 @@ sig
     val delay : (unit -> 'a) -> 'a susp
     val force : 'a susp -> 'a
   end
+
+  val reraise : exn -> 'a
 end

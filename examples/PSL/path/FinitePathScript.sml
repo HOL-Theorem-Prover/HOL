@@ -677,22 +677,22 @@ val ADD_SUC_lem =
 in
 
 val FINITE_SEL_REC_SEL_REC = store_thm("FINITE_SEL_REC_SEL_REC",
-    (--`!n1 m1 n2 m2 (l:'a list).
+    (``!n1 m1 n2 m2 (l:'a list).
      (((n1 + m1) <= (LENGTH l)) /\ ((n2 + m2) <= n1)) ==>
-     (SEL_REC n2 m2 (SEL_REC n1 m1 l) = SEL_REC n2 (m1 + m2) l)`--),
+     (SEL_REC n2 m2 (SEL_REC n1 m1 l) = SEL_REC n2 (m1 + m2) l)``),
     REPEAT numLib.INDUCT_TAC THEN INDUCT_THEN list_INDUCT ASSUME_TAC
     THEN REWRITE_TAC[LENGTH,FINITE_SEL_REC,NOT_LESS_0,NOT_SUC_LESS_EQ_0,ADD,ADD_0]
     THENL[
         GEN_TAC THEN REWRITE_TAC[LESS_EQ_MONO,CONS_11]
-        THEN STRIP_TAC THEN SUBST_OCCS_TAC[([3],SYM(SPEC(--`0`--)ADD_0))]
+        THEN STRIP_TAC THEN SUBST_OCCS_TAC[([3],SYM(SPEC(``0``)ADD_0))]
         THEN FIRST_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC[ADD_0],
 
         REWRITE_TAC[LESS_EQ_MONO,ADD_SUC_lem] THEN STRIP_TAC
-        THEN SUBST_OCCS_TAC[([2],SYM(SPEC(--`m2:num`--)(CONJUNCT1 ADD)))]
+        THEN SUBST_OCCS_TAC[([2],SYM(SPEC(``m2:num``)(CONJUNCT1 ADD)))]
         THEN FIRST_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC[ADD_0],
 
         REWRITE_TAC[LESS_EQ_MONO,ADD_SUC_lem] THEN STRIP_TAC
-        THEN SUBST_OCCS_TAC[([2],SYM(SPEC(--`m1:num`--)ADD_0))]
+        THEN SUBST_OCCS_TAC[([2],SYM(SPEC(``m1:num``)ADD_0))]
         THEN FIRST_ASSUM MATCH_MP_TAC
         THEN ASM_REWRITE_TAC[LESS_EQ_MONO,ADD_0],
 
@@ -703,16 +703,16 @@ val FINITE_SEL_REC_SEL_REC = store_thm("FINITE_SEL_REC_SEL_REC",
             ASM_REWRITE_TAC[ADD,LESS_EQ_MONO]]]);
 
 val FINITE_SEL_REC_SUC_CONS = store_thm("FINITE_SEL_REC_SUC_CONS",
-    (--`!m n l (x:'a). (SEL_REC m (SUC n) (CONS x l) = SEL_REC m n l)`--),
+    (``!m n l (x:'a). (SEL_REC m (SUC n) (CONS x l) = SEL_REC m n l)``),
     numLib.INDUCT_TAC THEN REWRITE_TAC[FINITE_SEL_REC]);
 
 val FINITE_SEL_REC_APPEND = store_thm("FINITE_SEL_REC_APPEND",
-    (--`!m (l1:'a list) n l2. (m < LENGTH l1) /\ ((LENGTH l1) <= (n + m)) /\
+    (``!m (l1:'a list) n l2. (m < LENGTH l1) /\ ((LENGTH l1) <= (n + m)) /\
       ((n + m) <= ((LENGTH l1) + (LENGTH l2))) ==>
       (SEL_REC n m (APPEND l1 l2) =
-        APPEND (SEL_REC ((LENGTH l1) - m) m l1) (SEL_REC ((n + m)-(LENGTH l1)) 0 l2))`--),
+        APPEND (SEL_REC ((LENGTH l1) - m) m l1) (SEL_REC ((n + m)-(LENGTH l1)) 0 l2))``),
     numLib.INDUCT_TAC THEN INDUCT_THEN list_INDUCT ASSUME_TAC
-    THEN REPEAT (FILTER_GEN_TAC (--`n:num`--))
+    THEN REPEAT (FILTER_GEN_TAC (``n:num``))
     THEN numLib.INDUCT_TAC THEN INDUCT_THEN list_INDUCT ASSUME_TAC
     THEN REPEAT GEN_TAC
     THEN REWRITE_TAC[LENGTH,FINITE_SEL_REC,NOT_LESS_0,NOT_SUC_LESS_EQ_0,ADD,ADD_0,SUB_0]
@@ -723,7 +723,7 @@ val FINITE_SEL_REC_APPEND = store_thm("FINITE_SEL_REC_APPEND",
         DISCH_THEN (CONJUNCTS_THEN ASSUME_TAC)
         THEN POP_ASSUM (SUBST1_TAC o (MATCH_MP LESS_EQUAL_ANTISYM))
         THEN REWRITE_TAC[FINITE_SEL_REC,APPEND_NIL,SUB_EQUAL_0],
-        STRIP_TAC THEN DISJ_CASES_TAC (SPEC (--`LENGTH (l1:'a list)`--)LESS_0_CASES)
+        STRIP_TAC THEN DISJ_CASES_TAC (SPEC (``LENGTH (l1:'a list)``)LESS_0_CASES)
         THENL[
             POP_ASSUM (ASSUME_TAC o SYM) THEN IMP_RES_TAC LENGTH_NIL
             THEN ASM_REWRITE_TAC[APPEND,FINITE_SEL_REC,SUB_0],

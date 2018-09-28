@@ -13,15 +13,16 @@ struct
 
   type kernelid = (kernelname * bool) ref (* bool is uptodate flag *)
 
-  fun name_of_id (ref (n,utd)) = n
-  fun uptodate_id (ref (n,utd)) = utd
+  fun name_of_id r = case !r of (n,utd) => n
+  fun uptodate_id r = case !r of (n,utd) => utd
   fun new_id n = ref (n, true)
-  fun retire_id (r as ref ({Thy,Name}, _)) =
+  fun retire_id r = case !r of ({Thy,Name}, _) =>
       r := ({Thy = Thy, Name = Globals.old Name}, false)
-  fun name_of (ref ({Name,Thy},_)) = Name
-  fun seg_of (ref ({Thy,Name},_)) = Thy
+  fun name_of r = case !r of  ({Name,Thy},_) => Name
+  fun seg_of r = case !r of ({Thy,Name},_) => Thy
   fun id_toString id = name_toString (name_of_id id)
-  fun id_compare(i1 as ref (n1,_), i2 as ref (n2,_)) =
+  fun id_compare(i1, i2) =
+    case (!i1, !i2) of ((n1,_), (n2,_)) =>
       if i1 = i2 then EQUAL else name_compare(n1,n2)
 
 
@@ -29,28 +30,28 @@ struct
   exception NotFound
 
   fun new_table() = ref (Binarymap.mkDict name_compare)
-  fun find(ref tab,n) = Binarymap.find(tab,n)
+  fun find(tab,n) = Binarymap.find(!tab,n)
       handle Binarymap.NotFound => raise NotFound
-  fun peek(ref tab,n) = Binarymap.peek(tab,n)
-  fun remove(r as ref tab,n) = let
-    val (tab', (id,v)) = Binarymap.remove(tab,n)
+  fun peek(tab,n) = Binarymap.peek(!tab,n)
+  fun remove(r, n) = let
+    val (tab', (id,v)) = Binarymap.remove(!r,n)
   in
     r := tab';
     SOME (id,v)
   end handle Binarymap.NotFound => NONE
 
-  fun numItems (ref tab) = Binarymap.numItems tab
+  fun numItems r = Binarymap.numItems (!r)
 
-  fun app f (ref tab) = Binarymap.app f tab
+  fun app f r = Binarymap.app f (!r)
 
-  fun foldl f acc (ref tab) = Binarymap.foldl f acc tab
+  fun foldl f acc r = Binarymap.foldl f acc (!r)
 
-  fun retire_name (r as ref tab, n) =
+  fun retire_name (r, n) =
       case remove(r, n) of
         NONE => raise NotFound
       | SOME (kid, v) => retire_id kid
 
-  fun insert(r as ref tab,n,v) = let
+  fun insert(r,n,v) = let
     val id = new_id n
   in
     retire_name(r,n) handle NotFound => ();
@@ -59,13 +60,13 @@ struct
   end
 
 
-  fun uptodate_name (r as ref tab, n) = let
+  fun uptodate_name (r, n) = let
     val (kid, _) = find(r, n)
   in
     uptodate_id kid
   end
 
-  fun listItems (ref tab) = Binarymap.listItems tab
+  fun listItems r = Binarymap.listItems (!r)
   fun listThy tab thy = let
     fun foldthis ({Thy,Name},(kid,v),acc) =
         if Thy = thy then ({Thy = Thy,Name = Name},(kid,v)) :: acc
@@ -82,7 +83,7 @@ struct
     foldl foldthis [] tab
   end
 
-  fun del_segment (r as ref tab, thyname) = let
+  fun del_segment (r, thyname) = let
     fun appthis (knm as {Name,Thy},(id,v)) =
         if Thy = thyname then retire_name(r,knm)
         else ()

@@ -980,13 +980,13 @@ fun work ptree k = toplevel ptree EXACT k
    fun sattest i timelimit numcsts numvars = if i <= 0 then ()
                        else let
                            val t = gen_test numcsts numvars
-                           val _ = current_goal := t
+                           val _ = current_goal := t (* OK *)
                            val ctimer = Timer.startCPUTimer()
                            val result = test t
                            val timetaken = Timer.checkCPUTimer ctimer
                            val _ = if Time.>(#usr timetaken,
                                              Time.fromSeconds timelimit) then
-                                     slow_goals := t :: (!slow_goals)
+                                     slow_goals := t :: (!slow_goals) (* OK *)
                                    else ()
                          in
                            case result of

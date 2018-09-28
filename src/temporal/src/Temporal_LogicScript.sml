@@ -891,7 +891,7 @@ val ALWAYS_AS_BEFORE = TAC_PROOF(
         val thm4 = SPEC_ALL(BETA_RULE thm3)
      in
         CONV_TAC(X_FUN_EQ_CONV“t0:num”) THEN GEN_TAC
-        THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b) = (~a=~b)”),PROP_TAC)]
+        THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b) = (~a= ~b)”),PROP_TAC)]
         THEN REWRITE_TAC[SYM thm4,ALWAYS,EVENTUAL] THEN BETA_TAC
         THEN CONV_TAC(DEPTH_CONV NOT_FORALL_CONV)
         THEN REWRITE_TAC[]
@@ -1262,7 +1262,7 @@ val SBEFORE_AS_SUNTIL = TAC_PROOF(
 val EVENTUAL_AS_SBEFORE = TAC_PROOF(
         ([],“EVENTUAL b = (b SBEFORE (\t.F))”),
         CONV_TAC(X_FUN_EQ_CONV“t0:num”) THEN BETA_TAC THEN GEN_TAC
-        THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b) = (~a=~b)”),PROP_TAC)]
+        THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b) = (~a= ~b)”),PROP_TAC)]
         THEN REWRITE_TAC[SBEFORE_AS_UNTIL] THEN BETA_TAC
         THEN REWRITE_TAC[SYM ALWAYS_AS_UNTIL]
         THEN REWRITE_TAC[ALWAYS,EVENTUAL] THEN BETA_TAC
@@ -1273,7 +1273,7 @@ val EVENTUAL_AS_SBEFORE = TAC_PROOF(
 val ALWAYS_AS_SBEFORE = TAC_PROOF(
         ([],“ALWAYS b = \t0. ~((\t.~b t) SBEFORE(\t.F)) t0”),
         CONV_TAC(X_FUN_EQ_CONV“t0:num”) THEN GEN_TAC THEN BETA_TAC
-        THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b) = (~a=~b)”),PROP_TAC)]
+        THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b) = (~a= ~b)”),PROP_TAC)]
         THEN REWRITE_TAC[SBEFORE_AS_UNTIL] THEN BETA_TAC
         THEN REWRITE_TAC[SYM ALWAYS_AS_UNTIL]
         THEN CONV_TAC(DEPTH_CONV ETA_CONV)
@@ -1284,7 +1284,7 @@ val ALWAYS_AS_SBEFORE = TAC_PROOF(
 val WHEN_AS_SBEFORE = TAC_PROOF(
         ([],“(a WHEN b) = \t0. (b SBEFORE (\t. ~a t /\ b t)) t0 \/ ALWAYS(\t. ~b t) t0”),
         CONV_TAC(X_FUN_EQ_CONV“t0:num”) THEN GEN_TAC THEN BETA_TAC
-        THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b) = (~a=~b)”),PROP_TAC)]
+        THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b) = (~a= ~b)”),PROP_TAC)]
         THEN ASSUME_TAC (REWRITE_RULE[](BETA_RULE
                         (SPEC“\t:num.~a t”(GEN“a:num->bool”SWHEN_AS_NOT_WHEN))))
         THEN UNDISCH_HD_TAC THEN CONV_TAC(DEPTH_CONV ETA_CONV)
@@ -1318,7 +1318,7 @@ val WHEN_AS_SBEFORE = TAC_PROOF(
 val UNTIL_AS_SBEFORE = TAC_PROOF(
         ([],“a UNTIL b = \t0.~((\t.~a t) SBEFORE b) t0”),
         CONV_TAC(X_FUN_EQ_CONV“t0:num”) THEN GEN_TAC THEN BETA_TAC
-        THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b) = (~a=~b)”),PROP_TAC)]
+        THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b) = (~a= ~b)”),PROP_TAC)]
         THEN ASSUME_TAC (REWRITE_RULE[](BETA_RULE
                         (SPEC“\t:num.~a t”(GEN“a:num->bool”SBEFORE_AS_UNTIL))))
         THEN POP_ASSUM REWRITE1_TAC
@@ -1503,7 +1503,7 @@ val EVENTUAL_ALWAYS_THM = TAC_PROOF(
 
 val EVENTUAL_REC = TAC_PROOF(
         ([],“EVENTUAL P t0 = (P t0 \/ NEXT (EVENTUAL P) t0)”),
-        PURE_ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b) = (~a=~b)”),
+        PURE_ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b) = (~a= ~b)”),
                                 BOOL_CASES_TAC “a:bool” THEN REWRITE_TAC[])]
         THEN REWRITE_TAC[DE_MORGAN_THM,EVENTUAL_ALWAYS_THM]
         THEN BETA_TAC
@@ -2121,7 +2121,7 @@ val EVENTUAL_FIX = TAC_PROOF(
         val th2 = BETA_RULE(CONV_RULE(DEPTH_CONV FUN_EQ_CONV) th1)
      in
         CONV_TAC(DEPTH_CONV FUN_EQ_CONV) THEN BETA_TAC
-        THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“(y (n:num)=b) = (~y n =~b)”),PROP_TAC)]
+        THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“(y (n:num)=b) = (~y n = ~b)”),PROP_TAC)]
         THEN REWRITE_TAC[DE_MORGAN_THM,
                 TAC_PROOF(([],“EVENTUAL a = \t.~ALWAYS (\t.~a t) t”),
                         CONV_TAC FUN_EQ_CONV THEN REWRITE_TAC[ALWAYS,EVENTUAL]
@@ -2407,7 +2407,7 @@ val NOT_SWHEN =
         val thm1 = BETA_RULE(SPEC“\t:num.~a t”(GEN“a:num->bool”NOT_WHEN))
         val thm2 = SYM(REWRITE_RULE[]thm1)
         val thm3 = (CONV_RULE(DEPTH_CONV ETA_CONV)) thm2
-        val thm4 = ONCE_REWRITE_RULE[TAC_PROOF(([],“(a=~b) = (~a=b)”),PROP_TAC)]thm3
+        val thm4 = ONCE_REWRITE_RULE[TAC_PROOF(([],“(a= ~b) = (~a=b)”),PROP_TAC)]thm3
      in thm4
     end
 
@@ -2586,7 +2586,7 @@ val SUNTIL_IDEM = TAC_PROOF(
 val BEFORE_IDEM = TAC_PROOF(
         ([],“(a BEFORE b) = ((a BEFORE b) BEFORE b)”),
         CONV_TAC(X_FUN_EQ_CONV“t0:num”) THEN BETA_TAC THEN GEN_TAC
-        THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b) = (~a=~b)”),PROP_TAC)]
+        THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b) = (~a= ~b)”),PROP_TAC)]
         THEN REWRITE_TAC[NOT_BEFORE]
         THEN CONV_TAC(DEPTH_CONV ETA_CONV)
         THEN REWRITE_TAC[SYM SUNTIL_IDEM])
@@ -2596,7 +2596,7 @@ val BEFORE_IDEM = TAC_PROOF(
 val SBEFORE_IDEM = TAC_PROOF(
         ([],“(a SBEFORE b) = ((a SBEFORE b) SBEFORE b)”),
         CONV_TAC(X_FUN_EQ_CONV“t0:num”) THEN BETA_TAC THEN GEN_TAC
-        THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b) = (~a=~b)”),PROP_TAC)]
+        THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b) = (~a= ~b)”),PROP_TAC)]
         THEN REWRITE_TAC[NOT_SBEFORE]
         THEN CONV_TAC(DEPTH_CONV ETA_CONV)
         THEN REWRITE_TAC[SYM UNTIL_IDEM])
@@ -2730,7 +2730,7 @@ val SBEFORE_LINORD = TAC_PROOF(
 
 val UNTIL_LINORD = TAC_PROOF(
         ([],“(a UNTIL b) t0 = !t1. (t0<=t1) /\ ~b t1 /\ UPTO(t0,t1,(\t.~b t)) ==> a t1”),
-        ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b) = (~a=~b)”),PROP_TAC)]
+        ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b) = (~a= ~b)”),PROP_TAC)]
         THEN REWRITE_TAC[NOT_UNTIL,SBEFORE_LINORD]
         THEN BETA_TAC THEN CONV_TAC(DEPTH_CONV NOT_FORALL_CONV)
         THEN REWRITE_TAC[TAC_PROOF(([],“~(a==>b) = (a/\~b)”),PROP_TAC)]
@@ -2746,7 +2746,7 @@ val UNTIL_LINORD = TAC_PROOF(
 
 val WHEN_LINORD = TAC_PROOF(
         ([],“(a WHEN b) t0 = !t1. (t0<=t1) /\ b t1 /\ UPTO(t0,t1,(\t.~b t)) ==> a t1”),
-        ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b) = (~a=~b)”),PROP_TAC)]
+        ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b) = (~a= ~b)”),PROP_TAC)]
         THEN REWRITE_TAC[NOT_WHEN,SWHEN_LINORD]
         THEN BETA_TAC THEN CONV_TAC(DEPTH_CONV NOT_FORALL_CONV)
         THEN REWRITE_TAC[TAC_PROOF(([],“~(a==>b) = (a/\~b)”),PROP_TAC)]
@@ -2762,7 +2762,7 @@ val WHEN_LINORD = TAC_PROOF(
 
 val BEFORE_LINORD = TAC_PROOF(
         ([],“(a BEFORE b) t0 = !t1. (t0<=t1) /\ UPTO(t0,t1,(\t.~a t)) ==> ~b t1”),
-        ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b) = (~a=~b)”),PROP_TAC)]
+        ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b) = (~a= ~b)”),PROP_TAC)]
         THEN REWRITE_TAC[NOT_BEFORE,SUNTIL_LINORD]
         THEN BETA_TAC THEN CONV_TAC(DEPTH_CONV NOT_FORALL_CONV)
         THEN REWRITE_TAC[TAC_PROOF(([],“~(a==>b) = (a/\~b)”),PROP_TAC)]

@@ -571,7 +571,7 @@ val DISJ_FG = TAC_PROOF(
                          (!t. q(t+(t0+1)) = (if q(t+t0) then b(t+t0) else ~a(t+t0))) /\
                          ?t1.!t2. ~q(t1+(t2+t0)) \/ b(t1+(t2+t0)))”),
         REPEAT GEN_TAC
-        THEN PURE_ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b)=(~a=~b)”),PROP_TAC)]
+        THEN PURE_ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b)=(~a= ~b)”),PROP_TAC)]
         THEN PURE_REWRITE_TAC[DE_MORGAN_THM]
         THEN CONV_TAC(REPEATC(CHANGED_CONV(DEPTH_CONV
                         (NOT_EXISTS_CONV ORELSEC NOT_FORALL_CONV))))
@@ -645,7 +645,7 @@ val DISJ_GF = TAC_PROOF(
                   (!t1.?t2.a(t1+(t2+t0))) \/ (!t1.?t2.b(t1+(t2+t0)))
                 = !t1.?t2. a(t1+(t2+t0)) \/ b(t1+(t2+t0))”),
         REPEAT GEN_TAC
-        THEN PURE_ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b)=(~a=~b)”),PROP_TAC)]
+        THEN PURE_ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b)=(~a= ~b)”),PROP_TAC)]
         THEN PURE_REWRITE_TAC[DE_MORGAN_THM]
         THEN CONV_TAC(REPEATC(CHANGED_CONV(DEPTH_CONV
                         (NOT_EXISTS_CONV ORELSEC NOT_FORALL_CONV))))
@@ -4711,7 +4711,7 @@ val FORALL_EXISTS_THM = TAC_PROOF(
 val EXISTS_FORALL_THM = TAC_PROOF(
         ([],“!P.(?t1.!t2. P(t1+t2)) = (?t1.!t2. t1<t2 ==> P t2)”),
         GEN_TAC
-        THEN PURE_ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b)=(~a=~b)”),PROP_TAC)]
+        THEN PURE_ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b)=(~a= ~b)”),PROP_TAC)]
         THEN CONV_TAC(REPEATC(CHANGED_CONV(DEPTH_CONV
                         (NOT_EXISTS_CONV ORELSEC NOT_FORALL_CONV))))
         THEN SUBST1_TAC(BETA_RULE(SPEC“\t:num. ~P t”FORALL_EXISTS_THM))
@@ -4755,7 +4755,7 @@ val ELGOT1_THM = TAC_PROOF(
 val ELGOT2_THM = TAC_PROOF(
         ([],“!PHI. (!x:'a.?p:'a->bool. PHI p x)
                         = (!q:'a->bool.?p.?x.!z. q z ==> PHI p x /\ q x)”),
-        GEN_TAC THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“ (a=b) = (~a=~b)”),PROP_TAC)]
+        GEN_TAC THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“ (a=b) = (~a= ~b)”),PROP_TAC)]
         THEN CONV_TAC(REPEATC(CHANGED_CONV(DEPTH_CONV
                         (NOT_FORALL_CONV ORELSEC NOT_EXISTS_CONV))))
         THEN SUBST1_TAC(BETA_RULE(SPEC“\(p:'a->bool) (x:'a).~PHI p x”ELGOT1_THM))

@@ -34,8 +34,9 @@ type varmap = varnode ref;
 fun meta_map ty =
   let val mevm = vm_ty ty mevm
       val mnvm = vm_ty ty mnvm
-      fun meta_rec (ref Lf) = mevm
-        | meta_rec (ref (Nd(t,v1,v2))) =
+      fun meta_rec r = case !r of
+          Lf => mevm
+        | (Nd(t,v1,v2)) =>
             mk_comb3(mnvm,t,meta_rec v1, meta_rec v2)
   in meta_rec
   end

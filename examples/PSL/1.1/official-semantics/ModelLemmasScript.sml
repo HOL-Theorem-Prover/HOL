@@ -61,6 +61,9 @@ val _ = intLib.deprecate_int();
 ******************************************************************************)
 val _ = new_theory "ModelLemmas";
 
+val Know = Q_TAC KNOW_TAC;
+val Suff = Q_TAC SUFF_TAC;
+
 (*****************************************************************************)
 (* A simpset fragment to rewrite away quantifiers restricted with :: LESS    *)
 (*****************************************************************************)
@@ -551,7 +554,7 @@ val COMPUTATION_OPEN_MODEL_AUTOMATON =
                then FULL_SIMP_TAC list_ss [GSYM(MATCH_MP LENGTH1_LAST (el 1 thl))]
                else ALL_TAC)
       THEN TRY(ASSUM_LIST(fn thl => ASSUME_TAC(Q.SPEC `(P,s)` (el 2 thl))))
-      THEN METIS_TAC[SUBSET_REFL,FST,SND,LENGTH_LAST]);
+      THEN METIS_TAC[SUBSET_REFL,FST,SND,LENGTH_LAST,LENGTH1_LAST,EL]);
 
 val UF_VALID_OPEN_MODEL_AUTOMATON =
  store_thm
@@ -657,7 +660,8 @@ val LEMMA2 =
           [LENGTH_def,ELEM_FINITE,ELEM_INFINITE,LE,LS,SUB,GSYM EL,
            DECIDE ``~A \/ ~B \/ C = A /\ B ==> C``]
     THENL
-     [`!m. m < LENGTH l ==> (FST(EL m l) = FST(EL 0 l) + m)` by Induct
+     [ Know `!m. m < LENGTH l ==> (FST(EL m l) = FST(EL 0 l) + m)`
+       >- ( Induct >> fs [] ) >> DISCH_TAC
        THEN RW_TAC arith_ss []
        THEN Cases_on `LENGTH l <= 1`
        THEN RW_TAC arith_ss []
@@ -671,7 +675,7 @@ val LEMMA2 =
       RW_TAC std_ss [DECIDE``~A \/ B = A ==> B``]
        THEN CCONTR_TAC
        THEN FULL_SIMP_TAC std_ss []
-       THEN `!m. FST(f m) = FST(f 0) + m` by Induct
+       THEN Know `!m. FST(f m) = FST(f 0) + m` >- (Induct >> fs []) >> DISCH_TAC
        THEN RW_TAC arith_ss []
        THEN POP_ASSUM(ASSUME_TAC o AP_TERM ``SUC`` o Q.SPEC `LENGTH l`)
        THEN `SUC (FST (f (LENGTH l))) < LENGTH l` by PROVE_TAC[]
@@ -970,7 +974,7 @@ val FINITE_PATH_LANGUAGE_LEMMA =
            PATH_ADD_IOTA_def,CONS_def]
     THEN RW_TAC (srw_ss()) []
     THEN EQ_TAC
-    THEN RW_TAC list_ss []
+    THEN RW_TAC list_ss [] (* 9 subgoals *)
     THENL
      [Cases_on `n`
        THEN RW_TAC list_ss []
@@ -1051,7 +1055,9 @@ val FINITE_PATH_LANGUAGE_LEMMA =
       Cases_on `LENGTH l = 0`
        THEN RW_TAC list_ss []
        THEN FULL_SIMP_TAC list_ss []
-       THEN `LENGTH l - 1 < LENGTH l` by DECIDE_TAC
+       THEN Know `LENGTH l - 1 < LENGTH l`
+            >- (Suff `LENGTH l <> 0` >- DECIDE_TAC \\
+                METIS_TAC [LENGTH_EQ_NUM]) >> DISCH_TAC
        THEN RES_TAC
        THENL
         [`!a s.
@@ -1474,7 +1480,7 @@ val OPEN_MODEL_PROD_INFINITE =
      THEN ASSUM_LIST
            (fn thl => ASSUME_TAC
                        (SPECL
-                         [``INFINITE(\n. (pi(FST(pi' n)), t''' n)):(('a -> bool) # 'b) path``,
+                         [``INFINITE(\n. (pi(FST((pi' :num -> num # 'b) n)), t''' n)):(('a -> bool) # 'b) path``,
                           ``(pi:num -> 'a -> bool 0,t):('a -> bool) # 'b``]
                          (el 9 thl)))
      THEN `PATH

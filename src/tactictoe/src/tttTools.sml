@@ -63,6 +63,12 @@ fun rmDir_err dir =
 
 fun rmDir_rec dir = ignore (OS.Process.system ("rm -r " ^ dir))
 
+fun cleanDir_rec dir =
+  (
+  rmDir_rec dir;
+  mkDir_err dir
+  )
+
 fun all_files dir =
   let
     val stream = OS.FileSys.openDir dir
@@ -109,7 +115,10 @@ val dlist      = Redblackmap.listItems
 val dlength    = Redblackmap.numItems
 val dapp       = Redblackmap.app
 val dmap       = Redblackmap.map
+val dfoldl     = Redblackmap.foldl
 fun dkeys d    = map fst (dlist d)
+
+fun inv_dict cmp d = dnew cmp (map (fn (a,b) => (b,a)) (dlist d))
 
 (* --------------------------------------------------------------------------
    References
@@ -144,6 +153,13 @@ fun is_reserved s =
 (* --------------------------------------------------------------------------
    List
    -------------------------------------------------------------------------- *)
+
+fun map_snd f l   = map (fn (a,b) => (a, f b)) l
+fun map_fst f l   = map (fn (a,b) => (f a, b)) l
+fun map_assoc f l = map (fn a => (a, f a)) l
+
+fun cartesian_product l1 l2 = 
+  List.concat (map (fn x => map (fn y => (x,y)) l2) l1)
 
 fun findSome f l = case l of
     [] => NONE
@@ -261,6 +277,18 @@ fun sum_int l = case l of [] => 0 | a :: m => a + sum_int m
 
 fun average_real l = sum_real l / Real.fromInt (length l)
 
+fun int_div n1 n2 = 
+   (if n2 = 0 then 0.0 else Real.fromInt n1 / Real.fromInt n2) 
+
+fun pow (x:real) (n:int) =
+  if n <= 0 then 1.0 else x * (pow x (n-1))
+
+fun approx n r = 
+  let val mult = pow 10.0 n in
+    Real.fromInt (Real.round (r * mult)) / mult 
+  end
+
+
 (* --------------------------------------------------------------------------
    Terms
    -------------------------------------------------------------------------- *)
@@ -312,6 +340,9 @@ fun string_of_bool b = if b then "T" else "F"
 (* --------------------------------------------------------------------------
    Comparisons
    -------------------------------------------------------------------------- *)
+
+fun compare_imax ((_,r2),(_,r1)) = Int.compare (r1,r2)
+fun compare_imin ((_,r1),(_,r2)) = Int.compare (r1,r2)
 
 fun compare_rmax ((_,r2),(_,r1)) = Real.compare (r1,r2)
 fun compare_rmin ((_,r1),(_,r2)) = Real.compare (r1,r2)
@@ -705,20 +736,33 @@ fun only_concl x =
    Parallelism
   ----------------------------------------------------------------------------*)
 
+datatype 'a result = Res of 'a | Exn of exn;
+
+fun capture f x = Res (f x) handle e => Exn e
+
+fun release (Res y) = y
+  | release (Exn x) = raise x
+
+fun is_res (Res y) = true
+  | is_res (Exn x) = false
+
+fun is_exn (Res y) = false
+  | is_exn (Exn x) = true
+
 fun interruptkill worker =
-   if Thread.Thread.isActive worker
-   then 
+   if Thread.isActive worker
+   then
      (
-     Thread.Thread.interrupt worker handle Thread.Thread _ => ();
-     if Thread.Thread.isActive worker
-       then Thread.Thread.kill worker
+     Thread.interrupt worker handle Thread _ => ();
+     if Thread.isActive worker
+       then Thread.kill worker
        else ()
      )
    else ()
 
 fun compare_imin (a,b) = Int.compare (snd a, snd b)
 
-fun par_map ncores forg lorg =
+fun parmap_err ncores forg lorg =
   let
     (* input *)
     val sizeorg = length lorg
@@ -747,7 +791,7 @@ fun par_map ncores forg lorg =
           let 
             val oldl = dfind pi dout
             val oldn = dfind pi dcount
-            val y = forg x 
+            val y = capture forg x 
           in
             oldl := (y,xi) :: (!oldl);
             incr oldn;
@@ -755,10 +799,10 @@ fun par_map ncores forg lorg =
             process pi
           end
       end
-    fun fork_on pi = Thread.Thread.fork (fn () => process pi, [])
+    fun fork_on pi = Thread.fork (fn () => process pi, [])
     val threadl = map fork_on (List.tabulate (ncores,I))
     fun loop () =
-      (      
+      (
       dispatcher ();
       if null (!queue) andalso sum_int (map (! o snd) lcount) >= sizeorg
       then app interruptkill threadl
@@ -769,7 +813,9 @@ fun par_map ncores forg lorg =
     map fst (dict_sort compare_imin (List.concat (map (! o snd) lout)))
   end
 
-fun par_app ncores forg lorg =
-  ignore (par_map ncores forg lorg)
+fun parmap ncores f l = 
+  map release (parmap_err ncores f l)
+
+fun parapp ncores f l = ignore (parmap ncores f l)
 
 end (* struct *)

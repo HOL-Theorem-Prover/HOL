@@ -43,4 +43,4 @@ EVALUATION of a theory (after RECORDING):
 
 NOTES FOR DEVELOPERS:
   Keep up-to-date: infix tokens in hhsInfix.sml, polyml values in hhsUnfold.sml.
-  Issue: Arith.clean cache.
+  Issue: 1) Arith.clean cache 2) Logging directories missing causes error when fast recording.

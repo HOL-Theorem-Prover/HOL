@@ -298,6 +298,9 @@ val _ = TeX_notation { hol = "nu",
 		       TeX = ("\\ensuremath{\\nu}", 1) };
 
 val _ = overload_on ("+", ``sum``); (* priority: 500 *)
+val _ = TeX_notation { hol = "+",
+		       TeX = ("\\ensuremath{+}", 1) };
+
 val _ = set_mapped_fixity { fixity = Infix(LEFT, 600), tok = "||", term_name = "par" };
 val _ = TeX_notation { hol = "||",
 		       TeX = ("\\ensuremath{\\parallel}", 1) };
@@ -376,7 +379,11 @@ val _ = type_abbrev ("transition",
 		    ``:('a, 'b) CCS -> 'b Action -> ('a, 'b) CCS -> bool``);
 
 (* Inductive definition of the transition relation TRANS for CCS.
-   TRANS: CCS -> Action -> CCS -> bool *)
+   TRANS: CCS -> Action -> CCS -> bool
+
+   NOTE: noticed that, the theorem TRANS_ind is never needed, thus even we define
+   TRANS co-inductively (i.e. by Hol_coreln), the whole formalization still works.
+ *)
 val (TRANS_rules, TRANS_ind, TRANS_cases) = Hol_reln `
     (!E u.                           TRANS (prefix u E) u E) /\		(* PREFIX *)
     (!E u E1 E'.    TRANS E u E1 ==> TRANS (sum E E') u E1) /\		(* SUM1 *)
@@ -428,16 +435,17 @@ val NIL_NO_TRANS_EQF = save_thm (
  *)
 val TRANS_IMP_NO_NIL = store_thm ("TRANS_IMP_NO_NIL",
   ``!E u E'. TRANS E u E' ==> ~(E = nil)``,
-    HO_MATCH_MP_TAC TRANS_ind
- >> REWRITE_TAC [CCS_distinct']);
-
-(* Above theorem can be proved without using TRANS_ind *)
-val TRANS_IMP_NO_NIL' = store_thm ("TRANS_IMP_NO_NIL'",
-  ``!E u E'. TRANS E u E' ==> ~(E = nil)``,
     rpt GEN_TAC
  >> ONCE_REWRITE_TAC [TRANS_cases]
  >> rpt STRIP_TAC
  >> PROVE_TAC [CCS_distinct']);
+
+(* Above proof could be easier using TRANS_ind for the only time in this project
+val TRANS_IMP_NO_NIL' = store_thm ("TRANS_IMP_NO_NIL'",
+  ``!E u E'. TRANS E u E' ==> ~(E = nil)``,
+    HO_MATCH_MP_TAC TRANS_ind
+ >> REWRITE_TAC [CCS_distinct']);
+ *)
 
 (* An agent variable has no transitions.
    |- !X u E'. ~TRANS (var X) u E'
@@ -835,7 +843,7 @@ val IS_PROC_def = Define `
     IS_PROC E = (FV E = EMPTY)`;
 
 val ALL_PROC_def = Define `
-    ALL_PROC Es = EVERY IS_PROC Es`;
+    ALL_PROC ES = EVERY IS_PROC ES`;
 
 (* The use of finite_mapTheory (to get rid of substitution orders) is
    suggested by Konrad Slind. *)
@@ -855,7 +863,7 @@ val CCS_Subst1_def = Define `
 
 (* :('a, 'b) CCS list -> ('a |-> ('a, 'b) CCS) -> ('a, 'b) CCS list *)
 val CCS_Subst2_def = Define `
-    CCS_Subst2 Es fm = MAP (\e. CCS_Subst1 e fm) Es`;
+    CCS_Subst2 ES fm = MAP (\e. CCS_Subst1 e fm) ES`;
 
 val DELETE_ELEMENT_def = Define `
    (DELETE_ELEMENT e [] = []) /\
@@ -969,9 +977,10 @@ val BN_definition = `
  *)
 local
     val tactic = (* the use of `($< LEX $<)` is learnt from Ramana Kumar *)
-	WF_REL_TAC `inv_image ($< LEX $<) (\x. (LENGTH (SND x), size (FST x)))` \\
-	rpt STRIP_TAC >- ( IMP_RES_TAC LENGTH_DELETE_ELEMENT_LE >> art [] ) \\
-	REWRITE_TAC [size_def, CCS_size_def] >> simp [];
+	WF_REL_TAC `inv_image ($< LEX $<) (\x. (LENGTH (SND x), size (FST x)))`
+     >> rpt STRIP_TAC >- ( IMP_RES_TAC LENGTH_DELETE_ELEMENT_LE >> art [] )
+     >> REWRITE_TAC [size_def, CCS_size_def]
+     >> simp [];
 in
     val FN_def = TotalDefn.tDefine "FN" FN_definition tactic;
     val BN_def = TotalDefn.tDefine "BN" BN_definition tactic;

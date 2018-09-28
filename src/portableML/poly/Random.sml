@@ -35,10 +35,16 @@ fun newgen () =
       newgenseed (Real.fromLargeInt sec + Real.fromLargeInt usec)
    end
 
-fun random {seedref as ref seed} = (seedref := nextrand seed; seed / m)
+fun random {seedref} =
+  let
+    val seed = !seedref
+  in
+    (seedref := nextrand seed; seed / m)
+  end
 
-fun randomlist (n, {seedref as ref seed0}) =
+fun randomlist (n, {seedref}) =
    let
+      val seed0 = !seedref
       fun h 0 seed res = (seedref := seed; res)
         | h i seed res = h (i - 1) (nextrand seed) (seed / m :: res)
    in
@@ -48,21 +54,25 @@ fun randomlist (n, {seedref as ref seed0}) =
 fun range (min, max) =
    if min > max
       then raise Fail "Random.range: empty range"
-   else fn {seedref as ref seed} =>
+   else fn {seedref} =>
+         let
+            val seed = !seedref
+         in
            (seedref := nextrand seed
             ; min + floor (real (max - min) * seed / m))
+         end
 
 fun rangelist (min, max) =
    if min > max
       then raise Fail "Random.rangelist: empty range"
-   else fn (n, {seedref as ref seed0}) =>
+   else fn (n, {seedref}) =>
            let
               fun h 0 seed res = (seedref := seed; res)
                 | h i seed res =
                     h (i - 1) (nextrand seed)
                       (min + floor (real (max - min) * seed / m) :: res)
            in
-              h n seed0 []
+              h n (!seedref) []
            end
 
 end

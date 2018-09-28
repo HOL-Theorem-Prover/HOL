@@ -14,8 +14,6 @@ struct
 
 open mlibUseful mlibTerm mlibMatch mlibThm mlibMeter;
 
-infix |-> ::> @> oo ##;
-
 structure S = mlibStream; local open mlibStream in end;
 structure U = mlibUnits; local open mlibUnits in end;
 
@@ -30,7 +28,7 @@ val op ::> = mlibSubst.::>;
 (* ------------------------------------------------------------------------- *)
 
 val module = "mlibSolver";
-val () = traces := {module = module, alignment = I} :: !traces;
+val () = add_trace {module = module, alignment = I}
 fun chatting l = tracing {module = module, level = l};
 fun chat s = (trace s; true)
 
@@ -262,7 +260,7 @@ fun combine_solvers n csolvers {slice, units, thms, hyps} =
     val cnodes = map (I ## f) csolvers
     fun check () = check_meter (!slice)
     fun slce cost =
-      meter := sub_meter (!slice)
+      meter := sub_meter (!slice) (* OK *)
       (case cost of Time x => {time = SOME (!SLICE * x), infs = NONE}
        | Infs x => {time = NONE, infs = SOME (Real.round (!SLICE * x))})
     fun read () = read_meter (!meter)
@@ -336,7 +334,7 @@ fun initialize (mlibSolver_node {solver_con, ...}) {limit, thms, hyps} =
         solver_con {slice = meter, units = units, thms = thms, hyps = hyps}
     in
       fn g =>
-      let val () = meter := new_meter limit
+      let val () = meter := new_meter limit (* OK *)
       in drop_after (fn _ => not (check_meter (!meter))) (solver g)
       end
     end;

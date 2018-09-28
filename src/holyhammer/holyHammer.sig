@@ -40,11 +40,23 @@ sig
   val clean_goaltac_cache : unit -> unit 
     (* saving results of the next functions in goaltac_cache *)
   val hh_goal           : goal -> tactic
-  val hh_fork           : goal -> Thread.Thread.thread
+  val hh_fork           : goal -> Thread.thread
   val holyhammer        : term -> tactic
   val hh                : tactic
+  
+  (* Other functions *)
   val metis_auto        : real -> int -> goal -> string option
   
+  (* For tttSyntEval.sml *)
+  val export_pb : 
+    string -> int -> term list * term -> 
+    int * (term * (string, term) Redblackmap.dict)
+  val eprover_parallel: 
+    string -> int -> int list -> int -> 
+    (int * string list option) list
+
+
+
   (* HolyHammer for TacTicToe parallel calls *)
   val hh_stac           :
     string ->

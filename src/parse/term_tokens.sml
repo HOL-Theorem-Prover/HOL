@@ -19,8 +19,27 @@ val non_aggregating_chars =
           (explode "()[]{}~.,;-")
 fun nonagg_c c = CharSet.member(non_aggregating_chars, c)
 
-fun s_has_nonagg_char s = length (String.fields nonagg_c s) <> 1 orelse
-                          s = UnicodeChars.neg
+fun s_has_nonagg_char s =
+  let
+    val lim = size s
+    fun recurse i =
+      if i >= lim then false
+      else
+        let
+          val c = String.sub(s,i)
+          val n = ord c
+        in
+          (* will look at UTF8 continuation bytes as if they were
+             independent characters but these will trigger false for both
+             tests below *)
+          nonagg_c c orelse
+          (n = 194 andalso i < lim - 1 andalso (* encoding of ¬ (UOK) *)
+           ord (String.sub(s,i+1)) = 172) orelse
+          recurse (i + 1)
+        end
+  in
+    recurse 0
+  end
 
 fun term_symbolp s = UnicodeChars.isSymbolic s andalso
                      not (s_has_nonagg_char s) andalso

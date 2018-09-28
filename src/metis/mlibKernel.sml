@@ -8,8 +8,6 @@ struct
 
 open mlibUseful mlibTerm;
 
-infixr |-> ::> oo;
-
 type subst        = mlibSubst.subst;
 val formula_subst = mlibSubst.formula_subst;
 

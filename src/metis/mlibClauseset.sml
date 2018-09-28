@@ -35,7 +35,7 @@ val formula_subst = mlibSubst.formula_subst;
 (* ------------------------------------------------------------------------- *)
 
 val module = "mlibClauseset";
-val () = traces := {module = module, alignment = I} :: !traces;
+val () = add_trace {module = module, alignment = I}
 fun chatting l = tracing {module = module, level = l};
 fun chat s = (trace s; true)
 
@@ -600,7 +600,7 @@ val pp_clauseset = pp_bracket "C<" ">" (pp_map ssize pp_int);
 val size = ssize;
 
 (* Quick testing
-quotation := true;
+quotation := true; (* OK *)
 installPP pp_formula;
 installPP pp_term;
 installPP pp_subst;

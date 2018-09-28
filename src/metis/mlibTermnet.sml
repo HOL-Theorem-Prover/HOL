@@ -12,8 +12,6 @@ app load ["mlibUseful", "mlibTerm"];
 structure mlibTermnet :> mlibTermnet =
 struct
 
-infixr |-> ::> oo;
-
 open mlibUseful mlibTerm;
 
 structure M = Binarymap; local open Binarymap in end;

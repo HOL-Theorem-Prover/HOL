@@ -71,16 +71,16 @@ fun apply_absargs f abs =
 
 val casesplit_munger = ref (NONE: (term -> term * (term * term)list) option)
 fun init_casesplit_munger f =
-    case casesplit_munger of
-      ref NONE => casesplit_munger := SOME f
+    case !casesplit_munger of
+      NONE => casesplit_munger := SOME f
     | _ => raise PP_ERR "init_casesplit_munger"
                         "casesplit munger already initialised"
 
 exception CaseConversionFailed
 fun convert_case tm =
-    case casesplit_munger of
-      ref NONE => raise CaseConversionFailed
-    | ref (SOME f) => let
+    case !casesplit_munger of
+      NONE => raise CaseConversionFailed
+    | (SOME f) => let
         val (split_on, splits) = f tm
             handle HOL_ERR _ => raise CaseConversionFailed
         val _ = not (null splits) orelse raise CaseConversionFailed

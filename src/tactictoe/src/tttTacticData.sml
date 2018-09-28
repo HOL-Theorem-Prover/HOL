@@ -1,5 +1,5 @@
 (* ========================================================================== *)
-(* FILE          : tttTacticData.sml                                                *)
+(* FILE          : tttTacticData.sml                                          *)
 (* DESCRIPTION   : Storing feature vectors                                    *)
 (* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck             *)
 (* DATE          : 2017                                                       *)
@@ -13,9 +13,9 @@ tttThmData tttPredict SharingTables Portable tttSetup
 
 val ERR = mk_HOL_ERR "tttTacticData"
 
-(*---------------------------------------------------------------------------
+(*----------------------------------------------------------------------------
  * Export
- *---------------------------------------------------------------------------*)
+ *----------------------------------------------------------------------------*)
 
 fun uptodate_goal (asl,w) = all uptodate_term (w :: asl)
 fun uptodate_feav ((_,_,g,gl),_) = all uptodate_goal (g :: gl)
@@ -153,7 +153,6 @@ fun readcat_list l =
   let val (ll,cont) = read_list l in
     (List.concat ll, cont)
   end
-
 
 fun read_id l = case l of
    [s1,s2] => {Thy = read_string s1, Other = read_string s2}

@@ -74,7 +74,7 @@ fun condprinter (tyg, tmg) backend printer ppfns (pgr,lgr,rgr) depth tm = let
   val (g,t,e) = dest_cond tm
 in
   paren PP.CONSISTENT paren_required (
-    doguard false (g,t) >> add_break(1,0) >> doelse e
+    block PP.CONSISTENT 0 (doguard false (g,t) >> add_break(1,0) >> doelse e)
   )
 end
 

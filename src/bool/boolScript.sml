@@ -4151,6 +4151,30 @@ in
 end
 val _ = overload_on("case", “itself_case”)
 
+(* FORALL_itself : |- (!x:'a itself. P x) <=> P (:'a)
+   EXISTS_itself : |- (?x:'a itself. P x) <=> P (:'a)
+*)
+local
+  val P = mk_var("P", “:'a itself -> bool”)
+  val x = mk_var("x", “:'a itself”)
+  val Px = mk_comb(P, x)
+  val APx = mk_forall(x, Px)
+  val itself = “(:'a)”
+  val Pitself = mk_comb(P, itself)
+  val imp1 = APx |> ASSUME |> SPEC itself |> DISCH_ALL
+  val unique = AP_TERM P (ITSELF_UNIQUE |> SPEC x |> SYM)
+  val imp2 = EQ_MP unique (ASSUME Pitself) |> GEN x |> DISCH_ALL
+  val fa = IMP_ANTISYM_RULE imp1 imp2
+  val not_not = NOT_CLAUSES |> CONJUNCT1 |> SPEC Px
+  (* exists half *)
+  val imp1 = CHOOSE (x, ASSUME (mk_exists(x,Px)))
+                    (EQ_MP (SYM unique) (ASSUME Px)) |> DISCH_ALL
+  val imp2 = EXISTS(mk_exists(x,Px),itself) (ASSUME Pitself) |> DISCH_ALL
+in
+  val FORALL_itself = save_thm("FORALL_itself", fa)
+  val EXISTS_itself = save_thm("EXISTS_itself", IMP_ANTISYM_RULE imp1 imp2)
+end;
+
 
 (*---------------------------------------------------------------------------*)
 (* Pulling FORALL and EXISTS up through /\ and ==>                           *)

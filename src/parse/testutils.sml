@@ -77,8 +77,11 @@ fun tppw width {input=s,output,testf} = let
   val _ = tprint (testf s)
   val t = Parse.Term [QUOTE s]
   val res = HOLPP.pp_to_string width Parse.pp_term t
+  fun f s = String.translate (fn #" " => UTF8.chr 0x2423 | c => str c) s
 in
-  if res = output then OK() else die ("\n  FAILED!  Saw: >|" ^ res ^ "|<")
+  if res = output then OK() else
+  die ("\n  FAILED!  Saw:\n    >|" ^ clear (f res) ^
+       boldred "|<\n  rather than \n    >|" ^ clear (f output) ^ boldred "|<\n")
 end
 fun tpp s = tppw (!linewidth) {input=s,output=s,testf=standard_tpp_message}
 

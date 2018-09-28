@@ -55,6 +55,8 @@ val hh_dir         = pathl [HOLDIR,"src","holyhammer"];
 val hh_eval_dir    = pathl [hh_dir,"eval"];
 val provbin_dir    = pathl [hh_dir,"provers"];
 fun provdir_of atp = pathl [provbin_dir, name_of atp ^ "_files"]
+val parallel_dir   = pathl [provbin_dir,"eprover_parallel"];
+
 fun out_of atp     = pathl [provdir_of atp,"out"]
 fun status_of atp  = pathl [provdir_of atp,"status"]
 fun out_dir dir    = pathl [dir,"out"]
@@ -214,6 +216,16 @@ fun parallel_call t fl =
 
 val atp_ref = ref ""
 
+fun launch_atp_mute dir atp t =
+  let 
+    val cmd = "sh " ^ name_of atp ^ ".sh " ^ int_to_string t ^ " " ^ 
+      dir ^ " > /dev/null 2> /dev/null"
+    val _ = cmd_in_dir provbin_dir cmd   
+    val r = get_lemmas (dir ^ "/status", dir ^ "/out")
+  in
+    r
+  end
+
 fun launch_atp dir atp t =
   let 
     val cmd = "sh " ^ name_of atp ^ ".sh " ^ int_to_string t ^ " " ^ 
@@ -343,9 +355,43 @@ fun metis_auto t n goal =
   end
  
 (*----------------------------------------------------------------------------
+   For tttSyntEval.sml
+ -----------------------------------------------------------------------------*)
+
+fun export_pb dir pid (tml,cj) =
+  let
+    val tml1 = number_list 0 tml
+    val tml2 = map (fn (i,x) => ("noTheory." ^ int_to_string i, x)) tml1 
+    val thml0 = map (fn (s,x) => (s, mk_thm ([],x))) tml2  
+    val thml1 = extra_premises @ thml0
+    val pb = translate_pb thml1 cj
+    val (axl,new_cj) = name_pb pb
+  in
+    write_tptp (dir ^ "/" ^ int_to_string pid) axl new_cj;
+    (pid, (cj, dnew String.compare tml2))
+  end
+
+fun eprover_parallel dir ncores pidl t =
+  let
+    fun dir_of_pid i = dir ^ "/" ^ int_to_string i
+    val dirl = map dir_of_pid pidl
+    val file = provbin_dir ^ "/parallel_files"
+    val _ = writel file dirl
+    val cmd = 
+      "cat " ^ file ^ " | parallel -j " ^ int_to_string ncores ^ 
+      " sh eprover.sh " ^ 
+      int_to_string t ^ " {} "
+    val _ = cmd_in_dir provbin_dir cmd
+    fun f pid = 
+      (pid,
+       get_lemmas (dir_of_pid pid ^ "/status", dir_of_pid pid ^ "/out"))
+  in  
+    map f pidl
+  end
+
+(*----------------------------------------------------------------------------
    Asynchronous calls to holyhammer in tactictoe.
-   remove references from the translation so that this function
-   can be run in parallel.
+   To be updated.
  -----------------------------------------------------------------------------*)
 
 fun hh_stac pids (symweight,feav,revdict) t goal =
@@ -358,7 +404,7 @@ fun hh_stac pids (symweight,feav,revdict) t goal =
     val pb = translate_pb thml cj
     val (axl,new_cj) = name_pb pb
     val _ = write_tptp provdir axl new_cj
-    val olemmas = launch_atp provdir Eprover t
+    val olemmas = launch_atp_mute provdir Eprover t
     val _ = (clean_dir provdir; rmDir_err provdir)
   in
     Option.map mk_metis_call olemmas

@@ -1,6 +1,6 @@
 (* ========================================================================== *)
 (* FILE          : tttTimeout.sml                                             *)
-(* DESCRIPTION   : Timing out PolyML functions                               *)
+(* DESCRIPTION   : Timing out PolyML functions.                               *)
 (* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck             *)
 (* DATE          : 2017                                                       *)
 (* ========================================================================== *)

@@ -3,37 +3,54 @@ sig
 
   include Abbrev
   
-  datatype role = Axiom | Theorem | Reproven | Conjecture
-  datatype usage = Irrelevant | Predicted | Useful of term list
+  datatype role = Axiom | Theorem | Conjecture
   
-  val dict_glob :
-    (int list, (term * int list) * role) Redblackmap.dict ref
+  type idict_t = int * (term * (string, term) Redblackmap.dict)
+  
+  (* globals *)
+  val nb_premises : int ref
+   
+  (* saving terms *)
+  val export_tml : string -> term list -> unit
+  val import_tml : string -> term list
 
-  val revtm_glob : (term, int list * (string * thm) * role) 
-    Redblackmap.dict ref
+  (* initialization *)
+  val init_dicts : int ->
+    (int list, term) Redblackmap.dict *
+      (term, int list) Redblackmap.dict * 
+      (term, role) Redblackmap.dict
+  
+  (* proving conjectures *)
+  val prove_main : 
+    (term, role) Redblackmap.dict ->
+    string -> int -> int ->     
+    (term -> term list) ->
+    (string -> int -> term list * term -> idict_t) ->
+    (string -> int -> int list -> int -> (int * string list option) list) ->
+    term list -> (* theorems *)
+    term list -> (* conjectures *)
+    (term * term list) list
+  
+  (* updating dictionnaries *)
+  val insert_cjl : 
+    (int list, term) Redblackmap.dict * 
+      (term, int list) Redblackmap.dict *
+      (term, role) Redblackmap.dict ->
+    (term * term list) list ->
+    (int list, term) Redblackmap.dict * 
+      (term, int list) Redblackmap.dict *
+      (term, role) Redblackmap.dict
 
-  val update_dict: (string, int) Redblackmap.dict -> string -> unit
-  
-  val mprove : real -> term list -> term -> bool
-  val minimize_aux : real -> term list -> term list -> term -> term list
-  val miniprove : real -> term list -> term -> term list option
-  
-  val prove_cj : 
-    real ->
-    (int, real) Redblackmap.dict * (term * int list) list ->
-    term -> (term * term list) option
-  
-  val eval_cjl  : real -> (term * term list) list -> (usage * term) list
-  
-  val reprove : real -> int list * ((term * int list) * role) -> unit
-  
-  val init_n_thy : int -> unit
-  
-  (* statistics *)
-  val is_useful : usage -> bool
-  val is_predicted : usage -> bool
-  
-  (* main *)
-  val all_in_one : int -> real -> int -> (usage * term) list
-  
+  (* evaluating conjecture *)
+  val eval_main : string -> int -> int ->
+    (int list, term) Redblackmap.dict * 
+      (term, int list) Redblackmap.dict *
+      (term, role) Redblackmap.dict ->
+    (term -> term list) ->
+    (string -> int -> term list * term -> idict_t) ->
+    (string -> int -> int list -> int -> (int * string list option) list) ->
+    ((term * term list) list * term list * term list)
+
+ 
+
 end

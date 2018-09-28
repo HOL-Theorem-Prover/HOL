@@ -14,8 +14,6 @@ struct
 
 open mlibUseful mlibTerm;
 
-infixr |-> ::> oo;
-
 structure S = mlibStream; local open mlibStream in end;
 structure T = mlibTermnet; local open mlibTermnet in end;
 

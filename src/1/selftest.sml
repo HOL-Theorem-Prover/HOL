@@ -391,6 +391,15 @@ in
   temp_clear_overloads_on "⊤"
 end
 
+val _ = print "** Tests with Unicode on\n"
+val _ = let
+  open testutils
+  fun md f = trace ("Unicode", 1) f
+in
+  app (md tpp) ["¬¬p", "¬p"]
+end
+
+
 val _ = print "** Tests with pp_dollar_escapes = 0.\n"
 val _ = set_trace "pp_dollar_escapes" 0
 val _ = app tpp ["(/\\)", "(if)"]
@@ -1016,6 +1025,26 @@ in
     | _ => die ("FAILED\n  Tactic returned wrong number of sub-goals (" ^
                 Int.toString (length res))
 end;
+
+val _ = let
+  open mp_then Portable
+  val _ = tprint "mp_then (backtracking pat)"
+  val gh567_1_def = new_definition("gh567_1_def", “gh567_1 p <=> p /\ F”)
+  val gh567_2_def = new_definition("gh567_2_def", “gh567_2 p <=> p /\ T”)
+  val _ = temp_overload_on ("gh567", “gh567_1”)
+  val _ = temp_overload_on ("gh567", “gh567_2”)
+  val tm1 = gh567_1_def |> SPEC_ALL |> concl |> lhs |> rator
+  val asl = [“!b. ^tm1 b ==> b”, “^tm1 F”]
+  val g = boolSyntax.F
+  val tac = first_x_assum (first_x_assum o mp_then (Pat ‘gh567’) assume_tac)
+in
+  case verdict tac (fn _ => ()) (asl,g) of
+      FAIL ((), e) => die ("FAILED\n  Got exception: " ^ General.exnMessage e)
+    | PASS (sgs, _) =>
+      if list_eq (pair_eq (list_eq aconv) aconv) sgs [([F], F)] then
+        OK()
+      else die ("FAILED\n  Wrong subgoals")
+end
 
 
 val _ = let
