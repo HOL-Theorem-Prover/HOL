@@ -92,449 +92,6 @@ fun string_of_subst sub =
     "[" ^ String.concatWith ", " (map f sub) ^ "]"
   end
 
-fun write_subdict subdict =
-  let
-    val _ = msgd_synt subdict "writing subdict"
-    val l = dlist subdict
-    fun f (sub, (cjl,score)) = 
-      Real.toString score ^ " " ^ int_to_string (length cjl) ^ ": " ^
-      string_of_subst sub
-  in
-    writel_synt "substitutions" (map f l)
-  end
-       
-fun write_origdict origdict = 
-  let
-    val _ = msgd_synt origdict "writing origdict"
-    val l = dlist origdict
-    fun g (sub,tm) = string_of_subst sub ^ ": " ^ term_to_string tm
-    fun f (cj,subtml) = String.concatWith "\n" 
-      (["Conjecture:", term_to_string cj] @ map g subtml)  
-  in
-    writel_synt "origdict" (map f l)
-  end
-
-(* --------------------------------------------------------------------------
-   Stateful dictionnaries
-   -------------------------------------------------------------------------- *)
-
-type psubst = (int * int) list
-type tsubst = (term * term) list
-
-(* dictionnary *)
-val cdict_glob = ref (dempty Term.compare)
-val icdict_glob = ref (dempty Int.compare)
-val cdict_loc = ref (dempty Int.compare)
-
-fun fconst_glob c =
-  dfind c (!cdict_glob) handle NotFound =>
-  let val cglob = dlength (!cdict_glob) in
-    cdict_glob := dadd c cglob (!cdict_glob); 
-    icdict_glob := dadd cglob c (!icdict_glob);
-    cglob
-  end
-
-fun fconst_loc cglob =
-  dfind cglob (!cdict_loc) handle NotFound =>
-  let val cloc = dlength (!cdict_loc) in
-    cdict_loc := dadd cglob cloc (!cdict_loc); 
-    cloc
-  end
-  
-fun fconst c = fconst_loc (fconst_glob c)
-
-fun init_synt () =
-  (
-  cdict_glob := dempty Term.compare;
-  icdict_glob := dempty Int.compare;
-  type_errors := 0
-  )
-
-(* --------------------------------------------------------------------------
-   Conceptualization. Should be done on demand.
-   -------------------------------------------------------------------------- *)
-
-val concept_threshold = ref 4
-val concept_flag = ref false
-
-fun is_varconst x = is_var x orelse is_const x
- 
-fun save_concept d tm = 
-  if dmem tm (!d) then () else 
-    let val v = mk_var ("C" ^ int_to_string (dlength (!d)), type_of tm) in
-      d := dadd tm v (!d)
-    end
- 
-fun concept_selection tml = 
-  let 
-    fun f x = find_terms (not o is_varconst) x
-    val l0 = List.concat (map f tml)
-    val freq = count_dict (dempty Term.compare) l0
-    val l1 = dlist freq
-    fun above_threshold x = snd x >= !concept_threshold
-    val l2 = filter above_threshold l1
-    val l3 = dict_sort compare_imax l2
-    fun w (x,n) = int_to_string n ^ " :" ^ term_to_string x 
-    val _  = writel_synt "concepts" (map w l3)
-    val _  = msg_synt l2 "selected concepts"
-    val d = ref (dempty Term.compare)
-  in
-    app (save_concept d) (map fst l2);
-    (!d)
-  end 
-
-fun conceptualize_tm ceptdict tm =
-  let 
-    fun is_cept x = dmem x ceptdict
-    val redexl0 = find_terms is_cept tm
-    fun cmp (tm1,tm2) = Int.compare (term_size tm2, term_size tm1)
-    val redexl1 = dict_sort cmp redexl0
-    fun f i tm = {redex = tm, residue = dfind tm ceptdict}
-    val sub = mapi f redexl1 
-    val newtm = Term.subst sub tm
-  in
-    if term_eq newtm tm then [tm] else [tm,newtm]
-  end
-
-fun read_cept iceptdict c =
-  let val tm = dfind c (!icdict_glob) in
-    dfind tm iceptdict handle NotFound => tm
-  end
-
-fun read_sub iceptdict sub = 
-  let fun f (a,b) = (read_cept iceptdict a, read_cept iceptdict b) in
-    map f sub
-  end
-
-(* --------------------------------------------------------------------------
-   Patterns
-   -------------------------------------------------------------------------- *) 
-
-datatype pattern =
-    Pconst of int
-  | Pcomb  of pattern * pattern
-  | Plamb  of pattern * pattern
-
-fun pattern_tm tm = 
-  case dest_term tm of
-    VAR _   => Pconst (fconst tm)
-  | CONST _ => Pconst (fconst tm)
-  | COMB(Rator,Rand) => Pcomb (pattern_tm Rator, pattern_tm Rand)
-  | LAMB(Var,Bod)    => Plamb (pattern_tm Var, pattern_tm Bod)
-  
-fun patternify_one tm = 
-  let 
-    val _ = cdict_loc := dempty Int.compare
-    fun cmp (a,b) = Int.compare (snd a, snd b)
-    val p = pattern_tm tm
-    val l1 = dlist (!cdict_loc)
-    val l2 = dict_sort cmp l1
-  in
-    (p, map fst l2)
-  end
- 
-fun match_pattern_aux d p tm = 
-  case (dest_term tm, p) of
-    (_, Pconst i) =>
-    (
-    if dmem i (!d) 
-    then Term.compare (dfind i (!d),tm) = EQUAL
-    else (d := dadd i tm (!d); true)
-    )
-  | (COMB(Rator,Rand), Pcomb (p1,p2)) => 
-    match_pattern_aux d p1 Rator andalso match_pattern_aux d p2 Rand
-  | (LAMB(Var,Bod), Plamb (p1,p2)) => 
-    match_pattern_aux d p1 Var andalso match_pattern_aux d p2 Bod
-  | _ => false
-
-fun match_pattern p tm =
-  let 
-    val dref = ref (dempty Int.compare)
-    val b = match_pattern_aux dref p tm 
-  in
-    if b then SOME (!dref) else NONE
-  end
-
-fun pattern_compare (p1,p2) = case (p1,p2) of
-    (Pconst i1,Pconst i2) => Int.compare (i1,i2)
-  | (Pconst _,_) => LESS
-  | (_,Pconst _) => GREATER
-  | (Pcomb(a1,b1),Pcomb(a2,b2)) => 
-    cpl_compare pattern_compare pattern_compare ((a1,b1),(a2,b2))
-  | (Pcomb _,_) => LESS
-  | (_,Pcomb _) => GREATER
-  | (Plamb(a1,b1),Plamb(a2,b2)) => 
-    cpl_compare pattern_compare pattern_compare ((a1,b1),(a2,b2))
-
-fun string_of_pattern p = case p of
-    Pconst i => int_to_string i
-  | Pcomb (p1,p2) =>
-    "(" ^ String.concatWith " " ("A" :: map string_of_pattern [p1,p2]) ^ ")"
-  | Plamb (p1,p2) =>
-    "(" ^ String.concatWith " " ("L" :: map string_of_pattern [p1,p2]) ^ ")"
-
-fun write_patceptdict ntot patceptdict = 
-  let
-    val _ = log_synt "writing patceptdict"
-    val l0 = dlist patceptdict
-    val l1 = filter (fn (a,b) => length b > 1) l0
-    val l2 = map (fn (a,b) => (a, length b)) l1
-    val r2 = int_div (sum_int (map snd l2)) ntot
-    val l3 = dict_sort compare_imax l2
-    fun w (p,n) = int_to_string n ^ ": " ^ string_of_pattern p
-    val _ = msg_synt l3 "patterns appearing at least twice"
-  in
-    writel_synt "patterns" (map w l3)
-  end
-
-fun write_ceptpatdict iceptdict ceptpatdict = 
-  let
-    val _  = log_synt "writing ceptpatdict"
-    val l0 = dlist ceptpatdict
-    val l1 = filter (fn (a,b) => length b > 1) l0
-    val l2 = map (fn (a,b) => (a, length b)) l1
-    val l3 = dict_sort compare_imax l2
-    fun w (cl,n) = 
-      int_to_string n ^ ": " ^ 
-      String.concatWith "\n" 
-        (map (term_to_string o read_cept iceptdict) cl)
-    val _ = msg_synt l3 "concept lists appearing at least twice"
-  in
-    writel_synt "concept_lists" (map w l3)
-  end
-
-fun patternify ntot ceptdict iceptdict tml =
-  let
-    val patceptdict = ref (dempty pattern_compare)
-    val ceptpatdict = ref (dempty (list_compare Int.compare))
-    val thmpatdict = ref (dempty Term.compare)
-    val tml1 = mk_fast_set Term.compare tml
-    fun f tm = 
-      let 
-        val (p,cl) = patternify_one tm 
-        val cll = dfind p (!patceptdict) handle NotFound => []
-        val pl  = dfind cl (!ceptpatdict) handle NotFound => []
-      in
-        patceptdict := dadd p (cl :: cll) (!patceptdict);
-        ceptpatdict := dadd cl (p :: pl) (!ceptpatdict);
-        (p,cl)
-      end
-    fun g tm = 
-      let 
-        val variants = 
-          if !concept_flag then conceptualize_tm ceptdict tm else [tm]
-        val patl = map f variants 
-      in
-        thmpatdict := dadd tm patl (!thmpatdict)
-      end
-    val _ = app g tml1
-    val _ = msgd_synt (!patceptdict) "patterns"
-    val _ = msgd_synt (!ceptpatdict) "concept lists"
-    val _ = write_patceptdict ntot (!patceptdict)
-    val _ = write_ceptpatdict iceptdict (!ceptpatdict) 
-  in
-    (!patceptdict, !ceptpatdict, !thmpatdict) 
-  end
-
-fun term_of_pat idict (p,cl) = case p of
-    Pconst i => read_cept idict (List.nth (cl,i))
-  | Pcomb (p1,p2) => 
-    mk_comb (term_of_pat idict (p1,cl), term_of_pat idict (p2,cl))
-  | Plamb (p1,p2) =>
-    mk_abs (term_of_pat idict (p1,cl), term_of_pat idict (p2,cl))
-
-fun term_of_pat2 (p,cl) = case p of
-    Pconst i => List.nth (cl,i)
-  | Pcomb (p1,p2) => 
-    mk_comb (term_of_pat2 (p1,cl), term_of_pat2 (p2,cl))
-  | Plamb (p1,p2) =>
-    mk_abs (term_of_pat2 (p1,cl), term_of_pat2 (p2,cl))
-
-
-(* --------------------------------------------------------------------------
-   Concept substitutions. Weighted frequency.
-   -------------------------------------------------------------------------- *)
-
-fun compare_kimin (a,b) = Int.compare (fst a, fst b)
-
-val sub_compare = list_compare (cpl_compare Term.compare Term.compare)
-
-fun norm_sub l = 
-  let val l1 = filter (fn (x,y) => x <> y) l in
-    dict_sort compare_kimin l1
-  end
-  
-fun pair_sub cll = 
-  let 
-    val cll' = mk_fast_set (list_compare Int.compare) cll
-    val cpl  = cartesian_product cll' cll'
-    val cpl' = filter (fn (x,y) => x <> y) cpl
-    val freq = 1.0 / Real.fromInt (length cpl')
-    fun add_freq sub = (sub,freq)
-    val r = map (add_freq o norm_sub o combine) cpl'
-  in
-    r
-  end
-
-fun welltyped_sub sub = 
-  let fun f (a,b) = type_of a = type_of b in
-    all f sub
-  end
-
-fun create_sub iceptdict patceptdict = 
-  let 
-    fun f (p,cll) = pair_sub cll 
-    val l1        = List.concat (map f (dlist patceptdict))
-    val cmp       = list_compare (cpl_compare Int.compare Int.compare)
-    val dref      = ref (dempty cmp)
-    fun update_d (sub,freq) =
-      let val oldfreq = dfind sub (!dref) handle NotFound => 0.0 in
-        dref := dadd sub (oldfreq + freq) (!dref)
-      end
-    val dfreq     = (app update_d l1; !dref)
-    val _         = msgd_synt dfreq "concept substitutions"
-    val l3        = dict_sort compare_rmax (dlist dfreq)
-    val l4        = (map (read_sub iceptdict)) (map fst l3)
-  in
-    filter welltyped_sub l4
-  end
-
-val sub_cache = ref (dempty (cpl_compare sub_compare Term.compare))
-
-fun unsafe_sub sub tm =
-  let val redreso = List.find (fn (red,res) => red = tm) sub in
-    if isSome redreso then snd (valOf (redreso)) else
-      (
-      case dest_term tm of
-        VAR(Name,Ty)       => tm
-      | CONST{Name,Thy,Ty} => tm
-      | COMB(Rator,Rand)   => 
-        mk_comb (unsafe_sub sub Rator, unsafe_sub sub Rand)
-      | LAMB(Var,Bod)      => 
-        mk_abs (unsafe_sub sub Var, unsafe_sub sub Bod)
-      )
-  end
-
-fun unsafe_sub_option sub tm = 
-  SOME (unsafe_sub sub tm) 
-  handle HOL_ERR _ => (incr type_errors; NONE)
-
-
-fun unsafe_sub_cached sub tm =
-  dfind (sub,tm) (!sub_cache) handle NotFound =>
-  let val r = unsafe_sub_option sub tm in
-    sub_cache := dadd (sub,tm) r (!sub_cache); r
-  end
-
-fun apply_sub sub tm = case unsafe_sub_cached sub tm of
-    NONE => NONE
-  | SOME tm' => 
-    if unvalid_change tm tm' then NONE else SOME (my_gen_all tm')
-
-(* --------------------------------------------------------------------------
-   Conjecturing by substitutions.
-   -------------------------------------------------------------------------- *) 
-
-fun update_genthmdict gencjdict genthmdict x =
-  if dmem x (!genthmdict) then () else 
-  genthmdict := dadd x (dlength (!gencjdict), dlength (!genthmdict)) 
-  (!genthmdict)
-
-fun update_gencjdict cjlim gencjdict x =
-  if dlength (!gencjdict) >= cjlim orelse dmem x (!gencjdict) 
-  then ()
-  else gencjdict := dadd x (dlength (!gencjdict)) (!gencjdict)
-
-fun update_gendict cjlim covdict genthmdict gencjdict x =
-  if dmem x covdict 
-  then update_genthmdict gencjdict genthmdict x
-  else update_gencjdict cjlim gencjdict x
-
-fun conjecture_sub cjlim covdict tml subl =
-  let
-    val gencjdict = ref (dempty Term.compare)
-    val genthmdict = ref (dempty Term.compare)
-    val dsub = dnew Int.compare (number_list 0 subl) 
-    val tmnl = map (fn x => (x,0)) tml
-    fun try_nsub n (tm,nsub) =
-      if not (dmem nsub dsub) orelse n <= 0 then (tm,nsub) else
-      (
-      case apply_sub (dfind nsub dsub) tm of
-        NONE => try_nsub (n - 1) (tm, nsub + 1)     
-      | SOME tm' => 
-        (
-        update_gendict cjlim covdict genthmdict gencjdict tm';
-        (tm, nsub + 1)
-        )
-      )
-    val mem = ref (~1) 
-    fun loop tmnl =
-       if dlength (!gencjdict) >= cjlim orelse 
-          !mem >= dlength (!gencjdict)
-       then () else
-         let 
-           val _ = mem := dlength (!gencjdict)
-           val _ = print_endline (int_to_string (!mem) ^ " conjectures")
-           val newtmnl = map (try_nsub 100) tmnl 
-         in
-           loop newtmnl
-         end
-  in 
-    loop tmnl;
-    (!gencjdict,!genthmdict)
-  end
-
-fun write_graph ntot genthmdict = 
-  let
-    val _    = log_synt "writing graph"
-    val rcov = int_div (dlength genthmdict) ntot
-    val _    = log_synt (Real.toString rcov ^ " conjecture coverage")
-    val l0 = map snd (dlist genthmdict)
-    val d = ref (dempty Int.compare)
-    fun update_dict (a,b) = 
-      let val oldb = dfind a (!d) handle NotFound => 0 in
-        if b > oldb then d := dadd a b (!d) else ()
-      end
-    val l1 = (app update_dict l0; dlist (!d))
-    fun w (a,b) = int_to_string a ^ " " ^ (Real.toString (int_div b ntot))
-    val header  = "# miss match"
-    val _       = writel_synt "coverage_data" (header :: map w l1)
-    val filein  = (!ttt_synt_dir) ^ "/coverage_data"
-    val fileout = (!ttt_synt_dir) ^ "/coverage_graph.ps"
-  in
-    gnuplotcmd filein fileout
-  end
-
-fun conjecture cjlim tml =
-  let
-    val _    = init_synt ()
-    val tml0 = mk_fast_set Term.compare tml
-    val tml1 = map (snd o strip_forall o rename_bvarl (fn _ => "")) tml0
-    val tml2 = mk_fast_set Term.compare tml1
-    val tml3 = map (fn x => (my_gen_all x, 0)) tml2
-    val _    = msg_synt tml3 "terms"
-    val covdict = dnew Term.compare tml3
-    val ntot = dlength covdict
-    val ceptdict = concept_selection tml2
-    val iceptdict = inv_dict Term.compare ceptdict
-    val (patceptdict, ceptpatdict, thmpatdict) = time_synt "patternify" 
-       patternify ntot ceptdict iceptdict tml2
-    val _ = msgd_synt (!cdict_glob) "constants or variables"
-
-    (* conjecture generation from substitutions *)
-    val (gencjdict,genthmdict) = 
-      let val subl = create_sub iceptdict patceptdict in
-        time_synt "conjecture_sub"
-        (conjecture_sub cjlim covdict tml2) subl
-      end
-    (* val _ = write_graph ntot genthmdict *)
-    val _ = log_synt (int_to_string (!type_errors) ^ " type errors")
-    val _ = msgd_synt gencjdict "generated conjectures"
-    val igencjdict = inv_dict Int.compare gencjdict
-  in
-    map snd (dlist igencjdict)
-  end
-
 (* --------------------------------------------------------------------------
    Brute force conjecturing
    -------------------------------------------------------------------------- 
@@ -542,6 +99,23 @@ fun conjecture cjlim tml =
 
 fun all_split (a,b) =
   if b < 1 then [] else (a,b) :: all_split (a+1,b-1)
+
+fun is_closed tm = type_of tm = bool andalso null (free_vars tm) 
+
+fun all_bvl tm = 
+  let val tml = find_terms is_abs tm in  
+    mk_set (map (fst o dest_abs) tml) (* few variables so mk_set *)
+  end 
+
+fun inter_bvl (t1,t2) =
+  let val (vl1,vl2) = (all_bvl t1, all_bvl t2) in
+    exists (fn x => mem x vl2) vl1   
+  end 
+
+fun smart_mk_comb (t1,t2) =
+  if is_closed t2 orelse inter_bvl (t1,t2) 
+  then NONE 
+  else SOME (mk_comb (t1,t2))
 
 fun is_applicable (ty1,ty2) =
   let fun apply ty1 ty2 =
@@ -556,36 +130,18 @@ fun all_mk_comb d1 d2 (ty1,ty2) =
     val tml2 = dfind ty2 d2
     val l = cartesian_product tml1 tml2
   in
-    map mk_comb l  
+    List.mapPartial smart_mk_comb l  
   end
 
-fun all_abs tml =
-  let fun f tm = 
-    let val vl = free_vars_lr in
-      map (fun x => mk_abs (x,tm))) vl
-    end
-  in
-    List.concat (map f tml)
-  end
+fun all_abs_one f tm = map (fn x => f (x,tm)) (free_vars_lr tm)
 
-fun all_forall tml =
-  let fun f tm = 
-    let val vl = free_vars_lr in
-      map (fun x => mk_forall (x,tm))) vl
-    end
-  in
-    List.concat (map f tml)
-  end
+fun all_abs f tml =
+  List.concat (map (all_abs_one f) tml)
 
-fun all_exists tml =
-  let fun f tm = 
-    let val vl = free_vars_lr in
-      map (fun x => mk_forall (x,tm))) vl
-    end
-  in
-    List.concat (map f tml)
-  end
 
+fun all_forall tml = all_abs mk_forall tml
+fun all_exists tml = all_abs mk_exists tml
+fun all_quant tml = all_forall tml @ all_exists tml
 
 val (gen_size_cache :  (int, (hol_type, term list) Redblackmap.dict) Redblackmap.dict ref) = ref (tttTools.dempty Int.compare)
 
@@ -600,13 +156,12 @@ fun init_gen_size tml =
   end
 
 fun gen_size filterf n =
-  (if n <= 0 then raise ERR "gen_size" "" else 
-   dfind n (!gen_size_cache)) 
+  (if n <= 0 then raise ERR "gen_size" "" else dfind n (!gen_size_cache)) 
   handle NotFound =>
   let 
     val l = all_split (1,n-1)   
     fun all_comb (n1,n2) = 
-      let 
+      let
         val d1 = gen_size filterf n1
         val d2 = gen_size filterf n2
         val tytyl  = cartesian_product (dkeys d1) (dkeys d2)
@@ -614,10 +169,13 @@ fun gen_size filterf n =
       in
         List.concat (map (all_mk_comb d1 d2) tytyl')
       end
-    val combl = List.concat (map all_comb l)
-    val tml1 = filterf combl
-    val tml2 =  map (fn x => (type_of x, x)) tml1
-    val r    = dregroup Type.compare tml2
+    val combl  = List.concat (map all_comb l)
+    val d      = gen_size filterf (n - 1)
+    val quantl = all_quant (dfind bool d handle NotFound => [])
+    val tml0   = quantl @ combl
+    val tml1   = filterf tml0
+    val tml2   = map (fn x => (type_of x, x)) tml1
+    val r      = dregroup Type.compare tml2
   in
     gen_size_cache := dadd n r (!gen_size_cache);
     log_synt ("gen_size " ^ int_to_string n ^ ": " ^ 
@@ -625,70 +183,40 @@ fun gen_size filterf n =
     r
   end
 
+val mk_term_set = mk_fast_set Term.compare
 
-
-fun report_rank cjl predl target =
-  let 
-    val cjnl = mapi (fn i => fn cj => (cj,i)) cjl
-    val d    = dnew Term.compare cjnl
-    fun f p  = int_to_string (dfind p d) handle NotFound => "_"
-    val s = String.concatWith " " (map f predl)
-    fun g p = SOME (dfind p d) handle NotFound => NONE
-    val l = List.mapPartial g predl
-    fun h y = length (filter (fn x => x < y) l)
-  in
-    log_synt ("Target: " ^ f target);
-    log_synt ("Prediction: " ^ s);
-    log_synt 
-      ("Coverage(" ^ int_to_string (length predl) ^ "): " ^ 
-      String.concatWith " " (map (int_to_string o h) [10,100,1000,10000]))
-  end
-
-fun cjenum depth maxperdepth filterf predl target = 
+fun cjenum inddepth indthm depth maxperdepth filterf vcset = 
   let
-    (* val _ = log_synt ("maxperdepth:" ^ int_to_string maxperdepth) *) 
     val newfilterf = filterf maxperdepth
-    fun is_vc x = is_var x orelse is_const x
-    val vcl = List.concat (map (find_terms is_vc) (target :: predl))
-    val vcset = mk_fast_set Term.compare vcl
     val _ = init_gen_size vcset
     val _ = gen_size newfilterf depth
-    val dictl = 
-      List.tabulate (depth, fn x => gen_size newfilterf (x+1))
-    fun closify_err x = 
-      SOME (list_mk_forall (free_vars_lr x, x)) handle HOL_ERR _ => NONE
+    val dictl0 = List.tabulate (depth, fn x => gen_size newfilterf (x+1))
+    val dictl1 = List.tabulate (inddepth, fn x => gen_size newfilterf (x+1))
+    fun closify x = list_mk_forall (free_vars_lr x, x)
     fun extract_thml dict =
       if dmem bool dict 
-      then mk_fast_set Term.compare (List.mapPartial closify_err (dfind bool dict))  
+      then mk_term_set (mapfilter closify (dfind bool dict))
       else []
-    val cjl = List.concat (map extract_thml dictl)
-    val _    = msg_synt cjl "conjectures"
-    val ordered_cjl = filterf (length cjl) cjl
-    val _    = 
-      log_synt ("Closest conjecture: " ^ term_to_string (hd ordered_cjl))
+    fun extract_ind dict =
+      if dmem bool dict then 
+        let 
+          val absl = all_abs mk_abs (dfind bool dict) 
+          fun f x = (closify o rand o only_concl o REDEPTH_CONV BETA_CONV o
+            only_concl o (SPEC x)) indthm 
+        in 
+          mk_term_set (mapfilter f absl)
+        end
+      else []
+    val cjl   = List.concat (map extract_thml dictl0)
+    val indl  = List.concat (map extract_ind dictl1)
+    val _     = msg_synt cjl "conjectures"
+    val _     = msg_synt indl "induction axioms"
   in
-    (* report_rank ordered_cjl predl target; *)
-    ordered_cjl
+    (shuffle cjl, shuffle indl)
   end
 
-fun aimcj depth maxperdepth filterf predl target = 
-  let
-    val newfilterf = filterf maxperdepth
-    fun is_vc x = is_var x orelse is_const x
-    val vcl = List.concat (map (find_terms is_vc) (target :: predl))
-    val vcset = mk_fast_set Term.compare vcl
-    val _ = init_gen_size vcset
-    val _ = gen_size newfilterf depth
-    val dictl = 
-      List.tabulate (depth, fn x => gen_size newfilterf (x+1))
-    fun extract_terml dict =
-      if dmem alpha dict 
-      then mk_fast_set Term.compare (dfind alpha dict)  
-      else []
-    val cjl = List.concat (map extract_terml dictl)
-  in
-    cjl
-  end
+
+
 
 end (* struct *)
 

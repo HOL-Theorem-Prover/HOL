@@ -2,15 +2,6 @@ signature tttSynt =
 sig
 
   include Abbrev
-  
-  datatype pattern =
-    Pconst of int
-  | Pcomb  of pattern * pattern
-  | Plamb  of pattern * pattern
-  
-  (* globals *)
-  val concept_threshold : int ref
-  val concept_flag : bool ref
 
   (* debugging *)
   val ttt_synt_dir  : string ref
@@ -21,16 +12,11 @@ sig
   val writel_synt   : string -> string list -> unit
   
   (* conjecturing *)
-  val conjecture : int -> term list -> term list
   val cjenum     : 
+    int -> thm ->
     int -> int ->
     (int -> term list -> term list) -> 
-    term list -> 
-    term -> 
-    term list
-
-  val aimcj : 
-    int -> int ->
-    (int -> term list -> term list) -> term list -> term -> term list
+    term list ->
+    term list * term list
 
 end

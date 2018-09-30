@@ -3,37 +3,20 @@ sig
 
   include Abbrev
   
-  datatype role = Axiom | Theorem
+  val time_mprove: 
+    (thm list -> tactic) ->
+    real -> 
+    term list -> term -> 
+    (term * real) option
   
-  type idict_t = int * (term * (string, term) Redblackmap.dict)
-  
-  val one_in_n : int -> int -> 'a list -> 'a list
-  
-  (* initialization *)
-  val init_dicts : unit -> (term, (int list * role)) Redblackmap.dict
-  
-  (* generate conjectures and estimates the coverage *)
-  val targeted_conjectures :  
-    int ->
-    (term, (int list * role)) Redblackmap.dict -> unit
+  val expprovel:  
+    (term, term list option) Redblackmap.dict ->
+    (thm list -> tactic) ->
+    term list -> term list -> (term, term list option) Redblackmap.dict
 
-  (* re-proving theorems *)
-  (* 
-  val reprove : int -> (int -> term list -> term list) ->
-           (string ->
-             int ->
-               term list * term -> int * (term * ('a, term) Redblackmap.dict))
-             ->
-             (string -> int -> int list -> 'b -> (int * 'a list option) list)
-               ->
-               string ->
-                 int ->
-                   'b ->
-                     'c * (term, int list) Redblackmap.dict *
-                     (term, role) Redblackmap.dict -> term list
-   *)
-   val cj_target :
-      term list -> term -> unit
+  val calc_reward: 
+    (term * term list) list ->
+    (term, int) Redblackmap.dict
 
 
 end

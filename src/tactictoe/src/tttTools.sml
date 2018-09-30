@@ -165,6 +165,12 @@ fun is_reserved s =
    List
    -------------------------------------------------------------------------- *)
 
+fun one_in_n n start l = case l of
+    [] => []
+  | a :: m => if start mod n = 0 
+              then a :: one_in_n n (start + 1) m
+              else one_in_n n (start + 1) m
+
 fun map_snd f l   = map (fn (a,b) => (a, f b)) l
 fun map_fst f l   = map (fn (a,b) => (f a, b)) l
 fun map_assoc f l = map (fn a => (a, f a)) l
@@ -360,10 +366,12 @@ fun compare_rmin ((_,r1),(_,r2)) = Real.compare (r1,r2)
 
 val new_real = Random.newgen ()
 
+fun random_real () = Random.random new_real
+
 fun shuffle l =
   let
-    val l' = map (fn x => (x, Random.random new_real)) l in
-    map fst (dict_sort compare_rmin l')
+    val l' = map (fn x => (x, random_real ())) l in
+      map fst (dict_sort compare_rmin l')
   end
 
 fun goal_compare ((asm1,w1), (asm2,w2)) =

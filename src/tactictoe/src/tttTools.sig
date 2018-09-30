@@ -88,6 +88,7 @@ sig
   val dregroup : ('a * 'a -> order) -> ('a * 'b) list -> ('a, 'b list) Redblackmap.dict 
 
   (* list *)
+  val one_in_n : int -> int -> 'a list -> 'a list
   val shuffle : 'a list -> 'a list
   val map_snd : ('a -> 'b) -> ('c * 'a) list -> ('c * 'b) list
   val map_fst : ('a -> 'b) -> ('a * 'c) list -> ('b * 'c) list 
@@ -112,6 +113,7 @@ sig
   val decr   : int ref -> unit
   val sum_real : real list -> real
   val average_real : real list -> real
+  val random_real : unit -> real
   val sum_int : int list -> int
   val int_div : int -> int -> real
   val pow : real -> int -> real
