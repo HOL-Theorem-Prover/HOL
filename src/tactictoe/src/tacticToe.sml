@@ -21,6 +21,8 @@ val ERR = mk_HOL_ERR "tacticToe"
    Set parameters
    -------------------------------------------------------------------------- *)
 
+val eprover_timeout = 5
+
 fun set_timeout r = (ttt_search_time := Time.fromReal r)
 
 (* --------------------------------------------------------------------------
@@ -87,7 +89,7 @@ fun init_tactictoe () =
    -------------------------------------------------------------------------- *)
 
 fun select_thmfea gfea =
-  if !ttt_metis_flag orelse !ttt_eprover_flag orelse !ttt_thmlarg_flag
+  if !ttt_metis_flag orelse !ttt_thmlarg_flag
   then
     let
       val (symweight,feav,revdict) =
@@ -184,7 +186,7 @@ fun main_tactictoe goal =
     fun hammer pid goal =
       (!hh_stac_glob) (int_to_string pid) 
          (pthmsymweight,pthmfeav,pthmrevdict)
-         (!ttt_eprover_time) goal
+         eprover_timeout goal
   in
     debug_t "search" (search thmpred tacpred glpred hammer) goal
   end
@@ -319,8 +321,8 @@ fun eval_eprover goal =
     val (thmsymweight,thmfeav,revdict) = all_thmfeav ()
     val _ = incr eprover_eval_ref 
     val iname = current_theory () ^ "_" ^ int_to_string (!eprover_eval_ref)
-    fun hammer g = (!hh_stac_glob) iname (thmsymweight,thmfeav,revdict)
-        (!ttt_eprover_time) g
+    fun hammer g = 
+      (!hh_stac_glob) iname (thmsymweight,thmfeav,revdict) eprover_timeout g
     val _ = debug_eproof ("eprover_eval: " ^ iname)
     val (staco,t) = add_time hammer goal
       handle _ => (debug ("Error: hammer: " ^ iname); 

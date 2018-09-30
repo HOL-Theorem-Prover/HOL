@@ -20,67 +20,7 @@ fun debug_err s = (debug ("Error: " ^ s); raise ERR "standard" "error")
    -------------------------------------------------------------------------- *)
 
 exception SearchTimeOut
-exception NoNextTac
-
-(* --------------------------------------------------------------------------
-   Asynchronous calls to provers
-   -------------------------------------------------------------------------- *)
-
-(* Result *)
-datatype async_result_t =
-  HSuccess of (string * goal) |
-  HFailure |
-  HRunning of Thread.thread |
-  HVoid
-
-(* 100000 is the maximum number of nodes *)
-val hammer_ref = ref 0
-val async_result = Array.array (100000, HVoid)
-val install_async = ref (dempty Int.compare)
-val running_async = ref (dempty Int.compare)
-
-(* Start and end of search *)
-fun init_async () =
-  if !ttt_eprover_flag
-  then
-    (
-    hammer_ref := 0;
-    install_async := dempty Int.compare;
-    running_async := dempty Int.compare;
-    Array.modify (fn _ => HVoid) async_result
-    )
-  else ()
-
-fun terminate_thread pid thread =
-  while (Thread.isActive thread)
-  do (debug_search ("terminate thread " ^ int_to_string pid);
-      Thread.interrupt thread)
-
-fun terminate_async_pid pid =
-  if !ttt_eprover_flag then
-    (
-    Array.update (async_result,pid,HVoid);
-    install_async := drem pid (!install_async);
-    running_async := drem pid (!running_async);
-    if dmem pid (!running_async)
-    then terminate_thread pid (dfind pid (!running_async))
-    else ()
-    )
-  else ()
-
-fun terminate_async () =
-  if !ttt_eprover_flag
-  then app terminate_async_pid (dkeys (!running_async))
-  else ()
-
-fun queue_async pid g =
-  if !ttt_eprover_flag then
-    (
-    terminate_async_pid pid;
-    debug_search ("install thread " ^ int_to_string pid);
-    install_async := dadd pid g (!install_async)
-    )
-  else ()
+exception SearchSaturated
 
 
 (* -------------------------------------------------------------------------
@@ -94,7 +34,6 @@ fun is_active x = not (is_notactive x)
 fun deactivate x =
   (
   debug_search ("deactivate " ^ int_to_string x);
-  terminate_async_pid x;
   notactivedict := dadd x () (!notactivedict)
   )
 
@@ -165,10 +104,6 @@ fun reset_timers () =
    -------------------------------------------------------------------------- *)
 
 val metis_spec = "tactictoe_metis"
-val eprover_spec = "tactictoe_eprover"
-
-fun add_eprover pred =
-  if !ttt_eprover_flag then eprover_spec :: pred else pred
 
 fun add_metis pred =
   if !ttt_metis_flag then metis_spec :: pred else pred
@@ -301,7 +236,7 @@ fun root_create goal pred =
   end
 
 fun root_create_wrap g =
-  root_create g ((add_eprover o add_metis o !tacpredictor_glob) g)
+  root_create g ((add_metis o !tacpredictor_glob) g)
 
 fun node_create pripol tactime parid parstac pargn parg goallist
     predlist pending pardict =
@@ -515,9 +450,7 @@ fun apply_next_stac pid =
     val stac = hd pred
       handle _ => debug_err "apply_next_stac: empty pred"
   in
-    if stac = eprover_spec
-      then (queue_async pid g; NONE)
-      else infstep_timer (apply_stac pid pardict trydict stac) g
+    infstep_timer (apply_stac pid pardict trydict stac) g
   end
 
 (* ----------------------------------------------------------------------
@@ -640,7 +573,7 @@ fun node_create_gl pripol tactime gl pid =
     val parchildren = #children prec
     val parchildrensave = Array.sub (#childrena prec,gn)
     val depth = #depth prec + 1
-    val predlist = map (add_eprover o add_metis o !tacpredictor_glob) gl
+    val predlist = map (add_metis o !tacpredictor_glob) gl
     val pending = rev (map fst (number_list 0 predlist))
     (* Updating list of parents *)
     val new_pardict = dadd goal () (#pardict prec)
@@ -682,92 +615,12 @@ fun close_proof_wrap staco tactime pid =
     close_proof cid pid
   end
 
-
-(* --------------------------------------------------------------------------
-   Handling asynchronously calls
-   -------------------------------------------------------------------------- *)
-
-fun current_goal pid =
-  let
-    val prec = dfind pid (!proofdict)
-    val gn   = hd (!(#pending prec))
-  in
-    Array.sub (#goalarr prec, gn)
-  end
-
-(* Opening a thread *)
-fun hammer_call pid g =
-  (
-  case !hammer_glob (!hammer_ref) g of
-    NONE      => Array.update (async_result,pid,HFailure)
-  | SOME stac => Array.update (async_result,pid,HSuccess (stac,g))
-  )
-  handle _ => Array.update (async_result,pid,HFailure)
-(* add a debug message here *)
-
-fun fork_hammer () =
-  if null (dkeys (!install_async)) then () else
-  let
-    val pid = hd (dkeys (!install_async))
-    val _ = install_async := drem pid (!install_async)
-    val _ = incr hammer_ref
-    val _ = debug_search ("new thread " ^ int_to_string pid)
-    val file = ttt_code_dir ^ "/hammer" ^ int_to_string (!hammer_ref)
-    val thread =
-      Thread.fork (fn () => hammer_call pid (current_goal pid), [])
-  in
-    running_async := dadd pid thread (!running_async);
-    Array.update (async_result,pid,HRunning thread)
-  end
-
-fun open_async () =
-  if dlength (!running_async) < !ttt_eprover_async
-  then
-    let
-      val n = dlength (!running_async)
-      val m = length (filter (Thread.isActive o snd)
-        (dlist (!running_async)))
-    in
-      debug_search (int_to_string n ^ " running thread");
-      debug_search (int_to_string m ^ " active thread");
-      fork_hammer ()
-    end
-  else ()
-
-(* Closing all successfull threads in increasing order of pid *)
-
-fun close_async () =
-  let
-    val pidl = dkeys (!running_async)
-    fun f pid = case Array.sub (async_result,pid) of
-      HSuccess(stac,g) =>
-      (
-      debug_search ("success thread " ^ int_to_string pid);
-      running_async := drem pid (!running_async);
-      Array.update (async_result,pid,HVoid);
-      if is_active pid andalso current_goal pid = g
-        then close_proof_wrap (SOME stac) 0.0 pid
-        else ()
-      )
-    | HFailure =>
-      (
-      debug_search ("failure thread " ^ int_to_string pid);
-      Array.update (async_result,pid,HVoid);
-      running_async := drem pid (!running_async)
-      )
-    | _ => ()
-  in
-    app f pidl
-  end
-
 (* ---------------------------------------------------------------------------
    Search function. Modifies the proof state.
    -------------------------------------------------------------------------- *)
 
 fun init_search thmpred tacpred glpred hammer g =
   (
-  (* async *)
-  init_async ();
   (* global time-out *)
   glob_timer := SOME (Timer.startRealTimer ());
   (* caching *)
@@ -810,13 +663,12 @@ fun node_find () =
   let
     val _ = debug_search "node_find"
     val l0 = filter (fn x => is_active (fst x)) (dlist (!proofdict))
-    (* also deactivate node with empty predictions *)
+    (* deactivate node with empty predictions (no possible actions) *)
     val l1 = filter (fn x => not (has_empty_pred (fst x))) l0
-    val _ = if !ttt_eprover_flag then (close_async (); open_async ()) else ()
-    val l2 = if !ttt_eprover_flag
-             then filter (fn x => is_active (fst x)) l1
-             else l1
-    val _ = if null l2 then (debug_search "nonexttac"; raise NoNextTac) else ()
+    val _ = 
+      if null l1 then 
+      (debug_search "SearchSaturated"; raise SearchSaturated) 
+      else ()
   in
     try_mc_find ()
   end
@@ -858,7 +710,7 @@ fun search_loop () =
     then ProofTimeOut
     else (search_step (); debug_search "search step"; search_loop ())
   )
-  handle NoNextTac => (debug "proof: saturated"; ProofSaturated)
+  handle SearchSaturated => (debug "proof: saturated"; ProofSaturated)
        | SearchTimeOut => (debug "proof: timeout"; ProofTimeOut)
        | ProofFound => (debug "proof: found"; Proof "")
        | e => raise e
@@ -943,8 +795,6 @@ fun search thmpred tacpred glpred hammer goal =
   let
     val r = total_timer search_loop ()
     val _ = debug_search "End search loop"
-    val _ = terminate_async ()
-    val _ = debug_search "After termination"
     val proof_status = case r of
       Proof _  =>
       let

@@ -1258,8 +1258,7 @@ fun eprover_eval_thy thy =
   ttt_record_flag := false;
   ttt_rewrite_thy thy;
   ttt_record_thy thy;
-  ttt_record_flag := true;
-  ttt_eprover_flag := false
+  ttt_record_flag := true
   )
 
 fun eprover_eval_parallel n thyl = parallel_thy eprover_eval_thy n thyl

@@ -88,13 +88,6 @@ val ttt_metis_flag     = ref false
 val ttt_metis_time     = ref 0.1
 val ttt_metis_radius   = ref 16
 
-(* Eprover *)
-  (* Use can update_hh_stac () to update eprover *)
-val ttt_eprover_flag = ref false
-val ttt_eprover_time = ref 5
-val ttt_eprover_radius = ref 128 (* can not be changed yet *)
-val ttt_eprover_async = ref 1
-
 (* Evaluate Eprover instead of TacticToe *)
 val eprover_eval_flag = ref false 
 val eprover_save_flag = ref false

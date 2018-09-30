@@ -50,11 +50,7 @@ sig
   (* proof presentation *)
   val ttt_prettify_flag : bool ref
   val ttt_minimize_flag : bool ref
-  (* eprover *)
-  val ttt_eprover_flag     : bool ref
-  val ttt_eprover_time     : int ref
-  val ttt_eprover_radius   : int ref 
-  val ttt_eprover_async    : int ref
+  (* eprover evaluation *)
   val eprover_eval_flag : bool ref
   val eprover_save_flag : bool ref
   (* term predictions *)
