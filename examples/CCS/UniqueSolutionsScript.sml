@@ -842,7 +842,7 @@ val WEAK_UNIQUE_SOLUTION = store_thm (
       Q.UNABBREV_TAC `R` >> BETA_TAC >> rpt STRIP_TAC \\
       `WEAK_EQUIV y Q3` by PROVE_TAC [WEAK_EQUIV_TRANS, WEAK_EQUIV_SYM] \\
       Q.EXISTS_TAC `y` >> art [] \\
-      `WEAK_EQUIV E1 y'` by PROVE_TAC [WEAK_EQUIV_TRANS, WEAK_EQUIV_SYM] \\
+      `WEAK_EQUIV E1 y'` by PROVE_TAC [WEAK_EQUIV_TRANS] \\
       Q.EXISTS_TAC `y'` >> art [] \\
       Q.EXISTS_TAC `H'''` >> art [],
 (*
@@ -888,7 +888,7 @@ val WEAK_UNIQUE_SOLUTION = store_thm (
       Q.UNABBREV_TAC `R` >> BETA_TAC >> rpt STRIP_TAC \\
       `WEAK_EQUIV y E2` by PROVE_TAC [WEAK_EQUIV_TRANS, WEAK_EQUIV_SYM] \\
       Q.EXISTS_TAC `y` >> art [] \\
-      `WEAK_EQUIV P3 y'` by PROVE_TAC [WEAK_EQUIV_TRANS, WEAK_EQUIV_SYM] \\
+      `WEAK_EQUIV P3 y'` by PROVE_TAC [WEAK_EQUIV_TRANS] \\
       Q.EXISTS_TAC `y'` >> art [] \\
       Q.EXISTS_TAC `H'''` >> art [],
 (*
@@ -915,7 +915,7 @@ val WEAK_UNIQUE_SOLUTION = store_thm (
       `?Q3. EPS (H Q) Q3 /\ WEAK_EQUIV Q3 (H' Q)` by PROVE_TAC [WEAK_EQUIV_EPS'] \\
       Q.EXISTS_TAC `Q3` >> art [] \\
       Q.UNABBREV_TAC `R` >> REWRITE_TAC [O_DEF] >> BETA_TAC \\
-      `WEAK_EQUIV (H' Q) Q3` by PROVE_TAC [WEAK_EQUIV_TRANS, WEAK_EQUIV_SYM] \\
+      `WEAK_EQUIV (H' Q) Q3` by PROVE_TAC [WEAK_EQUIV_SYM] \\
       Q.EXISTS_TAC `H' Q` >> art [] \\
       Q.EXISTS_TAC `E3` >> art [] \\
       Q.EXISTS_TAC `H'` >> art [],
@@ -927,7 +927,7 @@ val WEAK_UNIQUE_SOLUTION = store_thm (
       `?P3. EPS (H P) P3 /\ WEAK_EQUIV P3 (H' P)` by PROVE_TAC [WEAK_EQUIV_EPS'] \\
       Q.EXISTS_TAC `P3` >> art [] \\
       Q.UNABBREV_TAC `R` >> REWRITE_TAC [O_DEF] >> BETA_TAC \\
-      `WEAK_EQUIV E3 E2` by PROVE_TAC [WEAK_EQUIV_TRANS, WEAK_EQUIV_SYM] \\
+      `WEAK_EQUIV E3 E2` by PROVE_TAC [WEAK_EQUIV_SYM] \\
       Q.EXISTS_TAC `E3` >> art [] \\
       Q.EXISTS_TAC `H' P` >> art [] \\
       Q.EXISTS_TAC `H'` >> art [] ]);
@@ -1037,15 +1037,13 @@ val SEQ_EPS_lemma = Q.prove (
       Q.EXISTS_TAC `E1'` >> art [] \\
       REWRITE_TAC [O_DEF] >> BETA_TAC \\
       `WEAK_EQUIV E2 Q'` by PROVE_TAC [WEAK_EQUIV_SYM] \\
-      Q.EXISTS_TAC `E2` >> art [] \\
-      Q.EXISTS_TAC `H' P` >> art [] \\
-      Q.EXISTS_TAC `H'` >> art [WEAK_EQUIV_REFL] ]);
+      PROVE_TAC [WEAK_EQUIV_REFL] ]);
 
 (* Proposition 7.13 in Milner's book [1]:
    Let the expression E contains at most the variable X, and let X be guarded and sequential
    in E, then:
 	If P = E{P/X} and Q = E{Q/X} then P = Q. (here "=" means OBS_CONGR)
-   
+
    This proof doesn't use "bisimulation up to" at all, instead it constructed a bisimulation
    directly and then verify it against OBS_CONGR_BY_WEAK_BISIM. -- Chun Tian
  *)
@@ -1096,8 +1094,6 @@ val OBS_UNIQUE_SOLUTION = store_thm (
         REWRITE_TAC [O_DEF] >> BETA_TAC >> rpt STRIP_TAC \\
         qpat_x_assum `R y' y` MP_TAC \\
         Q.UNABBREV_TAC `R` >> BETA_TAC >> rpt STRIP_TAC \\
-        `WEAK_EQUIV y Q4` by PROVE_TAC [WEAK_EQUIV_TRANS, WEAK_EQUIV_SYM] \\
-        Q.EXISTS_TAC `H'''` >> art [] \\
         PROVE_TAC [WEAK_EQUIV_TRANS, WEAK_EQUIV_SYM],
 (*
  (goal 1.4)                            (goal 1.1)
@@ -1151,8 +1147,7 @@ val OBS_UNIQUE_SOLUTION = store_thm (
         qpat_x_assum `X P'' E3` MP_TAC \\
         REWRITE_TAC [O_DEF] >> BETA_TAC >> rpt STRIP_TAC \\
         qpat_x_assum `R y' y` MP_TAC \\
-        Q.UNABBREV_TAC `R` >> BETA_TAC >> rpt STRIP_TAC \\
-        Q.EXISTS_TAC `H'''` >> art [] \\
+        Q.UNABBREV_TAC `R` >> BETA_TAC >>
         PROVE_TAC [WEAK_EQUIV_TRANS, WEAK_EQUIV_SYM],
 (*
  (goal 1.3)                            (goal 1.2)
@@ -1188,8 +1183,7 @@ val OBS_UNIQUE_SOLUTION = store_thm (
         `?Q4. EPS Q' Q4 /\ WEAK_EQUIV Q4 Q3` by PROVE_TAC [WEAK_EQUIV_EPS'] \\
         Q.EXISTS_TAC `Q4` >> art [] \\
         Q.UNABBREV_TAC `R` >> BETA_TAC \\
-        Q.EXISTS_TAC `H'` >> art [] \\
-        PROVE_TAC [WEAK_EQUIV_TRANS, WEAK_EQUIV_SYM],
+        PROVE_TAC [WEAK_EQUIV_TRANS],
         (* goal 4 (of 4) *)
         `?E1. EPS (H Q) E1 /\ WEAK_EQUIV E2 E1` by PROVE_TAC [WEAK_EQUIV_TRANS_tau] \\
         `?E3. EPS ((H o E) Q) E3 /\ WEAK_EQUIV E1 E3` by PROVE_TAC [OBS_CONGR_EPS] \\
@@ -1200,7 +1194,6 @@ val OBS_UNIQUE_SOLUTION = store_thm (
         `?P4. EPS P' P4 /\ WEAK_EQUIV P4 P3` by PROVE_TAC [WEAK_EQUIV_EPS'] \\
         Q.EXISTS_TAC `P4` >> art [] \\
         Q.UNABBREV_TAC `R` >> BETA_TAC \\
-        Q.EXISTS_TAC `H'` >> art [] \\
         PROVE_TAC [WEAK_EQUIV_TRANS, WEAK_EQUIV_SYM] ],
       (* goal 2 (of 2) *)
       Q.ABBREV_TAC `R = \x y. ?H. SEQ H /\ WEAK_EQUIV x (H P) /\ WEAK_EQUIV y (H Q)` \\
@@ -1229,7 +1222,6 @@ val OBS_UNIQUE_SOLUTION = store_thm (
         REWRITE_TAC [O_DEF] >> BETA_TAC >> rpt STRIP_TAC \\
         qpat_x_assum `R y' y` MP_TAC \\
         Q.UNABBREV_TAC `R` >> BETA_TAC >> rpt STRIP_TAC \\
-        Q.EXISTS_TAC `H''` >> art [] \\
         PROVE_TAC [WEAK_EQUIV_TRANS, WEAK_EQUIV_SYM],
 (*
   (goal 2.1)
@@ -1272,8 +1264,7 @@ val OBS_UNIQUE_SOLUTION = store_thm (
         REWRITE_TAC [O_DEF] >> BETA_TAC >> rpt STRIP_TAC \\
         qpat_x_assum `R y' y` MP_TAC \\
         Q.UNABBREV_TAC `R` >> BETA_TAC >> rpt STRIP_TAC \\
-        Q.EXISTS_TAC `H''` >> art [] \\
-        PROVE_TAC [WEAK_EQUIV_TRANS, WEAK_EQUIV_SYM] ] ]); 
+        PROVE_TAC [WEAK_EQUIV_SYM, WEAK_EQUIV_TRANS] ] ]);
 (*
   (goal 2.2)
       P ------------------- u --------------> P''
@@ -1310,8 +1301,7 @@ val unfolding_lemma1 = store_thm (
  >> Induct >- REWRITE_TAC [FUNPOW, contracts_REFL]
  >> REWRITE_TAC [FUNPOW_SUC]
  >> Q.ABBREV_TAC `Q = FUNPOW E n P`
- >> `(E P) contracts (E Q)` by PROVE_TAC [contracts_SUBST_GCONTEXT]
- >> IMP_RES_TAC contracts_TRANS);
+ >> PROVE_TAC [contracts_SUBST_GCONTEXT, contracts_TRANS]);
 
 (* This can be merged to HOL's arithmeticTheory *)
 val FUNPOW_SUC_alt = Q.prove (
