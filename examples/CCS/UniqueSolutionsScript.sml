@@ -1312,9 +1312,6 @@ val FUNPOW_SUC_alt = Q.prove (
  >> `FUNPOW f (n + 1) x = FUNPOW f n (FUNPOW f 1 x)` by PROVE_TAC [FUNPOW_ADD]
  >> FULL_SIMP_TAC arith_ss [FUNPOW_1, ADD1]);
 
-(* |- !f n x. FUNPOW f (SUC n) x = FUNPOW f n (f x) *)
-val FUNPOW_SUC_alt' = BETA_RULE (REWRITE_RULE [FUN_EQ_THM, o_DEF] FUNPOW_SUC_alt);
-
 (* A single transition from WGS E[P] will not touch the variable P *)
 val unfolding_lemma2 = store_thm (
    "unfolding_lemma2",
@@ -1422,7 +1419,7 @@ val unfolding_lemma4 = store_thm (
  >> rpt STRIP_TAC
  >> qpat_x_assum `TRACE X xs P'` MP_TAC
  >> Know `(C o (FUNPOW E (SUC n))) P = (C o (FUNPOW E n)) (E P)`
- >- ( REWRITE_TAC [o_DEF, FUNPOW_SUC_alt'] >> BETA_TAC >> RW_TAC std_ss [] )
+ >- ( REWRITE_TAC [o_DEF, FUNPOW] >> BETA_TAC >> RW_TAC std_ss [] )
  >> Rewr >> DISCH_TAC
  >> IMP_RES_TAC TRACE_cases2
  >> Cases_on `xs`
@@ -1435,7 +1432,7 @@ val unfolding_lemma4 = store_thm (
       CONJ_TAC >- ( IMP_RES_TAC WGS_IS_GCONTEXT >> MATCH_MP_TAC GCONTEXT_combin \\
 		    art [] ) \\
       CONJ_TAC >- ( KILL_TAC >> REWRITE_TAC [o_DEF] >> RW_TAC std_ss [] ) \\
-      GEN_TAC >> REWRITE_TAC [FUNPOW_SUC_alt', o_DEF] >> BETA_TAC \\
+      GEN_TAC >> REWRITE_TAC [FUNPOW, o_DEF] >> BETA_TAC \\
       art [] )
  >> FULL_SIMP_TAC list_ss []
  >> `LENGTH (FRONT (h::t)) <= n` by PROVE_TAC [LENGTH_FRONT_CONS]
@@ -1452,7 +1449,7 @@ val unfolding_lemma4 = store_thm (
  >> REWRITE_TAC [NULL]
  >> Q.EXISTS_TAC `C' (E Q)`
  >> Q.UNABBREV_TAC `x` >> art []
- >> REWRITE_TAC [FUNPOW_SUC_alt']
+ >> REWRITE_TAC [FUNPOW]
  >> Q.UNABBREV_TAC `xs` >> art []);
 
 (* Lemma 3.9 of [2] *)
@@ -2009,7 +2006,7 @@ val OBS_unfolding_lemma4 = store_thm (
  >> rpt STRIP_TAC
  >> qpat_x_assum `TRACE X xs P'` MP_TAC
  >> Know `(C o (FUNPOW E (SUC n))) P = (C o (FUNPOW E n)) (E P)`
- >- ( REWRITE_TAC [o_DEF, FUNPOW_SUC_alt'] >> BETA_TAC >> RW_TAC std_ss [] )
+ >- ( REWRITE_TAC [o_DEF, FUNPOW] >> BETA_TAC >> RW_TAC std_ss [] )
  >> Rewr >> DISCH_TAC
  >> IMP_RES_TAC TRACE_cases2
  >> Cases_on `xs`
@@ -2022,7 +2019,7 @@ val OBS_unfolding_lemma4 = store_thm (
       CONJ_TAC >- ( IMP_RES_TAC WG_IS_CONTEXT >> MATCH_MP_TAC CONTEXT_combin \\
 		    art [] ) \\
       CONJ_TAC >- ( KILL_TAC >> REWRITE_TAC [o_DEF] >> RW_TAC std_ss [] ) \\
-      GEN_TAC >> REWRITE_TAC [FUNPOW_SUC_alt', o_DEF] >> BETA_TAC \\
+      GEN_TAC >> REWRITE_TAC [FUNPOW, o_DEF] >> BETA_TAC \\
       art [] )
  >> FULL_SIMP_TAC list_ss []
  >> `LENGTH (FRONT (h::t)) <= n` by PROVE_TAC [LENGTH_FRONT_CONS]
@@ -2039,7 +2036,7 @@ val OBS_unfolding_lemma4 = store_thm (
  >> REWRITE_TAC [NULL]
  >> Q.EXISTS_TAC `C' (E Q)`
  >> Q.UNABBREV_TAC `x` >> art []
- >> REWRITE_TAC [FUNPOW_SUC_alt']
+ >> REWRITE_TAC [FUNPOW]
  >> Q.UNABBREV_TAC `xs` >> art []);
 
 (* Lemma 3.9 of [2] *)
