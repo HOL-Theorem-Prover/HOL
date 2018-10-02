@@ -1436,6 +1436,10 @@ val unfolding_lemma4 = store_thm (
       art [] )
  >> FULL_SIMP_TAC list_ss []
  >> `LENGTH (FRONT (h::t)) <= n` by PROVE_TAC [LENGTH_FRONT_CONS]
+   (* >> PROVE_TAC[NULL, TRACE_cases2, FUNPOW]
+         METIS_TAC[NULL, TRACE_cases2, FUNPOW]
+         seems to reliably cause uninterruptible PROVE_TAC on *second* attempt
+   *)
  >> Q.ABBREV_TAC `xs = FRONT (h::t)`
  >> Q.ABBREV_TAC `x = LAST (h::t)`
  >> qpat_x_assum `!xs P'' P'''. X ==> X'`
