@@ -1,6 +1,30 @@
+open testutils mesonLib pairTheory
+
 app load ["mesonLib", "pairTheory", "numTheory"];
 
-fun M tm = Tactical.prove(tm, mesonLib.MESON_TAC []);
+val op$ = Portable.$
+
+fun M nm tm =
+  let
+    val _ = tprint ("meson "^nm)
+  in
+    timed Tactical.prove
+          (fn Exn e => die ("\nFAILED: exn = " ^ General.exnMessage e)
+          | Normal _ => OK())
+          (tm, mesonLib.MESON_TAC [])
+  end
+
+fun Mfail nm tm =
+  let
+    val _ = tprint ("meson (expected to fail)"^nm)
+  in
+    timed Tactical.prove
+          (fn Exn (HOL_ERR _) => OK()
+          | Exn e => ("\nFAILED: exn = " ^ General.exnMessage e)
+          | Normal _ => die "\nFAILED: unexpected success")
+          (tm, mesonLib.MESON_TAC [])
+  end
+
 
 (*---------------------------------------------------------------------------
  * Some of the big formulas are too big for guessing tyvars for. A workaround
@@ -8,31 +32,34 @@ fun M tm = Tactical.prove(tm, mesonLib.MESON_TAC []);
  *---------------------------------------------------------------------------*)
 
 val _ = Globals.guessing_tyvars := false;
+val _ = Parse.current_backend := PPBackEnd.raw_terminal
+val _ = temp_remove_termtok {term_name = "O", tok = "O"};
+val _ = app (ignore o hide) ["irreflexive", "transitive", "one"];
 
 (* -------------------------------------------------------------------------
  * Trivia
  * ------------------------------------------------------------------------- *)
 
 (* M90: OK *)
-M (--`T`--);
+M "T" “T”;
 
 
 (* M90: OK *)
-M (--`P \/ ~P`--);
+M "P \\/ ~P" “P \/ ~P”;
 
 
 (* -------------------------------------------------------------------------
  * Basic existential stuff (bug reported by Michael Norrish)
  * ------------------------------------------------------------------------- *)
 
-M (--`!se:num. ?n:num. f n se se ==> ?m:num. f m 0 0 `--);
+Mfail "Norrish existential" “!se:num. ?n:num. f n se se ==> ?m:num. f m 0 0 ”;
 
 (* -------------------------------------------------------------------------
  * P50
  * ------------------------------------------------------------------------- *)
 
-val P50 = (--`(!x:'a. F0 a x \/ !y. F0 x y) ==> ?x. !y. F0 x y`--);
-M P50;
+val P50 = “(!x:'a. F0 a x \/ !y. F0 x y) ==> ?x. !y. F0 x y”;
+M "P50" P50;
 
 (* -------------------------------------------------------------------------
  * Example from Eric Borm (see long info-hol discussion, September 93).
@@ -42,7 +69,7 @@ val ERIC = Term
 `!P Q R. !x:'a. ?v w. !y (z:'b).
           P x /\ Q y ==> (P v \/ R w) /\ (R z ==> Q v)`;
 
-M ERIC;
+M "ERIC" ERIC;
 
 
 
@@ -52,13 +79,13 @@ M ERIC;
  * yield a very efficient proof.
  * ------------------------------------------------------------------------- *)
 
-val LOS = (--`(!(x:'a) (y:'a) z. P x y /\ P y z ==> P x z) /\
+val LOS = “(!(x:'a) (y:'a) z. P x y /\ P y z ==> P x z) /\
    (!x (y:'a) z. Q x y /\ Q y z ==> Q x z) /\
    (!x y. P x y ==> P y x) /\
    (!x y. P x y \/ Q x y)
-   ==> (!x y. P x y) \/ (!x y. Q x y)`--);
+   ==> (!x y. P x y) \/ (!x y. Q x y)”;
 
-M LOS;;
+M "LOS" LOS;;
 
 
 (* -------------------------------------------------------------------------
@@ -66,7 +93,7 @@ M LOS;;
  * ------------------------------------------------------------------------- *)
 
 val P55 =
-(--`lives(agatha) /\ lives(butler) /\ lives(charles) /\
+“lives(agatha) /\ lives(butler) /\ lives(charles) /\
    (killed(agatha,agatha) \/ killed(butler,agatha) \/
     killed(charles,agatha)) /\
    (!x y. killed(x,y) ==> hates(x,y) /\ ~richer(x,y)) /\
@@ -75,16 +102,16 @@ val P55 =
    (!x. lives(x) /\ ~richer(x,agatha) ==> hates(butler,x)) /\
    (!x. hates(agatha,x) ==> hates(butler,x)) /\
    (!x. ~hates(x,agatha) \/ ~hates(x,butler) \/ ~hates(x,charles)) ==>
-   (?x:'person. killed(x,agatha))`--);
+   (?x:'person. killed(x,agatha))”;
 
-M P55;
+M "P55" P55;
 
 
 (* -------------------------------------------------------------------------
  * The Steamroller.
  * ------------------------------------------------------------------------- *)
 
-val P47 = (--`((!x:'a. P1 x ==> P0 x) /\ (?x. P1 x)) /\
+val P47 = “((!x:'a. P1 x ==> P0 x) /\ (?x. P1 x)) /\
    ((!x. P2 x ==> P0 x) /\ (?x. P2 x)) /\
    ((!x. P3 x ==> P0 x) /\ (?x. P3 x)) /\
    ((!x. P4 x ==> P0 x) /\ (?x. P4 x)) /\
@@ -99,7 +126,7 @@ val P47 = (--`((!x:'a. P1 x ==> P0 x) /\ (?x. P1 x)) /\
    (!x y. P3 x /\ P4 y ==> R x y) /\
    (!x y. P3 x /\ P5 y ==> ~(R x y)) /\
    (!x. (P4 x \/ P5 x) ==> ?y. Q0 y /\ R x y)
-   ==> ?x y. P0 x /\ P0 y /\ ?z. Q1 z /\ R y z /\ R x y`--);
+   ==> ?x y. P0 x /\ P0 y /\ ?z. Q1 z /\ R y z /\ R x y”;
 
 M P47;
 
@@ -109,7 +136,7 @@ M P47;
  * ------------------------------------------------------------------------- *)
 
 val P48 = M
- (--`((a:'a = b) \/ (c = d)) /\ ((a = c) \/ (b = d)) ==> (a = d) \/ (b = c)`--);
+ “((a:'a = b) \/ (c = d)) /\ ((a = c) \/ (b = d)) ==> (a = d) \/ (b = c)”;
 
 (* hol90 - tick *)
 
@@ -119,41 +146,41 @@ val P48 = M
  * ------------------------------------------------------------------------- *)
 
 (* hol90 - no *)
-val P49 = (--`(?x y. !z:'a. (z = x) \/ (z = y)) /\
-                            P a /\ P b /\ ~(a = b) ==> !x:'a. P x`--);
+val P49 = “(?x y. !z:'a. (z = x) \/ (z = y)) /\
+                            P a /\ P b /\ ~(a = b) ==> !x:'a. P x”;
 
 
 val P51 =
- (--`(?z w:'a. !x y:'a. F0 x y = (x = z) /\ (y = w)) ==>
-        ?z:'a. !x:'a. (?w:'a. !y:'a. F0 x y = (y = w)) = (x = z)`--);
+ “(?z w:'a. !x y:'a. F0 x y = (x = z) /\ (y = w)) ==>
+        ?z:'a. !x:'a. (?w:'a. !y:'a. F0 x y = (y = w)) = (x = z)”;
 
 
 M P51;
 
 val P52 =
- (--`(?z w:'a. !x y. F0 x y = (x = z) /\ (y = w)) ==>
-        ?w:'a. !y. (?z. !x:'a. F0 x y = (x = z)) = (y = w)`--);
+ “(?z w:'a. !x y. F0 x y = (x = z) /\ (y = w)) ==>
+        ?w:'a. !y. (?z. !x:'a. F0 x y = (x = z)) = (y = w)”;
 M P52;;
 
 
 (*** Too slow
 
 val P53 =
- (--`(?x y. ~(x = y) /\ !z. (z = x) \/ (z = y)) ==>
+ “(?x y. ~(x = y) /\ !z. (z = x) \/ (z = y)) ==>
      ((?z. !x. (?w. !y. F0 x y = (y = w)) = (x = z)) =
-      (?w. !y. (?z. !x. F0 x y = (x = z)) = (y = w)))`--);
+      (?w. !y. (?z. !x. F0 x y = (x = z)) = (y = w)))”;
 
 
 val P54 = Tactical.prove(GEN_MESON_TAC
- (--`(!y. ?z. !x. F0 x z = (x = y)) ==>
-    ~?w. !x. F0 x w = !u. F0 x u ==> ?y. F0 y u /\ ~ ?z. F0 x u /\ F0 z y`--));
+ “(!y. ?z. !x. F0 x z = (x = y)) ==>
+    ~?w. !x. F0 x w = !u. F0 x u ==> ?y. F0 y u /\ ~ ?z. F0 x u /\ F0 z y”);
 
 
 *****)
 
 (* hol90 - yes? (too slow) *)
 val P55 =
- (--`(?x:'a. lives x /\ killed x agatha) /\
+ “(?x:'a. lives x /\ killed x agatha) /\
    (lives(agatha) /\ lives(butler) /\ lives(charles)) /\
    (!x. lives(x) ==> (x = agatha) \/ (x = butler) \/ (x = charles)) /\
    (!y x. killed x y ==> hates x y) /\
@@ -164,7 +191,7 @@ val P55 =
    (!x. hates agatha x ==> hates butler x) /\
    (!x. ?y. ~hates x y) /\
    ~(agatha = butler)
-   ==> killed agatha agatha`--);
+   ==> killed agatha agatha”;
 
 
 (* ------------------------------------------------------------------------- *)
@@ -172,7 +199,7 @@ val P55 =
 
 (* hol90 - yes *)
 val P50 =
- (--`(!x:'a. P(a,x) \/ (!y. P(x,y))) ==> ?x. !y. P(x,y)`--);
+ “(!x:'a. P(a,x) \/ (!y. P(x,y))) ==> ?x. !y. P(x,y)”;
 
 
 (* ========================================================================= *)
@@ -291,7 +318,7 @@ val P50 =
  *)
 
 val BOOL =
-(--`(!(X:'a). equal(X,X)) /\
+“(!(X:'a). equal(X,X)) /\
    (!Y X. equal(X,Y) ==> equal(Y,X)) /\
    (!Y X Z. equal(X,Y) /\ equal(Y,Z) ==> equal(X,Z)) /\
    (!X Y. sum(X,Y,add(X,Y))) /\
@@ -326,30 +353,29 @@ val BOOL =
    (!X W Y. equal(X,Y) ==> equal(add(W,X),add(W,Y))) /\
    (!X Y W. equal(X,Y) ==> equal(multiply(X,W),multiply(Y,W))) /\
    (!X W Y. equal(X,Y) ==> equal(multiply(W,X),multiply(W,Y))) /\
-   (!X Y. equal(X,Y) ==> equal(inverse(X),inverse(Y)))`--);;
+   (!X Y. equal(X,Y) ==> equal(inverse(X),inverse(Y)))”;;
 
-open Meson;
-val BOOL_FACTS = mk_mset[BOOL];
 
-fun MESON msets thms tm = (tm,MESON_TAC msets thms);
-
-(* hol90 - yes *)
-val BOO003_1 = MESON [BOOL_FACTS] [] (--`product((x:'a),x,x):bool`--);;
+fun MESON _ thms tm = (tm,mesonLib.MESON_TAC (ASSUME BOOL :: thms) ([], tm));
+val BOOL_FACTS = true
 
 (* hol90 - yes *)
-val BOO004_1 = MESON [BOOL_FACTS] [] (--`sum((x:'a),x,x):bool`--);;
+val BOO003_1 = MESON [BOOL_FACTS] [] “product((x:'a),x,x):bool”;;
 
 (* hol90 - yes *)
-val BOO005_1 = MESON [BOOL_FACTS] [] (--`sum((x:'a),(multiplicative_identity:'a),multiplicative_identity):bool`--);;
+val BOO004_1 = MESON [BOOL_FACTS] [] “sum((x:'a),x,x):bool”;;
 
 (* hol90 - yes *)
-val BOO006_1 = MESON [BOOL_FACTS] [] (--`product((x:'a),(additive_identity:'a),additive_identity):bool`--);;
+val BOO005_1 = MESON [BOOL_FACTS] [] “sum((x:'a),(multiplicative_identity:'a),multiplicative_identity):bool”;;
 
 (* hol90 - yes *)
-val BOO011_1 = MESON [BOOL_FACTS] [] (--`equal((inverse(additive_identity:'a):'a),(multiplicative_identity:'a)):bool`--);;
+val BOO006_1 = MESON [BOOL_FACTS] [] “product((x:'a),(additive_identity:'a),additive_identity):bool”;;
 
-val CAT001_3 =
- (--`(!X:'a. equal(X,X)) /\
+(* hol90 - yes *)
+val BOO011_1 = MESON [BOOL_FACTS] [] “equal((inverse(additive_identity:'a):'a),(multiplicative_identity:'a)):bool”;;
+
+val CAT001_3 = M
+ “(!X:'a. equal(X,X)) /\
    (!Y X. equal(X,Y) ==> equal(Y,X)) /\
    (!Y X Z. equal(X,Y) /\ equal(Y,Z) ==> equal(X,Z)) /\
    (!Y X. equivalent(X,Y) ==> there_exists(X)) /\
@@ -382,11 +408,11 @@ val CAT001_3 =
    (!Y X Z. equal(compose(compose(a,b),X),Y) /\ equal(compose(compose(a,b),Z),Y) ==> equal(X,Z)) /\
    (there_exists(compose(b,h))) /\
    (equal(compose(b,h),compose(b,g))) /\
-   (~equal(h,g)) ==> F`--);
+   (~equal(h,g)) ==> F”;
 
 
-val CAT003_3 =
- (--`(!X:'a. equal(X,X)) /\
+val CAT003_3 = M
+ “(!X:'a. equal(X,X)) /\
    (!Y X. equal(X,Y) ==> equal(Y,X)) /\
    (!Y X Z. equal(X,Y) /\ equal(Y,Z) ==> equal(X,Z)) /\
    (!Y X. equivalent(X,Y) ==> there_exists(X)) /\
@@ -419,11 +445,11 @@ val CAT003_3 =
    (!Y X Z. equal(compose(X,compose(a,b)),Y) /\ equal(compose(Z,compose(a,b)),Y) ==> equal(X,Z)) /\
    (there_exists(h)) /\
    (equal(compose(h,a),compose(g,a))) /\
-   (~equal(g,h)) ==> F`--);
+   (~equal(g,h)) ==> F”;
 
 
 val CAT005_1 =
- (--`(!X:'a. equal(X,X)) /\
+ “(!X:'a. equal(X,X)) /\
    (!Y X. equal(X,Y) ==> equal(Y,X)) /\
    (!Y X Z. equal(X,Y) /\ equal(Y,Z) ==> equal(X,Z)) /\
    (!X Y. defined(X,Y) ==> product(X,Y,compose(X,Y))) /\
@@ -456,11 +482,11 @@ val CAT005_1 =
    (!X Y Z. equal(X,Y) ==> equal(compose(X,Z),compose(Y,Z))) /\
    (defined(a,d)) /\
    (identity_map(d)) /\
-   (~equal(domain(a),d)) ==> F`--);
+   (~equal(domain(a),d)) ==> F”;
 
 
 val CAT007_1 =
- (--`(!X:'a. equal(X,X)) /\
+ “(!X:'a. equal(X,X)) /\
    (!Y X. equal(X,Y) ==> equal(Y,X)) /\
    (!Y X Z. equal(X,Y) /\ equal(Y,Z) ==> equal(X,Z)) /\
    (!X Y. defined(X,Y) ==> product(X,Y,compose(X,Y))) /\
@@ -492,11 +518,11 @@ val CAT007_1 =
    (!X Z Y. equal(X,Y) ==> equal(compose(Z,X),compose(Z,Y))) /\
    (!X Y Z. equal(X,Y) ==> equal(compose(X,Z),compose(Y,Z))) /\
    (equal(domain(a),codomain(b))) /\
-   (~defined(a,b)) ==> F`--);
+   (~defined(a,b)) ==> F”;
 
 
 val CAT018_1 =
- (--`(!X:'a. equal(X,X)) /\
+ “(!X:'a. equal(X,X)) /\
    (!Y X. equal(X,Y) ==> equal(Y,X)) /\
    (!Y X Z. equal(X,Y) /\ equal(Y,Z) ==> equal(X,Z)) /\
    (!X Y. defined(X,Y) ==> product(X,Y,compose(X,Y))) /\
@@ -529,11 +555,11 @@ val CAT018_1 =
    (!X Y Z. equal(X,Y) ==> equal(compose(X,Z),compose(Y,Z))) /\
    (defined(a,b)) /\
    (defined(b,c)) /\
-   (~defined(a,compose(b,c))) ==> F`--);
+   (~defined(a,compose(b,c))) ==> F”;
 
 
 val COL001_2 =
- (--`(!X:'a. equal(X,X)) /\
+ “(!X:'a. equal(X,X)) /\
    (!Y X. equal(X,Y) ==> equal(Y,X)) /\
    (!Y X Z. equal(X,Y) /\ equal(Y,Z) ==> equal(X,Z)) /\
    (!X Y Z. equal(apply(apply(apply(s,X),Y),Z),apply(apply(X,Z),apply(Y,Z)))) /\
@@ -543,22 +569,22 @@ val COL001_2 =
    (!A B C. equal(A,B) ==> equal(apply(A,C),apply(B,C))) /\
    (!D F' E. equal(D,E) ==> equal(apply(F',D),apply(F',E))) /\
    (!X. equal(apply(apply(apply(s,apply(b,X)),i),apply(apply(s,apply(b,X)),i)),apply(x,apply(apply(apply(s,apply(b,X)),i),apply(apply(s,apply(b,X)),i))))) /\
-   (!Y. ~equal(Y,apply(combinator,Y))) ==> F`--);
+   (!Y. ~equal(Y,apply(combinator,Y))) ==> F”;
 
 
 val COL023_1 =
- (--`(!X:'a. equal(X,X)) /\
+ “(!X:'a. equal(X,X)) /\
    (!Y X. equal(X,Y) ==> equal(Y,X)) /\
    (!Y X Z. equal(X,Y) /\ equal(Y,Z) ==> equal(X,Z)) /\
    (!X Y Z. equal(apply(apply(apply(b,X),Y),Z),apply(X,apply(Y,Z)))) /\
    (!X Y Z. equal(apply(apply(apply(n,X),Y),Z),apply(apply(apply(X,Z),Y),Z))) /\
    (!A B C. equal(A,B) ==> equal(apply(A,C),apply(B,C))) /\
    (!D F' E. equal(D,E) ==> equal(apply(F',D),apply(F',E))) /\
-   (!Y. ~equal(Y,apply(combinator,Y))) ==> F`--);
+   (!Y. ~equal(Y,apply(combinator,Y))) ==> F”;
 
 
 val COL032_1 =
- (--`(!X:'a. equal(X,X)) /\
+ “(!X:'a. equal(X,X)) /\
    (!Y X. equal(X,Y) ==> equal(Y,X)) /\
    (!Y X Z. equal(X,Y) /\ equal(Y,Z) ==> equal(X,Z)) /\
    (!X. equal(apply(m,X),apply(X,X))) /\
@@ -566,11 +592,11 @@ val COL032_1 =
    (!A B C. equal(A,B) ==> equal(apply(A,C),apply(B,C))) /\
    (!D F' E. equal(D,E) ==> equal(apply(F',D),apply(F',E))) /\
    (!G H. equal(G,H) ==> equal(f(G),f(H))) /\
-   (!Y. ~equal(apply(Y,f(Y)),apply(f(Y),apply(Y,f(Y))))) ==> F`--);
+   (!Y. ~equal(apply(Y,f(Y)),apply(f(Y),apply(Y,f(Y))))) ==> F”;
 
 
 val COL052_2 =
- (--`(!X:'a. equal(X,X)) /\
+ “(!X:'a. equal(X,X)) /\
    (!Y X. equal(X,Y) ==> equal(Y,X)) /\
    (!Y X Z. equal(X,Y) /\ equal(Y,Z) ==> equal(X,Z)) /\
    (!X Y W. equal(response(compose(X,Y),W),response(X,response(Y,W)))) /\
@@ -585,11 +611,11 @@ val COL052_2 =
    (!J L K'. equal(J,K') ==> equal(response(L,J),response(L,K'))) /\
    (agreeable(c)) /\
    (~agreeable(a)) /\
-   (equal(c,compose(a,b))) ==> F`--);
+   (equal(c,compose(a,b))) ==> F”;
 
 
 val COL075_2 =
- (--`(!X:'a. equal(X,X)) /\
+ “(!X:'a. equal(X,X)) /\
    (!Y X. equal(X,Y) ==> equal(Y,X)) /\
    (!Y X Z. equal(X,Y) /\ equal(Y,Z) ==> equal(X,Z)) /\
    (!Y X. equal(apply(apply(k,X),Y),X)) /\
@@ -598,7 +624,7 @@ val COL075_2 =
    (!G I' H. equal(G,H) ==> equal(apply(I',G),apply(I',H))) /\
    (!A B. equal(A,B) ==> equal(b(A),b(B))) /\
    (!C D. equal(C,D) ==> equal(c(C),c(D))) /\
-   (!Y. ~equal(apply(apply(Y,b(Y)),c(Y)),apply(b(Y),b(Y)))) ==> F`--);
+   (!Y. ~equal(apply(apply(Y,b(Y)),c(Y)),apply(b(Y),b(Y)))) ==> F”;
 
 
 val COM001_1 =
@@ -625,7 +651,10 @@ Lib.with_flag(Globals.guessing_tyvars,true)
    (has(p8,goto(loop))) /\
    (~succeeds(p3,p3)) ==> F`;
 
-
+val _ = new_type("num", 0)
+val _ = new_constant("n0", ``:num``)
+val _ = new_constant("n1", ``:num``)
+val _ = new_constant("n2", ``:num``)
 val COM002_1 =
 Lib.with_flag(Globals.guessing_tyvars,true)
  Term
@@ -633,16 +662,16 @@ Lib.with_flag(Globals.guessing_tyvars,true)
    (!Goal_state Intermediate_state Start_state. succeeds(Goal_state,Intermediate_state) /\ succeeds(Intermediate_state,Start_state) ==> succeeds(Goal_state,Start_state)) /\
    (!Start_state Label Goal_state. has(Start_state,goto(Label)) /\ labels(Label,Goal_state) ==> succeeds(Goal_state,Start_state)) /\
    (!Start_state Condition Goal_state. has(Start_state,ifthen(Condition,Goal_state)) ==> succeeds(Goal_state,Start_state)) /\
-   (has(p1,assign(register_j,0))) /\
+   (has(p1,assign(register_j,n0))) /\
    (follows(p2,p1)) /\
-   (has(p2,assign(register_k,1))) /\
+   (has(p2,assign(register_k,n1))) /\
    (labels(loop,p3)) /\
    (follows(p3,p2)) /\
    (has(p3,ifthen(equal(register_j,n),p4))) /\
    (has(p4,goto(out))) /\
    (follows(p5,p4)) /\
    (follows(p6,p3)) /\
-   (has(p6,assign(register_k,times(2,register_k)))) /\
+   (has(p6,assign(register_k,times(n2,register_k)))) /\
    (follows(p7,p6)) /\
    (has(p7,assign(register_j,plus(register_j,1)))) /\
    (follows(p8,p7)) /\
@@ -753,7 +782,7 @@ Lib.with_flag(Globals.guessing_tyvars,true)
 
 
 val GEO003_1 =
- (--`(!X:'a. equal(X,X)) /\
+ “(!X:'a. equal(X,X)) /\
    (!Y X. equal(X,Y) ==> equal(Y,X)) /\
    (!Y X Z. equal(X,Y) /\ equal(Y,Z) ==> equal(X,Z)) /\
    (!X Y. between(X,Y,X) ==> equal(X,Y)) /\
@@ -808,11 +837,11 @@ val GEO003_1 =
    (!X V1 V2 V3 Y V4 V5. equal(X,Y) ==> equal(continuous(V1,V2,V3,X,V4,V5),continuous(V1,V2,V3,Y,V4,V5))) /\
    (!X V1 V2 V3 V4 Y V5. equal(X,Y) ==> equal(continuous(V1,V2,V3,V4,X,V5),continuous(V1,V2,V3,V4,Y,V5))) /\
    (!X V1 V2 V3 V4 V5 Y. equal(X,Y) ==> equal(continuous(V1,V2,V3,V4,V5,X),continuous(V1,V2,V3,V4,V5,Y))) /\
-   (~between(a,b,b)) ==> F`--);
+   (~between(a,b,b)) ==> F”;
 
 
 val GEO017_2 =
- (--`(!X:'a. equal(X,X)) /\
+ “(!X:'a. equal(X,X)) /\
    (!Y X. equal(X,Y) ==> equal(Y,X)) /\
    (!Y X Z. equal(X,Y) /\ equal(Y,Z) ==> equal(X,Z)) /\
    (!Y X. equidistant(X,Y,Y,X)) /\
@@ -866,11 +895,11 @@ val GEO017_2 =
    (!X V1 V2 V3 V4 Y V5. equal(X,Y) ==> equal(continuous(V1,V2,V3,V4,X,V5),continuous(V1,V2,V3,V4,Y,V5))) /\
    (!X V1 V2 V3 V4 V5 Y. equal(X,Y) ==> equal(continuous(V1,V2,V3,V4,V5,X),continuous(V1,V2,V3,V4,V5,Y))) /\
    (equidistant(u,v,w,x)) /\
-   (~equidistant(u,v,x,w)) ==> F`--);
+   (~equidistant(u,v,x,w)) ==> F”;
 
 
 val GEO027_3 =
- (--`(!X:'a. equal(X,X)) /\
+ “(!X:'a. equal(X,X)) /\
    (!Y X. equal(X,Y) ==> equal(Y,X)) /\
    (!Y X Z. equal(X,Y) /\ equal(Y,Z) ==> equal(X,Z)) /\
    (!Y X. equidistant(X,Y,Y,X)) /\
@@ -947,11 +976,11 @@ val GEO027_3 =
    (!U V W X. between(U,V,W) /\ between(U,V,X) /\ equidistant(V,W,V,X) ==> equal(U,V) \/ equal(W,X)) /\
    (between(u,v,w)) /\
    (~equal(u,v)) /\
-   (~equal(w,extension(u,v,v,w))) ==> F`--);
+   (~equal(w,extension(u,v,v,w))) ==> F”;
 
 
 val GEO058_2 =
- (--`(!X:'a. equal(X,X)) /\
+ “(!X:'a. equal(X,X)) /\
    (!Y X. equal(X,Y) ==> equal(Y,X)) /\
    (!Y X Z. equal(X,Y) /\ equal(Y,Z) ==> equal(X,Z)) /\
    (!Y X. equidistant(X,Y,Y,X)) /\
@@ -1008,7 +1037,7 @@ val GEO058_2 =
    (!X Y Z. equal(X,Y) ==> equal(reflection(X,Z),reflection(Y,Z))) /\
    (!A1 C1 B1. equal(A1,B1) ==> equal(reflection(C1,A1),reflection(C1,B1))) /\
    (equal(v,reflection(u,v))) /\
-   (~equal(u,v)) ==> F`--);
+   (~equal(u,v)) ==> F”;
 
 
 val GEO079_1 =
@@ -1023,7 +1052,7 @@ Lib.with_flag(Globals.guessing_tyvars,true)
 
 
 val GRP001_1 =
- (--`(!X:'a. equal(X,X)) /\
+ “(!X:'a. equal(X,X)) /\
    (!Y X. equal(X,Y) ==> equal(Y,X)) /\
    (!Y X Z. equal(X,Y) /\ equal(Y,Z) ==> equal(X,Z)) /\
    (!X. product(identity,X,X)) /\
@@ -1042,11 +1071,11 @@ val GRP001_1 =
    (!X W Z Y. equal(X,Y) /\ product(W,Z,X) ==> product(W,Z,Y)) /\
    (!X. product(X,X,identity)) /\
    (product(a,b,c)) /\
-   (~product(b,a,c)) ==> F`--);
+   (~product(b,a,c)) ==> F”;
 
 
 val GRP008_1 =
- (--`(!X:'a. equal(X,X)) /\
+ “(!X:'a. equal(X,X)) /\
    (!Y X. equal(X,Y) ==> equal(Y,X)) /\
    (!Y X Z. equal(X,Y) /\ equal(Y,Z) ==> equal(X,Z)) /\
    (!X. product(identity,X,X)) /\
@@ -1069,11 +1098,11 @@ val GRP008_1 =
    (!B A C. q(A) /\ product(A,B,C) ==> product(B,A,C)) /\
    (!A. product(j(A),A,h(A)) \/ product(A,j(A),h(A)) \/ q(A)) /\
    (!A. product(j(A),A,h(A)) /\ product(A,j(A),h(A)) ==> q(A)) /\
-   (~q(identity)) ==> F`--);
+   (~q(identity)) ==> F”;
 
 
 val GRP013_1 =
- (--`(!X:'a. equal(X,X)) /\
+ “(!X:'a. equal(X,X)) /\
    (!Y X. equal(X,Y) ==> equal(Y,X)) /\
    (!Y X Z. equal(X,Y) /\ equal(Y,Z) ==> equal(X,Z)) /\
    (!X. product(identity,X,X)) /\
@@ -1094,11 +1123,11 @@ val GRP013_1 =
    (product(a,b,c)) /\
    (product(inverse(a),inverse(b),d)) /\
    (!A C B. product(inverse(A),inverse(B),C) ==> product(A,C,B)) /\
-   (~product(c,d,identity)) ==> F`--);
+   (~product(c,d,identity)) ==> F”;
 
 
 val GRP037_3 =
- (--`(!X:'a. equal(X,X)) /\
+ “(!X:'a. equal(X,X)) /\
    (!Y X. equal(X,Y) ==> equal(Y,X)) /\
    (!Y X Z. equal(X,Y) /\ equal(Y,Z) ==> equal(X,Z)) /\
    (!X. product(identity,X,X)) /\
@@ -1127,21 +1156,21 @@ val GRP037_3 =
    (!B C D A. product(A,B,C) /\ product(D,B,C) ==> equal(D,A)) /\
    (subgroup_member(a)) /\
    (subgroup_member(another_identity)) /\
-   (~equal(inverse(a),another_inverse(a))) ==> F`--);
+   (~equal(inverse(a),another_inverse(a))) ==> F”;
 
 
 val GRP031_2 =
- (--`(!X Y. product(X,Y,multiply(X,Y))) /\
+ “(!X Y. product(X,Y,multiply(X,Y))) /\
    (!X Y Z W. product(X,Y,Z) /\ product(X,Y,W) ==> equal(Z,W)) /\
    (!Y U Z X V W. product(X,Y,U) /\ product(Y,Z,V) /\ product(U,Z,W) ==> product(X,V,W)) /\
    (!Y X V U Z W. product(X,Y,U) /\ product(Y,Z,V) /\ product(X,V,W) ==> product(U,Z,W)) /\
    (!A. product(A,inverse(A),identity)) /\
    (!A:'a. product(A,identity,A)) /\
-   (!A. ~product(A,a,identity)) ==> F`--);
+   (!A. ~product(A,a,identity)) ==> F”;
 
 
 val GRP034_4 =
- (--`(!X Y:'a. product(X,Y,multiply(X,Y))) /\
+ “(!X Y:'a. product(X,Y,multiply(X,Y))) /\
    (!X. product(identity,X,X)) /\
    (!X. product(X,identity,X)) /\
    (!X. product(X,inverse(X),identity)) /\
@@ -1149,11 +1178,11 @@ val GRP034_4 =
    (!Y X V U Z W. product(X,Y,U) /\ product(Y,Z,V) /\ product(X,V,W) ==> product(U,Z,W)) /\
    (!B A C. subgroup_member(A) /\ subgroup_member(B) /\ product(B,inverse(A),C) ==> subgroup_member(C)) /\
    (subgroup_member(a)) /\
-   (~subgroup_member(inverse(a))) ==> F`--);
+   (~subgroup_member(inverse(a))) ==> F”;
 
 
 val GRP047_2 =
- (--`(!X:'a. product(identity,X,X)) /\
+ “(!X:'a. product(identity,X,X)) /\
    (!X. product(inverse(X),X,identity)) /\
    (!X Y. product(X,Y,multiply(X,Y))) /\
    (!X Y Z W. product(X,Y,Z) /\ product(X,Y,W) ==> equal(Z,W)) /\
@@ -1161,11 +1190,11 @@ val GRP047_2 =
    (!Y X V U Z W. product(X,Y,U) /\ product(Y,Z,V) /\ product(X,V,W) ==> product(U,Z,W)) /\
    (!X W Z Y. equal(X,Y) /\ product(W,Z,X) ==> product(W,Z,Y)) /\
    (equal(a,b)) /\
-   (~equal(multiply(c,a),multiply(c,b))) ==> F`--);
+   (~equal(multiply(c,a),multiply(c,b))) ==> F”;
 
 
 val GRP130_1_002 =
- (--`(group_element(e_1:'a)) /\
+ “(group_element(e_1:'a)) /\
    (group_element(e_2)) /\
    (~equal(e_1,e_2)) /\
    (~equal(e_2,e_1)) /\
@@ -1173,11 +1202,11 @@ val GRP130_1_002 =
    (!X Y W Z. product(X,Y,W) /\ product(X,Y,Z) ==> equal(W,Z)) /\
    (!X Y W Z. product(X,W,Y) /\ product(X,Z,Y) ==> equal(W,Z)) /\
    (!Y X W Z. product(W,Y,X) /\ product(Z,Y,X) ==> equal(W,Z)) /\
-   (!Z1 Z2 Y X. product(X,Y,Z1) /\ product(X,Z1,Z2) ==> product(Z2,Y,X)) ==> F`--);
+   (!Z1 Z2 Y X. product(X,Y,Z1) /\ product(X,Z1,Z2) ==> product(Z2,Y,X)) ==> F”;
 
 
 val GRP156_1 =
- (--`(!X:'a. equal(X,X)) /\
+ “(!X:'a. equal(X,X)) /\
    (!Y X. equal(X,Y) ==> equal(Y,X)) /\
    (!Y X Z. equal(X,Y) /\ equal(Y,Z) ==> equal(X,Z)) /\
    (!X. equal(multiply(identity,X),X)) /\
@@ -1205,11 +1234,11 @@ val GRP156_1 =
    (!A B C. equal(A,B) ==> equal(multiply(A,C),multiply(B,C))) /\
    (!A C B. equal(A,B) ==> equal(multiply(C,A),multiply(C,B))) /\
    (equal(least_upper_bound(a,b),b)) /\
-   (~equal(greatest_lower_bound(multiply(a,c),multiply(b,c)),multiply(a,c))) ==> F`--);
+   (~equal(greatest_lower_bound(multiply(a,c),multiply(b,c)),multiply(a,c))) ==> F”;
 
 
 val GRP168_1 =
- (--`(!X:'a. equal(X,X)) /\
+ “(!X:'a. equal(X,X)) /\
    (!Y X. equal(X,Y) ==> equal(Y,X)) /\
    (!Y X Z. equal(X,Y) /\ equal(Y,Z) ==> equal(X,Z)) /\
    (!X. equal(multiply(identity,X),X)) /\
@@ -1237,11 +1266,11 @@ val GRP168_1 =
    (!A B C. equal(A,B) ==> equal(multiply(A,C),multiply(B,C))) /\
    (!A C B. equal(A,B) ==> equal(multiply(C,A),multiply(C,B))) /\
    (equal(least_upper_bound(a,b),b)) /\
-   (~equal(least_upper_bound(multiply(inverse(c),multiply(a,c)),multiply(inverse(c),multiply(b,c))),multiply(inverse(c),multiply(b,c)))) ==> F`--);
+   (~equal(least_upper_bound(multiply(inverse(c),multiply(a,c)),multiply(inverse(c),multiply(b,c))),multiply(inverse(c),multiply(b,c)))) ==> F”;
 
 
 val HEN003_3 =
- (--`(!X:'a. equal(X,X)) /\
+ “(!X:'a. equal(X,X)) /\
    (!Y X. equal(X,Y) ==> equal(Y,X)) /\
    (!Y X Z. equal(X,Y) /\ equal(Y,Z) ==> equal(X,Z)) /\
    (!X Y. less_equal(X,Y) ==> equal(divide(X,Y),zero)) /\
@@ -1255,11 +1284,11 @@ val HEN003_3 =
    (!D F' E. equal(D,E) ==> equal(divide(F',D),divide(F',E))) /\
    (!G H I'. equal(G,H) /\ less_equal(G,I') ==> less_equal(H,I')) /\
    (!J L K'. equal(J,K') /\ less_equal(L,J) ==> less_equal(L,K')) /\
-   (~equal(divide(a,a),zero)) ==> F`--);
+   (~equal(divide(a,a),zero)) ==> F”;
 
 
 val HEN007_2 =
- (--`(!X:'a. equal(X,X)) /\
+ “(!X:'a. equal(X,X)) /\
    (!Y X. equal(X,Y) ==> equal(Y,X)) /\
    (!Y X Z. equal(X,Y) /\ equal(Y,Z) ==> equal(X,Z)) /\
    (!X Y. less_equal(X,Y) ==> quotient(X,Y,zero)) /\
@@ -1287,11 +1316,11 @@ val HEN007_2 =
    (less_equal(x,y)) /\
    (quotient(z,y,zQy)) /\
    (quotient(z,x,zQx)) /\
-   (~less_equal(zQy,zQx)) ==> F`--);
+   (~less_equal(zQy,zQx)) ==> F”;
 
 
 val HEN008_4 =
- (--`(!X:'a. equal(X,X)) /\
+ “(!X:'a. equal(X,X)) /\
    (!Y X. equal(X,Y) ==> equal(Y,X)) /\
    (!Y X Z. equal(X,Y) /\ equal(Y,Z) ==> equal(X,Z)) /\
    (!X Y. less_equal(X,Y) ==> equal(divide(X,Y),zero)) /\
@@ -1313,11 +1342,11 @@ val HEN008_4 =
    (!X Z Y. less_equal(divide(X,Y),Z) ==> less_equal(divide(X,Z),Y)) /\
    (!Y Z X. less_equal(X,Y) ==> less_equal(divide(Z,Y),divide(Z,X))) /\
    (less_equal(a,b)) /\
-   (~less_equal(divide(a,c),divide(b,c))) ==> F`--);
+   (~less_equal(divide(a,c),divide(b,c))) ==> F”;
 
 
 val HEN009_5 =
- (--`(!X:'a. equal(X,X)) /\
+ “(!X:'a. equal(X,X)) /\
    (!Y X. equal(X,Y) ==> equal(Y,X)) /\
    (!Y X Z. equal(X,Y) /\ equal(Y,Z) ==> equal(X,Z)) /\
    (!Y X. equal(divide(divide(X,Y),X),zero)) /\
@@ -1334,11 +1363,11 @@ val HEN009_5 =
    (equal(divide(identity,a),b)) /\
    (equal(divide(identity,b),c)) /\
    (equal(divide(identity,c),d)) /\
-   (~equal(b,d)) ==> F`--);
+   (~equal(b,d)) ==> F”;
 
 
 val HEN012_3 =
- (--`(!X:'a. equal(X,X)) /\
+ “(!X:'a. equal(X,X)) /\
    (!Y X. equal(X,Y) ==> equal(Y,X)) /\
    (!Y X Z. equal(X,Y) /\ equal(Y,Z) ==> equal(X,Z)) /\
    (!X Y. less_equal(X,Y) ==> equal(divide(X,Y),zero)) /\
@@ -1352,41 +1381,41 @@ val HEN012_3 =
    (!D F' E. equal(D,E) ==> equal(divide(F',D),divide(F',E))) /\
    (!G H I'. equal(G,H) /\ less_equal(G,I') ==> less_equal(H,I')) /\
    (!J L K'. equal(J,K') /\ less_equal(L,J) ==> less_equal(L,K')) /\
-   (~less_equal(a,a)) ==> F`--);
+   (~less_equal(a,a)) ==> F”;
 
 
 val LCL010_1 =
- (--`(!X Y:'a. is_a_theorem(equivalent(X,Y)) /\ is_a_theorem(X) ==> is_a_theorem(Y)) /\
+ “(!X Y:'a. is_a_theorem(equivalent(X,Y)) /\ is_a_theorem(X) ==> is_a_theorem(Y)) /\
    (!X Z Y. is_a_theorem(equivalent(equivalent(X,Y),equivalent(equivalent(X,Z),equivalent(Z,Y))))) /\
-   (~is_a_theorem(equivalent(equivalent(a,b),equivalent(equivalent(c,b),equivalent(a,c))))) ==> F`--);
+   (~is_a_theorem(equivalent(equivalent(a,b),equivalent(equivalent(c,b),equivalent(a,c))))) ==> F”;
 
 
 val LCL077_2 =
- (--`(!X Y:'a. is_a_theorem(implies(X,Y)) /\ is_a_theorem(X) ==> is_a_theorem(Y)) /\
+ “(!X Y:'a. is_a_theorem(implies(X,Y)) /\ is_a_theorem(X) ==> is_a_theorem(Y)) /\
    (!Y X. is_a_theorem(implies(X,implies(Y,X)))) /\
    (!Y X Z. is_a_theorem(implies(implies(X,implies(Y,Z)),implies(implies(X,Y),implies(X,Z))))) /\
    (!Y X. is_a_theorem(implies(implies(not(X),not(Y)),implies(Y,X)))) /\
    (!X2 X1 X3. is_a_theorem(implies(X1,X2)) /\ is_a_theorem(implies(X2,X3)) ==> is_a_theorem(implies(X1,X3))) /\
-   (~is_a_theorem(implies(not(not(a)),a))) ==> F`--);
+   (~is_a_theorem(implies(not(not(a)),a))) ==> F”;
 
 
 val LCL082_1 =
- (--`(!X Y:'a. is_a_theorem(implies(X,Y)) /\ is_a_theorem(X) ==> is_a_theorem(Y)) /\
+ “(!X Y:'a. is_a_theorem(implies(X,Y)) /\ is_a_theorem(X) ==> is_a_theorem(Y)) /\
    (!Y Z U X. is_a_theorem(implies(implies(implies(X,Y),Z),implies(implies(Z,X),implies(U,X))))) /\
-   (~is_a_theorem(implies(a,implies(b,a)))) ==> F`--);
+   (~is_a_theorem(implies(a,implies(b,a)))) ==> F”;
 
 
 val LCL111_1 =
- (--`(!X Y:'a. is_a_theorem(implies(X,Y)) /\ is_a_theorem(X) ==> is_a_theorem(Y)) /\
+ “(!X Y:'a. is_a_theorem(implies(X,Y)) /\ is_a_theorem(X) ==> is_a_theorem(Y)) /\
    (!Y X. is_a_theorem(implies(X,implies(Y,X)))) /\
    (!Y X Z. is_a_theorem(implies(implies(X,Y),implies(implies(Y,Z),implies(X,Z))))) /\
    (!Y X. is_a_theorem(implies(implies(implies(X,Y),Y),implies(implies(Y,X),X)))) /\
    (!Y X. is_a_theorem(implies(implies(not(X),not(Y)),implies(Y,X)))) /\
-   (~is_a_theorem(implies(implies(a,b),implies(implies(c,a),implies(c,b))))) ==> F`--);
+   (~is_a_theorem(implies(implies(a,b),implies(implies(c,a),implies(c,b))))) ==> F”;
 
 
 val LCL143_1 =
- (--`(!X:'a. equal(X,X)) /\
+ “(!X:'a. equal(X,X)) /\
    (!Y X. equal(X,Y) ==> equal(Y,X)) /\
    (!Y X Z. equal(X,Y) /\ equal(Y,Z) ==> equal(X,Z)) /\
    (!X. equal(implies(true,X),X)) /\
@@ -1407,11 +1436,11 @@ val LCL143_1 =
    (!M N O. equal(M,N) /\ ordered(M,O) ==> ordered(N,O)) /\
    (!P R Q. equal(P,Q) /\ ordered(R,P) ==> ordered(R,Q)) /\
    (ordered(x,y)) /\
-   (~ordered(implies(z,x),implies(z,y))) ==> F`--);
+   (~ordered(implies(z,x),implies(z,y))) ==> F”;
 
 
 val LCL182_1 =
- (--`(!A:'a. axiom(or(not(or(A,A)),A))) /\
+ “(!A:'a. axiom(or(not(or(A,A)),A))) /\
    (!B A. axiom(or(not(A),or(B,A)))) /\
    (!B A. axiom(or(not(or(A,B)),or(B,A)))) /\
    (!B A C. axiom(or(not(or(A,or(B,C))),or(B,or(A,C))))) /\
@@ -1419,11 +1448,11 @@ val LCL182_1 =
    (!X. axiom(X) ==> theorem(X)) /\
    (!X Y. axiom(or(not(Y),X)) /\ theorem(Y) ==> theorem(X)) /\
    (!X Y Z. axiom(or(not(X),Y)) /\ theorem(or(not(Y),Z)) ==> theorem(or(not(X),Z))) /\
-   (~theorem(or(not(or(not(p),q)),or(not(not(q)),not(p))))) ==> F`--);
+   (~theorem(or(not(or(not(p),q)),or(not(not(q)),not(p))))) ==> F”;
 
 
 val LCL200_1 =
- (--`(!A:'a. axiom(or(not(or(A,A)),A))) /\
+ “(!A:'a. axiom(or(not(or(A,A)),A))) /\
    (!B A. axiom(or(not(A),or(B,A)))) /\
    (!B A. axiom(or(not(or(A,B)),or(B,A)))) /\
    (!B A C. axiom(or(not(or(A,or(B,C))),or(B,or(A,C))))) /\
@@ -1431,11 +1460,11 @@ val LCL200_1 =
    (!X. axiom(X) ==> theorem(X)) /\
    (!X Y. axiom(or(not(Y),X)) /\ theorem(Y) ==> theorem(X)) /\
    (!X Y Z. axiom(or(not(X),Y)) /\ theorem(or(not(Y),Z)) ==> theorem(or(not(X),Z))) /\
-   (~theorem(or(not(not(or(p,q))),not(q)))) ==> F`--);
+   (~theorem(or(not(not(or(p,q))),not(q)))) ==> F”;
 
 
 val LCL215_1 =
- (--`(!A:'a. axiom(or(not(or(A,A)),A))) /\
+ “(!A:'a. axiom(or(not(or(A,A)),A))) /\
    (!B A. axiom(or(not(A),or(B,A)))) /\
    (!B A. axiom(or(not(or(A,B)),or(B,A)))) /\
    (!B A C. axiom(or(not(or(A,or(B,C))),or(B,or(A,C))))) /\
@@ -1443,18 +1472,18 @@ val LCL215_1 =
    (!X. axiom(X) ==> theorem(X)) /\
    (!X Y. axiom(or(not(Y),X)) /\ theorem(Y) ==> theorem(X)) /\
    (!X Y Z. axiom(or(not(X),Y)) /\ theorem(or(not(Y),Z)) ==> theorem(or(not(X),Z))) /\
-   (~theorem(or(not(or(not(p),q)),or(not(or(p,q)),q)))) ==> F`--);
+   (~theorem(or(not(or(not(p),q)),or(not(or(p,q)),q)))) ==> F”;
 
 
 val LCL230_2 =
- (--`(q ==> p \/ r) /\
+ “(q ==> p \/ r) /\
    (~p) /\
    (q) /\
-   (~r) ==> F`--);
+   (~r) ==> F”;
 
 
-val LDA003_1 =
- (--`(!X:'a. equal(X,X)) /\
+val LDA003_1 = M
+ “(!X:num. equal(X,X)) /\
    (!Y X. equal(X,Y) ==> equal(Y,X)) /\
    (!Y X Z. equal(X,Y) /\ equal(Y,Z) ==> equal(X,Z)) /\
    (!Y X Z. equal(f(X,f(Y,Z)),f(f(X,Y),f(X,Z)))) /\
@@ -1467,7 +1496,7 @@ val LDA003_1 =
    (!D F' E. equal(D,E) ==> equal(f(F',D),f(F',E))) /\
    (!G H I'. equal(G,H) /\ left(G,I') ==> left(H,I')) /\
    (!J L K'. equal(J,K') /\ left(L,J) ==> left(L,K')) /\
-   (~left(3,u)) ==> F`--);
+   (~left(3,u)) ==> F”;
 
 
 val MSC002_1 =
@@ -1528,16 +1557,16 @@ Lib.with_flag(Globals.guessing_tyvars,true)
 
 
 val MSC006_1 =
- (--`(!Y X Z:'a. p(X,Y) /\ p(Y,Z) ==> p(X,Z)) /\
+ “(!Y X Z:'a. p(X,Y) /\ p(Y,Z) ==> p(X,Z)) /\
    (!Y X Z. q(X,Y) /\ q(Y,Z) ==> q(X,Z)) /\
    (!Y X. q(X,Y) ==> q(Y,X)) /\
    (!X Y. p(X,Y) \/ q(X,Y)) /\
    (~p(a,b)) /\
-   (~q(c,d)) ==> F`--);
+   (~q(c,d)) ==> F”;
 
 
 val NUM001_1 =
- (--`(!A:'a. equal(A,A)) /\
+ “(!A:'a. equal(A,A)) /\
    (!B A C. equal(A,B) /\ equal(B,C) ==> equal(A,C)) /\
    (!B A. equal(add(A,B),add(B,A))) /\
    (!A B C. equal(add(A,add(B,C)),add(add(A,B),C))) /\
@@ -1549,11 +1578,11 @@ val NUM001_1 =
    (!A C D B. equal(A,B) /\ equal(C,add(D,A)) ==> equal(C,add(D,B))) /\
    (!A C B D. equal(A,B) /\ equal(C,subtract(A,D)) ==> equal(C,subtract(B,D))) /\
    (!A C D B. equal(A,B) /\ equal(C,subtract(D,A)) ==> equal(C,subtract(D,B))) /\
-   (~equal(add(add(a,b),c),add(a,add(b,c)))) ==> F`--);
+   (~equal(add(add(a,b),c),add(a,add(b,c)))) ==> F”;
 
 
 val NUM021_1 =
- (--`(!X. equal(X,X)) /\
+ “(!X. equal(X,X)) /\
    (!Y X. equal(X,Y) ==> equal(Y,X)) /\
    (!Y X Z. equal(X,Y) /\ equal(Y,Z) ==> equal(X,Z)) /\
    (!A. equal(add(A,0),A)) /\
@@ -1571,11 +1600,11 @@ val NUM021_1 =
    (less(b,c)) /\
    (~less(b,a)) /\
    (divides(c,a)) /\
-   (!A. ~equal(successor(A),0)) ==> F`--);
+   (!A. ~equal(successor(A),0)) ==> F”;
 
 
 val NUM024_1 =
- (--`(!X. equal(X,X)) /\
+ “(!X. equal(X,X)) /\
    (!Y X. equal(X,Y) ==> equal(Y,X)) /\
    (!Y X Z. equal(X,Y) /\ equal(Y,Z) ==> equal(X,Z)) /\
    (!A. equal(add(A,0),A)) /\
@@ -1590,11 +1619,11 @@ val NUM024_1 =
    (!B A. equal(add(A,B),add(B,A))) /\
    (!B A C. equal(add(A,B),add(C,B)) ==> equal(A,C)) /\
    (less(a,a)) /\
-   (!A. ~equal(successor(A),0)) ==> F`--);
+   (!A. ~equal(successor(A),0)) ==> F”;
 
 
 val NUM180_1 =
-Lib.with_flag(Globals.guessing_tyvars,false)
+Lib.with_flag(Globals.guessing_tyvars,true)
  Term
 `(!X:'a. equal(X,X)) /\
    (!Y X. equal(X,Y) ==> equal(Y,X)) /\
@@ -2134,8 +2163,8 @@ Lib.with_flag(Globals.guessing_tyvars,false)
    (~equal(recursion_equation_functions(z),null_class)) ==> F`;
 
 
-val PLA002_1 =
- (--`(!Situation1 Situation2. warm(Situation1) \/ cold(Situation2)) /\
+val PLA002_1 = M
+ “(!Situation1 Situation2. warm(Situation1) \/ cold(Situation2)) /\
    (!Situation. at(a:'a,Situation) ==> at(b,walk(b,Situation))) /\
    (!Situation. at(a,Situation) ==> at(b,drive(b,Situation))) /\
    (!Situation. at(b,Situation) ==> at(a,walk(a,Situation))) /\
@@ -2151,10 +2180,10 @@ val PLA002_1 =
    (!Situation. at(d,Situation) ==> at(f,go(f,Situation))) /\
    (!Situation:'a. at(f,Situation) ==> at(d,go(d,Situation))) /\
    (at(f,s0)) /\
-   (!S'. ~at(a,S')) ==> F`--);
+   (!S'. ~at(a,S')) ==> F”;
 
 
-val PLA006_1 =
+val PLA006_1 = M $
 Lib.with_flag(Globals.guessing_tyvars,true)
  Term
 `(!X Y State. holds(X,State) /\ holds(Y,State) ==> holds(and'(X,Y),State)) /\
@@ -2190,7 +2219,7 @@ Lib.with_flag(Globals.guessing_tyvars,true)
    (!State. ~holds(on(c,table),State)) ==> F`;
 
 
-val PLA017_1 =
+val PLA017_1 = M $
 Lib.with_flag(Globals.guessing_tyvars,true)
  Term
 `(!X Y State. holds(X,State) /\ holds(Y,State) ==> holds(and'(X,Y),State)) /\
@@ -2226,7 +2255,7 @@ Lib.with_flag(Globals.guessing_tyvars,true)
    (!State. ~holds(on(a,c),State)) ==> F`;
 
 
-val PLA022_1 =
+val PLA022_1 = M $
 Lib.with_flag(Globals.guessing_tyvars,true)
  Term
 `(!X Y State. holds(X,State) /\ holds(Y,State) ==> holds(and'(X,Y),State)) /\
@@ -2320,7 +2349,7 @@ Lib.with_flag(Globals.guessing_tyvars,true)
 
 
 val PRV003_1 =
- (--`(!X:'a. equal(X,X)) /\
+ “(!X:'a. equal(X,X)) /\
    (!Y X. equal(X,Y) ==> equal(Y,X)) /\
    (!Y X Z. equal(X,Y) /\ equal(Y,Z) ==> equal(X,Z)) /\
    (!X. equal(predecessor(successor(X)),X)) /\
@@ -2346,11 +2375,11 @@ val PRV003_1 =
    (!X. less_than(X,j) /\ less_than(a(X),a(k)) ==> less_than(X,i)) /\
    (!X. less_than(one,i) /\ less_than(a(X),a(predecessor(i))) ==> less_than(X,i) \/ less_than(n,X)) /\
    (!X. ~(less_than(one,X) /\ less_than(X,i) /\ less_than(a(X),a(predecessor(X))))) /\
-   (less_than(j,i)) ==> F`--);
+   (less_than(j,i)) ==> F”;
 
 
 val PRV005_1 =
- (--`(!X:'a. equal(X,X)) /\
+ “(!X:'a. equal(X,X)) /\
    (!Y X. equal(X,Y) ==> equal(Y,X)) /\
    (!Y X Z. equal(X,Y) /\ equal(Y,Z) ==> equal(X,Z)) /\
    (!X. equal(predecessor(successor(X)),X)) /\
@@ -2376,11 +2405,11 @@ val PRV005_1 =
    (less_than(a(k),a(predecessor(l)))) /\
    (!X. less_than(X,successor(n)) /\ less_than(a(X),a(k)) ==> less_than(X,l)) /\
    (!X. less_than(one,l) /\ less_than(a(X),a(predecessor(l))) ==> less_than(X,l) \/ less_than(n,X)) /\
-   (!X. ~(less_than(one,X) /\ less_than(X,l) /\ less_than(a(X),a(predecessor(X))))) ==> F`--);
+   (!X. ~(less_than(one,X) /\ less_than(X,l) /\ less_than(a(X),a(predecessor(X))))) ==> F”;
 
 
 val PRV006_1 =
- (--`(!X:'a. equal(X,X)) /\
+ “(!X:'a. equal(X,X)) /\
    (!Y X. equal(X,Y) ==> equal(Y,X)) /\
    (!Y X Z. equal(X,Y) /\ equal(Y,Z) ==> equal(X,Z)) /\
    (!X. equal(predecessor(successor(X)),X)) /\
@@ -2405,7 +2434,7 @@ val PRV006_1 =
    (less_than(a(i),a(m))) /\
    (!X. less_than(X,successor(n)) /\ less_than(a(X),a(m)) ==> less_than(X,i)) /\
    (!X. less_than(one,i) /\ less_than(a(X),a(predecessor(i))) ==> less_than(X,i) \/ less_than(n,X)) /\
-   (!X. ~(less_than(one,X) /\ less_than(X,i) /\ less_than(a(X),a(predecessor(X))))) ==> F`--);
+   (!X. ~(less_than(one,X) /\ less_than(X,i) /\ less_than(a(X),a(predecessor(X))))) ==> F”;
 
 
 val PRV009_1 =
@@ -2507,7 +2536,7 @@ Lib.with_flag(Globals.guessing_tyvars,true)
 
 
 val PUZ029_1 =
- (--`(!X:'a. dances_on_tightropes(X) \/ eats_pennybuns(X) \/ old(X)) /\
+ “(!X:'a. dances_on_tightropes(X) \/ eats_pennybuns(X) \/ old(X)) /\
    (!X. pig(X) /\ liable_to_giddiness(X) ==> treated_with_respect(X)) /\
    (!X. wise(X) /\ balloonist(X) ==> has_umbrella(X)) /\
    (!X. ~(looks_ridiculous(X) /\ eats_pennybuns(X) /\ eats_lunch_in_public(X))) /\
@@ -2521,7 +2550,7 @@ val PUZ029_1 =
    (wise(piggy)) /\
    (young(piggy)) /\
    (pig(piggy)) /\
-   (balloonist(piggy)) ==> F`--);
+   (balloonist(piggy)) ==> F”;
 
 
 val RNG001_3 =
@@ -2538,7 +2567,7 @@ Lib.with_flag(Globals.guessing_tyvars,true)
 
 
 val RNG001_5 =
- (--`(!X:'a. equal(X,X)) /\
+ “(!X:'a. equal(X,X)) /\
    (!Y X. equal(X,Y) ==> equal(Y,X)) /\
    (!Y X Z. equal(X,Y) /\ equal(Y,Z) ==> equal(X,Z)) /\
    (!X. sum(additive_identity,X,X)) /\
@@ -2567,11 +2596,11 @@ val RNG001_5 =
    (!X Y W Z. equal(X,Y) /\ product(X,W,Z) ==> product(Y,W,Z)) /\
    (!X W Y Z. equal(X,Y) /\ product(W,X,Z) ==> product(W,Y,Z)) /\
    (!X W Z Y. equal(X,Y) /\ product(W,Z,X) ==> product(W,Z,Y)) /\
-   (~product(a,additive_identity,additive_identity)) ==> F`--);
+   (~product(a,additive_identity,additive_identity)) ==> F”;
 
 
 val RNG011_5 =
- (--`(!X:'a. equal(X,X)) /\
+ “(!X:'a. equal(X,X)) /\
    (!Y X. equal(X,Y) ==> equal(Y,X)) /\
    (!Y X Z. equal(X,Y) /\ equal(Y,Z) ==> equal(X,Z)) /\
    (!A B C. equal(A,B) ==> equal(add(A,C),add(B,C))) /\
@@ -2605,11 +2634,11 @@ val RNG011_5 =
    (!X Y Z. equal(associator(X,Y,Z),add(multiply(multiply(X,Y),Z),additive_inverse(multiply(X,multiply(Y,Z)))))) /\
    (!X Y. equal(commutator(X,Y),add(multiply(Y,X),additive_inverse(multiply(X,Y))))) /\
    (!X Y. equal(multiply(multiply(associator(X,X,Y),X),associator(X,X,Y)),additive_identity)) /\
-   (~equal(multiply(multiply(associator(a,a,b),a),associator(a,a,b)),additive_identity)) ==> F`--);
+   (~equal(multiply(multiply(associator(a,a,b),a),associator(a,a,b)),additive_identity)) ==> F”;
 
 
 val RNG023_6 =
- (--`(!X:'a. equal(X,X)) /\
+ “(!X:'a. equal(X,X)) /\
    (!Y X. equal(X,Y) ==> equal(Y,X)) /\
    (!Y X Z. equal(X,Y) /\ equal(Y,Z) ==> equal(X,Z)) /\
    (!Y X. equal(add(X,Y),add(Y,X))) /\
@@ -2637,11 +2666,11 @@ val RNG023_6 =
    (!A1 C1 B1. equal(A1,B1) ==> equal(commutator(C1,A1),commutator(C1,B1))) /\
    (!D1 E1 F1. equal(D1,E1) ==> equal(multiply(D1,F1),multiply(E1,F1))) /\
    (!G1 I1 H1. equal(G1,H1) ==> equal(multiply(I1,G1),multiply(I1,H1))) /\
-   (~equal(associator(x,x,y),additive_identity)) ==> F`--);
+   (~equal(associator(x,x,y),additive_identity)) ==> F”;
 
 
 val RNG028_2 =
- (--`(!X:'a. equal(X,X)) /\
+ “(!X:'a. equal(X,X)) /\
    (!Y X. equal(X,Y) ==> equal(Y,X)) /\
    (!Y X Z. equal(X,Y) /\ equal(Y,Z) ==> equal(X,Z)) /\
    (!X. equal(add(additive_identity,X),X)) /\
@@ -2673,7 +2702,7 @@ val RNG028_2 =
    (!X Y. ~equal(multiply(multiply(Y,X),Y),multiply(Y,multiply(X,Y)))) /\
    (!X Y Z. ~equal(associator(Y,X,Z),additive_inverse(associator(X,Y,Z)))) /\
    (!X Y Z. ~equal(associator(Z,Y,X),additive_inverse(associator(X,Y,Z)))) /\
-   (~equal(multiply(multiply(cx,multiply(cy,cx)),cz),multiply(cx,multiply(cy,multiply(cx,cz))))) ==> F`--);
+   (~equal(multiply(multiply(cx,multiply(cy,cx)),cz),multiply(cx,multiply(cy,multiply(cx,cz))))) ==> F”;
 
 
 val RNG038_2 =
@@ -2711,7 +2740,7 @@ val RNG038_2 =
 
 
 val RNG040_2 =
- (--`(!X:'a. equal(X,X)) /\
+ “(!X:'a. equal(X,X)) /\
    (!Y X. equal(X,Y) ==> equal(Y,X)) /\
    (!Y X Z. equal(X,Y) /\ equal(Y,Z) ==> equal(X,Z)) /\
    (!X Y. equal(X,Y) ==> equal(additive_inverse(X),additive_inverse(Y))) /\
@@ -2750,11 +2779,11 @@ val RNG040_2 =
    (product(d,a,additive_identity)) /\
    (product(b,a,l)) /\
    (product(c,a,n)) /\
-   (~sum(l,n,additive_identity)) ==> F`--);
+   (~sum(l,n,additive_identity)) ==> F”;
 
 
 val RNG041_1 =
- (--`(!X:'a. equal(X,X)) /\
+ “(!X:'a. equal(X,X)) /\
    (!Y X. equal(X,Y) ==> equal(Y,X)) /\
    (!Y X Z. equal(X,Y) /\ equal(Y,Z) ==> equal(X,Z)) /\
    (!X. sum(additive_identity,X,X)) /\
@@ -2794,11 +2823,11 @@ val RNG041_1 =
    (!A. product(h(A),A,multiplicative_identity) \/ equal(A,additive_identity)) /\
    (product(a,b,additive_identity)) /\
    (~equal(a,additive_identity)) /\
-   (~equal(b,additive_identity)) ==> F`--);
+   (~equal(b,additive_identity)) ==> F”;
 
 
 val ROB010_1 =
- (--`(!X:'a. equal(X,X)) /\
+ “(!X:'a. equal(X,X)) /\
    (!Y X. equal(X,Y) ==> equal(Y,X)) /\
    (!Y X Z. equal(X,Y) /\ equal(Y,Z) ==> equal(X,Z)) /\
    (!Y X. equal(add(X,Y),add(Y,X))) /\
@@ -2808,11 +2837,11 @@ val ROB010_1 =
    (!D F' E. equal(D,E) ==> equal(add(F',D),add(F',E))) /\
    (!G H. equal(G,H) ==> equal(negate(G),negate(H))) /\
    (equal(negate(add(a,negate(b))),c)) /\
-   (~equal(negate(add(c,negate(add(b,a)))),a)) ==> F`--);
+   (~equal(negate(add(c,negate(add(b,a)))),a)) ==> F”;
 
 
 val ROB013_1 =
- (--`(!X:'a. equal(X,X)) /\
+ “(!X:'a. equal(X,X)) /\
    (!Y X. equal(X,Y) ==> equal(Y,X)) /\
    (!Y X Z. equal(X,Y) /\ equal(Y,Z) ==> equal(X,Z)) /\
    (!Y X. equal(add(X,Y),add(Y,X))) /\
@@ -2822,11 +2851,11 @@ val ROB013_1 =
    (!D F' E. equal(D,E) ==> equal(add(F',D),add(F',E))) /\
    (!G H. equal(G,H) ==> equal(negate(G),negate(H))) /\
    (equal(negate(add(a,b)),c)) /\
-   (~equal(negate(add(c,negate(add(negate(b),a)))),a)) ==> F`--);
+   (~equal(negate(add(c,negate(add(negate(b),a)))),a)) ==> F”;
 
 
 val ROB016_1 =
- (--`(!X:'a. equal(X,X)) /\
+ “(!X:'a. equal(X,X)) /\
    (!Y X. equal(X,Y) ==> equal(Y,X)) /\
    (!Y X Z. equal(X,Y) /\ equal(Y,Z) ==> equal(X,Z)) /\
    (!Y X. equal(add(X,Y),add(Y,X))) /\
@@ -2839,18 +2868,18 @@ val ROB016_1 =
    (!M O N. equal(M,N) ==> equal(multiply(O,M),multiply(O,N))) /\
    (!P Q. equal(P,Q) ==> equal(successor(P),successor(Q))) /\
    (!R S'. equal(R,S') /\ positive_integer(R) ==> positive_integer(S')) /\
-   (!X. equal(multiply(one,X),X)) /\
+   (!X. equal(multiply(one:'a,X),X)) /\
    (!V X. positive_integer(X) ==> equal(multiply(successor(V),X),add(X,multiply(V,X)))) /\
    (positive_integer(one)) /\
    (!X. positive_integer(X) ==> positive_integer(successor(X))) /\
    (equal(negate(add(d,e)),negate(e))) /\
    (positive_integer(k)) /\
    (!Vk X Y. equal(negate(add(negate(Y),negate(add(X,negate(Y))))),X) /\ positive_integer(Vk) ==> equal(negate(add(Y,multiply(Vk,add(X,negate(add(X,negate(Y))))))),negate(Y))) /\
-   (~equal(negate(add(e,multiply(k,add(d,negate(add(d,negate(e))))))),negate(e))) ==> F`--);
+   (~equal(negate(add(e,multiply(k,add(d,negate(add(d,negate(e))))))),negate(e))) ==> F”;
 
 
 val ROB021_1 =
- (--`(!X:'a. equal(X,X)) /\
+ “(!X:'a. equal(X,X)) /\
    (!Y X. equal(X,Y) ==> equal(Y,X)) /\
    (!Y X Z. equal(X,Y) /\ equal(Y,Z) ==> equal(X,Z)) /\
    (!Y X. equal(add(X,Y),add(Y,X))) /\
@@ -2860,7 +2889,7 @@ val ROB021_1 =
    (!D F' E. equal(D,E) ==> equal(add(F',D),add(F',E))) /\
    (!G H. equal(G,H) ==> equal(negate(G),negate(H))) /\
    (!X Y. equal(negate(X),negate(Y)) ==> equal(X,Y)) /\
-   (~equal(add(negate(add(a,negate(b))),negate(add(negate(a),negate(b)))),b)) ==> F`--);
+   (~equal(add(negate(add(a,negate(b))),negate(add(negate(a),negate(b)))),b)) ==> F”;
 
 
 val SET005_1 =
@@ -2906,7 +2935,7 @@ Lib.with_flag(Globals.guessing_tyvars,true)
 
 
 val SET025_4 =
- (--`(!X:'a. equal(X,X)) /\
+ “(!X:'a. equal(X,X)) /\
    (!Y X. equal(X,Y) ==> equal(Y,X)) /\
    (!Y X Z. equal(X,Y) /\ equal(Y,Z) ==> equal(X,Z)) /\
    (!Y X. member(X,Y) ==> little_set(X)) /\
@@ -3172,7 +3201,7 @@ val SET025_4 =
    (!U15 V15. equal(U15,V15) /\ single_valued_set(U15) ==> single_valued_set(V15)) /\
    (!W15 X15 Y15. equal(W15,X15) /\ subset(W15,Y15) ==> subset(X15,Y15)) /\
    (!Z15 B16 A16. equal(Z15,A16) /\ subset(B16,Z15) ==> subset(B16,A16)) /\
-   (~little_set(ordered_pair(a,b))) ==> F`--);
+   (~little_set(ordered_pair(a,b))) ==> F”;
 
 
 val SET046_5 =
@@ -3194,23 +3223,23 @@ Lib.with_flag(Globals.guessing_tyvars,true)
 
 
 val SYN034_1 =
- (--`(!A:'a. p(A,a) \/ p(A,f(A))) /\
+ “(!A:'a. p(A,a) \/ p(A,f(A))) /\
    (!A. p(A,a) \/ p(f(A),A)) /\
-   (!A B. ~(p(A,B) /\ p(B,A) /\ p(B,a))) ==> F`--);
+   (!A B. ~(p(A,B) /\ p(B,A) /\ p(B,a))) ==> F”;
 
 
 val SYN071_1 =
- (--`(!X:'a. equal(X,X)) /\
+ “(!X:'a. equal(X,X)) /\
    (!Y X. equal(X,Y) ==> equal(Y,X)) /\
    (!Y X Z. equal(X,Y) /\ equal(Y,Z) ==> equal(X,Z)) /\
    (equal(a,b) \/ equal(c,d)) /\
    (equal(a,c) \/ equal(b,d)) /\
    (~equal(a,d)) /\
-   (~equal(b,c)) ==> F`--);
+   (~equal(b,c)) ==> F”;
 
 
 val SYN349_1 =
- (--`(!X Y. f(w(X),g(X,Y)) ==> f(X,g(X,Y))) /\
+ “(!X Y. f(w(X),g(X,Y)) ==> f(X,g(X,Y))) /\
    (!X Y:'a. f(X,g(X,Y)) ==> f(w(X),g(X,Y))) /\
    (!Y X. f(X,g(X,Y)) /\ f(Y,g(X,Y)) ==> f(g(X,Y),Y) \/ f(g(X,Y),w(X))) /\
    (!Y X. f(g(X,Y),Y) /\ f(Y,g(X,Y)) ==> f(X,g(X,Y)) \/ f(g(X,Y),w(X))) /\
@@ -3219,17 +3248,17 @@ val SYN349_1 =
    (!Y X. f(X,g(X,Y)) /\ f(g(X,Y),w(X)) ==> f(g(X,Y),Y) \/ f(Y,g(X,Y))) /\
    (!Y X. f(g(X,Y),Y) /\ f(g(X,Y),w(X)) ==> f(X,g(X,Y)) \/ f(Y,g(X,Y))) /\
    (!Y X. f(Y,g(X,Y)) /\ f(g(X,Y),w(X)) ==> f(X,g(X,Y)) \/ f(g(X,Y),Y)) /\
-   (!Y X. ~(f(X,g(X,Y)) /\ f(g(X,Y),Y) /\ f(Y,g(X,Y)) /\ f(g(X,Y),w(X)))) ==> F`--);
+   (!Y X. ~(f(X,g(X,Y)) /\ f(g(X,Y),Y) /\ f(Y,g(X,Y)) /\ f(g(X,Y),w(X)))) ==> F”;
 
 
 val SYN352_1 =
- (--`(f(a,b)) /\
+ “(f(a,b)) /\
    (!X Y:'a. f(X,Y) ==> f(b,z(X,Y)) \/ f(Y,z(X,Y))) /\
    (!X Y. f(X,Y) \/ f(z(X,Y),z(X,Y))) /\
    (!X Y. f(b,z(X,Y)) \/ f(X,z(X,Y)) \/ f(z(X,Y),z(X,Y))) /\
    (!X Y. f(b,z(X,Y)) /\ f(X,z(X,Y)) ==> f(z(X,Y),z(X,Y))) /\
    (!X Y. ~(f(X,Y) /\ f(X,z(X,Y)) /\ f(Y,z(X,Y)))) /\
-   (!X Y. f(X,Y) ==> f(X,z(X,Y)) \/ f(Y,z(X,Y))) ==> F`--);
+   (!X Y. f(X,Y) ==> f(X,z(X,Y)) \/ f(Y,z(X,Y))) ==> F”;
 
 
 val TOP001_2 =
