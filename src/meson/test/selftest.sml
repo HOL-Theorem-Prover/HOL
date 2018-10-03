@@ -52,7 +52,13 @@ M "P \\/ ~P" “P \/ ~P”;
  * Basic existential stuff (bug reported by Michael Norrish)
  * ------------------------------------------------------------------------- *)
 
-Mfail "Norrish existential" “!se:num. ?n:num. f n se se ==> ?m:num. f m 0 0 ”;
+val _ = new_type("num", 0)
+val _ = new_constant("n0", ``:num``)
+val _ = new_constant("n1", ``:num``)
+val _ = new_constant("n2", ``:num``)
+val _ = new_constant("n3", ``:num``);
+
+Mfail "Norrish existential" “!se:num. ?n:num. f n se se ==> ?m:num. f m n0 n0”;
 
 (* -------------------------------------------------------------------------
  * P50
@@ -645,12 +651,6 @@ Lib.with_flag(Globals.guessing_tyvars,true)
    (has(p8,goto(loop))) /\
    (~succeeds(p3,p3)) ==> F`;
 
-val _ = new_type("num", 0)
-val _ = new_constant("n0", ``:num``)
-val _ = new_constant("n1", ``:num``)
-val _ = new_constant("n2", ``:num``)
-val _ = new_constant("n3", ``:num``)
-
 val COM002_1 = M "COM002_1" $
 Lib.with_flag(Globals.guessing_tyvars,true)
  Term
@@ -669,7 +669,7 @@ Lib.with_flag(Globals.guessing_tyvars,true)
    (follows(p6,p3)) /\
    (has(p6,assign(register_k,times(n2,register_k)))) /\
    (follows(p7,p6)) /\
-   (has(p7,assign(register_j,plus(register_j,1)))) /\
+   (has(p7,assign(register_j,plus(register_j,n1)))) /\
    (follows(p8,p7)) /\
    (has(p8,goto(loop))) /\
    (~succeeds(p3,p3)) ==> F`;
@@ -682,18 +682,18 @@ Lib.with_flag(Globals.guessing_tyvars,true)
    (!Goal_state Intermediate_state Start_state. fails(Goal_state,Start_state) ==> fails(Goal_state,Intermediate_state) \/ fails(Intermediate_state,Start_state)) /\
    (!Start_state Label Goal_state. ~(fails(Goal_state,Start_state) /\ has(Start_state,goto(Label)) /\ labels(Label,Goal_state))) /\
    (!Start_state Condition Goal_state. ~(fails(Goal_state,Start_state) /\ has(Start_state,ifthen(Condition,Goal_state)))) /\
-   (has(p1,assign(register_j,0))) /\
+   (has(p1,assign(register_j,n0))) /\
    (follows(p2,p1)) /\
-   (has(p2,assign(register_k,1))) /\
+   (has(p2,assign(register_k,n1))) /\
    (labels(loop,p3)) /\
    (follows(p3,p2)) /\
    (has(p3,ifthen(equal(register_j,n),p4))) /\
    (has(p4,goto(out))) /\
    (follows(p5,p4)) /\
    (follows(p6,p3)) /\
-   (has(p6,assign(register_k,times(2,register_k)))) /\
+   (has(p6,assign(register_k,times(n2,register_k)))) /\
    (follows(p7,p6)) /\
-   (has(p7,assign(register_j,plus(register_j,1)))) /\
+   (has(p7,assign(register_j,plus(register_j,n1)))) /\
    (follows(p8,p7)) /\
    (has(p8,goto(loop))) /\
    (fails(p3,p3)) ==> F`;
@@ -1520,10 +1520,10 @@ Lib.with_flag(Globals.guessing_tyvars,true)
    (!Big_part Mid_part Number_of_mid_parts Number_of_small_parts Small_part. has_parts(Big_part,Number_of_mid_parts,Mid_part) /\ has_parts(object_in(Big_part,Mid_part,Small_part,Number_of_mid_parts,Number_of_small_parts),Number_of_small_parts,Small_part) ==> has_parts(Big_part,times(Number_of_mid_parts,Number_of_small_parts),Small_part)) /\
    (in'(john,boy)) /\
    (!X. in'(X,boy) ==> in'(X,human)) /\
-   (!X. in'(X,hand) ==> has_parts(X,5,fingers)) /\
-   (!X. in'(X,human) ==> has_parts(X,2,arm)) /\
-   (!X. in'(X,arm) ==> has_parts(X,1,hand)) /\
-   (~has_parts(john,times(2,1),hand)) ==> F`;
+   (!X. in'(X,hand) ==> has_parts(X,n5,fingers)) /\
+   (!X. in'(X,human) ==> has_parts(X,n2,arm)) /\
+   (!X. in'(X,arm) ==> has_parts(X,n1,hand)) /\
+   (~has_parts(john,times(n2,n1),hand)) ==> F`;
 
 
 val MSC004_1 = M "MSC004_1" $
@@ -1533,10 +1533,10 @@ Lib.with_flag(Globals.guessing_tyvars,true)
    (!Big_part Mid_part Number_of_mid_parts Number_of_small_parts Small_part. has_parts(Big_part,Number_of_mid_parts,Mid_part) /\ has_parts(object_in(Big_part,Mid_part,Small_part,Number_of_mid_parts,Number_of_small_parts),Number_of_small_parts,Small_part) ==> has_parts(Big_part,times(Number_of_mid_parts,Number_of_small_parts),Small_part)) /\
    (in'(john,boy)) /\
    (!X. in'(X,boy) ==> in'(X,human)) /\
-   (!X. in'(X,hand) ==> has_parts(X,5,fingers)) /\
-   (!X. in'(X,human) ==> has_parts(X,2,arm)) /\
-   (!X. in'(X,arm) ==> has_parts(X,1,hand)) /\
-   (~has_parts(john,times(times(2,1),5),fingers)) ==> F`;
+   (!X. in'(X,hand) ==> has_parts(X,n5,fingers)) /\
+   (!X. in'(X,human) ==> has_parts(X,n2,arm)) /\
+   (!X. in'(X,arm) ==> has_parts(X,n1,hand)) /\
+   (~has_parts(john,times(times(n2,n1),n5),fingers)) ==> F`;
 
 
 val MSC005_1 = M "MSC005_1" $
@@ -1581,9 +1581,9 @@ val NUM021_1 = M "NUM021_1"
  “(!X. equal(X,X)) /\
    (!Y X. equal(X,Y) ==> equal(Y,X)) /\
    (!Y X Z. equal(X,Y) /\ equal(Y,Z) ==> equal(X,Z)) /\
-   (!A. equal(add(A,0),A)) /\
+   (!A. equal(add(A,n0),A)) /\
    (!A B. equal(add(A,successor(B)),successor(add(A,B)))) /\
-   (!A. equal(multiply(A,0),0)) /\
+   (!A. equal(multiply(A,n0),n0)) /\
    (!B A. equal(multiply(A,successor(B)),add(multiply(A,B),A))) /\
    (!A B. equal(successor(A),successor(B)) ==> equal(A,B)) /\
    (!A B. equal(A,B) ==> equal(successor(A),successor(B))) /\
@@ -1596,16 +1596,16 @@ val NUM021_1 = M "NUM021_1"
    (less(b,c)) /\
    (~less(b,a)) /\
    (divides(c,a)) /\
-   (!A. ~equal(successor(A),0)) ==> F”;
+   (!A. ~equal(successor(A),n0)) ==> F”;
 
 
 val NUM024_1 = M "NUM024_1" $
  “(!X. equal(X,X)) /\
    (!Y X. equal(X,Y) ==> equal(Y,X)) /\
    (!Y X Z. equal(X,Y) /\ equal(Y,Z) ==> equal(X,Z)) /\
-   (!A. equal(add(A,0),A)) /\
+   (!A. equal(add(A,n0),A)) /\
    (!A B. equal(add(A,successor(B)),successor(add(A,B)))) /\
-   (!A. equal(multiply(A,0),0)) /\
+   (!A. equal(multiply(A,n0),n0)) /\
    (!B A. equal(multiply(A,successor(B)),add(multiply(A,B),A))) /\
    (!A B. equal(successor(A),successor(B)) ==> equal(A,B)) /\
    (!A B. equal(A,B) ==> equal(successor(A),successor(B))) /\
@@ -1615,7 +1615,7 @@ val NUM024_1 = M "NUM024_1" $
    (!B A. equal(add(A,B),add(B,A))) /\
    (!B A C. equal(add(A,B),add(C,B)) ==> equal(A,C)) /\
    (less(a,a)) /\
-   (!A. ~equal(successor(A),0)) ==> F”;
+   (!A. ~equal(successor(A),n0)) ==> F”;
 
 
 val NUM180_1 = M "NUM180_1" $
