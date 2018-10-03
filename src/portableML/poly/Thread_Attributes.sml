@@ -90,8 +90,8 @@ fun safe_interrupts (Attributes w) =
 
 fun with_attributes new_atts e =
   let
-    val atts1 = safe_interrupts (get_attributes ());
-    val atts2 = safe_interrupts new_atts;
+    val atts1 = get_attributes ()
+    val atts2 = safe_interrupts new_atts
   in
     if atts1 = atts2 then e atts1
     else
