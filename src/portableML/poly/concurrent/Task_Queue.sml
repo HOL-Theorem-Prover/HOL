@@ -48,9 +48,9 @@ end;
 structure Task_Queue: TASK_QUEUE =
 struct
 
-open Portable Library
-val new_id = Counter.make ();
+open Portable
 
+val new_id = Counter.make ();
 
 (** nested groups of tasks **)
 
@@ -80,8 +80,8 @@ fun cancel_group (Group {status, ...}) exn =
     (fn exns => SOME (Par_Exn.make (exn :: the_list exns)));
 
 fun is_canceled (Group {parent, status, ...}) =
-  is_some (Synchronized.value status) orelse
-    (case parent of NONE => false | SOME group => is_canceled group);
+  isSome (Synchronized.value status) orelse
+  (case parent of NONE => false | SOME group => is_canceled group);
 
 fun group_status (Group {parent, status, ...}) =
   the_list (Synchronized.value status) @
@@ -145,8 +145,13 @@ fun task_ord (Task{id=id1, pri=pri1, ...},Task{id = id2, pri = pri2, ...}) =
                  ((pri1, id1), (pri2, id2))
 end;
 
-structure Tasks = Table(type key = task val ord = task_ord);
-structure Task_Graph = Graph(type key = task val ord = task_ord);
+structure TaskKEY = struct
+  type key = task
+  val ord = task_ord
+  fun pp t = PolyML.prettyRepresentation(t,~1)
+end
+structure Tasks = Table(TaskKEY);
+structure Task_Graph = Graph(TaskKEY);
 
 
 (* timing *)
@@ -161,7 +166,7 @@ fun waiting task deps =
   update_timing (fn t => fn (a, b, ds) =>
     (a - t, b + t,
       if ! Multithreading.trace > 0
-      then fold (insert (op =) o name_of_task) deps ds else ds)) task;
+      then foldl' (op_insert equal o name_of_task) deps ds else ds)) task;
 
 
 
@@ -208,9 +213,10 @@ fun make_queue groups jobs urgent = Queue {groups = groups, jobs = jobs, urgent 
 val empty = make_queue Inttab.empty Task_Graph.empty 0;
 
 fun group_tasks (Queue {groups, ...}) gs =
-  fold (fn g => fn tasks => Tasks.merge (op =) (tasks, get_tasks groups (group_id g)))
-    gs Tasks.empty
-  |> Tasks.keys;
+  foldl' (fn g => fn tasks =>
+             Tasks.merge equal (tasks, get_tasks groups (group_id g)))
+         gs Tasks.empty
+         |> Tasks.keys;
 
 fun known_task (Queue {jobs, ...}) task = can (Task_Graph.get_entry jobs) task;
 
@@ -259,9 +265,13 @@ fun cancel (Queue {groups, jobs, ...}) group =
   let
     val _ = cancel_group group Exn.Interrupt;
     val running =
-      Tasks.fold (fn (task, _) =>
-          (case get_job jobs task of Running thread => insert Thread.equal thread | _ => I))
-        (get_tasks groups (group_id group)) [];
+      Tasks.fold
+        (fn (task, _) => (
+           case get_job jobs task of
+               Running thread => op_insert (curry Thread.equal) thread
+             | _ => I)
+        )
+        (get_tasks groups (group_id group)) []
   in running end;
 
 fun cancel_all (Queue {jobs, ...}) =
@@ -271,9 +281,10 @@ fun cancel_all (Queue {jobs, ...}) =
         val group = group_of_task task;
         val _ = cancel_group group Exn.Interrupt;
       in
-        (case job of
-          Running t => (insert eq_group group groups, insert Thread.equal t running)
-        | _ => (groups, running))
+        case job of
+            Running t => (op_insert (curry eq_group) group groups,
+                          op_insert (curry Thread.equal) t running)
+         | _ => (groups, running)
       end;
     val running = Task_Graph.fold cancel_job jobs ([], []);
   in running end;
@@ -315,7 +326,7 @@ fun enqueue name group deps pri job (Queue {groups, jobs, urgent}) =
     val groups' = fold_groups (fn g => add_task (group_id g, task)) group groups;
     val jobs' = jobs
       |> Task_Graph.new_node (task, Job [job])
-      |> fold (add_job task) deps;
+      |> foldl' (add_job task) deps;
     val urgent' = if pri >= urgent_pri then urgent + 1 else urgent;
   in (task, make_queue groups' jobs' urgent') end;
 
@@ -359,7 +370,7 @@ fun dequeue_deps thread deps (queue as Queue {groups, jobs, urgent}) =
           | SOME (_, entry) =>
               (case ready_job (task, entry) of
                 NONE => ready tasks (task :: rest)
-              | some => (some, fold cons rest tasks)));
+              | some => (some, foldl' cons rest tasks)));
 
     fun ready_dep _ [] = NONE
       | ready_dep seen (task :: tasks) =

@@ -46,7 +46,7 @@ end;
 structure Future: FUTURE =
 struct
 
-open Portable Library
+open Portable
 
 (** future values **)
 
@@ -172,7 +172,7 @@ fun cancel_all () = (*requires SYNCHRONIZED*)
   in groups end;
 
 fun cancel_later group = (*requires SYNCHRONIZED*)
- (Unsynchronized.change canceled (insert Task_Queue.eq_group group);
+ (Unsynchronized.change canceled (op_insert (curry Task_Queue.eq_group) group);
   broadcast scheduler_event);
 
 fun interruptible_task f x =
