@@ -713,10 +713,9 @@ local
   val push_CONV = GEN_REWRITE_CONV TOP_SWEEP_CONV [DEMORG_DISJ, NOT2]
   and pull_CONV = GEN_REWRITE_CONV DEPTH_CONV [DEMORG_AND]
   and imf_CONV  = REWR_CONV NOT_IMP
-  val memory    = ref ([]: ((int * term) * thm) list)
 in
-  fun clear_contrapos_cache() = memory := []
-  fun make_hol_contrapos (n,th) =
+  fun new_contrapos_cache() = ref ([] : ((int * term) * thm) list)
+  fun make_hol_contrapos memory (n,th) =
     let val tm = concl th
         val key = (n,tm)
     in
@@ -756,14 +755,14 @@ local
   val finish_RULE = Rewrite.GEN_REWRITE_RULE I Rewrite.empty_rewrites
                           [TAUT `(~p ==> p) = p`, TAUT `(p ==> ~p) = ~p`]
 in
-  fun meson_to_hol insts (Subgoal(g,gs,(n,th),offset,locin)) =
+  fun meson_to_hol insts cpos_cache (Subgoal(g,gs,(n,th),offset,locin)) =
     let val newins = itlist merge_inst locin insts
         val g'     = fol_inst newins g
         val hol_g  = hol_of_literal g'
-        val ths    = map (meson_to_hol newins) gs
+        val ths    = map (meson_to_hol newins cpos_cache) gs
         val hth =
            if concl th = the_true then ASSUME hol_g
-           else let val cth = make_hol_contrapos(n,th)
+           else let val cth = make_hol_contrapos cpos_cache (n,th)
                 in if null ths then cth
                    else Drule.MATCH_MP cth (Lib.end_itlist Thm.CONJ ths)
               handle e as HOL_ERR _ =>
@@ -967,8 +966,7 @@ val (POLY_ASSUME_TAC:thm list -> jrhTactics.Tactic) =
 (* ------------------------------------------------------------------------- *)
 
 fun SIMPLE_MESON_REFUTE min max inc ths =
-  (clear_contrapos_cache();
-   inferences := 0;
+  (inferences := 0;
    let val old_dcutin = !dcutin
    in
      if !depth then dcutin := 100001 else ();
@@ -978,7 +976,7 @@ fun SIMPLE_MESON_REFUTE min max inc ths =
         val (proof,(insts,_,_)) = solve_goal rules (!depth) min max inc (1,[])
       in
         dcutin := old_dcutin;
-        meson_to_hol insts proof
+        meson_to_hol insts (new_contrapos_cache()) proof
       end
    end);
 
