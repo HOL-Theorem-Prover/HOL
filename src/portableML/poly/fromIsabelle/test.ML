@@ -54,8 +54,7 @@ val large_facts = realtime (cmap HOLfact) (countl 40)
 val _ = print "\nMetis calls serially\n"
 fun f () = METIS_PROVE (map snd (DB.thms "arithmetic")) “1+1=2”;
 
-val metis_results =
-    realtime Future.joins (Future.forks Future.default_params [f,f])
+val metis_results = realtime (cmap f) [(), ()];
 
 val _ = print "\nNow trying in multi-threaded mode\n";
 val _ = Multithreading.max_threads_update 0;
@@ -68,5 +67,4 @@ val results = realtime Future.joins (Future.forks Future.default_params args);
 val large_facts' = realtime (cmap HOLfact) (countl 40)
 *)
 
-val metis_results =
-    realtime Future.joins (Future.forks Future.default_params [f,f])
+val metis_results = realtime (cmap f) [(), ()]
