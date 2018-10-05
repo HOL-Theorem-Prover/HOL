@@ -98,8 +98,8 @@ in
 val cline_opts = [
   {help = "check file exists afterwards (can repeat)", long = ["checkfor"],
    short = "c", desc = addString "filename"},
-  {help = "provide debug output", long = ["dbg"], short = "",
-   desc = mkBoolT #debug},
+  {help = "provide debug output & preserve temp files",
+   long = ["dbg"], short = "", desc = mkBoolT #debug},
   {help = "default outputname", long = ["defaultout"], short = "",
    desc = setStringOpt "filename" #defaultout},
   {help = "fn name to be executable's main", long = ["exe"], short = "",
@@ -361,7 +361,8 @@ in
         else
           case exe of
               SOME f => BuildHeap_EXE_Compile.exe_compile
-                          {fnname = f, output_exe = valOf output}
+                          {fnname = f, output_exe = valOf output,
+                           keep_temp_files = debug}
             | _ => ();
         List.app (fn s => if OS.FileSys.access(s, [OS.FileSys.A_READ]) then ()
                           else die ("Couldn't find required output file: "^s))
