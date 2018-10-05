@@ -450,7 +450,7 @@ val ALTERNATING_RUN_IS_PRERUN =
     SIMP_TAC std_ss [ALTERNATING_RUN_def, ALTERNATING_PRERUN_def]);
 
 (*****************************************************************************)
-(* Some Classes of alternating automata             									  *)
+(* Some Classes of alternating automata                                                                                   *)
 (*****************************************************************************)
 
 val IS_NONDETERMINISTIC_SEMI_AUTOMATON_def =
@@ -897,17 +897,7 @@ val NDET_MIN_RUN_REACHABLE =
             FULL_SIMP_TAC std_ss [IS_REACHABLE_BY_RUN_def] THEN
             `SING (r.R s n)` by PROVE_TAC[NDET_MIN_RUN_SING] THEN
             FULL_SIMP_TAC std_ss [SING_DEF] THEN
-            REPEAT STRIP_TAC THENL [
-                EXISTS_TAC ``x:'b`` THEN
-                EXISTS_TAC ``s:'b`` THEN
-                ASM_REWRITE_TAC [IN_SING],
-                (* TODO: check on std kernel *)
-                `s'' = s` by PROVE_TAC[] THEN  (* was: `s' = s` *)
-                `s''' = s` by PROVE_TAC[] THEN (* was: `s'' = s` *)
-                `x' = x` by PROVE_TAC[IN_SING] THEN
-                `y = x` by PROVE_TAC[IN_SING] THEN
-                ASM_REWRITE_TAC[]
-            ]
+            METIS_TAC[IN_SING]
         ]);
 
 
@@ -993,8 +983,8 @@ val ALT_SEM_S0_AND_SPLIT___INITIAL =
         METIS_TAC[],
         ASM_REWRITE_TAC[],
 
-        `?P. (\s n. (?w. (IS_PATH_TO w r s n) /\ ~(w 0 IN f))) = P` by METIS_TAC[] THEN
-        `?P'. (\s n. (?w. (IS_PATH_TO w r' s n) /\ ~(w 0 IN f))) = P'` by METIS_TAC[] THEN
+        Q.ABBREV_TAC `P = (\s n. (?w. (IS_PATH_TO w r s n) /\ ~(w 0 IN f)))` THEN
+        Q.ABBREV_TAC `P' = (\s n. (?w. (IS_PATH_TO w r' s n) /\ ~(w 0 IN f)))` THEN
         `!s:'b n:num. P s n ==> IS_REACHABLE_BY_RUN (s, n) r` by
             PROVE_TAC[PATH_TO_REACHABLE_STATES_EXISTS] THEN
         `!s:'b n:num. P' s n ==> IS_REACHABLE_BY_RUN (s, n) r'` by
@@ -1011,15 +1001,7 @@ val ALT_SEM_S0_AND_SPLIT___INITIAL =
                 ASM_SIMP_TAC std_ss [IS_REACHABLE_BY_RUN_def, alternating_run_S0, IN_UNION],
 
                 ASM_SIMP_TAC std_ss [IS_REACHABLE_BY_RUN_def, alternating_run_R] THEN
-                REPEAT STRIP_TAC THEN
-                Cases_on `P s'' n` THEN1 METIS_TAC[] THEN  (* was: `P s' n` *)
-                Cases_on `P' s'' n` THEN1 METIS_TAC[] THEN (* was: `P' s'' n` *)
-                FULL_SIMP_TAC std_ss [] THEN
-                `IS_REACHABLE_BY_RUN (s'',n) ru` by FULL_SIMP_TAC std_ss [] THEN
-                Cases_on `~(IS_REACHABLE_BY_RUN (s'', n) r)` THEN1 METIS_TAC[] THEN
-                Cases_on `~(IS_REACHABLE_BY_RUN (s'', n) r')` THEN1 METIS_TAC[] THEN
-                FULL_SIMP_TAC std_ss [] THEN
-                PROVE_TAC[IN_UNION]
+                METIS_TAC[IN_UNION]
             ]) THEN DISCH_TAC THEN
 
         EXISTS_TAC ``ru:'b alternating_run`` THEN
@@ -1574,4 +1556,3 @@ val NDET_TRUE___NDET_WEAK_CO_BUECHI =
 
 
 val _ = export_theory();
-

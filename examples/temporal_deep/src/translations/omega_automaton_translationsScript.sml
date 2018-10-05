@@ -170,15 +170,8 @@ val SYMBOLIC_SEMI_AUTOMATON_TO_SEMI_AUTOMATON___IS_WELL_FORMED =
                     SYMBOLIC_SEMI_AUTOMATON_TO_SEMI_AUTOMATON_def,
                     semi_automaton_REWRITES,
                     POWER_SET_FINITE, SUBSET_DEF, IN_POWER_SET_SUBSET_EQUIV,
-                    IN_CROSS] THEN
-    SIMP_TAC std_ss [IN_DEF] THEN
-    NTAC 4 STRIP_TAC THENL [
-      Cases_on `x` THEN
-      SIMP_TAC std_ss [],
-
-      Cases_on `x` THEN Cases_on `r` THEN
-      SIMP_TAC std_ss []
-    ]);
+                    IN_CROSS, FORALL_PROD] THEN
+    SIMP_TAC std_ss [IN_DEF]);
 
 
 val SYMBOLIC_SEMI_AUTOMATON_TO_SEMI_AUTOMATON___LANGUAGE_EQ =
@@ -1109,17 +1102,13 @@ val BREAKPOINT_CONSTRUCTION_SEMI_AUTOMATON___IS_WELL_FORMED =
                      semi_automaton_REWRITES, SUBSET_DEF,
                      IN_SING, IN_CROSS, IN_POWER_SET_SUBSET_EQUIV,
                      NOT_IN_EMPTY, FINITE_CROSS, POWER_SET_FINITE,
-prove(``!P. ((!x. P x) = (!x11 x12 i x21 x22 i'. P ((x11,x12),i,(x21,x22), i')))``,
-        METIS_TAC[PAIR, FST, SND]),
-prove(``!P. ((!x. P x) = (!x1 i x2 i'. P (x1,i,x2,i')))``,
-        METIS_TAC[PAIR, FST, SND]),
-prove(``!P x11 x12 i x21 x22. (((x11,x12),i,(x21,x22), i') IN \((x11,x12),i,(x21,x22), i'). P x11 x12 i x21 x22 i') = P x11 x12 i x21 x22 i'``, SIMP_TAC std_ss [IN_DEF]),
-prove (``!P x1 x2. (x IN \(x1, x2). P x1 x2) = P (FST x) (SND x)``, SIMP_TAC std_ss [IN_DEF, PAIR_BETA_THM])] THEN
-REPEAT STRIP_TAC THENL [
-    PROVE_TAC[FST],
-    METIS_TAC[IN_INTER],
-    PROVE_TAC[]
-]);
+                     FORALL_PROD, FORALL_AND_THM] THEN
+    SIMP_TAC std_ss [IN_DEF, FORALL_AND_THM, EMPTY_applied] THEN
+    REPEAT STRIP_TAC THENL [
+      PROVE_TAC[],
+      METIS_TAC[IN_INTER, IN_DEF],
+      PROVE_TAC[]
+    ]);
 
 
 val NDET_FG___TO___DET_FG___THM =
@@ -1217,7 +1206,7 @@ prove (``!P x1 x2. ((x1, x2) IN \(x1, x2). P x1 x2) = P x1 x2``, SIMP_TAC std_ss
       Q_TAC EXISTS_TAC `\n. FST (f n)` THEN
       NTAC 2 UNDISCH_HD_TAC THEN
       GSYM_NO_TAC 3 (*Def R*) THEN
-      ASM_SIMP_TAC std_ss [PAIR_BETA_THM, FORALL_AND_THM] THEN
+      ASM_SIMP_TAC (std_ss++pairSimps.gen_beta_ss) [FORALL_AND_THM] THEN
       DISCH_TAC THEN DISCH_TAC THEN
       SUBGOAL_TAC `!n. SND (f n) = n` THEN1 (
         Induct_on `n` THEN ASM_REWRITE_TAC[]
@@ -1240,8 +1229,7 @@ prove (``!P x1 x2. ((x1, x2) IN \(x1, x2). P x1 x2) = P x1 x2``, SIMP_TAC std_ss
       REMAINS_TAC `{y | R x y} SUBSET A.S CROSS {SUC (SND x)}` THEN1 (
         PROVE_TAC[SUBSET_FINITE, FINITE_CROSS, FINITE_SING]
       ) THEN
-      ASM_SIMP_TAC std_ss [SUBSET_DEF, GSPECIFICATION, IN_CROSS, PAIR_BETA_THM,
-        IN_SING] THEN
+      ASM_SIMP_TAC (std_ss++pairSimps.gen_beta_ss) [SUBSET_DEF, GSPECIFICATION, IN_CROSS, IN_SING] THEN
       METIS_TAC[FST, SND],
 
 
@@ -1264,7 +1252,7 @@ prove (``!P x1 x2. ((x1, x2) IN \(x1, x2). P x1 x2) = P x1 x2``, SIMP_TAC std_ss
           GSYM_NO_TAC 2 (*Def R*) THEN
           Cases_on `x` THEN
           ONCE_REWRITE_TAC[RTC_CASES2] THEN
-          ASM_SIMP_TAC arith_ss [PAIR_BETA_THM] THEN
+          ASM_SIMP_TAC (arith_ss++pairSimps.gen_beta_ss) [] THEN
           REPEAT STRIP_TAC THEN
           GSYM_NO_TAC 0 THEN
           ASM_SIMP_TAC arith_ss [] THEN
@@ -1293,7 +1281,7 @@ prove (``!P x1 x2. ((x1, x2) IN \(x1, x2). P x1 x2) = P x1 x2``, SIMP_TAC std_ss
 
             SUBGOAL_TAC `!y. R y (q,r) ==> (v = SND y)`  THEN1 (
               GSYM_NO_TAC 4 (*Def R*) THEN
-              ASM_SIMP_TAC arith_ss [PAIR_BETA_THM]
+              ASM_SIMP_TAC (arith_ss++pairSimps.gen_beta_ss) []
             ) THEN
 
             REPEAT STRIP_TAC THEN EQ_TAC THENL [
@@ -1310,7 +1298,7 @@ prove (``!P x1 x2. ((x1, x2) IN \(x1, x2). P x1 x2) = P x1 x2``, SIMP_TAC std_ss
           WEAKEN_HD_TAC THEN
           GSYM_NO_TAC 0 (*Def r*) THEN
           GSYM_NO_TAC 4 (*Def R*) THEN
-          ASM_SIMP_TAC std_ss [PAIR_BETA_THM] THEN
+          ASM_SIMP_TAC (std_ss++pairSimps.gen_beta_ss) [] THEN
           EQ_TAC THEN REPEAT STRIP_TAC THENL [
             GSYM_NO_TAC 2 (*Def v*) THEN
             FULL_SIMP_TAC std_ss [] THEN
@@ -1498,7 +1486,7 @@ prove (``!P x1 x2. ((x1, x2) IN \(x1, x2). P x1 x2) = P x1 x2``, SIMP_TAC std_ss
         ]
       ) THEN
       REMAINS_TAC `INFINITE (IMAGE f UNIV)` THEN1 (
-        METIS_TAC[SUBSET_FINITE, INFINITE_DEF]
+        METIS_TAC[SUBSET_FINITE]
       ) THEN
       MATCH_MP_TAC (SIMP_RULE std_ss [prove (``!P Q R. ((P ==> Q ==> R) = ((P /\ Q) ==> R))``, METIS_TAC[]), GSYM RIGHT_FORALL_IMP_THM] IMAGE_11_INFINITE) THEN
       STRIP_TAC THENL [
@@ -1995,8 +1983,7 @@ ASM_SIMP_TAC std_ss [A_NDET_FG___SYM__TO__CONRETE___MIN_I] THEN (
   `?h. h = \(S1, S2). (IMAGE f S1) UNION (IMAGE f' S2)` by METIS_TAC[] THEN
   `?h'. h' = \S:'a set. (IMAGE g (S INTER (IMAGE f (POWER_SET A.S))), IMAGE g (S INTER (IMAGE f' (POWER_SET A.S))))` by METIS_TAC[] THEN
   SUBGOAL_TAC `INJ h (POWER_SET (POWER_SET A.S) CROSS POWER_SET (POWER_SET A.S)) UNIV` THEN1 (
-    ASM_REWRITE_TAC [INJ_DEF, IN_CROSS, IN_POWER_SET_SUBSET_EQUIV, IN_UNIV,
-      PAIR_BETA_THM] THEN
+    ASM_SIMP_TAC (std_ss++pairSimps.gen_beta_ss) [INJ_DEF, IN_CROSS, IN_POWER_SET_SUBSET_EQUIV, IN_UNIV] THEN
     Cases_on `x` THEN Cases_on `y` THEN
     SIMP_ALL_TAC std_ss [IS_SYMBOLIC_BREAKPOINT_CONSTRUCTION_def] THEN
     NTAC 2 (UNDISCH_NO_TAC 4) THEN (*INJ f, f'*)
@@ -2121,11 +2108,11 @@ SUBGOAL_TAC `IMAGE (\(S1,S2). IMAGE f S1 UNION IMAGE f' S2)
   SIMP_TAC std_ss [EXTENSION] THEN
   REPEAT STRIP_TAC THEN EQ_TAC THENL [
     REPEAT WEAKEN_HD_TAC THEN
-    SIMP_TAC std_ss [IN_IMAGE, PAIR_BETA_THM, EXTENSION, IN_UNION, IN_CROSS,
+    SIMP_TAC (std_ss++pairSimps.gen_beta_ss) [IN_IMAGE, EXTENSION, IN_UNION, IN_CROSS,
       IN_POWER_SET_SUBSET_EQUIV, SUBSET_DEF] THEN
     METIS_TAC[],
 
-    ASM_SIMP_TAC std_ss [IN_POWER_SET_SUBSET_EQUIV, IN_IMAGE, PAIR_BETA_THM] THEN
+    ASM_SIMP_TAC (std_ss++pairSimps.gen_beta_ss) [IN_POWER_SET_SUBSET_EQUIV, IN_IMAGE] THEN
     REPEAT STRIP_TAC THEN
     Q_TAC EXISTS_TAC `(IMAGE g (x INTER (IMAGE f (POWER_SET A.S))), IMAGE g (x INTER (IMAGE f' (POWER_SET A.S))))` THEN
     SIMP_TAC std_ss [GSYM IMAGE_COMPOSE, IN_CROSS, IN_POWER_SET_SUBSET_EQUIV] THEN
@@ -2326,7 +2313,7 @@ BINOP_TAC THENL [
   EXISTS_EQ_STRIP_TAC THEN
   FORALL_EQ_STRIP_TAC THEN
   BOOL_EQ_STRIP_TAC THEN
-  SIMP_TAC std_ss [IN_IMAGE, PAIR_BETA_THM,
+  SIMP_TAC (std_ss++pairSimps.gen_beta_ss) [IN_IMAGE,
     prove (``!P x. (x IN \(x1, x2). P x1 x2) = (P (FST x) (SND x))``,
              Cases_on `x` THEN SIMP_TAC std_ss [IN_DEF])] THEN
   EQ_TAC THEN REPEAT STRIP_TAC THENL [
@@ -3728,4 +3715,3 @@ EQ_TAC THENL [
 
 
 val _ = export_theory();
-

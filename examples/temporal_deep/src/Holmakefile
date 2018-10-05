@@ -1,11 +1,8 @@
+INCLUDES=tools deep_embeddings translations model_check examples
+
 .PHONY: all clean world 
 
 all:
-	cd tools; Holmake --qof -k; cd ..
-	cd deep_embeddings; Holmake --qof -k; cd ..
-	cd translations; Holmake --qof -k; cd ..
-	cd model_check; Holmake --qof -k; cd ..
-	cd examples; Holmake --qof -k; cd ..
 
 clean:
 	cd tools; Holmake cleanAll; cd ..

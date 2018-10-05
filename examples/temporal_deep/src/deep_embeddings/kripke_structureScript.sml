@@ -3,9 +3,9 @@ open HolKernel Parse boolLib bossLib;
 (*
 quietdec := true;
 
-val home_dir = (concat Globals.HOLDIR "/examples/temporal_deep/");
-loadPath := (concat home_dir "src/deep_embeddings") ::
-            (concat home_dir "src/tools") :: !loadPath;
+val home_dir = (Globals.HOLDIR ^ "/examples/temporal_deep/");
+loadPath := (home_dir ^ "src/deep_embeddings") ::
+            (home_dir ^ "src/tools") :: !loadPath;
 
 map load
  ["xprop_logicTheory", "prop_logicTheory", "infinite_pathTheory", "pred_setTheory", "listTheory", "pairTheory", "set_lemmataTheory",
@@ -29,6 +29,9 @@ quietdec := false;
 
 
 val _ = new_theory "kripke_structure";
+
+
+val QIPAIR_ss = quantHeuristicsLib.QUANT_INST_ss [quantHeuristicsLibParameters.pair_default_qp]
 
 
 val kripke_structure_def =
@@ -187,8 +190,8 @@ val IS_REACHABLE_STATE_OF_KRIPKE_STRUCTURE___RECURSIVE_DEF =
 
         REPEAT STRIP_TAC THEN
         DISJ2_TAC THEN
-        SUBGOAL_TAC `!P. (!m. ((m < SUC n) ==> P m)) =
-                         ((!m. ((m < n) ==> P m)) /\ P n)` THEN1 (
+        `!P. (!m. ((m < SUC n) ==> P m)) =
+                         ((!m. ((m < n) ==> P m)) /\ P n)` by (
           REPEAT WEAKEN_HD_TAC THEN
           REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
             `m < SUC n` by DECIDE_TAC THEN RES_TAC,
@@ -247,10 +250,10 @@ val IS_TOTAL_KRIPKE_STRUCTURE___PATH_EXISTS =
   SIMP_TAC std_ss [IS_TOTAL_KRIPKE_STRUCTURE_def] THEN
   REPEAT STRIP_TAC THEN
   `?p. p = CHOOSEN_PATH {s} (\s n. {s' | (s, s') IN K.R})` by METIS_TAC[] THEN
-  SUBGOAL_TAC `p 0 = s` THEN1 (
+  `p 0 = s` by (
     ASM_SIMP_TAC std_ss [CHOOSEN_PATH_def, IN_SING]
   ) THEN
-  SUBGOAL_TAC `!n. IS_REACHABLE_STATE_OF_KRIPKE_STRUCTURE K (p n)` THEN1 (
+  `!n. IS_REACHABLE_STATE_OF_KRIPKE_STRUCTURE K (p n)` by (
     Induct_on `n` THENL [
       ASM_REWRITE_TAC[],
 
@@ -262,9 +265,8 @@ val IS_TOTAL_KRIPKE_STRUCTURE___PATH_EXISTS =
       METIS_TAC[]
     ]
   ) THEN
-  SUBGOAL_TAC `!n. (p n, p (SUC n)) IN K.R` THEN1 (
+  `!n. (p n, p (SUC n)) IN K.R` by (
     ASM_SIMP_TAC std_ss [CHOOSEN_PATH_def, GSPECIFICATION] THEN
-    SELECT_ELIM_TAC THEN
     METIS_TAC[]
   ) THEN
   WEAKEN_NO_TAC 3 (*Def p*) THEN
@@ -341,7 +343,7 @@ val IS_TOTAL_COMPLETELY_REACHABLE_KRIPKE_STRUCTURE___ALTERNATIVE_DEF =
       SIMP_ALL_TAC std_ss [IS_REACHABLE_STATE_OF_KRIPKE_STRUCTURE_def,
                            IS_WELL_FORMED_KRIPKE_STRUCTURE_def, SUBSET_DEF,
                            IN_CROSS] THEN
-      SUBGOAL_TAC `s IN K.S` THEN1 (
+      `s IN K.S` by (
         Cases_on `n` THENL [
           PROVE_TAC[],
 
@@ -474,7 +476,7 @@ REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
         Cases_on `(SUC n' - n0) MOD n = 0` THENL [
           DISJ1_TAC THEN
           ASM_SIMP_TAC arith_ss [] THEN
-          REMAINS_TAC `(n' - n0) MOD n = PRE n` THEN1 (
+          `(n' - n0) MOD n = PRE n` suffices_by (
             `n0 + PRE n = PRE (n + n0)` by DECIDE_TAC THEN
             ASM_SIMP_TAC arith_ss []
           ) THEN
@@ -487,7 +489,7 @@ REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
           DISJ2_TAC THEN
           Q_TAC EXISTS_TAC `n0 + ((n' - n0) MOD n)` THEN
           ASM_SIMP_TAC arith_ss [] THEN
-          REMAINS_TAC `(SUC (n0 + (n' - n0) MOD n)) = n0 + (SUC n' - n0) MOD n` THEN1 (
+          `(SUC (n0 + (n' - n0) MOD n)) = n0 + (SUC n' - n0) MOD n` suffices_by (
             ASM_SIMP_TAC arith_ss [] THEN
             PROVE_TAC[DIVISION]
           ) THEN
@@ -526,9 +528,9 @@ REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
 
 
     UNDISCH_HD_TAC THEN
-    REMAINS_TAC `!i j. (IS_TRACE_OF_INITIAL_PATH_THROUGH_KRIPKE_STRUCTURE M i /\
+    `!i j. (IS_TRACE_OF_INITIAL_PATH_THROUGH_KRIPKE_STRUCTURE M i /\
                         IS_TRACE_OF_INITIAL_PATH_THROUGH_KRIPKE_STRUCTURE M j) ==>
-                       (i = j)` THEN1 (
+                       (i = j)` suffices_by (
       METIS_TAC[]
     ) THEN
     ASM_SIMP_TAC std_ss [IS_TRACE_OF_INITIAL_PATH_THROUGH_KRIPKE_STRUCTURE_def,
@@ -539,7 +541,7 @@ REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
                         IN_SING,
     prove(``!P x1 x2. ((x1, x2) IN \(x1,x2). P x1 x2) = P x1 x2``, SIMP_TAC std_ss [IN_DEF])] THEN
     REPEAT STRIP_TAC THEN
-    REMAINS_TAC `p' = p''` THEN1 METIS_TAC[] THEN
+    `p' = p''` suffices_by METIS_TAC[] THEN
     ONCE_REWRITE_TAC[FUN_EQ_THM] THEN
     Induct_on `x` THENL [
       ASM_REWRITE_TAC[],
@@ -570,15 +572,13 @@ REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
 
 
 
-
-
   SIMP_ALL_TAC std_ss [IS_TRACE_OF_INITIAL_PATH_THROUGH_KRIPKE_STRUCTURE_def,
                        IS_INITIAL_PATH_THROUGH_KRIPKE_STRUCTURE_def] THEN
-  SUBGOAL_TAC `?n m. (n < m) /\ (p' n = p' m)` THEN1 (
+  `?n m. (n < m) /\ (p' n = p' m)` by (
     `!n. p' n IN M.S` by METIS_TAC[KRIPKE_STRUCTURE___PATHS_AND_TRACES_PATH_SUBSET] THEN
     SIMP_ALL_TAC std_ss [IS_WELL_FORMED_KRIPKE_STRUCTURE_def] THEN
     CCONTR_TAC THEN
-    REMAINS_TAC `!n. ({p' m | m < n} SUBSET M.S) /\ (CARD {p' m | m < n} = n)` THEN1 (
+    `!n. ({p' m | m < n} SUBSET M.S) /\ (CARD {p' m | m < n} = n)` suffices_by (
       `!n. ~(SUC n <= n)` by DECIDE_TAC THEN
       METIS_TAC[CARD_SUBSET]
     ) THEN
@@ -588,12 +588,12 @@ REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
       METIS_TAC[],
 
       Induct_on `n` THENL [
-        REMAINS_TAC `{p' m | m < 0} = {}` THEN1 (
-          ASM_REWRITE_TAC[CARD_DEF]
+        `{p' m | m < 0} = {}` suffices_by (
+          METIS_TAC[CARD_DEF]
         ) THEN
         SIMP_TAC std_ss [EXTENSION, NOT_IN_EMPTY, GSPECIFICATION],
 
-        SUBGOAL_TAC `{p' m | m < (SUC n)} = p' n INSERT {p' m | m < n}` THEN1 (
+        `{p' m | m < (SUC n)} = p' n INSERT {p' m | m < n}` by (
           SIMP_TAC std_ss [EXTENSION, GSPECIFICATION, IN_INSERT] THEN
           `!m. (m < SUC n) = ((m = n) \/ (m < n))` by DECIDE_TAC THEN
           METIS_TAC[]
@@ -607,8 +607,8 @@ REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
   ) THEN
 
   `?q. q = CUT_PATH_PERIODICALLY p' n (m-n)` by METIS_TAC[] THEN
-  SUBGOAL_TAC `i = TRACE_OF_PATH_THROUGH_KRIPKE_STRUCTURE M q` THEN1 (
-    REMAINS_TAC `q 0 IN M.S0 /\ IS_PATH_THROUGH_KRIPKE_STRUCTURE M q` THEN1 (
+  `i = TRACE_OF_PATH_THROUGH_KRIPKE_STRUCTURE M q` by (
+    `q 0 IN M.S0 /\ IS_PATH_THROUGH_KRIPKE_STRUCTURE M q` suffices_by (
       METIS_TAC[]
     ) THEN
     REPEAT STRIP_TAC THENL [
@@ -632,7 +632,7 @@ REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
         `?k. (n' - n) MOD (m - n) = k` by METIS_TAC[] THEN
         `0 < m - n` by DECIDE_TAC THEN
         `k < (m - n)` by PROVE_TAC[DIVISION] THEN
-        SUBGOAL_TAC `(SUC n' - n) MOD (m - n) = (SUC k) MOD (m - n)` THEN1 (
+        `(SUC n' - n) MOD (m - n) = (SUC k) MOD (m - n)` by (
           `(SUC n' - n) = SUC (n' - n)` by DECIDE_TAC THEN
           ASM_SIMP_TAC std_ss [SUC_MOD]
         ) THEN
@@ -708,28 +708,12 @@ val PRODUCT_KRIPKE_STRUCTURE___REWRITES =
               (K'.L = (\(s1,s2). K1.L s1 UNION K2.L s2)))``,
 
 
-    SIMP_TAC std_ss [IS_WELL_FORMED_KRIPKE_STRUCTURE_def,
-                    PRODUCT_KRIPKE_STRUCTURE_def,
+    SIMP_TAC (std_ss++ boolSimps.EQUIV_EXTRACT_ss) [IS_WELL_FORMED_KRIPKE_STRUCTURE_def,
+                    PRODUCT_KRIPKE_STRUCTURE_def, EXISTS_PROD, FORALL_PROD,
                     kripke_structure_REWRITES, EXTENSION,
-                    GSPECIFICATION, IN_INTER, IN_CROSS, SUBSET_DEF,
-                    PAIR_BETA_THM, PAIR_BETA_THM_4] THEN
-    REPEAT STRIP_TAC THENL [
-      METIS_TAC[],
+                    GSPECIFICATION, IN_INTER, IN_CROSS, SUBSET_DEF] THEN
+    METIS_TAC[]);
 
-      EQ_TAC THEN REPEAT STRIP_TAC THENL [
-        METIS_TAC[FST, SND],
-        METIS_TAC[FST, SND],
-        METIS_TAC[FST, SND],
-        METIS_TAC[FST, SND],
-        METIS_TAC[FST, SND],
-        METIS_TAC[FST, SND],
-        METIS_TAC[FST, SND],
-
-        EXISTS_TAC ``x':'b # 'c # 'b # 'c`` THEN
-        ASM_SIMP_TAC std_ss [] THEN
-        METIS_TAC[FST, SND]
-      ]
-    ]);
 
 
 
@@ -743,27 +727,22 @@ val PRODUCT_KRIPKE_STRUCTURE___IS_WELL_FORMED =
             IS_WELL_FORMED_KRIPKE_STRUCTURE (PRODUCT_KRIPKE_STRUCTURE K1 K2)``,
 
 REPEAT STRIP_TAC THEN
-`?S. (PRODUCT_KRIPKE_STRUCTURE K1 K2).S = S` by METIS_TAC[] THEN
-UNDISCH_HD_TAC THEN
 ASM_SIMP_TAC std_ss [IS_WELL_FORMED_KRIPKE_STRUCTURE_def,
                      PRODUCT_KRIPKE_STRUCTURE___REWRITES,
-                     INTER_SUBSET, GSPECIFICATION,
-                     PAIR_BETA_THM] THEN
-SIMP_ALL_TAC std_ss [IS_WELL_FORMED_KRIPKE_STRUCTURE_def] THEN
+                     INTER_SUBSET, GSPECIFICATION, FORALL_PROD, EXISTS_PROD] THEN
+FULL_SIMP_TAC std_ss [IS_WELL_FORMED_KRIPKE_STRUCTURE_def] THEN
 REPEAT STRIP_TAC THENL [
-  REMAINS_TAC `S' SUBSET (K1.S CROSS K2.S)` THEN1 (
+  Q.MATCH_ABBREV_TAC `FINITE S` THEN
+  `S SUBSET (K1.S CROSS K2.S)` suffices_by (
     METIS_TAC[FINITE_CROSS, SUBSET_FINITE]
   ) THEN
-  GSYM_NO_TAC 0 (*Def S'*) THEN
-  ASM_SIMP_TAC std_ss [SUBSET_DEF, GSPECIFICATION, IN_CROSS,
-    PAIR_BETA_THM],
+  UNABBREV_ALL_TAC THEN
+  FULL_SIMP_TAC std_ss [SUBSET_DEF, GSPECIFICATION, IN_CROSS,
+     PRODUCT_KRIPKE_STRUCTURE___REWRITES, FORALL_PROD, EXISTS_PROD],
 
   PROVE_TAC[FINITE_UNION],
 
-  UNDISCH_HD_TAC THEN
-  GSYM_NO_TAC 0 (*Def S'*) THEN
-  FULL_SIMP_TAC std_ss [SUBSET_DEF, GSPECIFICATION,
-    PAIR_BETA_THM, IN_UNION] THEN
+  FULL_SIMP_TAC std_ss [SUBSET_DEF, IN_UNION] THEN
   PROVE_TAC[]
 ]);
 
@@ -800,16 +779,9 @@ val PRODUCT_KRIPKE_STRUCTURES___PATH_IS_PRODUCT_OF_ORIGINAL_PATHS =
 
     SIMP_TAC std_ss [IS_PATH_THROUGH_KRIPKE_STRUCTURE_def,
       PRODUCT_KRIPKE_STRUCTURE_def, kripke_structure_REWRITES,
-      GSPECIFICATION, PAIR_BETA_THM_4] THEN
-    SIMP_TAC std_ss [SIMP_RULE std_ss [] (prove (
-        ``!P. (?(x :'b # 'c # 'b # 'c). P x) = (?x x1 x2 x3 x4. ((x = (x1, x2, x3, x4)) /\ P x))``,
-        REPEAT GEN_TAC THEN EXISTS_EQ_STRIP_TAC THEN
-        Cases_on `x` THEN Cases_on `r` THEN Cases_on `r'` THEN
-        SIMP_TAC std_ss []))] THEN
-    SIMP_TAC std_ss [prove (``!x y1 y2. (x = (y1, y2)) = ((FST x = y1) /\ (SND x = y2))``, Cases_on `x` THEN SIMP_TAC std_ss [])] THEN
-    SIMP_TAC std_ss [FORALL_AND_THM] THEN
+      GSPECIFICATION, FORALL_PROD, EXISTS_PROD] THEN
+    SIMP_TAC std_ss [prove (``!x y1 y2. (x = (y1, y2)) = ((FST x = y1) /\ (SND x = y2))``, Cases_on `x` THEN SIMP_TAC std_ss []), FORALL_AND_THM] THEN
     REPEAT STRIP_TAC THEN REPEAT BOOL_EQ_STRIP_TAC);
-
 
 
 (*open model*)
@@ -1021,7 +993,7 @@ val SIMULATION_RELATION___PATH_THROUGH_KRIPKE_STRUCTURE =
     `?w. w = CHOOSEN_PATH {s0}
           (\s2 n. {s2' | P (p n) s2' /\ (s2, s2') IN K2.R})` by METIS_TAC[] THEN
     EXISTS_TAC ``w:num->'c`` THEN
-    SUBGOAL_TAC `!n. P (p n) (w n)` THEN1 (
+    `!n. P (p n) (w n)` by (
       Induct_on `n` THENL [
         ASM_SIMP_TAC std_ss [CHOOSEN_PATH_def, GSPECIFICATION, IN_SING],
 
@@ -1062,7 +1034,7 @@ val SIMULATION_RELATION___INITIAL_PATH_THROUGH_KRIPKE_STRUCTURE =
 
     SIMP_TAC std_ss [IS_INITIAL_PATH_THROUGH_KRIPKE_STRUCTURE_def] THEN
     REPEAT STRIP_TAC THEN
-    REMAINS_TAC `?s0. P (p 0) s0 /\ s0 IN K2.S0` THEN1 (
+    `?s0. P (p 0) s0 /\ s0 IN K2.S0` suffices_by (
       METIS_TAC[SIMULATION_RELATION___PATH_THROUGH_KRIPKE_STRUCTURE]
     ) THEN
 
@@ -1186,4 +1158,3 @@ val UNIVERSAL_KRIPKE_STRUCTURE___IS_MOST_GENERAL =
 
 
 val _ = export_theory();
-

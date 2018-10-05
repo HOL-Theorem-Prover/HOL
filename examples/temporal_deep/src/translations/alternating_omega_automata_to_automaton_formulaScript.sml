@@ -500,10 +500,10 @@ val IMPL_COLLAPSED_RUN___EQ_COLLAPSED_RUN___ENRICHMENT =
 
     SUBGOAL_TAC `(!m n:num. (w n SUBSET (ITERATE fw w m n)) /\ ((ITERATE fw w m n) SUBSET (A:('a,'a) alternating_semi_automaton).S))` THEN1 (
         Induct_on `m` THENL [
-            ASM_SIMP_TAC std_ss [ITERATE_def, SUBSET_REFL],
+            ASM_SIMP_TAC std_ss [ITERATE_ALT_DEF, SUBSET_REFL],
 
             `?x. ITERATE fw w m = x` by PROVE_TAC[] THEN
-            ASM_SIMP_TAC std_ss [ITERATE_def, UNION_SUBSET] THEN
+            ASM_SIMP_TAC std_ss [ITERATE_ALT_DEF, UNION_SUBSET] THEN
             REPEAT STRIP_TAC THENL [
                 PROVE_TAC[SUBSET_UNION, SUBSET_REFL, SUBSET_TRANS],
                 PROVE_TAC[],
@@ -523,7 +523,7 @@ val IMPL_COLLAPSED_RUN___EQ_COLLAPSED_RUN___ENRICHMENT =
             REPEAT STRIP_TAC THEN
             `(v = m' - SUC m) /\ (m' >= SUC m)` by DECIDE_TAC THEN
             `(ITERATE fw w m n) SUBSET (ITERATE fw w (SUC m) n)` by (
-                REWRITE_TAC [ITERATE_def] THEN
+                REWRITE_TAC [ITERATE_ALT_DEF] THEN
                 `?x. ITERATE fw w m = x` by PROVE_TAC[] THEN
                 ASM_SIMP_TAC std_ss [SUBSET_DEF, IN_UNION]
             ) THEN
@@ -537,7 +537,7 @@ val IMPL_COLLAPSED_RUN___EQ_COLLAPSED_RUN___ENRICHMENT =
             GSYM RIGHT_EXISTS_AND_THM, GSPECIFICATION, IN_UNIV] THEN
         REPEAT STRIP_TAC THEN
         EXISTS_TAC ``0:num`` THEN
-        ASM_REWRITE_TAC[ITERATE_def]
+        ASM_REWRITE_TAC[ITERATE_ALT_DEF]
     ) THEN
 
 
@@ -596,10 +596,10 @@ val IMPL_COLLAPSED_RUN___EQ_COLLAPSED_RUN___ENRICHMENT =
     SUBGOAL_TAC `!n s m. (s IN (ITERATE fw w m n)) ==>
         (P_SEM (ITERATE fw w m (SUC n))  ((A:('a, 'a) alternating_semi_automaton).R s (i n)))` THEN1 (
         Induct_on `m` THENL [
-            ASM_SIMP_TAC std_ss [ITERATE_def],
+            ASM_SIMP_TAC std_ss [ITERATE_ALT_DEF],
 
             `?x. ITERATE fw w m = x` by PROVE_TAC[] THEN
-            ONCE_REWRITE_TAC [ITERATE_def] THEN
+            ONCE_REWRITE_TAC [ITERATE_ALT_DEF] THEN
             FULL_SIMP_TAC std_ss [IN_UNION, GSPECIFICATION] THEN
             PROVE_TAC[SUBSET_UNION, IS_POSITIVE_NEGATIVE_PROP_FORMULA_SEM]
         ]
@@ -634,7 +634,7 @@ val IMPL_COLLAPSED_RUN___EQ_COLLAPSED_RUN___ENRICHMENT =
             `?x. ITERATE fw w l = x` by PROVE_TAC[] THEN
             `w' (SUC n) = x (SUC n)` by PROVE_TAC[] THEN
             `SUC l >= l` by DECIDE_TAC THEN
-            `w' n = (fw x) n` by METIS_TAC[ITERATE_def] THEN
+            `w' n = (fw x) n` by METIS_TAC[ITERATE_ALT_DEF] THEN
             ASM_SIMP_TAC std_ss [IN_UNION, GSPECIFICATION]
         ]
     ]
@@ -785,4 +785,3 @@ val NDET_G___A_UNIVERSALLY_TOTAL_WEAK_CO_BUECHI___IMPL =
 
 
 val _ = export_theory();
-

@@ -30,6 +30,7 @@ quietdec := false;
 
 val _ = new_theory "omega_automaton";
 
+
 val explicit_acceptance_condition =
  Hol_datatype
   `explicit_acceptance_condition =
@@ -310,7 +311,7 @@ val OMEGA_AUTOMATON___STATE_VAR_RENAMING =
       Q_SPEC_NO_ASSUM 2 `w` THEN
       Q_SPEC_NO_ASSUM 3 `w` THEN
       NTAC 2 UNDISCH_HD_TAC THEN
-      SUBGOAL_TAC `!n. w n IN IMAGE f A.S` THEN1 (
+      `!n. w n IN IMAGE f A.S` by (
         SIMP_ALL_TAC std_ss [IS_RUN_THROUGH_SEMI_AUTOMATON_def,
                              SEMI_AUTOMATON_STATE_VAR_RENAMING_def,
                              semi_automaton_REWRITES]

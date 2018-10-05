@@ -3,9 +3,9 @@ open HolKernel Parse boolLib bossLib;
 (*
 quietdec := true;
 
-val home_dir = (concat Globals.HOLDIR "/examples/temporal_deep/");
-loadPath := (concat home_dir "src/deep_embeddings") ::
-            (concat home_dir "src/tools") :: !loadPath;
+val home_dir = (Globals.HOLDIR ^ "/examples/temporal_deep/");
+loadPath := (home_dir ^ "src/deep_embeddings") ::
+            (home_dir ^ "src/tools") :: !loadPath;
 
 map load
  ["xprop_logicTheory", "prop_logicTheory", "infinite_pathTheory", "pred_setTheory", "listTheory", "pairTheory", "set_lemmataTheory",
@@ -740,7 +740,7 @@ val IS_SIMPLIFIED_SYMBOLIC_SEMI_AUTOMATON___RUNS =
                                     IN_DIFF, PATH_SUBSET_def] THEN
               METIS_TAC[]
             ) THEN STRIP_TAC THEN
-            METIS_TAC[INJ_SUBSET, P_SEM___VAR_RENAMING]
+            METIS_TAC[INJ_SUBSET_DOMAIN, P_SEM___VAR_RENAMING]
         ) THEN STRIP_TAC THEN
         FULL_SIMP_TAC std_ss [] THEN
         ONCE_REWRITE_TAC [P_USED_VARS_INTER_THM] THEN
@@ -794,7 +794,7 @@ val IS_SIMPLIFIED_SYMBOLIC_SEMI_AUTOMATON___RUNS =
           UNDISCH_HD_TAC (*INJ f'*) THEN
           SIMP_TAC std_ss [] THEN
           MATCH_MP_TAC (REWRITE_RULE [
-            prove (``!t1 t2 t3. (t1 /\ t2 ==> t3) = (t2 ==> t1 ==> t3)``, PROVE_TAC[])] INJ_SUBSET) THEN
+            prove (``!t1 t2 t3. (t1 /\ t2 ==> t3) = (t2 ==> t1 ==> t3)``, PROVE_TAC[])] INJ_SUBSET_DOMAIN) THEN
           FULL_SIMP_TAC std_ss [SUBSET_DEF, IN_UNION, IN_INTER, SEMI_AUTOMATON_USED_VARS_def,
             PATH_SUBSET_def, SEMI_AUTOMATON_USED_INPUT_VARS_def, IN_DIFF] THEN
           METIS_TAC[]
@@ -810,7 +810,6 @@ val IS_SIMPLIFIED_SYMBOLIC_SEMI_AUTOMATON___RUNS =
       ]
     ]
   ]);
-
 
 
 val IS_SIMPLIFIED_SYMBOLIC_SEMI_AUTOMATON___RUNS2 =
@@ -831,34 +830,28 @@ val IS_SIMPLIFIED_SYMBOLIC_SEMI_AUTOMATON___RUNS2 =
         UNDISCH_HD_TAC (*PATH_SUBSET w A.S*) THEN
         ASM_SIMP_TAC std_ss [symbolic_semi_automaton_REWRITES],
 
-        REVERSE CONJ_TAC THEN1 (
-          rpt STRIP_TAC >> METIS_TAC[IS_SIMPLIFIED_SYMBOLIC_SEMI_AUTOMATON___RUN_INPUT_VARS]
+
+        REVERSE RIGHT_CONJ_TAC THEN1 (
+          METIS_TAC[IS_SIMPLIFIED_SYMBOLIC_SEMI_AUTOMATON___RUN_INPUT_VARS]
         ) THEN
 
-        ASSUME_TAC (GSYM IS_SIMPLIFIED_SYMBOLIC_SEMI_AUTOMATON___RUNS) THEN
-        Q_SPECL_NO_ASSUM 0 [`A`, `A'`, `f`] THEN
-        PROVE_CONDITION_NO_ASSUM 0 THEN1 ASM_REWRITE_TAC[] THEN
-        CLEAN_ASSUMPTIONS_TAC THEN
-        Q_SPECL_NO_ASSUM 1 [`PATH_RESTRICT w A'.S`, `i`] THEN
-        PROVE_CONDITION_NO_ASSUM 0 THEN1 ASM_SIMP_TAC std_ss [PATH_RESTRICT_def, PATH_MAP_def, INTER_SUBSET, PATH_SUBSET_def] THEN
+        MP_TAC (Q.SPECL [`A`, `A'`, `f`] (GSYM IS_SIMPLIFIED_SYMBOLIC_SEMI_AUTOMATON___RUNS)) THEN
+        ASM_REWRITE_TAC[] THEN STRIP_TAC THEN
+        Q.PAT_X_ASSUM `!w i. _` (MP_TAC o Q.SPECL [`PATH_RESTRICT w A'.S`, `i`]) THEN
+        ASM_SIMP_TAC std_ss [PATH_SUBSET_RESTRICT] THEN
+        DISCH_THEN (K ALL_TAC) THEN
 
-        ASM_REWRITE_TAC[] THEN WEAKEN_HD_TAC THEN
 
-        Suff `(\n.
-         PATH_RESTRICT w A'.S n UNION
-         IMAGE f (i n INTER SEMI_AUTOMATON_USED_INPUT_VARS A')) = w`
-        THEN1 (DISCH_TAC >> ASM_REWRITE_TAC[]) THEN
+        `(\n. PATH_RESTRICT w A'.S n UNION
+              IMAGE f (i n INTER SEMI_AUTOMATON_USED_INPUT_VARS A')) = w` suffices_by
+           (DISCH_TAC >> ASM_REWRITE_TAC[]) THEN
 
         ONCE_REWRITE_TAC[FUN_EQ_THM] THEN GEN_TAC THEN
         ONCE_REWRITE_TAC[EXTENSION] THEN GEN_TAC THEN
 
-(* TODO *)
-        cheat
-(*
         SIMP_ALL_TAC std_ss [PATH_SUBSET_def, PATH_RESTRICT_def, IN_UNION, IN_IMAGE,
-            SUBSET_DEF, PATH_MAP_def, IN_INTER] THEN
+          SUBSET_DEF, PATH_MAP_def, IN_INTER] THEN
         METIS_TAC[]
- *)
       ],
 
 
@@ -1064,7 +1057,7 @@ val SEMI_AUTOMATON___STATE_VAR_RENAMING =
       ]
     ) THEN STRIP_TAC THEN
 
-   METIS_TAC[SEMI_AUTOMATON___VAR_RENAMING, INJ_SUBSET, SUBSET_UNIV, SEMI_AUTOMATON_USED_INPUT_VARS_INTER_THM]);
+   METIS_TAC[SEMI_AUTOMATON___VAR_RENAMING, INJ_SUBSET_DOMAIN, SUBSET_UNIV, SEMI_AUTOMATON_USED_INPUT_VARS_INTER_THM]);
 
 
 
@@ -1080,7 +1073,7 @@ val P_SEM_AUTOMATON_RUN___STATE_VAR_RENAMING =
    SIMP_ASSUMPTIONS_TAC std_ss [IN_UNION, IN_DIFF] THEN
    `P_SEM (INPUT_RUN_PATH_UNION A i w t) p =
     P_SEM (IMAGE f (INPUT_RUN_PATH_UNION A i w t)) (P_VAR_RENAMING f p)`
-      by  METIS_TAC[P_SEM___VAR_RENAMING, INJ_SUBSET, SUBSET_UNIV] THEN
+      by  METIS_TAC[P_SEM___VAR_RENAMING, INJ_SUBSET_DOMAIN, SUBSET_UNIV] THEN
    ASM_REWRITE_TAC[] THEN
 
    `P_USED_VARS (P_VAR_RENAMING f p) = IMAGE f (P_USED_VARS p)`
@@ -1150,4 +1143,3 @@ val TRANSITION_STATE_CLEANING =
 
 
 val _ = export_theory();
-

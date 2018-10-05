@@ -313,10 +313,9 @@ val SUBSET_COMPL_DISJOINT =
    PROVE_TAC[]
 );
 
-
-val INJ_SUBSET =
+val INJ_SUBSET_DOMAIN =
  store_thm
-  ("INJ_SUBSET",
+  ("INJ_SUBSET_DOMAIN",
    ``!f S1 S2 S. (S2 SUBSET S1) ==> (INJ f S1 S) ==> (INJ f S2 S)``,
 
    REWRITE_TAC[INJ_DEF, SUBSET_DEF] THEN
@@ -411,6 +410,13 @@ val DISJOINT_SUBSET_BOTH =
     IN_INTER] THEN
    PROVE_TAC[]);
 
+
+val IN_BETA_THM =
+ store_thm
+  ("IN_BETA_THM",
+  ``!f x. x IN (\x. f x) = f x``,
+  SIMP_TAC std_ss [IN_DEF]
+  )
 
 
 val _ = export_theory();

@@ -4,9 +4,9 @@ open HolKernel Parse boolLib bossLib;
 quietdec := true;
 
 
-loadPath := (concat Globals.HOLDIR "/examples/PSL/path") ::
-            (concat Globals.HOLDIR "/examples/PSL/1.1/official-semantics") ::
-            (concat Globals.HOLDIR "/examples/temporal_deep/src/tools") ::
+loadPath := (Globals.HOLDIR ^ "/examples/PSL/path") ::
+            (Globals.HOLDIR ^ "/examples/PSL/1.1/official-semantics") ::
+            (Globals.HOLDIR ^ "/examples/temporal_deep/src/tools") ::
             !loadPath;
 
 map load
@@ -18,7 +18,7 @@ map load
 
 open FinitePathTheory PathTheory UnclockedSemanticsTheory ClockedSemanticsTheory LemmasTheory RewritesTheory RewritesPropertiesTheory
    ProjectionTheory SyntacticSugarTheory arithmeticTheory ModelTheory rich_listTheory pred_setTheory combinTheory
-   res_quanTools numLib tuerk_tacticsLib temporal_deep_mixedTheory set_lemmataTheory;
+   res_quanTools numLib tuerk_tacticsLib temporal_deep_mixedTheory set_lemmataTheory listTheory;
 
 val _ = hide "S";
 val _ = hide "I";
@@ -243,7 +243,7 @@ Induct_on `L` THENL [
   ASM_SIMP_TAC list_ss [CONCAT_def, MAP_EQ_APPEND, GSYM LEFT_EXISTS_AND_THM,
     GSYM RIGHT_EXISTS_AND_THM] THEN
   REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
-    Q_TAC EXISTS_TAC `l1'::L'` THEN
+    Q_TAC EXISTS_TAC `l10::L'` THEN
     ASM_SIMP_TAC list_ss [CONCAT_def],
 
 
@@ -1873,7 +1873,7 @@ INDUCT_THEN sere_induct ASSUME_TAC THENL [ (* 8 subgoals *)
   BOOL_EQ_STRIP_TAC THEN
   MATCH_MP_TAC B_SEM___VAR_RENAMING THEN
   UNDISCH_NO_TAC 1 THEN
-  MATCH_MP_TAC set_lemmataTheory.INJ_SUBSET THEN
+  MATCH_MP_TAC set_lemmataTheory.INJ_SUBSET_DOMAIN THEN
   SIMP_TAC std_ss [SUBSET_DEF, IN_UNION] THEN
   PROVE_TAC[],
 
@@ -1889,7 +1889,7 @@ INDUCT_THEN sere_induct ASSUME_TAC THENL [ (* 8 subgoals *)
   ) THEN
   STRIP_TAC THEN
   UNDISCH_NO_TAC 1 THEN
-  MATCH_MP_TAC set_lemmataTheory.INJ_SUBSET THEN
+  MATCH_MP_TAC set_lemmataTheory.INJ_SUBSET_DOMAIN THEN
   ASM_SIMP_TAC std_ss [SUBSET_DEF, IN_UNION, MAP_APPEND,
     LIST_BIGUNION_APPEND] THEN
   PROVE_TAC[],
@@ -1920,7 +1920,7 @@ INDUCT_THEN sere_induct ASSUME_TAC THENL [ (* 8 subgoals *)
   ) THEN
   STRIP_TAC THEN
   UNDISCH_NO_TAC 1 THEN
-  MATCH_MP_TAC set_lemmataTheory.INJ_SUBSET THEN
+  MATCH_MP_TAC set_lemmataTheory.INJ_SUBSET_DOMAIN THEN
   ASM_SIMP_TAC std_ss [SUBSET_DEF, IN_UNION, MAP_APPEND,
     LIST_BIGUNION_APPEND, MAP] THEN
   PROVE_TAC[],
@@ -1935,7 +1935,7 @@ INDUCT_THEN sere_induct ASSUME_TAC THENL [ (* 8 subgoals *)
   ) THEN
   STRIP_TAC THEN
   UNDISCH_HD_TAC THEN
-  MATCH_MP_TAC set_lemmataTheory.INJ_SUBSET THEN
+  MATCH_MP_TAC set_lemmataTheory.INJ_SUBSET_DOMAIN THEN
   SIMP_TAC std_ss [SUBSET_DEF, IN_UNION] THEN
   PROVE_TAC[],
 
@@ -1949,7 +1949,7 @@ INDUCT_THEN sere_induct ASSUME_TAC THENL [ (* 8 subgoals *)
   ) THEN
   STRIP_TAC THEN
   UNDISCH_HD_TAC THEN
-  MATCH_MP_TAC set_lemmataTheory.INJ_SUBSET THEN
+  MATCH_MP_TAC set_lemmataTheory.INJ_SUBSET_DOMAIN THEN
   SIMP_TAC std_ss [SUBSET_DEF, IN_UNION] THEN
   PROVE_TAC[],
 
@@ -1975,7 +1975,7 @@ INDUCT_THEN sere_induct ASSUME_TAC THENL [ (* 8 subgoals *)
     ) THEN
     STRIP_TAC THEN
     UNDISCH_HD_TAC THEN
-    MATCH_MP_TAC set_lemmataTheory.INJ_SUBSET THEN
+    MATCH_MP_TAC set_lemmataTheory.INJ_SUBSET_DOMAIN THEN
     SIMP_TAC std_ss [SUBSET_DEF, IN_UNION] THEN
     PROVE_TAC[]
   ],
@@ -2002,7 +2002,7 @@ val UF_SEM___VAR_RENAMING =
       ASM_SIMP_TAC std_ss [ELEM_PATH_VAR_RENAMING] THEN
       MATCH_MP_TAC B_SEM___VAR_RENAMING THEN
       UNDISCH_NO_TAC 1 THEN
-      MATCH_MP_TAC INJ_SUBSET THEN
+      MATCH_MP_TAC INJ_SUBSET_DOMAIN THEN
       SIMP_TAC std_ss [SUBSET_DEF, PATH_USED_VARS_def, IN_BETA_THM,
         IN_UNION] THEN
       PROVE_TAC[],
@@ -2020,7 +2020,7 @@ val UF_SEM___VAR_RENAMING =
       ASM_SIMP_TAC std_ss [ELEM_PATH_VAR_RENAMING] THEN
       MATCH_MP_TAC B_SEM___VAR_RENAMING THEN
       UNDISCH_NO_TAC 2 THEN
-      MATCH_MP_TAC INJ_SUBSET THEN
+      MATCH_MP_TAC INJ_SUBSET_DOMAIN THEN
       SIMP_TAC std_ss [SUBSET_DEF, PATH_USED_VARS_def, IN_BETA_THM,
         IN_UNION] THEN
       PROVE_TAC[],
@@ -2040,7 +2040,7 @@ val UF_SEM___VAR_RENAMING =
       ) THEN
       STRIP_TAC THEN
       UNDISCH_HD_TAC THEN
-      MATCH_MP_TAC set_lemmataTheory.INJ_SUBSET THEN
+      MATCH_MP_TAC set_lemmataTheory.INJ_SUBSET_DOMAIN THEN
       SIMP_TAC std_ss [SUBSET_DEF, IN_UNION] THEN
       PROVE_TAC[],
 
@@ -2056,7 +2056,7 @@ val UF_SEM___VAR_RENAMING =
       MATCH_MP_TAC US_SEM___VAR_RENAMING THEN
       ASM_REWRITE_TAC[] THEN
       UNDISCH_NO_TAC  3 THEN
-      MATCH_MP_TAC INJ_SUBSET THEN
+      MATCH_MP_TAC INJ_SUBSET_DOMAIN THEN
       SIMP_TAC std_ss [SUBSET_DEF, IN_UNION] THEN
       PROVE_TAC[SEL_PATH_USED_VARS, SUBSET_DEF],
 
@@ -2083,7 +2083,7 @@ val UF_SEM___VAR_RENAMING =
       MATCH_MP_TAC US_SEM___VAR_RENAMING THEN
       ASM_REWRITE_TAC[] THEN
       UNDISCH_NO_TAC  1 THEN
-      MATCH_MP_TAC INJ_SUBSET THEN
+      MATCH_MP_TAC INJ_SUBSET_DOMAIN THEN
       SIMP_TAC std_ss [SUBSET_DEF, IN_UNION] THEN
       REPEAT STRIP_TAC THENL [
         ALL_TAC,
@@ -2122,7 +2122,7 @@ val UF_SEM___VAR_RENAMING =
         PROVE_TAC[]
       ) THEN
       UNDISCH_NO_TAC 2 THEN
-      MATCH_MP_TAC INJ_SUBSET THEN
+      MATCH_MP_TAC INJ_SUBSET_DOMAIN THEN
       SIMP_TAC std_ss [SUBSET_DEF, IN_UNION] THEN
       PROVE_TAC[RESTN_PATH_USED_VARS, SUBSET_DEF],
 
@@ -2142,7 +2142,7 @@ val UF_SEM___VAR_RENAMING =
           PROVE_TAC[]
         ) THEN
         UNDISCH_NO_TAC 2 THEN
-        MATCH_MP_TAC INJ_SUBSET THEN
+        MATCH_MP_TAC INJ_SUBSET_DOMAIN THEN
         SIMP_TAC std_ss [SUBSET_DEF, IN_UNION] THEN
         PROVE_TAC[RESTN_PATH_USED_VARS, SUBSET_DEF, GT_LS],
 
@@ -2158,7 +2158,7 @@ val UF_SEM___VAR_RENAMING =
           PROVE_TAC[]
         ) THEN
         UNDISCH_NO_TAC 4 THEN
-        MATCH_MP_TAC INJ_SUBSET THEN
+        MATCH_MP_TAC INJ_SUBSET_DOMAIN THEN
         SIMP_TAC std_ss [SUBSET_DEF, IN_UNION] THEN
         PROVE_TAC[RESTN_PATH_USED_VARS, SUBSET_DEF]
       ],
@@ -2173,7 +2173,7 @@ val UF_SEM___VAR_RENAMING =
           PROVE_TAC[]
         ) THEN
         UNDISCH_HD_TAC THEN
-        MATCH_MP_TAC INJ_SUBSET THEN
+        MATCH_MP_TAC INJ_SUBSET_DOMAIN THEN
         SIMP_TAC std_ss [SUBSET_DEF, IN_UNION] THEN
         PROVE_TAC[],
 
@@ -2184,7 +2184,7 @@ val UF_SEM___VAR_RENAMING =
           ASM_SIMP_TAC std_ss [ELEM_PATH_VAR_RENAMING, GT_LS] THEN
           MATCH_MP_TAC B_SEM___VAR_RENAMING THEN
           UNDISCH_NO_TAC 1 THEN
-          MATCH_MP_TAC INJ_SUBSET THEN
+          MATCH_MP_TAC INJ_SUBSET_DOMAIN THEN
           SIMP_TAC std_ss [SUBSET_DEF, IN_UNION, PATH_USED_VARS_def, IN_BETA_THM] THEN
           PROVE_TAC[GT_LS],
 
@@ -2194,7 +2194,7 @@ val UF_SEM___VAR_RENAMING =
               PROVE_TAC[PATH_VAR_RENAMING___TOP_OMEGA]
             ) THEN
             UNDISCH_NO_TAC 1 THEN
-            MATCH_MP_TAC INJ_SUBSET THEN
+            MATCH_MP_TAC INJ_SUBSET_DOMAIN THEN
             SIMP_TAC std_ss [SUBSET_DEF, IN_UNION, PATH_USED_VARS_def,
               PATH_USED_VARS___TOP_OMEGA, NOT_IN_EMPTY],
 
@@ -2215,7 +2215,7 @@ val UF_SEM___VAR_RENAMING =
               PROVE_TAC[PATH_VAR_RENAMING___TOP_OMEGA]
             ) THEN
             UNDISCH_NO_TAC 1 THEN
-            MATCH_MP_TAC INJ_SUBSET THEN
+            MATCH_MP_TAC INJ_SUBSET_DOMAIN THEN
             SIMP_TAC std_ss [SUBSET_DEF, IN_UNION, CAT_PATH_USED_VARS, PATH_USED_VARS___TOP_OMEGA,
                 NOT_IN_EMPTY] THEN
             REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
@@ -2246,7 +2246,7 @@ val UF_SEM___VAR_RENAMING =
             MATCH_MP_TAC US_SEM___VAR_RENAMING THEN
             ASM_REWRITE_TAC[] THEN
             UNDISCH_NO_TAC 3 THEN
-            MATCH_MP_TAC INJ_SUBSET THEN
+            MATCH_MP_TAC INJ_SUBSET_DOMAIN THEN
             SIMP_TAC std_ss [SUBSET_DEF, IN_UNION, CAT_PATH_USED_VARS, PATH_USED_VARS___TOP_OMEGA,
                 NOT_IN_EMPTY] THEN
             REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
@@ -2263,7 +2263,7 @@ val UF_SEM___VAR_RENAMING =
                 PROVE_TAC[]
             ) THEN
             UNDISCH_NO_TAC 2 THEN
-            MATCH_MP_TAC INJ_SUBSET THEN
+            MATCH_MP_TAC INJ_SUBSET_DOMAIN THEN
             SIMP_TAC std_ss [SUBSET_DEF, IN_UNION] THEN
             PROVE_TAC[RESTN_PATH_USED_VARS, GT_LS, SUBSET_DEF]
       ]

@@ -36,12 +36,6 @@ val _ = new_theory "ctl_star";
 val Know = Q_TAC KNOW_TAC;
 val Suff = Q_TAC SUFF_TAC;
 
-local
-  val th = prove (``!a b. a /\ (a ==> b) ==> a /\ b``, PROVE_TAC [])
-in
-  val STRONG_CONJ_TAC :tactic = MATCH_MP_TAC th >> CONJ_TAC
-end;
-
 val ctl_star_def =
  Hol_datatype
   `ctl_star = CTL_STAR_PROP       of 'a prop_logic               (* boolean expression      *)
@@ -695,7 +689,6 @@ val FAIR_CTL_SEM_THM___A_EVENTUAL_ALWAYS = prove(
     PROVE_TAC[]);
 
 
-(* TODO *)
 val FAIR_CTL_SEM_THM___A_SUNTIL = prove(
     ``!M f1 f2 FC s.
    (FAIR_CTL_SEM M (FAIR_CTL_A_SUNTIL FC (f1, f2)) s = (!p. (IS_FAIR_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M FC p /\
@@ -714,23 +707,27 @@ val FAIR_CTL_SEM_THM___A_SUNTIL = prove(
     ] THEN
     CLEAN_ASSUMPTIONS_TAC THEN
     EQ_TAC THEN REPEAT STRIP_TAC THENL [
-      EXISTS_TAC ``j:num`` THEN
+      EXISTS_TAC ``k:num`` THEN
       ASM_REWRITE_TAC[] THEN
       REPEAT STRIP_TAC THEN
+      rename1 `k' < k` THEN
       RIGHT_DISJ_TAC THEN
-      SPECL_NO_ASSUM 2 [``j':num``] THEN
+      SPECL_NO_ASSUM 2 [``k':num``] THEN
       FULL_SIMP_TAC std_ss [] THENL [
-        PROVE_TAC[],
-        `j'' < j` by DECIDE_TAC THEN PROVE_TAC[]
+        METIS_TAC[],
+        rename1 `j' < k'` THEN
+        `j' < k` by DECIDE_TAC THEN PROVE_TAC[]
       ],
 
-      Cases_on `k' < k` THENL [
+
+      rename1 `FAIR_CTL_SEM M f1 (p j)` THEN
+      Cases_on `j < k'` THENL [
         PROVE_TAC[],
 
-        Cases_on `k' = k` THENL [
-          PROVE_TAC[],
+        Cases_on `k' = j` THENL [
+          FULL_SIMP_TAC std_ss [],
 
-          `k < k'` by DECIDE_TAC THEN
+          `k' < j` by DECIDE_TAC THEN
           PROVE_TAC[]
         ]
       ],
@@ -1010,4 +1007,3 @@ val IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE___TO___CTL_KS_FAIR_SEM =
 
 
 val _ = export_theory();
-

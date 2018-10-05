@@ -3,9 +3,9 @@ open HolKernel Parse boolLib bossLib;
 (*
 quietdec := true;
 
-val home_dir = (concat Globals.HOLDIR "/examples/temporal_deep/");
-loadPath := (concat home_dir "src/deep_embeddings") ::
-            (concat home_dir "src/tools") :: !loadPath;
+val home_dir = (Globals.HOLDIR ^ "/examples/temporal_deep/");
+loadPath := (home_dir ^ "src/deep_embeddings") ::
+            (home_dir ^ "src/tools") :: !loadPath;
 
 map load
  ["pred_setTheory", "pairTheory", "arithmeticTheory", "tuerk_tacticsLib",
@@ -1222,7 +1222,7 @@ Induct_on `l` THENL [
   FINITE_SING, IN_SING, P_PROP_SET_MODEL_SEM, FINITE_EMPTY,
   INTER_EMPTY],
 
-  GSYM_NO_TAC 0 THEN
+  POP_ASSUM (ASSUME_TAC o GSYM) THEN
   REWRITE_TAC [VAR_RENAMING_HASHTABLE_LIST_def] THEN
   ONCE_REWRITE_TAC[VAR_RENAMING_HASHTABLE_LIST___CLEAN_VAR_SET] THEN
   ASM_SIMP_TAC std_ss [LIST_TO_SET_THM, P_SEM_THM,
@@ -1287,7 +1287,7 @@ P_USED_VARS (VAR_RENAMING_HASHTABLE_LIST l S f) =
 
 
 Induct_on `l` THENL [
-  SIMP_TAC std_ss [VAR_RENAMING_HASHTABLE_LIST_def, LIST_TO_SET_THM, UNION_EMPTY, POWER_SET_def, SUBSET_EMPTY, GSPEC_EQ, IMAGE_SING, P_USED_VARS_def],
+  SIMP_TAC std_ss [VAR_RENAMING_HASHTABLE_LIST_def, LIST_TO_SET_THM, UNION_EMPTY, POWER_SET_def, SUBSET_EMPTY, GSPEC_EQ, IMAGE_SING, P_USED_VARS_def, POW_EQNS],
 
   ASM_SIMP_TAC std_ss [VAR_RENAMING_HASHTABLE_LIST_def, P_USED_VARS_EVAL,
     EXTENSION, IN_UNION, IN_SING, LIST_TO_SET_THM, IN_INSERT,
@@ -1298,4 +1298,3 @@ Induct_on `l` THENL [
 ]);
 
 val _ = export_theory();
-

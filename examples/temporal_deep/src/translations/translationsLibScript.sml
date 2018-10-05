@@ -812,7 +812,7 @@ val IS_ELEMENT_ITERATOR___ID =
 
     SIMP_TAC std_ss [IS_ELEMENT_ITERATOR_def,
                     PRED_SET_FORALL_def, IMP_DISJ_THM,
-                    NOT_LESS, GREATER_EQ] THEN
+                    NOT_LESS, GREATER_EQ, RES_FORALL_THM] THEN
     PROVE_TAC[]);
 
 
@@ -859,6 +859,7 @@ Induct_on `l` THENL [
   ]
 ]);
 
+
 val PRE_POS_START___REWRITES =
   store_thm ("PRE_POS_START___REWRITES",
     ``!n h. (PRE (POS_START n [] h) = 0) /\
@@ -866,21 +867,24 @@ val PRE_POS_START___REWRITES =
 
     SIMP_TAC std_ss [POS_START_def, COND_RAND]);
 
+
 val NUM_FINITE_INJ_EXISTS =
   store_thm ("NUM_FINITE_INJ_EXISTS",
 
   ``!S. FINITE S ==> ?f:'a -> num. INJ f S UNIV``,
 
   REPEAT STRIP_TAC THEN
-  ASSUME_TAC (INST_TYPE [beta |-> num] temporal_deep_mixedTheory.FINITE_INJ_EXISTS) THEN
-  PROVE_CONDITION_NO_ASSUM 0 THEN1 (
+  SUBGOAL_TAC `INFINITE (UNIV:num set)` THEN1 (
     SIMP_TAC std_ss [INFINITE_UNIV] THEN
     EXISTS_TAC ``\x. SUC x`` THEN
     SIMP_TAC arith_ss [] THEN
     EXISTS_TAC ``0:num`` THEN
     SIMP_TAC arith_ss []
   ) THEN
-  METIS_TAC[FINITE_EMPTY]);
+
+  MP_TAC (Q.SPECL [`S`, `EMPTY`]
+    (INST_TYPE [beta |-> num] temporal_deep_mixedTheory.FINITE_INJ_EXISTS)) THEN
+  ASM_SIMP_TAC std_ss [FINITE_EMPTY, DISJOINT_EMPTY]);
 
 
 val _ = export_theory();

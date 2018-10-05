@@ -189,7 +189,7 @@ val A_UNIV___A_SEM___CONCRETE_THM =
     ) THEN
     ASM_SIMP_TAC std_ss []
   ]
-)
+);
 
 
 
@@ -466,15 +466,7 @@ REPEAT STRIP_TAC THENL [
   Q_TAC EXISTS_TAC `m * t' + t` THEN
   SUBGOAL_TAC `m * t' >= t'` THEN1 (
     `m > 0` by DECIDE_TAC THEN UNDISCH_HD_TAC THEN
-    REPEAT WEAKEN_HD_TAC THEN
-    Cases_on `m` THEN SIMP_TAC arith_ss [GREATER_EQ] THEN
-    Cases_on `t'` THEN1 SIMP_TAC arith_ss [] THEN
-
-    ASSUME_TAC MULT_LESS_EQ_SUC THEN
-    Q_SPECL_NO_ASSUM 0 [`1:num`, `SUC n`, `n'`] THEN
-    `1 <= SUC n` by DECIDE_TAC THEN
-    RES_TAC THEN
-    METIS_TAC[MULT_RIGHT_1]
+    SIMP_TAC arith_ss [GREATER_EQ]
   ) THEN
   ASM_SIMP_TAC arith_ss [] THEN WEAKEN_HD_TAC THEN
 
@@ -1894,4 +1886,3 @@ VAR_RENAMING_HASHTABLE_LIST___BINARY_ENCODING___HASHTABLE_LIST]
 
 
 val _ = export_theory();
-

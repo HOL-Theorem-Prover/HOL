@@ -3,9 +3,9 @@ open HolKernel Parse boolLib bossLib;
 (*
 quietdec := true;
 
-val home_dir = (concat Globals.HOLDIR "/examples/temporal_deep/");
-loadPath := (concat home_dir "src/deep_embeddings") ::
-            (concat home_dir "src/tools") :: !loadPath;
+val home_dir = (Globals.HOLDIR ^ "/examples/temporal_deep/");
+loadPath := (home_dir ^ "src/deep_embeddings") ::
+            (home_dir ^ "src/tools") :: !loadPath;
 
 map load
  ["xprop_logicTheory", "prop_logicTheory", "infinite_pathTheory", "pred_setTheory", "listTheory", "pairTheory", "set_lemmataTheory",
@@ -109,7 +109,7 @@ val IS_DET_TOTAL_SEMI_AUTOMATON___UNIQUE_RUN_EXISTS =
     SIMP_ALL_TAC std_ss [] THEN
     REPEAT STRIP_TAC THENL [
       `?w. w = CHOOSEN_PATH {x} (\s n. ({s' | (s, i (PRE n) INTER A.I, s', (i n) INTER A.I) IN A.R}))` by METIS_TAC[] THEN
-      SUBGOAL_TAC `!n. w n IN A.S` THEN1 (
+      `!n. w n IN A.S` by (
         Induct_on `n` THENL [
           ASM_SIMP_TAC std_ss [CHOOSEN_PATH_def, IN_SING] THEN
           PROVE_TAC[FST],
@@ -133,7 +133,7 @@ val IS_DET_TOTAL_SEMI_AUTOMATON___UNIQUE_RUN_EXISTS =
       REPEAT STRIP_TAC THENL [
         PROVE_TAC[],
 
-        REMAINS_TAC `w 0 = x` THEN1 ASM_REWRITE_TAC[] THEN
+        `w 0 = x` suffices_by METIS_TAC[] THEN
         ASM_REWRITE_TAC [CHOOSEN_PATH_def, IN_SING] THEN
         SIMP_TAC std_ss [],
 
@@ -211,4 +211,3 @@ METIS_TAC[FST, SND]);
 
 
 val _ = export_theory();
-

@@ -923,14 +923,14 @@ val LTL_EQUIVALENT_true_false_rewrites =
       (!l. LTL_EQUIVALENT (LTL_PBEFORE(l, LTL_TRUE)) LTL_FALSE) /\
       (!l. LTL_EQUIVALENT (LTL_PBEFORE(l, LTL_FALSE)) LTL_TRUE)``,
 
-    SUBGOAL_TAC `!t. ?k. t <= k` THEN1 (
+    Q.SUBGOAL_THEN `!t. ?k. t <= k` STRIP_ASSUME_TAC THEN1 (
       GEN_TAC THEN EXISTS_TAC ``SUC t`` THEN DECIDE_TAC
     ) THEN
-    SUBGOAL_TAC `!t. ?k. k <= t` THEN1 (
+    Q.SUBGOAL_THEN `!t. ?k. k <= t` STRIP_ASSUME_TAC THEN1 (
       GEN_TAC THEN EXISTS_TAC ``0`` THEN DECIDE_TAC
     ) THEN
     `!t. t > 0 = ~(t = 0)` by DECIDE_TAC THEN
-    SUBGOAL_TAC `!t k. ((!j. ~(t <= j) \/ ~(j < k)) = (k <= t))` THEN1 (
+    Q.SUBGOAL_THEN `!t k. ((!j. ~(t <= j) \/ ~(j < k)) = (k <= t))` STRIP_ASSUME_TAC THEN1 (
       REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
         CCONTR_TAC THEN
         `(t < k) /\ (t <= t)` by DECIDE_TAC THEN
@@ -939,7 +939,7 @@ val LTL_EQUIVALENT_true_false_rewrites =
         DECIDE_TAC
       ]
     ) THEN
-    SUBGOAL_TAC `!t k. ((!j. ~(j <= t) \/ ~(k < j)) = (t <= k))` THEN1 (
+    Q.SUBGOAL_THEN `!t k. ((!j. ~(j <= t) \/ ~(k < j)) = (t <= k))` STRIP_ASSUME_TAC THEN1 (
       REPEAT WEAKEN_HD_TAC THEN
       REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
         CCONTR_TAC THEN

@@ -142,8 +142,8 @@ struct
    val IMP_TAC = fn t => ASSUME_TAC t THEN UNDISCH_HD_TAC;
    fun GSYM_NO_TAC i = POP_NO_ASSUM i (fn x=> ASSUME_TAC (GSYM x));
 
-   val SUBGOAL_TAC = (fn t => (t by ALL_TAC));
-   val REMAINS_TAC = (fn t => (Tactical.REVERSE(t by ALL_TAC)));
+   fun SUBGOAL_TAC q = Q.SUBGOAL_THEN q STRIP_ASSUME_TAC
+   fun REMAINS_TAC q = Tactical.REVERSE (SUBGOAL_TAC q)
    val SPEC_NO_ASSUM = (fn n => fn S => POP_NO_ASSUM n (fn x=> ASSUME_TAC (SPEC S x)));
    val SPECL_NO_ASSUM = (fn n => fn S => POP_NO_ASSUM n (fn x=> ASSUME_TAC (SPECL S x)));
 
