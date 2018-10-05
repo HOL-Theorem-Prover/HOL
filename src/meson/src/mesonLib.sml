@@ -221,29 +221,6 @@ fun fol_of_literal env consts tm =
   end
   handle HOL_ERR _ => fol_of_atom env consts tm
 
-fun fol_of_form env consts tm =
-  let val (v,bod) = dest_forall tm
-      val fv = fol_of_var v
-      val fbod = fol_of_form (v::env) (subtract consts [v]) bod
-  in
-     Forall(fv,fbod)
-  end
-  handle HOL_ERR _ =>
-    let val (l,r) = dest_conj tm
-        val fl = fol_of_form env consts l
-        val fr = fol_of_form env consts r
-    in
-        Conj(fl,fr)
-    end
-  handle HOL_ERR _ =>
-    let val (l,r) = dest_disj tm
-        val fl = fol_of_form env consts l
-        and fr = fol_of_form env consts r
-    in
-        Disj(fl,fr)
-    end
-  handle HOL_ERR _ => Atom(fol_of_literal env consts tm);;
-
 (* ------------------------------------------------------------------------- *)
 (* Further translation functions for HOL formulas.                           *)
 (* ------------------------------------------------------------------------- *)
