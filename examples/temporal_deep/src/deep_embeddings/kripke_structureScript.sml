@@ -67,7 +67,7 @@ val IS_WELL_FORMED_KRIPKE_STRUCTURE_def =
 val simple_kripke_structure_def =
  Define
   `simple_kripke_structure S B R =
-   kripke_structure S B R (POWER_SET S) (\s. {p | p SUBSET S /\ s IN p})`;
+   kripke_structure S B R (POW S) (\s. {p | p SUBSET S /\ s IN p})`;
 
 
 
@@ -788,8 +788,8 @@ val PRODUCT_KRIPKE_STRUCTURES___PATH_IS_PRODUCT_OF_ORIGINAL_PATHS =
 val UNIVERSAL_KRIPKE_STRUCTURE_def =
  Define
   `UNIVERSAL_KRIPKE_STRUCTURE P =
-    kripke_structure (POWER_SET P) (POWER_SET P)
-      (POWER_SET P CROSS POWER_SET P) P (\s. s)`
+    kripke_structure (POW P) (POW P)
+      (POW P CROSS POW P) P (\s. s)`
 
 
 val UNIVERSAL_KRIPKE_STRUCTURE___IS_WELL_FORMED =
@@ -800,8 +800,8 @@ val UNIVERSAL_KRIPKE_STRUCTURE___IS_WELL_FORMED =
     SIMP_TAC std_ss [IS_WELL_FORMED_KRIPKE_STRUCTURE_def,
                     UNIVERSAL_KRIPKE_STRUCTURE_def,
                     kripke_structure_REWRITES,
-                    SUBSET_REFL, IN_POWER_SET_SUBSET_EQUIV,
-                    POWER_SET_FINITE]);
+                    SUBSET_REFL, IN_POW,
+                    FINITE_POW_IFF]);
 
 
 
@@ -819,7 +819,7 @@ val UNIVERSAL_KRIPKE_STRUCTURE___PATHS_AND_TRACES =
       SIMP_TAC std_ss [IS_PATH_THROUGH_KRIPKE_STRUCTURE_def,
                       UNIVERSAL_KRIPKE_STRUCTURE_def,
                       kripke_structure_REWRITES, IN_CROSS,
-                      IN_POWER_SET_SUBSET_EQUIV,
+                      IN_POW,
                       TRACE_OF_PATH_THROUGH_KRIPKE_STRUCTURE_def,
                       IS_TRACE_OF_PATH_THROUGH_KRIPKE_STRUCTURE_def,
                       IS_TRACE_OF_INITIAL_PATH_THROUGH_KRIPKE_STRUCTURE_def,
@@ -1153,7 +1153,7 @@ val UNIVERSAL_KRIPKE_STRUCTURE___IS_MOST_GENERAL =
     FULL_SIMP_TAC std_ss [IS_WELL_FORMED_KRIPKE_STRUCTURE_def,
       IS_SIMULATION_RELATION_def, UNIVERSAL_KRIPKE_STRUCTURE_def,
       kripke_structure_REWRITES, SUBSET_REFL, IN_CROSS,
-      IN_POWER_SET_SUBSET_EQUIV, SUBSET_DEF, EXTENSION, IN_INTER] THEN
+      IN_POW, SUBSET_DEF, EXTENSION, IN_INTER] THEN
     METIS_TAC[FST, SND]);
 
 

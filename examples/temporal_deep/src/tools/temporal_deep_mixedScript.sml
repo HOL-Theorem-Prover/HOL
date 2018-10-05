@@ -29,21 +29,6 @@ quietdec := false;
 val _ = new_theory "temporal_deep_mixed";
 
 
-
-(******************************************************************************)
-(* ITERATE is just FUNPOW with swapped arguments. Get rid of it later         *)
-(******************************************************************************)
-
-val ITERATE_def = Define
-  `ITERATE f e n = FUNPOW f n e`
-
-val ITERATE_ALT_DEF = store_thm ("ITERATE_ALT_DEF",
-  ``(!f e0. (ITERATE f e0 0 = e0)) /\
-    (!f e0 n. (ITERATE f e0 (SUC n) = f (ITERATE f e0 n)))``,
-
-SIMP_TAC std_ss [ITERATE_def, FUNPOW_SUC, FUNPOW_0]);
-
-
 (******************************************************************************)
 (* IS_ELEMENT_ITERATOR                                                        *)
 (* This described a function that can create a number of new elements         *)
@@ -165,97 +150,6 @@ val IS_ELEMENT_ITERATOR_EXISTS =
     PROVE_TAC[FINITE_DIFF_down, IS_ELEMENT_ITERATOR_EXISTS___DIFF]);
 
 
-(******************************************************************************)
-(* POWER_SET is really POW, lets get rid of it soon                           *)
-(******************************************************************************)
-
-val POWER_SET_def=
- Define
-   `POWER_SET = POW`;
-
-
-val IN_POWER_SET_SUBSET_EQUIV=
- store_thm
-  ("IN_POWER_SET_SUBSET_EQUIV",
-   ``!s S. (s IN (POWER_SET S)) = (s SUBSET S)``,
-
-   SIMP_TAC std_ss [POWER_SET_def, POW_DEF, GSPECIFICATION]);
-
-
-
-val POWER_SET_IND_THM=
- store_thm
-  ("POWER_SET_IND_THM",
-   ``(POWER_SET {} = {{}}) /\
-    !s S. ((POWER_SET (s INSERT S) = ((POWER_SET S) UNION (IMAGE (\x. s INSERT x) (POWER_SET S)))))``,
-
-   SIMP_TAC std_ss [POWER_SET_def, POW_EQNS, LET_DEF, EXTENSION, IN_UNION, IN_IMAGE] THEN
-   METIS_TAC[]);
-
-val POWER_SET_TO_POW = store_thm (
-   "POWER_SET_TO_POW",
-  ``POWER_SET = POW``, METIS_TAC [POWER_SET_def, POW_DEF]);
-
-val POWER_SET_FINITE = store_thm
-  ("POWER_SET_FINITE",
-   ``!s. FINITE (POWER_SET s) = FINITE s``,
-   REWRITE_TAC[POWER_SET_def] >>
-   METIS_TAC[finite_countable, infinite_pow_uncountable, FINITE_POW]);
-
-
-val POWER_SET_SUBSET =
-  store_thm ("POWER_SET_SUBSET",
-    ``!s t. (POWER_SET s SUBSET POWER_SET t) = s SUBSET t``,
-
-   SIMP_TAC std_ss [SUBSET_DEF, IN_POWER_SET_SUBSET_EQUIV] THEN
-   PROVE_TAC[]);
-
-
-(******************************************************************************)
-(* Lemmata about lists, moste are not needed any more. This needs cleaning    *)
-(******************************************************************************)
-
-val LIST_EQ_ELEM_THM =
- store_thm
-  ("LIST_EQ_ELEM_THM",
-   ``!l1 l2. (l1 = l2) = ((LENGTH l1 = LENGTH l2) /\ (!n. (n < LENGTH l1) ==> (EL n l1 = EL n l2)))``,
-
-   REWRITE_TAC[LIST_EQ_REWRITE]);
-
-
-
-val SOME_EL_IS_EL =
- store_thm
-    ("SOME_EL_IS_EL",
-    ``!P l. (EXISTS P l) = (?e. IS_EL e l /\ P e)``,
-
-    Induct_on `l` THENL [
-        SIMP_TAC list_ss [],
-
-        SIMP_TAC list_ss [] THEN
-        PROVE_TAC[]
-    ]);
-
-
-val SOME_EL___IMPL =
- store_thm
-    ("SOME_EL___IMPL",
-    ``!P Q l. ((SOME_EL P l) /\ (!e. P e ==> Q e)) ==> (SOME_EL Q l)``,
-
-    METIS_TAC[MONO_EXISTS]);
-
-
-
-val MAP_SING_LIST =
- store_thm
-  ("MAP_SING_LIST",
-
-   ``!e l f. ([e] = MAP f l) =
-             (?e'. (l = [e']) /\ (e = f e'))``,
-
-METIS_TAC[MAP_EQ_SING]);
-
-
 (************************************************************************)
 (* Variable renamings, i.e. injective functions with some properties    *)
 (************************************************************************)
@@ -322,15 +216,15 @@ val DISJOINT_VARRENAMING_EXISTS =
    ]);
 
 
-val POWER_SET_VARRENAMING_EXISTS =
+val POW_VARRENAMING_EXISTS =
  store_thm
-  ("POWER_SET_VARRENAMING_EXISTS",
+  ("POW_VARRENAMING_EXISTS",
    ``!(S1:'a set) (S2:'a set). (FINITE S1 /\ FINITE S2 /\ INFINITE (UNIV:'a set)) ==>
-      (?f. INJ f (POWER_SET S1) UNIV /\ (DISJOINT (IMAGE f (POWER_SET S1)) S2))``,
+      (?f. INJ f (POW S1) UNIV /\ (DISJOINT (IMAGE f (POW S1)) S2))``,
 
    REPEAT STRIP_TAC THEN
    MATCH_MP_TAC FINITE_INJ_EXISTS THEN
-   ASM_REWRITE_TAC[POWER_SET_FINITE]);
+   ASM_REWRITE_TAC[FINITE_POW_IFF]);
 
 
 
@@ -409,27 +303,6 @@ val SUC_MOD_CASES =
   ]);
 
 
-(*********************************************************************************)
-(* PRED_SET_FORALL is just RES_FORALL with swapped arguments. Lets get rid of it *)
-(*********************************************************************************)
-
-val PRED_SET_FORALL_def =
-  Define `PRED_SET_FORALL P aset = RES_FORALL aset P`;
-
-
-val PRED_SET_FORALL_EMPTY =
-  store_thm ("PRED_SET_FORALL_EMPTY",
-    ``!P. PRED_SET_FORALL P EMPTY``,
-      SIMP_TAC std_ss [PRED_SET_FORALL_def, NOT_IN_EMPTY, RES_FORALL_THM]);
-
-
-val PRED_SET_FORALL_INSERT =
-  store_thm ("PRED_SET_FORALL_INSERT",
-    ``!P s aset. PRED_SET_FORALL P (s INSERT aset) = (P s /\ PRED_SET_FORALL P aset)``,
-
-    SIMP_TAC std_ss [PRED_SET_FORALL_def, IN_INSERT, RES_FORALL_THM] THEN
-    PROVE_TAC[]);
-
 
 (*****************************)
 (* COND_IMP_EQ               *)
@@ -444,66 +317,6 @@ val COND_IMP_EQ___REWRITE =
              ((A ==> B) /\ (c ==> (A = B)))``,
       SIMP_TAC std_ss [COND_IMP_EQ_def] THEN
       METIS_TAC[]);
-
-
-(**********************************************************)
-(* POS_START is some home-grown INDEX_OF. Lets replace it *)
-(**********************************************************)
-
-val POS_START_def =
-  Define `
-    (POS_START n [] h = 0) /\
-    (POS_START n (h'::l) h = (if (h = h') then (SUC n) else (POS_START (SUC n) l h)))`
-
-
-val POS_START_NOT_FOUND =
-  store_thm ("POS_START_NOT_FOUND",
-    ``!n l h. ((POS_START n l h = 0) = ~(MEM h l))``,
-
-    Induct_on `l` THENL [
-      SIMP_TAC list_ss [POS_START_def],
-
-      ASM_SIMP_TAC list_ss [POS_START_def] THEN
-      REPEAT GEN_TAC THEN
-      Cases_on `h' = h` THENL [
-        ASM_SIMP_TAC arith_ss [],
-        ASM_REWRITE_TAC[]
-      ]
-    ]);
-
-val POS_START_FOUND =
-  store_thm ("POS_START_FOUND",
-    ``!n l h. (MEM h l ==> (POS_START n l h > n) /\ (EL ((PRE (POS_START n l h)) - n) l = h))``,
-
-    Induct_on `l` THENL [
-      SIMP_TAC list_ss [],
-
-      ASM_SIMP_TAC list_ss [POS_START_def] THEN
-      REPEAT GEN_TAC THEN
-      Cases_on `h' = h` THENL [
-        ASM_SIMP_TAC list_ss [],
-
-        ASM_SIMP_TAC list_ss [] THEN
-        STRIP_TAC THEN
-        Q_SPECL_NO_ASSUM 2 [`SUC n`, `h'`] THEN
-        UNDISCH_HD_TAC THEN ASM_REWRITE_TAC[] THEN REPEAT STRIP_TAC THENL [
-          ASM_SIMP_TAC arith_ss [],
-          Cases_on `(POS_START (SUC n) l h')` THEN (
-            SIMP_ALL_TAC arith_ss []
-          ) THEN
-          Cases_on `n'` THEN SIMP_ALL_TAC arith_ss [] THEN
-          `SUC n'' - n = SUC (n'' - n)` by DECIDE_TAC THEN
-          ASM_SIMP_TAC list_ss []
-        ]
-      ]
-    ]);
-
-
-val POS_START_RANGE =
-  store_thm ("POS_START_RANGE",
-    ``!n l h. (POS_START n l h > n) \/ (POS_START n l h = 0)``,
-    PROVE_TAC[POS_START_FOUND, POS_START_NOT_FOUND]);
-
 
 
 (****************************************************************************************)
@@ -794,9 +607,9 @@ val SET_BINARY_ENCODING___BITS =
 
 val SET_BINARY_ENCODING___INJ =
   store_thm ("SET_BINARY_ENCODING___INJ",
-  ``!S. FINITE S ==> INJ SET_BINARY_ENCODING (POWER_SET S) UNIV``,
+  ``!S. FINITE S ==> INJ SET_BINARY_ENCODING (POW S) UNIV``,
 
-  SIMP_TAC std_ss [INJ_DEF, IN_UNIV, IN_POWER_SET_SUBSET_EQUIV, EXTENSION] THEN
+  SIMP_TAC std_ss [INJ_DEF, IN_UNIV, IN_POW, EXTENSION] THEN
   PROVE_TAC[SET_BINARY_ENCODING___BITS, SUBSET_FINITE]);
 
 
@@ -810,16 +623,16 @@ val SET_BINARY_ENCODING_SHIFT_def =
 
 val SET_BINARY_ENCODING_SHIFT___INJ =
   store_thm ("SET_BINARY_ENCODING_SHIFT___INJ",
-  ``!S n1 n2. (FINITE S /\ (!n. n IN S ==> n >= n1)) ==> INJ (SET_BINARY_ENCODING_SHIFT n1 n2) (POWER_SET S) UNIV``,
+  ``!S n1 n2. (FINITE S /\ (!n. n IN S ==> n >= n1)) ==> INJ (SET_BINARY_ENCODING_SHIFT n1 n2) (POW S) UNIV``,
 
 
   SIMP_TAC std_ss [SET_BINARY_ENCODING_SHIFT_def, INJ_DEF, IN_UNIV] THEN
   REPEAT STRIP_TAC THEN
   Q.ABBREV_TAC `f = (\n:num. n - n1)` THEN
   FULL_SIMP_TAC std_ss [] THEN
-  `(IMAGE f x) IN POWER_SET (IMAGE f S) /\
-               (IMAGE f y) IN POWER_SET (IMAGE f S)` by (
-    FULL_SIMP_TAC std_ss [IN_POWER_SET_SUBSET_EQUIV, IMAGE_SUBSET]
+  `(IMAGE f x) IN POW (IMAGE f S) /\
+               (IMAGE f y) IN POW (IMAGE f S)` by (
+    FULL_SIMP_TAC std_ss [IN_POW, IMAGE_SUBSET]
   ) THEN
   `FINITE (IMAGE f S)` by ASM_SIMP_TAC std_ss [IMAGE_FINITE] THEN
   `(IMAGE f x = IMAGE f y) <=> (x = y)` suffices_by METIS_TAC[SET_BINARY_ENCODING___INJ, INJ_DEF] THEN
@@ -827,7 +640,7 @@ val SET_BINARY_ENCODING_SHIFT___INJ =
   MATCH_MP_TAC INJECTIVE_IMAGE_EQ THEN
   REPEAT STRIP_TAC THEN
   `x' >= n1 /\ y' >= n1` by (
-    SIMP_ALL_TAC std_ss [IN_POWER_SET_SUBSET_EQUIV, IN_UNION, SUBSET_DEF] THEN
+    SIMP_ALL_TAC std_ss [IN_POW, IN_UNION, SUBSET_DEF] THEN
     PROVE_TAC[]
   ) THEN
   Q.UNABBREV_TAC `f` THEN
@@ -839,11 +652,11 @@ val SET_BINARY_ENCODING_SHIFT___INJ =
 val SET_BINARY_ENCODING___IMAGE_THM =
   store_thm ("SET_BINARY_ENCODING___IMAGE_THM",
 
-  ``!n. IMAGE SET_BINARY_ENCODING (POWER_SET (INTERVAL_SET 0 n)) =
+  ``!n. IMAGE SET_BINARY_ENCODING (POW (INTERVAL_SET 0 n)) =
         INTERVAL_SET 0 (PRE (2**(SUC n)))``,
 
     Induct_on `n` THENL [
-      SIMP_TAC std_ss [INTERVAL_SET_0, EXTENSION, IN_IMAGE, IN_POWER_SET_SUBSET_EQUIV, IN_COUNT] THEN
+      SIMP_TAC std_ss [INTERVAL_SET_0, EXTENSION, IN_IMAGE, IN_POW, IN_COUNT] THEN
       `!s. s SUBSET count 1 <=> (s = {}) \/ (s = {0})` by (
          SIMP_TAC arith_ss [EXTENSION, SUBSET_DEF, IN_SING, NOT_IN_EMPTY, IN_COUNT] THEN
          `!n. n < 1 <=> (n = 0)` by DECIDE_TAC THEN
@@ -855,24 +668,26 @@ val SET_BINARY_ENCODING___IMAGE_THM =
 
 
 
-      Q.SUBGOAL_THEN `(POWER_SET (INTERVAL_SET 0 (SUC n))) =
-                   ((POWER_SET (INTERVAL_SET 0 n)) UNION
-                    (IMAGE (\S. (SUC n) INSERT S) (POWER_SET (INTERVAL_SET 0 n))))`
+      Q.SUBGOAL_THEN `(POW (INTERVAL_SET 0 (SUC n))) =
+                   ((POW (INTERVAL_SET 0 n)) UNION
+                    (IMAGE (\S. (SUC n) INSERT S) (POW (INTERVAL_SET 0 n))))`
         SUBST1_TAC THEN1 (
         SIMP_TAC std_ss [INTERVAL_SET_0, Q.SPEC `SUC n` COUNT_SUC,
-          POWER_SET_IND_THM]
+          POW_EQNS, LET_THM] THEN
+        SIMP_TAC std_ss [EXTENSION, IN_IMAGE, IN_UNION] THEN
+        METIS_TAC[]
       ) THEN
       ASM_SIMP_TAC std_ss [IMAGE_UNION] THEN
 
 
       Q.SUBGOAL_THEN `IMAGE SET_BINARY_ENCODING
-      (IMAGE (\S. SUC n INSERT S) (POWER_SET (INTERVAL_SET 0 n))) =
+      (IMAGE (\S. SUC n INSERT S) (POW (INTERVAL_SET 0 n))) =
        IMAGE (\x. 2**(SUC n) + x) (IMAGE SET_BINARY_ENCODING
-        (POWER_SET (INTERVAL_SET 0 n)))` SUBST1_TAC THEN1 (
+        (POW (INTERVAL_SET 0 n)))` SUBST1_TAC THEN1 (
 
         SIMP_TAC std_ss [IMAGE_IMAGE, combinTheory.o_DEF] THEN
         MATCH_MP_TAC IMAGE_CONG THEN
-        SIMP_TAC std_ss [INTERVAL_SET_0, IN_POWER_SET_SUBSET_EQUIV] THEN
+        SIMP_TAC std_ss [INTERVAL_SET_0, IN_POW] THEN
         REPEAT STRIP_TAC THEN
         `~(SUC n IN x)` by (
           CCONTR_TAC THEN
@@ -904,7 +719,7 @@ val SET_BINARY_ENCODING___IMAGE_THM =
 val SET_BINARY_ENCODING_SHIFT___IMAGE_THM =
   store_thm ("SET_BINARY_ENCODING_SHIFT___IMAGE_THM",
   ``!n1 n2 n3. n1 <= n2 ==>
-              (IMAGE (SET_BINARY_ENCODING_SHIFT n1 n3) (POWER_SET (INTERVAL_SET n1 n2)) =
+              (IMAGE (SET_BINARY_ENCODING_SHIFT n1 n3) (POW (INTERVAL_SET n1 n2)) =
                INTERVAL_SET n3 (n3 + (PRE (2**(SUC (n2 - n1))))))``,
 
     REPEAT STRIP_TAC THEN
@@ -922,7 +737,7 @@ val SET_BINARY_ENCODING_SHIFT___IMAGE_THM =
 
     ONCE_REWRITE_TAC[EXTENSION] THEN
     SIMP_TAC std_ss [IN_IMAGE, SET_BINARY_ENCODING_SHIFT_def,
-      GSYM RIGHT_EXISTS_AND_THM, IN_POWER_SET_SUBSET_EQUIV] THEN
+      GSYM RIGHT_EXISTS_AND_THM, IN_POW] THEN
     GEN_TAC THEN
     EQ_TAC THEN REPEAT STRIP_TAC THENL [
       Q.EXISTS_TAC `(IMAGE (\n. n - n1) x')` THEN

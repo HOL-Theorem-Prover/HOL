@@ -14,6 +14,8 @@ map load
 open pred_setTheory prop_logicTheory xprop_logicTheory infinite_pathTheory tuerk_tacticsLib numLib
   arithmeticTheory symbolic_kripke_structureTheory set_lemmataTheory;
 
+val _ = hide "S";
+val _ = hide "I";
 
 (*
 show_assums := false;
@@ -26,14 +28,6 @@ quietdec := false;
 
 val _ = new_theory "ltl";
 
-val Know = Q_TAC KNOW_TAC;
-val Suff = Q_TAC SUFF_TAC;
-
-local
-  val th = prove (``!a b. a /\ (a ==> b) ==> a /\ b``, PROVE_TAC [])
-in
-  val STRONG_CONJ_TAC :tactic = MATCH_MP_TAC th >> CONJ_TAC
-end;
 
 (******************************************************************************
 * Syntax
@@ -460,9 +454,9 @@ val LTL_SEM_TIME___VAR_RENAMING =
       SIMP_TAC std_ss [LTL_SEM_TIME_def, LTL_USED_VARS_def,
         LTL_VAR_RENAMING_def] THEN
       REPEAT STRIP_TAC THEN
-      Suff `INJ f (PATH_USED_VARS v UNION LTL_USED_VARS f'') UNIV /\
+      REMAINS_TAC `INJ f (PATH_USED_VARS v UNION LTL_USED_VARS f'') UNIV /\
                    INJ f (PATH_USED_VARS v UNION LTL_USED_VARS f') UNIV` THEN1 (
-        STRIP_TAC THEN RES_TAC THEN
+        RES_TAC THEN
         ASM_REWRITE_TAC[]
       ) THEN
       NTAC 2 (WEAKEN_NO_TAC 1) THEN
@@ -480,9 +474,9 @@ val LTL_SEM_TIME___VAR_RENAMING =
       SIMP_TAC std_ss [LTL_SEM_TIME_def, LTL_USED_VARS_def,
         LTL_VAR_RENAMING_def] THEN
       REPEAT STRIP_TAC THEN
-      Suff `INJ f (PATH_USED_VARS v UNION LTL_USED_VARS f'') UNIV /\
+      REMAINS_TAC `INJ f (PATH_USED_VARS v UNION LTL_USED_VARS f'') UNIV /\
                    INJ f (PATH_USED_VARS v UNION LTL_USED_VARS f') UNIV` THEN1 (
-        STRIP_TAC THEN RES_TAC THEN
+        RES_TAC THEN
         ASM_REWRITE_TAC[]
       ) THEN
       NTAC 2 (WEAKEN_NO_TAC 1) THEN
@@ -504,9 +498,9 @@ val LTL_SEM_TIME___VAR_RENAMING =
       SIMP_TAC std_ss [LTL_SEM_TIME_def, LTL_USED_VARS_def,
         LTL_VAR_RENAMING_def] THEN
       REPEAT STRIP_TAC THEN
-      Suff `INJ f (PATH_USED_VARS v UNION LTL_USED_VARS f'') UNIV /\
+      REMAINS_TAC `INJ f (PATH_USED_VARS v UNION LTL_USED_VARS f'') UNIV /\
                    INJ f (PATH_USED_VARS v UNION LTL_USED_VARS f') UNIV` THEN1 (
-        STRIP_TAC THEN RES_TAC THEN
+        RES_TAC THEN
         ASM_REWRITE_TAC[]
       ) THEN
       NTAC 2 (WEAKEN_NO_TAC 1) THEN
@@ -837,7 +831,7 @@ val LTL_KS_SEM___VAR_RENAMING =
 
 
       `?w. w = PATH_RESTRICT p (LTL_USED_VARS f' UNION SYMBOLIC_KRIPKE_STRUCTURE_USED_VARS M)` by PROVE_TAC[] THEN
-      Know `(LTL_SEM_TIME 0 p f' = LTL_SEM_TIME 0 w f') /\
+      SUBGOAL_TAC `(LTL_SEM_TIME 0 p f' = LTL_SEM_TIME 0 w f') /\
                    (P_SEM (p 0) M.S0 = P_SEM (w 0) M.S0) /\
                    !n. (XP_SEM M.R (p n,p (SUC n)) = XP_SEM M.R (w n,w (SUC n)))` THEN1 (
         REPEAT STRIP_TAC THENL [
@@ -859,7 +853,7 @@ val LTL_KS_SEM___VAR_RENAMING =
           SIMP_TAC std_ss [SYMBOLIC_KRIPKE_STRUCTURE_USED_VARS_def, SUBSET_DEF,
             IN_UNION]
         ]
-      ) THEN STRIP_TAC THEN
+      ) THEN
       `!n. w n SUBSET (LTL_USED_VARS f' UNION SYMBOLIC_KRIPKE_STRUCTURE_USED_VARS M)` by METIS_TAC[PATH_RESTRICT_SUBSET] THEN
       GSYM_NO_TAC 4 THEN
 
@@ -868,7 +862,7 @@ val LTL_KS_SEM___VAR_RENAMING =
 
       Q_SPEC_NO_ASSUM 4 `PATH_VAR_RENAMING f w` THEN
       UNDISCH_HD_TAC THEN
-      Suff `(!n.
+      REMAINS_TAC `(!n.
         XP_SEM (XP_VAR_RENAMING f M.R)
           (PATH_VAR_RENAMING f w n,PATH_VAR_RENAMING f w (SUC n)) =
         XP_SEM M.R (w n, w (SUC n))) /\
@@ -876,7 +870,7 @@ val LTL_KS_SEM___VAR_RENAMING =
          P_SEM (w 0) M.S0) /\
         (LTL_SEM_TIME 0 (PATH_VAR_RENAMING f w) (LTL_VAR_RENAMING f f') =
          LTL_SEM_TIME 0 w f')` THEN1 (
-        STRIP_TAC THEN FULL_SIMP_TAC std_ss []
+        FULL_SIMP_TAC std_ss []
       ) THEN
 
       REPEAT STRIP_TAC THENL [
@@ -1044,7 +1038,7 @@ REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
 val LTL_EVENTUAL___PALWAYS =
  store_thm
   ("LTL_EVENTUAL___PALWAYS",
-   ``!k w. (LTL_SEM_TIME k w (LTL_EVENTUAL p)) ==>
+   ``!k w p. (LTL_SEM_TIME k w (LTL_EVENTUAL p)) ==>
       (!l. l <= k ==> LTL_SEM_TIME l w (LTL_EVENTUAL p))``,
 
    REWRITE_TAC[LTL_SEM_THM] THEN
@@ -1079,11 +1073,11 @@ val LTL_WEAK_UNTIL___ALTERNATIVE_DEF =
 
          DISJ1_TAC THEN
          SIMP_ASSUMPTIONS_TAC std_ss [] THEN
-         Know `?k. (k >= t /\ ~LTL_SEM_TIME k w f1) /\ !k'. k' < k ==> ~(k' >= t /\ ~LTL_SEM_TIME k' w f1)` THEN1 (
+         SUBGOAL_TAC `?k. (k >= t /\ ~LTL_SEM_TIME k w f1) /\ !k'. k' < k ==> ~(k' >= t /\ ~LTL_SEM_TIME k' w f1)` THEN1 (
             ASSUME_TAC (EXISTS_LEAST_CONV ``?k. k >= t /\ ~LTL_SEM_TIME k w f1``) THEN
             RES_TAC THEN PROVE_TAC[]
-         ) THEN STRIP_TAC THEN
-         Know `?l:num. l >= t /\ l <= k' /\ LTL_SEM_TIME l w f2` THEN1 (
+         ) THEN
+         SUBGOAL_TAC `?l:num. l >= t /\ l <= k' /\ LTL_SEM_TIME l w f2` THEN1 (
             Cases_on `LTL_SEM_TIME k' w f2` THENL [
                EXISTS_TAC ``k':num`` THEN
                ASM_SIMP_TAC arith_ss [],
@@ -1092,7 +1086,7 @@ val LTL_WEAK_UNTIL___ALTERNATIVE_DEF =
                EXISTS_TAC ``j:num`` THEN
                ASM_SIMP_TAC arith_ss []
             ]
-         ) THEN STRIP_TAC THEN
+         ) THEN
          EXISTS_TAC ``l:num`` THEN
          ASM_SIMP_TAC arith_ss [] THEN
          REPEAT STRIP_TAC THEN
@@ -1126,7 +1120,7 @@ val LTL_PAST_WEAK_UNTIL___ALTERNATIVE_DEF =
       LEFT_DISJ_TAC THEN
       SIMP_ALL_TAC std_ss [] THEN
       `?P. P = \k. k <= t /\ ~(LTL_SEM_TIME k w f1)` by METIS_TAC[] THEN
-      Know `?x. P x /\ !z. z > x ==> ~(P z)` THEN1 (
+      SUBGOAL_TAC `?x. P x /\ !z. z > x ==> ~(P z)` THEN1 (
         ASM_SIMP_TAC std_ss [GSYM arithmeticTheory.EXISTS_GREATEST] THEN
         REPEAT STRIP_TAC THENL [
           METIS_TAC[],
@@ -1134,11 +1128,11 @@ val LTL_PAST_WEAK_UNTIL___ALTERNATIVE_DEF =
           Q_TAC EXISTS_TAC `t` THEN
           SIMP_TAC arith_ss []
         ]
-      ) THEN STRIP_TAC THEN
+      ) THEN
       NTAC 2 (UNDISCH_HD_TAC) THEN
       ASM_SIMP_TAC std_ss [] THEN
       REPEAT STRIP_TAC THEN
-      Know `?x'. (x' >= x)  /\ (x' <= t) /\ LTL_SEM_TIME x' w f2` THEN1 (
+      SUBGOAL_TAC `?x'. (x' >= x)  /\ (x' <= t) /\ LTL_SEM_TIME x' w f2` THEN1 (
         Q_SPEC_NO_ASSUM 6 `x` THEN
         CLEAN_ASSUMPTIONS_TAC THENL [
           EXISTS_TAC ``x:num`` THEN
@@ -1147,7 +1141,7 @@ val LTL_PAST_WEAK_UNTIL___ALTERNATIVE_DEF =
           EXISTS_TAC ``j:num`` THEN
           ASM_SIMP_TAC arith_ss []
         ]
-      ) THEN STRIP_TAC THEN
+      ) THEN
       Q_TAC EXISTS_TAC `x'` THEN
       ASM_SIMP_TAC arith_ss [] THEN
       REPEAT STRIP_TAC THEN
@@ -1209,129 +1203,5 @@ val LTL_MONOTICITY_LAWS =
    METIS_TAC[]
    );
 
-(*
-!l t v. ?n0. !n. (n >= n0) ==> (
-  !p0. ?p. (p >= p0) ==> (
-    (LTL_SEM_TIME t v l =
-     LTL_SEM_TIME t (CUT_PATH_PERIODICALLY v n p) l) /\
-    ((!t'. t' >= t ==> LTL_SEM_TIME t' v l) =
-     (!t'. t' >= t ==> LTL_SEM_TIME t' (CUT_PATH_PERIODICALLY v n p) l)) /\
-    ((!t'. t' >= t ==> ~LTL_SEM_TIME t' v l) =
-     (!t'. t' >= t ==> ~LTL_SEM_TIME t' (CUT_PATH_PERIODICALLY v n p) l))
-  )
-)
-
-
-INDUCT_THEN ltl_induct ASSUME_TAC THENL [
-  REPEAT STRIP_TAC THEN
-  SIMP_TAC std_ss [LTL_SEM_TIME_def] THEN
-  Cases_on `?t'. t' >= t /\ (~P_SEM (v t') p)` THENL [
-    SIMP_ALL_TAC std_ss [] THEN
-    EXISTS_TAC ``t':num`` THEN
-    REPEAT STRIP_TAC THEN
-    EXISTS_TAC ``1:num`` THEN
-    REPEAT STRIP_TAC THENL [
-      ASM_SIMP_TAC arith_ss [CUT_PATH_PRERIODICALLY___BEGINNING],
-
-      EQ_TAC THEN REPEAT STRIP_TAC THENL [
-        PROVE_TAC [],
-
-        `t' < 1 + n` by DECIDE_TAC THEN
-        PROVE_TAC [CUT_PATH_PRERIODICALLY___BEGINNING]
-      ]
-    ],
-
-
-    SIMP_ALL_TAC std_ss [] THEN
-    EXISTS_TAC ``t:num`` THEN
-    REPEAT STRIP_TAC THEN
-    EXISTS_TAC ``1:num`` THEN
-    REPEAT STRIP_TAC THENL [
-      ASM_SIMP_TAC arith_ss [CUT_PATH_PRERIODICALLY___BEGINNING],
-
-      ASM_SIMP_TAC std_ss [IMP_DISJ_THM] THEN
-      GEN_TAC THEN
-      RIGHT_DISJ_TAC THEN
-      Cases_on `t' < 1 + n` THENL [
-        PROVE_TAC [CUT_PATH_PERIODICALLY___BEGINNING],
-
-        `t' >= n` by DECIDE_TAC THEN
-        ASM_SIMP_TAC std_ss [CUT_PATH_PERIODICALLY_1] THEN
-        PROVE_TAC[]
-      ]
-    ]
-  ],
-
-
-  REWRITE_TAC[LTL_SEM_TIME_def] THEN
-  ONCE_REWRITE_TAC[prove (``!A B C. (A /\ B /\ C) = (A /\ C /\ B)``, PROVE_TAC[])] THEN
-  ONCE_REWRITE_TAC[prove (``!A B. ((~A) = (~B)) = (A=B)``, PROVE_TAC[])] THEN
-  ASM_REWRITE_TAC[],
-
-
-
-  REPEAT STRIP_TAC THEN
-  Q_SPECL_NO_ASSUM 1 [`t`, `v`] THEN
-  Q_SPECL_NO_ASSUM 1 [`t`, `v`] THEN
-  SIMP_ALL_TAC std_ss [] THEN
-  EXISTS_TAC ``MAX n0 n0'`` THEN
-  REPEAT STRIP_TAC THEN
-  Q_SPEC_NO_ASSUM 2 `n` THEN
-  Q_SPEC_NO_ASSUM 2 `n` THEN
-  `(n >= n0) /\ (n >= n0')` by PROVE_TAC[MAX_LE, GREATER_EQ] THEN
-  FULL_SIMP_TAC std_ss [] THEN
-  Q_SPEC_NO_ASSUM 3 `p0` THEN
-  Q_SPEC_NO_ASSUM 3 `p0` THEN
-  SIMP_ALL_TAC std_ss [] THEN
-  EXISTS_TAC ``p*p'`` THEN
-  REPEAT STRIP_TAC THEN
-  REMAINS_TAC `(p > 0) /\ (p' > 0)` THEN
-  `(p* >= p0) /\ (p >= p0')` by PROVE_TAC[MAX_LE, GREATER_EQ] THEN
-
-  EXISTS_TAC ``MAX p0 p0'`` THEN
-  REPEAT STRIP_TAC THEN
-  `(p >= p0) /\ (p >= p0')` by PROVE_TAC[MAX_LE, GREATER_EQ] THEN
-  FULL_SIMP_TAC std_ss [LTL_SEM_TIME_def],
-
-
-  REWRITE_TAC[LTL_SEM_TIME_def] THEN METIS_TAC[],
-
-  REPEAT STRIP_TAC THEN
-  SIMP_TAC std_ss [LTL_SEM_TIME_def] THEN
-  Cases_on `~?k. LTL_SEM_TIME k v l'` THENL [
-    FULL_SIMP_TAC std_ss [] THEN
-    REMAINS_TAC `?n0. !n. n >= n0 ==> ?p0. !p.  p >= p0 ==>
-            !k.
-              ~(k >= t) \/
-              ~LTL_SEM_TIME k (CUT_PATH_PERIODICALLY v n p) l' \/
-              ?j.
-                (t <= j /\ j < k) /\
-                ~LTL_SEM_TIME j (CUT_PATH_PERIODICALLY v n p) l
-    METIS_TAC[]
-  )
-  Q_SPECL_NO_ASSUM 1 [`t`, `v`] THEN
-  Q_SPECL_NO_ASSUM 1 [`t`, `v`] THEN
-  SIMP_ALL_TAC std_ss []
-  EXISTS_TAC ``MAX n0 n0'`` THEN
-  REPEAT STRIP_TAC THEN
-  Q_SPEC_NO_ASSUM 2 `n` THEN
-  Q_SPEC_NO_ASSUM 2 `n` THEN
-  `(n >= n0) /\ (n >= n0')` by PROVE_TAC[MAX_LE, GREATER_EQ] THEN
-  FULL_SIMP_TAC std_ss [] THEN
-  EXISTS_TAC ``MAX p0 p0'`` THEN
-  REPEAT STRIP_TAC THEN
-  Q_SPEC_NO_ASSUM 4 `p` THEN
-  Q_SPEC_NO_ASSUM 4 `p` THEN
-  `(p >= p0) /\ (p >= p0')` by PROVE_TAC[MAX_LE, GREATER_EQ] THEN
-  FULL_SIMP_TAC std_ss [LTL_SEM_TIME_def],
-
-
-
-  REWRITE_TAC[LTL_SEM_TIME_def] THEN METIS_TAC[],
-
-  ALL_TAC,
-
-*)
 
 val _ = export_theory();
-

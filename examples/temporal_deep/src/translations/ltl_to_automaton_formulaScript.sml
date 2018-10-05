@@ -631,7 +631,7 @@ val LTL_TO_GEN_BUECHI_DS___KS_SEM___KRIPKE_STRUCTURE =
                   symbolic_semi_automaton_REWRITES]
     ) THEN
     SIMP_ALL_TAC std_ss [GSYM SUBSET_COMPL_DISJOINT, IS_ELEMENT_ITERATOR_def,
-      LTL_TO_GEN_BUECHI_DS___USED_STATE_VARS_def, SUBSET_DEF, IN_BETA_THM,
+      LTL_TO_GEN_BUECHI_DS___USED_STATE_VARS_def, SUBSET_DEF, IN_ABS,
       IN_COMPL, IN_UNION] THEN
     PROVE_TAC[]
   );
@@ -1660,7 +1660,7 @@ REPEAT STRIP_TAC THEN1 (
                    BIGUNION_UNION, MEM_MAP, IN_BIGUNION,
                    IN_IMAGE,
                    GSYM RIGHT_EXISTS_AND_THM,
-                   IN_BETA_THM,
+                   IN_ABS,
                    pairTheory.EXISTS_PROD] THEN
   `!n. n < DS1.SN ==> n < DS1.SN + DS2.SN` by DECIDE_TAC THEN
   `!n. n < DS2.SN ==> n + DS1.SN < DS1.SN + DS2.SN` by DECIDE_TAC THEN
@@ -1687,7 +1687,7 @@ REPEAT STRIP_TAC THEN1 (
       UNDISCH_NO_TAC 9 THEN (*ELEMENT_ITERATOR*)
       ASM_SIMP_TAC std_ss [LTL_TO_GEN_BUECHI_DS___USED_VARS_def,
         SUBSET_DEF, IN_COMPL,
-        IN_BETA_THM, IN_UNION, IN_LIST_BIGUNION, MEM_MAP,
+        IN_ABS, IN_UNION, IN_LIST_BIGUNION, MEM_MAP,
         GSYM LEFT_EXISTS_AND_THM, DISJ_IMP_THM, FORALL_AND_THM,
         GSYM LEFT_FORALL_IMP_THM, GSYM RIGHT_EXISTS_AND_THM,
         LTL_TO_GEN_BUECHI_DS___USED_STATE_VARS_def,
@@ -1719,7 +1719,7 @@ REPEAT STRIP_TAC THEN1 (
     NTAC 4 (GSYM_NO_TAC 5) THEN
     UNDISCH_NO_TAC 21 (*Element iterator*) THEN
     ASM_SIMP_TAC arith_ss [EXTENSION, IN_UNION, IN_INTER, IN_COMPL,
-      IN_DIFF, IN_BETA_THM, IS_ELEMENT_ITERATOR_def,
+      IN_DIFF, IN_ABS, IS_ELEMENT_ITERATOR_def,
       PATH_SUBSET_def, LTL_TO_GEN_BUECHI_DS___PRODUCT_def,
       ltl_to_gen_buechi_ds_REWRITES, PATH_RESTRICT_def,
       PATH_MAP_def,
@@ -1785,7 +1785,7 @@ REPEAT STRIP_TAC THEN1 (
                      A_SEM_def, ACCEPT_COND_SEM_def,
                      ACCEPT_COND_SEM_TIME_def,
                      PATH_SUBSET_def, SUBSET_DEF, IN_UNION,
-                     IN_BETA_THM
+                     IN_ABS
     ] THEN
     STRIP_TAC THEN
     REPEAT BOOL_EQ_STRIP_TAC THEN
@@ -1809,7 +1809,7 @@ REPEAT STRIP_TAC THEN1 (
         NTAC 4 (GSYM_NO_TAC 8) THEN (*P1, P2, P*)
         ASM_SIMP_TAC std_ss [
           P_SEM_THM, IN_UNION,
-          IN_DIFF, IN_BETA_THM,
+          IN_DIFF, IN_ABS,
           COND_RAND,
           IS_ELEMENT_ITERATOR_def
         ] THEN
@@ -1916,7 +1916,7 @@ REPEAT STRIP_TAC THEN1 (
         LTL_TO_GEN_BUECHI_DS___PRODUCT_def,
         LTL_TO_GEN_BUECHI_DS___USED_STATE_VARS_def,
         ltl_to_gen_buechi_ds_REWRITES, SUBSET_DEF,
-        IN_BETA_THM] THEN
+        IN_ABS] THEN
       REPEAT WEAKEN_HD_TAC THEN
       REPEAT STRIP_TAC THEN
       Cases_on `x' IN w'' x` THEN ASM_REWRITE_TAC[] THEN

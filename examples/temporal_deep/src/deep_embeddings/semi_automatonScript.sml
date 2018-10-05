@@ -56,8 +56,8 @@ val semi_automaton_REWRITES = save_thm("semi_automaton_REWRITES", LIST_CONJ [sem
 val IS_WELL_FORMED_SEMI_AUTOMATON_def =
  Define
   `IS_WELL_FORMED_SEMI_AUTOMATON A =
-    (FINITE A.S /\ FINITE A.I /\ A.S0 SUBSET (A.S CROSS (POWER_SET A.I)) /\
-     A.R SUBSET (A.S CROSS ((POWER_SET A.I) CROSS (A.S CROSS (POWER_SET A.I)))))`
+    (FINITE A.S /\ FINITE A.I /\ A.S0 SUBSET (A.S CROSS (POW A.I)) /\
+     A.R SUBSET (A.S CROSS ((POW A.I) CROSS (A.S CROSS (POW A.I)))))`
 
 (*****************************************************************************)
 (* RUN A i w is true iff p is a run of i through A                             *)
@@ -99,7 +99,7 @@ val IS_DET_TOTAL_SEMI_AUTOMATON___UNIQUE_RUN_EXISTS =
                     EXISTS_UNIQUE_DEF,
                     IS_DET_TOTAL_SEMI_AUTOMATON_def,
                     IS_WELL_FORMED_SEMI_AUTOMATON_def,
-                    SUBSET_DEF, IN_CROSS, IN_POWER_SET_SUBSET_EQUIV,
+                    SUBSET_DEF, IN_CROSS, IN_POW,
     prove (``!P. (!x. P x) = (!x1 x2 x3 x4. P (x1,x2,x3, x4))``,
             METIS_TAC[FST, SND, PAIR])
     ] THEN

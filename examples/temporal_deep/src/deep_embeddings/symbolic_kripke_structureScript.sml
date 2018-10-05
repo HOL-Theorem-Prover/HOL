@@ -12,7 +12,8 @@ map load
    "containerTheory", "prim_recTheory", "tuerk_tacticsLib", "temporal_deep_mixedTheory", "arithmeticTheory"];
 *)
 
-open infinite_pathTheory pred_setTheory listTheory pairTheory xprop_logicTheory containerTheory prop_logicTheory set_lemmataTheory prim_recTheory
+open infinite_pathTheory pred_setTheory listTheory pairTheory xprop_logicTheory
+     containerTheory prop_logicTheory set_lemmataTheory prim_recTheory
      tuerk_tacticsLib temporal_deep_mixedTheory arithmeticTheory;
 
 val _ = hide "S";
@@ -30,8 +31,6 @@ quietdec := false;
 
 val _ = new_theory "symbolic_kripke_structure";
 
-val Know = Q_TAC KNOW_TAC;
-val Suff = Q_TAC SUFF_TAC;
 
 val symbolic_kripke_structure_def =
  Hol_datatype
@@ -196,7 +195,7 @@ val IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE___VAR_RENAMING =
       REPEAT STRIP_TAC THEN
       `?w. w = PATH_RESTRICT p (SYMBOLIC_KRIPKE_STRUCTURE_USED_VARS K UNION
              LIST_BIGUNION (MAP P_USED_VARS fc))` by PROVE_TAC[] THEN
-      Know `(((?n. ~XP_SEM K.R (p n,p (SUC n))) \/
+      SUBGOAL_TAC `(((?n. ~XP_SEM K.R (p n,p (SUC n))) \/
                     ?b. MEM b fc /\ ?t0. !t. ~(t >= t0) \/ ~P_SEM (p t) b) \/
                     ~P_SEM (p 0) K.S0) =
                    (((?n. ~XP_SEM K.R (w n,w (SUC n))) \/
@@ -226,7 +225,7 @@ val IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE___VAR_RENAMING =
           MATCH_MP_TAC P_USED_VARS_INTER_SUBSET_THM THEN
           SIMP_TAC std_ss [SUBSET_DEF, SYMBOLIC_KRIPKE_STRUCTURE_USED_VARS_def, IN_UNION]
         ]
-      ) THEN STRIP_TAC THEN
+      ) THEN
       ONCE_ASM_REWRITE_TAC[] THEN WEAKEN_HD_TAC THEN
 
       `!n. w n SUBSET (SYMBOLIC_KRIPKE_STRUCTURE_USED_VARS K UNION
@@ -272,4 +271,3 @@ val IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE___VAR_RENAMING =
 
 
 val _ = export_theory();
-

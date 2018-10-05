@@ -808,10 +808,10 @@ val IS_ELEMENT_ITERATOR___ID =
   store_thm ("IS_ELEMENT_ITERATOR___ID",
 
     ``!S n0. IS_ELEMENT_ITERATOR (\n:num. n) n0 S =
-          PRED_SET_FORALL (\n. n >= n0) S``,
+          RES_FORALL S (\n. n >= n0)``,
 
     SIMP_TAC std_ss [IS_ELEMENT_ITERATOR_def,
-                    PRED_SET_FORALL_def, IMP_DISJ_THM,
+                    IMP_DISJ_THM,
                     NOT_LESS, GREATER_EQ, RES_FORALL_THM] THEN
     PROVE_TAC[]);
 
@@ -823,6 +823,62 @@ val INJ___ADD_FUNC =
                   INJ f S UNIV``,
 
     SIMP_TAC std_ss [INJ_DEF, IN_UNIV]);
+
+(*
+val POS_START_def =
+  Define `
+    (POS_START n [] h = 0) /\
+    (POS_START n (h'::l) h = (if (h = h') then (SUC n) else (POS_START (SUC n) l h)))`
+
+
+val POS_START_NOT_FOUND =
+  store_thm ("POS_START_NOT_FOUND",
+    ``!n l h. ((POS_START n l h = 0) = ~(MEM h l))``,
+
+    Induct_on `l` THENL [
+      SIMP_TAC list_ss [POS_START_def],
+
+      ASM_SIMP_TAC list_ss [POS_START_def] THEN
+      REPEAT GEN_TAC THEN
+      Cases_on `h' = h` THENL [
+        ASM_SIMP_TAC arith_ss [],
+        ASM_REWRITE_TAC[]
+      ]
+    ]);
+
+val POS_START_FOUND =
+  store_thm ("POS_START_FOUND",
+    ``!n l h. (MEM h l ==> (POS_START n l h > n) /\ (EL ((PRE (POS_START n l h)) - n) l = h))``,
+
+    Induct_on `l` THENL [
+      SIMP_TAC list_ss [],
+
+      ASM_SIMP_TAC list_ss [POS_START_def] THEN
+      REPEAT GEN_TAC THEN
+      Cases_on `h' = h` THENL [
+        ASM_SIMP_TAC list_ss [],
+
+        ASM_SIMP_TAC list_ss [] THEN
+        STRIP_TAC THEN
+        Q_SPECL_NO_ASSUM 2 [`SUC n`, `h'`] THEN
+        UNDISCH_HD_TAC THEN ASM_REWRITE_TAC[] THEN REPEAT STRIP_TAC THENL [
+          ASM_SIMP_TAC arith_ss [],
+          Cases_on `(POS_START (SUC n) l h')` THEN (
+            SIMP_ALL_TAC arith_ss []
+          ) THEN
+          Cases_on `n'` THEN SIMP_ALL_TAC arith_ss [] THEN
+          `SUC n'' - n = SUC (n'' - n)` by DECIDE_TAC THEN
+          ASM_SIMP_TAC list_ss []
+        ]
+      ]
+    ]);
+
+
+val POS_START_RANGE =
+  store_thm ("POS_START_RANGE",
+    ``!n l h. (POS_START n l h > n) \/ (POS_START n l h = 0)``,
+    PROVE_TAC[POS_START_FOUND, POS_START_NOT_FOUND]);
+
 
 
 val INJ_POS_START___MP_HELPER =
@@ -866,7 +922,7 @@ val PRE_POS_START___REWRITES =
     (!n h h' l. (PRE (POS_START n (h'::l) h)) = (if (h' = h) then n else PRE (POS_START (SUC n) l h)))``,
 
     SIMP_TAC std_ss [POS_START_def, COND_RAND]);
-
+*)
 
 val NUM_FINITE_INJ_EXISTS =
   store_thm ("NUM_FINITE_INJ_EXISTS",

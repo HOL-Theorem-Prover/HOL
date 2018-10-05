@@ -12,7 +12,8 @@ map load
   "temporal_deep_mixedTheory"];
 *)
 
-open pred_setTheory listTheory pairTheory prop_logicTheory containerTheory tuerk_tacticsLib set_lemmataTheory temporal_deep_mixedTheory;
+open pred_setTheory listTheory pairTheory prop_logicTheory containerTheory
+     tuerk_tacticsLib set_lemmataTheory temporal_deep_mixedTheory;
 
 val _ = hide "S";
 val _ = hide "I";
@@ -28,8 +29,6 @@ quietdec := false;
 
 val _ = new_theory "xprop_logic";
 
-val Know = Q_TAC KNOW_TAC;
-val Suff = Q_TAC SUFF_TAC;
 
 val xprop_logic =
  Hol_datatype
@@ -181,14 +180,14 @@ val XP_PROP_SET_MODEL_CURRENT_def = Define
         XP_BIGOR (SET_TO_LIST (IMAGE (\S.
             (XP_AND(XP_NEXT(P_PROP_SET_MODEL S S'),
                           XP_CURRENT(P_PROP_SET_MODEL (f (S INTER S')) S'))))
-            (POWER_SET S')))`;
+            (POW S')))`;
 
 val XP_PROP_SET_MODEL_NEXT_def = Define
   `XP_PROP_SET_MODEL_NEXT f S' =
         XP_BIGOR (SET_TO_LIST (IMAGE (\S.
             (XP_AND(XP_CURRENT(P_PROP_SET_MODEL S S'),
                           XP_NEXT(P_PROP_SET_MODEL (f (S INTER S')) S'))))
-            (POWER_SET S')))`;
+            (POW S')))`;
 
 
 val XP_NEXT_THM =
@@ -241,7 +240,7 @@ val XP_CURRENT_THM =
 val XP_SEM_THM =
  store_thm
   ("XP_SEM_THM",
-     ``!s1 s2 b1 b2 b c.
+     ``!s1 s2 b1 b2 b c p.
        (XP_SEM XP_TRUE (s1,s2)) /\
       ~(XP_SEM XP_FALSE (s1,s2)) /\
        (XP_SEM (XP_PROP p) (s1,s2) = p IN s1) /\
@@ -926,7 +925,7 @@ val XP_USED_VARS_INTER_SUBSET_THM =
 val XP_USED_VARS_INTER_THM =
  store_thm
   ("XP_USED_VARS_INTER_THM",
-   ``!b S s1 s2.
+   ``!b s1 s2.
        ((XP_SEM b (s1, s2)) = (XP_SEM b (s1 INTER (XP_USED_CURRENT_VARS b), s2 INTER (XP_USED_X_VARS b))))``,
 
    PROVE_TAC[XP_USED_VARS_INTER_SUBSET_THM, SUBSET_REFL]);
@@ -950,7 +949,7 @@ val XP_SEM___VAR_RENAMING___NOT_INJ =
         ((\x. f x IN s1), (\x. f x IN s2))``,
 
     INDUCT_THEN xprop_logic_induct ASSUME_TAC THEN (
-      ASM_SIMP_TAC std_ss [XP_VAR_RENAMING_def, XP_SEM_def, IN_BETA_THM]
+      ASM_SIMP_TAC std_ss [XP_VAR_RENAMING_def, XP_SEM_def, IN_ABS]
     ));
 
 val XP_SEM___VAR_RENAMING =
@@ -974,7 +973,7 @@ val XP_SEM___VAR_RENAMING =
 
       FULL_SIMP_TAC std_ss [XP_SEM_def, XP_VAR_RENAMING_def, XP_USED_VARS_def, XP_USED_CURRENT_VARS_def,
         XP_USED_X_VARS_def] THEN
-      Know `(s1 UNION s2 UNION (XP_USED_CURRENT_VARS p UNION XP_USED_X_VARS p)) SUBSET
+      SUBGOAL_TAC `(s1 UNION s2 UNION (XP_USED_CURRENT_VARS p UNION XP_USED_X_VARS p)) SUBSET
              (s1 UNION s2 UNION (XP_USED_CURRENT_VARS p UNION XP_USED_CURRENT_VARS p' UNION
               (XP_USED_X_VARS p UNION XP_USED_X_VARS p'))) /\
 
@@ -984,7 +983,7 @@ val XP_SEM___VAR_RENAMING =
 
         SIMP_TAC std_ss [SUBSET_DEF, IN_UNION] THEN
         PROVE_TAC[]
-      ) THEN STRIP_TAC THEN
+      ) THEN
       PROVE_TAC[INJ_SUBSET, SUBSET_REFL]
    ]);
 
@@ -1025,10 +1024,10 @@ val XP_PROP_SET_MODEL_CURRENT_SEM =
     REWRITE_TAC[XP_PROP_SET_MODEL_CURRENT_def, XP_SEM_THM,
         XP_BIGOR_SEM] THEN
     REPEAT STRIP_TAC THEN
-    ASM_SIMP_TAC std_ss [POWER_SET_FINITE, IMAGE_FINITE,
+    ASM_SIMP_TAC std_ss [FINITE_POW_IFF, IMAGE_FINITE,
         MEM_SET_TO_LIST, IN_IMAGE, GSYM LEFT_EXISTS_AND_THM,
         XP_SEM_THM, XP_SEM___XP_CURRENT, XP_SEM___XP_NEXT,
-        P_PROP_SET_MODEL_SEM, IN_POWER_SET_SUBSET_EQUIV
+        P_PROP_SET_MODEL_SEM, IN_POW
         ] THEN
     EQ_TAC THEN REPEAT STRIP_TAC THENL  [
         ASM_REWRITE_TAC[],
@@ -1047,10 +1046,10 @@ val XP_PROP_SET_MODEL_NEXT_SEM =
     REWRITE_TAC[XP_PROP_SET_MODEL_NEXT_def, XP_SEM_THM,
         XP_BIGOR_SEM] THEN
     REPEAT STRIP_TAC THEN
-    ASM_SIMP_TAC std_ss [POWER_SET_FINITE, IMAGE_FINITE,
+    ASM_SIMP_TAC std_ss [FINITE_POW_IFF, IMAGE_FINITE,
         MEM_SET_TO_LIST, IN_IMAGE, GSYM LEFT_EXISTS_AND_THM,
         XP_SEM_THM, XP_SEM___XP_CURRENT, XP_SEM___XP_NEXT,
-        P_PROP_SET_MODEL_SEM, IN_POWER_SET_SUBSET_EQUIV
+        P_PROP_SET_MODEL_SEM, IN_POW
         ] THEN
     EQ_TAC THEN REPEAT STRIP_TAC THENL  [
         ASM_REWRITE_TAC[],
@@ -1229,4 +1228,3 @@ val XP_CURRENT_NEXT___FORALL =
 
 
 val _ = export_theory();
-

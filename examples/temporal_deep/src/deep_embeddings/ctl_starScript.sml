@@ -33,8 +33,6 @@ quietdec := false;
 
 val _ = new_theory "ctl_star";
 
-val Know = Q_TAC KNOW_TAC;
-val Suff = Q_TAC SUFF_TAC;
 
 val ctl_star_def =
  Hol_datatype
@@ -356,7 +354,7 @@ val CTL_STAR_SEM___FAIRNESS =
       Tactical.REVERSE (BINOP_TAC) THEN1 ASM_REWRITE_TAC[] THEN
       REPEAT WEAKEN_HD_TAC THEN
       EQ_TAC THEN REPEAT STRIP_TAC THENL [
-        Know `?t1. t1 >= t /\ t1 > t0` THEN1 (
+        SUBGOAL_TAC `?t1. t1 >= t /\ t1 > t0` THEN1 (
           Cases_on `t > t0` THENL [
             EXISTS_TAC ``t:num`` THEN
             ASM_SIMP_TAC arith_ss [],
@@ -364,7 +362,7 @@ val CTL_STAR_SEM___FAIRNESS =
             EXISTS_TAC ``SUC t0`` THEN
             FULL_SIMP_TAC arith_ss []
           ]
-        ) THEN STRIP_TAC THEN
+        ) THEN
         SPECL_NO_ASSUM 2 [``t1:num``] THEN
         UNDISCH_HD_TAC THEN ASM_REWRITE_TAC[] THEN REPEAT STRIP_TAC THEN
         EXISTS_TAC ``k':num`` THEN
@@ -914,7 +912,7 @@ val CTL_A_SWHILE_def = Define `CTL_A_SWHILE(f1,f2) = CTL_NOT(CTL_E_UNTIL(CTL_NOT
 
 val CTL_TO_FAIR_CTL_THM =
   store_thm ("CTL_TO_FAIR_CTL_THM",
-    ``!b f f1 f2.
+    ``!b f f1 f2 c fc.
         (CTL_TO_FAIR_CTL fc (CTL_PROP b) = (FAIR_CTL_PROP b)) /\
         (CTL_TO_FAIR_CTL fc (CTL_NOT f) = (FAIR_CTL_NOT (CTL_TO_FAIR_CTL fc f))) /\
         (CTL_TO_FAIR_CTL fc (CTL_AND (f1, f2)) = (FAIR_CTL_AND (CTL_TO_FAIR_CTL fc f1, CTL_TO_FAIR_CTL fc f2))) /\

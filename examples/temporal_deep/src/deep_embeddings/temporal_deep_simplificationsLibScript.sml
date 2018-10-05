@@ -19,7 +19,6 @@ open HolKernel boolLib bossLib
   infinite_pathTheory symbolic_semi_automatonTheory listTheory pred_setTheory rich_listTheory pairTheory
   numLib listLib rltlTheory computeLib relationTheory tuerk_tacticsLib congLib Travrules congToolsLibTheory
 
-
 (*
 show_assums := false;
 show_assums := true;
@@ -184,8 +183,8 @@ val PROP_LOGIC_EQUIVALENT_rewrites =
       (!p1 p2. PROP_LOGIC_EQUIVALENT (P_OR(p1, P_OR(p2, p1))) (P_OR(p1,p2))) /\
       (!p1 p2. PROP_LOGIC_EQUIVALENT (P_COND(P_FALSE, p1, p2)) p2) /\
       (!p1 p2. PROP_LOGIC_EQUIVALENT (P_COND(P_TRUE, p1, p2)) p1) /\
-      (!p1 p2. PROP_LOGIC_EQUIVALENT (P_COND(P_NOT c, p1, p2))
-                                     (P_COND(c, p2, p1))) /\
+      (!p1 p2 c. PROP_LOGIC_EQUIVALENT (P_COND(P_NOT c, p1, p2))
+                                       (P_COND(c, p2, p1))) /\
 
 
       (!p. (PROP_LOGIC_EQUIVALENT (P_NOT p) P_FALSE) = (PROP_LOGIC_EQUIVALENT p P_TRUE)) /\
@@ -564,7 +563,7 @@ val XPROP_LOGIC_EQUIVALENT_nnf_rewrites =
     ``(!p1 p2. XPROP_LOGIC_EQUIVALENT (XP_NOT (XP_AND(p1, p2))) (XP_OR (XP_NOT p1, XP_NOT p2))) /\
       (!p1 p2. XPROP_LOGIC_EQUIVALENT (XP_NOT (XP_OR(p1, p2))) (XP_AND (XP_NOT p1, XP_NOT p2))) /\
       (!p1 p2. XPROP_LOGIC_EQUIVALENT (XP_NOT (XP_IMPL(p1, p2))) (XP_AND (p1, XP_NOT p2))) /\
-      (!p1 p2. XPROP_LOGIC_EQUIVALENT (XP_NOT (XP_COND(c, p1, p2))) (XP_COND(c, XP_NOT p1, XP_NOT p2))) /\
+      (!p1 p2 c. XPROP_LOGIC_EQUIVALENT (XP_NOT (XP_COND(c, p1, p2))) (XP_COND(c, XP_NOT p1, XP_NOT p2))) /\
       (!p1 p2. XPROP_LOGIC_EQUIVALENT (XP_NOT (XP_EQUIV(p1, p2))) (XP_EQUIV (XP_NOT p1, p2)))``,
 
     SIMP_TAC std_ss [XPROP_LOGIC_EQUIVALENT_def, XP_SEM_THM] THEN
@@ -666,7 +665,7 @@ val LTL_EQUIVALENT_congs =
                        LTL_EQUIVALENT l2 l2' ==>
                        LTL_EQUIVALENT (LTL_EQUIV(l1, l2)) (LTL_EQUIV(l1', l2'))) /\
 
-      (!p l p' l'.     PROP_LOGIC_EQUIVALENT p p' ==>
+      (!p p'.          PROP_LOGIC_EQUIVALENT p p' ==>
                        LTL_EQUIVALENT (LTL_PROP p) (LTL_PROP p')) /\
       (!l     l'     . LTL_EQUIVALENT l l' ==>
                        LTL_EQUIVALENT (LTL_NEXT l) (LTL_NEXT l')) /\
@@ -963,8 +962,6 @@ val LTL_EQUIVALENT_true_false_rewrites =
 
 
 
-
-
 val LTL_EQUIVALENT_simple_homogeneous_conj_disj_rewrites =
   prove (
     ``(*LTL_NEXT*)
@@ -1033,12 +1030,12 @@ val LTL_EQUIVALENT_simple_homogeneous_conj_disj_rewrites =
       (!l l1 l2 l3. (LTL_EQUIVALENT (LTL_OR (LTL_PUNTIL (l, l1), LTL_OR(l3, LTL_PUNTIL (l, l2)))) (LTL_OR(LTL_PUNTIL (l, (LTL_OR(l1,l2))), l3)))) /\
 
       (*LTL_SBEFORE OR*)
-      (!l1 l2 l3. (LTL_EQUIVALENT (LTL_OR (LTL_SBEFORE (l1, l), LTL_SBEFORE (l2, l))) (LTL_SBEFORE (LTL_OR(l1,l2), l)))) /\
+      (!l l1 l2. (LTL_EQUIVALENT (LTL_OR (LTL_SBEFORE (l1, l), LTL_SBEFORE (l2, l))) (LTL_SBEFORE (LTL_OR(l1,l2), l)))) /\
       (!l l1 l2 l3. (LTL_EQUIVALENT (LTL_OR (LTL_SBEFORE (l1, l), LTL_OR(LTL_SBEFORE (l2, l), l3))) (LTL_OR(LTL_SBEFORE ((LTL_OR(l1,l2)), l), l3)))) /\
-      (!l l2 l2 l3. (LTL_EQUIVALENT (LTL_OR (LTL_SBEFORE (l1, l), LTL_OR(l3, LTL_SBEFORE (l2, l)))) (LTL_OR(LTL_SBEFORE ((LTL_OR(l1,l2)), l), l3)))) /\
+      (!l l1 l2 l3. (LTL_EQUIVALENT (LTL_OR (LTL_SBEFORE (l1, l), LTL_OR(l3, LTL_SBEFORE (l2, l)))) (LTL_OR(LTL_SBEFORE ((LTL_OR(l1,l2)), l), l3)))) /\
 
       (*LTL_PSBEFORE OR*)
-      (!l1 l2 l3. (LTL_EQUIVALENT (LTL_OR (LTL_PSBEFORE (l1, l), LTL_PSBEFORE (l2, l))) (LTL_PSBEFORE (LTL_OR(l1,l2), l)))) /\
+      (!l l1 l2. (LTL_EQUIVALENT (LTL_OR (LTL_PSBEFORE (l1, l), LTL_PSBEFORE (l2, l))) (LTL_PSBEFORE (LTL_OR(l1,l2), l)))) /\
       (!l l1 l2 l3. (LTL_EQUIVALENT (LTL_OR (LTL_PSBEFORE (l1, l), LTL_OR(LTL_PSBEFORE (l2, l), l3))) (LTL_OR(LTL_PSBEFORE ((LTL_OR(l1,l2)), l), l3)))) /\
       (!l l1 l2 l3. (LTL_EQUIVALENT (LTL_OR (LTL_PSBEFORE (l1, l), LTL_OR(l3, LTL_PSBEFORE (l2, l)))) (LTL_OR(LTL_PSBEFORE ((LTL_OR(l1,l2)), l), l3))))``,
 
