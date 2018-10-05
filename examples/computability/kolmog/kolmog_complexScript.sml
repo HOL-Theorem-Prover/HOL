@@ -802,21 +802,136 @@ first_x_assum(fn th => qspec_then`jj` assume_tac th >> qspec_then`ii` assume_tac
 >- (`id<=0` by full_simp_tac(srw_ss () ++ realSimps.REAL_ARITH_ss)[])  )
 
 
-(* Take the set of pair and return the bounds of this set  *)
-val exten_def = Define`exten s = ()`
+val fsr = full_simp_tac(srw_ss () ++ realSimps.REAL_ARITH_ss);
 
-val exten_bound = Q.store_thm("exten_bound",
-`∀s. FINITE s ==> 0<= FST (exten s) ∧ SND (exten s) <= 1`,
+(* Take the set of pairs and return the bounds of this set  *)
+
+val max_rs_lemma = Q.prove(`∀s. FINITE s ==> s<>{} ==> ∃x:real. x∈s ∧ ∀y. y∈s ==> y<=x`,
+Induct_on`FINITE` >>rw[] >> Cases_on`s={}` >> fs[] >> qexists_tac`max e x` >> fsr[max_def] >> rw[]
+>- metis_tac[] >> Cases_on`y=e`>> fsr[] >> RES_TAC >> fsr[] )
+
+val min_rs_lemma = Q.prove(`∀s. FINITE s ==> s<>{} ==> ∃x:real. x∈s ∧ ∀y. y∈s ==> x<=y`,
+Induct_on`FINITE` >>rw[] >> Cases_on`s={}` >> fs[] >> qexists_tac`min e x` >> fsr[min_def] >> rw[]>>
+Cases_on`y=e`>> fsr[] >> RES_TAC >> fsr[] )
+
+val maxr_set_def = new_specification("maxr_set_def",["maxr_set"],
+SIMP_RULE(srw_ss() )[SKOLEM_THM,GSYM RIGHT_EXISTS_IMP_THM] max_rs_lemma)
+
+val minr_set_def = new_specification("minr_set_def",["minr_set"],
+SIMP_RULE(srw_ss() )[SKOLEM_THM,GSYM RIGHT_EXISTS_IMP_THM] min_rs_lemma)
+
+val exten_def = Define`exten s = (minr_set {FST k| k ∈ s},maxr_set {FST k + SND k|k∈s})`
+
+val maxr_set_thm = Q.store_thm("maxr_set_thm[simp]",
+`maxr_set {e} = e ∧ (FINITE s ∧ s<> {} ==> maxr_set (e INSERT s) = max e (maxr_set s))`,
+rw[] >- (qspec_then `{e}` mp_tac maxr_set_def >> simp[]) >> 
+qspec_then `e INSERT s` mp_tac maxr_set_def  >> simp[] >> strip_tac >> 
+qabbrev_tac`m = maxr_set (e INSERT s)` >> qspec_then`s` mp_tac maxr_set_def >> simp[] >> 
+qabbrev_tac`m0 = maxr_set s` >> rw[] >> rw[max_def] 
+>- (Cases_on`e = m0` >> rw[] >- (simp[Abbr`m`,ABSORPTION_RWT]) >> Cases_on`e=m` >> rw[]
+    >- (`m0<=e` by metis_tac[] >> fsr[]) >> metis_tac[REAL_LE_ANTISYM]  ) >> 
+spose_not_then strip_assume_tac >> `m<=m0` by fsr[] >> `m<e` by fsr[] >> `e<=m` by fsr[] >> fsr[])
+
+val minr_set_thm = Q.store_thm("maxr_set_thm[simp]",
+`minr_set {e} = e ∧ (FINITE s ∧ s<> {} ==> minr_set (e INSERT s) = min e (minr_set s))`,
+rw[] >- (qspec_then `{e}` mp_tac minr_set_def >> simp[]) >> 
+qspec_then `e INSERT s` mp_tac minr_set_def  >> simp[] >> strip_tac >> 
+qabbrev_tac`m = minr_set (e INSERT s)` >> qspec_then`s` mp_tac minr_set_def >> simp[] >> 
+qabbrev_tac`m0 = minr_set s` >> rw[] >> rw[min_def] 
+>- (Cases_on`e = m0` >> rw[] >- (simp[Abbr`m`,ABSORPTION_RWT]) >> Cases_on`e=m` >> rw[] >>
+    `m<=e` by metis_tac[] >>`m∈s` by fs[] >>`m0<=m` by fs[] >> metis_tac[REAL_LE_ANTISYM]) >> 
+spose_not_then strip_assume_tac >> `m<=m0` by fsr[] >> `m0<e` by fsr[] >> `m<=e` by fsr[] >> 
+Cases_on`m=e` >> fsr[] >> `m0 <= m` by fsr[] >> fsr[])
+
+val maxr_set_union = Q.store_thm("maxr_set_union",
+`∀s1. (FINITE s1) ==> ∀s2. (FINITE s2) ==> (s1 <> ∅ ∧  s2 <> ∅) ==> 
+  maxr_set (s1 ∪ s2)=max (maxr_set s1) (maxr_set s2)`,
+Induct_on`FINITE` >> strip_tac
+>- (Induct_on`FINITE` >>rw[maxr_set_thm] )
+>- (ntac 4 strip_tac >> Induct_on`FINITE` >> rw[maxr_set_thm] >> 
+    Cases_on`s2 <> {}` >> Cases_on`s1 <> {}` >> rw[] >>simp[maxr_set_thm] 
+    >- (Cases_on`e<= maxr_set s1` >> Cases_on`e'<= maxr_set s2` >> 
+        fs[max_def,maxr_set_thm,INSERT_UNION_EQ] >> rw[] >> fsr[]
+        >- (Cases_on`maxr_set s1 <= maxr_set s2` >> fsr[]) 
+        >- (Cases_on`maxr_set s1 <= e'` >> fsr[]) )
+    >- (Cases_on`e'<= maxr_set s2` >> 
+        fs[max_def,maxr_set_thm,INSERT_UNION_EQ] >> rw[] >> fsr[])
+    >- (Cases_on`e<= maxr_set s1` >> fs[max_def,maxr_set_thm,INSERT_UNION_EQ] >> rw[] >> 
+        fsr[] >> Cases_on`maxr_set s1 <= e'` >> fsr[])
+    >- (fs[max_def,maxr_set_thm,INSERT_UNION_EQ]) )
 )
 
-val lemma11 = Q.prove("lemma11",
+
+val minr_set_union = Q.store_thm("minr_set_union",
+`∀s1. (FINITE s1) ==> ∀s2. (FINITE s2) ==> (s1 <> ∅ ∧  s2 <> ∅) ==> 
+  minr_set (s1 ∪ s2)=min (minr_set s1) (minr_set s2)`,
+Induct_on`FINITE` >> strip_tac
+>- (Induct_on`FINITE` >>rw[minr_set_thm] )
+>- (ntac 4 strip_tac >> Induct_on`FINITE` >> rw[minr_set_thm] >> 
+    Cases_on`s2 <> {}` >> Cases_on`s1 <> {}` >> rw[] >>simp[minr_set_thm] 
+    >- (Cases_on`e<= minr_set s1` >> Cases_on`e'<= minr_set s2` >> 
+        fs[min_def,minr_set_thm,INSERT_UNION_EQ] >> rw[] >> fsr[]
+        >- (Cases_on`minr_set s1 <= e'` >> fsr[]) 
+        >- (Cases_on`minr_set s1 <= minr_set s2` >> fsr[]) )
+    >- (Cases_on`e<= minr_set s1` >> fs[min_def,minr_set_thm,INSERT_UNION_EQ] >> rw[] >> 
+        fsr[] >> Cases_on`minr_set s1 <= e'` >> fsr[])
+    >- (Cases_on`e<= minr_set s1` >> fs[min_def,minr_set_thm,INSERT_UNION_EQ] >> rw[] >> 
+        fsr[] >> Cases_on` minr_set s1 ≤ e'` >>rw[] >> fsr[])
+    >- (fs[min_def,minr_set_thm,INSERT_UNION_EQ]) )
+)
+
+
+val gspec_eq = Q.store_thm("gspec_eq[simp]",
+`GSPEC (λx. (f x,x=k)) = {f k}`,
+simp[EXTENSION])
+
+val gspec_in = Q.store_thm("gspec_in[simp]",
+`GSPEC (λx. (f x,x∈k)) = {f x|x∈k}`,
+simp[EXTENSION])
+
+val gspec_f_or = Q.store_thm("gspec_f_or[simp]",
+`∀P Q. {f x | P x ∨ Q x} = {f x | P x} ∪ {f x | Q x}`,
+rw[IN_UNION,EXTENSION] >> metis_tac[GSPECIFICATION_applied])
+
+val f_set_in = Q.store_thm("f_set_in",
+`FINITE s ==> FINITE {f k | k ∈ s}`,
+rw[] >> irule (INST_TYPE[beta|->``:alpha``] FINITE_INJ) >> qexists_tac`f` >> fs[IMAGE_FINITE])
+
+val exten_insert_thm = Q.store_thm("exten_insert_thm",
+`(s <> ∅ ∧ FINITE s) ==> exten (e INSERT s) =  (min (FST e) ## max (FST e + SND e)) (exten s)`,
+simp[exten_def,maxr_set_thm,minr_set_thm] >> rw[] 
+>- (`{FST k | k <> e ==> k ∈ s} = {FST k | k = e ∨ k ∈ s}` by fs[EXTENSION] >>
+    `{FST k | k = e ∨ k ∈ s} = {FST k | k = e} ∪ {FST k | k ∈ s}` by fs[] >> rw[] >> 
+    `FINITE {FST e}` by fs[] >> `{FST e} <> {}` by fs[] >> 
+    `FINITE {FST k | k ∈ s}` by metis_tac[IMAGE_FINITE,IMAGE_DEF] >> 
+    `{FST k | k ∈ s} <> {}` by metis_tac[IMAGE_EQ_EMPTY,IMAGE_DEF]>>
+    rw[minr_set_union])
+>- (`{FST k + SND k | k <> e ==> k ∈ s} = {FST k + SND k | k = e ∨ k ∈ s}` by fs[EXTENSION] >>
+    `{FST k + SND k | k = e ∨ k ∈ s} = {FST k + SND k | k = e} ∪ {FST k + SND k | k ∈ s}` by fs[] >> 
+    rw[] >> 
+    `FINITE {FST e  + SND k}` by fs[] >> `{FST e  + SND k} <> {}` by fs[] >> 
+    `FINITE {FST k + SND k | k ∈ s}` by metis_tac[IMAGE_FINITE,IMAGE_DEF] >> 
+    `{FST k + SND k | k ∈ s} <> {}` by metis_tac[IMAGE_EQ_EMPTY,IMAGE_DEF]>>
+    rw[maxr_set_union] ))
+
+Val lemma11 = Q.prove("lemma11",
 `∀s. FINITE s ==> (∀x dx y dy. (x,dx)∈s ∧ (y,dy) ∈ s ∧ x<>y ==> x+dx<=y ∨ y+dy<=x) ∧
-              (∀x d. (x,d)∈s ==> 0r<d) ∧ (∀x d. (x,d)∈s ==> 0<= x ∧ x+d <=1) 
-          ==> SIGMA SND s <= 1`,
-Induct_on`FINITE` >> simp[] >> rw[REAL_SUM_IMAGE_THM] >> fs[] >> simp[DELETE_NON_ELEMENT_RWT] >> 
+              (∀x d. (x,d)∈s ==> 0r<d) ∧ (∀x d. (x,d)∈s ==> 0<= x ∧ x+d <=1) ∧ (s <> {}) 
+          ==> (0<= FST (exten s) ∧ SND (exten s) <= 1)`,
+Induct_on`FINITE` >> simp[] >>ntac 2 (gen_tac>>strip_tac) >>strip_tac >> Cases_on`s={}` >> fs[]
+>- (simp[maxr_set_def,minr_set_def,exten_def,ITSET_THM] >> Cases_on`e` >> fs[]) >>
+
+  >> rw[REAL_SUM_IMAGE_THM] >> fs[] >> simp[DELETE_NON_ELEMENT_RWT] >> 
 Cases_on`e` >> fs[] >> `∀x d. (x,d)∈s ==> 0<d` by metis_tac[] >> 
 `∀x d. (x,d)∈s ==> 0<=x` by metis_tac[] >> `SIGMA SND s <= 1` by metis_tac[] >> 
-`0<=q ∧ 0<r` by metis_tac[] >>  )
+`0<=q ∧ 0<r` by metis_tac[] >> `∃x1 dx1. (x1,dx1)∈s` by (cheat) >> 
+`q<>x1` by cheat >> `((q = q ⇒ r ≠ r) ⇒ (q,r) ∈ s)` by fs[] >>
+`((x1 = q ⇒ dx1 ≠ r) ⇒ (x1,dx1) ∈ s)` by fs[] >> `q+r<=1` by fs[] >> `x1+dx1<=q ∨ q+r<=x1` by fs[] 
+>- ()
+>- (`r+SIGMA SND s <= x1+-q +SIGMA SND s` by fsr[] >>
+    `x1 + -q + SIGMA SND s <= 1` by (Cases_on`x1-q<=0` >- fsr[] >>
+      `q<x1` by fsr[]>> ) >>
+    metis_tac[REAL_LE_TRANS] ) )
 
 val lemma1 = Q.prove("lemma1",
 `(let is = IMAGE interval_bl P in ∀i1 i2. i1 ∈ is ∧ i2∈is ∧ i1<>i2 ==> disjoint_interval i1 i2)
@@ -834,7 +949,7 @@ val numl_size_def = Define`numl_size L n = SIGMA (λs. (2 rpow -&s)) {x|x ∈ L 
 val kraft_ineq_conv = Q.store_thm("kraft_ineq_conv",
 `∀L. (∃y0. y0<=1 ∧ numl_size L --> y0) ==> 
 (∃P. prefix_free P ∧ (∀p. p∈P ==> ∃l. l∈L ∧ LENGTH p = l) ∧ (∀l. l∈L ==> ∃p. p∈P ∧ LENGTH p=l ) )`,
-)
+) 
 
 
 (* Have done initial Kolmog stuff *)
