@@ -893,9 +893,6 @@ val gspec_f_or = Q.store_thm("gspec_f_or[simp]",
 `∀P Q. {f x | P x ∨ Q x} = {f x | P x} ∪ {f x | Q x}`,
 rw[IN_UNION,EXTENSION] >> metis_tac[GSPECIFICATION_applied])
 
-val f_set_in = Q.store_thm("f_set_in",
-`FINITE s ==> FINITE {f k | k ∈ s}`,
-rw[] >> irule (INST_TYPE[beta|->``:alpha``] FINITE_INJ) >> qexists_tac`f` >> fs[IMAGE_FINITE])
 
 val exten_insert_thm = Q.store_thm("exten_insert_thm",
 `(s <> ∅ ∧ FINITE s) ==> exten (e INSERT s) =  (min (FST e) ## max (FST e + SND e)) (exten s)`,
