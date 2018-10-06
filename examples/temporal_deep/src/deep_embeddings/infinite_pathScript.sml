@@ -15,6 +15,7 @@ map load
 
 open pred_setTheory pairTheory arithmeticTheory tuerk_tacticsLib
      containerTheory listTheory prop_logicTheory;
+open Sanity;
 
 val _ = hide "S";
 val _ = hide "I";

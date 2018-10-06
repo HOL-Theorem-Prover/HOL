@@ -12,6 +12,7 @@ map load
 *)
 
 open pred_setTheory arithmeticTheory infinite_pathTheory prop_logicTheory tuerk_tacticsLib numLib set_lemmataTheory symbolic_kripke_structureTheory
+open Sanity;
 
 (*
 show_assums := false;

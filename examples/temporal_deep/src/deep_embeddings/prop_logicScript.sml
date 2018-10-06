@@ -13,7 +13,8 @@ map load
 *)
 
 open pred_setTheory pairTheory arithmeticTheory tuerk_tacticsLib
-    containerTheory listTheory temporal_deep_mixedTheory set_lemmataTheory;
+     containerTheory listTheory temporal_deep_mixedTheory set_lemmataTheory;
+open Sanity;
 
 val _ = hide "S";
 val _ = hide "I";
@@ -280,7 +281,7 @@ Define
 val P_SEM_THM =
  store_thm
   ("P_SEM_THM",
-   ``!s b1 b2 c.
+   ``!s b1 b2 c b p.
    ((P_SEM s (P_TRUE)) /\ ~(P_SEM s (P_FALSE)) /\
     (P_SEM s (P_PROP p) = p IN s) /\
     (P_SEM s (P_NOT b) = ~(P_SEM s b)) /\
@@ -321,7 +322,7 @@ val P_USED_VARS_INTER_SUBSET_THM =
 val P_USED_VARS_INTER_THM =
  store_thm
   ("P_USED_VARS_INTER_THM",
-   ``!s p S. (P_SEM s p = P_SEM (s INTER (P_USED_VARS p)) p)``,
+   ``!s p. (P_SEM s p = P_SEM (s INTER (P_USED_VARS p)) p)``,
 
    METIS_TAC  [P_USED_VARS_INTER_SUBSET_THM, SUBSET_REFL]);
 
@@ -703,7 +704,7 @@ val P_SEM_MIN_MODEL_EXISTS =
 val P_PROP_SET_MODEL_SEM =
  store_thm
   ("P_PROP_SET_MODEL_SEM",
-    ``!S S' T. FINITE S' ==> (P_SEM T (P_PROP_SET_MODEL S S') = (T INTER S' = S INTER S'))``,
+    ``!S S' S''. FINITE S' ==> (P_SEM S'' (P_PROP_SET_MODEL S S') = (S'' INTER S' = S INTER S'))``,
 
     REWRITE_TAC[P_PROP_SET_MODEL_def, P_SEM_THM, P_PROP_DISJUNCTION_SEM,
     P_PROP_CONJUNCTION_SEM, EXISTS_MEM, EVERY_MEM] THEN

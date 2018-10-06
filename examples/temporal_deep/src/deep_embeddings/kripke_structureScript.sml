@@ -14,6 +14,7 @@ map load
 
 open infinite_pathTheory pred_setTheory listTheory pairTheory xprop_logicTheory containerTheory prop_logicTheory set_lemmataTheory prim_recTheory
      tuerk_tacticsLib temporal_deep_mixedTheory arithmeticTheory;
+open Sanity;
 
 val _ = hide "S";
 val _ = hide "I";
@@ -29,9 +30,6 @@ quietdec := false;
 
 
 val _ = new_theory "kripke_structure";
-
-
-val QIPAIR_ss = quantHeuristicsLib.QUANT_INST_ss [quantHeuristicsLibParameters.pair_default_qp]
 
 
 val kripke_structure_def =
@@ -414,7 +412,7 @@ val DET_TOTAL_KRIPKE_STRUCTURES_THM =
       (?M:('a, 'b) kripke_structure. IS_WELL_FORMED_KRIPKE_STRUCTURE M /\
           (M.P = S) /\
           IS_TRACE_OF_INITIAL_PATH_THROUGH_KRIPKE_STRUCTURE M i /\
-          (!j j'. IS_TRACE_OF_INITIAL_PATH_THROUGH_KRIPKE_STRUCTURE M j ==> (j = i)))))``,
+          (!j. IS_TRACE_OF_INITIAL_PATH_THROUGH_KRIPKE_STRUCTURE M j ==> (j = i)))))``,
 
 REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
   FULL_SIMP_TAC std_ss [IS_ULTIMATIVELY_PERIODIC_PATH_def,
@@ -844,8 +842,8 @@ val IS_SIMULATION_RELATION_def =
 val IS_SIMULATION_RELATION___REFL =
   store_thm (
     "IS_SIMULATION_RELATION___REFL",
-    ``!K P. (IS_WELL_FORMED_KRIPKE_STRUCTURE K) ==>
-            IS_SIMULATION_RELATION K K (\x y. (x = y) /\ (x IN K.S))``,
+    ``!K. (IS_WELL_FORMED_KRIPKE_STRUCTURE K) ==>
+          IS_SIMULATION_RELATION K K (\x y. (x = y) /\ (x IN K.S))``,
 
     SIMP_TAC std_ss [IS_SIMULATION_RELATION_def,
                      SUBSET_REFL, IS_WELL_FORMED_KRIPKE_STRUCTURE_def,
@@ -933,8 +931,8 @@ val IS_BISIMULATION_RELATION___SYM =
 val IS_BISIMULATION_RELATION___REFL =
   store_thm (
     "IS_BISIMULATION_RELATION___REFL",
-    ``!K P. (IS_WELL_FORMED_KRIPKE_STRUCTURE K) ==>
-            IS_BISIMULATION_RELATION K K (\x y. (x = y) /\ x IN K.S)``,
+    ``!K. (IS_WELL_FORMED_KRIPKE_STRUCTURE K) ==>
+          IS_BISIMULATION_RELATION K K (\x y. (x = y) /\ x IN K.S)``,
 
     SIMP_TAC std_ss [IS_BISIMULATION_RELATION_def,
                      IS_SIMULATION_RELATION_def, IN_CROSS,

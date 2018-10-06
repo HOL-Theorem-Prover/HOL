@@ -14,6 +14,7 @@ map load
 
 open pred_setTheory listTheory pairTheory prop_logicTheory containerTheory
      tuerk_tacticsLib set_lemmataTheory temporal_deep_mixedTheory;
+open Sanity;
 
 val _ = hide "S";
 val _ = hide "I";

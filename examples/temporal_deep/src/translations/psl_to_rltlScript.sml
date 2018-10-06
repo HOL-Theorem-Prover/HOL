@@ -18,10 +18,14 @@ map load
   "rltlTheory", "ltlTheory", "tuerk_tacticsLib", "prop_logicTheory", "infinite_pathTheory", "res_quanTools", "temporal_deep_mixedTheory"];
 *)
 
-open  FinitePathTheory PathTheory UnclockedSemanticsTheory SyntacticSugarTheory LemmasTheory RewritesTheory ModelTheory rltl_to_ltlTheory
-  RewritesPropertiesTheory ProjectionTheory SyntacticSugarTheory arithmeticTheory psl_lemmataTheory
-  listTheory numLib intLib rich_listTheory pred_setTheory prop_logicTheory infinite_pathTheory temporal_deep_mixedTheory
-  rltlTheory ltlTheory tuerk_tacticsLib res_quanTools;
+open FinitePathTheory PathTheory UnclockedSemanticsTheory SyntacticSugarTheory
+     LemmasTheory RewritesTheory ModelTheory rltl_to_ltlTheory
+     RewritesPropertiesTheory ProjectionTheory SyntacticSugarTheory
+     arithmeticTheory psl_lemmataTheory
+     listTheory numLib intLib rich_listTheory pred_setTheory prop_logicTheory
+     infinite_pathTheory temporal_deep_mixedTheory
+     rltlTheory ltlTheory tuerk_tacticsLib res_quanTools;
+open Sanity;
 
 val _ = intLib.deprecate_int();
 
@@ -1020,9 +1024,9 @@ val IS_PSL___NOT_F_CLOCK_SERE_FREE =
  store_thm
   ("IS_PSL___NOT_F_CLOCK_SERE_FREE",
 
-   ``!f a r. (~F_CLOCK_SERE_FREE f ==> (
-              ~IS_PSL_G f /\ ~IS_PSL_F f /\ ~IS_PSL_GF f /\
-              ~IS_PSL_FG f /\ ~IS_PSL_PREFIX f /\ ~IS_PSL_STREET f))``,
+   ``!f. (~F_CLOCK_SERE_FREE f ==> (
+          ~IS_PSL_G f /\ ~IS_PSL_F f /\ ~IS_PSL_GF f /\
+          ~IS_PSL_FG f /\ ~IS_PSL_PREFIX f /\ ~IS_PSL_STREET f))``,
 
    INDUCT_THEN fl_induct STRIP_ASSUME_TAC THEN
    ASM_SIMP_TAC std_ss [F_CLOCK_SERE_FREE_def, F_CLOCK_FREE_def, F_SERE_FREE_def, IS_RLTL_THM, IS_PSL_THM, PSL_TO_RLTL_def] THEN

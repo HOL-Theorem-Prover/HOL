@@ -19,6 +19,7 @@ map load
 open FinitePathTheory PathTheory UnclockedSemanticsTheory ClockedSemanticsTheory LemmasTheory RewritesTheory RewritesPropertiesTheory
    ProjectionTheory SyntacticSugarTheory arithmeticTheory ModelTheory rich_listTheory pred_setTheory combinTheory
    res_quanTools numLib tuerk_tacticsLib temporal_deep_mixedTheory set_lemmataTheory listTheory;
+open Sanity;
 
 val _ = hide "S";
 val _ = hide "I";

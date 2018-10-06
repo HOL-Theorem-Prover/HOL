@@ -15,9 +15,11 @@ map load
 *)
 
 open HolKernel boolLib bossLib
-    ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory prop_logicTheory
-  infinite_pathTheory symbolic_semi_automatonTheory listTheory pred_setTheory rich_listTheory pairTheory
-  numLib listLib rltlTheory computeLib relationTheory tuerk_tacticsLib congLib Travrules congToolsLibTheory
+     ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory prop_logicTheory
+     infinite_pathTheory symbolic_semi_automatonTheory listTheory pred_setTheory
+     rich_listTheory pairTheory numLib listLib rltlTheory computeLib relationTheory
+     tuerk_tacticsLib congLib Travrules congToolsLibTheory
+open Sanity;
 
 (*
 show_assums := false;
@@ -257,7 +259,7 @@ val PROP_LOGIC_EQUIVALENT_nnf_rewrites =
     ``(!p1 p2. PROP_LOGIC_EQUIVALENT (P_NOT (P_AND(p1, p2))) (P_OR (P_NOT p1, P_NOT p2))) /\
       (!p1 p2. PROP_LOGIC_EQUIVALENT (P_NOT (P_OR(p1, p2))) (P_AND (P_NOT p1, P_NOT p2))) /\
       (!p1 p2. PROP_LOGIC_EQUIVALENT (P_NOT (P_IMPL(p1, p2))) (P_AND (p1, P_NOT p2))) /\
-      (!p1 p2. PROP_LOGIC_EQUIVALENT (P_NOT (P_COND(c, p1, p2))) (P_COND(c, P_NOT p1, P_NOT p2))) /\
+      (!p1 p2 c. PROP_LOGIC_EQUIVALENT (P_NOT (P_COND(c, p1, p2))) (P_COND(c, P_NOT p1, P_NOT p2))) /\
       (!p1 p2. PROP_LOGIC_EQUIVALENT (P_NOT (P_EQUIV(p1, p2))) (P_EQUIV (P_NOT p1, p2)))``,
 
     SIMP_TAC std_ss [PROP_LOGIC_EQUIVALENT_def, P_SEM_THM] THEN
@@ -518,8 +520,8 @@ val XPROP_LOGIC_EQUIVALENT_rewrites =
       (!p1 p2. XPROP_LOGIC_EQUIVALENT (XP_OR(p1, XP_OR(p2, p1))) (XP_OR(p1,p2))) /\
       (!p1 p2. XPROP_LOGIC_EQUIVALENT (XP_COND(XP_FALSE, p1, p2)) p2) /\
       (!p1 p2. XPROP_LOGIC_EQUIVALENT (XP_COND(XP_TRUE, p1, p2)) p1) /\
-      (!p1 p2. XPROP_LOGIC_EQUIVALENT (XP_COND(XP_NOT c, p1, p2))
-                                     (XP_COND(c, p2, p1))) /\
+      (!p1 p2 c. XPROP_LOGIC_EQUIVALENT (XP_COND(XP_NOT c, p1, p2))
+                                        (XP_COND(c, p2, p1))) /\
 
       (!c p p1 p2.
       XPROP_LOGIC_EQUIVALENT (XP_COND (c, XP_EQUIV (p, p1), XP_EQUIV (p, p2)))     (XP_EQUIV (p, (XP_COND (c, p1,p2))))) /\

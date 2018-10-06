@@ -12,9 +12,12 @@ map load
    "containerTheory", "prim_recTheory", "tuerk_tacticsLib", "temporal_deep_mixedTheory", "ltlTheory", "semi_automatonTheory", "numLib",
   "relationTheory", "symbolic_kripke_structureTheory"];
 *)
-open infinite_pathTheory pred_setTheory listTheory pairTheory xprop_logicTheory containerTheory prop_logicTheory set_lemmataTheory prim_recTheory
+
+open infinite_pathTheory pred_setTheory listTheory pairTheory xprop_logicTheory 
+     containerTheory prop_logicTheory set_lemmataTheory prim_recTheory
      tuerk_tacticsLib temporal_deep_mixedTheory ltlTheory
      semi_automatonTheory numLib relationTheory;
+open Sanity;
 
 val _ = hide "S";
 val _ = hide "I";

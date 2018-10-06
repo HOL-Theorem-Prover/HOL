@@ -11,8 +11,11 @@ map load
  ["xprop_logicTheory", "prop_logicTheory", "infinite_pathTheory", "pred_setTheory", "listTheory", "pairTheory", "set_lemmataTheory",
    "containerTheory", "prim_recTheory", "tuerk_tacticsLib", "temporal_deep_mixedTheory"];
 *)
-open infinite_pathTheory pred_setTheory listTheory pairTheory xprop_logicTheory containerTheory prop_logicTheory set_lemmataTheory prim_recTheory
+
+open infinite_pathTheory pred_setTheory listTheory pairTheory xprop_logicTheory
+     containerTheory prop_logicTheory set_lemmataTheory prim_recTheory
      tuerk_tacticsLib temporal_deep_mixedTheory;
+open Sanity;
 
 val _ = hide "S";
 val _ = hide "I";
@@ -176,7 +179,7 @@ val SEMI_AUTOMATON_STATE_VAR_RENAMING_def =
 val SEMI_AUTOMATON_STATE_VAR_RENAMING___RUN =
   store_thm (
     "SEMI_AUTOMATON_STATE_VAR_RENAMING___RUN",
-    ``(!A f g i w w'.
+    ``(!A f g i w.
           IS_WELL_FORMED_SEMI_AUTOMATON A /\ INJ f A.S UNIV /\
           (!s. s IN A.S ==> (g (f s) = s)) /\ (!n. w n IN A.S) ==>
           (IS_RUN_THROUGH_SEMI_AUTOMATON

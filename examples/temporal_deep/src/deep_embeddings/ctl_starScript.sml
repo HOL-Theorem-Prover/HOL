@@ -16,9 +16,10 @@ map load
 *)
 
 open tuerk_tacticsLib res_quanTools prop_logicTheory infinite_pathTheory
-  symbolic_kripke_structureTheory numLib ltlTheory pred_setTheory
-  symbolic_semi_automatonTheory automaton_formulaTheory
-  temporal_deep_mixedTheory pairTheory set_lemmataTheory;
+     symbolic_kripke_structureTheory numLib ltlTheory pred_setTheory
+     symbolic_semi_automatonTheory automaton_formulaTheory
+     temporal_deep_mixedTheory pairTheory set_lemmataTheory;
+open Sanity;
 
 val _ = hide "S";
 val _ = hide "I";

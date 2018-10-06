@@ -30,6 +30,7 @@ open ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory
      omega_automaton_translationsTheory ctl_starTheory
      ltl_to_automaton_formulaTheory containerTheory
      psl_to_rltlTheory rltl_to_ltlTheory temporal_deep_simplificationsLib congLib kripke_structureTheory;
+open Sanity;
 
 val _ = hide "K";
 val _ = hide "S";
@@ -46,13 +47,6 @@ quietdec := false;
 
 
 val _ = new_theory "ibm";
-
-
-
-
-
-
-
 
 
 val A_UNIV___LTL_KS_SEM___CONCRETE_THM =
@@ -389,11 +383,12 @@ SUBGOAL_TAC `?m':num. (m' > n0) /\
     PROVE_CONDITION_NO_ASSUM 2 THEN1 ASM_REWRITE_TAC[] THEN
     Q_SPEC_NO_ASSUM 2 `n0` THEN
     FULL_SIMP_TAC std_ss [] THEN
-    Q_TAC EXISTS_TAC `MAX m' (SUC t'')` THEN
+    rename1 `P_SEM (INPUT_RUN_PATH_UNION B i w t2) h` THEN
+    Q_TAC EXISTS_TAC `MAX m' (SUC t2)` THEN
 
     ASM_SIMP_TAC arith_ss [GREATER_DEF, MAX_LT] THEN
     REPEAT STRIP_TAC THENL [
-      Q_TAC EXISTS_TAC `t''` THEN
+      Q_TAC EXISTS_TAC `t2` THEN
       ASM_SIMP_TAC arith_ss [],
 
       METIS_TAC[]
@@ -463,6 +458,7 @@ REPEAT STRIP_TAC THENL [
   ],
 
   RES_TAC THEN
+  rename1 `(_ >= t') /\ P_SEM _ p` THEN
   Q_TAC EXISTS_TAC `m * t' + t` THEN
   SUBGOAL_TAC `m * t' >= t'` THEN1 (
     `m > 0` by DECIDE_TAC THEN UNDISCH_HD_TAC THEN
@@ -518,6 +514,7 @@ val SYMBOLIC_KRIPKE_STRUCTURE_PRODUCT___TO___AUTOMATON =
     IS_TRANSITION_def, GSYM SUBSET_COMPL_DISJOINT,
     SYMBOLIC_KRIPKE_STRUCTURE_USED_VARS_def, UNION_SUBSET] THEN
   REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
+    rename1 `P_SEM (INPUT_RUN_PATH_UNION A i w t') p` THEN
     REMAINS_TAC `P_SEM (INPUT_RUN_PATH_UNION A i w 0) K.S0 /\
                 !n. XP_SEM K.R (INPUT_RUN_STATE_UNION A (i n) (w n),
                                 INPUT_RUN_STATE_UNION A (i (SUC n)) (w (SUC n)))` THEN1 (

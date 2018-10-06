@@ -18,6 +18,7 @@ open infinite_pathTheory pred_setTheory listTheory pairTheory xprop_logicTheory
    tuerk_tacticsLib temporal_deep_mixedTheory arithmeticTheory numLib
    automaton_formulaTheory alternating_omega_automataTheory
    symbolic_semi_automatonTheory;
+open Sanity;
 
 val _ = hide "S";
 val _ = hide "I";
@@ -168,6 +169,7 @@ val IMPL_COLLAPSED_RUN_SEM =
     ASM_REWRITE_TAC[] THEN
     REPEAT BOOL_EQ_STRIP_TAC THEN
     REPEAT FORALL_EQ_STRIP_TAC THEN
+    rename1 `s IN A.S` THEN
     Cases_on `~(s IN w n)` THENL [
         ASM_REWRITE_TAC[],
 
@@ -237,6 +239,7 @@ val EQ_COLLAPSED_RUN_SEM =
     ASM_REWRITE_TAC[] THEN
     REPEAT BOOL_EQ_STRIP_TAC THEN
     REPEAT FORALL_EQ_STRIP_TAC THEN
+    rename1 `s IN A.S` THEN
     Cases_on `~(s IN A.S)` THENL [
         ASM_REWRITE_TAC[] THEN
         PROVE_TAC[PATH_SUBSET_def, SUBSET_DEF],
@@ -319,12 +322,13 @@ val COLLAPSED_DECOLLAPSED_ELIM =
 val IS_REACHABLE_BY_DECOLLAPSED_EMPTY_ABORT_RUN_ELIM =
  store_thm
   ("IS_REACHABLE_BY_DECOLLAPSED_EMPTY_ABORT_RUN_ELIM",
-    ``!s n. (IS_REACHABLE_BY_RUN (s, n) (DECOLLAPSED_RUN (EMPTY_ABORT_RUN r))) = (s IN (EMPTY_ABORT_RUN r) n)``,
+    ``!s n r. (IS_REACHABLE_BY_RUN (s, n) (DECOLLAPSED_RUN (EMPTY_ABORT_RUN r))) = (s IN (EMPTY_ABORT_RUN r) n)``,
 
     Induct_on `n` THENL [
         SIMP_TAC std_ss [IS_REACHABLE_BY_RUN_def, DECOLLAPSED_RUN_def, alternating_run_S0],
 
         ASM_SIMP_TAC std_ss [IS_REACHABLE_BY_RUN_def, alternating_run_R, DECOLLAPSED_RUN_def] THEN
+        REPEAT GEN_TAC THEN
         Cases_on `EMPTY_ABORT_RUN r n = EMPTY` THENL [
             PROVE_TAC[MEMBER_NOT_EMPTY, EMPTY_ABORT_RUN_EMPTY_SUC],
             PROVE_TAC[MEMBER_NOT_EMPTY]
@@ -335,14 +339,14 @@ val IS_REACHABLE_BY_DECOLLAPSED_EMPTY_ABORT_RUN_ELIM =
 val IS_REACHABLE_BY_DECOLLAPSED_RUN =
  store_thm
   ("IS_REACHABLE_BY_DECOLLAPSED_RUN",
-    ``!s n. (IS_REACHABLE_BY_RUN (s, n) (DECOLLAPSED_RUN r)) ==> (s IN r n)``,
+    ``!s n r. (IS_REACHABLE_BY_RUN (s, n) (DECOLLAPSED_RUN r)) ==> (s IN r n)``,
 
     Induct_on `n` THENL [
         SIMP_TAC std_ss [IS_REACHABLE_BY_RUN_def, DECOLLAPSED_RUN_def, alternating_run_S0],
 
         ASM_SIMP_TAC std_ss [IS_REACHABLE_BY_RUN_def, alternating_run_R, DECOLLAPSED_RUN_def] THEN
         PROVE_TAC[]
-    ])
+    ]);
 
 
 
@@ -681,7 +685,7 @@ val NDET_TRUE___A_TRUE___IMPL =
  store_thm
   ("NDET_TRUE___A_TRUE___IMPL",
 
-    ``!A fi i i'. (IS_VALID_ALTERNATING_AUTOMATON A /\ (?S. A.AC = TRUE) /\
+    ``!A fi i i'. (IS_VALID_ALTERNATING_AUTOMATON A /\ (A.AC = TRUE) /\
              IS_VALID_INPUT_ENCODING A.A fi /\
              IS_VALID_ENCODED_INPUT A.A fi i i') ==>
         ((A_SEM i' (A_NDET (IMPL_COLLAPSED_ALTERNATING_SEMI_AUTOMATON A.A fi, A_TRUE))) = ALT_SEM A i)``,
@@ -701,7 +705,7 @@ val NDET_TRUE___A_TRUE___EQ =
  store_thm
   ("NDET_TRUE___A_TRUE___EQ",
 
-    ``!A fi i i'. (IS_VALID_ALTERNATING_AUTOMATON A /\ (?S. A.AC = TRUE) /\
+    ``!A fi i i'. (IS_VALID_ALTERNATING_AUTOMATON A /\ (A.AC = TRUE) /\
              IS_VALID_INPUT_ENCODING A.A fi /\
              IS_VALID_ENCODED_INPUT A.A fi i i') ==>
         ((A_SEM i' (A_NDET (EQ_COLLAPSED_ALTERNATING_SEMI_AUTOMATON A.A fi, A_TRUE))) = ALT_SEM A i)``,
@@ -729,7 +733,7 @@ val NDET_G___A_UNIVERSALLY_TOTAL_WEAK_CO_BUECHI___IMPL =
 
     ``!A fi i i' ac. (IS_VALID_ALTERNATING_AUTOMATON A /\
             IS_UNIVERSALLY_TOTAL_ALTERNATING_SEMI_AUTOMATON A.A /\
-            (?S. A.AC = WEAK_CO_BUECHI ac) /\
+            (A.AC = WEAK_CO_BUECHI ac) /\
              IS_VALID_INPUT_ENCODING A.A fi /\
              IS_VALID_ENCODED_INPUT A.A fi i i') ==>
         ((A_SEM i' (A_NDET (IMPL_COLLAPSED_ALTERNATING_SEMI_AUTOMATON A.A fi,

@@ -13,6 +13,7 @@ map load
 
 open pred_setTheory prop_logicTheory xprop_logicTheory infinite_pathTheory tuerk_tacticsLib numLib
   arithmeticTheory symbolic_kripke_structureTheory set_lemmataTheory;
+open Sanity;
 
 val _ = hide "S";
 val _ = hide "I";

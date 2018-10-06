@@ -18,6 +18,7 @@ open ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory
      infinite_pathTheory tuerk_tacticsLib symbolic_semi_automatonTheory listTheory pred_setTheory
      pred_setTheory rich_listTheory set_lemmataTheory temporal_deep_mixedTheory pairTheory symbolic_kripke_structureTheory
      numLib;
+open Sanity;
 
 val _ = hide "S";
 val _ = hide "I";
@@ -510,7 +511,7 @@ val LTL_TO_GEN_BUECHO_DS___A_NDET___IS_EMPTY___TO___KRIPKE_STRUCTURE_EMPTY =
 val GEN_BUECHI_KS_SEM___TO___KRIPKE_STRUCTURE_EMPTY =
  store_thm
   ("GEN_BUECHI_KS_SEM___TO___KRIPKE_STRUCTURE_EMPTY",
-   ``!A fc. DISJOINT A.S (SYMBOLIC_KRIPKE_STRUCTURE_USED_VARS M) ==> (
+   ``!A fc M. DISJOINT A.S (SYMBOLIC_KRIPKE_STRUCTURE_USED_VARS M) ==> (
     A_KS_SEM M (A_UNIV(A, A_NOT (A_BIGAND (MAP (\p. ACCEPT_COND_GF p) fc)))) =
     IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE (
       (SYMBOLIC_KRIPKE_STRUCTURE_PRODUCT M
@@ -1460,23 +1461,12 @@ val LTL_TO_GEN_BUECHI_DS___SEM___EQ =
         INPUT_RUN_STATE_UNION_def, LTL_TO_GEN_BUECHI_DS___USED_STATE_VARS_def,
         ltl_to_gen_buechi_ds_REWRITES, symbolic_semi_automaton_REWRITES
         ] THEN
-      EQ_TAC THENL [
-        STRIP_TAC THEN REPEAT GEN_TAC THEN STRIP_TAC THEN
-        Q_SPECL_NO_ASSUM 7 [`l`, `b1`, `b2`, `pf`] THEN
-        PROVE_CONDITION_NO_ASSUM 0 THEN1 ASM_REWRITE_TAC [] THEN
-        CLEAN_ASSUMPTIONS_TAC THEN
-        Q_SPECL_NO_ASSUM 6 [`l''`, `b1'`, `b2'`, `pf'`] THEN
-        UNDISCH_HD_TAC THEN ASM_REWRITE_TAC [] THEN
-        METIS_TAC[],
-
-
-        STRIP_TAC THEN REPEAT GEN_TAC THEN STRIP_TAC THEN
-        Q_SPECL_NO_ASSUM 8 [`l`, `b1`, `b2`, `pf`] THEN
-        UNDISCH_HD_TAC THEN ASM_REWRITE_TAC [] THEN STRIP_TAC THEN
-        Q_SPECL_NO_ASSUM 6 [`l'''`, `b1'`, `b2'`, `pf'`] THEN
-        UNDISCH_HD_TAC THEN ASM_REWRITE_TAC [] THEN
+      EQ_TAC THEN (
+        REPEAT STRIP_TAC THEN
+        RES_TAC THEN
+        RES_TAC THEN
         METIS_TAC[]
-      ]
+      )
     ]);
 
 
@@ -2079,7 +2069,7 @@ val LTL_TO_GEN_BUECHI_DS___BINDING_RUN_AND =
  store_thm
   ("LTL_TO_GEN_BUECHI_DS___BINDING_RUN_AND",
 
-   ``!DS i w b11 b12 l1 pf1 b12 b22 l2 pf2 sv.
+   ``!DS i w b11 b12 l1 pf1 b21 b22 l2 pf2 sv.
         (LTL_TO_GEN_BUECHI_DS___BINDING_RUN DS w (l1, b11, b12, pf1) i sv  /\
          LTL_TO_GEN_BUECHI_DS___BINDING_RUN DS w (l2, b21, b22, pf2) i sv) ==>
          LTL_TO_GEN_BUECHI_DS___BINDING_RUN DS w (LTL_AND(l1, l2), b11 /\ b21, b12 /\ b22, (\sv. P_AND(pf1 sv, pf2 sv))) i sv``,
@@ -2827,33 +2817,36 @@ val LEMMA_5_36___PSUNTIL =
       Cases_on `k` THENL [
          ASM_SIMP_TAC arith_ss [],
 
+         rename1 `SUC k > 0` THEN
          ASM_SIMP_TAC arith_ss [] THEN
          EQ_TAC THEN REPEAT STRIP_TAC THENL [
-            Cases_on `k = SUC n` THENL [
+            rename1 `k' <= SUC k` THEN
+            Cases_on `k' = SUC k` THENL [
                METIS_TAC[],
 
                DISJ2_TAC THEN
                REPEAT STRIP_TAC THENL [
-                  `k < SUC n /\ SUC n <= SUC n` by DECIDE_TAC THEN
+                  `k' < SUC k /\ SUC k <= SUC k` by DECIDE_TAC THEN
                   METIS_TAC[],
 
-                  EXISTS_TAC ``k:num`` THEN
-                  `k <= n /\ !j. j <= n ==> j <= SUC n` by DECIDE_TAC THEN
+                  EXISTS_TAC ``k':num`` THEN
+                  `k' <= k /\ !j. j <= k ==> j <= SUC k` by DECIDE_TAC THEN
                   METIS_TAC[]
                ]
             ],
 
-            EXISTS_TAC ``SUC n`` THEN
+            EXISTS_TAC ``SUC k`` THEN
             ASM_SIMP_TAC arith_ss [],
 
 
-            EXISTS_TAC ``k:num`` THEN
+            rename1 `k' <= k` THEN
+            EXISTS_TAC ``k':num`` THEN
             ASM_SIMP_TAC arith_ss [] THEN
             REPEAT STRIP_TAC THEN
-            Cases_on `j <= n` THENL [
+            Cases_on `j <= k` THENL [
                METIS_TAC[],
 
-               `j = SUC n` by DECIDE_TAC THEN
+               `j = SUC k` by DECIDE_TAC THEN
                METIS_TAC[]
             ]
          ]
@@ -2886,10 +2879,10 @@ val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_SUNTIL =
   REPEAT STRIP_TAC THENL [
 
 
-    `?P. (\n. LTL_SEM_TIME n (INPUT_RUN_PATH_UNION
+    Q.ABBREV_TAC `P = (\n. LTL_SEM_TIME n (INPUT_RUN_PATH_UNION
          (LTL_TO_GEN_BUECHI_DS___SEMI_AUTOMATON DS' sv) i w)
-                   (LTL_SUNTIL(LTL_PROP (pf1 sv), LTL_PROP (pf2 sv)))) = P` by METIS_TAC [] THEN
-    `?w'. PATH_EXTENSION w (sv DS.SN) P = w'` by PROVE_TAC[] THEN
+                   (LTL_SUNTIL(LTL_PROP (pf1 sv), LTL_PROP (pf2 sv))))` THEN
+    Q.ABBREV_TAC `w' = PATH_EXTENSION w (sv DS.SN) P` THEN
 
 
     `PATH_SUBSET w (LTL_TO_GEN_BUECHI_DS___USED_STATE_VARS DS sv)` by
@@ -2967,8 +2960,7 @@ val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_SUNTIL =
         UNDISCH_NO_TAC 1 (*sv DS.SN IN_INPUT_RUN_...*) THEN
         ASM_SIMP_TAC std_ss [XP_SEM_THM, INPUT_RUN_PATH_UNION_def, XP_SEM___XP_CURRENT, INPUT_RUN_STATE_UNION_def, LTL_TO_GEN_BUECHI_DS___SEMI_AUTOMATON_def,
           symbolic_semi_automaton_REWRITES, EXTEND_LTL_TO_GEN_BUECHI_DS___REWRITES, LTL_TO_GEN_BUECHI_DS___USED_STATE_VARS_def] THEN
-        GSYM_NO_TAC 8 (*Definition P*) THEN
-        ASM_SIMP_TAC std_ss [] THEN
+        Q.UNABBREV_TAC `P` THEN
         SUBGOAL_TAC `!w. (LTL_SEM_TIME n w
                           (LTL_SUNTIL (LTL_PROP (pf1 sv),LTL_PROP (pf2 sv)))) =
                     P_SEM (w n) (pf2 sv) \/
@@ -2985,10 +2977,10 @@ val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_SUNTIL =
           ASM_REWRITE_TAC[]
         ) THEN
         ASM_REWRITE_TAC[] THEN
-        SIMP_TAC std_ss [INPUT_RUN_PATH_UNION_def, INPUT_RUN_STATE_UNION_def,
+        FULL_SIMP_TAC std_ss [INPUT_RUN_PATH_UNION_def, INPUT_RUN_STATE_UNION_def,
           LTL_TO_GEN_BUECHI_DS___SEMI_AUTOMATON_def, LTL_TO_GEN_BUECHI_DS___USED_STATE_VARS_def,
           ltl_to_gen_buechi_ds_REWRITES, symbolic_semi_automaton_REWRITES,
-          EXTEND_LTL_TO_GEN_BUECHI_DS___REWRITES] THEN
+          EXTEND_LTL_TO_GEN_BUECHI_DS___REWRITES, GSYM IN_UNION, IN_ABS] THEN
         METIS_TAC[P_USED_VARS_INTER_SUBSET_THM],
 
 
@@ -3001,17 +2993,18 @@ val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_SUNTIL =
           ACCEPT_COND_SEM_def, ACCEPT_COND_SEM_TIME_def,
           ACCEPT_F_def, P_SEM_THM] THEN
         REPEAT STRIP_TAC THEN
-        GSYM_NO_TAC 13 (*Definition of P*) THEN
-        ASM_SIMP_TAC std_ss [LTL_SEM_TIME_def, INPUT_RUN_PATH_UNION_def, INPUT_RUN_STATE_UNION_def,
+        rename1 `(_ >= t1)` THEN
+        Q.UNABBREV_TAC `P` THEN
+        FULL_SIMP_TAC std_ss [LTL_SEM_TIME_def, INPUT_RUN_PATH_UNION_def, INPUT_RUN_STATE_UNION_def,
           LTL_TO_GEN_BUECHI_DS___SEMI_AUTOMATON_def, LTL_TO_GEN_BUECHI_DS___USED_STATE_VARS_def,
           ltl_to_gen_buechi_ds_REWRITES, symbolic_semi_automaton_REWRITES,
-          EXTEND_LTL_TO_GEN_BUECHI_DS___REWRITES] THEN
-        Cases_on `?t''. t'' >= t' /\ P_SEM
-            (w' t'' UNION (i t'' DIFF (\s. ?n. n < DS.SN + 1 /\ (s = sv n)))) (pf2 sv)` THENL [
+          EXTEND_LTL_TO_GEN_BUECHI_DS___REWRITES, IN_ABS] THEN
+        Cases_on `?t2. t2 >= t1 /\ P_SEM
+            (w' t2 UNION (i t2 DIFF (\s. ?n. n < DS.SN + 1 /\ (s = sv n)))) (pf2 sv)` THENL [
             METIS_TAC[],
 
             SIMP_ASSUMPTIONS_TAC std_ss [] THEN
-            EXISTS_TAC ``t':num`` THEN
+            EXISTS_TAC ``t1:num`` THEN
             ASM_SIMP_TAC arith_ss [] THEN
             METIS_TAC[P_USED_VARS_INTER_SUBSET_THM]
         ]

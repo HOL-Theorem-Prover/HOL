@@ -21,12 +21,14 @@ map load
 *)
 
 open ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory prop_logicTheory
-     infinite_pathTheory tuerk_tacticsLib symbolic_semi_automatonTheory listTheory pred_setTheory temporal_deep_mixedTheory
+     infinite_pathTheory tuerk_tacticsLib symbolic_semi_automatonTheory
+     listTheory pred_setTheory temporal_deep_mixedTheory
      pred_setTheory rich_listTheory set_lemmataTheory pairTheory
      ltl_to_automaton_formulaTheory numLib listLib rltlTheory
      rltl_to_ltlTheory psl_to_rltlTheory PathTheory UnclockedSemanticsTheory
      ProjectionTheory symbolic_kripke_structureTheory
      temporal_deep_simplificationsLibTheory;
+open Sanity;
 
 
 val _ = hide "S";
@@ -698,7 +700,7 @@ val LTL_TO_GEN_BUECHI_DS___KS_SEM___MIN___eval =
          (LTL_EQUIVALENT l l') ==>
          (l',a,T,pf) IN DS.B ==> !sv. (
          LTL_TO_GEN_BUECHI_DS___IS_ELEMENT_ITERATOR DS sv ==>
-         !i.
+         !M.
            LTL_KS_SEM M l = A_KS_SEM M (LTL_TO_GEN_BUECHI_DS___A_UNIV DS pf sv))``,
       METIS_TAC[LTL_TO_GEN_BUECHI_DS___KS_SEM___MIN, LTL_KS_SEM_def, LTL_SEM_def, LTL_EQUIVALENT_def])
 
@@ -796,10 +798,10 @@ val IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE_cong =
 val IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE___VAR_RENAMING___eval =
   store_thm ("IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE___VAR_RENAMING___eval",
 
-  ``!f K fc. COND_IMP_EQ (INJ f (SYMBOLIC_KRIPKE_STRUCTURE_USED_VARS K UNION
+  ``!f k fc. COND_IMP_EQ (INJ f (SYMBOLIC_KRIPKE_STRUCTURE_USED_VARS k UNION
                                 LIST_BIGUNION (MAP P_USED_VARS fc)) UNIV)
-            (IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE K fc)
-            (IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE (SYMBOLIC_KRIPKE_STRUCTURE_VAR_RENAMING f K) (MAP (P_VAR_RENAMING f) fc))``,
+            (IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE k fc)
+            (IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE (SYMBOLIC_KRIPKE_STRUCTURE_VAR_RENAMING f k) (MAP (P_VAR_RENAMING f) fc))``,
 
     SIMP_TAC std_ss [COND_IMP_EQ___REWRITE, IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE___IDENTIFY_VARIABLES,
     IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE___VAR_RENAMING]);
