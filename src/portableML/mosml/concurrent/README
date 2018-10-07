@@ -1,0 +1,2 @@
+Moscow ML does not provide any concurrency support, so this directory
+provides “fake” implementations of the API presented in poly/concurrent.
