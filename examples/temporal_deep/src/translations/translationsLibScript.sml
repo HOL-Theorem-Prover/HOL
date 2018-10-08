@@ -826,7 +826,7 @@ val INJ___ADD_FUNC =
 
     SIMP_TAC std_ss [INJ_DEF, IN_UNIV]);
 
-(*
+
 val POS_START_def =
   Define `
     (POS_START n [] h = 0) /\
@@ -924,7 +924,7 @@ val PRE_POS_START___REWRITES =
     (!n h h' l. (PRE (POS_START n (h'::l) h)) = (if (h' = h) then n else PRE (POS_START (SUC n) l h)))``,
 
     SIMP_TAC std_ss [POS_START_def, COND_RAND]);
-*)
+
 
 val NUM_FINITE_INJ_EXISTS =
   store_thm ("NUM_FINITE_INJ_EXISTS",
@@ -944,5 +944,10 @@ val NUM_FINITE_INJ_EXISTS =
     (INST_TYPE [beta |-> num] temporal_deep_mixedTheory.FINITE_INJ_EXISTS)) THEN
   ASM_SIMP_TAC std_ss [FINITE_EMPTY, DISJOINT_EMPTY]);
 
+
+val RES_FORALL_INSERT = store_thm ("RES_FORALL_INSERT",
+  ``!x xs P. RES_FORALL (x INSERT xs) P = (P x) /\ RES_FORALL xs P``,
+SIMP_TAC std_ss [res_quanTheory.RES_FORALL, IN_INSERT, DISJ_IMP_THM, FORALL_AND_THM] THEN
+METIS_TAC[])
 
 val _ = export_theory();

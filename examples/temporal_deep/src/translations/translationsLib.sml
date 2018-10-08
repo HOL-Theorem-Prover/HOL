@@ -24,12 +24,13 @@ map load
 *)
 
 open HolKernel boolLib bossLib
-    ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory prop_logicTheory
+     ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory prop_logicTheory
      infinite_pathTheory tuerk_tacticsLib symbolic_semi_automatonTheory listTheory pred_setTheory
-     temporal_deep_mixedTheory pred_setTheory rich_listTheory set_lemmataTheory pairTheory pred_setSyntax
+     temporal_deep_mixedTheory pred_setTheory rich_listTheory set_lemmataTheory
+     pairTheory pred_setSyntax
      ltl_to_automaton_formulaTheory numLib listLib translationsLibTheory
      rltl_to_ltlTheory rltlTheory computeLib congLib temporal_deep_simplificationsLib
-     Trace symbolic_kripke_structureTheory Varmap psl_lemmataTheory ProjectionTheory psl_to_rltlTheory;
+     Trace symbolic_kripke_structureTheory psl_lemmataTheory ProjectionTheory psl_to_rltlTheory;
 
 (*
 show_assums := false;
@@ -628,9 +629,10 @@ in
       fun TSPECL t thm =
         SPECL t (INST_TYPE [alpha |-> ltl_type] thm);
       val dsThm = (INST_TYPE [alpha |-> ltl_type] emptyDSThm);
+      val equiv_const = inst [alpha |-> ltl_type] ``LTL_EQUIVALENT:'a ltl -> 'a ltl -> bool``
 
+      val equivTHM = CONGRUENCE_SIMP_CONV equiv_const ltl_nnf_cs ltl_ss [] t;
 
-      val equivTHM = CONGRUENCE_SIMP_CONV ``LTL_EQUIVALENT:'a ltl -> 'a ltl -> bool`` ltl_nnf_cs ltl_ss [] t;
       val equivTHM = CONV_RULE (RAND_CONV (REWRITE_CONV [LTL_FALSE_def, LTL_TRUE_def])) equivTHM;
       val l = rand (concl (equivTHM));
 
@@ -694,6 +696,7 @@ local
       relations = [],
       dprocs = [],
       congs  = [IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE_cong]};
+
 
   val basic_compset = new_compset [ltl_to_gen_buechi_ds_REWRITES, LTL_TO_GEN_BUECHI_DS___IS_ELEMENT_ITERATOR_def]
   val final_cs = mk_congset [prop_logic_CS, xprop_logic_CS, special_CS];
@@ -772,7 +775,7 @@ in
     in
       thm
     end;
-end
+end;
 
 
 
@@ -797,7 +800,9 @@ local
                  symbolic_kripke_structure_REWRITES]
 
   val pred_set_forall_compset =
-    new_compset [PRED_SET_FORALL_INSERT, PRED_SET_FORALL_EMPTY,
+    new_compset [
+                res_quanTheory.RES_FORALL_EMPTY,
+                RES_FORALL_INSERT,
                 prove (``!x:num n:num. x + n >= n``, DECIDE_TAC),
                 AND_CLAUSES]
 
@@ -833,7 +838,8 @@ local
       val new_f_term = subst [(``n:num`` |-> used_vars_term),
                               ((mk_var ("f", ltl_type --> num)) |-> f_term)] new_f_term;
       val thm = SPEC new_f_term thm
-      val thm = CONV_RULE (RAND_CONV (RATOR_CONV (CBV_CONV pred_set_forall_compset))) thm val thm = REWRITE_RULE [INJ___ADD_FUNC] thm
+      val thm = CONV_RULE (RAND_CONV (RATOR_CONV (CBV_CONV pred_set_forall_compset))) thm
+      val thm = REWRITE_RULE [INJ___ADD_FUNC] thm
       val thm = BETA_RULE thm
       val thm = CONV_RULE (RATOR_CONV (SETIFY_CONV)) thm;
       val thm = GEN f_term thm
@@ -847,7 +853,7 @@ fun ks_fair_emptyness___num___eq thm ltl_type used_vars_num =
   let
     val var_set_term = rand (rator (rand (rator (body (rand (concl thm))))));
     val var_list = strip_set var_set_term;
-    val var_list_term = mk_list (var_list, ltl_type);
+    val var_list_term = listSyntax.mk_list (var_list, ltl_type);
 
     val pos_start_term = ``\x:'a. PRE (POS_START (0:num) (l:'a list) x)``;
     val pos_start_term = inst [alpha |-> ltl_type] pos_start_term
@@ -892,7 +898,7 @@ fun ks_fair_emptyness___num___impl thm ltl_type used_vars_num =
   let
     val var_set_term = rand (rator (rand (rator (body (rand (concl thm))))));
     val var_list = strip_set var_set_term;
-    val var_list_term = mk_list (var_list, ltl_type);
+    val var_list_term = listSyntax.mk_list (var_list, ltl_type);
 
 
     val f_term = bvar(rand (concl thm))
@@ -941,7 +947,6 @@ fun ks_fair_emptyness___num___impl thm ltl_type used_vars_num =
   in
     (thm, enum_list used_vars_num var_list)
   end
-
 
   fun ks_fair_emptyness___num mode thm num_thm ltl_type =
     let
