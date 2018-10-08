@@ -368,7 +368,10 @@ in
           | SOME i => buildheap_cline_mt := SOME i;
         List.app
           (maybe_check_load diag)
-          (("poly_decide_threadcount.uo", false)::objs);
+          ((case #multithread options of
+                NONE => []
+              | SOME _ => [("poly_decide_threadcount.uo", false)]) @
+           objs);
         if repl then
           (diag "Starting REPL";
            PolyML.print_depth 100;
