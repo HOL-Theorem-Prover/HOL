@@ -22,6 +22,7 @@ sig
   val ORELSE         : tactic * tactic -> tactic
   val ORELSE_LT      : list_tactic * list_tactic -> list_tactic
   val THEN1          : tactic * tactic -> tactic
+  val sTHEN1         : tactic * tactic -> tactic
   val >-             : tactic * tactic -> tactic
   val THEN_LT        : ('a,'b) gentactic * list_tactic -> ('a,'b) gentactic
   val >>>            : ('a,'b) gentactic * list_tactic -> ('a,'b) gentactic

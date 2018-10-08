@@ -149,29 +149,51 @@ fun (ltac1 ORELSE_LT ltac2) gl = ltac1 gl handle HOL_ERR _ => ltac2 gl
  *                  first subgoal of tac1
  *---------------------------------------------------------------------------*)
 
-fun op THEN1 (tac1: tactic, tac2: tactic) : tactic =
-   fn g =>
+fun sTHEN1 (tac1, tac2) g =
+  let
+    val (gl, jf) = tac1 g
+    val (h_g, t_gl) =
+        case gl of
+            [] => raise ERR "THEN1" "goal completely solved by first tactic"
+          | h::t => (h,t)
+    val (h_sgl, h_jf) = tac2 h_g
+    val _ = null h_sgl orelse
+            raise ERR "THEN1" "first subgoal not solved by second tactic"
+  in
+    (t_gl, fn ths => jf (h_jf [] :: ths))
+  end
+
+fun coreTHEN1 info tac1 tac2 g =
+  let
+    val (gl, jf) = tac1 g
+    fun massage (HOL_ERR {message,origin_function,origin_structure}) =
+      raise HOL_ERR {message = message ^ info,
+                     origin_structure = origin_structure,
+                     origin_function = origin_function}
+      | massage e = Exn.reraise e
+    val (h_g, t_gl) =
+        case gl of
+            [] => raise ERR "THEN1" "goal completely solved by first tactic"
+          | h::t => (h,t)
+    val f2 = Future.fork (fn () => tac2 h_g handle e as HOL_ERR _ => massage e)
+    fun J thl =
       let
-         val (gl, jf) = tac1 g
-         val (h_g, t_gl) =
-            case gl of
-               [] => raise ERR "THEN1" "goal completely solved by first tactic"
-             | h :: t => (h, t)
-         val (h_gl, h_jf) = tac2 h_g
-         val _ =
-            if null h_gl then ()
-            else raise ERR "THEN1" "first subgoal not solved by second tactic"
+        val (h_gl, h_jf) = Future.join f2
+        val _ = null h_gl orelse
+                massage (ERR "THEN1" "first subgoal not solved by second tactic")
       in
-         (t_gl, fn thl => jf (h_jf [] :: thl))
+        jf (h_jf [] :: thl)
       end
+  in
+    (t_gl, J)
+  end
+
+fun op THEN1 (tac1: tactic, tac2: tactic) : tactic = coreTHEN1 "" tac1 tac2
 
 val op >- = op THEN1
-fun op>>-(tac1, n) tac2 g =
-  op>- (tac1, tac2) g
-  handle e as HOL_ERR {message,origin_structure,origin_function} =>
-    raise HOL_ERR {message = message ^ " (THEN1 on line "^Int.toString n^")",
-                   origin_function = origin_function,
-                   origin_structure = origin_structure}
+fun op>>-(tac1, n) tac2 =
+  coreTHEN1 (" (THEN1 on line " ^ Int.toString n ^ ")") tac1 tac2
+
 fun (f ?? x) = f x
 
 

@@ -509,8 +509,10 @@ val WORD_NEG_RMUL_1 =
    SPECL [`v << n`,`1w`]) WORD_NEG_RMUL;
 
 fun MUST_BE_TAC th =
-  TRY (armLib.RES_MP1_TAC [`w` |-> `(2 * n + 1 >< 2 * n) (rs:word32)`] th
-         >> ASM_SIMP_TAC bool_ss []);
+  TRY (
+    sTHEN1 (armLib.RES_MP1_TAC [`w` |-> `(2 * n + 1 >< 2 * n) (rs:word32)`] th,
+            ASM_SIMP_TAC bool_ss [])
+  )
 
 val word_add_n2w_mod = prove(
   `!m n. ((n2w m):bool ** 'a) + n2w n = n2w ((m + n) MOD 2 ** ^WL)`,
