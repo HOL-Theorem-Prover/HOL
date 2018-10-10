@@ -27,10 +27,13 @@ open HolKernel boolLib bossLib
     ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory prop_logicTheory
      infinite_pathTheory tuerk_tacticsLib symbolic_semi_automatonTheory listTheory pred_setTheory
      temporal_deep_mixedTheory pred_setTheory rich_listTheory set_lemmataTheory pairTheory pred_setSyntax
-     ltl_to_automaton_formulaTheory numLib listLib translationsLibTheory
+     ltl_to_automaton_formulaTheory numLib listLib listSyntax translationsLibTheory
      rltl_to_ltlTheory rltlTheory computeLib congLib temporal_deep_simplificationsLib
      Trace symbolic_kripke_structureTheory Varmap psl_lemmataTheory ProjectionTheory psl_to_rltlTheory
-     translationsLib temporalLib bdd ctl_starTheory;
+     translationsLib temporalLib ctl_starTheory;
+
+(* this is Moscow ML only *)
+open bdd;
 
 (*
 show_assums := false;
@@ -307,8 +310,8 @@ help "intset"
     let
       val (f, _) = get_const term;
     in
-      if (f = "CTL_TRUE") then ("1", uv, []) else
-      if (f = "CTL_FALSE") then ("0", uv, []) else
+      if (f = "CTL_TRUE") then ("TRUE", uv, []) else
+      if (f = "CTL_FALSE") then ("FALSE", uv, []) else
       if (f = "CTL_PROP") then
         let
           val p_term = rand term;
@@ -506,7 +509,7 @@ help "intset"
         val bl = p_bdd::xp_bdd::(fc_bdds@ctl_bdds);
         val _ = definitions_of_bdd file_st s bl;
 
-        val _ = TextIO.output(file_st,"\n\nSPEC "^ctl_string^"\n\n");
+        val _ = TextIO.output(file_st,"\n\nCTLSPEC "^ctl_string^"\n\n");
         val _ = TextIO.flushOut file_st;
 
       in
@@ -603,15 +606,19 @@ fun model_check___psl_ks_sem f M =
       model_check___ks_fair_emptyness thm
     end
 
-(*
-(*examples*)
+(* examples:
 
 val ltl1 = ``LTL_SUNTIL (LTL_PROP (P_PROP a), LTL_PROP (P_PROP b))``;
-val ltl2 = ``LTL_EVENTUAL (LTL_AND(LTL_PROP (P_PROP b), LTL_PNEXT(LTL_PALWAYS (LTL_PROP (P_PROP a)))))``;
 
-model_check___ltl_equivalent_initial ltl1 ltl2
-model_check___ltl_equivalent ltl1 ltl2
+val ltl2 = ``LTL_EVENTUAL (LTL_AND (LTL_PROP (P_PROP b),
+				    LTL_PNEXT (LTL_PALWAYS (LTL_PROP (P_PROP a)))))``;
 
+(* SOME thm *)
+model_check___ltl_equivalent_initial ltl1 ltl2;
+
+(* NONE *)
+model_check___ltl_equivalent ltl1 ltl2;
 
 *)
+
 end
