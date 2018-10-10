@@ -25,21 +25,25 @@ quietdec := false;
 
 val IMP_REFL = prove (``!x. x ==> x``, SIMP_TAC std_ss []);
 
+fun extract_preorder_trans (Travrules.PREORDER(_,TRANS,_)) = TRANS;
+fun extract_preorder_refl (Travrules.PREORDER(_,_,REFL)) = REFL;
+fun extract_preorder_const (Travrules.PREORDER(t,_,_)) = t
 
-fun preorder_refl_thm (PREORDER ((name, thy), trans, refl)) =
+
+fun preorder_refl_thm preorder =
   let
-    val preorderTerm = prim_mk_const {Name=name,Thy=thy}
+    val preorderTerm = extract_preorder_const preorder
     val hol_type = hd (#2 (dest_type (type_of preorderTerm)))
     val var = mk_var ("x", hol_type)
-    val thm = refl var
-    val thm = GEN_ALL thm
+    val refl = extract_preorder_refl preorder;
+    val reflThm = refl {Rinst=preorderTerm,arg=var}
   in
-    thm
+    GEN_ALL reflThm
   end;
 
-fun preorder_trans_thm (PREORDER ((name, thy), trans, refl)) =
+fun preorder_trans_thm preorder =
   let
-    val preorderTerm = prim_mk_const {Name=name,Thy=thy}
+    val preorderTerm = extract_preorder_const preorder
     val hol_type = hd (#2 (dest_type (type_of preorderTerm)))
 
     val var1 = mk_var ("x1", hol_type)
@@ -49,7 +53,7 @@ fun preorder_trans_thm (PREORDER ((name, thy), trans, refl)) =
     val a2 = mk_comb ((mk_comb(preorderTerm,var2)), var3)
     val a1Thm = UNDISCH (ISPEC a1 IMP_REFL)
     val a2Thm = UNDISCH (ISPEC a2 IMP_REFL)
-    val thm = trans a1Thm a2Thm
+    val thm = extract_preorder_trans preorder a1Thm a2Thm
     val thm = DISCH a2 thm
     val thm = DISCH a1 thm
     val thm = REWRITE_RULE [AND_IMP_INTRO] thm

@@ -16,9 +16,10 @@ map load
 *)
 
 open tuerk_tacticsLib res_quanTools prop_logicTheory infinite_pathTheory
-  symbolic_kripke_structureTheory numLib ltlTheory pred_setTheory
-  symbolic_semi_automatonTheory automaton_formulaTheory
-  temporal_deep_mixedTheory pairTheory set_lemmataTheory;
+     symbolic_kripke_structureTheory numLib ltlTheory pred_setTheory
+     symbolic_semi_automatonTheory automaton_formulaTheory
+     temporal_deep_mixedTheory pairTheory set_lemmataTheory;
+open Sanity;
 
 val _ = hide "S";
 val _ = hide "I";
@@ -32,6 +33,7 @@ quietdec := false;
 *)
 
 val _ = new_theory "ctl_star";
+
 
 val ctl_star_def =
  Hol_datatype
@@ -686,7 +688,6 @@ val FAIR_CTL_SEM_THM___A_EVENTUAL_ALWAYS = prove(
     PROVE_TAC[]);
 
 
-
 val FAIR_CTL_SEM_THM___A_SUNTIL = prove(
     ``!M f1 f2 FC s.
    (FAIR_CTL_SEM M (FAIR_CTL_A_SUNTIL FC (f1, f2)) s = (!p. (IS_FAIR_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M FC p /\
@@ -705,23 +706,27 @@ val FAIR_CTL_SEM_THM___A_SUNTIL = prove(
     ] THEN
     CLEAN_ASSUMPTIONS_TAC THEN
     EQ_TAC THEN REPEAT STRIP_TAC THENL [
-      EXISTS_TAC ``j:num`` THEN
+      EXISTS_TAC ``k:num`` THEN
       ASM_REWRITE_TAC[] THEN
       REPEAT STRIP_TAC THEN
+      rename1 `k' < k` THEN
       RIGHT_DISJ_TAC THEN
-      SPECL_NO_ASSUM 2 [``j'':num``] THEN
+      SPECL_NO_ASSUM 2 [``k':num``] THEN
       FULL_SIMP_TAC std_ss [] THENL [
-        PROVE_TAC[],
-        `j''' < j` by DECIDE_TAC THEN PROVE_TAC[]
+        METIS_TAC[],
+        rename1 `j' < k'` THEN
+        `j' < k` by DECIDE_TAC THEN PROVE_TAC[]
       ],
 
-      Cases_on `k' < k` THENL [
+
+      rename1 `FAIR_CTL_SEM M f1 (p j)` THEN
+      Cases_on `j < k'` THENL [
         PROVE_TAC[],
 
-        Cases_on `k' = k` THENL [
-          PROVE_TAC[],
+        Cases_on `k' = j` THENL [
+          FULL_SIMP_TAC std_ss [],
 
-          `k < k'` by DECIDE_TAC THEN
+          `k' < j` by DECIDE_TAC THEN
           PROVE_TAC[]
         ]
       ],
@@ -908,7 +913,7 @@ val CTL_A_SWHILE_def = Define `CTL_A_SWHILE(f1,f2) = CTL_NOT(CTL_E_UNTIL(CTL_NOT
 
 val CTL_TO_FAIR_CTL_THM =
   store_thm ("CTL_TO_FAIR_CTL_THM",
-    ``!b f f1 f2.
+    ``!b f f1 f2 c fc.
         (CTL_TO_FAIR_CTL fc (CTL_PROP b) = (FAIR_CTL_PROP b)) /\
         (CTL_TO_FAIR_CTL fc (CTL_NOT f) = (FAIR_CTL_NOT (CTL_TO_FAIR_CTL fc f))) /\
         (CTL_TO_FAIR_CTL fc (CTL_AND (f1, f2)) = (FAIR_CTL_AND (CTL_TO_FAIR_CTL fc f1, CTL_TO_FAIR_CTL fc f2))) /\
@@ -1001,4 +1006,3 @@ val IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE___TO___CTL_KS_FAIR_SEM =
 
 
 val _ = export_theory();
-

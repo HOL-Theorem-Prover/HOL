@@ -13,7 +13,10 @@ map load
 
 open pred_setTheory prop_logicTheory xprop_logicTheory infinite_pathTheory tuerk_tacticsLib numLib
   arithmeticTheory symbolic_kripke_structureTheory set_lemmataTheory;
+open Sanity;
 
+val _ = hide "S";
+val _ = hide "I";
 
 (*
 show_assums := false;
@@ -25,6 +28,7 @@ quietdec := false;
 
 
 val _ = new_theory "ltl";
+
 
 (******************************************************************************
 * Syntax
@@ -438,7 +442,7 @@ val LTL_SEM_TIME___VAR_RENAMING =
       REPEAT STRIP_TAC THEN
       MATCH_MP_TAC P_SEM___VAR_RENAMING THEN
       UNDISCH_HD_TAC THEN
-      MATCH_MP_TAC INJ_SUBSET THEN
+      MATCH_MP_TAC INJ_SUBSET_DOMAIN THEN
       REWRITE_TAC [SUBSET_DEF, IN_UNION, LTL_USED_VARS_def,
         GSYM PATH_USED_VARS_THM] THEN
       PROVE_TAC[],
@@ -459,7 +463,7 @@ val LTL_SEM_TIME___VAR_RENAMING =
       NTAC 2 (WEAKEN_NO_TAC 1) THEN
       STRIP_TAC THEN
       UNDISCH_HD_TAC THEN
-      MATCH_MP_TAC INJ_SUBSET THEN
+      MATCH_MP_TAC INJ_SUBSET_DOMAIN THEN
       SIMP_TAC std_ss [SUBSET_DEF, IN_UNION] THEN
       PROVE_TAC[],
 
@@ -479,7 +483,7 @@ val LTL_SEM_TIME___VAR_RENAMING =
       NTAC 2 (WEAKEN_NO_TAC 1) THEN
       STRIP_TAC THEN
       UNDISCH_HD_TAC THEN
-      MATCH_MP_TAC INJ_SUBSET THEN
+      MATCH_MP_TAC INJ_SUBSET_DOMAIN THEN
       SIMP_TAC std_ss [SUBSET_DEF, IN_UNION] THEN
       PROVE_TAC[],
 
@@ -503,7 +507,7 @@ val LTL_SEM_TIME___VAR_RENAMING =
       NTAC 2 (WEAKEN_NO_TAC 1) THEN
       STRIP_TAC THEN
       UNDISCH_HD_TAC THEN
-      MATCH_MP_TAC INJ_SUBSET THEN
+      MATCH_MP_TAC INJ_SUBSET_DOMAIN THEN
       SIMP_TAC std_ss [SUBSET_DEF, IN_UNION] THEN
       PROVE_TAC[]
    ]);
@@ -521,7 +525,7 @@ val LTL_SEM_TIME___VAR_RENAMING___PATH_RESTRICT =
    CONV_TAC (LHS_CONV (ONCE_REWRITE_CONV [LTL_USED_VARS_INTER_THM])) THEN
    MATCH_MP_TAC LTL_SEM_TIME___VAR_RENAMING THEN
    UNDISCH_HD_TAC THEN
-   MATCH_MP_TAC INJ_SUBSET THEN
+   MATCH_MP_TAC INJ_SUBSET_DOMAIN THEN
    SIMP_TAC std_ss [SUBSET_DEF, IN_UNION, GSYM PATH_USED_VARS_THM,
     PATH_RESTRICT_def, PATH_MAP_def, IN_INTER] THEN
    PROVE_TAC[]);
@@ -859,7 +863,7 @@ val LTL_KS_SEM___VAR_RENAMING =
 
       Q_SPEC_NO_ASSUM 4 `PATH_VAR_RENAMING f w` THEN
       UNDISCH_HD_TAC THEN
-      REMAINS_TAC  `(!n.
+      REMAINS_TAC `(!n.
         XP_SEM (XP_VAR_RENAMING f M.R)
           (PATH_VAR_RENAMING f w n,PATH_VAR_RENAMING f w (SUC n)) =
         XP_SEM M.R (w n, w (SUC n))) /\
@@ -874,7 +878,7 @@ val LTL_KS_SEM___VAR_RENAMING =
         SIMP_TAC std_ss [PATH_VAR_RENAMING_def, PATH_MAP_def] THEN
         MATCH_MP_TAC (GSYM XP_SEM___VAR_RENAMING) THEN
         UNDISCH_NO_TAC 4 THEN
-        MATCH_MP_TAC INJ_SUBSET THEN
+        MATCH_MP_TAC INJ_SUBSET_DOMAIN THEN
         SIMP_ALL_TAC std_ss [SYMBOLIC_KRIPKE_STRUCTURE_USED_VARS_def,
                          IN_UNION, SUBSET_DEF] THEN
         PROVE_TAC[],
@@ -883,7 +887,7 @@ val LTL_KS_SEM___VAR_RENAMING =
         SIMP_TAC std_ss [PATH_VAR_RENAMING_def, PATH_MAP_def] THEN
         MATCH_MP_TAC (GSYM P_SEM___VAR_RENAMING) THEN
         UNDISCH_NO_TAC 4 THEN
-        MATCH_MP_TAC INJ_SUBSET THEN
+        MATCH_MP_TAC INJ_SUBSET_DOMAIN THEN
         SIMP_ALL_TAC std_ss [SYMBOLIC_KRIPKE_STRUCTURE_USED_VARS_def,
                          IN_UNION, SUBSET_DEF] THEN
         PROVE_TAC[],
@@ -891,7 +895,7 @@ val LTL_KS_SEM___VAR_RENAMING =
 
         MATCH_MP_TAC (GSYM LTL_SEM_TIME___VAR_RENAMING) THEN
         UNDISCH_NO_TAC 4 THEN
-        MATCH_MP_TAC INJ_SUBSET THEN
+        MATCH_MP_TAC INJ_SUBSET_DOMAIN THEN
         SIMP_ALL_TAC std_ss [SYMBOLIC_KRIPKE_STRUCTURE_USED_VARS_def,
                          IN_UNION, SUBSET_DEF, GSYM PATH_USED_VARS_THM] THEN
         PROVE_TAC[]
@@ -1035,7 +1039,7 @@ REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
 val LTL_EVENTUAL___PALWAYS =
  store_thm
   ("LTL_EVENTUAL___PALWAYS",
-   ``!k w. (LTL_SEM_TIME k w (LTL_EVENTUAL p)) ==>
+   ``!k w p. (LTL_SEM_TIME k w (LTL_EVENTUAL p)) ==>
       (!l. l <= k ==> LTL_SEM_TIME l w (LTL_EVENTUAL p))``,
 
    REWRITE_TAC[LTL_SEM_THM] THEN
@@ -1200,129 +1204,5 @@ val LTL_MONOTICITY_LAWS =
    METIS_TAC[]
    );
 
-(*
-!l t v. ?n0. !n. (n >= n0) ==> (
-  !p0. ?p. (p >= p0) ==> (
-    (LTL_SEM_TIME t v l =
-     LTL_SEM_TIME t (CUT_PATH_PERIODICALLY v n p) l) /\
-    ((!t'. t' >= t ==> LTL_SEM_TIME t' v l) =
-     (!t'. t' >= t ==> LTL_SEM_TIME t' (CUT_PATH_PERIODICALLY v n p) l)) /\
-    ((!t'. t' >= t ==> ~LTL_SEM_TIME t' v l) =
-     (!t'. t' >= t ==> ~LTL_SEM_TIME t' (CUT_PATH_PERIODICALLY v n p) l))
-  )
-)
-
-
-INDUCT_THEN ltl_induct ASSUME_TAC THENL [
-  REPEAT STRIP_TAC THEN
-  SIMP_TAC std_ss [LTL_SEM_TIME_def] THEN
-  Cases_on `?t'. t' >= t /\ (~P_SEM (v t') p)` THENL [
-    SIMP_ALL_TAC std_ss [] THEN
-    EXISTS_TAC ``t':num`` THEN
-    REPEAT STRIP_TAC THEN
-    EXISTS_TAC ``1:num`` THEN
-    REPEAT STRIP_TAC THENL [
-      ASM_SIMP_TAC arith_ss [CUT_PATH_PRERIODICALLY___BEGINNING],
-
-      EQ_TAC THEN REPEAT STRIP_TAC THENL [
-        PROVE_TAC [],
-
-        `t' < 1 + n` by DECIDE_TAC THEN
-        PROVE_TAC [CUT_PATH_PRERIODICALLY___BEGINNING]
-      ]
-    ],
-
-
-    SIMP_ALL_TAC std_ss [] THEN
-    EXISTS_TAC ``t:num`` THEN
-    REPEAT STRIP_TAC THEN
-    EXISTS_TAC ``1:num`` THEN
-    REPEAT STRIP_TAC THENL [
-      ASM_SIMP_TAC arith_ss [CUT_PATH_PRERIODICALLY___BEGINNING],
-
-      ASM_SIMP_TAC std_ss [IMP_DISJ_THM] THEN
-      GEN_TAC THEN
-      RIGHT_DISJ_TAC THEN
-      Cases_on `t' < 1 + n` THENL [
-        PROVE_TAC [CUT_PATH_PERIODICALLY___BEGINNING],
-
-        `t' >= n` by DECIDE_TAC THEN
-        ASM_SIMP_TAC std_ss [CUT_PATH_PERIODICALLY_1] THEN
-        PROVE_TAC[]
-      ]
-    ]
-  ],
-
-
-  REWRITE_TAC[LTL_SEM_TIME_def] THEN
-  ONCE_REWRITE_TAC[prove (``!A B C. (A /\ B /\ C) = (A /\ C /\ B)``, PROVE_TAC[])] THEN
-  ONCE_REWRITE_TAC[prove (``!A B. ((~A) = (~B)) = (A=B)``, PROVE_TAC[])] THEN
-  ASM_REWRITE_TAC[],
-
-
-
-  REPEAT STRIP_TAC THEN
-  Q_SPECL_NO_ASSUM 1 [`t`, `v`] THEN
-  Q_SPECL_NO_ASSUM 1 [`t`, `v`] THEN
-  SIMP_ALL_TAC std_ss [] THEN
-  EXISTS_TAC ``MAX n0 n0'`` THEN
-  REPEAT STRIP_TAC THEN
-  Q_SPEC_NO_ASSUM 2 `n` THEN
-  Q_SPEC_NO_ASSUM 2 `n` THEN
-  `(n >= n0) /\ (n >= n0')` by PROVE_TAC[MAX_LE, GREATER_EQ] THEN
-  FULL_SIMP_TAC std_ss [] THEN
-  Q_SPEC_NO_ASSUM 3 `p0` THEN
-  Q_SPEC_NO_ASSUM 3 `p0` THEN
-  SIMP_ALL_TAC std_ss [] THEN
-  EXISTS_TAC ``p*p'`` THEN
-  REPEAT STRIP_TAC THEN
-  REMAINS_TAC `(p > 0) /\ (p' > 0)` THEN
-  `(p* >= p0) /\ (p >= p0')` by PROVE_TAC[MAX_LE, GREATER_EQ] THEN
-
-  EXISTS_TAC ``MAX p0 p0'`` THEN
-  REPEAT STRIP_TAC THEN
-  `(p >= p0) /\ (p >= p0')` by PROVE_TAC[MAX_LE, GREATER_EQ] THEN
-  FULL_SIMP_TAC std_ss [LTL_SEM_TIME_def],
-
-
-  REWRITE_TAC[LTL_SEM_TIME_def] THEN METIS_TAC[],
-
-  REPEAT STRIP_TAC THEN
-  SIMP_TAC std_ss [LTL_SEM_TIME_def] THEN
-  Cases_on `~?k. LTL_SEM_TIME k v l'` THENL [
-    FULL_SIMP_TAC std_ss [] THEN
-    REMAINS_TAC `?n0. !n. n >= n0 ==> ?p0. !p.  p >= p0 ==>
-            !k.
-              ~(k >= t) \/
-              ~LTL_SEM_TIME k (CUT_PATH_PERIODICALLY v n p) l' \/
-              ?j.
-                (t <= j /\ j < k) /\
-                ~LTL_SEM_TIME j (CUT_PATH_PERIODICALLY v n p) l
-    METIS_TAC[]
-  )
-  Q_SPECL_NO_ASSUM 1 [`t`, `v`] THEN
-  Q_SPECL_NO_ASSUM 1 [`t`, `v`] THEN
-  SIMP_ALL_TAC std_ss []
-  EXISTS_TAC ``MAX n0 n0'`` THEN
-  REPEAT STRIP_TAC THEN
-  Q_SPEC_NO_ASSUM 2 `n` THEN
-  Q_SPEC_NO_ASSUM 2 `n` THEN
-  `(n >= n0) /\ (n >= n0')` by PROVE_TAC[MAX_LE, GREATER_EQ] THEN
-  FULL_SIMP_TAC std_ss [] THEN
-  EXISTS_TAC ``MAX p0 p0'`` THEN
-  REPEAT STRIP_TAC THEN
-  Q_SPEC_NO_ASSUM 4 `p` THEN
-  Q_SPEC_NO_ASSUM 4 `p` THEN
-  `(p >= p0) /\ (p >= p0')` by PROVE_TAC[MAX_LE, GREATER_EQ] THEN
-  FULL_SIMP_TAC std_ss [LTL_SEM_TIME_def],
-
-
-
-  REWRITE_TAC[LTL_SEM_TIME_def] THEN METIS_TAC[],
-
-  ALL_TAC,
-
-*)
 
 val _ = export_theory();
-
