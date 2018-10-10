@@ -1,2 +1,5 @@
-INCLUDES=../tools ../deep_embeddings ../translations ${HOLDIR}/examples/PSL/path ${HOLDIR}/examples/PSL/1.1/official-semantics/
+PRE_INCLUDES=${HOLDIR}/examples/PSL/path
 
+INCLUDES = ${HOLDIR}/examples/PSL/1.1/official-semantics \
+	${HOLDIR}/examples/HolBdd ${HOLDIR}/examples/muddy \
+	../tools ../deep_embeddings ../translations

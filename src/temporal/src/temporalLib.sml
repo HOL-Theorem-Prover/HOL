@@ -1389,7 +1389,7 @@ fun SMV_RUN_FILE smv_file =
     let
   val _ = case OS.Process.getEnv "HOL4_SMV_EXECUTABLE" of
 	    SOME file =>
-	      Process.system (file ^ " " ^ smv_file ^ " > " ^
+	      Process.system (file ^ " " ^ (!smv_tmp_dir) ^ smv_file ^ " > " ^
 			      (!smv_tmp_dir) ^ "smv_out")
 	  | NONE =>
 	    raise Feedback.mk_HOL_ERR "SMV" smv_file
