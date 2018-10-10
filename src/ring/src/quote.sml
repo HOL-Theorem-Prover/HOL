@@ -1,7 +1,7 @@
-structure quote =
+structure quote :> quote =
 struct
 
-open HolKernel Parse quoteTheory;
+open HolKernel Parse boolLib quoteTheory;
 
 local
 structure Parse =
