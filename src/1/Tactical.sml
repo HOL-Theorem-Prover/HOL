@@ -51,20 +51,14 @@ val _ = op THEN_LT : list_tactic * list_tactic -> list_tactic ;
  *---------------------------------------------------------------------------*)
 
 fun ALLGOALS tac2 gl =
-         case itlist
-                (fn goal => fn (G, V, lengths) =>
-                  case tac2 goal of
-                     ([], vfun) => let
-                                      val th = vfun []
-                                   in
-                                      (G, empty th :: V, 0 :: lengths)
-                                   end
-                   | (goals, vfun) =>
-                        (goals @ G, vfun :: V, length goals :: lengths))
-                gl ([], [], []) of
-            ([], V, _) =>
-                ([], let val ths = map (fn f => f []) V in empty ths end)
-          | (G, V, lengths) => (G, mapshape lengths V)
+  let
+    val (gll,pl) = unzip (Parmap.parmap tac2 gl)
+                   handle e => case Par_Exn.dest e of
+                                   SOME (h::_) => Exn.reraise h
+                                 | _ => Exn.reraise e
+  in
+    (List.concat gll, mapshape (map length gll) pl)
+  end
 
 (*---------------------------------------------------------------------------
  * fun (tac1:tactic) THEN (tac2:tactic) : tactic = fn g =>
