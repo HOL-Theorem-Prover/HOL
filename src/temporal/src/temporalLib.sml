@@ -1389,20 +1389,19 @@ fun SMV_RUN_FILE smv_file =
     let
   val _ = case OS.Process.getEnv "HOL4_SMV_EXECUTABLE" of
 	    SOME file =>
-	      Process.system (file ^ " " ^ (!smv_tmp_dir) ^ smv_file ^ " > " ^
+	      Process.system (file ^ " " ^ smv_file ^ " > " ^
 			      (!smv_tmp_dir) ^ "smv_out")
 	  | NONE =>
 	    raise Feedback.mk_HOL_ERR "SMV" smv_file
 		 ("SMV not configured: set the HOL4_SMV_EXECUTABLE environment" ^
 		  "variable to point to the SMV executable file.")
-  val file_in = TextIO.openIn((!smv_tmp_dir)^"smv_out")
+  val file_in = TextIO.openIn ((!smv_tmp_dir) ^ "smv_out")
   val s = ref (TextIO.inputLine file_in)
   val sl = ref ([]:string list)
   val _ = while ((!s)<>NONE) do (sl:=(valOf (!s))::(!sl); s:=TextIO.inputLine file_in)
   val _ = TextIO.closeIn file_in
   val p = interpret_smv_output(rev(!sl))
-  val _ = Process.system("rm "^(!smv_tmp_dir)^"smv_file.smv")
-  val _ = Process.system("rm "^(!smv_tmp_dir)^"smv_out")
+  val _ = Process.system ("rm " ^ (!smv_tmp_dir) ^ "smv_out")
      in
       if #Proved(p) then true
       else
@@ -1419,8 +1418,9 @@ fun SMV_RUN smv_program =
        TextIO.output(file_st,smv_program);
        TextIO.flushOut file_st;
        TextIO.closeOut file_st)
+     val p = SMV_RUN_FILE ((!smv_tmp_dir) ^ "smv_file.smv")
   in
-    SMV_RUN_FILE ((!smv_tmp_dir)^"smv_file.smv")
+    (Process.system ("rm " ^ (!smv_tmp_dir)^"smv_file.smv"); p)
   end
 
 fun SMV_AUTOMATON_CONV automaton =

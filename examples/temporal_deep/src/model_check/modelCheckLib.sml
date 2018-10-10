@@ -606,4 +606,19 @@ fun model_check___psl_ks_sem f M =
       model_check___ks_fair_emptyness thm
     end
 
+(* examples:
+
+val ltl1 = ``LTL_SUNTIL (LTL_PROP (P_PROP a), LTL_PROP (P_PROP b))``;
+
+val ltl2 = ``LTL_EVENTUAL (LTL_AND (LTL_PROP (P_PROP b),
+				    LTL_PNEXT (LTL_PALWAYS (LTL_PROP (P_PROP a)))))``;
+
+(* SOME thm *)
+model_check___ltl_equivalent_initial ltl1 ltl2;
+
+(* NONE *)
+model_check___ltl_equivalent ltl1 ltl2;
+
+*)
+
 end

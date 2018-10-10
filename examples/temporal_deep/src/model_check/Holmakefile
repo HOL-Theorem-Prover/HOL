@@ -3,3 +3,12 @@ PRE_INCLUDES=${HOLDIR}/examples/PSL/path
 INCLUDES = ${HOLDIR}/examples/PSL/1.1/official-semantics \
 	${HOLDIR}/examples/HolBdd ${HOLDIR}/examples/muddy \
 	../tools ../deep_embeddings ../translations
+
+TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
+
+all: $(TARGETS) selftest.exe
+
+selftest.exe: selftest.uo modelCheckLib.uo
+	$(HOLMOSMLC) -I ${PRE_INCLUDES} -o $@ $<
+
+.PHONY: all
