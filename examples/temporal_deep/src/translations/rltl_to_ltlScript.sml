@@ -14,6 +14,7 @@ map load
 *)
 
 open rltlTheory ltlTheory prop_logicTheory pred_setTheory;
+open Sanity;
 
 (*
 show_assums := false;
@@ -111,7 +112,7 @@ val RLTL_TO_LTL_THM =
 val RLTL_TO_LTL_THM___KS_SEM =
  store_thm
   ("RLTL_TO_LTL_THM___KS_SEM",
-   ``!f K. (RLTL_KS_SEM K f = LTL_KS_SEM K (RLTL_TO_LTL P_FALSE P_FALSE f))``,
+   ``!f k. (RLTL_KS_SEM k f = LTL_KS_SEM k (RLTL_TO_LTL P_FALSE P_FALSE f))``,
 
   SIMP_TAC std_ss [RLTL_KS_SEM_def, LTL_KS_SEM_def, RLTL_SEM_def, LTL_SEM_def,
     RLTL_TO_LTL_THM]);
@@ -169,4 +170,3 @@ val IS_LTL_RLTL_THM =
 
 
 val _ = export_theory();
-

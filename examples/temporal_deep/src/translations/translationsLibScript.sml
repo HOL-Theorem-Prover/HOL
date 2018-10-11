@@ -21,12 +21,14 @@ map load
 *)
 
 open ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory prop_logicTheory
-     infinite_pathTheory tuerk_tacticsLib symbolic_semi_automatonTheory listTheory pred_setTheory temporal_deep_mixedTheory
+     infinite_pathTheory tuerk_tacticsLib symbolic_semi_automatonTheory
+     listTheory pred_setTheory temporal_deep_mixedTheory
      pred_setTheory rich_listTheory set_lemmataTheory pairTheory
      ltl_to_automaton_formulaTheory numLib listLib rltlTheory
      rltl_to_ltlTheory psl_to_rltlTheory PathTheory UnclockedSemanticsTheory
      ProjectionTheory symbolic_kripke_structureTheory
      temporal_deep_simplificationsLibTheory;
+open Sanity;
 
 
 val _ = hide "S";
@@ -698,7 +700,7 @@ val LTL_TO_GEN_BUECHI_DS___KS_SEM___MIN___eval =
          (LTL_EQUIVALENT l l') ==>
          (l',a,T,pf) IN DS.B ==> !sv. (
          LTL_TO_GEN_BUECHI_DS___IS_ELEMENT_ITERATOR DS sv ==>
-         !i.
+         !M.
            LTL_KS_SEM M l = A_KS_SEM M (LTL_TO_GEN_BUECHI_DS___A_UNIV DS pf sv))``,
       METIS_TAC[LTL_TO_GEN_BUECHI_DS___KS_SEM___MIN, LTL_KS_SEM_def, LTL_SEM_def, LTL_EQUIVALENT_def])
 
@@ -796,10 +798,10 @@ val IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE_cong =
 val IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE___VAR_RENAMING___eval =
   store_thm ("IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE___VAR_RENAMING___eval",
 
-  ``!f K fc. COND_IMP_EQ (INJ f (SYMBOLIC_KRIPKE_STRUCTURE_USED_VARS K UNION
+  ``!f k fc. COND_IMP_EQ (INJ f (SYMBOLIC_KRIPKE_STRUCTURE_USED_VARS k UNION
                                 LIST_BIGUNION (MAP P_USED_VARS fc)) UNIV)
-            (IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE K fc)
-            (IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE (SYMBOLIC_KRIPKE_STRUCTURE_VAR_RENAMING f K) (MAP (P_VAR_RENAMING f) fc))``,
+            (IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE k fc)
+            (IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE (SYMBOLIC_KRIPKE_STRUCTURE_VAR_RENAMING f k) (MAP (P_VAR_RENAMING f) fc))``,
 
     SIMP_TAC std_ss [COND_IMP_EQ___REWRITE, IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE___IDENTIFY_VARIABLES,
     IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE___VAR_RENAMING]);
@@ -808,11 +810,11 @@ val IS_ELEMENT_ITERATOR___ID =
   store_thm ("IS_ELEMENT_ITERATOR___ID",
 
     ``!S n0. IS_ELEMENT_ITERATOR (\n:num. n) n0 S =
-          PRED_SET_FORALL (\n. n >= n0) S``,
+          RES_FORALL S (\n. n >= n0)``,
 
     SIMP_TAC std_ss [IS_ELEMENT_ITERATOR_def,
-                    PRED_SET_FORALL_def, IMP_DISJ_THM,
-                    NOT_LESS, GREATER_EQ] THEN
+                    IMP_DISJ_THM,
+                    NOT_LESS, GREATER_EQ, RES_FORALL_THM] THEN
     PROVE_TAC[]);
 
 
@@ -823,6 +825,62 @@ val INJ___ADD_FUNC =
                   INJ f S UNIV``,
 
     SIMP_TAC std_ss [INJ_DEF, IN_UNIV]);
+
+
+val POS_START_def =
+  Define `
+    (POS_START n [] h = 0) /\
+    (POS_START n (h'::l) h = (if (h = h') then (SUC n) else (POS_START (SUC n) l h)))`
+
+
+val POS_START_NOT_FOUND =
+  store_thm ("POS_START_NOT_FOUND",
+    ``!n l h. ((POS_START n l h = 0) = ~(MEM h l))``,
+
+    Induct_on `l` THENL [
+      SIMP_TAC list_ss [POS_START_def],
+
+      ASM_SIMP_TAC list_ss [POS_START_def] THEN
+      REPEAT GEN_TAC THEN
+      Cases_on `h' = h` THENL [
+        ASM_SIMP_TAC arith_ss [],
+        ASM_REWRITE_TAC[]
+      ]
+    ]);
+
+val POS_START_FOUND =
+  store_thm ("POS_START_FOUND",
+    ``!n l h. (MEM h l ==> (POS_START n l h > n) /\ (EL ((PRE (POS_START n l h)) - n) l = h))``,
+
+    Induct_on `l` THENL [
+      SIMP_TAC list_ss [],
+
+      ASM_SIMP_TAC list_ss [POS_START_def] THEN
+      REPEAT GEN_TAC THEN
+      Cases_on `h' = h` THENL [
+        ASM_SIMP_TAC list_ss [],
+
+        ASM_SIMP_TAC list_ss [] THEN
+        STRIP_TAC THEN
+        Q_SPECL_NO_ASSUM 2 [`SUC n`, `h'`] THEN
+        UNDISCH_HD_TAC THEN ASM_REWRITE_TAC[] THEN REPEAT STRIP_TAC THENL [
+          ASM_SIMP_TAC arith_ss [],
+          Cases_on `(POS_START (SUC n) l h')` THEN (
+            SIMP_ALL_TAC arith_ss []
+          ) THEN
+          Cases_on `n'` THEN SIMP_ALL_TAC arith_ss [] THEN
+          `SUC n'' - n = SUC (n'' - n)` by DECIDE_TAC THEN
+          ASM_SIMP_TAC list_ss []
+        ]
+      ]
+    ]);
+
+
+val POS_START_RANGE =
+  store_thm ("POS_START_RANGE",
+    ``!n l h. (POS_START n l h > n) \/ (POS_START n l h = 0)``,
+    PROVE_TAC[POS_START_FOUND, POS_START_NOT_FOUND]);
+
 
 
 val INJ_POS_START___MP_HELPER =
@@ -859,6 +917,7 @@ Induct_on `l` THENL [
   ]
 ]);
 
+
 val PRE_POS_START___REWRITES =
   store_thm ("PRE_POS_START___REWRITES",
     ``!n h. (PRE (POS_START n [] h) = 0) /\
@@ -866,21 +925,29 @@ val PRE_POS_START___REWRITES =
 
     SIMP_TAC std_ss [POS_START_def, COND_RAND]);
 
+
 val NUM_FINITE_INJ_EXISTS =
   store_thm ("NUM_FINITE_INJ_EXISTS",
 
   ``!S. FINITE S ==> ?f:'a -> num. INJ f S UNIV``,
 
   REPEAT STRIP_TAC THEN
-  ASSUME_TAC (INST_TYPE [beta |-> num] temporal_deep_mixedTheory.FINITE_INJ_EXISTS) THEN
-  PROVE_CONDITION_NO_ASSUM 0 THEN1 (
+  SUBGOAL_TAC `INFINITE (UNIV:num set)` THEN1 (
     SIMP_TAC std_ss [INFINITE_UNIV] THEN
     EXISTS_TAC ``\x. SUC x`` THEN
     SIMP_TAC arith_ss [] THEN
     EXISTS_TAC ``0:num`` THEN
     SIMP_TAC arith_ss []
   ) THEN
-  METIS_TAC[FINITE_EMPTY]);
 
+  MP_TAC (Q.SPECL [`S`, `EMPTY`]
+    (INST_TYPE [beta |-> num] temporal_deep_mixedTheory.FINITE_INJ_EXISTS)) THEN
+  ASM_SIMP_TAC std_ss [FINITE_EMPTY, DISJOINT_EMPTY]);
+
+
+val RES_FORALL_INSERT = store_thm ("RES_FORALL_INSERT",
+  ``!x xs P. RES_FORALL (x INSERT xs) P = (P x) /\ RES_FORALL xs P``,
+SIMP_TAC std_ss [res_quanTheory.RES_FORALL, IN_INSERT, DISJ_IMP_THM, FORALL_AND_THM] THEN
+METIS_TAC[])
 
 val _ = export_theory();
