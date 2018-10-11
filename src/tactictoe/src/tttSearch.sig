@@ -26,7 +26,6 @@ sig
     (int -> goal -> string list) ->
     (goal -> string list) ->
     (goal list -> real) ->
-    (int -> goal -> string option) ->
     goal -> proof_status_t
 
 end

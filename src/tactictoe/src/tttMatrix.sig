@@ -2,6 +2,7 @@ signature tttMatrix =
 sig
 
   (* vector *)
+  val vector_to_list : real vector -> real list 
   val sum_rvect      : real vector -> real
   val average_rvect  : real vector -> real
   val diff_rvect     : real vector -> real vector -> real vector
@@ -19,4 +20,8 @@ sig
     real vector vector -> real vector vector -> real vector vector
   val mat_transpose : 'a vector vector -> 'a vector vector
   val mat_random    : int * int -> real vector vector
+  (* output *)
+  val string_of_vect : real vector -> string
+  val string_of_mat : real vector vector -> string
+
 end

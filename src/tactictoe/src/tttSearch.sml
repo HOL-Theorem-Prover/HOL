@@ -48,7 +48,6 @@ val proofdict = ref (dempty Int.compare)
 val thmpredictor_glob = ref (fn _ => (fn _ => []))
 val tacpredictor_glob = ref (fn _ => [])
 val glpredictor_glob = ref (fn _ => 0.0)
-val hammer_glob = ref (fn _ => (fn _ => NONE))
 
 (* --------------------------------------------------------------------------
    Caching tactic applications on goals
@@ -327,7 +326,7 @@ fun try_nqtm pid n (stac,tac) (otm,qtac) g =
   end
 
 (* --------------------------------------------------------------------------
-   Transfomring code into a tactic. Doing necessary predictions.
+   Transforming code into a tactic. Doing necessary predictions.
    -------------------------------------------------------------------------- *)
 
 val thml_dict = ref (dempty (cpl_compare goal_compare Int.compare))
@@ -428,8 +427,6 @@ fun apply_stac pid pardict trydict stac g =
             glo
           end
       end
-    (* updating  *)
-      
     (* testing for loops *)
     val newglo = glob_productive pardict trydict g glo
   in
@@ -482,7 +479,7 @@ fun mc_node_find pid =
         Math.pow (1.0 - !ttt_mcpol_coeff, Real.fromInt n) * !ttt_mcpol_coeff
       val self_curpol = 1.0 / pdenom
       val self_selsc = (pid, (!ttt_mcev_coeff) * (self_pripol / self_curpol))
-      (* or explore deeper existing paritial proofs *)
+      (* or explore deeper existing partial proofs *)
       fun f cid =
         let
           val crec = dfind cid (!proofdict)
@@ -619,7 +616,7 @@ fun close_proof_wrap staco tactime pid =
    Search function. Modifies the proof state.
    -------------------------------------------------------------------------- *)
 
-fun init_search thmpred tacpred glpred hammer g =
+fun init_search thmpred tacpred glpred g =
   (
   (* global time-out *)
   glob_timer := SOME (Timer.startRealTimer ());
@@ -636,7 +633,6 @@ fun init_search thmpred tacpred glpred hammer g =
   tacpredictor_glob := tactimer tacpred;
   thmpredictor_glob := thmtimer thmpred;
   glpredictor_glob  := gltimer glpred;
-  hammer_glob := hammer;
   (* statistics *)
   reset_timers ();
   stac_counter := 0;
@@ -788,9 +784,9 @@ fun selflearn proof =
    Main
    -------------------------------------------------------------------------- *)
 
-fun search thmpred tacpred glpred hammer goal =
+fun search thmpred tacpred glpred goal =
   (
-  init_search thmpred tacpred glpred hammer goal;
+  init_search thmpred tacpred glpred goal;
   total_timer (node_create_timer root_create_wrap) goal;
   let
     val r = total_timer search_loop ()

@@ -183,12 +183,8 @@ fun main_tactictoe goal =
       in
         gl_cache := dadd gl r (!gl_cache); r
       end
-    fun hammer pid goal =
-      (!hh_stac_glob) (int_to_string pid) 
-         (pthmsymweight,pthmfeav,pthmrevdict)
-         eprover_timeout goal
   in
-    debug_t "search" (search thmpred tacpred glpred hammer) goal
+    debug_t "search" (search thmpred tacpred glpred) goal
   end
 
 (* --------------------------------------------------------------------------

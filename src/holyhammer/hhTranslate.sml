@@ -240,15 +240,6 @@ fun LET_CONV_BVL tm =
   name across statements unless their definition are alpha equivalent.
   ----------------------------------------------------------------------------*)
 
-fun strip_type ty =
-  if is_vartype ty then ([],ty) else 
-    case dest_type ty of
-      ("fun",[a,b]) => 
-      let val (tyl,im) = strip_type b in
-        (a :: tyl, im)
-      end
-    | _             => ([],ty)
-
 fun mk_arity_eq f n =
   let 
     val (tyl,_) = strip_type (type_of f) 

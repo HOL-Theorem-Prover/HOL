@@ -303,4 +303,31 @@ fun goal_of_sml s =
     if b then !ttt_goal_glob else raise ERR "goal_of_sml" s
   end
 
+(* --------------------------------------------------------------------------
+   Prover wrapper
+   -------------------------------------------------------------------------- *) 
+
+fun time_prove prover tmax premises tm =
+  let
+    fun mk_goal x = ([],x)
+    val thml = map (mk_thm o mk_goal) premises
+    val tac = prover thml
+    val (r,t) = add_time (tttExec.app_tac tmax tac) (mk_goal tm)
+  in
+    if r = SOME [] then SOME (tm,t) else NONE
+  end
+
+fun minimize_aux prover t l1 l2 tm = case l2 of
+    []     => l1
+  | a :: m => 
+    if isSome (time_prove prover t (l1 @ m) tm)
+    then minimize_aux prover t l1 m tm
+    else minimize_aux prover t (a :: l1) m tm
+    
+fun miniprove prover t tml tm = 
+  if isSome (time_prove prover t tml tm) 
+  then SOME (minimize_aux prover t [] tml tm)
+  else NONE
+
+
 end (* struct *)

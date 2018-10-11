@@ -17,6 +17,36 @@ type fea_t = int list
 type feav_t = (lbl_t * fea_t)
 
 (* --------------------------------------------------------------------------
+   To sort
+   -------------------------------------------------------------------------- 
+
+fun my_gen_all tm = list_mk_forall (free_vars_lr tm, tm)
+
+fun my_gen_all_err tm = SOME (my_gen_all tm)
+  handle HOL_ERR _ => (incr type_errors; NONE)
+
+fun alpha_equal_or_error tm tm' =
+  Term.compare (my_gen_all tm, my_gen_all tm') = EQUAL 
+  handle _ => true
+
+fun unvalid_change tm tm' =
+  alpha_equal_or_error tm tm' orelse
+  (type_of tm' <> bool handle HOL_ERR _ => true) 
+
+fun gnuplotcmd filein fileout = 
+  let
+    val plotcmd = "\"" ^ String.concatWith "; " [ 
+      "set term postscript",
+      "set output " ^ "'" ^ fileout ^ "'",
+      "plot " ^ "'" ^ filein ^ "'"] 
+      ^ "\""
+    val cmd = "gnuplot -p -e " ^ plotcmd ^ " > " ^ fileout
+  in
+    cmd_in_dir tactictoe_dir cmd
+  end
+*)
+
+(* --------------------------------------------------------------------------
    Global parameters
    -------------------------------------------------------------------------- *)
 
@@ -257,6 +287,8 @@ fun fold_left f l orig = case l of
 
 fun list_diff l1 l2 = filter (fn x => not (mem x l2)) l1
 
+fun subset l1 l2 = all (fn x => mem x l2) l1 
+
 fun topo_sort graph =
   let val (topl,downl) = List.partition (fn (x,xl) => null xl) graph in
     case (topl,downl) of
@@ -272,6 +304,15 @@ fun topo_sort graph =
   end
 
 fun sort_thyl thyl = topo_sort (map (fn x => (x, ancestry x)) thyl)
+
+fun mk_batch_aux size acc res l =
+  if length acc >= size
+  then mk_batch_aux size [] (acc :: res) l
+  else case l of
+      [] => res
+    | a :: m => mk_batch_aux size (a :: acc) res m
+
+fun mk_batch size l = mk_batch_aux size [] [] l
 
 
 (* ---------------------------------------------------------------------------
@@ -305,6 +346,7 @@ fun approx n r =
     Real.fromInt (Real.round (r * mult)) / mult 
   end
 
+fun percent x = approx 2 (100.0 * x)
 
 (* --------------------------------------------------------------------------
    Terms
@@ -332,6 +374,16 @@ fun rename_bvarl f tm =
 
 fun all_bvar tm = 
   mk_fast_set Term.compare (map (fst o dest_abs) (find_terms is_abs tm))
+
+fun strip_type ty =
+  if is_vartype ty then ([],ty) else 
+    case dest_type ty of
+      ("fun",[a,b]) => 
+      let val (tyl,im) = strip_type b in
+        (a :: tyl, im)
+      end
+    | _             => ([],ty)
+
 
 (* --------------------------------------------------------------------------
    Goal
@@ -539,6 +591,13 @@ fun debug_replay s =
 fun debug_record s =
   append_endline (ttt_record_dir ^ "/record/" ^ current_theory ()) s
 
+(* general *)
+val dbg_flag = ref false
+fun dbg_file file s = 
+  if !dbg_flag 
+  then append_endline (tactictoe_dir ^ "/dbg/" ^ file) s 
+  else ()
+
 (* --------------------------------------------------------------------------
    Parsing
    -------------------------------------------------------------------------- *)
@@ -729,12 +788,18 @@ fun depidl_of_thm thm =
   (Dep.depidl_of o Tag.dep_of o Thm.tag) thm
   handle HOL_ERR _ => raise ERR "depidl_of_thm" ""
 
+fun depid_of_thm thm =
+  (Dep.depid_of o Tag.dep_of o Thm.tag) thm
+  handle HOL_ERR _ => raise ERR "depidl_of_thm" ""
+
 fun tid_of_did (thy,n) =
   let fun has_depnumber n (_,thm) = n = depnumber_of_thm thm in
     case List.find (has_depnumber n) (DB.thms thy) of
       SOME (name,_) => SOME (thy ^ "Theory." ^ name)
     | NONE => NONE
   end
+
+fun sml_of_thm thm = tid_of_did (depid_of_thm thm)
 
 fun exists_did did = isSome (tid_of_did did)
 
@@ -844,5 +909,6 @@ fun parmap ncores f l =
   map release (parmap_err ncores f l)
 
 fun parapp ncores f l = ignore (parmap ncores f l)
+
 
 end (* struct *)

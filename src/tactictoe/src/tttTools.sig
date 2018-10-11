@@ -100,13 +100,14 @@ sig
   val part_n : int -> 'a list -> ('a list * 'a list)
   val number_list : int -> 'a list -> (int * 'a) list
   val list_diff : ''a list -> ''a list -> ''a list
+  val subset : ''a list -> ''a list -> bool
   val mk_fast_set : ('a * 'a -> order) -> 'a list -> 'a list
   val mk_sameorder_set : ('a * 'a -> order) -> 'a list -> 'a list
   val dict_sort   : ('a * 'a -> order) -> 'a list -> 'a list
   val topo_sort   : (''a * ''a list) list -> ''a list
   val sort_thyl   : string list -> string list
-  val fold_left : ('a -> 'b -> 'b) -> 'a list -> 'b -> 'b
-  
+  val fold_left   : ('a -> 'b -> 'b) -> 'a list -> 'b -> 'b
+  val mk_batch    : int -> 'a list -> 'a list list
 
   (* statistics *)
   val incr   : int ref -> unit
@@ -118,6 +119,7 @@ sig
   val int_div : int -> int -> real
   val pow : real -> int -> real
   val approx : int -> real -> real
+  val percent : real -> real  
 
   val compare_rmin : (('a * real) * ('a * real)) -> order
   val compare_rmax : (('a * real) * ('a * real)) -> order
@@ -135,6 +137,7 @@ sig
   (* term *)
   val rename_bvarl : (string -> string) -> term -> term
   val all_bvar : term -> term list
+  val strip_type : hol_type -> (hol_type list * hol_type)
 
   (* compare *)
   val goal_compare : (goal * goal) -> order
@@ -170,6 +173,9 @@ sig
   val debug_record : string -> unit
   val ttt_unfold_cthy : string ref
   val debug_unfold : string -> unit
+   
+  val dbg_flag : bool ref
+  val dbg_file : string -> string -> unit
 
   (* parse *)
   val is_string   : string -> bool
@@ -198,7 +204,8 @@ sig
   val tid_of_did : (string * int) -> string option
   val depl_of_thm : thm -> (bool * string list)
   val deplPartial_of_sthm : string -> string list
-  
+  val sml_of_thm : thm -> string option  
+
   (* theorem *)
   val only_concl : thm -> term
   
@@ -208,5 +215,4 @@ sig
   val parmap : int -> ('a -> 'b) -> 'a list -> 'b list
   val parapp : int -> ('a -> 'b) -> 'a list -> unit
 
- 
 end

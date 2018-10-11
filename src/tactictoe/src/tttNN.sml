@@ -11,106 +11,141 @@ struct
 open HolKernel boolLib Abbrev tttTools tttMatrix
 
 val ERR = mk_HOL_ERR "tttNN"
+val dbg = dbg_file "tttNN"
+
+val momentum = ref 0.0
+val learning_rate = ref 0.01
+val decay = ref 1.0
 
 
 (*----------------------------------------------------------------------------
  * Activation functions. Derivatives use the function itself.
  *----------------------------------------------------------------------------*)
 
-(* Math.tanh *)
+fun tanh x = Math.tanh x
 fun dtanh x = 1.0 - (x:real) * x (* 1 - (tanh x) * (tanh x) *)
+fun relu x  = if x > 0.0 then x else 0.0
+fun drelu x = if x < 0.000000000001 then 0.0 else 1.0
+fun leakyrelu x  = if x > 0.0 then x else 0.01 * x
+fun dleakyrelu x = if x <= 0.0 then 0.01 else 1.0
+fun id (x:real) = x:real
+fun did (x:real) = 1.0
 
 (*----------------------------------------------------------------------------
- * Layer
- *----------------------------------------------------------------------------*)
+  Types
+  ----------------------------------------------------------------------------*)
 
 type layer =
-  {a  : real -> real, 
+  {a  : real -> real,
    da : real -> real,
-   w  : real vector vector} 
+   w  : real vector vector}
+
+type nn = layer list
 
 type fpdata =
   {layer : layer,
    inv   : real vector,
    outv  : real vector,
-   outnv : real vector}  
+   outnv : real vector}
+
+type bpdata =
+  {doutnv: real vector,
+   doutv: real vector,
+   dinv: real vector,
+   dw: real vector vector}
+
+(*----------------------------------------------------------------------------
+  Initialization
+  ----------------------------------------------------------------------------*)
+
+fun diml_aux insize sizel = case sizel of
+    [] => []
+  | outsize :: m => (outsize, insize) :: diml_aux outsize m
+
+fun diml_of sizel = case sizel of
+    [] => []
+  | a :: m => diml_aux a m
+
+fun random_nn (a1,da1) (a2,da2) sizel =
+  let
+    val l = diml_of sizel
+    fun f x = {a = a1, da = da1, w = mat_random x}
+    fun g x = {a = a2, da = da2, w = mat_random x}
+  in
+    map f (butlast l) @ [g (last l)]
+  end
 
 (*----------------------------------------------------------------------------
   Forward propagration (fp) with memory of the steps
   ----------------------------------------------------------------------------*)
 
 fun fp_layer (layer : layer) inv =
-  let 
+  let
     val outv = mat_mult (#w layer) inv
-    val outnv = Vector.map (#a layer) outv 
+    val outnv = Vector.map (#a layer) outv
   in
-    {layer = layer, inv = inv, outv = outv, outnv = outnv}  
+    {layer = layer, inv = inv, outv = outv, outnv = outnv}
   end
-  
+
 fun fp_nn nn v = case nn of
     [] => []
-  | (layer : layer) :: m =>  
+  | (layer : layer) :: m =>
     let val fpdata = fp_layer layer v in
       fpdata :: fp_nn m (#outnv fpdata)
     end
 
-fun apply_nn nn v = 
-  let val fpdatal = rev (fp_nn nn v) in 
-    #outnv (hd fpdatal)
-  end
-
 (*---------------------------------------------------------------------------
   Backward propagation (bp)
   Takes the data from the forward pass, computes the loss and weight updates
-  by gradient descent.
-  --------------------------------------------------------------------------- *) 
+  by gradient descent. Input is j. Output is i. Matrix is Mij.
+  --------------------------------------------------------------------------- *)
 
-
-fun bp_layer eta (fpdata : fpdata) dnode_out =
-  let 
-    (* activation function *)
-    val dnode_da = (* trick undone *)
+fun bp_layer (fpdata:fpdata) doutnv =
+  let
+    val doutv =
+      (* should use (#outv fpdata) if you want to use the derivative *)
       let val dav = Vector.map (#da (#layer fpdata)) (#outnv fpdata) in
-        mult_rvect dav dnode_out
+        mult_rvect dav doutnv
       end
     (* matrix multiplication *)
-    fun dw_f eta i j = 
-      eta * Vector.sub (#inv fpdata,j) * Vector.sub (dnode_da,i)
-    val mat_delta = mat_tabulate (dw_f eta) (mat_dim (#w (#layer fpdata)))
-    val dnode_in = mat_mult (mat_transpose mat_delta) dnode_da
+    val w        = #w (#layer fpdata)
+    fun dw_f i j = Vector.sub (#inv fpdata,j) * Vector.sub (doutv,i)
+    val dw       = mat_tabulate dw_f (mat_dim w)
+    val dinv     = mat_mult (mat_transpose w) doutv
   in
-    (mat_delta, dnode_in)
+   {doutnv = doutnv,
+    doutv = doutv,
+    dinv = dinv,
+    dw = dw}
   end
 
-fun bp_nn_aux eta rev_nn_data dnode_out = 
-  case rev_nn_data of
+fun bp_nn_aux rev_fpdatal doutnv =
+  case rev_fpdatal of
     [] => []
   | fpdata :: m =>
-    let val (bp_mat,dnode_in) = bp_layer eta fpdata dnode_out in
-      bp_mat :: bp_nn_aux eta m dnode_in
+    let val bpdata = bp_layer fpdata doutnv in
+      bpdata :: bp_nn_aux m (#dinv bpdata)
     end
 
-fun calc_loss v =
-  let fun square x = (x:real) * x in average_rvect (Vector.map square v) end
+fun bp_nn_wocost fpdatal doutnv = rev (bp_nn_aux (rev fpdatal) doutnv)
 
-fun bp_nn eta nn_data expectv =
-  let 
-    val rev_nn_data = rev nn_data 
-    val fpdata = hd rev_nn_data 
-    val resultv = #outnv fpdata
-    val dnode = diff_rvect expectv resultv
-    val loss = calc_loss dnode
+fun bp_nn fpdatal expectv =
+  let
+    val rev_fpdatal = rev fpdatal
+    val outnv = #outnv (hd rev_fpdatal)
+    (* cost is mean square error *)
+    val doutnv = diff_rvect expectv outnv
   in
-    (loss, rev (bp_nn_aux eta rev_nn_data dnode))
+    rev (bp_nn_aux rev_fpdatal doutnv)
   end
 
 (*---------------------------------------------------------------------------
   Average the updates over a batch.
   --------------------------------------------------------------------------- *)
-  
-fun fpbp_nn eta nn (inputv,expectv) =
-  let val (nn_data : fpdata list) = fp_nn nn inputv in
-    bp_nn eta nn_data (expectv : real vector)
+
+fun train_nn_one nn (inputv,expectv) =
+  let val fpdatal = fp_nn nn inputv in
+    bp_nn fpdatal expectv
   end
 
 fun regroup_by_layers nndwl = case nndwl of
@@ -118,169 +153,128 @@ fun regroup_by_layers nndwl = case nndwl of
   | [] :: cont => []
   | (a :: m) :: cont => map hd nndwl :: regroup_by_layers (map tl nndwl)
 
-fun average_dwl dwl = 
+fun average_dwl dwl =
   let fun f i j = average_real (map (fn w => mat_sub w i j) dwl) in
     mat_tabulate f (mat_dim (hd dwl))
   end
 
-fun average_nndwl nndwl = map average_dwl (regroup_by_layers nndwl)
+fun average_dwll dwll = map average_dwl (regroup_by_layers dwll)
 
-fun average_batch eta nn batch = 
-  let 
-    val l = map (fpbp_nn eta nn) batch
-    val (lossl, nndwl) = split l
-    val loss = average_real lossl
-    val nn_delta = average_nndwl nndwl
+fun sum_dwl dwl =
+  let fun f i j = sum_real (map (fn w => mat_sub w i j) dwl) in
+    mat_tabulate f (mat_dim (hd dwl))
+  end
+
+fun sum_dwll dwll = map sum_dwl (regroup_by_layers dwll)
+
+fun average_bpdatall size bpdatall =
+  let
+    val invsize  = 1.0 / (Real.fromInt size)
+    val dwll     = map (map #dw) bpdatall
+    val dwl1     = sum_dwll dwll
+    val dwl2     = map (mat_smult invsize) dwl1
   in
-    (loss, nn_delta)
+    dwl2
   end
 
 (*---------------------------------------------------------------------------
-  Applying the udpates with momentum and decay.
+  Loss
   --------------------------------------------------------------------------- *)
 
-val lambda = 0.01
-val momentum = 0.9
-
-fun update_layer decay (layer,(wu,prev_wu)) = 
-  {
-  a = #a layer, da = #da layer, w = 
-  let 
-    val m1 = mat_smult (1.0 - momentum) wu 
-    val m2 = mat_smult momentum prev_wu
-    val m3 = mat_add m1 m2 
-  in
-    mat_smult decay (mat_add (#w layer) m3)
-  end
-  }
-
-(*---------------------------------------------------------------------------
-  Training for one batch.
-  --------------------------------------------------------------------------- *)
-
-fun train_batch pnn_delta eta batch nn =
-  let 
-    val decay = 1.0 - (lambda * eta)
-    val (loss, nn_delta) = average_batch eta nn batch 
-    val pnn_delta_aux = case pnn_delta of 
-      NONE => nn_delta
-    | SOME x => x
-    val lw = combine (nn, combine (nn_delta, pnn_delta_aux))
-    val new_nn = map (update_layer decay) lw
-  in
-    (* print_endline ("loss: " ^ Real.toString loss); *)
-    (loss, new_nn, nn_delta)
+fun calc_loss v =
+  let fun square x = (x:real) * x in
+    average_rvect (Vector.map square v)
   end
 
+fun bp_loss bpdatal = calc_loss (#doutnv (last bpdatal))
+
+fun average_loss bpdatall = average_real (map bp_loss bpdatall)
+
 (*---------------------------------------------------------------------------
-  Training for one epoch.
+  Weight udpate
   --------------------------------------------------------------------------- *)
 
-fun train_epoch_aux eta pnn_delta lossl nn batchl  = case batchl of
-    [] => 
-    (
-    print_endline ("loss: " ^ Real.toString (average_real lossl));
-    nn
-    ) 
-  | batch :: m => 
-    let val (loss, new_nn, nn_delta) = train_batch pnn_delta eta batch nn in
-      train_epoch_aux eta (SOME nn_delta) (loss :: lossl) new_nn m 
+fun clip (a,b) m =
+  let fun f x = if x < a then a else (if x > b then b else x) in
+    mat_map f m
+  end 
+
+fun update_layer (layer, layerwu) =
+  let
+    val w0 = mat_smult (!learning_rate) layerwu
+    val w1 = mat_smult (!decay) (mat_add (#w layer) w0)
+    val w2 = clip (~3.0,3.0) w1
+  in
+    {a = #a layer, da = #da layer, w = w2}
+  end
+
+fun update_nn nn wu = map update_layer (combine (nn,wu))
+
+(*---------------------------------------------------------------------------
+  Training schedule
+  --------------------------------------------------------------------------- *)
+
+fun train_nn_batch batch nn =
+  let
+    val bpdatall = map (train_nn_one nn) batch
+    val dwl      = average_bpdatall (length batch) bpdatall
+    val newnn    = update_nn nn dwl
+  in
+    (newnn, average_loss bpdatall)
+  end
+
+fun train_nn_epoch_aux lossl nn batchl  = case batchl of
+    [] =>
+    (print_endline ("loss: " ^ Real.toString (average_real lossl));
+     nn)
+  | batch :: m =>
+    let val (newnn,loss) = train_nn_batch batch nn in
+      train_nn_epoch_aux (loss :: lossl) newnn m
     end
 
-fun train_epoch eta nn batchl = train_epoch_aux eta NONE [] nn batchl
+fun train_nn_epoch nn batchl = train_nn_epoch_aux [] nn batchl
 
-(*---------------------------------------------------------------------------
-  Utilities.
-  --------------------------------------------------------------------------- *)
-
-fun random_nn depth dim = 
-  let fun f i = {a = Math.tanh, da = dtanh, w = mat_random dim} in
-    List.tabulate (depth,f)
-  end
-
-fun mk_batch_aux size acc res l =
-  if length acc >= size 
-  then mk_batch_aux size [] (acc :: res) l
-  else case l of
-      [] => res
-    | a :: m => mk_batch_aux size (a :: acc) res m
-
-fun mk_batch size l = mk_batch_aux size [] [] l
-
-fun train_nepoch n eta nn size training_set = 
+fun train_nn_nepoch n nn size trainset =
   if n <= 0 then nn else
-  let 
-    val batchl = mk_batch size training_set
-    val new_nn = train_epoch eta nn batchl 
+  let
+    val batchl = mk_batch size (shuffle trainset)
+    val new_nn = train_nn_epoch nn batchl
   in
-    train_nepoch (n - 1) eta new_nn size training_set
+    train_nn_nepoch (n - 1) new_nn size trainset
   end
 
 (*---------------------------------------------------------------------------
-  Testing
-
-load "tttNN";
-open tttTools tttMatrix tttNN;
-
-fun id x = (x:real)
-fun did (x:real) = 1.0
-fun dtanh x = 1.0 - (x:real) * x;
-fun relu x = Real.max (x, 0.01 * x)
-fun drelu x = if x > 0.0 then 1.0 else 0.01
-
-fun random_nm diml = 
-  let fun f dim = {a = relu, da = drelu, w = tttMatrix.mat_random dim} in
-    map f diml
-  end
-
-
-
-val training_set =
-  let 
-    fun f _ = Vector.tabulate (2, fn _ => random_real () * 0.8 + 0.1)
-    val l = List.tabulate (10000, f) 
-  in
-    map (fn x => (x, x)) l
-  end
-;
-val eta = 0.001;
-val nn = train_nepoch 1000 eta starting_nn 100 training_set;
-
+  Printing
   --------------------------------------------------------------------------- *)
 
-(*---------------------------------------------------------------------------
-  Examples:
-
-Learning the identity function.
-
-val starting_nn = random_nm [(2,2)];
-
-val training_set =
-  let 
-    fun f _ = Vector.tabulate (2, fn _ => random_real () * 0.8 + 0.1)
-    val l = List.tabulate (10000, f) 
-  in
-    map (fn x => (x, x)) l
-  end
-;
-val eta = 0.001;
-val nn = train_nepoch 1000 eta starting_nn 100 training_set;
-
-  --------------------------------------------------------------------------- *)
-
-
-(*---------------------------------------------------------------------------
-  todo
-
-batch norm 
-add bias 
-CNN.
-add residualnetworks
-remove relu from last layer.
-
-  --------------------------------------------------------------------------- *)
-
-
-
+fun string_of_nn nn = String.concatWith "\n\n" (map (string_of_mat o #w) nn)
 
 end (* struct *)
+
+(*---------------------------------------------------------------------------
+load "tttNN";
+open tttTools tttMatrix tttNN;
+val starting_nn = random_nn (leakyrelu,dleakyrelu) (tanh,dtanh) [2,5,2];
+
+fun rev_vector v =
+  let val vn = Vector.length v in
+    Vector.tabulate (vn, fn i => Vector.sub (v,vn - i - 1))
+  end
+
+
+val training_set =
+  let
+    fun f _ = Vector.tabulate (2, fn _ => random_real () - 0.5)
+    val l = List.tabulate (100000, f)
+  in
+    map (fn x => (x, rev_vector x)) l
+  end
+;
+
+learning_rate := 0.001;
+momentum := 0.0;
+decay := 1.0;
+
+val nn = train_nn_nepoch 1000 starting_nn 100 training_set;
+
+  --------------------------------------------------------------------------- *)

@@ -17,6 +17,8 @@ val ERR = mk_HOL_ERR "tttMatrix"
  * Vectors
  *----------------------------------------------------------------------------*)
 
+fun vector_to_list v = rev (Vector.foldl (op ::) [] v)
+
 fun sum_rvect v = Vector.foldl (op +) 0.0 v
 
 fun average_rvect v = sum_rvect v / Real.fromInt (Vector.length v)
@@ -73,5 +75,12 @@ fun mat_random dim =
   let fun f i j = 2.0 * random_real () - 1.0 in
     mat_tabulate f dim
   end
- 
+
+fun string_of_vect v = 
+  String.concatWith " " (map (Real.toString o approx 2) (vector_to_list v))
+
+fun string_of_mat m =
+  String.concatWith "\n" (map string_of_vect (vector_to_list m))
+
+
 end (* struct *)

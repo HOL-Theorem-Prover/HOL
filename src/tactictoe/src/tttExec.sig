@@ -66,4 +66,10 @@ sig
   val rec_stac   : real -> string -> goal -> goal list option
   val rec_sproof : string -> goal -> goal list option
 
+  (* prover *)
+  val time_mprove: 
+    (thm list -> tactic) -> real -> term list -> term -> (term * real) option
+  val miniprove : 
+    (thm list -> tactic) -> real -> term list -> term -> term list option
+
 end
