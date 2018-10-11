@@ -4,7 +4,9 @@ INCLUDES = ${HOLDIR}/examples/PSL/1.1/official-semantics \
 	${HOLDIR}/examples/HolBdd ${HOLDIR}/examples/muddy \
 	../tools ../deep_embeddings ../translations
 
-TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
+THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
+TARGETS0 = $(patsubst %Theory.sml,,$(THYFILES))
+TARGETS = $(patsubst %.sml,%.uo,$(TARGETS0))
 
 all: $(TARGETS) selftest.exe
 
