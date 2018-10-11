@@ -1590,18 +1590,15 @@ val finite_float_within_threshold = Q.store_thm (
   \\ res_tac
   \\ RealArith.REAL_ASM_ARITH_TAC);
 
-val round_finite_normal_float_id = Q.store_thm(
+val round_finite_float_id = Q.store_thm(
 "round_finite_normal_float_id",
   `!f.
      float_is_finite f /\
-     float_is_normal f /\
      ~ float_is_zero f ==>
      (round roundTiesToEven (float_to_real f) = f)`,
   rw[]
   \\ qpat_assum `float_is_finite _` mp_tac
-  \\ qpat_assum `float_is_normal _` mp_tac
-  \\ rewrite_tac [float_is_finite_def, float_is_normal_def]
-  \\ rewrite_tac [float_value_def]
+  \\ rewrite_tac [float_is_finite_def, float_value_def]
   \\ simp[]
   \\ strip_tac
   \\ once_rewrite_tac [round_def]
@@ -1630,15 +1627,14 @@ val round_finite_normal_float_id = Q.store_thm(
   \\ fs[float_to_real_eq]
   \\ rfs[]);
 
-val real_to_float_finite_normal_id = Q.store_thm (
+val real_to_float_finite_id = Q.store_thm (
   "real_to_float_finite_normal_id",
   `!f.
      float_is_finite f /\
-     float_is_normal f /\
      ~ float_is_zero f ==>
      (real_to_float roundTiesToEven (float_to_real f) = f)`,
   rpt strip_tac
-  \\ fs[real_to_float_def, float_round_def, round_finite_normal_float_id]);
+  \\ fs[real_to_float_def, float_round_def, round_finite_float_id]);
 
 val float_to_real_real_to_float_zero_id = Q.store_thm (
   "float_to_real_real_to_float_zero_id",
