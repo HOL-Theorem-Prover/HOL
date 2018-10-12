@@ -459,7 +459,8 @@ val lexer_partial_correctness = Q.prove
    correct_lex lexer_spec s toks`,
  recInduct lexer_ind
   >> conj_tac 
-  >- (rw [lexer_def] >> rw [correct_lex_def]) 
+  >- (rw [lexer_def] 
+      >> rw [correct_lex_def]) 
   >- (map_every qx_gen_tac [`trans`, `finals`, `start`, `v8`, `v9`, `acc`]
       >> rw[lexer_def]
       >> EVERY_CASE_TAC
@@ -502,51 +503,33 @@ val lexer_partial_correctness = Q.prove
              (?r_min tok_min. 
                  n_min < LENGTH lexer_spec /\
                  (EL n_min lexer_spec = (r_min,tok_min)) /\
-                 regexp_lang r_min lexeme') /\
+                 regexp_lang r_min prefix') /\
              (!n_min'. 
                 n_min' < n_min 
                 ==>
                 ~(?r_min tok_min.
                     (EL n_min' lexer_spec = (r_min,tok_min)) /\ 
-                    regexp_lang r_min lexeme'))`
+                    regexp_lang r_min prefix'))`
             by (mp_tac 
-                 ((Q.SPEC `f:string ->'b`
-                   o Q.SPEC `r` 
-                   o SIMP_RULE (srw_ss())
-                         [METIS_PROVE [] ``(?x. P x) ==> Q = !x. P x ==> Q``]
-                   o Q.SPECL [`\n_min. ?r_min tok_min.
+                 (min_lem |> Q.SPECL [`\n_min. ?r_min tok_min.
                                          n_min < LENGTH (lexer_spec:'b lexer_spec) /\
                                         (EL n_min lexer_spec = (r_min,tok_min)) /\
-                                        regexp_lang r_min lexeme'`,
-                              `n'`])
-                   min_lem) 
-                 >> asm_simp_tac bool_ss []
-		 >> strip_tac
-		 >> qexists_tac `n''`
-                  >> rw [] 
-                  >> metis_tac [arithmeticTheory.LESS_TRANS])
-	    (*
-imp_res_tac 
-                 ((Q.SPEC `f`
-                   o Q.SPEC `r` 
-                   o SIMP_RULE (srw_ss())
-                         [METIS_PROVE [] ``(?x. P x) ==> Q = !x. P x ==> Q``]
-                   o Q.SPECL [`\n_min. ?r_min tok_min.
-                                         n_min < LENGTH lexer_spec /\
-                                        (EL n_min lexer_spec = (r_min,tok_min)) /\
-                                        regexp_lang r_min lexeme'`,
-                              `n'`])
-                   min_lem) 
-                  >> qexists_tac `n''`
-                  >> rw [] 
-                  >> metis_tac [arithmeticTheory.LESS_TRANS])
-*)
+                                        regexp_lang r_min prefix'`,`n'`]
+			  |> SIMP_RULE (srw_ss())
+                                  [METIS_PROVE [] ``(?x. P x) ==> Q = !x. P x ==> Q``]
+                          |> Q.SPEC `r`
+                          |> Q.SPEC `f`)
+                >> asm_simp_tac bool_ss []
+		>> strip_tac
+		>> qexists_tac `n''`
+                >> rw [] 
+                >> metis_tac [arithmeticTheory.LESS_TRANS])
           >> fs [] 
           >> `!n_min'. n_min' < n_min ==> 
-                       ~regexp_lang (FST (EL n_min' lexer_spec)) lexeme'`
+                       ~regexp_lang (FST (EL n_min' lexer_spec)) prefix'`
                 by (rw [] >> Cases_on `EL n_min' lexer_spec` 
                      >> rw [] >> metis_tac []) 
-          >> `?p s. (lexeme' = MAP FST p) /\ 
+          >> `?p s. (prefix' = MAP FST p) /\ 
                      dfa_path trans start s p /\
                      (finals s = SOME tok_min)`
                  by metis_tac [dfa_correct_def, FST, SND]
@@ -563,7 +546,7 @@ imp_res_tac
           >> rw []
           >> `STRLEN (REVERSE q') = STRLEN (MAP FST path')` by rw []
           >> `(REVERSE q' = MAP FST path') /\ 
-              (r' = MAP FST path_extension ++ s_rest')`
+              (r' = MAP FST path_extension ++ suffix')`
                  by metis_tac [strcat_lem, STRCAT_ASSOC]
           >> fs [dfa_path_append]
           >> rw []
@@ -589,9 +572,9 @@ val lexer_complete_lem1 = Q.prove
   (lexer (trans,finals,start) (s1++s2) acc =
     case lexer_get_token trans finals start "" NONE (s1++s2) of
       | NONE => NONE
-      | SOME (tok,lexeme,s') =>
-          lexer (trans,finals,start) s' (tok (REVERSE lexeme)::acc))`,
- Cases_on `s1`>> rw [lexer_def]
+      | SOME (tokfn,prefix,suffix) =>
+          lexer (trans,finals,start) suffix (tokfn (REVERSE prefix)::acc))`,
+ Cases_on `s1` >> rw [lexer_def]
 );
 
 val lexer_complete = Q.prove 
@@ -603,15 +586,15 @@ val lexer_complete = Q.prove
  Induct_on `toks`
   >> rw [correct_lex_def, lexer_def]
   >> fs [correct_lex_def, lexer_spec_matches_prefix_def]
-  >> `lexer (trans,finals,start) s_rest acc = SOME (REVERSE acc ++ toks)`
+  >> `lexer (trans,finals,start) suffix acc = SOME (REVERSE acc ++ toks)`
            by metis_tac []
   >> rw [] 
-  >> `!n'. n' < n ==> ~regexp_lang (FST (EL n' lexer_spec)) lexeme`
+  >> `!n'. n' < n ==> ~regexp_lang (FST (EL n' lexer_spec)) prefix`
           by (rw [] >> Cases_on `EL n' lexer_spec` 
               >> rw [] 
               >> metis_tac [arithmeticTheory.LESS_TRANS,
                             arithmeticTheory.NOT_LESS_EQUAL]) 
-  >> `?p state. (lexeme = MAP FST p) /\ 
+  >> `?p state. (prefix = MAP FST p) /\ 
                 dfa_path trans start state p /\
                 (finals state = SOME f)`
           by metis_tac [FST, SND, dfa_correct_def] 
@@ -620,7 +603,7 @@ val lexer_complete = Q.prove
   >> fs []
   >> Cases_on `!path_extension state'.
       dfa_path trans state state' path_extension /\
-      (?s'. MAP FST path_extension ++ s' = s_rest) ==>
+      (?s'. MAP FST path_extension ++ s' = suffix) ==>
       EVERY (\extra_state. finals extra_state = NONE)
       (MAP SND path_extension)` 
   >> fs []
