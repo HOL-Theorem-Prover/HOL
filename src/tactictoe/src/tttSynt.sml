@@ -18,13 +18,13 @@ val dbg = dbg_file "tttSynt"
    -------------------------------------------------------------------------- 
 *)
 
-fun partition m n = 
+fun number_partition m n = 
   if m > n then raise ERR "partition" "" else
   if m = 1 then [[n]] else
   let 
     fun f x l = x :: l
     val sizel = List.tabulate (n-m+1, fn x => x+1)
-    fun g size = map (f size) (partition (m-1) (n-size))
+    fun g size = map (f size) (number_partition (m-1) (n-size))
   in
     List.concat (map g sizel)
   end
@@ -42,34 +42,48 @@ fun random_term tycdict (size,ty) =
     val oper = 
       if null tml then raise ERR "random_term" "" else hd (shuffle tml)
     val (tyargl,_) = strip_type (type_of oper)
-    val sizel = hd (shuffle (partition (length tyargl) (size - 1))) 
+    val sizel = hd (shuffle (number_partition (length tyargl) (size - 1))) 
     val argl = map (random_term tycdict) (combine (sizel,tyargl)) 
   in
     list_mk_comb (oper,argl)
   end
 
+fun n_random_term n cset (size,ty) =
+  let val tycdict = dregroup Type.compare (map (fn x => (type_of x, x)) cset) in
+    map (random_term tycdict) (List.tabulate (n,fn _ => (size,ty))) 
+  end
+
+
+fun n_random_formula n cset size =
+  let val tycdict = dregroup Type.compare (map (fn x => (type_of x, x)) cset) in
+    map (random_term tycdict) (List.tabulate (n,fn _ => (size,bool))) 
+  end
+
+fun success_tac tac g = null (fst (tac g))
+
+fun uniform_provable tac n cset size =
+  let
+    val cjl0 = 
+      mapfilter (n_random_formula (n * 10) cset) (List.tabulate (size + 1,I))
+    val cjl1 = map (mk_fast_set Term.compare) cjl0    
+    fun is_proved cj = success_tac tac ([], cj)
+    val cjpl0 = map (filter is_proved) cjl1
+    val cjpl1 = map (first_n n o shuffle) cjpl0
+  in 
+    List.concat cjpl1
+  end
+
+fun uniform_term n cset (size,ty) =
+  let
+    val cjl0 = mapfilter (n_random_term (n * 10) cset) 
+      (List.tabulate (size + 1,fn x => (x,ty)))
+    val cjl1 = map (first_n n o shuffle o mk_fast_set Term.compare) cjl0    
+  in 
+    List.concat cjl1
+  end
+
+
+
+
+
 end (* struct *)
-
-(* 
-load "tttSynt"; open tttSynt; open tttTools;
-val ax1 = ``PRE 0 = 0``;
-val ax2 = ``PRE (SUC x) = x``;
-val ax4 = ``x + 0 = x``;
-val ax5 = ``x + SUC y = SUC (x + y)``;
-val ax6 = ``x * 0 = 0``;
-val ax7 = ``x * (SUC y) = (x * y) + x``;
-val cl = List.concat (map (find_terms is_const) [ax1,ax2,ax4,ax5,ax6,ax7]);
-val cset = mk_fast_set Term.compare cl;
-val tycdict = dregroup Type.compare (map (fn x => (type_of x, x)) cset);
-val thm = random_term tycdict (10,bool);
-val thml = map (random_term tycdict) (List.tabulate (10,fn _ => (10,bool))); 
-*)
-
-
-
-
-
-
-
-
-

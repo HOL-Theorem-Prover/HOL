@@ -330,9 +330,8 @@ fun hh_goal goal =
 
 fun hh_fork goal = Thread.fork (fn () => ignore (hh_goal goal), [])
 
-fun holyhammer term = hh_goal ([],term)
-
 fun hh goal = (hh_goal goal) goal
+fun holyhammer tm = TAC_PROOF (([],tm), hh_goal ([],tm));
 
 fun metis_auto t n goal = 
   let

@@ -90,6 +90,7 @@ sig
   (* list *)
   val one_in_n : int -> int -> 'a list -> 'a list
   val shuffle : 'a list -> 'a list
+  val select_in_distrib : ('a * real) list -> 'a
   val map_snd : ('a -> 'b) -> ('c * 'a) list -> ('c * 'b) list
   val map_fst : ('a -> 'b) -> ('a * 'c) list -> ('b * 'c) list 
   val map_assoc : ('a -> 'b) -> 'a list -> ('a * 'b) list

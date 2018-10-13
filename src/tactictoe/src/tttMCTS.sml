@@ -37,12 +37,11 @@ type 'a tree = (int list, 'a node) Redblackmap.dict
   --------------------------------------------------------------------------- *)
 
 fun backup tree (id,eval) =
-  let 
+  let
     val node = dfind id tree
     val (sum,vis) = (#sum node, #vis node)
   in
-    sum := eval + !sum;
-    vis := 1.0 + !vis;
+    sum := eval + !sum; vis := 1.0 + !vis;
     case tl id of
       []  => () (* root *)
     | pid => backup tree (pid, eval)
@@ -91,7 +90,7 @@ fun value_child player tree vtot (move, polv, cid) =
 
 (*
   ---------------------------------------------------------------------------
-  Selection (pole =def policy entry)
+  Selection (pole : policy entry)
   --------------------------------------------------------------------------- *)
 
 datatype endcheck = InProgress | Win | Lose 
@@ -140,19 +139,25 @@ fun traverse endcheck tree =
   end
 (*
   ---------------------------------------------------------------------------
-  Expansion + backup
+  Expansion + backup (checking for loops)
   --------------------------------------------------------------------------- *)
 
-fun expand fevalpoli endcheck apply_move tree result =
+fun expand fevalpoli endcheck isloop apply_move tree result =
   case result of
     StopWin id                => (backup tree (id,1.0); tree)
   | StopLose id               => (backup tree (id,0.0); tree)
   | Expand (pid,(move,sc,id)) =>
     let 
-      val parent = dfind pid tree
-      val pos    = apply_move move (#pos parent)
+      val parent  = dfind pid tree
+      val ppos    = #pos parent
+      val pplayer = fst ppos
+      val pos     = apply_move move ppos
     in
-      node_create_backup fevalpoli tree id pos
+      if isloop tree pid pos
+      then if pplayer 
+        then (backup tree (pid,0.0); tree) 
+        else (backup tree (pid,1.0); tree) 
+      else node_create_backup fevalpoli tree id pos
     end
  
 (*
@@ -160,16 +165,16 @@ fun expand fevalpoli endcheck apply_move tree result =
   MCTS
   --------------------------------------------------------------------------- *)
 
-fun mcts nsim fevalpoli endcheck apply_move startpos =
+fun mcts nsim fevalpoli endcheck isloop apply_move startpos =
   let
     val tree0 = dempty (list_compare Int.compare)
     val tree1 = node_create_backup fevalpoli tree0 [0] startpos
     fun loop nsim tree =
       if nsim <= 0 then tree else
       let 
-        val _ = dbg ("\nsimulation " ^ int_to_string nsim)
-        val result = traverse endcheck tree
-        val newtree = expand fevalpoli endcheck apply_move tree result
+        val _       = dbg ("\nsimulation " ^ int_to_string nsim)
+        val result  = traverse endcheck tree
+        val newtree = expand fevalpoli endcheck isloop apply_move tree result
       in
         loop (nsim - 1) newtree
       end
@@ -186,9 +191,7 @@ fun rand_evalpoli movel pos =
   (random_real (), map (fn _ => random_real ()) movel)
 
 fun wrap_poli pid poli =
-  let fun f i (a,b) = (a, b, i :: pid) in
-    mapi f poli
-  end
+  let fun f i (a,b) = (a, b, i :: pid) in mapi f poli end
 
 (*
   ---------------------------------------------------------------------------

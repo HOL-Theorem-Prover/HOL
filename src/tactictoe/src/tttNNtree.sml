@@ -33,10 +33,10 @@ fun const_nn dim activ arity =
 
 fun random_treenn dim cal poln =
   let val l = map (fn (c,a) =>
-    (c, const_nn dim (leakyrelu,dleakyrelu) a)) cal
+    (c, const_nn dim (tanh,dtanh) a)) cal
   in
     (dnew Term.compare l,
-     random_nn (leakyrelu,dleakyrelu) (tanh,dtanh) [dim+1,dim,1+poln])
+     random_nn (tanh,dtanh) (tanh,dtanh) [dim+1,dim,1+poln])
   end
 
 (*---------------------------------------------------------------------------
@@ -127,12 +127,10 @@ fun bp_treenn_aux dim doutnvdict fpdict bpdict revtml = case revtml of
 
 fun bp_treenn dim (fpdict,fpdatal) (tml,expectv) =
   let
-    val outnv = #outnv (last fpdatal)
-    (* custom made cost function *)
-    val doutnv = (diff_rvect expectv outnv)
-      (* mult_rvect (Vector.map (fn x => x + 0.5) expectv) *)
-    val bpdatal = bp_nn_wocost fpdatal doutnv
-    val newdoutnv =
+    val outnv      = #outnv (last fpdatal)
+    val doutnv     = diff_rvect expectv outnv
+    val bpdatal    = bp_nn_wocost fpdatal doutnv
+    val newdoutnv  =
       (Vector.fromList o tl o vector_to_list o #dinv o hd) bpdatal
     val doutnvdict = dsave (last tml,newdoutnv) (dempty Term.compare)
     val bpdict     = dempty Term.compare
@@ -185,7 +183,7 @@ fun update_opernn bsize opdict (oper,bpdatall) =
 fun train_treenn_batch dim (treenn as (opdict,headnn)) batch =
   let
     val (bpdictl,bpdatall) =
-      split (map (train_treenn_one dim treenn) batch)
+      split (parmap 3 (train_treenn_one dim treenn) batch)
     val bsize = length batch
     val (newheadnn,loss) = update_head bsize headnn bpdatall
     val bpdict    = merge_bpdict bpdictl
@@ -204,11 +202,6 @@ fun train_treenn_epoch_aux dim lossl treenn batchl = case batchl of
       train_treenn_epoch_aux dim (loss :: lossl) newtreenn m
     end
 
-(*
-fun zero (x:real) = 0.0
-fun zero_wu nn = map (zero o #w) nn
-*)
-
 fun train_treenn_epoch dim treenn batchl =
   train_treenn_epoch_aux dim [] treenn batchl
 
@@ -220,6 +213,19 @@ fun train_treenn_nepoch n dim treenn size trainset =
   in
     train_treenn_nepoch (n - 1) dim newtreenn size trainset
   end
+
+fun train_treenn_schedule dim treenn bsize prepset schedule = 
+  case schedule of
+    [] => treenn
+  | (nepoch, lrate) :: m => 
+    let 
+      val _ = learning_rate := lrate 
+      val _ = print_endline ("learning_rate: " ^ Real.toString lrate)
+      val trainedtreenn =
+        train_treenn_nepoch nepoch dim treenn bsize prepset  
+    in
+      train_treenn_schedule dim trainedtreenn bsize prepset m
+    end
 
 (*---------------------------------------------------------------------------
   Printing

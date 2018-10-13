@@ -47,6 +47,12 @@ include Abbrev
     (term list * real vector) list ->
     treenn
 
+  val train_treenn_schedule : 
+    int -> treenn -> int ->
+    (term list * real vector) list ->
+    (int * real) list ->
+    treenn
+
   (* printing *)
   val string_of_treenn : treenn -> string
 

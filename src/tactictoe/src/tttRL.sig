@@ -15,6 +15,7 @@ sig
   }
   type 'a tree = (int list, 'a node) Redblackmap.dict 
   datatype endcheck = InProgress | Win | Lose 
+  
 
   (* statistics *)
   (*
@@ -30,6 +31,11 @@ sig
   *)
 
   val preevalpoli_tm : tttNNtree.treenn -> term -> real * real list
+  
+  val string_of_trainset : (term * (real * real list)) list -> string
+  
+  val prepare_trainset : 
+    (term * (real * real list)) list -> (term list * real vector) list
   
   (* tactic based search *)
   val tac_createdict : 

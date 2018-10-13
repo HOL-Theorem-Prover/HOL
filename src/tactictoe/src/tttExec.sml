@@ -312,7 +312,7 @@ fun time_prove prover tmax premises tm =
     fun mk_goal x = ([],x)
     val thml = map (mk_thm o mk_goal) premises
     val tac = prover thml
-    val (r,t) = add_time (tttExec.app_tac tmax tac) (mk_goal tm)
+    val (r,t) = add_time (app_tac tmax tac) (mk_goal tm)
   in
     if r = SOME [] then SOME (tm,t) else NONE
   end

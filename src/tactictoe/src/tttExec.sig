@@ -61,13 +61,13 @@ sig
 
 
   val app_tac    : real -> tactic -> goal -> goal list option
-  val app_qtac    : real -> (goal -> goal list option) -> goal -> goal list option
+  val app_qtac   : real -> (goal -> goal list option) -> goal -> goal list option
 
   val rec_stac   : real -> string -> goal -> goal list option
   val rec_sproof : string -> goal -> goal list option
 
   (* prover *)
-  val time_mprove: 
+  val time_prove: 
     (thm list -> tactic) -> real -> term list -> term -> (term * real) option
   val miniprove : 
     (thm list -> tactic) -> real -> term list -> term -> term list option

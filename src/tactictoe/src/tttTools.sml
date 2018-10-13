@@ -406,6 +406,7 @@ fun string_of_goal (asm,w) =
 
 fun string_of_bool b = if b then "T" else "F"
 
+
 (* --------------------------------------------------------------------------
    Comparisons
    -------------------------------------------------------------------------- *)
@@ -416,6 +417,10 @@ fun compare_imin ((_,r1),(_,r2)) = Int.compare (r1,r2)
 fun compare_rmax ((_,r2),(_,r1)) = Real.compare (r1,r2)
 fun compare_rmin ((_,r1),(_,r2)) = Real.compare (r1,r2)
 
+(* --------------------------------------------------------------------------
+   Random
+   -------------------------------------------------------------------------- *)
+
 val new_real = Random.newgen ()
 
 fun random_real () = Random.random new_real
@@ -425,6 +430,27 @@ fun shuffle l =
     val l' = map (fn x => (x, random_real ())) l in
       map fst (dict_sort compare_rmin l')
   end
+
+fun cumul_proba (tot:real) l = case l of
+    [] => []
+  | (mv,p) :: m => (mv, tot + p) :: cumul_proba (tot + p) m
+
+fun find_cumul proba cumul = case cumul of
+    []  => raise ERR "find_cumul" ""
+  | [a] => fst a
+  | (mv,p) :: m => if proba < (p:real) then mv else find_cumul proba m
+
+fun select_in_distrib l =
+  let 
+    val l' = cumul_proba 0.0 l
+    val (_,tot) = last l'
+  in
+    find_cumul (random_real () * tot) l'
+  end
+
+(* --------------------------------------------------------------------------
+   Comparisons
+   -------------------------------------------------------------------------- *)
 
 fun goal_compare ((asm1,w1), (asm2,w2)) =
   list_compare Term.compare (w1 :: asm1, w2 :: asm2)

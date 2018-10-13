@@ -39,10 +39,10 @@ sig
   val hh_pb             : prover list -> string list -> goal -> tactic
   val clean_goaltac_cache : unit -> unit 
     (* saving results of the next functions in goaltac_cache *)
-  val hh_goal           : goal -> tactic
-  val hh_fork           : goal -> Thread.thread
-  val holyhammer        : term -> tactic
-  val hh                : tactic
+  val hh_goal     : goal -> tactic
+  val hh_fork     : goal -> Thread.thread
+  val holyhammer  : term -> thm
+  val hh          : tactic
   
   (* Other functions *)
   val metis_auto        : real -> int -> goal -> string option

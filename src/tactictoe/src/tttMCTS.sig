@@ -23,6 +23,7 @@ sig
     int ->
     (int list -> 'a pos -> real * choice list) ->
     ('a pos -> endcheck) ->
+    ('a tree -> int list -> 'a pos -> bool) ->
     (string -> 'a pos -> 'a pos) ->
     'a pos -> 
     'a tree
