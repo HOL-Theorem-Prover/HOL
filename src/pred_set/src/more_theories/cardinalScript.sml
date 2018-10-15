@@ -15,15 +15,15 @@ fun K_TAC _ = ALL_TAC;
 fun MESON ths tm = prove(tm,MESON_TAC ths);
 fun METIS ths tm = prove(tm,METIS_TAC ths);
 
-val DISC_RW_KILL = DISCH_TAC THEN ONCE_ASM_REWRITE_TAC [] THEN 
+val DISC_RW_KILL = DISCH_TAC THEN ONCE_ASM_REWRITE_TAC [] THEN
                    POP_ASSUM K_TAC;
 
-fun SET_TAC L = 
+fun SET_TAC L =
     POP_ASSUM_LIST(K ALL_TAC) THEN REPEAT COND_CASES_TAC THEN
     REWRITE_TAC (append [EXTENSION, SUBSET_DEF, PSUBSET_DEF, DISJOINT_DEF,
     SING_DEF] L) THEN
-    SIMP_TAC std_ss [NOT_IN_EMPTY, IN_UNIV, IN_UNION, IN_INTER, IN_DIFF, 
-      IN_INSERT, IN_DELETE, IN_REST, IN_BIGINTER, IN_BIGUNION, IN_IMAGE, 
+    SIMP_TAC std_ss [NOT_IN_EMPTY, IN_UNIV, IN_UNION, IN_INTER, IN_DIFF,
+      IN_INSERT, IN_DELETE, IN_REST, IN_BIGINTER, IN_BIGUNION, IN_IMAGE,
       GSPECIFICATION, IN_DEF, EXISTS_PROD] THEN METIS_TAC [];
 
 fun ASSERT_TAC tm = SUBGOAL_THEN tm STRIP_ASSUME_TAC;
@@ -1508,7 +1508,7 @@ val RIGHT_IMP_EXISTS_THM = store_thm ("RIGHT_IMP_EXISTS_THM",
  ``!P Q. P ==> (?x. Q x) <=> (?x. P ==> Q x)``,
  REWRITE_TAC [GSYM RIGHT_EXISTS_IMP_THM]);
 
-val RIGHT_IMP_FORALL_THM = store_thm ("RIGHT_IMP_FORALL_THM", 
+val RIGHT_IMP_FORALL_THM = store_thm ("RIGHT_IMP_FORALL_THM",
  ``!P Q. P ==> (!x. Q x) <=> (!x. P ==> Q x)``,
  REWRITE_TAC [GSYM RIGHT_FORALL_IMP_THM]);
 
@@ -1563,12 +1563,12 @@ val FINITE_IMAGE_INJ_GENERAL = store_thm ("FINITE_IMAGE_INJ_GENERAL",
         ==> (FINITE {x | x IN s /\ f(x) IN A})``,
   REPEAT STRIP_TAC THEN
   FULL_SIMP_TAC std_ss [INJECTIVE_ON_LEFT_INVERSE] THEN ASSUME_TAC SUBSET_FINITE
-  THEN POP_ASSUM (MP_TAC o Q.SPEC `IMAGE (g:'b->'a) A`) THEN 
+  THEN POP_ASSUM (MP_TAC o Q.SPEC `IMAGE (g:'b->'a) A`) THEN
   KNOW_TAC ``FINITE (IMAGE g A)`` THENL [METIS_TAC [IMAGE_FINITE], DISCH_TAC
-  THEN FULL_SIMP_TAC std_ss [] THEN DISCH_TAC THEN 
+  THEN FULL_SIMP_TAC std_ss [] THEN DISCH_TAC THEN
   POP_ASSUM (MP_TAC o Q.SPEC `{x | x IN s /\ f x IN A}`) THEN DISCH_TAC
-  THEN KNOW_TAC ``{x | x IN s /\ f x IN A} SUBSET IMAGE g A`` THENL 
-  [REWRITE_TAC [IMAGE_DEF, SUBSET_DEF] THEN GEN_TAC THEN 
+  THEN KNOW_TAC ``{x | x IN s /\ f x IN A} SUBSET IMAGE g A`` THENL
+  [REWRITE_TAC [IMAGE_DEF, SUBSET_DEF] THEN GEN_TAC THEN
   SIMP_TAC std_ss [GSPECIFICATION] THEN METIS_TAC [] , METIS_TAC []]]);
 
 val FINITE_IMAGE_INJ = store_thm ("FINITE_IMAGE_INJ",
@@ -1584,7 +1584,7 @@ val FINITE_IMAGE_INJ_EQ = store_thm ("FINITE_IMAGE_INJ_EQ",
   REPEAT STRIP_TAC THEN EQ_TAC THEN ASM_SIMP_TAC std_ss [IMAGE_FINITE] THEN
   POP_ASSUM MP_TAC THEN REWRITE_TAC[AND_IMP_INTRO] THEN
   DISCH_THEN(MP_TAC o MATCH_MP FINITE_IMAGE_INJ_GENERAL) THEN
-  MATCH_MP_TAC EQ_IMPLIES THEN AP_TERM_TAC THEN 
+  MATCH_MP_TAC EQ_IMPLIES THEN AP_TERM_TAC THEN
   SIMP_TAC std_ss [EXTENSION, GSPECIFICATION, IN_IMAGE] THEN METIS_TAC []);
 
 val INFINITE_IMAGE_INJ = store_thm ("INFINITE_IMAGE_INJ",
@@ -1605,20 +1605,20 @@ val FINITE_PRODUCT_DEPENDENT = store_thm ("FINITE_PRODUCT_DEPENDENT",
  ``!f:'a->'b->'c s t.
         FINITE s /\ (!x. x IN s ==> FINITE(t x))
         ==> FINITE {f x y | x IN s /\ y IN (t x)}``,
-  REPEAT STRIP_TAC THEN KNOW_TAC ``{f x y | x IN s /\ y IN (t x)} SUBSET 
+  REPEAT STRIP_TAC THEN KNOW_TAC ``{f x y | x IN s /\ y IN (t x)} SUBSET
    IMAGE (\(x,y). (f:'a->'b->'c) x y) {x,y | x IN s /\ y IN t x}`` THENL
   [SRW_TAC [][SUBSET_DEF, IN_IMAGE, EXISTS_PROD], ALL_TAC] THEN
-  KNOW_TAC ``FINITE (IMAGE (\(x,y). (f:'a->'b->'c) x y) 
+  KNOW_TAC ``FINITE (IMAGE (\(x,y). (f:'a->'b->'c) x y)
                     {x,y | x IN s /\ y IN t x})`` THENL
   [MATCH_MP_TAC IMAGE_FINITE THEN MAP_EVERY UNDISCH_TAC
    [``!x:'a. x IN s ==> FINITE(t x :'b->bool)``, ``FINITE(s:'a->bool)``]
   THEN MAP_EVERY (fn t => SPEC_TAC(t,t)) [``t:'a->'b->bool``, ``s:'a->bool``]
   THEN SIMP_TAC std_ss [RIGHT_FORALL_IMP_THM] THEN GEN_TAC THEN
   KNOW_TAC ``(!(t:'a->'b->bool). (!x. x IN s ==> FINITE (t x)) ==>
-             FINITE {(x,y) | x IN s /\ y IN t x}) = 
+             FINITE {(x,y) | x IN s /\ y IN t x}) =
          (\s. !(t:'a->'b->bool). (!x. x IN s ==> FINITE (t x)) ==>
              FINITE {(x,y) | x IN s /\ y IN t x}) (s:'a->bool)`` THENL
-  [FULL_SIMP_TAC std_ss [], ALL_TAC] THEN DISCH_TAC THEN 
+  [FULL_SIMP_TAC std_ss [], ALL_TAC] THEN DISCH_TAC THEN
   ONCE_ASM_REWRITE_TAC [] THEN MATCH_MP_TAC FINITE_INDUCT THEN BETA_TAC
   THEN CONJ_TAC THENL [GEN_TAC THEN
   SUBGOAL_THEN ``{(x:'a,y:'b) | x IN {} /\ y IN (t x)} = {}``
@@ -1665,7 +1665,7 @@ val CARD_LE_INJ = store_thm ("CARD_LE_INJ",
    ==> ?f:'a->'b. (IMAGE f s) SUBSET t /\
                 !x y. x IN s /\ y IN s /\ (f x = f y) ==> (x = y)``,
   REWRITE_TAC[CONJ_EQ_IMP] THEN SIMP_TAC std_ss [RIGHT_FORALL_IMP_THM] THEN
-  ONCE_REWRITE_TAC [METIS [] 
+  ONCE_REWRITE_TAC [METIS []
     ``!s. (!t. FINITE t ==> CARD s <= CARD t ==>
     ?f. IMAGE (f:'a->'b) s SUBSET t /\
       !x. x IN s ==> !y. y IN s ==> (f x = f y) ==> (x = y)) =
@@ -1688,7 +1688,7 @@ val CARD_LE_INJ = store_thm ("CARD_LE_INJ",
     !x'. x' IN x INSERT s ==>
       !y. y IN x INSERT s ==> (f x' = f y) ==> (x' = y)) t``] THEN
   MATCH_MP_TAC FINITE_INDUCT THEN BETA_TAC THEN
-  SIMP_TAC std_ss [CARD_EMPTY, CARD_INSERT, LE, NOT_SUC] THEN  
+  SIMP_TAC std_ss [CARD_EMPTY, CARD_INSERT, LE, NOT_SUC] THEN
   SIMP_TAC std_ss [RIGHT_IMP_FORALL_THM] THEN
   MAP_EVERY X_GEN_TAC [``t:'b->bool``, ``y:'b``] THEN
   SIMP_TAC std_ss [CARD_EMPTY, CARD_INSERT] THEN
@@ -1710,7 +1710,7 @@ val CARD_IMAGE_INJ = store_thm ("CARD_IMAGE_INJ",
     (CARD (IMAGE f s) = CARD s) = (\s. (!(x :'a) (y :'a).
        x IN s ==> y IN s ==> ((f :'a -> 'b) x = f y) ==> (x = y)) ==>
     (CARD (IMAGE f s) = CARD s)) (s:'a->bool)`` THENL
-  [FULL_SIMP_TAC std_ss[], DISCH_TAC THEN ONCE_ASM_REWRITE_TAC [] 
+  [FULL_SIMP_TAC std_ss[], DISCH_TAC THEN ONCE_ASM_REWRITE_TAC []
   THEN MATCH_MP_TAC FINITE_INDUCT THEN BETA_TAC THEN
   REWRITE_TAC[NOT_IN_EMPTY, IMAGE_EMPTY, IMAGE_INSERT] THEN
   REPEAT STRIP_TAC THENL
@@ -1720,10 +1720,10 @@ val CARD_IMAGE_INJ = store_thm ("CARD_IMAGE_INJ",
 
 val CARD_IMAGE_LE = store_thm ("CARD_IMAGE_LE",
  ``!(f:'a->'b) s. FINITE s ==> CARD(IMAGE f s) <= CARD s``,
-  REPEAT GEN_TAC THEN KNOW_TAC``(CARD (IMAGE f s) <= CARD (s:'a->bool)) = 
-  ((\s.  CARD (IMAGE f s) <= CARD s) s)`` THENL [FULL_SIMP_TAC std_ss[], 
-  DISCH_TAC THEN ONCE_ASM_REWRITE_TAC [] THEN MATCH_MP_TAC FINITE_INDUCT  
-  THEN BETA_TAC THEN SIMP_TAC std_ss [IMAGE_EMPTY, IMAGE_INSERT, CARD_DEF, 
+  REPEAT GEN_TAC THEN KNOW_TAC``(CARD (IMAGE f s) <= CARD (s:'a->bool)) =
+  ((\s.  CARD (IMAGE f s) <= CARD s) s)`` THENL [FULL_SIMP_TAC std_ss[],
+  DISCH_TAC THEN ONCE_ASM_REWRITE_TAC [] THEN MATCH_MP_TAC FINITE_INDUCT
+  THEN BETA_TAC THEN SIMP_TAC std_ss [IMAGE_EMPTY, IMAGE_INSERT, CARD_DEF,
   IMAGE_FINITE, LESS_EQ_REFL] THEN REPEAT STRIP_TAC THEN COND_CASES_TAC THENL
   [MATCH_MP_TAC LESS_EQ_TRANS THEN EXISTS_TAC ``CARD (s' :'a -> bool)``
   THEN FULL_SIMP_TAC std_ss [], FULL_SIMP_TAC std_ss [LESS_EQ_MONO]]]);
@@ -1738,18 +1738,18 @@ val SURJECTIVE_IFF_INJECTIVE_GEN = store_thm ("SURJECTIVE_IFF_INJECTIVE_GEN",
   SUBGOAL_THEN ``CARD s <= CARD (IMAGE (f:'a->'b) (s DELETE y))`` MP_TAC THENL
   [ASM_REWRITE_TAC[] THEN KNOW_TAC  ``(!(s :'b -> bool).
             FINITE s ==> !(t :'b -> bool). t SUBSET s ==> CARD t <= CARD s)``
-  THENL [METIS_TAC [CARD_SUBSET], DISCH_TAC THEN 
+  THENL [METIS_TAC [CARD_SUBSET], DISCH_TAC THEN
   POP_ASSUM (MP_TAC o Q.SPEC `IMAGE (f:'a->'b) ((s:'a->bool) DELETE y)`) THEN
   KNOW_TAC ``FINITE (IMAGE (f :'a -> 'b) ((s :'a -> bool) DELETE (y :'a)))``
   THENL [FULL_SIMP_TAC std_ss [IMAGE_FINITE, FINITE_DELETE], DISCH_TAC
   THEN FULL_SIMP_TAC std_ss [] THEN DISCH_TAC THEN POP_ASSUM (MP_TAC o Q.SPEC `t:'b->bool`)
   THEN KNOW_TAC ``(t :'b -> bool) SUBSET IMAGE (f :'a -> 'b) ((s :'a -> bool) DELETE (y :'a))``
   THENL [REWRITE_TAC[SUBSET_DEF, IN_IMAGE, IN_DELETE] THEN ASM_MESON_TAC[], ASM_MESON_TAC[]]]],
-  FULL_SIMP_TAC std_ss [] THEN REWRITE_TAC[NOT_LESS_EQUAL] THEN 
+  FULL_SIMP_TAC std_ss [] THEN REWRITE_TAC[NOT_LESS_EQUAL] THEN
   MATCH_MP_TAC LESS_EQ_LESS_TRANS THEN EXISTS_TAC ``CARD(s DELETE (y:'a))`` THEN
-  CONJ_TAC THENL [ASM_SIMP_TAC std_ss [CARD_IMAGE_LE, FINITE_DELETE], 
+  CONJ_TAC THENL [ASM_SIMP_TAC std_ss [CARD_IMAGE_LE, FINITE_DELETE],
   KNOW_TAC ``!x. x - 1 < x:num <=> ~(x = 0)`` THENL [ARITH_TAC, DISCH_TAC
-  THEN ASM_SIMP_TAC std_ss [CARD_DELETE] THEN 
+  THEN ASM_SIMP_TAC std_ss [CARD_DELETE] THEN
   ASM_MESON_TAC[CARD_EQ_0, MEMBER_NOT_EMPTY]]]]],
   SUBGOAL_THEN ``IMAGE (f:'a->'b) s = t`` MP_TAC THENL
   [ALL_TAC, ASM_MESON_TAC[EXTENSION, IN_IMAGE]] THEN
@@ -1784,24 +1784,24 @@ val CARD_EQ_BIJECTIONS = store_thm ("CARD_EQ_BIJECTIONS",
   SIMP_TAC std_ss [SURJECTIVE_ON_RIGHT_INVERSE] THEN
   SIMP_TAC std_ss [GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM] THEN
   METIS_TAC[]);
- 
+
 val SING_SUBSET = store_thm ("SING_SUBSET",
  ``!s x. {x} SUBSET s <=> x IN s``,
   SET_TAC[]);
 
 val INJECTIVE_ON_IMAGE = store_thm ("INJECTIVE_ON_IMAGE",
- ``!f:'a->'b u. (!s t. s SUBSET u /\ t SUBSET u /\ 
-                (IMAGE f s = IMAGE f t) ==> (s = t)) <=> 
+ ``!f:'a->'b u. (!s t. s SUBSET u /\ t SUBSET u /\
+                (IMAGE f s = IMAGE f t) ==> (s = t)) <=>
       (!x y. x IN u /\ y IN u /\ (f x = f y) ==> (x = y))``,
-  REPEAT GEN_TAC THEN EQ_TAC THENL 
-  [DISCH_TAC, SET_TAC[]] THEN MAP_EVERY X_GEN_TAC [``x:'a``, ``y:'a``] THEN 
-   STRIP_TAC THEN FIRST_X_ASSUM(MP_TAC o SPECL [``{x:'a}``, ``{y:'a}``]) THEN 
+  REPEAT GEN_TAC THEN EQ_TAC THENL
+  [DISCH_TAC, SET_TAC[]] THEN MAP_EVERY X_GEN_TAC [``x:'a``, ``y:'a``] THEN
+   STRIP_TAC THEN FIRST_X_ASSUM(MP_TAC o SPECL [``{x:'a}``, ``{y:'a}``]) THEN
    ASM_REWRITE_TAC[SING_SUBSET, IMAGE_EMPTY, IMAGE_INSERT] THEN SET_TAC[]);
 
 val INJECTIVE_IMAGE = store_thm ("INJECTIVE_IMAGE",
- ``!f:'a->'b. (!s t. (IMAGE f s = IMAGE f t) ==> (s = t)) <=> 
+ ``!f:'a->'b. (!s t. (IMAGE f s = IMAGE f t) ==> (s = t)) <=>
               (!x y. (f x = f y) ==> (x = y))``,
-  GEN_TAC THEN MP_TAC(ISPECL [``f:'a->'b``, ``univ(:'a)``] INJECTIVE_ON_IMAGE) THEN 
+  GEN_TAC THEN MP_TAC(ISPECL [``f:'a->'b``, ``univ(:'a)``] INJECTIVE_ON_IMAGE) THEN
   REWRITE_TAC[IN_UNIV, SUBSET_UNIV]);
 
 val FINITE_FINITE_BIGUNION = store_thm
@@ -1818,12 +1818,12 @@ val num_FINITE = store_thm ("num_FINITE",
  ``!s:num->bool. FINITE s <=> ?a. !x. x IN s ==> x <= a``,
   GEN_TAC THEN EQ_TAC THENL
    [SPEC_TAC(``s:num->bool``,``s:num->bool``) THEN GEN_TAC THEN
-   KNOW_TAC ``(?a. !x. x IN s ==> x <= a) = 
+   KNOW_TAC ``(?a. !x. x IN s ==> x <= a) =
           (\s. ?a. !x. x IN s ==> x <= a) (s:num->bool)`` THENL
     [FULL_SIMP_TAC std_ss [], ALL_TAC] THEN DISC_RW_KILL THEN
     MATCH_MP_TAC FINITE_INDUCT THEN BETA_TAC THEN
     REWRITE_TAC[IN_INSERT, NOT_IN_EMPTY] THEN MESON_TAC[LESS_EQ_CASES, LESS_EQ_TRANS],
-    DISCH_THEN(X_CHOOSE_TAC ``n:num``) THEN 
+    DISCH_THEN(X_CHOOSE_TAC ``n:num``) THEN
     KNOW_TAC ``s SUBSET {m:num | m <= n}`` THENL [REWRITE_TAC [SUBSET_DEF] THEN
     RW_TAC std_ss [GSPECIFICATION], ALL_TAC] THEN MATCH_MP_TAC SUBSET_FINITE THEN
     KNOW_TAC ``{m:num | m <= n} = {m | m < n} UNION {n}``
@@ -1859,11 +1859,11 @@ val HAS_SIZE_0 = store_thm ("HAS_SIZE_0",
   FIRST_ASSUM(MP_TAC o CONJUNCT2) THEN
   FIRST_ASSUM(MP_TAC o CONJUNCT1) THEN
   SPEC_TAC(``s:'a->bool``,``s:'a->bool``) THEN GEN_TAC THEN
-  
-  KNOW_TAC ``(CARD s' = 0:num) ==> (s' = {}) = 
+
+  KNOW_TAC ``(CARD s' = 0:num) ==> (s' = {}) =
        (\s'. (CARD s' = 0:num) ==> (s' = {})) s'`` THENL
   [FULL_SIMP_TAC std_ss [], ALL_TAC] THEN DISCH_TAC THEN
-  ONCE_ASM_REWRITE_TAC [] THEN 
+  ONCE_ASM_REWRITE_TAC [] THEN
   MATCH_MP_TAC FINITE_INDUCT THEN BETA_TAC THEN
   REWRITE_TAC[NOT_INSERT_EMPTY] THEN
   REPEAT GEN_TAC THEN STRIP_TAC THEN
@@ -1875,14 +1875,14 @@ val HAS_SIZE_SUC = store_thm ("HAS_SIZE_SUC",
    ~(s = {}) /\ !a. a IN s ==> (s DELETE a) HAS_SIZE n``,
   REPEAT GEN_TAC THEN REWRITE_TAC[HAS_SIZE] THEN
   ASM_CASES_TAC ``s:'a->bool = {}`` THEN
-  ASM_REWRITE_TAC[CARD_DEF, FINITE_EMPTY, FINITE_INSERT, 
+  ASM_REWRITE_TAC[CARD_DEF, FINITE_EMPTY, FINITE_INSERT,
   NOT_IN_EMPTY, SUC_NOT] THEN REWRITE_TAC[FINITE_DELETE] THEN
   ASM_CASES_TAC ``FINITE(s:'a->bool)`` THEN
   RW_TAC std_ss[NOT_FORALL_THM, MEMBER_NOT_EMPTY] THEN
   EQ_TAC THEN REPEAT STRIP_TAC THENL
   [ASM_SIMP_TAC std_ss [CARD_DELETE],
-  KNOW_TAC ``?x. x IN s`` THENL 
-  [FULL_SIMP_TAC std_ss [MEMBER_NOT_EMPTY], ALL_TAC] THEN 
+  KNOW_TAC ``?x. x IN s`` THENL
+  [FULL_SIMP_TAC std_ss [MEMBER_NOT_EMPTY], ALL_TAC] THEN
   DISCH_THEN(X_CHOOSE_TAC ``a:'a``) THEN ASSUME_TAC CARD_INSERT THEN
   POP_ASSUM (MP_TAC o Q.SPEC `s DELETE a`) THEN
   FULL_SIMP_TAC std_ss [FINITE_DELETE] THEN STRIP_TAC THEN
@@ -1906,7 +1906,7 @@ val HAS_SIZE_CLAUSES = store_thm ("HAS_SIZE_CLAUSES",
   REWRITE_TAC[HAS_SIZE_0] THEN REPEAT STRIP_TAC THEN EQ_TAC THENL
    [REWRITE_TAC[HAS_SIZE_SUC, GSYM MEMBER_NOT_EMPTY] THEN
     MESON_TAC[lemma, IN_DELETE],
-    SIMP_TAC std_ss [LEFT_IMP_EXISTS_THM, HAS_SIZE, CARD_EMPTY, CARD_INSERT, 
+    SIMP_TAC std_ss [LEFT_IMP_EXISTS_THM, HAS_SIZE, CARD_EMPTY, CARD_INSERT,
      FINITE_INSERT]]);
 
 val CARD_SUBSET_EQ = store_thm ("CARD_SUBSET_EQ",
@@ -1914,7 +1914,7 @@ val CARD_SUBSET_EQ = store_thm ("CARD_SUBSET_EQ",
   REPEAT STRIP_TAC THEN
   MP_TAC(SPECL [``a:'a->bool``] CARD_UNION) THEN
   SUBGOAL_THEN ``FINITE(a:'a->bool)`` ASSUME_TAC THENL
-   [METIS_TAC[SUBSET_FINITE_I], ALL_TAC] THEN ASM_REWRITE_TAC [] THEN 
+   [METIS_TAC[SUBSET_FINITE_I], ALL_TAC] THEN ASM_REWRITE_TAC [] THEN
   DISCH_THEN (MP_TAC o SPEC ``b DIFF (a:'a->bool)``) THEN
   SUBGOAL_THEN ``FINITE(b:'a->bool DIFF a)`` ASSUME_TAC THENL
    [MATCH_MP_TAC SUBSET_FINITE_I THEN EXISTS_TAC ``b:'a->bool`` THEN
@@ -1936,9 +1936,9 @@ val HAS_SIZE_INDEX = store_thm ("HAS_SIZE_INDEX",
    ==> ?f:num->'a. (!m. m < n ==> f(m) IN s) /\
    (!x. x IN s ==> ?!m. m < n /\ (f m = x))``,
 
-  KNOW_TAC ``(!(s:'a->bool) (n:num). s HAS_SIZE n ==> 
+  KNOW_TAC ``(!(s:'a->bool) (n:num). s HAS_SIZE n ==>
        ?f. (!m. m < n ==> f m IN s) /\ !x. x IN s ==> ?!m. m < n /\ (f m = x)) =
-             (!(n:num) (s:'a->bool). s HAS_SIZE n ==> 
+             (!(n:num) (s:'a->bool). s HAS_SIZE n ==>
        ?f. (!m. m < n ==> f m IN s) /\ !x. x IN s ==> ?!m. m < n /\ (f m = x))``
   THENL [EQ_TAC THENL [FULL_SIMP_TAC std_ss [], FULL_SIMP_TAC std_ss []], ALL_TAC]
   THEN DISCH_TAC THEN ONCE_ASM_REWRITE_TAC [] THEN
@@ -1967,7 +1967,7 @@ val CARD_BIGUNION_LE = store_thm ("CARD_BIGUNION_LE",
   GEN_REWR_TAC (funpow 4 BINDER_CONV o funpow 2 LAND_CONV) [HAS_SIZE] THEN
   REWRITE_TAC[GSYM CONJ_ASSOC] THEN
   ONCE_REWRITE_TAC[CONJ_EQ_IMP] THEN SIMP_TAC std_ss [RIGHT_FORALL_IMP_THM] THEN
-  GEN_TAC THEN ONCE_REWRITE_TAC [METIS [] 
+  GEN_TAC THEN ONCE_REWRITE_TAC [METIS []
     ``(!(t :'a -> 'b -> bool) (n :num).
   (!(x :'a). x IN s ==> FINITE (t x) /\ CARD (t x) <= n) ==>
   CARD (BIGUNION {t x | x IN s}) <= CARD s * n) =
@@ -1975,9 +1975,9 @@ val CARD_BIGUNION_LE = store_thm ("CARD_BIGUNION_LE",
   (!(x :'a). x IN s ==> FINITE (t x) /\ CARD (t x) <= n) ==>
   CARD (BIGUNION {t x | x IN s}) <= CARD s * n) s``] THEN
   MATCH_MP_TAC FINITE_INDUCT THEN BETA_TAC THEN CONJ_TAC THEN
-  SIMP_TAC std_ss [SET_RULE ``BIGUNION {t x | x IN {}} = {}``, 
+  SIMP_TAC std_ss [SET_RULE ``BIGUNION {t x | x IN {}} = {}``,
                    CARD_EMPTY, CARD_INSERT, ZERO_LESS_EQ] THEN
-  REPEAT GEN_TAC THEN STRIP_TAC THEN 
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
   SIMP_TAC std_ss [GSYM RIGHT_FORALL_IMP_THM] THEN REPEAT GEN_TAC THEN
   ASM_SIMP_TAC std_ss [CARD_EMPTY, CARD_INSERT, FINITE_EMPTY, FINITE_INSERT] THEN
   DISCH_TAC THEN DISCH_TAC THEN
@@ -2072,7 +2072,7 @@ val INFINITE_DIFF_FINITE = store_thm ("INFINITE_DIFF_FINITE",
 val LE_CASES = store_thm ("LE_CASES",
  ``!m n:num. m <= n \/ n <= m``,
   REPEAT INDUCT_TAC THEN ASM_REWRITE_TAC[ZERO_LESS_EQ, LESS_EQ_MONO]);
-  
+
 val LT_CASES = store_thm ("LT_CASES",
  ``!m n:num. (m < n) \/ (n < m) \/ (m = n)``,
   METIS_TAC [LESS_CASES, LESS_OR_EQ]);
@@ -2093,11 +2093,11 @@ val LE_SUC_LT = store_thm ("LE_SUC_LT",
  ``!m n. (SUC m <= n) <=> (m < n)``,
   GEN_TAC THEN INDUCT_TAC THEN ASM_REWRITE_TAC[LE, LT, GSYM SUC_NOT, INV_SUC_EQ]);
 
-val lemma = METIS [] ``(!x. x IN s ==> (g(f(x)) = x)) <=> 
+val lemma = METIS [] ``(!x. x IN s ==> (g(f(x)) = x)) <=>
                      (!y x. x IN s /\ (y = f x) ==> (g y = x))``;
 
 val INJECTIVE_ON_LEFT_INVERSE = store_thm ("INJECTIVE_ON_LEFT_INVERSE",
- ``!f s. (!x y. x IN s /\ y IN s /\ (f x = f y) ==> (x = y)) <=> 
+ ``!f s. (!x y. x IN s /\ y IN s /\ (f x = f y) ==> (x = y)) <=>
        (?g. !x. x IN s ==> (g(f(x)) = x))``,
   ONCE_REWRITE_TAC [lemma] THEN
   SIMP_TAC std_ss [GSYM SKOLEM_THM] THEN METIS_TAC[]);
@@ -2161,7 +2161,7 @@ val BIJECTIVE_INJECTIVE_SURJECTIVE = store_thm ("BIJECTIVE_INJECTIVE_SURJECTIVE"
    (!x y. x IN s /\ y IN s /\ (f(x) = f(y)) ==> (x = y)) /\
    (!y. y IN t ==> ?x. x IN s /\ (f x = y))``,
   MESON_TAC[]);
-  
+
 val BIJECTIVE_INVERSES = store_thm ("BIJECTIVE_INVERSES",
  ``!f s t. (!x. x IN s ==> f(x) IN t) /\
    (!y. y IN t ==> ?!x. x IN s /\ (f x = y)) <=>
@@ -2540,7 +2540,7 @@ val CARD_LE_CARD_IMP = store_thm ("CARD_LE_CARD_IMP",
 
 val CARD_EQ_CARD_IMP = store_thm ("CARD_EQ_CARD_IMP",
  ``!s:'a->bool t:'b->bool. FINITE t /\ s =_c t ==> (CARD s = CARD t)``,
-  METIS_TAC[CARD_FINITE_CONG, ARITH_PROVE ``m <= n /\ n <= m <=> (m = n:num)``, 
+  METIS_TAC[CARD_FINITE_CONG, ARITH_PROVE ``m <= n /\ n <= m <=> (m = n:num)``,
             CARD_LE_ANTISYM, CARD_LE_CARD_IMP]);
 
 val CARD_LE_CARD = store_thm ("CARD_LE_CARD",
@@ -2630,10 +2630,10 @@ val CARD_LE_ADD = store_thm ("CARD_LE_ADD",
   DISCH_THEN(CONJUNCTS_THEN2
    (X_CHOOSE_THEN ``f:'a->'b`` STRIP_ASSUME_TAC)
    (X_CHOOSE_THEN ``g:'c->'d`` STRIP_ASSUME_TAC)) THEN
-  KNOW_TAC ``(?h. (!x. h (INL x) = INL ((f:'a->'b) x)) /\ 
+  KNOW_TAC ``(?h. (!x. h (INL x) = INL ((f:'a->'b) x)) /\
                   (!y. h (INR y) = INR ((g:'c->'d) y)))`` THENL
   [RW_TAC std_ss [sum_Axiom], ALL_TAC] THEN
-  DISCH_THEN (X_CHOOSE_TAC ``h:('a+'c)->('b+'d)``) THEN 
+  DISCH_THEN (X_CHOOSE_TAC ``h:('a+'c)->('b+'d)``) THEN
   EXISTS_TAC ``h:('a+'c)->('b+'d)`` THEN
   POP_ASSUM MP_TAC THEN STRIP_TAC THEN
   SIMP_TAC std_ss [IN_UNION, GSPECIFICATION] THEN
@@ -2697,9 +2697,9 @@ val UNION_LE_ADD_C = store_thm ("UNION_LE_ADD_C",
   REPEAT GEN_TAC THEN MATCH_MP_TAC CARD_LE_IMAGE_GEN THEN
   REWRITE_TAC[add_c, IMAGE_UNION] THEN ONCE_REWRITE_TAC[GSYM IMAGE_DEF] THEN
   REWRITE_TAC[GSYM IMAGE_COMPOSE, combinTheory.o_DEF] THEN
-  EXISTS_TAC ``(\(y:'a+'a). if (?x:'a. y = INR x) then (OUTR:'a+'a->'a) y 
+  EXISTS_TAC ``(\(y:'a+'a). if (?x:'a. y = INR x) then (OUTR:'a+'a->'a) y
                                                   else (OUTL:'a+'a->'a) y)`` THEN
-  REWRITE_TAC [SUBSET_DEF, IN_IMAGE, IN_UNION] THEN GEN_TAC THEN STRIP_TAC THENL 
+  REWRITE_TAC [SUBSET_DEF, IN_IMAGE, IN_UNION] THEN GEN_TAC THEN STRIP_TAC THENL
   [DISJ1_TAC THEN EXISTS_TAC ``x:'a`` THEN ASM_REWRITE_TAC [] THEN BETA_TAC THEN
    COND_CASES_TAC THENL [ALL_TAC, METIS_TAC [OUTL]] THEN CCONTR_TAC THEN
    UNDISCH_TAC ``?x'. (INL x):'a+'a = INR x'`` THEN REWRITE_TAC [] THEN
@@ -2743,7 +2743,7 @@ val CARD_ADD_ASSOC = store_thm ("CARD_ADD_ASSOC",
  ``!s:'a->bool t:'b->bool u:'c->bool. (s +_c (t +_c u)) =_c ((s +_c t) +_c u)``,
   REPEAT GEN_TAC THEN REWRITE_TAC[eq_c] THEN
   KNOW_TAC ``?(i:'b+'c->('a+'b)+'c). (!u. i (INL u) = INL(INR u)) /\
-                                     (!v. i (INR v) = INR v)`` THENL 
+                                     (!v. i (INR v) = INR v)`` THENL
   [RW_TAC std_ss [sum_Axiom], STRIP_TAC] THEN
   KNOW_TAC ``?(h:'a+'b+'c->('a+'b)+'c).
      (!x. h (INL x) = INL(INL x)) /\ (!z. h(INR z) = i(z))`` THENL
@@ -2779,7 +2779,7 @@ val CARD_LDISTRIB = store_thm ("CARD_LDISTRIB",
   KNOW_TAC
    ``?i. (!x y. (i:'a->('b+'c)->'a#'b+'a#'c) x (INL y) = INL(x,y)) /\
      (!x z. (i:'a->('b+'c)->'a#'b+'a#'c) x (INR z) = INR(x,z))`` THENL
-  [EXISTS_TAC ``(\(x:'a) (y:'b+'c). if (?z:'b. y = INL z) 
+  [EXISTS_TAC ``(\(x:'a) (y:'b+'c). if (?z:'b. y = INL z)
                   then INL(x,@z. y = INL z) else INR(x,(OUTR:'b+'c->'c) y))`` THEN
    SIMP_TAC std_ss [], STRIP_TAC] THEN
   KNOW_TAC ``?h. (!x s. (h:'a#('b+'c)->('a#'b)+('a#'c)) (x,s) = i x s)`` THENL
@@ -2796,7 +2796,7 @@ val CARD_RDISTRIB = store_thm ("CARD_RDISTRIB",
   KNOW_TAC ``((u:'c->bool) *_c ((s:'a->bool) +_c (t:'b->bool))) =_c
               (((s:'a->bool) *_c (u:'c->bool)) +_c ((t:'b->bool) *_c u))`` THENL
   [ALL_TAC, METIS_TAC [CARD_MUL_SYM, CARD_EQ_TRANS]] THEN
-  KNOW_TAC ``(((u:'c->bool) *_c (s:'a->bool)) +_c (u *_c (t:'b->bool))) =_c 
+  KNOW_TAC ``(((u:'c->bool) *_c (s:'a->bool)) +_c (u *_c (t:'b->bool))) =_c
              ((s *_c u) +_c (t *_c u))`` THENL
   [ALL_TAC, METIS_TAC [CARD_EQ_TRANS, CARD_LDISTRIB]] THEN
   MATCH_MP_TAC CARD_ADD_CONG THEN REWRITE_TAC[CARD_MUL_SYM]);
@@ -2830,13 +2830,13 @@ val CARD_ADD_LE_MUL_INFINITE = store_thm ("CARD_ADD_LE_MUL_INFINITE",
                           (\x. !y. x IN s +_c s /\ y IN s +_c s /\ (h x = h y) ==> (x = y)) x``] THEN
    MATCH_MP_TAC sum_INDUCT THEN
    ASM_SIMP_TAC std_ss [IN_CARD_ADD, IN_CARD_MUL, PAIR_EQ] THEN STRIP_TAC THEN STRIP_TAC THENL
-   [ONCE_REWRITE_TAC [METIS [] ``(x IN s /\ y IN s +_c s /\ ((f (0:num),x) =  
+   [ONCE_REWRITE_TAC [METIS [] ``(x IN s /\ y IN s +_c s /\ ((f (0:num),x) =
                                 (h :'a + 'a -> 'a # 'a) y) ==> (INL x = y)) =
-                      (\y:'a+'a. x IN s /\ y IN s +_c s /\ ((f (0:num),x) = 
+                      (\y:'a+'a. x IN s /\ y IN s +_c s /\ ((f (0:num),x) =
                                 (h :'a + 'a -> 'a # 'a) y) ==> (INL x = y)) y``],
-    ONCE_REWRITE_TAC [METIS [] ``(x IN s /\ y IN s +_c s /\ ((f (1:num),x) =  
+    ONCE_REWRITE_TAC [METIS [] ``(x IN s /\ y IN s +_c s /\ ((f (1:num),x) =
                                 (h :'a + 'a -> 'a # 'a) y) ==> (INR x = y)) =
-                      (\y:'a+'a. x IN s /\ y IN s +_c s /\ ((f (1:num),x) = 
+                      (\y:'a+'a. x IN s /\ y IN s +_c s /\ ((f (1:num),x) =
                                 (h :'a + 'a -> 'a # 'a) y) ==> (INR x = y)) y``]] THEN
    MATCH_MP_TAC sum_INDUCT THEN
    ASM_SIMP_TAC std_ss [IN_CARD_ADD, IN_CARD_MUL, PAIR_EQ] THEN
@@ -2889,7 +2889,7 @@ val CARD_MUL_FINITE = store_thm ("CARD_MUL_FINITE",
 
 val CARD_MUL_ABSORB_LE = store_thm ("CARD_MUL_ABSORB_LE",
  ``!s:'a->bool t:'b->bool. INFINITE(t) /\ s <=_c t ==> (s *_c t) <=_c t``,
-  REPEAT STRIP_TAC THEN 
+  REPEAT STRIP_TAC THEN
   KNOW_TAC ``(s *_c t) <=_c ((t:'b->bool) *_c t) /\
              ((t:'b->bool) *_c t) <=_c t`` THENL
   [ALL_TAC, METIS_TAC [CARD_LE_TRANS]] THEN
@@ -2900,7 +2900,7 @@ val CARD_MUL2_ABSORB_LE = store_thm ("CARD_MUL2_ABSORB_LE",
  ``!s:'a->bool t:'b->bool u:'c->bool.
      INFINITE(u) /\ s <=_c u /\ t <=_c u ==> (s *_c t) <=_c u``,
   REPEAT STRIP_TAC THEN
-  KNOW_TAC ``(s *_c t) <=_c ((s:'a->bool) *_c (u:'c->bool)) /\ 
+  KNOW_TAC ``(s *_c t) <=_c ((s:'a->bool) *_c (u:'c->bool)) /\
              ((s:'a->bool) *_c (u:'c->bool)) <=_c u`` THENL
   [ALL_TAC, METIS_TAC [CARD_LE_TRANS]] THEN
   ASM_SIMP_TAC std_ss [CARD_MUL_ABSORB_LE] THEN MATCH_MP_TAC CARD_LE_MUL THEN
@@ -3019,7 +3019,7 @@ val CANTOR_THM = store_thm ("CANTOR_THM",
  ``!s:'a->bool. s <_c {t | t SUBSET s}``,
   GEN_TAC THEN ONCE_REWRITE_TAC [lt_c] THEN CONJ_TAC THENL
    [REWRITE_TAC[le_c] THEN EXISTS_TAC ``(=):'a->'a->bool`` THEN
-    SIMP_TAC std_ss [FUN_EQ_THM] THEN 
+    SIMP_TAC std_ss [FUN_EQ_THM] THEN
     SIMP_TAC std_ss [GSPECIFICATION,  SUBSET_DEF, IN_DEF],
     SIMP_TAC std_ss [LE_C, GSPECIFICATION, SURJECTIVE_RIGHT_INVERSE] THEN
     X_GEN_TAC ``g:'a->('a->bool)`` THEN
@@ -3093,7 +3093,7 @@ val COUNTABLE_IMAGE_INJ_GENERAL = store_thm ("COUNTABLE_IMAGE_INJ_GENERAL",
         COUNTABLE A
         ==> COUNTABLE {x | x IN s /\ f(x) IN A}``,
   REPEAT STRIP_TAC THEN
-  UNDISCH_TAC ``!x y. x IN s /\ y IN s /\ ((f:'a->'b) x = f y) ==> 
+  UNDISCH_TAC ``!x y. x IN s /\ y IN s /\ ((f:'a->'b) x = f y) ==>
                 (x = y)`` THEN DISCH_TAC THEN
   FIRST_X_ASSUM(MP_TAC o REWRITE_RULE [INJECTIVE_ON_LEFT_INVERSE]) THEN
   DISCH_THEN(X_CHOOSE_TAC ``g:'b->'a``) THEN
@@ -3188,7 +3188,7 @@ val COUNTABLE_AS_IMAGE_SUBSET = store_thm ("COUNTABLE_AS_IMAGE_SUBSET",
 val COUNTABLE_AS_IMAGE_SUBSET_EQ = store_thm ("COUNTABLE_AS_IMAGE_SUBSET_EQ",
  ``!s:'a->bool. COUNTABLE s <=> ?f. s SUBSET (IMAGE f univ(:num))``,
   REWRITE_TAC[COUNTABLE, ge_c, LE_C, SUBSET_DEF, IN_IMAGE] THEN MESON_TAC[]);
- 
+
 val COUNTABLE_AS_IMAGE = store_thm ("COUNTABLE_AS_IMAGE",
  ``!s:'a->bool. COUNTABLE s /\ ~(s = {}) ==> ?f. (s = IMAGE f univ(:num))``,
   REPEAT STRIP_TAC THEN FIRST_X_ASSUM(X_CHOOSE_TAC ``a:'a`` o
