@@ -9,11 +9,11 @@ loadPath := (concat home_dir "src/deep_embeddings") ::
             !loadPath;
 
 map load
- ["metisLib", "rltlTheory", "ltlTheory", "prop_logicTheory",
+ ["metisLib", "rltlTheory", "full_ltlTheory", "prop_logicTheory",
   "pred_setTheory"];
 *)
 
-open rltlTheory ltlTheory prop_logicTheory pred_setTheory;
+open rltlTheory full_ltlTheory prop_logicTheory pred_setTheory;
 open Sanity;
 
 (*

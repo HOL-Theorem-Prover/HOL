@@ -6,14 +6,14 @@ quietdec := true;
 val base_dir = concat Globals.HOLDIR "/examples/temporal_deep/";
 loadPath := (concat base_dir "src/tools") :: (concat base_dir "src/deep_embeddings") :: !loadPath;
 map load
- ["ltlTheory", "arithmeticTheory", "automaton_formulaTheory", "xprop_logicTheory", "prop_logicTheory",
+ ["full_ltlTheory", "arithmeticTheory", "automaton_formulaTheory", "xprop_logicTheory", "prop_logicTheory",
   "infinite_pathTheory", "tuerk_tacticsLib", "symbolic_semi_automatonTheory", "listTheory", "pred_setTheory",
   "pred_setTheory", "rich_listTheory", "set_lemmataTheory", "temporal_deep_mixedTheory",
   "pairTheory", "symbolic_kripke_structureTheory",
   "numLib"];
 *)
 
-open ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory
+open full_ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory
      prop_logicTheory
      infinite_pathTheory tuerk_tacticsLib symbolic_semi_automatonTheory listTheory pred_setTheory
      pred_setTheory rich_listTheory set_lemmataTheory temporal_deep_mixedTheory pairTheory symbolic_kripke_structureTheory
@@ -2508,7 +2508,7 @@ val CONSTRUCTION_LTL_TO_GEN_BUECHI_DS___CASE_PSNEXT =
 
 (*before we can prove the cases of SUNTIL and PSUNTIL, we need some lemmata about
   the semantics of these operators. These are quite specialised lemmata, which are probably not
-  of general interest. Therefore, they are profed here and not in ltlTheory. Moreover,
+  of general interest. Therefore, they are profed here and not in full_ltlTheory. Moreover,
   they are not exported, because they are just of insterest to proof the cases of
   SUNTIL and PSUNTIL. The names of these lemmata go back to their number
   in the book "Verification of Reactive Systems" by Klaus Schneider,

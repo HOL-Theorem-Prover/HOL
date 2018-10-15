@@ -8,14 +8,14 @@ loadPath := (concat home_dir "src/deep_embeddings") ::
             (concat home_dir "src/tools") :: !loadPath;
 
 map load
- ["ltlTheory", "arithmeticTheory", "automaton_formulaTheory", "xprop_logicTheory", "prop_logicTheory",
+ ["full_ltlTheory", "arithmeticTheory", "automaton_formulaTheory", "xprop_logicTheory", "prop_logicTheory",
   "infinite_pathTheory", "symbolic_semi_automatonTheory", "listTheory", "pred_setTheory", "rich_listTheory", "pairTheory",
   "numLib", "listLib", "rltlTheory", "computeLib", "relationTheory",
   "tuerk_tacticsLib", "congLib", "Travrules", "congToolsLibTheory"];
 *)
 
 open HolKernel boolLib bossLib
-     ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory prop_logicTheory
+     full_ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory prop_logicTheory
      infinite_pathTheory symbolic_semi_automatonTheory listTheory pred_setTheory
      rich_listTheory pairTheory numLib listLib rltlTheory computeLib relationTheory
      tuerk_tacticsLib congLib Travrules congToolsLibTheory

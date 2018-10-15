@@ -1,6 +1,5 @@
-
 (*****************************************************************************)
-(* Create "PathTheory", the theory of (finite and infinite) sequences.       *)
+(* Create "PSLPathTheory", the theory of (finite and infinite) sequences.    *)
 (* Note that finite paths can be empty.                                      *)
 (*****************************************************************************)
 
@@ -14,8 +13,8 @@
 ******************************************************************************)
 (*
 quietdec := true;
-map load ["intLib","FinitePathTheory"];
-open intLib rich_listTheory FinitePathTheory;
+map load ["intLib","FinitePSLPathTheory"];
+open intLib rich_listTheory FinitePSLPathTheory;
 val _ = intLib.deprecate_int();
 quietdec := false;
 *)
@@ -28,7 +27,7 @@ open HolKernel Parse boolLib bossLib;
 (******************************************************************************
 * Open theories
 ******************************************************************************)
-open intLib rich_listTheory FinitePathTheory;
+open intLib rich_listTheory FinitePSLPathTheory;
 
 (******************************************************************************
 * Set default parsing to natural numbers rather than integers
@@ -45,9 +44,9 @@ val _ = intLib.deprecate_int();
 val simp_arith_ss = simpLib.++ (arith_ss, numSimps.SUC_FILTER_ss);
 
 (******************************************************************************
-* Start a new theory called Path
+* Start a new theory called PSLPath
 ******************************************************************************)
-val _ = new_theory "Path";
+val _ = new_theory "PSLPath";
 
 (******************************************************************************
 * A path is finite or infinite
@@ -143,8 +142,8 @@ val RESTN_FINITE =
    ``!l n. RESTN (FINITE l) n = FINITE(RESTN l n)``,
    Induct_on `n`
     THEN RW_TAC std_ss
-          [RESTN_def,FinitePathTheory.RESTN_def,
-           REST_def,FinitePathTheory.REST_def]);
+          [RESTN_def,FinitePSLPathTheory.RESTN_def,
+           REST_def,FinitePSLPathTheory.REST_def]);
 
 val FINITE_TL =
  store_thm
@@ -418,7 +417,7 @@ val LENGTH_RESTN =
     THEN RW_TAC list_ss
           [LENGTH_def,RESTN_def,IS_FINITE_REST,SUB,
            IS_FINITE_def,REST_def,LENGTH_RESTN,LS,EL]
-    THEN `Path$LENGTH(FINITE(TL l)) = XNUM(list$LENGTH(TL l))` by RW_TAC std_ss [LENGTH_def]
+    THEN `PSLPath$LENGTH(FINITE(TL l)) = XNUM(list$LENGTH(TL l))` by RW_TAC std_ss [LENGTH_def]
     THEN Cases_on `l`
     THEN FULL_SIMP_TAC list_ss [DECIDE ``~(SUC n < 0)``]
     THEN ASSUM_LIST(fn thl => ASSUME_TAC(Q.SPEC `FINITE t` (el 3 thl)))
@@ -620,7 +619,7 @@ val LENGTH_RESTN_THM =
    Cases_on `p`
     THEN RW_TAC std_ss
           [LS_num_xnum_def,LENGTH_RESTN,LENGTH_RESTN_INFINITE,RESTN_FINITE,
-           LENGTH_def,SUB,FinitePathTheory.LENGTH_RESTN]);
+           LENGTH_def,SUB,FinitePSLPathTheory.LENGTH_RESTN]);
 
 (******************************************************************************
 * 0 < i  ==> (ELEM (FINITE(TL l)) (i-1) = ELEM (FINITE l) i)
@@ -735,7 +734,7 @@ val ELEM_CAT_SEL =
    Induct_on `i`
     THEN RW_TAC simp_arith_ss
           [SEL_ELEM,CAT_def,ELEM_def,HEAD_def,RESTN_def,REST_def,HEAD_CONS,
-           SEL_def,SEL_REC_def,FinitePathTheory.SEL_def,FinitePathTheory.SEL_REC_def,
+           SEL_def,SEL_REC_def,FinitePSLPathTheory.SEL_def,FinitePSLPathTheory.SEL_REC_def,
            CAT_def,DECIDE``SUC i + 1= SUC(i+1)``]);
 
 val SEL_REC_SPLIT =
@@ -933,6 +932,3 @@ val SEL_RESTN =
    RW_TAC arith_ss [SEL_def,SEL_REC_RESTN]);
 
 val _ = export_theory();
-
-
-

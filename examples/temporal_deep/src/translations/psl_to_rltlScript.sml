@@ -12,19 +12,19 @@ loadPath := (concat home_dir "src/deep_embeddings") ::
             (concat hol_dir "examples/PSL/1.1/official-semantics") :: !loadPath;
 
 map load
- ["FinitePathTheory", "PathTheory", "UnclockedSemanticsTheory", "SyntacticSugarTheory", "LemmasTheory", "RewritesTheory",
+ ["FinitePSLPathTheory", "PSLPathTheory", "UnclockedSemanticsTheory", "SyntacticSugarTheory", "LemmasTheory", "RewritesTheory",
   "RewritesPropertiesTheory", "ProjectionTheory", "SyntacticSugarTheory", "arithmeticTheory", "psl_lemmataTheory",
   "listTheory", "numLib", "intLib", "rich_listTheory", "pred_setTheory", "ModelTheory", "rltl_to_ltlTheory",
-  "rltlTheory", "ltlTheory", "tuerk_tacticsLib", "prop_logicTheory", "infinite_pathTheory", "res_quanTools", "temporal_deep_mixedTheory"];
+  "rltlTheory", "full_ltlTheory", "tuerk_tacticsLib", "prop_logicTheory", "infinite_pathTheory", "res_quanTools", "temporal_deep_mixedTheory"];
 *)
 
-open FinitePathTheory PathTheory UnclockedSemanticsTheory SyntacticSugarTheory
+open FinitePSLPathTheory PSLPathTheory UnclockedSemanticsTheory SyntacticSugarTheory
      LemmasTheory RewritesTheory ModelTheory rltl_to_ltlTheory
      RewritesPropertiesTheory ProjectionTheory SyntacticSugarTheory
      arithmeticTheory psl_lemmataTheory
      listTheory numLib intLib rich_listTheory pred_setTheory prop_logicTheory
      infinite_pathTheory temporal_deep_mixedTheory
-     rltlTheory ltlTheory tuerk_tacticsLib res_quanTools;
+     rltlTheory full_ltlTheory tuerk_tacticsLib res_quanTools;
 open Sanity;
 
 val _ = intLib.deprecate_int();

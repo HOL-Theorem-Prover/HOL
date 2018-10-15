@@ -13,7 +13,7 @@ loadPath := (concat home_dir "src/deep_embeddings") ::
             (concat hol_dir "examples/PSL/1.1/official-semantics") :: !loadPath;
 
 map load
- ["ltlTheory", "arithmeticTheory", "automaton_formulaTheory", "xprop_logicTheory", "prop_logicTheory",
+ ["full_ltlTheory", "arithmeticTheory", "automaton_formulaTheory", "xprop_logicTheory", "prop_logicTheory",
   "infinite_pathTheory", "tuerk_tacticsLib", "symbolic_semi_automatonTheory", "listTheory", "pred_setTheory", "pred_setSyntax",
   "temporal_deep_mixedTheory", "pred_setTheory", "rich_listTheory", "set_lemmataTheory", "pairTheory",
   "ltl_to_automaton_formulaTheory", "rltl_to_ltlTheory",
@@ -24,7 +24,7 @@ map load
 *)
 
 open HolKernel boolLib bossLib
-     ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory prop_logicTheory
+     full_ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory prop_logicTheory
      infinite_pathTheory tuerk_tacticsLib symbolic_semi_automatonTheory listTheory pred_setTheory
      temporal_deep_mixedTheory pred_setTheory rich_listTheory set_lemmataTheory
      pairTheory pred_setSyntax

@@ -9,13 +9,13 @@ loadPath := (concat home_dir "src/deep_embeddings") ::
 
 map load
  ["xprop_logicTheory", "prop_logicTheory", "infinite_pathTheory", "pred_setTheory", "listTheory", "pairTheory", "set_lemmataTheory",
-   "containerTheory", "prim_recTheory", "tuerk_tacticsLib", "temporal_deep_mixedTheory", "ltlTheory", "semi_automatonTheory", "numLib",
+   "containerTheory", "prim_recTheory", "tuerk_tacticsLib", "temporal_deep_mixedTheory", "semi_automatonTheory", "numLib",
   "relationTheory", "symbolic_kripke_structureTheory"];
 *)
 
 open infinite_pathTheory pred_setTheory listTheory pairTheory xprop_logicTheory 
      containerTheory prop_logicTheory set_lemmataTheory prim_recTheory
-     tuerk_tacticsLib temporal_deep_mixedTheory ltlTheory
+     tuerk_tacticsLib temporal_deep_mixedTheory
      semi_automatonTheory numLib relationTheory;
 open Sanity;
 

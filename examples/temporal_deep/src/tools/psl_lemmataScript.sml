@@ -10,13 +10,13 @@ loadPath := (Globals.HOLDIR ^ "/examples/PSL/path") ::
             !loadPath;
 
 map load
- ["FinitePathTheory", "PathTheory", "ClockedSemanticsTheory", "UnclockedSemanticsTheory", "LemmasTheory", "RewritesTheory", "numLib",
+ ["FinitePSLPathTheory", "PSLPathTheory", "ClockedSemanticsTheory", "UnclockedSemanticsTheory", "LemmasTheory", "RewritesTheory", "numLib",
   "RewritesPropertiesTheory", "ProjectionTheory", "SyntacticSugarTheory", "arithmeticTheory", "ModelTheory", "res_quanTools",
   "rich_listTheory", "pred_setTheory", "combinTheory", "tuerk_tacticsLib", "temporal_deep_mixedTheory",
   "set_lemmataTheory"];
 *)
 
-open FinitePathTheory PathTheory UnclockedSemanticsTheory ClockedSemanticsTheory LemmasTheory RewritesTheory RewritesPropertiesTheory
+open FinitePSLPathTheory PSLPathTheory UnclockedSemanticsTheory ClockedSemanticsTheory LemmasTheory RewritesTheory RewritesPropertiesTheory
    ProjectionTheory SyntacticSugarTheory arithmeticTheory ModelTheory rich_listTheory pred_setTheory combinTheory
    res_quanTools numLib tuerk_tacticsLib temporal_deep_mixedTheory set_lemmataTheory listTheory;
 open Sanity;
@@ -127,7 +127,7 @@ val REST_RESTN =
      (!p:'a path. (REST p) = (RESTN p 1))``,
 
    `1 = SUC 0` by DECIDE_TAC THEN
-    ASM_REWRITE_TAC [RESTN_def, FinitePathTheory.RESTN_def]);
+    ASM_REWRITE_TAC [RESTN_def, FinitePSLPathTheory.RESTN_def]);
 
 
 val RESTN_REST =
@@ -136,7 +136,7 @@ val RESTN_REST =
    ``(!l:'a list n. (RESTN (REST l) n) = (REST (RESTN l n))) /\
      (!p:'a path n. (RESTN (REST p) n) = (REST (RESTN p n)))``,
 
-   SIMP_TAC arith_ss [FinitePathTheory.RESTN_RESTN, RESTN_RESTN, REST_RESTN]);
+   SIMP_TAC arith_ss [FinitePSLPathTheory.RESTN_RESTN, RESTN_RESTN, REST_RESTN]);
 
 
 val ELEM_CAT___LESS =
@@ -282,7 +282,7 @@ val REST_REPLICATE =
 
    Induct_on `n` THENL [
       SIMP_TAC arith_ss [],
-      SIMP_TAC list_ss [REPLICATE, FinitePathTheory.REST_def]
+      SIMP_TAC list_ss [REPLICATE, FinitePSLPathTheory.REST_def]
    ]);
 
 
@@ -292,9 +292,9 @@ val RESTN_REPLICATE =
    ``!m n e. m <= n ==> ((RESTN (REPLICATE n e)) m = (REPLICATE (n-m) e))``,
 
    Induct_on `m` THENL [
-      SIMP_TAC arith_ss [FinitePathTheory.RESTN_def],
+      SIMP_TAC arith_ss [FinitePSLPathTheory.RESTN_def],
 
-      ASM_SIMP_TAC arith_ss [FinitePathTheory.RESTN_def, RESTN_REST] THEN
+      ASM_SIMP_TAC arith_ss [FinitePSLPathTheory.RESTN_def, RESTN_REST] THEN
       REPEAT STRIP_TAC THEN
       `n - m > 0` by DECIDE_TAC THEN
       `PRE (n - m) = (n - SUC m)` by DECIDE_TAC THEN
@@ -322,11 +322,11 @@ val ELEM_REPLICATE =
   ("ELEM_REPLICATE",
    ``!m n e. m < n ==> ((ELEM (REPLICATE n e)) m = e)``,
 
-   SIMP_TAC list_ss [FinitePathTheory.ELEM_def, RESTN_REPLICATE] THEN
+   SIMP_TAC list_ss [FinitePSLPathTheory.ELEM_def, RESTN_REPLICATE] THEN
    REPEAT STRIP_TAC THEN
    `~(n - m = 0)` by DECIDE_TAC THEN
    `?n':num. (n - m) = SUC n'` by PROVE_TAC[num_CASES] THEN
-   ASM_SIMP_TAC list_ss [REPLICATE, FinitePathTheory.HEAD_def]
+   ASM_SIMP_TAC list_ss [REPLICATE, FinitePSLPathTheory.HEAD_def]
 );
 
 
@@ -563,9 +563,9 @@ val COMPLEMENT_CONS =
    ``!h v. COMPLEMENT (CONS (h, v)) = CONS (COMPLEMENT_LETTER h, COMPLEMENT v)``,
 
    Cases_on `v` THENL [
-      REWRITE_TAC[PathTheory.CONS_def, COMPLEMENT_def, GSYM MAP],
+      REWRITE_TAC[PSLPathTheory.CONS_def, COMPLEMENT_def, GSYM MAP],
 
-      SIMP_TAC std_ss [PathTheory.CONS_def, COMPLEMENT_def, FUN_EQ_THM, path_11] THEN
+      SIMP_TAC std_ss [PSLPathTheory.CONS_def, COMPLEMENT_def, FUN_EQ_THM, path_11] THEN
       PROVE_TAC[]
    ]);
 
@@ -653,11 +653,11 @@ val RESTN_CAT___LESS =
    ``!p v l. (l < LENGTH p) ==> ((RESTN (CAT (p, v)) l) = CAT (RESTN p l, v))``,
 
    Induct_on `l` THENL [
-      SIMP_TAC std_ss [RESTN_def, FinitePathTheory.RESTN_def],
+      SIMP_TAC std_ss [RESTN_def, FinitePSLPathTheory.RESTN_def],
 
       Cases_on `p` THEN SIMP_TAC list_ss [] THEN
-      SIMP_TAC list_ss [RESTN_def, CAT_def, FinitePathTheory.RESTN_def,
-                        FinitePathTheory.REST_def, REST_CONS] THEN
+      SIMP_TAC list_ss [RESTN_def, CAT_def, FinitePSLPathTheory.RESTN_def,
+                        FinitePSLPathTheory.REST_def, REST_CONS] THEN
       PROVE_TAC[]
    ]);
 
@@ -1871,8 +1871,8 @@ INDUCT_THEN sere_induct ASSUME_TAC THENL [ (* 8 subgoals *)
   Cases_on `l` THEN
   SIMP_TAC list_ss [US_SEM_def, S_VAR_RENAMING_def,
     S_USED_VARS_def,
-    LENGTH_NIL, FinitePathTheory.ELEM_def, FinitePathTheory.RESTN_def,
-    FinitePathTheory.HEAD_def, LIST_BIGUNION_def] THEN
+    LENGTH_NIL, FinitePSLPathTheory.ELEM_def, FinitePSLPathTheory.RESTN_def,
+    FinitePSLPathTheory.HEAD_def, LIST_BIGUNION_def] THEN
   REPEAT STRIP_TAC THEN
   BOOL_EQ_STRIP_TAC THEN
   MATCH_MP_TAC B_SEM___VAR_RENAMING THEN
@@ -2765,18 +2765,18 @@ val IS_FINITE_PROPER_PATH___RESTN =
    ``!v k. (IS_FINITE_PROPER_PATH v  /\ k < LENGTH v) ==> IS_FINITE_PROPER_PATH (RESTN v k)``,
 
    Induct_on `k` THENL [
-      SIMP_TAC list_ss [IS_FINITE_PROPER_PATH_def, PathTheory.RESTN_def, FinitePathTheory.RESTN_def],
+      SIMP_TAC list_ss [IS_FINITE_PROPER_PATH_def, PSLPathTheory.RESTN_def, FinitePSLPathTheory.RESTN_def],
 
       FULL_SIMP_TAC list_ss [IS_FINITE_PROPER_PATH_def] THEN
       REPEAT STRIP_TAC THEN
-      ASM_SIMP_TAC list_ss [PathTheory.RESTN_def, FinitePathTheory.RESTN_def] THEN
+      ASM_SIMP_TAC list_ss [PSLPathTheory.RESTN_def, FinitePSLPathTheory.RESTN_def] THEN
 
       `?v'. v' = FINITE (REST p)` by PROVE_TAC[] THEN
       `SUC k < LENGTH p` by METIS_TAC[LENGTH_def, LS] THEN
       `0 < LENGTH p` by DECIDE_TAC THEN
-      `REST v = v'` by ASM_SIMP_TAC list_ss [PathTheory.REST_def, FinitePathTheory.REST_def] THEN
+      `REST v = v'` by ASM_SIMP_TAC list_ss [PSLPathTheory.REST_def, FinitePSLPathTheory.REST_def] THEN
       `LENGTH v' = LENGTH v - 1` by
-         ASM_SIMP_TAC list_ss [LENGTH_def, SUB_xnum_num_def, xnum_11, FinitePathTheory.REST_def, LENGTH_TL] THEN
+         ASM_SIMP_TAC list_ss [LENGTH_def, SUB_xnum_num_def, xnum_11, FinitePSLPathTheory.REST_def, LENGTH_TL] THEN
       SUBGOAL_THEN ``PATH_TOP_FREE (v':'a letter path)`` ASSUME_TAC THEN1(
          FULL_SIMP_TAC std_ss [PATH_TOP_FREE_ELEM] THEN
          `!n. (n < LENGTH (FINITE p) - 1) = (n + 1 < LENGTH (FINITE p))` by
@@ -4081,7 +4081,7 @@ REPEAT STRIP_TAC THEN
 FULL_SIMP_TAC std_ss [IS_INFINITE_TOP_BOTTOM_FREE_PATH_def, LENGTH_def, US_SEM_def,
 ELEM_def, LS, GT, LENGTH_SEL, SEL_def, RESTN_def] THEN
 REWRITE_TAC[prove (``1 = SUC 0``, DECIDE_TAC), SEL_REC_def, HEAD_def] THEN
-SIMP_TAC list_ss [FinitePathTheory.ELEM_def, FinitePathTheory.RESTN_def, FinitePathTheory.HEAD_def, ETA_THM] THEN
+SIMP_TAC list_ss [FinitePSLPathTheory.ELEM_def, FinitePSLPathTheory.RESTN_def, FinitePSLPathTheory.HEAD_def, ETA_THM] THEN
 `?s. p 0 = STATE s` by METIS_TAC[] THEN
 ASM_REWRITE_TAC[B_SEM_def]);
 
@@ -4100,7 +4100,7 @@ REPEAT STRIP_TAC THEN
 FULL_SIMP_TAC std_ss [IS_INFINITE_TOP_BOTTOM_FREE_PATH_def, LENGTH_def, US_SEM_def,
 ELEM_def, LS, GT, LENGTH_SEL, SEL_def] THEN
 REWRITE_TAC[prove (``1 = SUC 0``, DECIDE_TAC), SEL_REC_def, HEAD_def] THEN
-SIMP_TAC list_ss [RESTN_INFINITE, HEAD_def, FinitePathTheory.ELEM_def, FinitePathTheory.RESTN_def, FinitePathTheory.HEAD_def, ETA_THM] THEN
+SIMP_TAC list_ss [RESTN_INFINITE, HEAD_def, FinitePSLPathTheory.ELEM_def, FinitePSLPathTheory.RESTN_def, FinitePSLPathTheory.HEAD_def, ETA_THM] THEN
 METIS_TAC[]);
 
 
@@ -4344,8 +4344,8 @@ EQ_TAC THENL [
       REPEAT STRIP_TAC THEN
       FULL_SIMP_TAC arith_ss [] THEN
       Q_TAC EXISTS_TAC `vlist <> [[p l]]` THEN
-      ASM_SIMP_TAC list_ss [FinitePathTheory.ELEM_def,
-        FinitePathTheory.RESTN_def, FinitePathTheory.HEAD_def,
+      ASM_SIMP_TAC list_ss [FinitePSLPathTheory.ELEM_def,
+        FinitePSLPathTheory.RESTN_def, FinitePSLPathTheory.HEAD_def,
         CONCAT_APPEND, CONCAT_def] THEN
       REPEAT STRIP_TAC THENL [
         REWRITE_TAC [prove (``SUC l = 1 + l``, DECIDE_TAC)] THEN
@@ -4363,8 +4363,8 @@ EQ_TAC THENL [
     UNDISCH_HD_TAC THEN
     ONCE_REWRITE_TAC [prove (``1 = SUC 0``, DECIDE_TAC)] THEN
     SIMP_TAC list_ss [SEL_REC_SUC, ELEM_INFINITE, SEL_REC_def,
-      FinitePathTheory.ELEM_def, FinitePathTheory.RESTN_def,
-      FinitePathTheory.HEAD_def] THEN
+      FinitePSLPathTheory.ELEM_def, FinitePSLPathTheory.RESTN_def,
+      FinitePSLPathTheory.HEAD_def] THEN
     METIS_TAC[B_SEM_def]
   ],
 
@@ -4445,8 +4445,8 @@ EQ_TAC THENL [
   ) THEN
   NTAC 2 (WEAKEN_NO_TAC  10) THEN GSYM_NO_TAC 1 THEN
 
-  FULL_SIMP_TAC list_ss [FinitePathTheory.ELEM_def,
-      FinitePathTheory.RESTN_def, FinitePathTheory.HEAD_def,
+  FULL_SIMP_TAC list_ss [FinitePSLPathTheory.ELEM_def,
+      FinitePSLPathTheory.RESTN_def, FinitePSLPathTheory.HEAD_def,
       B_SEM_def] THEN
   Q_EXISTS_LEAST_TAC `?l. P l` THEN
   SIMP_ALL_TAC std_ss [] THEN

@@ -1,9 +1,9 @@
 
 (*****************************************************************************)
-(* Create "FinitePathTheory", a theory of finite paths represented as lists. *)
-(* Note that finite paths can be empty in the "SEM_1" semantics.             *)
+(* Create "FinitePSLPathTheory", a theory of finite paths represented as     *)
+(* lists. Note that finite paths can be empty in the "SEM_1" semantics.      *)
 (*                                                                           *)
-(* The theory "PathTheory" defines a type ``:'a path`` of finite and         *)
+(* The theory "PSLPathTheory" defines a type ``:'a path`` of finite and      *)
 (* infinite paths, and extends the path operators to work on these.          *)
 (*                                                                           *)
 (* Created Wed Dec 27 2002                                                   *)
@@ -63,7 +63,7 @@ val _ = intLib.deprecate_int();
 (******************************************************************************
 * Start a new theory called FinitePath
 ******************************************************************************)
-val _ = new_theory "FinitePath";
+val _ = new_theory "FinitePSLPath";
 
 (******************************************************************************
 * Infix list concatenation
