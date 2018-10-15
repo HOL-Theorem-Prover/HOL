@@ -2595,8 +2595,8 @@ val CARD_EQ_IMAGE = store_thm ("CARD_EQ_IMAGE",
 (* Cardinal arithmetic operations.                                           *)
 (* ------------------------------------------------------------------------- *)
 
-val _ = set_fixity "+_c" (Infix(NONASSOC, 450));
-val _ = set_fixity "*_c" (Infix(NONASSOC, 450));
+val _ = set_fixity "+_c" (Infixl 500);
+val _ = set_fixity "*_c" (Infixl 600);
 
 val add_c = new_definition ("add_c",
   ``s +_c t = {INL x | x IN s} UNION {INR y | y IN t}``);
