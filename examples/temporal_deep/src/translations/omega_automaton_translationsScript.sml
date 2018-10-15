@@ -6,7 +6,7 @@ quietdec := true;
 val base_dir = (concat Globals.HOLDIR "/examples/temporal_deep/");
 loadPath := (concat base_dir "src/tools") :: (concat base_dir "src/deep_embeddings") :: !loadPath;
 map load
- ["ltlTheory", "arithmeticTheory", "automaton_formulaTheory", "xprop_logicTheory", "prop_logicTheory",
+ ["full_ltlTheory", "arithmeticTheory", "automaton_formulaTheory", "xprop_logicTheory", "prop_logicTheory",
   "infinite_pathTheory", "tuerk_tacticsLib", "symbolic_semi_automatonTheory", "listTheory", "pred_setTheory",
   "pred_setTheory", "rich_listTheory", "set_lemmataTheory", "temporal_deep_mixedTheory",
   "pairTheory", "symbolic_kripke_structureTheory",
@@ -14,7 +14,7 @@ map load
   "kripke_structureTheory", "containerTheory", "relationTheory"];
 *)
 
-open ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory
+open full_ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory
      prop_logicTheory
      infinite_pathTheory tuerk_tacticsLib symbolic_semi_automatonTheory listTheory pred_setTheory
      pred_setTheory rich_listTheory set_lemmataTheory temporal_deep_mixedTheory pairTheory symbolic_kripke_structureTheory

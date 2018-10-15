@@ -12,7 +12,7 @@ loadPath := (concat home_dir "src/deep_embeddings") ::
             (concat hol_dir "examples/PSL/1.1/official-semantics") :: !loadPath;
 
 map load
- ["ltlTheory", "arithmeticTheory", "automaton_formulaTheory", "xprop_logicTheory", "prop_logicTheory",
+ ["full_ltlTheory", "arithmeticTheory", "automaton_formulaTheory", "xprop_logicTheory", "prop_logicTheory",
   "infinite_pathTheory", "tuerk_tacticsLib", "symbolic_semi_automatonTheory", "listTheory", "pred_setTheory", "pred_setTheory", "rich_listTheory", "set_lemmataTheory", "pairTheory", "temporal_deep_mixedTheory",
   "ltl_to_automaton_formulaTheory", "rltlTheory",
   "numLib", "listLib", "rltl_to_ltlTheory", "psl_to_rltlTheory",
@@ -20,7 +20,7 @@ map load
   "symbolic_kripke_structureTheory", "temporal_deep_simplificationsLibTheory"];
 *)
 
-open ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory prop_logicTheory
+open full_ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory prop_logicTheory
      infinite_pathTheory tuerk_tacticsLib symbolic_semi_automatonTheory
      listTheory pred_setTheory temporal_deep_mixedTheory
      pred_setTheory rich_listTheory set_lemmataTheory pairTheory

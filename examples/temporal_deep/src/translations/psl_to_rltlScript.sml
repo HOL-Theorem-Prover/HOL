@@ -15,7 +15,7 @@ map load
  ["FinitePSLPathTheory", "PSLPathTheory", "UnclockedSemanticsTheory", "SyntacticSugarTheory", "LemmasTheory", "RewritesTheory",
   "RewritesPropertiesTheory", "ProjectionTheory", "SyntacticSugarTheory", "arithmeticTheory", "psl_lemmataTheory",
   "listTheory", "numLib", "intLib", "rich_listTheory", "pred_setTheory", "ModelTheory", "rltl_to_ltlTheory",
-  "rltlTheory", "ltlTheory", "tuerk_tacticsLib", "prop_logicTheory", "infinite_pathTheory", "res_quanTools", "temporal_deep_mixedTheory"];
+  "rltlTheory", "full_ltlTheory", "tuerk_tacticsLib", "prop_logicTheory", "infinite_pathTheory", "res_quanTools", "temporal_deep_mixedTheory"];
 *)
 
 open FinitePSLPathTheory PSLPathTheory UnclockedSemanticsTheory SyntacticSugarTheory
@@ -24,7 +24,7 @@ open FinitePSLPathTheory PSLPathTheory UnclockedSemanticsTheory SyntacticSugarTh
      arithmeticTheory psl_lemmataTheory
      listTheory numLib intLib rich_listTheory pred_setTheory prop_logicTheory
      infinite_pathTheory temporal_deep_mixedTheory
-     rltlTheory ltlTheory tuerk_tacticsLib res_quanTools;
+     rltlTheory full_ltlTheory tuerk_tacticsLib res_quanTools;
 open Sanity;
 
 val _ = intLib.deprecate_int();

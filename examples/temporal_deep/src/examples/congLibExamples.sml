@@ -7,11 +7,11 @@ loadPath := (concat home_dir "src/deep_embeddings") ::
 
 map load
  ["congLib", "temporal_deep_simplificationsLib",
-  "prop_logicTheory", "ltlTheory", "Travrules", "simpLib", "Trace"];
+  "prop_logicTheory", "full_ltlTheory", "Travrules", "simpLib", "Trace"];
 *)
 
 open HolKernel boolLib bossLib temporal_deep_simplificationsLib
-  congLib prop_logicTheory ltlTheory Travrules simpLib Trace
+  congLib prop_logicTheory full_ltlTheory Travrules simpLib Trace
 
 (*
 show_assums := false;
