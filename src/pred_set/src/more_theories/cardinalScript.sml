@@ -2602,9 +2602,8 @@ val add_c = new_definition ("add_c",
   ``s +_c t = {INL x | x IN s} UNION {INR y | y IN t}``);
 
 val _ = overload_on ("+", ``$+_c``);
-
 val _ = overload_on ("*_c", ``$CROSS``); (* defined in pred_setTheory *)
-val _ = Unicode.unicode_version {tmnm = "*_c", u = UTF8.chr 0xD7};
+val _ = overload_on ("CROSS", ``$CROSS``);
 val _ = TeX_notation {hol = "*_c", TeX = ("\\ensuremath{\\times}", 1)};
 
 val mul_c = store_thm ("mul_c",
