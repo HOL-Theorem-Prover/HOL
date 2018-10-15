@@ -23,7 +23,7 @@ map load
  ["UnclockedSemanticsTheory",
   "SyntacticSugarTheory", "ClockedSemanticsTheory", "RewritesTheory",
   "rich_listTheory", "intLib", "res_quanLib", "res_quanTheory"];
-open FinitePathTheory PathTheory SyntaxTheory SyntacticSugarTheory
+open FinitePSLPathTheory PSLPathTheory SyntaxTheory SyntacticSugarTheory
      UnclockedSemanticsTheory ClockedSemanticsTheory RewritesTheory
      arithmeticTheory listTheory rich_listTheory res_quanLib res_quanTheory
      ClockedSemanticsTheory;
@@ -39,7 +39,7 @@ open HolKernel Parse boolLib bossLib;
 (******************************************************************************
 * Open theories
 ******************************************************************************)
-open FinitePathTheory PathTheory SyntaxTheory SyntacticSugarTheory
+open FinitePSLPathTheory PSLPathTheory SyntaxTheory SyntacticSugarTheory
      UnclockedSemanticsTheory ClockedSemanticsTheory RewritesTheory
      arithmeticTheory listTheory rich_listTheory res_quanLib res_quanTheory
      ClockedSemanticsTheory;
@@ -68,9 +68,9 @@ val resq_SS =
     [IN_DEF,LESS_def,LENGTH_def]];
 
 (******************************************************************************
-* Set default path theory to FinitePathTheory
+* Set default path theory to FinitePSLPathTheory
 ******************************************************************************)
-open FinitePathTheory;
+open FinitePSLPathTheory;
 
 (******************************************************************************
 * Make SEL executable. (Why doesn't this happen automatically?)

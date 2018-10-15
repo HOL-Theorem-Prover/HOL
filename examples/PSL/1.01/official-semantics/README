@@ -7,8 +7,8 @@ The contents of this directory are
 README ......................... This file
 SyntaxScript.sml ............... Syntax of Sugar in HOL
 KripkeScript.sml ............... Theory of Kripke structures
-FinitePathScript.sml ........... Theory of finite paths (lists)
-PathScript.sml ................. Finite and infinite paths
+FinitePSLPathScript.sml ........ Theory of finite paths (lists)
+PSLPathScript.sml .............. Finite and infinite paths
 UnclockedSemanticsScript.sml ... Unclocked semantics
 ClockedSemanticsScript.sml ..... Clocked Semantics
 RewritesScript.sml ............. Rewrites semantics of Sugar

@@ -25,7 +25,7 @@ map load
  ["UnclockedSemanticsTheory",
   "SyntacticSugarTheory", "ClockedSemanticsTheory", "RewritesTheory",
   "rich_listTheory", "intLib", "res_quanLib", "res_quanTheory","LemmasTheory"];
-open FinitePathTheory PathTheory SyntaxTheory SyntacticSugarTheory
+open FinitePSLPathTheory PSLPathTheory SyntaxTheory SyntacticSugarTheory
      UnclockedSemanticsTheory ClockedSemanticsTheory RewritesTheory
      arithmeticTheory listTheory rich_listTheory res_quanLib res_quanTheory
      ClockedSemanticsTheory LemmasTheory;
@@ -41,7 +41,7 @@ open HolKernel Parse boolLib bossLib;
 (******************************************************************************
 * Open theories
 ******************************************************************************)
-open FinitePathTheory PathTheory SyntaxTheory SyntacticSugarTheory
+open FinitePSLPathTheory PSLPathTheory SyntaxTheory SyntacticSugarTheory
      UnclockedSemanticsTheory ClockedSemanticsTheory RewritesTheory
      arithmeticTheory listTheory rich_listTheory res_quanLib res_quanTheory
      ClockedSemanticsTheory LemmasTheory;
@@ -78,7 +78,7 @@ val resq_SS =
 (******************************************************************************
 * SEREs only need finite paths
 ******************************************************************************)
-open FinitePathTheory;
+open FinitePSLPathTheory;
 
 val US_SEM_BOOL_REWRITE_LEMMA =
  store_thm
@@ -156,7 +156,7 @@ val S_CLOCK_COMP_CORRECT =
 (******************************************************************************
 * Formulas need infinite paths
 ******************************************************************************)
-open PathTheory;
+open PSLPathTheory;
 
 (******************************************************************************
 * Structural induction rule for FL formulas
@@ -192,14 +192,14 @@ val LS_TRANS_X =
     THEN RW_TAC arith_ss [LS]);
 
 local
-open FinitePathTheory
+open FinitePSLPathTheory
 in
 val RESTN_NIL_LENGTH =
  store_thm
   ("RESTN_NIL_LENGTH",
    ``!k v. k <= LENGTH v ==> ((RESTN v k = []) = (LENGTH v = k))``,
    Induct
-    THEN RW_TAC list_ss [FinitePathTheory.RESTN_def,LENGTH_NIL,REST_def]
+    THEN RW_TAC list_ss [FinitePSLPathTheory.RESTN_def,LENGTH_NIL,REST_def]
     THEN ASSUM_LIST(fn thl => ASSUME_TAC(Q.SPEC `TL v` (el 2 thl)))
     THEN `0 < LENGTH v` by DECIDE_TAC
     THEN `LENGTH(TL v) = LENGTH v - 1` by PROVE_TAC[LENGTH_TL]
@@ -481,9 +481,9 @@ val UF_SEM_F_F_IMP =
     THEN Cases_on `v`
     THEN RW_TAC arith_ss
           [xnum_to_def,LENGTH_def,GT_xnum_num_def,RESTN_FINITE,LENGTH_def,
-           FinitePathTheory.LENGTH_RESTN,LENGTH_RESTN_INFINITE,LS]
+           FinitePSLPathTheory.LENGTH_RESTN,LENGTH_RESTN_INFINITE,LS]
     THEN Q.EXISTS_TAC `k`
-    THEN RW_TAC arith_ss [FinitePathTheory.LENGTH_RESTN,GSYM RESTN_FINITE]
+    THEN RW_TAC arith_ss [FinitePSLPathTheory.LENGTH_RESTN,GSYM RESTN_FINITE]
     THEN PROVE_TAC[LENGTH_def,LS]);
 
 (******************************************************************************
@@ -502,7 +502,7 @@ val UF_SEM_F_F =
     THEN Cases_on `v`
     THEN RW_TAC arith_ss
           [xnum_to_def,LENGTH_def,GT_xnum_num_def,RESTN_FINITE,LENGTH_def,
-           FinitePathTheory.LENGTH_RESTN,LENGTH_RESTN_INFINITE]
+           FinitePSLPathTheory.LENGTH_RESTN,LENGTH_RESTN_INFINITE]
     THEN EQ_TAC
     THEN RW_TAC arith_ss []
     THENL
@@ -682,7 +682,7 @@ val th =
      F_W_def,F_F_def,F_G_def,UF_SEM_F_OR,UF_SEM_F_U_CLOCK,LENGTH_COMPLEMENT,
      ELEM_EL,RESTN_def,RESTN_FINITE,ELEM_def,COMPLEMENT_def,LS,
      DECIDE ``m < 1 = (m=0)``, DECIDE ``m < 2 = (m=0) \/ (m=1)``,
-     COMPLEMENT_LETTER_def,FinitePathTheory.RESTN_def,
+     COMPLEMENT_LETTER_def,FinitePSLPathTheory.RESTN_def,
      HEAD_def,B_SEM_def,xnum_11,HD_SEL]
   ``F_SEM (FINITE[BOTTOM]) c (F_WEAK_BOOL b) =
      UF_SEM (FINITE[BOTTOM]) (F_CLOCK_COMP c (F_WEAK_BOOL b))``;
@@ -1056,7 +1056,7 @@ val F_NEXT_CLOCK_COMP_IMP1 =
                    [GT,LENGTH_RESTN_INFINITE,RESTN_FINITE,
                     IS_FINITE_def,LENGTH_RESTN,LENGTH_def,SUB]
              THEN FULL_SIMP_TAC list_ss [LENGTH_def,LS]
-             THEN RW_TAC list_ss [FinitePathTheory.LENGTH_RESTN],
+             THEN RW_TAC list_ss [FinitePSLPathTheory.LENGTH_RESTN],
             `(j + 1) + i <= k` by DECIDE_TAC
              THEN RES_TAC
              THEN `i + (j + 1) = (j + 1) + i` by DECIDE_TAC
@@ -1094,10 +1094,10 @@ val F_NEXT_CLOCK_COMP_IMP2 =
                     IS_FINITE_def,LENGTH_RESTN,LENGTH_def,SUB]
              THEN FULL_SIMP_TAC list_ss [LENGTH_def,LS,RESTN_FINITE,xnum_11,GT]
              THEN `LENGTH(RESTN l j) = LENGTH l - j`
-                   by PROVE_TAC[FinitePathTheory.LENGTH_RESTN]
+                   by PROVE_TAC[FinitePSLPathTheory.LENGTH_RESTN]
              THEN `j + 1 < LENGTH l` by DECIDE_TAC
              THEN `LENGTH(RESTN l (j + 1)) = LENGTH l - (j + 1)`
-                   by PROVE_TAC[FinitePathTheory.LENGTH_RESTN]
+                   by PROVE_TAC[FinitePSLPathTheory.LENGTH_RESTN]
              THEN DECIDE_TAC,
             RW_TAC list_ss [EL_SEL_THM]
             THEN `?l. (LENGTH l = j + (j' + 1)) /\ (v = FINITE l)`
@@ -1120,10 +1120,10 @@ val F_NEXT_CLOCK_COMP_IMP2 =
                     IS_FINITE_def,LENGTH_RESTN,LENGTH_def,SUB]
              THEN FULL_SIMP_TAC list_ss [LENGTH_def,LS,RESTN_FINITE,xnum_11,GT]
              THEN `LENGTH(RESTN l j) = LENGTH l - j`
-                   by PROVE_TAC[FinitePathTheory.LENGTH_RESTN]
+                   by PROVE_TAC[FinitePSLPathTheory.LENGTH_RESTN]
              THEN `j + 1 < LENGTH l` by DECIDE_TAC
              THEN `LENGTH(RESTN l (j + 1)) = LENGTH l - (j + 1)`
-                   by PROVE_TAC[FinitePathTheory.LENGTH_RESTN]
+                   by PROVE_TAC[FinitePSLPathTheory.LENGTH_RESTN]
              THEN DECIDE_TAC,
             FULL_SIMP_TAC list_ss [ELEM_RESTN]
              THEN RW_TAC list_ss [EL_SEL_THM],

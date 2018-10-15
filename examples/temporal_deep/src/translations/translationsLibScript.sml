@@ -16,7 +16,7 @@ map load
   "infinite_pathTheory", "tuerk_tacticsLib", "symbolic_semi_automatonTheory", "listTheory", "pred_setTheory", "pred_setTheory", "rich_listTheory", "set_lemmataTheory", "pairTheory", "temporal_deep_mixedTheory",
   "ltl_to_automaton_formulaTheory", "rltlTheory",
   "numLib", "listLib", "rltl_to_ltlTheory", "psl_to_rltlTheory",
-  "PathTheory", "UnclockedSemanticsTheory", "ProjectionTheory",
+  "PSLPathTheory", "UnclockedSemanticsTheory", "ProjectionTheory",
   "symbolic_kripke_structureTheory", "temporal_deep_simplificationsLibTheory"];
 *)
 
@@ -25,7 +25,7 @@ open ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory prop_l
      listTheory pred_setTheory temporal_deep_mixedTheory
      pred_setTheory rich_listTheory set_lemmataTheory pairTheory
      ltl_to_automaton_formulaTheory numLib listLib rltlTheory
-     rltl_to_ltlTheory psl_to_rltlTheory PathTheory UnclockedSemanticsTheory
+     rltl_to_ltlTheory psl_to_rltlTheory PSLPathTheory UnclockedSemanticsTheory
      ProjectionTheory symbolic_kripke_structureTheory
      temporal_deep_simplificationsLibTheory;
 open Sanity;

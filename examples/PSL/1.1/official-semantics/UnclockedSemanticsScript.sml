@@ -18,7 +18,7 @@ loadPath                                  (* Add path to loadPath            *)
  :=
  "../../path" :: !loadPath;
 map load
- ["SyntaxTheory","PathTheory","ModelTheory"];
+ ["SyntaxTheory","PSLPathTheory","ModelTheory"];
 quietdec := false;
 *)
 
@@ -30,7 +30,7 @@ open HolKernel Parse boolLib bossLib;
 (******************************************************************************
 * Open theories of sequences and lists
 ******************************************************************************)
-open SyntaxTheory PathTheory ModelTheory;
+open SyntaxTheory PSLPathTheory ModelTheory;
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
@@ -118,16 +118,16 @@ val US_SEM_REPEAT =
      THEN RW_TAC std_ss [US_SEM_def]
      THENL
       [Q.EXISTS_TAC `[]`
-        THEN RW_TAC list_ss [FinitePathTheory.CONCAT_def],
+        THEN RW_TAC list_ss [FinitePSLPathTheory.CONCAT_def],
        EQ_TAC
         THEN RW_TAC list_ss []
         THENL
          [Cases_on `vlist`
-           THEN FULL_SIMP_TAC list_ss [FinitePathTheory.CONCAT_def]
+           THEN FULL_SIMP_TAC list_ss [FinitePSLPathTheory.CONCAT_def]
            THEN Q.EXISTS_TAC `h'` THEN Q.EXISTS_TAC `CONCAT t`
            THEN PROVE_TAC[],
           Q.EXISTS_TAC `v1::vlist`
-           THEN RW_TAC list_ss [FinitePathTheory.CONCAT_def]]]);
+           THEN RW_TAC list_ss [FinitePSLPathTheory.CONCAT_def]]]);
 
 (******************************************************************************
 * Unclocked semantics of SEREs.
@@ -192,7 +192,7 @@ val TOP_OMEGA_def =
 * LESS : num -> num -> bool
 * LESSX m is predicate to test if a number is less than extended number m
 * LESSX : xnum -> num -> bool
-* Now defined in PathTheory
+* Now defined in PSLPathTheory
 ******************************************************************************)
 
 (******************************************************************************
