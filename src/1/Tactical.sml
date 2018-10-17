@@ -52,7 +52,7 @@ val _ = op THEN_LT : list_tactic * list_tactic -> list_tactic ;
 
 fun ALLGOALS tac2 gl =
   let
-    val (gll,pl) = unzip (Parmap.parmap tac2 gl)
+    val (gll,pl) = unzip (Parmap.chunking_parmap {ratio=2,mincsz=1} tac2 gl)
                    handle e => case Par_Exn.dest e of
                                    SOME (h::_) => Exn.reraise h
                                  | _ => Exn.reraise e
