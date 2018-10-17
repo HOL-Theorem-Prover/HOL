@@ -233,6 +233,21 @@ fun mapi f lst =
       List.rev (recurse 0 [] lst)
    end
 
+fun chunk csz l =
+  if csz <= 0 then raise List.Empty
+  else if csz = 1 then map single l
+  else
+    let
+      fun recurse A a i l =
+        case l of
+            [] => List.rev (List.rev a :: A)
+          | h::t => if i = 0 then
+                      recurse (List.rev a :: A) [h] (csz - 1) t
+                    else recurse A (h::a) (i - 1) t
+    in
+      recurse [] [] csz l
+    end
+
 fun assoc1 item =
    let
       fun assc ((e as (key, _)) :: rst) =

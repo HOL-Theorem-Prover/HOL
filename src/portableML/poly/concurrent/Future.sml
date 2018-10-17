@@ -39,6 +39,7 @@ sig
   val promise: (unit -> unit) -> 'a future
   val fulfill_result: 'a future -> 'a Exn.result -> unit
   val fulfill: 'a future -> 'a -> unit
+  val relevant : 'a list -> bool
   val snapshot: group list -> task list
   val shutdown: unit -> unit
 end;
@@ -531,6 +532,15 @@ fun task_context name group f x =
       | SOME res => Exn.release res)
     end);
 
+fun enabled () =
+  let
+    val threads = Multithreading.max_threads ()
+  in
+    threads > 1 andalso
+    SYNCHRONIZED "enabled" (fn () => Task_Queue.total_jobs (! queue) < threads)
+  end
+
+val relevant = (fn [] => false | [_] => false | _ => enabled ());
 
 (* fast-path operations -- bypass task queue if possible *)
 

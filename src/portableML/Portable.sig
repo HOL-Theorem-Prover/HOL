@@ -76,6 +76,7 @@ sig
   val upto : int -> int -> int list
   val appi : (int -> 'a -> unit) -> 'a list -> unit
   val mapi : (int -> 'a -> 'b) -> 'a list -> 'b list
+  val chunk : int -> 'a list -> 'a list list    (* exn List.Empty if int <= 0 *)
 
   type 'a cmp = 'a * 'a -> order
   val flip_order : order -> order

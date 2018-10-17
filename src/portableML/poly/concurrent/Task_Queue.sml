@@ -31,6 +31,7 @@ sig
   val group_tasks: queue -> group list -> task list
   val known_task: queue -> task -> bool
   val all_passive: queue -> bool
+  val total_jobs : queue -> int
   val status: queue -> {ready: int, pending: int, running: int, passive: int, urgent: int}
   val cancel: queue -> group -> Thread.thread list
   val cancel_all: queue -> group list * Thread.thread list
@@ -207,10 +208,11 @@ fun add_job task dep (jobs: jobs) =
 
 (* queue *)
 
-datatype queue = Queue of {groups: groups, jobs: jobs, urgent: int};
+datatype queue = Queue of {groups: groups, jobs: jobs, urgent: int, total : int};
 
-fun make_queue groups jobs urgent = Queue {groups = groups, jobs = jobs, urgent = urgent};
-val empty = make_queue Inttab.empty Task_Graph.empty 0;
+fun make_queue groups jobs urgent total =
+  Queue {groups = groups, jobs = jobs, urgent = urgent, total = total};
+val empty = make_queue Inttab.empty Task_Graph.empty 0 0;
 
 fun group_tasks (Queue {groups, ...}) gs =
   foldl' (fn g => fn tasks =>
@@ -243,6 +245,7 @@ fun all_passive (Queue {jobs, ...}) =
 
 
 (* queue status *)
+fun total_jobs (Queue {total,...}) = total
 
 fun status (Queue {jobs, urgent, ...}) =
   let
@@ -292,35 +295,38 @@ fun cancel_all (Queue {jobs, ...}) =
 
 (* finish *)
 
-fun finish task (Queue {groups, jobs, urgent}) =
+fun finish task (Queue {groups, jobs, urgent, total}) =
   let
     val group = group_of_task task;
     val groups' = fold_groups (fn g => del_task (group_id g, task)) group groups;
     val jobs' = Task_Graph.del_node task jobs;
     val maximal = Task_Graph.is_maximal jobs task;
-  in (maximal, make_queue groups' jobs' urgent) end;
+    val total' = total - 1
+  in (maximal, make_queue groups' jobs' urgent total') end;
 
 
 (* enroll *)
 
-fun enroll thread name group (Queue {groups, jobs, urgent}) =
+fun enroll thread name group (Queue {groups, jobs, urgent, total}) =
   let
     val task = new_task group name NONE;
     val groups' = fold_groups (fn g => add_task (group_id g, task)) group groups;
     val jobs' = jobs |> Task_Graph.new_node (task, Running thread);
-  in (task, make_queue groups' jobs' urgent) end;
+    val total' = total + 1
+  in (task, make_queue groups' jobs' urgent total') end;
 
 
 (* enqueue *)
 
-fun enqueue_passive group name abort (Queue {groups, jobs, urgent}) =
+fun enqueue_passive group name abort (Queue {groups, jobs, urgent, total}) =
   let
     val task = new_task group name NONE;
     val groups' = fold_groups (fn g => add_task (group_id g, task)) group groups;
     val jobs' = jobs |> Task_Graph.new_node (task, Passive abort);
-  in (task, make_queue groups' jobs' urgent) end;
+    val total' = total + 1
+  in (task, make_queue groups' jobs' urgent total') end;
 
-fun enqueue name group deps pri job (Queue {groups, jobs, urgent}) =
+fun enqueue name group deps pri job (Queue {groups, jobs, urgent, total}) =
   let
     val task = new_task group name (SOME pri);
     val groups' = fold_groups (fn g => add_task (group_id g, task)) group groups;
@@ -328,44 +334,46 @@ fun enqueue name group deps pri job (Queue {groups, jobs, urgent}) =
       |> Task_Graph.new_node (task, Job [job])
       |> foldl' (add_job task) deps;
     val urgent' = if pri >= urgent_pri then urgent + 1 else urgent;
-  in (task, make_queue groups' jobs' urgent') end;
+    val total' = total + 1
+  in (task, make_queue groups' jobs' urgent' total) end;
 
-fun extend task job (Queue {groups, jobs, urgent}) =
-  case total (get_job jobs) task of
+fun extend task job (Queue {groups, jobs, urgent, total}) =
+  case Portable.total (get_job jobs) task of
     SOME (Job list) =>
-      SOME (make_queue groups (set_job task (Job (job :: list)) jobs) urgent)
+      SOME (make_queue groups (set_job task (Job (job :: list)) jobs)
+                       urgent total)
    | _ => NONE
 
 
 (* dequeue *)
 
-fun dequeue_passive thread task (queue as Queue {groups, jobs, urgent}) =
-  case total (get_job jobs) task of
+fun dequeue_passive thread task (queue as Queue {groups, jobs, urgent, total}) =
+  case Portable.total (get_job jobs) task of
     SOME (Passive _) =>
       let val jobs' = set_job task (Running thread) jobs
-      in (SOME true, make_queue groups jobs' urgent) end
+      in (SOME true, make_queue groups jobs' urgent total) end
   | SOME _ => (SOME false, queue)
   | NONE => (NONE, queue)
 
-fun dequeue thread urgent_only (queue as Queue {groups, jobs, urgent}) =
+fun dequeue thread urgent_only (queue as Queue {groups, jobs, urgent, total}) =
   if not urgent_only orelse urgent > 0 then
     (case Task_Graph.get_first (ready_job_urgent urgent_only) jobs of
       SOME (result as (task, _)) =>
         let
           val jobs' = set_job task (Running thread) jobs;
           val urgent' = if pri_of_task task >= urgent_pri then urgent - 1 else urgent;
-        in (SOME result, make_queue groups jobs' urgent') end
+        in (SOME result, make_queue groups jobs' urgent' total) end
     | NONE => (NONE, queue))
   else (NONE, queue);
 
 
 (* dequeue wrt. dynamic dependencies *)
 
-fun dequeue_deps thread deps (queue as Queue {groups, jobs, urgent}) =
+fun dequeue_deps thread deps (queue as Queue {groups, jobs, urgent, total}) =
   let
     fun ready [] rest = (NONE, rev rest)
       | ready (task :: tasks) rest =
-          (case total (Task_Graph.get_entry jobs) task of
+          (case Portable.total (Task_Graph.get_entry jobs) task of
             NONE => ready tasks rest
           | SOME (_, entry) =>
               (case ready_job (task, entry) of
@@ -386,7 +394,7 @@ fun dequeue_deps thread deps (queue as Queue {groups, jobs, urgent}) =
       let
         val jobs' = set_job task (Running thread) jobs;
         val urgent' = if pri_of_task task >= urgent_pri then urgent - 1 else urgent;
-      in ((SOME res, deps'), make_queue groups jobs' urgent') end;
+      in ((SOME res, deps'), make_queue groups jobs' urgent' total) end;
   in
     (case ready deps [] of
       (SOME res, deps') => result res deps'
