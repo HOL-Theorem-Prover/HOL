@@ -871,7 +871,10 @@ fun unadjzip [] A = A
  ----------------------------------------------------------------------------*)
 
 fun total_cpu {usr,sys} = Time.+(usr,sys)
-val new_theory_time = ref (total_cpu (Timer.checkCPUTimer Globals.hol_clock))
+val real_clock = Timer.startRealTimer()
+val new_theory_time =
+    ref (total_cpu (Timer.checkCPUTimer Globals.hol_clock),
+         Timer.checkRealTimer real_clock)
 
 val report_times = ref true
 val _ = Feedback.register_btrace ("report_thy_times", report_times)
@@ -950,8 +953,11 @@ fun export_theory () = let
           val ostrm2 = Portable.open_out(concat["./",name,".sml"])
           val ostrm3 = Portable.open_out(concat["./",name,".dat"])
           val time_now = total_cpu (Timer.checkCPUTimer Globals.hol_clock)
-          val time_since = Time.-(time_now, !new_theory_time)
-          val tstr = Lib.time_to_string time_since
+          val cpu_time_since = Time.-(time_now, #1 (!new_theory_time))
+          val real_time_since = Time.-(time_now, #2 (!new_theory_time))
+          val cpu_tstr = Lib.time_to_string cpu_time_since
+          val real_tstr = Lib.time_to_string real_time_since
+          val tstr = cpu_tstr ^ " (CPU); " ^ real_tstr ^ " (elapsed)"
       in
         mesg ("Exporting theory "^Lib.quote thyname^" ... ");
         theory_out (TheoryPP.pp_sig (!pp_thm) sigthry) ostrm1;
@@ -960,7 +966,9 @@ fun export_theory () = let
         mesg "done.\n";
         if !report_times then
           (mesg ("Theory "^Lib.quote thyname^" took "^ tstr ^ " to build\n");
-           maybe_log_time_to_disk thyname (Time.toString time_since))
+           maybe_log_time_to_disk thyname
+                                  (Time.toString cpu_time_since ^ " " ^
+                                   Time.toString real_time_since))
         else ()
       end
         handle e => (Lib.say "\nFailure while writing theory!\n"; raise e))
@@ -1003,7 +1011,9 @@ fun new_theory str =
                          makeCT(fresh_segment str);
                          call_hooks tdelta)
         val _ =
-            new_theory_time := total_cpu (Timer.checkCPUTimer Globals.hol_clock)
+            new_theory_time :=
+              (total_cpu (Timer.checkCPUTimer Globals.hol_clock),
+               Timer.checkRealTimer real_clock)
       in
         if str=thyname then
           (HOL_MESG("Restarting theory "^Lib.quote str);
