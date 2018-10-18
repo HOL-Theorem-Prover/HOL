@@ -1,2 +1,0 @@
-INCLUDES = ../temporal_deep/src/deep_embeddings ../logic/ltl
-
