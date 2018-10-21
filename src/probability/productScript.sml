@@ -15,10 +15,10 @@
 (*                                                                           *)
 (* ========================================================================= *)
 
-open HolKernel Parse boolLib bossLib numLib unwindLib tautLib Arith prim_recTheory 
-combinTheory quotientTheory arithmeticTheory hrealTheory realaxTheory realTheory 
-realLib jrhUtils pairTheory seqTheory limTheory transcTheory listTheory mesonLib 
-boolTheory pred_setTheory util_probTheory optionTheory numTheory 
+open HolKernel Parse boolLib bossLib numLib unwindLib tautLib Arith prim_recTheory
+combinTheory quotientTheory arithmeticTheory hrealTheory realaxTheory realTheory
+realLib jrhUtils pairTheory seqTheory limTheory transcTheory listTheory mesonLib
+boolTheory pred_setTheory util_probTheory optionTheory numTheory
 sumTheory InductiveDefinition ind_typeTheory;
 
 open cardinalTheory iterateTheory;
@@ -33,15 +33,15 @@ fun K_TAC _ = ALL_TAC;
 fun MESON ths tm = prove(tm,MESON_TAC ths);
 fun METIS ths tm = prove(tm,METIS_TAC ths);
 
-val DISC_RW_KILL = DISCH_TAC THEN ONCE_ASM_REWRITE_TAC [] THEN 
+val DISC_RW_KILL = DISCH_TAC THEN ONCE_ASM_REWRITE_TAC [] THEN
                    POP_ASSUM K_TAC;
-				   
-fun SET_TAC L = 
+
+fun SET_TAC L =
     POP_ASSUM_LIST(K ALL_TAC) THEN REPEAT COND_CASES_TAC THEN
     REWRITE_TAC (append [EXTENSION, SUBSET_DEF, PSUBSET_DEF, DISJOINT_DEF,
     SING_DEF] L) THEN
-    SIMP_TAC std_ss [NOT_IN_EMPTY, IN_UNIV, IN_UNION, IN_INTER, IN_DIFF, 
-      IN_INSERT, IN_DELETE, IN_REST, IN_BIGINTER, IN_BIGUNION, IN_IMAGE, 
+    SIMP_TAC std_ss [NOT_IN_EMPTY, IN_UNIV, IN_UNION, IN_INTER, IN_DIFF,
+      IN_INSERT, IN_DELETE, IN_REST, IN_BIGINTER, IN_BIGUNION, IN_IMAGE,
       GSPECIFICATION, IN_DEF, EXISTS_PROD] THEN METIS_TAC [];
 
 fun ASSERT_TAC tm = SUBGOAL_THEN tm STRIP_ASSUME_TAC;
@@ -156,9 +156,9 @@ val NPRODUCT_EQ_NUMSEG = store_thm ("NPRODUCT_EQ_NUMSEG",
 
 val NPRODUCT_EQ_0 = store_thm ("NPRODUCT_EQ_0",
  ``!f s. FINITE s ==> ((nproduct s f = 0) <=> ?x. x IN s /\ (f(x) = 0))``,
-  GEN_TAC THEN 
+  GEN_TAC THEN
   ONCE_REWRITE_TAC [METIS []
-   ``!s. ((nproduct s f = 0) <=> ?x. x IN s /\ (f x = 0)) = 
+   ``!s. ((nproduct s f = 0) <=> ?x. x IN s /\ (f x = 0)) =
          (\s. ((nproduct s f = 0) <=> ?x. x IN s /\ (f x = 0))) s``] THEN
   MATCH_MP_TAC FINITE_INDUCT THEN BETA_TAC THEN
   SIMP_TAC arith_ss [NPRODUCT_CLAUSES, MULT_EQ_0, IN_INSERT, NOT_IN_EMPTY] THEN
@@ -171,8 +171,8 @@ val NPRODUCT_EQ_0_NUMSEG = store_thm ("NPRODUCT_EQ_0_NUMSEG",
 val NPRODUCT_LE = store_thm ("NPRODUCT_LE",
  ``!f s. FINITE s /\ (!x. x IN s ==> 0 <= f(x) /\ f(x) <= g(x))
          ==> nproduct s f <= nproduct s g``,
-  GEN_TAC THEN REWRITE_TAC[CONJ_EQ_IMP] THEN 
-  ONCE_REWRITE_TAC [METIS [] 
+  GEN_TAC THEN REWRITE_TAC[CONJ_EQ_IMP] THEN
+  ONCE_REWRITE_TAC [METIS []
    ``!s. ((!x. x IN s ==> 0 <= f x /\ f x <= g x) ==>
   nproduct s f <= nproduct s g) =
      (\s. (!x. x IN s ==> 0 <= f x /\ f x <= g x) ==>
@@ -205,7 +205,7 @@ val NPRODUCT_MUL_GEN = store_thm ("NPRODUCT_MUL_GEN",
 val NPRODUCT_MUL = store_thm ("NPRODUCT_MUL",
  ``!f g s. FINITE s
            ==> (nproduct s (\x. f x * g x) = nproduct s f * nproduct s g)``,
-  GEN_TAC THEN GEN_TAC THEN 
+  GEN_TAC THEN GEN_TAC THEN
   ONCE_REWRITE_TAC [METIS []
     ``(nproduct s (\x. f x * g x) = nproduct s f * nproduct s g) =
  (\s. (nproduct s (\x. f x * g x) = nproduct s f * nproduct s g)) s``] THEN
@@ -346,7 +346,7 @@ val PRODUCT_POS_LE_NUMSEG = store_thm ("PRODUCT_POS_LE_NUMSEG",
 val PRODUCT_POS_LT = store_thm ("PRODUCT_POS_LT",
  ``!f s. FINITE s /\ (!x. x IN s ==> &0 < f x) ==> &0 < product s f``,
   GEN_TAC THEN REWRITE_TAC[CONJ_EQ_IMP] THEN
-  ONCE_REWRITE_TAC [METIS [] ``!s. 
+  ONCE_REWRITE_TAC [METIS [] ``!s.
    ((!x. x IN s ==> &0 < f x) ==> &0 < product s f) =
    (\s. (!x. x IN s ==> &0 < f x) ==> &0 < product s f) s``] THEN
   MATCH_MP_TAC FINITE_INDUCT THEN BETA_TAC THEN
@@ -393,7 +393,7 @@ val PRODUCT_EQ_NUMSEG = store_thm ("PRODUCT_EQ_NUMSEG",
 val PRODUCT_EQ_0 = store_thm ("PRODUCT_EQ_0",
  ``!f s. FINITE s ==> ((product s f = &0) <=> ?x. x IN s /\ (f(x) = &0))``,
   GEN_TAC THEN
-  ONCE_REWRITE_TAC [METIS [] ``!s. 
+  ONCE_REWRITE_TAC [METIS [] ``!s.
    (((product s f = &0) <=> ?x. x IN s /\ (f(x) = &0))) =
    (\s. ((product s f = &0) <=> ?x. x IN s /\ (f(x) = &0))) s``] THEN
   MATCH_MP_TAC FINITE_INDUCT THEN BETA_TAC THEN
@@ -456,8 +456,8 @@ val PRODUCT_MUL_NUMSEG = store_thm ("PRODUCT_MUL_NUMSEG",
 
 val PRODUCT_CONST = store_thm ("PRODUCT_CONST",
  ``!c s. FINITE s ==> (product s (\x. c) = c pow (CARD s))``,
-  GEN_TAC THEN 
-  ONCE_REWRITE_TAC [METIS [] ``!s. 
+  GEN_TAC THEN
+  ONCE_REWRITE_TAC [METIS [] ``!s.
    (product s (\x. c) = c pow (CARD s)) =
    (\s. product s (\x. c) = c pow (CARD s)) s``] THEN
   MATCH_MP_TAC FINITE_INDUCT THEN BETA_TAC THEN
@@ -496,7 +496,7 @@ val PRODUCT_INV = store_thm ("PRODUCT_INV",
   ASM_CASES_TAC ``((f:'a->real) e <> 0) /\ (product s f <> 0:real)`` THENL
   [ASM_SIMP_TAC real_ss [GSYM REAL_INV_MUL], ALL_TAC] THEN
   FULL_SIMP_TAC real_ss [REAL_INV_0]);
-  
+
 val PRODUCT_DIV = store_thm ("PRODUCT_DIV",
  ``!f g s. FINITE s ==> (product s (\x. f x / g x) = product s f / product s g)``,
   SIMP_TAC std_ss [real_div, PRODUCT_MUL, PRODUCT_INV]);
@@ -514,7 +514,7 @@ val PRODUCT_LE_1 = store_thm ("PRODUCT_LE_1",
  ``!f s. FINITE s /\ (!x. x IN s ==> &0 <= f x /\ f x <= &1)
          ==> product s f <= &1``,
   GEN_TAC THEN REWRITE_TAC[CONJ_EQ_IMP] THEN
-  ONCE_REWRITE_TAC [METIS [] ``!s. 
+  ONCE_REWRITE_TAC [METIS [] ``!s.
    ((!x. x IN s ==> &0 <= f x /\ f x <= &1)
          ==> product s f <= &1) =
    (\s. (!x. x IN s ==> &0 <= f x /\ f x <= &1)
@@ -528,7 +528,7 @@ val PRODUCT_ABS = store_thm ("PRODUCT_ABS",
  ``!f s. FINITE s ==> (product s (\x. abs(f x)) = abs(product s f))``,
   GEN_TAC THEN ONCE_REWRITE_TAC [METIS [] ``!s.
    (product s (\x. abs(f x)) = abs(product s f)) =
-   (\s. product s (\x. abs(f x)) = abs(product s f)) s``] THEN 
+   (\s. product s (\x. abs(f x)) = abs(product s f)) s``] THEN
   MATCH_MP_TAC FINITE_INDUCT THEN BETA_TAC THEN
   SIMP_TAC std_ss [PRODUCT_CLAUSES, ABS_MUL, ABS_N]);
 
@@ -596,4 +596,3 @@ val th = store_thm ("th",
     ASM_SIMP_TAC std_ss [GSPECIFICATION, IN_NUMSEG]);
 
 val _ = export_theory();
-

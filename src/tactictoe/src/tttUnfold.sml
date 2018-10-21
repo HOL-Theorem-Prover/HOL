@@ -573,7 +573,7 @@ fun ppstring_stac qtac =
 
 val is_thm_flag = ref false
 
-fun modified_program (h,d) p = 
+fun modified_program (h,d) p =
   let fun continue m' = modified_program (h,d) m' in
   case p of
     [] => []
@@ -587,7 +587,7 @@ fun modified_program (h,d) p =
       val _ = if d = 0 then is_thm_flag := false else ()
       val head' = modified_program (true, d+1) head
       val body' = modified_program ((s <> "val") orelse h, d+1) body
-      val semicolon = 
+      val semicolon =
         if d = 0 andalso !is_thm_flag then [";"] else []
     in
       semicolon @ [s] @ head' @ [sep] @ body' @ continue m
@@ -644,7 +644,7 @@ fun modified_program (h,d) p =
     else a :: continue m
     )
 
-  
+
   end
 (* --------------------------------------------------------------------------
    Stack continued
@@ -1046,7 +1046,7 @@ fun find_script x =
 
 fun clean_dir cthy dir = (mkDir_err dir; erase_file (dir ^ "/" ^ cthy))
 
-fun ttt_rewrite_thy thy = 
+fun ttt_rewrite_thy thy =
   if mem thy ["bool","min"] then () else
   let
     val _ = clean_dir thy ttt_unfold_dir
@@ -1081,8 +1081,8 @@ fun save_file file =
     val dir = #dir (OS.Path.splitDirFile file)
     val cmd = "cp -p " ^ file ^ " " ^ (file ^ ".tttsave")
   in
-	  cmd_in_dir dir cmd
-	end
+    cmd_in_dir dir cmd
+  end
 
 fun restore_file file =
   let
@@ -1101,7 +1101,7 @@ fun restore_scripts script = app restore_file (script :: theory_files script)
    Recording
    -------------------------------------------------------------------------- *)
 
-fun ttt_record_thy thy = 
+fun ttt_record_thy thy =
   if mem thy ["bool","min"] then () else
   let val scriptorg = find_script thy in
     let
@@ -1140,8 +1140,8 @@ fun compare_fstint ((a,_),(b,_)) = Int.compare (a,b)
 
 fun split_thyl_aux l2 l1 = case l1 of
     []     => l2
-  | a :: newl1 => 
-    let 
+  | a :: newl1 =>
+    let
       val l2' = dict_sort compare_fstint l2
       val (n,l) = hd l2'
       val newl2 = (n + length (DB.thms a), a :: l) :: (tl l2')
@@ -1149,14 +1149,14 @@ fun split_thyl_aux l2 l1 = case l1 of
       split_thyl_aux newl2 newl1
     end
 
-fun mk_list n a = 
+fun mk_list n a =
   if n <= 0 then [] else a :: mk_list (n-1) a
 
-fun split_thyl n thyl = 
+fun split_thyl n thyl =
   if n <= 0 then raise ERR "split_thyl" "" else
-  let 
-    fun test x = not (mem x ["bool","min"]) 
-    val l1  = sort_thyl thyl 
+  let
+    fun test x = not (mem x ["bool","min"])
+    val l1  = sort_thyl thyl
       handle _ => (debug "Warning: split_thyl"; thyl)
     val l1' = filter test l1
     val l2  = mk_list n (0,[])
@@ -1182,8 +1182,8 @@ fun parallel_thy f n thyl =
   end
 
 (* ---------------------------------------------------------------------------
-   Parallel recording. (Orthogonalization is weakened 
-   compared to ttt_record) . 
+   Parallel recording. (Orthogonalization is weakened
+   compared to ttt_record) .
    There may be some problems with hiding error messages
    due to parallelism.
    -------------------------------------------------------------------------- *)

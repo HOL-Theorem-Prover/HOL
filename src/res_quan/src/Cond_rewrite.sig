@@ -1,9 +1,9 @@
 (* =====================================================================*)
 (* FILE          : cond_rewr.sig                                        *)
 (* DESCRIPTION   : Signature for conditional rewriting conversions and  *)
-(*                 tactics 					        *)
-(* AUTHOR	 : P Curzon 					        *)
-(* DATE		 : May 1993						*)
+(*                 tactics                                              *)
+(* AUTHOR        : P Curzon                                             *)
+(* DATE          : May 1993                                             *)
 (* =====================================================================*)
 
 signature Cond_rewrite =

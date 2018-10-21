@@ -81,10 +81,10 @@ val PBEFORE = new_infixr_definition("PBEFORE",
        Some aliases of Past Temporal Operators (borrowed from NuSMV)
  ---------------------------------------------------------------------------*)
 
-val _ = overload_on ("PREV",	``PNEXT``);
-val _ = overload_on ("ONCE",	``PEVENTUAL``);
-val _ = overload_on ("SINCE",	``$PUNTIL``);
-val _ = set_fixity   "SINCE"	 (Infixr 200);
+val _ = overload_on ("PREV",    ``PNEXT``);
+val _ = overload_on ("ONCE",    ``PEVENTUAL``);
+val _ = overload_on ("SINCE",   ``$PUNTIL``);
+val _ = set_fixity   "SINCE"     (Infixr 200);
 
 (*---------------------------------------------------------------------------
        Initialization
