@@ -1345,7 +1345,7 @@ val WEAK_EQUIV_PRESD_BY_PAR = store_thm (
             EXISTS_TAC ``par E1'''' E1'''''`` \\
             REWRITE_TAC [MATCH_MP EPS_PAR_PAR
                                   (CONJ (ASSUME ``EPS F1' E1''''``)
-                                        (ASSUME ``EPS F2' E1'''''``))] \\ 
+                                        (ASSUME ``EPS F2' E1'''''``))] \\
             MATCH_MP_TAC EPS_TRANS \\
             EXISTS_TAC ``par E2''''' E2''''''`` \\
             REWRITE_TAC [MATCH_MP EPS_PAR_PAR

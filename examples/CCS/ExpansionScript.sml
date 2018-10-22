@@ -154,11 +154,11 @@ val COMP_EXPANSION = store_thm (
  >> BETA_TAC
  >> REPEAT STRIP_TAC (* 3 sub-goals here *)
  >| [ (* goal 1 (of 3) *)
-      IMP_RES_TAC 
+      IMP_RES_TAC
         (MATCH_MP
           (REWRITE_RULE [EXPANSION_ALT] (ASSUME ``EXPANSION Exp1``))
           (ASSUME ``(Exp1 :('a, 'b) simulation) E y``)) \\
-      IMP_RES_TAC 
+      IMP_RES_TAC
         (MATCH_MP
           (REWRITE_RULE [EXPANSION_ALT] (ASSUME ``EXPANSION Exp2``))
           (ASSUME ``(Exp2 :('a, 'b) simulation) y E'``)) \\
@@ -713,7 +713,7 @@ val expands_SUBST_RESTR = store_thm (
       IMP_RES_TAC TRANS_RESTR >- IMP_RES_TAC Action_distinct_label \\
       IMP_RES_TAC (MATCH_MP expands_TRANS_label' (ASSUME ``E1 expands E2``)) \\
       Q.EXISTS_TAC `restr L' E1'` \\
-      ASM_REWRITE_TAC 
+      ASM_REWRITE_TAC
         [MATCH_MP WEAK_RESTR_label
                   (LIST_CONJ [ASSUME ``~((l': 'b Label) IN L')``,
                               ASSUME ``~((COMPL (l': 'b Label)) IN L')``,
@@ -795,7 +795,7 @@ val expands_SUBST_RELAB = store_thm (
       qpat_x_assum `tau = relabel rf' u'` (ASSUME_TAC o SYM) \\
       IMP_RES_TAC Relab_tau \\
       ASSUME_TAC (REWRITE_RULE [ASSUME ``(u' :'b Action) = tau``]
-                               (ASSUME ``TRANS E1 u' E''''``)) \\ 
+                               (ASSUME ``TRANS E1 u' E''''``)) \\
       IMP_RES_TAC (MATCH_MP expands_TRANS_tau (ASSUME ``E1 expands E2``))
       >- ( DISJ1_TAC >> ASM_REWRITE_TAC [] \\
            take [`E''''`, `E2`, `rf'`] >> ASM_REWRITE_TAC [] ) \\

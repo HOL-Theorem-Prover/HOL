@@ -9,7 +9,7 @@ fun failwithERR e =
    regexpMisc.fail());
 
 fun dest_string "" = raise ERR "dest_string" "empty string"
-  | dest_string str = 
+  | dest_string str =
      let val c = String.sub(str,0)
          val t = String.substring(str,1,String.size str - 1)
      in (c,t)
@@ -175,7 +175,7 @@ local
  end;
 
 fun array256String intList =
- let val spreadList = 
+ let val spreadList =
        spreadlnWith {sep=",", ln="\n     ", width=31} Int.toString intList
  in
    String.concat ("[":: spreadList @ ["]"])
@@ -226,14 +226,14 @@ end;
 
 local
 fun finalsString list =
- let val spreadList = 
+ let val spreadList =
        spreadlnWith {sep=",", ln="\n    ", width=10} Bool.toString list
  in
    String.concat ("{" :: spreadList @ ["}"])
  end;
 
 fun array256String intList =
- let val spreadList = 
+ let val spreadList =
        spreadlnWith {sep=",", ln="\n     ", width=31} Int.toString intList
  in
    String.concat ("{":: spreadList @ ["}"])
@@ -282,7 +282,7 @@ end;
 fun HOLfile name quote (certificate,_,finals,table) =
  case certificate
   of NONE => ""
-   | SOME thm => 
+   | SOME thm =>
      let open HolKernel Drule boolLib bossLib
          val _ = stdErr_print "Generating theorem.\n"
          val eqn = snd(dest_forall(concl thm))
@@ -349,7 +349,7 @@ fun main () =
 (*  ; check_compset() *)
   ; case parse_args()
     of NONE => (printHelp(); regexpMisc.fail())
-     | SOME (justify,lang,name,rstring) => 
+     | SOME (justify,lang,name,rstring) =>
       let val regexp = parse_regexp rstring
           val _ = stdErr_print "Parsed regexp, now constructing DFA ... "
           val result = compile_regexp justify regexp
@@ -357,8 +357,8 @@ fun main () =
             (case lang
               of Ada  => Adafile
                | C    => Cfile
-               | ML   => MLfile 
-               | Java => Javafile 
+               | ML   => MLfile
+               | Java => Javafile
                | Thm  => HOLfile)
             name rstring (deconstruct result)
       in

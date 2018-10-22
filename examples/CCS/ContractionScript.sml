@@ -326,10 +326,10 @@ val COMP_CONTRACTION = store_thm (
  >> BETA_TAC
  >> REPEAT STRIP_TAC (* 4 sub-goals here *)
  >| [ (* goal 1 (of 4) *)
-      IMP_RES_TAC 
+      IMP_RES_TAC
         (MATCH_MP (REWRITE_RULE [CONTRACTION] (ASSUME ``CONTRACTION Con1``))
                   (ASSUME ``(Con1 :('a, 'b) simulation) E y``)) \\
-      IMP_RES_TAC 
+      IMP_RES_TAC
         (MATCH_MP (REWRITE_RULE [CONTRACTION] (ASSUME ``CONTRACTION Con2``))
                   (ASSUME ``(Con2 :('a, 'b) simulation) y E'``)) \\
       Q.EXISTS_TAC `E2'` >> ASM_REWRITE_TAC [] \\
@@ -344,7 +344,7 @@ val COMP_CONTRACTION = store_thm (
       Q.EXISTS_TAC `E1'` >> ASM_REWRITE_TAC [] \\
       IMP_RES_TAC WEAK_EQUIV_TRANS,
       (* goal 3 (of 4) *)
-      IMP_RES_TAC 
+      IMP_RES_TAC
         (MATCH_MP (REWRITE_RULE [CONTRACTION] (ASSUME ``CONTRACTION Con1``))
                   (ASSUME ``(Con1 :('a, 'b) simulation) E y``)) (* 2 sub-goals here *)
       >- ( DISJ1_TAC >> Q.EXISTS_TAC `y` >> ASM_REWRITE_TAC [] ) \\
@@ -765,7 +765,7 @@ val contracts_SUBST_RESTR = store_thm (
       IMP_RES_TAC TRANS_RESTR >- IMP_RES_TAC Action_distinct_label \\
       IMP_RES_TAC (MATCH_MP contracts_TRANS_label' (ASSUME ``E1 contracts E2``)) \\
       Q.EXISTS_TAC `restr L' E1'` \\
-      ASM_REWRITE_TAC 
+      ASM_REWRITE_TAC
         [MATCH_MP WEAK_RESTR_label
                   (LIST_CONJ [ASSUME ``~((l': 'b Label) IN L')``,
                               ASSUME ``~((COMPL (l': 'b Label)) IN L')``,
@@ -844,7 +844,7 @@ val contracts_SUBST_RELAB = store_thm (
       qpat_x_assum `tau = relabel rf' u'` (ASSUME_TAC o SYM) \\
       IMP_RES_TAC Relab_tau \\
       ASSUME_TAC (REWRITE_RULE [ASSUME ``(u' :'b Action) = tau``]
-                               (ASSUME ``TRANS E1 u' E''''``)) \\ 
+                               (ASSUME ``TRANS E1 u' E''''``)) \\
       IMP_RES_TAC (MATCH_MP contracts_TRANS_tau (ASSUME ``E1 contracts E2``))
       >- ( DISJ1_TAC >> ASM_REWRITE_TAC [] \\
            take [`E''''`, `E2`, `rf'`] >> ASM_REWRITE_TAC [] ) \\
@@ -1759,7 +1759,7 @@ val C_contracts_IMP_SUM_contracts = store_thm (
  >> POP_ASSUM (MP_TAC o BETA_RULE) >> Rewr);
 
 val OBS_contracts_IMP_SUM_contracts = store_thm (
-   "OBS_contracts_IMP_SUM_contracts", 
+   "OBS_contracts_IMP_SUM_contracts",
   ``!p q. OBS_contracts p q ==> SUM_contracts p q``,
     rpt STRIP_TAC
  >> MATCH_MP_TAC C_contracts_IMP_SUM_contracts

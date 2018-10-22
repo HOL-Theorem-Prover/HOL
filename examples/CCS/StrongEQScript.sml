@@ -615,7 +615,7 @@ val STRONG_EQUIV_SUBST_RELAB = store_thm (
         (* goal 2.2 (of 2) *)
         ASSUME_TAC (REWRITE_RULE [ASSUME ``E''' = relab E2 rf'``]
                                  (ASSUME ``TRANS E''' u E2'``)) \\
-        IMP_RES_TAC TRANS_RELAB \\ 
+        IMP_RES_TAC TRANS_RELAB \\
         IMP_RES_TAC (ONCE_REWRITE_RULE [PROPERTY_STAR]
                                        (ASSUME ``STRONG_EQUIV E1 E2``)) \\
         EXISTS_TAC ``relab E1' rf'`` \\

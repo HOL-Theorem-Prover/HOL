@@ -71,10 +71,10 @@ val STRONG_EQUIV' = new_definition (
    "STRONG_EQUIV'",
   ``STRONG_EQUIV' E E' =
         (!u.
-         (!E1. TRANS E u E1 ==> 
+         (!E1. TRANS E u E1 ==>
                (?E2. TRANS E' u E2 /\ STRONG_EQUIV E1 E2)) /\
-         (!E2. TRANS E' u E2 ==> 
-               (?E1. TRANS E u E1 /\ STRONG_EQUIV E1 E2)))``); 
+         (!E2. TRANS E' u E2 ==>
+               (?E1. TRANS E u E1 /\ STRONG_EQUIV E1 E2)))``);
 
 (* Strong equivalence implies the new relation. *)
 val STRONG_EQUIV_IMP_STRONG_EQUIV' = store_thm (
@@ -83,7 +83,7 @@ val STRONG_EQUIV_IMP_STRONG_EQUIV' = store_thm (
     rpt GEN_TAC
  >> REWRITE_TAC [STRONG_EQUIV', STRONG_EQUIV]
  >> rpt STRIP_TAC (* 2 sub-goals *)
- >> IMP_RES_TAC 
+ >> IMP_RES_TAC
       (MATCH_MP (EQ_MP STRONG_BISIM (ASSUME ``STRONG_BISIM Bsm``))
                 (ASSUME ``(Bsm: ('a, 'b) simulation) E E'``))
  >| [ Q.EXISTS_TAC `E2`,
@@ -97,7 +97,7 @@ val STRONG_EQUIV'_IS_STRONG_BISIM = store_thm (
   ``STRONG_BISIM STRONG_EQUIV'``,
     PURE_ONCE_REWRITE_TAC [STRONG_BISIM]
  >> rpt STRIP_TAC (* 2 sub-goals here *)
- >> IMP_RES_TAC 
+ >> IMP_RES_TAC
        (EQ_MP (Q.SPECL [`E`, `E'`] STRONG_EQUIV')
               (ASSUME ``STRONG_EQUIV' E E'``))
  >| [ Q.EXISTS_TAC `E2`,
@@ -125,9 +125,9 @@ val PROPERTY_STAR' = store_thm (
                  (?E1. TRANS E u E1 /\ STRONG_EQUIV E1 E2)))``,
     rpt GEN_TAC
  >> EQ_TAC (* 2 sub-goals here *)
- >| [ PURE_ONCE_REWRITE_TAC 
+ >| [ PURE_ONCE_REWRITE_TAC
         [ONCE_REWRITE_RULE [STRONG_EQUIV'] STRONG_EQUIV_IMP_STRONG_EQUIV'],
-      PURE_ONCE_REWRITE_TAC 
+      PURE_ONCE_REWRITE_TAC
         [ONCE_REWRITE_RULE [STRONG_EQUIV'] STRONG_EQUIV'_IMP_STRONG_EQUIV] ]);
 
 (******************************************************************************)

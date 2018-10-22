@@ -13,7 +13,7 @@ map load
    "containerTheory", "infinite_pathTheory", "tuerk_tacticsLib",
    "symbolic_kripke_structureTheory", "temporal_deep_mixedTheory"];
 *)
-open symbolic_semi_automatonTheory prop_logicTheory xprop_logicTheory set_lemmataTheory pred_setTheory listTheory pairTheory 
+open symbolic_semi_automatonTheory prop_logicTheory xprop_logicTheory set_lemmataTheory pred_setTheory listTheory pairTheory
      containerTheory infinite_pathTheory symbolic_kripke_structureTheory tuerk_tacticsLib
      temporal_deep_mixedTheory;
 open Sanity;

@@ -289,7 +289,7 @@ val OBS_CONGR_PRESD_BY_SUM = store_thm (
         Q.EXISTS_TAC `E2''` >> art [] \\
         MATCH_MP_TAC WEAK_SUM1 >> art [],
         (* goal 1.2 (of 2) *)
-        IMP_RES_TAC OBS_CONGR_TRANS_LEFT \\ 
+        IMP_RES_TAC OBS_CONGR_TRANS_LEFT \\
         Q.EXISTS_TAC `E2''` >> art [] \\
         MATCH_MP_TAC WEAK_SUM2 >> art [] ],
       (* goal 2 (of 2) *)
@@ -299,7 +299,7 @@ val OBS_CONGR_PRESD_BY_SUM = store_thm (
         Q.EXISTS_TAC `E1''` >> art [] \\
         MATCH_MP_TAC WEAK_SUM1 >> art [],
         (* goal 2.2 (of 2) *)
-        IMP_RES_TAC OBS_CONGR_TRANS_RIGHT \\ 
+        IMP_RES_TAC OBS_CONGR_TRANS_RIGHT \\
         Q.EXISTS_TAC `E1''` >> art [] \\
         MATCH_MP_TAC WEAK_SUM2 >> art [] ] ]);
 

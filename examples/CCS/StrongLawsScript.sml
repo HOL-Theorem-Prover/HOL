@@ -698,12 +698,12 @@ val STRONG_PAR_PREF_SYNCR = store_thm (
    "STRONG_PAR_PREF_SYNCR",
   ``!(l :'b Label) l'. (l = COMPL l') ==>
          !E E'.
-           STRONG_EQUIV 
+           STRONG_EQUIV
            (par (prefix (label l) E) (prefix (label l') E'))
            (sum
             (sum (prefix (label l) (par E (prefix (label l') E')))
                  (prefix (label l') (par (prefix (label l) E) E')))
-            (prefix tau (par E E')))``,    
+            (prefix tau (par E E')))``,
     REPEAT STRIP_TAC
  >> PURE_ONCE_REWRITE_TAC [STRONG_EQUIV]
  >> EXISTS_TAC
@@ -1093,7 +1093,7 @@ val STRONG_RELAB_PREFIX = store_thm (
                       (prefix (relabel (RELAB labl) u) (relab E (RELAB labl)))``,
     REPEAT GEN_TAC
  >> PURE_ONCE_REWRITE_TAC [STRONG_EQUIV]
- >> EXISTS_TAC 
+ >> EXISTS_TAC
        ``\x y. (x = y) \/ (?u' E'. (x = relab (prefix u' E') (RELAB labl)) /\
                                    (y = prefix (relabel (RELAB labl) u')
                                                (relab E' (RELAB labl))))``

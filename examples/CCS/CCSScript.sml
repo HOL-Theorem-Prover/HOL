@@ -871,7 +871,7 @@ val DELETE_ELEMENT_def = Define `
     if (e = x) then DELETE_ELEMENT e l else x :: DELETE_ELEMENT e l)`;
 
 val NOT_IN_DELETE_ELEMENT = store_thm (
-   "NOT_IN_DELETE_ELEMENT", 
+   "NOT_IN_DELETE_ELEMENT",
   ``!e L. ~MEM e (DELETE_ELEMENT e L)``,
     GEN_TAC >> Induct_on `L`
  >- REWRITE_TAC [DELETE_ELEMENT_def, MEM]
@@ -879,7 +879,7 @@ val NOT_IN_DELETE_ELEMENT = store_thm (
  >> Cases_on `e = h` >> fs []);
 
 val DELETE_ELEMENT_FILTER = store_thm (
-   "DELETE_ELEMENT_FILTER", 
+   "DELETE_ELEMENT_FILTER",
   ``!e L. DELETE_ELEMENT e L = FILTER ((<>) e) L``,
     GEN_TAC >> Induct_on `L`
  >- REWRITE_TAC [DELETE_ELEMENT_def, FILTER]

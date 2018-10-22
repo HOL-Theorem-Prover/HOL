@@ -13,7 +13,7 @@ map load
   "relationTheory", "symbolic_kripke_structureTheory"];
 *)
 
-open infinite_pathTheory pred_setTheory listTheory pairTheory xprop_logicTheory 
+open infinite_pathTheory pred_setTheory listTheory pairTheory xprop_logicTheory
      containerTheory prop_logicTheory set_lemmataTheory prim_recTheory
      tuerk_tacticsLib temporal_deep_mixedTheory
      semi_automatonTheory numLib relationTheory;

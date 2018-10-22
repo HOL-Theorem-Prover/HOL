@@ -200,7 +200,7 @@ val CMREG_SUBEXP_def = Define `
 
 (*
 val CMREG_WELLFORMED_SUB_def = Define `
-         (CMREG_WELLFORMED_SUB r = !s. ((s = r) \/ CMREG_SUBEXP s r) ==> 
+         (CMREG_WELLFORMED_SUB r = !s. ((s = r) \/ CMREG_SUBEXP s r) ==>
              ((cempty s = (empty (UNCACHE_REG s))) /\ (cfinal s = (final (UNCACHE_REG s))))
          )
 `;

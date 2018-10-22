@@ -30,9 +30,9 @@ val STRONG_BISIM_UPTO = new_definition (
   ``STRONG_BISIM_UPTO (Bsm :('a, 'b) simulation) =
     !E E'.
         Bsm E E' ==>
-        !u. (!E1. TRANS E u E1 ==> 
+        !u. (!E1. TRANS E u E1 ==>
                   ?E2. TRANS E' u E2 /\ (STRONG_EQUIV O Bsm O STRONG_EQUIV) E1 E2) /\
-            (!E2. TRANS E' u E2 ==> 
+            (!E2. TRANS E' u E2 ==>
                   ?E1. TRANS E u E1 /\ (STRONG_EQUIV O Bsm O STRONG_EQUIV) E1 E2)``);
 
 val IDENTITY_STRONG_BISIM_UPTO_lemma = store_thm (
@@ -1003,7 +1003,7 @@ val OBS_BISIM_UPTO_THM = store_thm (
         IMP_RES_TAC WEAK_EQUIV_WEAK_TRANS_label \\
 (***
         E    ~   y''    Obsm     y'   ~~   E'
-        |        |               ||        || 
+        |        |               ||        ||
         l        l               l         l
         |        |               ||        ||
        !E1'  ~   E2' (~ Obsm ~~) E2'' ~~  E2'''
@@ -1044,7 +1044,7 @@ val OBS_BISIM_UPTO_THM = store_thm (
         IMP_RES_TAC WEAK_EQUIV_WEAK_TRANS_tau \\
 (***
         E    ~   y''    Obsm     y'   ~~   E'
-        |        |               ||        || 
+        |        |               ||        ||
         tau     tau              tau       eps
         |        |               ||        ||
        !E1'  ~   E2' (~ Obsm ~~) E2'' ~~  E2'''
@@ -1091,7 +1091,7 @@ val OBS_BISIM_UPTO_THM = store_thm (
         IMP_RES_TAC STRONG_EQUIV_WEAK_TRANS \\
 (***
         E    ~~  y''    Obsm     y'   ~    E'
-        |        ||              ||        || 
+        |        ||              ||        ||
         l        l               l         l
         |        ||              ||        ||
        !E1'  ~~  E2' (~ Obsm ~~) E2'' ~   E2'''
@@ -1132,7 +1132,7 @@ val OBS_BISIM_UPTO_THM = store_thm (
         IMP_RES_TAC STRONG_EQUIV_EPS \\
 (***
         E    ~~  y''    Obsm     y'   ~    E'
-        |        ||              ||        || 
+        |        ||              ||        ||
        tau       eps            eps        eps
         |        ||              ||        ||
        !E1'  ~~  E2' (~ Obsm ~~) E2'' ~   E2'''

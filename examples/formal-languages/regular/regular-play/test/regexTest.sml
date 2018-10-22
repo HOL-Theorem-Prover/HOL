@@ -66,17 +66,17 @@ struct
          let
            val infile = BinIO.openIn fileName;
            fun readMax 0 l = l
-             | readMax i l = 
+             | readMax i l =
                    let
                      val co = BinIO.input1 infile;
-                   in 
+                   in
                      if (co = NONE) then [] else readMax (i - 1) ((valOf co)::l)
                    end;
          in
            implode (map (fn x => chr ((Word8.toIntX x) + 128)) (readMax maxSize []))
          end;
-    
-  
+
+
 
 (* performance test case collection *)
   val r4  = Seq (r1, r2);

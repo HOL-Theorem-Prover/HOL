@@ -5,7 +5,7 @@ struct
 
   open regexType;
 
-  fun match r s = regexEMCML.accept (mapToRegExe r) (explode s); (*: RegEx -> string -> bool*) 
+  fun match r s = regexEMCML.accept (mapToRegExe r) (explode s); (*: RegEx -> string -> bool*)
 
 end
 

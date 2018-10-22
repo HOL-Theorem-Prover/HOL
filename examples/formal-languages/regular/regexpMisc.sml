@@ -21,7 +21,7 @@ fun spreadlnWith {sep:string, ln:string, width:int} f =
                else hstring::sep::spr (n-1) t
            end
  in
-  spr width 
+  spr width
  end;
 
 fun bigUpto b t =
