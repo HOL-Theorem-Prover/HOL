@@ -6,7 +6,7 @@ all: unicode-grep
 
 ifdef POLY
 
-unicode-grep: ugrep.sml
+unicode-grep: poly-ugrep.ML ugrep.sml
 	$(POLYC) $< -o $@
 
 else

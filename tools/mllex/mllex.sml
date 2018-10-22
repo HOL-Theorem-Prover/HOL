@@ -294,7 +294,8 @@ structure LexGen: LEXGEN =
 				StrDecl := false)
 
    val LexOut = ref(TextIO.stdOut)
-   fun say x = TextIO.output(!LexOut, x)
+   val removeTABs = String.translate (fn #"\t" => "    " | c => str c)
+   fun say x = TextIO.output(!LexOut, removeTABs x)
 
 (* Union: merge two sorted lists of integers *)
 
@@ -1384,4 +1385,3 @@ fun lexGen infile =
 	 end)
     end
 end
-
