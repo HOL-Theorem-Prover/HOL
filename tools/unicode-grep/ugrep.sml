@@ -126,12 +126,27 @@ fun check_twspace qp fname linenum (line,ss) =
     else true
   end
 
+fun inc k m =
+  case Binarymap.peek(m,k) of
+      NONE => Binarymap.insert(m,k,1)
+    | SOME i => Binarymap.insert(m,k,i+1)
+
 fun checkfile (opts as {chattiness,files_wmatches,...}:t) sofar fname =
   let
     val istrm = TextIO.openIn fname
-    fun recurse linenum sofar =
+    fun recurse linenum tags sofar =
       case TextIO.inputLine istrm of
-          NONE => (TextIO.closeIn istrm; sofar)
+          NONE =>
+          let
+            fun tagfold (k,v,acc) = (k ^ "(" ^ Int.toString v ^ ")") :: acc
+            val tagdump = Binarymap.foldr tagfold [] tags
+          in
+            TextIO.closeIn istrm;
+            if files_wmatches andalso not (null tagdump) then
+              print (fname ^ ": " ^ String.concatWith ", " tagdump ^ "\n")
+            else ();
+            sofar
+          end
         | SOME line =>
           let
             val ss = Substring.full line
@@ -140,21 +155,17 @@ fun checkfile (opts as {chattiness,files_wmatches,...}:t) sofar fname =
               let
                 val b' = f qp fname linenum (line,ss)
               in
-                (b andalso b', if not b' then tag::tags else tags)
+                (b andalso b', if not b' then inc tag tags else tags)
               end
-            val (c, tags) = List.foldl foldthis (true, []) (#tests opts)
+            val (c, tags) = List.foldl foldthis (true, tags) (#tests opts)
           in
-            if not c andalso (files_wmatches orelse chattiness = 0) then
-              (TextIO.closeIn istrm;
-               if files_wmatches andalso chattiness > 0 then
-                 print (fname ^ ": " ^ String.concatWith ", " tags ^ "\n")
-               else ();
-               false)
+            if not c andalso chattiness = 0 then
+              (TextIO.closeIn istrm; false)
             else
-              recurse (linenum + 1) (c andalso sofar)
+              recurse (linenum + 1) tags (c andalso sofar)
           end
   in
-    recurse 1 sofar
+    recurse 1 (Binarymap.mkDict String.compare) sofar
   end
 
 fun is_generated opts fname =
