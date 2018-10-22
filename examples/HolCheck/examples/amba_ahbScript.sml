@@ -282,9 +282,9 @@ val INIT_A_def = Ia;
 (* arbiter: simple priority based *)
 val Ra = Define `TRANS_A n (^Ra_state,^Ra_state') =
     (if n=0 then hgrant_0' else if ~MASK n (^mask_vars) /\ BUSREQ n (^busreq_vars) /\ IDLE (^htransv) then GRANT n  (^grant_vars')
-				else TRANS_A (n-1)  (^Ra_state,^Ra_state')) /\
+                                else TRANS_A (n-1)  (^Ra_state,^Ra_state')) /\
 (* whoever is granted gets bus ownership when hreadyout goes high *)
-	 ((^master_vars') = if ~hreadyout then (^master_vars) else (^grant_vars))
+         ((^master_vars') = if ~hreadyout then (^master_vars) else (^grant_vars))
 `;
 val TRANS_A_def = Ra;
 
@@ -292,7 +292,7 @@ val TRANS_A_def = Ra;
 val Rm = Define `TRANS_AHB_M n (^Rm_state,^Rm_state') =
 if n=0 then (* dummy master *)
     (MASTER n (^grant_vars) ==> IDLE(htransm_0_0',htransm_0_1')) /\ (* always signal IDLE on grant *)
-	(~BUSREQ n (^busreq_vars')) (* dummy never requests the bus *)
+        (~BUSREQ n (^busreq_vars')) (* dummy never requests the bus *)
 else (* generic master *)
 (* keep requesting bus if you get ownership (so arbiter only takes it away for higher priorty req) until transfer is done *)
     (~(OKAY(hresp_0,hresp_1) /\ hreadyout) /\ MASTER n (^grant_vars)  ==> BUSREQ n (^busreq_vars')) /\
@@ -319,21 +319,21 @@ else (* generic master *)
     (BUSYM n (^transm_vars)) /\ ~MOD16_N2B ^(fromMLnum (nb-1)) (bb3,bb2,bb1,bb0) /\ OKAY(hresp_0,hresp_1) /\ MASTER n (^grant_vars)
                             ==> (SEQM n (^transm_vars') /\ INC4M n (^burstm_vars')) /\
 (* response to first cycle of retry - no need to reset bb; they take an extra cycle to reset but retry is two cycle so no prob *)
-	 (~hreadyout /\ RETRY(hresp_0,hresp_1) /\ GRANT n (^grant_vars)
-	                    ==> IDLEM n (^transm_vars')) /\
+         (~hreadyout /\ RETRY(hresp_0,hresp_1) /\ GRANT n (^grant_vars)
+                            ==> IDLEM n (^transm_vars')) /\
 (* response to second cycle of retry - {3-22} says master *must* retry *)
-	 (hreadyout /\ RETRY(hresp_0,hresp_1) /\ GRANT n (^grant_vars)
-	                    ==> NOSEQM n (^transm_vars')) /\
+         (hreadyout /\ RETRY(hresp_0,hresp_1) /\ GRANT n (^grant_vars)
+                            ==> NOSEQM n (^transm_vars')) /\
 (* response to first cycle of error ;{3-23} gives the option of continuing or cancelling transfer - we choose cancel*)
-	 (~hreadyout /\ ERROR(hresp_0,hresp_1) /\GRANT n (^grant_vars)
-	                    ==> IDLEM n (^transm_vars')) /\
+         (~hreadyout /\ ERROR(hresp_0,hresp_1) /\GRANT n (^grant_vars)
+                            ==> IDLEM n (^transm_vars')) /\
 (* response to second cycle of error ;{3-23} gives the option of continuing or cancelling transfer - we choose cancel*)
-	 (hreadyout /\ ERROR(hresp_0,hresp_1) /\ GRANT n (^grant_vars)
-	                    ==> IDLEM n (^transm_vars'))  /\
+         (hreadyout /\ ERROR(hresp_0,hresp_1) /\ GRANT n (^grant_vars)
+                            ==> IDLEM n (^transm_vars'))  /\
 (* record the number of a split master for future masking/unmasking *)
-	 (if SPLIT(hresp_0,hresp_1) /\ ~hreadyout /\ MASTER n (^master_vars) then MASK n (^mask_vars')
-	  else if HSPLIT n (^split_vars) then ~MASK n (^mask_vars')
-	       else MASK n (^mask_vars') = MASK n (^mask_vars))
+         (if SPLIT(hresp_0,hresp_1) /\ ~hreadyout /\ MASTER n (^master_vars) then MASK n (^mask_vars')
+          else if HSPLIT n (^split_vars) then ~MASK n (^mask_vars')
+               else MASK n (^mask_vars') = MASK n (^mask_vars))
 `;
 val TRANS_AHB_M_def = Rm;
 
@@ -344,46 +344,46 @@ val Rs = Define `TRANS_AHB_S n (^Rs_state,^Rs_state') =
 (* force hreadyout to high because slave can't do more than nw  wait states *)
          (HSEL n (^hselv) /\ MOD16_N2B ^(fromMLnum (nw-1)) (hws3,hws2,hws1,hws0) ==> hreadyout') /\
 (* signal end of transfer (single or part of a burst) (don't need to check for rdy because value of rdy irrelevent to address phase) *)
-	 (HSEL n (^hselv) /\ (NOSEQ(htrans_0,htrans_1) \/ SEQ(htrans_0,htrans_1)) /\  OKAY(hresp_0,hresp_1)
-	  ==> OKAY(hresp_0',hresp_1') /\ hreadyout') /\
+         (HSEL n (^hselv) /\ (NOSEQ(htrans_0,htrans_1) \/ SEQ(htrans_0,htrans_1)) /\  OKAY(hresp_0,hresp_1)
+          ==> OKAY(hresp_0',hresp_1') /\ hreadyout') /\
 (* {3-9} slave response to IDLE is READY + OKAY *)
          (HSEL n (^hselv) /\ IDLE(htrans_0,htrans_1) ==> hreadyout' /\  OKAY(hresp_0',hresp_1')) /\
 (* {3-9} slave response to BUSY is OKAY *)
          (HSEL n (^hselv) /\ BUSY(htrans_0,htrans_1) ==> OKAY(hresp_0',hresp_1')) /\
 (* if m0 is granted then respond with OK always (to prevent RETRY or SPLIT on m0 *)
-	 (HSEL n (^hselv) /\ GRANT 0 (^grant_vars) ==>  OKAY(hresp_0',hresp_1')) /\
+         (HSEL n (^hselv) /\ GRANT 0 (^grant_vars) ==>  OKAY(hresp_0',hresp_1')) /\
 (* disable all but ok response*)
-	 (HSEL n (^hselv) ==> (~SPLIT(hresp_0',hresp_1') /\ ~RETRY(hresp_0',hresp_1') /\ ~ERROR(hresp_0',hresp_1'))) /\
+         (HSEL n (^hselv) ==> (~SPLIT(hresp_0',hresp_1') /\ ~RETRY(hresp_0',hresp_1') /\ ~ERROR(hresp_0',hresp_1'))) /\
 (* disable assertion of HSPLIT*)
-	 (!m. m<^(fromMLnum nm) ==> (\m. ~HSPLIT m (^split_vars')) m) /\
+         (!m. m<^(fromMLnum nm) ==> (\m. ~HSPLIT m (^split_vars')) m) /\
 (* drive second cycle of RETRY *)
-	 (HSEL n (^hselv) /\ ~hreadyout /\ ~(IDLE(htrans_0,htrans_1) \/ BUSY(htrans_0,htrans_1)) /\ RETRY(hresp_0,hresp_1)
+         (HSEL n (^hselv) /\ ~hreadyout /\ ~(IDLE(htrans_0,htrans_1) \/ BUSY(htrans_0,htrans_1)) /\ RETRY(hresp_0,hresp_1)
                 ==> hreadyout' /\ RETRY(hresp_0',hresp_1')) /\
 (* drive second cycle of ERROR *)
-	 (HSEL n (^hselv) /\ ~hreadyout  /\ ~(IDLE(htrans_0,htrans_1) \/ BUSY(htrans_0,htrans_1)) /\ ERROR(hresp_0,hresp_1)
+         (HSEL n (^hselv) /\ ~hreadyout  /\ ~(IDLE(htrans_0,htrans_1) \/ BUSY(htrans_0,htrans_1)) /\ ERROR(hresp_0,hresp_1)
                 ==> hreadyout' /\ ERROR(hresp_0',hresp_1')) /\
 (* drive second cycle of SPLIT *)
-	 (HSEL n (^hselv) /\ ~hreadyout  /\ ~(IDLE(htrans_0,htrans_1) \/ BUSY(htrans_0,htrans_1)) /\ SPLIT(hresp_0,hresp_1)
+         (HSEL n (^hselv) /\ ~hreadyout  /\ ~(IDLE(htrans_0,htrans_1) \/ BUSY(htrans_0,htrans_1)) /\ SPLIT(hresp_0,hresp_1)
                 ==> hreadyout' /\ SPLIT(hresp_0',hresp_1')) /\
 (* if SPLITing record current master's number *)
-	 (if (HSEL n (^hselv) /\ ~hreadyout /\ SPLIT(hresp_0,hresp_1))
-	      then !m. m<16 ==> MASTER m (^master_vars) ==> HSLVSPLT n m (^slvsplt_vars')
-	  else (SLVSPLT n (^slvsplt_vars') = SLVSPLT n (^slvsplt_vars))) /\
+         (if (HSEL n (^hselv) /\ ~hreadyout /\ SPLIT(hresp_0,hresp_1))
+              then !m. m<16 ==> MASTER m (^master_vars) ==> HSLVSPLT n m (^slvsplt_vars')
+          else (SLVSPLT n (^slvsplt_vars') = SLVSPLT n (^slvsplt_vars))) /\
 (* note we don't do anything about slave asserting HSPLIT because abstracting that away *)
 (* however, we do need to ensure that if we have split on Mx, we don't assert HSPLITy where x!=y *)
 (* with >1 split-capable slave we would have to use HSPLITx to avoid conflict, but with only one we can access HSPLIT directly *)
-	 (!m. m<^(fromMLnum nm) ==> (\m. ~HSLVSPLT n m (^slvsplt_vars) ==> ~HSPLIT m (^split_vars')) m) /\
+         (!m. m<^(fromMLnum nm) ==> (\m. ~HSLVSPLT n m (^slvsplt_vars) ==> ~HSPLIT m (^split_vars')) m) /\
 (* since slave can only split on one master, do not split if have already done so*)
-	 (~HSLVSPLT n 0 (^slvsplt_vars) ==> ~SPLIT(hresp_0',hresp_1')) /\
+         (~HSLVSPLT n 0 (^slvsplt_vars) ==> ~SPLIT(hresp_0',hresp_1')) /\
 (* if asserting hsplit, drive down hslvsplt (again since can only split on at most one master)   *)
-	  (!m. m<^(fromMLnum nm) ==> (\m. HSLVSPLT n m (^slvsplt_vars) /\ HSPLIT m (^split_vars)
-				      ==> HSLVSPLT n 0  (^slvsplt_vars')) m)
+          (!m. m<^(fromMLnum nm) ==> (\m. HSLVSPLT n m (^slvsplt_vars) /\ HSPLIT m (^split_vars)
+                                      ==> HSLVSPLT n 0  (^slvsplt_vars')) m)
 `;
 val TRANS_AHB_S_def = Rs;
 
 (*(* make sure non-existent slaves are never selected *)
          (~HSEL 8 (^hselv') /\ ~HSEL 9 (^hselv') /\ ~HSEL 10 (^hselv') /\ ~HSEL 11 (^hselv') /\
-	  ~HSEL 12 (^hselv') /\ ~HSEL 13 (^hselv') /\ ~HSEL 14 (^hselv') /\ ~HSEL 15 (^hselv')) /\*)
+          ~HSEL 12 (^hselv') /\ ~HSEL 13 (^hselv') /\ ~HSEL 14 (^hselv') /\ ~HSEL 15 (^hselv')) /\*)
 
 (* mux, which sends the current bus owner's signals through *)
 (* technically we should be using hmaster_0 (rather than hgrant) here but can't because
@@ -416,12 +416,12 @@ val RCn = Define `TRANS_CNT (^RCn_state,^RCn_state') =
 (* not sure if I should hold or reset if idle; or does that depend on where the counter is?*)
 (* FIXME: get rid of having to have a lambda here*)
     ((bb3',bb2',bb1',bb0') = (\(bb3,bb2,bb1,bb0).
-			      if hreadyout then
-				  if NOSEQ(htrans_0,htrans_1) then MOD16_ONE(bb3,bb2,bb1,bb0)
-				  else if SEQ(htrans_0,htrans_1) then BB_INC ^(fromMLnum nb) (bb3,bb2,bb1,bb0)
-				       else if BUSY(htrans_0,htrans_1) then MOD16_HOLD(bb3,bb2,bb1,bb0)
-					    else MOD16_ZERO(bb3,bb2,bb1,bb0)
-			      else MOD16_ZERO(bb3,bb2,bb1,bb0)) (bb3,bb2,bb1,bb0))
+                              if hreadyout then
+                                  if NOSEQ(htrans_0,htrans_1) then MOD16_ONE(bb3,bb2,bb1,bb0)
+                                  else if SEQ(htrans_0,htrans_1) then BB_INC ^(fromMLnum nb) (bb3,bb2,bb1,bb0)
+                                       else if BUSY(htrans_0,htrans_1) then MOD16_HOLD(bb3,bb2,bb1,bb0)
+                                            else MOD16_ZERO(bb3,bb2,bb1,bb0)
+                              else MOD16_ZERO(bb3,bb2,bb1,bb0)) (bb3,bb2,bb1,bb0))
 `;
 val TRANS_CNT_def = RCn;
 
@@ -439,21 +439,21 @@ val INIT_AHB_def = I1h;
 val Rr = list_mk_exists
     ((strip_pair bbv)@(strip_pair bbv')@(strip_pair hwsv)@(strip_pair hwsv'),
      list_mk_conj [``INIT_AHB (^I1h_state) ==> (MOD16_IS_ZERO (^bbv') /\ MOD16_IS_ZERO (^hwsv'))``,
-		   lhs(concl(Drule.SPEC_ALL RCn)),
-		   (list_mk_exists
-		    ((strip_pair mask_vars)@(strip_pair mask_vars'),
-		     list_mk_conj [``INIT_AHB (^I1h_state) ==> NO_MASK (^mask_vars)``,
-				   lhs(concl(Drule.SPEC_ALL (SPEC (fromMLnum (nm-1)) Ra))),
-				   list_mk_exists((strip_pair transm_vars)@(strip_pair transm_vars')
-						  @(strip_pair burstm_vars)@(strip_pair burstm_vars'),
-						  (list_mk_conj[``INIT_AHB (^I1h_state) ==> !m. m<16 ==> IDLEM m (^transm_vars)``,
-								list_mk_conj(List.tabulate(nm,
-									fn n => lhs(concl(Drule.SPEC_ALL (SPEC (fromMLnum n) Rm))))),
-								lhs(concl(Drule.SPEC_ALL Rx))]))])),
-		   list_mk_exists
-		   ((strip_pair slvsplt_vars)@(strip_pair slvsplt_vars'),
-		    list_mk_conj([``INIT_AHB (^I1h_state) ==> NO_HSLVSPLT (^slvsplt_vars)``,
-				  list_mk_conj(List.tabulate(ns,fn n => lhs(concl(Drule.SPEC_ALL (SPEC (fromMLnum n) Rs)))))]))])
+                   lhs(concl(Drule.SPEC_ALL RCn)),
+                   (list_mk_exists
+                    ((strip_pair mask_vars)@(strip_pair mask_vars'),
+                     list_mk_conj [``INIT_AHB (^I1h_state) ==> NO_MASK (^mask_vars)``,
+                                   lhs(concl(Drule.SPEC_ALL (SPEC (fromMLnum (nm-1)) Ra))),
+                                   list_mk_exists((strip_pair transm_vars)@(strip_pair transm_vars')
+                                                  @(strip_pair burstm_vars)@(strip_pair burstm_vars'),
+                                                  (list_mk_conj[``INIT_AHB (^I1h_state) ==> !m. m<16 ==> IDLEM m (^transm_vars)``,
+                                                                list_mk_conj(List.tabulate(nm,
+                                                                        fn n => lhs(concl(Drule.SPEC_ALL (SPEC (fromMLnum n) Rm))))),
+                                                                lhs(concl(Drule.SPEC_ALL Rx))]))])),
+                   list_mk_exists
+                   ((strip_pair slvsplt_vars)@(strip_pair slvsplt_vars'),
+                    list_mk_conj([``INIT_AHB (^I1h_state) ==> NO_HSLVSPLT (^slvsplt_vars)``,
+                                  list_mk_conj(List.tabulate(ns,fn n => lhs(concl(Drule.SPEC_ALL (SPEC (fromMLnum n) Rs)))))]))])
 
 (*^(lhs(concl(Drule.SPEC_ALL Rd)))*)
 val R1h = Define `TRANS_AHB (^R1h_state,^R1h_state') = ^Rr`;
@@ -461,17 +461,17 @@ val TRANS_AHB_def = R1h;
 
 val abbrev_defs = [IDLE_def,BUSY_def,NOSEQ_def,SEQ_def,OKAY_def,ERROR_def,RETRY_def,SPLIT_def,SINGLE_def,INC4_def,
                    INC4M_def,BURSTM0_def,TRANSM0_def,TRANSM1_def,IDLEM_def,BUSYM_def,NOSEQM_def,SEQM_def,ALL_SPLIT_def,
-		   MASK_def,BUSREQ_def,HSPLIT_def,NO_BUSREQ_def,NO_HSPLIT_def,NO_MASK_def,INIT_GRANT_def,GRANT_def,
-		   INIT_MASTER_def, MASTER_def,HSLVSPLT_def,SLVSPLT_def,NO_HSLVSPLT_def,HSEL_def,BB_INC_def,WS_INC_def]
+                   MASK_def,BUSREQ_def,HSPLIT_def,NO_BUSREQ_def,NO_HSPLIT_def,NO_MASK_def,INIT_GRANT_def,GRANT_def,
+                   INIT_MASTER_def, MASTER_def,HSLVSPLT_def,SLVSPLT_def,NO_HSLVSPLT_def,HSEL_def,BB_INC_def,WS_INC_def]
 
 val I1rh = save_thm("amba_ahb_I1rh",SIMP_RULE (pure_ss++BETA_ss++pairSimps.PAIR_ss++ARITH_ss)
-		     ([INIT_M_def,INIT_S_def,INIT_A_def,COND_CLAUSES]@abbrev_defs@m16n2b@m16exp) INIT_AHB_def)
+                     ([INIT_M_def,INIT_S_def,INIT_A_def,COND_CLAUSES]@abbrev_defs@m16n2b@m16exp) INIT_AHB_def)
 
 val Rc = rhs(concl(SPEC_ALL TRANS_AHB_def))
 
 val R1rh = save_thm("amba_ahb_R1rh", EVERY_CONJ_CONV (STRIP_QUANT_CONV
-		(EVERY_CONJ_CONV (STRIP_QUANT_CONV (EVERY_CONJ_CONV
-		(unroll_ahb_CONV [TRANS_AHB_M_def,TRANS_X_def,(*TRANS_D_def,*)TRANS_CNT_def,TRANS_AHB_S_def,I1rh]
-				 TRANS_A_def abbrev_defs))))) Rc)
+                (EVERY_CONJ_CONV (STRIP_QUANT_CONV (EVERY_CONJ_CONV
+                (unroll_ahb_CONV [TRANS_AHB_M_def,TRANS_X_def,(*TRANS_D_def,*)TRANS_CNT_def,TRANS_AHB_S_def,I1rh]
+                                 TRANS_A_def abbrev_defs))))) Rc)
 
 val _ = export_theory()

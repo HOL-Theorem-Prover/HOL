@@ -725,34 +725,34 @@ val BIGINF_UNIV_IMP = store_thm ("BIGINF_UNIV_IMP",
 
 SIMP_TAC std_ss [BIGINF_def, OPTION_SELECT_THM] THEN
 REPEAT STRIP_TAC THENL [
-	Q.PAT_X_ASSUM `X IN D` MP_TAC THEN
-	SELECT_ELIM_TAC THEN
-	CONJ_TAC THENL [
-		Q.EXISTS_TAC `s` THEN
-		ASM_REWRITE_TAC[],
+        Q.PAT_X_ASSUM `X IN D` MP_TAC THEN
+        SELECT_ELIM_TAC THEN
+        CONJ_TAC THENL [
+                Q.EXISTS_TAC `s` THEN
+                ASM_REWRITE_TAC[],
 
-		REPEAT STRIP_TAC THEN
-		Q.EXISTS_TAC `x` THEN
-		FULL_SIMP_TAC std_ss [IS_INFIMUM_def, IS_LOWER_BOUND_def, IN_UNIV]
-	],
+                REPEAT STRIP_TAC THEN
+                Q.EXISTS_TAC `x` THEN
+                FULL_SIMP_TAC std_ss [IS_INFIMUM_def, IS_LOWER_BOUND_def, IN_UNIV]
+        ],
 
 
-	Q.PAT_X_ASSUM `X IN D` MP_TAC THEN
-	SELECT_ELIM_TAC THEN
-	CONJ_TAC THENL [
-		Q.EXISTS_TAC `s` THEN
-		ASM_REWRITE_TAC[],
+        Q.PAT_X_ASSUM `X IN D` MP_TAC THEN
+        SELECT_ELIM_TAC THEN
+        CONJ_TAC THENL [
+                Q.EXISTS_TAC `s` THEN
+                ASM_REWRITE_TAC[],
 
-		REPEAT STRIP_TAC THEN
-		SELECT_ELIM_TAC THEN
-		CONJ_TAC THENL [
-			Q.EXISTS_TAC `x` THEN
-			FULL_SIMP_TAC std_ss [IS_INFIMUM_def, IS_LOWER_BOUND_def, IN_UNIV],
+                REPEAT STRIP_TAC THEN
+                SELECT_ELIM_TAC THEN
+                CONJ_TAC THENL [
+                        Q.EXISTS_TAC `x` THEN
+                        FULL_SIMP_TAC std_ss [IS_INFIMUM_def, IS_LOWER_BOUND_def, IN_UNIV],
 
-			REPEAT STRIP_TAC THEN
-			FULL_SIMP_TAC std_ss [IS_INFIMUM_def, IS_LOWER_BOUND_def, IN_UNIV, rest_antisymmetric_def]
-		]
-	]
+                        REPEAT STRIP_TAC THEN
+                        FULL_SIMP_TAC std_ss [IS_INFIMUM_def, IS_LOWER_BOUND_def, IN_UNIV, rest_antisymmetric_def]
+                ]
+        ]
 ])
 
 

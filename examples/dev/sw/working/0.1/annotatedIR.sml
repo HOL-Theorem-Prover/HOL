@@ -40,10 +40,10 @@ structure annotatedIR = struct
             (indent d; sayln "SC("; printtree(s1,d+2); sayln ","; printtree(s2,d+2); say ")")
         | printtree(CJ((exp1,rop,exp2),s1,s2,info),d) =
             (indent d; say "CJ("; say (format_exp exp1 ^ " " ^ print_rop rop ^ " " ^ format_exp exp2); sayln ",";
-		       printtree(s1,d+2); sayln ","; printtree(s2,d+2); say ")")
+                       printtree(s1,d+2); sayln ","; printtree(s2,d+2); say ")")
         | printtree(TR((exp1,rop,exp2),s,info),d) =
             (indent d; say "TR("; say (format_exp exp1 ^ " " ^ print_rop rop ^ format_exp exp2); sayln ",";
-		       printtree(s,d+2); say ")")
+                       printtree(s,d+2); say ")")
         | printtree(CALL(fname,pre,body,post,info),d) =
             if not (!show_call_detail) then
                 (indent d; say ("CALL(" ^ fname ^ ")"))
@@ -92,7 +92,7 @@ structure annotatedIR = struct
        let
            fun one_node (nodeNo,gr') =
                if f nodeNo then
-		   gr'
+                   gr'
                else
                    List.foldl (fn ((a,b),gr'') =>
                                    one_node (b, G.embed (([(a,nodeNo)],b,#3 (G.context(b,gr)),[]), gr''))
@@ -108,7 +108,7 @@ structure annotatedIR = struct
            val maxNodeNo = G.noNodes gr - 1;
            fun one_node nodeNo =
                if f nodeNo then
-		   (SOME nodeNo,true)
+                   (SOME nodeNo,true)
                else if nodeNo = maxNodeNo then
                    (NONE,false)
                else
@@ -326,52 +326,52 @@ structure annotatedIR = struct
        (* Determine whether two irs are equal or not *)
 
        fun is_ir_equal (SC(s1,s2,_)) (SC(s3,s4,_)) =
-	     is_ir_equal s1 s3 andalso is_ir_equal s2 s4
+             is_ir_equal s1 s3 andalso is_ir_equal s2 s4
         |  is_ir_equal (TR(cond1,body1,_)) (TR(cond2,body2,_)) =
-	     cond1 = cond2 andalso is_ir_equal body1 body2
+             cond1 = cond2 andalso is_ir_equal body1 body2
         |  is_ir_equal (CJ(cond1,s1,s2,_)) (CJ(cond2,s3,s4,_)) =
-	     cond1 = cond2 andalso is_ir_equal s1 s3 andalso is_ir_equal s2 s4
+             cond1 = cond2 andalso is_ir_equal s1 s3 andalso is_ir_equal s2 s4
         |  is_ir_equal (BLK(s1,_)) (BLK(s2,_)) =
-	     List.all (op =) (zip s1 s2)
+             List.all (op =) (zip s1 s2)
         |  is_ir_equal (STM s1) (STM s2) =
-	     List.all (op =) (zip s1 s2)
+             List.all (op =) (zip s1 s2)
         |  is_ir_equal (CALL(name1,_,_,_,_)) (CALL(name2,_,_,_,_)) =
-	     name1 = name2
+             name1 = name2
         |  is_ir_equal _ _ = false;
 
        fun merge_stm (SC(STM s1, STM s2, info)) =
              BLK (s1 @ s2, info)
         |  merge_stm (SC(STM s1, BLK(s2,_), info)) =
-	     BLK (s1 @ s2, info)
-	|  merge_stm (SC(BLK(s1,_), STM s2, info)) =
-	     BLK (s1 @ s2, info)
-	|  merge_stm (SC(BLK(s1,_), BLK(s2,_), info)) =
-	     BLK (s1 @ s2, info)
-	|  merge_stm (SC(STM [], s2, info)) =
-	     merge_stm s2
-	|  merge_stm (SC(s1, STM [], info)) =
-	     merge_stm s1
-	|  merge_stm (SC(BLK([],_), s2, info)) =
-	     merge_stm s2
-	|  merge_stm (SC(s1, BLK([],_), info)) =
-	     merge_stm s1
-	|  merge_stm (SC(s1,s2,info)) =
-	     SC (merge_stm s1, merge_stm s2, info)
-	|  merge_stm (TR(cond, body, info)) =
-	     TR(cond, merge_stm body, info)
-	|  merge_stm (CJ(cond, s1, s2, info)) =
-	     CJ(cond, merge_stm s1, merge_stm s2, info)
+             BLK (s1 @ s2, info)
+        |  merge_stm (SC(BLK(s1,_), STM s2, info)) =
+             BLK (s1 @ s2, info)
+        |  merge_stm (SC(BLK(s1,_), BLK(s2,_), info)) =
+             BLK (s1 @ s2, info)
+        |  merge_stm (SC(STM [], s2, info)) =
+             merge_stm s2
+        |  merge_stm (SC(s1, STM [], info)) =
+             merge_stm s1
+        |  merge_stm (SC(BLK([],_), s2, info)) =
+             merge_stm s2
+        |  merge_stm (SC(s1, BLK([],_), info)) =
+             merge_stm s1
+        |  merge_stm (SC(s1,s2,info)) =
+             SC (merge_stm s1, merge_stm s2, info)
+        |  merge_stm (TR(cond, body, info)) =
+             TR(cond, merge_stm body, info)
+        |  merge_stm (CJ(cond, s1, s2, info)) =
+             CJ(cond, merge_stm s1, merge_stm s2, info)
         |  merge_stm (STM s) =
              BLK(s, init_info)
-	|  merge_stm stm =
-	     stm
+        |  merge_stm stm =
+             stm
 
         fun merge ir = let val ir' = merge_stm ir;
                            val ir'' = merge_stm ir' in
                          if is_ir_equal ir' ir'' then ir'' else merge ir''
                        end
      in
-	merge ir
+        merge ir
      end
 
 
@@ -481,7 +481,7 @@ structure annotatedIR = struct
               val (s1_info, s2_info) = (get_annt s1, get_annt s2');
               val s2'' = if S.isSubset (pair2set (#ins s2_info), pair2set (#outs s1_info))
                          then adjust_ins s2' (replace_ins s2_info (#outs s1_info))
-			 else s2';
+                         else s2';
               val s2_info = get_annt s2'';
               val s1' = back_trace s1 {ins = #ins s1_info, outs = #ins s2_info, context = #context s2_info, fspec = #fspec s1_info};
               val s1_info = get_annt s1'
@@ -531,12 +531,12 @@ structure annotatedIR = struct
                   val (inner_outS, outer_outS) = (pair2set (#outs info0), pair2set outs)
                   val ir1 = if S.equal(inner_outS, outer_outS) then ir0
                             else SC (ir0, BLK ([], {context = #context info0, ins = #outs info0, outs = outs, fspec = thm_t}),
-				     replace_outs info0 outs)
+                                     replace_outs info0 outs)
                   val info1 = get_annt ir1
               in
                   if #ins info0 = ins then ir1
                   else SC (BLK ([], {context = #context info1, ins = ins, outs = #ins info0, fspec = thm_t}),
-			   ir1, replace_ins info1 ins)
+                           ir1, replace_ins info1 ins)
               end
           val info =  {ins = ins, outs = outs, context = [], fspec = thm_t}
        in
@@ -567,9 +567,9 @@ structure annotatedIR = struct
           val ((pre_ins,post_outs),(outer_ins,outer_outs)) = ((#ins (get_annt pre), #outs (get_annt post)), (#ins info, #outs info))
           val ir' = if post_outs = outer_outs then ir
                     else
-			SC (ir,
-			    BLK ([], {ins = post_outs, outs = outer_outs, context = #context info, fspec = thm_t}),
-			    replace_ins info pre_ins)
+                        SC (ir,
+                            BLK ([], {ins = post_outs, outs = outer_outs, context = #context info, fspec = thm_t}),
+                            replace_ins info pre_ins)
       in
           if pre_ins = outer_ins then ir'
           else

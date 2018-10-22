@@ -27,7 +27,7 @@ sig
     val high    : bdd -> bdd
 
     datatype bddop =
-	And | Xor | Or | Nand | Nor | Imp | Biimp
+        And | Xor | Or | Nand | Nor | Imp | Biimp
       | Diff | Lessth | Invimp
 
     type varSet
@@ -134,17 +134,17 @@ sig
     val verbosegc      : (string * string) option -> unit
 
     val stats    : unit -> {produced     : int,
-			    nodenum      : int,
-			    maxnodenum   : int,
-			    freenodes    : int,
-			    minfreenodes : int,
-			    varnum       : int,
-			    cachesize    : int,
-			    gbcnum       : int}
+                            nodenum      : int,
+                            maxnodenum   : int,
+                            freenodes    : int,
+                            minfreenodes : int,
+                            varnum       : int,
+                            cachesize    : int,
+                            gbcnum       : int}
 
 end
 
-(* Structure bdd provide an interface to Jørn Linds <jl@it.dtu.dk>
+(* Structure bdd provide an interface to JÃ¸rn Linds <jl@it.dtu.dk>
    BuDDy BDD library.
 
    Type [bdd] is the abstract type of BDDs.
@@ -227,9 +227,9 @@ end
    x y  |  And  Xor  Or  Nand  Nor  Imp  Biimp  Diff  Lessth  Invimp
   ------|------------------------------------------------------------
    T T  |   T    F   T    F     F    T     T     F      F       T
-   T F  |   F    T   T	  T     F    F     F     T      F       T
-   F T  |   F    T   T	  T     F    T     F     F      T       F
-   F F  |   F    F   F	  T     T    T     T     F      F       T
+   T F  |   F    T   T    T     F    F     F     T      F       T
+   F T  |   F    T   T    T     F    T     F     F      T       F
+   F F  |   F    F   F    T     T    T     T     F      F       T
 
    [apply x y opr] constructs the bdd using the binary boolean
    operator.

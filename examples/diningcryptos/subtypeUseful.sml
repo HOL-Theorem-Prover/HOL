@@ -1061,8 +1061,8 @@ val SET_EQ_TAC = CONV_TAC (CHANGED_CONV (ONCE_DEPTH_CONV SET_EQ_CONV));
 fun SUFF_TAC t (al, c)
   = let val tm = parse_with_goal t (al, c)
     in ([(al, mk_imp (tm, c)), (al, tm)],
-	fn [th1, th2] => MP th1 th2
-	 | _ => raise ERR "SUFF_TAC" "panic")
+        fn [th1, th2] => MP th1 th2
+         | _ => raise ERR "SUFF_TAC" "panic")
     end;
 
 fun KNOW_TAC t = REVERSE (SUFF_TAC t);

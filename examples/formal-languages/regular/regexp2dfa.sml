@@ -29,7 +29,7 @@ fun check_compset() =
       | check_these =>
          (stdErr_print "Unmapped consts in regexp_compset: \n  ";
           stdErr_print (String.concat
-	     (spreadlnWith {sep=", ", ln = "\n  ", width = 5}
+             (spreadlnWith {sep=", ", ln = "\n  ", width = 5}
                            join check_these));
           stdErr_print "\n\n")
  end
@@ -288,8 +288,8 @@ fun HOLfile name quote (certificate,_,finals,table) =
          val eqn = snd(dest_forall(concl thm))
          val (exec_dfa,[finals,table,start,s]) = strip_comb(lhs eqn)
          val name_finals = name^"_finals"
-	 val name_table = name^"_table"
-	 val name_start = name^"_start"
+         val name_table = name^"_table"
+         val name_start = name^"_start"
          val finals_var = mk_var(name_finals,type_of finals)
          val table_var  = mk_var(name_table,type_of table)
          val start_var  = mk_var(name_start,type_of start)
@@ -327,7 +327,7 @@ fun parse_args () =
      fun check(J,lstring,name,string) =
        case to_lang lstring
         of SOME lang => SOME(J,lang,name,string)
-	 | NONE => NONE
+         | NONE => NONE
  in
     case CommandLine.arguments()
      of ["-dfagen","SML",lstring,name,string] => check(regexpLib.SML,lstring,name,string)
@@ -354,13 +354,13 @@ fun main () =
           val _ = stdErr_print "Parsed regexp, now constructing DFA ... "
           val result = compile_regexp justify regexp
           val file_string =
-	    (case lang
+            (case lang
               of Ada  => Adafile
                | C    => Cfile
                | ML   => MLfile 
                | Java => Javafile 
                | Thm  => HOLfile)
-	    name rstring (deconstruct result)
+            name rstring (deconstruct result)
       in
          stdOut_print file_string
        ; regexpMisc.succeed()

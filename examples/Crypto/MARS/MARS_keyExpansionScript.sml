@@ -75,7 +75,7 @@ val  (linear_rnd_def, linear_rnd_ind)  = Defn.tprove (
        linear_rnd (i+1)
          (update(t, i, ((sub(t, (i-7) MOD 15) ?? sub(t,(i-2) MOD 15)) #<< 3) ??
             (4w * n2w i + n2w j))) j`,
-	WF_REL_TAC `measure ($- 15 o FST)`);
+        WF_REL_TAC `measure ($- 15 o FST)`);
 
 val linear_def = Define
     `linear (t, j) = linear_rnd 0 t j`;
@@ -98,15 +98,15 @@ val stiring_def = Define
 
 val store_10_words_def = Define
     `store_10_words (t) =
-	[sub(t,0); sub(t,4); sub(t,8); sub(t,12); sub(t,1);
+        [sub(t,0); sub(t,4); sub(t,8); sub(t,12); sub(t,1);
          sub(t,5); sub(t,9); sub(t,13); sub(t,2); sub(t,6)]`;
 
 val Init_K_def = Define
     `Init_K (t) =
-	let t1 = store_10_words(stiring(linear(t,0),0)) in
-	let t2 = store_10_words(stiring(linear(t1,1),1)) in
-	let t3 = store_10_words(stiring(linear(t2,2),2)) in
-	let t4 = store_10_words(stiring(linear(t3,3),3)) in
+        let t1 = store_10_words(stiring(linear(t,0),0)) in
+        let t2 = store_10_words(stiring(linear(t1,1),1)) in
+        let t3 = store_10_words(stiring(linear(t2,2),2)) in
+        let t4 = store_10_words(stiring(linear(t3,3),3)) in
           t1 ++ t2 ++ t3 ++ t4`;
 
 val INIT_K_LENGTH = Q.store_thm
@@ -152,8 +152,8 @@ val mul_rnd_def = Define `
 
 val mul_def = Define `
   mul (k) = mul_rnd(mul_rnd(mul_rnd(mul_rnd(mul_rnd(mul_rnd(mul_rnd(mul_rnd
-	(mul_rnd(mul_rnd(mul_rnd(mul_rnd(mul_rnd(mul_rnd(mul_rnd(mul_rnd(k,35),
-	33),31),29),27),25),23),21),19),17),15),13),11),9),7),5)`;
+        (mul_rnd(mul_rnd(mul_rnd(mul_rnd(mul_rnd(mul_rnd(mul_rnd(mul_rnd(k,35),
+        33),31),29),27),25),23),21),19),17),15),13),11),9),7),5)`;
 
 
 val MUL_RND_LENGTH = Q.store_thm

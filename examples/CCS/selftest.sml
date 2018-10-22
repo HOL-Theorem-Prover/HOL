@@ -35,7 +35,7 @@ val CCS_TRANS_tests =
 
      (* test #2 *)
      (``par (prefix (label (name "a")) nil)
-	    (prefix (label (coname "a")) nil)``,
+            (prefix (label (coname "a")) nil)``,
 “∀u E.
    In "a"..nil || Out "a"..nil --u-> E ⇔
    ((u = In "a") ∧ (E = nil || Out "a"..nil) ∨
@@ -52,14 +52,14 @@ val CCS_TRANS_tests =
 
      (* test #5 *)
      (``label (name "a")..label (name "b")..nil +
-	     label (name "b")..label (name "a")..nil``,
+             label (name "b")..label (name "a")..nil``,
 “∀u E.
    In "a"..In "b"..nil + In "b"..In "a"..nil --u-> E ⇔
    (u = In "a") ∧ (E = In "b"..nil) ∨ (u = In "b") ∧ (E = In "a"..nil)”),
 
      (* test #6 *)
      (``(restr {name "a"} (label (name "a")..nil || label (coname "a")..nil)) ||
-		(label (name "a")..nil)``,
+                (label (name "a")..nil)``,
 “∀u E.
    ν "a" (In "a"..nil || Out "a"..nil) || In "a"..nil --u-> E ⇔
    (u = τ) ∧ (E = ν "a" (nil || nil) || In "a"..nil) ∨
@@ -67,7 +67,7 @@ val CCS_TRANS_tests =
 
      (* test #7 *)
      (``rec "VM" (In "coin"..(In "ask-esp"..rec "VM1" (Out "esp-coffee"..var "VM") +
-			      In "ask-am"..rec "VM2" (Out "am-coffee"..var "VM")))``,
+                              In "ask-am"..rec "VM2" (Out "am-coffee"..var "VM")))``,
 “∀u E.
    rec "VM"
      (In "coin"

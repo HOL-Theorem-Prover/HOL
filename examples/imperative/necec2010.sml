@@ -65,40 +65,40 @@ The following provides a test of this definition.
 
 \begin{lstlisting} % *)
 
-val _ = let	val
-		xForyImplies_sx_Is_es =
-		(
-				EVAL_RULE (SPEC ``x:'a`` (EVAL_RULE (ASSUME ``assign x e s s'``)))
-						(*	[
-								assign x e s s'
-							]	|-
-								s' x  = e s  : thm
-						*)
-		)
+val _ = let     val
+                xForyImplies_sx_Is_es =
+                (
+                                EVAL_RULE (SPEC ``x:'a`` (EVAL_RULE (ASSUME ``assign x e s s'``)))
+                                                (*      [
+                                                                assign x e s s'
+                                                        ]       |-
+                                                                s' x  = e s  : thm
+                                                *)
+                )
 
-	in
-		prove (
-			``(\ (s :'a -> 'b) (s' :'a -> 'b).((s'(x:'a)) = ((e:('a->'b)->'b) s))) [=. (assign x e)``,
-			(
-				(REFINEMENT_TAC)
-						(*	[
-							]	|-
-								 assign x e s s'
-								 ==>
-								 s' x = e s
-						*)
-			THEN
-				(DISCH_TAC)
-						(* 	[
-								assign x e s s'
-							]	|-
-								s' x = e s
-						*)
-			THEN
-				(ACCEPT_TAC xForyImplies_sx_Is_es)
-			)
-		)
-	end
+        in
+                prove (
+                        ``(\ (s :'a -> 'b) (s' :'a -> 'b).((s'(x:'a)) = ((e:('a->'b)->'b) s))) [=. (assign x e)``,
+                        (
+                                (REFINEMENT_TAC)
+                                                (*      [
+                                                        ]       |-
+                                                                 assign x e s s'
+                                                                 ==>
+                                                                 s' x = e s
+                                                *)
+                        THEN
+                                (DISCH_TAC)
+                                                (*      [
+                                                                assign x e s s'
+                                                        ]       |-
+                                                                s' x = e s
+                                                *)
+                        THEN
+                                (ACCEPT_TAC xForyImplies_sx_Is_es)
+                        )
+                )
+        end
 ;
 
 (* \end{lstlisting}
@@ -140,115 +140,115 @@ is satisfied by $y:=1;x:=y$. (here the semicolon is used to indicate sequential 
 
 \begin{lstlisting} % *)
 
-fun testRefinement rhsProgLhsSpec = let	val
-		lemma =
-	 		(UNDISCH_ALL (#1 (EQ_IMP_RULE (EVAL (mk_comb(mk_comb ((rand rhsProgLhsSpec),``s:'a->num``),``s':'a->num``))))))
-						(*	[
-								sc (assign y (\s. 1)) (assign x (\s. s y)) s s'
-							]	|-
-								    ?s''.
-										(!y'. if y = y' then s'' y' = 1 else s'' y' = s y')
-										/\
-										(!y'. if x = y' then s' y' = s'' y else s' y' = s'' y')
-						*)
-	in
-		prove
-		(
-			rhsProgLhsSpec,
-			(
-				(REFINEMENT_TAC)
-						(*	[
-							]	|-
-									sc (assign y (\s. 1)) (assign x (\s. s y)) s s' ==> (s' x = 1) /\ (s' y = 1)
-						*)
-			THEN
-				(STRIP_TAC)
-						(* 	[
-								sc (assign y (\s. 1)) (assign x (\s. s y)) s s'
-							]	|-
-									(s' x = 1) /\ (s' y = 1)
-						*)
-			THEN
-				(STRIP_ASSUME_TAC lemma)
-						(* 	[
-								 !y'. if x = y' then s' y' = s'' y else s' y' = s'' y'
-							,
-								 !y'. if y = y' then s'' y' = 1 else s'' y' = s y'
-							,
-								 sc (assign y (\s. 1)) (assign x (\s. s y)) s s'
-							]	|-
-									(s' x = 1) /\ (s' y = 1)
-						*)
-			THEN
-				(SUBST_TAC
-					[(
-						EVAL_RULE
-							(
-								(SPECL [``x:'a``]	(ASSUME ( #2(dest_conj (beta_conv(mk_comb((rand (concl  lemma)),``s'':'a->num``)))))))
-							)
-					)]
-				)
-						(* 	[
-								 !y'. if x = y' then s' y' = s'' y else s' y' = s'' y'
-							,
-								 !y'. if y = y' then s'' y' = 1 else s'' y' = s y'
-							,
-								 sc (assign y (\s. 1)) (assign x (\s. s y)) s s'
-							]	|-
-									(s'' y = 1) /\ (s' y = 1)
-						*)
-			THEN
-				(SUBST_TAC
-					[(
-						EVAL_RULE
-							(
-								(SPECL [``y:'a``]	(ASSUME ( #2(dest_conj (beta_conv(mk_comb((rand (concl  lemma)),``s'':'a->num``)))))))
-							)
-					)]
-				)
-						(* 	[
-								 !y'. if x = y' then s' y' = s'' y else s' y' = s'' y'
-							,
-								 !y'. if y = y' then s'' y' = 1 else s'' y' = s y'
-							,
-								 sc (assign y (\s. 1)) (assign x (\s. s y)) s s'
-							]	|-
-									(s'' y = 1) /\ (s'' y = 1 )
-						*)
-			THEN
-				(CONJ_TAC THENL
-					[(
-						(* 	[
-								 !y'. if x = y' then s' y' = s'' y else s' y' = s'' y'
-							,
-								 !y'. if y = y' then s'' y' = 1 else s'' y' = s y'
-							,
-								 sc (assign y ( \s. 1)) (assign x ( \s. s y)) s s'
-							]	|-
-									(s'' y = (1 :num))
-						*)
-						(ACCEPT_TAC
-							(
-								EVAL_RULE
-								(
-									(SPECL [``y:'a``]	(ASSUME (#1(dest_conj (beta_conv(mk_comb((rand (concl  lemma)),``s'':'a->num``)))))))
-								)
-							)
-						)
-					),(
-						(ACCEPT_TAC
-							(
-								EVAL_RULE
-									(
-										(SPECL [``y:'a``]	(ASSUME (#1(dest_conj (beta_conv(mk_comb((rand (concl  lemma)),``s'':'a->num``)))))))
-									)
-							)
-						)
-					)]
-				)
-			)
-		)
-	end
+fun testRefinement rhsProgLhsSpec = let val
+                lemma =
+                        (UNDISCH_ALL (#1 (EQ_IMP_RULE (EVAL (mk_comb(mk_comb ((rand rhsProgLhsSpec),``s:'a->num``),``s':'a->num``))))))
+                                                (*      [
+                                                                sc (assign y (\s. 1)) (assign x (\s. s y)) s s'
+                                                        ]       |-
+                                                                    ?s''.
+                                                                                (!y'. if y = y' then s'' y' = 1 else s'' y' = s y')
+                                                                                /\
+                                                                                (!y'. if x = y' then s' y' = s'' y else s' y' = s'' y')
+                                                *)
+        in
+                prove
+                (
+                        rhsProgLhsSpec,
+                        (
+                                (REFINEMENT_TAC)
+                                                (*      [
+                                                        ]       |-
+                                                                        sc (assign y (\s. 1)) (assign x (\s. s y)) s s' ==> (s' x = 1) /\ (s' y = 1)
+                                                *)
+                        THEN
+                                (STRIP_TAC)
+                                                (*      [
+                                                                sc (assign y (\s. 1)) (assign x (\s. s y)) s s'
+                                                        ]       |-
+                                                                        (s' x = 1) /\ (s' y = 1)
+                                                *)
+                        THEN
+                                (STRIP_ASSUME_TAC lemma)
+                                                (*      [
+                                                                 !y'. if x = y' then s' y' = s'' y else s' y' = s'' y'
+                                                        ,
+                                                                 !y'. if y = y' then s'' y' = 1 else s'' y' = s y'
+                                                        ,
+                                                                 sc (assign y (\s. 1)) (assign x (\s. s y)) s s'
+                                                        ]       |-
+                                                                        (s' x = 1) /\ (s' y = 1)
+                                                *)
+                        THEN
+                                (SUBST_TAC
+                                        [(
+                                                EVAL_RULE
+                                                        (
+                                                                (SPECL [``x:'a``]       (ASSUME ( #2(dest_conj (beta_conv(mk_comb((rand (concl  lemma)),``s'':'a->num``)))))))
+                                                        )
+                                        )]
+                                )
+                                                (*      [
+                                                                 !y'. if x = y' then s' y' = s'' y else s' y' = s'' y'
+                                                        ,
+                                                                 !y'. if y = y' then s'' y' = 1 else s'' y' = s y'
+                                                        ,
+                                                                 sc (assign y (\s. 1)) (assign x (\s. s y)) s s'
+                                                        ]       |-
+                                                                        (s'' y = 1) /\ (s' y = 1)
+                                                *)
+                        THEN
+                                (SUBST_TAC
+                                        [(
+                                                EVAL_RULE
+                                                        (
+                                                                (SPECL [``y:'a``]       (ASSUME ( #2(dest_conj (beta_conv(mk_comb((rand (concl  lemma)),``s'':'a->num``)))))))
+                                                        )
+                                        )]
+                                )
+                                                (*      [
+                                                                 !y'. if x = y' then s' y' = s'' y else s' y' = s'' y'
+                                                        ,
+                                                                 !y'. if y = y' then s'' y' = 1 else s'' y' = s y'
+                                                        ,
+                                                                 sc (assign y (\s. 1)) (assign x (\s. s y)) s s'
+                                                        ]       |-
+                                                                        (s'' y = 1) /\ (s'' y = 1 )
+                                                *)
+                        THEN
+                                (CONJ_TAC THENL
+                                        [(
+                                                (*      [
+                                                                 !y'. if x = y' then s' y' = s'' y else s' y' = s'' y'
+                                                        ,
+                                                                 !y'. if y = y' then s'' y' = 1 else s'' y' = s y'
+                                                        ,
+                                                                 sc (assign y ( \s. 1)) (assign x ( \s. s y)) s s'
+                                                        ]       |-
+                                                                        (s'' y = (1 :num))
+                                                *)
+                                                (ACCEPT_TAC
+                                                        (
+                                                                EVAL_RULE
+                                                                (
+                                                                        (SPECL [``y:'a``]       (ASSUME (#1(dest_conj (beta_conv(mk_comb((rand (concl  lemma)),``s'':'a->num``)))))))
+                                                                )
+                                                        )
+                                                )
+                                        ),(
+                                                (ACCEPT_TAC
+                                                        (
+                                                                EVAL_RULE
+                                                                        (
+                                                                                (SPECL [``y:'a``]       (ASSUME (#1(dest_conj (beta_conv(mk_comb((rand (concl  lemma)),``s'':'a->num``)))))))
+                                                                        )
+                                                        )
+                                                )
+                                        )]
+                                )
+                        )
+                )
+        end
 
 val rhsProgRefinesLhsSpec = ``(\ (s:'a->num) (s':'a->num). (((s' (x:'a)) = 1 ) /\ ((s' (y:'a)) = 1))) [=. (sc (assign y (\ (s:'a->num).1)) (assign x (\ (s:'a->num).(s y))))``;
 
@@ -310,77 +310,77 @@ The first variable is then assigned the value of the other variable, and then th
 
 val _ = tprint ("swap is possible with introduction of temporary variable: " );
 val GeneralSwap = let val
-	conversion =
-			PURE_ONCE_REWRITE_RULE [PREDICATIVE_SPEC_EQ_THM]
-			(
-				SPECL
-					[
-						``"t"``,
-						``(assign "x" (\ (s:string->'b). s "y"))``,
-						``(\ (s:string->'b).s "x")``
-					]
-					(INST_TYPE
-						[	alpha |-> ``:string``,
-							gamma |-> ``:string->'b``
-						]
-						(	REFINEMENT_RULE
-							(
-								SPECL
-									[
-										``f:('a->'b)->'c->bool``,
-										``e:('a->'b)->'b``,
-										``x:'a``
-									]
-									FORWARD_SUB
-							)
-						)
-					)
-			)
-	in
-		prove
-		(
-			``	(
-					(
-						\ (s:string->'b) (s':string->'b) . ((s' "x") = (s "y")) /\ ((s' "y") = (s "x"))
-					)
-					[=.
-					(
-						sc
-						(
-							sc	(assign ("t") (\ (s:string->'b).s "x")) (assign "x" (\ (s:string->'b). s "y"))
-						)
-						(assign "y" (\ (s:string->'b).s "t"))
-					)
-				)
-			``
-			,
-			(SUBST_TAC [conversion])
-				(*	[
-					]	|-
-							 (\s s'. (s' "x" = s "y") /\ (s' "y" = s "x")) [=. sc (subs (assign "x" (\s. s "y")) "t" (\s. s "x")) (assign "y" (\s. s "t"))
-				*)
-		THEN
-			(REP_EVAL_TAC)
-				(*	[
-					]	|-
-							!s s'.
-								(?s''.
-										(!y.if "x" = y then  s'' y = s "y"  else s' y = if "t" = y then s "x" else s y)
-												/\
-										(!y. if "y" = y then s' y = s'' "t" else s' y = s'' y)
-								)
-								==>
-									(s' "x" = s "y") /\ (s' "y" = s "x")
-				*)
+        conversion =
+                        PURE_ONCE_REWRITE_RULE [PREDICATIVE_SPEC_EQ_THM]
+                        (
+                                SPECL
+                                        [
+                                                ``"t"``,
+                                                ``(assign "x" (\ (s:string->'b). s "y"))``,
+                                                ``(\ (s:string->'b).s "x")``
+                                        ]
+                                        (INST_TYPE
+                                                [       alpha |-> ``:string``,
+                                                        gamma |-> ``:string->'b``
+                                                ]
+                                                (       REFINEMENT_RULE
+                                                        (
+                                                                SPECL
+                                                                        [
+                                                                                ``f:('a->'b)->'c->bool``,
+                                                                                ``e:('a->'b)->'b``,
+                                                                                ``x:'a``
+                                                                        ]
+                                                                        FORWARD_SUB
+                                                        )
+                                                )
+                                        )
+                        )
+        in
+                prove
+                (
+                        ``      (
+                                        (
+                                                \ (s:string->'b) (s':string->'b) . ((s' "x") = (s "y")) /\ ((s' "y") = (s "x"))
+                                        )
+                                        [=.
+                                        (
+                                                sc
+                                                (
+                                                        sc      (assign ("t") (\ (s:string->'b).s "x")) (assign "x" (\ (s:string->'b). s "y"))
+                                                )
+                                                (assign "y" (\ (s:string->'b).s "t"))
+                                        )
+                                )
+                        ``
+                        ,
+                        (SUBST_TAC [conversion])
+                                (*      [
+                                        ]       |-
+                                                         (\s s'. (s' "x" = s "y") /\ (s' "y" = s "x")) [=. sc (subs (assign "x" (\s. s "y")) "t" (\s. s "x")) (assign "y" (\s. s "t"))
+                                *)
+                THEN
+                        (REP_EVAL_TAC)
+                                (*      [
+                                        ]       |-
+                                                        !s s'.
+                                                                (?s''.
+                                                                                (!y.if "x" = y then  s'' y = s "y"  else s' y = if "t" = y then s "x" else s y)
+                                                                                                /\
+                                                                                (!y. if "y" = y then s' y = s'' "t" else s' y = s'' y)
+                                                                )
+                                                                ==>
+                                                                        (s' "x" = s "y") /\ (s' "y" = s "x")
+                                *)
 
-		THEN
-			(REPEAT STRIP_TAC)
-		THEN
-			(EVAL_FOR_STATEVARS [``"t"``,``"x"``,``"y"``])
-		THEN
-			REP_EVAL_TAC
-		)
-	end
+                THEN
+                        (REPEAT STRIP_TAC)
+                THEN
+                        (EVAL_FOR_STATEVARS [``"t"``,``"x"``,``"y"``])
+                THEN
+                        REP_EVAL_TAC
+                )
+        end
 handle HOL_ERR _ => die "general swap FAILED";
 val _ = OK();
 
@@ -391,83 +391,83 @@ In the special case where both variables are numbers, an algebraic method can be
 \begin{lstlisting} % *)
 
 (*
-	need this for LESS_EQ_REFL, LESS_EQ_ADD_SUB, SUB_EQ_0, and ADD_0
+        need this for LESS_EQ_REFL, LESS_EQ_ADD_SUB, SUB_EQ_0, and ADD_0
 
 *)
 
 val _ = tprint ("swap is possible for num type without need for temporary variable: " );
 val NumericSwap = let val
-		conversion =
-			PURE_ONCE_REWRITE_RULE [PREDICATIVE_SPEC_EQ_THM]
-			(
-				SPECL
-					[
-						``"x"``,
-						``(assign "y" (\ (s:string->num). ((s "x") - (s "y"))))``,
-						``(\ (s:string->num).((s "x") + (s "y")))``
-					]
-					(INST_TYPE
-						[
-							alpha |-> ``:string``,
-							beta |-> ``:num``,
-							gamma |-> ``:string->num``
-						]
-						(	REFINEMENT_RULE
-							(
-								SPECL
-									[
-										``f:('a->'b)->'c->bool``,
-										``e:('a->'b)->'b``,
-										``x:'a``
-									] FORWARD_SUB
-							)
-						)
-					)
-			)
-	and
-		lemma = prove (``!(a:num) (b:num). (a + b -(a + b -b)) = (b + a - a)``,(PROVE_TAC [LESS_EQ_REFL, LESS_EQ_ADD_SUB, SUB_EQ_0,ADD_0,ADD_SYM]))
-	in
-		prove
-		(
-			``
-				(
-					\ (s:string->num) (s':string->num). ((s' "x") = (s "y")) /\ ((s' "y") = (s "x"))
-				)
-				[=.
-				(
-					sc
-						(
-							(	sc
-									(assign "x" (\ (s:string->num).((s "x") + (s "y"))))
-									(assign "y" (\ (s:string->num). ((s "x") - (s "y"))))
-							)
-						)
-						(
-								assign "x" (\ (s:string->num).((s "x") - (s "y")))
-						)
-				)
-			``
-			,
-			(SUBST_TAC [conversion])
-				(*	[
-					]	|-
-							(\(s :string -> num) (s' :string -> num). (s' "x" = s "y") /\ (s' "y" = s "x"))
-							[=.
-								 sc
-								   (subs (assign "y" (\(s :string -> num). s "x" - s "y")) "x"
-									  (\(s :string -> num). s "x" + s "y"))
-								   (assign "x" (\(s :string -> num). s "x" - s "y"))
-				*)
-		THEN
-			(REP_EVAL_TAC)
-		THEN
-			(REPEAT STRIP_TAC)
-		THEN
-			(EVAL_FOR_STATEVARS [``"x"``,``"y"``])
-		THEN
-			(PROVE_TAC [LESS_EQ_REFL, LESS_EQ_ADD_SUB, SUB_EQ_0,ADD_0,lemma])
-		)
-	end
+                conversion =
+                        PURE_ONCE_REWRITE_RULE [PREDICATIVE_SPEC_EQ_THM]
+                        (
+                                SPECL
+                                        [
+                                                ``"x"``,
+                                                ``(assign "y" (\ (s:string->num). ((s "x") - (s "y"))))``,
+                                                ``(\ (s:string->num).((s "x") + (s "y")))``
+                                        ]
+                                        (INST_TYPE
+                                                [
+                                                        alpha |-> ``:string``,
+                                                        beta |-> ``:num``,
+                                                        gamma |-> ``:string->num``
+                                                ]
+                                                (       REFINEMENT_RULE
+                                                        (
+                                                                SPECL
+                                                                        [
+                                                                                ``f:('a->'b)->'c->bool``,
+                                                                                ``e:('a->'b)->'b``,
+                                                                                ``x:'a``
+                                                                        ] FORWARD_SUB
+                                                        )
+                                                )
+                                        )
+                        )
+        and
+                lemma = prove (``!(a:num) (b:num). (a + b -(a + b -b)) = (b + a - a)``,(PROVE_TAC [LESS_EQ_REFL, LESS_EQ_ADD_SUB, SUB_EQ_0,ADD_0,ADD_SYM]))
+        in
+                prove
+                (
+                        ``
+                                (
+                                        \ (s:string->num) (s':string->num). ((s' "x") = (s "y")) /\ ((s' "y") = (s "x"))
+                                )
+                                [=.
+                                (
+                                        sc
+                                                (
+                                                        (       sc
+                                                                        (assign "x" (\ (s:string->num).((s "x") + (s "y"))))
+                                                                        (assign "y" (\ (s:string->num). ((s "x") - (s "y"))))
+                                                        )
+                                                )
+                                                (
+                                                                assign "x" (\ (s:string->num).((s "x") - (s "y")))
+                                                )
+                                )
+                        ``
+                        ,
+                        (SUBST_TAC [conversion])
+                                (*      [
+                                        ]       |-
+                                                        (\(s :string -> num) (s' :string -> num). (s' "x" = s "y") /\ (s' "y" = s "x"))
+                                                        [=.
+                                                                 sc
+                                                                   (subs (assign "y" (\(s :string -> num). s "x" - s "y")) "x"
+                                                                          (\(s :string -> num). s "x" + s "y"))
+                                                                   (assign "x" (\(s :string -> num). s "x" - s "y"))
+                                *)
+                THEN
+                        (REP_EVAL_TAC)
+                THEN
+                        (REPEAT STRIP_TAC)
+                THEN
+                        (EVAL_FOR_STATEVARS [``"x"``,``"y"``])
+                THEN
+                        (PROVE_TAC [LESS_EQ_REFL, LESS_EQ_ADD_SUB, SUB_EQ_0,ADD_0,lemma])
+                )
+        end
 handle HOL_ERR _ => die "numeric swap FAILED";
 val _ = OK();
 

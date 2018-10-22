@@ -1,7 +1,7 @@
 use "prelim";
 
 (* --------------------------------------------------------------------------*)
-(*	Test the pre-processing and normalization     	                     *)
+(*      Test the pre-processing and normalization                            *)
 (* --------------------------------------------------------------------------*)
 
 val f1_def = Define
@@ -10,11 +10,11 @@ val f1_def = Define
 val f2_def =
  Define
    `f2 ((y,z),(k0,k1,k2,k3),sum)  =
-	let sum1 = sum + 100 in
-	let v1 = if y > z \/ y + 2 * k0 > z then y + f1 (z, sum1 * 4, k0, k1)
+        let sum1 = sum + 100 in
+        let v1 = if y > z \/ y + 2 * k0 > z then y + f1 (z, sum1 * 4, k0, k1)
           else z + f1 (y, sum1, k2 - y, k3)
         in
-	v1 + sum1`;
+        v1 + sum1`;
 
 (*
 val th1 = normalize f2_def;

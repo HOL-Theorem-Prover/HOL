@@ -44,7 +44,7 @@ val FORALL_KEYSCHEDS = Q.prove(
   SIMP_TAC std_ss [FORALL_PROD]);
 
 (* --------------------------------------------------------------------------*)
-(* Functions for processing keys 	                                     *)
+(* Functions for processing keys                                             *)
 (*---------------------------------------------------------------------------*)
 
 val ROTKEYS_def = Define`

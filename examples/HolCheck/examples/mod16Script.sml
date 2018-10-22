@@ -81,9 +81,9 @@ val MOD16_PROJ_def = Define `MOD16_PROJ (b3,b2,b1,b0) i = if i = 0 then b0 else 
 val N2B'_defn = Hol_defn "MOD16_N2B'"
 `MOD16_N2B' n k (b3,b2,b1,b0) =
     if k=0 then
-	if n=1 then b0 else ~b0
+        if n=1 then b0 else ~b0
     else (if n >= 2**k then MOD16_PROJ (b3,b2,b1,b0) k else ~(MOD16_PROJ (b3,b2,b1,b0) k)) /\
-	MOD16_N2B' (if n >= 2**k then n-(2**k) else n) (k-1) (b3,b2,b1,b0)`;
+        MOD16_N2B' (if n >= 2**k then n-(2**k) else n) (k-1) (b3,b2,b1,b0)`;
 
 val (MOD16_N2B'_def,N2B'_ind) = Defn.tprove(N2B'_defn,WF_REL_TAC `measure (FST o SND)`);
 val _ = save_thm("MOD16_N2B'_def",MOD16_N2B'_def)

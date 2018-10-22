@@ -13,8 +13,8 @@ structure S = Binaryset
 structure IR = IRSyntax
 
 (*
-	open funCall;
-	quietdec := false;
+        open funCall;
+        quietdec := false;
 *)
 in
 
@@ -30,7 +30,7 @@ fun strOrder (s1:string,s2:string) =
 
 (* ---------------------------------------------------------------------------------------------------------------------*)
 (* The configuaration for passing parameters, returning results and allocating stack space                              *)
-(* The stack goes upward. 												*)
+(* The stack goes upward.                                                                                               *)
 (* ---------------------------------------------------------------------------------------------------------------------*)
 (*
                 Address goes upward (i.e. from low address to high address)!!!
@@ -70,15 +70,15 @@ fun strOrder (s1:string,s2:string) =
 
 
 (* Distinguish inputs and local variables                                               *)
-(* Calculate the offset based on fp of the temporaries bebing read in a callee		*)
-(* If a temporary is an input, then read it from the stack where the caller sets 	*)
-(* If it is a local variable, then read it from the current frame			*)
+(* Calculate the offset based on fp of the temporaries bebing read in a callee          *)
+(* If a temporary is an input, then read it from the stack where the caller sets        *)
+(* If it is a local variable, then read it from the current frame                       *)
 
 fun calculate_relative_address (args,ir,outs,numSavedRegs) =
   let
     (* Identify those TMEMs that are actually arguments *)
     val argT = #1 (List.foldl (fn (IR.TMEM n, (t,i)) =>
-			          (T.enter(t, n, i), i+1)
+                                  (T.enter(t, n, i), i+1)
                                |  (arg, (t,i)) => (t, i+1)
                               )
                         (T.empty, 0)
@@ -92,16 +92,16 @@ fun calculate_relative_address (args,ir,outs,numSavedRegs) =
 
     fun filter_mems (IR.TMEM n) =
         ( case T.peek (argT, n) of
-                SOME k => IR.MEM (IR.fromAlias IR.fp, ~2 - k)		(* inputs *)
+                SOME k => IR.MEM (IR.fromAlias IR.fp, ~2 - k)           (* inputs *)
            |     NONE =>
-		( case T.peek(!localT, n) of
-		      SOME j => IR.MEM (IR.fromAlias IR.fp, 3 + j + numSavedRegs) (* existing local variable *)
-		   |  NONE =>
-			  ( localT := T.enter(!localT, n, !i);
-			    i := !i + 1;
-			    IR.MEM (IR.fromAlias IR.fp, 3 + (!i - 1) + numSavedRegs) (* local variables *)
-			  )
-		 )
+                ( case T.peek(!localT, n) of
+                      SOME j => IR.MEM (IR.fromAlias IR.fp, 3 + j + numSavedRegs) (* existing local variable *)
+                   |  NONE =>
+                          ( localT := T.enter(!localT, n, !i);
+                            i := !i + 1;
+                            IR.MEM (IR.fromAlias IR.fp, 3 + (!i - 1) + numSavedRegs) (* local variables *)
+                          )
+                 )
         )
      |  filter_mems v = v
 
@@ -109,9 +109,9 @@ fun calculate_relative_address (args,ir,outs,numSavedRegs) =
             {oper = op1, dst = List.map filter_mems dst1, src = List.map filter_mems src1}
 
     fun adjust_exp (IR.PAIR (e1,e2)) =
-	    IR.PAIR(adjust_exp e1, adjust_exp e2)
+            IR.PAIR(adjust_exp e1, adjust_exp e2)
      |  adjust_exp e =
-	    filter_mems e
+            filter_mems e
 
     fun adjust_info {ins = ins', outs = outs', context = context', fspec = fspec'} =
         {ins = adjust_exp ins', outs = adjust_exp outs', context = List.map adjust_exp context', fspec = fspec'}
@@ -149,9 +149,9 @@ fun inc_p pt n = {oper = IR.madd, dst = [IR.REG pt], src = [IR.REG pt, IR.WCONST
 (* Pre-call and post-call processing in compilance with the ARM Procedure Call standard                                 *)
 (* ---------------------------------------------------------------------------------------------------------------------*)
 
-(* 	MOV     ip, sp
-	STMFA   sp!, {..., fp,ip,lr,pc}
-	SUB     fp, ip, #1
+(*      MOV     ip, sp
+        STMFA   sp!, {..., fp,ip,lr,pc}
+        SUB     fp, ip, #1
         SUB     sp, sp, #var (* skip local variables *)
 *)
 
@@ -159,7 +159,7 @@ fun entry_blk rs n =
     [ {oper = IR.mmov, dst = [IR.REG (IR.fromAlias IR.ip)], src = [IR.REG (IR.fromAlias IR.sp)]},
       {oper = IR.mpush, dst = [IR.REG (IR.fromAlias IR.sp)],
        src = rs @ [IR.REG (IR.fromAlias IR.fp), IR.REG (IR.fromAlias IR.ip),
-		   IR.REG (IR.fromAlias IR.lr), IR.REG (IR.fromAlias IR.pc)]
+                   IR.REG (IR.fromAlias IR.lr), IR.REG (IR.fromAlias IR.pc)]
       },
       {oper = IR.msub, dst = [IR.REG (IR.fromAlias IR.fp)], src = [IR.REG (IR.fromAlias IR.ip), IR.WCONST (Arbint.fromInt 4)]},
       dec_p (IR.fromAlias IR.sp) n (* skip local variables *)
@@ -167,7 +167,7 @@ fun entry_blk rs n =
 
 (*
     ADD         sp, fp, 3 + #modified registers      (* Skip saved lr, sp, fp and modified registers *)
-    LDMFD 	sp, {..., fp,sp,pc}
+    LDMFD       sp, {..., fp,sp,pc}
 *)
 
 fun exit_blk rs =
@@ -189,20 +189,20 @@ fun mk_reg_segments argL =
 
       (* proceeds in reverse order of the list *)
       fun one_arg (IR.REG r, (invRegLs, i)) =
-	let val flag = !isBroken
-	    val _ = isBroken := false
-	in
-	    if null invRegLs orelse flag then
-	        (([IR.REG r], true, i) :: invRegLs, i-1)
-	    else
-	        let val (cur_segL, a, j) = hd invRegLs
-	        in
-	  	    if null cur_segL then (([IR.REG r], true, i) :: (tl invRegLs), i-1)
-	  	    else ((IR.REG r :: cur_segL, true, i) :: (tl invRegLs), i-1)
-	        end
-	end
-      |	  one_arg (exp, (invRegLs, i)) =
-		(isBroken := true; (([exp],false, i) :: invRegLs, i-1))
+        let val flag = !isBroken
+            val _ = isBroken := false
+        in
+            if null invRegLs orelse flag then
+                (([IR.REG r], true, i) :: invRegLs, i-1)
+            else
+                let val (cur_segL, a, j) = hd invRegLs
+                in
+                    if null cur_segL then (([IR.REG r], true, i) :: (tl invRegLs), i-1)
+                    else ((IR.REG r :: cur_segL, true, i) :: (tl invRegLs), i-1)
+                end
+        end
+      |   one_arg (exp, (invRegLs, i)) =
+                (isBroken := true; (([exp],false, i) :: invRegLs, i-1))
 
       val (invRegLs, i) = List.foldr one_arg ([], length argL - 1) argL
 
@@ -218,20 +218,20 @@ fun mk_reg_segments argL =
 
 fun mk_ldm_stm isPop r dataL =
     if isPop then
-	if length dataL = 1 then
-	       {oper = IR.mldr, dst = dataL, src = [IR.MEM (r,1)]}
-	else
+        if length dataL = 1 then
+               {oper = IR.mldr, dst = dataL, src = [IR.MEM (r,1)]}
+        else
                {oper = IR.mpop, dst = dataL, src = [IR.REG r]}
     else
-	if length dataL = 1 then
+        if length dataL = 1 then
                {oper = IR.mstr, dst = [IR.MEM(r,0)], src = dataL}
-	else
-	       {oper = IR.mpush, dst = [IR.REG r], src = dataL}
+        else
+               {oper = IR.mpush, dst = [IR.REG r], src = dataL}
 
 (* ---------------------------------------------------------------------------------------------------------------------*)
-(*  Write one argument to the memory slot referred by regNo and offset      			                        *)
-(*  Push arguments to the stack. If the argument comes from a register, and store it into the stack directly; 		*)
-(*  if it comes from memory, then first load it into R10, and then store it into the stack;				*)
+(*  Write one argument to the memory slot referred by regNo and offset                                                  *)
+(*  Push arguments to the stack. If the argument comes from a register, and store it into the stack directly;           *)
+(*  if it comes from memory, then first load it into R10, and then store it into the stack;                             *)
 (*  if it is a constant, then assign it to R10 first then store it into the stack.                                      *)
 (* ---------------------------------------------------------------------------------------------------------------------*)
 
@@ -242,7 +242,7 @@ fun write_one_arg (IR.MEM v) (regNo,offset) =
                [  {oper = IR.mstr, dst = [IR.MEM (regNo,offset)], src = [IR.REG r]} ]
  |  write_one_arg v (regNo,offset) =   (* v = NONCST n or WCONST w *)
                [  {oper = IR.mmov, dst = [IR.REG 10], src = [v]},
-		  {oper = IR.mstr, dst = [IR.MEM (regNo,offset)], src = [IR.REG 10]} ]
+                  {oper = IR.mstr, dst = [IR.MEM (regNo,offset)], src = [IR.REG 10]} ]
 
 (* ---------------------------------------------------------------------------------------------------------------------*)
 (*  Read one argument from the memory slot referred by regNo and offset                                                 *)
@@ -252,7 +252,7 @@ fun write_one_arg (IR.MEM v) (regNo,offset) =
 (* ---------------------------------------------------------------------------------------------------------------------*)
 
 fun read_one_arg (IR.REG r) (regNo,offset) =
-	       [  {oper = IR.mldr, dst = [IR.REG r], src = [IR.MEM(regNo,offset)]} ]
+               [  {oper = IR.mldr, dst = [IR.REG r], src = [IR.MEM(regNo,offset)]} ]
  |  read_one_arg (IR.MEM v) (regNo,offset) =
                [  {oper = IR.mldr, dst = [IR.REG (!numAvaiRegs)], src = [IR.MEM(regNo,offset)]},
                   {oper = IR.mstr, dst = [IR.MEM v], src = [IR.REG (!numAvaiRegs)]} ]
@@ -281,7 +281,7 @@ fun pushL regNo argL =
                   let val k = !offset in
                     ( offset := i + length regL;
                       [dec_p regNo (i - k),
-		       (* reverse the regL in accordance with the order of STM *)
+                       (* reverse the regL in accordance with the order of STM *)
                        mk_ldm_stm false regNo (List.rev regL)])
                   end
        | one_seg ([v], false, i) =
@@ -349,7 +349,7 @@ fun get_args argL =
        val len1 = if len < (!numAvaiRegs) then len else (!numAvaiRegs)
 
        fun mk_regL 0 = [IR.REG 0]
-	|  mk_regL n = mk_regL (n-1) @ [IR.REG n];
+        |  mk_regL n = mk_regL (n-1) @ [IR.REG n];
 
    in
        popL (IR.fromAlias (IR.ip)) argL
@@ -376,7 +376,7 @@ fun send_results outL numArgs =
    in
        { oper = IR.madd,
          dst = [IR.REG (IR.fromAlias IR.sp)],
-	      src = [IR.REG (IR.fromAlias IR.fp), IR.WCONST (Arbint.fromInt (4* sOffset))]
+              src = [IR.REG (IR.fromAlias IR.fp), IR.WCONST (Arbint.fromInt (4* sOffset))]
        }
        :: stms
    end
@@ -424,94 +424,94 @@ fun compute_fcall_info ((outer_ins,outer_outs),(caller_src,caller_dst),(callee_i
 
 
 
-	(*This function gets to lists of registers. The values of the
-	registers in scrL are moved to the registers in destL. Thereby,
-	the dummy registers are used for intermediate storage, if necessary.
-	The result is a list of move statements that have to be executed.
-	For example
-		destL = [REG 0, REG 2, REG 1]
-		srcL = [REG 0, REG 1, REG 2]
-		dummyL = [REG 3, ...]
-	should result in something like
-		(REG 3 <- REG 2), (REG 2 <- REG 1), (REG 1 <- REG 3)
-	*)
+        (*This function gets to lists of registers. The values of the
+        registers in scrL are moved to the registers in destL. Thereby,
+        the dummy registers are used for intermediate storage, if necessary.
+        The result is a list of move statements that have to be executed.
+        For example
+                destL = [REG 0, REG 2, REG 1]
+                srcL = [REG 0, REG 1, REG 2]
+                dummyL = [REG 3, ...]
+        should result in something like
+                (REG 3 <- REG 2), (REG 2 <- REG 1), (REG 1 <- REG 3)
+        *)
 
 local
-	fun remove_reg (REG r) = r
-	fun is_reg (REG r) = true |
-		 is_reg _ = false;
+        fun remove_reg (REG r) = r
+        fun is_reg (REG r) = true |
+                 is_reg _ = false;
 
-	val sortdata =
-		sort (fn (dest:int, src:int, beforeL:int list) => fn (dest':int, src':int, beforeL':int list) => (length beforeL < length beforeL'))
+        val sortdata =
+                sort (fn (dest:int, src:int, beforeL:int list) => fn (dest':int, src':int, beforeL':int list) => (length beforeL < length beforeL'))
 
-	fun extract_next dummyL (data):(int * int * int list) list =
-		if ((#3 (hd data)) = []) then data else
-		let
-			val data' = sortdata data
-		in
-			if ((#3 (hd data')) = []) then data' else
-			let
-				val (dest, src, beforeL) = hd data';
-				val dummy_reg = remove_reg (hd dummyL)
-				val new_elem = (dummy_reg, dest, []:int list);
-				(*security check*)
-				val _ = if (exists (fn e:(int*int*int list) => (#1 e = dummy_reg) orelse (#2 e = dummy_reg)) data) then
-						raise argPassing else ()
-			in
-				new_elem :: data'
-			end
-		end
+        fun extract_next dummyL (data):(int * int * int list) list =
+                if ((#3 (hd data)) = []) then data else
+                let
+                        val data' = sortdata data
+                in
+                        if ((#3 (hd data')) = []) then data' else
+                        let
+                                val (dest, src, beforeL) = hd data';
+                                val dummy_reg = remove_reg (hd dummyL)
+                                val new_elem = (dummy_reg, dest, []:int list);
+                                (*security check*)
+                                val _ = if (exists (fn e:(int*int*int list) => (#1 e = dummy_reg) orelse (#2 e = dummy_reg)) data) then
+                                                raise argPassing else ()
+                        in
+                                new_elem :: data'
+                        end
+                end
 
-	fun process_next (data:(int*int*int list) list) =
-	let
-		val (dest, src, beforeL) = hd data;
-		val _ = if (beforeL = []) then () else raise argPassing;
-		val data' = map (fn (e_dest, e_src, e_beforeL) =>
-							let
-								val e_src' = if (e_src = src) then dest else e_src;
-								val e_beforeL' = if (e_dest = src) then [] else filter (fn e => not (e = dest)) e_beforeL;
-							in
-								(e_dest, e_src', e_beforeL')
-							end) (tl data)
-	in
-		((dest, src), data')
-	end
+        fun process_next (data:(int*int*int list) list) =
+        let
+                val (dest, src, beforeL) = hd data;
+                val _ = if (beforeL = []) then () else raise argPassing;
+                val data' = map (fn (e_dest, e_src, e_beforeL) =>
+                                                        let
+                                                                val e_src' = if (e_src = src) then dest else e_src;
+                                                                val e_beforeL' = if (e_dest = src) then [] else filter (fn e => not (e = dest)) e_beforeL;
+                                                        in
+                                                                (e_dest, e_src', e_beforeL')
+                                                        end) (tl data)
+        in
+                ((dest, src), data')
+        end
 in
-	fun mk_mov_ir destL srcL dummyL =
-	let
-		val copyL = zip destL srcL;
-		val (regL, nonRegL) = partition (fn (x, y) => is_reg y) copyL;
-		val regL = map (fn (x, y) => (remove_reg x, remove_reg y)) regL;
-		val regL = filter (fn (x, y) => not (x = y)) regL;
+        fun mk_mov_ir destL srcL dummyL =
+        let
+                val copyL = zip destL srcL;
+                val (regL, nonRegL) = partition (fn (x, y) => is_reg y) copyL;
+                val regL = map (fn (x, y) => (remove_reg x, remove_reg y)) regL;
+                val regL = filter (fn (x, y) => not (x = y)) regL;
 
 
-		(*calculates, which registers have to be updated before,
-			because they directly depend on the value, that should be
-			overwritten*)
-		fun direct_before r =
-			let
-				val regL_filter = filter (fn (dest, src) => (src = r)) regL;
-			in
-				map (fn (dest, src) => dest) regL_filter
-			end
+                (*calculates, which registers have to be updated before,
+                        because they directly depend on the value, that should be
+                        overwritten*)
+                fun direct_before r =
+                        let
+                                val regL_filter = filter (fn (dest, src) => (src = r)) regL;
+                        in
+                                map (fn (dest, src) => dest) regL_filter
+                        end
 
-		val data = map (fn (dest, src) => (dest, src, direct_before dest)) regL
+                val data = map (fn (dest, src) => (dest, src, direct_before dest)) regL
 
-		fun process_data dummyL resultL [] = resultL |
-			 process_data dummyL resultL data =
-			 let
-				val data' = extract_next dummyL data;
-				val (res, data'') = (process_next data');
-			 in
-				process_data dummyL (resultL@[res]) data''
-			 end;
+                fun process_data dummyL resultL [] = resultL |
+                         process_data dummyL resultL data =
+                         let
+                                val data' = extract_next dummyL data;
+                                val (res, data'') = (process_next data');
+                         in
+                                process_data dummyL (resultL@[res]) data''
+                         end;
 
-		val aL = process_data dummyL [] data;
-		val aL = map (fn (x, y) => (REG x, REG y)) aL
-   	fun mov_ir (dst, src) = {oper = IR.mmov, dst = [dst], src = [src]}
-	in
-		map mov_ir (aL@nonRegL)
-	end;
+                val aL = process_data dummyL [] data;
+                val aL = map (fn (x, y) => (REG x, REG y)) aL
+        fun mov_ir (dst, src) = {oper = IR.mmov, dst = [dst], src = [src]}
+        in
+                map mov_ir (aL@nonRegL)
+        end;
 
 end;
 
@@ -534,9 +534,9 @@ val (fname, pre, body, post, outer_info) = extract s2
 
 fun convert_fcall (CALL(fname, pre, body, post, outer_info)) =
     let
-        (* pass the arguments to the callee, and callee will save and restore anything	*)
-	(* create the BL statement							*)
-	(* then modify the sp to point to the real position of the returning arguments	*)
+        (* pass the arguments to the callee, and callee will save and restore anything  *)
+        (* create the BL statement                                                      *)
+        (* then modify the sp to point to the real position of the returning arguments  *)
 
         val (outer_ins,outer_outs) = (#ins outer_info, #outs outer_info);
         val (caller_dst,caller_src) = let val x = get_annt body in (#outs x, #ins x) end;
@@ -549,50 +549,50 @@ fun convert_fcall (CALL(fname, pre, body, post, outer_info)) =
              compute_fcall_info ((outer_ins,outer_outs),(caller_src,caller_dst),(callee_ins,callee_outs),rs,#context outer_info);
 
         fun to_stack 0 = [] |
-				to_stack n = (MEM(13, n))::(to_stack(n-1))
+                                to_stack n = (MEM(13, n))::(to_stack(n-1))
 
-		 val preserve_list = filter (fn r => not (mem r (pair2list caller_dst))) (pair2list outer_outs);
+                 val preserve_list = filter (fn r => not (mem r (pair2list caller_dst))) (pair2list outer_outs);
 
 
-		 val dummy_reg_list =
-			let
-				val dummy_list = [REG 0, REG 1, REG 2, REG 3, REG 4,
-										REG 5, REG 6, REG 7, REG 8, REG 9, REG 10];
-				val dummy_list = filter (fn r => not (mem r (pair2list outer_outs))) dummy_list
-				val dummy_list = preserve_list@dummy_list;
+                 val dummy_reg_list =
+                        let
+                                val dummy_list = [REG 0, REG 1, REG 2, REG 3, REG 4,
+                                                                                REG 5, REG 6, REG 7, REG 8, REG 9, REG 10];
+                                val dummy_list = filter (fn r => not (mem r (pair2list outer_outs))) dummy_list
+                                val dummy_list = preserve_list@dummy_list;
 
-				val not_use_list = (pair2list caller_src) @
-										 (pair2list caller_dst) @
-										 (pair2list callee_ins) @
-										 (pair2list callee_outs)
-				val dummy_list = filter (fn r => not (mem r not_use_list))
-										dummy_list
-			in
-				dummy_list
-			end;
+                                val not_use_list = (pair2list caller_src) @
+                                                                                 (pair2list caller_dst) @
+                                                                                 (pair2list callee_ins) @
+                                                                                 (pair2list callee_outs)
+                                val dummy_list = filter (fn r => not (mem r not_use_list))
+                                                                                dummy_list
+                        in
+                                dummy_list
+                        end;
 
-		 val in_mov_ir = mk_mov_ir (pair2list callee_ins) (pair2list caller_src) dummy_reg_list
-		 val out_mov_ir = mk_mov_ir (pair2list caller_dst) (pair2list callee_outs) dummy_reg_list
+                 val in_mov_ir = mk_mov_ir (pair2list callee_ins) (pair2list caller_src) dummy_reg_list
+                 val out_mov_ir = mk_mov_ir (pair2list caller_dst) (pair2list callee_outs) dummy_reg_list
 
-		 val mpop_ir = if (preserve_list = []) then	[] else
-				 			 [{dst = preserve_list, oper = mpop, src = [REG 13]}]
-		 val mpush_ir = if (preserve_list = []) then	[] else
-				 			 [{dst = [REG 13], oper = mpush, src = preserve_list}]
+                 val mpop_ir = if (preserve_list = []) then     [] else
+                                                         [{dst = preserve_list, oper = mpop, src = [REG 13]}]
+                 val mpush_ir = if (preserve_list = []) then    [] else
+                                                         [{dst = [REG 13], oper = mpush, src = preserve_list}]
 
-		 val stack_ir_list = to_stack (length preserve_list)
-		 val ins_stack = trim_pair(list2pair(stack_ir_list @ (pair2list callee_ins)));
-		 val outs_stack = trim_pair(list2pair(stack_ir_list @ (pair2list callee_outs)));
+                 val stack_ir_list = to_stack (length preserve_list)
+                 val ins_stack = trim_pair(list2pair(stack_ir_list @ (pair2list callee_ins)));
+                 val outs_stack = trim_pair(list2pair(stack_ir_list @ (pair2list callee_outs)));
 
        val pre' = BLK (
                         mpush_ir @ in_mov_ir,
                     {ins = outer_ins,
-							outs = ins_stack, context = context, fspec = thm_t});
+                                                        outs = ins_stack, context = context, fspec = thm_t});
 
-		  val callee_ir' = convert_fcall callee_ir;
+                  val callee_ir' = convert_fcall callee_ir;
         val body' = apply_to_info callee_ir' (fn info' => {ins = ins_stack, outs = outs_stack, context = context, fspec = thm_t});
 
         val post' = BLK (
-					out_mov_ir @	mpop_ir,
+                                        out_mov_ir @    mpop_ir,
                {ins = outs_stack, outs = outer_outs, context = context, fspec = thm_t})
     in
         CALL(fname, pre' , body', post', outer_info)
@@ -616,7 +616,7 @@ fun link_ir prog =
       val (ins1,ir1,outs1, localNum) = calculate_relative_address (ins,ir0,outs,S.numItems rs);
       val ir2 = convert_fcall ir1
       (*val ir3 = match_ins_outs ir1*)
-		val ir3 = ir2
+                val ir3 = ir2
 
       val rs' = S.addList (S.empty regAllocation.intOrder, get_modified_regs ir3);
       val _ = (involved_defs := [];

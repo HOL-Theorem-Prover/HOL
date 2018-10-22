@@ -75,30 +75,30 @@ sig
 
        arm_parse_from_quote
          `// this is an example
-		ARCH	ARMv6T2
-		THUMB @ enter thumb code (does an ALIGN 2 too)
+                ARCH    ARMv6T2
+                THUMB @ enter thumb code (does an ALIGN 2 too)
 
-	label:	add	r1,r2
-		add.w	r1,r8,r3
-		b.n	+#4	; branch to the next instruction
-		b	-#8	/* branches to the labelled instruction
-				   (assumes the first add is narrow) */
+        label:  add     r1,r2
+                add.w   r1,r8,r3
+                b.n     +#4     ; branch to the next instruction
+                b       -#8     /* branches to the labelled instruction
+                                   (assumes the first add is narrow) */
 
-		ARM @ enter ARM code (does an ALIGN 4 too)
+                ARM @ enter ARM code (does an ALIGN 4 too)
 
-		ASCII	"a"
-		BYTE	0b1011
-		ALIGN	4	; ensures next short is in the following word
-		SHORT	0xABCD	(* no need for another ALIGN because
-				   instructions are always aligned *)
-		blx	label	; branch to thumb code
+                ASCII   "a"
+                BYTE    0b1011
+                ALIGN   4       ; ensures next short is in the following word
+                SHORT   0xABCD  (* no need for another ALIGN because
+                                   instructions are always aligned *)
+                blx     label   ; branch to thumb code
 
-		SPACE	40	; skip 10 instructions
+                SPACE   40      ; skip 10 instructions
 
-		mov	r1,#^(expr (~8 + 4 - 2))
-				; can use expr for int arith
-				; will covert to mvn r1,#5
-		pop	{r1-r6,pc}`
+                mov     r1,#^(expr (~8 + 4 - 2))
+                                ; can use expr for int arith
+                                ; will covert to mvn r1,#5
+                pop     {r1-r6,pc}`
 
   ......................................................................... *)
 

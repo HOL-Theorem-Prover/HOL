@@ -2140,4 +2140,4 @@ val Brzozowski_partial_eval_256 = save_thm
 (* val _ = EmitTeX.tex_theory"-"; *)
 
 val _ = export_theory();
-		     
+                     

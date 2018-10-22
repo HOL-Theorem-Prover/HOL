@@ -33,13 +33,13 @@ fun tsimps ty = let val {convs,rewrs} = TypeBase.simpls_of ty in rewrs end
 (*      however, using strings for bound vars of mu an nu is a hack because it is a pain getting general support for binders *)
 
 val _ = bossLib.Hol_datatype `
-	mu = TR
-	| FL
-	| Not of mu
-	| And of mu => mu
-	| Or of mu => mu
-	| RV of string (* relational var *)
-	| AP of 'prop (* atomic proposition *)
+        mu = TR
+        | FL
+        | Not of mu
+        | And of mu => mu
+        | Or of mu => mu
+        | RV of string (* relational var *)
+        | AP of 'prop (* atomic proposition *)
         | DIAMOND of string => mu (* diamond *)
         | BOX of string => mu (* box *)
         | mu of string => mu   (* lfp *)
@@ -256,7 +256,7 @@ FULL_SIMP_TAC std_ss [] THENL [
   Q.X_GEN_TAC `s`
   THEN Cases_on `Q=Q'` THENL [
     Cases_on `Q'=s` THEN REPEAT (Cases_on `Q=s` THEN
-				 (FULL_SIMP_TAC std_ss [RVNEG_def] ORELSE
+                                 (FULL_SIMP_TAC std_ss [RVNEG_def] ORELSE
                                   PROVE_TAC [])),
     Cases_on `Q'=s` THENL [
       Cases_on `Q=s` THENL [
@@ -275,7 +275,7 @@ FULL_SIMP_TAC std_ss [] THENL [
   THEN Cases_on `Q=Q'` THENL [
     Cases_on `Q'=s` THEN
     REPEAT (Cases_on `Q=s` THEN
-	    (FULL_SIMP_TAC std_ss [RVNEG_def] ORELSE ASSUM_LIST PROVE_TAC)),
+            (FULL_SIMP_TAC std_ss [RVNEG_def] ORELSE ASSUM_LIST PROVE_TAC)),
     Cases_on `Q'=s` THENL [
       Cases_on `Q=s` THENL [
         FULL_SIMP_TAC std_ss [RVNEG_def],
@@ -564,12 +564,12 @@ REPEAT STRIP_TAC THEN Cases_on `Q'=Q` THENL [
  FULL_SIMP_TAC std_ss ([MU_SUB_def,NNF_def,RVNEG_def]@ tsimps_mu),
  FULL_SIMP_TAC std_ss ([MU_SUB_def,NNF_def,RVNEG_def]@ tsimps_mu)
  THEN FULL_SIMP_TAC std_ss [SIMP_RULE std_ss [RVNEG_def] (SPECL[``~RVNEG Q' (f:'prop mu)``,``Q:string``,``Q':string``]
-								      STATES_MONO_LEM2)]], (* mu *)
+                                                                      STATES_MONO_LEM2)]], (* mu *)
 REPEAT STRIP_TAC THEN Cases_on `Q'=Q` THENL [
  FULL_SIMP_TAC std_ss ([MU_SUB_def,NNF_def,RVNEG_def]@ tsimps_mu),
  FULL_SIMP_TAC std_ss ([MU_SUB_def,NNF_def,RVNEG_def]@ tsimps_mu)
  THEN FULL_SIMP_TAC std_ss [SIMP_RULE std_ss [RVNEG_def] (SPECL[``~RVNEG Q' (f:'prop mu)``,``Q:string``,``Q':string``]
-								      STATES_MONO_LEM2)]], (* nu *)
+                                                                      STATES_MONO_LEM2)]], (* nu *)
 REPEAT GEN_TAC THEN Cases_on `Q'=Q` THENL [
  FULL_SIMP_TAC std_ss [MU_SUB_def,NNF_def]
  THEN FULL_SIMP_TAC std_ss tsimps_mu,
@@ -579,13 +579,13 @@ REPEAT STRIP_TAC THEN Cases_on `Q'=Q` THENL [
  FULL_SIMP_TAC std_ss ([MU_SUB_def,NNF_def,RVNEG_def]@ tsimps_mu)
  THEN SIMP_TAC std_ss [RVNEG_SYM]
  THEN PROVE_TAC [SIMP_RULE std_ss [RVNEG_def] (SPECL[``RVNEG Q' (f:'prop mu)``,``Q:string``,``Q':string``]
-								      STATES_MONO_LEM2)]], (* ~mu *)
+                                                                      STATES_MONO_LEM2)]], (* ~mu *)
 REPEAT STRIP_TAC THEN Cases_on `Q'=Q` THENL [
  FULL_SIMP_TAC std_ss ([NNF_RVNEG_DUALITY,MU_SUB_def,NNF_def,RVNEG_def]@ tsimps_mu),
  FULL_SIMP_TAC std_ss ([MU_SUB_def,NNF_def,RVNEG_def]@ tsimps_mu)
  THEN SIMP_TAC std_ss [RVNEG_SYM]
  THEN PROVE_TAC [SIMP_RULE std_ss [RVNEG_def] (SPECL[``RVNEG Q' (f:'prop mu)``,``Q:string``,``Q':string``]
-								      STATES_MONO_LEM2)]]])) (* ~nu *)
+                                                                      STATES_MONO_LEM2)]]])) (* ~nu *)
 
 val STATES_MONO_LEM6 = save_thm("STATES_MONO_LEM6",prove (``!Q Q' (f:'prop mu). SUBFORMULA (~RV Q') (NNF mu Q.. f) = SUBFORMULA (~RV Q') (NNF f)``,FULL_SIMP_TAC std_ss ([MU_SUB_def,NNF_def]@ tsimps_mu)))
 

@@ -26,35 +26,35 @@ using INST_TYPE, SPECL and REWRITEs
 val simpleTruthForgettableName1 = TAUT_PROVE (``!(a:bool) (b:bool). (  (~ (a       ==> b) ) <=> (   a  /\  ~ b  ) )``);
 val simpleTruthForgettableName2 = TAUT_PROVE (``!(a:bool) (b:bool). (  (~ ( a       /\ b) ) <=> ( (~a) \/ (~ b) ) )``);
 val simpleTruthForgettableName3 = prove(
-	``!(z:num)(z':num)(x:'a)(x':'a).(
-		((if x = x' then ((if x = x' then 1 else 0) = z) else ((if x = x' then 1 else 0) = z'))
-	<=>
-		(if x = x' then (1 = z) else (0 = z'))))
-	``,(METIS_TAC [])
+        ``!(z:num)(z':num)(x:'a)(x':'a).(
+                ((if x = x' then ((if x = x' then 1 else 0) = z) else ((if x = x' then 1 else 0) = z'))
+        <=>
+                (if x = x' then (1 = z) else (0 = z'))))
+        ``,(METIS_TAC [])
 );
 
 val simpleTruthForgettableName4 = prove(
-	``!(z:num) (z':num)(v:bool).(
-		((~v) ==> ( (if v then z else z' ) <> z) )
-	<=>
-		( (~v) ==>(z' <> z ) ))
-	``,(METIS_TAC [])
+        ``!(z:num) (z':num)(v:bool).(
+                ((~v) ==> ( (if v then z else z' ) <> z) )
+        <=>
+                ( (~v) ==>(z' <> z ) ))
+        ``,(METIS_TAC [])
 );
 
 val UNDISCH_HD_TAC= (POP_ASSUM MP_TAC);
 
 val simpleTruthForgettableName5 = prove(``(f :'a -> 'a -> bool) (s :'a) (s' :'a) ==> ?(s' :'a) (s :'a). f s s'``,
-	(DISCH_TAC THEN (EXISTS_TAC ``(s':'a)``) THEN (EXISTS_TAC ``s:'a``) THEN (REPEAT UNDISCH_HD_TAC) THEN REP_EVAL_TAC)
+        (DISCH_TAC THEN (EXISTS_TAC ``(s':'a)``) THEN (EXISTS_TAC ``s:'a``) THEN (REPEAT UNDISCH_HD_TAC) THEN REP_EVAL_TAC)
 );
 
 val simpleTruthForgettableName6 = prove(``(f :'a -> 'a -> bool) (s :'a) (s' :'a) ==> ?(S' :'a->'a) (s :'a). f s (S' s)``,
-	(DISCH_TAC THEN (EXISTS_TAC ``\(s:'a).(s':'a)``) THEN (EXISTS_TAC ``s:'a``) THEN (REPEAT UNDISCH_HD_TAC) THEN REP_EVAL_TAC)
+        (DISCH_TAC THEN (EXISTS_TAC ``\(s:'a).(s':'a)``) THEN (EXISTS_TAC ``s:'a``) THEN (REPEAT UNDISCH_HD_TAC) THEN REP_EVAL_TAC)
 );
 
 val simpleTruthForgettableName7 = prove(``(f :'a -> 'a -> bool) (s :'a) (s' :'a) ==> !(f :'a -> 'a -> bool).
               (?(s' :'a) (s :'a). f s s') <=>
               ?(S' :'a -> 'a) (s :'a). f s (S' s)``,
-		(DISCH_TAC THEN GEN_TAC THEN METIS_TAC [simpleTruthForgettableName5,simpleTruthForgettableName6])
+                (DISCH_TAC THEN GEN_TAC THEN METIS_TAC [simpleTruthForgettableName5,simpleTruthForgettableName6])
 );
 
 (*
@@ -85,26 +85,26 @@ assignment and sequential composition.
 *)
 
 val simpleRewrites = [
-	simpleTruthForgettableName1,
-	simpleTruthForgettableName2
+        simpleTruthForgettableName1,
+        simpleTruthForgettableName2
 ];
 
 fun theTac statevars = (
-	(REPEAT STRIP_TAC)
+        (REPEAT STRIP_TAC)
 THEN
-	(REFINEMENT_TAC)
+        (REFINEMENT_TAC)
 THEN
-	(REWRITE_TAC simpleRewrites)
+        (REWRITE_TAC simpleRewrites)
 THEN
-	(REWRITE_TAC [FORWARD_SUB])
+        (REWRITE_TAC [FORWARD_SUB])
 THEN
-	(REP_EVAL_TAC)
+        (REP_EVAL_TAC)
 THEN
-	(REPEAT STRIP_TAC)
+        (REPEAT STRIP_TAC)
 THEN
-	(EVAL_FOR_STATEVARS statevars )
+        (EVAL_FOR_STATEVARS statevars )
 THEN
-	REP_EVAL_TAC
+        REP_EVAL_TAC
 );
 
 (*
@@ -119,17 +119,17 @@ fun LHSrefinedbyRHS (lhsSpec:term)  (rhsProg:term) = mk_icomb(mk_icomb(REFINEMEN
 val _ = tprint ("some implementation refines given specification: " );
 
 val _ = let val proveSo = (
-		prove(
-			(assumeAensureH
-				(DECL_STATEVARS ``v:'a`` statevars)
-				(LHSrefinedbyRHS theSpec  goodImplementation )
-			),
-			(theTac statevars)
-		);
-		NONE
-	)
-	handle
-		HOL_ERR _ => SOME "refinement not proven"
+                prove(
+                        (assumeAensureH
+                                (DECL_STATEVARS ``v:'a`` statevars)
+                                (LHSrefinedbyRHS theSpec  goodImplementation )
+                        ),
+                        (theTac statevars)
+                );
+                NONE
+        )
+        handle
+                HOL_ERR _ => SOME "refinement not proven"
 in case proveSo of
       NONE => OK()
      | SOME s => die s
@@ -156,57 +156,57 @@ Alternate tactics are required to extract these suggestions from the prover.
 *)
 
 val altTac1 = (
-	fn goal:((term list) * term) => (
-		(let val
-			Px =(#2 (strip_forall( rand( rator( #2(strip_exists(#2(goal))) ) ) ) ) )
-		in (let val
-			P = mk_abs(``v:'a``,Px)
-		 in (let val
-			Q= ( rand (#2(strip_exists(#2(goal))) ))
-		  in
-			(REWRITE_TAC [BETA_RULE (SPECL [P,Q] LEFT_AND_FORALL_THM) ] goal)
-		  end)
-		 end)
-		end)
-	)
+        fn goal:((term list) * term) => (
+                (let val
+                        Px =(#2 (strip_forall( rand( rator( #2(strip_exists(#2(goal))) ) ) ) ) )
+                in (let val
+                        P = mk_abs(``v:'a``,Px)
+                 in (let val
+                        Q= ( rand (#2(strip_exists(#2(goal))) ))
+                  in
+                        (REWRITE_TAC [BETA_RULE (SPECL [P,Q] LEFT_AND_FORALL_THM) ] goal)
+                  end)
+                 end)
+                end)
+        )
 );
 
 val altTac2 = (
-	fn goal:((term list) * term) => (
-		(let val
-				Px =( strip_exists(#2(goal)) )
-	 	in
-			(let val
-				P = mk_abs( hd(#1(Px)), mk_abs( hd (tl(#1(Px))), (#2(Px)) ) )
-			in
-				REWRITE_TAC	[BETA_RULE (SPEC P (INST_TYPE [alpha |-> ``:'a->num``,beta |-> ``:'a->num``]
-								SWAP_EXISTS_THM))]
-						goal
-		  	end)
-		end)
-	)
+        fn goal:((term list) * term) => (
+                (let val
+                                Px =( strip_exists(#2(goal)) )
+                in
+                        (let val
+                                P = mk_abs( hd(#1(Px)), mk_abs( hd (tl(#1(Px))), (#2(Px)) ) )
+                        in
+                                REWRITE_TAC     [BETA_RULE (SPEC P (INST_TYPE [alpha |-> ``:'a->num``,beta |-> ``:'a->num``]
+                                                                SWAP_EXISTS_THM))]
+                                                goal
+                        end)
+                end)
+        )
 );
 
 val parameterizeSPrime = (
-		EVAL_RULE ( SPECL [``t:'a``,``t:'a``,``\(s:'a) (s':'a).T``] (GEN_ALL simpleTruthForgettableName7) )
+                EVAL_RULE ( SPECL [``t:'a``,``t:'a``,``\(s:'a) (s':'a).T``] (GEN_ALL simpleTruthForgettableName7) )
 );
 
 val parameterizeSPrimeTac = (
-	fn goal:((term list) * term) => (
-		(let val
-				Pxy =( strip_exists(#2(goal)) )
-	 	in
-			(let val
-				P = mk_abs( hd(tl(#1(Pxy))), mk_abs( hd (#1(Pxy)), (#2(Pxy)) ) )
-			in
-				REWRITE_TAC 	[ (EVAL_RULE (
-							SPEC P (INST_TYPE [ alpha |-> type_of((hd(#1(Pxy))))] parameterizeSPrime)
-						  ) )
-						]
-						goal
-			end)
-		end)
-	)
+        fn goal:((term list) * term) => (
+                (let val
+                                Pxy =( strip_exists(#2(goal)) )
+                in
+                        (let val
+                                P = mk_abs( hd(tl(#1(Pxy))), mk_abs( hd (#1(Pxy)), (#2(Pxy)) ) )
+                        in
+                                REWRITE_TAC     [ (EVAL_RULE (
+                                                        SPEC P (INST_TYPE [ alpha |-> type_of((hd(#1(Pxy))))] parameterizeSPrime)
+                                                  ) )
+                                                ]
+                                                goal
+                        end)
+                end)
+        )
 );
 
 
@@ -219,29 +219,29 @@ Finally, we need to provide a witness for s that proves the original specificati
 *)
 
 val findRealSpecTac = (
-	altTac1
+        altTac1
 THEN
-	altTac2
+        altTac2
 THEN
-	(parameterizeSPrimeTac)
+        (parameterizeSPrimeTac)
 );
 
 fun applyWitnessTac statevars = (
-	(EXISTS_TAC ``\(s:'a->num) (v:'a). ( if (x:'a)=v then 1 else ( s (v) ) )``)
+        (EXISTS_TAC ``\(s:'a->num) (v:'a). ( if (x:'a)=v then 1 else ( s (v) ) )``)
 THEN
-	(EXISTS_TAC ``\(v':'a).0``)
+        (EXISTS_TAC ``\(v':'a).0``)
 THEN
-	(GEN_TAC THEN (REPEAT STRIP_TAC) THEN REP_EVAL_TAC)
+        (GEN_TAC THEN (REPEAT STRIP_TAC) THEN REP_EVAL_TAC)
 THEN
-	(REWRITE_TAC [SPECL [``1``,``0``] simpleTruthForgettableName3])
+        (REWRITE_TAC [SPECL [``1``,``0``] simpleTruthForgettableName3])
 THEN
-	(UNDISCH_TAC `` (x :'a) <> (y :'a) ``)
+        (UNDISCH_TAC `` (x :'a) <> (y :'a) ``)
 THEN
-	(REWRITE_TAC [SPECL [``1``,``0``] simpleTruthForgettableName4])
+        (REWRITE_TAC [SPECL [``1``,``0``] simpleTruthForgettableName4])
 THEN
-	DISCH_TAC
+        DISCH_TAC
 THEN
-	EVAL_TAC
+        EVAL_TAC
 );
 
 
@@ -250,45 +250,45 @@ With the preliminaries out of the way, we can now proceed with the counter-examp
 *)
 
 val _ = let val proveSo = (
-		prove(
-			(assumeAensureH
-				(DECL_STATEVARS ``v:'a`` statevars)
-				(LHSrefinedbyRHS theSpec  disputedImplementation)
-			),
-			(theTac statevars)
-		);
-		NONE
-	)
-	handle
-		HOL_ERR _ => SOME "refinement not proven"
+                prove(
+                        (assumeAensureH
+                                (DECL_STATEVARS ``v:'a`` statevars)
+                                (LHSrefinedbyRHS theSpec  disputedImplementation)
+                        ),
+                        (theTac statevars)
+                );
+                NONE
+        )
+        handle
+                HOL_ERR _ => SOME "refinement not proven"
 in case proveSo of
       NONE => (die "expected failure but refinement was proven" )
      | SOME s => (
-		let val proveOtherwise = (
-			prove(
-				(assumeAensureH
-					(DECL_STATEVARS ``v:'a`` statevars)
-					(LHSnotrefinedbyRHS theSpec  disputedImplementation )
-				),
-				(
-					(theTac statevars)
-				THEN
-					(findRealSpecTac)
-				THEN
-					(applyWitnessTac statevars)
-				)
-			);
-			NONE
-		)
-		handle
-			HOL_ERR _ => SOME "refinement not disproven"
-		in case proveOtherwise of
-      			NONE => (tprint  "...RELAX: refinement has been disproven" )
-     			| SOME s => (
-					die s
-				)
-		end
-	)
+                let val proveOtherwise = (
+                        prove(
+                                (assumeAensureH
+                                        (DECL_STATEVARS ``v:'a`` statevars)
+                                        (LHSnotrefinedbyRHS theSpec  disputedImplementation )
+                                ),
+                                (
+                                        (theTac statevars)
+                                THEN
+                                        (findRealSpecTac)
+                                THEN
+                                        (applyWitnessTac statevars)
+                                )
+                        );
+                        NONE
+                )
+                handle
+                        HOL_ERR _ => SOME "refinement not disproven"
+                in case proveOtherwise of
+                        NONE => (tprint  "...RELAX: refinement has been disproven" )
+                        | SOME s => (
+                                        die s
+                                )
+                end
+        )
 end;
 
 val _ = OK();

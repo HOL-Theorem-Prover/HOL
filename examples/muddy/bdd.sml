@@ -11,55 +11,55 @@ struct
     type varnum = int
 
     datatype bddop =
-	And | Xor | Or | Nand | Nor | Imp | Biimp | Diff | Lessth | Invimp
+        And | Xor | Or | Nand | Nor | Imp | Biimp | Diff | Lessth | Invimp
 
 
     open MuddyCore
 
     val constants_ : unit -> int * int * int * int
                            * int * int * int * int
-	                   * int * int
-	                   * int * int * int * int * int * int * int * int
-	           = app1 (symb "mlbdd_constants")
+                           * int * int
+                           * int * int * int * int * int * int * int * int
+                   = app1 (symb "mlbdd_constants")
 
     val (bddop_and, bddop_xor, bddop_or, bddop_nand,
-	 bddop_nor, bddop_imp, bddop_biimp, bddop_diff,
-	 bddop_less, bddop_invimp,
-	 FIXED, FREE, WIN2, WIN2ITE, SIFT, SIFTITE, RANDOM, REORDER_NONE)
-	= constants_ ()
+         bddop_nor, bddop_imp, bddop_biimp, bddop_diff,
+         bddop_less, bddop_invimp,
+         FIXED, FREE, WIN2, WIN2ITE, SIFT, SIFTITE, RANDOM, REORDER_NONE)
+        = constants_ ()
 
     val opr2i =
-	fn And    => bddop_and
-	 | Xor    => bddop_xor
-	 | Or     => bddop_or
-	 | Nand   => bddop_nand
-	 | Nor    => bddop_nor
-	 | Imp    => bddop_imp
-	 | Biimp  => bddop_biimp
-	 | Diff   => bddop_diff
-	 | Lessth => bddop_less
-	 | Invimp => bddop_invimp
+        fn And    => bddop_and
+         | Xor    => bddop_xor
+         | Or     => bddop_or
+         | Nand   => bddop_nand
+         | Nor    => bddop_nor
+         | Imp    => bddop_imp
+         | Biimp  => bddop_biimp
+         | Diff   => bddop_diff
+         | Lessth => bddop_less
+         | Invimp => bddop_invimp
 
     val apply_ : bdd -> bdd -> int -> bdd = app3 (symb "mlbdd_bdd_apply")
     val exist_  : bdd -> varSet -> bdd    = app2 (symb "mlbdd_bdd_exist")
     val forall_ : bdd -> varSet -> bdd    = app2 (symb "mlbdd_bdd_forall")
     val appall_ : bdd -> bdd -> int -> varSet -> bdd
-	                                  = app4 (symb "mlbdd_bdd_appall")
+                                          = app4 (symb "mlbdd_bdd_appall")
     val appex_ : bdd -> bdd -> int -> varSet -> bdd
-	                                  = app4 (symb "mlbdd_bdd_appex")
+                                          = app4 (symb "mlbdd_bdd_appex")
 
     val mkset_ : varnum vector -> varSet  = app1 (symb "mlbdd_makeset")
 
 
     val stats_ : unit -> int * int * int * int * int * int * int * int
-	                                  = app1 (symb "mlbdd_bdd_stats")
+                                          = app1 (symb "mlbdd_bdd_stats")
 
 
     val makepairset_ : varnum vector -> varnum vector -> pairSet
-	                                  = app2 (symb "mlbdd_makepairset")
+                                          = app2 (symb "mlbdd_makepairset")
 
     val makebddpairset_ : varnum vector -> bdd vector -> pairSet
-	                                  = app2 (symb "mlbdd_makebddpairset")
+                                          = app2 (symb "mlbdd_makebddpairset")
 
 
     val setVarnum : int -> unit = app1 (symb "mlbdd_bdd_setvarnum")
@@ -105,33 +105,33 @@ struct
     val nodecount : bdd -> int = app1 (symb "mlbdd_bdd_nodecount")
 
     fun stats unit =
-	let val (p,nn,mn,fnum,minn,vn,cs,gn) = stats_ unit
-	in
-	    {produced     = p,
-	     nodenum      = nn,
-	     maxnodenum   = mn,
-	     freenodes    = fnum,
-	     minfreenodes = minn,
-	     varnum       = vn,
-	     cachesize    = cs,
-	     gbcnum       = gn}
-	end
+        let val (p,nn,mn,fnum,minn,vn,cs,gn) = stats_ unit
+        in
+            {produced     = p,
+             nodenum      = nn,
+             maxnodenum   = mn,
+             freenodes    = fnum,
+             minfreenodes = minn,
+             varnum       = vn,
+             cachesize    = cs,
+             gbcnum       = gn}
+        end
 
     fun makeset_ vector = if Vector.length vector = 0 then (*Obj.magic*) FALSE
-			  else mkset_ vector
+                          else mkset_ vector
 
     fun nodup _ nil                   = nil
       | nodup pre (h :: tail) = if pre = h then nodup pre tail
-					else h :: nodup h tail
+                                        else h :: nodup h tail
     fun makeset varlist =
-	let val positive = List.filter (fn i => i >= 0) varlist
-	    val sorted = Listsort.sort Int.compare positive
-	    val nodup  = case sorted of
-		             nil => nil
-			   | h :: tail => h :: nodup h tail
-	in
-	    makeset_ (Vector.fromList(nodup))
-	end
+        let val positive = List.filter (fn i => i >= 0) varlist
+            val sorted = Listsort.sort Int.compare positive
+            val nodup  = case sorted of
+                             nil => nil
+                           | h :: tail => h :: nodup h tail
+        in
+            makeset_ (Vector.fromList(nodup))
+        end
 
     val scanset : varSet -> varnum vector = app1 (symb "mlbdd_bdd_scanset")
 
@@ -168,7 +168,7 @@ struct
         in makepairset_ (vector old) (vector new) end
 
     val compose_ : bdd -> bdd -> varnum -> bdd
-	= app3 (symb "mlbdd_bdd_compose")
+        = app3 (symb "mlbdd_bdd_compose")
 
     fun compose (v,r2) r1 = compose_ r1 r2 v
 
@@ -191,7 +191,7 @@ struct
                 if isBool bdd then acc
                 else let val var = var bdd
                          val low = low bdd
-			 val high = high bdd
+                         val high = high bdd
                      in  if equal low FALSE then loop high ((var,true) :: acc)
                          else loop low ((var,false) :: acc)
                      end
@@ -214,55 +214,55 @@ struct
     fun table size = (size, ref 0, Array.array(size,[]))
     fun mem i []           = NONE
       | mem i ((k,d) :: t) = if i = k then SOME d
-			     else mem i t
+                             else mem i t
     fun add (size,next,tab) r =
-	let val code = r mod size
-	    val slot = Array.sub(tab,code)
-	in
-	    case mem r slot of
-		NONE => let val n = !next
-			in  next := n + 1;
-			    Array.update(tab, code, (r,n) :: slot);
-			    n
-			end
-	      | SOME n => n
-	end
+        let val code = r mod size
+            val slot = Array.sub(tab,code)
+        in
+            case mem r slot of
+                NONE => let val n = !next
+                        in  next := n + 1;
+                            Array.update(tab, code, (r,n) :: slot);
+                            n
+                        end
+              | SOME n => n
+        end
 
     fun nodetable r =
-	let val nc = nodecount r + 2
-	    val rootno = add (table nc) o root
-	    val tab = Array.array(nc,NONE)
-	    fun peek i = Array.sub(tab, i)
-	    fun update i d = Array.update(tab,i,SOME d)
+        let val nc = nodecount r + 2
+            val rootno = add (table nc) o root
+            val tab = Array.array(nc,NONE)
+            fun peek i = Array.sub(tab, i)
+            fun update i d = Array.update(tab,i,SOME d)
 
-	    fun node r =
-		let val root = rootno r
-		in
-		    case peek root of
-			NONE   => let val low = low r
-				      val high = high r
-				  in  update root (var r,
-						   rootno low,
-						   rootno high);
-				      node low;
-				      node high
-				  end
-		      | SOME _ => ()
-		end
-	in
-	    update (rootno TRUE) (0,0,0);
-	    update (rootno FALSE) (0,0,0);
-	    node r;
-	    (rootno r,
-	     Vector.tabulate(nc, fn i => valOf(Array.sub(tab,i))))
-	end
+            fun node r =
+                let val root = rootno r
+                in
+                    case peek root of
+                        NONE   => let val low = low r
+                                      val high = high r
+                                  in  update root (var r,
+                                                   rootno low,
+                                                   rootno high);
+                                      node low;
+                                      node high
+                                  end
+                      | SOME _ => ()
+                end
+        in
+            update (rootno TRUE) (0,0,0);
+            update (rootno FALSE) (0,0,0);
+            node r;
+            (rootno r,
+             Vector.tabulate(nc, fn i => valOf(Array.sub(tab,i))))
+        end
 
     (* BuDDy tuning stuff *)
     val setMaxincrease : int -> int = app1 (symb "mlbdd_bdd_setmaxincrease")
     val setCacheratio  : int -> int = app1 (symb "mlbdd_bdd_setcacheratio")
 
     val setprintgc : bool -> string -> string -> unit =
-	app3 (symb "mlbdd_setprintgc")
+        app3 (symb "mlbdd_setprintgc")
 
     fun verbosegc NONE           = setprintgc false "" ""
       | verbosegc (SOME(s1, s2)) = setprintgc true s1 s2

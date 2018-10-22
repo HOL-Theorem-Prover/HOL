@@ -11,7 +11,7 @@ open modelCheckLib testutils;
 val ltl1 = ``LTL_SUNTIL (LTL_PROP (P_PROP a), LTL_PROP (P_PROP b))``;
 
 val ltl2 = ``LTL_EVENTUAL (LTL_AND (LTL_PROP (P_PROP b),
-				    LTL_PNEXT (LTL_PALWAYS (LTL_PROP (P_PROP a)))))``;
+                                    LTL_PNEXT (LTL_PALWAYS (LTL_PROP (P_PROP a)))))``;
 
 val result1 = “LTL_EQUIVALENT_INITIAL
        (LTL_SUNTIL (LTL_PROP (P_PROP a),LTL_PROP (P_PROP b)))
@@ -32,7 +32,7 @@ fun modelCheck_test2 () = let
     val test2 = model_check___ltl_equivalent ltl1 ltl2;
 in
     (if (isSome test2) then
-	 die ("FAILED!\n  Got " ^ term_to_string (concl (valOf test2)))
+         die ("FAILED!\n  Got " ^ term_to_string (concl (valOf test2)))
      else OK ();
      Process.system ("rm " ^ (!model_check_temp_file)))
 end;

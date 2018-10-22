@@ -206,7 +206,7 @@ val LRTC_INDUCT = store_thm (
 val LRTC_RULES = store_thm (
    "LRTC_RULES",
   ``!R. (!x. LRTC R (x :'a) [] x) /\
-	(!x h y t z. R x h y /\ LRTC R y t z ==> LRTC R x (h :: t) z)``,
+        (!x h y t z. R x h y /\ LRTC R y t z ==> LRTC R x (h :: t) z)``,
     REWRITE_TAC [LRTC_DEF] >> PROVE_TAC []);
 
 val LRTC_REFL = store_thm (
@@ -228,7 +228,7 @@ val LRTC_SINGLE = store_thm (
 val LRTC_STRONG_INDUCT = store_thm (
    "LRTC_STRONG_INDUCT",
   ``!R P. (!x. P x [] x) /\
-	  (!x h y t z. R x h y /\ LRTC R y t z /\ P y t z ==> P x (h :: t) z) ==>
+          (!x h y t z. R x h y /\ LRTC R y t z /\ P y t z ==> P x (h :: t) z) ==>
           (!x l (y :'a). LRTC R x l y ==> P x l y)``,
     REPEAT GEN_TAC
  >> STRIP_TAC
@@ -259,7 +259,7 @@ val LRTC_TRANS = store_thm (
 val LRTC_CASES1 = store_thm (
    "LRTC_CASES1",
   ``!R (x :'a) l y. LRTC R x l y = if NULL l then (x = y)
-					     else ?u. R x (HD l) u /\ LRTC R u (TL l) y``,
+                                             else ?u. R x (HD l) u /\ LRTC R u (TL l) y``,
     SIMP_TAC bool_ss [EQ_IMP_THM, FORALL_AND_THM]
  >> CONJ_TAC (* 2 sub-goals here *)
  >| [ (* goal 1 (of 2) *)
@@ -269,22 +269,22 @@ val LRTC_CASES1 = store_thm (
       Q.EXISTS_TAC `x'` >> ASM_REWRITE_TAC [] \\
       Cases_on `NULL l` >> FULL_SIMP_TAC std_ss [] >| (* 2 sub-goals here *)
       [ (* goal 1.1 (of 2) *)
-	POP_ASSUM (REWRITE_TAC o wrap o (REWRITE_RULE [NULL_EQ])) \\
-	REWRITE_TAC [CONJUNCT1 (Q.SPEC `R` LRTC_RULES)],
-	(* goal 1.2 (of 2) *)
-	POP_ASSUM (ONCE_REWRITE_TAC o wrap o SYM o (MATCH_MP CONS)) \\
-	MATCH_MP_TAC (CONJUNCT2 (Q.SPEC `R` LRTC_RULES)) \\
-	Q.EXISTS_TAC `u` >> ASM_REWRITE_TAC [] ],
+        POP_ASSUM (REWRITE_TAC o wrap o (REWRITE_RULE [NULL_EQ])) \\
+        REWRITE_TAC [CONJUNCT1 (Q.SPEC `R` LRTC_RULES)],
+        (* goal 1.2 (of 2) *)
+        POP_ASSUM (ONCE_REWRITE_TAC o wrap o SYM o (MATCH_MP CONS)) \\
+        MATCH_MP_TAC (CONJUNCT2 (Q.SPEC `R` LRTC_RULES)) \\
+        Q.EXISTS_TAC `u` >> ASM_REWRITE_TAC [] ],
       (* goal 2 (of 2) *)
       rpt STRIP_TAC \\
       Cases_on `NULL l` >> FULL_SIMP_TAC std_ss [] >| (* 2 sub-goals here *)
       [ (* goal 2.1 (of 2) *)
-	POP_ASSUM (REWRITE_TAC o wrap o (REWRITE_RULE [NULL_EQ])) \\
-	REWRITE_TAC [CONJUNCT1 (Q.SPEC `R` LRTC_RULES)],
-	(* goal 2.2 (of 2) *)
-	POP_ASSUM (ONCE_REWRITE_TAC o wrap o SYM o (MATCH_MP CONS)) \\
-	MATCH_MP_TAC (CONJUNCT2 (Q.SPEC `R` LRTC_RULES)) \\
-	Q.EXISTS_TAC `u` >> ASM_REWRITE_TAC [] ] ]);
+        POP_ASSUM (REWRITE_TAC o wrap o (REWRITE_RULE [NULL_EQ])) \\
+        REWRITE_TAC [CONJUNCT1 (Q.SPEC `R` LRTC_RULES)],
+        (* goal 2.2 (of 2) *)
+        POP_ASSUM (ONCE_REWRITE_TAC o wrap o SYM o (MATCH_MP CONS)) \\
+        MATCH_MP_TAC (CONJUNCT2 (Q.SPEC `R` LRTC_RULES)) \\
+        Q.EXISTS_TAC `u` >> ASM_REWRITE_TAC [] ] ]);
 
 val LRTC_NIL = store_thm (
    "LRTC_NIL", ``!R (x :'a) y. LRTC R x [] y = (x = y)``,
@@ -307,7 +307,7 @@ val LRTC_ONE = store_thm (
 val LRTC_CASES2 = store_thm (
    "LRTC_CASES2",
   ``!R (x :'a) l y. LRTC R x l y = if NULL l then (x = y)
-					     else ?u. LRTC R x (FRONT l) u /\ R u (LAST l) y``,
+                                             else ?u. LRTC R x (FRONT l) u /\ R u (LAST l) y``,
     SIMP_TAC bool_ss [EQ_IMP_THM, FORALL_AND_THM]
  >> CONJ_TAC (* 2 sub-goals here *)
  >| [ (* goal 1 (of 2) *)
@@ -316,27 +316,27 @@ val LRTC_CASES2 = store_thm (
       rpt STRIP_TAC \\
       Cases_on `l` >> FULL_SIMP_TAC list_ss [] >| (* 2 sub-goals here *)
       [ (* goal 1.1 (of 2) *)
-	Q.EXISTS_TAC `x` >> ASM_REWRITE_TAC [CONJUNCT1 (Q.SPEC `R` LRTC_RULES)],
-	(* goal 1.2 (of 2) *)
-	Q.EXISTS_TAC `u` >> ASM_REWRITE_TAC [] \\
-	MATCH_MP_TAC (CONJUNCT2 (Q.SPEC `R` LRTC_RULES)) \\
-	Q.EXISTS_TAC `x'` >> ASM_REWRITE_TAC [] ],
+        Q.EXISTS_TAC `x` >> ASM_REWRITE_TAC [CONJUNCT1 (Q.SPEC `R` LRTC_RULES)],
+        (* goal 1.2 (of 2) *)
+        Q.EXISTS_TAC `u` >> ASM_REWRITE_TAC [] \\
+        MATCH_MP_TAC (CONJUNCT2 (Q.SPEC `R` LRTC_RULES)) \\
+        Q.EXISTS_TAC `x'` >> ASM_REWRITE_TAC [] ],
       (* goal 2 (of 2) *)
       rpt STRIP_TAC \\
       Cases_on `l` >> FULL_SIMP_TAC list_ss []
-	>- REWRITE_TAC [CONJUNCT1 (Q.SPEC `R` LRTC_RULES)] \\
+        >- REWRITE_TAC [CONJUNCT1 (Q.SPEC `R` LRTC_RULES)] \\
       Cases_on `t = []` \\
       FULL_SIMP_TAC list_ss [FRONT_DEF, LAST_DEF] >| (* 2 sub-goals here *)
       [ (* goal 2.1 (of 2) *)
-	MATCH_MP_TAC LRTC_SINGLE \\
-	IMP_RES_TAC (EQ_IMP_LR LRTC_NIL) >> ASM_REWRITE_TAC [],
-	(* goal 2.2 (of 2) *)
-	Know `h :: t = (h :: FRONT t) ++ [LAST t]`
-	>- ( SIMP_TAC list_ss [] >> PROVE_TAC [APPEND_FRONT_LAST] ) \\
-	Rewr \\
-	MATCH_MP_TAC LRTC_TRANS \\
-	Q.EXISTS_TAC `u` >> ASM_REWRITE_TAC [] \\
-	MATCH_MP_TAC LRTC_SINGLE >> ASM_REWRITE_TAC [] ] ]);
+        MATCH_MP_TAC LRTC_SINGLE \\
+        IMP_RES_TAC (EQ_IMP_LR LRTC_NIL) >> ASM_REWRITE_TAC [],
+        (* goal 2.2 (of 2) *)
+        Know `h :: t = (h :: FRONT t) ++ [LAST t]`
+        >- ( SIMP_TAC list_ss [] >> PROVE_TAC [APPEND_FRONT_LAST] ) \\
+        Rewr \\
+        MATCH_MP_TAC LRTC_TRANS \\
+        Q.EXISTS_TAC `u` >> ASM_REWRITE_TAC [] \\
+        MATCH_MP_TAC LRTC_SINGLE >> ASM_REWRITE_TAC [] ] ]);
 
 val LRTC_CASES_LRTC_TWICE = store_thm (
    "LRTC_CASES_LRTC_TWICE",
@@ -347,12 +347,12 @@ val LRTC_CASES_LRTC_TWICE = store_thm (
       GEN_TAC >> HO_MATCH_MP_TAC LRTC_INDUCT \\
       rpt STRIP_TAC >| (* 2 sub-goals here *)
       [ (* goal 1.1 (of 2) *)
-	take [`x`, `[]`, `[]`] >> SIMP_TAC list_ss [] \\
-	PROVE_TAC [LRTC_RULES],
-	(* goal 1.2 (of 2) *)
-	take [`u`, `h :: l1`, `l2`] >> ASM_SIMP_TAC list_ss [] \\
-	MATCH_MP_TAC (CONJUNCT2 (Q.SPEC `R` LRTC_RULES)) \\
-	Q.EXISTS_TAC `x'` >> ASM_REWRITE_TAC [] ],
+        take [`x`, `[]`, `[]`] >> SIMP_TAC list_ss [] \\
+        PROVE_TAC [LRTC_RULES],
+        (* goal 1.2 (of 2) *)
+        take [`u`, `h :: l1`, `l2`] >> ASM_SIMP_TAC list_ss [] \\
+        MATCH_MP_TAC (CONJUNCT2 (Q.SPEC `R` LRTC_RULES)) \\
+        Q.EXISTS_TAC `x'` >> ASM_REWRITE_TAC [] ],
       (* goal 2 (of 2) *)
       rpt STRIP_TAC >> ASM_REWRITE_TAC [] \\
       MATCH_MP_TAC LRTC_TRANS \\
@@ -390,12 +390,12 @@ val _ = overload_on ("epsilon", ``[] :'b Action list``);
 
 val _ = Unicode.unicode_version { u = UTF8.chr 0x03B5, tmnm = "epsilon"};
 val _ = TeX_notation { hol = "epsilon",
-		       TeX = ("\\ensuremath{\\epsilon}", 1) };
+                       TeX = ("\\ensuremath{\\epsilon}", 1) };
 
 val TRACE_def = Define `TRACE = LRTC TRANS`;
 
 val _ = type_abbrev ("trace",
-		    ``:('a, 'b) CCS -> 'b Action list -> ('a, 'b) CCS -> bool``);
+                    ``:('a, 'b) CCS -> 'b Action list -> ('a, 'b) CCS -> bool``);
 
 local
     val trans = (REWRITE_RULE [SYM TRACE_def]) o (ISPEC ``TRANS``);
@@ -529,11 +529,11 @@ val EPS_TRACE2 = Q.prove (
       Q.EXISTS_TAC `tau :: xs` \\
       CONJ_TAC >| (* 2 sub-goal here *)
       [ (* goal 2.1 (of 2) *)
-	MATCH_MP_TAC TRACE2 \\
-	Q.EXISTS_TAC `E'` >> ASM_REWRITE_TAC [],
-	(* goal 2.2 (of 2) *)
-	REWRITE_TAC [MEM] \\
-	ASM_REWRITE_TAC [Action_distinct_label] ] ]);
+        MATCH_MP_TAC TRACE2 \\
+        Q.EXISTS_TAC `E'` >> ASM_REWRITE_TAC [],
+        (* goal 2.2 (of 2) *)
+        REWRITE_TAC [MEM] \\
+        ASM_REWRITE_TAC [Action_distinct_label] ] ]);
 
 val EPS_AND_TRACE = store_thm (
    "EPS_AND_TRACE", ``!E E'. EPS E E' <=> ?xs. TRACE E xs E' /\ NO_LABEL xs``,
@@ -552,7 +552,7 @@ val EPS_AND_TRACE = store_thm (
       (* goal 2 (of 2) *)
       rpt STRIP_TAC \\
       qpat_x_assum `TRACE E (h::xs) E'`
-	(ASSUME_TAC o (ONCE_REWRITE_RULE [TRACE_cases1])) \\
+        (ASSUME_TAC o (ONCE_REWRITE_RULE [TRACE_cases1])) \\
       FULL_SIMP_TAC list_ss [] \\
       RES_TAC \\
       Cases_on `h` >- ( IMP_RES_TAC ONE_TAU >> IMP_RES_TAC EPS_TRANS ) \\
@@ -562,16 +562,16 @@ val EPS_AND_TRACE = store_thm (
 (* u is the unique Label in L, learnt from Robert Beers *)
 val UNIQUE_LABEL_def = Define `
     UNIQUE_LABEL u (L :'b Action list) =
-	?L1 L2. (L1 ++ [u] ++ L2 = L) /\ NO_LABEL L1 /\ NO_LABEL L2`;
+        ?L1 L2. (L1 ++ [u] ++ L2 = L) /\ NO_LABEL L1 /\ NO_LABEL L2`;
 
 (* old equivalent definition without using NO_LABEL *)
 val UNIQUE_LABEL_DEF = store_thm (
    "UNIQUE_LABEL_DEF",
   ``!u (L :'b Action list).
       UNIQUE_LABEL u (L :'b Action list) =
-	?L1 L2. (L1 ++ [u] ++ L2 = L) /\ ~?l. MEM (label l) L1 \/ MEM (label l) L2``,
+        ?L1 L2. (L1 ++ [u] ++ L2 = L) /\ ~?l. MEM (label l) L1 \/ MEM (label l) L2``,
     Know `!L1 L2. (?l. MEM (label l) L1 \/ MEM (label l) L2) =
-		  (?l. MEM (label l) L1) \/ (?l. MEM (label l) L2)`
+                  (?l. MEM (label l) L1) \/ (?l. MEM (label l) L2)`
  >- ( NTAC 2 GEN_TAC \\
       Q.ABBREV_TAC `P = \x. MEM (label x) L1` \\
       Q.ABBREV_TAC `Q = \x. MEM (label x) L2` >> fs [] \\
@@ -640,7 +640,7 @@ val UNIQUE_LABEL_cases2 = store_thm (
 
 val WEAK_TRANS_TRACE2 = Q.prove (
    `!E u E'. WEAK_TRANS E u E' ==> ?us. TRACE E us E' /\ ~NULL us /\
-					if (u = tau) then NO_LABEL us else UNIQUE_LABEL u us`,
+                                        if (u = tau) then NO_LABEL us else UNIQUE_LABEL u us`,
     REWRITE_TAC [WEAK_TRANS]
  >> rpt STRIP_TAC
  >> IMP_RES_TAC EPS_TRACE2
@@ -661,7 +661,7 @@ val WEAK_TRANS_TRACE2 = Q.prove (
 val WEAK_TRANS_AND_TRACE = store_thm (
    "WEAK_TRANS_AND_TRACE",
   ``!E u E'. WEAK_TRANS E u E' <=> ?us. TRACE E us E' /\ ~NULL us /\
-					if (u = tau) then NO_LABEL us else UNIQUE_LABEL u us``,
+                                        if (u = tau) then NO_LABEL us else UNIQUE_LABEL u us``,
     rpt GEN_TAC >> EQ_TAC (* 2 sub-goals here *)
  >- ( DISCH_TAC \\
       MATCH_MP_TAC WEAK_TRANS_TRACE2 >> ASM_REWRITE_TAC [] )
@@ -675,9 +675,9 @@ val WEAK_TRANS_AND_TRACE = store_thm (
       REV_FULL_SIMP_TAC list_ss [] \\
       Know `HD us = tau`
       >- ( Cases_on `HD us` >- REWRITE_TAC [] \\
-	   qpat_x_assum `!l. ~MEM (label l) us` (ASSUME_TAC o (Q.SPEC `x`)) \\
-	   qpat_x_assum `HD us = label x` ((FULL_SIMP_TAC list_ss) o wrap o SYM) \\
-	   PROVE_TAC [CONS, MEM] ) \\
+           qpat_x_assum `!l. ~MEM (label l) us` (ASSUME_TAC o (Q.SPEC `x`)) \\
+           qpat_x_assum `HD us = label x` ((FULL_SIMP_TAC list_ss) o wrap o SYM) \\
+           PROVE_TAC [CONS, MEM] ) \\
       DISCH_TAC >> FULL_SIMP_TAC list_ss [] \\
       Q.EXISTS_TAC `u` >> ASM_REWRITE_TAC [] \\
       REWRITE_TAC [EPS_AND_TRACE, NO_LABEL_def] \\
@@ -692,21 +692,21 @@ val WEAK_TRANS_AND_TRACE = store_thm (
       IMP_RES_TAC UNIQUE_LABEL_DEF \\
       qpat_x_assum `L1 ++ [label L] ++ L2 = us` ((FULL_SIMP_TAC std_ss) o wrap o SYM) \\
       qpat_x_assum `TRACE E (L1 ++ [label L] ++ L2) E'`
-	(STRIP_ASSUME_TAC o (REWRITE_RULE [TRACE_APPEND_cases])) \\
+        (STRIP_ASSUME_TAC o (REWRITE_RULE [TRACE_APPEND_cases])) \\
       take [`u'`, `u`] \\
       IMP_RES_TAC TRACE_ONE >> ASM_REWRITE_TAC [] \\
       REWRITE_TAC [EPS_AND_TRACE, NO_LABEL_def] \\
       CONJ_TAC >| (* 2 sub-goals here *)
       [ (* goal 2.1 (of 2) *)
-	Q.EXISTS_TAC `L1` >> ASM_REWRITE_TAC [],
-	(* goal 2.2 (of 2) *)
-	Q.EXISTS_TAC `L2` >> ASM_REWRITE_TAC [] ] ]);
+        Q.EXISTS_TAC `L1` >> ASM_REWRITE_TAC [],
+        (* goal 2.2 (of 2) *)
+        Q.EXISTS_TAC `L2` >> ASM_REWRITE_TAC [] ] ]);
 
 (* changed variables to P and P' *)
 val WEAK_TRANS_AND_TRACE' = store_thm (
    "WEAK_TRANS_AND_TRACE'",
   ``!P u P'. WEAK_TRANS P u P' <=> ?acts. TRACE P acts P' /\ ~NULL acts /\
-					if (u = tau) then NO_LABEL acts else UNIQUE_LABEL u acts``,
+                                        if (u = tau) then NO_LABEL acts else UNIQUE_LABEL u acts``,
     rpt GEN_TAC >> EQ_TAC (* 2 sub-goals here *)
  >- ( DISCH_TAC \\
       MATCH_MP_TAC WEAK_TRANS_TRACE2 >> ASM_REWRITE_TAC [] )
@@ -720,9 +720,9 @@ val WEAK_TRANS_AND_TRACE' = store_thm (
       REV_FULL_SIMP_TAC list_ss [] \\
       Know `HD acts = tau`
       >- ( Cases_on `HD acts` >- REWRITE_TAC [] \\
-	   qpat_x_assum `!l. ~MEM (label l) acts` (ASSUME_TAC o (Q.SPEC `x`)) \\
-	   qpat_x_assum `HD acts = label x` ((FULL_SIMP_TAC list_ss) o wrap o SYM) \\
-	   PROVE_TAC [CONS, MEM] ) \\
+           qpat_x_assum `!l. ~MEM (label l) acts` (ASSUME_TAC o (Q.SPEC `x`)) \\
+           qpat_x_assum `HD acts = label x` ((FULL_SIMP_TAC list_ss) o wrap o SYM) \\
+           PROVE_TAC [CONS, MEM] ) \\
       DISCH_TAC >> FULL_SIMP_TAC list_ss [] \\
       Q.EXISTS_TAC `u` >> ASM_REWRITE_TAC [] \\
       REWRITE_TAC [EPS_AND_TRACE, NO_LABEL_def] \\
@@ -737,15 +737,15 @@ val WEAK_TRANS_AND_TRACE' = store_thm (
       IMP_RES_TAC UNIQUE_LABEL_DEF \\
       qpat_x_assum `L1 ++ [label L] ++ L2 = acts` ((FULL_SIMP_TAC std_ss) o wrap o SYM) \\
       qpat_x_assum `TRACE P (L1 ++ [label L] ++ L2) P'`
-	(STRIP_ASSUME_TAC o (REWRITE_RULE [TRACE_APPEND_cases])) \\
+        (STRIP_ASSUME_TAC o (REWRITE_RULE [TRACE_APPEND_cases])) \\
       take [`u'`, `u`] \\
       IMP_RES_TAC TRACE_ONE >> ASM_REWRITE_TAC [] \\
       REWRITE_TAC [EPS_AND_TRACE, NO_LABEL_def] \\
       CONJ_TAC >| (* 2 sub-goals here *)
       [ (* goal 2.1 (of 2) *)
-	Q.EXISTS_TAC `L1` >> ASM_REWRITE_TAC [],
-	(* goal 2.2 (of 2) *)
-	Q.EXISTS_TAC `L2` >> ASM_REWRITE_TAC [] ] ]);
+        Q.EXISTS_TAC `L1` >> ASM_REWRITE_TAC [],
+        (* goal 2.2 (of 2) *)
+        Q.EXISTS_TAC `L2` >> ASM_REWRITE_TAC [] ] ]);
 
 val _ = export_theory ();
 val _ = html_theory "Trace";

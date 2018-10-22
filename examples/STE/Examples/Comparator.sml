@@ -13,14 +13,14 @@ val Xnor_def = Define `Xnor a b = Or (And a b)(And (Not a)(Not b))`;
 
 (* Unit delay two bit comparator circuit for equality testing - lattice model*)
 val Comparator_lattice_def = Define `(Comparator_lattice s node =
-			      if (node = "a0") then X
-				  else if (node = "a1") then X
-				      else if (node = "b0") then X
-					  else if (node = "b1") then X
-					      else if (node = "out") then
-						  And (Xnor (s "a0")(s "b0"))
-						  (Xnor (s "a1")(s "b1"))
-						      else X)`;
+                              if (node = "a0") then X
+                                  else if (node = "a1") then X
+                                      else if (node = "b0") then X
+                                          else if (node = "b1") then X
+                                              else if (node = "out") then
+                                                  And (Xnor (s "a0")(s "b0"))
+                                                  (Xnor (s "a1")(s "b1"))
+                                                      else X)`;
 
 
 (* Unit delay two bit comparator circuit for equality testing - Boolean model*)
@@ -30,61 +30,61 @@ val Comparator_bool_def = Define `Comparator_bool (s_b:string->bool) s_b' =
 
 
 val comp_list = [Comparator_lattice_def, Xnor_def, Or_def,
-		 And_def, Not_def];
+                 And_def, Not_def];
 
 (* prove that it is okay to relate the two models for comparator *)
 val COMPARATOR_OK =
     store_thm ("COMPARATOR_OK",
-	       ``Okay (Comparator_lattice, Comparator_bool)``,
-	       FULL_SIMP_TAC std_ss [Okay_def,
-				     Comparator_lattice_def, Xnor_def, Or_def,
-				     Comparator_bool_def, And_def, Not_def,
-				     extended_drop_state_def,
-				     leq_state_def]
-	       THEN REPEAT STRIP_TAC
-	       THEN REPEAT COND_CASES_TAC
-	       THEN fs [lattice_X1_lemma, leq_def]
-	       THEN Cases_on `s_b "a0"`
-		      THEN Cases_on `s_b "b0"`
-		      THEN Cases_on `s_b "a1"`
-		      THEN Cases_on `s_b "b1"`
-		      THEN fs [drop_def,
-			       One_def,
-			       Zero_def,
-			       X_def,
-			       Top_def,
-			       lub_def,
-			       Or_def,
-			       And_def,
-			       Not_def]);
+               ``Okay (Comparator_lattice, Comparator_bool)``,
+               FULL_SIMP_TAC std_ss [Okay_def,
+                                     Comparator_lattice_def, Xnor_def, Or_def,
+                                     Comparator_bool_def, And_def, Not_def,
+                                     extended_drop_state_def,
+                                     leq_state_def]
+               THEN REPEAT STRIP_TAC
+               THEN REPEAT COND_CASES_TAC
+               THEN fs [lattice_X1_lemma, leq_def]
+               THEN Cases_on `s_b "a0"`
+                      THEN Cases_on `s_b "b0"`
+                      THEN Cases_on `s_b "a1"`
+                      THEN Cases_on `s_b "b1"`
+                      THEN fs [drop_def,
+                               One_def,
+                               Zero_def,
+                               X_def,
+                               Top_def,
+                               lub_def,
+                               Or_def,
+                               And_def,
+                               Not_def]);
 
 (* prove that the comparator circuit is monotonic *)
 val COMPARATOR_MONOTONIC =
     store_thm("COMPARATOR_MONOTONIC",
-	      ``Monotonic Comparator_lattice``,
-	      FULL_SIMP_TAC std_ss [Monotonic_def,
-		      Comparator_lattice_def,
-		      Xnor_def, Or_def,
-		      And_def, Not_def,
-		      extended_drop_state_def,
-		      leq_state_def]
-	      THEN REPEAT STRIP_TAC
-	      THEN REPEAT COND_CASES_TAC
-	      THEN fs [leq_def, lub_def, X_def]
-	      THEN FIRST_ASSUM(STRIP_ASSUME_TAC o SPEC ``"a0"``)
-	      THEN FIRST_ASSUM(STRIP_ASSUME_TAC o SPEC ``"a1"``)
-	      THEN FIRST_ASSUM(STRIP_ASSUME_TAC o SPEC ``"b0"``)
-	      THEN FIRST_ASSUM(STRIP_ASSUME_TAC o SPEC ``"b1"``)
-	      THEN FIRST_ASSUM(STRIP_ASSUME_TAC o SPEC ``"out"``)
-	      THEN Cases_on `s "a0"` THEN Cases_on `s' "a0"`
-	      THEN Cases_on `s "b0"` THEN Cases_on `s' "b0"`
-	      THEN Cases_on `s "a1"` THEN Cases_on `s' "a1"`
-	      THEN Cases_on `s "b1"` THEN Cases_on `s' "b1"`
-	      THEN Cases_on `s "out"` THEN Cases_on `s' "out"`
-	      THEN fs [Not_def, And_def, Or_def, lub_def]
-	      THEN RW_TAC std_ss []
-	      THENL [EQ_TAC THEN REPEAT STRIP_TAC THEN fs [],
-		     EQ_TAC THEN REPEAT STRIP_TAC THEN fs []]);
+              ``Monotonic Comparator_lattice``,
+              FULL_SIMP_TAC std_ss [Monotonic_def,
+                      Comparator_lattice_def,
+                      Xnor_def, Or_def,
+                      And_def, Not_def,
+                      extended_drop_state_def,
+                      leq_state_def]
+              THEN REPEAT STRIP_TAC
+              THEN REPEAT COND_CASES_TAC
+              THEN fs [leq_def, lub_def, X_def]
+              THEN FIRST_ASSUM(STRIP_ASSUME_TAC o SPEC ``"a0"``)
+              THEN FIRST_ASSUM(STRIP_ASSUME_TAC o SPEC ``"a1"``)
+              THEN FIRST_ASSUM(STRIP_ASSUME_TAC o SPEC ``"b0"``)
+              THEN FIRST_ASSUM(STRIP_ASSUME_TAC o SPEC ``"b1"``)
+              THEN FIRST_ASSUM(STRIP_ASSUME_TAC o SPEC ``"out"``)
+              THEN Cases_on `s "a0"` THEN Cases_on `s' "a0"`
+              THEN Cases_on `s "b0"` THEN Cases_on `s' "b0"`
+              THEN Cases_on `s "a1"` THEN Cases_on `s' "a1"`
+              THEN Cases_on `s "b1"` THEN Cases_on `s' "b1"`
+              THEN Cases_on `s "out"` THEN Cases_on `s' "out"`
+              THEN fs [Not_def, And_def, Or_def, lub_def]
+              THEN RW_TAC std_ss []
+              THENL [EQ_TAC THEN REPEAT STRIP_TAC THEN fs [],
+                     EQ_TAC THEN REPEAT STRIP_TAC THEN fs []]);
 
 
 
