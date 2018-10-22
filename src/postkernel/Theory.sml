@@ -954,7 +954,8 @@ fun export_theory () = let
           val ostrm3 = Portable.open_out(concat["./",name,".dat"])
           val time_now = total_cpu (Timer.checkCPUTimer Globals.hol_clock)
           val cpu_time_since = Time.-(time_now, #1 (!new_theory_time))
-          val real_time_since = Time.-(time_now, #2 (!new_theory_time))
+          val real_time_since =
+              Time.-(Timer.checkRealTimer real_clock, #2 (!new_theory_time))
           val cpu_tstr = Lib.time_to_string cpu_time_since
           val real_tstr = Lib.time_to_string real_time_since
           val tstr = cpu_tstr ^ " (CPU); " ^ real_tstr ^ " (elapsed)"
