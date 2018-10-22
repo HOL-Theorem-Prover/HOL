@@ -167,8 +167,8 @@ fun is_generated opts fname =
     case ext of
         SOME "uo" => true
       | SOME "ui" => true
-      | SOME "sig" => suff "Theory"
-      | SOME "sml" => suffs [".lex", ".grm", ".grm-sig", "Theory"]
+      | SOME "sig" => suffs ["Theory", "ML"]
+      | SOME "sml" => suffs [".lex", ".grm", ".grm-sig", "Theory", "ML"]
       | _ => false
   end
 
