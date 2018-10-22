@@ -6,5 +6,6 @@ INCLUDES = $(HOLDIR)/tools/unicode-grep
 
 all:
 	$(protect $(HOLDIR)/tools/unicode-grep/unicode-grep) --nolinelen $(protect $(HOLDIR)/src) $(protect $(HOLDIR)/help/Docfiles)
+	$(protect $(HOLDIR)/tools/unicode-grep/unicode-grep) --nolinelen -u $(protect $(HOLDIR)/examples)
 
 endif
