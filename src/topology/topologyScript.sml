@@ -21,15 +21,15 @@ fun MESON ths tm = prove(tm,MESON_TAC ths);
 fun METIS ths tm = prove(tm,METIS_TAC ths);
 
 fun K_TAC _ = ALL_TAC;
-val DISC_RW_KILL = DISCH_TAC THEN ONCE_ASM_REWRITE_TAC [] THEN 
+val DISC_RW_KILL = DISCH_TAC THEN ONCE_ASM_REWRITE_TAC [] THEN
                    POP_ASSUM K_TAC;
 
-fun SET_TAC L = 
+fun SET_TAC L =
     POP_ASSUM_LIST(K ALL_TAC) THEN REPEAT COND_CASES_TAC THEN
     REWRITE_TAC (append [EXTENSION, SUBSET_DEF, PSUBSET_DEF, DISJOINT_DEF,
     SING_DEF] L) THEN
-    SIMP_TAC std_ss [NOT_IN_EMPTY, IN_UNIV, IN_UNION, IN_INTER, IN_DIFF, 
-      IN_INSERT, IN_DELETE, IN_REST, IN_BIGINTER, IN_BIGUNION, IN_IMAGE, 
+    SIMP_TAC std_ss [NOT_IN_EMPTY, IN_UNIV, IN_UNION, IN_INTER, IN_DIFF,
+      IN_INSERT, IN_DELETE, IN_REST, IN_BIGINTER, IN_BIGUNION, IN_IMAGE,
       GSPECIFICATION, IN_DEF, EXISTS_PROD] THEN METIS_TAC [];
 
 fun SET_RULE tm = prove(tm,SET_TAC []);
@@ -109,7 +109,7 @@ val OPEN_IN_CLAUSES = store_thm ("OPEN_IN_CLAUSES",
         open_in top {} /\
         (!s t. open_in top s /\ open_in top t ==> open_in top (s INTER t)) /\
         (!k. (!s. s IN k ==> open_in top s) ==> open_in top (BIGUNION k))``,
-  SIMP_TAC std_ss [IN_DEF, SUBSET_DEF, 
+  SIMP_TAC std_ss [IN_DEF, SUBSET_DEF,
   SIMP_RULE std_ss [istopology, IN_DEF, SUBSET_DEF] ISTOPOLOGY_OPEN_IN]);
 
 val OPEN_IN_SUBSET = store_thm ("OPEN_IN_SUBSET",
@@ -295,7 +295,7 @@ val CLOSED_IN_BIGINTER = store_thm ("CLOSED_IN_BIGINTER",
   KNOW_TAC ``{topspace top DIFF s | s IN k} = IMAGE (\s. topspace top DIFF s) k`` THENL
   [FULL_SIMP_TAC std_ss [GSYM IMAGE_DEF], ALL_TAC] THEN DISC_RW_KILL THEN
   REWRITE_TAC [IN_BIGUNION, IN_BIGINTER] THEN
-  GEN_REWR_TAC (QUANT_CONV o RAND_CONV o QUANT_CONV o LAND_CONV) [SPECIFICATION] THEN 
+  GEN_REWR_TAC (QUANT_CONV o RAND_CONV o QUANT_CONV o LAND_CONV) [SPECIFICATION] THEN
   ONCE_REWRITE_TAC [CONJ_SYM] THEN SIMP_TAC std_ss [EXISTS_IN_IMAGE] THEN
   REWRITE_TAC [METIS [SPECIFICATION]``(topspace top DIFF s) x = x IN (topspace top DIFF s)``] THEN
   REWRITE_TAC [IN_DIFF, IN_BIGINTER] THEN PROVE_TAC[]);
@@ -422,12 +422,12 @@ val HULL_SUBSET = store_thm ("HULL_SUBSET",
 
 val HULL_MONO = store_thm ("HULL_MONO",
  ``!P s t. s SUBSET t ==> (P hull s) SUBSET (P hull t)``,
-   SIMP_TAC std_ss [hull, SUBSET_DEF, IN_BIGINTER, GSPECIFICATION] THEN 
+   SIMP_TAC std_ss [hull, SUBSET_DEF, IN_BIGINTER, GSPECIFICATION] THEN
    METIS_TAC[]);
 
 val HULL_ANTIMONO = store_thm ("HULL_ANTIMONO",
  ``!P Q s. P SUBSET Q ==> (Q hull s) SUBSET (P hull s)``,
-  SIMP_TAC std_ss [SUBSET_DEF, hull, IN_BIGINTER, GSPECIFICATION] THEN 
+  SIMP_TAC std_ss [SUBSET_DEF, hull, IN_BIGINTER, GSPECIFICATION] THEN
   MESON_TAC[IN_DEF]);
 
 val HULL_MINIMAL = store_thm ("HULL_MINIMAL",
@@ -513,7 +513,7 @@ val HULL_IMAGE = store_thm ("HULL_IMAGE",
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   POP_ASSUM MP_TAC THEN POP_ASSUM MP_TAC THEN
   REWRITE_TAC [AND_IMP_INTRO] THEN
-  SIMP_TAC std_ss [SET_RULE ``!f. (!x y. (f x = f y) ==> (x = y)) /\ 
+  SIMP_TAC std_ss [SET_RULE ``!f. (!x y. (f x = f y) ==> (x = y)) /\
    (!y. ?x. f x = y) <=> ?g. (!y. f (g y) = y) /\ !x. g (f x) = x``] THEN
   DISCH_THEN(X_CHOOSE_THEN ``g:'a->'a`` STRIP_ASSUME_TAC) THEN
   MATCH_MP_TAC HULL_IMAGE_GALOIS THEN EXISTS_TAC ``g:'a->'a`` THEN

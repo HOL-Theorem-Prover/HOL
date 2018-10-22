@@ -26,9 +26,9 @@ sig
 
   val ttt_eproof_dir   : string
   val ttt_proof_dir    : string
-  
+
   val ttt_buildheap_dir : string
-  
+
   (* commands *)
   val mkDir_err        : string -> unit
   val rmDir_err        : string -> unit
@@ -82,13 +82,13 @@ sig
   val mk_string_set : string list -> string list
   val count_dict  :
     ('a, int) Redblackmap.dict -> 'a list -> ('a, int) Redblackmap.dict
-  val inv_dict : 
+  val inv_dict :
     ('a * 'a -> order) ->
     ('b, 'a) Redblackmap.dict -> ('a, 'b) Redblackmap.dict
 
   (* list *)
   val map_snd : ('a -> 'b) -> ('c * 'a) list -> ('c * 'b) list
-  val map_fst : ('a -> 'b) -> ('a * 'c) list -> ('b * 'c) list 
+  val map_fst : ('a -> 'b) -> ('a * 'c) list -> ('b * 'c) list
   val map_assoc : ('a -> 'b) -> 'a list -> ('a * 'b) list
   val cartesian_product : 'a list -> 'b list -> ('a * 'b) list
   val findSome : ('a -> 'b option) -> 'a list -> 'b option
@@ -103,7 +103,7 @@ sig
   val topo_sort   : (''a * ''a list) list -> ''a list
   val sort_thyl   : string list -> string list
   val fold_left : ('a -> 'b -> 'b) -> 'a list -> 'b -> 'b
-  
+
 
   (* statistics *)
   val incr   : int ref -> unit
@@ -183,7 +183,7 @@ sig
   val rm_prefix : string -> string -> string
   val rm_squote : string -> string
   val rm_space  : string -> string
-  
+
   (* escaping *)
   val escape : string -> string
   val unescape : string -> string
@@ -194,15 +194,15 @@ sig
   val tid_of_did : (string * int) -> string option
   val depl_of_thm : thm -> (bool * string list)
   val deplPartial_of_sthm : string -> string list
-  
+
   (* theorem *)
   val only_concl : thm -> term
-  
+
   (* parallelism *)
   datatype 'a result = Res of 'a | Exn of exn
   val parmap_err : int -> ('a -> 'b) -> 'a list -> 'b result list
   val parmap : int -> ('a -> 'b) -> 'a list -> 'b list
   val parapp : int -> ('a -> 'b) -> 'a list -> unit
 
- 
+
 end

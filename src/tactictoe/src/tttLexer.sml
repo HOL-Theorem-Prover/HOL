@@ -120,7 +120,7 @@ fun lex_helper acc charl = case charl of
     else raise ERR "lex_helper" (Char.toString a)
     )
 
-(* This fix is not perfect if ~ or # is redefined 
+(* This fix is not perfect if ~ or # is redefined
    as we forgot if there was a space or not *)
 fun reg_char l = case l of
     [] => []
@@ -133,7 +133,7 @@ fun reg_char l = case l of
                      if Char.isDigit (String.sub(s,0))
                      then ("~" ^ s) :: reg_char m
                      else "~" :: reg_char (s :: m)
-                     )                   
+                     )
   | a :: m        => a :: reg_char m
 
 fun some_acc acc =

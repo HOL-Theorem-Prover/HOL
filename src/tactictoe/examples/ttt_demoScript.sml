@@ -29,7 +29,7 @@ val () = ttt_record ();
 
 val ex1 = store_thm("ex1",
   ``x > 9 ==> x > 8``,
-  (* Run this tactic first, to generate the one below: 
+  (* Run this tactic first, to generate the one below:
      ttt ([],``x > 9 ==> x > 8``); *)
   (ASM_SIMP_TAC (srw_ss () ++ boolSimps.LET_ss ++ ARITH_ss)) []);
 
@@ -40,7 +40,7 @@ val ex1 = store_thm("ex1",
 val ex2 = store_thm("ex2",
   ``(!n. f n = c) ==> (MAP f ls = REPLICATE (LENGTH ls) c)``,
   (* ttt ([],``(!n. f n = c) ==> (MAP f ls = REPLICATE (LENGTH ls) c)``); *)
-  (ASM_SIMP_TAC (srw_ss () ++ boolSimps.LET_ss ++ ARITH_ss)) 
+  (ASM_SIMP_TAC (srw_ss () ++ boolSimps.LET_ss ++ ARITH_ss))
   [listTheory.LIST_EQ_REWRITE, rich_listTheory.EL_REPLICATE] THEN
   SRW_TAC [] [listTheory.EL_MAP]);
 
@@ -61,8 +61,8 @@ val ex3 = store_thm("ex3",
 val ex4 = store_thm("ex4",
   ``count n SUBSET count (n+m)``,
   (* ttt ([],``count n SUBSET count (n+m)``); *)
-  ASM_SIMP_TAC numLib.std_ss 
-    [pred_setTheory.SUBSET_DEF, 
+  ASM_SIMP_TAC numLib.std_ss
+    [pred_setTheory.SUBSET_DEF,
      pred_setTheory.count_def,
      pred_setTheory.GSPECIFICATION] THEN
   METIS_TAC [arithmeticTheory.LESS_IMP_LESS_ADD]
@@ -75,8 +75,8 @@ val ex4 = store_thm("ex4",
 val ex5 = store_thm("ex5",
   ``count (n+m) DIFF count n = IMAGE ($+n) (count m)``,
   (* ttt ([],``count (n+m) DIFF count n = IMAGE ($+n) (count m)``); *)
-  SRW_TAC [ARITH_ss] [pred_setTheory.EXTENSION, EQ_IMP_THM] THEN 
-  Q.EXISTS_TAC `x - n` THEN 
+  SRW_TAC [ARITH_ss] [pred_setTheory.EXTENSION, EQ_IMP_THM] THEN
+  Q.EXISTS_TAC `x - n` THEN
   SRW_TAC [ARITH_ss] []
 );
 

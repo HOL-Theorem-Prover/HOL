@@ -10,15 +10,15 @@ sig
   val last_stac : string ref (* for debugging purpose *)
 
   val add_metis : string list -> string list
-  val stac_to_tac : 
+  val stac_to_tac :
     (int -> goal -> string list) ->
     (string, tactic) Redblackmap.dict ref *
     (string * goal, string * tactic * real) Redblackmap.dict ref *
     (goal * int, string list) Redblackmap.dict ref ->
-    string -> goal -> 
+    string -> goal ->
     string * tactic * real
 
-  
+
   datatype proof_status_t =
     ProofError | ProofSaturated | ProofTimeOut | Proof of string
 

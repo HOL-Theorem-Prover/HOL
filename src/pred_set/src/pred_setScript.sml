@@ -626,7 +626,7 @@ val _ = export_rewrites ["EMPTY_UNION"]
 (* from probability/iterateTheory *)
 val FORALL_IN_UNION = store_thm
   ("FORALL_IN_UNION",
-  ``!P s t:'a->bool. (!x. x IN s UNION t ==> P x) <=> 
+  ``!P s t:'a->bool. (!x. x IN s UNION t ==> P x) <=>
                      (!x. x IN s ==> P x) /\ (!x. x IN t ==> P x)``,
     REWRITE_TAC [IN_UNION] THEN PROVE_TAC []);
 

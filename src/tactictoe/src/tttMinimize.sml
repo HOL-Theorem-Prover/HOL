@@ -312,9 +312,9 @@ fun pretty_proof_wrap p =
     end
   else p
 
-fun minimize_proof p = 
+fun minimize_proof p =
   (pretty_proof_wrap o mini_proof_wrap) p
-  handle _ => 
+  handle _ =>
     (debug "Error: prettification or minimization failed"; p)
 
 (*----------------------------------------------------------------------------
@@ -364,8 +364,8 @@ fun reconstruct g proof =
   then (unsafe_reconstruct g proof handle _ => safe_reconstruct g proof)
   else safe_reconstruct g proof
   )
-  handle _ => 
+  handle _ =>
     (debug ("Error: reconstruction failed" ^ string_of_proof proof);
      string_of_proof proof)
-   
+
 end (* struct *)

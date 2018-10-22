@@ -224,7 +224,7 @@ fun term_of_sml s =
    -------------------------------------------------------------------------- *)
 
 val hh_stac_glob:
-  (string -> 
+  (string ->
      (int, real) Redblackmap.dict *
      (string * fea_t) list *
      (string, goal * int list) Redblackmap.dict ->
