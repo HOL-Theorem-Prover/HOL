@@ -8,7 +8,7 @@ fun x << y = HOLset.isSubset(x,y)
 
 type key = term
 type data = (term HOLset.set * thm option) list
-type table = (key, data) Redblackmap.dict ref
+type table = (key, data) Redblackmap.dict
 type cache = table ref
 
 fun all_hyps thmlist = let
@@ -29,18 +29,18 @@ fun all_aconv [] [] = true
   | all_aconv [] _ = false
   | all_aconv _ [] = false
   | all_aconv (h1::t1) (h2::t2) = aconv h1 h2 andalso all_aconv t1 t2
-fun new_table() =
-    ref (Redblackmap.mkDict Term.compare):table
+val empty_table = Redblackmap.mkDict Term.compare : table
+fun new_table() = ref empty_table
 
 val thmcompare = inv_img_cmp concl Term.compare
 val empty_thmset = HOLset.empty thmcompare
 
 fun CACHE (filt,conv) = let
-  val cache = ref (new_table()) : cache
+  val cache = new_table() : cache
   fun cache_proc thms tm = let
     val _ = if (filt tm) then ()
             else failwith "CACHE_CCONV: not applicable"
-    val prevs = Redblackmap.find (!(!cache), tm) handle Redblackmap.NotFound => []
+    val prevs = Redblackmap.find (!cache, tm) handle Redblackmap.NotFound => []
     val curr = all_hyps thms
     fun ok (prev,SOME thm) = prev << curr
       | ok (prev,NONE) = curr << prev
@@ -58,21 +58,21 @@ fun CACHE (filt,conv) = let
                                         mk_imp(list_mk_conj
                                                  (HOLset.listItems curr),
                                                  tm))) ;
-                         !cache := Redblackmap.insert (!(!cache), tm, (curr,NONE)::prevs);
+                         cache := Redblackmap.insert (!cache, tm, (curr,NONE)::prevs);
                          raise e)
            in
              (trace(2,PRODUCE(tm, "Inserting into cache:", thm));
-              !cache := Redblackmap.insert (!(!cache), tm,(curr,SOME thm)::prevs); thm)
+              cache := Redblackmap.insert (!cache, tm,(curr,SOME thm)::prevs); thm)
            end
   end
 in
   (cache_proc, cache)
 end
 
-fun clear_cache cache = (cache := new_table())
+fun clear_cache cache = (cache := empty_table)
 
 fun cache_values (cache : table ref) = let
-  val items = Redblackmap.listItems (!(!cache))
+  val items = Redblackmap.listItems (!cache)
   fun tolist (set, thmopt) = (HOLset.listItems set, thmopt)
   fun ToList (k, stlist) = (k, map tolist stlist)
 in
@@ -214,9 +214,10 @@ in
   mk_eq(t, if ty = bool then T else mk_arb ty)
 end
 
-fun consider_false_context_cache cache original_goal (ctxtlist:context list) =
+fun consider_false_context_cache table original_goal (ctxtlist:context list) =
     let
-      val cache_F = Redblackmap.find (!cache, boolSyntax.F) handle Redblackmap.NotFound => []
+      val cache_F = Redblackmap.find (table, boolSyntax.F)
+                    handle Redblackmap.NotFound => []
       fun recurse acc ctxts =
           case ctxts of
             [] => possible_ctxts acc
@@ -236,7 +237,7 @@ fun consider_false_context_cache cache original_goal (ctxtlist:context list) =
       recurse [] ctxtlist
     end
 
-fun prove_false_context (conv:thm list -> conv) (cache:table) (ctxtlist:context list) original_goal = let
+fun prove_false_context (conv:thm list -> conv) (cache:cache) (ctxtlist:context list) original_goal = let
   fun recurse clist =
       case clist of
         [] => raise mk_HOL_ERR "Cache" "RCACHE"
@@ -255,7 +256,7 @@ fun prove_false_context (conv:thm list -> conv) (cache:table) (ctxtlist:context 
             end
           | NONE => (trace(2, REDUCE("Inserting failed contradictory context",
                                      conjs));
-                                     cache := Redblackmap.insert (!cache, F, (hyps, NONE)::oldval);
+                     cache := Redblackmap.insert (!cache, F, (hyps, NONE)::oldval);
                      recurse cs)
         end
 in
@@ -264,7 +265,7 @@ end
 
 
 fun RCACHE (dpfvs, check, conv) = let
-  val cache = ref(new_table())
+  val cache = new_table()
   fun build_up_ctxt mp th = let
     val c = concl th
   in
@@ -280,7 +281,7 @@ fun RCACHE (dpfvs, check, conv) = let
   fun decider ctxt t = let
     val _ = if check t then ()
             else raise mk_HOL_ERR "Cache" "RCACHE" "not applicable"
-    val prevs = Redblackmap.find (!(!cache), t) handle NotFound => []
+    val prevs = Redblackmap.find (!cache, t) handle NotFound => []
     val curr = all_hyps ctxt
     fun oksome (prev, SOME thm) = prev << curr
       | oksome (_, NONE) = false
@@ -349,7 +350,7 @@ fun RCACHE (dpfvs, check, conv) = let
                   SOME th => let
                   in
                     trace(2,PRODUCE(t,"Inserting into cache:", th));
-                    !cache := Redblackmap.insert (!(!cache), t, (glhyps, SOME th)::prevs);
+                    cache := Redblackmap.insert (!cache, t, (glhyps, SOME th)::prevs);
                     th
                   end
                 | NONE => let
@@ -358,8 +359,8 @@ fun RCACHE (dpfvs, check, conv) = let
                                     if HOLset.isEmpty glhyps then t
                                     else mk_imp(list_mk_conj
                                                   (map concl thmlist), t)));
-                    !cache := Redblackmap.insert (!(!cache), t, (glhyps, NONE)::prevs);
-                    prove_false_context conv (!cache) cs t
+                    cache := Redblackmap.insert (!cache, t, (glhyps, NONE)::prevs);
+                    prove_false_context conv cache cs t
                   end
               end
           end
@@ -370,7 +371,7 @@ fun RCACHE (dpfvs, check, conv) = let
           in
             case consider_false_context_cache (!cache) t divided_clist of
               proved_it th => th
-            | possible_ctxts cs => prove_false_context conv (!cache) cs t
+            | possible_ctxts cs => prove_false_context conv cache cs t
           end
         | SOME _ => raise Fail "RCACHE: invariant failure the second"
       end
