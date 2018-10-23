@@ -88,15 +88,16 @@ sig
   val dregroup : ('a * 'a -> order) -> ('a * 'b) list -> ('a, 'b list) Redblackmap.dict 
 
   (* list *)
-  val one_in_n : int -> int -> 'a list -> 'a list
-  val shuffle : 'a list -> 'a list
+  val only_hd   : 'a list -> 'a 
+  val one_in_n  : int -> int -> 'a list -> 'a list
+  val shuffle   : 'a list -> 'a list
   val select_in_distrib : ('a * real) list -> 'a
-  val map_snd : ('a -> 'b) -> ('c * 'a) list -> ('c * 'b) list
-  val map_fst : ('a -> 'b) -> ('a * 'c) list -> ('b * 'c) list 
+  val map_snd   : ('a -> 'b) -> ('c * 'a) list -> ('c * 'b) list
+  val map_fst   : ('a -> 'b) -> ('a * 'c) list -> ('b * 'c) list 
   val map_assoc : ('a -> 'b) -> 'a list -> ('a * 'b) list
   val cartesian_product : 'a list -> 'b list -> ('a * 'b) list
-  val findSome : ('a -> 'b option) -> 'a list -> 'b option
-  val first_n : int -> 'a list -> 'a list
+  val findSome  : ('a -> 'b option) -> 'a list -> 'b option
+  val first_n   : int -> 'a list -> 'a list
   val first_test_n : ('a -> bool) -> int -> 'a list -> 'a list
   val part_n : int -> 'a list -> ('a list * 'a list)
   val number_list : int -> 'a list -> (int * 'a) list
@@ -108,7 +109,9 @@ sig
   val topo_sort   : (''a * ''a list) list -> ''a list
   val sort_thyl   : string list -> string list
   val fold_left   : ('a -> 'b -> 'b) -> 'a list -> 'b -> 'b
-  val mk_batch    : int -> 'a list -> 'a list list
+  val mk_batch         : int -> 'a list -> 'a list list
+  val number_partition : int -> int -> int list list   
+  val duplicate : int -> 'a list -> 'a list  
 
   (* statistics *)
   val incr   : int ref -> unit
@@ -177,6 +180,7 @@ sig
    
   val dbg_flag : bool ref
   val dbg_file : string -> string -> unit
+  val erase_dbg : string -> unit  
 
   (* parse *)
   val is_string   : string -> bool
@@ -195,6 +199,12 @@ sig
   val rm_squote : string -> string
   val rm_space  : string -> string
   
+  (* more parsing *)
+  datatype lisp = Lterm of lisp list | Lstring of string
+  val lisp_of : string list -> lisp list
+  val rec_fun_type : int -> hol_type -> hol_type
+  val term_of_lisp : lisp -> term
+
   (* escaping *)
   val escape : string -> string
   val unescape : string -> string

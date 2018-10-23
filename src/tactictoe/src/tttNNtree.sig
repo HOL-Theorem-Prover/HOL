@@ -23,13 +23,10 @@ include Abbrev
      dw     : real vector vector}
  
   (* Tree NN *) 
-  type treenn = ((term,nn) Redblackmap.dict * nn)
-
-  (* preparing training set *)
-  val order_subtm : term -> term list  
+  type treenn = ((term * int),nn) Redblackmap.dict * nn
 
   (* initialization of the treenn *)
-  val random_treenn : int -> (term * int) list -> int -> treenn
+  val random_treenn : (int * int) -> (term * int) list -> treenn
   
   (* forward and backward propagation *)
   val fp_treenn : treenn -> term list ->
@@ -39,8 +36,20 @@ include Abbrev
     int ->
     (term, fpdata list) Redblackmap.dict * fpdata list ->
     term list * real vector ->
-    (term, bpdata list list) Redblackmap.dict * bpdata list
+    (term * int, bpdata list list) Redblackmap.dict * bpdata list
   
+  (* inference *)
+  val apply_treenn : treenn -> term -> (real * real list)
+   
+  (* training set *)
+  val order_subtm : term -> term list 
+  val prepare_trainset   : 
+    (term * (real * real list)) list -> (term list * real vector) list
+  val cal_of_prepset     : 
+    (term list * real vector) list -> (term * int) list
+  val string_of_trainset : 
+    (term * (real * real list)) list -> string
+
   (* training *)
   val train_treenn_nepoch : 
     int -> int -> treenn -> int ->
@@ -55,5 +64,13 @@ include Abbrev
 
   (* printing *)
   val string_of_treenn : treenn -> string
+
+  (* training set helpers *)
+  val create_boolcastl : term list -> term list
+  val cast_to_bool     : term list -> term -> term
+  val io_to_nnterm     : term * term -> term
+  val goal_to_nnterm   : goal -> term
+  val cut_to_nntml     : term list -> (goal * term) -> term list
+  val cal_of_term      : term -> (term * int) list
 
 end

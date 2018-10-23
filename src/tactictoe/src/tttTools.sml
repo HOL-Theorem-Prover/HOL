@@ -195,6 +195,8 @@ fun is_reserved s =
    List
    -------------------------------------------------------------------------- *)
 
+fun only_hd x = case x of [a] => a | _ => raise ERR "only_hd" ""
+
 fun one_in_n n start l = case l of
     [] => []
   | a :: m => if start mod n = 0 
@@ -305,15 +307,62 @@ fun topo_sort graph =
 
 fun sort_thyl thyl = topo_sort (map (fn x => (x, ancestry x)) thyl)
 
+(* keeps the order *)
 fun mk_batch_aux size acc res l =
   if length acc >= size
-  then mk_batch_aux size [] (acc :: res) l
+  then mk_batch_aux size [] (rev acc :: res) l
   else case l of
-      [] => res
+      [] => rev res
     | a :: m => mk_batch_aux size (a :: acc) res m
 
 fun mk_batch size l = mk_batch_aux size [] [] l
 
+fun number_partition m n = 
+  if m > n then raise ERR "partition" "" else
+  if m = 1 then [[n]] else
+  let 
+    fun f x l = x :: l
+    val sizel = List.tabulate (n-m+1, fn x => x+1)
+    fun g size = map (f size) (number_partition (m-1) (n-size))
+  in
+    List.concat (map g sizel)
+  end
+
+fun duplicate n l = 
+  List.concat (map (fn x => List.tabulate (n, fn _ => x)) l);
+
+(* ---------------------------------------------------------------------------
+   Parsing
+   -------------------------------------------------------------------------- *)
+
+datatype lisp = Lterm of lisp list | Lstring of string
+
+fun lisp_aux acc sl = case sl of
+    []       => (rev acc, [])
+  | "(" :: m => 
+    let val (parsedl,contl) = lisp_aux [] m in 
+      lisp_aux (Lterm parsedl :: acc) contl 
+    end
+  | ")" :: m => (rev acc, m)
+  | a   :: m => lisp_aux (Lstring a :: acc) m
+
+fun lisp_of sl = fst (lisp_aux [] sl)
+
+fun strip_lisp x = case x of 
+    Lterm (Lstring x :: m) => (x, m)
+  | Lstring x              => (x ,[])
+  | _                      => raise ERR "strip_lisp" "operator is a comb"
+
+fun rec_fun_type n ty =
+  if n <= 1 then ty else mk_type ("fun",[ty,rec_fun_type (n-1) ty])
+
+fun term_of_lisp x = 
+  let 
+    val (oper,argl) = strip_lisp x 
+    val opertm = mk_var (oper, rec_fun_type (length argl + 1) alpha)
+  in
+    list_mk_comb (opertm, map term_of_lisp argl)
+  end
 
 (* ---------------------------------------------------------------------------
    Reals
@@ -623,6 +672,8 @@ fun dbg_file file s =
   if !dbg_flag 
   then append_endline (tactictoe_dir ^ "/dbg/" ^ file) s 
   else ()
+
+fun erase_dbg file = erase_file (tactictoe_dir ^ "/dbg/" ^ file)
 
 (* --------------------------------------------------------------------------
    Parsing

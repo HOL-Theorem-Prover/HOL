@@ -2,43 +2,42 @@ signature tttMCTS =
 sig
   
   include Abbrev
-
-  type 'a pos = bool * 'a list option
-  type choice = (string * real * int list)
   
-  type 'a node = 
+  datatype status = Undecided | Win | Lose
+  
+  val string_of_status : status -> string
+
+  (* 'a is the representation of the board *)  
+  type 'a pos = bool * 'a
+
+  (* ''b is the representation of a move *)
+  type 'b choice = (('b * real) * int list)
+  
+  type ('a,'b) node = 
   {
-    pol   : choice list,
+    pol   : 'b choice list,
     pos   : 'a pos,
     id    : int list,
-    sum   : real ref,
-    vis   : real ref
+    sum   : real,
+    vis   : real,
+    status : status
   }
-  type 'a tree = (int list, 'a node) Redblackmap.dict 
 
-  datatype endcheck = InProgress | Win | Lose 
-  
+  type ('a,'b) tree = (int list, ('a,'b) node) Redblackmap.dict 
+
+  (* tool *)
+  val genealogy : int list -> int list list
+
   (* search function *)
   val mcts : 
     int ->
-    (int list -> 'a pos -> real * choice list) ->
-    ('a pos -> endcheck) ->
-    ('a tree -> int list -> 'a pos -> bool) ->
-    (string -> 'a pos -> 'a pos) ->
+    ('a pos -> real * ('b * real) list) ->
+    (('a,'b) tree -> 'a pos -> status) ->
+    ('b -> 'a pos -> 'a pos) ->
     'a pos -> 
-    'a tree
-  
-  (* creating a player *)
-  val rand_evalpoli : string list -> 'a pos -> (real * real list)
-  val wrap_poli : int list -> ('a * 'b) list -> ('a * 'b * int list) list
-  
-  (* training examples *)
-  val traineval_of_node : 'a node -> real
-  val trainpoli_of_node : 'a tree -> 'a node -> (string * real) list
-  val trainex_of_node   : 'a tree -> 'a node -> (real * real list) 
+    ('a,'b) tree
 
   (* statistics *)
-  val main_variation : 'a tree -> 'a node list
+  val root_variation : ('a,''b) tree -> ('a,''b) node list
   
-
 end

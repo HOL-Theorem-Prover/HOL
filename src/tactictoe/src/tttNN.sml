@@ -17,7 +17,6 @@ val momentum = ref 0.0
 val learning_rate = ref 0.01
 val decay = ref 1.0
 
-
 (*----------------------------------------------------------------------------
  * Activation functions. Derivatives use the function itself.
  *----------------------------------------------------------------------------*)

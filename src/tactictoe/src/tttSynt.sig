@@ -3,8 +3,7 @@ sig
 
   include Abbrev
   
-  val number_partition : int -> int -> int list list
-
+  (* randorm terms: top-down *)
   val random_term : 
     (hol_type, term list) Redblackmap.dict -> (int * hol_type) -> term
   
@@ -16,5 +15,13 @@ sig
 
   val uniform_term : 
     int -> term list -> (int * hol_type) -> term list  
+  
+  (* selected terms: bottom-up *)
+  val evalf_to_filterf : 
+    real -> (term -> real) -> term list -> term list
+
+  val synthetize : 
+    (term list -> term list) -> (int * int) -> term list -> term list
+
 
 end
