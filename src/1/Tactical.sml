@@ -329,28 +329,51 @@ fun ADD_SGS_TAC (tms : term list) (tac : tactic) (g as (asl, w) : goal) =
 local
    val validity_tag = "ValidityCheck"
    fun masquerade goal = Thm.mk_oracle_thm validity_tag goal
-   fun achieves th (asl, w) =
-      Term.aconv (concl th) w andalso
-      Lib.all (fn h => Lib.exists (aconv h) asl) (hyp th)
+   datatype validity_failure = Concl of term | Hyp of term
+   fun bad_prf th (asl, w) =
+       if concl th !~ w then SOME (Concl (concl th))
+       else
+         case List.find (fn h => List.all (not o aconv h) asl) (hyp th) of
+             NONE => NONE
+           | SOME h => SOME (Hyp h)
+   fun error f t e =
+       let
+         val pfx = "Invalid " ^ t ^ ": theorem has "
+         val (desc, t) =
+             case e of
+                 Hyp h => ("bad hypothesis", h)
+               | Concl c => ("wrong conclusion", c)
+       in
+         raise ERR f (pfx ^ desc ^ " " ^ Parse.term_to_string t)
+       end
 in
    fun VALID (tac: tactic) : tactic =
       fn g: goal =>
          let
             val (result as (glist, prf)) = tac g
          in
-            if achieves (prf (map masquerade glist)) g
-               then result
-            else raise ERR "VALID" "Invalid tactic"
+           case bad_prf (prf (map masquerade glist)) g of
+               NONE => result
+             | SOME e => error "VALID" "tactic" e
          end
 
    fun VALID_LT (ltac: list_tactic) : list_tactic =
       fn gl: goal list =>
          let
             val (result as (glist, prf)) = ltac gl
+            val wrongnum_msg = "Invalid list-tactic: wrong number of results\
+                               \ from justification"
+            fun check ths gls =
+                case (ths, gls) of
+                    ([], []) => result
+                  | (_, []) => raise ERR "VALID_LT" wrongnum_msg
+                  | ([], _) => raise ERR "VALID_LT" wrongnum_msg
+                  | (th::ths0,gl::gls0) =>
+                    (case bad_prf th gl of
+                         NONE => check ths0 gls0
+                       | SOME e => error "VALID_LT" "list-tactic" e)
          in
-            if Lib.all2 achieves (prf (map masquerade glist)) gl
-               then result
-            else raise ERR "VALID_LT" "Invalid list-tactic"
+            check (prf (map masquerade glist)) gl
          end
 end
 

@@ -1163,3 +1163,24 @@ val _ = print "Testing cond-printer after set_grammar_ancestry\n"
 val _ = set_trace "PP.avoid_unicode" 1
 val _ = set_grammar_ancestry ["bool"]
 val _ = app condprinter_test condprinter_tests
+
+val _ = let
+  open Exn
+  fun badtac (asl,g) = ([], fn [] => ASSUME ``p:bool`` | _ => raise Fail "")
+  val vtac = VALID badtac
+  fun checkmsg P f os ofn m = os = "Tactical" andalso ofn = f andalso P m
+  fun checkv P = checkmsg P "VALID"
+  fun checkvl P = checkmsg P "VALID_LT"
+  val _ = tprint "VALID-checking (normal)"
+  val _ = require is_result vtac ([``p:bool``], ``p:bool``)
+  val _ = tprint "VALID-checking (bad concl)"
+  val expectedmsg1 = "Invalid tactic: theorem has wrong conclusion p"
+  val _ = require (check_HOL_ERR (checkv (equal expectedmsg1))) vtac
+                  ([``p:bool``, ``q:bool``], ``P:bool``)
+  val _ = tprint "VALID-checking (bad hyp)"
+  val expectedmsg2 = "Invalid tactic: theorem has bad hypothesis p"
+  val _ = require (check_HOL_ERR (checkv (equal expectedmsg2))) vtac
+                  ([], ``p:bool``)
+in
+  ()
+end
