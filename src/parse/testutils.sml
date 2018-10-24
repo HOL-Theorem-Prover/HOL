@@ -3,11 +3,13 @@ struct
 
 open Lib Feedback
 
-datatype 'a testresult = Normal of 'a | Exn of exn
+datatype testresult = datatype Exn.result
 
 val linewidth = ref 80
 val output_linewidth = Holmake_tools.getWidth()
 
+fun is_result (Exn.Res _) = true
+  | is_result _ = false
 fun crush extra w s =
   let
     val exsize = UTF8.size extra
@@ -21,9 +23,46 @@ fun crush extra w s =
 
 fun tprint s = print (crush " ...  " (output_linewidth - 3) s)
 
+fun printsize s =
+    let
+      fun normal c s =
+          case UTF8.getChar s of
+              NONE => c
+            | SOME ((_, 27), rest) => escape c rest
+            | SOME (_, rest) => normal (c + 1) rest
+      and escape c s =
+          case UTF8.getChar s of
+              NONE => c + 1
+            | SOME (("[", _), rest) => ANSIp c rest
+            | SOME (_, rest) => normal (c - 1) rest
+                (* bare escape consumes next 2, it seems *)
+      and ANSIp c s = (* ANSI parameters *)
+          case UTF8.getChar s of
+              NONE => c
+            | SOME ((_, i), rest) =>
+                if 0x30 <= i andalso i <= 0x3F then ANSIp c rest
+                else ANSIib c s
+      and ANSIib c s = (* ANSI intermediate bytes *)
+          case UTF8.getChar s of
+              NONE => c
+            | SOME ((_, i), rest) =>
+                if 0x20 <= i andalso i <= 0x2F then ANSIib c rest
+                else ANSIfinal c s
+      and ANSIfinal c s = (* ANSI final bytes *)
+          case UTF8.getChar s of
+              NONE => c
+            | SOME(_, rest) => normal c rest
+    in
+      normal 0 s
+    end
+
 fun tadd s =
-  (for_se 1 (UTF8.size s) (fn _ => print "\008");
-   print s)
+    let
+      val (pfx,sfx) = Substring.position "\n" (Substring.full s)
+    in
+      for_se 1 (printsize (Substring.string pfx)) (fn _ => print "\008");
+      print s
+    end
 
 fun checkterm pfx s =
   case OS.Process.getEnv "TERM" of
@@ -73,6 +112,8 @@ in
 end
 end (* local *)
 
+val FAILEDstr = "\027[2CFAILED!"
+
 fun tppw width {input=s,output,testf} = let
   val _ = tprint (testf s)
   val t = Parse.Term [QUOTE s]
@@ -80,7 +121,7 @@ fun tppw width {input=s,output,testf} = let
   fun f s = String.translate (fn #" " => UTF8.chr 0x2423 | c => str c) s
 in
   if res = output then OK() else
-  die ("\n  FAILED!  Saw:\n    >|" ^ clear (f res) ^
+  die (FAILEDstr ^ "\n  Saw:\n    >|" ^ clear (f res) ^
        boldred "|<\n  rather than \n    >|" ^ clear (f output) ^ boldred "|<\n")
 end
 fun tpp s = tppw (!linewidth) {input=s,output=s,testf=standard_tpp_message}
@@ -90,15 +131,15 @@ fun tpp_expected r = tppw (!linewidth) r
 fun timed f check x =
   let
     val cputimer = Timer.startCPUTimer()
-    val res = Normal (f x) handle e => Exn e
+    val res = Res (f x) handle e => Exn e
     val {nongc = {usr,...}, ...} = Timer.checkCPUTimes cputimer
-    val usr_s = "(" ^ Time.toString usr ^"s)     "
+    val usr_s = "(" ^ Time.toString usr ^"s)      "
     val _ = tadd usr_s
   in
     check res
   end
 
-fun exncheck f (Normal a) = f a
+fun exncheck f (Res a) = f a
   | exncheck f (Exn e) = die ("\n  EXN: "^General.exnMessage e)
 
 fun convtest (nm,conv,tm,expected) =
@@ -129,16 +170,37 @@ fun convtest (nm,conv,tm,expected) =
 fun is_struct_HOL_ERR st (HOL_ERR {origin_structure = st',...}) = st' = st
   | is_struct_HOL_ERR _ _ = false
 
+fun check_HOL_ERRexn P e =
+    case e of
+        HOL_ERR{origin_structure,origin_function,message} =>
+        P origin_structure origin_function message
+      | _ => false
+
+fun check_HOL_ERR P (Res _) = false
+  | check_HOL_ERR P (Exn e) = check_HOL_ERRexn P e
+
+
+fun require_msg P pr f x =
+    let
+      fun check res =
+          if P res then OK()
+          else
+            case res of
+                Exn e => die (FAILEDstr ^ "\n  Unexpected exception:\n    " ^
+                              General.exnMessage e)
+              | Res y => die (FAILEDstr ^ "\n  Unexpected result:\n    " ^ pr y)
+    in
+      timed f check x
+    end
+fun require P f x = require_msg P (fn _ => "") f x
+
 fun shouldfail {printarg,testfn,printresult,checkexn} arg =
   let
     val _ = tprint (printarg arg)
-    fun handle_result (Normal r) =
-          die ("FAILED\n  got: " ^ printresult r)
-      | handle_result (Exn e) =
-          if checkexn e then OK()
-          else die ("FAILED\n  unexpected exception: " ^ General.exnMessage e)
+    fun check (Res r) = false
+      | check (Exn e) = checkexn e
   in
-    timed testfn handle_result arg
+    require_msg check printresult testfn arg
   end
 
 end (* struct *)
