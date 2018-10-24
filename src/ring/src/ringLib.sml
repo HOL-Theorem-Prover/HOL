@@ -197,7 +197,8 @@ fun binop_eq ty =
 type convs = { NormConv : conv, EqConv : conv,
                Reify : term list -> {Metamap : term, Poly : term list} }
 
-val no_such_ring = RING_ERR "" "No ring declared on that type"
+fun no_such_ring f ty =
+  RING_ERR f ("No ring declared on type "^Parse.type_to_string ty)
 
 val rings =
   ref (Redblackmap.mkDict Type.compare) : (hol_type, convs) Redblackmap.dict ref;
@@ -205,10 +206,18 @@ val rings =
 fun add_ring ty rng =
   rings := Redblackmap.insert (!rings, ty,rng);
 
-fun RING_NORM_CONV tm = #NormConv (Redblackmap.find (!rings, type_of tm)) tm;
-fun RING_CONV tm      = #EqConv (Redblackmap.find (!rings, #3 (dest_eq_ty tm))) tm;
-fun reify tml         = #Reify (Redblackmap.find (!rings, type_of (hd tml))) tml;
+fun find_apply nm (isel : convs -> ('a -> 'b)) tysel (x:'a) =
+  let
+    val ty = tysel x
+    val r = Redblackmap.find(!rings, ty)
+      handle Redblackmap.NotFound => raise no_such_ring nm ty
+  in
+    isel r x
+  end
 
+val RING_NORM_CONV = find_apply "RING_NORM_CONV" #NormConv type_of
+val RING_CONV      = find_apply "RING_CONV" #EqConv (#3 o dest_eq_ty)
+val reify          = find_apply "reify" #Reify (type_of o hd)
 
 fun declare_ring {RingThm,IsConst,Rewrites} =
   let val {Ty,OpSign,SoundThm,LhsThm,RhsThm} = dest_ring_thm RingThm

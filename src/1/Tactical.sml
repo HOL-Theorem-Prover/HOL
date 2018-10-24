@@ -117,7 +117,7 @@ fun TACS_TO_LT (tacl: tactic list) : list_tactic =
 
 (*---------------------------------------------------------------------------
  * NULL_OK_LT ltac: A list-tactical like ltac but succeeds with no effect
- *                  when applied to an ampty goal list
+ *                  when applied to an empty goal list
  *---------------------------------------------------------------------------*)
 
 fun NULL_OK_LT ltac [] = ([], Lib.I)

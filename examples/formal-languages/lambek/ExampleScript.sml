@@ -36,9 +36,9 @@ in
     val qpat_x_assum = qpat_x_assum;
 
     (* Tacticals for better expressivity *)
-    fun fix  ts = MAP_EVERY Q.X_GEN_TAC ts;	(* from HOL Light *)
-    fun set  ts = MAP_EVERY Q.ABBREV_TAC ts;	(* from HOL mizar mode *)
-    fun take ts = MAP_EVERY Q.EXISTS_TAC ts;	(* from HOL mizar mode *)
+    fun fix  ts = MAP_EVERY Q.X_GEN_TAC ts;     (* from HOL Light *)
+    fun set  ts = MAP_EVERY Q.ABBREV_TAC ts;    (* from HOL mizar mode *)
+    fun take ts = MAP_EVERY Q.EXISTS_TAC ts;    (* from HOL mizar mode *)
 end;
 
 val _ = new_theory "Example";
@@ -77,7 +77,7 @@ local
     and after_tac  = PROVE_TAC [arrow_rules]
 in
     fun check_arrow tm =
-	prove (tm, before_tac >> after_tac)
+        prove (tm, before_tac >> after_tac)
 end;
 
 val John_works_thm3 = save_thm (
@@ -103,8 +103,8 @@ val Ex1 = store_thm ("Ex1", (* sn/n . n |- sn *)
 
 val Ex2 = store_thm ("Ex2", (* sn . (((sn \ n) / S) . S)) |- n *)
   ``natDed NL_Sequent
-	(OneForm (Dot (At "sn") (Dot (Slash (Backslash (At "sn") (At "n")) (At "S")) (At "S"))))
-	(At "n")``,
+        (OneForm (Dot (At "sn") (Dot (Slash (Backslash (At "sn") (At "n")) (At "S")) (At "S"))))
+        (At "n")``,
     MATCH_MP_TAC DotElim
  >> ONCE_REWRITE_TAC [replace_cases]
  >> RW_TAC std_ss [Term_11, Term_distinct]
@@ -137,7 +137,7 @@ val to = ``Slash (At "pp") (At "np")``;
 
 val himself = (* ((np \ s) / np) \ (np \ s) *)
   ``Backslash (Slash (Backslash (At "np") (At "S")) (At "np"))
-	      (Backslash (At "np") (At "S"))``;
+              (Backslash (At "np") (At "S"))``;
 
 (* (Kevin, ((talks, to), himself)) *)
 val Kevin_talks_to_himself = ``Dot ^Kevin (Dot (Dot ^talks ^to) ^himself)``;
@@ -191,7 +191,7 @@ val cosa_guarda_passare_arrow = store_thm (
                       -------------------------- L_Sequent
                        (S/inf, inf/np), np |- S
                       -------------------------- /i
- S/(S/np) |- S/(S/np)	 S/inf, inf/np |- S/np
+ S/(S/np) |- S/(S/np)    S/inf, inf/np |- S/np
 ------------------------------------------------ /e
     S/(S/np), (S/inf, inf/np) |- S
 ------------------------------------ Lex
@@ -201,7 +201,7 @@ val cosa_guarda_passare_arrow = store_thm (
 val cosa_guarda_passare_natDed = store_thm (
    "cosa_guarda_passare_natDed",
   ``natDed L_Sequent (Comma (OneForm ^cosa) (Comma (OneForm ^guarda) (OneForm ^passare)))
-		     (At "S")``,
+                     (At "S")``,
     MATCH_MP_TAC SlashElim
  >> EXISTS_TAC ``(At "S") / (At "np")`` (* guess 1 *)
  >> CONJ_TAC (* 2 sub-goals here *)
@@ -211,7 +211,7 @@ val cosa_guarda_passare_natDed = store_thm (
       MATCH_MP_TAC SlashIntro \\
       MATCH_MP_TAC NatExtSimpl \\
       EXISTS_TAC ``(Comma (OneForm (At "S" / At "inf"))
-			  (Comma (OneForm (At "inf" / At "np")) (OneForm (At "np"))))`` \\
+                          (Comma (OneForm (At "inf" / At "np")) (OneForm (At "np"))))`` \\
       CONJ_TAC >- REWRITE_TAC [L_Sequent_rules] \\
       MATCH_MP_TAC SlashElim \\
       EXISTS_TAC ``At "inf"`` \\ (* guess 2 *)
@@ -233,7 +233,7 @@ val cosa_guarda_passare_natDed = store_thm (
          -------------------------- L_Sequent
           (S/inf, inf/np), np |- S
          ----------------------------- /R
- S |- S		S/inf, inf/np |- S/np
+ S |- S         S/inf, inf/np |- S/np
 -------------------------------------- /L
     S/(S/np), (S/inf, inf/np) |- S
 ------------------------------------ Lex
@@ -243,14 +243,14 @@ val cosa_guarda_passare_natDed = store_thm (
 val cosa_guarda_passare_gentzenSequent = store_thm (
    "cosa_guarda_passare_gentzenSequent",
   ``gentzenSequent L_Sequent (Comma (OneForm ^cosa) (Comma (OneForm ^guarda) (OneForm ^passare)))
-			     (At "S")``,
+                             (At "S")``,
     MATCH_MP_TAC LeftSlashSimpl
  >> CONJ_TAC (* 2 sub-goals here *)
  >| [ (* goal 1 *)
       MATCH_MP_TAC RightSlash \\
       MATCH_MP_TAC SeqExtSimpl \\
       EXISTS_TAC ``(Comma (OneForm (At "S" / At "inf"))
-			  (Comma (OneForm (At "inf" / At "np")) (OneForm (At "np"))))`` \\
+                          (Comma (OneForm (At "inf" / At "np")) (OneForm (At "np"))))`` \\
       CONJ_TAC >- REWRITE_TAC [L_Sequent_rules] \\
       MATCH_MP_TAC LeftSlashSimpl \\
       CONJ_TAC >| (* 2 sub-goals here *)
@@ -264,17 +264,17 @@ val cosa_guarda_passare_gentzenSequent = store_thm (
 
 val r0 =
   ``(Unf (Sequent L_Sequent (Comma (OneForm (At "S" / (At "S" / At "np")))
-				   (Comma (OneForm (At "S" / At "inf")) (OneForm (At "inf" / At "np"))))
-			    (At "S")))``;
+                                   (Comma (OneForm (At "S" / At "inf")) (OneForm (At "inf" / At "np"))))
+                            (At "S")))``;
 
 val r1 =
   ``(Der (Sequent L_Sequent (Comma (OneForm (At "S" / (At "S" / At "np")))
-				   (Comma (OneForm (At "S" / At "inf")) (OneForm (At "inf" / At "np"))))
-			    (At "S"))
-	 LeftSlash
+                                   (Comma (OneForm (At "S" / At "inf")) (OneForm (At "inf" / At "np"))))
+                            (At "S"))
+         LeftSlash
       [ (Unf (Sequent L_Sequent (OneForm (At "S")) (At "S"))) ;
-	(Unf (Sequent L_Sequent (Comma (OneForm (At "S" / At "inf")) (OneForm (At "inf" / At "np")))
-				(At "S" / At "np"))) ])``;
+        (Unf (Sequent L_Sequent (Comma (OneForm (At "S" / At "inf")) (OneForm (At "inf" / At "np")))
+                                (At "S" / At "np"))) ])``;
 
 val r0_to_r1 = store_thm (
    "r0_to_r1", ``derivOne ^r0 ^r1``,
@@ -295,13 +295,13 @@ val r0_to_r1'' = store_thm (
 
 val r2 =
   ``(Der (Sequent L_Sequent (Comma (OneForm (At "S" / (At "S" / At "np")))
-				   (Comma (OneForm (At "S" / At "inf")) (OneForm (At "inf" / At "np"))))
-			    (At "S"))
-	 LeftSlash
+                                   (Comma (OneForm (At "S" / At "inf")) (OneForm (At "inf" / At "np"))))
+                            (At "S"))
+         LeftSlash
       [ (Der (Sequent L_Sequent (OneForm (At "S")) (At "S"))
-	     SeqAxiom []) ;
-	(Unf (Sequent L_Sequent (Comma (OneForm (At "S" / At "inf")) (OneForm (At "inf" / At "np")))
-				(At "S" / At "np"))) ])``;
+             SeqAxiom []) ;
+        (Unf (Sequent L_Sequent (Comma (OneForm (At "S" / At "inf")) (OneForm (At "inf" / At "np")))
+                                (At "S" / At "np"))) ])``;
 
 val r1_to_r2 = store_thm (
    "r1_to_r2", ``deriv ^r1 ^r2``,
@@ -311,18 +311,18 @@ val r1_to_r2 = store_thm (
 
 val r3 =
   ``(Der (Sequent L_Sequent (Comma (OneForm (At "S" / (At "S" / At "np")))
-				   (Comma (OneForm (At "S" / At "inf")) (OneForm (At "inf" / At "np"))))
-			    (At "S"))
-	 LeftSlash
+                                   (Comma (OneForm (At "S" / At "inf")) (OneForm (At "inf" / At "np"))))
+                            (At "S"))
+         LeftSlash
       [ (Der (Sequent L_Sequent (OneForm (At "S")) (At "S"))
-	     SeqAxiom []) ;
-	(Der (Sequent L_Sequent (Comma (OneForm (At "S" / At "inf")) (OneForm (At "inf" / At "np")))
-				(At "S" / At "np"))
-	     RightSlash
-	  [ (Unf (Sequent L_Sequent (Comma (Comma (OneForm (At "S" / At "inf"))
-						  (OneForm (At "inf" / At "np")))
-					   (OneForm (At "np")))
-				    (At "S"))) ]) ])``;
+             SeqAxiom []) ;
+        (Der (Sequent L_Sequent (Comma (OneForm (At "S" / At "inf")) (OneForm (At "inf" / At "np")))
+                                (At "S" / At "np"))
+             RightSlash
+          [ (Unf (Sequent L_Sequent (Comma (Comma (OneForm (At "S" / At "inf"))
+                                                  (OneForm (At "inf" / At "np")))
+                                           (OneForm (At "np")))
+                                    (At "S"))) ]) ])``;
 
 val r2_to_r3 = store_thm (
    "r2_to_r3", ``deriv ^r2 ^r3``,
@@ -332,23 +332,23 @@ val r2_to_r3 = store_thm (
 
 val r4 =
   ``(Der (Sequent L_Sequent (Comma (OneForm (At "S" / (At "S" / At "np")))
-				   (Comma (OneForm (At "S" / At "inf")) (OneForm (At "inf" / At "np"))))
-			    (At "S"))
-	 LeftSlash
+                                   (Comma (OneForm (At "S" / At "inf")) (OneForm (At "inf" / At "np"))))
+                            (At "S"))
+         LeftSlash
       [ (Der (Sequent L_Sequent (OneForm (At "S")) (At "S"))
-	     SeqAxiom []) ;
-	(Der (Sequent L_Sequent (Comma (OneForm (At "S" / At "inf")) (OneForm (At "inf" / At "np")))
-				(At "S" / At "np"))
-	     RightSlash
-	  [ (Der (Sequent L_Sequent (Comma (Comma (OneForm (At "S" / At "inf"))
-						  (OneForm (At "inf" / At "np")))
-					   (OneForm (At "np")))
-				    (At "S"))
-			  SeqExt
-		    [ (Unf (Sequent L_Sequent (Comma (OneForm (At "S" / At "inf"))
-						     (Comma (OneForm (At "inf" / At "np"))
-							    (OneForm (At "np"))))
-					      (At "S"))) ]) ]) ])``;
+             SeqAxiom []) ;
+        (Der (Sequent L_Sequent (Comma (OneForm (At "S" / At "inf")) (OneForm (At "inf" / At "np")))
+                                (At "S" / At "np"))
+             RightSlash
+          [ (Der (Sequent L_Sequent (Comma (Comma (OneForm (At "S" / At "inf"))
+                                                  (OneForm (At "inf" / At "np")))
+                                           (OneForm (At "np")))
+                                    (At "S"))
+                          SeqExt
+                    [ (Unf (Sequent L_Sequent (Comma (OneForm (At "S" / At "inf"))
+                                                     (Comma (OneForm (At "inf" / At "np"))
+                                                            (OneForm (At "np"))))
+                                              (At "S"))) ]) ]) ])``;
 
 val r3_to_r4 = store_thm (
    "r3_to_r4", ``deriv ^r3 ^r4``,
@@ -357,36 +357,36 @@ val r3_to_r4 = store_thm (
  >> MATCH_MP_TAC derivDerivOne
  >> MATCH_MP_TAC derivSeqExt
  >> EXISTS_TAC ``(Comma (OneForm (At "S" / At "inf"))
-			(Comma (OneForm (At "inf" / At "np")) (OneForm (At "np"))))``
+                        (Comma (OneForm (At "inf" / At "np")) (OneForm (At "np"))))``
  >> EXISTS_TAC ``(Comma (Comma (OneForm (At "S" / At "inf"))
-			       (OneForm (At "inf" / At "np")))
-			(OneForm (At "np")))``
+                               (OneForm (At "inf" / At "np")))
+                        (OneForm (At "np")))``
  >> REWRITE_TAC [replaceRoot, L_Sequent_rules]);
 
 val r5 =
   ``(Der (Sequent L_Sequent (Comma (OneForm (At "S" / (At "S" / At "np")))
-				   (Comma (OneForm (At "S" / At "inf")) (OneForm (At "inf" / At "np"))))
-			    (At "S"))
-	 LeftSlash
+                                   (Comma (OneForm (At "S" / At "inf")) (OneForm (At "inf" / At "np"))))
+                            (At "S"))
+         LeftSlash
       [ (Der (Sequent L_Sequent (OneForm (At "S")) (At "S"))
-	     SeqAxiom []) ;
-	(Der (Sequent L_Sequent (Comma (OneForm (At "S" / At "inf")) (OneForm (At "inf" / At "np")))
-				(At "S" / At "np"))
-	     RightSlash
-	  [ (Der (Sequent L_Sequent (Comma (Comma (OneForm (At "S" / At "inf"))
-						  (OneForm (At "inf" / At "np")))
-					   (OneForm (At "np")))
-				    (At "S"))
-			  SeqExt
-		    [ (Der (Sequent L_Sequent (Comma (OneForm (At "S" / At "inf"))
-						     (Comma (OneForm (At "inf" / At "np"))
-							    (OneForm (At "np"))))
-					      (At "S"))
-			   LeftSlash
-			[ (Unf (Sequent L_Sequent (Comma (OneForm (At "S" / At "inf"))
-							 (OneForm (At "inf")))
-						  (At "S"))) ;
-			  (Unf (Sequent L_Sequent (OneForm (At "np")) (At "np"))) ]) ]) ]) ])``;
+             SeqAxiom []) ;
+        (Der (Sequent L_Sequent (Comma (OneForm (At "S" / At "inf")) (OneForm (At "inf" / At "np")))
+                                (At "S" / At "np"))
+             RightSlash
+          [ (Der (Sequent L_Sequent (Comma (Comma (OneForm (At "S" / At "inf"))
+                                                  (OneForm (At "inf" / At "np")))
+                                           (OneForm (At "np")))
+                                    (At "S"))
+                          SeqExt
+                    [ (Der (Sequent L_Sequent (Comma (OneForm (At "S" / At "inf"))
+                                                     (Comma (OneForm (At "inf" / At "np"))
+                                                            (OneForm (At "np"))))
+                                              (At "S"))
+                           LeftSlash
+                        [ (Unf (Sequent L_Sequent (Comma (OneForm (At "S" / At "inf"))
+                                                         (OneForm (At "inf")))
+                                                  (At "S"))) ;
+                          (Unf (Sequent L_Sequent (OneForm (At "np")) (At "np"))) ]) ]) ]) ])``;
 
 val r4_to_r5 = store_thm (
    "r4_to_r5", ``deriv ^r4 ^r5``,
@@ -401,31 +401,31 @@ val r4_to_r5 = store_thm (
 
 val r6 =
   ``(Der (Sequent L_Sequent (Comma (OneForm (At "S" / (At "S" / At "np")))
-				   (Comma (OneForm (At "S" / At "inf")) (OneForm (At "inf" / At "np"))))
-			    (At "S"))
-	 LeftSlash
+                                   (Comma (OneForm (At "S" / At "inf")) (OneForm (At "inf" / At "np"))))
+                            (At "S"))
+         LeftSlash
       [ (Der (Sequent L_Sequent (OneForm (At "S")) (At "S"))
-	     SeqAxiom []) ;
-	(Der (Sequent L_Sequent (Comma (OneForm (At "S" / At "inf")) (OneForm (At "inf" / At "np")))
-				(At "S" / At "np"))
-	     RightSlash
-	  [ (Der (Sequent L_Sequent (Comma (Comma (OneForm (At "S" / At "inf"))
-						  (OneForm (At "inf" / At "np")))
-					   (OneForm (At "np")))
-				    (At "S"))
-			  SeqExt
-		    [ (Der (Sequent L_Sequent (Comma (OneForm (At "S" / At "inf"))
-						     (Comma (OneForm (At "inf" / At "np"))
-							    (OneForm (At "np"))))
-					      (At "S"))
-			   LeftSlash
-			[ (Der (Sequent L_Sequent (Comma (OneForm (At "S" / At "inf"))
-							 (OneForm (At "inf")))
-						  (At "S"))
-					LeftSlash
-			    [ (Unf (Sequent L_Sequent (OneForm (At "S")) (At "S"))) ;
-			      (Unf (Sequent L_Sequent (OneForm (At "inf")) (At "inf"))) ]) ;
-			  (Unf (Sequent L_Sequent (OneForm (At "np")) (At "np"))) ]) ]) ]) ])``;
+             SeqAxiom []) ;
+        (Der (Sequent L_Sequent (Comma (OneForm (At "S" / At "inf")) (OneForm (At "inf" / At "np")))
+                                (At "S" / At "np"))
+             RightSlash
+          [ (Der (Sequent L_Sequent (Comma (Comma (OneForm (At "S" / At "inf"))
+                                                  (OneForm (At "inf" / At "np")))
+                                           (OneForm (At "np")))
+                                    (At "S"))
+                          SeqExt
+                    [ (Der (Sequent L_Sequent (Comma (OneForm (At "S" / At "inf"))
+                                                     (Comma (OneForm (At "inf" / At "np"))
+                                                            (OneForm (At "np"))))
+                                              (At "S"))
+                           LeftSlash
+                        [ (Der (Sequent L_Sequent (Comma (OneForm (At "S" / At "inf"))
+                                                         (OneForm (At "inf")))
+                                                  (At "S"))
+                                        LeftSlash
+                            [ (Unf (Sequent L_Sequent (OneForm (At "S")) (At "S"))) ;
+                              (Unf (Sequent L_Sequent (OneForm (At "inf")) (At "inf"))) ]) ;
+                          (Unf (Sequent L_Sequent (OneForm (At "np")) (At "np"))) ]) ]) ]) ])``;
 
 val r5_to_r6 = store_thm (
    "r5_to_r6", ``deriv ^r5 ^r6``,
@@ -440,31 +440,31 @@ val r5_to_r6 = store_thm (
 
 val r_final =
   ``(Der (Sequent L_Sequent (Comma (OneForm (At "S" / (At "S" / At "np")))
-				   (Comma (OneForm (At "S" / At "inf")) (OneForm (At "inf" / At "np"))))
-			    (At "S"))
-	 LeftSlash
+                                   (Comma (OneForm (At "S" / At "inf")) (OneForm (At "inf" / At "np"))))
+                            (At "S"))
+         LeftSlash
       [ (Der (Sequent L_Sequent (OneForm (At "S")) (At "S"))
-	     SeqAxiom []) ;
-	(Der (Sequent L_Sequent (Comma (OneForm (At "S" / At "inf")) (OneForm (At "inf" / At "np")))
-				(At "S" / At "np"))
-	     RightSlash
-	  [ (Der (Sequent L_Sequent (Comma (Comma (OneForm (At "S" / At "inf"))
-						  (OneForm (At "inf" / At "np")))
-					   (OneForm (At "np")))
-				    (At "S"))
-			  SeqExt
-		    [ (Der (Sequent L_Sequent (Comma (OneForm (At "S" / At "inf"))
-						     (Comma (OneForm (At "inf" / At "np"))
-							    (OneForm (At "np"))))
-					      (At "S"))
-			   LeftSlash
-			[ (Der (Sequent L_Sequent (Comma (OneForm (At "S" / At "inf"))
-							 (OneForm (At "inf")))
-						  (At "S"))
-					LeftSlash
-			    [ (Der (Sequent L_Sequent (OneForm (At "S")) (At "S")) SeqAxiom []) ;
-			      (Der (Sequent L_Sequent (OneForm (At "inf")) (At "inf")) SeqAxiom []) ]) ;
-			  (Der (Sequent L_Sequent (OneForm (At "np")) (At "np")) SeqAxiom []) ]) ]) ]) ])``;
+             SeqAxiom []) ;
+        (Der (Sequent L_Sequent (Comma (OneForm (At "S" / At "inf")) (OneForm (At "inf" / At "np")))
+                                (At "S" / At "np"))
+             RightSlash
+          [ (Der (Sequent L_Sequent (Comma (Comma (OneForm (At "S" / At "inf"))
+                                                  (OneForm (At "inf" / At "np")))
+                                           (OneForm (At "np")))
+                                    (At "S"))
+                          SeqExt
+                    [ (Der (Sequent L_Sequent (Comma (OneForm (At "S" / At "inf"))
+                                                     (Comma (OneForm (At "inf" / At "np"))
+                                                            (OneForm (At "np"))))
+                                              (At "S"))
+                           LeftSlash
+                        [ (Der (Sequent L_Sequent (Comma (OneForm (At "S" / At "inf"))
+                                                         (OneForm (At "inf")))
+                                                  (At "S"))
+                                        LeftSlash
+                            [ (Der (Sequent L_Sequent (OneForm (At "S")) (At "S")) SeqAxiom []) ;
+                              (Der (Sequent L_Sequent (OneForm (At "inf")) (At "inf")) SeqAxiom []) ]) ;
+                          (Der (Sequent L_Sequent (OneForm (At "np")) (At "np")) SeqAxiom []) ]) ]) ]) ])``;
 
 val r_finished = store_thm (
    "r_finished", ``Proof ^r_final``,
@@ -508,13 +508,13 @@ val _ = html_theory "Example";
 (*
 if (OS.FileSys.isDir "../papers" handle e => false) then
     let in
-	OS.FileSys.remove "../papers/references.tex" handle e => {};
-	OS.FileSys.remove "../papers/HOLLambek.tex" handle e => {};
-	OS.FileSys.remove "../papers/HOLCutFree.tex" handle e => {};
-	OS.FileSys.remove "../papers/HOLExample.tex" handle e => {};
+        OS.FileSys.remove "../papers/references.tex" handle e => {};
+        OS.FileSys.remove "../papers/HOLLambek.tex" handle e => {};
+        OS.FileSys.remove "../papers/HOLCutFree.tex" handle e => {};
+        OS.FileSys.remove "../papers/HOLExample.tex" handle e => {};
 
-	EmitTeX.print_theories_as_tex_doc
-	    ["Lambek", "CutFree", "Example"] "../papers/references"
+        EmitTeX.print_theories_as_tex_doc
+            ["Lambek", "CutFree", "Example"] "../papers/references"
     end
 else
     {};

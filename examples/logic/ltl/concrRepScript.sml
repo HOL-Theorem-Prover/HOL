@@ -321,7 +321,7 @@ val TRANSFORMLABEL_SUBSET2 = store_thm
 (*             >> fs[transformLabel_def] >> Cases_on `m' ∈ char (POW aP) h` *)
 (*             >- (`m' ∈ {}` by metis_tac[IN_INTER,SET_EQ_SUBSET] >> fs[]) *)
 (*             >- (`m' ∈ char_neg fs[char_def] >> *)
-                  
+
 
 (*              >- metis_tac[FOLDR_INTER,SUBSET_DEF,IN_POW] *)
 (*              >- *)

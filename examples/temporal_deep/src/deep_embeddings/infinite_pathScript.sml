@@ -14,7 +14,8 @@ map load
 
 
 open pred_setTheory pairTheory arithmeticTheory tuerk_tacticsLib
-    containerTheory listTheory prop_logicTheory;
+     containerTheory listTheory prop_logicTheory;
+open Sanity;
 
 val _ = hide "S";
 val _ = hide "I";
@@ -334,7 +335,7 @@ val NAND_ON_PATH_RESTN___GREATER_IMPL =
 val NOT_ON_PATH_RESTN___GREATER_IMPL =
  store_thm
   ("NOT_ON_PATH_RESTN___GREATER_IMPL",
-   ``!v t a b. NOT_ON_PATH_RESTN t v a = (!t'. t' >= t ==> NOT_ON_PATH_RESTN t' v a)``,
+   ``!v t a. NOT_ON_PATH_RESTN t v a = (!t'. t' >= t ==> NOT_ON_PATH_RESTN t' v a)``,
    SIMP_TAC arith_ss [NOT_ON_PATH_RESTN_def] THEN
    REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
       METIS_TAC[GREATER_EQ, LESS_EQ_TRANS],
@@ -345,7 +346,7 @@ val NOT_ON_PATH_RESTN___GREATER_IMPL =
 val IS_ON_PATH_RESTN___GREATER_IMPL =
  store_thm
   ("IS_ON_PATH_RESTN___GREATER_IMPL",
-   ``!v t a b. IS_ON_PATH_RESTN t v a = (?t0. (t <= t0) /\ (P_SEM (v t0) a) /\ (!t'. (t <= t' /\ t' <= t0) ==> IS_ON_PATH_RESTN t' v a))``,
+   ``!v t a. IS_ON_PATH_RESTN t v a = (?t0. (t <= t0) /\ (P_SEM (v t0) a) /\ (!t'. (t <= t' /\ t' <= t0) ==> IS_ON_PATH_RESTN t' v a))``,
 
    SIMP_TAC arith_ss [IS_ON_PATH_RESTN_def, NOT_ON_PATH_RESTN_def] THEN
    REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
@@ -360,7 +361,7 @@ val IS_ON_PATH_RESTN___GREATER_IMPL =
 val EQUIV_PATH_RESTN___GREATER_IMPL =
  store_thm
   ("EQUIV_PATH_RESTN___GREATER_IMPL",
-   ``!v t a b. EQUIV_PATH_RESTN t v1 v2 = (!t'. t' >= t ==> EQUIV_PATH_RESTN t' v1 v2)``,
+   ``!t v1 v2. EQUIV_PATH_RESTN t v1 v2 = (!t'. t' >= t ==> EQUIV_PATH_RESTN t' v1 v2)``,
    SIMP_TAC arith_ss [EQUIV_PATH_RESTN_def] THEN
    REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
       METIS_TAC[GREATER_EQ, LESS_EQ_TRANS],
@@ -371,7 +372,7 @@ val EQUIV_PATH_RESTN___GREATER_IMPL =
 val EQUIV_PATH_RESTN___PATH_RESTN =
  store_thm
   ("EQUIV_PATH_RESTN___PATH_RESTN",
-   ``!v t a b. (EQUIV_PATH_RESTN t v1 v2) = (PATH_RESTN v1 t = PATH_RESTN v2 t)``,
+   ``!t v1 v2. (EQUIV_PATH_RESTN t v1 v2) = (PATH_RESTN v1 t = PATH_RESTN v2 t)``,
    SIMP_TAC arith_ss [EQUIV_PATH_RESTN_def, PATH_RESTN_def, EXTENSION] THEN
    ONCE_REWRITE_TAC[FUN_EQ_THM] THEN
    SIMP_TAC std_ss [EXTENSION] THEN
@@ -854,6 +855,9 @@ val PATH_RESTRICT___CUT_PATH_PERIODICALLY =
     SIMP_TAC std_ss [CUT_PATH_PERIODICALLY_def, PATH_RESTRICT_def, PATH_MAP_def, COND_RAND]);
 
 
+val PATH_SUBSET_RESTRICT = store_thm ("PATH_SUBSET_RESTRICT",
+  ``!w S. PATH_SUBSET (PATH_RESTRICT w S) S``,
+SIMP_TAC std_ss [PATH_RESTRICT_def, PATH_MAP_def, INTER_SUBSET, PATH_SUBSET_def])
+
 
 val _ = export_theory();
-

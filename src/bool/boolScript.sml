@@ -4275,4 +4275,17 @@ val _ = add_user_printer ("bool.COND", “COND gd tr fl”)
 val _ = add_user_printer ("bool.LET", “LET f x”)
 val _ = add_absyn_postprocessor "bool.LET"
 
+val DISJ_EQ_IMP = save_thm("DISJ_EQ_IMP",
+  let
+    val lemma = NOT_CLAUSES |> CONJUNCT1 |> SPEC ``A:bool``
+  in
+    IMP_DISJ_THM
+    |> SPECL [``~A:bool``,``B:bool``]
+    |> SYM
+    |> CONV_RULE
+      ((RATOR_CONV o RAND_CONV o RATOR_CONV o RAND_CONV)
+         (fn tm => lemma))
+    |> GENL [``A:bool``,``B:bool``]
+  end);
+
 val _ = export_theory();

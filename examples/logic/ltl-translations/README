@@ -1,0 +1,19 @@
+Currently, there are 3 different formalisation of LTL shipped with HOL 4.
+There are
+
+- "src/temporal/"
+  contains a shallow embedding of LTL. There are both past and future operators.
+
+- "examples/temporal_deep"
+  contains a deep embedding of LTL. It was developed by the same group
+  as "src/temporal" and has therefore many similarities. The main difference
+  is that one is a deep and the other a shallow embedding.
+
+- "examples/logic/ltl"
+  contains a deep embedding of LTL. In contrast to "examples/temporal_deep"
+  only future operators are present.
+
+The logics are all similar, but tailored towards there concrete usage.
+The formalisation of the logics themselves is tiny compared with their usages.
+Therefore using one common foundation is not necessarily sensible. As a tiny
+nod in this direction, this directory contains translations between these different formalisations.

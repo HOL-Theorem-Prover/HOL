@@ -7,6 +7,8 @@ tools/mlyacc/mlyacclib
 [poly]src/portableML/poly
 src/portableML
 src/portableML/monads
+[poly]src/portableML/poly/concurrent
+[mosml]src/portableML/mosml/concurrent
 !src/portableML/testsrc
 src/prekernel
 **KERNEL**

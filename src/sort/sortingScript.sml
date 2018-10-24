@@ -1111,6 +1111,16 @@ val PERM_CONG_APPEND_IFF = store_thm (
 METIS_TAC [PERM_EQUIVALENCE_ALT_DEF, PERM_APPEND_IFF]);
 
 
+val PERM_CONG_APPEND_IFF2 = store_thm (
+"PERM_CONG_APPEND_IFF2",
+``!l1 l1' l1'' l2 l2' l2''.
+(PERM l1 (l1'++l1'')) ==>
+(PERM l2 (l2'++l2'')) ==>
+(PERM l1' l2') ==>
+(PERM l1 l2 = PERM l1'' l2'')``,
+METIS_TAC [PERM_EQUIVALENCE_ALT_DEF, PERM_APPEND_IFF]);
+
+
 val PERM_FUN_SPLIT = store_thm (
 "PERM_FUN_SPLIT",
 ``!l l1 l1' l2.
@@ -1126,6 +1136,30 @@ val PERM_REWR = store_thm (
 (PERM l r) ==>
 (PERM (l++l1) l2 = PERM (r++l1) l2)``,
 PROVE_TAC [PERM_EQUIVALENCE_ALT_DEF, PERM_APPEND_IFF]);
+
+
+val PERM_CENTRE1 = prove (
+``(PERM (xs ++ l) (r1 ++ xs ++ r2) = PERM l (r1 ++ r2))``,
+METIS_TAC [APPEND_ASSOC, PERM_APPEND_IFF,
+    PERM_APPEND, PERM_EQUIVALENCE_ALT_DEF]);
+val PERM_CENTRE2 = PERM_CENTRE1 |> Q.GEN `xs` |> Q.SPEC `[x]`
+  |> SIMP_RULE bool_ss [APPEND, GSYM APPEND_ASSOC]
+
+val PERM_TO_APPEND_SIMPS = store_thm (
+"PERM_TO_APPEND_SIMPS",
+``(PERM (x::l) ((x::r1) ++ r2) = PERM l (r1 ++ r2)) /\
+(PERM (x::l) (r1 ++ (x::r2)) = PERM l (r1 ++ r2)) /\
+(PERM ((xs ++ ys) ++ zs) r = PERM (xs ++ (ys ++ zs)) r) /\
+(PERM ((x :: ys) ++ zs) r = PERM (x :: (ys ++ zs)) r) /\
+(PERM ([] ++ l) r = PERM l r) /\
+(PERM (xs ++ l) ((xs ++ r1) ++ r2) = PERM l (r1 ++ r2)) /\
+(PERM (xs ++ l) (r1 ++ (xs ++ r2)) = PERM l (r1 ++ r2)) /\
+(PERM [] ([] ++ []) = T) /\
+(PERM xs ((xs ++ []) ++ []) = T) /\
+(PERM xs ([] ++ (xs ++ [])) = T)``,
+SIMP_TAC list_ss [PERM_REFL, PERM_CONS_IFF, PERM_CENTRE1, PERM_CENTRE2]
+  \\ SIMP_TAC bool_ss [GSYM APPEND_ASSOC, PERM_APPEND_IFF]);
+
 
 (*---------------------------------------------------------------------------*)
 (* QSORT3 - A stable version of QSORT (James Reynolds - 10/2010)             *)

@@ -291,7 +291,7 @@ val translate_def = Define `
     (translate (SC S1 S2) =
          mk_SC (translate S1) (translate S2)) /\
     (translate (CJ cond Strue Sfalse) =
-	 mk_CJ (translate_condition cond) (translate Strue) (translate Sfalse)) /\
+         mk_CJ (translate_condition cond) (translate Strue) (translate Sfalse)) /\
     (translate (TR cond Sbody) =
          mk_TR (translate_condition cond) (translate Sbody))
   `;
@@ -401,11 +401,11 @@ val STATEMENT_IS_WELL_FORMED = Q.store_thm (
         Cases_on `stm` THEN
             (fn g =>
                (SIMP_TAC list_ss [get_st_def, Once RUNTO_ADVANCE, SIMP_RULE std_ss [] (Q.SPEC `(pos0,cpsr0,regs,mem):STATE`
-			  (INST_TYPE [alpha |-> Type `:word32 # (num |-> word32) # (num |-> word32)`] UPLOAD_LEM_2)),
+                          (INST_TYPE [alpha |-> Type `:word32 # (num |-> word32) # (num |-> word32)`] UPLOAD_LEM_2)),
                          TRANSLATE_ASSIGMENT_CORRECT_2, SUC_ONE_ADD] THEN
                 RW_TAC std_ss [Once RUNTO_ADVANCE] THEN
                 SIMP_TAC list_ss [get_st_def, Once RUNTO_ADVANCE, SIMP_RULE std_ss [] (Q.SPEC `(pos1,cpsr1,regs,mem):STATE`
-			  (INST_TYPE [alpha |-> Type `:word32 # (num |-> word32) # (num |-> word32)`] UPLOAD_LEM_2)),
+                          (INST_TYPE [alpha |-> Type `:word32 # (num |-> word32) # (num |-> word32)`] UPLOAD_LEM_2)),
                          TRANSLATE_ASSIGMENT_CORRECT_2, SUC_ONE_ADD] THEN
                 RW_TAC std_ss [Once RUNTO_ADVANCE]) g
             )
@@ -529,7 +529,7 @@ val CFL_SEMANTICS_TR = Q.store_thm (
             IMP_RES_TAC LOOPNUM_INDUCTIVE THEN
             `v = loopNum (translate_condition cond) arm (\i.ARB) ((0,0w,SND (SND (FST (runTo (upload arm (\i.ARB) 0) (LENGTH arm) ((0,0w,st),{}))))),{})` by
             METIS_TAC [ABS_PAIR_THM,DECIDE (Term`!x.0+x=x`),LOOPNUM_INDEPENDENT_OF_CPSR_PCS, get_st_def, FST, SND, DSTATE_IRRELEVANT_PCS,
-		well_formed_def] THEN
+                well_formed_def] THEN
             RES_TAC THEN Q.PAT_ASSUM `v = x` (ASSUME_TAC o GSYM) THEN FULL_SIMP_TAC std_ss [] THEN POP_ASSUM (K ALL_TAC) THEN
             Q.PAT_ASSUM `v = x` (ASSUME_TAC o GSYM) THEN FULL_SIMP_TAC std_ss [] THEN POP_ASSUM (K ALL_TAC) THEN
             Q.PAT_ASSUM `~x` (ASSUME_TAC o SIMP_RULE std_ss [get_st_def]) THEN

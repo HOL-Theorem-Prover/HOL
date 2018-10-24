@@ -120,8 +120,8 @@ val ProbAssign_def = Define
 
 val For_def = Define
    `For i init cond incr c =
-  	Seq (Assign i init)
-	    (While cond (Seq (Program c) (Assign i incr)))`;
+        Seq (Assign i init)
+            (While cond (Seq (Program c) (Assign i incr)))`;
 
 val WhileProgram_def = Define `WhileProgram c l = While c (Program l)`;
 

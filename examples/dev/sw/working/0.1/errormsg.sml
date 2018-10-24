@@ -21,27 +21,27 @@ struct
   val sourceStream = ref TextIO.stdIn
 
   fun reset() = (anyErrors:=false;
-		 fileName:="";
-		 lineNum:=1;
-		 linePos:=[1];
-		 sourceStream:=TextIO.stdIn)
+                 fileName:="";
+                 lineNum:=1;
+                 linePos:=[1];
+                 sourceStream:=TextIO.stdIn)
 
   exception Error
 
   fun error pos (msg:string) =
       let fun look(a::rest,n) =
-		if a<pos then app print [":",
-				       Int.toString n,
-				       ".",
-				       Int.toString (pos-a)]
-		       else look(rest,n-1)
-	    | look _ = print "0.0"
+                if a<pos then app print [":",
+                                       Int.toString n,
+                                       ".",
+                                       Int.toString (pos-a)]
+                       else look(rest,n-1)
+            | look _ = print "0.0"
        in anyErrors := true;
-	  print (!fileName);
-	  look(!linePos,!lineNum);
-	  print ":";
-	  print msg;
-	  print "\n"
+          print (!fileName);
+          look(!linePos,!lineNum);
+          print ":";
+          print msg;
+          print "\n"
       end
 
   fun impossible msg =

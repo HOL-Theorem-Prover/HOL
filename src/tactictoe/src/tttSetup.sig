@@ -6,7 +6,7 @@ sig
   val ttt_reclet_flag   : bool ref
   val ttt_recprove_flag : bool ref
   val ttt_rectac_time   : real ref
-  val ttt_recproof_time : real ref 
+  val ttt_recproof_time : real ref
   val ttt_printproof_flag : bool ref
   (* orthogonalization *)
   val ttt_ortho_flag   : bool ref
@@ -19,10 +19,10 @@ sig
   (* prediction *)
   val ttt_randdist_flag  : bool ref
   val ttt_covdist_flag   : bool ref
-  
+
   (** Generating fof problems *)
   val ttt_fof_flag : bool ref
-  
+
   (** Evaluation **)
   val ttt_eval_flag     : bool ref
   (* evaluated theorems *)
@@ -53,7 +53,7 @@ sig
   (* eprover *)
   val ttt_eprover_flag     : bool ref
   val ttt_eprover_time     : int ref
-  val ttt_eprover_radius   : int ref 
+  val ttt_eprover_radius   : int ref
   val ttt_eprover_async    : int ref
   val eprover_eval_flag : bool ref
   val eprover_save_flag : bool ref
@@ -64,6 +64,6 @@ sig
   val ttt_selflearn_flag : bool ref
   (* initialization *)
   val init_metis      : string -> unit
-  
+
 
 end

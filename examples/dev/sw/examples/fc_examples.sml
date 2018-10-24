@@ -26,8 +26,8 @@ val spec5 = pp_compile def5 false;
 
 
 val def6 = Define `f6(x:word32,y) =
-	let a = if (x >= y) then f2 y else x in
-	(y + (f4 (x, a, y)) + x)`;
+        let a = if (x >= y) then f2 y else x in
+        (y + (f4 (x, a, y)) + x)`;
 
 val spec6_pre = pp_compile def6 false;
 
@@ -38,16 +38,16 @@ REWRITE_TAC[FUN_EQ_THM] THEN
 Cases_on `x` THEN
 SIMP_TAC std_ss [def6, def4, def2, def1, FUN_EQ_THM, LET_THM] THEN
 Cases_on `q >= r` THEN (
-	ASM_SIMP_TAC std_ss [WORD_ADD_ASSOC]
+        ASM_SIMP_TAC std_ss [WORD_ADD_ASSOC]
 ))
 
 
 val def7 = Define `f7(x:word32,y) =
-	let a = y + (2w * x) in
-	let b = 5w in
-	let c = if (a <= b) then (f2 a) + b else b in
-	let d = f4 (c, c, a) in
-	(x + d + b)`;
+        let a = y + (2w * x) in
+        let b = 5w in
+        let c = if (a <= b) then (f2 a) + b else b in
+        let d = f4 (c, c, a) in
+        (x + d + b)`;
 
 val spec7 = pp_compile def7 false;
 

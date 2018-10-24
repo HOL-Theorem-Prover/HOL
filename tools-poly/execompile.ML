@@ -1,7 +1,15 @@
-structure BuildHeap_EXE_Compile =
+structure BuildHeap_EXE_Compile :
+sig
+  val res : OS.Process.status ref
+  val exe_compile : {fnname: string, output_exe: string, keep_temp_files : bool}
+                      ->
+                    'a
+end =
 struct
 
-fun withtemp_file {stem: string, extension: string} (k : string -> unit) =
+fun quietremove f = OS.FileSys.remove f handle SysErr _ => ()
+
+fun withtemp_file {stem, extension, keep_file} (k : string -> unit) =
   let
     fun gen i =
       let
@@ -9,7 +17,10 @@ fun withtemp_file {stem: string, extension: string} (k : string -> unit) =
         val fname = OS.Path.joinBaseExt{base = stem, ext = SOME extension}
       in
         if OS.FileSys.access(fname, [OS.FileSys.A_READ]) then gen (i + 1)
-        else (k fname; OS.FileSys.remove fname)
+        else (
+          k fname;
+          if keep_file then () else quietremove fname
+        )
       end
   in
     gen 0
@@ -34,7 +45,7 @@ fun gen_ml_compile_file {functionname, mlfilename, objfilename, execname} k =
 
 val res = ref OS.Process.success
 
-fun exe_compile {fnname: string, output_exe: string} =
+fun exe_compile {fnname: string, output_exe: string, keep_temp_files : bool} =
   let
     val output_stem = OS.Path.file output_exe
     fun withobj_and_ml obj ml =
@@ -44,10 +55,13 @@ fun exe_compile {fnname: string, output_exe: string} =
                            execname = output_exe}
                           (fn () => PolyML.use ml)
     fun withobj obj =
-      withtemp_file {stem = "poly-mk" ^ output_stem, extension = "ML"}
+      withtemp_file {stem = "poly-mk" ^ output_stem, extension = "ML",
+                     keep_file = keep_temp_files}
                     (withobj_and_ml obj)
   in
-    withtemp_file {stem = output_stem, extension = "o"} withobj ;
+    withtemp_file {stem = output_stem, extension = "o",
+                   keep_file = keep_temp_files}
+                  withobj ;
     OS.Process.exit (!res)
   end
 

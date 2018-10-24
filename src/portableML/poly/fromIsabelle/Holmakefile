@@ -1,9 +1,0 @@
-Future.uo: Future.sml $(SIGOBJ)/Graph.uo
-
-CoreLib.uo: CoreLib.sml
-
-Library.uo: CoreLib.uo
-
-Task_Queue.uo: $(SIGOBJ)/ConcIsaLib.uo
-
-Standard_Thread.uo: $(SIGOBJ)/ConcIsaLib.uo

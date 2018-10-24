@@ -51,12 +51,12 @@ fun hide_out f x =
    Commands
    -------------------------------------------------------------------------- *)
 
-fun mkDir_err dir = 
-  OS.FileSys.mkDir dir 
+fun mkDir_err dir =
+  OS.FileSys.mkDir dir
   handle Interrupt => raise Interrupt
        | _         => ()
-       
-fun rmDir_err dir = 
+
+fun rmDir_err dir =
   OS.FileSys.rmDir dir
   handle Interrupt => raise Interrupt
        | _         => ()
@@ -158,7 +158,7 @@ fun map_snd f l   = map (fn (a,b) => (a, f b)) l
 fun map_fst f l   = map (fn (a,b) => (f a, b)) l
 fun map_assoc f l = map (fn a => (a, f a)) l
 
-fun cartesian_product l1 l2 = 
+fun cartesian_product l1 l2 =
   List.concat (map (fn x => map (fn y => (x,y)) l2) l1)
 
 fun findSome f l = case l of
@@ -277,15 +277,15 @@ fun sum_int l = case l of [] => 0 | a :: m => a + sum_int m
 
 fun average_real l = sum_real l / Real.fromInt (length l)
 
-fun int_div n1 n2 = 
-   (if n2 = 0 then 0.0 else Real.fromInt n1 / Real.fromInt n2) 
+fun int_div n1 n2 =
+   (if n2 = 0 then 0.0 else Real.fromInt n1 / Real.fromInt n2)
 
 fun pow (x:real) (n:int) =
   if n <= 0 then 1.0 else x * (pow x (n-1))
 
-fun approx n r = 
+fun approx n r =
   let val mult = pow 10.0 n in
-    Real.fromInt (Real.round (r * mult)) / mult 
+    Real.fromInt (Real.round (r * mult)) / mult
   end
 
 
@@ -293,15 +293,15 @@ fun approx n r =
    Terms
    -------------------------------------------------------------------------- *)
 
-fun rename_bvarl f tm = 
-  let 
+fun rename_bvarl f tm =
+  let
     val vi = ref 0
     fun rename_aux tm = case dest_term tm of
       VAR(Name,Ty)       => tm
     | CONST{Name,Thy,Ty} => tm
     | COMB(Rator,Rand)   => mk_comb (rename_aux Rator, rename_aux Rand)
-    | LAMB(Var,Bod)      => 
-      let 
+    | LAMB(Var,Bod)      =>
+      let
         val vs = f (fst (dest_var Var))
         val new_tm = rename_bvar ("V" ^ int_to_string (!vi) ^ vs) tm
         val (v,bod) = dest_abs new_tm
@@ -313,7 +313,7 @@ fun rename_bvarl f tm =
     rename_aux tm
   end
 
-fun all_bvar tm = 
+fun all_bvar tm =
   mk_fast_set Term.compare (map (fst o dest_abs) (find_terms is_abs tm))
 
 (* --------------------------------------------------------------------------
@@ -664,18 +664,18 @@ fun clean_tttdata () =
 fun escape_char c =
   if Char.isAlphaNum c then Char.toString c
   else if c = #"_" then "__"
-  else 
+  else
     let val hex = Int.fmt StringCvt.HEX (Char.ord c) in
       StringCvt.padLeft #"_" 3 hex
     end
-    
+
 fun escape s = String.translate escape_char s;
 
-fun isCapitalHex c = 
+fun isCapitalHex c =
   Char.ord #"A" <= Char.ord c andalso Char.ord c <= Char.ord #"F"
 
-fun charhex_to_int c = 
-  if Char.isDigit c 
+fun charhex_to_int c =
+  if Char.isDigit c
     then Char.ord c - Char.ord #"0"
   else if isCapitalHex c
     then Char.ord c - Char.ord #"A" + 10
@@ -684,10 +684,10 @@ fun charhex_to_int c =
 fun unescape_aux l = case l of
    [] => []
  | #"_" :: #"_" :: m => #"_" :: unescape_aux m
- | #"_" :: a :: b :: m => 
+ | #"_" :: a :: b :: m =>
    Char.chr (16 * charhex_to_int a + charhex_to_int b) :: unescape_aux m
  | a :: m => a :: unescape_aux m
- 
+
 fun unescape s = implode (unescape_aux (explode s))
 
 (*----------------------------------------------------------------------------
@@ -727,7 +727,7 @@ fun deplPartial_of_sthm s =
     else List.mapPartial tid_of_did (depidl_of_thm (DB.fetch a b))
   end
 
-fun only_concl x = 
+fun only_concl x =
   let val (a,b) = dest_thm x in
     if null a then b else raise ERR "only_concl" ""
   end
@@ -771,27 +771,27 @@ fun parmap_err ncores forg lorg =
     fun fi xi x = (x,xi)
     val queue = ref (mapi fi lorg)
     (* update process inputs *)
-    fun update_from_queue lineref = 
+    fun update_from_queue lineref =
       if null (!queue) then ()
       else (lineref := SOME (hd (!queue)); queue := tl (!queue))
     fun is_refnone x = (not o isSome o ! o snd) x
-    fun dispatcher () = 
+    fun dispatcher () =
       app (update_from_queue o snd) (filter is_refnone lin)
-    (* output *)  
+    (* output *)
     val lout = List.tabulate (ncores,(fn x => (x, ref [])))
     val dout = dnew Int.compare lout
     val lcount = List.tabulate (ncores,(fn x => (x, ref 0)))
     val dcount = dnew Int.compare lcount
     (* process *)
-    fun process pi = 
+    fun process pi =
       let val inref = dfind pi din in
         case !inref of
           NONE => process pi
-        | SOME (x,xi) => 
-          let 
+        | SOME (x,xi) =>
+          let
             val oldl = dfind pi dout
             val oldn = dfind pi dcount
-            val y = capture forg x 
+            val y = capture forg x
           in
             oldl := (y,xi) :: (!oldl);
             incr oldn;
@@ -813,7 +813,7 @@ fun parmap_err ncores forg lorg =
     map fst (dict_sort compare_imin (List.concat (map (! o snd) lout)))
   end
 
-fun parmap ncores f l = 
+fun parmap ncores f l =
   map release (parmap_err ncores f l)
 
 fun parapp ncores f l = ignore (parmap ncores f l)

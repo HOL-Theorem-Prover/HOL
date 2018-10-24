@@ -428,23 +428,23 @@ val aligned_word_readable_def = Define `aligned_word_readable s is_thumb add1 =
  (  permitted_byte_pure (add1) F s.coprocessors.state.cp15.C1 s.coprocessors.state.cp15.C2 s.coprocessors.state.cp15.C3 F s.memory
        /\ (is_thumb ==> (  permitted_byte_pure (align(add1,2)) F s.coprocessors.state.cp15.C1
                                                         s.coprocessors.state.cp15.C2
-        						 s.coprocessors.state.cp15.C3 F s.memory
+                                                         s.coprocessors.state.cp15.C3 F s.memory
                                /\ permitted_byte_pure (align (add1,2) + 1w) F s.coprocessors.state.cp15.C1
-        	                                              s.coprocessors.state.cp15.C2
-        						      s.coprocessors.state.cp15.C3 F s.memory))
+                                                              s.coprocessors.state.cp15.C2
+                                                              s.coprocessors.state.cp15.C3 F s.memory))
 
        /\ (~is_thumb ==> (  permitted_byte_pure (align(add1,4)) F s.coprocessors.state.cp15.C1
                                                         s.coprocessors.state.cp15.C2
-        						 s.coprocessors.state.cp15.C3 F s.memory
+                                                         s.coprocessors.state.cp15.C3 F s.memory
                                /\ permitted_byte_pure (align (add1,4) + 1w) F s.coprocessors.state.cp15.C1
-        	                                              s.coprocessors.state.cp15.C2
-        						      s.coprocessors.state.cp15.C3 F s.memory
+                                                              s.coprocessors.state.cp15.C2
+                                                              s.coprocessors.state.cp15.C3 F s.memory
                                /\ permitted_byte_pure (align (add1,4) + 2w) F s.coprocessors.state.cp15.C1
-        	                                              s.coprocessors.state.cp15.C2
-        						      s.coprocessors.state.cp15.C3 F s.memory
+                                                              s.coprocessors.state.cp15.C2
+                                                              s.coprocessors.state.cp15.C3 F s.memory
                                /\ permitted_byte_pure (align (add1,4) + 3w) F s.coprocessors.state.cp15.C1
-        	                                              s.coprocessors.state.cp15.C2
-        						      s.coprocessors.state.cp15.C3 F s.memory)))`;
+                                                              s.coprocessors.state.cp15.C2
+                                                              s.coprocessors.state.cp15.C3 F s.memory)))`;
 
 
 val _ = export_theory();

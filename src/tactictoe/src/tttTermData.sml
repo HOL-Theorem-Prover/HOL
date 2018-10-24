@@ -66,7 +66,7 @@ fun pp_tml tml =
         PP.add_newline, PP.add_newline,
         PP.add_string "TERMS_START",
         PP.add_newline ] @ pp_terml @ [ PP.add_newline,
-        PP.add_string "TERMS_END"       
+        PP.add_string "TERMS_END"
       ]
     )
   end

@@ -13,7 +13,7 @@ sig
   val ttt_qtactic_glob : (term quotation -> tactic) ref
   val ttt_string_glob  : string ref
   val ttt_goal_glob    : goal ref
-  
+
   (* forward references to holyhammer and metis *)
   val hh_stac_glob     :
     (string ->
@@ -27,7 +27,7 @@ sig
 
   val create_fof_glob   : (string -> thm -> unit) ref
   val update_create_fof : unit -> unit
-  
+
   (* execution function *)
   val exec_sml         : string -> string -> bool
 

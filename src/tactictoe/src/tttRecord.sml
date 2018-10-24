@@ -167,7 +167,7 @@ fun wrap_tactics_in name qtac goal =
     (
     let
       val (gl,v) =
-      total_time replay_time 
+      total_time replay_time
         (tttTimeout.timeOut (!ttt_recproof_time) final_tac) goal
     in
       if gl = []
@@ -251,8 +251,8 @@ val fetch = total_time fetch_thm_time fetch_thm
 val thm_counter = ref 0
 
 fun start_record_proof name =
-  let 
-    val outname = "\nName: " ^ int_to_string (!thm_counter) ^ " " ^ name 
+  let
+    val outname = "\nName: " ^ int_to_string (!thm_counter) ^ " " ^ name
     val _ = update_thmfea (current_theory ())
   in
     debug_proof outname;
@@ -265,15 +265,15 @@ fun start_record_proof name =
 fun end_record_proof name g =
   let
     val lbl1 = map fst (rev (!goalstep_glob))
-    fun noortho (stac,t,g,gl) = 
+    fun noortho (stac,t,g,gl) =
       case abstract_stac stac of
         SOME astac => [(stac,t,g,gl),(astac,t,g,gl)]
       | NONE => [(stac,t,g,gl)]
-    fun ortho (stac,t,g,gl) = 
+    fun ortho (stac,t,g,gl) =
       [orthogonalize ((stac,t,g,gl), tttFeature.fea_of_goal g)]
     fun f lbl = if !ttt_ortho_flag then ortho lbl else noortho lbl
-    val lbl2 = if !ttt_noabs_flag 
-               then lbl1 
+    val lbl2 = if !ttt_noabs_flag
+               then lbl1
                else List.concat (map f lbl1)
   in
     debug_t ("Saving " ^ int_to_string (length lbl2) ^ " labels")
@@ -291,7 +291,7 @@ fun pe_thml file thml =
   append_endline file "Thm_list";
   app (pe_thm file) thml
   )
-  
+
 fun pe_thmll file thmll = app (pe_thml file) thmll
 
 fun print_proof name g =
@@ -327,20 +327,20 @@ fun org_tac tac g =
       then (gl,v)
       else (debug "Error: org_tac: pending goals"; clear_tac tac g)
   end
-  handle 
+  handle
       TacTimeOut => (debug "Error: org_tac: loop"; clear_tac tac g)
     | _ => (debug "Error: org_tac: error"; clear_tac tac g)
 
 val fof_counter = ref 0
 
 fun create_fof_wrap name pflag result =
-  if !ttt_fof_flag andalso (not pflag orelse !ttt_evprove_flag) then 
+  if !ttt_fof_flag andalso (not pflag orelse !ttt_evprove_flag) then
     let
       val thm = (snd result) []
       val _ = update_create_fof ()
       val _ = incr fof_counter
       val is = int_to_string (!fof_counter)
-      val newname = current_theory () ^ "__" ^ is ^ "__" ^ name 
+      val newname = current_theory () ^ "__" ^ is ^ "__" ^ name
     in
       (!create_fof_glob) newname thm
     end
@@ -348,9 +348,9 @@ fun create_fof_wrap name pflag result =
 
 fun record_proof name lflag tac1 tac2 g =
   if !ttt_fof_flag then
-    let 
+    let
       val pflag = String.isPrefix "tactictoe_prove_" name
-      val result =  
+      val result =
         let val (r,t) = add_time (org_tac tac2) g in
           debug_proof ("Original proof time: " ^ Real.toString t);
           r
@@ -366,17 +366,17 @@ fun record_proof name lflag tac1 tac2 g =
     val pflag = String.isPrefix "tactictoe_prove_" name
     val b2 = (not (!ttt_recprove_flag) andalso pflag)
     val b3 = (not (!ttt_reclet_flag) andalso lflag)
-    val _ = 
-      if !ttt_eval_flag andalso 
-        (not pflag orelse !ttt_evprove_flag) andalso 
+    val _ =
+      if !ttt_eval_flag andalso
+        (not pflag orelse !ttt_evprove_flag) andalso
         (not lflag orelse !ttt_evlet_flag)
-      then eval_tactictoe g 
+      then eval_tactictoe g
       else ()
-    val _ = 
-      if !eprover_eval_flag andalso 
-        (not pflag orelse !ttt_evprove_flag) andalso 
+    val _ =
+      if !eprover_eval_flag andalso
+        (not pflag orelse !ttt_evprove_flag) andalso
         (not lflag orelse !ttt_evlet_flag)
-      then eval_eprover g 
+      then eval_eprover g
       else ()
     val result =
       if b2 orelse b3 orelse (not (!ttt_record_flag))
@@ -384,17 +384,17 @@ fun record_proof name lflag tac1 tac2 g =
         let val (r,t) = add_time (org_tac tac2) g in
           debug_proof ("Original proof time: " ^ Real.toString t);
           r
-        end  
+        end
       else
         let
           val (r,t) = add_time tac1 g
           val _ = debug_proof ("Recording proof time: " ^ Real.toString t)
-          val _ = if !ttt_printproof_flag 
+          val _ = if !ttt_printproof_flag
                   then print_proof name g
                   else end_record_proof name g
         in
           if null (fst r) then r
-          else (debug "Record error: try_record_proof: not null"; 
+          else (debug "Record error: try_record_proof: not null";
                 org_tac tac2 g)
         end
         handle _ => (debug "Record error: try_record_proof"; org_tac tac2 g)
@@ -416,7 +416,7 @@ fun clean_subdirl thy dir subdirl =
   end
 
 fun clean_dir thy dir = (mkDir_err dir; erase_file (dir ^ "/" ^ thy))
-  
+
 fun start_record_thy thy =
   (
   mkDir_err ttt_code_dir;
@@ -442,14 +442,14 @@ fun start_record_thy thy =
 
 fun end_record_thy thy =
   (
-  if !ttt_eval_flag orelse !eprover_eval_flag 
+  if !ttt_eval_flag orelse !eprover_eval_flag
   then debug "EvalSuccessful"
-  else 
+  else
     (
     debug_t "export_tacdata" export_tacdata thy;
     debug_t "export_thmfea" export_thmfea thy;
     debug "RecordSuccessful"
-    )  
+    )
   )
 
 end (* struct *)

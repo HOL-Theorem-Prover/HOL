@@ -1,15 +1,13 @@
-structure quote =
+structure quote :> quote =
 struct
 
-open HolKernel Parse quoteTheory;
+open HolKernel Parse boolLib quoteTheory;
 
-local
 structure Parse =
 struct
   open Parse
   val (Type,Term) = parse_from_grammars quoteTheory.quote_grammars
 end
-in
 
 fun QUOTE_ERR function message =
     HOL_ERR{origin_structure = "quote",
@@ -79,31 +77,24 @@ fun add_term t vm i =
       else Lr (add_term t v2 (i div 2))
   | _ => raise QUOTE_ERR "add_term" "";
 
-local
-  val vm = ref Lf
-  val size = ref 0
-in
-fun empty_map () =
-  (vm := Lf; size := 0)
 
-and get_map ty =
-  let val meta = meta_map ty
-      fun get_it() =
-        let val m = meta vm in
-        empty_map();
-        m
-        end
-  in get_it
+type vmdb = (varnode ref * int ref)
+fun empty_map () = (ref Lf, ref 0)
+
+fun get_map ((vm, _) : vmdb) ty =
+  let
+    val meta = meta_map ty
+  in
+    fn () => meta vm
   end
 
-and term_index t =
+fun term_index ((vm,size): vmdb) t =
   case search_term t vm of
     SOME i => i
   | _ =>
       let val _ = size := (!size) + 1 in
       add_term t vm (!size)
       end
-end;
 
 
 
@@ -124,7 +115,11 @@ fun op_assoc x [] = NONE
 
 
 fun meta_expr ty is_qu { Op1, Op2, Vars, Csts } =
-  let fun meta_rec t =
+  let
+    fun meta_rec vmdb t =
+      let
+        val meta_rec = meta_rec vmdb
+      in
         if is_qu t then Pquote t
         else
           let val oper =
@@ -143,10 +138,12 @@ fun meta_expr ty is_qu { Op1, Op2, Vars, Csts } =
                   else NONE
               end
             else NONE
-          in case oper of
-            SOME mt => mt
-          | NONE => Pvar (term_index t)
+          in
+            case oper of
+                SOME mt => mt
+              | NONE => Pvar (term_index vmdb t)
           end
+      end
 
       fun meta_pol (Pvar i) = mk_comb(Vars,meta_index i)
         | meta_pol (Pquote t) = mk_comb(Csts,t)
@@ -156,16 +153,18 @@ fun meta_expr ty is_qu { Op1, Op2, Vars, Csts } =
             raise QUOTE_ERR "meta_expr" "unrecognized polynomial expression"
         | non_trivial p = p
 
-      val mpol = meta_pol  o  non_trivial  o  meta_rec
-      val mk_map = get_map ty
+      fun mpol vmdb = meta_pol  o  non_trivial  o  meta_rec vmdb
+      fun mk_map vmdb = get_map vmdb ty
 
       fun meta_list lt =
-        let val _ = empty_map()
-            val lmt = map mpol lt
-            val mm = mk_map()
-        in {Metamap=mm,Poly=lmt} end
-  in meta_list
+        let val vmdb = empty_map()
+            val lmt = map (mpol vmdb) lt
+            val mm = mk_map vmdb ()
+        in
+          {Metamap=mm,Poly=lmt}
+        end
+  in
+    meta_list
   end;
 
-end (* local *)
 end;

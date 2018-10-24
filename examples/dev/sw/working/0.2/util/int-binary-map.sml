@@ -24,8 +24,8 @@
  *      University of Southampton
  *   Address:  Electronics & Computer Science
  *             University of Southampton
- *	     Southampton  SO9 5NH
- *	     Great Britian
+ *           Southampton  SO9 5NH
+ *           Great Britian
  *   E-mail:   sra@ecs.soton.ac.uk
  *
  *   Comments:
@@ -53,8 +53,8 @@ structure IntBinaryMapUpd : ORD_MAP_UPD =
 
     structure Key =
       struct
-	type ord_key = int
-	val compare = Int.compare
+        type ord_key = int
+        val compare = Int.compare
       end
 
     (*
@@ -71,7 +71,7 @@ structure IntBinaryMapUpd : ORD_MAP_UPD =
           cnt : int,
           left : 'a map,
           right : 'a map
-	}
+        }
 
     fun numItems E = 0
       | numItems (T{cnt,...}) = cnt
@@ -163,14 +163,14 @@ in
           else T{key=x,value=f(value),left=left,right=right,cnt= #cnt set}
 
     fun find (set, x) = let
-	  fun mem E = NONE
-	    | mem (T(n as {key,left,right,...})) =
-		if x > key then mem right
-		else if x < key then mem left
-		else SOME(#value n)
-	  in
-	    mem set
-	  end
+          fun mem E = NONE
+            | mem (T(n as {key,left,right,...})) =
+                if x > key then mem right
+                else if x < key then mem left
+                else SOME(#value n)
+          in
+            mem set
+          end
 
     fun findSome E = NONE
      |  findSome (T{key,value,...}) = SOME (key,value)
@@ -186,85 +186,85 @@ in
           else (delete'(left,right),value)
 
     fun listItems d = let
-	  fun d2l (E, l) = l
-	    | d2l (T{key,value,left,right,...}, l) =
-		d2l(left, value::(d2l(right,l)))
-	  in
-	    d2l (d,[])
-	  end
+          fun d2l (E, l) = l
+            | d2l (T{key,value,left,right,...}, l) =
+                d2l(left, value::(d2l(right,l)))
+          in
+            d2l (d,[])
+          end
 
     fun listItemsi d = let
-	  fun d2l (E, l) = l
-	    | d2l (T{key,value,left,right,...}, l) =
-		d2l(left, (key,value)::(d2l(right,l)))
-	  in
-	    d2l (d,[])
-	  end
+          fun d2l (E, l) = l
+            | d2l (T{key,value,left,right,...}, l) =
+                d2l(left, (key,value)::(d2l(right,l)))
+          in
+            d2l (d,[])
+          end
 
     local
       fun next ((t as T{right, ...})::rest) = (t, left(right, rest))
-	| next _ = (E, [])
+        | next _ = (E, [])
       and left (E, rest) = rest
-	| left (t as T{left=l, ...}, rest) = left(l, t::rest)
+        | left (t as T{left=l, ...}, rest) = left(l, t::rest)
     in
     fun collate cmpRng (s1, s2) = let
-	  fun cmp (t1, t2) = (case (next t1, next t2)
-		 of ((E, _), (E, _)) => EQUAL
-		  | ((E, _), _) => LESS
-		  | (_, (E, _)) => GREATER
-		  | ((T{key=x1, value=y1, ...}, r1), (T{key=x2, value=y2, ...}, r2)) => (
-		      case Key.compare(x1, x2)
-		       of EQUAL => (case cmpRng(y1, y2)
-			     of EQUAL => cmp (r1, r2)
-			      | order => order
-			    (* end case *))
-			| order => order
-		      (* end case *))
-		(* end case *))
-	  in
-	    cmp (left(s1, []), left(s2, []))
-	  end
+          fun cmp (t1, t2) = (case (next t1, next t2)
+                 of ((E, _), (E, _)) => EQUAL
+                  | ((E, _), _) => LESS
+                  | (_, (E, _)) => GREATER
+                  | ((T{key=x1, value=y1, ...}, r1), (T{key=x2, value=y2, ...}, r2)) => (
+                      case Key.compare(x1, x2)
+                       of EQUAL => (case cmpRng(y1, y2)
+                             of EQUAL => cmp (r1, r2)
+                              | order => order
+                            (* end case *))
+                        | order => order
+                      (* end case *))
+                (* end case *))
+          in
+            cmp (left(s1, []), left(s2, []))
+          end
     end (* local *)
 
     fun appi f d = let
-	  fun appf E = ()
-	    | appf (T{key,value,left,right,...}) = (
-		appf left; f(key,value); appf right)
-	  in
-	    appf d
-	  end
+          fun appf E = ()
+            | appf (T{key,value,left,right,...}) = (
+                appf left; f(key,value); appf right)
+          in
+            appf d
+          end
     fun app f d = appi (fn (_, v) => f v) d
 
     fun mapi f d = let
-	  fun mapf E = E
-	    | mapf (T{key,value,left,right,cnt}) = let
-		val left' = mapf left
-		val value' = f(key, value)
-		val right' = mapf right
-		in
-		  T{cnt=cnt, key=key, value=value', left = left', right = right'}
-		end
-	  in
-	    mapf d
-	  end
+          fun mapf E = E
+            | mapf (T{key,value,left,right,cnt}) = let
+                val left' = mapf left
+                val value' = f(key, value)
+                val right' = mapf right
+                in
+                  T{cnt=cnt, key=key, value=value', left = left', right = right'}
+                end
+          in
+            mapf d
+          end
     fun map f d = mapi (fn (_, x) => f x) d
 
     fun foldli f init d = let
-	  fun fold (E,v) = v
-	    | fold (T{key,value,left,right,...},v) =
-		fold (right, f(key, value, fold(left, v)))
-	  in
-	    fold (d, init)
-	  end
+          fun fold (E,v) = v
+            | fold (T{key,value,left,right,...},v) =
+                fold (right, f(key, value, fold(left, v)))
+          in
+            fold (d, init)
+          end
     fun foldl f init d = foldli (fn (_, v, accum) => f (v, accum)) init d
 
     fun foldri f init d = let
-	  fun fold (E,v) = v
-	    | fold (T{key,value,left,right,...},v) =
-		fold (left, f(key, value, fold(right, v)))
-	  in
-	    fold (d, init)
-	  end
+          fun fold (E,v) = v
+            | fold (T{key,value,left,right,...},v) =
+                fold (left, f(key, value, fold(right, v)))
+          in
+            fold (d, init)
+          end
     fun foldr f init d = foldri (fn (_, v, accum) => f (v, accum)) init d
 
     end (* local *)
@@ -274,94 +274,94 @@ in
  * at some point.
  *)
     fun unionWith f (m1, m2) = let
-	  fun ins (key, x, m) = (case find(m, key)
-		 of NONE => insert(m, key, x)
-		  | (SOME x') => insert(m, key, f(x, x'))
-		(* end case *))
-	  in
-	    if (numItems m1 > numItems m2)
-	      then foldli ins m1 m2
-	      else foldli ins m2 m1
-	  end
+          fun ins (key, x, m) = (case find(m, key)
+                 of NONE => insert(m, key, x)
+                  | (SOME x') => insert(m, key, f(x, x'))
+                (* end case *))
+          in
+            if (numItems m1 > numItems m2)
+              then foldli ins m1 m2
+              else foldli ins m2 m1
+          end
     fun unionWithi f (m1, m2) = let
-	  fun ins (key, x, m) = (case find(m, key)
-		 of NONE => insert(m, key, x)
-		  | (SOME x') => insert(m, key, f(key, x, x'))
-		(* end case *))
-	  in
-	    if (numItems m1 > numItems m2)
-	      then foldli ins m1 m2
-	      else foldli ins m2 m1
-	  end
+          fun ins (key, x, m) = (case find(m, key)
+                 of NONE => insert(m, key, x)
+                  | (SOME x') => insert(m, key, f(key, x, x'))
+                (* end case *))
+          in
+            if (numItems m1 > numItems m2)
+              then foldli ins m1 m2
+              else foldli ins m2 m1
+          end
 
     fun intersectWith f (m1, m2) = let
-	(* iterate over the elements of m1, checking for membership in m2 *)
-	  fun intersect (m1, m2) = let
-		fun ins (key, x, m) = (case find(m2, key)
-		       of NONE => m
-			| (SOME x') => insert(m, key, f(x, x'))
-		      (* end case *))
-		in
-		  foldli ins empty m1
-		end
-	  in
-	    if (numItems m1 > numItems m2)
-	      then intersect (m1, m2)
-	      else intersect (m2, m1)
-	  end
+        (* iterate over the elements of m1, checking for membership in m2 *)
+          fun intersect (m1, m2) = let
+                fun ins (key, x, m) = (case find(m2, key)
+                       of NONE => m
+                        | (SOME x') => insert(m, key, f(x, x'))
+                      (* end case *))
+                in
+                  foldli ins empty m1
+                end
+          in
+            if (numItems m1 > numItems m2)
+              then intersect (m1, m2)
+              else intersect (m2, m1)
+          end
 
     fun intersectWithi f (m1, m2) = let
-	(* iterate over the elements of m1, checking for membership in m2 *)
-	  fun intersect (m1, m2) = let
-		fun ins (key, x, m) = (case find(m2, key)
-		       of NONE => m
-			| (SOME x') => insert(m, key, f(key, x, x'))
-		      (* end case *))
-		in
-		  foldli ins empty m1
-		end
-	  in
-	    if (numItems m1 > numItems m2)
-	      then intersect (m1, m2)
-	      else intersect (m2, m1)
-	  end
+        (* iterate over the elements of m1, checking for membership in m2 *)
+          fun intersect (m1, m2) = let
+                fun ins (key, x, m) = (case find(m2, key)
+                       of NONE => m
+                        | (SOME x') => insert(m, key, f(key, x, x'))
+                      (* end case *))
+                in
+                  foldli ins empty m1
+                end
+          in
+            if (numItems m1 > numItems m2)
+              then intersect (m1, m2)
+              else intersect (m2, m1)
+          end
 
   (* this is a generic implementation of filter.  It should
    * be specialized to the data-structure at some point.
    *)
     fun filter predFn m = let
-	  fun f (key, item, m) = if predFn item
-		then insert(m, key, item)
-		else m
-	  in
-	    foldli f empty m
-	  end
+          fun f (key, item, m) = if predFn item
+                then insert(m, key, item)
+                else m
+          in
+            foldli f empty m
+          end
     fun filteri predFn m = let
-	  fun f (key, item, m) = if predFn(key, item)
-		then insert(m, key, item)
-		else m
-	  in
-	    foldli f empty m
-	  end
+          fun f (key, item, m) = if predFn(key, item)
+                then insert(m, key, item)
+                else m
+          in
+            foldli f empty m
+          end
 
   (* this is a generic implementation of mapPartial.  It should
    * be specialized to the data-structure at some point.
    *)
     fun mapPartial f m = let
-	  fun g (key, item, m) = (case f item
-		 of NONE => m
-		  | (SOME item') => insert(m, key, item')
-		(* end case *))
-	  in
-	    foldli g empty m
-	  end
+          fun g (key, item, m) = (case f item
+                 of NONE => m
+                  | (SOME item') => insert(m, key, item')
+                (* end case *))
+          in
+            foldli g empty m
+          end
     fun mapPartiali f m = let
-	  fun g (key, item, m) = (case f(key, item)
-		 of NONE => m
-		  | (SOME item') => insert(m, key, item')
-		(* end case *))
-	  in
-	    foldli g empty m
-	  end
+          fun g (key, item, m) = (case f(key, item)
+                 of NONE => m
+                  | (SOME item') => insert(m, key, item')
+                (* end case *))
+          in
+            foldli g empty m
+          end
 
   end

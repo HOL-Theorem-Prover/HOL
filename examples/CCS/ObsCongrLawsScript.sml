@@ -14,7 +14,7 @@ val _ = new_theory "ObsCongrLaws";
 
 (******************************************************************************)
 (*                                                                            *)
-(*         Basic laws of observation congruence for binary summation	      *)
+(*         Basic laws of observation congruence for binary summation          *)
 (*               through strong equivalence                                   *)
 (*                                                                            *)
 (******************************************************************************)
@@ -55,7 +55,7 @@ val OBS_SUM_ASSOC_L = save_thm (
 
 (******************************************************************************)
 (*                                                                            *)
-(*           Basic laws of observation congruence for the parallel	      *)
+(*           Basic laws of observation congruence for the parallel            *)
 (*                 operator through strong equivalence                        *)
 (*                                                                            *)
 (******************************************************************************)
@@ -122,9 +122,9 @@ val OBS_PAR_TAU_TAU = save_thm (
 val OBS_PAR_PREF_NO_SYNCR = save_thm (
    "OBS_PAR_PREF_NO_SYNCR",
     STRIP_FORALL_RULE ((DISCH ``~((l :'b Label) = COMPL l')``) o
-		       (STRIP_FORALL_RULE (MATCH_MP STRONG_IMP_OBS_CONGR)) o
-		       UNDISCH)
-		      STRONG_PAR_PREF_NO_SYNCR);
+                       (STRIP_FORALL_RULE (MATCH_MP STRONG_IMP_OBS_CONGR)) o
+                       UNDISCH)
+                      STRONG_PAR_PREF_NO_SYNCR);
 
 (* Prove OBS_PAR_PREF_SYNCR:
    |- !l l'.
@@ -139,9 +139,9 @@ val OBS_PAR_PREF_NO_SYNCR = save_thm (
 val OBS_PAR_PREF_SYNCR = save_thm (
    "OBS_PAR_PREF_SYNCR",
     STRIP_FORALL_RULE ((DISCH ``((l :'b Label) = COMPL l')``) o
-		       (STRIP_FORALL_RULE (MATCH_MP STRONG_IMP_OBS_CONGR)) o
-		       UNDISCH)
-		      STRONG_PAR_PREF_SYNCR);
+                       (STRIP_FORALL_RULE (MATCH_MP STRONG_IMP_OBS_CONGR)) o
+                       UNDISCH)
+                      STRONG_PAR_PREF_SYNCR);
 
 (* The expansion law for observation congruence:
   |- !f n f' m.
@@ -158,11 +158,11 @@ val OBS_PAR_PREF_SYNCR = save_thm (
 val OBS_EXPANSION_LAW = save_thm (
    "OBS_EXPANSION_LAW",
     STRIP_FORALL_RULE (DISCH_ALL o (MATCH_MP STRONG_IMP_OBS_CONGR) o UNDISCH)
-		      STRONG_EXPANSION_LAW);
+                      STRONG_EXPANSION_LAW);
 
 (******************************************************************************)
 (*                                                                            *)
-(*          Basic laws of observation congruence for the restriction	      *)
+(*          Basic laws of observation congruence for the restriction          *)
 (*                operator through strong equivalence                         *)
 (*                                                                            *)
 (******************************************************************************)
@@ -223,11 +223,11 @@ val OBS_RESTR_PREFIX_LABEL = save_thm (
               (Q.SPECL [`l`, `L`] STRONG_RESTR_PREFIX_LABEL))))
            (SPECL [``restr (L :'b Label set) (prefix (label l) E)``,
                    ``prefix (label (l :'b Label)) (restr L E)``]
-		  STRONG_IMP_OBS_CONGR)));
+                  STRONG_IMP_OBS_CONGR)));
 
 (******************************************************************************)
 (*                                                                            *)
-(*           Basic laws of observation congruence for the recursion	      *)
+(*           Basic laws of observation congruence for the recursion           *)
 (*                 operator through strong equivalence                        *)
 (*                                                                            *)
 (******************************************************************************)
@@ -251,7 +251,7 @@ val OBS_PREF_REC_EQUIV = save_thm (
 
 (******************************************************************************)
 (*                                                                            *)
-(*         Basic laws of observation congruence for the relabelling	      *)
+(*         Basic laws of observation congruence for the relabelling           *)
 (*               operator through strong equivalence                          *)
 (*                                                                            *)
 (******************************************************************************)
@@ -279,7 +279,7 @@ val OBS_RELAB_PREFIX = save_thm (
 
 (******************************************************************************)
 (*                                                                            *)
-(*      tau-laws for observation congruence (and the same tau-laws	      *)
+(*      tau-laws for observation congruence (and the same tau-laws            *)
 (*       for observation equivalence derived through the congruence)          *)
 (*                                                                            *)
 (******************************************************************************)
@@ -374,7 +374,7 @@ val TAU3 = store_thm ("TAU3",
         Q.EXISTS_TAC `E1` \\
         ASM_REWRITE_TAC [WEAK_TRANS, WEAK_EQUIV_REFL] \\
         take [`prefix (u :'b Action) (sum E (prefix tau E'))`,
-	      `sum E (prefix tau E')`] \\
+              `sum E (prefix tau E')`] \\
         REWRITE_TAC [EPS_REFL, PREFIX] \\
         MATCH_MP_TAC ONE_TAU \\
         MATCH_MP_TAC SUM2 \\

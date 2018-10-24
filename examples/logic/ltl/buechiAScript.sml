@@ -463,7 +463,7 @@ val ALPH_COUNTER_FST_LEMM2 = store_thm
 
 (* ) *)
 (* ) *)
- 
+
 
 (*               >> `!a. (i <= a) ==> *)
 (*                     (SND (alph_counter N f g (SUC a)) = *)
@@ -487,7 +487,7 @@ val ALPH_COUNTER_FST_LEMM2 = store_thm
 
 
 (* ) *)
-                   
+
 
 (* `?k. i <= k *)
 (*                    ∧ (g (f (SND (alph_counter N f g k))) *)

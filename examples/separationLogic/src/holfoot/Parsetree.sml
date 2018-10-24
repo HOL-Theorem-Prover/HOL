@@ -37,7 +37,7 @@ datatype a_space_pred =
 
 datatype a_proposition =
    Aprop_infix of string * a_expression * a_expression
-	  (* string is one of "<", "<=", ">", ">=", "==", "!=" *)
+          (* string is one of "<", "<=", ">", ">=", "==", "!=" *)
   | Aprop_false
   | Aprop_ifthenelse of a_proposition * a_proposition * a_proposition
   | Aprop_star of a_proposition * a_proposition

@@ -37,13 +37,13 @@ fun theory_files script =
   end
 
 fun find_heapname file =
-  let 
+  let
     val dir = OS.Path.dir file
     val file' = OS.Path.file file
     val bare = OS.Path.base file'
     val heapname_string = HOLDIR ^ "/bin/heapname"
     val _ = mkDir_err ttt_code_dir
-    val fileout = ttt_code_dir ^ "/ttt_heapname_" ^ bare 
+    val fileout = ttt_code_dir ^ "/ttt_heapname_" ^ bare
     val cmd = String.concatWith " " [heapname_string,">",fileout]
   in
     cmd_in_dir dir cmd;
@@ -52,7 +52,7 @@ fun find_heapname file =
   handle _ => raise ERR "find_heapname" ""
 
 fun find_genscriptdep file =
-  let 
+  let
     val dir = OS.Path.dir file
     val file' = OS.Path.file file
     val bare = OS.Path.base file'
@@ -67,16 +67,16 @@ fun find_genscriptdep file =
   handle _ => raise ERR "find_genscriptdep" ""
 
 fun run_buildheap core_flag file =
-  let 
+  let
     val _ = mkDir_err ttt_buildheap_dir
     val dir = OS.Path.dir file
     val file' = OS.Path.file file
     val bare = OS.Path.base file'
     val buildheap = HOLDIR ^ "/bin/buildheap"
     val filel = find_genscriptdep file
-    val state = 
+    val state =
       if core_flag then HOLDIR ^ "/bin/hol.state0" else find_heapname file
-    val cmd = 
+    val cmd =
       String.concatWith " "
         ([buildheap,"--holstate=" ^ state,"--gcthreads=1"] @ filel @ [file']
         @ [">",ttt_buildheap_dir ^ "/" ^ bare])
@@ -86,7 +86,7 @@ fun run_buildheap core_flag file =
 
 fun remove_err s = FileSys.remove s handle SysErr _ => ()
 
-fun run_rm_script core_flag file = 
+fun run_rm_script core_flag file =
   (
   run_buildheap core_flag file;
   remove_err file

@@ -22,7 +22,7 @@ struct
     val getConst: bvec -> const = app1 (symb "mlbvec_getconst")
 
     fun lookupConst bvec =
-	if isConst bvec then SOME(getConst bvec) else NONE
+        if isConst bvec then SOME(getConst bvec) else NONE
 
     val add: bvec * bvec -> bvec = cur2 (symb "mlbvec_add")
     val sub: bvec * bvec -> bvec = cur2 (symb "mlbvec_sub")

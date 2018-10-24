@@ -43,10 +43,10 @@ val _ = disable_tyabbrev_printing "list_simulation";
 val (STRONG_EQUIV_rules, STRONG_EQUIV_coind, STRONG_EQUIV_cases) = Hol_coreln `
     (!(E :('a, 'b) CCS) (E' :('a, 'b) CCS).
        (!u.
-	 (!E1. TRANS E u E1 ==>
-	       (?E2. TRANS E' u E2 /\ STRONG_EQUIV E1 E2)) /\
-	 (!E2. TRANS E' u E2 ==>
-	       (?E1. TRANS E u E1 /\ STRONG_EQUIV E1 E2))) ==> STRONG_EQUIV E E')`;
+         (!E1. TRANS E u E1 ==>
+               (?E2. TRANS E' u E2 /\ STRONG_EQUIV E1 E2)) /\
+         (!E2. TRANS E' u E2 ==>
+               (?E1. TRANS E u E1 /\ STRONG_EQUIV E1 E2))) ==> STRONG_EQUIV E E')`;
 
   then the 3rd returned value (STRONG_EQUIV_cases) is just the PROPERTY_STAR:
 
@@ -71,10 +71,10 @@ val STRONG_EQUIV' = new_definition (
    "STRONG_EQUIV'",
   ``STRONG_EQUIV' E E' =
         (!u.
-         (!E1. TRANS E u E1 ==> 
+         (!E1. TRANS E u E1 ==>
                (?E2. TRANS E' u E2 /\ STRONG_EQUIV E1 E2)) /\
-         (!E2. TRANS E' u E2 ==> 
-               (?E1. TRANS E u E1 /\ STRONG_EQUIV E1 E2)))``); 
+         (!E2. TRANS E' u E2 ==>
+               (?E1. TRANS E u E1 /\ STRONG_EQUIV E1 E2)))``);
 
 (* Strong equivalence implies the new relation. *)
 val STRONG_EQUIV_IMP_STRONG_EQUIV' = store_thm (
@@ -83,9 +83,9 @@ val STRONG_EQUIV_IMP_STRONG_EQUIV' = store_thm (
     rpt GEN_TAC
  >> REWRITE_TAC [STRONG_EQUIV', STRONG_EQUIV]
  >> rpt STRIP_TAC (* 2 sub-goals *)
- >> IMP_RES_TAC 
+ >> IMP_RES_TAC
       (MATCH_MP (EQ_MP STRONG_BISIM (ASSUME ``STRONG_BISIM Bsm``))
-		(ASSUME ``(Bsm: ('a, 'b) simulation) E E'``))
+                (ASSUME ``(Bsm: ('a, 'b) simulation) E E'``))
  >| [ Q.EXISTS_TAC `E2`,
       Q.EXISTS_TAC `E1` ]
  >> ASM_REWRITE_TAC []
@@ -97,7 +97,7 @@ val STRONG_EQUIV'_IS_STRONG_BISIM = store_thm (
   ``STRONG_BISIM STRONG_EQUIV'``,
     PURE_ONCE_REWRITE_TAC [STRONG_BISIM]
  >> rpt STRIP_TAC (* 2 sub-goals here *)
- >> IMP_RES_TAC 
+ >> IMP_RES_TAC
        (EQ_MP (Q.SPECL [`E`, `E'`] STRONG_EQUIV')
               (ASSUME ``STRONG_EQUIV' E E'``))
  >| [ Q.EXISTS_TAC `E2`,
@@ -125,9 +125,9 @@ val PROPERTY_STAR' = store_thm (
                  (?E1. TRANS E u E1 /\ STRONG_EQUIV E1 E2)))``,
     rpt GEN_TAC
  >> EQ_TAC (* 2 sub-goals here *)
- >| [ PURE_ONCE_REWRITE_TAC 
+ >| [ PURE_ONCE_REWRITE_TAC
         [ONCE_REWRITE_RULE [STRONG_EQUIV'] STRONG_EQUIV_IMP_STRONG_EQUIV'],
-      PURE_ONCE_REWRITE_TAC 
+      PURE_ONCE_REWRITE_TAC
         [ONCE_REWRITE_RULE [STRONG_EQUIV'] STRONG_EQUIV'_IMP_STRONG_EQUIV] ]);
 
 (******************************************************************************)
@@ -137,7 +137,7 @@ val PROPERTY_STAR' = store_thm (
 (******************************************************************************)
 
 val VM = ``rec "VM" (In "coin"..(In "ask-esp"..rec "VM1" (Out "esp-coffee"..var "VM") +
-				 In "ask-am"..rec "VM2" (Out "am-coffee"..var "VM")))``;
+                                 In "ask-am"..rec "VM2" (Out "am-coffee"..var "VM")))``;
 
 (* ex1 =
 |- label (name "a")..label (name "b")..nil +
@@ -148,10 +148,10 @@ val VM = ``rec "VM" (In "coin"..(In "ask-esp"..rec "VM1" (Out "esp-coffee"..var 
 local
     val t1 = ISPEC ``label (name "a")`` (ISPEC ``prefix (label (name "b")) nil`` PREFIX)
     and t2 = ISPECL [``prefix (label (name "a")) (prefix (label (name "b")) nil)``,
-		    ``label (name "a")``,
-		    ``prefix (label (name "b")) nil``,
-		    ``prefix (label (name "b")) (prefix (label (name "a")) nil)``]
-		   SUM1;
+                    ``label (name "a")``,
+                    ``prefix (label (name "b")) nil``,
+                    ``prefix (label (name "b")) (prefix (label (name "a")) nil)``]
+                   SUM1;
 in
     val ex1 = save_thm ("ex1", MP t2 t1)
 end;
@@ -184,7 +184,7 @@ val coList_imp_List = store_thm (
    >> ONCE_REWRITE_TAC [List_cases]
    >> REPEAT STRIP_TAC
    >| [ ASM_REWRITE_TAC [],
-	SIMP_TAC list_ss []
+        SIMP_TAC list_ss []
      >> `t = l` by PROVE_TAC [CONS_11]
      >> PROVE_TAC [] ] ]);
 
@@ -204,16 +204,16 @@ local
 in
   val ex_A = save_thm ("ex_A", temp_A);
   val [ex_A1, ex_A2, ex_A3] = map (fn (n, (thm, _)) => save_thm (n, thm))
-				(combine (["ex_A1", "ex_A2", "ex_A3"], nodes))
+                                (combine (["ex_A1", "ex_A2", "ex_A3"], nodes))
 end;
 
 val (WB_rules, WB_coind, WB_cases) = Hol_coreln `
     (!(P :('a, 'b) CCS) (Q :('a, 'b) CCS).
        (!l.
-	 (!P'. TRANS P (label l) P' ==>
-	       (?Q'. WEAK_TRANS Q (label l) Q' /\ WB P' Q')) /\
-	 (!Q'. TRANS Q (label l) Q' ==>
-	       (?P'. WEAK_TRANS P (label l) P' /\ WB P' Q'))) /\
+         (!P'. TRANS P (label l) P' ==>
+               (?Q'. WEAK_TRANS Q (label l) Q' /\ WB P' Q')) /\
+         (!Q'. TRANS Q (label l) Q' ==>
+               (?P'. WEAK_TRANS P (label l) P' /\ WB P' Q'))) /\
        (!P'. TRANS P tau P' ==> (?Q'. EPS Q Q' /\ WB P' Q')) /\
        (!Q'. TRANS Q tau Q' ==> (?P'. EPS P P' /\ WB P' Q'))
      ==> WB P Q)`;
@@ -241,23 +241,23 @@ val PAR2' = store_thm (
 
 val PAR3' = store_thm (
    "PAR3'", ``!P l P' Q P2. TRANS P (label l) P' /\ TRANS Q (label (COMPL l)) Q'
-		==> TRANS (par P Q) tau (par P' Q')``,
+                ==> TRANS (par P Q) tau (par P' Q')``,
     PROVE_TAC [PAR3]);
 
 val RESTR' = store_thm (
    "RESTR'", ``!P u Q l L.   TRANS P u Q /\ ((u = tau) \/
-				     ((u = label l) /\ l NOTIN L /\ (COMPL l) NOTIN L))
-		==> TRANS (restr L P) u (restr L Q)``,
+                                     ((u = label l) /\ l NOTIN L /\ (COMPL l) NOTIN L))
+                ==> TRANS (restr L P) u (restr L Q)``,
     PROVE_TAC [RESTR]);
 
 val RELABELING' = store_thm (
    "RELABELING'", ``!P u Q rf.    TRANS P u Q
-		==> TRANS (relab P rf) (relabel rf u) (relab Q rf)``,
+                ==> TRANS (relab P rf) (relabel rf u) (relab Q rf)``,
     PROVE_TAC [RELABELING]);
 
 val REC' = store_thm (
    "REC'", ``!P u A P'.     TRANS (CCS_Subst P (rec A P) A) u P'
-		==> TRANS (rec A P) u P'``,
+                ==> TRANS (rec A P) u P'``,
     PROVE_TAC [REC]);
 
 val _ = export_theory ();
@@ -269,38 +269,38 @@ open EmitTeX;
 val _ =
  if (OS.FileSys.isDir "../paper" handle e => false) then
     let in
-	OS.FileSys.remove "../paper/references.tex" handle e => {};
-	OS.FileSys.remove "../paper/HOLCCS.tex" handle e => {};
-	OS.FileSys.remove "../paper/HOLStrongEQ.tex" handle e => {};
-	OS.FileSys.remove "../paper/HOLStrongLaws.tex" handle e => {};
-	OS.FileSys.remove "../paper/HOLWeakEQ.tex" handle e => {};
-	OS.FileSys.remove "../paper/HOLWeakLaws.tex" handle e => {};
-	OS.FileSys.remove "../paper/HOLObsCongr.tex" handle e => {};
-	OS.FileSys.remove "../paper/HOLObsCongrLaws.tex" handle e => {};
-	OS.FileSys.remove "../paper/HOLCongruence.tex" handle e => {};
-	OS.FileSys.remove "../paper/HOLTrace.tex" handle e => {};
-	OS.FileSys.remove "../paper/HOLCoarsestCongr.tex" handle e => {};
-	OS.FileSys.remove "../paper/HOLBisimulationUpto.tex" handle e => {};
-	OS.FileSys.remove "../paper/HOLExpansion.tex" handle e => {};
-	OS.FileSys.remove "../paper/HOLContraction.tex" handle e => {};
-	OS.FileSys.remove "../paper/HOLUniqueSolutions.tex" handle e => {};
+        OS.FileSys.remove "../paper/references.tex" handle e => {};
+        OS.FileSys.remove "../paper/HOLCCS.tex" handle e => {};
+        OS.FileSys.remove "../paper/HOLStrongEQ.tex" handle e => {};
+        OS.FileSys.remove "../paper/HOLStrongLaws.tex" handle e => {};
+        OS.FileSys.remove "../paper/HOLWeakEQ.tex" handle e => {};
+        OS.FileSys.remove "../paper/HOLWeakLaws.tex" handle e => {};
+        OS.FileSys.remove "../paper/HOLObsCongr.tex" handle e => {};
+        OS.FileSys.remove "../paper/HOLObsCongrLaws.tex" handle e => {};
+        OS.FileSys.remove "../paper/HOLCongruence.tex" handle e => {};
+        OS.FileSys.remove "../paper/HOLTrace.tex" handle e => {};
+        OS.FileSys.remove "../paper/HOLCoarsestCongr.tex" handle e => {};
+        OS.FileSys.remove "../paper/HOLBisimulationUpto.tex" handle e => {};
+        OS.FileSys.remove "../paper/HOLExpansion.tex" handle e => {};
+        OS.FileSys.remove "../paper/HOLContraction.tex" handle e => {};
+        OS.FileSys.remove "../paper/HOLUniqueSolutions.tex" handle e => {};
 
-	EmitTeX.print_theories_as_tex_doc
-	    ["CCS",
-	     "StrongEQ",
-	     "StrongLaws",
-	     "WeakEQ",
-	     "WeakLaws",
-	     "ObsCongr",
-	     "ObsCongrLaws",
-	     "Congruence",
-	     "CoarsestCongr",
-	     "BisimulationUpto",
-	     "Trace",
-	     "Expansion",
-	     "Contraction",
-	     "UniqueSolutions"]
-	    "../paper/references"
+        EmitTeX.print_theories_as_tex_doc
+            ["CCS",
+             "StrongEQ",
+             "StrongLaws",
+             "WeakEQ",
+             "WeakLaws",
+             "ObsCongr",
+             "ObsCongrLaws",
+             "Congruence",
+             "CoarsestCongr",
+             "BisimulationUpto",
+             "Trace",
+             "Expansion",
+             "Contraction",
+             "UniqueSolutions"]
+            "../paper/references"
     end
  else
     {};

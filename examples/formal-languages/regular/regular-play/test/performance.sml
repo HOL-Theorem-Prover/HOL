@@ -16,7 +16,7 @@ val runPerformanceTests = true;
 
 exception TestCaseException of (string * int);
 
-(* create a test template as a functor *)    
+(* create a test template as a functor *)
 functor regexTestRunner (regexM:regex) =
 struct
 
@@ -49,7 +49,7 @@ fun runTestFun testFun name tests =
          print ("Test with id '" ^ (Int.toString id) ^ "' failed.\n\n");
          false
        );
-         
+
 
 
 

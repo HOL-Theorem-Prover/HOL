@@ -83,8 +83,6 @@ val offinc = 10000;;     (* NB: should be bigger than all variable codes.    *)
 (* Some "flags".                                                             *)
 (* ------------------------------------------------------------------------- *)
 
-val inferences = ref 0;;        (* Inference counter                         *)
-
 val depth = ref false;;         (* Use depth not inference bound.            *)
 
 val prefine = ref true;;        (* Plaisted's "positive refinement".         *)
@@ -128,10 +126,7 @@ datatype fol_form = Atom   of fol_atom
 (* ------------------------------------------------------------------------- *)
 
 local
-  val vstore = ref ([]:(term * int) list)
-  val gstore = ref ([]:(term * int) list)
-  val vcounter = ref 0
-  fun inc_vcounter () =
+  fun inc_vcounter vcounter =
     let
       val n = !vcounter
       val m = n + 1
@@ -141,17 +136,17 @@ local
       else
         (vcounter := m; n)
     end
-  fun hol_of_var v =
+  fun hol_of_var (vstore,gstore,_) v =
      case assoc2 v (!vstore)
       of NONE => assoc2 v (!gstore)
        | x => x
-  fun hol_of_bumped_var v =
-    case (hol_of_var v)
-     of SOME x => x
+  fun hol_of_bumped_var (vdb as (_, gstore, _)) v =
+    case hol_of_var vdb v of
+        SOME x => x
       | NONE =>
          let val v' = v mod offinc
-             val hv' = case (hol_of_var v')
-                        of SOME y => y
+             val hv' = case hol_of_var vdb v' of
+                           SOME y => y
                          | NONE => failwith "hol_of_bumped_var"
              val gv = genvar (type_of hv')
          in
@@ -159,106 +154,81 @@ local
             gv
          end
 in
-  fun reset_vars () = (vstore := []; gstore := []; vcounter := 0)
-  fun fol_of_var (v:term) =
+  type vardb = (term * int) list ref * (term * int) list ref * int ref
+  fun new_vardb () : vardb = (ref [], ref [], ref 0)
+  fun fol_of_var ((vstore,_,vcounter):vardb) (v:term) =
     let val currentvars = !vstore
     in case assoc1 v currentvars
         of SOME x => x
          | NONE =>
-            let val n = inc_vcounter()
+            let val n = inc_vcounter vcounter
             in vstore := (v,n)::currentvars; n
             end
     end
   val hol_of_var = hol_of_bumped_var
 end;
 
-local
-  val cstore = ref ([]:(term * int) list)
-  val ccounter = ref 2
-in
-  fun reset_consts () = (cstore := [(the_false, 1)]; ccounter := 2)
-  fun fol_of_const c =
-    let
-      val currentconsts = !cstore
-    in
-      case assoc1_eq Term.compare c currentconsts of
-        SOME x => x
-      | NONE =>
-        let val n = !ccounter
-        in
-          ccounter := n + 1;
-          cstore := (c,n)::currentconsts;
-          n
-        end
-    end
-  fun hol_of_const c =
-     case assoc2 c (!cstore)
-      of SOME x => x
-       | NONE => failwith "hol_of_const"
-end;
+type cdb = ((term * int) list ref * int ref)
+fun new_cdb () : cdb = (ref [(the_false, 1)], ref 2)
+fun fol_of_const ((cstore,ccounter) : cdb) c =
+  let
+    val currentconsts = !cstore
+  in
+    case assoc1_eq Term.compare c currentconsts of
+      SOME x => x
+    | NONE =>
+      let val n = !ccounter
+      in
+        ccounter := n + 1;
+        cstore := (c,n)::currentconsts;
+        n
+      end
+  end
+fun hol_of_const ((cstore,_):cdb) c =
+   case assoc2 c (!cstore)
+    of SOME x => x
+     | NONE => failwith "hol_of_const"
 
-fun fol_of_term env consts tm =
-  if is_var tm andalso not (mem tm consts) then Var(fol_of_var tm)
+fun fol_of_term env consts (cvdb as (cdb,vdb)) tm =
+  if is_var tm andalso not (mem tm consts) then Var(fol_of_var vdb tm)
   else
     let val (f,args) = strip_comb tm
     in if mem f env then failwith "fol_of_term: higher order"
-       else let val ff = fol_of_const f
-            in Fnapp(ff, map (fol_of_term env consts) args)
+       else let val ff = fol_of_const cdb f
+            in Fnapp(ff, map (fol_of_term env consts cvdb) args)
             end
     end
 
-fun fol_of_atom env consts tm =
+fun fol_of_atom env consts (cvdb as (cdb,_)) tm =
   let val (f,args) = strip_comb tm
   in if mem f env then failwith "fol_of_atom: higher order"
-     else (fol_of_const f, map (fol_of_term env consts) args)
+     else (fol_of_const cdb f, map (fol_of_term env consts cvdb) args)
   end
 
-fun fol_of_literal env consts tm =
+fun fol_of_literal env consts cvdb tm =
   let val tm' = dest_neg tm
-      val (p,a) = fol_of_atom env consts tm'
+      val (p,a) = fol_of_atom env consts cvdb tm'
   in
     (~p,a)
   end
-  handle HOL_ERR _ => fol_of_atom env consts tm
-
-fun fol_of_form env consts tm =
-  let val (v,bod) = dest_forall tm
-      val fv = fol_of_var v
-      val fbod = fol_of_form (v::env) (subtract consts [v]) bod
-  in
-     Forall(fv,fbod)
-  end
-  handle HOL_ERR _ =>
-    let val (l,r) = dest_conj tm
-        val fl = fol_of_form env consts l
-        val fr = fol_of_form env consts r
-    in
-        Conj(fl,fr)
-    end
-  handle HOL_ERR _ =>
-    let val (l,r) = dest_disj tm
-        val fl = fol_of_form env consts l
-        and fr = fol_of_form env consts r
-    in
-        Disj(fl,fr)
-    end
-  handle HOL_ERR _ => Atom(fol_of_literal env consts tm);;
+  handle HOL_ERR _ => fol_of_atom env consts cvdb tm
 
 (* ------------------------------------------------------------------------- *)
 (* Further translation functions for HOL formulas.                           *)
 (* ------------------------------------------------------------------------- *)
 
-fun hol_of_term tm =
+fun hol_of_term (cvdb as (cdb,vdb)) tm =
   case tm of
-    Var v => hol_of_var v
-  | Fnapp(f,args) => list_mk_comb(hol_of_const f,map hol_of_term args);;
+    Var v => hol_of_var vdb v
+  | Fnapp(f,args) =>
+      list_mk_comb(hol_of_const cdb f,map (hol_of_term cvdb) args)
 
-fun hol_of_atom (p,args) =
-  list_mk_comb(hol_of_const p,map hol_of_term args);;
+fun hol_of_atom (cvdb as (cdb,vdb)) (p,args) =
+  list_mk_comb(hol_of_const cdb p,map (hol_of_term cvdb) args);;
 
-fun hol_of_literal (p,args) =
-  if p < 0 then mk_neg(hol_of_atom(~p,args))
-  else hol_of_atom (p,args);;
+fun hol_of_literal cvdb (p,args) =
+  if p < 0 then mk_neg(hol_of_atom cvdb (~p,args))
+  else hol_of_atom cvdb (p,args)
 
 (* ------------------------------------------------------------------------- *)
 (* Versions of shadow syntax operations with variable bumping.               *)
@@ -485,7 +455,7 @@ datatype fol_goal = Subgoal of fol_atom
 (* Perform basic MESON expansion.                                            *)
 (* ------------------------------------------------------------------------- *)
 
-fun meson_single_expand rule ((g,ancestors),(insts,offset,size)) =
+fun meson_single_expand infs rule ((g,ancestors),(insts,offset,size)) =
  let val ((hyps,conc),tag) = rule
      val allins = rev_itlist2 (fol_unify offset) (snd g) (snd conc) insts
      val (locin,globin) = qpartition (fn (_,v) => offset <= v) insts allins
@@ -495,7 +465,7 @@ fun meson_single_expand rule ((g,ancestors),(insts,offset,size)) =
          end
      val newhyps =  map mk_ihyp hyps
   in
-    inferences := !inferences + 1;
+    infs := !infs + 1;
     (newhyps, (globin, offset+offinc, size - length hyps))
   end;
 
@@ -504,28 +474,28 @@ fun meson_single_expand rule ((g,ancestors),(insts,offset,size)) =
 (* Perform first basic expansion which allows continuation call.             *)
 (* ------------------------------------------------------------------------- *)
 
-fun meson_expand_cont rules state cont =
-  tryfind (fn r => cont (snd r) (meson_single_expand r state)) rules;;
+fun meson_expand_cont infs rules state cont =
+  tryfind (fn r => cont (snd r) (meson_single_expand infs r state)) rules;;
 
 (* ------------------------------------------------------------------------- *)
 (* Try expansion and continuation call with either ancestor or initial rule. *)
 (* ------------------------------------------------------------------------- *)
 
-fun meson_expand rules ((g,ancestors),(tup as (insts,offset,size))) cont =
+fun meson_expand infs rules ((g,ancestors),(tup as (insts,offset,size))) cont =
  let val pr = fst g
      val newancestors = insertan insts g ancestors
      val newstate = ((g,newancestors),tup)
  in
    (if !prefine andalso pr > 0 then failwith "meson_expand"
     else case (assoc1 pr ancestors)
-          of SOME arules => meson_expand_cont arules newstate cont
+          of SOME arules => meson_expand_cont infs arules newstate cont
            | NONE => failwith "not found")
    handle Cut => failwith "meson_expand"
         | HOL_ERR _ =>
            (case (assoc1 pr rules)
              of SOME x =>
                   let val crules = filter (fn ((h,_),_) => length h <= size) x
-                  in meson_expand_cont crules newstate cont
+                  in meson_expand_cont infs crules newstate cont
                   end
               | NONE => failwith "not found")
            handle Cut => failwith "meson_expand"
@@ -535,12 +505,12 @@ fun meson_expand rules ((g,ancestors),(tup as (insts,offset,size))) cont =
 (* Simple Prolog engine which organizes search and backtracking.             *)
 (* ------------------------------------------------------------------------- *)
 
-fun expand_goal rules =
+fun expand_goal infs rules =
   let
     fun exp_goal depth (state as ((g,_),(insts,offset,size))) cont =
       if depth < 0 then failwith "expand_goal: too deep"
       else
-        meson_expand rules state
+        meson_expand infs rules state
         (fn apprule => fn (newstate as (_,(pinsts,_,_))) =>
          exp_goals (depth-1) newstate
          (cacheconts
@@ -605,29 +575,28 @@ val state = (g,([],2 * offinc,maxinf))
 (* stores putative solutions then fails; that will initiate backtracking!    *)
 (* ------------------------------------------------------------------------- *)
 
-fun chat n =
+fun chat infs n =
   case !chatting
    of 0 => ()
     | 1 => say "."
-    | _ => say (String.concat[int_to_string (!inferences),
-                              " inferences so far. ",
+    | _ => say (String.concat[Int.toString infs, " inferences so far. ",
                               "Searching with maximum size ",
                               int_to_string n, ".\n"]);
 
-fun say_solved n =
+fun say_solved infs n =
   if (n <> 0 andalso n <> 1)
   then say (String.concat["Internal goal solved with ",
-                          int_to_string (!inferences),
+                          Int.toString infs,
                           " MESON inferences.\n"])
   else ();
 
-fun solve_goal rules incdepth min max incsize =
+fun solve_goal infs rules incdepth min max incsize =
  let fun solve n g =
       if n > max then failwith "solve_goal: Too deep"
-      else let val _ = chat n
-               val gi = if incdepth then expand_goal rules g n 100000 I
-                                    else expand_goal rules g 100000 n I
-               val _ = say_solved (!chatting)
+      else let val _ = chat (!infs) n
+               val gi = if incdepth then expand_goal infs rules g n 100000 I
+                                    else expand_goal infs rules g 100000 n I
+               val _ = say_solved (!infs) (!chatting)
            in
              gi
            end
@@ -652,12 +621,12 @@ val fol_of_hol_clauses =
             let val new = ((map mk_negated (used @ t),h),(n,th))
             in mk_contraposes (n + 1) th (used@[h]) t (new::sofar)
             end
-    fun fol_of_hol_clause th =
+    fun fol_of_hol_clause cvdb th =
       let
         val lconsts = freesl (hyp th)
         val tm = concl th
         val hlits = strip_disj tm
-        val flits = map (fol_of_literal [] lconsts) hlits
+        val flits = map (fol_of_literal [] lconsts cvdb) hlits
         val basics = mk_contraposes 0 th [] flits []
       in
         if Lib.all (fn (p,_) => p < 0) flits then
@@ -667,9 +636,9 @@ val fol_of_hol_clauses =
     fun eek (x1,(i1,th1)) (x2,(i2,th2)) =
         (x1=x2) andalso (i1=i2) andalso thm_eq th1 th2
   in
-    fn thms =>
+    fn cvdb => fn thms =>
     let
-      val rawrules = itlist (Lib.op_union eek o fol_of_hol_clause) thms []
+      val rawrules = itlist (Lib.op_union eek o fol_of_hol_clause cvdb) thms []
       val prs = mk_set (map (fst o snd o fst) rawrules)
       val prules =
         map (fn t => (t,filter (curry op = t o fst o snd o fst) rawrules)) prs
@@ -713,10 +682,9 @@ local
   val push_CONV = GEN_REWRITE_CONV TOP_SWEEP_CONV [DEMORG_DISJ, NOT2]
   and pull_CONV = GEN_REWRITE_CONV DEPTH_CONV [DEMORG_AND]
   and imf_CONV  = REWR_CONV NOT_IMP
-  val memory    = ref ([]: ((int * term) * thm) list)
 in
-  fun clear_contrapos_cache() = memory := []
-  fun make_hol_contrapos (n,th) =
+  fun new_contrapos_cache() = ref ([] : ((int * term) * thm) list)
+  fun make_hol_contrapos memory (n,th) =
     let val tm = concl th
         val key = (n,tm)
     in
@@ -746,24 +714,20 @@ end
 (* ------------------------------------------------------------------------- *)
 
 local
-  fun bump_hol_thm offset th =
-    let val fvs = subtract (free_vars (concl th)) (freesl(hyp th))
-    in INST (map(fn v => {redex=v,residue=hol_of_var(fol_of_var v + offset)})
-                 fvs) th
-    end
   fun hol_negate tm = dest_neg tm handle HOL_ERR _ => mk_neg tm
   fun merge_inst (t,x) current = (fol_subst current t,x)::current
   val finish_RULE = Rewrite.GEN_REWRITE_RULE I Rewrite.empty_rewrites
                           [TAUT `(~p ==> p) = p`, TAUT `(p ==> ~p) = ~p`]
 in
-  fun meson_to_hol insts (Subgoal(g,gs,(n,th),offset,locin)) =
+  fun meson_to_hol insts cpos_cache cvdb (Subgoal(g,gs,(n,th),offset,locin)) =
     let val newins = itlist merge_inst locin insts
         val g'     = fol_inst newins g
-        val hol_g  = hol_of_literal g'
-        val ths    = map (meson_to_hol newins) gs
+        val hol_g  = hol_of_literal cvdb g'
+        val (cdv, vdb) = cvdb
+        val ths    = map (meson_to_hol newins cpos_cache cvdb) gs
         val hth =
            if concl th = the_true then ASSUME hol_g
-           else let val cth = make_hol_contrapos(n,th)
+           else let val cth = make_hol_contrapos cpos_cache (n,th)
                 in if null ths then cth
                    else Drule.MATCH_MP cth (Lib.end_itlist Thm.CONJ ths)
               handle e as HOL_ERR _ =>
@@ -966,49 +930,51 @@ val (POLY_ASSUME_TAC:thm list -> jrhTactics.Tactic) =
 (* rules too).                                                               *)
 (* ------------------------------------------------------------------------- *)
 
-fun SIMPLE_MESON_REFUTE min max inc ths =
-  (clear_contrapos_cache();
-   inferences := 0;
-   let val old_dcutin = !dcutin
+fun SIMPLE_MESON_REFUTE infs min max inc ths =
+  (let val old_dcutin = !dcutin
    in
      if !depth then dcutin := 100001 else ();
      let
         val ths' = ths @ create_equality_axioms (map concl ths)
-        val rules = optimize_rules(fol_of_hol_clauses ths')
-        val (proof,(insts,_,_)) = solve_goal rules (!depth) min max inc (1,[])
+        val cvdb = (new_cdb(), new_vardb())
+        val rules = optimize_rules(fol_of_hol_clauses cvdb ths')
+        val (proof,(insts,_,_)) =
+            solve_goal infs rules (!depth) min max inc (1,[])
       in
         dcutin := old_dcutin;
-        meson_to_hol insts proof
+        meson_to_hol insts (new_contrapos_cache()) cvdb proof
       end
-   end);
+   end)
 
 
-fun PURE_MESON_TAC min max inc gl =
+fun PURE_MESON_TAC infs min max inc gl =
   let open jrhTactics
   in
-    (reset_vars(); reset_consts();
-     (FIRST_ASSUM CONTR_TAC ORELSE
-      W(ACCEPT_TAC o SIMPLE_MESON_REFUTE min max inc o fst)) gl)
+    (FIRST_ASSUM CONTR_TAC ORELSE
+     W(ACCEPT_TAC o SIMPLE_MESON_REFUTE infs min max inc o fst)) gl
   end
 
 
 fun inform tac g =
   let val _ = if (!chatting = 1) then say "Meson search level: " else ()
-      val res = tac g
+      val infs = ref 0
+      val res = tac infs g
       val _ = if (!chatting = 0) then ()
          else if (!chatting = 1) then say"\n"
-              else say  ("  solved with "^(int_to_string (!inferences))^
+              else say  ("  solved with " ^ Int.toString (!infs) ^
                          " MESON inferences.\n")
   in  res  end;
 
 fun GEN_MESON_TAC min max step ths g =
  inform
- (REFUTE_THEN ASSUME_TAC
-   THEN let open jrhTactics
-        in convert (POLY_ASSUME_TAC (map GEN_ALL ths)
-                      THEN PREMESON_CANON_TAC
-                      THEN PURE_MESON_TAC min max step)
-        end) g;
+ (fn infs =>
+   REFUTE_THEN ASSUME_TAC THEN
+   let
+     open jrhTactics
+   in
+     convert (POLY_ASSUME_TAC (map GEN_ALL ths) THEN PREMESON_CANON_TAC THEN
+              PURE_MESON_TAC infs min max step)
+   end) g;
 
 
 val max_depth = ref 30;

@@ -15,7 +15,7 @@ map load
  ["bossLib", "metisLib", "matcherTheory", "KripkeTheory", "UnclockedSemanticsTheory",
   "SyntacticSugarTheory", "ClockedSemanticsTheory", "RewritesTheory",
   "rich_listTheory", "intLib", "res_quanLib", "res_quanTheory"];
-open KripkeTheory FinitePathTheory PathTheory SyntaxTheory SyntacticSugarTheory
+open KripkeTheory FinitePSLPathTheory PSLPathTheory SyntaxTheory SyntacticSugarTheory
      UnclockedSemanticsTheory ClockedSemanticsTheory RewritesTheory
      arithmeticTheory listTheory rich_listTheory res_quanLib res_quanTheory
      ClockedSemanticsTheory metisLib matcherTheory;
@@ -50,7 +50,7 @@ val () = computeLib.add_funs
 * Evaluating Sugar2 formulas
 ******************************************************************************)
 val _ = computeLib.add_funs
-  [PathTheory.SEL_REC_AUX,
+  [PSLPathTheory.SEL_REC_AUX,
    UF_SEM_F_UNTIL_REC,
    B_SEM,
 (* Prefer the optimizing version of

@@ -106,8 +106,8 @@ fun get_ctl_prop_type f =  (hd o snd o dest_type o type_of) f
 
 (* return a list of all terms of the form AP p that occur in f *)
 fun find_BPROPs f = let val p_ty  = get_ctl_prop_type f
-		     val pvar = mk_var("p",p_ty)
-		 in find_terms (can (match_term (mk_comb(inst [alpha|-> p_ty] C_BPROP_tm,pvar)))) f end
+                     val pvar = mk_var("p",p_ty)
+                 in find_terms (can (match_term (mk_comb(inst [alpha|-> p_ty] C_BPROP_tm,pvar)))) f end
 
 val get_ctl_S = (rand o rand o rator)
 val get_ctl_S0 = (rand o rand o rator o rand)
@@ -123,7 +123,7 @@ let val ksSu = inst [alpha |-> s_ty,beta |-> p_ty] ksSu_tm
     val ksLu = inst [alpha |-> s_ty,beta |-> p_ty] ksLu_tm
     val arb_cks = inst [alpha |-> ks_ty] boolSyntax.arb
 in List.foldr (fn ((u,v),ks) => mk_comb(mk_comb (u,mk_comb(inst [alpha |-> type_of v, beta |->type_of v] combinSyntax.K_tm,v)),ks))
-	      arb_cks  [(ksSu,S),(ksS0u,S0),(ksRu,R),(ksPu,P),(ksLu,L)] end
+              arb_cks  [(ksSu,S),(ksS0u,S0),(ksRu,R),(ksPu,P),(ksLu,L)] end
 
 fun bool2ctl state p_ty f =
 if is_bool_var f  then C_AP state f
@@ -135,10 +135,10 @@ else if is_disj f then (bool2ctl state p_ty (land f)) C_OR  (bool2ctl state p_ty
 else if is_imp f  then (bool2ctl state p_ty (land f)) C_IMP (bool2ctl state p_ty (rand f))
 else if is_eq f   then (bool2ctl state p_ty (land f)) C_IFF (bool2ctl state p_ty (rand f))
 else if is_cond f then let val (c,a,b) = dest_cond f
-		       in ((bool2ctl state p_ty c) C_OR (bool2ctl state p_ty b)) C_AND
-			  ((bool2ctl state p_ty (mk_neg c)) C_OR (bool2ctl state p_ty a)) end
+                       in ((bool2ctl state p_ty c) C_OR (bool2ctl state p_ty b)) C_AND
+                          ((bool2ctl state p_ty (mk_neg c)) C_OR (bool2ctl state p_ty a)) end
 else case (fst(dest_const(fst(strip_comb f)))) of
-	 "BC_AF" => C_AF (bool2ctl state p_ty (rand f))
+         "BC_AF" => C_AF (bool2ctl state p_ty (rand f))
        | "BC_AX" => C_AX (bool2ctl state p_ty (rand f))
        | "BC_AG" => C_AG (bool2ctl state p_ty (rand f))
        | "BC_EF" => C_EF (bool2ctl state p_ty (rand f))

@@ -110,7 +110,7 @@ fun elim_redundant_rules rules =
                          | _ => false        (* Wildcard or variables *)
                        )
                     | ConS s1 =>
-		       (case t2 of
+                       (case t2 of
                            Constr y => S.member(s1, y)
                          | ConS s2 => S.isSubset(s2,s1)
                          | _ => false        (* Wildcard or variables *)
@@ -146,12 +146,12 @@ fun inst_rules(rules : rule_type list, test_set) =
           | ConS s => let val sub_s = S.intersection(constr_set, s) in
                           if S.isEmpty sub_s then r_rules
                           else if S.numItems s = 1 then
-			    r_rules @ [inst_rule(rule, index, Constr (hd (S.listItems s)))]
+                            r_rules @ [inst_rule(rule, index, Constr (hd (S.listItems s)))]
                           else
-			    r_rules @ [inst_rule(rule, index, ConS constr_set)]
+                            r_rules @ [inst_rule(rule, index, ConS constr_set)]
                       end
           | _ => r_rules @ [inst_rule(rule, index,
-			    if S.numItems constr_set = 1
+                            if S.numItems constr_set = 1
                             then Constr (hd (S.listItems constr_set))
                             else ConS constr_set)]
           )
@@ -223,7 +223,7 @@ fun select_index(test_set, indices) =
         List.foldl
           (fn ((index,name), (i,j)) =>
              let val n = length (List.filter (fn (n,x) => n = i) test_list)
-	     in  if n < j then (index, n)
+             in  if n < j then (index, n)
                  else (i,j)
              end
            )

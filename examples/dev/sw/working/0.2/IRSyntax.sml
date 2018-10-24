@@ -341,12 +341,12 @@ end
   fun getIO stmL =
    let
      val (regT:((ROLE * ROLE) T.table) ref, memCT:((ROLE * ROLE) T.table) ref, memRT:((ROLE * ROLE) T.table) ref)
-	  = (ref (T.empty), ref (T.empty), ref (T.empty));
+          = (ref (T.empty), ref (T.empty), ref (T.empty));
 
      fun peekT(t,index) =
-	case T.peek(t,index) of
-	     NONE => (UNKNOWN,UNKNOWN)
-	 |   SOME v => v;
+        case T.peek(t,index) of
+             NONE => (UNKNOWN,UNKNOWN)
+         |   SOME v => v;
 
      fun ch_mode (UNKNOWN,UNKNOWN) READ = (INPUT,UNKNOWN)
       |  ch_mode (m,UNKNOWN) READ = (INPUT, UNKNOWN)
@@ -358,26 +358,26 @@ end
       |  ch_mode _ _ = raise Fail "ch_mode: invalidMode";
 
      fun update_mode (REG r) action =
-	   regT := T.enter (!regT, r, ch_mode (peekT(!regT, r)) action)
+           regT := T.enter (!regT, r, ch_mode (peekT(!regT, r)) action)
       |  update_mode (TMEM i) action =
            memCT := T.enter (!memCT, i, ch_mode (peekT(!memCT, i)) action)
       |  update_mode _ _ =
-	   ();
+           ();
 
      fun one_stm ({oper = op1, dst = dst1, src = src1}) =
-	  ( List.map (fn exp => update_mode exp READ) src1;
-	    List.map (fn exp => update_mode exp WRITE) dst1
-	  );
+          ( List.map (fn exp => update_mode exp READ) src1;
+            List.map (fn exp => update_mode exp WRITE) dst1
+          );
 
      fun mk_regL indexL =
-	List.map (fn n => REG n) indexL;
+        List.map (fn n => REG n) indexL;
 
      fun mk_memL indexL =
-	List.map TMEM indexL;
+        List.map TMEM indexL;
 
      fun filter_inputs mode =
-	 mk_regL (List.filter (fn n => #1 (T.look (!regT,n)) = mode) (T.listKeys (!regT))) @
-	 mk_memL (List.filter (fn n => #1 (T.look (!memCT,n)) = mode) (T.listKeys (!memCT)));
+         mk_regL (List.filter (fn n => #1 (T.look (!regT,n)) = mode) (T.listKeys (!regT))) @
+         mk_memL (List.filter (fn n => #1 (T.look (!memCT,n)) = mode) (T.listKeys (!memCT)));
 
      fun filter_out_stack mode =
          mk_regL (List.filter (fn n => #2 (T.look (!regT,n)) = mode) (T.listKeys (!regT))) @
@@ -387,7 +387,7 @@ end
      val (ins, temps, outs) = (filter_inputs INPUT, filter_out_stack INSTACK, filter_out_stack OUTPUT);
 
      in
-	(ins, temps, outs)
+        (ins, temps, outs)
      end
 
 

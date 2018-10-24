@@ -1,5 +1,9 @@
 signature DefinitionDoc =
 sig
+
+ type term = Term.term
+ type thm = Thm.thm
+
   (* This signature file is for documentation purposes only,
      and is a temporary workaround for GitHub issue #238 *)
 

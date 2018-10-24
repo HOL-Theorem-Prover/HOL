@@ -111,19 +111,19 @@ fun var_res_strip_local_vars t =
     in
        if (same_const op_term var_res_prog_call_by_value_arg_term) then (
          let
-	     val (arg1, arg2) = (el 1 args, el 2 args);
-	     val (v, t') = dest_abs arg1;
+             val (arg1, arg2) = (el 1 args, el 2 args);
+             val (v, t') = dest_abs arg1;
              val (l, t'') = var_res_strip_local_vars t';
          in
-	     ((v,SOME arg2)::l, t'')
+             ((v,SOME arg2)::l, t'')
          end
        ) else if (same_const op_term var_res_prog_local_var_term) then (
          let
-	     val arg1 = el 1 args;
-	     val (v, t') = dest_abs arg1;
+             val arg1 = el 1 args;
+             val (v, t') = dest_abs arg1;
              val (l, t'') = var_res_strip_local_vars t';
          in
-	     ((v,NONE)::l, t'')
+             ((v,NONE)::l, t'')
          end
        ) else ([],t)
     end handle HOL_ERR _ => ([], t);

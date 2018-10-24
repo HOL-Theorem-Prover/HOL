@@ -29,7 +29,7 @@ FULL_SIMP_TAC std_ss [ReachableRec_def,ReachNext_def,SUBSET_DEF,SET_SPEC]
 ]);
 
 val ReachableStable =prove(``!R s n. (ReachableRec R s n = ReachableRec R s (SUC n)) ==>
-			   !m. m >= n ==> (ReachableRec R s m = ReachableRec R s n)``,
+                           !m. m >= n ==> (ReachableRec R s m = ReachableRec R s n)``,
 REWRITE_TAC [DECIDE ``(m>=n) = ((m=n) \/ (m>n))``]
 THEN REPEAT STRIP_TAC THENL [
 ASM_REWRITE_TAC [],
@@ -74,7 +74,7 @@ THEN SIMP_TAC std_ss [SET_SPEC]
 THEN ASSUM_LIST PROVE_TAC);
 
 val ReachableLem1 = prove(``!R s n'. (ReachableRec R s n' = ReachableRec R s (SUC n')) ==>
-			  (ReachableRec R s n' UNION  BIGUNION {P | ?n. n >= n' /\ (P =ReachableRec R s n)} =  ReachableRec R s n')``,
+                          (ReachableRec R s n' UNION  BIGUNION {P | ?n. n >= n' /\ (P =ReachableRec R s n)} =  ReachableRec R s n')``,
 REPEAT GEN_TAC
 THEN ASSUME_TAC (SPEC_ALL ReachableStableSubset)
 THEN UNDISCH_TAC ``(ReachableRec R s n' = ReachableRec R s (SUC n')) ==>
@@ -86,9 +86,9 @@ THEN ONCE_REWRITE_TAC [UNION_COMM]
 THEN ASSUM_LIST (fn t => PROVE_TAC (SUBSET_UNION_ABSORPTION::t)));
 
 val ReachableLem2 = prove(``!R s n'. (ReachableRec R s n' = ReachableRec R s (SUC n')) ==>
-			  (BIGUNION {P | ?n. n <= n' /\ (P = ReachableRec R s n)} UNION
-			   BIGUNION {P | ?n. n >= n' /\ (P = ReachableRec R s n)} =
-			   ReachableRec R s n')``,
+                          (BIGUNION {P | ?n. n <= n' /\ (P = ReachableRec R s n)} UNION
+                           BIGUNION {P | ?n. n >= n' /\ (P = ReachableRec R s n)} =
+                           ReachableRec R s n')``,
 REPEAT STRIP_TAC
 THEN ASSUM_LIST (fn t => SIMP_TAC std_ss (ReachableChainUnion::(tl t)))
 THEN ASSUME_TAC (SPEC_ALL ReachableLem1)
@@ -114,5 +114,3 @@ THEN REWRITE_TAC [GSYM BIGUNION_SPLIT]
 THEN ASSUM_LIST PROVE_TAC));
 
 val _ = export_theory();
-
-

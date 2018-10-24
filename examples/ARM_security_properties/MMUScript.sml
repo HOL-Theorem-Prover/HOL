@@ -67,26 +67,26 @@ val read_mem32_def  = Define ` read_mem32 add mem =
 
 val enabled_MMU_def = Define `enabled_MMU (c1:word32) =
                                      let bit0 = BIT 0 (w2n(c1)) in
-					 bit0`;
+                                         bit0`;
 
 
 (* checking MMU support only for one section descriptor *)
 (* further changes in version 2: expr3 = 0 and expr7 may be 01 as well *)
 val sd_supports_MMU_def = Define `sd_supports_MMU content_of_sd si =
-	   	let expr1 = (content_of_sd && 0x00000003w) in
-		let expr2 = (content_of_sd && 0x0000000Cw) >>> 2 in
-		let expr3 = (content_of_sd && 0x00000010w) >>> 4 in
-		let expr4 = (content_of_sd && 0x00000200w) >>> 9 in
-		let expr7 = (content_of_sd && 0x00000C00w) >>> 10 in
-		let expr5 = (content_of_sd && 0x000FF000w) >>> 12 in
-		let expr6 = (content_of_sd && 0xFFF00000w) >>> 20 in
-		    (expr1 = 0b10w:bool[32]) /\
-			(expr2 = 0b00w:word32) /\
-			     (expr3 = 0b0w:word32) /\
-			       (expr4 = 0b0w:word32) /\
-				   ((expr7 = 0b11w:word32) \/ (expr7 = 0b01w:word32)) /\
-					(expr5 = 0b0w:word32) /\
-					     (expr6 = si)`;
+                let expr1 = (content_of_sd && 0x00000003w) in
+                let expr2 = (content_of_sd && 0x0000000Cw) >>> 2 in
+                let expr3 = (content_of_sd && 0x00000010w) >>> 4 in
+                let expr4 = (content_of_sd && 0x00000200w) >>> 9 in
+                let expr7 = (content_of_sd && 0x00000C00w) >>> 10 in
+                let expr5 = (content_of_sd && 0x000FF000w) >>> 12 in
+                let expr6 = (content_of_sd && 0xFFF00000w) >>> 20 in
+                    (expr1 = 0b10w:bool[32]) /\
+                        (expr2 = 0b00w:word32) /\
+                             (expr3 = 0b0w:word32) /\
+                               (expr4 = 0b0w:word32) /\
+                                   ((expr7 = 0b11w:word32) \/ (expr7 = 0b01w:word32)) /\
+                                        (expr5 = 0b0w:word32) /\
+                                             (expr6 = si)`;
 
 
 
@@ -94,18 +94,18 @@ val sd_supports_MMU_def = Define `sd_supports_MMU content_of_sd si =
 (* returns (understood, permitted, message) *)
 val permitted_byte_def = Define `permitted_byte adr is_write (c1:word32) c2 (c3:bool[32]) priv mem =
                     if (~(enabled_MMU c1)) then
-			(T, T, "MMU is disabled")
-	            else
-			let si = (adr >>> 20) in
-			let first_sd = c2 && (0xFFFFC000w:bool[32]) in
-			let adr_sd =  first_sd + 4w * si in
-			let content_of_sd = read_mem32 adr_sd mem in
-			let domain:bool[32] =
-				   (content_of_sd && 0x000001E0w:bool[32]) >>> 5 in
-			(* make sure that it starts with one *)
-			let bit1_c3 = BIT (2*w2n(domain)) (w2n(c3)) in
-			let bit2_c3 = BIT (2*w2n(domain)+1) (w2n(c3)) in
-			let AP = (content_of_sd && 0x00000C00w) >>> 10 in
+                        (T, T, "MMU is disabled")
+                    else
+                        let si = (adr >>> 20) in
+                        let first_sd = c2 && (0xFFFFC000w:bool[32]) in
+                        let adr_sd =  first_sd + 4w * si in
+                        let content_of_sd = read_mem32 adr_sd mem in
+                        let domain:bool[32] =
+                                   (content_of_sd && 0x000001E0w:bool[32]) >>> 5 in
+                        (* make sure that it starts with one *)
+                        let bit1_c3 = BIT (2*w2n(domain)) (w2n(c3)) in
+                        let bit2_c3 = BIT (2*w2n(domain)+1) (w2n(c3)) in
+                        let AP = (content_of_sd && 0x00000C00w) >>> 10 in
                         if (sd_supports_MMU content_of_sd si)
                             then
                             (case (bit2_c3, bit1_c3) of
@@ -138,32 +138,32 @@ val permitted_byte_def = Define `permitted_byte adr is_write (c1:word32) c2 (c3:
 
 val permitted_byte_pure_def = Define `permitted_byte_pure adr is_write (c1:word32) c2 (c3:bool[32]) priv mem =
                     if (~(enabled_MMU c1)) then
-			T
-	            else
-			let si = (adr >>> 20) in
-			let first_sd = c2 && (0xFFFFC000w:bool[32]) in
-			let adr_sd =  first_sd + 4w * si in
-			let content_of_sd = read_mem32 adr_sd mem in
-			let domain:bool[32] =
-				   (content_of_sd && 0x000001E0w:bool[32]) >>> 5 in
-			(* make sure that it starts with one *)
-			let bit1_c3 = BIT (2*w2n(domain)) (w2n(c3)) in
-			let bit2_c3 = BIT (2*w2n(domain)+1) (w2n(c3)) in
-			let AP = (content_of_sd && 0x00000C00w) >>> 10 in
+                        T
+                    else
+                        let si = (adr >>> 20) in
+                        let first_sd = c2 && (0xFFFFC000w:bool[32]) in
+                        let adr_sd =  first_sd + 4w * si in
+                        let content_of_sd = read_mem32 adr_sd mem in
+                        let domain:bool[32] =
+                                   (content_of_sd && 0x000001E0w:bool[32]) >>> 5 in
+                        (* make sure that it starts with one *)
+                        let bit1_c3 = BIT (2*w2n(domain)) (w2n(c3)) in
+                        let bit2_c3 = BIT (2*w2n(domain)+1) (w2n(c3)) in
+                        let AP = (content_of_sd && 0x00000C00w) >>> 10 in
                              case (bit2_c3, bit1_c3) of
                                 (T,T) => T
-			     | (F,F)  => F
-			     | (F,T)  => (case AP of
+                             | (F,F)  => F
+                             | (F,T)  => (case AP of
                                              0b00w => F
                                            |0b01w => (if priv
-							then T
-							else F
-						     )
-					   |0b10w => (if priv
-							then T
-							else (~is_write)
-						     )
-					   |0b11w => T
+                                                        then T
+                                                        else F
+                                                     )
+                                           |0b10w => (if priv
+                                                        then T
+                                                        else (~is_write)
+                                                     )
+                                           |0b11w => T
                                           )
                         `;
 
@@ -189,15 +189,15 @@ val permitted_byte_simp = store_thm (
 
 val check_accesses_def = Define `check_accesses accesses c1 c2 c3 priv memory =
                          case accesses of
-			 x::tl =>
-			 ( let (adr, is_write) =
-			       ( case x of
-			          MEM_READ address => (address, F)
-	                       | MEM_WRITE address _ => (address, T)
-			       ) in
+                         x::tl =>
+                         ( let (adr, is_write) =
+                               ( case x of
+                                  MEM_READ address => (address, F)
+                               | MEM_WRITE address _ => (address, T)
+                               ) in
 
-			    let (und, per, msg) = (permitted_byte adr is_write c1 c2 c3 priv memory) in
-			    (
+                            let (und, per, msg) = (permitted_byte adr is_write c1 c2 c3 priv memory) in
+                            (
                                 if (und /\ (~per)) then
                                     (T, T, adr)
                                 else
@@ -214,8 +214,8 @@ val check_accesses_def = Define `check_accesses accesses c1 c2 c3 priv memory =
                                   )
                                )
                             )
-		          )
-		          |   _ => (T, F, UNKNOWN)`;
+                          )
+                          |   _ => (T, F, UNKNOWN)`;
 
 
 
@@ -226,14 +226,14 @@ val check_accesses_def = Define `check_accesses accesses c1 c2 c3 priv memory =
 (*   always understand the MMU setup               *)
 val check_accesses_pure_def = Define `check_accesses_pure accesses c1 c2 c3 priv memory =
                        case accesses of
-			 x::tl =>
-			 ( let (adr, is_write) =
-			       ( case x of
-			          MEM_READ address => (address, F)
-	                       | MEM_WRITE address _ => (address, T)
-			       ) in
-			    (~permitted_byte_pure adr is_write c1 c2 c3 priv memory) \/  (check_accesses_pure tl c1 c2 c3 priv memory)
-		          )
+                         x::tl =>
+                         ( let (adr, is_write) =
+                               ( case x of
+                                  MEM_READ address => (address, F)
+                               | MEM_WRITE address _ => (address, T)
+                               ) in
+                            (~permitted_byte_pure adr is_write c1 c2 c3 priv memory) \/  (check_accesses_pure tl c1 c2 c3 priv memory)
+                          )
                           | _ => F`;
 
 
@@ -313,7 +313,7 @@ val access_violation_full_def = Define `access_violation_full s = check_accesses
                                                            s.coprocessors.state.cp15.C1
                                                            s.coprocessors.state.cp15.C2
                                                            s.coprocessors.state.cp15.C3
-							   F
+                                                           F
                                                            s.memory`;
 
 (* empty access list, no violation *)
@@ -333,7 +333,7 @@ val access_violation_pure_def = Define `access_violation_pure s = check_accesses
                                                            s.coprocessors.state.cp15.C1
                                                            s.coprocessors.state.cp15.C2
                                                            s.coprocessors.state.cp15.C3
-							   F
+                                                           F
 
                                                s.memory`;
 
@@ -413,7 +413,7 @@ val mmu_arm_next_def = Define `mmu_arm_next irpt state  =
                   (
                      case (fetch_instruction <|proc:=0|> (\a. read_memA <|proc:=0|> (a, 4) >>= (\d. return (word32 d)))
                                                          (\a. read_memA <|proc:=0|> (a, 2) >>= (\d. return (word16 d)))
-							 (wfi_state with accesses := [])) of
+                                                         (wfi_state with accesses := [])) of
                              Error e => Error e
                           |  ValueState (opc,instr) fetched_state =>
                              (

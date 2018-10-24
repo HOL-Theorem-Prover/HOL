@@ -427,7 +427,7 @@ fun first_avail_slot env cont =
  let fun indexOfSlot s =
         valOf(Int.fromString(String.substring(s, 1, String.size s - 1)))
      val live = List.foldl (fn (t,ts) =>
-			     let val x = M.find(env,t)
+                             let val x = M.find(env,t)
                              in if is_mem x then x::ts else ts
                              end handle _ => ts) [] (free_vars cont)
      val max_slot = indexOfSlot(state(!mStrm))
@@ -448,7 +448,7 @@ fun alloc_mem (args,body) =
  let val body' = rhs (concl
                    (QCONV(SIMP_CONV bool_ss [ELIM_USELESS_LET]) body))
      val (save,loc) = (mk_const("save", (!VarType) --> (!VarType)),
-		       mk_const("loc", (!VarType) --> (!VarType)))
+                       mk_const("loc", (!VarType) --> (!VarType)))
      fun trav t env cont =
        if is_let t then
            let val (v,M,N) = dest_plet t
@@ -468,11 +468,11 @@ fun alloc_mem (args,body) =
                     mk_plet (v, M', N')
                 end
               else if is_pair v then
-		let val cont' = mk_pair(N,cont)
-		    val (v',env') =
-		        List.foldl (fn (x, (w, env')) =>
-		          if not (is_mem x) then (w,env')
-		          else
+                let val cont' = mk_pair(N,cont)
+                    val (v',env') =
+                        List.foldl (fn (x, (w, env')) =>
+                          if not (is_mem x) then (w,env')
+                          else
                             let val x' = first_avail_slot env' cont'
                             in (subst [x |-> x'] w, M.insert(env', x, x'))
                             end) (v,env) (strip_pair v)
