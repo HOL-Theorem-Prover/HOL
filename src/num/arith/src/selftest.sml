@@ -150,4 +150,22 @@ in
   else die "FAILED!\n"
 end
 
+(*
+val _ = numSimps.clear_arith_caches()
+val _ = tprint "Checking cache-fouling with theorems about constants"
+val _ = let
+  open boolSimps numSimps
+  val c1c2 = new_specification("c1c2", ["c1", "c2"],
+                Q.prove(‘∃c d:num. c < d’,
+                        MAP_EVERY Q.EXISTS_TAC [‘0’, ‘1’] >>
+                        numLib.REDUCE_TAC));
+  val tm = “c1 <> 0 \/ c2 <> 0”
+  val _ = QCONV (SIMP_CONV (bool_ss ++ ARITH_ss) []) tm (* taint *)
+  val res = QCONV (SIMP_CONV (bool_ss ++ ARITH_ss) [c1c2]) tm (* now fail *)
+in
+  if rhs (concl res) ~~ T then OK()
+  else die ("FAILED\n  RHS = " ^ term_to_string (rhs (concl res)))
+end
+*)
+
 val _ = Process.exit Process.success
