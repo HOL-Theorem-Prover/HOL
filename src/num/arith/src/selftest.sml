@@ -173,15 +173,15 @@ val _ = let
   val c3_def = new_definition("c3", “c3 = 10”)
   val goal = ([“c3 < x”, “x < 3”], “p:bool”)
   val _ = VALID (FULL_SIMP_TAC ss []) goal
-  fun check2 (Exn.Res (sgs, _)) = null sgs
-    | check2 _ = false
   fun prg(asl,w) =
       "([" ^ String.concatWith ", " (map term_to_string asl) ^ "], " ^
       term_to_string w ^ ")"
   fun pr (sgs, vf) =
       "[" ^ String.concatWith ",\n     " (map prg sgs) ^ "]"
 in
-  require_msg check2 pr (VALID (FULL_SIMP_TAC ss [c3_def])) goal
+  require_msg (check_result (null o #1)) pr
+              (VALID (FULL_SIMP_TAC ss [c3_def]))
+              goal
 end
 
 val _ = Process.exit Process.success

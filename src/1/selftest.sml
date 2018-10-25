@@ -1168,7 +1168,7 @@ val _ = let
   open Exn
   fun badtac (asl,g) = ([], fn [] => ASSUME ``p:bool`` | _ => raise Fail "")
   val vtac = VALID badtac
-  fun checkmsg P f os ofn m = os = "Tactical" andalso ofn = f andalso P m
+  fun checkmsg P f (os, ofn, m) = os = "Tactical" andalso ofn = f andalso P m
   fun checkv P = checkmsg P "VALID"
   fun checkvl P = checkmsg P "VALID_LT"
   val _ = tprint "VALID-checking (normal)"

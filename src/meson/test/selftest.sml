@@ -15,8 +15,7 @@ fun Mfail nm tm =
   let
     val _ = tprint ("meson (expected to fail) "^nm)
   in
-    require (check_HOL_ERR (fn _ => fn _ => fn _ => true)) TAC_PROOF
-            (([], tm), MESON_TAC [])
+    require (check_HOL_ERR (fn _ => true)) TAC_PROOF (([], tm), MESON_TAC [])
   end
 
 

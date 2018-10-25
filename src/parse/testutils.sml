@@ -140,7 +140,7 @@ fun timed f check x =
   end
 
 fun exncheck f (Res a) = f a
-  | exncheck f (Exn e) = die ("\n  EXN: "^General.exnMessage e)
+  | exncheck f (Exn e) = die (FAILEDstr ^ "\n  EXN: "^General.exnMessage e)
 
 fun convtest (nm,conv,tm,expected) =
   let
@@ -167,17 +167,19 @@ fun convtest (nm,conv,tm,expected) =
     timed conv (exncheck c) tm
   end
 
-fun is_struct_HOL_ERR st (HOL_ERR {origin_structure = st',...}) = st' = st
-  | is_struct_HOL_ERR _ _ = false
-
 fun check_HOL_ERRexn P e =
     case e of
         HOL_ERR{origin_structure,origin_function,message} =>
-        P origin_structure origin_function message
+          P (origin_structure, origin_function, message)
       | _ => false
 
 fun check_HOL_ERR P (Res _) = false
   | check_HOL_ERR P (Exn e) = check_HOL_ERRexn P e
+
+fun is_struct_HOL_ERR st1 = check_HOL_ERRexn (fn (st2,_,_) => st1 = st2)
+fun check_result P (Res r) = P r
+  | check_result P _ = false
+
 
 
 fun require_msg P pr f x =

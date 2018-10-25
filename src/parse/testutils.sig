@@ -24,10 +24,10 @@ val shouldfail : {testfn: 'a -> 'b, printresult: 'b -> string,
                   checkexn: exn -> bool} -> 'a -> unit
 
 val is_struct_HOL_ERR : string -> exn -> bool
-val check_HOL_ERRexn : (string -> string -> string -> bool) ->
-                       exn -> bool
-val check_HOL_ERR : (string -> string -> string -> bool) -> 'a testresult ->
+val check_HOL_ERRexn : (string * string * string -> bool) -> exn -> bool
+val check_HOL_ERR : (string * string * string -> bool) -> 'a testresult ->
                     bool
+val check_result : ('a -> bool) -> ('a testresult -> bool)
 val require : ('b testresult -> bool) -> ('a -> 'b) -> 'a -> unit
 val require_msg : ('b testresult -> bool) -> ('b -> string) -> ('a -> 'b) ->
                   'a -> unit
