@@ -959,22 +959,70 @@ val exten_sing = Q.store_thm("exten_sing[simp]",
 fs[exten_def])
 
 val size_of_exten = Q.prove(
-`∀s. FINITE s ==> (∀x dx y dy. (x,dx)∈s ∧ (y,dy) ∈ s ∧ x<>y ==> x+dx<=y ∨ y+dy<=x) ∧
+`∀s. FINITE s ==> (∀x dx y dy. (x,dx)∈s ∧ (y,dy) ∈ s ∧ (x,dx)<>(y,dy) ==> x+dx<=y ∨ y+dy<=x) ∧
               (∀x d. (x,d)∈s ==> 0r<d) ∧ (s <> {}) 
           ==> SIGMA SND s <= SND (exten s) - FST (exten s)`,
-Induct_on`FINITE` >> rw[] >> Cases_on`s={}` >> fsr[] >- (fsr[REAL_SUM_IMAGE_SING]) >> 
-fsr[exten_insert_thm,REAL_SUM_IMAGE_THM,DELETE_NON_ELEMENT_RWT] >> 
-Cases_on`(FST e + SND e)<= (SND (exten s))` >>
-Cases_on`(FST e)<= (FST (exten s))` >> rw[max_def,min_def] >> fsr[] >> 
-`(∀x d. (x,d) ∈ s ⇒ 0 < d) ` by metis_tac[]
->- (`SIGMA SND s <= SND (exten s) - FST (exten s)` by metis_tac[] >>
-    `SND e + SIGMA SND s <= SND e + SND (exten s) - FST (exten s)` by fsr[] >>fs[exten_def] >>
-    `FINITE {FST k + SND k | k ∈ s}` by metis_tac[IMAGE_FINITE,IMAGE_DEF] >>
-    `{FST k + SND k | k ∈ s} <> {}` by metis_tac[IMAGE_EQ_EMPTY,IMAGE_DEF]>>
-    `maxr_set {FST k + SND k | k ∈ s} ∈ {FST k + SND k | k ∈ s}` by metis_tac[maxr_set_def] >> 
+HO_MATCH_MP_TAC FINITE_COMPLETE_INDUCTION >> rw[] >> 
+map_every qabbrev_tac[`Rs = {FST k + SND k | k∈s}`,`Ls = {FST k |k∈s}`]>>
+`FINITE Ls` by metis_tac[IMAGE_FINITE,IMAGE_DEF] >>
+`Ls <> {}` by metis_tac[IMAGE_EQ_EMPTY,IMAGE_DEF] >>
+`∃e1 e2. (e1,e2)∈s ∧ ∀m. m∈ Ls ==> e1<=m` 
+  by (qexists_tac `minr_set Ls` >> qexists_tac`@e'. (minr_set Ls,e')∈s` >> reverse(rw[])
+      >- (metis_tac[minr_set_def]) >> SELECT_ELIM_TAC >> simp[] >> 
+      `minr_set Ls ∈ Ls` by  >> fs[Abbr`Ls`] >> metis_tac[pairTheory.PAIR]) >>
+qabbrev_tac`s0 = s DELETE (e1,e2)` >> Cases_on`s0={}` >> simp[] 
+  >- (`s = {(e1,e2)}` by cheat >> rw[REAL_SUM_IMAGE_THM] >> fsr[]) >> 
+`s0 ⊂ s` by (fs[Abbr`s0`,PSUBSET_MEMBER]>> metis_tac[]) >> last_x_assum drule >> impl_tac
+  >- (rw[Abbr`s0`] >> metis_tac[]) >> `s = (e1,e2) INSERT s0` by fs[Abbr`s0`] >> 
+`s0 DELETE (e1,e2) = s0` by fs[Abbr`s0`,ELT_IN_DELETE,DELETE_NON_ELEMENT] >>
+fsr[REAL_SUM_IMAGE_THM] >> 
+`SND (exten s0) - FST (exten s0) <=  SND (exten ((e1,e2) INSERT s0)) − FST (exten ((e1,e2) INSERT s0)) - e2` suffices_by fsr[] >> 
+fsr[exten_def,exten_insert_thm,REAL_SUM_IMAGE_THM,DELETE_NON_ELEMENT_RWT] >>
+map_every qabbrev_tac [`MX = maxr_set {FST k + SND k | k ∈ s0}`,`MN = minr_set  {FST k | k ∈ s0}`]>>
 
-    `FST e + SND e <= FST (exten s)` by metis_tac[])
+
+`∃n. (MN,n)∈s0` by (fs[Abbr`MN`] >> `minr_set {FST k | k∈ s0} ∈ {FST k | k∈s0}` by fs[minr_set_def,Abbr`s0`]  >> metis_tac[pairTheory.PAIR])
+
+rw[max_def,min_def] >> fsr[]
+>- (`e1 + e2 <= MN` suffices_by fsr[] >>  
+    `@e'. (FST (exten s0),e')∈s` by fs[]
+    first_x_assum(qspecl_then[`e1`,`e2`,`FST (exten s0)`,@e'. (FST (exten s0),e')∈s] MP_TAC) >> simp[] rw[] )
 >- ()
+>- ()
+>- ()
+
+`∃e1 e2. e = (e1,e2)` by (Cases_on`e` >> simp[]) >> rw[] >>
+`SIGMA SND s <= SND (exten s) - FST (exten s)` by metis_tac[] >>
+`e2 + SIGMA SND s <= e2 + SND (exten s) - FST (exten s)` by fsr[] >>fs[exten_def] >>
+
+map_every qabbrev_tac [`MX = maxr_set Rs`,`MN = minr_set Ls`] >> fs[Abbr`Ls`,Abbr`Rs`] >>
+
+`FINITE Rs` by metis_tac[IMAGE_FINITE,IMAGE_DEF] >>
+`Rs <> {}` by metis_tac[IMAGE_EQ_EMPTY,IMAGE_DEF]>>
+`MX ∈ Rs ∧ ∀m. m ∈ Rs ==> m <= MX ` by metis_tac[maxr_set_def] >> 
+`FINITE Ls` by metis_tac[IMAGE_FINITE,IMAGE_DEF] >>
+`Ls <> {}` by metis_tac[IMAGE_EQ_EMPTY,IMAGE_DEF]>>
+`MN ∈ Ls ∧ ∀m. m∈Ls ==> MN <= m` by metis_tac[minr_set_def] >>
+`∃n. (MN,n) ∈ s ∧ (∃k1 k2. MX = k1 + k2 ∧ (k1,k2)∈s)` 
+  by (fs[Abbr`Ls`,Abbr`Rs`] >> metis_tac[pairTheory.PAIR])>>rw[] >>qpat_x_assum`MN ∈ _`(K ALL_TAC) >>
+qpat_x_assum`k1+k2∈ _`(K ALL_TAC) >> 
+rw[max_def,min_def] >>
+`(∀x d. (x,d) ∈ s ⇒ 0 < d) ` by metis_tac[] 
+>- (`MN <> e1`  
+      by (strip_tac >> `n <> e2` by metis_tac[] >> 
+          first_x_assum(qspecl_then[`e1`,`e2`,`MN`,`n`] MP_TAC) >> simp[] >> 
+          `0<e2 ∧ 0<n` suffices_by fsr[] >> metis_tac[] )
+    `e1 + e2 <= MN` suffices_by fsr[] >> 
+    first_x_assum(qspecl_then[`e1`,`e2`,`MN`,`n`] MP_TAC) >> simp[] >> `0<n`suffices_by fsr[]>>
+    metis_tac[] )
+>- (`MN < e1` by fsr[] >> fsr[] >> `MN <> e1` by fsr[] >> 
+    `e1 + e2 <= MN ∨ MN + n <= e1` by fsr[]
+    >- (`e2 < 0` by fsr[] >> fsr[]) >>
+    
+    `MN + n +  <= FST k + SND k` by fsr[] >> 
+        `FST e + SND e <= FST k + SND k` by fsr[] >> Cases_on`FST p = FST k` >> fsr[]
+        >- (`SND e < SND k` by fsr[] >> )
+        >- ()   )
 >- ()
 >- ()  )
 
