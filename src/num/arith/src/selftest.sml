@@ -150,22 +150,38 @@ in
   else die "FAILED!\n"
 end
 
-(*
-val _ = numSimps.clear_arith_caches()
-val _ = tprint "Checking cache-fouling with theorems about constants"
 val _ = let
   open boolSimps numSimps
+  val _ = clear_arith_caches()
+  val _ = tprint "Checking cache-fouling with theorems about constants(1)"
   val c1c2 = new_specification("c1c2", ["c1", "c2"],
                 Q.prove(‘∃c d:num. c < d’,
                         MAP_EVERY Q.EXISTS_TAC [‘0’, ‘1’] >>
-                        numLib.REDUCE_TAC));
+                        reduceLib.REDUCE_TAC));
   val tm = “c1 <> 0 \/ c2 <> 0”
-  val _ = QCONV (SIMP_CONV (bool_ss ++ ARITH_ss) []) tm (* taint *)
-  val res = QCONV (SIMP_CONV (bool_ss ++ ARITH_ss) [c1c2]) tm (* now fail *)
+  val ss = bool_ss ++ ARITH_ss
+  val _ = QCONV (SIMP_CONV ss []) tm (* taint *)
+    (* examine cache with
+         Cache.cache_values numSimps.arith_cache
+    *)
+  fun check (Exn.Res th) = rhs (concl th) ~~ T
+    | check _ = false
+  val _ = require_msg check (term_to_string o rhs o concl)
+                      (SIMP_CONV (bool_ss ++ ARITH_ss) [c1c2])
+                      tm
+  val _ = tprint "Checking cache-fouling with theorems about constants(2)"
+  val c3_def = new_definition("c3", “c3 = 10”)
+  val goal = ([“c3 < x”, “x < 3”], “p:bool”)
+  val _ = VALID (FULL_SIMP_TAC ss []) goal
+  fun check2 (Exn.Res (sgs, _)) = null sgs
+    | check2 _ = false
+  fun prg(asl,w) =
+      "([" ^ String.concatWith ", " (map term_to_string asl) ^ "], " ^
+      term_to_string w ^ ")"
+  fun pr (sgs, vf) =
+      "[" ^ String.concatWith ",\n     " (map prg sgs) ^ "]"
 in
-  if rhs (concl res) ~~ T then OK()
-  else die ("FAILED\n  RHS = " ^ term_to_string (rhs (concl res)))
+  require_msg check2 pr (VALID (FULL_SIMP_TAC ss [c3_def])) goal
 end
-*)
 
 val _ = Process.exit Process.success
