@@ -1,7 +1,7 @@
 (* =====================================================================
  * FILE          : travrules.sig
  * DESCRIPTION   : Sets of rules for traversing terms.  Used for
- *	           simpification and term traversal.
+ *                 simpification and term traversal.
  *
  * AUTHOR        : Donald Syme
  *                 Based loosely on ideas from window inference.

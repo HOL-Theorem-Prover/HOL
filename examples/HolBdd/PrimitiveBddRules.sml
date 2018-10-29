@@ -231,14 +231,14 @@ fun BddEqMp th (TermBdd(tg,ass,vm,t1,b)) =
     then TermBdd(Tag.merge tg (Thm.tag th),HOLset.addList(ass,asl),vm,r,b)
    else if (!trace_level)>=1 then
        let val _ = print "BddEqMp Error\n"
-	   val _ = print "Theorem:\n"
-	   val _ = print_thm th
-	   val _ = print "\n"
-	   val _ = print "Term:\n"
-	   val _ = print_term t1
-	   val _ = print "\n"
+           val _ = print "Theorem:\n"
+           val _ = print_thm th
+           val _ = print "\n"
+           val _ = print "Term:\n"
+           val _ = print_term t1
+           val _ = print "\n"
        in raise BddEqMpError end
-	else raise BddEqMpError
+        else raise BddEqMpError
  end;
 
 (*****************************************************************************)
@@ -280,14 +280,14 @@ fun BddReplace tbl (TermBdd(tg,ass,vm,tm,b)) =
             then (print_term v' ; print" repeated\n";
                                   raise BddReplaceError)
             else (Tag.merge tg (Tag.merge tg1 tg2),
-		  HOLset.union(ass,HOLset.union(ass1,ass2)),
+                  HOLset.union(ass,HOLset.union(ass1,ass2)),
                   (v :: l, v' :: l'),
                   ((bdd.var b, bdd.var b')::replacel)))
         (tg,ass, ([],[]), [])
         tbl
  in
   TermBdd(tg',
-	  ass_union,
+          ass_union,
           vm,
           subst (ListPair.map (fn(v,v')=>(v|->v')) (l,l')) tm,
           bdd.replace b (bdd.makepairSet replacel))
@@ -338,7 +338,7 @@ fun BddCompose
      (TermBdd(tg2,ass2,vm2,tm2,b2)) =
  if is_var v andalso Varmap.eq(vm,vm1) andalso Varmap.eq(vm1,vm2)
   then TermBdd(Tag.merge tg (Tag.merge tg1 tg2),
-	       HOLset.union(ass,HOLset.union(ass1,ass2)),
+               HOLset.union(ass,HOLset.union(ass1,ass2)),
                vm,
                subst[v |-> tm1]tm2,
                bdd.compose (bdd.var b, b1) b2)
@@ -377,14 +377,14 @@ fun BddListCompose tbl (TermBdd(tg,ass,vm,tm,b)) =
             then (print_term v  ; print" repeated\n";
                                   raise BddListComposeError)
             else (Tag.merge tg (Tag.merge tg1 tg2),
-		  HOLset.union(ass,HOLset.union(ass1,ass2)),
+                  HOLset.union(ass,HOLset.union(ass1,ass2)),
                   (v :: l, tm :: l'),
                   ((bdd.var b, b')::composel)))
         (tg,ass, ([],[]), [])
         tbl
  in
   TermBdd(tg_merge,
-	  ass_union,
+          ass_union,
           vm,
           subst (ListPair.map (fn(v,tm)=>(v|->tm)) (l,l')) tm,
           bdd.veccompose (bdd.composeSet composel) b)
@@ -472,14 +472,14 @@ fun BddRestrict tbl tb =
             then (print_term v  ; print" repeated\n";
                                   raise BddRestrictError)
             else (Tag.merge tg (Tag.merge tg1 tg2),
-		  HOLset.union(ass,HOLset.union(ass1,ass2)),
+                  HOLset.union(ass,HOLset.union(ass1,ass2)),
                   (v :: l, c :: l'),
                   ((bdd.var b, mlval c)::restrictl)))
         (tg,ass, ([],[]), [])
         tbl
  in
   TermBdd(tg_merge,
-	  ass_union,
+          ass_union,
           vm,
           subst (ListPair.map (fn(v,c)=>(v|->c)) (l,l')) tm,
           bdd.restrict b (bdd.assignment restrictl))
@@ -557,7 +557,7 @@ exception BddOpError;
 fun BddOp (bddop, TermBdd(tg1,ass1,vm1,t1,b1), TermBdd(tg2,ass2,vm2,t2,b2)) =
 if Varmap.eq(vm1,vm2)
  then TermBdd(Tag.merge tg1 tg2,
-	      HOLset.union(ass1,ass2),
+              HOLset.union(ass1,ass2),
               vm1,
               termApply t1 t2 bddop,
               bdd.apply b1 b2 bddop)
@@ -571,8 +571,8 @@ exception BddDischError;
 
 fun BddDisch (TermBdd(tg1,ass1,vm1,tm1,b1))  (TermBdd(tg,ass,vm,tm,b)) =
     BddOp(Imp,
-	  TermBdd(tg1,ass1,vm1,tm1,b1),
-	  TermBdd(tg,HOLset.delete(ass,tm1) handle HOLset.NotFound => ass,vm,tm,b))
+          TermBdd(tg1,ass1,vm1,tm1,b1),
+          TermBdd(tg,HOLset.delete(ass,tm1) handle HOLset.NotFound => ass,vm,tm,b))
 
 (*****************************************************************************)
 (*    ass vm t |--> b   ass1 vm t1 |--> b1   ass2 vm t2 |--> b2              *)
@@ -587,7 +587,7 @@ fun BddIte(TermBdd(tg,ass,vm,t,b),
            TermBdd(tg2,ass2,vm2,t2,b2)) =
  if Varmap.eq(vm,vm1) andalso Varmap.eq(vm1,vm2)
   then TermBdd(Tag.merge tg (Tag.merge tg1 tg2),
-	       HOLset.union(ass,HOLset.union(ass1,ass2)),
+               HOLset.union(ass,HOLset.union(ass1,ass2)),
                vm,
                mk_cond(t,t1,t2),
                bdd.ITE b b1 b2)
@@ -699,7 +699,7 @@ fun BddAppall vl (bddop, TermBdd(tg1,ass1,vm1,t1,b1), TermBdd(tg2,ass2,vm2,t2,b2
       then
        TermBdd
         (tg,
-	 ass,
+         ass,
          vm1,
          list_mk_forall(vl, termApply t1 t2 bddop),
          appall
@@ -748,7 +748,7 @@ fun BddAppex vl (bddop, TermBdd(tg1,ass1,vm1,t1,b1), TermBdd(tg2,ass2,vm2,t2,b2)
       then
        TermBdd
         (tg,
-	 ass,
+         ass,
          vm1,
          list_mk_exists(vl, termApply t1 t2 bddop),
          appex

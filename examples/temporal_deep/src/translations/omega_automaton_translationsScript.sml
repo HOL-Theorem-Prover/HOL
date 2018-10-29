@@ -6,7 +6,7 @@ quietdec := true;
 val base_dir = (concat Globals.HOLDIR "/examples/temporal_deep/");
 loadPath := (concat base_dir "src/tools") :: (concat base_dir "src/deep_embeddings") :: !loadPath;
 map load
- ["ltlTheory", "arithmeticTheory", "automaton_formulaTheory", "xprop_logicTheory", "prop_logicTheory",
+ ["full_ltlTheory", "arithmeticTheory", "automaton_formulaTheory", "xprop_logicTheory", "prop_logicTheory",
   "infinite_pathTheory", "tuerk_tacticsLib", "symbolic_semi_automatonTheory", "listTheory", "pred_setTheory",
   "pred_setTheory", "rich_listTheory", "set_lemmataTheory", "temporal_deep_mixedTheory",
   "pairTheory", "symbolic_kripke_structureTheory",
@@ -14,12 +14,13 @@ map load
   "kripke_structureTheory", "containerTheory", "relationTheory"];
 *)
 
-open ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory
+open full_ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory
      prop_logicTheory
      infinite_pathTheory tuerk_tacticsLib symbolic_semi_automatonTheory listTheory pred_setTheory
      pred_setTheory rich_listTheory set_lemmataTheory temporal_deep_mixedTheory pairTheory symbolic_kripke_structureTheory
      numLib semi_automatonTheory omega_automatonTheory kripke_structureTheory
      containerTheory relationTheory;
+open Sanity;
 
 val _ = hide "K";
 val _ = hide "S";
@@ -43,7 +44,7 @@ val _ = new_theory "omega_automaton_translations";
 val DETERMINISED_SEMI_AUTOMATON_def =
  Define
   `DETERMINISED_SEMI_AUTOMATON A =
-    (semi_automaton (POWER_SET A.S) A.I ((\(s, i). (i SUBSET A.I) /\
+    (semi_automaton (POW A.S) A.I ((\(s, i). (i SUBSET A.I) /\
                                                 (!x. (x IN s) = ((x, i) IN A.S0))))
                      (\(s1, i, s2, i'). (s1 SUBSET A.S /\ i SUBSET A.I /\
                         (!x. x IN s2 = (?s1'. s1' IN s1 /\ (s1', i, x, i') IN A.R)))))`;
@@ -57,7 +58,7 @@ val DETERMINISED_SEMI_AUTOMATON___IS_DET_TOTAL =
     SIMP_TAC std_ss [IS_DET_TOTAL_SEMI_AUTOMATON_def,
                     DETERMINISED_SEMI_AUTOMATON_def,
                     semi_automaton_REWRITES, SING,
-                    IN_POWER_SET_SUBSET_EQUIV,
+                    IN_POW,
                     EXISTS_UNIQUE_THM,
                     INTER_SUBSET,
     prove(``!P s i i' s'. ((s, i, s', i') IN \(s, i, s', i'). P s i s' i') = P s i s' i'``,
@@ -81,7 +82,7 @@ val DETERMINISED_SEMI_AUTOMATON___IS_DET_TOTAL =
 val SEMI_AUTOMATON_TO_KRIPKE_STRUCTURE_def =
  Define
   `SEMI_AUTOMATON_TO_KRIPKE_STRUCTURE (A:('a, 'a) semi_automaton) =
-    (kripke_structure (A.S CROSS (POWER_SET A.I)) A.S0
+    (kripke_structure (A.S CROSS (POW A.I)) A.S0
                      (\((s1, i1),(s2, i2)). (s1, i1, s2, i2) IN A.R /\ i1 SUBSET A.I /\ i2 SUBSET A.I)
                      (A.S UNION A.I) (\(s,i). s INSERT i))`;
 
@@ -97,11 +98,11 @@ val SEMI_AUTOMATON_TO_KRIPKE_STRUCTURE___IS_WELL_FORMED =
     SIMP_TAC std_ss [IS_WELL_FORMED_KRIPKE_STRUCTURE_def,
                     SEMI_AUTOMATON_TO_KRIPKE_STRUCTURE_def,
                     kripke_structure_REWRITES, SUBSET_DEF,
-                    IN_CROSS, IN_POWER_SET_SUBSET_EQUIV,
+                    IN_CROSS, IN_POW,
                     IS_WELL_FORMED_SEMI_AUTOMATON_def] THEN
     GEN_TAC THEN STRIP_TAC THEN
     STRIP_TAC THEN1 (
-      PROVE_TAC[FINITE_CROSS, POWER_SET_FINITE]
+      PROVE_TAC[FINITE_CROSS, FINITE_POW_IFF]
     ) THEN
     STRIP_TAC THEN1 (
       ASM_SIMP_TAC std_ss [FINITE_UNION]
@@ -136,7 +137,7 @@ val SEMI_AUTOMATON_TO_KRIPKE_STRUCTURE___LANGUAGE_EQ =
                     IS_RUN_THROUGH_SEMI_AUTOMATON_def,
                     IS_INITIAL_PATH_THROUGH_KRIPKE_STRUCTURE_def,
                     IS_PATH_THROUGH_KRIPKE_STRUCTURE_def,
-                    IN_CROSS, IN_POWER_SET_SUBSET_EQUIV,
+                    IN_CROSS, IN_POW,
                     SUBSET_DEF, IS_WELL_FORMED_SEMI_AUTOMATON_def,
                     FORALL_AND_THM,
                     prove(``!x1 x2 x3 x4 P1 P2.
@@ -153,7 +154,7 @@ val SEMI_AUTOMATON_TO_KRIPKE_STRUCTURE___LANGUAGE_EQ =
 val SYMBOLIC_SEMI_AUTOMATON_TO_SEMI_AUTOMATON_def =
  Define
   `SYMBOLIC_SEMI_AUTOMATON_TO_SEMI_AUTOMATON (A:'a symbolic_semi_automaton) I =
-    (semi_automaton (POWER_SET A.S) I (\(s, i). s SUBSET A.S /\ i SUBSET I /\
+    (semi_automaton (POW A.S) I (\(s, i). s SUBSET A.S /\ i SUBSET I /\
                                         P_SEM (s UNION (i DIFF A.S)) A.S0)
                     (\(s1, i, s2, i'). ((s1 SUBSET A.S /\ s2 SUBSET A.S /\ i SUBSET I /\ i' SUBSET I /\
                                    XP_SEM A.R ((s1 UNION (i DIFF A.S)), s2 UNION (i' DIFF A.S))))))`;
@@ -169,16 +170,9 @@ val SYMBOLIC_SEMI_AUTOMATON_TO_SEMI_AUTOMATON___IS_WELL_FORMED =
     SIMP_TAC std_ss [IS_WELL_FORMED_SEMI_AUTOMATON_def,
                     SYMBOLIC_SEMI_AUTOMATON_TO_SEMI_AUTOMATON_def,
                     semi_automaton_REWRITES,
-                    POWER_SET_FINITE, SUBSET_DEF, IN_POWER_SET_SUBSET_EQUIV,
-                    IN_CROSS] THEN
-    SIMP_TAC std_ss [IN_DEF] THEN
-    NTAC 4 STRIP_TAC THENL [
-      Cases_on `x` THEN
-      SIMP_TAC std_ss [],
-
-      Cases_on `x` THEN Cases_on `r` THEN
-      SIMP_TAC std_ss []
-    ]);
+                    FINITE_POW_IFF, SUBSET_DEF, IN_POW,
+                    IN_CROSS, FORALL_PROD] THEN
+    SIMP_TAC std_ss [IN_DEF]);
 
 
 val SYMBOLIC_SEMI_AUTOMATON_TO_SEMI_AUTOMATON___LANGUAGE_EQ =
@@ -197,8 +191,8 @@ val SYMBOLIC_SEMI_AUTOMATON_TO_SEMI_AUTOMATON___LANGUAGE_EQ =
                           SYMBOLIC_SEMI_AUTOMATON_TO_SEMI_AUTOMATON_def,
                           semi_automaton_REWRITES,
                           PATH_SUBSET_def,
-                          IN_POWER_SET_SUBSET_EQUIV, INTER_SUBSET,
-                          IN_BETA_THM,
+                          IN_POW, INTER_SUBSET,
+                          IN_ABS,
                           INPUT_RUN_STATE_UNION_def,
                           INPUT_RUN_PATH_UNION_def,
                           prove (``!f x1 x2 x3 x4. (x1,x2,x3,x4) IN (\(s1,s2,s3,s4). f s1 s2 s3 s4) = f x1 x2 x3 x4``, SIMP_TAC std_ss [IN_DEF]),
@@ -262,7 +256,7 @@ val SYMBOLIC_SEMI_AUTOMATON___TO___KRIPKE_STRUCTURE___RUN =
 val SYMBOLIC_SEMI_AUTOMATON___TO___KRIPKE_STRUCTURE___INITIAL_PATH =
  store_thm
   ("SYMBOLIC_SEMI_AUTOMATON___TO___KRIPKE_STRUCTURE___INITIAL_PATH",
-    ``!A w.
+    ``!A i.
         IS_INITIAL_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE (SYMBOLIC_SEMI_AUTOMATON___TO___KRIPKE_STRUCTURE A) i =
         (IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON A i (PATH_RESTRICT i A.S))``,
 
@@ -304,9 +298,9 @@ val SYMBOLIC_KRIPKE_STRUCTURE___WITH___SEMI_AUTOMATON___PRODUCT =
 val IS_RABIN_SCOTT_SUBSET_CONSTRUCTION_def=
  Define
    `(IS_RABIN_SCOTT_SUBSET_CONSTRUCTION (A:'a symbolic_semi_automaton) (A':'a symbolic_semi_automaton) (IV:'a set) (f:'a set->'a) (g:'a -> 'a set)) =
-      ((INJ f (POWER_SET A.S) UNIV /\ (DISJOINT (IMAGE f (POWER_SET A.S)) IV)) /\
+      ((INJ f (POW A.S) UNIV /\ (DISJOINT (IMAGE f (POW A.S)) IV)) /\
        (!(z:'a set). ((z SUBSET A.S) ==> (g(f(z)) = z))) /\
-       (A'.S = (IMAGE f (POWER_SET A.S))) /\
+       (A'.S = (IMAGE f (POW A.S))) /\
        (!i Z. (Z SUBSET A'.S) ==> (((P_SEM (INPUT_RUN_STATE_UNION A' i Z) A'.S0) =
               (Z = {z | (z IN A'.S) /\ P_SEM (INPUT_RUN_STATE_UNION A i (g z)) A.S0})))) /\
        (!S1:('a set) S2:('a set) i1:('a set) i2:('a set).
@@ -321,7 +315,7 @@ val RABIN_SCOTT_SUBSET_CONSTRUCTION_AUTOMATON_def=
  Define
    `RABIN_SCOTT_SUBSET_CONSTRUCTION_AUTOMATON A f =
         symbolic_semi_automaton
-            (IMAGE f (POWER_SET A.S))
+            (IMAGE f (POW A.S))
             (P_FORALL (SET_TO_LIST A.S) (P_EQUIV(A.S0, VAR_RENAMING_HASHTABLE A.S f)))
             (XP_NEXT_FORALL (SET_TO_LIST A.S) (XP_EQUIV(
                     XP_NEXT (VAR_RENAMING_HASHTABLE A.S f),
@@ -339,8 +333,8 @@ val RABIN_SCOTT_SUBSET_CONSTRUCTION_AUTOMATON_THM =
 
       (FINITE A.S /\
        (A' = RABIN_SCOTT_SUBSET_CONSTRUCTION_AUTOMATON A f) /\
-       (INJ f (POWER_SET A.S) UNIV /\ (DISJOINT (IMAGE f (POWER_SET A.S)) IV) /\
-        (DISJOINT (IMAGE f (POWER_SET A.S)) (SEMI_AUTOMATON_USED_VARS A))) /\
+       (INJ f (POW A.S) UNIV /\ (DISJOINT (IMAGE f (POW A.S)) IV) /\
+        (DISJOINT (IMAGE f (POW A.S)) (SEMI_AUTOMATON_USED_VARS A))) /\
       (!(z:'a set). ((z SUBSET A.S) ==> (g(f(z)) = z)))) ==>
 
     (IS_RABIN_SCOTT_SUBSET_CONSTRUCTION (A:'a symbolic_semi_automaton) (A':'a symbolic_semi_automaton) (IV:'a set) (f:'a set->'a) (g:'a -> 'a set))``,
@@ -357,12 +351,12 @@ FULL_SIMP_TAC std_ss [DISJOINT_DIFF_ELIM, DISJOINT_UNION_BOTH] THEN
 
 
 SUBGOAL_TAC `!s. ~(f (s INTER A.S) IN A.S)` THEN1 (
-    FULL_SIMP_TAC std_ss [DISJOINT_DEF, IMAGE_DEF, EXTENSION, IN_POWER_SET_SUBSET_EQUIV, IN_INTER, NOT_IN_EMPTY, GSPECIFICATION] THEN
+    FULL_SIMP_TAC std_ss [DISJOINT_DEF, IMAGE_DEF, EXTENSION, IN_POW, IN_INTER, NOT_IN_EMPTY, GSPECIFICATION] THEN
     PROVE_TAC[INTER_SUBSET]
 ) THEN
 `!s s'. (s' SUBSET A.S) ==> ~(f (s INTER A.S) IN s')` by PROVE_TAC[SUBSET_DEF] THEN
 SUBGOAL_TAC `!l'' i s. ((f:'a set->'a) (l'' INTER A.S) IN (INPUT_RUN_STATE_UNION A' i s)) = (f (l'' INTER A.S) IN s)` THEN1 (
-    ASM_SIMP_TAC std_ss [INPUT_RUN_STATE_UNION_def, IN_UNION, IN_DIFF, IN_IMAGE, IN_POWER_SET_SUBSET_EQUIV] THEN
+    ASM_SIMP_TAC std_ss [INPUT_RUN_STATE_UNION_def, IN_UNION, IN_DIFF, IN_IMAGE, IN_POW] THEN
     PROVE_TAC[INTER_SUBSET]
 ) THEN
 SUBGOAL_TAC `!l. l SUBSET A.S ==> ((l INTER A.S) = l)` THEN1 (
@@ -372,7 +366,7 @@ SUBGOAL_TAC `!s s' s''. (s DIFF s'' UNION s') INTER s'' = s' INTER s''` THEN1 (
   SIMP_TAC std_ss [EXTENSION, IN_INTER, IN_DIFF, IN_UNION] THEN PROVE_TAC[]
 ) THEN
 
-SIMP_TAC std_ss [SUBSET_DEF, IN_IMAGE, IN_POWER_SET_SUBSET_EQUIV] THEN
+SIMP_TAC std_ss [SUBSET_DEF, IN_IMAGE, IN_POW] THEN
 REPEAT STRIP_TAC THENL [
     ASM_SIMP_TAC std_ss [P_FORALL_SEM, SET_TO_LIST_INV, VAR_RENAMING_HASHTABLE_SEM, P_SEM_THM, IN_DIFF, EXTENSION,
       GSPECIFICATION, IN_UNION] THEN
@@ -387,7 +381,7 @@ REPEAT STRIP_TAC THENL [
         ) THEN
         UNDISCH_HD_TAC THEN
         SIMP_ALL_TAC std_ss [EXTENSION, IN_INTER, INPUT_RUN_STATE_UNION_def, IN_UNION, IN_DIFF,
-          IN_IMAGE, IN_POWER_SET_SUBSET_EQUIV, SUBSET_DEF, GSYM SUBSET_COMPL_DISJOINT, IN_COMPL] THEN
+          IN_IMAGE, IN_POW, SUBSET_DEF, GSYM SUBSET_COMPL_DISJOINT, IN_COMPL] THEN
         REPEAT STRIP_TAC THEN REPEAT BOOL_EQ_STRIP_TAC THEN
         METIS_TAC[]
     ) THEN
@@ -398,7 +392,7 @@ REPEAT STRIP_TAC THENL [
             METIS_TAC[],
 
             `?l':'a set. l' SUBSET A.S /\ ((x:'a) = f l')` by PROVE_TAC [SUBSET_DEF, IN_IMAGE,
-                IN_POWER_SET_SUBSET_EQUIV] THEN
+                IN_POW] THEN
             METIS_TAC[],
 
             METIS_TAC[SUBSET_DEF]
@@ -426,7 +420,7 @@ REPEAT STRIP_TAC THENL [
           ASM_REWRITE_TAC[]
         ) THEN
         FULL_SIMP_TAC std_ss [EXTENSION, IN_INTER, INPUT_RUN_STATE_UNION_def, IN_UNION, IN_DIFF,
-          IN_IMAGE, IN_POWER_SET_SUBSET_EQUIV, SUBSET_DEF, GSYM SUBSET_COMPL_DISJOINT, IN_COMPL,
+          IN_IMAGE, IN_POW, SUBSET_DEF, GSYM SUBSET_COMPL_DISJOINT, IN_COMPL,
           XP_USED_VARS_def] THEN
         METIS_TAC[]
     ) THEN
@@ -436,7 +430,7 @@ REPEAT STRIP_TAC THENL [
             METIS_TAC[],
 
             `?l':'a set. l' SUBSET A.S /\ ((x:'a) = f l')` by PROVE_TAC [SUBSET_DEF, IN_IMAGE,
-                IN_POWER_SET_SUBSET_EQUIV] THEN
+                IN_POW] THEN
             METIS_TAC[],
 
 
@@ -449,7 +443,7 @@ REPEAT STRIP_TAC THENL [
         ASM_REWRITE_TAC[] THEN
         SIMP_TAC std_ss [GSYM SUBSET_DEF] THEN
         SUBGOAL_TAC `!x. ((f l' = f x) /\ x SUBSET A.S) = (x = l')` THEN1 (
-          METIS_TAC [INJ_DEF, IN_POWER_SET_SUBSET_EQUIV, IN_UNIV]
+          METIS_TAC [INJ_DEF, IN_POW, IN_UNIV]
         ) THEN
         ASM_SIMP_TAC std_ss [] THEN
         METIS_TAC[SUBSET_DEF]
@@ -462,7 +456,7 @@ val RABIN_SCOTT_SUBSET_CONSTRUCTION_AUTOMATON___USED_INPUT_VARS =
   store_thm (
     "RABIN_SCOTT_SUBSET_CONSTRUCTION_AUTOMATON___USED_INPUT_VARS",
     ``!A f. (FINITE A.S /\
-             DISJOINT (IMAGE f (POWER_SET A.S)) (SEMI_AUTOMATON_USED_VARS A))    ==>
+             DISJOINT (IMAGE f (POW A.S)) (SEMI_AUTOMATON_USED_VARS A))    ==>
     (SEMI_AUTOMATON_USED_INPUT_VARS
       (RABIN_SCOTT_SUBSET_CONSTRUCTION_AUTOMATON A f) =
     SEMI_AUTOMATON_USED_INPUT_VARS A)``,
@@ -487,13 +481,13 @@ val RABIN_SCOTT_SUBSET_CONSTRUCTION_AUTOMATON___USED_INPUT_VARS =
 
     ASM_SIMP_TAC std_ss [IN_UNION, IN_DIFF,
       IN_LIST_BIGUNION, MEM_MAP, GSYM LEFT_EXISTS_AND_THM,
-      MEM_SET_TO_LIST, POWER_SET_FINITE, IMAGE_FINITE,
+      MEM_SET_TO_LIST, FINITE_POW_IFF, IMAGE_FINITE,
       IN_IMAGE, P_USED_VARS_EVAL, IN_SING,
       XP_USED_VARS_EVAL,
-      IN_POWER_SET_SUBSET_EQUIV,
+      IN_POW,
       P_PROP_SET_MODEL___P_USED_VARS, NOT_IN_EMPTY] THEN
 
-    SIMP_ALL_TAC std_ss [DISJOINT_DISJ_THM, IN_POWER_SET_SUBSET_EQUIV,
+    SIMP_ALL_TAC std_ss [DISJOINT_DISJ_THM, IN_POW,
       IN_IMAGE, SEMI_AUTOMATON_USED_VARS___DIRECT_DEF, IN_UNION,
       XP_USED_VARS_def] THEN
 
@@ -508,8 +502,8 @@ val RABIN_SCOTT_SUBSET_CONSTRUCTION___EXISTS =
 
    REPEAT STRIP_TAC THEN
 
-   `?f. INJ f (POWER_SET A.S) UNIV /\ (DISJOINT (IMAGE f (POWER_SET A.S)) (IV UNION (SEMI_AUTOMATON_USED_INPUT_VARS A) UNION A.S))`
-      by METIS_TAC[POWER_SET_VARRENAMING_EXISTS,
+   `?f. INJ f (POW A.S) UNIV /\ (DISJOINT (IMAGE f (POW A.S)) (IV UNION (SEMI_AUTOMATON_USED_INPUT_VARS A) UNION A.S))`
+      by METIS_TAC[POW_VARRENAMING_EXISTS,
                    FINITE___SEMI_AUTOMATON_USED_INPUT_VARS, FINITE_UNION] THEN
    SUBGOAL_THEN ``?g:('a -> 'a set). (!(z:'a set). ((z SUBSET (A:'a symbolic_semi_automaton).S) ==> (g(f(z)) = z)))`` STRIP_ASSUME_TAC THEN1 (
       EXISTS_TAC ``\z:'a. @x:'a set. ((x SUBSET (A:'a symbolic_semi_automaton).S) /\ (f x = z))`` THEN
@@ -519,8 +513,8 @@ val RABIN_SCOTT_SUBSET_CONSTRUCTION___EXISTS =
       REPEAT STRIP_TAC THENL [
          METIS_TAC[],
 
-         `x IN (POWER_SET A.S)` by METIS_TAC[IN_POWER_SET_SUBSET_EQUIV] THEN
-         `z IN (POWER_SET A.S)` by METIS_TAC[IN_POWER_SET_SUBSET_EQUIV] THEN
+         `x IN (POW A.S)` by METIS_TAC[IN_POW] THEN
+         `z IN (POW A.S)` by METIS_TAC[IN_POW] THEN
          METIS_TAC[INJ_DEF]
       ]
    ) THEN
@@ -528,8 +522,8 @@ val RABIN_SCOTT_SUBSET_CONSTRUCTION___EXISTS =
    EXISTS_TAC ``f:'a set->'a`` THEN
    EXISTS_TAC ``g:'a -> 'a set`` THEN
 
-   SUBGOAL_TAC `(DISJOINT (IMAGE f (POWER_SET A.S)) IV) /\
-     (DISJOINT (IMAGE f (POWER_SET A.S)) (SEMI_AUTOMATON_USED_VARS A))` THEN1 (
+   SUBGOAL_TAC `(DISJOINT (IMAGE f (POW A.S)) IV) /\
+     (DISJOINT (IMAGE f (POW A.S)) (SEMI_AUTOMATON_USED_VARS A))` THEN1 (
 
         FULL_SIMP_TAC std_ss [SEMI_AUTOMATON_USED_VARS_def, DISJOINT_UNION_BOTH, DISJOINT_SYM]
    ) THEN
@@ -637,7 +631,7 @@ val RABIN_SCOTT_SUBSET_CONSTRUCTION___RUN_SUBSET =
                ?s1. s1 IN (w' n) /\ IS_TRANSITION A (g s1) (i n) (g s2) (i (SUC n))})` by
        METIS_TAC[RABIN_SCOTT_SUBSET_CONSTRUCTION___RUN] THEN
    Induct_on `n` THEN (
-       FULL_SIMP_TAC std_ss [IN_POWER_SET_SUBSET_EQUIV,
+       FULL_SIMP_TAC std_ss [IN_POW,
             IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON_def, INPUT_RUN_PATH_UNION_def, GSPECIFICATION, IN_IMAGE,
             IS_RABIN_SCOTT_SUBSET_CONSTRUCTION_def, PATH_SUBSET_def] THEN
        METIS_TAC[]
@@ -670,9 +664,9 @@ val RABIN_SCOTT_SUBSET_CONSTRUCTION___RUN_REACHABLE =
             `(!n. w' (SUC n) = {s2 | s2 IN A'.S /\
                ?s1. s1 IN (w' n) /\ IS_TRANSITION A (g s1) (i n) (g s2) (i (SUC n))})` by METIS_TAC[] THEN
             FULL_SIMP_TAC std_ss [EXTENSION, GSPECIFICATION] THEN
-            `s1 IN (IMAGE f (POWER_SET A.S))` by PROVE_TAC[SUBSET_DEF] THEN
+            `s1 IN (IMAGE f (POW A.S))` by PROVE_TAC[SUBSET_DEF] THEN
             SUBGOAL_TAC `?s1':'a set. (s1' SUBSET A.S) /\ (s1 = f (s1'))` THEN1 (
-                REWRITE_ASSUMPTIONS_TAC [IN_IMAGE, IN_POWER_SET_SUBSET_EQUIV] THEN
+                REWRITE_ASSUMPTIONS_TAC [IN_IMAGE, IN_POW] THEN
                 PROVE_TAC[]
             ) THEN
             FULL_SIMP_TAC std_ss [] THEN
@@ -710,12 +704,12 @@ val RABIN_SCOTT_SUBSET_CONSTRUCTION___RUN_REACHABLE =
 
         Induct_on `n` THENL [
             FULL_SIMP_TAC arith_ss [IS_RABIN_SCOTT_SUBSET_CONSTRUCTION_def,
-             INPUT_RUN_PATH_UNION_def, IN_POWER_SET_SUBSET_EQUIV, GSPECIFICATION, IN_IMAGE, PATH_SUBSET_def] THEN
+             INPUT_RUN_PATH_UNION_def, IN_POW, GSPECIFICATION, IN_IMAGE, PATH_SUBSET_def] THEN
             PROVE_TAC[],
 
             REPEAT STRIP_TAC THEN
             FULL_SIMP_TAC arith_ss [IS_RABIN_SCOTT_SUBSET_CONSTRUCTION_def, IN_IMAGE, PATH_SUBSET_def,
-             INPUT_RUN_PATH_UNION_def, IN_POWER_SET_SUBSET_EQUIV, GSPECIFICATION] THEN
+             INPUT_RUN_PATH_UNION_def, IN_POW, GSPECIFICATION] THEN
 
             `n < SUC n /\ (!m. m < n ==> m < SUC n)` by DECIDE_TAC THEN
             METIS_TAC[]
@@ -736,7 +730,7 @@ val SYMBOLIC___TOTAL_UNIV_G___TO___DET_G___THM =
 IS_RABIN_SCOTT_SUBSET_CONSTRUCTION A A' IV f g /\
 (!i s. s SUBSET A'.S ==>
   ((P_SEM (INPUT_RUN_STATE_UNION A' i s) p') =
-     !s'. s' IN IMAGE g (s INTER (IMAGE f (POWER_SET A.S))) ==>
+     !s'. s' IN IMAGE g (s INTER (IMAGE f (POW A.S))) ==>
          P_SEM (INPUT_RUN_STATE_UNION A i s') p))
 ) ==>
 !i.
@@ -747,38 +741,38 @@ A_SEM i (A_UNIV (A', ACCEPT_COND_G p')))``,
 REPEAT STRIP_TAC THEN
 SIMP_TAC std_ss [A_SEM_THM, ACCEPT_COND_G_def, ACCEPT_COND_SEM_def,
   ACCEPT_COND_SEM_TIME_def] THEN
-EQ_TAC THEN REPEAT STRIP_TAC THENL [
+EQ_TAC THEN REPEAT STRIP_TAC THEN rename1 `INPUT_RUN_PATH_UNION _ i w t` THENL [
   ASSUME_TAC RABIN_SCOTT_SUBSET_CONSTRUCTION___RUN_REACHABLE THEN
   Q_SPECL_NO_ASSUM 0 [`A`, `A'`, `IV`, `f`, `g`, `i`, `w`] THEN
   PROVE_CONDITION_NO_ASSUM 0 THEN
   ASM_REWRITE_TAC[] THEN
 
-  `IMAGE f (POWER_SET A.S) = A'.S` by
+  `IMAGE f (POW A.S) = A'.S` by
     FULL_SIMP_TAC std_ss [IS_RABIN_SCOTT_SUBSET_CONSTRUCTION_def] THEN
   `PATH_SUBSET w A'.S` by PROVE_TAC[IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON_def] THEN
-  SUBGOAL_TAC `INPUT_RUN_PATH_UNION A' i w t' INTER IMAGE f (POWER_SET A.S) =
+  SUBGOAL_TAC `INPUT_RUN_PATH_UNION A' i w t' INTER IMAGE f (POW A.S) =
                w t'` THEN1 (
     ONCE_REWRITE_TAC[EXTENSION] THEN GEN_TAC THEN
     FULL_SIMP_TAC std_ss [PATH_SUBSET_def, INPUT_RUN_PATH_UNION_def,
       INPUT_RUN_STATE_UNION_def, SUBSET_DEF, IN_INTER, IN_UNION, IN_DIFF] THEN
     METIS_TAC[]
   ) THEN
-  `w t' SUBSET A'.S` by PROVE_TAC[PATH_SUBSET_def] THEN
+  `w t SUBSET A'.S` by PROVE_TAC[PATH_SUBSET_def] THEN
   ASM_SIMP_TAC std_ss [INPUT_RUN_PATH_UNION_def] THEN
   NTAC 2 WEAKEN_HD_TAC THEN
 
   SIMP_TAC std_ss [IN_IMAGE, IN_INTER] THEN
   REPEAT STRIP_TAC THEN
-  `x IN IMAGE f (POWER_SET A.S)` by METIS_TAC[] THEN
-  FULL_SIMP_TAC std_ss [IN_IMAGE, IN_POWER_SET_SUBSET_EQUIV] THEN
+  `x IN IMAGE f (POW A.S)` by METIS_TAC[] THEN
+  FULL_SIMP_TAC std_ss [IN_IMAGE, IN_POW] THEN
   `g (f x') = x'` by METIS_TAC[IS_RABIN_SCOTT_SUBSET_CONSTRUCTION_def] THEN
   ASM_REWRITE_TAC[] THEN WEAKEN_HD_TAC THEN
 
-  REMAINS_TAC `?v. IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON A i v /\ (v t' = x')` THEN1 (
+  REMAINS_TAC `?v. IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON A i v /\ (v t = x')` THEN1 (
     METIS_TAC[INPUT_RUN_PATH_UNION_def]
   ) THEN
 
-  Q_SPECL_NO_ASSUM 7 [`t'`, `x'`] THEN
+  Q_SPECL_NO_ASSUM 7 [`t`, `x'`] THEN
   UNDISCH_HD_TAC THEN FULL_SIMP_TAC std_ss [] THEN STRIP_TAC THEN
   ASSUME_TAC TOTAL_SYMBOLIC_SEMI_AUTOMATON_TRANS_FUNC THEN
   Q_SPEC_NO_ASSUM 0 `A` THEN
@@ -787,34 +781,34 @@ EQ_TAC THEN REPEAT STRIP_TAC THENL [
   SIMP_ALL_TAC std_ss [] THEN
 
 
-  `?v'. v' = CHOOSEN_PATH {x'} (\s1 n. {R_FUNC s1 (i (PRE n + t')) (i (n+ t'))})` by METIS_TAC[] THEN
+  `?v'. v' = CHOOSEN_PATH {x'} (\s1 n. {R_FUNC s1 (i (PRE n + t)) (i (n + t))})` by METIS_TAC[] THEN
 
-  Q_TAC EXISTS_TAC `\t. if (t <= t') then w' t else v' (t-t')` THEN
+  Q_TAC EXISTS_TAC `\t2. if (t2 <= t) then w' t2 else v' (t2-t)` THEN
 
   FULL_SIMP_TAC std_ss [IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON_def, PATH_SUBSET_def,
    INPUT_RUN_PATH_UNION_def] THEN
   REPEAT STRIP_TAC THENL [
-    Cases_on `t <= t'` THEN ASM_REWRITE_TAC[] THEN
-    Q.ABBREV_TAC `t'' = t - t'` THEN
+    Cases_on `t2 <= t` THEN ASM_REWRITE_TAC[] THEN
+    Q.ABBREV_TAC `t3 = t2 - t` THEN
     WEAKEN_HD_TAC THEN
-    Induct_on `t''` THEN (
+    Induct_on `t3` THEN (
        ASM_SIMP_TAC std_ss [CHOOSEN_PATH_def, IN_SING]
     ),
 
 
-    Cases_on `SUC t <= t'` THEN ASM_SIMP_TAC arith_ss [] THEN
-    Cases_on `t = t'` THENL [
-      `SUC t' - t' = SUC 0` by DECIDE_TAC THEN
-      `1 + t' = SUC t'` by DECIDE_TAC THEN
+    Cases_on `SUC t2 <= t` THEN ASM_SIMP_TAC arith_ss [] THEN
+    Cases_on `t2 = t` THENL [
+      `SUC t - t = SUC 0` by DECIDE_TAC THEN
+      `1 + t = SUC t` by DECIDE_TAC THEN
       ASM_REWRITE_TAC [CHOOSEN_PATH_def] THEN
       ASM_SIMP_TAC std_ss [IN_SING],
 
 
       ASM_SIMP_TAC arith_ss [] THEN
-     `(SUC t - t' = SUC (t - t')) /\
-      (t' + (t - t') = t) /\
-      ((SUC (t - t') + t') = SUC t)` by DECIDE_TAC THEN
-     ASM_SIMP_TAC std_ss [CHOOSEN_PATH_def, IN_SING]
+      `(SUC t2 - t = SUC (t2 - t)) /\
+       (t + (t2 - t) = t2) /\
+       ((SUC (t2 - t) + t) = SUC t2)` by DECIDE_TAC THEN
+      ASM_SIMP_TAC std_ss [CHOOSEN_PATH_def, IN_SING]
     ]
   ],
 
@@ -823,28 +817,28 @@ EQ_TAC THEN REPEAT STRIP_TAC THENL [
   `?w'. IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON A' i w'` by
     METIS_TAC[RABIN_SCOTT_SUBSET_CONSTRUCTION___UNIQUE_RUN,
               EXISTS_UNIQUE_THM] THEN
-  `P_SEM (INPUT_RUN_PATH_UNION A' i w' t') p'` by PROVE_TAC[] THEN
+  `P_SEM (INPUT_RUN_PATH_UNION A' i w' t) p'` by PROVE_TAC[] THEN
   WEAKEN_NO_TAC 3 THEN
   UNDISCH_HD_TAC THEN
   ASM_SIMP_TAC std_ss [INPUT_RUN_PATH_UNION_def] THEN
   REPEAT STRIP_TAC THEN
 
-  `w' t' SUBSET A'.S` by
+  `w' t SUBSET A'.S` by
     METIS_TAC[IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON_def,
               PATH_SUBSET_def] THEN
-  REMAINS_TAC `w t' IN IMAGE g (w' t' INTER IMAGE f (POWER_SET A.S))` THEN1 METIS_TAC[] THEN
+  REMAINS_TAC `w t IN IMAGE g (w' t INTER IMAGE f (POW A.S))` THEN1 METIS_TAC[] THEN
   WEAKEN_HD_TAC THEN
 
-  `f (w t') IN w' t'` by METIS_TAC[
+  `f (w t) IN w' t` by METIS_TAC[
     RABIN_SCOTT_SUBSET_CONSTRUCTION___RUN_SUBSET] THEN
 
-  SIMP_TAC std_ss [IN_IMAGE, IN_INTER, IN_POWER_SET_SUBSET_EQUIV] THEN
-  Q_TAC EXISTS_TAC `f (w t')` THEN
+  SIMP_TAC std_ss [IN_IMAGE, IN_INTER, IN_POW] THEN
+  Q_TAC EXISTS_TAC `f (w t)` THEN
 
   FULL_SIMP_TAC std_ss [IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON_def, PATH_SUBSET_def,
    IS_RABIN_SCOTT_SUBSET_CONSTRUCTION_def] THEN
   METIS_TAC[]
-])
+]);
 
 
 
@@ -857,8 +851,8 @@ val SYMBOLIC___TOTAL_UNIV_G___TO___DET_G___CONCRETE_THM =
    IS_TOTAL_SYMBOLIC_SEMI_AUTOMATON A /\
   (A' = RABIN_SCOTT_SUBSET_CONSTRUCTION_AUTOMATON A f) /\
   (p' = (P_FORALL (SET_TO_LIST A.S) (P_IMPL( VAR_RENAMING_HASHTABLE A.S f, p)))) /\
-  INJ f (POWER_SET A.S) UNIV /\
-  DISJOINT (IMAGE f (POWER_SET A.S)) (SEMI_AUTOMATON_USED_VARS A UNION P_USED_VARS p)) ==>
+  INJ f (POW A.S) UNIV /\
+  DISJOINT (IMAGE f (POW A.S)) (SEMI_AUTOMATON_USED_VARS A UNION P_USED_VARS p)) ==>
 
 ((!i.
 (A_SEM i (A_UNIV (A, ACCEPT_COND_G p)) =
@@ -868,7 +862,7 @@ IS_TOTAL_DET_SYMBOLIC_SEMI_AUTOMATON A')``,
 
 REPEAT GEN_TAC THEN STRIP_TAC THEN
 SUBGOAL_TAC `?g. !x. (x SUBSET A.S) ==> (g (f x) = x)` THEN1 (
-  PROVE_TAC[INJ_INVERSE, IN_POWER_SET_SUBSET_EQUIV]
+  PROVE_TAC[INJ_INVERSE, IN_POW]
 ) THEN
 
 ASSUME_TAC RABIN_SCOTT_SUBSET_CONSTRUCTION_AUTOMATON_THM THEN
@@ -898,16 +892,16 @@ ASM_SIMP_TAC std_ss [P_FORALL_SEM,
 REPEAT STRIP_TAC THEN
 
 SUBGOAL_TAC `!l'. (l' SUBSET A.S) ==>
-  ((s UNION (i DIFF IMAGE f (POWER_SET A.S)) DIFF A.S UNION l') INTER A.S = l')` THEN1 (
+  ((s UNION (i DIFF IMAGE f (POW A.S)) DIFF A.S UNION l') INTER A.S = l')` THEN1 (
   SIMP_TAC std_ss [EXTENSION, IN_INTER, IN_UNION, IN_DIFF, SUBSET_DEF] THEN
   METIS_TAC[]
 ) THEN
 ASM_SIMP_TAC std_ss [] THEN WEAKEN_HD_TAC THEN
 
 SUBGOAL_TAC `!l'. (l' SUBSET A.S) ==>
-((f l' IN s UNION (i DIFF IMAGE f (POWER_SET A.S)) DIFF A.S UNION l') = (f l' IN s))` THEN1 (
+((f l' IN s UNION (i DIFF IMAGE f (POW A.S)) DIFF A.S UNION l') = (f l' IN s))` THEN1 (
   SIMP_ALL_TAC std_ss [EXTENSION, SUBSET_DEF, IN_UNION, IN_DIFF,
-    IN_IMAGE, IN_POWER_SET_SUBSET_EQUIV, DISJOINT_DISJ_THM,
+    IN_IMAGE, IN_POW, DISJOINT_DISJ_THM,
     SEMI_AUTOMATON_USED_VARS___DIRECT_DEF] THEN
   METIS_TAC[]
 ) THEN
@@ -915,7 +909,7 @@ ASM_SIMP_TAC std_ss [] THEN WEAKEN_HD_TAC THEN
 
 FORALL_EQ_STRIP_TAC THEN
 
-SIMP_TAC std_ss [IN_IMAGE, IN_INTER, IN_POWER_SET_SUBSET_EQUIV,
+SIMP_TAC std_ss [IN_IMAGE, IN_INTER, IN_POW,
   GSYM RIGHT_EXISTS_AND_THM] THEN
 
 `(?x'. (l' = g (f x')) /\ f x' IN s /\ x' SUBSET A.S) =
@@ -926,12 +920,12 @@ REPEAT BOOL_EQ_STRIP_TAC THEN
 ONCE_REWRITE_TAC [P_USED_VARS_INTER_THM] THEN
 AP_THM_TAC THEN AP_TERM_TAC THEN
 SIMP_TAC std_ss [EXTENSION, IN_INTER, IN_UNION, IN_DIFF,
-  IN_IMAGE, IN_POWER_SET_SUBSET_EQUIV] THEN
+  IN_IMAGE, IN_POW] THEN
 REPEAT STRIP_TAC THEN
 REPEAT BOOL_EQ_STRIP_TAC THEN
 
 SIMP_ALL_TAC std_ss [DISJOINT_DISJ_THM, IN_UNION, SUBSET_DEF,
-  IN_IMAGE, IN_POWER_SET_SUBSET_EQUIV] THEN
+  IN_IMAGE, IN_POW] THEN
 METIS_TAC[]);
 
 
@@ -991,31 +985,33 @@ SUBGOAL_TAC `!w. (?t'. EXPLICIT_PROP_ACCEPT_COND_SEM (i t') (w t') p) =
 ASM_REWRITE_TAC[] THEN
 WEAKEN_HD_TAC THEN
 EQ_TAC THEN REPEAT STRIP_TAC THENL [
+  rename1 `w t` THEN
   SUBGOAL_TAC `?t'. EXPLICIT_PROP_ACCEPT_COND_SEM (i t' INTER A.I) (w t') p /\
                !t''. t'' < t' ==> ~EXPLICIT_PROP_ACCEPT_COND_SEM (i t'' INTER A.I) (w t'') p` THEN1 (
     Q_TAC (fn t => (ASSUME_TAC (EXISTS_LEAST_CONV t))) `?t'. EXPLICIT_PROP_ACCEPT_COND_SEM (i t' INTER A.I) (w t') p` THEN
     METIS_TAC[]
   ) THEN
   Q_TAC EXISTS_TAC `w` THEN
-  Q_TAC EXISTS_TAC `\n. t'' < n` THEN
+  Q_TAC EXISTS_TAC `\n. t' < n` THEN
   ASM_SIMP_TAC std_ss [] THEN
   REPEAT STRIP_TAC THENL [
     EQ_TAC THEN REPEAT STRIP_TAC THENL [
       RIGHT_DISJ_TAC THEN
-      `n = t''` by DECIDE_TAC THEN
+      `n = t'` by DECIDE_TAC THEN
       ASM_REWRITE_TAC[],
 
       DECIDE_TAC,
 
-      `~(n < t'')` by PROVE_TAC[] THEN
+      `~(n < t')` by PROVE_TAC[] THEN
       DECIDE_TAC
     ],
 
-    EXISTS_TAC ``SUC t''`` THEN
+    EXISTS_TAC ``SUC t'`` THEN
     DECIDE_TAC
   ],
 
 
+  rename1 `~(_ >= t') \/ _` THEN
   Q_TAC EXISTS_TAC `w1` THEN
   ASM_SIMP_TAC std_ss [] THEN
   SUBGOAL_TAC `?t. w2 t /\ !t'. t' < t ==> ~(w2 t')` THEN1 (
@@ -1034,7 +1030,7 @@ EQ_TAC THEN REPEAT STRIP_TAC THENL [
 val BREAKPOINT_CONSTRUCTION_SEMI_AUTOMATON_def =
  Define
   `BREAKPOINT_CONSTRUCTION_SEMI_AUTOMATON A S =
-    (semi_automaton (POWER_SET A.S CROSS POWER_SET A.S) A.I
+    (semi_automaton (POW A.S CROSS POW A.S) A.I
                   (\(s,i). (i SUBSET A.I) /\ ((SND s) = EMPTY) /\ (!x. (x IN (FST s)) = ((x, i) IN A.S0)))
                   (\((s11, s12), i, (s21, s22), i').
                     (i SUBSET A.I /\ i' SUBSET A.I /\ s11 SUBSET A.S /\ s12 SUBSET A.S /\
@@ -1054,7 +1050,7 @@ val BREAKPOINT_CONSTRUCTION_SEMI_AUTOMATON___IS_DET_TOTAL =
     SIMP_TAC std_ss [IS_DET_TOTAL_SEMI_AUTOMATON_def,
                     BREAKPOINT_CONSTRUCTION_SEMI_AUTOMATON_def,
                     semi_automaton_REWRITES, SING, IN_CROSS,
-                    IN_POWER_SET_SUBSET_EQUIV,
+                    IN_POW,
                     EXISTS_UNIQUE_THM,
     prove(``!P s i s'. ((s, i, s', i') IN \((s11, s12), i, (s21, s22), i'). P s11 s12 i s21 s22 i') = P (FST s) (SND s) i (FST s') (SND s') i'``,
           Cases_on `s` THEN Cases_on `s'` THEN
@@ -1062,7 +1058,7 @@ val BREAKPOINT_CONSTRUCTION_SEMI_AUTOMATON___IS_DET_TOTAL =
     prove(``(x, y) IN (\(x, y). P x y) = P x y``, SIMP_TAC std_ss [IN_DEF])] THEN
     REPEAT STRIP_TAC THENL [
       Q_TAC EXISTS_TAC `((\x'. (x',i INTER A.I) IN A.S0), EMPTY:'b set)` THEN
-      SIMP_TAC std_ss [IN_BETA_THM, INTER_SUBSET],
+      SIMP_TAC std_ss [IN_ABS, INTER_SUBSET],
 
       Cases_on `x` THEN Cases_on `x'` THEN
       FULL_SIMP_TAC std_ss [EXTENSION],
@@ -1107,19 +1103,15 @@ val BREAKPOINT_CONSTRUCTION_SEMI_AUTOMATON___IS_WELL_FORMED =
     SIMP_TAC std_ss [IS_WELL_FORMED_SEMI_AUTOMATON_def,
                      BREAKPOINT_CONSTRUCTION_SEMI_AUTOMATON_def,
                      semi_automaton_REWRITES, SUBSET_DEF,
-                     IN_SING, IN_CROSS, IN_POWER_SET_SUBSET_EQUIV,
-                     NOT_IN_EMPTY, FINITE_CROSS, POWER_SET_FINITE,
-prove(``!P. ((!x. P x) = (!x11 x12 i x21 x22 i'. P ((x11,x12),i,(x21,x22), i')))``,
-        METIS_TAC[PAIR, FST, SND]),
-prove(``!P. ((!x. P x) = (!x1 i x2 i'. P (x1,i,x2,i')))``,
-        METIS_TAC[PAIR, FST, SND]),
-prove(``!P x11 x12 i x21 x22. (((x11,x12),i,(x21,x22), i') IN \((x11,x12),i,(x21,x22), i'). P x11 x12 i x21 x22 i') = P x11 x12 i x21 x22 i'``, SIMP_TAC std_ss [IN_DEF]),
-prove (``!P x1 x2. (x IN \(x1, x2). P x1 x2) = P (FST x) (SND x)``, SIMP_TAC std_ss [IN_DEF, PAIR_BETA_THM])] THEN
-REPEAT STRIP_TAC THENL [
-    PROVE_TAC[FST],
-    METIS_TAC[IN_INTER],
-    PROVE_TAC[]
-]);
+                     IN_SING, IN_CROSS, IN_POW,
+                     NOT_IN_EMPTY, FINITE_CROSS, FINITE_POW_IFF,
+                     FORALL_PROD, FORALL_AND_THM] THEN
+    SIMP_TAC std_ss [IN_DEF, FORALL_AND_THM, EMPTY_applied] THEN
+    REPEAT STRIP_TAC THENL [
+      PROVE_TAC[],
+      METIS_TAC[IN_INTER, IN_DEF],
+      PROVE_TAC[]
+    ]);
 
 
 val NDET_FG___TO___DET_FG___THM =
@@ -1147,7 +1139,7 @@ val NDET_FG___TO___DET_FG___THM =
                      EXPLICIT_ACCEPT_FG_def,
                      EXPLICIT_ACCEPT_COND_SEM_def,
                      EXPLICIT_ACCEPT_COND_SEM_TIME_def,
-                     IN_POWER_SET_SUBSET_EQUIV,
+                     IN_POW,
                      INTER_SUBSET, FORALL_AND_THM,
 prove (``!P. (!w:num->('a # 'b). P w) = (!w1 w2. P (\n. (w1 n, w2 n)))``,
   REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
@@ -1171,6 +1163,7 @@ prove(``!P x11 x12 i x21 x22 i'. (((x11,x12),i,(x21,x22),i') IN \((x11,x12),i,(x
 prove (``!P x1 x2. ((x1, x2) IN \(x1, x2). P x1 x2) = P x1 x2``, SIMP_TAC std_ss [IN_DEF])] THEN
   REPEAT STRIP_TAC THENL [
 
+    rename1 `~(_ >= t1) \/ _` THEN
     SUBGOAL_TAC `!n. w n IN w1 n` THEN1 (
       Induct_on `n` THEN (
         METIS_TAC[]
@@ -1178,14 +1171,14 @@ prove (``!P x1 x2. ((x1, x2) IN \(x1, x2). P x1 x2) = P x1 x2``, SIMP_TAC std_ss
     ) THEN
     CCONTR_TAC THEN
     FULL_SIMP_TAC std_ss [] THEN
-    `?u. (u >= t') /\ (w2 u = {})` by METIS_TAC[] THEN
+    `?u. (u >= t1) /\ (w2 u = {})` by METIS_TAC[] THEN
     SUBGOAL_TAC `!n. w ((SUC u) + n) IN w2 ((SUC u) + n)` THEN1 (
       Induct_on `n` THENL [
         ASM_SIMP_TAC std_ss [] THEN
         Q_SPEC_NO_ASSUM 4 `u` THEN
         UNDISCH_HD_TAC THEN
         ASM_SIMP_TAC std_ss [IN_INTER] THEN
-        `SUC u >= t'` by DECIDE_TAC THEN
+        `SUC u >= t1` by DECIDE_TAC THEN
         PROVE_TAC[],
 
 
@@ -1193,14 +1186,15 @@ prove (``!P x1 x2. ((x1, x2) IN \(x1, x2). P x1 x2) = P x1 x2``, SIMP_TAC std_ss
         `(SUC u + SUC n) = SUC((SUC u + n))` by DECIDE_TAC THEN
         `~(w2 (SUC u + n) = EMPTY)` by PROVE_TAC[MEMBER_NOT_EMPTY] THEN
         FULL_SIMP_TAC std_ss [] THEN
-        `SUC (SUC u + n) >= t'` by DECIDE_TAC THEN
+        `SUC (SUC u + n) >= t1` by DECIDE_TAC THEN
         PROVE_TAC[]
       ]
     ) THEN
     Q_SPEC_NO_ASSUM 3 `SUC u` THEN
     SIMP_ALL_TAC std_ss [] THEN
-    Q_SPEC_NO_ASSUM 2 `t'' - SUC u` THEN
-    `SUC u + (t'' - SUC u) = t''` by DECIDE_TAC THEN
+    rename1 `w2 t2 = EMPTY` THEN
+    Q_SPEC_NO_ASSUM 2 `t2 - SUC u` THEN
+    `SUC u + (t2 - SUC u) = t2` by DECIDE_TAC THEN
     FULL_SIMP_TAC std_ss [] THEN
     PROVE_TAC[MEMBER_NOT_EMPTY],
 
@@ -1208,28 +1202,30 @@ prove (``!P x1 x2. ((x1, x2) IN \(x1, x2). P x1 x2) = P x1 x2``, SIMP_TAC std_ss
 
 
 
-    `?R. (\(s1, n1) (s2, n2). (n2 = SUC n1) /\
+    rename1 `~(_ >= t1) \/ _` THEN
+    Q.ABBREV_TAC `R = (\(s1, n1) (s2, n2). (n2 = SUC n1) /\
                                    (s1, i n1 INTER A.I, s2, i n2 INTER A.I) IN A.R /\
-                                   (n1 >= t' ==> s2 IN S)) = R` by METIS_TAC[] THEN
+                                   (n1 >= t1 ==> s2 IN S))` THEN
     REMAINS_TAC `(!x. FINITE {y | R x y}) /\
                  (?s0. ((s0, i 0 INTER A.I) IN A.S0) /\ (~FINITE {y | RTC R (s0,0) y}))` THEN1 (
       `?f. (f 0 = (s0, 0)) /\ !n. R (f n) (f (SUC n))` by METIS_TAC[KoenigsLemma] THEN
       Q_TAC EXISTS_TAC `\n. FST (f n)` THEN
       NTAC 2 UNDISCH_HD_TAC THEN
       GSYM_NO_TAC 3 (*Def R*) THEN
-      ASM_SIMP_TAC std_ss [PAIR_BETA_THM, FORALL_AND_THM] THEN
+      ASM_SIMP_TAC (std_ss++pairSimps.gen_beta_ss) [FORALL_AND_THM] THEN
       DISCH_TAC THEN DISCH_TAC THEN
       SUBGOAL_TAC `!n. SND (f n) = n` THEN1 (
         Induct_on `n` THEN ASM_REWRITE_TAC[]
       ) THEN
       FULL_SIMP_TAC std_ss [IS_WELL_FORMED_SEMI_AUTOMATON_def, SUBSET_DEF, IN_CROSS,
-        IN_POWER_SET_SUBSET_EQUIV] THEN
+        IN_POW] THEN
       REPEAT STRIP_TAC THENL [
         METIS_TAC[FST, SND],
 
-        EXISTS_TAC ``SUC t'`` THEN
+        EXISTS_TAC ``SUC t1`` THEN
         GEN_TAC THEN RIGHT_DISJ_TAC THEN
-        `(PRE t''' >= t') /\ (SUC (PRE t''') = t''')` by DECIDE_TAC THEN
+        rename1 `FST (f t2) IN S` THEN
+        `(PRE t2 >= t1) /\ (SUC (PRE t2) = t2)` by DECIDE_TAC THEN
         PROVE_TAC[]
       ]
     ) THEN
@@ -1240,14 +1236,13 @@ prove (``!P x1 x2. ((x1, x2) IN \(x1, x2). P x1 x2) = P x1 x2``, SIMP_TAC std_ss
       REMAINS_TAC `{y | R x y} SUBSET A.S CROSS {SUC (SND x)}` THEN1 (
         PROVE_TAC[SUBSET_FINITE, FINITE_CROSS, FINITE_SING]
       ) THEN
-      ASM_SIMP_TAC std_ss [SUBSET_DEF, GSPECIFICATION, IN_CROSS, PAIR_BETA_THM,
-        IN_SING] THEN
+      ASM_SIMP_TAC (std_ss++pairSimps.gen_beta_ss) [SUBSET_DEF, GSPECIFICATION, IN_CROSS, IN_SING] THEN
       METIS_TAC[FST, SND],
 
 
 
 
-      `?P. (\s0 y. (?w. IS_RUN_THROUGH_SEMI_AUTOMATON_TO_STATE A i w (FST y) (SND y) /\ (w 0 = s0) /\ (!n. ((n > t') /\ (SND y >= n)) ==> w n IN S))) = P` by METIS_TAC[] THEN
+      Q.ABBREV_TAC `P = (\s0 y. (?w. IS_RUN_THROUGH_SEMI_AUTOMATON_TO_STATE A i w (FST y) (SND y) /\ (w 0 = s0) /\ (!n. ((n > t1) /\ (SND y >= n)) ==> w n IN S)))` THEN
       SUBGOAL_TAC `!s0. ((s0, i 0 INTER A.I) IN A.S0 /\ ~FINITE {y | RTC R (s0,0) y}) =
                         ((s0, i 0 INTER A.I) IN A.S0 /\ ~FINITE {y | P s0 y})` THEN1 (
         GSYM_NO_TAC 0 (*Def P*) THEN
@@ -1264,7 +1259,7 @@ prove (``!P x1 x2. ((x1, x2) IN \(x1, x2). P x1 x2) = P x1 x2``, SIMP_TAC std_ss
           GSYM_NO_TAC 2 (*Def R*) THEN
           Cases_on `x` THEN
           ONCE_REWRITE_TAC[RTC_CASES2] THEN
-          ASM_SIMP_TAC arith_ss [PAIR_BETA_THM] THEN
+          ASM_SIMP_TAC (arith_ss++pairSimps.gen_beta_ss) [] THEN
           REPEAT STRIP_TAC THEN
           GSYM_NO_TAC 0 THEN
           ASM_SIMP_TAC arith_ss [] THEN
@@ -1289,11 +1284,11 @@ prove (``!P x1 x2. ((x1, x2) IN \(x1, x2). P x1 x2) = P x1 x2``, SIMP_TAC std_ss
                       !n.
                         n < SND y ==>
                         (w n,i n INTER A.I,w (SUC n), i (SUC n) INTER A.I) IN A.R) /\
-                     (w 0 = s0) /\ (!n. ((n > t') /\ (SND y >= n)) ==> w n IN S)) /\ (R y (q,r)))` THEN1 (
+                     (w 0 = s0) /\ (!n. ((n > t1) /\ (SND y >= n)) ==> w n IN S)) /\ (R y (q,r)))` THEN1 (
 
             SUBGOAL_TAC `!y. R y (q,r) ==> (v = SND y)`  THEN1 (
               GSYM_NO_TAC 4 (*Def R*) THEN
-              ASM_SIMP_TAC arith_ss [PAIR_BETA_THM]
+              ASM_SIMP_TAC (arith_ss++pairSimps.gen_beta_ss) []
             ) THEN
 
             REPEAT STRIP_TAC THEN EQ_TAC THENL [
@@ -1310,7 +1305,7 @@ prove (``!P x1 x2. ((x1, x2) IN \(x1, x2). P x1 x2) = P x1 x2``, SIMP_TAC std_ss
           WEAKEN_HD_TAC THEN
           GSYM_NO_TAC 0 (*Def r*) THEN
           GSYM_NO_TAC 4 (*Def R*) THEN
-          ASM_SIMP_TAC std_ss [PAIR_BETA_THM] THEN
+          ASM_SIMP_TAC (std_ss++pairSimps.gen_beta_ss) [] THEN
           EQ_TAC THEN REPEAT STRIP_TAC THENL [
             GSYM_NO_TAC 2 (*Def v*) THEN
             FULL_SIMP_TAC std_ss [] THEN
@@ -1348,7 +1343,7 @@ prove (``!P x1 x2. ((x1, x2) IN \(x1, x2). P x1 x2) = P x1 x2``, SIMP_TAC std_ss
               `v < SUC v` by DECIDE_TAC THEN
               METIS_TAC[],
 
-              `(SUC v > t') /\ (SUC v >= SUC v)` by DECIDE_TAC THEN
+              `(SUC v > t1) /\ (SUC v >= SUC v)` by DECIDE_TAC THEN
               METIS_TAC[]
             ]
           ]
@@ -1391,7 +1386,7 @@ prove (``!P x1 x2. ((x1, x2) IN \(x1, x2). P x1 x2) = P x1 x2``, SIMP_TAC std_ss
 
       SUBGOAL_TAC `!n x. (x IN w2 n) ==>
                          (?w. IS_RUN_THROUGH_SEMI_AUTOMATON_TO_STATE A i w x n /\
-                            (!m. ((m > t') /\ (n >= m)) ==> (w m IN S)))` THEN1 (
+                            (!m. ((m > t1) /\ (n >= m)) ==> (w m IN S)))` THEN1 (
         Induct_on `n` THENL [
           ASM_SIMP_TAC std_ss [NOT_IN_EMPTY],
 
@@ -1399,24 +1394,25 @@ prove (``!P x1 x2. ((x1, x2) IN \(x1, x2). P x1 x2) = P x1 x2``, SIMP_TAC std_ss
           Q_SPEC_NO_ASSUM 5 `n` THEN
           Cases_on `w2 n = EMPTY` THENL [
             WEAKEN_NO_TAC 7 (*x IN w1 (SUC n)*) THEN
-            `~(n >= t')` by PROVE_TAC[] THEN
+            `~(n >= t1)` by PROVE_TAC[] THEN
             FULL_SIMP_TAC std_ss [NOT_IN_EMPTY, IN_INTER] THEN
             REPEAT STRIP_TAC THEN
             `?w. IS_RUN_THROUGH_SEMI_AUTOMATON_TO_STATE A i w x (SUC n)` by METIS_TAC[] THEN
             Q_TAC EXISTS_TAC `w` THEN
             ASM_SIMP_TAC std_ss [] THEN
             REPEAT STRIP_TAC THEN
-            `n >= t'` by DECIDE_TAC,
+            `n >= t1` by DECIDE_TAC,
 
 
             FULL_SIMP_TAC std_ss [] THEN
             REPEAT STRIP_TAC THEN
             `?w. IS_RUN_THROUGH_SEMI_AUTOMATON_TO_STATE A i w s1' n /\
-                 (!m. ((m > t') /\ (n >= m)) ==> (w m IN S))` by METIS_TAC[] THEN
+                 (!m. ((m > t1) /\ (n >= m)) ==> (w m IN S))` by METIS_TAC[] THEN
             Q_TAC EXISTS_TAC `\m:num. if (m = SUC n) then x else w m` THEN
             REPEAT STRIP_TAC THENL [
               SIMP_ALL_TAC std_ss [IS_RUN_THROUGH_SEMI_AUTOMATON_TO_STATE_def] THEN
               REPEAT STRIP_TAC THENL [
+                rename1 `m <= SUC n` THEN
                 Cases_on `m = SUC n` THEN ASM_REWRITE_TAC[] THEN
                 `m <= n` by DECIDE_TAC THEN
                 RES_TAC,
@@ -1424,6 +1420,7 @@ prove (``!P x1 x2. ((x1, x2) IN \(x1, x2). P x1 x2) = P x1 x2``, SIMP_TAC std_ss
                 ASM_SIMP_TAC arith_ss [],
 
 
+                rename1 `m < SUC n` THEN
                 ASM_SIMP_TAC arith_ss [] THEN
                 Cases_on `m = n` THENL [
                   ASM_SIMP_TAC std_ss [],
@@ -1433,6 +1430,7 @@ prove (``!P x1 x2. ((x1, x2) IN \(x1, x2). P x1 x2) = P x1 x2``, SIMP_TAC std_ss
                 ]
               ],
 
+              rename1 `SUC n >= m` THEN
               Cases_on `m = SUC n` THENL [
                 ASM_SIMP_TAC std_ss [],
 
@@ -1447,11 +1445,11 @@ prove (``!P x1 x2. ((x1, x2) IN \(x1, x2). P x1 x2) = P x1 x2``, SIMP_TAC std_ss
 
       `?A_S0'. A_S0' = \s0. (s0, i 0 INTER A.I) IN A.S0` by METIS_TAC[] THEN
       SUBGOAL_TAC `FINITE A_S0'` THEN1 (
-        `FINITE A.S0` by METIS_TAC[SUBSET_FINITE, FINITE_CROSS, POWER_SET_FINITE] THEN
+        `FINITE A.S0` by METIS_TAC[SUBSET_FINITE, FINITE_CROSS, FINITE_POW_IFF] THEN
         `?A_S0. A_S0 = A.S0 INTER (\(x, i'). (i' = (i 0 INTER A.I)))` by METIS_TAC[] THEN
         `FINITE A_S0` by PROVE_TAC[INTER_FINITE] THEN
         SUBGOAL_TAC `A_S0' = IMAGE FST A_S0` THEN1 (
-          ASM_SIMP_TAC std_ss [EXTENSION, IN_BETA_THM, IN_IMAGE, IN_INTER] THEN
+          ASM_SIMP_TAC std_ss [EXTENSION, IN_ABS, IN_IMAGE, IN_INTER] THEN
           REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
             Q_TAC EXISTS_TAC `(x, i 0 INTER A.I)` THEN
             ASM_SIMP_TAC std_ss [IN_INTER,
@@ -1470,11 +1468,11 @@ prove (``!P x1 x2. ((x1, x2) IN \(x1, x2). P x1 x2) = P x1 x2``, SIMP_TAC std_ss
       ) THEN
       SUBGOAL_TAC `FINITE (BIGUNION (IMAGE (\s0. {y | P s0 y}) A_S0'))` THEN1 (
         MATCH_MP_TAC FINITE_BIGUNION THEN
-        ASM_SIMP_TAC std_ss [IMAGE_FINITE, IN_IMAGE, GSYM LEFT_FORALL_IMP_THM, IN_BETA_THM] THEN
+        ASM_SIMP_TAC std_ss [IMAGE_FINITE, IN_IMAGE, GSYM LEFT_FORALL_IMP_THM, IN_ABS] THEN
         METIS_TAC[]
       ) THEN
 
-      `?f. f = \n. ((@s. s IN (w2 (t'+n))), t'+n)` by METIS_TAC[] THEN
+      `?f. f = \n. ((@s. s IN (w2 (t1+n))), t1+n)` by METIS_TAC[] THEN
       SUBGOAL_TAC `IMAGE f UNIV SUBSET (BIGUNION (IMAGE (\s0. {y | P s0 y}) A_S0'))` THEN1 (
         GSYM_NO_TAC 7 (*Def P*) THEN
         ASM_SIMP_TAC std_ss [SUBSET_DEF, IN_IMAGE, IN_BIGUNION, IN_UNIV,
@@ -1483,13 +1481,13 @@ prove (``!P x1 x2. ((x1, x2) IN \(x1, x2). P x1 x2) = P x1 x2``, SIMP_TAC std_ss
         REPEAT STRIP_TAC THEN
         Cases_on `x` THEN
         SIMP_ALL_TAC std_ss [] THEN
-        ASM_SIMP_TAC std_ss [IN_BETA_THM] THEN
+        ASM_SIMP_TAC std_ss [IN_ABS] THEN
         SELECT_ELIM_TAC THEN
         REPEAT STRIP_TAC THENL [
-          `t' + x' >= t'` by DECIDE_TAC THEN
+          `t1 + x' >= t1` by DECIDE_TAC THEN
           METIS_TAC[MEMBER_NOT_EMPTY],
 
-          Q_SPECL_NO_ASSUM 8 [`t' + x'`, `x`] THEN
+          Q_SPECL_NO_ASSUM 8 [`t1 + x'`, `x`] THEN
           UNDISCH_HD_TAC THEN ASM_REWRITE_TAC[] THEN
           REPEAT STRIP_TAC THEN
           Q_TAC EXISTS_TAC `w` THEN
@@ -1498,7 +1496,7 @@ prove (``!P x1 x2. ((x1, x2) IN \(x1, x2). P x1 x2) = P x1 x2``, SIMP_TAC std_ss
         ]
       ) THEN
       REMAINS_TAC `INFINITE (IMAGE f UNIV)` THEN1 (
-        METIS_TAC[SUBSET_FINITE, INFINITE_DEF]
+        METIS_TAC[SUBSET_FINITE]
       ) THEN
       MATCH_MP_TAC (SIMP_RULE std_ss [prove (``!P Q R. ((P ==> Q ==> R) = ((P /\ Q) ==> R))``, METIS_TAC[]), GSYM RIGHT_FORALL_IMP_THM] IMAGE_11_INFINITE) THEN
       STRIP_TAC THENL [
@@ -1532,9 +1530,10 @@ val A_SEM___NDET_F___TO___NDET_FG =
     INPUT_RUN_PATH_UNION_def, INPUT_RUN_STATE_UNION_def,
     ACCEPT_COND_F_def, ACCEPT_COND_FG_def, ACCEPT_F_def] THEN
   REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
+    rename1 `P_SEM (w t UNION _) p` THEN
     Q_EXISTS_LEAST_TAC `?t'. P_SEM (w t' UNION (v t' DIFF A.S)) p` THEN
     FULL_SIMP_TAC std_ss [] THEN
-    Q_TAC EXISTS_TAC `\n. if n < t'' then (w n) else (x INSERT (w n))` THEN
+    Q_TAC EXISTS_TAC `\n. if n < t' then (w n) else (x INSERT (w n))` THEN
     SUBGOAL_TAC `(!n. (w n UNION (v n DIFF (x INSERT A.S))) INTER (COMPL {x}) =
                      (w n UNION (v n DIFF A.S)) INTER (COMPL {x})) /\
                  (!n. ((x INSERT w n) UNION (v n DIFF (x INSERT A.S))) INTER (COMPL {x}) =
@@ -1551,17 +1550,17 @@ val A_SEM___NDET_F___TO___NDET_FG =
         COND_RATOR] THEN
       PROVE_TAC[],
 
-      Cases_on `0 < t''` THENL [
+      Cases_on `0 < t'` THENL [
         ASM_SIMP_TAC std_ss [P_SEM_THM, IN_UNION, IN_DIFF, IN_INSERT] THEN
         PROVE_TAC[P_USED_VARS_INTER_SUBSET_THM],
 
-        `t'' = 0` by DECIDE_TAC THEN
+        `t' = 0` by DECIDE_TAC THEN
         ASM_SIMP_TAC std_ss [P_SEM_THM, IN_UNION, IN_INSERT] THEN
         METIS_TAC[P_USED_VARS_INTER_SUBSET_THM]
       ],
 
-      Cases_on `SUC n < t''` THENL [
-        `n < t''` by DECIDE_TAC THEN
+      Cases_on `SUC n < t'` THENL [
+        `n < t'` by DECIDE_TAC THEN
         ASM_SIMP_TAC std_ss [XP_SEM_THM, IN_UNION, IN_DIFF, IN_INSERT,
                              XP_SEM___XP_NEXT] THEN
         REPEAT STRIP_TAC THENL [
@@ -1569,8 +1568,8 @@ val A_SEM___NDET_F___TO___NDET_FG =
           METIS_TAC[XP_USED_VARS_INTER_SUBSET_BOTH_THM]
         ],
 
-        Cases_on `SUC n = t''` THENL [
-          `n < t''` by DECIDE_TAC THEN
+        Cases_on `SUC n = t'` THENL [
+          `n < t'` by DECIDE_TAC THEN
           ASM_SIMP_TAC std_ss [XP_SEM_THM, IN_UNION, IN_DIFF, IN_INSERT,
                               XP_SEM___XP_NEXT] THEN
           REPEAT STRIP_TAC THENL [
@@ -1578,7 +1577,7 @@ val A_SEM___NDET_F___TO___NDET_FG =
             METIS_TAC[XP_USED_VARS_INTER_SUBSET_BOTH_THM]
           ],
 
-          `~(n < t'')` by DECIDE_TAC THEN
+          `~(n < t')` by DECIDE_TAC THEN
           ASM_SIMP_TAC std_ss [XP_SEM_THM, IN_UNION, IN_DIFF, IN_INSERT,
                               XP_SEM___XP_NEXT] THEN
           METIS_TAC[XP_USED_VARS_INTER_SUBSET_BOTH_THM]
@@ -1586,16 +1585,17 @@ val A_SEM___NDET_F___TO___NDET_FG =
       ],
 
 
-      EXISTS_TAC ``SUC t''`` THEN
+      EXISTS_TAC ``SUC t'`` THEN
       REPEAT STRIP_TAC THEN
       RIGHT_DISJ_TAC THEN
-      `~(t''' < t'')` by DECIDE_TAC THEN
+      rename1 `~~(t'' >= SUC t')` THEN
+      `~(t'' < t')` by DECIDE_TAC THEN
       ASM_SIMP_TAC std_ss [P_SEM_THM, IN_UNION, IN_DIFF, COND_RAND, COND_RATOR,
         IN_INSERT]
     ],
 
 
-
+    rename1 `~(_ >= t)` THEN
     Q_TAC EXISTS_TAC `PATH_RESTRICT w A.S` THEN
     SIMP_TAC std_ss [PATH_RESTRICT_def, PATH_MAP_def, PATH_SUBSET_def, INTER_SUBSET] THEN
     SUBGOAL_TAC `!n. (w n UNION (v n DIFF (x INSERT A.S))) INTER (COMPL {x}) =
@@ -1609,14 +1609,15 @@ val A_SEM___NDET_F___TO___NDET_FG =
       SIMP_ALL_TAC std_ss [P_SEM_THM] THEN
       METIS_TAC[P_USED_VARS_INTER_SUBSET_THM],
 
-      `XP_USED_VARS A.R SUBSET COMPL {x}` by ASM_SIMP_TAC std_ss [SUBSET_DEF, IN_COMPL, IN_SING] THEN
+      `XP_USED_VARS A.R SUBSET COMPL {x}`
+         by ASM_SIMP_TAC std_ss [SUBSET_DEF, IN_COMPL, IN_SING] THEN
       SIMP_ALL_TAC std_ss [XP_SEM_THM] THEN
       METIS_TAC[XP_USED_VARS_INTER_SUBSET_BOTH_THM],
 
 
       `P_USED_VARS p SUBSET COMPL {x}` by ASM_SIMP_TAC std_ss [SUBSET_DEF, IN_COMPL, IN_SING] THEN
       SIMP_ALL_TAC std_ss [XP_SEM_THM, P_SEM_THM, XP_SEM___XP_NEXT, IN_UNION, IN_DIFF, IN_INSERT] THEN
-      `t' >= t'` by DECIDE_TAC THEN
+      `t >= t` by DECIDE_TAC THEN
       Q_EXISTS_LEAST_TAC `?u. x IN w u` THEN
       SIMP_ALL_TAC std_ss [] THEN
       REMAINS_TAC `P_SEM (w u UNION (v u DIFF (x INSERT A.S))) p` THEN1 (
@@ -1729,14 +1730,15 @@ val A_NDET_FG___SYM__TO__CONRETE =
                     EXPLICIT_ACCEPT_COND_SEM_TIME_def,
                     EXPLICIT_ACCEPT_FG_def,
                     EXPLICIT_ACCEPT_F_def,
-                    IN_BETA_THM,
+                    IN_ABS,
                     ACCEPT_COND_FG_def,
                     ACCEPT_F_def,
                     A_SEM_THM,
                     ACCEPT_COND_SEM_def,
                     ACCEPT_COND_SEM_TIME_def] THEN
     EXISTS_EQ_STRIP_TAC THEN FORALL_EQ_STRIP_TAC THEN BOOL_EQ_STRIP_TAC THEN
-    REMAINS_TAC `INPUT_RUN_PATH_UNION A i w t'' INTER A.S = w t'' INTER A.S` THEN1 (
+    rename1 `t2 >= t1` THEN
+    REMAINS_TAC `INPUT_RUN_PATH_UNION A i w t2 INTER A.S = w t2 INTER A.S` THEN1 (
       METIS_TAC[P_USED_VARS_INTER_SUBSET_THM]
     ) THEN
     SIMP_TAC std_ss [INPUT_RUN_PATH_UNION_def, INPUT_RUN_STATE_UNION_def, EXTENSION,
@@ -1829,7 +1831,7 @@ val A_SEM___PRUNE_ACCEPTANCE_CONDITION =
         UNDISCH_NO_TAC 5 (*PATH_SUBSET w*) THEN
         UNDISCH_NO_TAC 2 (*i f i ON w*) THEN
         UNDISCH_NO_TAC 8 (*INJ f*) THEN
-        ASM_SIMP_TAC std_ss [EXTENSION, IN_BETA_THM,
+        ASM_SIMP_TAC std_ss [EXTENSION, IN_ABS,
           IN_INTER, COND_RAND, COND_RATOR] THEN
         REPEAT WEAKEN_HD_TAC THEN
         REPEAT DISCH_TAC THEN
@@ -1838,7 +1840,7 @@ val A_SEM___PRUNE_ACCEPTANCE_CONDITION =
           PATH_MAP_def, IN_INTER, COND_EXPAND_IMP,
           GSYM SUBSET_COMPL_DISJOINT, SUBSET_DEF, IN_COMPL,
           PATH_SUBSET_def, SEMI_AUTOMATON_USED_VARS___DIRECT_DEF, INJ_DEF,
-          IN_UNIV, IN_IMAGE, IN_DIFF, EXTENSION, IN_BETA_THM] THEN
+          IN_UNIV, IN_IMAGE, IN_DIFF, EXTENSION, IN_ABS] THEN
         METIS_TAC[],
 
 
@@ -1900,7 +1902,7 @@ val A_SEM___PRUNE_ACCEPTANCE_CONDITION =
         UNDISCH_NO_TAC 9 (*DISJOINT*) THEN
         UNDISCH_NO_TAC 4 (*PATH_SUBSET w*) THEN
         UNDISCH_NO_TAC 8 (*INJ f*) THEN
-        ASM_SIMP_TAC std_ss [EXTENSION, IN_BETA_THM,
+        ASM_SIMP_TAC std_ss [EXTENSION, IN_ABS,
           IN_INTER, COND_RAND, COND_RATOR] THEN
         REPEAT WEAKEN_HD_TAC THEN
         REPEAT DISCH_TAC THEN
@@ -1909,7 +1911,7 @@ val A_SEM___PRUNE_ACCEPTANCE_CONDITION =
           PATH_MAP_def, IN_INTER, COND_EXPAND_IMP,
           GSYM SUBSET_COMPL_DISJOINT, SUBSET_DEF, IN_COMPL,
           PATH_SUBSET_def, SEMI_AUTOMATON_USED_VARS___DIRECT_DEF, INJ_DEF,
-          IN_UNIV, IN_IMAGE, IN_DIFF, EXTENSION, IN_BETA_THM] THEN
+          IN_UNIV, IN_IMAGE, IN_DIFF, EXTENSION, IN_ABS] THEN
         METIS_TAC[]
       ]
     ])
@@ -1926,29 +1928,29 @@ val IS_SYMBOLIC_BREAKPOINT_CONSTRUCTION_def=
  Define
    `IS_SYMBOLIC_BREAKPOINT_CONSTRUCTION (A:'a symbolic_semi_automaton) (A':'a symbolic_semi_automaton) (IV:'a set) (f:'a set->'a) (g:'a -> 'a set)
        (f':'a set->'a) S = (
-       (S SUBSET (POWER_SET A.S)) /\
-      (INJ f (POWER_SET A.S) UNIV) /\
-      (INJ f' (POWER_SET A.S) UNIV) /\
-      (DISJOINT (IMAGE f (POWER_SET A.S)) IV) /\
-      (DISJOINT (IMAGE f' (POWER_SET A.S)) IV) /\
-      (DISJOINT (IMAGE f (POWER_SET A.S)) (IMAGE f' (POWER_SET A.S))) /\
+       (S SUBSET (POW A.S)) /\
+      (INJ f (POW A.S) UNIV) /\
+      (INJ f' (POW A.S) UNIV) /\
+      (DISJOINT (IMAGE f (POW A.S)) IV) /\
+      (DISJOINT (IMAGE f' (POW A.S)) IV) /\
+      (DISJOINT (IMAGE f (POW A.S)) (IMAGE f' (POW A.S))) /\
       (!z. z SUBSET A.S ==> (g (f z) = z)) /\
       (!z. z SUBSET A.S ==> (g (f' z) = z)) /\
 
 
-       (A'.S = (IMAGE f (POWER_SET A.S) UNION IMAGE f' (POWER_SET A.S))) /\
+       (A'.S = (IMAGE f (POW A.S) UNION IMAGE f' (POW A.S))) /\
 
        (!i Z. (Z SUBSET A'.S) ==> (((P_SEM (INPUT_RUN_STATE_UNION A' i Z) A'.S0) =
-              (Z = {z | (z IN (IMAGE f (POWER_SET A.S))) /\ P_SEM (INPUT_RUN_STATE_UNION A i (g z)) A.S0})))) /\
+              (Z = {z | (z IN (IMAGE f (POW A.S))) /\ P_SEM (INPUT_RUN_STATE_UNION A i (g z)) A.S0})))) /\
 
       (!S1 S2 i1 i2.
             (S1 SUBSET A'.S /\ S2 SUBSET A'.S) ==>
               ((IS_TRANSITION A' S1 i1 S2 i2) =
-                (S2 = {s2 | (s2 IN (IMAGE f (POWER_SET A.S))) /\ ?s1. (s1 IN S1 /\
-                 s1 IN (IMAGE f (POWER_SET A.S)) /\
+                (S2 = {s2 | (s2 IN (IMAGE f (POW A.S))) /\ ?s1. (s1 IN S1 /\
+                 s1 IN (IMAGE f (POW A.S)) /\
                  IS_TRANSITION A (g s1) i1 (g s2) i2)} UNION
-                    {s2 | (s2 IN (IMAGE f' (POWER_SET A.S))) /\ ?s1. (s1 IN S1 /\
-                 (COND (S1 INTER (IMAGE f' (POWER_SET A.S)) = EMPTY) (s1 IN (IMAGE f (POWER_SET A.S))) (s1 IN (IMAGE f' (POWER_SET A.S)))) /\
+                    {s2 | (s2 IN (IMAGE f' (POW A.S))) /\ ?s1. (s1 IN S1 /\
+                 (COND (S1 INTER (IMAGE f' (POW A.S)) = EMPTY) (s1 IN (IMAGE f (POW A.S))) (s1 IN (IMAGE f' (POW A.S)))) /\
                  IS_TRANSITION A (g s1) i1 (g s2) i2
                      /\ (g s2) IN S)})))
 
@@ -1968,136 +1970,133 @@ val SYMBOLIC___NDET_FG___TO___DET_FG___THM =
 (S = (\s. s SUBSET A.S /\ P_SEM s p)) /\
 IS_SYMBOLIC_BREAKPOINT_CONSTRUCTION A A' IV f g f' S /\
 (!s. (P_SEM s p') =
-     ~((s INTER (IMAGE f' (POWER_SET A.S)) = EMPTY)))
+     ~((s INTER (IMAGE f' (POW A.S)) = EMPTY)))
 ) ==>
 !i.
 (A_SEM i (A_NDET (A, ACCEPT_COND_FG p)) =
 A_SEM i (A_NDET (A', ACCEPT_COND_FG p')))``,
 
 REPEAT STRIP_TAC THEN
-ASM_SIMP_TAC std_ss [A_NDET_FG___SYM__TO__CONRETE___MIN_I] THEN (
+ASM_SIMP_TAC std_ss [A_NDET_FG___SYM__TO__CONRETE___MIN_I] THEN
 
-  ASSUME_TAC (INST_TYPE [beta |-> (alpha --> ``:bool``)] NDET_FG___TO___DET_FG___THM) THEN
-  Q_SPECL_NO_ASSUM 0 [`SYMBOLIC_SEMI_AUTOMATON_TO_SEMI_AUTOMATON A
+ASSUME_TAC (INST_TYPE [beta |-> (alpha --> ``:bool``)] NDET_FG___TO___DET_FG___THM) THEN
+Q_SPECL_NO_ASSUM 0 [`SYMBOLIC_SEMI_AUTOMATON_TO_SEMI_AUTOMATON A
           (SEMI_AUTOMATON_USED_INPUT_VARS A)`, `\s. P_SEM s p`, `i`] THEN
-  SUBGOAL_TAC `IS_WELL_FORMED_SEMI_AUTOMATON
-                  (SYMBOLIC_SEMI_AUTOMATON_TO_SEMI_AUTOMATON A
-                      (SEMI_AUTOMATON_USED_INPUT_VARS A))` THEN1 (
-    MATCH_MP_TAC SYMBOLIC_SEMI_AUTOMATON_TO_SEMI_AUTOMATON___IS_WELL_FORMED THEN
-    ASM_REWRITE_TAC[FINITE___SEMI_AUTOMATON_USED_INPUT_VARS]
-  ) THEN
-  FULL_SIMP_TAC std_ss [] THEN NTAC 2 WEAKEN_HD_TAC
-
+SUBGOAL_TAC `IS_WELL_FORMED_SEMI_AUTOMATON
+                (SYMBOLIC_SEMI_AUTOMATON_TO_SEMI_AUTOMATON A
+                    (SEMI_AUTOMATON_USED_INPUT_VARS A))` THEN1 (
+  MATCH_MP_TAC SYMBOLIC_SEMI_AUTOMATON_TO_SEMI_AUTOMATON___IS_WELL_FORMED THEN
+  ASM_REWRITE_TAC[FINITE___SEMI_AUTOMATON_USED_INPUT_VARS]
 ) THEN
+FULL_SIMP_TAC std_ss [] THEN NTAC 2 WEAKEN_HD_TAC
 
+THEN
 
-(
-  `?h. h = \(S1, S2). (IMAGE f S1) UNION (IMAGE f' S2)` by METIS_TAC[] THEN
-  `?h'. h' = \S:'a set. (IMAGE g (S INTER (IMAGE f (POWER_SET A.S))), IMAGE g (S INTER (IMAGE f' (POWER_SET A.S))))` by METIS_TAC[] THEN
-  SUBGOAL_TAC `INJ h (POWER_SET (POWER_SET A.S) CROSS POWER_SET (POWER_SET A.S)) UNIV` THEN1 (
-    ASM_REWRITE_TAC [INJ_DEF, IN_CROSS, IN_POWER_SET_SUBSET_EQUIV, IN_UNIV,
-      PAIR_BETA_THM] THEN
-    Cases_on `x` THEN Cases_on `y` THEN
-    SIMP_ALL_TAC std_ss [IS_SYMBOLIC_BREAKPOINT_CONSTRUCTION_def] THEN
-    NTAC 2 (UNDISCH_NO_TAC 4) THEN (*INJ f, f'*)
-    UNDISCH_NO_TAC 6 (*DISJOINT IMAGE*) THEN
-    REPEAT WEAKEN_HD_TAC THEN
-    REPEAT DISCH_TAC THEN
-    CLEAN_ASSUMPTIONS_TAC THEN
-    SUBGOAL_TAC `(IMAGE f q = IMAGE f q') /\
-                  (IMAGE f' r = IMAGE f' r')` THEN1 (
-      UNDISCH_HD_TAC THEN
-      SIMP_ALL_TAC std_ss [EXTENSION, IN_UNION, GSYM SUBSET_COMPL_DISJOINT,
-        SUBSET_DEF, IN_COMPL] THEN
-      METIS_TAC[IMAGE_SUBSET, SUBSET_DEF]
-    ) THEN
-    WEAKEN_NO_TAC 2 THEN
-
-    SIMP_ALL_TAC std_ss [INJ_DEF, IN_UNIV, SUBSET_DEF] THEN
-    REPEAT STRIP_TAC THENL [
-      UNDISCH_NO_TAC 1 THEN
-      IMP_TO_EQ_TAC THEN
-      MATCH_MP_TAC INJECTIVE_IMAGE_EQ THEN
-      SIMP_TAC std_ss [IN_UNION] THEN
-      METIS_TAC[],
-
-      UNDISCH_NO_TAC 0 THEN
-      IMP_TO_EQ_TAC THEN
-      MATCH_MP_TAC INJECTIVE_IMAGE_EQ THEN
-      SIMP_TAC std_ss [IN_UNION] THEN
-      METIS_TAC[]
-    ]
+`?h. h = \(S1, S2). (IMAGE f S1) UNION (IMAGE f' S2)` by METIS_TAC[] THEN
+`?h'. h' = \S:'a set. (IMAGE g (S INTER (IMAGE f (POW A.S))), IMAGE g (S INTER (IMAGE f' (POW A.S))))` by METIS_TAC[] THEN
+SUBGOAL_TAC `INJ h (POW (POW A.S) CROSS POW (POW A.S)) UNIV` THEN1 (
+  ASM_SIMP_TAC (std_ss++pairSimps.gen_beta_ss) [INJ_DEF, IN_CROSS, IN_POW, IN_UNIV] THEN
+  Cases_on `x` THEN Cases_on `y` THEN
+  SIMP_ALL_TAC std_ss [IS_SYMBOLIC_BREAKPOINT_CONSTRUCTION_def] THEN
+  NTAC 2 (UNDISCH_NO_TAC 4) THEN (*INJ f, f'*)
+  UNDISCH_NO_TAC 6 (*DISJOINT IMAGE*) THEN
+  REPEAT WEAKEN_HD_TAC THEN
+  REPEAT DISCH_TAC THEN
+  CLEAN_ASSUMPTIONS_TAC THEN
+  SUBGOAL_TAC `(IMAGE f q = IMAGE f q') /\
+                (IMAGE f' r = IMAGE f' r')` THEN1 (
+    UNDISCH_HD_TAC THEN
+    SIMP_ALL_TAC std_ss [EXTENSION, IN_UNION, GSYM SUBSET_COMPL_DISJOINT,
+      SUBSET_DEF, IN_COMPL] THEN
+    METIS_TAC[IMAGE_SUBSET, SUBSET_DEF]
   ) THEN
+  WEAKEN_NO_TAC 2 THEN
 
-  SUBGOAL_TAC `!s. s IN (POWER_SET (POWER_SET A.S) CROSS POWER_SET (POWER_SET A.S)) ==> (h' (h s) = s)` THEN1 (
-    Cases_on `s` THEN
-    ASM_SIMP_TAC std_ss [IN_CROSS, IN_POWER_SET_SUBSET_EQUIV] THEN
-    SIMP_ALL_TAC std_ss [IS_SYMBOLIC_BREAKPOINT_CONSTRUCTION_def] THEN
-    STRIP_TAC THEN
-    SUBGOAL_TAC `((IMAGE f q UNION IMAGE f' r) INTER IMAGE f (POWER_SET A.S) =
-                  IMAGE f q) /\
-                  ((IMAGE f q UNION IMAGE f' r) INTER IMAGE f' (POWER_SET A.S) =
-                  IMAGE f' r)` THEN1 (
-      NTAC 2 UNDISCH_HD_TAC (*r, q SUBSET POWERSET A.S*) THEN
-      UNDISCH_NO_TAC 9 (*DISJOINT IMAGE IMAGE*) THEN
-      REPEAT WEAKEN_HD_TAC THEN
-      SIMP_TAC std_ss [GSYM SUBSET_COMPL_DISJOINT, SUBSET_DEF, IN_COMPL, EXTENSION, IN_INTER, IN_UNION] THEN
-      METIS_TAC[IMAGE_SUBSET, SUBSET_DEF]
-    ) THEN
-    ASM_REWRITE_TAC[GSYM IMAGE_COMPOSE] THEN
-    REPEAT STRIP_TAC THEN
-    MATCH_MP_TAC IMAGE_ID_SUBSET THEN
-    SIMP_ALL_TAC std_ss [SUBSET_DEF, IN_POWER_SET_SUBSET_EQUIV] THEN
+  SIMP_ALL_TAC std_ss [INJ_DEF, IN_UNIV, SUBSET_DEF] THEN
+  REPEAT STRIP_TAC THENL [
+    UNDISCH_NO_TAC 1 THEN
+    IMP_TO_EQ_TAC THEN
+    MATCH_MP_TAC INJECTIVE_IMAGE_EQ THEN
+    SIMP_TAC std_ss [IN_UNION] THEN
+    METIS_TAC[],
+
+    UNDISCH_NO_TAC 0 THEN
+    IMP_TO_EQ_TAC THEN
+    MATCH_MP_TAC INJECTIVE_IMAGE_EQ THEN
+    SIMP_TAC std_ss [IN_UNION] THEN
     METIS_TAC[]
-  ) THEN
-
-
-  ASSUME_TAC (INST_TYPE [beta |-> (pairLib.mk_prod ((alpha --> bool) --> bool, (alpha --> bool) --> bool)), gamma |-> alpha --> bool] OMEGA_AUTOMATON___STATE_VAR_RENAMING) THEN
-  Q_SPECL_NO_ASSUM 0 [`BREAKPOINT_CONSTRUCTION_SEMI_AUTOMATON
-              (SYMBOLIC_SEMI_AUTOMATON_TO_SEMI_AUTOMATON A
-                 (SEMI_AUTOMATON_USED_INPUT_VARS A)) (\s. P_SEM s p)`,
-               ` EXPLICIT_ACCEPT_FG (EXPLICIT_ACCEPT_STATE
-                 (\(s1,s2).
-                    s1 SUBSET
-                    (SYMBOLIC_SEMI_AUTOMATON_TO_SEMI_AUTOMATON A
-                       (SEMI_AUTOMATON_USED_INPUT_VARS A)).S /\
-                    s2 SUBSET
-                    (SYMBOLIC_SEMI_AUTOMATON_TO_SEMI_AUTOMATON A
-                       (SEMI_AUTOMATON_USED_INPUT_VARS A)).S /\
-                    ~(s2 = {}))):('a, (('a -> bool) -> bool) # (('a -> bool) -> bool))
-                  explicit_acceptance_condition`,
-              `h`, `h'`] THEN
-  PROVE_CONDITION_NO_ASSUM 0 THEN1 (
-    REPEAT STRIP_TAC THENL [
-      MATCH_MP_TAC BREAKPOINT_CONSTRUCTION_SEMI_AUTOMATON___IS_WELL_FORMED THEN
-      MATCH_MP_TAC SYMBOLIC_SEMI_AUTOMATON_TO_SEMI_AUTOMATON___IS_WELL_FORMED THEN
-      ASM_SIMP_TAC std_ss [FINITE___SEMI_AUTOMATON_USED_INPUT_VARS],
-
-
-
-      SIMP_TAC std_ss [EXPLICIT_ACCEPT_COND_USED_STATE_VARS_def,
-                       BREAKPOINT_CONSTRUCTION_SEMI_AUTOMATON_def,
-                       semi_automaton_REWRITES, SUBSET_DEF,
-                       EXPLICIT_ACCEPT_FG_def, EXPLICIT_ACCEPT_F_def] THEN
-      Cases_on `x` THEN
-      SIMP_TAC std_ss [IN_POWER_SET_SUBSET_EQUIV, SUBSET_DEF, IN_CROSS,
-        prove (``!P x1 x2. ((x1, x2) IN \(x1,x2). P x1 x2) = P x1 x2``, SIMP_TAC std_ss [IN_DEF])],
-
-
-
-      SIMP_TAC std_ss [BREAKPOINT_CONSTRUCTION_SEMI_AUTOMATON_def,
-                       semi_automaton_REWRITES, SYMBOLIC_SEMI_AUTOMATON_TO_SEMI_AUTOMATON_def] THEN
-      ASM_REWRITE_TAC[],
-
-
-      UNDISCH_HD_TAC THEN
-      SIMP_TAC std_ss [BREAKPOINT_CONSTRUCTION_SEMI_AUTOMATON_def,
-                       semi_automaton_REWRITES, SYMBOLIC_SEMI_AUTOMATON_TO_SEMI_AUTOMATON_def] THEN
-      ASM_REWRITE_TAC[]
-    ]
-  ) THEN
-  ASM_REWRITE_TAC[] THEN WEAKEN_HD_TAC
+  ]
 ) THEN
+
+SUBGOAL_TAC `!s. s IN (POW (POW A.S) CROSS POW (POW A.S)) ==> (h' (h s) = s)` THEN1 (
+  Cases_on `s` THEN
+  ASM_SIMP_TAC std_ss [IN_CROSS, IN_POW] THEN
+  SIMP_ALL_TAC std_ss [IS_SYMBOLIC_BREAKPOINT_CONSTRUCTION_def] THEN
+  STRIP_TAC THEN
+  SUBGOAL_TAC `((IMAGE f q UNION IMAGE f' r) INTER IMAGE f (POW A.S) =
+                IMAGE f q) /\
+                ((IMAGE f q UNION IMAGE f' r) INTER IMAGE f' (POW A.S) =
+                IMAGE f' r)` THEN1 (
+    NTAC 2 UNDISCH_HD_TAC (*r, q SUBSET POWERSET A.S*) THEN
+    UNDISCH_NO_TAC 9 (*DISJOINT IMAGE IMAGE*) THEN
+    REPEAT WEAKEN_HD_TAC THEN
+    SIMP_TAC std_ss [GSYM SUBSET_COMPL_DISJOINT, SUBSET_DEF, IN_COMPL, EXTENSION, IN_INTER, IN_UNION] THEN
+    METIS_TAC[IMAGE_SUBSET, SUBSET_DEF]
+  ) THEN
+  ASM_REWRITE_TAC[GSYM IMAGE_COMPOSE] THEN
+  REPEAT STRIP_TAC THEN
+  MATCH_MP_TAC IMAGE_ID_SUBSET THEN
+  SIMP_ALL_TAC std_ss [SUBSET_DEF, IN_POW] THEN
+  METIS_TAC[]
+) THEN
+
+
+ASSUME_TAC (INST_TYPE [beta |-> (pairLib.mk_prod ((alpha --> bool) --> bool, (alpha --> bool) --> bool)), gamma |-> alpha --> bool] OMEGA_AUTOMATON___STATE_VAR_RENAMING) THEN
+Q_SPECL_NO_ASSUM 0 [`BREAKPOINT_CONSTRUCTION_SEMI_AUTOMATON
+            (SYMBOLIC_SEMI_AUTOMATON_TO_SEMI_AUTOMATON A
+               (SEMI_AUTOMATON_USED_INPUT_VARS A)) (\s. P_SEM s p)`,
+             ` EXPLICIT_ACCEPT_FG (EXPLICIT_ACCEPT_STATE
+               (\(s1,s2).
+                  s1 SUBSET
+                  (SYMBOLIC_SEMI_AUTOMATON_TO_SEMI_AUTOMATON A
+                     (SEMI_AUTOMATON_USED_INPUT_VARS A)).S /\
+                  s2 SUBSET
+                  (SYMBOLIC_SEMI_AUTOMATON_TO_SEMI_AUTOMATON A
+                     (SEMI_AUTOMATON_USED_INPUT_VARS A)).S /\
+                  ~(s2 = {}))):('a, (('a -> bool) -> bool) # (('a -> bool) -> bool))
+                explicit_acceptance_condition`,
+            `h`, `h'`] THEN
+PROVE_CONDITION_NO_ASSUM 0 THEN1 (
+  REPEAT STRIP_TAC THENL [
+    MATCH_MP_TAC BREAKPOINT_CONSTRUCTION_SEMI_AUTOMATON___IS_WELL_FORMED THEN
+    MATCH_MP_TAC SYMBOLIC_SEMI_AUTOMATON_TO_SEMI_AUTOMATON___IS_WELL_FORMED THEN
+    ASM_SIMP_TAC std_ss [FINITE___SEMI_AUTOMATON_USED_INPUT_VARS],
+
+
+
+    SIMP_TAC std_ss [EXPLICIT_ACCEPT_COND_USED_STATE_VARS_def,
+                     BREAKPOINT_CONSTRUCTION_SEMI_AUTOMATON_def,
+                     semi_automaton_REWRITES, SUBSET_DEF,
+                     EXPLICIT_ACCEPT_FG_def, EXPLICIT_ACCEPT_F_def] THEN
+    Cases_on `x` THEN
+    SIMP_TAC std_ss [IN_POW, SUBSET_DEF, IN_CROSS,
+      prove (``!P x1 x2. ((x1, x2) IN \(x1,x2). P x1 x2) = P x1 x2``, SIMP_TAC std_ss [IN_DEF])],
+
+
+
+    SIMP_TAC std_ss [BREAKPOINT_CONSTRUCTION_SEMI_AUTOMATON_def,
+                     semi_automaton_REWRITES, SYMBOLIC_SEMI_AUTOMATON_TO_SEMI_AUTOMATON_def] THEN
+    ASM_REWRITE_TAC[],
+
+
+    UNDISCH_HD_TAC THEN
+    SIMP_TAC std_ss [BREAKPOINT_CONSTRUCTION_SEMI_AUTOMATON_def,
+                     semi_automaton_REWRITES, SYMBOLIC_SEMI_AUTOMATON_TO_SEMI_AUTOMATON_def] THEN
+    ASM_REWRITE_TAC[]
+  ]
+) THEN
+ASM_REWRITE_TAC[] THEN WEAKEN_HD_TAC THEN
+
 
 FULL_SIMP_TAC std_ss [EXISTENTIAL_OMEGA_AUTOMATON_SEM_def,
                     BREAKPOINT_CONSTRUCTION_SEMI_AUTOMATON_def,
@@ -2114,62 +2113,62 @@ FULL_SIMP_TAC std_ss [EXISTENTIAL_OMEGA_AUTOMATON_SEM_def,
 
 EXISTS_EQ_STRIP_TAC THEN
 SUBGOAL_TAC `IMAGE (\(S1,S2). IMAGE f S1 UNION IMAGE f' S2)
-        (POWER_SET (POWER_SET A.S) CROSS POWER_SET (POWER_SET A.S)) =
-          POWER_SET
-        (IMAGE f (POWER_SET A.S) UNION IMAGE f' (POWER_SET A.S))` THEN1 (
+        (POW (POW A.S) CROSS POW (POW A.S)) =
+          POW
+        (IMAGE f (POW A.S) UNION IMAGE f' (POW A.S))` THEN1 (
 
   SIMP_TAC std_ss [EXTENSION] THEN
   REPEAT STRIP_TAC THEN EQ_TAC THENL [
     REPEAT WEAKEN_HD_TAC THEN
-    SIMP_TAC std_ss [IN_IMAGE, PAIR_BETA_THM, EXTENSION, IN_UNION, IN_CROSS,
-      IN_POWER_SET_SUBSET_EQUIV, SUBSET_DEF] THEN
+    SIMP_TAC (std_ss++pairSimps.gen_beta_ss) [IN_IMAGE, EXTENSION, IN_UNION, IN_CROSS,
+      IN_POW, SUBSET_DEF] THEN
     METIS_TAC[],
 
-    ASM_SIMP_TAC std_ss [IN_POWER_SET_SUBSET_EQUIV, IN_IMAGE, PAIR_BETA_THM] THEN
+    ASM_SIMP_TAC (std_ss++pairSimps.gen_beta_ss) [IN_POW, IN_IMAGE] THEN
     REPEAT STRIP_TAC THEN
-    Q_TAC EXISTS_TAC `(IMAGE g (x INTER (IMAGE f (POWER_SET A.S))), IMAGE g (x INTER (IMAGE f' (POWER_SET A.S))))` THEN
-    SIMP_TAC std_ss [GSYM IMAGE_COMPOSE, IN_CROSS, IN_POWER_SET_SUBSET_EQUIV] THEN
+    Q_TAC EXISTS_TAC `(IMAGE g (x INTER (IMAGE f (POW A.S))), IMAGE g (x INTER (IMAGE f' (POW A.S))))` THEN
+    SIMP_TAC std_ss [GSYM IMAGE_COMPOSE, IN_CROSS, IN_POW] THEN
     REPEAT STRIP_TAC THENL [
       SIMP_TAC std_ss [EXTENSION, SUBSET_DEF, IN_IMAGE, IN_UNION,
-        IN_POWER_SET_SUBSET_EQUIV, GSYM SUBSET_COMPL_DISJOINT, IN_COMPL,
+        IN_POW, GSYM SUBSET_COMPL_DISJOINT, IN_COMPL,
         GSYM RIGHT_EXISTS_AND_THM] THEN
       REPEAT STRIP_TAC THEN EQ_TAC THENL [
         REPEAT STRIP_TAC THEN
-        `x' IN IMAGE f (POWER_SET A.S) UNION IMAGE f' (POWER_SET A.S)` by
+        `x' IN IMAGE f (POW A.S) UNION IMAGE f' (POW A.S)` by
           PROVE_TAC[SUBSET_DEF] THEN
         SIMP_ALL_TAC std_ss [IN_UNION] THENL [
           DISJ1_TAC THEN
           Q_TAC EXISTS_TAC `x'` THEN
           ASM_REWRITE_TAC[IN_INTER] THEN
           UNDISCH_HD_TAC THEN
-          SIMP_TAC std_ss [IN_IMAGE, IN_POWER_SET_SUBSET_EQUIV] THEN
+          SIMP_TAC std_ss [IN_IMAGE, IN_POW] THEN
           METIS_TAC[],
 
           DISJ2_TAC THEN
           Q_TAC EXISTS_TAC `x'` THEN
           ASM_REWRITE_TAC[IN_INTER] THEN
           UNDISCH_HD_TAC THEN
-          SIMP_TAC std_ss [IN_IMAGE, IN_POWER_SET_SUBSET_EQUIV] THEN
+          SIMP_TAC std_ss [IN_IMAGE, IN_POW] THEN
           METIS_TAC[]
         ],
 
-        SIMP_TAC std_ss [IN_IMAGE, IN_POWER_SET_SUBSET_EQUIV, IN_INTER,
+        SIMP_TAC std_ss [IN_IMAGE, IN_POW, IN_INTER,
           GSYM RIGHT_EXISTS_AND_THM] THEN
         METIS_TAC[]
       ],
 
       SIMP_TAC std_ss [EXTENSION, SUBSET_DEF, IN_IMAGE, IN_UNION, IN_INTER,
-        IN_POWER_SET_SUBSET_EQUIV] THEN
+        IN_POW] THEN
       METIS_TAC[SUBSET_DEF],
 
       SIMP_TAC std_ss [EXTENSION, SUBSET_DEF, IN_IMAGE, IN_UNION, IN_INTER,
-        IN_POWER_SET_SUBSET_EQUIV] THEN
+        IN_POW] THEN
       METIS_TAC[SUBSET_DEF]
     ]
   ]
 ) THEN
 
-ASM_SIMP_TAC std_ss [IN_POWER_SET_SUBSET_EQUIV] THEN
+ASM_SIMP_TAC std_ss [IN_POW] THEN
 REPEAT BOOL_EQ_STRIP_TAC THEN
 ASM_SIMP_TAC std_ss [] THEN
 BINOP_TAC THENL [
@@ -2184,24 +2183,24 @@ BINOP_TAC THENL [
   EQ_TAC THENL [
     SIMP_TAC std_ss [EXTENSION, GSPECIFICATION, IN_UNION, IN_SING, NOT_IN_EMPTY, IN_INTER] THEN
     REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
-      `(x IN (IMAGE f (POWER_SET A.S)))` by PROVE_TAC[SUBSET_DEF, IN_UNION] THEN
+      `(x IN (IMAGE f (POW A.S)))` by PROVE_TAC[SUBSET_DEF, IN_UNION] THEN
       ASM_REWRITE_TAC[] THEN
       Q_SPEC_NO_ASSUM 2 `g x` THEN
-      SUBGOAL_TAC `g x IN IMAGE g (w 0 INTER IMAGE f (POWER_SET A.S))` THEN1 (
+      SUBGOAL_TAC `g x IN IMAGE g (w 0 INTER IMAGE f (POW A.S))` THEN1 (
         SIMP_TAC std_ss [IN_IMAGE] THEN
         PROVE_TAC[IN_INTER]
       ) THEN
       FULL_SIMP_TAC std_ss [],
 
       SUBGOAL_TAC `g x SUBSET A.S` THEN1 (
-        SIMP_ALL_TAC std_ss [IN_IMAGE, IN_POWER_SET_SUBSET_EQUIV] THEN
+        SIMP_ALL_TAC std_ss [IN_IMAGE, IN_POW] THEN
         METIS_TAC[]
       ) THEN
-      `g x IN IMAGE g (w 0 INTER IMAGE f (POWER_SET A.S))` by METIS_TAC[] THEN
+      `g x IN IMAGE g (w 0 INTER IMAGE f (POW A.S))` by METIS_TAC[] THEN
       UNDISCH_HD_TAC THEN
       UNDISCH_NO_TAC 2 (*x IN IMAGE f*) THEN
-      SIMP_TAC std_ss [IN_IMAGE, IN_INTER, GSYM RIGHT_EXISTS_AND_THM, IN_POWER_SET_SUBSET_EQUIV] THEN
-      SIMP_ALL_TAC std_ss [IN_IMAGE, IN_POWER_SET_SUBSET_EQUIV] THEN
+      SIMP_TAC std_ss [IN_IMAGE, IN_INTER, GSYM RIGHT_EXISTS_AND_THM, IN_POW] THEN
+      SIMP_ALL_TAC std_ss [IN_IMAGE, IN_POW] THEN
       METIS_TAC[]
     ],
 
@@ -2213,16 +2212,16 @@ BINOP_TAC THENL [
       METIS_TAC[],
 
 
-      SIMP_TAC std_ss [IN_IMAGE, IN_INTER, GSPECIFICATION, IN_POWER_SET_SUBSET_EQUIV, GSYM RIGHT_EXISTS_AND_THM] THEN
+      SIMP_TAC std_ss [IN_IMAGE, IN_INTER, GSPECIFICATION, IN_POW, GSYM RIGHT_EXISTS_AND_THM] THEN
       METIS_TAC[]
     ]
   ],
 
 
 
-  SUBGOAL_TAC `(!n. IMAGE g (w n INTER IMAGE f (POWER_SET A.S)) SUBSET POWER_SET A.S) /\  !n.
-    IMAGE g (w n INTER IMAGE f' (POWER_SET A.S)) SUBSET POWER_SET A.S` THEN1 (
-    ASM_SIMP_TAC std_ss [SUBSET_DEF, IN_POWER_SET_SUBSET_EQUIV, IN_IMAGE, IN_INTER,
+  SUBGOAL_TAC `(!n. IMAGE g (w n INTER IMAGE f (POW A.S)) SUBSET POW A.S) /\  !n.
+    IMAGE g (w n INTER IMAGE f' (POW A.S)) SUBSET POW A.S` THEN1 (
+    ASM_SIMP_TAC std_ss [SUBSET_DEF, IN_POW, IN_IMAGE, IN_INTER,
       GSYM RIGHT_EXISTS_AND_THM] THEN
     METIS_TAC[SUBSET_DEF]
   ) THEN
@@ -2237,47 +2236,47 @@ BINOP_TAC THENL [
 
   SUBGOAL_TAC `(w (SUC n) =
     {s2 |
-      s2 IN IMAGE f (POWER_SET A.S) /\
+      s2 IN IMAGE f (POW A.S) /\
       ?s1.
-        s1 IN w n /\ s1 IN IMAGE f (POWER_SET A.S) /\
+        s1 IN w n /\ s1 IN IMAGE f (POW A.S) /\
         XP_SEM A.R
           (g s1 UNION (i n INTER SEMI_AUTOMATON_USED_INPUT_VARS A DIFF A.S),
           g s2 UNION
           (i (SUC n) INTER SEMI_AUTOMATON_USED_INPUT_VARS A DIFF
             A.S))} UNION
     {s2 |
-      s2 IN IMAGE f' (POWER_SET A.S) /\
+      s2 IN IMAGE f' (POW A.S) /\
       ?s1.
         s1 IN w n /\
-        (if w n INTER IMAGE f' (POWER_SET A.S) = {} then
-          s1 IN IMAGE f (POWER_SET A.S)
+        (if w n INTER IMAGE f' (POW A.S) = {} then
+          s1 IN IMAGE f (POW A.S)
         else
-          s1 IN IMAGE f' (POWER_SET A.S)) /\
+          s1 IN IMAGE f' (POW A.S)) /\
         XP_SEM A.R
           (g s1 UNION (i n INTER SEMI_AUTOMATON_USED_INPUT_VARS A DIFF A.S),
           g s2 UNION
           (i (SUC n) INTER SEMI_AUTOMATON_USED_INPUT_VARS A DIFF A.S)) /\
         g s2 IN (\s. s SUBSET A.S /\ P_SEM s p)}) = (
-(w (SUC n) INTER (IMAGE f (POWER_SET A.S)) =
+(w (SUC n) INTER (IMAGE f (POW A.S)) =
                 {s2 |
-          s2 IN IMAGE f (POWER_SET A.S) /\
+          s2 IN IMAGE f (POW A.S) /\
           ?s1.
-            s1 IN w n /\ s1 IN IMAGE f (POWER_SET A.S) /\
+            s1 IN w n /\ s1 IN IMAGE f (POW A.S) /\
             XP_SEM A.R
               (g s1 UNION
                 (i n INTER SEMI_AUTOMATON_USED_INPUT_VARS A DIFF A.S),
                 g s2 UNION
                 (i (SUC n) INTER SEMI_AUTOMATON_USED_INPUT_VARS A DIFF
                 A.S))}) /\
-              (w (SUC n) INTER (IMAGE f' (POWER_SET A.S)) =
+              (w (SUC n) INTER (IMAGE f' (POW A.S)) =
                 {s2 |
-          s2 IN IMAGE f' (POWER_SET A.S) /\
+          s2 IN IMAGE f' (POW A.S) /\
           ?s1.
             s1 IN w n /\
-            (if w n INTER IMAGE f' (POWER_SET A.S) = {} then
-                s1 IN IMAGE f (POWER_SET A.S)
+            (if w n INTER IMAGE f' (POW A.S) = {} then
+                s1 IN IMAGE f (POW A.S)
               else
-                s1 IN IMAGE f' (POWER_SET A.S)) /\
+                s1 IN IMAGE f' (POW A.S)) /\
             XP_SEM A.R
               (g s1 UNION
                 (i n INTER SEMI_AUTOMATON_USED_INPUT_VARS A DIFF A.S),
@@ -2297,20 +2296,20 @@ BINOP_TAC THENL [
   MATCH_MP_TAC (prove (``((A = C) /\ (A ==> (B = D))) ==> (A /\ B = C /\ D)``, PROVE_TAC[])) THEN
   REPEAT STRIP_TAC THENL [
     SIMP_TAC std_ss [EXTENSION, GSPECIFICATION, IN_IMAGE, IN_INTER,
-      IN_POWER_SET_SUBSET_EQUIV, GSYM LEFT_EXISTS_AND_THM,
+      IN_POW, GSYM LEFT_EXISTS_AND_THM,
       GSYM RIGHT_EXISTS_AND_THM] THEN
 
     `!s1' x' n. ((!x. x IN s1' = x IN g (f x')) /\ f x' IN w n /\ x' SUBSET A.S) = ((s1' = x') /\ f x' IN w n /\ x' SUBSET A.S)` by METIS_TAC[EXTENSION] THEN
     ASM_SIMP_TAC std_ss [] THEN
     METIS_TAC[],
 
-    Cases_on `w n INTER IMAGE f' (POWER_SET A.S) = {}` THEN (
+    Cases_on `w n INTER IMAGE f' (POW A.S) = {}` THEN (
       ASM_REWRITE_TAC [] THEN
       ASM_SIMP_TAC std_ss [EXTENSION, IN_INTER] THEN
       WEAKEN_NO_TAC 1 THEN
       SIMP_TAC std_ss [GSPECIFICATION, IN_IMAGE, IN_INTER,
-        IN_POWER_SET_SUBSET_EQUIV, GSYM LEFT_EXISTS_AND_THM,
-        GSYM RIGHT_EXISTS_AND_THM, IN_BETA_THM] THEN
+        IN_POW, GSYM LEFT_EXISTS_AND_THM,
+        GSYM RIGHT_EXISTS_AND_THM, IN_ABS] THEN
       METIS_TAC[]
     )
   ],
@@ -2322,11 +2321,12 @@ BINOP_TAC THENL [
     EXPLICIT_ACCEPT_COND___STATE_VAR_RENAMING_def,
     EXPLICIT_ACCEPT_COND_SEM_def,
     EXPLICIT_ACCEPT_COND_SEM_TIME_def,
-    IN_BETA_THM] THEN
+    IN_ABS] THEN
   EXISTS_EQ_STRIP_TAC THEN
   FORALL_EQ_STRIP_TAC THEN
   BOOL_EQ_STRIP_TAC THEN
-  SIMP_TAC std_ss [IN_IMAGE, PAIR_BETA_THM,
+  rename1 `t2 >= t1` THEN
+  SIMP_TAC (std_ss++pairSimps.gen_beta_ss) [IN_IMAGE,
     prove (``!P x. (x IN \(x1, x2). P x1 x2) = (P (FST x) (SND x))``,
              Cases_on `x` THEN SIMP_TAC std_ss [IN_DEF])] THEN
   EQ_TAC THEN REPEAT STRIP_TAC THENL [
@@ -2336,23 +2336,23 @@ BINOP_TAC THENL [
     SIMP_TAC std_ss [GSYM SUBSET_COMPL_DISJOINT, SUBSET_DEF, IN_COMPL] THEN
     REPEAT STRIP_TAC THEN
     SUBGOAL_TAC `IMAGE f' (SND x) = EMPTY` THEN1 (
-      FULL_SIMP_TAC std_ss [EXTENSION, IN_IMAGE, IN_IMAGE, IN_POWER_SET_SUBSET_EQUIV, IN_INTER, NOT_IN_EMPTY, IN_UNION] THEN
+      FULL_SIMP_TAC std_ss [EXTENSION, IN_IMAGE, IN_IMAGE, IN_POW, IN_INTER, NOT_IN_EMPTY, IN_UNION] THEN
       METIS_TAC[]
     ) THEN
     SIMP_ALL_TAC std_ss [IMAGE_EQ_EMPTY],
 
 
-    `?w1. w1 = (w t'' INTER (IMAGE f (POWER_SET A.S)))` by PROVE_TAC[] THEN
-    `?w2. w2 = (w t'' INTER (IMAGE f' (POWER_SET A.S)))` by PROVE_TAC[] THEN
-    SUBGOAL_TAC `w t'' = w1 UNION w2` THEN1 (
+    `?w1. w1 = (w t2 INTER (IMAGE f (POW A.S)))` by PROVE_TAC[] THEN
+    `?w2. w2 = (w t2 INTER (IMAGE f' (POW A.S)))` by PROVE_TAC[] THEN
+    SUBGOAL_TAC `w t2 = w1 UNION w2` THEN1 (
       NTAC 2 UNDISCH_HD_TAC THEN
       UNDISCH_NO_TAC 2 (*w n SUBSET*) THEN
       REPEAT WEAKEN_HD_TAC THEN
       SIMP_TAC std_ss [EXTENSION, IN_INTER, IN_UNION, SUBSET_DEF] THEN
       METIS_TAC[]
     ) THEN
-    SUBGOAL_TAC `?gw1 gw2. (gw1 SUBSET (POWER_SET A.S)) /\
-                           (gw2 SUBSET (POWER_SET A.S)) /\
+    SUBGOAL_TAC `?gw1 gw2. (gw1 SUBSET (POW A.S)) /\
+                           (gw2 SUBSET (POW A.S)) /\
                            (w1 = IMAGE f gw1) /\
                            (w2 = IMAGE f' gw2)` THEN1 (
       NTAC 2 (UNDISCH_NO_TAC 1) THEN
@@ -2360,10 +2360,10 @@ BINOP_TAC THENL [
       REPEAT STRIP_TAC THEN
 
       ASSUME_TAC (INST_TYPE [alpha |-> alpha --> bool, beta |-> alpha] SUBSET_IMAGE___ORGINAL_EXISTS) THEN
-      Q_SPECL_NO_ASSUM 0 [`f`, `POWER_SET A.S`, `w1`] THEN
+      Q_SPECL_NO_ASSUM 0 [`f`, `POW A.S`, `w1`] THEN
 
       ASSUME_TAC (INST_TYPE [alpha |-> alpha --> bool, beta |-> alpha] SUBSET_IMAGE___ORGINAL_EXISTS) THEN
-      Q_SPECL_NO_ASSUM 0 [`f'`, `POWER_SET A.S`, `w2`] THEN
+      Q_SPECL_NO_ASSUM 0 [`f'`, `POW A.S`, `w2`] THEN
 
       METIS_TAC[INTER_SUBSET, SUBSET_IMAGE___ORGINAL_EXISTS]
     ) THEN
@@ -2387,7 +2387,7 @@ val SYMBOLIC_BREAKPOINT_CONSTRUCTION___IS_TOTAL =
     SIMP_TAC std_ss [IS_SYMBOLIC_BREAKPOINT_CONSTRUCTION_def, IS_TOTAL_SYMBOLIC_SEMI_AUTOMATON_def] THEN
     REPEAT STRIP_TAC THENL [
       Q_TAC EXISTS_TAC `{z |
-               z IN IMAGE f (POWER_SET A.S) /\
+               z IN IMAGE f (POW A.S) /\
                P_SEM (INPUT_RUN_STATE_UNION A i (g z)) A.S0}` THEN
       LEFT_CONJ_TAC THENL [
         ASM_SIMP_TAC std_ss [SUBSET_DEF, GSPECIFICATION, IN_UNION],
@@ -2397,18 +2397,18 @@ val SYMBOLIC_BREAKPOINT_CONSTRUCTION___IS_TOTAL =
 
       ONCE_REWRITE_TAC[TRANSITION_CURRENT_STATE_CLEANING] THEN
       `?s2. s2 = {s2 |
-              s2 IN IMAGE f (POWER_SET A.S) /\
+              s2 IN IMAGE f (POW A.S) /\
               ?s1'.
-                s1' IN s1 INTER A'.S /\ s1' IN IMAGE f (POWER_SET A.S) /\
+                s1' IN s1 INTER A'.S /\ s1' IN IMAGE f (POW A.S) /\
                 IS_TRANSITION A (g s1') (i1 UNION s1) (g s2) i2} UNION
              {s2 |
-              s2 IN IMAGE f' (POWER_SET A.S) /\
+              s2 IN IMAGE f' (POW A.S) /\
               ?s1'.
                 s1' IN s1 INTER A'.S /\
-                (if s1 INTER A'.S INTER IMAGE f' (POWER_SET A.S) = {} then
-                   s1' IN IMAGE f (POWER_SET A.S)
+                (if s1 INTER A'.S INTER IMAGE f' (POW A.S) = {} then
+                   s1' IN IMAGE f (POW A.S)
                  else
-                   s1' IN IMAGE f' (POWER_SET A.S)) /\
+                   s1' IN IMAGE f' (POW A.S)) /\
                 IS_TRANSITION A (g s1') (i1 UNION s1) (g s2) i2 /\
                 g s2 IN S}` by METIS_TAC[] THEN
       Q_TAC EXISTS_TAC `s2` THEN
@@ -2459,15 +2459,15 @@ val SYMBOLIC_BREAKPOINT_CONSTRUCTION_AUTOMATON_def=
  Define
    `SYMBOLIC_BREAKPOINT_CONSTRUCTION_AUTOMATON A f f' pS =
         symbolic_semi_automaton
-            (IMAGE f (POWER_SET A.S) UNION IMAGE f' (POWER_SET A.S))
+            (IMAGE f (POW A.S) UNION IMAGE f' (POW A.S))
             (P_AND (P_FORALL (SET_TO_LIST A.S) (P_EQUIV(A.S0, VAR_RENAMING_HASHTABLE A.S f)),
-              P_NOT (P_BIGOR (SET_TO_LIST (IMAGE (\s. P_PROP (f' s)) (POWER_SET A.S))))))
+              P_NOT (P_BIGOR (SET_TO_LIST (IMAGE (\s. P_PROP (f' s)) (POW A.S))))))
             (XP_AND(
   (XP_NEXT_FORALL (SET_TO_LIST A.S) (XP_EQUIV(
                       XP_NEXT (VAR_RENAMING_HASHTABLE A.S f),
                       XP_CURRENT_EXISTS (SET_TO_LIST A.S) (
                           XP_AND(A.R, XP_CURRENT (VAR_RENAMING_HASHTABLE A.S f)))))),
-  (XP_COND ((XP_NOT (XP_BIGOR (SET_TO_LIST (IMAGE (\s. XP_PROP (f' s)) (POWER_SET A.S))))),
+  (XP_COND ((XP_NOT (XP_BIGOR (SET_TO_LIST (IMAGE (\s. XP_PROP (f' s)) (POW A.S))))),
     (XP_NEXT_FORALL (SET_TO_LIST A.S) (XP_EQUIV(
                           XP_NEXT (VAR_RENAMING_HASHTABLE A.S f'),
                           XP_CURRENT_EXISTS (SET_TO_LIST A.S) (
@@ -2487,11 +2487,11 @@ val SYMBOLIC_BREAKPOINT_CONSTRUCTION_AUTOMATON_THM =
         FINITE A.S /\
         SEMI_AUTOMATON_USED_VARS A SUBSET IV /\
         P_USED_VARS pS SUBSET A.S /\
-        INJ f (POWER_SET A.S) UNIV /\
-        INJ f' (POWER_SET A.S) UNIV /\
-        DISJOINT (IMAGE f (POWER_SET A.S)) IV /\
-        DISJOINT (IMAGE f' (POWER_SET A.S)) IV /\
-        DISJOINT (IMAGE f (POWER_SET A.S)) (IMAGE f' (POWER_SET A.S)) /\
+        INJ f (POW A.S) UNIV /\
+        INJ f' (POW A.S) UNIV /\
+        DISJOINT (IMAGE f (POW A.S)) IV /\
+        DISJOINT (IMAGE f' (POW A.S)) IV /\
+        DISJOINT (IMAGE f (POW A.S)) (IMAGE f' (POW A.S)) /\
         (!z. z SUBSET A.S ==> (g (f z) = z)) /\
         (!z. z SUBSET A.S ==> (g (f' z) = z))) ==>
 
@@ -2502,17 +2502,17 @@ SIMP_TAC std_ss [IS_SYMBOLIC_BREAKPOINT_CONSTRUCTION_def,
   SYMBOLIC_BREAKPOINT_CONSTRUCTION_AUTOMATON_def, symbolic_semi_automaton_REWRITES] THEN
 REPEAT STRIP_TAC THENL [
 
-  SIMP_TAC std_ss [SUBSET_DEF, IN_BETA_THM, IN_POWER_SET_SUBSET_EQUIV],
+  SIMP_TAC std_ss [SUBSET_DEF, IN_ABS, IN_POW],
 
 
   ASM_SIMP_TAC std_ss [P_FORALL_SEM, SET_TO_LIST_INV,
     P_SEM_THM, VAR_RENAMING_HASHTABLE_SEM,
     INPUT_RUN_STATE_UNION_def, symbolic_semi_automaton_REWRITES,
-    P_BIGOR_SEM, MEM_SET_TO_LIST, POWER_SET_FINITE, IMAGE_FINITE] THEN
+    P_BIGOR_SEM, MEM_SET_TO_LIST, FINITE_POW_IFF, IMAGE_FINITE] THEN
 
   SUBGOAL_TAC `!l'. (l' SUBSET A.S) ==> ((Z UNION
             (i DIFF
-             (IMAGE f (POWER_SET A.S) UNION IMAGE f' (POWER_SET A.S))) DIFF
+             (IMAGE f (POW A.S) UNION IMAGE f' (POW A.S))) DIFF
             A.S UNION l') INTER A.S = l')` THEN1 (
     UNDISCH_HD_TAC (*Z SUBSET IMAGE*) THEN
     UNDISCH_NO_TAC 2 (*DISJOINT IMAGE IMAGE*) THEN
@@ -2526,7 +2526,7 @@ REPEAT STRIP_TAC THENL [
       (f l' IN
         Z UNION
         (i DIFF
-         (IMAGE f (POWER_SET A.S) UNION IMAGE f' (POWER_SET A.S))) DIFF
+         (IMAGE f (POW A.S) UNION IMAGE f' (POW A.S))) DIFF
         A.S UNION l') = (f l' IN Z))` THEN1 (
 
     SIMP_ALL_TAC std_ss [SEMI_AUTOMATON_USED_VARS___DIRECT_DEF,
@@ -2535,7 +2535,7 @@ REPEAT STRIP_TAC THENL [
     UNDISCH_NO_TAC 10 (*A.S SUBSET IV*) THEN
     REPEAT WEAKEN_HD_TAC THEN
     SIMP_TAC std_ss [EXTENSION, IN_INTER, IN_UNION, IN_DIFF, SUBSET_DEF,
-      GSYM SUBSET_COMPL_DISJOINT, IN_COMPL, IN_IMAGE, IN_POWER_SET_SUBSET_EQUIV] THEN
+      GSYM SUBSET_COMPL_DISJOINT, IN_COMPL, IN_IMAGE, IN_POW] THEN
     METIS_TAC[]
   ) THEN
   ASM_SIMP_TAC std_ss [] THEN WEAKEN_HD_TAC THEN
@@ -2543,7 +2543,7 @@ REPEAT STRIP_TAC THENL [
   SUBGOAL_TAC `!l'. (P_SEM
           (Z UNION
            (i DIFF
-            (IMAGE f (POWER_SET A.S) UNION IMAGE f' (POWER_SET A.S))) DIFF
+            (IMAGE f (POW A.S) UNION IMAGE f' (POW A.S))) DIFF
            A.S UNION l') A.S0) = (P_SEM (l' UNION (i DIFF A.S)) A.S0)` THEN1 (
     GEN_TAC THEN
     ONCE_REWRITE_TAC[P_USED_VARS_INTER_THM] THEN
@@ -2555,13 +2555,13 @@ REPEAT STRIP_TAC THENL [
   ASM_SIMP_TAC std_ss [] THEN WEAKEN_HD_TAC THEN
 
   SUBGOAL_TAC `(!e.
-       ~(e IN IMAGE (\s. P_PROP (f' s)) (POWER_SET A.S)) \/
+       ~(e IN IMAGE (\s. P_PROP (f' s)) (POW A.S)) \/
        ~P_SEM
           (Z UNION
            (i DIFF
-            (IMAGE f (POWER_SET A.S) UNION IMAGE f' (POWER_SET A.S)))) e) =
-          (Z INTER IMAGE f' (POWER_SET A.S) = EMPTY)` THEN1 (
-    SIMP_TAC std_ss [IN_IMAGE, GSYM LEFT_FORALL_OR_THM, P_SEM_THM, IN_POWER_SET_SUBSET_EQUIV, IN_UNION, EXTENSION, IN_INTER, IN_IMAGE, NOT_IN_EMPTY, IN_DIFF] THEN
+            (IMAGE f (POW A.S) UNION IMAGE f' (POW A.S)))) e) =
+          (Z INTER IMAGE f' (POW A.S) = EMPTY)` THEN1 (
+    SIMP_TAC std_ss [IN_IMAGE, GSYM LEFT_FORALL_OR_THM, P_SEM_THM, IN_POW, IN_UNION, EXTENSION, IN_INTER, IN_IMAGE, NOT_IN_EMPTY, IN_DIFF] THEN
     METIS_TAC[]
   ) THEN
   ASM_SIMP_TAC std_ss [] THEN WEAKEN_HD_TAC THEN
@@ -2570,14 +2570,14 @@ REPEAT STRIP_TAC THENL [
     REPEAT STRIP_TAC THEN
     SIMP_TAC std_ss [EXTENSION, GSPECIFICATION] THEN
     GEN_TAC THEN
-    SUBGOAL_TAC `Z = Z INTER (IMAGE f (POWER_SET A.S))` THEN1 (
+    SUBGOAL_TAC `Z = Z INTER (IMAGE f (POW A.S))` THEN1 (
       SIMP_ALL_TAC std_ss [EXTENSION, SUBSET_DEF, IN_INTER, NOT_IN_EMPTY, IN_UNION] THEN
       METIS_TAC[]
     ) THEN
     ONCE_ASM_REWRITE_TAC [] THEN WEAKEN_HD_TAC THEN
     SIMP_TAC std_ss [IN_INTER] THEN
     BOOL_EQ_STRIP_TAC THEN
-    SIMP_ALL_TAC std_ss [IN_IMAGE, IN_POWER_SET_SUBSET_EQUIV] THEN
+    SIMP_ALL_TAC std_ss [IN_IMAGE, IN_POW] THEN
     METIS_TAC[],
 
 
@@ -2587,7 +2587,7 @@ REPEAT STRIP_TAC THENL [
     REPEAT STRIP_TAC THENL [
       ASM_SIMP_TAC std_ss [] THEN
       BOOL_EQ_STRIP_TAC THEN
-      SIMP_TAC std_ss [IN_IMAGE, IN_POWER_SET_SUBSET_EQUIV] THEN
+      SIMP_TAC std_ss [IN_IMAGE, IN_POW] THEN
       PROVE_TAC[],
 
       SIMP_ALL_TAC std_ss [DISJOINT_DISJ_THM] THEN
@@ -2601,12 +2601,12 @@ REPEAT STRIP_TAC THENL [
     XP_SEM_THM, INPUT_RUN_STATE_UNION_def, XP_NEXT_FORALL_SEM,
     SET_TO_LIST_INV, XP_SEM___XP_NEXT, VAR_RENAMING_HASHTABLE_SEM,
     XP_CURRENT_EXISTS_SEM, XP_SEM___XP_CURRENT, XP_BIGOR_SEM,
-    MEM_SET_TO_LIST, POWER_SET_FINITE, IMAGE_FINITE] THEN
+    MEM_SET_TO_LIST, FINITE_POW_IFF, IMAGE_FINITE] THEN
 
   SUBGOAL_TAC `!l' Z i.
-            (Z SUBSET IMAGE f (POWER_SET A.S) UNION IMAGE f' (POWER_SET A.S)) ==> ((Z UNION
+            (Z SUBSET IMAGE f (POW A.S) UNION IMAGE f' (POW A.S)) ==> ((Z UNION
             (i DIFF
-             (IMAGE f (POWER_SET A.S) UNION IMAGE f' (POWER_SET A.S))) DIFF
+             (IMAGE f (POW A.S) UNION IMAGE f' (POW A.S))) DIFF
             A.S UNION l') INTER A.S = (l' INTER A.S))` THEN1 (
     UNDISCH_NO_TAC 4 (*DISJOINT IMAGE IMAGE*) THEN
     SIMP_TAC std_ss [EXTENSION, IN_INTER, IN_UNION, IN_DIFF, SUBSET_DEF,
@@ -2615,17 +2615,17 @@ REPEAT STRIP_TAC THENL [
   ) THEN
   ASM_SIMP_TAC std_ss [] THEN WEAKEN_HD_TAC THEN
 
-  SUBGOAL_TAC `!l' Z i. (Z SUBSET IMAGE f (POWER_SET A.S) UNION IMAGE f' (POWER_SET A.S)) ==> ((
+  SUBGOAL_TAC `!l' Z i. (Z SUBSET IMAGE f (POW A.S) UNION IMAGE f' (POW A.S)) ==> ((
       (f (l' INTER A.S) IN
         Z UNION
         (i DIFF
-         (IMAGE f (POWER_SET A.S) UNION IMAGE f' (POWER_SET A.S))) DIFF
+         (IMAGE f (POW A.S) UNION IMAGE f' (POW A.S))) DIFF
         A.S UNION l') = (f (l' INTER A.S) IN (Z UNION (l' DIFF A.S)))) /\
 
       ((f' (l' INTER A.S) IN
         Z UNION
         (i DIFF
-         (IMAGE f (POWER_SET A.S) UNION IMAGE f' (POWER_SET A.S))) DIFF
+         (IMAGE f (POW A.S) UNION IMAGE f' (POW A.S))) DIFF
         A.S UNION l') = (f' (l' INTER A.S) IN (Z UNION (l' DIFF A.S)))))` THEN1 (
 
     SIMP_ALL_TAC std_ss [SEMI_AUTOMATON_USED_VARS___DIRECT_DEF,
@@ -2635,22 +2635,22 @@ REPEAT STRIP_TAC THENL [
     UNDISCH_NO_TAC 10 (*A.S SUBSET IV*) THEN
     REPEAT WEAKEN_HD_TAC THEN
     SIMP_TAC std_ss [EXTENSION, IN_INTER, IN_UNION, IN_DIFF, SUBSET_DEF,
-      GSYM SUBSET_COMPL_DISJOINT, IN_COMPL, IN_IMAGE, IN_POWER_SET_SUBSET_EQUIV] THEN
+      GSYM SUBSET_COMPL_DISJOINT, IN_COMPL, IN_IMAGE, IN_POW] THEN
     METIS_TAC[INTER_SUBSET, SUBSET_DEF]
   ) THEN
   ASM_SIMP_TAC std_ss [] THEN WEAKEN_HD_TAC THEN
 
   SUBGOAL_TAC `(!e.
-        ~(e IN IMAGE (\s. XP_PROP (f' s)) (POWER_SET A.S)) \/
+        ~(e IN IMAGE (\s. XP_PROP (f' s)) (POW A.S)) \/
         ~XP_SEM e
            (S1 UNION
             (i1 DIFF
-             (IMAGE f (POWER_SET A.S) UNION IMAGE f' (POWER_SET A.S))),
+             (IMAGE f (POW A.S) UNION IMAGE f' (POW A.S))),
             S2 UNION
             (i2 DIFF
-             (IMAGE f (POWER_SET A.S) UNION IMAGE f' (POWER_SET A.S))))) =
-          (S1 INTER IMAGE f' (POWER_SET A.S) = EMPTY)` THEN1 (
-    SIMP_TAC std_ss [IN_IMAGE, GSYM LEFT_FORALL_OR_THM, XP_SEM_THM, IN_POWER_SET_SUBSET_EQUIV, IN_UNION, EXTENSION, IN_INTER, IN_IMAGE, NOT_IN_EMPTY, IN_DIFF] THEN
+             (IMAGE f (POW A.S) UNION IMAGE f' (POW A.S))))) =
+          (S1 INTER IMAGE f' (POW A.S) = EMPTY)` THEN1 (
+    SIMP_TAC std_ss [IN_IMAGE, GSYM LEFT_FORALL_OR_THM, XP_SEM_THM, IN_POW, IN_UNION, EXTENSION, IN_INTER, IN_IMAGE, NOT_IN_EMPTY, IN_DIFF] THEN
     METIS_TAC[]
   ) THEN
   POP_NO_ASSUM 0 (fn thm =>
@@ -2665,12 +2665,12 @@ REPEAT STRIP_TAC THENL [
   SUBGOAL_TAC `!i1 i2 l' l''. XP_SEM A.R
              (S1 UNION
               (i1 DIFF
-               (IMAGE f (POWER_SET A.S) UNION
-                IMAGE f' (POWER_SET A.S))) DIFF A.S UNION l'',
+               (IMAGE f (POW A.S) UNION
+                IMAGE f' (POW A.S))) DIFF A.S UNION l'',
               S2 UNION
               (i2 DIFF
-               (IMAGE f (POWER_SET A.S) UNION
-                IMAGE f' (POWER_SET A.S))) DIFF A.S UNION l') =
+               (IMAGE f (POW A.S) UNION
+                IMAGE f' (POW A.S))) DIFF A.S UNION l') =
 
             (XP_SEM A.R (l'' UNION (i1 DIFF A.S), l' UNION (i2 DIFF A.S)))` THEN1 (
     REPEAT GEN_TAC THEN
@@ -2686,8 +2686,8 @@ REPEAT STRIP_TAC THENL [
   SUBGOAL_TAC `!i2 l'. (P_SEM
              (S2 UNION
               (i2 DIFF
-               (IMAGE f (POWER_SET A.S) UNION
-                IMAGE f' (POWER_SET A.S))) DIFF A.S UNION l') pS) =
+               (IMAGE f (POW A.S) UNION
+                IMAGE f' (POW A.S))) DIFF A.S UNION l') pS) =
 
             (P_SEM l' pS)` THEN1 (
     REPEAT GEN_TAC THEN
@@ -2697,18 +2697,18 @@ REPEAT STRIP_TAC THENL [
       EXTENSION, SEMI_AUTOMATON_USED_VARS___DIRECT_DEF, IN_UNION, IN_INTER, IN_DIFF, XP_USED_VARS_def] THEN
     METIS_TAC[]
   ) THEN
-  ASM_SIMP_TAC std_ss [IN_BETA_THM] THEN WEAKEN_HD_TAC THEN
+  ASM_SIMP_TAC std_ss [IN_ABS] THEN WEAKEN_HD_TAC THEN
 
   SUBGOAL_TAC `!l'. l' SUBSET A.S ==>
                       (((l' INTER A.S = l') /\ (l' DIFF A.S = EMPTY)) /\
-                       (((f l' IN IMAGE f (POWER_SET A.S)) /\                 (f' l' IN IMAGE f' (POWER_SET A.S))) /\
-                       (~(f' l' IN IMAGE f (POWER_SET A.S)) /\               ~(f l' IN IMAGE f' (POWER_SET A.S)))))` THEN1 (
+                       (((f l' IN IMAGE f (POW A.S)) /\                 (f' l' IN IMAGE f' (POW A.S))) /\
+                       (~(f' l' IN IMAGE f (POW A.S)) /\               ~(f l' IN IMAGE f' (POW A.S)))))` THEN1 (
     GEN_TAC THEN NTAC 2 STRIP_TAC THENL [
       METIS_TAC [SUBSET_INTER_ABSORPTION, DIFF_SUBSET_EMPTY],
 
 
       LEFT_CONJ_TAC THENL [
-        SIMP_TAC std_ss [IN_IMAGE, IN_POWER_SET_SUBSET_EQUIV] THEN
+        SIMP_TAC std_ss [IN_IMAGE, IN_POW] THEN
         PROVE_TAC[],
 
         PROVE_TAC[DISJOINT_DISJ_THM]
@@ -2719,7 +2719,7 @@ REPEAT STRIP_TAC THENL [
   EQ_TAC THENL [
     ASM_SIMP_TAC std_ss [EXTENSION, IN_UNION, GSPECIFICATION] THEN
     DISCH_TAC THEN GEN_TAC THEN
-    Cases_on `~(x IN IMAGE f (POWER_SET A.S) UNION IMAGE f' (POWER_SET A.S))` THEN1 (
+    Cases_on `~(x IN IMAGE f (POW A.S) UNION IMAGE f' (POW A.S))` THEN1 (
       SIMP_ALL_TAC std_ss [IN_UNION, SUBSET_DEF] THEN
       ASM_REWRITE_TAC[] THEN
       METIS_TAC[]
@@ -2727,9 +2727,9 @@ REPEAT STRIP_TAC THENL [
     UNDISCH_HD_TAC THEN
     SIMP_TAC std_ss [IN_UNION] THEN
     STRIP_TAC THENL [
-      `~(x IN IMAGE f' (POWER_SET A.S))` by PROVE_TAC[DISJOINT_DISJ_THM] THEN
+      `~(x IN IMAGE f' (POW A.S))` by PROVE_TAC[DISJOINT_DISJ_THM] THEN
       FULL_SIMP_TAC std_ss [] THEN
-      SIMP_ALL_TAC std_ss [IN_IMAGE, IN_POWER_SET_SUBSET_EQUIV] THEN
+      SIMP_ALL_TAC std_ss [IN_IMAGE, IN_POW] THEN
       Q_SPEC_NO_ASSUM 5 `x'` THEN
       UNDISCH_HD_TAC THEN
       ASM_SIMP_TAC std_ss [NOT_IN_EMPTY] THEN
@@ -2737,9 +2737,9 @@ REPEAT STRIP_TAC THENL [
       METIS_TAC[NOT_IN_EMPTY],
 
 
-      `~(x IN IMAGE f (POWER_SET A.S))` by PROVE_TAC[DISJOINT_DISJ_THM] THEN
+      `~(x IN IMAGE f (POW A.S))` by PROVE_TAC[DISJOINT_DISJ_THM] THEN
       FULL_SIMP_TAC std_ss [] THEN
-      SIMP_ALL_TAC std_ss [IN_IMAGE, IN_POWER_SET_SUBSET_EQUIV] THEN
+      SIMP_ALL_TAC std_ss [IN_IMAGE, IN_POW] THEN
       Q_SPEC_NO_ASSUM 3 `x'` THEN
       UNDISCH_HD_TAC THEN
       ASM_SIMP_TAC std_ss [NOT_IN_EMPTY] THEN
@@ -2751,13 +2751,13 @@ REPEAT STRIP_TAC THENL [
 
     ASM_SIMP_TAC std_ss [UNION_EMPTY, GSPECIFICATION, IN_UNION, NOT_IN_EMPTY] THEN
     REPEAT STRIP_TAC THENL [
-      SUBGOAL_TAC `f l' IN IMAGE f (POWER_SET A.S)` THEN1 (
-        SIMP_TAC std_ss [IN_IMAGE, IN_POWER_SET_SUBSET_EQUIV] THEN
+      SUBGOAL_TAC `f l' IN IMAGE f (POW A.S)` THEN1 (
+        SIMP_TAC std_ss [IN_IMAGE, IN_POW] THEN
         PROVE_TAC[]
       ) THEN
-      `~(f l' IN IMAGE f' (POWER_SET A.S))` by PROVE_TAC [DISJOINT_DISJ_THM] THEN
+      `~(f l' IN IMAGE f' (POW A.S))` by PROVE_TAC [DISJOINT_DISJ_THM] THEN
       ASM_SIMP_TAC std_ss [NOT_IN_EMPTY, IN_IMAGE, GSYM RIGHT_EXISTS_AND_THM,
-        GSYM LEFT_EXISTS_AND_THM, IN_POWER_SET_SUBSET_EQUIV] THEN
+        GSYM LEFT_EXISTS_AND_THM, IN_POW] THEN
       EQ_TAC THEN REPEAT STRIP_TAC THENL [
         Q_TAC EXISTS_TAC `x` THEN
         ASM_SIMP_TAC std_ss [] THEN
@@ -2772,8 +2772,8 @@ REPEAT STRIP_TAC THENL [
 
 
 
-      Cases_on `(S1 INTER IMAGE f' (POWER_SET A.S) = {})` THENL [
-        ASM_SIMP_TAC std_ss [IN_IMAGE, IN_POWER_SET_SUBSET_EQUIV, UNION_EMPTY, IN_UNION, GSPECIFICATION] THEN
+      Cases_on `(S1 INTER IMAGE f' (POW A.S) = {})` THENL [
+        ASM_SIMP_TAC std_ss [IN_IMAGE, IN_POW, UNION_EMPTY, IN_UNION, GSPECIFICATION] THEN
         REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
           Q_TAC EXISTS_TAC `x` THEN
           ASM_SIMP_TAC std_ss [NOT_IN_EMPTY] THEN
@@ -2787,7 +2787,7 @@ REPEAT STRIP_TAC THENL [
         ],
 
 
-        ASM_REWRITE_TAC[IN_IMAGE, IN_POWER_SET_SUBSET_EQUIV] THEN
+        ASM_REWRITE_TAC[IN_IMAGE, IN_POW] THEN
         REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
           Q_TAC EXISTS_TAC `x` THEN
           ASM_SIMP_TAC std_ss [NOT_IN_EMPTY] THEN
@@ -2810,8 +2810,8 @@ val SYMBOLIC_BREAKPOINT_CONSTRUCTION_AUTOMATON___USED_INPUT_VARS =
     "SYMBOLIC_BREAKPOINT_CONSTRUCTION_AUTOMATON___USED_INPUT_VARS",
     ``!A f f' p. (FINITE A.S /\ (P_USED_VARS p SUBSET
       SEMI_AUTOMATON_USED_VARS A) /\
-      DISJOINT (IMAGE f (POWER_SET A.S)) (SEMI_AUTOMATON_USED_VARS A) /\
-      DISJOINT (IMAGE f' (POWER_SET A.S)) (SEMI_AUTOMATON_USED_VARS A))    ==>
+      DISJOINT (IMAGE f (POW A.S)) (SEMI_AUTOMATON_USED_VARS A) /\
+      DISJOINT (IMAGE f' (POW A.S)) (SEMI_AUTOMATON_USED_VARS A))    ==>
     (SEMI_AUTOMATON_USED_INPUT_VARS
       (SYMBOLIC_BREAKPOINT_CONSTRUCTION_AUTOMATON A f f' p) =
     SEMI_AUTOMATON_USED_INPUT_VARS A)``,
@@ -2836,13 +2836,13 @@ val SYMBOLIC_BREAKPOINT_CONSTRUCTION_AUTOMATON___USED_INPUT_VARS =
 
     ASM_SIMP_TAC std_ss [IN_UNION, IN_DIFF,
       IN_LIST_BIGUNION, MEM_MAP, GSYM LEFT_EXISTS_AND_THM,
-      MEM_SET_TO_LIST, POWER_SET_FINITE, IMAGE_FINITE,
+      MEM_SET_TO_LIST, FINITE_POW_IFF, IMAGE_FINITE,
       IN_IMAGE, P_USED_VARS_EVAL, IN_SING,
       XP_USED_VARS_EVAL,
-      IN_POWER_SET_SUBSET_EQUIV,
+      IN_POW,
       P_PROP_SET_MODEL___P_USED_VARS, NOT_IN_EMPTY] THEN
 
-    SIMP_ALL_TAC std_ss [DISJOINT_DISJ_THM, IN_POWER_SET_SUBSET_EQUIV,
+    SIMP_ALL_TAC std_ss [DISJOINT_DISJ_THM, IN_POW,
       IN_IMAGE, SEMI_AUTOMATON_USED_VARS___DIRECT_DEF, IN_UNION,
       XP_USED_VARS_def] THEN
 
@@ -2860,12 +2860,12 @@ val SYMBOLIC___NDET_FG___TO___DET_FG___CONCRETE_THM =
   (P_USED_VARS p SUBSET A.S) /\
   (A' = SYMBOLIC_BREAKPOINT_CONSTRUCTION_AUTOMATON A f f' p) /\
   (p' =  (P_BIGOR (SET_TO_LIST
-                       (IMAGE (\s. P_PROP (f' s)) (POWER_SET A.S))))) /\
-  INJ f (POWER_SET A.S) UNIV /\
-  INJ f' (POWER_SET A.S) UNIV /\
-  DISJOINT (IMAGE f (POWER_SET A.S)) (SEMI_AUTOMATON_USED_VARS A) /\
-  DISJOINT (IMAGE f' (POWER_SET A.S)) (SEMI_AUTOMATON_USED_VARS A) /\
-  DISJOINT (IMAGE f (POWER_SET A.S)) (IMAGE f' (POWER_SET A.S))) ==>
+                       (IMAGE (\s. P_PROP (f' s)) (POW A.S))))) /\
+  INJ f (POW A.S) UNIV /\
+  INJ f' (POW A.S) UNIV /\
+  DISJOINT (IMAGE f (POW A.S)) (SEMI_AUTOMATON_USED_VARS A) /\
+  DISJOINT (IMAGE f' (POW A.S)) (SEMI_AUTOMATON_USED_VARS A) /\
+  DISJOINT (IMAGE f (POW A.S)) (IMAGE f' (POW A.S))) ==>
 
 ((!i.
 (A_SEM i (A_NDET (A, ACCEPT_COND_FG p)) =
@@ -2876,13 +2876,13 @@ IS_TOTAL_DET_SYMBOLIC_SEMI_AUTOMATON A')``,
 
 REPEAT GEN_TAC THEN STRIP_TAC THEN
 
-SUBGOAL_TAC `?inv_f. !x. (x IN POWER_SET A.S) ==> (inv_f (f x) = x)` THEN1 (
+SUBGOAL_TAC `?inv_f. !x. (x IN POW A.S) ==> (inv_f (f x) = x)` THEN1 (
   PROVE_TAC[INJ_INVERSE]
 ) THEN
-SUBGOAL_TAC `?inv_f'. !x. (x IN POWER_SET A.S) ==> (inv_f' (f' x) = x)` THEN1 (
+SUBGOAL_TAC `?inv_f'. !x. (x IN POW A.S) ==> (inv_f' (f' x) = x)` THEN1 (
   PROVE_TAC[INJ_INVERSE]
 ) THEN
-`?g. g = \x. if (x IN IMAGE f (POWER_SET A.S)) then inv_f x else inv_f' x` by METIS_TAC[] THEN
+`?g. g = \x. if (x IN IMAGE f (POW A.S)) then inv_f x else inv_f' x` by METIS_TAC[] THEN
 
 REPEAT STRIP_TAC THENL [
 
@@ -2901,7 +2901,7 @@ REPEAT STRIP_TAC THENL [
       SUBSET_DEF, SYMBOLIC_BREAKPOINT_CONSTRUCTION_AUTOMATON_def,
       symbolic_semi_automaton_REWRITES, IN_LIST_BIGUNION, MEM_MAP,
       GSYM LEFT_EXISTS_AND_THM,
-      MEM_SET_TO_LIST, IMAGE_FINITE, POWER_SET_FINITE,
+      MEM_SET_TO_LIST, IMAGE_FINITE, FINITE_POW_IFF,
       IN_IMAGE, IN_SING, IN_UNION] THEN
     PROVE_TAC[],
 
@@ -2914,23 +2914,23 @@ REPEAT STRIP_TAC THENL [
 
     MATCH_MP_TAC SYMBOLIC_BREAKPOINT_CONSTRUCTION_AUTOMATON_THM THEN
     ASM_SIMP_TAC std_ss [SUBSET_REFL] THEN
-    SIMP_ALL_TAC std_ss [IN_POWER_SET_SUBSET_EQUIV, GSYM FORALL_AND_THM,
+    SIMP_ALL_TAC std_ss [IN_POW, GSYM FORALL_AND_THM,
       GSYM IMP_CONJ_THM] THEN
     GEN_TAC THEN STRIP_TAC THEN
 
-    SUBGOAL_TAC `f z IN IMAGE f (POWER_SET A.S) /\
-                f' z IN IMAGE f' (POWER_SET A.S)` THEN1 (
-      ASM_SIMP_TAC std_ss [IN_IMAGE, IN_POWER_SET_SUBSET_EQUIV] THEN
+    SUBGOAL_TAC `f z IN IMAGE f (POW A.S) /\
+                f' z IN IMAGE f' (POW A.S)` THEN1 (
+      ASM_SIMP_TAC std_ss [IN_IMAGE, IN_POW] THEN
       PROVE_TAC[]
     ) THEN
-    SUBGOAL_TAC `~(f' z IN IMAGE f (POWER_SET A.S))` THEN1 (
+    SUBGOAL_TAC `~(f' z IN IMAGE f (POW A.S))` THEN1 (
       PROVE_TAC[DISJOINT_DISJ_THM]
     ) THEN
     ASM_SIMP_TAC std_ss [],
 
 
     ASM_SIMP_TAC std_ss [P_SEM_THM, P_BIGOR_SEM, MEM_SET_TO_LIST,
-      IMAGE_FINITE, POWER_SET_FINITE, IN_IMAGE, GSYM LEFT_EXISTS_AND_THM] THEN
+      IMAGE_FINITE, FINITE_POW_IFF, IN_IMAGE, GSYM LEFT_EXISTS_AND_THM] THEN
     SIMP_TAC std_ss [EXTENSION, NOT_IN_EMPTY, IN_INTER, IN_IMAGE] THEN
     PROVE_TAC[]
   ],
@@ -2948,16 +2948,16 @@ REPEAT STRIP_TAC THENL [
 
   MATCH_MP_TAC SYMBOLIC_BREAKPOINT_CONSTRUCTION_AUTOMATON_THM THEN
   ASM_SIMP_TAC std_ss [SUBSET_REFL] THEN
-  SIMP_ALL_TAC std_ss [IN_POWER_SET_SUBSET_EQUIV, GSYM FORALL_AND_THM,
+  SIMP_ALL_TAC std_ss [IN_POW, GSYM FORALL_AND_THM,
     GSYM IMP_CONJ_THM] THEN
   GEN_TAC THEN STRIP_TAC THEN
 
-  SUBGOAL_TAC `f z IN IMAGE f (POWER_SET A.S) /\
-              f' z IN IMAGE f' (POWER_SET A.S)` THEN1 (
-    ASM_SIMP_TAC std_ss [IN_IMAGE, IN_POWER_SET_SUBSET_EQUIV] THEN
+  SUBGOAL_TAC `f z IN IMAGE f (POW A.S) /\
+              f' z IN IMAGE f' (POW A.S)` THEN1 (
+    ASM_SIMP_TAC std_ss [IN_IMAGE, IN_POW] THEN
     PROVE_TAC[]
   ) THEN
-  SUBGOAL_TAC `~(f' z IN IMAGE f (POWER_SET A.S))` THEN1 (
+  SUBGOAL_TAC `~(f' z IN IMAGE f (POW A.S))` THEN1 (
     PROVE_TAC[DISJOINT_DISJ_THM]
   ) THEN
   ASM_SIMP_TAC std_ss []
@@ -3090,10 +3090,9 @@ EQ_TAC THENL [
     `s1 IN K.S /\ s2 IN K.S` by METIS_TAC[IN_CROSS, SUBSET_DEF, FST, SND] THEN
     METIS_TAC[],
 
-    `s IN K.S` by PROVE_TAC[SUBSET_DEF] THEN
-    METIS_TAC[]
+    METIS_TAC[SUBSET_DEF]
   ]
-])
+]);
 
 
 
@@ -3119,8 +3118,7 @@ val KRIPKE_STRUCTURE___TO___SYMBOLIC_KRIPKE_STRUCTURE___TRACE_OF_INITIAL_PATH =
         (PATH_RESTRICT p K.P)``,
 
 REPEAT GEN_TAC THEN STRIP_TAC THEN
-ASM_SIMP_TAC std_ss [IS_TRACE_OF_INITIAL_PATH_THROUGH_KRIPKE_STRUCTURE_def
-] THEN
+ASM_SIMP_TAC std_ss [IS_TRACE_OF_INITIAL_PATH_THROUGH_KRIPKE_STRUCTURE_def] THEN
 
 ASSUME_TAC (SIMP_RULE std_ss [] KRIPKE_STRUCTURE___TO___SYMBOLIC_KRIPKE_STRUCTURE_THM) THEN
 Q_SPECL_NO_ASSUM 0 [`K`, `f`] THEN
@@ -3156,6 +3154,7 @@ ASM_SIMP_TAC std_ss [TRACE_OF_PATH_THROUGH_KRIPKE_STRUCTURE_def,
 
 REWRITE_TAC [IS_WELL_FORMED_KRIPKE_STRUCTURE_def] THEN
 REPEAT STRIP_TAC THEN
+rename1 `s IN K.S0` THEN
 `FINITE K.S0` by PROVE_TAC[SUBSET_FINITE] THEN
 `FINITE K.R` by PROVE_TAC[SUBSET_FINITE, FINITE_CROSS] THEN
 SUBGOAL_TAC `FINITE (BIGUNION (IMAGE f K.S))` THEN1 (
@@ -3204,7 +3203,7 @@ SUBGOAL_TAC `(!n. w' n IN K.S /\
     METIS_TAC[SUBSET_DEF],
 
 
-    SIMP_TAC std_ss [CHOOSEN_PATH_def, IN_BETA_THM] THEN
+    SIMP_TAC std_ss [CHOOSEN_PATH_def, IN_ABS] THEN
     SELECT_ELIM_TAC THEN
     REPEAT STRIP_TAC THENL [
       Q_SPEC_NO_ASSUM 7 `n'` (*K.R def*) THEN
@@ -3279,14 +3278,14 @@ val UNIQUE_PATHS_THROUGH_SYMBOLIC_KRIPKE_STRUCTURES_ARE_ULTIMATIVELY_PERIODIC =
 SIMP_TAC std_ss [PATHS_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE___REWRITES] THEN
 REPEAT STRIP_TAC THEN
 ASSUME_TAC (INST_TYPE [alpha |-> alpha-->bool] INF_ELEMENTS_OF_PATH_NOT_EMPTY) THEN
-Q_SPEC_NO_ASSUM 0 `POWER_SET (SYMBOLIC_KRIPKE_STRUCTURE_USED_VARS M)` THEN
+Q_SPEC_NO_ASSUM 0 `POW (SYMBOLIC_KRIPKE_STRUCTURE_USED_VARS M)` THEN
 PROVE_CONDITION_NO_ASSUM 0 THEN1 (
-  SIMP_TAC std_ss [POWER_SET_FINITE, SYMBOLIC_KRIPKE_STRUCTURE_USED_VARS_def,
+  SIMP_TAC std_ss [FINITE_POW_IFF, SYMBOLIC_KRIPKE_STRUCTURE_USED_VARS_def,
     FINITE_UNION, FINITE___P_USED_VARS, FINITE___XP_USED_VARS]
 ) THEN
 Q_SPEC_NO_ASSUM 0 `PATH_RESTRICT i (SYMBOLIC_KRIPKE_STRUCTURE_USED_VARS M)` THEN
 PROVE_CONDITION_NO_ASSUM 0 THEN1 (
-  SIMP_TAC std_ss [PATH_RESTRICT_def, PATH_MAP_def, IN_POWER_SET_SUBSET_EQUIV, INTER_SUBSET]
+  SIMP_TAC std_ss [PATH_RESTRICT_def, PATH_MAP_def, IN_POW, INTER_SUBSET]
 ) THEN
 
 
@@ -3512,21 +3511,21 @@ Q.ABBREV_TAC `B = (symbolic_semi_automaton (x INSERT A.S)
                         (XP_EQUIV
                            (XP_NEXT_PROP x,
                             XP_OR (XP_PROP x,XP_NEXT (P_NOT p))),A.R)))` THEN
-SUBGOAL_TAC `?f. INJ f (POWER_SET B.S) UNIV /\ DISJOINT (IMAGE f (POWER_SET B.S)) (SEMI_AUTOMATON_USED_VARS B UNION S)` THEN1 (
+SUBGOAL_TAC `?f. INJ f (POW B.S) UNIV /\ DISJOINT (IMAGE f (POW B.S)) (SEMI_AUTOMATON_USED_VARS B UNION S)` THEN1 (
   MATCH_MP_TAC (SIMP_RULE std_ss [GSYM RIGHT_FORALL_IMP_THM,
     AND_IMP_INTRO] FINITE_INJ_EXISTS) THEN
   Q.UNABBREV_TAC `B` THEN
   ASM_SIMP_TAC std_ss [symbolic_semi_automaton_REWRITES,
-    POWER_SET_FINITE, FINITE_INSERT, SEMI_AUTOMATON_USED_VARS_def,
+    FINITE_POW_IFF, FINITE_INSERT, SEMI_AUTOMATON_USED_VARS_def,
     FINITE_UNION, FINITE___SEMI_AUTOMATON_USED_INPUT_VARS]
 ) THEN
 
-SUBGOAL_TAC `?f'. INJ f' (POWER_SET B.S) UNIV /\ DISJOINT (IMAGE f' (POWER_SET B.S)) (SEMI_AUTOMATON_USED_VARS B UNION (IMAGE f (POWER_SET B.S)) UNION S)` THEN1 (
+SUBGOAL_TAC `?f'. INJ f' (POW B.S) UNIV /\ DISJOINT (IMAGE f' (POW B.S)) (SEMI_AUTOMATON_USED_VARS B UNION (IMAGE f (POW B.S)) UNION S)` THEN1 (
   MATCH_MP_TAC (SIMP_RULE std_ss [GSYM RIGHT_FORALL_IMP_THM,
     AND_IMP_INTRO] FINITE_INJ_EXISTS) THEN
   Q.UNABBREV_TAC `B` THEN
   ASM_SIMP_TAC std_ss [symbolic_semi_automaton_REWRITES,
-    POWER_SET_FINITE, FINITE_INSERT, SEMI_AUTOMATON_USED_VARS_def,
+    FINITE_POW_IFF, FINITE_INSERT, SEMI_AUTOMATON_USED_VARS_def,
     FINITE_UNION, FINITE___SEMI_AUTOMATON_USED_INPUT_VARS,
     IMAGE_FINITE]
 ) THEN
@@ -3543,7 +3542,7 @@ PROVE_CONDITION_NO_ASSUM 0 THEN1 (
 CLEAN_ASSUMPTIONS_TAC THEN
 
 Q_TAC EXISTS_TAC `SYMBOLIC_BREAKPOINT_CONSTRUCTION_AUTOMATON B f f' (P_PROP x)` THEN
-Q_TAC EXISTS_TAC `P_NOT (P_BIGOR (SET_TO_LIST (IMAGE (\s. P_PROP (f' s)) (POWER_SET B.S))))` THEN
+Q_TAC EXISTS_TAC `P_NOT (P_BIGOR (SET_TO_LIST (IMAGE (\s. P_PROP (f' s)) (POW B.S))))` THEN
 
 ASM_SIMP_TAC std_ss [] THEN
 REPEAT STRIP_TAC THENL [
@@ -3552,13 +3551,13 @@ REPEAT STRIP_TAC THENL [
 
   Q.UNABBREV_TAC `B` THEN
   FULL_SIMP_TAC std_ss [SYMBOLIC_BREAKPOINT_CONSTRUCTION_AUTOMATON_def,
-    symbolic_semi_automaton_REWRITES, IMAGE_FINITE, FINITE_UNION, POWER_SET_FINITE, FINITE_INSERT],
+    symbolic_semi_automaton_REWRITES, IMAGE_FINITE, FINITE_UNION, FINITE_POW_IFF, FINITE_INSERT],
 
   Q.UNABBREV_TAC `B` THEN
   ASM_SIMP_TAC std_ss [SYMBOLIC_BREAKPOINT_CONSTRUCTION_AUTOMATON_def,
     symbolic_semi_automaton_REWRITES,
     P_BIGOR___P_USED_VARS, SUBSET_DEF, IN_LIST_BIGUNION, IN_UNION,
-    MEM_MAP, MEM_SET_TO_LIST, POWER_SET_FINITE, FINITE_INSERT,
+    MEM_MAP, MEM_SET_TO_LIST, FINITE_POW_IFF, FINITE_INSERT,
     IMAGE_FINITE, GSYM LEFT_EXISTS_AND_THM, IN_IMAGE, P_USED_VARS_def,
     IN_SING] THEN
   METIS_TAC[],
@@ -3728,4 +3727,3 @@ EQ_TAC THENL [
 
 
 val _ = export_theory();
-

@@ -10,12 +10,12 @@ fun K_TAC _ = ALL_TAC;
 fun MESON ths tm = prove(tm,MESON_TAC ths);
 fun METIS ths tm = prove(tm,METIS_TAC ths);
 
-fun SET_TAC L = 
+fun SET_TAC L =
     POP_ASSUM_LIST(K ALL_TAC) THEN REPEAT COND_CASES_TAC THEN
     REWRITE_TAC (append [EXTENSION, SUBSET_DEF, PSUBSET_DEF, DISJOINT_DEF,
     SING_DEF] L) THEN
-    SIMP_TAC std_ss [NOT_IN_EMPTY, IN_UNIV, IN_UNION, IN_INTER, IN_DIFF, 
-      IN_INSERT, IN_DELETE, IN_REST, IN_BIGINTER, IN_BIGUNION, IN_IMAGE, 
+    SIMP_TAC std_ss [NOT_IN_EMPTY, IN_UNIV, IN_UNION, IN_INTER, IN_DIFF,
+      IN_INSERT, IN_DELETE, IN_REST, IN_BIGINTER, IN_BIGUNION, IN_IMAGE,
       GSPECIFICATION, IN_DEF, EXISTS_PROD] THEN METIS_TAC [];
 
 val FORALL_PROD = pairTheory.FORALL_PROD
@@ -1336,7 +1336,7 @@ val WF_DCHAIN = store_thm ("WF_DCHAIN",
      [ASM_MESON_TAC[], SIMP_TAC std_ss [SKOLEM_THM]] THEN
     DISCH_THEN(X_CHOOSE_THEN ``f:'a->'a`` STRIP_ASSUME_TAC) THEN
     KNOW_TAC ``?s. (s (0:num) = a) /\ (!n. s (SUC n) = f (s n))`` THENL
-    [ASSUME_TAC prim_recTheory.num_Axiom_old THEN 
+    [ASSUME_TAC prim_recTheory.num_Axiom_old THEN
      POP_ASSUM (MP_TAC o Q.SPECL [`a:'a`, `(\m n. f m)`]) THEN
      METIS_TAC [], STRIP_TAC] THEN
     EXISTS_TAC ``s:num->'a`` THEN ASM_REWRITE_TAC[] THEN
@@ -1380,7 +1380,7 @@ val WF_UREC_WF = store_thm ("WF_UREC_WF",
 
 val lemma = prove_nonschematic_inductive_relations_exist bool_monoset
    ``!f:'a->'b x. (!z. z << x ==> R z (f z)) ==> R x (H f x)``;
-	
+
 val WF_REC_INVARIANT = store_thm ("WF_REC_INVARIANT",
  ``WF(<<)
    ==> !H S. (!f g x. (!z. z << x ==> (f z = g z) /\ S z (f z))
@@ -1450,7 +1450,7 @@ val _ = overload_on ("chain",``Chain``);
 (* ======================================================================== *)
 
 val lemma1 = prove (
- ``!r:'a#'a->bool. (?y:'a. fl(r) y /\ !x. r(y,x) ==> (y = x)) = 
+ ``!r:'a#'a->bool. (?y:'a. fl(r) y /\ !x. r(y,x) ==> (y = x)) =
                    (?x:'a. x IN maximal_elements (\x. fl r x) r)``,
   REWRITE_TAC [maximal_elements_def, fl] THEN SET_TAC []);
 
@@ -1467,7 +1467,7 @@ val lemma4 = prove (
   REWRITE_TAC [partial_order_def, poset, fl] THEN
   REWRITE_TAC [domain_def, range_def, transitive_def, reflexive_def, antisym_def] THEN
   SET_TAC []);
-   
+
 val lemma5 = prove (
  ``!r:'a#'a->bool.
      ((\x. fl r x) <> {} /\ partial_order r (\x. fl r x) /\

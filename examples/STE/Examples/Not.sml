@@ -6,7 +6,7 @@ val Not_def = Define `Not (a:bool, b:bool) = (b, a)`;;
 val Not_lattice_def = Define `Not_lattice s node =
     if (node = "in") then X
     else if (node = "out") then Not (s "in")
-	 else X`;
+         else X`;
 
 (* Unit delay inverter -- Boolean model *)
 
@@ -18,43 +18,43 @@ val comp_list = [Not_lattice_def, Not_def, Not_def];
 
 
 val NOT_OK = store_thm("NOT_OK", ``Okay (Not_lattice, Not_bool)``,
-		       FULL_SIMP_TAC std_ss [Okay_def,
-					     Not_lattice_def,
-					     Not_bool_def, Not_def,
-					     extended_drop_state_def,
-					     leq_state_def]
-		       THEN REPEAT STRIP_TAC
-		       THEN REPEAT COND_CASES_TAC
-		       THEN fs [lattice_X1_lemma, leq_def]
-		       THEN Cases_on `s_b "in"`
-			      THEN Cases_on `s_b' "out"`
-			      THEN fs [drop_def, One_def, Zero_def,
-				       X_def, Top_def, lub_def,
-				       Not_def,
-				       Not_bool_def]);
+                       FULL_SIMP_TAC std_ss [Okay_def,
+                                             Not_lattice_def,
+                                             Not_bool_def, Not_def,
+                                             extended_drop_state_def,
+                                             leq_state_def]
+                       THEN REPEAT STRIP_TAC
+                       THEN REPEAT COND_CASES_TAC
+                       THEN fs [lattice_X1_lemma, leq_def]
+                       THEN Cases_on `s_b "in"`
+                              THEN Cases_on `s_b' "out"`
+                              THEN fs [drop_def, One_def, Zero_def,
+                                       X_def, Top_def, lub_def,
+                                       Not_def,
+                                       Not_bool_def]);
 
 
 
 val NOT_MONOTONIC =
     store_thm ("NOT_MONOTONIC",
-	       ``Monotonic Not_lattice``,
-	       FULL_SIMP_TAC std_ss [Monotonic_def,
-				     Not_lattice_def,
-				     Not_def,
-				     extended_drop_state_def,
-				     leq_state_def]
-	       THEN REPEAT STRIP_TAC
-	       THEN REPEAT COND_CASES_TAC
-	       THEN fs [leq_def, lub_def, X_def]
-	       THEN FIRST_ASSUM(STRIP_ASSUME_TAC o SPEC ``"in"``)
-	       THEN FIRST_ASSUM(STRIP_ASSUME_TAC o SPEC ``"out"``)
-	       THEN Cases_on `s "in"`
-	       THEN Cases_on `s' "in"`
-	       THEN Cases_on `q`
-	       THEN Cases_on `r`
-	       THEN Cases_on `q'`
-	       THEN Cases_on `r'`
-	       THEN PROVE_TAC [Not_def, lub_def]);
+               ``Monotonic Not_lattice``,
+               FULL_SIMP_TAC std_ss [Monotonic_def,
+                                     Not_lattice_def,
+                                     Not_def,
+                                     extended_drop_state_def,
+                                     leq_state_def]
+               THEN REPEAT STRIP_TAC
+               THEN REPEAT COND_CASES_TAC
+               THEN fs [leq_def, lub_def, X_def]
+               THEN FIRST_ASSUM(STRIP_ASSUME_TAC o SPEC ``"in"``)
+               THEN FIRST_ASSUM(STRIP_ASSUME_TAC o SPEC ``"out"``)
+               THEN Cases_on `s "in"`
+               THEN Cases_on `s' "in"`
+               THEN Cases_on `q`
+               THEN Cases_on `r`
+               THEN Cases_on `q'`
+               THEN Cases_on `r'`
+               THEN PROVE_TAC [Not_def, lub_def]);
 
 (* Example I *)
 

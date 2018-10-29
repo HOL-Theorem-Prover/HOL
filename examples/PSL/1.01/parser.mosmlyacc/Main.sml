@@ -9,8 +9,8 @@
 fun parseString parser s =
     let val expr = parser Lexer.Token (Lexing.createLexerString s)
     in
-	Parsing.clearParser();
-	expr
+        Parsing.clearParser();
+        expr
     end
     handle exn => (Parsing.clearParser(); raise exn);
 
@@ -52,8 +52,8 @@ fun stringToFile s =
 fun parseFileNoReport parser file stream lexbuf =
     let val expr = parser Lexer.Token lexbuf
     in
-	Parsing.clearParser();
-	expr
+        Parsing.clearParser();
+        expr
     end
     handle exn => (Parsing.clearParser(); raise exn);
 
@@ -62,27 +62,27 @@ fun parseFileNoReport parser file stream lexbuf =
 ******************************************************************************)
 fun parseFileReport parser file stream lexbuf =
     let val expr =
-	    parser Lexer.Token lexbuf
-	    handle
-	       Parsing.ParseError f =>
-		   let val pos1 = Lexing.getLexemeStart lexbuf
-		       val pos2 = Lexing.getLexemeEnd lexbuf
-		   in
-		       Location.errMsg (file, stream, lexbuf)
-		                       (Location.Loc(pos1, pos2))
-		                       "Syntax error."
-		   end
-	     | Lexer.LexicalError(msg, pos1, pos2) =>
-		   if pos1 >= 0 andalso pos2 >= 0 then
-		       Location.errMsg (file, stream, lexbuf)
-		                       (Location.Loc(pos1, pos2))
-		                       ("Lexical error: " ^ msg)
-		   else
-		       (Location.errPrompt ("Lexical error: " ^ msg ^ "\n\n");
-			raise Fail "Lexical error");
+            parser Lexer.Token lexbuf
+            handle
+               Parsing.ParseError f =>
+                   let val pos1 = Lexing.getLexemeStart lexbuf
+                       val pos2 = Lexing.getLexemeEnd lexbuf
+                   in
+                       Location.errMsg (file, stream, lexbuf)
+                                       (Location.Loc(pos1, pos2))
+                                       "Syntax error."
+                   end
+             | Lexer.LexicalError(msg, pos1, pos2) =>
+                   if pos1 >= 0 andalso pos2 >= 0 then
+                       Location.errMsg (file, stream, lexbuf)
+                                       (Location.Loc(pos1, pos2))
+                                       ("Lexical error: " ^ msg)
+                   else
+                       (Location.errPrompt ("Lexical error: " ^ msg ^ "\n\n");
+                        raise Fail "Lexical error");
     in
-	Parsing.clearParser();
-	expr
+        Parsing.clearParser();
+        expr
     end
     handle exn => (Parsing.clearParser(); raise exn);
 
@@ -98,11 +98,11 @@ fun createLexerStream (is : BasicIO.instream) =
 fun parse parser file =
     let val is     = Nonstdio.open_in_bin file
         val lexbuf = createLexerStream is
-	val expr   = parseFileReport parser file is lexbuf
-	             handle exn => (BasicIO.close_in is; raise exn)
+        val expr   = parseFileReport parser file is lexbuf
+                     handle exn => (BasicIO.close_in is; raise exn)
     in
         BasicIO.close_in is;
-	expr
+        expr
     end
 
 (******************************************************************************

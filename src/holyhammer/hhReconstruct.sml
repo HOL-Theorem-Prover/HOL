@@ -34,7 +34,7 @@ fun not_reserved s = String.isPrefix "thm." s
 fun is_dot c = c = #"."
 
 fun read_status atp_status =
-  remove_white_spaces (hd (readl atp_status)) 
+  remove_white_spaces (hd (readl atp_status))
   handle Interrupt => raise Interrupt
        | _         => "Unknown"
 
@@ -44,8 +44,8 @@ fun read_lemmas atp_out =
     val l2 = map hhTranslate.unescape l1
     val l3 = filter not_reserved l2
     fun f s =
-      let 
-        val sl1 = String.fields is_dot s 
+      let
+        val sl1 = String.fields is_dot s
         val sl2 = tl (butlast sl1)
       in
         String.concatWith "." sl2
@@ -64,8 +64,8 @@ fun get_lemmas (atp_status,atp_out) =
  -----------------------------------------------------------------------------*)
 
 fun hh_reconstruct lemmas g =
-  if not (!reconstruct_flag) 
-  then (print_endline (mk_metis_call lemmas); 
+  if not (!reconstruct_flag)
+  then (print_endline (mk_metis_call lemmas);
         raise ERR "hh_minimize" "reconstruction off")
   else
     let

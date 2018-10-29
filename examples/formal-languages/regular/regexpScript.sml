@@ -579,7 +579,7 @@ val regexp_compareW_trans = Q.store_thm
            >> rw_tac list_ss [ZIP_def])
      >- (every_case_tac
           >> full_simp_tac list_ss []
-	  >> rw_tac list_ss []
+          >> rw_tac list_ss []
              >- metis_tac [len_cmp_good,good_cmp_thm,cpn_distinct]
              >- (imp_res_tac len_cmp_length
                   >> rw_tac list_ss [Once (GSYM zip_append)]
@@ -653,9 +653,9 @@ val regexp_compareW_trans_eq = Q.store_thm
              >- (imp_res_tac len_cmp_length >> full_simp_tac arith_ss [])
              >- (imp_res_tac len_cmp_length
                   >> rw_tac list_ss [Once (GSYM zip_append)]
-	          >> first_x_assum match_mp_tac
-	          >> qexists_tac `l' ++ t2`
-	          >> metis_tac [LENGTH_APPEND,zip_append])
+                  >> first_x_assum match_mp_tac
+                  >> qexists_tac `l' ++ t2`
+                  >> metis_tac [LENGTH_APPEND,zip_append])
              >- metis_tac [len_cmp_good,good_cmp_thm,cpn_distinct]
              >- metis_tac [len_cmp_good,good_cmp_thm,cpn_distinct])
      >- (qpat_x_assum `$!M` (mp_tac o Q.SPECL [`r::t1`, `r'::t2`, `r''::l3`])

@@ -12,6 +12,7 @@
 !examples/fun-op-sem/lprefix_lub
 !examples/fun-op-sem/for
 !!examples/logic/ltl
+!!examples/logic/ltl-transformations
 ## !!examples/fun-op-sem  works only with the standard kernel
 
 # Crypto examples

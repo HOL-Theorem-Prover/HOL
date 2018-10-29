@@ -10,9 +10,9 @@ val _ = Datatype regexDatatypes.Reg_datatype_quot;
 
 val language_of_def = Define `
          (language_of (Eps)        = {[]}                                                       ) /\
-	 (language_of (Sym (c:'a)) = {[c]}                                                      ) /\
-	 (language_of (Alt r1 r2)  = { w      | w IN (language_of r1) \/ w IN (language_of r2) }) /\
-	 (language_of (Seq r1 r2)  = { u ++ v | u IN (language_of r1) /\ v IN (language_of r2) }) /\
+         (language_of (Sym (c:'a)) = {[c]}                                                      ) /\
+         (language_of (Alt r1 r2)  = { w      | w IN (language_of r1) \/ w IN (language_of r2) }) /\
+         (language_of (Seq r1 r2)  = { u ++ v | u IN (language_of r1) /\ v IN (language_of r2) }) /\
          (language_of (Rep r)      = { FLAT l | EVERY (\w. w IN (language_of r)) l }            )
 `;
 
@@ -23,9 +23,9 @@ val language_of_def = Define `
 (* ----------------------------------------------------------------------------- *)
 val language_of_DEFs = store_thm ("language_of_DEFs", ``
          (        language_of (Eps)        = {[]}                                                       ) /\
-	 (!c.     language_of (Sym c)      = {[c]}                                                      ) /\
-	 (!r1 r2. language_of (Alt r1 r2)  = { w      | w IN (language_of r1) \/ w IN (language_of r2) }) /\
-	 (!r1 r2. language_of (Seq r1 r2)  = { u ++ v | u IN (language_of r1) /\ v IN (language_of r2) }) /\
+         (!c.     language_of (Sym c)      = {[c]}                                                      ) /\
+         (!r1 r2. language_of (Alt r1 r2)  = { w      | w IN (language_of r1) \/ w IN (language_of r2) }) /\
+         (!r1 r2. language_of (Seq r1 r2)  = { u ++ v | u IN (language_of r1) /\ v IN (language_of r2) }) /\
          (!r.     language_of (Rep r)      = { FLAT l | EVERY (\w. w IN (language_of r)) l }            )
 ``,
 
@@ -38,7 +38,7 @@ val language_of_DEFs = store_thm ("language_of_DEFs", ``
 (* sanity check and helper lemmata *)
 (* ----------------------------------------------------------------------------- *)
 val language_of_Alt_OR = store_thm ("language_of_Alt_OR", ``
-	 (!w r1 r2. w IN language_of (Alt r1 r2) <=> w IN language_of r1 \/ w IN language_of r2)
+         (!w r1 r2. w IN language_of (Alt r1 r2) <=> w IN language_of r1 \/ w IN language_of r2)
 ``,
 
   SIMP_TAC (std_ss++pred_setSimps.PRED_SET_ss) [language_of_DEFs, pred_setTheory.IN_UNION]
@@ -46,7 +46,7 @@ val language_of_Alt_OR = store_thm ("language_of_Alt_OR", ``
 
 (* val IN_GSPEC_IFF_GEN = Q.GENL [`P`, `y`] pred_setTheory.IN_GSPEC_IFF; *)
 val language_of_Seq_APPEND = store_thm ("language_of_Seq_APPEND", ``
-	 (!u v r1 r2. (u IN language_of r1 /\ v IN language_of r2) ==> (u ++ v) IN language_of (Seq r1 r2))
+         (!u v r1 r2. (u IN language_of r1 /\ v IN language_of r2) ==> (u ++ v) IN language_of (Seq r1 r2))
 ``,
 
   SIMP_TAC (std_ss++pred_setSimps.PRED_SET_ss) [language_of_DEFs] >>
@@ -54,7 +54,7 @@ val language_of_Seq_APPEND = store_thm ("language_of_Seq_APPEND", ``
 );
 
 val language_of_Rep_empty = store_thm ("language_of_Rep_empty", ``
-	 (!r. [] IN language_of (Rep r))
+         (!r. [] IN language_of (Rep r))
 ``,
 
   SIMP_TAC (list_ss++pred_setSimps.PRED_SET_ss) [language_of_DEFs] >>
@@ -64,7 +64,7 @@ val language_of_Rep_empty = store_thm ("language_of_Rep_empty", ``
 
 (* ok, but not quite all - just 2 *)
 val language_of_Rep_APPEND2 = store_thm ("language_of_Rep_APPEND2", ``
-	 (!u v r. (u IN language_of r /\ v IN language_of r) ==> (u ++ v) IN language_of (Rep r))
+         (!u v r. (u IN language_of r /\ v IN language_of r) ==> (u ++ v) IN language_of (Rep r))
 ``,
 
   REPEAT STRIP_TAC >>
@@ -74,7 +74,7 @@ val language_of_Rep_APPEND2 = store_thm ("language_of_Rep_APPEND2", ``
 );
 
 val language_of_Rep_APPEND_rec = store_thm ("language_of_Rep_APPEND_rec", ``
-	 (!u v r. (u IN language_of (Rep r) /\ v IN language_of (Rep r)) ==> (u ++ v) IN language_of (Rep r))
+         (!u v r. (u IN language_of (Rep r) /\ v IN language_of (Rep r)) ==> (u ++ v) IN language_of (Rep r))
 ``,
 
   REPEAT STRIP_TAC >>

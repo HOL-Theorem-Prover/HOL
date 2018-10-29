@@ -18,7 +18,7 @@ quietdec := true;
 loadPath := ["../../path","../../regexp","../official-semantics"] @ !loadPath;
 app load ["bossLib","metisLib","intLib","res_quanTools","pred_setLib",
           "rich_listTheory", "regexpLib",
-          "FinitePathTheory","PathTheory","SyntaxTheory",
+          "FinitePSLPathTheory","PSLPathTheory","SyntaxTheory",
           "UnclockedSemanticsTheory","ClockedSemanticsTheory",
           "SyntacticSugarTheory"
           (*, "PropertiesTheory"*)
@@ -28,7 +28,7 @@ open HolKernel Parse boolLib;
 open bossLib metisLib listTheory rich_listTheory pred_setLib intLib
      arithmeticTheory;
 open regexpTheory matcherTheory;
-open FinitePathTheory PathTheory SyntaxTheory SyntacticSugarTheory
+open FinitePSLPathTheory PSLPathTheory SyntaxTheory SyntacticSugarTheory
      UnclockedSemanticsTheory ClockedSemanticsTheory
      (* PropertiesTheory*);
 
@@ -484,20 +484,20 @@ val UF_SEM_F_SUFFIX_IMP_REC =
 (*---------------------------------------------------------------------------*)
 
 val CONCAT_is_CONCAT = prove
-  (``FinitePath$CONCAT = regexp$CONCAT``,
+  (``FinitePSLPath$CONCAT = regexp$CONCAT``,
    RW_TAC std_ss [FUN_EQ_THM]
    ++ Induct_on `x`
-   ++ RW_TAC std_ss [FinitePathTheory.CONCAT_def, regexpTheory.CONCAT_def]);
+   ++ RW_TAC std_ss [FinitePSLPathTheory.CONCAT_def, regexpTheory.CONCAT_def]);
 
 val RESTN_is_BUTFIRSTN = prove
   (``!n l. n <= LENGTH l ==> (RESTN l n = BUTFIRSTN n l)``,
    Induct_on `l`
-   >> RW_TAC arith_ss [LENGTH, BUTFIRSTN, FinitePathTheory.RESTN_def]
+   >> RW_TAC arith_ss [LENGTH, BUTFIRSTN, FinitePSLPathTheory.RESTN_def]
    ++ GEN_TAC
-   ++ Cases >> RW_TAC arith_ss [LENGTH, BUTFIRSTN, FinitePathTheory.RESTN_def]
+   ++ Cases >> RW_TAC arith_ss [LENGTH, BUTFIRSTN, FinitePSLPathTheory.RESTN_def]
    ++ RW_TAC arith_ss
-      [LENGTH, BUTFIRSTN, FinitePathTheory.RESTN_def,
-       FinitePathTheory.REST_def, TL]);
+      [LENGTH, BUTFIRSTN, FinitePSLPathTheory.RESTN_def,
+       FinitePSLPathTheory.REST_def, TL]);
 
 val SEL_FINITE_is_BUTFIRSTN_FIRSTN = prove
   (``!j k l.
@@ -602,7 +602,7 @@ val FINITE_UF_SEM_F_STRONG_SERE = store_thm
    ++ MATCH_MP_TAC (PROVE [] ``(a ==> (b = c)) ==> (b /\ a = c /\ a)``)
    ++ STRIP_TAC
    ++ RW_TAC arith_ss [xnum_to_def, RESTN_FINITE, LENGTH_def]
-   ++ RW_TAC arith_ss [FinitePathTheory.LENGTH_RESTN]);
+   ++ RW_TAC arith_ss [FinitePSLPathTheory.LENGTH_RESTN]);
 
 val INFINITE_UF_SEM_F_STRONG_IMP_F_SUFFIX_IMP = store_thm
   ("INFINITE_UF_SEM_F_STRONG_IMP_F_SUFFIX_IMP",
@@ -734,7 +734,7 @@ val F_SERE_NEVER_amatch = store_thm
         !n. ~amatch (sere2regexp (S_CAT (S_REPEAT S_TRUE,r))) (SEL w (0,n)))``,
    RW_TAC std_ss [F_SERE_NEVER_def]
    ++ Know `LENGTH w = INFINITY`
-   >> PROVE_TAC [PathTheory.IS_INFINITE_EXISTS, PathTheory.LENGTH_def]
+   >> PROVE_TAC [PSLPathTheory.IS_INFINITE_EXISTS, PSLPathTheory.LENGTH_def]
    ++ RW_TAC list_resq_ss [UF_SEM_def, xnum_to_def]
    ++ Know `!l. US_SEM l S_FALSE = F`
    >> RW_TAC std_ss [US_SEM_def, S_FALSE_def, B_SEM]
@@ -757,8 +757,8 @@ val ELEM_SEL = store_thm
    ``!w i. ELEM (SEL w (0,i)) 0 = ELEM w 0``,
    Cases
    ++ RW_TAC arith_ss
-      [FinitePathTheory.ELEM_def, FinitePathTheory.RESTN_def,
-       FinitePathTheory.HEAD_def, ELEM_def, RESTN_def, SEL_def]
+      [FinitePSLPathTheory.ELEM_def, FinitePSLPathTheory.RESTN_def,
+       FinitePSLPathTheory.HEAD_def, ELEM_def, RESTN_def, SEL_def]
    ++ REWRITE_TAC [GSYM arithmeticTheory.ADD1, SEL_REC_def, HEAD_def, HD]);
 
 val US_SEM_APPEND = store_thm
@@ -773,14 +773,14 @@ val US_SEM_APPEND = store_thm
 
 val CONCAT_EMPTY = store_thm
   ("CONCAT_EMPTY",
-   ``!l. (FinitePath$CONCAT l = []) = EVERY (\x. x = []) l``,
+   ``!l. (FinitePSLPath$CONCAT l = []) = EVERY (\x. x = []) l``,
    Induct
    ++ RW_TAC std_ss [CONCAT_def, listTheory.EVERY_DEF,
                      listTheory.APPEND_eq_NIL]);
 
 val EMPTY_CONCAT = store_thm
   ("EMPTY_CONCAT",
-   ``!l. ([] = FinitePath$CONCAT l) = EVERY (\x. x = []) l``,
+   ``!l. ([] = FinitePSLPath$CONCAT l) = EVERY (\x. x = []) l``,
    PROVE_TAC [CONCAT_EMPTY]);
 
 val S_FLEX_AND_EMPTY = store_thm
@@ -868,7 +868,7 @@ val S_REPEAT_UNWIND = store_thm
        ++ Cases_on `wlist` >> RW_TAC std_ss [CONCAT_def]
        ++ DISJ2_TAC
        ++ Q.EXISTS_TAC `h`
-       ++ Q.EXISTS_TAC `FinitePath$CONCAT t`
+       ++ Q.EXISTS_TAC `FinitePSLPath$CONCAT t`
        ++ FULL_SIMP_TAC std_ss [CONCAT_def, listTheory.EVERY_DEF]
        ++ PROVE_TAC []]);
 

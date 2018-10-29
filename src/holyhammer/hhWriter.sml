@@ -353,7 +353,7 @@ fun write_thy dir filter_f state thy =
     val THEORY(_,t) = dest_theory thy
     val _ = app (hh_tydef state oc thy) (#types t)
     val _ = app (hh_constdef state oc thy) (#consts t)
-    val axl = map (fn x => (x,"ax")) (DB.theorems thy) 
+    val axl = map (fn x => (x,"ax")) (DB.theorems thy)
       (* TODO: why not (#theorems t) etc.? *)
     val defl = map (fn x => (x,"def")) (DB.axioms thy @ DB.definitions thy)
     fun local_compare (((_,th1),_),((_,th2),_)) =

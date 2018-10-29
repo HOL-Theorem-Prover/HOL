@@ -1,4 +1,4 @@
 structure Parmap :> Parmap =
 struct
-  val map = List.map
+  val parmap = List.map
 end

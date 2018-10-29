@@ -12,16 +12,20 @@ loadPath := (concat home_dir "src/deep_embeddings") ::
             (concat hol_dir "examples/PSL/1.1/official-semantics") :: !loadPath;
 
 map load
- ["FinitePathTheory", "PathTheory", "UnclockedSemanticsTheory", "SyntacticSugarTheory", "LemmasTheory", "RewritesTheory",
+ ["FinitePSLPathTheory", "PSLPathTheory", "UnclockedSemanticsTheory", "SyntacticSugarTheory", "LemmasTheory", "RewritesTheory",
   "RewritesPropertiesTheory", "ProjectionTheory", "SyntacticSugarTheory", "arithmeticTheory", "psl_lemmataTheory",
   "listTheory", "numLib", "intLib", "rich_listTheory", "pred_setTheory", "ModelTheory", "rltl_to_ltlTheory",
-  "rltlTheory", "ltlTheory", "tuerk_tacticsLib", "prop_logicTheory", "infinite_pathTheory", "res_quanTools", "temporal_deep_mixedTheory"];
+  "rltlTheory", "full_ltlTheory", "tuerk_tacticsLib", "prop_logicTheory", "infinite_pathTheory", "res_quanTools", "temporal_deep_mixedTheory"];
 *)
 
-open  FinitePathTheory PathTheory UnclockedSemanticsTheory SyntacticSugarTheory LemmasTheory RewritesTheory ModelTheory rltl_to_ltlTheory
-  RewritesPropertiesTheory ProjectionTheory SyntacticSugarTheory arithmeticTheory psl_lemmataTheory
-  listTheory numLib intLib rich_listTheory pred_setTheory prop_logicTheory infinite_pathTheory temporal_deep_mixedTheory
-  rltlTheory ltlTheory tuerk_tacticsLib res_quanTools;
+open FinitePSLPathTheory PSLPathTheory UnclockedSemanticsTheory SyntacticSugarTheory
+     LemmasTheory RewritesTheory ModelTheory rltl_to_ltlTheory
+     RewritesPropertiesTheory ProjectionTheory SyntacticSugarTheory
+     arithmeticTheory psl_lemmataTheory
+     listTheory numLib intLib rich_listTheory pred_setTheory prop_logicTheory
+     infinite_pathTheory temporal_deep_mixedTheory
+     rltlTheory full_ltlTheory tuerk_tacticsLib res_quanTools;
+open Sanity;
 
 val _ = intLib.deprecate_int();
 
@@ -272,13 +276,13 @@ INDUCT_THEN fl_induct ASSUME_TAC THENL [
    ASM_REWRITE_TAC[LENGTH_def, GT, CONVERT_PATH_PSL_LTL_ELEM_INFINITE] THEN
    `ELEM v 0 = p 0` by METIS_TAC[ELEM_INFINITE] THEN
    Cases_on `p 0` THENL [
-      `0 <= 1` by DECIDE_TAC THEN
+      `0:num <= 1` by DECIDE_TAC THEN
       `RESTN (INFINITE p) 1 = TOP_OMEGA` by PROVE_TAC [INFINITE_PROPER_PATH___RESTN_TOP_BOTTOM_OMEGA] THEN
       ASM_SIMP_TAC std_ss [TRANSLATE_TOP_BOTTOM_def, IN_DEF, P_SEM_THM, RLTL_SEM_TIME_def] THEN
       PROVE_TAC[UF_SEM___F_CLOCK_SERE_FREE___OMEGA_TOP_BOTTOM, F_CLOCK_SERE_FREE_def],
 
 
-      `0 <= 1` by DECIDE_TAC THEN
+      `0:num <= 1` by DECIDE_TAC THEN
       `RESTN (INFINITE p) 1 = BOTTOM_OMEGA` by PROVE_TAC [INFINITE_PROPER_PATH___RESTN_TOP_BOTTOM_OMEGA] THEN
       ASM_SIMP_TAC std_ss [TRANSLATE_TOP_BOTTOM_def, IN_DEF, P_SEM_THM, RLTL_SEM_TIME_def] THEN
       PROVE_TAC[UF_SEM___F_CLOCK_SERE_FREE___OMEGA_TOP_BOTTOM, F_CLOCK_SERE_FREE_def],
@@ -712,6 +716,8 @@ val PSL_TO_RLTL___NO_TOP_BOT_THM___WITH_T_B =
     PROVE_TAC[PATH_PROP_FREE_SEM]
   );
 
+
+
 val PSL_TO_RLTL___NO_TOP_BOT_THM =
  store_thm
   ("PSL_TO_RLTL___NO_TOP_BOT_THM",
@@ -746,7 +752,7 @@ val PSL_TO_RLTL___NO_TOP_BOT_THM =
     ) THEN
 
     SUBGOAL_TAC `?g. INJ g (F_USED_VARS f) UNIV /\
-                             (!x. x IN F_USED_VARS f ==> (~(g x = 0) /\ ~(g x = 1)))` THEN1 (
+                             (!x. x IN F_USED_VARS f ==> (~(g x = 0) /\ ~(g x = 1:num)))` THEN1 (
 
         SUBGOAL_TAC `(INFINITE (UNIV:num set)):bool` THEN1 (
             REWRITE_TAC[INFINITE_UNIV] THEN
@@ -767,10 +773,10 @@ val PSL_TO_RLTL___NO_TOP_BOT_THM =
         MATCH_MP_TAC UF_SEM___VAR_RENAMING THEN
         FULL_SIMP_TAC std_ss [F_CLOCK_SERE_FREE_def] THEN
         UNDISCH_NO_TAC 1 THEN
-        MATCH_MP_TAC set_lemmataTheory.INJ_SUBSET THEN
+        MATCH_MP_TAC set_lemmataTheory.INJ_SUBSET_DOMAIN THEN
         FULL_SIMP_TAC std_ss [SUBSET_DEF, IN_UNION,
             PATH_LETTER_RESTRICT_def, IS_INFINITE_TOP_BOTTOM_FREE_PATH_def,
-            psl_lemmataTheory.PATH_MAP_def, IN_BETA_THM,
+            psl_lemmataTheory.PATH_MAP_def, IN_ABS,
             psl_lemmataTheory.PATH_USED_VARS_def, LENGTH_def, GT, ELEM_INFINITE] THEN
         REPEAT STRIP_TAC THEN
         `?s. p n = STATE s` by PROVE_TAC[] THEN
@@ -782,8 +788,8 @@ val PSL_TO_RLTL___NO_TOP_BOT_THM =
     SUBGOAL_TAC `UF_SEM (PATH_VAR_RENAMING g (PATH_LETTER_RESTRICT (F_USED_VARS f) v)) (F_VAR_RENAMING g f) =
     RLTL_SEM (CONVERT_PATH_PSL_LTL___NO_TOP_BOT ((PATH_VAR_RENAMING g (PATH_LETTER_RESTRICT (F_USED_VARS f) v)))) (PSL_TO_RLTL (F_VAR_RENAMING g f))` THEN1 (
         MATCH_MP_TAC PSL_TO_RLTL___NO_TOP_BOT_THM___WITH_T_B THEN
-        EXISTS_TAC ``1`` THEN
-        EXISTS_TAC ``0`` THEN
+        EXISTS_TAC ``1:num`` THEN
+        EXISTS_TAC ``0:num`` THEN
         FULL_SIMP_TAC std_ss [IS_INFINITE_TOP_BOTTOM_FREE_PATH_def,
             F_VAR_RENAMING___F_CLOCK_SERE_FREE,
             PATH_LETTER_RESTRICT_def, psl_lemmataTheory.PATH_VAR_RENAMING_def,
@@ -1018,9 +1024,9 @@ val IS_PSL___NOT_F_CLOCK_SERE_FREE =
  store_thm
   ("IS_PSL___NOT_F_CLOCK_SERE_FREE",
 
-   ``!f a r. (~F_CLOCK_SERE_FREE f ==> (
-              ~IS_PSL_G f /\ ~IS_PSL_F f /\ ~IS_PSL_GF f /\
-              ~IS_PSL_FG f /\ ~IS_PSL_PREFIX f /\ ~IS_PSL_STREET f))``,
+   ``!f. (~F_CLOCK_SERE_FREE f ==> (
+          ~IS_PSL_G f /\ ~IS_PSL_F f /\ ~IS_PSL_GF f /\
+          ~IS_PSL_FG f /\ ~IS_PSL_PREFIX f /\ ~IS_PSL_STREET f))``,
 
    INDUCT_THEN fl_induct STRIP_ASSUME_TAC THEN
    ASM_SIMP_TAC std_ss [F_CLOCK_SERE_FREE_def, F_CLOCK_FREE_def, F_SERE_FREE_def, IS_RLTL_THM, IS_PSL_THM, PSL_TO_RLTL_def] THEN
@@ -1085,8 +1091,7 @@ val FUTURE_LTL_TO_PSL_THM =
 
 
       FULL_SIMP_TAC std_ss [CONVERT_PATH_LTL_PSL_def, FUTURE_LTL_TO_PSL_def, UF_SEM_def, LTL_SEM_TIME_def,
-                           IS_FUTURE_LTL_def, COMPLEMENT_def, COMPLEMENT_LETTER_def, RESTN_INFINITE] THEN
-      EVAL_TAC THEN PROVE_TAC[],
+                           IS_FUTURE_LTL_def, COMPLEMENT_def, COMPLEMENT_LETTER_def, RESTN_INFINITE, combinTheory.o_DEF],
 
 
       FULL_SIMP_TAC std_ss [CONVERT_PATH_LTL_PSL_def, FUTURE_LTL_TO_PSL_def, UF_SEM_def, IS_FUTURE_LTL_def, LTL_SEM_TIME_def],
@@ -1112,7 +1117,7 @@ val FUTURE_LTL_TO_PSL_THM =
             ASM_SIMP_TAC std_ss []
          ],
 
-         EXISTS_TAC ``(k + t)`` THEN
+         EXISTS_TAC ``(k:num) + (t:num)`` THEN
          REPEAT STRIP_TAC THENL [
             DECIDE_TAC,
 

@@ -67,7 +67,7 @@ val FORALL_KEYS = Q.prove
   SIMP_TAC std_ss [FORALL_PROD]);
 
 (* --------------------------------------------------------------------------*)
-(*      Rotation operators				                     *)
+(*      Rotation operators                                                   *)
 (* --------------------------------------------------------------------------*)
 
 val LeftShift_def = Define
@@ -97,7 +97,7 @@ val EX_Shift_Inversion = Q.store_thm
 *)
 
 (* --------------------------------------------------------------------------*)
-(*	One round forward computation and one round backward computation     *)
+(*      One round forward computation and one round backward computation     *)
 (* --------------------------------------------------------------------------*)
 
 (*---------------------------------------------------------------------------*)
@@ -111,17 +111,17 @@ val CompUT_def = Define
 
 val FwdRound_def = Define
   `FwdRound ((a,b,c,d):block) ((k0,k1):key)  =
-	(b,
-	 ((c ?? CompUT d) <<< CompUT b) + k1,  (*c = (c xor u <<< t) + k1*)
-	 d,
-	 ((a ?? CompUT b) <<< CompUT d) + k0)`;
+        (b,
+         ((c ?? CompUT d) <<< CompUT b) + k1,  (*c = (c xor u <<< t) + k1*)
+         d,
+         ((a ?? CompUT b) <<< CompUT d) + k0)`;
 
 val BwdRound_def = Define
   `BwdRound ((a,b,c,d):block) ((k0,k1):key)  =  (* NB: (a,b,c,d) = (d,a,b,c) *)
-	(((d - k0) >>> CompUT c) ?? CompUT a,	(* a = ((a-k0) >>> u) xor t  *)
-	 a,
-	 ((b - k1) >>> CompUT a) ?? CompUT c,	(* c = ((c-k1) >>> t) xor u  *)
-	 c)`;
+        (((d - k0) >>> CompUT c) ?? CompUT a,   (* a = ((a-k0) >>> u) xor t  *)
+         a,
+         ((b - k1) >>> CompUT a) ?? CompUT c,   (* c = ((c-k1) >>> t) xor u  *)
+         c)`;
 
 val OneRound_Inversion = Q.store_thm
   ("OneRound_Inversion",
@@ -213,7 +213,7 @@ val InvRound_def =
 (*---------------------------------------------------------------------------*)
 (* Encrypt and Decrypt                                                       *)
 (* The number of rounds is 20. It is easy to change it into any value, but in*)
-(* in this case you should redefine the type keysched 			     *)
+(* in this case you should redefine the type keysched                        *)
 (*---------------------------------------------------------------------------*)
 
 val RC6_FWD_def =
@@ -288,21 +288,21 @@ val mk_keysched_def = Define
 
 val setKeys_length = Q.prove
  (`!i S1 L a b. i>0 ==>
-	(LENGTH (setKeys i S1 L a b) = SUC(LENGTH (setKeys (i-1) S1 L a b)))`,
+        (LENGTH (setKeys i S1 L a b) = SUC(LENGTH (setKeys (i-1) S1 L a b)))`,
   Induct_on `i` THENL [
     RW_TAC list_ss [],
     RW_TAC list_ss [Ntimes setKeys_def 1] THEN
     Cases_on `i=0` THENL [
-	RW_TAC list_ss [setKeys_def],
-	Q.SUBGOAL_THEN
+        RW_TAC list_ss [setKeys_def],
+        Q.SUBGOAL_THEN
          `!i S1 L1 a1 b1 S2 L2 a2 b2.
              LENGTH (setKeys i S1 L1 a1 b1) = LENGTH (setKeys i S2 L2 a2 b2)`
         ASSUME_TAC THENL [
-    	    NTAC 4 (POP_ASSUM (K ALL_TAC)) THEN
-    	    Induct_on `i` THENL [
-	        RW_TAC list_ss [setKeys_def],
-	        RW_TAC list_ss [setKeys_def] THEN RW_TAC list_ss [LENGTH]],
-  	RW_TAC list_ss []]]]
+            NTAC 4 (POP_ASSUM (K ALL_TAC)) THEN
+            Induct_on `i` THENL [
+                RW_TAC list_ss [setKeys_def],
+                RW_TAC list_ss [setKeys_def] THEN RW_TAC list_ss [LENGTH]],
+        RW_TAC list_ss []]]]
   );
 
 (*---------------------------------------------------------------------------*)

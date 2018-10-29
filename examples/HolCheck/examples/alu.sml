@@ -108,40 +108,40 @@ fun makeALU d aw =
     (*val state = pairSyntax.list_mk_pair allvars;*)
     val I1 = T;
     val bw_alu_op = map (fn n =>
-			 mk_disj((mk_conj(``ctrl_ex:bool``,(mk_disj((mk_bool_var ("op0_"^n)),(mk_bool_var ("op1_"^n)))))),
-				 (mk_conj(``~(ctrl_ex:bool)``,(mk_neg(mk_disj((mk_bool_var ("op0_"^n)),(mk_bool_var ("op1_"^n)))))))))
+                         mk_disj((mk_conj(``ctrl_ex:bool``,(mk_disj((mk_bool_var ("op0_"^n)),(mk_bool_var ("op1_"^n)))))),
+                                 (mk_conj(``~(ctrl_ex:bool)``,(mk_neg(mk_disj((mk_bool_var ("op0_"^n)),(mk_bool_var ("op1_"^n)))))))))
                          datapath;
     val bw_res_trans = map (fn a => mk_eq((mk_bool_var ("res_"^a^"'")),mk_cond(``~stall_ex:bool``,
                                                                    (List.nth(bw_alu_op, (string_to_int a))),
                                                                     (mk_bool_var ("res_"^a))))) datapath;
     val bw_op0_trans = map (fn a => ``^(mk_bool_var ("op0_"^a^"'")) = if (~stall_ex /\ (^(regeq "dest_ex" "src0" aw)))
                                           then ^(List.nth(bw_alu_op, (string_to_int a)))
-							else (if stall_wb
+                                                        else (if stall_wb
                                                       then (^(getreg "src0" aw a))
-						                  else (if (^(regeq "dest_wb" "src0" aw))
+                                                                  else (if (^(regeq "dest_wb" "src0" aw))
                                                             then (^(mk_bool_var ("res_"^a)))
                                                             else (^(getreg "src0" aw a))))``) datapath;
     val bw_op1_trans = map (fn a => ``^(mk_bool_var ("op1_"^a^"'")) = if (~stall_ex /\ (^(regeq "dest_ex" "src1" aw)))
                                           then ^(List.nth(bw_alu_op, (string_to_int a)))
-							else (if stall_wb
+                                                        else (if stall_wb
                                                       then (^(getreg "src1" aw a))
-						                  else (if (^(regeq "dest_wb" "src1" aw))
+                                                                  else (if (^(regeq "dest_wb" "src1" aw))
                                                             then (^(mk_bool_var ("res_"^a)))
                                                             else (^(getreg "src1" aw a))))``) datapath;
    val bw_reg_trans = map (fn n =>
-			   (map (fn a => mk_eq(mk_bool_var ("reg"^n^"_"^a^"'"),
-					       mk_cond(``stall_wb:bool``,mk_bool_var ("reg"^n^"_"^a),
-					       mk_cond((boolSyntax.list_mk_conj(List.map
-										(fn b => mk_eq(mk_bool_var("dest_wb_"^b),
-											       (getbit n b aw))) addpath)),
-						       mk_bool_var("res_"^a),
-						       mk_bool_var("reg"^n^"_"^a) )))) datapath)) regnums;
+                           (map (fn a => mk_eq(mk_bool_var ("reg"^n^"_"^a^"'"),
+                                               mk_cond(``stall_wb:bool``,mk_bool_var ("reg"^n^"_"^a),
+                                               mk_cond((boolSyntax.list_mk_conj(List.map
+                                                                                (fn b => mk_eq(mk_bool_var("dest_wb_"^b),
+                                                                                               (getbit n b aw))) addpath)),
+                                                       mk_bool_var("res_"^a),
+                                                       mk_bool_var("reg"^n^"_"^a) )))) datapath)) regnums;
    val bw_reg_trans = map list_mk_conj bw_reg_trans;
    val bw_dest_trans = map (fn n => list_mk_conj(map (fn (x,y) => mk_eq(mk_bool_var(x^"_"^n^"'"),
-									mk_bool_var(y^"_"^n))) [("dest_wb","dest_ex"),
-												("dest_ex","dest")])) addpath;
+                                                                        mk_bool_var(y^"_"^n))) [("dest_wb","dest_ex"),
+                                                                                                ("dest_ex","dest")])) addpath;
     val R1 = list_mk_conj (bw_res_trans @ bw_op0_trans @ bw_op1_trans @ bw_reg_trans @  bw_dest_trans
-			 @ [(``stall_ex':bool = stall:bool``),(``stall_wb':bool=stall_ex:bool``), (``ctrl_ex':bool=ctrl:bool``)])
+                         @ [(``stall_ex':bool = stall:bool``),(``stall_wb':bool=stall_ex:bool``), (``ctrl_ex':bool=ctrl:bool``)])
     val T1 = [(".",R1)];
 
    (* define properties *)
@@ -151,33 +151,33 @@ fun makeALU d aw =
    fun alu_AP s = C_AP state (mk_bool_var s)
    val ap_ty = (type_of state) --> bool
    val bw_op0_defs = List.map  (fn b => list_C_OR
-	(List.map (fn x =>  (C_AX(C_AX(alu_AP ("reg"^x^"_"^b)))) C_AND
-		   (list_C_AND (List.map (fn y => (alu_AP ("src0"^"_"^y)) C_IFF  (getctlbit ap_ty x y aw))
-				addpath))) regnums)) datapath;
+        (List.map (fn x =>  (C_AX(C_AX(alu_AP ("reg"^x^"_"^b)))) C_AND
+                   (list_C_AND (List.map (fn y => (alu_AP ("src0"^"_"^y)) C_IFF  (getctlbit ap_ty x y aw))
+                                addpath))) regnums)) datapath;
    val bw_op1_defs = List.map (fn b => list_C_OR
-	(List.map (fn x => (C_AX(C_AX(alu_AP ("reg"^x^"_"^b)))) C_AND
-		   (list_C_AND (List.map (fn y=>((alu_AP ("src1"^"_"^y)) C_IFF (getctlbit ap_ty x y aw)))
-				addpath))) regnums)) datapath;
+        (List.map (fn x => (C_AX(C_AX(alu_AP ("reg"^x^"_"^b)))) C_AND
+                   (list_C_AND (List.map (fn y=>((alu_AP ("src1"^"_"^y)) C_IFF (getctlbit ap_ty x y aw)))
+                                addpath))) regnums)) datapath;
    val bw_res_defs = List.map (fn b => list_C_OR(map (fn x => (C_AX(C_AX(C_AX(alu_AP ("reg"^x^"_"^b))))) C_AND
-						 (list_C_AND(List.map (fn y => ((alu_AP ("dest"^"_"^y)) C_IFF (getctlbit ap_ty x y aw)))
-							     addpath))) regnums)) datapath;
+                                                 (list_C_AND(List.map (fn y => ((alu_AP ("dest"^"_"^y)) C_IFF (getctlbit ap_ty x y aw)))
+                                                             addpath))) regnums)) datapath;
    val bw_ctl_alu_op_defs = map (fn (x,y) => ((alu_AP ("ctrl")) C_AND (x C_OR y)) C_OR ((C_NOT(alu_AP ("ctrl"))) C_AND
-											(C_NOT( x C_OR y))))
-						(ListPair.zip(bw_op0_defs,bw_op1_defs));
+                                                                                        (C_NOT( x C_OR y))))
+                                                (ListPair.zip(bw_op0_defs,bw_op1_defs));
 
    val bw_prop1 = map (fn (x,y) => (C_AG((C_NOT(alu_AP ("stall"))) C_IMP (((x C_IFF y))))))
-		      (ListPair.zip(bw_ctl_alu_op_defs,bw_res_defs))
+                      (ListPair.zip(bw_ctl_alu_op_defs,bw_res_defs))
    val bw_prop1 = List.map (fn (p,n) => ("p1_"^(int_to_string n),p)) (ListPair.zip(bw_prop1,List.tabulate(List.length bw_prop1,I)))
 
    val bw_prop2 = map (fn b => list_C_AND(map
-					  (fn rg =>
-					   (C_AG( (alu_AP ("stall")) C_IMP
-						 (list_C_AND(map
-								(fn a =>C_NOT((alu_AP ("dest"^"_"^a)) C_IFF (getctlbit ap_ty rg a aw)))
-								addpath)) C_OR
-						 (((C_AX(C_AX(alu_AP ("reg"^rg^"_"^b)))) C_IFF
-						   (C_AX(C_AX(C_AX(alu_AP ("reg"^rg^"_"^b))))))))))
-					  regnums)) datapath;
+                                          (fn rg =>
+                                           (C_AG( (alu_AP ("stall")) C_IMP
+                                                 (list_C_AND(map
+                                                                (fn a =>C_NOT((alu_AP ("dest"^"_"^a)) C_IFF (getctlbit ap_ty rg a aw)))
+                                                                addpath)) C_OR
+                                                 (((C_AX(C_AX(alu_AP ("reg"^rg^"_"^b)))) C_IFF
+                                                   (C_AX(C_AX(C_AX(alu_AP ("reg"^rg^"_"^b))))))))))
+                                          regnums)) datapath;
    val bw_prop2 = List.map (fn (p,n) => ("p2_"^(int_to_string n),p)) (ListPair.zip(bw_prop2,List.tabulate(List.length bw_prop2,I)))
 
    fun makeBddMap d aw =
@@ -194,7 +194,7 @@ fun makeALU d aw =
      fun interleave l1 l2 = List.concat(map (fn ((x,x'),(y,y')) => [x,x',y,y']) (ListPair.zip(l1,l2)));
      fun stdest l1 l2 = if (l1=[]) then [] else List.take(l1,2)@List.take(l2,aw*2)@(stdest (List.drop(l1,2)) (List.drop(l2,aw*2)))  ;
      fun geninter L = (if (hd(L)=[]) then []
-		       else (List.concat(map (fn l => [fst(hd(l)),snd(hd(l))] ) L))::(geninter(map (fn l => tl(l)) L)));
+                       else (List.concat(map (fn l => [fst(hd(l)),snd(hd(l))] ) L))::(geninter(map (fn l => tl(l)) L)));
      in (interleave src0v src1v) @ (stdest stallv  destv) @ ctrlv @
         (List.concat(geninter ([(rev op0v)]@[(rev op1v)]@(regv)@[(rev resv)]))) end
     val bvm = makeBddMap d aw;
@@ -206,4 +206,3 @@ fun makeALU d aw =
 
 end
 end
-

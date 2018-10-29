@@ -17,7 +17,7 @@ loadPath
  "../official-semantics" :: "../../path" :: !loadPath;
 map load
  ["pred_setLib","res_quanTools", "rich_listTheory", "pairLib","intLib",
-  "FinitePathTheory", "PathTheory", "UnclockedSemanticsTheory",
+  "FinitePSLPathTheory", "PSLPathTheory", "UnclockedSemanticsTheory",
   "SyntacticSugarTheory", "ClockedSemanticsTheory", "RewritesTheory",
   "RewritesPropertiesTheory","ProjectionTheory",
   "rich_listTheory", "res_quanLib", "res_quanTheory", "metisLib"];
@@ -26,7 +26,7 @@ open SyntaxTheory SyntacticSugarTheory
      RewritesPropertiesTheory ProjectionTheory pred_setLib res_quanTools
      arithmeticTheory listTheory rich_listTheory res_quanLib res_quanTheory
      ClockedSemanticsTheory pairLib pred_setTheory ModelTheory metisLib
-     FinitePathTheory PathTheory pairTheory;    (* Open after list theory for CONS_def *)
+     FinitePSLPathTheory PSLPathTheory pairTheory;    (* Open after list theory for CONS_def *)
 val _ = intLib.deprecate_int();
 quietdec := false;
 *)
@@ -44,8 +44,8 @@ open SyntaxTheory SyntacticSugarTheory
      pred_setLib pred_setTheory arithmeticTheory listTheory rich_listTheory
      res_quanLib pairLib res_quanTheory ModelTheory ClockedSemanticsTheory
      res_quanTools RewritesPropertiesTheory ProjectionTheory ModelTheory
-     metisLib FinitePathTheory pairTheory
-     PathTheory; (* Open after list theory for CONS_def *)
+     metisLib FinitePSLPathTheory pairTheory
+     PSLPathTheory; (* Open after list theory for CONS_def *)
 
 (******************************************************************************
 * Set default parsing to natural numbers rather than integers
@@ -1152,7 +1152,7 @@ val UF_SEM_FINITE_TOP_FREE_F_ALWAYS =
       !i. i < LENGTH l ==> B_SEM (EL i l) b)``,
    RW_TAC
     (list_ss++resq_SS)
-    [UF_SEM,B_SEM_def,UF_SEM_F_G,F_ALWAYS_def,FinitePathTheory.LENGTH_RESTN,LESSX_def,LS,
+    [UF_SEM,B_SEM_def,UF_SEM_F_G,F_ALWAYS_def,FinitePSLPathTheory.LENGTH_RESTN,LESSX_def,LS,
      ELEM_RESTN,ELEM_def,HEAD_def,REST_def,RESTN_FINITE,HD_RESTN,xnum_11,TOP_FREE_EL]
     THEN EQ_TAC
     THEN RW_TAC list_ss []
@@ -1168,7 +1168,7 @@ val UF_SEM_FINITE_F_ALWAYS =
           ?j. j < i /\ (EL j l = TOP) /\ ~(LENGTH l = j)``,
    RW_TAC
     (list_ss++resq_SS)
-    [UF_SEM,B_SEM_def,UF_SEM_F_G,F_ALWAYS_def,FinitePathTheory.LENGTH_RESTN,LESSX_def,LS,
+    [UF_SEM,B_SEM_def,UF_SEM_F_G,F_ALWAYS_def,FinitePSLPathTheory.LENGTH_RESTN,LESSX_def,LS,
      ELEM_RESTN,ELEM_def,HEAD_def,REST_def,RESTN_FINITE,HD_RESTN,xnum_11,TOP_FREE_EL]
     THEN EQ_TAC
     THEN RW_TAC list_ss []);
@@ -1299,7 +1299,7 @@ val RESTN_MAP_PATH =
     THEN Q.UNDISCH_TAC `n < LENGTH l`
     THEN Q.SPEC_TAC(`l`,`l`)
     THEN Induct_on `n`
-    THEN RW_TAC list_ss [FinitePathTheory.RESTN_def,FinitePathTheory.REST_def]
+    THEN RW_TAC list_ss [FinitePSLPathTheory.RESTN_def,FinitePSLPathTheory.REST_def]
     THEN `~(LENGTH l = 0)` by DECIDE_TAC
     THEN `~(l = [])` by PROVE_TAC[LENGTH_NIL]
     THEN RW_TAC list_ss [TL_MAP]

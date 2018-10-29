@@ -1,16 +1,16 @@
-(* FILE		: stable.ml						*)
+(* FILE         : stable.ml                                             *)
 (* DESCRIPTION   : Creates the theory "stable" containing the definition*)
-(*		  of the predicate, Stable, and associated theorems. 	*)
-(*									*)
-(* READS FILES	: <none>						*)
-(* WRITES FILES	: stable.th						*)
-(*									*)
-(* AUTHOR	: T. Melham						*)
-(* DATE		: 84.12.05						*)
-(* REVISED	: 86.05.11						*)
+(*                of the predicate, Stable, and associated theorems.    *)
+(*                                                                      *)
+(* READS FILES  : <none>                                                *)
+(* WRITES FILES : stable.th                                             *)
+(*                                                                      *)
+(* AUTHOR       : T. Melham                                             *)
+(* DATE         : 84.12.05                                              *)
+(* REVISED      : 86.05.11                                              *)
 (*                                                                      *)
 (* PORTED HOL98  : M. Gordon                                            *)
-(* DATE		: 00.10.03						*)
+(* DATE         : 00.10.03                                              *)
 
 
 (*
@@ -31,16 +31,16 @@ open prim_recTheory;
 open hol88Lib;
 open pairTheory;
 
-(* Create the new theory "stable.th"					*)
+(* Create the new theory "stable.th"                                    *)
 val _ = new_theory "stable";;
 
-(* Definition of Stable: a predicate for signals that are stable in an 	*)
-(* interval.								*)
+(* Definition of Stable: a predicate for signals that are stable in an  *)
+(* interval.                                                            *)
 val Stable =
     new_definition
         ("Stable",
-	 ``!sig t1 t2. Stable t1 t2 sig =
-	    !t. ((t1 <= t) /\ (t < t2)) ==> (sig(t) = sig(t1))``);;
+         ``!sig t1 t2. Stable t1 t2 sig =
+            !t. ((t1 <= t) /\ (t < t2)) ==> (sig(t) = sig(t1))``);;
 
 val Stable_pair =
     store_thm

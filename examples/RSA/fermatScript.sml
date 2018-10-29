@@ -22,7 +22,7 @@ val _ = new_theory "fermat";
 val FACT_def = ONCE_REWRITE_RULE [MULT_COMM] FACT;
 
 val DIV_FACT = store_thm("DIV_FACT",
-			Term `!p n. prime p /\ 0 <n /\ divides p (FACT n)
+                        Term `!p n. prime p /\ 0 <n /\ divides p (FACT n)
                                 ==> ?k. 0<k /\ k <= n /\ divides p k`,
                         Induct_on `n` THEN ARW[FACT_def]
                         THEN Cases_on `divides p (SUC n)` THENL[
@@ -53,7 +53,7 @@ val DIV_FACT_LESS = store_thm("DIV_FACT_LESS",
 
 
 val P_DIV_BINOMIAL = store_thm("P_DIV_BINOMIAL",
-			Term `!p n. prime p /\ 0<n /\ n<p ==>  divides p (binomial p n)`,
+                        Term `!p n. prime p /\ 0<n /\ n<p ==>  divides p (binomial p n)`,
                         ARW[]
                         THEN `0<p` by (Cases_on `p=0` THEN ARW[] THEN PROVE_TAC[NOT_PRIME_0])
                         THEN `divides p ((binomial ((p-n)+n) n) * (FACT (p-n) * FACT n))` by ARW[BINOMIAL_FACT,DIVIDES_FACT]

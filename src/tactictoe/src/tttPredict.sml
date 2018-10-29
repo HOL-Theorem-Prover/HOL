@@ -39,7 +39,7 @@ fun union_dict dict l = dkeys (daddl (map (fn x => (x,())) l) dict)
 val random_gen = Random.newgen ()
 
 fun knn_sim1 symweight dict_o fea_p =
-  if !ttt_randdist_flag 
+  if !ttt_randdist_flag
     then Random.random random_gen
   else
     let
@@ -51,7 +51,7 @@ fun knn_sim1 symweight dict_o fea_p =
     end
 
 fun knn_sim2 symweight dict_o fea_p =
-  if !ttt_randdist_flag 
+  if !ttt_randdist_flag
     then Random.random random_gen
   else
     let
@@ -64,7 +64,7 @@ fun knn_sim2 symweight dict_o fea_p =
     end
 
 fun knn_sim3 symweight dict_o fea_p =
-  if !ttt_randdist_flag 
+  if !ttt_randdist_flag
     then Random.random random_gen
   else
     let
@@ -105,11 +105,11 @@ fun pre_sim3 symweight feal fea_o = pre_pred knn_sim3 symweight feal fea_o
 fun stacknn symweight n feal fea_o =
   let
     val l1 = map fst (pre_sim1 symweight feal fea_o)
-    fun coverage x = dfind x (!ttt_taccov) handle _ => 0 
-    fun compare_coverage (lbl1,lbl2) = 
+    fun coverage x = dfind x (!ttt_taccov) handle _ => 0
+    fun compare_coverage (lbl1,lbl2) =
       Int.compare (coverage (#1 lbl2), coverage (#1 lbl1))
-    val l1' = 
-      if !ttt_covdist_flag 
+    val l1' =
+      if !ttt_covdist_flag
       then dict_sort compare_coverage l1
       else l1
     val l2 = mk_sameorder_set lbl_compare l1'
@@ -149,10 +149,10 @@ val add_fea_cache = ref (dempty goal_compare)
 fun add_fea dict (name,thm) =
   let val g = dest_thm thm in
     if not (dmem g (!dict)) andalso uptodate_thm thm
-    then 
-      let 
-        val fea = dfind g (!add_fea_cache) 
-          handle NotFound => 
+    then
+      let
+        val fea = dfind g (!add_fea_cache)
+          handle NotFound =>
             let val fea' = fea_of_goal g in
               add_fea_cache := dadd g fea' (!add_fea_cache);
               fea'
@@ -275,7 +275,7 @@ fun termknn n ((asl,w):goal) term =
   in
     first_n n (map fst l3)
   end
-  
+
 (* --------------------------------------------------------------------------
    Term prediction for conjecturing experiments.
    Todo: add dependencies between deps.

@@ -9,7 +9,7 @@ Specializes the conclusion of a theorem with its own quantified variables.
 rule, restricted quantifier.
 
 \DESCRIBE
-When applied to a theorem whose conclusion has zero or more 
+When applied to a theorem whose conclusion has zero or more
 ordinary or restricted universal quantifications,
 the inference rule {GQSPEC_ALL} returns a theorem which is the result
 of specializing the quantified variables with its own variables. If this

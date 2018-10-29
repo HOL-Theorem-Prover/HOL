@@ -135,17 +135,17 @@ val fact_spec = prove___spec_assums fact_comp_pre
    (
    SIMP_TAC std_ss [FUN_EQ_THM, FORALL_PROD] THEN
    HO_MATCH_MP_TAC fact_ind THEN
-	REPEAT STRIP_TAC THEN
+        REPEAT STRIP_TAC THEN
    ONCE_REWRITE_TAC [fact_def, WHILE] THEN
    RW_TAC std_ss [] THEN
-	Q.PAT_ASSUM `~(x = 0w) ==> P x` MP_TAC THEN
-	WORDS_TAC THEN
-	ASM_SIMP_TAC std_ss [])
+        Q.PAT_ASSUM `~(x = 0w) ==> P x` MP_TAC THEN
+        WORDS_TAC THEN
+        ASM_SIMP_TAC std_ss [])
 
 
 
 (*---------------------------------------------------------------------------------*)
-(*      binary relations															              *)
+(*      binary relations                                                                                                                                      *)
 (*---------------------------------------------------------------------------------*)
 
 val def = Define `f (x1:word32) = if (x1 = 0w) then x1 else (x1+1w)`
@@ -260,14 +260,14 @@ val f3_def = Define `
 (* equivalence proof fails, thus an assumtion is created*)
 val f3_comp_pre = pp_compile f3_def true
 val f3_spec = prove___spec_assums f3_comp_pre
-	(* set_goal___spec_assums  f3_comp_pre*)
-	(
+        (* set_goal___spec_assums  f3_comp_pre*)
+        (
    SIMP_TAC std_ss [FUN_EQ_THM, f3_def, FORALL_PROD, LET_THM] THEN
-	REPEAT GEN_TAC THEN
-	Cases_on `p_1 = 1w` THEN (
-		ASM_SIMP_TAC std_ss [] THEN
-		WORDS_TAC
-	))
+        REPEAT GEN_TAC THEN
+        Cases_on `p_1 = 1w` THEN (
+                ASM_SIMP_TAC std_ss [] THEN
+                WORDS_TAC
+        ))
 
 (*
 *)

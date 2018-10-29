@@ -48,9 +48,9 @@ val CTL2MU_def = Define `
         (CTL2MU (C_BOOL b) = BEXP2MU b) /\
         (CTL2MU (C_NOT f)  = ~(CTL2MU f)) /\
         (CTL2MU (C_AND(f,g))  = (CTL2MU f) /\ (CTL2MU g )) /\
-	(CTL2MU (C_EX f)  = <<".">> (CTL2MU f)) /\
+        (CTL2MU (C_EX f)  = <<".">> (CTL2MU f)) /\
         (CTL2MU (C_EG f)  = nu "Q" .. ((CTL2MU f ) /\ <<".">> (RV "Q"))) /\
-	(CTL2MU (C_EU(f,g))  = mu "Q" .. ((CTL2MU g) \/ ((CTL2MU f) /\ <<".">> (RV "Q"))))`;
+        (CTL2MU (C_EU(f,g))  = mu "Q" .. ((CTL2MU g) \/ ((CTL2MU f) /\ <<".">> (RV "Q"))))`;
 
 val ctl2muks_def = Define `ctl2muks (M : ('prop,'state) kripke_structure) =
     <| S  := M.S;
@@ -126,7 +126,7 @@ THEN REPEAT STRIP_TAC THENL [
  Induct_on `n` THENL [
   SIMP_TAC std_ss [ELEM_def,RESTN_INFINITE,HEAD_def]
   THEN Q.PAT_ASSUM `ELEM (INFINITE f') 0 = ELEM (INFINITE f'') 1`
-	 				       (fn t => ONCE_REWRITE_TAC [SIMP_RULE std_ss [ELEM_def,RESTN_INFINITE,HEAD_def] t])
+                                               (fn t => ONCE_REWRITE_TAC [SIMP_RULE std_ss [ELEM_def,RESTN_INFINITE,HEAD_def] t])
   THEN Q.PAT_ASSUM `ELEM (INFINITE f'') 0 = s`  (fn t => ONCE_REWRITE_TAC [SIMP_RULE std_ss [ELEM_def,RESTN_INFINITE,HEAD_def] (SYM t)])
   THEN Q.PAT_ASSUM `!n. M.R (ELEM (INFINITE f'') n,ELEM (INFINITE f'') (n + 1))`
    (fn t => ONCE_REWRITE_TAC [SIMP_RULE std_ss [ELEM_def,RESTN_INFINITE,HEAD_def] (SPEC ``0:num`` t)]), (* 0 *)
@@ -150,7 +150,7 @@ val unc = Define `unc R = \x y. R(x,y)`; (*FIXME: replace this with CURRY_DEF*)
 val unc_thm = save_thm("unc_thm",prove(``!P x y. P(x,y) = (unc P) x y``,PROVE_TAC [unc]));
 
 val EU_LEMMA = prove(``!(M :('prop,'state) kripke_structure) (f:'prop ctl) (g:'prop ctl) (s:'state). TOTAL M.R ==>
-			(C_SEM M (C_EU(f,g)) s = C_SEM M (C_NOT(C_AND(C_NOT g,C_NOT(C_AND(f,C_EX (C_EU(f,g))))))) s)``,
+                        (C_SEM M (C_EU(f,g)) s = C_SEM M (C_NOT(C_AND(C_NOT g,C_NOT(C_AND(f,C_EX (C_EU(f,g))))))) s)``,
 REPEAT GEN_TAC THEN STRIP_TAC THEN EQ_TAC THENL [
 REWRITE_TAC [C_SEM_def,PATH_def,IN_DEF]
 THEN BETA_TAC
@@ -184,7 +184,7 @@ THEN CONJ_TAC THENL [
  ONCE_REWRITE_TAC [DECIDE ``n+1=SUC n``]
  THEN Induct_on `n` THENL [
   SIMP_TAC arith_ss [Nf2,ELEM_def,RESTN_def,REST_def,HEAD_def,listTheory.HD,listTheory.TL,
-		     PLENGTH_def,GT_xnum_num_def,listTheory.LENGTH]
+                     PLENGTH_def,GT_xnum_num_def,listTheory.LENGTH]
   THEN PAT_ASSUM ``!(s:'state). ?(s':'state). M.R (s,s')`` (fn t => ASSUME_TAC (SPEC ``s:'state`` t))
   THEN FULL_SIMP_TAC std_ss [unc_thm]
   THEN REWRITE_TAC [SELECT_THM]
@@ -212,7 +212,7 @@ THEN CONJ_TAC THENL [
     FULL_SIMP_TAC std_ss [IS_INFINITE_def], (* finite *)
     REWRITE_TAC [HEAD_def]
     THEN PAT_ASSUM ``ELEM (INFINITE (f':num -> 'state)) 0 = ELEM (p:'state path) 1`` (fn t =>
-				REWRITE_TAC [(CONV_RULE (LHS_CONV (SIMP_CONV std_ss [ELEM_def,RESTN_INFINITE,HEAD_def]))) t])
+                                REWRITE_TAC [(CONV_RULE (LHS_CONV (SIMP_CONV std_ss [ELEM_def,RESTN_INFINITE,HEAD_def]))) t])
     THEN PAT_ASSUM ``ELEM (p:'state path) 0 = s`` (fn t => REWRITE_TAC [SYM t])
     THEN ONCE_REWRITE_TAC [DECIDE ``(1:num) = 0 + 1``]
     THEN PAT_ASSUM ``!n. (M :('prop,'state) kripke_structure).R (ELEM p n,ELEM p (n + 1))``
@@ -331,8 +331,8 @@ recInduct (theorem "CTL2MU_ind") THEN REPEAT CONJ_TAC THENL [
 val Nf = Define `(Nf (R:'state # 'state -> bool) (s:'state) (q:'state) (0:num) = s) /\ (Nf R s q (SUC n) = if (n=0) then q else (@r. R(Nf R s q n,r)))`;
 
 val STATES_FV_ENV_INV_SPEC = save_thm("STATES_FV_ENV_INV_SPEC",prove(``!(f: 'prop ctl) (M: ('prop,'state) kripke_structure) X.
-				      (STATES (CTL2MU f) (ctl2muks M)  EMPTY_ENV[[["Q"<--X]]]
-				       = STATES (CTL2MU f) (ctl2muks M) EMPTY_ENV)``,
+                                      (STATES (CTL2MU f) (ctl2muks M)  EMPTY_ENV[[["Q"<--X]]]
+                                       = STATES (CTL2MU f) (ctl2muks M) EMPTY_ENV)``,
 recInduct (theorem "CTL2MU_ind") THEN SIMP_TAC std_ss [FV_CTL2MU,NOT_IN_EMPTY] THEN REPEAT CONJ_TAC THENL [
 recInduct (theorem "BEXP2MU_ind")
 THEN FULL_SIMP_TAC std_ss [STATES_def,BEXP2MU_def,CTL2MU_def],
@@ -349,7 +349,7 @@ THEN SIMP_TAC std_ss [EXTENSION,SET_SPEC]
 THEN SIMP_TAC std_ss [ENV_UPDATE]]));
 
 val Nf3 = Define `(Nf3 (R:'state # 'state -> bool) (x:'state) (q:'state) (0:num) = x)
-	  /\ (Nf3 R x q (SUC n) = if (n=0) then q else (@r. R(Nf3 R x q n,r)))`;
+          /\ (Nf3 R x q (SUC n) = if (n=0) then q else (@r. R(Nf3 R x q n,r)))`;
 
 val CTL2MU_AND_LEM = prove(``!(M: ('prop,'state) kripke_structure) f1 f2 . C_SEM M (C_AND(f1,f2)) = C_SEM M f1 INTER C_SEM M f2``,
 REPEAT GEN_TAC
@@ -368,7 +368,7 @@ THEN SIMP_TAC std_ss [IN_DEF]
 THEN SIMP_TAC std_ss [C_SEM_def]);
 
 val CTL2MU_EG_LEM = prove(``!(M: ('prop,'state) kripke_structure) (f:'prop ctl). TOTAL M.R /\ wfKS (ctl2muks M) ==>
-			  (STATES <<".">> (RV "Q") (ctl2muks M) EMPTY_ENV[[["Q"<--C_SEM M (C_EG f)]]] = C_SEM M (C_EX (C_EG f)))``,
+                          (STATES <<".">> (RV "Q") (ctl2muks M) EMPTY_ENV[[["Q"<--C_SEM M (C_EG f)]]] = C_SEM M (C_EX (C_EG f)))``,
 REPEAT STRIP_TAC
 THEN SIMP_TAC std_ss [EXTENSION]
 THEN GEN_TAC
@@ -412,7 +412,7 @@ THEN EQ_TAC THENL [
    THEN ASM_REWRITE_TAC []]]); (* <== *)
 
 val CTL2MU_EU_LEM = prove(``!(M: ('prop,'state) kripke_structure) (f:'prop ctl) (g:'prop ctl). TOTAL M.R /\ wfKS (ctl2muks M) ==>
-		       (STATES <<".">> (RV "Q") (ctl2muks M) EMPTY_ENV[[["Q"<--C_SEM M (C_EU(f,g))]]] = C_SEM M (C_EX (C_EU(f,g))))``,
+                       (STATES <<".">> (RV "Q") (ctl2muks M) EMPTY_ENV[[["Q"<--C_SEM M (C_EU(f,g))]]] = C_SEM M (C_EX (C_EU(f,g))))``,
 REPEAT STRIP_TAC
 THEN SIMP_TAC std_ss [EXTENSION]
 THEN GEN_TAC
@@ -460,9 +460,9 @@ val GFP_def = Define `
 (GFP M f (SUC n) = C_SEM M f INTER {s | ?s'. M.R(s,s') /\ s' IN GFP M f n})`;
 
 val CTL_GFP_EQ_CTL2MU_GFP = prove(``!(f: 'prop ctl) (s:'state) (M: ('prop,'state) kripke_structure).
-	  ((C_SEM M f = MU_SAT (CTL2MU f) (ctl2muks M) EMPTY_ENV) /\ wfKS (ctl2muks M) )
-	  ==> (BIGINTER {P | ?i. P = GFP M f i}
-	       = BIGINTER {P | ?i. P = FP ((CTL2MU f) /\ <<".">> (RV "Q")) "Q" (ctl2muks M) EMPTY_ENV[[["Q"<--(ctl2muks M).S]]] i})``,
+          ((C_SEM M f = MU_SAT (CTL2MU f) (ctl2muks M) EMPTY_ENV) /\ wfKS (ctl2muks M) )
+          ==> (BIGINTER {P | ?i. P = GFP M f i}
+               = BIGINTER {P | ?i. P = FP ((CTL2MU f) /\ <<".">> (RV "Q")) "Q" (ctl2muks M) EMPTY_ENV[[["Q"<--(ctl2muks M).S]]] i})``,
 REPEAT STRIP_TAC
 THEN MATCH_MP_TAC BIGINTER_LEMMA1
 THEN Induct_on `n` THENL [
@@ -481,10 +481,10 @@ THEN Induct_on `n` THENL [
  THEN SIMP_TAC std_ss [IN_DEF,MU_SAT_def]]);
 
 val CTL_GFP_CLOSURE = prove(``!(f: 'prop ctl) (s:'state) (M: ('prop,'state) kripke_structure).
-	  ((C_SEM M f = MU_SAT (CTL2MU f) (ctl2muks M) EMPTY_ENV) /\ wfKS (ctl2muks M) /\  FINITE (ctl2muks M).S
+          ((C_SEM M f = MU_SAT (CTL2MU f) (ctl2muks M) EMPTY_ENV) /\ wfKS (ctl2muks M) /\  FINITE (ctl2muks M).S
            /\ (!(f: 'prop ctl). IMF (CTL2MU f)))
-	 ==> (s IN BIGINTER {P | ?i. P = GFP M f i}
-	      = (C_SEM M f s /\ ?s'. M.R(s,s') /\ s' IN BIGINTER {P | ?i. P = GFP M f i}))``,
+         ==> (s IN BIGINTER {P | ?i. P = GFP M f i}
+              = (C_SEM M f s /\ ?s'. M.R(s,s') /\ s' IN BIGINTER {P | ?i. P = GFP M f i}))``,
 REPEAT STRIP_TAC
 THEN IMP_RES_TAC  CTL_GFP_EQ_CTL2MU_GFP
 THEN POP_ASSUM (fn t => REWRITE_TAC [t])
@@ -502,7 +502,7 @@ THEN SIMP_TAC std_ss [SET_SPEC]
 THEN SIMP_TAC std_ss [MU_SAT_def,IN_DEF]);
 
 val Nf4_def = Define `(Nf4 (R:'state # 'state -> bool) (P:'state -> bool) (0:num) = (ARB:'state))
-	  /\ (Nf4 R P (SUC n) =  @r. R(Nf4 R P n,r) /\ P r)`;
+          /\ (Nf4 R P (SUC n) =  @r. R(Nf4 R P n,r) /\ P r)`;
 
 
 val P1_def = Define `P1 P R s = R(ARB,s) /\ P s`;
@@ -535,7 +535,7 @@ THEN CONJ_TAC THENL [
   THEN ASSUM_LIST PROVE_TAC]]); (* conj, SUC *)
 
 val Nf5_def = Define `(Nf5 (R:'state # 'state -> bool) (P:'state -> bool) (s:'state) (0:num) = s)
-	  /\ (Nf5 R P s (SUC n) =  @r. R(Nf5 R P s n,r) /\ P r)`;
+          /\ (Nf5 R P s (SUC n) =  @r. R(Nf5 R P s n,r) /\ P r)`;
 
 val P4_def = Define `P4 R P s s' = R(s,s') /\ P s'`;
 val P5_def = Define `P5 R P s n s' = R(Nf5 R P s n,s') /\ P s'`;
@@ -575,7 +575,7 @@ THEN CONJ_TAC THENL [
   REWRITE_TAC [Nf5_def]
   THEN CONJ_TAC THENL [
   MATCH_MP_TAC (DECIDE ``((R:'state # 'state -> bool) (s,@r. R (s,r) /\ (P:'state ->bool) r) /\ P(@r. R (s,r) /\ P r))
-		       ==> (R (s,@r. R (s,r) /\ P r))``)
+                       ==> (R (s,@r. R (s,r) /\ P r))``)
   THEN REWRITE_TAC [GSYM P4_def]
   THEN REWRITE_TAC [SELECT_THM]
   THEN REWRITE_TAC [P4_def]
@@ -585,14 +585,14 @@ THEN CONJ_TAC THENL [
   REWRITE_TAC [Nf5_def]
   THEN REWRITE_TAC [GSYM P5_def]
   THEN MATCH_MP_TAC (DECIDE ``((R:'state # 'state -> bool) ((@r. P5 R (P:'state ->bool) s n r),@r. R ((@r. P5 R P s n r),r) /\ P r)
-			       /\ P (@r. R ((@r. P5 R P s n r),r) /\ P r))
-		     ==> (R((@r. P5 R P s n r),@r. R ((@r. P5 R P s n r),r) /\ P r))``)
+                               /\ P (@r. R ((@r. P5 R P s n r),r) /\ P r))
+                     ==> (R((@r. P5 R P s n r),@r. R ((@r. P5 R P s n r),r) /\ P r))``)
   THEN REWRITE_TAC [GSYM P6_def]
   THEN REWRITE_TAC [SELECT_THM]
   THEN REWRITE_TAC [P5_def,P6_def]
   THEN REWRITE_TAC [GSYM (List.last(CONJUNCTS Nf5_def))]
   THEN POP_ASSUM (fn t => `P (Nf5 (R:'state # 'state -> bool) (P:'state ->bool) s (SUC n))`
-			   by PROVE_TAC [List.last(CONJUNCTS t),GFP_CLOSURE_IMP_EG_LEM1a])
+                           by PROVE_TAC [List.last(CONJUNCTS t),GFP_CLOSURE_IMP_EG_LEM1a])
   THEN ASSUM_LIST PROVE_TAC,
   IMP_RES_TAC GFP_CLOSURE_IMP_EG_LEM1a
   THEN ASSUM_LIST PROVE_TAC] (* conj *)] (* SUC *)] (* conj *));
@@ -609,13 +609,13 @@ val GFP_CLOSURE_IMP_EG_LEM = prove (``!(f: 'prop ctl) (s:'state) (M: ('prop,'sta
 (s IN BIGINTER {P | ?i. P = GFP M f i}) ==> ?p. PATH M p s /\ !n::0 to PLENGTH p. C_SEM M f (ELEM p n)``,
 REPEAT STRIP_TAC
 THEN `!(s :'state). s IN BIGINTER {(P :'state -> bool) | ?(i :num). P = GFP M f i}
-	      = C_SEM M f s /\ ?(s' :'state). M.R (s,s') /\ s' IN BIGINTER {P | ?(i :num). P = GFP M f i}`
+              = C_SEM M f s /\ ?(s' :'state). M.R (s,s') /\ s' IN BIGINTER {P | ?(i :num). P = GFP M f i}`
      by (POP_ASSUM (fn t => ALL_TAC) THEN IMP_RES_TAC CTL_GFP_CLOSURE)
 THEN POP_ASSUM (fn t => ASSUME_TAC (SIMP_RULE std_ss [IN_DEF] t))
 THEN `!(s :'state). BIGINTER {P | ?i. P = GFP M f i} s ==>
             ?f'. (f' 0 = s) /\ !n. M.R (f' n,f' (SUC n)) /\ C_SEM M f (f' n)` by IMP_RES_TAC GFP_CLOSURE_IMP_EG_LEM3
 THEN PAT_ASSUM ``(s :'state) IN BIGINTER {P | ?i. P = GFP M f i}`` (fn t => POP_ASSUM (fn t' =>
-									     ASSUME_TAC (MATCH_MP t' (SIMP_RULE std_ss [IN_DEF] t))))
+                                                                             ASSUME_TAC (MATCH_MP t' (SIMP_RULE std_ss [IN_DEF] t))))
 THEN POP_ASSUM (fn t => POP_ASSUM_LIST (fn t => ALL_TAC) THEN ASSUME_TAC t)
 THEN FULL_SIMP_TAC std_ss []
 THEN EXISTS_TAC ``INFINITE (f':num->'state)``
@@ -638,10 +638,10 @@ val CTL_LFP = Define `
 (LFP M f g (SUC n) = C_SEM M g UNION (C_SEM M f INTER {s | ?s'. M.R(s,s') /\ s' IN LFP M f g n}))`;
 
 val CTL_LFP_EQ_CTL2MU_LFP = prove(``!(f: 'prop ctl) (g: 'prop ctl) (s:'state) (M: ('prop,'state) kripke_structure).
-	  ((C_SEM M f = MU_SAT (CTL2MU f) (ctl2muks M) EMPTY_ENV)
-	   /\ (C_SEM M g = MU_SAT (CTL2MU g) (ctl2muks M) EMPTY_ENV) /\ (wfKS (ctl2muks M)))
-	  ==> (BIGUNION {P | ?i. P = LFP M f g i}
-	       = BIGUNION {P | ?i. P = FP ((CTL2MU g) \/ ((CTL2MU f) /\ <<".">> (RV "Q"))) "Q" (ctl2muks M) EMPTY_ENV[[["Q"<--{}]]] i})``,
+          ((C_SEM M f = MU_SAT (CTL2MU f) (ctl2muks M) EMPTY_ENV)
+           /\ (C_SEM M g = MU_SAT (CTL2MU g) (ctl2muks M) EMPTY_ENV) /\ (wfKS (ctl2muks M)))
+          ==> (BIGUNION {P | ?i. P = LFP M f g i}
+               = BIGUNION {P | ?i. P = FP ((CTL2MU g) \/ ((CTL2MU f) /\ <<".">> (RV "Q"))) "Q" (ctl2muks M) EMPTY_ENV[[["Q"<--{}]]] i})``,
 REPEAT STRIP_TAC
 THEN MATCH_MP_TAC BIGUNION_LEMMA1
 THEN Induct_on `n` THENL [
@@ -740,7 +740,7 @@ THEN Induct_on `p` THENL [
     THEN RES_TAC
     THEN PAT_ASSUM ``C_SEM x y z ==> t`` (fn t => ALL_TAC)
     THEN SUBGOAL_THEN ``(!j. j < (k:num) - 1
-		==> C_SEM (M: ('prop,'state) kripke_structure)  f (ELEM (p:'state path) (j + 1)))`` ASSUME_TAC THENL [
+                ==> C_SEM (M: ('prop,'state) kripke_structure)  f (ELEM (p:'state path) (j + 1)))`` ASSUME_TAC THENL [
      GEN_TAC
      THEN IMP_RES_TAC (DECIDE ``~((k:num)=0) ==> (j<k-1 = j+1<k)``)
      THEN POP_ASSUM (fn _ => POP_ASSUM (fn _ => POP_ASSUM (fn t => REWRITE_TAC [t])))
@@ -750,9 +750,9 @@ THEN Induct_on `p` THENL [
      THEN PAT_ASSUM ``!(j:num). j < (k:num) - 1 ==> C_SEM M f (ELEM (p:'state path) (j + 1))`` (fn t => ALL_TAC)
      THEN FULL_SIMP_TAC std_ss [PATH_def]
      THEN PAT_ASSUM ``!(j:num). j < (k:num)==> C_SEM M f (ELEM (p:'state path) j)``
-					   (fn t => ASSUME_TAC (SPEC ``0:num`` t) THEN ASSUME_TAC t)
+                                           (fn t => ASSUME_TAC (SPEC ``0:num`` t) THEN ASSUME_TAC t)
      THEN PAT_ASSUM ``ELEM (p:'state path) 0 = s`` (fn t => PAT_ASSUM `` 0 < (k:num)  ==> C_SEM M f (ELEM p 0)`` (fn t' =>
-					ASSUME_TAC (REWRITE_RULE [t] t') THEN ASSUME_TAC t))
+                                        ASSUME_TAC (REWRITE_RULE [t] t') THEN ASSUME_TAC t))
      THEN FULL_SIMP_TAC std_ss [DECIDE ``~((k:num)=0) = 0 < k``]
      THEN RES_TAC
      THEN FULL_SIMP_TAC std_ss [SYM (DECIDE ``~((k:num)=0) = 0 < k``)]
@@ -770,8 +770,8 @@ THEN Induct_on `p` THENL [
       THEN ASSUM_LIST PROVE_TAC]]]]]]);
 
 val CTL2MU_LEM = prove(``!(f: 'prop ctl) (M: ('prop,'state) kripke_structure).
-		      ((!(f: 'prop ctl). IMF (CTL2MU f)) /\ TOTAL M.R /\ wfKS (ctl2muks M) /\ FINITE (ctl2muks M).S) ==>
-		      (C_SEM M f = MU_SAT (CTL2MU f) (ctl2muks M) EMPTY_ENV)``,
+                      ((!(f: 'prop ctl). IMF (CTL2MU f)) /\ TOTAL M.R /\ wfKS (ctl2muks M) /\ FINITE (ctl2muks M).S) ==>
+                      (C_SEM M f = MU_SAT (CTL2MU f) (ctl2muks M) EMPTY_ENV)``,
 REWRITE_TAC [FUN_EQ_THM]
 THEN CONV_TAC (STRIP_QUANT_CONV (RIGHT_IMP_FORALL_CONV))
 THEN CONV_TAC (QUANT_CONV SWAP_VARS_CONV)
@@ -792,9 +792,9 @@ THEN PROVE_TAC [IN_UNIV],
 FULL_SIMP_TAC std_ss [ctl2muks_def,KS_accfupds,KS_accessors,KS_fn_updates,B_SEM_def,BEXP2MU_def,STATES_def,wfKS_def,IN_UNIV,DIFF_DEF,SET_SPEC],
 FULL_SIMP_TAC std_ss [ctl2muks_def,KS_accfupds,KS_accessors,KS_fn_updates,B_SEM_def,BEXP2MU_def,STATES_def,wfKS_def,IN_UNIV,INTER_DEF,SET_SPEC]], (* C_BOOL *)
 FULL_SIMP_TAC std_ss [ctl2muks_def,KS_accfupds,KS_accessors,KS_fn_updates,B_SEM_def,BEXP2MU_def,STATES_def,wfKS_def,IN_UNIV,DIFF_DEF,
-		      SET_SPEC,MU_SAT_def,STATES_def,CTL2MU_def,C_SEM_def,B_SEM_def], (* C_NOT *)
+                      SET_SPEC,MU_SAT_def,STATES_def,CTL2MU_def,C_SEM_def,B_SEM_def], (* C_NOT *)
 FULL_SIMP_TAC std_ss [ctl2muks_def,KS_accfupds,KS_accessors,KS_fn_updates,B_SEM_def,BEXP2MU_def,STATES_def,wfKS_def,IN_UNIV,INTER_DEF,
-		      SET_SPEC,MU_SAT_def,STATES_def,CTL2MU_def,C_SEM_def,B_SEM_def], (* C_AND *)
+                      SET_SPEC,MU_SAT_def,STATES_def,CTL2MU_def,C_SEM_def,B_SEM_def], (* C_AND *)
 FULL_SIMP_TAC std_ss [MU_SAT_def,STATES_def,CTL2MU_def,BEXP2MU_def,C_SEM_def,B_SEM_def]
 THEN CONV_TAC (STRIP_QUANT_CONV (RAND_CONV (STRIP_QUANT_CONV (RAND_CONV (LHS_CONV(STRIP_QUANT_CONV (RAND_CONV(RATOR_CONV (REWRITE_CONV [IN_DEF])))))))))
 THEN BETA_TAC
@@ -824,7 +824,7 @@ THEN EQ_TAC THENL [
  ONCE_REWRITE_TAC [DECIDE ``n+1=SUC n``]
  THEN Induct_on `n` THENL [
   SIMP_TAC arith_ss [Nf,ELEM_def,RESTN_def,REST_def,HEAD_def,listTheory.HD,listTheory.TL,
-		     PLENGTH_def,GT_xnum_num_def,listTheory.LENGTH]
+                     PLENGTH_def,GT_xnum_num_def,listTheory.LENGTH]
   THEN REWRITE_TAC [Nf,DECIDE ``1=SUC 0``]
   THEN ASM_REWRITE_TAC [], (* 0 *)
   FULL_SIMP_TAC arith_ss [ELEM_def,RESTN_INFINITE,HEAD_def,TOTAL_def,Nf]
@@ -862,8 +862,8 @@ THEN EQ_TAC THENL [
   THEN POP_ASSUM (fn t => ASSUME_TAC (REWRITE_RULE [GSYM FUN_EQ_THM] (SIMP_RULE std_ss [IN_DEF] t)))
   THEN POP_ASSUM (fn t => FULL_SIMP_TAC std_ss [SYM t])
   THEN FULL_SIMP_TAC std_ss [GSYM CTL2MU_AND_LEM,
-			     REWRITE_RULE [GSYM FUN_EQ_THM]
-					  (GENL [``(M: ('prop,'state) kripke_structure)``,``f:'prop ctl``] EG_LEMMA)]], (* SUC,==>*)
+                             REWRITE_RULE [GSYM FUN_EQ_THM]
+                                          (GENL [``(M: ('prop,'state) kripke_structure)``,``f:'prop ctl``] EG_LEMMA)]], (* SUC,==>*)
   RES_TAC
   THEN POP_ASSUM (fn t => ALL_TAC)
   THEN POP_ASSUM (fn t => ALL_TAC)
@@ -886,13 +886,13 @@ THEN EQ_TAC THENL [
  THEN PAT_ASSUM ``!s. t ==> t'`` (fn t => ALL_TAC)
  THEN PAT_ASSUM ``!s. t ==> t'`` (fn t => ALL_TAC)
  THEN PAT_ASSUM ``!s. C_SEM M g s = s IN STATES (CTL2MU g) (ctl2muks M) EMPTY_ENV``
-		   (fn t=> ASSUME_TAC (SIMP_RULE std_ss [GSYM MU_SAT_def] t))
+                   (fn t=> ASSUME_TAC (SIMP_RULE std_ss [GSYM MU_SAT_def] t))
  THEN POP_ASSUM (fn t=> ASSUME_TAC (REWRITE_RULE [GSYM FUN_EQ_THM] t))
  THEN PAT_ASSUM ``!s. C_SEM M f s = s IN STATES (CTL2MU f) (ctl2muks M) EMPTY_ENV``
-		   (fn t=> ASSUME_TAC (SIMP_RULE std_ss [GSYM MU_SAT_def] t))
+                   (fn t=> ASSUME_TAC (SIMP_RULE std_ss [GSYM MU_SAT_def] t))
  THEN POP_ASSUM (fn t=> ASSUME_TAC (REWRITE_RULE [GSYM FUN_EQ_THM] t))
  THEN `BIGUNION {P | ?i. P = LFP M f g i}
-		   = BIGUNION {P  | ?i. P = FP (CTL2MU g \/ CTL2MU f /\ <<".">> (RV "Q")) "Q" (ctl2muks M) EMPTY_ENV[[["Q"<--{}]]] i}`
+                   = BIGUNION {P  | ?i. P = FP (CTL2MU g \/ CTL2MU f /\ <<".">> (RV "Q")) "Q" (ctl2muks M) EMPTY_ENV[[["Q"<--{}]]] i}`
        by IMP_RES_TAC CTL_LFP_EQ_CTL2MU_LFP
  THEN POP_ASSUM (fn t => REWRITE_TAC [SYM t])
  THEN REWRITE_TAC [CTL_LFP_LEM], (* ==> *)
@@ -919,21 +919,21 @@ THEN EQ_TAC THENL [
   THEN PAT_ASSUM ``!s. C_SEM M g s ==> s IN STATES (CTL2MU g) (ctl2muks M) EMPTY_ENV`` (fn t => ALL_TAC)
   THEN PAT_ASSUM ``!s. s IN STATES (CTL2MU g) (ctl2muks M) EMPTY_ENV ==> C_SEM M g s`` (fn t => ALL_TAC)
   THEN PAT_ASSUM ``!s. C_SEM M f s = s IN STATES (CTL2MU f) (ctl2muks M) EMPTY_ENV``
-				       (fn t => ASSUME_TAC (REWRITE_RULE [GSYM FUN_EQ_THM] (SIMP_RULE std_ss [IN_DEF] t)))
+                                       (fn t => ASSUME_TAC (REWRITE_RULE [GSYM FUN_EQ_THM] (SIMP_RULE std_ss [IN_DEF] t)))
   THEN PAT_ASSUM ``!s. C_SEM M g s = s IN STATES (CTL2MU g) (ctl2muks M) EMPTY_ENV``
-				       (fn t => ASSUME_TAC (REWRITE_RULE [GSYM FUN_EQ_THM] (SIMP_RULE std_ss [IN_DEF] t)))
+                                       (fn t => ASSUME_TAC (REWRITE_RULE [GSYM FUN_EQ_THM] (SIMP_RULE std_ss [IN_DEF] t)))
   THEN POP_ASSUM (fn t => POP_ASSUM (fn t' => FULL_SIMP_TAC std_ss [SYM t,SYM t']))
   THEN FULL_SIMP_TAC std_ss [GSYM CTL2MU_AND_LEM,GSYM CTL2MU_OR_LEM,
-			     (CONV_RULE (RAND_CONV(REWRITE_CONV [GSYM FUN_EQ_THM])))
-				 ((CONV_RULE FORALL_IMP_CONV)
-				      (ISPECL [``(M: ('prop,'state) kripke_structure)``,``f:'prop ctl``,``g:'prop ctl``]
-								     EU_LEMMA))]]]]);
+                             (CONV_RULE (RAND_CONV(REWRITE_CONV [GSYM FUN_EQ_THM])))
+                                 ((CONV_RULE FORALL_IMP_CONV)
+                                      (ISPECL [``(M: ('prop,'state) kripke_structure)``,``f:'prop ctl``,``g:'prop ctl``]
+                                                                     EU_LEMMA))]]]]);
 
 val CTL2MU = save_thm("CTL2MU",SIMP_RULE std_ss [IMF_CTL] CTL2MU_LEM);
 
 val CTL2MU_MODEL = save_thm("CTL2MU_MODEL",prove(``!(f: 'prop ctl) (M: ('prop,'state) kripke_structure).
-		      (TOTAL M.R /\ wfKS (ctl2muks M) /\ FINITE (ctl2muks M).S) ==>
-		      (CTL_MODEL_SAT M f = MU_MODEL_SAT (CTL2MU f) (ctl2muks M) EMPTY_ENV)``,
+                      (TOTAL M.R /\ wfKS (ctl2muks M) /\ FINITE (ctl2muks M).S) ==>
+                      (CTL_MODEL_SAT M f = MU_MODEL_SAT (CTL2MU f) (ctl2muks M) EMPTY_ENV)``,
 REPEAT STRIP_TAC THEN REWRITE_TAC [MU_MODEL_SAT_def,CTL_MODEL_SAT_def]
 THEN CONV_TAC (RHS_CONV (QUANT_CONV (LAND_CONV (REWRITE_CONV[ctl2muks_def]))))
 THEN REWRITE_TAC [combinTheory.K_THM,KS_accfupds]
@@ -941,4 +941,3 @@ THEN METIS_TAC [CTL2MU]))
 
 
 val _ = export_theory();
-

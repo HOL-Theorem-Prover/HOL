@@ -441,9 +441,9 @@ fun stac_to_tac thmpred (tac_dict,inst_dict,thml_dict) stac g =
       (newstac,newtac,!ttt_metis_time)
     end
     )
-  else 
-    let fun find_stac stac = 
-      dfind stac (!tac_dict) handle NotFound => 
+  else
+    let fun find_stac stac =
+      dfind stac (!tac_dict) handle NotFound =>
         let val tac = tactic_of_sml stac in
           tac_dict := dadd stac tac (!tac_dict);
           tac
@@ -452,10 +452,10 @@ fun stac_to_tac thmpred (tac_dict,inst_dict,thml_dict) stac g =
       (stac, find_stac stac, !ttt_tactic_time)
     end
   )
-  handle _ => 
+  handle _ =>
     (debug ("Warning: stac_to_tac: " ^ stac);
      ("Tactical.NO_TAC", NO_TAC, !ttt_tactic_time))
-    
+
 (* --------------------------------------------------------------------------
    Application of a tactic.
    -------------------------------------------------------------------------- *)
@@ -475,7 +475,7 @@ fun apply_stac pid pardict trydict stac g =
     val _ = last_stac := stac
     val _ = stac_counter := !stac_counter + 1
     (* instantiation of theorems and reading *)
-    val (newstac,newtac,tim) = 
+    val (newstac,newtac,tim) =
       stac_to_tac (!thmpredictor_glob) (tac_dict,inst_dict,thml_dict) stac g
     val _ = update_curstac newstac pid
     (* execution *)
@@ -494,7 +494,7 @@ fun apply_stac pid pardict trydict stac g =
           end
       end
     (* updating  *)
-      
+
     (* testing for loops *)
     val newglo = glob_productive pardict trydict g glo
   in
@@ -537,7 +537,7 @@ fun has_empty_pred pid =
 fun mc_node_find pid =
   if Timer.checkRealTimer (valOf (!glob_timer)) > (!ttt_search_time)
   then (debug "Warning: mc_node_find: loop"; raise SearchTimeOut)
-  else  
+  else
     let
       val prec = dfind pid (!proofdict)
       val {children,visit,...} = prec

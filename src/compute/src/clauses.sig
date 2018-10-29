@@ -38,8 +38,8 @@ sig
   and rewrite =
       RW of { cst: term,          (* constant which the rule applies to *)
               lhs: pattern list,  (* patterns = constant args in lhs of thm *)
-	      npv: int,           (* number of distinct pat vars in lhs *)
-	      rhs: db dterm,
+              npv: int,           (* number of distinct pat vars in lhs *)
+              rhs: db dterm,
               thm: Thm.thm }      (* thm we use for rewriting *)
 
   type comp_rws

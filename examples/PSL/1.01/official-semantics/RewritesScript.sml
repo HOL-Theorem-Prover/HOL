@@ -12,9 +12,9 @@
 (*
 quietdec := true;
 map load
- ["SyntaxTheory", "SyntacticSugarTheory", "FinitePathTheory", "PathTheory",
+ ["SyntaxTheory", "SyntacticSugarTheory", "FinitePSLPathTheory", "PSLPathTheory",
    "UnclockedSemanticsTheory","intLib","res_quanTools"];
-open SyntaxTheory SyntacticSugarTheory FinitePathTheory PathTheory
+open SyntaxTheory SyntacticSugarTheory FinitePSLPathTheory PSLPathTheory
      UnclockedSemanticsTheory
      listTheory rich_listTheory intLib res_quanTools;
 val _ = intLib.deprecate_int();
@@ -29,7 +29,7 @@ open HolKernel Parse boolLib bossLib;
 (******************************************************************************
 * Open theories
 ******************************************************************************)
-open SyntaxTheory FinitePathTheory PathTheory UnclockedSemanticsTheory
+open SyntaxTheory FinitePSLPathTheory PSLPathTheory UnclockedSemanticsTheory
      SyntacticSugarTheory listTheory rich_listTheory intLib res_quanTools;
 
 (******************************************************************************

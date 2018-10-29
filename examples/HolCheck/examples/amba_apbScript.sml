@@ -34,17 +34,17 @@ val TRANS_APB_M_def = Rm;
 (* the saddr and sdata vars will go away once we have DI *)
 val Rs = Define `TRANS_APB_S x (^Rps_state,^Rps_state') =
     (psel /\ PSEL x (psel_3,psel_2,psel_1,psel_0) /\ penable ==>
-	(SDATA x (sdata_0',sdata_1') = if pwrite then pdata else SDATA x (sdata_0,sdata_1))) /\
+        (SDATA x (sdata_0',sdata_1') = if pwrite then pdata else SDATA x (sdata_0,sdata_1))) /\
     (psel /\ PSEL x (psel_3,psel_2,psel_1,psel_0) /\ penable ==>
-	(SADDR x (saddr_0',saddr_1') = if pwrite then paddr else SADDR x (saddr_0,saddr_1)))
+        (SADDR x (saddr_0',saddr_1') = if pwrite then paddr else SADDR x (saddr_0,saddr_1)))
 `;
 val TRANS_APB_S_def = Rs;
 
 val Rb = Define `TRANS_BUS x (^Rp_state,^Rp_state') =
   (psel /\ PSEL x (psel_3,psel_2,psel_1,psel_0) /\ ~penable ==>
-						(paddr' = if pwrite then maddr else SADDR x (saddr_0,saddr_1))) /\
+                                                (paddr' = if pwrite then maddr else SADDR x (saddr_0,saddr_1))) /\
   (psel /\ PSEL x (psel_3,psel_2,psel_1,psel_0) /\ ~penable ==>
-						(pdata' = if pwrite then mdata else SDATA x (sdata_0,sdata_1)))
+                                                (pdata' = if pwrite then mdata else SDATA x (sdata_0,sdata_1)))
 `;
 val TRANS_BUS_def = Rb;
 

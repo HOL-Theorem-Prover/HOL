@@ -60,11 +60,11 @@ fn l => fn thm => MP_TAC (SPECL l thm);
 
 val ASSUME_SPECL_INST_TAC =
  fn sl => fn tl => fn thm =>
-	     ASSUME_TAC (SPECL sl (INST_TYPE tl thm))
+             ASSUME_TAC (SPECL sl (INST_TYPE tl thm))
 
 
 val ASSUME_SPECL_GEN_REWRITE_TAC =
  fn (l , thm, simps) => ASSUME_TAC (SPECL
-					l (GEN_ALL (REWRITE_RULE simps thm)));
+                                        l (GEN_ALL (REWRITE_RULE simps thm)));
 
 end

@@ -42,10 +42,10 @@ local
     fun apb_PSEL_proj i = if i<4 then apb_AP ("psel_"^(int_to_string i)) else failwith ("apb_PSEL_proj arg out of range")
 
     fun apb_PSEL' n k =
-	if k=0 then
-	    if n=1 then apb_AP "psel_0" else C_NOT(apb_AP "psel_0")
-	else if n >= intpow 2 k then apb_PSEL_proj k
-	     else C_NOT(apb_PSEL_proj k) C_AND (apb_PSEL' (if n >= intpow 2 k then n-(intpow 2 k) else n) (k-1))
+        if k=0 then
+            if n=1 then apb_AP "psel_0" else C_NOT(apb_AP "psel_0")
+        else if n >= intpow 2 k then apb_PSEL_proj k
+             else C_NOT(apb_PSEL_proj k) C_AND (apb_PSEL' (if n >= intpow 2 k then n-(intpow 2 k) else n) (k-1))
 
     fun apb_PSEL x = apb_PSEL' x 3
 
@@ -54,11 +54,11 @@ local
 
     (* AG (~penable /\ psel /\ pwrite /\ PSEL x ==> AX AX sdata x = mdata) coherence + latency in write cycle *)
     fun ctl_latw n = C_AG ((list_C_AND [C_NOT(apb_AP "penable"),apb_AP "psel",apb_AP "pwrite",apb_PSEL n])
-			     C_IMP ((C_AX (C_AX (apb_SDATA n))) C_IFF (apb_AP "mdata")))
+                             C_IMP ((C_AX (C_AX (apb_SDATA n))) C_IFF (apb_AP "mdata")))
 
     (* AG (~penable /\ psel /\ ~pwrite /\ PSEL x ==> AX AX mdata  = sdata x) coherence + latency in read cycle *)
     fun ctl_latr n = C_AG ((list_C_AND [C_NOT(apb_AP "penable"),apb_AP "psel",C_NOT(apb_AP "pwrite"),apb_PSEL n])
-			     C_IMP ((C_AX (C_AX (apb_AP "mdata")) C_IFF (apb_SDATA n))))
+                             C_IMP ((C_AX (C_AX (apb_AP "mdata")) C_IFF (apb_SDATA n))))
 
     (* AG (AF (psel ==> AX penable)) (the imp is there (not conj) because psel may never assert but that's not deadlock)*)
     val ctl_dlp = C_AG (C_AF ((apb_AP "psel") C_IMP (C_AX (apb_AP "penable"))))
@@ -68,8 +68,8 @@ local
 in
 
 fun mk_apb() =  ((set_init (rhs (concl(Drule.SPEC_ALL INIT_APB_def)))) o (set_trans T1rp) o (set_flag_ric true) o
-		 (set_name "apb") o (set_vord bvmp)o (set_state state) o
-		 (set_props ([("ctl_initp",ctl_initp),("ctl_dlp", ctl_dlp)]@ctl_latr_list@ctl_latw_list))) empty_model
+                 (set_name "apb") o (set_vord bvmp)o (set_state state) o
+                 (set_props ([("ctl_initp",ctl_initp),("ctl_dlp", ctl_dlp)]@ctl_latr_list@ctl_latw_list))) empty_model
 
 end
 
@@ -79,9 +79,3 @@ val bvmb = ["hsel_1","hsel_1'","haddr_0","haddr_0'","hreadyout","hreadyout'","hr
 
 end
 end
-
-
-
-
-
-

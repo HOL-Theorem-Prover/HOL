@@ -45,7 +45,7 @@ val ShiftXor_def =
           ((x << 4) + k0) ?? (x + s) ?? ((x >> 5) + k1)`;
 
 (* --------------------------------------------------------------------------*)
-(*	One round forward computation    				     *)
+(*      One round forward computation                                        *)
 (* --------------------------------------------------------------------------*)
 
 val Round_def =
@@ -54,8 +54,8 @@ val Round_def =
       let s' = s + DELTA in let
           y' = y + ShiftXor(z, s', k0, k1)
       in
-	((y', z + ShiftXor(y', s', k2, k3)),
-	 (k0,k1,k2,k3), s')`;
+        ((y', z + ShiftXor(y', s', k2, k3)),
+         (k0,k1,k2,k3), s')`;
 
 (*---------------------------------------------------------------------------*)
 (* Arbitrary number of cipher rounds                                         *)

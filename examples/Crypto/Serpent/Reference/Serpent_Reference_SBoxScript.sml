@@ -136,9 +136,9 @@ val invSNibble_def = Define
 val invS_S_cancel=Q.store_thm(
 "invS_S_cancel",
 `!round.
-	round<8
-	==>
-	(!n. n<16==> (invS  round (w2n (S round n))=n2w n))`,
+        round<8
+        ==>
+        (!n. n<16==> (invS  round (w2n (S round n))=n2w n))`,
 
 SIMP_TAC arith_ss [BOUNDED_FORALL_THM] THEN
   SRW_TAC [] [SBoxVal, invSBoxVal]);
@@ -146,9 +146,9 @@ SIMP_TAC arith_ss [BOUNDED_FORALL_THM] THEN
 val invSNibble_sNibble_cancel=Q.store_thm(
 "invSNibble_sNibble_cancel",
 `!round w.
-	round<32
-	==>
-	(invSNibble round (sNibble round w)=w)`,
+        round<32
+        ==>
+        (invSNibble round (sNibble round w)=w)`,
 
 SRW_TAC [] [invSNibble_def,sNibble_def,invS_S_cancel,
             WORD_DECIDE ``w2n (w:word4) < 16``]);
@@ -156,13 +156,13 @@ SRW_TAC [] [invSNibble_def,sNibble_def,invS_S_cancel,
 val w4l_fact=Q.store_thm(
 "w4l_fact",
 `!wl round.
-	round<32
-	==>
-	ALL_EL (\x. (invSNibble round o sNibble round) x =x) wl`,
+        round<32
+        ==>
+        ALL_EL (\x. (invSNibble round o sNibble round) x =x) wl`,
 
 Induct_on `wl` THENL [
-	 RW_TAC list_ss [],
-	 RW_TAC list_ss [invSNibble_sNibble_cancel]]);
+         RW_TAC list_ss [],
+         RW_TAC list_ss [invSNibble_sNibble_cancel]]);
 
 
 
@@ -178,9 +178,9 @@ val invSBlock_def=Define
 val invSBlock_sBlock_cancel=Q.store_thm(
 "invSBlock_sBlock_cancel",
 `!w128 round.
-	round <32
-	==>
-	(invSBlock round (sBlock round w128)=w128)`,
+        round <32
+        ==>
+        (invSBlock round (sBlock round w128)=w128)`,
 
 RW_TAC std_ss [invSBlock_def,sBlock_def] THEN
 `LENGTH  (MAP (sNibble round) (word128tow4l w128))=32` by METIS_TAC [LENGTH_MAP,LENGTH_word128tow4l] THEN

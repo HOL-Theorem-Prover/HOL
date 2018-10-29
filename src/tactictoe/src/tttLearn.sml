@@ -38,39 +38,39 @@ fun change_thml thml = case thml of
   | a :: m =>
     (
     if is_thm (String.concatWith " " a)
-    then SOME thml 
+    then SOME thml
     else NONE
     )
 
 fun abstract_thmlarg_loop thmlacc l = case l of
     []       => []
   | "[" :: m =>
-    let 
+    let
       val (el,cont) = split_level "]" m
       val thml = rpt_split_level "," el
     in
       case change_thml thml of
         NONE => "[" :: abstract_thmlarg_loop thmlacc m
-      | SOME x => 
+      | SOME x =>
         (
         thmlacc := map (String.concatWith " ") thml :: !thmlacc;
-        ["[",thmlarg_placeholder,"]"] @ 
+        ["[",thmlarg_placeholder,"]"] @
           abstract_thmlarg_loop thmlacc cont
         )
     end
   | a :: m => a :: abstract_thmlarg_loop thmlacc m
 
 fun pe_abs stac =
-  let 
+  let
     val sl1  = ttt_lex stac
     val lref = ref []
     val sl2  = abstract_thmlarg_loop lref sl1
   in
     (
-    String.concatWith " " sl2, 
+    String.concatWith " " sl2,
     map (List.mapPartial thm_of_sml) (List.rev (!lref))
     )
-  end  
+  end
 
 fun abstract_thmlarg stac =
   if is_thmlarg_stac stac then stac else
@@ -207,10 +207,10 @@ fun inst_stacl thmls g stacl = map (fn x => (x, inst_stac thmls g x)) stacl
  *----------------------------------------------------------------------------*)
 
 fun record_glfea b (g,gl) =
-  if !ttt_recgl_flag 
+  if !ttt_recgl_flag
   then update_glfea (fea_of_goallist gl) (b,(hash_goal g))
   else ()
-  
+
 val (TC_OFF : tactic -> tactic) = trace ("show_typecheck_errors", 0)
 
 fun test_stac g gl (stac, istac) =

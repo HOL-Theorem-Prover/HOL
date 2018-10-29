@@ -110,7 +110,7 @@ val REAL_SUP_MAX = store_thm
     >- PROVE_TAC []
     >> STRIP_TAC
     >> ASSUME_TAC ((SPEC ``P:real->bool`` o CONV_RULE
-		      (DEPTH_CONV EXISTS_UNIQUE_CONV)) REAL_SUP_EXISTS_UNIQUE)
+                      (DEPTH_CONV EXISTS_UNIQUE_CONV)) REAL_SUP_EXISTS_UNIQUE)
     >> RES_TAC);
 
 val REAL_INF_MIN = store_thm

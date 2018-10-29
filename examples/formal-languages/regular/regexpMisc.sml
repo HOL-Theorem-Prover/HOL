@@ -16,12 +16,12 @@ fun spreadlnWith {sep:string, ln:string, width:int} f =
        | spr n [x] = [f x]
        | spr n (h::t) =
           let val hstring = f h
-	   in if n <= 0
+           in if n <= 0
                then hstring::sep::ln::spr width t
                else hstring::sep::spr (n-1) t
            end
  in
-  spr width 
+  spr width
  end;
 
 fun bigUpto b t =

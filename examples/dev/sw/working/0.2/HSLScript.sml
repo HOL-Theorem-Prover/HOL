@@ -189,7 +189,7 @@ val _ = type_abbrev("TCND", Type`:TREG # COND # TROC`);
 val _ = Hol_datatype `
     TOPER = TLDR of TREG => num |
             TSTR of num => TREG |
-	    TMOV of TREG => TROC |
+            TMOV of TREG => TROC |
             TADD of TREG => TROC => TROC |
             TSUB of TREG => TROC => TROC |
             TRSB of TREG => TROC => TROC |
@@ -197,7 +197,7 @@ val _ = Hol_datatype `
             TAND of TREG => TROC => TROC |
             TORR of TREG => TROC => TROC |
             TEOR of TREG => TROC => TROC |
-	    TLSL of TREG => TROC => word5 |
+            TLSL of TREG => TROC => word5 |
             TLSR of TREG => TROC => word5 |
             TASR of TREG => TROC => word5 |
             TROR of TREG => TROC => word5

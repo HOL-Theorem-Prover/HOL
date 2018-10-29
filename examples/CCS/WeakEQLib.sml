@@ -14,8 +14,8 @@ infix 0 OE_THENC OE_ORELSEC;
 
 (******************************************************************************)
 (*                                                                            *)
-(*              Basic functions and conversions for rewriting		      *)
-(*               with the laws for observational equivalence		      *)
+(*              Basic functions and conversions for rewriting                 *)
+(*               with the laws for observational equivalence                  *)
 (*                                                                            *)
 (******************************************************************************)
 
@@ -28,9 +28,9 @@ fun OE_SYM thm = MATCH_MP WEAK_EQUIV_SYM thm;
  *)
 fun OE_TRANS thm1 thm2 =
     if (rhs_tm thm1 = lhs_tm thm2) then
-	MATCH_MP WEAK_EQUIV_TRANS (CONJ thm1 thm2)
+        MATCH_MP WEAK_EQUIV_TRANS (CONJ thm1 thm2)
     else
-	failwith "transitivity of observation equivalence not applicable";
+        failwith "transitivity of observation equivalence not applicable";
 
 (* When applied to a term "t: CCS", the conversion OE_ALL_CONV returns the
    theorem: |- WEAK_EQUIV t t
@@ -60,17 +60,17 @@ fun OE_LHS_CONV_TAC (c :conv) :tactic =
       val (opt, t1, t2) = args_equiv w
   in
       if (opt = ``WEAK_EQUIV``) then
-	  let val thm = MATCH_MP STRONG_IMP_WEAK_EQUIV ((S_DEPTH_CONV c) t1);
-	      val (t1', t') = args_thm thm (* t1' = t1 *)
-	  in
-	      if (t' = t2) then
-		  ([], fn [] => OE_TRANS thm (ISPEC t' WEAK_EQUIV_REFL))
-	      else
-		  ([(asl, ``WEAK_EQUIV ^t' ^t2``)],
-		   fn [thm'] => OE_TRANS thm thm')
-	  end
+          let val thm = MATCH_MP STRONG_IMP_WEAK_EQUIV ((S_DEPTH_CONV c) t1);
+              val (t1', t') = args_thm thm (* t1' = t1 *)
+          in
+              if (t' = t2) then
+                  ([], fn [] => OE_TRANS thm (ISPEC t' WEAK_EQUIV_REFL))
+              else
+                  ([(asl, ``WEAK_EQUIV ^t' ^t2``)],
+                   fn [thm'] => OE_TRANS thm thm')
+          end
       else
-	  failwith "the goal is not an WEAK_EQUIV relation"
+          failwith "the goal is not an WEAK_EQUIV relation"
   end;
 
 fun OE_RHS_CONV_TAC (c :conv) :tactic =
@@ -78,17 +78,17 @@ fun OE_RHS_CONV_TAC (c :conv) :tactic =
       val (opt, t1, t2) = args_equiv w
   in
       if (opt = ``WEAK_EQUIV``) then
-	  let val thm = MATCH_MP STRONG_IMP_WEAK_EQUIV ((S_DEPTH_CONV c) t2);
-	      val (t2', t') = args_thm thm (* t2' = t2 *)
-	  in
-	      if (t' = t1) then
-		  ([], fn [] => OE_SYM thm)
-	      else
-		  ([(asl, ``WEAK_EQUIV ^t1 ^t'``)],
-		   fn [thm'] => OE_TRANS thm' (OE_SYM thm))
-	  end
+          let val thm = MATCH_MP STRONG_IMP_WEAK_EQUIV ((S_DEPTH_CONV c) t2);
+              val (t2', t') = args_thm thm (* t2' = t2 *)
+          in
+              if (t' = t1) then
+                  ([], fn [] => OE_SYM thm)
+              else
+                  ([(asl, ``WEAK_EQUIV ^t1 ^t'``)],
+                   fn [thm'] => OE_TRANS thm' (OE_SYM thm))
+          end
       else
-	  failwith "the goal is not an WEAK_EQUIV relation"
+          failwith "the goal is not an WEAK_EQUIV relation"
   end;
 
 val STRONG_IMP_WEAK_EQUIV_RULE =

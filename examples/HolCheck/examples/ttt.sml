@@ -65,11 +65,11 @@ fun makeTTT n =
       val r = List.map (fn x => Vector.foldr (fn (h,t) => h::t) [] (Array2.row(pm,x))) (List.tabulate (n, (fn x => x)))
       val c = List.map (fn x => Vector.foldr (fn (h,t) => h::t) [] (Array2.column(pm,x))) (List.tabulate (n, (fn x => x)))
       val d1 = List.foldr (fn ((h1,h2),t) => if h1=h2 then h1::t else t) []
-			  (ListPair.zip((List.foldr (fn (h,t) => h @ t) [] r),
-					(List.foldr (fn (h,t) => h @ t) [] c)))
+                          (ListPair.zip((List.foldr (fn (h,t) => h @ t) [] r),
+                                        (List.foldr (fn (h,t) => h @ t) [] c)))
       val d2 = List.foldr (fn ((h1,h2),t) => if h1=h2 then h1::t else t) []
-	  (ListPair.zip((List.foldr (fn (h,t) => h @ t) [] r),
-			(List.rev(List.foldr (fn (h,t) => h @ t) [] c))))
+          (ListPair.zip((List.foldr (fn (h,t) => h @ t) [] r),
+                        (List.rev(List.foldr (fn (h,t) => h @ t) [] c))))
       val aps = List.map (fn l => List.map (fn v => mk_bool_var v) l) (d1::d2::(r @ c))
       val wn = list_mk_disj (List.map list_mk_conj aps)
       val mv = if (pl=0) then (mk_neg(mk_bool_var "m")) else (mk_bool_var "m");
@@ -85,13 +85,13 @@ fun makeTTT n =
     val I1 = list_mk_conj(List.map (fn v => if v="m" then (mk_bool_var v) else mk_neg(mk_bool_var v)) (lam @ lbm @ ["m"]))
 
     (* Function to create a relation to represent a move in which a 'o' or an 'x'    *)
-    (* is placed at x which must have been unoccupied      		             *)
+    (* is placed at x which must have been unoccupied                                *)
     fun make_move_trans (x) =
      let
-     	val (_,unchanged) = List.partition (fn v => mem v [x]) (lam @ lbm);
-     	val cp = if (String.compare(String.substring(x,0,1),"u")=EQUAL)
-     			then (String.concat ["v", String.substring(x,1,String.size(x)-1)])
-     			else (String.concat ["u", String.substring(x,1,String.size(x)-1)])
+        val (_,unchanged) = List.partition (fn v => mem v [x]) (lam @ lbm);
+        val cp = if (String.compare(String.substring(x,0,1),"u")=EQUAL)
+                        then (String.concat ["v", String.substring(x,1,String.size(x)-1)])
+                        else (String.concat ["u", String.substring(x,1,String.size(x)-1)])
      in
      list_mk_conj
       ([mk_neg(mk_bool_var x),
@@ -120,9 +120,9 @@ fun makeTTT n =
       val r = List.map (fn x => Vector.foldr (fn (h,t) => h::t) [] (Array2.row(pm,x))) (List.tabulate (n, (fn x => x)))
       val c = List.map (fn x => Vector.foldr (fn (h,t) => h::t) [] (Array2.column(pm,x))) (List.tabulate (n, (fn x => x)))
       val d1 = List.foldr (fn ((h1,h2),t) => if h1=h2 then h1::t else t) []
-		(ListPair.zip((List.foldr (fn (h,t) => h @ t) [] r),(List.foldr (fn (h,t) => h @ t) [] c)))
+                (ListPair.zip((List.foldr (fn (h,t) => h @ t) [] r),(List.foldr (fn (h,t) => h @ t) [] c)))
       val d2 = List.foldr (fn ((h1,h2),t) => if h1=h2 then h1::t else t) []
-		(ListPair.zip((List.foldr (fn (h,t) => h @ t) [] r),(List.rev(List.foldr (fn (h,t) => h @ t) [] c))))
+                (ListPair.zip((List.foldr (fn (h,t) => h @ t) [] r),(List.rev(List.foldr (fn (h,t) => h @ t) [] c))))
       val aps = List.map (fn l => List.map (fn v => ttt_AP v) l) (d1::d2::(r @ c))
       val wn = list_C_OR (List.map list_C_AND aps)
       val mv = if (pl=0) then C_NOT(ttt_AP "m") else ttt_AP "m";
@@ -151,7 +151,7 @@ fun makeTTT n =
     val fl =[("isInit",isInit),("A_win",A_win),("B_win",B_win),("A_canwin",A_can_win),("B_can_win",B_can_win)]
     (* this is for testing what holCheck does if supplied with both mu and CTL forumlas
      val fl' = [("muisInit",ctl2muTools.ctl2mu ((snd o hd) fl))]@fl@
-	      [("muAcw",ctl2muTools.ctl2mu ((snd o last o butlast) fl))]*)
+              [("muAcw",ctl2muTools.ctl2mu ((snd o last o butlast) fl))]*)
   in
     ((set_init I1) o (set_trans T1) o (set_flag_ric false) o (set_name "ttt") o (set_vord bvm)o (set_state state) o
     (set_props fl)) empty_model
@@ -159,7 +159,3 @@ fun makeTTT n =
 
 end
 end
-
-
-
-

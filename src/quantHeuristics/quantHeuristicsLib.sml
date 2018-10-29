@@ -1,6 +1,6 @@
 structure quantHeuristicsLib :> quantHeuristicsLib =
 struct
 
-open quantHeuristicsLibBase quantHeuristicsLibSimple quantHeuristicsLibParameters quantHeuristicsLibFunRemove 
+open quantHeuristicsLibBase quantHeuristicsLibSimple quantHeuristicsLibParameters quantHeuristicsLibFunRemove
 
 end

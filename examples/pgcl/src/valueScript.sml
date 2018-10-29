@@ -1,5 +1,5 @@
 (* ========================================================================= *)
-(* Create "valueTheory"                   		    	             *)
+(* Create "valueTheory"                                                      *)
 (*                                                                           *)
 (* ========================================================================= *)
 
@@ -50,9 +50,9 @@ val lemma = I prove;
 (* ------------------------------------------------------------------------- *)
 
 val () = Hol_datatype `value =
-		Null
-	      | Int of int
-	      |	Array of value list`;
+                Null
+              | Int of int
+              | Array of value list`;
 
 (* ------------------------------------------------------------------------- *)
 (* Useful Functions for Turning Values into nums or ints                     *)
@@ -168,27 +168,27 @@ val New_Array = Define
 
 val NondetAssign_Array_num_i_def = Define
    `NondetAssign_Array_num_i a i xs =
-	Nondets (MAP (\x. Assign_Array_num_i a i (\s. x)) xs)`;
+        Nondets (MAP (\x. Assign_Array_num_i a i (\s. x)) xs)`;
 
 val NondetAssign_Array_i_def = Define
    `NondetAssign_Array_i a i xs =
-	Nondets (MAP (\x. Assign_Array_i a i (\s. x)) xs)`;
+        Nondets (MAP (\x. Assign_Array_i a i (\s. x)) xs)`;
 
 val ProbAssign_Array_num_i_def = Define
    `ProbProbAssign_Array_num_i a i xs =
-	Probs (MAP (\x. (1/ & (LENGTH xs), Assign_Array_num_i a i (\s. x))) xs)`;
+        Probs (MAP (\x. (1/ & (LENGTH xs), Assign_Array_num_i a i (\s. x))) xs)`;
 
 val ProbAssign_Array_i_def = Define
    `ProbAssign_Array_i a i xs =
-	Probs (MAP (\x. (1/ & (LENGTH xs), Assign_Array_i a i (\s. x))) xs)`;
+        Probs (MAP (\x. (1/ & (LENGTH xs), Assign_Array_i a i (\s. x))) xs)`;
 
 val NondetAssign_Array_extend_def = Define
    `NondetAssign_Array_extend a xs =
-	Nondets (MAP (\x. Assign_Array_extend a (\s. x)) xs)`;
+        Nondets (MAP (\x. Assign_Array_extend a (\s. x)) xs)`;
 
 val ProbAssign_Array_extend_def = Define
    `ProbAssign_Array_extend a xs =
-	Probs (MAP (\x. (1/ & (LENGTH xs), Assign_Array_extend a (\s. x))) xs)`;
+        Probs (MAP (\x. (1/ & (LENGTH xs), Assign_Array_extend a (\s. x))) xs)`;
 
 val For_0_to_n_def = Define
    `For_0_to_n i n l = For i (\s. Int 0) (\s. (int_of_value(s i)) < (int_of_value(s n))) (\s. Int ((int_of_value(s i)) + 1)) l`;

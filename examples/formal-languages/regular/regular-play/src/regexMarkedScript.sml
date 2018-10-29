@@ -197,7 +197,7 @@ val MARK_REG_NOT_HAS_MARKS_thm = store_thm ("MARK_REG_NOT_HAS_MARKS_thm", ``
 val UNMARK_MARK_thm = store_thm ("UNMARK_MARK_thm", ``
          (!mr. (~HAS_MARKS mr) ==> (mr = MARK_REG (UNMARK_REG mr)))
 ``,
-				 
+
   Induct_on `mr` >> (
     FULL_SIMP_TAC (list_ss++MReg_ss) [HAS_MARKS_ALT_DEF, UNMARK_REG_DEFs, MARK_REG_DEFs]
   )
@@ -371,7 +371,7 @@ val FLAT_splitup_thm = store_thm ("FLAT_splitup_thm", ``
   Induct_on `l` >- SIMP_TAC list_ss [] >>
 
   REPEAT STRIP_TAC >>
-  Cases_on `h` >> (FULL_SIMP_TAC list_ss [] >> METIS_TAC [])  
+  Cases_on `h` >> (FULL_SIMP_TAC list_ss [] >> METIS_TAC [])
 );
 
 

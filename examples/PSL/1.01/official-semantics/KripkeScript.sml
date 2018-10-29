@@ -31,8 +31,8 @@ functions on lists (commented out for compilation)
 ******************************************************************************)
 (*
 quietdec := true;
-map load ["PathTheory", "rich_listTheory", "intLib"];
-open PathTheory listTheory rich_listTheory;
+map load ["PSLPathTheory", "rich_listTheory", "intLib"];
+open PSLPathTheory listTheory rich_listTheory;
 val _ = intLib.deprecate_int();
 quietdec := false;
 *)
@@ -45,7 +45,7 @@ open HolKernel Parse boolLib bossLib;
 (******************************************************************************
 * Open theories
 ******************************************************************************)
-open PathTheory listTheory rich_listTheory;
+open PSLPathTheory listTheory rich_listTheory;
 
 (******************************************************************************
 * Set default parsing to natural numbers rather than integers
