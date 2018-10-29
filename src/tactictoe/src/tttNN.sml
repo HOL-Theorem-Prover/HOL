@@ -106,7 +106,6 @@ fun bp_layer (fpdata:fpdata) doutnv =
       let val dav = Vector.map (#da (#layer fpdata)) (#outnv fpdata) in
         mult_rvect dav doutnv
       end
-    (* matrix multiplication *)
     val w        = #w (#layer fpdata)
     fun dw_f i j = Vector.sub (#inv fpdata,j) * Vector.sub (doutv,i)
     val dw       = mat_tabulate dw_f (mat_dim w)
@@ -177,12 +176,12 @@ fun average_bpdatall size bpdatall =
   end
 
 (*---------------------------------------------------------------------------
-  Loss
+  Loss (only used for statistics)
   --------------------------------------------------------------------------- *)
 
 fun calc_loss v =
   let fun square x = (x:real) * x in
-    average_rvect (Vector.map square v)
+    Math.sqrt (average_rvect (Vector.map square v))
   end
 
 fun bp_loss bpdatal = calc_loss (#doutnv (last bpdatal))
@@ -201,8 +200,8 @@ fun clip (a,b) m =
 fun update_layer (layer, layerwu) =
   let
     val w0 = mat_smult (!learning_rate) layerwu
-    val w1 = mat_smult (!decay) (mat_add (#w layer) w0)
-    val w2 = clip (~3.0,3.0) w1
+    val w1 = mat_add (#w layer) w0
+    val w2 = clip (~4.0,4.0) w1
   in
     {a = #a layer, da = #da layer, w = w2}
   end

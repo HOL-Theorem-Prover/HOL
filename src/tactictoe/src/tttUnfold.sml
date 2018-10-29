@@ -1239,7 +1239,8 @@ fun ttt_clean_all () =
   )
 
 (* ---------------------------------------------------------------------------
-   Evaluation (requires recording)
+   Evaluation (todo: rewriting should be done first before everything
+   in the parallel version)
    -------------------------------------------------------------------------- *)
 
 fun ttt_eval_thy thy =

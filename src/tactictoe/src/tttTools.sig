@@ -112,12 +112,14 @@ sig
   val mk_batch         : int -> 'a list -> 'a list list
   val number_partition : int -> int -> int list list   
   val duplicate : int -> 'a list -> 'a list  
+  val indent    : int -> string   
 
   (* statistics *)
   val incr   : int ref -> unit
   val decr   : int ref -> unit
   val sum_real : real list -> real
   val average_real : real list -> real
+  val standard_deviation : real list -> real
   val random_real : unit -> real
   val sum_int : int list -> int
   val int_div : int -> int -> real
@@ -163,6 +165,7 @@ sig
   val erase_file : string -> unit
   val append_endline : string -> string -> unit
   val writel : string -> string list -> unit
+  val writel_path : string -> string -> string list -> unit
 
   (* debug *)
   val debug : string -> unit
@@ -178,8 +181,8 @@ sig
   val ttt_unfold_cthy : string ref
   val debug_unfold : string -> unit
    
-  val dbg_flag : bool ref
-  val dbg_file : string -> string -> unit
+  val dbg_flag  : bool ref
+  val dbg_file  : string -> string -> unit
   val erase_dbg : string -> unit  
 
   (* parse *)

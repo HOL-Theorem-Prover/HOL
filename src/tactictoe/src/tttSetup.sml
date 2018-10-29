@@ -96,14 +96,14 @@ val eprover_save_flag = ref false
    Search
    -------------------------------------------------------------------------- *)
    
-val ttt_mcpol_coeff = ref 0.5
+val ttt_mcpol_coeff   = ref 0.5
 val ttt_mcevnone_flag = ref false
 val ttt_mcevtriv_flag = ref true
-val ttt_mcev_radius = ref 10
+val ttt_mcev_radius   = ref 10
 val ttt_mcevinit_flag = ref false
 val ttt_mcevfail_flag = ref true
-val ttt_mcev_coeff = ref 2.0 
-val ttt_mcev_pint = ref 2
+val ttt_mcev_coeff    = ref 2.0 
+val ttt_mcev_pint     = ref 2
 
 (* --------------------------------------------------------------------------
    Proof presentation

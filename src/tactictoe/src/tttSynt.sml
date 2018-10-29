@@ -104,6 +104,7 @@ fun evalf_to_filterf threshold evalf tml =
     map fst tmscl3
   end
 
+(* slow *)
 fun synthetize filterf (maxgen,maxdepth) cset =
   let
     val tycset = map (fn x => (type_of x, x)) cset

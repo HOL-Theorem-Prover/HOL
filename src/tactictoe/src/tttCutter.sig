@@ -32,8 +32,9 @@ sig
   val cutter_mk_startpos : term -> cutter_board pos
   (* policy and evaluation function *)
   val cutter_fevalpoli : 
-    term list * term list ->
-    tttNNtree.treenn * tttNNtree.treenn ->
+    term list ->
+    (tttNNtree.treenn * tttNNtree.treenn) *
+             (tttNNtree.treenn * tttNNtree.treenn) ->
     cutter_board pos -> real * (cutter_move * real) list
   (* status function *)
   val is_refl   : goal -> bool 
@@ -41,9 +42,7 @@ sig
   val is_subs   : goal -> bool
   val is_apterm : goal -> bool
   val is_primitive : term list -> goal -> bool
-  val cutter_status_of : 
-    term list -> 
-    (cutter_board, cutter_move) tree -> cutter_board pos -> tttMCTS.status
+  val cutter_status_of : term list ->  cutter_board pos -> tttMCTS.status
 
   (* apply_move function *)
   val cutter_apply_move : 
@@ -52,16 +51,44 @@ sig
   (* statistics *)
   datatype wintree = Wleaf of int list | Wnode of (int list * wintree list)
   val winning_tree : (cutter_board, cutter_move) tree -> int list -> wintree
+  val success_rate : 
+    (term * (cutter_board, cutter_move) tree) list -> int 
+
+  (* mcts wrapper *)
+  val cutter_mcts :  int * real ->
+           term list ->
+             (tttNNtree.treenn * tttNNtree.treenn) *
+             (tttNNtree.treenn * tttNNtree.treenn) ->
+               term list ->
+                 cutter_board tttMCTS.pos ->
+                   (cutter_board, cutter_move) tttMCTS.tree
+
   
-  (* creating training sets *)
-  val prepare_gentnn_data : 
-    term list -> (term * (cutter_board, cutter_move) tree) list -> 
-    (term * real) list
-  val prepare_judgetnn_data : 
-    (term * (cutter_board, cutter_move) tree) list -> 
-    (term * real) list
+  (* collecting examples from big steps *)
+  val list_collect_exl : 
+     int * real ->
+           int ->
+             term list ->
+ (tttNNtree.treenn * tttNNtree.treenn) *
+             (tttNNtree.treenn * tttNNtree.treenn) ->
+                 term list ->
+                   term list ->
+                     (
+                     (term * real) list * (term * real) list *
+                     (term * real) list * (term * real) list) list
 
+  
+  val wrap_train_treenn : int * (term * int) list -> (term * real) list -> tttNNtree.treenn
 
+  (* reinforcement learning loop 
+  val rl_gen : int ->
+           term list * term list ->
+             term list ->
+               term list ->
+                 int * 'a ->
+                   tttNNtree.opdict * tttNN.nn * tttNN.nn ->
+                     tttNNtree.opdict * tttNNtree.nn * tttNNtree.nn
 
+*)
 
 end

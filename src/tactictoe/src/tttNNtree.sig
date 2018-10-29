@@ -23,10 +23,13 @@ include Abbrev
      dw     : real vector vector}
  
   (* Tree NN *) 
-  type treenn = ((term * int),nn) Redblackmap.dict * nn
+  type opdict = ((term * int),nn) Redblackmap.dict
+  type treenn = opdict * nn
 
   (* initialization of the treenn *)
-  val random_treenn : (int * int) -> (term * int) list -> treenn
+  val random_headnn : int -> nn
+  val random_opdict : int -> (term * int) list -> opdict
+  val random_treenn : int -> (term * int) list -> treenn
   
   (* forward and backward propagation *)
   val fp_treenn : treenn -> term list ->
@@ -38,18 +41,24 @@ include Abbrev
     term list * real vector ->
     (term * int, bpdata list list) Redblackmap.dict * bpdata list
   
-  (* inference *)
-  val apply_treenn : treenn -> term -> (real * real list)
-   
   (* training set *)
+  val add_bias    : real vector -> real vector
   val order_subtm : term -> term list 
+  val norm_vect   : real vector -> real vector
+  val denorm_vect : real vector -> real vector
   val prepare_trainset   : 
     (term * (real * real list)) list -> (term list * real vector) list
+  val prepare_trainsetone : 
+    (term * real) list -> (term list * real vector) list
   val cal_of_prepset     : 
     (term list * real vector) list -> (term * int) list
-  val string_of_trainset : 
-    (term * (real * real list)) list -> string
-
+  
+  (* inference *)
+  val embdict_glob      : (term, real vector) Redblackmap.dict ref
+  val embed_cache       : opdict -> term -> real vector
+  val eval_treenn       : treenn -> term -> real
+  val eval_treenn_cache : treenn -> term -> real
+ 
   (* training *)
   val train_treenn_nepoch : 
     int -> int -> treenn -> int ->
@@ -63,14 +72,18 @@ include Abbrev
     treenn
 
   (* printing *)
-  val string_of_treenn : treenn -> string
+  val string_of_treenn   : treenn -> string
+  val string_of_trainset : (term * (real * real list)) list -> string
+  val string_of_trainsetone : (term * real) list -> string  
 
-  (* training set helpers *)
-  val create_boolcastl : term list -> term list
-  val cast_to_bool     : term list -> term -> term
-  val io_to_nnterm     : term * term -> term
-  val goal_to_nnterm   : goal -> term
-  val cut_to_nntml     : term list -> (goal * term) -> term list
-  val cal_of_term      : term -> (term * int) list
+  (* input terms *)
+  val goallist_to_nnterm : goal list -> term
+  val forget_to_nnterm   : (goal * term) -> term
+  val cut_to_nnterm      : (goal * term) -> term
+  val initcut_to_nnterm  : (goal * term) -> term
+  val buildcut_to_nnterm : ((goal * term) * term) -> term
+
+  (* operators *)
+  val operl_of_term : term -> (term * int) list
 
 end

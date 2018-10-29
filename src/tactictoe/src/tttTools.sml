@@ -82,7 +82,7 @@ fun hide_out f x =
    -------------------------------------------------------------------------- *)
 
 fun mkDir_err dir = 
-  OS.FileSys.mkDir dir 
+  OS.FileSys.mkDir dir
   handle Interrupt => raise Interrupt
        | _         => ()
        
@@ -329,7 +329,9 @@ fun number_partition m n =
   end
 
 fun duplicate n l = 
-  List.concat (map (fn x => List.tabulate (n, fn _ => x)) l);
+  List.concat (map (fn x => List.tabulate (n, fn _ => x)) l)
+
+fun indent n = implode (duplicate n [#" "])
 
 (* ---------------------------------------------------------------------------
    Parsing
@@ -383,6 +385,14 @@ fun list_imax l = case l of
 fun sum_int l = case l of [] => 0 | a :: m => a + sum_int m
 
 fun average_real l = sum_real l / Real.fromInt (length l)
+
+fun standard_deviation l = 
+  let 
+    val mean     = average_real l
+    val variance = average_real (map (fn x => (x - mean) * (x - mean)) l)
+  in
+    Math.sqrt variance
+  end
 
 fun int_div n1 n2 = 
    (if n2 = 0 then 0.0 else Real.fromInt n1 / Real.fromInt n2) 
@@ -589,6 +599,29 @@ fun writel file sl =
     app (fn s => TextIO.output (oc, s ^ "\n")) sl;
     TextIO.closeOut oc
   end
+
+fun ancestors_path path = 
+  let val dir = OS.Path.getParent path in
+    if dir = "." orelse dir = "/" 
+    then [] 
+    else dir :: ancestors_path dir
+  end
+
+fun mkPathDir dir path = 
+  let 
+    val l0 = rev (ancestors_path path)
+    val l1 = map (fn x => (OS.Path.concat (dir,x))) l0 
+  in
+    app mkDir_err l1
+  end
+  
+fun writel_path dir path sl =
+  (
+  mkPathDir dir path;
+  writel (OS.Path.concat (dir,path)) sl
+  )
+  
+
 
 fun append_file file s =
   let val oc = TextIO.openAppend file in

@@ -1,6 +1,6 @@
 (* ========================================================================== *)
 (* FILE          : tttXO.sml                                                  *)
-(* DESCRIPTION   : Execute SML strings                                        *)
+(* DESCRIPTION   : MCTS example                                        *)
 (* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck             *)
 (* DATE          : 2017                                                       *)
 (* ========================================================================== *)

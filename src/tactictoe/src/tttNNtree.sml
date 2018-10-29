@@ -1,9 +1,9 @@
-(* ========================================================================== *)
-(* FILE          : tttNNtree.sml                                              *)
-(* DESCRIPTION   : Tree neural network                                        *)
-(* AUTHOR        : (c) Thibault Gauthier, Czech Technical University          *)
-(* DATE          : 2018                                                       *)
-(* ========================================================================== *)
+(* ========================================================================= *)
+(* FILE          : tttNNtree.sml                                             *)
+(* DESCRIPTION   : Tree neural network                                       *)
+(* AUTHOR        : (c) Thibault Gauthier, Czech Technical University         *)
+(* DATE          : 2018                                                      *)
+(* ========================================================================= *)
 
 structure tttNNtree :> tttNNtree =
 struct
@@ -13,44 +13,77 @@ open HolKernel boolLib Abbrev tttTools tttMatrix tttNN
 val ERR = mk_HOL_ERR "tttNNtree"
 val dbg = dbg_file "tttNNtree"
 
-(*---------------------------------------------------------------------------
-  Initialization
-  --------------------------------------------------------------------------- *)
+(* -------------------------------------------------------------------------
+   Initialization
+   ------------------------------------------------------------------------- *)
 
-type treenn = ((term * int),nn) Redblackmap.dict * nn
+type opdict = ((term * int),nn) Redblackmap.dict
+type treenn = opdict * nn
 
 fun const_nn dim activ arity =
   if arity = 0
   then random_nn activ activ [1,dim]
   else random_nn activ activ [arity * dim + 1, dim, dim]
 
-fun random_treenn (dim,poln) cal =
+fun random_opdict dim cal =
   let val l = map_assoc (fn (_,a) => const_nn dim (tanh,dtanh) a) cal in
-    (dnew (cpl_compare Term.compare Int.compare) l,
-     random_nn (tanh,dtanh) (tanh,dtanh) [dim+1,dim,1+poln])
+    dnew (cpl_compare Term.compare Int.compare) l
   end
 
-(*---------------------------------------------------------------------------
-  Forward propagation
-  --------------------------------------------------------------------------- *)
+fun random_headnn dim =
+  random_nn (tanh,dtanh) (tanh,dtanh) [dim+1,dim,1]
 
-fun fp_treenn_aux opdict fpdict tml = case tml of
+fun random_treenn dim cal = (random_opdict dim cal, random_headnn dim)
+
+fun string_of_opdictone ((oper,a),nn) =
+  term_to_string oper ^ " " ^ int_to_string a ^ "\n\n" ^ string_of_nn nn 
+
+fun string_of_opdict opdict =
+  String.concatWith "\n\n\n" (map string_of_opdictone (dlist opdict))
+
+fun string_of_treenn (opdict,headnn) = 
+  "head\n\n" ^ string_of_nn headnn ^ "\n\n\n" ^ string_of_opdict opdict
+
+(* -------------------------------------------------------------------------
+   Formatting the input
+   ------------------------------------------------------------------------- *)
+
+fun order_subtm tm =
+  let
+    fun f x =
+      let val (_,argl) = strip_comb x in
+        (x, mk_fast_set Term.compare argl) :: List.concat (map f argl)
+      end
+    fun cmp (a,b) = Term.compare (fst a, fst b)
+    fun g x = mk_fast_set cmp (f x)
+  in
+    topo_sort (g tm)
+  end
+
+fun norm_vect v = Vector.map (fn x => 2.0 * (x - 0.5)) v
+fun denorm_vect v = Vector.map (fn x => 0.5 * x + 0.5) v
+
+(* -------------------------------------------------------------------------
+   Forward propagation
+   ------------------------------------------------------------------------- *)
+
+fun fp_opdict opdict fpdict tml = case tml of
     []      => fpdict
   | tm :: m =>
     let
       val (f,argl) = strip_comb tm
       val nn = dfind (f,length argl) opdict
-        handle NotFound => raise ERR "fp_treenn" (term_to_string tm)
+        handle NotFound => raise ERR "fp_treenn" ""
       val invl = map (fn x => #outnv (last (dfind x fpdict))) argl
       val inv = Vector.concat (Vector.fromList [1.0] :: invl)
       val fpdatal = fp_nn nn inv
     in
-      fp_treenn_aux opdict (dadd tm fpdatal fpdict) m
+      fp_opdict opdict (dadd tm fpdatal fpdict) m
     end
 
 fun fp_treenn (opdict,headnn) tml =
   let
-    val fpdict = fp_treenn_aux opdict (dempty Term.compare) tml
+    val fpdict = fp_opdict opdict (dempty Term.compare) tml
     val invl = [#outnv (last (dfind (last tml) fpdict))]
     val inv = Vector.concat (Vector.fromList [1.0] :: invl)
     val fpdatal = fp_nn headnn inv
@@ -58,9 +91,55 @@ fun fp_treenn (opdict,headnn) tml =
     (fpdict, fpdatal)
   end
 
-(*---------------------------------------------------------------------------
-  Backward pass
-  --------------------------------------------------------------------------- *)
+(* -------------------------------------------------------------------------
+   Forward propagation with cache
+   ------------------------------------------------------------------------- *)
+
+val embdict_glob = ref (dempty Term.compare)
+
+fun fp_opdict_cache opdict embdict tml = case tml of
+    []      => embdict
+  | tm :: m =>
+    if dmem tm embdict 
+    then fp_opdict_cache opdict embdict m
+    else
+      let
+        val (f,argl) = strip_comb tm
+        val nn = dfind (f,length argl) opdict
+          handle NotFound => raise ERR "fp_treenn" ""
+        val invl = map (fn x => dfind x embdict) argl
+        val inv = Vector.concat (Vector.fromList [1.0] :: invl)
+        val emb = #outnv (last (fp_nn nn inv))
+      in
+        fp_opdict_cache opdict (dadd tm emb embdict) m
+      end
+
+fun embed_cache opdict tm =
+  dfind tm (!embdict_glob) handle NotFound =>
+  let  
+    val tml = order_subtm tm 
+    val embdict = fp_opdict_cache opdict (!embdict_glob) tml
+    val embv = dfind tm embdict
+  in
+    if dlength (!embdict_glob) > 10000000 
+      then print_endline "cache is full"
+      else embdict_glob := embdict;
+    embv
+  end
+
+fun add_bias v = Vector.concat [Vector.fromList [1.0], v]
+
+fun fp_treenn_cache (opdict,headnn) tm =
+  let
+    val embv = embed_cache opdict tm
+    val inv  = add_bias embv
+  in
+    #outnv (last (fp_nn headnn inv))
+  end
+
+(* -------------------------------------------------------------------------
+   Backward propagation
+   ------------------------------------------------------------------------- *)
 
 fun dsave (k,v) d =
   let val oldl = dfind k d handle NotFound => [] in
@@ -84,9 +163,7 @@ fun bp_treenn_aux dim doutnvdict fpdict bpdict revtml = case revtml of
           val dinvl       = map Vector.fromList (mk_batch dim (tl dinv))
         in
           (operbpdatal, combine (argl,dinvl))
-          handle HOL_ERR _ => 
-            raise ERR "bp_treenn" ((term_to_string tm) ^ " " ^
-              int_to_string (length argl) ^ " " ^ int_to_string (length dinvl))
+          handle HOL_ERR _ => raise ERR "bp_treenn" ""
         end
       val rl            = map f doutnvl
       val operbpdatall  = map fst rl
@@ -110,28 +187,20 @@ fun bp_treenn dim (fpdict,fpdatal) (tml,expectv) =
     (bp_treenn_aux dim doutnvdict fpdict bpdict (rev tml), bpdatal)
   end
 
-(*---------------------------------------------------------------------------
-  Training data
-  --------------------------------------------------------------------------- *)
-
-fun order_subtm tm =
-  let
-    fun f x =
-      let val (_,argl) = strip_comb x in
-        (x, mk_fast_set Term.compare argl) :: List.concat (map f argl)
-      end
-    fun cmp (a,b) = Term.compare (fst a, fst b)
-    fun g x = mk_fast_set cmp (f x)
-  in
-    topo_sort (g tm)
-  end
-
-fun norm_vect v = Vector.map (fn x => 2.0 * (x - 0.5)) v
-fun denorm_vect v = Vector.map (fn x => 0.5 * x + 0.5) v
+(* -------------------------------------------------------------------------
+   Training data
+   ------------------------------------------------------------------------- *)
 
 fun prepare_trainset trainset =
   let fun f (cj,(eval,poli)) = 
     (order_subtm cj, norm_vect (Vector.fromList (eval :: poli)))
+  in
+    map f trainset
+  end
+
+fun prepare_trainsetone trainset =
+  let fun f (cj,eval) = 
+    (order_subtm cj, norm_vect (Vector.fromList [eval]))
   in
     map f trainset
   end
@@ -147,20 +216,12 @@ fun cal_of_prepset prepset =
     mk_fast_set (cpl_compare Term.compare Int.compare) (map f l)
   end
 
-fun apply_treenn treenn tm = 
-  let 
-    val (_,fpdatal) = fp_treenn treenn (order_subtm tm)
-    val v = denorm_vect (#outnv (last fpdatal))
-    val l = tttMatrix.vector_to_list v
-  in
-    (hd l, tl l)
-  end
-
+(* debugging *)
 fun string_of_trainset trainset =
   let 
     fun cmp (x,y) = Real.compare (fst (snd x),fst (snd y))
     val l = dict_sort cmp trainset
-    fun sr x = Real.toString (approx 2 x)
+    fun sr x = Real.toString (approx 4 x)
     fun f (cj,(eval,poli)) =
       term_to_string cj ^ ":\n  " ^ sr eval ^ "\n  " ^
       String.concatWith " " (map sr poli)
@@ -168,9 +229,41 @@ fun string_of_trainset trainset =
     String.concatWith "\n" (map f l)
   end
 
-(*---------------------------------------------------------------------------
-  Training
-  --------------------------------------------------------------------------- *)
+fun string_of_trainsetone trainset =
+  let 
+    val l = dict_sort compare_rmin trainset
+    fun sr x = Real.toString (approx 4 x)
+    fun f (cj,eval) = term_to_string cj ^ ":\n  " ^ sr eval
+  in
+    String.concatWith "\n" (map f l)
+  end
+
+
+
+(* -------------------------------------------------------------------------
+   Inference
+   ------------------------------------------------------------------------- *)
+
+fun eval_treenn treenn tm = 
+  let 
+    val (_,fpdatal) = fp_treenn treenn (order_subtm tm)
+    val v = denorm_vect (#outnv (last fpdatal))
+  in
+    Vector.sub (v,0)
+  end
+
+(* cached versions *)
+fun eval_treenn_cache treenn tm = 
+  let 
+    val v' = fp_treenn_cache treenn tm
+    val v  = denorm_vect v'
+  in
+    Vector.sub (v,0)
+  end
+
+(* -------------------------------------------------------------------------
+   Training a treenn for some epochs
+   ------------------------------------------------------------------------- *)
 
 fun train_treenn_one dim treenn (tml,expectv) =
   let
@@ -215,7 +308,7 @@ fun update_opernn bsize opdict (oper,bpdatall) =
 fun train_treenn_batch dim (treenn as (opdict,headnn)) batch =
   let
     val (bpdictl,bpdatall) =
-      split (parmap 3 (train_treenn_one dim treenn) batch)
+      split (map (train_treenn_one dim treenn) batch)
     val bsize = length batch
     val (newheadnn,loss) = update_head bsize headnn bpdatall
     val bpdict    = merge_bpdict bpdictl
@@ -259,98 +352,83 @@ fun train_treenn_schedule dim treenn bsize prepset schedule =
       train_treenn_schedule dim trainedtreenn bsize prepset m
     end
 
-(*---------------------------------------------------------------------------
-  Printing
-  --------------------------------------------------------------------------- *)
+(* -------------------------------------------------------------------------
+   Input terms for the tree neural networks
+   ------------------------------------------------------------------------- *)
 
-fun string_of_treenn (opdict,headnn) = 
-  let fun f ((oper,arity),nn) = 
-    term_to_string oper ^ " " ^ int_to_string arity ^ "\n\n" ^ 
-    string_of_nn nn 
-  in
-    String.concatWith "\n\n\n" 
-      (("head\n\n" ^ string_of_nn headnn) :: map f (dlist opdict))
-  end
+(* new operators *)
+val seq_sym      = mk_var ("seq_sym", ``:bool -> bool -> bool``)
+val asm_cat      = mk_var ("asm_cat", ``:bool -> bool -> bool``)
+val goal_cat     = mk_var ("goal_cat", ``:bool -> bool -> bool``)
+val forget_relation = 
+  mk_var ("forget_relation", ``:bool -> bool -> bool``)
+val cut_relation = 
+  mk_var ("cut_relation", ``:bool -> bool -> bool``)
+val initcut_relation = 
+  mk_var ("initcut_relation", ``:bool -> bool -> bool``)
+val buildcut_relation = 
+  mk_var ("buildcut_relation", ``:bool -> bool -> bool``)
 
-
-(*---------------------------------------------------------------------------
-  Input modifiers. Helpers for building training set.
-  --------------------------------------------------------------------------- *)
-
-fun is_true _ = true
-val seq_sym     = mk_var ("seq_sym", ``:bool -> bool -> bool``)
-val asm_cat     = mk_var ("asm_cat", ``:bool -> bool -> bool``)
-val io_relation = mk_var ("io_relation", ``:bool -> bool -> bool``)
-fun mk_seq (a,b) = list_mk_comb (seq_sym,[a,b])
-fun mk_asm (a,b) = list_mk_comb (asm_cat,[a,b])
-fun list_mk_asm (asm,asml)  = case asml of
+(* contructors for those operators *)
+fun mk_seqsym (a,b) = list_mk_comb (seq_sym,[a,b])
+fun mk_asmcat (a,b) = list_mk_comb (asm_cat,[a,b])
+fun list_mk_asmcat (asm,asml)  = case asml of
     []     => asm
-  | a :: m => mk_asm (asm, list_mk_asm (a,m))
+  | a :: m => mk_asmcat (asm, list_mk_asmcat (a,m))
 fun strip_asml tm = case strip_comb tm of
     (a,[b,c]) => (if a <> asm_cat then [tm] else b :: strip_asml c)  
   | _         => [tm]
+fun mk_goalcat (a,b) = list_mk_comb (goal_cat,[a,b])
+fun list_mk_goalcat (tm,tml)  = case tml of
+    []     => tm
+  | a :: m => mk_goalcat (tm, list_mk_goalcat (a,m))
 
-
-(* goal_to_nn term *)
-fun goal_to_nnterm (asm,w) = 
-  (
-  case asm of
+(* representing a goal as a nnterm *)
+fun goal_to_nnterm (asm,w) = case asm of
     []     => w
-  | a :: m => mk_seq (list_mk_asm (a,m),w)
-  )
-  handle HOL_ERR _ => raise ERR "goal_to_nnterm" (string_of_goal (asm,w))
+  | a :: m => mk_seqsym (list_mk_asmcat (a,m),w)
 
-(* problem to term *)
-fun io_to_nnterm (interm,outterm) =
-  list_mk_comb (io_relation,[interm,outterm])
-  handle HOL_ERR _ => 
-    raise ERR "io_to_nnterm" 
-      (term_to_string interm ^ " ## " ^  term_to_string outterm)
+fun goallist_to_nnterm gl = case map goal_to_nnterm gl of
+    []     => raise ERR "goallist_to_nnterm" ""
+  | a :: m => list_mk_goalcat (a,m)
 
+(* board state/move to nnterm transformation *)
+fun forget_to_nnterm (g,t) =
+  list_mk_comb (forget_relation, [goal_to_nnterm g, t])
 
-(* casting a term to a formula *)
-fun create_boolcastl tml =
-  let    
-    val subtml = List.concat (map (find_terms is_true) tml)
-    val tyl  = mk_fast_set Type.compare (map type_of subtml)
-    fun f i x = 
-      mk_var ("bool_cast" ^ int_to_string i, mk_type ("fun",[x,bool]))
-  in
-    mapi f tyl
-  end
+fun cut_to_nnterm (g,t) = 
+  list_mk_comb (cut_relation, [goal_to_nnterm g, t])
 
-fun cast_to_bool castl tm =
+fun initcut_to_nnterm (g,t) =
+  list_mk_comb (initcut_relation, [goal_to_nnterm g, t])
+
+fun buildcut_to_nnterm ((g,t1),t2) =
+  list_mk_comb (buildcut_relation, [cut_to_nnterm (g,t1), t2])
+
+(* -------------------------------------------------------------------------
+   Set of operators of a tree neural network
+   ------------------------------------------------------------------------- *)
+
+fun fo_terms tm = 
+  let val (oper,argl) = strip_comb tm in 
+    tm :: List.concat (map fo_terms argl)
+  end  
+
+val extra_operators = 
+  [(seq_sym,2),(asm_cat,2),(goal_cat,2),
+   (forget_relation,2),
+   (cut_relation,2),
+   (initcut_relation,2),
+   (buildcut_relation,2)]
+
+fun operl_of_term tm = 
   let 
-    fun test x =
-      can mk_comb (x,tm) andalso type_of (mk_comb (x,tm)) = bool
-    val caster = valOf (List.find test castl)
-  in
-    mk_comb (caster,tm)
-  end
-  handle HOL_ERR _ => 
-    raise ERR "cast_to_bool" (term_to_string tm)
-
-
-(* cut to term list *)
-fun cut_to_nntml castl (g,cut) = 
-  let 
-    val interm  = goal_to_nnterm g
-    val subtml1 = find_terms is_true cut
-    val subtml2 = map (cast_to_bool castl) subtml1
-  in
-    map (fn x => io_to_nnterm (interm,x)) subtml2
-  end
-
-(* creating the set of constant constructor for the nn *)
-
-fun cal_of_term tm = 
-  let 
-    val tml = find_terms (fn _ => true) tm
+    val tml = mk_fast_set Term.compare (fo_terms tm)
     fun f x = let val (oper,argl) = strip_comb x in (oper, length argl) end  
   in
+    extra_operators ::
     mk_fast_set (cpl_compare Term.compare Int.compare) (map f tml)
   end
-
 
 end (* struct *)
 
@@ -389,4 +467,44 @@ val embedding0 = dfind (``0``,0) (fst treenn1);
 *)
 
 
+(* casting a term to a formula 
+fun create_boolcastl tml =
+  let    
+    val subtml = List.concat (map (find_terms is_true) tml)
+    val tyl  = mk_fast_set Type.compare (map type_of subtml)
+    fun f i x = 
+      mk_var ("bool_cast" ^ int_to_string i, mk_type ("fun",[x,bool]))
+  in
+    mapi f tyl
+  end
+
+fun cast_to_bool castl tm =
+  let 
+    fun test x =
+      can mk_comb (x,tm) andalso type_of (mk_comb (x,tm)) = bool
+    val caster = valOf (List.find test castl)
+  in
+    mk_comb (caster,tm)
+  end
+  handle HOL_ERR _ => 
+    raise ERR "cast_to_bool" (term_to_string tm)
+
+
+(* problem to term *)
+fun io_to_nnterm (interm,outterm) =
+  list_mk_comb (io_relation,[interm,outterm])
+  handle HOL_ERR _ => 
+    raise ERR "io_to_nnterm" 
+      (term_to_string interm ^ " ## " ^  term_to_string outterm)
+
+(* cut to term list *)
+fun cut_to_nntml castl (g,cut) = 
+  let 
+    val interm  = goal_to_nnterm g
+    val subtml1 = find_terms is_true cut
+    val subtml2 = map (cast_to_bool castl) subtml1
+  in
+    map (fn x => io_to_nnterm (interm,x)) subtml2
+  end
+*)
 

@@ -147,10 +147,9 @@ fun tac_createdict thml =
     dnew String.compare tacl
   end 
 
-(*
-  ---------------------------------------------------------------------------
-  Search wrappers
-  --------------------------------------------------------------------------- *)
+(* --------------------------------------------------------------------------
+   Search wrappers
+   -------------------------------------------------------------------------- *)
 
 fun tac_mcts_aux fevalpoli tacdict nsim cj =
   let
@@ -207,15 +206,6 @@ fun trainset_of cjtreel =
 fun preevalpoli treenn pos = case pos of
     (true, SOME [g]) => apply_treenn treenn (list_mk_imp g)
   | _                => raise ERR "preevalpoli1" ""
-
-fun merge_trainset trainset1 trainset2 =
-  let 
-    val trainsetd2 = dnew Term.compare trainset2
-    fun overwritten (cj,_) = dmem cj trainsetd2
-    val newtrainset1 = filter (not o overwritten) trainset1
-  in
-    trainset1 @ trainset2
-  end
 
 fun train_ngen ntot cal tacdict nsim epochn dim bsize cjl =
   let

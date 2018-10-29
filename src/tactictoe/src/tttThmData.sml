@@ -1,5 +1,5 @@
 (* ========================================================================== *)
-(* FILE          : tttThmData.sml                                               *)
+(* FILE          : tttThmData.sml                                             *)
 (* DESCRIPTION   :                                                            *)
 (*                                                                            *)
 (* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck             *)

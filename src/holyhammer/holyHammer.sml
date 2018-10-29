@@ -199,7 +199,7 @@ fun parallel_call t fl =
     val rt = Timer.startRealTimer ()
     fun loop () =
       (
-      OS.Process.sleep (Time.fromReal 0.2);
+      OS.Process.sleep (Time.fromReal 0.01);
       if isSome (!parallel_result) orelse 
          not (exists Thread.isActive threadl) orelse
          Timer.checkRealTimer rt  > Time.fromReal t

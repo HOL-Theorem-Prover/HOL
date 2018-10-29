@@ -131,7 +131,7 @@ fun init_eval pripol pid =
   end
 
 (* --------------------------------------------------------------------------
-   MCTS: Backpropagation
+   MCTS: Backup (works marginally with number of failures)
    -------------------------------------------------------------------------- *)
 
 fun backup_loop beval eval cid =
@@ -227,9 +227,9 @@ fun root_create goal pred =
   in
     debug_search "Root";
     debug_search ("  goal: " ^
-          String.concatWith "," (map string_of_goal [goal]));
+      String.concatWith "," (map string_of_goal [goal]));
     debug_search ("  pred: \n  " ^
-       String.concatWith ",\n  " (map (string_of_pred o (first_n 2)) [pred]));
+      String.concatWith ",\n  " (map (string_of_pred o (first_n 2)) [pred]));
     proofdict := dadd selfid selfrec (!proofdict);
     init_eval 0.0 selfid
   end
@@ -512,7 +512,7 @@ fun try_mc_find () =
     end
 
 (* ---------------------------------------------------------------------------
-   Closing proofs
+   Closing proofs (should not need that with a proper search mechanism)
    -------------------------------------------------------------------------- *)
 
 fun children_of pid =
