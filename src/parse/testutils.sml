@@ -80,9 +80,10 @@ val red = checkterm "\027[31m"
 val dim = checkterm "\027[2m"
 val clear = checkterm "\027[0m"
 
+val FAILEDstr = "\027[2CFAILED!"
 val really_die = ref true;
 fun die s =
-  (tadd (boldred s ^ "\n");
+  (tadd (boldred FAILEDstr ^ "\n" ^ s);
    if (!really_die) then OS.Process.exit OS.Process.failure
    else raise (Fail ("DIE:" ^ s)))
 fun OK () = print (boldgreen "OK" ^ "\n")
@@ -112,8 +113,6 @@ in
 end
 end (* local *)
 
-val FAILEDstr = "\027[2CFAILED!"
-
 fun tppw width {input=s,output,testf} = let
   val _ = tprint (testf s)
   val t = Parse.Term [QUOTE s]
@@ -121,7 +120,7 @@ fun tppw width {input=s,output,testf} = let
   fun f s = String.translate (fn #" " => UTF8.chr 0x2423 | c => str c) s
 in
   if res = output then OK() else
-  die (FAILEDstr ^ "\n  Saw:\n    >|" ^ clear (f res) ^
+  die ("  Saw:\n    >|" ^ clear (f res) ^
        boldred "|<\n  rather than \n    >|" ^ clear (f output) ^ boldred "|<\n")
 end
 fun tpp s = tppw (!linewidth) {input=s,output=s,testf=standard_tpp_message}
@@ -140,7 +139,7 @@ fun timed f check x =
   end
 
 fun exncheck f (Res a) = f a
-  | exncheck f (Exn e) = die (FAILEDstr ^ "\n  EXN: "^General.exnMessage e)
+  | exncheck f (Exn e) = die ("  Unexpected EXN:\n    "^General.exnMessage e)
 
 fun convtest (nm,conv,tm,expected) =
   let
@@ -188,9 +187,9 @@ fun require_msg P pr f x =
           if P res then OK()
           else
             case res of
-                Exn e => die (FAILEDstr ^ "\n  Unexpected exception:\n    " ^
+                Exn e => die ("  Unexpected exception:\n    " ^
                               General.exnMessage e)
-              | Res y => die (FAILEDstr ^ "\n  Unexpected result:\n    " ^ pr y)
+              | Res y => die ("  Unexpected result:\n    " ^ pr y)
     in
       timed f check x
     end

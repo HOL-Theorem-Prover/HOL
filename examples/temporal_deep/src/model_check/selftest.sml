@@ -23,18 +23,18 @@ val result1 = “LTL_EQUIVALENT_INITIAL
 fun modelCheck_test1 () = let
     val test1 = model_check___ltl_equivalent_initial ltl1 ltl2;
 in
-    (if (aconv (concl (valOf test1)) result1) then OK ()
-     else die ("FAILED!\n  Got " ^ term_to_string (concl (valOf test1)));
-     Process.system ("rm " ^ (!model_check_temp_file)))
+  if aconv (concl (valOf test1)) result1 then OK ()
+  else die ("Got " ^ term_to_string (concl (valOf test1)));
+  Process.system ("rm " ^ (!model_check_temp_file)))
 end;
 
 fun modelCheck_test2 () = let
-    val test2 = model_check___ltl_equivalent ltl1 ltl2;
+  val test2 = model_check___ltl_equivalent ltl1 ltl2;
 in
-    (if (isSome test2) then
-         die ("FAILED!\n  Got " ^ term_to_string (concl (valOf test2)))
-     else OK ();
-     Process.system ("rm " ^ (!model_check_temp_file)))
+  if (isSome test2) then
+    die ("Got " ^ term_to_string (concl (valOf test2)))
+  else OK ();
+  Process.system ("rm " ^ (!model_check_temp_file)))
 end;
 
 val _ = modelCheck_test1 ();

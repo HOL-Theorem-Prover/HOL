@@ -8,9 +8,8 @@ fun test0 n_t =
   let
     val _ = tprint ("Composite test on "^Parse.term_to_string n_t)
     val nprime_n = mk_neg (mk_comb(prime_t, n_t))
-    fun c th = if aconv nprime_n (concl th) then OK() else die "FAILED!"
   in
-    timed COMPOSITE_PROVER (exncheck c) n_t
+    require (check_result (aconv nprime_n o concl)) COMPOSITE_PROVER n_t
   end
 
 fun mkN n = numSyntax.mk_numeral (Arbnum.fromInt n)
