@@ -185,7 +185,7 @@ val TBL2N_inj_len = Q.store_thm("TBL2N_inj_len",
 `∀x y.(LENGTH x = LENGTH y) ==> (TBL2N x = TBL2N y <=> x=y)`,
 Induct_on`x` >> simp[] >> Cases_on`y` >> simp[] >> rw[tbl2n_append_1] >> 
 `TBL2N t < 2** LENGTH t` by  (metis_tac[tbl2n_ub,LENGTH_REVERSE]) >>  
-`TBL2N x < 2** LENGTH t` by  (metis_tac[tbl2n_ub,LENGTH_REVERSE]) >>fs[] );
+`TBL2N x < 2** LENGTH t` by  (metis_tac[tbl2n_ub,LENGTH_REVERSE]) >>simp[]);
 
 val TBL2N_lem1 = Q.store_thm("TBL2N_lem1",
 `∀δ. δ<2**Δ ==> ∃l. TBL2N l = δ ∧ LENGTH l = Δ ∧ TBL2N (i++Fpow Δ) +δ = TBL2N (i++l)`,
@@ -215,9 +215,10 @@ val prefix_length_lt = Q.store_thm("prefix_length_lt",
 rw[prefix_def] >> `LENGTH a <= LENGTH b` by fs[rich_listTheory.IS_PREFIX_LENGTH] >> 
 Cases_on`LENGTH a = LENGTH b` >> simp[] >> metis_tac[rich_listTheory.IS_PREFIX_LENGTH_ANTI])
 
+
 val tbl2n_append = Q.store_thm("tbl2n_append",
 `tbl2n (p++s) = 2**LENGTH p * (tbl2n s) +tbl2n p`,
-Induct_on`p` >> simp[] >> Cases_on`h` >> simp[ADD1,EXP_ADD,LEFT_ADD_DISTRIB])
+Induct_on`p` >> simp[] >> Cases_on`h` >> rw[GSYM ADD1,EXP,LEFT_ADD_DISTRIB] )
 
 val TBL2N_append = Q.store_thm("TBL2N_append",
 `TBL2N (p++s) = 2**LENGTH s * (TBL2N p) +TBL2N s`,
@@ -335,21 +336,27 @@ val interval_bl_sigma = Q.store_thm("interval_bl_sigma",
 SIGMA (λa. SND (interval_bl a)) {x | x ∈ P} = SIGMA (λa. 2 rpow -&LENGTH a) {x | x ∈ P} `,
 rw[] >> irule REAL_SUM_IMAGE_EQ >> rw[] >> simp[interval_bl_def]);
 
+
+fun fsr thl = full_simp_tac(srw_ss () ++ realSimps.REAL_ARITH_ss) thl;
+
+
+
 val disjoint_interval_thm = Q.store_thm("disjoint_interval_thm",
 `disjoint_interval (interval_bl i) (interval_bl j) ==> 
 FST (interval_bl i) + SND (interval_bl i) <= FST (interval_bl j) ∨ 
 FST (interval_bl j) + SND (interval_bl j) <= FST (interval_bl i)`,
-rw[interval_bl_def,disjoint_interval_def,DISJOINT_DEF,EXTENSION] >> 
-Cases_on` &TBL2N i * 2 rpow -&LENGTH i + 2 rpow -&LENGTH i < &TBL2N j * 2 rpow -&LENGTH j` >> simp[]>>
-qmatch_abbrev_tac`jj+jd<ii:real` >> qabbrev_tac`id=2 rpow -&LENGTH i` >> spose_not_then assume_tac >>
-fs[REAL_NOT_LT,REAL_NOT_LE]  >> 
-first_x_assum(fn th => qspec_then`jj` assume_tac th >> qspec_then`ii` assume_tac th) >> fs[] >>
+rw[interval_bl_def,disjoint_interval_def,DISJOINT_DEF,EXTENSION,PULL_EXISTS] >> 
+Cases_on` &TBL2N i * 2 rpow -&LENGTH i + 2 rpow -&LENGTH i < &TBL2N j * 2 rpow -&LENGTH j` >> 
+fsr[]>> 
+qabbrev_tac`id=2 rpow -&LENGTH i` >> qmatch_abbrev_tac`_ ∨ jj+jd<=ii:real` >>
+spose_not_then assume_tac >>
+fsr[REAL_NOT_LT,REAL_NOT_LE]  >> 
+first_x_assum(fn th => qspec_then`jj` assume_tac th >> qspec_then`ii` assume_tac th) >> fsr[]
 >- (`id<= 0` by metis_tac[REAL_LE_LADD,REAL_ADD_RID] >> 
     `0<id` suffices_by metis_tac[REAL_LET_TRANS,REAL_LT_REFL] >> simp[Abbr`id`,RPOW_POS_LT])
->- (full_simp_tac(srw_ss () ++ realSimps.REAL_ARITH_ss)[])
->- (`id<=0` by full_simp_tac(srw_ss () ++ realSimps.REAL_ARITH_ss)[])  )
+>- (`jd<= 0` by metis_tac[REAL_LE_LADD,REAL_ADD_RID] >> 
+    `0<jd` suffices_by metis_tac[REAL_LET_TRANS,REAL_LT_REFL] >> simp[Abbr`jd`,RPOW_POS_LT]) )
 
-fun fsr thl = full_simp_tac(srw_ss () ++ realSimps.REAL_ARITH_ss) thl;
 
 val max_rs_lemma = Q.prove(`∀s. FINITE s ==> s<>{} ==> ∃x:real. x∈s ∧ ∀y. y∈s ==> y<=x`,
 Induct_on`FINITE` >>rw[] >> Cases_on`s={}` >> fs[] >> qexists_tac`max e x` >> fsr[max_def] >> rw[]
@@ -506,10 +513,6 @@ val exten_sing = Q.store_thm("exten_sing[simp]",
 `exten {e} = (FST e,FST e + SND e)`,
 fs[exten_def])
 
-(*  In progress of proving *)
-
-(*
-
 val size_of_exten = Q.prove(
 `∀s. FINITE s ==> (∀x dx y dy. (x,dx)∈s ∧ (y,dy) ∈ s ∧ (x,dx)<>(y,dy) ==> x+dx<=y ∨ y+dy<=x) ∧
               (∀x d. (x,d)∈s ==> 0r<d) ∧ (s <> {}) 
@@ -521,9 +524,10 @@ map_every qabbrev_tac[`Rs = {FST k + SND k | k∈s}`,`Ls = {FST k |k∈s}`]>>
 `∃e1 e2. (e1,e2)∈s ∧ ∀m. m∈ Ls ==> e1<=m` 
   by (qexists_tac `minr_set Ls` >> qexists_tac`@e'. (minr_set Ls,e')∈s` >> reverse(rw[])
       >- (metis_tac[minr_set_def]) >> SELECT_ELIM_TAC >> simp[] >> 
-      `minr_set Ls ∈ Ls` by  >> fs[Abbr`Ls`] >> metis_tac[pairTheory.PAIR]) >>
+      `minr_set Ls ∈ Ls` by metis_tac[minr_set_def] >> fs[Abbr`Ls`] >> 
+      metis_tac[pairTheory.PAIR]) >>
 qabbrev_tac`s0 = s DELETE (e1,e2)` >> Cases_on`s0={}` >> simp[] 
-  >- (`s = {(e1,e2)}` by cheat >> rw[REAL_SUM_IMAGE_THM] >> fsr[]) >> 
+  >- (`s = {(e1,e2)}` by (metis_tac[DELETE_EQ_SING]) >> rw[REAL_SUM_IMAGE_THM] >> fsr[]) >> 
 `s0 ⊂ s` by (fs[Abbr`s0`,PSUBSET_MEMBER]>> metis_tac[]) >> last_x_assum drule >> impl_tac
   >- (rw[Abbr`s0`] >> metis_tac[]) >> `s = (e1,e2) INSERT s0` by fs[Abbr`s0`] >> 
 `s0 DELETE (e1,e2) = s0` by fs[Abbr`s0`,ELT_IN_DELETE,DELETE_NON_ELEMENT] >>
@@ -531,65 +535,60 @@ fsr[REAL_SUM_IMAGE_THM] >>
 `SND (exten s0) - FST (exten s0) <=  SND (exten ((e1,e2) INSERT s0)) − FST (exten ((e1,e2) INSERT s0)) - e2` suffices_by fsr[] >> 
 fsr[exten_def,exten_insert_thm,REAL_SUM_IMAGE_THM,DELETE_NON_ELEMENT_RWT] >>
 map_every qabbrev_tac [`MX = maxr_set {FST k + SND k | k ∈ s0}`,`MN = minr_set  {FST k | k ∈ s0}`]>>
-
-
-`∃n. (MN,n)∈s0` by (fs[Abbr`MN`] >> `minr_set {FST k | k∈ s0} ∈ {FST k | k∈s0}` by fs[minr_set_def,Abbr`s0`]  >> metis_tac[pairTheory.PAIR])
-
+map_every qabbrev_tac[`Rs0 = {FST k + SND k | k∈s0}`,`Ls0 = {FST k |k∈s0}`] >>
+`FINITE Ls0` by metis_tac[IMAGE_FINITE,IMAGE_DEF] >>
+`Ls0 <> {}` by metis_tac[IMAGE_EQ_EMPTY,IMAGE_DEF] >>
+`MN ∈ Ls0` by metis_tac[minr_set_def] >>
+`∃n. (MN,n)∈s0` by (`∃p. p∈s0 ∧ FST p = MN` suffices_by (rw[] >> metis_tac[pairTheory.PAIR]) >>
+                    pop_assum MP_TAC >> simp[Abbr`Ls0`] >> metis_tac[]) >>
+`MN ∈ Ls` by (simp[Abbr`Ls`] >>metis_tac[pairTheory.FST]) >>
 rw[max_def,min_def] >> fsr[]
->- (`e1 + e2 <= MN` suffices_by fsr[] >>  
-    `@e'. (FST (exten s0),e')∈s` by fs[]
-    first_x_assum(qspecl_then[`e1`,`e2`,`FST (exten s0)`,@e'. (FST (exten s0),e')∈s] MP_TAC) >> simp[] rw[] )
->- ()
->- ()
->- ()
+>- (`e1 + e2 <= MN` suffices_by fsr[] >> 
+    first_x_assum(qspecl_then[`e1`,`e2`,`MN`,`n`] MP_TAC) >> simp[] >> impl_tac
+    >- (rpt strip_tac >> rw[] >> rw[Abbr`s0`] >> fs[]) >> strip_tac >> `e1<=MN` by fs[]>>
+     `0<n` suffices_by fsr[] >> metis_tac[]  )
+>- (`MX < e1+e2` by fsr[] >> `FINITE Rs0` by metis_tac[IMAGE_FINITE,IMAGE_DEF] >>
+    `Rs0 <> {}` by metis_tac[IMAGE_EQ_EMPTY,IMAGE_DEF] >>`MX ∈ Rs0` by metis_tac[maxr_set_def]>>
+    `∃i j. (i,j)∈s0 ∧ MX = i+j` by (pop_assum MP_TAC >> simp[Abbr`Rs0`] >> 
+                                    metis_tac[pairTheory.PAIR]) >> 
+    first_x_assum(qspecl_then[`e1`,`e2`,`i`,`j`] MP_TAC) >> simp[] >> impl_tac
+    >- (rpt strip_tac >> rw[] >> rw[Abbr`s0`] >> fs[]) >> strip_tac
+    >- (rw[] >> `0<j` suffices_by fsr[] >> metis_tac[]) >> rw[] >> 
+    `i∈Ls` by (simp[Abbr`Ls`,pairTheory.EXISTS_PROD] >>metis_tac[])>> `e1<=i` by simp[]>>
+    `0<j` suffices_by fsr[] >> metis_tac[]  ) )
 
-`∃e1 e2. e = (e1,e2)` by (Cases_on`e` >> simp[]) >> rw[] >>
-`SIGMA SND s <= SND (exten s) - FST (exten s)` by metis_tac[] >>
-`e2 + SIGMA SND s <= e2 + SND (exten s) - FST (exten s)` by fsr[] >>fs[exten_def] >>
-
-map_every qabbrev_tac [`MX = maxr_set Rs`,`MN = minr_set Ls`] >> fs[Abbr`Ls`,Abbr`Rs`] >>
-
-`FINITE Rs` by metis_tac[IMAGE_FINITE,IMAGE_DEF] >>
-`Rs <> {}` by metis_tac[IMAGE_EQ_EMPTY,IMAGE_DEF]>>
-`MX ∈ Rs ∧ ∀m. m ∈ Rs ==> m <= MX ` by metis_tac[maxr_set_def] >> 
-`FINITE Ls` by metis_tac[IMAGE_FINITE,IMAGE_DEF] >>
-`Ls <> {}` by metis_tac[IMAGE_EQ_EMPTY,IMAGE_DEF]>>
-`MN ∈ Ls ∧ ∀m. m∈Ls ==> MN <= m` by metis_tac[minr_set_def] >>
-`∃n. (MN,n) ∈ s ∧ (∃k1 k2. MX = k1 + k2 ∧ (k1,k2)∈s)` 
-  by (fs[Abbr`Ls`,Abbr`Rs`] >> metis_tac[pairTheory.PAIR])>>rw[] >>qpat_x_assum`MN ∈ _`(K ALL_TAC) >>
-qpat_x_assum`k1+k2∈ _`(K ALL_TAC) >> 
-rw[max_def,min_def] >>
-`(∀x d. (x,d) ∈ s ⇒ 0 < d) ` by metis_tac[] 
->- (`MN <> e1`  
-      by (strip_tac >> `n <> e2` by metis_tac[] >> 
-          first_x_assum(qspecl_then[`e1`,`e2`,`MN`,`n`] MP_TAC) >> simp[] >> 
-          `0<e2 ∧ 0<n` suffices_by fsr[] >> metis_tac[] )
-    `e1 + e2 <= MN` suffices_by fsr[] >> 
-    first_x_assum(qspecl_then[`e1`,`e2`,`MN`,`n`] MP_TAC) >> simp[] >> `0<n`suffices_by fsr[]>>
-    metis_tac[] )
->- (`MN < e1` by fsr[] >> fsr[] >> `MN <> e1` by fsr[] >> 
-    `e1 + e2 <= MN ∨ MN + n <= e1` by fsr[]
-    >- (`e2 < 0` by fsr[] >> fsr[]) >>
-    
-    `MN + n +  <= FST k + SND k` by fsr[] >> 
-        `FST e + SND e <= FST k + SND k` by fsr[] >> Cases_on`FST p = FST k` >> fsr[]
-        >- (`SND e < SND k` by fsr[] >> )
-        >- ()   )
->- ()
->- ()  )
+(*  In progress of proving *)
 
 val lemma1 = Q.prove("lemma1",
 `(let is = IMAGE interval_bl P in ∀i1 i2. i1 ∈ is ∧ i2∈is ∧ i1<>i2 ==> disjoint_interval i1 i2)
  ==>(∀n. bls_size P n <= 1)`,
-rw[EQ_IMP_THM,PULL_EXISTS] >> fs[bls_size_def,interval_bl_def,disjoint_interval_def] >> 
+rw[EQ_IMP_THM,PULL_EXISTS] >> fs[bls_size_def,disjoint_interval_thm] >> 
 `FINITE  {x | x ∈ P ∧ LENGTH x < n}` by metis_tac[finite_and,finite_bool_list_lt_n] >>
-`FINITE {(λy. (&TBL2N y * 2 rpow -&LENGTH y,2 rpow -&LENGTH y)) x | x∈ {z | z ∈ P ∧ LENGTH z <n}}` by 
-  metis_tac[IMAGE_FINITE,IMAGE_DEF] >> fs[] >> 
+`FINITE {(λy. (&TBL2N y * 2 rpow -&LENGTH y,2 rpow -&LENGTH y)) x| x∈ {z | z ∈ P ∧ LENGTH z <n}}`
+ by metis_tac[IMAGE_FINITE,IMAGE_DEF] >> fs[] >> 
 qabbrev_tac`s = {(&TBL2N x * 2 rpow -&LENGTH x,2 rpow -&LENGTH x) |  x ∈ P ∧ LENGTH x < n}` >>
-Cases_on`s={}` >- () >> 
+Cases_on`s={}` 
+>- (`{x | x ∈ P ∧ LENGTH x < n} = {}` by (fs[Abbr`s`] >> 
+      `{(λy. (&TBL2N y * 2 rpow -&LENGTH y,2 rpow -&LENGTH y))  x | x ∈ P ∧ LENGTH x < n} = {}`
+        by simp[] >> 
+      `IMAGE (λx. (&TBL2N x * 2 rpow -&LENGTH x,2 rpow -&LENGTH x)) {x | x ∈ P ∧ LENGTH x < n}
+        = {(λy. (&TBL2N y * 2 rpow -&LENGTH y,2 rpow -&LENGTH y))  x | x ∈ P ∧ LENGTH x < n}`
+        by fs[IMAGE_DEF] >> metis_tac[IMAGE_EQ_EMPTY]) >> fs[REAL_SUM_IMAGE_THM] ) >> 
 `0<= FST (exten s) ∧ SND (exten s) <= 1` by 
-  (irule lemma11 >> rw[]>> fs[Abbr`s`,TBL2N_lb,rpow_len_lb,TBL2N_ub2] >> fs[DISJOINT_DEF,EXTENSION] >>
-   cheat) >>  )
+  (irule lemma11 >> rw[]>> fsr[Abbr`s`,TBL2N_lb,rpow_len_lb,TBL2N_ub2] >> 
+   rw[] >> `x'<>x''` by (metis_tac[FUN_EQ_THM]) >> 
+   `disjoint_interval (interval_bl x') (interval_bl x'')` by simp[] >> 
+   `FST (interval_bl x') + SND (interval_bl x') ≤ FST (interval_bl x'') ∨
+     FST (interval_bl x'') + SND (interval_bl x'') ≤ FST (interval_bl x')` by 
+     simp[disjoint_interval_thm]  >> fs[interval_bl_def] ) >>
+`SIGMA (λa. 2 rpow -&LENGTH a) {x|x∈{x | x ∈ P ∧ LENGTH x < n}}=
+  SIGMA (λa. SND (interval_bl a)) {x|x∈{x | x ∈ P ∧ LENGTH x < n}}` by (fs[interval_bl_sigma]) >>
+fs[] >> `SIGMA (λs. SND (interval_bl s)) {x | x ∈ P ∧ LENGTH x < n} = 
+         SIGMA (λx. x) (IMAGE (λa. SND (interval_bl a)) {x | x ∈ P ∧ LENGTH x < n})` by 
+         (irule REAL_SUM_IMAGE_IMAGE)
+
+rw[Once interval_bl_def]
+fs[interval_bl_def,disjoint_interval_def] >> simp[REAL_SUM_IMAGE_DISJOINT_UNION] )
 
 
 val kraft_ineq1 = Q.store_thm("kraft_ineq1",
@@ -768,6 +767,6 @@ rw[LESS_EQ_TRANS,solomonoff_thm_claim_11,solomonoff_thm_claim_2])
  *)
 
 
-*)
+
 
 val _ = export_theory();
