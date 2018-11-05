@@ -23,7 +23,6 @@ fun summary s =
 
 fun erase_log () = (erase_file logfile; erase_file sumfile)
 
-
 (* -------------------------------------------------------------------------
    Global fixed parameters
    ------------------------------------------------------------------------- *)
@@ -62,12 +61,10 @@ fun string_of_status status = case status of
 type 'a pos    = bool * 'a
 type 'b choice = (('b * real) * int list)
 
-
 type ('a,'b) node = 
 {
   pol    : 'b choice list,
   pos    : 'a pos,
-  id     : int list,
   sum    : real,
   vis    : real,
   status : status
@@ -85,10 +82,9 @@ fun access_child tree (_,cid) =
 fun access_poli tree pol = filter (access_child tree) pol
 
 (* -------------------------------------------------------------------------
-   Backup
+   Backup: not efficient but conceptually simple
    ------------------------------------------------------------------------- *)
 
-(* not efficient but conceptually simple *)
 fun quant_status quant status tree pol = 
   let 
     val cidl    = map snd pol 
@@ -103,7 +99,7 @@ fun all_lose tree pol    = quant_status all Lose tree pol
 fun exists_win tree pol  = quant_status exists Win tree pol
 fun exists_lose tree pol = quant_status exists Lose tree pol
 
-fun update_node decay tree eval {pol,pos,id,sum,vis,status} =
+fun update_node decay tree eval {pol,pos,sum,vis,status} =
   let 
     val newstatus =
       if status = Undecided then
@@ -117,7 +113,7 @@ fun update_node decay tree eval {pol,pos,id,sum,vis,status} =
            Undecided)
       else status
   in
-    {pol=pol, pos=pos, id=id, sum=sum + decay * eval, vis=vis+1.0, status=newstatus} 
+    {pol=pol, pos=pos, sum=sum + decay * eval, vis=vis+1.0, status=newstatus} 
   end
 
 fun backup decay tree (id,eval) =
@@ -133,7 +129,7 @@ fun backup decay tree (id,eval) =
 
 (*
   ---------------------------------------------------------------------------
-  Node creation
+  Node creation.
   --------------------------------------------------------------------------- *)
 
 fun node_create_backup decay fevalpoli status_of tree (id,pos) =
@@ -145,7 +141,7 @@ fun node_create_backup decay fevalpoli status_of tree (id,pos) =
       | Lose      => ((0.0,[]),Lose) 
       | Undecided => (fevalpoli pos,Undecided)
     val node           = 
-      {pol=wrap_poli poli, pos=pos, id=id, sum=0.0, vis=0.0, status=status}
+      {pol=wrap_poli poli, pos=pos, sum=0.0, vis=0.0, status=status}
     val tree1 = dadd id node tree
     val tree2 = backup_timer (backup decay tree1) (id,eval)
   in
@@ -216,23 +212,55 @@ fun expand decay fevalpoli status_of apply_move tree (id,cid) =
    MCTS
    ------------------------------------------------------------------------- *)
 
-fun mcts (nsim,decay) fevalpoli status_of apply_move startpos =
-  let
-    val tree0 = dempty (list_compare Int.compare)
-    val tree1 = node_create_backup decay 
-      fevalpoli status_of tree0 ([0],startpos)
-    fun loop nsim tree =
-      if nsim <= 0 orelse 
+fun starttree_of decay fevalpoli status_of startpos =
+  let val empty_tree = dempty (list_compare Int.compare) in
+    node_create_backup decay fevalpoli status_of empty_tree ([0],startpos)
+  end
+
+fun mcts (nsim,decay) fevalpoli status_of apply_move starttree =
+  let 
+    fun loop tree =
+      if dlength tree > nsim orelse 
          #status (dfind [0] tree) <> Undecided then tree else
       let
         val (id,cid) = select_timer (select_child tree) [0]
         val newtree  = expand decay 
           fevalpoli status_of apply_move tree (id,cid)
       in
-        loop (nsim - 1) newtree
+        loop newtree
       end
   in
-    loop nsim tree1
+    loop starttree
+  end
+
+(* -------------------------------------------------------------------------
+   Changing the root of the tree to an arbitrary node. Allow reuse of
+   the trees during bigsteps.
+   ------------------------------------------------------------------------- *)
+
+fun remove_prefix prefix l = case (prefix,l) of
+    ([],_) => l
+  | (_,[]) => raise ERR "remove_prefix" ""
+  | (a1 :: m1, a2 :: m2) => 
+    if a1 = a2 then remove_prefix m1 m2 else raise ERR "remove_prefix" ""
+
+fun remove_suffix_add0 suffix l = 
+  rev (0 :: (remove_prefix (rev suffix) (rev l)))
+
+fun cut_tree tree suffix =
+  let
+    val l0 = dlist tree
+    fun change_entry (id,{pol,pos,sum,vis,status}) =
+      let 
+        fun f x = remove_suffix_add0 suffix x
+        val newid = f id
+        val newpol = map_snd f pol
+      in
+        (newid, {pol=newpol, pos=pos, sum=sum, vis=vis, status=status})
+      end
+    val l1 = mapfilter change_entry l0
+  in
+    dnew (list_compare Int.compare) l1
   end
 
 (* -------------------------------------------------------------------------
@@ -254,9 +282,14 @@ fun wtree_of tree id =
       else Wnode (id, map (wtree_of tree) cidl1)
   end
 
+fun list_imax l = case l of 
+    [] => raise ERR "list_imax" ""
+  | [a] => a
+  | a :: m => Int.max (a, list_imax m) 
+
 fun depth_of_wtree wtree = case wtree of
-    Wleaf => 1
-  | Wnode (t1,t2) => Int.max (depth_of_wtree t1, depth_of_wtree t2) + 1
+    Wleaf _ => 1
+  | Wnode (_,treel) => list_imax (map depth_of_wtree treel) + 1
   
 fun best_child tree id =
   let 
@@ -282,48 +315,96 @@ fun node_variation tree id =
 
 fun root_variation tree = node_variation tree [0] 
 
+(* Statistics 
+val cidvisits = map_assoc (visit_count tree) (map snd (#pol node))
+    val _ = if length cidvisits > 0 then print_distrib cidvisits else ()
+    val _ = if #status node = Win then 
+      log ("  Proof depth: " ^ 
+        int_to_string (depth_of_wtree (wtree_of tree id)))
+      else ()
+*)
+
+
 (* -------------------------------------------------------------------------
-   Choosing a big step
+   Creating the distribution
    ------------------------------------------------------------------------- *)
 
-fun move_win tree cid =
-  #status (dfind cid tree) = Win handle NotFound => false
-
-fun visit_of_child tree cid = 
-  if not (dmem cid tree) 
-  then NONE
-  else SOME (cid, #vis (dfind cid tree))
+fun move_win tree cid = #status (dfind cid tree) = Win
+fun move_lose tree cid = #status (dfind cid tree) = Lose
 
 fun print_distrib l = 
   log ("  " ^ String.concatWith " " (map (Real.toString o approx 4 o snd) l))
 
-(* could still contain critical bugs *)
-fun proba_child tree id =
+(* Player1 *)
+fun p1_distrib tree cidl =
+  if exists (move_win tree) cidl then
+    map_assoc (fn x => if move_win tree x then SOME 1.0 else NONE) cidl
+  else if all (move_lose tree) cidl then
+    map_assoc (fn x => SOME (#vis (dfind x tree))) cidl
+  else 
+    map_assoc (fn x => if move_lose tree x 
+      then NONE else SOME (#vis (dfind x tree))) cidl
+
+(* Player 2 *)
+fun p2_distrib tree cidl =
+  if exists (move_lose tree) cidl then
+    map_assoc (fn x => if move_lose tree x then SOME 1.0 else NONE) cidl
+  else if all (move_win tree) cidl then
+    map_assoc (fn x => SOME (#vis (dfind x tree))) cidl
+  else 
+    map_assoc (fn x => if move_win tree x 
+      then NONE else SOME (#vis (dfind x tree))) cidl
+
+(* Wrap with innaccessible *)
+fun inac_distrib f tree cidl =
   let 
-    val node  = dfind id tree
-    val cidl0 = map snd (#pol node) 
-    val poliwin = map_assoc (move_win tree) cidl0 
-    val _ = if #status = Win then 
-      log ("  Proof depth: " ^ 
-        int_to_string (depth_of_wtree (wtree_of tree id)))
-      else ()
+    val cidl' = filter (fn x => dmem x tree) cidl
+    val dis   = f tree cidl'
+    val d     = dnew (list_compare Int.compare) dis
   in
-    if fst (#pos node) andalso (#status node = Win) andalso (#vis node < 1.1)
-      then (log "  Axiom"; NONE)
-    else if fst (#pos node) andalso exists snd poliwin
-      then 
-        let
-          fun f (a,x) = if x then SOME (a,1.0) else NONE
-          val poliwindis = List.mapPartial f poliwin
-        in
-          (print_distrib poliwindis; SOME (select_in_distrib poliwindis))
-        end
-    else
-      let val cidl1 = List.mapPartial (visit_of_child tree) cidl0 in
-        if null cidl1 
-        then (log "  Error: no child"; NONE)
-        else (print_distrib cidl1; SOME (select_in_distrib cidl1))
-      end
+    map_assoc (fn x => (dfind x d handle NotFound => NONE)) cidl
+  end
+
+fun make_distrib tree id =
+  let 
+    val node = dfind id tree  
+    val cidl = map snd (#pol node)
+  in
+    if fst (#pos node) 
+    then inac_distrib p1_distrib tree cidl 
+    else inac_distrib p2_distrib tree cidl
+  end
+
+(* -------------------------------------------------------------------------
+   Rescaling the distribution for the training examples
+   ------------------------------------------------------------------------- *)
+
+fun policy_example tree id =
+  let 
+    val dis0 = make_distrib tree id
+    val dis1 = map_snd (fn x => if isSome x then valOf x else 0.0) dis0
+    val tot  = sum_real (map snd dis1)
+  in
+    if tot < 0.5 then [] else map_snd (fn x => x / tot) dis1
+  end
+
+(* -------------------------------------------------------------------------
+   Big step selection
+   ------------------------------------------------------------------------- *)
+
+fun select_bigstep tree id =
+  let 
+    val node = dfind id tree
+    val _    = print_distrib (map fst (#pol node))
+    val dis0 = make_distrib tree id
+    val disstats = map_snd (fn x => if isSome x then valOf x else 0.0) dis0
+    val _    = print_distrib disstats
+    val dis1 = mapfilter (fn (a,b) => (a, valOf b)) dis0
+    val tot  = sum_real (map snd dis1)
+  in
+    if tot < 0.5 
+    then (log "  This is the END."; NONE)
+    else SOME (select_in_distrib dis1)
   end
 
 

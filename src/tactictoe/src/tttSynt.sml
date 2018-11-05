@@ -38,13 +38,15 @@ fun random_term tycdict (size,ty) =
   end
 
 fun n_random_term n cset (size,ty) =
-  let val tycdict = dregroup Type.compare (map (fn x => (type_of x, x)) cset) in
+  let val tycdict = dregroup Type.compare (map (fn x => (type_of x, x)) cset) 
+  in
     map (random_term tycdict) (List.tabulate (n,fn _ => (size,ty))) 
   end
 
 
 fun n_random_formula n cset size =
-  let val tycdict = dregroup Type.compare (map (fn x => (type_of x, x)) cset) in
+  let val tycdict = dregroup Type.compare (map (fn x => (type_of x, x)) cset) 
+  in
     map (random_term tycdict) (List.tabulate (n,fn _ => (size,bool))) 
   end
 
@@ -105,7 +107,7 @@ fun evalf_to_filterf threshold evalf tml =
   end
 
 (* slow *)
-fun synthetize filterf (maxgen,maxdepth) cset =
+fun synthetize filterf (maxgen,maxdepth) (targetty,cset) =
   let
     val tycset = map (fn x => (type_of x, x)) cset
     val d1 = dregroup Type.compare tycset
@@ -136,8 +138,8 @@ fun synthetize filterf (maxgen,maxdepth) cset =
       if length acc >= maxgen orelse depth > maxdepth 
         then first_n maxgen acc else 
       let 
-        val tml    = dfind bool (gen_size depth) handle NotFound => []
-        val newacc = acc @ filter is_eq tml
+        val tml    = dfind targetty (gen_size depth) handle NotFound => []
+        val newacc = acc @ tml
       in
         collect_thml newacc n (depth + 1)
       end
@@ -146,10 +148,44 @@ fun synthetize filterf (maxgen,maxdepth) cset =
   end
 
 
+(* -------------------------------------------------------------------------
+   Function for building cuts for the Cutter theorem prover.
+   ------------------------------------------------------------------------- *)
+
+(*
+fun is_metaground x = 
+ not (can (find_term (fn x => x = ``meta_var : num``)) x)
+
+fun build_fo_cut subl metatm = 
+  let
+    val n = length (find_terms (fn x => x = ``meta_var : num``) metatm)
+    fun f sub i = subst_occs [[i+1]] sub metatm
+    val absl = map (fn x => List.tabulate (n,f x)) subl
+  in
+    mk_fast_set Term.compare (List.concat absl)
+  end
+
+val tml = find_terms (fn x => type_of x = ``:num``) tm
 
 
 
 
+fun build_fo_cut subl metatm = 
+  let
+    fun f sub i = subst active_var
+    val absl = map (fn x => List.tabulate (n,f x)) subl
+  in
+    mk_fast_set Term.compare (List.concat absl)
+  end
+
+
+
+*)
+
+fun build_term (subfl,n) (tm : term) = (List.nth (subfl,n) tm : term);
+
+
+  
 
 
 end (* struct *)
@@ -162,11 +198,71 @@ load "tttSynt"; open tttSynt tttTools;
 val maxsize = 20;
 
 (* signature *)
-val pax1  = ("ADD_ASSOC", ``(x+y)+z = x+(y+z)``);
-val pax3  = ("MUL_ASSOC", ``(x*y)*z = x*(y*z)``);
-val pax14 = ("LE_S",   ``0 < SUC 0``);
-val cl    = List.concat (map (find_terms is_const o snd) [pax14,pax1,pax3]);
-val cset  = mk_fast_set Term.compare cl;
+val active_var = ``active_var : num``;
+val pending_var = ``pending_var : num``;
+val starttm = mk_eq (active_var,pending_var);
+fun mk_suc x = mk_comb (``SUC``,x);
+fun mk_add (a,b) = list_mk_comb (``$+``,[a,b]);
+val zero = ``0``;
+
+val sub1 = [{redex = active_var, residue = mk_suc active_var}];
+val sub2 = [{redex = active_var, residue = mk_add (active_var,pending_var)}];
+val sub3 = [{redex = active_var, residue = zero},
+            {redex = pending_var, residue = active_var}];
+
+val subl = [sub1,sub2,sub3];
+val subfl = [subst_occs [[1]] sub1,
+ subst_occs [[1]] sub2,
+ subst_occs [[1],[1]] sub3];
+
+val curtm = starttm;
+
+val curtm' = ;
+val curtm = curtm';
+
+fun loop tm = 
+  if can (find_term (fn x => x = active_var)) tm then
+    let 
+      val tm' = (hd (shuffle subfl)) tm
+      val _ = print_endline (term_to_string tm')
+    in
+      loop tm'
+    end    
+  else tm
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+val subl = [sub1,sub2,sub3];
+
+val metatml1 = build_fo_cut subl metatm;
+val metatml2 = 
+  mk_fast_set Term.compare (List.concat (map (build_fo_cut subl) metatml1));
+val metatml3 = 
+  mk_fast_set Term.compare (List.concat (map (build_fo_cut subl) metatml2));
+val metatml4 = 
+  mk_fast_set Term.compare (List.concat (map (build_fo_cut subl) metatml3));
+val metatml5 = 
+  mk_fast_set Term.compare (List.concat (map (build_fo_cut subl) metatml4));
+val metatml6 = 
+  mk_fast_set Term.compare (List.concat (map (build_fo_cut subl) metatml5));
 
 *)
 

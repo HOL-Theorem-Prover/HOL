@@ -54,34 +54,29 @@ include Abbrev
     (term list * real vector) list -> (term * int) list
   
   (* inference *)
-  val embdict_glob      : (term, real vector) Redblackmap.dict ref
-  val embed_cache       : opdict -> term -> real vector
   val eval_treenn       : treenn -> term -> real
-  val eval_treenn_cache : treenn -> term -> real
- 
-  (* training *)
-  val train_treenn_nepoch : 
-    int -> int -> treenn -> int ->
-    (term list * real vector) list ->
-    treenn
 
+  (* training *)
   val train_treenn_schedule : 
     int -> treenn -> int ->
     (term list * real vector) list ->
     (int * real) list ->
-    treenn
+    (treenn * real)
 
   (* printing *)
-  val string_of_treenn   : treenn -> string
-  val string_of_trainset : (term * (real * real list)) list -> string
+  val string_of_treenn      : treenn -> string
+  val string_of_trainset    : (term * (real * real list)) list -> string
   val string_of_trainsetone : (term * real) list -> string  
 
   (* input terms *)
+  val goal_to_nnterm     : goal -> term
   val goallist_to_nnterm : goal list -> term
   val forget_to_nnterm   : (goal * term) -> term
   val cut_to_nnterm      : (goal * term) -> term
+  val cutpos_to_nnterm   : (goal * term) -> term
   val initcut_to_nnterm  : (goal * term) -> term
   val buildcut_to_nnterm : ((goal * term) * term) -> term
+  val goalchoice_to_nnterm : (goal list * goal) -> term
 
   (* operators *)
   val operl_of_term : term -> (term * int) list

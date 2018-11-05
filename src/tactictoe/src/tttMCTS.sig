@@ -22,7 +22,6 @@ sig
   {
     pol   : 'b choice list,
     pos   : 'a pos,
-    id    : int list,
     sum   : real,
     vis   : real,
     status : status
@@ -30,28 +29,35 @@ sig
 
   type ('a,'b) tree = (int list, ('a,'b) node) Redblackmap.dict 
 
-  (* tool *)
-  val genealogy : int list -> int list list
-  
-  (* statistics *)
-  val backuptime : real ref
-  val selecttime : real ref
-  datatype wintree = Wleaf of int list | Wnode of (int list * wintree list)
-  val wtree_of : (cutter_board, cutter_move) tree -> int list -> wintree  
-  val root_variation : ('a,'b) tree -> (int list) list
-
   (* search function *)
+  val starttree_of :     
+    real ->
+    ('a pos -> real * ('b * real) list) ->
+    ('a pos -> status) ->
+    'a pos -> 
+    ('a,'b) tree
+
   val mcts : 
     (int * real) ->
     ('a pos -> real * ('b * real) list) ->
     ('a pos -> status) ->
     ('b -> 'a pos -> 'a pos) ->
-    'a pos -> 
+    ('a,'b) tree -> 
     ('a,'b) tree
+  
+  (* restart *)
+  val cut_tree : ('a,'b) tree -> int list -> ('a,'b) tree
 
+  (* statistics *)
+  val backuptime : real ref
+  val selecttime : real ref
+  datatype wintree = Wleaf of int list | Wnode of (int list * wintree list)
+  val wtree_of : ('a,'b) tree -> int list -> wintree  
+  val root_variation : ('a,'b) tree -> (int list) list
+
+  (* constructing a training example *)
+  val policy_example : ('a,'b) tree -> int list -> (int list * real) list
   (* choosing a big step *)
-  val proba_child : ('a,'b) tree -> int list -> int list option
-   
-  
-  
+  val select_bigstep : ('a,'b) tree -> int list -> int list option
+
 end

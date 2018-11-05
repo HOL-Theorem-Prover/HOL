@@ -21,7 +21,8 @@ sig
     real -> (term -> real) -> term list -> term list
 
   val synthetize : 
-    (term list -> term list) -> (int * int) -> term list -> term list
+    (term list -> term list) -> (int * int) -> (hol_type * term list) -> 
+    term list
 
 
 end
