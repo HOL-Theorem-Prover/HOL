@@ -56,13 +56,3 @@ val f1_def = Define`
   f3 (y : 'a) (z : 'a) = \x. case x of 0 => 0n | SUC n => f3 y z n
 ` handle _ => die "FAILED!"
 val _ = OK();
-
-val LENGTH_FILTER_SUBSET = Q.prove(
-`(!y. P y ==> Q y) ==> !L. LENGTH(FILTER P L) <= LENGTH (FILTER Q L)`,
-strip_tac >> Induct THEN rw[] >> metis_tac[]);
-
-val variant_def = tDefine "variant" ‘
-  variant x l = if MEM x l then variant (x + 1) l else x
-’ (WF_REL_TAC ‘measure (λ(x,l). LENGTH (FILTER ((<=) x) l))’ >>
-   Induct >> rw[] >>
-   simp [DECIDE “x < SUC y ⇔ x ≤ y”, LENGTH_FILTER_SUBSET])
