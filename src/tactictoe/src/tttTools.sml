@@ -161,6 +161,15 @@ fun dregroup cmp l =
     app update l; !d
   end
 
+fun distrib l = case l of
+    [] => []
+  | (a,al) :: m => map (fn x => (a,x)) al @ distrib m
+
+
+
+fun dset cmp l = dnew cmp (map (fn x => (x,())) l)
+fun daddset l d = daddl (map (fn x => (x,())) l) 
+
 (* --------------------------------------------------------------------------
    References
    -------------------------------------------------------------------------- *)
@@ -442,6 +451,8 @@ fun strip_type ty =
         (a :: tyl, im)
       end
     | _             => ([],ty)
+
+fun has_boolty x = type_of x = bool
 
 
 (* --------------------------------------------------------------------------

@@ -29,9 +29,6 @@ Example:
   holyhammer ``1+0=1``;
 
   Loading 2995 theorems 
-  vampire found a proof
-  z3 found a proof
-  eprover found a proof
   METIS_TAC [arithmeticTheory.ALT_ZERO, arithmeticTheory.NUMERAL_DEF,
   arithmeticTheory.SUC_ONE_ADD, numeralTheory.numeral_suc]
 

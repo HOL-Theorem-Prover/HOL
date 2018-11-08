@@ -86,6 +86,13 @@ sig
     ('a * 'a -> order) ->
     ('b, 'a) Redblackmap.dict -> ('a, 'b) Redblackmap.dict
   val dregroup : ('a * 'a -> order) -> ('a * 'b) list -> ('a, 'b list) Redblackmap.dict 
+  val dset : ('a * 'a -> order) -> 'a list -> 
+    ('a, unit) Redblackmap.dict
+  val daddset : 
+    'a list -> 'b -> ('a, unit) Redblackmap.dict -> 
+    ('a, unit) Redblackmap.dict
+  val distrib : ('a * 'b list) list -> ('a * 'b) list
+
 
   (* list *)
   val only_hd   : 'a list -> 'a 
@@ -144,6 +151,7 @@ sig
   val rename_bvarl : (string -> string) -> term -> term
   val all_bvar : term -> term list
   val strip_type : hol_type -> (hol_type list * hol_type)
+  val has_boolty : term -> bool  
 
   (* compare *)
   val goal_compare : (goal * goal) -> order

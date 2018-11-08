@@ -5,7 +5,7 @@ sig
 
   (* TacticToe *)
   val ttt       : tactic
-  val tactictoe : term -> tactic
+  val tactictoe : term -> thm
 
   (* Interactive exploration *)
   val next_tac_number : int ref

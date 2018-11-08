@@ -1,4 +1,4 @@
-signature tttTablebase =
+signature tttRobberBasic =
 sig
 
   include Abbrev

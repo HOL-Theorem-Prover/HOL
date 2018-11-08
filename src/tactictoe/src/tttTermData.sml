@@ -55,13 +55,13 @@ fun pp_tml tml =
   in
     PP.block CONSISTENT 0 (
       [
-        PP.add_string"IDS", PP.add_newline,
+        PP.add_string "IDS", PP.add_newline,
         theoryout_idtable idtable,
         PP.add_newline, PP.add_newline,
-        PP.add_string"TYPES", PP.add_newline,
+        PP.add_string "TYPES", PP.add_newline,
         theoryout_typetable tytable,
         PP.add_newline, PP.add_newline,
-        PP.add_string"TERMS", PP.add_newline,
+        PP.add_string "TERMS", PP.add_newline,
         theoryout_termtable tmtable,
         PP.add_newline, PP.add_newline,
         PP.add_string "TERMS_START",

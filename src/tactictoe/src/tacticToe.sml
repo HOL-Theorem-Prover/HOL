@@ -213,7 +213,8 @@ fun tactictoe_aux goal =
   
 fun ttt goal = (tactictoe_aux goal) goal
 
-fun tactictoe term = tactictoe_aux ([],term)
+fun tactictoe term = 
+  let val goal = ([],term) in TAC_PROOF (goal, tactictoe_aux goal) end
 
 (* --------------------------------------------------------------------------
    Prediction of the next tactic only

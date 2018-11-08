@@ -13,6 +13,15 @@ open HolKernel boolLib Abbrev tttTools tttNN
 val ERR = mk_HOL_ERR "tttMCTS"
 val dbg = dbg_file "tttMCTS"
 
+(* -------------------------------------------------------------------------
+   Global fixed parameters
+   ------------------------------------------------------------------------- *)
+
+val exploration_coeff = 1.0
+
+(* -------------------------------------------------------------------------
+   Log
+   ------------------------------------------------------------------------- *)
 
 val logfile = tactictoe_dir ^ "/exp/log"
 val sumfile = tactictoe_dir ^ "/exp/summary"
@@ -24,10 +33,39 @@ fun summary s =
 fun erase_log () = (erase_file logfile; erase_file sumfile)
 
 (* -------------------------------------------------------------------------
-   Global fixed parameters
+   Timers
    ------------------------------------------------------------------------- *)
 
-val exploration_coeff = 1.0
+val backuptime = ref 0.0
+val selecttime = ref 0.0
+val fevalpolitime = ref 0.0
+val statusoftime  = ref 0.0
+val applymovetime = ref 0.0
+
+fun backup_timer f x = total_time backuptime f x 
+fun select_timer f x = total_time selecttime f x
+fun fevalpoli_timer f x  = total_time fevalpolitime f x
+fun status_of_timer f x  = total_time statusoftime f x
+fun apply_move_timer f x = total_time applymovetime f x
+
+fun init_timers () =
+  (
+  backuptime    := 0.0;
+  selecttime    := 0.0;
+  fevalpolitime := 0.0;
+  statusoftime  := 0.0;
+  applymovetime := 0.0
+  )
+
+fun string_of_timers tim =
+  String.concatWith "\n"
+    [
+    "  backup time     : " ^ Real.toString (!backuptime), 
+    "  select time     : " ^ Real.toString (!selecttime), 
+    "  fevalpoli time  : " ^ Real.toString (!fevalpolitime), 
+    "  status_of time  : " ^ Real.toString (!statusoftime), 
+    "  apply_move time : " ^ Real.toString (!applymovetime)
+    ]
 
 (* -------------------------------------------------------------------------
    Debug
@@ -41,11 +79,6 @@ fun string_of_poli poli =
   in
     String.concatWith "\n  " (map f poli)
   end
-
-val selecttime = ref 0.0
-fun select_timer f x = total_time selecttime f x
-val backuptime = ref 0.0
-fun backup_timer f x = total_time backuptime f x 
 
 (* -------------------------------------------------------------------------
    Node
@@ -219,13 +252,16 @@ fun starttree_of decay fevalpoli status_of startpos =
 
 fun mcts (nsim,decay) fevalpoli status_of apply_move starttree =
   let 
+    val fevalpoli_timed = fevalpoli_timer fevalpoli
+    val status_of_timed = status_of_timer status_of
+    val apply_move_timed = apply_move_timer apply_move
     fun loop tree =
       if dlength tree > nsim orelse 
          #status (dfind [0] tree) <> Undecided then tree else
       let
         val (id,cid) = select_timer (select_child tree) [0]
         val newtree  = expand decay 
-          fevalpoli status_of apply_move tree (id,cid)
+          fevalpoli_timed status_of_timed apply_move_timed tree (id,cid)
       in
         loop newtree
       end
