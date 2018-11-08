@@ -75,4 +75,5 @@ struct
     'a -> 'tmg ppbackend -> sysprinter -> ppstream_funs ->
     (grav * grav * grav) -> int -> Term.term -> uprinter
   exception UserPP_Failed
+  fun dummyprinter _ _ _ _ _ _ _ = raise Fail "Called dummyprinter"
 end;

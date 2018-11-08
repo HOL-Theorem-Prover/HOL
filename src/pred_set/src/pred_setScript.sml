@@ -168,6 +168,9 @@ val GSPECIFICATION = new_specification
 val _ = TeX_notation {hol = "|", TeX = ("\\HOLTokenBar{}", 1)}
 val _ = ot0 "GSPEC" "specification"
 
+val _ = add_user_printer ("pred_set.GSPEC", ``GSPEC f``)
+
+
 val GSPECIFICATION_applied = save_thm(
   "GSPECIFICATION_applied[simp]",
   REWRITE_RULE [SPECIFICATION] GSPECIFICATION);
