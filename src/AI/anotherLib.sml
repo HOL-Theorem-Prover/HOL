@@ -39,26 +39,18 @@ local open Char String in
     end
 end
 
-(* -------------------------------------------------------------------------
-   Artificial theory name for theorems from the namespace.
-   ------------------------------------------------------------------------- *)
-
-(* Warning: causes a problem if a theory is named namespace_tag *)
-val namespace_tag = "namespace_tag"
-
 (* ------------------------------------------------------------------------
    Commands
    ------------------------------------------------------------------------ *)
 
+fun exists_file file = OS.FileSys.access (file, []);
+
 fun mkDir_err dir = 
-  OS.FileSys.mkDir dir
-  handle Interrupt => raise Interrupt
-       | _         => ()
-       
+  if exists_file dir then () else OS.FileSys.mkDir dir
+
 fun rmDir_err dir = 
   OS.FileSys.rmDir dir
-  handle Interrupt => raise Interrupt
-       | _         => ()
+  handle Interrupt => raise Interrupt | _ => ()
 
 fun rmDir_rec dir = ignore (OS.Process.system ("rm -r " ^ dir))
 
@@ -94,9 +86,6 @@ fun run_cmd cmd = ignore (OS.Process.system cmd)
 
 (* TODO: Use OS to change dir? *)
 fun cmd_in_dir dir cmd = run_cmd ("cd " ^ dir ^ "; " ^ cmd)
-
-fun exists_file file = OS.FileSys.access (file, []);
-
 
 (* -------------------------------------------------------------------------
    Comparisons
@@ -160,7 +149,6 @@ fun distrib l = case l of
 (* sets *)
 fun dset cmp l = dnew cmp (map (fn x => (x,())) l)
 fun daddset l d = daddl (map (fn x => (x,())) l) 
-
 
 (* more *)
 fun union_dict cmp dl = dnew cmp (List.concat (map dlist dl))
@@ -450,6 +438,12 @@ fun string_of_goal (asm,w) =
 
 fun string_of_bool b = if b then "T" else "F"
 
+fun only_concl x = 
+  let val (a,b) = dest_thm x in
+    if null a then b else raise ERR "only_concl" ""
+  end
+
+
 (* -------------------------------------------------------------------------
    I/O
    ------------------------------------------------------------------------- *)
@@ -535,8 +529,12 @@ fun append_file file s =
 
 fun append_endline file s = append_file file (s ^ "\n")
 
-val dbg_flag = ref false
-fun dbg_file file s = if !dbg_flag then append_endline file s else ()
+val debug_flag = ref false
+fun debug_in_dir dir file s = 
+  if !debug_flag 
+  then (mkDir_err dir; 
+        append_endline (dir ^ "/" ^ current_theory () ^ "___" ^ file) s)
+  else ()
 
 (* --------------------------------------------------------------------------
    Profiling
@@ -646,6 +644,33 @@ fun rm_space_aux l = case l of
   | a :: m => if a = #" " then rm_space_aux m else l
 
 fun rm_space s = implode (rm_space_aux (explode s))
+
+(* --------------------------------------------------------------------------
+   Reserved tokens
+   -------------------------------------------------------------------------- *)
+
+val reserved_dict =
+  dnew String.compare
+  (map (fn x => (x,()))
+  ["op", "if", "then", "else", "val", "fun",
+   "structure", "signature", "struct", "sig", "open",
+   "infix", "infixl", "infixr", "andalso", "orelse",
+   "and", "datatype", "type", "where", ":", ";" , ":>",
+   "let", "in", "end", "while", "do",
+   "local","=>","case","of","_","|","fn","handle","raise","#",
+   "[","(",",",")","]","{","}","..."])
+
+fun is_quoted s = String.sub (s,0) = #"\"" 
+  handle Interrupt => raise Interrupt | _ => false
+fun is_number s = Char.isDigit (String.sub (s,0)) 
+  handle Interrupt => raise Interrupt | _ => false
+fun is_chardef s = String.substring (s,0,2) = "#\"" 
+  handle Interrupt => raise Interrupt | _ => false
+
+fun is_reserved s =
+  dmem s reserved_dict orelse
+  is_number s orelse is_quoted s orelse is_chardef s
+
 
 (* -------------------------------------------------------------------------
    Escape
@@ -796,8 +821,6 @@ fun parmap ncores f l =
   map release (parmap_err ncores f l)
 
 fun parapp ncores f l = ignore (parmap ncores f l)
-
-
 
 
 end (* struct *)

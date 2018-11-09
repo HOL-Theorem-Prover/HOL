@@ -9,7 +9,7 @@
 structure smlRedirect :> smlRedirect =
 struct
 
-open HolKernel boolLib Posix.IO Posix.FileSys TextIO
+open HolKernel boolLib anotherLib Posix.IO Posix.FileSys TextIO
 
 val ERR = mk_HOL_ERR "smlRedirect"
 
@@ -68,5 +68,20 @@ fun hide_in_file file f x =
     handle e => (pop_output_file (); raise e)
     )
   )
+
+val sml_hide_dir = HOLDIR ^ "/src/AI/sml_inspection/hide"
+
+fun hide_out f x =
+  (
+  mkDir_err sml_hide_dir;
+  hide_in_file (sml_hide_dir ^ "/" ^ current_theory ()) f x
+  )
+
+
+  
+
+
+
+
 
 end

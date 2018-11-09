@@ -11,22 +11,23 @@
 structure holyHammer :> holyHammer =
 struct
 
-open HolKernel boolLib Thread 
-  tttTools tttExec tttFeature tttPredict tttSetup
-  hhWriter hhReconstruct hhTranslate hhTptp 
+open HolKernel boolLib Thread anotherLib smlExecute smlThm smlRedirect   
+  mlFeature mlNearestNeighbor hhReconstruct hhTranslate hhTptp 
 
 val ERR = mk_HOL_ERR "holyHammer"
+val debugdir = HOLDIR ^ "/src/holyhammer/debug"
+fun debug s = debug_in_dir debugdir "holyHammer" s
 
-(*----------------------------------------------------------------------------
+(* -------------------------------------------------------------------------
    Settings
-  ----------------------------------------------------------------------------*)
+   ------------------------------------------------------------------------- *)
 
 val timeout_glob = ref 5
 fun set_timeout n = timeout_glob := n
 
-(*----------------------------------------------------------------------------
-  ATPs
-  ----------------------------------------------------------------------------*)
+(* -------------------------------------------------------------------------
+   ATPs
+   ------------------------------------------------------------------------- *)
 
 datatype prover = Eprover | Z3 | Vampire
 fun name_of atp = case atp of
@@ -39,12 +40,12 @@ fun npremises_of atp = case atp of
   | Z3 => 32
   | Vampire => 96
 
-val all_atps = ref [Eprover,Z3,Vampire] 
 (* atps called by holyhammer if their binary exists *)
+val all_atps = ref [Eprover,Z3,Vampire] 
 
-(*----------------------------------------------------------------------------
+(* -------------------------------------------------------------------------
    Directories
- -----------------------------------------------------------------------------*)
+   ------------------------------------------------------------------------- *)
 
 fun pathl sl = case sl of 
     []  => raise ERR "pathl" "empty"
@@ -62,126 +63,10 @@ fun status_of atp  = pathl [provdir_of atp,"status"]
 fun out_dir dir    = pathl [dir,"out"]
 fun status_dir dir = pathl [dir,"status"]
 
-(*----------------------------------------------------------------------------
-  Messages for evaluation. 
-  Should not be used in parallel threads.
-  ----------------------------------------------------------------------------*)
-
-val hh_eval_flag = ref false
-val thy_ref = ref "scratch"
-
-fun hh_log_eval s = 
-  if !hh_eval_flag 
-  then append_endline (hh_eval_dir ^ "/" ^ !thy_ref) s 
-  else ()
-
-fun hh_logt_eval s f x =
-  let
-    val _ = hh_log_eval s
-    val (r,t) = add_time f x
-    val _ = hh_log_eval (s ^ " " ^ Real.toString t)
-  in
-    r
-  end
-
-(*----------------------------------------------------------------------------
-   Building a database of theorems and cached their features.
-   Makes subsequent call of holyhammer in the same theory faster. 
-   Should not be used in parallel threads.
-  ----------------------------------------------------------------------------*)
-
-val hh_goalfea_cache = ref (dempty goal_compare)
-
-fun clean_goalfea_cache () = hh_goalfea_cache := dempty goal_compare
-
-fun fea_of_goal_cached g = 
-  dfind g (!hh_goalfea_cache) handle NotFound =>
-  let val fea = fea_of_goal g in
-    hh_goalfea_cache := dadd g fea (!hh_goalfea_cache);
-    fea
-  end
-
-fun add_fea dict (name,thm) =
-  let val g = dest_thm thm in
-    if not (dmem g (!dict)) andalso uptodate_thm thm
-    then dict := dadd g (name, fea_of_goal_cached g) (!dict)
-    else ()
-  end
-
-fun insert_thyfeav initdict thyl =
-  let
-    val dict = ref initdict
-    fun f_thy thy =
-      let fun f (name,thm) =
-        add_fea dict ((thy ^ "Theory." ^ name), thm)
-      in
-        app f (DB.thms thy)
-      end
-  in
-    app f_thy thyl;
-    !dict
-  end
-
-fun insert_namespace thmdict =
-  let
-    val dict = ref thmdict
-    fun f (x,y) = (namespace_tag ^ "Theory." ^ x, y)
-    val l1 = hide_out namespace_thms ()
-    val l2 = map f l1
-  in
-    app (add_fea dict) l2;
-    (!dict)
-  end
-
-fun create_symweight_feav thmdict =
-  let
-    val l = dlist thmdict
-    val feav = map snd l
-    val symweight = learn_tfidf feav
-    fun f (g,(name,fea)) = (name,(g,fea))
-    val revdict = dnew String.compare (map f l)
-  in
-    (symweight,feav,revdict)
-  end
-
-fun update_thmdata () =
-  let
-    val thyl = current_theory () :: ancestry (current_theory ())
-    val dict0 = insert_thyfeav (dempty goal_compare) thyl
-    val dict1 = insert_namespace dict0
-    val is = int_to_string (dlength dict1)
-  in
-    print_endline ("Loading " ^ is ^ " theorems ");
-    create_symweight_feav dict1
-  end
-
-(*----------------------------------------------------------------------------
-   Reading a theorem from its string representation
- -----------------------------------------------------------------------------*)
-
-fun in_namespace s = fst (split_string "Theory." s) = namespace_tag
-
-fun thm_of_name s =
-  let val (a,b) = split_string "Theory." s in 
-    (s, DB.fetch a b)
-  end
-
-fun thml_of_namel sl = 
-  let
-    val (ns1,namel) = partition in_namespace sl
-    fun f s = case thm_of_sml (snd (split_string "Theory." s)) of
-        SOME (_,thm) => SOME (s,thm)
-      | NONE => NONE
-    val ns2  = hide_out (List.mapPartial f) ns1
-    val thml = map thm_of_name namel
-  in
-    ns2 @ thml
-  end
-
-(*----------------------------------------------------------------------------
-   Run function in parallel and terminate as soon as one returned a
+(* -------------------------------------------------------------------------
+   Run functions in parallel and terminate as soon as one returned a
    positive result in parallel_result.
- -----------------------------------------------------------------------------*)
+   ------------------------------------------------------------------------- *)
 
 val (parallel_result : string list option ref) = ref NONE
 
@@ -210,21 +95,11 @@ fun parallel_call t fl =
     loop ()
   end
 
-(*----------------------------------------------------------------------------
+(* -------------------------------------------------------------------------
    Launch an ATP
-  ----------------------------------------------------------------------------*)
+   ------------------------------------------------------------------------- *)
 
 val atp_ref = ref ""
-
-fun launch_atp_mute dir atp t =
-  let 
-    val cmd = "sh " ^ name_of atp ^ ".sh " ^ int_to_string t ^ " " ^ 
-      dir ^ " > /dev/null 2> /dev/null"
-    val _ = cmd_in_dir provbin_dir cmd   
-    val r = get_lemmas (dir ^ "/status", dir ^ "/out")
-  in
-    r
-  end
 
 fun launch_atp dir atp t =
   let 
@@ -245,9 +120,9 @@ fun launch_atp dir atp t =
     r
   end
 
-(*----------------------------------------------------------------------------
-  HolyHammer
-  ----------------------------------------------------------------------------*)  
+(* -------------------------------------------------------------------------
+   HolyHammer
+   ------------------------------------------------------------------------- *)
 
 val notfalse = EQT_ELIM (last (CONJ_LIST 3 NOT_CLAUSES))
 
@@ -259,7 +134,7 @@ fun translate_write_atp premises cj atp =
   let     
     val new_premises = first_n (npremises_of atp) premises
     val thml = extra_premises @ thml_of_namel new_premises           
-    val pb = hh_logt_eval "translate_pb" (translate_pb thml) cj
+    val pb = translate_pb thml cj
     val (axl,new_cj) = name_pb pb
   in
     write_tptp (provdir_of atp) axl new_cj
@@ -278,33 +153,25 @@ val hh_goaltac_cache = ref (dempty goal_compare)
 
 fun hh_pb wanted_atpl premises goal =
   let
-    val _ = mkDir_err ttt_code_dir
     val atpl = filter exists_atp_err wanted_atpl
     val cj = list_mk_imp goal
     val _  = app (translate_write_atp premises cj) atpl
     val t1 = !timeout_glob
     val t2 = Real.fromInt t1 + 2.0
-    val olemmas = 
-      parallel_call t2
-        (map 
-           (fn x => (fn () => ignore (launch_atp (provdir_of x) x t1)))
-           atpl)
+    fun f x = fn () => ignore (launch_atp (provdir_of x) x t1)
+    val olemmas = parallel_call t2 (map f atpl)
   in
     case olemmas of
       NONE => 
         (
-        hh_log_eval "Proof status: failure";
         raise ERR "holyhammer" "ATPs could not find a proof"
         )
     | SOME lemmas => 
-      let 
-        val _ = hh_log_eval "Proof status: success"
+      let
         val (stac,tac) = hh_reconstruct lemmas goal 
       in
         print_endline "Minimized proof:";
         print_endline ("  " ^ stac);
-        hh_log_eval "Proof reconstructed";
-        hh_log_eval stac;
         hh_goaltac_cache := dadd goal (stac,tac) (!hh_goaltac_cache);
         tac
       end
@@ -319,100 +186,22 @@ fun hh_goal goal =
   end
   handle NotFound =>
     let
-      val _ = mkDir_err ttt_code_dir
       val atpl = filter exists_atp (!all_atps)
-      val (symweight,feav,revdict) = update_thmdata ()
+      val (symweight,feav) = create_thmdata ()
       val n = list_imax (map npremises_of atpl)
-      val premises = thmknn_wdep (symweight,feav,revdict) n (fea_of_goal goal)
+      val premises = thmknn_wdep (symweight,feav) n (fea_of_goal goal)
     in
       hh_pb atpl premises goal
     end
 
 fun hh_fork goal = Thread.fork (fn () => ignore (hh_goal goal), [])
-
 fun hh goal = (hh_goal goal) goal
 fun holyhammer tm = TAC_PROOF (([],tm), hh_goal ([],tm));
 
-fun metis_auto t n goal = 
-  let
-    val _ = mkDir_err ttt_code_dir
-    val (symweight,feav,revdict) = update_thmdata ()
-    val premises = thmknn_wdep (symweight,feav,revdict) n (fea_of_goal goal)
-    val thml = map snd (thml_of_namel premises)
-    val stac = mk_metis_call premises
-    val tac = hide_out tactic_of_sml stac
-  in
-    case hide_out (app_tac t tac) goal of
-      SOME _ => 
-      let
-        val t1 = !minimization_timeout
-        val newstac = hide_out (tttMinimize.minimize_stac t1 stac goal) []
-      in
-        SOME newstac
-      end
-    | NONE   => NONE    
-  end
- 
-(*----------------------------------------------------------------------------
-   For tttSyntEval.sml
- -----------------------------------------------------------------------------*)
 
-fun export_pb dir pid (tml,cj) =
-  let
-    val tml1 = number_list 0 tml
-    val tml2 = map (fn (i,x) => ("noTheory." ^ int_to_string i, x)) tml1 
-    val thml0 = map (fn (s,x) => (s, mk_thm ([],x))) tml2  
-    val thml1 = extra_premises @ thml0
-    val pb = translate_pb thml1 cj
-    val (axl,new_cj) = name_pb pb
-  in
-    write_tptp (dir ^ "/" ^ int_to_string pid) axl new_cj;
-    (pid, (cj, dnew String.compare tml2))
-  end
+end (* struct *)
 
-fun eprover_parallel dir ncores pidl t =
-  let
-    fun dir_of_pid i = dir ^ "/" ^ int_to_string i
-    val dirl = map dir_of_pid pidl
-    val file = provbin_dir ^ "/parallel_files"
-    val _ = writel file dirl
-    val cmd = 
-      "cat " ^ file ^ " | parallel -j " ^ int_to_string ncores ^ 
-      " sh eprover.sh " ^ 
-      int_to_string t ^ " {} "
-    val _ = cmd_in_dir provbin_dir cmd
-    fun f pid = 
-      (pid,
-       get_lemmas (dir_of_pid pid ^ "/status", dir_of_pid pid ^ "/out"))
-  in  
-    map f pidl
-  end
-
-(*----------------------------------------------------------------------------
-   Asynchronous calls to holyhammer in tactictoe.
-   To be updated.
- -----------------------------------------------------------------------------*)
-
-fun hh_stac pids (symweight,feav,revdict) t goal =
-  let
-    val cj = list_mk_imp goal
-    val premises = 
-      thmknn_wdep (symweight,feav,revdict) 128 (fea_of_goal goal)
-    val provdir = pathl [provbin_dir,pids]
-    val thml = extra_premises @ thml_of_namel premises
-    val pb = translate_pb thml cj
-    val (axl,new_cj) = name_pb pb
-    val _ = write_tptp provdir axl new_cj
-    val olemmas = launch_atp_mute provdir Eprover t
-    val _ = (clean_dir provdir; rmDir_err provdir)
-  in
-    Option.map mk_metis_call olemmas
-  end
-
-(*----------------------------------------------------------------------------
-  Evaluation
-  ----------------------------------------------------------------------------*)  
-
+(* Evaluation (move to hhTest)
 fun hh_eval_thm atpl bsound (s,thm) =
   let
     val _ = (mkDir_err hh_eval_dir; print_endline s)
@@ -438,43 +227,6 @@ fun hh_eval_thy atpl bsound thy =
   hh_eval_flag := false
   )
 
-(*---------------------------------------------------------------------------
-   Export to TT format. Used in the previous holyhammer version.
- ----------------------------------------------------------------------------*)
-
-fun pred_filter pred thy ((name,_),_) =
-  let val thypred = map snd (filter (fn x => fst x = thy) pred) in
-    mem name thypred
-  end
-
-fun export_problem dir premises cj =
-  let
-    val premises' = map (split_string "Theory.") premises
-    (* val _ = print_endline (String.concatWith " " (first_n 10 premises)) *)
-    val nsthml1 = filter in_namespace premises
-    fun f s = case thm_of_sml (snd (split_string "Theory." s)) of
-        SOME (_,thm) => SOME (s,thm)
-      | NONE => NONE
-    val nsthml2 = hide_out (List.mapPartial f) nsthml1
-    val ct   = current_theory ()
-    val thyl = ct :: Theory.ancestry ct
-  in
-    clean_dir dir;
-    write_problem dir (pred_filter premises') nsthml2 thyl cj;
-    write_thydep (dir ^ "/thydep.dep") thyl
-  end
-
-fun export_theories dir thyl =
-  (
-  clean_dir dir;
-  write_thyl dir (fn thy => (fn thma => true)) thyl;
-  write_thydep (dir ^ "/thydep.dep") thyl
-  )
-
-(*----------------------------------------------------------------------------
-  load "holyHammer";
-  open holyHammer;
-  hh_eval_thy [Eprover] false "list"; 
   ----------------------------------------------------------------------------*)  
 
-end
+

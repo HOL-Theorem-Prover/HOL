@@ -1,17 +1,17 @@
 (* ========================================================================= *)
-(* FILE          : Storage.sml                                               *)
+(* FILE          : smlStorage.sml                                            *)
 (* DESCRIPTION   : Storing data                                              *)
 (* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck            *)
 (* DATE          : 2018                                                      *)
 (* ========================================================================= *)
 
 
-structure Storage :> Storage =
+structure smlStorage :> smlStorage =
 struct
 
 open HolKernel boolLib Abbrev SharingTables Portable anotherLib smlLexer
 
-val ERR = mk_HOL_ERR "Storage"
+val ERR = mk_HOL_ERR "smlStorage"
 fun err_msg s l = raise ERR s (String.concatWith " " (first_n 10 l))
 
 (* -------------------------------------------------------------------------

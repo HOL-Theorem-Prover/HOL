@@ -1,22 +1,21 @@
-(* ========================================================================== *)
-(* FILE          : tttSynt.sml                                                *)
-(* DESCRIPTION   : Synthesis of terms for conjecturing lemmas                 *)
-(* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck             *)
-(* DATE          : 2018                                                       *)
-(* ========================================================================== *)
+(* ========================================================================= *)
+(* FILE          : psTermGen.sml                                             *)
+(* DESCRIPTION   : Synthesis of terms for conjecturing lemmas                *)
+(* AUTHOR        : (c) Thibault Gauthier, Czech Technical University         *)
+(* DATE          : 2018                                                      *)
+(* ========================================================================= *)
 
-structure tttSynt :> tttSynt =
+structure psTermGen :> psTermGen =
 struct
 
-open HolKernel boolLib Abbrev tttTools
+open HolKernel Abbrev boolLib anotherLib
 
-val ERR = mk_HOL_ERR "tttSynt"
-val dbg = dbg_file "tttSynt"
+val ERR = mk_HOL_ERR "psTermGen"
+val dbg = dbg_file "psTermGen"
 
-
-(* --------------------------------------------------------------------------
-   "Random" first-order terms of a certain size. (top-down)
-   -------------------------------------------------------------------------- *)
+(* -------------------------------------------------------------------------
+   Random terms for a fixed size (top-down).
+   ------------------------------------------------------------------------- *)
 
 fun random_term tycdict (size,ty) =
   if size <= 0 then raise ERR "random_term" "<= 0" else
@@ -43,28 +42,6 @@ fun n_random_term n cset (size,ty) =
     map (random_term tycdict) (List.tabulate (n,fn _ => (size,ty))) 
   end
 
-
-fun n_random_formula n cset size =
-  let val tycdict = dregroup Type.compare (map (fn x => (type_of x, x)) cset) 
-  in
-    map (random_term tycdict) (List.tabulate (n,fn _ => (size,bool))) 
-  end
-
-fun success_tac tac g = null (fst (tac g))
-
-fun uniform_provable tac n cset size =
-  let
-    val cjl0 = 
-      mapfilter (n_random_formula (n * 10) cset) 
-        (List.tabulate (size + 1,I))
-    val cjl1 = map (mk_fast_set Term.compare) cjl0    
-    fun is_proved cj = success_tac tac ([], cj)
-    val cjpl0 = map (filter is_proved) cjl1
-    val cjpl1 = map (first_n n o shuffle) cjpl0
-  in 
-    List.concat cjpl1
-  end
-
 fun uniform_term n cset (size,ty) =
   let
     val cjl0 = mapfilter (n_random_term (n * 10) cset) 
@@ -74,11 +51,9 @@ fun uniform_term n cset (size,ty) =
     List.concat cjl1
   end
 
-
-(* --------------------------------------------------------------------------
-   Building terms bottom up according to a filtering function.
-   Limits the number of subterms for each size.
-   -------------------------------------------------------------------------- *)
+(* -------------------------------------------------------------------------
+   Random terms of a fixed size (bottom-up)
+   ------------------------------------------------------------------------- *)
 
 fun is_applicable (ty1,ty2) =
   let fun apply ty1 ty2 =
@@ -96,18 +71,7 @@ fun all_mk_comb d1 d2 (ty1,ty2) =
     map mk_comb l  
   end
 
-(* Warning: filterf is also sorting *)
-fun evalf_to_filterf threshold evalf tml =
-  let 
-    val tmscl1 = map_assoc evalf tml
-    val tmscl2 = filter (fn (_,sc) => sc > threshold) tmscl1
-    val tmscl3 = dict_sort compare_rmax tmscl2
-  in
-    map fst tmscl3
-  end
-
-(* slow *)
-fun synthetize filterf (maxgen,maxdepth) (targetty,cset) =
+fun synthetize filterf (maxgen,maxdepth) (targettype,cset) =
   let
     val tycset = map (fn x => (type_of x, x)) cset
     val d1 = dregroup Type.compare tycset
@@ -134,17 +98,17 @@ fun synthetize filterf (maxgen,maxdepth) (targetty,cset) =
         gen_size_cache := dadd n r (!gen_size_cache);
         r
       end
-    fun collect_thml acc n depth = 
+    fun filter_with_targettype acc n depth = 
       if length acc >= maxgen orelse depth > maxdepth 
         then first_n maxgen acc else 
       let 
-        val tml    = dfind targetty (gen_size depth) handle NotFound => []
+        val tml    = dfind targettype (gen_size depth) handle NotFound => []
         val newacc = acc @ tml
       in
-        collect_thml newacc n (depth + 1)
+        filter_with_targettype newacc n (depth + 1)
       end
   in
-    collect_thml [] maxgen 1
+    filter_with_targettype [] maxgen 1
   end
 
 
@@ -167,9 +131,6 @@ fun build_fo_cut subl metatm =
 
 val tml = find_terms (fn x => type_of x = ``:num``) tm
 
-
-
-
 fun build_fo_cut subl metatm = 
   let
     fun f sub i = subst active_var
@@ -179,10 +140,10 @@ fun build_fo_cut subl metatm =
   end
 
 
+fun build_term (subfl,n) (tm : term) = (List.nth (subfl,n) tm : term);
 
 *)
 
-fun build_term (subfl,n) (tm : term) = (List.nth (subfl,n) tm : term);
 
 
   
@@ -191,7 +152,7 @@ fun build_term (subfl,n) (tm : term) = (List.nth (subfl,n) tm : term);
 end (* struct *)
 
 (* test 
-load "tttSynt"; open tttSynt tttTools;
+load "psTermGen"; open psTermGen tttTools;
 
 (* can derive the filter function from the nn scoring function *)
 
@@ -230,26 +191,6 @@ fun loop tm =
     end    
   else tm
  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 val subl = [sub1,sub2,sub3];
 
 val metatml1 = build_fo_cut subl metatm;

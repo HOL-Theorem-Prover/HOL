@@ -1,4 +1,4 @@
-signature tttMinimize =
+signature psMinimize =
 sig
 
   include Abbrev

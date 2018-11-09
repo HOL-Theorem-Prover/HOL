@@ -11,11 +11,7 @@ struct
 open HolKernel boolLib Abbrev tttTools tttNN tttNNtree tttMCTS tttSynt
 
 val ERR = mk_HOL_ERR "tttRobber"
-val dbg = dbg_file "tttRobber"
-
-
-
-
+val dbg = dbg_file "debug_tttRobber"
 
 (* -------------------------------------------------------------------------
    Check if the preimage is in the dictionary of proven thing.

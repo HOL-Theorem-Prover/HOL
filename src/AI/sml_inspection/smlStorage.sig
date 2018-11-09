@@ -1,4 +1,4 @@
-signature Storage =
+signature smlStorage =
 sig
 
   include Abbrev

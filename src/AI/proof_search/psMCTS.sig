@@ -1,4 +1,4 @@
-signature tttMCTS =
+signature psMCTS =
 sig
   
   include Abbrev
@@ -6,10 +6,11 @@ sig
   datatype status = Undecided | Win | Lose
   
   (* Debug *)
+  (*
   val log : string -> unit
   val summary : string -> unit
   val erase_log : unit -> unit
-  
+  *)
   val string_of_status : status -> string
   
   (* 'a is the representation of the board *)  

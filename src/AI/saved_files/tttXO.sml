@@ -1,9 +1,9 @@
-(* ========================================================================== *)
-(* FILE          : tttXO.sml                                                  *)
-(* DESCRIPTION   : MCTS example                                        *)
-(* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck             *)
-(* DATE          : 2017                                                       *)
-(* ========================================================================== *)
+(* ========================================================================= *)
+(* FILE          : tttXO.sml                                                 *)
+(* DESCRIPTION   : MCTS example: Tic-Tac-Toe player                          *)
+(* AUTHOR        : (c) Thibault Gauthier, Czech Technical University         *)
+(* DATE          : 2018                                                      *)
+(* ========================================================================= *)
 
 structure tttXO :> tttXO =
 struct
@@ -12,12 +12,11 @@ open HolKernel Abbrev boolLib tttTools tttMCTS
 
 val ERR = mk_HOL_ERR "tttXO"
 
-(*
-  ---------------------------------------------------------------------------
-  tic-tac-toe: endcheck
-  --------------------------------------------------------------------------- *)
+(* -------------------------------------------------------------------------
+   Status
+   ------------------------------------------------------------------------- *)
 
-val tic_startpos = (true,SOME [0,0,0,0,0,0,0,0,0])
+val startpos = (true,SOME [0,0,0,0,0,0,0,0,0])
 
 val indexwin = 
   [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]]
@@ -31,25 +30,24 @@ fun is_halfwin n board =
     exists (fn x => subset x posn) indexwin
   end
 
-fun tic_is_win (player1, boardo) = 
+fun is_win (player1, boardo) = 
   case boardo of
     NONE     => player1
   | SOME board => is_halfwin 1 board
 
-fun tic_is_lose (player1, boardo) =
+fun is_lose (player1, boardo) =
   case boardo of
     NONE       => not player1
   | SOME board => is_halfwin 2 board orelse all (fn x => x <> 0) board
 
-fun tic_endcheck r =
+fun status_of r =
   if tic_is_win r then Win else if tic_is_lose r then Lose else InProgress
 
-(*
-  ---------------------------------------------------------------------------
-  tic-tac-toe: makes a move
-  --------------------------------------------------------------------------- *)
+(* ------------------------------------------------------------------------
+   Apply_move
+   ------------------------------------------------------------------------ *)
 
-fun tic_apply_move move pos =
+fun apply_move move pos =
   let 
     val (ps,moves) = split_string "." move 
     val movei = string_to_int moves
@@ -63,37 +61,35 @@ fun tic_apply_move move pos =
   end
   handle _ => raise ERR "tic_apply_move" ""
 
-(*
-  ---------------------------------------------------------------------------
-  tic-tac-toe: evalpoli
-  --------------------------------------------------------------------------- *)
+(* -------------------------------------------------------------------------
+   Evaluation and policy
+   ------------------------------------------------------------------------- *)
 
 val p1movel = map (fn x => "1." ^ int_to_string x) [0,1,2,3,4,5,6,7,8]
 val p2movel = map (fn x => "2." ^ int_to_string x) [0,1,2,3,4,5,6,7,8]
 
-fun tic_randplayer movel pid pos =
+fun randplayer movel pid pos =
   let 
-    val (eval,prepoli) = rand_evalpoli movel pos 
+    val (eval,prepoli) = (0.5, List.tabulate (9, fn _ => 0.5))
     val poli = combine (movel, prepoli)
   in
     (
-    if tic_is_win pos then 1.0 else 
-    if tic_is_lose pos then 0.0 else 
+    if is_win pos then 1.0 else 
+    if is_lose pos then 0.0 else 
     eval, 
     wrap_poli pid poli
     )
   end
 
-fun tic_build_evalpoli pid pos = case pos of
+fun build_evalpoli pid pos = case pos of
     (true,NONE)     => (1.0,[]) 
   | (false,NONE)    => (0.0,[]) 
-  | (false, SOME l) => tic_randplayer p2movel pid pos
-  | (true, SOME l)  => tic_randplayer p1movel pid pos
+  | (false, SOME l) => randplayer p2movel pid pos
+  | (true, SOME l)  => randplayer p1movel pid pos
 
-(*
-  ---------------------------------------------------------------------------
-  tic-tac-toe: user output
-  --------------------------------------------------------------------------- *)
+(* -------------------------------------------------------------------------
+   User output
+   ------------------------------------------------------------------------- *)
 
 fun string_of_piecei l (i,a) =
   if a = 1 then " X " else if a = 2 then " O " else 

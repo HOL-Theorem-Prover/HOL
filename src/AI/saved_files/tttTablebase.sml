@@ -11,7 +11,7 @@ struct
 open HolKernel boolLib Abbrev tttTools tttSynt tttRobberType
 
 val ERR = mk_HOL_ERR "tttTablebase"
-val dbg = dbg_file "tttTablebase"
+val dbg = dbg_file "debug_tttTablebase"
 
 fun negate x = if is_neg x then dest_neg x else mk_neg x
 

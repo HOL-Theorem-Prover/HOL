@@ -104,5 +104,25 @@ fun feahash_of_term tm =
 fun feahash_of_goal g = 
   mk_fast_set Int.compare (map hash_string (fea_of_goal g))
 
+(* ------------------------------------------------------------------------
+   TFIDF: weight of symbols (power of 6 comes from the neareset neighbor 
+   distance)
+   ------------------------------------------------------------------------ *)
+
+fun weight_tfidf symsl =
+  let
+    val syms      = List.concat symsl
+    val dict      = count_dict (dempty Int.compare) syms
+    val n         = length symsl
+    fun f (fea,freq) =
+      Math.pow (Math.ln (Real.fromInt n) - Math.ln (Real.fromInt freq), 6.0)
+  in
+    Redblackmap.map f dict
+  end
+
+fun learn_tfidf feavl = weight_tfidf (map snd feavl)
+
+
+
 
 end (* struct *)

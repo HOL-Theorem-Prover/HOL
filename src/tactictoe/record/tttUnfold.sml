@@ -370,7 +370,7 @@ fun extract_store_thm sl =
     val (term,qtac) = split_codelevel "," l0
     val name = original_code (last namel)
   in
-    if is_string name
+    if is_quoted name
     then SOME (rm_bbra_str (rm_squote name), namel, term, qtac, lflag, cont)
     else NONE
   end
@@ -390,7 +390,7 @@ fun extract_thmname sl =
     val (namel,_) = split_codelevel "," body
     val name = original_code (last namel)
   in
-    if is_string name
+    if is_quoted name
     then SOME (rm_bbra_str (rm_squote name),cont)
     else NONE
   end
@@ -403,7 +403,7 @@ fun extract_recordname sl =
     val ll1 = map (split_codelevel "=") ll0
     val name = original_code (last (assoc [Code ("name",Protect)] ll1))
   in
-    if is_string name
+    if is_quoted name
     then SOME (rm_bbra_str (rm_squote name),cont)
     else NONE
   end

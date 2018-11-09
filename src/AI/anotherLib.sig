@@ -12,7 +12,6 @@ sig
   val print_endline : string -> unit
   val vector_to_list : 'a vector -> 'a list
   val hash_string : string -> int
-  val namespace_tag : string
 
   (* comparisons *)
   val cpl_compare : 
@@ -34,14 +33,14 @@ sig
   val total_time : real ref -> ('a -> 'b) -> 'a -> 'b  
 
   (* commands *)
-  val mkDir_err        : string -> unit
-  val rmDir_err        : string -> unit
-  val rmDir_rec        : string -> unit
-  val cleanDir_rec     : string -> unit
-  val clean_dir        : string -> unit
-  val run_cmd          : string -> unit
-  val cmd_in_dir       : string -> string -> unit
-  val exists_file      : string -> bool
+  val mkDir_err : string -> unit
+  val rmDir_err : string -> unit
+  val rmDir_rec : string -> unit
+  val cleanDir_rec : string -> unit
+  val clean_dir : string -> unit
+  val run_cmd : string -> unit
+  val cmd_in_dir : string -> string -> unit
+  val exists_file : string -> bool
 
   (* dictionnary *)
   val dfind  : 'a -> ('a, 'b) Redblackmap.dict -> 'b
@@ -79,10 +78,10 @@ sig
     ('a, int) Redblackmap.dict -> 'a list -> ('a, int) Redblackmap.dict
 
   (* list *)
-  val only_hd   : 'a list -> 'a 
-  val one_in_n  : int -> int -> 'a list -> 'a list
-  val map_snd   : ('a -> 'b) -> ('c * 'a) list -> ('c * 'b) list
-  val map_fst   : ('a -> 'b) -> ('a * 'c) list -> ('b * 'c) list 
+  val only_hd : 'a list -> 'a 
+  val one_in_n : int -> int -> 'a list -> 'a list
+  val map_snd : ('a -> 'b) -> ('c * 'a) list -> ('c * 'b) list
+  val map_fst : ('a -> 'b) -> ('a * 'c) list -> ('b * 'c) list 
   val map_assoc : ('a -> 'b) -> 'a list -> ('a * 'b) list
   val cartesian_product : 'a list -> 'b list -> ('a * 'b) list
   val findSome  : ('a -> 'b option) -> 'a list -> 'b option
@@ -96,14 +95,14 @@ sig
   val mk_string_set : string list -> string list
   val mk_term_set : term list -> term list
   val mk_sameorder_set : ('a * 'a -> order) -> 'a list -> 'a list
-  val dict_sort   : ('a * 'a -> order) -> 'a list -> 'a list
-  val topo_sort   : (''a * ''a list) list -> ''a list
-  val sort_thyl   : string list -> string list
-  val fold_left   : ('a -> 'b -> 'b) -> 'a list -> 'b -> 'b
-  val mk_batch         : int -> 'a list -> 'a list list
+  val dict_sort : ('a * 'a -> order) -> 'a list -> 'a list
+  val topo_sort : (''a * ''a list) list -> ''a list
+  val sort_thyl : string list -> string list
+  val fold_left : ('a -> 'b -> 'b) -> 'a list -> 'b -> 'b
+  val mk_batch : int -> 'a list -> 'a list list
   val number_partition : int -> int -> int list list   
   val duplicate : int -> 'a list -> 'a list  
-  val indent    : int -> string   
+  val indent: int -> string   
 
   (* random *)
   val random_real : unit -> real
@@ -122,8 +121,8 @@ sig
   val append_endline : string -> string -> unit
   val writel : string -> string list -> unit
   val writel_path : string -> string -> string list -> unit
-  val dbg_flag  : bool ref
-  val dbg_file  : string -> string -> unit
+  val debug_flag  : bool ref
+  val debug_in_dir : string -> string -> string -> unit
 
   (* parse *)
   val unquote_string : string -> string
@@ -144,6 +143,12 @@ sig
   (* escape *)
   val escape : string -> string
   val unescape : string -> string
+  
+  (* reserved *)
+  val is_quoted   : string -> bool
+  val is_number   : string -> bool
+  val is_chardef  : string -> bool
+  val is_reserved : string -> bool
 
   (* statistics *)
   val incr   : int ref -> unit
@@ -156,5 +161,12 @@ sig
   val pow : real -> int -> real
   val approx : int -> real -> real
   val percent : real -> real  
+
+  (* term *)
+  val rename_bvarl : (string -> string) -> term -> term
+  val all_bvar : term -> term list
+  val strip_type : hol_type -> (hol_type list * hol_type)
+  val has_boolty : term -> bool  
+  val only_concl : thm -> term
 
 end

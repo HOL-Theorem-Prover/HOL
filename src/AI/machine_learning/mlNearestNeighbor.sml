@@ -8,12 +8,13 @@
 structure mlNearestNeighbor :> mlNearestNeighbor =
 struct
 
-open HolKernel Abbrev anotherLib mlFeature (* smlExecute *)
+open HolKernel Abbrev anotherLib mlFeature smlThm
 
 val ERR = mk_HOL_ERR "mlNearestNeighbor"
 
 (* ------------------------------------------------------------------------
-   TFIDF: weight of symbols (power of 6 comes from the distance)
+   TFIDF: weight of symbols (power of 6 comes from the neareset neighbor 
+   distance)
    ------------------------------------------------------------------------ *)
 
 fun weight_tfidf symsl =

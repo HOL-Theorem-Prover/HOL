@@ -6,9 +6,6 @@ sig
   type lbl = (string * real * goal * goal list)
   type fea = int list
 
-  (* tfidf *)
-  val learn_tfidf : ('a * int list) list -> (int, real) Redblackmap.dict
-
   (* theorem 
   val all_thmfeav : unit ->
     (int, real) Redblackmap.dict *

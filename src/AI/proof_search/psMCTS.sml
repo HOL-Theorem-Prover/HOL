@@ -1,28 +1,19 @@
 (* ========================================================================= *)
-(* FILE          : tttMCTS.sml                                               *)
+(* FILE          : psMCTS.sml                                               *)
 (* DESCRIPTION   : MCTS algorithm.                                           *)
 (* AUTHOR        : (c) Thibault Gauthier, Czech Technical University         *)
 (* DATE          : 2018                                                      *)
 (* ========================================================================= *)
 
-structure tttMCTS :> tttMCTS =
+structure psMCTS :> psMCTS =
 struct
  
-open HolKernel boolLib Abbrev tttTools tttNN
+open HolKernel Abbrev boolLib anotherLib
 
-val ERR = mk_HOL_ERR "tttMCTS"
-val dbg = dbg_file "tttMCTS"
+val ERR = mk_HOL_ERR "psMCTS"
+val dbg = dbg_file "psMCTS"
 
-(* -------------------------------------------------------------------------
-   Global fixed parameters
-   ------------------------------------------------------------------------- *)
-
-val exploration_coeff = 1.0
-
-(* -------------------------------------------------------------------------
-   Log
-   ------------------------------------------------------------------------- *)
-
+(*
 val logfile = tactictoe_dir ^ "/exp/log"
 val sumfile = tactictoe_dir ^ "/exp/summary"
 
@@ -31,6 +22,13 @@ fun summary s =
   (print_endline s; append_endline logfile s; append_endline sumfile s)
 
 fun erase_log () = (erase_file logfile; erase_file sumfile)
+*)
+
+(* -------------------------------------------------------------------------
+   Global fixed parameters
+   ------------------------------------------------------------------------- *)
+
+val exploration_coeff = 1.0
 
 (* -------------------------------------------------------------------------
    Timers
@@ -369,7 +367,8 @@ fun move_win tree cid = #status (dfind cid tree) = Win
 fun move_lose tree cid = #status (dfind cid tree) = Lose
 
 fun print_distrib l = 
-  log ("  " ^ String.concatWith " " (map (Real.toString o approx 4 o snd) l))
+  print_endline 
+    ("  " ^ String.concatWith " " (map (Real.toString o approx 4 o snd) l))
 
 (* Player1 *)
 fun p1_distrib tree cidl =
@@ -439,7 +438,7 @@ fun select_bigstep tree id =
     val tot  = sum_real (map snd dis1)
   in
     if tot < 0.5 
-    then (log "  This is the END."; NONE)
+    then (print_endline "  This is the END."; NONE)
     else SOME (select_in_distrib dis1)
   end
 

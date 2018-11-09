@@ -9,21 +9,22 @@
 structure hhReconstruct :> hhReconstruct =
 struct
 
-open HolKernel boolLib Dep Tag tttTools tttExec hhWriter
+open HolKernel Dep Tag boolLib anotherLib smlExecute smlThm smlTimeout
+  smlRedirect psMinimize
 
 val ERR = mk_HOL_ERR "hhReconstruct"
 
-(*----------------------------------------------------------------------------
+(* --------------------------------------------------------------------------
    Settings
- -----------------------------------------------------------------------------*)
+   -------------------------------------------------------------------------- *)
 
 val reconstruct_flag = ref true
 val minimization_timeout = ref 1.0
 val reconstruction_timeout = ref 1.0
 
-(*----------------------------------------------------------------------------
-   Reading the ATP output
- -----------------------------------------------------------------------------*)
+(* --------------------------------------------------------------------------
+   ATP output
+   -------------------------------------------------------------------------- *)
 
 fun remove_white_spaces s =
   let fun f c = if Char.isSpace c then "" else Char.toString c in
@@ -40,18 +41,10 @@ fun read_status atp_status =
 
 fun read_lemmas atp_out =
   let
-    val l1 = readl atp_out
-    val l2 = map hhTranslate.unescape l1
-    val l3 = filter not_reserved l2
-    fun f s =
-      let 
-        val sl1 = String.fields is_dot s 
-        val sl2 = tl (butlast sl1)
-      in
-        String.concatWith "." sl2
-      end
+    val l = filter not_reserved (map unescape (readl atp_out))
+    fun f s = String.concatWith "." (tl (butlast (String.fields is_dot s)))
   in
-    mk_fast_set String.compare (map f l3)
+    mk_string_set (map f l)
   end
 
 fun get_lemmas (atp_status,atp_out) =
@@ -72,10 +65,10 @@ fun hh_reconstruct lemmas g =
       val stac = mk_metis_call lemmas
       val t1 = !minimization_timeout
       val t2 = !reconstruction_timeout
-      val newstac = hide_out (tttMinimize.minimize_stac t1 stac g) []
+      val newstac = hide_out (psMinimize.minimize_stac t1 stac g) []
       val tac = hide_out tactic_of_sml newstac
     in
-      case hide_out (app_tac t2 tac) g of
+      case hide_out (timed_tactic t2 tac) g of
         SOME _ => (newstac,tac)
       | NONE   => raise ERR "hh_reconstruct" "reconstruction failed"
     end

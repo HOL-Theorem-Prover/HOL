@@ -46,7 +46,7 @@ fun sml_prop_first p = case p of
     PolyML.PTfirstChild f  => SOME (snd (f ()))
   | _               => NONE
 
-fun sml_path_of s =
+fun declaration_path s =
   let
     val x = hd (sml_propl_of s)
     val l = valOf (sml_prop_first x)
@@ -213,5 +213,6 @@ fun extract_tacticl_aux tree = case tree of
 
 fun extract_tacticl s =
   List.concat (map extract_tacticl_aux (extract_subexpr s))
+
 
 end (* struct *)
