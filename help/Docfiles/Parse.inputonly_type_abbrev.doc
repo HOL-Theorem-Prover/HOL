@@ -1,0 +1,38 @@
+\DOC inputonly_type_abbrev
+
+\TYPE {Parse.inputonly_type_abbrev : string * hol_type -> unit}
+
+\SYNOPSIS
+Establishes a type abbreviation for parsing, but not printing.
+
+\KEYWORDS
+Parsing, pretty-printing, HOL types.
+
+\DESCRIBE
+A call to {inputonly_type_abbrev(s,ty)} establishes {s} as an
+abbreviation for the type {ty} (as with a call to
+{type_abbrev(s,ty)}), but the pretty-printer for types will not be
+changed by this call, so that types matching the pattern {ty} will
+print as they did previously.
+
+\FAILURE
+Fails if the argument {ty} is a single type variable.
+
+\EXAMPLE
+{
+   > inputonly_type_abbrev("foo", ``:num``);
+   val it = () : unit
+
+   > type_of ``3 + x:foo``;
+   val it = ``:num``
+}
+
+\COMMENTS
+There is a version of this function with name
+{temp_inputonly_type_abbrev} that does not cause the effect on the
+grammar to be persistent (exported to descendent theories).
+
+\SEEALSO
+Parse.disable_tyabbrev_printing, Parse.thytype_abbrev, Parse.type_abbrev.
+
+\ENDDOC

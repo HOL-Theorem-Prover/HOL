@@ -17,7 +17,7 @@ val (privty, unprivty) = if privthy = "gh294a" then (b2b, b2b2b)
 val ty = ``:foo``
 val _ = assert (equal privty) ty
 
-val _ = temp_thytype_abbrev ({Name = "foo", Thy = unprivthy}, unprivty)
+val _ = temp_thytype_abbrev ({Name = "foo", Thy = unprivthy}, unprivty, true)
 
 val ty = ``:foo``
 val _ = assert (equal unprivty) ty

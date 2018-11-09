@@ -63,6 +63,9 @@ types.  The pretty-printer can be instructed not to print particular
 abbreviations (using {Parse.disable_tyabbrev_printing}), or to not
 print any (by setting the trace variable {"print_tyabbrevs"}).
 
+As a convenience {inputonly_type_abbrev} combines the action of
+{type_abbrev} and {disable_tyabbrev_printing}.
+
 \SEEALSO
-Parse.add_infix_type, Parse.disable_tyabbrev_printing, Parse.remove_type_abbrev, Parse.thytype_abbrev.
+Parse.add_infix_type, Parse.disable_tyabbrev_printing, Parse.inputonly_type_abbrev, Parse.remove_type_abbrev, Parse.thytype_abbrev.
 \ENDDOC

@@ -728,10 +728,8 @@ in
          min_grammar),
         ("Testing ty-grammar p/printing (min_grammar with non-printing abbrev)",
          "noprint_tygrammar.txt",
-         min_grammar |> (fn g =>
-                            new_abbreviation g
-                                             ({Name = "set", Thy = "scratch"},
-                                              alpha --> bool))
+         min_grammar |> new_abbreviation {knm = {Name = "set", Thy = "scratch"},
+                                          ty = alpha --> bool, print = true}
                      |> disable_abbrev_printing "set")
       ]
 end (* tygrammar p/printing local *)

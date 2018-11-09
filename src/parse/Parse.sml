@@ -612,21 +612,24 @@ fun replace_exnfn fnm f x =
                             origin_structure = s}
 
 fun thytype_abbrev0 r = [TYABBREV r]
-
 val temp_thytype_abbrev = mk_temp_tyd thytype_abbrev0
 val thytype_abbrev = mk_perm_tyd thytype_abbrev0
 
-fun temp_type_abbrev (s, ty) =
-  replace_exnfn "temp_type_abbrev" temp_thytype_abbrev
-                ({Thy = Theory.current_theory(), Name = s}, ty)
-
-fun type_abbrev (s, ty) =
-  replace_exnfn "type_abbrev" thytype_abbrev
-                ({Thy = Theory.current_theory(), Name = s}, ty)
+fun mktyabbrev_rec p (s,ty) = ({Thy = Theory.current_theory(), Name = s}, ty, p)
+val temp_type_abbrev =
+  replace_exnfn "temp_type_abbrev" temp_thytype_abbrev o mktyabbrev_rec true
+val type_abbrev =
+  replace_exnfn "type_abbrev" thytype_abbrev o mktyabbrev_rec true
 
 fun disable_tyabbrev_printing0 s = [DISABLE_TYPRINT s]
 val temp_disable_tyabbrev_printing = mk_temp_tyd disable_tyabbrev_printing0
 val disable_tyabbrev_printing = mk_perm_tyd disable_tyabbrev_printing0
+
+val temp_inputonly_type_abbrev =
+    replace_exnfn "temp_inputonly_type_abbrev" temp_thytype_abbrev o
+    mktyabbrev_rec false
+val inputonly_type_abbrev =
+    replace_exnfn "inputonly_type_abbrev" thytype_abbrev o mktyabbrev_rec false
 
 fun remove_type_abbrev0 s = [RM_TYABBREV s]
 val temp_remove_type_abbrev = mk_temp_tyd remove_type_abbrev0

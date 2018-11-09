@@ -39,14 +39,16 @@ signature Parse = sig
                              Name : string,
                              Assoc : associativity} -> unit
 
-  val temp_thytype_abbrev : KernelSig.kernelname * hol_type -> unit
-  val thytype_abbrev : KernelSig.kernelname * hol_type -> unit
+  val temp_thytype_abbrev : KernelSig.kernelname * hol_type * bool -> unit
+  val thytype_abbrev : KernelSig.kernelname * hol_type * bool -> unit
   val temp_type_abbrev : string * hol_type -> unit
   val type_abbrev : string * hol_type -> unit
   val temp_disable_tyabbrev_printing : string -> unit
   val disable_tyabbrev_printing : string -> unit
   val remove_type_abbrev : string -> unit
   val temp_remove_type_abbrev : string -> unit
+  val temp_inputonly_type_abbrev : string * hol_type -> unit
+  val inputonly_type_abbrev : string * hol_type -> unit
 
   (* Parsing terms *)
 
