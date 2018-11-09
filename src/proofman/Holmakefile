@@ -27,7 +27,8 @@ DEPS = $(BOOLLIB) $(BOOLTHEORY) $(PRIMREC) $(TERMPP) \
        $(dprot $(SIGOBJ)/type_grammar.uo) \
        $(dprot $(SIGOBJ)/Symtab.uo) \
        $(dprot $(SIGOBJ)/Inttab.uo) \
-       $(dprot $(SIGOBJ)/KNametab.uo)
+       $(dprot $(SIGOBJ)/KNametab.uo) \
+       $(dprot $(HOLDIR)/bin/buildheap)
 
 UOARGS = $(protect $(SIGOBJ)/boolLib) proofManagerLib History goalStack \
          $(protect $(SIGOBJ)/KNametab) $(protect $(SIGOBJ)/Symtab) \
