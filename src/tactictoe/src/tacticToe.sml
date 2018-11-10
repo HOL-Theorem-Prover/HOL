@@ -9,153 +9,86 @@ structure tacticToe :> tacticToe =
 struct
 
 open HolKernel Abbrev boolLib anotherLib 
-  smlLexer smlExecute smlInfix smlStorage
-  mlFeature mlNearestNeighbor 
+  smlLexer smlExecute smlRedirect smlInfix
+  mlFeature mlDataThm mlDataTactic mlNearestNeighbor 
   psMinimize 
-  tttUnfold tttLearn tttSearch
+  tttSetup tttSearch
 
 val ERR = mk_HOL_ERR "tacticToe"
-val debugdir = HOLDIR ^ "/src/tactictoe/debug"
+val tactictoe_dir = HOLDIR ^ "/src/tactictoe"
+val debugdir = tactictoe_dir ^ "/debug"
 fun debug s = debug_in_dir debugdir "tacticToe" s
 
 (* -------------------------------------------------------------------------
-   Set parameters
+   Time limit
    ------------------------------------------------------------------------- *)
 
-fun set_timeout r = (ttt_search_time := Time.fromReal r)
-
-(* -------------------------------------------------------------------------
-   Initialization: import theory data
-   ------------------------------------------------------------------------- *)
-
-fun report_data () =
-  let
-    val s1 = int_to_string (dlength (!ttt_tacfea))
-    val s2 = int_to_string (dlength (!ttt_thmfea))
-    val s3 = int_to_string (dlength (!ttt_glfea))
-  in
-    print_endline ("Loading " ^ s1 ^ " tactics, " ^ s2 ^ " theorems")
-  end
-
-fun import_ancestry () =
-  let
-    val thyl = ancestry (current_theory ())
-    val _ = debug_t "import_tacdata" import_tacdata thyl
-    val _ = debug_t "import_thmfea" import_thmfea thyl
-    val _ = debug_t "import_glfea" import_glfea thyl
-  in
-    report_data ()
-  end
-
-(* -------------------------------------------------------------------------
-   Importing databases.
-   ------------------------------------------------------------------------- *)
-
-val imported_theories = ref []
-
-fun exists_theorydata () =
-  let 
-    val thyl = dict_sort String.compare (ancestry (current_theory ()))
-    fun f thy = exists_file (ttt_tacfea_dir ^ "/" ^ thy)
-  in
-    filter f thyl
-  end
-  
-fun init_tactictoe () =
-  let
-    val _ = mkDir_err ttt_code_dir
-    val cthy = current_theory ()
-    val _ = init_metis cthy
-    val thyl = exists_theorydata ()
-  in
-    if !imported_theories <> thyl 
-    then
-      (
-      debug_t ("init_tactictoe " ^ cthy) import_ancestry ();
-      hide_out QUse.use (tactictoe_dir ^ "/src/infix_file.sml");
-      imported_theories := thyl
-      )
-    else ();
-    update_thmfea (current_theory ())
-  end
+fun set_timeout r = (ttt_search_time := r)
 
 (* -------------------------------------------------------------------------
    Preselection of theorems
    ------------------------------------------------------------------------- *)
 
-fun select_thmfea gfea =
-  if !ttt_metis_flag orelse !ttt_thmlarg_flag
-  then
-    let
-      val (symweight,feav,revdict) =
-        debug_t "all_thmfeav" all_thmfeav ()
-      val l0 = debug_t "thmknn_wdep"
-        thmknn_wdep (symweight,feav,revdict)
-          (!ttt_presel_radius) gfea
-      val dict = dnew String.compare feav
-      fun f x = (x, snd (dfind x revdict))
-        handle NotFound =>
-          (debug ("dfind: " ^ x); raise ERR "dfind" x)
-      val newfeav = debug_t "assoc_thmfea" (map f) l0
-    in
-      ((symweight,feav,revdict), newfeav)
-    end
-  else ((dempty Int.compare, [], dempty String.compare), [])
+fun select_thmfea (symweight,thmfeadict) gfea =
+  let
+    val l0 = thmknn_wdep (symweight,thmfeadict) (!ttt_presel_radius) gfea
+    val d = dset String.compare l0
+    val l1 = filter (fn (k,v) => dmem k d) (dlist thmfeadict)
+  in
+    (symweight, dnew String.compare l1)
+  end
 
 (* -------------------------------------------------------------------------
    Preselection of tactics
    ------------------------------------------------------------------------- *)
 
-fun select_tacfea goalf =
+fun select_tacfea tacdata goalf =
   let
-    val tacfea = dlist (!ttt_tacfea)
-    val stacsymweight = debug_t "learn_tfidf"
-      learn_tfidf tacfea
-    val l0 = debug_t "stacknn"
-      (stacknn stacsymweight (!ttt_presel_radius) tacfea) goalf
-    val l1 = debug_t "add_stacdesc"
-      add_stacdesc (!ttt_tacdep) (!ttt_presel_radius) l0
-    fun f x = (x, dfind x (!ttt_tacfea))
+    val tacfea = dlist (#tacfea tacdata)
+    val tacsymweight = learn_tfidf tacfea
+    val l0 = 
+      stacknn_preselect (tacsymweight,tacfea) (!ttt_presel_radius) goalf
+    val l1 = add_stacdep (#tacdep tacdata) (!ttt_presel_radius) (map fst l0)
+    fun f x = (x, dfind x (#tacfea tacdata))
     val l2 = map f l1
   in
-    (stacsymweight, l2)
+    (tacsymweight, l2)
   end
 
 (* -------------------------------------------------------------------------
    Main function
    ------------------------------------------------------------------------- *)
 
-fun main_tactictoe goal =
+fun main_tactictoe (thmdata,tacdata) goal =
   let
     (* preselection *)
-    val goalf = fea_of_goal goal
-    val (stacsymweight, tacfea) = select_tacfea goalf
-    val ((pthmsymweight,pthmfeav,pthmrevdict), thmfeav) = select_thmfea goalf
+    val goalf = feahash_of_goal goal
+    val (thmsymweight,thmfeadict) = select_thmfea thmdata goalf
+    val (tacsymweight,tacfea) = select_tacfea tacdata goalf
     (* caches *)
     val thm_cache = ref (dempty (cpl_compare goal_compare Int.compare))
     val tac_cache = ref (dempty goal_compare)
     (* predictors *)
+    fun thmpred n g =
+      dfind (g,n) (!thm_cache) handle NotFound =>
+      let val r = thmknn (thmsymweight,thmfeadict) n (feahash_of_goal g) in
+        thm_cache := dadd (g,n) r (!thm_cache); r
+      end
     fun tacpred g =
       dfind g (!tac_cache) handle NotFound =>
       let
-        val l = fea_of_goal g
-        val lbll = stacknn_uniq stacsymweight (!ttt_presel_radius) tacfea l
-        val r = map #1 lbll
+        val l = feahash_of_goal g
+        val stacl = stacknn_uniq (tacsymweight,tacfea) (!ttt_presel_radius) l
       in
-        tac_cache := dadd g r (!tac_cache); r
-      end
-    fun thmpred n g =
-      dfind (g,n) (!thm_cache) handle NotFound =>
-      let val r = thmknn (pthmsymweight,thmfeav) n (fea_of_goal g) in
-        thm_cache := dadd (g,n) r (!thm_cache); r
+        tac_cache := dadd g stacl (!tac_cache); stacl
       end
   in
     search thmpred tacpred goal
   end
 
-(* --------------------------------------------------------------------------
+(* -------------------------------------------------------------------------
    Return values
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------- *)
 
 fun status r = case r of
    ProofError     =>
@@ -164,122 +97,39 @@ fun status r = case r of
    (print_endline "tactictoe: saturated"; FAIL_TAC "tactictoe: saturated")
  | ProofTimeOut   =>
    (print_endline "tactictoe: time out"; FAIL_TAC "tactictoe: time out")
- | Proof s        =>
-   (print_endline s; hide_out tactic_of_sml s)
+ | Proof s        => (print_endline s; hide_out tactic_of_sml s)
 
-(* --------------------------------------------------------------------------
+(* -------------------------------------------------------------------------
    Interface
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------- *)
+
+val infix_file = HOLDIR ^ "/src/AI/sml_inspection/infix_file.sml"
 
 fun tactictoe_aux goal = 
-  (
-  init_tactictoe ();
-  status (hide_out main_tactictoe goal)
-  )
+  let 
+    val _ = hide_out QUse.use infix_file
+    val _ = init_metis ()
+    val thmdata = create_thmdata ()
+    val tacdata = create_tacdata ()
+  in
+    status (hide_out (main_tactictoe (thmdata,tacdata)) goal)
+  end
   
 fun ttt goal = (tactictoe_aux goal) goal
 
 fun tactictoe term = 
   let val goal = ([],term) in TAC_PROOF (goal, tactictoe_aux goal) end
 
-(* --------------------------------------------------------------------------
-   Prediction of the next tactic only (to move to search)
-    ------------------------------------------------------------------------- *) 
-
-val next_tac_glob = ref []
-val next_tac_number = ref 5
-fun next n = List.nth (!next_tac_glob,n)
-
-fun save_stac tac stac g gl =
-  (
-  next_tac_glob := !next_tac_glob @ [tac];
-  print_endline "";
-  print_endline 
-    (requote_sproof (hide_out (minimize_stac 1.0 stac g) gl))
-  )
-
-fun try_tac thmpred read_dicts gldict n g stacl =
-   if n <= 0 then () else
-   case stacl of
-    [] => print_endline "no more tactics"
-  | stac :: m =>
-    let
-      fun continue gldict' n' = try_tac thmpred read_dicts gldict' n' g m
-      fun p s = (print_endline ("  " ^ s))
-      val (newstac,tac,_) = hide_out (stac_to_tac thmpred read_dicts stac) g
-      val ro = SOME (hide_out (tttTimeout.timeOut 1.0 tac) g)
-               handle _ => NONE
-    in
-      case ro of
-        NONE => (print "."; continue gldict n)
-      | SOME (gl,_) =>
-        (
-        if dmem gl gldict then (print "."; continue gldict n) else
-          (
-          if gl = []
-          then (save_stac tac newstac g gl; p "solved")
-          else
-            (
-            if mem g gl (* should test for alpha equivalence here *)
-            then (print "."; continue (dadd gl () gldict) n)
-            else (save_stac tac newstac g gl;
-                  app (p o string_of_goal) gl;
-                  continue (dadd gl () gldict) (n-1))
-            )
-          )
-        )
-    end
-
-fun next_tac goal =
-  let
-    val _ = hide_out init_tactictoe ()
-    val _ = next_tac_glob := []
-    (* preselection *)
-    val goalf = fea_of_goal goal
-    val (stacsymweight, tacfea) =
-      debug_t "select_tacfea" (hide_out  select_tacfea) goalf
-    val ((pthmsymweight,pthmfeav,pthmrevdict), thmfeav) =
-      debug_t "select_thmfea" (hide_out select_thmfea) goalf
-    (* caches *)
-    val thm_cache = ref (dempty (cpl_compare goal_compare Int.compare))
-    val tac_cache = ref (dempty goal_compare)
-    (* predictors *)
-    fun tacpred g =
-      dfind g (!tac_cache) handle NotFound =>
-      let
-        val l = fea_of_goal g
-        val lbll = stacknn_uniq stacsymweight (!ttt_presel_radius) tacfea l
-        val r = map #1 lbll
-      in
-        tac_cache := dadd g r (!tac_cache); r
-      end
-    fun thmpred n g =
-      dfind (g,n) (!thm_cache) handle NotFound =>
-      let val r = thmknn (pthmsymweight,thmfeav) n (fea_of_goal g) in
-        thm_cache := dadd (g,n) r (!thm_cache); r
-      end
-    (* internal caches: some could be duplicates *)
-    val thml_dict = ref (dempty (cpl_compare goal_compare Int.compare))
-    val inst_dict = ref (dempty (cpl_compare String.compare goal_compare))
-    val tac_dict = ref (dempty String.compare)
-    val read_dicts = (tac_dict, inst_dict, thml_dict)
-    (* not printing same outputs *)
-    val gldict = dempty (list_compare goal_compare)
-    val stacl = add_metis (tacpred goal)
-  in
-    try_tac thmpred read_dicts gldict (!next_tac_number) goal stacl
-  end
-
 (* -------------------------------------------------------------------------
    Evaluate TacticToe (to move to tttTest)
    ------------------------------------------------------------------------- *)
-
+(*
 fun debug_eval_status r =
   case r of
-    ProofError     => debug_proof "Error: debug_eval_status"
-  | ProofSaturated => debug_proof "Proof status: Saturated"
-  | ProofTimeOut   => debug_proof "Proof status: Time Out"
-  | Proof s        => debug_proof ("Proof found: " ^ s)
+    ProofError     => debug "Error: debug_eval_status"
+  | ProofSaturated => debug "Proof status: Saturated"
+  | ProofTimeOut   => debug "Proof status: Time Out"
+  | Proof s        => debug ("Proof found: " ^ s)
 
 fun eval_tactictoe goal =
   (
@@ -288,6 +138,6 @@ fun eval_tactictoe goal =
   init_tactictoe ();
   debug_eval_status (hide_out main_tactictoe goal)
   )
-
+*)
 
 end (* struct *)

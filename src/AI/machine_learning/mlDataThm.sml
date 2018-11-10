@@ -73,7 +73,7 @@ fun safe_namespace_thms () =
    Metis string
    ------------------------------------------------------------------------- *)
 
-fun dbfetch_of_sthm s =
+fun dbfetch_of_thmid s =
   let val (a,b) = split_string "Theory." s in
     if a = current_theory ()
       then String.concatWith " " ["DB.fetch",mlquote a,mlquote b]
@@ -83,7 +83,7 @@ fun dbfetch_of_sthm s =
 
 fun mk_metis_call sl =
   "metisTools.METIS_TAC " ^
-  "[" ^ String.concatWith " , " (map dbfetch_of_sthm sl) ^ "]"
+  "[" ^ String.concatWith " , " (map dbfetch_of_thmid sl) ^ "]"
 
 (* -------------------------------------------------------------------------
    Theorem dependencies

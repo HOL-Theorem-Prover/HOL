@@ -11,7 +11,7 @@ struct
 open HolKernel Abbrev boolLib anotherLib smlExecute smlRedirect
 
 (* -------------------------------------------------------------------------
-   Nearest neigbhor parameters
+   Nearest neighbor parameters
    ------------------------------------------------------------------------- *)
 
 val ttt_thmlarg_radius = ref 16
@@ -31,14 +31,14 @@ val ttt_recproof_time   = ref 20.0
    Search
    ------------------------------------------------------------------------- *)
 
-(* Metis *)
 fun init_metis () = hide_out metistac_of_sml () 
   handle Interrupt => raise Interrupt | _ => ()
 
 val ttt_metis_time   = ref 0.1
 val ttt_metis_radius = ref 16
 
-(* MCTS *)
+val ttt_tactic_time = ref 0.04 (* also used in tttLearn *)
+val ttt_search_time = ref 15.0
 val ttt_policy_coeff = ref 0.5
 
 end (* struct *)

@@ -222,7 +222,7 @@ fun reconstruct_aux g proof sproof =
     val tac = tactic_of_sml sproof 
       handle Interrupt => raise Interrupt | _ => NO_TAC
     val new_tim = 
-      snd (add_time (timeOut search_time Tactical.TAC_PROOF) (g,tac))
+      snd (add_time (timeout search_time Tactical.TAC_PROOF) (g,tac))
       handle 
         Interrupt => raise Interrupt 
       | _ => (debug ("Warning: reconstruct: " ^ sproof); search_time)

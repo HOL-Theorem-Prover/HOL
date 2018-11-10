@@ -3,27 +3,26 @@ sig
 
   include Abbrev
 
-  type lbl_t = (string * real * goal * goal list)
-  type fea_t = int list
-  type feav_t = (lbl_t * fea_t)
+  type lbl = (string * real * goal * goal list)
+  type fea = int list
+  type tacdata =
+    {
+    tacfea : (lbl,fea) Redblackmap.dict,
+    tacfea_cthy : (lbl,fea) Redblackmap.dict,
+    taccov : (string, int) Redblackmap.dict,
+    tacdep : (goal, lbl list) Redblackmap.dict
+    }  
 
-  (* orthogonalization *)
-  val orthogonalize : feav_t -> lbl_t
+  (* abstraction of theorem list arguments in tactics *)
+  val thmlarg_placeholder : string
+  val abstract_stac : string -> string option
+  val inst_stac : string list -> string -> string
+  val is_thmlarg_stac : string -> bool 
+ 
+  (* competition between different tactics over a goal *)
+  val orthogonalize : tacdata -> (lbl * fea) -> lbl 
 
-  (* abstraction of terms *)
-  val abs_termarg : string ->
-    (term * (term quotation -> tactic)) option
-  val inst_termarg :  string -> term -> string
-
-  (* abstraction of tactic arguments *)
-  val abstract_stac   : string -> string option
-  val inst_stac       : string -> goal -> string -> string
-  val is_absarg_stac  : string -> bool
-
-  (* abstraction for export *)
+  (* abstraction info for the nn branch *)
   val pe_abs : string -> (string * (string * thm) list list) 
 
 end
-
-
-

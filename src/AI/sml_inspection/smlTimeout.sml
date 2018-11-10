@@ -57,12 +57,12 @@ fun timeLimit time f x =
     release result
   end
 
-fun timeOut t f x = timeLimit (Time.fromReal t) f x
+fun timeout t f x = timeLimit (Time.fromReal t) f x
 
 val (TC_OFF : tactic -> tactic) = trace ("show_typecheck_errors", 0)
 
-fun timed_tactic tim tac g =
-  SOME (fst (timeOut tim (TC_OFF tac) g))
+fun timeout_tactic t tac g =
+  SOME (fst (timeout t (TC_OFF tac) g))
   handle Interrupt => raise Interrupt | _ => NONE
 
 

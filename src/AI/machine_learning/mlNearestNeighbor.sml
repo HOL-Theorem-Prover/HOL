@@ -16,11 +16,11 @@ val ERR = mk_HOL_ERR "mlNearestNeighbor"
    Distance
    ------------------------------------------------------------------------ *)
 
-fun knn_dist symweight dicto fea_p =
+fun knn_dist symweight dicto feap =
   let
-    val fea_i   = filter (fn x => dmem x dicto) fea_p
+    val feai    = filter (fn x => dmem x dicto) feap
     fun wf n    = dfind n symweight handle NotFound => raise ERR "knn_dist" ""
-    val weightl = map wf fea_i
+    val weightl = map wf feai
   in
     sum_real weightl
   end
@@ -29,12 +29,12 @@ fun knn_dist symweight dicto fea_p =
    Sorting feature vectors according to the distance
    ------------------------------------------------------------------------ *)
 
-fun knn_sort symweight feal feao =
+fun knn_sort (symweight,feav) feao =
   let
     val dicto = dset Int.compare feao
-    fun f (x,fea) = ((x,fea), knn_dist symweight dicto fea)
+    fun f (x,feap) = ((x,feap), knn_dist symweight dicto feap)
   in
-    dict_sort compare_rmax (map f feal)
+    dict_sort compare_rmax (map f feav)
   end
 
 (* ------------------------------------------------------------------------
@@ -43,10 +43,18 @@ fun knn_sort symweight feal feao =
 
 fun thmknn (symweight,feavdict) n fea =
   let
-    val l1 = map (fst o fst) (knn_sort symweight (dlist feavdict) fea)
+    val l1 = map (fst o fst) (knn_sort (symweight, dlist feavdict) fea)
     val l2 = mk_sameorder_set String.compare l1
   in
     first_n n l2
+  end
+
+fun thmknn_std n g =
+  let 
+    val (symweight,feavdict) = create_thmdata ()
+    val fea = feahash_of_goal g
+  in
+    thmknn (symweight,feavdict) n fea
   end
 
 (* ----------------------------------------------------------------------
@@ -69,17 +77,14 @@ fun thmknn_wdep (symweight,feavdict) n fea =
    Tactic predictions
    ------------------------------------------------------------------------ *)
 
-fun stacknn_preselect symweight n feal feao =
-  let val l1 = map fst (knn_sort symweight feal feao) in
-    first_n n l1
+fun stacknn_preselect (symweight,feav) n feao =
+  let val l = map fst (knn_sort (symweight,feav) feao) in
+    first_n n l
   end
 
-fun stacknn_uniq symweight n feal feao =
-  let
-    val l = stacknn_preselect symweight n feal feao
-    fun f (lbl1,lbl2) = String.compare (#1 lbl1, #1 lbl2)
-  in
-    first_n n (mk_sameorder_set f (map fst l))
+fun stacknn_uniq (symweight,feav) n feao =
+  let val l = stacknn_preselect (symweight,feav) n feao in
+    mk_sameorder_set String.compare (map (#1 o fst) l)
   end
 
 (* ----------------------------------------------------------------------

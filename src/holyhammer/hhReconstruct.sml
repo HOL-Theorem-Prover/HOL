@@ -68,7 +68,7 @@ fun hh_reconstruct lemmas g =
       val newstac = hide_out (psMinimize.minimize_stac t1 stac g) []
       val tac = hide_out tactic_of_sml newstac
     in
-      case hide_out (timed_tactic t2 tac) g of
+      case hide_out (timeout_tactic t2 tac) g of
         SOME _ => (newstac,tac)
       | NONE   => raise ERR "hh_reconstruct" "reconstruction failed"
     end

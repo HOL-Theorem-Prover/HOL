@@ -1,31 +1,34 @@
-(* ========================================================================== *)
-(* FILE          : tttSearch.sml                                              *)
-(* DESCRIPTION   : Search algorithm for TacticToe.                            *)
-(* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck             *)
-(* DATE          : 2017                                                       *)
-(* ========================================================================== *)
+(* ========================================================================= *)
+(* FILE          : tttSearch.sml                                             *)
+(* DESCRIPTION   : Search algorithm for TacticToe.                           *)
+(* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck            *)
+(* DATE          : 2017                                                      *)
+(* ========================================================================= *)
 
 structure tttSearch :> tttSearch =
 struct
 
-open HolKernel boolLib Abbrev tttTools tttTimeout tttFeature tttPredict
-tttExec tttLexer tttMinimize tttThmData tttTacticData tttLearn tttSetup
+open HolKernel Abbrev boolLib anotherLib 
+  smlTimeout smlLexer smlExecute 
+  mlFeature mlDataThm mlDataTactic mlNearestNeighbor
+  psMinimize
+  tttSetup tttLearn
 
 val ERR = mk_HOL_ERR "tttSearch"
-val last_stac = ref ""
-fun debug_err s = (debug ("Error: " ^ s); raise ERR "standard" "error")
+val debugdir = HOLDIR ^ "/src/tactictoe/debug"
+fun debug s = debug_in_dir debugdir "tttSearch" s
+fun debug_err s = (debug ("Error: " ^ s); raise ERR s "")
 
-(* --------------------------------------------------------------------------
+(* -------------------------------------------------------------------------
    Exceptions
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------- *)
 
-exception SearchTimeOut
+exception SearchTimeout
 exception SearchSaturated
-
 
 (* -------------------------------------------------------------------------
    Tell if a node is active or not
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------- *)
 
 val notactivedict = ref (dempty Int.compare)
 fun is_notactive x = dmem x (!notactivedict)
@@ -33,13 +36,13 @@ fun is_active x = not (is_notactive x)
 
 fun deactivate x =
   (
-  debug_search ("deactivate " ^ int_to_string x);
+  debug ("deactivate " ^ int_to_string x);
   notactivedict := dadd x () (!notactivedict)
   )
 
 (* -------------------------------------------------------------------------
    Search references
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------- *)
 
 val glob_timer = ref NONE
 val proofdict = ref (dempty Int.compare)
@@ -47,30 +50,25 @@ val proofdict = ref (dempty Int.compare)
 (* global values to prevent many arguments in functions *)
 val thmpredictor_glob = ref (fn _ => (fn _ => []))
 val tacpredictor_glob = ref (fn _ => [])
-val glpredictor_glob = ref (fn _ => 0.0)
 
-(* --------------------------------------------------------------------------
+(* -------------------------------------------------------------------------
    Caching tactic applications on goals
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------- *)
 
 val stacgoal_cache = ref (dempty (cpl_compare String.compare goal_compare))
 
-(* --------------------------------------------------------------------------
+(* -------------------------------------------------------------------------
    Statistics
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------- *)
 
 val stac_counter = ref 0
-
-fun string_of_pred pred =
-  "[" ^ String.concatWith "," pred ^ "]"
+fun string_of_pred pred = "[" ^ String.concatWith "," pred ^ "]"
 
 val tactime = ref 0.0
 val thmtime = ref 0.0
-val gltime = ref 0.0
 
 val tactimer = total_time tactime
 val thmtimer = total_time thmtime
-val gltimer = total_time gltime
 
 val inst_time = ref 0.0
 val terminst_time = ref 0.0
@@ -90,7 +88,6 @@ fun reset_timers () =
   (
   tactime := 0.0;
   thmtime := 0.0;
-  gltime := 0.0;
   inst_time := 0.0;
   infstep_time := 0.0;
   node_create_time := 0.0;
@@ -98,31 +95,26 @@ fun reset_timers () =
   tot_time := 0.0
   )
 
-(* --------------------------------------------------------------------------
+(* -------------------------------------------------------------------------
    Special tactics
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------- *)
 
 val metis_spec = "tactictoe_metis"
+fun add_metis pred = metis_spec :: pred
 
-fun add_metis pred =
-  if !ttt_metis_flag then metis_spec :: pred else pred
-
-(* --------------------------------------------------------------------------
+(* -------------------------------------------------------------------------
    MCTS: Priors
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------- *)
 
 fun array_to_list a =
   let fun f (a,l) = a :: l in rev (Array.foldl f [] a) end
 
 fun init_eval pripol pid =
   let
-    val _ = debug_search "mcts evaluation"
+    val _ = debug "mcts evaluation"
     val prec = dfind pid (!proofdict)
     val {visit,pending,goalarr,prioreval,cureval,priorpolicy,...} = prec
-    val eval =
-      if !ttt_mcevnone_flag then 0.0
-      else if !ttt_mcevtriv_flag then 1.0
-      else (!glpredictor_glob) (array_to_list (#goalarr prec))
+    val eval = 1.0
   in
     priorpolicy := pripol;
     visit := 1.0;
@@ -130,54 +122,46 @@ fun init_eval pripol pid =
     cureval := [eval]
   end
 
-(* --------------------------------------------------------------------------
-   MCTS: Backup (works marginally with number of failures)
-   -------------------------------------------------------------------------- *)
+(* -------------------------------------------------------------------------
+   MCTS: Backup (works marginally).
+   Prior eval is constant equal to 1.0
+   ------------------------------------------------------------------------- *)
 
-fun backup_loop beval eval cid =
+fun backup_loop eval cid =
   let
     val crec = dfind cid (!proofdict)
     val {parid,visit,cureval,...} = crec
   in
-    if beval
-    then cureval := eval :: !cureval
-    else ()
-    ;
+    cureval := eval :: !cureval;
     visit := !visit + 1.0;
-    if parid = NONE then () else backup_loop beval eval (valOf parid)
+    if parid = NONE then () else backup_loop eval (valOf parid)
   end
 
 fun backup cid =
   let
-    val _ = debug_search "mcts backpropagation"
+    val _ = debug "mcts backpropagation"
     val crec = dfind cid (!proofdict)
     val {parid,prioreval,...} = crec
   in
-    if parid = NONE
-    then ()
-    else backup_loop true (!prioreval) (valOf parid)
+    if parid = NONE then () else backup_loop (!prioreval) (valOf parid)
   end
 
 fun backup_fail cid =
   let
-    val _ = debug_search "backup fail"
+    val _ = debug "backup fail"
     val crec = dfind cid (!proofdict)
     val {parid,...} = crec
   in
-    if parid = NONE
-    then ()
-    else backup_loop (!ttt_mcevfail_flag) 0.0 (valOf parid)
+    if parid = NONE then () else backup_loop 0.0 (valOf parid)
   end
 
 fun backup_success cid =
   let
-    val _ = debug_search "backup success"
+    val _ = debug "backup success"
     val crec = dfind cid (!proofdict)
     val {parid,...} = crec
   in
-    if parid = NONE
-    then ()
-    else backup_loop true 1.0 (valOf parid)
+    if parid = NONE then () else backup_loop 1.0 (valOf parid)
   end
 
 (* --------------------------------------------------------------------------
@@ -225,10 +209,10 @@ fun root_create goal pred =
       cureval = ref []
       }
   in
-    debug_search "Root";
-    debug_search ("  goal: " ^
+    debug "Root";
+    debug ("  goal: " ^
       String.concatWith "," (map string_of_goal [goal]));
-    debug_search ("  pred: \n  " ^
+    debug ("  pred: \n  " ^
       String.concatWith ",\n  " (map (string_of_pred o (first_n 2)) [pred]));
     proofdict := dadd selfid selfrec (!proofdict);
     init_eval 0.0 selfid
@@ -270,12 +254,12 @@ fun node_create pripol tactime parid parstac pargn parg goallist
     val cdepth = #depth selfrec
   in
     if cdepth > !max_depth_mem then max_depth_mem := cdepth else ();
-    debug_search
+    debug
        ("Node " ^ int_to_string selfid ^ " " ^ int_to_string parid ^ " " ^
         Real.toString (! (#priorpolicy selfrec)));
-    debug_search
+    debug
        ("  goals: " ^ String.concatWith "," (map string_of_goal goallist));
-    debug_search ("  predictions: " ^
+    debug ("  predictions: " ^
        String.concatWith ",\n  " (map (string_of_pred o (first_n 2)) predlist));
     proofdict := dadd selfid selfrec (!proofdict);
     init_eval pripol selfid;
@@ -283,11 +267,11 @@ fun node_create pripol tactime parid parstac pargn parg goallist
   end
 
 fun node_delete pid =
-  (debug_search ("node_delete " ^ int_to_string pid); deactivate pid)
+  (debug ("node_delete " ^ int_to_string pid); deactivate pid)
 
-(* --------------------------------------------------------------------------
+(* -------------------------------------------------------------------------
    Change the name of the tactic that has been applied
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------- *)
 
 fun update_curstac newstac pid =
   let
@@ -298,101 +282,81 @@ fun update_curstac newstac pid =
   in
     Array.update (#predarr prec, gn, newpred)
   end
-  handle _ => debug_err ("update_curstac :" ^ newstac)
+  handle Interrupt => raise Interrupt | _ => 
+    debug_err ("update_curstac :" ^ newstac)
 
-(* --------------------------------------------------------------------------
-   Trying multiple terms.
-   -------------------------------------------------------------------------- *)
 
-fun try_nqtm pid n (stac,tac) (otm,qtac) g =
-  let
-    val glo = SOME (fst (tac g)) handle _ => NONE
-    fun locprod x = case x of SOME gl => not (mem g gl) | NONE => false
-  in
-    if locprod glo then glo else
-      let fun loop qtac tml =
-        case tml of [] => NONE | tm :: m =>
-        let val glo' = SOME (fst (qtac [ANTIQUOTE tm] g)) handle _ => NONE in
-          if locprod glo'
-          then
-            let val newstac = inst_timer (inst_termarg stac) tm in
-              update_curstac newstac pid; glo'
-            end
-          else loop qtac m
-        end
-      in
-        loop qtac (termknn n g otm)
-      end
-  end
-
-(* --------------------------------------------------------------------------
-   Transforming code into a tactic. Doing necessary predictions.
-   -------------------------------------------------------------------------- *)
+(* -------------------------------------------------------------------------
+   Caches
+   ------------------------------------------------------------------------- *)
 
 val thml_dict = ref (dempty (cpl_compare goal_compare Int.compare))
 val inst_dict = ref (dempty (cpl_compare String.compare goal_compare))
 val tac_dict = ref (dempty String.compare)
 
-fun pred_sthml thmpredictor thml_dict n g =
+fun cache_thmpred n g =
   dfind (g,n) (!thml_dict) handle NotFound =>
-    let val sl = thmpredictor n g in
-      thml_dict := dadd (g,n) sl (!thml_dict);
-      sl
-    end
+  let val sl = (!thmpredictor_glob) n g in
+    thml_dict := dadd (g,n) sl (!thml_dict);
+    sl
+  end
 
-fun stac_to_tac thmpred (tac_dict,inst_dict,thml_dict) stac g =
+fun cache_thminst stac g =
+  dfind (stac,g) (!inst_dict) handle NotFound =>
+  let
+    val _ = debug ("instantiating: " ^ stac)
+    val thmidl = cache_thmpred (!ttt_thmlarg_radius) g
+    val newstac = inst_stac thmidl stac
+    val newtac = tactic_of_sml newstac
+      handle Interrupt => raise Interrupt | _ =>
+        debug_err ("stac_to_tac: " ^ newstac)
+    val r = (newstac, newtac, !ttt_tactic_time)
+  in
+    debug ("to: " ^ newstac);
+    inst_dict := dadd (stac,g) r (!inst_dict);
+    r
+  end
+
+fun cache_metisinst stac g =
+  dfind (stac,g) (!inst_dict) handle NotFound =>
+  let
+    val thmidl = cache_thmpred (!ttt_metis_radius) g
+    val newstac = mk_metis_call thmidl
+    val newtac = tactic_of_sml newstac 
+      handle Interrupt => raise Interrupt | _ =>
+        debug_err ("stac_to_tac: " ^ newstac)
+  in
+    inst_dict := dadd (stac,g) (newstac,newtac,!ttt_metis_time) (!inst_dict);
+    debug ("to: " ^ newstac);
+    (newstac,newtac,!ttt_metis_time)
+  end
+
+fun cache_stac stac = 
+  dfind stac (!tac_dict) handle NotFound => 
+  let val tac = tactic_of_sml stac in
+    tac_dict := dadd stac tac (!tac_dict);
+    tac
+  end
+
+(* -------------------------------------------------------------------------
+   Transforming code into a tactic. Doing necessary predictions.
+   ------------------------------------------------------------------------- *)
+
+fun stac_to_tac stac g =
   (
-  if !ttt_thmlarg_flag andalso is_absarg_stac stac then
-    (
-    dfind (stac,g) (!inst_dict) handle NotFound =>
-    let
-      val _ = debug_search ("instantiating: " ^ stac)
-      val sl =
-        if !ttt_thmlarg_flag
-        then pred_sthml thmpred thml_dict (!ttt_thmlarg_radius) g
-        else []
-      val thmls = String.concatWith " , " (map dbfetch_of_string sl)
-      val newstac = inst_stac thmls g stac
-      val newtac = tactic_of_sml newstac
-        handle _ =>
-        (debug ("Warning: stac_to_tac: " ^ newstac); raise ERR "stac_to_tac" "")
-    in
-      inst_dict := dadd (stac,g) (newstac,newtac, !ttt_tactic_time) (!inst_dict);
-      debug_search ("to: " ^ newstac);
-      (newstac, newtac, !ttt_tactic_time)
-    end
-    )
-  else if stac = metis_spec then
-    (
-    dfind (stac,g) (!inst_dict) handle NotFound =>
-    let
-      val sl = pred_sthml thmpred thml_dict (!ttt_metis_radius) g
-      val newstac = mk_metis_call sl
-      val newtac = tactic_of_sml newstac
-    in
-      inst_dict := dadd (stac,g) (newstac,newtac,!ttt_metis_time) (!inst_dict);
-      debug_search ("to: " ^ newstac);
-      (newstac,newtac,!ttt_metis_time)
-    end
-    )
-  else 
-    let fun find_stac stac = 
-      dfind stac (!tac_dict) handle NotFound => 
-        let val tac = tactic_of_sml stac in
-          tac_dict := dadd stac tac (!tac_dict);
-          tac
-        end
-    in
-      (stac, find_stac stac, !ttt_tactic_time)
-    end
+  if is_thmlarg_stac stac 
+    then cache_thminst stac g
+  else if stac = metis_spec 
+    then cache_metisinst stac g
+  else (stac, cache_stac stac, !ttt_tactic_time)
   )
-  handle _ => 
-    (debug ("Warning: stac_to_tac: " ^ stac);
+  handle Interrupt => raise Interrupt | _ => 
+    (debug ("stac_to_tac: " ^ stac);
      ("Tactical.NO_TAC", NO_TAC, !ttt_tactic_time))
     
-(* --------------------------------------------------------------------------
+(* -------------------------------------------------------------------------
    Application of a tactic.
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------- *)
 
 fun glob_productive pardict trydict g glo =
   case glo of
@@ -406,27 +370,13 @@ fun glob_productive pardict trydict g glo =
 
 fun apply_stac pid pardict trydict stac g =
   let
-    val _ = last_stac := stac
     val _ = stac_counter := !stac_counter + 1
     (* instantiation of theorems and reading *)
-    val (newstac,newtac,tim) = 
-      stac_to_tac (!thmpredictor_glob) (tac_dict,inst_dict,thml_dict) stac g
+    val (newstac,newtac,tim) = stac_to_tac stac g
     val _ = update_curstac newstac pid
     (* execution *)
-    val glo = dfind (newstac,g) (!stacgoal_cache) handle NotFound =>
-      let val cpo = if !ttt_termarg_flag then abs_termarg newstac else NONE in
-        case cpo of
-          NONE => app_tac tim newtac g
-        | SOME (otm,qtac) =>
-        (* instantiations of terms *)
-          let
-            val etac =
-              try_nqtm pid (!ttt_termarg_radius) (newstac,newtac) (otm,qtac)
-            val glo =  app_qtac tim etac g
-          in
-            glo
-          end
-      end
+    val glo = dfind (newstac,g) (!stacgoal_cache) 
+       handle NotFound => timeout_tactic tim newtac g
     (* testing for loops *)
     val newglo = glob_productive pardict trydict g glo
   in
@@ -436,16 +386,18 @@ fun apply_stac pid pardict trydict stac g =
 
 fun apply_next_stac pid =
   let
-    val _ = debug_search "apply_next_stac"
+    val _ = debug "apply_next_stac"
     val prec = dfind pid (!proofdict)
     val gn = hd (! (#pending prec))
-      handle _ => debug_err "apply_next_stac: empty pending"
+      handle Interrupt => raise Interrupt | _ => 
+      debug_err "apply_next_stac: empty pending"
     val g = Array.sub (#goalarr prec, gn)
     val pred = Array.sub (#predarr prec, gn)
     val trydict = !(#trydict prec)
     val pardict = (#pardict prec)
     val stac = hd pred
-      handle _ => debug_err "apply_next_stac: empty pred"
+      handle Interrupt => raise Interrupt | _ => 
+      debug_err "apply_next_stac: empty pred"
   in
     infstep_timer (apply_stac pid pardict trydict stac) g
   end
@@ -459,14 +411,16 @@ fun has_empty_pred pid =
     val prec = dfind pid (!proofdict)
     val gn = hd (!(#pending prec))
     val pred = Array.sub (#predarr prec, gn)
-      handle _ => debug_err ("find_next_tac: " ^ int_to_string pid)
+      handle Interrupt => raise Interrupt | _ => 
+      debug_err ("find_next_tac: " ^ int_to_string pid)
   in
     if null pred then (deactivate pid; true) else false
   end
 
 fun mc_node_find pid =
-  if Timer.checkRealTimer (valOf (!glob_timer)) > (!ttt_search_time)
-  then (debug "Warning: mc_node_find: loop"; raise SearchTimeOut)
+  if Timer.checkRealTimer (valOf (!glob_timer)) > 
+     Time.fromReal (!ttt_search_time)
+  then (debug "Warning: mc_node_find: loop"; raise SearchTimeout)
   else  
     let
       val prec = dfind pid (!proofdict)
@@ -476,9 +430,9 @@ fun mc_node_find pid =
       (* try new tactic on the node itself *)
       val n = length (!children)
       val self_pripol =
-        Math.pow (1.0 - !ttt_mcpol_coeff, Real.fromInt n) * !ttt_mcpol_coeff
+        Math.pow (1.0 - !ttt_policy_coeff, Real.fromInt n) * !ttt_policy_coeff
       val self_curpol = 1.0 / pdenom
-      val self_selsc = (pid, (!ttt_mcev_coeff) * (self_pripol / self_curpol))
+      val self_selsc = (pid, 2.0 * self_pripol / self_curpol)
       (* or explore deeper existing partial proofs *)
       fun f cid =
         let
@@ -488,7 +442,7 @@ fun mc_node_find pid =
           val visit = !(#visit crec)
           val curpol = (visit + 1.0) / pdenom
         in
-          (cid, meaneval + (!ttt_mcev_coeff) * (pripol / curpol))
+          (cid, meaneval + 2.0 * (pripol / curpol))
         end
       (* sort and select node with best selection score *)
       val l0 = self_selsc :: List.map f (!children)
@@ -499,16 +453,17 @@ fun mc_node_find pid =
     end
 
 fun try_mc_find () =
-  if Timer.checkRealTimer (valOf (!glob_timer)) > (!ttt_search_time)
-  then (debug "Warning: try_mc_find"; raise SearchTimeOut)
+  if Timer.checkRealTimer (valOf (!glob_timer)) > 
+     Time.fromReal (!ttt_search_time)
+  then (debug "Warning: try_mc_find"; raise SearchTimeout)
   else
     let
-      val _ = debug_search "mc_node_find"
+      val _ = debug "mc_node_find"
       val (pid,pripol) = mc_node_find 0
     in
       if is_notactive pid
       then (backup_fail pid; try_mc_find ())
-      else (debug_search ("Find " ^ int_to_string pid); (pid,pripol))
+      else (debug ("Find " ^ int_to_string pid); (pid,pripol))
     end
 
 (* ---------------------------------------------------------------------------
@@ -545,12 +500,10 @@ fun close_proof cid pid =
     children := [];
     trydict := dempty (list_compare goal_compare);
     pending := tl (!pending);
-    (* optional reinitialization of the evaluation function *)
-    if !ttt_mcevinit_flag then init_eval (!priorpolicy) pid else ();
     (* check if the goal was solved and recursively close *)
     if null (!pending)
     then
-      if parid = NONE (* special case when it's root *)
+      if parid = NONE (* root *)
       then (debug "proof found"; node_delete pid; raise ProofFound)
       else close_proof pid (valOf parid)
     else ()
@@ -616,7 +569,7 @@ fun close_proof_wrap staco tactime pid =
    Search function. Modifies the proof state.
    -------------------------------------------------------------------------- *)
 
-fun init_search thmpred tacpred glpred g =
+fun init_search thmpred tacpred g =
   (
   (* global time-out *)
   glob_timer := SOME (Timer.startRealTimer ());
@@ -632,7 +585,6 @@ fun init_search thmpred tacpred glpred g =
   (* easier access to values *)
   tacpredictor_glob := tactimer tacpred;
   thmpredictor_glob := thmtimer thmpred;
-  glpredictor_glob  := gltimer glpred;
   (* statistics *)
   reset_timers ();
   stac_counter := 0;
@@ -641,7 +593,7 @@ fun init_search thmpred tacpred glpred g =
 
 fun get_next_pred pid =
   let
-    val _ = debug_search "get_next_pred"
+    val _ = debug "get_next_pred"
     val prec = dfind pid (!proofdict)
   in
     if null (!(#pending prec)) then () else
@@ -657,13 +609,13 @@ fun get_next_pred pid =
 
 fun node_find () =
   let
-    val _ = debug_search "node_find"
+    val _ = debug "node_find"
     val l0 = filter (fn x => is_active (fst x)) (dlist (!proofdict))
     (* deactivate node with empty predictions (no possible actions) *)
     val l1 = filter (fn x => not (has_empty_pred (fst x))) l0
     val _ = 
       if null l1 then 
-      (debug_search "SearchSaturated"; raise SearchSaturated) 
+      (debug "SearchSaturated"; raise SearchSaturated) 
       else ()
   in
     try_mc_find ()
@@ -702,18 +654,20 @@ datatype proof_status_t =
 
 fun search_loop () =
   (
-  if Timer.checkRealTimer (valOf (!glob_timer)) > (!ttt_search_time)
-    then ProofTimeOut
-    else (search_step (); debug_search "search step"; search_loop ())
+  if Timer.checkRealTimer (valOf (!glob_timer)) > 
+     Time.fromReal (!ttt_search_time)
+  then ProofTimeOut
+  else (search_step (); debug "search step"; search_loop ())
   )
   handle SearchSaturated => (debug "proof: saturated"; ProofSaturated)
-       | SearchTimeOut => (debug "proof: timeout"; ProofTimeOut)
+       | SearchTimeout => (debug "proof: timeout"; ProofTimeOut)
        | ProofFound => (debug "proof: found"; Proof "")
        | e => raise e
 
 fun proofl_of pid =
   let
-    val prec = dfind pid (!proofdict) handle _ => debug_err "proofl_of"
+    val prec = dfind pid (!proofdict) 
+      handle NotFound => debug_err "proofl_of"
     fun compare_gn ((gn1,_,_),(gn2,_,_)) = Int.compare (gn1,gn2)
     val proofl = !(#proofl prec)
     val new_proofl = dict_sort compare_gn proofl
@@ -733,72 +687,42 @@ fun proofl_of pid =
 
 fun end_search () =
   (
-  debug_proof ("Statistics");
-  debug_proof ("  infstep : " ^ int_to_string (!stac_counter));
-  debug_proof ("  nodes   : " ^ int_to_string (!pid_counter));
-  debug_proof ("  maxdepth: " ^ int_to_string (!max_depth_mem));
-  debug_proof ("Time: " ^ Real.toString (!tot_time));
-  debug_proof ("  inferstep: " ^ Real.toString (!infstep_time));
-  debug_proof ("  node_find: " ^ Real.toString (!node_find_time));
-  debug_proof ("  node_crea: " ^ Real.toString (!node_create_time));
-  debug_proof ("  thminst  : " ^ Real.toString (!inst_time));
-  debug_proof ("  tacpred  : " ^ Real.toString (!tactime));
-  debug_proof ("  thmpred  : " ^ Real.toString (!thmtime));
-  debug_proof ("  glpred   : " ^ Real.toString (!gltime));
+  debug ("Statistics");
+  debug ("  infstep : " ^ int_to_string (!stac_counter));
+  debug ("  nodes   : " ^ int_to_string (!pid_counter));
+  debug ("  maxdepth: " ^ int_to_string (!max_depth_mem));
+  debug ("Time: " ^ Real.toString (!tot_time));
+  debug ("  inferstep: " ^ Real.toString (!infstep_time));
+  debug ("  node_find: " ^ Real.toString (!node_find_time));
+  debug ("  node_crea: " ^ Real.toString (!node_create_time));
+  debug ("  thminst  : " ^ Real.toString (!inst_time));
+  debug ("  tacpred  : " ^ Real.toString (!tactime));
+  debug ("  thmpred  : " ^ Real.toString (!thmtime));
   proofdict      := dempty Int.compare;
   tac_dict       := dempty String.compare;
   inst_dict      := dempty (cpl_compare String.compare goal_compare);
   stacgoal_cache := dempty (cpl_compare String.compare goal_compare)
   )
 
-(* ---------------------------------------------------------------------------
-   Self learning
-   -------------------------------------------------------------------------- *)
-
-fun selflearn_aux proof = case proof of
-    Tactic (stac,g) =>
-      (
-      let
-        val ((gl,_),t) = add_time (tactic_of_sml stac) g
-        val lbl = (stac,t,g,gl)
-      in
-        update_tacdata lbl
-      end
-      handle _ => debug_search ("Error: selflearn: " ^ stac)
-      )
-  | Then (p1,p2) => (selflearn_aux p1; selflearn_aux p2)
-  | Thenl (p,pl) => (selflearn_aux p; app selflearn_aux pl)
-
-fun string_of_proof proof = case proof of
-    Tactic (stac,g) => stac
-  | Then (p1,p2) => string_of_proof p1 ^ " THEN " ^ string_of_proof p2
-  | Thenl (p,pl) => string_of_proof p ^ " THENL " ^
-     String.concatWith " " (map string_of_proof pl)
-
-fun selflearn proof =
-  if !ttt_selflearn_flag
-  then debug_t "selflearn" selflearn_aux proof
-  else ()
-
-(* ---------------------------------------------------------------------------
+(* -------------------------------------------------------------------------
    Main
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------- *)
 
-fun search thmpred tacpred glpred goal =
+fun search thmpred tacpred goal =
   (
-  init_search thmpred tacpred glpred goal;
+  init_search thmpred tacpred goal;
   total_timer (node_create_timer root_create_wrap) goal;
   let
     val r = total_timer search_loop ()
-    val _ = debug_search "End search loop"
+    val _ = debug "End search loop"
     val proof_status = case r of
       Proof _  =>
       let
-        val proofl = proofl_of 0 handle _ => debug_err "SNH0"
+        val proofl = proofl_of 0 
+          handle Interrupt => raise Interrupt | _ => debug_err "SNH0"
         val proof0 = hd proofl handle Empty => debug_err "SNH1"
-        val _ = selflearn proof0
-        val proof1 = debug_t "minimize" minimize_proof proof0
-        val sproof = debug_t "reconstruct" reconstruct goal proof1
+        val proof1 = minimize_proof proof0
+        val sproof = reconstruct goal proof1
       in
         Proof sproof
       end

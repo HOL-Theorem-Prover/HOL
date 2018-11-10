@@ -22,4 +22,7 @@ sig
   val import_tacfea : string -> (lbl,fea) Redblackmap.dict 
   val import_tacdata : string list -> tacdata
 
+  val create_tacdata : unit -> tacdata
+  val update_tacdata : tacdata -> lbl -> tacdata
+
 end

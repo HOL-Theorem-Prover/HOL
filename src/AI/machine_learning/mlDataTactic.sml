@@ -10,6 +10,7 @@ structure mlDataTactic :> mlDataTactic =
 struct
 
 open HolKernel boolLib Abbrev SharingTables Portable anotherLib smlLexer
+  mlFeature
 
 val ERR = mk_HOL_ERR "mlDataTactic"
 fun err_msg s l = raise ERR s (String.concatWith " " (first_n 10 l))
@@ -416,7 +417,19 @@ fun import_tacdata filel =
     init_tacdata tacfea
   end
 
-fun update_tacdata {tacfea, tacfea_cthy, taccov, tacdep} (lbl,fea) =
+fun create_tacdata () =
+  let 
+    val dir = HOLDIR ^ "/src/tactictoe/ttt_tacticdata"
+    val thyl = ancestry (current_theory ())
+    val filel = filter exists_file (map (fn x => dir ^ "/" ^ x) thyl)
+    val tacdata = import_tacdata filel
+    val is = int_to_string (dlength (#tacfea tacdata))
+  in
+    print_endline ("Loading " ^ is ^ " tactics");
+    tacdata
+  end
+
+fun update_tacdata_aux {tacfea, tacfea_cthy, taccov, tacdep} (lbl,fea) =
   {
   tacfea      = dadd lbl fea tacfea,
   tacfea_cthy = dadd lbl fea tacfea_cthy,
@@ -424,11 +437,10 @@ fun update_tacdata {tacfea, tacfea_cthy, taccov, tacdep} (lbl,fea) =
   taccov      = count_dict taccov [#1 lbl]
   }
 
-(*
 fun update_tacdata tacdata (lbl as (stac,t,g,gl)) =
   if mem g gl orelse dmem lbl (#tacfea tacdata)
   then tacdata 
-  else update_tacdata_aux (lbl, tttFeature.fea_of_goal g))
-*)
+  else update_tacdata_aux tacdata (lbl, feahash_of_goal g)
+  
 
 end (* struct *)

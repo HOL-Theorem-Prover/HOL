@@ -9,7 +9,7 @@ sig
   val safe_namespace_thms : unit -> (string * thm) list
 
   (* theorem strings *)
-  val dbfetch_of_sthm : string -> string
+  val dbfetch_of_thmid : string -> string
   val mk_metis_call : string list -> string
   
   (* data for the nearest neighbor predictor *)
