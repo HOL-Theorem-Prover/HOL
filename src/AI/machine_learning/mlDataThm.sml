@@ -203,7 +203,4 @@ fun dbfetch_of_depid thm =
   else NONE
 
 
-
-
-
 end (* struct *)

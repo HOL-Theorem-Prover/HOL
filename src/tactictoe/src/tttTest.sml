@@ -1,3 +1,16 @@
+
+(*
+load "tttUnfold";
+open tttUnfold;
+anotherLib.debug_flag := true;
+ttt_record ();
+
+ttt_rewrite_thy "ConseqConv";
+ttt_record_thy "ConseqConv";
+
+
+
+*)
 (* =========================================================================
    Evaluation (to move to tttTest)
    ========================================================================= *)

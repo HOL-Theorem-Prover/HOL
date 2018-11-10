@@ -15,7 +15,6 @@ open HolKernel Abbrev boolLib anotherLib
   tttSetup
 
 val ERR = mk_HOL_ERR "tttUnfold"
-val debugdir = HOLDIR ^ "/src/tactictoe/debug"
 fun debug s = debug_in_dir ttt_debugdir "tttUnfold" s
 
 (* -------------------------------------------------------------------------
@@ -902,6 +901,7 @@ fun output_header oc cthy =
   ];
   (* infix operators *)
   app (os oc) (bare_readl infix_file);
+  output_flag oc "anotherLib.debug_flag" debug_flag;
   (* recording *)
   output_flag oc "tttSetup.ttt_recprove_flag" ttt_recprove_flag;
   output_flag oc "tttSetup.ttt_reclet_flag" ttt_reclet_flag;
@@ -1048,7 +1048,8 @@ fun ttt_rewrite () =
   end
 
 (* ------------------------------------------------------------------------
-    Extra safety during recording (in case of export_theory is not catched)
+   Extra safety during recording 
+   (in case of export_theory is not catched)
    ------------------------------------------------------------------------ *)
 
 fun save_file file =
@@ -1069,7 +1070,6 @@ fun restore_file file =
   end
 
 fun save_scripts script = app save_file (script :: theory_files script)
-
 fun restore_scripts script = app restore_file (script :: theory_files script)
 
 (* ---------------------------------------------------------------------------
@@ -1120,10 +1120,6 @@ fun load_sigobj () =
   in
     app load l1
   end
-
-
-
-
 
 
 end (* struct *)

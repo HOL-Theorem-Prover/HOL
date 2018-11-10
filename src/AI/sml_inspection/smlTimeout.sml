@@ -8,9 +8,9 @@
 structure smlTimeout :> smlTimeout =
 struct
 
-open Thread
+open HolKernel Abbrev boolLib Thread
 
-exception Timeout
+exception FunctionTimeout
 datatype 'a result = Res of 'a | Exn of exn
 
 fun capture f x = Res (f x) handle e => Exn e
@@ -49,7 +49,7 @@ fun timeLimit time f x =
         then self_wait ()
         else
           case !result_ref of
-            NONE => Exn Timeout
+            NONE => Exn FunctionTimeout
           | SOME s => s
       )
     val result = self_wait ()

@@ -461,6 +461,7 @@ fun ttt_export_tacdata thy tacdata =
     val _ = mkDir_err ttt_tacdata_dir
     val file = ttt_tacdata_dir ^ "/" ^ thy 
   in
+    print_endline file;
     export_tacfea file (#tacfea tacdata)
   end
 

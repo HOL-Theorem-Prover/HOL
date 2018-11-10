@@ -15,8 +15,7 @@ open HolKernel Abbrev boolLib anotherLib
   tttSetup tttLearn
 
 val ERR = mk_HOL_ERR "tttSearch"
-val debugdir = HOLDIR ^ "/src/tactictoe/debug"
-fun debug s = debug_in_dir debugdir "tttSearch" s
+fun debug s = debug_in_dir ttt_debugdir "tttSearch" s
 fun debug_err s = (debug ("Error: " ^ s); raise ERR s "")
 
 (* -------------------------------------------------------------------------

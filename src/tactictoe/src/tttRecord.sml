@@ -9,12 +9,12 @@ structure tttRecord :> tttRecord =
 struct
 
 open HolKernel boolLib anotherLib
-  smlLexer smlTimeout smlExecute smlTag smlParser
+  smlLexer smlTimeout smlExecute smlTag smlParser smlRedirect
   mlFeature mlDataThm mlDataTactic
   tttSetup tttLearn
  
 val ERR = mk_HOL_ERR "tttRecord"
-fun debug s = debug_in_dir ttt_debugdir "tttUnfold" s
+fun debug s = debug_in_dir ttt_debugdir "tttRecord" s
 
 val goalstep_glob = ref []
 val tactictoe_step_counter = ref 0
@@ -112,7 +112,7 @@ fun tactic_err msg stac g =
 fun record_tactic_aux (tac,stac) g =
   let
     val ((gl,v),t) = add_time (timeout (!ttt_rectac_time) tac) g
-      handle Timeout => tactic_err "timed out" stac g
+      handle FunctionTimeout => tactic_err "timed out" stac g
             | x      => raise x
   in
     tactic_time := (!tactic_time) + t;
@@ -170,15 +170,13 @@ fun wrap_tactics_in name qtac goal =
       if gl = []
         then (
              success_flag := SOME (gl,v);
-             debug ("Original proof time: " ^
-                          Real.toString (!original_time));
              n_replay_glob := (!n_replay_glob + 1)
              )
       else replay_msg "opened goals" name qtac final_stac
     end
     handle
         Interrupt => raise Interrupt
-      | Timeout => replay_msg "timed out or other" name qtac final_stac
+      | FunctionTimeout => replay_msg "timed out" name qtac final_stac
       | _       => replay_msg "other error" name qtac final_stac
     );
     case (!success_flag) of
@@ -237,6 +235,7 @@ fun end_record_proof name g =
     tacdata_glob := newtacdata
   end
 
+(*
 fun clear_tac tac g =
   (
   ignore (smlExecute.exec_sml "cache" "numSimps.clear_arith_caches ()");
@@ -244,16 +243,16 @@ fun clear_tac tac g =
   )
 
 fun org_tac tac g =
-  let val (gl,v) = timeout 20.0 tac g in
-    if null gl
-      then (gl,v)
-      else (debug "Error: org_tac: pending goals"; clear_tac tac g)
+  let val (gl,v) = timeout (!ttt_recproof_time) tac g in
+    if null gl 
+    then (gl,v)
+    else (debug "Error: org_tac: pending goals"; tac g)
   end
   handle 
-      Timeout => (debug "Error: org_tac: slow (probably a loop)"; 
-                     clear_tac tac g)
-    | _ => (debug "Error: org_tac: error"; clear_tac tac g)
-
+      FunctionTimeout => 
+      (debug "Error: org_tac: slow (probably a loop)"; tac g)
+    | _ => (debug "Error: org_tac: error"; tac g)
+*)
 
 fun record_proof name lflag tac1 tac2 g =
   let
@@ -262,23 +261,17 @@ fun record_proof name lflag tac1 tac2 g =
     val b2 = (not (!ttt_recprove_flag) andalso pflag)
     val b3 = (not (!ttt_reclet_flag) andalso lflag)
     val result =
-      if b2 orelse b3 then
-        let val (r,t) = add_time (org_tac tac2) g in
-          debug ("Original proof time: " ^ Real.toString t);
-          r
-        end
-      else
+      if b2 orelse b3 then tac2 g else
         let
           val (r,t) = add_time tac1 g
           val _ = debug ("Recording proof time: " ^ Real.toString t)
           val _ = end_record_proof name g
         in
           if null (fst r) then r
-          else (debug "Record error: try_record_proof: not null"; 
-                org_tac tac2 g)
+          else (debug "record_proof: not null"; tac2 g)
         end
         handle Interrupt => raise Interrupt 
-          | _ => (debug "Record error: try_record_proof"; org_tac tac2 g)
+          | _ => (debug "record_proof: exception"; tac2 g)
   in
     result
   end
@@ -291,9 +284,9 @@ fun start_record_thy thy =
   (tacdata_glob := empty_tacdata; reset_profiling ())
  
 fun end_record_thy thy =
-  let val file = ttt_tacdata_dir ^ "/" ^ thy in 
-    ttt_export_tacdata file (!tacdata_glob);
-    debug "Record Successful"
-  end
+  (
+  ttt_export_tacdata thy (!tacdata_glob);
+  debug "record successful"
+  )
 
 end (* struct *)

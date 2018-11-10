@@ -13,7 +13,7 @@ open HolKernel boolLib anotherLib
 
 val ERR = mk_HOL_ERR "smlOpen"
 
-val sml_dir = HOLDIR ^ "/src/AI/sml"
+val sml_dir = HOLDIR ^ "/src/AI/sml_inspection"
 val sml_code_dir = sml_dir ^ "/code"
 val sml_open_dir = sml_dir ^ "/open"
 val sml_buildheap_dir = sml_dir ^ "/buildheap"

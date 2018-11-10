@@ -1,6 +1,8 @@
 signature mlDataThm =
 sig
 
+  include Abbrev
+
   type fea = int list
 
   (* theorems from the global namespace *)
