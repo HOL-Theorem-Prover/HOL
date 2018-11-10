@@ -1,16 +1,16 @@
 (* ========================================================================= *)
-(* FILE          : smlThm.sml                                                *)
-(* DESCRIPTION   : Manipulating string representation of theorems            *)
+(* FILE          : mlDataThm.sml                                             *)
+(* DESCRIPTION   : Theorem data used by the nearest neighbor predictor       *)
 (* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck            *)
 (* DATE          : 2017                                                      *)
 (* ========================================================================= *)
 
-structure smlThm :> smlThm =
+structure mlDataThm :> mlDataThm =
 struct
 
 open HolKernel boolLib anotherLib smlLexer smlExecute smlRedirect mlFeature
 
-val ERR = mk_HOL_ERR "smlThm"
+val ERR = mk_HOL_ERR "mlDataThm"
 
 (* -------------------------------------------------------------------------
    Artificial theory name for theorems from the namespace.
@@ -86,7 +86,40 @@ fun mk_metis_call sl =
   "[" ^ String.concatWith " , " (map dbfetch_of_sthm sl) ^ "]"
 
 (* -------------------------------------------------------------------------
-   Theorem features: live database shared by TacticToe and HolyHammer
+   Theorem dependencies
+   ------------------------------------------------------------------------- *)
+
+fun depnumber_of_thm thm =
+  (Dep.depnumber_of o Dep.depid_of o Tag.dep_of o Thm.tag) thm
+  handle HOL_ERR _ => raise ERR "depnumber_of_thm" ""
+
+fun depidl_of_thm thm =
+  (Dep.depidl_of o Tag.dep_of o Thm.tag) thm
+  handle HOL_ERR _ => raise ERR "depidl_of_thm" ""
+
+fun depid_of_thm thm =
+  (Dep.depid_of o Tag.dep_of o Thm.tag) thm
+  handle HOL_ERR _ => raise ERR "depidl_of_thm" ""
+
+fun thmid_of_depid (thy,n) =
+  let fun has_depnumber n (_,thm) = n = depnumber_of_thm thm in
+    case List.find (has_depnumber n) (DB.thms thy) of
+      SOME (name,_) => 
+        if can (DB.fetch thy) name andalso uptodate_thm (DB.fetch thy name)
+        then SOME (thy ^ "Theory." ^ name)
+        else NONE
+    | NONE => NONE
+  end
+
+fun validdep_of_thmid thmid =
+  let val (a,b) = split_string "Theory." thmid in
+    if a = namespace_tag 
+    then []
+    else List.mapPartial thmid_of_depid (depidl_of_thm (DB.fetch a b))
+  end
+
+(* -------------------------------------------------------------------------
+   Theorem features
    ------------------------------------------------------------------------- *)
 
 val goalfea_cache = ref (dempty goal_compare)
@@ -99,41 +132,34 @@ fun fea_of_goal_cached g =
     goalfea_cache := dadd g fea (!goalfea_cache); fea
   end
 
-fun add_thmfea ((name,thm),(thmfeadict,nodupl)) =
+fun add_thmfea thy ((name,thm),(thmfeadict,nodupl)) =
   let val g = dest_thm thm in
     if not (dmem g nodupl) andalso uptodate_thm thm
-    then (dadd name (g, fea_of_goal_cached g) thmfeadict, dadd g () nodupl)
+    then (dadd (thy ^ "Theory." ^ name) (fea_of_goal_cached g) thmfeadict,
+          dadd g () nodupl)
     else (thmfeadict,nodupl)
   end
 
 fun add_thmfea_from_thy (thy,(thmfeadict,nodupl)) =
-  foldl add_thmfea (thmfeadict,nodupl) (DB.thms thy)
+  foldl (add_thmfea thy) (thmfeadict,nodupl) (DB.thms thy)
     
 fun thmfea_from_thyl thyl = 
   foldl add_thmfea_from_thy (dempty String.compare, dempty goal_compare) thyl
 
 fun add_namespacethm (thmfeadict,nodupl) =
-  let
-    fun f (x,y) = (namespace_tag ^ "Theory." ^ x, y)
-    val l1 = hide_out unsafe_namespace_thms ()
-    val l2 = map f l1
-  in
-    foldl add_thmfea (thmfeadict,nodupl) l2
+  let val l = hide_out unsafe_namespace_thms () in
+    foldl (add_thmfea namespace_tag) (thmfeadict,nodupl) l
   end
 
-
-
-(* should include dependencies maybe *)
 fun create_thmdata () =
   let
     val thyl = current_theory () :: ancestry (current_theory ())
-    val (d0,nodupl) = thmfea_from_thyl thyl
-    val (d1,_) = add_namespacethm (d0,nodupl)
-    val is = int_to_string (dlength d1)
-    val feav = map (fn (a,(b,c)) => (a,c)) (dlist d1)
+    val (d,nodupl) = thmfea_from_thyl thyl
+    val (thmfeadict,_) = add_namespacethm (d,nodupl)
+    val is = int_to_string (dlength thmfeadict)
   in
     print_endline ("Loading " ^ is ^ " theorems ");
-    (learn_tfidf feav ,feav)
+    (learn_tfidf (dlist thmfeadict), thmfeadict)
   end
 
 (* -------------------------------------------------------------------------

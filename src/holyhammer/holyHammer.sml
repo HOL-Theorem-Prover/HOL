@@ -11,8 +11,8 @@
 structure holyHammer :> holyHammer =
 struct
 
-open HolKernel boolLib Thread anotherLib smlExecute smlThm smlRedirect   
-  mlFeature mlNearestNeighbor hhReconstruct hhTranslate hhTptp 
+open HolKernel boolLib Thread anotherLib smlExecute smlRedirect   
+  mlFeature mlDataThm mlNearestNeighbor hhReconstruct hhTranslate hhTptp 
 
 val ERR = mk_HOL_ERR "holyHammer"
 val debugdir = HOLDIR ^ "/src/holyhammer/debug"
@@ -22,7 +22,7 @@ fun debug s = debug_in_dir debugdir "holyHammer" s
    Settings
    ------------------------------------------------------------------------- *)
 
-val timeout_glob = ref 5
+val timeout_glob = ref 15
 fun set_timeout n = timeout_glob := n
 
 (* -------------------------------------------------------------------------
@@ -124,6 +124,10 @@ fun launch_atp dir atp t =
    HolyHammer
    ------------------------------------------------------------------------- *)
 
+val hh_goaltac_cache = ref (dempty goal_compare)
+
+fun clean_hh_goaltac_cache () = hh_goaltac_cache := dempty goal_compare
+
 val notfalse = EQT_ELIM (last (CONJ_LIST 3 NOT_CLAUSES))
 
 val extra_premises = 
@@ -148,8 +152,6 @@ fun exists_atp_err atp =
     if not b then print_endline ("No binary for " ^ name_of atp) else ();
     b
   end
-
-val hh_goaltac_cache = ref (dempty goal_compare)
 
 fun hh_pb wanted_atpl premises goal =
   let
@@ -177,8 +179,6 @@ fun hh_pb wanted_atpl premises goal =
       end
   end
 
-fun clean_goaltac_cache () = hh_goaltac_cache := dempty goal_compare
-
 fun hh_goal goal =
   let val (stac,tac) = dfind goal (!hh_goaltac_cache) in
     print_endline ("Goal already solved by " ^ stac);
@@ -187,9 +187,10 @@ fun hh_goal goal =
   handle NotFound =>
     let
       val atpl = filter exists_atp (!all_atps)
-      val (symweight,feav) = create_thmdata ()
+      val (symweight,thmfeadict) = create_thmdata ()
       val n = list_imax (map npremises_of atpl)
-      val premises = thmknn_wdep (symweight,feav) n (fea_of_goal goal)
+      val premises = 
+        thmknn_wdep (symweight,thmfeadict) n (feahash_of_goal goal)
     in
       hh_pb atpl premises goal
     end
@@ -202,6 +203,7 @@ fun holyhammer tm = TAC_PROOF (([],tm), hh_goal ([],tm));
 end (* struct *)
 
 (* Evaluation (move to hhTest)
+
 fun hh_eval_thm atpl bsound (s,thm) =
   let
     val _ = (mkDir_err hh_eval_dir; print_endline s)
@@ -227,6 +229,6 @@ fun hh_eval_thy atpl bsound thy =
   hh_eval_flag := false
   )
 
-  ----------------------------------------------------------------------------*)  
+*)  
 
 

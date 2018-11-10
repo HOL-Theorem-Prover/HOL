@@ -1,0 +1,44 @@
+(* ========================================================================= *)
+(* FILE          : tttSetup.sml                                              *)
+(* DESCRIPTION   : global parameters for TacticToe                           *)
+(* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck            *)
+(* DATE          : 2017                                                      *)
+(* ========================================================================= *)
+
+structure tttSetup :> tttSetup =
+struct
+
+open HolKernel Abbrev boolLib anotherLib smlExecute smlRedirect
+
+(* -------------------------------------------------------------------------
+   Nearest neigbhor parameters
+   ------------------------------------------------------------------------- *)
+
+val ttt_thmlarg_radius = ref 16
+val ttt_ortho_radius   = ref 10
+val ttt_presel_radius  = ref 500
+
+(* -------------------------------------------------------------------------
+   Recording
+   ------------------------------------------------------------------------- *)
+
+val ttt_recprove_flag   = ref true
+val ttt_reclet_flag     = ref false
+val ttt_rectac_time     = ref 2.0
+val ttt_recproof_time   = ref 20.0
+
+(* -------------------------------------------------------------------------
+   Search
+   ------------------------------------------------------------------------- *)
+
+(* Metis *)
+fun init_metis () = hide_out metistac_of_sml () 
+  handle Interrupt => raise Interrupt | _ => ()
+
+val ttt_metis_time   = ref 0.1
+val ttt_metis_radius = ref 16
+
+(* MCTS *)
+val ttt_policy_coeff = ref 0.5
+
+end (* struct *)

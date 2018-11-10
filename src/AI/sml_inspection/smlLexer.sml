@@ -8,7 +8,7 @@
 structure smlLexer :> smlLexer =
 struct
 
-open HolKernel boolLib
+open HolKernel boolLib anotherLib
 
 val ERR = mk_HOL_ERR "smlLexer"
 
@@ -144,5 +144,33 @@ fun reg_dot acc l = case l of
   | a :: m                 => some_acc acc @ reg_dot [a] m
 
 fun partial_sml_lexer s = reg_dot [] (reg_char (lex_helper [] (explode s)))
+
+
+(* -------------------------------------------------------------------------
+   Reserved tokens used in tttUnfold.
+   ------------------------------------------------------------------------- *)
+
+val reserved_dict =
+  dnew String.compare
+  (map (fn x => (x,()))
+  ["op", "if", "then", "else", "val", "fun",
+   "structure", "signature", "struct", "sig", "open",
+   "infix", "infixl", "infixr", "andalso", "orelse",
+   "and", "datatype", "type", "where", ":", ";" , ":>",
+   "let", "in", "end", "while", "do",
+   "local","=>","case","of","_","|","fn","handle","raise","#",
+   "[","(",",",")","]","{","}","..."])
+
+fun is_quoted s = String.sub (s,0) = #"\"" 
+  handle Interrupt => raise Interrupt | _ => false
+fun is_number s = Char.isDigit (String.sub (s,0)) 
+  handle Interrupt => raise Interrupt | _ => false
+fun is_chardef s = String.substring (s,0,2) = "#\"" 
+  handle Interrupt => raise Interrupt | _ => false
+
+fun is_reserved s =
+  dmem s reserved_dict orelse
+  is_number s orelse is_quoted s orelse is_chardef s
+
 
 end (* struct *)

@@ -1,4 +1,4 @@
-signature smlThm =
+signature mlDataThm =
 sig
 
   type fea = int list
@@ -13,8 +13,12 @@ sig
   val mk_metis_call : string list -> string
   
   (* data for the nearest neighbor predictor *)
-  val create_thmdata : 
-    unit -> (int, real) Redblackmap.dict * (string * fea) list
+  val create_thmdata : unit -> 
+    (int, real) Redblackmap.dict * (string, int list) Redblackmap.dict
+  val clean_goalfea_cache : unit -> unit  
+
+  (* dependencies of a top-level theorem *)
+  val validdep_of_thmid : string -> string list
   
   (* SML value of theorem identifiers *)
   val thm_of_name : string -> (string * thm) option

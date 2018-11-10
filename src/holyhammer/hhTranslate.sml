@@ -14,7 +14,6 @@ val ERR = mk_HOL_ERR "hhTranslate"
 val debugdir = HOLDIR ^ "/src/holyhammer/debug"
 fun debug s = debug_in_dir debugdir "hhTranslate" s
 
-
 (* -------------------------------------------------------------------------
    Numbering terms and variables
    ------------------------------------------------------------------------- *)

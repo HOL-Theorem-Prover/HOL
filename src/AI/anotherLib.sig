@@ -44,7 +44,6 @@ sig
 
   (* dictionnary *)
   val dfind  : 'a -> ('a, 'b) Redblackmap.dict -> 'b
-  val dfind_err : string -> 'a -> ('a, 'b) Redblackmap.dict -> 'b
   val dmem   : 'a -> ('a, 'b) Redblackmap.dict -> bool
   val drem   : 'a -> ('a, 'b) Redblackmap.dict -> ('a, 'b) Redblackmap.dict
   val dadd   :
@@ -144,12 +143,6 @@ sig
   val escape : string -> string
   val unescape : string -> string
   
-  (* reserved *)
-  val is_quoted   : string -> bool
-  val is_number   : string -> bool
-  val is_chardef  : string -> bool
-  val is_reserved : string -> bool
-
   (* statistics *)
   val incr   : int ref -> unit
   val decr   : int ref -> unit

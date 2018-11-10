@@ -113,8 +113,6 @@ fun compare_rmin ((_,r1),(_,r2)) = Real.compare (r1,r2)
    ------------------------------------------------------------------------- *)
 
 fun dfind k m  = Redblackmap.find (m,k)
-fun dfind_err msg x dict = dfind x dict handle _ => raise ERR "dfind" msg
-
 fun drem k m   = fst (Redblackmap.remove (m,k)) handle NotFound => m
 fun dmem k m   = Lib.can (dfind k) m
 fun dadd k v m = Redblackmap.insert (m,k,v)
@@ -644,33 +642,6 @@ fun rm_space_aux l = case l of
   | a :: m => if a = #" " then rm_space_aux m else l
 
 fun rm_space s = implode (rm_space_aux (explode s))
-
-(* --------------------------------------------------------------------------
-   Reserved tokens
-   -------------------------------------------------------------------------- *)
-
-val reserved_dict =
-  dnew String.compare
-  (map (fn x => (x,()))
-  ["op", "if", "then", "else", "val", "fun",
-   "structure", "signature", "struct", "sig", "open",
-   "infix", "infixl", "infixr", "andalso", "orelse",
-   "and", "datatype", "type", "where", ":", ";" , ":>",
-   "let", "in", "end", "while", "do",
-   "local","=>","case","of","_","|","fn","handle","raise","#",
-   "[","(",",",")","]","{","}","..."])
-
-fun is_quoted s = String.sub (s,0) = #"\"" 
-  handle Interrupt => raise Interrupt | _ => false
-fun is_number s = Char.isDigit (String.sub (s,0)) 
-  handle Interrupt => raise Interrupt | _ => false
-fun is_chardef s = String.substring (s,0,2) = "#\"" 
-  handle Interrupt => raise Interrupt | _ => false
-
-fun is_reserved s =
-  dmem s reserved_dict orelse
-  is_number s orelse is_quoted s orelse is_chardef s
-
 
 (* -------------------------------------------------------------------------
    Escape

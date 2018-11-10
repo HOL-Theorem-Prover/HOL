@@ -13,6 +13,7 @@ open HolKernel Abbrev boolLib tttLexer tttTools tttInfix tttOpen tttSetup
 
 val ERR = mk_HOL_ERR "tttUnfold"
 
+
 (* --------------------------------------------------------------------------
    Debugging
    -------------------------------------------------------------------------- *)
@@ -174,8 +175,7 @@ val replace_special_time = ref 0.0
 val replace_id_time = ref 0.0
 
 (* --------------------------------------------------------------------------
-   Poly/ML 5.7
-   rlwrap poly
+   Poly/ML 5.7 rlwrap poly
    val l = map (fn (a,b) => a) (#allVal (PolyML.globalNameSpace) ());
    -------------------------------------------------------------------------- *)
 

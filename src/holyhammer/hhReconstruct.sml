@@ -9,8 +9,8 @@
 structure hhReconstruct :> hhReconstruct =
 struct
 
-open HolKernel Dep Tag boolLib anotherLib smlExecute smlThm smlTimeout
-  smlRedirect psMinimize
+open HolKernel Dep Tag boolLib anotherLib smlExecute smlTimeout smlRedirect
+  mlDataThm psMinimize
 
 val ERR = mk_HOL_ERR "hhReconstruct"
 

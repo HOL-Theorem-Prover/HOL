@@ -6,26 +6,15 @@ sig
   type lbl = (string * real * goal * goal list)
   type fea = int list
 
-  (* theorem 
-  val all_thmfeav : unit ->
-    (int, real) Redblackmap.dict *
-    (string * fea) list *
-    (string, goal * fea) Redblackmap.dict
-  *)
-  
+
+  (* theorem *)
   val thmknn:
-    (int, real) Redblackmap.dict * (string * fea) list -> int -> 
+    (int, real) Redblackmap.dict * (string, fea) Redblackmap.dict -> int -> 
     fea -> string list
 
-  (*
-  val thmknn_std: int -> goal -> string list
-
   val thmknn_wdep:
-    (int, real) Redblackmap.dict *
-    (string * fea) list *
-    (string, goal * fea) Redblackmap.dict ->
-    int -> fea -> string list
-  *)
+    (int, real) Redblackmap.dict * (string, fea) Redblackmap.dict -> int -> 
+    fea -> string list
 
   (* tactic *)
   val stacknn_preselect:
@@ -36,9 +25,7 @@ sig
     (int, real) Redblackmap.dict -> int -> (lbl * fea) list -> fea -> 
     lbl list
 
-  (*
-   val add_stacdesc:
+   val add_stacdep:
     (goal, lbl list) Redblackmap.dict -> int -> lbl list -> lbl list
-  *)
 
 end

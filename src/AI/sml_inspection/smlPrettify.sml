@@ -86,6 +86,9 @@ fun elim_dbfetch sl = case sl of
    Requoting terms
    ------------------------------------------------------------------------- *)
 
+fun is_quoted s = String.sub (s,0) = #"\"" 
+  handle Interrupt => raise Interrupt | _ => false
+
 fun requote sl = case sl of
    [] => []
   | "[" :: "QUOTE" :: s :: "]" :: m =>

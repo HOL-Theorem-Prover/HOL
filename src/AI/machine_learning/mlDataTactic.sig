@@ -1,10 +1,9 @@
-signature smlStorage =
+signature mlDataTactic =
 sig
 
   include Abbrev
 
-
-  (* term *)  
+  (* term data (can be useful for other purposes) *)  
   val export_terml : string -> term list -> unit
   val import_terml : string -> term list
 

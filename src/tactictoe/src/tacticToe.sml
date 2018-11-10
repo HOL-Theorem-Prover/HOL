@@ -1,33 +1,32 @@
-(* ========================================================================== *)
-(* FILE          : tacticToe.sml                                              *)
-(* DESCRIPTION   : Automated theorem prover based on tactic selection         *)
-(* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck             *)
-(* DATE          : 2017                                                       *)
-(* ========================================================================== *)
+(* ========================================================================= *)
+(* FILE          : tacticToe.sml                                             *)
+(* DESCRIPTION   : Automated theorem prover based on tactic selection        *)
+(* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck            *)
+(* DATE          : 2017                                                      *)
+(* ========================================================================= *)
 
 structure tacticToe :> tacticToe =
 struct
 
-open HolKernel boolLib Abbrev
-  tttTools tttLexer tttExec tttSetup
-  tttInfix tttUnfold
-  tttFeature tttPredict tttLearn
-  tttTacticData tttThmData tttGoallistData
-  tttMinimize tttSearch
+open HolKernel Abbrev boolLib anotherLib 
+  smlLexer smlExecute smlInfix smlStorage
+  mlFeature mlNearestNeighbor 
+  psMinimize 
+  tttUnfold tttLearn tttSearch
 
 val ERR = mk_HOL_ERR "tacticToe"
+val debugdir = HOLDIR ^ "/src/tactictoe/debug"
+fun debug s = debug_in_dir debugdir "tacticToe" s
 
-(* --------------------------------------------------------------------------
+(* -------------------------------------------------------------------------
    Set parameters
-   -------------------------------------------------------------------------- *)
-
-val eprover_timeout = 5
+   ------------------------------------------------------------------------- *)
 
 fun set_timeout r = (ttt_search_time := Time.fromReal r)
 
-(* --------------------------------------------------------------------------
+(* -------------------------------------------------------------------------
    Initialization: import theory data
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------- *)
 
 fun report_data () =
   let
@@ -35,11 +34,7 @@ fun report_data () =
     val s2 = int_to_string (dlength (!ttt_thmfea))
     val s3 = int_to_string (dlength (!ttt_glfea))
   in
-    debug (s1 ^ " tactics, " ^ s2 ^ " theorems, " ^ s3 ^ " lists of goals");
-    if dlength (!ttt_glfea) = 0 
-    then print_endline ("Loading " ^ s1 ^ " tactics, " ^ s2 ^ " theorems")
-    else print_endline ("Loading " ^ s1 ^ " tactics, " ^ s2 ^ " theorems, " ^ 
-           s3 ^ " lists of goals")
+    print_endline ("Loading " ^ s1 ^ " tactics, " ^ s2 ^ " theorems")
   end
 
 fun import_ancestry () =
@@ -52,9 +47,9 @@ fun import_ancestry () =
     report_data ()
   end
 
-(* --------------------------------------------------------------------------
+(* -------------------------------------------------------------------------
    Importing databases.
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------- *)
 
 val imported_theories = ref []
 
@@ -84,9 +79,9 @@ fun init_tactictoe () =
     update_thmfea (current_theory ())
   end
 
-(* --------------------------------------------------------------------------
+(* -------------------------------------------------------------------------
    Preselection of theorems
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------- *)
 
 fun select_thmfea gfea =
   if !ttt_metis_flag orelse !ttt_thmlarg_flag
@@ -107,9 +102,9 @@ fun select_thmfea gfea =
     end
   else ((dempty Int.compare, [], dempty String.compare), [])
 
-(* --------------------------------------------------------------------------
+(* -------------------------------------------------------------------------
    Preselection of tactics
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------- *)
 
 fun select_tacfea goalf =
   let
@@ -126,38 +121,17 @@ fun select_tacfea goalf =
     (stacsymweight, l2)
   end
 
-(* --------------------------------------------------------------------------
-   Preselection of lists of goals
-   -------------------------------------------------------------------------- *)
-
-fun select_mcfeav tacfea =
-  let
-    fun f ((_,_,g,_),_) = (hash_goal g, ())
-    val goal_dict = dnew Int.compare (map f tacfea)
-    val mcfeav0 = map (fn (a,b) => (b,a)) (dlist (!ttt_glfea))
-    fun filter_f ((b,n),nl) = dmem n goal_dict
-    val mcfeav1 = filter filter_f mcfeav0
-    val mcsymweight = debug_t "mcsymweight" learn_tfidf mcfeav0
-  in
-    (mcsymweight, mcfeav1)
-  end
-
-(* --------------------------------------------------------------------------
+(* -------------------------------------------------------------------------
    Main function
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------- *)
 
 fun main_tactictoe goal =
   let
     (* preselection *)
     val goalf = fea_of_goal goal
-    val (stacsymweight, tacfea) =
-      debug_t "select_tacfea" select_tacfea goalf
-    val ((pthmsymweight,pthmfeav,pthmrevdict), thmfeav) =
-      debug_t "select_thmfea" select_thmfea goalf
-    val (mcsymweight, mcfeav) =
-      debug_t "select_mcfeav" select_mcfeav tacfea
+    val (stacsymweight, tacfea) = select_tacfea goalf
+    val ((pthmsymweight,pthmfeav,pthmrevdict), thmfeav) = select_thmfea goalf
     (* caches *)
-    val gl_cache = ref (dempty (list_compare goal_compare))
     val thm_cache = ref (dempty (cpl_compare goal_compare Int.compare))
     val tac_cache = ref (dempty goal_compare)
     (* predictors *)
@@ -175,16 +149,8 @@ fun main_tactictoe goal =
       let val r = thmknn (pthmsymweight,thmfeav) n (fea_of_goal g) in
         thm_cache := dadd (g,n) r (!thm_cache); r
       end
-    fun glpred gl =
-      dfind gl (!gl_cache) handle NotFound =>
-      let
-        val nl = fea_of_goallist gl
-        val r = mcknn mcsymweight (!ttt_mcev_radius) mcfeav nl
-      in
-        gl_cache := dadd gl r (!gl_cache); r
-      end
   in
-    debug_t "search" (search thmpred tacpred glpred) goal
+    search thmpred tacpred goal
   end
 
 (* --------------------------------------------------------------------------
@@ -217,7 +183,7 @@ fun tactictoe term =
   let val goal = ([],term) in TAC_PROOF (goal, tactictoe_aux goal) end
 
 (* --------------------------------------------------------------------------
-   Prediction of the next tactic only
+   Prediction of the next tactic only (to move to search)
     ------------------------------------------------------------------------- *) 
 
 val next_tac_glob = ref []
@@ -304,48 +270,9 @@ fun next_tac goal =
     try_tac thmpred read_dicts gldict (!next_tac_number) goal stacl
   end
 
-(* --------------------------------------------------------------------------
-   Evaluate Eprover
-   -------------------------------------------------------------------------- *)
-
-val eprover_eval_ref = ref 0
-
-fun eval_eprover goal =
-  let
-    val _ = init_tactictoe ()
-    val _ = can update_hh_stac ()
-    val _ = mkDir_err ttt_eproof_dir
-    val (thmsymweight,thmfeav,revdict) = all_thmfeav ()
-    val _ = incr eprover_eval_ref 
-    val iname = current_theory () ^ "_" ^ int_to_string (!eprover_eval_ref)
-    fun hammer g = 
-      (!hh_stac_glob) iname (thmsymweight,thmfeav,revdict) eprover_timeout g
-    val _ = debug_eproof ("eprover_eval: " ^ iname)
-    val (staco,t) = add_time hammer goal
-      handle _ => (debug ("Error: hammer: " ^ iname); 
-                   (NONE,0.0))
-  in
-    debug_eproof ("Time: " ^ Real.toString t);
-    case staco of
-      NONE      => debug_eproof ("Proof status: Time Out")
-    | SOME stac =>
-      let
-        val newstac = minimize_stac 1.0 stac goal []
-        val tac = tactic_of_sml newstac
-        val (b,t) = add_time (app_tac 2.0 tac) goal
-      in
-        if isSome b
-          then debug_eproof ("Reconstructed: " ^ Real.toString t)
-          else debug_eproof ("Reconstructed: None")
-        ;
-        debug_eproof ("Proof found: " ^ newstac)
-      end
-  end
-  handle _ => debug "Error: eval_eprover"
-
-(* --------------------------------------------------------------------------
-   Evaluate TacticToe
-   -------------------------------------------------------------------------- *)
+(* -------------------------------------------------------------------------
+   Evaluate TacticToe (to move to tttTest)
+   ------------------------------------------------------------------------- *)
 
 fun debug_eval_status r =
   case r of
