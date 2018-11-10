@@ -10,7 +10,7 @@ struct
 
 open Thread
 
-exception TimeOut
+exception Timeout
 datatype 'a result = Res of 'a | Exn of exn
 
 fun capture f x = Res (f x) handle e => Exn e
@@ -49,7 +49,7 @@ fun timeLimit time f x =
         then self_wait ()
         else
           case !result_ref of
-            NONE => Exn TimeOut
+            NONE => Exn Timeout
           | SOME s => s
       )
     val result = self_wait ()

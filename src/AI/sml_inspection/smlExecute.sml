@@ -20,15 +20,14 @@ val sml_code_dir = sml_dir ^ "/code"
    ------------------------------------------------------------------------- *)
 
 val sml_bool_glob = ref false
-val sml_tacticl_glob = ref []
 val sml_tactic_glob = ref (FAIL_TAC "smlExecute")
-(* val sml_qtactic_glob = ref (fn _ => FAIL_TAC "smlExec") *)
+val sml_tacticl_glob = ref []
 val sml_string_glob = ref ""
 val sml_goal_glob = ref ([],F)
 val sml_term_glob = ref T
 val sml_termlist_glob = ref [T]
 val sml_thm_glob = ref TRUTH
-val sml_thml_glob : thm list ref = ref []
+val sml_thml_glob = ref []
 
 (* -------------------------------------------------------------------------
    Execute strings as sml code

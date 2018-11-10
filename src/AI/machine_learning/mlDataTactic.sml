@@ -27,6 +27,14 @@ type tacdata =
   tacdep : (goal, lbl list) Redblackmap.dict
   }
 
+val empty_tacdata = 
+  {
+  tacfea = dempty lbl_compare,
+  tacfea_cthy = dempty lbl_compare,
+  taccov = dempty String.compare, 
+  tacdep = dempty goal_compare
+  }
+
 (* -------------------------------------------------------------------------
    Check if data is up-to-date before export
    ------------------------------------------------------------------------- *)
@@ -284,8 +292,6 @@ fun pp_feavl feavl =
     )
   end
 
-(* val file = ttt_tacfea_dir ^ "/" ^ thy *)
-
 fun export_tacfea file tacfea =
   let
     val ostrm = Portable.open_out file
@@ -417,11 +423,19 @@ fun import_tacdata filel =
     init_tacdata tacfea
   end
 
-fun create_tacdata () =
-  let 
-    val dir = HOLDIR ^ "/src/tactictoe/ttt_tacticdata"
+(* -------------------------------------------------------------------------
+   Tactictoe database management
+   ------------------------------------------------------------------------- *)
+
+val ttt_tacdata_dir = HOLDIR ^ "/src/tactictoe/ttt_tacdata"
+
+fun exists_tacdata_thy thy = exists_file (ttt_tacdata_dir ^ "/" ^ thy)
+
+fun ttt_create_tacdata () =
+  let
     val thyl = ancestry (current_theory ())
-    val filel = filter exists_file (map (fn x => dir ^ "/" ^ x) thyl)
+    fun f x = ttt_tacdata_dir ^ "/" ^ x
+    val filel = filter exists_file (map f thyl)
     val tacdata = import_tacdata filel
     val is = int_to_string (dlength (#tacfea tacdata))
   in
@@ -429,7 +443,7 @@ fun create_tacdata () =
     tacdata
   end
 
-fun update_tacdata_aux {tacfea, tacfea_cthy, taccov, tacdep} (lbl,fea) =
+fun ttt_update_tacdata_aux {tacfea, tacfea_cthy, taccov, tacdep} (lbl,fea) =
   {
   tacfea      = dadd lbl fea tacfea,
   tacfea_cthy = dadd lbl fea tacfea_cthy,
@@ -437,10 +451,19 @@ fun update_tacdata_aux {tacfea, tacfea_cthy, taccov, tacdep} (lbl,fea) =
   taccov      = count_dict taccov [#1 lbl]
   }
 
-fun update_tacdata tacdata (lbl as (stac,t,g,gl)) =
+fun ttt_update_tacdata (lbl as (stac,t,g,gl), tacdata) =
   if mem g gl orelse dmem lbl (#tacfea tacdata)
   then tacdata 
-  else update_tacdata_aux tacdata (lbl, feahash_of_goal g)
-  
+  else ttt_update_tacdata_aux tacdata (lbl, feahash_of_goal g)
+ 
+fun ttt_export_tacdata thy tacdata =
+  let
+    val _ = mkDir_err ttt_tacdata_dir
+    val file = ttt_tacdata_dir ^ "/" ^ thy 
+  in
+    export_tacfea file (#tacfea tacdata)
+  end
+
+
 
 end (* struct *)

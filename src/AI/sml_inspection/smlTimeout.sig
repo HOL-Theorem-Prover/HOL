@@ -1,7 +1,7 @@
 signature smlTimeout =
 sig
 
-  exception TimeOut
+  exception Timeout
   val timeout : real -> ('a -> 'b) -> 'a -> 'b
   val timeout_tactic : real -> tactic -> goal -> goal list option
 

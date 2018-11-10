@@ -10,6 +10,10 @@ struct
 
 open HolKernel Abbrev boolLib anotherLib smlExecute smlRedirect
 
+val infix_file = HOLDIR ^ "/src/AI/sml_inspection/infix_file.sml"
+val tactictoe_dir = HOLDIR ^ "/src/tactictoe"
+val ttt_debugdir = tactictoe_dir ^ "/debug"
+
 (* -------------------------------------------------------------------------
    Nearest neighbor parameters
    ------------------------------------------------------------------------- *)

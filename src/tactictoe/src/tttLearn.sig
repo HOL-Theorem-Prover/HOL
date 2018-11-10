@@ -22,7 +22,4 @@ sig
   (* competition between different tactics over a goal *)
   val orthogonalize : tacdata -> (lbl * fea) -> lbl 
 
-  (* abstraction info for the nn branch *)
-  val pe_abs : string -> (string * (string * thm) list list) 
-
 end

@@ -15,9 +15,7 @@ open HolKernel Abbrev boolLib anotherLib
   tttSetup tttSearch
 
 val ERR = mk_HOL_ERR "tacticToe"
-val tactictoe_dir = HOLDIR ^ "/src/tactictoe"
-val debugdir = tactictoe_dir ^ "/debug"
-fun debug s = debug_in_dir debugdir "tacticToe" s
+fun debug s = debug_in_dir ttt_debugdir "tacticToe" s
 
 (* -------------------------------------------------------------------------
    Time limit
@@ -110,7 +108,7 @@ fun tactictoe_aux goal =
     val _ = hide_out QUse.use infix_file
     val _ = init_metis ()
     val thmdata = create_thmdata ()
-    val tacdata = create_tacdata ()
+    val tacdata = ttt_create_tacdata ()
   in
     status (hide_out (main_tactictoe (thmdata,tacdata)) goal)
   end

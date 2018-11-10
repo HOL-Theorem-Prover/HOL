@@ -180,6 +180,30 @@ fun thm_of_name s =
 
 fun thml_of_namel sl = hide_out (List.mapPartial thm_of_name) sl
 
+(* -------------------------------------------------------------------------
+   Find a theorem name thanks to their depid and their goal representation. 
+   ------------------------------------------------------------------------- *)
+
+fun dbfetch_of_depid thm =
+  if can depid_of_thm thm then
+    let
+      val (thy,n) = depid_of_thm thm
+      val thml = DB.thms thy
+      val thmdict = dnew goal_compare (map (fn (a,b) => (dest_thm b,a)) thml)
+      val goal = dest_thm thm
+    in
+      if dmem goal thmdict
+      then
+        let val name = dfind goal thmdict in
+          SOME (String.concatWith " "
+            ["(","DB.fetch",mlquote thy,mlquote name,")"])
+        end
+      else NONE
+    end
+  else NONE
+
+
+
 
 
 end (* struct *)

@@ -10,6 +10,7 @@ sig
 
   (* theorem strings *)
   val dbfetch_of_thmid : string -> string
+  val dbfetch_of_depid : thm -> string option
   val mk_metis_call : string list -> string
   
   (* data for the nearest neighbor predictor *)

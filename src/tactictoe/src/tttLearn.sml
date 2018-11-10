@@ -60,22 +60,6 @@ fun abstract_thmlarg stac =
   end
 
 (* -------------------------------------------------------------------------
-   Abstraction printer for the nn branch
-   ------------------------------------------------------------------------- *)
-
-fun pe_abs stac =
-  let 
-    val sl1  = partial_sml_lexer stac
-    val lref = ref []
-    val sl2  = abstract_thmlarg_loop lref sl1
-  in
-    (
-    String.concatWith " " sl2, 
-    map (List.mapPartial thm_of_sml) (List.rev (!lref))
-    )
-  end  
-
-(* -------------------------------------------------------------------------
    Instantiating abstracted tactic with a list of theorems
    ------------------------------------------------------------------------- *)
 

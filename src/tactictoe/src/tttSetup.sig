@@ -1,6 +1,11 @@
 signature tttSetup =
 sig
 
+  (* directories *)
+  val infix_file : string
+  val tactictoe_dir : string
+  val ttt_debugdir : string
+
   (* nearest neighbor *)
   val ttt_thmlarg_radius : int ref
   val ttt_ortho_radius   : int ref
