@@ -25,11 +25,12 @@ end
 end (* local *)
 
 fun test (s, exp) = let
-  val result = test0 ``sxnt_sexp`` s
   val exp_t = ``Result (SOME ([], ^exp)) : (char, sexpNT, sexp) evalcase``
 in
-  tprint (s ^ " --> " ^ term_to_string result);
-  if aconv exp_t result then OK() else die "FAILED\n"
+  tprint (s ^ " --> " ^ term_to_string exp_t);
+  require_msg (check_result (aconv exp_t))
+              term_to_string (test0 ``sxnt_sexp``)
+              s
 end
 val _ = temp_overload_on ("Ok", ``λt. (Result (SOME ([], t)))``)
 

@@ -116,6 +116,9 @@
 (define-key hol-unicode-subscript-map "u" "ᵤ")
 (define-key hol-unicode-subscript-map "v" "ᵥ")
 (define-key hol-unicode-subscript-map "x" "ₓ")
+(define-key hol-unicode-subscript-map "+" "₊")
+(define-key hol-unicode-subscript-map "=" "₌")
+(define-key hol-unicode-subscript-map "-" "₋")
 
 (define-key hol-unicode-superscript-map "1"
   (lambda () (interactive) (insert "¹")))

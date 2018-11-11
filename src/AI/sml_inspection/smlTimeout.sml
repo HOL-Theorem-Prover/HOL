@@ -66,5 +66,4 @@ fun timeout_tactic t tac g =
   handle Interrupt => raise Interrupt | _ => NONE
 
 
-
 end

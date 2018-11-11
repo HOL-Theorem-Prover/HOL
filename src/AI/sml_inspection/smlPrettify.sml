@@ -48,7 +48,7 @@ fun elim_infix sl = case sl of
   Removing structure prefixes
   ----------------------------------------------------------------------------*)
 
-fun drop_struct long = 
+fun drop_struct long =
   let
     val l = String.tokens (fn x => x = #".") long
     val short = last l
@@ -86,7 +86,7 @@ fun elim_dbfetch sl = case sl of
    Requoting terms
    ------------------------------------------------------------------------- *)
 
-fun is_quoted s = String.sub (s,0) = #"\"" 
+fun is_quoted s = String.sub (s,0) = #"\""
   handle Interrupt => raise Interrupt | _ => false
 
 fun requote sl = case sl of

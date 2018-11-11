@@ -18,19 +18,19 @@ val ERR = mk_HOL_ERR "tttXO"
 
 val startpos = (true,SOME [0,0,0,0,0,0,0,0,0])
 
-val indexwin = 
+val indexwin =
   [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]]
 (* [0,5,7],[2,3,7],[6,1,5],[8,1,3] *)
 
-fun is_halfwin n board = 
-  let 
+fun is_halfwin n board =
+  let
     fun f i x = if x = n then SOME i else NONE
     val posn = List.mapPartial I (mapi f board)
   in
     exists (fn x => subset x posn) indexwin
   end
 
-fun is_win (player1, boardo) = 
+fun is_win (player1, boardo) =
   case boardo of
     NONE     => player1
   | SOME board => is_halfwin 1 board
@@ -48,14 +48,14 @@ fun status_of r =
    ------------------------------------------------------------------------ *)
 
 fun apply_move move pos =
-  let 
-    val (ps,moves) = split_string "." move 
+  let
+    val (ps,moves) = split_string "." move
     val movei = string_to_int moves
     val pn = string_to_int ps
     val (player, board) = (fst pos, valOf (snd pos))
-  in 
-    if List.nth (board, movei) <> 0 then (not player, NONE) else 
-      let fun f i x = if i = movei then pn else x in 
+  in
+    if List.nth (board, movei) <> 0 then (not player, NONE) else
+      let fun f i x = if i = movei then pn else x in
         (not player, SOME (mapi f board))
       end
   end
@@ -69,21 +69,21 @@ val p1movel = map (fn x => "1." ^ int_to_string x) [0,1,2,3,4,5,6,7,8]
 val p2movel = map (fn x => "2." ^ int_to_string x) [0,1,2,3,4,5,6,7,8]
 
 fun randplayer movel pid pos =
-  let 
+  let
     val (eval,prepoli) = (0.5, List.tabulate (9, fn _ => 0.5))
     val poli = combine (movel, prepoli)
   in
     (
-    if is_win pos then 1.0 else 
-    if is_lose pos then 0.0 else 
-    eval, 
+    if is_win pos then 1.0 else
+    if is_lose pos then 0.0 else
+    eval,
     wrap_poli pid poli
     )
   end
 
 fun build_evalpoli pid pos = case pos of
-    (true,NONE)     => (1.0,[]) 
-  | (false,NONE)    => (0.0,[]) 
+    (true,NONE)     => (1.0,[])
+  | (false,NONE)    => (0.0,[])
   | (false, SOME l) => randplayer p2movel pid pos
   | (true, SOME l)  => randplayer p1movel pid pos
 
@@ -92,7 +92,7 @@ fun build_evalpoli pid pos = case pos of
    ------------------------------------------------------------------------- *)
 
 fun string_of_piecei l (i,a) =
-  if a = 1 then " X " else if a = 2 then " O " else 
+  if a = 1 then " X " else if a = 2 then " O " else
   let val r = approx 0 (List.nth (l,i) * 1000.0) in
     (if r < 10.0 then "0" else "") ^
     (if r < 100.0 then "0" else "") ^
@@ -100,9 +100,9 @@ fun string_of_piecei l (i,a) =
   end
   handle Subscript => "   "
 
-fun string_of_boardi l x = case x of [a,b,c,d,e,f,g,h,i] => 
-  "\n  -----------\n" ^ 
-  "  " ^ String.concatWith " " (map (string_of_piecei l) [a,b,c]) ^ "\n\n" ^ 
+fun string_of_boardi l x = case x of [a,b,c,d,e,f,g,h,i] =>
+  "\n  -----------\n" ^
+  "  " ^ String.concatWith " " (map (string_of_piecei l) [a,b,c]) ^ "\n\n" ^
   "  " ^ String.concatWith " " (map (string_of_piecei l) [d,e,f]) ^ "\n\n" ^
   "  " ^ String.concatWith " " (map (string_of_piecei l) [g,h,i]) ^ "\n" ^
   "  " ^ "-----------"
@@ -111,7 +111,7 @@ fun string_of_boardi l x = case x of [a,b,c,d,e,f,g,h,i] =>
 fun heatmap_of_node (node: int node) =
   case snd (#pos node) of
     NONE => "---"
-  | SOME board => 
+  | SOME board =>
     string_of_boardi (map (snd o fst) (!(#value node))) (number_list 0 board)
 
 end (* struct *)
@@ -122,7 +122,7 @@ open tttMCTS; open tttTools;
 
 val nsim = 1000000;
 
-val tree = 
+val tree =
   mcts nsim tic_build_evalpoli tic_endcheck tic_apply_move tic_startpos;
 
 val _ = update_value tree;

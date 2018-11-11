@@ -8,8 +8,8 @@
 structure tttSearch :> tttSearch =
 struct
 
-open HolKernel Abbrev boolLib aiLib 
-  smlTimeout smlLexer smlExecute 
+open HolKernel Abbrev boolLib aiLib
+  smlTimeout smlLexer smlExecute
   mlFeature mlThmData mlTacticData mlNearestNeighbor
   psMinimize
   tttSetup tttLearn
@@ -281,7 +281,7 @@ fun update_curstac newstac pid =
   in
     Array.update (#predarr prec, gn, newpred)
   end
-  handle Interrupt => raise Interrupt | _ => 
+  handle Interrupt => raise Interrupt | _ =>
     debug_err ("update_curstac :" ^ newstac)
 
 
@@ -321,7 +321,7 @@ fun cache_metisinst stac g =
   let
     val thmidl = cache_thmpred (!ttt_metis_radius) g
     val newstac = mk_metis_call thmidl
-    val newtac = tactic_of_sml newstac 
+    val newtac = tactic_of_sml newstac
       handle Interrupt => raise Interrupt | _ =>
         debug_err ("stac_to_tac: " ^ newstac)
   in
@@ -330,8 +330,8 @@ fun cache_metisinst stac g =
     (newstac,newtac,!ttt_metis_time)
   end
 
-fun cache_stac stac = 
-  dfind stac (!tac_dict) handle NotFound => 
+fun cache_stac stac =
+  dfind stac (!tac_dict) handle NotFound =>
   let val tac = tactic_of_sml stac in
     tac_dict := dadd stac tac (!tac_dict);
     tac
@@ -343,16 +343,16 @@ fun cache_stac stac =
 
 fun stac_to_tac stac g =
   (
-  if is_thmlarg_stac stac 
+  if is_thmlarg_stac stac
     then cache_thminst stac g
-  else if stac = metis_spec 
+  else if stac = metis_spec
     then cache_metisinst stac g
   else (stac, cache_stac stac, !ttt_tactic_time)
   )
-  handle Interrupt => raise Interrupt | _ => 
+  handle Interrupt => raise Interrupt | _ =>
     (debug ("stac_to_tac: " ^ stac);
      ("Tactical.NO_TAC", NO_TAC, !ttt_tactic_time))
-    
+
 (* -------------------------------------------------------------------------
    Application of a tactic.
    ------------------------------------------------------------------------- *)
@@ -374,7 +374,7 @@ fun apply_stac pid pardict trydict stac g =
     val (newstac,newtac,tim) = stac_to_tac stac g
     val _ = update_curstac newstac pid
     (* execution *)
-    val glo = dfind (newstac,g) (!stacgoal_cache) 
+    val glo = dfind (newstac,g) (!stacgoal_cache)
        handle NotFound => timeout_tactic tim newtac g
     (* testing for loops *)
     val newglo = glob_productive pardict trydict g glo
@@ -388,14 +388,14 @@ fun apply_next_stac pid =
     val _ = debug "apply_next_stac"
     val prec = dfind pid (!proofdict)
     val gn = hd (! (#pending prec))
-      handle Interrupt => raise Interrupt | _ => 
+      handle Interrupt => raise Interrupt | _ =>
       debug_err "apply_next_stac: empty pending"
     val g = Array.sub (#goalarr prec, gn)
     val pred = Array.sub (#predarr prec, gn)
     val trydict = !(#trydict prec)
     val pardict = (#pardict prec)
     val stac = hd pred
-      handle Interrupt => raise Interrupt | _ => 
+      handle Interrupt => raise Interrupt | _ =>
       debug_err "apply_next_stac: empty pred"
   in
     infstep_timer (apply_stac pid pardict trydict stac) g
@@ -410,17 +410,17 @@ fun has_empty_pred pid =
     val prec = dfind pid (!proofdict)
     val gn = hd (!(#pending prec))
     val pred = Array.sub (#predarr prec, gn)
-      handle Interrupt => raise Interrupt | _ => 
+      handle Interrupt => raise Interrupt | _ =>
       debug_err ("find_next_tac: " ^ int_to_string pid)
   in
     if null pred then (deactivate pid; true) else false
   end
 
 fun mc_node_find pid =
-  if Timer.checkRealTimer (valOf (!glob_timer)) > 
+  if Timer.checkRealTimer (valOf (!glob_timer)) >
      Time.fromReal (!ttt_search_time)
   then (debug "Warning: mc_node_find: loop"; raise SearchTimeout)
-  else  
+  else
     let
       val prec = dfind pid (!proofdict)
       val {children,visit,...} = prec
@@ -452,7 +452,7 @@ fun mc_node_find pid =
     end
 
 fun try_mc_find () =
-  if Timer.checkRealTimer (valOf (!glob_timer)) > 
+  if Timer.checkRealTimer (valOf (!glob_timer)) >
      Time.fromReal (!ttt_search_time)
   then (debug "Warning: try_mc_find"; raise SearchTimeout)
   else
@@ -612,9 +612,9 @@ fun node_find () =
     val l0 = filter (fn x => is_active (fst x)) (dlist (!proofdict))
     (* deactivate node with empty predictions (no possible actions) *)
     val l1 = filter (fn x => not (has_empty_pred (fst x))) l0
-    val _ = 
-      if null l1 then 
-      (debug "SearchSaturated"; raise SearchSaturated) 
+    val _ =
+      if null l1 then
+      (debug "SearchSaturated"; raise SearchSaturated)
       else ()
   in
     try_mc_find ()
@@ -648,12 +648,12 @@ fun search_step () =
     | SOME gl => f1 gl
   end
 
-datatype proof_status_t =
+datatype proof_status =
   ProofError | ProofSaturated | ProofTimeOut | Proof of string
 
 fun search_loop () =
   (
-  if Timer.checkRealTimer (valOf (!glob_timer)) > 
+  if Timer.checkRealTimer (valOf (!glob_timer)) >
      Time.fromReal (!ttt_search_time)
   then ProofTimeOut
   else (search_step (); debug "search step"; search_loop ())
@@ -665,7 +665,7 @@ fun search_loop () =
 
 fun proofl_of pid =
   let
-    val prec = dfind pid (!proofdict) 
+    val prec = dfind pid (!proofdict)
       handle NotFound => debug_err "proofl_of"
     fun compare_gn ((gn1,_,_),(gn2,_,_)) = Int.compare (gn1,gn2)
     val proofl = !(#proofl prec)
@@ -717,7 +717,7 @@ fun search thmpred tacpred goal =
     val proof_status = case r of
       Proof _  =>
       let
-        val proofl = proofl_of 0 
+        val proofl = proofl_of 0
           handle Interrupt => raise Interrupt | _ => debug_err "SNH0"
         val proof0 = hd proofl handle Empty => debug_err "SNH1"
         val proof1 = minimize_proof proof0

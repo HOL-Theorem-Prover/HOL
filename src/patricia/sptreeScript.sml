@@ -1617,4 +1617,49 @@ val lookup_map_K = Q.store_thm("lookup_map_K",
   \\ REPEAT STRIP_TAC \\ Cases_on `n = 0` \\ full_simp_tac(srw_ss())[]
   \\ Cases_on `EVEN n` \\ full_simp_tac(srw_ss())[]);
 
+val spt_fold_def = Define `
+  (spt_fold f acc LN = acc) /\
+  (spt_fold f acc (LS a) = f a acc) /\
+  (spt_fold f acc (BN t1 t2) = spt_fold f (spt_fold f acc t1) t2) /\
+  (spt_fold f acc (BS t1 a t2) = spt_fold f (f a (spt_fold f acc t1)) t2)`
+
+val IMP_size_LESS_size = store_thm("IMP_size_LESS_size",
+  ``!x y. subspt x y /\ domain x <> domain y ==> size x < size y``,
+  fs [size_domain,domain_difference] \\ rw []
+  \\ `?t. (domain y = domain x UNION t) /\ t <> EMPTY /\
+          (domain x INTER t = EMPTY)` by
+   (qexists_tac `domain y DIFF domain x`
+    \\ fs [pred_setTheory.EXTENSION]
+    \\ qsuff_tac `domain x SUBSET domain y`
+    THEN1 (fs [pred_setTheory.EXTENSION,pred_setTheory.SUBSET_DEF] \\ metis_tac [])
+    \\ fs [domain_lookup,subspt_lookup,pred_setTheory.SUBSET_DEF]
+    \\ rw [] \\ res_tac \\ fs [])
+  \\ asm_rewrite_tac []
+  \\ `FINITE (domain y)` by fs [FINITE_domain]
+  \\ `FINITE t` by metis_tac [pred_setTheory.FINITE_UNION]
+  \\ fs [pred_setTheory.CARD_UNION_EQN]
+  \\ `CARD t <> 0` by metis_tac [pred_setTheory.CARD_EQ_0] \\ fs []);
+
+val size_diff_less = store_thm("size_diff_less",
+  ``!x y z t.
+      domain z SUBSET domain y /\ t IN domain y /\
+      ~(t IN domain z) /\ t IN domain x ==>
+      size (difference x y) < size (difference x z)``,
+  rw []
+  \\ match_mp_tac IMP_size_LESS_size
+  \\ fs [domain_difference,pred_setTheory.EXTENSION]
+  \\ reverse conj_tac THEN1 metis_tac []
+  \\ fs [subspt_lookup,lookup_difference]
+  \\ rw [] \\ fs [pred_setTheory.SUBSET_DEF,domain_lookup,PULL_EXISTS]
+  \\ CCONTR_TAC
+  \\ Cases_on `lookup x' z` \\ fs []
+  \\ res_tac \\ fs []);
+
+val inter_eq_LN = store_thm("inter_eq_LN",
+  ``!x y. (inter x y = LN) <=> DISJOINT (domain x) (domain y)``,
+  fs [spt_eq_thm,wf_inter,wf_def,lookup_def,lookup_inter_alt]
+  \\ fs [domain_lookup,pred_setTheory.IN_DISJOINT]
+  \\ metis_tac [optionTheory.NOT_SOME_NONE,optionTheory.SOME_11,
+                optionTheory.option_CASES]);
+
 val _ = export_theory();

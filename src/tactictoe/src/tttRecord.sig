@@ -5,7 +5,7 @@ include Abbrev
 
   (* These function are printed out by tttUnfold and used in a modified
      fooScript.sml *)
-  
+
   (* Globalizing tactic tokens *)
   val fetch : string -> string -> string
 

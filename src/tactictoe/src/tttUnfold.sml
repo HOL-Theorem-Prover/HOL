@@ -1,22 +1,21 @@
-(* ========================================================================== *)
-(* FILE          : tttUnfold.sml                                              *)
-(* DESCRIPTION   : Partial unfolding of SML code.                             *)
-(*                 Produces SML strings re-usable in different context.       *)
-(* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck             *)
-(* DATE          : 2017                                                       *)
-(* ========================================================================== *)
+(* ======================================================================== *)
+(* FILE          : tttUnfold.sml                                            *)
+(* DESCRIPTION   : Partial unfolding of SML code.                           *)
+(*                 Produces SML strings re-usable in different context.     *)
+(* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck           *)
+(* DATE          : 2017                                                     *)
+(* ======================================================================== *)
 
 structure tttUnfold :> tttUnfold =
 struct
 
-open HolKernel Abbrev boolLib aiLib 
-  smlLexer smlInfix smlOpen 
+open HolKernel Abbrev boolLib aiLib
+  smlLexer smlInfix smlOpen
   mlTacticData
   tttSetup
 
 val ERR = mk_HOL_ERR "tttUnfold"
 fun debug s = debug_in_dir ttt_debugdir "tttUnfold" s
-
 
 (* -----------------------------------------------------------------------
    Program representation and stack
@@ -572,7 +571,7 @@ fun ppstring_stac qtac =
 
 val is_thm_flag = ref false
 
-fun modified_program (h,d) p = 
+fun modified_program (h,d) p =
   let fun continue m' = modified_program (h,d) m' in
   case p of
     [] => []
@@ -586,7 +585,7 @@ fun modified_program (h,d) p =
       val _ = if d = 0 then is_thm_flag := false else ()
       val head' = modified_program (true, d+1) head
       val body' = modified_program ((s <> "val") orelse h, d+1) body
-      val semicolon = 
+      val semicolon =
         if d = 0 andalso !is_thm_flag then [";"] else []
     in
       semicolon @ [s] @ head' @ [sep] @ body' @ continue m
@@ -643,7 +642,7 @@ fun modified_program (h,d) p =
     else a :: continue m
     )
 
-  
+
   end
 (* ------------------------------------------------------------------------
    Stack continued
@@ -908,9 +907,9 @@ fun output_header oc cthy =
   output_flag oc "tttSetup.ttt_recprove_flag" ttt_recprove_flag;
   output_flag oc "tttSetup.ttt_reclet_flag" ttt_reclet_flag;
   (* evaluation *)
-  if !ttt_ttteval_flag then osn oc 
+  if !ttt_ttteval_flag then osn oc
     "val _ = tttSetup.ttt_evalfun_glob := Option.SOME tacticToe.ttt_eval"
-  else if !ttt_hheval_flag then osn oc 
+  else if !ttt_hheval_flag then osn oc
     "val _ = tttSetup.ttt_evalfun_glob := Option.SOME holyHammer.hh_eval"
   else osn oc  "val _ = tttSetup.ttt_evalfun_glob := Option.NONE"
   ;
@@ -992,9 +991,9 @@ fun print_program cthy fileorg sl =
     val _ = mkDir_err scriptdir
     val oc = TextIO.openOut fileout
     fun script_save () =
-      let    
+      let
         val cmd = "cp " ^ fileout ^ " " ^
-          (scriptdir ^ "/" ^ cthy ^ "_debugScript.sml")
+          (scriptdir ^ "/" ^ cthy ^ "_debugScript")
       in
         cmd_in_dir tactictoe_dir cmd
       end
@@ -1031,7 +1030,7 @@ fun find_script x =
 
 fun clean_dir cthy dir = (mkDir_err dir; erase_file (dir ^ "/" ^ cthy))
 
-fun ttt_rewrite_thy thy = 
+fun ttt_rewrite_thy thy =
   if mem thy ["bool","min"] then () else
   let
     val scriptorg = find_script thy
@@ -1054,7 +1053,7 @@ fun ttt_rewrite () =
   end
 
 (* ------------------------------------------------------------------------
-   Extra safety during recording 
+   Extra safety during recording
    (in case of export_theory is not catched)
    ------------------------------------------------------------------------ *)
 
@@ -1063,8 +1062,8 @@ fun save_file file =
     val dir = #dir (OS.Path.splitDirFile file)
     val cmd = "cp -p " ^ file ^ " " ^ (file ^ ".tttsave")
   in
-	  cmd_in_dir dir cmd
-	end
+    cmd_in_dir dir cmd
+  end
 
 fun restore_file file =
   let
@@ -1082,7 +1081,7 @@ fun restore_scripts script = app restore_file (script :: theory_files script)
    Recording
    ------------------------------------------------------------------------ *)
 
-fun ttt_record_thy thy = 
+fun ttt_record_thy thy =
   if mem thy ["bool","min"] then () else
   let val scriptorg = find_script thy in
     let

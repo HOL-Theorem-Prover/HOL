@@ -19,15 +19,15 @@ sig
     val IMP_RES_SIMP_TAC  : Abbrev.thm list -> Abbrev.thm -> Abbrev.tactic
     val ASSUME_SPEC_TAC  : Thm.term -> Thm.thm -> Abbrev.tactic
     val ASSUME_SPECL_SIMP_TAC
-	: Abbrev.term list -> Abbrev.thm list -> Abbrev.thm -> Abbrev.tactic
+        : Abbrev.term list -> Abbrev.thm list -> Abbrev.thm -> Abbrev.tactic
     val IMP_RES_SPEC_TAC  : Thm.term -> Thm.thm -> Abbrev.tactic
     val IMP_RES_SPECL_TAC  : Abbrev.term list -> Abbrev.thm -> Abbrev.tactic
     val MP_SPEC_TAC  : Thm.term -> Thm.thm -> Abbrev.tactic
     val MP_SPECL_TAC  : Abbrev.term list -> Abbrev.thm -> Abbrev.tactic
     val ASSUME_SPECL_GEN_REWRITE_TAC
-	: Abbrev.term list * Abbrev.thm * Abbrev.thm list -> Abbrev.tactic
+        : Abbrev.term list * Abbrev.thm * Abbrev.thm list -> Abbrev.tactic
     val ASSUME_SPECL_INST_TAC
-	:
-	Abbrev.term list ->
-	(Thm.hol_type, Thm.hol_type) Lib.subst -> Thm.thm -> Abbrev.tactic
+        :
+        Abbrev.term list ->
+        (Thm.hol_type, Thm.hol_type) Lib.subst -> Thm.thm -> Abbrev.tactic
 end

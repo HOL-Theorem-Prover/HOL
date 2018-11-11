@@ -23,8 +23,8 @@ datatype axiom = Refl | Inst of term
 
 datatype proofstep =
   Sym of term |
-  NegSym of term | 
-  Ap of term |  
+  NegSym of term |
+  Ap of term |
   Inj of term |
   Sub of ((int list * term) * term)
 
@@ -37,12 +37,12 @@ val ax4' = ``0 + x = x``;
 val ax5' = ``SUC y + x  = SUC (x + y)``;
 val axl_glob = [ax4,ax5,ax4',ax5',ax6];
 
-fun is_refl tm = 
+fun is_refl tm =
   let val (a,b) = dest_eq tm in a = b end handle HOL_ERR _ => false
 
 fun is_inst a b = can (match_term a) b
-  
-fun match_axiom tm = 
+
+fun match_axiom tm =
   let val instl = filter (fn x => is_inst x tm) axl_glob in
     if is_refl tm then [Refl] else [] @ map Inst instl
   end
@@ -52,23 +52,23 @@ fun match_axiom tm =
    ------------------------------------------------------------------------- *)
 
 fun all_posred_aux curpos tm =
-  let 
+  let
     val (oper,argl) = strip_comb tm
     fun f i x = all_posred_aux (i :: curpos) x
     val posl = List.concat (mapi f argl)
   in
     (curpos,tm) :: posl
-  end    
+  end
 
 fun all_posred tm = map_fst rev (all_posred_aux [] tm);
 
 fun all_tactic_output cut_dict tm =
-  let 
+  let
     val posredl = all_posred tm
     fun f (pos,red) = (pos, dfind red cut_dict)
     val posresll = mapfilter f posredl
     val posresl = distrib posresll
-  in 
+  in
     (if can sym_tac tm then [Sym (sym_tac tm)] else []) @
     (if can negsym_tac tm then [NegSym (negsym_tac tm)] else []) @
     (if can ap_tac tm then [Ap (ap_tac tm)] else []) @
@@ -76,7 +76,7 @@ fun all_tactic_output cut_dict tm =
     map Sub (map_assoc (sub_at_pos tm) posresl)
   end
 
-fun init_tablebase tmsize = 
+fun init_tablebase tmsize =
   let
     val cj   = ``(SUC 0) + 0``
     val cset = mk_fast_set Term.compare (find_terms is_const cj)
@@ -106,7 +106,7 @@ val (pdict0, ante0) = init_tablebase tmsize;
 
 fun match_subtm subtm (tm1,tm2) =
   if tm1 = subtm then tm2 else
-  let 
+  let
     val (oper1,argl1) = strip_comb tm1
     val (oper2,argl2) = strip_comb tm2
     val _ = if oper1 <> oper2 then raise ERR "match_subtm" "" else ()
@@ -115,13 +115,13 @@ fun match_subtm subtm (tm1,tm2) =
     val (newtm1,newtm2) = valOf (List.find f argl)
   in
     match_subtm subtm (newtm1,newtm2)
-  end  
+  end
 
 fun term_path_aux acc (partres,fullres) =
   if not (is_subtm active_var partres) then rev acc else
   let
-    val subtm = match_subtm active_var (partres,fullres) 
-    val imit = 
+    val subtm = match_subtm active_var (partres,fullres)
+    val imit =
       if subtm = zero then ImitZero
       else if can dest_suc subtm then ImitSuc
       else if can dest_add subtm then ImitAdd
@@ -131,14 +131,14 @@ fun term_path_aux acc (partres,fullres) =
     term_path_aux ((partres,imit) :: acc) (newpartres,fullres)
   end
 
-fun term_path tm = term_path_aux [] active_var tm 
+fun term_path tm = term_path_aux [] active_var tm
 
 (* -------------------------------------------------------------------------
    Check if the tactic output is proven
    ------------------------------------------------------------------------- *)
 
 fun find_proof (pdict,antel) =
-  let 
+  let
     fun g (tm,x) = case x of
        StepSub y =>
          dmem (snd y) pdict andalso dmem (recover_cut tm (fst y)) pdict
@@ -146,17 +146,17 @@ fun find_proof (pdict,antel) =
      | StepNegSym ante => dmem ante pdict
      | StepAp ante     => dmem ante pdict
      | StepInj ante    => dmem ante pdict
-     
+
     fun f (tm,l) = (tm, filter (fn x => g (tm,x)) l)
   in
     map f antel
-  end 
+  end
 
 fun onestep (pdict,antel) =
-  let  
+  let
     val pl = filter (fn x => not (null (snd x))) (find_proof (pdict,antel))
-    val newpdict = daddset (map fst pl) pdict  
-    fun test (x,_) = 
+    val newpdict = daddset (map fst pl) pdict
+    fun test (x,_) =
       not (dmem x newpdict) andalso not (dmem (negate x) newpdict)
     val newantel = filter test antel
   in
@@ -182,9 +182,9 @@ fun value_of_step step = case step of
   | StepInj _    => 4.0
   | StepSub (_,ante) => 5.0 + Real.fromInt (term_size ante)
 
-fun step_choice stepl = 
-  let val (step,_) = 
-    hd (dict_sort compare_rmin (map_assoc value_of_step stepl)) 
+fun step_choice stepl =
+  let val (step,_) =
+    hd (dict_sort compare_rmin (map_assoc value_of_step stepl))
   in
     step
   end
@@ -200,16 +200,16 @@ fun poli_of_step step = case step of
    Choosing the position
    ------------------------------------------------------------------------- *)
 
-fun tag_term tm = 
+fun tag_term tm =
   let val ty = type_of tm in
     mk_comb (mk_var ("tag_var", mk_type ("fun",[ty,ty])), tm)
   end
 
-fun tag_position (tm,pos) = 
-  if null pos then tag_term tm else 
-  let 
-    val (oper,argl) = strip_comb tm 
-    fun f i arg = 
+fun tag_position (tm,pos) =
+  if null pos then tag_term tm else
+  let
+    val (oper,argl) = strip_comb tm
+    fun f i arg =
       if i = hd pos
       then tag_position (arg,tl pos)
       else arg
@@ -221,35 +221,35 @@ fun all_prefix acc l = case l of
     [] => [rev acc]
   | a :: m => rev acc :: all_prefix (a :: acc) m
 
-datatype descent = Stop | Continue 
+datatype descent = Stop | Continue
 
 datatype descent_arg = Left | Right
 
 fun two_arg tm = length (snd (strip_comb tm)) = 2;
 
-fun mk_choice pos = 
+fun mk_choice pos =
   if null pos then NONE else SOME (butlast pos, last pos)
 
 fun sc_descent x = case x of Stop => 0.0 | Continue => 1.0
-fun sc_descarg x = case x of Left => 0.0 | Right => 1.0 
+fun sc_descarg x = case x of Left => 0.0 | Right => 1.0
 
 fun choice_of_pos (tm,((pos,res),ante)) =
-  let 
+  let
     val posl = all_prefix [] pos
     val choicel0 = List.mapPartial mk_choice posl
-    val descentl = 
+    val descentl =
       map_assoc (fn _ => Continue) (butlast posl) @ [(last posl, Stop)]
     val nn1 = map_fst (fn x => tag_position (tm,x)) descentl
-    fun g (locpos,i) = 
+    fun g (locpos,i) =
       if two_arg (subtm_at_pos locpos tm)
-      then if i = 0 then SOME (locpos,Left) else SOME (locpos,Right)  
+      then if i = 0 then SOME (locpos,Left) else SOME (locpos,Right)
       else NONE
     val choicel1 = List.mapPartial g choicel0
     val nn2 = map_fst (fn x => tag_position (tm,x)) choicel1
   in
-    (map_snd sc_descent nn1, map_snd sc_descarg nn2) 
+    (map_snd sc_descent nn1, map_snd sc_descarg nn2)
   end
-    
+
 (* -------------------------------------------------------------------------
    Choosing the residue
    ------------------------------------------------------------------------- *)
@@ -281,7 +281,7 @@ fun all_in_one nstepl =
     val prepoll1 = map_snd step_choice prepoll0
     (* choosing the tactic *)
     val tacchoice_exl = map_snd poli_of_step prepoll1
-    val prepoll3 = 
+    val prepoll3 =
       mapfilter (fn (tm,step) => (tm, dest_stepsub step)) prepoll1
     (* choosing the position *)
     val (stop_exl, lr_exl) = split (map choice_of_pos prepoll3)
@@ -304,8 +304,8 @@ fun trainset_info trainset =
     val mean = average_real (map snd trainset)
     val dev = standard_deviation (map snd trainset)
   in
-    "  length: " ^ int_to_string (length trainset) ^ "\n" ^ 
-    "  mean: " ^ Real.toString mean ^ "\n" ^ 
+    "  length: " ^ int_to_string (length trainset) ^ "\n" ^
+    "  mean: " ^ Real.toString mean ^ "\n" ^
     "  standard deviation: " ^ Real.toString dev
   end
 
@@ -317,7 +317,7 @@ fun wrap_train_treenn (dim,cal) trainset =
     val schedule = [(50,0.1),(50,0.01)]
     val prepset  = prepare_trainsetone trainset
     val treenn   = random_treenn dim cal
-    val ((treenn,loss), nn_tim) = 
+    val ((treenn,loss), nn_tim) =
       add_time (train_treenn_schedule dim treenn bsize prepset) schedule
   in
     print_endline ("  NN Time: " ^ Real.toString nn_tim);
@@ -325,15 +325,15 @@ fun wrap_train_treenn (dim,cal) trainset =
     treenn
   end
 
-fun fo_terms tm = 
-  let val (oper,argl) = strip_comb tm in 
+fun fo_terms tm =
+  let val (oper,argl) = strip_comb tm in
     tm :: List.concat (map fo_terms argl)
-  end  
+  end
 
-fun operl_of_term tm = 
-  let 
+fun operl_of_term tm =
+  let
     val tml = mk_fast_set Term.compare (fo_terms tm)
-    fun f x = let val (oper,argl) = strip_comb x in (oper, length argl) end  
+    fun f x = let val (oper,argl) = strip_comb x in (oper, length argl) end
   in
     mk_fast_set (cpl_compare Term.compare Int.compare) (map f tml)
   end
@@ -348,7 +348,7 @@ val tmdist0 = map fst pl0;
 val tmdistl = tmdist0 :: map (map fst) nstepl;
 val decay = 0.95;
 
-fun mk_eval i l = 
+fun mk_eval i l =
   let val coeff = Math.pow (decay, Real.fromInt i) in
     map (fn x => (x,1.0)) l
   end
@@ -378,11 +378,11 @@ val sc = eval_treenn treenn ``0 = 0 + 0``;
 
 end (* struct *)
 
-(* test 
+(* test
 load "tttNNtree"; open tttNNtree;
 
-todo: 
-  
+todo:
+
   1) human readable  1 = SUC 0
 
 load "holyHammer"; open holyHammer;

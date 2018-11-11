@@ -69,7 +69,7 @@ fun is_string s = exec_sml "is_string" ("val _ = String.isPrefix (" ^ s ^ ")")
 fun is_pointer_eq s1 s2 =
   let
     val b = exec_sml "is_pointer_eq"
-      ("val _ = smlExecute.sml_bool_glob := PolyML.pointerEq (" ^ s1 ^ "," ^ 
+      ("val _ = smlExecute.sml_bool_glob := PolyML.pointerEq (" ^ s1 ^ "," ^
        s2 ^ ")")
   in
     b andalso (!sml_bool_glob)
@@ -147,7 +147,7 @@ fun goal_of_sml s =
 val (TC_OFF : tactic -> tactic) = trace ("show_typecheck_errors", 0)
 
 fun app_stac tim stac g =
-  let val tac = tactic_of_sml stac in 
+  let val tac = tactic_of_sml stac in
     SOME (fst (timeout tim (TC_OFF tac) g))
   end
   handle Interrupt => raise Interrupt | _ => NONE

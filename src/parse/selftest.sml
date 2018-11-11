@@ -728,10 +728,26 @@ in
          min_grammar),
         ("Testing ty-grammar p/printing (min_grammar with non-printing abbrev)",
          "noprint_tygrammar.txt",
-         min_grammar |> (fn g =>
-                            new_abbreviation g
-                                             ({Name = "set", Thy = "scratch"},
-                                              alpha --> bool))
+         min_grammar |> new_abbreviation {knm = {Name = "set", Thy = "scratch"},
+                                          ty = alpha --> bool, print = true}
                      |> disable_abbrev_printing "set")
       ]
 end (* tygrammar p/printing local *)
+
+local
+  open term_tokens
+  fun test (s, expected) =
+    let
+      val _ = tprint ("Non-aggregating lex-test on "^s)
+      fun check (Exn.Res (SOME (r, _))) =
+            (case r of Ident s' => s' = expected | _ => false)
+        | check _ = false
+      fun pr NONE = "NONE"
+        | pr (SOME (t, _)) = "SOME(" ^ token_string t ^ ")"
+    in
+      require_msg check pr (lex []) (qbuf.new_buffer [QUOTE s])
+    end
+in
+val _ = List.app test [("aa(", "aa"), ("((a", "("), ("¬¬", "¬"),
+                       ("¬¬p", "¬")]
+end (* local open term_tokens *)

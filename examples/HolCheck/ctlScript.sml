@@ -229,7 +229,7 @@ val _ = set_fixity "to" (Infixl 500);
 ******************************************************************************)
 val SUB_num_xnum_def =
  Define
-  `$SUB_num_xnum (m:num) (XNUM (n:num)) = XNUM((m:num) - (n:num))	`;
+  `$SUB_num_xnum (m:num) (XNUM (n:num)) = XNUM((m:num) - (n:num))       `;
 
 val SUB_xnum_num_def =
  Define `$SUB_xnum_num (XNUM (m:num)) (n:num) = XNUM((m:num) - (n:num))`;

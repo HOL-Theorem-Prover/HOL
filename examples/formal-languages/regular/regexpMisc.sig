@@ -9,7 +9,7 @@ sig
  val spread : 'a -> 'a list -> 'a list
  val spreadlnWith : {sep:string, ln:string, width:int}
                     -> ('a -> string)
-		    -> 'a list -> string list
+                    -> 'a list -> string list
 
  val bigUpto : IntInf.int -> IntInf.int -> IntInf.int list
 

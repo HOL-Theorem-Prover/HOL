@@ -7,7 +7,7 @@
 
 structure tttRobber :> tttRobber =
 struct
- 
+
 open HolKernel boolLib Abbrev tttTools tttNN tttNNtree tttMCTS tttSynt
 
 val ERR = mk_HOL_ERR "tttRobber"
@@ -18,7 +18,7 @@ val dbg = dbg_file "debug_tttRobber"
    ------------------------------------------------------------------------- *)
 
 fun find_proof (pdict,antel) =
-  let 
+  let
     fun g (tm,x) = case x of
        StepSub y =>
          dmem (snd y) pdict andalso dmem (recover_cut tm (fst y)) pdict
@@ -29,13 +29,13 @@ fun find_proof (pdict,antel) =
     fun f (tm,l) = (tm, filter (fn x => g (tm,x)) l)
   in
     map f antel
-  end 
+  end
 
 fun onestep (pdict,antel) =
-  let  
+  let
     val pl = filter (fn x => not (null (snd x))) (find_proof (pdict,antel))
-    val newpdict = daddset (map fst pl) pdict  
-    fun test (x,_) = 
+    val newpdict = daddset (map fst pl) pdict
+    fun test (x,_) =
       not (dmem x newpdict) andalso not (dmem (negate x) newpdict)
     val newantel = filter test antel
   in
@@ -61,9 +61,9 @@ fun value_of_step step = case step of
   | StepInj _    => 4.0
   | StepSub (_,ante) => 5.0 + Real.fromInt (term_size ante)
 
-fun step_choice stepl = 
-  let val (step,_) = 
-    hd (dict_sort compare_rmin (map_assoc value_of_step stepl)) 
+fun step_choice stepl =
+  let val (step,_) =
+    hd (dict_sort compare_rmin (map_assoc value_of_step stepl))
   in
     step
   end
@@ -79,16 +79,16 @@ fun poli_of_step step = case step of
    Choosing the position
    ------------------------------------------------------------------------- *)
 
-fun tag_term tm = 
+fun tag_term tm =
   let val ty = type_of tm in
     mk_comb (mk_var ("tag_var", mk_type ("fun",[ty,ty])), tm)
   end
 
-fun tag_position (tm,pos) = 
-  if null pos then tag_term tm else 
-  let 
-    val (oper,argl) = strip_comb tm 
-    fun f i arg = 
+fun tag_position (tm,pos) =
+  if null pos then tag_term tm else
+  let
+    val (oper,argl) = strip_comb tm
+    fun f i arg =
       if i = hd pos
       then tag_position (arg,tl pos)
       else arg
@@ -102,29 +102,29 @@ fun all_prefix acc l = case l of
 
 fun two_arg tm = length (snd (strip_comb tm)) = 2;
 
-fun mk_choice pos = 
+fun mk_choice pos =
   if null pos then NONE else SOME (butlast pos, last pos)
 
 fun sc_descent x = case x of Stop => 0.0 | Continue => 1.0
-fun sc_descarg x = case x of Left => 0.0 | Right => 1.0 
+fun sc_descarg x = case x of Left => 0.0 | Right => 1.0
 
 fun choice_of_pos (tm,((pos,res),ante)) =
-  let 
+  let
     val posl = all_prefix [] pos
     val choicel0 = List.mapPartial mk_choice posl
-    val descentl = 
+    val descentl =
       map_assoc (fn _ => Continue) (butlast posl) @ [(last posl, Stop)]
     val nn1 = map_fst (fn x => tag_position (tm,x)) descentl
-    fun g (locpos,i) = 
+    fun g (locpos,i) =
       if two_arg (subtm_at_pos locpos tm)
-      then if i = 0 then SOME (locpos,Left) else SOME (locpos,Right)  
+      then if i = 0 then SOME (locpos,Left) else SOME (locpos,Right)
       else NONE
     val choicel1 = List.mapPartial g choicel0
     val nn2 = map_fst (fn x => tag_position (tm,x)) choicel1
   in
-    (map_snd sc_descent nn1, map_snd sc_descarg nn2) 
+    (map_snd sc_descent nn1, map_snd sc_descarg nn2)
   end
-    
+
 (* -------------------------------------------------------------------------
    Choosing the residue
    ------------------------------------------------------------------------- *)
@@ -156,7 +156,7 @@ fun all_in_one nstepl =
     val prepoll1 = map_snd step_choice prepoll0
     (* choosing the tactic *)
     val tacchoice_exl = map_snd poli_of_step prepoll1
-    val prepoll3 = 
+    val prepoll3 =
       mapfilter (fn (tm,step) => (tm, dest_stepsub step)) prepoll1
     (* choosing the position *)
     val (stop_exl, lr_exl) = split (map choice_of_pos prepoll3)
@@ -179,8 +179,8 @@ fun trainset_info trainset =
     val mean = average_real (map snd trainset)
     val dev = standard_deviation (map snd trainset)
   in
-    "  length: " ^ int_to_string (length trainset) ^ "\n" ^ 
-    "  mean: " ^ Real.toString mean ^ "\n" ^ 
+    "  length: " ^ int_to_string (length trainset) ^ "\n" ^
+    "  mean: " ^ Real.toString mean ^ "\n" ^
     "  standard deviation: " ^ Real.toString dev
   end
 
@@ -192,7 +192,7 @@ fun wrap_train_treenn (dim,cal) trainset =
     val schedule = [(50,0.1),(50,0.01)]
     val prepset  = prepare_trainsetone trainset
     val treenn   = random_treenn dim cal
-    val ((treenn,loss), nn_tim) = 
+    val ((treenn,loss), nn_tim) =
       add_time (train_treenn_schedule dim treenn bsize prepset) schedule
   in
     print_endline ("  NN Time: " ^ Real.toString nn_tim);
@@ -200,15 +200,15 @@ fun wrap_train_treenn (dim,cal) trainset =
     treenn
   end
 
-fun fo_terms tm = 
-  let val (oper,argl) = strip_comb tm in 
+fun fo_terms tm =
+  let val (oper,argl) = strip_comb tm in
     tm :: List.concat (map fo_terms argl)
-  end  
+  end
 
-fun operl_of_term tm = 
-  let 
+fun operl_of_term tm =
+  let
     val tml = mk_fast_set Term.compare (fo_terms tm)
-    fun f x = let val (oper,argl) = strip_comb x in (oper, length argl) end  
+    fun f x = let val (oper,argl) = strip_comb x in (oper, length argl) end
   in
     mk_fast_set (cpl_compare Term.compare Int.compare) (map f tml)
   end
@@ -223,7 +223,7 @@ val tmdist0 = map fst pl0;
 val tmdistl = tmdist0 :: map (map fst) nstepl;
 val decay = 0.95;
 
-fun mk_eval i l = 
+fun mk_eval i l =
   let val coeff = Math.pow (decay, Real.fromInt i) in
     map (fn x => (x,1.0)) l
   end
@@ -263,15 +263,15 @@ fun apply_tac tac tm = case tac of
 (* position choice *)
 fun descend_pos (tm,pos) stopchoice = case stopchoice of
     Stop     => ResChoice ((tm,pos), startres)
-  | Continue => 
-    let 
+  | Continue =>
+    let
       val subtm = subtm_at_pos pos tm
       val (_,argl) = strip_comb subtm
     in
       case argl of
-        []    => ResChoice ((tm,pos), startres)     
+        []    => ResChoice ((tm,pos), startres)
       | [a]   => StopChoice (tm, pos @ [0])
-      | [a,b] => LrChoice (tm,pos) 
+      | [a,b] => LrChoice (tm,pos)
       | _     => raise ERR "descend_pos" " "
     end
 
@@ -280,9 +280,9 @@ fun descend_lr (tm,pos) lrchoice = case lrchoice of
   | Right => StopChoice (tm, pos @ [1])
 
 (* residue choice *)
-fun expand_res ((tm,pos),res) imit = 
+fun expand_res ((tm,pos),res) imit =
   let val newres = apply_imit imit res in
-    if is_subtm active_var newres 
+    if is_subtm active_var newres
     then ResChoice ((tm,pos),newres)
     else TermChoice (sub_at_pos tm (pos,res), recover_cut tm (pos,res))
   end
@@ -292,18 +292,18 @@ fun expand_res ((tm,pos),res) imit =
 
 
 fun altern_player altern player (tm1,tm2) = case altern of
-    First     => (not player, TacChoice tm1) 
+    First     => (not player, TacChoice tm1)
   | Second    => (not player, TacChoice tm2)
   | NegFirst  => (player, TacChoice (negate tm1))
   | NefSecond => (player, TacChoice (negate tm2))
 
-(* two player : one is trying to prove the other to disprove 
+(* two player : one is trying to prove the other to disprove
    Think about it without the decay first.
-   
+
    A reward of 0 for the second player means that the term has been disproven
-   
+
    try to instantiate apply_move and status_of
-    
+
   *)
 
 (* -------------------------------------------------------------------------
@@ -317,11 +317,11 @@ fun altern_player altern player (tm1,tm2) = case altern of
 
 end (* struct *)
 
-(* test 
+(* test
 load "tttNNtree"; open tttNNtree;
 
-todo: 
-  
+todo:
+
   1) human readable  1 = SUC 0
 
 load "holyHammer"; open holyHammer;
@@ -376,11 +376,11 @@ fun status_of situation =
    Game primitives
    ------------------------------------------------------------------------- *)
 
-(* todo regularization with respect to the size of the terms 
+(* todo regularization with respect to the size of the terms
    maybe just hard cut-off for now *)
 
-datatype board = 
-  TermChoice of (term * term) | 
+datatype board =
+  TermChoice of (term * term) |
   TacChoice  of term |
   StopChoice of (term * int list) |
   LrChoice   of (term * int list) |
@@ -394,17 +394,17 @@ fun string_of_board x = x
 fun string_of_pos x = x
 
 fun board_to_nnterm board = case board of
-    TermChoice (tm1,tm2) => mk_conj (tm1,tm2) 
+    TermChoice (tm1,tm2) => mk_conj (tm1,tm2)
   | TacChoice  tm => tm
   | StopChoice (tm,pos) => tag_position (tm,pos)
   | LrChoice (tm,pos) => tag_position (tm,pos)
-  | ResChoice ((tm,pos),res) => 
-    let val cut = recover_cut ((tm,pos),res) in 
+  | ResChoice ((tm,pos),res) =>
+    let val cut = recover_cut ((tm,pos),res) in
       mk_conj (tag_position (tm,pos), cut)
-    end     
+    end
 
-(* 
-  eval_treenn with multiple output 
+(*
+  eval_treenn with multiple output
   poli_treenn
 *)
 
@@ -414,20 +414,20 @@ fun board_to_nnterm board = case board of
 
 fun p1poli j1ptnn pos = case pos of
     (true, Board1 (g, NONE)) =>
-    let 
-      val movel = 
-        if !rewrite_flag 
+    let
+      val movel =
+        if !rewrite_flag
           then map Rewrite (all_rewrite g)
-        else if !rwcut_flag 
-          then 
-            let  
-              val d = count_dict (dempty Term.compare) 
+        else if !rwcut_flag
+          then
+            let
+              val d = count_dict (dempty Term.compare)
                 (find_terms (fn _ => true) (snd g))
               val cutl = filter (fn x => dmem (lhs x) d) (!cutl_glob)
             in
               List.concat (map (fn x => rewrite_with_cut x g) cutl)
             end
-        else InitCut (!initcut_glob) :: map Forget (fst g) 
+        else InitCut (!initcut_glob) :: map Forget (fst g)
       val default = 1.0 / Real.fromInt (length movel)
     in
       map_assoc (eval_p1move default j1ptnn (g, NONE)) movel
@@ -439,9 +439,9 @@ fun p1poli j1ptnn pos = case pos of
     in
       map_assoc (eval_p1move default j1ptnn (g, SOME cut)) movel
     end
-  | _ => raise ERR "p1poli" ""  
+  | _ => raise ERR "p1poli" ""
 
-fun p1evalpoli (j1etnn,j1ptnn) pos = 
+fun p1evalpoli (j1etnn,j1ptnn) pos =
   (p1eval j1etnn pos, p1poli j1ptnn pos)
 
 (* Player 2 *)
@@ -449,9 +449,9 @@ fun p1evalpoli (j1etnn,j1ptnn) pos =
 (* evaluation *)
 fun p2pos_to_nnterm pos = goallist_to_nnterm (dest_board2 (snd pos))
 
-fun p2eval j2etnn pos = 
-  let val nntm = p2pos_to_nnterm pos in 
-    if !lookup_flag 
+fun p2eval j2etnn pos =
+  let val nntm = p2pos_to_nnterm pos in
+    if !lookup_flag
     then (dfind nntm (#3 (!lookup_ref)) handle NotFound => 0.5)
     else eval_treenn j2etnn nntm
   end
@@ -464,14 +464,14 @@ fun p2move_to_nnterm gl move =
 
 fun eval_p2move default j2ptnn gl move =
   let val nntm = p2move_to_nnterm gl move in
-    if !lookup_flag 
+    if !lookup_flag
     then (dfind nntm (#4 (!lookup_ref)) handle NotFound => default)
     else eval_treenn j2ptnn nntm
   end
 
 fun p2evalpoli (j2etnn,j2ptnn) pos =
-  let 
-    val eval    = p2eval j2etnn pos 
+  let
+    val eval    = p2eval j2etnn pos
     val gl      = dest_board2 (snd pos)
     val movel   = map Choice gl
     val default = 1.0 / Real.fromInt (length movel)
@@ -489,7 +489,7 @@ fun fevalpoli (alltnn1,alltnn2) sit =
    ------------------------------------------------------------------------- *)
 
 fun merge_trainset trainset1 trainset2 =
-  let 
+  let
     val trainsetd2 = dnew Term.compare trainset2
     fun overwritten (cj,_) = dmem cj trainsetd2
     val newtrainset1 = filter (not o overwritten) trainset1
@@ -502,13 +502,13 @@ fun trainset_info trainset =
     val mean = average_real (map snd trainset)
     val dev = standard_deviation (map snd trainset)
   in
-    "  length: " ^ int_to_string (length trainset) ^ "\n" ^ 
-    "  mean: " ^ Real.toString mean ^ "\n" ^ 
+    "  length: " ^ int_to_string (length trainset) ^ "\n" ^
+    "  mean: " ^ Real.toString mean ^ "\n" ^
     "  standard deviation: " ^ Real.toString dev
   end
 
 fun save_trainset name trainset =
-  let val info = trainset_info trainset in 
+  let val info = trainset_info trainset in
     log info;
     save name (info ^ "\n\n" ^ string_of_trainsetone trainset)
   end
@@ -521,7 +521,7 @@ fun wrap_train_treenn (dim,cal) trainset =
     val schedule = [(50,0.1),(50,0.01)]
     val prepset  = prepare_trainsetone trainset
     val treenn   = random_treenn dim cal
-    val ((treenn,loss), nn_tim) = 
+    val ((treenn,loss), nn_tim) =
       add_time (train_treenn_schedule dim treenn bsize prepset) schedule
   in
     summary ("  NN Time: " ^ Real.toString nn_tim);
@@ -562,14 +562,14 @@ fun j2eval_ex node = (p2pos_to_nnterm (#pos node), evaluation_example node)
 fun move_of_cid cid pol =
   fst (fst (valOf (List.find (fn x => snd x = cid) pol)))
 
-fun string_of_pol pol = 
+fun string_of_pol pol =
   let val movel = map (fst o fst) pol in
-    String.concatWith "\n  " (map string_of_move movel) 
+    String.concatWith "\n  " (map string_of_move movel)
   end
 
 
 fun j1poli_ex tree id =
-  let 
+  let
     val cidscl = policy_example tree id
     val node = dfind id tree
     val (g,tmo) = dest_board1 (snd (#pos node))
@@ -580,7 +580,7 @@ fun j1poli_ex tree id =
   end
 
 fun j2poli_ex tree id =
-  let 
+  let
     val cidscl = policy_example tree id
     val node = dfind id tree
     val gl = dest_board2 (snd (#pos node))
@@ -598,35 +598,35 @@ val partialwin_flag = ref false
 val win_flag = ref false
 
 fun collect_exl depth bigsteps (j1e,j1p,j2e,j2p) prover starttree =
-  let 
+  let
     val tree = prover starttree
-    val root = dfind [0] tree  
-    val reps = 
+    val root = dfind [0] tree
+    val reps =
        if #status root = Win andalso depth = 0
-         then 
+         then
          (win_flag := true; "  (Win) " ^ string_of_pos (#pos root))
-       else if #status root = Win 
-         then 
+       else if #status root = Win
+         then
          (partialwin_flag := true; "  (win) " ^ string_of_pos (#pos root))
        else "  " ^ string_of_pos (#pos root)
     val _   = log reps
-    val exl = 
+    val exl =
       if fst (#pos root)
       then (j1eval_ex root :: j1e, j1poli_ex tree [0] @ j1p, j2e, j2p)
       else (j1e, j1p, j2eval_ex root :: j2e, j2poli_ex tree [0] @ j2p)
   in
     if depth >= bigsteps
-      then (log ("  reached maxdepth " ^ int_to_string depth); exl) 
-    else 
+      then (log ("  reached maxdepth " ^ int_to_string depth); exl)
+    else
       case select_bigstep tree [0] of
         NONE => exl
-      | SOME cid => 
-        let 
+      | SOME cid =>
+        let
           val pol  = #pol (dfind [0] tree)
           val _    = log ("  " ^ string_of_pol pol)
           val move = move_of_cid cid pol
           val _ = log ("    " ^ string_of_move move)
-          val newstarttree = cut_tree tree cid 
+          val newstarttree = cut_tree tree cid
         in
           collect_exl (depth + 1) bigsteps exl prover newstarttree
         end
@@ -634,21 +634,21 @@ fun collect_exl depth bigsteps (j1e,j1p,j2e,j2p) prover starttree =
 
 fun combine_4 l = case l of
     [] => ([],[],[],[])
-  | (a,b,c,d) :: m => 
+  | (a,b,c,d) :: m =>
     let val (am,bm,cm,dm) = combine_4 m in
       (a @ am, b @ bm, c @ cm, d @ dm)
     end
-  
+
 fun list_collect_exl (nsim,decay) bigsteps (alltnn,alldict) targetl =
-  let 
+  let
     val (partialwin,win,ended) = (ref 0,ref 0,ref 0)
     fun f i target =
     let
       val _  = (partialwin_flag := false; win_flag := false)
-      val _  = log ("\nTarget " ^ int_to_string i)  
+      val _  = log ("\nTarget " ^ int_to_string i)
       val (starttree,prover) = cutter_mcts (nsim,decay) alltnn target
       val exl = collect_exl 0 bigsteps ([],[],[],[]) prover starttree
-      val _ = 
+      val _ =
         if !win_flag orelse !partialwin_flag then incr partialwin else ()
       val _ = if !win_flag then incr win else ()
     in
@@ -665,7 +665,7 @@ fun list_collect_exl (nsim,decay) bigsteps (alltnn,alldict) targetl =
    Reinforcement learning loop
    ------------------------------------------------------------------------- *)
 
-fun rl_loop (ngen,tot) (nsim,decay,bigsteps) targetl (dim,cal) 
+fun rl_loop (ngen,tot) (nsim,decay,bigsteps) targetl (dim,cal)
   (alltnn,allex) =
   let
     val its   = int_to_string
@@ -674,7 +674,7 @@ fun rl_loop (ngen,tot) (nsim,decay,bigsteps) targetl (dim,cal)
     val _     = summary ("MCTS games")
     val _     = init_timers ()
     val (j1eo,j1po,j2eo,j2po) = allex
-    val alldict = 
+    val alldict =
       (dnew Term.compare (rev j1eo), dnew Term.compare (rev j1po),
        dnew Term.compare (rev j2eo), dnew Term.compare (rev j2po))
     val _ = summary ("Dictionnary lengths")
@@ -683,15 +683,15 @@ fun rl_loop (ngen,tot) (nsim,decay,bigsteps) targetl (dim,cal)
     val _ = summary ("  " ^ int_to_string (dlength (#3 alldict)))
     val _ = summary ("  " ^ int_to_string (dlength (#4 alldict)))
     val _ = lookup_ref := alldict
-    val ((j1e,j1p,j2e,j2p), mcts_tim) = 
-      add_time 
+    val ((j1e,j1p,j2e,j2p), mcts_tim) =
+      add_time
       (list_collect_exl (nsim,decay) bigsteps (alltnn,alldict)) targetl
     val _ = summary (string_of_timers mcts_tim)
     val newallex = (j1e @ j1eo, j1p @ j1po, j2e @ j2eo, j2p @ j2po)
   in
-    if ngen >= tot 
+    if ngen >= tot
       then (alltnn, allex) else
-    if !lookup_flag 
+    if !lookup_flag
       then rl_loop (ngen + 1,tot) (nsim,decay,bigsteps) targetl
             (dim,cal) (alltnn,newallex)
     else
@@ -712,18 +712,18 @@ fun rl_loop (ngen,tot) (nsim,decay,bigsteps) targetl (dim,cal)
   end
 
 fun rl_gen tot (nsim,decay,bigsteps) targetl (dim,cal) =
-  let 
+  let
     val _ = summary ("Global parameters")
     val _ = summary ("  NN dimension: " ^ int_to_string dim)
     val _ = summary ("  MCTS simulation: " ^ int_to_string nsim)
     val _ = summary ("  MCTS decay: " ^ Real.toString decay)
     val _ = summary ("  MCTS bigsteps: " ^ int_to_string bigsteps)
-    val alltnn = 
+    val alltnn =
       (random_treenn dim cal, random_treenn dim cal,
        random_treenn dim cal, random_treenn dim cal)
     val allex = ([],[],[],[])
   in
-    rl_loop (0,tot) (nsim,decay,bigsteps) targetl (dim,cal) 
+    rl_loop (0,tot) (nsim,decay,bigsteps) targetl (dim,cal)
     (alltnn,allex)
   end
 

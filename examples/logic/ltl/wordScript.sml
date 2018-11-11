@@ -17,6 +17,16 @@ val AT_SUFF_LEMM = store_thm
    >> fs[at_def, suff_def]
   );
 
+val SUFF_SUFF_LEMM = store_thm
+  ("SUFF_SUFF_LEMM",
+   ``!w t1 t2. suff (suff w t1) t2 = suff w (t1+t2)``,
+  Cases_on `w` >> SIMP_TAC arith_ss [suff_def]);
+
+val SUFF_0_LEMM = store_thm
+  ("SUFF_0_LEMM",
+   ``!w. suff w 0 = w``,
+  Cases_on `w` >> SIMP_TAC arith_ss [suff_def, ETA_THM]);
+
 val WORD_RANGE_SUFF_LEMM = store_thm
   ("WORD_RANGE_SUFF_LEMM",
    ``!w n. word_range (suff w n) ⊆ word_range w``,

@@ -278,7 +278,6 @@ fun testconv (f:conv) x =
   SOME (SOME (f x))
   handle UNCHANGED => SOME NONE
        | HOL_ERR _ => NONE
-       | e => Portable.reraise e
 
 fun IFC (conv1:conv) conv2 conv3 tm =
   case testconv conv1 tm of

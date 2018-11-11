@@ -37,9 +37,9 @@ in
     val qpat_x_assum = qpat_x_assum;
 
     (* Tacticals for better expressivity *)
-    fun fix  ts = MAP_EVERY Q.X_GEN_TAC ts;	(* from HOL Light *)
-    fun set  ts = MAP_EVERY Q.ABBREV_TAC ts;	(* from HOL mizar mode *)
-    fun take ts = MAP_EVERY Q.EXISTS_TAC ts;	(* from HOL mizar mode *)
+    fun fix  ts = MAP_EVERY Q.X_GEN_TAC ts;     (* from HOL Light *)
+    fun set  ts = MAP_EVERY Q.ABBREV_TAC ts;    (* from HOL mizar mode *)
+    fun take ts = MAP_EVERY Q.EXISTS_TAC ts;    (* from HOL mizar mode *)
 end;
 
 val _ = new_theory "Lambek";
@@ -68,18 +68,18 @@ val _ = type_abbrev ("arrow_extension", ``:'a Form -> 'a Form -> bool``);
 
 (* Rules of Lambek's "Syntactic Calculus" (non-associative + extension) *)
 val (arrow_rules, arrow_ind, arrow_cases) = Hol_reln `
-    (!X A. arrow X A A) /\						(* one *)
-    (!X A B C. arrow X (Dot A B) C ==> arrow X A (Slash C B)) /\	(* beta *)
-    (!X A B C. arrow X A (Slash C B) ==> arrow X (Dot A B) C) /\	(* beta' *)
-    (!X A B C. arrow X (Dot A B) C ==> arrow X B (Backslash A C)) /\	(* gamma *)
-    (!X A B C. arrow X B (Backslash A C) ==> arrow X (Dot A B) C) /\	(* gamma' *)
-    (!X A B C. arrow X A B /\ arrow X B C ==> arrow X A C) /\		(* comp *)
-    (!(X :'a arrow_extension) A B. X A B ==> arrow X A B) `;		(* arrow_plus *)
+    (!X A. arrow X A A) /\                                              (* one *)
+    (!X A B C. arrow X (Dot A B) C ==> arrow X A (Slash C B)) /\        (* beta *)
+    (!X A B C. arrow X A (Slash C B) ==> arrow X (Dot A B) C) /\        (* beta' *)
+    (!X A B C. arrow X (Dot A B) C ==> arrow X B (Backslash A C)) /\    (* gamma *)
+    (!X A B C. arrow X B (Backslash A C) ==> arrow X (Dot A B) C) /\    (* gamma' *)
+    (!X A B C. arrow X A B /\ arrow X B C ==> arrow X A C) /\           (* comp *)
+    (!(X :'a arrow_extension) A B. X A B ==> arrow X A B) `;            (* arrow_plus *)
 
 val [one, beta, beta', gamma, gamma', comp, arrow_plus] =
     map save_thm
         (combine (["one", "beta", "beta'", "gamma", "gamma'", "comp", "arrow_plus"],
-		  CONJUNCTS arrow_rules));
+                  CONJUNCTS arrow_rules));
 
 val beta_EQ = store_thm ("beta_EQ",
   ``!X A B C. arrow X A (Slash C B) = arrow X (Dot A B) C``,
@@ -269,9 +269,9 @@ val alfa = store_thm ("alfa",
   ``!X. extends L X ==> !A B C. arrow X (Dot A (Dot B C)) (Dot (Dot A B) C)``,
     REPEAT STRIP_TAC
  >> `L (Dot A (Dot B C)) (Dot (Dot A B) C)`
-	by REWRITE_TAC [L_rule_rl]
+        by REWRITE_TAC [L_rule_rl]
  >> `arrow L (Dot A (Dot B C)) (Dot (Dot A B) C)`
-	by RW_TAC bool_ss [arrow_plus]
+        by RW_TAC bool_ss [arrow_plus]
  >> PROVE_TAC [mono_X]);
 
 val alfa_L = store_thm ("alfa_L",
@@ -336,17 +336,17 @@ in
   and L_j  = store_thm ("L_j",  ``!x y z. arrow L (Slash z y) (Slash (Slash z x) (Slash y x))``, t)
 
   and L_k  = store_thm ("L_k",  ``!x y z. arrow L (Slash (Backslash x y) z)
-						  (Backslash x (Slash y z))``, t)
+                                                  (Backslash x (Slash y z))``, t)
 
   and L_k' = store_thm ("L_k'", ``!x y z. arrow L (Backslash x (Slash y z))
-						  (Slash (Backslash x y) z)``, t)
+                                                  (Slash (Backslash x y) z)``, t)
 
   and L_l  = store_thm ("L_l",  ``!x y z. arrow L (Slash (Slash x y) z) (Slash x (Dot z y))``, t)
   and L_l' = store_thm ("L_l'", ``!x y z. arrow L (Slash x (Dot z y)) (Slash (Slash x y) z)``, t)
   and L_m  = store_thm ("L_m",  ``!x x' y y'. arrow L x x' /\ arrow L y y'
-					  ==> arrow L (Dot x y) (Dot x' y')``, t)
+                                          ==> arrow L (Dot x y) (Dot x' y')``, t)
   and L_n  = store_thm ("L_n",  ``!x x' y y'. arrow L x x' /\ arrow L y y'
-					  ==> arrow L (Slash x y') (Slash x' y)``, t);
+                                          ==> arrow L (Slash x y') (Slash x' y)``, t);
 
   val L_arrow_rules_ex = save_thm (
      "L_arrow_rules_ex", LIST_CONJ [L_f, L_g, L_h, L_i, L_j, L_k, L_k', L_l, L_l', L_m, L_n])
@@ -371,8 +371,8 @@ in
   val L_arrow_rules_mono = save_thm (
      "L_arrow_rules_mono",
       LIST_CONJ [L_dot_mono_r, L_dot_mono_l,
-		 L_slash_mono_l, L_slash_antimono_r,
-		 L_backslash_antimono_l, L_backslash_mono_r])
+                 L_slash_mono_l, L_slash_antimono_r,
+                 L_backslash_antimono_l, L_backslash_mono_r])
 end;
 
 (******************************************************************************)
@@ -456,13 +456,13 @@ val _ = type_abbrev ("ReplaceProp", ``:'a Term -> 'a Term -> 'a Term -> 'a Term 
    the term Gamma by Delta' *)
 
 val (replace_rules, replace_ind, replace_cases) = Hol_reln `
-    (!F1 F2. replace F1 F2 F1 F2) /\					(* replaceRoot *)
+    (!F1 F2. replace F1 F2 F1 F2) /\                                    (* replaceRoot *)
     (!Gamma1 Gamma2 Delta F1 F2.
      replace Gamma1 Gamma2 F1 F2 ==>
-     replace (Comma Gamma1 Delta) (Comma Gamma2 Delta) F1 F2) /\	(* replaceLeft *)
+     replace (Comma Gamma1 Delta) (Comma Gamma2 Delta) F1 F2) /\        (* replaceLeft *)
     (!Gamma1 Gamma2 Delta F1 F2.
      replace Gamma1 Gamma2 F1 F2 ==>
-     replace (Comma Delta Gamma1) (Comma Delta Gamma2) F1 F2)`;		(* replaceRight *)
+     replace (Comma Delta Gamma1) (Comma Delta Gamma2) F1 F2)`;         (* replaceRight *)
 
 local
     val list = CONJUNCTS replace_rules
@@ -480,13 +480,13 @@ end;
 
 val (replaceCommaDot1_rules, replaceCommaDot1_ind, replaceCommaDot1_cases) = Hol_reln `
     (!T1 T2 A B. replace T1 T2 (Comma (OneForm A) (OneForm B)) (OneForm (Dot A B))
-	     ==> replaceCommaDot1 T1 T2)`;
+             ==> replaceCommaDot1 T1 T2)`;
 
 val replaceCommaDot_def = Define `replaceCommaDot = RTC replaceCommaDot1`;
 
 val replaceCommaDot_rule = store_thm ("replaceCommaDot_rule",
   ``!T1 T2 A B. replace T1 T2 (Comma (OneForm A) (OneForm B)) (OneForm (Dot A B))
-	    ==> replaceCommaDot T1 T2``,
+            ==> replaceCommaDot T1 T2``,
     PROVE_TAC [replaceCommaDot_def, replaceCommaDot1_rules, RTC_SINGLE]);
 
 val replaceTransitive = store_thm ("replaceTransitive", ``transitive replaceCommaDot``,
@@ -502,28 +502,28 @@ val noReplace = store_thm ("noReplace[simp]", ``!T. replaceCommaDot T T``,
 
 local
   val t = PROVE_TAC [replaceCommaDot1_rules, replaceCommaDot_def, replaceTransitive,
-		     transitive_def, RTC_SINGLE]
+                     transitive_def, RTC_SINGLE]
 in
   val replaceOneComma = store_thm ("replaceOneComma",
     ``!T1 T2 T3 A B. replaceCommaDot T1 T2 /\
-		     replace T2 T3 (Comma (OneForm A) (OneForm B)) (OneForm (Dot A B))
-		 ==> replaceCommaDot T1 T3``, t)
+                     replace T2 T3 (Comma (OneForm A) (OneForm B)) (OneForm (Dot A B))
+                 ==> replaceCommaDot T1 T3``, t)
 
   and replaceOneComma' = store_thm ("replaceOneComma'",
     ``!T1 T2 T3 A B. replace T1 T2 (Comma (OneForm A) (OneForm B)) (OneForm (Dot A B)) /\
-		     replaceCommaDot T2 T3
-		 ==> replaceCommaDot T1 T3``, t);
+                     replaceCommaDot T2 T3
+                 ==> replaceCommaDot T1 T3``, t);
 
   val replaceCommaDot_rules = save_thm (
      "replaceCommaDot_rules", LIST_CONJ [noReplace, replaceCommaDot_rule,
-					 replaceOneComma, replaceOneComma'])
+                                         replaceOneComma, replaceOneComma'])
 end;
 
 (* An induction theorem for RTC replaceCommaDot1, similar to those generated by Hol_reln *)
 val replaceCommaDot_ind = store_thm ("replaceCommaDot_ind",
   ``!(P:'a gentzen_extension).
-	(!x. P x x) /\
-	(!x y z A B. replace x y (Comma (OneForm A) (OneForm B)) (OneForm (Dot A B)) /\ P y z ==> P x z)
+        (!x. P x x) /\
+        (!x y z A B. replace x y (Comma (OneForm A) (OneForm B)) (OneForm (Dot A B)) /\ P y z ==> P x z)
     ==> (!x y. replaceCommaDot x y ==> P x y)``,
  (* The idea is to use RTC_INDUCT thm to prove induct theorems for RTCs *)
     REWRITE_TAC [replaceCommaDot_def]
@@ -534,20 +534,20 @@ val replaceCommaDot_ind = store_thm ("replaceCommaDot_ind",
 
 local
   val t = GEN_TAC \\ (* prepare for higher order matching and induction *)
-	  HO_MATCH_MP_TAC replaceCommaDot_ind \\
-	  PROVE_TAC [replace_rules, replaceCommaDot_rules]
+          HO_MATCH_MP_TAC replaceCommaDot_ind \\
+          PROVE_TAC [replace_rules, replaceCommaDot_rules]
 in
   val replaceMonoRight = store_thm ("replaceMonoRight",
     ``!T3 T1 T2. replaceCommaDot T1 T2
-	     ==> replaceCommaDot (Comma T1 T3) (Comma T2 T3)``, t)
+             ==> replaceCommaDot (Comma T1 T3) (Comma T2 T3)``, t)
   and replaceMonoLeft = store_thm ("replaceMonoLeft",
     ``!T3 T1 T2. replaceCommaDot T1 T2
-	     ==> replaceCommaDot (Comma T3 T1) (Comma T3 T2)``, t)
+             ==> replaceCommaDot (Comma T3 T1) (Comma T3 T2)``, t)
 end;
 
 val replaceMono = store_thm ("replaceMono",
   ``!T1 T2 T3 T4. replaceCommaDot T1 T2 /\ replaceCommaDot T3 T4
-	      ==> replaceCommaDot (Comma T1 T3) (Comma T2 T4)``,
+              ==> replaceCommaDot (Comma T1 T3) (Comma T2 T4)``,
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC replaceTransitive'
  >> EXISTS_TAC ``Comma T2 T3``
@@ -596,8 +596,8 @@ val doubleReplace = store_thm ("doubleReplace",
   ``!Gamma Gamma' T1 T2.
      replace Gamma Gamma' T1 T2 ==>
      !Gamma2 A T3. replace Gamma' Gamma2 (OneForm A) T3 ==>
-	      (?G. replace Gamma G (OneForm A) T3 /\ replace G Gamma2 T1 T2) \/
-	      (?G. replace T2 G (OneForm A) T3 /\ replace Gamma Gamma2 T1 G)``,
+              (?G. replace Gamma G (OneForm A) T3 /\ replace G Gamma2 T1 T2) \/
+              (?G. replace T2 G (OneForm A) T3 /\ replace Gamma Gamma2 T1 G)``,
     Induct_on `replace`
  >> REPEAT STRIP_TAC (* 3 sub-goals here *)
  >| [ (* goal 1 (of 3) *)
@@ -661,7 +661,7 @@ val doubleReplace = store_thm ("doubleReplace",
 
 val replaceSameP = store_thm ("replaceSameP",
   ``!T1 T2 T3 T4. replace T1 T2 T3 T4 ==>
-		  !G. ?G'. replace T1 G' T3 G /\ replace G' T2 G T4``,
+                  !G. ?G'. replace T1 G' T3 G /\ replace G' T2 G T4``,
     Induct_on `replace`
  >> REPEAT STRIP_TAC
  >| [ Q.EXISTS_TAC `G` >> REWRITE_TAC [replaceRoot],
@@ -696,35 +696,35 @@ val replaceTrans' = store_thm ("replaceTrans'",
 (******************************************************************************)
 
 val (natDed_rules, natDed_ind, natDed_cases) = Hol_reln `
-    (!(E:'a gentzen_extension) A.				(* NatAxiom *)
+    (!(E:'a gentzen_extension) A.                               (* NatAxiom *)
       natDed E (OneForm A) A) /\
-    (!E Gamma A B.						(* SlashIntro *)
+    (!E Gamma A B.                                              (* SlashIntro *)
       natDed E (Comma Gamma (OneForm B)) A ==>
       natDed E Gamma (Slash A B)) /\
-    (!E Gamma A B.						(* BackslashIntro *)
+    (!E Gamma A B.                                              (* BackslashIntro *)
       natDed E (Comma (OneForm B) Gamma) A ==>
       natDed E Gamma (Backslash B A)) /\
-    (!E Gamma Delta A B.					(* DotIntro *)
+    (!E Gamma Delta A B.                                        (* DotIntro *)
       natDed E Gamma A /\ natDed E Delta B ==>
       natDed E (Comma Gamma Delta) (Dot A B)) /\
-    (!E Gamma Delta A B.					(* SlashElim *)
+    (!E Gamma Delta A B.                                        (* SlashElim *)
       natDed E Gamma (Slash A B) /\ natDed E Delta B ==>
       natDed E (Comma Gamma Delta) A) /\
-    (!E Gamma Delta A B.				 	(* BackslashElim *)
+    (!E Gamma Delta A B.                                        (* BackslashElim *)
       natDed E Gamma B /\ natDed E Delta (Backslash B A) ==>
       natDed E (Comma Gamma Delta) A) /\
-    (!E Gamma Gamma' Delta A B C.				(* DotElim *)
+    (!E Gamma Gamma' Delta A B C.                               (* DotElim *)
       replace Gamma Gamma' (Comma (OneForm A) (OneForm B)) Delta /\
       natDed E Delta (Dot A B) /\ natDed E Gamma C ==>
       natDed E Gamma' C) /\
-    (!(E:'a gentzen_extension) C Gamma Gamma' Delta Delta'.	(* NatExt *)
+    (!(E:'a gentzen_extension) C Gamma Gamma' Delta Delta'.     (* NatExt *)
       replace Gamma Gamma' Delta Delta' /\ E Delta Delta' /\
       natDed E Gamma C ==> natDed E Gamma' C)`;
 
 val [NatAxiom, SlashIntro, BackslashIntro, DotIntro, SlashElim, BackslashElim, DotElim, NatExt] =
     map save_thm
         (combine (["NatAxiom[simp]", "SlashIntro", "BackslashIntro", "DotIntro", "SlashElim",
-		   "BackslashElim", "DotElim", "NatExt"], CONJUNCTS natDed_rules));
+                   "BackslashElim", "DotElim", "NatExt"], CONJUNCTS natDed_rules));
 
 val NatAxiomGeneralized = store_thm ("NatAxiomGeneralized[simp]",
   ``!E Gamma. natDed E Gamma (deltaTranslation Gamma)``,
@@ -735,7 +735,7 @@ val NatAxiomGeneralized = store_thm ("NatAxiomGeneralized[simp]",
 
 val DotElimGeneralized = store_thm ("DotElimGeneralized",
   ``!E C Gamma Gamma'. replaceCommaDot Gamma Gamma'
-		   ==> natDed E Gamma C ==> natDed E Gamma' C``,
+                   ==> natDed E Gamma C ==> natDed E Gamma' C``,
     NTAC 2 GEN_TAC
  >> HO_MATCH_MP_TAC replaceCommaDot_ind
  >> REPEAT STRIP_TAC
@@ -762,44 +762,44 @@ val NatExtSimpl = store_thm (
 
 (* gentzen presentation using sequents. *)
 val (gentzenSequent_rules, gentzenSequent_ind, gentzenSequent_cases) = Hol_reln `
-    (!(E:'a gentzen_extension) A.				(* SeqAxiom = NatAxiom *)
+    (!(E:'a gentzen_extension) A.                               (* SeqAxiom = NatAxiom *)
       gentzenSequent E (OneForm A) A) /\
-    (!E Gamma A B.						(* RightSlash = SlashIntro *)
+    (!E Gamma A B.                                              (* RightSlash = SlashIntro *)
       gentzenSequent E (Comma Gamma (OneForm B)) A ==>
       gentzenSequent E Gamma (Slash A B)) /\
-    (!E Gamma A B.						(* RightBackslash = BackslashIntro *)
+    (!E Gamma A B.                                              (* RightBackslash = BackslashIntro *)
       gentzenSequent E (Comma (OneForm B) Gamma) A ==>
       gentzenSequent E Gamma (Backslash B A)) /\
-    (!E Gamma Delta A B.					(* RightDot = DotIntro *)
+    (!E Gamma Delta A B.                                        (* RightDot = DotIntro *)
       gentzenSequent E Gamma A /\ gentzenSequent E Delta B ==>
       gentzenSequent E (Comma Gamma Delta) (Dot A B)) /\
 
     (* Delta |- B /\ Gamma[A] |- C ==> Gamma[A / B, Delta] |- C  *)
-    (!E Gamma Gamma' Delta A B C.				(* LeftSlash *)
+    (!E Gamma Gamma' Delta A B C.                               (* LeftSlash *)
       replace Gamma Gamma' (OneForm A) (Comma (OneForm (Slash A B)) Delta) /\
       gentzenSequent E Delta B /\ gentzenSequent E Gamma C ==>
       gentzenSequent E Gamma' C) /\
 
     (* Delta |- B /\ Gamma[A] |- C ==> Gamma[Delta, B \ A] |- C *)
-    (!E Gamma Gamma' Delta A B C.				(* LeftBackslash *)
+    (!E Gamma Gamma' Delta A B C.                               (* LeftBackslash *)
       replace Gamma Gamma' (OneForm A) (Comma Delta (OneForm (Backslash B A))) /\
       gentzenSequent E Delta B /\ gentzenSequent E Gamma C ==>
       gentzenSequent E Gamma' C) /\
 
     (* Gamma[A, B] |- C ==> Gamma[A * B] |- C *)
-    (!E Gamma Gamma' A B C.					(* LeftDot *)
+    (!E Gamma Gamma' A B C.                                     (* LeftDot *)
       replace Gamma Gamma' (Comma (OneForm A) (OneForm B)) (OneForm (Dot A B)) /\
       gentzenSequent E Gamma C ==>
       gentzenSequent E Gamma' C) /\
 
     (* Delta |- A /\ Gamma[A] |- C ==> Gamma[Delta] |- C *)
-    (!E Delta Gamma Gamma' A C.					(* CutRule *)
+    (!E Delta Gamma Gamma' A C.                                 (* CutRule *)
       replace Gamma Gamma' (OneForm A) Delta /\
       gentzenSequent E Delta A /\ gentzenSequent E Gamma C ==>
       gentzenSequent E Gamma' C) /\
 
     (* E Delta Delta' /\ Gamma[Delta] |- C ==> Gamma[Delta'] |- C *)
-    (!(E:'a gentzen_extension) Gamma Gamma' Delta Delta' C.	(* SeqExt = NatExt *)
+    (!(E:'a gentzen_extension) Gamma Gamma' Delta Delta' C.     (* SeqExt = NatExt *)
       replace Gamma Gamma' Delta Delta' /\ E Delta Delta' /\
       gentzenSequent E Gamma C ==> gentzenSequent E Gamma' C)`;
 
@@ -807,8 +807,8 @@ val [SeqAxiom, RightSlash, RightBackslash, RightDot, LeftSlash, LeftBackslash, L
      CutRule, SeqExt] =
     map save_thm
         (combine (["SeqAxiom[simp]", "RightSlash", "RightBackslash", "RightDot",
-		   "LeftSlash", "LeftBackslash", "LeftDot", "CutRule", "SeqExt"],
-		  CONJUNCTS gentzenSequent_rules));
+                   "LeftSlash", "LeftBackslash", "LeftDot", "CutRule", "SeqExt"],
+                  CONJUNCTS gentzenSequent_rules));
 
 (* old name: axiomeGeneralisation *)
 val SeqAxiomGeneralized = store_thm ("SeqAxiomGeneralized[simp]",
@@ -822,7 +822,7 @@ val SeqAxiomGeneralized = store_thm ("SeqAxiomGeneralized[simp]",
 
 val LeftDotSimpl = store_thm ("LeftDotSimpl",
   ``!E A B C. gentzenSequent E (Comma (OneForm A) (OneForm B)) C ==>
-	      gentzenSequent E (OneForm (Dot A B)) C``,
+              gentzenSequent E (OneForm (Dot A B)) C``,
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC LeftDot
  >> EXISTS_TAC ``(Comma (OneForm A) (OneForm B))``
@@ -839,39 +839,39 @@ val LeftDotGeneralized = store_thm ("LeftDotGeneralized",
 
 val SeqTermToForm = store_thm ("SeqTermToForm",
   ``!E Gamma C. gentzenSequent E Gamma C
-	    ==> gentzenSequent E (OneForm (deltaTranslation Gamma)) C``,
+            ==> gentzenSequent E (OneForm (deltaTranslation Gamma)) C``,
     REPEAT GEN_TAC
  >> MATCH_MP_TAC LeftDotGeneralized
  >> RW_TAC bool_ss [replaceTranslation]);
 
 val LeftSlashSimpl = store_thm ("LeftSlashSimpl",
   ``!E Gamma A B C. gentzenSequent E Gamma B /\ gentzenSequent E (OneForm A) C
-	        ==> gentzenSequent E (Comma (OneForm (Slash A B)) Gamma) C``,
+                ==> gentzenSequent E (Comma (OneForm (Slash A B)) Gamma) C``,
     PROVE_TAC [replace_rules, replaceCommaDot_rules, LeftSlash]);
 
 val LeftBackslashSimpl = store_thm ("LeftBackslashSimpl",
   ``!E Gamma A B C. gentzenSequent E Gamma B /\ gentzenSequent E (OneForm A) C
-	        ==> gentzenSequent E (Comma Gamma (OneForm (Backslash B A))) C``,
+                ==> gentzenSequent E (Comma Gamma (OneForm (Backslash B A))) C``,
     PROVE_TAC [replace_rules, replaceCommaDot_rules, LeftBackslash]);
 
 val CutRuleSimpl = store_thm ("CutRuleSimpl",
   ``!E Gamma A C. gentzenSequent E Gamma A /\ gentzenSequent E (OneForm A) C
-	      ==> gentzenSequent E Gamma C``,
+              ==> gentzenSequent E Gamma C``,
     PROVE_TAC [replace_rules, replaceCommaDot_rules, CutRule]);
 
 val DotRightSlash' = store_thm ("DotRightSlash'",
   ``!E A B C. gentzenSequent E (OneForm A) (Slash C B)
-	  ==> gentzenSequent E (OneForm (Dot A B)) C``,
+          ==> gentzenSequent E (OneForm (Dot A B)) C``,
     PROVE_TAC [replace_rules, replaceCommaDot_rules, gentzenSequent_rules]);
 
 val DotRightBackslash' = store_thm ("DotRightBackslash'",
   ``!E A B C. gentzenSequent E (OneForm B) (Backslash A C)
-	  ==> gentzenSequent E (OneForm (Dot A B)) C``,
+          ==> gentzenSequent E (OneForm (Dot A B)) C``,
     PROVE_TAC [replace_rules, replaceCommaDot_rules, gentzenSequent_rules]);
 
 val SeqExtSimpl = store_thm (
    "SeqExtSimpl", ``!E Gamma Gamma' C. E Gamma Gamma' /\ gentzenSequent E Gamma C
-				   ==> gentzenSequent E Gamma' C``,
+                                   ==> gentzenSequent E Gamma' C``,
     REPEAT STRIP_TAC
  >> `replace Gamma Gamma' Gamma Gamma'` by REWRITE_TAC [replaceRoot]
  >> IMP_RES_TAC SeqExt);
@@ -880,13 +880,13 @@ val SeqExtSimpl = store_thm (
 
 val LextensionSimpl = store_thm ("LextensionSimpl",
   ``!E T1 T2 T3 C. extends L_Sequent E /\
-		   gentzenSequent E (Comma T1 (Comma T2 T3)) C
-	       ==> gentzenSequent E (Comma (Comma T1 T2) T3) C``,
+                   gentzenSequent E (Comma T1 (Comma T2 T3)) C
+               ==> gentzenSequent E (Comma (Comma T1 T2) T3) C``,
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC SeqExt
- >> EXISTS_TAC ``(Comma T1 (Comma T2 T3))``	(* Gamma *)
- >> EXISTS_TAC ``(Comma T1 (Comma T2 T3))``	(* Delta *)
- >> EXISTS_TAC ``(Comma (Comma T1 T2) T3)``	(* Delta' *)
+ >> EXISTS_TAC ``(Comma T1 (Comma T2 T3))``     (* Gamma *)
+ >> EXISTS_TAC ``(Comma T1 (Comma T2 T3))``     (* Delta *)
+ >> EXISTS_TAC ``(Comma (Comma T1 T2) T3)``     (* Delta' *)
  >> REPEAT STRIP_TAC (* 3 sub-goals here *)
  >- REWRITE_TAC [replaceRoot]
  >- PROVE_TAC [RSUBSET, L_Intro_lr]
@@ -894,13 +894,13 @@ val LextensionSimpl = store_thm ("LextensionSimpl",
 
 val LextensionSimpl' = store_thm ("LextensionSimpl'", (* dual theorem of above *)
   ``!E T1 T2 T3 C. extends L_Sequent E /\
-		   gentzenSequent E (Comma (Comma T1 T2) T3) C
-	       ==> gentzenSequent E (Comma T1 (Comma T2 T3)) C``,
+                   gentzenSequent E (Comma (Comma T1 T2) T3) C
+               ==> gentzenSequent E (Comma T1 (Comma T2 T3)) C``,
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC SeqExt
- >> EXISTS_TAC ``(Comma (Comma T1 T2) T3)``	(* Gamma *)
- >> EXISTS_TAC ``(Comma (Comma T1 T2) T3)``	(* Delta *)
- >> EXISTS_TAC ``(Comma T1 (Comma T2 T3))``	(* Delta' *)
+ >> EXISTS_TAC ``(Comma (Comma T1 T2) T3)``     (* Gamma *)
+ >> EXISTS_TAC ``(Comma (Comma T1 T2) T3)``     (* Delta *)
+ >> EXISTS_TAC ``(Comma T1 (Comma T2 T3))``     (* Delta' *)
  >> REPEAT STRIP_TAC (* 3 sub-goals here *)
  >- REWRITE_TAC [replaceRoot]
  >- PROVE_TAC [RSUBSET, L_Intro_rl]
@@ -908,8 +908,8 @@ val LextensionSimpl' = store_thm ("LextensionSimpl'", (* dual theorem of above *
 
 val LextensionSimplDot = store_thm ("LextensionSimplDot",
   ``!E A B C D. extends L_Sequent E /\
-		gentzenSequent E (OneForm (Dot A (Dot B C))) D
-	    ==> gentzenSequent E (OneForm (Dot (Dot A B) C)) D``,
+                gentzenSequent E (OneForm (Dot A (Dot B C))) D
+            ==> gentzenSequent E (OneForm (Dot (Dot A B) C)) D``,
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC LeftDotSimpl
  >> MATCH_MP_TAC LeftDot
@@ -927,8 +927,8 @@ val LextensionSimplDot = store_thm ("LextensionSimplDot",
 
 val LextensionSimplDot' = store_thm ("LextensionSimplDot'", (* dual theorem of above *)
   ``!E A B C D. extends L_Sequent E /\
-		gentzenSequent E (OneForm (Dot (Dot A B) C)) D
-	    ==> gentzenSequent E (OneForm (Dot A (Dot B C))) D``,
+                gentzenSequent E (OneForm (Dot (Dot A B) C)) D
+            ==> gentzenSequent E (OneForm (Dot A (Dot B C))) D``,
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC LeftDotSimpl
  >> MATCH_MP_TAC LeftDot
@@ -946,8 +946,8 @@ val LextensionSimplDot' = store_thm ("LextensionSimplDot'", (* dual theorem of a
 
 val NLPextensionSimpl = store_thm ("NLPextensionSimpl",
   ``!E T1 T2 C. extends NLP_Sequent E /\
-		gentzenSequent E (Comma T1 T2) C
-	    ==> gentzenSequent E (Comma T2 T1) C``,
+                gentzenSequent E (Comma T1 T2) C
+            ==> gentzenSequent E (Comma T2 T1) C``,
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC SeqExt
  >> EXISTS_TAC ``(Comma T1 T2)``
@@ -960,8 +960,8 @@ val NLPextensionSimpl = store_thm ("NLPextensionSimpl",
 
 val NLPextensionSimplDot = store_thm ("NLPextensionSimplDot",
   ``!E A B C. extends NLP_Sequent E /\
-	      gentzenSequent E (OneForm (Dot A B)) C
-	  ==> gentzenSequent E (OneForm (Dot B A)) C``,
+              gentzenSequent E (OneForm (Dot A B)) C
+          ==> gentzenSequent E (OneForm (Dot B A)) C``,
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC LeftDotSimpl
  >> MATCH_MP_TAC NLPextensionSimpl
@@ -974,8 +974,8 @@ val NLPextensionSimplDot = store_thm ("NLPextensionSimplDot",
 (* original name: gentzenExtends, see also mono_X *)
 val mono_E = store_thm ("mono_E",
   ``!E' E Gamma A. gentzenSequent E Gamma A
-	       ==> extends E E'
-	       ==> gentzenSequent E' Gamma A``,
+               ==> extends E E'
+               ==> gentzenSequent E' Gamma A``,
     GEN_TAC
  >> HO_MATCH_MP_TAC gentzenSequent_ind
  >> REPEAT STRIP_TAC (* 9 goals here *)
@@ -1011,7 +1011,7 @@ val application' = store_thm ("application'",
 
 val RightSlashDot = store_thm ("RightSlashDot",
   ``!E A B C. gentzenSequent E (OneForm (Dot A C)) B
-	  ==> gentzenSequent E (OneForm A) (Slash B C)``,
+          ==> gentzenSequent E (OneForm A) (Slash B C)``,
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC RightSlash
  >> MATCH_MP_TAC CutRuleSimpl
@@ -1020,7 +1020,7 @@ val RightSlashDot = store_thm ("RightSlashDot",
 
 val RightBackslashDot = store_thm ("RightBackslashDot",
   ``!E A B C. gentzenSequent E (OneForm (Dot B A)) C
-	  ==> gentzenSequent E (OneForm A) (Backslash B C)``,
+          ==> gentzenSequent E (OneForm A) (Backslash B C)``,
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC RightBackslash
  >> MATCH_MP_TAC CutRuleSimpl
@@ -1037,13 +1037,13 @@ val coApplication' = store_thm ("coApplication'",
 
 val monotonicity = store_thm ("monotonicity",
   ``!E A B C D. gentzenSequent E (OneForm A) B /\
-		gentzenSequent E (OneForm C) D
-	    ==> gentzenSequent E (OneForm (Dot A C)) (Dot B D)``,
+                gentzenSequent E (OneForm C) D
+            ==> gentzenSequent E (OneForm (Dot A C)) (Dot B D)``,
     PROVE_TAC [LeftDotSimpl, RightDot]);
 
 val isotonicity = store_thm ("isotonicity",
   ``!E A B C. gentzenSequent E (OneForm A) B
-	  ==> gentzenSequent E (OneForm (Slash A C)) (Slash B C)``,
+          ==> gentzenSequent E (OneForm (Slash A C)) (Slash B C)``,
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC RightSlash
  >> MATCH_MP_TAC CutRuleSimpl
@@ -1052,7 +1052,7 @@ val isotonicity = store_thm ("isotonicity",
 
 val isotonicity' = store_thm ("isotonicity'",
   ``!E A B C. gentzenSequent E (OneForm A) B
-	  ==> gentzenSequent E (OneForm (Backslash C A)) (Backslash C B)``,
+          ==> gentzenSequent E (OneForm (Backslash C A)) (Backslash C B)``,
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC RightBackslash
  >> MATCH_MP_TAC CutRuleSimpl
@@ -1061,7 +1061,7 @@ val isotonicity' = store_thm ("isotonicity'",
 
 val antitonicity = store_thm ("antitonicity",
   ``!E A B C. gentzenSequent E (OneForm A) B
-	  ==> gentzenSequent E (OneForm (Slash C B)) (Slash C A)``,
+          ==> gentzenSequent E (OneForm (Slash C B)) (Slash C A)``,
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC RightSlash
  >> MATCH_MP_TAC CutRuleSimpl
@@ -1072,7 +1072,7 @@ val antitonicity = store_thm ("antitonicity",
 
 val antitonicity' = store_thm ("antitonicity'",
   ``!E A B C. gentzenSequent E (OneForm A) B
-	  ==> gentzenSequent E (OneForm (Backslash B C)) (Backslash A C)``,
+          ==> gentzenSequent E (OneForm (Backslash B C)) (Backslash A C)``,
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC RightBackslash
  >> MATCH_MP_TAC CutRuleSimpl
@@ -1105,8 +1105,8 @@ val lifting' = store_thm ("lifting'",
 
 val mainGeach = store_thm ("mainGeach",
   ``!E A B C. extends L_Sequent E
-	  ==> gentzenSequent E (OneForm (Slash A B))
-			       (Slash (Slash A C) (Slash B C))``,
+          ==> gentzenSequent E (OneForm (Slash A B))
+                               (Slash (Slash A C) (Slash B C))``,
     REPEAT STRIP_TAC
  >> NTAC 2 (MATCH_MP_TAC RightSlash)
  >> MATCH_MP_TAC LextensionSimpl
@@ -1118,15 +1118,15 @@ val mainGeach = store_thm ("mainGeach",
  >| [ MATCH_MP_TAC RightDot \\
       CONJ_TAC >|
       [ REWRITE_TAC [SeqAxiom],
-	MATCH_MP_TAC LeftSlashSimpl \\
-	STRIP_TAC \\
-	REWRITE_TAC [SeqAxiom] ],
+        MATCH_MP_TAC LeftSlashSimpl \\
+        STRIP_TAC \\
+        REWRITE_TAC [SeqAxiom] ],
       REWRITE_TAC [application] ]);
 
 val mainGeach' = store_thm ("mainGeach'",
   ``!E A B C. extends L_Sequent E
-	  ==> gentzenSequent E (OneForm (Backslash B A))
-			       (Backslash (Backslash C B) (Backslash C A))``,
+          ==> gentzenSequent E (OneForm (Backslash B A))
+                               (Backslash (Backslash C B) (Backslash C A))``,
     REPEAT STRIP_TAC
  >> NTAC 2 (MATCH_MP_TAC RightBackslash)
  >> MATCH_MP_TAC LextensionSimpl'
@@ -1138,15 +1138,15 @@ val mainGeach' = store_thm ("mainGeach'",
  >| [ MATCH_MP_TAC RightDot \\
       CONJ_TAC >|
       [ MATCH_MP_TAC LeftBackslashSimpl \\
-	STRIP_TAC \\
-	REWRITE_TAC [SeqAxiom],
-	REWRITE_TAC [SeqAxiom] ] ,
+        STRIP_TAC \\
+        REWRITE_TAC [SeqAxiom],
+        REWRITE_TAC [SeqAxiom] ] ,
       REWRITE_TAC [application'] ]);
 
 val secondaryGeach = store_thm ("secondaryGeach",
   ``!E A B C. extends L_Sequent E
-	  ==> gentzenSequent E (OneForm (Slash B C))
-			       (Backslash (Slash A B) (Slash A C))``,
+          ==> gentzenSequent E (OneForm (Slash B C))
+                               (Backslash (Slash A B) (Slash A C))``,
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC RightBackslash
  >> MATCH_MP_TAC RightSlash
@@ -1158,15 +1158,15 @@ val secondaryGeach = store_thm ("secondaryGeach",
  >| [ MATCH_MP_TAC RightDot \\
       CONJ_TAC >|
       [ REWRITE_TAC [SeqAxiom],
-	MATCH_MP_TAC LeftSlashSimpl \\
-	STRIP_TAC \\
-	REWRITE_TAC [SeqAxiom] ],
+        MATCH_MP_TAC LeftSlashSimpl \\
+        STRIP_TAC \\
+        REWRITE_TAC [SeqAxiom] ],
       REWRITE_TAC [application] ]);
 
 val secondaryGeach' = store_thm ("secondaryGeach'",
 ``!E A B C. extends L_Sequent E
-	==> gentzenSequent E (OneForm (Backslash C B))
-			     (Slash (Backslash C A) (Backslash B A))``,
+        ==> gentzenSequent E (OneForm (Backslash C B))
+                             (Slash (Backslash C A) (Backslash B A))``,
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC RightSlash
  >> MATCH_MP_TAC RightBackslash
@@ -1179,15 +1179,15 @@ val secondaryGeach' = store_thm ("secondaryGeach'",
  >| [ MATCH_MP_TAC RightDot \\
       STRIP_TAC >|
       [ MATCH_MP_TAC LeftBackslashSimpl \\
-	STRIP_TAC \\
-	REWRITE_TAC [SeqAxiom],
-	REWRITE_TAC [SeqAxiom] ] ,
+        STRIP_TAC \\
+        REWRITE_TAC [SeqAxiom],
+        REWRITE_TAC [SeqAxiom] ] ,
       REWRITE_TAC [application'] ]);
 
 val composition = store_thm ("composition",
   ``!E A B C. extends L_Sequent E
-	  ==> gentzenSequent E (OneForm (Dot (Slash A B) (Slash B C)))
-			       (Slash A C)``,
+          ==> gentzenSequent E (OneForm (Dot (Slash A B) (Slash B C)))
+                               (Slash A C)``,
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC CutRuleSimpl
  >> EXISTS_TAC ``(Dot (Slash (Slash A C) (Slash B C)) (Slash B C))``
@@ -1199,8 +1199,8 @@ val composition = store_thm ("composition",
 
 val composition' = store_thm ("composition'",
   ``!E A B C. extends L_Sequent E
-	  ==> gentzenSequent E (OneForm (Dot (Backslash C B) (Backslash B A)))
-			       (Backslash C A)``,
+          ==> gentzenSequent E (OneForm (Dot (Backslash C B) (Backslash B A)))
+                               (Backslash C A)``,
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC CutRuleSimpl
  >> EXISTS_TAC ``(Dot (Slash (Backslash C A) (Backslash B A)) (Backslash B A))``
@@ -1212,8 +1212,8 @@ val composition' = store_thm ("composition'",
 
 val restructuring = store_thm ("restructuring",
   ``!E A B C. extends L_Sequent E
-	  ==> gentzenSequent E (OneForm (Slash (Backslash A B) C))
-			       (Backslash A (Slash B C))``,
+          ==> gentzenSequent E (OneForm (Slash (Backslash A B) C))
+                               (Backslash A (Slash B C))``,
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC RightBackslash
  >> MATCH_MP_TAC RightSlash
@@ -1225,14 +1225,14 @@ val restructuring = store_thm ("restructuring",
  >> CONJ_TAC
  >| [ MATCH_MP_TAC RightDot \\
       CONJ_TAC >| [ REWRITE_TAC [SeqAxiom],
-		    MATCH_MP_TAC LeftSlashSimpl \\
-		    REWRITE_TAC [SeqAxiom] ],
+                    MATCH_MP_TAC LeftSlashSimpl \\
+                    REWRITE_TAC [SeqAxiom] ],
       REWRITE_TAC [application'] ]);
 
 val restructuring' = store_thm ("restructuring'",
   ``!E A B C. extends L_Sequent E
-	  ==> gentzenSequent E (OneForm (Backslash A (Slash B C)))
-			       (Slash (Backslash A B) C)``,
+          ==> gentzenSequent E (OneForm (Backslash A (Slash B C)))
+                               (Slash (Backslash A B) C)``,
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC RightSlash
  >> MATCH_MP_TAC RightBackslash
@@ -1244,14 +1244,14 @@ val restructuring' = store_thm ("restructuring'",
  >> CONJ_TAC
  >| [ MATCH_MP_TAC RightDot \\
       CONJ_TAC >| [ MATCH_MP_TAC LeftBackslashSimpl \\
-		    REWRITE_TAC [SeqAxiom],
-		    REWRITE_TAC [SeqAxiom] ],
+                    REWRITE_TAC [SeqAxiom],
+                    REWRITE_TAC [SeqAxiom] ],
       REWRITE_TAC [application] ]);
 
 val currying = store_thm ("currying",
   ``!E A B C. extends L_Sequent E
-	  ==> gentzenSequent E (OneForm (Slash A (Dot B C)))
-			       (Slash (Slash A C) B)``,
+          ==> gentzenSequent E (OneForm (Slash A (Dot B C)))
+                               (Slash (Slash A C) B)``,
     REPEAT STRIP_TAC
  >> NTAC 2 (MATCH_MP_TAC RightSlashDot)
  >> MATCH_MP_TAC LextensionSimplDot
@@ -1261,8 +1261,8 @@ val currying = store_thm ("currying",
 
 val currying' = store_thm ("currying'",
   ``!E A B C. extends L_Sequent E
-	  ==> gentzenSequent E (OneForm (Slash (Slash A C) B))
-			       (Slash A (Dot B C))``,
+          ==> gentzenSequent E (OneForm (Slash (Slash A C) B))
+                               (Slash A (Dot B C))``,
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC RightSlashDot
  >> MATCH_MP_TAC LextensionSimplDot'
@@ -1278,8 +1278,8 @@ val currying' = store_thm ("currying'",
 
 val decurrying = store_thm ("decurrying",
   ``!E A B C. extends L_Sequent E
-	  ==> gentzenSequent E (OneForm (Backslash (Dot A B) C))
-			       (Backslash B (Backslash A C))``,
+          ==> gentzenSequent E (OneForm (Backslash (Dot A B) C))
+                               (Backslash B (Backslash A C))``,
     REPEAT STRIP_TAC
  >> NTAC 2 (MATCH_MP_TAC RightBackslashDot)
  >> MATCH_MP_TAC LextensionSimplDot'
@@ -1289,8 +1289,8 @@ val decurrying = store_thm ("decurrying",
 
 val decurrying' = store_thm ("decurrying'",
   ``!E A B C. extends L_Sequent E
-	  ==> gentzenSequent E (OneForm (Backslash B (Backslash A C)))
-			       (Backslash (Dot A B) C)``,
+          ==> gentzenSequent E (OneForm (Backslash B (Backslash A C)))
+                               (Backslash (Dot A B) C)``,
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC RightBackslashDot
  >> MATCH_MP_TAC LextensionSimplDot
@@ -1307,8 +1307,8 @@ val decurrying' = store_thm ("decurrying'",
 
 val permutation = store_thm ("permutation",
   ``!E A B C. extends NLP_Sequent E
-	  ==> gentzenSequent E (OneForm A) (Backslash B C)
-	  ==> gentzenSequent E (OneForm B) (Backslash A C)``,
+          ==> gentzenSequent E (OneForm A) (Backslash B C)
+          ==> gentzenSequent E (OneForm B) (Backslash A C)``,
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC RightBackslashDot
  >> MATCH_MP_TAC NLPextensionSimplDot
@@ -1322,7 +1322,7 @@ val permutation = store_thm ("permutation",
 
 val exchange = store_thm ("exchange",
   ``!E A B. extends NLP_Sequent E
-	==> gentzenSequent E (OneForm (Slash A B)) (Backslash B A)``,
+        ==> gentzenSequent E (OneForm (Slash A B)) (Backslash B A)``,
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC RightBackslashDot
  >> MATCH_MP_TAC NLPextensionSimplDot
@@ -1330,7 +1330,7 @@ val exchange = store_thm ("exchange",
 
 val exchange' = store_thm ("exchange'",
   ``!E A B. extends NLP_Sequent E
-	==> gentzenSequent E (OneForm (Backslash B A)) (Slash A B)``,
+        ==> gentzenSequent E (OneForm (Backslash B A)) (Slash A B)``,
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC RightSlashDot
  >> MATCH_MP_TAC NLPextensionSimplDot
@@ -1338,7 +1338,7 @@ val exchange' = store_thm ("exchange'",
 
 val preposing = store_thm ("preposing",
   ``!E A B. extends NLP_Sequent E
-	==> gentzenSequent E (OneForm A) (Slash B (Slash B A))``,
+        ==> gentzenSequent E (OneForm A) (Slash B (Slash B A))``,
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC RightSlashDot
  >> MATCH_MP_TAC NLPextensionSimplDot
@@ -1346,7 +1346,7 @@ val preposing = store_thm ("preposing",
 
 val postposing = store_thm ("postposing",
   ``!E A B. extends NLP_Sequent E
-	==> gentzenSequent E (OneForm A) (Backslash (Backslash A B) B)``,
+        ==> gentzenSequent E (OneForm A) (Backslash (Backslash A B) B)``,
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC RightBackslashDot
  >> MATCH_MP_TAC NLPextensionSimplDot
@@ -1356,7 +1356,7 @@ val postposing = store_thm ("postposing",
 
 val mixedComposition = store_thm ("mixedComposition",
   ``!E A B C. extends LP_Sequent E
-	  ==> gentzenSequent E (OneForm (Dot (Slash A B) (Backslash C B))) (Backslash C A)``,
+          ==> gentzenSequent E (OneForm (Dot (Slash A B) (Backslash C B))) (Backslash C A)``,
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC NLPextensionSimplDot
  >> CONJ_TAC
@@ -1375,7 +1375,7 @@ val mixedComposition = store_thm ("mixedComposition",
 
 val mixedComposition' = store_thm ("mixedComposition'",
   ``!E A B C. extends LP_Sequent E
-	 ==>  gentzenSequent E (OneForm (Dot (Slash B C) (Backslash B A))) (Slash A C)``,
+         ==>  gentzenSequent E (OneForm (Dot (Slash B C) (Backslash B A))) (Slash A C)``,
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC NLPextensionSimplDot
  >> CONJ_TAC
@@ -1428,7 +1428,7 @@ val replace_arrow' = store_thm ("replace_arrow'",
 (* from axiomatic presentation to sequent calculus *)
 val arrowToGentzenExt_def = Define `
     arrowToGentzenExt (X :'a arrow_extension) (E :'a gentzen_extension) =
-	!A B. X A B ==> gentzenSequent E (OneForm A) B`;
+        !A B. X A B ==> gentzenSequent E (OneForm A) B`;
 
 val NLToNL_Sequent = store_thm (
    "NLToNL_Sequent", ``arrowToGentzenExt NL NL_Sequent``,
@@ -1532,12 +1532,12 @@ val arrowToGentzenLP = store_thm (
    Notice the strange thing here: the order of T1 and T2 are changed from E to X. *)
 val gentzenToArrowExt_def = Define
    `gentzenToArrowExt (E :'a gentzen_extension) (X :'a arrow_extension) =
-	(!T1 T2. E T1 T2 ==> X (deltaTranslation T2) (deltaTranslation T1))`;
+        (!T1 T2. E T1 T2 ==> X (deltaTranslation T2) (deltaTranslation T1))`;
 
 (* Build arrow_extensions directly from gentzen_extensions *)
 val ToArrowExt_def = Define `
     ToArrowExt (E :'a gentzen_extension) =
-	CURRY { (deltaTranslation y, deltaTranslation x) | (x,y) IN (UNCURRY E) }`;
+        CURRY { (deltaTranslation y, deltaTranslation x) | (x,y) IN (UNCURRY E) }`;
 
 val ToArrowExt_thm = store_thm (
    "ToArrowExt_thm",
@@ -1548,7 +1548,7 @@ val ToArrowExt_thm = store_thm (
  >> ONCE_REWRITE_TAC [GSPECIFICATION]
  >> Q.EXISTS_TAC `(T2, T1)`
  >> `(T1, T2) IN (UNCURRY E)`
-	by PROVE_TAC [UNCURRY_DEF, SPECIFICATION]
+        by PROVE_TAC [UNCURRY_DEF, SPECIFICATION]
  >> FULL_SIMP_TAC std_ss []);
 
 val gentzenToArrowExt_thm = store_thm (
@@ -1593,7 +1593,7 @@ val LP_SequentToLP = store_thm (
 val gentzenToArrow' = store_thm (
    "gentzenToArrow'",
   ``!X E Gamma A. gentzenSequent E Gamma A ==> gentzenToArrowExt E X ==>
-		  arrow X (deltaTranslation Gamma) A``,
+                  arrow X (deltaTranslation Gamma) A``,
     GEN_TAC
  >> HO_MATCH_MP_TAC gentzenSequent_ind
  >> REPEAT STRIP_TAC (* 9 sub-goals here *)
@@ -1611,55 +1611,55 @@ val gentzenToArrow' = store_thm (
       (* goal 5 *)
       RES_TAC \\
       SUFF_TAC ``arrow X (deltaTranslation (Comma (OneForm (Slash A A')) Gamma''))
-			 (deltaTranslation (OneForm A))`` >| (* 2 sub-goals here *)
+                         (deltaTranslation (OneForm A))`` >| (* 2 sub-goals here *)
       [ (* goal 5.1 (of 2) *)
-	DISCH_TAC \\
-	`arrow X (deltaTranslation Gamma') (deltaTranslation Gamma)`
-		by PROVE_TAC [replace_arrow] \\
-	IMP_RES_TAC comp,
-	(* goal 5.2 (of 2) *)
-	REWRITE_TAC [deltaTranslation_def] \\
-	MATCH_MP_TAC beta' \\
-	MATCH_MP_TAC Slash_antimono_right \\
-	POP_ASSUM ACCEPT_TAC ],
+        DISCH_TAC \\
+        `arrow X (deltaTranslation Gamma') (deltaTranslation Gamma)`
+                by PROVE_TAC [replace_arrow] \\
+        IMP_RES_TAC comp,
+        (* goal 5.2 (of 2) *)
+        REWRITE_TAC [deltaTranslation_def] \\
+        MATCH_MP_TAC beta' \\
+        MATCH_MP_TAC Slash_antimono_right \\
+        POP_ASSUM ACCEPT_TAC ],
       (* goal 6 *)
       RES_TAC \\
       SUFF_TAC ``arrow X (deltaTranslation (Comma Gamma'' (OneForm (Backslash A' A))))
-			 (deltaTranslation (OneForm A))`` >| (* 2 sub-goals here *)
+                         (deltaTranslation (OneForm A))`` >| (* 2 sub-goals here *)
       [ (* goal 6.1 (of 2) *)
-	DISCH_TAC \\
-	`arrow X (deltaTranslation Gamma') A''` by PROVE_TAC [replace_arrow'],
-	(* goal 6.2 (of 2) *)
-	REWRITE_TAC [deltaTranslation_def] \\
-	MATCH_MP_TAC gamma' \\
-	MATCH_MP_TAC Backslash_antimono_left \\
-	POP_ASSUM ACCEPT_TAC ],
+        DISCH_TAC \\
+        `arrow X (deltaTranslation Gamma') A''` by PROVE_TAC [replace_arrow'],
+        (* goal 6.2 (of 2) *)
+        REWRITE_TAC [deltaTranslation_def] \\
+        MATCH_MP_TAC gamma' \\
+        MATCH_MP_TAC Backslash_antimono_left \\
+        POP_ASSUM ACCEPT_TAC ],
       (* goal 7 *)
       RES_TAC \\
       SUFF_TAC ``arrow X (deltaTranslation (OneForm (Dot A B)))
-			 (deltaTranslation (Comma (OneForm A) (OneForm B)))`` >|
+                         (deltaTranslation (Comma (OneForm A) (OneForm B)))`` >|
       (* 2 sub-goals here *)
       [ (* goal 7.1 *)
-	DISCH_TAC \\
-	`arrow X (deltaTranslation Gamma') A'` by PROVE_TAC [replace_arrow'],
-	(* goal 7.2 *)
-	REWRITE_TAC [deltaTranslation_def, one] ],
+        DISCH_TAC \\
+        `arrow X (deltaTranslation Gamma') A'` by PROVE_TAC [replace_arrow'],
+        (* goal 7.2 *)
+        REWRITE_TAC [deltaTranslation_def, one] ],
      (* goal 8 *)
      RES_TAC \\
      `arrow X (deltaTranslation Gamma) (deltaTranslation (OneForm A))`
-	by ASM_REWRITE_TAC [deltaTranslation_def] \\
+        by ASM_REWRITE_TAC [deltaTranslation_def] \\
      `arrow X (deltaTranslation Gamma'') A'` by PROVE_TAC [replace_arrow'],
      (* goal 9 *)
      FULL_SIMP_TAC std_ss [gentzenToArrowExt_def] \\
      RES_TAC \\
      `arrow X (deltaTranslation Delta') (deltaTranslation Delta)`
-	by PROVE_TAC [arrow_plus] \\
+        by PROVE_TAC [arrow_plus] \\
      `arrow X (deltaTranslation Gamma') A` by PROVE_TAC [replace_arrow'] ]);
 
 val gentzenToArrow = store_thm (
    "gentzenToArrow",
   ``!E X Gamma A. gentzenToArrowExt E X /\ gentzenSequent E Gamma A
-	      ==> arrow X (deltaTranslation Gamma) A``,
+              ==> arrow X (deltaTranslation Gamma) A``,
     REPEAT STRIP_TAC
  >> PAT_X_ASSUM ``gentzenToArrowExt E X`` MP_TAC
  >> POP_ASSUM MP_TAC
@@ -1758,9 +1758,9 @@ val replaceNatDed = store_thm ("replaceNatDed",
 (* E T1[A] T2[A] ==> ?T1[Delta]. X T1[Delta] T2[Delta] *)
 val condCutExt_def = Define `
     condCutExt (E :'a gentzen_extension) =
-	!Gamma T1 T2 A Delta.
-	 E T1 T2 ==> replace T2 Gamma (OneForm A) Delta
-	         ==> ?Gamma'. E Gamma' Gamma /\ replace T1 Gamma' (OneForm A) Delta`;
+        !Gamma T1 T2 A Delta.
+         E T1 T2 ==> replace T2 Gamma (OneForm A) Delta
+                 ==> ?Gamma'. E Gamma' Gamma /\ replace T1 Gamma' (OneForm A) Delta`;
 
 val conditionOKNL = store_thm ("conditionOKNL", ``condCutExt NL_Sequent``,
     REWRITE_TAC [condCutExt_def]
@@ -1795,61 +1795,61 @@ val conditionOKL = store_thm ("conditionOKL", ``condCutExt L_Sequent``,
  >> GEN_REWRITE_TAC (RATOR_CONV o ONCE_DEPTH_CONV) empty_rewrites [L_Sequent_cases]
  >> REPEAT STRIP_TAC (* 2 sub-goals here *)
  >| [ (* goal 1 *)
-      ASM_REWRITE_TAC []						\\
+      ASM_REWRITE_TAC []                                                \\
       `replace (Comma (Comma A' B) C) Gamma (OneForm A) Delta`
-	by PROVE_TAC []							\\
-      POP_ASSUM (MP_TAC o (MATCH_MP replace_inv2))			\\
+        by PROVE_TAC []                                                 \\
+      POP_ASSUM (MP_TAC o (MATCH_MP replace_inv2))                      \\
       REPEAT STRIP_TAC >| (* 2 sub sub-goals here *)
       [ (* goal 1.1 (of 2) *)
-	POP_ASSUM (MP_TAC o (MATCH_MP replace_inv2))			\\
-	REPEAT STRIP_TAC >| (* 2 sub-goals here *)
-	[ (* goal 1.1.1 (of 2) *)
-	  ASM_REWRITE_TAC []						\\
-	  EXISTS_TAC ``(Comma G' (Comma B C))``				\\
-	  CONJ_TAC >- REWRITE_TAC [L_Sequent_rules]			\\
-	  MATCH_MP_TAC replaceLeft					\\
-	  ASM_REWRITE_TAC [],
-	  (* goal 1.1.2 (of 2) *)
-	  ASM_REWRITE_TAC []						\\
-	  EXISTS_TAC ``(Comma A' (Comma G' C))``			\\
-	  CONJ_TAC >- REWRITE_TAC [L_Sequent_rules]			\\
-	  MATCH_MP_TAC replaceRight					\\
-	  MATCH_MP_TAC replaceLeft					\\
-	  ASM_REWRITE_TAC [] ],
-	(* goal 1.2 (of 2) *)
-	ASM_REWRITE_TAC []						\\
-	EXISTS_TAC ``(Comma A' (Comma B G))``				\\
-	CONJ_TAC >- REWRITE_TAC [L_Sequent_rules]			\\
-	NTAC 2 (MATCH_MP_TAC replaceRight)				\\
+        POP_ASSUM (MP_TAC o (MATCH_MP replace_inv2))                    \\
+        REPEAT STRIP_TAC >| (* 2 sub-goals here *)
+        [ (* goal 1.1.1 (of 2) *)
+          ASM_REWRITE_TAC []                                            \\
+          EXISTS_TAC ``(Comma G' (Comma B C))``                         \\
+          CONJ_TAC >- REWRITE_TAC [L_Sequent_rules]                     \\
+          MATCH_MP_TAC replaceLeft                                      \\
+          ASM_REWRITE_TAC [],
+          (* goal 1.1.2 (of 2) *)
+          ASM_REWRITE_TAC []                                            \\
+          EXISTS_TAC ``(Comma A' (Comma G' C))``                        \\
+          CONJ_TAC >- REWRITE_TAC [L_Sequent_rules]                     \\
+          MATCH_MP_TAC replaceRight                                     \\
+          MATCH_MP_TAC replaceLeft                                      \\
+          ASM_REWRITE_TAC [] ],
+        (* goal 1.2 (of 2) *)
+        ASM_REWRITE_TAC []                                              \\
+        EXISTS_TAC ``(Comma A' (Comma B G))``                           \\
+        CONJ_TAC >- REWRITE_TAC [L_Sequent_rules]                       \\
+        NTAC 2 (MATCH_MP_TAC replaceRight)                              \\
         ASM_REWRITE_TAC [] ],
       (* goal 2 (of 2) *)
-      ASM_REWRITE_TAC []						\\
+      ASM_REWRITE_TAC []                                                \\
       `replace (Comma A' (Comma B C)) Gamma (OneForm A) Delta`
-	by PROVE_TAC []							\\
-      POP_ASSUM (MP_TAC o (MATCH_MP replace_inv2))			\\
+        by PROVE_TAC []                                                 \\
+      POP_ASSUM (MP_TAC o (MATCH_MP replace_inv2))                      \\
       REPEAT STRIP_TAC >| (* 2 sub-goals here *)
       [ (* goal 2.1 (of 2) *)
-	ASM_REWRITE_TAC []						\\
-	EXISTS_TAC ``(Comma (Comma G B) C)``				\\
-	CONJ_TAC >- REWRITE_TAC [L_Sequent_rules]			\\
-	NTAC 2 (MATCH_MP_TAC replaceLeft)				\\
-	ASM_REWRITE_TAC [],
-	(* goal 2.2 (of 2) *)
-	POP_ASSUM (MP_TAC o (MATCH_MP replace_inv2))			\\
-	REPEAT STRIP_TAC >| (* 2 sub-goals here *)
-	[ (* goal 2.2.1 (of 2) *)
-	  ASM_REWRITE_TAC []						\\
-	  EXISTS_TAC ``(Comma (Comma A' G') C)``			\\
-	  CONJ_TAC >- REWRITE_TAC [L_Sequent_rules]			\\
-	  MATCH_MP_TAC replaceLeft					\\
-	  MATCH_MP_TAC replaceRight					\\
-	  ASM_REWRITE_TAC [],
-	  (* goal 2.2.2 (of 2) *)
-	  ASM_REWRITE_TAC []						\\
-	  EXISTS_TAC ``(Comma (Comma A' B) G')``			\\
-	  CONJ_TAC >- REWRITE_TAC [L_Sequent_rules]			\\
-	  MATCH_MP_TAC replaceRight					\\
-	  ASM_REWRITE_TAC [] ] ] ]);
+        ASM_REWRITE_TAC []                                              \\
+        EXISTS_TAC ``(Comma (Comma G B) C)``                            \\
+        CONJ_TAC >- REWRITE_TAC [L_Sequent_rules]                       \\
+        NTAC 2 (MATCH_MP_TAC replaceLeft)                               \\
+        ASM_REWRITE_TAC [],
+        (* goal 2.2 (of 2) *)
+        POP_ASSUM (MP_TAC o (MATCH_MP replace_inv2))                    \\
+        REPEAT STRIP_TAC >| (* 2 sub-goals here *)
+        [ (* goal 2.2.1 (of 2) *)
+          ASM_REWRITE_TAC []                                            \\
+          EXISTS_TAC ``(Comma (Comma A' G') C)``                        \\
+          CONJ_TAC >- REWRITE_TAC [L_Sequent_rules]                     \\
+          MATCH_MP_TAC replaceLeft                                      \\
+          MATCH_MP_TAC replaceRight                                     \\
+          ASM_REWRITE_TAC [],
+          (* goal 2.2.2 (of 2) *)
+          ASM_REWRITE_TAC []                                            \\
+          EXISTS_TAC ``(Comma (Comma A' B) G')``                        \\
+          CONJ_TAC >- REWRITE_TAC [L_Sequent_rules]                     \\
+          MATCH_MP_TAC replaceRight                                     \\
+          ASM_REWRITE_TAC [] ] ] ]);
 
 val condAddExt = store_thm (
    "condAddExt",
@@ -1869,124 +1869,124 @@ val condAddExt = store_thm (
 val CutNatDed = store_thm (
    "CutNatDed",
   ``!Delta A E Gamma C. natDed E Gamma C ==> condCutExt E ==> natDed E Delta A ==>
-	!Gamma'. replace Gamma Gamma' (OneForm A) Delta ==> natDed E Gamma' C``,
+        !Gamma'. replace Gamma Gamma' (OneForm A) Delta ==> natDed E Gamma' C``,
     NTAC 2 GEN_TAC
  >> Induct_on `natDed`
  >> REPEAT CONJ_TAC (* 8 sub-goals here *)
  >| [ (* goal 1 (of 8) *)
-      fix [`E`, `C`] >> rpt STRIP_TAC					\\
-      POP_ASSUM (MP_TAC o (MATCH_MP replace_inv1))			\\
-      RW_TAC std_ss []							\\
+      fix [`E`, `C`] >> rpt STRIP_TAC                                   \\
+      POP_ASSUM (MP_TAC o (MATCH_MP replace_inv1))                      \\
+      RW_TAC std_ss []                                                  \\
       ASM_REWRITE_TAC [],
       (* goal 2 (of 8) *)
-      fix [`E`, `Gamma`, `C`, `B`] >> rpt STRIP_TAC			\\
-      MATCH_MP_TAC SlashIntro						\\
-      IMP_RES_TAC replaceLeft						\\
-      POP_ASSUM (ASSUME_TAC o (SPEC ``(OneForm B)``))			\\
+      fix [`E`, `Gamma`, `C`, `B`] >> rpt STRIP_TAC                     \\
+      MATCH_MP_TAC SlashIntro                                           \\
+      IMP_RES_TAC replaceLeft                                           \\
+      POP_ASSUM (ASSUME_TAC o (SPEC ``(OneForm B)``))                   \\
       RES_TAC,
       (* goal 3 (of 8) *)
-      fix [`E`, `Gamma`, `C`, `B`] >> rpt STRIP_TAC			\\
-      MATCH_MP_TAC BackslashIntro					\\
-      IMP_RES_TAC replaceRight						\\
-      POP_ASSUM (ASSUME_TAC o (SPEC ``(OneForm B)``))			\\
+      fix [`E`, `Gamma`, `C`, `B`] >> rpt STRIP_TAC                     \\
+      MATCH_MP_TAC BackslashIntro                                       \\
+      IMP_RES_TAC replaceRight                                          \\
+      POP_ASSUM (ASSUME_TAC o (SPEC ``(OneForm B)``))                   \\
       RES_TAC,
       (* goal 4 (of 8) *)
-      fix [`E`, `Gamma`, `Gamma'`, `C`, `C'`] >> rpt STRIP_TAC		\\
-      POP_ASSUM (MP_TAC o (MATCH_MP replace_inv2))			\\
+      fix [`E`, `Gamma`, `Gamma'`, `C`, `C'`] >> rpt STRIP_TAC          \\
+      POP_ASSUM (MP_TAC o (MATCH_MP replace_inv2))                      \\
       REPEAT STRIP_TAC >| (* 2 sub-goals here *)
       [ (* goal 4.1 (of 2) *)
-        ASM_REWRITE_TAC []						\\
-        MATCH_MP_TAC DotIntro						\\
-        CONJ_TAC >- RES_TAC						\\
+        ASM_REWRITE_TAC []                                              \\
+        MATCH_MP_TAC DotIntro                                           \\
+        CONJ_TAC >- RES_TAC                                             \\
         ASM_REWRITE_TAC [],
         (* goal 4.2 (of 2) *)
-        ASM_REWRITE_TAC []						\\
-        MATCH_MP_TAC DotIntro						\\
-        CONJ_TAC >- ASM_REWRITE_TAC []					\\
+        ASM_REWRITE_TAC []                                              \\
+        MATCH_MP_TAC DotIntro                                           \\
+        CONJ_TAC >- ASM_REWRITE_TAC []                                  \\
         RES_TAC ],
       (* goal 5 (of 8) *)
-      fix [`E`, `Gamma`, `Gamma'`, `C`, `C'`] >> rpt STRIP_TAC		\\
-      POP_ASSUM (MP_TAC o (MATCH_MP replace_inv2))			\\
-      REPEAT STRIP_TAC (* 2 sub-goals here, same tacticals *)		\\
-      ASM_REWRITE_TAC []						\\
-      MATCH_MP_TAC SlashElim						\\
-      Q.EXISTS_TAC `C'`							\\
+      fix [`E`, `Gamma`, `Gamma'`, `C`, `C'`] >> rpt STRIP_TAC          \\
+      POP_ASSUM (MP_TAC o (MATCH_MP replace_inv2))                      \\
+      REPEAT STRIP_TAC (* 2 sub-goals here, same tacticals *)           \\
+      ASM_REWRITE_TAC []                                                \\
+      MATCH_MP_TAC SlashElim                                            \\
+      Q.EXISTS_TAC `C'`                                                 \\
       ASM_REWRITE_TAC [] >> RES_TAC,
       (* goal 6 (of 8) *)
-      fix [`E`, `Gamma`, `Gamma'`, `C`, `C'`] >> rpt STRIP_TAC		\\
-      POP_ASSUM (MP_TAC o (MATCH_MP replace_inv2))			\\
-      REPEAT STRIP_TAC (* 2 sub-goals here, same tacticals *)		\\
-      ASM_REWRITE_TAC []						\\
-      MATCH_MP_TAC BackslashElim					\\
-      Q.EXISTS_TAC `C'`							\\
+      fix [`E`, `Gamma`, `Gamma'`, `C`, `C'`] >> rpt STRIP_TAC          \\
+      POP_ASSUM (MP_TAC o (MATCH_MP replace_inv2))                      \\
+      REPEAT STRIP_TAC (* 2 sub-goals here, same tacticals *)           \\
+      ASM_REWRITE_TAC []                                                \\
+      MATCH_MP_TAC BackslashElim                                        \\
+      Q.EXISTS_TAC `C'`                                                 \\
       ASM_REWRITE_TAC [] >> RES_TAC,
       (* goal 7 (of 8) *)
-      fix [`E`, `Gamma`, `Gamma'`, `Gamma''`, `A'`, `B`, `C'`]		\\
-      REPEAT STRIP_TAC							\\
+      fix [`E`, `Gamma`, `Gamma'`, `Gamma''`, `A'`, `B`, `C'`]          \\
+      REPEAT STRIP_TAC                                                  \\
       PAT_X_ASSUM ``replace Gamma Gamma' (Comma (OneForm A') (OneForm B)) Gamma''``
-	(ASSUME_TAC o (MATCH_MP doubleReplace))				\\
-      POP_ASSUM (ASSUME_TAC o (Q.SPECL [`Gamma'''`, `A`, `Delta`]))	\\
-      RES_TAC (* 2 sub-goals here, same tactical *)			\\
+        (ASSUME_TAC o (MATCH_MP doubleReplace))                         \\
+      POP_ASSUM (ASSUME_TAC o (Q.SPECL [`Gamma'''`, `A`, `Delta`]))     \\
+      RES_TAC (* 2 sub-goals here, same tactical *)                     \\
       IMP_RES_TAC DotElim,
       (* goal 8 (of 8) *)
-      fix [`E`, `C`, `Gamma`, `Gamma'`, `Delta'`, `Delta''`]		\\
-      REPEAT STRIP_TAC							\\
+      fix [`E`, `C`, `Gamma`, `Gamma'`, `Delta'`, `Delta''`]            \\
+      REPEAT STRIP_TAC                                                  \\
       PAT_X_ASSUM ``condCutExt E ==> P``
-	(ASSUME_TAC o
-	  (fn thm => (MATCH_MP thm (ASSUME ``condCutExt E``))))		\\
+        (ASSUME_TAC o
+          (fn thm => (MATCH_MP thm (ASSUME ``condCutExt E``))))         \\
       PAT_X_ASSUM ``natDed E Delta A ==> P``
-	(ASSUME_TAC o
-	  (fn thm => (MATCH_MP thm (ASSUME ``natDed E Delta A``))))	\\
+        (ASSUME_TAC o
+          (fn thm => (MATCH_MP thm (ASSUME ``natDed E Delta A``))))     \\
       PAT_X_ASSUM ``condCutExt E``
-	(ASSUME_TAC o (REWRITE_RULE [condCutExt_def]))			\\
+        (ASSUME_TAC o (REWRITE_RULE [condCutExt_def]))                  \\
       PAT_X_ASSUM ``replace Gamma Gamma' Delta' Delta''``
-	(ASSUME_TAC o (MATCH_MP doubleReplace))				\\
-      POP_ASSUM (ASSUME_TAC o (Q.SPECL [`Gamma''`, `A`, `Delta`]))	\\
+        (ASSUME_TAC o (MATCH_MP doubleReplace))                         \\
+      POP_ASSUM (ASSUME_TAC o (Q.SPECL [`Gamma''`, `A`, `Delta`]))      \\
       POP_ASSUM (MP_TAC o
-	(fn thm => (MATCH_MP
-		     thm (ASSUME ``replace Gamma' Gamma'' (OneForm A) Delta``)))) \\
+        (fn thm => (MATCH_MP
+                     thm (ASSUME ``replace Gamma' Gamma'' (OneForm A) Delta``)))) \\
       REPEAT STRIP_TAC >| (* 2 sub-goals here *)
       [ (* goal 8.1 (of 2) *)
-	MATCH_MP_TAC NatExt						\\
-	Q.EXISTS_TAC `G`						\\
-	Q.EXISTS_TAC `Delta'`						\\
-	Q.EXISTS_TAC `Delta''`						\\
-	CONJ_TAC >- ASM_REWRITE_TAC []					\\
-	CONJ_TAC >- ASM_REWRITE_TAC []					\\
-	PAT_X_ASSUM ``!Gamma'. replace Gamma Gamma' (OneForm A) Delta ==> P``
-	  (ASSUME_TAC o (Q.SPEC `G`))					\\
-	RES_TAC,
+        MATCH_MP_TAC NatExt                                             \\
+        Q.EXISTS_TAC `G`                                                \\
+        Q.EXISTS_TAC `Delta'`                                           \\
+        Q.EXISTS_TAC `Delta''`                                          \\
+        CONJ_TAC >- ASM_REWRITE_TAC []                                  \\
+        CONJ_TAC >- ASM_REWRITE_TAC []                                  \\
+        PAT_X_ASSUM ``!Gamma'. replace Gamma Gamma' (OneForm A) Delta ==> P``
+          (ASSUME_TAC o (Q.SPEC `G`))                                   \\
+        RES_TAC,
         (* goal 8.2 (of 2) *)
         PAT_X_ASSUM ``!Gamma T1 T2 A Delta. E T1 T2 ==> P``
-	  (ASSUME_TAC o
-	    (Q.SPECL [`G`, `Delta'`, `Delta''`, `A`, `Delta`]))		\\
+          (ASSUME_TAC o
+            (Q.SPECL [`G`, `Delta'`, `Delta''`, `A`, `Delta`]))         \\
         POP_ASSUM (ASSUME_TAC o
-	  (fn thm => (MP thm (ASSUME ``(E :'a gentzen_extension) Delta' Delta''``)))) \\
+          (fn thm => (MP thm (ASSUME ``(E :'a gentzen_extension) Delta' Delta''``)))) \\
         POP_ASSUM (ASSUME_TAC o
-	  (fn thm => (MP thm (ASSUME ``replace Delta'' G (OneForm A) Delta``)))) \\
-        POP_ASSUM MP_TAC >> STRIP_TAC					\\
+          (fn thm => (MP thm (ASSUME ``replace Delta'' G (OneForm A) Delta``)))) \\
+        POP_ASSUM MP_TAC >> STRIP_TAC                                   \\
         PAT_X_ASSUM ``replace Gamma Gamma'' Delta' G``
-	  (ASSUME_TAC o (MATCH_MP replaceSameP))			\\
-        POP_ASSUM (ASSUME_TAC o (Q.SPEC `Gamma'''`))			\\
-        POP_ASSUM (Q.X_CHOOSE_TAC `G'`)					\\
-        POP_ASSUM MP_TAC >> STRIP_TAC					\\
-        MATCH_MP_TAC NatExt						\\
-        Q.EXISTS_TAC `G'`						\\
-        Q.EXISTS_TAC `Gamma'''`						\\
-        Q.EXISTS_TAC `G`						\\
-        CONJ_TAC >- ASM_REWRITE_TAC []					\\
-        CONJ_TAC >- ASM_REWRITE_TAC []					\\
-        PAT_X_ASSUM ``!Gamma'. P`` MATCH_MP_TAC				\\
-        MATCH_MP_TAC replaceTrans'					\\
-        Q.EXISTS_TAC `Delta'`						\\
-        Q.EXISTS_TAC `Gamma'''`						\\
-        CONJ_TAC >- ASM_REWRITE_TAC []					\\
+          (ASSUME_TAC o (MATCH_MP replaceSameP))                        \\
+        POP_ASSUM (ASSUME_TAC o (Q.SPEC `Gamma'''`))                    \\
+        POP_ASSUM (Q.X_CHOOSE_TAC `G'`)                                 \\
+        POP_ASSUM MP_TAC >> STRIP_TAC                                   \\
+        MATCH_MP_TAC NatExt                                             \\
+        Q.EXISTS_TAC `G'`                                               \\
+        Q.EXISTS_TAC `Gamma'''`                                         \\
+        Q.EXISTS_TAC `G`                                                \\
+        CONJ_TAC >- ASM_REWRITE_TAC []                                  \\
+        CONJ_TAC >- ASM_REWRITE_TAC []                                  \\
+        PAT_X_ASSUM ``!Gamma'. P`` MATCH_MP_TAC                         \\
+        MATCH_MP_TAC replaceTrans'                                      \\
+        Q.EXISTS_TAC `Delta'`                                           \\
+        Q.EXISTS_TAC `Gamma'''`                                         \\
+        CONJ_TAC >- ASM_REWRITE_TAC []                                  \\
         ASM_REWRITE_TAC [] ] ] );
 
 val natDedComposition = store_thm (
    "natDedComposition",
   ``!E Gamma F1 F2. condCutExt E /\ natDed E Gamma F1 /\ natDed E (OneForm F1) F2
-		==> natDed E Gamma F2``,
+                ==> natDed E Gamma F2``,
     REPEAT STRIP_TAC
  >> irule CutNatDed
  >> ASM_REWRITE_TAC []
@@ -2002,53 +2002,53 @@ val natDedToGentzen = store_thm (
  >| [ (* goal 1 (of 8) *)
       REWRITE_TAC [SeqAxiom],
       (* goal 2 (of 8) *)
-      MATCH_MP_TAC RightSlash						\\
+      MATCH_MP_TAC RightSlash                                           \\
       ASM_REWRITE_TAC [],
       (* goal 3 (of 8) *)
-      MATCH_MP_TAC RightBackslash					\\
+      MATCH_MP_TAC RightBackslash                                       \\
       ASM_REWRITE_TAC [],
       (* goal 4 (of 8) *)
-      MATCH_MP_TAC RightDot						\\
+      MATCH_MP_TAC RightDot                                             \\
       ASM_REWRITE_TAC [],
       (* goal 5 (of 8) *)
-      MATCH_MP_TAC CutRule						\\
-      Q.EXISTS_TAC `Gamma` (* for Delta' *)				\\
-      EXISTS_TAC ``(Comma (OneForm (Slash A B)) Delta)``		\\
-      EXISTS_TAC ``(Slash A B)``					\\
+      MATCH_MP_TAC CutRule                                              \\
+      Q.EXISTS_TAC `Gamma` (* for Delta' *)                             \\
+      EXISTS_TAC ``(Comma (OneForm (Slash A B)) Delta)``                \\
+      EXISTS_TAC ``(Slash A B)``                                        \\
       CONJ_TAC >| (* 2 sub-goals here *)
       [ (* goal 5.1 (of 2) *)
-        MATCH_MP_TAC replaceLeft					\\
+        MATCH_MP_TAC replaceLeft                                        \\
         REWRITE_TAC [replaceRoot],
         (* goal 5.2 (of 2) *)
-        CONJ_TAC >- ASM_REWRITE_TAC []					\\
-        MATCH_MP_TAC LeftSlashSimpl					\\
-        CONJ_TAC >- ASM_REWRITE_TAC []					\\
+        CONJ_TAC >- ASM_REWRITE_TAC []                                  \\
+        MATCH_MP_TAC LeftSlashSimpl                                     \\
+        CONJ_TAC >- ASM_REWRITE_TAC []                                  \\
         REWRITE_TAC [SeqAxiom] ],
       (* goal 6 (of 8) *)
-      MATCH_MP_TAC CutRule						\\
-      Q.EXISTS_TAC `Delta`						\\
-      EXISTS_TAC ``(Comma Gamma (OneForm (Backslash B A)))``		\\
-      EXISTS_TAC ``(Backslash B A)``					\\
+      MATCH_MP_TAC CutRule                                              \\
+      Q.EXISTS_TAC `Delta`                                              \\
+      EXISTS_TAC ``(Comma Gamma (OneForm (Backslash B A)))``            \\
+      EXISTS_TAC ``(Backslash B A)``                                    \\
       CONJ_TAC >| (* 2 sub-goals here *)
       [ (* goal 6.1 (of 2) *)
-        MATCH_MP_TAC replaceRight					\\
+        MATCH_MP_TAC replaceRight                                       \\
         REWRITE_TAC [replaceRoot],
         (* goal 6.2 (of 2) *)
-        CONJ_TAC >- ASM_REWRITE_TAC []					\\
-        MATCH_MP_TAC LeftBackslashSimpl					\\
-        CONJ_TAC >- ASM_REWRITE_TAC []					\\
+        CONJ_TAC >- ASM_REWRITE_TAC []                                  \\
+        MATCH_MP_TAC LeftBackslashSimpl                                 \\
+        CONJ_TAC >- ASM_REWRITE_TAC []                                  \\
         REWRITE_TAC [SeqAxiom] ],
       (* goal 7 (of 8) *)
-      MATCH_MP_TAC replaceGentzen'					\\
-      Q.EXISTS_TAC `Gamma`						\\
-      EXISTS_TAC ``(Comma (OneForm A) (OneForm B))``			\\
-      Q.EXISTS_TAC `Delta`						\\
-      CONJ_TAC >- ASM_REWRITE_TAC []					\\
-      REWRITE_TAC [deltaTranslation_def]				\\
-      CONJ_TAC >- ASM_REWRITE_TAC []					\\
+      MATCH_MP_TAC replaceGentzen'                                      \\
+      Q.EXISTS_TAC `Gamma`                                              \\
+      EXISTS_TAC ``(Comma (OneForm A) (OneForm B))``                    \\
+      Q.EXISTS_TAC `Delta`                                              \\
+      CONJ_TAC >- ASM_REWRITE_TAC []                                    \\
+      REWRITE_TAC [deltaTranslation_def]                                \\
+      CONJ_TAC >- ASM_REWRITE_TAC []                                    \\
       ASM_REWRITE_TAC [],
       (* goal 8 (of 8) *)
-      MP_TAC (SPEC_ALL SeqExt) >> REPEAT STRIP_TAC			\\
+      MP_TAC (SPEC_ALL SeqExt) >> REPEAT STRIP_TAC                      \\
       RES_TAC ]);
 
 (* The hard direction, heavily depends on theorems proved recently *)
@@ -2058,92 +2058,92 @@ val gentzenToNatDed = store_thm (
     HO_MATCH_MP_TAC gentzenSequent_ind (* or: Induct_on `gentzenSequent` *)
  >> REPEAT CONJ_TAC (* 9 sub-goals here *)
  >| [ (* goal 1 (of 9) *)
-      fix [`E`, `C`] >> rpt STRIP_TAC					\\
+      fix [`E`, `C`] >> rpt STRIP_TAC                                   \\
       REWRITE_TAC [NatAxiom],
       (* goal 2 (of 9) *)
-      fix [`E`, `Gamma`, `C`, `B`] >> rpt STRIP_TAC			\\
-      RES_TAC								\\
+      fix [`E`, `Gamma`, `C`, `B`] >> rpt STRIP_TAC                     \\
+      RES_TAC                                                           \\
       MATCH_MP_TAC SlashIntro >> ASM_REWRITE_TAC [],
       (* goal 3 (of 9) *)
-      fix [`E`, `Gamma`, `C`, `B`] >> rpt STRIP_TAC			\\
-      RES_TAC								\\
+      fix [`E`, `Gamma`, `C`, `B`] >> rpt STRIP_TAC                     \\
+      RES_TAC                                                           \\
       MATCH_MP_TAC BackslashIntro >> ASM_REWRITE_TAC [],
       (* goal 4 (of 9) *)
-      fix [`E`, `Gamma`, `Gamma'`, `C`, `C'`] >> rpt STRIP_TAC		\\
-      RES_TAC								\\
+      fix [`E`, `Gamma`, `Gamma'`, `C`, `C'`] >> rpt STRIP_TAC          \\
+      RES_TAC                                                           \\
       MATCH_MP_TAC DotIntro >> ASM_REWRITE_TAC [],
       (* goal 5 (of 9) *)
-      fix [`E`, `Gamma`, `Gamma'`, `Gamma''`, `A`, `C`, `C'`]		\\
-      REPEAT STRIP_TAC							\\
-      MATCH_MP_TAC natDedComposition					\\
-      EXISTS_TAC ``(deltaTranslation Gamma)``				\\
-      CONJ_TAC >- ASM_REWRITE_TAC []					\\
+      fix [`E`, `Gamma`, `Gamma'`, `Gamma''`, `A`, `C`, `C'`]           \\
+      REPEAT STRIP_TAC                                                  \\
+      MATCH_MP_TAC natDedComposition                                    \\
+      EXISTS_TAC ``(deltaTranslation Gamma)``                           \\
+      CONJ_TAC >- ASM_REWRITE_TAC []                                    \\
       CONJ_TAC >| (* 2 sub-goals here *)
       [ (* goal 5.1 (of 2) *)
-        irule replaceNatDed						\\
-        EXISTS_TAC ``(OneForm A)``					\\
-        EXISTS_TAC ``(Comma (OneForm (Slash A C)) Gamma'')``		\\
+        irule replaceNatDed                                             \\
+        EXISTS_TAC ``(OneForm A)``                                      \\
+        EXISTS_TAC ``(Comma (OneForm (Slash A C)) Gamma'')``            \\
         CONJ_TAC >| (* 2 sub-goals here *)
         [ (* goal 5.1.1 (of 2) *)
-          REWRITE_TAC [deltaTranslation_def]				\\
-          MATCH_MP_TAC SlashElim					\\
-          Q.EXISTS_TAC `C`						\\
+          REWRITE_TAC [deltaTranslation_def]                            \\
+          MATCH_MP_TAC SlashElim                                        \\
+          Q.EXISTS_TAC `C`                                              \\
           CONJ_TAC >- REWRITE_TAC [NatAxiom] >> RES_TAC,
           (* goal 5.1.2 (of 2) *)
           ASM_REWRITE_TAC [] ],
         (* goal 5.2 (of 2) *)
         MATCH_MP_TAC NatTermToForm >> RES_TAC ],
       (* goal 6 (of 9) *)
-      fix [`E`, `Gamma`, `Gamma'`, `Gamma''`, `A`, `C`, `C'`]		\\
-      REPEAT STRIP_TAC							\\
-      MATCH_MP_TAC natDedComposition					\\
-      EXISTS_TAC ``(deltaTranslation Gamma)``				\\
-      CONJ_TAC >- ASM_REWRITE_TAC []					\\
+      fix [`E`, `Gamma`, `Gamma'`, `Gamma''`, `A`, `C`, `C'`]           \\
+      REPEAT STRIP_TAC                                                  \\
+      MATCH_MP_TAC natDedComposition                                    \\
+      EXISTS_TAC ``(deltaTranslation Gamma)``                           \\
+      CONJ_TAC >- ASM_REWRITE_TAC []                                    \\
       CONJ_TAC >| (* 2 sub-goals here *)
       [ (* goal 6.1 (of 2) *)
-        irule replaceNatDed						\\
-        EXISTS_TAC ``(OneForm A)``					\\
-        EXISTS_TAC ``(Comma Gamma'' (OneForm (Backslash C A)))``	\\
+        irule replaceNatDed                                             \\
+        EXISTS_TAC ``(OneForm A)``                                      \\
+        EXISTS_TAC ``(Comma Gamma'' (OneForm (Backslash C A)))``        \\
         CONJ_TAC >| (* 2 sub-goals here *)
         [ (* goal 6.1.1 (of 2) *)
-          REWRITE_TAC [deltaTranslation_def]				\\
-          MATCH_MP_TAC BackslashElim					\\
-          Q.EXISTS_TAC `C`						\\
-          CONJ_TAC >- RES_TAC						\\
+          REWRITE_TAC [deltaTranslation_def]                            \\
+          MATCH_MP_TAC BackslashElim                                    \\
+          Q.EXISTS_TAC `C`                                              \\
+          CONJ_TAC >- RES_TAC                                           \\
           REWRITE_TAC [NatAxiom],
           (* goal 6.1.2 (of 2) *)
           ASM_REWRITE_TAC [] ],
         (* goal 6.2 (of 2) *)
         MATCH_MP_TAC NatTermToForm >> RES_TAC ],
       (* goal 7 (of 9) *)
-      fix [`E`, `Gamma`, `Gamma'`, `A`, `B`, `C`] >> rpt STRIP_TAC	\\
-      MATCH_MP_TAC natDedComposition					\\
-      EXISTS_TAC ``(deltaTranslation Gamma)``				\\
-      CONJ_TAC >- ASM_REWRITE_TAC []					\\
+      fix [`E`, `Gamma`, `Gamma'`, `A`, `B`, `C`] >> rpt STRIP_TAC      \\
+      MATCH_MP_TAC natDedComposition                                    \\
+      EXISTS_TAC ``(deltaTranslation Gamma)``                           \\
+      CONJ_TAC >- ASM_REWRITE_TAC []                                    \\
       CONJ_TAC >| (* 2 sub-goals here *)
       [ (* goal 7.1 (of 2) *)
-        irule replaceNatDed						\\
-        EXISTS_TAC ``(Comma (OneForm A) (OneForm B))``			\\
-        EXISTS_TAC ``(OneForm (Dot A B))``				\\
+        irule replaceNatDed                                             \\
+        EXISTS_TAC ``(Comma (OneForm A) (OneForm B))``                  \\
+        EXISTS_TAC ``(OneForm (Dot A B))``                              \\
         CONJ_TAC >| (* 2 sub-goals here *)
         [ (* goal 7.1.1 (of 2) *)
-          REWRITE_TAC [deltaTranslation_def]				\\
+          REWRITE_TAC [deltaTranslation_def]                            \\
           REWRITE_TAC [NatAxiom],
           (* goal 7.1.2 (of 2) *)
           ASM_REWRITE_TAC [] ],
         (* goal 7.2 (of 2) *)
         MATCH_MP_TAC NatTermToForm >> RES_TAC ],
       (* goal 8 (of 9) *)
-      fix [`E`, `Gamma`, `Gamma'`, `Gamma''`, `C`, `C'`]		\\
-      REPEAT STRIP_TAC							\\	
-      MATCH_MP_TAC natDedComposition					\\
-      EXISTS_TAC ``(deltaTranslation Gamma')``				\\
-      CONJ_TAC >- ASM_REWRITE_TAC []					\\
+      fix [`E`, `Gamma`, `Gamma'`, `Gamma''`, `C`, `C'`]                \\
+      REPEAT STRIP_TAC                                                  \\
+      MATCH_MP_TAC natDedComposition                                    \\
+      EXISTS_TAC ``(deltaTranslation Gamma')``                          \\
+      CONJ_TAC >- ASM_REWRITE_TAC []                                    \\
       CONJ_TAC >| (* 2 sub-goals here *)
       [ (* goal 8.1 (of 2) *)
-        irule replaceNatDed						\\
-        EXISTS_TAC ``(OneForm C)``					\\
-        Q.EXISTS_TAC `Gamma`						\\
+        irule replaceNatDed                                             \\
+        EXISTS_TAC ``(OneForm C)``                                      \\
+        Q.EXISTS_TAC `Gamma`                                            \\
         CONJ_TAC >| (* 2 sub-goals here *)
         [ (* goal 8.1.1 (of 2) *)
           REWRITE_TAC [deltaTranslation_def] >> RES_TAC,
@@ -2152,14 +2152,14 @@ val gentzenToNatDed = store_thm (
         (* goal 8.2 (of 2) *)
         MATCH_MP_TAC NatTermToForm >> RES_TAC ],
       (* goal 9 (of 9) *)
-      fix [`E`, `Gamma`, `Gamma'`, `Delta`, `Delta'`, `C`]		\\
-      REPEAT STRIP_TAC							\\
-      MATCH_MP_TAC NatExt						\\
-      Q.EXISTS_TAC `Gamma`						\\
-      Q.EXISTS_TAC `Delta`						\\
-      Q.EXISTS_TAC `Delta'`						\\
-      CONJ_TAC >- ASM_REWRITE_TAC []					\\
-      CONJ_TAC >- ASM_REWRITE_TAC []					\\
+      fix [`E`, `Gamma`, `Gamma'`, `Delta`, `Delta'`, `C`]              \\
+      REPEAT STRIP_TAC                                                  \\
+      MATCH_MP_TAC NatExt                                               \\
+      Q.EXISTS_TAC `Gamma`                                              \\
+      Q.EXISTS_TAC `Delta`                                              \\
+      Q.EXISTS_TAC `Delta'`                                             \\
+      CONJ_TAC >- ASM_REWRITE_TAC []                                    \\
+      CONJ_TAC >- ASM_REWRITE_TAC []                                    \\
       RES_TAC ]);
 
 val gentzenEqNatDed = store_thm (
@@ -2223,7 +2223,7 @@ val natDedToArrow_E = store_thm (
 val arrowToNatDed = store_thm (
    "arrowToNatDed",
   ``!E X A B. condCutExt E /\ arrowToGentzenExt X E /\ arrow X A B
-	  ==> natDed E (OneForm A) B``,
+          ==> natDed E (OneForm A) B``,
     REPEAT STRIP_TAC
  >> irule gentzenToNatDed
  >> ASM_REWRITE_TAC []
@@ -2240,28 +2240,28 @@ val arrowToNatDed = store_thm (
 fun enable_grammar () = let
 in
     add_rule { term_name = "arrow", fixity = Infix (NONASSOC, 450),
-	pp_elements = [ BreakSpace(1,0), TOK ":-", BreakSpace(1,0), TM, BreakSpace(1,0), TOK "-->",
-			BreakSpace(1,0) ],
-	paren_style = OnlyIfNecessary,
-	block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)) };
+        pp_elements = [ BreakSpace(1,0), TOK ":-", BreakSpace(1,0), TM, BreakSpace(1,0), TOK "-->",
+                        BreakSpace(1,0) ],
+        paren_style = OnlyIfNecessary,
+        block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)) };
 
     add_rule { term_name = "natDed", fixity = Infix (NONASSOC, 450),
-	pp_elements = [ BreakSpace(1,0), TOK ":-", BreakSpace(1,0), TM, BreakSpace(1,0), TOK "|-n",
-			BreakSpace(1,0) ],
-	paren_style = OnlyIfNecessary,
-	block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)) };
+        pp_elements = [ BreakSpace(1,0), TOK ":-", BreakSpace(1,0), TM, BreakSpace(1,0), TOK "|-n",
+                        BreakSpace(1,0) ],
+        paren_style = OnlyIfNecessary,
+        block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)) };
 
     add_rule { term_name = "gentzenSequent", fixity = Infix (NONASSOC, 450),
-	pp_elements = [ BreakSpace(1,0), TOK ":-", BreakSpace(1,0), TM, BreakSpace(1,0), TOK "|-g",
-			BreakSpace(1,0) ],
-	paren_style = OnlyIfNecessary,
-	block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)) };
+        pp_elements = [ BreakSpace(1,0), TOK ":-", BreakSpace(1,0), TM, BreakSpace(1,0), TOK "|-g",
+                        BreakSpace(1,0) ],
+        paren_style = OnlyIfNecessary,
+        block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)) };
 
     add_rule { term_name = "Sequent", fixity = Infix (NONASSOC, 450),
-	pp_elements = [ BreakSpace(1,0), TOK ":-", BreakSpace(1,0), TM, BreakSpace(1,0), TOK "|-",
-			BreakSpace(1,0) ],
-	paren_style = OnlyIfNecessary,
-	block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)) }
+        pp_elements = [ BreakSpace(1,0), TOK ":-", BreakSpace(1,0), TM, BreakSpace(1,0), TOK "|-",
+                        BreakSpace(1,0) ],
+        paren_style = OnlyIfNecessary,
+        block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)) }
 end;
 
 val _ = enable_grammar ();

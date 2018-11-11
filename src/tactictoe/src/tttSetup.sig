@@ -2,7 +2,7 @@ signature tttSetup =
 sig
 
   include Abbrev
-   
+
   (* directories *)
   val infix_file : string
   val tactictoe_dir : string
@@ -30,8 +30,8 @@ sig
   (* evaluation *)
   type lbl = (string * real * goal * goal list)
   type fea = int list
-  type thmdata = 
-    (int, real) Redblackmap.dict * 
+  type thmdata =
+    (int, real) Redblackmap.dict *
     (string, int list) Redblackmap.dict
   type tacdata =
     {

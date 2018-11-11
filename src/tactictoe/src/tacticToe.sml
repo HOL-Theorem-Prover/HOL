@@ -8,10 +8,10 @@
 structure tacticToe :> tacticToe =
 struct
 
-open HolKernel Abbrev boolLib aiLib 
+open HolKernel Abbrev boolLib aiLib
   smlLexer smlExecute smlRedirect smlInfix
-  mlFeature mlThmData mlTacticData mlNearestNeighbor 
-  psMinimize 
+  mlFeature mlThmData mlTacticData mlNearestNeighbor
+  psMinimize
   tttSetup tttSearch
 
 val ERR = mk_HOL_ERR "tacticToe"
@@ -45,7 +45,7 @@ fun select_tacfea tacdata goalf =
   let
     val tacfea = dlist (#tacfea tacdata)
     val tacsymweight = learn_tfidf tacfea
-    val l0 = 
+    val l0 =
       stacknn_preselect (tacsymweight,tacfea) (!ttt_presel_radius) goalf
     val l1 = add_stacdep (#tacdep tacdata) (!ttt_presel_radius) (map fst l0)
     fun f x = (x, dfind x (#tacfea tacdata))
@@ -91,16 +91,16 @@ fun main_tactictoe (thmdata,tacdata) goal =
 
 fun read_status r = case r of
    ProofError     =>
-   (print_endline "tactictoe: error"; 
+   (print_endline "tactictoe: error";
     (NONE, FAIL_TAC "tactictoe: error"))
  | ProofSaturated =>
-   (print_endline "tactictoe: saturated"; 
+   (print_endline "tactictoe: saturated";
     (NONE, FAIL_TAC "tactictoe: saturated"))
  | ProofTimeOut   =>
-   (print_endline "tactictoe: time out"; 
+   (print_endline "tactictoe: time out";
     (NONE, FAIL_TAC "tactictoe: time out"))
- | Proof s        => 
-   (print_endline ("tactictoe found a proof:\n  " ^ s); 
+ | Proof s        =>
+   (print_endline ("tactictoe found a proof:\n  " ^ s);
     (SOME s, hide_out tactic_of_sml s))
 
 (* -------------------------------------------------------------------------
@@ -114,18 +114,18 @@ fun clean_ttt_tacdata_cache () = ttt_tacdata_cache := dempty String.compare
 
 val ttt_goaltac_cache = ref (dempty goal_compare)
 fun clean_ttt_goaltac_cache () = ttt_goaltac_cache := dempty goal_compare
-  
+
 fun tactictoe_aux goal =
   let val (stac,tac) = dfind goal (!ttt_goaltac_cache) in
     print_endline ("goal already solved by:\n  " ^ stac); tac
   end
   handle NotFound =>
-  let 
+  let
     val _ = hide_out QUse.use infix_file
     val cthy = current_theory ()
     val _ = init_metis ()
     val thmdata = create_thmdata ()
-    val tacdata = 
+    val tacdata =
       dfind cthy (!ttt_tacdata_cache) handle NotFound =>
       let val tacdata_aux = ttt_create_tacdata () in
         ttt_tacdata_cache := dadd cthy tacdata_aux (!ttt_tacdata_cache);
@@ -138,19 +138,19 @@ fun tactictoe_aux goal =
   in
     tac
   end
-  
+
 fun ttt goal = (tactictoe_aux goal) goal
 
-fun tactictoe term = 
+fun tactictoe term =
   let val goal = ([],term) in TAC_PROOF (goal, tactictoe_aux goal) end
 
 (* -------------------------------------------------------------------------
-   Evaluation 
+   Evaluation
    ------------------------------------------------------------------------- *)
 
 val ttt_eval_dir = tactictoe_dir ^ "/eval"
-fun log_eval s = 
-  let val file = ttt_eval_dir ^ "/" ^ current_theory () in  
+fun log_eval s =
+  let val file = ttt_eval_dir ^ "/" ^ current_theory () in
     print_endline s;
     mkDir_err ttt_eval_dir;
     append_endline file s
@@ -162,8 +162,8 @@ fun log_status r = case r of
  | ProofTimeOut   => log_eval "  tactictoe: time out"
  | Proof s        => log_eval ("  tactictoe found a proof:\n  " ^ s)
 
-fun ttt_eval (thmdata,tacdata) goal = 
-  let 
+fun ttt_eval (thmdata,tacdata) goal =
+  let
     val _ = log_eval ("Goal: " ^ string_of_goal goal)
     val (status,t) = add_time (main_tactictoe (thmdata,tacdata)) goal
   in

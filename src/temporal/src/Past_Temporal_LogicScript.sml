@@ -81,10 +81,10 @@ val PBEFORE = new_infixr_definition("PBEFORE",
        Some aliases of Past Temporal Operators (borrowed from NuSMV)
  ---------------------------------------------------------------------------*)
 
-val _ = overload_on ("PREV",	``PNEXT``);
-val _ = overload_on ("ONCE",	``PEVENTUAL``);
-val _ = overload_on ("SINCE",	``$PUNTIL``);
-val _ = set_fixity   "SINCE"	 (Infixr 200);
+val _ = overload_on ("PREV",    ``PNEXT``);
+val _ = overload_on ("ONCE",    ``PEVENTUAL``);
+val _ = overload_on ("SINCE",   ``$PUNTIL``);
+val _ = set_fixity   "SINCE"     (Infixr 200);
 
 (*---------------------------------------------------------------------------
        Initialization
@@ -839,7 +839,7 @@ val SUNTIL_AS_SBEFORE1 = TAC_PROOF(
 val BEFORE_AS_UNTIL1 = TAC_PROOF(
         ([], “(a BEFORE b) = (\t. ~b t) UNTIL (\t. a t /\ ~b t)”),
         CONV_TAC(X_FUN_EQ_CONV “t0:num”) THEN GEN_TAC
-        THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b) = (~a=~b)”),PROP_TAC)]
+        THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b) = (~a= ~b)”),PROP_TAC)]
         THEN REWRITE_TAC[NOT_BEFORE,NOT_UNTIL] THEN BETA_TAC
         THEN REWRITE_TAC[] THEN CONV_TAC(DEPTH_CONV ETA_CONV)
         THEN REWRITE_TAC[SUNTIL_AS_SBEFORE1] THEN BETA_TAC
@@ -879,7 +879,7 @@ val SBEFORE_AS_SUNTIL1 = TAC_PROOF(
 val UNTIL_AS_BEFORE1 = TAC_PROOF(
         ([], “(a UNTIL b) = b BEFORE (\t. ~a t /\ ~b t)”),
         CONV_TAC(X_FUN_EQ_CONV “t0:num”) THEN GEN_TAC
-        THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b) = (~a=~b)”),PROP_TAC)]
+        THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b) = (~a= ~b)”),PROP_TAC)]
         THEN REWRITE_TAC[NOT_BEFORE,NOT_UNTIL] THEN BETA_TAC
         THEN REWRITE_TAC[SBEFORE_AS_SUNTIL1] THEN BETA_TAC
         THEN REWRITE_TAC[]);
@@ -902,7 +902,7 @@ val SUNTIL_EXPRESSIVE = TAC_PROOF(
             THEN REWRITE_TAC[UNTIL_AS_BEFORE1, WHEN_AS_UNTIL, NOT_SUNTIL]
             THEN BETA_TAC THEN REWRITE_TAC[]
             THEN CONV_TAC(DEPTH_CONV ETA_CONV) THEN REWRITE_TAC[DE_MORGAN_THM]
-            THEN REWRITE_TAC[TAC_PROOF(([],“b/\(~a\/~b)=~a/\b”),PROP_TAC)]);
+            THEN REWRITE_TAC[TAC_PROOF(([],“b/\(~a\/~b)= ~a/\b”),PROP_TAC)]);
 
 
 
@@ -948,7 +948,7 @@ val SBEFORE_EXPRESSIVE = TAC_PROOF(
             THEN REWRITE_TAC[TAC_PROOF(([],“~b/\(a\/b)=a/\~b”),PROP_TAC)]
             THEN ONCE_REWRITE_TAC[MORE_EVENT] THEN BETA_TAC
             THEN REWRITE_TAC[TAC_PROOF(([],“~(a==>b)/\~b=a/\~b”),PROP_TAC)]
-            THEN REWRITE_TAC[TAC_PROOF(([],“~(a\/b)/\~(a/\~b)=~b/\~(a/\~b)”),PROP_TAC)]
+            THEN REWRITE_TAC[TAC_PROOF(([],“~(a\/b)/\~(a/\~b)= ~b/\~(a/\~b)”),PROP_TAC)]
             THEN CONV_TAC(DEPTH_CONV ETA_CONV)
             THEN REWRITE_TAC[]);
 
@@ -969,7 +969,7 @@ val UNTIL_EXPRESSIVE = TAC_PROOF(
             THEN REWRITE_TAC[SUNTIL_AS_SBEFORE1, SWHEN_AS_SUNTIL, NOT_UNTIL]
             THEN BETA_TAC THEN REWRITE_TAC[]
             THEN CONV_TAC(DEPTH_CONV ETA_CONV) THEN REWRITE_TAC[DE_MORGAN_THM]
-            THEN REWRITE_TAC[TAC_PROOF(([],“b/\(~a\/~b)=~a/\b”),PROP_TAC)]);
+            THEN REWRITE_TAC[TAC_PROOF(([],“b/\(~a\/~b)= ~a/\b”),PROP_TAC)]);
 
 
 
@@ -1014,8 +1014,8 @@ val BEFORE_EXPRESSIVE = TAC_PROOF(
             THEN REWRITE_TAC[TAC_PROOF(([],“~b/\(a\/b)=a/\~b”),PROP_TAC)]
             THEN ONCE_REWRITE_TAC[MORE_EVENT] THEN BETA_TAC
             THEN REWRITE_TAC[TAC_PROOF(([],“~(a==>b)/\~b=a/\~b”),PROP_TAC)]
-            THEN REWRITE_TAC[TAC_PROOF(([],“~(a\/b)/\~(a/\~b)=~b/\~(a/\~b)”),PROP_TAC)]
-            THEN REWRITE_TAC[TAC_PROOF(([],“b/\~(a/\b)=~a/\b”),PROP_TAC)]
+            THEN REWRITE_TAC[TAC_PROOF(([],“~(a\/b)/\~(a/\~b)= ~b/\~(a/\~b)”),PROP_TAC)]
+            THEN REWRITE_TAC[TAC_PROOF(([],“b/\~(a/\b)= ~a/\b”),PROP_TAC)]
             THEN CONV_TAC(DEPTH_CONV ETA_CONV)
             THEN REWRITE_TAC[]
         );
@@ -1062,7 +1062,7 @@ val NEGATION_NORMAL_FORM = TAC_PROOF(
          (~(a PSBEFORE b) t = ((\t. ~a t) PUNTIL b) t)
         ”),
         PAST_TEMP_TAC2
-        THEN REWRITE_TAC[PSNEXT,PNEXT,PRE,EQT_ELIM(ARITH_CONV“(0<t)=~(t=0)”)]
+        THEN REWRITE_TAC[PSNEXT,PNEXT,PRE,EQT_ELIM(ARITH_CONV“(0<t)= ~(t=0)”)]
         THEN BETA_TAC THEN PROP_TAC
         )
         in
@@ -1098,7 +1098,7 @@ val past_cnf_thm = TAC_PROOF(
                          (CONJUNCTS RECURSION))
     THEN BETA_TAC
     THEN REWRITE_TAC[PNEXT,PSNEXT,ZERO_LEMMA,PRE,
-                     EQT_ELIM(ARITH_CONV“(0<t)=~(t=0)”)]
+                     EQT_ELIM(ARITH_CONV“(0<t)= ~(t=0)”)]
     THEN BETA_TAC
     THENL[
         PROP_TAC,
@@ -1175,7 +1175,7 @@ val future_cnf_thm = TAC_PROOF(
 val before_cnf_thm = TAC_PROOF(
         ([],“((c BEFORE (\t. a t \/ b t)) t = (c BEFORE a) t  /\ (c BEFORE b) t)”),
         REWRITE_TAC[BEFORE_AS_SUNTIL] THEN BETA_TAC
-        THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“(~a=~b/\~c) = (a = b\/c)”),PROP_TAC)]
+        THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“(~a= ~b/\~c) = (a = b\/c)”),PROP_TAC)]
         THEN REWRITE_TAC[SUNTIL_SIGNAL] THEN BETA_TAC
         THEN REWRITE_TAC[DE_MORGAN_THM] THEN EQ_TAC THEN REPEAT STRIP_TAC
         THENL[
@@ -1271,7 +1271,7 @@ val DISJUNCTIVE_NORMAL_FORM = TAC_PROOF(
          (((\t. a t \/ b t) PSBEFORE c) = \t. (a PSBEFORE c) t \/ (b PSBEFORE c) t)
         ”),
         CONV_TAC(DEPTH_CONV FUN_EQ_CONV) THEN BETA_TAC
-        THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b)=(~a=~b)”),PROP_TAC)]
+        THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b)=(~a= ~b)”),PROP_TAC)]
         THEN REWRITE_TAC[NEGATION_NORMAL_FORM] THEN BETA_TAC
         THEN REWRITE_TAC[DE_MORGAN_THM,NEGATION_NORMAL_FORM] THEN BETA_TAC
         THEN REWRITE_TAC
@@ -1670,7 +1670,7 @@ val SUNTIL_AND_PNEXT_SEPARATE = TAC_PROOF(
             THEN IMP_RES_TAC LESS_ADD_1 THEN CONJ_TAC
             THENL[
                 GEN_TAC THEN DISCH_TAC THEN RES_TAC
-                THEN ASM_REWRITE_TAC[TAC_PROOF(([],“(c==>~b)=~(b/\c)”),PROP_TAC)]
+                THEN ASM_REWRITE_TAC[TAC_PROOF(([],“(c==>~b)= ~(b/\c)”),PROP_TAC)]
                 THEN DISJ_CASES_TAC(EQT_ELIM(ARITH_CONV“(t'=0)\/(0<t')”))
                 THENL[ASM_REWRITE_TAC[ADD_CLAUSES],ALL_TAC]
                 THEN IMP_RES_TAC LESS_ADD_1
@@ -1737,7 +1737,7 @@ val SUNTIL_AND_PSNEXT_SEPARATE = TAC_PROOF(
             THEN IMP_RES_TAC LESS_ADD_1 THEN CONJ_TAC
             THENL[
                 GEN_TAC THEN DISCH_TAC THEN RES_TAC
-                THEN ASM_REWRITE_TAC[TAC_PROOF(([],“(c==>~b)=~(b/\c)”),PROP_TAC)]
+                THEN ASM_REWRITE_TAC[TAC_PROOF(([],“(c==>~b)= ~(b/\c)”),PROP_TAC)]
                 THEN DISJ_CASES_TAC(EQT_ELIM(ARITH_CONV“(t'=0)\/(0<t')”))
                 THENL[ASM_REWRITE_TAC[ADD_CLAUSES],ALL_TAC]
                 THEN IMP_RES_TAC LESS_ADD_1
@@ -1819,7 +1819,7 @@ val BEFORE_OR_RIGHT_SEPARATE = TAC_PROOF(
         ([],“((c BEFORE (\t. a t \/ b t)) = \t. (c BEFORE a) t  /\ (c BEFORE b) t)”),
         CONV_TAC(X_FUN_EQ_CONV “t:num”) THEN GEN_TAC
         THEN REWRITE_TAC[BEFORE_AS_SUNTIL] THEN BETA_TAC
-        THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“(~a=~b/\~c) = (a = b\/c)”),PROP_TAC)]
+        THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“(~a= ~b/\~c) = (a = b\/c)”),PROP_TAC)]
         THEN REWRITE_TAC[SUNTIL_SIGNAL] THEN BETA_TAC
         THEN REWRITE_TAC[DE_MORGAN_THM] THEN EQ_TAC THEN REPEAT STRIP_TAC
         THENL[
@@ -2341,7 +2341,7 @@ val SUNTIL_OR_PSUNTIL_SEPARATE = TAC_PROOF(
                      ((\t. b t \/ c t \/ ((\t. d t \/ NEXT c t) BEFORE (\t. ~a t /\ ~d t)) t) SUNTIL d) t
         ”),
         CONV_TAC(X_FUN_EQ_CONV “t:num”) THEN GEN_TAC
-        THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b) = (~a=~b)”),PROP_TAC)]
+        THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b) = (~a= ~b)”),PROP_TAC)]
         THEN REWRITE_TAC[NOT_SUNTIL] THEN BETA_TAC
         THEN REWRITE_TAC[DE_MORGAN_THM,NEGATION_NORMAL_FORM]
         THEN ASSUME_TAC(BETA_RULE
@@ -2364,7 +2364,7 @@ val SUNTIL_OR_PBEFORE_SEPARATE = TAC_PROOF(
                      ((\t. ~c t \/ ((\t. d t \/ NEXT b t) BEFORE (\t. ~a t /\ ~d t)) t) SUNTIL d) t
         ”),
         CONV_TAC(X_FUN_EQ_CONV “t:num”) THEN GEN_TAC
-        THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b) = (~a=~b)”),PROP_TAC)]
+        THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b) = (~a= ~b)”),PROP_TAC)]
         THEN REWRITE_TAC[NOT_SUNTIL,DE_MORGAN_THM] THEN BETA_TAC
         THEN REWRITE_TAC[DE_MORGAN_THM,NEGATION_NORMAL_FORM]
         THEN ASSUME_TAC(BETA_RULE
@@ -2382,7 +2382,7 @@ val SUNTIL_OR_PBEFORE_SEPARATE = TAC_PROOF(
 val BEFORE_OR_LEFT_SEPARATE = TAC_PROOF(
         ([],“((\t. a t \/ b t) BEFORE c) = \t. (a BEFORE c) t \/ (b BEFORE c) t”),
         CONV_TAC(X_FUN_EQ_CONV “t:num”) THEN GEN_TAC THEN BETA_TAC
-        THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b) = (~a=~b)”),PROP_TAC)]
+        THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b) = (~a= ~b)”),PROP_TAC)]
         THEN REWRITE_TAC[NOT_BEFORE,DE_MORGAN_THM] THEN BETA_TAC
         THEN ASSUME_TAC(BETA_RULE
                         (SPECL[“c:num->bool”,“\t:num. ~b t”,“\t:num. ~a t”]
@@ -2619,7 +2619,7 @@ val SEPARATE_BEFORE_THM = TAC_PROOF(
                 BEFORE_RIGHT_PNEXT_SEPARATE,BEFORE_RIGHT_PSNEXT_SEPARATE
                 ]
         THEN CONV_TAC(DEPTH_CONV FUN_EQ_CONV) THEN BETA_TAC
-        THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b)=(~a=~b)”),PROP_TAC)]
+        THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b)=(~a= ~b)”),PROP_TAC)]
         THEN REWRITE_TAC[NEGATION_NORMAL_FORM,DE_MORGAN_THM,
                          CONJUNCTIVE_NORMAL_FORM,SEPARATE_SUNTIL_THM]
         THEN BETA_TAC THEN REWRITE_TAC[] THEN CONV_TAC(DEPTH_CONV ETA_CONV)
@@ -3020,7 +3020,7 @@ val SEPARATE_PSUNTIL_THM = TAC_PROOF(
                 PSUNTIL_AND_SUNTIL_SEPARATE,
                 PSUNTIL_AND_BEFORE_SEPARATE]
         THEN CONV_TAC(DEPTH_CONV FUN_EQ_CONV) THEN BETA_TAC
-        THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b)=(~a=~b)”),PROP_TAC)]
+        THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b)=(~a= ~b)”),PROP_TAC)]
         THEN REWRITE_TAC[NEGATION_NORMAL_FORM] THEN BETA_TAC
         THEN REWRITE_TAC[DE_MORGAN_THM,NEGATION_NORMAL_FORM] THEN BETA_TAC
         THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“~a t = (\t. ~a t ) t”),BETA_TAC THEN REWRITE_TAC[])]
@@ -3255,7 +3255,7 @@ val PSBEFORE_RIGHT_NEXT = TAC_PROOF(
 val PUNTIL_LEFT_NEXT = TAC_PROOF(
         ([],“((NEXT a) PUNTIL b) = NEXT ((\t. a t \/ InitPoint t) PUNTIL (PNEXT b))”),
         CONV_TAC FUN_EQ_CONV
-        THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b) = (~a=~b)”),PROP_TAC)]
+        THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b) = (~a= ~b)”),PROP_TAC)]
         THEN REWRITE_TAC[NEGATION_NORMAL_FORM]
         THEN CONV_TAC(DEPTH_CONV ETA_CONV)
         THEN REWRITE_TAC[PSBEFORE_LEFT_NEXT] THEN BETA_TAC
@@ -3265,7 +3265,7 @@ val PUNTIL_LEFT_NEXT = TAC_PROOF(
 val PWHEN_LEFT_NEXT = TAC_PROOF(
         ([],“((NEXT a) PWHEN b) = NEXT (a PWHEN (PSNEXT b))”),
         CONV_TAC FUN_EQ_CONV
-        THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b) = (~a=~b)”),PROP_TAC)]
+        THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b) = (~a= ~b)”),PROP_TAC)]
         THEN REWRITE_TAC[NEGATION_NORMAL_FORM]
         THEN CONV_TAC(DEPTH_CONV ETA_CONV)
         THEN REWRITE_TAC[PSWHEN_LEFT_NEXT]
@@ -3274,7 +3274,7 @@ val PWHEN_LEFT_NEXT = TAC_PROOF(
 val PBEFORE_LEFT_NEXT = TAC_PROOF(
         ([],“((NEXT a) PBEFORE b) = NEXT (a PBEFORE (PSNEXT b))”),
         CONV_TAC FUN_EQ_CONV
-        THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b) = (~a=~b)”),PROP_TAC)]
+        THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b) = (~a= ~b)”),PROP_TAC)]
         THEN REWRITE_TAC[NEGATION_NORMAL_FORM]
         THEN CONV_TAC(DEPTH_CONV ETA_CONV)
         THEN REWRITE_TAC[PSUNTIL_LEFT_NEXT]
@@ -3284,7 +3284,7 @@ val PBEFORE_LEFT_NEXT = TAC_PROOF(
 val PUNTIL_RIGHT_NEXT = TAC_PROOF(
         ([],“(a PUNTIL (NEXT b)) = NEXT ((PNEXT a) PUNTIL b)”),
         CONV_TAC FUN_EQ_CONV
-        THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b) = (~a=~b)”),PROP_TAC)]
+        THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b) = (~a= ~b)”),PROP_TAC)]
         THEN REWRITE_TAC[NEGATION_NORMAL_FORM]
         THEN CONV_TAC(DEPTH_CONV ETA_CONV)
         THEN REWRITE_TAC[PSBEFORE_RIGHT_NEXT]
@@ -3294,7 +3294,7 @@ val PUNTIL_RIGHT_NEXT = TAC_PROOF(
 val PBEFORE_RIGHT_NEXT = TAC_PROOF(
         ([],“(a PBEFORE (NEXT b)) = NEXT ((PNEXT a) PBEFORE (\t. ~InitPoint t /\ b t))”),
         CONV_TAC FUN_EQ_CONV
-        THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b) = (~a=~b)”),PROP_TAC)]
+        THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b) = (~a= ~b)”),PROP_TAC)]
         THEN REWRITE_TAC[NEGATION_NORMAL_FORM]
         THEN CONV_TAC(DEPTH_CONV ETA_CONV)
         THEN REWRITE_TAC[PSUNTIL_RIGHT_NEXT]
@@ -3349,7 +3349,7 @@ val PSWHEN_RIGHT_NEXT = TAC_PROOF(
 val PWHEN_RIGHT_NEXT = TAC_PROOF(
         ([],“(a PWHEN (NEXT b)) = NEXT ((PNEXT a) PWHEN (\t. b t /\ ~InitPoint t))”),
         CONV_TAC FUN_EQ_CONV
-        THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b) = (~a=~b)”),PROP_TAC)]
+        THEN ONCE_REWRITE_TAC[TAC_PROOF(([],“(a=b) = (~a= ~b)”),PROP_TAC)]
         THEN REWRITE_TAC[NEGATION_NORMAL_FORM]
         THEN CONV_TAC(DEPTH_CONV ETA_CONV)
         THEN REWRITE_TAC[PSWHEN_RIGHT_NEXT]

@@ -32,8 +32,8 @@ val _ = Hol_datatype `test9l = R9 of test9r | EndL ;
                       test9r = L9 of test9l | EndR`;
 val _ = Hol_datatype `testA = <| Reg1 : num; Reg2 : num; Waiting : bool |>`;
 val _ = Hol_datatype `testBa = Aa of num | Ba of testBb | Ca of testBc ;
-		      testBb = Bb of int | Ab of testBa | Cb of testBc ;
-		      testBc = Cc of rat | Bc of testBb | Ac of testBa`;
+                      testBb = Bb of int | Ab of testBa | Cb of testBc ;
+                      testBc = Cc of rat | Bc of testBb | Ac of testBa`;
 val _ = Hol_datatype `labels = l1 | l2 | l3 | l4 | l5`;
 val _ = Hol_datatype `noalpha = CurryNA of num => num => num # num`;
 val _ = Hol_datatype `threecons = ConsNone
@@ -227,30 +227,30 @@ Hol_datatype
 set_trace "EncodeLib.TypeEncoding" 1;
 
 val types = [``:('a,'b) test1``,``:('a,'b) test2``,``:('a,'b,'c) test2b``,``:('a,'b,'c) test2c``,``:('a,'b) test3``,``:labels``,``:noalpha``,``:('a,'b,'c) threecons``,
-		``:test4``,``:test5``,``:test6``,``:test8``,``:'a test7``,``:test9l``,``:test9r``,``:'a rose_tree``,``:testBa``,``:('a,'b) mlistL``,``:tree``,
-		``:One``,``:('a,'b) Term``,``:'a List``,``:('a,'b) Btree``,``:Command``,``:tri``,``:exp``,``:Steve0``,``:('a,'b,'c) TY1``,``:atpat_e``];
+                ``:test4``,``:test5``,``:test6``,``:test8``,``:'a test7``,``:test9l``,``:test9r``,``:'a rose_tree``,``:testBa``,``:('a,'b) mlistL``,``:tree``,
+                ``:One``,``:('a,'b) Term``,``:'a List``,``:('a,'b) Btree``,``:Command``,``:tri``,``:exp``,``:Steve0``,``:('a,'b,'c) TY1``,``:atpat_e``];
 
 fun test_types types =
-let	fun timeit t =
-	let 	val _ = print "Encoding Type: "
-		val _ = print_type t
-		val _ = print "\n"
-		val start = Time.now()
-		val res = encode_type t
-	in
-		(print ("Time taken: " ^ (Time.toString (Time.- (Time.now(),start)) handle e => "0.000") ^ "s\n\n") ; res)
-	end;
-	val (passed,failed) = partition (can timeit) types
-	fun concat f [] = ""
-	  | concat f [x] = f x
-	  | concat f (x::xs) = (f x) ^ "," ^ (concat f xs)
-	val _ = print ("Passed: [" ^ (concat type_to_string passed) ^ "]\n")
-	val _ = print ("Failed: [" ^ (concat type_to_string failed) ^ "]\n")
+let     fun timeit t =
+        let     val _ = print "Encoding Type: "
+                val _ = print_type t
+                val _ = print "\n"
+                val start = Time.now()
+                val res = encode_type t
+        in
+                (print ("Time taken: " ^ (Time.toString (Time.- (Time.now(),start)) handle e => "0.000") ^ "s\n\n") ; res)
+        end;
+        val (passed,failed) = partition (can timeit) types
+        fun concat f [] = ""
+          | concat f [x] = f x
+          | concat f (x::xs) = (f x) ^ "," ^ (concat f xs)
+        val _ = print ("Passed: [" ^ (concat type_to_string passed) ^ "]\n")
+        val _ = print ("Failed: [" ^ (concat type_to_string failed) ^ "]\n")
 in
-	(print "\nTheorems:\n" ;
-	app (fn x => (	print_thm (get_encode_decode_thm x) ; print "\n" ;
-			print_thm (get_decode_encode_thm x) ; print "\n" ;
-			print_thm (get_detect_encode_thm x) ; print "\n\n")) passed)
+        (print "\nTheorems:\n" ;
+        app (fn x => (  print_thm (get_encode_decode_thm x) ; print "\n" ;
+                        print_thm (get_decode_encode_thm x) ; print "\n" ;
+                        print_thm (get_detect_encode_thm x) ; print "\n\n")) passed)
 end;
 
 time test_types types;
@@ -428,72 +428,72 @@ set_trace "EncodeLib.FunctionEncoding" 1;
 (*****************************************************************************)
 
 val (divsub_def,divsub_ind) =
-	(RIGHT_CONV_RULE (ONCE_DEPTH_CONV (HO_REWR_CONV
-		(prove(``	(let c = a * b:num in let d = a + b in e c d) =
-				(let c = a * b and d = a + b in e c d)``,
-			REWRITE_TAC [LET_THM] THEN BETA_TAC THEN REFL_TAC)))) ## I)
-	(Defn.tprove
-		(Hol_defn "divsub" `divsub a b =
-			if 0 < a \/ 0 < b then let c = a * b in let d = a + b in 1 + divsub (c DIV d) (c - d) else 0n`,
-	WF_REL_TAC `measure (\ (a,b). if 0 < a then a else b)` THEN
-	RW_TAC arith_ss [DIV_LT_X,LEFT_ADD_DISTRIB,RIGHT_ADD_DISTRIB,X_LT_DIV]));
+        (RIGHT_CONV_RULE (ONCE_DEPTH_CONV (HO_REWR_CONV
+                (prove(``       (let c = a * b:num in let d = a + b in e c d) =
+                                (let c = a * b and d = a + b in e c d)``,
+                        REWRITE_TAC [LET_THM] THEN BETA_TAC THEN REFL_TAC)))) ## I)
+        (Defn.tprove
+                (Hol_defn "divsub" `divsub a b =
+                        if 0 < a \/ 0 < b then let c = a * b in let d = a + b in 1 + divsub (c DIV d) (c - d) else 0n`,
+        WF_REL_TAC `measure (\ (a,b). if 0 < a then a else b)` THEN
+        RW_TAC arith_ss [DIV_LT_X,LEFT_ADD_DISTRIB,RIGHT_ADD_DISTRIB,X_LT_DIV]));
 
-val acl2_exp_def = 		convert_definition EXP;
+val acl2_exp_def =              convert_definition EXP;
 val acl2_fact_def =             convert_definition FACT;
-val acl2_findq_def = 		convert_definition findq_thm;
-val acl2_divmod_def = 		convert_definition DIVMOD_THM;
-val acl2_divsub_def = 		convert_definition_full NONE
-					[DECIDE ``0 < a \/ 0 < b ==> ~(a + b = 0n)``] divsub_def;
+val acl2_findq_def =            convert_definition findq_thm;
+val acl2_divmod_def =           convert_definition DIVMOD_THM;
+val acl2_divsub_def =           convert_definition_full NONE
+                                        [DECIDE ``0 < a \/ 0 < b ==> ~(a + b = 0n)``] divsub_def;
 
 
 (*****************************************************************************)
 (* Encoding of Matt's example given earlier:                                 *)
 (*****************************************************************************)
 
-val acl2_read_step_def = 	convert_definition read_step_def;
-val acl2_write_step_def = 	convert_definition write_step_def;
-val acl2_run_def = 		convert_definition run_def;
-val acl2_write_increment_def = 	convert_definition write_increment_def;
-val acl2_read_increment_def = 	convert_definition read_increment_def;
-val acl2_max_addr_def = 	convert_definition max_addr_def;
-val acl2_fix_address_def = 	convert_definition fix_address_def;
-val acl2_make_instrs_def = 	convert_definition make_instrs_def;
+val acl2_read_step_def =        convert_definition read_step_def;
+val acl2_write_step_def =       convert_definition write_step_def;
+val acl2_run_def =              convert_definition run_def;
+val acl2_write_increment_def =  convert_definition write_increment_def;
+val acl2_read_increment_def =   convert_definition read_increment_def;
+val acl2_max_addr_def =         convert_definition max_addr_def;
+val acl2_fix_address_def =      convert_definition fix_address_def;
+val acl2_make_instrs_def =      convert_definition make_instrs_def;
 
 (*****************************************************************************)
 (* Encoding of rose_tree and red-black tree functions...                     *)
 (*****************************************************************************)
 
 
-val count_def = 		Define `	(count (Branch []) = 0n) /\
-						(count (Branch ((x,hd)::tl)) = 1 + count (hd:num rose_tree) + count (Branch tl))`;
-val acl2_count_def = 		convert_definition count_def;
+val count_def =                 Define `        (count (Branch []) = 0n) /\
+                                                (count (Branch ((x,hd)::tl)) = 1 + count (hd:num rose_tree) + count (Branch tl))`;
+val acl2_count_def =            convert_definition count_def;
 
-val member_def = 		Define `	(member key LEAF = F) /\
-						(member key (NODE col k left right) = if key < k then member key left else if k < key then member key right else T)`;
-val acl2_member_def = 		convert_definition member_def;
+val member_def =                Define `        (member key LEAF = F) /\
+                                                (member key (NODE col k left right) = if key < k then member key left else if k < key then member key right else T)`;
+val acl2_member_def =           convert_definition member_def;
 
 (*****************************************************************************)
 (* Restricting the input domain of a function:                               *)
 (*****************************************************************************)
 
-val modpow_def = 		Define `(modpow a 0 n = 1) /\ (modpow a (SUC b) n = a * (modpow a b n) MOD n)`;
-val acl2_modpow_def = 		convert_definition_full (SOME ``\a b c. ~(c = 0n)``) [] modpow_def;
+val modpow_def =                Define `(modpow a 0 n = 1) /\ (modpow a (SUC b) n = a * (modpow a b n) MOD n)`;
+val acl2_modpow_def =           convert_definition_full (SOME ``\a b c. ~(c = 0n)``) [] modpow_def;
 
 (*****************************************************************************)
 (* Addition of a termination helper theorem:                                 *)
 (*****************************************************************************)
 
-val (log2_def,log2_ind) = 	Defn.tprove(Hol_defn "log2" `(log2 0 = 0) /\ (log2 a = SUC (log2 (a DIV 2)))`,WF_REL_TAC `measure (\a.a)` THEN RW_TAC arith_ss [DIV_LT_X]);
-val acl2_log2_def = 		convert_definition_full (SOME ``\a. 0 < a ==> a DIV 2 < a``)
-				[prove(``!a. 0 < a ==> a DIV 2 < a``,RW_TAC arith_ss [DIV_LT_X]),
-				 DECIDE ``~(2 = 0n)``] log2_def;
+val (log2_def,log2_ind) =       Defn.tprove(Hol_defn "log2" `(log2 0 = 0) /\ (log2 a = SUC (log2 (a DIV 2)))`,WF_REL_TAC `measure (\a.a)` THEN RW_TAC arith_ss [DIV_LT_X]);
+val acl2_log2_def =             convert_definition_full (SOME ``\a. 0 < a ==> a DIV 2 < a``)
+                                [prove(``!a. 0 < a ==> a DIV 2 < a``,RW_TAC arith_ss [DIV_LT_X]),
+                                 DECIDE ``~(2 = 0n)``] log2_def;
 
 (*****************************************************************************)
 (* Theorem encoding...                                                       *)
 (*****************************************************************************)
 
-val acl2_division = 	convert_theorem [DECIDE ``0 < a ==> ~(a = 0n)``] DIVISION;
-val acl2_divmod_calc = 	convert_theorem [DECIDE ``0 < a ==> ~(a = 0n)``] DIVMOD_CALC;
+val acl2_division =     convert_theorem [DECIDE ``0 < a ==> ~(a = 0n)``] DIVISION;
+val acl2_divmod_calc =  convert_theorem [DECIDE ``0 < a ==> ~(a = 0n)``] DIVMOD_CALC;
 
 (*****************************************************************************)
 (* HO function encoding...                                                   *)
@@ -514,10 +514,10 @@ val acl2_filter_zero_def' = REWRITE_RULE [filter0_rewrite] acl2_filter_zero_def;
 (*****************************************************************************)
 
 val acl2_firstn_def = convert_definition_full (SOME ``\n l. n <= LENGTH l``)
-			[prove(``!n (l:num list). n <= LENGTH l ==> (n = 0) \/ ?t h. l = h :: t``,
-				Cases_on `l` THEN Cases_on `n` THEN RW_TAC std_ss [LENGTH]),
-			prove(``!n (l:num list) x. SUC n <= LENGTH (x::l) ==> n <= LENGTH l``,
-				RW_TAC std_ss [LENGTH])] (INST_TYPE [``:'a`` |-> ``:num``] rich_listTheory.FIRSTN);
+                        [prove(``!n (l:num list). n <= LENGTH l ==> (n = 0) \/ ?t h. l = h :: t``,
+                                Cases_on `l` THEN Cases_on `n` THEN RW_TAC std_ss [LENGTH]),
+                        prove(``!n (l:num list) x. SUC n <= LENGTH (x::l) ==> n <= LENGTH l``,
+                                RW_TAC std_ss [LENGTH])] (INST_TYPE [``:'a`` |-> ``:num``] rich_listTheory.FIRSTN);
 val acl2_tl_def = convert_definition (INST_TYPE [``:'a`` |-> ``:num``] TL);
 val acl2_hd_def = convert_definition (INST_TYPE [``:'a`` |-> ``:num``] HD);
 

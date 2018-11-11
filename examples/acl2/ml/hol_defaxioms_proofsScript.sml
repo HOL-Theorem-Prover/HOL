@@ -2626,13 +2626,13 @@ val pkg_thm_for_initial_pkg_system_lemma =
     THEN METIS_TAC[]);
 
 fun import_conv1 term =
-	((REWR_CONV (CONJUNCT2 imported_symbol_names_def) THENC
-	RATOR_CONV (RATOR_CONV (RAND_CONV (FIRST_CONV (map REWR_CONV slist)))) THENC
-	FIRST_CONV [
-		REWR_CONV (CONJUNCT1 (SPEC_ALL COND_CLAUSES)) THENC RAND_CONV import_conv1,
-		REWR_CONV (CONJUNCT2 (SPEC_ALL COND_CLAUSES)) THENC import_conv1])
-	ORELSEC
-	(REWR_CONV (CONJUNCT1 imported_symbol_names_def))) term;
+        ((REWR_CONV (CONJUNCT2 imported_symbol_names_def) THENC
+        RATOR_CONV (RATOR_CONV (RAND_CONV (FIRST_CONV (map REWR_CONV slist)))) THENC
+        FIRST_CONV [
+                REWR_CONV (CONJUNCT1 (SPEC_ALL COND_CLAUSES)) THENC RAND_CONV import_conv1,
+                REWR_CONV (CONJUNCT2 (SPEC_ALL COND_CLAUSES)) THENC import_conv1])
+        ORELSEC
+        (REWR_CONV (CONJUNCT1 imported_symbol_names_def))) term;
 
 val STAR_COMMON_LISP_SYMBOLS_FROM_MAIN_LISP_PACKAGE_STAR =
  time (ONCE_DEPTH_CONV (REWR_CONV pack_rdef) THENC
@@ -3224,7 +3224,7 @@ val acl2_package_defaxiom =
           [VALID_ACL2_PACKAGE_ALIST,LOOKUP_NOT_EMPTY_STRING,
            LOOKUP_PKG_WITNESS,LOOKUP_IDEMPOTENT,
            pkg_thm_for_initial_pkg_system_lemma,
-	   prove(``"ACL2" <> ""``,RW_TAC std_ss [])]);
+           prove(``"ACL2" <> ""``,RW_TAC std_ss [])]);
 
 (*****************************************************************************)
 (* val LOOKUP_EMPTY = |- LOOKUP "" ACL2_PACKAGE_ALIST s = "" : thm           *)

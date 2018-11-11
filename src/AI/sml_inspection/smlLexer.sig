@@ -1,6 +1,6 @@
 signature smlLexer =
 sig
-  
+
   (* lexer *)
   val rm_comment : string -> string
   val partial_sml_lexer : string -> string list

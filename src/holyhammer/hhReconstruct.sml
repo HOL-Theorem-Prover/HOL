@@ -35,7 +35,7 @@ fun not_reserved s = String.isPrefix "thm." s
 fun is_dot c = c = #"."
 
 fun read_status atp_status =
-  remove_white_spaces (hd (readl atp_status)) 
+  remove_white_spaces (hd (readl atp_status))
   handle Interrupt => raise Interrupt
        | _         => "Unknown"
 
@@ -57,8 +57,8 @@ fun get_lemmas (atp_status,atp_out) =
  -----------------------------------------------------------------------------*)
 
 fun hh_reconstruct lemmas g =
-  if not (!reconstruct_flag) 
-  then (print_endline (mk_metis_call lemmas); 
+  if not (!reconstruct_flag)
+  then (print_endline (mk_metis_call lemmas);
         raise ERR "hh_minimize" "reconstruction off")
   else
     let

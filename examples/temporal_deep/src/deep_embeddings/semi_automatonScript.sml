@@ -3,16 +3,19 @@ open HolKernel Parse boolLib bossLib;
 (*
 quietdec := true;
 
-val home_dir = (concat Globals.HOLDIR "/examples/temporal_deep/");
-loadPath := (concat home_dir "src/deep_embeddings") ::
-            (concat home_dir "src/tools") :: !loadPath;
+val home_dir = (Globals.HOLDIR ^ "/examples/temporal_deep/");
+loadPath := (home_dir ^ "src/deep_embeddings") ::
+            (home_dir ^ "src/tools") :: !loadPath;
 
 map load
  ["xprop_logicTheory", "prop_logicTheory", "infinite_pathTheory", "pred_setTheory", "listTheory", "pairTheory", "set_lemmataTheory",
    "containerTheory", "prim_recTheory", "tuerk_tacticsLib", "temporal_deep_mixedTheory"];
 *)
-open infinite_pathTheory pred_setTheory listTheory pairTheory xprop_logicTheory containerTheory prop_logicTheory set_lemmataTheory prim_recTheory
+
+open infinite_pathTheory pred_setTheory listTheory pairTheory xprop_logicTheory
+     containerTheory prop_logicTheory set_lemmataTheory prim_recTheory
      tuerk_tacticsLib temporal_deep_mixedTheory;
+open Sanity;
 
 val _ = hide "S";
 val _ = hide "I";
@@ -56,8 +59,8 @@ val semi_automaton_REWRITES = save_thm("semi_automaton_REWRITES", LIST_CONJ [sem
 val IS_WELL_FORMED_SEMI_AUTOMATON_def =
  Define
   `IS_WELL_FORMED_SEMI_AUTOMATON A =
-    (FINITE A.S /\ FINITE A.I /\ A.S0 SUBSET (A.S CROSS (POWER_SET A.I)) /\
-     A.R SUBSET (A.S CROSS ((POWER_SET A.I) CROSS (A.S CROSS (POWER_SET A.I)))))`
+    (FINITE A.S /\ FINITE A.I /\ A.S0 SUBSET (A.S CROSS (POW A.I)) /\
+     A.R SUBSET (A.S CROSS ((POW A.I) CROSS (A.S CROSS (POW A.I)))))`
 
 (*****************************************************************************)
 (* RUN A i w is true iff p is a run of i through A                             *)
@@ -99,7 +102,7 @@ val IS_DET_TOTAL_SEMI_AUTOMATON___UNIQUE_RUN_EXISTS =
                     EXISTS_UNIQUE_DEF,
                     IS_DET_TOTAL_SEMI_AUTOMATON_def,
                     IS_WELL_FORMED_SEMI_AUTOMATON_def,
-                    SUBSET_DEF, IN_CROSS, IN_POWER_SET_SUBSET_EQUIV,
+                    SUBSET_DEF, IN_CROSS, IN_POW,
     prove (``!P. (!x. P x) = (!x1 x2 x3 x4. P (x1,x2,x3, x4))``,
             METIS_TAC[FST, SND, PAIR])
     ] THEN
@@ -109,7 +112,7 @@ val IS_DET_TOTAL_SEMI_AUTOMATON___UNIQUE_RUN_EXISTS =
     SIMP_ALL_TAC std_ss [] THEN
     REPEAT STRIP_TAC THENL [
       `?w. w = CHOOSEN_PATH {x} (\s n. ({s' | (s, i (PRE n) INTER A.I, s', (i n) INTER A.I) IN A.R}))` by METIS_TAC[] THEN
-      SUBGOAL_TAC `!n. w n IN A.S` THEN1 (
+      `!n. w n IN A.S` by (
         Induct_on `n` THENL [
           ASM_SIMP_TAC std_ss [CHOOSEN_PATH_def, IN_SING] THEN
           PROVE_TAC[FST],
@@ -133,7 +136,7 @@ val IS_DET_TOTAL_SEMI_AUTOMATON___UNIQUE_RUN_EXISTS =
       REPEAT STRIP_TAC THENL [
         PROVE_TAC[],
 
-        REMAINS_TAC `w 0 = x` THEN1 ASM_REWRITE_TAC[] THEN
+        `w 0 = x` suffices_by METIS_TAC[] THEN
         ASM_REWRITE_TAC [CHOOSEN_PATH_def, IN_SING] THEN
         SIMP_TAC std_ss [],
 
@@ -176,7 +179,7 @@ val SEMI_AUTOMATON_STATE_VAR_RENAMING_def =
 val SEMI_AUTOMATON_STATE_VAR_RENAMING___RUN =
   store_thm (
     "SEMI_AUTOMATON_STATE_VAR_RENAMING___RUN",
-    ``(!A f g i w w'.
+    ``(!A f g i w.
           IS_WELL_FORMED_SEMI_AUTOMATON A /\ INJ f A.S UNIV /\
           (!s. s IN A.S ==> (g (f s) = s)) /\ (!n. w n IN A.S) ==>
           (IS_RUN_THROUGH_SEMI_AUTOMATON
@@ -211,4 +214,3 @@ METIS_TAC[FST, SND]);
 
 
 val _ = export_theory();
-

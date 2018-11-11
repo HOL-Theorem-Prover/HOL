@@ -8,7 +8,7 @@
 structure psMinimize :> psMinimize =
 struct
 
-open HolKernel Abbrev boolLib aiLib 
+open HolKernel Abbrev boolLib aiLib
   smlExecute smlLexer smlTimeout smlPrettify
 
 val ERR = mk_HOL_ERR "psMinimize"
@@ -38,8 +38,8 @@ fun is_effect tim stac g gl = (app_stac tim stac g = SOME gl)
    ------------------------------------------------------------------------- *)
 
 fun unsafe_prettify_stac stac =
-  (smart_space o elim_infix o elim_struct o elim_par o 
-   elim_dbfetch o partial_sml_lexer)   
+  (smart_space o elim_infix o elim_struct o elim_par o
+   elim_dbfetch o partial_sml_lexer)
   stac
 
 fun safe_prettify_stac stac = (smart_space o partial_sml_lexer) stac
@@ -199,13 +199,13 @@ fun mini_proof proof = case proof of
   ----------------------------------------------------------------------------*)
 
 (* tactic *)
-fun minimize_stac tim stac g gl = 
+fun minimize_stac tim stac g gl =
   unsafe_prettify_stac (mini_stac_g_gl tim stac g gl)
 
 (* proof *)
-fun minimize_proof p = 
+fun minimize_proof p =
   (pretty_allstac tactic_time o mini_proof o mini_allstac) p
-  handle _ => 
+  handle _ =>
     (debug "Error: prettification or minimization failed"; p)
 
 (*----------------------------------------------------------------------------
@@ -219,12 +219,12 @@ fun proof_length proof = case proof of
 
 fun reconstruct_aux g proof sproof =
   let
-    val tac = tactic_of_sml sproof 
+    val tac = tactic_of_sml sproof
       handle Interrupt => raise Interrupt | _ => NO_TAC
-    val new_tim = 
+    val new_tim =
       snd (add_time (timeout search_time Tactical.TAC_PROOF) (g,tac))
-      handle 
-        Interrupt => raise Interrupt 
+      handle
+        Interrupt => raise Interrupt
       | _ => (debug ("Warning: reconstruct: " ^ sproof); search_time)
   in
     debug ("proof length: " ^ int_to_string (proof_length proof));
@@ -242,11 +242,11 @@ fun safe_reconstruct g proof =
 
 fun reconstruct g proof =
   (
-  unsafe_reconstruct g proof 
+  unsafe_reconstruct g proof
   handle Interrupt => raise Interrupt | _ => safe_reconstruct g proof
   )
   handle Interrupt => raise Interrupt | _ => safe_prettify_proof proof
-   
+
 
 
 end (* struct *)

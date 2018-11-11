@@ -26,11 +26,12 @@ Bugs fixed:
 New theories:
 -------------
 
-*   HOL4 now has a rather complete theory of Elementary Topology in Euclidean
-    Space (`rich_topologyTheory`), ported by Muhammad Qasim and Osman
-    Hasan from HOL light (up to 2015). The part of General Topology
+*   `real_topologyTheory`: a rather complete theory of Elementary
+    Topology in Euclidean Space, ported by Muhammad Qasim and Osman
+    Hasan from HOL-light (up to 2015). The part of General Topology
     (independent of `realTheory`) is now available at
-    `topologyTheory`; the old `topologyTheory` is renamed to `metricTheory`.
+    `topologyTheory`; the old `topologyTheory` is renamed to
+    `metricTheory`.
 
     There is a minor backwards-incompatibility: old proof scripts using
     the metric-related results in previous `topologyTheory` should now
@@ -51,6 +52,10 @@ Incompatibilities:
     Experts who *do* want to have script files continue past such errors can use the `--noqof` option to enable the old behaviour.
 
 *   When running with Poly/ML, we now require at least version 5.7.0.
+
+*   The `type_abbrev` function now affects only the type parser.
+    The pretty-printer will not use the new abbreviation when printing types.
+    If the old behaviour of printing the abbreviations as well as parsing them is desired, the new entrypoint `type_abbrev_pp` should be used.
 
 * * * * *
 

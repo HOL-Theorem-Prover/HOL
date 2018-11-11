@@ -11,7 +11,7 @@ loadPath := (concat home_dir "src/deep_embeddings") ::
             (concat hol_dir "examples/PSL/1.1/official-semantics") :: !loadPath;
 
 map load
- ["ltlTheory", "arithmeticTheory", "automaton_formulaTheory", "xprop_logicTheory", "prop_logicTheory",
+ ["full_ltlTheory", "arithmeticTheory", "automaton_formulaTheory", "xprop_logicTheory", "prop_logicTheory",
   "infinite_pathTheory", "tuerk_tacticsLib", "symbolic_semi_automatonTheory", "listTheory", "pred_setTheory",
   "pred_setTheory", "rich_listTheory", "set_lemmataTheory", "temporal_deep_mixedTheory",
   "pairTheory", "symbolic_kripke_structureTheory",
@@ -22,7 +22,7 @@ map load
   "kripke_structureTheory"];
 *)
 
-open ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory
+open full_ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory
      prop_logicTheory
      infinite_pathTheory tuerk_tacticsLib symbolic_semi_automatonTheory listTheory pred_setTheory
      pred_setTheory rich_listTheory set_lemmataTheory temporal_deep_mixedTheory pairTheory symbolic_kripke_structureTheory
@@ -30,6 +30,7 @@ open ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory
      omega_automaton_translationsTheory ctl_starTheory
      ltl_to_automaton_formulaTheory containerTheory
      psl_to_rltlTheory rltl_to_ltlTheory temporal_deep_simplificationsLib congLib kripke_structureTheory;
+open Sanity;
 
 val _ = hide "K";
 val _ = hide "S";
@@ -46,13 +47,6 @@ quietdec := false;
 
 
 val _ = new_theory "ibm";
-
-
-
-
-
-
-
 
 
 val A_UNIV___LTL_KS_SEM___CONCRETE_THM =
@@ -178,7 +172,7 @@ val A_UNIV___A_SEM___CONCRETE_THM =
         LTL_TO_GEN_BUECHI_DS___SEMI_AUTOMATON_def,
         symbolic_semi_automaton_REWRITES,
         LTL_TO_GEN_BUECHI_DS___USED_STATE_VARS_def,
-        IN_BETA_THM] THEN
+        IN_ABS] THEN
       SIMP_ALL_TAC std_ss [IS_ELEMENT_ITERATOR_def] THEN
       GEN_TAC THEN
       RIGHT_DISJ_TAC THEN
@@ -189,7 +183,7 @@ val A_UNIV___A_SEM___CONCRETE_THM =
     ) THEN
     ASM_SIMP_TAC std_ss []
   ]
-)
+);
 
 
 
@@ -365,9 +359,9 @@ FULL_SIMP_TAC std_ss [A_SEM_THM, ACCEPT_COND_PROP_def, ACCEPT_COND_SEM_def,
 
 SUBGOAL_TAC `?e. !n:num. ?m:num. m > n /\ (w m = e)` THEN1 (
   ASSUME_TAC (SIMP_RULE std_ss [GSYM RIGHT_FORALL_IMP_THM, AND_IMP_INTRO] (INST_TYPE [alpha |-> alpha --> bool] INF_ELEMENTS_OF_PATH_NOT_EMPTY)) THEN
-  Q_SPECL_NO_ASSUM 0 [`POWER_SET B.S`, `w`] THEN
+  Q_SPECL_NO_ASSUM 0 [`POW B.S`, `w`] THEN
   PROVE_CONDITION_NO_ASSUM 0 THEN1 (
-    FULL_SIMP_TAC std_ss [PATH_SUBSET_def, IN_POWER_SET_SUBSET_EQUIV, POWER_SET_FINITE]
+    FULL_SIMP_TAC std_ss [PATH_SUBSET_def, IN_POW, FINITE_POW_IFF]
   ) THEN
   FULL_SIMP_TAC std_ss [GSYM MEMBER_NOT_EMPTY,
     INF_ELEMENTS_OF_PATH_def, GSPECIFICATION] THEN
@@ -389,11 +383,12 @@ SUBGOAL_TAC `?m':num. (m' > n0) /\
     PROVE_CONDITION_NO_ASSUM 2 THEN1 ASM_REWRITE_TAC[] THEN
     Q_SPEC_NO_ASSUM 2 `n0` THEN
     FULL_SIMP_TAC std_ss [] THEN
-    Q_TAC EXISTS_TAC `MAX m' (SUC t'')` THEN
+    rename1 `P_SEM (INPUT_RUN_PATH_UNION B i w t2) h` THEN
+    Q_TAC EXISTS_TAC `MAX m' (SUC t2)` THEN
 
     ASM_SIMP_TAC arith_ss [GREATER_DEF, MAX_LT] THEN
     REPEAT STRIP_TAC THENL [
-      Q_TAC EXISTS_TAC `t''` THEN
+      Q_TAC EXISTS_TAC `t2` THEN
       ASM_SIMP_TAC arith_ss [],
 
       METIS_TAC[]
@@ -463,18 +458,11 @@ REPEAT STRIP_TAC THENL [
   ],
 
   RES_TAC THEN
+  rename1 `(_ >= t') /\ P_SEM _ p` THEN
   Q_TAC EXISTS_TAC `m * t' + t` THEN
   SUBGOAL_TAC `m * t' >= t'` THEN1 (
     `m > 0` by DECIDE_TAC THEN UNDISCH_HD_TAC THEN
-    REPEAT WEAKEN_HD_TAC THEN
-    Cases_on `m` THEN SIMP_TAC arith_ss [GREATER_EQ] THEN
-    Cases_on `t'` THEN1 SIMP_TAC arith_ss [] THEN
-
-    ASSUME_TAC MULT_LESS_EQ_SUC THEN
-    Q_SPECL_NO_ASSUM 0 [`1:num`, `SUC n`, `n'`] THEN
-    `1 <= SUC n` by DECIDE_TAC THEN
-    RES_TAC THEN
-    METIS_TAC[MULT_RIGHT_1]
+    SIMP_TAC arith_ss [GREATER_EQ]
   ) THEN
   ASM_SIMP_TAC arith_ss [] THEN WEAKEN_HD_TAC THEN
 
@@ -526,6 +514,7 @@ val SYMBOLIC_KRIPKE_STRUCTURE_PRODUCT___TO___AUTOMATON =
     IS_TRANSITION_def, GSYM SUBSET_COMPL_DISJOINT,
     SYMBOLIC_KRIPKE_STRUCTURE_USED_VARS_def, UNION_SUBSET] THEN
   REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
+    rename1 `P_SEM (INPUT_RUN_PATH_UNION A i w t') p` THEN
     REMAINS_TAC `P_SEM (INPUT_RUN_PATH_UNION A i w 0) K.S0 /\
                 !n. XP_SEM K.R (INPUT_RUN_STATE_UNION A (i n) (w n),
                                 INPUT_RUN_STATE_UNION A (i (SUC n)) (w (SUC n)))` THEN1 (
@@ -665,7 +654,7 @@ val PROBLEM_TO_LTL_KS_SEM =
                   (LTL_EQUIV (LTL_ALWAYS (LTL_EVENTUAL
                                 (LTL_PROP (P_NOT (P_BIGOR (SET_TO_LIST
                                             (IMAGE (\s. P_PROP (f' s))
-                                                (POWER_SET (INTERVAL_SET (SUC i0) (SUC s0))))))))),
+                                                (POW (INTERVAL_SET (SUC i0) (SUC s0))))))))),
                              PSL_TO_LTL psl))
 
       )  =
@@ -902,14 +891,14 @@ PROVE_CONDITION_NO_ASSUM 0 THEN1 (
 ASM_REWRITE_TAC[] THEN WEAKEN_HD_TAC THEN
 
 
-SUBGOAL_TAC `DISJOINT (IMAGE f (POWER_SET A.S))
+SUBGOAL_TAC `DISJOINT (IMAGE f (POW A.S))
                       (SEMI_AUTOMATON_USED_VARS A UNION P_USED_VARS p)` THEN1 (
   ASM_REWRITE_TAC[DISJOINT_DISJ_THM] THEN
   Cases_on `i0 = s0` THENL [
     SUBGOAL_TAC `INTERVAL_SET (SUC i0) s0 = EMPTY` THEN1 (
       ASM_SIMP_TAC arith_ss [EXTENSION, IN_INTERVAL_SET, NOT_IN_EMPTY]
     ) THEN
-    ASM_REWRITE_TAC[IN_IMAGE, IN_POWER_SET_SUBSET_EQUIV,
+    ASM_REWRITE_TAC[IN_IMAGE, IN_POW,
       SUBSET_EMPTY] THEN
 
     SIMP_TAC std_ss [SET_BINARY_ENCODING_SHIFT_def,
@@ -975,7 +964,7 @@ PROVE_CONDITION_NO_ASSUM 0 THEN1 (
       SUBGOAL_TAC `INTERVAL_SET (SUC i0) s0 = EMPTY` THEN1 (
         ASM_SIMP_TAC arith_ss [EXTENSION, IN_INTERVAL_SET, NOT_IN_EMPTY]
       ) THEN
-      ASM_REWRITE_TAC[IN_IMAGE, IN_POWER_SET_SUBSET_EQUIV,
+      ASM_REWRITE_TAC[IN_IMAGE, IN_POW,
         SUBSET_EMPTY] THEN
 
       SIMP_TAC std_ss [SET_BINARY_ENCODING_SHIFT_def,
@@ -1805,7 +1794,7 @@ PROVE_CONDITION_NO_ASSUM 0 THEN1 (
         SUBGOAL_TAC `INTERVAL_SET (SUC i0) s0 = EMPTY` THEN1 (
           ASM_SIMP_TAC arith_ss [EXTENSION, IN_INTERVAL_SET, NOT_IN_EMPTY]
         ) THEN
-        ASM_REWRITE_TAC[IN_IMAGE, IN_POWER_SET_SUBSET_EQUIV,
+        ASM_REWRITE_TAC[IN_IMAGE, IN_POW,
           SUBSET_EMPTY] THEN
 
         SIMP_TAC std_ss [SET_BINARY_ENCODING_SHIFT_def,
@@ -1837,7 +1826,7 @@ PROVE_CONDITION_NO_ASSUM 0 THEN1 (
         SUBGOAL_TAC `INTERVAL_SET (SUC s0) s0 = EMPTY` THEN1 (
           ASM_SIMP_TAC arith_ss [EXTENSION, IN_INTERVAL_SET, NOT_IN_EMPTY]
         ) THEN
-        ASM_REWRITE_TAC[IN_IMAGE, IN_POWER_SET_SUBSET_EQUIV,
+        ASM_REWRITE_TAC[IN_IMAGE, IN_POW,
           SUBSET_EMPTY] THEN
 
         SIMP_TAC arith_ss [SET_BINARY_ENCODING_SHIFT_def,
@@ -1894,4 +1883,3 @@ VAR_RENAMING_HASHTABLE_LIST___BINARY_ENCODING___HASHTABLE_LIST]
 
 
 val _ = export_theory();
-

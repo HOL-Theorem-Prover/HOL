@@ -39,9 +39,15 @@ sig
   val with_exn : ('a -> 'b) -> 'a -> exn -> 'b
 
   val list_of_singleton : 'a -> 'a list
+  val single : 'a -> 'a list (* synonym of list_of_singleton *)
+  val the_single : 'a list -> 'a        (* exn List.Empty if list length <> 1 *)
+  val singleton : ('a list -> 'b list) -> 'a -> 'b
+                (* singleton f x raises exn List.Empty if length (f [x]) <> 1 *)
   val list_of_pair : 'a * 'a -> 'a list
   val list_of_triple : 'a * 'a * 'a -> 'a list
   val list_of_quadruple : 'a * 'a * 'a * 'a -> 'a list
+  val the_list : 'a option -> 'a list
+  val the_default : 'a -> 'a option -> 'a
 
   val all : ('a -> bool) -> 'a list -> bool
   val exists : ('a -> bool) -> 'a list -> bool
@@ -50,6 +56,10 @@ sig
   val rev_itlist : ('a -> 'b -> 'b) -> 'a list -> 'b -> 'b
   val foldl' : ('a -> 'b -> 'b) -> 'a list -> 'b -> 'b
   val foldr' : ('a -> 'b -> 'b) -> 'a list -> 'b -> 'b
+  val foldl2' : ('a -> 'b -> 'c -> 'c) -> 'a list -> 'b list -> 'c -> 'c
+                                              (* exn ListPair.UnequalLengths *)
+  val foldr2' : ('a -> 'b -> 'c -> 'c) -> 'a list -> 'b list -> 'c -> 'c
+                                              (* exn ListPair.UnequalLengths *)
   val foldl_map : ('a * 'b -> 'a * 'c) -> 'a * 'b list -> 'a * 'c list
   val separate : 'a -> 'a list -> 'a list
   val filter : ('a -> bool) -> 'a list -> 'a list

@@ -71,7 +71,6 @@ val Cond =
 val _ = new_theory "pred_set";
 
 val _ = type_abbrev ("set", ``:'a -> bool``);
-val _ = disable_tyabbrev_printing "set";
 
 local open OpenTheoryMap
   val ns = ["Set"]
@@ -167,6 +166,9 @@ val GSPECIFICATION = new_specification
   ("GSPECIFICATION", ["GSPEC"], GSPEC_DEF_LEMMA);
 val _ = TeX_notation {hol = "|", TeX = ("\\HOLTokenBar{}", 1)}
 val _ = ot0 "GSPEC" "specification"
+
+val _ = add_user_printer ("pred_set.GSPEC", ``GSPEC f``)
+
 
 val GSPECIFICATION_applied = save_thm(
   "GSPECIFICATION_applied[simp]",
@@ -456,8 +458,8 @@ val EQ_SUBSET_SUBSET = store_thm (* from util_prob *)
    ``!(s :'a -> bool) t. (s = t) ==> s SUBSET t /\ t SUBSET s``,
    RW_TAC std_ss [SUBSET_DEF, EXTENSION]);
 
-val SUBSET_ANTISYM_EQ = store_thm (* from topology *)
-  ("SUBSET_ANTISYM_EQ",
+val SUBSET_SUBSET_EQ = store_thm (* from topology, was: SUBSET_ANTISYM_EQ *)
+  ("SUBSET_SUBSET_EQ",
    “!(s:'a set) t. (s SUBSET t) /\ (t SUBSET s) <=> (s = t)”,
    REPEAT GEN_TAC THEN EQ_TAC THENL
   [REWRITE_TAC [SUBSET_ANTISYM],
@@ -626,7 +628,7 @@ val _ = export_rewrites ["EMPTY_UNION"]
 (* from probability/iterateTheory *)
 val FORALL_IN_UNION = store_thm
   ("FORALL_IN_UNION",
-  ``!P s t:'a->bool. (!x. x IN s UNION t ==> P x) <=> 
+  ``!P s t:'a->bool. (!x. x IN s UNION t ==> P x) <=>
                      (!x. x IN s ==> P x) /\ (!x. x IN t ==> P x)``,
     REWRITE_TAC [IN_UNION] THEN PROVE_TAC []);
 
@@ -6211,6 +6213,20 @@ val IMAGE_PREIMAGE = store_thm (* from miller *)
    >> PROVE_TAC []);
 
 (* end PREIMAGE lemmas *)
+
+(* "<<=" is overloaded in listTheory, cardinalTheory and maybe others,
+   we put its Unicode and TeX definitions here to make sure by loading any of the
+   theories user could see the Unicode representations. *)
+
+val _ = set_fixity "<<=" (Infix(NONASSOC, 450));
+
+val _ = Unicode.unicode_version {u = UTF8.chr 0x227C, tmnm = "<<="};
+        (* in tex input mode in emacs, produce U+227C with \preceq *)
+        (* tempting to add a not-isprefix macro keyed to U+22E0 \npreceq, but
+           hard to know what the ASCII version should be.  *)
+
+val _ = TeX_notation {hol = "<<=",           TeX = ("\\HOLTokenIsPrefix{}",   1)};
+val _ = TeX_notation {hol = UTF8.chr 0x227C, TeX = ("\\HOLTokenIsPrefix{}",   1)};
 
 val is_measure_maximal_def = new_definition("is_measure_maximal_def",
   “is_measure_maximal m s x <=> x IN s /\ !y. y IN s ==> m y <= m x”

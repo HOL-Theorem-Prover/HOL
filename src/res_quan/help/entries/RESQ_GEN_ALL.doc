@@ -10,7 +10,7 @@ rule, restricted quantifier, universal.
 
 \DESCRIBE
 When applied to a theorem {A |- t}, the inference rule {RESQ_GEN_ALL} returns
-the theorem {A' |- !x1::P1. ...!xn::Pn. t}, where the {Pi xi} are in the 
+the theorem {A' |- !x1::P1. ...!xn::Pn. t}, where the {Pi xi} are in the
 assumptions.
 {
          A |- t

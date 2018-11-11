@@ -11,9 +11,9 @@
 structure holyHammer :> holyHammer =
 struct
 
-open HolKernel boolLib Thread aiLib smlExecute smlRedirect   
-  mlFeature mlThmData mlTacticData mlNearestNeighbor 
-  hhReconstruct hhTranslate hhTptp 
+open HolKernel boolLib Thread aiLib smlExecute smlRedirect
+  mlFeature mlThmData mlTacticData mlNearestNeighbor
+  hhReconstruct hhTranslate hhTptp
 
 val ERR = mk_HOL_ERR "holyHammer"
 val debugdir = HOLDIR ^ "/src/holyhammer/debug"
@@ -42,13 +42,13 @@ fun npremises_of atp = case atp of
   | Vampire => 96
 
 (* atps called by holyhammer if their binary exists *)
-val all_atps = ref [Eprover,Z3,Vampire] 
+val all_atps = ref [Eprover,Z3,Vampire]
 
 (* -------------------------------------------------------------------------
    Directories
    ------------------------------------------------------------------------- *)
 
-fun pathl sl = case sl of 
+fun pathl sl = case sl of
     []  => raise ERR "pathl" "empty"
   | [a] => a
   | a :: m => OS.Path.concat (a, pathl m)
@@ -71,9 +71,9 @@ fun status_dir dir = pathl [dir,"status"]
 val hh_eval_dir    = pathl [hh_dir,"eval"];
 val eval_flag = ref false
 val eval_thy = ref "scratch"
-fun log_eval s = 
-  if !eval_flag then 
-    let val file = hh_eval_dir ^ "/" ^ (!eval_thy) in  
+fun log_eval s =
+  if !eval_flag then
+    let val file = hh_eval_dir ^ "/" ^ (!eval_thy) in
       mkDir_err hh_eval_dir;
       append_endline file s
     end
@@ -91,7 +91,7 @@ fun close_thread thread =
   then (Thread.interrupt thread;
         if Thread.isActive thread then Thread.kill thread else ())
   else ()
-   
+
 fun parallel_call t fl =
   let
     val _ = parallel_result := NONE
@@ -101,7 +101,7 @@ fun parallel_call t fl =
     fun loop () =
       (
       OS.Process.sleep (Time.fromReal 0.01);
-      if isSome (!parallel_result) orelse 
+      if isSome (!parallel_result) orelse
          not (exists Thread.isActive threadl) orelse
          Timer.checkRealTimer rt  > Time.fromReal t
       then (app close_thread threadl; !parallel_result)
@@ -118,25 +118,26 @@ fun parallel_call t fl =
 val atp_ref = ref ""
 
 fun launch_atp dir atp t =
-  let 
-    val cmd = "sh " ^ name_of atp ^ ".sh " ^ int_to_string t ^ " " ^ 
+  let
+    val cmd = "sh " ^ name_of atp ^ ".sh " ^ int_to_string t ^ " " ^
       dir ^ " > /dev/null 2> /dev/null"
-    val _ = cmd_in_dir provbin_dir cmd   
+    val _ = cmd_in_dir provbin_dir cmd
     val r = get_lemmas (status_of atp, out_of atp)
   in
-    if isSome r 
-    then 
+    if isSome r
+    then
       (
       atp_ref := name_of atp;
       print_endline ("proof found by " ^ name_of atp ^ ":");
       print_endline ("  " ^ mk_metis_call (valOf r));
       log_eval ("  proof found by " ^ name_of atp ^ ":");
       log_eval ("    " ^ mk_metis_call (valOf r));
-      parallel_result := r 
+      parallel_result := r
       )
     else ();
     r
   end
+
 
 (* -------------------------------------------------------------------------
    HolyHammer
@@ -148,24 +149,24 @@ fun clean_hh_goaltac_cache () = hh_goaltac_cache := dempty goal_compare
 
 val notfalse = EQT_ELIM (last (CONJ_LIST 3 NOT_CLAUSES))
 
-val extra_premises = 
+val extra_premises =
   [("truth", TRUTH), ("notfalse", notfalse),
    ("bool_cases_ax", BOOL_CASES_AX), ("eq_ext", EQ_EXT)]
 
 fun translate_write_atp premises cj atp =
-  let     
+  let
     val new_premises = first_n (npremises_of atp) premises
-    val thml = extra_premises @ thml_of_namel new_premises           
+    val thml = extra_premises @ thml_of_namel new_premises
     val pb = translate_pb thml cj
     val (axl,new_cj) = name_pb pb
   in
     write_tptp (provdir_of atp) axl new_cj
   end
 
-fun exists_atp atp = 
+fun exists_atp atp =
   exists_file (pathl [provbin_dir, name_of atp])
 
-fun exists_atp_err atp = 
+fun exists_atp_err atp =
   let val b = exists_file (pathl [provbin_dir, name_of atp]) in
     if not b then print_endline ("no binary for " ^ name_of atp) else ();
     b
@@ -182,12 +183,12 @@ fun hh_pb wanted_atpl premises goal =
     val olemmas = parallel_call t2 (map f atpl)
   in
     case olemmas of
-      NONE => 
+      NONE =>
         (log_eval "  ATPs could not find a proof";
         raise ERR "holyhammer" "ATPs could not find a proof")
-    | SOME lemmas => 
+    | SOME lemmas =>
       let
-        val (stac,tac) = hh_reconstruct lemmas goal 
+        val (stac,tac) = hh_reconstruct lemmas goal
       in
         print_endline ("minimized proof:  \n  " ^ stac);
         log_eval ("  minimized proof:  \n    " ^ stac);
@@ -196,9 +197,9 @@ fun hh_pb wanted_atpl premises goal =
       end
   end
 
-fun main_hh thmdata goal = 
+fun main_hh thmdata goal =
   let
-    val atpl = filter exists_atp (!all_atps) 
+    val atpl = filter exists_atp (!all_atps)
     val n = list_imax (map npremises_of atpl)
     val premises = thmknn_wdep thmdata n (feahash_of_goal goal)
   in
@@ -216,9 +217,8 @@ fun hh_fork goal = Thread.fork (fn () => ignore (hh_goal goal), [])
 fun hh goal = (hh_goal goal) goal
 fun holyhammer tm = TAC_PROOF (([],tm), hh_goal ([],tm));
 
-
 (* -------------------------------------------------------------------------
-   HolyHammer evaluation without premise selection: 
+   HolyHammer evaluation without premise selection:
    trying to re-prove theorems from their dependencies.
    ------------------------------------------------------------------------- *)
 
@@ -228,7 +228,7 @@ fun hh_pb_eval_thm atpl (s,thm) =
     val _ = log_eval ("\nTheorem: " ^ s)
     val goal = dest_thm thm
     val (b,premises) = intactdep_of_thm thm
-    val _ = log_eval ("  dependencies:\n    " ^ 
+    val _ = log_eval ("  dependencies:\n    " ^
       (String.concatWith "\n    " premises))
   in
     if not b then (print_endline "  broken_dependencies (not tested)";
@@ -239,9 +239,9 @@ fun hh_pb_eval_thm atpl (s,thm) =
       end
   end
 
-fun hh_pb_eval_thy atpl thy = 
+fun hh_pb_eval_thy atpl thy =
   (
-  eval_flag := true; eval_thy := thy; 
+  eval_flag := true; eval_thy := thy;
   mkDir_err hh_eval_dir;
   remove_file (hh_eval_dir ^ "/" ^ thy);
   app (hh_pb_eval_thm atpl) (DB.theorems thy);
@@ -262,7 +262,7 @@ fun hh_pb_eval_thy atpl thy =
 
 fun hh_eval (thmdata,tacdata) goal =
   (
-  eval_flag := true; eval_thy := current_theory (); 
+  eval_flag := true; eval_thy := current_theory ();
   mkDir_err hh_eval_dir;
   log_eval ("Goal: " ^ string_of_goal goal);
   ignore (main_hh thmdata goal);
@@ -278,7 +278,5 @@ fun hh_eval (thmdata,tacdata) goal =
    Results can be found in HOLDIR/src/holyhammer/eval.
   ------------------------------------------------------------------------- *)
 
+
 end (* struct *)
-
-
-

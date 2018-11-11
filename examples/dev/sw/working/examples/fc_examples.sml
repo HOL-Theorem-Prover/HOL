@@ -28,7 +28,7 @@ val def1 = Define `f1 x = x + x + 1w`;
   Arguments         : r0
   Returns           : r0
   Body:
-	[madd r0 r0 r0; madd r0 r0 #1w]
+        [madd r0 r0 r0; madd r0 r0 #1w]
 
 *)
 

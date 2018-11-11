@@ -531,7 +531,7 @@ val Completeness_Lemma = Q.prove
  (* Now just do a little object logic proof. *)
  `(IMAGE (IValue env) V) ||- (Var d --> p)` by METIS_TAC [DEDUCTION] THEN
  `(IMAGE (IValue env) V) ||- ((Var d --> False) --> p)`
-		    by METIS_TAC [DEDUCTION] THEN
+                    by METIS_TAC [DEDUCTION] THEN
  `(IMAGE(IValue env) V) ||- ((Var d --> p) --> ((Var d --> False) --> p) --> p)`
      by METIS_TAC [Case_Split] THEN
  METIS_TAC [is_thm_MP]]);

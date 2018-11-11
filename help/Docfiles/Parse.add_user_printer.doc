@@ -31,6 +31,12 @@ of the theory). The name passed to the {register_userPP} function is
 then the name that must also be passed to {add_user_printer}. The term
 argument is the desired pattern.
 
+Alternatively, if the name specified is the empty string ({""}), the
+behaviour is to ensure that terms matching this pattern are not
+handled by the user-printing machinery. The expectation is that a more
+general pattern has already been registered, but that in this
+specified scenario the general term-printing machinery should be used.
+
 The user-supplied function may choose not to print anything for the
 given term and hand back control to the standard printer by raising
 the exception {term_pp_types.UserPP_Failed}.  All other exceptions

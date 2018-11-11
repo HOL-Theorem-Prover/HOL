@@ -12,7 +12,7 @@ open HolKernel boolLib aiLib
   smlLexer smlTimeout smlExecute smlTag smlParser smlRedirect
   mlFeature mlThmData mlTacticData
   tttSetup tttLearn
- 
+
 val ERR = mk_HOL_ERR "tttRecord"
 fun debug s = debug_in_dir ttt_debugdir "tttRecord" s
 
@@ -153,7 +153,7 @@ fun wrap_tactics_in name qtac goal =
       in
         (final_stac, final_tac)
       end
-      handle Interrupt => raise Interrupt 
+      handle Interrupt => raise Interrupt
         | _ => parse_err name qtac (!final_stac_ref)
     val (final_stac, final_tac)  =
       total_time hide_time (hide_out (total_time mkfinal_time mk_alttac)) qtac
@@ -163,7 +163,7 @@ fun wrap_tactics_in name qtac goal =
     (
     let
       val (gl,v) =
-        total_time replay_time 
+        total_time replay_time
         (timeout (!ttt_recproof_time) final_tac) goal
     in
       if gl = []
@@ -219,7 +219,7 @@ fun start_record_proof name =
   end
 
 (* communication channel between the record calls *)
-val tacdata_glob = ref empty_tacdata 
+val tacdata_glob = ref empty_tacdata
 
 fun end_record_proof name g =
   let
@@ -233,22 +233,21 @@ fun end_record_proof name g =
     tacdata_glob := newtacdata
   end
 
-
 fun record_proof name lflag tac1 tac2 g =
   let
     val _ = start_record_proof name
     val pflag = String.isPrefix "tactictoe_prove_" name
     val b2 = (not (!ttt_recprove_flag) andalso pflag)
     val b3 = (not (!ttt_reclet_flag) andalso lflag)
-    val eval_ignore = pflag orelse lflag orelse 
+    val eval_ignore = pflag orelse lflag orelse
                       not (isSome (!ttt_evalfun_glob))
     val result =
       if b2 orelse b3 then tac2 g else
         let
-          val _ = if eval_ignore then () else 
+          val _ = if eval_ignore then () else
             let val (thmdata,tacdata) = (create_thmdata (), !tacdata_glob) in
               (valOf (!ttt_evalfun_glob)) (thmdata,tacdata) g
-            end 
+            end
           val (r,t) = add_time tac1 g
           val _ = debug ("Recording proof time: " ^ Real.toString t)
           val _ = end_record_proof name g
@@ -256,7 +255,7 @@ fun record_proof name lflag tac1 tac2 g =
           if null (fst r) then r
           else (debug "record_proof: not null"; tac2 g)
         end
-        handle Interrupt => raise Interrupt 
+        handle Interrupt => raise Interrupt
           | _ => (debug "record_proof: exception"; tac2 g)
   in
     result
@@ -266,10 +265,11 @@ fun record_proof name lflag tac1 tac2 g =
    Theory hooks
    ---------------------------------------------------------------------- *)
 
-fun start_record_thy thy = 
+fun start_record_thy thy =
   (tacdata_glob := empty_tacdata; reset_profiling ())
- 
+
 fun end_record_thy thy =
   (ttt_export_tacdata thy (!tacdata_glob); debug "record successful")
+
 
 end (* struct *)

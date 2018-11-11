@@ -1,17 +1,17 @@
 
-(* FILE		: next.ml						*)
-(* DESCRIPTION   : Creates the theory "next" containing the definition 	*)
-(*		  of the predicate, Next, and associated theorems. 	*)
-(*									*)
-(* READS FILES	: <none>						*)
-(* WRITES FILES	: next.th						*)
-(*									*)
-(* AUTHOR	: T. Melham						*)
-(* DATE		: 84.12.05						*)
-(* REVISED	: 86.05.11						*)
+(* FILE         : next.ml                                               *)
+(* DESCRIPTION   : Creates the theory "next" containing the definition  *)
+(*                of the predicate, Next, and associated theorems.      *)
+(*                                                                      *)
+(* READS FILES  : <none>                                                *)
+(* WRITES FILES : next.th                                               *)
+(*                                                                      *)
+(* AUTHOR       : T. Melham                                             *)
+(* DATE         : 84.12.05                                              *)
+(* REVISED      : 86.05.11                                              *)
 (*                                                                      *)
 (* PORTED HOL98  : M. Gordon                                            *)
-(* DATE		: 00.10.03						*)
+(* DATE         : 00.10.03                                              *)
 
 (*
 load "bossLib";
@@ -31,23 +31,23 @@ open prim_recTheory;
 open hol88Lib;
 
 
-(* Create the new theory "next.th"					*)
+(* Create the new theory "next.th"                                      *)
 val _ = new_theory "next";;
 
 (* Definition of Next.  Time t2 is the first (i.e. next) time after t1  *)
-(* when the signal sig is true.						*)
+(* when the signal sig is true.                                         *)
 val Next =
     new_definition
     ("Next",
      ``!sig t1 t2.
       Next t1 t2 sig = (t1<t2)/\(sig t2)/\(!t. (t1<t)/\(t<t2) ==> ~sig t)``);
 
-(* The following lemma will be needed in the proofs below:		*)
+(* The following lemma will be needed in the proofs below:              *)
 val cases = DECIDE ``!m n. m < n ==> (SUC m) < n \/ (SUC m = n)``;
 
 
-(* Theorem for Increasing the size of the interval covered by the 	*)
-(* predicate Next.							*)
+(* Theorem for Increasing the size of the interval covered by the       *)
+(* predicate Next.                                                      *)
 val Next_Increase =
     store_thm
      ("Next_Increase",
@@ -60,7 +60,7 @@ val Next_Increase =
        GEN_TAC THEN DISCH_THEN (STRIP_ASSUME_TAC o MATCH_MP cases) THENL
        [RES_TAC, POP_ASSUM (SUBST1_TAC o SYM) THEN ASM_REWRITE_TAC[]]]);
 
-(* Lemma for decreasing the size of the interval covered by Next.	*)
+(* Lemma for decreasing the size of the interval covered by Next.       *)
 val Next_Decrease =
     store_thm
      ("Next_Decrease",
@@ -69,12 +69,12 @@ val Next_Decrease =
       REPEAT STRIP_TAC THENL
       [IMP_RES_THEN
         (DISJ_CASES_THEN2 ACCEPT_TAC
-		(MP_TAC o (AP_TERM ``sig:num->bool``))) cases THEN
+                (MP_TAC o (AP_TERM ``sig:num->bool``))) cases THEN
        ASM_REWRITE_TAC[],
        FIRST_ASSUM ACCEPT_TAC,
        IMP_RES_TAC SUC_LESS THEN RES_TAC]);
 
-(* Uniqueness lemma for Next.						*)
+(* Uniqueness lemma for Next.                                           *)
 val Next_Unique =
     store_thm
      ("Next_Unique",
@@ -85,5 +85,5 @@ val Next_Unique =
       ASM_CASES_TAC ``t1 < t2`` THENL
       [RES_TAC, IMP_RES_TAC LESS_CASES_IMP THEN RES_TAC]);
 
-(* Close the theory ``next.th``.					*)
+(* Close the theory ``next.th``.                                        *)
 val _ = export_theory();

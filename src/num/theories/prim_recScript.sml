@@ -544,6 +544,7 @@ Q.new_definition
   ("wellfounded_def",
    `wellfounded (R:'a->'a->bool) = ~?f. !n. R (f (SUC n)) (f n)`);
 
+val _ = overload_on ("Wellfounded", ``wellfounded``);
 
 (*---------------------------------------------------------------------------
  * First half of showing that the two definitions of wellfoundedness agree.

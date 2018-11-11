@@ -90,21 +90,27 @@ fun mp_then pos (ttac : thm_tactic) ith0 rth (g as (asl,w)) =
       | Pos f => m (conj f) (fn _ => raise fail) t
       | Pat q =>
         let
-          val pat = parse_in_context
-                      (HOLset.listItems (FVL (w::asl) empty_tmset))
-                      q
-          fun doit n =
+          open TermParse
+          val pats =
+              prim_ctxt_termS Parse.Absyn (term_grammar())
+                              (HOLset.listItems (FVL (w::asl) empty_tmset))
+                              q
+          fun doit ps n =
             if n > max then raise fail
-            else m (fn t => let val subterm = conj (el n) t
-                            in
-                              if can (match_subterm pat) subterm then
-                                subterm
-                              else raise fail
-                            end)
-                   (fn _ => doit (n + 1))
+            else
+              case seq.cases ps of
+                  NONE => doit pats (n + 1)
+                | SOME (pat, rest) =>
+                    m (fn t => let val subterm = conj (el n) t
+                               in
+                                 if can (match_subterm pat) subterm then
+                                   subterm
+                                 else raise fail
+                               end)
+                      (fn _ => doit rest n)
                    t
         in
-          doit 1
+          doit pats 1
         end
       | Concl => m (fn t => t |> dest_imp |> #2)
                    (fn _ => raise fail)

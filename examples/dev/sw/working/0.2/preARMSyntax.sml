@@ -36,12 +36,12 @@ fun mk_arm (ins,stms,outs) =
         let
             val ops = list_mk_pair [ mk_thy_const {Name = Assem.print_op op1, Thy = "preARM", Ty = Type `:OPERATOR`},
 
-				     (* For instruction BL, jump is always effective; and, when the pc appears in the destination list, then
-					a jump occurs												*)
+                                     (* For instruction BL, jump is always effective; and, when the pc appears in the destination list, then
+                                        a jump occurs                                                                                           *)
                                      if op1 = Assem.BL orelse not (List.find (fn r => r = Assem.REG 15 orelse r = Assem.WREG 15) dlist = NONE)  then
-						Term(`SOME AL:COND option`)         (* always jumps *)
+                                                Term(`SOME AL:COND option`)         (* always jumps *)
 
-				     else if cond1 = NONE then mk_none (Type `:COND`)
+                                     else if cond1 = NONE then mk_none (Type `:COND`)
                                      else mk_comb(Term`SOME:COND->COND option`,
                                                    mk_const(Assem.print_cond cond1, Type `:COND`)),
                                      Term`F`]

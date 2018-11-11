@@ -2,11 +2,11 @@ signature tacticToe =
 sig
 
   include Abbrev
- 
+
   val set_timeout : real -> unit
   val ttt : tactic
   val tactictoe : term -> thm
- 
+
   (* contains recorded data from the ancestries of the current theory *)
   val clean_ttt_tacdata_cache : unit -> unit
   (* remembers the goal proven by tactictoe *)
@@ -15,8 +15,8 @@ sig
   (* evaluation *)
   type lbl = (string * real * goal * goal list)
   type fea = int list
-  type thmdata = 
-    (int, real) Redblackmap.dict * 
+  type thmdata =
+    (int, real) Redblackmap.dict *
     (string, int list) Redblackmap.dict
   type tacdata =
     {
@@ -26,6 +26,5 @@ sig
     tacdep : (goal, lbl list) Redblackmap.dict
     }
   val ttt_eval : thmdata * tacdata -> goal -> unit
-
 
 end

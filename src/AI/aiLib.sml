@@ -8,10 +8,9 @@
 structure aiLib :> aiLib =
 struct
 
-open HolKernel Abbrev boolLib 
+open HolKernel Abbrev boolLib
 
 val ERR = mk_HOL_ERR "aiLib"
-
 
 (* ------------------------------------------------------------------------
    Misc
@@ -49,10 +48,10 @@ end
 
 fun exists_file file = OS.FileSys.access (file, []);
 
-fun mkDir_err dir = 
+fun mkDir_err dir =
   if exists_file dir then () else OS.FileSys.mkDir dir
 
-fun remove_file file = 
+fun remove_file file =
   if exists_file file then ignore (OS.FileSys.remove file) else ()
 
 fun run_cmd cmd = ignore (OS.Process.system cmd)
@@ -71,8 +70,6 @@ fun cpl_compare cmp1 cmp2 ((a1,a2),(b1,b2)) =
   let val r = cmp1 (a1,b1) in
     if r = EQUAL then cmp2 (a2,b2) else r
   end
-
-
 
 fun lbl_compare ((stac1,_,g1,_),(stac2,_,g2,_)) =
   cpl_compare String.compare goal_compare ((stac1,g1),(stac2,g2))
@@ -104,8 +101,8 @@ fun dkeys d    = map fst (dlist d)
 fun inv_dict cmp d = dnew cmp (map (fn (a,b) => (b,a)) (dlist d))
 
 (* one to many transformations *)
-fun dregroup cmp l = 
-  let 
+fun dregroup cmp l =
+  let
     val d = ref (dempty cmp)
     fun update (k,v) =
       let val oldl = dfind k (!d) handle NotFound => [] in
@@ -121,7 +118,7 @@ fun distrib l = case l of
 
 (* sets *)
 fun dset cmp l = dnew cmp (map (fn x => (x,())) l)
-fun daddset l d = daddl (map (fn x => (x,())) l) 
+fun daddset l d = daddl (map (fn x => (x,())) l)
 
 (* more *)
 fun union_dict cmp dl = dnew cmp (List.concat (map dlist dl))
@@ -151,7 +148,7 @@ fun only_hd x = case x of [a] => a | _ => raise ERR "only_hd" ""
 
 fun one_in_n n start l = case l of
     [] => []
-  | a :: m => if start mod n = 0 
+  | a :: m => if start mod n = 0
               then a :: one_in_n n (start + 1) m
               else one_in_n n (start + 1) m
 
@@ -159,7 +156,7 @@ fun map_snd f l   = map (fn (a,b) => (a, f b)) l
 fun map_fst f l   = map (fn (a,b) => (f a, b)) l
 fun map_assoc f l = map (fn a => (a, f a)) l
 
-fun cartesian_product l1 l2 = 
+fun cartesian_product l1 l2 =
   List.concat (map (fn x => map (fn y => (x,y)) l2) l1)
 
 fun findSome f l = case l of
@@ -233,7 +230,7 @@ fun fold_left f l orig = case l of
 
 fun list_diff l1 l2 = filter (fn x => not (mem x l2)) l1
 
-fun subset l1 l2 = all (fn x => mem x l2) l1 
+fun subset l1 l2 = all (fn x => mem x l2) l1
 
 fun topo_sort graph =
   let val (topl,downl) = List.partition (fn (x,xl) => null xl) graph in
@@ -261,10 +258,10 @@ fun mk_batch_aux size acc res l =
 
 fun mk_batch size l = mk_batch_aux size [] [] l
 
-fun number_partition m n = 
+fun number_partition m n =
   if m > n then raise ERR "partition" "" else
   if m = 1 then [[n]] else
-  let 
+  let
     fun f x l = x :: l
     val sizel = List.tabulate (n-m+1, fn x => x+1)
     fun g size = map (f size) (number_partition (m-1) (n-size))
@@ -272,7 +269,7 @@ fun number_partition m n =
     List.concat (map g sizel)
   end
 
-fun duplicate n l = 
+fun duplicate n l =
   List.concat (map (fn x => List.tabulate (n, fn _ => x)) l)
 
 fun indent n = implode (duplicate n [#" "])
@@ -285,16 +282,16 @@ datatype lisp = Lterm of lisp list | Lstring of string
 
 fun lisp_aux acc sl = case sl of
     []       => (rev acc, [])
-  | "(" :: m => 
-    let val (parsedl,contl) = lisp_aux [] m in 
-      lisp_aux (Lterm parsedl :: acc) contl 
+  | "(" :: m =>
+    let val (parsedl,contl) = lisp_aux [] m in
+      lisp_aux (Lterm parsedl :: acc) contl
     end
   | ")" :: m => (rev acc, m)
   | a   :: m => lisp_aux (Lstring a :: acc) m
 
 fun lisp_of sl = fst (lisp_aux [] sl)
 
-fun strip_lisp x = case x of 
+fun strip_lisp x = case x of
     Lterm (Lstring x :: m) => (x, m)
   | Lstring x              => (x ,[])
   | _                      => raise ERR "strip_lisp" "operator is a comb"
@@ -302,9 +299,9 @@ fun strip_lisp x = case x of
 fun rec_fun_type n ty =
   if n <= 1 then ty else mk_type ("fun",[ty,rec_fun_type (n-1) ty])
 
-fun term_of_lisp x = 
-  let 
-    val (oper,argl) = strip_lisp x 
+fun term_of_lisp x =
+  let
+    val (oper,argl) = strip_lisp x
     val opertm = mk_var (oper, rec_fun_type (length argl + 1) alpha)
   in
     list_mk_comb (opertm, map term_of_lisp argl)
@@ -330,23 +327,23 @@ fun sum_int l = case l of [] => 0 | a :: m => a + sum_int m
 
 fun average_real l = sum_real l / Real.fromInt (length l)
 
-fun standard_deviation l = 
-  let 
+fun standard_deviation l =
+  let
     val mean     = average_real l
     val variance = average_real (map (fn x => (x - mean) * (x - mean)) l)
   in
     Math.sqrt variance
   end
 
-fun int_div n1 n2 = 
-   (if n2 = 0 then 0.0 else Real.fromInt n1 / Real.fromInt n2) 
+fun int_div n1 n2 =
+   (if n2 = 0 then 0.0 else Real.fromInt n1 / Real.fromInt n2)
 
 fun pow (x:real) (n:int) =
   if n <= 0 then 1.0 else x * (pow x (n-1))
 
-fun approx n r = 
+fun approx n r =
   let val mult = pow 10.0 n in
-    Real.fromInt (Real.round (r * mult)) / mult 
+    Real.fromInt (Real.round (r * mult)) / mult
   end
 
 fun percent x = approx 2 (100.0 * x)
@@ -355,15 +352,15 @@ fun percent x = approx 2 (100.0 * x)
    Terms
    ------------------------------------------------------------------------- *)
 
-fun rename_bvarl f tm = 
-  let 
+fun rename_bvarl f tm =
+  let
     val vi = ref 0
     fun rename_aux tm = case dest_term tm of
       VAR(Name,Ty)       => tm
     | CONST{Name,Thy,Ty} => tm
     | COMB(Rator,Rand)   => mk_comb (rename_aux Rator, rename_aux Rand)
-    | LAMB(Var,Bod)      => 
-      let 
+    | LAMB(Var,Bod)      =>
+      let
         val vs = f (fst (dest_var Var))
         val new_tm = rename_bvar ("V" ^ int_to_string (!vi) ^ vs) tm
         val (v,bod) = dest_abs new_tm
@@ -375,13 +372,13 @@ fun rename_bvarl f tm =
     rename_aux tm
   end
 
-fun all_bvar tm = 
+fun all_bvar tm =
   mk_fast_set Term.compare (map (fst o dest_abs) (find_terms is_abs tm))
 
 fun strip_type ty =
-  if is_vartype ty then ([],ty) else 
+  if is_vartype ty then ([],ty) else
     case dest_type ty of
-      ("fun",[a,b]) => 
+      ("fun",[a,b]) =>
       let val (tyl,im) = strip_type b in
         (a :: tyl, im)
       end
@@ -389,7 +386,7 @@ fun strip_type ty =
 
 fun has_boolty x = type_of x = bool
 
-fun only_concl x = 
+fun only_concl x =
   let val (a,b) = dest_thm x in
     if null a then b else raise ERR "only_concl" ""
   end
@@ -411,7 +408,7 @@ fun string_of_goal (asm,w) =
 
 fun string_of_bool b = if b then "T" else "F"
 
-fun only_concl x = 
+fun only_concl x =
   let val (a,b) = dest_thm x in
     if null a then b else raise ERR "only_concl" ""
   end
@@ -474,21 +471,21 @@ fun writel file sl =
     TextIO.closeOut oc
   end
 
-fun ancestors_path path = 
+fun ancestors_path path =
   let val dir = OS.Path.getParent path in
-    if dir = "." orelse dir = "/" 
-    then [] 
+    if dir = "." orelse dir = "/"
+    then []
     else dir :: ancestors_path dir
   end
 
-fun mkPathDir dir path = 
-  let 
+fun mkPathDir dir path =
+  let
     val l0 = rev (ancestors_path path)
-    val l1 = map (fn x => (OS.Path.concat (dir,x))) l0 
+    val l1 = map (fn x => (OS.Path.concat (dir,x))) l0
   in
     app mkDir_err l1
   end
-  
+
 fun writel_path dir path sl =
   (
   mkPathDir dir path;
@@ -503,9 +500,9 @@ fun append_file file s =
 fun append_endline file s = append_file file (s ^ "\n")
 
 val debug_flag = ref false
-fun debug_in_dir dir file s = 
-  if !debug_flag 
-  then (mkDir_err dir; 
+fun debug_in_dir dir file s =
+  if !debug_flag
+  then (mkDir_err dir;
         append_endline (dir ^ "/" ^ current_theory () ^ "___" ^ file) s)
   else ()
 
@@ -625,18 +622,18 @@ fun rm_space s = implode (rm_space_aux (explode s))
 fun escape_char c =
   if Char.isAlphaNum c then Char.toString c
   else if c = #"_" then "__"
-  else 
+  else
     let val hex = Int.fmt StringCvt.HEX (Char.ord c) in
       StringCvt.padLeft #"_" 3 hex
     end
-    
+
 fun escape s = String.translate escape_char s;
 
-fun isCapitalHex c = 
+fun isCapitalHex c =
   Char.ord #"A" <= Char.ord c andalso Char.ord c <= Char.ord #"F"
 
-fun charhex_to_int c = 
-  if Char.isDigit c 
+fun charhex_to_int c =
+  if Char.isDigit c
     then Char.ord c - Char.ord #"0"
   else if isCapitalHex c
     then Char.ord c - Char.ord #"A" + 10
@@ -645,10 +642,10 @@ fun charhex_to_int c =
 fun unescape_aux l = case l of
    [] => []
  | #"_" :: #"_" :: m => #"_" :: unescape_aux m
- | #"_" :: a :: b :: m => 
+ | #"_" :: a :: b :: m =>
    Char.chr (16 * charhex_to_int a + charhex_to_int b) :: unescape_aux m
  | a :: m => a :: unescape_aux m
- 
+
 fun unescape s = implode (unescape_aux (explode s))
 
 (* ------------------------------------------------------------------------
@@ -675,7 +672,7 @@ fun find_cumul proba cumul = case cumul of
   | (mv,p) :: m => if proba < (p:real) then mv else find_cumul proba m
 
 fun select_in_distrib l =
-  let 
+  let
     val l' = cumul_proba 0.0 l
     val (_,tot) = last l'
   in
@@ -721,27 +718,27 @@ fun parmap_err ncores forg lorg =
     fun fi xi x = (x,xi)
     val queue = ref (mapi fi lorg)
     (* update process inputs *)
-    fun update_from_queue lineref = 
+    fun update_from_queue lineref =
       if null (!queue) then ()
       else (lineref := SOME (hd (!queue)); queue := tl (!queue))
     fun is_refnone x = (not o isSome o ! o snd) x
-    fun dispatcher () = 
+    fun dispatcher () =
       app (update_from_queue o snd) (filter is_refnone lin)
-    (* output *)  
+    (* output *)
     val lout = List.tabulate (ncores,(fn x => (x, ref [])))
     val dout = dnew Int.compare lout
     val lcount = List.tabulate (ncores,(fn x => (x, ref 0)))
     val dcount = dnew Int.compare lcount
     (* process *)
-    fun process pi = 
+    fun process pi =
       let val inref = dfind pi din in
         case !inref of
           NONE => process pi
-        | SOME (x,xi) => 
-          let 
+        | SOME (x,xi) =>
+          let
             val oldl = dfind pi dout
             val oldn = dfind pi dcount
-            val y = capture forg x 
+            val y = capture forg x
           in
             oldl := (y,xi) :: (!oldl);
             incr oldn;
@@ -763,7 +760,7 @@ fun parmap_err ncores forg lorg =
     map fst (dict_sort compare_imin (List.concat (map (! o snd) lout)))
   end
 
-fun parmap ncores f l = 
+fun parmap ncores f l =
   map release (parmap_err ncores f l)
 
 fun parapp ncores f l = ignore (parmap ncores f l)

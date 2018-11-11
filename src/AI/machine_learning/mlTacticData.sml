@@ -23,15 +23,15 @@ type tacdata =
   {
   tacfea : (lbl,fea) Redblackmap.dict,
   tacfea_cthy : (lbl,fea) Redblackmap.dict,
-  taccov : (string, int) Redblackmap.dict, 
+  taccov : (string, int) Redblackmap.dict,
   tacdep : (goal, lbl list) Redblackmap.dict
   }
 
-val empty_tacdata = 
+val empty_tacdata =
   {
   tacfea = dempty lbl_compare,
   tacfea_cthy = dempty lbl_compare,
-  taccov = dempty String.compare, 
+  taccov = dempty String.compare,
   tacdep = dempty goal_compare
   }
 
@@ -206,18 +206,18 @@ fun pp_tml tml =
         PP.add_newline, PP.add_newline,
         PP.add_string "TERMS_START",
         PP.add_newline ] @ pp_terml @ [ PP.add_newline,
-        PP.add_string "TERMS_END"       
+        PP.add_string "TERMS_END"
       ]
     )
   end
 
 fun export_terml file tml =
-  let 
+  let
     val tml' = filter uptodate_term tml
-    val _ = if length tml <> length tml' 
+    val _ = if length tml <> length tml'
             then print_endline "Warning: out-of-date terms are not exported"
             else ()
-    val ostrm = Portable.open_out file 
+    val ostrm = Portable.open_out file
   in
     (PP.prettyPrint (curry TextIO.output ostrm, 75) (pp_tml tml');
      TextIO.closeOut ostrm)
@@ -231,14 +231,14 @@ fun pp_feavl feavl =
   let
     val ((terml,termdict),(idtable,tytable,tmtable)) =
       create_sharing_tables_feavl feavl
-    
+
     fun pp_sml_list pfun l =
       PP.block INCONSISTENT 0 (
         [ PP.add_string "[", PP.add_break (0,0) ] @
         PP.pr_list pfun [PP.add_string ",", PP.add_break (1,0)] l @
         [ PP.add_break (0,0), PP.add_string "]" ]
       )
-    
+
     fun raw_term_to_string term =
       quote ((Term.write_raw (fn t => Map.find(#termmap tmtable, t))) term)
     fun pp_tm tm = PP.add_string (raw_term_to_string tm)
@@ -417,7 +417,7 @@ fun init_tacdata tacfea =
   tacdep      = init_tacdep tacfea,
   taccov      = init_taccov tacfea
   }
- 
+
 fun import_tacdata filel =
   let val tacfea = union_dict lbl_compare (map import_tacfea filel) in
     init_tacdata tacfea
@@ -437,12 +437,12 @@ fun ttt_create_tacdata () =
     fun f x = ttt_tacdata_dir ^ "/" ^ x
     val ethyl1 = filter (not o exists_tacdata_thy) thyl
     val ethyl2 = filter (fn x => not (mem x ["bool","min"])) ethyl1
-    val _ = 
+    val _ =
       if null ethyl2 then () else
-      print_endline 
-        ("Warning: missing tactic data for theories:" ^ 
+      print_endline
+        ("Warning: missing tactic data for theories:" ^
         (String.concatWith " " ethyl2))
-    val filel = filter exists_file (map f thyl) 
+    val filel = filter exists_file (map f thyl)
     val tacdata = import_tacdata filel
     val is = int_to_string (dlength (#tacfea tacdata))
   in
@@ -460,13 +460,13 @@ fun ttt_update_tacdata_aux {tacfea, tacfea_cthy, taccov, tacdep} (lbl,fea) =
 
 fun ttt_update_tacdata (lbl as (stac,t,g,gl), tacdata) =
   if mem g gl orelse dmem lbl (#tacfea tacdata)
-  then tacdata 
+  then tacdata
   else ttt_update_tacdata_aux tacdata (lbl, feahash_of_goal g)
- 
+
 fun ttt_export_tacdata thy tacdata =
   let
     val _ = mkDir_err ttt_tacdata_dir
-    val file = ttt_tacdata_dir ^ "/" ^ thy 
+    val file = ttt_tacdata_dir ^ "/" ^ thy
   in
     print_endline file;
     export_tacfea file (#tacfea tacdata)

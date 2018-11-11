@@ -24,21 +24,21 @@ fun is_binop op1 =
                         oper_name = "<<" orelse
                         oper_name = ">>" orelse
                         oper_name = ">>#" orelse
-			oper_name = ">>>" orelse
-			oper_name = "??" orelse
+                        oper_name = ">>>" orelse
+                        oper_name = "??" orelse
             oper_name = "word_or" orelse
             oper_name = "word_and" orelse
             oper_name = "word_xor" orelse
             oper_name = "word_add" orelse
-      			oper_name = "word_sub" orelse
-      			oper_name = "word_mul" orelse
-      			oper_name = "bitwise_and" orelse
-      			oper_name = "bitwise_or" orelse
-      			oper_name = "word_lsl" orelse
-      			oper_name = "word_lsr" orelse
-      			oper_name = "word_asr" orelse
-      			oper_name = "word_ror" orelse
-      			oper_name = "bitwise_eor"
+                        oper_name = "word_sub" orelse
+                        oper_name = "word_mul" orelse
+                        oper_name = "bitwise_and" orelse
+                        oper_name = "bitwise_or" orelse
+                        oper_name = "word_lsl" orelse
+                        oper_name = "word_lsr" orelse
+                        oper_name = "word_asr" orelse
+                        oper_name = "word_ror" orelse
+                        oper_name = "bitwise_eor"
                         then true
                 else false
             end
@@ -49,15 +49,15 @@ fun is_relop op1 =
   else let val (uncur, oper) = dest_comb op1 in
        if not (is_const uncur andalso is_const oper) then false
        else let val (uncur_name, uncur_type) = dest_const uncur;
-      	        val (oper_name, oper_type) = dest_const oper
-  	    in
-      		if not (uncur_name = "UNCURRY") then false
-      		else if oper_name = ">" orelse
-     	      		oper_name = ">=" orelse
-              		oper_name = "!=" orelse
-              		oper_name = "<" orelse
-              		oper_name = "<=" orelse
-              		oper_name = "=" orelse
+                val (oper_name, oper_type) = dest_const oper
+            in
+                if not (uncur_name = "UNCURRY") then false
+                else if oper_name = ">" orelse
+                        oper_name = ">=" orelse
+                        oper_name = "!=" orelse
+                        oper_name = "<" orelse
+                        oper_name = "<=" orelse
+                        oper_name = "=" orelse
                         oper_name = "word_gt" orelse
                         oper_name = "word_lt" orelse
                         oper_name = "word_ge" orelse
@@ -66,9 +66,9 @@ fun is_relop op1 =
                         oper_name = "word_hi" orelse
                         oper_name = "word_lo" orelse
                         oper_name = "word_ls"
-      	   		then true
-      		else false
-	    end
+                        then true
+                else false
+            end
        end;
 
 
@@ -140,7 +140,7 @@ val symbolT : ((string,int) H.hash_table) ref =
      SOME d =>  d
    | NONE => let
         val i = T.numItems (!tmpT) in
-	    tmpT := T.enter(!tmpT, i, str);
+            tmpT := T.enter(!tmpT, i, str);
             H.insert (!symbolT) (str, i);
             i
         end
@@ -153,96 +153,96 @@ val symbolT : ((string,int) H.hash_table) ref =
 fun mk_MOVE e1 (Tree.ESEQ(s1, Tree.ESEQ(s2,e2))) =
         Tree.SEQ(s1, mk_MOVE e1 (Tree.ESEQ(s2,e2)))
  |  mk_MOVE e1 (Tree.ESEQ(s1, e2)) =
-	Tree.SEQ(s1, Tree.MOVE (e1,e2))
+        Tree.SEQ(s1, Tree.MOVE (e1,e2))
  |  mk_MOVE e1 s = Tree.MOVE (e1,s);
 
 
  fun mk_PAIR (Tree.ESEQ(s1,s2)) = mk_PAIR s2
   |  mk_PAIR (Tree.PAIR (e1,e2)) =
-	Tree.PAIR(mk_PAIR e1, mk_PAIR e2)
+        Tree.PAIR(mk_PAIR e1, mk_PAIR e2)
   |  mk_PAIR exp =
-	  Tree.TEMP (inspectVar(Temp.makestring(Temp.newtemp())));
+          Tree.TEMP (inspectVar(Temp.makestring(Temp.newtemp())));
 
  fun analyzeExp exp =
 
      if is_let exp then
         let val (var, rhs) = dest_let exp;
             val (lhs, rest) = dest_pabs var;
-	    val rt = analyzeExp rhs
+            val rt = analyzeExp rhs
         in
-	    Tree.ESEQ(Tree.MOVE(analyzeExp lhs, analyzeExp rhs), analyzeExp rest)
+            Tree.ESEQ(Tree.MOVE(analyzeExp lhs, analyzeExp rhs), analyzeExp rest)
         end
 
      else if is_numeral exp then
-	Tree.NCONST (Arbint.fromNat (dest_numeral exp))
+        Tree.NCONST (Arbint.fromNat (dest_numeral exp))
 
      else if not (is_comb exp) then
-	if is_var exp then
+        if is_var exp then
             let val (v,ty) = dest_var exp in
-      	        Tree.TEMP (inspectVar v)
+                Tree.TEMP (inspectVar v)
             end
-	else
-	    Tree.NCONST Arbint.zero
+        else
+            Tree.NCONST Arbint.zero
 
      else if is_cond exp then
         let val (c,t,f) = dest_cond exp;
-	    val (t_lab, r_lab) = (Temp.newlabel(), Temp.newlabel());
-	    val new_exp = mk_PAIR (analyzeExp t);
+            val (t_lab, r_lab) = (Temp.newlabel(), Temp.newlabel());
+            val new_exp = mk_PAIR (analyzeExp t);
 
-	    val insts = flow [ Tree.CJUMP(analyzeExp c, t_lab),
-			       mk_MOVE new_exp (analyzeExp f),
-			       Tree.JUMP r_lab,
-			       Tree.LABEL t_lab,
-			       mk_MOVE new_exp (analyzeExp t),
-			       Tree.LABEL r_lab]
-			      new_exp
-	in
-	  insts
-	end
+            val insts = flow [ Tree.CJUMP(analyzeExp c, t_lab),
+                               mk_MOVE new_exp (analyzeExp f),
+                               Tree.JUMP r_lab,
+                               Tree.LABEL t_lab,
+                               mk_MOVE new_exp (analyzeExp t),
+                               Tree.LABEL r_lab]
+                              new_exp
+        in
+          insts
+        end
 
      else if is_pair exp then
-	let val (t1,t2) = dest_pair exp
+        let val (t1,t2) = dest_pair exp
         in  Tree.PAIR(analyzeExp t1, analyzeExp t2)
-	end
+        end
 
      else if is_comb exp then
 
-	let val (operator, operands) = dest_comb exp in
+        let val (operator, operands) = dest_comb exp in
 
         if is_relop operator then
-	    let val (t1, t2) = dest_pair operands
+            let val (t1, t2) = dest_pair operands
             in
-	        Tree.RELOP(convert_relop operator, analyzeExp t1, analyzeExp t2)
-	    end
+                Tree.RELOP(convert_relop operator, analyzeExp t1, analyzeExp t2)
+            end
 
         else if is_binop operator then
-            if is_pair operands then 						(* BINOP of binop * exp * exp	*)
-	          let val (t1, t2) = dest_pair operands in
-	          Tree.BINOP (convert_binop operator, analyzeExp t1, analyzeExp t2)
+            if is_pair operands then                                            (* BINOP of binop * exp * exp   *)
+                  let val (t1, t2) = dest_pair operands in
+                  Tree.BINOP (convert_binop operator, analyzeExp t1, analyzeExp t2)
                   end
-	    else Tree.BINOP (convert_binop operator, analyzeExp operands, analyzeExp operands)    (* UNIOP of uniop * exp  *)
+            else Tree.BINOP (convert_binop operator, analyzeExp operands, analyzeExp operands)    (* UNIOP of uniop * exp  *)
 
-	else if same_const operator n2w_tm then				(* words		*)
-		Tree.WCONST (Arbint.fromNat (dest_numeral operands))
-        else 								(* function call		*)
-	    let val (fun_name, fun_type) = dest_const operator in
-	        Tree.CALL (Tree.NAME (Temp.namedlabel fun_name),
-		           analyzeExp operands)
+        else if same_const operator n2w_tm then                         (* words                *)
+                Tree.WCONST (Arbint.fromNat (dest_numeral operands))
+        else                                                            (* function call                *)
+            let val (fun_name, fun_type) = dest_const operator in
+                Tree.CALL (Tree.NAME (Temp.namedlabel fun_name),
+                           analyzeExp operands)
             end
         end
 
-     else								(* 	0	*)
-	    raise ERR "buildIR" "the expression is invalid"
+     else                                                               (*      0       *)
+            raise ERR "buildIR" "the expression is invalid"
 
 
 (*
 fun
-	convert_ESEQ (Tree.ESEQ(Tree.MOVE(e1, e2), Tree.ESEQ(s2,e))) =
+        convert_ESEQ (Tree.ESEQ(Tree.MOVE(e1, e2), Tree.ESEQ(s2,e))) =
    convert_ESEQ (Tree.ESEQ (Tree.SEQ(
-		Tree.MOVE(e1, convert_ESEQ e2), s2), convert_ESEQ e))
+                Tree.MOVE(e1, convert_ESEQ e2), s2), convert_ESEQ e))
  |
-	convert_ESEQ (Tree.ESEQ(s1, Tree.ESEQ(s2,e))) =
-	convert_ESEQ (Tree.ESEQ (Tree.SEQ(s1, s2), convert_ESEQ e))
+        convert_ESEQ (Tree.ESEQ(s1, Tree.ESEQ(s2,e))) =
+        convert_ESEQ (Tree.ESEQ (Tree.SEQ(s1, s2), convert_ESEQ e))
  |  convert_ESEQ s = s;
 
 convert_ESEQ ir
@@ -253,7 +253,7 @@ fun linearize (stm:Tree.stm) : Tree.stm list =
      |  linear (s,l) = s::l
 
     fun discompose_move(Tree.MOVE(Tree.PAIR(e1,e2), Tree.PAIR(e3,e4))) =
-	      discompose_move(Tree.MOVE(e1,e3)) @ discompose_move(Tree.MOVE(e2,e4))
+              discompose_move(Tree.MOVE(e1,e3)) @ discompose_move(Tree.MOVE(e2,e4))
      |   discompose_move exp = [exp]
      |   discompose_move exp = [exp]
 
@@ -265,30 +265,30 @@ fun linearize (stm:Tree.stm) : Tree.stm list =
 
 fun
   linerize_IR_stm (Tree.MOVE (e1, Tree.ESEQ (s, e2))) =
-		(linerize_IR_stm s) @ linerize_IR_stm (Tree.MOVE (e1, e2)) |
+                (linerize_IR_stm s) @ linerize_IR_stm (Tree.MOVE (e1, e2)) |
   linerize_IR_stm (Tree.SEQ (s1, s2)) = (linerize_IR_stm s1) @ (linerize_IR_stm s2) |
   linerize_IR_stm (Tree.MOVE(Tree.PAIR(e1,e2), Tree.PAIR(e3,e4))) =
-	  linerize_IR_stm (Tree.MOVE(e1,e3)) @ linerize_IR_stm (Tree.MOVE(e2,e4))
+          linerize_IR_stm (Tree.MOVE(e1,e3)) @ linerize_IR_stm (Tree.MOVE(e2,e4))
   |
   linerize_IR_stm stm = [stm]
 
 
 fun linerize_IR (Tree.ESEQ (s, e)) =
-		let
-			val (stmL, e') = linerize_IR e
-		in
-			(((linerize_IR_stm s) @ stmL), e')
-		end |
-	linerize_IR e = ([], e)
+                let
+                        val (stmL, e') = linerize_IR e
+                in
+                        (((linerize_IR_stm s) @ stmL), e')
+                end |
+        linerize_IR e = ([], e)
 
 
 fun convert_to_IR prog =
    let
        fun buildArgs args =
-	   if is_pair args then
-           	let val (arg1,arg2) = dest_pair args
-        	in  Tree.PAIR(analyzeExp arg1, analyzeExp arg2) end
-	   else analyzeExp args
+           if is_pair args then
+                let val (arg1,arg2) = dest_pair args
+                in  Tree.PAIR(analyzeExp arg1, analyzeExp arg2) end
+           else analyzeExp args
 
        val (decl,body) =
            dest_eq(concl(SPEC_ALL prog))
@@ -304,7 +304,7 @@ fun convert_to_IR prog =
        val ir = linerize_IR (Tree.ESEQ(Tree.LABEL (start_lab), analyzeExp body))
    in
        (f_name, f_type, buildArgs args, #1 ir, #2 ir)
-	handle HOL_ERR _
+        handle HOL_ERR _
            => (print "the program body includes invalid expression\n";
              raise ERR "IR" "invalid expression in program body")
    end
@@ -362,7 +362,7 @@ fun print_stm ir =
    ;
 
   fun one_stm (Tree.MOVE(v1,v2)) =
-	indent ^ "MOV " ^ (one_exp v1) ^ ", " ^ (one_exp v2)
+        indent ^ "MOV " ^ (one_exp v1) ^ ", " ^ (one_exp v2)
    |  one_stm (Tree.LABEL lab) =
         (Symbol.name lab) ^ ":"
    |  one_stm (Tree.JUMP lab) =

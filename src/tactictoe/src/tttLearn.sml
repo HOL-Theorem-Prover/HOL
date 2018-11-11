@@ -8,9 +8,9 @@
 structure tttLearn :> tttLearn =
 struct
 
-open HolKernel Abbrev boolLib aiLib  
+open HolKernel Abbrev boolLib aiLib
   smlTimeout smlLexer smlExecute
-  mlFeature mlThmData mlTacticData mlNearestNeighbor 
+  mlFeature mlThmData mlTacticData mlNearestNeighbor
   psMinimize
   tttSetup
 
@@ -23,27 +23,26 @@ fun debug s = debug_in_dir ttt_debugdir "tactictoe" s
 
 val thmlarg_placeholder = "tactictoe_thmlarg"
 
-fun is_thmlarg_stac stac = 
+fun is_thmlarg_stac stac =
   mem thmlarg_placeholder (partial_sml_lexer stac)
 
 fun change_thml thml = case thml of
     [] => NONE
-  | a :: m =>
-    (if is_thm (String.concatWith " " a) then SOME thml else NONE)
+  | a :: m => (if is_thm (String.concatWith " " a) then SOME thml else NONE)
 
 fun abstract_thmlarg_loop thmlacc l = case l of
     []       => []
   | "[" :: m =>
-    let 
+    let
       val (el,cont) = split_level "]" m
       val thml = rpt_split_level "," el
     in
       case change_thml thml of
         NONE => "[" :: abstract_thmlarg_loop thmlacc m
-      | SOME x => 
+      | SOME x =>
         (
         thmlacc := map (String.concatWith " ") thml :: !thmlacc;
-        ["[",thmlarg_placeholder,"]"] @ 
+        ["[",thmlarg_placeholder,"]"] @
           abstract_thmlarg_loop thmlacc cont
         )
     end
@@ -90,13 +89,13 @@ fun concat_absstacl ostac stacl =
     mk_sameorder_set String.compare (List.mapPartial I l)
   end
 
-fun inst_stac thmidl stac = 
+fun inst_stac thmidl stac =
   let val thmls = String.concatWith " , " (map dbfetch_of_thmid thmidl) in
     inst_thmlarg thmls stac
   end
 
 fun inst_stacl thmidl stacl = map_assoc (inst_stac thmidl) stacl
- 
+
 (* -------------------------------------------------------------------------
    Orthogonalization
    ------------------------------------------------------------------------- *)
@@ -106,7 +105,7 @@ fun test_stac g gl (stac, istac) =
     (
     debug ("test_stac " ^ stac ^ "\n" ^ istac);
     let val tac = tactic_of_sml istac
-      handle Interrupt => raise Interrupt 
+      handle Interrupt => raise Interrupt
       | _ => (debug ("Warning: tactic_of_sml: " ^ istac); NO_TAC)
     in
       timeout_tactic (!ttt_tactic_time) tac g
@@ -159,4 +158,3 @@ val s0 = "METIS_TAC [arithmeticTheory.LESS_EQ]";
 val s1 = abstract_stac s0;
 val s2 = inst_stac "foo" (valOf s1);
 *)
-

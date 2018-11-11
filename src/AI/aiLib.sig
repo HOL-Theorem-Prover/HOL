@@ -13,9 +13,9 @@ sig
   val hash_string : string -> int
 
   (* comparisons *)
-  val cpl_compare : 
+  val cpl_compare :
     ('a * 'b -> order) ->
-    ('c * 'd -> order) -> 
+    ('c * 'd -> order) ->
     ('a * 'c) * ('b * 'd) -> order
   val goal_compare : (goal * goal) -> order
   val lbl_compare : (lbl * lbl) -> order
@@ -25,11 +25,11 @@ sig
   val compare_imax : (('a * int) * ('a * int)) -> order
   val list_rmax : real list -> real
   val list_imax : int list -> int
-  
+
   (* time *)
   val add_time : ('a -> 'b) -> 'a -> 'b * real
   val print_time : string -> real -> unit
-  val total_time : real ref -> ('a -> 'b) -> 'a -> 'b  
+  val total_time : real ref -> ('a -> 'b) -> 'a -> 'b
 
   (* commands *)
   val mkDir_err : string -> unit
@@ -47,7 +47,7 @@ sig
   val daddl  :
     ('a * 'b) list -> ('a, 'b) Redblackmap.dict -> ('a, 'b) Redblackmap.dict
   val dempty : ('a * 'a -> order) -> ('a, 'b) Redblackmap.dict
-  val dnew   : ('a * 'a -> order) -> ('a * 'b) list -> 
+  val dnew   : ('a * 'a -> order) -> ('a * 'b) list ->
     ('a, 'b) Redblackmap.dict
   val dlist  : ('a, 'b) Redblackmap.dict -> ('a * 'b) list
   val dlength : ('a, 'b) Redblackmap.dict -> int
@@ -56,15 +56,15 @@ sig
   val dmap  : ('a * 'b -> 'c) ->
     ('a, 'b) Redblackmap.dict -> ('a, 'c) Redblackmap.dict
   val dfoldl : ('a * 'b * 'c -> 'c) -> 'c -> ('a, 'b) Redblackmap.dict -> 'c
-  val inv_dict : 
+  val inv_dict :
     ('a * 'a -> order) ->
     ('b, 'a) Redblackmap.dict -> ('a, 'b) Redblackmap.dict
-  val dregroup : ('a * 'a -> order) -> ('a * 'b) list -> 
-    ('a, 'b list) Redblackmap.dict 
-  val dset : ('a * 'a -> order) -> 'a list -> 
+  val dregroup : ('a * 'a -> order) -> ('a * 'b) list ->
+    ('a, 'b list) Redblackmap.dict
+  val dset : ('a * 'a -> order) -> 'a list ->
     ('a, unit) Redblackmap.dict
-  val daddset : 
-    'a list -> 'b -> ('a, unit) Redblackmap.dict -> 
+  val daddset :
+    'a list -> 'b -> ('a, unit) Redblackmap.dict ->
     ('a, unit) Redblackmap.dict
   val distrib : ('a * 'b list) list -> ('a * 'b) list
   val union_dict : ('a * 'a -> order) ->
@@ -73,10 +73,10 @@ sig
     ('a, int) Redblackmap.dict -> 'a list -> ('a, int) Redblackmap.dict
 
   (* list *)
-  val only_hd : 'a list -> 'a 
+  val only_hd : 'a list -> 'a
   val one_in_n : int -> int -> 'a list -> 'a list
   val map_snd : ('a -> 'b) -> ('c * 'a) list -> ('c * 'b) list
-  val map_fst : ('a -> 'b) -> ('a * 'c) list -> ('b * 'c) list 
+  val map_fst : ('a -> 'b) -> ('a * 'c) list -> ('b * 'c) list
   val map_assoc : ('a -> 'b) -> 'a list -> ('a * 'b) list
   val cartesian_product : 'a list -> 'b list -> ('a * 'b) list
   val findSome  : ('a -> 'b option) -> 'a list -> 'b option
@@ -95,9 +95,9 @@ sig
   val sort_thyl : string list -> string list
   val fold_left : ('a -> 'b -> 'b) -> 'a list -> 'b -> 'b
   val mk_batch : int -> 'a list -> 'a list list
-  val number_partition : int -> int -> int list list   
-  val duplicate : int -> 'a list -> 'a list  
-  val indent: int -> string   
+  val number_partition : int -> int -> int list list
+  val duplicate : int -> 'a list -> 'a list
+  val indent: int -> string
 
   (* random *)
   val random_real : unit -> real
@@ -138,7 +138,7 @@ sig
   (* escape *)
   val escape : string -> string
   val unescape : string -> string
-  
+
   (* statistics *)
   val incr   : int ref -> unit
   val decr   : int ref -> unit
@@ -149,13 +149,13 @@ sig
   val int_div : int -> int -> real
   val pow : real -> int -> real
   val approx : int -> real -> real
-  val percent : real -> real  
+  val percent : real -> real
 
   (* term *)
   val rename_bvarl : (string -> string) -> term -> term
   val all_bvar : term -> term list
   val strip_type : hol_type -> (hol_type list * hol_type)
-  val has_boolty : term -> bool  
+  val has_boolty : term -> bool
   val only_concl : thm -> term
 
 end

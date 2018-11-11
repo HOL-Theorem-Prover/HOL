@@ -15,7 +15,7 @@ open HolKernel Parse boolLib bossLib numLib pred_setSimps pred_setTheory
 val _ = new_theory "preARM";
 
 (*----------------------------------------------------------------------------*)
-(* Registers	                                                              *)
+(* Registers                                                                  *)
 (*----------------------------------------------------------------------------*)
 
 val _ = type_abbrev("REGISTER", Type`:num`);
@@ -41,13 +41,13 @@ val getS_def = Define
         `;
 
 val getS_thm = Q.store_thm (
-	"getS_thm",
+        "getS_thm",
         `(getS (cpsr : CPSR) SN = cpsr %% 31) /\
-	 (getS (cpsr : CPSR) SZ = cpsr %% 30) /\
-	 (getS (cpsr : CPSR) SC = cpsr %% 29) /\
-	 (getS (cpsr : CPSR) SV = cpsr %% 28)
-	`,
-	RW_TAC std_ss [getS_def]);
+         (getS (cpsr : CPSR) SZ = cpsr %% 30) /\
+         (getS (cpsr : CPSR) SC = cpsr %% 29) /\
+         (getS (cpsr : CPSR) SV = cpsr %% 28)
+        `,
+        RW_TAC std_ss [getS_def]);
 
 
 val setS_def = Define
@@ -86,11 +86,11 @@ val setNZCV_thm = Q.store_thm (
 
 
 (*-------------------------------------------------------------------------------*)
-(* Operator			                                                 *)
+(* Operator                                                                      *)
 (*-------------------------------------------------------------------------------*)
 
 val _ = Hol_datatype ` OPERATOR = MOV |
-			ADD | SUB | RSB | MUL | MLA |
+                        ADD | SUB | RSB | MUL | MLA |
                         AND | ORR | EOR | CMP | TST |
                         LSL | LSR | ASR | ROR |
                         LDR | STR | LDMFD | STMFD |
@@ -106,7 +106,7 @@ val _ = Hol_datatype ` COND = EQ | CS | MI | VS | HI | GE | GT | AL |
                               NE | CC | PL | VC | LS | LT | LE | NV`;
 
 (*-------------------------------------------------------------------------------*)
-(* Expressions			                                                 *)
+(* Expressions                                                                   *)
 (*-------------------------------------------------------------------------------*)
 
 val _ = type_abbrev("ADDR", Type`:num`);
@@ -118,11 +118,11 @@ val _ = Hol_datatype `OFFSET = POS of DISTANCE
              `;
 
 
-val _ = Hol_datatype `EXP = MEM of num # OFFSET			(* (register, offset) *)
+val _ = Hol_datatype `EXP = MEM of num # OFFSET                 (* (register, offset) *)
                   | NCONST of num
-		  | WCONST of word32
+                  | WCONST of word32
                   | REG of REGISTER
-		  | WREG of REGISTER
+                  | WREG of REGISTER
              `;
 
 val FP_def =
@@ -144,7 +144,7 @@ val PC_def =
 (* Operations                                                                    *)
 (*-------------------------------------------------------------------------------*)
 
-(* An instruction: ((operator, condition code, set flags), destination, source, jump)					 *)
+(* An instruction: ((operator, condition code, set flags), destination, source, jump)                                    *)
 val _ = type_abbrev("OPERATION", Type`:OPERATOR # (COND option) # bool`);
 val _ = type_abbrev("INST", Type`:OPERATION # (EXP option) # (EXP list) # (OFFSET option)`);
 
@@ -157,7 +157,7 @@ val _ = type_abbrev("STATE", Type`: ADDR # CPSR # (REGISTER |-> DATA) # (ADDR |-
 val FORALL_DSTATE = Q.store_thm
   ("FORALL_DSTATE",
     `(!s:(REGISTER |-> DATA) # (ADDR |-> DATA). P s) =
-	!regs mem. P (regs,mem)`,
+        !regs mem. P (regs,mem)`,
     SIMP_TAC std_ss [FORALL_PROD]);
 
 val FORALL_STATE = Q.store_thm
@@ -174,11 +174,11 @@ val read_def =
     read (regs,mem) (exp:EXP) =
       case exp of
         MEM (r,offset) ->
-	    (case offset of
-		  POS k -> mem ' (w2n (regs ' r) + k) ||
-		  NEG k -> mem ' (w2n (regs ' r) - k)
-	    )	||
-	NCONST i -> n2w i     ||
+            (case offset of
+                  POS k -> mem ' (w2n (regs ' r) + k) ||
+                  NEG k -> mem ' (w2n (regs ' r) - k)
+            )   ||
+        NCONST i -> n2w i     ||
         WCONST w -> w         ||
         REG r -> regs ' r
 `;
@@ -197,11 +197,11 @@ val write_def =
     write (regs,mem) (exp:EXP) (v:DATA)=
       case exp of
         MEM (r,offset) ->
-	    (regs,
+            (regs,
              (case offset of
                    POS k -> mem |+ (w2n (regs ' r) + k, v) ||
                    NEG k -> mem |+ (w2n (regs ' r) - k, v)
-             ))   	 ||
+             ))          ||
         REG r -> ( regs |+ (r, v),
                    mem ) ||
         _ -> (regs, mem)
@@ -245,31 +245,31 @@ val decode_op_def =
           (* we assume that the stack goes from low addresses to high addresses even it is "FD",
              change LDMFD to be LDMFA if necessary *)
 
-	  LDMFD -> (case THE dst of
-			REG r ->
-			     (* We must read values from the original state instead of the updated state *)
-			    (cpsr, FST (FOLDL (\(s1,i) reg. (write s1 reg (read s (MEM(r,POS(i+1)))), i+1)) (s,0) src))
+          LDMFD -> (case THE dst of
+                        REG r ->
+                             (* We must read values from the original state instead of the updated state *)
+                            (cpsr, FST (FOLDL (\(s1,i) reg. (write s1 reg (read s (MEM(r,POS(i+1)))), i+1)) (s,0) src))
                     ||
                         WREG r ->
-			    (cpsr, write (FST (FOLDL (\(s1,i) reg. (write s1 reg (read s (MEM(r,POS(i+1)))), i+1)) (s,0) src))
-						 (REG r) (read s (REG r) + n2w (LENGTH src)))
-		   )
-	      ||
+                            (cpsr, write (FST (FOLDL (\(s1,i) reg. (write s1 reg (read s (MEM(r,POS(i+1)))), i+1)) (s,0) src))
+                                                 (REG r) (read s (REG r) + n2w (LENGTH src)))
+                   )
+              ||
 
           (* we assume that the stack goes from low addresses to high addresses even it is "FD",
              change STMFA to be STMFD if necessary *)
 
-	  STMFD -> (case THE dst of
+          STMFD -> (case THE dst of
                         REG r ->
                                 (cpsr,
-			         (* We must read values from the original state instead of the updated state *)
+                                 (* We must read values from the original state instead of the updated state *)
                                  FST (FOLDL (\(s1,i) reg. (write s1 (MEM(r,NEG i)) (read s reg), i+1)) (s,0) (REVERSE src))) ||
                         WREG r ->
                                 (cpsr,
-				 write (FST (FOLDL (\(s1,i) reg. (write s1 (MEM(r,NEG i)) (read s reg), i+1)) (s,0) (REVERSE src)))
-					(REG r) (read s (REG r) - n2w (LENGTH src)))
-		   )
-	      ||
+                                 write (FST (FOLDL (\(s1,i) reg. (write s1 (MEM(r,NEG i)) (read s reg), i+1)) (s,0) (REVERSE src)))
+                                        (REG r) (read s (REG r) - n2w (LENGTH src)))
+                   )
+              ||
           ADD -> (cpsr, (write s (THE dst) (read s (HD src) + read s (HD (TL (src))))))
               ||
           SUB -> (cpsr, (write s (THE dst) (read s (HD src) - read s (HD (TL (src))))))
@@ -278,8 +278,8 @@ val decode_op_def =
               ||
           MUL -> (cpsr, (write s (THE dst) (read s (HD src) * read s (HD (TL (src))))))
               ||
-	  MLA -> (cpsr, (write s (THE dst) (read s (HD src) * read s (HD (TL (src))) +
-						  read s (HD (TL (TL (src)))) )))
+          MLA -> (cpsr, (write s (THE dst) (read s (HD src) * read s (HD (TL (src))) +
+                                                  read s (HD (TL (TL (src)))) )))
               ||
           AND -> (cpsr, (write s (THE dst) (read s (HD src) && read s (HD (TL (src))))))
               ||
@@ -289,16 +289,16 @@ val decode_op_def =
               ||
 
           LSL -> (cpsr, (write s (THE dst)
-				(read s (HD src) << w2n (read s (HD (TL (src)))))))
+                                (read s (HD src) << w2n (read s (HD (TL (src)))))))
               ||
           LSR -> (cpsr, (write s (THE dst)
-				(read s (HD src) >>> w2n (read s (HD (TL (src)))))))
+                                (read s (HD src) >>> w2n (read s (HD (TL (src)))))))
               ||
           ASR -> (cpsr, (write s (THE dst)
-				(read s (HD src) >> w2n (read s (HD (TL (src)))))))
+                                (read s (HD src) >> w2n (read s (HD (TL (src)))))))
               ||
           ROR -> (cpsr, (write s (THE dst)
-				(read s (HD src) #>> w2n (read s (HD (TL (src)))))))
+                                (read s (HD src) #>> w2n (read s (HD (TL (src)))))))
               ||
 
           CMP -> (let a = read s (HD src) in
@@ -322,20 +322,20 @@ val decode_op_def =
               ||
 
           LDR -> (cpsr, (write s (THE dst) (read s (HD src))))
-		(* write the value in src (i.e. the memory) to the dst (i.e. the register)*)
+                (* write the value in src (i.e. the memory) to the dst (i.e. the register)*)
               ||
 
           STR -> (cpsr, (write s (HD src) (read s (THE dst))))
-		(* write the value in src (i.e. the register) to the dst (i.e. the memory)*)
+                (* write the value in src (i.e. the register) to the dst (i.e. the memory)*)
               ||
 
           MSR -> (read s (HD src), s)
               ||
           MRS -> (cpsr, (write s (THE dst) cpsr))
-	      ||
+              ||
 
-	  B   -> (cpsr, s)
-	      ||
+          B   -> (cpsr, s)
+              ||
           BL ->  (cpsr, write s (REG 14) (n2w (SUC pc)))
   `;
 
@@ -383,7 +383,7 @@ val decode_op_thm = Q.store_thm
                                 (write s1 reg
                                    (read s (MEM (r,POS (i + 1)))),i + 1))
                                (s,0) src)) (REG r)
-                       	     (read s (REG r) + n2w (LENGTH src)))) /\
+                             (read s (REG r) + n2w (LENGTH src)))) /\
   (decode_op (pc,cpsr,s) (STMFD,SOME (REG r),src,jump) =
                   (cpsr, FST (FOLDL
                           (\(s1,i) reg.
@@ -429,16 +429,16 @@ val decode_cond_def =
             NONE -> (pc+1, decode_op (pc,cpsr,s) (op,dst,src,jump))
                 ||
             SOME c ->
-		          if (decode_cond_cpsr cpsr c) then (goto(pc,jump), decode_op (pc,cpsr,s) (op,dst,src,jump))
-			        else (pc+1, cpsr, s))
+                          if (decode_cond_cpsr cpsr c) then (goto(pc,jump), decode_op (pc,cpsr,s) (op,dst,src,jump))
+                                else (pc+1, cpsr, s))
   `;
 
 val decode_cond_thm = Q.store_thm
 ( "decode_cond_thm",
   `!pc cpsr s op sflag dst src jump.
-	  (decode_cond (pc,cpsr,s) ((op,NONE,sflag),dst,src,jump) = (pc+1, decode_op (pc,cpsr,s) (op,dst,src,jump))) /\
+          (decode_cond (pc,cpsr,s) ((op,NONE,sflag),dst,src,jump) = (pc+1, decode_op (pc,cpsr,s) (op,dst,src,jump))) /\
      (decode_cond (pc,cpsr,s) ((op,SOME AL,sflag),dst,src,jump) = (goto(pc,jump), decode_op (pc,cpsr,s) (op,dst,src,jump))) /\
-	  (decode_cond (pc,cpsr,s) ((op,SOME NV,sflag),dst,src,jump) = (pc+1, cpsr, s))`,
+          (decode_cond (pc,cpsr,s) ((op,SOME NV,sflag),dst,src,jump) = (pc+1, cpsr, s))`,
 
   RW_TAC std_ss [decode_cond_def, decode_cond_cpsr_def]);
 
@@ -487,7 +487,7 @@ val UPLOAD_LEM = Q.store_thm (
 val UPLOAD_START_POINT_INDEPENDENT = Q.store_thm (
   "UPLOAD_START_POINT_INDEPENDENT",
   `!instL start1 start2 iB addr. addr < LENGTH instL ==>
-	((upload instL iB start1) (start1+addr) = (upload instL iB start2) (start2+addr))`,
+        ((upload instL iB start1) (start1+addr) = (upload instL iB start2) (start2+addr))`,
    RW_TAC std_ss [UPLOAD_LEM]
   );
 
@@ -508,12 +508,12 @@ val UPLOADCODE_LEM = Q.store_thm (
 val uploadSeg_def = Define `
     (uploadSeg 0 segs iB = iB) /\
     (uploadSeg (SUC n) segs iB =
-	upload (EL n segs) (uploadSeg n segs iB) (10 * n))`;
+        upload (EL n segs) (uploadSeg n segs iB) (10 * n))`;
 
 val UPLOADSEG_LEM = Q.store_thm
   ("UPLOADSEG_LEM",
    `!n segs instB. uploadSeg n segs instB =
-	(if n > 0 then upload (EL (PRE n) segs) (uploadSeg (PRE n) segs instB) (10 * (PRE n)) else instB)`,
+        (if n > 0 then upload (EL (PRE n) segs) (uploadSeg (PRE n) segs instB) (10 * (PRE n)) else instB)`,
     Cases_on `n` THEN RW_TAC list_ss [uploadSeg_def]
   );
 
@@ -528,7 +528,7 @@ val (run_def,run_ind) =
     `run n instB P (pc,cpsr,st) =
         if n = 0 then (pc,cpsr,st)
         else
-	   if P (pc,cpsr,st) then (pc,cpsr,st)
+           if P (pc,cpsr,st) then (pc,cpsr,st)
            else run (n-1) instB P (decode_cond (pc,cpsr,st) (instB pc))`,
     WF_REL_TAC `measure FST`);
 
@@ -539,7 +539,7 @@ val RUN_LEM_1 = Q.store_thm
   ("RUN_LEM_1",
    `!n instB s.
         (run (SUC n) instB P s =
-		if P s then s
+                if P s then s
                 else run n instB P (decode_cond s (instB (FST s)))
         ) /\
         (run 0 instB P s = s)`,
@@ -566,8 +566,8 @@ val RUN_THM_1 = Q.store_thm
         RW_TAC list_ss [RUN_LEM_1],
         `SUC m + n = SUC (m + n)` by RW_TAC list_ss [ADD_SUC] THEN
         ASM_REWRITE_TAC [] THEN RW_TAC list_ss [RUN_LEM_1] THEN
-	RW_TAC list_ss [RUN_LEM_2]
-  	]
+        RW_TAC list_ss [RUN_LEM_2]
+        ]
   );
 
 val _ = Globals.priming := NONE;
@@ -678,8 +678,8 @@ val SHORTEST_LEM = Q.store_thm
     `(P x ==> ((LEAST n. P (FUNPOW g n x)) = 0))` by ALL_TAC THENL [
        STRIP_TAC THEN
        `P (FUNPOW g 0 x)` by METIS_TAC [FUNPOW] THEN
-	    `~(0 < (LEAST n. P (FUNPOW g n x)))` by METIS_TAC [SIMP_RULE std_ss [] (Q.SPECL [`\n.P (FUNPOW g n x)`, `0`] LESS_LEAST)] THEN
-	    RW_TAC arith_ss [],
+            `~(0 < (LEAST n. P (FUNPOW g n x)))` by METIS_TAC [SIMP_RULE std_ss [] (Q.SPECL [`\n.P (FUNPOW g n x)`, `0`] LESS_LEAST)] THEN
+            RW_TAC arith_ss [],
        STRIP_TAC THENL [
            RW_TAC std_ss [],
            STRIP_TAC THEN
@@ -758,17 +758,17 @@ val TERD_WHILE_EQ_UNROLL = Q.store_thm
            REPEAT STRIP_TAC THEN
            `1 <= shortest P g x` by RW_TAC arith_ss [] THEN
            IMP_RES_TAC SHORTEST_THM THEN
-	   `~( P x)` by METIS_TAC [SHORTEST_LEM] THEN
+           `~( P x)` by METIS_TAC [SHORTEST_LEM] THEN
            `stopAt P g (g x)` by ALL_TAC THENL [
                FULL_SIMP_TAC std_ss [stopAt_def] THEN
                    Cases_on `n` THEN
-	           FULL_SIMP_TAC std_ss [FUNPOW] THEN
+                   FULL_SIMP_TAC std_ss [FUNPOW] THEN
                    METIS_TAC [],
-	       PAT_ASSUM ``shortest P g x = k + 1`` (ASSUME_TAC o REWRITE_RULE [REWRITE_RULE [Once ADD_SYM] (GSYM SUC_ONE_ADD)]) THEN
+               PAT_ASSUM ``shortest P g x = k + 1`` (ASSUME_TAC o REWRITE_RULE [REWRITE_RULE [Once ADD_SYM] (GSYM SUC_ONE_ADD)]) THEN
                    ASSUME_TAC (DECIDE ``1 = SUC 0``) THEN
                    REWRITE_TAC [Once WHILE] THEN
                    `v = shortest P g (g x)` by METIS_TAC [FUNPOW, numTheory.INV_SUC] THEN
-		   FULL_SIMP_TAC std_ss [FUNPOW]
+                   FULL_SIMP_TAC std_ss [FUNPOW]
            ]
    ]
   );
@@ -793,7 +793,7 @@ val WHILE_STILL = Q.store_thm
   ("WHILE_STILL",
    `!P g x.
         stopAt P g x ==>
-	    (WHILE ($~ o P) g (WHILE ($~ o P) g x) = WHILE ($~ o P) g x)`,
+            (WHILE ($~ o P) g (WHILE ($~ o P) g x) = WHILE ($~ o P) g x)`,
    SIMP_TAC std_ss [TERD_WHILE_EQ_UNROLL] THEN
    RW_TAC std_ss [stopAt_def, shortest_def] THEN
    IMP_RES_TAC (SIMP_RULE std_ss [] (Q.SPEC `\n.P (FUNPOW g n x)` LEAST_EXISTS_IMP)) THEN
@@ -804,7 +804,7 @@ val WHILE_STILL = Q.store_thm
 (*---------------------------------------------------------------------------------*)
 (*                    Run to a particular position                                 *)
 (* Run the instructions in the instruction buffer until the pc reaches a specific  *)
-(*	position. The running may not terminate and keep going on                  *)
+(*      position. The running may not terminate and keep going on                  *)
 (*---------------------------------------------------------------------------------*)
 
 val _ = type_abbrev("STATEPCS", Type`:STATE # (num->bool)`);
@@ -816,7 +816,7 @@ val step_def = Define `
 val step_FORM1 = Q.store_thm
   ("step_FORM1",
    `!instB. step instB =
-	 \s.(decode_cond (FST s) (instB (FST (FST s))),FST (FST s) INSERT (SND s))`,
+         \s.(decode_cond (FST s) (instB (FST (FST s))),FST (FST s) INSERT (SND s))`,
    RW_TAC std_ss [FUN_EQ_THM] THEN
    `?s0 pcS0. s = (s0,pcS0)` by METIS_TAC [ABS_PAIR_THM] THEN
    RW_TAC std_ss [step_def]
@@ -856,7 +856,7 @@ val SHORTEST_INDEPENDENT_OF_PCS = Q.store_thm
   `!s0 s1 instB j.
         stopAt (\s. FST (FST s) = j) (step instB) s0 /\
         (FST s0 = FST s1) ==>
-	    (shortest (\s. FST (FST s) = j) (step instB) s0 =
+            (shortest (\s. FST (FST s) = j) (step instB) s0 =
              shortest (\s. FST (FST s) = j) (step instB) s1)`,
   Induct_on `shortest (\s. FST (FST s) = j) (step instB) s0` THENL [
       RW_TAC std_ss [] THEN
@@ -872,11 +872,11 @@ val SHORTEST_INDEPENDENT_OF_PCS = Q.store_thm
           FULL_SIMP_TAC std_ss [] THEN
           STRIP_TAC THEN
           POP_ASSUM (ASSUME_TAC o SIMP_RULE std_ss [Ntimes step_def 2] o (Q.SPEC `step instB (st,pcS1)`)) THEN
-	  ASM_REWRITE_TAC [] THEN
+          ASM_REWRITE_TAC [] THEN
           IMP_RES_TAC STOPAT_ANY_PCS_2 THEN
           `~(\s. FST (FST s) = j) (st,pcS1)` by METIS_TAC [FST] THEN
           `SUC 0 <= shortest (\s:STATEPCS. FST (FST s) = j) (step instB) (st,pcS1)` by METIS_TAC [Q.SPECL [`(st,pcS1)`,`(\s:STATEPCS. FST (FST s) = j)`,
-			`step instB`] (INST_TYPE [alpha |-> Type`:STATEPCS`] SHORTEST_LEM), DECIDE (Term `1 = SUC 0`)] THEN
+                        `step instB`] (INST_TYPE [alpha |-> Type`:STATEPCS`] SHORTEST_LEM), DECIDE (Term `1 = SUC 0`)] THEN
           `shortest (\s. FST (FST s) = j) (step instB) (st,pcS1)  = shortest (\s. FST (FST s) = j) (step instB) (step instB (st,pcS1)) + SUC 0`
                 by METIS_TAC [FUNPOW, SHORTEST_THM] THEN
            RW_TAC arith_ss []
@@ -885,7 +885,7 @@ val SHORTEST_INDEPENDENT_OF_PCS = Q.store_thm
 
 val runTo_def = Define `
   runTo instB j (s,pcS) =
-	WHILE (\(s,pcS). ~(FST s = j)) (step instB) (s,pcS)`;
+        WHILE (\(s,pcS). ~(FST s = j)) (step instB) (s,pcS)`;
 
 (*----------------------------------------------------------------------------*)
 (* A bunch of theorems about runTo                                            *)
@@ -894,7 +894,7 @@ val runTo_def = Define `
 val runTo_FORM1 = Q.store_thm
   ("runTo_FORM1",
    `!instB j s. runTo instB j s =
-	WHILE (\s. ~(FST (FST s) = j)) (step instB) s`,
+        WHILE (\s. ~(FST (FST s) = j)) (step instB) s`,
    REPEAT GEN_TAC THEN
    `?s0 pcS0. s = (s0,pcS0)` by METIS_TAC [ABS_PAIR_THM] THEN
    RW_TAC std_ss [runTo_def] THEN
@@ -916,7 +916,7 @@ val RUNTO_ADVANCE = Q.store_thm
    RW_TAC list_ss [runTo_def, step_def] THENL [
         RW_TAC list_ss [Once WHILE],
         RW_TAC list_ss [Once WHILE]
-	]
+        ]
   );
 
 val RUNTO_EXPAND_ONCE = Q.store_thm
@@ -949,7 +949,7 @@ val UNROLL_RUNTO = Q.store_thm
 
 val terd_def = Define `
   terd instB j s =
-	stopAt (\s:STATEPCS.FST (FST s) = j) (step instB) s`;
+        stopAt (\s:STATEPCS.FST (FST s) = j) (step instB) s`;
 
 
 val set_ss = std_ss ++ SET_SPEC_ss ++ PRED_SET_ss;
@@ -1054,7 +1054,7 @@ val RUNTO_PCS_UNION_LEM = Q.store_thm
         RES_TAC THEN
         RW_TAC std_ss [] THEN
        `FST (s:STATE) IN SND (FUNPOW (step instB) n (s1,FST s INSERT pcS'))` by (FULL_SIMP_TAC set_ss [step_def] THEN
-	      RW_TAC set_ss [(SIMP_RULE arith_ss [step_def] o REWRITE_RULE [FUNPOW] o
+              RW_TAC set_ss [(SIMP_RULE arith_ss [step_def] o REWRITE_RULE [FUNPOW] o
               Q.SPECL [`SUC n`, `0`, `instB`,`(s,pcS')`]) RUNTO_PCS_MEMBERS, RUNTO_PCS_GROW]) THEN
        `pcS1 = FST (s:STATE) INSERT pcS` by FULL_SIMP_TAC std_ss [step_def] THEN
        FULL_SIMP_TAC set_ss [] THEN
@@ -1148,8 +1148,8 @@ val RUNTO_COMPOSITION = Q.store_thm
    `!j k instB s0 pcS0 s1 pcS1.
         terd instB j (s0,pcS0) /\
         ((s1,pcS1) = runTo instB j (s0,pcS0)) /\
-	~(k IN ((FST s0) INSERT pcS1)) ==>
-	        (runTo instB k (s0,pcS0) = runTo instB k (s1,pcS1))`,
+        ~(k IN ((FST s0) INSERT pcS1)) ==>
+                (runTo instB k (s0,pcS0) = runTo instB k (s1,pcS1))`,
     RW_TAC std_ss [] THEN
     IMP_RES_TAC (SIMP_RULE std_ss [LET_THM] RUNTO_COMPOSITION_LEM) THEN
     `?s' pcS'. runTo instB j (s0,pcS0) = (s',pcS')` by METIS_TAC [ABS_PAIR_THM] THEN

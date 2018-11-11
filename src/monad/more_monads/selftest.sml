@@ -27,14 +27,11 @@ val _ = if same_const bind_t (#1 (strip_comb t)) then OK()
         else udie()
 
 val _ = Parse.current_backend := PPBackEnd.vt100_terminal
-fun tpp (s,expected) = let
-  val t = Parse.Term [QUOTE s]
-  val _ = tprint ("Testing (coloured-)printing of `"^s^"`")
-  val res = ppstring pp_term t
-in
-  if res = expected then OK()
-  else die ("FAILED\n  Printer produced \"" ^ res ^ "\"!")
-end
+fun tpp' (s,expected) =
+  testutils.tpp_expected {
+    input = s, output = expected,
+    testf = fn s => "Testing (coloured-)printing of `"^s^"`"
+  }
 
 fun bound s = "\^[[0;32m" ^ s ^ "\^[[0m"
 fun free s = "\^[[0;1;34m" ^ s ^ "\^[[0m"
@@ -53,7 +50,24 @@ val monadtpp_test2 =
     ("do m1; m2 od",
      concat ["do ", free "m1", "; ", free "m2", " od"])
 
-val _ = app tpp [monadtpp_test1, monadtpp_test2]
+val monadtpp_test3 =
+  ("do x <- m1; y <- m2; \
+   \if my_very_long_guard then m3 else do a <- very_long_monad1; \
+   \b <- very_long_monad2; superLongFinalMonad long_arg od od",
+   String.concat [
+    "do\n  ",
+      bx, " <- ", free "m1", ";\n  ",
+      bound "y", " <- ", free "m2", ";\n  ",
+      "if ", free "my_very_long_guard", " then ", free "m3", "\n  ",  (* 2 *)
+      "else\n    ",
+        "do\n      ",                                                 (* 6 *)
+          bound "a", " <- ", free "very_long_monad1", ";\n      ",    (* 6 *)
+          bound "b", " <- ", free "very_long_monad2", ";\n      ",    (* 6 *)
+          free "superLongFinalMonad", " ", free "long_arg", "\n    ", (* 4 *)
+        "od\n",                                                       (* 0 *)
+    "od"])
+
+val _ = app tpp' [monadtpp_test1, monadtpp_test2, monadtpp_test3]
 
 val _ = clear_overloads_on "monad_bind"
 
@@ -102,14 +116,14 @@ val _ = same_const f ``option$OPTION_BIND`` andalso
         hd (tl args) = ``K (SOME 4) : num -> num option`` andalso
         (OK(); true) orelse udie()
 
-val _ = app tpp [monadtpp_test1, monadtpp_test2]
+val _ = app tpp' [monadtpp_test1, monadtpp_test2, monadtpp_test3]
 
 val _ = disable_monad "option"
 val _ = enable_monad "errorState"
 
 val _ = print "Testing with error state monad\n"
 
-val _ = app tpp [monadtpp_test1, monadtpp_test2]
+val _ = app tpp' [monadtpp_test1, monadtpp_test2, monadtpp_test3]
 
 val _ = current_backend := PPBackEnd.raw_terminal
 val _ = testutils.tpp "do x <- f y; g x od arg"

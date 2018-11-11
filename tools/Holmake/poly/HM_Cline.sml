@@ -3,6 +3,7 @@ struct
 
 type t = {
   holstate : string option,
+  multithread : int option,
   poly : string option,
   polymllibdir : string option,
   poly_not_hol : bool,
@@ -13,21 +14,23 @@ type t = {
 
 local
   open FunctionalRecordUpdate
-  fun makeUpdateT z = makeUpdate7 z
+  fun makeUpdateT z = makeUpdate8 z
 in
 fun updateT z = let
-  fun from core holstate poly polymllibdir poly_not_hol relocbuild time_limit =
-    {core = core, holstate = holstate, poly = poly,
+  fun from core holstate multithread poly polymllibdir poly_not_hol relocbuild
+           time_limit =
+    {core = core, holstate = holstate, multithread = multithread, poly = poly,
      polymllibdir = polymllibdir, poly_not_hol = poly_not_hol,
      relocbuild = relocbuild, time_limit = time_limit}
-  fun from' time_limit relocbuild poly_not_hol polymllibdir poly holstate
-            core =
-    {core = core, holstate = holstate, poly = poly,
+  fun from' time_limit relocbuild poly_not_hol polymllibdir poly multithread
+            holstate core =
+    {core = core, holstate = holstate, multithread = multithread, poly = poly,
      polymllibdir = polymllibdir, poly_not_hol = poly_not_hol,
      relocbuild = relocbuild, time_limit = time_limit}
-  fun to f {core, holstate, poly, polymllibdir, poly_not_hol, relocbuild,
-            time_limit} =
-    f core holstate poly polymllibdir poly_not_hol relocbuild time_limit
+  fun to f {core, holstate, multithread, poly, polymllibdir, poly_not_hol,
+            relocbuild, time_limit} =
+    f core holstate multithread poly polymllibdir poly_not_hol relocbuild
+      time_limit
 in
   makeUpdateT (from, from', to)
 end z
@@ -39,6 +42,7 @@ fun fupd_core f t = updateT t (U #core (f (#core t))) $$
 val default_options = {
   core = HM_Core_Cline.default_core_options,
   holstate = NONE,
+  multithread = NONE,
   poly = NONE,
   polymllibdir = NONE,
   poly_not_hol = false,
@@ -88,9 +92,31 @@ fun set_time_limit s =
                                   (U #time_limit (SOME (Time.fromSeconds i)))
                                   $$)
 
+fun mt_optint sopt =
+  let
+    fun set i =
+      resfn (fn (wn, t : t) =>
+                (if isSome (#multithread t) then
+                   wn ("Multithread count already set; ignoring earlier count")
+                 else ();
+                 updateT t (U #multithread (SOME i)) $$))
+  in
+    case sopt of
+        NONE => set 0
+      | SOME s =>
+        (case Int.fromString s of
+             SOME i => set i
+           | NONE => resfn
+                       (fn (wn, t:t) =>
+                           (wn ("Bad count for multithread; ignoring it");
+                            t)))
+  end
+
 val poly_option_descriptions = [
   {help = "specify HOL state", long = ["holstate"], short = "",
    desc = ReqArg (set_holstate, "holstate")},
+  {help = "thread count (0/none = max h/w count)", short = "",
+   long = ["mt"], desc = OptArg (mt_optint, "c")},
   {help = "specify Poly executable", long = ["poly"], short = "",
    desc = ReqArg (set_poly, "executable")},
   {help = "use poly rather than a HOL heap", long = ["poly_not_hol"],

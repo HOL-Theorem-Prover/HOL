@@ -206,8 +206,8 @@ let val rand_term = random_term arch enc
                                              else
                                                if enc = ARM orelse
                                                   enc = Thumb2 andalso
-            	                                  wide andalso not unpriv
-	                                       then 12
+                                                  wide andalso not unpriv
+                                               then 12
                                                else
                                                  if enc = ARM orelse
                                                     enc = Thumb2  orelse
@@ -868,7 +868,7 @@ local
   fun generate_opcode_cond pass arch enc opc = let
     val _ = valid_arch_ecoding enc arch orelse
               raise ERR "generate_opcode"
-		        "Architecture does not support encoding"
+                        "Architecture does not support encoding"
     val b = block (encoding enc)
     val ass = case b
               of "ARM"    => armLib.arm_disassemble_decode opc
@@ -882,7 +882,7 @@ in
   fun generate_random arch enc class =
     let val _ = valid_arch_ecoding enc arch orelse
                   raise ERR "generate_random"
-		            "Architecture does not support encoding"
+                            "Architecture does not support encoding"
         val a = arch_to_string arch
         val aa = String.concat ["ARCH ", a, "\n "]
         val typ = case class

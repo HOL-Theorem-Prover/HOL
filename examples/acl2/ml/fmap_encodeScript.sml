@@ -820,16 +820,16 @@ val lexorder_sym = prove(
     if ~(a = "") /\ (BASIC_INTERN b a = sym a b)
        then if ~(c = "") /\ (BASIC_INTERN d c = sym c d)
                then if STRING_LESS b d \/ (b = d) /\ STRING_LESS_EQ a c then t else nil
- 	       else t
+               else t
        else if ~(c = "") /\ (BASIC_INTERN d c = sym c d)
-       	       then nil
-	       else if STRING_LESS a c \/ (a = c) /\ STRING_LESS_EQ b d then t else nil``,
+               then nil
+               else if STRING_LESS a c \/ (a = c) /\ STRING_LESS_EQ b d then t else nil``,
  ONCE_REWRITE_TAC [lexorder_def] THEN
  REWRITE_TAC [sexpTheory.coerce_string_to_list_def,
    hol_defaxiomsTheory.ACL2_SIMPS, sexpTheory.itel_def,
    sexpTheory.SEXP_SYM_LESS_EQ_def,sexpTheory.SEXP_SYM_LESS_def] THEN
   REPEAT (CHANGED_TAC (REPEAT (POP_ASSUM MP_TAC) THEN RW_TAC (std_ss ++ boolSimps.LET_ss)
-    	   [GSYM sexpTheory.int_def, hol_defaxiomsTheory.ACL2_SIMPS,
+           [GSYM sexpTheory.int_def, hol_defaxiomsTheory.ACL2_SIMPS,
             sexpTheory.coerce_string_to_list_def,
             REWRITE_RULE [sexpTheory.nil_def] sexp_str_lt_l1,
             string_less_l_nil, sexpTheory.COMMON_LISP_def])) THEN
@@ -849,7 +849,7 @@ val vars2 = [``num (com c d)``, ``sym c d``, ``str c``, ``chr c``, ``cons c d``]
 val lexorder_terms = flatten (map (fn y => (map (fn x => mk_comb(mk_comb(``lexorder``, x), y)) vars1)) vars2);
 val lexorder_thms = map (REWRITE_CONV [lexorder_str_string, lexorder_char, lexorder_sym] THENC ONCE_REWRITE_CONV [lexorder_def] THENC
                          REWRITE_CONV [hol_defaxiomsTheory.ACL2_SIMPS,sexpTheory.itel_def, sym_rwr,
-    		       	               sexpTheory.SEXP_SYM_LESS_EQ_def, sexpTheory.SEXP_SYM_LESS_def]) lexorder_terms;
+                                       sexpTheory.SEXP_SYM_LESS_EQ_def, sexpTheory.SEXP_SYM_LESS_def]) lexorder_terms;
 
 val SEXP_LE_RWRS = LIST_CONJ (hol_defaxiomsTheory.ACL2_SIMPS::bool_rwr::
                               METIS_PROVE [] ``((if a then b else c) = d) = (a /\ (b = d) \/ ~a /\ (c = d))``::lexorder_thms);
@@ -944,15 +944,15 @@ val map_fmap_def = Define `map_fmap m1 m2 = L2M o MAP (m1 ## m2) o M2L`;
 val all_fmap_def = Define `all_fmap p1 p2 = EVERY (all_pair p1 p2) o M2L`;
 
 val fix_fmap_def = Define `fix_fmap f1 f2 = list (pair I I) o
-    		   	  	    QSORT3 ($<= LEX (K (K T))) o M2L o L2M o sexp_to_list (sexp_to_pair I I) o fix_list (fix_pair f1 f2)`;
+                                    QSORT3 ($<= LEX (K (K T))) o M2L o L2M o sexp_to_list (sexp_to_pair I I) o fix_list (fix_pair f1 f2)`;
 
 val encode_fmap_def = Define `encode_fmap fenc tenc = list (pair fenc tenc) o QSORT3 ((inv_image $<= fenc) LEX (K (K T))) o M2L`;
 
 val decode_fmap_def = Define `decode_fmap fdec tdec = L2M o sexp_to_list (sexp_to_pair fdec tdec)`;
 
 val detect_fmap_def = Define `detect_fmap fdet tdet x =
-    		      	     		  (MAPSET ($<= LEX (K (K T))) o sexp_to_list (sexp_to_pair I I)) x /\
-					  (listp (pairp fdet tdet) x)`;
+                                          (MAPSET ($<= LEX (K (K T))) o sexp_to_list (sexp_to_pair I I)) x /\
+                                          (listp (pairp fdet tdet) x)`;
 
 (*****************************************************************************)
 (* Encoding proofs                                                           *)
@@ -1024,7 +1024,7 @@ val QSORT3_M2L_L2M_MAP_INV = store_thm("QSORT3_M2L_L2M_MAP_INV",
     `total (inv_image $<= h)` by METIS_TAC [SEXP_LE_TOTAL, TOTAL_INV] THEN
     TRY (METIS_TAC [M2L_L2M_MAP, PERM_QSORT3, PERM_TRANS,PERM_SYM, PERM_MAP, QSORT3_SORTS, SEXP_LE_TOTAL,
                SEXP_LE_TRANSITIVE, TRANSITIVE_K, TOTAL_K, TRANSITIVE_LEX, TOTAL_LEX, SORTS_DEF, SORTED_LEX,
-	       ANTISYM_INV, TRANS_INV, IRREFL_INV, TOTAL_INV,
+               ANTISYM_INV, TRANS_INV, IRREFL_INV, TOTAL_INV,
                SEXP_LE_ANTISYMMETRIC, ALL_DISTINCT_PERM, ALL_DISTINCT_MAPFST_M2L]));
 
 val INVIMAGE_I = store_thm("INVIMAGE_I",
@@ -1077,7 +1077,7 @@ val lemma
     = GSYM (GEN_ALL (PULL_RULE (DISCH_ALL (CONJUNCT2 (UNDISCH (SPEC_ALL (PULL_RULE (REWRITE_RULE [STABLE_DEF] QSORT3_STABLE))))))));
 val sorttac
     = RW_TAC std_ss [map_lemma, TRANSITIVE_K, SEXP_LE_ANTISYMMETRIC, SEXP_LE_TRANSITIVE, SEXP_LE_TOTAL,
-      	     	     TOTAL_INV, TRANS_INV, ANTISYM_INV, IRREFL_INV, INV_INV_IMAGE,
+                     TOTAL_INV, TRANS_INV, ANTISYM_INV, IRREFL_INV, INV_INV_IMAGE,
                      REWRITE_RULE [SORTS_DEF] QSORT3_SORTS, TOTAL_K, TOTAL_LEX, TRANSITIVE_LEX, TOTAL_INV, TRANS_INV]
 in
 val QSORT3_PAIRMAP_INV = store_thm("QSORT3_PAIRMAP_INV",
@@ -1287,7 +1287,7 @@ val sorted_car_distinct = store_thm("sorted_car_distinct",
      RW_TAC std_ss [] THEN REPEAT (POP_ASSUM MP_TAC) THEN RW_TAC std_ss [] THEN
      Cases_on `x'` THEN
      FULL_SIMP_TAC std_ss [sorted_car_cons, hol_defaxiomsTheory.ACL2_SIMPS, translateTheory.sexp_to_list_def,
-     		   translateTheory.sexp_to_pair_def, MAP, ALL_DISTINCT, MEM] THEN
+                   translateTheory.sexp_to_pair_def, MAP, ALL_DISTINCT, MEM] THEN
      REPEAT (POP_ASSUM MP_TAC) THEN RW_TAC std_ss [sexp_nil,MAP,MEM] THEN
      TRY (FIRST_ASSUM (STRIP_ASSUME_TAC o el 2 o CONJUNCTS o SPEC_ALL o MATCH_MP sexp_nil) THEN
           POP_ASSUM (CONV_TAC o DEPTH_CONV o REWR_CONV o GSYM)) THEN
@@ -1317,7 +1317,7 @@ val MAPSET_sortedcar = store_thm("MAPSET_sortedcar",
    RW_TAC std_ss [] THEN REPEAT (POP_ASSUM MP_TAC) THEN RW_TAC std_ss [MAPSET_def, slemma, MAP, ALL_DISTINCT, sexpTheory.t_def] THEN
    Cases_on `l'` THEN
    REWRITE_TAC [hol_defaxiomsTheory.ACL2_SIMPS,translateTheory.sexp_to_list_def, translateTheory.sexp_to_pair_def,
-   	       MEM, ALL_DISTINCT, MAP, sortingTheory.SORTED_DEF] THEN
+               MEM, ALL_DISTINCT, MAP, sortingTheory.SORTED_DEF] THEN
    FULL_SIMP_TAC std_ss [hol_defaxiomsTheory.ACL2_SIMPS] THEN
    RW_TAC std_ss [HD, pairTheory.LEX_DEF, SEXP_LE_def,SEXP_LT_def, hol_defaxiomsTheory.ACL2_SIMPS] THEN
    METIS_TAC [sexp_nil]);
@@ -1326,7 +1326,7 @@ val booleanp_sortedcar = store_thm("booleanp_sortedcar", ``!x. |= booleanp (sort
     Induct THEN
     ONCE_REWRITE_TAC [sorted_car_def] THEN REPEAT (
        RW_TAC std_ss [translateTheory.TRUTH_REWRITES, hol_defaxiomsTheory.booleanp_def,sexpTheory.ite_def,
-       	      sexpTheory.equal_def, sexpTheory.andl_def, sexpTheory.consp_def, sexpTheory.car_def, sexpTheory.cdr_def] THEN
+              sexpTheory.equal_def, sexpTheory.andl_def, sexpTheory.consp_def, sexpTheory.car_def, sexpTheory.cdr_def] THEN
        REPEAT (POP_ASSUM MP_TAC)));
 
 val sorted_car_rewrite = store_thm("sorted_car_rewrite",
@@ -1483,9 +1483,9 @@ val INSERT_FUPDATE = store_thm("INSERT_FUPDATE",
          REWRITE_TAC [SETEQ_THM, SET_M2L_FUPDATE, LIST_TO_SET_THM] THEN
          Q.ABBREV_TAC `l = QSORT3 (R LEX K (K T)) (M2L m)` THEN
          REVERSE (`set (insert R (x,y) l) = (x,y) INSERT (set l DIFF {z | FST z = x})` by MATCH_MP_TAC INSERT_SET) THEN1
-	     (`set l = set (M2L m)` by METIS_TAC [PERM_SETEQ, SETEQ_THM, PERM_QSORT3] THEN ASM_REWRITE_TAC [SET_M2L_DOMSUB] THEN AP_TERM_TAC)) THEN
+             (`set l = set (M2L m)` by METIS_TAC [PERM_SETEQ, SETEQ_THM, PERM_QSORT3] THEN ASM_REWRITE_TAC [SET_M2L_DOMSUB] THEN AP_TERM_TAC)) THEN
     METIS_TAC [PERM_MAP, ALL_DISTINCT_MAPFST_M2L, ALL_DISTINCT_PERM, ALL_DISTINCT_MAPFST_M2L, ALL_DISTINCT_MAPFST, PERM_QSORT3, SORTED_LEX,
-    	       TRANSITIVE_K, QSORT3_SORTS, SORTS_DEF, TOTAL_K, TOTAL_LEX, TRANSITIVE_LEX, ALL_DISTINCT_MAPFST_INSERT]);
+               TRANSITIVE_K, QSORT3_SORTS, SORTS_DEF, TOTAL_K, TOTAL_LEX, TRANSITIVE_LEX, ALL_DISTINCT_MAPFST_INSERT]);
 
 val fupdate_rewrite = store_thm("fupdate_rewrite",
     ``!x f g m. ONE_ONE f ==> (encode_fmap f g (m |+ x) = ains (pair f g x) (encode_fmap f g m))``,

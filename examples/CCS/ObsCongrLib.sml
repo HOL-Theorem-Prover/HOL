@@ -17,7 +17,7 @@ infix 0 OC_THENC OC_ORELSEC;
 
 (******************************************************************************)
 (*                                                                            *)
-(*             Basic functions and conversions for rewriting with	      *)
+(*             Basic functions and conversions for rewriting with             *)
 (*                 the CCS laws for observation congruence                    *)
 (*                                                                            *)
 (******************************************************************************)
@@ -61,17 +61,17 @@ fun OC_LHS_CONV_TAC (c :conv) :tactic =
       val (opt, t1, t2) = args_equiv w
   in
       if (opt = ``OBS_CONGR``) then
-	  let val thm = c t1;
-	      val (t1', t') = args_thm thm (* t1' = t1 *)
-	  in
-	      if (t' = t2) then
-		  ([], fn [] => OC_TRANS thm (ISPEC t' OBS_CONGR_REFL))
-	      else
-		  ([(asl, ``OBS_CONGR ^t' ^t2``)],
-		   fn [thm'] => OC_TRANS thm thm')
-	  end
+          let val thm = c t1;
+              val (t1', t') = args_thm thm (* t1' = t1 *)
+          in
+              if (t' = t2) then
+                  ([], fn [] => OC_TRANS thm (ISPEC t' OBS_CONGR_REFL))
+              else
+                  ([(asl, ``OBS_CONGR ^t' ^t2``)],
+                   fn [thm'] => OC_TRANS thm thm')
+          end
       else
-	  failwith "the goal is not an OBS_CONGR relation"
+          failwith "the goal is not an OBS_CONGR relation"
   end;
 
 fun OC_RHS_CONV_TAC (c :conv) :tactic =
@@ -79,17 +79,17 @@ fun OC_RHS_CONV_TAC (c :conv) :tactic =
       val (opt, t1, t2) = args_equiv w
   in
       if (opt = ``OBS_CONGR``) then
-	  let val thm = c t2;
-	      val (t2', t'') = args_thm thm (* t2' = t2 *)
-	  in
-	      if (t'' = t1) then
-		  ([], fn [] => OC_SYM thm)
-	      else
-		  ([(asl, ``OBS_CONGR ^t1 ^t''``)],
-		   fn [thm'] => OC_TRANS thm' (OC_SYM thm))
-	  end
+          let val thm = c t2;
+              val (t2', t'') = args_thm thm (* t2' = t2 *)
+          in
+              if (t'' = t1) then
+                  ([], fn [] => OC_SYM thm)
+              else
+                  ([(asl, ``OBS_CONGR ^t1 ^t''``)],
+                   fn [thm'] => OC_TRANS thm' (OC_SYM thm))
+          end
       else
-	  failwith "the goal is not an OBS_CONGR relation"
+          failwith "the goal is not an OBS_CONGR relation"
   end;
 
 val STRONG_IMP_OBS_CONGR_RULE =

@@ -15,7 +15,6 @@ val ERR = mk_HOL_ERR "mlThmData"
 type thmdata =
   (int, real) Redblackmap.dict * (string, fea) Redblackmap.dict
 
-
 (* -------------------------------------------------------------------------
    Artificial theory name for theorems from the namespace.
    Warning: conflict if a theory is named namespace_tag.
@@ -108,7 +107,7 @@ fun depid_of_thm thm =
 fun thmid_of_depid (thy,n) =
   let fun has_depnumber n (_,thm) = n = depnumber_of_thm thm in
     case List.find (has_depnumber n) (DB.thms thy) of
-      SOME (name,_) => 
+      SOME (name,_) =>
         if can (DB.fetch thy) name andalso uptodate_thm (DB.fetch thy name)
         then SOME (thy ^ "Theory." ^ name)
         else NONE
@@ -122,11 +121,11 @@ fun intactdep_of_thm thm =
   in
     (length l0 = length l1, l1)
   end
-    
+
 
 fun validdep_of_thmid thmid =
   let val (a,b) = split_string "Theory." thmid in
-    if a = namespace_tag 
+    if a = namespace_tag
     then []
     else List.mapPartial thmid_of_depid (depidl_of_thm (DB.fetch a b))
   end
@@ -139,7 +138,7 @@ val goalfea_cache = ref (dempty goal_compare)
 
 fun clean_goalfea_cache () = goalfea_cache := dempty goal_compare
 
-fun fea_of_goal_cached g = 
+fun fea_of_goal_cached g =
   dfind g (!goalfea_cache) handle NotFound =>
   let val fea = feahash_of_goal g in
     goalfea_cache := dadd g fea (!goalfea_cache); fea
@@ -155,8 +154,8 @@ fun add_thmfea thy ((name,thm),(thmfeadict,nodupl)) =
 
 fun add_thmfea_from_thy (thy,(thmfeadict,nodupl)) =
   foldl (add_thmfea thy) (thmfeadict,nodupl) (DB.thms thy)
-    
-fun thmfea_from_thyl thyl = 
+
+fun thmfea_from_thyl thyl =
   foldl add_thmfea_from_thy (dempty String.compare, dempty goal_compare) thyl
 
 fun add_namespacethm (thmfeadict,nodupl) =
@@ -187,14 +186,14 @@ fun thm_of_name s =
       SOME (_,thm) => SOME (s,thm)
     | NONE => NONE)
   else
-    let val (a,b) = split_string "Theory." s in 
+    let val (a,b) = split_string "Theory." s in
       SOME (s, DB.fetch a b)
     end
 
 fun thml_of_namel sl = hide_out (List.mapPartial thm_of_name) sl
 
 (* -------------------------------------------------------------------------
-   Find a theorem name thanks to their depid and their goal representation. 
+   Find a theorem name thanks to their depid and their goal representation.
    ------------------------------------------------------------------------- *)
 
 fun dbfetch_of_depid thm =

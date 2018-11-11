@@ -37,9 +37,9 @@ in
     val qpat_x_assum = qpat_x_assum;
 
     (* Tacticals for better expressivity *)
-    fun fix  ts = MAP_EVERY Q.X_GEN_TAC ts;	(* from HOL Light *)
-    fun set  ts = MAP_EVERY Q.ABBREV_TAC ts;	(* from HOL mizar mode *)
-    fun take ts = MAP_EVERY Q.EXISTS_TAC ts;	(* from HOL mizar mode *)
+    fun fix  ts = MAP_EVERY Q.X_GEN_TAC ts;     (* from HOL Light *)
+    fun set  ts = MAP_EVERY Q.ABBREV_TAC ts;    (* from HOL mizar mode *)
+    fun take ts = MAP_EVERY Q.EXISTS_TAC ts;    (* from HOL mizar mode *)
 end;
 
 val _ = new_theory "CutFree";
@@ -73,18 +73,18 @@ val degreeForm_0 = store_thm ("degreeForm_0", ``!F0. 1 <= (degreeFormula F0)``,
 val _ = Datatype `Sequent = Sequent ('a gentzen_extension) ('a Term) ('a Form)`;
 
 val _ = Datatype `Rule = SeqAxiom
-		       | RightSlash | RightBackslash | RightDot
-		       | LeftSlash  | LeftBackslash  | LeftDot
-		       | CutRule    | SeqExt`;
+                       | RightSlash | RightBackslash | RightDot
+                       | LeftSlash  | LeftBackslash  | LeftDot
+                       | CutRule    | SeqExt`;
 
 val all_rules_def = Define `
     all_rules =
-	{ SeqAxiom; RightSlash; RightBackslash; RightDot;
-	  LeftSlash; LeftBackslash; LeftDot; SeqExt; CutRule }`;
+        { SeqAxiom; RightSlash; RightBackslash; RightDot;
+          LeftSlash; LeftBackslash; LeftDot; SeqExt; CutRule }`;
 
 (* Note: (Dertree list) never has more than 2 elements in Lambek's Sequent Calculus *)
 val _ = Datatype `Dertree = Der ('a Sequent) Rule (Dertree list)
-			  | Unf ('a Sequent)`;
+                          | Unf ('a Sequent)`;
 
 val Dertree_induction = TypeBase.induction_of ``:'a Dertree``;
 val Dertree_nchotomy  = TypeBase.nchotomy_of ``:'a Dertree``;
@@ -124,47 +124,47 @@ val exten_def = Define `
    (exten (Der (Sequent E Delta A) _ _) = E)`;
 
 val degreeRule_def = Define `
-   (degreeRule (Der S SeqAxiom [])		= 0) /\
-   (degreeRule (Der S RightSlash [H])		= 0) /\
-   (degreeRule (Der S RightBackslash [H])	= 0) /\
-   (degreeRule (Der S RightDot [H1; H2])	= 0) /\
-   (degreeRule (Der S LeftSlash [H1; H2])	= 0) /\
-   (degreeRule (Der S LeftBackslash [H1; H2])	= 0) /\
-   (degreeRule (Der S LeftDot [H])		= 0) /\
-   (degreeRule (Der S SeqExt [H])		= 0) /\
+   (degreeRule (Der S SeqAxiom [])              = 0) /\
+   (degreeRule (Der S RightSlash [H])           = 0) /\
+   (degreeRule (Der S RightBackslash [H])       = 0) /\
+   (degreeRule (Der S RightDot [H1; H2])        = 0) /\
+   (degreeRule (Der S LeftSlash [H1; H2])       = 0) /\
+   (degreeRule (Der S LeftBackslash [H1; H2])   = 0) /\
+   (degreeRule (Der S LeftDot [H])              = 0) /\
+   (degreeRule (Der S SeqExt [H])               = 0) /\
    (* The degree of a cut is the degree of the cut formula which disappears after
       application of the rule. *)
-   (degreeRule (Der S CutRule [H1; H2])		= degreeFormula (concl H1))`;
+   (degreeRule (Der S CutRule [H1; H2])         = degreeFormula (concl H1))`;
 
 (* degreeProof, one way to check if CutRule gets used *)
 val degreeProof_def = Define `
-   (degreeProof (Der S SeqAxiom [])		= 0) /\
-   (degreeProof (Der S RightSlash [H])		= degreeProof H) /\
-   (degreeProof (Der S RightBackslash [H])	= degreeProof H) /\
-   (degreeProof (Der S RightDot [H1; H2])	= MAX (degreeProof H1) (degreeProof H2)) /\
-   (degreeProof (Der S LeftSlash [H1; H2])	= MAX (degreeProof H1) (degreeProof H2)) /\
-   (degreeProof (Der S LeftBackslash [H1; H2])	= MAX (degreeProof H1) (degreeProof H2)) /\
-   (degreeProof (Der S LeftDot [H])		= degreeProof H) /\
-   (degreeProof (Der S SeqExt [H])		= degreeProof H) /\
+   (degreeProof (Der S SeqAxiom [])             = 0) /\
+   (degreeProof (Der S RightSlash [H])          = degreeProof H) /\
+   (degreeProof (Der S RightBackslash [H])      = degreeProof H) /\
+   (degreeProof (Der S RightDot [H1; H2])       = MAX (degreeProof H1) (degreeProof H2)) /\
+   (degreeProof (Der S LeftSlash [H1; H2])      = MAX (degreeProof H1) (degreeProof H2)) /\
+   (degreeProof (Der S LeftBackslash [H1; H2])  = MAX (degreeProof H1) (degreeProof H2)) /\
+   (degreeProof (Der S LeftDot [H])             = degreeProof H) /\
+   (degreeProof (Der S SeqExt [H])              = degreeProof H) /\
    (* CutRule is special *)
-   (degreeProof (Der S CutRule [H1; H2])	=
-	MAX (degreeFormula (concl H1))
-	    (MAX (degreeProof H1) (degreeProof H2)))`;
+   (degreeProof (Der S CutRule [H1; H2])        =
+        MAX (degreeFormula (concl H1))
+            (MAX (degreeProof H1) (degreeProof H2)))`;
 
 (* subFormula and their theorems *)
 val (subFormula_rules, subFormula_ind, subFormula_cases) = Hol_reln `
-    (!(A:'a Form).		subFormula A A) /\			(* equalForm *)
-    (!A B C. subFormula A B ==> subFormula A (Slash B C)) /\		(* slashL *)
-    (!A B C. subFormula A B ==> subFormula A (Slash C B)) /\		(* slashR *)
-    (!A B C. subFormula A B ==> subFormula A (Backslash B C)) /\	(* backslashL *)
-    (!A B C. subFormula A B ==> subFormula A (Backslash C B)) /\	(* backslashR *)
-    (!A B C. subFormula A B ==> subFormula A (Dot B C)) /\		(* dotL *)
-    (!A B C. subFormula A B ==> subFormula A (Dot C B))`;		(* dotR *)
+    (!(A:'a Form).              subFormula A A) /\                      (* equalForm *)
+    (!A B C. subFormula A B ==> subFormula A (Slash B C)) /\            (* slashL *)
+    (!A B C. subFormula A B ==> subFormula A (Slash C B)) /\            (* slashR *)
+    (!A B C. subFormula A B ==> subFormula A (Backslash B C)) /\        (* backslashL *)
+    (!A B C. subFormula A B ==> subFormula A (Backslash C B)) /\        (* backslashR *)
+    (!A B C. subFormula A B ==> subFormula A (Dot B C)) /\              (* dotL *)
+    (!A B C. subFormula A B ==> subFormula A (Dot C B))`;               (* dotR *)
 
 val [equalForm, slashL, slashR, backslashL, backslashR, dotL, dotR] =
     map save_thm
         (combine (["equalForm", "slashL", "slashR", "backslashL", "backslashR", "dotL", "dotR"],
-		  CONJUNCTS subFormula_rules));
+                  CONJUNCTS subFormula_rules));
 
 (* The simp set related to Form *)
 val Form_ss = DatatypeSimps.type_rewrites_ss [``:'a Form``];
@@ -215,9 +215,9 @@ val subFormulaTrans' = store_thm (
 
 (* subFormTerm *)
 val (subFormTerm_rules, subFormTerm_ind, subFormTerm_cases) = Hol_reln `
-    (!A B.     subFormula  A B  ==> subFormTerm A (OneForm B)) /\	(* eqFT *)
-    (!A T1 T2. subFormTerm A T1 ==> subFormTerm A (Comma T1 T2)) /\	(* comL *)
-    (!A T1 T2. subFormTerm A T1 ==> subFormTerm A (Comma T2 T1))`;	(* comR *)
+    (!A B.     subFormula  A B  ==> subFormTerm A (OneForm B)) /\       (* eqFT *)
+    (!A T1 T2. subFormTerm A T1 ==> subFormTerm A (Comma T1 T2)) /\     (* comL *)
+    (!A T1 T2. subFormTerm A T1 ==> subFormTerm A (Comma T2 T1))`;      (* comR *)
 
 val [eqFT, comL, comR] =
     map save_thm (combine (["eqFT", "comL", "comR"], CONJUNCTS subFormTerm_rules));
@@ -267,7 +267,7 @@ val subReplace2 = store_thm ("subReplace2",
 
 val subReplace3 = store_thm ("subReplace3",
   ``!X T1 T2 T3 T4. replace T1 T2 T3 T4 ==> subFormTerm X T1
-		==> subFormTerm X T2 \/ subFormTerm X T3``,
+                ==> subFormTerm X T2 \/ subFormTerm X T3``,
     GEN_TAC
  >> HO_MATCH_MP_TAC replace_ind
  >> REPEAT STRIP_TAC
@@ -275,13 +275,13 @@ val subReplace3 = store_thm ("subReplace3",
  >| [ (* case 2 *)
       `subFormTerm X T1 \/ subFormTerm X Delta` by PROVE_TAC [comSub] >|
       [ `subFormTerm X T2 \/ subFormTerm X T3` by PROVE_TAC [] \\
-	PROVE_TAC [comL],
-	PROVE_TAC [comR] ],
+        PROVE_TAC [comL],
+        PROVE_TAC [comR] ],
       (* case 3 *)
       `subFormTerm X Delta \/ subFormTerm X T1` by PROVE_TAC [comSub] >|
-      [ PROVE_TAC [comL], 
-	`subFormTerm X T2 \/ subFormTerm X T3` by PROVE_TAC [] \\
-	PROVE_TAC [comR] ] ]);
+      [ PROVE_TAC [comL],
+        `subFormTerm X T2 \/ subFormTerm X T3` by PROVE_TAC [] \\
+        PROVE_TAC [comR] ] ]);
 
 val CutFreeProof_def = Define `
     CutFreeProof p = (degreeProof p = 0)`;
@@ -302,87 +302,87 @@ val notCutFree = store_thm ("notCutFree",
 
 val (subProofOne_rules, subProofOne_ind, subProofOne_cases) = Hol_reln `
     (!p0 p E Gamma A B R D.
-		(p0 = Sequent E Gamma (Slash A B)) /\
-		(p = Der (Sequent E (Comma Gamma (OneForm B)) A) R D)
-	    ==> subProofOne p  (Der p0 RightSlash [p]))			/\ (* 1. rs *)
+                (p0 = Sequent E Gamma (Slash A B)) /\
+                (p = Der (Sequent E (Comma Gamma (OneForm B)) A) R D)
+            ==> subProofOne p  (Der p0 RightSlash [p]))                 /\ (* 1. rs *)
 
     (!p0 p E Gamma A B R D.
-		(p0 = Sequent E Gamma (Backslash B A)) /\
-		(p = Der (Sequent E (Comma (OneForm B) Gamma) A) R D)
-	    ==> subProofOne p  (Der p0 RightBackslash [p]))		/\ (* 2. rbs *)
+                (p0 = Sequent E Gamma (Backslash B A)) /\
+                (p = Der (Sequent E (Comma (OneForm B) Gamma) A) R D)
+            ==> subProofOne p  (Der p0 RightBackslash [p]))             /\ (* 2. rbs *)
 
     (!p0 p1 p2 E Gamma Delta A B R D.
-		(p0 = Sequent E (Comma Gamma Delta) (Dot A B)) /\
-		(p1 = Der (Sequent E Gamma A) R D) /\
-		(p2 = Der (Sequent E Delta B) R D)
-	    ==> subProofOne p1 (Der p0 RightDot  [p1; p2]))		/\ (* 3. rd1 *)
+                (p0 = Sequent E (Comma Gamma Delta) (Dot A B)) /\
+                (p1 = Der (Sequent E Gamma A) R D) /\
+                (p2 = Der (Sequent E Delta B) R D)
+            ==> subProofOne p1 (Der p0 RightDot  [p1; p2]))             /\ (* 3. rd1 *)
 
     (!p0 p1 p2 E Gamma Delta A B R D.
-		(p0 = Sequent E (Comma Gamma Delta) (Dot A B)) /\
-		(p1 = Der (Sequent E Gamma A) R D) /\
-		(p2 = Der (Sequent E Delta B) R D)
-	    ==> subProofOne p2 (Der p0 RightDot  [p1; p2]))		/\ (* 4. rd2 *)
+                (p0 = Sequent E (Comma Gamma Delta) (Dot A B)) /\
+                (p1 = Der (Sequent E Gamma A) R D) /\
+                (p2 = Der (Sequent E Delta B) R D)
+            ==> subProofOne p2 (Der p0 RightDot  [p1; p2]))             /\ (* 4. rd2 *)
 
     (!p0 p1 p2 E Gamma Gamma' Delta A B C R D.
-		(p0 = Sequent E Gamma' C) /\
-		(p1 = Der (Sequent E Delta B) R D) /\
-		(p2 = Der (Sequent E Gamma C) R D) /\
-		(replace Gamma Gamma' (OneForm A) (Comma (OneForm (Slash A B)) Delta))
-	    ==> subProofOne p1 (Der p0 LeftSlash [p1; p2]))		/\ (* 5. ls1 *)
+                (p0 = Sequent E Gamma' C) /\
+                (p1 = Der (Sequent E Delta B) R D) /\
+                (p2 = Der (Sequent E Gamma C) R D) /\
+                (replace Gamma Gamma' (OneForm A) (Comma (OneForm (Slash A B)) Delta))
+            ==> subProofOne p1 (Der p0 LeftSlash [p1; p2]))             /\ (* 5. ls1 *)
 
     (!p0 p1 p2 E Gamma Gamma' Delta A B C R D.
-		(p0 = Sequent E Gamma' C) /\
-		(p1 = Der (Sequent E Delta B) R D) /\
-		(p2 = Der (Sequent E Gamma C) R D) /\
-		replace Gamma Gamma' (OneForm A) (Comma (OneForm (Slash A B)) Delta)
-	    ==> subProofOne p2 (Der p0 LeftSlash [p1; p2]))		/\ (* 6. ls2 *)
+                (p0 = Sequent E Gamma' C) /\
+                (p1 = Der (Sequent E Delta B) R D) /\
+                (p2 = Der (Sequent E Gamma C) R D) /\
+                replace Gamma Gamma' (OneForm A) (Comma (OneForm (Slash A B)) Delta)
+            ==> subProofOne p2 (Der p0 LeftSlash [p1; p2]))             /\ (* 6. ls2 *)
 
     (!p0 p1 p2 E Gamma Gamma' Delta A B C R D.
-		(p0 = Sequent E Gamma' C) /\
-		(p1 = Der (Sequent E Delta B) R D) /\
-		(p2 = Der (Sequent E Gamma C) R D) /\
-		replace Gamma Gamma' (OneForm A) (Comma Delta (OneForm (Backslash B A)))
-	    ==> subProofOne p1 (Der p0 LeftBackslash [p1; p2]))		/\ (* 7. lbs1 *)
+                (p0 = Sequent E Gamma' C) /\
+                (p1 = Der (Sequent E Delta B) R D) /\
+                (p2 = Der (Sequent E Gamma C) R D) /\
+                replace Gamma Gamma' (OneForm A) (Comma Delta (OneForm (Backslash B A)))
+            ==> subProofOne p1 (Der p0 LeftBackslash [p1; p2]))         /\ (* 7. lbs1 *)
 
     (!p0 p1 p2 E Gamma Gamma' Delta A B C R D.
-		(p0 = Sequent E Gamma' C) /\
-		(p1 = Der (Sequent E Delta B) R D) /\
-		(p2 = Der (Sequent E Gamma C) R D) /\
-		replace Gamma Gamma' (OneForm A) (Comma Delta (OneForm (Backslash B A)))
-	    ==> subProofOne p2 (Der p0 LeftBackslash [p1; p2]))		/\ (* 8. lbs2 *)
+                (p0 = Sequent E Gamma' C) /\
+                (p1 = Der (Sequent E Delta B) R D) /\
+                (p2 = Der (Sequent E Gamma C) R D) /\
+                replace Gamma Gamma' (OneForm A) (Comma Delta (OneForm (Backslash B A)))
+            ==> subProofOne p2 (Der p0 LeftBackslash [p1; p2]))         /\ (* 8. lbs2 *)
 
     (!p0 p E Gamma Gamma' A B C R D.
-		(p0 = Sequent E Gamma' C) /\
-		(p = Der (Sequent E Gamma C) R D) /\
-		replace Gamma Gamma' (Comma (OneForm A) (OneForm B)) (OneForm (Dot A B))
-	    ==>	subProofOne p  (Der p0 LeftDot [p]))			/\ (* 9. ld *)
+                (p0 = Sequent E Gamma' C) /\
+                (p = Der (Sequent E Gamma C) R D) /\
+                replace Gamma Gamma' (Comma (OneForm A) (OneForm B)) (OneForm (Dot A B))
+            ==> subProofOne p  (Der p0 LeftDot [p]))                    /\ (* 9. ld *)
 
     (!p0 p1 p2 E Gamma Gamma' Delta A C R D.
-		(p0 = Sequent E Gamma' C) /\
-		(p1 = Der (Sequent E Delta A) R D) /\
-		(p2 = Der (Sequent E Gamma C) R D) /\
-		replace Gamma Gamma' (OneForm A) Delta
-	    ==> subProofOne p1 (Der p0 CutRule [p1; p2]))		/\ (* 10. cr1 *)
+                (p0 = Sequent E Gamma' C) /\
+                (p1 = Der (Sequent E Delta A) R D) /\
+                (p2 = Der (Sequent E Gamma C) R D) /\
+                replace Gamma Gamma' (OneForm A) Delta
+            ==> subProofOne p1 (Der p0 CutRule [p1; p2]))               /\ (* 10. cr1 *)
 
     (!p0 p1 p2 E Gamma Gamma' Delta A C R D.
-		(p0 = Sequent E Gamma' C) /\
-		(p1 = Der (Sequent E Delta A) R D) /\
-		(p2 = Der (Sequent E Gamma C) R D) /\
-		replace Gamma Gamma' (OneForm A) Delta
-	    ==> subProofOne p2 (Der p0 CutRule [p1; p2]))		/\ (* 11. cr2 *)
+                (p0 = Sequent E Gamma' C) /\
+                (p1 = Der (Sequent E Delta A) R D) /\
+                (p2 = Der (Sequent E Gamma C) R D) /\
+                replace Gamma Gamma' (OneForm A) Delta
+            ==> subProofOne p2 (Der p0 CutRule [p1; p2]))               /\ (* 11. cr2 *)
 
     (!p0 p E Gamma Gamma' T1 T2 C R D.
-		(p0 = Sequent E Gamma' C) /\
-		(p = Der (Sequent E Gamma C) R D) /\
-		(E :'a gentzen_extension) T1 T2 /\
-		replace Gamma Gamma' T1 T2
-	    ==> subProofOne p  (Der p0 SeqExt [p])) `;			   (* se *)
+                (p0 = Sequent E Gamma' C) /\
+                (p = Der (Sequent E Gamma C) R D) /\
+                (E :'a gentzen_extension) T1 T2 /\
+                replace Gamma Gamma' T1 T2
+            ==> subProofOne p  (Der p0 SeqExt [p])) `;                     (* se *)
 
 val [rs, rbs, rd1, rd2, ls1, ls2, lbs1, lbs2, ld, cr1, cr2, se] =
     map save_thm
         (combine (["rs", "rbs", "rd1", "rd2", "ls1", "ls2", "lbs1", "lbs2",
-		   "ld", "cr1", "cr2", "se"],
-		  CONJUNCTS subProofOne_rules));
+                   "ld", "cr1", "cr2", "se"],
+                  CONJUNCTS subProofOne_rules));
 
 (* (subProof :'a Dertree -> 'a Dertree -> bool) *)
 val subProof_def = Define `subProof = RTC subProofOne`;
@@ -418,7 +418,7 @@ val subProof_strongind = save_thm (
    "subProof_strongind",
     REWRITE_RULE [GSYM subProof_def] (Q.ISPEC `subProofOne` RTC_STRONG_INDUCT));
 
-(* 
+(*
  |- ∀x y. subProof x y ⇔ (x = y) ∨ ∃u. subProofOne x u ∧ subProof u y
  *)
 val subProof_cases = save_thm (
@@ -476,66 +476,66 @@ val subProof_extension = store_thm (
 val (derivOne_rules, derivOne_ind, derivOne_cases) = Hol_reln `
     (!E A.
      derivOne (Unf (Sequent E (OneForm A) A))
-	(Der (Sequent E (OneForm A) A) SeqAxiom [])) /\
+        (Der (Sequent E (OneForm A) A) SeqAxiom [])) /\
     (!E Gamma A B.
      derivOne (Unf (Sequent E Gamma (Slash A B)))
-	(Der (Sequent E Gamma (Slash A B)) RightSlash
-	     [ Unf (Sequent E (Comma Gamma (OneForm B)) A) ])) /\
+        (Der (Sequent E Gamma (Slash A B)) RightSlash
+             [ Unf (Sequent E (Comma Gamma (OneForm B)) A) ])) /\
     (!E Gamma A B.
      derivOne (Unf (Sequent E Gamma (Backslash B A)))
-	(Der (Sequent E Gamma (Backslash B A)) RightBackslash
-	     [ Unf (Sequent E (Comma (OneForm B) Gamma) A) ])) /\
+        (Der (Sequent E Gamma (Backslash B A)) RightBackslash
+             [ Unf (Sequent E (Comma (OneForm B) Gamma) A) ])) /\
     (!E Gamma Delta A B.
      derivOne (Unf (Sequent E (Comma Gamma Delta) (Dot A B)))
-	(Der (Sequent E (Comma Gamma Delta) (Dot A B)) RightDot
-	     [ Unf (Sequent E Gamma A); Unf (Sequent E Delta B) ])) /\
+        (Der (Sequent E (Comma Gamma Delta) (Dot A B)) RightDot
+             [ Unf (Sequent E Gamma A); Unf (Sequent E Delta B) ])) /\
     (!E Gamma Gamma' Delta A B C.
      replace Gamma Gamma' (OneForm A) (Comma (OneForm (Slash A B)) Delta) ==>
      derivOne (Unf (Sequent E Gamma' C))
-	(Der (Sequent E Gamma' C) LeftSlash
-	     [ Unf (Sequent E Gamma C); Unf (Sequent E Delta B) ])) /\
+        (Der (Sequent E Gamma' C) LeftSlash
+             [ Unf (Sequent E Gamma C); Unf (Sequent E Delta B) ])) /\
     (!E Gamma Gamma' Delta A B C.
      replace Gamma Gamma' (OneForm A) (Comma Delta (OneForm (Backslash B A))) ==>
      derivOne (Unf (Sequent E Gamma' C))
-	(Der (Sequent E Gamma' C) LeftBackslash
-	     [ Unf (Sequent E Gamma C); Unf (Sequent E Delta B) ])) /\
+        (Der (Sequent E Gamma' C) LeftBackslash
+             [ Unf (Sequent E Gamma C); Unf (Sequent E Delta B) ])) /\
     (!E Gamma Gamma' A B C.
      replace Gamma Gamma' (Comma (OneForm A) (OneForm B)) (OneForm (Dot A B)) ==>
      derivOne (Unf (Sequent E Gamma' C))
-	(Der (Sequent E Gamma' C) LeftDot
-	     [ Unf (Sequent E Gamma C) ])) /\
+        (Der (Sequent E Gamma' C) LeftDot
+             [ Unf (Sequent E Gamma C) ])) /\
     (!E Delta Gamma Gamma' A C.
      replace Gamma Gamma' (OneForm A) Delta ==>
      derivOne (Unf (Sequent E Gamma' C))
-	(Der (Sequent E Gamma' C) CutRule
-	     [ Unf (Sequent E Gamma C); Unf (Sequent E Delta A) ])) /\
+        (Der (Sequent E Gamma' C) CutRule
+             [ Unf (Sequent E Gamma C); Unf (Sequent E Delta A) ])) /\
     (!E Gamma Gamma' Delta Delta' C.
      replace Gamma Gamma' Delta Delta' /\ E Delta Delta' ==>
      derivOne (Unf (Sequent E Gamma' C))
-	(Der (Sequent E Gamma' C) SeqExt
-	     [ Unf (Sequent E Gamma C) ]))`;
+        (Der (Sequent E Gamma' C) SeqExt
+             [ Unf (Sequent E Gamma C) ]))`;
 
 val [derivSeqAxiom, derivRightSlash, derivRightBackslash, derivRightDot,
      derivLeftSlash, derivLeftBackslash, derivLeftDot, derivCutRule, derivSeqExt] =
     map save_thm
         (combine (["derivSeqAxiom", "derivRightSlash", "derivRightBackslash",
-		   "derivRightDot", "derivLeftSlash", "derivLeftBackslash",
-		   "derivLeftDot", "derivCutRule", "derivSeqExt"],
-		  CONJUNCTS derivOne_rules));
+                   "derivRightDot", "derivLeftSlash", "derivLeftBackslash",
+                   "derivLeftDot", "derivCutRule", "derivSeqExt"],
+                  CONJUNCTS derivOne_rules));
 
 (* structure rules *)
 val (deriv_rules, deriv_ind, deriv_cases) = Hol_reln `
-    (!D1 D2.          derivOne D1 D2  ==> deriv D1 D2)					/\
-    (!S R D1 D1'.        deriv D1 D1' ==> deriv (Der S R [D1])    (Der S R [D1']))	/\
-    (!S R D1 D1' D.      deriv D1 D1' ==> deriv (Der S R [D1; D]) (Der S R [D1'; D]))	/\
-    (!S R D2 D2' D.      deriv D2 D2' ==> deriv (Der S R [D; D2]) (Der S R [D; D2']))	/\
+    (!D1 D2.          derivOne D1 D2  ==> deriv D1 D2)                                  /\
+    (!S R D1 D1'.        deriv D1 D1' ==> deriv (Der S R [D1])    (Der S R [D1']))      /\
+    (!S R D1 D1' D.      deriv D1 D1' ==> deriv (Der S R [D1; D]) (Der S R [D1'; D]))   /\
+    (!S R D2 D2' D.      deriv D2 D2' ==> deriv (Der S R [D; D2]) (Der S R [D; D2']))   /\
     (!S R D1 D1' D2 D2'. deriv D1 D1' /\ deriv D2 D2'
-		     ==> deriv (Der S R [D1; D2]) (Der S R [D1'; D2']))`;
+                     ==> deriv (Der S R [D1; D2]) (Der S R [D1'; D2']))`;
 
 val [derivDerivOne, derivOne, derivLeft, derivRight, derivBoth] =
     map save_thm
         (combine (["derivDerivOne", "derivOne", "derivLeft", "derivRight", "derivBoth"],
-		  CONJUNCTS deriv_rules));
+                  CONJUNCTS deriv_rules));
 
 (* closure rules, in this way we can finish a proof *)
 val Deriv_def = Define `Deriv = RTC deriv`;
@@ -544,13 +544,13 @@ val Deriv_def = Define `Deriv = RTC deriv`;
 val Deriv_refl  = save_thm (
    "Deriv_refl",
     REWRITE_RULE [SYM Deriv_def]
-	(((Q.ISPEC `deriv`) o (Q.GEN `R`) o (Q.GEN `x`)) RTC_REFL));
+        (((Q.ISPEC `deriv`) o (Q.GEN `R`) o (Q.GEN `x`)) RTC_REFL));
 
 (* |- ∀x y z. Deriv x y ∧ Deriv y z ⇒ Deriv x z *)
 val Deriv_trans = save_thm (
    "Deriv_trans",
     REWRITE_RULE [SYM Deriv_def]
-	(Q.ISPEC `deriv` (REWRITE_RULE [transitive_def] RTC_TRANSITIVE)));
+        (Q.ISPEC `deriv` (REWRITE_RULE [transitive_def] RTC_TRANSITIVE)));
 
 fun derivToDeriv thm =
     REWRITE_RULE [SYM Deriv_def] (MATCH_MP RTC_SINGLE thm);
@@ -558,7 +558,7 @@ fun derivToDeriv thm =
 fun derivOneToDeriv thm =
     REWRITE_RULE [GSYM Deriv_def]
       (MATCH_MP (Q.ISPEC `deriv` RTC_SINGLE)
-	(MATCH_MP derivDerivOne (SPEC_ALL thm)));
+        (MATCH_MP derivDerivOne (SPEC_ALL thm)));
 
 (* derivation rules expressed in relation `Deriv`, for convinence *)
 
@@ -590,8 +590,8 @@ val DerivLeftSlash = store_thm (
   ``!E Gamma Gamma' Delta A B C.
      replace Gamma Gamma' (OneForm A) (Comma (OneForm (Slash A B)) Delta) ==>
      Deriv (Unf (Sequent E Gamma' C))
-	(Der (Sequent E Gamma' C) LeftSlash
-	     [ Unf (Sequent E Gamma C); Unf (Sequent E Delta B) ])``,
+        (Der (Sequent E Gamma' C) LeftSlash
+             [ Unf (Sequent E Gamma C); Unf (Sequent E Delta B) ])``,
     REPEAT STRIP_TAC
  >> REWRITE_TAC [Deriv_def]
  >> MATCH_MP_TAC (Q.ISPEC `deriv` RTC_SINGLE)
@@ -604,8 +604,8 @@ val DerivLeftBackslash = store_thm (
   ``!E Gamma Gamma' Delta A B C.
      replace Gamma Gamma' (OneForm A) (Comma Delta (OneForm (Backslash B A))) ==>
      Deriv (Unf (Sequent E Gamma' C))
-	(Der (Sequent E Gamma' C) LeftBackslash
-	     [ Unf (Sequent E Gamma C); Unf (Sequent E Delta B) ])``,
+        (Der (Sequent E Gamma' C) LeftBackslash
+             [ Unf (Sequent E Gamma C); Unf (Sequent E Delta B) ])``,
     REPEAT STRIP_TAC
  >> REWRITE_TAC [Deriv_def]
  >> MATCH_MP_TAC (Q.ISPEC `deriv` RTC_SINGLE)
@@ -618,8 +618,8 @@ val DerivLeftDot = store_thm (
   ``!E Gamma Gamma' A B C.
      replace Gamma Gamma' (Comma (OneForm A) (OneForm B)) (OneForm (Dot A B)) ==>
      Deriv (Unf (Sequent E Gamma' C))
-	(Der (Sequent E Gamma' C) LeftDot
-	     [ Unf (Sequent E Gamma C) ])``,
+        (Der (Sequent E Gamma' C) LeftDot
+             [ Unf (Sequent E Gamma C) ])``,
     REPEAT STRIP_TAC
  >> REWRITE_TAC [Deriv_def]
  >> MATCH_MP_TAC (Q.ISPEC `deriv` RTC_SINGLE)
@@ -632,8 +632,8 @@ val DerivCutRule = store_thm (
   ``!E Delta Gamma Gamma' A C.
      replace Gamma Gamma' (OneForm A) Delta ==>
      Deriv (Unf (Sequent E Gamma' C))
-	(Der (Sequent E Gamma' C) CutRule
-	     [ Unf (Sequent E Gamma C); Unf (Sequent E Delta A) ])``,
+        (Der (Sequent E Gamma' C) CutRule
+             [ Unf (Sequent E Gamma C); Unf (Sequent E Delta A) ])``,
     REPEAT STRIP_TAC
  >> REWRITE_TAC [Deriv_def]
  >> MATCH_MP_TAC (Q.ISPEC `deriv` RTC_SINGLE)
@@ -646,8 +646,8 @@ val DerivSeqExt = store_thm (
   ``!E Gamma Gamma' Delta Delta' C.
      replace Gamma Gamma' Delta Delta' /\ E Delta Delta' ==>
      Deriv (Unf (Sequent E Gamma' C))
-	(Der (Sequent E Gamma' C) SeqExt
-	     [ Unf (Sequent E Gamma C) ])``,
+        (Der (Sequent E Gamma' C) SeqExt
+             [ Unf (Sequent E Gamma C) ])``,
     REPEAT STRIP_TAC
  >> REWRITE_TAC [Deriv_def]
  >> MATCH_MP_TAC (Q.ISPEC `deriv` RTC_SINGLE)
@@ -663,7 +663,7 @@ val DerivOne = store_thm ("DerivOne",
  >- REWRITE_TAC [RTC_REFL]
  >> PAT_X_ASSUM ``deriv D1 D1'`` (ASSUME_TAC o (MATCH_MP derivOne))
  >> POP_ASSUM (ASSUME_TAC o (MATCH_MP (Q.ISPEC `deriv` RTC_SINGLE))
-			  o (SPECL [``S :'a Sequent``, ``R :Rule``]))
+                          o (SPECL [``S :'a Sequent``, ``R :Rule``]))
  >> IMP_RES_TAC (Q.ISPEC `deriv` (REWRITE_RULE [transitive_def] RTC_TRANSITIVE)));
 
 val DerivLeft = store_thm ("DerivLeft",
@@ -690,7 +690,7 @@ val DerivRight = store_thm ("DerivRight",
 
 val DerivBoth = store_thm ("DerivBoth",
   ``!S R D2 D2' D1 D1'. Deriv D1 D1' ==> Deriv D2 D2'
-		    ==> Deriv (Der S R [D1; D2]) (Der S R [D1'; D2'])``,
+                    ==> Deriv (Der S R [D1; D2]) (Der S R [D1'; D2'])``,
     NTAC 4 GEN_TAC
  >> REWRITE_TAC [Deriv_def]
  >> HO_MATCH_MP_TAC RTC_INDUCT
@@ -706,22 +706,22 @@ val DerivBoth = store_thm ("DerivBoth",
         (* goal 1.2 (of 2) *)
         PAT_X_ASSUM ``deriv D2 D2'`` (ASSUME_TAC o (MATCH_MP derivRight)) \\
         POP_ASSUM (ASSUME_TAC o (MATCH_MP (Q.ISPEC `deriv` RTC_SINGLE))
-			      o (Q.SPECL [`S`, `R`, `D1`])) \\
+                              o (Q.SPECL [`S`, `R`, `D1`])) \\
         IMP_RES_TAC (Q.ISPEC `deriv` (REWRITE_RULE [transitive_def] RTC_TRANSITIVE)) ],
       (* goal 2 (of 2) *)
       RES_TAC \\
       PAT_X_ASSUM ``deriv D1 D1'`` (ASSUME_TAC o (MATCH_MP derivLeft)) \\
       POP_ASSUM (ASSUME_TAC o (MATCH_MP (Q.ISPEC `deriv` RTC_SINGLE))
-			    o (Q.SPECL [`S`, `R`, `D2`])) \\
+                            o (Q.SPECL [`S`, `R`, `D2`])) \\
       IMP_RES_TAC (Q.ISPEC `deriv` (REWRITE_RULE [transitive_def] RTC_TRANSITIVE)) ]);
 
 (* All Deriv rules *)
 val Deriv_rules = save_thm ("Deriv_rules",
     LIST_CONJ [ DerivSeqAxiom, DerivRightSlash, DerivRightBackslash, DerivRightDot,
-		DerivLeftSlash, DerivLeftBackslash, DerivLeftDot,
-		DerivCutRule, DerivSeqExt,
-		DerivOne, DerivLeft, DerivRight, DerivBoth,
-		Deriv_refl, Deriv_trans ]);
+                DerivLeftSlash, DerivLeftBackslash, DerivLeftDot,
+                DerivCutRule, DerivSeqExt,
+                DerivOne, DerivLeft, DerivRight, DerivBoth,
+                Deriv_refl, Deriv_trans ]);
 
 (* Inductively define a "finished" proof *)
 val (Proof_rules, Proof_ind, Proof_cases) = Hol_reln `
@@ -731,7 +731,7 @@ val (Proof_rules, Proof_ind, Proof_cases) = Hol_reln `
 
 val [ProofZero, ProofOne, ProofTwo] =
     map save_thm
-	(combine (["ProofZero", "ProofOne", "ProofTwo"], CONJUNCTS Proof_rules));
+        (combine (["ProofZero", "ProofOne", "ProofTwo"], CONJUNCTS Proof_rules));
 
 (* Derivations starting from "Unf" are not finished! *)
 val notProofUnf = store_thm (
@@ -747,7 +747,7 @@ val notProofUnf = store_thm (
 val gentzenToDeriv = store_thm (
    "gentzenToDeriv",
   ``!E Gamma A. gentzenSequent E Gamma A
-	    ==> (?D. Deriv (Unf (Sequent E Gamma A)) D /\ Proof D)``,
+            ==> (?D. Deriv (Unf (Sequent E Gamma A)) D /\ Proof D)``,
     Induct_on `gentzenSequent`
  >> REPEAT STRIP_TAC (* 9 sub-goals here *)
  >| [ (* goal 1 (of 9) *)
@@ -759,7 +759,7 @@ val gentzenToDeriv = store_thm (
       [ (* goal 2.1 (of 2) *)
         ASSUME_TAC (SPEC_ALL DerivRightSlash) \\
         PAT_X_ASSUM ``Deriv (Unf (Sequent E (Comma Gamma (OneForm B)) A)) D``
-	  (ASSUME_TAC o (MATCH_MP DerivOne)) \\
+          (ASSUME_TAC o (MATCH_MP DerivOne)) \\
         POP_ASSUM (ASSUME_TAC o (Q.SPECL [`Sequent E Gamma (Slash A B)`, `RightSlash`])) \\
         IMP_RES_TAC Deriv_trans,
         (* goal 2.2 (of 2) *)
@@ -771,7 +771,7 @@ val gentzenToDeriv = store_thm (
       [ (* goal 3.1 (of 2) *)
         ASSUME_TAC (SPEC_ALL DerivRightBackslash) \\
         PAT_X_ASSUM ``Deriv (Unf (Sequent E (Comma (OneForm B) Gamma) A)) D``
-	  (ASSUME_TAC o (MATCH_MP DerivOne)) \\
+          (ASSUME_TAC o (MATCH_MP DerivOne)) \\
         POP_ASSUM (ASSUME_TAC o (Q.SPECL [`Sequent E Gamma (Backslash B A)`, `RightBackslash`])) \\
         IMP_RES_TAC Deriv_trans,
         (* goal 3.2 (of 2) *)
@@ -782,9 +782,9 @@ val gentzenToDeriv = store_thm (
       CONJ_TAC >| (* 2 sub-goals here *)
       [ (* goal 4.1 (of 2) *)
         `Deriv (Der (Sequent E (Comma Gamma Gamma') (Dot A A')) RightDot
-		  [ (Unf (Sequent E Gamma A)); (Unf (Sequent E Gamma' A')) ])
-	       (Der (Sequent E (Comma Gamma Gamma') (Dot A A')) RightDot [D; D'])`
-	    by PROVE_TAC [DerivBoth] \\
+                  [ (Unf (Sequent E Gamma A)); (Unf (Sequent E Gamma' A')) ])
+               (Der (Sequent E (Comma Gamma Gamma') (Dot A A')) RightDot [D; D'])`
+            by PROVE_TAC [DerivBoth] \\
         ASSUME_TAC (Q.SPECL [`E`, `Gamma`, `Gamma'`, `A`, `A'`] DerivRightDot) \\
         IMP_RES_TAC Deriv_trans,
         (* goal 4.2 (of 2) *)
@@ -794,11 +794,11 @@ val gentzenToDeriv = store_thm (
       CONJ_TAC >| (* 2 sub-goals here *)
       [ (* goal 5.1 (of 2) *)
         `Deriv (Der (Sequent E Gamma' A'') LeftSlash
-		 [ (Unf (Sequent E Gamma A'')); (Unf (Sequent E Gamma'' A')) ])
-	       (Der (Sequent E Gamma' A'') LeftSlash [D'; D])`
-	    by PROVE_TAC [DerivBoth] \\
+                 [ (Unf (Sequent E Gamma A'')); (Unf (Sequent E Gamma'' A')) ])
+               (Der (Sequent E Gamma' A'') LeftSlash [D'; D])`
+            by PROVE_TAC [DerivBoth] \\
         ASSUME_TAC (Q.SPECL [`E`, `Gamma`, `Gamma'`, `Gamma''`, `A`, `A'`, `A''`]
-			    DerivLeftSlash) \\
+                            DerivLeftSlash) \\
         RES_TAC >> IMP_RES_TAC Deriv_trans,
         (* goal 5.2 (of 2) *)
         MATCH_MP_TAC ProofTwo >> ASM_REWRITE_TAC [] ],
@@ -807,11 +807,11 @@ val gentzenToDeriv = store_thm (
       CONJ_TAC >| (* 2 sub-goals here *)
       [ (* goal 6.1 (of 2) *)
         `Deriv (Der (Sequent E Gamma' A'') LeftBackslash
-		 [ (Unf (Sequent E Gamma A'')); (Unf (Sequent E Gamma'' A')) ])
-	       (Der (Sequent E Gamma' A'') LeftBackslash [D'; D])`
-	    by PROVE_TAC [DerivBoth] \\
+                 [ (Unf (Sequent E Gamma A'')); (Unf (Sequent E Gamma'' A')) ])
+               (Der (Sequent E Gamma' A'') LeftBackslash [D'; D])`
+            by PROVE_TAC [DerivBoth] \\
         ASSUME_TAC (Q.SPECL [`E`, `Gamma`, `Gamma'`, `Gamma''`, `A`, `A'`, `A''`]
-			    DerivLeftBackslash) \\
+                            DerivLeftBackslash) \\
         RES_TAC >> IMP_RES_TAC Deriv_trans,
         (* goal 6.2 (of 2) *)
         MATCH_MP_TAC ProofTwo >> ASM_REWRITE_TAC [] ],
@@ -822,7 +822,7 @@ val gentzenToDeriv = store_thm (
         IMP_RES_TAC DerivLeftDot \\
         POP_ASSUM (ASSUME_TAC o (Q.SPECL [`E`, `A'`])) \\
         PAT_X_ASSUM ``Deriv (Unf (Sequent E Gamma A')) D``
-	  (ASSUME_TAC o (MATCH_MP DerivOne)) \\
+          (ASSUME_TAC o (MATCH_MP DerivOne)) \\
         POP_ASSUM (ASSUME_TAC o (Q.SPECL [`Sequent E Gamma' A'`, `LeftDot`])) \\
         IMP_RES_TAC Deriv_trans,
         (* goal 7.2 (of 2) *)
@@ -835,9 +835,9 @@ val gentzenToDeriv = store_thm (
         IMP_RES_TAC DerivCutRule \\
         POP_ASSUM (ASSUME_TAC o (Q.SPECL [`E`, `A'`])) \\
         `Deriv (Der (Sequent E Gamma'' A') CutRule
-		 [ (Unf (Sequent E Gamma' A')); (Unf (Sequent E Gamma A)) ])
-	       (Der (Sequent E Gamma'' A') CutRule [D'; D])`
-	    by PROVE_TAC [DerivBoth] \\
+                 [ (Unf (Sequent E Gamma' A')); (Unf (Sequent E Gamma A)) ])
+               (Der (Sequent E Gamma'' A') CutRule [D'; D])`
+            by PROVE_TAC [DerivBoth] \\
         IMP_RES_TAC Deriv_trans,
         (* goal 8.2 (of 2) *)
         MATCH_MP_TAC ProofTwo >> ASM_REWRITE_TAC [] ],
@@ -848,8 +848,8 @@ val gentzenToDeriv = store_thm (
         IMP_RES_TAC DerivOne \\
         POP_ASSUM (ASSUME_TAC o (Q.SPECL [`(Sequent E Gamma' A)`, `SeqExt`])) \\
         `Deriv (Unf (Sequent E Gamma' A))
-	       (Der (Sequent E Gamma' A) SeqExt [Unf (Sequent E Gamma A)])`
-	    by PROVE_TAC [DerivSeqExt] \\
+               (Der (Sequent E Gamma' A) SeqExt [Unf (Sequent E Gamma A)])`
+            by PROVE_TAC [DerivSeqExt] \\
         IMP_RES_TAC Deriv_trans,
         (* goal 9.2 (of 2) *)
         POP_ASSUM MP_TAC \\
@@ -864,10 +864,10 @@ val gentzenToDeriv = store_thm (
 val subFormulaPropertyOne = store_thm (
    "subFormulaPropertyOne",
   ``!q p. subProofOne q p ==>
-	  extensionSub (exten p) ==>
-	  CutFreeProof p ==>
+          extensionSub (exten p) ==>
+          CutFreeProof p ==>
       !x. (subFormTerm x (prems q) \/ subFormula x (concl q)) ==>
-	  (subFormTerm x (prems p) \/ subFormula x (concl p))``,
+          (subFormTerm x (prems p) \/ subFormula x (concl p))``,
     REPEAT GEN_TAC
  >> NTAC 3 DISCH_TAC
  >> GEN_TAC
@@ -1079,16 +1079,16 @@ val subFormulaPropertyOne' = store_thm (
 val subFormulaProperty = store_thm (
    "subFormulaProperty",
   ``!q p. subProof q p ==>
-	  extensionSub (exten p) ==>
-	  CutFreeProof p ==>
+          extensionSub (exten p) ==>
+          CutFreeProof p ==>
       !x. (subFormTerm x (prems q) \/ subFormula x (concl q)) ==>
-	  (subFormTerm x (prems p) \/ subFormula x (concl p))``,
+          (subFormTerm x (prems p) \/ subFormula x (concl p))``,
     HO_MATCH_MP_TAC subProof_strongind
  >> STRIP_TAC >- rw []
  >> fix [`p3`, `p2`, `p1`]
  >> set [`T1 = prems p1`, `T2 = prems p2`, `T3 = prems p3`,
-	 `A1 = concl p1`, `A2 = concl p2`, `A3 = concl p3`,
-	 `E  = exten p1`]
+         `A1 = concl p1`, `A2 = concl p2`, `A3 = concl p3`,
+         `E  = exten p1`]
  >> PURE_ONCE_REWRITE_TAC []
  >> NTAC 4 STRIP_TAC >> DISCH_TAC
  >> `subFormTerm x T2 \/ subFormula x A2 ==>
@@ -1096,7 +1096,7 @@ val subFormulaProperty = store_thm (
  >> `CutFreeProof p2` by METIS_TAC [CutFreeSubProof]
  >> `extensionSub (exten p2)` by METIS_TAC [subProof_extension]
  >> `subFormTerm x T2 \/ subFormula x A2`
-	by METIS_TAC [subFormulaPropertyOne]
+        by METIS_TAC [subFormulaPropertyOne]
  >> METIS_TAC []);
 
 (* original statements in the Coq version *)

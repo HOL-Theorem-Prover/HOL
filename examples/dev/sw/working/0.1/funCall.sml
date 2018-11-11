@@ -18,7 +18,7 @@ fun strOrder (s1:string,s2:string) =
 
 (* ---------------------------------------------------------------------------------------------------------------------*)
 (* The configuaration for passing parameters, returning results and allocating stack space                              *)
-(* The stack goes upward. 												*)
+(* The stack goes upward.                                                                                               *)
 (* ---------------------------------------------------------------------------------------------------------------------*)
 (*
                 Address goes upward (i.e. from low address to high address)!!!
@@ -58,15 +58,15 @@ fun strOrder (s1:string,s2:string) =
 
 
 (* Distinguish inputs and local variables                                               *)
-(* Calculate the offset based on fp of the temporaries bebing read in a callee		*)
-(* If a temporary is an input, then read it from the stack where the caller sets 	*)
-(* If it is a local variable, then read it from the current frame			*)
+(* Calculate the offset based on fp of the temporaries bebing read in a callee          *)
+(* If a temporary is an input, then read it from the stack where the caller sets        *)
+(* If it is a local variable, then read it from the current frame                       *)
 
 fun calculate_relative_address (args,ir,outs,numSavedRegs) =
   let
     (* Identify those TMEMs that are actually arguments *)
     val argT = #1 (List.foldl (fn (IR.TMEM n, (t,i)) =>
-			          (T.enter(t, n, i), i+1)
+                                  (T.enter(t, n, i), i+1)
                                |  (arg, (t,i)) => (t, i+1)
                               )
                         (T.empty, 0)
@@ -80,16 +80,16 @@ fun calculate_relative_address (args,ir,outs,numSavedRegs) =
 
     fun filter_mems (IR.TMEM n) =
         ( case T.peek (argT, n) of
-                SOME k => IR.MEM (IR.fromAlias IR.fp, ~2 - k)		(* inputs *)
+                SOME k => IR.MEM (IR.fromAlias IR.fp, ~2 - k)           (* inputs *)
            |     NONE =>
-		( case T.peek(!localT, n) of
-		      SOME j => IR.MEM (IR.fromAlias IR.fp, 3 + j + numSavedRegs) (* existing local variable *)
-		   |  NONE =>
-			  ( localT := T.enter(!localT, n, !i);
-			    i := !i + 1;
-			    IR.MEM (IR.fromAlias IR.fp, 3 + (!i - 1) + numSavedRegs) (* local variables *)
-			  )
-		 )
+                ( case T.peek(!localT, n) of
+                      SOME j => IR.MEM (IR.fromAlias IR.fp, 3 + j + numSavedRegs) (* existing local variable *)
+                   |  NONE =>
+                          ( localT := T.enter(!localT, n, !i);
+                            i := !i + 1;
+                            IR.MEM (IR.fromAlias IR.fp, 3 + (!i - 1) + numSavedRegs) (* local variables *)
+                          )
+                 )
         )
      |  filter_mems v = v
 
@@ -97,9 +97,9 @@ fun calculate_relative_address (args,ir,outs,numSavedRegs) =
             {oper = op1, dst = List.map filter_mems dst1, src = List.map filter_mems src1}
 
     fun adjust_exp (IR.PAIR (e1,e2)) =
-	    IR.PAIR(adjust_exp e1, adjust_exp e2)
+            IR.PAIR(adjust_exp e1, adjust_exp e2)
      |  adjust_exp e =
-	    filter_mems e
+            filter_mems e
 
     fun adjust_info {ins = ins', outs = outs', context = context', fspec = fspec'} =
         {ins = adjust_exp ins', outs = adjust_exp outs', context = List.map adjust_exp context', fspec = fspec'}
@@ -137,9 +137,9 @@ fun inc_p pt n = {oper = IR.madd, dst = [IR.REG pt], src = [IR.REG pt, IR.WCONST
 (* Pre-call and post-call processing in compilance with the ARM Procedure Call standard                                 *)
 (* ---------------------------------------------------------------------------------------------------------------------*)
 
-(* 	MOV     ip, sp
-	STMFA   sp!, {..., fp,ip,lr,pc}
-	SUB     fp, ip, #1
+(*      MOV     ip, sp
+        STMFA   sp!, {..., fp,ip,lr,pc}
+        SUB     fp, ip, #1
         SUB     sp, sp, #var (* skip local variables *)
 *)
 
@@ -147,7 +147,7 @@ fun entry_blk rs n =
     [ {oper = IR.mmov, dst = [IR.REG (IR.fromAlias IR.ip)], src = [IR.REG (IR.fromAlias IR.sp)]},
       {oper = IR.mpush, dst = [IR.REG (IR.fromAlias IR.sp)],
        src = rs @ [IR.REG (IR.fromAlias IR.fp), IR.REG (IR.fromAlias IR.ip),
-		   IR.REG (IR.fromAlias IR.lr), IR.REG (IR.fromAlias IR.pc)]
+                   IR.REG (IR.fromAlias IR.lr), IR.REG (IR.fromAlias IR.pc)]
       },
       {oper = IR.msub, dst = [IR.REG (IR.fromAlias IR.fp)], src = [IR.REG (IR.fromAlias IR.ip), IR.WCONST (Arbint.fromInt 4)]},
       dec_p (IR.fromAlias IR.sp) n (* skip local variables *)
@@ -155,7 +155,7 @@ fun entry_blk rs n =
 
 (*
     ADD         sp, fp, 3 + #modified registers      (* Skip saved lr, sp, fp and modified registers *)
-    LDMFD 	sp, {..., fp,sp,pc}
+    LDMFD       sp, {..., fp,sp,pc}
 *)
 
 fun exit_blk rs =
@@ -177,20 +177,20 @@ fun mk_reg_segments argL =
 
       (* proceeds in reverse order of the list *)
       fun one_arg (IR.REG r, (invRegLs, i)) =
-	let val flag = !isBroken
-	    val _ = isBroken := false
-	in
-	    if null invRegLs orelse flag then
-	        (([IR.REG r], true, i) :: invRegLs, i-1)
-	    else
-	        let val (cur_segL, a, j) = hd invRegLs
-	        in
-	  	    if null cur_segL then (([IR.REG r], true, i) :: (tl invRegLs), i-1)
-	  	    else ((IR.REG r :: cur_segL, true, i) :: (tl invRegLs), i-1)
-	        end
-	end
-      |	  one_arg (exp, (invRegLs, i)) =
-		(isBroken := true; (([exp],false, i) :: invRegLs, i-1))
+        let val flag = !isBroken
+            val _ = isBroken := false
+        in
+            if null invRegLs orelse flag then
+                (([IR.REG r], true, i) :: invRegLs, i-1)
+            else
+                let val (cur_segL, a, j) = hd invRegLs
+                in
+                    if null cur_segL then (([IR.REG r], true, i) :: (tl invRegLs), i-1)
+                    else ((IR.REG r :: cur_segL, true, i) :: (tl invRegLs), i-1)
+                end
+        end
+      |   one_arg (exp, (invRegLs, i)) =
+                (isBroken := true; (([exp],false, i) :: invRegLs, i-1))
 
       val (invRegLs, i) = List.foldr one_arg ([], length argL - 1) argL
 
@@ -206,20 +206,20 @@ fun mk_reg_segments argL =
 
 fun mk_ldm_stm isPop r dataL =
     if isPop then
-	if length dataL = 1 then
-	       {oper = IR.mldr, dst = dataL, src = [IR.MEM (r,1)]}
-	else
+        if length dataL = 1 then
+               {oper = IR.mldr, dst = dataL, src = [IR.MEM (r,1)]}
+        else
                {oper = IR.mpop, dst = dataL, src = [IR.REG r]}
     else
-	if length dataL = 1 then
+        if length dataL = 1 then
                {oper = IR.mstr, dst = [IR.MEM(r,0)], src = dataL}
-	else
-	       {oper = IR.mpush, dst = [IR.REG r], src = dataL}
+        else
+               {oper = IR.mpush, dst = [IR.REG r], src = dataL}
 
 (* ---------------------------------------------------------------------------------------------------------------------*)
-(*  Write one argument to the memory slot referred by regNo and offset      			                        *)
-(*  Push arguments to the stack. If the argument comes from a register, and store it into the stack directly; 		*)
-(*  if it comes from memory, then first load it into R10, and then store it into the stack;				*)
+(*  Write one argument to the memory slot referred by regNo and offset                                                  *)
+(*  Push arguments to the stack. If the argument comes from a register, and store it into the stack directly;           *)
+(*  if it comes from memory, then first load it into R10, and then store it into the stack;                             *)
 (*  if it is a constant, then assign it to R10 first then store it into the stack.                                      *)
 (* ---------------------------------------------------------------------------------------------------------------------*)
 
@@ -230,7 +230,7 @@ fun write_one_arg (IR.MEM v) (regNo,offset) =
                [  {oper = IR.mstr, dst = [IR.MEM (regNo,offset)], src = [IR.REG r]} ]
  |  write_one_arg v (regNo,offset) =   (* v = NONCST n or WCONST w *)
                [  {oper = IR.mmov, dst = [IR.REG 10], src = [v]},
-		  {oper = IR.mstr, dst = [IR.MEM (regNo,offset)], src = [IR.REG 10]} ]
+                  {oper = IR.mstr, dst = [IR.MEM (regNo,offset)], src = [IR.REG 10]} ]
 
 (* ---------------------------------------------------------------------------------------------------------------------*)
 (*  Read one argument from the memory slot referred by regNo and offset                                                 *)
@@ -240,7 +240,7 @@ fun write_one_arg (IR.MEM v) (regNo,offset) =
 (* ---------------------------------------------------------------------------------------------------------------------*)
 
 fun read_one_arg (IR.REG r) (regNo,offset) =
-	       [  {oper = IR.mldr, dst = [IR.REG r], src = [IR.MEM(regNo,offset)]} ]
+               [  {oper = IR.mldr, dst = [IR.REG r], src = [IR.MEM(regNo,offset)]} ]
  |  read_one_arg (IR.MEM v) (regNo,offset) =
                [  {oper = IR.mldr, dst = [IR.REG (!numAvaiRegs)], src = [IR.MEM(regNo,offset)]},
                   {oper = IR.mstr, dst = [IR.MEM v], src = [IR.REG (!numAvaiRegs)]} ]
@@ -269,7 +269,7 @@ fun pushL regNo argL =
                   let val k = !offset in
                     ( offset := i + length regL;
                       [dec_p regNo (i - k),
-		       (* reverse the regL in accordance with the order of STM *)
+                       (* reverse the regL in accordance with the order of STM *)
                        mk_ldm_stm false regNo (List.rev regL)])
                   end
        | one_seg ([v], false, i) =
@@ -337,7 +337,7 @@ fun get_args argL =
        val len1 = if len < (!numAvaiRegs) then len else (!numAvaiRegs)
 
        fun mk_regL 0 = [IR.REG 0]
-	|  mk_regL n = mk_regL (n-1) @ [IR.REG n];
+        |  mk_regL n = mk_regL (n-1) @ [IR.REG n];
 
    in
        popL (IR.fromAlias (IR.ip)) argL
@@ -364,7 +364,7 @@ fun send_results outL numArgs =
    in
        { oper = IR.madd,
          dst = [IR.REG (IR.fromAlias IR.sp)],
-	      src = [IR.REG (IR.fromAlias IR.fp), IR.WCONST (Arbint.fromInt (4* sOffset))]
+              src = [IR.REG (IR.fromAlias IR.fp), IR.WCONST (Arbint.fromInt (4* sOffset))]
        }
        :: stms
    end
@@ -415,9 +415,9 @@ val involved_defs = ref ([] : thm list);
 
 fun convert_fcall (CALL(fname, pre, body, post, outer_info)) =
     let
-        (* pass the arguments to the callee, and callee will save and restore anything	*)
-	(* create the BL statement							*)
-	(* then modify the sp to point to the real position of the returning arguments	*)
+        (* pass the arguments to the callee, and callee will save and restore anything  *)
+        (* create the BL statement                                                      *)
+        (* then modify the sp to point to the real position of the returning arguments  *)
 
         val (outer_ins,outer_outs) = (#ins outer_info, #outs outer_info);
         val (caller_dst,caller_src) = let val x = get_annt body in (#outs x, #ins x) end;
@@ -426,8 +426,8 @@ fun convert_fcall (CALL(fname, pre, body, post, outer_info)) =
         val ((pre_ins,pre_outs),(body_ins,body_outs),(post_ins,post_outs),rs',context) =
              compute_fcall_info ((outer_ins,outer_outs),(caller_src,caller_dst),(callee_ins,callee_outs),rs,#context outer_info);
 
-	val reserve_space_for_outputs =
-	        [dec_p (fromAlias sp) (length (pair2list caller_dst))];
+        val reserve_space_for_outputs =
+                [dec_p (fromAlias sp) (length (pair2list caller_dst))];
 
         val pre' = rm_dummy_inst (BLK (
                         reserve_space_for_outputs @

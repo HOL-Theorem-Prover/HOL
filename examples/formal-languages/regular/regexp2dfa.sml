@@ -9,7 +9,7 @@ fun failwithERR e =
    regexpMisc.fail());
 
 fun dest_string "" = raise ERR "dest_string" "empty string"
-  | dest_string str = 
+  | dest_string str =
      let val c = String.sub(str,0)
          val t = String.substring(str,1,String.size str - 1)
      in (c,t)
@@ -29,7 +29,7 @@ fun check_compset() =
       | check_these =>
          (stdErr_print "Unmapped consts in regexp_compset: \n  ";
           stdErr_print (String.concat
-	     (spreadlnWith {sep=", ", ln = "\n  ", width = 5}
+             (spreadlnWith {sep=", ", ln = "\n  ", width = 5}
                            join check_these));
           stdErr_print "\n\n")
  end
@@ -175,7 +175,7 @@ local
  end;
 
 fun array256String intList =
- let val spreadList = 
+ let val spreadList =
        spreadlnWith {sep=",", ln="\n     ", width=31} Int.toString intList
  in
    String.concat ("[":: spreadList @ ["]"])
@@ -226,14 +226,14 @@ end;
 
 local
 fun finalsString list =
- let val spreadList = 
+ let val spreadList =
        spreadlnWith {sep=",", ln="\n    ", width=10} Bool.toString list
  in
    String.concat ("{" :: spreadList @ ["}"])
  end;
 
 fun array256String intList =
- let val spreadList = 
+ let val spreadList =
        spreadlnWith {sep=",", ln="\n     ", width=31} Int.toString intList
  in
    String.concat ("{":: spreadList @ ["}"])
@@ -282,14 +282,14 @@ end;
 fun HOLfile name quote (certificate,_,finals,table) =
  case certificate
   of NONE => ""
-   | SOME thm => 
+   | SOME thm =>
      let open HolKernel Drule boolLib bossLib
          val _ = stdErr_print "Generating theorem.\n"
          val eqn = snd(dest_forall(concl thm))
          val (exec_dfa,[finals,table,start,s]) = strip_comb(lhs eqn)
          val name_finals = name^"_finals"
-	 val name_table = name^"_table"
-	 val name_start = name^"_start"
+         val name_table = name^"_table"
+         val name_start = name^"_start"
          val finals_var = mk_var(name_finals,type_of finals)
          val table_var  = mk_var(name_table,type_of table)
          val start_var  = mk_var(name_start,type_of start)
@@ -327,7 +327,7 @@ fun parse_args () =
      fun check(J,lstring,name,string) =
        case to_lang lstring
         of SOME lang => SOME(J,lang,name,string)
-	 | NONE => NONE
+         | NONE => NONE
  in
     case CommandLine.arguments()
      of ["-dfagen","SML",lstring,name,string] => check(regexpLib.SML,lstring,name,string)
@@ -349,18 +349,18 @@ fun main () =
 (*  ; check_compset() *)
   ; case parse_args()
     of NONE => (printHelp(); regexpMisc.fail())
-     | SOME (justify,lang,name,rstring) => 
+     | SOME (justify,lang,name,rstring) =>
       let val regexp = parse_regexp rstring
           val _ = stdErr_print "Parsed regexp, now constructing DFA ... "
           val result = compile_regexp justify regexp
           val file_string =
-	    (case lang
+            (case lang
               of Ada  => Adafile
                | C    => Cfile
-               | ML   => MLfile 
-               | Java => Javafile 
+               | ML   => MLfile
+               | Java => Javafile
                | Thm  => HOLfile)
-	    name rstring (deconstruct result)
+            name rstring (deconstruct result)
       in
          stdOut_print file_string
        ; regexpMisc.succeed()

@@ -303,6 +303,9 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
         val _ = app safedelete expected_results
         val useScript = fullPath [HOLDIR, "bin", "buildheap"]
         val cline = useScript::"--gcthreads=1"::
+                    (case #multithread optv of
+                         NONE => []
+                       | SOME i => ["--mt=" ^ Int.toString i]) @
                     (if polynothol then "--poly" else "--holstate="^HOLSTATE)::
                     ((if debug then ["--dbg"] else []) @ objectfiles) @
                     List.concat (map (fn f => ["-c", f]) expected_results)

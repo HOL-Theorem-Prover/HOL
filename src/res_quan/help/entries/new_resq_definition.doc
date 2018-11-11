@@ -12,7 +12,7 @@ definition, restricted quantifier.
 The function {new_resq_definition} provides a facility for definitional
 extensions to the current theory. The new constant defined using this
 function may take arguments which are restricted quantified.  The
-function {new_resq_definition} takes a pair argument consisting 
+function {new_resq_definition} takes a pair argument consisting
 of the name under which the resulting definition will be saved
 in the current theory segment, and a term giving the desired definition.  The
 value returned by {new_resq_definition} is a theorem which states the
@@ -22,10 +22,10 @@ Let {x_1,...,x_n} be distinct variables.  Evaluating
 {
    new_resq_definition (`name`,
     "!x_i::P_i. ... !x_j::P_j. C x_1 ... x_n = t")
-} 
+}
 where {C} is not already a constant, {i} is greater or equal to 1 and
 {i <= j <= n}, declares {C} to be a new constant in the current theory
-with this definition as its specification. 
+with this definition as its specification.
 This constant specification is returned as a theorem with the form
 {
    |- !x_i::P_i. ... !x_j::P_j. !x_k .... C x_1 ... x_n = t
@@ -33,7 +33,7 @@ This constant specification is returned as a theorem with the form
 where the variables {x_k} are the free variables occurring on
 the left hand side of the definition and are not restricted
 quantified. This theorem is saved in the current theory under
-(the name) {name}. 
+(the name) {name}.
 
 If the restricting predicates {P_l} contains free occurrence of
 variable(s) of the left hand side, the constant {C} will stand for a

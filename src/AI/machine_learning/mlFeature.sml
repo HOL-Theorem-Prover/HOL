@@ -11,7 +11,7 @@ struct
 open HolKernel Abbrev boolLib aiLib
 
 val ERR = mk_HOL_ERR "tttFeature"
- 
+
 (* -------------------------------------------------------------------------
    Constants, variables and types
    ------------------------------------------------------------------------- *)
@@ -26,15 +26,15 @@ fun string_of_var tm = fst (dest_var tm) ^ ".v"
 
 fun varfea_of tm =
   map string_of_var (mk_term_set (find_terms is_var tm))
-      
+
 fun zeroed_type ty =
   if is_vartype ty then "T" else
   let
     val {Args,Thy,Tyop} = dest_thy_type ty
     val s = Tyop ^ "." ^ Thy ^ ".t"
   in
-    if null Args 
-    then s 
+    if null Args
+    then s
     else "(" ^ s ^ String.concatWith " " (map zeroed_type Args) ^ ")"
   end
 
@@ -48,9 +48,9 @@ fun typefea_of tm =
    ------------------------------------------------------------------------- *)
 
 fun atoms_of tm =
-  if is_eq tm andalso type_of (lhs tm) = bool 
+  if is_eq tm andalso type_of (lhs tm) = bool
     then atoms_of (lhs tm) @ atoms_of (rhs tm)
-  else if is_conj tm orelse is_disj tm orelse is_imp_only tm 
+  else if is_conj tm orelse is_disj tm orelse is_imp_only tm
     then atoms_of (lhand tm) @ atoms_of (rand tm)
   else if is_neg tm    then atoms_of (rand tm)
   else if is_forall tm then atoms_of (snd (dest_forall tm))
@@ -69,9 +69,9 @@ fun zeroed_term tm =
   else raise ERR "zeroed_term" ""
 
 fun subtermfea_of tm =
-  let 
+  let
     val atoml = atoms_of tm
-    val subterml = List.concat (map (find_terms (fn _ => true)) atoml) 
+    val subterml = List.concat (map (find_terms (fn _ => true)) atoml)
   in
     map zeroed_term (mk_term_set subterml)
   end
@@ -81,8 +81,8 @@ fun subtermfea_of tm =
    ------------------------------------------------------------------------- *)
 
 fun fea_of_term tm =
-  if term_size tm > 2000 
-  then constfea_of tm 
+  if term_size tm > 2000
+  then constfea_of tm
   else subtermfea_of tm @ constfea_of tm @ varfea_of tm @ typefea_of tm
 
 fun fea_of_goal (asl,w) =
@@ -101,11 +101,11 @@ fun fea_of_goal (asl,w) =
 fun feahash_of_term tm =
   mk_fast_set Int.compare (map hash_string (fea_of_term tm))
 
-fun feahash_of_goal g = 
+fun feahash_of_goal g =
   mk_fast_set Int.compare (map hash_string (fea_of_goal g))
 
 (* ------------------------------------------------------------------------
-   TFIDF: weight of symbols (power of 6 comes from the neareset neighbor 
+   TFIDF: weight of symbols (power of 6 comes from the neareset neighbor
    distance)
    ------------------------------------------------------------------------ *)
 
@@ -121,8 +121,6 @@ fun weight_tfidf symsl =
   end
 
 fun learn_tfidf feavl = weight_tfidf (map snd feavl)
-
-
 
 
 end (* struct *)

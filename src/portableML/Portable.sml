@@ -86,9 +86,19 @@ fun these (SOME x) = x
    ---------------------------------------------------------------------- *)
 
 fun list_of_singleton a = [a]
+fun single a = [a]
+fun the_single [x] = x
+  | the_single _ = raise List.Empty;
+fun singleton f x = the_single (f [x])
+
 fun list_of_pair (a, b) = [a, b]
 fun list_of_triple (a, b, c) = [a, b, c]
 fun list_of_quadruple (a, b, c, d) = [a, b, c, d]
+
+fun the_list NONE = []
+  | the_list (SOME x) = [x]
+fun the_default d NONE = d
+  | the_default _ (SOME x) = x
 
 val all = List.all
 val exists = List.exists
@@ -120,6 +130,13 @@ fun foldl_map _ (acc, []) = (acc, [])
       in
          (acc'', y :: ys)
       end
+
+fun foldl2' _ [] [] z = z
+  | foldl2' f (x::xs) (y::ys) z = foldl2' f xs ys (f x y z)
+  | foldl2' _ _ _ _ = raise ListPair.UnequalLengths
+fun foldr2' _ [] [] z = z
+  | foldr2' f (x::xs) (y::ys) z = f x y (foldr2' f xs ys z)
+  | foldr2' _ _ _ _ = raise ListPair.UnequalLengths
 
 (* separate s [x1, x2, ..., xn] ===> [x1, s, x2, s, ..., s, xn] *)
 

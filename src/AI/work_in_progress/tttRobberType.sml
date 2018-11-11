@@ -7,7 +7,7 @@
 
 structure tttRobberType :> tttRobberType =
 struct
- 
+
 open HolKernel boolLib Abbrev
 
 val ERR = mk_HOL_ERR "tttRobberType"
@@ -28,12 +28,12 @@ fun mk_suc x = mk_comb (``SUC``,x);
 fun mk_add (a,b) = list_mk_comb (``$+``,[a,b]);
 val zero = ``0``;
 
-fun dest_suc x = 
+fun dest_suc x =
   let val (a,b) = dest_comb x in
     if a <> ``SUC`` then raise ERR "" "" else b
   end
 
-fun dest_add tm = 
+fun dest_add tm =
   let val (oper,argl) = strip_comb tm in
     if oper <> ``$+`` then raise ERR "" "" else pair_of_list argl
   end
@@ -44,20 +44,20 @@ fun dest_add tm =
 
 fun sub_at_pos tm (pos,res) =
   if null pos then res else
-  let 
+  let
     val (oper,argl) = strip_comb tm
-    fun f i x = 
+    fun f i x =
       if i = hd pos then sub_at_pos x (tl pos,res) else x
     val newargl = mapi f argl
   in
     list_mk_comb (oper,newargl)
-  end   
+  end
 
 fun subtm_at_pos pos tm =
   if null pos then tm else
   let val (oper,argl) = strip_comb tm in
     subtm_at_pos (tl pos) (List.nth (argl,hd pos))
-  end 
+  end
 
 fun recover_cut tm (pos,res) =
   let val red = subtm_at_pos pos tm in mk_eq (red,res) end
@@ -66,17 +66,17 @@ fun recover_cut tm (pos,res) =
    Tactic tools
    ------------------------------------------------------------------------- *)
 
-fun ap_tac tm = (snd o only_hd o fst o AP_TERM_TAC) ([],tm); 
+fun ap_tac tm = (snd o only_hd o fst o AP_TERM_TAC) ([],tm);
 
 fun negsym_tac tm =
   let val (a,b) = dest_eq (dest_neg tm) in
     mk_neg (mk_eq (b,a))
   end
 
-fun sym_tac tm = 
+fun sym_tac tm =
   let val (a,b) = dest_eq tm in mk_eq (b,a) end
 
-fun inj_tac tm = 
+fun inj_tac tm =
   let
     val (a,b) = dest_eq (dest_neg tm)
     val (a',b') = (dest_suc a, dest_suc b)
@@ -88,8 +88,8 @@ fun inj_tac tm =
    Proof state
    ------------------------------------------------------------------------- *)
 
-datatype board = 
-  ConjChoice of (term * term) | 
+datatype board =
+  ConjChoice of (term * term) |
   TacChoice of term |
   StopChoice of (term * int list) |
   LrChoice of (term * int list) |
@@ -101,10 +101,10 @@ datatype board =
 
 datatype conjchoice = First | Second
 
-fun move_conj conj sit = case sit of (p, ConjChoice (tm1,tm2)) => 
+fun move_conj conj sit = case sit of (p, ConjChoice (tm1,tm2)) =>
     (
     case altern of
-      First     => (not p, TacChoice tm1) 
+      First     => (not p, TacChoice tm1)
     | Second    => (not p, TacChoice tm2)
     )
   | _ => raise ERR "move_altern" ""
@@ -131,7 +131,7 @@ fun move_tac tac sit = case sit of (p, TacChoice tm) =>
    Choice of a position in a term
    ------------------------------------------------------------------------- *)
 
-datatype stopchoice = Stop | Continue 
+datatype stopchoice = Stop | Continue
 
 val active_var = ``active_var : num``
 
@@ -139,10 +139,10 @@ fun move_stop stop sit = case sit of (p, StopChoice (tm,pos)) =>
     (
     case stop of
       Stop     => (p, ResChoice ((tm,pos), active_var))
-    | Continue => 
+    | Continue =>
       let val (_,argl) = strip_comb (subtm_at_pos pos tm) in
         case argl of
-          []    => (p, ResChoice ((tm,pos), active_var))   
+          []    => (p, ResChoice ((tm,pos), active_var))
         | [a]   => (p, StopChoice (tm, pos @ [0]))
         | [a,b] => (p, LrChoice (tm,pos))
         | _     => raise ERR "descend_pos" " "
@@ -180,7 +180,7 @@ fun apply_imit imit tm = case imit of
 
 fun move_imit imit sit = case sit of (p, ResChoice ((tm,pos),res)) =>
     let val newres = apply_imit imit res in
-      if is_subtm active_var newres 
+      if is_subtm active_var newres
       then (p, ResChoice ((tm,pos),newres))
       else (not p,
             TermChoice (sub_at_pos tm (pos,res), recover_cut tm (pos,res))

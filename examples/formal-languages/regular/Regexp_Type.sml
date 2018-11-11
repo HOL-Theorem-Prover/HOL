@@ -1303,7 +1303,7 @@ fun sum [] = 0
 fun pack_intervals list =
  let val _ = if null list then
              raise ERR "pack_intervals" "empty list input"
-	     else ()
+             else ()
      val iwlist = map (fn x => (x,bits_width x)) list
      val _ = stdErr_print ("Packed interval.\n  "^
                String.concat (spread "\n  " (map interval_width_string iwlist))

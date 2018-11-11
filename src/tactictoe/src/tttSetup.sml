@@ -8,7 +8,7 @@
 structure tttSetup :> tttSetup =
 struct
 
-open HolKernel Abbrev boolLib aiLib smlExecute smlRedirect 
+open HolKernel Abbrev boolLib aiLib smlExecute smlRedirect
   mlThmData mlTacticData
 
 val infix_file = HOLDIR ^ "/src/AI/sml_inspection/infix_file.sml"
@@ -36,7 +36,7 @@ val ttt_recproof_time   = ref 20.0
    Search
    ------------------------------------------------------------------------- *)
 
-fun init_metis () = hide_out metistac_of_sml () 
+fun init_metis () = hide_out metistac_of_sml ()
   handle Interrupt => raise Interrupt | _ => ()
 
 val ttt_metis_time   = ref 0.1

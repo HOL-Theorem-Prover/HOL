@@ -37,7 +37,7 @@ FULL_SIMP_TAC std_ss [ReachFromRec_def,Next_def,SUBSET_DEF,SET_SPEC]
 ]);
 
 val ReachFromStable =prove(``!R s (n:num). (ReachFromRec R s n = ReachFromRec R s (SUC n)) ==>
-			   !m. m >= n ==> (ReachFromRec R s m = ReachFromRec R s n)``,
+                           !m. m >= n ==> (ReachFromRec R s m = ReachFromRec R s n)``,
 REWRITE_TAC [DECIDE ``((m:num)>=n) = ((m=n) \/ (m>n))``]
 THEN REPEAT STRIP_TAC THENL [
 ASM_REWRITE_TAC [],
@@ -82,7 +82,7 @@ THEN SIMP_TAC std_ss [SET_SPEC]
 THEN ASSUM_LIST PROVE_TAC);
 
 val ReachFromLem1 = prove(``!R s n'. (ReachFromRec R s n' = ReachFromRec R s (SUC n')) ==>
-			  (ReachFromRec R s n' UNION  BIGUNION {P | ?n. n >= n' /\ (P =ReachFromRec R s n)} =  ReachFromRec R s n')``,
+                          (ReachFromRec R s n' UNION  BIGUNION {P | ?n. n >= n' /\ (P =ReachFromRec R s n)} =  ReachFromRec R s n')``,
 REPEAT GEN_TAC
 THEN ASSUME_TAC (SPEC_ALL ReachFromStableSubset)
 THEN UNDISCH_TAC ``(ReachFromRec R s n' = ReachFromRec R s (SUC n')) ==>
@@ -94,9 +94,9 @@ THEN ONCE_REWRITE_TAC [UNION_COMM]
 THEN ASSUM_LIST (fn t => PROVE_TAC (SUBSET_UNION_ABSORPTION::t)));
 
 val ReachFromLem2 = prove(``!R s n'. (ReachFromRec R s n' = ReachFromRec R s (SUC n')) ==>
-			  (BIGUNION {P | ?n. n <= n' /\ (P = ReachFromRec R s n)} UNION
-			   BIGUNION {P | ?n. n >= n' /\ (P = ReachFromRec R s n)} =
-			   ReachFromRec R s n')``,
+                          (BIGUNION {P | ?n. n <= n' /\ (P = ReachFromRec R s n)} UNION
+                           BIGUNION {P | ?n. n >= n' /\ (P = ReachFromRec R s n)} =
+                           ReachFromRec R s n')``,
 REPEAT STRIP_TAC
 THEN ASSUM_LIST (fn t => SIMP_TAC std_ss (ReachFromChainUnion::(tl t)))
 THEN ASSUME_TAC (SPEC_ALL ReachFromLem1)
@@ -128,7 +128,7 @@ FULL_SIMP_TAC std_ss [ReachToRec_def,Next_def,SUBSET_DEF,SET_SPEC]
 ]);
 
 val ReachToStable =prove(``!R s n. (ReachToRec R s n = ReachToRec R s (SUC n)) ==>
-			   !m. m >= n ==> (ReachToRec R s m = ReachToRec R s n)``,
+                           !m. m >= n ==> (ReachToRec R s m = ReachToRec R s n)``,
 REWRITE_TAC [DECIDE ``(m>=n) = ((m=n) \/ (m>n))``]
 THEN REPEAT STRIP_TAC THENL [
 ASM_REWRITE_TAC [],
@@ -172,7 +172,7 @@ THEN SIMP_TAC std_ss [SET_SPEC]
 THEN ASSUM_LIST PROVE_TAC);
 
 val ReachToLem1 = prove(``!R s n'. (ReachToRec R s n' = ReachToRec R s (SUC n')) ==>
-			  (ReachToRec R s n' UNION  BIGUNION {P | ?n. n >= n' /\ (P =ReachToRec R s n)} =  ReachToRec R s n')``,
+                          (ReachToRec R s n' UNION  BIGUNION {P | ?n. n >= n' /\ (P =ReachToRec R s n)} =  ReachToRec R s n')``,
 REPEAT GEN_TAC
 THEN ASSUME_TAC (SPEC_ALL ReachToStableSubset)
 THEN UNDISCH_TAC ``(ReachToRec R s n' = ReachToRec R s (SUC n')) ==>
@@ -184,9 +184,9 @@ THEN ONCE_REWRITE_TAC [UNION_COMM]
 THEN ASSUM_LIST (fn t => PROVE_TAC (SUBSET_UNION_ABSORPTION::t)));
 
 val ReachToLem2 = prove(``!R s n'. (ReachToRec R s n' = ReachToRec R s (SUC n')) ==>
-			  (BIGUNION {P | ?n. n <= n' /\ (P = ReachToRec R s n)} UNION
-			   BIGUNION {P | ?n. n >= n' /\ (P = ReachToRec R s n)} =
-			   ReachToRec R s n')``,
+                          (BIGUNION {P | ?n. n <= n' /\ (P = ReachToRec R s n)} UNION
+                           BIGUNION {P | ?n. n >= n' /\ (P = ReachToRec R s n)} =
+                           ReachToRec R s n')``,
 REPEAT STRIP_TAC
 THEN ASSUM_LIST (fn t => SIMP_TAC std_ss (ReachToChainUnion::(tl t)))
 THEN ASSUME_TAC (SPEC_ALL ReachToLem1)
@@ -284,9 +284,9 @@ val SCC_def =  save_thm("SCC_def",Define `SCC R s = ReachFrom R s UNION ReachTo 
 val ABS_KS_def =  save_thm("ABS_KS_def",Define `ABS_KS M (h:('a#'b)->bool) =
                                        <| S := UNIV:'b->bool;
                                           S0:= { sh | ?s'. (s' IN M.S0) /\ h(s',sh)};
-					  T := \a. \(sh,sh'). ?s' s''. (M.T a)(s',s'') /\ h(s',sh) /\ h(s'',sh');
-					  L:= \sh. BIGUNION { X | ?s.  (X = (M.L s)) /\ h(s,sh)}
-					|>`);
+                                          T := \a. \(sh,sh'). ?s' s''. (M.T a)(s',s'') /\ h(s',sh) /\ h(s'',sh');
+                                          L:= \sh. BIGUNION { X | ?s.  (X = (M.L s)) /\ h(s,sh)}
+                                        |>`);
 
 
 val wf_absKS = save_thm("wf_absKS",prove(``!ks h. wfKS ks ==> wfKS (ABS_KS ks h)``,
@@ -334,11 +334,11 @@ THEN ASSUM_LIST (fn t => PROVE_TAC [IN_DEF]), (* RV *)
 RW_TAC std_ss [NNF_def,SUB_DMD_DMD], (* <> *)
 RW_TAC std_ss []
 THEN FULL_SIMP_TAC std_ss [NNF_def,SUB_DMD_BOX,SUB_AP_BOX,SUB_RV_BOX,STATES_def,SET_SPEC,IN_UNIV,wfKS_def,
-		      REWRITE_RULE [wfKS_def] wf_absKS]
+                      REWRITE_RULE [wfKS_def] wf_absKS]
 THEN POP_ASSUM MP_TAC
 THEN ASSUM_LIST (fn l => SIMP_TAC std_ss (l@[REWRITE_RULE [wfKS_def] wf_absKS,IN_UNIV]))
 THEN CONV_TAC (FORK_CONV(QUANT_CONV (FORK_CONV(REWRITE_CONV [KS_TRANSITION_def,KS_accfupds,combinTheory.K_DEF],ALL_CONV)),
-			 QUANT_CONV (FORK_CONV(REWRITE_CONV [KS_TRANSITION_def,KS_accfupds,combinTheory.K_DEF],ALL_CONV))))
+                         QUANT_CONV (FORK_CONV(REWRITE_CONV [KS_TRANSITION_def,KS_accfupds,combinTheory.K_DEF],ALL_CONV))))
 THEN REPEAT STRIP_TAC
 THEN PAT_ASSUM ``!q. (ABS_KS ks h).T a (sh,q) ==> q IN STATES (NNF f) (ABS_KS ks h) eh`` (fn t => ASSUME_TAC (CONV_RULE (QUANT_CONV (RATOR_CONV(RAND_CONV(SIMP_CONV std_ss [ABS_KS_def,KS_TRANSITION_def,KS_accfupds,combinTheory.K_DEF])))) t))
 THEN PAT_ASSUM ``!s1 s2 sh'. h (s1,sh') /\ h (s2,sh') ==> !p. p IN ks.ap ==> (s1 IN ks.S /\ p IN ks.L s1 = s2 IN ks.S /\ p IN ks.L s2)``
@@ -379,9 +379,9 @@ THEN (SUBGOAL_THEN (mk_forall(``n:num``,list_mk_forall([``sh:'astate``,``s:'stat
    THEN POP_ASSUM_LIST (fn t => PROVE_TAC (List.take(t,4))),
    POP_ASSUM (fn t => ASSUME_TAC (SPECL [``(e :string -> 'state -> bool)[[[Q<--(Y :'state -> bool)]]]``,``(eh :string -> 'astate -> bool)[[[(Q :string)<--(X :'astate -> bool)]]]``] t))
    THEN (SUBGOAL_THEN``(!(Q' :string) (s :'state) (sh :'astate). (h:'state # 'astate -> bool)(s,sh) ==> (sh IN (eh :string -> 'astate -> bool)[[[(Q :string)<--(X :'astate -> bool)]]]
-			 Q' ==> s IN (e :string -> 'state -> bool)[[[Q<--(Y :'state -> bool)]]] Q'))`` ASSUME_TAC) THENL [
+                         Q' ==> s IN (e :string -> 'state -> bool)[[[Q<--(Y :'state -> bool)]]] Q'))`` ASSUME_TAC) THENL [
     PAT_ASSUM ``!sh s.  h (s,sh) ==> sh IN X ==> s IN Y`` (fn t => PAT_ASSUM ``!Q s sh. h (s,sh) ==> (sh IN eh Q ==> s IN e Q)``
-							(fn t'=> POP_ASSUM_LIST (fn _ => ASSUME_TAC t THEN ASSUME_TAC t')))
+                                                        (fn t'=> POP_ASSUM_LIST (fn _ => ASSUME_TAC t THEN ASSUME_TAC t')))
     THEN REPEAT GEN_TAC
     THEN Cases_on `Q=Q'` THENL [
      FULL_SIMP_TAC std_ss [ENV_EVAL] THEN ASSUM_LIST PROVE_TAC,
@@ -423,9 +423,9 @@ THEN (SUBGOAL_THEN (mk_forall(``n:num``,list_mk_forall([``sh:'astate``,``s:'stat
    THEN POP_ASSUM_LIST (fn t => PROVE_TAC (List.take(t,4))),
    POP_ASSUM (fn t => ASSUME_TAC (SPECL [``(e :string -> 'state -> bool)[[[Q<--(Y :'state -> bool)]]]``,``(eh :string -> 'astate -> bool)[[[(Q :string)<--(X :'astate -> bool)]]]``] t))
    THEN (SUBGOAL_THEN``(!(Q' :string) (s :'state) (sh :'astate). (h:'state # 'astate -> bool)(s,sh) ==> sh IN (eh :string -> 'astate -> bool)[[[(Q :string)<--(X :'astate -> bool)]]]
-			 Q' ==> s IN (e :string -> 'state -> bool)[[[Q<--(Y :'state -> bool)]]] Q')`` ASSUME_TAC) THENL [
+                         Q' ==> s IN (e :string -> 'state -> bool)[[[Q<--(Y :'state -> bool)]]] Q')`` ASSUME_TAC) THENL [
     PAT_ASSUM ``!sh s.  h (s,sh) ==> sh IN X ==> s IN Y`` (fn t => PAT_ASSUM ``!Q s sh. h (s,sh) ==> sh IN eh Q ==> s IN e Q``
-							(fn t'=> POP_ASSUM_LIST (fn _ => ASSUME_TAC t THEN ASSUME_TAC t')))
+                                                        (fn t'=> POP_ASSUM_LIST (fn _ => ASSUME_TAC t THEN ASSUME_TAC t')))
     THEN REPEAT GEN_TAC
     THEN Cases_on `Q=Q'` THENL [
      FULL_SIMP_TAC std_ss [ENV_EVAL] THEN ASSUM_LIST PROVE_TAC,
@@ -467,7 +467,7 @@ RW_TAC std_ss [NNF_def,MU_SUB_def], (* ~RV *)
 FULL_SIMP_TAC std_ss [NNF_def,SUB_DMD_BOX,SUB_AP_NEG_DMD,SUB_RV_BOX,STATES_def,SET_SPEC,IN_UNIV,wfKS_def,REWRITE_RULE [wfKS_def] wf_absKS]
 THEN NTAC 17 STRIP_TAC
 THEN CONV_TAC (FORK_CONV(QUANT_CONV (FORK_CONV(REWRITE_CONV [KS_TRANSITION_def,KS_accfupds,combinTheory.K_DEF],ALL_CONV)),
-			 QUANT_CONV (FORK_CONV(REWRITE_CONV [KS_TRANSITION_def,KS_accfupds,combinTheory.K_DEF],ALL_CONV))))
+                         QUANT_CONV (FORK_CONV(REWRITE_CONV [KS_TRANSITION_def,KS_accfupds,combinTheory.K_DEF],ALL_CONV))))
 THEN REPEAT STRIP_TAC
 THEN PAT_ASSUM ``!q. (ABS_KS ks h).T a (sh,q) ==> q IN STATES (NNF f) (ABS_KS ks h) eh`` (fn t => ASSUME_TAC (CONV_RULE (QUANT_CONV (RATOR_CONV(RAND_CONV(SIMP_CONV std_ss [ABS_KS_def,KS_TRANSITION_def,KS_accfupds,combinTheory.K_DEF])))) t))
 THEN POP_ASSUM (fn t => POP_ASSUM (fn t' => POP_ASSUM (fn t'' => ASSUME_TAC t THEN ASSUME_TAC t' THEN RES_TAC THEN ASSUME_TAC t'')))
@@ -506,9 +506,9 @@ THEN (SUBGOAL_THEN (mk_forall(``n:num``,list_mk_forall([``sh:'astate``,``s:'stat
    THEN POP_ASSUM_LIST (fn t => PROVE_TAC (List.take(t,4))),
    POP_ASSUM (fn t => ASSUME_TAC (SPECL [``(e :string -> 'state -> bool)[[[Q<--(Y :'state -> bool)]]]``,``(eh :string -> 'astate -> bool)[[[(Q :string)<--(X :'astate -> bool)]]]``] t))
    THEN (SUBGOAL_THEN``(!(Q' :string) (s :'state) (sh :'astate). (h :'state # 'astate -> bool)(s,sh) ==> sh IN (eh :string -> 'astate -> bool)[[[(Q :string)<--(X :'astate -> bool)]]]
-			 Q' ==> s IN (e :string -> 'state -> bool)[[[Q<--(Y :'state -> bool)]]] Q')`` ASSUME_TAC) THENL [
+                         Q' ==> s IN (e :string -> 'state -> bool)[[[Q<--(Y :'state -> bool)]]] Q')`` ASSUME_TAC) THENL [
     PAT_ASSUM ``!sh s.  h (s,sh) ==> sh IN X ==> s IN Y`` (fn t => PAT_ASSUM ``!Q s sh. h (s,sh) ==> sh IN eh Q ==> s IN e Q``
-							(fn t'=> POP_ASSUM_LIST (fn _ => ASSUME_TAC t THEN ASSUME_TAC t')))
+                                                        (fn t'=> POP_ASSUM_LIST (fn _ => ASSUME_TAC t THEN ASSUME_TAC t')))
     THEN REPEAT GEN_TAC
     THEN Cases_on `Q=Q'` THENL [
      FULL_SIMP_TAC std_ss [ENV_EVAL] THEN ASSUM_LIST PROVE_TAC,
@@ -549,9 +549,9 @@ THEN (SUBGOAL_THEN (mk_forall(``n:num``,list_mk_forall([``sh:'astate``,``s:'stat
    THEN POP_ASSUM_LIST (fn t => PROVE_TAC (List.take(t,4))),
    POP_ASSUM (fn t => ASSUME_TAC (SPECL [``(e :string -> 'state -> bool)[[[Q<--(Y :'state -> bool)]]]``,``(eh :string -> 'astate -> bool)[[[(Q :string)<--(X :'astate -> bool)]]]``] t))
    THEN (SUBGOAL_THEN``(!(Q' :string) (s :'state) (sh :'astate). (h :'state # 'astate -> bool)(s,sh) ==> (sh IN (eh :string -> 'astate -> bool)[[[(Q :string)<--(X :'astate -> bool)]]]
-			 Q' ==> s IN (e :string -> 'state -> bool)[[[Q<--(Y :'state -> bool)]]] Q'))`` ASSUME_TAC) THENL [
+                         Q' ==> s IN (e :string -> 'state -> bool)[[[Q<--(Y :'state -> bool)]]] Q'))`` ASSUME_TAC) THENL [
     PAT_ASSUM ``!sh s.  h (s,sh) ==> sh IN X ==> s IN Y`` (fn t => PAT_ASSUM ``!Q s sh. h (s,sh) ==> (sh IN eh Q ==> s IN e Q)``
-							(fn t'=> POP_ASSUM_LIST (fn _ => ASSUME_TAC t THEN ASSUME_TAC t')))
+                                                        (fn t'=> POP_ASSUM_LIST (fn _ => ASSUME_TAC t THEN ASSUME_TAC t')))
     THEN REPEAT GEN_TAC
     THEN Cases_on `Q=Q'` THENL [
      FULL_SIMP_TAC std_ss [ENV_EVAL] THEN ASSUM_LIST PROVE_TAC,
@@ -633,11 +633,11 @@ THEN IMP_RES_TAC ABS_CONS_STATES
 THEN FULL_SIMP_TAC std_ss []));
 
 val SCC_FOLD_BASE = save_thm ("SCC_FOLD_BASE",
-			      prove(``!f g pf R s sh k. (s IN {s | !i. i<=k ==> SCC (R i) (f i (0:num)) (pf i s)} = g (0:num) sh)
-				    /\ (s IN {s | !i. i<=k ==> SCC (R i) (f i (1:num)) (pf i s)} = g (1:num) sh)
-				    =
-				    (s IN {s | !j. j<=1 ==> (s IN {s | !i. i<=k ==>  (pf i s) IN (SCC (R i) (f i j))}
-							     = (g j sh))})``,
+                              prove(``!f g pf R s sh k. (s IN {s | !i. i<=k ==> SCC (R i) (f i (0:num)) (pf i s)} = g (0:num) sh)
+                                    /\ (s IN {s | !i. i<=k ==> SCC (R i) (f i (1:num)) (pf i s)} = g (1:num) sh)
+                                    =
+                                    (s IN {s | !j. j<=1 ==> (s IN {s | !i. i<=k ==>  (pf i s) IN (SCC (R i) (f i j))}
+                                                             = (g j sh))})``,
 REPEAT STRIP_TAC THEN EQ_TAC THENL [
  STRIP_TAC THEN SIMP_TAC std_ss [SET_SPEC] THEN Induct_on `j` THENL [
   FULL_SIMP_TAC arith_ss [IN_DEF,DECIDE ``SUC (j:num) <= 1 = (j=0)``,SET_SPEC],
@@ -653,9 +653,9 @@ REPEAT STRIP_TAC THEN EQ_TAC THENL [
 ]));
 
 val SCC_FOLD_STEP = save_thm("SCC_FOLD_STEP",prove(``!f g pf R s sh k n.
-						      s IN {s | !(j:num). j<=n ==> (s IN {s | !i. i<=k ==> SCC (R i) (f i j) (pf i s)} = (g j sh))}
-						   /\ (s IN {s | !i. i<=k ==> SCC (R i) (f i (SUC n)) (pf i s)} = g (SUC n) sh)
-						   = s IN {s | !(j:num). j<=(SUC n) ==> (s IN {s | !i. i<=k ==> SCC (R i) (f i j) (pf i s)} = (g j sh))}``,
+                                                      s IN {s | !(j:num). j<=n ==> (s IN {s | !i. i<=k ==> SCC (R i) (f i j) (pf i s)} = (g j sh))}
+                                                   /\ (s IN {s | !i. i<=k ==> SCC (R i) (f i (SUC n)) (pf i s)} = g (SUC n) sh)
+                                                   = s IN {s | !(j:num). j<=(SUC n) ==> (s IN {s | !i. i<=k ==> SCC (R i) (f i j) (pf i s)} = (g j sh))}``,
 REPEAT STRIP_TAC
 THEN FULL_SIMP_TAC std_ss [SET_SPEC,IN_DEF]
 THEN EQ_TAC THEN DISCH_TAC THEN (TRY CONJ_TAC) THEN (TRY (Induct_on `j`)) THEN RW_TAC std_ss [] THENL [
@@ -709,4 +709,3 @@ val abst_lem1 = save_thm("abst_lem1",prove(``!f sh k i j. ((!i. i<=k /\ f i sh =
 REPEAT STRIP_TAC THEN RES_TAC));
 
 val _ = export_theory();
-

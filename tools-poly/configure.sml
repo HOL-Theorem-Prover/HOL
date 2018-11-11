@@ -521,7 +521,7 @@ val _ =
       val target_boss = fullPath [holdir, "bin", "hol"]
       val hol0_heap   = protect(fullPath[HOLDIR,"bin", "hol.state0"])
       val hol_heapcalc=
-            "$(" ^ protect(fullPath[HOLDIR,"bin","heapname"]) ^ ")"
+            "\"$(" ^ protect(fullPath[HOLDIR,"bin","heapname"]) ^ ")\""
       fun TP s = protect(fullPath[HOLDIR, "tools-poly", s])
       val prelude = ["Arbint", "Arbrat", TP "prelude.ML"]
       val prelude2 = prelude @ [TP "prelude2.ML"]

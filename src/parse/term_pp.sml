@@ -210,17 +210,8 @@ in
 end
 
 
-
-(* ----------------------------------------------------------------------
-    A flag controlling printing of set comprehensions
-   ---------------------------------------------------------------------- *)
-
-val unamb_comp = ref 0
-val _ = Feedback.register_trace ("pp_unambiguous_comprehensions", unamb_comp, 2)
-
 fun grav_name (Prec(n, s)) = s | grav_name _ = ""
 fun grav_prec (Prec(n,s)) = n | grav_prec _ = ~1
-
 
 fun pneeded_by_style (rr: term_grammar.rule_record, pgrav, fname, fprec) =
   case #paren_style rr of
@@ -594,6 +585,7 @@ fun pp_term (G : grammar) TyG backend = let
                              (pgrav, lgrav, rgrav)
                              depth tm
          fun runfirst [] = pr0 tm
+           | runfirst ((_, "", _) :: _) = pr0 tm
            | runfirst ((_,_,f)::t) =
                   (printwith f
                    handle UserPP_Failed => runfirst t) || runfirst t
@@ -1596,48 +1588,6 @@ fun pp_term (G : grammar) TyG backend = let
                 NONE => (f, args @ [Rand], false)
               | SOME (f, args) => (f, args, true)
 
-          fun check_for_setcomprehensions () =
-              if grammar_name G oif = SOME "GSPEC" andalso my_is_abs Rand
-              then let
-                  val (vs, body) = my_dest_abs Rand
-                  val vfrees = FVL [vs] empty_tmset
-                  val bvars_seen_here = HOLset.listItems vfrees
-
-                  val (l, r) = dest_pair body
-                  val lfrees = FVL [l] empty_tmset
-                  val rfrees = FVL [r] empty_tmset
-                  open HOLset
-                in
-                  if ((equal(intersection(lfrees,rfrees), vfrees) orelse
-                       (isEmpty lfrees andalso equal(rfrees, vfrees)) orelse
-                       (isEmpty rfrees andalso equal(lfrees, vfrees)))
-                      andalso !unamb_comp = 0) orelse
-                     !unamb_comp = 2
-                  then
-                    block CONSISTENT 0
-                       (record_bvars bvars_seen_here
-                        (set_gspec
-                           (add_string "{" >>
-                            block CONSISTENT 0
-                              (pr_term l Top Top Top (decdepth depth) >>
-                               hardspace 1 >> add_string "|" >> spacep true >>
-                               pr_term r Top Top Top (decdepth depth)) >>
-                            add_string "}")))
-                  else
-                    block CONSISTENT 0
-                      (record_bvars bvars_seen_here
-                       (set_gspec
-                         (add_string "{" >>
-                          block CONSISTENT 0
-                            (pr_term l Top Top Top (decdepth depth) >>
-                             hardspace 1 >> add_string "|" >> spacep true >>
-                             pr_term vs Top Top Top (decdepth depth) >>
-                             hardspace 1 >> add_string "|" >> spacep true >>
-                             pr_term r Top Top Top (decdepth depth)) >>
-                          add_string "}")))
-                end handle HOL_ERR _ => fail
-              else fail
-
           fun is_atom tm = is_const tm orelse is_var tm
           fun pr_atomf (f,args0) = let
             (* the tm, Rator and Rand bindings that we began with are
@@ -1829,8 +1779,6 @@ fun pp_term (G : grammar) TyG backend = let
                   check_for_field_selection (list_mk_comb(oif,args)) Rand
                 end) |||
           (fn _ => check_for_record_update tm Rator Rand) |||
-
-          check_for_setcomprehensions |||
 
           (* case expressions *)
           (fn () =>

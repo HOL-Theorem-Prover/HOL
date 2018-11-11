@@ -86,7 +86,7 @@ fun mk_union_spec (spec1:spec_type) (spec2:spec_type) =
   let (*  s1 |+| s2 *)
       val union_body = list_mk_comb(inst [alpha |-> !VarType] union_tm, [#body spec1, #body spec2])
       val exp = mk_plet (#dst spec1, #exp spec1,
-			 mk_comb(mk_pabs (#dst spec1, #exp spec2), #dst spec1))
+                         mk_comb(mk_pabs (#dst spec1, #exp spec2), #dst spec1))
       val value = mk_pair(exp, #dst spec2)
       val s = list_mk_pair [#entry spec1, union_body, #exit spec2]
       val spec = list_mk_comb(inst [alpha |-> !VarType] reduce_tm, [s, value])
@@ -95,7 +95,7 @@ fun mk_union_spec (spec1:spec_type) (spec2:spec_type) =
                        MATCH_MP_TAC seq_rule THEN
                        EXISTS_TAC (#exit spec1) THEN EXISTS_TAC (#dst spec1) THEN
                        PBETA_TAC THEN
-		       REWRITE_TAC [#thm spec1, #thm spec2]
+                       REWRITE_TAC [#thm spec1, #thm spec2]
                       )
      val spec_thm = PBETA_RULE spec_lem
   in
@@ -136,16 +136,16 @@ fun mk_cond_spec (entry_l,exit_l) (dest,src) args =
        val s = list_mk_pair [l1, b2, l4]
 
        val exp = mk_cond (mk_comb(c,args),
-			  mk_comb(mk_pabs(args, #exp spec1), args),
-			  mk_comb(mk_pabs(args, #exp spec2), args))
+                          mk_comb(mk_pabs(args, #exp spec1), args),
+                          mk_comb(mk_pabs(args, #exp spec2), args))
        val value = mk_pair(exp, dest)
        val spec = list_mk_comb(inst [alpha |-> !VarType] reduce_tm, [s, value])
 
        val spec_lem =  prove (spec,   (* set_goal ([], spec) *)
-			      MATCH_MP_TAC CONDITIONAL_RULE THEN
-			      PBETA_TAC THEN
+                              MATCH_MP_TAC CONDITIONAL_RULE THEN
+                              PBETA_TAC THEN
                               REWRITE_TAC [#thm spec1, #thm spec2]
-			      )
+                              )
        val spec_thm = PBETA_RULE spec_lem
        val exp' = mk_cond (J, #exp spec1, #exp spec2)
 
@@ -163,10 +163,10 @@ and
 
 mk_spec (entry_l,exit_l) (dest,src) args =
     if is_atomic src orelse is_pair src then
-	mk_instr_spec (entry_l,exit_l) (dest,src)
+        mk_instr_spec (entry_l,exit_l) (dest,src)
 
     else if is_cond src then                 (*  t = if P then M else N *)
-	mk_cond_spec (entry_l,exit_l) (dest,src) args
+        mk_cond_spec (entry_l,exit_l) (dest,src) args
 
     else if is_comb src then
       let val (operator, operands) = strip_comb src
@@ -174,7 +174,7 @@ mk_spec (entry_l,exit_l) (dest,src) args =
         if basic.is_binop operator then (* Arith. and Logical Operations *)
            mk_instr_spec (entry_l,exit_l) (dest,src)
         else (* Application *)
-	   raise Fail "unimplemented SAL code generation for function applications"
+           raise Fail "unimplemented SAL code generation for function applications"
       end
     else
        raise Fail "unimplemented for this structure!"
@@ -186,8 +186,8 @@ and
 gen_code (entry_l, t, exit_l) (input,output) =
    if is_atomic t orelse is_pair t then
        if t = output then    (* no copying is required *)
-	    {entry = entry_l, exit = exit_l, body = inst [alpha |-> !VarType] nop, exp = t, dst = t,
-	     thm = dummy_rule}
+            {entry = entry_l, exit = exit_l, body = inst [alpha |-> !VarType] nop, exp = t, dst = t,
+             thm = dummy_rule}
        else mk_instr_spec (entry_l,exit_l) (output, t)
 
    else if is_let t then                     (*  exp = LET (\v. N) M  *)
@@ -197,7 +197,7 @@ gen_code (entry_l, t, exit_l) (input,output) =
          val spec1 = mk_spec (entry_l,new_l) (v,M) input
          val spec2 = gen_code (new_l, N, exit_l) (#dst spec1, output)
          val spec3 = if #body spec2 = (inst [alpha |-> !VarType] nop) then
-	                 mk_spec (entry_l,exit_l) (v,M) input       (* make sure the exit label is correct *)
+                         mk_spec (entry_l,exit_l) (v,M) input       (* make sure the exit label is correct *)
                      else mk_union_spec spec1 spec2
      in
          spec3
@@ -245,8 +245,8 @@ fun formatSAL code =
        else if op_s = "IFGOTO" then
          let val [entry_l, cond, true_l, false_l] = xs
          in indent_label entry_l ^ "ifgoto " ^
-	     term_to_string (#2 (dest_pabs cond)) ^ " " ^ format_label true_l ^
-	      " " ^ format_label false_l ^ !seperator
+             term_to_string (#2 (dest_pabs cond)) ^ " " ^ format_label true_l ^
+              " " ^ format_label false_l ^ !seperator
          end
        else if op_s = "GOTO" then
          let val [entry_l, exit_l] = xs
@@ -266,7 +266,7 @@ fun formatSAL code =
 
 fun find_output t =
     if is_let t then
-	let val (v,M,N) = dest_plet t
+        let val (v,M,N) = dest_plet t
         in if is_atomic N orelse is_pair N then SOME N
            else find_output N
         end
@@ -304,9 +304,9 @@ fun certified_gen def =
   in
     if sane then
       let val _ = (reset_label(); VarType := var_type)
-	  val s = gen_code (next_label(), #body rs, next_label()) (#input rs, #output rs)
+          val s = gen_code (next_label(), #body rs, next_label()) (#input rs, #output rs)
       in
-	  {code = #body s, thm = #thm s}
+          {code = #body s, thm = #thm s}
       end
       handle _ =>
        ( print("STOP: The source program (FIL) includes structures whose conversion hasn't been implemented!\n");

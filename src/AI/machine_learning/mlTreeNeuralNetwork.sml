@@ -37,12 +37,12 @@ fun random_headnn dim =
 fun random_treenn dim cal = (random_opdict dim cal, random_headnn dim)
 
 fun string_of_opdictone ((oper,a),nn) =
-  term_to_string oper ^ " " ^ int_to_string a ^ "\n\n" ^ string_of_nn nn 
+  term_to_string oper ^ " " ^ int_to_string a ^ "\n\n" ^ string_of_nn nn
 
 fun string_of_opdict opdict =
   String.concatWith "\n\n\n" (map string_of_opdictone (dlist opdict))
 
-fun string_of_treenn (opdict,headnn) = 
+fun string_of_treenn (opdict,headnn) =
   "head\n\n" ^ string_of_nn headnn ^ "\n\n\n" ^ string_of_opdict opdict
 
 (* -------------------------------------------------------------------------
@@ -157,7 +157,7 @@ fun prepare_trainset_eval trainset =
   prepare_trainset_poli (map_snd (fn x => [x]) trainset)
 
 fun string_of_trainset_poli trainset =
-  let 
+  let
     fun cmp (x,y) = Real.compare (hd (snd x), hd (snd y))
     val l = dict_sort cmp trainset
     fun sr x = Real.toString (approx 4 x)
@@ -168,7 +168,7 @@ fun string_of_trainset_poli trainset =
   end
 
 fun string_of_trainset_eval trainset =
-  let 
+  let
     val l = dict_sort compare_rmin trainset
     fun sr x = Real.toString (approx 4 x)
     fun f (cj,eval) = term_to_string cj ^ ": " ^ sr eval
@@ -180,13 +180,13 @@ fun string_of_trainset_eval trainset =
    Inference
    ------------------------------------------------------------------------- *)
 
-fun poli_treenn treenn tm = 
+fun poli_treenn treenn tm =
   let val (_,fpdatal) = fp_treenn treenn (order_subtm tm) in
     vector_to_list (denorm_vect (#outnv (last fpdatal)))
   end
 
 fun eval_treenn treenn tm = hd (poli_treenn treenn tm)
-  
+
 (* -------------------------------------------------------------------------
    Training a treenn for some epochs
    ------------------------------------------------------------------------- *)
@@ -221,11 +221,11 @@ fun string_of_oper (optm,i) = term_to_string optm ^ " " ^ int_to_string i
 
 fun update_opernn bsize opdict (oper,bpdatall) =
   let
-    val nn       = dfind oper opdict 
+    val nn       = dfind oper opdict
       handle NotFound => raise ERR "update_opernn" (string_of_oper oper)
     val dwl      = average_bpdatall bsize bpdatall
     val loss     = average_loss bpdatall
-    val _        = debug (string_of_oper oper ^ ": " ^ Real.toString loss) 
+    val _        = debug (string_of_oper oper ^ ": " ^ Real.toString loss)
     val newnn    = update_nn nn dwl
   in
     (oper,newnn)
@@ -259,28 +259,28 @@ fun train_treenn_epoch dim treenn batchl =
 
 fun train_treenn_nepoch n dim (treenn,loss) size trainset =
   if n <= 0 then (treenn,loss) else
-  let  
+  let
     val batchl              = mk_batch size (shuffle trainset)
     val (newtreenn,newloss) = train_treenn_epoch dim treenn batchl
   in
     train_treenn_nepoch (n - 1) dim (newtreenn,newloss) size trainset
   end
 
-fun train_treenn_schedule_aux dim (treenn,loss) bsize prepset schedule = 
+fun train_treenn_schedule_aux dim (treenn,loss) bsize prepset schedule =
   case schedule of
     [] => (treenn,loss)
-  | (nepoch, lrate) :: m => 
-    let 
-      val _ = learning_rate := lrate 
+  | (nepoch, lrate) :: m =>
+    let
+      val _ = learning_rate := lrate
       val _ = print_endline ("learning_rate: " ^ Real.toString lrate)
       val (newtreenn,newloss) =
-        train_treenn_nepoch nepoch dim (treenn,loss) bsize prepset  
+        train_treenn_nepoch nepoch dim (treenn,loss) bsize prepset
     in
       train_treenn_schedule_aux dim (newtreenn,newloss) bsize prepset m
     end
 
 fun train_treenn_schedule dim treenn bsize prepset schedule =
-  train_treenn_schedule_aux dim (treenn,0.0) bsize prepset schedule  
+  train_treenn_schedule_aux dim (treenn,0.0) bsize prepset schedule
 
 (* -------------------------------------------------------------------------
    Input terms for the tree neural networks
@@ -290,17 +290,17 @@ fun train_treenn_schedule dim treenn bsize prepset schedule =
 val seq_sym      = mk_var ("seq_sym", ``:bool -> bool -> bool``)
 val asm_cat      = mk_var ("asm_cat", ``:bool -> bool -> bool``)
 val goal_cat     = mk_var ("goal_cat", ``:bool -> bool -> bool``)
-val forget_relation = 
+val forget_relation =
   mk_var ("forget_relation", ``:bool -> bool -> bool``)
-val cut_relation = 
+val cut_relation =
   mk_var ("cut_relation", ``:bool -> bool -> bool``)
-val cutpos_relation = 
+val cutpos_relation =
   mk_var ("cutpos_relation", ``:bool -> bool -> bool``)
-val initcut_relation = 
+val initcut_relation =
   mk_var ("initcut_relation", ``:bool -> bool -> bool``)
-val buildcut_relation = 
+val buildcut_relation =
   mk_var ("buildcut_relation", ``:bool -> bool -> bool``)
-val goalchoice_relation = 
+val goalchoice_relation =
   mk_var ("goalchoice_relation", ``:bool -> bool -> bool``)
 
 
@@ -311,7 +311,7 @@ fun list_mk_asmcat (asm,asml)  = case asml of
     []     => asm
   | a :: m => mk_asmcat (asm, list_mk_asmcat (a,m))
 fun strip_asml tm = case strip_comb tm of
-    (a,[b,c]) => (if a <> asm_cat then [tm] else b :: strip_asml c)  
+    (a,[b,c]) => (if a <> asm_cat then [tm] else b :: strip_asml c)
   | _         => [tm]
 fun mk_goalcat (a,b) = list_mk_comb (goal_cat,[a,b])
 fun list_mk_goalcat (tm,tml)  = case tml of
@@ -331,10 +331,10 @@ fun goallist_to_nnterm gl = case map goal_to_nnterm gl of
 fun forget_to_nnterm (g,t) =
   list_mk_comb (forget_relation, [goal_to_nnterm g, t])
 
-fun cut_to_nnterm (g,t) = 
+fun cut_to_nnterm (g,t) =
   list_mk_comb (cut_relation, [goal_to_nnterm g, t])
 
-fun cutpos_to_nnterm (g,t) = 
+fun cutpos_to_nnterm (g,t) =
   list_mk_comb (cutpos_relation, [goal_to_nnterm g, t])
 
 fun initcut_to_nnterm (g,t) =
@@ -350,12 +350,12 @@ fun goalchoice_to_nnterm (gl,g) =
    Set of operators of a tree neural network
    ------------------------------------------------------------------------- *)
 
-fun fo_terms tm = 
-  let val (oper,argl) = strip_comb tm in 
+fun fo_terms tm =
+  let val (oper,argl) = strip_comb tm in
     tm :: List.concat (map fo_terms argl)
-  end  
+  end
 
-val extra_operators = 
+val extra_operators =
   [
    (seq_sym,2),
    (asm_cat,2),
@@ -368,10 +368,10 @@ val extra_operators =
    (goalchoice_relation,2)
   ]
 
-fun operl_of_term tm = 
-  let 
+fun operl_of_term tm =
+  let
     val tml = mk_fast_set Term.compare (fo_terms tm)
-    fun f x = let val (oper,argl) = strip_comb x in (oper, length argl) end  
+    fun f x = let val (oper,argl) = strip_comb x in (oper, length argl) end
   in
     extra_operators @
     mk_fast_set (cpl_compare Term.compare Int.compare) (map f tml)

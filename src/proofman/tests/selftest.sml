@@ -201,16 +201,21 @@ val _ = List.app testf [
 
 val _ = Parse.current_backend := PPBackEnd.raw_terminal
 
-val _ = app tpp ["f\n\
-                 \  (let\n\
-                 \     x = long expression ;\n\
-                 \     y = long expression ;\n\
-                 \     z = long expression\n\
-                 \   in\n\
-                 \     x /\\ y /\\ z)"]
-
-val _ = testutils.linewidth := 20
-
-val _ = app tpp ["f\n  (longterm =\n   longterm)",
-                 "f\n  (term001 = term002)"
-                 ]
+val _ = app (fn (w,s) => Portable.with_flag(testutils.linewidth,w) tpp s)
+            [(20, "f\n  (longterm =\n   longterm)"),
+             (20, "f\n  (term001 = term002)"),
+             (30, "let\n\
+                  \  v =\n\
+                  \    if gd then th\n\
+                  \    else if gd then th\n\
+                  \    else el\n\
+                  \in\n\
+                  \  v /\\ y"),
+             (80, "f\n\
+                  \  (let\n\
+                  \     x = long expression ;\n\
+                  \     y = long expression ;\n\
+                  \     z = long expression\n\
+                  \   in\n\
+                  \     x /\\ y /\\ z)")
+            ]

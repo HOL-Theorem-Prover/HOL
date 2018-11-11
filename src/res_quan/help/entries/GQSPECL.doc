@@ -3,7 +3,7 @@
 \TYPE {GQSPECL : (term list -> thm -> thm)}
 
 \SYNOPSIS
-Specializes zero or more variables in the conclusion of a 
+Specializes zero or more variables in the conclusion of a
 universally quantified theorem.
 
 \KEYWORDS
@@ -26,7 +26,7 @@ It is permissible for the term-list to be empty, in which case
 the application of {GQSPECL} has no effect.
 
 \FAILURE
-Fails if one of the specialization of the 
+Fails if one of the specialization of the
 quantified variable in the original theorem fails.
 
 \SEEALSO

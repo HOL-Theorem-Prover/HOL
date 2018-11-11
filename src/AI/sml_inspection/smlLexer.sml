@@ -118,7 +118,7 @@ fun lex_helper acc charl = case charl of
     else raise ERR "lex_helper" (Char.toString a)
     )
 
-(* This fix is not perfect if ~ or # is redefined 
+(* This fix is not perfect if ~ or # is redefined
    as we forgot if there was a space or not *)
 fun reg_char l = case l of
     [] => []
@@ -131,7 +131,7 @@ fun reg_char l = case l of
                      if Char.isDigit (String.sub(s,0))
                      then ("~" ^ s) :: reg_char m
                      else "~" :: reg_char (s :: m)
-                     )                   
+                     )
   | a :: m        => a :: reg_char m
 
 fun some_acc acc =
@@ -161,11 +161,11 @@ val reserved_dict =
    "local","=>","case","of","_","|","fn","handle","raise","#",
    "[","(",",",")","]","{","}","..."])
 
-fun is_quoted s = String.sub (s,0) = #"\"" 
+fun is_quoted s = String.sub (s,0) = #"\""
   handle Interrupt => raise Interrupt | _ => false
-fun is_number s = Char.isDigit (String.sub (s,0)) 
+fun is_number s = Char.isDigit (String.sub (s,0))
   handle Interrupt => raise Interrupt | _ => false
-fun is_chardef s = String.substring (s,0,2) = "#\"" 
+fun is_chardef s = String.substring (s,0,2) = "#\""
   handle Interrupt => raise Interrupt | _ => false
 
 fun is_reserved s =

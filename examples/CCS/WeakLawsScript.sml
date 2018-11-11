@@ -12,10 +12,10 @@ open WeakEQTheory WeakEQLib;
 val _ = new_theory "WeakLaws";
 
 (******************************************************************************)
-(*									      *)
+(*                                                                            *)
 (*  Basic laws of observation equivalence for the binary summation operator   *)
-(*		derived through strong equivalence			      *)
-(*									      *)
+(*              derived through strong equivalence                            *)
+(*                                                                            *)
 (******************************************************************************)
 
 (* Prove WEAK_SUM_IDENT_R: |- !E. WEAK_EQUIV (sum E nil) E *)
@@ -41,7 +41,7 @@ val WEAK_SUM_COMM = save_thm (
 (* Observation equivalence of stable agents is substitutive under the binary
    summation operator on the left:
    |- !E E'. WEAK_EQUIV E E' /\ STABLE E /\ STABLE E' ==>
-	     (!E''. WEAK_EQUIV (sum E'' E) (sum E'' E'))
+             (!E''. WEAK_EQUIV (sum E'' E) (sum E'' E'))
  *)
 val WEAK_EQUIV_SUBST_SUM_L = save_thm (
    "WEAK_EQUIV_SUBST_SUM_L",
@@ -49,10 +49,10 @@ val WEAK_EQUIV_SUBST_SUM_L = save_thm (
      (DISCH_ALL
       (Q.GEN `E''`
        (OE_TRANS
-	 (Q.SPECL [`E''`, `E`] WEAK_SUM_COMM)
-	 (OE_TRANS
-	   (SPEC_ALL (UNDISCH (SPEC_ALL WEAK_EQUIV_SUBST_SUM_R)))
-	   (Q.SPECL [`E'`, `E''`] WEAK_SUM_COMM))))));
+         (Q.SPECL [`E''`, `E`] WEAK_SUM_COMM)
+         (OE_TRANS
+           (SPEC_ALL (UNDISCH (SPEC_ALL WEAK_EQUIV_SUBST_SUM_R)))
+           (Q.SPECL [`E'`, `E''`] WEAK_SUM_COMM))))));
 
 (* Prove WEAK_SUM_ASSOC_R:
    |- !E E' E''. WEAK_EQUIV (sum (sum E E') E'') (sum E (sum E' E''))
@@ -69,10 +69,10 @@ val WEAK_SUM_ASSOC_L = save_thm (
     STRONG_IMP_WEAK_EQUIV_RULE STRONG_SUM_ASSOC_L);
 
 (******************************************************************************)
-(*									      *)
-(*	     Basic laws of observation equivalence for the parallel	      *)
-(*	       operator derived through strong equivalence		      *)
-(*									      *)
+(*                                                                            *)
+(*           Basic laws of observation equivalence for the parallel           *)
+(*             operator derived through strong equivalence                    *)
+(*                                                                            *)
 (******************************************************************************)
 
 (* Prove WEAK_PAR_IDENT_R: |- !E. WEAK_EQUIV (par E nil) E
@@ -103,8 +103,8 @@ val WEAK_PAR_ASSOC = save_thm (
 (* Prove WEAK_PAR_PREF_TAU:
    |- !u E E'.
        WEAK_EQUIV (par (prefix u E) (prefix tau E'))
-		 (sum (prefix u (par E (prefix tau E')))
-		      (prefix tau (par (prefix u E) E')))
+                 (sum (prefix u (par E (prefix tau E')))
+                      (prefix tau (par (prefix u E) E')))
  *)
 val WEAK_PAR_PREF_TAU = save_thm (
    "WEAK_PAR_PREF_TAU",
@@ -113,8 +113,8 @@ val WEAK_PAR_PREF_TAU = save_thm (
 (* Prove WEAK_PAR_TAU_PREF:
    |- !E u E'.
        WEAK_EQUIV (par (prefix tau E) (prefix u E'))
-		 (sum (prefix tau (par E (prefix u E')))
-		      (prefix u (par (prefix tau E) E')))
+                 (sum (prefix tau (par E (prefix u E')))
+                      (prefix u (par (prefix tau E) E')))
  *)
 val WEAK_PAR_TAU_PREF = save_thm (
    "WEAK_PAR_TAU_PREF",
@@ -123,8 +123,8 @@ val WEAK_PAR_TAU_PREF = save_thm (
 (* Prove WEAK_PAR_TAU_TAU:
    |- !E E'.
        WEAK_EQUIV (par (prefix tau E) (prefix tau E'))
-		 (sum (prefix tau (par E (prefix tau E')))
-		      (prefix tau (par (prefix tau E) E')))
+                 (sum (prefix tau (par E (prefix tau E')))
+                      (prefix tau (par (prefix tau E) E')))
  *)
 val WEAK_PAR_TAU_TAU = save_thm (
    "WEAK_PAR_TAU_TAU", Q.SPEC `tau` WEAK_PAR_PREF_TAU);
@@ -133,33 +133,33 @@ val WEAK_PAR_TAU_TAU = save_thm (
    |- !l l'.
        ~(l = COMPL l') ==>
        (!E E'.
-	 WEAK_EQUIV (par (prefix (label l) E) (prefix (label l') E'))
-		   (sum (prefix (label l) (par E (prefix (label l') E')))
-			(prefix (label l') (par (prefix (label l) E) E'))))
+         WEAK_EQUIV (par (prefix (label l) E) (prefix (label l') E'))
+                   (sum (prefix (label l) (par E (prefix (label l') E')))
+                        (prefix (label l') (par (prefix (label l) E) E'))))
  *)
 val WEAK_PAR_PREF_NO_SYNCR = save_thm (
    "WEAK_PAR_PREF_NO_SYNCR",
     STRIP_FORALL_RULE ((DISCH ``~((l :'b Label) = COMPL l')``) o
-		       (STRONG_IMP_WEAK_EQUIV_RULE) o
-		       UNDISCH)
-		      STRONG_PAR_PREF_NO_SYNCR);
+                       (STRONG_IMP_WEAK_EQUIV_RULE) o
+                       UNDISCH)
+                      STRONG_PAR_PREF_NO_SYNCR);
 
 (* Prove WEAK_PAR_PREF_SYNCR:
    |- !l l'.
        (l = COMPL l') ==>
        (!E E'.
-	 WEAK_EQUIV (par (prefix (label l) E) (prefix (label l') E'))
-		   (sum
-		    (sum (prefix (label l) (par E (prefix (label l') E')))
-			 (prefix (label l') (par (prefix (label l) E) E')))
-		    (prefix tau (par E E'))))
+         WEAK_EQUIV (par (prefix (label l) E) (prefix (label l') E'))
+                   (sum
+                    (sum (prefix (label l) (par E (prefix (label l') E')))
+                         (prefix (label l') (par (prefix (label l) E) E')))
+                    (prefix tau (par E E'))))
  *)
 val WEAK_PAR_PREF_SYNCR = save_thm (
    "WEAK_PAR_PREF_SYNCR",
     STRIP_FORALL_RULE ((DISCH ``((l :'b Label) = COMPL l')``) o
-		       (STRONG_IMP_WEAK_EQUIV_RULE) o
-		       UNDISCH)
-		      STRONG_PAR_PREF_SYNCR);
+                       (STRONG_IMP_WEAK_EQUIV_RULE) o
+                       UNDISCH)
+                      STRONG_PAR_PREF_SYNCR);
 
 (* The expansion law for observation equivalence:
   |- !f n f' m.
@@ -169,20 +169,20 @@ val WEAK_PAR_PREF_SYNCR = save_thm (
       (par (SIGMA f n) (SIGMA f' m))
       (sum
        (sum
-	(SIGMA (\i. prefix (PREF_ACT (f i)) (par (PREF_PROC (f i)) (SIGMA f' m))) n)
-	(SIGMA (\j. prefix (PREF_ACT (f' j)) (par (SIGMA f n) (PREF_PROC (f' j)))) m))
+        (SIGMA (\i. prefix (PREF_ACT (f i)) (par (PREF_PROC (f i)) (SIGMA f' m))) n)
+        (SIGMA (\j. prefix (PREF_ACT (f' j)) (par (SIGMA f n) (PREF_PROC (f' j)))) m))
        (ALL_SYNC f n f' m))
  *)
 val WEAK_EXPANSION_LAW = save_thm (
    "WEAK_EXPANSION_LAW",
     STRIP_FORALL_RULE (DISCH_ALL o (MATCH_MP STRONG_IMP_WEAK_EQUIV) o UNDISCH)
-		      STRONG_EXPANSION_LAW);
+                      STRONG_EXPANSION_LAW);
 
 (******************************************************************************)
-(*									      *)
-(*	Basic laws of observation equivalence for the restriction	      *)
-(*	      operator derived through strong equivalence		      *)
-(*									      *)
+(*                                                                            *)
+(*      Basic laws of observation equivalence for the restriction             *)
+(*            operator derived through strong equivalence                     *)
+(*                                                                            *)
 (******************************************************************************)
 
 (* Prove WEAK_RESTR_NIL: |- !L. WEAK_EQUIV (restr nil L) nil *)
@@ -206,21 +206,21 @@ val WEAK_RESTR_PREFIX_TAU = save_thm (
 
 (* Prove WEAK_RESTR_PR_LAB_NIL:
    |- !l L. l IN L \/ (COMPL l) IN L ==>
-	    (!E. WEAK_EQUIV (restr (prefix (label l) E) L) nil)
+            (!E. WEAK_EQUIV (restr (prefix (label l) E) L) nil)
  *)
 val WEAK_RESTR_PR_LAB_NIL = save_thm (
    "WEAK_RESTR_PR_LAB_NIL",
     GEN_ALL
        (DISCH ``(l :'b Label) IN L \/ (COMPL l) IN L``
-	(Q.GEN `E`
-	 (UNDISCH
-	  (IMP_TRANS
-	   (DISCH ``(l :'b Label) IN L \/ (COMPL l) IN L``
-	    (Q.SPEC `E`
-	     (UNDISCH
-	      (Q.SPECL [`l`, `L`] STRONG_RESTR_PR_LAB_NIL))))
-	   (SPECL [``restr (L :'b Label set) (prefix (label l) E)``, ``nil``]
-		    STRONG_IMP_WEAK_EQUIV))))));
+        (Q.GEN `E`
+         (UNDISCH
+          (IMP_TRANS
+           (DISCH ``(l :'b Label) IN L \/ (COMPL l) IN L``
+            (Q.SPEC `E`
+             (UNDISCH
+              (Q.SPECL [`l`, `L`] STRONG_RESTR_PR_LAB_NIL))))
+           (SPECL [``restr (L :'b Label set) (prefix (label l) E)``, ``nil``]
+                    STRONG_IMP_WEAK_EQUIV))))));
 
 (* Prove WEAK_RESTR_PREFIX_LABEL:
    |- !l L.
@@ -231,22 +231,22 @@ val WEAK_RESTR_PREFIX_LABEL = save_thm (
    "WEAK_RESTR_PREFIX_LABEL",
     GEN_ALL
        (DISCH ``~((l :'b Label) IN L) /\ ~((COMPL l) IN L)``
-	(Q.GEN `E`
-	 (UNDISCH
-	  (IMP_TRANS
-	   (DISCH ``~((l :'b Label) IN L) /\ ~((COMPL l) IN L)``
-	    (Q.SPEC `E`
-	     (UNDISCH
-	      (Q.SPECL [`l`, `L`] STRONG_RESTR_PREFIX_LABEL))))
-	   (SPECL [``restr (L :'b Label set) (prefix (label l) E)``,
-		   ``prefix (label (l :'b Label)) (restr L E)``]
-		  STRONG_IMP_WEAK_EQUIV))))));
+        (Q.GEN `E`
+         (UNDISCH
+          (IMP_TRANS
+           (DISCH ``~((l :'b Label) IN L) /\ ~((COMPL l) IN L)``
+            (Q.SPEC `E`
+             (UNDISCH
+              (Q.SPECL [`l`, `L`] STRONG_RESTR_PREFIX_LABEL))))
+           (SPECL [``restr (L :'b Label set) (prefix (label l) E)``,
+                   ``prefix (label (l :'b Label)) (restr L E)``]
+                  STRONG_IMP_WEAK_EQUIV))))));
 
 (******************************************************************************)
-(*									      *)
-(*	  Basic laws of observation equivalence for the relabelling	      *)
-(*		operator derived through strong equivalence		      *)
-(*									      *)
+(*                                                                            *)
+(*        Basic laws of observation equivalence for the relabelling           *)
+(*              operator derived through strong equivalence                   *)
+(*                                                                            *)
 (******************************************************************************)
 
 (* Prove WEAK_RELAB_NIL: |- !rf. WEAK_EQUIV (relab nil rf) nil *)
@@ -264,17 +264,17 @@ val WEAK_RELAB_SUM = save_thm (
 (* Prove WEAK_RELAB_PREFIX:
    |- !u E labl.
        WEAK_EQUIV (relab (prefix u E) (RELAB labl))
-		 (prefix (relabel (Apply_Relab labl) u) (relab E (RELAB labl)))
+                 (prefix (relabel (Apply_Relab labl) u) (relab E (RELAB labl)))
  *)
 val WEAK_RELAB_PREFIX = save_thm (
    "WEAK_RELAB_PREFIX",
     STRONG_IMP_WEAK_EQUIV_RULE STRONG_RELAB_PREFIX);
 
 (******************************************************************************)
-(*									      *)
-(*	 Basic laws of observation equivalence for the recursion	      *)
-(*		 operator through strong equivalence			      *)
-(*									      *)
+(*                                                                            *)
+(*       Basic laws of observation equivalence for the recursion              *)
+(*               operator through strong equivalence                          *)
+(*                                                                            *)
 (******************************************************************************)
 
 (* The unfolding law:
@@ -295,9 +295,9 @@ val WEAK_PREF_REC_EQUIV = save_thm (
     STRONG_IMP_WEAK_EQUIV_RULE STRONG_PREF_REC_EQUIV);
 
 (******************************************************************************)
-(*									      *)
-(*	   the tau-law "tau.E = E" for observation equivalence		      *)
-(*									      *)
+(*                                                                            *)
+(*         the tau-law "tau.E = E" for observation equivalence                *)
+(*                                                                            *)
 (******************************************************************************)
 
 (* Prove TAU_WEAK:  |- !E. WEAK_EQUIV (prefix tau E) E *)

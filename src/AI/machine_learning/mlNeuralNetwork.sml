@@ -189,7 +189,7 @@ fun average_loss bpdatall = average_real (map bp_loss bpdatall)
 fun clip (a,b) m =
   let fun f x = if x < a then a else (if x > b then b else x) in
     mat_map f m
-  end 
+  end
 
 fun update_layer (layer, layerwu) =
   let
