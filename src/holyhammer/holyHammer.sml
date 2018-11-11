@@ -11,8 +11,8 @@
 structure holyHammer :> holyHammer =
 struct
 
-open HolKernel boolLib Thread anotherLib smlExecute smlRedirect   
-  mlFeature mlDataThm mlNearestNeighbor hhReconstruct hhTranslate hhTptp 
+open HolKernel boolLib Thread aiLib smlExecute smlRedirect   
+  mlFeature mlThmData mlNearestNeighbor hhReconstruct hhTranslate hhTptp 
 
 val ERR = mk_HOL_ERR "holyHammer"
 val debugdir = HOLDIR ^ "/src/holyhammer/debug"

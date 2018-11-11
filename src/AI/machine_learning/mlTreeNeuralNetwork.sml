@@ -8,10 +8,11 @@
 structure mlTreeNeuralNetwork :> mlTreeNeuralNetwork =
 struct
 
-open HolKernel boolLib Abbrev anotherLib mlMatrix mlNeuralNetwork
+open HolKernel boolLib Abbrev aiLib mlMatrix mlNeuralNetwork
 
 val ERR = mk_HOL_ERR "mlTreeNeuralNetwork"
-val dbg = dbg_file "debug_mlTreeNeuralNetwork"
+val debugdir = HOLDIR ^ "/src/AI/machine_learning/debug"
+fun debug s = debug_in_dir debugdir "mlTreeNeuralNetwork" s
 
 (* -------------------------------------------------------------------------
    Initialization
@@ -203,7 +204,7 @@ fun update_head bsize headnn bpdatall =
     val newheadnn = update_nn headnn dwl
     val loss      = average_loss bpdatall
   in
-    dbg ("head loss: " ^ Real.toString loss);
+    debug ("head loss: " ^ Real.toString loss);
     (newheadnn, loss)
   end
 
@@ -224,7 +225,7 @@ fun update_opernn bsize opdict (oper,bpdatall) =
       handle NotFound => raise ERR "update_opernn" (string_of_oper oper)
     val dwl      = average_bpdatall bsize bpdatall
     val loss     = average_loss bpdatall
-    val _        = dbg (string_of_oper oper ^ ": " ^ Real.toString loss) 
+    val _        = debug (string_of_oper oper ^ ": " ^ Real.toString loss) 
     val newnn    = update_nn nn dwl
   in
     (oper,newnn)

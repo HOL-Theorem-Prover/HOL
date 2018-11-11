@@ -9,7 +9,7 @@
 structure smlOpen :> smlOpen =
 struct
 
-open HolKernel boolLib anotherLib
+open HolKernel boolLib aiLib
 
 val ERR = mk_HOL_ERR "smlOpen"
 

@@ -2,7 +2,7 @@
 (*
 load "tttUnfold";
 open tttUnfold;
-anotherLib.debug_flag := true;
+aiLib.debug_flag := true;
 ttt_record ();
 
 ttt_rewrite_thy "ConseqConv";

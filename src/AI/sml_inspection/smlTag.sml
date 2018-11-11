@@ -9,7 +9,7 @@
 structure smlTag :> smlTag =
 struct
 
-open HolKernel boolLib anotherLib smlLexer
+open HolKernel boolLib aiLib smlLexer
 
 val ERR = mk_HOL_ERR "smlTag"
 

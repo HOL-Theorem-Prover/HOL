@@ -1,5 +1,5 @@
 (* ========================================================================= *)
-(* FILE          : psMCTS.sml                                               *)
+(* FILE          : psMCTS.sml                                                *)
 (* DESCRIPTION   : MCTS algorithm.                                           *)
 (* AUTHOR        : (c) Thibault Gauthier, Czech Technical University         *)
 (* DATE          : 2018                                                      *)
@@ -8,21 +8,9 @@
 structure psMCTS :> psMCTS =
 struct
  
-open HolKernel Abbrev boolLib anotherLib
+open HolKernel Abbrev boolLib aiLib
 
 val ERR = mk_HOL_ERR "psMCTS"
-val dbg = dbg_file "psMCTS"
-
-(*
-val logfile = tactictoe_dir ^ "/exp/log"
-val sumfile = tactictoe_dir ^ "/exp/summary"
-
-fun log s = (print_endline s; append_endline logfile s)
-fun summary s = 
-  (print_endline s; append_endline logfile s; append_endline sumfile s)
-
-fun erase_log () = (erase_file logfile; erase_file sumfile)
-*)
 
 (* -------------------------------------------------------------------------
    Global fixed parameters
@@ -348,16 +336,6 @@ fun node_variation tree id =
   ) 
 
 fun root_variation tree = node_variation tree [0] 
-
-(* Statistics 
-val cidvisits = map_assoc (visit_count tree) (map snd (#pol node))
-    val _ = if length cidvisits > 0 then print_distrib cidvisits else ()
-    val _ = if #status node = Win then 
-      log ("  Proof depth: " ^ 
-        int_to_string (depth_of_wtree (wtree_of tree id)))
-      else ()
-*)
-
 
 (* -------------------------------------------------------------------------
    Creating the distribution

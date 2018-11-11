@@ -8,7 +8,7 @@
 structure smlLexer :> smlLexer =
 struct
 
-open HolKernel boolLib anotherLib
+open HolKernel boolLib aiLib
 
 val ERR = mk_HOL_ERR "smlLexer"
 

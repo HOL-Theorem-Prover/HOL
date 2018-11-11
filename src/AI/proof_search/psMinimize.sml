@@ -8,7 +8,7 @@
 structure psMinimize :> psMinimize =
 struct
 
-open HolKernel Abbrev boolLib anotherLib 
+open HolKernel Abbrev boolLib aiLib 
   smlExecute smlLexer smlTimeout smlPrettify
 
 val ERR = mk_HOL_ERR "psMinimize"

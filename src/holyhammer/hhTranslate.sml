@@ -8,7 +8,7 @@
 structure hhTranslate :> hhTranslate =
 struct
 
-open HolKernel boolLib anotherLib
+open HolKernel boolLib aiLib
 
 val ERR = mk_HOL_ERR "hhTranslate"
 val debugdir = HOLDIR ^ "/src/holyhammer/debug"

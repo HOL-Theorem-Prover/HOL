@@ -9,9 +9,9 @@
 structure tttUnfold :> tttUnfold =
 struct
 
-open HolKernel Abbrev boolLib anotherLib 
+open HolKernel Abbrev boolLib aiLib 
   smlLexer smlInfix smlOpen 
-  mlDataTactic
+  mlTacticData
   tttSetup
 
 val ERR = mk_HOL_ERR "tttUnfold"
@@ -901,7 +901,7 @@ fun output_header oc cthy =
   ];
   (* infix operators *)
   app (os oc) (bare_readl infix_file);
-  output_flag oc "anotherLib.debug_flag" debug_flag;
+  output_flag oc "aiLib.debug_flag" debug_flag;
   (* recording *)
   output_flag oc "tttSetup.ttt_recprove_flag" ttt_recprove_flag;
   output_flag oc "tttSetup.ttt_reclet_flag" ttt_reclet_flag;

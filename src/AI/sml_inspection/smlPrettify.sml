@@ -8,7 +8,7 @@
 structure smlPrettify :> smlPrettify =
 struct
 
-open HolKernel Abbrev boolLib Tactical anotherLib smlTimeout smlLexer smlExecute
+open HolKernel Abbrev boolLib Tactical aiLib smlTimeout smlLexer smlExecute
 
 val ERR = mk_HOL_ERR "smlPrettify"
 

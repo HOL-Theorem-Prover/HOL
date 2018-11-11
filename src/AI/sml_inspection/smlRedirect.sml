@@ -9,7 +9,7 @@
 structure smlRedirect :> smlRedirect =
 struct
 
-open HolKernel boolLib anotherLib Posix.IO Posix.FileSys TextIO
+open HolKernel boolLib aiLib Posix.IO Posix.FileSys TextIO
 
 val ERR = mk_HOL_ERR "smlRedirect"
 

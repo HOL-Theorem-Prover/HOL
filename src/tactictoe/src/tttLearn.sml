@@ -8,9 +8,9 @@
 structure tttLearn :> tttLearn =
 struct
 
-open HolKernel Abbrev boolLib anotherLib  
+open HolKernel Abbrev boolLib aiLib  
   smlTimeout smlLexer smlExecute
-  mlFeature mlDataThm mlDataTactic mlNearestNeighbor 
+  mlFeature mlThmData mlTacticData mlNearestNeighbor 
   psMinimize
   tttSetup
 

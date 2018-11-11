@@ -8,10 +8,11 @@
 structure mlNeuralNetwork :> mlNeuralNetwork =
 struct
 
-open HolKernel Abbrev boolLib anotherLib mlMatrix
+open HolKernel Abbrev boolLib aiLib mlMatrix
 
 val ERR = mk_HOL_ERR "mlNeuralNetwork"
-val dbg = dbg_file "debug_mlNeuralNetwork"
+val debugdir = HOLDIR ^ "/src/AI/machine_learning/debug"
+fun debug s = debug_in_dir debugdir "mlNeuralNetwork" s
 
 (* -------------------------------------------------------------------------
    Parameters

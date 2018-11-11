@@ -8,7 +8,7 @@
 structure mlNearestNeighbor :> mlNearestNeighbor =
 struct
 
-open HolKernel Abbrev anotherLib mlFeature mlDataThm
+open HolKernel Abbrev aiLib mlFeature mlThmData
 
 val ERR = mk_HOL_ERR "mlNearestNeighbor"
 

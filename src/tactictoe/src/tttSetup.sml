@@ -8,7 +8,7 @@
 structure tttSetup :> tttSetup =
 struct
 
-open HolKernel Abbrev boolLib anotherLib smlExecute smlRedirect
+open HolKernel Abbrev boolLib aiLib smlExecute smlRedirect
 
 val infix_file = HOLDIR ^ "/src/AI/sml_inspection/infix_file.sml"
 val tactictoe_dir = HOLDIR ^ "/src/tactictoe"

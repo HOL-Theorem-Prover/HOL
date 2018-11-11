@@ -8,7 +8,7 @@
 structure smlParser :> smlParser =
 struct
 
-open HolKernel boolLib anotherLib smlLexer smlExecute
+open HolKernel boolLib aiLib smlLexer smlExecute
 
 val ERR = mk_HOL_ERR "smlExtract"
 

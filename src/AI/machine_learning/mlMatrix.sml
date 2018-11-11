@@ -9,7 +9,7 @@
 structure mlMatrix :> mlMatrix =
 struct
  
-open HolKernel Abbrev boolLib anotherLib
+open HolKernel Abbrev boolLib aiLib
 
 val ERR = mk_HOL_ERR "mlMatrix"
 

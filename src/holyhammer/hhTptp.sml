@@ -9,7 +9,7 @@
 structure hhTptp :> hhTptp =
 struct
 
-open HolKernel boolLib anotherLib hhTranslate
+open HolKernel boolLib aiLib hhTranslate
 
 (* -------------------------------------------------------------------------
    Escaping constants , variables and theorems
@@ -183,7 +183,11 @@ fun write_cj oc cj =
 
 fun write_tptp dir axl cj =
   let
-    val _ = clean_dir dir
+    val _ = mkDir_err dir
+    val _ = remove_file (dir ^ "/status")
+    val _ = remove_file (dir ^ "/out")
+    val _ = remove_file (dir ^ "/error")
+    val _ = remove_file (dir ^ "/out1")
     val oc = TextIO.openOut (dir ^ "/atp_in")
   in
     ((readable_flag := false; app (write_ax oc) axl; write_cj oc cj)

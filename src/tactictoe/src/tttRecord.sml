@@ -8,9 +8,9 @@
 structure tttRecord :> tttRecord =
 struct
 
-open HolKernel boolLib anotherLib
+open HolKernel boolLib aiLib
   smlLexer smlTimeout smlExecute smlTag smlParser smlRedirect
-  mlFeature mlDataThm mlDataTactic
+  mlFeature mlThmData mlTacticData
   tttSetup tttLearn
  
 val ERR = mk_HOL_ERR "tttRecord"

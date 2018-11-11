@@ -8,7 +8,7 @@
 structure smlExecute :> smlExecute =
 struct
 
-open HolKernel Abbrev boolLib Tactical anotherLib smlTimeout smlLexer
+open HolKernel Abbrev boolLib Tactical aiLib smlTimeout smlLexer
 
 val ERR = mk_HOL_ERR "smlExec"
 
