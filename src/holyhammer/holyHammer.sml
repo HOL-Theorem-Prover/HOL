@@ -53,7 +53,7 @@ fun pathl sl = case sl of
   | a :: m => OS.Path.concat (a, pathl m)
 
 val hh_dir         = pathl [HOLDIR,"src","holyhammer"];
-val hh_eval_dir    = pathl [hh_dir,"eval"];
+
 val provbin_dir    = pathl [hh_dir,"provers"];
 fun provdir_of atp = pathl [provbin_dir, name_of atp ^ "_files"]
 val parallel_dir   = pathl [provbin_dir,"eprover_parallel"];
@@ -62,6 +62,20 @@ fun out_of atp     = pathl [provdir_of atp,"out"]
 fun status_of atp  = pathl [provdir_of atp,"status"]
 fun out_dir dir    = pathl [dir,"out"]
 fun status_dir dir = pathl [dir,"status"]
+
+(* -------------------------------------------------------------------------
+   Evaluation log
+   ------------------------------------------------------------------------- *)
+
+val hh_eval_dir    = pathl [hh_dir,"eval"];
+val eval_flag = ref false
+val eval_thy = ref "scratch"
+fun log_eval s = 
+  let val file = hh_eval_dir ^ "/" ^ (!eval_thy) in  
+    debug s;
+    mkDir_err hh_eval_dir;
+    append_endline file s
+  end
 
 (* -------------------------------------------------------------------------
    Run functions in parallel and terminate as soon as one returned a
@@ -112,8 +126,10 @@ fun launch_atp dir atp t =
     then 
       (
       atp_ref := name_of atp;
-      print_endline ("Proof found by " ^ name_of atp ^ ":");
+      print_endline ("proof found by " ^ name_of atp ^ ":");
       print_endline ("  " ^ mk_metis_call (valOf r));
+      log_eval ("  proof found by " ^ name_of atp ^ ":");
+      log_eval ("    " ^ mk_metis_call (valOf r));
       parallel_result := r 
       )
     else ();
@@ -149,7 +165,7 @@ fun exists_atp atp =
 
 fun exists_atp_err atp = 
   let val b = exists_file (pathl [provbin_dir, name_of atp]) in
-    if not b then print_endline ("No binary for " ^ name_of atp) else ();
+    if not b then print_endline ("no binary for " ^ name_of atp) else ();
     b
   end
 
@@ -165,15 +181,14 @@ fun hh_pb wanted_atpl premises goal =
   in
     case olemmas of
       NONE => 
-        (
-        raise ERR "holyhammer" "ATPs could not find a proof"
-        )
+        (log_eval "  ATPs could not find a proof";
+        raise ERR "holyhammer" "ATPs could not find a proof")
     | SOME lemmas => 
       let
         val (stac,tac) = hh_reconstruct lemmas goal 
       in
-        print_endline "Minimized proof:";
-        print_endline ("  " ^ stac);
+        print_endline ("minimized proof:  \n  " ^ stac);
+        log_eval ("  minimized proof:  \n    " ^ stac);
         hh_goaltac_cache := dadd goal (stac,tac) (!hh_goaltac_cache);
         tac
       end
@@ -181,7 +196,8 @@ fun hh_pb wanted_atpl premises goal =
 
 fun hh_goal goal =
   let val (stac,tac) = dfind goal (!hh_goaltac_cache) in
-    print_endline ("Goal already solved by " ^ stac);
+    log_eval ("  goal already solved by " ^ stac);
+    print_endline ("goal already solved by " ^ stac);
     tac
   end
   handle NotFound =>
@@ -200,35 +216,44 @@ fun hh goal = (hh_goal goal) goal
 fun holyhammer tm = TAC_PROOF (([],tm), hh_goal ([],tm));
 
 
-end (* struct *)
+(* -------------------------------------------------------------------------
+   HolyHammer evaluation without premise selection: 
+   trying to re-prove theorems from their dependencies.
+   ------------------------------------------------------------------------- *)
 
-(* Evaluation (move to hhTest)
-
-fun hh_eval_thm atpl bsound (s,thm) =
+fun hh_eval_thm atpl (s,thm) =
   let
-    val _ = (mkDir_err hh_eval_dir; print_endline s)
-    val _ = hh_log_eval ("\nTheorem: " ^ s)
-    val goal = if bsound then ([],F) else dest_thm thm
-    val (b,premises) = depl_of_thm thm
+    val _ = print_endline ("\nTheorem: " ^ s)
+    val _ = log_eval ("\nTheorem: " ^ s)
+    val goal = dest_thm thm
+    val (b,premises) = intactdep_of_thm thm
+    val _ = log_eval ("  dependencies:\n    " ^ 
+      (String.concatWith "\n    " premises))
   in
-    if not b 
-    then hh_log_eval "broken dependencies" 
-    else 
+    if not b then (print_endline "  broken_dependencies (not tested)";
+                   log_eval "  broken dependencies (not tested)")
+    else
       let val (_,t) = add_time (can (hh_pb atpl premises)) goal in
-        hh_log_eval ("Time: " ^ Real.toString t)
+        log_eval ("  time: " ^ Real.toString t)
       end
   end
 
-fun hh_eval_thy atpl bsound thy = 
+fun hh_eval_thy atpl thy = 
   (
-  hh_eval_flag := true; 
-  thy_ref := thy; 
+  eval_flag := true; eval_thy := thy; 
   mkDir_err hh_eval_dir;
-  erase_file (hh_eval_dir ^ "/" ^ thy);
-  app (hh_eval_thm atpl bsound) (DB.theorems thy);
-  hh_eval_flag := false
+  remove_file (hh_eval_dir ^ "/" ^ thy);
+  app (hh_eval_thm atpl) (DB.theorems thy);
+  eval_flag := false; eval_thy := "scratch"
   )
 
+end (* struct *)
+
+(* Evaluation example
+  load "holyHammer"; open holyHammer;
+  set_timeout 5;
+  load "gcdTheory";
+  hh_eval_thy [Eprover] "gcd";
 *)  
 
 
