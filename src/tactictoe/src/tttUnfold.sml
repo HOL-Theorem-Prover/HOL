@@ -17,9 +17,10 @@ open HolKernel Abbrev boolLib aiLib
 val ERR = mk_HOL_ERR "tttUnfold"
 fun debug s = debug_in_dir ttt_debugdir "tttUnfold" s
 
-(* -------------------------------------------------------------------------
+
+(* -----------------------------------------------------------------------
    Program representation and stack
-   ------------------------------------------------------------------------- *)
+   ----------------------------------------------------------------------- *)
 
 datatype stack =
     Protect
@@ -45,17 +46,17 @@ datatype sketch =
   | End
   | In
 
-(* --------------------------------------------------------------------------
+(* ------------------------------------------------------------------------
    Global references
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------ *)
 
 val (infix_glob : (string * infixity_t) list ref) = ref []
 val open_cache = ref []
 val ttt_unfold_cthy = ref "scratch"
 
-(* --------------------------------------------------------------------------
+(* ------------------------------------------------------------------------
    Test starting parentheses
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------ *)
 
 fun hd_code_par2 m =
   (hd m = Code ("(",Protect) orelse hd m = Code ("{",Protect))
@@ -64,9 +65,9 @@ fun hd_code_par2 m =
 fun hd_code_par m =
   hd m = Code ("(",Protect) handle _ => false
 
-(* --------------------------------------------------------------------------
+(* ------------------------------------------------------------------------
    Program extraction
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------ *)
 
 fun stringl_of_infix (a,b) = case b of
     Inf_left n  => ["infix" ,int_to_string n,a]
@@ -164,18 +165,18 @@ fun replace_program f g p = case p of
 fun replace_program1 p = replace_program replace_code1 singleton p
 fun replace_program2 p = replace_program replace_code2 mlquote_singleton p
 
-(* --------------------------------------------------------------------------
+(* ------------------------------------------------------------------------
    Profiling
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------ *)
 
 val open_time = ref 0.0
 val replace_special_time = ref 0.0
 val replace_id_time = ref 0.0
 
-(* --------------------------------------------------------------------------
+(* ------------------------------------------------------------------------
    Poly/ML 5.7 rlwrap poly
    val l = map (fn (a,b) => a) (#allVal (PolyML.globalNameSpace) ());
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------ *)
 
 val basis = String.tokens Char.isSpace
 (
@@ -186,9 +187,9 @@ val basis = String.tokens Char.isSpace
 "false abs <> exnName Domain Bind true >= valOf <= not := hd chr concat floor"
 );
 
-(* --------------------------------------------------------------------------
+(* ------------------------------------------------------------------------
    Rebuild store_thm calls
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------ *)
 
 fun rm_squote s =
   if String.sub (s,0) = #"\"" andalso String.sub (s,String.size s - 1) = #"\""
@@ -206,9 +207,9 @@ fun rm_bbra bbra charl =
 
 fun rm_bbra_str s = implode (rm_bbra false (explode s))
 
-(* --------------------------------------------------------------------------
+(* ------------------------------------------------------------------------
    Record global values as string for further references
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------ *)
 
 fun is_endtype opar s =
   opar <= 0 andalso
@@ -245,9 +246,9 @@ fun split_endval_aux test opar acc sl =
 fun split_endval sl = split_endval_aux is_endval 0 [] sl
 fun split_endtype sl = split_endval_aux is_endtype 0 [] sl
 
-(* --------------------------------------------------------------------------
+(* ------------------------------------------------------------------------
    Extract pattern and identifiers.
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------ *)
 
 fun extract_pattern s sl =
   let
@@ -279,12 +280,12 @@ fun extract_infix inf_constr l =
     (map (f n) body, cont)
   end
 
-(* --------------------------------------------------------------------------
+(* ------------------------------------------------------------------------
    Watching and replacing some special values:
    functions calling save_thm
    functions making a definitions
    functions with side effects (export_rewrites) which can be unfolded.
-   ------------------------------------------------------------------------- *)
+   ----------------------------------------------------------------------- *)
 
 val store_thm_list =
   ["store_thm","maybe_thm","Store_thm","asm_store_thm"]
@@ -326,9 +327,9 @@ val watch_list_init =
 
 val watch_dict = dnew String.compare (map (fn x => (x,())) watch_list_init)
 
-(* --------------------------------------------------------------------------
+(* ------------------------------------------------------------------------
    Extract calls
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------ *)
 
 val let_flag = ref false
 
@@ -407,9 +408,9 @@ fun extract_recordname sl =
   end
   handle _ => NONE
 
-(* --------------------------------------------------------------------------
+(* ------------------------------------------------------------------------
    Extract a program sketch
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------ *)
 
 fun concat_with el ll = case ll of
     []     => []
@@ -489,9 +490,9 @@ and sketch_record m =
     concat_with (Code (",",Protect)) l @ [Code ("}",Protect)] @ sketch cont
   end
 
-(* --------------------------------------------------------------------------
+(* ------------------------------------------------------------------------
    Stack
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------ *)
 
 val push_time = ref 0.0
 
@@ -565,9 +566,9 @@ fun ppstring_stac qtac =
     String.concatWith " " ["(","String.concatWith",mlquote " ","\n",tac3,")"]
   end
 
-(* --------------------------------------------------------------------------
+(* ------------------------------------------------------------------------
    Final modifications of the scripts
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------ *)
 
 val is_thm_flag = ref false
 
@@ -711,10 +712,10 @@ fun open_struct stack s = total_time open_time (open_struct_aux stack) s
 
 fun open_structure s = open_struct_aux [] s
 
-(* ---------------------------------------------------------------------------
+(* ------------------------------------------------------------------------
    Functions for which we know how to extract the name of the theorem from
    its arguments.
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------ *)
 
 fun is_watch_name x = mem (drop_sig x) (store_thm_list @ name_thm_list)
 
@@ -895,16 +896,24 @@ fun output_header oc cthy =
   (
   app (osn oc)
   [
-  "(* ========================================================================== *)",
-  "(* This file was modifed by TacticToe.                                        *)",
-  "(* ========================================================================== *)"
+  "(* =================================================================== *)",
+  "(* This file was modifed by TacticToe.                                 *)",
+  "(* =================================================================== *)"
   ];
   (* infix operators *)
   app (os oc) (bare_readl infix_file);
+  (* debugging *)
   output_flag oc "aiLib.debug_flag" debug_flag;
   (* recording *)
   output_flag oc "tttSetup.ttt_recprove_flag" ttt_recprove_flag;
   output_flag oc "tttSetup.ttt_reclet_flag" ttt_reclet_flag;
+  (* evaluation *)
+  if !ttt_ttteval_flag then osn oc 
+    "val _ = tttSetup.ttt_evalfun_glob := Option.SOME tacticToe.ttt_eval"
+  else if !ttt_hheval_flag then osn oc 
+    "val _ = tttSetup.ttt_evalfun_glob := Option.SOME holyHammer.hh_eval"
+  else osn oc  "val _ = tttSetup.ttt_evalfun_glob := Option.NONE"
+  ;
   (* global references *)
   osn oc ("val _ = tttSetup.ttt_search_time := " ^
     Real.toString (!ttt_search_time));
@@ -922,11 +931,8 @@ fun start_unfold_thy cthy =
   debug ("start_unfold_thy: " ^ cthy);
   ttt_unfold_cthy := cthy;
   (* statistics *)
-  n_store_thm := 0;
-  open_time := 0.0;
-  replace_special_time := 0.0;
-  replace_id_time := 0.0;
-  push_time := 0.0;
+  n_store_thm := 0; open_time := 0.0; replace_special_time := 0.0;
+  replace_id_time := 0.0; push_time := 0.0;
   (* initial stack *)
   infix_glob := overlay_infixity;
   (* cache *)
@@ -1072,9 +1078,9 @@ fun restore_file file =
 fun save_scripts script = app save_file (script :: theory_files script)
 fun restore_scripts script = app restore_file (script :: theory_files script)
 
-(* ---------------------------------------------------------------------------
+(* -------------------------------------------------------------------------
    Recording
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------ *)
 
 fun ttt_record_thy thy = 
   if mem thy ["bool","min"] then () else
@@ -1095,9 +1101,9 @@ fun ttt_record_thyl thyl = app ttt_record_thy thyl
 fun ttt_record () =
   let val thyl = ttt_rewrite () in ttt_record_thyl thyl end
 
-(* ---------------------------------------------------------------------------
-   Recording tools
-   -------------------------------------------------------------------------- *)
+(* ------------------------------------------------------------------------
+   Theories of the standard library
+   ------------------------------------------------------------------------ *)
 
 fun sigobj_theories () =
   let
@@ -1120,6 +1126,5 @@ fun load_sigobj () =
   in
     app load l1
   end
-
 
 end (* struct *)

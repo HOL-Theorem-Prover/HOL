@@ -117,13 +117,15 @@ fun test_stac g gl (stac, istac) =
       (if subset newgl gl then SOME (stac,0.0,g,newgl) else NONE)
   end
 
-fun orthogonalize tacdata (lbl as (ostac,t,g,gl),fea) =
+fun orthogonalize (thmdata,tacdata) (lbl as (ostac,t,g,gl)) =
   let
+    (* goal features *)
+    val gfea = feahash_of_goal g
     (* predict tactics *)
     val _ = debug "predict tactics"
-    val feav = dlist (#tacfea tacdata)
-    val symweight = learn_tfidf feav
-    val stacl1 = stacknn_uniq (symweight,feav) (!ttt_ortho_radius) fea
+    val tacfea = dlist (#tacfea tacdata)
+    val symweight = learn_tfidf tacfea
+    val stacl1 = stacknn_uniq (symweight,tacfea) (!ttt_ortho_radius) gfea
     val stacl2 = filter (fn x => not (x = ostac)) stacl1
     (* order tactics by frequency *)
     val _ = debug "order tactics"
@@ -137,7 +139,7 @@ fun orthogonalize tacdata (lbl as (ostac,t,g,gl),fea) =
     val stacl5 = concat_absstacl ostac stacl4
     (* predict theorems *)
     val _ = debug "predict theorems"
-    val thml = thmknn_std (!ttt_thmlarg_radius) g
+    val thml = thmknn thmdata (!ttt_thmlarg_radius) gfea
     (* instantiate arguments *)
     val _ = debug "instantiate argument"
     val stacl6 = inst_stacl thml stacl5

@@ -18,9 +18,27 @@ sig
   (* remembers features of goals (shared with tactictoe) *)
   val clean_goalfea_cache : unit -> unit
   
-  (* Evaluation of hh_pb *)
-  val hh_eval_thm : prover list -> string * thm -> unit
-  val hh_eval_thy : prover list -> string -> unit
+  (* Evaluation of holyhammer (without premise selection) *)
+  val hh_pb_eval_thm : prover list -> string * thm -> unit
+  val hh_pb_eval_thy : prover list -> string -> unit
   
+  (* Evaluation of holyhammer (with premise selection)
+     This function can be used inside the tactictoe evaluation framework.
+     It ignores the tactic data.
+   *)
+  type lbl = (string * real * goal * goal list)
+  type fea = int list
+  type thmdata = 
+    (int, real) Redblackmap.dict * 
+    (string, int list) Redblackmap.dict
+  type tacdata =
+    {
+    tacfea : (lbl,fea) Redblackmap.dict,
+    tacfea_cthy : (lbl,fea) Redblackmap.dict,
+    taccov : (string, int) Redblackmap.dict,
+    tacdep : (goal, lbl list) Redblackmap.dict
+    }
+  val hh_eval : (thmdata * tacdata) -> goal -> unit
+
 
 end

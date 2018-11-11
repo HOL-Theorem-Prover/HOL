@@ -49,14 +49,6 @@ fun thmknn (symweight,feavdict) n fea =
     first_n n l2
   end
 
-fun thmknn_std n g =
-  let 
-    val (symweight,feavdict) = create_thmdata ()
-    val fea = feahash_of_goal g
-  in
-    thmknn (symweight,feavdict) n fea
-  end
-
 (* ----------------------------------------------------------------------
    Adding theorem dependencies
    ---------------------------------------------------------------------- *)

@@ -1,6 +1,8 @@
 signature tttSetup =
 sig
 
+  include Abbrev
+   
   (* directories *)
   val infix_file : string
   val tactictoe_dir : string
@@ -24,5 +26,23 @@ sig
   val ttt_metis_time : real ref
   val ttt_metis_radius : int ref
   val ttt_policy_coeff : real ref
+
+  (* evaluation *)
+  type lbl = (string * real * goal * goal list)
+  type fea = int list
+  type thmdata = 
+    (int, real) Redblackmap.dict * 
+    (string, int list) Redblackmap.dict
+  type tacdata =
+    {
+    tacfea : (lbl,fea) Redblackmap.dict,
+    tacfea_cthy : (lbl,fea) Redblackmap.dict,
+    taccov : (string, int) Redblackmap.dict,
+    tacdep : (goal, lbl list) Redblackmap.dict
+    }
+  (* global carrying the evaluation function (instantiated in tttUnfold) *)
+  val ttt_evalfun_glob : (thmdata * tacdata -> goal -> unit) option ref
+  val ttt_hheval_flag : bool ref
+  val ttt_ttteval_flag : bool ref
 
 end

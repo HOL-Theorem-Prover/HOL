@@ -15,6 +15,7 @@ open HolKernel Abbrev boolLib aiLib
   tttSetup tttSearch
 
 val ERR = mk_HOL_ERR "tacticToe"
+val tactictoe_dir = HOLDIR ^ "/src/tactictoe"
 fun debug s = debug_in_dir ttt_debugdir "tacticToe" s
 
 (* -------------------------------------------------------------------------
@@ -88,14 +89,19 @@ fun main_tactictoe (thmdata,tacdata) goal =
    Return values
    ------------------------------------------------------------------------- *)
 
-fun status r = case r of
+fun read_status r = case r of
    ProofError     =>
-   (print_endline "tactictoe: error"; FAIL_TAC "tactictoe: error")
+   (print_endline "tactictoe: error"; 
+    (NONE, FAIL_TAC "tactictoe: error"))
  | ProofSaturated =>
-   (print_endline "tactictoe: saturated"; FAIL_TAC "tactictoe: saturated")
+   (print_endline "tactictoe: saturated"; 
+    (NONE, FAIL_TAC "tactictoe: saturated"))
  | ProofTimeOut   =>
-   (print_endline "tactictoe: time out"; FAIL_TAC "tactictoe: time out")
- | Proof s        => (print_endline s; hide_out tactic_of_sml s)
+   (print_endline "tactictoe: time out"; 
+    (NONE, FAIL_TAC "tactictoe: time out"))
+ | Proof s        => 
+   (print_endline ("tactictoe found a proof:\n  " ^ s); 
+    (SOME s, hide_out tactic_of_sml s))
 
 (* -------------------------------------------------------------------------
    Interface
@@ -103,14 +109,34 @@ fun status r = case r of
 
 val infix_file = HOLDIR ^ "/src/AI/sml_inspection/infix_file.sml"
 
-fun tactictoe_aux goal = 
+val ttt_tacdata_cache = ref (dempty String.compare)
+fun clean_ttt_tacdata_cache () = ttt_tacdata_cache := dempty String.compare
+
+val ttt_goaltac_cache = ref (dempty goal_compare)
+fun clean_ttt_goaltac_cache () = ttt_goaltac_cache := dempty goal_compare
+  
+fun tactictoe_aux goal =
+  let val (stac,tac) = dfind goal (!ttt_goaltac_cache) in
+    print_endline ("goal already solved by:\n  " ^ stac); tac
+  end
+  handle NotFound =>
   let 
     val _ = hide_out QUse.use infix_file
+    val cthy = current_theory ()
     val _ = init_metis ()
     val thmdata = create_thmdata ()
-    val tacdata = ttt_create_tacdata ()
+    val tacdata = 
+      dfind cthy (!ttt_tacdata_cache) handle NotFound =>
+      let val tacdata_aux = ttt_create_tacdata () in
+        ttt_tacdata_cache := dadd cthy tacdata_aux (!ttt_tacdata_cache);
+        tacdata_aux
+      end
+    val proofstatus = hide_out (main_tactictoe (thmdata,tacdata)) goal
+    val (staco,tac) = read_status proofstatus
+    val _ = case staco of NONE => () | SOME stac =>
+      ttt_goaltac_cache := dadd goal (stac,tac) (!ttt_goaltac_cache)
   in
-    status (hide_out (main_tactictoe (thmdata,tacdata)) goal)
+    tac
   end
   
 fun ttt goal = (tactictoe_aux goal) goal
@@ -119,23 +145,40 @@ fun tactictoe term =
   let val goal = ([],term) in TAC_PROOF (goal, tactictoe_aux goal) end
 
 (* -------------------------------------------------------------------------
-   Evaluate TacticToe (to move to tttTest)
+   Evaluation 
    ------------------------------------------------------------------------- *)
-(*
-fun debug_eval_status r =
-  case r of
-    ProofError     => debug "Error: debug_eval_status"
-  | ProofSaturated => debug "Proof status: Saturated"
-  | ProofTimeOut   => debug "Proof status: Time Out"
-  | Proof s        => debug ("Proof found: " ^ s)
 
-fun eval_tactictoe goal =
-  (
-  mkDir_err ttt_proof_dir;
-  report_data ();
-  init_tactictoe ();
-  debug_eval_status (hide_out main_tactictoe goal)
-  )
-*)
+val ttt_eval_dir = tactictoe_dir ^ "/eval"
+fun log_eval s = 
+  let val file = ttt_eval_dir ^ "/" ^ current_theory () in  
+    print_endline s;
+    mkDir_err ttt_eval_dir;
+    append_endline file s
+  end
+
+fun log_status r = case r of
+   ProofError     => log_eval "  tactictoe: error"
+ | ProofSaturated => log_eval "  tactictoe: saturated"
+ | ProofTimeOut   => log_eval "  tactictoe: time out"
+ | Proof s        => log_eval ("  tactictoe found a proof:\n  " ^ s)
+
+fun ttt_eval (thmdata,tacdata) goal = 
+  let 
+    val _ = log_eval ("Goal: " ^ string_of_goal goal)
+    val (status,t) = add_time (main_tactictoe (thmdata,tacdata)) goal
+  in
+    log_status status;
+    log_eval ("  time: " ^ Real.toString t)
+  end
+
+(* -------------------------------------------------------------------------
+   Usage:
+     load "tttUnfold"; open tttUnfold; open tttSetup;
+     ttt_ttteval_flag := true;
+     ttt_rewrite_thy "ConseqConv"; ttt_record_thy "ConseqConv";
+     ttt_ttteval_flag := false;
+   Results can be found in HOLDIR/src/tactictoe/eval.
+  ------------------------------------------------------------------------- *)
+
 
 end (* struct *)

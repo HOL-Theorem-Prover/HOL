@@ -5,6 +5,10 @@ sig
 
   type lbl = (string * real * goal * goal list)
   type fea = int list
+
+  type thmdata = (int, real) Redblackmap.dict * 
+    (string, int list) Redblackmap.dict
+
   type tacdata =
     {
     tacfea : (lbl,fea) Redblackmap.dict,
@@ -20,6 +24,6 @@ sig
   val is_thmlarg_stac : string -> bool 
  
   (* competition between different tactics over a goal *)
-  val orthogonalize : tacdata -> (lbl * fea) -> lbl 
+  val orthogonalize : (thmdata * tacdata) -> lbl -> lbl 
 
 end

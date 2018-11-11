@@ -11,8 +11,6 @@ sig
     (int, real) Redblackmap.dict * (string, fea) Redblackmap.dict -> int -> 
     fea -> string list
 
-  val thmknn_std: int -> goal -> string list
-  
   val thmknn_wdep:
     (int, real) Redblackmap.dict * (string, fea) Redblackmap.dict -> int -> 
     fea -> string list
