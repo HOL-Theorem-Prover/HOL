@@ -91,15 +91,15 @@ SIMP_TAC std_ss [] THEN
 Q.EXISTS_TAC `0` THEN
 SIMP_TAC arith_ss []);
 
-val _ = type_abbrev("holfoot_heap", Type `:num |-> (holfoot_tag -> num)`)
-val _ = type_abbrev("holfoot_stack", Type `:(num, holfoot_var) var_res_state`)
-val _ = type_abbrev("holfoot_state", Type `:(holfoot_stack # holfoot_heap)`)
+val _ = type_abbrev_pp("holfoot_heap", “:num |-> (holfoot_tag -> num)”)
+val _ = type_abbrev_pp("holfoot_stack", “:(num, holfoot_var) var_res_state”)
+val _ = type_abbrev_pp("holfoot_state", “:(holfoot_stack # holfoot_heap)”)
 
 (* equivalent to x:(num,holfoot_var) var_res_expression*)
-val _ = type_abbrev("holfoot_a_expression", Type `:holfoot_stack -> num option`)
+val _ = type_abbrev_pp("holfoot_a_expression", “:holfoot_stack -> num option”)
 
 (* equivalent to (num,holfoot_var,holfoot_heap) var_res_proposition*)
-val _ = type_abbrev("holfoot_a_proposition", Type `:holfoot_state -> bool`);
+val _ = type_abbrev_pp("holfoot_a_proposition", “:holfoot_state -> bool”;
 
 
 

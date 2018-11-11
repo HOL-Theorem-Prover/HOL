@@ -18,7 +18,7 @@ val _ = temp_loose_equality ();
 (******************************************************************************)
 
 (* Type abbreviations *)
-val _ = type_abbrev ("simulation", ``:('a, 'b) CCS -> ('a, 'b) CCS -> bool``);
+val _ = type_abbrev_pp ("simulation", “:('a, 'b) CCS -> ('a, 'b) CCS -> bool”);
 
 (* Use LIST_REL to build list_simulation from simulation, e.g. `LIST_REL STRONG_EQUIV` *)
 val _ = type_abbrev ("list_simulation",

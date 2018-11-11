@@ -159,7 +159,7 @@ val char_size_def = Define `char_size (c:char) = 0`;
       representation.
  ---------------------------------------------------------------------------*)
 
-val _ = type_abbrev ("string", ``:char list``)
+val _ = type_abbrev_pp ("string", ``:char list``)
 
 val _ = overload_on ("STRING", ``CONS : char -> string -> string``)
 val _ = overload_on ("EMPTYSTRING", ``[] : string``)

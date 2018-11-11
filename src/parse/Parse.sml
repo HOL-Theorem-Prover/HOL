@@ -617,19 +617,19 @@ val thytype_abbrev = mk_perm_tyd thytype_abbrev0
 
 fun mktyabbrev_rec p (s,ty) = ({Thy = Theory.current_theory(), Name = s}, ty, p)
 val temp_type_abbrev =
-  replace_exnfn "temp_type_abbrev" temp_thytype_abbrev o mktyabbrev_rec true
+  replace_exnfn "temp_type_abbrev" temp_thytype_abbrev o mktyabbrev_rec false
 val type_abbrev =
-  replace_exnfn "type_abbrev" thytype_abbrev o mktyabbrev_rec true
+  replace_exnfn "type_abbrev" thytype_abbrev o mktyabbrev_rec false
 
 fun disable_tyabbrev_printing0 s = [DISABLE_TYPRINT s]
 val temp_disable_tyabbrev_printing = mk_temp_tyd disable_tyabbrev_printing0
 val disable_tyabbrev_printing = mk_perm_tyd disable_tyabbrev_printing0
 
-val temp_inputonly_type_abbrev =
-    replace_exnfn "temp_inputonly_type_abbrev" temp_thytype_abbrev o
-    mktyabbrev_rec false
-val inputonly_type_abbrev =
-    replace_exnfn "inputonly_type_abbrev" thytype_abbrev o mktyabbrev_rec false
+val temp_type_abbrev_pp =
+    replace_exnfn "temp_type_abbrev_pp" temp_thytype_abbrev o
+    mktyabbrev_rec true
+val type_abbrev_pp =
+    replace_exnfn "type_abbrev_pp" thytype_abbrev o mktyabbrev_rec true
 
 fun remove_type_abbrev0 s = [RM_TYABBREV s]
 val temp_remove_type_abbrev = mk_temp_tyd remove_type_abbrev0

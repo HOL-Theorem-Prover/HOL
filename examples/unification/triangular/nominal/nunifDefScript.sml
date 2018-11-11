@@ -46,7 +46,7 @@ val nwfs_extend = Q.store_thm(
 );
 
 val _ = type_abbrev("fe",``:(string # num) set``);
-val _ = type_abbrev("pkg", ``:('a nsubst # fe)``);
+val _ = type_abbrev_pp("pkg", ``:('a nsubst # fe)``);
 
 val term_fcs_def = tDefine "term_fcs" `
   term_fcs a t =

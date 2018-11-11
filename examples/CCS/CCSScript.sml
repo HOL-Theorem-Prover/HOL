@@ -50,7 +50,7 @@ val Label_not_eq' = save_thm (
 val Label_11 = TypeBase.one_one_of ``:'b Label``;
 
 (* NEW: define the set of actions as the OPTION of Label *)
-val _ = type_abbrev ("Action", ``:'b Label option``);
+val _ = type_abbrev_pp ("Action", ``:'b Label option``);
 
 val _ = overload_on ("tau",   ``NONE :'b Action``);
 val _ = overload_on ("label", ``SOME :'b Label -> 'b Action``);

@@ -71,7 +71,6 @@ val Cond =
 val _ = new_theory "pred_set";
 
 val _ = type_abbrev ("set", ``:'a -> bool``);
-val _ = disable_tyabbrev_printing "set";
 
 local open OpenTheoryMap
   val ns = ["Set"]

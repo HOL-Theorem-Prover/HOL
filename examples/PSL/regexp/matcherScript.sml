@@ -473,8 +473,8 @@ val length_drop = store_thm
 (* Non-deterministic and deterministic automata.                             *)
 (*---------------------------------------------------------------------------*)
 
-val () = type_abbrev ("na", Type`:'a # ('a->'b->'a->bool) # ('a->bool)`);
-val () = type_abbrev ("da", Type`:'a # ('a->'b->'a) # ('a->bool)`);
+val () = type_abbrev_pp ("na", Type`:'a # ('a->'b->'a->bool) # ('a->bool)`);
+val () = type_abbrev_pp ("da", Type`:'a # ('a->'b->'a) # ('a->bool)`);
 
 val initial_def    = Define `initial    ((i,trans,acc) : ('a,'b) na) = i`;
 val transition_def = Define `transition ((i,trans,acc) : ('a,'b) na) = trans`;

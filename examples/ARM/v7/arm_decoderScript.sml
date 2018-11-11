@@ -22,9 +22,9 @@ val _ = wordsLib.prefer_word();
 
 (* ------------------------------------------------------------------------ *)
 
-val _ = type_abbrev ("word1",  ``:1 word``);
-val _ = type_abbrev ("word10", ``:10 word``);
-val _ = type_abbrev ("word11", ``:11 word``);
+val _ = type_abbrev_pp ("word1",  ``:1 word``);
+val _ = type_abbrev_pp ("word10", ``:10 word``);
+val _ = type_abbrev_pp ("word11", ``:11 word``);
 
 val _ = temp_overload_on("DP",
          ``\opc setflags rn rd mode1.

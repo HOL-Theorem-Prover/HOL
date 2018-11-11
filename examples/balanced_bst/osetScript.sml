@@ -9,7 +9,7 @@ val _ = new_theory "oset";
 val _ = temp_tight_equality ();
 
 (* oset for ordered set *)
-val _ = type_abbrev ("oset", ``:('a,unit) balanced_map``);
+val _ = type_abbrev_pp ("oset", ``:('a,unit) balanced_map``);
 
 (* Basic definitions, that correspond directly to balanced tree operations *)
 val good_oset_def = Define `
