@@ -107,8 +107,6 @@ fun read_status r = case r of
    Interface
    ------------------------------------------------------------------------- *)
 
-val infix_file = HOLDIR ^ "/src/AI/sml_inspection/infix_file.sml"
-
 val ttt_tacdata_cache = ref (dempty String.compare)
 fun clean_ttt_tacdata_cache () = ttt_tacdata_cache := dempty String.compare
 
