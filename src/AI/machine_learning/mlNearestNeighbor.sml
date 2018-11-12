@@ -55,7 +55,8 @@ fun thmknn (symweight,feavdict) n fea =
 
 fun add_thmdep n predl =
   let
-    val predl0 = List.concat (map validdep_of_thmid predl)
+    fun f pred = pred :: validdep_of_thmid pred
+    val predl0 = List.concat (map f predl)
     val predl1 = mk_sameorder_set String.compare predl0
   in
     first_n n predl1
