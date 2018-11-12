@@ -4903,7 +4903,7 @@ word Encode(i::instruction) =
 -- RVC instruction decoding
 ---------------------------------------------------------------------------
 
-type rvcreg :: bits(3)
+type rvcreg = bits(3)
 
 half CBtype(o::bits(2), f3::bits(3), rs1::rvcreg, imm::bits(8)) =
     f3 : [imm<7>]::bits(1) : imm<3:2> : rs1 : imm<6:5> : imm<1:0> : [imm<5>]::bits(1) : o
