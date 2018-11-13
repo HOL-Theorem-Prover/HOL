@@ -1,21 +1,20 @@
-(* =========================================================================  *)
-(* FILE          : tttRecord.sml                                              *)
-(* DESCRIPTION   : Record tactics, theorems and goal lists                    *)
-(* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck             *)
-(* DATE          : 2017                                                       *)
-(* ========================================================================== *)
+(* ========================================================================  *)
+(* FILE          : tttRecord.sml                                             *)
+(* DESCRIPTION   : Functions used in files written by tttUnfold              *)
+(* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck            *)
+(* DATE          : 2017                                                      *)
+(* ========================================================================= *)
 
 structure tttRecord :> tttRecord =
 struct
 
-open HolKernel boolLib
-tttTools tttLexer tttTimeout tttExec tttSetup
-tttNumber tttExtract tttUnfold
-tttThmData tttTacticData tttGoallistData
-tttPredict tttLearn
-tacticToe
+open HolKernel boolLib aiLib
+  smlLexer smlTimeout smlExecute smlTag smlParser smlRedirect
+  mlFeature mlThmData mlTacticData
+  tttSetup tttLearn
 
 val ERR = mk_HOL_ERR "tttRecord"
+fun debug s = debug_in_dir ttt_debugdir "tttRecord" s
 
 val goalstep_glob = ref []
 val tactictoe_step_counter = ref 0
@@ -24,12 +23,12 @@ val tactictoe_thm_counter = ref 0
 fun local_tag x = x
 fun add_local_tag s = "( tttRecord.local_tag " ^ s ^ ")"
 
-(*----------------------------------------------------------------------------
- * Error messages and profiling.
- *----------------------------------------------------------------------------*)
+(* -------------------------------------------------------------------------
+   Error messages and profiling
+   ------------------------------------------------------------------------- *)
 
 fun tactic_msg msg stac g =
-  debug_replay ("replay_tactic " ^ msg ^ ": " ^ stac)
+  debug ("replay_tactic " ^ msg ^ ": " ^ stac)
 
 fun proof_msg f_debug prefix msg thmname qtac final_stac =
   (
@@ -41,9 +40,9 @@ fun proof_msg f_debug prefix msg thmname qtac final_stac =
   )
 
 fun replay_msg msg thmname qtac final_stac =
-  proof_msg debug_replay "replay_proof" msg thmname qtac final_stac
+  proof_msg debug "replay_proof" msg thmname qtac final_stac
 fun parse_msg thmname qtac final_stac =
-  proof_msg debug_parse "" "parse_proof" thmname qtac final_stac
+  proof_msg debug "" "parse_proof" thmname qtac final_stac
 fun parse_err thmname qtac final_stac =
   (parse_msg thmname qtac final_stac; raise ERR "" "")
 
@@ -68,7 +67,6 @@ fun reset_profiling () =
   (
   fetch_thm_time := 0.0;
   tactic_time := 0.0;
-  feature_time := 0.0;
   save_time := 0.0;
   record_time := 0.0;
   extract_time := 0.0;
@@ -85,8 +83,8 @@ fun reset_profiling () =
 
 fun out_record_summary cthy =
   let
-    fun f i s = debug_record (int_to_string i ^ " " ^ s)
-    fun g s r = debug_record (s ^ ": " ^ Real.toString r)
+    fun f i s = debug (int_to_string i ^ " " ^ s)
+    fun g s r = debug (s ^ ": " ^ Real.toString r)
   in
     f (!n_parse_glob)  "proofs parsed";
     f (!n_replay_glob) "proofs replayed";
@@ -101,23 +99,21 @@ fun out_record_summary cthy =
     g "  Replay" (!replay_time);
     g "    Record" (!record_time);
     g "    Save" (!save_time);
-    g "    Tactic" (!tactic_time);
-    g "    Feature" (!feature_time);
-    f (length (!ttt_tacerr)) "bad tactics during evaluation"
+    g "    Tactic" (!tactic_time)
   end
 
-(* --------------------------------------------------------------------------
-   Replaying a tactic.
-   -------------------------------------------------------------------------- *)
+(* -------------------------------------------------------------------------
+   Replaying a tactic
+   ------------------------------------------------------------------------- *)
 
 fun tactic_err msg stac g =
   (tactic_msg msg stac g; raise ERR "record_tactic" "")
 
 fun record_tactic_aux (tac,stac) g =
   let
-    val ((gl,v),t) = add_time (timeOut (!ttt_rectac_time) tac) g
-      handle TacTimeOut => tactic_err "timed out" stac g
-            | x         => raise x
+    val ((gl,v),t) = add_time (timeout (!ttt_rectac_time) tac) g
+      handle FunctionTimeout => tactic_err "timed out" stac g
+            | x      => raise x
   in
     tactic_time := (!tactic_time) + t;
     n_tactic_replay_glob := (!n_tactic_replay_glob) + 1;
@@ -128,9 +124,8 @@ fun record_tactic_aux (tac,stac) g =
 fun record_tactic (tac,stac) g =
   total_time record_time (record_tactic_aux (tac,stac)) g
 
-(* --------------------------------------------------------------------------
-   Replaying a proof: following code is legacy code (very ugly).
-   -------------------------------------------------------------------------- *)
+(* -------------------------------------------------------------------------
+   Replaying a proof  ------------------------------------------------------------------------- *)
 
 fun wrap_tactics_in name qtac goal =
   let
@@ -141,9 +136,9 @@ fun wrap_tactics_in name qtac goal =
       let
         val _ = final_stac_ref := ""
         val s2 = total_time number_time number_stac qtac
-        val ostac = ttt_lex s2
-        val l2 = total_time extract_time ttt_extract s2
-        val _  = debug_proof ("Org tac number: " ^ int_to_string (length l2))
+        val ostac = partial_sml_lexer s2
+        val l2 = total_time extract_time extract_tacticl s2
+        val _  = debug ("org tac number: " ^ int_to_string (length l2))
         val _  = n_tactic_parse_glob := (!n_tactic_parse_glob) + length l2;
         val l3 = map (fn x => (x, drop_numbering x)) l2
         fun mk_reps (x,y) =
@@ -158,7 +153,8 @@ fun wrap_tactics_in name qtac goal =
       in
         (final_stac, final_tac)
       end
-      handle _ => parse_err name qtac (!final_stac_ref)
+      handle Interrupt => raise Interrupt
+        | _ => parse_err name qtac (!final_stac_ref)
     val (final_stac, final_tac)  =
       total_time hide_time (hide_out (total_time mkfinal_time mk_alttac)) qtac
   in
@@ -167,64 +163,29 @@ fun wrap_tactics_in name qtac goal =
     (
     let
       val (gl,v) =
-      total_time replay_time
-        (tttTimeout.timeOut (!ttt_recproof_time) final_tac) goal
+        total_time replay_time
+        (timeout (!ttt_recproof_time) final_tac) goal
     in
       if gl = []
         then (
              success_flag := SOME (gl,v);
-             debug_proof ("Original proof time: " ^
-                          Real.toString (!original_time));
              n_replay_glob := (!n_replay_glob + 1)
              )
       else replay_msg "opened goals" name qtac final_stac
     end
     handle
-        TacTimeOut => replay_msg "timed out or other" name qtac final_stac
-      | _          => replay_msg "other error" name qtac final_stac
+        Interrupt => raise Interrupt
+      | FunctionTimeout => replay_msg "timed out" name qtac final_stac
+      | _       => replay_msg "other error" name qtac final_stac
     );
     case (!success_flag) of
       SOME x => x
     | NONE   => raise ERR "" ""
   end
 
-(*----------------------------------------------------------------------------
+(*---------------------------------------------------------------------------
   Globalizing theorems and create a new theorem if the value does not exists.
-  ----------------------------------------------------------------------------*)
-
-(*
-fun save_tactictoe_thm thm =
-  let
-    val name = "tactictoe_thm_" ^ int_to_string (!tactictoe_thm_counter)
-    val _    = incr tactictoe_thm_counter
-    val cthy = current_theory ()
-  in
-    ignore (save_thm (name,thm));
-    String.concatWith " " ["(","DB.fetch",mlquote cthy,mlquote name,")"]
-  end
-*)
-
-fun depid_of_thm thm =
-  (Dep.depid_of o Tag.dep_of o Thm.tag) thm
-  handle HOL_ERR _ => raise ERR "depid_of_thm" ""
-
-fun sml_of_thm thm =
-  if can depid_of_thm thm then
-    let
-      val (thy,n) = depid_of_thm thm
-      val thml = DB.thms thy
-      val thmdict = dnew goal_compare (map (fn (a,b) => (dest_thm b,a)) thml)
-      val goal = dest_thm thm
-    in
-      if dmem goal thmdict
-      then
-        let val name = dfind goal thmdict in
-          SOME (String.concatWith " "
-            ["(","DB.fetch",mlquote thy,mlquote name,")"])
-        end
-      else NONE
-    end
-  else NONE
+  ---------------------------------------------------------------------------*)
 
 (* replacement string is not used anymore for theorems *)
 fun fetch_thm s reps =
@@ -232,13 +193,13 @@ fun fetch_thm s reps =
     case sthmo of
       NONE =>
         (if reps = ""
-        then (debug_record ("fetch_other: " ^ s); add_local_tag s)
-        else reps)
+         then (debug ("fetch_other: " ^ s); add_local_tag s)
+         else reps)
     | SOME (_,thm) =>
-    let val nameo = sml_of_thm thm in
+    let val nameo = dbfetch_of_depid thm in
       case nameo of
         SOME x => x
-      | NONE => (debug_record ("fetch_thm: " ^ s); add_local_tag s)
+      | NONE => (debug ("fetch_thm: " ^ s); add_local_tag s)
     end
   end
 
@@ -251,205 +212,64 @@ val fetch = total_time fetch_thm_time fetch_thm
 val thm_counter = ref 0
 
 fun start_record_proof name =
-  let
-    val outname = "\nName: " ^ int_to_string (!thm_counter) ^ " " ^ name
-    val _ = update_thmfea (current_theory ())
-  in
-    debug_proof outname;
-    debug_search outname;
+  let val outname = "\nName: " ^ int_to_string (!thm_counter) ^ " " ^ name in
     debug outname;
     incr thm_counter;
     goalstep_glob := []
   end
 
+(* communication channel between the record calls *)
+val tacdata_glob = ref empty_tacdata
+
 fun end_record_proof name g =
   let
-    val lbl1 = map fst (rev (!goalstep_glob))
-    fun noortho (stac,t,g,gl) =
-      case abstract_stac stac of
-        SOME astac => [(stac,t,g,gl),(astac,t,g,gl)]
-      | NONE => [(stac,t,g,gl)]
-    fun ortho (stac,t,g,gl) =
-      [orthogonalize ((stac,t,g,gl), tttFeature.fea_of_goal g)]
-    fun f lbl = if !ttt_ortho_flag then ortho lbl else noortho lbl
-    val lbl2 = if !ttt_noabs_flag
-               then lbl1
-               else List.concat (map f lbl1)
+    val (thmdata,tacdata) = (create_thmdata (), !tacdata_glob)
+    val l1 = map fst (rev (!goalstep_glob))
+    fun f lbl = orthogonalize (thmdata,tacdata) lbl
+    val l2 = map f l1
+    val newtacdata = foldl ttt_update_tacdata tacdata l2
   in
-    debug_t ("Saving " ^ int_to_string (length lbl2) ^ " labels")
-      (app update_tacdata) lbl2
+    debug ("Saving " ^ int_to_string (length l2) ^ " labels");
+    tacdata_glob := newtacdata
   end
-
-fun pe_thm file (s,thm) =
-  (
-  append_endline file ("  thm_lbl: " ^ s);
-  append_endline file ("  thm_value: " ^ string_of_goal (dest_thm thm))
-  )
-
-fun pe_thml file thml =
-  (
-  append_endline file "Thm_list";
-  app (pe_thm file) thml
-  )
-
-fun pe_thmll file thmll = app (pe_thml file) thmll
-
-fun print_proof name g =
-  let
-    val lbl1 = map fst (rev (!goalstep_glob))
-    val dir  = tactictoe_dir ^ "/print_proof"
-    val _    = mkDir_err dir
-    val file = dir ^ "/" ^ current_theory () ^ "____" ^ name
-    fun f (stac,t,g,gl) =
-      let val (astac, thmll) = pe_abs stac in
-        append_endline file ("tactic: " ^ stac);
-        append_endline file ("goal: " ^ string_of_goal g);
-        append_endline file ("abs_tactic: " ^ astac);
-        pe_thmll file thmll;
-        append_endline file ""
-      end
-  in
-    erase_file file;
-    append_endline file ("Proof " ^ (int_to_string (!thm_counter)));
-    append_endline file "";
-    app f lbl1
-  end
-
-fun clear_tac tac g =
-  (
-  ignore (tttExec.exec_sml "cache" "numSimps.clear_arith_caches ()");
-  tac g
-  )
-
-fun org_tac tac g =
-  let val (gl,v) = timeOut 600.0 tac g in
-    if null gl
-      then (gl,v)
-      else (debug "Error: org_tac: pending goals"; clear_tac tac g)
-  end
-  handle
-      TacTimeOut => (debug "Error: org_tac: loop"; clear_tac tac g)
-    | _ => (debug "Error: org_tac: error"; clear_tac tac g)
-
-val fof_counter = ref 0
-
-fun create_fof_wrap name pflag result =
-  if !ttt_fof_flag andalso (not pflag orelse !ttt_evprove_flag) then
-    let
-      val thm = (snd result) []
-      val _ = update_create_fof ()
-      val _ = incr fof_counter
-      val is = int_to_string (!fof_counter)
-      val newname = current_theory () ^ "__" ^ is ^ "__" ^ name
-    in
-      (!create_fof_glob) newname thm
-    end
-  else ()
 
 fun record_proof name lflag tac1 tac2 g =
-  if !ttt_fof_flag then
-    let
-      val pflag = String.isPrefix "tactictoe_prove_" name
-      val result =
-        let val (r,t) = add_time (org_tac tac2) g in
-          debug_proof ("Original proof time: " ^ Real.toString t);
-          r
-        end
-      val _ = create_fof_wrap name pflag result
-        handle _ => (debug "Error: create_fof_wrap"; ())
-    in
-      result
-    end
-  else
   let
     val _ = start_record_proof name
     val pflag = String.isPrefix "tactictoe_prove_" name
     val b2 = (not (!ttt_recprove_flag) andalso pflag)
     val b3 = (not (!ttt_reclet_flag) andalso lflag)
-    val _ =
-      if !ttt_eval_flag andalso
-        (not pflag orelse !ttt_evprove_flag) andalso
-        (not lflag orelse !ttt_evlet_flag)
-      then eval_tactictoe g
-      else ()
-    val _ =
-      if !eprover_eval_flag andalso
-        (not pflag orelse !ttt_evprove_flag) andalso
-        (not lflag orelse !ttt_evlet_flag)
-      then eval_eprover g
-      else ()
+    val eval_ignore = pflag orelse lflag orelse
+                      not (isSome (!ttt_evalfun_glob))
     val result =
-      if b2 orelse b3 orelse (not (!ttt_record_flag))
-      then
-        let val (r,t) = add_time (org_tac tac2) g in
-          debug_proof ("Original proof time: " ^ Real.toString t);
-          r
-        end
-      else
+      if b2 orelse b3 then tac2 g else
         let
+          val _ = if eval_ignore then () else
+            let val (thmdata,tacdata) = (create_thmdata (), !tacdata_glob) in
+              (valOf (!ttt_evalfun_glob)) (thmdata,tacdata) g
+            end
           val (r,t) = add_time tac1 g
-          val _ = debug_proof ("Recording proof time: " ^ Real.toString t)
-          val _ = if !ttt_printproof_flag
-                  then print_proof name g
-                  else end_record_proof name g
+          val _ = debug ("Recording proof time: " ^ Real.toString t)
+          val _ = end_record_proof name g
         in
           if null (fst r) then r
-          else (debug "Record error: try_record_proof: not null";
-                org_tac tac2 g)
+          else (debug "record_proof: not null"; tac2 g)
         end
-        handle _ => (debug "Record error: try_record_proof"; org_tac tac2 g)
+        handle Interrupt => raise Interrupt
+          | _ => (debug "record_proof: exception"; tac2 g)
   in
     result
   end
 
-(*----------------------------------------------------------------------------
-  Theory hooks
-  ----------------------------------------------------------------------------*)
-
-fun clean_subdirl thy dir subdirl =
-  let
-    fun clean_sub x =
-      (mkDir_err (dir ^ "/" ^ x); erase_file (dir ^ "/" ^ x ^ "/" ^ thy))
-  in
-    mkDir_err dir;
-    app clean_sub subdirl
-  end
-
-fun clean_dir thy dir = (mkDir_err dir; erase_file (dir ^ "/" ^ thy))
+(* ----------------------------------------------------------------------
+   Theory hooks
+   ---------------------------------------------------------------------- *)
 
 fun start_record_thy thy =
-  (
-  mkDir_err ttt_code_dir;
-  mkDir_err ttt_proof_dir; clean_dir thy ttt_proof_dir;
-  mkDir_err ttt_eproof_dir; clean_dir thy ttt_eproof_dir;
-  (* Hack to record bool *)
-  if thy = "ConseqConv"
-  then (clean_tttdata ();
-        clean_subdirl "bool" ttt_search_dir ["debug","search","proof"];
-        mkDir_err ttt_thmfea_dir;
-        debug_t "export_thmfea" export_thmfea "bool")
-  else ();
-  clean_tttdata ();
-  reset_profiling ();
-  (* Proof search *)
-  clean_subdirl thy ttt_search_dir ["debug","search","proof"];
-  mkDir_err ttt_tacfea_dir;
-  mkDir_err ttt_thmfea_dir;
-  mkDir_err ttt_glfea_dir;
-  (* Tactic scripts recording *)
-  clean_subdirl thy ttt_record_dir ["parse","replay","record"]
-  )
+  (tacdata_glob := empty_tacdata; reset_profiling ())
 
 fun end_record_thy thy =
-  (
-  if !ttt_eval_flag orelse !eprover_eval_flag
-  then debug "EvalSuccessful"
-  else
-    (
-    debug_t "export_tacdata" export_tacdata thy;
-    debug_t "export_thmfea" export_thmfea thy;
-    debug "RecordSuccessful"
-    )
-  )
+  (ttt_export_tacdata thy (!tacdata_glob); debug "record successful")
+
 
 end (* struct *)

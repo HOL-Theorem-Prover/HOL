@@ -291,8 +291,10 @@ fun type_to_structure ty =
   end
 
 
-fun new_abbreviation tyg (knm as {Name=s,Thy=thy}, ty) = let
+fun new_abbreviation {knm,print,ty} tyg = let
+  open Portable
   val st = type_to_structure ty
+  val {Name = s, Thy = thy} = knm
   val tyg = case Binarymap.peek(parse_map tyg, knm) of
                 NONE => tyg
               | SOME st' =>
@@ -317,10 +319,11 @@ fun new_abbreviation tyg (knm as {Name=s,Thy=thy}, ty) = let
   val (tstamp, tyg) = bump_tstamp tyg
   val result =
     tyg |> fupdate_parse_str (fn d => Binarymap.insert(d,knm,st))
-        |> fupdate_str_print
+        |> (print ?
+            fupdate_str_print
              (fn pmap => TypeNet.insert(pmap,
                                         structure_to_type st,
-                                        (tstamp, knm)))
+                                        (tstamp, knm))))
         |> fupdate_bare_names(fn d => Binarymap.insert(d,s,thy))
 in
   result
@@ -627,7 +630,7 @@ fun apply_delta d g =
     | NEW_INFIX {Name,ParseName,Assoc,Prec} =>
       new_binary_tyop g {precedence=Prec, infix_form = ParseName,
                          opname = Name, associativity = Assoc}
-    | TYABBREV (kid,ty) => new_abbreviation g (kid,ty)
+    | TYABBREV (kid,ty,prp) => new_abbreviation {knm=kid,ty=ty,print=prp} g
     | DISABLE_TYPRINT s => disable_abbrev_printing s g
     | RM_KNM_TYABBREV kid => remove_knm_abbreviation g kid
     | RM_TYABBREV s => remove_abbreviation g s

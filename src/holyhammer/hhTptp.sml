@@ -1,23 +1,23 @@
-(* ========================================================================== *)
-(* FILE          : hhTptp.sml                                                 *)
-(* DESCRIPTION   : TPTP writer for essentially first-order HOL formulas       *)
-(* AUTHOR        : (c) Thibault Gauthier, Czech Technical University          *)
-(*                     Cezary Kaliszyk, University of Innsbruck               *)
-(* DATE          : 2018                                                       *)
-(* ========================================================================== *)
+(* ========================================================================= *)
+(* FILE          : hhTptp.sml                                                *)
+(* DESCRIPTION   : TPTP writer for essentially first-order HOL formulas      *)
+(* AUTHOR        : (c) Thibault Gauthier, Czech Technical University         *)
+(*                     Cezary Kaliszyk, University of Innsbruck              *)
+(* DATE          : 2018                                                      *)
+(* ========================================================================= *)
 
 structure hhTptp :> hhTptp =
 struct
 
-open HolKernel boolLib tttTools hhTranslate
+open HolKernel boolLib aiLib hhTranslate
 
-(*----------------------------------------------------------------------------
+(* -------------------------------------------------------------------------
    Escaping constants , variables and theorems
-  ----------------------------------------------------------------------------*)
+   ------------------------------------------------------------------------- *)
 
 val ERR = mk_HOL_ERR "hhTptp"
 
-val readable_flag = ref false
+val readable_flag = ref false (* used for debugging *)
 
 fun tptp_of_var arity v =
   if not (!readable_flag)
@@ -63,11 +63,10 @@ fun tptp_of_thm (name,tm) =
     else escape ("reserved." ^ name)
   else name
 
-(*----------------------------------------------------------------------------
-   FOF writer
- -----------------------------------------------------------------------------*)
+(* -------------------------------------------------------------------------
+   writer shortcuts
+   ------------------------------------------------------------------------- *)
 
-(* helpers *)
 fun os oc s = TextIO.output (oc,s)
 
 fun oiter_aux oc sep f l = case l of
@@ -76,6 +75,10 @@ fun oiter_aux oc sep f l = case l of
   | a :: m => (f oc a; os oc sep; oiter_aux oc sep f m)
 
 fun oiter oc sep f l = oiter_aux oc sep f l
+
+(* -------------------------------------------------------------------------
+   FOF writer
+   ------------------------------------------------------------------------- *)
 
 fun write_type oc ty =
   if is_vartype ty then os oc (tptp_of_vartype ty)
@@ -97,17 +100,6 @@ fun write_term oc tm =
     os oc (tptp_of_constvar (length argl) rator);
     if null argl then ()
     else (os oc "("; oiter oc "," write_term argl; os oc ")");
-    os oc ")"
-  end
-
-(* Type unsafe version *)
-fun write_term_unsafe oc tm =
-  let
-    val (rator,argl) = strip_comb tm
-  in
-    os oc (tptp_of_constvar (length argl) rator);
-    if null argl then ()
-    else (os oc "("; oiter oc "," write_term_unsafe argl; os oc ")");
     os oc ")"
   end
 
@@ -191,7 +183,11 @@ fun write_cj oc cj =
 
 fun write_tptp dir axl cj =
   let
-    val _ = clean_dir dir
+    val _ = mkDir_err dir
+    val _ = remove_file (dir ^ "/status")
+    val _ = remove_file (dir ^ "/out")
+    val _ = remove_file (dir ^ "/error")
+    val _ = remove_file (dir ^ "/out1")
     val oc = TextIO.openOut (dir ^ "/atp_in")
   in
     ((readable_flag := false; app (write_ax oc) axl; write_cj oc cj)

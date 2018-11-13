@@ -1,4 +1,4 @@
-INCLUDES = ../../common
+INCLUDES = ../../common ../../lib
 
 THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
 TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))

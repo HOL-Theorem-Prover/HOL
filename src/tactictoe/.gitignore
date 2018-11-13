@@ -1,5 +1,5 @@
-gen_*
-log_*
-fea_*
-proof_ttt
-proof_E
+debug/*
+code/*
+eval/*
+scripts/*
+ttt_tacdata/*

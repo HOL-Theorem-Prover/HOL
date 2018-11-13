@@ -24,6 +24,10 @@ src/1
 src/proofman
 [poly]bin/hol.bare
 src/proofman/tests
+[poly]src/AI
+[poly]src/AI/sml_inspection
+[poly]src/AI/machine_learning
+[poly]src/AI/proof_search
 [poly]src/tactictoe/src
 [poly]src/holyhammer
 !tools/Holmake/tests/depchain1/dir3

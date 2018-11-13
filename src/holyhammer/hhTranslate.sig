@@ -3,10 +3,6 @@ sig
 
 include Abbrev
 
-  val log_translate_flag : bool ref
-
-  val escape : string -> string
-  val unescape : string -> string
   val must_pred : term -> bool
   val no_lambda : term -> bool
   val no_pred   : term -> bool
@@ -27,10 +23,8 @@ include Abbrev
   val all_arity_eq : term -> thm list
 
   (* translation *)
-  val debug_translate    : int * term -> term list
-  val translate          : int * term -> term list
-  val cached_translate   : term -> term list
-  val parallel_translate : int -> term list -> term list list
+  val debug_translate_tm : int * term -> term list
+  val translate_tm : term -> term list (* uses a cache *)
 
   (* problem *)
   val translate_pb  : (string * thm) list -> term ->

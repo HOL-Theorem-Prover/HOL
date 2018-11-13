@@ -1,0 +1,6 @@
+eprover
+vampire
+z3
+eprover_files/*
+vampire_files/*
+z3_files/*

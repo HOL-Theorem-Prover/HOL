@@ -71,7 +71,6 @@ val Cond =
 val _ = new_theory "pred_set";
 
 val _ = type_abbrev ("set", ``:'a -> bool``);
-val _ = disable_tyabbrev_printing "set";
 
 local open OpenTheoryMap
   val ns = ["Set"]
@@ -167,6 +166,9 @@ val GSPECIFICATION = new_specification
   ("GSPECIFICATION", ["GSPEC"], GSPEC_DEF_LEMMA);
 val _ = TeX_notation {hol = "|", TeX = ("\\HOLTokenBar{}", 1)}
 val _ = ot0 "GSPEC" "specification"
+
+val _ = add_user_printer ("pred_set.GSPEC", ``GSPEC f``)
+
 
 val GSPECIFICATION_applied = save_thm(
   "GSPECIFICATION_applied[simp]",

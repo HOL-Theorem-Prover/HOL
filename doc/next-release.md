@@ -53,6 +53,10 @@ Incompatibilities:
 
 *   When running with Poly/ML, we now require at least version 5.7.0.
 
+*   The `type_abbrev` function now affects only the type parser.
+    The pretty-printer will not use the new abbreviation when printing types.
+    If the old behaviour of printing the abbreviations as well as parsing them is desired, the new entrypoint `type_abbrev_pp` should be used.
+
 * * * * *
 
 <div class="footer">

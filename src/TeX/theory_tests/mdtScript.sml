@@ -4,7 +4,7 @@ val _ = new_theory "mdt";
 
 val _ = new_type ("char", 0)
 
-val _ = type_abbrev("string", ``:char list``)
+val _ = type_abbrev_pp("string", ``:char list``)
 
 val _ = Hol_datatype`
   term = Var of string => type

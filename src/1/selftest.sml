@@ -707,7 +707,7 @@ end handle _ => die ""
 
 val _ = let
   val _ = tprint "Removing type abbreviation"
-  val _ = temp_type_abbrev ("foo", ``:'a -> bool``)
+  val _ = temp_type_abbrev_pp ("foo", ``:'a -> bool``)
   val s1 = type_to_string ``:bool -> bool``
   val _ = s1 = ":bool foo" orelse die ""
   val _ = temp_remove_type_abbrev "foo"

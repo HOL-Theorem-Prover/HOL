@@ -12,7 +12,7 @@ fun ty_as_term ty = mk_var("x", ty)
 
 fun tydelta_terms (d:type_grammar.delta) =
   case d of
-      TYABBREV (_, ty) => [ty_as_term ty]
+      TYABBREV (_, ty, _) => [ty_as_term ty]
     | _ => []
 
 val tydeltal_terms = List.foldl (fn (d,acc) => tydelta_terms d @ acc) []
@@ -23,7 +23,7 @@ fun tydelta_reader readtm =
     infix || >> >*
     fun new_infix (((nm,pnm),assoc),prec) =
       NEW_INFIX {Name = nm, ParseName = pnm, Assoc = assoc, Prec = prec}
-    fun tyabbrev (kid, tm) = TYABBREV (kid, type_of tm)
+    fun tyabbrev ((kid, tm), p) = TYABBREV (kid, type_of tm, p)
   in
     (literal "NTY" >> Coding.map NEW_TYPE KernelNameData.reader) ||
     (literal "NIX" >>
@@ -31,7 +31,8 @@ fun tydelta_reader readtm =
                            assoc_reader >* IntData.reader)) ||
     (literal "TYA" >>
      Coding.map tyabbrev
-       (KernelNameData.reader >* Coding.map readtm StringData.reader)) ||
+       (KernelNameData.reader >* Coding.map readtm StringData.reader >*
+        BoolData.reader)) ||
     (literal "DTYP" >> Coding.map DISABLE_TYPRINT StringData.reader) ||
     (literal "RKA" >> Coding.map RM_KNM_TYABBREV KernelNameData.reader) ||
     (literal "RTY" >> Coding.map RM_TYABBREV StringData.reader)
@@ -46,9 +47,10 @@ fun tydelta_encode wtm tyd =
       | NEW_INFIX{Name,ParseName,Assoc,Prec} =>
           "NIX" ^ StringData.encode Name ^ StringData.encode ParseName ^
           assoc_encode Assoc ^ IntData.encode Prec
-      | TYABBREV (kid, ty) =>
+      | TYABBREV (kid, ty, prp) =>
           "TYA" ^ KernelNameData.encode kid ^
-          StringData.encode (wtm (ty_as_term ty))
+          StringData.encode (wtm (ty_as_term ty)) ^
+          BoolData.encode prp
       | DISABLE_TYPRINT s => "DTYP" ^ StringData.encode s
       | RM_KNM_TYABBREV kid => "RKA" ^ KernelNameData.encode kid
       | RM_TYABBREV s => "RTY" ^ StringData.encode s

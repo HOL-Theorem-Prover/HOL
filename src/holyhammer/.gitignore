@@ -1,10 +1,2 @@
-provers/eprover
-provers/eprover_files
-
-provers/z3
-provers/z3_files
-
-provers/vampire
-provers/vampire_files
-
-eval
+debug/*
+eval/*
