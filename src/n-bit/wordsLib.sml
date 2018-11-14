@@ -2641,7 +2641,7 @@ fun mk_word_size n =
                      (SIMP_RULE std_ss [INT_MIN] o
                       Thm.INST_TYPE [``:'a`` |-> typ]) dimword_IS_TWICE_INT_MIN)
    in
-      type_abbrev ("word" ^ SN, TYPE)
+      type_abbrev_pp ("word" ^ SN, TYPE)
    end
 
 val dest_word_literal = fst o wordsSyntax.dest_mod_word_literal
