@@ -8,11 +8,9 @@ open numposrepTheory numposrepLib
 open ASCIInumbersTheory ASCIInumbersSyntax ASCIInumbersLib
 open stringSyntax
 
-structure Parse = struct
-  open Parse
-  val (Type, Term) = parse_from_grammars wordsTheory.words_grammars
-end
-open Parse
+(* Fix the grammar used by this file *)
+val ambient_grammars = Parse.current_grammars();
+val _ = Parse.temp_set_grammars wordsTheory.words_grammars
 
 val () = ignore (Lib.with_flag (Feedback.emit_MESG, false) bossLib.srw_ss ())
 
@@ -2982,5 +2980,7 @@ fun prefer_word () =
          handle HOL_ERR _ => ()) operators
 
 val _ = Defn.const_eq_ref := (!Defn.const_eq_ref ORELSEC word_EQ_CONV)
+
+val _ = Parse.temp_set_grammars ambient_grammars
 
 end
