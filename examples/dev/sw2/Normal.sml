@@ -19,8 +19,6 @@ fun mk_atom tm =
   with_exn mk_comb (inst [alpha |-> type_of tm] atom_tm, tm)
           (ERR "mk_atom" "Non-boolean argument");
 
-val _ = (Globals.priming := SOME "");
-
 val branch_join = ref false
 
 (*---------------------------------------------------------------------------*)

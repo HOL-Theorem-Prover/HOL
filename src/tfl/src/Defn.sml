@@ -34,6 +34,12 @@ fun variants FV vlist =
        (fn v => fn (V,W) =>
            let val v' = variant W v in (v'::V, v'::W) end) vlist ([],FV));
 
+fun numvariants FV vlist =
+  fst
+    (rev_itlist
+       (fn v => fn (V,W) =>
+           let val v' = numvariant W v in (v'::V, v'::W) end) vlist ([],FV));
+
 fun make_definition thry s tm = (new_definition(s,tm), thry)
 
 fun head tm = head (rator tm) handle HOL_ERR _ => tm;
@@ -980,8 +986,8 @@ fun mutrec thy bindstem eqns =
              val outbar = assoc ftupvar RNG_OUTS
              val (fvarname,_) = dest_atom fvar
              val defvars = rev
-                  (Lib.with_flag (Globals.priming, SOME"") (variants [fvar])
-                     (map (curry mk_var "x") argtys))
+                             (numvariants [fvar]
+                                          (map (curry mk_var "x") argtys))
              val tup_defvars = list_mk_pair defvars
              val newty = itlist (curry (op-->)) (map type_of params@argtys) rng
              val fvar' = mk_var(fvarname,newty)
@@ -1101,9 +1107,8 @@ fun pairf (stem, eqs0) =
            val (lhs, rhs) = dest_eq (snd (strip_forall eq1))
            val (tuplec, args) = strip_comb lhs
            val (SV, p) = front_last args
-           val defvars = rev (Lib.with_flag (Globals.priming, SOME "")
-                                 (variants (f :: SV))
-                                 (map (curry mk_var "x") argtys))
+           val defvars = rev (numvariants (f :: SV)
+                                          (map (curry mk_var "x") argtys))
            val tuplecSV = list_mk_comb (tuplec, SV)
            val def_args = SV @ defvars
            val fvar =

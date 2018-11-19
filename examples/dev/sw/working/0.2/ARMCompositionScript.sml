@@ -13,8 +13,6 @@ open HolKernel Parse boolLib bossLib numLib pred_setSimps pred_setTheory wordsLi
 
 val _ = new_theory "ARMComposition";
 
-val _ = Globals.priming := NONE;
-
 (*------------------------------------------------------------------------------------------------------*)
 (* Additional theorems for finite maps                                                                  *)
 (*------------------------------------------------------------------------------------------------------*)
@@ -1530,8 +1528,6 @@ val FUNPOW_DSTATE = Q.store_thm (
    ]
    );
 
-val _ = (Globals.priming := SOME "");
-
 val UNROLL_TR_LEM = Q.store_thm (
    "UNROLL_TR_LEM",
    `!cond arm iB s pcS.
@@ -1670,8 +1666,6 @@ val UNROLL_TR_LEM = Q.store_thm (
   );
 
 
-val _ = (Globals.priming := NONE);
-
 val TR_IS_WELL_FORMED = Q.store_thm (
    "TR_IS_WELL_FORMED",
    `!cond arm. well_formed arm /\ WF_TR (cond,arm)
@@ -1800,4 +1794,3 @@ val WELL_FORMED_INSTB = Q.store_thm (
 
 
 val _ = export_theory();
-

@@ -57,6 +57,11 @@ Incompatibilities:
     The pretty-printer will not use the new abbreviation when printing types.
     If the old behaviour of printing the abbreviations as well as parsing them is desired, the new entrypoint `type_abbrev_pp` should be used.
 
+*   The `Globals.priming` reference variable has been removed.
+    All priming done by the kernel is now by appending extra prime (apostrophe) characters to the names of variables.
+    This also means that this is the only form of variation introduced by the `variant` function.
+    However, there is also a new `numvariant` function, which makes the varying function behave as if the old `Globals.priming` was set to `SOME ""` (introduces and increments a numeric suffix).
+
 * * * * *
 
 <div class="footer">
