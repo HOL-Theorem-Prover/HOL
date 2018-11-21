@@ -4903,7 +4903,7 @@ word Encode(i::instruction) =
 -- RVC instruction decoding
 ---------------------------------------------------------------------------
 
-instruction Decode16(h::half) =
+instruction DecodeRVC(h::half) =
    match h
    { -- case '000 00000000 000 00' => _ -- illegal
 
@@ -4912,7 +4912,7 @@ instruction Decode16(h::half) =
      case '001 ilo`3      rs1 ihi`2     rd 00' => FPLoad(FLD('01' : rd, '01' : rs1, '0000'        : ihi : ilo : '000' )) -- 32/64
      -- case '001 ilo`2 i8`1 rs1 ihi`2     rd 00' => Load(   LQ('01' : rd, '01' : rs1, '000'   : i8  : ihi : ilo : '0000')) -- 128
      case '010 imi`3      rs1 i2`1 i6`1 rd 00' => Load(   LW('01' : rd, '01' : rs1, '00000' : i6  : imi : i2  : '00'  ))
-     case '011 imi`3      rs1 i2`1 i6`1 rd 00' => FPLoad(FLW('01' : rd, '01' : rs1, '00000' : i6  : imi : i2  : '00'  )) -- 32
+     -- case '011 imi`3      rs1 i2`1 i6`1 rd 00' => FPLoad(FLW('01' : rd, '01' : rs1, '00000' : i6  : imi : i2  : '00'  )) -- 32
      case '011 ilo`3      rs1 ihi`2     rd 00' => Load(   LD('01' : rd, '01' : rs1, '0000'        : ihi : ilo : '000' )) -- 64/128
 
      -- -- case '100 _ 00' => _ -- reserved
@@ -4920,12 +4920,12 @@ instruction Decode16(h::half) =
      case '101 ilo`3      rs1 ihi`2     rs2 00' => FPStore(FSD('01' : rs2, '01' : rs1, '0000'        : ihi : ilo : '000' )) -- 32/64
      -- case '101 ilo`2 i8`1 rs1 ihi`2     rs2 00' => Store(   SQ('01' : rs2, '01' : rs1, '000'   : i8  : ihi : ilo : '0000')) -- 128
      case '110 imi`3      rs1 i2`1 i6`1 rs2 00' => Store(   SW('01' : rs2, '01' : rs1, '00000' : i6  : imi : i2  : '00'  ))
-     case '111 imi`3      rs1 i2`1 i6`1 rs2 00' => FPStore(FSW('01' : rs2, '01' : rs1, '00000' : i6  : imi : i2  : '00'  )) -- 32
+     -- case '111 imi`3      rs1 i2`1 i6`1 rs2 00' => FPStore(FSW('01' : rs2, '01' : rs1, '00000' : i6  : imi : i2  : '00'  )) -- 32
      case '111 ilo`3      rs1 ihi`2     rs2 00' => Store(   SD('01' : rs2, '01' : rs1, '0000'        : ihi : ilo : '000' )) -- 64/128
 
      case '000 0 00000 00000 01' => ArithI(ADDI(0, 0, 0))
 
-     case '001 i11`1 i4`1 ihi`2 i10`1 i6`1 i7`1 ilo`3 i5`1 01' => Branch(JAL(1, i11 ^ 10 : i10 : ihi : i7 : i6 : i5 : i4 : ilo)) -- 32, (moved)
+     -- case '001 i11`1 i4`1 ihi`2 i10`1 i6`1 i7`1 ilo`3 i5`1 01' => Branch(JAL(1, i11 ^ 10 : i10 : ihi : i7 : i6 : i5 : i4 : ilo)) -- 32, (moved)
 
      case '000 i5`1 r     imi`5                01' => ArithI( ADDI( r, r, i5 ^ 7 : imi)) -- rd /= 0, imm /= 0
      case '001 i5`1 r     imi`5                01' => ArithI(ADDIW( r, r, i5 ^ 7 : imi)) -- rd /= 0, 64/128
@@ -4962,7 +4962,7 @@ instruction Decode16(h::half) =
      case '001 i5`1 rd ilo`2 ihi`3 10' => FPLoad(FLD(rd, 2, '000'  : ihi : i5 : ilo : '000' )) -- 32/64
      -- case '001 i5`1 rd i4    imi`4 10' => Load(   LQ(rd, 2, '00'   : imi : i5 : i4  : '0000')) -- rd /= 0, 128
      case '010 i5`1 rd ilo`3 ihi`2 10' => Load(   LW(rd, 2, '0000' : ihi : i5 : ilo : '00'  )) -- rd /= 0
-     case '011 i5`1 rd ilo`3 ihi`2 10' => FPLoad(FLW(rd, 2, '0000' : ihi : i5 : ilo : '00'  )) -- 32
+     -- case '011 i5`1 rd ilo`3 ihi`2 10' => FPLoad(FLW(rd, 2, '0000' : ihi : i5 : ilo : '00'  )) -- 32
      case '011 i5`1 rd ilo`2 ihi`3 10' => Load(   LD(rd, 2, '000'  : ihi : i5 : ilo : '000' )) -- rd /= 0, 64/128
 
      case '100 1 00000 00000 10' => System(EBREAK) -- (moved)
@@ -4975,11 +4975,11 @@ instruction Decode16(h::half) =
      case '101 ilo`3 ihi`3 rs2 10' => FPStore(FSD(rs2, 2, '000'  : ihi : ilo : '000' )) -- 32/64
      -- case '101 ilo`2 ihi`4 rs2 10' => Store(   SQ(rs2, 2, '00'   : ihi : ilo : '0000')) -- 128
      case '110 ilo`4 ihi`2 rs2 10' => Store(   SW(rs2, 2, '0000' : ihi : ilo : '00'  ))
-     case '111 ilo`4 ihi`2 rs2 10' => FPStore(FSW(rs2, 2, '0000' : ihi : ilo : '00'  )) -- 32
+     -- case '111 ilo`4 ihi`2 rs2 10' => FPStore(FSW(rs2, 2, '0000' : ihi : ilo : '00'  )) -- 32
      case '111 ilo`3 ihi`3 rs2 10' => Store(   SD(rs2, 2, '000'  : ihi : ilo : '000' )) -- 64/128
 
      -- unsupported instructions
-     case _                                        => UnknownInstruction
+     case _ => UnknownInstruction
    }
 
 type rvcreg = bits(3)
