@@ -37,6 +37,12 @@ type fpval    = bits(64)
 
 type exc_code = bits(4)
 
+-- raw instructions
+construct rawInstType
+{ Half :: half
+  Word :: word
+}
+
 -- instruction fields
 type opcode   = bits(7)
 type imm12    = bits(12)
@@ -652,6 +658,7 @@ declare
   c_fpr         :: id -> RegFile                -- floating-point registers
 
   c_PC          :: id -> regType                -- program counter
+  c_Skip        :: id -> regType                -- bytes to next instruction
 
   c_UCSR        :: id -> UserCSR                -- user-level CSRs
   c_SCSR        :: id -> SupervisorCSR          -- supervisor-level CSRs
@@ -705,6 +712,11 @@ component fpr(n::reg) :: regType
 component PC :: regType
 { value        = c_PC(procID)
   assign value = c_PC(procID) <- value
+}
+
+component Skip :: regType
+{ value        = c_Skip(procID)
+  assign value = c_Skip(procID) <- value
 }
 
 component UCSR :: UserCSR
@@ -1233,7 +1245,7 @@ record StateDelta
   fetch_exc     :: bool                 -- whether that exception occured on fetch
                                 --   if so, the retired instruction (rinstr) is undefined
   pc            :: regType              -- PC of retired instruction
-  rinstr        :: word                 -- the retired instruction
+  rinstr        :: rawInstType          -- the retired instruction
 
   addr          :: regType option       -- address argument for instruction:
                                 --   new control flow target for jump, exception branch, ERET
@@ -1261,7 +1273,7 @@ component Delta :: StateDelta
   assign value = c_update(procID) <- value
 }
 
-inline unit setupDelta(pc::regType, instr::word) =
+inline unit setupDelta(pc::regType, instr::rawInstType) =
 { Delta.exc_taken <- false
 ; Delta.fetch_exc <- false
 ; Delta.pc        <- pc
@@ -1716,11 +1728,24 @@ unit rawWriteData(pAddr::pAddr, data::regType, nbytes::nat) =
        }
 }
 
-word rawReadInst(pAddr::pAddr) =
+half rawReadHalf(pAddr::pAddr) =
 { pAddrIdx = pAddr<63:3>
 ; data     = MEM(pAddrIdx)
 ; mark_log(LOG_MEM, log_r_mem(pAddrIdx, pAddr, data))
-; if pAddr<2> then data<63:32> else data<31:0>
+; match pAddr<2:1>
+  { case '00' => data<63:48>
+    case '01' => data<47:32>
+    case '10' => data<31:16>
+    case '11' => data<15:0>
+  }
+}
+
+rawInstType rawReadInst(pAddr::pAddr) =
+{ h = rawReadHalf(pAddr)
+; match h
+  { case '_ 11' => Word(rawReadHalf(pAddr + 2) : h)
+    case _      => Half(h)
+  }
 }
 
 -- helper used to preload memory contents
@@ -2400,9 +2425,9 @@ define MulDiv > REMUW(rd::reg, rs1::reg, rs2::reg) =
 -----------------------------------
 define Branch > JAL(rd::reg, imm::imm20) =
 { addr = PC + SignExtend(imm) << 1
-; if addr<1:0> != 0
+; if addr<0>
   then signalAddressException(Fetch_Misaligned, addr)
-  else { writeRD(rd, PC + 4)
+  else { writeRD(rd, PC + Skip)
        ; branchTo(addr)
        }
 }
@@ -2412,9 +2437,9 @@ define Branch > JAL(rd::reg, imm::imm20) =
 -----------------------------------
 define Branch > JALR(rd::reg, rs1::reg, imm::imm12) =
 { addr = (GPR(rs1) + SignExtend(imm)) && SignExtend('10')
-; if addr<1:0> != 0
+; if addr<0>
   then signalAddressException(Fetch_Misaligned, addr)
-  else { writeRD(rd, PC + 4)
+  else { writeRD(rd, PC + Skip)
        ; branchTo(addr)
        }
 }
@@ -2429,7 +2454,7 @@ define Branch > BEQ(rs1::reg, rs2::reg, offs::imm12) =
 ; v2 = if in32BitMode() then SignExtend(GPR(rs2)<31:0>) else GPR(rs2)
 ; if v1 == v2
   then branchTo(PC + (SignExtend(offs) << 1))
-  else noBranch(PC + 4)
+  else noBranch(PC + Skip)
 }
 
 -----------------------------------
@@ -2440,7 +2465,7 @@ define Branch > BNE(rs1::reg, rs2::reg, offs::imm12) =
 ; v2 = if in32BitMode() then SignExtend(GPR(rs2)<31:0>) else GPR(rs2)
 ; if v1 <> v2
   then branchTo(PC + (SignExtend(offs) << 1))
-  else noBranch(PC + 4)
+  else noBranch(PC + Skip)
 }
 
 -----------------------------------
@@ -2451,7 +2476,7 @@ define Branch > BLT(rs1::reg, rs2::reg, offs::imm12) =
 ; v2 = if in32BitMode() then SignExtend(GPR(rs2)<31:0>) else GPR(rs2)
 ; if v1 < v2
   then branchTo(PC + (SignExtend(offs) << 1))
-  else noBranch(PC + 4)
+  else noBranch(PC + Skip)
 }
 
 -----------------------------------
@@ -2462,7 +2487,7 @@ define Branch > BLTU(rs1::reg, rs2::reg, offs::imm12) =
 ; v2 = if in32BitMode() then SignExtend(GPR(rs2)<31:0>) else GPR(rs2)
 ; if v1 <+ v2
   then branchTo(PC + (SignExtend(offs) << 1))
-  else noBranch(PC + 4)
+  else noBranch(PC + Skip)
 }
 
 -----------------------------------
@@ -2473,7 +2498,7 @@ define Branch > BGE(rs1::reg, rs2::reg, offs::imm12) =
 ; v2 = if in32BitMode() then SignExtend(GPR(rs2)<31:0>) else GPR(rs2)
 ; if v1 >= v2
   then branchTo(PC + (SignExtend(offs) << 1))
-  else noBranch(PC + 4)
+  else noBranch(PC + Skip)
 }
 
 -----------------------------------
@@ -2484,7 +2509,7 @@ define Branch > BGEU(rs1::reg, rs2::reg, offs::imm12) =
 ; v2 = if in32BitMode() then SignExtend(GPR(rs2)<31:0>) else GPR(rs2)
 ; if v1 >=+ v2
   then branchTo(PC + (SignExtend(offs) << 1))
-  else noBranch(PC + 4)
+  else noBranch(PC + Skip)
 }
 
 ---------------------------------------------------------------------------
@@ -4179,12 +4204,12 @@ define Run
 
 construct FetchResult
 { F_Error   :: instruction
-, F_Result  :: word
+, F_Result  :: rawInstType
 }
 
 FetchResult Fetch() =
-{ vPC    = PC
-; if vPC<1:0> != 0
+{ vPC = PC
+; if vPC<0>
   then F_Error(Internal(FETCH_MISALIGNED(vPC)))
   else match translateAddr(vPC, Instruction, Read)
        { case Some(pPC) => { instw = rawReadInst(pPC)
@@ -5238,7 +5263,12 @@ unit Next =
        }
 
 ; match Fetch()
-  { case F_Result(w) =>
+  { case F_Result(Half(h)) =>
+    { inst = DecodeRVC(h)
+    ; mark_log(LOG_INSN, log_instruction(ZeroExtend(h), inst))
+    ; Run(inst)
+    }
+    case F_Result(Word(w)) =>
     { inst = Decode(w)
     ; mark_log(LOG_INSN, log_instruction(w, inst))
     ; Run(inst)
@@ -5254,11 +5284,11 @@ unit Next =
 ; match NextFetch, checkInterrupts()
   { case None, None =>
              { incrInstret()
-             ; PC <- PC + 4
+             ; PC <- PC + Skip
              }
     case None, Some(i, p) =>
              { incrInstret()
-             ; takeTrap(true, interruptIndex(i), PC + 4, None, p)
+             ; takeTrap(true, interruptIndex(i), PC + Skip, None, p)
              }
     case Some(BranchTo(addr)), _ =>
              { incrInstret()
