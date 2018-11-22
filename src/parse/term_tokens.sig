@@ -23,5 +23,6 @@ sig
   val nonagg_c     : char -> bool
 
   val lextest : string list -> string -> 'a term_token list
+  val toString : ('a -> string) -> 'a term_token -> string (* for debugging *)
 
 end

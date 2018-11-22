@@ -179,9 +179,13 @@ val _ = app test [(`abc`, ["abc"]),
 (* tests of the term lexer *)
 fun test (s, toklist : unit term_tokens.term_token list) = let
   val _ = tprint ("Term token testing " ^ Lib.quote s)
+  val result = term_tokens.lextest [] s
 in
-  if term_tokens.lextest [] s = toklist then OK()
-  else die "FAILED!"
+  if result = toklist then OK()
+  else die ("Got: ["^
+            String.concatWith ", "
+               (map (term_tokens.toString (fn _ => "()")) result) ^
+            "]")
 end handle LEX_ERR (s,_) => die ("FAILED!\n  [LEX_ERR "^s^"]")
          | e => die ("FAILED\n ["^exnMessage e^"]")
 

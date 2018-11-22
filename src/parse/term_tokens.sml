@@ -311,6 +311,18 @@ in
   recurse []
 end
 
+fun toString aqp t =
+    case t of
+        Ident s => "Ident("^s^")"
+      | Antiquote a => "AQ(" ^ aqp a ^ ")"
+      | Numeral(n,copt) => "Numeral(" ^ Arbnum.toString n ^ ", " ^
+                           (case copt of NONE => "NONE"
+                                       | SOME c => str c) ^ ")"
+      | Fraction{wholepart,fracpart,places} =>
+          "Fraction{w=" ^ Arbnum.toString wholepart ^", f=" ^
+          Arbnum.toString fracpart ^ ", p=" ^ Int.toString places ^ "}"
+      | QIdent(s1,s2) => s1 ^ "$" ^ s2
+
 end (* struct *)
 
 (* good parsing/lexing test:
