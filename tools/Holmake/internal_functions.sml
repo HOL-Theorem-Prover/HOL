@@ -235,7 +235,7 @@ fun wildcard s =
     in
       case rest of
           [] => (* happens if input was a series of forward slashes *) [s]
-        | _ => (case recurse pfx starting_dir rest of [] => [s] | x => x)
+        | _ => (case recurse pfx starting_dir rest of [] => [] | x => x)
     end
 
 fun get_first f [] = NONE
