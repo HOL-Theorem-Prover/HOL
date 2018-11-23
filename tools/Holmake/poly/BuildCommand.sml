@@ -485,16 +485,10 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                                     time_limit = time_limit,
                                     quiet = quiet_flag, hmenv = hmenv,
                                     jobs = jobs } ii g |> interpret_graph)
-  fun extend_holpaths () =
-    List.app holpathdb.extend_db
-             (holpathdb.search_for_extensions
-                (fn s => [])
-                [OS.FileSys.getDir()])
-
 in
   {extra_impl_deps = if relocbuild orelse HOLSTATE = POLY then []
                      else [Unhandled HOLSTATE],
-   build_graph = (fn arg => (extend_holpaths(); build_graph arg))}
+   build_graph = build_graph}
 end
 
 end (* struct *)
