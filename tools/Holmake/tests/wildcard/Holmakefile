@@ -1,6 +1,6 @@
-.PHONY: all test1 test2 test3 test4 test5 test6
+.PHONY: all test1 test2 test3 test4 test5 test6 test7 test8
 
-all: test1 test2 test3 test4 test5 test6
+all:        test1 test2 test3 test4 test5 test6 test7 test8
 
 TEST1 = $(wildcard t1*)
 TEST2 = $(wildcard t2*)
@@ -8,6 +8,8 @@ TEST3 = $(wildcard t3/t3*)
 TEST4 = $(wildcard t3/t3[234]*)
 TEST5 = $(wildcard */)
 TEST6 = $(wildcard t1*/)
+TEST7 = $(wildcard t1* t2* t3*)
+TEST8 = $(wildcard t7\ t*)
 
 test1:
 	[ "$(TEST1)" = "t1a t1b" ]
@@ -24,5 +26,15 @@ test4:
 test5:
 	[ "$(TEST5)" = "t3/ t4/" ]
 
+
+# GNU make 3.8.1 actually expands $(TEST6) to t1a t1b, perhaps a bug.
+# Some discussion of this sort of thing at
+#   https://stackoverflow.com/questions/9442829/gnu-make-how-to-determine-a-path-is-a-file-or-a-directory
 test6:
 	[ "$(TEST6)a" = "a" ]
+
+test7:
+	[ "$(TEST7)" = "t1a t1b t3" ]
+
+test8:
+	[ "$(TEST8)" = "t7 t7" ]

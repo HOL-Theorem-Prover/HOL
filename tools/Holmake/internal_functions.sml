@@ -354,9 +354,10 @@ in
   | "wildcard" => if length args <> 1 then
                     raise Fail "Bad number of arguments to 'wildcard' function"
                   else let
-                    val arg_evalled = eval (hd args)
+                    val args' = tokenize (Substring.string (hd args))
+                    val args_evalled = map (eval o Substring.full) args'
                   in
-                    spacify (wildcard arg_evalled)
+                    spacify (List.concat (map wildcard args_evalled))
                   end
   | "shell" => if length args <> 1 then
                  raise Fail "Bad number of arguments to 'shell' function"
