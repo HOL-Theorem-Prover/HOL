@@ -237,6 +237,12 @@ let
             incdirmap =
               extend_idmap dir (idm_lookup incdirmap newdir) incdirmap}
     else let
+      val _ = OS.FileSys.access
+                (hmdir.toAbsPath newdir, [OS.FileSys.A_READ, OS.FileSys.A_EXEC])
+              orelse
+                die ("Attempt to recurse into non-existent directory: " ^
+                     hmdir.toString newdir ^
+                     "\n  (Probably a result of bad INCLUDES spec.)")
       val _ = diag (fn _ => "Recursive call in " ^ hmdir.pretty_dir newdir)
       val _ = diag (fn _ => "Visited set = " ^ print_set visited)
       val _ = terminal_log ("Holmake: "^nice_dir (hmdir.toString newdir))

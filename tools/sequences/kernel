@@ -17,6 +17,7 @@ src/thm
 src/postkernel
 # these three directories are required to even run hol.bare.unquote
 src/parse
+!tools/Holmake/tests/badincludes
 src/opentheory
 (otknl)src/opentheory/logging
 src/bool
