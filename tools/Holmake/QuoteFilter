@@ -132,7 +132,7 @@ quoteend = "`" | "\226\128\153";
                                  locpragma yyarg (yytext, yypos) 0)
 )
                  else ECHO yyarg yytext);
-<INITIAL>"theorem"{ws}+{alphaMLid}("["{alphaMLid_list}"]")? => (
+<INITIAL>"Theorem"{ws}+{alphaMLid}("["{alphaMLid_list}"]")? => (
   let
     val (thmname,with_attrs_string) = dest_ml_thm_binding yytext
   in
