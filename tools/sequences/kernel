@@ -32,6 +32,7 @@ src/proofman/tests
 [poly]src/AI/proof_search
 [poly]src/tactictoe/src
 [poly]src/holyhammer
+!tools/Holmake/tests/holpathdb/proj2
 !tools/Holmake/tests/depchain1/dir3
 !tools/Holmake/tests/depchain2/dir1
 !tools/Holmake/tests/altquote1
