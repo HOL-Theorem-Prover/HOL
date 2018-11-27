@@ -168,7 +168,11 @@ fun digits_afterbasespec locn b cpts =
     in
       case cpts of
           [] => done
-        | d :: rest => if c0 <= d andalso d <= c9 then
+        | d :: rest => if c0 <= d andalso d <= c9 orelse
+                          b = 16 andalso
+                          (cA <= d andalso d <= cF orelse
+                           ca <= d andalso d <= cf)
+                       then
                          digits locn b Arbnum.zero cpts
                        else done
     end

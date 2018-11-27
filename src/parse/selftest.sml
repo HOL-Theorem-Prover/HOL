@@ -212,6 +212,7 @@ val _ = app test [
       ("((-12", [Ident "(", Ident "(", Ident "-", snum 12]),
       ("0a", [Numeral(ai 0, SOME #"a")]),
       ("0", [snum 0]),
+      ("(0xF", [Ident "(", snum 15]),
       ("01", [snum 1]),
       ("1.2", [Fraction{wholepart = ai 1, fracpart = ai 2, places = 1}]),
       ("-1.2", [Ident "-",
