@@ -424,6 +424,77 @@ val _ = register_btrace ("PP.print_firstcasebar", pp_print_firstcasebar)
 
 val unfakeconst = Option.map #fake o GrammarSpecials.dest_fakeconst_name
 
+fun badpc_encode s =
+    let val sz = String.size s
+        fun recurse seendigit i =
+            if i <= 0 then false
+            else
+              let val c = String.sub(s,i)
+              in
+                if Char.isDigit c then recurse true (i - 1)
+                else c = #"'" andalso seendigit
+              end
+    in
+      sz >= 4 andalso String.sub(s, sz - 1) = #"'" andalso
+      recurse false (sz - 2)
+    end
+
+fun is_safe_varname s =
+    s <> "" andalso
+    (let val v0 = #1 (valOf (UTF8.firstChar s))
+     in
+       UnicodeChars.isAlpha v0 orelse v0 = "_"
+     end) andalso
+    UTF8.all UnicodeChars.isMLIdent s andalso
+    not (badpc_encode s)
+fun unsafe_style s =
+    let
+      fun trans s =
+          if s = "\n" then "\\n"
+          else if s = "\009" then "\\t"
+          else if s = ")" then "\\)"
+          else if UnicodeChars.isSpace s andalso s <> " " then
+            String.translate
+              (fn c => "\\" ^
+                       StringCvt.padLeft #"0" 3 (Int.toString (Char.ord c)))
+              s
+          else s
+    in
+      "$var$(" ^ UTF8.translate trans s ^ ")"
+    end
+fun unicode_supdigit 0 = UnicodeChars.sup_0
+  | unicode_supdigit 1 = UnicodeChars.sup_1
+  | unicode_supdigit 2 = UnicodeChars.sup_2
+  | unicode_supdigit 3 = UnicodeChars.sup_3
+  | unicode_supdigit 4 = UnicodeChars.sup_4
+  | unicode_supdigit 5 = UnicodeChars.sup_5
+  | unicode_supdigit 6 = UnicodeChars.sup_6
+  | unicode_supdigit 7 = UnicodeChars.sup_7
+  | unicode_supdigit 8 = UnicodeChars.sup_8
+  | unicode_supdigit 9 = UnicodeChars.sup_9
+  | unicode_supdigit _ = raise Fail "unicode_supdigit: i < 0 or i > 9"
+fun prettynumbers false i = Int.toString i
+  | prettynumbers true i =
+    let
+      fun recurse A i =
+          if i = 0 then String.concat A
+          else
+            recurse (unicode_supdigit (i mod 10) :: A) (i div 10)
+    in
+      if i = 0 then UnicodeChars.sup_0
+      else if i < 0 then UnicodeChars.sup_minus ^ recurse [] (~i)
+      else recurse [] i
+    end
+
+fun vname_styling unicode s =
+    if not (is_safe_varname s) then unsafe_style s
+    else
+      let val (s0,n) = Lib.extract_pc s
+      in
+        if n > 2 then s0 ^ "'" ^ prettynumbers unicode n ^ "'"
+        else s
+      end
+
 fun atom_name tm = let
   val (vnm, _) = dest_var tm
 in
@@ -1509,6 +1580,7 @@ fun pp_term (G : grammar) TyG backend = let
             showtypes andalso not isfake andalso (binderp orelse nfv)
           val adds =
               if is_constish tm then constann tm else var_ann tm
+          val uok = current_trace "PP.avoid_unicode" = 0
         in
           fupdate (fn x => x) >- return o new_freevar >-
           (fn is_new =>
@@ -1521,8 +1593,8 @@ fun pp_term (G : grammar) TyG backend = let
                     pr_sole_name tm vname (map #3 (valOf vrule))
                   else
                     if HOLset.member(spec_table, vname) then
-                      dollarise adds add_string vname
-                    else adds vname) >>
+                      dollarise adds add_string (vname_styling uok vname)
+                    else adds (vname_styling uok vname)) >>
                  (if print_type then add_type else nothing)
                )
              )
