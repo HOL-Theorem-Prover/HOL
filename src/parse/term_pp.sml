@@ -1004,7 +1004,7 @@ fun pp_term (G : grammar) TyG backend = let
                         PPBackEnd.Literal PPBackEnd.NumLit) >>
         (if showtypes then
            add_string (" "^type_intro) >> add_break (0,0) >>
-           doTy (#2 (dom_rng injty))
+           doTy (#2 (dom_rng injty)) >> setlaststring " "
          else nothing)
       )
     end
@@ -1326,7 +1326,7 @@ fun pp_term (G : grammar) TyG backend = let
                        prec prec rprec (decdepth depth) >>
           (if comb_show_type then
              add_string (" "^type_intro) >> add_break (0,0) >>
-             doTy (type_of tm)
+             doTy (type_of tm) >> setlaststring " "
            else nothing)
         )
       )
@@ -1570,7 +1570,8 @@ fun pp_term (G : grammar) TyG backend = let
               handle Option => (false, vname)
           val vrule = lookup_term vname
           val add_type=
-            add_string (" "^type_intro) >>  add_break(0,0) >> doTy Ty
+            add_string (" "^type_intro) >>  add_break(0,0) >> doTy Ty >>
+            setlaststring " "
           fun new_freevar ({seen_frees,current_bvars,...}:printing_info) =
             showtypes andalso not isfake andalso
             not (HOLset.member(seen_frees, tm)) andalso
