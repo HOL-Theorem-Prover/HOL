@@ -235,7 +235,7 @@ fun wildcard s =
     in
       case rest of
           [] => (* happens if input was a series of forward slashes *) [s]
-        | _ => (case recurse pfx starting_dir rest of [] => [s] | x => x)
+        | _ => (case recurse pfx starting_dir rest of [] => [] | x => x)
     end
 
 fun get_first f [] = NONE
@@ -354,9 +354,10 @@ in
   | "wildcard" => if length args <> 1 then
                     raise Fail "Bad number of arguments to 'wildcard' function"
                   else let
-                    val arg_evalled = eval (hd args)
+                    val args' = tokenize (Substring.string (hd args))
+                    val args_evalled = map (eval o Substring.full) args'
                   in
-                    spacify (wildcard arg_evalled)
+                    spacify (List.concat (map wildcard args_evalled))
                   end
   | "shell" => if length args <> 1 then
                  raise Fail "Bad number of arguments to 'shell' function"
