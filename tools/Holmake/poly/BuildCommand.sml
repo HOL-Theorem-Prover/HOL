@@ -235,7 +235,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                default)
   end
 
-
+  val extra_poly_cline = envlist "POLY_CLINE_OPTIONS"
 
   fun poly_link quietp result files =
   let
@@ -253,9 +253,10 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
     p "#!/bin/sh";
     p ("set -e");
     p (protect(fullPath [HOLDIR, "bin", "buildheap"]) ^ " --gcthreads=1 " ^
-       (if polynothol then "--poly" else "--holstate="^protect(HOLSTATE)) ^
-       (if debug then "--dbg" else "") ^
-       " " ^ String.concatWith " " (map protect files));
+       (if polynothol then "--poly" else "--holstate="^protect(HOLSTATE))^" "^
+       (if debug then "--dbg " else "") ^
+       String.concatWith " " extra_poly_cline ^ " " ^
+       String.concatWith " " (map protect files));
     p ("exit 0");
     TextIO.closeOut out;
     Systeml.mk_xable result;
@@ -307,6 +308,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                          NONE => []
                        | SOME i => ["--mt=" ^ Int.toString i]) @
                     (if polynothol then "--poly" else "--holstate="^HOLSTATE)::
+                    extra_poly_cline @
                     ((if debug then ["--dbg"] else []) @ objectfiles) @
                     List.concat (map (fn f => ["-c", f]) expected_results)
         fun cont wn res =
