@@ -257,7 +257,7 @@ and alphaIdent locn A cpts =
 fun holsymbol c =
     UnicodeChars.isSymbolic_i c andalso c <> 36 (* $ *) andalso c <> 39 (* ' *)
     andalso not (cpt_is_nonagg_char c) andalso c <> 95 (* _ *)
-    andalso c <> 34 (* " *) orelse c = clambda
+    andalso c <> 34 (* " *)
 fun symbolIdent locn A cpts = (* have consumed 1+ symbolic thing (in A) *)
     case cpts of
         [] => (A_to_string A, [])
@@ -351,6 +351,7 @@ fun toplevel_split locn octalok cpts =
       | 39 (* ' *) :: rest => quotes 1 locn rest
       | c :: rest =>
         if c0 <= c andalso c <= c9 then numeralthing locn octalok cpts
+        else if c = clambda then (Ident (UTF8.chr c), rest)
         else if UnicodeChars.isAlpha_i c andalso c <> clambda orelse c = c_ then
           let val ((ident_s,pc), rest) = alphaIdent locn [c] rest
               val id = ident_s ^ repc pc #"'"

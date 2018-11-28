@@ -261,7 +261,9 @@ val _ = app test [
       ("x''", [Ident "x''"]),
       ("x'3'", [Ident "x'''"]),
       ("xa'3'a'", [Ident "xa'3'a'"]),
-      ("x'⁴'", [Ident "x''''"])
+      ("x'⁴'", [Ident "x''''"]),
+      ("map:=λh.", [Ident "map", Ident ":=", Ident "λ", Ident "h", Ident "."]),
+      ("map:=\\h.", [Ident "map", Ident ":=\\", Ident "h", Ident "."])
     ]
 val _ = List.app failtest [
       ("thy$$$", "qualified ident"),
