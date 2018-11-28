@@ -369,6 +369,8 @@ fun translate_tm tm =
     translate_cache := dadd tm tml (!translate_cache); tml
   end
 
+val complete_flag = ref false
+
 fun translate_pb premises cj =
   let
     fun f (name,thm) = (debug ("\n" ^ name);
@@ -377,7 +379,9 @@ fun translate_pb premises cj =
     val ax_tml = map f premises
     val big_tm =
       list_mk_conj (map list_mk_conj (cj_tml :: (map snd ax_tml)))
-    val ari_thml = optim_arity_eq big_tm
+    val ari_thml = if !complete_flag 
+                   then all_arity_eq big_tm
+                   else optim_arity_eq big_tm
     val ari_tml =  map only_concl ari_thml
   in
     (ari_tml, ax_tml, cj_tml)
