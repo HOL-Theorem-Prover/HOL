@@ -30,7 +30,7 @@ structure HolQbfLib :> HolQbfLib = struct
                    [path, cert_path]
         else ()
   in
-    finally finish dowork ()
+    Portable.finally finish dowork ()
   end
 
   (* 'prove' can prove valid QBFs in prenex form by validating a
