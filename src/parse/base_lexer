@@ -88,7 +88,7 @@ creturn = \013;
 newline = {linefeed} | {creturn} | {creturn}{linefeed};
 locpragma = "(*#loc" {space}+ {numeric}* {space}+ {numeric}* {space}* "*)";
 qvarinterior = {coresymbol} | {alpha} | {numeric} | {space} | "(" | "\\n" |
-               "\\t" | "\\"{rparen} | "\\\\";
+               "\\t" | "\\)" | "\\\\" | "\\z" | "*";
 
 %%
 <INITIAL>"$var$(" {qvarinterior}* ")" => (

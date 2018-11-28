@@ -459,8 +459,12 @@ fun unsafe_style s =
                        StringCvt.padLeft #"0" 3 (Int.toString (Char.ord c)))
               s
           else s
+      val s' = UTF8.translate trans s
+      val s'' = case UTF8.lastChar s' of
+                    NONE => s'
+                  | SOME (cs, _) => if cs = "*" then s' ^ "\\z" else s'
     in
-      "$var$(" ^ UTF8.translate trans s ^ ")"
+      "$var$(" ^ s'' ^ ")"
     end
 fun unicode_supdigit 0 = UnicodeChars.sup_0
   | unicode_supdigit 1 = UnicodeChars.sup_1

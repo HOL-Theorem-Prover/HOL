@@ -255,6 +255,8 @@ val _ = app test [
       ("$var$(ab\\nc)", [Ident "ab\nc"]),
       ("$var$(ab\\nc\\))", [Ident "ab\nc)"]),
       ("$var$(% foo )", [Ident "% foo "]),
+      ("$var$(% foo* )", [Ident "% foo* "]),
+      ("$var$(% foo*\\z)", [Ident "% foo*"]),
       ("(')", [Ident "(", Ident "'", Ident ")"]),   (* e.g., finite_mapScript *)
       ("λx.x", [Ident "λ", Ident "x", Ident ".", Ident "x"]),
       ("x'", [Ident "x'"]),

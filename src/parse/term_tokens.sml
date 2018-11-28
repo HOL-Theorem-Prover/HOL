@@ -308,6 +308,8 @@ fun qvar_interior locn A cpts =
       | 92 (* \ *) :: rest => qvar_interior_bslash locn A rest
       | cpt :: rest => qvar_interior locn (cpt::A) rest
 and qvar_interior_bslash locn A cpts =
+    (* \z encodes a null string (zero-sized, geddit?), for use when wanting
+       to avoid a comment-ending asterisk-rparen combination, for example. *)
     case cpts of
         [] => raise LEX_ERR ("Trailing backslash at end of quoted variable",
                              locn)
@@ -315,6 +317,7 @@ and qvar_interior_bslash locn A cpts =
       | 92 (* \ *) :: rest => qvar_interior locn (92 :: A) rest
       | 110 (* n *) :: rest => qvar_interior locn (10 (* NL *) :: A) rest
       | 116 (* t *) :: rest => qvar_interior locn (9 (* TAB *) :: A) rest
+      | 122 (* z *) :: rest => qvar_interior locn A rest
       | c :: rest => raise LEX_ERR ("Bad backslash applied to " ^ UTF8.chr c,
                                     locn)
 
