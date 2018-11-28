@@ -1,7 +1,7 @@
 structure term_tokens :> term_tokens =
 struct
 
-  open qbuf base_tokens locn
+  open Portable qbuf base_tokens locn
 
   val WARN = Feedback.HOL_WARNING "term lexer" ""
 
@@ -14,82 +14,78 @@ struct
   | QIdent of (string * string)
 
 
-val non_aggregating_chars =
-    foldl (fn (c, cs) => CharSet.add(cs,c)) CharSet.empty
-          (explode "()[]{}~.,;-")
-fun nonagg_c c = CharSet.member(non_aggregating_chars, c)
+val c0 = Char.ord #"0"
+val c9 = Char.ord #"9"
+val ca = Char.ord #"a"
+val cf = Char.ord #"f"
+val cA = Char.ord #"A"
+val cF = Char.ord #"F"
+val c' = Char.ord #"'"
+val c_ = Char.ord #"_"
+val clambda = 0x3BB (* lower case lambda *)
 
-fun s_has_nonagg_char s =
-  let
-    val lim = size s
-    fun recurse i =
-      if i >= lim then false
+fun repc i c = CharVector.tabulate(i, fn _ => c)
+
+val non_aggregating_chars =
+    foldl (fn (c, cs) => HOLset.add(cs,c))
+          (HOLset.empty Int.compare)
+          (UTF8.explodei "()[]{}~.,;-¬") (* UOK *)
+fun cpt_is_nonagg_char i = HOLset.member(non_aggregating_chars, i)
+val cpts_have_nonagg_char = List.exists cpt_is_nonagg_char
+
+fun isIdent_i i = UnicodeChars.isMLIdent_i i andalso i <> clambda
+
+val sup_codepoints =
+    let open UnicodeChars UTF8
+    in
+      map (#2 o valOf o firstChar)
+          [sup_0, sup_1, sup_2, sup_3, sup_4, sup_5, sup_6, sup_7, sup_8, sup_9]
+    end
+fun unpc_encode s =
+    let
+      val sz = String.size s
+    in
+      if sz <= 3 then s
       else
         let
-          val c = String.sub(s,i)
-          val n = ord c
+          open Lib
+          val cpoints = List.rev (UTF8.explodei s)
+          fun recurse A base uni seendigit lastzerop inp =
+              case inp of
+                  [] => NONE
+                | [_] => NONE
+                | cp::rest =>
+                  case (uni,seendigit) of
+                      (_, false) =>
+                        if c0 <= cp andalso cp <= c9 then
+                          recurse ((cp-c0)*base + A) (base * 10) false true
+                                  (cp = c0) rest
+                        else if mem cp sup_codepoints then
+                          recurse (index (equal cp) sup_codepoints * base + A)
+                                  (base * 10) true true false rest
+                        else NONE
+                    | (true, true) =>
+                        if mem cp sup_codepoints then
+                          recurse (index (equal cp) sup_codepoints * base + A)
+                                  (base * 10) true true false rest
+                        else if cp = Char.ord #"'" then SOME(A,rest)
+                        else NONE
+                    | (false,true) =>
+                        if c0 <= cp andalso cp <= c9 then
+                          recurse ((cp-c0)*base + A) (base * 10) false true
+                                  (cp = c0) rest
+                        else if cp = Char.ord #"'" andalso not lastzerop then
+                          SOME(A,rest)
+                        else NONE
         in
-          (* will look at UTF8 continuation bytes as if they were
-             independent characters but these will trigger false for both
-             tests below *)
-          nonagg_c c orelse
-          (n = 194 andalso i < lim - 1 andalso (* encoding of ¬ (UOK) *)
-           ord (String.sub(s,i+1)) = 172) orelse
-          recurse (i + 1)
+          if hd cpoints = Char.ord #"'" then
+            case recurse 0 1 false false false (tl cpoints) of
+                NONE => s
+              | SOME (i, rest) =>
+                String.concat (List.rev (repc i #"'" :: map UTF8.chr rest))
+          else s
         end
-  in
-    recurse 0
-  end
-
-fun term_symbolp s = UnicodeChars.isSymbolic s andalso
-                     not (s_has_nonagg_char s) andalso
-                     s <> "\"" andalso s <> "'" andalso s <> "_"
-fun const_symbolp s = Char.isPunct (String.sub(s,0)) andalso s <> ")" andalso
-                      s <> "_" andalso s <> "'" andalso s <> "\""
-
-fun term_identp s = UnicodeChars.isMLIdent s andalso s <> UnicodeChars.lambda
-fun const_identp s = Char.isAlphaNum (String.sub(s,0)) orelse s = "_" orelse
-                     s = "'"
-fun const_identstartp s = const_identp s andalso
-                          not (Char.isDigit (String.sub(s,0)))
-
-fun ishexdigit s = let
-  val c = Char.toLower (String.sub(s,0))
-in
-  #"a" <= c andalso c <= #"f"
-end
-fun numberp s = Char.isDigit (String.sub(s,0)) orelse s = "_" orelse
-                s = "x" orelse s = "." orelse ishexdigit s orelse
-                Char.isLower (String.sub(s,0))
-
-fun categorise c =
-    if s_has_nonagg_char c orelse c = UnicodeChars.neg then s_has_nonagg_char
-    else if Char.isDigit (String.sub(c,0)) then numberp
-    else if term_identp c then term_identp
-    else term_symbolp
-
-fun constid_categorise c =
-    if const_identstartp c then const_identp
-    else if const_symbolp c then const_symbolp
-    else raise Fail (c ^ " cannot begin a valid constant name")
-
-
-fun mixed s = let
-  open UnicodeChars UTF8
-in
-  case getChar s of
-    NONE => false (* empty string is not mixed; it shouldn't really be
-                     showing up *)
-  | SOME ((c,_), s) => let
-      val test = categorise c
-      fun allok s =
-          case getChar s of
-            NONE => true
-          | SOME ((s, i), rest) => test s andalso allok rest
-    in
-      not (allok s)
     end
-end
 
 (* lexer guarantees:
 
@@ -108,150 +104,349 @@ end
      token 'quoting' as well as being the separator for qualified identifiers.
 *)
 
-fun str_all P s = let
-  fun recurse ss =
-      case Substring.getc ss of
-        NONE => true
-      | SOME (c, ss') => P c andalso recurse ss'
-in
-  recurse (Substring.full s)
-end
-
-fun MkID qb (s, loc) = let
-  val {advance, pushstring} = qb
-  val c = String.sub(s,0)
-in
-  if Char.isDigit c then
-    case CharVector.findi (fn (i,c) => c = #".") s of
-      NONE => (advance(); Numeral (base_tokens.parse_numeric_literal (s, loc)))
-    | SOME (j, _) => let
-      in
-        if j = size s - 1 then let
-            val (locn1, locn2) = locn.split_at (size s - 1) loc
-          in
-            pushstring (".", locn2);
-            Numeral (base_tokens.parse_numeric_literal
-                         (String.substring(s,0,size s - 1), locn1))
-          end
-        else
-          (advance(); Fraction (base_tokens.parse_fraction (s,loc)))
-      end
-  else if c = #"'" then
-    if str_all (fn c => c = #"'") s then (advance(); Ident s)
-    else raise LEX_ERR ("Term idents can't begin with prime characters",loc)
-  else (advance(); Ident s)
-end
+val str_all = CharVector.all
 
 open qbuf
 
-fun split_ident mixedset s locn qb = let
+fun digit_term A cpts =
+    case cpts of
+        [] => (Numeral(A,NONE), [])
+      | d::rest => if d < 128 andalso Char.isAlpha (Char.chr d) then
+                     (Numeral(A,SOME (Char.chr d)), rest)
+                   else (Numeral(A,NONE), d::rest)
+fun maybefrac backup cpts (* have seen decimal point *) =
+    case cpts of
+        [] => backup
+      | 95 (* _ *) :: rest => maybefrac backup rest
+      | d :: rest =>
+        if c0 <= d andalso d <= c9 then
+          let
+            fun add A i = let open Arbnum in fromInt 10 * A + fromInt i end
+            val (w,fr,p) =
+                case backup of
+                    (Fraction{wholepart=w,fracpart=f,places=p},_) => (w,f,p)
+                  | (Numeral(n, _),_) => (n,Arbnum.zero,0)
+                  | _ => raise Fail "term_tokens.maybefrac invariant failure"
+            val b' = Fraction{wholepart=w, places=p+1, fracpart=add fr (d-c0)}
+          in
+            maybefrac (b',rest) rest
+          end
+        else backup
+fun digits locn b A cpts =
+    let
+      fun add A i = let open Arbnum in fromInt b * A + fromInt i end
+      val digs = digits (locn.move_start 1 locn) b
+    in
+      case cpts of
+          [] => (Numeral(A,NONE), [])
+        | 46 (* . *) :: rest => if b = 10 then
+                                  maybefrac (Numeral(A,NONE),cpts) rest
+                                else (Numeral(A,NONE), cpts)
+        | 95 (* _ *) :: rest => digs A rest
+        | d :: rest =>
+          if c0 <= d andalso d <= c9 then
+            if d - c0 >= b then
+              raise LEX_ERR ("Illegal digit for base-" ^ Int.toString b ^
+                             " number", locn)
+            else digs (add A (d - c0)) rest
+          else if b = 16 then
+            if ca <= d andalso d <= cf then
+              digs (add A (10 + d - ca)) rest
+            else if cA <= d andalso d <= cF then
+              digs (add A (10 + d - cA)) rest
+            else digit_term A cpts
+          else digit_term A cpts
+    end
+
+fun digits_afterbasespec locn b cpts =
+    let
+      val vdone =
+          case b of 2 => Numeral(Arbnum.zero, SOME #"b")
+                  | 16 => Numeral(Arbnum.zero, SOME #"x")
+                  | i => raise Fail "digits_afterbasespec: impossible"
+      val done = (vdone, cpts)
+    in
+      case cpts of
+          [] => done
+        | d :: rest => if c0 <= d andalso d <= c9 orelse
+                          b = 16 andalso
+                          (cA <= d andalso d <= cF orelse
+                           ca <= d andalso d <= cf)
+                       then
+                         digits locn b Arbnum.zero cpts
+                       else done
+    end
+fun digit1_was0 locn octalok cpts =
+    case cpts of
+        [] => (Numeral(Arbnum.zero, NONE), [])
+      | 98 (* b *) :: rest => digits_afterbasespec locn 2 rest
+      | 120 (* x *) :: rest => digits_afterbasespec locn 16 rest
+      | d :: rest => if c0 <= d andalso d <= c9 then
+                       if octalok then digits locn 8 Arbnum.zero cpts
+                       else digits locn 10 Arbnum.zero cpts
+                     else digit_term Arbnum.zero cpts
+fun numeralthing locn octalok cpts = (* head is a digit *)
+    case cpts of
+        48 (* 0 *) :: rest => digit1_was0 locn octalok rest
+      | _ => digits locn 10 Arbnum.zero cpts
+
+fun A_to_string A = String.concat (map UTF8.chr (List.rev A))
+
+fun DEBUG s cpts = print (s ^ ": " ^
+                          (case cpts of [] => "[]"
+                                      | h :: _ => Int.fmt StringCvt.HEX h) ^
+                          "\n")
+fun alphaIdentSupDigits locn (A0,rest0) (acc as (A,pc)) cpts =
+    case cpts of
+        [] => ((A_to_string A0, 0), rest0)
+      | 39 (* ' *) :: rest => ((A_to_string A,pc), rest)
+      | cp :: rest =>
+        case UnicodeChars.supDigitVal_i cp of
+            NONE => ((A_to_string A0, 0), rest0)
+          | SOME i =>
+              alphaIdentSupDigits locn (A0,rest0) (A,pc*10 + i) rest
+
+and alphaIdentPrimeDigits locn A0 (acc as (A,pc)) cpts =
+    case cpts of
+        [] => ((A_to_string A0,0), cpts)
+      | 39 (* ' *) :: rest => alphaIdentFinishedDigits locn (39::A0) acc rest
+      | cp :: rest =>
+        if c0 <= cp andalso cp <= c9 then
+          alphaIdentPrimeDigits locn (cp::A0) (A,pc*10 + (cp - c0)) rest
+        else alphaIdent locn A0 rest
+
+and alphaIdentFinishedDigits locn A0 (A,pc) cpts =
+    (* head of A0 is a prime *)
+    case cpts of
+        [] => ((A_to_string A, pc), cpts)
+      | 39 (* ' *) :: rest => alphaIdent' locn A0 (tl A0,2) rest
+      | cp :: rest =>
+        if isIdent_i cp then
+          alphaIdent locn (cp::A0) rest
+        else if UnicodeChars.isSupDigit_i cp then
+          alphaIdentSupDigits locn (A0,cpts) (A0,0) cpts
+        else if c0 <= cp andalso cp <= c9 then
+          alphaIdentPrimeDigits locn A0 (A0,0) cpts
+        else ((A_to_string A, pc), cpts)
+
+and alphaIdent' locn A0 (acc as (A,pc)) cpts =
+    (* last character seen was a prime/apostrophe, pc is number seen in a row
+       and will thus be >= 1 *)
+    case cpts of
+        [] => ((A_to_string A, pc), cpts)
+      | 39 (* ' *) :: rest =>
+          alphaIdent' locn (39::A0) (A,pc+1) rest
+      | cp :: rest =>
+        if UnicodeChars.isSupDigit_i cp then
+          alphaIdentSupDigits locn (A0,cpts) (A,0) cpts
+        else if c0 <= cp andalso cp <= c9 then
+          alphaIdentPrimeDigits locn A0 (A,0) cpts
+        else if isIdent_i cp then alphaIdent locn (cp::A0) rest
+        else
+          ((A_to_string A, pc), cpts)
+
+and alphaIdent locn A cpts =
+    (* have consumed 1+ alphabetic thing (in A) *)
+    case cpts of
+        [] => ((A_to_string A,0), [])
+      | 39 (* ' *) :: rest => alphaIdent' locn (39::A) (A,1) rest
+      | cp :: rest => if isIdent_i cp then alphaIdent locn (cp::A) rest
+                      else ((A_to_string A,0), cpts)
+
+
+fun holsymbol c =
+    UnicodeChars.isSymbolic_i c andalso c <> 36 (* $ *) andalso c <> 39 (* ' *)
+    andalso not (cpt_is_nonagg_char c) andalso c <> 95 (* _ *)
+    andalso c <> 34 (* " *)
+fun symbolIdent locn A cpts = (* have consumed 1+ symbolic thing (in A) *)
+    case cpts of
+        [] => (A_to_string A, [])
+      | 36 (* $ *) :: _ => raise LEX_ERR("Illegal dollar character", locn)
+      | cp :: rest => if holsymbol cp then symbolIdent locn (cp::A) rest
+                      else (A_to_string A, cpts)
+
+fun constsymbol i = Lexis.in_class(Lexis.hol_symbols, i)
+fun constSymIdent locn A cpts = (* have consumed 1+ symbolic thing (in A) *)
+    case cpts of
+        [] => (A_to_string A, [])
+      | 36 (* $ *) :: _ => raise LEX_ERR("Illegal dollar character", locn)
+      | cp :: rest => if constsymbol cp then constSymIdent locn (cp::A) rest
+                      else (A_to_string A, cpts)
+
+fun constAlpha i = Lexis.in_class(Lexis.alphabet, i)
+fun constAlphaIdent locn A cpts =
+    case cpts of
+        [] => (A_to_string A, [])
+      | 36 (* $ *) :: _ => raise LEX_ERR("Illegal dollar character", locn)
+      | cp :: rest => if Lexis.in_class(Lexis.alphanumerics, cp) then
+                        constAlphaIdent locn (cp::A) rest
+                      else (A_to_string A, cpts)
+
+fun quotes nqs locn cpts =
+    case cpts of
+        [] => (Ident (repc nqs #"'"), [])
+      | 39 (* ' *) :: rest => quotes (nqs+1) locn rest
+      | cp :: rest =>
+          if UnicodeChars.isAlpha_i cp then
+            raise LEX_ERR ("Term idents can't begin with prime characters",
+                           locn)
+          else
+            (Ident (repc nqs #"'"), cpts)
+
+fun dollars locn c cpts =
+    case cpts of
+        [] => (Ident(CharVector.tabulate(c, fn _ => #"$")), [])
+      | 36 (* $ *) :: rest => dollars locn (c + 1) rest
+      | _ => raise LEX_ERR ("Bad token: " ^
+                            CharVector.tabulate(c, fn _ => #"$") ^
+                            String.concat (map UTF8.chr cpts), locn)
+
+fun qvar_interior locn A cpts =
+    case cpts of
+        [] => raise LEX_ERR ("Unterminated quoted variable", locn)
+      | 41 (* ) *) :: rest => (Ident (A_to_string A), rest)
+      | 92 (* \ *) :: rest => qvar_interior_bslash locn A rest
+      | cpt :: rest => qvar_interior locn (cpt::A) rest
+and qvar_interior_bslash locn A cpts =
+    (* \z encodes a null string (zero-sized, geddit?), for use when wanting
+       to avoid a comment-ending asterisk-rparen combination, for example. *)
+    case cpts of
+        [] => raise LEX_ERR ("Trailing backslash at end of quoted variable",
+                             locn)
+      | 41 (* ) *) :: rest => qvar_interior locn (41 :: A) rest
+      | 92 (* \ *) :: rest => qvar_interior locn (92 :: A) rest
+      | 110 (* n *) :: rest => qvar_interior locn (10 (* NL *) :: A) rest
+      | 116 (* t *) :: rest => qvar_interior locn (9 (* TAB *) :: A) rest
+      | 122 (* z *) :: rest => qvar_interior locn A rest
+      | c :: rest => raise LEX_ERR ("Bad backslash applied to " ^ UTF8.chr c,
+                                    locn)
+
+val badqid_str = "Malformed qualified identifier"
+fun qualified_part2 locn cpts =
+    case cpts of
+        [] => raise LEX_ERR("Illegal trailing $ (" ^ badqid_str ^ "?)", locn)
+      | 36 (* $ *) :: _ => raise LEX_ERR(badqid_str, locn)
+      | 39 (* ' *) :: _ => raise LEX_ERR(badqid_str, locn)
+      | 48 (* 0 *) :: rest =>
+        (case rest of
+            [] => ("0", [])
+          | 36 (* $ *) :: _ => raise LEX_ERR(badqid_str, locn)
+          | 39 (* ' *) :: _ => raise LEX_ERR(badqid_str, locn)
+          | cp2 :: _ =>
+              if UnicodeChars.isSymbolic_i cp2 then ("0", rest)
+              else
+                raise LEX_ERR("Illegal constant name in qualified identifier",
+                              locn)
+        )
+      | cp::rest =>
+        if constsymbol cp then constSymIdent locn [cp] rest
+        else if constAlpha cp then constAlphaIdent locn [cp] rest
+        else raise LEX_ERR ("Illegal 2nd part to qualified identifier", locn)
+
+(* various possibilities have already been filtered out. In particular, need
+   not worry about string and character literals, nor quoted-variables (the
+   $var$(...) syntax)
+*)
+fun toplevel_split locn octalok cpts =
+    case cpts of
+        [] => raise LEX_ERR("Empty string to split!?", locn)
+      | 36 (* $ *) :: rest => raise Fail "toplevel_split: unexpected $"
+      | 39 (* ' *) :: rest => quotes 1 locn rest
+      | c :: rest =>
+        if c0 <= c andalso c <= c9 then numeralthing locn octalok cpts
+        else if c = clambda then (Ident (UTF8.chr c), rest)
+        else if UnicodeChars.isAlpha_i c andalso c <> clambda orelse c = c_ then
+          let val ((ident_s,pc), rest) = alphaIdent locn [c] rest
+              val id = ident_s ^ repc pc #"'"
+          in
+            case rest of
+                [] => (Ident id, [])
+              | 36 (* $ *) :: rest =>
+                  apfst (fn s => QIdent(id,s)) (qualified_part2 locn rest)
+              | _ => (Ident id, rest)
+          end
+        else if holsymbol c then apfst Ident (symbolIdent locn [c] rest)
+        else raise LEX_ERR("Uncategorisable code-point: " ^ UTF8.chr c, locn)
+
+fun split_ident mixedset octalok s locn qb = let
   val {advance,replace_current} = qb
-  val qb' = {advance = advance,
-             pushstring = (fn (s,loc) => replace_current (BT_Ident s, loc))}
+  fun pushstring (s,loc) = replace_current (BT_Ident s, loc)
   val s0 = String.sub(s, 0)
   val is_char = s0 = #"#" andalso size s > 1 andalso String.sub(s,1) = #"\""
-  val ID = Ident
+  val cpts = UTF8.explodei s
+  val (cp0, cpts0) =
+      case cpts of [] => raise Fail "split_ident: invariant failure"
+                 | h::t => (h,t)
+  fun i2s is = String.concat (map UTF8.chr is)
+  fun stdfinish (tok, sfx) =
+      let
+        val sz = UTF8.size sfx
+      in
+        if 0 < sz then
+          let
+            val (locn1,locn2) = locn.split_at (length cpts - UTF8.size sfx) locn
+          in
+            pushstring (sfx, locn2);
+            (tok, locn1)
+          end
+        else (advance(); (tok, locn))
+      end
 in
-  if is_char orelse s0 = #"\"" then (advance(); (ID s, locn))
-  else if s0 = #"$" then
-    if CharVector.all (Lib.equal #"$") s then (advance(); (ID s, locn))
+  if is_char orelse s0 = #"\"" then (advance(); (Ident s, locn))
+  else if cp0 = 36 (* $ *) then
+    if List.all (Lib.equal 36) cpts then (advance(); (Ident s, locn))
     else if size s > 1 andalso String.sub(s,1) = #"$" then
       raise LEX_ERR ("Bad token "^s, locn)
+    else if String.isPrefix "$var$(" s then
+      stdfinish (apsnd i2s (qvar_interior locn [] (List.drop(cpts, 6))))
     else
       let
-        val (tok,locn') = split_ident mixedset
+        val (tok,locn') = split_ident mixedset octalok
                                       (String.extract(s, 1, NONE))
                                       (locn.move_start 1 locn) qb
       in
         case tok of
-            Ident s' => (ID ("$" ^ s'), locn.move_start ~1 locn')
+            Ident s' => (Ident ("$" ^ s'), locn.move_start ~1 locn')
           | _ => raise LEX_ERR
                        ("Can't use $-quoting of this sort of token", locn')
       end
-  else if not (mixed s) andalso not (s_has_nonagg_char s) then
-    (MkID qb' (s, locn), locn)
   else
-    case UTF8Set.longest_pfx_member(mixedset, s) of
-      NONE => (* identifier blob doesn't occur in list of known keywords *) let
-      in
-        case UTF8.getChar s of
-          NONE => raise LEX_ERR ("Token is empty string??", locn)
-        | SOME ((c,i),rest) => let
-            open UnicodeChars
-            fun grab test acc s =
-                case UTF8.getChar s of
-                  NONE => (String.concat (List.rev acc), "")
-                | SOME((s,i),rest) => let
-                  in
-                    if test s then grab test (s::acc) rest
-                    else (String.concat (List.rev acc), s^rest)
-                  end
-            fun stdfinish (tok, sfx) = let
-              val (locn1, locn2) = locn.split_at (size s - size sfx) locn
-            in
-              if size sfx <> 0 then (replace_current (BT_Ident sfx, locn2);
-                                     (tok, locn1))
-              else (advance(); (tok, locn))
-            end
-          in
-            if s_has_nonagg_char c then stdfinish (ID c, rest)
-            else let
-                val (pfx0, sfx0) = grab (categorise c) [c] rest
-              in
-                if size sfx0 <> 0 andalso String.sub(sfx0,0) = #"$" then
-                  if size sfx0 > 1 then let
-                      val sfx0_1 = String.extract(sfx0, 1, NONE)
-                      val c0 = String.sub(sfx0_1, 0)
-                      val rest = String.extract(sfx0_1, 1, NONE)
-                    in
-                      if c0 = #"0" then
-                        (* special case - "0" can be a constant name *)
-                        if rest = "" then stdfinish (QIdent(pfx0,"0"), "")
-                        else raise LEX_ERR (sfx0_1 ^ " cannot be the name\
-                                                     \ of a constant",
-                                            locn)
-                      else let
-                          val (qid2, sfx) =
-                              grab (constid_categorise (str c0))
-                                   [str c0]
-                                   rest
-                                   handle Fail s => raise LEX_ERR (s, locn)
-                        in
-                          stdfinish (QIdent(pfx0,qid2), sfx)
-                        end
-                    end
-                  else
-                    raise LEX_ERR ("Malformed qualified ident", locn)
-                else if size sfx0 = 0 then (MkID qb' (pfx0,locn), locn)
-                else let
-                    val (locn1,locn2) = locn.split_at (size pfx0) locn
-                    fun adv() = replace_current (BT_Ident sfx0, locn2)
-                    fun push (s,loc) =
-                        replace_current (BT_Ident (s ^ sfx0),
-                                         locn.between loc locn2)
-                  in
-                    (MkID {advance = adv, pushstring = push} (pfx0, locn),
-                     locn)
-                  end
-              end
-          end
-      end
-    | SOME {pfx,rest} => let
-        val (locn1,locn2) = locn.split_at (size pfx) locn
-      in
-        if size rest = 0 then (advance(); (ID s, locn))
-        else
-          (replace_current (BT_Ident rest,locn2); (ID pfx, locn1))
-      end
+    case Exn.capture (toplevel_split locn octalok) cpts of
+        Exn.Res (i, []) => (advance(); (i, locn))
+      | r => (
+          case UTF8Set.longest_pfx_member(mixedset, s) of
+              NONE =>
+              (* identifier blob doesn't occur in list of known keywords *)
+              if cpt_is_nonagg_char cp0 then
+                stdfinish (Ident (UTF8.chr cp0), i2s cpts0)
+              else
+                stdfinish (apsnd i2s (Exn.release r))
+            | SOME {pfx,rest} =>
+                if size rest = 0 then (advance(); (Ident s, locn))
+                else
+                  stdfinish(Ident pfx, rest)
+      )
 end
 
+fun mixed ilist =
+    case ilist of
+        [] => false
+      | cp::rest =>
+        let
+          val P =
+              if UnicodeChars.isDigit_i cp then UnicodeChars.isDigit_i
+              else if UnicodeChars.isAlpha_i cp then UnicodeChars.isMLIdent_i
+              else holsymbol
+        in
+          List.exists (not o P) rest
+        end
 
-
-fun lex keywords0 = let
-  fun test s = mixed s orelse s_has_nonagg_char s
-  val mixed = List.filter test keywords0
-  val mixedset = UTF8Set.addList(UTF8Set.empty, mixed)
-  val split = split_ident mixedset
+fun lex keywords = let
+  val kwd_is = map (fn s => (s, UTF8.explodei s)) keywords
+  fun test (s, is) = mixed is orelse cpts_have_nonagg_char is
+  val mixedkws = List.filter test kwd_is
+  val mixedset = UTF8Set.addList(UTF8Set.empty, map #1 mixedkws)
+  val split = split_ident mixedset (!base_tokens.allow_octal_input)
 in
 fn qb => let
    val (bt,locn) = current qb
@@ -272,19 +467,19 @@ fn qb => let
 end
 
 fun user_split_ident keywords = let
-  fun test s = mixed s orelse s_has_nonagg_char s
-  val mixed = List.filter test keywords
-  val mixedset = UTF8Set.addList (UTF8Set.empty, mixed)
+  val kwd_is = map (fn s => (s, UTF8.explodei s)) keywords
+  fun test (s, is) = mixed is orelse cpts_have_nonagg_char is
+  val mixedkws = List.filter test kwd_is
+  val mixedset = UTF8Set.addList(UTF8Set.empty, map #1 mixedkws)
+  val split = split_ident mixedset (!base_tokens.allow_octal_input)
 in
   fn s => let
        val pushback = ref ""
-       fun a () = ()
        fun rc (btid, _) =
            case btid of
              BT_Ident s => (pushback := s)
            | _ => () (* shouldn't happen *)
-       val _ = split_ident mixedset s locn.Loc_None
-                           {advance=a, replace_current=rc}
+       val _ = split s locn.Loc_None {advance=fn()=>(), replace_current=rc}
      in
        (String.substring(s,0,size s - size (!pushback)),
         !pushback)
@@ -313,7 +508,7 @@ end
 
 fun toString aqp t =
     case t of
-        Ident s => "Ident("^s^")"
+        Ident s => "Ident(\""^String.toString s^"\")"
       | Antiquote a => "AQ(" ^ aqp a ^ ")"
       | Numeral(n,copt) => "Numeral(" ^ Arbnum.toString n ^ ", " ^
                            (case copt of NONE => "NONE"
@@ -327,7 +522,7 @@ end (* struct *)
 
 (* good parsing/lexing test:
 
-time Term
+val q as [QUOTE s] =
     `~((~v5 \/ ~v0 \/ v0) /\ (~v5 \/ ~v2 \/ v2) /\ (~v5 \/ ~v31 \/ v31) /\
        (~v5 \/ ~v5 \/ v5) /\ (~v13 \/ ~v0 \/ v7) /\ (~v13 \/ ~v2 \/ v9) /\
        (~v13 \/ ~v31 \/ v11) /\ (~v13 \/ ~v5 \/ v13) /\ (~v20 \/ ~v0 \/ v15) /\
@@ -386,5 +581,7 @@ time Term
        (v15 \/ v30) /\ (v16 \/ v17) /\ (v18 \/ v19) /\ (v20 \/ v21) /\
        (v22 \/ v23) /\ (v24 \/ v25) /\ (v26 \/ v27) /\ (v28 \/ v29) /\ ~v30 /\
        ~v31)`;
+
+val _ = time (for_se 1 100) (fn i => ignore (term_tokens.lextest [] s));
 
 *)

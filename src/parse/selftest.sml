@@ -177,44 +177,102 @@ val _ = app test [(`abc`, ["abc"]),
                  ]
 
 (* tests of the term lexer *)
-fun test (s, toklist : unit term_tokens.term_token list) = let
-  val _ = tprint ("Term token testing " ^ Lib.quote s)
-  val result = term_tokens.lextest [] s
-in
-  if result = toklist then OK()
-  else die ("Got: ["^
-            String.concatWith ", "
-               (map (term_tokens.toString (fn _ => "()")) result) ^
-            "]")
-end handle LEX_ERR (s,_) => die ("FAILED!\n  [LEX_ERR "^s^"]")
-         | e => die ("FAILED\n ["^exnMessage e^"]")
+local
+  open term_tokens
+  fun prtoks l =
+      "["^ String.concatWith ", " (map (toString (fn _ => "()")) l) ^ "]"
+  val testf = lextest ["--b->", "=β=>₁", "(<", ">)", "-->"]
 
-open term_tokens
+fun test (s, toklist : unit term_token list) = let
+  val _ = tprint ("Term token testing " ^ Lib.quote (String.toString s))
+in
+  require_msg (check_result (equal toklist)) prtoks testf s
+end
+
+fun failtest (s, substring) =
+    let
+      fun pr s = "Testing failing lex of " ^ Lib.quote (String.toString s)
+      fun check substring (LEX_ERR(s, _)) =
+            String.isSubstring substring s
+        | check _ _ = false
+    in
+      shouldfail {testfn = testf, printresult = prtoks, printarg = pr,
+                  checkexn = check substring}
+                 s
+    end
+
 val ai = Arbnum.fromInt
-val _ = app test [("abc", [Ident "abc"]),
-                  ("12", [Numeral (ai 12, NONE)]),
-                  ("-12", [Ident "-", Numeral (ai 12, NONE)]),
-                  ("((-12", [Ident "(", Ident "(", Ident "-",
-                             Numeral (ai 12, NONE)]),
-                  ("1.2", [Fraction{wholepart = ai 1, fracpart = ai 2,
-                                    places = 1}]),
-                  ("-1.2", [Ident "-",
-                            Fraction{wholepart = ai 1, fracpart = ai 2,
-                                     places = 1}]),
-                  ("~1.2", [Ident "~",
-                            Fraction{wholepart = ai 1, fracpart = ai 2,
-                                     places = 1}]),
-                  ("(2n*e", [Ident "(", Numeral (ai 2, SOME #"n"),
-                             Ident "*", Ident "e"]),
-                  ("2_001", [Numeral (ai 2001, NONE)]),
-                  ("2.000_023", [Fraction{wholepart = ai 2, places = 6,
-                                          fracpart = ai 23}]),
-                  ("0.", [Numeral (ai 0, NONE), Ident "."]),
-                  ("a0.", [Ident "a0", Ident "."]),
-                  ("-0.", [Ident "-", Numeral (ai 0, NONE), Ident "."]),
-                  ("{2.3", [Ident "{", Fraction{wholepart = ai 2, places = 1,
-                                                fracpart = ai 3}])
-                  ]
+fun snum i = Numeral(ai i, NONE)
+
+in
+val _ = app test [
+      ("abc", [Ident "abc"]),
+      ("12", [snum 12]),
+      ("-12", [Ident "-", snum 12]),
+      ("((-12", [Ident "(", Ident "(", Ident "-", snum 12]),
+      ("0a", [Numeral(ai 0, SOME #"a")]),
+      ("0", [snum 0]),
+      ("(0xF", [Ident "(", snum 15]),
+      ("01", [snum 1]),
+      ("1.2", [Fraction{wholepart = ai 1, fracpart = ai 2, places = 1}]),
+      ("-1.2", [Ident "-",
+                Fraction{wholepart = ai 1, fracpart = ai 2, places = 1}]),
+      ("~1.2", [Ident "~",
+                Fraction{wholepart = ai 1, fracpart = ai 2, places = 1}]),
+      ("(2n*e", [Ident "(", Numeral (ai 2, SOME #"n"), Ident "*", Ident "e"]),
+      ("2_001", [snum 2001]),
+      ("2.000_023", [Fraction{wholepart = ai 2, places = 6, fracpart = ai 23}]),
+      ("(", [Ident "("]),
+      (".", [Ident "."]),
+      ("0.", [snum 0, Ident "."]),
+      ("a0.", [Ident "a0", Ident "."]),
+      ("-0.", [Ident "-", snum 0, Ident "."]),
+      ("{2.3",
+       [Ident "{", Fraction{wholepart = ai 2, places = 1, fracpart = ai 3}]),
+      ("(a+1", [Ident "(", Ident"a", Ident"+", snum 1]),
+      ("a--b->c", [Ident "a", Ident"--b->", Ident"c"]),
+      ("(+)", [Ident "(", Ident "+", Ident ")"]),
+      ("$ $$ $$$ $+ $if $a",
+       [Ident "$", Ident "$$", Ident "$$$", Ident "$+", Ident "$if",
+        Ident "$a"]),
+      ("thy$id", [QIdent("thy", "id")]),
+      ("$+a", [Ident "$+", Ident "a"]),
+      ("$==>", [Ident "$==>"]),
+      ("bool$~", [QIdent("bool", "~")]),
+      ("$~", [Ident "$~"]),
+      ("$¬", [Ident "$¬"]),
+      ("(<a+b>)", [Ident "(<", Ident "a", Ident "+", Ident "b", Ident ">)"]),
+      ("f(<a+b>)", [Ident "f", Ident "(<", Ident "a", Ident "+", Ident "b",
+                    Ident ">)"]),
+      ("+(<a+b>)", [Ident "+", Ident "(<", Ident "a", Ident "+", Ident "b",
+                    Ident ">)"]),
+      ("((<a+b>)", [Ident "(", Ident "(<", Ident "a", Ident "+", Ident "b",
+                    Ident ">)"]),
+      ("::_", [Ident "::", Ident "_"]),             (* case pattern with CONS *)
+      ("=\"\"", [Ident "=", Ident "\"\""]),             (* e.g., stringScript *)
+      ("$-->", [Ident "$-->"]),                       (* e.g., quotientScript *)
+      ("$var$(ab)", [Ident "ab"]),
+      ("$var$(ab\\nc)", [Ident "ab\nc"]),
+      ("$var$(ab\\nc\\))", [Ident "ab\nc)"]),
+      ("$var$(% foo )", [Ident "% foo "]),
+      ("$var$(% foo* )", [Ident "% foo* "]),
+      ("$var$(% foo*\\z)", [Ident "% foo*"]),
+      ("(')", [Ident "(", Ident "'", Ident ")"]),   (* e.g., finite_mapScript *)
+      ("λx.x", [Ident "λ", Ident "x", Ident ".", Ident "x"]),
+      ("x'", [Ident "x'"]),
+      ("x''", [Ident "x''"]),
+      ("x'3'", [Ident "x'''"]),
+      ("xa'3'a'", [Ident "xa'3'a'"]),
+      ("x'⁴'", [Ident "x''''"]),
+      ("map:=λh.", [Ident "map", Ident ":=", Ident "λ", Ident "h", Ident "."]),
+      ("map:=\\h.", [Ident "map", Ident ":=\\", Ident "h", Ident "."])
+    ]
+val _ = List.app failtest [
+      ("thy$$$", "qualified ident"),
+      ("$var$(ab\n c)", "quoted variable"),
+      ("'a", "can't begin with prime")
+]
+end (* local - tests of term lexer *)
 
 val g0 = term_grammar.stdhol;
 fun mTOK s = term_grammar_dtype.RE (HOLgrammars.TOK s)
@@ -688,25 +746,6 @@ val _ =
           [] => OK()
         | _ => die "Nope - something still there!"
     end
-
-local open term_tokens
-fun test (s,expected) =
-  let
-    val _ = tprint ("lexing "^s)
-    val toks : unit term_token list = lextest [] s
-  in
-    if toks = expected then OK()
-    else die "FAILED"
-  end
-in
-val _ =
-    List.app test [
-      ("$ $$ $$$ $+ $if", [Ident "$", Ident "$$", Ident "$$$", Ident "$+",
-                           Ident "$if"]),
-      ("thy$id", [QIdent("thy", "id")]),
-      ("thy$$$", [QIdent("thy", "$$")])
-    ]
-end (* open term_tokens local *);
 
 local
   val pr = PP.pp_to_string 77 type_grammar.prettyprint_grammar
