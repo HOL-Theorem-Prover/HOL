@@ -82,7 +82,7 @@ Making constants have pure alphanumeric names is generally a good idea.
 \begin{session}
 \begin{alltt}
 >> set_mapped_fixity {fixity = Infix(NONASSOC, 450),
-                      tok = "-->", term_name = "redn"}
+                      tok = "-->", term_name = "redn"};
 \end{alltt}
 \end{session}
 We make our arrow symbol non-associative, thereby making it a
