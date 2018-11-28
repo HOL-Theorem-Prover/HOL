@@ -1,5 +1,4 @@
 CLINE_OPTIONS = --no_overlay
-TARGETS = $(patsubst %.sml,%.uo,$(TARGETS0))
 
 FTHM_UI = $(protect $(SIGOBJ)/FinalThm-sig.ui)
 FTHM_UID = $(dprot $(SIGOBJ)/FinalThm-sig.ui)

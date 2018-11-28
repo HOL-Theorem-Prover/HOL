@@ -1,12 +1,7 @@
-EXTRA_CLEANS = selftest.exe
-
-THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
-TARGETS0 = $(patsubst %Theory.sml,,$(THYFILES))
-TARGETS = $(patsubst %.sml,%.uo,$(TARGETS0))
-
+all: $(DEFAULT_TARGETS) selftest.exe
 .PHONY: all
-
-all: $(TARGETS) selftest.exe
 
 selftest.exe: selftest.uo bagTheory.uo bagSimps.uo
 	$(HOLMOSMLC) -o $@ $<
+
+EXTRA_CLEANS = selftest.exe

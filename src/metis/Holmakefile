@@ -1,9 +1,5 @@
-THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
-TARGETS0 = $(patsubst %Theory.sml,,$(THYFILES))
-TARGETS = $(patsubst %.sml,%.uo,$(TARGETS0))
-
 .PHONY: all
-all: selftest.exe $(TARGETS)
+all: selftest.exe $(DEFAULT_TARGETS)
 
 selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
