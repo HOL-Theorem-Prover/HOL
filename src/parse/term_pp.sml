@@ -1582,6 +1582,7 @@ fun pp_term (G : grammar) TyG backend = let
           val adds =
               if is_constish tm then constann tm else var_ann tm
           val uok = current_trace "PP.avoid_unicode" = 0
+          val styled_name = if isfake then vname else vname_styling uok vname
         in
           fupdate (fn x => x) >- return o new_freevar >-
           (fn is_new =>
@@ -1594,8 +1595,8 @@ fun pp_term (G : grammar) TyG backend = let
                     pr_sole_name tm vname (map #3 (valOf vrule))
                   else
                     if HOLset.member(spec_table, vname) then
-                      dollarise adds add_string (vname_styling uok vname)
-                    else adds (vname_styling uok vname)) >>
+                      dollarise adds add_string styled_name
+                    else adds styled_name) >>
                  (if print_type then add_type else nothing)
                )
              )
