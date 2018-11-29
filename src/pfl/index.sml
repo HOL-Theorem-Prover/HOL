@@ -234,11 +234,10 @@ fun mysubst theta v = Option.valOf(subst_assoc (equal v) theta);
 fun mk_typed_vars name vlist tylist =
  let fun vary (away,[],vars) = rev vars
        | vary (away,ty::tyl,vars) =
-          let val v = variant away (mk_var(name,ty))
+          let val v = numvariant away (mk_var(name,ty))
           in vary (v::away,tyl,v::vars)
           end
- in Lib.with_flag
-       (Globals.priming, SOME"") vary (vlist,tylist,[])
+ in vary (vlist,tylist,[])
  end;
 
 fun single x = [x];
@@ -311,8 +310,7 @@ fun limit_spec_def base_case =
      val (fname,ty) = dest_var fvar
      val fconst = mk_const (fname,ty)
      val lim_name = fname^"Lim"
-     val limvar = Lib.with_flag(Globals.priming,SOME"_")
-                   (variant (all_vars base_case)) (mk_var(lim_name,num))
+     val limvar = numvariant (all_vars base_case) (mk_var(lim_name,num))
      val fapp = mk_is_some(list_mk_comb(fconst, limvar::args'))
      val tm' = list_mk_forall(args',mk_exists(limvar,fapp))
  in

@@ -146,10 +146,9 @@ fun backup decay tree (id,eval) =
     | pid => backup decay newtree (pid,eval)
   end
 
-(*
-  ---------------------------------------------------------------------------
-  Node creation.
-  --------------------------------------------------------------------------- *)
+(* --------------------------------------------------------------------------
+   Node creation
+   ------------------------------------------------------------------------- *)
 
 fun node_create_backup decay fevalpoli status_of tree (id,pos) =
   let
@@ -167,10 +166,9 @@ fun node_create_backup decay fevalpoli status_of tree (id,pos) =
     tree2
   end
 
-(*
-  ---------------------------------------------------------------------------
-  Value of a choice
-  --------------------------------------------------------------------------- *)
+(* -------------------------------------------------------------------------
+   Value of a choice
+   ------------------------------------------------------------------------- *)
 
 fun value_choice player tree vtot ((move,polv),cid) =
   let
@@ -183,10 +181,9 @@ fun value_choice player tree vtot ((move,polv),cid) =
     exploitation + exploration_coeff * exploration
   end
 
-(*
-  ---------------------------------------------------------------------------
-  Selection of a node to extend by traversing the tree
-  --------------------------------------------------------------------------- *)
+(* -------------------------------------------------------------------------
+   Selection of a node to extend by traversing the tree
+   ------------------------------------------------------------------------- *)
 
 fun select_child tree id =
   let

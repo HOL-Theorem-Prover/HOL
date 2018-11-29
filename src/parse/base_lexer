@@ -73,20 +73,27 @@ numeric = [0-9];
 digitseq = ({numeric} | _)* {numeric} ({numeric} | _)*;
 hexdigit = [A-Fa-f] | {numeric};
 hexdigitseq = ({hexdigit} | _)* {hexdigit} ({hexdigit} | _)*;
-symbol = [-`|!#%&)=+[{};:@~\\,.<>?/^$\128-\255] | ];
+coresymbol = [-`|!#%&=+[{};:@~,.<>?/^$\128-\255] | ];
+symbol = {coresymbol} | [)\\];
 nonparen = {symbol} | \* | {alpha} | {numeric};
 nonstar_nonparen = {symbol} | {alpha} | {numeric};
 nonparen_nondigit = {symbol} | {alpha} | \*;
 ident = {alpha} ({alpha} | {numeric})*;
 lparen = \(;
+rparen = \);
 anysymb = (({nonparen_nondigit} | ({lparen}+ {nonstar_nonparen})) ({nonparen} | {lparen}+ {nonstar_nonparen}) * {lparen} ?) | {lparen};
 space = [\ \t];
 linefeed = \n;
 creturn = \013;
 newline = {linefeed} | {creturn} | {creturn}{linefeed};
 locpragma = "(*#loc" {space}+ {numeric}* {space}+ {numeric}* {space}* "*)";
+qvarinterior = {coresymbol} | {alpha} | {numeric} | {space} | "(" | "\\n" |
+               "\\t" | "\\)" | "\\\\" | "\\z" | "*";
 
 %%
+<INITIAL>"$var$(" {qvarinterior}* ")" => (
+  (BT_Ident yytext, getLoc yyarg yypos yytext)
+);
 <INITIAL>{locpragma} => (dolocpragma yyarg yypos yytext; continue());
 <INITIAL>"(*" => (YYBEGIN comment; incommentp := 1; continue());
 <INITIAL>{numeric} ({numeric}| "_")* "." {digitseq} =>

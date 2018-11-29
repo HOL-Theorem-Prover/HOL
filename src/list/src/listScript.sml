@@ -149,11 +149,13 @@ val HD = new_recursive_definition
        def = “HD (h::t) = h”};
 val _ = export_rewrites ["HD"]
 
-val TL = new_recursive_definition
-      {name = "TL",
+val TL_DEF = new_recursive_definition
+      {name = "TL_DEF",
        rec_axiom = list_Axiom,
-       def = “TL (h::t) = t”};
-val _ = export_rewrites ["TL"]
+       def = “(TL [] = []) /\
+              (TL (h::t) = t)”};
+val TL = save_thm("TL",CONJUNCT2 TL_DEF);
+val _ = export_rewrites ["TL_DEF"];
 
 val SUM = new_recursive_definition
       {name = "SUM",

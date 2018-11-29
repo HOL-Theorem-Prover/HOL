@@ -62,8 +62,6 @@ val DUMMY_KEYS_def =
 (* Orchestrate the round computations.                                       *)
 (*---------------------------------------------------------------------------*)
 
-val _ = Globals.priming := SOME ""
-
 val (RoundTuple_def, RoundTuple_ind) = Defn.tprove
  (Hol_defn
    "RoundTuple"
@@ -193,7 +191,6 @@ val mk_keysched_def = Define
 (*---------------------------------------------------------------------------*)
 (* Sanity check                                                              *)
 (*---------------------------------------------------------------------------*)
-val _ = Globals.priming := SOME"";
 
 (*
 val PolyExp = Q.prove

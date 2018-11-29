@@ -37,6 +37,9 @@ sig
 
   val assert_exn : ('a -> bool) -> 'a -> exn -> 'a
   val with_exn : ('a -> 'b) -> 'a -> exn -> 'b
+  val finally : (unit -> unit) -> ('a -> 'b) -> ('a -> 'b)
+     (* first argument (the finally finisher) must terminate, and preferably
+        quickly, or you may mask/hide user-generated Interrupt exceptions *)
 
   val list_of_singleton : 'a -> 'a list
   val single : 'a -> 'a list (* synonym of list_of_singleton *)

@@ -10,7 +10,7 @@ When applied to a list of variables to avoid clashing with, and a
 variable to modify, {variant} returns a variant of the variable to
 modify, that is, it changes the name as intuitively as possible to
 make it distinct from any variables in the list, or any constants.
-This is normally done by adding primes to the name.
+This is done by adding primes to the name.
 
 The exact form of the variable name should not be relied on, except
 that the original variable will be returned unmodified unless it is
@@ -24,33 +24,28 @@ constant.
 \EXAMPLE
 The following shows a couple of typical cases:
 {
-   - variant [Term`y:bool`, Term`z:bool`] (Term`x:bool`);
-   > val it = `x` : term
+   > variant [``y:bool``, ``z:bool``] ``x:bool``;
+   val it = ``x`` : term
 
-   - variant [Term`x:bool`, Term`x':num`, Term`x'':num`] (Term `x:bool`);
-   > val it = `x'''` : term
+   > variant [``x:bool``, ``x':num``, ``x'':num``] ``x:bool``;
+   > val it = ``x'''`` : term
 }
 while the following shows that clashes with the names of constants
 are also avoided:
 {
-   - variant [] (mk_var("T",bool));
-   > val it = `T'` : term
+   > variant [] (mk_var("T",bool));
+   val it = ``T'`` : term
 }
-The style of renaming can be altered by modifying the reference
-variable {Globals.priming}:
-{
-   - with_flag (priming,SOME "_")
-     (uncurry variant)
-     ([Term`x:bool`, Term`x':num`, Term`x'':num`], Term `x:bool`);
-
-   > val it = `x_1` : term
-}
-
 
 \USES
 The function {variant} is extremely useful for complicated derived
 rules which need to rename variables to avoid free variable capture
 while still making the role of the variable obvious to the user.
+
+\COMMENTS
+There is a `Term.numvariant` function that has the same type
+signature, but which varies by adding and then incrementing a numeric
+suffix to the variable’s stem.
 
 \SEEALSO
 Term.genvar, Term.prim_variant, Globals.priming.

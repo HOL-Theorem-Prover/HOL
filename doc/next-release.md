@@ -37,6 +37,9 @@ New theories:
     the metric-related results in previous `topologyTheory` should now
     open `metricTheory` instead. (Thanks to Chun Tian for this work.)
 
+*   Holmakefiles can now refer to the new variable `DEFAULT_TARGETS` in order to generate a list of the targets in the current directory that Holmake would attempt to build by default.
+    This provides an easier way to adjust makefiles than that suggested in the [release notes for Kananaskis-10](http://hol-theorem-prover.org/kananaskis-10.release.html).
+
 New tools:
 ----------
 
@@ -56,6 +59,11 @@ Incompatibilities:
 *   The `type_abbrev` function now affects only the type parser.
     The pretty-printer will not use the new abbreviation when printing types.
     If the old behaviour of printing the abbreviations as well as parsing them is desired, the new entrypoint `type_abbrev_pp` should be used.
+
+*   The `Globals.priming` reference variable has been removed.
+    All priming done by the kernel is now by appending extra prime (apostrophe) characters to the names of variables.
+    This also means that this is the only form of variation introduced by the `variant` function.
+    However, there is also a new `numvariant` function, which makes the varying function behave as if the old `Globals.priming` was set to `SOME ""` (introduces and increments a numeric suffix).
 
 * * * * *
 

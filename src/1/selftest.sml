@@ -353,6 +353,10 @@ val _ = app tpp ["(if P then q else r) s",
 val _ = tpp "x = y"
 val _ = Lib.with_flag (testutils.linewidth, 10) tpp "xxxxxx =\nyyyyyy"
 
+val _ = temp_overload_on ("RM*", ``\x y. x /\ y``)
+val _ = tpp "RM* p q"
+val _ = clear_overloads_on "RM*"
+
 val _ = add_rule {term_name = "=",
                   fixity = Infix(NONASSOC, 100),
                   block_style = (AroundSamePrec, (PP.CONSISTENT,0)),

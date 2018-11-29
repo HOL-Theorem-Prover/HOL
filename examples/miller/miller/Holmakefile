@@ -2,11 +2,7 @@ PRE_INCLUDES = ../prob ../formalize
 INCLUDES = ../ho_prover ../subtypes ../../RSA ../groups ../useful
 OPTIONS = QUIT_ON_FAILURE
 
-THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
-TARGETS0 = $(patsubst %Theory.sml,,$(THYFILES))
-TARGETS = $(patsubst %.sml,%.uo,$(TARGETS0))
-
-all: $(TARGETS) selftest.exe
+all: $(DEFAULT_TARGETS) selftest.exe
 .PHONY: all
 
 selftest.exe: selftest.uo miller_rabinTools.uo

@@ -1,4 +1,3 @@
-!tools/Holmake/tests/holpathdb/proj2
 !src/boss/theory_tests
 !src/tfl/src/test
 src/TeX
@@ -22,6 +21,7 @@ src/finite_map
 src/bag
 !!examples/unification/triangular/first-order
 src/n-bit
+[poly]!src/n-bit/interactive_tests
 !examples/ARM/arm6-verification
 !!examples/ARM/arm6-verification/correctness
 src/ring/src

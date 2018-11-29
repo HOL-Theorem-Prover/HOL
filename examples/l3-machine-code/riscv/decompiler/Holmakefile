@@ -10,10 +10,7 @@ EXTRA_CLEANS = $(HOLHEAP) $(HOLHEAP).o
 BARE_THYS = ../prog/riscv_progLib
 DEPS = $(patsubst %,%.uo,$(BARE_THYS))
 
-THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
-TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
-
-all: $(TARGETS) $(HOLHEAP)
+all: $(DEFAULT_TARGETS) $(HOLHEAP)
 .PHONY: all
 
 $(HOLHEAP): $(DEPS)

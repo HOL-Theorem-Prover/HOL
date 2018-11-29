@@ -23,6 +23,13 @@ exception Mod = General.Div
 
 fun assert_exn P x e = if P x then x else raise e
 fun with_exn f x e = f x handle Interrupt => raise Interrupt | _ => raise e
+fun finally finish f x =
+    let
+      val result = Exn.capture f x
+    in
+      finish();
+      Exn.release result
+    end
 
 val int_to_string = Int.toString
 

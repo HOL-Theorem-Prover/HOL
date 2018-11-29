@@ -1,6 +1,7 @@
 !tools/Holmake/tests/holdep
 !tools/Holmake/tests/depchainloop
 !tools/Holmake/tests/recursiveclean
+!tools/Holmake/tests/wildcard
 tools/set_mtime
 tools/mlyacc/mlyacclib
 [mosml]src/portableML/mosml
@@ -16,6 +17,7 @@ src/thm
 src/postkernel
 # these three directories are required to even run hol.bare.unquote
 src/parse
+!tools/Holmake/tests/badincludes
 src/opentheory
 (otknl)src/opentheory/logging
 src/bool
@@ -30,6 +32,7 @@ src/proofman/tests
 [poly]src/AI/proof_search
 [poly]src/tactictoe/src
 [poly]src/holyhammer
+!tools/Holmake/tests/holpathdb/proj2
 !tools/Holmake/tests/depchain1/dir3
 !tools/Holmake/tests/depchain2/dir1
 !tools/Holmake/tests/altquote1

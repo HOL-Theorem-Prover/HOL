@@ -314,6 +314,21 @@ fun unprime s =
       else raise ERR "unprime" "string doesn't end with a prime"
    end
 
+fun extract_pc s =
+    let
+      (* c = # of primes seen;
+         i = current index into string, terminate on -1
+         -- does right thing on UTF8 encoded codepoints
+       *)
+      fun recurse c i =
+          if i < 0 then ("", c)
+          else if String.sub(s,i) = #"'" then recurse (c + 1) (i - 1)
+          else (String.substring(s,0,i+1), c)
+    in
+      recurse 0 (String.size s - 1)
+    end
+
+
 fun unprefix pfx s =
    if String.isPrefix pfx s
       then String.extract (s, size pfx, NONE)
