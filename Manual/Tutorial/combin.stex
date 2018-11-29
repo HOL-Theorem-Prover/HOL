@@ -418,7 +418,7 @@ It's very tempting to state the goal as the obvious \[
 \con{diamond}\;R\;\Rightarrow\;\con{diamond}\,(R^*)
 \]
 but doing so will actually make it harder to apply the induction principle when the time is right.
-Better to start out with a statement of the goal that is very near in form to the induction princple.
+Better to start out with a statement of the goal that is very near in form to the induction principle.
 So, we manually expand the meaning of \con{diamond} and state our next goal thus:
 \begin{session}
 \begin{alltt}
