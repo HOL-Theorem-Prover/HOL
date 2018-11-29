@@ -345,7 +345,7 @@ in
   let
     val {argpos = (argline, argcpos), command, options = opts, ...} = argument
     val alltt = OptSet.has AllTT opts orelse
-                (command = Theorem andalso not (OptSet.has TT opts))
+                ((command = Theorem) andalso not (OptSet.has TT opts))
     val rulep = OptSet.has Rule opts orelse OptSet.has StackedRule opts
     fun rule_print printer term = let
       val (hs, c) = let

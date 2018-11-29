@@ -190,7 +190,7 @@ let
    val _ = if (isSome content) then () else Feedback.fail();
    val empty_posn = (0,0);
    val opts = mungeTools.parseOpts empty_posn ("alltt,"^options);
-   val _ = if command = mungeTools.Theorem then
+   val _ = if (command = mungeTools.Theorem) then
         let
            val (ty, tm) = destruct_theory_thm (valOf content);
            val _ = DB.fetch ty tm
