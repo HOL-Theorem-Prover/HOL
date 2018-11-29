@@ -1,4 +1,5 @@
 open HolKernel Parse boolLib bossLib;
+open Sanity;
 
 
 val _ = new_theory "congToolsLib";

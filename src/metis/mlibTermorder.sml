@@ -33,7 +33,7 @@ val term_subst    = mlibSubst.term_subst;
 (* ------------------------------------------------------------------------- *)
 
 val module = "mlibTermorder";
-val () = traces := {module = module, alignment = I} :: !traces;
+val () = add_trace {module = module, alignment = I}
 fun chatting l = tracing {module = module, level = l};
 fun chat s = (trace s; true)
 
@@ -220,28 +220,28 @@ datatype termorder = TO of parameters * string list * string mset list * bool;
 
 fun pp_equation vars =
   let
-    fun pp_tm pp ("",n) = pp_string pp (int_to_string n)
-      | pp_tm pp (v,n) =
-      pp_string pp ((if n=1 then "" else (int_to_string n^"*")) ^ v)
-    fun pp_tms pp [] = pp_string pp "0"
-      | pp_tms pp [tm] = pp_tm pp tm
-      | pp_tms pp (tm :: tms) = pp_binop " +" pp_tm pp_tms pp (tm,tms)
+    fun pp_tm ("",n) = pp_string (int_to_string n)
+      | pp_tm (v,n) =
+          pp_string ((if n=1 then "" else (int_to_string n^"*")) ^ v)
+    fun pp_tms [] = pp_string "0"
+      | pp_tms [tm] = pp_tm tm
+      | pp_tms (tm :: tms) = pp_binop " +" pp_tm pp_tms (tm,tms)
   in
-    fn pp => fn eqn =>
+    fn eqn =>
     let
       val eqn = zip (vars @ [""]) (list_eqn vars eqn)
       val tms = List.filter (fn (_,n) => n <> 0) eqn
       val (pos,neg) = List.partition (fn (_,n) => 0 < n) tms
       val neg = map (I ## ~) neg
     in
-      pp_binop " <=" pp_tms pp_tms pp (neg,pos)
+      pp_binop " <=" pp_tms pp_tms (neg,pos)
     end
   end;
 
-fun pp_termorder pp (TO (_,vars,eqns,sat)) =
+fun pp_termorder (TO (_,vars,eqns,sat)) =
   pp_bracket "{" (if sat then "}*" else "}")
   (pp_binop " |" (pp_sequence "" pp_string)
-   (pp_sequence "," (pp_equation vars))) pp (vars,eqns);
+   (pp_sequence "," (pp_equation vars))) (vars,eqns);
 
 val termorder_to_string = PP.pp_to_string (!LINE_LENGTH) pp_termorder;
 
@@ -504,7 +504,6 @@ val null = tnull;
 
 (* Quick testing
 app load ["mlibThm"];
-val () = quotation := true;
 val T = parse_term;
 val F = parse_formula;
 installPP pp_termorder;

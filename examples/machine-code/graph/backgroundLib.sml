@@ -1,12 +1,11 @@
-structure backgroundLib =
+structure backgroundLib :> backgroundLib =
 struct
 
 open HolKernel boolLib bossLib Parse;
 open helperLib;
+open GraphLangTheory
 
 val _ = set_echo 5;
-
-infix \\ val op \\ = op THEN;
 
 fun the (SOME x) = x | the NONE = fail()
 

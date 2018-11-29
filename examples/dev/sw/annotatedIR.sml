@@ -8,8 +8,8 @@ quietdec := true;
   open HolKernel Parse boolLib preARMTheory pairLib simpLib bossLib
        numSyntax optionSyntax listSyntax ILTheory IRSyntax
 (*
-	quietdec := false;
-	open annotatedIR
+        quietdec := false;
+        open annotatedIR
 *)
   in
 
@@ -50,10 +50,10 @@ quietdec := true;
             (indent d; sayln "SC("; printtree(s1,d+2); sayln ","; printtree(s2,d+2); say ")")
         | printtree(CJ((exp1,rop,exp2),s1,s2,info),d) =
             (indent d; say "CJ("; say (format_exp exp1 ^ " " ^ print_rop rop ^ " " ^ format_exp exp2); sayln ",";
-		       printtree(s1,d+2); sayln ","; printtree(s2,d+2); say ")")
+                       printtree(s1,d+2); sayln ","; printtree(s2,d+2); say ")")
         | printtree(TR((exp1,rop,exp2),s,info),d) =
             (indent d; say "TR("; say (format_exp exp1 ^ " " ^ print_rop rop ^ format_exp exp2); sayln ",";
-		       printtree(s,d+2); say ")")
+                       printtree(s,d+2); say ")")
         | printtree(CALL(fname,pre,body,post,info),d) =
             if not (!show_call_detail) then
                 (indent d; say ("CALL(" ^ fname ^ ")"))
@@ -102,7 +102,7 @@ quietdec := true;
        let
            fun one_node (nodeNo,gr') =
                if f nodeNo then
-		   gr'
+                   gr'
                else
                    List.foldl (fn ((a,b),gr'') =>
                                    one_node (b, G.embed (([(a,nodeNo)],b,#3 (G.context(b,gr)),[]), gr''))
@@ -118,7 +118,7 @@ quietdec := true;
            val maxNodeNo = G.noNodes gr - 1;
            fun one_node nodeNo =
                if f nodeNo then
-		   (SOME nodeNo,true)
+                   (SOME nodeNo,true)
                else if nodeNo = maxNodeNo then
                    (NONE,false)
                else
@@ -228,8 +228,8 @@ quietdec := true;
    val thm_t = DECIDE (Term `T`);
    val init_info = {fspec = thm_t, ins = NA, outs = NA, context = []};
 (*
-	val (cfg, n) = (r_cfg, r_start_node)
-	val n = (#2 (hd sucL))
+        val (cfg, n) = (r_cfg, r_start_node)
+        val n = (#2 (hd sucL))
 fun extract (Assem.OPER {oper = (Assem.BL,_,_), dst = dList, src = sList, jump = jp}) = (dList, sList, jp);
 val (dList, sList, jp) = extract inst'
 val x = inst'
@@ -343,52 +343,52 @@ val x = inst'
        (* Determine whether two irs are equal or not *)
 
        fun is_ir_equal (SC(s1,s2,_)) (SC(s3,s4,_)) =
-	     is_ir_equal s1 s3 andalso is_ir_equal s2 s4
+             is_ir_equal s1 s3 andalso is_ir_equal s2 s4
         |  is_ir_equal (TR(cond1,body1,_)) (TR(cond2,body2,_)) =
-	     cond1 = cond2 andalso is_ir_equal body1 body2
+             cond1 = cond2 andalso is_ir_equal body1 body2
         |  is_ir_equal (CJ(cond1,s1,s2,_)) (CJ(cond2,s3,s4,_)) =
-	     cond1 = cond2 andalso is_ir_equal s1 s3 andalso is_ir_equal s2 s4
+             cond1 = cond2 andalso is_ir_equal s1 s3 andalso is_ir_equal s2 s4
         |  is_ir_equal (BLK(s1,_)) (BLK(s2,_)) =
-	     List.all (op =) (zip s1 s2)
+             List.all (op =) (zip s1 s2)
         |  is_ir_equal (STM s1) (STM s2) =
-	     List.all (op =) (zip s1 s2)
+             List.all (op =) (zip s1 s2)
         |  is_ir_equal (CALL(name1,_,_,_,_)) (CALL(name2,_,_,_,_)) =
-	     name1 = name2
+             name1 = name2
         |  is_ir_equal _ _ = false;
 
        fun merge_stm (SC(STM s1, STM s2, info)) =
              BLK (s1 @ s2, info)
         |  merge_stm (SC(STM s1, BLK(s2,_), info)) =
-	     BLK (s1 @ s2, info)
-	|  merge_stm (SC(BLK(s1,_), STM s2, info)) =
-	     BLK (s1 @ s2, info)
-	|  merge_stm (SC(BLK(s1,_), BLK(s2,_), info)) =
-	     BLK (s1 @ s2, info)
-	|  merge_stm (SC(STM [], s2, info)) =
-	     merge_stm s2
-	|  merge_stm (SC(s1, STM [], info)) =
-	     merge_stm s1
-	|  merge_stm (SC(BLK([],_), s2, info)) =
-	     merge_stm s2
-	|  merge_stm (SC(s1, BLK([],_), info)) =
-	     merge_stm s1
-	|  merge_stm (SC(s1,s2,info)) =
-	     SC (merge_stm s1, merge_stm s2, info)
-	|  merge_stm (TR(cond, body, info)) =
-	     TR(cond, merge_stm body, info)
-	|  merge_stm (CJ(cond, s1, s2, info)) =
-	     CJ(cond, merge_stm s1, merge_stm s2, info)
+             BLK (s1 @ s2, info)
+        |  merge_stm (SC(BLK(s1,_), STM s2, info)) =
+             BLK (s1 @ s2, info)
+        |  merge_stm (SC(BLK(s1,_), BLK(s2,_), info)) =
+             BLK (s1 @ s2, info)
+        |  merge_stm (SC(STM [], s2, info)) =
+             merge_stm s2
+        |  merge_stm (SC(s1, STM [], info)) =
+             merge_stm s1
+        |  merge_stm (SC(BLK([],_), s2, info)) =
+             merge_stm s2
+        |  merge_stm (SC(s1, BLK([],_), info)) =
+             merge_stm s1
+        |  merge_stm (SC(s1,s2,info)) =
+             SC (merge_stm s1, merge_stm s2, info)
+        |  merge_stm (TR(cond, body, info)) =
+             TR(cond, merge_stm body, info)
+        |  merge_stm (CJ(cond, s1, s2, info)) =
+             CJ(cond, merge_stm s1, merge_stm s2, info)
         |  merge_stm (STM s) =
              BLK(s, init_info)
-	|  merge_stm stm =
-	     stm
+        |  merge_stm stm =
+             stm
 
         fun merge ir = let val ir' = merge_stm ir;
                            val ir'' = merge_stm ir' in
                          if is_ir_equal ir' ir'' then ir'' else merge ir''
                        end
      in
-	merge ir
+        merge ir
      end
 
 
@@ -439,15 +439,15 @@ val x = inst'
     |  get_modified_regs (CJ(cond,ir1,ir2,info)) =
          (get_modified_regs ir1) @ (get_modified_regs ir2)
     |  get_modified_regs (CALL(fname,pre,body,post,info)) =
-			let
-				val preL = get_modified_regs pre
-				val bodyL = get_modified_regs body
-				val outsL = (List.map (fn (REG r) => r | _ => ~1) (pair2list (#outs info)))
-				val restoredL = [13, ~1]
-				val modL = filter (fn e => not (mem e restoredL)) (preL @ bodyL @ outsL)
-			in
-				modL
-			end
+                        let
+                                val preL = get_modified_regs pre
+                                val bodyL = get_modified_regs body
+                                val outsL = (List.map (fn (REG r) => r | _ => ~1) (pair2list (#outs info)))
+                                val restoredL = [13, ~1]
+                                val modL = filter (fn e => not (mem e restoredL)) (preL @ bodyL @ outsL)
+                        in
+                                modL
+                        end
     |  get_modified_regs (STM l) =
          itlist (curry (fn (a,b) => one_stm_modified_regs a @ b)) l []
     |  get_modified_regs (BLK (l,info)) =
@@ -492,7 +492,7 @@ val x = inst'
 val irX = (back_trace ir1 info)
 
 fun extract (SC(s1,s2,inner_info)) (outer_info as {outs = outer_outs, context = contextL, ...}:annt) =
-	(s1, s2, inner_info, outer_outs, contextL, outer_info)
+        (s1, s2, inner_info, outer_outs, contextL, outer_info)
 
 val (s1, s2, inner_info, outer_outs, contextL, outer_info)  = extract ir1 info
 
@@ -531,7 +531,7 @@ val (fname, pre, body, post, info, outer_info, outer_outs, contextL, fout_spec) 
               val (s1_info, s2_info) = (get_annt s1, get_annt s2');
               val s2'' = if S.isSubset (pair2set (#ins s2_info), pair2set (#outs s1_info))
                          then adjust_ins s2' (replace_ins s2_info (#outs s1_info))
-			 else s2';
+                         else s2';
               val s2_info = get_annt s2'';
               val s1' = back_trace s1 {ins = #ins outer_info, outs = #ins s2_info, context = #context s2_info, fspec = #fspec s1_info};
               val s1_info = get_annt s1'
@@ -550,7 +550,7 @@ val (fname, pre, body, post, info, outer_info, outer_outs, contextL, fout_spec) 
               val s2' = back_trace s2 outer_info
               val ({ins = ins1, outs = outs1, ...}, {ins = ins2, outs = outs2, ...}) = (get_annt s1', get_annt s2');
               val inS_0 = set2pair (list2set (filter filter_exp
-					(cond_expL @ (pair2list ins1) @ (pair2list ins2))));
+                                        (cond_expL @ (pair2list ins1) @ (pair2list ins2))));
                       (* union of the variables in the condition and the inputs of the s1' and s2' *)
               val info_0 = replace_ins outer_info inS_0
           in
@@ -569,15 +569,15 @@ val (fname, pre, body, post, info, outer_info, outer_outs, contextL, fout_spec) 
           (* the adjustment will be performed later in the funCall.sml *)
     |  back_trace (CALL (fname, pre, body, post, info)) (outer_info as {outs = outer_outs, context = contextL, fspec = fout_spec, ...}) =
           let
-				  val outer_outs_set = pair2set outer_outs
-				  val inner_outs_set = pair2set (#outs info);
-				  val extra_outs_set = S.difference (outer_outs_set, inner_outs_set);
+                                  val outer_outs_set = pair2set outer_outs
+                                  val inner_outs_set = pair2set (#outs info);
+                                  val extra_outs_set = S.difference (outer_outs_set, inner_outs_set);
 
-				  val inner_ins_set = pair2set (#ins info)
-				  val new_ins_set = S.union(extra_outs_set, inner_ins_set);
+                                  val inner_ins_set = pair2set (#ins info)
+                                  val new_ins_set = S.union(extra_outs_set, inner_ins_set);
 
-				  val new_ins = set2pair new_ins_set;
-				  val info' = replace_ins outer_info new_ins
+                                  val new_ins = set2pair new_ins_set;
+                                  val info' = replace_ins outer_info new_ins
           in
               CALL (fname, pre, BLK ([], info), post, info')
           end;
@@ -589,12 +589,12 @@ val (fname, pre, body, post, info, outer_info, outer_outs, contextL, fout_spec) 
                   val (inner_outS, outer_outS) = (IRSyntax.pair2set (#outs info0), IRSyntax.pair2set outs)
                   val ir1 = if Binaryset.equal(inner_outS, outer_outS) then ir0
                             else SC (ir0, BLK ([], {context = #context info0, ins = #outs info0, outs = outs, fspec = thm_t}),
-				     replace_outs info0 outs)
+                                     replace_outs info0 outs)
                   val info1 = get_annt ir1
               in
                   if #ins info0 = ins then ir1
                   else SC (BLK ([], {context = #context info1, ins = ins, outs = #ins info0, fspec = thm_t}),
-			   ir1, replace_ins info1 ins)
+                           ir1, replace_ins info1 ins)
               end
           val info =  {ins = ins, outs = outs, context = [], fspec = thm_t}
        in
@@ -624,9 +624,9 @@ val (fname, pre, body, post, info, outer_info, outer_outs, contextL, fout_spec) 
           val ((pre_ins,post_outs),(outer_ins,outer_outs)) = ((#ins (get_annt pre), #outs (get_annt post)), (#ins info, #outs info))
           val ir' = if post_outs = outer_outs then ir
                     else
-			SC (ir,
-			    BLK ([], {ins = post_outs, outs = outer_outs, context = #context info, fspec = thm_t}),
-			    replace_ins info pre_ins)
+                        SC (ir,
+                            BLK ([], {ins = post_outs, outs = outer_outs, context = #context info, fspec = thm_t}),
+                            replace_ins info pre_ins)
       in
           if pre_ins = outer_ins then ir'
           else

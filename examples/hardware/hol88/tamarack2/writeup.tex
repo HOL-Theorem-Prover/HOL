@@ -1,0 +1,2691 @@
+\documentstyle[a4,12pt]{article}
+\pagestyle{myheadings}
+\markboth{J. Joyce, Cambridge University}{J. Joyce, Cambridge University}
+\markright{J. Joyce, Cambridge University}
+
+\oddsidemargin  -5mm
+\evensidemargin -5mm
+\textheight 23cm
+\textwidth  17cm
+
+\renewcommand{\bottomfraction}{.7}
+
+\setlength{\parskip}{\baselineskip}
+\setlength{\parindent}{0in}
+
+\begin{document}
+
+\begin{normalsize}
+
+\copyright Jeffrey J. Joyce, Computer Laboratory, Cambridge University
+
+{\large\bf Outline of Section 6.2} (DRAFT 4, April 1989)
+
+6.2{\hspace*{4mm}}Hardware Verification in Higher-Order Logic\\*[1mm]
+6.2.1{\hspace*{4mm}}Formal{\hspace*{4mm}}roofs and Proof Sketches\\*[1mm]
+6.2.2{\hspace*{4mm}}\mbox{$1$-bit} Full-Adder Proof of Correctness\\*[1mm]
+6.2.3{\hspace*{4mm}}\mbox{$n$-bit} Ripple-Carry Adder Proof of Correctness\\*[1mm]
+6.2.3.1{\hspace*{4mm}}Basis Step\\*[1mm]
+6.2.3.2{\hspace*{4mm}}Inductive Step\\*[1mm]
+6.2.3.3{\hspace*{4mm}}Alternate Statements of Correctness\\*[1mm]
+6.2.4{\hspace*{4mm}}A Simple 3-Function ALU\\*[1mm]
+6.2.5{\hspace*{4mm}}A Simple 8-Instruction Microprocessor\\*[1mm]
+6.2.5.1{\hspace*{4mm}}Implementation Specification\\*[1mm]
+6.2.5.2{\hspace*{4mm}}Behavioural Specification\\*[1mm]
+6.2.5.3{\hspace*{4mm}}Formal Verification\\*[1mm]
+6.2.5.3.1{\hspace*{4mm}}Microinstruction Interpretation Correctness\\*[1mm]
+6.2.5.3.2{\hspace*{4mm}}Instruction Interpretation Correctness\\*[1mm]
+6.2.5.3.3{\hspace*{4mm}}Top-Level Correctness Statement\\*[1mm]
+6.2.5.4{\hspace*{4mm}}Proof Summary\\*[1mm]
+6.2.6{\hspace*{4mm}}The HOL Proof Generating System\\*[1mm]
+6.2.7{\hspace*{4mm}}Concluding Remarks
+
+\newpage
+
+{\large\bf Introduction}
+
+These notes have been written as the second part of a two part
+discussion on the formal specification and verification of hardware
+in higher-order logic.
+
+Section 6.1 (not given here) explains
+how higher-order logic can be used to describe both structural and
+behavioural aspects of hardware.
+To summarize this approach  briefly,
+predicates are defined to describe the behaviour of
+devices in terms of relations on inputs and outputs.
+At the lowest levels of specification,
+simple relationships, such as the behaviour of a logic gate,
+can be expressed directly in terms of basic logical
+and arithmetic functions and relations,
+{\it e.g.} $\neg$, $\wedge$, $\vee$, $\Longrightarrow$, $=$, $+$, $<$, $\leq$.
+At higher levels, the behaviour of a composite device is defined
+hierarchically in terms of behaviours for its components.
+Behaviour composition and internal signal hiding (`black boxing')
+are expressed by logical conjunction and existential quantification
+respectively.
+
+For simple combinational devices in situations where delay is not
+important, input and outputs can be represented by {\it time-independent}
+values.
+For example, the inputs and output of a simple logic gate can be represented
+by Boolean variables as shown below in the definition \verb"INV" which
+specifies the behaviour of an inverter with no delay.
+
+$\vdash_{def}$\verb" INV (in,out) "$=$\verb" (out "$=$\verb" "$\neg$\verb"in)"
+
+In the case of sequential logic or in situations where delay needs to
+be modelled, inputs and outputs
+are {\it time-dependent} signals which can be represented by functions from
+discrete time to sampled values.  The definition of
+\verb"INV-DEL" describes an inverter with a fixed propagation delay,
+\verb"del".  In this case, the variables \verb"in" and \verb"out" are
+functions from discrete time (represented by the natural numbers)
+to Boolean values.
+
+$\vdash_{def}$\verb" INV-DEL (in,out) "$=$\verb" "$\forall$\verb"t. out (t"$+$\verb"del) "$=$\verb" "$\neg$\verb"(in t)"
+
+The examples discussed in these notes are self-contained except for the
+specification of a \mbox{$1$-bit} full-adder and an \mbox{$n$-bit}
+\mbox{ripple-carry} adder.  These specifications are given below.
+
+\begin{minipage}{17cm}
+$\vdash_{def}$\verb" FULLADDER (a,b,cin,cout,sum) "$=$\\*
+\phantom{$\vdash_{def}$\verb" "}$\exists$\verb" w1 w2 w3."\\*
+\phantom{$\vdash_{def}$\verb" "$\exists$\verb" "}\verb"HALFADDER (a,b,w1,w2) "$\wedge$\\*
+\phantom{$\vdash_{def}$\verb" "$\exists$\verb" "}\verb"HALFADDER (w2,cin,w3,sum) "$\wedge$\\*
+\phantom{$\vdash_{def}$\verb" "$\exists$\verb" "}\verb"OR (w1,w3,cout)"
+\end{minipage}
+
+\begin{minipage}{17cm}
+$\vdash_{def}$\verb" ADDn n (a,b,cin,cout,sum) "$=$\\*
+\phantom{$\vdash_{def}$\verb" AD"}\verb"(n "$=$\verb" 0) "$\Rightarrow$\verb" (cout "$=$\verb" cin) |"\\*
+\phantom{$\vdash_{def}$\verb" AD"\verb"(n"}$\exists$\verb"c."\\*
+\phantom{$\vdash_{def}$\verb" AD"\verb"(n"$\exists$\verb"c"}\verb"ADDn (n"$-$\verb"1) (a,b,cin,c,sum) "$\wedge$\\*
+\phantom{$\vdash_{def}$\verb" AD"\verb"(n"$\exists$\verb"c"}\verb"FULLADDER (a (n"$-$\verb"1),b (n"$-$\verb"1),c,cout,sum (n"$-$\verb"1))"
+\end{minipage}
+
+\newpage
+
+\copyright Jeffrey J. Joyce, Computer Laboratory, Cambridge University
+
+\vskip \baselineskip
+{\large\bf 6.2  Hardware Verification in Higher-Order Logic}
+
+The preceding section
+explained how higher-order logic can be used to describe
+both structural and behavioural aspects of hardware.
+We now describe how the axioms and inference rules of higher-order logic
+can be used to prove hardware correct by establishing a formal
+relationship between structural and behavioural specifications.
+We begin by briefly discussing the difference between
+{\it formal proof} and {\it proof sketches}.
+Although the concrete result of formal verification is a formal proof,
+our discussion is limited to an outline of
+the overall strategy used to construct the formal proof.
+We describe several verification examples, in particular,
+correctness proofs for
+a \mbox{$1$-bit} \mbox{full-adder},
+an \mbox{$n$-bit} ripple-carry
+and a \mbox{3-function} ALU (Arithmetic Logic Unit).
+Finally, we consider a much larger example:
+the formal specification and verification of a very simple
+\mbox{8-instruction} microprocessor.
+
+\vskip \baselineskip
+{\large\bf 6.2.1  Formal Proofs and Proof Sketches}
+
+A {\it formal proof} in higher-order logic is constructed from the axioms and
+inference rules of higher-order logic.
+In the HOL formulation of higher-order logic [Gordon87],
+each line in a formal proof has the form
+\mbox{$\Gamma$\verb" "$\vdash$\verb" t"}
+where $\Gamma$ is a set of assumptions
+and \verb"t" is a conclusion.  A sequence of such lines is a proof if
+every line is either an axiom or can be obtained from a previous line
+by a rule of inference.
+
+This style of proof where each line involves both a set of assumptions and
+a conclusion is called {\it natural deduction}.
+It is often more `natural' than other (e.g. Hilbert-style) systems,
+because it reflects how we intuitively prove
+propositions of the form ``If X then Y''
+by assuming X and using this to prove Y.
+For each line
+\mbox{$\Gamma$\verb" "$\vdash$\verb" t"},
+the conclusion \verb"t" is a true proposition if
+all of the assumptions in $\Gamma$ are true.
+If there are no assumptions, then the proposition is a theorem.
+
+The HOL formulation of higher-order logic has five axioms
+and eight primitive inference rules.
+For example, when an implication \mbox{\verb"t1 "$\Longrightarrow$\verb" t2"}
+and its antecedent \verb"t1" appear on previous lines of a proof,
+the consequent \verb"t2" can follow on a later line
+inheriting assumptions from these two previous lines.  This rule,
+called {\it Modus Ponens}, is illustrated below.
+
+\hspace*{\fill}
+\begin{minipage}{65mm}
+$\Gamma$$1$\verb" "$\vdash$\verb" t1 "$\Longrightarrow$\verb" t2"\verb"     "$\Gamma$$2$\verb" "$\vdash$\verb" t1"\\*
+\verb"__________________________"\\*
+$\Gamma$$1$\verb" "$\cup$\verb" "$\Gamma$$2$\verb" "$\vdash$\verb" t2"
+\end{minipage}
+\hspace*{\fill}
+
+Another example is the rule for discharging an assumption.
+This rule (or something similar)
+is an essential feature of the natural deduction proof style;
+it is often used in the final steps of a proof
+to eliminate earlier assumptions .
+
+\hspace*{\fill}
+\begin{minipage}{50mm}
+$\Gamma$\verb" "$\vdash$\verb" t2"\\*
+\verb"___________________"\\*
+$\Gamma$\verb"-{t1} "$\vdash$\verb" t1 "$\Longrightarrow$\verb" t2"
+\end{minipage}
+\hspace*{\fill}
+
+The main advantage of a formal proof is that every single step
+has a precise justification which can be mechanically checked.
+The main disadvantage is that the formal proof of
+a non-trivial theorem typically involves a large number of steps.
+Even the relatively simple examples described in this section
+ultimately depend on thousands of primitive inference steps.
+However, the complexity of doing large formal proofs can be overcome
+with mechanical assistance from a computer both to
+check that each proof step is correct and to automatically generate
+large portions of the proof.
+
+This section is about formal proofs of
+correctness for hardware using the axioms and inference rules of
+higher-order logic.
+The purpose of this discussion is to describe
+the nature of these proofs with several example
+proofs of correctness.
+Because it is both impractical and not very helpful
+to reproduce every single line in a formal proof of correctness,
+we instead present {\it proof sketches}
+which outline the underlying strategies of the formal proofs.
+
+The main simplification in our proof sketches is that most of the steps in
+the formal proof are left out:
+only a few intermediate steps are given to outline the proof strategy.
+We also make implicit use of natural deduction techniques:
+for instance, we describe direct manipulations `inside' a theorem
+corresponding to a sequence of natural deduction steps in the formal proof.
+Another technique used in our proof sketches
+is to show that a proposition is logically equivalent to another proposition
+which has a trivial proof: typically, definitions and lemmas are
+used to reduce the desired proposition to a tautology or direct
+consequence of the assumptions.
+
+The use of these techniques in our proof sketches
+correspond to formal deductions
+based on the rules of the axioms and inference rules of higher-order logic.
+These proof sketches are presented as summaries of formal proofs which
+have been generated with mechanical assistance from the HOL proof generating
+system [Gordon87].
+
+\vskip \baselineskip
+{\large\bf 6.2.2  \mbox{$1$-bit} Full-Adder Proof of Correctness}
+
+In Section 6.1.4
+the implementation of a \mbox{$1$-bit} \mbox{full-adder} was formally
+specified in terms of an OR-gate and two \mbox{half-adders}.
+Behavioural models for the OR-gate and the \mbox{half-adder}
+are shown below.  Here we are using a time-independent model
+where wires are represented by Boolean variables.
+
+$\vdash_{def}$\verb" OR (a,b,out) "$=$\verb" (out "$=$\verb" (a "$\vee$\verb" b))"
+
+\begin{minipage}{17cm}
+$\vdash_{def}$\verb" HALFADDER (a,b,cout,sum) "$=$\\*
+\phantom{$\vdash_{def}$\verb" HA"}\verb"(cout "$=$\verb" (a "$\wedge$\verb" b)) "$\wedge$\\*
+\phantom{$\vdash_{def}$\verb" HA"}\verb"(sum "$=$\verb" ((a "$\wedge$\verb" "$\neg$\verb"b) "$\vee$\verb" ("$\neg$\verb"a "$\wedge$\verb" b)))"
+\end{minipage}
+
+The correctness of the \mbox{$1$-bit} \mbox{full-adder} is stated in terms of
+a simple arithmetic relationship which holds between
+its inputs and outputs.
+This simple relationship states that,
+when the Boolean values \verb"T" and \verb"F" are interpreted as
+the numbers \verb"1" and \verb"0" respectively,
+the sum of the three inputs is equal to the value of the carry-out,
+multiplied by two, plus the value of the sum output.
+This relationship is expressed formally by the equation,
+
+\hspace*{\fill}
+\verb"((Val a) "$+$\verb" (Val b) "$+$\verb" (Val cin)) "$=$\verb" ((2 "$\times$\verb" (Val cout)) "$+$\verb" (Val sum))"
+\hspace*{\fill}
+
+where \verb"Val" is defined as a function which maps \verb"T" and \verb"F" to
+the numbers \verb"1" and \verb"0" respectively:
+
+$\vdash_{def}$\verb" Val b "$=$\verb" (b "$\Rightarrow$\verb" 1 | 0)"
+
+To prove that this relationship holds between the inputs and outputs
+of a \mbox{$1$-bit} \mbox{full-adder},
+we start by deriving equations for the two outputs.
+For any two Boolean valued terms \verb"t1" and \verb"t2",
+the equation
+\verb"t1 "$=$\verb" t2" implies \verb"t1 "$\Longrightarrow$\verb" t2".
+Hence, the definition of \verb"FULLADDER" implies:
+
+\begin{minipage}{17cm}
+$\vdash_{thm}$\verb" FULLADDER (a,b,cin,cout,sum) "$\Longrightarrow$\\*
+\phantom{$\vdash_{thm}$\verb" "}$\exists$\verb" w1 w2 w3."\\*
+\phantom{$\vdash_{thm}$\verb" "$\exists$\verb" "}\verb"HALFADDER (a,b,w1,w2) "$\wedge$\\*
+\phantom{$\vdash_{thm}$\verb" "$\exists$\verb" "}\verb"HALFADDER (w2,cin,w3,sum) "$\wedge$\\*
+\phantom{$\vdash_{thm}$\verb" "$\exists$\verb" "}\verb"OR (w1,w3,cout)"
+\end{minipage}
+
+Expanding with the definitions of \verb"HALFADDER" and \verb"OR",
+we obtain:
+
+\begin{minipage}{17cm}
+$\vdash_{thm}$\verb" FULLADDER (a,b,cin,cout,sum) "$\Longrightarrow$\\*
+\phantom{$\vdash_{thm}$\verb" "}$\exists$\verb" w1 w2 w3."\\*
+\phantom{$\vdash_{thm}$\verb" "$\exists$\verb" "}\verb"(w1 "$=$\verb" (a "$\wedge$\verb" b)) "$\wedge$\\*
+\phantom{$\vdash_{thm}$\verb" "$\exists$\verb" "}\verb"(w2 "$=$\verb" ((a "$\wedge$\verb" "$\neg$\verb"b) "$\vee$\verb" ("$\neg$\verb"a "$\wedge$\verb" b))) "$\wedge$\\*
+\phantom{$\vdash_{thm}$\verb" "$\exists$\verb" "}\verb"(w3 "$=$\verb" (w2 "$\wedge$\verb" cin)) "$\wedge$\\*
+\phantom{$\vdash_{thm}$\verb" "$\exists$\verb" "}\verb"(sum "$=$\verb" ((w2 "$\wedge$\verb" "$\neg$\verb"cin) "$\vee$\verb" ("$\neg$\verb"w2 "$\wedge$\verb" cin))) "$\wedge$\\*
+\phantom{$\vdash_{thm}$\verb" "$\exists$\verb" "}\verb"(cout "$=$\verb" (w1 "$\vee$\verb" w3))"
+\end{minipage}
+
+The above theorem describes equations for the three existentially-quantified
+variables, \verb"w1", \verb"w2" and \verb"w3" (which represent internal wires
+of the full-adder), along with equations for the two outputs,
+\verb"sum" and \verb"cout".
+Using natural deduction techniques,
+we can directly manipulate these equations
+to eliminate all occurences of \verb"w1", \verb"w2" and \verb"w3"
+in the equations for \verb"sum" and \verb"cout".
+This symbolically models the effect of inputs propagating to outputs
+through internal gates and wires of the physical device.
+The resulting equations for \verb"sum" and \verb"cout"
+only involve the input variables \verb"a", \verb"b" and \verb"cin".
+
+\begin{minipage}{17cm}
+$\vdash_{thm}$\verb" FULLADDER (a,b,cin,cout,sum) "$\Longrightarrow$\\*
+\phantom{$\vdash_{thm}$\verb" "}\verb"(sum "$=$\verb" ((((a "$\wedge$\verb" "$\neg$\verb"b) "$\vee$\verb" ("$\neg$\verb"a "$\wedge$\verb" b)) "$\wedge$\verb" "$\neg$\verb"cin) "$\vee$\\*
+\phantom{$\vdash_{thm}$\verb" "\verb"(sum "$=$\verb" ("}\verb"("$\neg$\verb"((a "$\wedge$\verb" "$\neg$\verb"b) "$\vee$\verb" ("$\neg$\verb"a "$\wedge$\verb" b)) "$\wedge$\verb" cin))) "$\wedge$\\*
+\phantom{$\vdash_{thm}$\verb" "}\verb"(cout "$=$\verb" ((a "$\wedge$\verb" b) "$\vee$\verb" (((a "$\wedge$\verb" "$\neg$\verb"b) "$\vee$\verb" ("$\neg$\verb"a "$\wedge$\verb" b)) "$\wedge$\verb" cin)))"
+\end{minipage}
+
+The above theorem can be used to determine output values
+for any combination of input values.
+From this theorem, we can derive the following set of facts giving
+output values for each of the eight possible input combinations.
+
+\begin{minipage}{17cm}
+$\vdash_{thm}$\verb" FULLADDER (T,T,T,cout,sum) "$\Longrightarrow$\verb" ((cout "$=$\verb" T) "$\wedge$\verb" (sum "$=$\verb" T))"\\*
+$\vdash_{thm}$\verb" FULLADDER (T,T,F,cout,sum) "$\Longrightarrow$\verb" ((cout "$=$\verb" T) "$\wedge$\verb" (sum "$=$\verb" F))"\\*
+$\vdash_{thm}$\verb" FULLADDER (T,F,T,cout,sum) "$\Longrightarrow$\verb" ((cout "$=$\verb" T) "$\wedge$\verb" (sum "$=$\verb" F))"\\*
+$\vdash_{thm}$\verb" FULLADDER (T,F,F,cout,sum) "$\Longrightarrow$\verb" ((cout "$=$\verb" F) "$\wedge$\verb" (sum "$=$\verb" T))"\\*
+$\vdash_{thm}$\verb" FULLADDER (F,T,T,cout,sum) "$\Longrightarrow$\verb" ((cout "$=$\verb" T) "$\wedge$\verb" (sum "$=$\verb" F))"\\*
+$\vdash_{thm}$\verb" FULLADDER (F,T,F,cout,sum) "$\Longrightarrow$\verb" ((cout "$=$\verb" F) "$\wedge$\verb" (sum "$=$\verb" T))"\\*
+$\vdash_{thm}$\verb" FULLADDER (F,F,T,cout,sum) "$\Longrightarrow$\verb" ((cout "$=$\verb" F) "$\wedge$\verb" (sum "$=$\verb" T))"\\*
+$\vdash_{thm}$\verb" FULLADDER (F,F,F,cout,sum) "$\Longrightarrow$\verb" ((cout "$=$\verb" F) "$\wedge$\verb" (sum "$=$\verb" F))"
+\end{minipage}
+
+The formal verification of the \mbox{$1$-bit} \mbox{full-adder} is completed
+by using the above set of facts to show that its
+behavioural specification is satisfied
+for any combination of input values.
+We recall that the behaviour specification of the
+\mbox{$1$-bit} \mbox{full-adder}
+is expressed by an arithmetic equation relating outputs to inputs.
+The following theorem is derived from these eight facts by
+case analysis on the three Boolean inputs.
+This final proof step also uses the definition of \verb"Val"
+and simple laws of arithmetic and Boolean logic.
+
+\begin{minipage}{17cm}
+$\vdash_{thm}$\verb" "$\forall$\verb" a b cin cout sum."\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb"a"}\verb"FULLADDER (a,b,cin,cout,sum) "$\Longrightarrow$\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb"a"}\verb"(((Val a) "$+$\verb" (Val b) "$+$\verb" (Val cin)) "$=$\verb" ((2 "$\times$\verb" (Val cout)) "$+$\verb" (Val sum)))"
+\end{minipage}
+
+This theorem states that any
+set of Boolean variables which satisfies the predicate \verb"FULLADDER"
+also satisfies the arithmetic equation relating outputs to inputs.
+This illustrates the general form used to express correctness
+where the constraints imposed by a structural specification
+are shown to {\it imply} the behavioural specification.
+
+\vskip \baselineskip
+{\large\bf 6.2.3  \mbox{$n$-bit} Ripple-Carry Adder Proof of Correctness}
+
+The structure of the \mbox{$n$-bit} ripple-carry adder was formally
+specified in Section 6.1.4 as the iteration, or repetition,
+of $n$ \mbox{$1$-bit} \mbox{full-adders}
+with the carry-out from
+each stage (except for the $n$th stage) connected to the carry-in of the
+next stage.
+A primitive recursive definition was used to specify
+the iteration of \mbox{$1$-bit} \mbox{full-adders}.
+This defines a predicate, \verb"ADDn", which expresses constraints
+on the outputs of the \mbox{$n$-bit} adder in terms of its inputs.
+These inputs and outputs consist of single wires,
+represented by Boolean variables, as well as \mbox{$n$-bit} busses.
+An \mbox{$n$-bit} bus is represented by a function mapping bit positions to
+Boolean values.  For example, the binary value 011 is represented
+by the function $f$ where $f(0)$ is \verb"T", $f(1)$ is \verb"T" and
+$f(2)$ is \verb"F".
+
+The correctness of the \mbox{$n$-bit} adder is also expressed in terms of
+an arithmetic equation.  In this case, the \mbox{$n$-bit} input and output
+busses are interpreted as the unsigned binary representation of a
+number. Primitive recursion is used to define
+the function \verb"Valn" which returns the
+value of the first $n$ bits of a bus.
+
+$\vdash_{def}$\verb" Valn n b "$=$\verb" ((n "$=$\verb" 0) "$\Rightarrow$\verb" 0 | ((2"$^{\verb"n-1"}$\verb" "$\times$\verb" (Val (b (n-1)))) "$+$\verb" (Valn (n-1) b)))"
+
+The correctness of the
+\mbox{$n$-bit} adder is expressed in terms of the following equation.
+
+\verb"((Valn n a) "$+$\verb" (Valn n b) "$+$\verb" (Val cin)) "$=$\verb" ((2"$^{\verb"n"}$\verb" "$\times$\verb" (Val cout)) "$+$\verb" (Valn n sum))"
+
+This equation is derived from the structural specification
+of the \mbox{$n$-bit} adder by mathematical induction on $n$.
+Using the inductive proof strategy, it is sufficient to show
+that the equation holds for the basis step, when $n$ is zero,
+and for the inductive step,
+$n$$+$\verb"1", given the inductive hypothesis that the equation
+holds for $n$.
+
+\vskip \baselineskip
+{\large\bf 6.2.3.1  Basis Step}
+
+The basis step is a matter of proving that the assertion,
+
+\begin{minipage}{17.5cm}
+\verb"ADDn 0 (a,b,cin,cout,sum) "$\Longrightarrow$\\*
+\verb"(((Valn 0 a) "$+$\verb" (Valn 0 b) "$+$\verb" (Val cin)) "$=$\verb" ((2"$^{\verb"0"}$\verb" "$\times$\verb" (Val cout)) "$+$\verb" (Valn 0 sum)))"
+\end{minipage}
+
+is a theorem.
+Our strategy for achieving this goal
+is to show that it is logically equivalent
+to another theorem which has a trivial proof.
+Firstly, the definition of \verb"ADDn"
+implies that a $0$-bit adder is simply a wire connecting carry-in to
+carry-out.
+This fact is expressed by the lemma,
+
+$\vdash_{thm}$\verb" ADDn 0 (a,b,cin,cout,sum) "$=$\verb" (cout "$=$\verb" cin)"
+
+which is used to simplify the antecedent of the above assertion.
+Secondly,
+the definition of \verb"Valn" shows that the value of a $0$-bit
+bus is zero.
+Hence, the terms
+\mbox{\verb"(Valn 0 a)"},
+\mbox{\verb"(Valn 0 b)"} and \mbox{\verb"(Valn 0 sum)"}
+can be replaced by \verb"0".
+After these replacements, we have:
+
+\hspace*{\fill}
+\verb"(cout "$=$\verb" cin) "$\Longrightarrow$\verb" ((0 "$+$\verb" 0 "$+$\verb" (Val cin)) "$=$\verb" ((2"$^{\verb"0"}$\verb" "$\times$\verb" (Val cout)) "$+$\verb" 0))"
+\hspace*{\fill}
+
+This new assertion is logically
+equivalent to the original assertion because each step
+in this simplification sequence involves the substitution of one term by a
+logically equivalent term.
+Therefore,
+it is sufficient to prove that this new assertion is a theorem.
+Using natural deduction techniques,
+it is easy to prove that this assertion is a theorem
+by assuming the antecedent and proving the consequent.
+The antecedent is used to replace the single instance of \verb"cout" in
+the consequent by the term \verb"cin".
+Arithmetic laws about exponentiation, multiplication and addition
+are then used to further simplify the consequent.
+The result is
+an equation of the form \verb"t "$=$\verb" t" which is
+a theorem (by the rule of reflexivity).
+This completes the basis step of the inductive proof.
+
+Admittedly, a correctness proof for
+a \mbox{$0$-bit} adder has little significance on its own;
+hence, the above proof sketch
+may seem `out of touch' with real problems in VLSI CAD design.
+However, as the basis step in a mathematical induction,
+this result leads to a correctness proof for \mbox{ripple-carry}
+adders of all sizes.
+
+\vskip \baselineskip
+{\large\bf 6.2.3.2  Inductive Step}
+
+As the following lemma suggests,
+
+\begin{minipage}{17cm}
+$\vdash_{thm}$\verb" ADDn (n+1) (a,b,cin,cout,sum) "$=$\\*
+\phantom{$\vdash_{thm}$\verb" AD"}$\exists$\verb"c."\\*
+\phantom{$\vdash_{thm}$\verb" AD"$\exists$\verb"c"}\verb"ADDn n (a,b,cin,c,sum) "$\wedge$\\*
+\phantom{$\vdash_{thm}$\verb" AD"$\exists$\verb"c"}\verb"FULLADDER (a n,b n,c,cout,sum n)"
+\end{minipage}
+
+the inductive step corresponds to the implementation of an
+\mbox{$n$$+$\verb"1"-bit}
+adder from an \mbox{$n$-bit} adder and a \mbox{$1$-bit} \mbox{full-adder}.
+This lemma also shows that
+the carry-out from the \mbox{$n$-bit} adder is connected to the carry-in
+of the \mbox{$1$-bit} \mbox{full-adder} by an internal wire \verb"c".
+
+The strategy for proving the inductive step centers upon
+two essential items of information:
+the inductive hypothesis which describes an arithmetic
+relationship between inputs and outputs of the \mbox{$n$-bit} adder,
+
+\hspace*{\fill}
+\verb"((Valn n a) "$+$\verb" (Valn n b) "$+$\verb" (Val cin)) "$=$\verb" ((2"$^{\verb"n"}$\verb" "$\times$\verb" (Val c)) "$+$\verb" (Valn n sum))"
+\hspace*{\fill}
+
+and the correctness theorem for the \mbox{$1$-bit} \mbox{full-adder}
+which describes an arithmetic relationship between
+the inputs and outputs of the \mbox{$1$-bit} \mbox{full-adder},
+
+\verb"((Val (a n)) "$+$\verb" (Val (b n)) "$+$\verb" (Val c)) "$=$\verb" ((2 "$\times$\verb" (Val cout)) "$+$\verb" (Val (sum n)))"
+
+These two equations are used to establish the inductive
+step of the proof.
+Because the \mbox{$1$-bit} \mbox{full-adder} is used at the $n$th bit position,
+both sides of the arithmetic equation relating inputs of the full-adder
+to its outputs are multiplied by \mbox{\verb"2"$^{\verb"n"}$}.
+The result,
+
+\hspace*{\fill}
+\begin{minipage}{11cm}
+\verb"(2"$^{\verb"n"}$\verb" "$\times$\verb" ((Val (a n)) "$+$\verb" (Val (b n)) "$+$\verb" (Val c))) ="\\*
+\verb"(2"$^{\verb"n"}$\verb" "$\times$\verb" ((2 "$\times$\verb" (Val cout)) "$+$\verb" (Val (sum n))))"
+\end{minipage}
+\hspace*{\fill}
+
+is combined with the first equation using the arithmetic law,
+
+$\vdash_{thm}$\verb" "$\forall$\verb" n m p q. (n "$=$\verb" m) "$\wedge$\verb" (p "$=$\verb" q) "$\Longrightarrow$\verb" ((n "$+$\verb" p) "$=$\verb" (m "$+$\verb" q))"
+
+to yield,
+
+\hspace*{\fill}
+\begin{minipage}{10.5cm}
+\verb"((2"$^{\verb"n"}$\verb" "$\times$\verb" ((Val(a n)) "$+$\verb" (Val(b n)) "$+$\verb" (Val c))) $+$"\\*
+\phantom{\verb"("}\verb"((Valn n a) "$+$\verb" (Valn n b) "$+$\verb" (Val cin))) ="\\*
+\verb"((2"$^{\verb"n"}$\verb" "$\times$\verb" ((2 "$\times$\verb" (Val cout)) "$+$\verb" (Val (sum n)))) $+$"\\*
+\phantom{\verb"("}\verb"((2"$^{\verb"n"}$\verb" "$\times$\verb" (Val c)) "$+$\verb" (Valn n sum)))"
+\end{minipage}
+\hspace*{\fill}
+
+The inductive step of the proof is completed by
+using various arithmetic laws
+to simplify and re-arrange terms of the above equation.
+The term \mbox{\verb"(2"$^{\verb"n"}$\verb" "$\times$\verb" (Val c))"}
+is then subtracted from both sides of the equation.
+Finally, the equation is simplified with the lemma,
+
+$\vdash_{thm}$\verb" "$\forall$\verb"b. ((2"$^{\verb"n"}$\verb" "$\times$\verb" (Val (b n))) "$+$\verb" (Valn n b)) "$=$\verb" Valn (n+1) b"
+
+which can be derived from the definition of \verb"Valn".
+The result,
+
+\hspace*{\fill}
+\begin{minipage}{11cm}
+\verb"((Valn (n+1) a) "$+$\verb" (Valn (n+1) b) "$+$\verb" (Val cin)) ="\\*
+\verb"((2"$^{\verb"n+1"}$\verb" "$\times$\verb" (Val cout)) "$+$\verb" (Valn (n+1) sum))"
+\end{minipage}
+\hspace*{\fill}
+
+shows that the arithmetic relationship between
+inputs and outputs holds for the
+$n$$+$\verb"1"-bit adder establishing the inductive step
+of the correctness proof.
+
+Having achieved both the basis and the inductive steps,
+the rule of mathematical induction allows us to conclude that the
+equation relating outputs to inputs of an \mbox{$n$-bit} adder holds
+for all $n$.
+
+\begin{minipage}{17cm}
+$\vdash_{thm}$\verb" "$\forall$\verb" n a b cin cout sum."\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb"n"}\verb"ADDn n (a,b,cin,cout,sum) "$\Longrightarrow$\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb"n"}\verb"(((Valn n a) "$+$\verb" (Valn n b) "$+$\verb" (Val cin)) "$=$\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb"n"\verb"("}\verb"((2"$^{\verb"n"}$\verb" "$\times$\verb" (Val cout)) "$+$\verb" (Valn n sum)))"
+\end{minipage}
+
+\vskip \baselineskip
+{\large\bf 6.2.3.3  Alternate Statements of Correctness}
+
+The above correctness theorem can be used to derive
+additional theorems
+which express the behaviour of the \mbox{$n$-bit} adder in slightly
+different ways.
+For example, it is often useful to describe the function
+of an adder in terms of modulo arithmetic ignoring the value
+of the carry-out wire.
+This form of correctness statement is obtained
+by applying the modulus function (for the quotient \mbox{\verb"2"$^{\verb"n"}$})
+to both sides of the equation in the above theorem.
+The lemma,
+
+$\vdash_{thm}$\verb" "$\forall$\verb" n q b. (((2"$^{\verb"n"}$\verb" "$\times$\verb" q) "$+$\verb" (Valn n b)) MOD 2"$^{\verb"n"}$\verb") "$=$\verb" Valn n b"
+
+is then used to simplify the right hand side of the resulting equation.
+This yields the following correctness theorem.
+
+\begin{minipage}{17cm}
+$\vdash_{thm}$\verb" "$\forall$\verb" n a b cin cout sum."\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb"n"}\verb"ADDn n (a,b,cin,cout,sum) "$\Longrightarrow$\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb"n"}\verb"((((Valn n a) "$+$\verb" (Valn n b) "$+$\verb" (Val cin)) MOD 2"$^{\verb"n"}$\verb") "$=$\verb" (Valn n sum))"
+\end{minipage}
+
+This second form of correctness is stated in terms of an equation
+for the value of the output bus when interpreted as an unsigned
+binary number.
+Yet another way to express the behaviour of the \mbox{$n$-bit} adder is
+an equation for the \mbox{$n$-bit} output bus itself instead of its
+interpreted value.
+To express behaviour in this form
+we need both a function which generates the \mbox{$n$-bit} binary representation
+of a number as well as a convention which ensures a unique representation
+for every \mbox{$n$-bit} bus.
+
+The function \verb"BinRep" generates the binary representation
+of a number using the modulus function.
+Since busses are represented by functions from bit positions
+to Boolean values,
+\verb"BinRep" is a higher-order function which returns
+a function (denoted by a $\lambda$-expression).
+
+$\vdash_{def}$\verb" BinRep n "$=$\verb" "$\lambda$\verb"p. "$\neg$\verb"(((n - (n MOD 2"$^{\verb"p"}$\verb")) MOD 2"$^{\verb"p+1"}$\verb") "$=$\verb" 0)"
+
+The function \verb"Wordn" truncates the binary representation of
+number after the $n$th
+bit by forcing all bits at positions greater than $n$ to a fixed
+arbitrary Boolean value denoted by the constant \verb"ARB".
+
+$\vdash_{def}$\verb" Wordn n m "$=$\verb" "$\lambda$\verb"p. p "$<$\verb" n "$\Rightarrow$\verb" (BinRep m p) | ARB"
+
+The convention of forcing all bits at positions greater than $n$ to
+a fixed arbitrary value ensures that every \mbox{$n$-bit} bus has a
+unique representation.
+This convention is also followed in the definition of the predicate
+\verb"BusWidth" which is used to declare the width of an \mbox{$n$-bit} bus.
+
+$\vdash_{def}$\verb" BusWidth n b "$=$\verb" "$\forall$\verb"p. n "$\leq$\verb" p "$\Longrightarrow$\verb" (b p "$=$\verb" ARB)"
+
+These definitions result in several useful lemmas:
+
+$\vdash_{thm}$\verb" "$\forall$\verb"n m. Wordn n (m MOD 2"$^{\verb"n"}$\verb") "$=$\verb" Wordn n m"
+
+$\vdash_{thm}$\verb" "$\forall$\verb"n b. BusWidth n b "$\Longrightarrow$\verb" (Wordn n (Valn n b) "$=$\verb" b)"
+
+To obtain a statement of correctness in terms of an equation for
+the \mbox{$n$-bit} output bus, the function-denoting
+term \verb"(Wordn n)" is applied
+to both sides of the equation in the previous correctness statement.
+The left and right hand sides of the resulting equation are
+then simplified using the above lemmas.
+
+\begin{minipage}{17cm}
+$\vdash_{thm}$\verb" "$\forall$\verb"n a b cin cout sum."\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb"n"}\verb"ADDn n (a,b,cin,cout,sum) "$\wedge$\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb"n"}\verb"BusWidth n sum"\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb"n"}$\Longrightarrow$\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb"n"}\verb"(Wordn n ((Valn n a) "$+$\verb" (Valn n b) "$+$\verb" (Val cin)) "$=$\verb" sum)"
+\end{minipage}
+
+To summarize,
+the structural specification of the \mbox{$n$-bit} adder exploits hierarchy and
+iteration to define a system of simultaneous constraints.
+These constraints result in a complex Boolean relation on the individual
+input and output bits of the \mbox{$n$-bit} adder.
+From this complex low-level relation,
+we can derive a relatively simple arithmetic relationship
+using functions such as \verb"Valn" and \verb"Wordn" to relate
+low-level representations of data to higher algebraic levels.
+This illustrates an important strategy in hardware verification
+where complexity is controlled by relating behaviour to increasingly
+abstract levels.
+
+\vskip \baselineskip
+{\large\bf 6.2.4  A Simple 3-Function ALU}
+
+The \mbox{$n$-bit} adder can be combined with other \mbox{$n$-bit} structures to
+implement a very simple \mbox{3-function} ALU (Arithmetic Logic Unit).
+Figure 6.2.4.1 shows the top-level structure of the ALU consisting of an
+\mbox{$n$-bit} parallel inverter, a hard-wired constant,
+an \mbox{$n$-bit} adder and multiplexing logic controlled by
+a 2-bit function code \verb"(f0,f1)".
+The signal \verb"f0" also serves as
+the carry-in value for the \mbox{$n$-bit} adder.
+For example, when \verb"f0" and \verb"f1" are both low
+the multiplexing logic selects $a$ and $b$ as inputs to the
+adder to compute the \mbox{$n$-bit} sum of these two signal values.
+To increment input $b$, the
+\mbox{hard-wired} constant \verb"1" is selected as the other input
+to the adder and the carry-in is set low.
+The difference $a-b$ in two's complement arithmetic is obtained by
+routing input $b$ through the parallel inverter into the adder with
+the carry-in set high.
+
+\setlength{\unitlength}{1mm}
+\begin{center}
+\begin{picture}(167,55)(-3,0)
+  {\thicklines {\put(10,5){\framebox(20,40){}}}}
+  {\thicklines {\put(40,5){\framebox(20,40){}}}}
+  {\thicklines {\put(70,5){\framebox(20,40){}}}}
+  {\thicklines {\put(100,5){\framebox(20,40){}}}}
+  {\thicklines {\put(130,5){\framebox(20,40){}}}}
+  \put(20,25){\makebox(0,0)[c]{\large {\verb"INVn"}}}
+  \put(50,25){\makebox(0,0)[c]{\large {\verb"MUXn"}}}
+  \put(80,25){\makebox(0,0)[c]{\large {\verb"ONEn"}}}
+  \put(110,25){\makebox(0,0)[c]{\large {\verb"MUXn"}}}
+  \put(140,25){\makebox(0,0)[c]{\large {\verb"ADDn"}}}
+  \put(0,50){\makebox(0,0)[r]{ {\verb"b"}}}
+  \put(1,50){\line(1,0){34}}
+  \put(5,50){\line(0,-1){25}}
+  \put(5,25){\vector(1,0){5}}
+  \put(35,50){\line(0,-1){15}}
+  \put(35,35){\vector(1,0){5}}
+  \put(30,15){\vector(1,0){10}}
+  \put(50,52){\makebox(0,0)[b]{ {\verb"f0"}}}
+  \put(50,51){\vector(0,-1){6}}
+  \put(60,25){\line(1,0){5}}
+  \put(65,25){\line(0,-1){25}}
+  \put(65,0){\line(1,0){60}}
+  \put(125,0){\line(0,1){15}}
+  \put(125,15){\vector(1,0){5}}
+  \put(90,50){\makebox(0,0)[r]{ {\verb"a"}}}
+  \put(91,50){\line(1,0){4}}
+  \put(95,50){\line(0,-1){15}}
+  \put(95,35){\vector(1,0){5}}
+  \put(90,15){\vector(1,0){10}}
+  \put(120,35){\vector(1,0){10}}
+  \put(110,52){\makebox(0,0)[b]{ {\verb"f1"}}}
+  \put(110,51){\vector(0,-1){6}}
+  \put(140,52){\makebox(0,0)[b]{ {\verb"f0"}}}
+  \put(140,51){\vector(0,-1){6}}
+  \put(150,25){\vector(1,0){5}}
+  \put(156,25){\makebox(0,0)[l]{ {\verb"out"}}}
+\end{picture}
+
+Figure 6.2.4.1: Top-Level Structure of the 3-Function ALU.
+\end{center}
+
+This top-level structure is formally specified below.
+In addition to specifying the \mbox{$n$-bit} components of the ALU,
+the widths
+of internal busses are specified using the predicate \verb"BusWidth".
+The carry-out signal
+is also hidden internally by existential quantification and does
+not appear in Figure 6.2.4.1.
+
+\begin{minipage}{17cm}
+$\vdash_{def}$\verb" ALUn n (f0,f1,a,b,out) "$=$\\*
+\phantom{$\vdash_{def}$\verb"  AL"}$\exists$\verb" b1 b2 b3 b4 cout."\\*
+\phantom{$\vdash_{def}$\verb"  AL"$\exists$\verb" "}\verb"INVn n (b,b1) "$\wedge$\\*
+\phantom{$\vdash_{def}$\verb"  AL"$\exists$\verb" "}\verb"MUXn n (f0,b,b1,b2) "$\wedge$\\*
+\phantom{$\vdash_{def}$\verb"  AL"$\exists$\verb" "}\verb"ONEn n b3 "$\wedge$\\*
+\phantom{$\vdash_{def}$\verb"  AL"$\exists$\verb" "}\verb"MUXn n (f1,a,b3,b4) "$\wedge$\\*
+\phantom{$\vdash_{def}$\verb"  AL"$\exists$\verb" "}\verb"ADDn n (b2,b4,f0,out,cout) "$\wedge$\\*
+\phantom{$\vdash_{def}$\verb"  AL"$\exists$\verb" "}\verb"BusWidth n b1 "$\wedge$\\*
+\phantom{$\vdash_{def}$\verb"  AL"$\exists$\verb" "}\verb"BusWidth n b2 "$\wedge$\\*
+\phantom{$\vdash_{def}$\verb"  AL"$\exists$\verb" "}\verb"BusWidth n b3 "$\wedge$\\*
+\phantom{$\vdash_{def}$\verb"  AL"$\exists$\verb" "}\verb"BusWidth n b4"
+\end{minipage}
+
+Theorems expressing correctness results
+for the \mbox{$n$-bit} parallel inverter,
+multiplexing logic and hard-wired constant are shown below.
+The function \verb"Notn" is also defined to describe the result of
+applying logical negation to each bit in an \mbox{$n$-bit} bus.
+Formal specifications of suitable implementations for these components
+are left as an exercise for the reader.
+
+$\vdash_{def}$\verb" Notn n b "$=$\verb" "$\lambda$\verb"p. p "$<$\verb" n "$\Longrightarrow$\verb" "$\neg$\verb"(b p) | ARB"
+
+$\vdash_{thm}$\verb" "$\forall$\verb" n in out. INVn n (in,out) "$\wedge$\verb" BusWidth n out "$\Longrightarrow$\verb" (out "$=$\verb" Notn n in)"
+
+$\vdash_{thm}$\verb" "$\forall$\verb" n out. ONEn n out "$\wedge$\verb" BusWidth n out "$\Longrightarrow$\verb" (out "$=$\verb" Wordn n 1)"
+
+\begin{minipage}{17cm}
+$\vdash_{thm}$\verb" "$\forall$\verb" n cntl a b out."\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb"n"}\verb"MUXn n (cntl,a,b,out) "$\wedge$\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb"n"}\verb"BusWidth n a "$\wedge$\verb" BusWidth n b "$\wedge$\verb" Buswidth n out"\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb"n"}$\Longrightarrow$\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb"n"}\verb"(out "$=$\verb" (cntl "$\Rightarrow$\verb" b | a))"
+\end{minipage}
+
+These correctness results, along with the correctness theorem for
+the \mbox{$n$-bit} adder can be used to prove a correctness statement
+for the ALU.
+The \mbox{$n$-bit} operations implemented by the ALU are expressed
+in terms of arithmetic functions using the functions
+\verb"Valn" and \verb"Wordn" to translate between natural numbers and
+their binary representations.
+Because subtraction in two's complement arithmetic differs
+from subtraction on the natural numbers,
+we cannot simply use ``$-$'' to specify this operation.
+Instead, we define a function \verb"Negn"
+which returns the negative value of an \mbox{$n$-bit} word
+in two's complement representation.  The subtraction operation
+is then defined in terms of addition and \verb"Negn".
+
+$\vdash_{def}$\verb" Incn n b "$=$\verb" Wordn n ((Valn n b) "$+$\verb" 1)"
+
+$\vdash_{def}$\verb" Addn n (b1,b2) "$=$\verb" Wordn n ((Valn n b1) "$+$\verb" (Valn n b2))"
+
+$\vdash_{def}$\verb" Negn n b "$=$\verb" Wordn n ((Valn n (Notn n b)) "$+$\verb" 1)"
+
+$\vdash_{def}$\verb" Subn n (b1,b2) "$=$\verb" Wordn n ((Valn n b1) "$+$\verb" (Valn n (Negn n b2)))"
+
+The correctness of the
+ALU is expressed by the following theorem
+in terms of these \mbox{$n$-bit} operations.
+The ALU is only designed to implemented three functions, namely,
+incrementation, addition and subtraction.
+The remaining unused function code \verb"(T,T)" results in the computation
+of an unspecified value denoted by the existentially quantified variable
+\verb"x".
+
+\begin{minipage}{17cm}
+$\vdash_{thm}$\verb" "$\forall$\verb" n f0 f1 a b out."\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb" "}\verb"ALUn n (f0,f1,a,b,out) "$\wedge$\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb" "}\verb"BusWidth n a "$\wedge$\verb" BusWidth n b "$\wedge$\verb" Buswidth n out"\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb" "}$\Longrightarrow$\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb" "}$\exists$\verb"x."\\
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb" "$\exists$\verb"x"}\verb"out "$=$\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb" "$\exists$\verb"x"\verb"ou"}\verb"(((f0,f1) "$=$\verb" (F,T)) "$\Rightarrow$\verb" Incn n b |"\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb" "$\exists$\verb"x"\verb"ou"\verb"("}\verb"((f0,f1) "$=$\verb" (F,F)) "$\Rightarrow$\verb" Addn n (a,b) |"\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb" "$\exists$\verb"x"\verb"ou"\verb"("}\verb"((f0,f1) "$=$\verb" (T,F)) "$\Rightarrow$\verb" Subn n (a,b) | x)"
+\end{minipage}
+
+The strategy used to prove this theorem considers each of the three valid
+function codes.  In each case, the function code determines
+how inputs are propagated through the internal logic of the ALU
+to the output bus.
+To illustrate this strategy, we consider the case of subtraction
+which has the function code \verb"(T,F)".
+In this case, it is necessary to prove that the equation,
+
+\hspace*{\fill}
+\verb"out "$=$\verb" Subn n (a,b)"
+\hspace*{\fill}
+
+is a consequence of the ALU specification for the function code \verb"(T,F)".
+We will achieve this goal by showing that this equation is logically
+equivalent to another equation which follows directly from the ALU
+specification for this function code.
+
+Expanding with the definitions of \verb"Subn" and \verb"Negn",
+the new goal is:
+
+\hspace*{\fill}
+\verb"out "$=$\verb" Wordn n ((Valn n a) "$+$\verb" (Valn n (Wordn n ((Valn n (Notn n b)) "$+$\verb" 1))))"
+\hspace*{\fill}
+
+In the above equation, the value one is added to inverted bits of \verb"b"
+to form the two's complement negation of \verb"b".
+This contrasts with the implementation of subtraction in the ALU
+where the value one is added to the sum of the \mbox{$n$-bit} adder
+inputs by setting the carry-in of the
+\mbox{$n$-bit} adder high.
+Our proof strategy is to transform the above goal into an
+equation which more closely reflects how subtraction is
+actually implemented in the ALU.
+This new goal will follow directly from the structural specification
+of the ALU and correctness results for the ALU components.
+
+We first use the lemma,
+
+\begin{minipage}{17cm}
+$\vdash_{thm}$\verb" "$\forall$\verb" n p q."\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb"n"}\verb"(Valn n (Wordn n (p "$+$\verb" q))) "$=$\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb"n"}\verb"(((Valn n (Wordn n p)) "$+$\verb" (Valn n (Wordn n q))) MOD 2"$^{\verb"n"}$\verb")"
+\end{minipage}
+
+to expand the above equation for \verb"out" into,
+
+\begin{minipage}{17.5cm}
+\verb"out "$=$\\*
+\phantom{\verb"ou"}\verb"Wordn n ("\\*
+\phantom{\verb"ou"\verb"Wo"}\verb"(Valn n a) "$+$\\*
+\phantom{\verb"ou"\verb"Wo"}\verb"(((Valn n (Wordn n (Valn n (Notn n b)))) "$+$\verb" (Valn n (Wordn n 1))) MOD 2"$^{\verb"n"}$\verb"))"
+\end{minipage}
+
+and then simplify with the lemmas,
+
+$\vdash_{thm}$\verb" "$\forall$\verb" n b. Wordn n (Valn n (Notn n b)) "$=$\verb" Notn n b"
+
+$\vdash_{thm}$\verb" "$\forall$\verb" n p q. Wordn n (p "$+$\verb" (q MOD 2"$^{\verb"n"}$\verb")) "$=$\verb" Wordn n (p "$+$\verb" q)"
+
+to obtain the new goal:
+
+\hspace*{\fill}
+\verb"out "$=$\verb" Wordn n ((Valn n a) "$+$\verb" (Valn n (Notn n b)) "$+$\verb" (Valn n (Wordn n 1)))"
+\hspace*{\fill}
+
+The special case where \verb"n" is zero can be reduced to an equation
+of the form \mbox{\verb"t "$=$\verb" t"} since all $0$-bit busses are
+represented by a unique function.
+Otherwise, we can assume that \verb"n" is greater than zero in which
+case the term \verb"(Valn n (Wordn n 1))" simplifies to the value one.
+
+\hspace*{\fill}
+\verb"out "$=$\verb" Wordn n ((Valn n a) "$+$\verb" (Valn n (Notn n b)) "$+$\verb" 1)"
+\hspace*{\fill}
+
+The above goal follows directly from the structural specification
+of the ALU and correctness results for the ALU components.
+To show this, we first derive equations for the
+internal busses and output bus of the ALU.
+These equations have already been simplified for
+the case where \mbox{\verb"(f0,f1)"} is equal to \mbox{\verb"(T,F)"}.
+
+\begin{minipage}{17cm}
+$\vdash_{thm}$\verb" ALUn n (T,F,a,b,out) "$\wedge$\\*
+\phantom{$\vdash_{thm}$\verb" "}\verb"BusWidth n a "$\wedge$\verb" BusWidth n b "$\wedge$\verb" Buswidth n out"\\*
+\phantom{$\vdash_{thm}$\verb" "}$\Longrightarrow$\\*
+\phantom{$\vdash_{thm}$\verb" "}$\exists$\verb" b1 b2 b3 b4."\\*
+\phantom{$\vdash_{thm}$\verb" "$\exists$\verb" "}\verb"(b1 "$=$\verb" Notn n b) "$\wedge$\\*
+\phantom{$\vdash_{thm}$\verb" "$\exists$\verb" "}\verb"(b2 "$=$\verb" b1) "$\wedge$\\*
+\phantom{$\vdash_{thm}$\verb" "$\exists$\verb" "}\verb"(b3 "$=$\verb" Wordn n 1) "$\wedge$\\*
+\phantom{$\vdash_{thm}$\verb" "$\exists$\verb" "}\verb"(b4 "$=$\verb" a) "$\wedge$\\*
+\phantom{$\vdash_{thm}$\verb" "$\exists$\verb" "}\verb"(out "$=$\verb" Wordn ((Valn n b2) "$+$\verb" (Valn n b4) "$+$\verb" (Val T)))"
+\end{minipage}
+
+Using natural deduction techniques, we can directly manipulate these equations
+to eliminate all occurences of \verb"b1", \verb"b2", \verb"b3" and \verb"b4"
+in the equation for \verb"out" to obtain:
+
+\begin{minipage}{17cm}
+$\vdash_{thm}$\verb" ALUn n (T,F,a,b,out) "$\wedge$\\*
+\phantom{$\vdash_{thm}$\verb" "}\verb"BusWidth n a "$\wedge$\verb" BusWidth n b "$\wedge$\verb" Buswidth n out"\\*
+\phantom{$\vdash_{thm}$\verb" "}$\Longrightarrow$\\*
+\phantom{$\vdash_{thm}$\verb" "}\verb"(out "$=$\verb" Wordn n ((Valn n (Notn n b)) "$+$\verb" (Valn n a) "$+$\verb" (Val T)))"
+\end{minipage}
+
+By the definition of \verb"Val", the term \verb"(Val T)"
+simplifies to the value one.
+Finally, a simple re-ordering of terms results
+in a theorem satisfying the current goal.
+This completes the subtraction case in the ALU correctness proof.
+The remaining two cases for incrementation and addition,
+both simplier cases than subtraction,
+are left as exercises for the reader.
+
+\vskip \baselineskip
+{\large\bf 6.2.5  A Simple 8-Instruction Microprocessor}
+
+Figure 6.2.5.1 shows the
+{\it register-transfer level} architecture of a very simple microprocessor.
+The \mbox{top-level} view of this architecture is separated into a control unit
+and a data path.  The microcoded control unit consists of a ROM
+(Read Only Memory) for storing microcode, a microinstruction decoder
+and the microcode program counter unit which consists of
+a register for the address of the current microinstruction
+and logic for computing the address of the next microinstruction.
+The data path consists of a system bus interconnecting
+registers, memory and various functional elements such as the ALU.
+The data path is controlled by signals from the control unit which,
+in turn, receives feedback from the data path.
+
+\setlength{\unitlength}{1mm}
+\begin{center}
+\begin{picture}(147,175)(0,0)
+
+  {\thicklines {\put(90,165){\framebox(30,10){\large {\verb"MAR"}}}}}
+  {\thicklines {\put(90,155){\framebox(30,5){\verb"address bits"}}}}
+  {\thicklines {\put(90,120){\framebox(30,30){\large {\verb"MEM"}}}}}
+  {\thicklines {\put(90,105){\framebox(30,10){\large {\verb"PC"}}}}}
+  {\thicklines {\put(90,90){\framebox(30,10){\large {\verb"ACC"}}}}}
+  {\thicklines {\put(90,80){\framebox(30,5){\verb"test acc"}}}}
+  {\thicklines {\put(90,65){\framebox(30,10){\large {\verb"IR"}}}}}
+  {\thicklines {\put(90,55){\framebox(30,5){\verb"opcode bits"}}}}
+  {\thicklines {\put(90,40){\framebox(30,10){\large {\verb"ARG"}}}}}
+  {\thicklines {\put(90,25){\framebox(30,10){\large {\verb"ALU"}}}}}
+  {\thicklines {\put(90,10){\framebox(30,10){\large {\verb"BUF"}}}}}
+
+  \put(63,170){\vector(1,0){27}}
+  \put(65,137){\vector(1,0){25}}
+  \put(67,133){\vector(1,0){23}}
+  \put(69,112){\vector(1,0){21}}
+  \put(71,108){\vector(1,0){19}}
+  \put(73,97){\vector(1,0){17}}
+  \put(75,93){\vector(1,0){15}}
+  \put(73,72){\vector(1,0){17}}
+  \put(71,68){\vector(1,0){19}}
+  \put(69,45){\vector(1,0){21}}
+  \put(67,32){\vector(1,0){23}}
+  \put(65,28){\vector(1,0){25}}
+  \put(63,15){\vector(1,0){27}}
+
+  \put(63,170){\line(0,-1){65}}
+  \put(65,137){\line(0,-1){34}}
+  \put(67,133){\line(0,-1){32}}
+  \put(69,112){\line(0,-1){13}}
+  \put(71,108){\line(0,-1){11}}
+  \put(73,97){\line(0,-1){2}}
+  \put(73,72){\line(0,1){19}}
+  \put(71,68){\line(0,1){21}}
+  \put(69,45){\line(0,1){42}}
+  \put(67,32){\line(0,1){53}}
+  \put(65,28){\line(0,1){55}}
+  \put(63,15){\line(0,1){66}}
+
+  \put(57,105){\line(1,0){6}}
+  \put(57,103){\line(1,0){8}}
+  \put(57,101){\line(1,0){10}}
+  \put(57,99){\line(1,0){12}}
+  \put(57,97){\line(1,0){14}}
+  \put(57,95){\line(1,0){16}}
+  \put(57,93){\line(1,0){18}}
+  \put(57,91){\line(1,0){16}}
+  \put(57,89){\line(1,0){14}}
+  \put(57,87){\line(1,0){12}}
+  \put(57,85){\line(1,0){10}}
+  \put(57,83){\line(1,0){8}}
+  \put(57,81){\line(1,0){6}}
+
+  \put(105,165){\vector(0,-1){5}}
+  \put(105,155){\vector(0,-1){5}}
+  \put(105,90){\vector(0,-1){5}}
+  \put(105,65){\vector(0,-1){5}}
+  \put(105,40){\vector(0,-1){5}}
+  \put(105,25){\vector(0,-1){5}}
+  \put(135,10){\vector(0,1){165}}
+  \put(135,175){\vector(0,-1){165}}
+  \put(135,170){\vector(-1,0){15}}
+  \put(135,135){\vector(-1,0){15}}
+  \put(135,110){\vector(-1,0){15}}
+  \put(135,95){\vector(-1,0){15}}
+  \put(135,70){\vector(-1,0){15}}
+  \put(135,45){\vector(-1,0){15}}
+  \put(135,30){\vector(-1,0){15}}
+  \put(120,135){\vector(1,0){15}}
+  \put(120,110){\vector(1,0){15}}
+  \put(120,95){\vector(1,0){15}}
+  \put(120,70){\vector(1,0){15}}
+  \put(120,15){\vector(1,0){15}}
+
+  \put(76,172){\makebox(0,0)[l]{\small{\verb"wmar"}}}
+  \put(76,139){\makebox(0,0)[l]{\small{\verb"wmem"}}}
+  \put(76,131){\makebox(0,0)[l]{\small{\verb"rmem"}}}
+  \put(76,114){\makebox(0,0)[l]{\small{\verb"wpc"}}}
+  \put(76,106){\makebox(0,0)[l]{\small{\verb"rpc"}}}
+  \put(76,99){\makebox(0,0)[l]{\small{\verb"wacc"}}}
+  \put(76,91){\makebox(0,0)[l]{\small{\verb"racc"}}}
+  \put(76,74){\makebox(0,0)[l]{\small{\verb"wir"}}}
+  \put(76,66){\makebox(0,0)[l]{\small{\verb"rir"}}}
+  \put(76,47){\makebox(0,0)[l]{\small{\verb"warg"}}}
+  \put(76,34){\makebox(0,0)[l]{\small{\verb"alu0"}}}
+  \put(76,26){\makebox(0,0)[l]{\small{\verb"alu1"}}}
+  \put(76,17){\makebox(0,0)[l]{\small{\verb"rbuf"}}}
+
+  {\thicklines {\put(0,78){\framebox(30,30){\large {\verb"ROM"}}}}}
+  {\thicklines {\put(35,78){\framebox(22,30){\large {\verb"Decoder"}}}}}
+  {\thicklines {\put(0,43){\framebox(30,30){\large {\verb"MpcUnit"}}}}}
+  \put(15,73){\vector(0,1){5}}
+  \put(30,93){\vector(1,0){5}}
+
+  \put(120,82.5){\line(1,0){27}}
+  \put(120,57.5){\line(1,0){25}}
+  \put(147,82.5){\line(0,-1){82.5}}
+  \put(145,57.5){\line(0,-1){55.5}}
+  \put(147,0){\line(-1,0){140}}
+  \put(145,2){\line(-1,0){134}}
+  \put(7,0){\vector(0,1){43}}
+  \put(11,2){\vector(0,1){41}}
+
+  \put(54,78){\line(0,-1){44}}
+  \put(52,78){\line(0,-1){42}}
+  \put(50,78){\line(0,-1){40}}
+  \put(54,34){\line(-1,0){39}}
+  \put(52,36){\line(-1,0){33}}
+  \put(50,38){\line(-1,0){27}}
+  \put(15,34){\vector(0,1){9}}
+  \put(19,36){\vector(0,1){7}}
+  \put(23,38){\vector(0,1){5}}
+
+\end{picture}
+
+Figure 6.2.5.1: Register-Transfer Level Architecture.
+\end{center}
+
+The {\it programming level model},
+also called the {\it external architecture},
+of this microprocessor hides most of these implementation details.
+In the programming level model,
+the externally visible state of the microprocessor consists
+of the memory MEM, program counter PC and accumulator ACC.
+The operation of the microprocessor is defined by the semantics
+of the instruction set described informally by Table 6.2.5.1.
+This simple instruction set precludes the possibility of illegal operations
+and events such as arithmetic overflow or interrupts
+cannot be detected.
+
+\begin{center}
+\begin{tabular}{||lll||} \hline
+  000---address---& JZR& jump if ACC $=$ 0\\
+  001---address---& JMP& jump\\
+  010---address---& ADD& add contents to ACC\\
+  011---address---& SUB& subtract contents from ACC\\
+  100---address---& LD& load ACC\\
+  101---address---& ST& store ACC\\
+  110---address---& NOP& jump to next instruction\\
+  111---address---& NOP& jump to next instruction\\ \hline
+\end{tabular}
+
+Table 6.2.5.1: Processor Instruction Set.
+\end{center}
+
+The word size of the microprocessor is not fixed at a specific value;
+instead it is given by a parameter $n$ which specifies the width of
+the address field in an instruction.
+For instance, $n$ could be thirteen resulting in a word size of sixteen
+since three additional bits are needed for the instruction opcode.
+
+\vskip \baselineskip
+{\large\bf 6.2.5.1  Implementation Specification}
+
+This simple microprocessor has been designed to illustrate
+the use of higher-order logic to reason
+about hardware at a larger scale than
+the two preceding examples.
+We shift our focus away from the details of implementing
+\mbox{$n$-bit} wide structures towards a model which is more suited
+to reasoning about sequences of data transfers in
+a microprocessor under the control of microcode.
+In this model, wires and busses are modelled as time-dependent
+signals; in particular, as functions of discrete time.
+Wires are represented by functions mapping discrete time to Boolean values
+and \mbox{$n$-bit} busses are represented by functions mapping discrete
+time to numbers.
+
+A possible problem with using numbers to represent sampled values
+of \mbox{$n$-bit} busses is that \mbox{$n$-bit} wide structures only provide
+finite representations of numbers.
+The register-transfer models presented here
+are carefully designed to limit the range of bus values
+within the set of values that could actually be represented
+in an \mbox{$n$-bit} wide structure.
+This is achieved by defining operations on bus values in terms
+of modulo arithmetic.
+
+We begin by defining a behavioural model of the 3-function
+ALU similar to the behavioural specification previously derived
+from an implementation of this component.
+The main difference from before
+is that the inputs and output of the
+ALU in this new model are time-dependent signals (although
+delay is not modelled in the ALU itself) and that the ALU
+operates on numbers instead of \mbox{$n$-bit} values.
+To accommodate this latter difference,
+the functions \verb"Incn", \verb"Addn" and \verb"Subn" are
+re-defined here as operations on numbers.
+
+$\vdash_{def}$\verb" Incn n a "$=$\verb" ((a "$+$\verb" 1) MOD 2"$^{\verb"n"}$\verb")"
+
+$\vdash_{def}$\verb" Addn n (a,b) "$=$\verb" ((a "$+$\verb" b) MOD 2"$^{\verb"n"}$\verb")"
+
+$\vdash_{def}$\verb" Subn n (a,b) "$=$\verb" ((a "$-$\verb" b) MOD 2"$^{\verb"n"}$\verb")"
+
+\hspace*{\fill}
+\begin{minipage}{17cm}
+$\vdash_{def}$\verb" ALUn n (f0,f1,a,b,out) ="\\*
+\phantom{$\vdash_{def}$\verb" AL"}$\forall$\verb"t. "$\exists$\verb"x."\\*
+\phantom{$\vdash_{def}$\verb" AL"$\forall$\verb"t"}\verb"out t ="\\*
+\phantom{$\vdash_{def}$\verb" AL"$\forall$\verb"t"\verb"ou"}\verb"(((f0 t,f1 t) "$=$\verb" (F,T)) "$\Rightarrow$\verb" Incn n (b t) |"\\*
+\phantom{$\vdash_{def}$\verb" AL"$\forall$\verb"t"\verb"ou"\verb"("}\verb"((f0 t,f1 t) "$=$\verb" (F,F)) "$\Rightarrow$\verb" Addn n (a t,b t) |"\\*
+\phantom{$\vdash_{def}$\verb" AL"$\forall$\verb"t"\verb"ou"\verb"("}\verb"((f0 t,f1 t) "$=$\verb" (T,F)) "$\Rightarrow$\verb" Subn n (a t,b t) | x)"
+\end{minipage}
+\hspace*{\fill}
+
+We continue with behavioural specifications for voltage sources
+and simple logic gates.
+
+$\vdash_{def}$\verb" PWR out "$=$\verb" "$\forall$\verb"t. out t "$=$\verb" T"
+
+$\vdash_{def}$\verb" GND out "$=$\verb" "$\forall$\verb"t. out t "$=$\verb" F"
+
+$\vdash_{def}$\verb" AND (a,b,out) "$=$\verb" "$\forall$\verb"t. out t "$=$\verb" (a t "$\wedge$\verb" b t)"
+
+$\vdash_{def}$\verb" OR (a,b,out) "$=$\verb" "$\forall$\verb"t. out t "$=$\verb" (a t "$\vee$\verb" b t)"
+
+The definition of \verb"Bits" uses \verb"MOD" in combination
+with natural number division, \verb"DIV", to describe the result
+of extracting a \mbox{sub-field}
+of \verb"m" bits beginning at bit position \verb"n" in a word:
+the modulus function masks out all but the \verb"m" rightmost bits after
+`shifting' right \verb"n" bit positions
+using division by \mbox{\verb"2"$^{\verb"n"}$}.
+The predicate \verb"BITS" uses the function \verb"Bits" to
+specify a behavioural model of wiring which connects
+its output to a sub-field of its input.
+
+$\vdash_{def}$\verb" Bits (n,m) a "$=$\verb" ((a DIV 2"$^{\verb"n"}$\verb") MOD 2"$^{\verb"m"}$\verb")"
+
+$\vdash_{def}$\verb" BITS (n,m) (in,out) "$=$\verb" "$\forall$\verb"t. out t "$=$\verb" Bits (n,m) (in t)"
+
+\verb"NORn" defines a behavioural model for a chain of \verb"n" NOR gates
+which, as the behavioural model suggests, tests whether its input is not
+equal to zero.
+Even though the size \verb"n" is not used in the definition
+of \verb"NORn", it is included as a parameter to maintain a specification
+style consistent with the specification of other register-transfer level
+components.
+
+$\vdash_{def}$\verb" NORn n (in,out) "$=$\verb" "$\forall$\verb"t. out t "$=$\verb" "$\neg$\verb"(in t "$=$\verb" 0)"
+
+Three hard-wired constants are required in the implementation of the
+next address logic in the control unit.
+Instead of three separate predicates,
+we define a single predicate, \verb"HWCn", parameterized by
+the word size \verb"n" and the actual value
+\verb"c" of the hard-wired constant.
+
+$\vdash_{def}$\verb" HWCn n c out "$=$\verb" "$\forall$\verb"t. out t "$=$\verb" (c MOD 2"$^{\verb"n"}$\verb")"
+
+The definitions of both \verb"MUXn" and \verb"ADDn" are similar to
+the behavioural specifications given earlier
+except that they now involve time-dependent signals.
+The behavioural model for the adder also assumes that the carry-in signal
+has been wired low.
+
+$\vdash_{def}$\verb" MUXn n (cntl,a,b,out) "$=$\verb" "$\forall$\verb"t. out t "$=$\verb" (cntl t "$\Rightarrow$\verb" b t | a t)"
+
+$\vdash_{def}$\verb" ADDn n (a,b,out) "$=$\verb" "$\forall$\verb"t. out t "$=$\verb" Addn n (a t,b t)"
+
+All of the above specifications represent functional elements
+in the register-transfer architecture and
+do not model any form of delay.
+The only form of delay modelled at the register-transfer level
+corresponds to the clocking of sequential devices such as
+registers and memory.
+The simplest form of clocked sequential device used in the
+microprocessor is an \mbox{$n$-bit} register, or latch, which
+is updated every clock cycle.
+Here, a clock cycle corresponds to a single unit of time.
+
+$\vdash_{def}$\verb" DELn n (in,out) "$=$\verb" "$\forall$\verb"t. out (t"$+$\verb"1) "$=$\verb" in t"
+
+A more versatile type of
+register is modelled by the predicate \verb"REGn".
+This type of register
+can be selectively loaded and has a tri-state output
+gate for asserting the contents of the register onto a bus.
+
+\hspace*{\fill}
+\begin{minipage}{17cm}
+$\vdash_{def}$\verb" REGn n ((w,r,in,bus,out),(P)) ="\\*
+\phantom{$\vdash_{def}$\verb" RE"}$\forall$\verb"t."\\*
+\phantom{$\vdash_{def}$\verb" RE"$\forall$\verb"t"}\verb"(out (t"$+$\verb"1) "$=$\verb" (w t "$\Rightarrow$\verb" in t | out t)) "$\wedge$\\*
+\phantom{$\vdash_{def}$\verb" RE"$\forall$\verb"t"}\verb"(P t "$\Longrightarrow$\verb" r t "$\Longrightarrow$\verb" (bus t "$=$\verb" out t))"
+\end{minipage}
+\hspace*{\fill}
+
+The above specification of \verb"REGn" is parameterized by
+a predicate \verb"P" which represents an external, time-dependent
+condition on the environment.
+This is intended to reflect the fact that a register can only
+successfully assert its contents onto a bus provided no
+other device is also attempting to assert a value onto
+the bus.
+The predicate \verb"P" does not correspond to any physical wire or
+bus in the microprocessor; rather it represents a {\it virtual}
+time-dependent signal associated with the behaviour of the register.
+To help distinguish between physical and virtual signals,
+the parameter list of \verb"REGn" is divided into two sub-groups,
+\verb"(w,r,in,bus,out)" and \verb"(P)".  This grouping is simply
+meant to improve the readability of these specifications and has
+no logical significance.
+
+The memory for this simple microprocessor is assumed to be
+a synchronous device which completes read and write requests
+in single clock cycles.
+Its formal specification is similar to the register specification
+except that the internal memory state is represented by a function
+from addresses to the values stored at each address.
+The function \verb"Update" is defined to model the effect of
+updating the memory state at a given address.
+
+$\vdash_{def}$\verb" Update (mem,addr,data) "$=$\verb" "$\lambda$\verb"a. (a "$=$\verb" addr) "$\Rightarrow$\verb" data | (mem a)"
+
+\hspace*{\fill}
+\begin{minipage}{17cm}
+$\vdash_{def}$\verb" MEMn n ((w,r,addr,bus),(P,mem)) ="\\*
+\phantom{$\vdash_{def}$\verb" ME"}$\forall$\verb"t."\\*
+\phantom{$\vdash_{def}$\verb" ME"$\forall$\verb"t"}\verb"(mem (t"$+$\verb"1) "$=$\verb" (w t "$\Rightarrow$\verb" Update (mem t,addr t,bus t) | mem t)) "$\wedge$\\*
+\phantom{$\vdash_{def}$\verb" ME"$\forall$\verb"t"}\verb"(P t "$\Longrightarrow$\verb" r t "$\Longrightarrow$\verb" (bus t "$=$\verb" mem t (addr t)))"
+\end{minipage}
+\hspace*{\fill}
+
+As shown above, the output of the memory is controlled by a
+tri-state output gate.
+Like the register model,
+the memory behaviour is parameterized by an external, time-dependent
+condition on the environment.
+In addition to \verb"P", the memory specification is
+parameterized by another virtual signal, \verb"mem", corresponding to the
+internal memory state.
+
+The predicate \verb"CheckCntls" defines the external, time-dependent
+condition on the environment which governs use of the bus in the data path.
+This predicate simply checks that at most one of the `read signal'
+values is true.
+
+\hspace*{\fill}
+\begin{minipage}{17cm}$\vdash_{def}$\verb" CheckCntls (rmem,rpc,racc,rir,rbuf,P) ="\\*
+\phantom{$\vdash_{def}$\verb" Ch"}$\forall$\verb"t."\\*
+\phantom{$\vdash_{def}$\verb" Ch"$\forall$\verb"t"}\verb"P t ="\\*
+\phantom{$\vdash_{def}$\verb" Ch"$\forall$\verb"t"\verb"P "}\verb"((rmem t) "$\Rightarrow$\verb" ("$\neg$\verb"(rpc t "$\vee$\verb" racc t "$\vee$\verb" rir t "$\vee$\verb" rbuf t)) |"\\*
+\phantom{$\vdash_{def}$\verb" Ch"$\forall$\verb"t"\verb"P "\verb"("}\verb"(rpc t) "$\Rightarrow$\verb" ("$\neg$\verb"(racc t "$\vee$\verb" rir t "$\vee$\verb" rbuf t)) |"\\*
+\phantom{$\vdash_{def}$\verb" Ch"$\forall$\verb"t"\verb"P "\verb"("}\verb"(racc t) "$\Rightarrow$\verb" ("$\neg$\verb"(rir t "$\vee$\verb" rbuf t)) |"\\*
+\phantom{$\vdash_{def}$\verb" Ch"$\forall$\verb"t"\verb"P "\verb"("}\verb"(rir t) "$\Rightarrow$\verb" ("$\neg$\verb"(rbuf t)) | T)"
+\end{minipage}
+\hspace*{\fill}
+
+At this point, the implementation of the data path can be formally
+specified in terms of these register-transfer level components and
+the predicate \verb"CheckCntls".
+The list of physical signals consists of control signals and feedback signals.
+The list of virtual signals consists of signals for the contents of
+every register as well as the internal state of memory.
+
+\hspace*{\fill}
+\begin{minipage}{17cm}
+$\vdash_{def}$\verb" DataPath n ("\\*
+\phantom{$\vdash_{def}$\verb" Da"}\verb"(wmar,wmem,rmem,wpc,rpc,wacc,racc,wir,rir,warg,alu0,alu1,rbuf,"\\*
+\phantom{$\vdash_{def}$\verb" Da"\verb"("}\verb"zeroflag,opc),"\\*
+\phantom{$\vdash_{def}$\verb" Da"}\verb"(mar,mem,pc,acc,ir,arg,buf)) ="\\*
+\phantom{$\vdash_{def}$\verb" Da"}$\exists$\verb" P bus addr alu pwr gnd."\\*
+\phantom{$\vdash_{def}$\verb" Da"$\exists$\verb" "}\verb"CheckCntls (rmem,rpc,racc,rir,rbuf,P) "$\wedge$\\*
+\phantom{$\vdash_{def}$\verb" Da"$\exists$\verb" "}\verb"REGn (n+3) ((wmar,gnd,bus,bus,mar),P) "$\wedge$\\*
+\phantom{$\vdash_{def}$\verb" Da"$\exists$\verb" "}\verb"BITS (0,n) (mar,addr) "$\wedge$\\*
+\phantom{$\vdash_{def}$\verb" Da"$\exists$\verb" "}\verb"MEMn (n+3) ((wmem,rmem,addr,bus),(P,mem)) "$\wedge$\\*
+\phantom{$\vdash_{def}$\verb" Da"$\exists$\verb" "}\verb"REGn (n+3) ((wpc,rpc,bus,bus,pc),P) "$\wedge$\\*
+\phantom{$\vdash_{def}$\verb" Da"$\exists$\verb" "}\verb"REGn (n+3) ((wacc,racc,bus,bus,acc),P) "$\wedge$\\*
+\phantom{$\vdash_{def}$\verb" Da"$\exists$\verb" "}\verb"NORn (n+3) (acc,zeroflag) "$\wedge$\\*
+\phantom{$\vdash_{def}$\verb" Da"$\exists$\verb" "}\verb"REGn (n+3) ((wir,rir,bus,bus,ir),P) "$\wedge$\\*
+\phantom{$\vdash_{def}$\verb" Da"$\exists$\verb" "}\verb"BITS (n,3) (ir,opc) "$\wedge$\\*
+\phantom{$\vdash_{def}$\verb" Da"$\exists$\verb" "}\verb"REGn (n+3) ((warg,gnd,bus,bus,arg),P) "$\wedge$\\*
+\phantom{$\vdash_{def}$\verb" Da"$\exists$\verb" "}\verb"ALUn (n+3) (alu0,alu1,arg,bus,alu) "$\wedge$\\*
+\phantom{$\vdash_{def}$\verb" Da"$\exists$\verb" "}\verb"REGn (n+3) ((pwr,rbuf,alu,bus,buf),P) "$\wedge$\\*
+\phantom{$\vdash_{def}$\verb" Da"$\exists$\verb" "}\verb"PWR pwr "$\wedge$\\*
+\phantom{$\vdash_{def}$\verb" Da"$\exists$\verb" "}\verb"GND gnd"
+\end{minipage}
+\hspace*{\fill}
+
+The signals which control the operation of the data path are generated
+by the control unit and determined ultimately by the contents of the
+microcode ROM.
+Every word stored in the 16-word by 19-bit ROM is a microinstruction
+organized into a 13-bit control word, a 2-bit test field and a 4-bit
+address field.
+The 13-bit control word of the current microinstruction generates
+the thirteen control signal values.  The test and
+address fields are used within the control unit to determine the
+address of the next microinstruction.
+
+\begin{center}
+\begin{tabular}{||c|c|c||} \hline
+  13-bit control word& 2-bit test field& 4-bit address field\\ \hline
+\end{tabular}
+\end{center}
+
+The contents of the microcode ROM are specified as a function
+mapping addresses to microinstructions.  Microinstructions
+are represented by $n$-tuples of Boolean values and numbers.
+The function \verb"Microcode" is defined below with the help of
+the functions \verb"Cntls" and \verb"NextMpc".  These auxiliary
+functions allow the microcode specification to be expressed
+in a readable form instead of a pattern of Boolean values and numbers.
+
+\hspace*{\fill}
+\begin{minipage}{17cm}
+$\vdash_{def}$\verb" Cntls (tok1,tok2) ="\\*
+\phantom{$\vdash_{def}$\verb" Cn"}\verb"((tok2 "$=$\verb" `wmar`),"\\*
+\phantom{$\vdash_{def}$\verb" Cn"\verb"("}\verb"(tok2 "$=$\verb" `wmem`),"\\*
+\phantom{$\vdash_{def}$\verb" Cn"\verb"("}\verb"(tok1 "$=$\verb" `rmem`),"\\*
+\phantom{$\vdash_{def}$\verb" Cn"\verb"("}\verb"(tok2 "$=$\verb" `wpc`),"\\*
+\phantom{$\vdash_{def}$\verb" Cn"\verb"("}\verb"(tok1 "$=$\verb" `rpc`),"\\*
+\phantom{$\vdash_{def}$\verb" Cn"\verb"("}\verb"(tok2 "$=$\verb" `wacc`),"\\*
+\phantom{$\vdash_{def}$\verb" Cn"\verb"("}\verb"(tok1 "$=$\verb" `racc`),"\\*
+\phantom{$\vdash_{def}$\verb" Cn"\verb"("}\verb"(tok2 "$=$\verb" `wir`),"\\*
+\phantom{$\vdash_{def}$\verb" Cn"\verb"("}\verb"(tok1 "$=$\verb" `rir`),"\\*
+\phantom{$\vdash_{def}$\verb" Cn"\verb"("}\verb"(tok2 "$=$\verb" `warg`),"\\*
+\phantom{$\vdash_{def}$\verb" Cn"\verb"("}\verb"(tok2 "$=$\verb" `sub`),"\\*
+\phantom{$\vdash_{def}$\verb" Cn"\verb"("}\verb"(tok2 "$=$\verb" `inc`),"\\*
+\phantom{$\vdash_{def}$\verb" Cn"\verb"("}\verb"(tok1 "$=$\verb" `rbuf`))"
+\end{minipage}
+\hspace*{\fill}
+
+\hspace*{\fill}
+\begin{minipage}{17cm}
+$\vdash_{def}$\verb" NextMpc (tok,addr) ="\\*
+\phantom{$\vdash_{def}$\verb" Ne"}\verb"((tok "$=$\verb" `jop`) "$\Rightarrow$\verb" ((T,F),addr) |"\\*
+\phantom{$\vdash_{def}$\verb" Ne"\verb"("}\verb"(tok "$=$\verb" `jnz`) "$\Rightarrow$\verb" ((F,T),addr) |"\\*
+\phantom{$\vdash_{def}$\verb" Ne"\verb"("}\verb"(tok "$=$\verb" `jmp`) "$\Rightarrow$\verb" ((T,T),addr) |"\\*
+\phantom{$\vdash_{def}$\verb" Ne"\verb"("\verb"(tok "$=$\verb" `jmp`) "$\Rightarrow$\verb" "}\verb"((F,F),addr))"
+\end{minipage}
+\hspace*{\fill}
+
+\hspace*{\fill}
+\begin{minipage}{17cm}
+$\vdash_{def}$\verb" Microcode n ="\\*
+\phantom{$\vdash_{def}$\verb" Mi"}\verb"((n "$=$\verb" 0)  "$\Rightarrow$\verb" (Cntls (`rpc`,`wmar`),  NextMpc (`inc`,0))  |"\\*
+\phantom{$\vdash_{def}$\verb" Mi"\verb"("}\verb"(n "$=$\verb" 1)  "$\Rightarrow$\verb" (Cntls (`rmem`,`wir`),  NextMpc (`inc`,0))  |"\\*
+\phantom{$\vdash_{def}$\verb" Mi"\verb"("}\verb"(n "$=$\verb" 2)  "$\Rightarrow$\verb" (Cntls (`rir`,`wmar`),  NextMpc (`jop`,0))  |"\\*
+\phantom{$\vdash_{def}$\verb" Mi"\verb"("}\verb"(n "$=$\verb" 3)  "$\Rightarrow$\verb" (Cntls (`none`,`none`), NextMpc (`jnz`,10)) |"\\*
+\phantom{$\vdash_{def}$\verb" Mi"\verb"("}\verb"(n "$=$\verb" 4)  "$\Rightarrow$\verb" (Cntls (`rir`,`wpc`),   NextMpc (`jmp`,0))  |"\\*
+\phantom{$\vdash_{def}$\verb" Mi"\verb"("}\verb"(n "$=$\verb" 5)  "$\Rightarrow$\verb" (Cntls (`racc`,`warg`), NextMpc (`jmp`,12)) |"\\*
+\phantom{$\vdash_{def}$\verb" Mi"\verb"("}\verb"(n "$=$\verb" 6)  "$\Rightarrow$\verb" (Cntls (`racc`,`warg`), NextMpc (`jmp`,13)) |"\\*
+\phantom{$\vdash_{def}$\verb" Mi"\verb"("}\verb"(n "$=$\verb" 7)  "$\Rightarrow$\verb" (Cntls (`rmem`,`wacc`), NextMpc (`jmp`,10)) |"\\*
+\phantom{$\vdash_{def}$\verb" Mi"\verb"("}\verb"(n "$=$\verb" 8)  "$\Rightarrow$\verb" (Cntls (`racc`,`wmem`), NextMpc (`jmp`,10)) |"\\*
+\phantom{$\vdash_{def}$\verb" Mi"\verb"("}\verb"(n "$=$\verb" 9)  "$\Rightarrow$\verb" (Cntls (`none`,`none`), NextMpc (`inc`,0))  |"\\*
+\phantom{$\vdash_{def}$\verb" Mi"\verb"("}\verb"(n "$=$\verb" 10) "$\Rightarrow$\verb" (Cntls (`rpc`,`inc`),   NextMpc (`inc`,0))  |"\\*
+\phantom{$\vdash_{def}$\verb" Mi"\verb"("}\verb"(n "$=$\verb" 11) "$\Rightarrow$\verb" (Cntls (`rbuf`,`wpc`),  NextMpc (`jmp`,0))  |"\\*
+\phantom{$\vdash_{def}$\verb" Mi"\verb"("}\verb"(n "$=$\verb" 12) "$\Rightarrow$\verb" (Cntls (`rmem`,`add`),  NextMpc (`jmp`,14)) |"\\*
+\phantom{$\vdash_{def}$\verb" Mi"\verb"("}\verb"(n "$=$\verb" 13) "$\Rightarrow$\verb" (Cntls (`rmem`,`sub`),  NextMpc (`inc`,0))  |"\\*
+\phantom{$\vdash_{def}$\verb" Mi"\verb"("}\verb"(n "$=$\verb" 14) "$\Rightarrow$\verb" (Cntls (`rbuf`,`wacc`), NextMpc (`jmp`,10)) |"\\*
+\phantom{$\vdash_{def}$\verb" Mi"\verb"("\verb"(n "$=$\verb" 14) "$\Rightarrow$\verb" "}\verb"(Cntls (`none`,`none`), NextMpc (`jmp`,0)))"
+\end{minipage}
+\hspace*{\fill}
+
+The above definitions illustrate how a simple
+micro-assembler can be expressed within higher-order logic.
+These definitions can be used to derive
+the `assembled' form of the microcode specification shown
+below as a set of theorems.
+
+\hspace*{\fill}
+\begin{minipage}{17cm}
+$\vdash_{thm}$\verb" Microcode 0  "$=$\verb" ((T,F,F,F,T,F,F,F,F,F,F,F,F),(F,F),0)"\\*
+$\vdash_{thm}$\verb" Microcode 1  "$=$\verb" ((F,F,T,F,F,F,F,T,F,F,F,F,F),(F,F),0)"\\*
+$\vdash_{thm}$\verb" Microcode 2  "$=$\verb" ((T,F,F,F,F,F,F,F,T,F,F,F,F),(T,F),0)"\\*
+$\vdash_{thm}$\verb" Microcode 3  "$=$\verb" ((F,F,F,F,F,F,F,F,F,F,F,F,F),(F,T),10)"\\*
+$\vdash_{thm}$\verb" Microcode 4  "$=$\verb" ((F,F,F,T,F,F,F,F,T,F,F,F,F),(T,T),0)"\\*
+$\vdash_{thm}$\verb" Microcode 5  "$=$\verb" ((F,F,F,F,F,F,T,F,F,T,F,F,F),(T,T),12)"\\*
+$\vdash_{thm}$\verb" Microcode 6  "$=$\verb" ((F,F,F,F,F,F,T,F,F,T,F,F,F),(T,T),13)"\\*
+$\vdash_{thm}$\verb" Microcode 7  "$=$\verb" ((F,F,T,F,F,T,F,F,F,F,F,F,F),(T,T),10)"\\*
+$\vdash_{thm}$\verb" Microcode 8  "$=$\verb" ((F,T,F,F,F,F,T,F,F,F,F,F,F),(T,T),10)"\\*
+$\vdash_{thm}$\verb" Microcode 9  "$=$\verb" ((F,F,F,F,F,F,F,F,F,F,F,F,F),(F,F),0)"\\*
+$\vdash_{thm}$\verb" Microcode 10 "$=$\verb" ((F,F,F,F,T,F,F,F,F,F,F,T,F),(F,F),0)"\\*
+$\vdash_{thm}$\verb" Microcode 11 "$=$\verb" ((F,F,F,T,F,F,F,F,F,F,F,F,T),(T,T),0)"\\*
+$\vdash_{thm}$\verb" Microcode 12 "$=$\verb" ((F,F,T,F,F,F,F,F,F,F,F,F,F),(T,T),14)"\\*
+$\vdash_{thm}$\verb" Microcode 13 "$=$\verb" ((F,F,T,F,F,F,F,F,F,F,T,F,F),(F,F),0)"\\*
+$\vdash_{thm}$\verb" Microcode 14 "$=$\verb" ((F,F,F,F,F,T,F,F,F,F,F,F,T),(T,T),10)"\\*
+$\vdash_{thm}$\verb" Microcode 15 "$=$\verb" ((F,F,F,F,F,F,F,F,F,F,F,F,F),(T,T),0)"\\*
+\end{minipage}
+\hspace*{\fill}
+
+The microcode ROM is simply a device which produces
+the microinstruction addressed by its 4-bit input.
+
+$\vdash_{def}$\verb" ROM (addr,data) "$=$\verb" "$\forall$\verb"t. data t "$=$\verb" Microcode (addr t)"
+
+The output of the ROM is a microinstruction which needs to be separated
+into the control word, test and address fields.
+The wiring which separates the microinstruction into these
+fields is modelled by the predicate \verb"Decoder".
+
+\hspace*{\fill}
+\begin{minipage}{17cm}
+$\vdash_{def}$\verb" Decoder ("\\*
+\phantom{$\vdash_{def}$\verb" De"}\verb"rom,test0,test1,addr,"\\*
+\phantom{$\vdash_{def}$\verb" De"}\verb"wmar,wmem,rmem,wpc,rpc,wacc,racc,wir,rir,warg,alu0,alu1,rbuf) ="\\*
+\phantom{$\vdash_{def}$\verb" De"}$\forall$\verb"t."\\*
+\phantom{$\vdash_{def}$\verb" De"$\forall$\verb"t"}\verb"((wmar t,wmem t,rmem t,wpc t,rpc t,wacc t,"\\*
+\phantom{$\vdash_{def}$\verb" De"$\forall$\verb"t"\verb"(("}\verb"racc t,wir t,rir t,warg t,alu0 t,alu1 t,rbuf t),"\\*
+\phantom{$\vdash_{def}$\verb" De"$\forall$\verb"t"\verb"("}\verb"((test0 t,test1 t),addr t)) ="\\*
+\phantom{$\vdash_{def}$\verb" De"$\forall$\verb"t"}\verb"(rom t)"
+\end{minipage}
+\hspace*{\fill}
+
+The above definition of \verb"Decoder" is expressed in terms
+of an equation where the left and right hand sides of the equation
+are $n$-tuples.
+Two $n$-tuples are equal if and only if they have exactly the
+same number of elements and matching elements of each $n$-tuple
+are equal both in type and in value.
+In the definition of \verb"Decoder",
+the right hand side of the equation, \mbox{\verb"rom t"}, denotes
+the current output of the ROM.
+The current output of the ROM is an $n$-tuple in the form
+used to represent microinstructions.
+The left hand side of the equation
+consists of the individual output signal values organized into
+an $n$-tuple which exactly matches the representation
+of a microinstruction.
+Hence, the definition of \verb"Decoder" effectively `assigns'
+individual components of a microinstruction to the corresponding
+output signals.
+
+The final component of the control unit is a block containing
+the next address logic together with the MPC register
+(implemented by an instance of \verb"DEL").
+As shown in Figure 6.2.5.1.1,
+this block consists of 4-bit register-transfer level components and
+a small amount of control logic implemented by a pair of logic gates.
+
+\setlength{\unitlength}{1mm}
+\begin{center}
+\begin{picture}(140,107)(0,0)
+
+  {\thicklines {\put(10,0){\framebox(20,40){\large{\verb"MUXn 4"}}}}}
+  {\thicklines {\put(10,50){\framebox(20,40){\large{\verb"MUXn 4"}}}}}
+  {\thicklines {\put(45,0){\framebox(20,40){\large{\verb"MUXn 4"}}}}}
+  {\thicklines {\put(45,50){\framebox(20,40){\large{\verb"MUXn 4"}}}}}
+  {\thicklines {\put(75,25){\framebox(20,40){\large{\verb"ADDn 4"}}}}}
+  {\thicklines {\put(105,25){\framebox(20,40){\large{\verb"DELn 4"}}}}}
+
+  \put(5,10){\vector(1,0){5}}
+  \put(5,30){\vector(1,0){5}}
+  \put(5,60){\vector(1,0){5}}
+  \put(5,80){\vector(1,0){5}}
+  \put(35,10){\vector(1,0){10}}
+  \put(40,30){\vector(1,0){5}}
+  \put(35,60){\vector(1,0){10}}
+  \put(35,80){\vector(1,0){10}}
+  \put(70,35){\vector(1,0){5}}
+  \put(70,55){\vector(1,0){5}}
+  \put(95,45){\vector(1,0){10}}
+  \put(125,45){\vector(1,0){10}}
+
+  \put(30,20){\line(1,0){5}}
+  \put(30,70){\line(1,0){5}}
+  \put(65,20){\line(1,0){5}}
+  \put(65,70){\line(1,0){5}}
+
+  \put(35,20){\line(0,-1){10}}
+  \put(35,70){\line(0,-1){10}}
+  \put(70,20){\line(0,1){15}}
+  \put(70,70){\line(0,-1){15}}
+
+  \put(130,45){\line(0,1){50}}
+  \put(130,95){\line(-1,0){95}}
+  \put(35,95){\line(0,-1){15}}
+
+  \put(20,106){\makebox(0,0)[c]{\verb"test1"}}
+  \put(40.5,106){\makebox(0,0)[l]{\verb"test0 "$\vee$\verb" (test1 "$\wedge$\verb " zeroflag)"}}
+
+  \put(20,103){\vector(0,-1){13}}
+  \put(55,103){\vector(0,-1){13}}
+  \put(20,50){\vector(0,-1){10}}
+  \put(55,50){\vector(0,-1){10}}
+
+  \put(4,10){\makebox(0,0)[r]{``\verb"0"''}}
+  \put(4,30){\makebox(0,0)[r]{``\verb"3"''}}
+  \put(4,60){\makebox(0,0)[r]{\verb"addr"}}
+  \put(4,80){\makebox(0,0)[r]{\verb"opc"}}
+  \put(39,30){\makebox(0,0)[r]{``\verb"1"''}}
+  \put(136,45){\makebox(0,0)[l]{\verb"mpc"}}
+
+\end{picture}
+
+Figure 6.2.5.1.1:  \verb"MpcUnit" Implementation.
+\end{center}
+
+\hspace*{\fill}
+\begin{minipage}{17cm}
+$\vdash_{def}$\verb" MpcUnit (test0,test1,zeroflag,opc,addr,mpc) ="\\*
+\phantom{$\vdash_{def}$\verb" Mp"}$\exists$\verb" w1 w2 zero one three b1 b2 b3 b4 b5."\\*
+\phantom{$\vdash_{def}$\verb" Mp"$\exists$\verb" "}\verb"AND (test1,zeroflag,w1) "$\wedge$\\*
+\phantom{$\vdash_{def}$\verb" Mp"$\exists$\verb" "}\verb"OR (test0,w1,w2) "$\wedge$\\*
+\phantom{$\vdash_{def}$\verb" Mp"$\exists$\verb" "}\verb"MUXn 4 (test1,opc,addr,b1) "$\wedge$\\*
+\phantom{$\vdash_{def}$\verb" Mp"$\exists$\verb" "}\verb"MUXn 4 (w2,mpc,b1,b2) "$\wedge$\\*
+\phantom{$\vdash_{def}$\verb" Mp"$\exists$\verb" "}\verb"HWCn 4 0 zero "$\wedge$\\*
+\phantom{$\vdash_{def}$\verb" Mp"$\exists$\verb" "}\verb"HWCn 4 3 three "$\wedge$\\*
+\phantom{$\vdash_{def}$\verb" Mp"$\exists$\verb" "}\verb"MUXn 4 (test1,three,zero,b3) "$\wedge$\\*
+\phantom{$\vdash_{def}$\verb" Mp"$\exists$\verb" "}\verb"HWCn 4 1 one "$\wedge$\\*
+\phantom{$\vdash_{def}$\verb" Mp"$\exists$\verb" "}\verb"MUXn 4 (w2,one,b3,b4) "$\wedge$\\*
+\phantom{$\vdash_{def}$\verb" Mp"$\exists$\verb" "}\verb"ADDn 4 (b2,b4,b5) "$\wedge$\\*
+\phantom{$\vdash_{def}$\verb" Mp"$\exists$\verb" "}\verb"DELn 4 (b5,mpc)"
+\end{minipage}
+\hspace*{\fill}
+
+The control unit specification describes the assembly of these components.
+As shown below, the physical signals of the control unit
+consist of control and feedback signals to and from the data path.
+In addition to these physical signals,
+the address of the current microinstruction is externally available
+as a virtual signal.
+
+\hspace*{\fill}
+\begin{minipage}{17cm}
+$\vdash_{def}$\verb" CntlUnit ("\\*
+\phantom{$\vdash_{def}$\verb" Cn"}\verb"(zeroflag,opc,"\\*
+\phantom{$\vdash_{def}$\verb" Cn"\verb"("}\verb"wmar,wmem,rmem,wpc,rpc,wacc,racc,wir,rir,warg,alu0,alu1,rbuf),"\\*
+\phantom{$\vdash_{def}$\verb" Cn"}\verb"(mpc)) ="\\*
+\phantom{$\vdash_{def}$\verb" Cn"}$\exists$\verb" rom test0 test1 addr."\\*
+\phantom{$\vdash_{def}$\verb" Cn"$\exists$\verb" "}\verb"ROM (mpc,rom) "$\wedge$\\*
+\phantom{$\vdash_{def}$\verb" Cn"$\exists$\verb" "}\verb"Decoder ("\\*
+\phantom{$\vdash_{def}$\verb" Cn"$\exists$\verb" "\verb"De"}\verb"rom,test0,test1,addr,"\\*
+\phantom{$\vdash_{def}$\verb" Cn"$\exists$\verb" "\verb"De"}\verb"wmar,wmem,rmem,wpc,rpc,wacc,racc,wir,rir,warg,alu0,alu1,rbuf) "$\wedge$\\*
+\phantom{$\vdash_{def}$\verb" Cn"$\exists$\verb" "}\verb"MpcUnit (test0,test1,zeroflag,opc,addr,mpc)"
+\end{minipage}
+\hspace*{\fill}
+
+Finally, the top-level specification of the microprocessor implementation
+is obtained by combining specifications for the control unit and the
+data path.
+There are no physical inputs or outputs in the formal specification
+of the microprocessor at this highest level in the specification
+hierarchy.  The parameter list at this level consists entirely of
+virtual signals corresponding to the internal state of the microprocessor.
+
+\hspace*{\fill}
+\begin{minipage}{17cm}
+$\vdash_{def}$\verb" Tamarack n (mpc,mar,mem,pc,acc,ir,arg,buf) ="\\*
+\phantom{$\vdash_{def}$\verb" Im"}$\exists$\verb" zeroflag opc"\\*
+\phantom{$\vdash_{def}$\verb" Im"$\exists$\verb" "}\verb"wmar wmem rmem wpc rpc wacc racc wir rir warg alu0 alu1 rbuf."\\*
+\phantom{$\vdash_{def}$\verb" Im"$\exists$\verb" "}\verb"CntlUnit ("\\*
+\phantom{$\vdash_{def}$\verb" Im"$\exists$\verb" "\verb"Cn"}\verb"(zeroflag,opc,"\\*
+\phantom{$\vdash_{def}$\verb" Im"$\exists$\verb" "\verb"Cn"\verb"("}\verb"wmar,wmem,rmem,wpc,rpc,wacc,racc,wir,rir,warg,alu0,alu1,rbuf),"\\*
+\phantom{$\vdash_{def}$\verb" Im"$\exists$\verb" "\verb"Cn"}\verb"(mpc)) "$\wedge$\\*
+\phantom{$\vdash_{def}$\verb" Im"$\exists$\verb" "}\verb"DataPath n ("\\*
+\phantom{$\vdash_{def}$\verb" Im"$\exists$\verb" "\verb"Da"}\verb"(wmar,wmem,rmem,wpc,rpc,wacc,racc,wir,rir,warg,alu0,alu1,rbuf,"\\*
+\phantom{$\vdash_{def}$\verb" Im"$\exists$\verb" "\verb"Da"\verb"("}\verb"zeroflag,opc),"\\*
+\phantom{$\vdash_{def}$\verb" Im"$\exists$\verb" "\verb"Da"}\verb"(mar,mem,pc,acc,ir,arg,buf))"
+\end{minipage}
+\hspace*{\fill}
+
+This completes the formal specification of the microprocessor
+implementation.
+Some features of the microprocessor such as a reset capability
+are not included in the formal specification.
+Our decision to not model various features is partially for the
+sake of simplicity in our discussion.
+There are also methodological grounds for not modelling some
+features.  The main purpose of this model
+is to verify the operation of the register-transfer level
+architecture under the control of microcode.
+With this purpose in mind,
+we have decided that it is inappropriate to model
+a reset capability at the register-transfer level
+because it is really an implicit feature at this level
+in the same way that clock signals are not explicit
+in the register-transfer level specification.
+For similar reasons, we also assume that there is an external
+means of loading values into memory which is not formally modelled.
+
+\vskip \baselineskip
+{\large\bf 6.2.5.2  Behavioural Specification}
+
+The next step is to formally specify the intended behaviour of the
+microprocessor.
+This specification is a formalization of the
+programming level model described earlier by \mbox{Table 6.2.5.1}.
+
+The function \verb"Inst" is defined to extract the current instruction
+word from the memory state and value of the program counter.
+The functions \verb"Opc" and \verb"Addr" extract the opcode
+and address field of the current instruction word.
+Until now, the formal parameters \verb"mem", \verb"pc" and \verb"acc"
+have been signals, i.e., functions of time.
+However, these formal parameters
+are signal values, i.e., memory states and numbers,
+in the following function definitions.
+
+$\vdash_{def}$\verb" Inst n (mem,pc) "$=$\verb" mem (pc MOD 2"$^{\verb"n"}$\verb")"
+
+$\vdash_{def}$\verb" Opc n (mem,pc) "$=$\verb" Bits (n,3) (Inst n (mem,pc))"
+
+$\vdash_{def}$\verb" Addr n (mem,pc) "$=$\verb" Bits (0,n) (Inst n (mem,pc))"
+
+The semantics of each instruction are specified as function which
+returns a 3-tuple giving the next values of the memory state, program
+counter and accumulator.
+These values are computed from the current values of the memory
+state, program counter and accumulator.
+These functions are then combined to define a next state function
+which uses the opcode of the current instruction to determine the next state
+of the microprocessor.
+
+\hspace*{\fill}
+\begin{minipage}{17cm}
+$\vdash_{def}$\verb" JZR n (mem,pc,acc) ="\\*
+\phantom{$\vdash_{def}$\verb" JZ"}\verb"(mem,((acc "$=$\verb" 0) "$\Rightarrow$\verb" (Inst n (mem,pc)) | (Incn (n+3) pc)),acc)"
+\end{minipage}
+\hspace*{\fill}
+
+$\vdash_{def}$\verb" JMP n (mem,pc,acc) "$=$\verb" (mem,(Inst n (mem,pc)),acc)"
+
+\hspace*{\fill}
+\begin{minipage}{17cm}
+$\vdash_{def}$\verb" ADD n (mem,pc,acc) ="\\*
+\phantom{$\vdash_{def}$\verb" AD"}\verb"(mem,(Incn (n+3) pc),(Addn (n+3) (acc,mem (Addr n (mem,pc)))))"
+\end{minipage}
+\hspace*{\fill}
+
+\hspace*{\fill}
+\begin{minipage}{17cm}
+$\vdash_{def}$\verb" SUB n (mem,pc,acc) ="\\*
+\phantom{$\vdash_{def}$\verb" SU"}\verb"(mem,(Incn (n+3) pc),(Subn (n+3) (acc,mem (Addr n (mem,pc)))))"
+\end{minipage}
+\hspace*{\fill}
+
+$\vdash_{def}$\verb" LD n (mem,pc,acc) "$=$\verb" (mem,(Incn (n+3) pc),mem (Addr n (mem,pc)))"
+
+\hspace*{\fill}
+\begin{minipage}{17cm}
+$\vdash_{def}$\verb" ST n (mem,pc,acc) ="\\
+\phantom{$\vdash_{def}$\verb" ST"}\verb"(Update (mem,Addr n (mem,pc),acc),(Incn (n+3) pc),acc)"
+\end{minipage}
+\hspace*{\fill}
+
+$\vdash_{def}$\verb" NOP n (mem,pc,acc) "$=$\verb" (mem,(Incn (n+3) pc),acc)"
+
+\hspace*{\fill}
+\begin{minipage}{17cm}
+$\vdash_{def}$\verb" NextState n (mem,pc,acc) ="\\*
+\phantom{$\vdash_{def}$\verb" Ne"}\verb"((Opc n (mem,pc) "$=$\verb" 0) "$\Rightarrow$\verb" JZR n (mem,pc,acc) |"\\*
+\phantom{$\vdash_{def}$\verb" Ne"\verb"("}\verb"(Opc n (mem,pc) "$=$\verb" 1) "$\Rightarrow$\verb" JMP n (mem,pc,acc) |"\\*
+\phantom{$\vdash_{def}$\verb" Ne"\verb"("}\verb"(Opc n (mem,pc) "$=$\verb" 2) "$\Rightarrow$\verb" ADD n (mem,pc,acc) |"\\*
+\phantom{$\vdash_{def}$\verb" Ne"\verb"("}\verb"(Opc n (mem,pc) "$=$\verb" 3) "$\Rightarrow$\verb" SUB n (mem,pc,acc) |"\\*
+\phantom{$\vdash_{def}$\verb" Ne"\verb"("}\verb"(Opc n (mem,pc) "$=$\verb" 4) "$\Rightarrow$\verb" LD n (mem,pc,acc) |"\\*
+\phantom{$\vdash_{def}$\verb" Ne"\verb"("}\verb"(Opc n (mem,pc) "$=$\verb" 5) "$\Rightarrow$\verb" ST n (mem,pc,acc) |"\\*
+\phantom{$\vdash_{def}$\verb" Ne"\verb"("\verb"(Opc n (mem,pc) "$=$\verb" 5) "$\Rightarrow$}\verb" NOP n (mem,pc,acc))"
+\end{minipage}
+\hspace*{\fill}
+
+As shown above, \verb"NextState" is defined in terms of a sequence of
+nested conditional expressions.
+The next state of the microprocessor is given for each of the eight
+possible opcodes including the two NOP opcodes,
+\verb"6" and \verb"7", which are given by
+the `default' case in this sequence.
+
+Finally,
+we use the function \verb"NextState" to
+define the predicate \verb"Behaviour"
+which specifies the intended behaviour of the microprocessor
+as a relation on the time-dependent signals \verb"mem", \verb"pc"
+and \verb"acc".
+This specification states that the sampled values of these signals
+from one time point to the next is determined by the function \verb"NextState".
+
+\hspace*{\fill}
+\begin{minipage}{17cm}
+$\vdash_{def}$\verb" Behaviour n (mem,pc,acc) ="\\*
+\phantom{$\vdash_{def}$\verb" Be"}$\forall$\verb"t. (mem (t"$+$\verb"1),pc (t"$+$\verb"1),acc (t"$+$\verb"1)) "$=$\verb" NextState n (mem t,pc t,acc t)"
+\end{minipage}
+\hspace*{\fill}
+
+This specification
+not only hides structural details of the microprocessor
+implementation but also timing details about the number of
+microinstructions executed for each instruction.
+To be more precise, the behavioural specification describes
+the operation of the microprocessor in terms of an abstract scale of
+time where each instruction is uniformly executed in a single unit of time.
+This abstract time scale is different than the concrete time scale
+used to specify the behaviour of register-transfer level components.
+With respect to the underlying register-transfer level time scale,
+a single unit of abstract time is coarser and varies
+depending on the number of microinstructions executed for each
+programming level instruction.
+As the explained in the next section,
+the formal verification of the microprocessor takes account
+of this difference by establishing a formal relationship between
+the concrete and abstract time scales.
+
+\vskip \baselineskip
+{\large\bf 6.2.5.3  Formal Verification}
+
+In general,
+the architecture of a microprocessor can be viewed as a hierarchy of
+interpretation levels.
+For instance, four distinct levels of interpretation
+are described by F. Anceau [Anceau86] for
+the Intel I8505 microprocessor:
+instruction language; machine cycle language; timing state language;
+and clock phase language.
+Each interpretation level defines a virtual machine which is
+used to interpret higher levels.
+
+The simple microprocessor described here has just two levels of
+interpretation as shown in Figure 6.2.5.3.1.
+The lowest level is the interpretation of individual microinstructions
+by the hardware.  This level of interpretation defines a virtual
+machine for executing sequences of microinstructions.
+Higher up,
+programming level instructions are interpreted by
+sequences of microinstructions.
+This second level of interpretation defines a virtual machine which
+corresponds to the programming level model of the microprocessor.
+
+\setlength{\unitlength}{1mm}
+\begin{center}
+\begin{picture}(88,70)(0,0)
+
+  {\thicklines {\put(50,0){\framebox(20,10){hardware}}}}
+  {\thicklines {\put(32,26){\framebox(56,10){microinstruction interpreter}}}}
+  {\thicklines {\put(35,52){\framebox(50,10){programming level model}}}}
+  \put(60,52){\vector(0,-1){16}}
+  \put(60,26){\vector(0,-1){16}}
+  \put(23,46){\vector(1,0){37}}
+  \put(34,18){\vector(1,0){26}}
+  \put(0,46){\makebox(0,0)[l]{instructions}}
+  \put(0,41){\makebox(0,0)[l]{(microinstruction sequences)}}
+  \put(0,18){\makebox(0,0)[l]{microinstructions}}
+  \put(0,13){\makebox(0,0)[l]{(control signals)}}
+
+\end{picture}
+
+Figure 6.2.5.3.1: Hierarchy of Interpretation Levels.
+\end{center}
+
+This hierarchy of interpretation levels provides the basis for
+a strategy to verify the correctness of the simple microprocessor.
+The correctness proof is divided into three main steps:
+
+\hspace*{\fill}
+\begin{minipage}{15cm}
+\begin{enumerate}
+\item Prove that each microinstruction is correctly interpreted by the hardware.
+\item Prove that each programming level instruction is correctly
+implemented by the corresponding sequence of microinstructions.
+\item Relate concrete time scale behaviour to abstract time scale behaviour.
+\end{enumerate}
+\end{minipage}
+\hspace*{\fill}
+
+The first two steps correspond to the two levels of interpretation shown
+in Figure 6.2.5.3.1.
+This is followed by a third step in which correctness results
+from the first two steps are packaged
+into a single statement of correctness for the microprocessor based on
+a formally defined relationship between the concrete and abstract time scales.
+
+\vskip \baselineskip
+{\large\bf 6.2.5.3.1  Microinstruction Interpretation Correctness}
+
+The first main step in verifying the microprocessor is to establish
+that the sixteen microinstructions
+(at locations 0 to 15 in the microcode ROM) are correctly interpreted
+by the hardware.
+To illustrate this process, we outline the steps taken to establish
+that \mbox{microinstruction 0}, i.e., the microinstruction at location \verb"0",
+is correctly interpreted by the hardware.
+
+The intended effect of \mbox{microinstruction 0},
+
+\hspace*{\fill}
+\verb"(Cntls (`rpc`,`wmar`),NextMpc (`inc`,0))"
+\hspace*{\fill}
+
+is to transfer
+the contents of the program counter PC to the memory address register MAR
+and to increment the microcode program counter to \verb"1"
+(the unused value of the address field is arbitrarily set to \verb"0").
+Furthermore, the execution of this microinstruction leaves the
+internal state of the memory and the contents of the
+program counter PC and accumulator ACC unchanged.
+The effect of this microinstruction on the remaining components of the
+microprocessor's internal state,
+namely, the ARG and BUF registers,
+is unimportant and can be ignored.
+
+To derive a theorem which shows that \mbox{microinstruction 0}
+does indeed have this effect,
+we use inference rules of higher-order logic to symbolically execute the
+interpretation of this microinstruction by the hardware.
+{\it Symbolic execution} is used here as a purely descriptive
+term for a proof technique; we emphasize that
+this technique is formal proof based on the inference rules of
+higher-order logic.
+
+We start with the assumption that the microcode program counter is zero
+at time \verb"t".
+We then use the
+definitions of \verb"ROM" and \verb"Microcode" to
+derive the following equation for the current output of the ROM.
+
+\hspace*{\fill}
+\verb"rom t "$=$\verb" (Cntls (`rpc`,`wmar`),NextMpc (`inc`,0))"
+\hspace*{\fill}
+
+The definitions of \verb"Cntls"
+and \verb"NextMpc" are then used to transform this equation
+into a form which explicitly shows the
+pattern of bits and value of the address
+field specified by this microinstruction.
+
+\hspace*{\fill}
+\verb"rom t "$=$\verb" ((T,F,F,F,T,F,F,F,F,F,F,F,F),(F,F),0)"
+\hspace*{\fill}
+
+The behavioural specification of the decoder is used to assign
+this bit pattern and the value of the address field to the
+control signals, test and address field signals.
+This results in a set of equations stating that all
+of the control signals are low (i.e., equal to \verb"F")
+except \verb"wmar" and \verb"rpc" which are high (i.e. equal to \verb"T"),
+that the pair of test field signals are low
+and that the address field signal is equal to \verb"0".
+
+We have reached the point in the symbolic execution of \mbox{microinstruction 0}
+where values for the control signals
+and the test and address field signals have been generated as outputs
+of the microinstruction decoder.
+We now consider the effect of these signal values
+on the next address logic in the control unit and on components
+of the data path.
+
+The pair of test field values \verb"(F,F)" causes the next address logic
+of the control unit to simply increment the current value of the
+microcode program counter from \verb"0" to \verb"1".
+This effect on the next address logic is easily derived from the
+specification of \verb"MpcUnit" and behavioural models of its components.
+
+\hspace*{\fill}
+\verb"mpc (t"$+$\verb"1) "$=$\verb" 1"
+\hspace*{\fill}
+
+The effect of the control signal values
+on the data path is derived in a similar manner from the specification
+of \verb"DataPath" and behavioural models of its components.
+In particular, the value of every `read signal' is false except for \verb"rpc"
+satisfying the condition that only one bus device can assert a value
+onto the bus of the data path.
+Hence, the value of the program counter is successfully read onto
+the bus.  The control signal \verb"wmar"
+then completes the data transfer by
+causing the value of the bus to be written into the memory address register.
+
+\hspace*{\fill}
+\begin{minipage}{45mm}
+\verb"mar (t"$+$\verb"1) "$=$\verb" pc t"\\*
+\verb"mem (t"$+$\verb"1) "$=$\verb" mem t"\\*
+\verb"pc (t"$+$\verb"1) "$=$\verb" pc t"\\*
+\verb"acc (t"$+$\verb"1) "$=$\verb" acc t"
+\end{minipage}
+\hspace*{\fill}
+
+The above equations are then combined in the following theorem which
+states that microinstruction 0 is correctly interpreted by the hardware.
+
+\hspace*{\fill}
+\begin{minipage}{17cm}
+$\vdash_{thm}$\verb" "$\forall$\verb"n mpc mar mem pc acc ir arg buf."\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb"n"}\verb"Tamarack n (mpc,mar,mem,pc,acc,ir,arg,buf)"\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb"n"}$\Longrightarrow$\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb"n"}$\forall$\verb"t."\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb"n"$\forall$\verb"t"}\verb"(mpc t "$=$\verb" 0) "$\Longrightarrow$\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb"n"$\forall$\verb"t"}\verb"((mpc (t"$+$\verb"1) = 1) "$\wedge$\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb"n"$\forall$\verb"t"\verb"("}\verb"(mar (t"$+$\verb"1) = pc t) "$\wedge$\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb"n"$\forall$\verb"t"\verb"("}\verb"(mem (t"$+$\verb"1) = mem t) "$\wedge$\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb"n"$\forall$\verb"t"\verb"("}\verb"(pc (t"$+$\verb"1) = pc t) "$\wedge$\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb"n"$\forall$\verb"t"\verb"("}\verb"(acc (t"$+$\verb"1) = acc t))"
+\end{minipage}
+\hspace*{\fill}
+
+A similar pattern of reasoning is used to derive correctness results for the
+remaining fifteen microinstructions.
+Each of these theorems shows that the microinstruction
+satisfies a set of equations for the next state of the microprocessor
+at time \verb"t"$+$\verb"1" in terms of its state at \mbox{time \verb"t"}.
+
+\vskip \baselineskip
+{\large\bf 6.2.5.3.2  Instruction Interpretation Correctness}
+
+The second main step of the verification procedure is
+the symbolic execution of programming level instructions
+implemented by sequences of microinstructions.
+The results are used to show that the net effect of
+these execution sequences satisfies the semantics of the instruction
+set formally defined in Section 6.2.5.2.
+
+For example, the sequence of microinstructions executed
+for an ADD instruction are located in the microcode
+ROM at locations 0, 1, 2, 5, 12, 14, 10 and 11.
+The reader can easily find this sequence
+by `stepping through' the microcode source
+(i.e., the definition of \verb"Microcode")
+assuming that the opcode for an ADD instruction
+causes a jump from microinstruction 2 to microinstruction 5.
+
+To derive the net effect of this microinstruction sequence,
+we start with the assumption that the microcode program counter is zero
+at time \verb"t" and
+that the opcode of the current instruction
+is two (i.e., the opcode for an ADD instruction).
+These two assumptions are formally expressed by:
+
+\hspace*{\fill}
+\begin{minipage}{55mm}
+\verb"mpc t "$=$\verb" 0"\\*
+\verb"Opc n (mem t,pc t) "$=$\verb" 2"
+\end{minipage}
+\hspace*{\fill}
+
+Each step in the
+symbolic simulation of the microcode
+corresponds to the execution of a single microinstruction.
+The effect of executing each microinstruction is given directly
+by one of the sixteen theorems just mentioned in Section 6.2.5.3.1.
+For instance,
+the theorem for \mbox{microinstruction 0} is used to determine
+the internal state of the microprocessor at time \verb"t"$+$\verb"1".
+Next, the theorem for microinstruction 1 is used to
+determine its state at time \verb"t"$+$\verb"2".
+
+By time \verb"t"$+$\verb"2",
+the instruction addressed by the program counter PC has been
+read from memory and written into the instruction register IR.
+The three high-order bits of the instruction register form the
+opcode for the current instruction.
+In this case, we have assumed that the value of the opcode is two.
+The theorem describing the effect of microinstruction 2 records
+the fact that the address of the next microinstruction is obtained
+by adding three to the value of the opcode;
+hence, the address of the next microinstruction is five.
+This fact is shown below along with equations for the other relevant components
+of the microprocessor state at \mbox{time \verb"t"$+$\verb"3"}.
+
+\hspace*{\fill}
+\begin{minipage}{65mm}
+\verb"mpc(t"$+$\verb"3) "$=$\verb" 5"\\*
+\verb"mar(t"$+$\verb"3) "$=$\verb" Inst (mem t,pc t)"\\*
+\verb"mem(t"$+$\verb"3) "$=$\verb" mem t"\\*
+\verb"pc(t"$+$\verb"3) "$=$\verb" pc t"\\*
+\verb"acc(t"$+$\verb"3) "$=$\verb" acc t"\\*
+\verb"ir(t"$+$\verb"3) "$=$\verb" Inst (mem t,pc t)"
+\end{minipage}
+\hspace*{\fill}
+
+This sequence continues with the symbolic execution of
+microinstructions 5, 12, 14, 10 and 11;
+eventually we obtain
+a set of equations for the state of the microprocessor at the
+end of this particular execution sequence,
+time \verb"t"$+$\verb"8", in terms of its initial state at time \verb"t".
+At this point, we are only interested in the net effect on the
+microcode program counter, memory, program counter and accumulator.
+The contents of the remaining registers are no longer important
+and can be ignored.
+
+\hspace*{\fill}
+\begin{minipage}{115mm}
+\verb"mpc(t"$+$\verb"8) "$=$\verb" 0"\\*
+\verb"mem(t"$+$\verb"8) "$=$\verb" mem t"\\*
+\verb"pc(t"$+$\verb"8) "$=$\verb" Incn (n+3) (pc t)"\\*
+\verb"acc(t"$+$\verb"8) "$=$\verb" Addn (n+3) (acc t,Addr n (mem t,pc t))"
+\end{minipage}
+\hspace*{\fill}
+
+The above set of equations describes the net effect of executing
+the microinstruction sequences for an ADD instruction.
+These equations are then used to show that the net effect of
+this execution sequence satisfies the semantics of an ADD instruction
+(as given by the definition of \verb"ADD" in Section 6.2.5.2).
+This result is expressed by the following theorem.
+
+\hspace*{\fill}
+\begin{minipage}{17cm}
+$\vdash_{thm}$\verb" "$\forall$\verb" n mpc mar mem pc acc ir arg buf."\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb" "}\verb"Tamarack n (mpc,mar,mem,pc,acc,ir,arg,buf)"\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb" "}$\Longrightarrow$\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb" "}$\forall$\verb"t."\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb" "$\forall$\verb"t"}\verb"(mpc t "$=$\verb" 0) "$\wedge$\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb" "$\forall$\verb"t"}\verb"(Opc n (mem t,pc t)) "$=$\verb" 2)"\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb" "$\forall$\verb"t"}$\Longrightarrow$\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb" "$\forall$\verb"t"}\verb"(mpc (t"$+$\verb"8) "$=$\verb" 0) "$\wedge$\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb" "$\forall$\verb"t"}\verb"((mem (t"$+$\verb"8),pc (t"$+$\verb"8),acc (t"$+$\verb"8)) "$=$\verb" ADD n (mem t,pc t,acc t))"
+\end{minipage}
+\hspace*{\fill}
+
+There are eight further cases to consider:
+one case for the JZR instruction when the value of the accumulator
+is zero; another case for JZR instruction when the accumulator is
+non-zero; and
+six more cases, one for each of the six remaining instructions.
+In each case,
+the net effect of the corresponding execution sequence is shown
+to satisfy the semantics of the instruction.
+
+\vskip \baselineskip
+{\large\bf 6.2.5.3.3  Top-Level Correctness Statement}
+
+The final step in the verification procedure packages these individual
+results for the eight instructions of the microprocessor into
+a single statement of correctness based on
+a formally defined relationship between the concrete and abstract time scales.
+
+The first step is to hide explicit references to differing lengths
+of microinstruction sequences for each instruction using the
+function \verb"MicroCycles".
+This function computes the length of the microinstruction sequence
+for the instruction addressed by the program counter.
+
+\hspace*{\fill}
+\begin{minipage}{17cm}
+$\vdash_{def}$\verb" MicroCycles n (mem,pc,acc) ="\\*
+\phantom{$\vdash_{def}$\verb" Mi"}\verb"let opc "$=$\verb" Opc n (mem,pc) in"\\*
+\phantom{$\vdash_{def}$\verb" Mi"}\verb"((opc "$=$\verb" 0) "$\Rightarrow$\verb" ((acc "$=$\verb" 0) "$\Rightarrow$\verb" 5 | 6) |"\\*
+\phantom{$\vdash_{def}$\verb" Mi"\verb"("}\verb"(opc "$=$\verb" 1) "$\Rightarrow$\verb" 4 |"\\*
+\phantom{$\vdash_{def}$\verb" Mi"\verb"("}\verb"(opc "$=$\verb" 2) "$\Rightarrow$\verb" 8 |"\\*
+\phantom{$\vdash_{def}$\verb" Mi"\verb"("}\verb"(opc "$=$\verb" 3) "$\Rightarrow$\verb" 8 |"\\*
+\phantom{$\vdash_{def}$\verb" Mi"\verb"("}\verb"(opc "$=$\verb" 4) "$\Rightarrow$\verb" 6 |"\\*
+\phantom{$\vdash_{def}$\verb" Mi"\verb"("}\verb"(opc "$=$\verb" 5) "$\Rightarrow$\verb" 6 |"\\*
+\phantom{$\vdash_{def}$\verb" Mi"\verb"("}\verb"(opc "$=$\verb" 6) "$\Rightarrow$\verb" 6 | 5)"
+\end{minipage}
+\hspace*{\fill}
+
+Using this function definition,
+and the fact that the value of the 3-bit opcode
+ranges between zero and seven,
+the following theorem can be derived to combine individual correctness
+results for each of the eight instructions of the microprocessor
+into a single statement of correctness.
+
+\hspace*{\fill}
+\begin{minipage}{17cm}
+$\vdash_{thm}$\verb" "$\forall$\verb" n mpc mar mem pc acc ir arg buf."\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb" "}\verb"Tamarack n (mpc,mar,mem,pc,acc,ir,arg,buf)"\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb" "}$\Longrightarrow$\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb" "}$\forall$\verb"t."\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb" "$\forall$\verb"t"}\verb"(mpc t "$=$\verb" 0)"\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb" "$\forall$\verb"t"}$\Longrightarrow$\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb" "$\forall$\verb"t"}\verb"let m "$=$\verb" MicroCycles n (mem t,pc t,acc t) in"\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb" "$\forall$\verb"t"}\verb"((mpc (t"$+$\verb"m) "$=$\verb" 0) "$\wedge$\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb" "$\forall$\verb"t"\verb"("}\verb"((mem (t"$+$\verb"m),pc (t"$+$\verb"m),acc (t"$+$\verb"m)) "$=$\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb" "$\forall$\verb"t"\verb"("\verb"("}\verb"NextState n (mem t,pc t,acc t)))"
+\end{minipage}
+\hspace*{\fill}
+
+The next step is to
+define a formal relationship between the concrete time scale used to model
+the behaviour of components in the register-transfer level implementation
+and the abstract time scale used to specify the programming
+level model of the microprocessor.
+
+If every programming level
+instruction was implemented by the same number of microinstructions,
+then the relationship between the two time scales could be expressed very
+simply by arithmetic equation.
+However, this is not the case for our implementation of the microprocessor.
+For instance, the ADD instruction is implemented by a sequence of
+eight microinstructions as shown in Figure 6.2.5.3.3.1
+whereas the JMP instruction is implemented by
+a sequence of four microinstructions as shown in Figure 6.2.5.3.3.2.
+Therefore, we cannot use a simple arithmetic equation to define a formal
+relationship between the abstract and concrete time scales.
+
+\setlength{\unitlength}{1mm}
+\begin{center}
+\begin{picture}(135,38)(0,0)
+  \put(83,33){\vector(-1,0){31}}
+  \put(95,33){\vector(1,0){30}}
+  \put(89,33){\makebox(0,0)[c]{ADD}}
+  \put(50,33){\makebox(0,0)[c]{\verb"u"}}
+  \put(130,33){\makebox(0,0)[c]{\verb"u"$+$\verb"1"}}
+  \put(40,28){\makebox(0,0)[r]{programming level:}}
+  \put(45,28){\line(1,0){90}}
+  \put(50,28){\makebox(0,0)[c]{$\bullet$}}
+  \put(50,26){\thicklines {\vector(0,-1){14}}}
+  \put(130,28){\makebox(0,0)[c]{$\bullet$}}
+  \put(130,26){\thicklines {\vector(0,-1){14}}}
+  \put(40,10){\makebox(0,0)[r]{register-transfer level:}}
+  \put(45,10){\line(1,0){90}}
+  \multiput(50,10)(10,0){9}{\makebox(0,0)[c]{$\bullet$}}
+  \put(50,5){\makebox(0,0)[c]{\verb"t"}}
+  \put(130,5){\makebox(0,0)[c]{\verb"t"$+$\verb"8"}}
+  \put(40,0){\makebox(0,0)[r]{\verb"mpc":}}
+  \put(50,0){\makebox(0,0)[c]{\verb"0"}}
+  \put(60,0){\makebox(0,0)[c]{\verb"1"}}
+  \put(70,0){\makebox(0,0)[c]{\verb"2"}}
+  \put(80,0){\makebox(0,0)[c]{\verb"5"}}
+  \put(90,0){\makebox(0,0)[c]{\verb"12"}}
+  \put(100,0){\makebox(0,0)[c]{\verb"14"}}
+  \put(110,0){\makebox(0,0)[c]{\verb"10"}}
+  \put(120,0){\makebox(0,0)[c]{\verb"11"}}
+  \put(130,0){\makebox(0,0)[c]{\verb"0"}}
+
+\end{picture}
+
+Figure 6.2.5.3.3.1: ADD Microinstruction Sequence.
+\end{center}
+
+\setlength{\unitlength}{1mm}
+\begin{center}
+\begin{picture}(135,38)(0,0)
+  \put(63,33){\vector(-1,0){11}}
+  \put(75,33){\vector(1,0){10}}
+  \put(69,33){\makebox(0,0)[c]{JMP}}
+  \put(50,33){\makebox(0,0)[c]{\verb"u"}}
+  \put(90,33){\makebox(0,0)[c]{\verb"u"$+$\verb"1"}}
+  \put(40,28){\makebox(0,0)[r]{programming level:}}
+  \put(45,28){\line(1,0){50}}
+  \put(50,28){\makebox(0,0)[c]{$\bullet$}}
+  \put(50,26){\thicklines {\vector(0,-1){14}}}
+  \put(90,28){\makebox(0,0)[c]{$\bullet$}}
+  \put(90,26){\thicklines {\vector(0,-1){14}}}
+  \put(40,10){\makebox(0,0)[r]{register-transfer level:}}
+  \put(45,10){\line(1,0){50}}
+  \multiput(50,10)(10,0){5}{\makebox(0,0)[c]{$\bullet$}}
+  \put(50,5){\makebox(0,0)[c]{\verb"t"}}
+  \put(90,5){\makebox(0,0)[c]{\verb"t"$+$\verb"4"}}
+  \put(40,0){\makebox(0,0)[r]{\verb"mpc":}}
+  \put(50,0){\makebox(0,0)[c]{\verb"0"}}
+  \put(60,0){\makebox(0,0)[c]{\verb"1"}}
+  \put(70,0){\makebox(0,0)[c]{\verb"2"}}
+  \put(80,0){\makebox(0,0)[c]{\verb"4"}}
+  \put(90,0){\makebox(0,0)[c]{\verb"0"}}
+
+\end{picture}
+
+Figure 6.2.4.3.3.2: JMP Microinstruction Sequence.
+\end{center}
+
+Instead, we define a primitive recursive function \verb"TimeOfCycle" which
+computes the concrete time of every abstract time point
+using \verb"MicroCycles" to determine the number of microinstructions
+executed between adjacent points on the abstract time scale.
+To compute the concrete time of \verb"u",
+we recursively compute the concrete time of \mbox{\verb"u"$-$\verb"1"}
+and then add the number given by \verb"MicroCycles" for
+the length of the next microinstruction sequence
+to be executed.
+
+\hspace*{\fill}
+\begin{minipage}{17cm}
+$\vdash_{def}$\verb" TimeOfCycle n (mem,pc,acc) u "$=$\\*
+\phantom{$\vdash_{def}$\verb"Ti"}\verb"(u = 0) "$\Rightarrow$\verb" 0 |"\\*
+\phantom{$\vdash_{def}$\verb"Ti"\verb"(u"}\verb"(let t "$=$\verb" (TimeOfCycle n (mem,pc,acc) (u"$-$\verb"1)) in"\\*
+\phantom{$\vdash_{def}$\verb"Ti"\verb"(u"\verb"("}\verb"(t "$+$\verb" (MicroCycles n (mem t,pc t,acc t))))"
+\end{minipage}
+\hspace*{\fill}
+
+The function denoted by the term \verb"(TimeOfCycle n (mem,pc,acc))" is a
+mapping from abstract time to concrete time;
+this function is represented by the downward arrows in Figures
+\mbox{6.2.4.3.3.1} and \mbox{6.2.4.3.3.2}.
+For instance, in the ADD microinstruction sequence where \verb"t" is
+the concrete time of \verb"u",
+the next point on the abstract time scale, \mbox{\verb"u"$+$\verb"1"},
+is mapped to \mbox{\verb"t"$+$\verb"8"} on the concrete time scale.
+In the JMP microinstruction sequence, \mbox{\verb"u"$+$\verb"1"}
+is mapped to \mbox{\verb"t"$+$\verb"4"}.
+
+Now that we have established a formal relationship between
+the abstract and concrete time scales,
+we can use this relationship to derive
+correctness results expressed in terms of the abstract time scale
+from results already obtained which are expressed in terms
+of the concrete time scale.
+In particular, we want to show that
+from one abstract time point to the next,
+the microprocessor executes a single programming level instruction.
+
+We first need to show that every point on the abstract
+time scale corresponds to the start of a microinstruction sequence.
+It is sufficient to show that every abstract time point maps to
+a concrete time when the microcode program counter is zero since
+every microinstruction sequence begins at this location.
+It is necessary to assume that the microcode program counter
+initially has the value zero; that is, time begins when the microcode
+program counter is reset.
+The following theorem can be proved by mathematical induction on \verb"u".
+
+\hspace*{\fill}
+\begin{minipage}{17cm}
+$\vdash_{thm}$\verb" "$\forall$\verb" n mpc mar mem pc acc ir arg buf."\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb" "}\verb"Tamarack n (mpc,mar,mem,pc,acc,ir,arg,buf) "$\wedge$\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb" "}\verb"(mpc 0 "$=$\verb" 0)"\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb" "}$\Longrightarrow$\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb" "}$\forall$\verb"u. mpc (TimeOfCycle n (mem,pc,acc) u) "$=$\verb" 0"
+\end{minipage}
+\hspace*{\fill}
+
+We now use natural deduction style of
+reasoning to show that from one abstract time point
+to the next,
+the microprocessor executes a single programming level instruction.
+Consider any point \verb"u" on the abstract time scale.
+Let \verb"t" be equal to the concrete time of \verb"u":
+
+\hspace*{\fill}
+\verb"t "$=$\verb" TimeOfCycle n (mem,pc,acc) u"
+\hspace*{\fill}
+
+By the above theorem, we know that
+this corresponds to the start of a sequence of microinstructions
+implementing a programming level instruction.
+
+\hspace*{\fill}
+\verb"mpc t "$=$\verb" 0"
+\hspace*{\fill}
+
+By an earlier theorem, we know that the execution of this
+sequence is eventually completed \verb"m" time units later where:
+
+\hspace*{\fill}
+\verb"m "$=$\verb" MicroCycles n (mem t,pc t,acc t)"
+\hspace*{\fill}
+
+Furthermore, this theorem also states that the net effect of this
+microinstruction sequence results in the state specified by
+the function \verb"NextState".
+
+\hspace*{\fill}
+\verb"(mem (t"$+$\verb"m),pc (t"$+$\verb"m),acc (t"$+$\verb"m)) "$=$\verb" NextState n (mem t,pc t,acc t)"
+\hspace*{\fill}
+
+By the definition of \verb"TimeOfCycle",
+
+\hspace*{\fill}
+\verb"t"$+$\verb"m "$=$\verb" TimeOfCycle n (mem,pc,acc) (u"$+$\verb"1)"
+\hspace*{\fill}
+
+which together with the preceding assertion implies that the
+externally visible
+state of the microprocessor at \verb"u"$+$\verb"1" on the abstract
+time scale is the state specified by the function \verb"NextState".
+Thus, we can obtain the following theorem.
+
+\hspace*{\fill}
+\begin{minipage}{17cm}
+$\vdash_{thm}$\verb" "$\forall$\verb" n mpc mar mem pc acc ir arg buf."\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb" "}\verb"Tamarack n (mpc,mar,mem,pc,acc,ir,arg,buf) "$\wedge$\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb" "}\verb"(mpc 0 "$=$\verb" 0)"\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb" "}$\Longrightarrow$\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb" "}\verb"let f "$=$\verb" TimeOfCycle n (mem,pc,acc) in"\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb" "}$\forall$\verb"u."\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb" "$\forall$\verb"u"}\verb"(mem (f (u"$+$\verb"1)),pc (f (u"$+$\verb"1)),acc (f (u"$+$\verb"1))) "$=$\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb" "$\forall$\verb"u"}\verb"NextState n (mem (f u),pc (f u),acc (f u))"
+\end{minipage}
+\hspace*{\fill}
+
+Next, we replace all terms of the form
+\mbox{\verb"(g (f x))"} by logically equivalent terms of the form
+\mbox{\verb"((g "$\circ$\verb" f) x)"}
+where \verb"g" is a signal and ``$\circ$'' is the infix
+operator for function composition.
+
+\hspace*{\fill}
+\begin{minipage}{17cm}
+$\vdash_{thm}$\verb" "$\forall$\verb" n mpc mar mem pc acc ir arg buf."\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb" "}\verb"Tamarack n (mpc,mar,mem,pc,acc,ir,arg,buf) "$\wedge$\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb" "}\verb"(mpc 0 "$=$\verb" 0)"\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb" "}$\Longrightarrow$\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb" "}\verb"let f "$=$\verb" TimeOfCycle n (mem,pc,acc) in"\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb" "}$\forall$\verb"u."\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb" "$\forall$\verb"u"}\verb"((mem "$\circ$\verb" f) (u"$+$\verb"1),(pc "$\circ$\verb" f) (u"$+$\verb"1),(acc "$\circ$\verb" f) (u"$+$\verb"1)) "$=$\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb" "$\forall$\verb"u"}\verb"NextState n ((mem "$\circ$\verb" f) u,(pc "$\circ$\verb" f)  u,(acc "$\circ$\verb" f) u)"
+\end{minipage}
+\hspace*{\fill}
+
+The terms \verb"(mem "$\circ$\verb" f)",
+\verb"(pc "$\circ$\verb" f)" and \verb"(acc "$\circ$\verb" f)"
+denote programming level signals corresponding to the register-transfer
+level signals \verb"mem", \verb"pc" and \verb"acc".
+These programming level signals are obtained by
+sampling the register-transfer level signals at each point
+on the abstract time scale.
+
+The final step in the proof relates
+the implementation specification of the microprocessor given by the
+predicate \verb"Tamarack" to its behavioural specification
+given by the predicate \verb"Behaviour".
+In particular, we show that the constraints imposed by
+\verb"Tamarack" on the register-transfer level signals
+of the implementation satisfy the constraints imposed by
+\verb"Behaviour" on the corresponding programming level signals.
+
+The above theorem states that the relation,
+
+\hspace*{\fill}
+\begin{minipage}{120mm}
+$\forall$\verb"u."\\*
+\phantom{$\forall$\verb"u"}\verb"((mem "$\circ$\verb" f) (u"$+$\verb"1),(pc "$\circ$\verb" f) (u"$+$\verb"1),(acc "$\circ$\verb" f) (u"$+$\verb"1)) "$=$\\*
+\phantom{$\forall$\verb"u"}\verb"NextState n ((mem "$\circ$\verb" f) u,(pc "$\circ$\verb" f) u,(acc "$\circ$\verb" f) u)"
+\end{minipage}
+\hspace*{\fill}
+
+is implied by the predicate \verb"Tamarack" (and the assumption
+that the microcode program counter is reset at time 0).
+This is equivalent to the relation denoted by the term,
+
+\hspace*{\fill}
+\verb"Behaviour n (mem "$\circ$\verb" f,pc "$\circ$\verb" f,acc "$\circ$\verb" f)"
+\hspace*{\fill}
+
+that is, the constraints imposed directly on the programming
+level signals by the predicate \verb"Behaviour".
+Hence, we obtain the \mbox{top-level} statement of correctness for
+the microprocessor.
+
+\hspace*{\fill}
+\begin{minipage}{17cm}
+$\vdash_{thm}$\verb" "$\forall$\verb" n mpc mar mem pc acc ir arg buf."\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb" "}\verb"Tamarack n (mpc,mar,mem,pc,acc,ir,arg,buf) "$\wedge$\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb" "}\verb"(mpc 0 "$=$\verb" 0)"\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb" "}$\Longrightarrow$\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb" "}\verb"let f "$=$\verb" TimeOfCycle n (mem,pc,acc) in"\\*
+\phantom{$\vdash_{thm}$\verb" "$\forall$\verb" "}\verb"Behaviour n (mem "$\circ$\verb" f,pc "$\circ$\verb" f,acc "$\circ$\verb" f)"
+\end{minipage}
+\hspace*{\fill}
+
+This theorem states that the predicate \verb"Behaviour" is an abstract
+model of the underlying register-transfer implementation specified
+by the predicate \verb"Tamarack".
+Therefore, true statements about the behaviour of the abstract model
+can be related to
+true statements about the behaviour of the implementation model.
+In particular, we have established a verified model of the implementation
+which allows us to reason about the execution of programs
+using the formally defined semantics of the instruction set.
+
+\vskip \baselineskip
+{\large\bf 6.2.5.4  Proof Summary}
+
+To summarize the strategy used to construct this proof of correctness,
+the complexity of the proof was reduced by first proving that
+each microinstruction is correctly interpreted by the hardware and
+then using these results to prove that programming level instructions
+are correctly implemented by the corresponding microinstruction
+sequences.
+
+In effect, this strategy amounts to the introduction of an intermediate
+level of specification between the register-transfer level architecture
+and the programming level model of the microprocessor.
+This intermediate level consists of a finite state machine
+whose state transitions correspond to the execution of individual
+microinstructions by the hardware.
+These state transitions are described by the sixteen theorems
+derived in the first main step of the verification procedure.
+
+This use of an intermediate level of specification may be described
+as a {\it structured} approach to formal verification.
+In this approach, intermediate levels of specification are
+used to clarify what forms of complexity
+are being reduced at each step in the proof.
+In the verification of the simple microprocesssor,
+the finite state machine is a major simplification of the
+underlying register-transfer level architecture because it eliminates
+structural aspects of verification problem.
+The second main step of the verification procedure,
+the derivation of the programming level model from the finite state
+machine behaviour, considers the net effect of microinstruction sequences.
+The main simplification at this level is the contraction of behaviour
+over time into a single state transition for each programming level
+instruction.
+
+The third main step of the proof formalizes the
+abstract notion of time used in the programming level model
+of the microprocessor where each instruction is executed in a single
+unit of abstract time.
+This illustrates how formal logic can be used to support
+the informally developed concepts commonly used to describe the
+operation of a microprocessor.
+
+Finally, we note that this very simple example avoids some
+of the more difficult aspects of specifying and verifying
+microprocessor systems.
+For instance,
+the register-transfer level behaviour of a typical microprocessor is
+often much less regular than in our simple example:
+this can be due to
+\mbox{while-loops} in microcode which implement `wait states'
+during \mbox{hand-shaking} interactions with external devices.
+However, many of these more difficult aspects of behaviour
+can also be handled in a sufficiently powerful formalism such
+as higher-order logic.
+
+\vskip \baselineskip
+{\large\bf 6.2.6  The HOL Proof Generating System}
+
+As mentioned earlier, the proof sketches presented in this section
+are summaries of
+formal proofs in the HOL formulation of higher-order logic.
+Every step in these proofs has been mechanically checked by
+the HOL proof generating system.
+Furthermore, large portions of these proofs have been automatically
+generated by the HOL system.
+
+The user interacts with the HOL system through a
+strongly typed, functional programming language called ML.
+Theorems are represented by ML data objects.
+Initially, the only theorems in the system are the axioms of the HOL
+logic.  New theorems are generated from existing theorems by
+ML functions corresponding to the eight primitive inference rules.
+The type discipline of ML ensures that inference rules can only
+be applied to data objects representing previously generated theorems.
+This guarantees that the only way to obtain a theorem in the system
+is by the generation of a formal proof.
+
+Primitive inference rules correspond to the smallest steps in a formal
+proof; to make large proofs feasible,
+ML functions can be programmed to
+apply sequences of primitive inference rules as single steps in a proof.
+A large number of these ML functions, called {\it derived inference rules},
+are built into the HOL system.
+Some these of rules can potentially collapse hundreds (or even thousands)
+of primitive inferences into a single step.
+The user can also implement derived rules to either extend the
+built-in repertoire of general purpose rules or
+to perform a specific sequence of inferences in a particular proof
+(e.g. symbolic simulation of a microinstruction in
+the microprocessor correctness proof).
+Because the implementation
+of derived inference rules, either built-in or user-defined,
+ultimately depends on the axioms and eight primitive inference rules,
+the security of theorem generation is not compromised by
+the implementation of a new rule.
+
+The development of a formal proof as a linear sequence of proof
+lines is a bottom-up process, called {\it forward} proof,
+which starts with axioms and uses inference
+rule to eventually prove the desired theorem.
+When developing a proof in this manner, it is often difficult
+to tell whether or not a sequence of proof steps will ultimately
+be successful.
+In practice, proofs are usually developed in a top-down manner,
+called {\it goal-oriented} or {\it backwards} proof,
+starting with the conclusion of the desired theorem
+and reducing the problem of proving this theorem to simpler
+sub-goals.
+Some of the proof sketches described earlier in this section used
+a simple form of top-down reasoning by showing that a desired theorem
+is logically equivalent to another theorem which has a trivial proof.
+More generally, top-down reasoning reflects how we intuitively
+solve problems:  ``I could prove X if I had a proof of Y and Z''.
+In this case, the goal X is reduced to the sub-goals Y and Z.
+Sub-goals are repeatedly reduced to one or more sub-goals until they are
+all achieved by trivial inferences.
+Once all of the sub-goals have been achieved,
+the top-down development of the proof is used to guide the
+mechanical generation of a forward proof for the desired theorem.
+The HOL system supports the top-down development of proofs by
+providing semi-automatic mechanisms to reduce a goal to sub-goals.
+Furthermore, the system constructs a forward
+proof of the desired theorem as a side-effect of generating sub-goals.
+
+A more detailed description of the HOL system may be found in
+a report by M. Gordon \mbox{[Gordon87]} and the system documentation [SRI89].
+The HOL system is descendent of the \mbox{Edinburgh} LCF system
+which is described in a book by M. Gordon, R. Milner and \mbox{C. Wadsworth}
+[Gordon79].
+Many of the LCF system features re-used in the HOL system are also
+described in a recent book by L. Paulson [Paulson87].
+
+\vskip \baselineskip
+{\large\bf 6.2.7  Concluding Remarks}
+
+An important difference from many other hardware description languages
+is that the higher-order logic model is not predisposed towards a
+particular technology or design style.
+There are no built-in circuit models or even a
+standard way to describe hardware in this formalism.
+Instead of imposing a fixed hardware model,
+higher-order logic can be used as a tool to reason
+within framework based on a hardware model supplied by the user.
+
+The idea of using logic in hardware design is not new:  Boolean logic
+has always been used to show that networks of logic gates implement
+specific functions.  However, only recently has logic been used to
+verify hardware at a much larger scale and for a much wider range
+of digital behaviours.
+Examples include the formal verification of the British Ministry of
+Defense Viper microprocessor [Cohn87,Cohn88] using the HOL system and
+the formal verification of a \mbox{16-bit} microprocessor [Hunt86]
+using the Boyer-Moore system [Boyer79].
+While conventional methods such as multi-level simulation may reveal
+errors or inconsistencies, formal verification can provide
+greater certainty about the correctness of a design.
+The use of logic, and more generally, the use of formal methods
+is an increasingly active area of research fueled by the widespread
+use of microprocessor systems in real-time control.
+It has even been suggested that the use of formal methods should be
+a requirement in the certification of {\it safety-critical} devices
+in control applications such as nuclear reactors,
+railroad signalling and avionics [Cullyer86].
+
+Theorem provers such as the HOL system
+automate much of the tedious detail of formal proof and
+mechanically checks that each step is justified
+by an axiom or rule of inference.
+However, there is a serious danger of misplaced confidence in
+formal verification [Cohn89].
+At stake here is really the value using a theorem prover to
+automatically generate a 20,000 line formal proof and produce
+the answer ``VERIFIED''.
+We can be confident that the theorem has indeed been proved, but
+the automatic generation of this proof does nothing
+to increase confidence in our understanding of what the theorem
+really says.
+In this regard, it somewhat fortunate that complete automation
+is an unlikely prospect for non-trivial proofs.
+We are still required to actively participate in the kind of
+analysis described for the examples given in this section.
+In practice, the formal verification of non-trivial hardware
+remains a human process requiring much expertise,
+creativity and effort.
+Hence, the HOL system is a tool guided by the intelligence of the user;
+but unlike informal proof,
+the user's reasoning is guaranteed to be sound
+by a secure implementation of the underlying formalism.
+
+\newpage
+\begin{thebibliography}{12}
+
+\setlength{\parskip}{0mm}
+
+\bibitem[Anceau86]{Anceau86}
+F. Anceau,
+The Architecture of Microprocessors,
+Addison-Wesley Publishing Company, Wokingham, 1986.
+
+\bibitem[Boyer79]{Boyer79}
+R. S. Boyer and J S. Moore,
+A Computational Logic,
+Academic Press, New York, 1979.
+
+\bibitem[Cullyer87]{Cullyer87}
+W. J. Cullyer,
+Implementing Safety-Critical Systems:  The VIPER Microprocessor, in:
+G. Birtwistle and P. Subrahmanyam, eds.,
+VLSI Specification, Verification and Synthesis,
+Kluwer Academic Publishers, Boston, 1988,
+pp. 1-25.
+
+\bibitem[Cohn87]{Cohn87}
+Avra Cohn,
+A Proof of Correctness of the Viper Microprocessor:  The First Level, in:
+G. Birtwistle and P. Subrahmanyam, eds.,
+VLSI Specification, Verification and Synthesis,
+Kluwer Academic Publishers, Boston, 1988,
+pp. 27-71.
+Also Report No. 104, Computer Laboratory, Cambridge University,
+January 1987.
+
+\bibitem[Cohn88]{Cohn88}
+Avra Cohn,
+Correctness Properties of the Viper Block Model:  The Second Level,
+Report No. 134, Computer Laboratory, Cambridge University,
+May 1988.
+
+\bibitem[Cohn89]{Cohn89}
+A. J. Cohn,
+The Notion of Proof in Hardware Verification,
+Journal of Automated Reasoning, to appear, 1989.
+
+\bibitem[Gordon79]{Gordon79}
+M. Gordon, R. Milner and C. Wadsworth,
+Edinburgh LCF: An Mechanised Logic of Computation,
+Lecture Notes in Computer Science,
+Springer-Verlag,
+Berlin,
+1979.
+
+\bibitem[Gordon86]{Gordon86}
+M. Gordon,
+Why Higher-Order Logic is a Good Formalism
+for Specifying and Verifying Hardware, in:
+G.J. Milne and P. Subrahmanyam, eds.,
+Formal Aspects of VLSI Design,
+Proceedings of the 1985 Edinburgh Conference on VLSI,
+North-Holland, Amsterdam,
+1986,
+pp. 153-177.
+Also Report No. 77, Computer Laboratory, Cambridge University,
+September 1985.
+
+\bibitem[Gordon87]{Gordon87}
+Mike Gordon,
+A Proof Generating System for Higher-Order Logic, in:
+G. Birtwistle and P. Subrahmanyam, eds.,
+VLSI Specification, Verification and Synthesis,
+Kluwer Academic Publishers, Boston, 1988,
+pp. 73-128.
+Also Report No. 103, Computer Laboratory, Cambridge University,
+January 1987.
+
+\bibitem[Hunt86]{Hunt86}
+Warren A. Hunt,
+FM8501, A Verified Microprocessor,
+Ph.D. Thesis, Report No. 47,
+Institute for Computing Science, University of Texas, Austin,
+February 1986.
+
+\bibitem[Joyce88]{Joyce88}
+Jeffrey J. Joyce,
+Formal Specification and Verification of Microprocessor Systems, in:
+S. Winter and H. Schumny, eds.,
+Euromicro 88,
+Proceedings of the 14th Symposium on Microprocessing and Microprogramming,
+Zurich, Switzerland, 29 August - 1 September, 1988,
+North-Holland, Amsterdam, 1988,
+pp. 371-378.
+
+\bibitem[Joyce89]{Joyce89}
+Jeffrey J. Joyce,
+Totally Verified Microprocessor Systems,
+Ph.D. Thesis, Computer Laboratory, Cambridge University,
+expected 1989.
+
+\bibitem[Paulson87]{Paulson87}
+L. C. Paulson,
+Logic and Computation,
+Cambridge University Press,
+Cambridge,
+1987.
+
+\bibitem[SRI89]{SRI89}
+HOL System Documentation,
+SRI International,
+Cambridge,
+1989.
+
+\end{thebibliography}
+
+\end{normalsize}
+
+\end{document}

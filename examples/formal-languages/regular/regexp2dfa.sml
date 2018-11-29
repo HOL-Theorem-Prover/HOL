@@ -1,4 +1,4 @@
-open Lib regexpMisc;
+open Lib regexpMisc regexpLib;
 
 val justifyDefault = regexpLib.SML;
 
@@ -22,6 +22,18 @@ fun Upper str =
     else String.concat [toString(toUpper c), t]
  end;
 
+fun check_compset() =
+ let fun join (s1,s2) = s2^"."^s1
+ in case computeLib.unmapped (regexpLib.regexp_compset())
+     of [] => ()
+      | check_these =>
+         (stdErr_print "Unmapped consts in regexp_compset: \n  ";
+          stdErr_print (String.concat
+             (spreadlnWith {sep=", ", ln = "\n  ", width = 5}
+                           join check_these));
+          stdErr_print "\n\n")
+ end
+
 
 (*---------------------------------------------------------------------------*)
 (* Ada code                                                                  *)
@@ -29,8 +41,8 @@ fun Upper str =
 
 local
  fun finalsString nstates list =
- let val slist = map Bool.toString list
-     val spreadList = spreadln {sep=",", ln="\n     ", width=10} slist
+ let val spreadList =
+      spreadlnWith {sep=",", ln="\n     ", width=10} Bool.toString list
  in
   String.concat
    ["ACCEPTING : constant array (0 .. ", Int.toString (nstates-1), ") of Boolean :=",
@@ -39,8 +51,8 @@ local
  end;
 
 fun array256String intList =
- let val slist = map Int.toString intList
-     val spreadList = spreadln {sep=",", ln="\n     ", width=31} slist
+ let val spreadList =
+      spreadlnWith {sep=",", ln="\n     ", width=31} Int.toString intList
  in
    String.concat ("(":: spreadList @ [")"])
  end
@@ -97,15 +109,15 @@ fun bool_to_C true = 1
   | bool_to_C false = 0;
 
 fun finalsString list =
- let val slist = map Int.toString list
-     val spreadList = spreadln {sep=",", ln="\n  ", width=31}  slist
+ let val spreadList =
+        spreadlnWith {sep=",", ln="\n  ", width=31} Int.toString list
  in
    String.concat ("{" :: spreadList @ ["}"])
  end;
 
 fun array256String intList =
- let val slist = map Int.toString intList
-     val spreadList = spreadln {sep=",", ln="\n   ", width=31} slist
+ let val spreadList =
+      spreadlnWith {sep=",", ln="\n   ", width=31} Int.toString intList
  in
    String.concat ("{":: spreadList @ ["}"])
  end
@@ -151,20 +163,20 @@ fun Cfile name quote (_,_,finals,table) =
 end;
 
 (*---------------------------------------------------------------------------*)
-(* ML code                                                                    *)
+(* ML code                                                                   *)
 (*---------------------------------------------------------------------------*)
 
 local
  fun finalsString list =
- let val slist = map Bool.toString list
-     val spreadList = spreadln {sep=",", ln="\n     ", width=10} slist
+ let val spreadList =
+        spreadlnWith {sep=",", ln="\n     ", width=10} Bool.toString list
  in
    String.concat ("Vector.fromList\n    [" :: spreadList @ ["]"])
  end;
 
 fun array256String intList =
- let val slist = map Int.toString intList
-     val spreadList = spreadln {sep=",", ln="\n     ", width=31} slist
+ let val spreadList =
+       spreadlnWith {sep=",", ln="\n     ", width=31} Int.toString intList
  in
    String.concat ("[":: spreadList @ ["]"])
  end
@@ -214,15 +226,15 @@ end;
 
 local
 fun finalsString list =
- let val slist = map Bool.toString list
-     val spreadList = spreadln {sep=",", ln="\n    ", width=10} slist
+ let val spreadList =
+       spreadlnWith {sep=",", ln="\n    ", width=10} Bool.toString list
  in
    String.concat ("{" :: spreadList @ ["}"])
  end;
 
 fun array256String intList =
- let val slist = map Int.toString intList
-     val spreadList = spreadln {sep=",", ln="\n     ", width=31} slist
+ let val spreadList =
+       spreadlnWith {sep=",", ln="\n     ", width=31} Int.toString intList
  in
    String.concat ("{":: spreadList @ ["}"])
  end
@@ -276,8 +288,8 @@ fun HOLfile name quote (certificate,_,finals,table) =
          val eqn = snd(dest_forall(concl thm))
          val (exec_dfa,[finals,table,start,s]) = strip_comb(lhs eqn)
          val name_finals = name^"_finals"
-	 val name_table = name^"_table"
-	 val name_start = name^"_start"
+         val name_table = name^"_table"
+         val name_start = name^"_start"
          val finals_var = mk_var(name_finals,type_of finals)
          val table_var  = mk_var(name_table,type_of table)
          val start_var  = mk_var(name_start,type_of start)
@@ -315,7 +327,7 @@ fun parse_args () =
      fun check(J,lstring,name,string) =
        case to_lang lstring
         of SOME lang => SOME(J,lang,name,string)
-	 | NONE => NONE
+         | NONE => NONE
  in
     case CommandLine.arguments()
      of ["-dfagen","SML",lstring,name,string] => check(regexpLib.SML,lstring,name,string)
@@ -331,9 +343,10 @@ fun main () =
      fun parse_regexp s =
        Regexp_Type.fromString s handle e => failwithERR e
      fun compile_regexp J r =
-        regexpLib.matcher J r handle e => failwithERR e
+       regexpLib.matcher J r handle e => failwithERR e
  in
     stdErr_print "regexp2dfa: \n"
+(*  ; check_compset() *)
   ; case parse_args()
     of NONE => (printHelp(); regexpMisc.fail())
      | SOME (justify,lang,name,rstring) =>
@@ -341,13 +354,13 @@ fun main () =
           val _ = stdErr_print "Parsed regexp, now constructing DFA ... "
           val result = compile_regexp justify regexp
           val file_string =
-	    (case lang
+            (case lang
               of Ada  => Adafile
                | C    => Cfile
                | ML   => MLfile
                | Java => Javafile
                | Thm  => HOLfile)
-	    name rstring (deconstruct result)
+            name rstring (deconstruct result)
       in
          stdOut_print file_string
        ; regexpMisc.succeed()

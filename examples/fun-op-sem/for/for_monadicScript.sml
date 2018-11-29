@@ -3,7 +3,6 @@ open forTheory state_transformerTheory
 
 val _ = new_theory "for_monadic";
 val _ = temp_tight_equality ();
-val _ = monadsyntax.temp_add_monadsyntax()
 
 (*
 This file casts the semantics for the FOR language from forTheory using a monad
@@ -17,14 +16,20 @@ val mbind_def = Define`
     case f s of
     | (Rval x,s) => g x s
     | r => r`;
-val _ = overload_on("monad_bind",``mbind``);
 
 val mibind_def = Define`
   mibind f g = mbind f (λx. g)`;
-val _ = overload_on("monad_unitbind",``mibind``);
 
 val mfail_def = Define`
   mfail = return Rfail`;
+
+val _ =
+    monadsyntax.declare_monad ("for_state", {
+      bind = “mbind”, ignorebind = SOME “mibind”,
+      unit = “state_transformer$UNIT”,
+      guard = NONE, fail = NONE, choice = NONE
+    })
+val _ = monadsyntax.enable_monad "for_state"
 
 val mbreak_def = Define`
   mbreak = return Rbreak`;

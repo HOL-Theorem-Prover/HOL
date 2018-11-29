@@ -41,8 +41,8 @@ val EMPTY_ENV = Define `EMPTY_ENV = \(s:string). {}`
 val env1a = prove(``!x Q Q'. ~(Q=Q') ==> (!e X X'. e[[[Q<--X]]][[[Q'<--X']]]x = e[[[Q'<--X']]][[[Q<--X]]]x)``,RW_TAC std_ss [ENV_UPDATE_def] THEN ASSUM_LIST PROVE_TAC)
 
 val ENV_SWAP = save_thm("ENV_SWAP",prove (``!e Q Q' X X'. ~(Q=Q') ==> (e[[[Q<--X]]][[[Q'<--X']]] = e[[[Q'<--X']]][[[Q<--X]]])``,
-		RW_TAC std_ss [ENV_UPDATE_def,EXTENSION,SET_SPEC]
-		THEN RW_TAC std_ss [FUN_EQ_CONV ``(\q. (if q = Q' then X' else (if q = Q then X else e q))) =
+                RW_TAC std_ss [ENV_UPDATE_def,EXTENSION,SET_SPEC]
+                THEN RW_TAC std_ss [FUN_EQ_CONV ``(\q. (if q = Q' then X' else (if q = Q then X else e q))) =
                                 (\q. (if q = Q then X else (if q = Q' then X' else e q)))``,env1a,ENV_UPDATE_def]
                 THEN ASSUM_LIST PROVE_TAC))
 
@@ -53,10 +53,10 @@ val ENV_EVAL = save_thm("ENV_EVAL",prove(``!e Q X. e[[[Q<--X]]] Q = X``,SIMP_TAC
 val ENV_UPDATE_INV = save_thm("ENV_UPDATE_INV",prove(``!e Q Q' X. ~(Q=Q') ==> (e[[[Q'<--X]]] Q = e Q)``,SIMP_TAC std_ss [ENV_UPDATE_def]))
 
 val ENV_EVAL_EQ_INV = save_thm("ENV_EVAL_EQ_INV",prove(``!e e' Q P X. (Q=P) ==> (e[[[Q<--X]]] P = e'[[[Q<--X]]] P)``,
-					    SIMP_TAC std_ss [ENV_UPDATE_def]))
+                                            SIMP_TAC std_ss [ENV_UPDATE_def]))
 
 val ENV_EVAL_NEQ_INV = save_thm("ENV_EVAL_NEQ_INV",prove(``!e e' Q P X. ~(Q=P) ==> ((e[[[Q<--X]]] P = e'[[[Q<--X]]] P) = (e P = e' P))``,
-					    SIMP_TAC std_ss [ENV_UPDATE_def]))
+                                            SIMP_TAC std_ss [ENV_UPDATE_def]))
 
 val EMPTY_ENV_MAP = save_thm("EMPTY_ENV_MAP",prove(``!x y. EMPTY_ENV x = EMPTY_ENV y``,SIMP_TAC std_ss [EMPTY_ENV]))
 

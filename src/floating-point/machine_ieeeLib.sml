@@ -76,13 +76,23 @@ local
       in
          (get_function def, def)
       end
-   fun mk_fp_to_real fp float_value fp_to_float fp_ty =
+   fun mk_fp_to_real fp float_to_real fp_to_float fp_ty =
       let
          val fp_to_real = fp ^ "_to_real"
-         val fp_to_real_var = Term.mk_var (fp_to_real, fp_ty --> value_ty)
+         val fp_to_real_var = Term.mk_var (fp_to_real, fp_ty --> real_ty)
          val def =
             Definition.new_definition (fp_to_real ^ "_def",
-              fp_to_real_var == float_value o' fp_to_float)
+              fp_to_real_var == float_to_real o' fp_to_float)
+      in
+         (get_function def, def)
+      end
+   fun mk_fp_to_value fp float_value fp_to_float fp_ty =
+      let
+         val fp_to_value = fp ^ "_to_value"
+         val fp_to_value_var = Term.mk_var (fp_to_value, fp_ty --> value_ty)
+         val def =
+            Definition.new_definition (fp_to_value ^ "_def",
+              fp_to_value_var == float_value o' fp_to_float)
       in
          (get_function def, def)
       end
@@ -375,7 +385,7 @@ local
          )
       end
 in
-   fun mk_fp_encoding (fp, t, w, a) =
+   fun mk_machine (fp, t, w, a) =
      let
 (* e.g. val fp = "fp16" and t = 10 and w = 5 and a = SOME "half" *)
         val pre_k = t + w
@@ -384,6 +394,7 @@ in
         val w_ty = fcpSyntax.mk_int_numeric_type w
         val fp_ty = mk_w (fcpSyntax.mk_int_numeric_type k)
         val float_ty = Type.mk_type ("float", [t_ty, w_ty])
+        val float_to_real = Term.mk_const ("float_to_real", float_ty --> real_ty)
         val float_value = Term.mk_const ("float_value", float_ty --> value_ty)
         val real_to_float =
           Term.mk_const ("real_to_float", rounding_ty --> real_ty --> float_ty)
@@ -395,7 +406,9 @@ in
         val (float_to_fp, float_to_fp_def) =
           mk_float_to_fp fp fp_ty float_ty t_ty w_ty
         val (fp_to_real, fp_to_real_def) =
-          mk_fp_to_real fp float_value fp_to_float fp_ty
+          mk_fp_to_real fp float_to_real fp_to_float fp_ty
+        val (fp_to_value, fp_to_value_def) =
+          mk_fp_to_value fp float_value fp_to_float fp_ty
         val (real_to_fp, real_to_fp_def) =
           mk_real_to_fp fp real_to_float float_to_fp fp_ty
         val (real_to_fp_with_flags, real_to_fp_with_flags_def) =
@@ -485,8 +498,8 @@ in
          fp_top_def, fp_bottom_def, float_to_fp_fp_to_float,
          fp_to_float_float_to_fp] @
         List.map monop
-          [fp_to_real_def, fp_to_int_def, fp_abs_def, fp_negate_def,
-           fp_isnan_def, fp_issignallingnan_def,
+          [fp_to_real_def, fp_to_value_def, fp_to_int_def, fp_abs_def,
+           fp_negate_def, fp_isnan_def, fp_issignallingnan_def,
            fp_isintegral_def, fp_iszero_def, fp_isnormal_def,
            fp_issubnormal_def, fp_isfinite_def, fp_isinfinite_def,
            fp_roundToIntegral_def, fp_sqrt_with_flags_def] @
@@ -498,5 +511,21 @@ in
            fp_mul_sub_with_flags_def]
      end
 end
+
+fun mk_fp_encoding (x as (_, y, _, _)) =
+    let
+       val mtch = DB.match [Theory.current_theory()] o Thm.concl
+       fun get_thm_name thm =
+          case mtch thm of
+             [((_, name), _)] => (thm, name)
+           | _ => raise Feedback.mk_HOL_ERR "machine_ieee" "get_thm_name" ""
+       val l =
+          (List.map get_thm_name o
+           (if y = 52 then (* native *) fn l => List.drop (l, 11) else Lib.I) o
+           mk_machine) x
+       val (thms, names) = ListPair.unzip l
+    in
+       computeLib.add_persistent_funs names; thms
+    end
 
 end

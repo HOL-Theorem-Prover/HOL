@@ -432,7 +432,7 @@ val healthy_wp_prob = lemma
                ++ REVERSE CONJ_TAC >> METIS_TAC []
                ++ MATCH_MP_TAC le_add2
                ++ CONJ_TAC
-	       ++ RW_TAC posreal_ss []
+               ++ RW_TAC posreal_ss []
                ++ MATCH_MP_TAC le_lmul_imp
                ++ Q.SPEC_TAC (`s`, `s`)
                ++ Know `!e f : 'a state expect. Leq e f ==> (!s. e s <= f s)`
@@ -1179,8 +1179,8 @@ val wlp_if_vc = store_thm
 (* Counter-example:                                                          *)
 (* We would like it to be the case that                                      *)
 (* !prog. (wp prog One = One) ==> (!postE. wp prog postE = wlp prog postE)   *)
-(* 									     *)
-(* For the loop below, wp loop One = One				     *)
+(*                                                                           *)
+(* For the loop below, wp loop One = One                                     *)
 (* but wlp loop One = (\s. if s n = x then 1 else infty)                     *)
 (* ------------------------------------------------------------------------- *)
 

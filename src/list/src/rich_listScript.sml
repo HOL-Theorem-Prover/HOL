@@ -1,5 +1,5 @@
 open HolKernel Parse BasicProvers boolLib numLib metisLib simpLib
-open combinTheory arithmeticTheory prim_recTheory
+open combinTheory arithmeticTheory prim_recTheory pred_setTheory
 local open listTheory listSimps pred_setSimps TotalDefn in end
 
 local
@@ -55,6 +55,10 @@ val () = new_theory "rich_list"
 (* ------------------------------------------------------------------------ *)
 
 val list_ss = arith_ss ++ listSimps.LIST_ss ++ pred_setSimps.PRED_SET_ss
+val metis_tac = METIS_TAC
+val rw = SRW_TAC[numSimps.ARITH_ss]
+fun simp thl = ASM_SIMP_TAC (srw_ss() ++ numSimps.ARITH_ss) thl
+fun fs thl = FULL_SIMP_TAC (srw_ss() ++ numSimps.ARITH_ss) thl
 
 val DEF0 = Lib.with_flag (boolLib.def_suffix, "") TotalDefn.Define
 val DEF = Lib.with_flag (boolLib.def_suffix, "_DEF") TotalDefn.Define
@@ -2720,6 +2724,133 @@ val prefixes_is_prefix_total = Q.store_thm("prefixes_is_prefix_total",
   GEN_TAC THEN Cases THEN SIMP_TAC(srw_ss())[] THEN
   Cases THEN SRW_TAC[][])
 
+(* ----------------------------------------------------------------------
+    longest_prefix
+
+    longest string that is a prefix of all elements of a set. If the set
+    is empty, return []
+   ---------------------------------------------------------------------- *)
+
+val common_prefixes_def = new_definition(
+  "common_prefixes_def",
+  “common_prefixes s = { p | !m. m IN s ==> p <<= m}”
+);
+
+val common_prefixes_BIGINTER = Q.store_thm(
+  "common_prefixes_BIGINTER",
+  ‘common_prefixes s = BIGINTER (IMAGE (\l. { p | p <<= l }) s)’,
+  simp[EXTENSION, common_prefixes_def] >> gen_tac >> eq_tac >> rw[]
+  >- metis_tac[] >>
+  first_x_assum (Q.SPEC_THEN ‘{ y | y <<= m }’ mp_tac) >> simp[] >>
+  disch_then irule >> Q.EXISTS_TAC ‘m’ >> simp[]);
+
+val FINITE_prefix = Q.store_thm(
+  "FINITE_prefix",
+  ‘FINITE { a | a <<= b }’,
+  Induct_on ‘b’ >> simp[listTheory.isPREFIX_CONSR] >> Q.X_GEN_TAC ‘a’ >>
+  Q.MATCH_ABBREV_TAC ‘FINITE s’ >>
+  ‘s = {[]} UNION IMAGE (CONS a) { xs | xs <<= b }’ suffices_by simp[] >>
+  simp[Abbr‘s’, EXTENSION]);
+
+val FINITE_common_prefixes = Q.store_thm(
+  "FINITE_common_prefixes[simp]",
+  ‘s <> {} ==> FINITE (common_prefixes s)’,
+  strip_tac >> simp[common_prefixes_BIGINTER] >> irule FINITE_BIGINTER >>
+  simp[PULL_EXISTS,FINITE_prefix] >> metis_tac[IN_INSERT,SET_CASES]);
+
+val common_prefixes_NONEMPTY = Q.store_thm(
+  "common_prefixes_NONEMPTY[simp]",
+  ‘common_prefixes s <> {}’,
+  ‘[] IN common_prefixes s’ by simp[common_prefixes_def] >> strip_tac >> fs[]);
+
+val longest_prefix_def = new_definition(
+  "longest_prefix_def",
+  “longest_prefix s =
+     if s = {} then []
+     else @x. is_measure_maximal LENGTH (common_prefixes s) x”
+);
+
+val two_common_prefixes = Q.store_thm(
+  "two_common_prefixes",
+  ‘s <> {} /\ p1 IN common_prefixes s /\ p2 IN common_prefixes s ==>
+   p1 <<= p2 \/ p2 <<= p1’,
+  rw[common_prefixes_def] >> Cases_on ‘s’ >> fs[] >>
+  metis_tac[prefixes_is_prefix_total]);
+
+val longest_prefix_UNIQUE = Q.store_thm(
+  "longest_prefix_UNIQUE",
+  ‘s <> {} /\ is_measure_maximal LENGTH (common_prefixes s) x /\
+   is_measure_maximal LENGTH (common_prefixes s) y ==> (x = y)’,
+  rw[is_measure_maximal_def] >>
+  ‘LENGTH x = LENGTH y’ by metis_tac[arithmeticTheory.LESS_EQUAL_ANTISYM] >>
+  dxrule_all_then strip_assume_tac two_common_prefixes >>
+  metis_tac[IS_PREFIX_LENGTH_ANTI]);
+
+val common_prefixes_NIL = Q.store_thm(
+  "common_prefixes_NIL",
+  ‘[] IN s ==> (common_prefixes s = {[]})’,
+  simp[common_prefixes_def, EXTENSION] >> rpt strip_tac >> eq_tac >> strip_tac
+  >- (first_x_assum drule >> simp[]) >> simp[]);
+
+val longest_prefix_NIL = Q.store_thm(
+  "longest_prefix_NIL",
+  ‘[] IN s ==> (longest_prefix s = [])’,
+  rw[longest_prefix_def, common_prefixes_NIL] >> SELECT_ELIM_TAC >>
+  simp[is_measure_maximal_def]);
+
+val NIL_IN_common_prefixes = Q.store_thm(
+  "NIL_IN_common_prefixes[simp]",
+  ‘[] IN common_prefixes s’,
+  simp[common_prefixes_def]);
+
+val longest_prefix_EMPTY = Q.store_thm(
+  "longest_prefix_EMPTY[simp]",
+  ‘longest_prefix {} = []’,
+  simp[longest_prefix_def]);
+
+val longest_prefix_SING = Q.store_thm(
+  "longest_prefix_SING[simp]",
+  ‘longest_prefix {s} = s’,
+  simp[longest_prefix_def] >> SELECT_ELIM_TAC >> conj_tac
+  >- (irule FINITE_is_measure_maximal >> simp[]) >>
+  simp[is_measure_maximal_def, common_prefixes_def] >> rw[] >>
+  metis_tac[IS_PREFIX_LENGTH_ANTI, LESS_EQUAL_ANTISYM, IS_PREFIX_LENGTH]);
+
+val common_prefixes_PAIR = Q.store_thm(
+  "common_prefixes_PAIR[simp]",
+  ‘(common_prefixes {[]; x} = {[]}) /\ (common_prefixes {x; []} = {[]}) /\
+   (common_prefixes {a::xs; b::ys} =
+      [] INSERT (if a = b then IMAGE (CONS a) (common_prefixes {xs; ys})
+                 else {}))’,
+  simp[common_prefixes_NIL] >> rw[common_prefixes_def] >>
+  simp[EXTENSION, DISJ_IMP_THM, FORALL_AND_THM, listTheory.isPREFIX_CONSR] >>
+  rw[EQ_IMP_THM]);
+
+val longest_prefix_PAIR = Q.store_thm(
+  "longest_prefix_PAIR",
+  ‘(longest_prefix {[]; ys} = []) /\ (longest_prefix {xs; []} = []) /\
+   (longest_prefix {x::xs; y::ys} =
+      if x = y then x :: longest_prefix {xs; ys} else [])’,
+  simp[longest_prefix_NIL] >> reverse (rw[])
+  >- simp[longest_prefix_def] >>
+  simp[longest_prefix_def] >>
+  SELECT_ELIM_TAC >> conj_tac
+  >- (irule FINITE_is_measure_maximal >> simp[]) >>
+  Q.X_GEN_TAC ‘m’ >>
+  Q.ABBREV_TAC ‘cset = IMAGE (CONS x) (common_prefixes {xs;ys})’ >>
+  ‘?c. c IN cset /\ LENGTH ([]:'a list) < LENGTH c’
+    by (simp[Abbr‘cset’, PULL_EXISTS] >> Q.EXISTS_TAC ‘[]’ >> simp[]) >>
+  drule_all_then assume_tac is_measure_maximal_INSERT >>
+  simp[] >> SELECT_ELIM_TAC >> conj_tac
+  >- (irule FINITE_is_measure_maximal >> simp[]) >>
+  rw[is_measure_maximal_def, Abbr‘cset’]  >> fs[PULL_EXISTS] >>
+  Q.RENAME_TAC [‘a = b’, ‘a IN common_prefixes {xs;ys}’,
+                ‘b IN common_prefixes {xs;ys}’] >>
+  ‘LENGTH a = LENGTH b’ by metis_tac[DECIDE “a <= b /\ b <= a ==> (a = b)”] >>
+  ‘{xs;ys} <> {}’ by simp[] >>
+  ‘a <<= b \/ b <<= a’ by metis_tac[two_common_prefixes] >>
+  metis_tac[IS_PREFIX_LENGTH_ANTI])
+
 (*---------------------------------------------------------------------------
    A list of numbers
  ---------------------------------------------------------------------------*)
@@ -3499,29 +3630,29 @@ local
        ("ZIP_GENLIST", "ZIP_GENLIST"),
        ("ZIP_UNZIP", "ZIP_UNZIP")
       ]
+   val B = PP.block PP.CONSISTENT 0
 in
    val () = Theory.adjoin_to_theory {
       sig_ps = SOME
-        (fn ppstrm =>
+        (fn _ =>
            let
-              fun S s =
-                 (PP.add_string ppstrm ("val " ^ s ^ " : thm")
-                  ; PP.add_newline ppstrm)
+              fun S s = PP.add_string ("val " ^ s ^ " : thm")
            in
-              PP.add_string ppstrm "(* Aliases for legacy theorem names *)"
-              ; PP.add_newline ppstrm
-              ; PP.add_newline ppstrm
-              ; List.app S
-                  (Lib.sort (Lib.curry String.<) (List.map fst (alias @ moved)))
+             B (
+               [PP.add_string "(* Aliases for legacy theorem names *)", PP.NL] @
+               PP.pr_list S [PP.add_break(1,0)]
+                          (Lib.sort (Lib.curry String.<)
+                                    (List.map fst (alias @ moved)))
+             )
            end),
       struct_ps = SOME
-        (fn ppstrm =>
+        (fn _ =>
            let
               fun S p (s1, s2) =
-                 (PP.add_string ppstrm ("val " ^ s1 ^ " = " ^ p ^ s2)
-                  ; PP.add_newline ppstrm)
+                PP.add_string ("val " ^ s1 ^ " = " ^ p ^ s2)
+              fun L p l = B (PP.pr_list (S p) [PP.NL] l)
            in
-              List.app (S "") alias; List.app (S "listTheory.") moved
+              B [L "" alias, PP.add_break(1,0), L "listTheory." moved]
            end)}
 end
 

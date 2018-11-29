@@ -17,10 +17,6 @@ open HolKernel Parse boolLib bossLib
 
 type env = (term * (bool * thm * thm * thm)) list;
 
-val _ = (Globals.priming := SOME "");
-
-
-
 (*---------------------------------------------------------------------------*)
 (* Ensure that each let-bound variable name in a term is different than the  *)
 (* others.                                                                   *)
@@ -567,4 +563,3 @@ fun toANF env def =
 
 
 end
-

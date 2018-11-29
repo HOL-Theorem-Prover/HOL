@@ -8,8 +8,8 @@ signature Parse = sig
   type PhraseBlockStyle = term_grammar.PhraseBlockStyle
   type ParenStyle = term_grammar.ParenStyle
   type block_info = term_grammar.block_info
-  type 'a frag = 'a Portable.frag
-  type ppstream = Portable.ppstream
+  type 'a frag = 'a PP.frag
+  type 'a pprinter = 'a -> HOLPP.pretty
 
   datatype fixity = datatype term_grammar_dtype.fixity
   val fixityToString : fixity -> string
@@ -39,14 +39,16 @@ signature Parse = sig
                              Name : string,
                              Assoc : associativity} -> unit
 
-  val temp_thytype_abbrev : KernelSig.kernelname * hol_type -> unit
-  val thytype_abbrev : KernelSig.kernelname * hol_type -> unit
+  val temp_thytype_abbrev : KernelSig.kernelname * hol_type * bool -> unit
+  val thytype_abbrev : KernelSig.kernelname * hol_type * bool -> unit
   val temp_type_abbrev : string * hol_type -> unit
   val type_abbrev : string * hol_type -> unit
   val temp_disable_tyabbrev_printing : string -> unit
   val disable_tyabbrev_printing : string -> unit
   val remove_type_abbrev : string -> unit
   val temp_remove_type_abbrev : string -> unit
+  val temp_type_abbrev_pp : string * hol_type -> unit
+  val type_abbrev_pp : string * hol_type -> unit
 
   (* Parsing terms *)
 
@@ -75,8 +77,7 @@ signature Parse = sig
       ((hol_type frag list -> hol_type) * (term frag list -> term))
   val print_from_grammars :
       (type_grammar.grammar * term_grammar.grammar) ->
-      ((Portable.ppstream -> hol_type -> unit) *
-       (Portable.ppstream -> term -> unit))
+      (hol_type pprinter * term pprinter)
   val print_term_by_grammar :
         (type_grammar.grammar * term_grammar.grammar) -> term -> unit
   val print_without_macros : term -> unit
@@ -128,10 +129,9 @@ signature Parse = sig
   val overload_info_for : string -> unit
 
   (* printing without overloads or abbreviations *)
-  val pp_term_without_overloads_on : string list -> ppstream -> term -> unit
-  val pp_term_without_overloads : (string * term) list -> ppstream -> term ->
-                                  unit
-  val pp_type_without_abbrevs : string list -> ppstream -> hol_type -> unit
+  val pp_term_without_overloads_on : string list -> term pprinter
+  val pp_term_without_overloads : (string * term) list -> term pprinter
+  val pp_type_without_abbrevs : string list -> hol_type pprinter
 
   (* adding and removing user parsers and printers to the grammar *)
 
@@ -189,24 +189,16 @@ signature Parse = sig
   (* Pretty printing *)
   val current_backend : PPBackEnd.t ref
   val interactive_ppbackend : unit -> PPBackEnd.t
-  val pp_term : ppstream -> term -> unit
-  val pp_type : ppstream -> hol_type -> unit
-  val pp_thm : ppstream -> thm -> unit
+  val mlower : (term_pp_types.printing_info,'a)smpp.t -> HOLPP.pretty
+  val pp_term : term pprinter
+  val pp_type : hol_type pprinter
+  val pp_thm : thm pprinter
   val stdprinters : ((term -> string) * (hol_type -> string)) option
 
-  val pp_with_bquotes :
-    (ppstream -> 'a -> unit) -> (ppstream -> 'a -> unit)
-  val term_pp_with_delimiters :
-    (ppstream -> term -> unit) -> ppstream -> term -> unit
-  val respect_width_ref :
-      int ref -> (ppstream -> 'a -> unit) ->
-      (ppstream -> 'a -> unit)
-  val type_pp_with_delimiters :
-    (ppstream -> hol_type -> unit) ->
-    ppstream -> hol_type -> unit
-  val get_term_printer : unit -> (ppstream -> term -> unit)
-  val set_term_printer : (ppstream -> term -> unit) ->
-                               ppstream -> term -> unit
+  val term_pp_with_delimiters : term pprinter -> term pprinter
+  val type_pp_with_delimiters : hol_type pprinter -> hol_type pprinter
+  val get_term_printer : unit -> term pprinter
+  val set_term_printer : term pprinter -> term pprinter
 
   val minprint               : term -> string
   val rawterm_pp             : ('a -> 'b) -> 'a -> 'b

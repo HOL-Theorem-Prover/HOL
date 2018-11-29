@@ -48,7 +48,7 @@ val ERR = mk_HOL_ERR "res_quanTools";
 
 
 (* ===================================================================== *)
-(* Conversions		    	    					 *)
+(* Conversions                                                           *)
 (* --------------------------------------------------------------------- *)
 
 local
@@ -103,8 +103,8 @@ fun PRED_THENC_BODY c1 c2 =
    (((RATOR_CONV o RAND_CONV) c1) THENC ((RAND_CONV o ABS_CONV) c2));
 
 (* --------------------------------------------------------------------- *)
-(* IMP_RES_FORALL_CONV (--`!x. P x ==> t[x]`--)			 *)
-(*     |- !x. P x ==> t[x] = !x :: P. t[x]    	    			 *)
+(* IMP_RES_FORALL_CONV (--`!x. P x ==> t[x]`--)                  *)
+(*     |- !x. P x ==> t[x] = !x :: P. t[x]                               *)
 (* --------------------------------------------------------------------- *)
 
 val IMP_RES_FORALL_CONV  = (fn tm =>
@@ -195,15 +195,15 @@ val RES_FORALL_SWAP_CONV = (fn tm =>
     :conv;
 
 (* --------------------------------------------------------------------- *)
-(* RESQ_REWRITE1_CONV : thm list -> thm -> conv				 *)
-(* RESQ_REWRITE1_CONV thms thm tm	    				 *)
-(* The input theorem thm should be restricted quantified equational 	 *)
+(* RESQ_REWRITE1_CONV : thm list -> thm -> conv                          *)
+(* RESQ_REWRITE1_CONV thms thm tm                                        *)
+(* The input theorem thm should be restricted quantified equational      *)
 (* theorem ie. the form suitable for RESQ_REWRITE_TAC. The input term tm *)
 (* should be an instance of the left-hand side of the conclusion of thm. *)
 (* The theorem list thms should contains theorems matching the conditions*)
-(* in the input thm. They are used to discharge the conditions. The 	 *)
-(* conditions which cannot be discharged by matching theorems will be 	 *)
-(* left in the assumption.   	    					 *)
+(* in the input thm. They are used to discharge the conditions. The      *)
+(* conditions which cannot be discharged by matching theorems will be    *)
+(* left in the assumption.                                               *)
 (* --------------------------------------------------------------------- *)
 
 fun RESQ_REWRITE1_CONV thms th =
@@ -215,7 +215,7 @@ fun RESQ_REWRITE1_CONV thms th =
     end):conv;
 
 (* ===================================================================== *)
-(* Derived rules    	    	    					 *)
+(* Derived rules                                                         *)
 (* --------------------------------------------------------------------- *)
 
 (* --------------------------------------------------------------------- *)
@@ -230,8 +230,8 @@ fun RESQ_REWRITE1_CONV thms th =
 fun RESQ_HALF_SPEC tm = CONV_RULE RES_FORALL_CONV THENR SPEC tm;
 
 (* --------------------------------------------------------------------- *)
-(* Specialize a list of universal quantifiers which may be a mixture	 *)
-(* of ordinary or restricted in any order.				 *)
+(* Specialize a list of universal quantifiers which may be a mixture     *)
+(* of ordinary or restricted in any order.                               *)
 (* --------------------------------------------------------------------- *)
 
 fun GEN_RESQ_HALF_SPECL spec res_spec =
@@ -265,30 +265,30 @@ val RESQ_HALF_SPECL = GEN_RESQ_HALF_SPECL SPEC RESQ_HALF_SPEC;
 fun RESQ_SPEC tm = (RESQ_HALF_SPEC tm THENR UNDISCH) ORELSER SPEC tm;
 
 (* ---------------------------------------------------------------------*)
-(* RESQ_SPECL : term list -> thm -> thm					*)
-(* An analogy to SPECL as RESQ_SEPC to SPEC.				*)
-(* Instatiate a list of possibly restricted universal quantifiers.	*)
+(* RESQ_SPECL : term list -> thm -> thm                                 *)
+(* An analogy to SPECL as RESQ_SEPC to SPEC.                            *)
+(* Instatiate a list of possibly restricted universal quantifiers.      *)
 (* ---------------------------------------------------------------------*)
 
 val RESQ_SPECL = C (foldl (uncurry RESQ_SPEC));
 
 (* --------------------------------------------------------------------- *)
-(* RESQ_MATCH_MP : thm -> thm -> thm  					 *)
-(* RESQ_MATCH_MP (|- !x :: P. Q x) (|- t IN P) returns |- Q t  	    	 *)
+(* RESQ_MATCH_MP : thm -> thm -> thm                                     *)
+(* RESQ_MATCH_MP (|- !x :: P. Q x) (|- t IN P) returns |- Q t            *)
 (* --------------------------------------------------------------------- *)
 
 fun RESQ_MATCH_MP th1 th2 = MATCH_MP (CONV_RULE RES_FORALL_CONV th1) th2;
 
 (* --------------------------------------------------------------------- *)
-(* RESQ_REWR_CANON : thm -> thm	    					 *)
-(* convert a theorem into a canonical form for COND_REWR_TAC		 *)
+(* RESQ_REWR_CANON : thm -> thm                                          *)
+(* convert a theorem into a canonical form for COND_REWR_TAC             *)
 (* --------------------------------------------------------------------- *)
 
 val RESQ_REWR_CANON =
     COND_REWR_CANON o (CONV_RULE ((TOP_DEPTH_CONV RES_FORALL_CONV)));
 
 (* ===================================================================== *)
-(* Tactics   	    	    	    					*)
+(* Tactics                                                              *)
 (* --------------------------------------------------------------------- *)
 
 (* --------------------------------------------------------------------- *)
@@ -341,31 +341,31 @@ val RESQ_STRIP_TAC = RESQ_STRIP_GOAL_THEN RESQ_STRIP_ASSUME_TAC;
 val RESQ_GEN_TAC = RESQ_GEN_THEN RESQ_STRIP_ASSUME_TAC;
 
 (* --------------------------------------------------------------------- *)
-(* RESOLUTION								*)
+(* RESOLUTION                                                           *)
 (* --------------------------------------------------------------------- *)
 
 (* --------------------------------------------------------------------- *)
-(* check st l : Fail with st if l is empty, otherwise return l.		*)
+(* check st l : Fail with st if l is empty, otherwise return l.         *)
 (* --------------------------------------------------------------------- *)
 
 local fun check st l = if null l then raise ERR "check" st else l
 
 (* --------------------------------------------------------------------- *)
-(* check_res th : Fail if th is not in the form:			*)
-(* !x0 ... xn. !y :: P. t   otherwise, it returns the following theorem	*)
-(* !x0 ... xn y. P ==> t.    	    					*)
+(* check_res th : Fail if th is not in the form:                        *)
+(* !x0 ... xn. !y :: P. t   otherwise, it returns the following theorem *)
+(* !x0 ... xn y. P ==> t.                                               *)
 (* --------------------------------------------------------------------- *)
 
 and  check_res th =
     if is_forall (concl th) then
-    	GEN_ALL (CONV_RULE RES_FORALL_CONV (SPEC_ALL th))
+        GEN_ALL (CONV_RULE RES_FORALL_CONV (SPEC_ALL th))
     else CONV_RULE RES_FORALL_CONV th
       handle _ => raise ERR "check_res" "not restricted forall";
 in
 
 (* --------------------------------------------------------------------- *)
-(* RESQ_IMP_RES_THEN  : Resolve a restricted quantified theorem against	 *)
-(* the assumptions.	    	    					 *)
+(* RESQ_IMP_RES_THEN  : Resolve a restricted quantified theorem against  *)
+(* the assumptions.                                                      *)
 (* --------------------------------------------------------------------- *)
 
 fun RESQ_IMP_RES_THEN ttac resth =
@@ -376,8 +376,8 @@ fun RESQ_IMP_RES_THEN ttac resth =
         raise ERR "RESQ_IMP_RES_THEN" s
 
 (* --------------------------------------------------------------------- *)
-(* RESQ_RES_THEN : Resolve all restricted universally quantified 	 *)
-(* assumptions against the rest.	    			 	 *)
+(* RESQ_RES_THEN : Resolve all restricted universally quantified         *)
+(* assumptions against the rest.                                         *)
 (* --------------------------------------------------------------------- *)
 
 and RESQ_RES_THEN (ttac:thm_tactic) (asl,g) =
@@ -401,10 +401,10 @@ fun RESQ_RES_TAC g =
     handle _ => ALL_TAC g;
 
 (* --------------------------------------------------------------------- *)
-(* RESQ_REWRITE1_TAC : thm_tactic					 *)
-(* RESQ_REWRITE1_TAC |- !x::P. u[x] = v[x]				 *)
+(* RESQ_REWRITE1_TAC : thm_tactic                                        *)
+(* RESQ_REWRITE1_TAC |- !x::P. u[x] = v[x]                               *)
 (* transforms the input restricted quantified theorem to implicative     *)
-(* form then do conditional rewriting.					 *)
+(* form then do conditional rewriting.                                   *)
 (* --------------------------------------------------------------------- *)
 
 fun RESQ_REWRITE1_TAC th' =
@@ -470,8 +470,8 @@ val RESQ_PRED_SET_ss = named_rewrites "RESQ_PRED_SET_ss" [
   RES_FORALL_BIGINTER, RES_EXISTS_BIGINTER];
 
 (* ===================================================================== *)
-(* Functions for making definition with restrict universal quantified	 *)
-(* variables.	    	    	    					 *)
+(* Functions for making definition with restrict universal quantified    *)
+(* variables.                                                            *)
 (* The auxiliary functions used here are taken from the system directly. *)
 (* --------------------------------------------------------------------- *)
 
@@ -529,11 +529,11 @@ fun get_type left rightty =
   handle _ => raise ERR "get_type" "bad lhs";
 
 (* ---------------------------------------------------------------------*)
-(* RESQ_DEF_EXISTS_RULE `!x1::P1. ... !xn::Pn. 			        *)
+(* RESQ_DEF_EXISTS_RULE `!x1::P1. ... !xn::Pn.                          *)
 (*   C y x1 ... xn z = t[y,x1,...,xn,z]`returns a theorem which is      *)
-(* suitable to be used in new_specification				*)
-(* If there are free variables in Pi, then Skolem conversion will be 	*)
-(* done, so the constant C will become C' m where m is free in Pi.	*)
+(* suitable to be used in new_specification                             *)
+(* If there are free variables in Pi, then Skolem conversion will be    *)
+(* done, so the constant C will become C' m where m is free in Pi.      *)
 (* ---------------------------------------------------------------------*)
 
 fun RESQ_DEF_EXISTS_RULE tm =
@@ -575,8 +575,8 @@ fun RESQ_DEF_EXISTS_RULE tm =
                                mk_eq(lh,rh)))))
       val ex = list_mk_abs((tl leftvars), rh)
       val defthm = prove(gl,
-    	REPEAT GEN_TAC THEN EXISTS_TAC ex THEN BETA_TAC
-    	THEN REPEAT RESQ_GEN_TAC THEN REPEAT GEN_TAC THEN REFL_TAC)
+        REPEAT GEN_TAC THEN EXISTS_TAC ex THEN BETA_TAC
+        THEN REPEAT RESQ_GEN_TAC THEN REPEAT GEN_TAC THEN REFL_TAC)
       in
        if is_forall(concl defthm)
        then CONV_RULE SKOLEM_CONV defthm
@@ -587,12 +587,12 @@ fun RESQ_DEF_EXISTS_RULE tm =
         raise ERR "RESQ_DEF_EXISTS_RULE" s;
 
 (* --------------------------------------------------------------------- *)
-(* new_gen_resq_definition flag (name, (--`!x1::P1. ... !xn::Pn. 	 *)
-(*   C y x1 ... xn z = t[y,x1,...,xn,z]`--))				 *)
-(* This makes a new constant definition via new_specification.		 *)
+(* new_gen_resq_definition flag (name, (--`!x1::P1. ... !xn::Pn.         *)
+(*   C y x1 ... xn z = t[y,x1,...,xn,z]`--))                             *)
+(* This makes a new constant definition via new_specification.           *)
 (*  The definition is stored in the current theory under the give name.  *)
-(*  flag specifies the syntactic status of the new constant. It should	 *)
-(*    be either "constant", or "infix" or "binder".			 *)
+(*  flag specifies the syntactic status of the new constant. It should   *)
+(*    be either "constant", or "infix" or "binder".                      *)
 (* --------------------------------------------------------------------- *)
 
 open Parse

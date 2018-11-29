@@ -330,19 +330,17 @@ in
                     (List.length l, fn i => name ^ "_" ^ Int.toString i), l))
   fun adjoin_thms () =
     Theory.adjoin_to_theory
-      { sig_ps = SOME (fn pps => PP.add_string pps ("val rwts : string list")),
+      { sig_ps = SOME (fn _ => PP.add_string ("val rwts : string list")),
         struct_ps =
-          SOME (fn pps =>
-                  ( PP.add_string pps "val rwts = ["
-                  ; PP.begin_block pps PP.INCONSISTENT 0
-                  ; Portable.pr_list
-                     (PP.add_string pps o Lib.quote)
-                     (fn () => PP.add_string pps ",")
-                     (fn () => PP.add_break pps (1, 0)) (!names)
-                  ; PP.add_string pps "]"
-                  ; PP.end_block pps
-                  ; PP.add_newline pps
-                  ))
+          SOME (fn _ =>
+                   PP.block PP.INCONSISTENT 12 (
+                     [PP.add_string "val rwts = ["] @
+                     PP.pr_list (PP.add_string o Lib.quote)
+                                [PP.add_string ",", PP.add_break (1, 0)]
+                                (!names) @
+                     [PP.add_string "]", PP.add_newline]
+                   )
+               )
       }
 end
 
@@ -723,8 +721,7 @@ fun avoid_name_clashes tm2 tm1 =
       val sb = List.foldl
                   (fn (v, (sb, avoids)) =>
                      let
-                        val v' = Lib.with_flag (Globals.priming, SOME "_")
-                                    (Term.variant avoids) v
+                        val v' = Term.numvariant avoids v
                      in
                         ((v |-> v') :: sb, v' :: avoids)
                      end) ([], v2) l

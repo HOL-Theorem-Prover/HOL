@@ -59,6 +59,11 @@ fun symlink_check() =
     else link
 val default_link = if OS = "winNT" then cp else link
 
+fun mem x [] = false
+  | mem x (y::ys) = x = y orelse mem x ys
+
+fun exns_link exns b s1 s2 =
+  if mem (OS.Path.file s1) exns then () else default_link b s1 s2
 
 (*---------------------------------------------------------------------------
         Transport a compiled directory to another location. The
@@ -90,10 +95,19 @@ fun buildDir symlink s =
 
 fun build_src symlink = List.app (buildDir symlink) SRCDIRS
 
+fun upload_holmake_files symlink =
+  upload ((fullPath[HOLDIR, "tools", "Holmake"], 0), SIGOBJ, symlink)
+
+val holmake_exns = [
+  "Systeml.sig", "Systeml.ui", "Systeml.uo"
+]
+
+
 fun build_hol symlink = let
 in
   clean_sigobj();
   setup_logfile();
+  upload_holmake_files (exns_link holmake_exns);
   build_src symlink
     handle Interrupt => (finish_logging false; die "Interrupted");
   finish_logging true;

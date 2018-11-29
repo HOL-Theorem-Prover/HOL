@@ -66,7 +66,7 @@ tools/build-stamp
 tools/lastbuildoptions
 tools/build-logs
 
-help/Docfiles/*.adoc
+help/Docfiles/*.txt
 help/Docfiles/HTML/*
 help/HOLindex.html
 help/HOL.Help
@@ -76,7 +76,7 @@ help/src-sml/index.txt
 help/theorygraph/*.html
 help/theorygraph/theories.dot
 help/theorygraph/theories.imap
-help/theorygraph/theories.jpg
+help/theorygraph/theories.svg
 help/theorygraph/theories.pdf
 
 src/bool/SharingTables.*
@@ -121,8 +121,6 @@ examples/muddy/muddyC/Makefile
 examples/muddy/muddyC/buddy/src/libbdd.a
 examples/muddy/muddyC/muddy.so
 
-examples/set-theory/hol_sets/ordinalML.*
-
 examples/theorem-prover/lisp-runtime/bin/*.s
 
 examples/computability/lambda/computability-heap
@@ -130,4 +128,4 @@ examples/computability/lambda/computability-heap
 local-hol-heap
 examples/l3-machine-code/**/*-heap
 
-*_ttt/
+*Script_ttt.sml

@@ -10,6 +10,8 @@ open riscvTheory
 
 val () = Theory.new_theory "riscv_step"
 
+val ERR = mk_HOL_ERR "riscv_stepTheory";
+
 val () =
   ( List.app (fn f => f ())
       [numLib.prefer_num, wordsLib.prefer_word, wordsLib.guess_lengths]

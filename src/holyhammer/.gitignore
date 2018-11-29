@@ -1,15 +1,2 @@
-provers/eprover
-provers/eprover_files
-theories_eprover
-
-provers/z3
-provers/z3_files
-theories_z3
-
-provers/vampire
-provers/vampire_files
-theories_vampire
-
-provers/prover_*
-theories
-problem_*
+debug/*
+eval/*

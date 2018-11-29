@@ -199,19 +199,19 @@ fun term_of_lin (LIN (tms,k)) =
       val const_term = if k > zero then SOME (mk_numeral k) else NONE
   in
       case const_term of
-	  SOME x =>
-	      if (null pos_terms) then
-		  if (null neg_terms) then x
-		  else mk_minus(x,list_mk_plus neg_terms)
-	      else if (null neg_terms) then list_mk_plus(pos_terms@[x])
-		   else mk_minus(list_mk_plus (pos_terms@[x]),
+          SOME x =>
+              if (null pos_terms) then
+                  if (null neg_terms) then x
+                  else mk_minus(x,list_mk_plus neg_terms)
+              else if (null neg_terms) then list_mk_plus(pos_terms@[x])
+                   else mk_minus(list_mk_plus (pos_terms@[x]),
                                  list_mk_plus neg_terms)
-	| NONE =>
-	      if (null pos_terms) then
-		  if (null neg_terms) then zero_tm
-		  else failwith "no positive terms"
-	      else if (null neg_terms) then list_mk_plus pos_terms
-		   else mk_minus(list_mk_plus pos_terms,list_mk_plus neg_terms)
+        | NONE =>
+              if (null pos_terms) then
+                  if (null neg_terms) then zero_tm
+                  else failwith "no positive terms"
+              else if (null neg_terms) then list_mk_plus pos_terms
+                   else mk_minus(list_mk_plus pos_terms,list_mk_plus neg_terms)
   end;
 
 fun negate (x,y:int) = (x,~y);
@@ -282,7 +282,7 @@ and
    if (is_forall tm) then
        (type_of (bvar (rand tm)) = num_ty andalso is_presburger(body(rand tm)))
    else if is_exists tm then
-	(type_of (bvar (rand tm)) = num_ty andalso is_arith (body (rand tm)))
+        (type_of (bvar (rand tm)) = num_ty andalso is_arith (body (rand tm)))
    else if (is_abs tm) then false
    else if (is_geq tm) orelse (is_less tm) orelse
            (is_leq tm) orelse (is_great tm) then  true

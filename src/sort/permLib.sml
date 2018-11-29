@@ -303,7 +303,7 @@ let
    val thm1 = CONV_RULE (RHS_CONV (REWRITE_CONV [GSYM (CONJUNCT2 APPEND)])) thm0
 
    val thm2 = CONV_RULE (RHS_CONV (RAND_CONV (
-		 quantHeuristicsLibBase.BOUNDED_REPEATC (length ls) (REWR_CONV APPEND_ASSOC)))) thm1;
+                 quantHeuristicsLibBase.BOUNDED_REPEATC (length ls) (REWR_CONV APPEND_ASSOC)))) thm1;
 
    val thm3 = CONV_RULE (RAND_CONV (RAND_CONV (RAND_CONV LIST_NIL_CONV))) thm2
 in
@@ -311,11 +311,8 @@ in
 end
 
 
-fun PERM_ELIM_DUPLICATES_CONV t =
+fun PERM_ELIM_DUPLICATES_CONV_DIRECT (l1,l2) common_terms =
 let
-   val (l1,l2) = dest_PERM t handle HOL_ERR _ => raise UNCHANGED;
-   val common_terms = perm_list_inter l1 l2;
-
    val thm_l1 = PERM_SPLIT_el_lists l1 common_terms;
    val thm_l2 = PERM_SPLIT_el_lists l2 common_terms;
 
@@ -329,10 +326,101 @@ let
    val thm1 = MP thm0 thm_l1
    val thm2 = MP thm1 thm_l2
    val thm3 = CONV_RULE (RHS_CONV (REWRITE_CONV [PERM_REFL, PERM_NIL, NOT_CONS_NIL,
-			    APPEND_eq_NIL])) thm2
+                            APPEND_eq_NIL])) thm2
 in
    thm3
 end;
+
+fun ASSUM_BY_CONV conv thm = let
+    val thm = CONV_RULE (RATOR_CONV (RAND_CONV conv)) thm
+  in MP thm TRUTH handle HOL_ERR e => (print ("ASSUM_BY_CONV: conv-ed thm: "
+    ^ Parse.thm_to_string thm ^ "\n"); raise (HOL_ERR e)) end
+
+fun add_count d k n = Redblackmap.update (d, k, fn NONE => n | SOME m => m + n)
+fun look_count d k = case Redblackmap.peek (d, k) of NONE => 0 | SOME n => n
+
+local
+   fun strip_build_opers t ops =
+      if (listSyntax.is_cons t) then
+         strip_build_opers (rand t) (rator t :: ops)
+      else if (listSyntax.is_append t) then
+         let
+             val (t1,t2) = listSyntax.dest_append t;
+         in
+             strip_build_opers t2 (strip_build_opers t1 ops)
+         end
+      else if (listSyntax.is_nil t) then ops
+      else rator (listSyntax.mk_append (t, t)) :: ops
+
+   fun mk_div_list count [] (sel, rej) = (sel, rej)
+     | mk_div_list count (oper :: ops) (sel, rej) =
+      if look_count count (rand oper) > 0
+      then mk_div_list (add_count count (rand oper) (~1)) ops
+         (mk_comb (oper, sel), rej)
+      else mk_div_list count ops (sel, mk_comb (oper, rej))
+in
+   fun strip_perm_list_div count t = let
+         val opers = strip_build_opers t []
+         val empty = listSyntax.mk_list ([], listSyntax.eltype t)
+      in mk_div_list count opers (empty, empty) end
+end
+
+(* Proves PERM l1comm l2comm ==> PERM l1 l2 = PERM l1rem l2rem
+   where l1comm and l2comm are the elements of 'common' in the
+   order they appear in l1/l2, and l1rem and l2rem are the
+   remainders. Fast: O(n) proof steps, O(nlogn) calculation. *)
+fun PERM_ELIM_COMMON_IMP common l1 l2 = let
+    val comm_tab = foldl (fn (x, d) => add_count d x 1)
+        (Redblackmap.mkDict Term.compare) common
+    val (l1_comm, l1_rem) = strip_perm_list_div comm_tab l1
+    val (l2_comm, l2_rem) = strip_perm_list_div comm_tab l2
+    val thm = ISPECL [l1, l1_comm, l1_rem, l2, l2_comm, l2_rem]
+        PERM_CONG_APPEND_IFF2
+    val conv = simpLib.SIMP_CONV boolSimps.bool_ss [PERM_TO_APPEND_SIMPS]
+  in ASSUM_BY_CONV conv (ASSUM_BY_CONV conv thm) end
+
+fun PERM_ELIM_DUPLICATES_CONV t =
+let
+   val (l1,l2) = dest_PERM t handle HOL_ERR _ => raise UNCHANGED
+   val common_terms = perm_list_inter l1 l2
+
+   val _ = length ((op @) common_terms) > 0 orelse raise UNCHANGED
+   val l1_length = length ((op @) (strip_perm_list l1))
+   fun half xs = List.take (xs, Int.min (l1_length div 2, length xs))
+
+in if l1_length > 10
+  then PERM_ELIM_COMMON_IMP (half ((op @) common_terms)) l1 l2
+    |> ASSUM_BY_CONV PERM_ELIM_DUPLICATES_CONV
+    |> CONV_RULE (RHS_CONV PERM_ELIM_DUPLICATES_CONV)
+  else PERM_ELIM_DUPLICATES_CONV_DIRECT (l1,l2) common_terms
+end
+
+(* testing
+
+val t = ``PERM (x1::l1 ++ (l2 ++ (x2::x3::(1 : num)::l3) ++ x4::l4))
+  (x1::(1 : num)::l1 ++ ((x2::x3::l3) ++ x4::l4 ++ l2))``
+val (t1, t2) = dest_PERM t
+val comm = [``l2 : num list``, ``x3 : num``]
+
+val test_IMP = PERM_ELIM_COMMON_IMP comm t1 t2
+
+fun mk_num_list is = listSyntax.mk_list (map numSyntax.term_of_int is, ``: num``);
+fun mk_PERM a b = list_mk_icomb PERM_tm [a, b];
+
+fun test1 n = mk_PERM (mk_num_list (upto 1 n)) (mk_num_list (rev (upto 1 n)))
+    |> PERM_ELIM_DUPLICATES_CONV;
+val t1_200 = test1 200;
+
+fun test2 n = let
+    val app = listSyntax.mk_append
+    val lhs = app (app (mk_num_list (upto 1 n), t1), mk_num_list (upto 12 (n + 11)))
+    val rhs = app (app (mk_num_list (rev (upto 12 (n + 11))), mk_num_list (upto 4 n)),
+        app (``rmn : num list``, t2))
+  in PERM_ELIM_DUPLICATES_CONV (mk_PERM lhs rhs) end
+
+val t2_200 = test2 200;
+*)
+
 
 (*
 PERM_SPLIT ls l
@@ -456,7 +544,7 @@ end;
 val PERM_NORMALISE_CONV = PERM_ELIM_DUPLICATES_CONV THENC
                           PERM_TAKE_DROP_CONV THENC
                           PERM_NO_ELIM_NORMALISE_CONV THENC
-			  PERM_TURN_CONV;
+                          PERM_TURN_CONV;
 
 (*
 val thm = (ASSUME ``PERM l1 [x;y;z]``)
@@ -607,6 +695,47 @@ conv ``(PERM l1 m1 /\
         PERM (l1 ++ l2) n1 /\
         PERM (m1 ++ m2) n2) ==>
         PERM n1 n2``
+
+*)
+
+fun SORTED_CONV conv = let
+    fun safe_conv t = if is_conj t orelse t = ``T``
+        then NO_CONV t else CHANGED_CONV conv t
+  in
+    REWRITE_CONV [SORTED_DEF]
+        THENC TOP_DEPTH_CONV safe_conv
+        THENC simpLib.SIMP_CONV boolSimps.bool_ss []
+  end
+
+(* Prove `ALL_DISTINCT xs = T` by permuting to a sorted list
+   (i.e. using theorems ALL_DISTINCT_PERM and SORTED_ALL_DISTINCT).
+   Requires a relation R, a theorem `irreflexive R /\ transitive R`,
+   a function f used to sort the terms of xs in ML, and a conversion that
+   can show `R x y` for any x/y for which f `x` `y`. *)
+fun ALL_DISTINCT_CONV rel_thm ord_f conv tm = let
+    val xs_t = listSyntax.dest_all_distinct tm
+        handle HOL_ERR _ => raise UNCHANGED
+    val (xs, elT) = listSyntax.dest_list xs_t
+        handle HOL_ERR _ => raise UNCHANGED
+    val xs_ord = sort ord_f xs
+    val xs_ord_t = listSyntax.mk_list (xs_ord, elT)
+    val part1 = if xs_ord = xs then (fn t => raise UNCHANGED)
+      else (fn t => sortingTheory.ALL_DISTINCT_PERM
+          |> ISPEC xs_t |> SPEC xs_ord_t
+          |> ASSUM_BY_CONV PERM_ELIM_DUPLICATES_CONV)
+    val part2_thm = MATCH_MP sortingTheory.SORTED_ALL_DISTINCT rel_thm
+          |> ISPEC xs_ord_t |> ASSUM_BY_CONV (SORTED_CONV conv)
+  in (part1 THENC simpLib.SIMP_CONV boolSimps.bool_ss [part2_thm]) tm end
+
+(* testing -- requires good_cmp_Less_irrefl_trans from comparisonTheory
+
+val num_ALL_DISTINCT_CONV = ALL_DISTINCT_CONV
+  (MATCH_MP good_cmp_Less_irrefl_trans comparisonTheory.num_cmp_good)
+  (fn x => fn y => numSyntax.int_of_term x < numSyntax.int_of_term y) EVAL;
+
+val test = mk_icomb (listSyntax.all_distinct_tm, mk_num_list
+    (map (fn x => (x * 17) mod 1000) (upto 5 800)))
+  |> num_ALL_DISTINCT_CONV;
 
 *)
 

@@ -15,8 +15,6 @@ struct
 
 open mlibUseful;
 
-infix |-> ::> @> oo ## ::* ::@;
-
 (* ------------------------------------------------------------------------- *)
 (* Search limits                                                             *)
 (* ------------------------------------------------------------------------- *)
@@ -27,31 +25,26 @@ val unlimited = {time = NONE, infs = NONE};
 
 val expired = {time = SOME 0.0, infs = SOME 0};
 
-fun pp_limit pp {time,infs} =
+fun pp_limit {time,infs} =
   let
     open PP
-    val () = begin_block pp INCONSISTENT 1
-    val () = add_string pp "{";
-    val () = begin_block pp INCONSISTENT 2
-    val () = add_string pp "time ="
-    val () = add_break pp (1,0)
-    val () =
-      case time of NONE => add_string pp "unlimited"
-      | SOME t => add_string pp (Real.fmt (StringCvt.FIX (SOME 3)) t)
-    val () = end_block pp
-    val () = add_string pp ","
-    val () = add_break pp (1,0)
-    val () = begin_block pp INCONSISTENT 2
-    val () = add_string pp "infs ="
-    val () = add_break pp (1,0)
-    val () =
-      case infs of NONE => add_string pp "unlimited"
-      | SOME i => add_string pp (int_to_string i)
-    val () = end_block pp
-    val () = add_string pp "}"
-    val () = end_block pp
   in
-    ()
+    block INCONSISTENT 1 [
+      add_string "{",
+      block INCONSISTENT 2 [
+        add_string "time =", add_break (1,0),
+        case time of
+            NONE => add_string "unlimited"
+          | SOME t => add_string (Real.fmt (StringCvt.FIX (SOME 3)) t)
+      ],
+      add_string ",", add_break (1,0),
+      block INCONSISTENT 2 [
+        add_string "infs =", add_break (1,0),
+        case infs of NONE => add_string "unlimited"
+                   | SOME i => add_string (int_to_string i)
+      ],
+      add_string "}"
+    ]
   end;
 
 fun limit_to_string l = PP.pp_to_string (!LINE_LENGTH) pp_limit l;
@@ -95,7 +88,7 @@ fun new_inference_meter () =
     val infs = ref 0
     fun read () = !infs
   in
-    (read, fn n => infs := !infs + n)
+    (read, fn n => infs := !infs + n) (* OK *)
   end;
 
 fun new_meter lim : meter =

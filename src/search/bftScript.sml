@@ -166,8 +166,8 @@ val BFT_REACH_1 = Q.store_thm
  recInduct BFT_ind
  >> RW_TAC set_ss [BFT_def, REACH_LIST_def, REACH_def, IN_DEF]
     >- metis_tac []
-    >- (rfs[] 
-        >> POP_ASSUM (MP_TAC o Q.SPEC `x`) 
+    >- (rfs[]
+        >> POP_ASSUM (MP_TAC o Q.SPEC `x`)
         >> RW_TAC set_ss []
            >- metis_tac[]
            >- (IMP_RES_TAC RTC_RULES >> metis_tac[])

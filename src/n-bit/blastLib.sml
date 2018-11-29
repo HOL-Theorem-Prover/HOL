@@ -565,7 +565,8 @@ end
 
 local
     val thm =
-        SPECL [“a: 'a words$word”, “n2w (NUMERAL n)”] wordsTheory.WORD_SUM_ZERO
+        SPECL [“a: 'a words$word”, “n2w (NUMERAL n) : 'a word”]
+          wordsTheory.WORD_SUM_ZERO
     val WORD_SUM_ZERO_CONV =
        Conv.REWR_CONV thm THENC Conv.RHS_CONV wordsLib.WORD_EVAL_CONV
 

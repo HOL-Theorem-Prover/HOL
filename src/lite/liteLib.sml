@@ -114,7 +114,7 @@ fun rev_splitlist dest =
     in  rsplist (r::ls) l
     end
     handle Interrupt => raise Interrupt
-	 | _ => (x,ls)
+         | _ => (x,ls)
   in
     fn x => rsplist [] x
   end;;
@@ -125,7 +125,7 @@ fun striplist dest =
     in strip l (strip r acc)
     end
     handle Interrupt => raise Interrupt
-	 | _ => x::acc
+         | _ => x::acc
   in
     fn x => strip x []
   end;;
@@ -139,7 +139,7 @@ val rev_assoc = Lib.rev_assoc;
 
 fun remove_assoc x =
     let fun remove [] = raise ERR "" ""
-	  | remove ((h as (l,r))::t) = if (x = l) then t else (h::remove t)
+          | remove ((h as (l,r))::t) = if (x = l) then t else (h::remove t)
     in fn l => (remove l handle HOL_ERR _ => l)
     end;
 
@@ -193,30 +193,30 @@ fun list_mk_binop opr = Lib.end_itlist (Lib.curry (mk_binop opr));
 
 fun dest_binop opr tm =
     let val (Rator,rhs) = Term.dest_comb tm
-	val (opr',lhs) = Term.dest_comb Rator
+        val (opr',lhs) = Term.dest_comb Rator
     in
-	if aconv opr opr' then (lhs,rhs) else fail()
+        if aconv opr opr' then (lhs,rhs) else fail()
     end
     handle HOL_ERR _ => failwith "dest_binop";
 
 fun strip_binop opr =
     let val dest = dest_binop opr
-	fun strip tm =
-	    let val (l,r) = dest tm
-		val (str,rm) = strip r
-	    in (l::str,rm)
-	    end
-  	    handle HOL_ERR _ => ([],tm)
+        fun strip tm =
+            let val (l,r) = dest tm
+                val (str,rm) = strip r
+            in (l::str,rm)
+            end
+            handle HOL_ERR _ => ([],tm)
     in strip
     end;
 
 fun binops opr =
     let val dest = dest_binop opr
-	fun strip tm =
-	    let val (l,r) = dest tm
-	    in strip l @ strip r
-	    end
-  	    handle HOL_ERR _ => [tm]
+        fun strip tm =
+            let val (l,r) = dest tm
+            in strip l @ strip r
+            end
+            handle HOL_ERR _ => [tm]
     in strip
     end;
 
@@ -344,8 +344,8 @@ fun COMB2_QCONV conv1 conv2 tm =
   let val (l,r) = Term.dest_comb tm
   in let val th1 = conv1 l
      in let val th2 = conv2 r
-	in MK_COMB(th1,th2)
-	end
+        in MK_COMB(th1,th2)
+        end
         handle HOL_ERR _ => AP_THM th1 r
      end
      handle HOL_ERR _ => AP_TERM l (conv2 r)

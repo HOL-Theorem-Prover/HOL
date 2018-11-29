@@ -8,10 +8,8 @@ val _ = new_theory "bag";
 
 val _ = set_grammar_ancestry ["list", "divides"]
 
-val _ = type_abbrev("bag", Type`:'a -> num`)
-val _ = disable_tyabbrev_printing "bag"
-val _ = type_abbrev("multiset", Type`:'a -> num`)
-val _ = disable_tyabbrev_printing "multiset"
+val _ = type_abbrev("bag", “:'a -> num”)
+val _ = type_abbrev("multiset", “:'a -> num”)
 
 val _ = print "Defining basic bag operations\n"
 
@@ -70,7 +68,7 @@ val BAG_INSERT = new_definition (
 val _ = add_listform {cons = "BAG_INSERT", nilstr = "EMPTY_BAG",
                       separator = [TOK ";", BreakSpace(1,0)],
                       leftdelim = [TOK "{|"], rightdelim = [TOK "|}"],
-                      block_info = (PP.INCONSISTENT, 0)};
+                      block_info = (PP.INCONSISTENT, 2)};
 val _ = TeX_notation { hol = "{|", TeX = ("\\HOLTokenBagLeft{}", 1) }
 val _ = TeX_notation { hol = "|}", TeX = ("\\HOLTokenBagRight{}", 1) }
 
@@ -935,7 +933,7 @@ val SET_OF_BAG_MERGE = store_thm (
             SET_OF_BAG b1 UNION SET_OF_BAG b2``,
   ONCE_REWRITE_TAC[EXTENSION] THEN
   SIMP_TAC std_ss [SET_OF_BAG, IN_UNION, IN_ABS,
-		   BAG_IN_BAG_MERGE]);
+                   BAG_IN_BAG_MERGE]);
 
 val SET_OF_BAG_INSERT = Q.store_thm(
   "SET_OF_BAG_INSERT",
@@ -1007,8 +1005,8 @@ val BAG_DISJOINT_BAG_IN = store_thm (
   ``!b1 b2. BAG_DISJOINT b1 b2 =
             !e. ~(BAG_IN e b1) \/ ~(BAG_IN e b2)``,
   SIMP_TAC std_ss [BAG_DISJOINT, DISJOINT_DEF,
- 		   EXTENSION, NOT_IN_EMPTY,
-		   IN_INTER, IN_SET_OF_BAG]);
+                   EXTENSION, NOT_IN_EMPTY,
+                   IN_INTER, IN_SET_OF_BAG]);
 
 val BAG_DISJOINT_BAG_INSERT = store_thm (
   "BAG_DISJOINT_BAG_INSERT",
@@ -1019,7 +1017,7 @@ val BAG_DISJOINT_BAG_INSERT = store_thm (
       BAG_DISJOINT b1 (BAG_INSERT e2 b2) =
       (~(BAG_IN e2 b1) /\ (BAG_DISJOINT b1 b2)))``,
   SIMP_TAC std_ss [BAG_DISJOINT_BAG_IN,
-		   BAG_IN_BAG_INSERT] THEN
+                   BAG_IN_BAG_INSERT] THEN
   METIS_TAC[]);
 
 val BAG_DISJOINT_BAG_UNION = store_thm(
@@ -1605,7 +1603,7 @@ val BAG_CHOICE_DEF = new_specification
 
 
 (* ===================================================================== *)
-(* The REST of a bag after removing a chosen element.			 *)
+(* The REST of a bag after removing a chosen element.                    *)
 (* ===================================================================== *)
 
 val BAG_REST_DEF = Q.new_definition
@@ -1966,7 +1964,7 @@ val BAG_ALL_DISTINCT_BAG_MERGE = store_thm (
         (BAG_ALL_DISTINCT b1 /\  BAG_ALL_DISTINCT b2)``,
   SIMP_TAC std_ss [BAG_ALL_DISTINCT, BAG_MERGE,
                    GSYM FORALL_AND_THM, COND_RAND, COND_RATOR,
-		   COND_EXPAND_IMP] THEN
+                   COND_EXPAND_IMP] THEN
   REPEAT STRIP_TAC THEN
   HO_MATCH_MP_TAC forall_eq_thm THEN
   GEN_TAC THEN bossLib.DECIDE_TAC);
@@ -1979,10 +1977,10 @@ val BAG_ALL_DISTINCT_BAG_UNION = store_thm (
         (BAG_ALL_DISTINCT b1 /\ BAG_ALL_DISTINCT b2 /\
          BAG_DISJOINT b1 b2)``,
   SIMP_TAC std_ss [BAG_ALL_DISTINCT, BAG_UNION,
-		   BAG_DISJOINT, DISJOINT_DEF, EXTENSION,
-		   NOT_IN_EMPTY, IN_INTER,
-		   IN_SET_OF_BAG, BAG_IN,
-     		   BAG_INN, GSYM FORALL_AND_THM] THEN
+                   BAG_DISJOINT, DISJOINT_DEF, EXTENSION,
+                   NOT_IN_EMPTY, IN_INTER,
+                   IN_SET_OF_BAG, BAG_IN,
+                   BAG_INN, GSYM FORALL_AND_THM] THEN
   REPEAT STRIP_TAC THEN
   HO_MATCH_MP_TAC forall_eq_thm THEN
   GEN_TAC THEN bossLib.DECIDE_TAC);
@@ -2817,21 +2815,13 @@ val BAG_SIZE_INSERT = save_thm
 (* Add multiset type to the TypeBase.                                        *)
 (*---------------------------------------------------------------------------*)
 
-val _ = adjoin_to_theory
-  {sig_ps = NONE,
-   struct_ps = SOME (fn pps =>
-    let fun pp_line s = (PP.add_string pps s; PP.add_newline pps)
-    in
-     app pp_line
-     ["val _ = ",
-      " TypeBase.write",
-      " [TypeBasePure.mk_nondatatype_info",
-      "  (alpha --> numSyntax.num,",
-      "    {nchotomy = SOME BAG_cases,",
-      "     induction = SOME STRONG_FINITE_BAG_INDUCT,",
-      "     size = SOME(Parse.Term`\\(obsize:'a->num) (y:'b). bag$bag_size obsize`,CONJ BAG_SIZE_EMPTY BAG_SIZE_INSERT),",
-      "     encode=NONE})];\n"
-      ] end)};
-
+val _ = TypeBase.export [
+      TypeBasePure.mk_nondatatype_info
+        (“:'a -> num”,
+         {nchotomy = SOME BAG_cases,
+          induction = SOME STRONG_FINITE_BAG_INDUCT,
+          size = NONE,
+          encode=NONE})
+    ]
 
 val _ = export_theory();

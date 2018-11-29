@@ -7,7 +7,7 @@ sig
   type tygrammar = type_grammar.grammar
   type absyn = Absyn.absyn
   type preterm = Preterm.preterm
-  type 'a quotation = 'a Portable.frag list
+  type 'a quotation = 'a PP.frag list
   type pprinters = ((term -> string) * (hol_type -> string)) option
   type 'a in_env = 'a Pretype.in_env
 

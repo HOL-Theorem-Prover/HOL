@@ -279,6 +279,18 @@ val good_cmp_trans = Q.store_thm ("good_cmp_trans",
  fs [] >>
  metis_tac [cmp_thms]);
 
+val good_cmp_Less_trans = Q.store_thm ("good_cmp_Less_trans",
+`!cmp. good_cmp cmp ==> transitive (\k k'. cmp k k' = Less)`,
+ rw [relationTheory.transitive_def] >>
+ fs [] >>
+ metis_tac [cmp_thms]);
+
+val good_cmp_Less_irrefl_trans = Q.store_thm ("good_cmp_Less_irrefl_trans",
+`!cmp. good_cmp cmp ==> (irreflexive (\k k'. cmp k k' = Less) /\
+    transitive (\k k'. cmp k k' = Less))`,
+ simp [good_cmp_Less_trans, relationTheory.irreflexive_def] >>
+ simp [cmp_thms]);
+
 val bool_cmp_antisym = Q.store_thm ("bool_cmp_antisym[simp]",
 `!x y. bool_cmp x y = Equal <=> x = y`,
  rw [] >>

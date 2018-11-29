@@ -359,9 +359,12 @@ in
   Normal {build_theory_graph = buildgraph,
           cmdline = rest,
           debug = #debug option_record,
-          selftest_level = #selftest option_record,
+          selftest_level = case #selftest option_record of
+                               NONE => 0
+                             | SOME i => i,
           extra = {seqname = seqspec, kernelspec = knlspec},
           jobcount = jcount,
+          multithread = #multithread option_record,
           relocbuild = #relocbuild option_record}
 end handle DoClean s => (Clean s before safedelete Holmake_tools.kernelid_fname)
 
@@ -871,7 +874,7 @@ fun process_cline () =
         post_action();
         Process.exit Process.success
       end
-    | Normal {extra = {seqname,kernelspec}, cmdline,
+    | Normal {extra = {seqname,kernelspec}, cmdline, multithread,
               build_theory_graph, jobcount, relocbuild, debug,
               selftest_level} =>
       let
@@ -884,10 +887,11 @@ fun process_cline () =
           {build_theory_graph=build_theory_graph,
            cmdline=cmdline,
            debug = debug,
-           selftest_level = selftest_level,
            extra = {SRCDIRS = SRCDIRS},
            jobcount = jobcount,
-           relocbuild = relocbuild
+           multithread = multithread,
+           relocbuild = relocbuild,
+           selftest_level = selftest_level
           }
       end
 

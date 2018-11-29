@@ -73,7 +73,7 @@ signature Opening = sig
    type congproc = {relation: term,
                     solver : term -> thm,
                     freevars: term list,
-		    depther : (thm list * term) -> conv} -> conv
+                    depther : (thm list * term) -> conv} -> conv
    val samerel            : term -> term -> bool
    val CONGPROC           : ({Rinst:term,arg:term} -> thm) -> thm -> congproc
    val rel_of_congrule    : thm -> term

@@ -27,8 +27,6 @@ val set_ss = std_ss ++ SET_SPEC_ss ++ PRED_SET_ss;
 (*      Inference based on Hoare Logic                                             *)
 (*---------------------------------------------------------------------------------*)
 
-val _ = Globals.priming := NONE;
-
 (*---------------------------------------------------------------------------------*)
 (*      read from an data state                                                    *)
 (*---------------------------------------------------------------------------------*)
@@ -46,7 +44,7 @@ val mread_def = Define `
      (mread st (RC c) = c)`;
 
 val _ = add_rule {term_name = "mread", fixity = Suffix 60,
-		  pp_elements = [TOK "<", TM, TOK ">"],
+                  pp_elements = [TOK "<", TM, TOK ">"],
                   paren_style = OnlyIfNecessary,
                   block_style = (AroundSameName, (PP.INCONSISTENT, 0))} handle HOL_ERR e => print (#message e);
 
@@ -70,11 +68,11 @@ val _ = type_abbrev("HSPEC_TYPE", type_of (Term `HSPEC`));
 
 (*
 val _ = add_rule {term_name = "HSPEC",
-		  fixity = Infix (HOLgrammars.RIGHT, 3),
-		  pp_elements = [HardSpace 1, TOK "(", TM, TOK ")", HardSpace 1],
-		  paren_style = OnlyIfNecessary,
-		  block_style = (AroundEachPhrase,
-				 (PP.INCONSISTENT, 0))};
+                  fixity = Infix (HOLgrammars.RIGHT, 3),
+                  pp_elements = [HardSpace 1, TOK "(", TM, TOK ")", HardSpace 1],
+                  paren_style = OnlyIfNecessary,
+                  block_style = (AroundEachPhrase,
+                                 (PP.INCONSISTENT, 0))};
 *)
 
 (*---------------------------------------------------------------------------------*)
@@ -360,42 +358,42 @@ val PRJ_TR_RULE = Q.store_thm (
             POP_ASSUM (ASSUME_TAC o Q.SPEC `(stk_f:DSTATE->'a) st`) THEN
             IMP_RES_TAC WF_TR_LEM_1 THEN
             IMP_RES_TAC (Q.SPECL [`cond`,`ir`,`\st1. pre_p st1 /\ ((stk_f:DSTATE->'a)
-			          st1 = (stk_f:DSTATE->'a) st)`] CFL_TR_RULE) THEN
+                                  st1 = (stk_f:DSTATE->'a) st)`] CFL_TR_RULE) THEN
             POP_ASSUM (ASSUME_TAC o Q.SPEC `st` o SIMP_RULE std_ss [HSPEC_def]) THEN
             METIS_TAC [],
 
         IMP_RES_TAC (SIMP_RULE std_ss [PSPEC_def] PSPEC_CHARACTERISTIC) THEN
             Q.PAT_ASSUM `!v x.p` (K ALL_TAC) THEN
             `WF_TR (translate_condition cond,translate ir)` by METIS_TAC [WF_TR_LEM_1] THEN
-	    FULL_SIMP_TAC std_ss [WELL_FORMED_SUB_thm, HSPEC_def, run_cfl_def, run_arm_def, translate_def, eval_il_cond_def] THEN
-	    Q.ABBREV_TAC `arm = translate ir` THEN
-	    IMP_RES_TAC (SIMP_RULE set_ss [] (Q.SPECL [`translate_condition cond`,`arm`,`(\i. ARB)`,`(0,0w,st):STATE`,`{}`]
+            FULL_SIMP_TAC std_ss [WELL_FORMED_SUB_thm, HSPEC_def, run_cfl_def, run_arm_def, translate_def, eval_il_cond_def] THEN
+            Q.ABBREV_TAC `arm = translate ir` THEN
+            IMP_RES_TAC (SIMP_RULE set_ss [] (Q.SPECL [`translate_condition cond`,`arm`,`(\i. ARB)`,`(0,0w,st):STATE`,`{}`]
                               ARMCompositionTheory.UNROLL_TR_LEM)) THEN
-	    POP_ASSUM (ASSUME_TAC o Q.SPEC `st`) THEN
-	    FULL_SIMP_TAC std_ss [FUNPOW, ARMCompositionTheory.get_st_def] THEN
-	    NTAC 2 (POP_ASSUM (K ALL_TAC)) THEN
-	    Induct_on `loopNum (translate_condition cond) arm (\i.ARB) ((0,0w,st),{})` THENL [
-	      REWRITE_TAC [Once EQ_SYM_EQ] THEN RW_TAC std_ss [FUNPOW,ARMCompositionTheory.get_st_def] THEN
-	      IMP_RES_TAC ARMCompositionTheory.LOOPNUM_BASIC THEN
-	      FULL_SIMP_TAC arith_ss [Once WHILE, ARMCompositionTheory.get_st_def],
+            POP_ASSUM (ASSUME_TAC o Q.SPEC `st`) THEN
+            FULL_SIMP_TAC std_ss [FUNPOW, ARMCompositionTheory.get_st_def] THEN
+            NTAC 2 (POP_ASSUM (K ALL_TAC)) THEN
+            Induct_on `loopNum (translate_condition cond) arm (\i.ARB) ((0,0w,st),{})` THENL [
+              REWRITE_TAC [Once EQ_SYM_EQ] THEN RW_TAC std_ss [FUNPOW,ARMCompositionTheory.get_st_def] THEN
+              IMP_RES_TAC ARMCompositionTheory.LOOPNUM_BASIC THEN
+              FULL_SIMP_TAC arith_ss [Once WHILE, ARMCompositionTheory.get_st_def],
 
-	    REWRITE_TAC [Once EQ_SYM_EQ] THEN RW_TAC std_ss [FUNPOW] THEN
+            REWRITE_TAC [Once EQ_SYM_EQ] THEN RW_TAC std_ss [FUNPOW] THEN
         IMP_RES_TAC ARMCompositionTheory.LOOPNUM_INDUCTIVE THEN
-	      `v = loopNum (translate_condition cond) arm (\i.ARB) ((0,0w,SND (SND (FST (runTo (upload arm (\i.ARB) 0) (LENGTH arm)
+              `v = loopNum (translate_condition cond) arm (\i.ARB) ((0,0w,SND (SND (FST (runTo (upload arm (\i.ARB) 0) (LENGTH arm)
                    ((0,0w,st),{}))))),{})` by METIS_TAC [ABS_PAIR_THM,DECIDE (Term`!x.0+x=x`),
                        ARMCompositionTheory.LOOPNUM_INDEPENDENT_OF_CPSR_PCS, ARMCompositionTheory.get_st_def,
                        FST, SND, ARMCompositionTheory.DSTATE_IRRELEVANT_PCS,ARMCompositionTheory.well_formed_def] THEN
-	      RES_TAC THEN Q.PAT_ASSUM `v = x` (ASSUME_TAC o GSYM) THEN
+              RES_TAC THEN Q.PAT_ASSUM `v = x` (ASSUME_TAC o GSYM) THEN
               FULL_SIMP_TAC std_ss [] THEN POP_ASSUM (K ALL_TAC) THEN
-	      Q.PAT_ASSUM `v = x` (ASSUME_TAC o GSYM) THEN FULL_SIMP_TAC std_ss [] THEN POP_ASSUM (K ALL_TAC) THEN
-	      Q.PAT_ASSUM `~x` (ASSUME_TAC o SIMP_RULE std_ss [ARMCompositionTheory.get_st_def]) THEN
-	      RW_TAC std_ss [Once WHILE] THEN
-	      Q.UNABBREV_TAC `arm` THEN
-	      `run_cfl ir st = SND (SND (FST (runTo (upload (translate ir) (\i. ARB) 0) (LENGTH (translate ir))
+              Q.PAT_ASSUM `v = x` (ASSUME_TAC o GSYM) THEN FULL_SIMP_TAC std_ss [] THEN POP_ASSUM (K ALL_TAC) THEN
+              Q.PAT_ASSUM `~x` (ASSUME_TAC o SIMP_RULE std_ss [ARMCompositionTheory.get_st_def]) THEN
+              RW_TAC std_ss [Once WHILE] THEN
+              Q.UNABBREV_TAC `arm` THEN
+              `run_cfl ir st = SND (SND (FST (runTo (upload (translate ir) (\i. ARB) 0) (LENGTH (translate ir))
                   ((0,0w,st),{}))))` by RW_TAC arith_ss [
                    ARMCompositionTheory.get_st_def, run_cfl_def, run_arm_def] THEN
-	      METIS_TAC [SND,FST,ARMCompositionTheory.get_st_def,ARMCompositionTheory.FUNPOW_DSTATE, ABS_PAIR_THM]
-	    ]
+              METIS_TAC [SND,FST,ARMCompositionTheory.get_st_def,ARMCompositionTheory.FUNPOW_DSTATE, ABS_PAIR_THM]
+            ]
      ]
    );
 
@@ -405,7 +403,7 @@ val PRJ_TR_RULE_2 = Q.store_thm (
         WELL_FORMED ir /\ (!st. cond_f (prj_f st) = eval_il_cond cond st) /\
         (?R. WF R /\ !t0 t1. ~cond_f t0 ==> R (f t0) t0) /\
            PSPEC ir ((\st.T),(\st.T)) stk_f (prj_f,f,prj_f) ==>
-		    PSPEC (TR cond ir) ((\st.T),(\st.T)) stk_f (prj_f, WHILE ($~ o cond_f) f, prj_f)`,
+                    PSPEC (TR cond ir) ((\st.T),(\st.T)) stk_f (prj_f, WHILE ($~ o cond_f) f, prj_f)`,
 
     SIMP_TAC std_ss [PSPEC_def, HSPEC_def] THEN
     REPEAT GEN_TAC THEN NTAC 2 STRIP_TAC THEN
@@ -449,7 +447,7 @@ val PRJ_POP_RULE = Q.store_thm (
    "PRJ_POP_RULE",
    `!ir pre_p post_p stk_f in_f f out_f stk_f' in_f' g out_f'.
       PSPEC ir (pre_p,post_p) stk_f (in_f,f,out_f) /\
-	valid_push (stk_f,in_f,f,out_f) (stk_f',in_f',g,out_f')
+        valid_push (stk_f,in_f,f,out_f) (stk_f',in_f',g,out_f')
        ==>
         PSPEC ir (pre_p,post_p) stk_f' (in_f', g, out_f')`,
     RW_TAC list_ss [PSPEC_def, HSPEC_def, valid_push_def]

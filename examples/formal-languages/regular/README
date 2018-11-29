@@ -80,10 +80,10 @@ Regexp_Type
    * SML definition of the type of regular expressions. This lies at
      the base of both "proof" and "code" paths.
 
-   * The size of the alphabet (default 256) can be set here, and the
-     resulting matchers will work properly. Note that large alphabets 
-     like Unicode will need a different approach. Also note that the
-     interval regexp support assumes that the alphabet size is 256.
+   * The size of the alphabet (default 256) can be set here. Note that
+     large alphabets like Unicode will need a different approach. Also
+     note that the interval regexp support assumes that the alphabet
+     size is 256.
 
    * There is a regexp parser implementation (entrypoints:
      fromSubstring, fromString, fromQuote). See above for the concrete
@@ -93,13 +93,8 @@ Regexp_Type
 Regexp_Match.
 
    * SML implementation of the regexp match compiler. Does not
-     generate proofs. Is close to the algorithms in regexpTheory,
-     having been derived from it. 
-
-   * There have been some efficiency hacks applied in order to speed
-     up processing of some regexps, the important one being use of
-     PolyML.pointerEq in regexp_compare. Some timings motivating
-     the hacking choices made are in test.results
+     generate proofs. Is close to the algorithms in regexpTheory and
+     regexp_compilerTheory, having been derived from them. 
 
    * A version that only runs the search and doesn't post-process to
      obtain the DFA is in the function domBrz. This is useful for
@@ -153,14 +148,13 @@ test.{hol,ml}
 
 regexp2dfa
 
-   * Command-line tool for generating programs (C,Java,ML) from regexps. See
-     codegen/gen_files for invocation examples.
+   * Command-line tool for generating programs (Ada,C,Java,ML) from
+     regexps. See codegen/gen_*_files for invocation examples.
 
 codegen
 
-   * Directory of examples demonstrating generation of code from
-     regexps.  Contents: gen_files (shell script; just run it with
-     ./gen_files and files will be created in a variety of languages).
+   * Directory of shell scripts demonstrating generation of code from
+     regexps.  Contents: gen_ada_files, gen__c_files, ...
 
 
 Status.

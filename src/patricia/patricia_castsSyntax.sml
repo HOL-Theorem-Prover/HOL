@@ -9,6 +9,8 @@ struct
 open Abbrev HolKernel pred_setSyntax wordsSyntax patriciaSyntax
      patricia_castsTheory;
 
+val ERR = mk_HOL_ERR "patricia_castsSyntax"
+
 (* ------------------------------------------------------------------------- *)
 
 fun mk_word_ptree_type (aty, bty) =

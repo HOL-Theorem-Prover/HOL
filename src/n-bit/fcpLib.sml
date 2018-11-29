@@ -14,6 +14,8 @@ open fcpTheory fcpSyntax
 
 (* ------------------------------------------------------------------------- *)
 
+val ERR = mk_HOL_ERR "fcpLib"
+
 val index_type   = fcpSyntax.mk_numeric_type
 val index_to_num = fcpSyntax.dest_numeric_type
 

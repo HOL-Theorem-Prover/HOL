@@ -6,7 +6,6 @@ structure TypeBasePure :> TypeBasePure =
 struct
 
 open HolKernel boolSyntax Drule Conv Prim_rec;
-type ppstream = Portable.ppstream
 type simpfrag = simpfrag.simpfrag
 
 val ERR = mk_HOL_ERR "TypeBasePure";
@@ -21,6 +20,24 @@ datatype shared_thm
     = ORIG of thm
     | COPY of (string * string) * thm;
 
+   type mk_datatype_record =
+        {ax        : shared_thm,
+         induction : shared_thm,
+         case_def  : thm,
+         case_cong : thm,
+         case_eq   : thm,
+         nchotomy  : thm,
+         size      : (term * shared_thm) option,
+         encode    : (term * shared_thm) option,
+         lift      : term option,
+         one_one   : thm option,
+         distinct  : thm option,
+         fields    : (string * hol_type) list,
+         accessors : thm list,
+         updates   : thm list,
+         destructors : thm list,
+         recognizers : thm list}
+
 fun thm_of (ORIG x)     = x
   | thm_of (COPY (s,x)) = x;
 
@@ -33,7 +50,7 @@ type dtyinfo =
             axiom        : shared_thm,
             induction    : shared_thm,
             case_def     : thm,
-            case_eq  : thm,
+            case_eq      : thm,
             case_cong    : thm,
             nchotomy     : thm,
             case_const   : term,
@@ -48,48 +65,71 @@ type dtyinfo =
             fields       : (string * hol_type) list,
             accessors    : thm list,
             updates      : thm list,
-            simpls       : simpfrag} ;
+            simpls       : simpfrag,
+            extra        : ThyDataSexp.t list} ;
 
 open FunctionalRecordUpdate
-fun gcons_mkUp z = makeUpdate20 z
+fun gcons_mkUp z = makeUpdate21 z
 fun update_DTY z = let
   fun from accessors axiom case_cong case_const case_def case_eq
-           constructors destructors distinct encode fields induction lift
+           constructors destructors distinct encode extra fields induction lift
            nchotomy one_one recognizers simpls size ty updates =
     {accessors = accessors, axiom = axiom, case_cong = case_cong,
      case_const = case_const, case_def = case_def, case_eq = case_eq,
      constructors = constructors, destructors = destructors,
-     distinct = distinct, encode = encode, fields = fields,
+     distinct = distinct, encode = encode, extra = extra, fields = fields,
      induction = induction, lift = lift, nchotomy = nchotomy,
      one_one = one_one, recognizers = recognizers, simpls = simpls,
      size = size, ty = ty, updates = updates}
   (* fields in reverse order to above *)
   fun from' updates ty size simpls recognizers one_one nchotomy lift induction
-            fields encode distinct destructors constructors case_eq case_def
-            case_const case_cong axiom accessors =
+            fields extra encode distinct destructors constructors case_eq
+            case_def case_const case_cong axiom accessors =
     {accessors = accessors, axiom = axiom, case_cong = case_cong,
      case_const = case_const, case_def = case_def, case_eq = case_eq,
      constructors = constructors, destructors = destructors,
-     distinct = distinct, encode = encode, fields = fields,
+     distinct = distinct, encode = encode, extra = extra, fields = fields,
      induction = induction, lift = lift, nchotomy = nchotomy,
      one_one = one_one, recognizers = recognizers, simpls = simpls,
      size = size, ty = ty, updates = updates}
   (* first order *)
   fun to f {accessors, axiom, case_cong, case_const, case_def, case_eq,
-            constructors, destructors, distinct, encode, fields, induction,
-            lift, nchotomy, one_one, recognizers, simpls, size, ty, updates} =
+            constructors, destructors, distinct, encode, extra, fields,
+            induction, lift, nchotomy, one_one, recognizers, simpls, size, ty,
+            updates} =
     f accessors axiom case_cong case_const case_def case_eq
-      constructors destructors distinct encode fields induction lift
+      constructors destructors distinct encode extra fields induction lift
       nchotomy one_one recognizers simpls size ty updates
 in
   gcons_mkUp (from, from', to)
 end z
 
-type ntyinfo = hol_type *
-          {nchotomy : thm option,
-           induction : thm option,
-           size : (term * thm) option,
-           encode : (term * thm) option};
+type ntyrec = {encode : (term * thm) option,
+               extra : ThyDataSexp.t list,
+               induction : thm option,
+               nchotomy : thm option,
+               simpls : simpfrag.simpfrag,
+               size : (term * thm) option
+              };
+
+fun gcons_mkUp z = makeUpdate6 z
+fun update_NTY z = let
+  fun from encode extra induction nchotomy simpls size =
+    {encode = encode, extra = extra, induction = induction,
+     nchotomy = nchotomy, simpls = simpls, size = size}
+  (* fields in reverse order to above *)
+  fun from' size simpls nchotomy induction extra encode =
+    {encode = encode, extra = extra, induction = induction,
+     nchotomy = nchotomy, simpls = simpls, size = size}
+  (* first order *)
+  fun to f {encode, extra, induction, nchotomy, simpls, size} =
+    f encode extra induction nchotomy simpls size
+in
+  gcons_mkUp (from, from', to)
+end z
+
+
+type ntyinfo = hol_type * ntyrec
 
 datatype tyinfo = DFACTS of dtyinfo
                 | NFACTS of ntyinfo;
@@ -134,6 +174,9 @@ fun case_eq_of (DFACTS {case_eq, ...}) = case_eq
   | case_eq_of (NFACTS (ty,_)) =
        raise ERR "case_eq_of" (dollarty ty^" is not a datatype");
 
+fun extra_of (DFACTS{extra,...}) = extra
+  | extra_of (NFACTS(_, {extra,...})) = extra
+
 fun induction_of0 (DFACTS {induction,...}) = induction
   | induction_of0 (NFACTS (ty,{induction,...}))
      = raise ERR "induction_of0" "not a mutrec. datatype";
@@ -149,12 +192,10 @@ fun nchotomy_of (DFACTS {nchotomy,...}) = nchotomy
         raise ERR "nchotomy_of" (dollarty ty^" no cases theorem available");
 
 fun distinct_of (DFACTS {distinct,...}) = distinct
-  | distinct_of (NFACTS (ty,_)) =
-        raise ERR "distinct_of" (dollarty ty^" is not a datatype");
+  | distinct_of (NFACTS (ty,_)) = NONE
 
 fun one_one_of (DFACTS {one_one,...}) = one_one
-  | one_one_of (NFACTS (ty,_)) =
-        raise ERR "one_one_of" (dollarty ty^" is not a datatype");
+  | one_one_of (NFACTS (ty,_)) = NONE
 
 fun fields_of (DFACTS {fields,...}) = fields
   | fields_of (NFACTS _) = [];
@@ -177,16 +218,14 @@ fun axiom_of (DFACTS {axiom,...}) = thm_of axiom
       raise ERR "axiom_of" (dollarty ty^" is not a datatype");
 
 fun size_of0 (DFACTS {size,...}) = size
-  | size_of0 (NFACTS (ty,_)) =
-      raise ERR "size_of0" (dollarty ty^" is not a datatype");
+  | size_of0 (NFACTS (ty,{size,...})) = Option.map (I ## ORIG) size
 
 fun size_of (DFACTS {size=NONE,...}) = NONE
   | size_of (DFACTS {size=SOME(tm,def),...}) = SOME(tm,thm_of def)
   | size_of (NFACTS(_,{size,...})) = size;
 
 fun encode_of0(DFACTS {encode,...}) = encode
-  | encode_of0(NFACTS (ty,_)) =
-       raise ERR "encode_of0" (dollarty ty^" is not a datatype")
+  | encode_of0(NFACTS (ty,{encode,...})) = Option.map (I ## ORIG) encode
 
 fun encode_of(DFACTS {encode=NONE,...}) = NONE
   | encode_of(DFACTS {encode=SOME(tm,def),...}) = SOME(tm,thm_of def)
@@ -197,43 +236,65 @@ fun lift_of(DFACTS {lift,...}) = lift
        raise ERR "lift_of" (dollarty ty^" is not a datatype")
 ;
 
+fun extras_of (DFACTS{extra,...}) = extra
+  | extras_of (NFACTS(_, {extra,...})) = extra
+
 (*---------------------------------------------------------------------------
                     Making alterations
  ---------------------------------------------------------------------------*)
 
 fun put_nchotomy th (DFACTS dty) = DFACTS (update_DTY dty (U #nchotomy th) $$)
-  | put_nchotomy th (NFACTS(ty,{nchotomy,induction,size,encode})) =
-      NFACTS(ty,{nchotomy=SOME th,induction=induction,size=size,encode=encode});
+  | put_nchotomy th (NFACTS(ty,ntyr)) =
+      NFACTS(ty,update_NTY ntyr (U #nchotomy (SOME th)) $$)
 
 fun put_simpls thl (DFACTS dty) = DFACTS (update_DTY dty (U #simpls thl) $$)
-  | put_simpls _ _ = raise ERR "put_simpls" "not a datatype";
+  | put_simpls ssf (NFACTS (ty,nty)) =
+      NFACTS(ty, update_NTY nty (U #simpls ssf) $$)
+
+fun add_rewrs thl tyi =
+  let
+    val {convs,rewrs} = simpls_of tyi
+  in
+    put_simpls {convs = convs, rewrs = rewrs @ thl} tyi
+  end
+
+val add_convs = simpfrag.add_convs
+fun add_ssfrag_convs cds (DFACTS dty) =
+    DFACTS (update_DTY dty(U #simpls (add_convs cds (#simpls dty))) $$)
+  | add_ssfrag_convs cds (NFACTS(ty,nty)) =
+      NFACTS(ty, update_NTY nty (U #simpls (add_convs cds (#simpls nty))) $$)
 
 fun put_induction th (DFACTS dty) = DFACTS (update_DTY dty (U #induction th) $$)
-  | put_induction (ORIG th) (NFACTS(ty,{nchotomy,induction,size,encode})) =
-      NFACTS(ty,{induction=SOME th,nchotomy=nchotomy,size=size,encode=encode})
-  | put_induction (COPY th) (NFACTS(ty,{nchotomy,induction,size,encode})) =
+  | put_induction (ORIG th) (NFACTS(ty,ntyr)) =
+      NFACTS(ty,update_NTY ntyr (U #induction (SOME th)) $$)
+  | put_induction (COPY th) (NFACTS _) =
       raise ERR "put_induction" "non-datatype but mutrec"
 
 fun put_size szinfo (DFACTS dty) =
       DFACTS (update_DTY dty (U #size (SOME szinfo)) $$)
-  | put_size (size_tm,ORIG size_rw)
-             (NFACTS(ty,{nchotomy,induction,size,encode})) =
-      NFACTS(ty,{nchotomy=nchotomy,size=SOME(size_tm,size_rw),
-                 induction=induction,encode=encode})
-  | put_size (size_tm,COPY size_rw)
-             (NFACTS(ty,{nchotomy,induction,size,encode})) =
+  | put_size (size_tm,ORIG size_rw) (NFACTS(ty,ntyr)) =
+      NFACTS(ty,update_NTY ntyr (U #size (SOME(size_tm,size_rw))) $$)
+  | put_size (size_tm,COPY size_rw) (NFACTS _) =
       raise ERR "put_size" "non-datatype but mutrec"
 
 fun put_encode encinfo (DFACTS dty) =
       DFACTS (update_DTY dty (U #encode (SOME encinfo)) $$)
   | put_encode (encode_tm,ORIG encode_rw)
-               (NFACTS(ty,{nchotomy,induction,size,encode})) =
-     NFACTS(ty,{nchotomy=nchotomy,induction=induction,
-                size=size,encode=SOME(encode_tm,encode_rw)})
-  | put_encode (encode_tm,COPY encode_rw)
-               (NFACTS(ty,{nchotomy,induction,size,encode})) =
+               (NFACTS(ty, ntyr)) =
+      NFACTS(ty, update_NTY ntyr (U #encode (SOME(encode_tm,encode_rw))) $$)
+  | put_encode (encode_tm,COPY encode_rw) (NFACTS _) =
       raise ERR "put_encode" "non-datatype but mutrec"
 
+fun put_extra e tyi =
+  case tyi of
+      DFACTS dty => DFACTS (update_DTY dty (U #extra e) $$)
+    | NFACTS(ty,ntyr) => NFACTS (ty, update_NTY ntyr (U #extra e) $$)
+
+fun add_extra e tyi =
+  case tyi of
+      DFACTS dty => DFACTS (update_DTY dty (U #extra (#extra dty @ e)) $$)
+    | NFACTS (ty, ntyr) =>
+        NFACTS (ty, update_NTY ntyr (U #extra (#extra ntyr @ e)) $$)
 
 fun put_lift lift_tm (DFACTS dty) =
       DFACTS (update_DTY dty (U #lift (SOME lift_tm)) $$)
@@ -284,37 +345,50 @@ val defn_const =
  * numbers are in the context, which is not necessarily true.                *
  *---------------------------------------------------------------------------*)
 
-fun mk_datatype_info {ax,case_def,case_eq,case_cong,induction,
-                      nchotomy,size,encode,lift,one_one,
-                      fields, accessors, updates, distinct,
-                      destructors,recognizers} =
-  let val (ty,ty_names,constructors) = basic_info case_def
-      val inj = case one_one of NONE => [] | SOME x => [x]
-      val D  = case distinct of NONE => [] | SOME x => CONJUNCTS x
+fun mk_datatype_info_no_simpls rcd =
+  let
+    val {ax,case_def,case_eq,case_cong,induction,
+         nchotomy,size,encode,lift,one_one,
+         fields, accessors, updates, distinct,
+         destructors,recognizers} = rcd
+    val (ty,ty_names,constructors) = basic_info case_def
   in
-   DFACTS
-     {ty           = ty,
-      constructors = constructors,
-      destructors  = destructors,
-      recognizers  = recognizers,
-      case_const   = defn_const case_def,
-      case_def     = case_def,
-      case_eq      = case_eq,
-      case_cong    = case_cong,
-      induction    = induction,
-      nchotomy     = nchotomy,
-      one_one      = one_one,
-      distinct     = distinct,
-      fields       = fields,
-      accessors    = accessors,
-      updates      = updates,
-      simpls       = {rewrs = case_def :: (D@map GSYM D@inj), convs = []},
-      size         = size,
-      encode       = encode,
-      lift         = lift,
-      axiom        = ax}
-  end;
+    DFACTS
+      {ty           = ty,
+       constructors = constructors,
+       destructors  = destructors,
+       recognizers  = recognizers,
+       case_const   = defn_const case_def,
+       case_def     = case_def,
+       case_eq      = case_eq,
+       case_cong    = case_cong,
+       induction    = induction,
+       nchotomy     = nchotomy,
+       one_one      = one_one,
+       distinct     = distinct,
+       fields       = fields,
+       accessors    = accessors,
+       updates      = updates,
+       simpls       = {rewrs = [], convs = []},
+       size         = size,
+       encode       = encode,
+       lift         = lift,
+       axiom        = ax,
+       extra        = []}
+  end
 
+fun gen_std_rewrs tyi =
+  let
+    val D  = case distinct_of tyi of NONE => [] | SOME x => CONJUNCTS x
+    val inj = case one_one_of tyi of NONE => [] | SOME th => [th]
+    val c = D @ map GSYM D @ inj
+  in
+    case_def_of tyi :: c handle HOL_ERR _ => c
+  end
+fun add_std_simpls tyi = add_rewrs (gen_std_rewrs tyi) tyi
+
+fun mk_datatype_info rcd =
+    rcd |> mk_datatype_info_no_simpls |> add_std_simpls
 
 local fun mk_ti (n,ax,ind)
                 (cdef::cds) (ccong::cgs) (oo::oos) (d::ds) (nch::nchs) =
@@ -343,7 +417,7 @@ fun gen_datatype_info {ax, ind, case_defs} =
      val cased1 = hd case_defs
      val casec1 = hd case_congs
      val nch1 = hd nchotomyl
-     val tyinfo_1 = mk_datatype_info
+     val tyinfo_1 = mk_datatype_info_no_simpls
            {ax=ORIG ax, induction=ORIG ind,
             case_def = cased1, case_cong = casec1, nchotomy = nch1,
             case_eq =
@@ -362,139 +436,152 @@ fun gen_datatype_info {ax, ind, case_defs} =
  end
 end;
 
-fun mk_nondatatype_info (ty,record) = NFACTS(ty,record);
-
+fun mk_nondatatype_info (ty,{encode,induction,nchotomy,size}) =
+  NFACTS(ty,{encode=encode,induction=induction,size=size,extra=[],
+             nchotomy=nchotomy,simpls=simpfrag.empty_simpfrag});
 
 fun name_pair(s1,s2) = s1^"$"^s2;
 
-fun pp_tyinfo ppstrm (d as DFACTS recd) =
- let open Portable
-     val {add_string,add_break,begin_block,end_block,...}
-          = with_ppstream ppstrm
-     val pp_term = Parse.pp_term ppstrm
-     val pp_thm = Parse.pp_thm ppstrm
-     val {ty,constructors, case_const, case_def, case_cong, induction,
-          nchotomy,one_one,distinct,simpls,size,encode,lift,axiom, case_eq,
-          fields, accessors, updates,recognizers,destructors} = recd
-     val ty_namestring = name_pair (ty_name_of d)
- in
-   begin_block CONSISTENT 0;
-     begin_block INCONSISTENT 0;
-        add_string "-----------------------"; add_newline ppstrm;
-        add_string "-----------------------"; add_newline ppstrm;
-        add_string "HOL datatype:"; add_break(1,0);
-        add_string (Lib.quote ty_namestring); end_block();
-   add_break(1,0);
-   begin_block CONSISTENT 1;
-   add_string "Primitive recursion:"; add_break (1,0);
-       (case axiom
-         of ORIG thm  => pp_thm thm
-          | COPY(sp,_) => add_string ("see "^Lib.quote (name_pair sp)));
-        end_block();
-   add_break(1,0);
-   begin_block CONSISTENT 1; add_string "Case analysis:";
-                             add_break (1,0); pp_thm case_def; end_block();
-   add_break(1,0);
-   case size
-    of NONE => ()
-     | SOME (tm,size_def) =>
-        (begin_block CONSISTENT 1;
-         add_string "Size:"; add_break (1,0);
-         (case size_def
-           of COPY(sp,th) => add_string ("see "^Lib.quote (name_pair sp))
-            | ORIG th    => if is_const tm
-                            then pp_thm th else pp_term tm)
-         ; end_block(); add_break(1,0));
+fun pp_tyinfo tyi =
+  let
+    open Portable smpp
+    val pp_type = lift Parse.pp_type
+    val pp_term = lift Parse.pp_term
+    val pp_thm = lift Parse.pp_thm
+    val pp_sexp =
+        lift (ThyDataSexp.pp_sexp Parse.pp_type Parse.pp_term Parse.pp_thm)
+  in
+    case tyi of
+        d as DFACTS recd =>
+        let
+          val {ty,constructors, case_const, case_def, case_cong, induction,
+               nchotomy,one_one,distinct,simpls,size,encode,lift,axiom, case_eq,
+               fields, accessors, updates,recognizers,destructors,extra} = recd
+          val ty_namestring = name_pair (ty_name_of d)
+        in
+          block CONSISTENT 0 (
+            block INCONSISTENT 0 (
+              add_string "-----------------------" >> add_newline >>
+              add_string "-----------------------" >> add_newline >>
+              add_string "HOL datatype:" >> add_break(1,0) >>
+              add_string (Lib.quote ty_namestring)
+            ) >> add_break(1,0) >>
 
-   (* add_break(1,0); *)
-   case encode
-    of NONE => ()
-     | SOME (tm,encode_def) =>
-        (begin_block CONSISTENT 1;
-         add_string "Encoder:"; add_break (1,0);
-         (case encode_def
-           of COPY(sp,th) => add_string ("see "^Lib.quote (name_pair sp))
-            | ORIG th    => if is_const tm
-                            then pp_thm th else pp_term tm);
-          end_block();
-          add_break(1,0));
+            block CONSISTENT 1 (
+              add_string "Primitive recursion:" >> add_break (1,0) >>
+              (case axiom of
+                   ORIG thm  => pp_thm thm
+                 | COPY(sp,_) => add_string ("see "^Lib.quote (name_pair sp)))
+            ) >> add_break(1,0) >>
 
-   begin_block CONSISTENT 1;
-   add_string "Induction:"; add_break (1,0);
-    (case induction
-      of ORIG thm  => pp_thm thm
-       | COPY(sp,_) => add_string ("see "^Lib.quote (name_pair sp)));
-   end_block();
+            block CONSISTENT 1 (
+              add_string "Case analysis:" >> add_break (1,0) >> pp_thm case_def
+            ) >> add_break(1,0) >>
 
-   add_break(1,0);
-   begin_block CONSISTENT 1; add_string "Case completeness:";
-   add_break (1,0); pp_thm nchotomy; end_block();
+            (case size of
+                 NONE => nothing
+               | SOME (tm,size_def) =>
+                 block CONSISTENT 1 (
+                   add_string "Size:" >> add_break (1,0) >>
+                   (case size_def of
+                        COPY(sp,th) =>
+                          add_string ("see "^Lib.quote (name_pair sp))
+                      | ORIG th    => if is_const tm then pp_thm th
+                                      else pp_term tm)
+                 ) >> add_break(1,0)) >>
 
-   add_break(1,0);
-   begin_block CONSISTENT 1; add_string "Case-const equality split:";
-   add_break (1,0); pp_thm case_eq; end_block();
+            (case encode of
+                 NONE => nothing
+               | SOME (tm,encode_def) =>
+                 (block CONSISTENT 1 (
+                     add_string "Encoder:" >> add_break (1,0) >>
+                     (case encode_def of
+                          COPY(sp,th) =>
+                            add_string ("see "^Lib.quote (name_pair sp))
+                        | ORIG th => if is_const tm then pp_thm th
+                                     else pp_term tm)
+                   ) >> add_break(1,0))) >>
 
-   let fun do11 thm =
-            (begin_block CONSISTENT 1; add_string "One-to-one:";
-             add_break (1,0); pp_thm thm; end_block());
-       fun do_distinct thm =
-            (begin_block CONSISTENT 1; add_string "Distinctness:";
-             add_break (1,0); pp_thm thm; end_block())
-   in
-     case (one_one,distinct)
-      of (NONE,NONE) => ()
-       | (NONE,SOME thm) => (add_break(1,0); do_distinct thm)
-       | (SOME thm,NONE) => (add_break(1,0); do11 thm)
-       | (SOME thm1,SOME thm2) => (add_break(1,0); do11 thm1;
-                                   add_break(1,0); do_distinct thm2)
-   end;
-   end_block()
- end
- | pp_tyinfo ppstrm (NFACTS(ty,recd)) =
-   let open Portable
-     val {add_string,add_break,begin_block,end_block,...}
-           = with_ppstream ppstrm
-     val pp_type = Parse.pp_type ppstrm
-     val pp_term = Parse.pp_term ppstrm
-     val pp_thm = Parse.pp_thm ppstrm
-     val {nchotomy,induction,size,encode} = recd
-   in
-    begin_block CONSISTENT 0;
-     begin_block INCONSISTENT 0;
-        add_string "-----------------------"; add_newline ppstrm;
-        add_string "-----------------------"; add_newline ppstrm;
-        add_string "HOL type:";
-        add_break(1,0);
-        pp_type ty;
-     end_block();
-    add_break(1,0);
-     begin_block CONSISTENT 1;
-       add_string "Case completeness:"; add_break (1,0);
-       (case nchotomy
-         of NONE => add_string "none"
-          | SOME thm => pp_thm thm);
-     end_block();
-    add_break(1,0);
-     begin_block CONSISTENT 1;
-       add_string "Induction:"; add_break (1,0);
-       (case induction
-        of NONE  => add_string "none"
-         | SOME thm => pp_thm thm);
-     end_block();
-    add_break(1,0);
-     begin_block CONSISTENT 1;
-       add_string "Size:"; add_break (1,0);
-       (case size
-         of NONE => add_string "none"
-          | SOME (tm,size_def) =>
-             (begin_block CONSISTENT 1;
-              (if is_const tm then pp_thm size_def else pp_term tm);
-              end_block()));
-     end_block();
-    end_block()
-  end;
+            block CONSISTENT 1 (
+              add_string "Induction:" >> add_break (1,0) >>
+              (case induction of
+                   ORIG thm  => pp_thm thm
+                 | COPY(sp,_) => add_string ("see "^Lib.quote (name_pair sp)))
+            ) >> add_break(1,0) >>
 
+            block CONSISTENT 1 (
+              add_string "Case completeness:" >> add_break (1,0) >>
+              pp_thm nchotomy
+            ) >> add_break(1,0) >>
 
+            block CONSISTENT 1 (
+              add_string "Case-const equality split:" >> add_break (1,0) >>
+              pp_thm case_eq
+            ) >> add_break(1,0) >>
+
+            block CONSISTENT 1 (
+              add_string "Extras: [" >> add_break(1,0) >>
+              pr_list pp_sexp (add_string "," >> add_break(1,0)) extra >>
+              add_string "]"
+            ) >>
+
+            let fun do11 thm =
+                     block CONSISTENT 1 (add_string "One-to-one:" >>
+                                         add_break (1,0) >> pp_thm thm)
+                fun do_distinct thm =
+                     block CONSISTENT 1 (add_string "Distinctness:" >>
+                                         add_break (1,0) >> pp_thm thm)
+            in
+              case (one_one,distinct)
+               of (NONE,NONE) => nothing
+                | (NONE,SOME thm) => add_break(1,0) >> do_distinct thm
+                | (SOME thm,NONE) => add_break(1,0) >> do11 thm
+                | (SOME thm1,SOME thm2) => add_break(1,0) >> do11 thm1 >>
+                                           add_break(1,0) >> do_distinct thm2
+            end
+          )
+        end
+      | NFACTS(ty,{nchotomy,induction,size,encode,extra,...}) =>
+        block CONSISTENT 0 (
+          block INCONSISTENT 0 (
+             add_string "-----------------------" >> add_newline >>
+             add_string "-----------------------" >> add_newline >>
+             add_string "HOL type:" >> add_break(1,0) >> pp_type ty
+          ) >> add_break(1,0) >>
+
+          block CONSISTENT 1 (
+            add_string "Case completeness:" >> add_break (1,0) >>
+            (case nchotomy of
+                 NONE => add_string "none"
+               | SOME thm => pp_thm thm)
+          ) >> add_break(1,0) >>
+
+          block CONSISTENT 1 (
+            add_string "Induction:" >> add_break (1,0) >>
+            (case induction of
+                 NONE  => add_string "none"
+               | SOME thm => pp_thm thm)
+          ) >> add_break(1,0) >>
+
+          block CONSISTENT 1 (
+            add_string "Size:" >> add_break (1,0) >>
+            (case size of
+                 NONE => add_string "none"
+               | SOME (tm,size_def) =>
+                 block CONSISTENT 1 (
+                     if is_const tm then pp_thm size_def else pp_term tm
+                 )
+            )
+          ) >> add_break(1,0) >>
+
+          block CONSISTENT 1 (
+            add_string "Extras:" >> add_break(1,0) >>
+            pr_list pp_sexp (add_string "," >> add_break(1,0)) extra
+          )
+        )
+  end
+
+val pp_tyinfo = Parse.mlower o pp_tyinfo
 
 (*---------------------------------------------------------------------------*)
 (* Database of facts.                                                        *)
@@ -503,6 +590,8 @@ fun pp_tyinfo ppstrm (d as DFACTS recd) =
 type typeBase = tyinfo TypeNet.typenet
 
 val empty : typeBase = TypeNet.empty
+
+val fold = TypeNet.fold
 
 fun next_ty ty = mk_vartype(Lexis.tyvar_vary (dest_vartype ty))
 
@@ -941,4 +1030,150 @@ fun mk_record tybase (ty,fields) =
        end
   else raise ERR "mk_record" "first arg. not a record type";
 
-end
+exception OptionExn = Option
+open ThyDataSexp
+fun ty_to_key ty =
+  let
+    val {Thy,Tyop,...} = dest_thy_type ty
+  in
+    List [String Thy, String Tyop]
+  end
+
+fun field s v = [Sym s, v]
+fun option f v =
+  case v of
+      NONE => Sym "NONE"
+    | SOME v0 => List [Sym "SOME", f v0]
+fun dtyiToSEXPs (dtyi : dtyinfo) =
+    field "ty" (Type (#ty dtyi)) @
+    field "axiom" (Thm (thm_of (#axiom dtyi))) @
+    field "induction" (Thm (thm_of (#induction dtyi))) @
+    field "case_def" (Thm (#case_def dtyi)) @
+    field "case_eq" (Thm (#case_eq dtyi)) @
+    field "case_cong" (Thm (#case_cong dtyi)) @
+    field "case_const" (Term (#case_const dtyi)) @
+    field "constructors" (List (map Term (#constructors dtyi))) @
+    field "destructors" (List (map Thm (#destructors dtyi))) @
+    field "recognizers" (List (map Thm (#recognizers dtyi))) @
+    field "size" (option (fn (t,th) => List [Term t, Thm (thm_of th)])
+                         (#size dtyi)) @
+    field "encode" (option (fn (t,th) => List [Term t, Thm (thm_of th)])
+                           (#encode dtyi)) @
+    field "lift" (option Term (#lift dtyi)) @
+    field "distinct" (option Thm (#distinct dtyi)) @
+    field "nchotomy" (Thm (#nchotomy dtyi)) @
+    field "one_one" (option Thm (#one_one dtyi)) @
+    field "fields" (List (map (fn (s,ty) => List[String s, Type ty])
+                              (#fields dtyi))) @
+    field "accessors" (List (map Thm (#accessors dtyi))) @
+    field "updates" (List (map Thm (#updates dtyi))) @
+    field "simpls" (List (map Thm (#rewrs (#simpls dtyi)))) @
+    field "extra" (List (#extra dtyi))
+
+fun toSEXP0 tyi =
+  case tyi of
+      DFACTS dtyi => List (Sym "DFACTS" :: dtyiToSEXPs dtyi)
+    | NFACTS (ty,{nchotomy, induction, size, encode, extra, simpls}) =>
+        List (
+          Sym "NFACTS" ::
+          field "ty" (Type ty) @
+          field "nchotomy" (option Thm nchotomy) @
+          field "induction" (option Thm induction) @
+          field "extra" (List extra) @
+          field "size" (option (fn (t,th) => List [Term t, Thm th]) size) @
+          field "encode" (option (fn (t,th) => List [Term t, Thm th]) encode) @
+          field "simpls" (List (map Thm (#rewrs simpls)))
+        )
+
+fun toSEXP tyi =
+  List [ty_to_key (ty_of tyi), toSEXP0 tyi]
+
+fun fromSEXP0 s =
+  let
+    fun string (String s) = s | string _ = raise OptionExn
+    fun ty (Type t) = t | ty _ = raise OptionExn
+    fun tm (Term t) = t | tm _ = raise OptionExn
+    fun thm (Thm th) = th | thm _ = raise OptionExn
+    fun sthm (Thm th) = ORIG th | sthm _ = raise OptionExn
+    fun dest_option df (Sym "NONE") = NONE
+      | dest_option df (List [Sym "SOME", v]) = SOME (df v)
+      | dest_option _ _ = raise OptionExn
+    fun dest_pair df1 df2 (List [s1, s2]) = (df1 s1, df2 s2)
+      | dest_pair _ _ _ = raise OptionExn
+    fun H nm f x = f x
+       handle OptionExn => raise ERR "fromSEXP" ("Bad encoding for field "^nm)
+  in
+    case s of
+        List [Sym "DFACTS",
+              Sym "ty", Type typ,
+              Sym "axiom", Thm axiom,
+              Sym "induction", Thm induction,
+              Sym "case_def", Thm case_def,
+              Sym "case_eq", Thm case_eq,
+              Sym "case_cong", Thm case_cong,
+              Sym "case_const", Term case_const,
+              Sym "constructors", List clist,
+              Sym "destructors", List dlist,
+              Sym "recognizers", List rlist,
+              Sym "size", size_option,
+              Sym "encode", encode_option,
+              Sym "lift", lift_option,
+              Sym "distinct", distinct_option,
+              Sym "nchotomy", Thm nchotomy,
+              Sym "one_one", one_one_option,
+              Sym "fields", List field_list,
+              Sym "accessors", List accessor_list,
+              Sym "updates", List update_list,
+              Sym "simpls", List fragrewr_list,
+              Sym "extra", List extra] =>
+        (SOME (
+            DFACTS {ty = typ, axiom = ORIG axiom, induction = ORIG induction,
+                    case_def = case_def, case_eq = case_eq,
+                    case_cong = case_cong,
+                    case_const = case_const,
+                    constructors = H "constructors" (map tm) clist,
+                    destructors = H "destructors" (map thm) dlist,
+                    recognizers = H "recognizers" (map thm) rlist,
+                    size =
+                      H "size" (dest_option (dest_pair tm sthm)) size_option,
+                    encode = H "encode"
+                               (dest_option (dest_pair tm sthm)) encode_option,
+                    lift = H "lift" (dest_option tm) lift_option,
+                    distinct = H "distinct" (dest_option thm) distinct_option,
+                    nchotomy = nchotomy,
+                    one_one = H "one_one" (dest_option thm) one_one_option,
+                    fields = H "fields" (map (dest_pair string ty)) field_list,
+                    accessors = H "accessors" (map thm) accessor_list,
+                    updates = H "updates" (map thm) update_list,
+                    simpls = simpfrag.add_rwts simpfrag.empty_simpfrag
+                                 (H "simpls" (map thm) fragrewr_list),
+                    extra = extra}
+          ) handle OptionExn => NONE)
+      | List [Sym "NFACTS", Sym "ty", Type typ,
+              Sym "nchotomy", nch_option,
+              Sym "induction", ind_option,
+              Sym "extra", List extra,
+              Sym "size", size_option,
+              Sym "encode", encode_option,
+              Sym "simpls", List rewrs] =>
+        (SOME (
+            NFACTS (typ, {
+                     nchotomy = H "nchotomy" (dest_option thm) nch_option,
+                     induction = H "induction" (dest_option thm) ind_option,
+                     extra = extra,
+                     size = H "size" (dest_option (dest_pair tm thm))
+                              size_option,
+                     encode = H "encode" (dest_option (dest_pair tm thm))
+                                encode_option,
+                     simpls = simpfrag.add_rwts simpfrag.empty_simpfrag
+                                                (H "simpls" (map thm) rewrs)}))
+         handle OptionExn => NONE)
+      | _ => NONE
+  end
+
+fun fromSEXP s =
+  case s of
+      List[_, s0] => fromSEXP0 s0
+    | _ => NONE
+
+end (* struct *)

@@ -18,7 +18,8 @@ val partial     : exn -> ('a -> 'b option) -> 'a -> 'b
 val timed       : ('a -> 'b) -> 'a -> real * 'b
 val timed_many  : ('a -> 'b) -> 'a -> real * 'b
 val trace_level : int ref
-val traces      : {module : string, alignment : int -> int} list ref
+val add_trace   : {module : string, alignment : int -> int} -> unit
+val set_traces  : {module : string, alignment : int -> int} list -> unit
 val tracing     : {module : string, level : int} -> bool
 val trace       : string -> unit
 
@@ -28,7 +29,6 @@ val I      : 'a -> 'a
 val K      : 'a -> 'b -> 'a
 val S      : ('a -> 'b -> 'c) -> ('a -> 'b) -> 'a -> 'c
 val W      : ('a -> 'a -> 'b) -> 'a -> 'b
-val oo     : ('a -> 'b) * ('c -> 'd -> 'a) -> 'c -> 'd -> 'b
 val ##     : ('a -> 'c) * ('b -> 'd) -> 'a * 'b -> 'c * 'd
 val funpow : int -> ('a -> 'a) -> 'a -> 'a
 
@@ -139,7 +139,7 @@ val pos               : real -> real
 val log2              : real -> real              (* Domain *)
 
 (* Pretty-printing *)
-type 'a pp = PP.ppstream -> 'a -> unit
+type 'a pp = 'a Parse.pprinter
 val LINE_LENGTH : int ref
 val pp_map      : ('a -> 'b) -> 'b pp -> 'a pp
 val pp_bracket  : string -> string -> 'a pp -> 'a pp
@@ -177,22 +177,15 @@ val tree_partial_foldl :
   ('a->'c->'c option) -> ('b->'c->'d option) -> 'c -> ('a,'b) tree -> 'd list
 
 (* mlibUseful impure features *)
-val ==        : 'a * 'a -> bool  (* pointer equality *)
 val memoize   : (unit -> 'a) -> unit -> 'a
 val new_int   : unit -> int
 val new_ints  : int -> int list
 val uniform   : unit -> real
 val coin_flip : unit -> bool
 val with_flag : 'r ref * ('r -> 'r) -> ('a -> 'b) -> 'a -> 'b
-val cached    : 'a ordering -> ('a -> 'b) -> 'a -> 'b
 
 (* The environment *)
-val host           : string
-val date           : unit -> string
-val today          : unit -> string
 val warn           : string -> unit
 val die            : string -> unit
-val read_textfile  : {filename : string} -> string
-val write_textfile : {filename : string, contents : string} -> unit
 
 end

@@ -1,7 +1,7 @@
 signature Lib =
 sig
    datatype 'a delta = SAME | DIFF of 'a
-   datatype frag = datatype Portable.frag
+   datatype frag = datatype HOLPP.frag
    datatype ('a, 'b) verdict = PASS of 'a | FAIL of 'b
    type 'a cmp = 'a * 'a -> order
    type 'a eqf = 'a -> 'a -> bool
@@ -44,6 +44,7 @@ sig
    val curry : ('a * 'b -> 'c) -> 'a -> 'b -> 'c
    val deinitcomment : string -> string
    val deinitcommentss : substring -> substring
+   val delete_trailing_wspace : string -> string
    val delta_apply : ('a -> 'a delta) -> 'a -> 'a
    val delta_map : ('a -> 'a delta) -> 'a list -> 'a list delta
    val delta_pair :
@@ -108,6 +109,7 @@ sig
    val op_rev_assoc : ('a -> 'a -> bool) -> 'a -> ('b * 'a) list -> 'b
    val op_set_diff : ('a -> 'a -> bool) -> 'a list -> 'a list -> 'a list
    val op_union : ('a -> 'a -> bool) -> 'a list -> 'a list -> 'a list
+   val option_compare : 'a cmp -> 'a option cmp
    val option_eq : 'a eqf -> 'a option eqf
    val pair : 'a -> 'b -> 'a * 'b
    val pair_compare : ('a cmp * 'b cmp) -> ('a * 'b) cmp
@@ -116,7 +118,7 @@ sig
    val partial : exn -> ('a -> 'b option) -> 'a -> 'b
    val partition : ('a -> bool) -> 'a list -> 'a list * 'a list
    val pluck : ('a -> bool) -> 'a list -> 'a * 'a list
-   val ppstring : (HOLPP.ppstream -> 'a -> unit) -> 'a -> string
+   val ppstring : ('a -> HOLPP.pretty) -> 'a -> string
    val prime : string -> string
    val quadruple : 'a -> 'b -> 'c -> 'd -> 'a * 'b * 'c * 'd
    val quadruple_of_list : 'a list -> 'a * 'a * 'a * 'a

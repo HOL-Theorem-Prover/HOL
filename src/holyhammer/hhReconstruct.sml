@@ -2,7 +2,6 @@
 (* FILE          : hhReconstruct.sml                                     *)
 (* DESCRIPTION   : Reconstruct a proof from the lemmas given by an ATP   *)
 (*                 and minimize them.                                    *)
-(*                 of theorems' names.                                   *)
 (* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck        *)
 (* DATE          : 2015                                                  *)
 (* ===================================================================== *)
@@ -10,146 +9,68 @@
 structure hhReconstruct :> hhReconstruct =
 struct
 
-open HolKernel boolLib Dep Tag tttTools tttExec hhWriter
+open HolKernel Dep Tag boolLib aiLib smlExecute smlTimeout smlRedirect
+  mlThmData psMinimize
 
 val ERR = mk_HOL_ERR "hhReconstruct"
 
-(*---------------------------------------------------------------------------
-   Unescaping and extracting theorem and theory name.
- ----------------------------------------------------------------------------*)
+(* --------------------------------------------------------------------------
+   Settings
+   -------------------------------------------------------------------------- *)
+
+val reconstruct_flag = ref true
+val minimization_timeout = ref 1.0
+val reconstruction_timeout = ref 1.0
+
+(* --------------------------------------------------------------------------
+   ATP output
+   -------------------------------------------------------------------------- *)
 
 fun remove_white_spaces s =
-  let
-    val cl = String.explode s
-    val cl' = filter (not o Char.isSpace) cl
-  in
-    String.implode cl'
+  let fun f c = if Char.isSpace c then "" else Char.toString c in
+    String.translate f s
   end
 
-(* Assumes the theorem name was single quoted before
-   which always happen except for reserved names *)
-fun unsquotify s =
-  if String.size s >= 2
-  then String.substring (s, 1, String.size s - 2)
-  else raise ERR "unsquotify" ""
-
-fun map_half b f l = case l of
-    [] => []
-  | a :: m => if b then f a :: map_half false f m
-              else a :: map_half true f m
-
-fun hh_unescape s =
-  let
-    val sl = String.fields (fn c => c = #"|") s
-    fun f s =
-      let val n = string_to_int s in
-        Char.toString (Char.chr n)
-      end
-  in
-    String.concat (map_half false f sl)
-  end
-
-(* Todo: names of theorems should be standardized with tactictoe convention *)
-fun split_name s = case String.fields (fn c => c = #".") s of
-    [_,thy,name] => (thy,name)
-  | _       => raise ERR "split_name" ""
-
-(*---------------------------------------------------------------------------
-   Reading the ATP file.
- ----------------------------------------------------------------------------*)
-
-fun readl path =
-  let
-    val file = TextIO.openIn path
-    fun loop file = case TextIO.inputLine file of
-        SOME line => line :: loop file
-      | NONE => []
-    val l1 = loop file
-    fun rm_last_char s = String.substring (s,0,String.size s - 1)
-    fun is_empty s = s = ""
-    val l2 = map rm_last_char l1 (* removing end line *)
-    val l3 = filter (not o is_empty) l2
-  in
-    (TextIO.closeIn file; l3)
-  end
+fun not_reserved s = String.isPrefix "thm." s
+fun is_dot c = c = #"."
 
 fun read_status atp_status =
-  remove_white_spaces (hd (readl atp_status)) handle _ => "Unknown"
-
-(* removing reserverd names: use a similar
-   escaping than the holyhammer fof writer *)
-fun reserved_escape name =
-  let fun is_alphanumeric s =
-    let val l = String.explode s in
-      all (fn x => Char.isAlphaNum x orelse x = #"_") l
-    end
-  in
-  if is_alphanumeric name andalso Char.isLower (hd (String.explode name))
-  then name
-  else "'" ^ name ^ "'"
-  end
-
-val reserved_names_escaped = map reserved_escape reserved_names
+  remove_white_spaces (hd (readl atp_status))
+  handle Interrupt => raise Interrupt
+       | _         => "Unknown"
 
 fun read_lemmas atp_out =
   let
-    val l = readl atp_out
-    val l' = filter (fn x => not (mem x reserved_names_escaped)) l
+    val l = filter not_reserved (map unescape (readl atp_out))
+    fun f s = String.concatWith "." (tl (butlast (String.fields is_dot s)))
   in
-    map (split_name o hh_unescape o unsquotify) l'
+    mk_string_set (map f l)
   end
 
 fun get_lemmas (atp_status,atp_out) =
-  let val s = read_status atp_status in
-    if s = "Theorem"
-    then SOME (read_lemmas atp_out)
-    else NONE
-  end
+  if read_status atp_status = "Theorem"
+  then SOME (read_lemmas atp_out)
+  else NONE
 
-(*---------------------------------------------------------------------------
-   Minimization and pretty-printing.
-   Todo: Timeout is very short and can not be modified yet.
- ----------------------------------------------------------------------------*)
+(*----------------------------------------------------------------------------
+   Minimization and pretty-printing
+ -----------------------------------------------------------------------------*)
 
-fun string_of_lemma (thy,name) =
-  if thy = namespace_tag
-    then name
-  else if thy = current_theory ()
-    then String.concatWith " " ["DB.fetch", quote thy, quote name]
-  else thy ^ "Theory." ^ name
-
-fun mk_metiscall lemmas =
-  let val l = map string_of_lemma lemmas in
-    "metisTools.METIS_TAC [" ^
-    String.concatWith " , " l ^ "]"
-  end
-
-fun hh_minimize lemmas g =
-  let
-    val stac = mk_metiscall lemmas
-    val newstac = hide_out (tttMinimize.minimize_stac 1.0 stac g) []
-  in
-    print_endline newstac;
-    tactic_of_sml newstac
-  end
-
-(*---------------------------------------------------------------------------
-   Reconstruction.
- ----------------------------------------------------------------------------*)
-
-fun reconstruct (atp_status,atp_out) g =
-  let val olemmas = get_lemmas (atp_status,atp_out) in
-    case olemmas of
-      NONE => (print_endline "holyhammer: time out";
-               FAIL_TAC "holyhammer: time out")
-    | SOME lemmas => hh_minimize lemmas g
-  end
-
-fun reconstruct_stac (atp_status,atp_out) g =
-  let val olemmas = get_lemmas (atp_status,atp_out) in
-    case olemmas of
-      NONE => NONE
-    | SOME lemmas => SOME (mk_metiscall lemmas)
-  end
+fun hh_reconstruct lemmas g =
+  if not (!reconstruct_flag)
+  then (print_endline (mk_metis_call lemmas);
+        raise ERR "hh_minimize" "reconstruction off")
+  else
+    let
+      val stac = mk_metis_call lemmas
+      val t1 = !minimization_timeout
+      val t2 = !reconstruction_timeout
+      val newstac = hide_out (psMinimize.minimize_stac t1 stac g) []
+      val tac = hide_out tactic_of_sml newstac
+    in
+      case hide_out (timeout_tactic t2 tac) g of
+        SOME _ => (newstac,tac)
+      | NONE   => raise ERR "hh_reconstruct" "reconstruction failed"
+    end
 
 end

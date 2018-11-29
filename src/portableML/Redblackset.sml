@@ -55,14 +55,14 @@ struct
     fun REDr(x,l,(r,inc)) = (RED(x,l,r), inc)
     fun insert compare elm = let
       fun ins LEAF = (RED(elm,LEAF,LEAF), 1)
-	| ins (BLACK(x,left,right)) = let
+        | ins (BLACK(x,left,right)) = let
           in
             case compare(elm, x) of
               LESS    => lbal x (ins left) right
             | GREATER => rbal x left (ins right)
             | EQUAL   => (BLACK(elm,left,right), 0)
           end
-	| ins (RED(x,left,right)) = let
+        | ins (RED(x,left,right)) = let
           in
             case compare(elm, x) of
               LESS    => REDl(x, (ins left), right)
@@ -221,12 +221,12 @@ struct
     | union (s1,(_, _, 0)) = s1
     | union (s1 as (_, _, n1), s2 as (_, _, n2)) =
       let val ((smin,nmin),(smax,nmax)) =
-	      if (n1<n2) then ((s1,Real.fromInt n1),(s2,Real.fromInt n2))
-	      else ((s2,Real.fromInt n2),(s1,Real.fromInt n1))
+              if (n1<n2) then ((s1,Real.fromInt n1),(s2,Real.fromInt n2))
+              else ((s2,Real.fromInt n2),(s1,Real.fromInt n1))
       in
-	  if Math.ln nmax / ln2 * nmin < nmin + nmax
-	  then foldl (fn(x, res) => add(res, x)) smax smin
-	  else actual_union(s1,s2)
+          if Math.ln nmax / ln2 * nmin < nmin + nmax
+          then foldl (fn(x, res) => add(res, x)) smax smin
+          else actual_union(s1,s2)
       end
   end
 
@@ -322,17 +322,17 @@ struct
   (* Peter Sestoft's convert a sorted list to RB tree *)
   fun fromSortedList' ls =
       let val len = length ls
-	  fun log2 n =
-	      let fun loop k p = if p >= n then k else loop (k+1) (2*p)
-	      in loop 0 1 end
-	  fun h 0 _ xs = (LEAF, xs)
-	    | h n d xs =
-	      let val m = n div 2
-	          val (t1, ys) = h m       (d-1) xs
+          fun log2 n =
+              let fun loop k p = if p >= n then k else loop (k+1) (2*p)
+              in loop 0 1 end
+          fun h 0 _ xs = (LEAF, xs)
+            | h n d xs =
+              let val m = n div 2
+                  val (t1, ys) = h m       (d-1) xs
                   val y = hd ys
                   and yr = tl ys
-	          val (t2, zs) = h (n-m-1) (d-1) yr
-	      in (if d=0 then RED(y, t1, t2) else BLACK(y, t1, t2), zs) end
+                  val (t2, zs) = h (n-m-1) (d-1) yr
+              in (if d=0 then RED(y, t1, t2) else BLACK(y, t1, t2), zs) end
       in  ( case #1 (h len (log2 (len + 1) - 1) ls) of
                 RED(x, left, right) => BLACK(x, left, right)
               | tree                => tree
@@ -368,13 +368,13 @@ struct
     | append left LEAF                     = left
     | append (RED(x,a,b)) (RED(y,c,d))     =
       (case append b c of
-	   RED(z, b, c) => RED(z, RED(x, a, b), RED(y, c, d))
+           RED(z, b, c) => RED(z, RED(x, a, b), RED(y, c, d))
          | bc           => RED(x, a, RED(y, bc, d)))
     | append a (RED(x,b,c))                = RED(x, append a b, c)
     | append (RED(x,a,b)) c                = RED(x, a, append b c)
     | append (BLACK(x,a,b)) (BLACK(y,c,d)) =
       (case append b c of
-	   RED(z, b, c) => RED(z, BLACK(x, a, b), BLACK(y, c, d))
+           RED(z, b, c) => RED(z, BLACK(x, a, b), BLACK(y, c, d))
          | bc           => balleft x a (BLACK(y, bc, d)))
 
   fun delete (set as (compare, tree, n), x) =

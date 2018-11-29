@@ -19,8 +19,9 @@
 structure ParseDatatype :> ParseDatatype =
 struct
 
-val ERR = Feedback.mk_HOL_ERR "ParseDatatype";
-val ERRloc = Feedback.mk_HOL_ERRloc "ParseDatatype";
+open Feedback
+val ERR = mk_HOL_ERR "ParseDatatype";
+val ERRloc = mk_HOL_ERRloc "ParseDatatype";
 
 open Portable Lib;
 
@@ -182,6 +183,13 @@ fun parse_type G strm =
     G
     strm
 
+fun parse_atom G strm =
+  parse_type.parse_atom
+    {vartype = dVartype o #1, tyop = tyop, qtyop = qtyop, antiq = dAQ}
+    true
+    G
+    strm
+
 val parse_constructor_id = ident
 
 fun parse_record_fld G qb = let
@@ -261,11 +269,10 @@ fun parse_harg G qb =
         in
           parse_type G qb before scan ")" qb
         end
-      else let
-        val qb' = qbuf.new_buffer [QUOTE s]
-      in
-        qbuf.advance qb; parse_type G qb'
-      end
+      else
+        (parse_atom G qb
+         handle HOL_ERR {origin_structure = "Parse", message, ...} =>
+                raise ERR "parse_harg" message)
     | (base_tokens.BT_AQ ty, _) => (qbuf.advance qb; dAQ ty)
     | (_, locn) => raise ERRloc "parse_harg" locn
                          "Unexpected token in constructor's argument"

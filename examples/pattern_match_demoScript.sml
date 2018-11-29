@@ -1,3 +1,5 @@
+open HolKernel boolLib Parse bossLib
+
 (* This is demo / test file for new features of the pattern matcher.
    It's just a collection of tests and demos, nothing substantial.
    It is not even decently documented and not intended to make it
@@ -5,7 +7,7 @@
 
 val _ = new_theory "pattern_match_demo";
 
-open Pmatch
+open Pmatch PmatchHeuristics
 
 fun Define_heu heu = with_heuristic heu Define
 
@@ -24,7 +26,7 @@ val _ = set_trace "pp_cases" 0
 val DELETE_ELEMENT_def = Define
   `(DELETE_ELEMENT n [] = []) /\
    (DELETE_ELEMENT 0 (x::l) = l) /\
-   (DELETE_ELEMENT (SUC n) (x::l) = x::DELETE_ELEMENT n l)`
+   (DELETE_ELEMENT (SUC n) (x::l) = x::DELETE_ELEMENT n l)`;
 
 (* old (classic result)
 
@@ -48,9 +50,10 @@ val SWAP_ELEMENTS_def = Define `
    (SWAP_ELEMENTS _ _ [] = []) /\
    (SWAP_ELEMENTS _ _ [e] = [e]) /\
    (SWAP_ELEMENTS 0 (SUC n) (e1::e2::l) = ARB (* Something clever *) ) /\
-   (SWAP_ELEMENTS (SUC m) (SUC n) (e::l) = e:: (SWAP_ELEMENTS m n l))`
+   (SWAP_ELEMENTS (SUC m) (SUC n) (e::l) = e:: (SWAP_ELEMENTS m n l))`;
 
-term_size (concl SWAP_ELEMENTS_def)
+val sz = term_size (concl SWAP_ELEMENTS_def)
+
 (* old (classic result)
 
  |- (                SWAP_ELEMENTS 0        0         []              = []) /\
@@ -88,11 +91,6 @@ with Define_q
     (!n l e2 e1.     SWAP_ELEMENTS 0        (SUC n)   (e1::e2::l)     = ARB) /\
     (!v13 v12 n m e. SWAP_ELEMENTS (SUC m)  (SUC n)   (e::v12::v13)   = e::SWAP_ELEMENTS m n (v12::v13):
    thm
-
-
- |- (DELETE_ELEMENT n [] = []) /\
-    (!x l. DELETE_ELEMENT 0 (x::l) = l) /\
-    (!x n l. DELETE_ELEMENT (SUC n) (x::l) = x::DELETE_ELEMENT n l)
 
 *)
 
@@ -139,9 +137,9 @@ fun get_def thm = (rhs (snd (dest_forall (concl thm))))
 fun def_size thm = term_size (get_def thm)
 
 
-val x = def_size test_pair_qba_def   (* 37 *)
-val x = def_size test_pair_def     (* 37 *)
-val x = def_size test_pair_org_def (* 89 *)
+val sz_qba = def_size test_pair_qba_def   (* 37 *)
+val sz = def_size test_pair_def     (* 37 *)
+val sz_org = def_size test_pair_org_def (* 89 *)
 
 (* Test runtime performance *)
 

@@ -310,52 +310,42 @@ in
            LIST_CONJ (map mk_consequence constrs))
 end
 
-local
-  fun enum_eq_CONV eq_elim_th repth =
-    let
-      val cnv = Conv.REWR_CONV eq_elim_th
-                THENC PURE_REWRITE_CONV [repth]
-                THENC numLib.REDUCE_CONV
-    in
-      fn t =>
-        let
-          (* keying will have already ensured that t is an equality between two
-             values in the enumerated type *)
-          val (l, r) = boolSyntax.dest_eq t
-        in
-          if Term.is_const l andalso Term.is_const r
-            then cnv t
-          else raise ERR "enum_eq_CONV" "Equality not between constants"
-        end
-    end
-in
-  fun update_simpls cnvs rws tyinfo0 =
-    let
-      val {convs, rewrs} = TypeBasePure.simpls_of tyinfo0
-    in
-      TypeBasePure.put_simpls
-        {convs = cnvs @ convs, rewrs = rws @ rewrs} tyinfo0
-    end
-  fun update_tyinfo absth repth eq =
-    let
-      val cnvs =
-        case eq of
-           SOME (tyname, eqth) =>
-             let
-               val ty = type_of (hd (#1 (strip_forall (concl eqth))))
-               val new_conv =
-                 {name = tyname ^ "const_eq_CONV",
-                  key = SOME ([], mk_eq (mk_var ("x", ty), mk_var ("y", ty))),
-                  trace = 3,
-                  conv = K (K (enum_eq_CONV eqth repth))}
-             in
-               [new_conv]
-             end
-         | NONE => []
-    in
-      update_simpls cnvs [absth, repth]
-    end
-end
+fun enum_eq_CONV repth =
+  let
+    val r_rwts = repth |> CONJUNCTS
+    val r_t = r_rwts |> hd |> concl |> lhs |> strip_comb |> #1
+    val (d_ty, _) = dom_rng (type_of r_t)
+    fun cnv t =
+      let
+        val reqn = AP_TERM r_t (ASSUME t)
+        val (r1, r2) = dest_eq (concl reqn)
+        val rth = FIRST_CONV (map REWR_CONV r_rwts)
+        val r1th = rth r1 and r2th = rth r2
+        val num_eqn = TRANS (SYM r1th) (TRANS reqn r2th)
+        val falsity = CONV_RULE numLib.REDUCE_CONV num_eqn
+      in
+        DISCH_ALL falsity |> EQ_MP (SPEC t boolTheory.IMP_F_EQ_F)
+      end
+    fun finalconv _ _ t =
+      let
+        (* keying will have already ensured that t is an equality between two
+           values in the enumerated type *)
+        val (l, r) = boolSyntax.dest_eq t
+      in
+        if Term.is_const l andalso Term.is_const r andalso
+           type_of l = d_ty
+        then cnv t
+        else raise ERR "enum_eq_CONV"
+                   "Equality not between constants of right type"
+      end
+  in
+    {name = #1 (dest_type d_ty) ^ "_enum_neq_conv",
+     key = SOME ([], mk_eq(mk_var("x", d_ty), mk_var("y", d_ty))),
+     trace = 2,
+     conv = finalconv} : simpfrag.convdata
+  end
+
+val _ = simpfrag.register_simpfrag_conv {name = "EnumType", code = enum_eq_CONV}
 
 fun enum_type_to_tyinfo (ty, clist) = let
   val abs = "num2" ^ ty
@@ -378,6 +368,13 @@ fun enum_type_to_tyinfo (ty, clist) = let
   val rep_t = rator (lhs (hd (strip_conj (concl rep_thm))))
   val case_def = define_case (ty, rep_t, rep_thm, constrs)
   val case_cong = Prim_rec.case_cong_thm nchotomy case_def
+  fun add_rewrs l tyi =
+    let
+      val {convs, rewrs} = TypeBasePure.simpls_of tyi
+    in
+      TypeBasePure.put_simpls {convs=convs, rewrs = rewrs @ l} tyi
+    end
+
   val tyinfo0 =
     TypeBasePure.mk_datatype_info
        {ax = TypeBasePure.ORIG initiality,
@@ -397,14 +394,16 @@ fun enum_type_to_tyinfo (ty, clist) = let
         recognizers = [],
         destructors = [],
         distinct = distinct }
-  val (eq, s) =
-    if Option.isSome distinct then (NONE, "NONE")
-    else (SOME (ty, eq_elim_th),
-          "(SOME (" ^ mlquote ty ^ ", " ^ eq_elim_name ^ "))")
+       |> add_rewrs [rep_thm, abs_thm]
+  open ThyDataSexp
 in
     List.app (fn s => Theory.delete_binding (s ^ "_def")) clist
-  ; (update_tyinfo abs_thm rep_thm eq tyinfo0,
-     "EnumType.update_tyinfo " ^ abs_name ^ " " ^ rep_name ^ " " ^ s ^ " ")
+  ; Theory.add_ML_dependency "EnumType"
+  ; if isSome distinct then tyinfo0
+    else tyinfo0
+           |> TypeBasePure.add_extra
+               [List [Sym simpfrag.simpfrag_conv_tag,
+                      String "EnumType", Thm rep_thm]]
 end
 
 val _ = Parse.temp_set_grammars ambient_grammars

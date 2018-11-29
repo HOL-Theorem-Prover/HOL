@@ -90,7 +90,7 @@ end; (* end local *)
 
 fun pp_to_disk ppstrm (TAG (d,olist,_)) =
   let
-    open Portable
+    open Portable OldPP
     val {add_string,add_break,begin_block,end_block,...} = with_ppstream ppstrm
     fun pp_sl l =
       (
@@ -120,31 +120,31 @@ fun pp_to_disk ppstrm (TAG (d,olist,_)) =
  ---------------------------------------------------------------------------*)
 
 local open Portable
-      fun repl ch alist =
-           String.implode (itlist (fn _ => fn chs => (ch::chs)) alist [])
+      fun repl ch alist = CharVector.tabulate(length alist, fn _ => ch)
+      open HOLPP
+      fun pr_list s c b [] = []
+        | pr_list s c b [e] = [PrettyString (s e)]
+        | pr_list s c b (e::es) =
+            PrettyString (s e) :: PrettyString c :: PrettyBreak b ::
+            pr_list s c b es
+      val add_string = PrettyString
+      val add_break = PrettyBreak
 in
-fun pp_tag ppstrm (TAG (_,olist,axlist)) =
-   let val {add_string,add_break,begin_block,end_block,...} =
-       with_ppstream ppstrm
-   in
-     begin_block CONSISTENT 0;
-      add_string "[oracles: ";
-        begin_block INCONSISTENT 1;
-        if !Globals.show_tags
-        then pr_list add_string (fn () => add_string ",")
-                                (fn () => add_break(1,0)) olist
-        else add_string(repl #"#" olist); end_block();
-      add_string "]";
-      add_break(1,0);
-      add_string "[axioms: ";
-        begin_block INCONSISTENT 1;
-        if !Globals.show_axioms
-        then pr_list (add_string o Nonce.dest)
-             (fn () => add_string ",") (fn () => add_break(1,0)) axlist
-        else add_string(repl #"#" axlist); end_block();
-      add_string "]";
-     end_block()
-   end
+fun pp_tag (TAG (_,olist,axlist)) =
+  PrettyBlock(0, true, [],
+    [PrettyString "[oracles: ",
+     PrettyBlock(1, false, [],
+                 if !Globals.show_tags then pr_list I "," (1,0) olist
+                 else [PrettyString(repl #"#" olist)]),
+      add_string "]",
+      add_break(1,0),
+      add_string "[axioms: ",
+      PrettyBlock(1, false, [],
+                  if !Globals.show_axioms then
+                    pr_list Nonce.dest "," (1,0) axlist
+                  else [add_string(repl #"#" axlist)]),
+      add_string "]"
+    ])
 end;
 
 end

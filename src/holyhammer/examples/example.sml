@@ -20,11 +20,9 @@ open holyHammer;
 open complexTheory;
 open realTheory;
 val cj = ``i * i = -1``;
-(* set_timeout 30; holyhammer cj; *)
+(* set_timeout 60; holyhammer cj; *)
 val tactic =
-  METIS_TAC [COMPLEX_NEGNEG, COMPLEX_DIV_REFL, COMPLEX_INVINV, complex_div,
-  REAL_INV1, REAL_MUL_RID, REAL_NEG_NEG, POW_2, REAL_MUL_RNEG, REAL_MUL_LZERO,
-  real_div, complex_inv, REAL_10, pairTheory.CLOSED_PAIR_EQ, COMPLEX_NEG_RMUL,
-  i, complex_of_num, complex_neg, REAL_ADD_RID, pairTheory.FST, complex_of_real, 
-  REAL_ADD_SYM];
+  METIS_TAC [IM, RE, complex_mul, complex_neg, complex_of_num, complex_of_real,
+  i, pairTheory.FST, pairTheory.SND, REAL_ADD_LID, REAL_MUL_RID, REAL_MUL_RZERO,
+  REAL_NEG_0, real_sub]
 val thm = store_thm ("isquare", cj, tactic);

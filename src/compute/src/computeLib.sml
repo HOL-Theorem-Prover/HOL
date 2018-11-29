@@ -21,6 +21,8 @@ type cbv_stack =
    (thm->thm->thm) * bool * (thm * db fterm),
    (thm->thm)) stack;
 
+val ERR = mk_HOL_ERR "computeLib"
+
 fun stack_out(th, Ztop) = th
   | stack_out(th, Zrator{Rand=(mka,(thb,_)), Ctx}) = stack_out(mka th thb,Ctx)
   | stack_out(th,Zrand{Rator=(mka,_,(tha,_)),Ctx}) = stack_out(mka tha th, Ctx)
@@ -57,7 +59,7 @@ fun cbv_wk ((th,CLOS{Env, Term=App(a,args)}), stk) =
       cbv_wk ((tha, mk_clos(Env,a)), stka)
       end
   | cbv_wk ((th,CLOS{Env, Term=Abs body}),
-	    Zrator{Rand=(mka,(thb,cl)), Ctx=s'}) =
+            Zrator{Rand=(mka,(thb,cl)), Ctx=s'}) =
       cbv_wk ((beta_thm(mka th thb), mk_clos(cl :: Env, body)), s')
   | cbv_wk ((th,CST cargs), stk) =
       let val (reduced,clos) = reduce_cst (th,cargs) in
@@ -247,6 +249,9 @@ in
     val write_datatype_info = add_datatype_info the_compset
 end
 
+val _ = TypeBase.register_update_fn
+          (fn tyis => (app write_datatype_info tyis; tyis))
+
 (*---------------------------------------------------------------------------*)
 (* Usage note: call this before export_theory().                             *)
 (*---------------------------------------------------------------------------*)
@@ -263,6 +268,11 @@ val add_persistent_funs = app export
 (* sure that the constant doesn't get re-added when the theory is exported   *)
 (*---------------------------------------------------------------------------*)
 
+fun pr_list_to_ppstream pps f b1 b2 [] = ()
+  | pr_list_to_ppstream pps f b1 b2 [e] = f pps e
+  | pr_list_to_ppstream pps f b1 b2 (e::es) =
+      (f pps e; b1 pps; b2 pps; pr_list_to_ppstream pps f b1 b2 es)
+
 fun del_persistent_consts [] = ()
   | del_persistent_consts clist =
      let open Portable
@@ -275,24 +285,22 @@ fun del_persistent_consts [] = ()
        del_consts clist
        ; Theory.adjoin_to_theory
           {sig_ps = NONE,
-           struct_ps = SOME(fn ppstrm =>
-             (PP.begin_block ppstrm CONSISTENT 0;
-              PP.add_string ppstrm "val _ = computeLib.del_consts [";
-              PP.begin_block ppstrm INCONSISTENT 0;
-              pr_list_to_ppstream ppstrm
-                 PP.add_string (C PP.add_string ",")
-                 (C PP.add_break (0,0)) plist'';
-              PP.end_block ppstrm;
-              PP.add_string ppstrm "];";
-              PP.add_break ppstrm (2,0);
-              PP.end_block ppstrm))}
+           struct_ps = SOME(fn _ =>
+             PP.block CONSISTENT 0 [
+               PP.add_string "val _ = computeLib.del_consts [",
+               PP.block INCONSISTENT 0 (
+                 PP.pr_list PP.add_string
+                            [PP.add_string ",", PP.add_break (0,0)] plist''
+               ),
+               PP.add_string "];"
+             ])}
      end
 
 (* ----------------------------------------------------------------------
     compset pretty-printer
    ---------------------------------------------------------------------- *)
 
-fun pp_compset pps c = PP.add_string pps "<compset>"
+fun pp_compset c = HOLPP.add_string "<compset>"
 
 (* ----------------------------------------------------------------------
    Help for building up compsets and creating new compset based conversions

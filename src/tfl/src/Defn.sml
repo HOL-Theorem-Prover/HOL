@@ -34,6 +34,12 @@ fun variants FV vlist =
        (fn v => fn (V,W) =>
            let val v' = variant W v in (v'::V, v'::W) end) vlist ([],FV));
 
+fun numvariants FV vlist =
+  fst
+    (rev_itlist
+       (fn v => fn (V,W) =>
+           let val v' = numvariant W v in (v'::V, v'::W) end) vlist ([],FV));
+
 fun make_definition thry s tm = (new_definition(s,tm), thry)
 
 fun head tm = head (rator tm) handle HOL_ERR _ => tm;
@@ -540,7 +546,13 @@ type wfrec_eqns_result = {WFR : term,
                           extracta  : (thm * term list * bool) list,
                           pats  : pattern list}
 
-fun protect_rhs eqn = mk_eq(lhs eqn,combinSyntax.mk_I(rhs eqn))
+fun protect_rhs eqn =
+  if is_forall eqn then
+    raise ERR "mk_defn"
+          "Universally quantified equation as argument to well-founded \
+          \recursion"
+  else
+    mk_eq(lhs eqn,combinSyntax.mk_I(rhs eqn))
 fun protect eqns = list_mk_conj (map protect_rhs (strip_conj eqns));
 
 val unprotect_term = rhs o concl o PURE_REWRITE_CONV [combinTheory.I_THM];
@@ -747,7 +759,7 @@ fun nestrec thy bindstem {proto_def,SV,WFR,pats,extracta} =
      val var_wits = LIST_CONJ (map ASSUME full_rqt)
      val TC_choice_thm =
          MP (CONV_RULE(BINOP_CONV BETA_CONV)
-                      (ISPECL[R2abs, R1] boolTheory.SELECT_AX)) 
+                      (ISPECL[R2abs, R1] boolTheory.SELECT_AX))
             var_wits
      val elim_chosenTCs =
            rev_itlist (C ModusPonens) (CONJUNCTS TC_choice_thm) R2inst'd
@@ -977,8 +989,8 @@ fun mutrec thy bindstem eqns =
              val outbar = op_assoc aconv ftupvar RNG_OUTS
              val (fvarname,_) = dest_atom fvar
              val defvars = rev
-                  (Lib.with_flag (Globals.priming, SOME"") (variants [fvar])
-                     (map (curry mk_var "x") argtys))
+                             (numvariants [fvar]
+                                          (map (curry mk_var "x") argtys))
              val tup_defvars = list_mk_pair defvars
              val newty = itlist (curry (op-->)) (map type_of params@argtys) rng
              val fvar' = mk_var(fvarname,newty)
@@ -1098,9 +1110,8 @@ fun pairf (stem, eqs0) =
            val (lhs, rhs) = dest_eq (snd (strip_forall eq1))
            val (tuplec, args) = strip_comb lhs
            val (SV, p) = front_last args
-           val defvars = rev (Lib.with_flag (Globals.priming, SOME "")
-                                 (variants (f :: SV))
-                                 (map (curry mk_var "x") argtys))
+           val defvars = rev (numvariants (f :: SV)
+                                          (map (curry mk_var "x") argtys))
            val tuplecSV = list_mk_comb (tuplec, SV)
            val def_args = SV @ defvars
            val fvar =
@@ -1230,6 +1241,16 @@ fun stdrec_defn (facts,(stem,stem'),wfrec_res,untuple) =
     in TotalDefn.
  ---------------------------------------------------------------------------*)
 
+fun holexnMessage (HOL_ERR {origin_structure,origin_function,message}) =
+      origin_structure ^ "." ^ origin_function ^ ": " ^ message
+  | holexnMessage e = General.exnMessage e
+
+fun is_simple_arg t =
+  is_var t orelse
+  (case Lib.total dest_pair t of
+       NONE => false
+     | SOME (l,r) => is_simple_arg l andalso is_simple_arg r)
+
 fun prim_mk_defn stem eqns =
  let
    fun err s = raise ERR "prim_mk_defn" s
@@ -1237,14 +1258,22 @@ fun prim_mk_defn stem eqns =
            err (String.concat [Lib.quote stem, " is not alphanumeric"])
    val facts = TypeBase.theTypeBase ()
  in
-  non_wfrec_defn (facts, defSuffix stem, eqns)
-  handle HOL_ERR _ =>
-    case all_fns eqns of
+   case verdict non_wfrec_defn (fn _ => ()) (facts, defSuffix stem, eqns) of
+     PASS th => th
+   | FAIL (_, e) =>
+     case all_fns eqns of
        [] => err "no eqns"
      | [_] => (* one defn being made *)
         let val ((f, args), rhs) = dest_hd_eqn eqns
         in
           if List.length args > 0 then
+            if not (can dest_conj eqns) andalso not (free_in f rhs)  andalso
+               List.all is_simple_arg args
+            then
+              (* not recursive, yet failed *)
+              raise err ("Simple definition failed with message: "^
+                         holexnMessage e)
+            else
              let
                 val (tup_eqs, stem', untuple) = pairf (stem, eqns)
                   handle HOL_ERR _ =>

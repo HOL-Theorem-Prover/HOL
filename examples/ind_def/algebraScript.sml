@@ -1,10 +1,10 @@
 (* ===================================================================== *)
-(* File		: algebraScript.sml                                      *)
+(* File         : algebraScript.sml                                      *)
 (* DESCRIPTION  : Maximal trace semantics and transition semantics of a  *)
-(*		  small process algebra.              			 *)
-(*									 *)
-(* AUTHORS	: Juanito Camilleri and Tom Melham		       	 *)
-(* DATE		: 91.05.13						 *)
+(*                small process algebra.                                 *)
+(*                                                                       *)
+(* AUTHORS      : Juanito Camilleri and Tom Melham                       *)
+(* DATE         : 91.05.13                                               *)
 (* ===================================================================== *)
 
 (*
@@ -23,25 +23,25 @@ val _ = new_theory "algebra";
 
 
 (* ===================================================================== *)
-(* Syntax of a small process algebra		        		 *)
+(* Syntax of a small process algebra                                     *)
 (* ===================================================================== *)
 
 (* --------------------------------------------------------------------- *)
-(* We use the recursive types package to define the syntax of a small	 *)
-(* process algebra, with processes					 *)
-(*									 *)
-(*    agent  ::=   Nil                    [does nothing]		 *)
-(*               | Pre  label agent       [prefix agent with label]	 *)
-(*               | Sum  agent agent       [nondeterministic choice]	 *)
-(*	         | Prod agent agent       [composition]			 *)
-(*									 *)
+(* We use the recursive types package to define the syntax of a small    *)
+(* process algebra, with processes                                       *)
+(*                                                                       *)
+(*    agent  ::=   Nil                    [does nothing]                 *)
+(*               | Pre  label agent       [prefix agent with label]      *)
+(*               | Sum  agent agent       [nondeterministic choice]      *)
+(*               | Prod agent agent       [composition]                  *)
+(*                                                                       *)
 (* The different syntactic classes of processes are thus represented by  *)
-(* the constructors (constant functions):				 *)
-(*									 *)
+(* the constructors (constant functions):                                *)
+(*                                                                       *)
 (*  Nil:agent, Pre:label->agent->agent, Sum and Prod:agent->agent->agent *)
-(*									 *)
-(* for the concrete data type :agent.  The type :label here is just an	 *)
-(* abbreviation for :string.						 *)
+(*                                                                       *)
+(* for the concrete data type :agent.  The type :label here is just an   *)
+(* abbreviation for :string.                                             *)
 (* --------------------------------------------------------------------- *)
 
 val _ = type_abbrev ("label",``:string``);
@@ -55,20 +55,20 @@ val _ =
 
 
 (* ===================================================================== *)
-(* Definition of a maximal trace semantics for the process algebra.	 *)
+(* Definition of a maximal trace semantics for the process algebra.      *)
 (* ===================================================================== *)
 
 (* --------------------------------------------------------------------- *)
-(* Type abbreviation for traces.   These are just finite sequences of 	 *)
-(* labels, represented here by lists.					 *)
+(* Type abbreviation for traces.   These are just finite sequences of    *)
+(* labels, represented here by lists.                                    *)
 (* --------------------------------------------------------------------- *)
 
 val _ = type_abbrev("trace", ``:label list``);
 
 (* --------------------------------------------------------------------- *)
-(* Inductive definition of a trace relation MTRACE.  This is defined so	 *)
-(* that MTRACE P A means A is the maximal trace of the process P. The 	 *)
-(* definition is done inductively by the rules given below.	     	 *)
+(* Inductive definition of a trace relation MTRACE.  This is defined so  *)
+(* that MTRACE P A means A is the maximal trace of the process P. The    *)
+(* definition is done inductively by the rules given below.              *)
 (* --------------------------------------------------------------------- *)
 
 val (trules, tind, tcases) = Hol_reln
@@ -82,13 +82,13 @@ val (trules, tind, tcases) = Hol_reln
 val trulel = CONJUNCTS trules;
 
 (* --------------------------------------------------------------------- *)
-(* Stronger form of rule induction.					 *)
+(* Stronger form of rule induction.                                      *)
 (* --------------------------------------------------------------------- *)
 
 val tsind = derive_strong_induction (trules,tind);
 
 (* --------------------------------------------------------------------- *)
-(* Definition of a terminal process: one with [] as a maximal trace.	 *)
+(* Definition of a terminal process: one with [] as a maximal trace.     *)
 (* --------------------------------------------------------------------- *)
 
 val TERMINAL_def =
@@ -100,8 +100,8 @@ val TERMINAL_def =
 (* ===================================================================== *)
 
 (* --------------------------------------------------------------------- *)
-(* We now define a labelled transition relation TRANS P l Q to mean	 *)
-(* there that process P can participate in action l and thereby evolve	 *)
+(* We now define a labelled transition relation TRANS P l Q to mean      *)
+(* there that process P can participate in action l and thereby evolve   *)
 (* into process Q.  The definition is done inductively, as usual.        *)
 (* --------------------------------------------------------------------- *)
 
@@ -115,20 +115,20 @@ val (lrules, lind, lcases) = Hol_reln
 val lrulel = CONJUNCTS lrules;
 
 (* --------------------------------------------------------------------- *)
-(* Strong form of rule induction for TRANS.	      			 *)
+(* Strong form of rule induction for TRANS.                              *)
 (* --------------------------------------------------------------------- *)
 
 val lsind = derive_strong_induction (lrules,lind);
 
 
 (* ===================================================================== *)
-(* Inductive definition of a trace transition system                	 *)
+(* Inductive definition of a trace transition system                     *)
 (* ===================================================================== *)
 
 (* --------------------------------------------------------------------- *)
-(* We now define a transition system that accumulates the trace of a	 *)
-(* process.  This is essentially the reflexive-transitive closure of	 *)
-(* TRANS, but with the label being a list of the labels from TRANS.	 *)
+(* We now define a transition system that accumulates the trace of a     *)
+(* process.  This is essentially the reflexive-transitive closure of     *)
+(* TRANS, but with the label being a list of the labels from TRANS.      *)
 (* --------------------------------------------------------------------- *)
 
 val (Lrules, Lind, Lcases) = Hol_reln
@@ -148,14 +148,14 @@ val Lsind = derive_strong_induction (Lrules,Lind);
 (* ===================================================================== *)
 
 (* --------------------------------------------------------------------- *)
-(* Lemma 1 is to prove the following theorem:				 *)
-(*									 *)
+(* Lemma 1 is to prove the following theorem:                            *)
+(*                                                                       *)
 (*    |- !P a Q. TRANS P a Q ==> !A. MTRACE Q A ==> MTRACE P (a::A)      *)
-(*									 *)
-(* The proof is a straightforward rule induction on TRANS, followed by	 *)
-(* a case analysis on MTRACE Q A when Q is a product (Prod), and then	 *)
-(* completed by a simple search for the proof of the conclusion using 	 *)
-(* the tactic MTRACE_TAC.						 *)
+(*                                                                       *)
+(* The proof is a straightforward rule induction on TRANS, followed by   *)
+(* a case analysis on MTRACE Q A when Q is a product (Prod), and then    *)
+(* completed by a simple search for the proof of the conclusion using    *)
+(* the tactic MTRACE_TAC.                                                *)
 (* --------------------------------------------------------------------- *)
 
 val Lemma1 = Q.prove
@@ -170,12 +170,12 @@ val Lemma1 = Q.prove
 
 (* --------------------------------------------------------------------- *)
 (* Theorem 1:  |- !P A Q. TRANSIT P A Q ==> TERMINAL Q ==> MTRACE P A    *)
-(*									 *)
-(* This theorem shows that the trace semantics agrees with the 		 *)
-(* trace-transition semantics, in the sense that if we follow the	 *)
-(* transitions of a process P until we reach a terminal process Q, that	 *)
-(* is a process with an empty maximal trace, then we will have gone	 *)
-(* through a maximal trace of P.					 *)
+(*                                                                       *)
+(* This theorem shows that the trace semantics agrees with the           *)
+(* trace-transition semantics, in the sense that if we follow the        *)
+(* transitions of a process P until we reach a terminal process Q, that  *)
+(* is a process with an empty maximal trace, then we will have gone      *)
+(* through a maximal trace of P.                                         *)
 (* --------------------------------------------------------------------- *)
 
 val Theorem1 = Q.store_thm
@@ -187,8 +187,8 @@ val Theorem1 = Q.store_thm
 
 (* --------------------------------------------------------------------- *)
 (* Corollary 1: !P A Q. TRANSIT P A Nil ==> MTRACE P A                   *)
-(*									 *)
-(* Note that the converse does not hold.				 *)
+(*                                                                       *)
+(* Note that the converse does not hold.                                 *)
 (* --------------------------------------------------------------------- *)
 
 val Corollary1 = Q.store_thm
@@ -202,10 +202,10 @@ val Corollary1 = Q.store_thm
 (* ===================================================================== *)
 
 (* --------------------------------------------------------------------- *)
-(* Lemma 2 shows that the trace of a product is just the trace of its	 *)
-(* two components in the relation TRANSIT. The proof is a sraightfoward	 *)
+(* Lemma 2 shows that the trace of a product is just the trace of its    *)
+(* two components in the relation TRANSIT. The proof is a sraightfoward  *)
 (* structural induction on the list A, with simplification using the     *)
-(* case analysis theorem for TRANSIT.					 *)
+(* case analysis theorem for TRANSIT.                                    *)
 (* --------------------------------------------------------------------- *)
 
 val Lemma2 = Q.prove
@@ -215,16 +215,16 @@ val Lemma2 = Q.prove
   RW_TAC std_ss [] THEN METIS_TAC lrulel);
 
 (* --------------------------------------------------------------------- *)
-(* Theorem 2:  |- !P A. MTRACE P A ==> ?Q. TRANSIT P A Q /\ TERMINAL Q	 *)
-(*									 *)
-(* This theorem shows that the transition semantics "agrees" with the	 *)
+(* Theorem 2:  |- !P A. MTRACE P A ==> ?Q. TRANSIT P A Q /\ TERMINAL Q   *)
+(*                                                                       *)
+(* This theorem shows that the transition semantics "agrees" with the    *)
 (* trace semantics, in the sense that every maximal trace A leads in the *)
-(* transition semantics to a terminal process.  The proof proceeds by	 *)
-(* rule induction on MTRACE P A, followed by semi-automatic search for 	 *)
+(* transition semantics to a terminal process.  The proof proceeds by    *)
+(* rule induction on MTRACE P A, followed by semi-automatic search for   *)
 (* proofs of TRANSIT P A Q and TERMINAL Q.  The user supplies a witness  *)
 (* for any existential goals that arise.  There is also a case analysis  *)
-(* on the TRANSIT assumption in the Sum cases, there being different 	 *)
-(* witnesses required for the two TRANSIT rules.			 *)
+(* on the TRANSIT assumption in the Sum cases, there being different     *)
+(* witnesses required for the two TRANSIT rules.                         *)
 (* --------------------------------------------------------------------- *)
 
 val Theorem2 = Q.store_thm
@@ -243,7 +243,7 @@ val Theorem2 = Q.store_thm
 
 
 (* ===================================================================== *)
-(* Theorem3: The transition and maximal trace semantics "agree".	 *)
+(* Theorem3: The transition and maximal trace semantics "agree".         *)
 (* ===================================================================== *)
 
 val Theorem3 = Q.store_thm
@@ -258,7 +258,7 @@ val Theorem3 = Q.store_thm
 
 (* --------------------------------------------------------------------- *)
 (* Maximal trace equivalence. Two processes are maximal trace equivalent *)
-(* if they have the same maximal traces.				 *)
+(* if they have the same maximal traces.                                 *)
 (* --------------------------------------------------------------------- *)
 
 val _ = set_fixity "MEQUIV" (Infixl 701);
@@ -271,9 +271,9 @@ val MEQUIV_def =
 (* --------------------------------------------------------------------- *)
 (* Bisimulation equivalence.  A binary relation s:agent->agent->bool is  *)
 (* a simulation if s P Q implies that any transitions that P can do can  *)
-(* also be done by Q such that the corresponding successive pairs of	 *)
-(* agents remain in the relation s.  Equivalence is then defined to be 	 *)
-(* the bisimulation (simulation whose inverse is also a simulation).	 *)
+(* also be done by Q such that the corresponding successive pairs of     *)
+(* agents remain in the relation s.  Equivalence is then defined to be   *)
+(* the bisimulation (simulation whose inverse is also a simulation).     *)
 (* --------------------------------------------------------------------- *)
 
 val SIM_def =
@@ -288,7 +288,7 @@ val BEQUIV_def =
 
 
 (* --------------------------------------------------------------------- *)
-(* End of example.							 *)
+(* End of example.                                                       *)
 (* --------------------------------------------------------------------- *)
 
 val _ = export_theory();

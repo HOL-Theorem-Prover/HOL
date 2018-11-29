@@ -1071,7 +1071,7 @@ val test = test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
 
 val test_nchot = test_gen (fn l => (
   print "[";
-  Portable.pr_list print_term' (fn () => print ", ") (fn () => ()) l;
+  OldPP.pr_list print_term' (fn () => print ", ") (fn () => ()) l;
   print "]"))
   print_thm' print_term' (fn (inp, out, res) => aconv  out (concl res))
   "nchotomy_of_pats" nchotomy_of_pats

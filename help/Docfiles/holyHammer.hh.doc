@@ -33,15 +33,15 @@ the proof from the selected lemmas in less than 30 seconds.
 
 - val lemmas = [fetch "arithmetic" "TWO", fetch "arithmetic" "SUC_ONE_ADD"];
 > val lemmas =
-   [|- 2 = SUC 1, |- ∀n. SUC n = 1 + n]:
+   [|- 2 = SUC 1, |- !n. SUC n = 1 + n]:
 
 - val thm = METIS_PROVE lemmas ``1+1=2``;
 > val thm = |- 1 + 1 = 2: thm
 }
 
 \COMMENTS
-See src/holyhammer/README for more information on how to install the provers.
-See more examples in src/holyhammer/examples.
+See {src/holyhammer/README} for more information on how to install the provers.
+See more examples in {src/holyhammer/examples}.
 
 \SEEALSO
 DB.match, DB.matchp, DB.matcher.

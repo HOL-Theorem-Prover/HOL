@@ -237,6 +237,12 @@ let
             incdirmap =
               extend_idmap dir (idm_lookup incdirmap newdir) incdirmap}
     else let
+      val _ = OS.FileSys.access
+                (hmdir.toAbsPath newdir, [OS.FileSys.A_READ, OS.FileSys.A_EXEC])
+              orelse
+                die ("Attempt to recurse into non-existent directory: " ^
+                     hmdir.toString newdir ^
+                     "\n  (Probably a result of bad INCLUDES spec.)")
       val _ = diag (fn _ => "Recursive call in " ^ hmdir.pretty_dir newdir)
       val _ = diag (fn _ => "Visited set = " ^ print_set visited)
       val _ = terminal_log ("Holmake: "^nice_dir (hmdir.toString newdir))
@@ -295,7 +301,11 @@ end
 (* directory specific stuff here *)
 type res = holmake_result
 fun Holmake nobuild dir dirinfo cline_additional_includes targets : res = let
-  val _ = OS.FileSys.chDir (hmdir.toAbsPath dir)
+  val abs_dir = hmdir.toAbsPath dir
+  val _ = OS.FileSys.chDir abs_dir
+  val holpathdb_extensions =
+      holpathdb.search_for_extensions (fn s => []) [abs_dir]
+  val _ = List.app holpathdb.extend_db holpathdb_extensions
 
   val option_value =
       pass_option_value |> apply_updates (get_hmf_cline_updates())
@@ -348,6 +358,12 @@ val hmakefile =
       else die_with ("Couldn't read/find makefile: "^s)
 
 val base_env = HM_BaseEnv.make_base_env option_value
+val base_env = let
+  open Holmake_types
+  fun foldthis ({vname,path}, env) = env_extend (vname, [LIT path]) env
+in
+  List.foldl foldthis base_env holpathdb_extensions
+end
 
 val (hmakefile_env, extra_rules, first_target) =
   if exists_readable hmakefile andalso not no_hmakefile

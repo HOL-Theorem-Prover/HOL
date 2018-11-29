@@ -15,24 +15,31 @@ val _ = use "execompile.ML";
 val SIGOBJ = OS.Path.concat(Systeml.HOLDIR, "sigobj")
 local
   open FunctionalRecordUpdate
-  fun makeUpdateT z = makeUpdate11 z
+  fun makeUpdateT z = makeUpdate13 z
 in
 fun updateT z = let
-  fun from all_forced base_state debug defaultout exe extra_data forced_objs
-           help output quietp repl =
-    {all_forced = all_forced, base_state = base_state, debug = debug,
+  fun from all_forced base_state checkfors debug defaultout exe extra_data
+           forced_objs
+           help multithread output quietp repl =
+    {all_forced = all_forced, base_state = base_state, checkfors = checkfors,
+     debug = debug,
      defaultout = defaultout, exe = exe,
      extra_data = extra_data, forced_objs = forced_objs, help = help,
+     multithread = multithread,
      output = output, quietp = quietp, repl = repl}
-  fun from' repl quietp output help forced_objs extra_data exe defaultout
-            debug base_state all_forced =
-    {all_forced = all_forced, base_state = base_state, debug = debug,
+  fun from' repl quietp output multithread help forced_objs extra_data exe
+            defaultout debug checkfors base_state all_forced =
+    {all_forced = all_forced, base_state = base_state, checkfors = checkfors,
+     debug = debug,
      defaultout = defaultout, exe = exe,
      extra_data = extra_data, forced_objs = forced_objs, help = help,
+     multithread = multithread,
      output = output, quietp = quietp, repl = repl}
-  fun to f {all_forced, base_state, debug, defaultout, exe, extra_data,
-            forced_objs, help, output, quietp, repl} =
-    f all_forced base_state debug defaultout exe extra_data forced_objs help
+  fun to f {all_forced, base_state, checkfors, debug, defaultout, exe,
+            extra_data,
+            forced_objs, help, multithread, output, quietp, repl} =
+    f all_forced base_state checkfors debug defaultout exe extra_data
+      forced_objs help multithread
       output quietp repl
 in
   makeUpdateT (from, from', to)
@@ -49,12 +56,14 @@ struct
 datatype option_record = OR of {
   all_forced : bool,
   base_state : string option,
+  checkfors : string list,
   debug : bool,
   defaultout : string option,
   exe : string option,
   extra_data : string option,
   forced_objs : string list,
   help : bool,
+  multithread : int option,
   output : string option,
   quietp : bool,
   repl : bool
@@ -64,7 +73,11 @@ local
 open TextIO
 in
 fun warn s = (output(stdErr, s ^ "\n"); flushOut stdErr)
-fun die (s:string) : 'a = (warn s; OS.Process.exit OS.Process.failure)
+fun die (s:string) : 'a =
+  (flushOut stdOut;
+   (* try to give stdout a chance to clear so that dying message is last *)
+   OS.Process.sleep (Time.fromMilliseconds 300);
+   warn s; OS.Process.exit OS.Process.failure)
 end
 
 fun mk_quiet (OR r) = OR (updateT r (U #quietp true) $$);
@@ -80,10 +93,24 @@ local
    ReqArg ((fn s => fn (OR r) =>
                OR (updateT r (U #forced_objs (#forced_objs r @ [s])) $$)),
            "file.uo")
+ fun addString argnm =
+   ReqArg((fn s => fn (OR r) =>
+              OR (updateT r (U #checkfors (#checkfors r @ [s])) $$)),
+          argnm)
+ fun set_threadcount sopt =
+   case sopt of
+       NONE => (fn (OR r) => OR (updateT r (U #multithread (SOME 0)) $$))
+     | SOME s =>
+       (case Int.fromString s of
+            NONE => (warn ("Ignoring malformed thread count"); fn x => x)
+          | SOME i =>
+            (fn (OR r) => OR (updateT r (U #multithread (SOME i)) $$)))
 in
 val cline_opts = [
-  {help = "provide debug output", long = ["dbg"], short = "",
-   desc = mkBoolT #debug},
+  {help = "check file exists afterwards (can repeat)", long = ["checkfor"],
+   short = "c", desc = addString "filename"},
+  {help = "provide debug output & preserve temp files",
+   long = ["dbg"], short = "", desc = mkBoolT #debug},
   {help = "default outputname", long = ["defaultout"], short = "",
    desc = setStringOpt "filename" #defaultout},
   {help = "fn name to be executable's main", long = ["exe"], short = "",
@@ -98,6 +125,8 @@ val cline_opts = [
    desc = mkBoolT #help},
   {help = "load holstate as base", long = ["holstate"], short = "b",
    desc = setStringOpt "filename" #base_state},
+  {help = "thread count", long = ["mt"], short = "",
+   desc = OptArg (set_threadcount, "c")},
   {help = "output heap/munger name", long = [], short = "o",
    desc = setStringOpt "filename" #output},
   {help = "use poly as base", long = ["poly"], short = "",
@@ -109,12 +138,14 @@ val cline_opts = [
 ]
 val initial_cline = OR {all_forced = false,
                         base_state = !heapname,
+                        checkfors = [],
                         debug = false,
                         defaultout = NONE,
                         exe = NONE,
                         extra_data = NONE,
                         forced_objs = [],
                         help = false,
+                        multithread = NONE,
                         output = NONE,
                         quietp = false,
                         repl = false}
@@ -226,6 +257,8 @@ val buildheap_extra_data = ref (NONE : string option)
 
 end (* BuildHeap_CLINE struct *)
 
+val buildheap_cline_mt = ref (NONE : int option)
+
 fun main() = let
   open BuildHeap_CLINE
   val usage_header =
@@ -330,7 +363,15 @@ in
     | _ =>
       let
       in
-        List.app (maybe_check_load diag) objs;
+        case #multithread options of
+            NONE => ()
+          | SOME i => buildheap_cline_mt := SOME i;
+        List.app
+          (maybe_check_load diag)
+          ((case #multithread options of
+                NONE => []
+              | SOME _ => [("poly_decide_threadcount.uo", false)]) @
+           objs);
         if repl then
           (diag "Starting REPL";
            PolyML.print_depth 100;
@@ -344,8 +385,12 @@ in
         else
           case exe of
               SOME f => BuildHeap_EXE_Compile.exe_compile
-                          {fnname = f, output_exe = valOf output}
+                          {fnname = f, output_exe = valOf output,
+                           keep_temp_files = debug}
             | _ => ();
+        List.app (fn s => if OS.FileSys.access(s, [OS.FileSys.A_READ]) then ()
+                          else die ("Couldn't find required output file: "^s))
+                 (#checkfors options);
         diag "Buildheap done; about to exit successfully";
         OS.Process.exit OS.Process.success
       end

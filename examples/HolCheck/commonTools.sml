@@ -48,7 +48,7 @@ val BETA_ss = SSFRAG
    convs=[{name="BETA_CONV (beta reduction)",
            trace=2,
            key=SOME ([],(--`(\x:'a. y:'b) z`--)),
-	   conv=K (K BETA_CONV)}],
+           conv=K (K BETA_CONV)}],
    rewrs=[], congs = [], filter = NONE, ac = [], dprocs = []};
 
 val REDUCE_ss = SSFRAG
@@ -56,7 +56,7 @@ val REDUCE_ss = SSFRAG
    convs=[{name="REDUCE_CONV (num reduction)",
            trace=2,
            key=SOME ([],(--`(x:num)-1`--)),
-	   conv=K (K REDUCE_CONV)}],
+           conv=K (K REDUCE_CONV)}],
    rewrs=[], congs = [], filter = NONE, ac = [], dprocs = []};
 
 val EL_ss = SSFRAG
@@ -64,7 +64,7 @@ val EL_ss = SSFRAG
    convs=[{name="num_CONV (num to suc conversion)",
            trace=2,
            key=SOME ([],(--`EL (x:num)`--)),
-	   conv=K (K (RAND_CONV numLib.num_CONV))}],
+           conv=K (K (RAND_CONV numLib.num_CONV))}],
    rewrs=[EL,HD,TL], congs = [], filter = NONE, ac = [], dprocs = []};
 
 fun UNCHANGED_CONV conv tm = conv tm handle UNCHANGED => REFL tm
@@ -97,7 +97,7 @@ fun interleave (h1::t1) (h2::t2) = h1::h2::(interleave t1 t2)
 (* just discovered this is already present as Lib.split_after (though not sure if that behaves exactly like this) *)
 fun split_list [] n =  ([],[])
   | split_list (h::t) n = let val (M,N)=split_list (t) (n-1)
-			  in if (n>0) then (h::M,N) else (M,h::N) end
+                          in if (n>0) then (h::M,N) else (M,h::N) end
 
 fun listmax l = List.foldl (fn (i,m) => if m<i then i else m) (Option.valOf Int.minInt) l
 
@@ -116,8 +116,8 @@ fun listkeyfind (h::t) k cf = if (cf(k,fst h)=EQUAL) then snd h else listkeyfind
 
 (* chop up a list into lists of length n, though the last list will just take up the slack *)
 fun multi_part n l = if (List.length l) <= n then [l]
-		     else let val (bf,af) = split_list l n
-			  in bf::(multi_part n af) end
+                     else let val (bf,af) = split_list l n
+                          in bf::(multi_part n af) end
 
 (* remove duplicates from list l, under comparison function f *)
 fun undup f l = Binaryset.listItems(Binaryset.addList(Binaryset.empty f,l))
@@ -155,17 +155,17 @@ fun is_prop_tm tm =
     if is_neg tm
     then is_prop_tm (rand tm)
     else
-	if is_conj tm orelse is_imp tm orelse is_disj tm orelse is_cond tm orelse is_eq tm
-	then is_prop_tm (land tm) andalso is_prop_tm (rand tm)
-	else
-	    if (is_forall tm)
-	    then let val (v,t) = dest_forall tm
-		 in is_bool_var v andalso is_prop_tm t end
-	    else
-		if is_exists tm
-		then let val (v,t) = dest_exists tm
-		     in is_bool_var v andalso is_prop_tm t end
-		else is_T tm orelse is_F tm orelse is_bool_var tm
+        if is_conj tm orelse is_imp tm orelse is_disj tm orelse is_cond tm orelse is_eq tm
+        then is_prop_tm (land tm) andalso is_prop_tm (rand tm)
+        else
+            if (is_forall tm)
+            then let val (v,t) = dest_forall tm
+                 in is_bool_var v andalso is_prop_tm t end
+            else
+                if is_exists tm
+                then let val (v,t) = dest_exists tm
+                     in is_bool_var v andalso is_prop_tm t end
+                else is_T tm orelse is_F tm orelse is_bool_var tm
 
 fun term_to_string2 t = with_flag (show_types,false) term_to_string t;
 
@@ -183,15 +183,15 @@ fun list_mk_conj2 [] = T
 
 (* break apart all top-level conjunctions *)
 fun list_dest_conj t = if (is_conj t) then (if (is_conj(fst (dest_conj t))) then list_dest_conj(fst (dest_conj t))
-					    else [fst (dest_conj t)])@
+                                            else [fst (dest_conj t)])@
                                            (if (is_conj(snd (dest_conj t))) then list_dest_conj(snd (dest_conj t))
-					    else [snd (dest_conj t)])
-		       else [t];
+                                            else [snd (dest_conj t)])
+                       else [t];
 
 (* assume t=(c,f1,f2) is a nested conditional, return a list of all the conditions *)
 fun depth_dest_cond_aux (c,f1,f2) =
     let val l1 = if (is_cond f1) then depth_dest_cond_aux (dest_cond f1) else []
-	val l2 = if (is_cond f2) then depth_dest_cond_aux (dest_cond f2) else []
+        val l2 = if (is_cond f2) then depth_dest_cond_aux (dest_cond f2) else []
     in c::(l1@l2) end
 
 fun depth_dest_cond t = if is_cond t then depth_dest_cond_aux (dest_cond t) else [t]
@@ -203,7 +203,7 @@ fun list_dest_cond t = if is_cond t then list_dest_cond_aux (dest_cond t) else [
 
 fun gen_dest_cond_aux (c,f1,f2) =
     let val l1 = if (is_cond f1) then gen_dest_cond_aux (dest_cond f1) else [([],f1)]
-	val l2 = if (is_cond f2) then gen_dest_cond_aux (dest_cond f2) else [([],f2)]
+        val l2 = if (is_cond f2) then gen_dest_cond_aux (dest_cond f2) else [([],f2)]
     in (List.map (fn (l,v) => (c::l,v)) l1)@(List.map (fn (l,v) => (l,v)) l2) end
 
 (* destroy general conditional, returning (list of tests,value) pairs *)
@@ -237,8 +237,8 @@ local
   val is_universal   = same_const boolSyntax.universal
   val is_existential = same_const boolSyntax.existential
   val CONV = fn n => EVERY_CONV (List.tabulate(n,fn n => Ho_Rewrite.PURE_ONCE_REWRITE_CONV [pairTheory.ELIM_UNCURRY])) THENC
-				DEPTH_CONV BETA_CONV THENC
-				Ho_Rewrite.PURE_REWRITE_CONV [pairTheory.ELIM_PEXISTS,pairTheory.ELIM_PFORALL]
+                                DEPTH_CONV BETA_CONV THENC
+                                Ho_Rewrite.PURE_REWRITE_CONV [pairTheory.ELIM_PEXISTS,pairTheory.ELIM_PFORALL]
 
   fun dest_tupled_quant tm =
     case total dest_comb tm
@@ -246,11 +246,11 @@ local
       | SOME(f,x) =>
         if is_comb x andalso is_uncurry_tm (rator x)
         then if is_existential f then SOME (strip_exists, list_mk_exists, pairSyntax.dest_pexists,
-					 fn v => fn n => CONV_RULE (RHS_CONV ((MK_VACUOUS_QUANT_CONV mk_exists v)
-								THENC (PUSH_QUANT_CONV SWAP_EXISTS_CONV n)))) else
+                                         fn v => fn n => CONV_RULE (RHS_CONV ((MK_VACUOUS_QUANT_CONV mk_exists v)
+                                                                THENC (PUSH_QUANT_CONV SWAP_EXISTS_CONV n)))) else
              if is_universal f   then SOME (strip_forall, list_mk_forall, pairSyntax.dest_pforall,
-					 fn v => fn n => CONV_RULE (RHS_CONV ((MK_VACUOUS_QUANT_CONV mk_forall v)
-								THENC (PUSH_QUANT_CONV SWAP_VARS_CONV n))))
+                                         fn v => fn n => CONV_RULE (RHS_CONV ((MK_VACUOUS_QUANT_CONV mk_forall v)
+                                                                THENC (PUSH_QUANT_CONV SWAP_VARS_CONV n))))
              else NONE
         else NONE
 in
@@ -258,25 +258,25 @@ in
 fun ELIM_TUPLED_QUANT_CONV tm =
     if not (is_pair (fst ((if is_pforall tm then dest_pforall else dest_pexists) tm))) then REFL tm
     else case dest_tupled_quant tm
-	  of NONE => raise Fail "TUPLED_QUANT_CONV"
-	   | SOME (strip_quant, list_mk_quant, dest_pquant,thm_rule) =>
-	     let val (tmq,tmbody) = dest_pquant tm
-		 val V = strip_pair tmq
-		 val thm = CONV ((List.length V)-1) tm
-		 val bodyvarset = Binaryset.addList(Binaryset.empty Term.compare, free_vars tmbody)
-		 val Vset = Binaryset.addList(Binaryset.empty Term.compare, V)
-		 val rside = rhs(concl thm)
-		 val ((W,W'),body) = ((fn l => split_list l (List.length V)) ## I) (strip_quant rside)
-	     in TRANS thm (ALPHA rside (list_mk_quant(V@W', subst(map2 (curry op|->) W V) body)))
-	     end
+          of NONE => raise Fail "TUPLED_QUANT_CONV"
+           | SOME (strip_quant, list_mk_quant, dest_pquant,thm_rule) =>
+             let val (tmq,tmbody) = dest_pquant tm
+                 val V = strip_pair tmq
+                 val thm = CONV ((List.length V)-1) tm
+                 val bodyvarset = Binaryset.addList(Binaryset.empty Term.compare, free_vars tmbody)
+                 val Vset = Binaryset.addList(Binaryset.empty Term.compare, V)
+                 val rside = rhs(concl thm)
+                 val ((W,W'),body) = ((fn l => split_list l (List.length V)) ## I) (strip_quant rside)
+             in TRANS thm (ALPHA rside (list_mk_quant(V@W', subst(map2 (curry op|->) W V) body)))
+             end
 end
 
 fun lzELIM_TUPLED_QUANT_CONV tm =
     let val ia = is_pforall tm
         val (bv,bod) = if ia then dest_pforall tm else dest_pexists tm
     in mk_lthm (fn _ => (mk_eq(tm,if ia then list_mk_forall(spine_pair bv,bod) else list_mk_exists(spine_pair bv,bod)),
-			 (fn _ => ELIM_TUPLED_QUANT_CONV tm)))
-	       (fn _ => ELIM_TUPLED_QUANT_CONV tm) end
+                         (fn _ => ELIM_TUPLED_QUANT_CONV tm)))
+               (fn _ => ELIM_TUPLED_QUANT_CONV tm) end
 
 (*********** sums **************)
 
@@ -289,28 +289,28 @@ fun mk_sum_component_aux n i s =
 fun mk_sum_component ty i s =
     if ((List.length (sumSyntax.strip_sum ty)) = 1) then s
     else let val tys = sumSyntax.strip_sum ty
-	     val n = List.length tys
-	     val res = mk_sum_component_aux n i s
-	     val tysp = split_after i tys
-	     val stl = if (i=(n-1)) then [] else [(sumSyntax.list_mk_sum o List.tl) (snd tysp)]
+             val n = List.length tys
+             val res = mk_sum_component_aux n i s
+             val tysp = split_after i tys
+             val stl = if (i=(n-1)) then [] else [(sumSyntax.list_mk_sum o List.tl) (snd tysp)]
              val nl = if i = (n-1) then List.tabulate(n-1,fn n => n +1) else List.tabulate(n-(n-i)+1,I)
-	 in inst (List.map (fn (j,t) => mk_vartype("'a"^(int_to_string j)) |-> t)
-			   (ListPair.zip(List.rev nl,(fst tysp)@stl))) res
-	 end
+         in inst (List.map (fn (j,t) => mk_vartype("'a"^(int_to_string j)) |-> t)
+                           (ListPair.zip(List.rev nl,(fst tysp)@stl))) res
+         end
 
 (* returns s:(ty_0+ty_1+...+ty_(n-1)) tagged with OUTL's and OUTR's to strip away the sum type
  assuming s is the i'th component in the sum *)
 fun dest_sum_component styl n i s =
     let val _ = dbgTools.DEN dpfx "dsc" (*DBG*)
-	val _ = dbgTools.DTM (dpfx^"dsc_s") s
-	val _ = List.app (dbgTools.DTY (dpfx^"dsc_styl")) styl
-	val res =
-	    if (n=1) then s (* there is only one component *)
-	    else if (i = 0) then mk_comb(inst [alpha |-> List.hd styl,beta |-> list_mk_sum (List.tl styl)] outl_tm,s)
-	    else if (i = 1 andalso n = 2) then mk_comb(inst [alpha |-> List.hd styl,beta |-> list_mk_sum (List.tl styl)] outr_tm,s)
-	    else dest_sum_component (List.tl styl) (n-1) (i-1) (mk_comb(inst [alpha |-> List.hd styl,
-									      beta |->list_mk_sum (List.tl styl)] outr_tm,s))
-	val _ = dbgTools.DEX dpfx "dsc" (*DBG*)
+        val _ = dbgTools.DTM (dpfx^"dsc_s") s
+        val _ = List.app (dbgTools.DTY (dpfx^"dsc_styl")) styl
+        val res =
+            if (n=1) then s (* there is only one component *)
+            else if (i = 0) then mk_comb(inst [alpha |-> List.hd styl,beta |-> list_mk_sum (List.tl styl)] outl_tm,s)
+            else if (i = 1 andalso n = 2) then mk_comb(inst [alpha |-> List.hd styl,beta |-> list_mk_sum (List.tl styl)] outr_tm,s)
+            else dest_sum_component (List.tl styl) (n-1) (i-1) (mk_comb(inst [alpha |-> List.hd styl,
+                                                                              beta |->list_mk_sum (List.tl styl)] outr_tm,s))
+        val _ = dbgTools.DEX dpfx "dsc" (*DBG*)
     in res end
 
 fun isIN t = let val s = term_to_string2 t in String.compare(s,"INL")=EQUAL orelse String.compare(s,"INR")=EQUAL end
@@ -319,7 +319,7 @@ fun isIN t = let val s = term_to_string2 t in String.compare(s,"INL")=EQUAL orel
 fun strip_in t =
     if is_comb t
     then let val (a,b) = dest_comb t
-	 in if isIN a then strip_in b else t end
+         in if isIN a then strip_in b else t end
     else t
 
 end

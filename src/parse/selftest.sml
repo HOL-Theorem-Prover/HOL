@@ -1,4 +1,4 @@
-open PPBackEnd PP Lib Type testutils
+open Lib Type PP smpp PPBackEnd testutils
 
 (* -------------------------------------------------------------------------- *)
 (* Test code for terminal styles                                              *)
@@ -29,13 +29,20 @@ val color_list =
     LightGrey , OrangeRed  , VividGreen , Yellow,
     Blue      , PinkPurple , LightBlue  , White]
 
+val _ = tprint "Basic vt100 style"
+val s = HOLPP.pp_to_string
+          70
+          (fn s => Parse.mlower
+                     (#ustyle vt100_terminal [FG Blue] (smpp.add_string s)))
+          "should be blue"
+val _ = if s = "\027[0;1;34mshould be blue\027[0m" then OK()
+        else die "FAILED!";
+
 
 fun test_terminal test_bg (terminal:t) =
 let
-   val pp_out = Portable.stdOut_ppstream ();
    val {add_string, add_xstring, add_newline, add_break,
-        begin_style, end_style, begin_block, end_block, ...} =
-       with_ppstream terminal pp_out
+        ustyle, ublock, ...} = terminal
    fun add_ann_string (s,ann) = add_xstring {s=s,ann=SOME ann,sz=NONE}
 
    val fg_styles =
@@ -57,67 +64,61 @@ let
           map (fn (s, styL) =>
             ((s^" - Background "^(color_name_fw c)), (BG c)::styL)) und_fg_styles)
           color_list)))
+   val m =
+       ublock INCONSISTENT 0 (
+         add_string "Terminal testing" >> add_newline >>
+         add_string "================" >> add_newline >> add_newline >>
+
+         add_string "Annotations:" >> add_newline >>
+         add_string "------------" >> add_newline >>
+         add_ann_string ("Bound variable", BV (bool, fn () => ": bool")) >>
+         add_newline >>
+         add_ann_string ("Free variable", FV (bool, fn () => ": bool")) >>
+         add_newline >>
+         add_ann_string ("Type variable", TyV) >>
+         add_newline >>
+         add_ann_string ("TySyn", TySyn (fn () => "TySyn")) >>
+         add_newline >>
+         add_ann_string ("TyOp", TyOp (fn () => "TyOp")) >>
+         add_newline >>
+         add_ann_string ("Const", Const {Name = "test-name", Thy = "test-thy",
+                                         Ty = (Type.bool, fn () => "bool")}) >>
+         add_newline >>
+         add_ann_string ("Note", Note "Some note") >>
+         add_newline >>
+
+         add_newline >> add_newline >>
+
+         add_string "Basic styles:" >> add_newline >>
+         add_string "-------------" >> add_newline >>
+         add_string "default style" >> add_newline >>
+         ustyle [Bold] (add_string "Bold") >> add_newline >>
+         ustyle [Underline] (add_string "Underline") >> add_newline >>
+         mapp (fn c => (
+                 add_string "Foreground " >>
+                 ustyle [FG c] (add_string (color_name_fw c)) >>
+                 add_newline))
+              color_list >>
+         mapp (fn c => (
+                add_string "Background " >>
+                ustyle [BG c] (add_string (color_name_fw c)) >>
+                add_newline)) color_list >>
+         add_newline >> add_newline >>
+
+         (if test_bg then
+            add_string "All style combinations:" >> add_newline >>
+            add_string "------------------------" >> add_newline
+          else
+            add_string "All style combinations (without background color):" >>
+            add_newline >>
+            add_string "--------------------------------------------------" >>
+            add_newline) >>
+         mapp (fn (s, styL) => ustyle styL (add_string s) >> add_newline)
+              full_styles >>
+         add_newline >> add_newline
+       )
 in
-   PP.clear_ppstream pp_out;
-   (#begin_block terminal) pp_out INCONSISTENT 0;
-
-   add_string "Terminal testing"; add_newline();
-   add_string "================"; add_newline();
-   add_newline();
-
-   add_string "Annotations:"; add_newline();
-   add_string "------------"; add_newline();
-   add_ann_string ("Bound variable", BV (bool, fn () => ": bool"));
-   add_newline();
-   add_ann_string ("Free variable", FV (bool, fn () => ": bool"));
-   add_newline();
-   add_ann_string ("Type variable", TyV);
-   add_newline();
-   add_ann_string ("TySyn", TySyn (fn () => "TySyn"));
-   add_newline();
-   add_ann_string ("TyOp", TyOp (fn () => "TyOp"));
-   add_newline();
-   add_ann_string ("Const", Const {Name = "test-name", Thy = "test-thy",
-                                   Ty = (Type.bool, fn () => "bool")});
-   add_newline();
-   add_ann_string ("Note", Note "Some note") ;
-   add_newline();
-
-   add_newline(); add_newline();
-
-   add_string "Basic styles:"; add_newline();
-   add_string "-------------"; add_newline();
-   add_string "default style"; add_newline();
-   begin_style [Bold]; add_string "Bold"; end_style(); add_newline();
-   begin_style [Underline]; add_string "Underline"; end_style(); add_newline();
-   map (fn c => (
-      add_string "Foreground ";
-      begin_style [FG c];
-          add_string (color_name_fw c);
-      end_style(); add_newline())) color_list;
-   map (fn c => (
-      add_string "Background ";
-      begin_style [BG c];
-          add_string (color_name_fw c);
-      end_style(); add_newline())) color_list;
-
-   add_newline(); add_newline();
-
-   if test_bg then (
-      add_string "All style combinations:"; add_newline();
-      add_string "------------------------"; add_newline()
-   ) else (
-      add_string "All style combinations (without background color):"; add_newline();
-      add_string "--------------------------------------------------"; add_newline()
-   );
-   map (fn (s, styL) => (
-      begin_style styL;
-          add_string s;
-      end_style(); add_newline())) full_styles;
-   add_newline();add_newline();
-
-   (#end_block terminal) pp_out;
-   PP.flush_ppstream pp_out
+  HOLPP.prettyPrint (TextIO.print, 75) (Parse.mlower m)
 end;
 
 
@@ -133,28 +134,6 @@ val _ = print "vt100 terminal\n";
 val _ = print "==============\n\n";
 val _ = test_terminal false (PPBackEnd.vt100_terminal);
 
-
-
-(* -------------------------------------------------------------------------- *)
-(* Test code for style errors (non terminated style)                          *)
-(* -------------------------------------------------------------------------- *)
-
-fun test_style_error (terminal:t) =
-let
-   val pp_out = Portable.stdOut_ppstream ();
-   val {add_string, add_xstring, add_newline, add_break,
-        begin_style, end_style, begin_block, end_block, ...} =
-       with_ppstream terminal pp_out
-in
-   PP.clear_ppstream pp_out;
-   (#begin_block terminal) pp_out INCONSISTENT 0;
-
-   add_string "Style error";
-   begin_style [Bold]; add_string "...."; add_newline();
-
-   (#end_block terminal) pp_out;
-   PP.flush_ppstream pp_out
-end;
 
 
 (* ----------------------------------------------------------------------
@@ -200,9 +179,13 @@ val _ = app test [(`abc`, ["abc"]),
 (* tests of the term lexer *)
 fun test (s, toklist : unit term_tokens.term_token list) = let
   val _ = tprint ("Term token testing " ^ Lib.quote s)
+  val result = term_tokens.lextest [] s
 in
-  if term_tokens.lextest [] s = toklist then OK()
-  else die "FAILED!"
+  if result = toklist then OK()
+  else die ("Got: ["^
+            String.concatWith ", "
+               (map (term_tokens.toString (fn _ => "()")) result) ^
+            "]")
 end handle LEX_ERR (s,_) => die ("FAILED!\n  [LEX_ERR "^s^"]")
          | e => die ("FAILED\n ["^exnMessage e^"]")
 
@@ -269,6 +252,37 @@ val lf_g = add_listform g0
               rightdelim= [mTOK "]"],
               nilstr = "NIL", cons = "CONS"}
 end;
+fun isabsynlist slist a =
+  let
+    open Absyn
+  in
+    case slist of
+        [] => (case a of IDENT (_, "NIL") => true | _ => false)
+      | s1 :: rest =>
+        (case a of
+             APP(_, APP (_, IDENT(_, "CONS"), IDENT (_, el1)), a_rest) =>
+               el1 = s1 andalso isabsynlist rest a_rest
+           | _ => false)
+  end
+val _ = PP.prettyPrint
+          (print, 75)
+          (Parse.mlower
+             (term_grammar.prettyprint_grammar
+                (fn g =>fn _ => smpp.add_string "<term>")
+                lf_g))
+
+fun parsetest sl =
+  let
+    val s = "["^String.concatWith ";" sl^"]"
+    val _ = tprint ("Parsing "^s)
+    val a = TermParse.absyn lf_g type_grammar.min_grammar [QUOTE s]
+  in
+    if isabsynlist sl a then OK() else die "FAILED!"
+  end
+
+val _ = parsetest []
+val _ = parsetest (map str (explode "ab"))
+val _ = parsetest (map str (explode "abcdef"))
 
 fun find_named_rule nm g =
   let
@@ -287,7 +301,7 @@ val _ =
     in
       if Lib.set_eq result
                     ["\\", "|>", "<|", ")", "(", ".", ":", "updated_by",
-                     ":=", "with", "let", "in", ";"]
+                     ":=", "with", "let", "in", ";", "$"]
       then OK()
       else die ("\nFAILED ["^
                 String.concatWith "," (map (fn s => "\""^s^"\"") result) ^ "]")
@@ -409,7 +423,12 @@ val mk_list = mk_list0 bool NIL_t CONS_t;
 
 fun tmprint g =
   PP.pp_to_string 70
-      (term_pp.pp_term g type_grammar.min_grammar PPBackEnd.raw_terminal);
+      (fn t =>
+          Parse.mlower
+            (term_pp.pp_term g
+                             type_grammar.min_grammar
+                             PPBackEnd.raw_terminal
+                             t))
 
 fun tpp msg expected g t =
   let
@@ -563,7 +582,7 @@ val vbool = dTyop{Tyop = "bool", Thy = SOME "min", Args = []}
 fun pdparse s = parse mintyg [QUOTE s]
 fun hdparse s = hparse mintyg [QUOTE s]
 
-fun pdtest (nm, s,expected) =
+fun pdtest0 (nm, s,expected) =
   let
     val _ = tprint (nm ^ ": " ^ s)
     val res = (if nm = "p" then pdparse else hdparse) s
@@ -572,6 +591,21 @@ fun pdtest (nm, s,expected) =
     else die ("FAILED:\n  "^ASTL_toString res)
   end
 infix -=>
+fun nm2parse nm = if nm = "p" then pdparse else hdparse
+fun pdtest (nm, s, expected) =
+  let
+    val _ = tprint (nm ^ ": " ^ s)
+  in
+    timed (nm2parse nm)
+          (exncheck (fn r => if r = expected then OK()
+                             else die ("FAILED:\n  "^ASTL_toString r)))
+          s
+  end
+fun pdfail (nm, s) =
+  shouldfail {printarg = (fn s => nm ^ ": " ^ s ^ " (should fail)"),
+              printresult = ASTL_toString,
+              testfn = nm2parse nm,
+              checkexn = is_struct_HOL_ERR "ParseDatatype"} s
 
 fun vty1 -=> vty2 = dTyop{Tyop = "fun", Thy = SOME "min", Args = [vty1,vty2]}
 fun recop s = dTyop{Thy = NONE, Tyop = s, Args = []}
@@ -583,10 +617,14 @@ fun listnm nm =
   [(nm, Constructors[("N", []), ("C",[dVartype "'a", recop "ty"])])]
 val expected4 = listnm "ty"
 val expected5 = [("C", Constructors[("foo", []), ("bar",[])])]
+val expected6 = [("C", Constructors[("foo", [vbool, vbool])]),
+                 ("D", Constructors[("bar", [vbool]), ("baz", [])])]
 val _ = List.app pdtest [
   ("p", "ty = Cons of bool;", expected1),
   ("h", "ty = Cons bool;", expected1),
   ("h", "ty = Cons1 bool | Cons2 bool (bool -> bool);", expected2),
+  ("h", "ty = Cons1 bool | Cons2 bool (bool->bool);", expected2),
+  ("p", "ty = Cons1 of bool | Cons2 of bool => bool -> bool;", expected2),
   ("h", "ty = <| fld1 : bool ; fld2 : bool -> bool |>;", expected3),
   ("h", "ty = <| fld1 : bool ; fld2 : bool -> bool; |>;", expected3),
   ("h", "ty= <|fld1:bool;fld2:bool->bool; |>;", expected3),
@@ -596,7 +634,12 @@ val _ = List.app pdtest [
   ("h", "ty=N|C 'a ty", expected4),
   ("h", "ty= <|fld1:bool;fld2:bool->bool; |>;ty2=N|C 'a ty",
    expected3 @ listnm "ty2"),
-  ("h", "C = | foo | bar", expected5)
+  ("h", "C = | foo | bar", expected5),
+  ("h", "C = foo bool bool; D = bar bool|baz", expected6)
+]
+
+val _ = List.app pdfail [
+  ("h", "C = foo bool->bool")
 ]
 
 
@@ -620,13 +663,95 @@ val _ = List.app test [("abcd", "yd"), ("ab", "xxxzzzz"), ("c", ""),
                        ("ccb", "vv")]
 end (* local *)
 
-(*
+val _ = tprint "rules_for finds record rule"
+val G0 = term_grammar.stdhol
+val recrules = term_grammar.rules_for G0 GrammarSpecials.reccons_special
+val _ =
+    let
+      open term_grammar
+    in
+      case recrules of
+          [(_, GRULE {pp_elements = RE (TOK "<|") :: _,...})] => OK()
+        | _ => die "Couldn't find it"
+    end
 
-full test including backgrounds
-val _ = test_terminal true (!Parse.current_backend)
+val _ = tprint "remove_termtok \"<|\" removes record rule"
+val G' =
+    term_grammar.remove_form_with_tok G0 {
+      term_name = GrammarSpecials.recd_lform_name, tok = "<|"
+    }
+val _ =
+    let
+      open term_grammar
+    in
+      case term_grammar.rules_for G' GrammarSpecials.reccons_special of
+          [] => OK()
+        | _ => die "Nope - something still there!"
+    end
 
+local open term_tokens
+fun test (s,expected) =
+  let
+    val _ = tprint ("lexing "^s)
+    val toks : unit term_token list = lextest [] s
+  in
+    if toks = expected then OK()
+    else die "FAILED"
+  end
+in
+val _ =
+    List.app test [
+      ("$ $$ $$$ $+ $if", [Ident "$", Ident "$$", Ident "$$$", Ident "$+",
+                           Ident "$if"]),
+      ("thy$id", [QIdent("thy", "id")]),
+      ("thy$$$", [QIdent("thy", "$$")])
+    ]
+end (* open term_tokens local *);
 
-error testing for backends (be careful)
-val _ = test_style_error (!Parse.current_backend)
+local
+  val pr = PP.pp_to_string 77 type_grammar.prettyprint_grammar
+  fun testvs(testname, fname, g) =
+    let
+      val expected0 = let
+        val istrm = TextIO.openIn fname
+      in
+        TextIO.inputAll istrm before TextIO.closeIn istrm
+      end
+      val expected = if String.sub(expected0, size expected0 - 1) = #"\n" then
+                       String.extract(expected0, 0, SOME (size expected0 - 1))
+                     else expected0
+      val res = delete_trailing_wspace (pr g)
+    in
+      tprint testname;
+      if res = expected then OK() else die ("\nFAILED!\n" ^ res)
+    end
+  open type_grammar
+in
+  val _ = app testvs [
+        ("Testing ty-grammar p/printing (min_grammar)", "tygrammar.txt",
+         min_grammar),
+        ("Testing ty-grammar p/printing (min_grammar with non-printing abbrev)",
+         "noprint_tygrammar.txt",
+         min_grammar |> new_abbreviation {knm = {Name = "set", Thy = "scratch"},
+                                          ty = alpha --> bool, print = true}
+                     |> disable_abbrev_printing "set")
+      ]
+end (* tygrammar p/printing local *)
 
-*)
+local
+  open term_tokens
+  fun test (s, expected) =
+    let
+      val _ = tprint ("Non-aggregating lex-test on "^s)
+      fun check (Exn.Res (SOME (r, _))) =
+            (case r of Ident s' => s' = expected | _ => false)
+        | check _ = false
+      fun pr NONE = "NONE"
+        | pr (SOME (t, _)) = "SOME(" ^ token_string t ^ ")"
+    in
+      require_msg check pr (lex []) (qbuf.new_buffer [QUOTE s])
+    end
+in
+val _ = List.app test [("aa(", "aa"), ("((a", "("), ("¬¬", "¬"),
+                       ("¬¬p", "¬")]
+end (* local open term_tokens *)

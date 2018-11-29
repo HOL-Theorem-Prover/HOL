@@ -38,8 +38,8 @@ and beqop = inst [alpha |->bool] equality;
 (*-----------------------------------------------------------------------*)
 
 local val [c1,c2,c3] = CONJUNCTS
-	(Tactical.prove(“(~T = F) /\ (~F = T) /\ (!t. ~~t = t)”,
-	       REWRITE_TAC[NOT_CLAUSES]))
+        (Tactical.prove(“(~T = F) /\ (~F = T) /\ (!t. ~~t = t)”,
+               REWRITE_TAC[NOT_CLAUSES]))
 in
 fun NOT_CONV tm =
  let val xn = dest_neg tm
@@ -61,7 +61,7 @@ local val [c1,c2,c3,c4,c5] = CONJUNCTS
        (Tactical.prove
         (Term`(!t. T /\ t = t) /\ (!t. t /\ T = t) /\
               (!t. F /\ t = F) /\ (!t. t /\ F = F) /\ (!t. t /\ t = t)`,
-	       REWRITE_TAC[AND_CLAUSES]))
+               REWRITE_TAC[AND_CLAUSES]))
 in
 fun AND_CONV tm =
  let val (xn,yn) = with_exn dest_conj tm (ERR "AND_CONV" "")
@@ -83,10 +83,10 @@ fun AND_CONV tm =
 (*-----------------------------------------------------------------------*)
 
 local val [c1,c2,c3,c4,c5] = CONJUNCTS
-	(Tactical.prove
+        (Tactical.prove
          (Term`(!t. T \/ t = T) /\ (!t. t \/ T = T) /\ (!t. F \/ t = t) /\
-		   (!t. t \/ F = t) /\ (!t. t \/ t = t)`,
-	  REWRITE_TAC[OR_CLAUSES]))
+                   (!t. t \/ F = t) /\ (!t. t \/ t = t)`,
+          REWRITE_TAC[OR_CLAUSES]))
 in
 fun OR_CONV tm =
  let val (xn,yn) = with_exn dest_disj tm (ERR "OR_CONV" "")
@@ -108,7 +108,7 @@ end;
 (*-----------------------------------------------------------------------*)
 
 local val [c1,c2,c3,c4,c5] = CONJUNCTS
-	(Tactical.prove(
+        (Tactical.prove(
           Term`(!t. (T ==> t) = t) /\ (!t. (t ==> T) = T) /\
                (!t. (F ==> t) = T) /\ (!t. (t ==> F) = ~t) /\
                (!t. (t ==> t) = T)`, REWRITE_TAC[IMP_CLAUSES]))
@@ -135,8 +135,8 @@ end;
 local val [c1,c2,c3,c4,c5] = CONJUNCTS
        (Tactical.prove
         (Term`(!t. (T = t) = t) /\ (!t. (t = T) = t) /\ (!t. (F = t) = ~t) /\
-		   (!t. (t = F) = ~t) /\ (!t:bool. (t = t) = T)`,
-	       REWRITE_TAC[EQ_CLAUSES]))
+                   (!t. (t = F) = ~t) /\ (!t:bool. (t = t) = T)`,
+               REWRITE_TAC[EQ_CLAUSES]))
 in
 fun BEQ_CONV tm =
  let val (xn,yn) = with_exn dest_eq tm (ERR "BEQ_CONV" "")
@@ -155,10 +155,10 @@ end;
 (*-----------------------------------------------------------------------*)
 
 local val [c1,c2,c3] = CONJUNCTS
-	(Tactical.prove(Term`(!t1 t2. (if T then t1 else t2) = (t1:'a)) /\
-	                     (!t1 t2. (if F then t1 else t2) = (t2:'a)) /\
-		             (!b t.   (if b then t else t) = (t:'a))`,
-	       REWRITE_TAC[COND_CLAUSES, COND_ID]))
+        (Tactical.prove(Term`(!t1 t2. (if T then t1 else t2) = (t1:'a)) /\
+                             (!t1 t2. (if F then t1 else t2) = (t2:'a)) /\
+                             (!b t.   (if b then t else t) = (t:'a))`,
+               REWRITE_TAC[COND_CLAUSES, COND_ID]))
 in
 fun COND_CONV tm =
  let val (b,t1,t2) = with_exn dest_cond tm (ERR "COND_CONV" "")

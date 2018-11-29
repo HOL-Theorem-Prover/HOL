@@ -13,7 +13,6 @@ struct
   type ('a,'b) gentactic = 'a -> goal list * (thm list -> 'b)
   type thm_tactic   = thm -> tactic
   type thm_tactical = thm_tactic -> thm_tactic
-  type ppstream     = Portable.ppstream
   type 'a quotation = 'a Portable.frag list
   type ('a,'b)subst = ('a,'b) Lib.subst
   type defn         = DefnBase.defn

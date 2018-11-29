@@ -16,6 +16,8 @@ open
         fracTheory fracLib fracUtils
         ratTheory ratUtils integerRingLib ratSyntax;
 
+val ERR = mk_HOL_ERR "ratLib"
+
 (*--------------------------------------------------------------------------
  *  imported from fracLib
  *--------------------------------------------------------------------------*)

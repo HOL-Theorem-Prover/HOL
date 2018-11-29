@@ -325,7 +325,7 @@ val IN_dFV_lift = store_thm(
   Induct_on `M` THEN SRW_TAC [ARITH_ss][] THENL [
     METIS_TAC [],
     SIMP_TAC (srw_ss() ++ DNF_ss ++ ARITH_ss ++ CONJ_ss)
-	     [EQ_IMP_THM]
+             [EQ_IMP_THM]
   ])
 val _ = export_rewrites ["IN_dFV_lift"]
 
@@ -1132,7 +1132,7 @@ val neta_dpm = store_thm(
         THEN1 SRW_TAC [][neta_rules] THEN
   UNABBREV_ALL_TAC THEN
   SRW_TAC [][dpm_nsub,nipkow_eta_lemma, IN_dFV_dpm, REVERSE_inc_pm,
-	     lswapstr_inc_pm]);
+             lswapstr_inc_pm]);
 
 val alt_neta_redex = prove(
   ``~(i IN dFV t) ==> neta (dLAM i (dAPP t (dV i))) t``,
@@ -1157,7 +1157,7 @@ val nipkow_free_sub_lemmma = store_thm(
   ``!s t i k.
       i IN dFV (nsub t k s) = k IN dFV s /\ i IN dFV t \/
                               if i < k then i IN dFV s
-			      else i + 1 IN dFV s``,
+                              else i + 1 IN dFV s``,
   Induct THEN SRW_TAC [ARITH_ss][] THEN METIS_TAC []);
 
 val lift_nsub = store_thm(

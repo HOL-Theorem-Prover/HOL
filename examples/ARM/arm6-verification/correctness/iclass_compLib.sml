@@ -18,6 +18,8 @@ open HolKernel boolLib bossLib;
 open Q computeLib pairTheory
 open armTheory coreTheory lemmasTheory interruptsTheory iclass_compTheory;
 
+val ERR = mk_HOL_ERR "iclass_compLib"
+
 (* ------------------------------------------------------------------------- *)
 
 fun add_rws f rws =

@@ -85,79 +85,36 @@ val define_type = ind_types.define_type;
 (* builds type variables or compound types.                                  *)
 (*---------------------------------------------------------------------------*)
 
-fun extern_type mk_vartype_str mk_thy_type_str ppstrm ty =
- let open Portable
-     val {add_break,add_newline,
-          add_string,begin_block,end_block,...} = with_ppstream ppstrm
-     val extern = extern_type mk_vartype_str mk_thy_type_str ppstrm
+val extern_type = TheoryPP.pp_type
 
- in
-  if is_vartype ty
-  then case dest_vartype ty
-        of "'a" => add_string "alpha"
-         | "'b" => add_string "beta"
-         | "'c" => add_string "gamma"
-         | "'d" => add_string "delta"
-         |   s  => add_string (mk_vartype_str^quote s)
-  else
-  case dest_thy_type ty
-   of {Tyop="bool",Thy="min", Args=[]} => add_string "bool"
-    | {Tyop="ind", Thy="min", Args=[]} => add_string "ind"
-    | {Tyop="fun", Thy="min", Args=[d,r]}
-       => (add_string "(";
-           begin_block INCONSISTENT 0;
-             extern d;
-             add_break (1,0);
-             add_string "-->";
-             add_break (1,0);
-             extern r;
-           end_block ();
-           add_string ")")
-   | {Tyop,Thy,Args}
-      => let in
-           add_string mk_thy_type_str;
-           begin_block INCONSISTENT 0;
-           add_string (quote Thy);
-           add_break (1,0);
-           add_string (quote Tyop);
-           add_break (1,0);
-           add_string "[";
-           begin_block INCONSISTENT 0;
-           pr_list extern (fn () => add_string ",")
-                          (fn () => add_break (1,0)) Args;
-           end_block (); add_string "]";
-           end_block ()
-         end
- end
-
-fun with_parens pfn ppstrm x =
-  let open Portable
-  in add_string ppstrm "("; pfn ppstrm x; add_string ppstrm ")"
+fun with_parens pfn x =
+  let open Portable PP
+  in block CONSISTENT 1 [add_string "(", pfn x, add_string ")"]
   end
 
-fun pp_fields ppstrm fields =
- let open Portable
-     val {add_break,add_newline,
-          add_string,begin_block,end_block,...} = with_ppstream ppstrm
+fun pp_fields fields =
+ let open Portable PP
      fun pp_field (s,ty) =
-        (begin_block CONSISTENT 0;
-         add_string ("("^Lib.quote s);
-         add_string ",";
-         extern_type "U" "T" ppstrm ty;
-         add_string ")";
-         end_block())
+       block CONSISTENT 0 [
+         add_string ("("^Lib.quote s),
+         add_string ",",
+         extern_type "U" "T" ty,
+         add_string ")"
+       ]
  in
-  begin_block CONSISTENT 0;
-  add_string "let fun T t s A = mk_thy_type{Thy=t,Tyop=s,Args=A}"; add_newline();
-  add_string "    val U = mk_vartype"; add_newline();
-  add_string "in"; add_newline();
-  begin_block CONSISTENT 0;
-   add_string "[";
-   begin_block INCONSISTENT 0;
-   pr_list pp_field (fn () => add_string ",")
-                    (fn () => add_break (1,0)) fields;
-   end_block (); add_string "] end";
-   end_block ()
+  block CONSISTENT 0 [
+    add_string "let fun T s t A = mk_thy_type{Thy=t,Tyop=s,Args=A}", NL,
+    add_string "    val U = mk_vartype", NL,
+    add_string "in", NL,
+    block CONSISTENT 1 [
+      add_string "[",
+      block INCONSISTENT 0 (
+        pr_list pp_field [add_string ",", add_break (1,0)] fields
+      ),
+      add_string "]"
+    ],
+    add_string "end"
+  ]
  end
 
 
@@ -499,7 +456,7 @@ end
 
 val bigrec_subdivider_string = GrammarSpecials.bigrec_subdivider_string
 
-val big_record_size = ref 20 (* arbitrary choice *)
+val big_record_size = ref 100 (* arbitrary choice *)
 
 (* these functions generate the "magic" names used to represent big records
    as two level trees of smaller records.  There is a coupling between the
@@ -691,7 +648,6 @@ fun prove_bigrec_theorems tyinfos ss (tyname, fldlist) = let
      names of the theorems below need to be the same as the theorems
      generated there. *)
   open TypeBasePure
-  val tyinfos = map #1 (tyinfos : (tyinfo * string) list)
   fun tyinfo_for ty = let
     val {Thy,Tyop,...} = dest_thy_type ty
   in
@@ -865,14 +821,13 @@ end
 (*    persistent.                                                            *)
 (*---------------------------------------------------------------------------*)
 
-fun tyi_compare((ty1, _), (ty2, _)) =
-   Lib.pair_compare(String.compare,String.compare)
-        (TypeBasePure.ty_name_of ty1,
-         TypeBasePure.ty_name_of ty2);
+val tyi_compare =
+   inv_img_cmp TypeBasePure.ty_name_of
+               (Lib.pair_compare(String.compare,String.compare))
 
 fun alist_comp ((s1,_,_), (s2,_,_)) = String.compare(s1,s2);
 
-fun augment_tyinfos persistp tyis thminfo_list = let
+fun augment_tyinfos tyis thminfo_list = let
   val tyis = Listsort.sort tyi_compare tyis
   val thminfo_list = Listsort.sort alist_comp thminfo_list
   type thmdata = (string * thm) list
@@ -882,21 +837,15 @@ fun augment_tyinfos persistp tyis thminfo_list = let
         ([], _ :: _ ) => raise Fail "Datatype.sml: invariant failure 101"
       | ([],[]) => acc
       | (_, []) => tyis @ acc
-      | ((tyi_s as (tyi, ty_s))::tyi_rest, (th_s, thms, flds)::thmi_rest) => let
+      | (tyi::tyi_rest, (th_s, thms, flds)::thmi_rest) => let
         in
-          case String.compare
-                   (snd(TypeBasePure.ty_name_of tyi), th_s) of
-            LESS => merge (tyi_s::acc) tyi_rest thmi_list
+          case String.compare (snd(TypeBasePure.ty_name_of tyi), th_s) of
+            LESS => merge (tyi::acc) tyi_rest thmi_list
           | GREATER => raise Fail "Datatype.sml: invariant failure 102"
           | EQUAL => let
               val tyi' = RecordType.update_tyinfo (SOME flds) (map #2 thms) tyi
-              val ty_s' = if persistp then
-                            "(RecordType.update_tyinfo NONE [" ^
-                            String.concat (Lib.commafy (map #1 thms)) ^
-                            "] o " ^ ty_s ^ ")"
-                          else ty_s
             in
-              merge ((tyi', ty_s') :: acc) tyi_rest thmi_rest
+              merge (tyi' :: acc) tyi_rest thmi_rest
             end
         end
 in
@@ -905,7 +854,7 @@ end
 
 
 local
-  fun add_record_facts (tyinfo, NONE) = (tyinfo, "")
+  fun add_record_facts (tyinfo, NONE) = tyinfo
     | add_record_facts (tyinfo, SOME fields) =
       RecordType.prove_recordtype_thms (tyinfo, fields)
   fun field_names_of (_,Record l) = SOME (map fst l)
@@ -985,11 +934,12 @@ in
                                              recording user's desired fields for
                                              each big record type *)
       val merged_alists = merge_alists function_defns fldinfo
-      val tyinfos = augment_tyinfos true tyinfos merged_alists
+      val tyinfos = augment_tyinfos tyinfos merged_alists
       val ss = let
         open simpLib boolSimps
         fun foldthis (tyi, ss) =
-            ss ++ rewrites (#rewrs (TypeBasePure.simpls_of (fst tyi)))
+            ss ++ rewrites (TypeBasePure.gen_std_rewrs tyi @
+                            #rewrs (TypeBasePure.simpls_of tyi))
       in
         foldl foldthis (bool_ss ++ combinSimps.COMBIN_ss) tyinfos
       end
@@ -998,7 +948,7 @@ in
         will mention the theorems that should be in the typebase.  What we've
         done here is made the theorems look right.
       *)
-      val tyinfos = augment_tyinfos false tyinfos merged_alists
+      val tyinfos = augment_tyinfos tyinfos merged_alists
     in
       (db, tyinfos)
     end
@@ -1042,7 +992,7 @@ fun define_type_from_astl prevtypes db astl = let
   val f = define_type_from_astl
   fun handle_astl (astl, (prevtypes, db, tyinfo_acc)) = let
     val (db, new_tyinfos) = prim_define_type_from_astl prevtypes f db astl
-    fun addtyi ((tyi, _), db) = TypeBasePure.insert db tyi
+    fun addtyi (tyi, db) = TypeBasePure.insert db tyi
     val alltyvars =
         List.foldl (fn ((_, dtf), acc) => dtForm_vartypes(dtf, acc))
                    empty_stringset
@@ -1087,172 +1037,31 @@ fun primHol_datatype db astl = define_type_from_astl [] db astl;
 
  ---------------------------------------------------------------------------*)
 
-val (type_to_string, term_to_string) = let
-  val (pty, ptm) = print_from_grammars boolTheory.bool_grammars
-  fun sanitise f =
-      f |> Lib.with_flag (Parse.current_backend, PPBackEnd.raw_terminal)
-        |> trace ("Unicode", 0)
-in
-  (sanitise (fn ty => ":" ^ PP.pp_to_string 70 pty ty),
-   sanitise (PP.pp_to_string 70 ptm))
-end;
-
-fun adjoin [] = raise ERR "Hol_datatype" "no tyinfos"
-  | adjoin (string_etc0 :: strings_etc) =
-    adjoin_to_theory
-    {sig_ps = NONE,
-     struct_ps = SOME
-     (fn ppstrm =>
-      let val S = PP.add_string ppstrm
-          fun NL() = PP.add_newline ppstrm
-          fun do_size NONE = (S "         size = NONE,"; NL())
-            | do_size (SOME (c,s)) =
-               let val strc = String.concat
-                     ["(", term_to_string c, ") ", type_to_string (type_of c)]
-                   val line = String.concat ["SOME(Parse.Term`", strc, "`,"]
-               in S ("         size="^line); NL();
-                  S ("                   "^s^"),")
-               end
-          fun do_encode NONE = S "         encode = NONE,"
-            | do_encode (SOME (c,s)) =
-               let val strc = String.concat
-                     ["(", term_to_string c, ") ",type_to_string (type_of c)]
-                   val line = String.concat ["SOME(Parse.Term`", strc, "`,"]
-               in S ("         encode="^line); NL();
-                  S ("                   "^s^"),")
-               end
-          fun do_extras extra_string =
-              (S ("      val tyinfo0 = " ^ extra_string ^ "tyinfo0"); NL())
-          fun do_string_etc
-             ({ax,case_def,case_cong,case_eq,induction,nchotomy,
-               one_one,distinct,encode,lift,size,fields,accessors,updates,
-               recognizers,destructors},
-              extra_simpls_string) =
-            (S "    let";                                               NL();
-             S "      open TypeBasePure";                               NL();
-             S "      val tyinfo0 = mk_datatype_info";                  NL();
-             S("        {ax="^ax^",");                                  NL();
-             S("         case_def="^case_def^",");                      NL();
-             S("         case_cong="^case_cong^",");                    NL();
-             S("         case_eq="^case_eq^",");                        NL();
-             S("         induction="^induction^",");                    NL();
-             S("         nchotomy="^nchotomy^",");                      NL();
-             do_size size;                                              NL();
-             do_encode encode;                                          NL();
-             S("         lift=NONE,");                                  NL();
-             S("         one_one="^one_one^",");                        NL();
-             S("         distinct="^distinct^",");                      NL();
-             S("         fields="^fields^",");                          NL();
-             S("         accessors="^accessors^",");                    NL();
-             S("         updates="^updates^",");                        NL();
-             S("         recognizers="^recognizers^",");                NL();
-             S("         destructors="^destructors^"}");                NL();
-             do_extras extra_simpls_string;
-             S "      val () = computeLib.write_datatype_info tyinfo0"; NL();
-             S "    in";                                                NL();
-             S "      tyinfo0";                                         NL();
-             S "    end")
-      in
-        S "val _ =";                                                    NL();
-        S "  TypeBase.write [";                                         NL();
-        do_string_etc string_etc0;
-        app (fn se => (S ","; NL(); do_string_etc se)) strings_etc;     NL();
-        S "  ];";                                                       NL()
-      end)};
-
-fun string_pair(s1,s2) = "("^Lib.quote s1^","^Lib.quote s2^")";
-
-fun write_tyinfo tyinfo =
- let open TypeBasePure
-     val tname = snd(ty_name_of tyinfo)
-     fun name s = tname ^ s
-     fun easy_sel nm sel =
-       let val result = name nm in save_thm(result, sel tyinfo); result end
-     fun list_sel nm sel =
-       case sel tyinfo of
-           [] => "[]"
-         | other => "Drule.CONJUNCTS "^name nm
-
-     val one_one_name =
-       case one_one_of tyinfo
-        of NONE => "NONE"
-         | SOME th =>
-            let val nm = name"_11" in save_thm(nm, th); "SOME "^nm end
-     val distinct_name =
-       case distinct_of tyinfo
-        of NONE => "NONE"
-         | SOME th =>
-            let val nm = name"_distinct" in save_thm(nm,th); "SOME "^nm end
-
-     val case_cong_name = easy_sel "_case_cong" case_cong_of
-     val case_eq_name = easy_sel "_case_eq" case_eq_of
-     val nchotomy_name = easy_sel "_nchotomy" nchotomy_of
-     val axiom_name =
-        let val axname = name"_Axiom"
-        in
-        case axiom_of0 tyinfo
-         of ORIG th => (save_thm (axname, th); "ORIG "^axname)
-          | COPY (sp,th) => "COPY ("^string_pair sp^","^snd(sp)^"_Axiom)"
-        end
-     val induction_name =
-        let val indname = name"_induction"
-        in
-        case induction_of0 tyinfo
-         of ORIG th => (save_thm (indname, th); "ORIG "^indname)
-          | COPY (sp,th) => "COPY ("^string_pair sp^","^snd(sp)^"_induction)"
-        end
-     val size_info =
-       let val sd_name = name"_size_def"
-       in
-       case size_of0 tyinfo
-        of NONE => NONE
-         | SOME (tm, ORIG def) => SOME (tm, "ORIG "^sd_name)
-         | SOME (tm, COPY(sp,def))
-            => SOME (tm, "COPY ("^string_pair sp^","^snd(sp)^"_size_def)")
-       end
-     val encode_info =
-       let val sd_name = "encode_"^name"_def"
-       in
-       case encode_of0 tyinfo
-        of NONE => NONE
-         | SOME (tm, ORIG def) => SOME (tm, "ORIG "^sd_name)
-         | SOME (tm, COPY(sp,def))
-            => SOME (tm, "COPY ("^string_pair sp^",encode_"^snd(sp)^"_def)")
-       end
-     val lift_info = NONE
-     val accessors_list = list_sel "_accessors" accessors_of
-     val updates_list = list_sel "_fn_updates" updates_of
-     val destructors_list = list_sel "_destructors" destructors_of
-     val recognizers_list = list_sel "_recognizers" recognizers_of
- in
-   {ax        = axiom_name,
-    induction = induction_name,
-    case_eq   = case_eq_name,
-    case_def  = case_constant_defn_name {type_name = tname},
-    case_cong = case_cong_name,
-    nchotomy  = nchotomy_name,
-    size      = size_info,
-    encode    = encode_info,
-    lift      = lift_info,
-    one_one   = one_one_name,
-    fields    = Portable.pp_to_string 60 pp_fields (fields_of tyinfo),
-    accessors = accessors_list,
-    updates   = updates_list,
-    recognizers = recognizers_list,
-    destructors = destructors_list,
-    distinct  = distinct_name}
- end;
-
-val write_tyinfos = adjoin o map (write_tyinfo ## I);
-
-fun persistent_tyinfo tyinfos_etc =
-  let val (tyinfos, etc) = unzip tyinfos_etc
-      val tyinfos = TypeBase.write tyinfos
+fun persistent_tyinfo tyinfos =
+  let
       fun ovl tyi = Parse.overload_on ("case", TypeBasePure.case_const_of tyi)
-      val () = app ovl tyinfos
-      val () = app computeLib.write_datatype_info tyinfos
+      fun save_thms tyi =
+        let
+          open TypeBasePure
+          val tname = snd (ty_name_of tyi)
+          fun name s = tname ^ s
+          fun optsave nm thopt =
+            case thopt of NONE => () | SOME th => ignore (save_thm(name nm, th))
+        in
+          optsave "_11" (one_one_of tyi);
+          optsave "_distinct" (distinct_of tyi);
+          save_thm(name "_nchotomy", nchotomy_of tyi);
+          save_thm(name "_Axiom", axiom_of tyi);
+          save_thm(name "_induction", induction_of tyi);
+          save_thm(name "_case_cong", case_cong_of tyi);
+          save_thm(name "_case_eq", case_eq_of tyi);
+          ()
+        end
   in
-    write_tyinfos tyinfos_etc
+    TypeBase.export tyinfos;
+    app save_thms tyinfos;
+    app ovl tyinfos;
+    app computeLib.write_datatype_info tyinfos
   end;
 
 (*---------------------------------------------------------------------------*)
@@ -1297,18 +1106,19 @@ fun datatype_thm (n,M) = save_thm
 
 fun astHol_datatype astl =
  let
-  val (_,tyinfos_etc) = primHol_datatype (TypeBase.theTypeBase()) astl
+  val (_,tyinfos) = primHol_datatype (TypeBase.theTypeBase()) astl
   val _ = Theory.scrub()
   val _ = datatype_thm (mk_datatype_presentation (current_theory()) astl)
-  val tynames = map (TypeBasePure.ty_name_of o #1) tyinfos_etc
-  val tynames = filter (not o is_substring bigrec_subdivider_string o snd) tynames
+  val tynames = map TypeBasePure.ty_name_of tyinfos
+  val tynames =
+      filter (not o is_substring bigrec_subdivider_string o snd) tynames
   val tynames = map (Lib.quote o snd) tynames
   val message = "Defined type"^(if length tynames > 1 then "s" else "")^
                 ": "^String.concat (Lib.commafy tynames)
  in
-  persistent_tyinfo tyinfos_etc;
+  persistent_tyinfo tyinfos;
   HOL_MESG message
- end handle ? as HOL_ERR _ => Raise (wrap_exn "Datatype" "Hol_datatype" ?);
+ end handle e as HOL_ERR _ => Raise (wrap_exn "Datatype" "Hol_datatype" e);
 
 fun Hol_datatype q = astHol_datatype (ParseDatatype.parse (type_grammar()) q)
 fun Datatype q = astHol_datatype (ParseDatatype.hparse (type_grammar()) q)

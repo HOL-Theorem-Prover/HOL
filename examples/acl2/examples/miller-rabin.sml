@@ -136,15 +136,15 @@ val _ = save_thm ("log2_ind", log2_ind);
 ***)
 
 val log2a_def = Define `
-	(log2a 0 _ = 0) /\
-	(log2a _ 0 = 0) /\
-	(log2a (SUC a) b = SUC (log2a a (b DIV 2)))`;
+        (log2a 0 _ = 0) /\
+        (log2a _ 0 = 0) /\
+        (log2a (SUC a) b = SUC (log2a a (b DIV 2)))`;
 
 val log2a_lemma = prove(``!x y. x <= y ==> (log2 x = log2a y x)``,
-	GEN_TAC ++ completeInduct_on `x` ++
-	Cases ++ Cases_on `x` ++ RW_TAC arith_ss [log2a_def,log2_def] ++
-	PAT_ASSUM ``!a:num.P`` (STRIP_ASSUME_TAC o SPEC ``SUC n' DIV 2``) ++
-	FULL_SIMP_TAC arith_ss [DIV_LT_X,DIV_LE_X,DECIDE ``0 < 2n``]);
+        GEN_TAC ++ completeInduct_on `x` ++
+        Cases ++ Cases_on `x` ++ RW_TAC arith_ss [log2a_def,log2_def] ++
+        PAT_ASSUM ``!a:num.P`` (STRIP_ASSUME_TAC o SPEC ``SUC n' DIV 2``) ++
+        FULL_SIMP_TAC arith_ss [DIV_LT_X,DIV_LE_X,DECIDE ``0 < 2n``]);
 
 val log2a_proof = store_thm("log2a_proof",``!x. log2 x = log2a x x``,RW_TAC arith_ss [log2a_lemma]);
 
@@ -175,23 +175,23 @@ val _ = save_thm ("factor_twos_ind", factor_twos_ind);
 ***)
 
 val factor_twosa_def = Define `
-	(factor_twosa 0 _ = (0, 0)) /\
-	(factor_twosa (SUC a) n =
-	 if 0 < n /\ EVEN n then
-	   let (r,s) = factor_twosa a (n DIV 2) in (SUC r, s)
-	 else (0,n))`;
+        (factor_twosa 0 _ = (0, 0)) /\
+        (factor_twosa (SUC a) n =
+         if 0 < n /\ EVEN n then
+           let (r,s) = factor_twosa a (n DIV 2) in (SUC r, s)
+         else (0,n))`;
 
 val factor_twosa_lemma = prove(``!x y. x <= y ==> (factor_twos x = factor_twosa y x)``,
-	GEN_TAC ++ completeInduct_on `x` ++
-	Cases ++ Cases_on `x` ++ ONCE_REWRITE_TAC [factor_twos_def] ++
-	RW_TAC arith_ss [factor_twosa_def] ++
-	PAT_ASSUM ``!a:num.P`` (STRIP_ASSUME_TAC o SPEC ``SUC n' DIV 2``) ++
-	FULL_SIMP_TAC arith_ss [DIV_LT_X,DIV_LE_X,DECIDE ``0 < 2n``] ++
-	POP_ASSUM (STRIP_ASSUME_TAC o SPEC ``n:num``) ++
-	FULL_SIMP_TAC arith_ss []);
+        GEN_TAC ++ completeInduct_on `x` ++
+        Cases ++ Cases_on `x` ++ ONCE_REWRITE_TAC [factor_twos_def] ++
+        RW_TAC arith_ss [factor_twosa_def] ++
+        PAT_ASSUM ``!a:num.P`` (STRIP_ASSUME_TAC o SPEC ``SUC n' DIV 2``) ++
+        FULL_SIMP_TAC arith_ss [DIV_LT_X,DIV_LE_X,DECIDE ``0 < 2n``] ++
+        POP_ASSUM (STRIP_ASSUME_TAC o SPEC ``n:num``) ++
+        FULL_SIMP_TAC arith_ss []);
 
 val factor_twosa_proof = store_thm("factor_twosa_proof",``!x. factor_twos x = factor_twosa x x``,
-	RW_TAC arith_ss [factor_twosa_lemma]);
+        RW_TAC arith_ss [factor_twosa_lemma]);
 
 val (modexp_def,modexp_ind) =
     (miller_rabinTheory.modexp_def,miller_rabinTheory.modexp_ind);
@@ -222,24 +222,24 @@ val _ = save_thm ("modexp_ind", modexp_ind);
 ***)
 
 val modexpa_def = Define `
-	(modexpa 0 n a b = 1) /\
-	(modexpa _ _ _ 0 = 1) /\
-	(modexpa (SUC v) n a b =
+        (modexpa 0 n a b = 1) /\
+        (modexpa _ _ _ 0 = 1) /\
+        (modexpa (SUC v) n a b =
                let r = modexpa v n a (b DIV 2) in
                let r2 = (r * r) MOD n in
                if EVEN b then r2 else (r2 * a) MOD n)`;
 
 val modexpa_lemma = prove(``!x y n a. x <= y ==> (modexp n a x = modexpa y n a x)``,
-	GEN_TAC ++ completeInduct_on `x` ++
-	Cases ++ Cases_on `x` ++ ONCE_REWRITE_TAC [modexp_def] ++
-	RW_TAC arith_ss [modexpa_def] ++
-	PAT_ASSUM ``!a:num.P`` (STRIP_ASSUME_TAC o SPEC ``SUC n' DIV 2``) ++
-	FULL_SIMP_TAC arith_ss [DIV_LT_X,DIV_LE_X,DECIDE ``0 < 2n``] ++
-	POP_ASSUM (STRIP_ASSUME_TAC o SPEC ``n:num``) ++
-	FULL_SIMP_TAC arith_ss []);
+        GEN_TAC ++ completeInduct_on `x` ++
+        Cases ++ Cases_on `x` ++ ONCE_REWRITE_TAC [modexp_def] ++
+        RW_TAC arith_ss [modexpa_def] ++
+        PAT_ASSUM ``!a:num.P`` (STRIP_ASSUME_TAC o SPEC ``SUC n' DIV 2``) ++
+        FULL_SIMP_TAC arith_ss [DIV_LT_X,DIV_LE_X,DECIDE ``0 < 2n``] ++
+        POP_ASSUM (STRIP_ASSUME_TAC o SPEC ``n:num``) ++
+        FULL_SIMP_TAC arith_ss []);
 
 val modexpa_proof = store_thm("modexpa_proof",``!n a b. modexp n a b = modexpa b n a b``,
-	RW_TAC arith_ss [modexpa_lemma]);
+        RW_TAC arith_ss [modexpa_lemma]);
 
 val witness_tail_def = miller_rabinTheory.witness_tail_def;
 (***
@@ -265,9 +265,9 @@ val exists_witness_def =
        (exists_witness n (hd::tl) = witness n hd \/ exists_witness n tl)`;
 
 val exists_witness_proof = store_thm("exists_witness_proof",
-	``!n l. EXISTS (witness n) l = exists_witness n l``,
-	GEN_TAC ++ Induct ++
-	RW_TAC std_ss [EXISTS_DEF,exists_witness_def]);
+        ``!n l. EXISTS (witness n) l = exists_witness n l``,
+        GEN_TAC ++ Induct ++
+        RW_TAC std_ss [EXISTS_DEF,exists_witness_def]);
 
 val miller_rabin_list_def =
     Define
@@ -662,42 +662,42 @@ val (list_natp_rewrite,list_natp_def) = get_recogniser ``:num list``;
 val div_terminate =  prove(``!a. 0 < a ==> a DIV 2 < a``,RW_TAC arith_ss [DIV_LT_X]);
 
 val (_,acl2_factor_twos_def) =
-	convert_definition_full
-		(SOME ``\a. 0 < a ==> a DIV 2 < a``)
-		[div_terminate,DECIDE ``~(2 = 0n)``]
-	factor_twos_def
+        convert_definition_full
+                (SOME ``\a. 0 < a ==> a DIV 2 < a``)
+                [div_terminate,DECIDE ``~(2 = 0n)``]
+        factor_twos_def
 
 val (_,acl2_modexp_def) =
-	convert_definition_full
-		(SOME ``\a b c. ~(a = 0n) /\ (0 < c ==> c DIV 2 < c)``)
-		[div_terminate,DECIDE ``~(2 = 0n)``]
-	modexp_def;
+        convert_definition_full
+                (SOME ``\a b c. ~(a = 0n) /\ (0 < c ==> c DIV 2 < c)``)
+                [div_terminate,DECIDE ``~(2 = 0n)``]
+        modexp_def;
 
 val (_,acl2_witness_tail_def) =
-	convert_definition_full
-		(SOME ``\a b c. ~(b = 0n)``)
-		[]
-	witness_tail_def;
+        convert_definition_full
+                (SOME ``\a b c. ~(b = 0n)``)
+                []
+        witness_tail_def;
 
 val (_,acl2_witness_def) =
-	convert_definition_full
-		(SOME ``\a b.~(a = 0n)``)
-		[]
-	witness_def;
+        convert_definition_full
+                (SOME ``\a b.~(a = 0n)``)
+                []
+        witness_def;
 
 val (_,acl2_exists_ho_def) =
-	convert_definition
-	(INST_TYPE [``:'a`` |-> ``:num``] EXISTS_DEF);
+        convert_definition
+        (INST_TYPE [``:'a`` |-> ``:num``] EXISTS_DEF);
 
 val (miller_rabin_list_correct,acl2_miller_rabin_list_def) =
-	convert_definition_full
-		(SOME ``\a b. ~(a = 0n)``)
-		[]
-	miller_rabin_list_def;
+        convert_definition_full
+                (SOME ``\a b. ~(a = 0n)``)
+                []
+        miller_rabin_list_def;
 
 val (witness_rewrite,acl2_exists_witness_def) =
-	flatten_HO_definition "acl2_exists_witness" acl2_exists_ho_def
-		``acl2_EXISTS (\x. ite (natp x) (acl2_witness n x) (acl2_witness n (nat 0))) l``;
+        flatten_HO_definition "acl2_exists_witness" acl2_exists_ho_def
+                ``acl2_EXISTS (\x. ite (natp x) (acl2_witness n x) (acl2_witness n (nat 0))) l``;
 
 (* ------------------------------------------------------------------------- *)
 (* Print out the definitions (removing 'andl')                               *)
@@ -708,12 +708,12 @@ open TextIO sexp;
 val outs = openOut(FileSys.fullPath "../lisp/miller-rabin.lisp");
 
 fun output_thm thm =
-let	val string = ref ""
-	val _ = (print_mlsexp (fn s => string := (!string) ^ s) o
-			def_to_mlsexp_defun o REWRITE_RULE [sexpTheory.andl_def]) thm
-	val _ = string := (!string) ^ "\n\n"
+let     val string = ref ""
+        val _ = (print_mlsexp (fn s => string := (!string) ^ s) o
+                        def_to_mlsexp_defun o REWRITE_RULE [sexpTheory.andl_def]) thm
+        val _ = string := (!string) ^ "\n\n"
 in
-	(print (!string) ; output(outs,!string))
+        (print (!string) ; output(outs,!string))
 end;
 
 val _ = output(outs,"(in-package \"ACL2\")\n\n");
@@ -735,12 +735,12 @@ val _ = closeOut outs;
 val _ = (print_thm miller_rabin_list_correct ; print "\n");
 
 val miller_rabin_list_correct2 =
-	DISCH_ALL (REWRITE_RULE [SEXP_TO_BOOL_OF_BOOL]
-		(AP_TERM ``sexp_to_bool`` (UNDISCH (SPEC_ALL miller_rabin_list_correct))));
+        DISCH_ALL (REWRITE_RULE [SEXP_TO_BOOL_OF_BOOL]
+                (AP_TERM ``sexp_to_bool`` (UNDISCH (SPEC_ALL miller_rabin_list_correct))));
 
 val miller_rabin_list_correct2 =
-	prove(``~(n = 0) ==>
-	       (miller_rabin_list n =
-        	sexp_to_bool o acl2_miller_rabin_list (nat n) o list nat)``,
-	RW_TAC arith_ss [FUN_EQ_THM] THEN MATCH_MP_TAC miller_rabin_list_correct2
-	THEN FIRST_ASSUM ACCEPT_TAC);
+        prove(``~(n = 0) ==>
+               (miller_rabin_list n =
+                sexp_to_bool o acl2_miller_rabin_list (nat n) o list nat)``,
+        RW_TAC arith_ss [FUN_EQ_THM] THEN MATCH_MP_TAC miller_rabin_list_correct2
+        THEN FIRST_ASSUM ACCEPT_TAC);

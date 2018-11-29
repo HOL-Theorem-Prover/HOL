@@ -1,13 +1,13 @@
 (* =====================================================================*)
-(* LIBRARY: pred_set							*)
-(* FILE:    mk_pred_set.sml						*)
-(* DESCRIPTION: a simple theory of predicates-as-sets			*)
-(*									*)
-(* AUTHOR:  T. Kalker							*)
-(* DATE:    8 June 1989  			         		*)
-(*									*)
-(* REVISED: Tom Melham (extensively revised and extended)		*)
-(* DATE:    January 1992						*)
+(* LIBRARY: pred_set                                                    *)
+(* FILE:    mk_pred_set.sml                                             *)
+(* DESCRIPTION: a simple theory of predicates-as-sets                   *)
+(*                                                                      *)
+(* AUTHOR:  T. Kalker                                                   *)
+(* DATE:    8 June 1989                                                 *)
+(*                                                                      *)
+(* REVISED: Tom Melham (extensively revised and extended)               *)
+(* DATE:    January 1992                                                *)
 (* =====================================================================*)
 
 (* interactive use
@@ -22,7 +22,12 @@ open HolKernel Parse boolLib Prim_rec pairLib numLib
 val AP = numLib.ARITH_PROVE
 val ARITH_ss = numSimps.ARITH_ss
 val arith_ss = bool_ss ++ ARITH_ss
+val DECIDE = numLib.ARITH_PROVE
+
+(* don't eta-contract these; that will force tactics to use one fixed version
+   of srw_ss() *)
 fun fs thl = FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) thl
+fun simp thl = ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) thl
 
 fun store_thm(r as(n,t,tac)) = let
   val th = boolLib.store_thm r
@@ -60,13 +65,12 @@ val Cond =
     CONJ_TAC;
 
 (* ---------------------------------------------------------------------*)
-(* Create the new theory.						*)
+(* Create the new theory.                                               *)
 (* ---------------------------------------------------------------------*)
 
 val _ = new_theory "pred_set";
 
 val _ = type_abbrev ("set", ``:'a -> bool``);
-val _ = disable_tyabbrev_printing "set";
 
 local open OpenTheoryMap
   val ns = ["Set"]
@@ -76,11 +80,11 @@ in
 end
 
 (* =====================================================================*)
-(* Membership. 								*)
+(* Membership.                                                          *)
 (* =====================================================================*)
 
 (* ---------------------------------------------------------------------*)
-(* The axiom of specification: x IN {y | P y} iff P x			*)
+(* The axiom of specification: x IN {y | P y} iff P x                   *)
 (* ---------------------------------------------------------------------*)
 
 val SPECIFICATION = store_thm(
@@ -100,7 +104,7 @@ val IN_ABS = Tactical.store_thm (
 val _ = export_rewrites ["IN_ABS"]
 
 (* ---------------------------------------------------------------------*)
-(* Axiom of extension: (s = t) iff !x. x IN s = x IN t			*)
+(* Axiom of extension: (s = t) iff !x. x IN s = x IN t                  *)
 (* ---------------------------------------------------------------------*)
 
 val EXTENSION = store_thm
@@ -112,7 +116,7 @@ val EXTENSION = store_thm
 val NOT_EQUAL_SETS =
     store_thm
     ("NOT_EQUAL_SETS",
-	     (“!s:'a set. !t. ~(s = t) = ?x. x IN t = ~(x IN s)”),
+             (“!s:'a set. !t. ~(s = t) = ?x. x IN t = ~(x IN s)”),
      PURE_ONCE_REWRITE_TAC [EXTENSION] THEN
      CONV_TAC (ONCE_DEPTH_CONV NOT_FORALL_CONV) THEN
      REPEAT STRIP_TAC THEN EQ_TAC THENL
@@ -123,7 +127,7 @@ val NOT_EQUAL_SETS =
       ASM_CASES_TAC (“(x:'a) IN s”) THEN ASM_REWRITE_TAC []]);
 
 (* --------------------------------------------------------------------- *)
-(* A theorem from homeier@org.aero.uniblab (Peter Homeier)		 *)
+(* A theorem from homeier@org.aero.uniblab (Peter Homeier)               *)
 (* --------------------------------------------------------------------- *)
 
 val NUM_SET_WOP =
@@ -140,7 +144,7 @@ val NUM_SET_WOP =
       EXISTS_TAC (“n:num”) THEN FIRST_ASSUM ACCEPT_TAC]);
 
 (* ===================================================================== *)
-(* Generalized set specification.					 *)
+(* Generalized set specification.                                        *)
 (* ===================================================================== *)
 val GSPEC_DEF_LEMMA =
     TAC_PROOF
@@ -153,9 +157,9 @@ val GSPEC_DEF_LEMMA =
      REFL_TAC);
 
 (* --------------------------------------------------------------------- *)
-(* generalized axiom of specification:					 *)
-(*									 *)
-(*   GSPECIFICATION = |- !f v. v IN (GSPEC f) = (?x. v,T = f x)		 *)
+(* generalized axiom of specification:                                   *)
+(*                                                                       *)
+(*   GSPECIFICATION = |- !f v. v IN (GSPEC f) = (?x. v,T = f x)          *)
 (* --------------------------------------------------------------------- *)
 
 val GSPECIFICATION = new_specification
@@ -163,12 +167,15 @@ val GSPECIFICATION = new_specification
 val _ = TeX_notation {hol = "|", TeX = ("\\HOLTokenBar{}", 1)}
 val _ = ot0 "GSPEC" "specification"
 
+val _ = add_user_printer ("pred_set.GSPEC", ``GSPEC f``)
+
+
 val GSPECIFICATION_applied = save_thm(
   "GSPECIFICATION_applied[simp]",
   REWRITE_RULE [SPECIFICATION] GSPECIFICATION);
 
 (* --------------------------------------------------------------------- *)
-(* load generalized specification code.					 *)
+(* load generalized specification code.                                  *)
 (* --------------------------------------------------------------------- *)
 
 val SET_SPEC_CONV = PGspec.SET_SPEC_CONV GSPECIFICATION;
@@ -184,7 +191,7 @@ val _ = augment_srw_ss [SET_SPEC_ss]
 
 
 (* --------------------------------------------------------------------- *)
-(* activate generalized specification parser/pretty-printer.		 *)
+(* activate generalized specification parser/pretty-printer.             *)
 (* --------------------------------------------------------------------- *)
 (* define_set_abstraction_syntax "GSPEC"; *)
 (* set_flag("print_set",true); *)
@@ -249,7 +256,7 @@ val PAIR_IN_GSPEC_same = Q.store_thm ("PAIR_IN_GSPEC_same",
    pre-pre-terms to terms *)
 
 (* --------------------------------------------------------------------- *)
-(* A theorem from homeier@org.aero.uniblab (Peter Homeier)		 *)
+(* A theorem from homeier@org.aero.uniblab (Peter Homeier)               *)
 (* --------------------------------------------------------------------- *)
 
 val lemma =
@@ -277,7 +284,7 @@ val SET_MINIMUM =
 
 
 (* ===================================================================== *)
-(* The empty set							 *)
+(* The empty set                                                         *)
 (* ===================================================================== *)
 
 val EMPTY_DEF = new_definition
@@ -312,7 +319,7 @@ val EMPTY_applied = store_thm(
 val _ = export_rewrites ["EMPTY_applied"]
 
 (* ===================================================================== *)
-(* The set of everything						 *)
+(* The set of everything                                                 *)
 (* ===================================================================== *)
 
 val UNIV_DEF = new_definition
@@ -375,7 +382,7 @@ val _ = TeX_notation {hol = UnicodeChars.universal_set,
 
 
 (* ===================================================================== *)
-(* Set inclusion.							 *)
+(* Set inclusion.                                                        *)
 (* ===================================================================== *)
 
 val SUBSET_DEF = new_definition(
@@ -391,6 +398,9 @@ val SUBSET_THM = store_thm (* from util_prob *)
   ("SUBSET_THM",
    ``!(P : 'a -> bool) Q. P SUBSET Q ==> (!x. x IN P ==> x IN Q)``,
     RW_TAC std_ss [SUBSET_DEF]);
+
+val SUBSET_applied = save_thm
+  ("SUBSET_applied", SIMP_RULE bool_ss [IN_DEF] SUBSET_DEF);
 
 val SUBSET_TRANS = store_thm
     ("SUBSET_TRANS",
@@ -448,6 +458,13 @@ val EQ_SUBSET_SUBSET = store_thm (* from util_prob *)
    ``!(s :'a -> bool) t. (s = t) ==> s SUBSET t /\ t SUBSET s``,
    RW_TAC std_ss [SUBSET_DEF, EXTENSION]);
 
+val SUBSET_SUBSET_EQ = store_thm (* from topology, was: SUBSET_ANTISYM_EQ *)
+  ("SUBSET_SUBSET_EQ",
+   “!(s:'a set) t. (s SUBSET t) /\ (t SUBSET s) <=> (s = t)”,
+   REPEAT GEN_TAC THEN EQ_TAC THENL
+  [REWRITE_TAC [SUBSET_ANTISYM],
+   REWRITE_TAC [EQ_SUBSET_SUBSET]]);
+
 val SUBSET_ADD = store_thm (* from util_prob *)
   ("SUBSET_ADD",
    ``!f n d.
@@ -477,7 +494,7 @@ val SUBSET_K = store_thm (* from util_prob *)
    >> PROVE_TAC []);
 
 (* ===================================================================== *)
-(* Proper subset.							 *)
+(* Proper subset.                                                        *)
 (* ===================================================================== *)
 
 val PSUBSET_DEF =  new_definition(
@@ -527,7 +544,7 @@ val PSUBSET_UNIV =
      CONV_TAC (ONCE_DEPTH_CONV NOT_FORALL_CONV) THEN GEN_TAC THEN REFL_TAC);
 
 (* ===================================================================== *)
-(* Union								 *)
+(* Union                                                                 *)
 (* ===================================================================== *)
 
 val UNION_DEF = new_infixl_definition
@@ -608,10 +625,15 @@ val EMPTY_UNION = store_thm("EMPTY_UNION",
      REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN RES_TAC);
 val _ = export_rewrites ["EMPTY_UNION"]
 
-
+(* from probability/iterateTheory *)
+val FORALL_IN_UNION = store_thm
+  ("FORALL_IN_UNION",
+  ``!P s t:'a->bool. (!x. x IN s UNION t ==> P x) <=>
+                     (!x. x IN s ==> P x) /\ (!x. x IN t ==> P x)``,
+    REWRITE_TAC [IN_UNION] THEN PROVE_TAC []);
 
 (* ===================================================================== *)
-(* Intersection								 *)
+(* Intersection                                                          *)
 (* ===================================================================== *)
 
 val INTER_DEF = new_infixl_definition
@@ -697,7 +719,7 @@ val INTER_UNIV =
      REWRITE_TAC [IN_INTER,EXTENSION,IN_UNIV]);
 
 (* ===================================================================== *)
-(* Distributivity							 *)
+(* Distributivity                                                        *)
 (* ===================================================================== *)
 
 val UNION_OVER_INTER = store_thm
@@ -717,7 +739,7 @@ val INTER_OVER_UNION = store_thm
     ASM_REWRITE_TAC[]);
 
 (* ===================================================================== *)
-(* Disjoint sets.							 *)
+(* Disjoint sets.                                                        *)
 (* ===================================================================== *)
 
 val DISJOINT_DEF = new_definition ("DISJOINT_DEF",
@@ -746,7 +768,7 @@ val DISJOINT_ALT = store_thm (* from util_prob *)
    >> PROVE_TAC []);
 
 (* --------------------------------------------------------------------- *)
-(* A theorem from homeier@org.aero.uniblab (Peter Homeier)		 *)
+(* A theorem from homeier@org.aero.uniblab (Peter Homeier)               *)
 (* --------------------------------------------------------------------- *)
 val DISJOINT_EMPTY =
     store_thm
@@ -764,7 +786,7 @@ val DISJOINT_EMPTY_REFL_RWT = save_thm(
   ONCE_REWRITE_RULE [EQ_SYM_EQ] DISJOINT_EMPTY_REFL)
 
 (* --------------------------------------------------------------------- *)
-(* A theorem from homeier@org.aero.uniblab (Peter Homeier)		 *)
+(* A theorem from homeier@org.aero.uniblab (Peter Homeier)               *)
 (* --------------------------------------------------------------------- *)
 val DISJOINT_UNION = store_thm ("DISJOINT_UNION",
 “!(s:'a set) t u. DISJOINT (s UNION t) u = DISJOINT s u /\ DISJOINT t u”,
@@ -793,7 +815,7 @@ val DISJOINT_SUBSET = Q.store_thm
 
 
 (* ===================================================================== *)
-(* Set difference							 *)
+(* Set difference                                                        *)
 (* ===================================================================== *)
 
 val DIFF_DEF = new_infixl_definition
@@ -914,7 +936,7 @@ val DISJOINT_DIFFS = store_thm (* from util_prob *)
     >> PROVE_TAC []]);
 
 (* ===================================================================== *)
-(* The insertion function.					         *)
+(* The insertion function.                                               *)
 (* ===================================================================== *)
 
 val INSERT_DEF =
@@ -929,10 +951,10 @@ val _ = ot0 "INSERT" "insert"
 val _ = add_listform {leftdelim = [TOK "{"], rightdelim = [TOK "}"],
                       separator = [TOK ";", BreakSpace(1,0)],
                       cons = "INSERT", nilstr = "EMPTY",
-                      block_info = (PP.INCONSISTENT, 0)};
+                      block_info = (PP.INCONSISTENT, 1)};
 
 (* --------------------------------------------------------------------- *)
-(* Theorems about INSERT.						 *)
+(* Theorems about INSERT.                                                *)
 (* --------------------------------------------------------------------- *)
 
 val IN_INSERT =
@@ -1120,7 +1142,7 @@ val INSERT_DIFF =
     store_thm
     ("INSERT_DIFF",
      (“!s t. !x:'a. (x INSERT s) DIFF t =
-     		  (if x IN t then s DIFF t else (x INSERT (s DIFF t)))”),
+                  (if x IN t then s DIFF t else (x INSERT (s DIFF t)))”),
      REPEAT GEN_TAC THEN COND_CASES_TAC THENL
      [ASM_REWRITE_TAC [EXTENSION,IN_DIFF,IN_INSERT] THEN
       GEN_TAC THEN EQ_TAC THENL
@@ -1138,8 +1160,19 @@ val UNIV_BOOL = store_thm(
   SRW_TAC [][EXTENSION]);
 val _ = export_rewrites ["UNIV_BOOL"]
 
+(* from probability/iterateTheory *)
+val FORALL_IN_INSERT = store_thm
+  ("FORALL_IN_INSERT",
+  ``!P a s. (!x. x IN (a INSERT s) ==> P x) <=> P a /\ (!x. x IN s ==> P x)``,
+    REWRITE_TAC [IN_INSERT] THEN PROVE_TAC []);
+
+val EXISTS_IN_INSERT = store_thm
+  ("EXISTS_IN_INSERT",
+  ``!P a s. (?x. x IN (a INSERT s) /\ P x) <=> P a \/ ?x. x IN s /\ P x``,
+    REWRITE_TAC [IN_INSERT] THEN PROVE_TAC []);
+
 (* ===================================================================== *)
-(* Removal of an element						 *)
+(* Removal of an element                                                 *)
 (* ===================================================================== *)
 
 val DELETE_DEF =
@@ -1306,7 +1339,7 @@ val INSERT_DELETE =
      ASM_CASES_TAC (“x':'a = x”) THEN ASM_REWRITE_TAC[]);
 
 (* --------------------------------------------------------------------- *)
-(* A theorem from homeier@org.aero.uniblab (Peter Homeier)		 *)
+(* A theorem from homeier@org.aero.uniblab (Peter Homeier)               *)
 (* --------------------------------------------------------------------- *)
 val DELETE_INTER =
     store_thm
@@ -1319,7 +1352,7 @@ val DELETE_INTER =
 
 
 (* --------------------------------------------------------------------- *)
-(* A theorem from homeier@org.aero.uniblab (Peter Homeier)		 *)
+(* A theorem from homeier@org.aero.uniblab (Peter Homeier)               *)
 (* --------------------------------------------------------------------- *)
 val DISJOINT_DELETE_SYM =
     store_thm
@@ -1334,7 +1367,7 @@ val DISJOINT_DELETE_SYM =
      end);
 
 (* ===================================================================== *)
-(* Choice								 *)
+(* Choice                                                                *)
 (* ===================================================================== *)
 
 val CHOICE_EXISTS =
@@ -1351,12 +1384,17 @@ val CHOICE_DEF = new_specification("CHOICE_DEF",["CHOICE"],CHOICE_EXISTS);
 val _ = ot0 "CHOICE" "choice"
 
 (* ===================================================================== *)
-(* The REST of a set after removing a chosen element.			 *)
+(* The REST of a set after removing a chosen element.                    *)
 (* ===================================================================== *)
 
 val REST_DEF =
     new_definition
     ("REST_DEF", (“REST (s:'a set) = s DELETE (CHOICE s)”));
+
+val IN_REST = store_thm
+  ("IN_REST",
+  ``!x:'a. !s. x IN (REST s) <=> x IN s /\ ~(x = CHOICE s)``,
+    REWRITE_TAC [REST_DEF, IN_DELETE]);
 
 val CHOICE_NOT_IN_REST =
     store_thm
@@ -1380,7 +1418,7 @@ val REST_SUBSET =
 
 val lemma =
     TAC_PROOF(([], (“(P /\ Q = P) = (P ==> Q)”)),
-    	      BOOL_CASES_TAC (“P:bool”) THEN REWRITE_TAC[]);
+              BOOL_CASES_TAC (“P:bool”) THEN REWRITE_TAC[]);
 
 val REST_PSUBSET =
     store_thm
@@ -1396,7 +1434,7 @@ val REST_PSUBSET =
      ASM_REWRITE_TAC []);
 
 (* ===================================================================== *)
-(* Singleton set.							 *)
+(* Singleton set.                                                        *)
 (* ===================================================================== *)
 
 val SING_DEF =
@@ -1533,7 +1571,7 @@ val SING_IFF_EMPTY_REST =
 
 
 (* ===================================================================== *)
-(* The image of a function on a set.					 *)
+(* The image of a function on a set.                                     *)
 (* ===================================================================== *)
 
 val IMAGE_DEF =
@@ -1679,8 +1717,20 @@ val IMAGE_IMAGE = store_thm
    RW_TAC std_ss [EXTENSION, IN_IMAGE, o_THM]
    >> PROVE_TAC []);
 
+(* from probability/iterateTheory *)
+val FORALL_IN_IMAGE = store_thm
+  ("FORALL_IN_IMAGE",
+  ``!P f s. (!y. y IN IMAGE f s ==> P y) <=> (!x. x IN s ==> P(f x))``,
+    REWRITE_TAC [IN_IMAGE] THEN PROVE_TAC []);
+
+(* from probability/rich_topologyTheory *)
+val EXISTS_IN_IMAGE = store_thm
+  ("EXISTS_IN_IMAGE",
+  ``!P f s. (?y. y IN IMAGE f s /\ P y) <=> ?x. x IN s /\ P(f x)``,
+    REWRITE_TAC [IN_IMAGE] THEN PROVE_TAC []);
+
 (* ===================================================================== *)
-(* Injective functions on a set.					 *)
+(* Injective functions on a set.                                         *)
 (* ===================================================================== *)
 
 val INJ_DEF =
@@ -1756,7 +1806,7 @@ val INJ_IMAGE_SUBSET = Q.store_thm ("INJ_IMAGE_SUBSET",
   REPEAT STRIP_TAC THEN BasicProvers.VAR_EQ_TAC THEN RES_TAC) ;
 
 (* ===================================================================== *)
-(* Surjective functions on a set.					 *)
+(* Surjective functions on a set.                                        *)
 (* ===================================================================== *)
 
 val SURJ_DEF =
@@ -1824,7 +1874,7 @@ val SURJ_IMP_INJ = store_thm (* from util_prob *)
    >> RW_TAC std_ss [boolTheory.EXISTS_DEF]);
 
 (* ===================================================================== *)
-(* Bijective functions on a set.					 *)
+(* Bijective functions on a set.                                         *)
 (* ===================================================================== *)
 
 val BIJ_DEF =
@@ -2051,8 +2101,8 @@ val SCHROEDER_BERNSTEIN = store_thm
       CONJ_TAC >| (* 2 sub-goals here *)
       [ (* goal 1.1 (of 2) *)
         POP_ASSUM MP_TAC \\
-	RW_TAC std_ss [INJ_DEF, SUBSET_DEF, IN_IMAGE] \\
-	PROVE_TAC [],
+        RW_TAC std_ss [INJ_DEF, SUBSET_DEF, IN_IMAGE] \\
+        PROVE_TAC [],
         (* goal 1.2 (of 2) *)
         Q.EXISTS_TAC `g o f` >> rpt (POP_ASSUM MP_TAC) \\
         RW_TAC std_ss [INJ_DEF, SUBSET_DEF, IN_IMAGE, combinTheory.o_DEF] \\
@@ -2081,13 +2131,13 @@ val BIJ_ALT = store_thm (* from util_prob *)
       PROVE_TAC [],
       (* goal 2 (of 4) *)
       Q.PAT_X_ASSUM `!x. P x`
-	(fn th =>
-	    MP_TAC (Q.SPEC `(f :'a-> 'b) x` th) \\
-	    MP_TAC (Q.SPEC `(f:'a->'b) y` th)) \\
-	    Cond >- PROVE_TAC [] \\
-	    STRIP_TAC \\
-	    Cond >- PROVE_TAC [] \\
-	    STRIP_TAC >> PROVE_TAC [],
+        (fn th =>
+            MP_TAC (Q.SPEC `(f :'a-> 'b) x` th) \\
+            MP_TAC (Q.SPEC `(f:'a->'b) y` th)) \\
+            Cond >- PROVE_TAC [] \\
+            STRIP_TAC \\
+            Cond >- PROVE_TAC [] \\
+            STRIP_TAC >> PROVE_TAC [],
       (* goal 3 (of 4) *)
       PROVE_TAC [],
       (* goal 4 (of 4) *)
@@ -2101,7 +2151,7 @@ val BIJ_INSERT_IMP = store_thm (* from util_prob *)
     RW_TAC std_ss [BIJ_ALT]
  >> Q.EXISTS_TAC `t DELETE f e`
  >> FULL_SIMP_TAC std_ss [IN_FUNSET, INSERT_DELETE, ELT_IN_DELETE, IN_INSERT,
-			  DISJ_IMP_THM]
+                          DISJ_IMP_THM]
  >> SIMP_TAC std_ss [IN_DELETE]
  >> REPEAT STRIP_TAC (* 3 sub-goals here *)
  >> METIS_TAC [IN_INSERT]);
@@ -2113,7 +2163,7 @@ val BIJ_IMAGE = store_thm (* from miller *)
    >> PROVE_TAC []);
 
 (* ===================================================================== *)
-(* Left and right inverses.						 *)
+(* Left and right inverses.                                              *)
 (* ===================================================================== *)
 
 (* Left inverse, to option type, result is NONE outside image of domain *)
@@ -2171,8 +2221,8 @@ val LINV_LO = new_definition ("LINV_LO",
   ``LINV f s y = THE (LINV_OPT f s y)``) ;
 
 (* --------------------------------------------------------------------- *)
-(* LINV_DEF:								 *)
-(*   |- !f s t. INJ f s t ==> (!x. x IN s ==> (LINV f s(f x) = x))	 *)
+(* LINV_DEF:                                                             *)
+(*   |- !f s t. INJ f s t ==> (!x. x IN s ==> (LINV f s(f x) = x))       *)
 (* --------------------------------------------------------------------- *)
 
 val LINV_DEF = Q.store_thm ("LINV_DEF",
@@ -2236,7 +2286,7 @@ val RINV_LO = new_definition ("RINV_LO",
   ``RINV f s y = THE (LINV_OPT f s y)``) ;
 
 (* --------------------------------------------------------------------- *)
-(* RINV_DEF:								 *)
+(* RINV_DEF:                                                             *)
 (*   |- !f s t. SURJ f s t ==> (!x. x IN t ==> (f(RINV f s x) = x))      *)
 (* --------------------------------------------------------------------- *)
 
@@ -2249,8 +2299,8 @@ val RINV_DEF = Q.store_thm ("RINV_DEF",
   FULL_SIMP_TAC std_ss [RINV_LO, SURJ_DEF, LINV_OPT_def,
     optionTheory.THE_DEF] THEN
   RES_TAC THEN
-  irule (BETA_RULE (Q.SPECL [`P`, `\y. f y = x`] SELECT_ELIM_THM)) THEN1
-    SIMP_TAC std_ss [] THEN
+  irule (BETA_RULE (Q.SPECL [`P`, `\y. f y = x`] SELECT_ELIM_THM)) THEN
+  CONJ_TAC THEN1 SIMP_TAC std_ss [] THEN
   Q.EXISTS_TAC `y` THEN ASM_SIMP_TAC std_ss []) ;
 
 val SURJ_INJ_INV = store_thm(
@@ -2269,7 +2319,7 @@ val SURJ_INJ_INV = store_thm(
       [IN_IMAGE', GSYM SELECT_THM, BETA_THM]) THEN ASM_REWRITE_TAC [] ]) ;
 
 (* ===================================================================== *)
-(* Finiteness								 *)
+(* Finiteness                                                            *)
 (* ===================================================================== *)
 
 val FINITE_DEF =
@@ -2339,7 +2389,7 @@ val set_tyinfo = TypeBasePure.mk_nondatatype_info
                         size=NONE,
                         encode=NONE});
 
-val _ = TypeBase.write [set_tyinfo];
+val _ = TypeBase.export [set_tyinfo];
 
 val FINITE_DELETE =
     TAC_PROOF
@@ -2594,12 +2644,12 @@ val REL_RESTRICT_SUBSET = store_thm(
   SRW_TAC [][relationTheory.RSUBSET, REL_RESTRICT_DEF, SUBSET_DEF]);
 
 (* =====================================================================*)
-(* Cardinality 								*)
+(* Cardinality                                                          *)
 (* =====================================================================*)
 
 (* --------------------------------------------------------------------- *)
 (* card_rel_def: defining equations for a relation `R s n`, which means  *)
-(* that the finite s has cardinality n.				 	 *)
+(* that the finite s has cardinality n.                                  *)
 (* --------------------------------------------------------------------- *)
 
 val card_rel_def =
@@ -2607,14 +2657,14 @@ val card_rel_def =
       (!s n. R s (SUC n) = ?x:'a. x IN s /\ R (s DELETE x) n)”);
 
 (* ---------------------------------------------------------------------*)
-(* Prove that such a relation exists.					*)
+(* Prove that such a relation exists.                                   *)
 (* ---------------------------------------------------------------------*)
 
 val CARD_REL_EXISTS =  prove_rec_fn_exists num_Axiom card_rel_def;
 
 (* ---------------------------------------------------------------------*)
-(* Now, prove that it doesn't matter which element we delete		*)
-(* Proof modified for Version 12 IMP_RES_THEN		 [TFM 91.01.23]	*)
+(* Now, prove that it doesn't matter which element we delete            *)
+(* Proof modified for Version 12 IMP_RES_THEN            [TFM 91.01.23] *)
 (* ---------------------------------------------------------------------*)
 
 val CARD_REL_DEL_LEMMA =
@@ -2647,12 +2697,12 @@ val CARD_REL_DEL_LEMMA =
         EXISTS_TAC (“x:'a”) THEN ASM_REWRITE_TAC [IN_DELETE] THEN
         RES_THEN (TRY o IMP_RES_THEN ASSUME_TAC) THEN
         PURE_ONCE_REWRITE_TAC [DELETE_COMM] THEN
-	FIRST_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC [IN_DELETE] THEN
-	CONV_TAC (ONCE_DEPTH_CONV SYM_CONV) THEN FIRST_ASSUM ACCEPT_TAC]]]);
+        FIRST_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC [IN_DELETE] THEN
+        CONV_TAC (ONCE_DEPTH_CONV SYM_CONV) THEN FIRST_ASSUM ACCEPT_TAC]]]);
 
 
 (* --------------------------------------------------------------------- *)
-(* So `R s` specifies a unique number.				         *)
+(* So `R s` specifies a unique number.                                   *)
 (* --------------------------------------------------------------------- *)
 
 val CARD_REL_UNIQUE =
@@ -2670,7 +2720,7 @@ val CARD_REL_UNIQUE =
        IMP_RES_TAC CARD_REL_DEL_LEMMA THEN RES_TAC]]);
 
 (* --------------------------------------------------------------------- *)
-(* Now, ?n. R s n if s is finite.					*)
+(* Now, ?n. R s n if s is finite.                                       *)
 (* --------------------------------------------------------------------- *)
 
 val CARD_REL_EXISTS_LEMMA = TAC_PROOF
@@ -2684,8 +2734,8 @@ val CARD_REL_EXISTS_LEMMA = TAC_PROOF
       ASM_REWRITE_TAC [DELETE_INSERT,IN_INSERT]]);
 
 (* ---------------------------------------------------------------------*)
-(* So (@n. R s n) = m iff R s m        (\s.@n.R s n defines a function)	*)
-(* Proof modified for Version 12 IMP_RES_THEN		 [TFM 91.01.23]	*)
+(* So (@n. R s n) = m iff R s m        (\s.@n.R s n defines a function) *)
+(* Proof modified for Version 12 IMP_RES_THEN            [TFM 91.01.23] *)
 (* ---------------------------------------------------------------------*)
 
 val CARD_REL_THM =
@@ -2705,7 +2755,7 @@ val CARD_REL_THM =
       EXISTS_TAC (“n:num”) THEN FIRST_ASSUM MATCH_ACCEPT_TAC]);
 
 (* ---------------------------------------------------------------------*)
-(* Now, prove the existence of the required cardinality function.	*)
+(* Now, prove the existence of the required cardinality function.       *)
 (* ---------------------------------------------------------------------*)
 
 val CARD_EXISTS = TAC_PROOF(([],
@@ -2729,13 +2779,13 @@ val CARD_EXISTS = TAC_PROOF(([],
        IMP_RES_THEN (TRY o MATCH_ACCEPT_TAC) CARD_REL_EXISTS_LEMMA]]);
 
 (* ---------------------------------------------------------------------*)
-(* Finally, introduce the CARD function via a constant specification.	*)
+(* Finally, introduce the CARD function via a constant specification.   *)
 (* ---------------------------------------------------------------------*)
 
 val CARD_DEF = new_specification ("CARD_DEF", ["CARD"], CARD_EXISTS);
 
 (* ---------------------------------------------------------------------*)
-(* Various cardinality results.						*)
+(* Various cardinality results.                                         *)
 (* ---------------------------------------------------------------------*)
 
 val CARD_EMPTY = save_thm("CARD_EMPTY",CONJUNCT1 CARD_DEF);
@@ -2771,7 +2821,7 @@ val CARD_DELETE =
        [let fun tac th g = SUBST_ALL_TAC th g handle _ => ASSUME_TAC th g
         in REPEAT_GTCL IMP_RES_THEN tac CARD_EQ_0
         end THEN IMP_RES_TAC NOT_IN_EMPTY,
-	ASM_REWRITE_TAC [SUC_SUB1]]]]);
+        ASM_REWRITE_TAC [SUC_SUB1]]]]);
 
 
 val lemma1 =
@@ -2922,7 +2972,7 @@ val SING_IFF_CARD1 =
        ASM_REWRITE_TAC []]]);
 
 (* ---------------------------------------------------------------------*)
-(* A theorem from homeier@aero.uniblab (Peter Homeier)      		*)
+(* A theorem from homeier@aero.uniblab (Peter Homeier)                  *)
 (* ---------------------------------------------------------------------*)
 val CARD_DIFF =
     store_thm
@@ -2967,7 +3017,7 @@ val CARD_DIFF_EQN = store_thm(
   SRW_TAC [numSimps.ARITH_ss][]);
 
 (* ---------------------------------------------------------------------*)
-(* A theorem from homeier@aero.uniblab (Peter Homeier)	        	*)
+(* A theorem from homeier@aero.uniblab (Peter Homeier)                  *)
 (* ---------------------------------------------------------------------*)
 val LESS_CARD_DIFF =
     store_thm
@@ -3031,7 +3081,7 @@ val FINITE_BIJ = store_thm (* from util_prob *)
  >> HO_MATCH_MP_TAC FINITE_INDUCT
  >> CONJ_TAC
  >- ( RW_TAC std_ss [BIJ_ALT, FINITE_EMPTY, CARD_EMPTY, IN_FUNSET, NOT_IN_EMPTY,
-		     EXISTS_UNIQUE_ALT] \\ (* 2 sub-goals here, same tacticals *)
+                     EXISTS_UNIQUE_ALT] \\ (* 2 sub-goals here, same tacticals *)
       FULL_SIMP_TAC std_ss [NOT_IN_EMPTY] \\
       `t = {}` by RW_TAC std_ss [EXTENSION, NOT_IN_EMPTY] \\
       RW_TAC std_ss [FINITE_EMPTY, CARD_EMPTY] )
@@ -3149,7 +3199,7 @@ val INJ_CARD = Q.store_thm
     IMP_RES_TAC (GSYM INJ_CARD_IMAGE) THEN
     ASSUME_TAC (CONJUNCT2 th)) THEN
   ASM_REWRITE_TAC [] THEN
-  irule CARD_SUBSET THEN1 FIRST_ASSUM ACCEPT_TAC THEN
+  irule CARD_SUBSET THEN CONJ_TAC THEN1 FIRST_ASSUM ACCEPT_TAC THEN
   IMP_RES_TAC INJ_IMAGE_SUBSET) ;
 
 val PHP = Q.store_thm
@@ -3214,7 +3264,7 @@ val COUNT_11 = store_thm(
 val _ = export_rewrites ["COUNT_11"]
 
 (* =====================================================================*)
-(* Infiniteness								*)
+(* Infiniteness                                                         *)
 (* =====================================================================*)
 
 val _ = overload_on ("INFINITE", ``\s. ~FINITE s``)
@@ -3283,17 +3333,17 @@ val INFINITE_INJ = store_thm (* from util_prob *)
 
 (* ---------------------------------------------------------------------- *)
 (* The next series of lemmas are used for proving that if UNIV: set       *)
-(* is INFINITE then :'a satisfies an axiom of infinity.			  *)
-(*									  *)
-(* The function g:num->'a set defines a series of sets:		          *)
-(*									  *)
-(*    {}, {x1}, {x1,x2}, {x1,x2,x3},...					  *)
-(*									  *)
-(* and one then defines an f:'a->'a such that f(xi)=xi+1.		  *)
+(* is INFINITE then :'a satisfies an axiom of infinity.                   *)
+(*                                                                        *)
+(* The function g:num->'a set defines a series of sets:                   *)
+(*                                                                        *)
+(*    {}, {x1}, {x1,x2}, {x1,x2,x3},...                                   *)
+(*                                                                        *)
+(* and one then defines an f:'a->'a such that f(xi)=xi+1.                 *)
 (* ---------------------------------------------------------------------- *)
 
 (* ---------------------------------------------------------------------*)
-(* Defining equations for g 				                *)
+(* Defining equations for g                                             *)
 (* ---------------------------------------------------------------------*)
 
 val gdef = map Term
@@ -3301,7 +3351,7 @@ val gdef = map Term
      `!n. g (SUC n) = (@x:'a.~(x IN (g n))) INSERT (g n)`];
 
 (* ---------------------------------------------------------------------*)
-(* Lemma: g n is finite for all n.					*)
+(* Lemma: g n is finite for all n.                                      *)
 (* ---------------------------------------------------------------------*)
 
 val g_finite =
@@ -3310,7 +3360,7 @@ val g_finite =
      INDUCT_TAC THEN ASM_REWRITE_TAC[FINITE_EMPTY,FINITE_INSERT]);
 
 (* ---------------------------------------------------------------------*)
-(* Lemma: g n is contained in g (n+i) for all i.			*)
+(* Lemma: g n is contained in g (n+i) for all i.                        *)
 (* ---------------------------------------------------------------------*)
 
 val g_subset =
@@ -3320,7 +3370,7 @@ val g_subset =
      ASM_REWRITE_TAC [ADD_CLAUSES,IN_INSERT]);
 
 (* ---------------------------------------------------------------------*)
-(* Lemma: if x is in g(n) then {x} = g(n+1)-g(n) for some n.		*)
+(* Lemma: if x is in g(n) then {x} = g(n+1)-g(n) for some n.            *)
 (* ---------------------------------------------------------------------*)
 
 val lemma =
@@ -3330,8 +3380,8 @@ val lemma =
 val g_cases =
     TAC_PROOF
     ((gdef, (“(!s. FINITE s ==> ?x:'a. ~(x IN s)) ==>
-    	      !x:'a. (?n. x IN (g n)) ==>
-	            (?m. (x IN (g (SUC m))) /\ ~(x IN (g m)))”)),
+              !x:'a. (?n. x IN (g n)) ==>
+                    (?m. (x IN (g (SUC m))) /\ ~(x IN (g m)))”)),
      DISCH_TAC THEN GEN_TAC THEN
      DISCH_THEN (STRIP_THM_THEN MP_TAC o
                  CONV_RULE numLib.EXISTS_LEAST_CONV) THEN
@@ -3349,7 +3399,7 @@ val g_cases =
       DISCH_THEN IMP_RES_TAC]);
 
 (* ---------------------------------------------------------------------*)
-(* Lemma: @x.~(x IN {}) is an element of every g(n+1).			*)
+(* Lemma: @x.~(x IN {}) is an element of every g(n+1).                  *)
 (* ---------------------------------------------------------------------*)
 
 val z_in_g1 =
@@ -3366,7 +3416,7 @@ val z_in_gn =
      REWRITE_TAC [ONE,z_in_g1]);
 
 (* ---------------------------------------------------------------------*)
-(* Lemma: @x. ~(x IN g n) is an element of g(n+1).			*)
+(* Lemma: @x. ~(x IN g n) is an element of g(n+1).                      *)
 (* ---------------------------------------------------------------------*)
 
 val in_lemma =
@@ -3375,14 +3425,14 @@ val in_lemma =
      ASM_REWRITE_TAC [IN_INSERT]);
 
 (* ---------------------------------------------------------------------*)
-(* Lemma: the x added to g(n+1) is not in g(n)				*)
+(* Lemma: the x added to g(n+1) is not in g(n)                          *)
 (* ---------------------------------------------------------------------*)
 
 val not_in_lemma =
     TAC_PROOF
     ((gdef, (“(!s. FINITE s ==>
                      ?x:'a. ~(x IN s)) ==>
-	             !i n. ~((@x:'a. ~(x IN (g (n+i)))) IN g n)”)),
+                     !i n. ~((@x:'a. ~(x IN (g (n+i)))) IN g n)”)),
      DISCH_TAC THEN INDUCT_TAC THENL
      [ASM_REWRITE_TAC [ADD_CLAUSES] THEN
       GEN_TAC THEN CONV_TAC SELECT_CONV THEN
@@ -3397,7 +3447,7 @@ val not_in_lemma =
       REPEAT STRIP_TAC THEN RES_TAC]);
 
 (* ---------------------------------------------------------------------*)
-(* Lemma: each value is added to a unique g(n).				*)
+(* Lemma: each value is added to a unique g(n).                         *)
 (* ---------------------------------------------------------------------*)
 
 val less_lemma = numLib.ARITH_PROVE ``!m n. ~(m = n) = ((m < n) \/ (n < m))``
@@ -3425,13 +3475,13 @@ val gn_unique = TAC_PROOF
       DISCH_THEN SUBST1_TAC THEN REFL_TAC]);
 
 (* ---------------------------------------------------------------------*)
-(* Lemma: the value added to g(n) to get g(n+1) is unique.		*)
+(* Lemma: the value added to g(n) to get g(n+1) is unique.              *)
 (* ---------------------------------------------------------------------*)
 
 val x_unique =
     TAC_PROOF
     ((gdef, (“!n. !x. !y:'a.
-	       (~(x IN g n) /\ ~(y IN g n))
+               (~(x IN g n) /\ ~(y IN g n))
                 ==> (x IN g(SUC n))
                 ==> (y IN g(SUC n))
                 ==> (x = y)”)),
@@ -3439,13 +3489,13 @@ val x_unique =
      REPEAT (DISCH_THEN SUBST1_TAC) THEN REFL_TAC);
 
 (* ---------------------------------------------------------------------*)
-(* Now, show the existence of a non-onto one-one fuction.  The required	*)
-(* function is denoted by fdef.  The theorem cases is:			*)
-(*									*)
-(*   |- (?n. x IN (g n)) \/ (!n. ~x IN (g n))				*)
-(*									*)
-(* and is used to do case splits on the condition of the conditional 	*)
-(* present in fdef.							*)
+(* Now, show the existence of a non-onto one-one fuction.  The required *)
+(* function is denoted by fdef.  The theorem cases is:                  *)
+(*                                                                      *)
+(*   |- (?n. x IN (g n)) \/ (!n. ~x IN (g n))                           *)
+(*                                                                      *)
+(* and is used to do case splits on the condition of the conditional    *)
+(* present in fdef.                                                     *)
 (* ---------------------------------------------------------------------*)
 
 val fdef = Term
@@ -3495,11 +3545,11 @@ val INF_IMP_INFINITY = TAC_PROOF(([],
 
 (* --------------------------------------------------------------------- *)
 (* We now also prove the converse, namely that if :'a satisfies an axiom *)
-(* of infinity then UNIV:'a set is INFINITE.			         *)
+(* of infinity then UNIV:'a set is INFINITE.                             *)
 (* --------------------------------------------------------------------- *)
 
 (* --------------------------------------------------------------------- *)
-(* First, a version of the primitive recursion theorem			 *)
+(* First, a version of the primitive recursion theorem                   *)
 (* --------------------------------------------------------------------- *)
 
 val prth =
@@ -3531,7 +3581,7 @@ val num_fn_thm = TAC_PROOF(([],
       REPEAT STRIP_TAC THEN RES_TAC THEN RES_TAC]);
 
 (* --------------------------------------------------------------------- *)
-(* Lemma: every finite set of numbers has an upper bound.		*)
+(* Lemma: every finite set of numbers has an upper bound.               *)
 (* --------------------------------------------------------------------- *)
 
 val finite_N_bounded =
@@ -3549,7 +3599,7 @@ val finite_N_bounded =
        end]]);
 
 (* --------------------------------------------------------------------- *)
-(* Lemma: the set UNIV:(num->bool) is infinite.				*)
+(* Lemma: the set UNIV:(num->bool) is infinite.                         *)
 (* --------------------------------------------------------------------- *)
 
 val N_lemma =
@@ -3563,7 +3613,7 @@ val N_lemma =
      REWRITE_TAC [NOT_LESS,LESS_OR_EQ,LESS_SUC_REFL]);
 
 (* --------------------------------------------------------------------- *)
-(* Lemma: if s is finite, f:num->'a is one-one, then ?n. f(n) not in s	*)
+(* Lemma: if s is finite, f:num->'a is one-one, then ?n. f(n) not in s  *)
 (* --------------------------------------------------------------------- *)
 
 val main_lemma =
@@ -3580,7 +3630,7 @@ val main_lemma =
      THEN FIRST_ASSUM ACCEPT_TAC);
 
 (* ---------------------------------------------------------------------*)
-(* Now show that we can always choose an element not in a finite set.	*)
+(* Now show that we can always choose an element not in a finite set.   *)
 (* ---------------------------------------------------------------------*)
 
 val INFINITY_IMP_INF =
@@ -3595,7 +3645,7 @@ val INFINITY_IMP_INF =
 
 
 (* ---------------------------------------------------------------------*)
-(* Finally, we can prove the desired theorem.				*)
+(* Finally, we can prove the desired theorem.                           *)
 (* ---------------------------------------------------------------------*)
 
 val INFINITE_UNIV =
@@ -3961,6 +4011,12 @@ val DISJOINT_COUNT = store_thm (* from util_prob *)
    >> Know `~(x':num = n)` >- DECIDE_TAC
    >> PROVE_TAC []);
 
+(* from probability/iterateTheory *)
+val FORALL_IN_BIGUNION = store_thm
+  ("FORALL_IN_BIGUNION",
+  ``!P s. (!x. x IN BIGUNION s ==> P x) <=> !t x. t IN s /\ x IN t ==> P x``,
+    REWRITE_TAC [IN_BIGUNION] THEN PROVE_TAC []);
+
 (* ----------------------------------------------------------------------
     BIGINTER (intersection of a set of sets)
    ---------------------------------------------------------------------- *)
@@ -3982,19 +4038,19 @@ val IN_BIGINTER_IMAGE = store_thm (* from util_prob *)
    >> PROVE_TAC []);
 
 val BIGINTER_INSERT = Q.store_thm
-("BIGINTER_INSERT",
+("BIGINTER_INSERT[simp]",
  `!P B. BIGINTER (P INSERT B) = P INTER BIGINTER B`,
   REPEAT GEN_TAC THEN CONV_TAC (REWR_CONV EXTENSION) THEN
   SIMP_TAC bool_ss [IN_BIGINTER, IN_INSERT, IN_INTER, DISJ_IMP_THM,
                     FORALL_AND_THM]);
 
 val BIGINTER_EMPTY = Q.store_thm
-("BIGINTER_EMPTY",
+("BIGINTER_EMPTY[simp]",
  `BIGINTER {} = UNIV`,
   REWRITE_TAC [EXTENSION, IN_BIGINTER, NOT_IN_EMPTY, IN_UNIV]);
 
 val BIGINTER_INTER = Q.store_thm
-("BIGINTER_INTER",
+("BIGINTER_INTER[simp]",
  `!P Q. BIGINTER {P; Q} = P INTER Q`,
   REWRITE_TAC [BIGINTER_EMPTY, BIGINTER_INSERT, INTER_UNIV]);
 
@@ -4020,7 +4076,8 @@ val DISJOINT_BIGINTER = Q.store_thm
 val BIGINTER_UNION = Q.store_thm
 ("BIGINTER_UNION",
  `!s1 s2. BIGINTER (s1 UNION s2) = BIGINTER s1 INTER BIGINTER s2`,
- SIMP_TAC bool_ss [IN_BIGINTER, IN_UNION, IN_INTER, EXTENSION] THEN PROVE_TAC []);
+ SIMP_TAC bool_ss [IN_BIGINTER, IN_UNION, IN_INTER, EXTENSION] THEN
+ PROVE_TAC []);
 
 val BIGINTER_SUBSET = store_thm (* from util_prob *)
   ("BIGINTER_SUBSET", ``!sp s. (!t. t IN s ==> t SUBSET sp)  /\ (~(s = {}))
@@ -4034,19 +4091,26 @@ val DIFF_BIGINTER1 = store_thm
     ``!sp s. sp DIFF (BIGINTER s) = BIGUNION (IMAGE (\u. sp DIFF u) s)``,
   (* SRW_TAC [] [EXTENSION] *)
   RW_TAC std_ss [EXTENSION, BIGINTER, BIGUNION, DIFF_DEF, IMAGE_DEF, IN_IMAGE,
-		 GSPECIFICATION, PAIR_EQ]
+                 GSPECIFICATION, PAIR_EQ]
   >> EQ_TAC >- METIS_TAC [IN_DIFF]
   >> RW_TAC std_ss []
   >> METIS_TAC []);
 
-val DIFF_BIGINTER = store_thm (* from util_prob *)
-   ("DIFF_BIGINTER", ``!sp s. (!t. t IN s ==> t SUBSET sp)  /\ (~(s = {}))
-         ==> ( BIGINTER s = sp DIFF (BIGUNION (IMAGE (\u. sp DIFF u) s)) )``,
+val DIFF_BIGINTER = store_thm( (* from util_prob *)
+  "DIFF_BIGINTER",
+  ``!sp s. (!t. t IN s ==> t SUBSET sp) /\ s <> {} ==>
+           (BIGINTER s = sp DIFF (BIGUNION (IMAGE (\u. sp DIFF u) s)))``,
   RW_TAC std_ss []
   >> `(BIGINTER s SUBSET sp)` by RW_TAC std_ss [BIGINTER_SUBSET]
   >> ASSUME_TAC (Q.SPECL [`sp`,`s`] DIFF_BIGINTER1)
-  >> `sp DIFF (sp DIFF (BIGINTER s)) = (BIGINTER s)` by RW_TAC std_ss [DIFF_DIFF_SUBSET]
+  >> `sp DIFF (sp DIFF (BIGINTER s)) = (BIGINTER s)`
+       by RW_TAC std_ss [DIFF_DIFF_SUBSET]
   >> METIS_TAC []);
+
+val FINITE_BIGINTER = Q.store_thm(
+  "FINITE_BIGINTER",
+  ‘(?s. s IN P /\ FINITE s) ==> FINITE (BIGINTER P)’,
+  simp[PULL_EXISTS, Once DECOMPOSITION, INTER_FINITE]);
 
 (* ====================================================================== *)
 (* Cross product of sets                                                  *)
@@ -4709,20 +4773,6 @@ val SUM_IMAGE_PERMUTES = store_thm(
   `INJ g s univ(:'a)` by METIS_TAC[INJ_SUBSET, SUBSET_REFL] THEN
   `SIGMA (f o g) s = SIGMA f (IMAGE g s)` by SRW_TAC[][SUM_IMAGE_INJ_o] THEN
   SRW_TAC[][]);
-
-
-(*---------------------------------------------------------------------------*)
-(* Support for Cases, Cases_on, Induct, and termination proofs               *)
-(*---------------------------------------------------------------------------*)
-
-val set_tyinfo = TypeBasePure.mk_nondatatype_info
-                      (``:'a set``,
-                       {nchotomy = SOME SET_CASES,
-                        induction = SOME FINITE_INDUCT,
-                        size=SOME(``\(x:'a->num) (y:'b). SUM_IMAGE x``,SUM_IMAGE_THM),
-                        encode=NONE});
-
-val _ = TypeBase.write [set_tyinfo];
 
 (*---------------------------------------------------------------------------*)
 (* SUM_SET sums the elements of a set of natural numbers                     *)
@@ -5918,12 +5968,12 @@ val COUNTABLE_ENUM = store_thm (* from util_prob *)
 
 val IMAGE_BIGUNION = store_thm ("IMAGE_BIGUNION",
   ``!f M. IMAGE f (BIGUNION M) =
-	  BIGUNION (IMAGE (IMAGE f) M)``,
+          BIGUNION (IMAGE (IMAGE f) M)``,
 
 ONCE_REWRITE_TAC [EXTENSION] THEN
 SIMP_TAC bool_ss [IN_BIGUNION, IN_IMAGE,
-	GSYM LEFT_EXISTS_AND_THM,
-	GSYM RIGHT_EXISTS_AND_THM] THEN
+        GSYM LEFT_EXISTS_AND_THM,
+        GSYM RIGHT_EXISTS_AND_THM] THEN
 METIS_TAC[]);
 
 
@@ -5948,7 +5998,7 @@ val PSUBSET_SING = store_thm ("PSUBSET_SING",
 ``!s x. x PSUBSET {s} = (x = EMPTY)``,
 
 SIMP_TAC bool_ss [PSUBSET_DEF, SUBSET_DEF, EXTENSION,
-		 IN_SING, NOT_IN_EMPTY] THEN
+                 IN_SING, NOT_IN_EMPTY] THEN
 METIS_TAC[]);
 
 
@@ -5979,23 +6029,13 @@ val DELETE_SUBSET_INSERT = store_thm ("DELETE_SUBSET_INSERT",
 
 
 val IN_INSERT_EXPAND = store_thm ("IN_INSERT_EXPAND",
-``!x y P. x IN y INSERT P =
-  (x = y) \/ (~(x = y) /\ x IN P)``,
-
-SIMP_TAC bool_ss [IN_INSERT] THEN
-METIS_TAC[]);
-
-
+  ``!x y P. x IN y INSERT P = (x = y) \/ x <> y /\ x IN P``,
+  SIMP_TAC bool_ss [IN_INSERT] THEN
+  METIS_TAC[]);
 
 val FINITE_INTER = store_thm ("FINITE_INTER",
-``!s1 s2. ((FINITE s1) \/ (FINITE s2)) ==>
-  FINITE (s1 INTER s2)``,
-
-REPEAT GEN_TAC THEN
-`((s1 INTER s2) SUBSET s1) /\ ((s1 INTER s2) SUBSET s2)` by (
-   SIMP_TAC bool_ss [SUBSET_DEF, IN_INTER]
-) THEN
-METIS_TAC[SUBSET_FINITE]);
+  ``!s1 s2. ((FINITE s1) \/ (FINITE s2)) ==> FINITE (s1 INTER s2)``,
+  METIS_TAC[INTER_COMM, INTER_FINITE]);
 (* END misc thms *)
 
 (*---------------------------------------------------------------------------*)
@@ -6174,12 +6214,59 @@ val IMAGE_PREIMAGE = store_thm (* from miller *)
 
 (* end PREIMAGE lemmas *)
 
+(* "<<=" is overloaded in listTheory, cardinalTheory and maybe others,
+   we put its Unicode and TeX definitions here to make sure by loading any of the
+   theories user could see the Unicode representations. *)
+
+val _ = set_fixity "<<=" (Infix(NONASSOC, 450));
+
+val _ = Unicode.unicode_version {u = UTF8.chr 0x227C, tmnm = "<<="};
+        (* in tex input mode in emacs, produce U+227C with \preceq *)
+        (* tempting to add a not-isprefix macro keyed to U+22E0 \npreceq, but
+           hard to know what the ASCII version should be.  *)
+
+val _ = TeX_notation {hol = "<<=",           TeX = ("\\HOLTokenIsPrefix{}",   1)};
+val _ = TeX_notation {hol = UTF8.chr 0x227C, TeX = ("\\HOLTokenIsPrefix{}",   1)};
+
+val is_measure_maximal_def = new_definition("is_measure_maximal_def",
+  “is_measure_maximal m s x <=> x IN s /\ !y. y IN s ==> m y <= m x”
+);
+
+val FINITE_is_measure_maximal = Q.store_thm(
+  "FINITE_is_measure_maximal",
+  ‘!s. FINITE s /\ s <> {} ==> ?x. is_measure_maximal m s x’,
+  ‘!s. FINITE s ==> s <> {} ==> ?x. is_measure_maximal m s x’
+    suffices_by METIS_TAC[] >>
+  Induct_on ‘FINITE’ >> simp[] >> rpt strip_tac >> Cases_on ‘s = {}’ >> simp[]
+  >- (Q.RENAME_TAC [‘{e}’] >> Q.EXISTS_TAC ‘e’ >>
+      simp[is_measure_maximal_def]) >>
+  fs[is_measure_maximal_def] >> Q.RENAME_TAC [‘m _ <= m e0’, ‘e NOTIN s’] >>
+  Cases_on ‘m e0 <= m e’
+  >- (Q.EXISTS_TAC ‘e’ >> SRW_TAC[][] >> simp[] >>
+      METIS_TAC[arithmeticTheory.LESS_EQ_TRANS]) >>
+  Q.EXISTS_TAC ‘e0’ >> simp[DISJ_IMP_THM]);
+
+val is_measure_maximal_SING = Q.store_thm(
+  "is_measure_maximal_SING[simp]",
+  ‘is_measure_maximal m {x} y <=> (y = x)’,
+  simp[is_measure_maximal_def, EQ_IMP_THM]);
+
+val is_measure_maximal_INSERT = Q.store_thm(
+  "is_measure_maximal_INSERT",
+  ‘!x s m e y.
+     x IN s /\ m e < m x ==>
+     (is_measure_maximal m (e INSERT s) y <=> is_measure_maximal m s y)’,
+  simp[is_measure_maximal_def] >> rpt strip_tac >> eq_tac >> SRW_TAC[][]
+  >- METIS_TAC[DECIDE “(x <= y /\ y < z ==> x < z) /\ ~(a < a)”]
+  >- METIS_TAC[DECIDE “x < y /\ y <= z ==> x <= z”]
+  >- METIS_TAC[]);
+
 val _ = export_rewrites
     [
      (* BIGUNION/BIGINTER theorems *)
      "IN_BIGINTER", "DISJOINT_BIGUNION",
      "BIGUNION_UNION", "BIGINTER_UNION",
-     "DISJOINT_BIGUNION", "BIGINTER_EMPTY", "BIGINTER_INSERT",
+     "DISJOINT_BIGUNION",
      (* cardinality theorems *)
      "CARD_DIFF", "CARD_EQ_0",
      "CARD_INTER_LESS_EQ", "CARD_DELETE", "CARD_DIFF",
@@ -6232,14 +6319,6 @@ in
        dprocs = [], filter = NONE, rewrs = []}
   val _ = BasicProvers.augment_srw_ss [SET_SPEC_ss]
 end
-
-val _ =
-  TypeBase.write
-   [TypeBasePure.mk_nondatatype_info
-     (alpha --> bool,
-      {nchotomy = SOME SET_CASES,
-       induction = SOME FINITE_INDUCT,
-       size = SOME (Parse.Term^`\(obsize:'a->num) (y:'b). pred_set$SUM_IMAGE (\x:'a. 1 + obsize x)^`, SUM_IMAGE_THM),
-       encode = NONE})];`
+`
 
 val _ = export_theory();

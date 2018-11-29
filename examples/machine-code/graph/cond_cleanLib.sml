@@ -1,12 +1,10 @@
-structure cond_cleanLib =
+structure cond_cleanLib :> cond_cleanLib =
 struct
 
 open HolKernel boolLib bossLib Parse;
-open listTheory wordsTheory pred_setTheory arithmeticTheory wordsLib pairTheory;
-open set_sepTheory progTheory helperLib addressTheory combinTheory;
-
-open backgroundLib syntaxLib file_readerLib derive_specsLib graph_specsLib;
-open GraphLangTheory writerLib;
+open helperLib backgroundLib syntaxLib file_readerLib derive_specsLib
+open graph_specsLib writerLib;
+open GraphLangTheory
 
 fun find_inst_for loc insts = let
   val pat = ``IMPL_INST code locs (Inst ^loc assert next)``

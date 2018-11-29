@@ -9,18 +9,6 @@ open regexpLib Interval;
 fun matcher q = #matchfn(regexpLib.matcher SML (Regexp_Type.fromQuote q));
 fun dom q = Regexp_Match.domBrz (Regexp_Type.fromQuote q);
 
-val _ = 
-let fun pp2polypp (ppfn: PP.ppstream -> 'a -> unit) =
-     let fun f pps x = Parse.respect_width_ref Globals.linewidth ppfn pps x
-                       handle e => Raise e
-     in
-       fn depth => fn printArgTypes => fn e:'a =>
-        PolyML.PrettyString (PP.pp_to_string (!Globals.linewidth) f e)
-     end
- in 
-   PolyML.addPrettyPrinter (pp2polypp Regexp_Type.pp_regexp)
- end;
-
 val test = matcher `foobar`;
  not (test "fo2b") 
  andalso (test "foobar")
@@ -208,8 +196,45 @@ val date_matcher = time matcher
   not (date_matcher "foo-bar-baz")
 ; 
 
-time matcher
+(*---------------------------------------------------------------------------*)
+(* Time-stamped data in JSON format                                          *)
+(*---------------------------------------------------------------------------*)
+
+val time_matcher = time matcher
   `\[\{"time":\d{13}(:\d{3})?,\w{1,20}:\{(\w{1,25}:\w{1,30},?)+\}\}\]`;
+
+time_matcher "[{\"time\":1234567890123:000,foo:{ted:teddy,sam:sammy}}]"
+  andalso 
+not (time_matcher "[{\"time\":1234567890123:000,foo:{ted:teddy,   sam:sammy}}]")
+  andalso
+time_matcher "[{\"time\":1234567890123,foo:{ted:teddy,sam:sammy}}]"
+  andalso
+time_matcher "[{\"time\":1234567890123,foo:{ted:teddy}}]";
+
+(*---------------------------------------------------------------------------*)
+(* UTF-8                                                                     *)
+(*   Binary    Hex          Comments                                         *)
+(*   0xxxxxxx  0x00..0x7F   Only byte of a 1-byte character encoding         *)
+(*   10xxxxxx  0x80..0xBF   Continuation bytes (1-3 continuation bytes)      *)
+(*   110xxxxx  0xC0..0xDF   First byte of a 2-byte character encoding        *)
+(*   1110xxxx  0xE0..0xEF   First byte of a 3-byte character encoding        *)
+(*   11110xxx  0xF0..0xF4   First byte of a 4-byte character encoding        *)
+(*                                                                           *)
+(* Since a 4-byte character has 5 header bits in the first byte and 3        *)
+(* "payload" bits, it seems as though the Hex range should be 0xF0..0xF7,    *)
+(* but there is a requirement to be compatible with UTF-16, which has        *)
+(* U+10FFFF as its highest codepoint, so the Hex range is actually           *)
+(* restricted to 0xF0..0xF4.                                                 *)
+(*                                                                           *)
+(* There are further requirements, e.g., characters need to be "minimally"   *)
+(* (or canonically) encoded. This is also known as the "overlong" encoding   *)
+(* issue. I am not yet sure whether this can be handled nicely with a regex. *)
+(*---------------------------------------------------------------------------*)
+
+val utf8_matcher =
+ time matcher
+  `([\000-\127]|[\192-\223][\128-\191]|[\224-\239][\128-\191][\128-\191]|[\240-\244][\128-\191][\128-\191][\128-\191])*`;
+
 
 (*---------------------------------------------------------------------------*)
 (* Test ranges over natural numbers                                          *)
@@ -410,42 +435,6 @@ val match_1802    = matcher `\i{0,9999,LSB}\i{0,3599,LSB}.{4}`;
 val test_1802_alt = matcher `\i{0,9999}\i{0,3599}\k{0}{4}`;
 val match_1803    = matcher `\i{0,12}\i{0,16}\i{0,999,LSB}\i{0,999,LSB}\i{0,999,LSB}`;
 
-(*
-fun prod [] l2 = []
-  | prod (h::t) l2 = map (strcat h) l2 @ prod t l2;
-
-fun PROD [] = []
-  | PROD [list] = list
-  | PROD (h::t) = prod h (PROD t);
-
-(*---------------------------------------------------------------------------*)
-(* 58 trillion strings to match exhaustively. Slightly unfeasible as written. *)
-(* Could be done one-at-a-time, I suppose.                                   *)
-(*---------------------------------------------------------------------------*)
-
-Lib.all (equal true)
- (map match_1800 
-   (PROD 
-     [map (int2string 1) (upto 1 31),
-      map (int2string 1) (upto 1 12),
-      map (int2string 1) (upto 0 99),
-      map (int2string 1) (upto 0 23),
-      map (int2string 1) (upto 0 59),
-      map (int2string 1) (upto 0 59),
-      map (int2string 2) (upto 0 17999)]));
-*)
-
-Lib.all (equal true)
- (map match_1800 
-   (PROD 
-     [map (int2string 1) (upto 1 10),
-      map (int2string 1) (upto 1 10),
-      map (int2string 1) (upto 0 9),
-      map (int2string 1) (upto 0 9),
-      map (int2string 1) (upto 0 9),
-      map (int2string 1) (upto 0 9),
-      map (int2string 2) (upto 0 9)]));
-
 val match_18xx_disjunctive = matcher 
  `\i{1,31}\i{1,12}\i{0,99}\i{0,23}\i{0,59}\i{0,59}\i{0,17999,LSB}|\i{~90,90}\i{0,59}\i{0,5999}\i{~180,180}\i{0,59}\i{0,5999}|\i{0,9999,LSB}\i{0,3599,LSB}|\i{0,12}\i{0,16}\i{0,999,LSB}\i{0,999,LSB}\i{0,999,LSB}`;
 
@@ -462,7 +451,7 @@ time matcher `\w{1,75}`;
 time matcher `\w{1,100}`;
 time matcher `\w{1,200}`;
 
-set_trace "regexp-compiler" 0;;
+set_trace "regexp-compiler" 0;
 
 dom `\w{20}`;
 dom `\w{50}`;
@@ -470,50 +459,38 @@ dom `\w{75}`;
 dom `\w{100}`;
 dom `\w{200}`;
 
-dom `\w{1,20}`;  (* 256: 0.02s ; 0.12s ; 128: 0.052s *)
-dom `\w{1,50}`;  (* 256: 0.14s ; 1.8s  ; 128: 0.73600s *)
-dom `\w{1,75}`;  (* 256: 0.37s ; 6.2s  ; 128: 2.784s *)
-dom `\w{1,100}`; (* 256: 0.72s ; 13.6s ; 128: 6.912s *)
-dom `\w{1,200}`; (* 256: 4.4s  ; 123s  ; 128: 62 s *)
-dom `\w{1,300}`; (* 256: 12.8s *)
-dom `\w{1,400}`; (* 256: 28.2s *)
-dom `\w{1,500}`; (* 256: 55.5ss *)
+dom `\w{1,20}`;  
+dom `\w{1,50}`;  
+dom `\w{1,75}`;  
+dom `\w{1,100}`; 
+dom `\w{1,200}`; 
+dom `\w{1,300}`; 
+dom `\w{1,400}`; 
+dom `\w{1,500}`; 
+
+(*---------------------------------------------------------------------------*)
+(* Other examples with dom                                                   *)
+(*---------------------------------------------------------------------------*)
+
+dom `(201\d|202[0-5])-([1-9]|1[0-2])-([1-9]|[1-2]\d|3[0-1]) (1?\d|2[0-3]):(\d|[1-5]\d):(\d|[1-5]\d)`;
+(* 0.25s; 24 states *)
+
+dom `\[\{"time":"\d{13}(:\d{3})?","\w{1,20}":\{("\w{1,25}":"\w{1,30}",?)+\}\}\]`;
+(* 119 states *)
 
 (*---------------------------------------------------------------------------*)
 (* packed intervals                                                          *)
 (*---------------------------------------------------------------------------*)
 
-map interval_bit_width [(0,63),(~32,31),(35,60),(~12,27)];
-
-val test = int_cat (int_cat (int_cat 63 6 31) 6 45) 6 ~1;
-
 matcher `\p{(~180,180)(0,59).{1}}`;
-
-matcher `\p{(0,63)(~32,31)(35,60)(~12,27)}`;
-
-matcher `\p{(0,1)(0,2)(0,3)(~1,1)}`
-
-map interval_bit_width [(0,1),(0,2),(0,3),(~1,1)];
-
-matcher `\p{(0,7)(0,1)(0,15)}`
-matcher `\p{(1,5)(0,1)(0,15)}`
+matcher `\p{(0,1)(0,2)(0,3).{1}(~1,1)}`;
+matcher `\p{(0,7)(0,1)(0,15)}`;
+matcher `\p{(1,5)(0,1)(0,15)}`;
 matcher `\p{(1,5)(0,1)(0,15)}\i{0,999}`;
 
 dom `\p{(0,5)(0,3)(3,5)}`;
-(* 0.002s. 1 byte needed *)
-
 dom `\p{(0,5)(0,63)(0,127)}`;  (* Weird regexp generated *)
-(* 7.5s. 2 bytes needed. 1 interval *)
-(* 8.5s. 2 bytes needed. 1 interval *)
-(* 8.7s. 2 bytes needed. 442371 intervals  (smallest total size) *)
-(* 0.52s. 2 bytes needed. 49152 elements; 3911 nodes in regexp *)
-(* 0.068s. ditto the rest *)
-
-dom `\p{(0,127)(0,63)(0,5)}`;    (* Another weird regexp generated *)
-(* 1.3s. 2 bytes. 8192 intervals *)
-(* 0.17s. 2 bytes. 192 intervals *)
-(* 0.29s. 2 bytes. 442944 intervals (smallest total size) *)
-(* 0.384s. 2 bytes needed. 49152 elements; 4035 nodes in regexp *)
+dom `\p{(0,127)(0,63)(0,5)}`;  (* Another weird regexp generated *)
 
 dom `\p{(0,360)(0,59).{1}}`;
 dom `\p{(0,360)(0,59)(1,1)}`;
@@ -521,42 +498,14 @@ dom `\p{(0,360).{1}(0,59)}`;
 dom `\p{.{1}(0,360)(0,59)}`;
 
 dom `\p{(~180,180)(0,59)(0,0)}`;
-(* 0.12s. 2 bytes needed. 361 intervals *)
-(* 0.08s. 2 bytes needed. 120 intervals *)
-(* 0.15s. 2 bytes needed. 195300 intervals (smallest total size) *)
-(* 0.039s. 2 bytes needed. 21660 elements; 2403 nodes in regexp *)
-
 dom `\p{(0,59)(~180,180).{1}}`;
-(* 3.4s. 2 bytes needed. 61 intervals *)
-(* 4.9s. 2 bytes needed. 61 intervals *)
-(* 3.5s. 2 bytes needed. 195,123 intervals (smallest total size) *)
-(* 0.012s. 2 bytes needed. 21660 elements;  2449 nodes in regexp *)
-
-dom `\p{(0,41)(0,127)(0,255)(0,0)(0,0)(0,0)}`;
-dom `\p{(0,41)(0,127)(0,255),(0,7)}`;
-dom `\p{(0,41)(0,127)(0,255).{3}}`;
-(* 12.2s. 3 bytes. 79464 intervals generated *)
-(* 11.5s. 5376 intervals *)
-(* 263s. 168 intervals *)
-(* 228s. 16,515,576 intervals (smallest total size) *)
-(* 5.1s. 1,376,256 elements; 161923 nodes in regexp *)
-
-dom `\p{(0,41)(0,42)(0,43)(0,48)}`;
-(* 56s. 3 bytes. 79464 intervals generated *)
-(* 113s 3 bytes. 26,080,059 intervals generated *)
-(* 34.3s. 3 bytes. 3,893,736 elements ;  2,216,899 nodes in regexp *)
-
-dom `\p{(0,63)(0,42)(0,63)(0,63)}`;
-(* 261s. 3 bytes, 11,272,192 elements in set, 33,993,813 nodes in regexp *)
-
-dom `(201\d|202[0-5])-([1-9]|1[0-2])-([1-9]|[1-2]\d|3[0-1]) (1?\d|2[0-3]):(\d|[1-5]\d):(\d|[1-5]\d)`;
-(* 0.25s; 24 states *)
-
-dom `\[\{"time":"\d{13}(:\d{3})?","\w{1,20}":\{("\w{1,25}":"\w{1,30}",?)+\}\}\]`;
-(* 119 states; 0.68s *)
 
 dom `\i{~90,90}\i{0,59}\i{0,5999}\p{(~180,180)(0,59).{1}}\i{0,5999}`;
-(* 14 states ; 0.46s *)
-(* 13 states ; 0.54s *)
-(* 0.27s. 195,300 intervals *)
-(* 0.17s. 21660 elements; 2403 nodes in regexp *)
+
+(* Following are expensive
+   matcher `\p{(0,63)(~32,31)(35,60)(~12,27)}`;
+   dom `\p{(0,41)(0,127)(0,255)(0,7)}`;
+   dom `\p{(0,41)(0,127)(0,255).{3}}`;
+   dom `\p{(0,41)(0,42)(0,43)(0,48)}`;
+   dom `\p{(0,63)(0,42)(0,63)(0,63)}`;
+*)

@@ -17,7 +17,7 @@ loadPath
  "../official-semantics" :: "../../path" :: !loadPath;
 map load
  ["pred_setLib","res_quanTools", "rich_listTheory", "pairLib","intLib",
-  "FinitePathTheory", "PathTheory", "UnclockedSemanticsTheory",
+  "FinitePSLPathTheory", "PSLPathTheory", "UnclockedSemanticsTheory",
   "SyntacticSugarTheory", "ClockedSemanticsTheory", "RewritesTheory",
   "RewritesPropertiesTheory","ProjectionTheory",
   "rich_listTheory", "res_quanLib", "res_quanTheory", "metisLib"];
@@ -26,7 +26,7 @@ open SyntaxTheory SyntacticSugarTheory
      RewritesPropertiesTheory ProjectionTheory pred_setLib res_quanTools
      arithmeticTheory listTheory rich_listTheory res_quanLib res_quanTheory
      ClockedSemanticsTheory pairLib pred_setTheory ModelTheory metisLib
-     FinitePathTheory PathTheory pairTheory;    (* Open after list theory for CONS_def *)
+     FinitePSLPathTheory PSLPathTheory pairTheory;    (* Open after list theory for CONS_def *)
 val _ = intLib.deprecate_int();
 quietdec := false;
 *)
@@ -44,8 +44,8 @@ open SyntaxTheory SyntacticSugarTheory
      pred_setLib pred_setTheory arithmeticTheory listTheory rich_listTheory
      res_quanLib pairLib res_quanTheory ModelTheory ClockedSemanticsTheory
      res_quanTools RewritesPropertiesTheory ProjectionTheory ModelTheory
-     metisLib FinitePathTheory pairTheory
-     PathTheory; (* Open after list theory for CONS_def *)
+     metisLib FinitePSLPathTheory pairTheory
+     PSLPathTheory; (* Open after list theory for CONS_def *)
 
 (******************************************************************************
 * Set default parsing to natural numbers rather than integers
@@ -60,6 +60,9 @@ val _ = intLib.deprecate_int();
 * Start a new theory called Lemmas
 ******************************************************************************)
 val _ = new_theory "ModelLemmas";
+
+val Know = Q_TAC KNOW_TAC;
+val Suff = Q_TAC SUFF_TAC;
 
 (*****************************************************************************)
 (* A simpset fragment to rewrite away quantifiers restricted with :: LESS    *)
@@ -551,7 +554,7 @@ val COMPUTATION_OPEN_MODEL_AUTOMATON =
                then FULL_SIMP_TAC list_ss [GSYM(MATCH_MP LENGTH1_LAST (el 1 thl))]
                else ALL_TAC)
       THEN TRY(ASSUM_LIST(fn thl => ASSUME_TAC(Q.SPEC `(P,s)` (el 2 thl))))
-      THEN METIS_TAC[SUBSET_REFL,FST,SND,LENGTH_LAST]);
+      THEN METIS_TAC[SUBSET_REFL,FST,SND,LENGTH_LAST,LENGTH1_LAST,EL]);
 
 val UF_VALID_OPEN_MODEL_AUTOMATON =
  store_thm
@@ -657,7 +660,8 @@ val LEMMA2 =
           [LENGTH_def,ELEM_FINITE,ELEM_INFINITE,LE,LS,SUB,GSYM EL,
            DECIDE ``~A \/ ~B \/ C = A /\ B ==> C``]
     THENL
-     [`!m. m < LENGTH l ==> (FST(EL m l) = FST(EL 0 l) + m)` by Induct
+     [ Know `!m. m < LENGTH l ==> (FST(EL m l) = FST(EL 0 l) + m)`
+       >- ( Induct >> fs [] ) >> DISCH_TAC
        THEN RW_TAC arith_ss []
        THEN Cases_on `LENGTH l <= 1`
        THEN RW_TAC arith_ss []
@@ -671,7 +675,7 @@ val LEMMA2 =
       RW_TAC std_ss [DECIDE``~A \/ B = A ==> B``]
        THEN CCONTR_TAC
        THEN FULL_SIMP_TAC std_ss []
-       THEN `!m. FST(f m) = FST(f 0) + m` by Induct
+       THEN Know `!m. FST(f m) = FST(f 0) + m` >- (Induct >> fs []) >> DISCH_TAC
        THEN RW_TAC arith_ss []
        THEN POP_ASSUM(ASSUME_TAC o AP_TERM ``SUC`` o Q.SPEC `LENGTH l`)
        THEN `SUC (FST (f (LENGTH l))) < LENGTH l` by PROVE_TAC[]
@@ -970,7 +974,7 @@ val FINITE_PATH_LANGUAGE_LEMMA =
            PATH_ADD_IOTA_def,CONS_def]
     THEN RW_TAC (srw_ss()) []
     THEN EQ_TAC
-    THEN RW_TAC list_ss []
+    THEN RW_TAC list_ss [] (* 9 subgoals *)
     THENL
      [Cases_on `n`
        THEN RW_TAC list_ss []
@@ -1051,7 +1055,9 @@ val FINITE_PATH_LANGUAGE_LEMMA =
       Cases_on `LENGTH l = 0`
        THEN RW_TAC list_ss []
        THEN FULL_SIMP_TAC list_ss []
-       THEN `LENGTH l - 1 < LENGTH l` by DECIDE_TAC
+       THEN Know `LENGTH l - 1 < LENGTH l`
+            >- (Suff `LENGTH l <> 0` >- DECIDE_TAC \\
+                METIS_TAC [LENGTH_EQ_NUM]) >> DISCH_TAC
        THEN RES_TAC
        THENL
         [`!a s.
@@ -1146,7 +1152,7 @@ val UF_SEM_FINITE_TOP_FREE_F_ALWAYS =
       !i. i < LENGTH l ==> B_SEM (EL i l) b)``,
    RW_TAC
     (list_ss++resq_SS)
-    [UF_SEM,B_SEM_def,UF_SEM_F_G,F_ALWAYS_def,FinitePathTheory.LENGTH_RESTN,LESSX_def,LS,
+    [UF_SEM,B_SEM_def,UF_SEM_F_G,F_ALWAYS_def,FinitePSLPathTheory.LENGTH_RESTN,LESSX_def,LS,
      ELEM_RESTN,ELEM_def,HEAD_def,REST_def,RESTN_FINITE,HD_RESTN,xnum_11,TOP_FREE_EL]
     THEN EQ_TAC
     THEN RW_TAC list_ss []
@@ -1162,7 +1168,7 @@ val UF_SEM_FINITE_F_ALWAYS =
           ?j. j < i /\ (EL j l = TOP) /\ ~(LENGTH l = j)``,
    RW_TAC
     (list_ss++resq_SS)
-    [UF_SEM,B_SEM_def,UF_SEM_F_G,F_ALWAYS_def,FinitePathTheory.LENGTH_RESTN,LESSX_def,LS,
+    [UF_SEM,B_SEM_def,UF_SEM_F_G,F_ALWAYS_def,FinitePSLPathTheory.LENGTH_RESTN,LESSX_def,LS,
      ELEM_RESTN,ELEM_def,HEAD_def,REST_def,RESTN_FINITE,HD_RESTN,xnum_11,TOP_FREE_EL]
     THEN EQ_TAC
     THEN RW_TAC list_ss []);
@@ -1293,7 +1299,7 @@ val RESTN_MAP_PATH =
     THEN Q.UNDISCH_TAC `n < LENGTH l`
     THEN Q.SPEC_TAC(`l`,`l`)
     THEN Induct_on `n`
-    THEN RW_TAC list_ss [FinitePathTheory.RESTN_def,FinitePathTheory.REST_def]
+    THEN RW_TAC list_ss [FinitePSLPathTheory.RESTN_def,FinitePSLPathTheory.REST_def]
     THEN `~(LENGTH l = 0)` by DECIDE_TAC
     THEN `~(l = [])` by PROVE_TAC[LENGTH_NIL]
     THEN RW_TAC list_ss [TL_MAP]
@@ -1474,7 +1480,7 @@ val OPEN_MODEL_PROD_INFINITE =
      THEN ASSUM_LIST
            (fn thl => ASSUME_TAC
                        (SPECL
-                         [``INFINITE(\n. (pi(FST(pi' n)), t''' n)):(('a -> bool) # 'b) path``,
+                         [``INFINITE(\n. (pi(FST((pi' :num -> num # 'b) n)), t''' n)):(('a -> bool) # 'b) path``,
                           ``(pi:num -> 'a -> bool 0,t):('a -> bool) # 'b``]
                          (el 9 thl)))
      THEN `PATH

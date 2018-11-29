@@ -20,8 +20,8 @@ local
   val ty_g = Parse.type_grammar ()
 in
   val term_to_string =
-        Portable.pp_to_string 70
-          (term_pp.pp_term tm_g ty_g PPBackEnd.raw_terminal)
+        PP.pp_to_string 70
+          (Parse.mlower o term_pp.pp_term tm_g ty_g PPBackEnd.raw_terminal)
 end
 
 (* ------------------------------------------------------------------------- *)

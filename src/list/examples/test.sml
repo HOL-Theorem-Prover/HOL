@@ -153,7 +153,7 @@ val LEFT_ID_ADD_0 = TAC_PROOF(([],    --`LEFT_ID $+ 0`--),
 
 val MONOID_ADD_0 = TAC_PROOF(([],  --`MONOID $+ 0`--),
     REWRITE_TAC[MONOID_DEF,ASSOC_ADD,
-    	LEFT_ID_ADD_0,RIGHT_ID_ADD_0]);
+        LEFT_ID_ADD_0,RIGHT_ID_ADD_0]);
 
 
 set_list_thm_database

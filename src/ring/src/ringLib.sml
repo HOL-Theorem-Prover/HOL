@@ -10,8 +10,8 @@ open HolKernel Parse boolLib ternaryComparisonsTheory quoteTheory quote
 
 fun RING_ERR function message =
     HOL_ERR{origin_structure = "ringLib",
-		      origin_function = function,
-		      message = message};
+                      origin_function = function,
+                      message = message};
 
 
 (* reify ring expressions: building a signature, which is the correspondence
@@ -80,57 +80,57 @@ fun is_ring_thm th =
 fun import_ring name th =
   let val ring = rand (concl th)
       val { ics_aux_def, interp_cs_def, interp_m_def, interp_vl_def,
-	    ivl_aux_def, interp_p_def,
-	    canonical_sum_merge_def, monom_insert_def,
-	    varlist_insert_def, canonical_sum_scalar_def,
-	    canonical_sum_scalar2_def, canonical_sum_scalar3_def,
-	    canonical_sum_prod_def, canonical_sum_simplify_def,
-	    polynom_normalize_def, polynom_simplify_def,
-	    polynom_simplify_ok,... } =
-	ringNormTheory.IMPORT
-	  { Vals = [ring],
-	    Inst = [th],
-	    Rule = REWRITE_RULE[ringTheory.ring_accessors ],
-	    Rename = fn s => SOME(name^"_"^s) }
+            ivl_aux_def, interp_p_def,
+            canonical_sum_merge_def, monom_insert_def,
+            varlist_insert_def, canonical_sum_scalar_def,
+            canonical_sum_scalar2_def, canonical_sum_scalar3_def,
+            canonical_sum_prod_def, canonical_sum_simplify_def,
+            polynom_normalize_def, polynom_simplify_def,
+            polynom_simplify_ok,... } =
+        ringNormTheory.IMPORT
+          { Vals = [ring],
+            Inst = [th],
+            Rule = REWRITE_RULE[ringTheory.ring_accessors ],
+            Rename = fn s => SOME(name^"_"^s) }
   in LIST_CONJ
     [ th,
       GSYM polynom_simplify_ok,
       LIST_CONJ [ interp_p_def, varmap_find_def ],
       LIST_CONJ
-       	[ canonical_sum_merge_def, monom_insert_def,
-	  varlist_insert_def, canonical_sum_scalar_def,
-	  canonical_sum_scalar2_def, canonical_sum_scalar3_def,
-	  canonical_sum_prod_def, canonical_sum_simplify_def,
-	  ivl_aux_def, interp_vl_def, interp_m_def, ics_aux_def, interp_cs_def,
-	  polynom_normalize_def, polynom_simplify_def ] ]
+        [ canonical_sum_merge_def, monom_insert_def,
+          varlist_insert_def, canonical_sum_scalar_def,
+          canonical_sum_scalar2_def, canonical_sum_scalar3_def,
+          canonical_sum_prod_def, canonical_sum_simplify_def,
+          ivl_aux_def, interp_vl_def, interp_m_def, ics_aux_def, interp_cs_def,
+          polynom_normalize_def, polynom_simplify_def ] ]
   end;
 
 fun import_semi_ring name th =
   let val sring = rand (concl th)
       val { ics_aux_def, interp_cs_def, interp_m_def, interp_vl_def,
-	    ivl_aux_def, interp_sp_def,
-	    canonical_sum_merge_def, monom_insert_def,
-	    varlist_insert_def, canonical_sum_scalar_def,
-	    canonical_sum_scalar2_def, canonical_sum_scalar3_def,
-	    canonical_sum_prod_def, canonical_sum_simplify_def,
-	    spolynom_normalize_def, spolynom_simplify_def,
-	    spolynomial_simplify_ok, ... } =
-	canonicalTheory.IMPORT
-	  { Vals = [sring],
-	    Inst = [th],
-	    Rule = REWRITE_RULE[semi_ringTheory.semi_ring_accessors ],
-	    Rename = fn s => SOME(name^"_"^s) }
+            ivl_aux_def, interp_sp_def,
+            canonical_sum_merge_def, monom_insert_def,
+            varlist_insert_def, canonical_sum_scalar_def,
+            canonical_sum_scalar2_def, canonical_sum_scalar3_def,
+            canonical_sum_prod_def, canonical_sum_simplify_def,
+            spolynom_normalize_def, spolynom_simplify_def,
+            spolynomial_simplify_ok, ... } =
+        canonicalTheory.IMPORT
+          { Vals = [sring],
+            Inst = [th],
+            Rule = REWRITE_RULE[semi_ringTheory.semi_ring_accessors ],
+            Rename = fn s => SOME(name^"_"^s) }
   in LIST_CONJ
     [ th,
       GSYM spolynomial_simplify_ok,
       LIST_CONJ [ interp_sp_def, varmap_find_def ],
       LIST_CONJ
-       	[ canonical_sum_merge_def, monom_insert_def,
-	  varlist_insert_def, canonical_sum_scalar_def,
-	  canonical_sum_scalar2_def, canonical_sum_scalar3_def,
-	  canonical_sum_prod_def, canonical_sum_simplify_def,
-	  ivl_aux_def, interp_vl_def, interp_m_def, ics_aux_def, interp_cs_def,
-	  spolynom_normalize_def, spolynom_simplify_def ] ]
+        [ canonical_sum_merge_def, monom_insert_def,
+          varlist_insert_def, canonical_sum_scalar_def,
+          canonical_sum_scalar2_def, canonical_sum_scalar3_def,
+          canonical_sum_prod_def, canonical_sum_simplify_def,
+          ivl_aux_def, interp_vl_def, interp_m_def, ics_aux_def, interp_cs_def,
+          spolynom_normalize_def, spolynom_simplify_def ] ]
   end;
 
 fun mk_ring_thm nm th =
@@ -156,10 +156,10 @@ fun dest_ring_thm thm =
   (case CONJ_LIST 4 thm of
     [th1,th2,th3,th4] =>
       let val ring = rand (concl th1)
-   	  val ty = find_type th2
-      	  val sign =
-	    if is_ring_thm th1 then polynom_sign ty ring
-	    else spolynom_sign ty ring in
+          val ty = find_type th2
+          val sign =
+            if is_ring_thm th1 then polynom_sign ty ring
+            else spolynom_sign ty ring in
       {Ty=ty,OpSign=sign,SoundThm=th2,LhsThm=th3,RhsThm=th4}
       end
   | _ => raise RING_ERR "" "")
@@ -195,9 +195,10 @@ fun binop_eq ty =
 
 (* Ring Database *)
 type convs = { NormConv : conv, EqConv : conv,
- 	       Reify : term list -> {Metamap : term, Poly : term list} }
+               Reify : term list -> {Metamap : term, Poly : term list} }
 
-val no_such_ring = RING_ERR "" "No ring declared on that type"
+fun no_such_ring f ty =
+  RING_ERR f ("No ring declared on type "^Parse.type_to_string ty)
 
 val rings =
   ref (Redblackmap.mkDict Type.compare) : (hol_type, convs) Redblackmap.dict ref;
@@ -205,18 +206,26 @@ val rings =
 fun add_ring ty rng =
   rings := Redblackmap.insert (!rings, ty,rng);
 
-fun RING_NORM_CONV tm = #NormConv (Redblackmap.find (!rings, type_of tm)) tm;
-fun RING_CONV tm      = #EqConv (Redblackmap.find (!rings, #3 (dest_eq_ty tm))) tm;
-fun reify tml         = #Reify (Redblackmap.find (!rings, type_of (hd tml))) tml;
+fun find_apply nm (isel : convs -> ('a -> 'b)) tysel (x:'a) =
+  let
+    val ty = tysel x
+    val r = Redblackmap.find(!rings, ty)
+      handle Redblackmap.NotFound => raise no_such_ring nm ty
+  in
+    isel r x
+  end
 
+val RING_NORM_CONV = find_apply "RING_NORM_CONV" #NormConv type_of
+val RING_CONV      = find_apply "RING_CONV" #EqConv (#3 o dest_eq_ty)
+val reify          = find_apply "reify" #Reify (type_of o hd)
 
 fun declare_ring {RingThm,IsConst,Rewrites} =
   let val {Ty,OpSign,SoundThm,LhsThm,RhsThm} = dest_ring_thm RingThm
       val reify_fun = meta_expr Ty IsConst OpSign
       val (lhs_rws,rhs_rws) =
- 	comp_rws Rewrites (CONJUNCTS LhsThm) (CONJUNCTS RhsThm)
+        comp_rws Rewrites (CONJUNCTS LhsThm) (CONJUNCTS RhsThm)
       val simp_rule =
-	CONV_RULE(CBV_CONV lhs_rws THENC RAND_CONV (CBV_CONV rhs_rws))
+        CONV_RULE(CBV_CONV lhs_rws THENC RAND_CONV (CBV_CONV rhs_rws))
       val mk_eq = binop_eq Ty
 
       fun norm_conv t =
@@ -224,20 +233,20 @@ fun declare_ring {RingThm,IsConst,Rewrites} =
                               of {Metamap,Poly=[p]} => (Metamap, p)
                                | _ => raise Match
             val thm = SPECL[Metamap,p] SoundThm
-  	in simp_rule thm
-  	end
+        in simp_rule thm
+        end
         handle HOL_ERR _ => raise RING_ERR "norm_conv" ""
 
       fun eq_conv t =
-  	let val (lhs,rhs) = dest_eq t
+        let val (lhs,rhs) = dest_eq t
             val (Metamap,p1,p2) = case reify_fun [lhs,rhs]
                                   of {Metamap,Poly=[p1,p2]} => (Metamap,p1,p2)
                                    | _ => raise Match
-	    val mthm = SPEC Metamap SoundThm
+            val mthm = SPEC Metamap SoundThm
             val th1 = simp_rule (SPEC p1 mthm)
             val th2 = simp_rule (SPEC p2 mthm)
-  	in mk_eq th1 th2
-	end
+        in mk_eq th1 th2
+        end
         handle HOL_ERR _ => raise RING_ERR "eq_conv" ""
 
   in add_ring Ty { NormConv=norm_conv, EqConv=eq_conv, Reify=reify_fun }

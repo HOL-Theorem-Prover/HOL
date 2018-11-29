@@ -79,7 +79,7 @@ fun CoreDPLL initial_th = let (* [ci] |- cnf *)
           (case recurse r of
                Unsat r_false =>
                Unsat (DISJ_CASES (SPEC v BOOL_CASES_AX) l_false r_false)
-	       (* [assignsr\v,assignsl\v,ci] |- F *)
+               (* [assignsr\v,assignsl\v,ci] |- F *)
             | x => x)
         | x => x
       end
@@ -90,28 +90,28 @@ end
 
 fun doCNF neg_tm =  (* clauses is (ci,[~t] |- ci') pairs, where ci' is expanded ci *)
     let val (cnfv,vc,lfn,clauseth) = to_cnf false neg_tm
-	val clauses = Array.foldr (fn ((c,th),l) => (c,th)::l) [] clauseth
-	val cnf_thm = List.foldl (fn ((c,_),cnf) => CONJ (ASSUME c) cnf)(*[ci] |- cnf*)
-				  (ASSUME (fst (hd clauses))) (tl clauses)
+        val clauses = Array.foldr (fn ((c,th),l) => (c,th)::l) [] clauseth
+        val cnf_thm = List.foldl (fn ((c,_),cnf) => CONJ (ASSUME c) cnf)(*[ci] |- cnf*)
+                                  (ASSUME (fst (hd clauses))) (tl clauses)
     in (cnfv,cnf_thm,lfn,clauses) end
 
 fun undoCNF lfn clauses th = (* th is [ci] |-  F *)
     let val insts = RBM.foldl (fn (v,t,insts) => (v |-> t)::insts) [] lfn
-	val inst_th = INST insts th
-	val th0 = List.foldl (fn ((_,cth),th) => PROVE_HYP cth th) inst_th clauses (* ~t |- F *)
+        val inst_th = INST insts th
+        val th0 = List.foldl (fn ((_,cth),th) => PROVE_HYP cth th) inst_th clauses (* ~t |- F *)
     in th0 end
 
 fun mk_model_thm cnfv lfn t f =
     if isSome cnfv then let
-	    val fvs = List.map fst (RBM.listItems lfn)
-	    val model = List.map (fn v => if is_T (f v) then v else mk_neg v) fvs
-	    val model2 = mapfilter (fn l => let val x = hd(free_vars l)
-						val y = rbapply lfn x
-					    in if is_var y then subst [x|->y] l
-					       else failwith"" end) model
-	in satCheck model2 (mk_neg t) end else
+            val fvs = List.map fst (RBM.listItems lfn)
+            val model = List.map (fn v => if is_T (f v) then v else mk_neg v) fvs
+            val model2 = mapfilter (fn l => let val x = hd(free_vars l)
+                                                val y = rbapply lfn x
+                                            in if is_var y then subst [x|->y] l
+                                               else failwith"" end) model
+        in satCheck model2 (mk_neg t) end else
     let val fvs = free_vars t
-	val model = List.map (fn v => if is_T (f v) then v else mk_neg v) fvs
+        val model = List.map (fn v => if is_T (f v) then v else mk_neg v) fvs
     in satCheck model (mk_neg t) end
 
 fun DPLL_TAUT t = let

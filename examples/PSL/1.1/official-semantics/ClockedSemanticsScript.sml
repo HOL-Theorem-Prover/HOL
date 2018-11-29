@@ -16,7 +16,7 @@
 quietdec := true;
 map load
  ["SyntaxTheory","UnclockedSemanticsTheory"];
-open SyntaxTheory PathTheory ModelTheory UnclockedSemanticsTheory;
+open SyntaxTheory PSLPathTheory ModelTheory UnclockedSemanticsTheory;
 quietdec := false;
 *)
 
@@ -28,7 +28,7 @@ open HolKernel Parse boolLib bossLib;
 (******************************************************************************
 * Open theories of sequences and lists
 ******************************************************************************)
-open SyntaxTheory PathTheory ModelTheory UnclockedSemanticsTheory;
+open SyntaxTheory PSLPathTheory ModelTheory UnclockedSemanticsTheory;
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
@@ -100,16 +100,16 @@ val S_SEM_REPEAT =
      THEN RW_TAC std_ss [S_SEM_def]
      THENL
       [Q.EXISTS_TAC `[]`
-        THEN RW_TAC list_ss [FinitePathTheory.CONCAT_def],
+        THEN RW_TAC list_ss [FinitePSLPathTheory.CONCAT_def],
        EQ_TAC
         THEN RW_TAC list_ss []
         THENL
          [Cases_on `vlist`
-           THEN FULL_SIMP_TAC list_ss [FinitePathTheory.CONCAT_def]
+           THEN FULL_SIMP_TAC list_ss [FinitePSLPathTheory.CONCAT_def]
            THEN Q.EXISTS_TAC `h'` THEN Q.EXISTS_TAC `CONCAT t`
            THEN PROVE_TAC[],
           Q.EXISTS_TAC `v1::vlist`
-           THEN RW_TAC list_ss [FinitePathTheory.CONCAT_def]]]);
+           THEN RW_TAC list_ss [FinitePSLPathTheory.CONCAT_def]]]);
 
 
 (******************************************************************************

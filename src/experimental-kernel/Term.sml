@@ -116,11 +116,6 @@ fun same_const t1 t2 =
 
 (* constructors - variables *)
 val mk_var = Var
-fun mk_primed_var (Name,Ty) =
-  let val next = Lexis.nameStrm Name
-      fun spin s = if inST s then spin (next()) else s
-  in mk_var(spin Name, Ty)
-  end;
 
 local val genvar_prefix = "%%genvar%%"
       fun num2name i = genvar_prefix^Lib.int_to_string i
@@ -497,9 +492,7 @@ let vsubst =
 *)
 
 fun set_name_variant nmset n = let
-  val next = Lexis.nameStrm n
-  fun loop n = if HOLset.member(nmset, n) then loop (next())
-               else n
+  fun loop n = if HOLset.member(nmset, n) then loop (n ^ "'") else n
 in
   loop n
 end
@@ -833,13 +826,10 @@ fun gen_variant P caller =
   let fun var_name _ (Var(Name,_)) = Name
         | var_name caller _ = raise ERR caller "not a variable"
       fun vary vlist (Var(Name,Ty)) =
-          let val next = Lexis.nameStrm Name
-              val L = map (var_name caller) vlist
-              fun away s = if mem s L then away (next()) else s
-              fun loop name =
-                 let val s = away name
-                 in if P s then loop (next()) else s
-                 end
+          let val L = map (var_name caller) vlist
+              fun loop s =
+                  if mem s L orelse P s then loop (s ^ "'")
+                  else s
           in mk_var(loop Name, Ty)
           end
         | vary _ _ = raise ERR caller "2nd argument should be a variable"
@@ -848,6 +838,24 @@ fun gen_variant P caller =
 
 val variant      = gen_variant inST "variant"
 val prim_variant = gen_variant (K false) "prim_variant";
+
+fun numvariant avoids (Var(Name,Ty)) =
+    let
+      fun var_name (Var(Name,_)) = Name
+        | var_name _ =
+             raise ERR "numvariant" "Avoids list contains non-variable"
+      val nms = map var_name avoids
+      fun vary s = let val s' = Lexis.tmvar_vary s
+                   in
+                     if inST s' then vary s' else s'
+                   end
+    in
+      mk_var(Lexis.gen_variant vary nms Name, Ty)
+    end
+  | numvariant _ _ =
+      raise ERR "numvariant" "2nd argument should be a variable"
+
+fun mk_primed_var p = gen_variant inST "mk_primed_var" [] (mk_var p)
 
 
 (* In the name-carrying implementation this operation is no longer constant
@@ -937,7 +945,7 @@ fun RM patobs (theta0 as (tminfo, tyS)) =
           end
         | (Const(c1, ty1), Const(c2, ty2)) =>
           if c1 <> c2 then MERR ("Different constants: "^c2string c1^" and "^
-				 c2string c2)
+                                 c2string c2)
           else RM rest (tminfo, Type.raw_match_type ty1 ty2 tyS)
         | (App(f1, x1), App(f2, x2)) =>
           RM (TMP (f1, f2) :: TMP (x1, x2) :: rest) theta0

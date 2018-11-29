@@ -1,35 +1,27 @@
 TacticToe is a tactic-based prover.
 
-It explores proof trees by repeatly selecting tactics that are
-appropriate to solve the current goal.
-The selection is performed on a dataset of recorded human tactics.
+It searches for a proof by repeatedly applying suitable tactics for each goal state that it produces. 
 
+RECORDING: 
+  
+  load "tttUnfold"; open tttUnfold;
+  load "fooTheory";
+  ttt_record (); (* takes a long time (2-12h) *)
 
-USAGE: 
-  See more examples in examples/ttt_demoScript.sml.
- 
-  load "tacticToe";
-  open tacticToe;
-  load "arithmeticTheory"; (* change arithmetic to the theory of your choice *)
-  ttt_record (); (* takes a while *)
+USAGE: (after RECORDING) 
+  load "tacticToe"; open tacticToe;
   tactictoe ``1+1=2``;
+  
+  See more examples in examples/ttt_demoScript.sml.
 
-
-EVALUATION of a theory (not needed to use TacticToe):
-  Evaluates how much tactictoe can automatically re-prove 
-  from previous definitions.
-  The result is stored in src/tactictoe/search_log/proof/your.
-
-  load "tacticToe";
-  open tacticToe;
-  load "yourTheory";
-  ttt_record (); (* takes a while *)
-  ttt_eval_thy "your";
-
-
-ISSUES:
-  Applying numSimps.clear_arith_caches is necessary in rare circumstances.
-
+EVALUATION of a theory (after RECORDING): To appear.
 
 NOTES FOR DEVELOPERS:
-  Keep up-to-date: infix tokens in hhsInfix.sml, polyml values in hhsUnfold.sml.
+  Keep up-to-date: 
+    infix tokens in hhsInfix.sml, polyml values in tttUnfold.sml.
+  Issue: 
+   1) Arith.clean cache: not sure if fixed yet or not.
+   2) (Metis/or some other mechanism) seems to remembers when it is terminated, 
+      so the subsequent call with the same input may not work:
+      fixed by raising the tactic timeout from 2.0 to 20.0 seconds.
+         

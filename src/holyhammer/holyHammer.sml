@@ -11,278 +11,272 @@
 structure holyHammer :> holyHammer =
 struct
 
-open HolKernel boolLib hhWriter hhReconstruct tttTools tttExec tttFeature tttPredict
+open HolKernel boolLib Thread aiLib smlExecute smlRedirect
+  mlFeature mlThmData mlTacticData mlNearestNeighbor
+  hhReconstruct hhTranslate hhTptp
 
 val ERR = mk_HOL_ERR "holyHammer"
+val debugdir = HOLDIR ^ "/src/holyhammer/debug"
+fun debug s = debug_in_dir debugdir "holyHammer" s
 
-fun cmd_in_dir dir cmd = OS.Process.system ("cd " ^ dir ^ "; " ^ cmd)
-
-(*---------------------------------------------------------------------------
-   Caching of the dictionnaries. Makes subsequent call of holyhammer in
-   the same theory faster. Not to be used for parallel calls.
- ----------------------------------------------------------------------------*)
-
-val dict_cache = ref (dempty (list_compare String.compare))
-fun clean_cache () = dict_cache := dempty (list_compare String.compare)
-
-(*---------------------------------------------------------------------------
+(* -------------------------------------------------------------------------
    Settings
- ----------------------------------------------------------------------------*)
+   ------------------------------------------------------------------------- *)
 
-datatype prover = Eprover | Z3 | Satallax
+val timeout_glob = ref 10
+fun set_timeout n = timeout_glob := n
+
+(* -------------------------------------------------------------------------
+   ATPs
+   ------------------------------------------------------------------------- *)
+
+datatype prover = Eprover | Z3 | Vampire
 fun name_of atp = case atp of
     Eprover => "eprover"
   | Z3 => "z3"
-  | Satallax => "satallax"
+  | Vampire => "vampire"
 
-val timeout_glob = ref 5
-fun set_timeout n = timeout_glob := n
+fun npremises_of atp = case atp of
+    Eprover => 128
+  | Z3 => 32
+  | Vampire => 96
 
-(*---------------------------------------------------------------------------
+(* atps called by holyhammer if their binary exists *)
+val all_atps = ref [Eprover,Z3,Vampire]
+
+(* -------------------------------------------------------------------------
    Directories
- ----------------------------------------------------------------------------*)
+   ------------------------------------------------------------------------- *)
 
-fun all_files dir =
+fun pathl sl = case sl of
+    []  => raise ERR "pathl" "empty"
+  | [a] => a
+  | a :: m => OS.Path.concat (a, pathl m)
+
+val hh_dir         = pathl [HOLDIR,"src","holyhammer"];
+
+val provbin_dir    = pathl [hh_dir,"provers"];
+fun provdir_of atp = pathl [provbin_dir, name_of atp ^ "_files"]
+val parallel_dir   = pathl [provbin_dir,"eprover_parallel"];
+
+fun out_of atp     = pathl [provdir_of atp,"out"]
+fun status_of atp  = pathl [provdir_of atp,"status"]
+fun out_dir dir    = pathl [dir,"out"]
+fun status_dir dir = pathl [dir,"status"]
+
+(* -------------------------------------------------------------------------
+   Evaluation log
+   ------------------------------------------------------------------------- *)
+
+val hh_eval_dir    = pathl [hh_dir,"eval"];
+val eval_flag = ref false
+val eval_thy = ref "scratch"
+fun log_eval s =
+  if !eval_flag then
+    let val file = hh_eval_dir ^ "/" ^ (!eval_thy) in
+      mkDir_err hh_eval_dir;
+      append_endline file s
+    end
+  else ()
+
+(* -------------------------------------------------------------------------
+   Run functions in parallel and terminate as soon as one returned a
+   positive result in parallel_result.
+   ------------------------------------------------------------------------- *)
+
+val (parallel_result : string list option ref) = ref NONE
+
+fun close_thread thread =
+  if Thread.isActive thread
+  then (Thread.interrupt thread;
+        if Thread.isActive thread then Thread.kill thread else ())
+  else ()
+
+fun parallel_call t fl =
   let
-    val stream = OS.FileSys.openDir dir
-    fun loop acc stream =
-      case OS.FileSys.readDir stream of
-        NONE => acc
-      | SOME s => loop (s :: acc) stream
-    val l = loop [] stream
+    val _ = parallel_result := NONE
+    fun rec_fork f = Thread.fork (fn () => f (), [])
+    val threadl = map rec_fork fl
+    val rt = Timer.startRealTimer ()
+    fun loop () =
+      (
+      OS.Process.sleep (Time.fromReal 0.01);
+      if isSome (!parallel_result) orelse
+         not (exists Thread.isActive threadl) orelse
+         Timer.checkRealTimer rt  > Time.fromReal t
+      then (app close_thread threadl; !parallel_result)
+      else loop ()
+      )
   in
-    OS.FileSys.closeDir stream;
-    l
+    loop ()
   end
 
-fun clean_dir dir =
+(* -------------------------------------------------------------------------
+   Launch an ATP
+   ------------------------------------------------------------------------- *)
+
+val atp_ref = ref ""
+
+fun launch_atp dir atp t =
   let
-    val _ = OS.FileSys.mkDir dir handle _ => ()
-    val l0 = all_files dir
-    val l1 = map (fn x => OS.Path.concat (dir,x)) l0
+    val cmd = "sh " ^ name_of atp ^ ".sh " ^ int_to_string t ^ " " ^
+      dir ^ " > /dev/null 2> /dev/null"
+    val _ = cmd_in_dir provbin_dir cmd
+    val r = get_lemmas (status_of atp, out_of atp)
   in
-    app OS.FileSys.remove l1
-  end
-
-val hh_dir = HOLDIR ^ "/src/holyhammer"
-val hh_bin_dir = hh_dir ^ "/hh"
-val provbin_dir = hh_dir ^ "/provers"
-
-fun probdir_of atp = hh_dir ^ "/problem_" ^ name_of atp
-fun provdir_of atp = provbin_dir ^ "/" ^ name_of atp ^ "_files"
-
-fun out_of atp = provdir_of atp ^ "/out"
-fun status_of atp = provdir_of atp ^ "/status"
-
-fun out_dir dir = dir ^ "/out"
-fun status_dir dir = dir ^ "/status"
-
-(* ----------------------------------------------------------------------
-   Predicting theorems
-   ---------------------------------------------------------------------- *)
-
-fun add_fea dict (name,thm) =
-  let val g = dest_thm thm in
-    if not (dmem g (!dict)) andalso
-       uptodate_thm thm
-    then dict := dadd g (name, fea_of_goal g) (!dict)
-    else ()
-  end
-
-fun insert_feav thmdict thyl =
-  let
-    val dict = ref thmdict
-    fun f_thy thy =
-      let fun f (name,thm) =
-        add_fea dict ((thy ^ "Theory." ^ name), thm)
-      in
-        app f (DB.thms thy)
-      end
-  in
-    app f_thy thyl;
-    !dict
-  end
-
-fun cached_ancfeav () =
-  let
-    val thyl = ancestry (current_theory ())
-    val thmdict = dempty goal_compare
-  in
-    dfind thyl (!dict_cache) handle _ =>
-      let 
-        val newdict = insert_feav thmdict thyl 
-      in
-        dict_cache := dadd thyl newdict (!dict_cache);
-        print_endline ("Loading " ^ int_to_string (dlength newdict) ^
-           " theorems");
-        newdict
-      end
-  end
-
-fun insert_namespace thmdict =
-  let
-    val dict = ref thmdict
-    fun f (x,y) = (namespace_tag ^ "Theory." ^ x, y)
-    val l1 = hide_out namespace_thms ()
-    val l2 = map f l1
-  in
-    app (add_fea dict) l2;
-    (!dict)
-  end
-
-fun create_symweight_feav thmdict =
-  let
-    val l = dlist thmdict
-    val feav = map snd l
-    val symweight = learn_tfidf feav
-    fun f (g,(name,fea)) = (name,(g,fea))
-    val revdict = dnew String.compare (map f l)
-  in
-    (symweight,feav,revdict)
-  end
-
-fun update_thmdata () =
-  let
-    val dict0 = cached_ancfeav ()
-    val dict1 = insert_feav dict0 [current_theory ()]
-    val dict2 = insert_namespace dict1
-  in
-    create_symweight_feav dict2
-  end
-
-(*---------------------------------------------------------------------------
-   Export to TT format
- ----------------------------------------------------------------------------*)
-
-fun pred_filter pred thy ((name,_),_) =
-  let val thypred = map snd (filter (fn x => fst x = thy) pred) in
-    mem name thypred
-  end
-
-fun in_namespace s = fst (split_string "Theory." s) = namespace_tag
-
-fun export_problem probdir premises cj =
-  let
-    val premises' = map (split_string "Theory.") premises
-    (* val _ = print_endline (String.concatWith " " (first_n 10 premises)) *)
-    val nsthml1 = filter in_namespace premises
-    fun f s = case thm_of_sml (snd (split_string "Theory." s)) of
-        SOME (_,thm) => SOME (s,thm)
-      | NONE => NONE
-    val nsthml2 = hide_out (List.mapPartial f) nsthml1
-    val ct   = current_theory ()
-    val thyl = ct :: Theory.ancestry ct
-  in
-    clean_dir probdir;
-    write_problem probdir (pred_filter premises') nsthml2 thyl cj;
-    write_thydep (probdir ^ "/thydep.dep") thyl
-  end
-
-fun export_theories dir thyl =
-  (
-  clean_dir dir;
-  write_thyl dir (fn thy => (fn thma => true)) thyl;
-  write_thydep (dir ^ "/thydep.dep") thyl
-  )
-
-(*---------------------------------------------------------------------------
-   Translate from higher-order to first order
- ----------------------------------------------------------------------------*)
-
-fun translate_bin bin probbdir provdir =
-  let
-    val _ = clean_dir provdir
-    val cmd = String.concatWith " "
-      [bin,
-       "all","0",probbdir,
-       probbdir ^ "/conjecture.fof",
-       "conjecture", provdir,
-       "-thydep", probbdir ^ "/thydep.dep",">","/dev/null"]
-  in
-    cmd_in_dir hh_dir cmd
-  end
-
-fun translate_fof dir_in dir_out =
-  translate_bin (hh_bin_dir ^ "/hh") dir_in dir_out
-fun translate_thf dir_in dir_out =
-  translate_bin (hh_bin_dir ^ "/hh_thf") dir_in dir_out
-
-fun launch_atp dir atp tim =
-  let val cmd = case atp of
-      Eprover =>
-      "sh eprover.sh " ^ int_to_string tim ^ " " ^ dir ^
-      " > /dev/null 2> /dev/null"
-    | Z3      => "sh z3.sh " ^ int_to_string tim ^ " " ^ dir ^
-      " > /dev/null 2> /dev/null"
-    | _       => raise ERR "launch_atp" "atp not supported"
-  in
-    cmd_in_dir provbin_dir cmd
-  end
-
-(*---------------------------------------------------------------------------
-   Read theorems needed for the proof and replay the proof with Metis.
- ----------------------------------------------------------------------------*)
-
-fun reconstruct_dir dir goal = reconstruct (status_dir dir, out_dir dir) goal
-fun reconstruct_atp atp goal = reconstruct (status_of atp, out_of atp) goal
-
-fun reconstruct_dir_stac dir goal =
-  reconstruct_stac (status_dir dir, out_dir dir) goal
-
-fun get_lemmas_atp atp = get_lemmas (status_of atp, out_of atp)
-
-(*---------------------------------------------------------------------------
-   Performs all previous steps with (experimentally) the best parameters.
-   Todo: replace by PolyML.fork for faster termination of asynchronous calls.
- ----------------------------------------------------------------------------*)
-
-fun launch_parallel t =
-  let val cmd =
-    String.concatWith " & "
-    ["sh eprover.sh " ^ int_to_string t ^ " " ^ provdir_of Eprover,
-     "sh z3.sh " ^ int_to_string t ^ " " ^ provdir_of Z3,
-     "wait"]
-  in
-    cmd_in_dir provbin_dir cmd
-  end
-
-(* todo:
-     translate when the prover's binary exists.
-     terminate when the first prover finds a proof. *)
-fun holyhammer_goal goal =
-  let
-    val term = list_mk_imp goal
-    val (symweight,feav,revdict) = update_thmdata ()
-    val premises = thmknn_wdep (symweight,feav,revdict) 128  (fea_of_goal goal)
-    val _ = export_problem (probdir_of Eprover) premises term
-    val _ = translate_fof (probdir_of Eprover) (provdir_of Eprover)
-    val _ = export_problem (probdir_of Z3) (first_n 32 premises) term
-    val _ = translate_fof (probdir_of Z3) (provdir_of Z3)
-    val _ = launch_parallel (!timeout_glob)
-  in
-    reconstruct_atp Eprover goal
-    handle _ => reconstruct_atp Z3 goal
-  end
-
-fun holyhammer term = holyhammer_goal ([],term)
-
-fun hh goal = (holyhammer_goal goal) goal
-
-fun hh_stac pid (symweight,feav,revdict) t goal =
-  let
-    val term = list_mk_imp goal
-    val ns = int_to_string pid
-    val premises = thmknn_wdep (symweight,feav,revdict) 128 (fea_of_goal goal)
-    val probdir = hh_dir ^ "/problem_" ^ ns
-    val _ = export_problem probdir premises term
-    val provdir = provbin_dir ^ "/prover_" ^ ns
-    val _ = translate_fof probdir provdir
-    val _ = rmDir_rec probdir
-    val _ = launch_atp provdir Eprover t
-    val r = reconstruct_dir_stac provdir goal
-    val _ = rmDir_rec provdir
-  in
+    if isSome r
+    then
+      (
+      atp_ref := name_of atp;
+      print_endline ("proof found by " ^ name_of atp ^ ":");
+      print_endline ("  " ^ mk_metis_call (valOf r));
+      log_eval ("  proof found by " ^ name_of atp ^ ":");
+      log_eval ("    " ^ mk_metis_call (valOf r));
+      parallel_result := r
+      )
+    else ();
     r
   end
 
-end
+
+(* -------------------------------------------------------------------------
+   HolyHammer
+   ------------------------------------------------------------------------- *)
+
+val hh_goaltac_cache = ref (dempty goal_compare)
+
+fun clean_hh_goaltac_cache () = hh_goaltac_cache := dempty goal_compare
+
+val notfalse = EQT_ELIM (last (CONJ_LIST 3 NOT_CLAUSES))
+
+val extra_premises =
+  [("truth", TRUTH), ("notfalse", notfalse),
+   ("bool_cases_ax", BOOL_CASES_AX), ("eq_ext", EQ_EXT)]
+
+fun translate_write_atp premises cj atp =
+  let
+    val new_premises = first_n (npremises_of atp) premises
+    val thml = extra_premises @ thml_of_namel new_premises
+    val pb = translate_pb thml cj
+    val (axl,new_cj) = name_pb pb
+  in
+    write_tptp (provdir_of atp) axl new_cj
+  end
+
+fun exists_atp atp =
+  exists_file (pathl [provbin_dir, name_of atp])
+
+fun exists_atp_err atp =
+  let val b = exists_file (pathl [provbin_dir, name_of atp]) in
+    if not b then print_endline ("no binary for " ^ name_of atp) else ();
+    b
+  end
+
+fun hh_pb wanted_atpl premises goal =
+  let
+    val atpl = filter exists_atp_err wanted_atpl
+    val cj = list_mk_imp goal
+    val _  = app (translate_write_atp premises cj) atpl
+    val t1 = !timeout_glob
+    val t2 = Real.fromInt t1 + 2.0
+    fun f x = fn () => ignore (launch_atp (provdir_of x) x t1)
+    val olemmas = parallel_call t2 (map f atpl)
+  in
+    case olemmas of
+      NONE =>
+        (log_eval "  ATPs could not find a proof";
+        raise ERR "holyhammer" "ATPs could not find a proof")
+    | SOME lemmas =>
+      let
+        val (stac,tac) = hh_reconstruct lemmas goal
+      in
+        print_endline ("minimized proof:  \n  " ^ stac);
+        log_eval ("  minimized proof:  \n    " ^ stac);
+        hh_goaltac_cache := dadd goal (stac,tac) (!hh_goaltac_cache);
+        tac
+      end
+  end
+
+fun main_hh thmdata goal =
+  let
+    val atpl = filter exists_atp (!all_atps)
+    val n = list_imax (map npremises_of atpl)
+    val premises = thmknn_wdep thmdata n (feahash_of_goal goal)
+  in
+    hh_pb atpl premises goal
+  end
+
+fun hh_goal goal =
+  let val (stac,tac) = dfind goal (!hh_goaltac_cache) in
+    print_endline ("goal already solved by:\n  " ^ stac);
+    tac
+  end
+  handle NotFound => main_hh (create_thmdata ()) goal
+
+fun hh_fork goal = Thread.fork (fn () => ignore (hh_goal goal), [])
+fun hh goal = (hh_goal goal) goal
+fun holyhammer tm = TAC_PROOF (([],tm), hh_goal ([],tm));
+
+(* -------------------------------------------------------------------------
+   HolyHammer evaluation without premise selection:
+   trying to re-prove theorems from their dependencies.
+   ------------------------------------------------------------------------- *)
+
+fun hh_pb_eval_thm atpl (s,thm) =
+  let
+    val _ = print_endline ("\nTheorem: " ^ s)
+    val _ = log_eval ("\nTheorem: " ^ s)
+    val goal = dest_thm thm
+    val (b,premises) = intactdep_of_thm thm
+    val _ = log_eval ("  dependencies:\n    " ^
+      (String.concatWith "\n    " premises))
+  in
+    if not b then (print_endline "  broken_dependencies (not tested)";
+                   log_eval "  broken dependencies (not tested)")
+    else
+      let val (_,t) = add_time (can (hh_pb atpl premises)) goal in
+        log_eval ("  time: " ^ Real.toString t)
+      end
+  end
+
+fun hh_pb_eval_thy atpl thy =
+  (
+  eval_flag := true; eval_thy := thy;
+  mkDir_err hh_eval_dir;
+  remove_file (hh_eval_dir ^ "/" ^ thy);
+  app (hh_pb_eval_thm atpl) (DB.theorems thy);
+  eval_flag := false; eval_thy := "scratch"
+  )
+
+(* -------------------------------------------------------------------------
+   Usage:
+     load "holyHammer"; load "gcdTheory"; open holyHammer;
+     set_timeout 5;
+     hh_eval_thy [Eprover] "gcd";
+   Results can be found in HOLDIR/src/holyhammer/eval.
+  ------------------------------------------------------------------------- *)
+
+(* -------------------------------------------------------------------------
+   Function called by the tactictoe evaluation framework
+   ------------------------------------------------------------------------- *)
+
+fun hh_eval (thmdata,tacdata) goal =
+  (
+  eval_flag := true; eval_thy := current_theory ();
+  mkDir_err hh_eval_dir;
+  log_eval ("Goal: " ^ string_of_goal goal);
+  ignore (main_hh thmdata goal);
+  eval_flag := false; eval_thy := "scratch"
+  )
+
+(* -------------------------------------------------------------------------
+   Usage:
+     load "tttUnfold"; open tttUnfold; open tttSetup;
+     ttt_hheval_flag := true;
+     ttt_rewrite_thy "ConseqConv"; ttt_record_thy "ConseqConv";
+     ttt_hheval_flag := false;
+   Results can be found in HOLDIR/src/holyhammer/eval.
+  ------------------------------------------------------------------------- *)
+
+
+end (* struct *)

@@ -12,8 +12,6 @@ app load ["mlibHeap", "mlibTerm", "mlibSubst", "mlibMatch", "mlibThm", "mlibTerm
 structure mlibModel :> mlibModel =
 struct
 
-infix ## |->;
-
 open mlibUseful mlibTerm;
 
 structure W = Word; local open Word in end;
@@ -23,7 +21,7 @@ structure W = Word; local open Word in end;
 (* ------------------------------------------------------------------------- *)
 
 val module = "mlibModel";
-val () = traces := {module = module, alignment = I} :: !traces;
+val () = add_trace {module = module, alignment = I}
 fun chatting l = tracing {module = module, level = l};
 fun chat s = (trace s; true)
 
@@ -41,8 +39,16 @@ val pp_fp = pp_map
   (fn (f,a) => Fn (f, map (fn n => Fn (int_to_string n, [])) a)) pp_term;
 
 fun cached c f k =
-  case Binarymap.peek (!c,k) of SOME v => v
-  | NONE => let val v = f k val () = c := Binarymap.insert (!c,k,v) in v end;
+  case Binarymap.peek (!c,k) of
+      SOME v => v
+    | NONE =>
+      let
+        val v = f k
+        val () = c := Binarymap.insert (!c,k,v)  (* OK *)
+                                       (* - caches are private per model *)
+      in
+        v
+      end;
 
 fun log2_int 1 = 0 | log2_int n = 1 + log2_int (n div 2);
 
@@ -295,7 +301,7 @@ datatype model = MODEL of
    fixp : (string * int list) -> bool option};
 
 local
-  val new_id = let val n = ref ~1 in fn () => (n := !n + 1; !n) end;
+  val new_id = Portable.make_counter{inc=1,init=0}
 in
   fun new (parm : parameters) =
     let
@@ -328,8 +334,8 @@ fun update_overp overp m =
             overf = overf, overp = overp, fixf = fixf, fixp = fixp}
   end;
 
-fun pp_model pp (MODEL {parm = {size = N, ...}, id, ...}) =
-  pp_string pp (int_to_string id ^ ":" ^ int_to_string N);
+fun pp_model (MODEL {parm = {size = N, ...}, id, ...}) =
+  pp_string (int_to_string id ^ ":" ^ int_to_string N);
 
 (* ------------------------------------------------------------------------- *)
 (* Evaluating ground formulas on models                                      *)

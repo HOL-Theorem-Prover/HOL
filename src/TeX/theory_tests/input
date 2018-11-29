@@ -13,3 +13,19 @@
 \HOLtm{x INSERT s}
 
 \HOLtm{APPEND x y}
+
+\HOLtm[m;]{p /\ q}
+
+\HOLtm[>>,alltt,width=30]{pp /\ qq /\ rr /\ ss /\ tt ==> pp \/ qq \/ rr \/ ss \/ tt}
+
+\HOLthm[>>4,width=30,nosp]{bool.AND_CLAUSES}
+
+\HOLthm[width=50]{bool.AND_CLAUSES}
+
+\HOLthm[width=50,m;]{bool.AND_CLAUSES}
+
+\HOLthm[def,>>]{list.MAP}
+
+\HOLthm[spaceddef,>>]{list.MAP}
+
+|- \HOLthm[>>~3,nostile,width=50]{list.MAP}

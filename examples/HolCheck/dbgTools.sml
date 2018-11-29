@@ -56,10 +56,10 @@ fun sb t = if (!dbg)>0 then sbdd := t else () (* enable/disable DBD calls *)
 
 (* however, after a run, may need to reset to default if rerun is done within same session *)
 fun reset() = if (!dbg)>0 then (vis := (empty String.compare); visp := (empty String.compare);
-				tmcb := (Binarymap.mkDict String.compare);
-				thcb := (Binarymap.mkDict String.compare);
-				thlcb := (Binarymap.mkDict String.compare)
-				) else ()
+                                tmcb := (Binarymap.mkDict String.compare);
+                                thcb := (Binarymap.mkDict String.compare);
+                                thlcb := (Binarymap.mkDict String.compare)
+                                ) else ()
 
 (* allow code to register call backs that I can use after a run to recover run-time values*)
 fun CBTM s tm = if (!dbg)>0  then (tmcb:= (Binarymap.insert(!tmcb,s,Susp.delay (fn _ => (tm:term))))) else ()

@@ -238,18 +238,21 @@ end;
 local fun num2name s i = s^Lib.int_to_string i
       fun subscripts x s =
         let val project = num2name (s^x)
-            val cnt = ref 0
-            fun incr() = (cnt := !cnt + 1; project (!cnt))
-        in incr
+            val cnt = Portable.make_counter{init=1,inc=1}
+            fun incr() = project (cnt())
+        in
+          incr
         end
       fun primes s =
-        let val current = ref s
-            fun next () = (current := Lib.prime (!current); !current)
-        in next
+        let val {upd,...} = Portable.syncref s
+            fun next () = upd (fn s => let val s' = Lib.prime s in (s',s') end)
+        in
+          next
         end
 in
-fun nameStrm s =
-  (case !Globals.priming of NONE => primes | SOME x => subscripts x) s
+(* don't eta-contract *)
+fun nameStrm NONE s = primes s
+  | nameStrm (SOME x) s = subscripts x s
 end;
 
 

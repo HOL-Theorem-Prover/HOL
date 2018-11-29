@@ -239,7 +239,7 @@ val _ = save_thm("expand_def",expand_def);
 val _ = computeLib.add_persistent_funs ["expand_def"];
 
 (*---------------------------------------------------------------------------*)
-(* Digest a block	                                                     *)
+(* Digest a block                                                            *)
 (*---------------------------------------------------------------------------*)
 
 val digestBlock_def =

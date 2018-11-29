@@ -2,7 +2,7 @@
 fun inc r = (r := !r + 1)
 fun dec r = (r := !r - 1)
 
-fun bslash_escape s = "\\" ^ Int.toString (Char.ord(String.sub(s,0)))
+fun bslash_escape s = "\\" ^ StringCvt.padLeft #"0" 3 (Int.toString (Char.ord(String.sub(s,0))))
 
 datatype quotetype = inQUOTE | inTMQUOTE | inTYQUOTE
 
@@ -32,8 +32,16 @@ fun print (QFS _) s = s
 fun ifscript (QFS {inscript,...}) s1 s2 =
   if inscript then s1 else s2
 
+fun dest_ml_thm_binding s =
+    let
+      val ss = Substring.dropl Char.isSpace (Substring.extract(s, 7, NONE))
+      val (nmss, _) = Substring.position "[" ss
+    in
+      (Substring.string nmss, Substring.string ss)
+    end
+
 fun makesafe c =
-    if not (Char.isPrint c) then "\\" ^ Int.toString (Char.ord c)
+    if not (Char.isPrint c) then "\\" ^ StringCvt.padLeft #"0" 3 (Int.toString (Char.ord c))
     else str c
 
 fun safeprint x s = ECHO x (String.translate makesafe s)
@@ -92,7 +100,9 @@ fun eof arg = ""
 letter = [A-Za-z];
 digit = [0-9];
 symbol = [-!%&$+/:<=>?@~|#*\\^];
-MLid = ({letter} ({letter} | {digit} | _ | "'")*) | {symbol}+;
+alphaMLid = {letter} ({letter} | {digit} | _ | "'")*;
+alphaMLid_list = {alphaMLid} (","{alphaMLid})*;
+MLid =  {alphaMLid} | {symbol}+;
 ws = [\ \t];
 newline = "\n" | "\015\n";
 locpragma = "(*#loc" {ws}+ {digit}* {ws}+ {digit}* {ws}* "*)";
@@ -122,11 +132,24 @@ quoteend = "`" | "\226\128\153";
                                  locpragma yyarg (yytext, yypos) 0)
 )
                  else ECHO yyarg yytext);
-<INITIAL>{fullquotebegin} {ws}* ":" ({letter} | {ws} | {newline} | [('] | {digit} | {lowergreek}) => (
+<INITIAL>"Theorem"{ws}+{alphaMLid}("["{alphaMLid_list}"]")? => (
+  let
+    val (thmname,with_attrs_string) = dest_ml_thm_binding yytext
+  in
+    ECHO yyarg ("val " ^ thmname ^ " = " ^
+                "(fn q => fn tac => Q.store_thm(\"" ^ with_attrs_string ^
+                "\",q,tac))")
+  end
+);
+<INITIAL>{fullquotebegin} {ws}* ":" ({letter} | {ws} | [('] | {digit} | {lowergreek}) => (
                  YYBEGIN tyquote;
                  ECHO yyarg
                    ("(Parse.Type [QUOTE \""^locpragma yyarg (yytext,yypos) 2 ^
                     safeprint yyarg (drop_upto #":" yytext)));
+<INITIAL>{fullquotebegin} {ws}* ":" {newline} =>
+     (YYBEGIN tyquote;
+      ECHO yyarg ("(Parse.Type [QUOTE \""^locpragma yyarg (yytext,yypos) 2) ^
+      ":" ^ qnewline yyarg (yypos, yytext));
 <INITIAL>{fullquotebegin} {ws}* ":^" =>
               (antiquote_stack := inTYQUOTE :: !antiquote_stack;
                YYBEGIN ANTIQ;

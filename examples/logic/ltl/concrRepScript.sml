@@ -321,7 +321,7 @@ val TRANSFORMLABEL_SUBSET2 = store_thm
 (*             >> fs[transformLabel_def] >> Cases_on `m' ∈ char (POW aP) h` *)
 (*             >- (`m' ∈ {}` by metis_tac[IN_INTER,SET_EQ_SUBSET] >> fs[]) *)
 (*             >- (`m' ∈ char_neg fs[char_def] >> *)
-                  
+
 
 (*              >- metis_tac[FOLDR_INTER,SUBSET_DEF,IN_POW] *)
 (*              >- *)
@@ -545,10 +545,10 @@ val concr2AbstrAA_def = Define`
   concr2AbstrAA (concrAA g init prop) =
     ALTER_A
         (concr2Abstr_states g)
-        (concr2Abstr_init init g)
-        (concr2Abstr_final g)
         (POW (LIST_TO_SET prop))
-        (concrTrans g (set prop))`;
+        (concrTrans g (set prop))
+        (concr2Abstr_init init g)
+        (concr2Abstr_final g)`;
 
 val graphStatesWithId_def = Define`
   graphStatesWithId g =

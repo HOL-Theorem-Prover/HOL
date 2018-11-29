@@ -46,7 +46,7 @@ fun find_most_appealing HOLpath docfile =
       val docfile_dir = concat(HOLpath,dir)
       val htmldir  = concat(docfile_dir,"HTML")
       val htmlfile = joinBaseExt{base=base,ext=SOME "html"}
-      val adocfile = joinBaseExt{base=base,ext=SOME "adoc"}
+      val adocfile = joinBaseExt{base=base,ext=SOME "txt"}
       val htmlpath = concat(htmldir,htmlfile)
       val adocpath = concat(docfile_dir,adocfile)
       val docpath  = concat(docfile_dir,file)
@@ -179,7 +179,8 @@ fun processSig db version bgcolor HOLpath SRCFILES sigfile htmlfile =
            end
 
         val aliasStrName =
-           fn "FinalType" => "Type"
+           fn "DefinitionDoc" => "Definition"
+            | "FinalType" => "Type"
             | "FinalTerm" => "Term"
             | "FinalThm" => "Thm"
             | "HolKernelDoc" => "HolKernel"
@@ -282,10 +283,9 @@ fun processSig db version bgcolor HOLpath SRCFILES sigfile htmlfile =
 	print sigfile; print "\n"
        ; *)
         traverse pass1;
-        out "<!DOCTYPE html PUBLIC \"-//W3C//DTD HTML 4.01//EN\">\n";
+        out "<!DOCTYPE html>\n";
         out "<html><head>\n";
-        out "<meta http-equiv=\"content-type\" content=\"text/html ; \
-            \charset=UTF-8\">\n";
+        out "<meta charset=\"utf-8\">\n";
         out "<title>Structure ";
         out strName; out "</title>\n";
         out "<style type=\"text/css\">\n";
@@ -429,7 +429,7 @@ fun printHTMLBase version bgcolor HOLpath pred header (sigfile, outfile) =
                 end))
         val seps = Listsort.sort Char.compare (separators db [])
     in
-	out "<html><head><title>"; out header; out "</title></head>\n";
+	out "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>"; out header; out "</title></head>\n";
 	out "<body bgcolor=\""; out bgcolor; out "\">\n";
 	out "<h1>"; out header; out "</h1>\n";
 	mkalphaindex seps;

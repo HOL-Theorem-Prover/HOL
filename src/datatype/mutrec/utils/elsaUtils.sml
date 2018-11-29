@@ -1,14 +1,14 @@
 (* =====================================================================*)
-(* FILE		: elsaUtils (formerly utilsLib.sml and before that,     *)
+(* FILE         : elsaUtils (formerly utilsLib.sml and before that,     *)
 (*                   functions.sml and before that, start_groups.ml)    *)
-(* DESCRIPTION	: defines a collection of general purpose functions,	*)
-(*                rules, and tactics which are used throughout the	*)
-(*                group library entry and the integer library entry.	*)
-(*									*)
+(* DESCRIPTION  : defines a collection of general purpose functions,    *)
+(*                rules, and tactics which are used throughout the      *)
+(*                group library entry and the integer library entry.    *)
+(*                                                                      *)
 (* AUTHOR       : Elsa Gunter, Bell Labs                                *)
-(* DATE		: 89.3.20						*)
+(* DATE         : 89.3.20                                               *)
 (* TRANSLATOR   : Elsa Gunter,                                          *)
-(* TRANSLATED   : 91.22.12						*)
+(* TRANSLATED   : 91.22.12                                              *)
 (* =====================================================================*)
 
 (* Copyright 1991 by AT&T Bell Laboratories *)
@@ -50,20 +50,20 @@ fun is_contained_in {subset, superset} =
 
 fun find_match {pattern, term} =
     let
-	fun find_match_aux term =
-	    match_term pattern term
-	    handle HOL_ERR _ =>
-		find_match_aux (#Body(dest_abs term))
-		handle HOL_ERR _ =>
-		    find_match_aux (rator term)
-		    handle HOL_ERR _ =>
-			find_match_aux (rand term)
-			handle HOL_ERR _ =>
-			    raise UTILSLIB_ERR
+        fun find_match_aux term =
+            match_term pattern term
+            handle HOL_ERR _ =>
+                find_match_aux (#Body(dest_abs term))
+                handle HOL_ERR _ =>
+                    find_match_aux (rator term)
+                    handle HOL_ERR _ =>
+                        find_match_aux (rand term)
+                        handle HOL_ERR _ =>
+                            raise UTILSLIB_ERR
                                     {function = "find_match",
-				     message = "no match"}
+                                     message = "no match"}
     in
-	find_match_aux term
+        find_match_aux term
     end
 
 (*
@@ -73,16 +73,16 @@ fun find_match {pattern, term} =
 
 fun mapshape {partition = [],functions = [], unionlist = []} = []
   | mapshape {partition = (n1::rem_lengths),
-	      functions = (f::rem_funs),
-	      unionlist} =
+              functions = (f::rem_funs),
+              unionlist} =
       let
-	  val (first_list,rem_lists) = split_after n1 unionlist
+          val (first_list,rem_lists) = split_after n1 unionlist
       in
-	  (f first_list) ::
-	  (mapshape
-	   {partition = rem_lengths,
-	    functions = rem_funs,
-	    unionlist = rem_lists})
+          (f first_list) ::
+          (mapshape
+           {partition = rem_lengths,
+            functions = rem_funs,
+            unionlist = rem_lists})
       end
   | mapshape _ = raise UTILSLIB_ERR{function = "mapshape",
                                                  message = "bad fit"}
@@ -111,34 +111,34 @@ local
       | COUNT_UNDISCH n thm = COUNT_UNDISCH (n -1) (UNDISCH thm)
     fun split_subst [] = ([], [])
       | split_subst ({redex, residue}::rest) =
-	let val (vals, vars) = split_subst rest
-	in
-	    (residue::vals, redex::vars)
-	end
+        let val (vals, vars) = split_subst rest
+        in
+            (residue::vals, redex::vars)
+        end
 in
     fun STRONG_INST_TYPE {type_substitution, theorem} =
-	  COUNT_UNDISCH
-	    (length (hyp theorem))
-	    (INST_TYPE type_substitution (DISCH_ALL theorem))
+          COUNT_UNDISCH
+            (length (hyp theorem))
+            (INST_TYPE type_substitution (DISCH_ALL theorem))
 
     fun STRONG_INST_TY_TERM {type_substitution, term_substitution, theorem} =
-	let
-	    val inst_ty_thm = INST_TYPE type_substitution (DISCH_ALL theorem)
-	    val (values,variables) = split_subst term_substitution
-	in
-	    COUNT_UNDISCH
-	      (length (hyp theorem))
-	      (SPECL values (GENL variables inst_ty_thm))
-	end
+        let
+            val inst_ty_thm = INST_TYPE type_substitution (DISCH_ALL theorem)
+            val (values,variables) = split_subst term_substitution
+        in
+            COUNT_UNDISCH
+              (length (hyp theorem))
+              (SPECL values (GENL variables inst_ty_thm))
+        end
 
     fun STRONG_INST {term_substitution, theorem} =
-	let
-	    val (values,variables) = split_subst term_substitution
-	in
-	    COUNT_UNDISCH
-	      (length (hyp theorem))
-	      (SPECL values (GENL variables (DISCH_ALL theorem)))
-	end
+        let
+            val (values,variables) = split_subst term_substitution
+        in
+            COUNT_UNDISCH
+              (length (hyp theorem))
+              (SPECL values (GENL variables (DISCH_ALL theorem)))
+        end
 end
 
 
@@ -156,16 +156,16 @@ end
 
 fun AUTO_SPEC {specialization_term, generalized_theorem} =
     let
-	val type_substitution =
-	      match_type
-	        (type_of(#Bvar(dest_forall(concl generalized_theorem))))
-		(type_of specialization_term)
+        val type_substitution =
+              match_type
+                (type_of(#Bvar(dest_forall(concl generalized_theorem))))
+                (type_of specialization_term)
     in
-	SPEC
-	  specialization_term
-	  (STRONG_INST_TYPE
-	     {type_substitution = type_substitution,
-	      theorem = generalized_theorem})
+        SPEC
+          specialization_term
+          (STRONG_INST_TYPE
+             {type_substitution = type_substitution,
+              theorem = generalized_theorem})
     end
 
 
@@ -185,7 +185,7 @@ fun AUTO_SPECL {specialization_list, generalized_theorem} =
     rev_itlist
       (fn specialization_term => fn gen_thm =>
          AUTO_SPEC {specialization_term = specialization_term,
-		    generalized_theorem = gen_thm})
+                    generalized_theorem = gen_thm})
       specialization_list
       generalized_theorem
 
@@ -201,9 +201,9 @@ fun AUTO_SPECL {specialization_list, generalized_theorem} =
 fun EQF_INTRO neg_thm =
       EQ_MP
         (SYM(CONJUNCT2(CONJUNCT2(CONJUNCT2(SPEC
-					    (dest_neg(concl neg_thm))
-					    EQ_CLAUSES)))))
-	neg_thm
+                                            (dest_neg(concl neg_thm))
+                                            EQ_CLAUSES)))))
+        neg_thm
 
 
 (*
@@ -219,25 +219,25 @@ local
     val neg_type = (==`:bool -> bool`==)
 in
     fun FALSITY_INTRO {theorem, negated_theorem} =
-	let
-	    val neg_var =
-		 variant
-	           (all_varsl ((concl negated_theorem)::(hyp negated_theorem)))
-		   (mk_var {Name="neg", Ty=neg_type})
-	in
-	    if aconv (concl negated_theorem) (mk_neg (concl theorem))
-		then
-		    MP
-		      (BETA_RULE
-		       (SUBST[{thm=NOT_DEF, var=neg_var}]
-			      (mk_comb {Rator=neg_var, Rand=(concl theorem)})
-			      negated_theorem))
-		      theorem
-	    else raise UTILSLIB_ERR
-			   {function = "FALSITY_INTRO",
-			    message = "negated_theorem is not the "^
-			               "negation of theorem"}
-	end
+        let
+            val neg_var =
+                 variant
+                   (all_varsl ((concl negated_theorem)::(hyp negated_theorem)))
+                   (mk_var {Name="neg", Ty=neg_type})
+        in
+            if aconv (concl negated_theorem) (mk_neg (concl theorem))
+                then
+                    MP
+                      (BETA_RULE
+                       (SUBST[{thm=NOT_DEF, var=neg_var}]
+                              (mk_comb {Rator=neg_var, Rand=(concl theorem)})
+                              negated_theorem))
+                      theorem
+            else raise UTILSLIB_ERR
+                           {function = "FALSITY_INTRO",
+                            message = "negated_theorem is not the "^
+                                       "negation of theorem"}
+        end
 end
 
 fun NORMALIZE rewrite_list thm = REWRITE_RULE rewrite_list (BETA_RULE thm)
@@ -247,15 +247,15 @@ fun NORMALIZE rewrite_list thm = REWRITE_RULE rewrite_list (BETA_RULE thm)
 
 fun MATCH_TERM_SUBS_RULE thm tm =
     let
-	val strip_thm = hd (IMP_CANON thm)
-	val (term_substitution,type_substitution)=
-	      match_term (lhs(concl strip_thm)) tm
+        val strip_thm = hd (IMP_CANON thm)
+        val (term_substitution,type_substitution)=
+              match_term (lhs(concl strip_thm)) tm
     in
-	SUBS
-	  [(STRONG_INST_TY_TERM
-	      {term_substitution=term_substitution,
-	       type_substitution=type_substitution,
-	       theorem = strip_thm})]
+        SUBS
+          [(STRONG_INST_TY_TERM
+              {term_substitution=term_substitution,
+               type_substitution=type_substitution,
+               theorem = strip_thm})]
     end
 
 
@@ -273,18 +273,18 @@ local
     val bool = (==`:bool`==)
 in
     fun SUPPOSE_TAC new_claim current_goal =
-	if type_of new_claim = bool
-	    then
-		([(new_claim::(fst current_goal),snd current_goal),
-		  (fst current_goal, new_claim)],
-		 fn [goalthm,claimthm] =>
-		   MP (DISCH new_claim goalthm) claimthm
-		  | _ => raise UTILSLIB_ERR
-				  {function = "SUPPOSE_TAC",
-				   message = "invalid application"})
-	else raise UTILSLIB_ERR
-		       {function = "SUPPOSE_TAC",
-			message = "The claim doesn't have type :bool"}
+        if type_of new_claim = bool
+            then
+                ([(new_claim::(fst current_goal),snd current_goal),
+                  (fst current_goal, new_claim)],
+                 fn [goalthm,claimthm] =>
+                   MP (DISCH new_claim goalthm) claimthm
+                  | _ => raise UTILSLIB_ERR
+                                  {function = "SUPPOSE_TAC",
+                                   message = "invalid application"})
+        else raise UTILSLIB_ERR
+                       {function = "SUPPOSE_TAC",
+                        message = "The claim doesn't have type :bool"}
 end
 
 
@@ -300,17 +300,17 @@ local
     val bool = (==`:bool`==)
 in
     fun REV_SUPPOSE_TAC new_claim current_goal =
-	if type_of new_claim = bool
-	    then
-		([(fst current_goal, new_claim),
-		  (new_claim::(fst current_goal),snd current_goal)],
-		 fn [claimthm,goalthm] =>
-		   MP (DISCH new_claim goalthm) claimthm
-		  | _ => raise UTILSLIB_ERR
-				 {function = "REV_SUPPOSE_TAC",
-				  message = "invalid application"})
-	else raise UTILSLIB_ERR
-		{function = "REV_SUPPOSE_TAC",
+        if type_of new_claim = bool
+            then
+                ([(fst current_goal, new_claim),
+                  (new_claim::(fst current_goal),snd current_goal)],
+                 fn [claimthm,goalthm] =>
+                   MP (DISCH new_claim goalthm) claimthm
+                  | _ => raise UTILSLIB_ERR
+                                 {function = "REV_SUPPOSE_TAC",
+                                  message = "invalid application"})
+        else raise UTILSLIB_ERR
+                {function = "REV_SUPPOSE_TAC",
                  message = "The claim doesn't have type :bool"}
 end
 
@@ -327,14 +327,14 @@ fun ADD_ASSUMS_THEN {new_assumptions = [], tactic} (asms,goal) =
       tactic (asms,goal)
   | ADD_ASSUMS_THEN {new_assumptions = (claim::rest), tactic} (asms,goal) =
       if exists (aconv claim) asms
-	  then ADD_ASSUMS_THEN
-	        {new_assumptions = rest,
-		 tactic = tactic}
-		(asms,goal)
+          then ADD_ASSUMS_THEN
+                {new_assumptions = rest,
+                 tactic = tactic}
+                (asms,goal)
       else (SUPPOSE_TAC claim THENL
-	    [(ADD_ASSUMS_THEN {new_assumptions = rest, tactic = tactic}),
-	     ALL_TAC])
-	   (asms,goal)
+            [(ADD_ASSUMS_THEN {new_assumptions = rest, tactic = tactic}),
+             ALL_TAC])
+           (asms,goal)
 
 (*
   ADD_STRIP_ASSUMS_THEN : {new_assumptions:term list, tactic:tactic} -> tactic
@@ -348,15 +348,15 @@ fun ADD_STRIP_ASSUMS_THEN {new_assumptions = [], tactic} (asms,goal) =
   | ADD_STRIP_ASSUMS_THEN {new_assumptions = (claim::rest), tactic}
                           (asms,goal) =
       if exists (aconv claim) asms
-	  then ADD_STRIP_ASSUMS_THEN
-	        {new_assumptions = rest,
-		 tactic = tactic}
-		(asms,goal)
+          then ADD_STRIP_ASSUMS_THEN
+                {new_assumptions = rest,
+                 tactic = tactic}
+                (asms,goal)
       else (SUPPOSE_TAC claim THENL
-	    [((POP_ASSUM STRIP_ASSUME_TAC) THEN
-	      (ADD_STRIP_ASSUMS_THEN {new_assumptions=rest,tactic=tactic})),
-	     ALL_TAC])
-	   (asms,goal)
+            [((POP_ASSUM STRIP_ASSUME_TAC) THEN
+              (ADD_STRIP_ASSUMS_THEN {new_assumptions=rest,tactic=tactic})),
+             ALL_TAC])
+           (asms,goal)
 
 (*
    use_thm : {theorem:thm, thm_tactic:(thm -> tactic)} -> tactic
@@ -368,7 +368,7 @@ fun ADD_STRIP_ASSUMS_THEN {new_assumptions = [], tactic} (asms,goal) =
 
 fun use_thm {theorem, thm_tactic} =
     ADD_STRIP_ASSUMS_THEN{new_assumptions = hyp theorem,
-			  tactic = thm_tactic theorem}
+                          tactic = thm_tactic theorem}
 
 
 fun NEW_SUBST1_TAC thm = use_thm {theorem = thm, thm_tactic = SUBST1_TAC}
@@ -376,36 +376,36 @@ fun NEW_SUBST1_TAC thm = use_thm {theorem = thm, thm_tactic = SUBST1_TAC}
 
 fun SUBST_MATCH_TAC thm (asms,goal) =
     let
-	val strip_thm = hd (IMP_CANON thm)
-	val (term_substitution,type_substitution)=
-	    find_match {pattern = (lhs(concl strip_thm)), term = goal}
-	val subst_thm = STRONG_INST_TY_TERM
-			  {term_substitution=term_substitution,
-			   type_substitution=type_substitution,
-			   theorem = strip_thm}
+        val strip_thm = hd (IMP_CANON thm)
+        val (term_substitution,type_substitution)=
+            find_match {pattern = (lhs(concl strip_thm)), term = goal}
+        val subst_thm = STRONG_INST_TY_TERM
+                          {term_substitution=term_substitution,
+                           type_substitution=type_substitution,
+                           theorem = strip_thm}
     in
-	NEW_SUBST1_TAC subst_thm (asms,goal)
+        NEW_SUBST1_TAC subst_thm (asms,goal)
     end
 
 
 
 fun ASSUME_LIST_TAC thms (asms,goal) =
     let
-	val new_assums = flatten (map hyp thms)
-	val tactic =
-	      itlist
-	       (fn thm => fn tac =>
-	         if exists (aconv (concl thm)) asms orelse
-		    exists (aconv (concl thm)) new_assums
-		     then ALL_TAC
-		 else (ASSUME_TAC thm) THEN tac)
-	       thms
-	       ALL_TAC
+        val new_assums = flatten (map hyp thms)
+        val tactic =
+              itlist
+               (fn thm => fn tac =>
+                 if exists (aconv (concl thm)) asms orelse
+                    exists (aconv (concl thm)) new_assums
+                     then ALL_TAC
+                 else (ASSUME_TAC thm) THEN tac)
+               thms
+               ALL_TAC
     in
-	ADD_ASSUMS_THEN
-	{new_assumptions=new_assums,
-	 tactic = tactic}
-	(asms,goal)
+        ADD_ASSUMS_THEN
+        {new_assumptions=new_assums,
+         tactic = tactic}
+        (asms,goal)
     end
 
 
@@ -420,16 +420,16 @@ fun ASSUME_LIST_TAC thms (asms,goal) =
 
 fun ASM_CONJ1_TAC (asms,goal) =
     if is_conj goal
-	then
-	    (REV_SUPPOSE_TAC (rand(rator goal)) THENL
-	     [ALL_TAC,
-	      CONJ_TAC THENL
-	      [ACCEPT_TAC(ASSUME (rand(rator goal))),
-	       ALL_TAC]])
-	    (asms,goal)
+        then
+            (REV_SUPPOSE_TAC (rand(rator goal)) THENL
+             [ALL_TAC,
+              CONJ_TAC THENL
+              [ACCEPT_TAC(ASSUME (rand(rator goal))),
+               ALL_TAC]])
+            (asms,goal)
     else raise UTILSLIB_ERR
-		    {function = "ASM_CONJ1_TAC",
-		     message = "goal not a conjuct"}
+                    {function = "ASM_CONJ1_TAC",
+                     message = "goal not a conjuct"}
 
 
 (*
@@ -442,16 +442,16 @@ fun ASM_CONJ1_TAC (asms,goal) =
 
 fun ASM_CONJ2_TAC (asms,goal) =
     if is_conj goal
-	then
-	    (SUPPOSE_TAC (rand goal) THENL
-	     [CONJ_TAC THENL
-	      [ALL_TAC,
-	       ACCEPT_TAC(ASSUME (rand goal))],
-	       ALL_TAC])
-	    (asms,goal)
+        then
+            (SUPPOSE_TAC (rand goal) THENL
+             [CONJ_TAC THENL
+              [ALL_TAC,
+               ACCEPT_TAC(ASSUME (rand goal))],
+               ALL_TAC])
+            (asms,goal)
     else raise UTILSLIB_ERR
-		    {function = "ASM_CONJ2_TAC",
-		     message = "goal not a conjuct"}
+                    {function = "ASM_CONJ2_TAC",
+                     message = "goal not a conjuct"}
 
 
 (*
@@ -464,29 +464,29 @@ fun ASM_CONJ2_TAC (asms,goal) =
 
 fun MP_IMP_TAC imp_thm (thisgoal as (asms,goal)) =
     if is_imp (concl imp_thm)
-	then
-	    if aconv (#conseq (dest_imp (concl imp_thm))) goal
-		then
-		    use_thm
-		      {theorem = imp_thm,
-		       thm_tactic =
-		         fn imp_thm => fn (asms,goal) =>
-			   ([(asms,#ant(dest_imp(concl imp_thm)))],
-			    fn [thm] => MP imp_thm thm
-			     | _ => raise UTILSLIB_ERR
-				            {function = "MP_IMP_TAC",
-				             message = "invalid application"})}
-		      thisgoal
-	    else raise UTILSLIB_ERR
-			    {function = "MP_IMP_TAC",
-			     message = "theorem doesn't imply goal"}
+        then
+            if aconv (#conseq (dest_imp (concl imp_thm))) goal
+                then
+                    use_thm
+                      {theorem = imp_thm,
+                       thm_tactic =
+                         fn imp_thm => fn (asms,goal) =>
+                           ([(asms,#ant(dest_imp(concl imp_thm)))],
+                            fn [thm] => MP imp_thm thm
+                             | _ => raise UTILSLIB_ERR
+                                            {function = "MP_IMP_TAC",
+                                             message = "invalid application"})}
+                      thisgoal
+            else raise UTILSLIB_ERR
+                            {function = "MP_IMP_TAC",
+                             message = "theorem doesn't imply goal"}
     else raise UTILSLIB_ERR
-		    {function = "MP_IMP_TAC",
-		     message = "theorem is not an implication"}
+                    {function = "MP_IMP_TAC",
+                     message = "theorem is not an implication"}
 
 (*
    MATCH_THM_TAC : {pattern_function:(term -> term),
-		    thm_tactic:thm_tactic} -> thm_tactic
+                    thm_tactic:thm_tactic} -> thm_tactic
 
    Used to create a version of a theorem tactic that will do matching
    against the given theorem.
@@ -494,22 +494,22 @@ fun MP_IMP_TAC imp_thm (thisgoal as (asms,goal)) =
 
 fun MATCH_THM_TAC {pattern_function, thm_tactic} =
     let
-	fun sub_tac thm (asms,goal) =
-	    let
-		val (term_substitution,type_substitution) =
-		      match_term (pattern_function (concl thm)) goal
-		val inst_thm =
-		      STRONG_INST_TY_TERM
-		        {term_substitution=term_substitution,
-			 type_substitution=type_substitution,
-			 theorem=thm}
-	    in
-		((thm_tactic inst_thm) ORELSE
-		 (thm_tactic (BETA_RULE inst_thm)))
-		(asms,goal)
-	    end
+        fun sub_tac thm (asms,goal) =
+            let
+                val (term_substitution,type_substitution) =
+                      match_term (pattern_function (concl thm)) goal
+                val inst_thm =
+                      STRONG_INST_TY_TERM
+                        {term_substitution=term_substitution,
+                         type_substitution=type_substitution,
+                         theorem=thm}
+            in
+                ((thm_tactic inst_thm) ORELSE
+                 (thm_tactic (BETA_RULE inst_thm)))
+                (asms,goal)
+            end
     in
-	fn thm => (REPEAT GEN_TAC) THEN (sub_tac (SPEC_ALL thm))
+        fn thm => (REPEAT GEN_TAC) THEN (sub_tac (SPEC_ALL thm))
     end
 
 
@@ -525,8 +525,8 @@ fun MATCH_THM_TAC {pattern_function, thm_tactic} =
 val NEW_MATCH_ACCEPT_TAC =
       MATCH_THM_TAC
         {pattern_function = (fn x => x),
-	 thm_tactic = (fn thm => use_thm {theorem = thm,
-					  thm_tactic = ACCEPT_TAC})}
+         thm_tactic = (fn thm => use_thm {theorem = thm,
+                                          thm_tactic = ACCEPT_TAC})}
 
 
 (*
@@ -544,7 +544,7 @@ val NEW_MATCH_ACCEPT_TAC =
 val MATCH_MP_IMP_TAC =
       MATCH_THM_TAC
         {pattern_function = fn tm => #conseq(dest_imp tm),
-	 thm_tactic = MP_IMP_TAC}
+         thm_tactic = MP_IMP_TAC}
 
 
 (*
@@ -557,29 +557,29 @@ val MATCH_MP_IMP_TAC =
 
 local
     fun tryfind f [] =
-	  raise UTILSLIB_ERR{function = "REDUCE_TAC-tryfind",
-					  message ="impossible to see this"}
+          raise UTILSLIB_ERR{function = "REDUCE_TAC-tryfind",
+                                          message ="impossible to see this"}
       | tryfind f (x::rest) = f x handle (HOL_ERR _) => tryfind f rest
 in
     fun REDUCE_TAC reduction_thms =
-	let
-	    val new_reduction_thms =
-		map UNDISCH_ALL (flatten (map IMP_CANON reduction_thms))
-	    val tac_list =
-		map
-	        (fn thm => (NEW_MATCH_ACCEPT_TAC thm) ORELSE
-		 (MATCH_MP_IMP_TAC thm))
-		new_reduction_thms
-	    fun core_reduce_tac goal =
-		((FIRST_ASSUM ACCEPT_TAC) ORELSE
-		 ((REPEAT STRIP_TAC) THEN
-		  ((FIRST_ASSUM ACCEPT_TAC) ORELSE
-		   ((fn gl => tryfind (fn f => f gl) tac_list) THEN
-		    core_reduce_tac) ORELSE
-		   ALL_TAC))) goal
-	in
-	    core_reduce_tac
-	end
+        let
+            val new_reduction_thms =
+                map UNDISCH_ALL (flatten (map IMP_CANON reduction_thms))
+            val tac_list =
+                map
+                (fn thm => (NEW_MATCH_ACCEPT_TAC thm) ORELSE
+                 (MATCH_MP_IMP_TAC thm))
+                new_reduction_thms
+            fun core_reduce_tac goal =
+                ((FIRST_ASSUM ACCEPT_TAC) ORELSE
+                 ((REPEAT STRIP_TAC) THEN
+                  ((FIRST_ASSUM ACCEPT_TAC) ORELSE
+                   ((fn gl => tryfind (fn f => f gl) tac_list) THEN
+                    core_reduce_tac) ORELSE
+                   ALL_TAC))) goal
+        in
+            core_reduce_tac
+        end
 end
 
 

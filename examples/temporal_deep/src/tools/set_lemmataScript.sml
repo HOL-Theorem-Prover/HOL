@@ -6,6 +6,10 @@ map load ["pred_setTheory"];
 *)
 
 open pred_setTheory;
+open Sanity;
+
+val _ = hide "S";
+val _ = hide "I";
 
 (*
 show_assums := false;
@@ -238,9 +242,9 @@ val DIFF_DISJOINT =
    PROVE_TAC[]);
 
 
-val DIFF_UNION =
+val DIFF_UNION_ELIM =
  store_thm
-  ("DIFF_UNION",
+  ("DIFF_UNION_ELIM",
    ``!S1 S2. (((S1 DIFF S2) UNION S2) = (S1 UNION S2)) /\
              ((S2 UNION (S1 DIFF S2)) = (S2 UNION S1))``,
 
@@ -313,10 +317,9 @@ val SUBSET_COMPL_DISJOINT =
    PROVE_TAC[]
 );
 
-
-val INJ_SUBSET =
+val INJ_SUBSET_DOMAIN =
  store_thm
-  ("INJ_SUBSET",
+  ("INJ_SUBSET_DOMAIN",
    ``!f S1 S2 S. (S2 SUBSET S1) ==> (INJ f S1 S) ==> (INJ f S2 S)``,
 
    REWRITE_TAC[INJ_DEF, SUBSET_DEF] THEN
@@ -327,7 +330,7 @@ val INJ_INVERSE =
  store_thm
   ("INJ_INVERSE",
 
-  ``!f. INJ f S1 S2 ==> (?g. !x. (x IN S1) ==> (g(f(x)) = x))``,
+  ``!S1 S2 f. INJ f S1 S2 ==> (?g. !x. (x IN S1) ==> (g(f(x)) = x))``,
 
   REPEAT STRIP_TAC THEN
   EXISTS_TAC ``\S:'b. (@x:'a. ((x IN S1 /\ ((f x) = S))))`` THEN
@@ -341,7 +344,7 @@ val INJ_INVERSE =
 val INSERT_SING =
  store_thm
   ("INSERT_SING",
-    ``!x s. (x INSERT t = {s}) = ((x = s) /\ ((t = {}) \/ (t = {s})))``,
+    ``!x t s. (x INSERT t = {s}) = ((x = s) /\ ((t = {}) \/ (t = {s})))``,
     SIMP_TAC std_ss [INSERT_DEF, NOT_IN_EMPTY, EXTENSION, GSPECIFICATION] THEN
     PROVE_TAC[]
     );
@@ -357,15 +360,6 @@ val DIFF_DIFF_INTER =
     PROVE_TAC[]);
 
 
-val PSUBSET_SING =
- store_thm
-  ("PSUBSET_SING",
-    ``!S x. (S PSUBSET {x}) = (S = {})``,
-
-    REWRITE_TAC[PSUBSET_DEF, SUBSET_DEF, IN_SING, EXTENSION, NOT_IN_EMPTY] THEN
-    PROVE_TAC[]);
-
-
 val IMAGE_SING =
   store_thm
     ("IMAGE_SING",
@@ -376,7 +370,7 @@ val IMAGE_SING =
 
 val INJECTIVE_IMAGE_EQ =
   store_thm ("INJECTIVE_IMAGE_EQ",
-    ``!s1 s2. (!x y.  ((x IN (s1 UNION s2) /\ y IN (s1 UNION s2)) ==>
+    ``!f s1 s2. (!x y.  ((x IN (s1 UNION s2) /\ y IN (s1 UNION s2)) ==>
           ((f x = f y) ==> (x = y)))) ==>
           ((IMAGE f s1 = IMAGE f s2) = (s1 = s2))``,
 
@@ -411,6 +405,19 @@ val DISJOINT_SUBSET_BOTH =
     IN_INTER] THEN
    PROVE_TAC[]);
 
+
+val FINITE_POW_IFF = store_thm
+  ("FINITE_POW_IFF",
+   ``!s. FINITE (POW s) = FINITE s``,
+   METIS_TAC[finite_countable, infinite_pow_uncountable, FINITE_POW]);
+
+
+val SUBSET_POW_IFF =
+  store_thm ("SUBSET_POW_IFF",
+    ``!s t. (POW s SUBSET POW t) = s SUBSET t``,
+
+   SIMP_TAC std_ss [SUBSET_DEF, IN_POW] THEN
+   PROVE_TAC[]);
 
 
 val _ = export_theory();

@@ -204,53 +204,50 @@ fun chase (Tyop{Tyop = "fun", Thy = "min", Args = [_, ty]}) = return ty
 
 datatype pp_pty_state = none | left | right | uvar
 
-fun pp_pretype pps pty = let
-  fun pp_pty pps state pty = let
+fun pp_pretype pty = let
+  open HOLPP
+  fun pp_pty state pty = let
   in
     case pty of
-      Vartype s => PP.add_string pps ("V("^s^")")
-    | Tyop {Thy,Tyop = tyop,Args} => let
-        fun qid pps = if Thy = "bool" orelse Thy = "min" then
-                        PP.add_string pps tyop
-                      else PP.add_string pps (Thy ^ "$" ^ tyop)
+      Vartype s => [add_string ("V("^s^")")]
+    | Tyop {Thy,Tyop = tyop,Args} =>
+      let
+        val qid = if Thy = "bool" orelse Thy = "min" then add_string tyop
+                  else add_string (Thy ^ "$" ^ tyop)
       in
-        if Thy = "min" andalso tyop = "fun" then let
+        if Thy = "min" andalso tyop = "fun" then
+          let
+            val wrap =
+                case state of
+                    none => (fn ps => [block INCONSISTENT 0 ps])
+                  | right => I
+                  | _ (* left or uvar *) =>
+                    fn ps => [add_string "(", block INCONSISTENT 0 ps,
+                              add_string ")"]
+            val core =
+                pp_pty left (hd Args) @
+                [add_string " ", add_string "->", add_break (1,0)] @
+                pp_pty right (hd (tl Args))
           in
-            if state = none then PP.begin_block pps PP.INCONSISTENT 0 else ();
-            if state = left orelse state = uvar then
-              (PP.add_string pps "("; PP.begin_block pps PP.INCONSISTENT 0)
-            else ();
-            pp_pty pps left (hd Args);
-            PP.add_string pps " ->";
-            PP.add_break pps (1,0);
-            pp_pty pps right (hd (tl Args));
-            if state = left orelse state = uvar then
-              (PP.end_block pps; PP.add_string pps ")")
-            else ();
-            if state = none then PP.end_block pps else ()
+            wrap core
           end
         else
           case Args of
-            [] => qid pps
-          | _ => let
-            in
-              PP.add_string pps "(";
-              PP.begin_block pps PP.INCONSISTENT 0;
-              Portable.pr_list (fn a => (PP.begin_block pps PP.INCONSISTENT 0;
-                                         pp_pty pps none a;
-                                         PP.end_block pps))
-                               (fn () => PP.add_string pps ",")
-                               (fn () => ())
-                               Args;
-              PP.end_block pps ;
-              PP.add_string pps ")";
-              qid pps
-            end
+            [] => [qid]
+          | _ => [
+              add_string "(",
+              block INCONSISTENT 0 (
+                pr_list (block INCONSISTENT 0 o pp_pty none) [add_string ","]
+                        Args
+              ),
+              add_string ")",
+              qid
+          ]
       end
-    | UVar r => PP.add_string pps ("U("^Int.toString r^")")
+    | UVar r => [add_string ("U("^Int.toString r^")")]
   end
 in
-  pp_pty pps none pty
+  block INCONSISTENT 0 (pp_pty none pty)
 end
 
 fun remove_ty_aq t =

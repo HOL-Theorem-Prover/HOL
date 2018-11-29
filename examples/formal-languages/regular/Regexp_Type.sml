@@ -203,57 +203,41 @@ fun strip_cat r =
   of Cat(a,b) => a::strip_cat b
    | otherwise => [r]
 
-fun pp_regexp ppstrm =
- let open Portable
-     val {add_string, begin_block, end_block, add_break,...} = with_ppstream ppstrm
-     fun paren i j x = if i < j then () else add_string x
+val pp_regexp =
+ let open Portable PP
+     fun paren i j s1 s2 ps =
+       if i < j then block CONSISTENT 0 ps
+       else block INCONSISTENT (size s1) (add_string s1 :: ps @ [add_string s2])
      fun pp i regexp =
       case regexp
        of Chset cs => add_string (charset_string cs)
         | Cat(s,t) =>
             let val rlist = strip_cat regexp
             in
-               paren i 2 "("
-             ; begin_block INCONSISTENT 2
-             ; pr_list (pp 2)
-                       (fn () => ())
-                       (fn () => add_break(0,0))
-                       rlist
-             ; end_block ()
-             ; paren i 2 ")"
+               paren i 2 "(" ")" (
+                 pr_list (pp 2) [add_break(0,0)] rlist
+               )
             end
         | Or rlist =>
-           let in
-               paren i 1 "("
-             ; begin_block INCONSISTENT 1
-             ; pr_list (pp 1)
-                       (fn () => add_string " |")
-                       (fn () => add_break(1,0)) rlist
-             ; end_block ()
-             ; paren i 1 ")"
-           end
+               paren i 1 "(" ")" (
+                 pr_list (pp 1) [add_string " |", add_break(1,0)] rlist
+               )
         | Neg r =>
-            let in
-               paren i 3 "("
-             ; add_string "~"
-             ; begin_block CONSISTENT 1
-             ; pp 3 r
-             ; end_block ()
-             ; paren i 3 ")"
-            end
+               paren i 3 "(" ")" [
+                  add_string "~",
+                  pp 3 r
+                ]
         | Star r =>
-            let in
-               paren i 4 "("
-             ; begin_block CONSISTENT 1
-             ; pp 4 r
-             ; end_block ()
-             ; add_string "*"
-             ; paren i 4 ")"
-            end
+               paren i 4 "(" ")" [
+                 pp 4 r,
+                 add_string "*"
+               ]
  in
    pp 0
  end;
 
+
+val _ = PolyML.addPrettyPrinter (fn d => fn _ => fn r => pp_regexp r);
 
 (*---------------------------------------------------------------------------*)
 (* print regexp as string to stdOut                                          *)
@@ -1319,7 +1303,7 @@ fun sum [] = 0
 fun pack_intervals list =
  let val _ = if null list then
              raise ERR "pack_intervals" "empty list input"
-	     else ()
+             else ()
      val iwlist = map (fn x => (x,bits_width x)) list
      val _ = stdErr_print ("Packed interval.\n  "^
                String.concat (spread "\n  " (map interval_width_string iwlist))

@@ -17,8 +17,8 @@ ProjectionScript.sml............ Validation of the projection view (incomplete)
 
 Also needed is
 
-FinitePathScript.sml ........... Theory of finite paths (lists)
-PathScript.sml ................. Finite and infinite paths
+FinitePSLPathScript.sml ........... Theory of finite paths (lists)
+PSLPathScript.sml ................. Finite and infinite paths
 
 which are in the directory PSL/path 
 (should be ../../path relative to this one).

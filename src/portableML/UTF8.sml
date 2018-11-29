@@ -128,6 +128,8 @@ in
   recurse 0 0
 end
 
+val firstChar = Option.map #1 o getChar
+
 fun lastChar s = let
   open Substring
   val ss = full s
@@ -199,5 +201,30 @@ fun substring (s,start,finish) =
   in
     recurse [] 0 s
   end
+
+fun all P s =
+    case getChar s of
+        NONE => true
+      | SOME ((s,_), rest) => P s andalso all P rest
+
+fun explode s =
+    let
+      fun recurse A s =
+          case getChar s of
+              NONE => List.rev A
+            | SOME((s,_), rest) => recurse (s::A) rest
+    in
+      recurse [] s
+    end
+
+fun explodei s =
+    let
+      fun recurse A s =
+          case getChar s of
+              NONE => List.rev A
+            | SOME((_,i), rest) => recurse (i::A) rest
+    in
+      recurse [] s
+    end
 
 end (* struct *)

@@ -48,6 +48,8 @@ type simple_guess_search_fun_with_callback =
 (* Auxiliary function                  *)
 (***************************************)
 
+val ERR = mk_HOL_ERR "quantHeuristicsLibSimple"
+
 fun not_uses_avoid_vars avoid tm = let
   val s1 = FVL [tm] empty_tmset
   val s2 = HOLset.intersection (s1, avoid)

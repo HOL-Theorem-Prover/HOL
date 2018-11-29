@@ -3,11 +3,12 @@ sig
 
 type t = {
   holstate : string option,
+  multithread : int option,
   poly : string option,
   polymllibdir : string option,
   poly_not_hol : bool,
-  time_limit : Time.time option,
   relocbuild : bool,
+  time_limit : Time.time option,
   core : HM_Core_Cline.t
 }
 

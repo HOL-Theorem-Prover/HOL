@@ -182,7 +182,7 @@ val ASSGN_CORRESPOND = Q.store_thm (
        correspond (tdecode (rg,sk) stm) (mdecode st (translate_assgn stm)) m`,
 
    let val tac1 =
-	 FULL_SIMP_TAC finmap_ss [correspond_def, translate_assgn_def, tdecode_def, twrite_def, tread_def, mdecode_def,
+         FULL_SIMP_TAC finmap_ss [correspond_def, translate_assgn_def, tdecode_def, twrite_def, tread_def, mdecode_def,
             toREG_def, toMEM_def, write_thm, toEXP_def, conv_roc_def, toEXP_def, read_thm, roc_2_exp_def,
             data_reg_lem_1, data_reg_lem_2, toLocn_def] THEN
          RW_TAC std_ss [data_reg_lem_3, fp_def] THEN

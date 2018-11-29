@@ -24,7 +24,7 @@ open hol88Lib
      prim_recTheory
      arithmeticTheory
      realTheory
-     topologyTheory
+     metricTheory
      netsTheory
      seqTheory
      limTheory

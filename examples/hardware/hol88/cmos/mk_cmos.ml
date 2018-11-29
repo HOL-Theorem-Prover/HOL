@@ -1,0 +1,144 @@
+% Constuction of transistor models out of capacitors and switches %
+
+new_theory`cmos`;;
+
+declare_word_widths[1];;
+
+let tri  = ":tri_word1"
+and time = ":num";;
+
+let sig  = ":^time -> ^tri";;
+
+maptok (\t. new_constant(t,":^tri")) `HI LO`;;
+
+let TRI_AX =
+ new_axiom(`TRI_AX`, "!x:^tri. (x=HI) \/ (x=LO) \/ (x=FLOAT1)");;
+
+let TRI_EQ_DISTINCT =
+ new_axiom(`TRI_EQ_DISTINCT`, "~(HI=LO) /\ ~(HI=FLOAT1) /\ ~(LO=FLOAT1)");;
+
+let TRI_U_AX =
+ new_axiom(`TRI_U_AX`, "!x:^tri. x U1 x = x");;
+
+% |- ~(HI=LO)/\~(HI=FLOAT1)/\~(LO=FLOAT1)/\~(LO=HI)/\
+     ~(FLOAT1=HI)/\~(FLOAT1=LO) %
+
+let TRI_EQ_CLAUSES =
+ let thl1 = CONJUNCTS TRI_EQ_DISTINCT
+ in
+ let thl2 = map NOT_EQ_SYM thl1
+ in
+ save_thm(`TRI_EQ_CLAUSES`, LIST_CONJ(thl1@thl2));;
+
+% DEF x is true if x is HI or LO %
+
+let DEF =
+ new_definition
+  (`DEF`,
+   "!x:^tri. DEF x = ((x = HI) \/ (x = LO))");;
+
+let DEF_CLAUSES =
+ prove_thm
+  (`DEF_CLAUSES`,
+   "(DEF HI) /\ (DEF LO) /\ ~(DEF FLOAT1)",
+   REWRITE_TAC[DEF;TRI_EQ_CLAUSES]);;
+
+let NSWITCH =
+ new_definition
+  (`NSWITCH`,
+   "NSWITCH(g,i,o) = !t:^time. 
+     ((g t = HI) ==> (o t = i t)) /\
+     ((g t = LO) ==> (o t = FLOAT1))");;
+
+let PSWITCH =
+ new_definition
+  (`PSWITCH`,
+   "PSWITCH(g,i,o) = !t:^time. 
+     ((g t = LO) ==> (o t = i t)) /\
+     ((g t = HI) ==> (o t = FLOAT1))");;
+
+let CAPACITOR =
+ new_definition
+  (`CAPACITOR`,
+   "CAPACITOR(i,o) =
+     !t. (DEF(i t) ==> (o t = i t)) /\ 
+         (((i t = FLOAT1) /\ DEF(i(t-1))) ==> (o t = i(t-1)))");;
+
+let NTRAN =
+ new_definition
+  (`NTRAN`,
+   "NTRAN(g,i,o) = ?p. CAPACITOR(g,p) /\ NSWITCH(p,i,o)");;
+
+let PTRAN =
+ new_definition
+  (`PTRAN`,
+   "PTRAN(g,i,o) = ?p. CAPACITOR(g,p) /\ PSWITCH(p,i,o)");;
+
+let DEF_IMP =
+ prove_thm
+  (`DEF_IMP`,
+   "!x. ((x = HI) ==> DEF x) /\ ((x = LO) ==> DEF x)",
+   REPEAT STRIP_TAC
+    THEN ASM_REWRITE_TAC[DEF_CLAUSES]);;
+
+% A tactical that repeats a tactic until no new goals are produced 
+  (will be put in the system at next rebuild) %
+
+letrec CHANGED_TAC (tac:tactic) g =
+ let gl,p = tac g
+ in
+ if set_equal gl [g] then fail else (gl,p);;
+
+let NTRAN_THM = 
+ prove_thm
+  (`NTRAN_THM`,
+   "!g:^sig. !s:^sig. !d:^sig.
+     NTRAN(g,s,d) ==>
+      !t. 
+       (((g t = HI)\/((g t = FLOAT1)/\(g(t-1) = HI))) ==> (d t = s t)) /\
+       (((g t = LO)\/((g t = FLOAT1)/\(g(t-1) = LO))) ==> (d t = FLOAT1))",
+   REPEAT GEN_TAC
+    THEN REWRITE_TAC[NTRAN;CAPACITOR;NSWITCH]
+    THEN REPEAT STRIP_TAC
+    THEN REPEAT
+          (CHANGED_TAC
+            (IMP_RES_TAC DEF_IMP 
+              THEN RES_TAC
+              THEN IMP_RES_TAC EQ_TRANS 
+              THEN RES_TAC )));;
+
+let PTRAN_THM = 
+ prove_thm
+  (`PTRAN_THM`,
+   "!g:^sig. !s:^sig. !d:^sig.
+     PTRAN(g,s,d) ==>
+      !t. 
+       (((g t = LO)\/((g t = FLOAT1)/\(g(t-1) = LO))) ==> (d t = s t)) /\
+       (((g t = HI)\/((g t = FLOAT1)/\(g(t-1) = HI))) ==> (d t = FLOAT1))",
+   REPEAT GEN_TAC
+    THEN REWRITE_TAC[PTRAN;CAPACITOR;PSWITCH]
+    THEN REPEAT STRIP_TAC
+    THEN REPEAT
+          (CHANGED_TAC
+            (IMP_RES_TAC DEF_IMP 
+              THEN RES_TAC
+              THEN IMP_RES_TAC EQ_TRANS 
+              THEN RES_TAC )));;
+
+let PWR =
+ new_definition
+  (`PWR`,
+   "PWR(o:^sig) = !t. o t = HI");;
+
+let GND =
+ new_definition
+  (`GND`,
+   "GND(o:^sig) = !t. o t = LO");;
+
+let J =
+ new_definition
+  (`J`,
+   "!i1:^sig. !i2:^sig. !o:^sig.
+     J(i1,i2,o) = !t. o t = (i1 t) U1 (i2 t)");;
+
+close_theory();;

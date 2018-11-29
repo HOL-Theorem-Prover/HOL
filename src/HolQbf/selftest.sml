@@ -31,18 +31,21 @@ fun die s =
 fun read_after_write t =
 let
   val path = FileSys.tmpName ()
-  val dict = QDimacs.write_qdimacs_file path t
-  val varfn = QDimacs.dict_to_varfn dict
+  fun finish () = OS.FileSys.remove path handle SysErr _ => ()
+  fun work() = let
+    val dict = QDimacs.write_qdimacs_file path t
+    val varfn = QDimacs.dict_to_varfn dict
+    val t' = QDimacs.read_qdimacs_file varfn path
+  in
+    if Term.aconv t t' then print "."
+    else
+      (finish(); die "Term read not alpha-equivalent to original term.")
+  end
 in
-  if Term.aconv t (QDimacs.read_qdimacs_file varfn path) then
-    print "."
-  else
-    die "Term read not alpha-equivalent to original term."
+  Portable.finally finish work ()
+    handle e => die ("Exception: " ^ General.exnMessage e ^
+                     " raised while attempting read of dimacs file")
 end
-handle Feedback.HOL_ERR {origin_structure, origin_function, message} =>
-  die ("Read after write failed on term '" ^ Hol_pp.term_to_string t ^
-    "': exception HOL_ERR (in " ^ origin_structure ^ "." ^ origin_function ^
-    ", message: " ^ message ^ ")")
 
 fun prove t =
   if squolem_installed then

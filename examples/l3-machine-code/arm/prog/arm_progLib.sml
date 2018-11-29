@@ -1208,6 +1208,10 @@ val pos = ref 0;
 val () = List.app (fn s => (addInstructionClass s; Portable.inc pos))
                   (List.drop (l, !pos))
 
+val () =
+  List.app (fn s => (addInstructionClass s
+                     handle HOL_ERR _ => (fails := s::(!fails)))) l
+
 use "arm_tests.sml";
 val l = Lib.mk_set arm_tests
 length arm_tests

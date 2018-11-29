@@ -201,8 +201,8 @@ fun split_at f [] = raise failwith"split_at"
 fun CONJ_TO_FRONT_CONV conj term =
     let val conjs = strip_conj term
         val (front,e,back) = split_at (term_eq conj) conjs
-	    handle HOL_ERR _ => failwith "CONJ_TO_FRONT_CONV"
-	val rhs = list_mk_conj (e::(front @ back))
+            handle HOL_ERR _ => failwith "CONJ_TO_FRONT_CONV"
+        val rhs = list_mk_conj (e::(front @ back))
     in CONJ_ACI (mk_eq(term,rhs))
     end;
 

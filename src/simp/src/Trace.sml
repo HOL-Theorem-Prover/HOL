@@ -51,10 +51,16 @@ fun tty_trace (LZ_TEXT fs) = (say "  "; say (fs ()); say "\n")
   | tty_trace (MORE_CONTEXT thm) =
     (say "  more context: "; print_thm thm; say "\n");
 
+(* hol_clock is sometimes a small amount of time in the future under Poly/ML,
+   presumably a consequence of being stored in a heap.
+*)
+fun fudge t = Time.+(t, Time.fromSeconds 10)
+
 val _ = trace_hook :=
         (fn (n,a) => if (n <= !trace_level) then
                        (say "[";
-                        say ((Arbnum.toString o #usec o Portable.dest_time)
+                        say ((Arbnum.toString o #usec o Portable.dest_time o
+                              fudge)
                              (#usr (Timer.checkCPUTimer Globals.hol_clock)));
                         say "]: ";
                         tty_trace a)

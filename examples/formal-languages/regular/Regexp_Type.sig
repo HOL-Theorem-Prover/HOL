@@ -72,7 +72,7 @@ sig
  val fromString    : string -> regexp
  val fromQuote     : 'a frag list -> regexp
 
- val pp_regexp     : HOLPP.ppstream -> regexp -> unit
+ val pp_regexp     : regexp PP.pprinter
  val print_regexp  : regexp -> unit
  val println_regexp  : regexp -> unit
 

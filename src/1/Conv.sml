@@ -13,6 +13,17 @@
 (* TRANSLATOR    : Konrad Slind, University of Calgary                   *)
 (* DATE          : September 11, 1991                                    *)
 (* Many micro-optimizations added, February 24, 1992, KLS                *)
+
+(* This file as a whole is assumed to be under the license in the file
+"COPYRIGHT" in the HOL4 distribution (note added by Mario Castelán         UOK
+Castro).
+
+For the avoidance of legal uncertainty, I (Mario Castelán Castro) hereby   UOK
+place my modifications to this file in the public domain per the Creative
+Commons CC0 1.0 public domain dedication <https://creativecommons.org/publ
+icdomain/zero/1.0/legalcode>. This should not be interpreted as a personal
+endorsement of permissive (non-Copyleft) licenses. *)
+
 (* ===================================================================== *)
 
 structure Conv :> Conv =
@@ -25,6 +36,10 @@ exception UNCHANGED
 fun QCONV c tm = c tm handle UNCHANGED => REFL tm
 
 val ERR = mk_HOL_ERR "Conv"
+fun w nm c t = c t handle UNCHANGED => raise UNCHANGED
+                   | e as HOL_ERR _ => Portable.reraise e
+                   | Fail s => raise Fail (s ^ " --> " ^ nm)
+                   | e => raise Fail (nm ^ ": " ^ General.exnMessage e)
 
 (*----------------------------------------------------------------------*
  * Conversion for rewrite rules of the form |- !x1 ... xn. t == u       *
@@ -249,6 +264,8 @@ fun CHANGED_CONV conv tm =
       else th
    end
 
+(* val CHANGED_CONV = fn c => w "Conv.CHANGED_CONV" (CHANGED_CONV c) *)
+
 (*----------------------------------------------------------------------*
  *  Cause a failure if the conversion causes the UNCHANGED exception to *
  *  be raised.  Doesn't "waste time" doing an equality check.           *
@@ -258,26 +275,33 @@ fun CHANGED_CONV conv tm =
 fun QCHANGED_CONV conv tm =
    conv tm handle UNCHANGED => raise ERR "QCHANGED_CONV" "Input term unchanged"
 
-local
-  fun testconv f x = SOME (SOME (f x))
+fun testconv (f:conv) x =
+  SOME (SOME (f x))
   handle UNCHANGED => SOME NONE
        | HOL_ERR _ => NONE
-       | e => raise e
-in
-  fun IFC (conv1:conv) conv2 conv3 tm =
-    case testconv conv1 tm of
-      SOME (SOME th) =>
-        (TRANS th (conv2 (rhs (concl th))) handle UNCHANGED => th)
-    | SOME NONE => conv2 tm
-    | NONE => conv3 tm
-end
+
+fun IFC (conv1:conv) conv2 conv3 tm =
+  case testconv conv1 tm of
+    SOME (SOME th) =>
+      (TRANS th (conv2 (rhs (concl th))) handle UNCHANGED => th)
+  | SOME NONE => conv2 tm
+  | NONE => conv3 tm
 
 (*----------------------------------------------------------------------*
  * Apply a conversion zero or more times.                               *
  *----------------------------------------------------------------------*)
 
 fun REPEATC conv tm =
-   (IFC (QCHANGED_CONV conv) (REPEATC conv) ALL_CONV) tm
+  let
+    fun loop thm =
+      case (testconv conv o rhs o concl) thm of
+          SOME (SOME thm') => loop (TRANS thm thm')
+        | _ => thm
+  in
+    case testconv conv tm of
+        SOME (SOME thm) => loop thm
+      | _ => raise UNCHANGED
+  end
 
 fun TRY_CONV conv = conv ORELSEC ALL_CONV
 
@@ -1477,6 +1501,7 @@ in
                          {origin_structure = "Conv",
                           origin_function = "X_SKOLEM_CONV", ...} => raise e
                  | HOL_ERR _ => err ""
+   (* val X_SKOLEM_CONV = w "X_SKOLEM_CONV" X_SKOLEM_CONV *)
 end
 
 (*----------------------------------------------------------------------*
@@ -1502,6 +1527,7 @@ in
          X_SKOLEM_CONV (variant (free_vars tm) fv) tm
       end
       handle HOL_ERR _ => raise ERR "SKOLEM_CONV" ""
+   (* val SKOLEM_CONV = w "SKOLEM_CONV" SKOLEM_CONV *)
 end
 
 (*----------------------------------------------------------------------*
@@ -1518,6 +1544,16 @@ fun SYM_CONV tm =
       SPECL [lhs, rhs] th
    end
    handle HOL_ERR _ => raise ERR "SYM_CONV" ""
+
+(*-----------------------------------------------------------------------*
+ * GSYM - General symmetry rule                                          *
+ *                                                                       *
+ * Reverses the first equation(s) encountered in a top-down search.      *
+ *                                                                       *
+ * [JRH 92.03.28]                                                        *
+ *-----------------------------------------------------------------------*)
+
+val GSYM = CONV_RULE (ONCE_DEPTH_CONV SYM_CONV)
 
 (*----------------------------------------------------------------------*
  *     A |- t1 = t2                                                     *
@@ -1652,6 +1688,29 @@ in
       end
       handle HOL_ERR _ => raise ERR "SELECT_CONV" ""
 end
+
+(*----------------------------------------------------------------------*
+ * SPLICE_CONJ_CONV: Normalize to right associativity a conjunction     *
+ * without recursing in the right conjunct.                             *
+ *                                                                      *
+ * SPLICE_CONJ_CONV "(a1 /\ a2 /\ ...) /\ b"                            *
+ * --> |- = "(a1 /\ a2 /\ ...) /\ b = a1 /\ a2 /\ ... /\ b"             *
+ *                                                                      *
+ * Fails if the term is not a conjunction.                              *
+ *----------------------------------------------------------------------*)
+local
+  val conv = REWR_CONV (GSYM CONJ_ASSOC)
+in
+fun SPLICE_CONJ_CONV t =
+  let
+    fun recurse t = IFC conv (RAND_CONV recurse) ALL_CONV t
+  in
+    if is_conj t then
+      recurse t
+    else
+      raise mk_HOL_ERR "Conv" "SPLICE_CONJ_CONV" "Not a conjunction"
+  end
+end (* local *)
 
 (*----------------------------------------------------------------------*
  * CONTRAPOS_CONV: convert an implication to its contrapositive.        *
@@ -2361,16 +2420,6 @@ fun AC_CONV (associative, commutative) =
          end
    end
    handle e => raise (wrap_exn "Conv" "AC_CONV" e)
-
-(*-----------------------------------------------------------------------*
- * GSYM - General symmetry rule                                          *
- *                                                                       *
- * Reverses the first equation(s) encountered in a top-down search.      *
- *                                                                       *
- * [JRH 92.03.28]                                                        *
- *-----------------------------------------------------------------------*)
-
-val GSYM = CONV_RULE (ONCE_DEPTH_CONV SYM_CONV)
 
 (*--------------------------------------------------------------------------*
  * Conversions for messing with bound variables.                            *

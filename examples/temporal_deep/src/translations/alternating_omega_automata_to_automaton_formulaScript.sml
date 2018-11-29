@@ -18,6 +18,7 @@ open infinite_pathTheory pred_setTheory listTheory pairTheory xprop_logicTheory
    tuerk_tacticsLib temporal_deep_mixedTheory arithmeticTheory numLib
    automaton_formulaTheory alternating_omega_automataTheory
    symbolic_semi_automatonTheory;
+open Sanity;
 
 val _ = hide "S";
 val _ = hide "I";
@@ -168,6 +169,7 @@ val IMPL_COLLAPSED_RUN_SEM =
     ASM_REWRITE_TAC[] THEN
     REPEAT BOOL_EQ_STRIP_TAC THEN
     REPEAT FORALL_EQ_STRIP_TAC THEN
+    rename1 `s IN A.S` THEN
     Cases_on `~(s IN w n)` THENL [
         ASM_REWRITE_TAC[],
 
@@ -237,6 +239,7 @@ val EQ_COLLAPSED_RUN_SEM =
     ASM_REWRITE_TAC[] THEN
     REPEAT BOOL_EQ_STRIP_TAC THEN
     REPEAT FORALL_EQ_STRIP_TAC THEN
+    rename1 `s IN A.S` THEN
     Cases_on `~(s IN A.S)` THENL [
         ASM_REWRITE_TAC[] THEN
         PROVE_TAC[PATH_SUBSET_def, SUBSET_DEF],
@@ -319,12 +322,13 @@ val COLLAPSED_DECOLLAPSED_ELIM =
 val IS_REACHABLE_BY_DECOLLAPSED_EMPTY_ABORT_RUN_ELIM =
  store_thm
   ("IS_REACHABLE_BY_DECOLLAPSED_EMPTY_ABORT_RUN_ELIM",
-    ``!s n. (IS_REACHABLE_BY_RUN (s, n) (DECOLLAPSED_RUN (EMPTY_ABORT_RUN r))) = (s IN (EMPTY_ABORT_RUN r) n)``,
+    ``!s n r. (IS_REACHABLE_BY_RUN (s, n) (DECOLLAPSED_RUN (EMPTY_ABORT_RUN r))) = (s IN (EMPTY_ABORT_RUN r) n)``,
 
     Induct_on `n` THENL [
         SIMP_TAC std_ss [IS_REACHABLE_BY_RUN_def, DECOLLAPSED_RUN_def, alternating_run_S0],
 
         ASM_SIMP_TAC std_ss [IS_REACHABLE_BY_RUN_def, alternating_run_R, DECOLLAPSED_RUN_def] THEN
+        REPEAT GEN_TAC THEN
         Cases_on `EMPTY_ABORT_RUN r n = EMPTY` THENL [
             PROVE_TAC[MEMBER_NOT_EMPTY, EMPTY_ABORT_RUN_EMPTY_SUC],
             PROVE_TAC[MEMBER_NOT_EMPTY]
@@ -335,14 +339,14 @@ val IS_REACHABLE_BY_DECOLLAPSED_EMPTY_ABORT_RUN_ELIM =
 val IS_REACHABLE_BY_DECOLLAPSED_RUN =
  store_thm
   ("IS_REACHABLE_BY_DECOLLAPSED_RUN",
-    ``!s n. (IS_REACHABLE_BY_RUN (s, n) (DECOLLAPSED_RUN r)) ==> (s IN r n)``,
+    ``!s n r. (IS_REACHABLE_BY_RUN (s, n) (DECOLLAPSED_RUN r)) ==> (s IN r n)``,
 
     Induct_on `n` THENL [
         SIMP_TAC std_ss [IS_REACHABLE_BY_RUN_def, DECOLLAPSED_RUN_def, alternating_run_S0],
 
         ASM_SIMP_TAC std_ss [IS_REACHABLE_BY_RUN_def, alternating_run_R, DECOLLAPSED_RUN_def] THEN
         PROVE_TAC[]
-    ])
+    ]);
 
 
 
@@ -494,16 +498,16 @@ val IMPL_COLLAPSED_RUN___EQ_COLLAPSED_RUN___ENRICHMENT =
 
     FULL_SIMP_TAC std_ss [IS_VALID_ALTERNATING_SEMI_AUTOMATON_def, PATH_SUBSET_def] THEN
     `?fw. fw = (\w n. (w n) UNION ({s | s IN A.S /\ P_SEM (w (SUC n)) (A.R s (i n))}))` by METIS_TAC[] THEN
-    `?w'. w' = (\n:num. BIGUNION {ITERATE fw w m n | m IN UNIV})` by
+    `?w'. w' = (\n:num. BIGUNION {FUNPOW fw m w n | m IN UNIV})` by
         METIS_TAC[] THEN
 
 
-    SUBGOAL_TAC `(!m n:num. (w n SUBSET (ITERATE fw w m n)) /\ ((ITERATE fw w m n) SUBSET (A:('a,'a) alternating_semi_automaton).S))` THEN1 (
+    SUBGOAL_TAC `(!m n:num. (w n SUBSET (FUNPOW fw m w n)) /\ ((FUNPOW fw m w n) SUBSET (A:('a,'a) alternating_semi_automaton).S))` THEN1 (
         Induct_on `m` THENL [
-            ASM_SIMP_TAC std_ss [ITERATE_def, SUBSET_REFL],
+            ASM_SIMP_TAC std_ss [FUNPOW_0, SUBSET_REFL],
 
-            `?x. ITERATE fw w m = x` by PROVE_TAC[] THEN
-            ASM_SIMP_TAC std_ss [ITERATE_def, UNION_SUBSET] THEN
+            `?x. FUNPOW fw m w = x` by PROVE_TAC[] THEN
+            ASM_SIMP_TAC std_ss [FUNPOW_SUC, UNION_SUBSET] THEN
             REPEAT STRIP_TAC THENL [
                 PROVE_TAC[SUBSET_UNION, SUBSET_REFL, SUBSET_TRANS],
                 PROVE_TAC[],
@@ -513,7 +517,7 @@ val IMPL_COLLAPSED_RUN___EQ_COLLAPSED_RUN___ENRICHMENT =
     ) THEN
 
 
-    SUBGOAL_TAC `!m m':num n:num. m' >= m ==> ((ITERATE fw w m n) SUBSET (ITERATE fw w m' n))` THEN1 (
+    SUBGOAL_TAC `!m m':num n:num. m' >= m ==> ((FUNPOW fw m w n) SUBSET (FUNPOW fw m' w n))` THEN1 (
         Induct_on `m'-m` THENL [
 
             REPEAT STRIP_TAC THEN
@@ -522,9 +526,9 @@ val IMPL_COLLAPSED_RUN___EQ_COLLAPSED_RUN___ENRICHMENT =
 
             REPEAT STRIP_TAC THEN
             `(v = m' - SUC m) /\ (m' >= SUC m)` by DECIDE_TAC THEN
-            `(ITERATE fw w m n) SUBSET (ITERATE fw w (SUC m) n)` by (
-                REWRITE_TAC [ITERATE_def] THEN
-                `?x. ITERATE fw w m = x` by PROVE_TAC[] THEN
+            `(FUNPOW fw m w n) SUBSET (FUNPOW fw (SUC m) w n)` by (
+                REWRITE_TAC [FUNPOW_SUC] THEN
+                `?x. FUNPOW fw m w = x` by PROVE_TAC[] THEN
                 ASM_SIMP_TAC std_ss [SUBSET_DEF, IN_UNION]
             ) THEN
             PROVE_TAC[SUBSET_TRANS]
@@ -537,7 +541,7 @@ val IMPL_COLLAPSED_RUN___EQ_COLLAPSED_RUN___ENRICHMENT =
             GSYM RIGHT_EXISTS_AND_THM, GSPECIFICATION, IN_UNIV] THEN
         REPEAT STRIP_TAC THEN
         EXISTS_TAC ``0:num`` THEN
-        ASM_REWRITE_TAC[ITERATE_def]
+        ASM_REWRITE_TAC[FUNPOW_0]
     ) THEN
 
 
@@ -548,34 +552,34 @@ val IMPL_COLLAPSED_RUN___EQ_COLLAPSED_RUN___ENRICHMENT =
         PROVE_TAC[SUBSET_DEF]
     ) THEN
 
-    SUBGOAL_TAC `!n. ?m0. !m. m >= m0 ==> (ITERATE fw w m n = ITERATE fw w m0 n)` THEN1 (
+    SUBGOAL_TAC `!n. ?m0. !m. m >= m0 ==> (FUNPOW fw m w n = FUNPOW fw m0 w n)` THEN1 (
         CCONTR_TAC THEN
         FULL_SIMP_TAC std_ss [] THEN
 
-        `?z. (!m. CARD (ITERATE fw w m n) <= z) /\ !z'. z' < z ==> ~!m. CARD (ITERATE fw w m n) <= z'` by
+        `?z. (!m. CARD (FUNPOW fw m w n) <= z) /\ !z'. z' < z ==> ~!m. CARD (FUNPOW fw m w n) <= z'` by
             METIS_TAC[CARD_SUBSET,
-            EXISTS_LEAST_CONV ``?z. !m. CARD (ITERATE fw (w:num->'a set) m n) <= z``] THEN
-        SUBGOAL_TAC `?m0. CARD (ITERATE fw w m0 n) = z` THEN1 (
+            EXISTS_LEAST_CONV ``?z. !m. CARD (FUNPOW fw m (w:num->'a set) n) <= z``] THEN
+        SUBGOAL_TAC `?m0. CARD (FUNPOW fw m0 w n) = z` THEN1 (
             CCONTR_TAC THEN
             FULL_SIMP_TAC std_ss [] THEN
             `!x z. (x <= z /\ (~(x = z))) ==> (x <= PRE z /\ PRE z < z)` by DECIDE_TAC THEN
-            `!m:num. CARD (ITERATE fw w m n) <= (PRE z) /\ PRE z < z` by METIS_TAC[] THEN
+            `!m:num. CARD (FUNPOW fw m w n) <= (PRE z) /\ PRE z < z` by METIS_TAC[] THEN
             METIS_TAC[]
         ) THEN
 
-        `?m1. m1 >= m0 /\ ~(ITERATE fw w m1 n = ITERATE fw w m0 n)` by METIS_TAC[] THEN
-        `ITERATE fw w m0 n PSUBSET ITERATE fw w m1 n` by PROVE_TAC[PSUBSET_DEF] THEN
-        `z < CARD (ITERATE fw w m1 n)` by PROVE_TAC[CARD_PSUBSET, SUBSET_FINITE] THEN
+        `?m1. m1 >= m0 /\ ~(FUNPOW fw m1 w n = FUNPOW fw m0 w n)` by METIS_TAC[] THEN
+        `FUNPOW fw m0 w n PSUBSET FUNPOW fw m1 w n` by PROVE_TAC[PSUBSET_DEF] THEN
+        `z < CARD (FUNPOW fw m1 w n)` by PROVE_TAC[CARD_PSUBSET, SUBSET_FINITE] THEN
         `!x y. ~(x <= y /\ y < x)` by DECIDE_TAC THEN
         PROVE_TAC[]
     ) THEN
 
-    SUBGOAL_TAC `!n. ?m0. (w' n = (ITERATE fw w m0 n)) /\
-        (!m. m >= m0 ==> (ITERATE fw w m n = ITERATE fw w m0 n))` THEN1 (
+    SUBGOAL_TAC `!n. ?m0. (w' n = (FUNPOW fw m0 w n)) /\
+        (!m. m >= m0 ==> (FUNPOW fw m w n = FUNPOW fw m0 w n))` THEN1 (
         GSYM_NO_TAC 6 THEN
         ASM_SIMP_TAC std_ss [] THEN
         REPEAT STRIP_TAC THEN
-        `?m0. !m. m >= m0 ==> (ITERATE fw w m n = ITERATE fw w m0 n)` by PROVE_TAC[] THEN
+        `?m0. !m. m >= m0 ==> (FUNPOW fw m w n = FUNPOW fw m0 w n)` by PROVE_TAC[] THEN
         EXISTS_TAC ``m0:num`` THEN
         ASM_REWRITE_TAC[EXTENSION] THEN
         SIMP_TAC std_ss [GSYM RIGHT_EXISTS_AND_THM, IN_BIGUNION,
@@ -593,13 +597,13 @@ val IMPL_COLLAPSED_RUN___EQ_COLLAPSED_RUN___ENRICHMENT =
     ) THEN
 
 
-    SUBGOAL_TAC `!n s m. (s IN (ITERATE fw w m n)) ==>
-        (P_SEM (ITERATE fw w m (SUC n))  ((A:('a, 'a) alternating_semi_automaton).R s (i n)))` THEN1 (
+    SUBGOAL_TAC `!n s m. (s IN (FUNPOW fw m w n)) ==>
+        (P_SEM (FUNPOW fw m w (SUC n))  ((A:('a, 'a) alternating_semi_automaton).R s (i n)))` THEN1 (
         Induct_on `m` THENL [
-            ASM_SIMP_TAC std_ss [ITERATE_def],
+            ASM_SIMP_TAC std_ss [FUNPOW_0],
 
-            `?x. ITERATE fw w m = x` by PROVE_TAC[] THEN
-            ONCE_REWRITE_TAC [ITERATE_def] THEN
+            `?x. FUNPOW fw m w = x` by PROVE_TAC[] THEN
+            ONCE_REWRITE_TAC [FUNPOW_SUC] THEN
             FULL_SIMP_TAC std_ss [IN_UNION, GSPECIFICATION] THEN
             PROVE_TAC[SUBSET_UNION, IS_POSITIVE_NEGATIVE_PROP_FORMULA_SEM]
         ]
@@ -611,13 +615,13 @@ val IMPL_COLLAPSED_RUN___EQ_COLLAPSED_RUN___ENRICHMENT =
         ASM_REWRITE_TAC[],
         PROVE_TAC[IS_POSITIVE_NEGATIVE_PROP_FORMULA_SEM],
 
-        SUBGOAL_TAC `?l. (w' n = ITERATE fw w l n) /\
-                                         (!m. m >= l ==> (ITERATE fw w m n = ITERATE fw w l n)) /\
-                                         (w' (SUC n) = ITERATE fw w l (SUC n)) /\
-                                         (!m. m >= l ==> (ITERATE fw w m (SUC n) = ITERATE fw w l (SUC n)))` THEN1 (
-            `?m0. (w' n = ITERATE fw w m0 n) /\ !m. m >= m0 ==> (ITERATE fw w m n = ITERATE fw w m0 n)`
+        SUBGOAL_TAC `?l. (w' n = FUNPOW fw l w n) /\
+                                         (!m. m >= l ==> (FUNPOW fw m w n = FUNPOW fw l w n)) /\
+                                         (w' (SUC n) = FUNPOW fw l w (SUC n)) /\
+                                         (!m. m >= l ==> (FUNPOW fw m w (SUC n) = FUNPOW fw l w (SUC n)))` THEN1 (
+            `?m0. (w' n = FUNPOW fw m0 w n) /\ !m. m >= m0 ==> (FUNPOW fw m w n = FUNPOW fw m0 w n)`
                 by METIS_TAC[] THEN
-            `?m1. (w' (SUC n) = ITERATE fw w m1 (SUC n)) /\ !m. m >= m1 ==> (ITERATE fw w m (SUC n) = ITERATE fw w m1 (SUC n))` by METIS_TAC[] THEN
+            `?m1. (w' (SUC n) = FUNPOW fw m1 w (SUC n)) /\ !m. m >= m1 ==> (FUNPOW fw m w (SUC n) = FUNPOW fw m1 w (SUC n))` by METIS_TAC[] THEN
             SUBGOAL_TAC `?l. l >= m0 /\ l >= m1` THEN1 (
                 Cases_on `m0 >= m1` THENL [
                     EXISTS_TAC ``m0:num``,
@@ -631,10 +635,10 @@ val IMPL_COLLAPSED_RUN___EQ_COLLAPSED_RUN___ENRICHMENT =
         EQ_TAC THENL [
             PROVE_TAC[SUBSET_DEF],
 
-            `?x. ITERATE fw w l = x` by PROVE_TAC[] THEN
+            `?x. FUNPOW fw l w = x` by PROVE_TAC[] THEN
             `w' (SUC n) = x (SUC n)` by PROVE_TAC[] THEN
             `SUC l >= l` by DECIDE_TAC THEN
-            `w' n = (fw x) n` by METIS_TAC[ITERATE_def] THEN
+            `w' n = (fw x) n` by METIS_TAC[FUNPOW_SUC, FUNPOW_0] THEN
             ASM_SIMP_TAC std_ss [IN_UNION, GSPECIFICATION]
         ]
     ]
@@ -681,7 +685,7 @@ val NDET_TRUE___A_TRUE___IMPL =
  store_thm
   ("NDET_TRUE___A_TRUE___IMPL",
 
-    ``!A fi i i'. (IS_VALID_ALTERNATING_AUTOMATON A /\ (?S. A.AC = TRUE) /\
+    ``!A fi i i'. (IS_VALID_ALTERNATING_AUTOMATON A /\ (A.AC = TRUE) /\
              IS_VALID_INPUT_ENCODING A.A fi /\
              IS_VALID_ENCODED_INPUT A.A fi i i') ==>
         ((A_SEM i' (A_NDET (IMPL_COLLAPSED_ALTERNATING_SEMI_AUTOMATON A.A fi, A_TRUE))) = ALT_SEM A i)``,
@@ -701,7 +705,7 @@ val NDET_TRUE___A_TRUE___EQ =
  store_thm
   ("NDET_TRUE___A_TRUE___EQ",
 
-    ``!A fi i i'. (IS_VALID_ALTERNATING_AUTOMATON A /\ (?S. A.AC = TRUE) /\
+    ``!A fi i i'. (IS_VALID_ALTERNATING_AUTOMATON A /\ (A.AC = TRUE) /\
              IS_VALID_INPUT_ENCODING A.A fi /\
              IS_VALID_ENCODED_INPUT A.A fi i i') ==>
         ((A_SEM i' (A_NDET (EQ_COLLAPSED_ALTERNATING_SEMI_AUTOMATON A.A fi, A_TRUE))) = ALT_SEM A i)``,
@@ -729,7 +733,7 @@ val NDET_G___A_UNIVERSALLY_TOTAL_WEAK_CO_BUECHI___IMPL =
 
     ``!A fi i i' ac. (IS_VALID_ALTERNATING_AUTOMATON A /\
             IS_UNIVERSALLY_TOTAL_ALTERNATING_SEMI_AUTOMATON A.A /\
-            (?S. A.AC = WEAK_CO_BUECHI ac) /\
+            (A.AC = WEAK_CO_BUECHI ac) /\
              IS_VALID_INPUT_ENCODING A.A fi /\
              IS_VALID_ENCODED_INPUT A.A fi i i') ==>
         ((A_SEM i' (A_NDET (IMPL_COLLAPSED_ALTERNATING_SEMI_AUTOMATON A.A fi,
@@ -785,4 +789,3 @@ val NDET_G___A_UNIVERSALLY_TOTAL_WEAK_CO_BUECHI___IMPL =
 
 
 val _ = export_theory();
-

@@ -5,7 +5,7 @@ loadPath := (concat Globals.HOLDIR "/examples/dev/sw") :: !loadPath;
 
 app load ["pred_setSimps", "pred_setTheory",
      "arithmeticTheory", "wordsTheory", "wordsLib", "pairTheory", "listTheory", "whileTheory", "finite_mapTheory", "preARMTheory", "ARMCompositionTheory",
-	  "relationTheory"];
+          "relationTheory"];
 
 quietdec := false;
 *)
@@ -250,7 +250,7 @@ val translate_def = Define `
     (translate (SC S1 S2) =
          mk_SC (translate S1) (translate S2)) /\
     (translate (CJ cond Strue Sfalse) =
-	 mk_CJ (translate_condition cond) (translate Strue) (translate Sfalse)) /\
+         mk_CJ (translate_condition cond) (translate Strue) (translate Sfalse)) /\
     (translate (TR cond Sbody) =
          mk_TR (translate_condition cond) (translate Sbody))
   `;
@@ -293,55 +293,55 @@ val WELL_FORMED_SUB_thm = store_thm ("WELL_FORMED_SUB_thm",
 
 
 val CHANGED_def = Define `CHANGED s ir =
-	!st st'. (st' = run_ir ir st) ==> (
-		!r. ~(MEM r s) ==> (read st (toREG r) = read st' (toREG r))
-	)`
+        !st st'. (st' = run_ir ir st) ==> (
+                !r. ~(MEM r s) ==> (read st (toREG r) = read st' (toREG r))
+        )`
 
 val UNCHANGED_def = Define `UNCHANGED s ir =
-	!st st'. (st' = run_ir ir st) ==> (
-		!r. (MEM r s) ==> (read st (toREG r) = read st' (toREG r))
-	)`
+        !st st'. (st' = run_ir ir st) ==> (
+                !r. (MEM r s) ==> (read st (toREG r) = read st' (toREG r))
+        )`
 
 val LIST_COUNT_def = Define `
-	(LIST_COUNT 0 = []) /\
-	(LIST_COUNT (SUC n) = n::(LIST_COUNT n))`
+        (LIST_COUNT 0 = []) /\
+        (LIST_COUNT (SUC n) = n::(LIST_COUNT n))`
 
 val MEM_LIST_COUNT = store_thm ("MEM_LIST_COUNT",
-	``!n m. MEM n (LIST_COUNT m) = (n < m)``,
+        ``!n m. MEM n (LIST_COUNT m) = (n < m)``,
 
-	Induct_on `m` THENL [
-		SIMP_TAC list_ss [LIST_COUNT_def],
-		ASM_SIMP_TAC list_ss [LIST_COUNT_def]
-	])
+        Induct_on `m` THENL [
+                SIMP_TAC list_ss [LIST_COUNT_def],
+                ASM_SIMP_TAC list_ss [LIST_COUNT_def]
+        ])
 
 
 val USED_STACK_def = Define `USED_STACK size ir =
-	!r m r' m' base. (((r', m') = run_ir ir (r, m)) /\
-				      (base = preARM$MEM_ADDR (read (r,m) (REG 13)))
-						) ==> (
-		(!l. (MEM l (MAP (\off. base - n2w off) (LIST_COUNT size))) \/ (m ' l = m' ' l))
-	)`;
+        !r m r' m' base. (((r', m') = run_ir ir (r, m)) /\
+                                      (base = preARM$MEM_ADDR (read (r,m) (REG 13)))
+                                                ) ==> (
+                (!l. (MEM l (MAP (\off. base - n2w off) (LIST_COUNT size))) \/ (m ' l = m' ' l))
+        )`;
 
 val USED_STACK_THM =
-	store_thm ("USED_STACK_THM",
-	``USED_STACK size ir =
-	!r m r' m'. ((r', m') = run_ir ir (r, m)) ==> (
-		(!l. ~(MEM l (MAP (\off. preARM$MEM_ADDR (r ' 13w) - n2w off) (LIST_COUNT size))) ==> (m ' l = m' ' l))
-	)``,
+        store_thm ("USED_STACK_THM",
+        ``USED_STACK size ir =
+        !r m r' m'. ((r', m') = run_ir ir (r, m)) ==> (
+                (!l. ~(MEM l (MAP (\off. preARM$MEM_ADDR (r ' 13w) - n2w off) (LIST_COUNT size))) ==> (m ' l = m' ' l))
+        )``,
 
-	SIMP_TAC std_ss [USED_STACK_def, read_thm, IMP_DISJ_THM])
+        SIMP_TAC std_ss [USED_STACK_def, read_thm, IMP_DISJ_THM])
 
 
 val USED_STACK_ENLARGE =
-	store_thm ("USED_STACK_ENLARGE",
-	``!ir size1 size2.
-	((size1 <= size2) /\ USED_STACK size1 ir) ==>
-	USED_STACK size2 ir``,
+        store_thm ("USED_STACK_ENLARGE",
+        ``!ir size1 size2.
+        ((size1 <= size2) /\ USED_STACK size1 ir) ==>
+        USED_STACK size2 ir``,
 
-	SIMP_TAC std_ss [USED_STACK_def, MEM_MAP, MEM_LIST_COUNT] THEN
-	REPEAT STRIP_TAC THEN
-	`!off. (off < size1) ==> (off < size2)` by DECIDE_TAC THEN
-	METIS_TAC[])
+        SIMP_TAC std_ss [USED_STACK_def, MEM_MAP, MEM_LIST_COUNT] THEN
+        REPEAT STRIP_TAC THEN
+        `!off. (off < size1) ==> (off < size2)` by DECIDE_TAC THEN
+        METIS_TAC[])
 
 
 val UNCHANGED_STACK_def = Define `UNCHANGED_STACK reglist stack_size ir = UNCHANGED reglist ir /\ USED_STACK stack_size ir`;
@@ -349,13 +349,13 @@ val UNCHANGED_STACK_def = Define `UNCHANGED_STACK reglist stack_size ir = UNCHAN
 
 val UNCHANGED_THM = store_thm ("UNCHANGED_THM",
 
-	``!s ir.
-		UNCHANGED s ir =
-		EVERY (\r. !reg mem. (read (run_ir ir (reg,mem)) (toREG r) =
-			read (reg,mem) (toREG r))) s``,
+        ``!s ir.
+                UNCHANGED s ir =
+                EVERY (\r. !reg mem. (read (run_ir ir (reg,mem)) (toREG r) =
+                        read (reg,mem) (toREG r))) s``,
 
-	SIMP_TAC std_ss [EVERY_MEM, UNCHANGED_def, ELIM_PFORALL] THEN
-	METIS_TAC[pairTheory.PAIR])
+        SIMP_TAC std_ss [EVERY_MEM, UNCHANGED_def, ELIM_PFORALL] THEN
+        METIS_TAC[pairTheory.PAIR])
 
 (*---------------------------------------------------------------------------------*)
 (*      Hoare Rules for IR                                                         *)
@@ -426,11 +426,11 @@ val STATEMENT_IS_WELL_FORMED = Q.store_thm (
         Cases_on `stm` THEN
             (fn g =>
                (SIMP_TAC list_ss [get_st_def, Once RUNTO_ADVANCE, SIMP_RULE std_ss [] (Q.SPEC `(pos0,cpsr0,regs,mem):STATE`
-			  (INST_TYPE [alpha |-> Type `:word32 # (word4 |-> word32) # (word30 |-> word32)`] UPLOAD_LEM_2)),
+                          (INST_TYPE [alpha |-> Type `:word32 # (word4 |-> word32) # (word30 |-> word32)`] UPLOAD_LEM_2)),
                          TRANSLATE_ASSIGMENT_CORRECT_2, SUC_ONE_ADD] THEN
                 RW_TAC std_ss [Once RUNTO_ADVANCE] THEN
                 SIMP_TAC list_ss [get_st_def, Once RUNTO_ADVANCE, SIMP_RULE std_ss [] (Q.SPEC `(pos1,cpsr1,regs,mem):STATE`
-			  (INST_TYPE [alpha |-> Type `:word32 # (word4 |-> word32) # (word30 |-> word32)`] UPLOAD_LEM_2)),
+                          (INST_TYPE [alpha |-> Type `:word32 # (word4 |-> word32) # (word30 |-> word32)`] UPLOAD_LEM_2)),
                          TRANSLATE_ASSIGMENT_CORRECT_2, SUC_ONE_ADD] THEN
                 RW_TAC std_ss [Once RUNTO_ADVANCE]) g
             )
@@ -553,7 +553,7 @@ val IR_SEMANTICS_TR = Q.store_thm (
             IMP_RES_TAC LOOPNUM_INDUCTIVE THEN
             `v = loopNum (translate_condition cond) arm (\i.ARB) ((0,0w,SND (SND (FST (runTo (upload arm (\i.ARB) 0) (LENGTH arm) ((0,0w,st),{}))))),{})` by
             METIS_TAC [ABS_PAIR_THM,DECIDE (Term`!x.0+x=x`),LOOPNUM_INDEPENDENT_OF_CPSR_PCS, get_st_def, FST, SND, DSTATE_IRRELEVANT_PCS,
-		well_formed_def] THEN
+                well_formed_def] THEN
             RES_TAC THEN Q.PAT_ASSUM `v = x` (ASSUME_TAC o GSYM) THEN FULL_SIMP_TAC std_ss [] THEN POP_ASSUM (K ALL_TAC) THEN
             Q.PAT_ASSUM `v = x` (ASSUME_TAC o GSYM) THEN FULL_SIMP_TAC std_ss [] THEN POP_ASSUM (K ALL_TAC) THEN
             Q.PAT_ASSUM `~x` (ASSUME_TAC o SIMP_RULE std_ss [get_st_def]) THEN
@@ -568,100 +568,100 @@ val IR_SEMANTICS_TR = Q.store_thm (
 
 val IR_SEMANTICS_EMBEDDED_THM = Q.store_thm (
    "IR_SEMANTICS_EMBEDDED_THM",
-		`!ir s. well_formed (translate ir) ==>
-				(?pc cpsr pcS.
-				(run_arm (translate ir) s = ((pc, cpsr, run_ir ir (SND(SND(FST s)))), pcS)))`,
+                `!ir s. well_formed (translate ir) ==>
+                                (?pc cpsr pcS.
+                                (run_arm (translate ir) s = ((pc, cpsr, run_ir ir (SND(SND(FST s)))), pcS)))`,
 
-		SIMP_TAC std_ss [run_ir_def, well_formed_def] THEN
-		REPEAT STRIP_TAC THEN
-		`?pc cpsr st pcS. (s = ((pc,cpsr,st),pcS))` by METIS_TAC[PAIR, FST, SND] THEN
-		ASM_REWRITE_TAC [run_arm_def] THEN
-		Q.ABBREV_TAC `arm = (translate ir)` THEN
-		`get_st (runTo (upload arm (\i. ARB) 0) (0 + LENGTH arm) ((0,0w,st),{})) =
-		 get_st (runTo (upload arm (\i. ARB) pc) (pc + LENGTH arm) ((pc,cpsr,st),pcS))`
-			 by METIS_TAC[status_independent_def, DSTATE_IRRELEVANT_PCS, FST] THEN
-		ASM_SIMP_TAC std_ss [get_st_def] THEN
-		METIS_TAC[PAIR, FST, SND]);
+                SIMP_TAC std_ss [run_ir_def, well_formed_def] THEN
+                REPEAT STRIP_TAC THEN
+                `?pc cpsr st pcS. (s = ((pc,cpsr,st),pcS))` by METIS_TAC[PAIR, FST, SND] THEN
+                ASM_REWRITE_TAC [run_arm_def] THEN
+                Q.ABBREV_TAC `arm = (translate ir)` THEN
+                `get_st (runTo (upload arm (\i. ARB) 0) (0 + LENGTH arm) ((0,0w,st),{})) =
+                 get_st (runTo (upload arm (\i. ARB) pc) (pc + LENGTH arm) ((pc,cpsr,st),pcS))`
+                         by METIS_TAC[status_independent_def, DSTATE_IRRELEVANT_PCS, FST] THEN
+                ASM_SIMP_TAC std_ss [get_st_def] THEN
+                METIS_TAC[PAIR, FST, SND]);
 
 
 
 
 val WF_ir_TR_def =  Define `
-	WF_ir_TR (cond, ir) =
-		WF_Loop ((eval_il_cond cond),
+        WF_ir_TR (cond, ir) =
+                WF_Loop ((eval_il_cond cond),
               (run_ir ir))`;
 
 
 val WF_ir_TR_thm = Q.store_thm (
    "WF_ir_TR_thm",
-	  `!cond ir. WELL_FORMED ir ==>
-		(WF_ir_TR (cond, ir) = WF_TR (translate_condition cond, translate ir))`,
+          `!cond ir. WELL_FORMED ir ==>
+                (WF_ir_TR (cond, ir) = WF_TR (translate_condition cond, translate ir))`,
 
 SIMP_TAC std_ss [WF_ir_TR_def, WF_TR_def, WF_Loop_def, eval_il_cond_def, WELL_FORMED_SUB_thm] THEN
 REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
-	Q_TAC EXISTS_TAC `inv_image R get_st` THEN
-	ASM_SIMP_TAC std_ss [WF_inv_image] THEN
-	GEN_TAC THEN
-	`?pc' cpsr' pcS'. run_arm (translate ir) s =
-		((pc',cpsr',run_ir ir (SND (SND (FST s)))),pcS')` by
-		METIS_TAC[IR_SEMANTICS_EMBEDDED_THM] THEN
-	`?pc cpsr st pcS. (s = ((pc,cpsr,st),pcS))` by METIS_TAC[PAIR, FST, SND] THEN
-	`runTo (upload (translate ir) iB pc) (pc + LENGTH (translate ir))
-				((pc,cpsr,st),pcS) =
-	run_arm (translate ir) ((pc,cpsr,st),pcS)` by ALL_TAC THEN1 (
-		SIMP_TAC std_ss [run_arm_def] THEN
-		METIS_TAC[WELL_FORMED_INSTB, FST]
-	) THEN
-	FULL_SIMP_TAC std_ss [relationTheory.inv_image_def, get_st_def],
+        Q_TAC EXISTS_TAC `inv_image R get_st` THEN
+        ASM_SIMP_TAC std_ss [WF_inv_image] THEN
+        GEN_TAC THEN
+        `?pc' cpsr' pcS'. run_arm (translate ir) s =
+                ((pc',cpsr',run_ir ir (SND (SND (FST s)))),pcS')` by
+                METIS_TAC[IR_SEMANTICS_EMBEDDED_THM] THEN
+        `?pc cpsr st pcS. (s = ((pc,cpsr,st),pcS))` by METIS_TAC[PAIR, FST, SND] THEN
+        `runTo (upload (translate ir) iB pc) (pc + LENGTH (translate ir))
+                                ((pc,cpsr,st),pcS) =
+        run_arm (translate ir) ((pc,cpsr,st),pcS)` by ALL_TAC THEN1 (
+                SIMP_TAC std_ss [run_arm_def] THEN
+                METIS_TAC[WELL_FORMED_INSTB, FST]
+        ) THEN
+        FULL_SIMP_TAC std_ss [relationTheory.inv_image_def, get_st_def],
 
 
 
-	FULL_SIMP_TAC std_ss [FORALL_PROD] THEN
-	`!iB pc cpsr st pcS. runTo (upload (translate ir) iB pc) (pc + LENGTH (translate ir))
-				((pc,cpsr,st),pcS) =
-	run_arm (translate ir) ((pc,cpsr,st),pcS)` by ALL_TAC THEN1 (
-		SIMP_TAC std_ss [run_arm_def] THEN
-		METIS_TAC[WELL_FORMED_INSTB, FST]
-	) THEN
-	FULL_SIMP_TAC std_ss [] THEN
-	POP_ASSUM (fn thm => ALL_TAC) THEN
+        FULL_SIMP_TAC std_ss [FORALL_PROD] THEN
+        `!iB pc cpsr st pcS. runTo (upload (translate ir) iB pc) (pc + LENGTH (translate ir))
+                                ((pc,cpsr,st),pcS) =
+        run_arm (translate ir) ((pc,cpsr,st),pcS)` by ALL_TAC THEN1 (
+                SIMP_TAC std_ss [run_arm_def] THEN
+                METIS_TAC[WELL_FORMED_INSTB, FST]
+        ) THEN
+        FULL_SIMP_TAC std_ss [] THEN
+        POP_ASSUM (fn thm => ALL_TAC) THEN
 
-	`?Q. Q = \st st'. !s'.
-	   let s = (run_arm (translate ir) s') in
-		(((get_st s' = st')) ==> ((get_st s = st) /\
-	     R s s'))` by METIS_TAC[] THEN
-	Q_TAC EXISTS_TAC `Q` THEN
-	REPEAT STRIP_TAC THENL [
-		FULL_SIMP_TAC std_ss [WF_DEF, LET_THM] THEN
-		REPEAT STRIP_TAC THEN
-		`?B'. B' = (\s. B (get_st s))` by METIS_TAC[] THEN
-		Q.PAT_ASSUM `!B. (?w. B w) ==> X` (fn thm => Q_TAC
-			(fn t => (ASSUME_TAC (SPEC t thm))) `B'`) THEN
-		Q.PAT_UNDISCH_TAC `X` THEN
-		SIMP_TAC std_ss [GSYM LEFT_FORALL_IMP_THM,
-			GSYM LEFT_EXISTS_IMP_THM] THEN
+        `?Q. Q = \st st'. !s'.
+           let s = (run_arm (translate ir) s') in
+                (((get_st s' = st')) ==> ((get_st s = st) /\
+             R s s'))` by METIS_TAC[] THEN
+        Q_TAC EXISTS_TAC `Q` THEN
+        REPEAT STRIP_TAC THENL [
+                FULL_SIMP_TAC std_ss [WF_DEF, LET_THM] THEN
+                REPEAT STRIP_TAC THEN
+                `?B'. B' = (\s. B (get_st s))` by METIS_TAC[] THEN
+                Q.PAT_ASSUM `!B. (?w. B w) ==> X` (fn thm => Q_TAC
+                        (fn t => (ASSUME_TAC (SPEC t thm))) `B'`) THEN
+                Q.PAT_UNDISCH_TAC `X` THEN
+                SIMP_TAC std_ss [GSYM LEFT_FORALL_IMP_THM,
+                        GSYM LEFT_EXISTS_IMP_THM] THEN
 
-		`?w. B (get_st w)` by METIS_TAC[get_st_def, PAIR, FST, SND] THEN
-		Q_TAC EXISTS_TAC `w'` THEN
-		ASM_SIMP_TAC std_ss [] THEN
-		REPEAT STRIP_TAC THEN
-		Q_TAC EXISTS_TAC `get_st min` THEN
-		ASM_SIMP_TAC std_ss [] THEN
-		GEN_TAC THEN
-		Q_TAC EXISTS_TAC `min` THEN
-		SIMP_TAC std_ss [] THEN
-	   METIS_TAC[],
+                `?w. B (get_st w)` by METIS_TAC[get_st_def, PAIR, FST, SND] THEN
+                Q_TAC EXISTS_TAC `w'` THEN
+                ASM_SIMP_TAC std_ss [] THEN
+                REPEAT STRIP_TAC THEN
+                Q_TAC EXISTS_TAC `get_st min` THEN
+                ASM_SIMP_TAC std_ss [] THEN
+                GEN_TAC THEN
+                Q_TAC EXISTS_TAC `min` THEN
+                SIMP_TAC std_ss [] THEN
+           METIS_TAC[],
 
 
-		FULL_SIMP_TAC std_ss [LET_THM, get_st_def, run_ir_def] THEN
-		GEN_TAC THEN
-		`?pc cpsr st pcS. (s' = ((pc,cpsr,st),pcS))` by METIS_TAC[PAIR, FST, SND] THEN
-		ASM_SIMP_TAC std_ss [] THEN
-		FULL_SIMP_TAC std_ss [GSYM get_st_def, run_arm_def,  well_formed_def] THEN
+                FULL_SIMP_TAC std_ss [LET_THM, get_st_def, run_ir_def] THEN
+                GEN_TAC THEN
+                `?pc cpsr st pcS. (s' = ((pc,cpsr,st),pcS))` by METIS_TAC[PAIR, FST, SND] THEN
+                ASM_SIMP_TAC std_ss [] THEN
+                FULL_SIMP_TAC std_ss [GSYM get_st_def, run_arm_def,  well_formed_def] THEN
 
-		`(LENGTH (translate ir)) = 0 + (LENGTH (translate ir))` by DECIDE_TAC THEN
-		METIS_TAC[status_independent_def, DSTATE_IRRELEVANT_PCS, FST]
-	]
+                `(LENGTH (translate ir)) = 0 + (LENGTH (translate ir))` by DECIDE_TAC THEN
+                METIS_TAC[status_independent_def, DSTATE_IRRELEVANT_PCS, FST]
+        ]
 ]);
 
 
@@ -673,12 +673,12 @@ val IR_SEMANTICS_TR___FUNPOW = Q.store_thm (
         FUNPOW (run_ir ir) (shortest (eval_il_cond cond) (run_ir ir) st) st)`,
 
 
-	SIMP_TAC std_ss [IR_SEMANTICS_TR] THEN
-	REPEAT STRIP_TAC THEN
-	`(\st'. ~eval_il_cond cond st') = $~ o (eval_il_cond cond)` by SIMP_TAC std_ss [combinTheory.o_DEF] THEN
-	ASM_SIMP_TAC std_ss [] THEN
-	MATCH_MP_TAC ARMCompositionTheory.UNROLL_LOOP THEN
-	METIS_TAC[WF_ir_TR_thm, WF_ir_TR_def]);
+        SIMP_TAC std_ss [IR_SEMANTICS_TR] THEN
+        REPEAT STRIP_TAC THEN
+        `(\st'. ~eval_il_cond cond st') = $~ o (eval_il_cond cond)` by SIMP_TAC std_ss [combinTheory.o_DEF] THEN
+        ASM_SIMP_TAC std_ss [] THEN
+        MATCH_MP_TAC ARMCompositionTheory.UNROLL_LOOP THEN
+        METIS_TAC[WF_ir_TR_thm, WF_ir_TR_def]);
 
 
 

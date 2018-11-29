@@ -67,6 +67,7 @@ val ADD = new_recursive_definition
 
 val _ = set_fixity "+" (Infixl 500);
 val _ = ot "+"
+val _ = TeX_notation { hol = "+", TeX = ("\\ensuremath{+}", 1) };
 
 (*---------------------------------------------------------------------------*
  * Define NUMERAL, a tag put on numeric literals, and the basic constructors *
@@ -1631,10 +1632,10 @@ val SUB_RIGHT_EQ = store_thm ("SUB_RIGHT_EQ",
 val LE = save_thm ("LE",
    CONJ LESS_EQ_0
       (prove(“(!m n. m <= SUC n = (m = SUC n) \/ m <= n)”,
-	REPEAT GEN_TAC THEN
-	CONV_TAC (DEPTH_CONV (LHS_CONV (REWR_CONV LESS_OR_EQ))) THEN
-	REWRITE_TAC [GSYM LESS_EQ_IFF_LESS_SUC] THEN
-	MATCH_ACCEPT_TAC DISJ_COMM))) ;
+        REPEAT GEN_TAC THEN
+        CONV_TAC (DEPTH_CONV (LHS_CONV (REWR_CONV LESS_OR_EQ))) THEN
+        REWRITE_TAC [GSYM LESS_EQ_IFF_LESS_SUC] THEN
+        MATCH_ACCEPT_TAC DISJ_COMM))) ;
 
 val _ = print "Proving division\n"
 
@@ -3879,31 +3880,24 @@ val num_case_eq = Q.store_thm(
   Q.SPEC_THEN ‘n’ STRUCT_CASES_TAC num_CASES THEN
   SRW_TAC [][num_case_def, SUC_NOT, INV_SUC_EQ]);
 
-val _ = adjoin_to_theory
-{sig_ps = NONE,
- struct_ps = SOME
- (fn ppstrm => let
-   val S = (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm))
- in
-   S "val _ = TypeBase.write";
-   S "  [TypeBasePure.mk_datatype_info";
-   S "     {ax=TypeBasePure.ORIG prim_recTheory.num_Axiom,";
-   S "      case_def=num_case_def,";
-   S "      case_cong=num_case_cong,";
-   S "      case_eq = num_case_eq,";
-   S "      induction=TypeBasePure.ORIG numTheory.INDUCTION,";
-   S "      nchotomy=num_CASES,";
-   S "      size=SOME(Parse.Term`\\x:num. x`, TypeBasePure.ORIG boolTheory.REFL_CLAUSE),";
-   S "      encode=NONE,";
-   S "      fields=[],";
-   S "      accessors=[],";
-   S "      updates=[],";
-   S "      recognizers=[],";
-   S "      destructors=[CONJUNCT2(prim_recTheory.PRE)],";
-   S "      lift=SOME(mk_var(\"numSyntax.lift_num\",Parse.Type`:'type -> num -> 'term`)),";
-   S "      one_one=SOME prim_recTheory.INV_SUC_EQ,";
-   S "      distinct=SOME numTheory.NOT_SUC}];"
- end)};
+val _ = TypeBase.export
+  [TypeBasePure.mk_datatype_info_no_simpls
+     {ax=TypeBasePure.ORIG prim_recTheory.num_Axiom,
+      case_def=num_case_def,
+      case_cong=num_case_cong,
+      case_eq = num_case_eq,
+      induction=TypeBasePure.ORIG numTheory.INDUCTION,
+      nchotomy=num_CASES,
+      size=SOME(“\x:num. x”, TypeBasePure.ORIG boolTheory.REFL_CLAUSE),
+      encode=NONE,
+      fields=[],
+      accessors=[],
+      updates=[],
+      recognizers=[],
+      destructors=[CONJUNCT2(prim_recTheory.PRE)],
+      lift=SOME(mk_var("numSyntax.lift_num",“:'type -> num -> 'term”)),
+      one_one=SOME prim_recTheory.INV_SUC_EQ,
+      distinct=SOME numTheory.NOT_SUC}];
 
 val datatype_num = store_thm(
   "datatype_num",

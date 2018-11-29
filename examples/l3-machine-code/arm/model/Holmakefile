@@ -1,9 +1,6 @@
 INCLUDES = ../../common ../../lib
 
-THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
-TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
-
-all: $(TARGETS) arm.ui
+all: $(DEFAULT_TARGETS) arm.ui
 .PHONY: all
 
 ifeq ($(KERNELID),otknl)

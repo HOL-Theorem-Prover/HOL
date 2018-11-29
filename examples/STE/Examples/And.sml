@@ -5,17 +5,17 @@ val And_def = Define  `And (a, b) (c, d) = (a/\c, b\/d)`;;
 
 val And_bool_def =  Define `And_bool s_b s_b' =
     !node. ((node = "out") ==>
-	    (s_b' node = ((s_b "i0") /\ (s_b "i1"))))`;
+            (s_b' node = ((s_b "i0") /\ (s_b "i1"))))`;
 
 val And_lattice_def = Define `(And_lattice s node =
-			    if (node = "i0")
-				then X
-			    else if (node = "i1") then X
-			    else if (node = "out")
-				     then
-					 And (s "i0")(s "i1")
-				 else
-				     X)`;
+                            if (node = "i0")
+                                then X
+                            else if (node = "i1") then X
+                            else if (node = "out")
+                                     then
+                                         And (s "i0")(s "i1")
+                                 else
+                                     X)`;
 
 val comp_list = [And_lattice_def, And_bool_def];
 

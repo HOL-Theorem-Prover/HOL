@@ -46,7 +46,7 @@ fun REMAINS_TO_PROVE (t:term) = SUBGOAL_THEN t PROVE1_TAC;
  *--------------------------------------------------------------------------*)
 
 fun NEW_GOAL_TAC (t:term) =
-	SUBGOAL_THEN t MATCH_MP_TAC THEN1 PROVE_TAC[];
+        SUBGOAL_THEN t MATCH_MP_TAC THEN1 PROVE_TAC[];
 
 (*--------------------------------------------------------------------------
  *  ASSUME_X_TAC thm -> tactic
@@ -64,9 +64,9 @@ fun ASSUME_X_TAC (thm1:thm) = ASSUME_TAC thm1 THEN UNDISCH_HD_TAC;
 
 fun DISJ_LIST_CASES_TAC (thm1:thm) (asm_list, goal) =
 let
-	val cases_thm = GEN ``P:bool`` (prove(mk_imp (list_mk_conj (map (fn x => ``^x ==> P:bool``) (strip_disj (concl thm1))), ``P:bool``), PROVE_TAC[thm1]))
+        val cases_thm = GEN ``P:bool`` (prove(mk_imp (list_mk_conj (map (fn x => ``^x ==> P:bool``) (strip_disj (concl thm1))), ``P:bool``), PROVE_TAC[thm1]))
 in
-	(MATCH_MP_TAC (SPEC goal cases_thm) THEN REPEAT CONJ_TAC THEN STRIP_TAC) (asm_list, goal)
+        (MATCH_MP_TAC (SPEC goal cases_thm) THEN REPEAT CONJ_TAC THEN STRIP_TAC) (asm_list, goal)
 end
 
 (*--------------------------------------------------------------------------
@@ -76,7 +76,7 @@ end
  *--------------------------------------------------------------------------*)
 
 fun NESTED_ASM_CASES_TAC nil = ALL_TAC
-	| NESTED_ASM_CASES_TAC (h::t) = ASM_CASES_TAC (h) THENL [ALL_TAC,(NESTED_ASM_CASES_TAC t)];
+        | NESTED_ASM_CASES_TAC (h::t) = ASM_CASES_TAC (h) THENL [ALL_TAC,(NESTED_ASM_CASES_TAC t)];
 
 
 (*==========================================================================
@@ -88,11 +88,11 @@ fun NESTED_ASM_CASES_TAC nil = ALL_TAC
  *--------------------------------------------------------------------------*)
 
 fun store_thm_verbose (s:string, t:term, tac:tactic) =
-	let
-		val _ = print ("Proving " ^ s ^ "...\n")
-	in
-		store_thm(s,t,tac)
-	end;
+        let
+                val _ = print ("Proving " ^ s ^ "...\n")
+        in
+                store_thm(s,t,tac)
+        end;
 
 (*--------------------------------------------------------------------------
  *  extract_terms_of_type : hol_type -> term -> term list
@@ -116,10 +116,10 @@ fun extract_terms_of_type (typ1:hol_type) (t1:term) =
  *--------------------------------------------------------------------------*)
 
 fun dest_binop_triple tm =
-	let val (Rator,rhs) = Term.dest_comb tm
-		val (opr,lhs) = Term.dest_comb Rator
-	in
-		(opr,lhs,rhs)
-	end;
+        let val (Rator,rhs) = Term.dest_comb tm
+                val (opr,lhs) = Term.dest_comb Rator
+        in
+                (opr,lhs,rhs)
+        end;
 
 end; (* of struct *)

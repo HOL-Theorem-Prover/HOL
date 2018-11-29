@@ -36,7 +36,7 @@ fun seq_chop (n:int, s: 'a seq): 'a list * 'a seq =
   else case seq_pull(s) of
            NONE => ([],s)
          | SOME(x,s') => let val (xs,s'') = seq_chop (n-1,s')
-		         in  (x::xs, s'')  end;
+                         in  (x::xs, s'')  end;
 
 (*conversion from sequence to list*)
 fun list_of_seq (s: 'a seq) : 'a list = case seq_pull(s) of
@@ -53,10 +53,10 @@ fun seq_of_list []     = seq_nil
   the function prelem should print the element number and also the element*)
 fun seq_print (prelem: int -> 'a -> unit) count (s: 'a seq) : unit =
   let fun pr (k,s) =
-	   if k>count then ()
-	   else case seq_pull(s) of
-	       NONE => ()
-	     | SOME(x,s') => (prelem k x;  prs"\n";  pr (k+1, s'))
+           if k>count then ()
+           else case seq_pull(s) of
+               NONE => ()
+             | SOME(x,s') => (prelem k x;  prs"\n";  pr (k+1, s'))
   in  pr(1,s)  end;
 
 (*Map the function f over the sequence, making a new sequence*)
@@ -67,22 +67,22 @@ fun seq_map f xq = mk_seq (fn()=> case seq_pull(xq) of
 (*Sequence seq_append:  put the elements of xq in front of those of yq*)
 fun seq_append (xq,yq)  =
   let fun copy xq = mk_seq (fn()=>
-	    case seq_pull xq of
-		 NONE       => seq_pull yq
-	       | SOME(x,xq') => SOME (x, copy xq'))
+            case seq_pull xq of
+                 NONE       => seq_pull yq
+               | SOME(x,xq') => SOME (x, copy xq'))
   in  copy xq end;
 
 (*Interleave elements of xq with those of yq -- fairer than seq_append*)
 fun seq_interleave (xq,yq) = mk_seq (fn()=>
       case seq_pull(xq) of
           NONE       => seq_pull yq
-	| SOME(x,xq') => SOME (x, seq_interleave(yq, xq')));
+        | SOME(x,xq') => SOME (x, seq_interleave(yq, xq')));
 
 (*map over a sequence xq, append the sequence yq*)
 fun seq_mapp f xq yq =
   let fun copy s = mk_seq (fn()=>
             case seq_pull(s) of
-	        NONE       => seq_pull(yq)
+                NONE       => seq_pull(yq)
               | SOME(x,xq') => SOME(f x, copy xq'))
   in  copy xq end;
 
@@ -96,25 +96,25 @@ fun seq_flat ss = mk_seq (fn()=> case seq_pull(ss) of
 fun seq_iterate (f: 'a * 'b seq -> 'b seq) (s: 'a seq, bstr: 'b seq) : 'b seq =
   let fun its s = mk_seq (fn()=>
             case seq_pull(s) of
-	        NONE       => seq_pull bstr
-	      | SOME(a,s') => seq_pull(f(a, its s')))
+                NONE       => seq_pull bstr
+              | SOME(a,s') => seq_pull(f(a, its s')))
   in  its s end;
 
 fun seq_filter pred xq =
   let fun copy s = mk_seq (fn()=>
             case seq_pull(s) of
-	        NONE       => NONE
+                NONE       => NONE
               | SOME(x,xq') => if pred x then SOME(x, copy xq')
-			       else seq_pull (copy xq') )
+                               else seq_pull (copy xq') )
   in  copy xq end
 
 
 fun seq_mapfilter f xq =
   let fun copy s = mk_seq (fn()=>
             case seq_pull(s) of
-	        NONE       => NONE
+                NONE       => NONE
               | SOME(x,xq') => SOME(f x, copy xq')
-			       handle Interrupt => raise Interrupt
+                               handle Interrupt => raise Interrupt
                                     | _ => seq_pull (copy xq'))
   in  copy xq end;
 
@@ -127,19 +127,19 @@ fun seq_mapfilter f xq =
  * --------------------------------------------------------------------*)
 
 local fun diag (s1,l1) (s2,l2) () =
-	case (seq_pull s1,seq_pull s2) of
-	    (NONE,NONE) => NONE
-	  | (NONE,SOME (h2,s2')) =>
-		seq_pull(seq_append(seq_of_list (map (fn x => (x,h2)) l1),
-			    mk_seq (diag (seq_nil,l1) (s2',h2::l2))))
-	  | (SOME (h1,s1'),NONE) =>
-		seq_pull(seq_append(seq_of_list (map (fn x => (h1,x)) l2),
-			    mk_seq (diag (s1',h1::l1) (seq_nil,l2))))
-	  | (SOME (h1,s1'),SOME (h2,s2')) =>
-		SOME ((h1,h2),
-		      seq_append(seq_of_list (map (fn x => (h1,x)) l2),
-			     seq_append(seq_of_list (map (fn x => (x,h2)) l1),
-				    mk_seq (diag (s1',h1::l1) (s2',h2::l2)))))
+        case (seq_pull s1,seq_pull s2) of
+            (NONE,NONE) => NONE
+          | (NONE,SOME (h2,s2')) =>
+                seq_pull(seq_append(seq_of_list (map (fn x => (x,h2)) l1),
+                            mk_seq (diag (seq_nil,l1) (s2',h2::l2))))
+          | (SOME (h1,s1'),NONE) =>
+                seq_pull(seq_append(seq_of_list (map (fn x => (h1,x)) l2),
+                            mk_seq (diag (s1',h1::l1) (seq_nil,l2))))
+          | (SOME (h1,s1'),SOME (h2,s2')) =>
+                SOME ((h1,h2),
+                      seq_append(seq_of_list (map (fn x => (h1,x)) l2),
+                             seq_append(seq_of_list (map (fn x => (x,h2)) l1),
+                                    mk_seq (diag (s1',h1::l1) (s2',h2::l2)))))
 in
 fun seq_diagonalize s1 s2 = mk_seq (diag (s1,[]) (s2,[]))
 end;
@@ -152,13 +152,13 @@ fun seq_permutations l =
    let fun remove_el n l =
        if (n = 1) then (hd l,tl l)
        else let val (x,l') = remove_el (n - 1) (tl l)
-	    in  (x,(hd l)::l')
-	    end
+            in  (x,(hd l)::l')
+            end
        fun one_smaller_subsets l =
           let fun one_smaller_subsets' l n () =
-	      if (null l) then NONE
-	      else SOME(remove_el n l,mk_seq (one_smaller_subsets' l (n + 1)))
-		  handle Interrupt => raise Interrupt
+              if (null l) then NONE
+              else SOME(remove_el n l,mk_seq (one_smaller_subsets' l (n + 1)))
+                  handle Interrupt => raise Interrupt
                        | _ => NONE
           in  mk_seq (one_smaller_subsets' l 1)
           end

@@ -3,14 +3,6 @@
 (* Created by Joe Hurd, October 2001                                         *)
 (* ========================================================================= *)
 
-(*
-loadPath := ["../basic", "../fol", "../metis", "../normalize"] @ !loadPath;
-app load
-["mlibUseful", "mlibSolver", "normalForms", "normalFormsTheory", "folMapping"];
-*)
-
-(*
-*)
 structure folTools :> folTools =
 struct
 
@@ -22,8 +14,6 @@ structure Parse = struct
   val (Type,Term) = parse_from_grammars normalFormsTheory.normalForms_grammars
 end
 open Parse
-
-infix THEN ORELSE THENC ##;
 
 type 'a pp       = 'a mlibUseful.pp;
 type 'a stream   = 'a mlibStream.stream;
@@ -42,7 +32,7 @@ local
   open mlibUseful;
   val module = "folTools";
 in
-  val () = traces := {module = module, alignment = I} :: !traces;
+  val () = add_trace {module = module, alignment = I}
   fun chatting l = tracing {module = module, level = l};
   fun chat s = (trace s; true)
   val ERR = mk_HOL_ERR module;
@@ -204,10 +194,12 @@ type fol_problem = {thms : thm1 list, hyps : thm1 list, query : formula1 list};
 
 val recent_fol_problems : fol_problem list option ref = ref NONE;
 
+(* no code actually sets this reference to SOME, but it may of course be useful
+   for debugging *)
 fun save_fol_problem (t, h, q) =
   case !recent_fol_problems of NONE => ()
   | SOME l
-    => recent_fol_problems := SOME ({thms = t, hyps = h, query = q} :: l);
+    => recent_fol_problems := SOME ({thms = t, hyps = h, query = q} :: l);(*OK*)
 
 (* ------------------------------------------------------------------------- *)
 (* Logic maps manage the interface between HOL and first-order logic.        *)

@@ -6,7 +6,11 @@ sig
   val apfst : ('a -> 'b) -> 'a * 'c -> 'b * 'c
   val apsnd : ('a -> 'b) -> 'c * 'a -> 'c * 'b
   val $  : ('a -> 'b) * 'a -> 'b
+  val ?  : (bool * ('a -> 'a)) -> 'a -> 'a
   val |> : 'a * ('a -> 'b) -> 'b
+  val |>> : ('a * 'b) * ('a -> 'c) -> ('c * 'b)
+  val ||> : ('a * 'b) * ('b -> 'c) -> ('a * 'c)
+  val ||-> : ('a * 'b) * ('a -> 'b -> 'c) -> 'c
   val C : ('a -> 'b -> 'c) -> 'b -> 'a -> 'c
   val I : 'a -> 'a
   val K : 'a -> 'b -> 'a
@@ -29,23 +33,40 @@ sig
   val can : ('a -> 'b) -> 'a -> bool
   val total : ('a -> 'b) -> 'a -> 'b option
   val partial : exn -> ('a -> 'b option) -> 'a -> 'b
+  val these : 'a list option -> 'a list
 
   val assert_exn : ('a -> bool) -> 'a -> exn -> 'a
   val with_exn : ('a -> 'b) -> 'a -> exn -> 'b
+  val finally : (unit -> unit) -> ('a -> 'b) -> ('a -> 'b)
+     (* first argument (the finally finisher) must terminate, and preferably
+        quickly, or you may mask/hide user-generated Interrupt exceptions *)
 
   val list_of_singleton : 'a -> 'a list
+  val single : 'a -> 'a list (* synonym of list_of_singleton *)
+  val the_single : 'a list -> 'a        (* exn List.Empty if list length <> 1 *)
+  val singleton : ('a list -> 'b list) -> 'a -> 'b
+                (* singleton f x raises exn List.Empty if length (f [x]) <> 1 *)
   val list_of_pair : 'a * 'a -> 'a list
   val list_of_triple : 'a * 'a * 'a -> 'a list
   val list_of_quadruple : 'a * 'a * 'a * 'a -> 'a list
+  val the_list : 'a option -> 'a list
+  val the_default : 'a -> 'a option -> 'a
 
   val all : ('a -> bool) -> 'a list -> bool
   val exists : ('a -> bool) -> 'a list -> bool
   val first_opt : (int -> 'a -> 'b option) -> 'a list -> 'b option
   val itlist : ('a -> 'b -> 'b) -> 'a list -> 'b -> 'b
   val rev_itlist : ('a -> 'b -> 'b) -> 'a list -> 'b -> 'b
+  val foldl' : ('a -> 'b -> 'b) -> 'a list -> 'b -> 'b
+  val foldr' : ('a -> 'b -> 'b) -> 'a list -> 'b -> 'b
+  val foldl2' : ('a -> 'b -> 'c -> 'c) -> 'a list -> 'b list -> 'c -> 'c
+                                              (* exn ListPair.UnequalLengths *)
+  val foldr2' : ('a -> 'b -> 'c -> 'c) -> 'a list -> 'b list -> 'c -> 'c
+                                              (* exn ListPair.UnequalLengths *)
   val foldl_map : ('a * 'b -> 'a * 'c) -> 'a * 'b list -> 'a * 'c list
   val separate : 'a -> 'a list -> 'a list
   val filter : ('a -> bool) -> 'a list -> 'a list
+  val filter_out : ('a -> bool) -> 'a list -> 'a list
   val partition : ('a -> bool) -> 'a list -> 'a list * 'a list
   val unzip : ('a * 'b) list -> 'a list * 'b list
   val split : ('a * 'b) list -> 'a list * 'b list
@@ -64,6 +85,7 @@ sig
   val flip_cmp : 'a cmp -> 'a cmp
   val bool_compare : bool cmp
   val list_compare : 'a cmp -> 'a list cmp
+  val option_compare : 'a cmp -> 'a option cmp
   val pair_compare : ('a cmp * 'b cmp) -> ('a * 'b) cmp
   val measure_cmp : ('a -> int) -> 'a cmp
   val inv_img_cmp : ('b -> 'a) -> 'a cmp -> 'b cmp
@@ -71,6 +93,8 @@ sig
 
   val for : int -> int -> (int -> 'a) -> 'a list
   val for_se : int -> int -> (int -> unit) -> unit
+  val make_counter : {init:int,inc:int} -> unit -> int
+  val syncref : 'a -> {get:unit -> 'a, upd:('a -> 'b * 'a) -> 'b}
 
   val assoc1 : ''a -> (''a * 'b) list -> (''a * 'b) option
   val assoc2 : ''a -> ('b * ''a) list -> ('b * ''a) option
@@ -108,10 +132,13 @@ sig
   val op_U : ('a -> 'a -> bool) -> 'a list list -> 'a list
   val op_intersect : ('a -> 'a -> bool) -> 'a list -> 'a list -> 'a list
   val op_set_diff : ('a -> 'a -> bool) -> 'a list -> 'a list -> 'a list
+  val op_remove : ('a -> 'b -> bool) -> 'a -> 'b list -> 'b list
+  val op_update : ('a -> 'a -> bool) -> 'a -> 'a list -> 'a list
 
   val int_to_string : int -> string
   val quote : string -> string
   val mlquote : string -> string
+  val enclose : string -> string -> string -> string (* enclose ld rd mid *)
   val is_substring : string -> string -> bool
   val prime : string -> string
   val commafy : string list -> string list
@@ -145,31 +172,16 @@ sig
   type instream  = TextIO.instream
   type outstream = TextIO.outstream
 
-  include HOLPP where type break_style = HOLPP.break_style
-                  and type ppstream = HOLPP.ppstream
-                  and type 'a frag = 'a HOLPP.frag
-
-  val with_ppstream : ppstream
+  datatype frag = datatype HOLPP.frag
+  datatype break_style = datatype HOLPP.break_style
+  val with_ppstream : OldPP.ppstream
                        -> {add_break      : int * int -> unit,
                            add_newline    : unit -> unit,
                            add_string     : string -> unit,
-                           begin_block    : break_style -> int -> unit,
+                           begin_block    : HOLPP.break_style -> int -> unit,
                            clear_ppstream : unit -> unit,
                            end_block      : unit -> unit,
                            flush_ppstream : unit -> unit}
-
-  val mk_consumer : 'a -> 'a
-  val defaultConsumer : unit -> {consumer : string -> unit,
-                                 flush : unit -> unit,
-                                 linewidth : int}
-  val stdOut_ppstream : unit -> ppstream
-  val pr_list : ('a -> unit) -> (unit -> 'b) -> (unit -> 'c)
-                -> 'a list -> unit
-  val pr_list_to_ppstream
-     : ppstream -> (ppstream -> 'a -> unit)
-                  -> (ppstream -> unit)
-                   -> (ppstream -> unit) -> 'a list -> unit
-  val pprint : (ppstream -> 'a -> unit) -> 'a -> unit
 
   val dec: int ref -> unit
   val inc: int ref -> unit
@@ -190,6 +202,7 @@ sig
   val time_max : time * time -> time
   val time_maxl : time list -> time
   val time : ('a -> 'b) -> 'a -> 'b
+  val realtime : ('a -> 'b) -> 'a -> 'b
 
   val getEnv: string -> string option
   val getArgs: unit -> string list
@@ -220,6 +233,8 @@ sig
   exception Div
   exception Interrupt
 
+  type 'a quotation = 'a HOLPP.quotation
+  val pprint : 'a HOLPP.pprinter -> 'a -> unit
   val norm_quote : 'a quotation -> 'a quotation
   val quote_to_string : ('a -> string) -> 'a quotation -> string
   val quote_to_string_list : string quotation -> string list
@@ -232,4 +247,6 @@ sig
     val delay : (unit -> 'a) -> 'a susp
     val force : 'a susp -> 'a
   end
+
+  val reraise : exn -> 'a
 end

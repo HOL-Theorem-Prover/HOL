@@ -35,7 +35,7 @@ fun checkterm pfx s =
   case OS.Process.getEnv "TERM" of
       NONE => s
     | SOME term =>
-      if String.isPrefix "xterm" term then
+      if String.isPrefix "xterm" term orelse term = "screen" then
         pfx ^ s ^ "\027[0m"
       else
         s
@@ -48,7 +48,57 @@ val red = checkterm "\027[31m"
 val dim = checkterm "\027[2m"
 val CLR_EOL = "\027[0K" (* ANSI clear to EOL code *)
 
+fun optbind x f =
+  case x of
+      SOME y => f y
+    | _ => NONE
+fun optchoice (opt1, opt2) =
+  case opt1 of
+      NONE => opt2()
+    | _ => opt1
+infix ++
+val op++ = optchoice
+fun isc r = Int.scan StringCvt.DEC r
+fun char_reader (s, i) = if size s <= i then NONE
+                         else SOME (String.sub(s,i), (s,i+1))
+fun estbind m f s =
+  case m s of
+      NONE => NONE
+    | SOME(r,s') => f r s'
 
+fun run s =
+  let
+    val outfile = OS.FileSys.tmpName()
+    val res = OS.Process.system (String.concatWith " " [s,"1>",outfile,"2>&1"])
+    val output =
+        let
+          val istrm = TextIO.openIn outfile
+        in
+          TextIO.inputAll istrm before
+          TextIO.closeIn istrm before
+          OS.FileSys.remove outfile
+        end handle IO.Io _ => ""
+  in
+    if OS.Process.isSuccess res then SOME output else NONE
+  end
+
+fun optassert P x = if P x then SOME x else NONE
+
+fun getWidth0 () =
+  let
+    fun tputresult istr = Int.fromString istr
+    fun sttyresult i2str =
+      Option.map #1
+                 (estbind (isc char_reader) (fn _ => isc char_reader)
+                          (i2str, 0))
+    fun positive m x = optbind (m x) (optassert (fn i => i > 0))
+  in
+    optbind (run "stty size") (positive sttyresult) ++
+    (fn _ => optbind (run "tput cols") (positive tputresult)) ++
+    (fn _ => SOME 80)
+  end
+
+fun getWidth() = valOf (getWidth0())
 
 fun realspace_delimited_fields s = let
   open Substring

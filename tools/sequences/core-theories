@@ -15,6 +15,7 @@ src/IndDef
 src/basicProof
 src/relation
 src/coretypes
+[poly]!!src/meson/test
 src/tfl/src
 src/num/theories
 src/num/reduce/src
@@ -31,8 +32,8 @@ src/datatype/equiv
 src/datatype/record
 src/datatype
 !src/datatype/theory_tests
-src/list/src
 src/monad
+src/list/src
 src/quantHeuristics
 src/unwind
 src/pattern_matches

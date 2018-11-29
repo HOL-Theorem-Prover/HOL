@@ -33,10 +33,10 @@ val _ = OpenTheory_const_name{const={Thy="one",Name="one_CASE"},name=(ns,"case")
 end
 
 (* ---------------------------------------------------------------------*)
-(* Introduce the new type.						*)
-(* The type :one will be represented by the subset {T} of :bool.	*)
-(* The predicate defining this subset will be `\b.b`.  We must first 	*)
-(* prove the (trivial) theorem: ?b.(\b.b)b.				*)
+(* Introduce the new type.                                              *)
+(* The type :one will be represented by the subset {T} of :bool.        *)
+(* The predicate defining this subset will be `\b.b`.  We must first    *)
+(* prove the (trivial) theorem: ?b.(\b.b)b.                             *)
 (*----------------------------------------------------------------------*)
 
 val EXISTS_ONE_REP = prove
@@ -45,7 +45,7 @@ val EXISTS_ONE_REP = prove
 
 (*---------------------------------------------------------------------------*)
 (* Use the type definition mechanism to introduce the new type.              *)
-(* The theorem returned is:   |- ?rep. TYPE_DEFINITION (\b.b) rep	     *)
+(* The theorem returned is:   |- ?rep. TYPE_DEFINITION (\b.b) rep            *)
 (*---------------------------------------------------------------------------*)
 
 val one_TY_DEF =
@@ -53,7 +53,7 @@ val one_TY_DEF =
     (new_type_definition("one", EXISTS_ONE_REP));
 
 (* ---------------------------------------------------------------------*)
-(* The proof of the `axiom` for type :one follows.			*)
+(* The proof of the `axiom` for type :one follows.                      *)
 (* ---------------------------------------------------------------------*)
 
 val one_axiom = store_thm("one_axiom",
@@ -130,7 +130,7 @@ val _ = add_rule {block_style = (AroundEachPhrase, (PP.CONSISTENT,0)),
  ---------------------------------------------------------------------------*)
 
 val _ = overload_on ("()", ``one``);
-val _ = type_abbrev("unit",``:one``);
+val _ = type_abbrev_pp("unit",``:one``);
 
 val one_induction = Q.store_thm
 ("one_induction",
@@ -156,21 +156,15 @@ val one_case_thm = Q.store_thm
   ONCE_REWRITE_TAC [GSYM one] THEN REWRITE_TAC [one_case_def]);
 
 
-val _ = adjoin_to_theory
-{sig_ps = NONE,
- struct_ps = SOME(fn ppstrm =>
-   let val S = PP.add_string ppstrm
-       fun NL() = PP.add_newline ppstrm
-   in
-      S "val _ = TypeBase.write";               NL();
-      S "  (TypeBasePure.gen_datatype_info";    NL();
-      S "     {ax=one_prim_rec,";               NL();
-      S "      ind=one_induction,";             NL();
-      S "      case_defs = [one_case_thm]});";  NL();
-      NL();
-      S "val _ = let open computeLib";          NL();
-      S "        in add_thms [one_case_def]";   NL();
-      S "        end;"
-   end)};
+val _ = TypeBase.export (
+      TypeBasePure.gen_datatype_info {
+        ax=one_prim_rec, ind=one_induction,
+        case_defs = [one_case_thm]
+      }
+    )
+
+val _ = computeLib.add_persistent_funs ["one_case_def"]
+
+
 
 val _ = export_theory();

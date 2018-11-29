@@ -436,15 +436,15 @@ val MULT_FUN_LEMMA =
      store_thm
       ("MULT_FUN_LEMMA",
        --`!i1 i2.
-	 (MULT_FUN((i1,i2),(if i1=0 then 0 else i2),i1,(((i1-1)=0)\/(i2=0)))) =
-	  ((i1*i2), (if ((i1-1)=0)\/(i2=0) then i1 else 1), T)`--,
+         (MULT_FUN((i1,i2),(if i1=0 then 0 else i2),i1,(((i1-1)=0)\/(i2=0)))) =
+          ((i1*i2), (if ((i1-1)=0)\/(i2=0) then i1 else 1), T)`--,
        REPEAT GEN_TAC
-	THEN ASM_CASES_TAC (--`i1=0`--)
-	THEN ASM_CASES_TAC (--`i2=0`--)
-	THEN ASM_REWRITE_TAC[MULT_FUN_THM,MULT_CLAUSES,SUB_0]
-	THEN ASM_CASES_TAC (--`(i1-1)=0`--)
-	THEN IMP_RES_TAC SUB_LEMMA1
-	THEN IMP_RES_TAC MULT_ADD_LEMMA2
+        THEN ASM_CASES_TAC (--`i1=0`--)
+        THEN ASM_CASES_TAC (--`i2=0`--)
+        THEN ASM_REWRITE_TAC[MULT_FUN_THM,MULT_CLAUSES,SUB_0]
+        THEN ASM_CASES_TAC (--`(i1-1)=0`--)
+        THEN IMP_RES_TAC SUB_LEMMA1
+        THEN IMP_RES_TAC MULT_ADD_LEMMA2
         THEN ASM_REWRITE_TAC[MULT_CLAUSES]);
 
 val _ = export_theory();

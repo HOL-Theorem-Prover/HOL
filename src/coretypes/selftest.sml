@@ -17,6 +17,19 @@ val _ = if Type.compare(ty, alpha) = EQUAL then OK()
 
 val _ = tpp "case opt of NONE => T | SOME b => b"
 
+(* tests for option monad stuff evaluation *)
+val _ = convtest ("EVAL OPTION_BIND(1)", computeLib.EVAL_CONV,
+                  ``OPTION_BIND (SOME T) (\x. SOME x)``, ``SOME T``)
+val _ = convtest ("EVAL OPTION_BIND(2)", computeLib.EVAL_CONV,
+                  “OPTION_BIND NONE (\x:bool. SOME x)”, “NONE : bool option”)
+
+val _ = convtest ("EVAL OPTION_IGNORE_BIND(1)", computeLib.EVAL_CONV,
+                  ``OPTION_IGNORE_BIND (SOME T) (SOME (\x:'a. x))``,
+                  ``SOME (\x:'a. x)``)
+val _ = convtest ("EVAL OPTION_IGNORE_BIND(2)", computeLib.EVAL_CONV,
+                  ``OPTION_IGNORE_BIND (NONE : bool option) (SOME (\x:'a. x))``,
+                  “NONE : ('a -> 'a) option”)
+
 (* testing for pairs *)
 val die = fn () => die "FAILED!\n"
 fun sdie s = testutils.die ("FAILED!\n  "^s^"\n")

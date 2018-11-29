@@ -19,7 +19,7 @@
 app load ["arithmeticTheory","realTheory","transcTheory","limTheory",
           "boolTheory","hol88Lib","numLib","reduceLib","pairTheory","jrhUtils",
           "powserTheory","Diff","mesonLib","RealArith","tautLib","pairLib",
-          "seqTheory", "numTheory","prim_recTheory","topologyTheory",
+          "seqTheory", "numTheory","prim_recTheory","metricTheory",
           "netsTheory","PairedLambda", "pred_setTheory"];
 *)
 
@@ -27,7 +27,7 @@ open boolTheory powserTheory PairedLambda Diff mesonLib RealArith
      tautLib transcTheory limTheory
      HolKernel Parse bossLib boolLib hol88Lib numLib reduceLib pairLib
      pairTheory arithmeticTheory numTheory prim_recTheory
-     jrhUtils realTheory topologyTheory netsTheory seqTheory pred_setTheory;
+     jrhUtils realTheory metricTheory netsTheory seqTheory pred_setTheory;
 
 val _ = new_theory "integral";
 

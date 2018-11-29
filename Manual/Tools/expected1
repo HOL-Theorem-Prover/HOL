@@ -8,25 +8,23 @@ val it = 11: int
          x < 20`;
 val it =
    Proof manager status: 1 proof.
-1. Incomplete goalstack:
-     Initial goal:
-
-     \(\forall\)x. 4 < x \(\land\) x < 10 \(\Rightarrow\) x < 20
+   1. Incomplete goalstack:
+        Initial goal:
+        
+        \(\forall\)x. 4 < x \(\land\) x < 10 \(\Rightarrow\) x < 20
 \end{verbatim}
 
 \begin{session}
 > open arithmeticTheory;\quad\textit{\small\dots{}output elided\dots{}}
 > ADD_CLAUSES;
 val it =
-   \(\turn\) (0 + m = m) \(\land\) (m + 0 = m) \(\land\) (SUC m + n = SUC (m + n)) \(\land\)
-  (m + SUC n = SUC (m + n)):
-   thm
+   \(\!\!\!{\turn}\!\!\!\!\) (0 + m = m) \(\land\) (m + 0 = m) \(\land\) (SUC m + n = SUC (m + n)) \(\land\)
+     (m + SUC n = SUC (m + n)): thm
 
 > load "bagTheory";
 val it = (): unit
 > bagTheory.BAG_IN_BAG_INSERT;
-val it = \(\turn\) \(\forall\)b e1 e2. e1 <: BAG_INSERT e2 b \({\iff}\) (e1 = e2) \(\lor\) e1 <: b:
-   thm
+val it = \(\!\!\!{\turn}\!\!\!\!\) \(\forall\)b e1 e2. e1 <: BAG_INSERT e2 b \({\iff}\) (e1 = e2) \(\lor\) e1 <: b: thm
 
 This case illustrates an interesting issue: the HOL system itself writes a message to standard out; we'd like to capture this so that it is properly sequenced with the other output.
 
@@ -34,16 +32,16 @@ This case illustrates an interesting issue: the HOL system itself writes a messa
 <<HOL message: inventing new type variable names: 'a>>
 val it =
    Proof manager status: 2 proofs.
-2. Incomplete goalstack:
-     Initial goal:
-
-     \(\forall\)x. 4 < x \(\land\) x < 10 \(\Rightarrow\) x < 20
-
-
-1. Incomplete goalstack:
-     Initial goal:
-
-     MEM p l \(\Rightarrow\) \(\exists\)i. i < LENGTH l \(\land\) (p = EL i l)
+   2. Incomplete goalstack:
+        Initial goal:
+        
+        \(\forall\)x. 4 < x \(\land\) x < 10 \(\Rightarrow\) x < 20
+        
+        
+   1. Incomplete goalstack:
+        Initial goal:
+        
+        MEM p l \(\Rightarrow\) \(\exists\)i. i < LENGTH l \(\land\) (p = EL i l)
 > ``3 <> 4``;
 val it = \mbox{\textrm{``}}3 \(\ne\) 4\mbox{\textrm{''}}: term
 > type_of ``[]``;
@@ -92,22 +90,22 @@ OK..
 2 subgoals:
 val it =
    
-0 < SUC n \(\Rightarrow\) 0 < SUC n * SUC n
-------------------------------------
-  0 < n \(\Rightarrow\) 0 < n * n
-
-
-0 < 0 \(\Rightarrow\) 0 < 0 * 0
+   0 < SUC n \(\Rightarrow\) 0 < SUC n * SUC n
+   ------------------------------------
+    0 < n \(\Rightarrow\) 0 < n * n
+   
+   
+   0 < 0 \(\Rightarrow\) 0 < 0 * 0
 
 > val foo = store_thm(
 "foo",
 ``p /\bs{} q ==> p``,
 strip_tac);
-val foo = \(\turn\) p \(\land\) q \(\Rightarrow\) p: thm
+val foo = \(\!\!\!{\turn}\!\!\!\!\) p \(\land\) q \(\Rightarrow\) p: thm
 > foo;
-val it = \(\turn\) p \(\land\) q \(\Rightarrow\) p: thm
+val it = \(\!\!\!{\turn}\!\!\!\!\) p \(\land\) q \(\Rightarrow\) p: thm
 x /\bs{} y
 \(\alpha\) list
 :'a list
 > root2Theory.SQRT_2_IRRATIONAL
-val it = \(\turn\) \(\neg\)Rational (sqrt 2): thm
+val it = \(\!\!\!{\turn}\!\!\!\!\) \(\neg\)Rational (sqrt 2): thm

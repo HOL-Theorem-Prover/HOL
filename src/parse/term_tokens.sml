@@ -19,8 +19,27 @@ val non_aggregating_chars =
           (explode "()[]{}~.,;-")
 fun nonagg_c c = CharSet.member(non_aggregating_chars, c)
 
-fun s_has_nonagg_char s = length (String.fields nonagg_c s) <> 1 orelse
-                          s = UnicodeChars.neg
+fun s_has_nonagg_char s =
+  let
+    val lim = size s
+    fun recurse i =
+      if i >= lim then false
+      else
+        let
+          val c = String.sub(s,i)
+          val n = ord c
+        in
+          (* will look at UTF8 continuation bytes as if they were
+             independent characters but these will trigger false for both
+             tests below *)
+          nonagg_c c orelse
+          (n = 194 andalso i < lim - 1 andalso (* encoding of ¬ (UOK) *)
+           ord (String.sub(s,i+1)) = 172) orelse
+          recurse (i + 1)
+        end
+  in
+    recurse 0
+  end
 
 fun term_symbolp s = UnicodeChars.isSymbolic s andalso
                      not (s_has_nonagg_char s) andalso
@@ -134,15 +153,21 @@ fun split_ident mixedset s locn qb = let
   val ID = Ident
 in
   if is_char orelse s0 = #"\"" then (advance(); (ID s, locn))
-  else if s0 = #"$" then let
-      val (tok,locn') = split_ident mixedset
-                                   (String.extract(s, 1, NONE))
-                                   (locn.move_start 1 locn) qb
-    in
-      case tok of
-        Ident s' => (ID ("$" ^ s'), locn.move_start ~1 locn')
-      | _ => raise LEX_ERR ("Can't use $-quoting of this sort of token", locn')
-    end
+  else if s0 = #"$" then
+    if CharVector.all (Lib.equal #"$") s then (advance(); (ID s, locn))
+    else if size s > 1 andalso String.sub(s,1) = #"$" then
+      raise LEX_ERR ("Bad token "^s, locn)
+    else
+      let
+        val (tok,locn') = split_ident mixedset
+                                      (String.extract(s, 1, NONE))
+                                      (locn.move_start 1 locn) qb
+      in
+        case tok of
+            Ident s' => (ID ("$" ^ s'), locn.move_start ~1 locn')
+          | _ => raise LEX_ERR
+                       ("Can't use $-quoting of this sort of token", locn')
+      end
   else if not (mixed s) andalso not (s_has_nonagg_char s) then
     (MkID qb' (s, locn), locn)
   else
@@ -176,7 +201,7 @@ in
                 if size sfx0 <> 0 andalso String.sub(sfx0,0) = #"$" then
                   if size sfx0 > 1 then let
                       val sfx0_1 = String.extract(sfx0, 1, NONE)
-	              val c0 = String.sub(sfx0_1, 0)
+                      val c0 = String.sub(sfx0_1, 0)
                       val rest = String.extract(sfx0_1, 1, NONE)
                     in
                       if c0 = #"0" then
@@ -186,13 +211,13 @@ in
                                                      \ of a constant",
                                             locn)
                       else let
-	                  val (qid2, sfx) =
+                          val (qid2, sfx) =
                               grab (constid_categorise (str c0))
                                    [str c0]
                                    rest
                                    handle Fail s => raise LEX_ERR (s, locn)
-	                in
-	                  stdfinish (QIdent(pfx0,qid2), sfx)
+                        in
+                          stdfinish (QIdent(pfx0,qid2), sfx)
                         end
                     end
                   else
@@ -285,6 +310,18 @@ fun lextest toks s = let
 in
   recurse []
 end
+
+fun toString aqp t =
+    case t of
+        Ident s => "Ident("^s^")"
+      | Antiquote a => "AQ(" ^ aqp a ^ ")"
+      | Numeral(n,copt) => "Numeral(" ^ Arbnum.toString n ^ ", " ^
+                           (case copt of NONE => "NONE"
+                                       | SOME c => str c) ^ ")"
+      | Fraction{wholepart,fracpart,places} =>
+          "Fraction{w=" ^ Arbnum.toString wholepart ^", f=" ^
+          Arbnum.toString fracpart ^ ", p=" ^ Int.toString places ^ "}"
+      | QIdent(s1,s2) => s1 ^ "$" ^ s2
 
 end (* struct *)
 

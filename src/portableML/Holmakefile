@@ -2,20 +2,25 @@ CLINE_OPTIONS = --no_overlay
 
 UOFILES = $(patsubst %.sml,%.uo,$(wildcard *.sml))
 
-FRU = FunctionalRecordUpdate
-
-all: $(UOFILES) selftest.exe $(FRU).uo GetOpt.ui GetOpt.uo
+all: $(UOFILES) selftest.exe
 
 selftest.exe: selftest.uo Redblackset.uo
 	$(MOSMLC) -o $@ $<
 
-$(FRU).sml: $(dprot $(HOLDIR)/tools/Holmake/$(FRU).sml)
-	$(CP) $< $@
+Table.uo Table.ui: Table.sml Portable.ui HOLPP.ui
+	$(MOSMLC) -toplevel -c $<
 
-GetOpt.sig: $(dprot $(HOLDIR)/tools/Holmake/GetOpt.sig)
-	$(CP) $< $@
+Graph.uo Graph.ui: Graph.sml Table.ui Portable.ui HOLPP.ui
+	$(MOSMLC) -toplevel -c Table.ui $<
 
-GetOpt.sml: $(dprot $(HOLDIR)/tools/Holmake/GetOpt.sml)
-	$(CP) $< $@
+Inttab.uo: Inttab.sml Table.ui
+	$(MOSMLC) Table.ui -c $<
 
-EXTRA_CLEANS = $(FRU).sml GetOpt.sig GetOpt.sml
+Symtab.uo: Symtab.sml Table.ui
+	$(MOSMLC) Table.ui -c $<
+
+Symreltab.uo: Symreltab.sml Table.ui
+	$(MOSMLC) Table.ui -c $<
+
+Int_Graph.uo: Int_Graph.sml Graph.ui
+	$(MOSMLC) -c Graph.ui $<

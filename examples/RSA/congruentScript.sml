@@ -23,15 +23,15 @@ val CONGRUENT = Define `congruent a b n = ?c d. a+c*n = b+d*n`;
 
 
 val CONGRUENT_REF = store_thm("CONGRUENT_REF",
-			Term `!a n. congruent a a n`,
+                        Term `!a n. congruent a a n`,
                         PROVE_TAC[CONGRUENT]);
 
 val CONGRUENT_SYM = store_thm("CONGRUENT_SYM",
-			Term `!a b n. congruent a b n = congruent b a n`,
+                        Term `!a b n. congruent a b n = congruent b a n`,
                         PROVE_TAC[CONGRUENT]);
 
 val CONGRUENT_TRANS = store_thm("CONGRUENT_TRANS",
-			Term `!a b c n. congruent a b n /\ congruent b c n
+                        Term `!a b c n. congruent a b n /\ congruent b c n
                                 ==> congruent a c n`,
                         ARW[CONGRUENT]
                         THEN EXISTS_TAC (Term `c'+c''`)
@@ -40,14 +40,14 @@ val CONGRUENT_TRANS = store_thm("CONGRUENT_TRANS",
                       );
 
 val CONGRUENT_MULT_0 = store_thm("CONGRUENT_MULT_0",
-			Term `!a b n. congruent a 0 n ==> congruent (a*b) 0 n`,
+                        Term `!a b n. congruent a 0 n ==> congruent (a*b) 0 n`,
                         ARW[CONGRUENT]
                         THEN EXISTS_TAC (Term `b*c`)
                         THEN EXISTS_TAC (Term `b*d`)
                         THEN PROVE_TAC[RIGHT_ADD_DISTRIB,MULT_ASSOC,MULT_SYM]);
 
 val CONGRUENT_ADD = store_thm("CONGRUENT_ADD",
-			Term `!a b c d n. congruent a b n /\ congruent c d n
+                        Term `!a b c d n. congruent a b n /\ congruent c d n
                                  ==> congruent (a+c) (b+d) n`,
                         ARW[CONGRUENT]
                         THEN EXISTS_TAC (Term `c'+c''`)
@@ -56,7 +56,7 @@ val CONGRUENT_ADD = store_thm("CONGRUENT_ADD",
 
 
 val CONGRUENT_TIMES = store_thm("CONGRUENT_TIMES",
-			Term `!a b c n. congruent a b n
+                        Term `!a b c n. congruent a b n
                                          ==>
                                         congruent (a*c) (b*c) n`,
                         ARW[CONGRUENT]
@@ -69,7 +69,7 @@ val CONGRUENT_TIMES = store_thm("CONGRUENT_TIMES",
                         THEN ARW[]);
 
 val CONGRUENT_MULT = store_thm("CONGRUENT_MULT",
-			Term `!a b c d n. congruent a b n /\ congruent c d n
+                        Term `!a b c d n. congruent a b n /\ congruent c d n
                                             ==>
                                           congruent (a*c) (b*d) n`,
                         ARW[CONGRUENT]
@@ -86,7 +86,7 @@ val CONGRUENT_MULT = store_thm("CONGRUENT_MULT",
 
 
 val CONGRUENT_POWER = store_thm("CONGRUENT_POWER",
-			Term `!a b c n. congruent a b n
+                        Term `!a b c n. congruent a b n
                                            ==>
                                         congruent ($EXP a c) ($EXP b c) n`,
                         Induct_on `c` THEN
@@ -94,7 +94,7 @@ val CONGRUENT_POWER = store_thm("CONGRUENT_POWER",
 
 
 val CONGRUENT_LE_EX = store_thm("CONGRUENT_LE_EX",
-			Term `!a b n. b <= a /\ congruent a b n
+                        Term `!a b n. b <= a /\ congruent a b n
                                           ==>
                                       ?c. a = b + c*n`,
                         ARW[CONGRUENT]
@@ -102,7 +102,7 @@ val CONGRUENT_LE_EX = store_thm("CONGRUENT_LE_EX",
                         THEN ARW[RIGHT_SUB_DISTRIB]
                      );
 val CONGRUENT_LE_1 = store_thm("CONGRUENT_LE_1",
-			Term `!a n. 1 < n /\ congruent a 1 n ==> 1 <= a`,
+                        Term `!a n. 1 < n /\ congruent a 1 n ==> 1 <= a`,
                         Cases_on `a` THEN ARW[CONGRUENT]
                         THEN SPOSE_NOT_THEN STRIP_ASSUME_TAC
                         THEN `(c-d)*n = 1`
@@ -112,7 +112,7 @@ val CONGRUENT_LE_1 = store_thm("CONGRUENT_LE_1",
                      );
 
 val DIVIDES_CONGRUENT = store_thm("DIVIDES_CONGRUENT",
-			Term `!a n. divides n a = congruent a 0 n`,
+                        Term `!a n. divides n a = congruent a 0 n`,
                         ARW[] THEN
                         `divides n a ==> congruent a 0 n`
                           by (ARW[divides_def,CONGRUENT]
@@ -125,7 +125,7 @@ val DIVIDES_CONGRUENT = store_thm("DIVIDES_CONGRUENT",
                      );
 
 val CONGRUENT_DIVIDES = store_thm("CONGRUENT_DIVIDES",
-			Term `!a b n. b <= a /\ congruent a b n
+                        Term `!a b n. b <= a /\ congruent a b n
                                            ==>
                                       divides n (a-b)`,
                          ARW[] THEN IMP_RES_TAC CONGRUENT_LE_EX

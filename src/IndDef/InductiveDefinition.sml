@@ -629,16 +629,19 @@ val inddef_strict = ref false;
 val _ = Feedback.register_btrace ("inddef strict", inddef_strict);
 
 fun indented_term_to_string n tm = let
-  val nspaces = String.implode (List.tabulate(n, K #" "))
-  fun pper pps tm = let
+  val nspaces = CharVector.tabulate(n, K #" ")
+  fun pper tm = let
+    open smpp
   in
-    PP.add_string pps nspaces;
-    Lib.with_flag (Parse.current_backend, PPBackEnd.raw_terminal)
-                  (Parse.pp_term pps)
-                  tm
+    add_string nspaces >>
+    block PP.CONSISTENT n (
+      Lib.with_flag (Parse.current_backend, PPBackEnd.raw_terminal)
+                    (lift Parse.pp_term)
+                    tm
+    )
   end
 in
-  PP.pp_to_string (!Globals.linewidth) pper tm
+  PP.pp_to_string (!Globals.linewidth) (Parse.mlower o pper) tm
 end
 
 

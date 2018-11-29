@@ -326,46 +326,37 @@ fun CONG_STEP (RW{cong_net,...}) tm = Lib.trye hd (Net.match tm cong_net) tm;
  *                          Prettyprinting
  *---------------------------------------------------------------------------*)
 
-local open Portable
+local open Portable PP
 in
-fun pp_simpls ppstrm (RW{thms,congs,...}) =
-   let val {add_string,add_break,begin_block,end_block,add_newline,...} =
-         with_ppstream ppstrm
-       val pp_thm = Parse.pp_thm ppstrm
+fun pp_simpls (RW{thms,congs,...}) =
+   let val pp_thm = Parse.pp_thm
        val thms' = mk_simplsl SPEC_ALL (rev(flatten thms))
        val congs' = rev(flatten congs)
        val how_many_thms = length thms'
        val how_many_congs = length congs'
+       val B = block CONSISTENT 0
    in
-      begin_block PP.CONSISTENT 0;
-      if (how_many_thms = 0)
-      then (add_string "<empty simplification set>")
-      else ( add_string"Rewrite Rules:"; add_newline();
-             add_string"--------------"; add_newline();
-             begin_block PP.INCONSISTENT 0;
-             pr_list pp_thm (fn () => add_string";")
-                            (fn () => add_break(2,0))
-                            thms';
-             end_block());
-      add_newline();
-      add_string("Number of rewrite rules = "^Lib.int_to_string how_many_thms);
-      add_newline();
-      if (how_many_congs = 0)
-      then ()
-      else (add_newline();
-            add_string"Congruence Rules"; add_newline();
-            add_string"----------------"; add_newline();
-            begin_block PP.CONSISTENT 0;
-            pr_list pp_thm (fn () => add_string";")
-                           (fn () => add_break(2,0))
-                           congs';
-            end_block();
-            add_newline();
+     block PP.CONSISTENT 0 [
+       if (how_many_thms = 0)
+       then (add_string "<empty simplification set>")
+       else B [add_string"Rewrite Rules:", NL,
+               add_string"--------------", NL,
+               block PP.INCONSISTENT 0 (
+                 pr_list pp_thm [add_string";", add_break(2,0)] thms')
+              ],
+       NL,
+       add_string("Number of rewrite rules = "^Lib.int_to_string how_many_thms),
+       NL,
+       B (if (how_many_congs = 0) then []
+          else [
+            NL,
+            add_string"Congruence Rules", NL,
+            add_string"----------------", NL,
+            B (pr_list pp_thm [add_string";", add_break(2,0)] congs'), NL,
             add_string("Number of congruence rules = "
-                       ^Lib.int_to_string how_many_congs);
-            add_newline());
-
-      end_block()
+                       ^Lib.int_to_string how_many_congs), NL
+         ])
+     ]
    end
 end;
 

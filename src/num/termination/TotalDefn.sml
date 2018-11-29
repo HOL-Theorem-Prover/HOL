@@ -537,8 +537,9 @@ local open Defn
         val s =
            if !auto_tgoal
               then (Defn.tgoal defn
-                    ; Portable.pprint
-                         proofManagerLib.pp_proof (proofManagerLib.p())
+                    ; PP.prettyPrint
+                        (TextIO.print, !Globals.linewidth)
+                        (proofManagerLib.pp_proof (proofManagerLib.p()))
                     ; if !Globals.interactive then msg2 else "")
            else ""
      in

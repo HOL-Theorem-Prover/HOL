@@ -636,10 +636,8 @@ Thus, we can merge the two sub-cases of the base-case into a single invocation o
 \end{alltt}
 \end{hol}
 
-We have now finished our exercise in tactic revision. Certainly, it
-would be hard to foresee that this final tactic would prove the
-goal; the required lemmas for the final invocation of \ml{metis\_tac}
-have been found by an incremental process of revision.
+We have now finished our exercise in tactic revision.
+Certainly, it would be hard to foresee that this final tactic would prove the goal; the lemmas passed to our invocations of the simplifier, and the final structure of the tactic have been found by an incremental process of revision.
 
 \subsection{Divisibility and factorial (again!)}
 
@@ -899,10 +897,9 @@ Let's prise this apart and look at it in some detail. A proof by
 contradiction can be started by using the \ml{bossLib} function
 \ml{spose\_not\_then}. With it, one assumes the negation of the
 current goal and then uses that in an attempt to prove falsity
-(\verb+F+). The assumed negation $\neg(\forall n.\ \exists p.\ n < p
-\land \mbox{\tt prime}\ p)$ is simplified a bit into $\exists n.\
-\forall p.\ n < p \supset \, \neg \,\mbox{\tt prime}\ p$ and then is
-passed to the tactic \ml{strip\_assume\_tac}. This moves its argument
+(\verb+F+).
+The assumed negation $\neg(\forall n.\ \exists p.\ n < p \land \mbox{\tt prime}\ p)$ is simplified a bit into $\exists n.\ \forall p.\ n < p \,\Rightarrow \, \neg \,\mbox{\tt prime}\ p$ and then is passed to the tactic \ml{strip\_assume\_tac}.
+This moves its argument
 to the assumption list of the goal after eliminating the existential
 quantification on $n$.
 \begin{session}

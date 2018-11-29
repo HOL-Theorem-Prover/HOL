@@ -10,7 +10,7 @@ open HolKernel Parse boolLib pred_setTheory listTheory bagTheory
      listSimps bossLib;
 
 (* ---------------------------------------------------------------------*)
-(* Create the new theory.						*)
+(* Create the new theory.                                               *)
 (* ---------------------------------------------------------------------*)
 
 val _ = new_theory "container";
@@ -251,12 +251,15 @@ val WF_mlt_list = Q.store_thm
 val _ = adjoin_to_theory
 {sig_ps = NONE,
  struct_ps = SOME
- (fn ppstrm => let
-   val S = (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm))
+ (fn _ => let
+   fun S s = [PP.add_string s, PP.add_newline]
  in
-   S "val _ = TotalDefn.WF_thms := (!TotalDefn.WF_thms @ [WF_mlt_list]);";
-   S "val _ = TotalDefn.termination_simps := (!TotalDefn.termination_simps @ [mlt_list_def]);"
- end)};
+   PP.block PP.CONSISTENT 0 (
+     S "val _ = TotalDefn.WF_thms := (!TotalDefn.WF_thms @ [WF_mlt_list]);" @
+     S "val _ = TotalDefn.termination_simps := \
+         \(!TotalDefn.termination_simps @ [mlt_list_def]);"
+   )
+  end)};
 
 
 (*---------------------------------------------------------------------------
@@ -272,9 +275,9 @@ val BAG_OF_FMAP_THM = store_thm ("BAG_OF_FMAP_THM",
   (!f b k v. (BAG_OF_FMAP f (b |+ (k, v)) =
              BAG_INSERT (f k v) (BAG_OF_FMAP f (b \\ k))))``,
 SIMP_TAC std_ss [BAG_OF_FMAP, FDOM_FEMPTY, NOT_IN_EMPTY, EMPTY_BAG,
-		 combinTheory.K_DEF,
-		 BAG_INSERT, FDOM_FUPDATE, IN_INSERT,
-		 GSYM EMPTY_DEF, CARD_EMPTY] THEN
+                 combinTheory.K_DEF,
+                 BAG_INSERT, FDOM_FUPDATE, IN_INSERT,
+                 GSYM EMPTY_DEF, CARD_EMPTY] THEN
 ONCE_REWRITE_TAC [FUN_EQ_THM] THEN
 REPEAT GEN_TAC THEN SIMP_TAC std_ss [] THEN
 Cases_on `x = f k v` THENL [
@@ -293,7 +296,7 @@ Cases_on `x = f k v` THENL [
       `ks = ks INTER FDOM b` suffices_by (
          STRIP_TAC THEN ONCE_ASM_REWRITE_TAC[] THEN
          MATCH_MP_TAC FINITE_INTER THEN
-	 REWRITE_TAC[FDOM_FINITE]
+         REWRITE_TAC[FDOM_FINITE]
       ) THEN
       Q.UNABBREV_TAC `ks` THEN
       SIMP_TAC std_ss [EXTENSION, IN_INTER, IN_ABS] THEN

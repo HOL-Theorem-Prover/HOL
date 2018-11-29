@@ -816,7 +816,7 @@ fun irule thm = let
   val th' = IRULE_CANON thm
 in
   if th' |> concl |> strip_forall |> #2 |> is_imp then
-    MATCH_MP_TAC th' THEN REPEAT CONJ_TAC
+    MATCH_MP_TAC th'
   else MATCH_ACCEPT_TAC th'
 end
 val IRULE_TAC = irule

@@ -9,6 +9,8 @@ val _ = set_trace "Unicode" 0
 val _ = set_trace "print blast counterexamples" 0
 val _ = set_trace "bit blast" 0
 
+val ERR = mk_HOL_ERR "selftest"
+
 val prs = StringCvt.padRight #" "
 fun trunc w t = let
   val s = Lib.with_flag (Globals.linewidth, 10000) term_to_string t
@@ -37,7 +39,7 @@ val _ = if type_to_string ty2 = ":('a + 'b)[32]" then OK()
 
 val _ = tprint "Parsing abbreviated word types"
 val u8 = fcpSyntax.mk_cart_type(bool, fcpSyntax.mk_int_numeric_type 8)
-val _ = type_abbrev("u8", u8)
+val _ = type_abbrev_pp("u8", u8)
 val _ = if Type.compare(Parse.Type`:u8`, u8) <> EQUAL then die "FAILED!"
         else OK()
 val _ = tprint "Printing abbreviated word types"

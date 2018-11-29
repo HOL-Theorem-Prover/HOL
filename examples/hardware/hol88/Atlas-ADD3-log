@@ -1,0 +1,33 @@
+
+TTT_Thm3 = |- ADD3_IMP(T,T,T,sum,cout) = (sum = T) /\ (cout = T)
+Runtime: 130334.8s
+GC: 41280.8s
+
+TTF_Thm3 = |- ADD3_IMP(T,T,F,sum,cout) = (sum = F) /\ (cout = T)
+Runtime: 129350.3s
+GC: 34537.6s
+
+TFT_Thm3 = |- ADD3_IMP(T,F,T,sum,cout) = (sum = F) /\ (cout = T)
+Runtime: 131058.2s
+GC: 41808.9s
+
+TFF_Thm3 = |- ADD3_IMP(T,F,F,sum,cout) = (sum = T) /\ (cout = F)
+Runtime: 130907.1s
+GC: 34667.7s
+
+FTT_Thm3 = |- ADD3_IMP(F,T,T,sum,cout) = (sum = F) /\ (cout = T)
+Runtime: 131861.2s
+GC: 41934.6s
+
+FTF_Thm3 = |- ADD3_IMP(F,T,F,sum,cout) = (sum = T) /\ (cout = F)
+Runtime: 130561.9s
+GC: 35242.1s
+
+FFT_Thm3 = |- ADD3_IMP(F,F,T,sum,cout) = (sum = T) /\ (cout = F)
+Runtime: 163428.9s
+GC: 49389.4s
+
+FFF_Thm3 = |- ADD3_IMP(F,F,F,sum,cout) = (sum = F) /\ (cout = F)
+Runtime: 162951.4s
+GC: 49405.1s
+

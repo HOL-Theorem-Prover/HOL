@@ -67,7 +67,7 @@ val _ =
 
 val rws2 = from_list (List.map lazyfy_thm
       [ ARITH_PROVE (--` !n. 0+n = n `--),
-	ARITH_PROVE (--` !n m. (SUC m)+n = SUC (m+n) `--) ]);
+        ARITH_PROVE (--` !n m. (SUC m)+n = SUC (m+n) `--) ]);
 
 val norm2 = CBV_CONV rws2;
 

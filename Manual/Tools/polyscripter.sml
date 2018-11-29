@@ -2,11 +2,18 @@ val _ = use "../../tools-poly/prelude.ML";
 val _ = use "../../tools-poly/prelude2.ML";
 val _ = PolyML.print_depth 0;
 
+fun exnMessage (e:exn) = 
+  let 
+    fun p (e:exn) = PolyML.prettyRepresentation (e, 10000)
+  in
+    PP.pp_to_string 75 p e
+  end
+
 fun die s = (TextIO.output(TextIO.stdErr, s ^ "\n");
              OS.Process.exit OS.Process.failure)
 fun lnumdie linenum extra exn =
   die ("Exception raised on line " ^ Int.toString linenum ^ ": "^
-       extra ^ General.exnMessage exn)
+       extra ^ exnMessage exn)
 
 val outputPrompt = ref ">"
 
@@ -126,8 +133,8 @@ fun cruftSuffix sfxs s =
     | SOME (sfx,rep) => SOME (String.substring(s, 0, size s - size sfx) ^ rep)
 
 val cruftySuffixes = ref [
-      (":\n   proofs\n", ""),
-      ("\n: proof\n", "\n"),
+      ("\n   : proofs\n", ""),
+      ("\n   : proof\n", "\n"),
       (":\n   proof\n", "\n")
     ]
 
@@ -284,7 +291,6 @@ in
       val raw_output = compiler obuf (lnumdie (linenum lbuf))
                                 (QFRead.stringToReader (thm_name ^ " :Thm.thm"))
       val output = transformOutput umap ws (strip_for_thm raw_output)
-                        |> addIndent "  " 
                         |> deleteTrailingWhiteSpace 
                         |> (fn s => "  " ^ s)
       val _ = advance lbuf
@@ -372,7 +378,7 @@ in
     let
       val firstline = String.extract(line, 3, NONE)
       val input = getRest 3 [firstline]
-      fun handle_exn extra exn = raise Fail (extra ^ General.exnMessage exn)
+      fun handle_exn extra exn = raise Fail (extra ^ exnMessage exn)
       val raw_output = compiler obuf handle_exn (QFRead.stringToReader input)
                        handle Fail s => "Exception- " ^ s ^ " raised\n"
     in
@@ -446,6 +452,9 @@ fun main () =
         | SOME line =>
           let
             val (i, coutopt) = process_line umap obuf line lb
+               handle e => die ("Untrapped exception: line "^
+                                Int.toString (linenum lb) ^ ": " ^
+                                exnMessage e)
           in
             (case coutopt of
                 NONE => print i

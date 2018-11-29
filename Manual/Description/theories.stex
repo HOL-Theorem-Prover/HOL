@@ -408,7 +408,7 @@ infix
 \ml{arithmeticTheory} has been loaded, then \ml{``x+1``} is
 translated to \ml{``\$+~x~1``}. The escape character \ml{\$}
 %
-\index{ escape, in HOL logic parser@\ml{\$} (escape, in \HOL{} logic parser)}%
+\index{ dollar sign, in HOL logic parser@\ml{\$} (dollar sign, in \HOL{} logic parser)!as escape character}%
 \index{declared constants, in HOL logic@declared constants, in \HOL{} logic}%
 \index{infixes, in HOL logic@infixes, in \HOL{} logic}%
 %
@@ -2529,20 +2529,14 @@ fundamental theorems about lists are proved and stored in the theory
 \index{axioms!non-primitive, of HOL logic@non-primitive, of \HOL{} logic!for lists}
 \index{induction theorems, in HOL logic@induction theorems, in \HOL{} logic!for lists}
 \index{characterizing theorem!for lists}
-\begin{verbatim}
-   list_Axiom
-     |- !x f. ?fn. (fn [] = x) /\ (!h t. fn (h::t) = f(fn t)h t)
-   list_INDUCT
-     |- !P. P [] /\ (!t. P t ==> (!h. P(h::t))) ==> (!l. P l)
-   list_CASES
-     |- !l. (l = []) \/ (?t h. l = h::t)
-   CONS_11
-     |- !h t h' t'. (h::t = h'::t') = (h = h') /\ (t = t')
-   NOT_NIL_CONS
-     |- !h t. ~([] = h::t)
-   NOT_CONS_NIL
-     |- !h t. ~(h::t = [])
-\end{verbatim}
+\begin{alltt}
+##thm list_Axiom
+##thm list_INDUCT
+##thm list_CASES
+##thm CONS_11
+##thm NOT_NIL_CONS
+##thm NOT_CONS_NIL
+\end{alltt}
 \end{hol}
 
 The theorem \ml{list\_Axiom} shown above is analogous to the primitive
@@ -2611,11 +2605,9 @@ Such an expression is translated to
 $\holtxt{list\_CASE}\ e_1\ e_2\ (\lambda h\; t.\ e_3)$ where the constant
 \holtxt{list\_CASE} is defined as follows:
 \begin{hol}
-\begin{verbatim}
-   list_case_def
-     |- (!v f. list_CASE [] v f = v) /\
-        (!v f a0 a1. list_CASE (a0::a1) v f = f a0 a1)
-\end{verbatim}
+\begin{alltt}
+##thm list_case_def
+\end{alltt}
 \end{hol}
 
 \paragraph{List membership}
@@ -2625,7 +2617,7 @@ Membership in a list, written using the \holtxt{MEM} syntax, is characterised as
 %
 \begin{hol}
 \begin{alltt}
->> listTheory.MEM;
+##thm MEM
 \end{alltt}
 \end{hol}
 
@@ -2633,21 +2625,21 @@ Membership in a list, written using the \holtxt{MEM} syntax, is characterised as
 \index{APPEND, the HOL constant@\ml{APPEND}, the \HOL{} constant}
 \index{concatenation, of lists!in HOL logic@in \HOL{} logic}
 \index{FLAT, the HOL constant@\ml{FLAT}, the \HOL{} constant}
+\index{SNOC, the HOL constant@\ml{SNOC}, the \HOL{} constant}
 
 Binary list concatenation ({\small\verb+APPEND+}) may also be denoted by
 the infix operator {\small\verb|++|}; thus the expression
 {\small\verb|L1 ++ L2|} is translated into {\small\verb+APPEND L1 L2+}.
 The concatenation of a list of lists into a list is achieved by
 {\small\verb+FLAT+}.
+The special case where a single element is appended to the end of a list (the ``opposite'' of \holtxt{CONS}, which adds elements to the front of a list), is implemented by \holtxt{SNOC}.
 %
 \begin{hol}
-\begin{verbatim}
-   APPEND
-     |- (!l. APPEND [] l = l) /\
-        (!l1 l2 h. APPEND (h::l1) l2 = h::APPEND l1 l2)
-   FLAT
-     |- (FLAT [] = []) /\ (!h t. FLAT(h::t) = h ++ FLAT t)
-\end{verbatim}
+\begin{alltt}
+##thm APPEND
+##thm FLAT
+##thm SNOC
+\end{alltt}
 \end{hol}
 
 \paragraph {Numbers and lists}
@@ -2663,23 +2655,35 @@ size of each list element. The alternate length definition
 Numbers can also be used to index into lists, extracting the element at the specified position. %
 \index{EL, the HOL constant@\holtxt{EL}, the \HOL{} constant}%
 \begin{hol}
-\begin{verbatim}
-   LENGTH
-     |- (LENGTH [] = 0) /\ (!h t. LENGTH (h::t) = SUC(LENGTH t))
-   LEN_DEF
-     |- (!n. LEN [] n = n) /\ !h t n. LEN (h::t) n = LEN t (n + 1)
-   list_size_def
-     |- (!f. list_size f [] = 0) /\
-        !f a0 a1. list_size f (a0::a1) = 1 + (f a0 + list_size f a1))
-   EL
-     |- (!l. EL 0 l = HD l) /\ (!l n. EL (SUC n) l = EL n (TL l))
-\end{verbatim}
+\begin{alltt}
+##thm LENGTH
+##thm LEN_DEF
+##thm list_size_def
+##thm EL
+\end{alltt}
 \end{hol}
 
 \noindent
 Note that the extraction of the $n$th element (\holtxt{EL}) of a list starts its indexing from 0.
 If the length of the list $\ell$ is less than or equal to $n$, the result of \holtxt{EL~$n$~$\ell$~} is unspecified.
-For more on the ``indexed'' treatment of lists, see Section~\ref{sec:indexed-lists} below.
+
+\index{GENLIST, the HOL constant@\ml{GENLIST}, the \HOL{} constant}
+The \holtxt{GENLIST} constant can be used to generate a list of a particular size, where the value of each element is independently determined by reference to a function that takes natural numbers (the set $\{0\dots n-1\}$) to element values:
+\begin{hol}
+\begin{alltt}
+##thm GENLIST
+##thm EL_GENLIST
+\end{alltt}
+\end{hol}
+\index{SNOC, the HOL constant@\ml{SNOC}, the \HOL{} constant}
+Working with \holtxt{SNOC}, and thus the definition above, can occasionally be awkward, so a characterisation of \holtxt{GENLIST}'s \holtxt{SUC} clause in terms of \holtxt{CONS} can also be useful:
+\begin{hol}
+\begin{alltt}
+##thm GENLIST_CONS
+\end{alltt}
+\end{hol}
+For more on the ``indexed'' treatment of lists, see
+Section~\ref{sec:indexed-lists} below.
 
 \paragraph {Mapping functions over lists}
 \index{MAP, the HOL constant@\ml{MAP}, the \HOL{} constant}
@@ -2716,23 +2720,53 @@ is supported by \holtxt{EVERY} and \holtxt{EXISTS}, respectively. The
 elimination of all elements in list not satisfying a given predicate
 is performed by \holtxt{FILTER}.
 \begin{hol}
-\begin{verbatim}
-   EVERY_DEF
-     |- (!P. EVERY P [] = T) /\
-        (!P h t. EVERY P (h::t) = P h /\ EVERY P t)
-   EXISTS_DEF
-     |- (!P. EXISTS P [] = F) /\
-        (!P h t. EXISTS P (h::t) = P h \/ EXISTS P t)
-   FILTER
-     |- (!P. FILTER P [] = []) /\
-        (!P h t. FILTER P (h::t) = if P h then h::FILTER P t else FILTER P t)
-   ALL_DISTINCT
-     |- (ALL_DISTINCT [] = T) /\
-        (!h t. ALL_DISTINCT (h::t) = ~MEM h t /\ ALL_DISTINCT t)
-\end{verbatim}
+\begin{alltt}
+##thm EVERY_DEF
+##thm EXISTS_DEF
+##thm FILTER
+##thm ALL_DISTINCT
+\end{alltt}
 \end{hol}
 The predicate \holtxt{ALL\_DISTINCT} holds on a list just in case no
 element in the list is equal to any other.
+
+\index{EVERY2@\ml{EVERY2}|see{\ml{LIST\_REL}}}
+\index{LIST_REL, the HOL constant@\ml{LIST\_REL}, the \HOL{} constant}
+\paragraph{Relations over lists}
+A binary relation on elements can be ``lifted'' to a relation on lists of such elements with the \holtxt{LIST\_REL} constant:
+\begin{hol}
+\begin{alltt}
+##thm LIST_REL_def
+\end{alltt}
+\end{hol}
+This can be viewed as an application of \holtxt{EVERY}:
+\begin{hol}
+\begin{alltt}
+##thm LIST_REL_EVERY_ZIP
+\end{alltt}
+\end{hol}
+Acknowledging this view, the system overloads the name \holtxt{EVERY2} to map to the same constant.
+\begin{hol}
+\begin{alltt}
+>> “EVERY2 (λm n. EVEN (m + n)) [1;2;3] [3;4;5]”;
+\end{alltt}
+\end{hol}
+Some theorems in \ml{listTheory} have names that reflect this.
+
+Equally, \holtxt{LIST\_REL} can be seen as a test that checks the relation at all relevant indices:
+\begin{hol}
+\begin{alltt}
+##thm LIST_REL_EL_EQN
+\end{alltt}
+\end{hol}
+Finally, there is a natural induction principle for this constant (as \emph{per} Section~\ref{sec:proofs-with-inductive-relations}, the tactic \ml{Induct_on~\bq{}LIST_REL\bq} applies it):
+\begin{hol}
+\begin{alltt}
+##thm LIST_REL_strongind
+\end{alltt}
+\end{hol}
+
+
 
 \paragraph {Folding}
 \index{FOLDL, the HOL constant@\ml{FOLDL}, the \HOL{} constant}
@@ -2744,14 +2778,10 @@ through a list and accumulating the result is known as
 from left-to-right (\holtxt{FOLDL}), and at others the
 right-to-left direction (\holtxt{FOLDR}) is required.
 \begin{hol}
-\begin{verbatim}
-   FOLDL
-     |- (!f e. FOLDL f e [] = e) /\
-        (!f e x l. FOLDL f e (x::l) = FOLDL f (f e x) l)
-   FOLDR
-     |- (!f e. FOLDR f e [] = e) /\
-        (!f e x l. FOLDR f e (x::l) = f x (FOLDR f e l))
-\end{verbatim}
+\begin{alltt}
+##thm FOLDL
+##thm FOLDR
+\end{alltt}
 \end{hol}
 
 \paragraph {List reversal}
@@ -2773,7 +2803,7 @@ counterpart \holtxt{REV} are defined in \theoryimp{list}.
 The \holtxt{nub} function removes all duplicate entries from a list.
 \begin{hol}
 \begin{alltt}
->> listTheory.nub_def;
+##thm nub_def
 \end{alltt}
 \end{hol}
 
@@ -2945,7 +2975,7 @@ total relation.
 
 
 
-\subsubsection{Indexed Lists}
+\subsubsection{Indexed lists}
 \label{sec:indexed-lists}
 
 \index{EL, the HOL constant@\holtxt{EL}, the \HOL{} constant|pin}
@@ -2974,10 +3004,7 @@ The relevant constant is \holtxt{LUPDATE}, where the term $\holtxt{LUPDATE}\;e\;
 The definition is given in three clauses:
 \begin{hol}
 \begin{alltt}
-   LUPDATE_def
-     |- (\(\forall\)e n. LUPDATE e n [] = []) \(\land\)
-        (\(\forall\)e x l. LUPDATE e 0 (x::l) = e::l) \(\land\)
-        \(\forall\)e n x l. LUPDATE e (SUC n) (x::l) = x::LUPDATE e n l
+   ##thm LUPDATE_def
 \end{alltt}
 \end{hol}
 The definition implies that attempting to update a list at an index beyond the end of the list returns the input list unchanged.
@@ -2989,7 +3016,7 @@ The basic characterisation of the link between \holtxt{EL} and \holtxt{LUPDATE} 
 \end{alltt}
 \end{hol}
 
-\paragraph{The \ml{indexedLists} Theory} The \ml{indexedLists} theory defines a number of extra constants that are ``aware'' of lists as indexed values.
+\paragraph{The \ml{indexedLists} theory} The \ml{indexedLists} theory defines a number of extra constants that are ``aware'' of lists as indexed values.
 Some of these constants are:
 \begin{hol}
 \begin{verbatim}
@@ -3009,9 +3036,7 @@ is such that $\holtxt{findi}\;e\;\ell$ returns the first index of element $e$ wi
 The definition is by recursion over the structure of the input list:
 \begin{hol}
 \begin{alltt}
-   findi_def
-     |- (\(\forall\)x. findi x [] = 0) \(\land\)
-        \(\forall\)x h t. findi x (h::t) = if x = h then 0 else 1 + findi x t
+   ##thm findi_def
 \end{alltt}
 \end{hol}
 
@@ -3023,9 +3048,7 @@ is used to remove the $n$-th element from a list.
 It is also defined by recursion over the structure of the input list:
 \begin{hol}
 \begin{alltt}
-   delN_def
-     |- (\(\forall\)i. delN i [] = []) \(\land\)
-        \(\forall\)i h t. delN i (h::t) = if i = 0 then t else h::delN (i - 1) t
+   ##thm delN_def
 \end{alltt}
 \end{hol}
 
@@ -3085,24 +3108,16 @@ domains of type \ml{llist}.  Rather, \ml{llist} is a coinductive type,
 and has an axiom that justifies the definition of (co-)recursive
 functions that map \emph{into} the \ml{llist} type:
 \begin{hol}
-\begin{verbatim}
-   llist_Axiom
-      |- !f : 'a -> ('a # 'b) option.
-           ?g : 'a -> 'b llist.
-             (!x. LHD (g x) = OPTION_MAP SND (f x)) /\
-             (!x. LTL (g x) = OPTION_MAP (g o FST) (f x))
-\end{verbatim}
+\begin{alltt}
+   >>__ load "llistTheory"; open llistTheory
+   ##thm llist_Axiom
+\end{alltt}
 \end{hol}
 \noindent An equivalent form of the above is
 \begin{hol}
-\begin{verbatim}
-   llist_Axiom_1
-      |- !f. ?g.
-           !x. g x =
-               case f x
-                of NONE => LNIL
-                 | SOME (x',y) => LCONS y (g x')
-\end{verbatim}
+\begin{alltt}
+   ##thm llist_Axiom_1
+\end{alltt}
 \end{hol}
 
 Other constants in the theory \theoryimp{llist} include \ml{LMAP}, \ml{LFINITE},
@@ -3121,30 +3136,14 @@ Other constants in the theory \theoryimp{llist} include \ml{LMAP}, \ml{LFINITE},
 \end{hol}
 They are characterised by the following theorems
 \begin{hol}
-\begin{verbatim}
-   LMAP
-      |- (LMAP f LNIL = LNIL) /\
-         (LMAP f (LCONS h t) = LCONS (f h) (LMAP f t))
-   LFINITE_THM
-      |- (LFINITE LNIL = T) /\
-         (LFINITE (LCONS h t) = LFINITE t)
-   LNTH_THM
-      |- (!n. LNTH n LNIL = NONE) /\
-         (!h t. LNTH 0 (LCONS h t) = SOME h) /\
-         (!n h t. LNTH (SUC n) (LCONS h t) = LNTH n t)
-   LTAKE_THM
-      |- (LTAKE 0 l = SOME []) /\
-         (LTAKE (SUC n) LNIL = NONE) /\
-         (LTAKE (SUC n) (LCONS h t) = OPTION_MAP (CONS h) (LTAKE n t)
-   LDROP_THM
-      |- (LDROP 0 ll = SOME ll) /\
-         (LDROP (SUC n) ll = NONE) /\
-         (LDROP (SUC n) (LCONS h t) = LDROP n t)
-   LFILTER_THM
-      |- (LFILTER P LNIL = LNIL) /\
-         (LFILTER P (LCONS h t) = if P h then LCONS h (LFILTER P t)
-                                         else LFILTER P t)
-\end{verbatim}
+\begin{alltt}
+##thm LMAP
+##thm LFINITE_THM
+##thm LNTH_THM
+##thm LTAKE_THM
+##thm LDROP_THM
+##thm LFILTER_THM
+\end{alltt}
 \end{hol}
 
 \paragraph{Concatenation}
@@ -3153,29 +3152,24 @@ Two lazy lists may be concatenated by \ml{LAPPEND}. If the first lazy
 list is infinite, elements of the second are inaccessible in the
 result.  A lazy list of lazy lists can be flattened to a lazy list by
 \ml{LFLATTEN}.
-\begin{hol}\begin{verbatim}
-   LAPPEND
-      |- (!x. LAPPEND LNIL x = x) /\
-         (!h t x. LAPPEND (LCONS h t) x = LCONS h (LAPPEND t x))
-   LFLATTEN_THM
-      |- (LFLATTEN LNIL = LNIL) /\
-         (!tl. LFLATTEN (LCONS LNIL t) = LFLATTEN t) /\
-         (!h t tl. LFLATTEN (LCONS (LCONS h t) tl) =
-                      LCONS h (LFLATTEN (LCONS t tl)))
-\end{verbatim}\end{hol}
+\begin{hol}
+\begin{alltt}
+##thm LAPPEND
+##thm LFLATTEN_THM
+\end{alltt}
+\end{hol}
 
 \paragraph{Lists and lazy lists}
 
 Mapping back and forth from lists to lazy lists is accomplished
 by \ml{fromList} and \ml{toList}:
-\begin{hol}\begin{verbatim}
-   fromList
-      |- (fromList [] = LNIL) /\
-         (!h t. fromList (h::t) = LCONS h (fromList t))
-   toList_THM
-      |- (toList LNIL = SOME []) /\
-         (!h t. toList (LCONS h t) = OPTION_MAP (CONS h) (toList t))
-\end{verbatim}\end{hol}
+\begin{hol}
+\begin{alltt}
+##thm fromList_def
+##thm toList_THM
+\end{alltt}
+\end{hol}
+Note that \holtxt{toList~ll~=~NONE} when \holtxt{ll} is infinite.
 
 \paragraph{Proof principles}
 
@@ -3184,22 +3178,16 @@ that two \ml{llist} values are equal.  The first states that two
 sequences are equal if they return the same prefixes of length $n$ for
 all possible values of $n$:
 \begin{hol}
-\begin{verbatim}
-   LTAKE_EQ |- (ll1 = ll2) = (!n. LTAKE n ll1 = LTAKE n ll2)
-\end{verbatim}
+\begin{alltt}
+##thm LTAKE_EQ
+\end{alltt}
 \end{hol}
 This theorem is subsequently used to derive the bisimulation
 principle:
 \begin{hol}
-\begin{verbatim}
-   LLIST_BISIMULATION
-            |- (ll1 = ll2) =
-               ?R. R ll1 ll2 /\
-                   !ll3 ll4. R ll3 ll4 ==>
-                             (ll3 = LNIL) /\ (ll4 = LNIL) \/
-                             (LHD ll3 = LHD ll4) /\
-                             R (THE (LTL ll3)) (THE (LTL ll4))
-\end{verbatim}
+\begin{alltt}
+##thm LLIST_BISIMULATION
+\end{alltt}
 \end{hol}
 The principle of bisimulation states that two \ml{llist} values $l_1$
 and $l_2$ are equal if (and only if) it is possible to find a
@@ -3279,41 +3267,38 @@ Other constants defined in theory \theoryimp{path} include
 The \ml{first} function returns the first element of a path.
 There always is such an element, and the defining equations are
 \begin{hol}
-\begin{verbatim}
-   first_thm  |- (first (stopped_at x) = x) /\
-                 (first (pcons x l p) = x)
-\end{verbatim}
+\begin{alltt}
+>>__ load "pathTheory"
+>>__ open pathTheory;
+##thm first_thm
+\end{alltt}
 \end{hol}
 
 On the other hand, the \ml{last} function does not always have a
 well-specified value, though it still has nice characterising
 equations:
 \begin{hol}
-\begin{verbatim}
-   last_thm   |- (last (stopped_at x) = x) /\
-                 (last (pcons x l p) = last p)
-\end{verbatim}
+\begin{alltt}
+##thm last_thm
+\end{alltt}
 \end{hol}
 
 The theorem for \ml{finite} has a similar feel, but has a definite
 value (\ml{F}, or \emph{false}) on infinite paths), whereas the
 value of \ml{last} on such paths is unspecified:
 \begin{hol}
-\begin{verbatim}
-   finite_thm |- (finite (stopped_at x) = T) /\
-                 (finite (pcons x l p) = finite p)
-\end{verbatim}
+\begin{alltt}
+##thm finite_thm
+\end{alltt}
 \end{hol}
 
 The function \ml{pconcat} concatenates two paths, linking them
 with a provided label.  If the first path is infinite, then the result
 is equal to that first path.  The defining equation is
 \begin{hol}
-\begin{verbatim}
-   pconcat_thm |- (pconcat (stopped_at x) lab p2 = pcons x lab p2) /\
-                  (pconcat (pcons x r p) lab p2 =
-                       pcons x r (pconcat p lab p2)
-\end{verbatim}
+\begin{alltt}
+##thm pconcat_thm
+\end{alltt}
 \end{hol}
 %
 These equations are true even when the first argument to
@@ -3323,35 +3308,27 @@ The \ml{okpath} predicate tests whether or not a path is a valid
 transition given a ternary transition relation.  Its characterising
 theorem is
 \begin{hol}
-\begin{verbatim}
-  okpath_thm |-
-     (okpath R (stopped_at x)) /\
-     (okpath R (pcons x r p) = R x r (first p) /\ okpath R p)
-\end{verbatim}
+\begin{alltt}
+##thm okpath_thm
+\end{alltt}
 \end{hol}
 %
 There is also an induction principle that simplifies reasoning about
 finite $R$-paths:
 %
 \begin{hol}
-\begin{verbatim}
-   finite_okpath_ind |-
-       (!x. P (stopped_at x)) /\
-       (!x r p. okpath R p /\ finite p /\ R x r (first p) /\ P p ==>
-                P (pcons x r p)) ==>
-       !p. okpath R p /\ finite p ==> P p
-\end{verbatim}
+\begin{alltt}
+##thm finite_okpath_ind
+\end{alltt}
 \end{hol}
 
+\noindent
 One can show that a set \holtxt{P} of paths are all $R$-paths with the
 co-induction principle:
 \begin{hol}
-\begin{verbatim}
-   okpath_co_ind |-
-      !P.
-         (!x r p. P (pcons x r p) ==> R x r (first p) /\ P p) ==>
-         !p. P p ==> okpath R p
-\end{verbatim}
+\begin{alltt}
+##thm okpath_co_ind
+\end{alltt}
 \end{hol}
 \index{labelled paths, the HOL theory of@labelled paths, the \HOL{} theory of|)}
 \index{reduction sequences, the HOL theory of@reduction sequences, the \HOL{} theory of|)}
@@ -4099,7 +4076,7 @@ where all the elements not in the set have been dropped
 \end{verbatim}
 \end{hol}
 
-\paragraph {Sets and Multisets}
+\paragraph {Sets and multisets}
 
 Moving between bags and sets is accomplished by the following two
 definitions.
@@ -4797,6 +4774,232 @@ theory \theoryimp{while}.
 
 %\section{Partial orders}
 
+\section{Monads}
+\index{monads|(}
+
+\HOL{}'s simple type system means that it is impossible to define a general type of monad in the way that is possible in programming languages such as Haskell.
+Nonetheless, a number of the types predefined in \HOL{}, such as options and lists, can indeed be seen as monads, and it is useful to be able to write functions over those types that leverage this view.
+Equally, it is useful to be able to declare monads of one's own that can use the same syntactic facilities.
+
+Monads are defined by their ``unit'' and ``bind'' functions, and these can be composed in expressive ways.
+In particular, \HOL{} supports a syntax inspired by Haskell's do notation, wherein it is possible to write such functions as
+\begin{session}
+\begin{alltt}
+>>__ load "monadsyntax";
+>>__ monadsyntax.add_monadsyntax();
+>>__ monadsyntax.enable_monad "list";
+>> val mapM_def = Define‘
+     (mapM f [] = return []) ∧
+     (mapM f (x::xs) = do
+        e  <- f x;
+        es <- mapM f xs;
+        return (e::es);
+      od)’;
+
+>> type_of “mapM”;
+\end{alltt}
+\end{session}
+
+Again, because \HOL{} does not have a sufficiently expressive type system, though the notation is generic, the function is fixed to a particular monad instance.
+In this case, the monad instance is that of lists.
+We can use the \holtxt{mapM} function to implement what one might term a cross-product operation on lists:
+\begin{session}
+\begin{alltt}
+>> EVAL “mapM I [[1;2;3]; [a;b]; [x;y;z]]”;
+\end{alltt}
+\end{session}
+
+The general abstract syntax is described by the following grammar
+\[
+\begin{array}{rcl}
+M &::=& e_{\alpha\,\texttt{\scriptsize M}} \;\;\mid\;\; \texttt{do}\;\, \mathit{binds}\,\;\texttt{od} \;\;\mid\;\;\texttt{return}\;e_\alpha\\
+\mathit{binds} &::=& \mathit{bind}\;\texttt{;}^? \;\;\mid\;\; \mathit{bind}\,\texttt{;}\,\;\mathit{binds}\\
+\mathit{bind} &::=& M \;\;\mid\;\; \mathit{vs}\;\,\texttt{\lt-}\;M
+\end{array}
+\]
+where $\mathit{e}_\tau$ is a \HOL{} expression required to be of type $\tau$, and $\mathit{vs}$ is a single variable, or a tuple of variables (\eg, \holtxt{(x,y,z)}).
+If a given $M$ has type \holtxt{:$\alpha$ M} for a monad instance \holtxt{M}, then writing a binding such as \holtxt{$v$~\lt-~$M$} will require variable $v$ to have type $\alpha$.
+This variable is then bound in later bindings within the same \holtxt{do}-\holtxt{od} block.
+
+The special monad syntax has a straightforward translation into underlying \HOL{} terms.
+The \holtxt{do}-\holtxt{od} delimiters have no semantic effect; they can be viewed as a special form of parenthesis that identifies where the binding syntax is going to be used.\footnote{Indeed, writing \holtxt{do~$M$~od} for a single binding form $M$ will see the system print back $M$ on its own.}
+Subsequently, the translation from $\mathit{vs}\;\holtxt{\lt-} M_1\holtxt{;}\;M_2$ is to $\holtxt{monad\_bind}\;M_1\;(\lambda\mathit{vs}.\,M_2)$, making it clear that $\mathit{vs}$ can be used (and is bound) in $M_2$.
+If there is no variable-arrow on the first binding, then $M_1\holtxt{;}\;M_2$ translates to something equivalent to $\holtxt{monad\_bind}\;M_1\;(\holtxt{K}\;M_2)$, where \holtxt{K} is the K-combinator from \ml{combinTheory} (see Section~\ref{sec:combinTheory}).
+Finally, the \holtxt{return} keyword is an overloading for the monad instance's unit function (which will have type $\alpha \to \alpha\,\holtxt{M}$).
+
+\subsection{Declaring monads}
+
+Monad instances have to be declared if the system is to support their parsing and pretty-printing.
+The function responsible is \index{declare_monad@\ml{declare\_monad}}\ml{declare\_monad} in the \ml{monadsyntax} module.
+(There is also an accompanying \index{temp_declare_monad@\ml{temp\_declare\_monad}}\ml{temp\_declare\_monad} function that achieves the same thing dynamically but doesn't cause the declaration to persist for the benefit of other later descendant theories.)
+
+\begin{alltt}
+>>__ val SOME ms_struct =
+       #lookupStruct PolyML.globalNameSpace "monadsyntax";
+>>__ val ms_ns = PolyML.NameSpace.Structures.contents ms_struct;
+>>__ val SOME minfo_ty = #lookupType ms_ns "monadinfo"
+>>__ val SOME dm_val = #lookupVal ms_ns "declare_monad"
+>>__ val dmval_p =
+       PolyML.NameSpace.Values.printWithType(dm_val,100,NONE)
+>>__ val minfo_p =
+       PolyML.NameSpace.TypeConstrs.print (minfo_ty, 100, NONE)
+>>__ val safeprint =
+        TextIO.print o
+        String.translate
+          (fn #"{" => "\\{" | #"}" => "\\}" | c => str c)
+>>__ val _ = PP.prettyPrint(safeprint, 70) minfo_p
+>>__ val _ = PP.prettyPrint(safeprint, 70) dmval_p
+\end{alltt}
+
+The terms for the \ml{bind} and \ml{unit} fields are the terms implementing the corresponding monad functions.
+For example, the bind function for the option function is \holtxt{OPTION\_BIND}, characterised by its defining theorem:
+\begin{alltt}
+>>__ open optionTheory
+##thm OPTION_BIND_def
+\end{alltt}
+The unit function is just the \holtxt{SOME} constructor for the type.
+
+All of the other fields in the \ml{monadinfo} record can be left unspecified.
+The \ml{ignorebind} field is used to encode the situation where the user writes
+\begin{alltt}
+   do m1; m2 od
+\end{alltt}
+meaning that though \holtxt{m1} may return a value, the remainder of the function does not use that value.
+As above, this can be handled through the use of the \holtxt{K} combinator, which is what is done if the \ml{ignorebind} field is set to \ml{NONE}.
+However, if desired, one can specify a specific term to be used in this situation.
+For example, the system's encoding of the option monad uses a separate constant with exactly the definition one would expect:
+\begin{alltt}
+##thm OPTION_IGNORE_BIND_def
+\end{alltt}
+
+The three remaining fields (\ml{guard}, \ml{fail} and \ml{choice}) are relevant for monads with errors or failure modes.
+The underlying property is that if $m_1$ is an error value, then $\holtxt{monad\_bind}\;m_1\;f\;\;=\;\;m_1$, meaning that attempting to sequence computations after an error just causes the error to be the result, without any use of the $f$ value.
+In this way, one might see $m_1$ as a computation that has thrown some sort of exception.
+
+If one specifies a \ml{fail} term in declaring a monad, an overload is set up from the string \holtxt{fail} to that term.
+This is flexible enough to allow parameterised errors: make the term be the function that takes a parameter and returns a monad error value.
+There is no monad-specific support required for this concept: the overload is sufficient.
+
+When provided, the \ml{guard} and \ml{choice} terms are similarly established as overloads so that monadic code across different monads will look similar.
+If one views \ml{fail} as throwing an exception, then the \ml{choice} notation allows for catching an exception and trying another computation.
+The overload is to the infix \holtxt{++} syntax, meaning that one can write
+$M_1\;\holtxt{++}\;M_2$ to represent the ``choice'' between $M_1$ and $M_2$.
+(Note that in the list monad, \holtxt{++} is \holtxt{APPEND}.
+This explains the choice of notation, though in the list monad, viewing ``choice'' as throwing and catching exceptions is actually harder to motivate.)
+
+Finally, the \ml{guard} term (if given) overloads to the term \holtxt{assert}, which is expected to be defined such that
+\[
+   \holtxt{assert}\;b\;\; = \;\;\textsf{if}\;b\;\textsf{then}\;\holtxt{return}\;()\;\textsf{else}\;\holtxt{fail}
+\]
+A typical use of \holtxt{assert} might be in a function such as
+\begin{alltt}
+  do
+     list <- some_monad;
+     assert(list <> []);
+     return (HD list + 1)
+  od
+\end{alltt}
+where the \holtxt{assert} ensures that the subsequent call to \holtxt{HD} makes sense.
+
+\subsection{Enabling monad syntax}
+
+There are two steps to being able to use monadic syntax.
+Both steps \emph{persist}, meaning that their effects are preserved for the benefit of descendant theories.
+Because of this persistence, the function calls implementing these two steps should only be used in \ml{$x$Script.sml} files.
+As with other parsing and pretty-printing functions, there are \ml{temp\_} versions of the functions.
+These do not cause persistence and can safely be used in other \ml{.sml} files (such as library implementations).
+
+\smallskip
+\noindent
+The first step is to enable the generic monad syntax, by calling
+\begin{alltt}
+   monadsyntax.enable_monadsyntax : unit -> unit
+\end{alltt}
+After this, one can write \holtxt{do}\dots\holtxt{od} blocks, even though without any specific instances enabled the output will be unhelpful (the \holtxt{monad\_bind} printed in the session below is actually a variable):
+% works badly - polyscripter puts stderr output before invocation, and
+%               exception prints off edge of page
+% >>+ “do x <- M1; M2 od”;
+\begin{session}
+\begin{alltt}
+>>__ monadsyntax.disable_monadsyntax();
+>>__ List.app (monadsyntax.disable_monad o #1)
+              (monadsyntax.all_monads());
+>> monadsyntax.enable_monadsyntax();
+>> “do x <- M1; M2 od”;
+\end{alltt}
+\end{session}
+
+\smallskip
+\noindent
+One can see which monads have been declared with a call to \ml{all_monads}:
+\begin{session}
+\begin{alltt}
+>> monadsyntax.all_monads()
+\end{alltt}
+\end{session}
+
+Particular monads can be enabled with calls to \ml{enable\_monad}.
+The most recently enabled is preferred when the context makes the choice ambiguous.
+
+\begin{session}
+\begin{alltt}
+>> List.app monadsyntax.enable_monad ["list", "option"];
+
+>> val t = “do x <- M; return (x + 1) od”;
+>> type_of t;
+
+>> val t' = “do x <- MAP f l; return (x + 1); od”;
+>> type_of t';
+\end{alltt}
+\end{session}
+
+\smallskip\noindent
+Thanks to the persistence features of these API points, loading fresh theories may cause more monads to be declared and/or enabled:
+\begin{session}
+\begin{alltt}
+>> load "errorStateMonadTheory";
+>> monadsyntax.all_monads();
+\end{alltt}
+\end{session}
+
+\smallskip\noindent
+Everything that has been enabled can in turn be disabled, with calls drawn from:
+\begin{alltt}
+     disable_monad            : string -> unit
+     temp_disable_monad       : string -> unit
+
+     disable_monadsyntax      : unit -> unit
+     temp_disable_monadsyntax : unit -> unit
+\end{alltt}
+
+\subsection{Some built-in monad theories}
+
+See Figure~\ref{fig:bind-defns} for the bind definitions for a number of different monads that are present in the core HOL set of theories.
+\begin{figure}[hbtp]
+\begin{alltt}
+>>__ app load ["readerMonadTheory", "state_transformerTheory",
+               "errorStateMonadTheory"];
+>>__ List.app (fn (s,_) => monadsyntax.disable_monad s)
+              (monadsyntax.all_monads())
+>>__ val oldwidth = !Globals.linewidth;
+     val _ = Globals.linewidth := oldwidth - 10;
+>>__ hide "BIND";
+##thm errorStateMonadTheory.BIND_DEF
+
+##thm listTheory.LIST_BIND_THM
+
+##thm optionTheory.OPTION_BIND_def
+
+##thm readerMonadTheory.BIND_def
+
+##thm state_transformerTheory.BIND_DEF
+>>__ val _ = Globals.linewidth := oldwidth;
+\end{alltt}
+\caption{Monad bind definitions}
+\label{fig:bind-defns}
+\end{figure}
+
+\index{monads|)}
 \section{Further Theories}
 Other theories of interest in \HOL{} are listed and briefly described
 in Figure~\ref{fig:further-hol-theories}.

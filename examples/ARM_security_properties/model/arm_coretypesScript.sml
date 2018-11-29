@@ -135,8 +135,6 @@ val _ = type_abbrev ("proc", ``:num``);
 
 val _ = Hol_datatype `iiid = <| proc : num |>`;
 
-val _ = disable_tyabbrev_printing "proc";
-
 (* ------------------------------------------------------------------------ *)
 
 val _ = overload_on("UInt", ``\w. int_of_num (w2n w)``);

@@ -2,6 +2,8 @@ signature term_pp_utils =
 sig
 
   type term = Term.term
+  val dflt_pinfo : term_pp_types.printing_info
+
   val setbvs : term HOLset.set -> (term_pp_types.printing_info,unit) smpp.t
   val getbvs : (term_pp_types.printing_info,term HOLset.set) smpp.t
   val addbvs : term list -> (term_pp_types.printing_info,unit)smpp.t

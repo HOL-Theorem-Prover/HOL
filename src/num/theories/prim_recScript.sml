@@ -63,7 +63,7 @@ val _ = new_theory "prim_rec";
 
 val _ = if !Globals.interactive then () else Feedback.emit_WARNING := false;
 
-(* Added TFM 88.04.02						*)
+(* Added TFM 88.04.02                                           *)
 
 val NOT_SUC     = numTheory.NOT_SUC
 and INV_SUC     = numTheory.INV_SUC
@@ -504,9 +504,9 @@ end;
 
 
 (*----------------------------------------------------------------------*)
-(* Unique existence theorem for prim rec definitions on num.		*)
-(*									*)
-(* ADDED TFM 88.04.02							*)
+(* Unique existence theorem for prim rec definitions on num.            *)
+(*                                                                      *)
+(* ADDED TFM 88.04.02                                                   *)
 (*----------------------------------------------------------------------*)
 
 val num_Axiom_old = store_thm(
@@ -544,6 +544,7 @@ Q.new_definition
   ("wellfounded_def",
    `wellfounded (R:'a->'a->bool) = ~?f. !n. R (f (SUC n)) (f n)`);
 
+val _ = overload_on ("Wellfounded", ``wellfounded``);
 
 (*---------------------------------------------------------------------------
  * First half of showing that the two definitions of wellfoundedness agree.

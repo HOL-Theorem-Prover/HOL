@@ -688,7 +688,7 @@ val PERM_RTC = store_thm ("PERM_RTC",
     ``PERM = RTC PERM_SINGLE_SWAP``,
 
 REWRITE_TAC[GSYM (CONJUNCT2 (SIMP_RULE std_ss [FORALL_AND_THM] TC_RC_EQNS)),
-	    PERM_TC] THEN
+            PERM_TC] THEN
 AP_TERM_TAC THEN
 SIMP_TAC std_ss [RC_DEF, FUN_EQ_THM] THEN
 PROVE_TAC[PERM_SINGLE_SWAP_REFL]);
@@ -709,7 +709,7 @@ PROVE_TAC[PERM_REFL]);
 val PERM_lift_TC_RULE =
   (GEN_ALL o
    SIMP_RULE std_ss [GSYM PERM_TC, PERM_SINGLE_SWAP_DEF, GSYM LEFT_FORALL_IMP_THM,
-		     GSYM RIGHT_EXISTS_AND_THM, GSYM LEFT_EXISTS_AND_THM] o
+                     GSYM RIGHT_EXISTS_AND_THM, GSYM LEFT_EXISTS_AND_THM] o
    Q.ISPEC `PERM_SINGLE_SWAP` o
    Q.GEN `R`);
 
@@ -750,7 +750,7 @@ val PERM_EQUIVALENCE_ALT_DEF = store_thm(
 "PERM_EQUIVALENCE_ALT_DEF",
 ``!x y. PERM x y = (PERM x = PERM y)``,
 SIMP_TAC std_ss [GSYM ALT_equivalence,
-		 PERM_EQUIVALENCE]);
+                 PERM_EQUIVALENCE]);
 
 val ALL_DISTINCT_PERM = store_thm ("ALL_DISTINCT_PERM",
    ``!l1 l2. PERM l1 l2 ==> (ALL_DISTINCT l1 = ALL_DISTINCT l2)``,
@@ -1008,7 +1008,7 @@ val PERM_FUN_SWAP_AT_FRONT = store_thm (
 "PERM_FUN_SWAP_AT_FRONT",
 ``!x y l. PERM (x::y::l) = PERM (y::x::l)``,
 REWRITE_TAC[GSYM PERM_EQUIVALENCE_ALT_DEF,
-	    PERM_SWAP_AT_FRONT, PERM_REFL]);
+            PERM_SWAP_AT_FRONT, PERM_REFL]);
 
 val PERM_FUN_CONS_11_SWAP_AT_FRONT = store_thm (
 "PERM_FUN_CONS_11_SWAP_AT_FRONT",
@@ -1111,6 +1111,16 @@ val PERM_CONG_APPEND_IFF = store_thm (
 METIS_TAC [PERM_EQUIVALENCE_ALT_DEF, PERM_APPEND_IFF]);
 
 
+val PERM_CONG_APPEND_IFF2 = store_thm (
+"PERM_CONG_APPEND_IFF2",
+``!l1 l1' l1'' l2 l2' l2''.
+(PERM l1 (l1'++l1'')) ==>
+(PERM l2 (l2'++l2'')) ==>
+(PERM l1' l2') ==>
+(PERM l1 l2 = PERM l1'' l2'')``,
+METIS_TAC [PERM_EQUIVALENCE_ALT_DEF, PERM_APPEND_IFF]);
+
+
 val PERM_FUN_SPLIT = store_thm (
 "PERM_FUN_SPLIT",
 ``!l l1 l1' l2.
@@ -1126,6 +1136,30 @@ val PERM_REWR = store_thm (
 (PERM l r) ==>
 (PERM (l++l1) l2 = PERM (r++l1) l2)``,
 PROVE_TAC [PERM_EQUIVALENCE_ALT_DEF, PERM_APPEND_IFF]);
+
+
+val PERM_CENTRE1 = prove (
+``(PERM (xs ++ l) (r1 ++ xs ++ r2) = PERM l (r1 ++ r2))``,
+METIS_TAC [APPEND_ASSOC, PERM_APPEND_IFF,
+    PERM_APPEND, PERM_EQUIVALENCE_ALT_DEF]);
+val PERM_CENTRE2 = PERM_CENTRE1 |> Q.GEN `xs` |> Q.SPEC `[x]`
+  |> SIMP_RULE bool_ss [APPEND, GSYM APPEND_ASSOC]
+
+val PERM_TO_APPEND_SIMPS = store_thm (
+"PERM_TO_APPEND_SIMPS",
+``(PERM (x::l) ((x::r1) ++ r2) = PERM l (r1 ++ r2)) /\
+(PERM (x::l) (r1 ++ (x::r2)) = PERM l (r1 ++ r2)) /\
+(PERM ((xs ++ ys) ++ zs) r = PERM (xs ++ (ys ++ zs)) r) /\
+(PERM ((x :: ys) ++ zs) r = PERM (x :: (ys ++ zs)) r) /\
+(PERM ([] ++ l) r = PERM l r) /\
+(PERM (xs ++ l) ((xs ++ r1) ++ r2) = PERM l (r1 ++ r2)) /\
+(PERM (xs ++ l) (r1 ++ (xs ++ r2)) = PERM l (r1 ++ r2)) /\
+(PERM [] ([] ++ []) = T) /\
+(PERM xs ((xs ++ []) ++ []) = T) /\
+(PERM xs ([] ++ (xs ++ [])) = T)``,
+SIMP_TAC list_ss [PERM_REFL, PERM_CONS_IFF, PERM_CENTRE1, PERM_CENTRE2]
+  \\ SIMP_TAC bool_ss [GSYM APPEND_ASSOC, PERM_APPEND_IFF]);
+
 
 (*---------------------------------------------------------------------------*)
 (* QSORT3 - A stable version of QSORT (James Reynolds - 10/2010)             *)
@@ -1147,10 +1181,10 @@ val PART3_DEF = Define `
     (PART3 R h [] = ([],[],[])) /\
     (PART3 R h (hd::tl) =
          if R h hd /\ R hd h
-	    then (I ## CONS hd ## I) (PART3 R h tl)
-	    else if R hd h
+            then (I ## CONS hd ## I) (PART3 R h tl)
+            else if R hd h
                     then (CONS hd ## I ## I) (PART3 R h tl)
-		    else (I ## I ## CONS hd) (PART3 R h tl))`;
+                    else (I ## I ## CONS hd) (PART3 R h tl))`;
 
 val LENGTH_FILTER =
   prove(``!a. LENGTH (FILTER P a) <= LENGTH a``,
@@ -1181,7 +1215,7 @@ val PART3_FILTER =
 val QSORT3_DEF = tDefine "QSORT3" `
     (QSORT3 R [] = []) /\
     (QSORT3 R (hd::tl) =
-    	let (lo,eq,hi) = PART3 R hd tl
+        let (lo,eq,hi) = PART3 R hd tl
         in QSORT3 R lo ++ (hd::eq) ++ QSORT3 R hi)`
   (WF_REL_TAC `measure (LENGTH o SND)` THEN
    RW_TAC arith_ss [PART3_FILTER, length_lem]);

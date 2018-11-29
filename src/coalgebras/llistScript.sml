@@ -32,7 +32,7 @@ val lrep_ok_alt' = Q.prove (
 val lrep_ok_alt = Q.store_thm ("lrep_ok_alt",
   `lrep_ok f = (!n. IS_SOME (f (SUC n)) ==> IS_SOME (f n))`,
   EQ_TAC THEN REPEAT STRIP_TAC
-  THEN1 (irule lrep_ok_alt' THEN FIRST_ASSUM ACCEPT_TAC) THEN
+  THEN1 (irule lrep_ok_alt' >> rpt conj_tac >> FIRST_ASSUM ACCEPT_TAC) THEN
   irule lrep_ok_coind THEN
   Q.EXISTS_TAC `\f. !n. IS_SOME (f (SUC n)) ==> IS_SOME (f n)` THEN
   ASM_SIMP_TAC bool_ss [] THEN
@@ -174,7 +174,7 @@ val _ = add_rule {term_name = "LCONS", fixity = Infixr 490,
 val _ = add_listform {separator = [TOK ";", BreakSpace(1,0)],
                       leftdelim = [TOK "[|"], rightdelim = [TOK "|]"],
                       cons = "LCONS", nilstr = "LNIL",
-                      block_info = (PP.INCONSISTENT, 0)};
+                      block_info = (PP.INCONSISTENT, 2)};
 val _ = TeX_notation {hol = "[|", TeX = ("\\HOLTokenLeftDenote{}", 1)}
 val _ = TeX_notation {hol = "|]", TeX = ("\\HOLTokenRightDenote{}", 1)}
 
@@ -185,8 +185,8 @@ val LHDTL_CONS_THM = store_thm(
 
 val lrep_inversion = prove(
   ``lrep_ok f ==> (f = \n. NONE) \/
-	    (?h t. (f = \n. if n = 0 then SOME h else t (n - 1))
-		/\ lrep_ok t)``,
+            (?h t. (f = \n. if n = 0 then SOME h else t (n - 1))
+                /\ lrep_ok t)``,
    MATCH_ACCEPT_TAC (fst (EQ_IMP_RULE (SPEC_ALL lrep_ok_cases)))
 );
 
@@ -473,10 +473,10 @@ val LUNFOLD_BISIMULATION = store_thm(
   "LUNFOLD_BISIMULATION",
   ``!f1 f2 x1 x2. (LUNFOLD f1 x1 = LUNFOLD f2 x2) =
       ?R. R x1 x2 /\
-	!y1 y2.  R y1 y2 ==>
-	   (f1 y1 = NONE) /\ (f2 y2 = NONE) \/
-	   ?h t1 t2.
-	     (f1 y1 = SOME (t1, h)) /\ (f2 y2 = SOME (t2, h)) /\ R t1 t2``,
+        !y1 y2.  R y1 y2 ==>
+           (f1 y1 = NONE) /\ (f2 y2 = NONE) \/
+           ?h t1 t2.
+             (f1 y1 = SOME (t1, h)) /\ (f2 y2 = SOME (t2, h)) /\ R t1 t2``,
   REPEAT GEN_TAC THEN EQ_TAC THENL [
     DISCH_THEN (fn th =>
       Q.EXISTS_TAC `\x1 x2. LUNFOLD f1 x1 = LUNFOLD f2 x2` THEN
@@ -1759,22 +1759,22 @@ val LUNZIP_THM = new_specification (
   ["LUNZIP"],
   Q.prove(
       `?LUNZIP. (LUNZIP [||] = ([||]:'a llist, [||]:'b llist)) /\
-    	(!x y t. LUNZIP ((x:'a, y:'b):::t) =
+        (!x y t. LUNZIP ((x:'a, y:'b):::t) =
                   let (ll1, ll2) = LUNZIP t in (x:::ll1, y:::ll2))`,
       STRIP_ASSUME_TAC
        (Q.ISPEC `\ll. if (LHD ll = NONE) then NONE
-        		else SOME (THE (LTL ll), SND (THE (LHD ll)))` llist_Axiom_1) THEN
+                        else SOME (THE (LTL ll), SND (THE (LHD ll)))` llist_Axiom_1) THEN
       STRIP_ASSUME_TAC
        (Q.ISPEC `\ll. if (LHD ll = NONE) then NONE
                         else SOME (THE (LTL ll), FST (THE (LHD ll)))` llist_Axiom_1) THEN
       Q.EXISTS_TAC `\ll. (g' ll, g ll)` THEN SIMP_TAC list_ss [] THEN
       REPEAT STRIP_TAC THENL [
-	POP_ASSUM (ASSUME_TAC o Q.SPEC `[||]`) THEN
-	FULL_SIMP_TAC list_ss [LHD_THM],
-	POP_ASSUM (K ALL_TAC) THEN POP_ASSUM (ASSUME_TAC o Q.SPEC `[||]`) THEN
+        POP_ASSUM (ASSUME_TAC o Q.SPEC `[||]`) THEN
+        FULL_SIMP_TAC list_ss [LHD_THM],
+        POP_ASSUM (K ALL_TAC) THEN POP_ASSUM (ASSUME_TAC o Q.SPEC `[||]`) THEN
         FULL_SIMP_TAC list_ss [LHD_THM],
         NTAC 2 (POP_ASSUM (MP_TAC o Q.SPEC `(x,y):::t`)) THEN
-	RW_TAC list_ss [LHD_THM, LTL_THM, LET_THM]])
+        RW_TAC list_ss [LHD_THM, LTL_THM, LET_THM]])
   );
 val _ = export_rewrites ["LUNZIP_THM"]
 
@@ -2040,7 +2040,8 @@ val linear_order_to_list_lem1a = Q.prove (
   RULE_L_ASSUM_TAC CONJUNCTS THEN
   `SING (minimal_elements X lo)`
     by EVERY [IMP_RES_THEN (IMP_RES_THEN irule) fploum,
-      Q.EXISTS_TAC `x`, FIRST_ASSUM ACCEPT_TAC ] THEN
+              Q.EXISTS_TAC `x`,
+              FIRST_ASSUM ACCEPT_TAC ] THEN
   RULE_ASSUM_TAC (REWRITE_RULE [SING_DEF]) THEN POP_ASSUM CHOOSE_TAC THEN
   IMP_RES_TAC linear_order_dom_rg THEN Cases_on `x' = x` THEN1
     (* where x is minimum of X *)
@@ -2078,10 +2079,9 @@ val linear_order_to_list_lem1a = Q.prove (
       REPEAT VAR_EQ_TAC THEN
       FULL_SIMP_TAC set_ss [] THEN
       IMP_RES_TAC in_dom_rg THEN ASM_REWRITE_TAC [],
-      irule linear_order_restrict THEN FIRST_ASSUM ACCEPT_TAC,
-      IMP_RES_THEN irule finite_prefixes_subset_rs THENL [
-	SIMP_TAC set_ss [],
-	irule rrestrict_SUBSET] ]) THEN
+      irule linear_order_restrict >> simp[],
+      IMP_RES_THEN irule finite_prefixes_subset_rs >> simp[] >>
+      irule rrestrict_SUBSET ]) THEN
   Q.SUBGOAL_THEN `CARD s = SUC (CARD (s DELETE x'))` ASSUME_TAC THEN1
     (irule CARD_SUC_DELETE THEN ASM_REWRITE_TAC []) THEN
     IMP_RES_TAC csd_gt0 THEN IMP_RES_TAC pssp THEN ASM_REWRITE_TAC [] THEN
@@ -2144,12 +2144,12 @@ val linear_order_to_list_lem1d = Q.prove (
   (LNTH (PRE (CARD {y | (y,x) IN lo})) (LUNFOLD linear_order_to_list_f lo) =
     SOME x)`,
   REPEAT DISCH_TAC THEN
-  irule (MODIFY_CONS CONJUNCT1 linear_order_to_list_lem1a)
+  irule (MODIFY_CONS CONJUNCT1 linear_order_to_list_lem1a) >> rpt conj_tac
   THENL [RULE_ASSUM_TAC (REWRITE_RULE [finite_prefixes_def]) THEN RES_TAC,
     REFL_TAC,
     Q.EXISTS_TAC `X` THEN ASM_REWRITE_TAC []]) ;
 
-val linear_order_to_llist_eq = Q.store_thm ("linear_order_to_llist",
+val linear_order_to_llist_eq = Q.store_thm ("linear_order_to_llist_eq",
   `!lo X.
   linear_order lo X /\
   finite_prefixes lo X
@@ -2177,7 +2177,7 @@ val linear_order_to_llist_eq = Q.store_thm ("linear_order_to_llist",
       (EVERY o map ASSUME_TAC o CONJUNCTS) THEN1
     (VAR_EQ_TAC THEN ASM_REWRITE_TAC [IN_UNION]) THEN
     RES_TAC THEN ASM_REWRITE_TAC [] THEN
-    irule PRE_LESS_EQ THEN irule CARD_SUBSET THEN1
+    irule PRE_LESS_EQ THEN irule CARD_SUBSET >> conj_tac THEN1
     (RULE_ASSUM_TAC (REWRITE_RULE [finite_prefixes_def]) THEN RES_TAC) THEN
     Ho_Rewrite.REWRITE_TAC [SUBSET_DEF, IN_GSPEC_IFF] THEN
     REPEAT STRIP_TAC THEN
@@ -2625,11 +2625,12 @@ val LLENGTH_LREPEAT = Q.store_thm(
    Update TypeBase
    -------------------------------------------------------------------------- *)
 
-val _ = Theory.quote_adjoin_to_theory `none`
-`val _ = TypeBase.write
-  [TypeBasePure.mk_nondatatype_info
-     (Parse.Type^`:'a llist^`,
-      {nchotomy = SOME llist_CASES,
-       induction = NONE, size = NONE, encode = NONE})]`
+val _ = TypeBase.export
+  [TypeBasePure.mk_nondatatype_info (
+      “:'a llist”,
+      {nchotomy = SOME llist_CASES, induction = NONE, size = NONE,
+       encode = NONE}
+   )
+  ]
 
 val _ = export_theory();

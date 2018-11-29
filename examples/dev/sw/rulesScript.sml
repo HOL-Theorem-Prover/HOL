@@ -27,8 +27,6 @@ val set_ss = std_ss ++ SET_SPEC_ss ++ PRED_SET_ss;
 (*      Inference based on Hoare Logic                                             *)
 (*---------------------------------------------------------------------------------*)
 
-val _ = Globals.priming := NONE;
-
 (*---------------------------------------------------------------------------------*)
 (*      read from an data state                                                    *)
 (*---------------------------------------------------------------------------------*)
@@ -46,7 +44,7 @@ val mread_def = Define `
      (mread st (RC c) = c)`;
 
 val _ = add_rule {term_name = "mread", fixity = Suffix 60,
-		  pp_elements = [TOK "<", TM, TOK ">"],
+                  pp_elements = [TOK "<", TM, TOK ">"],
                   paren_style = OnlyIfNecessary,
                   block_style = (AroundSameName, (PP.INCONSISTENT, 0))} handle HOL_ERR e => print (#message e);
 
@@ -70,11 +68,11 @@ val _ = type_abbrev("HSPEC_TYPE", type_of (Term `HSPEC`));
 
 (*
 val _ = add_rule {term_name = "HSPEC",
-		  fixity = Infix (HOLgrammars.RIGHT, 3),
-		  pp_elements = [HardSpace 1, TOK "(", TM, TOK ")", HardSpace 1],
-		  paren_style = OnlyIfNecessary,
-		  block_style = (AroundEachPhrase,
-				 (PP.INCONSISTENT, 0))};
+                  fixity = Infix (HOLgrammars.RIGHT, 3),
+                  pp_elements = [HardSpace 1, TOK "(", TM, TOK ")", HardSpace 1],
+                  paren_style = OnlyIfNecessary,
+                  block_style = (AroundEachPhrase,
+                                 (PP.INCONSISTENT, 0))};
 *)
 
 (*---------------------------------------------------------------------------------*)
@@ -359,42 +357,42 @@ val PRJ_TR_RULE = Q.store_thm (
             POP_ASSUM (ASSUME_TAC o Q.SPEC `(stk_f:DSTATE->'a) st`) THEN
             IMP_RES_TAC WF_TR_LEM_1 THEN
             IMP_RES_TAC (Q.SPECL [`cond`,`ir`,`\st1. pre_p st1 /\ ((stk_f:DSTATE->'a)
-			          st1 = (stk_f:DSTATE->'a) st)`] TR_RULE) THEN
+                                  st1 = (stk_f:DSTATE->'a) st)`] TR_RULE) THEN
             POP_ASSUM (ASSUME_TAC o Q.SPEC `st` o SIMP_RULE std_ss [HSPEC_def]) THEN
             METIS_TAC [],
 
         IMP_RES_TAC (SIMP_RULE std_ss [PSPEC_def] PSPEC_CHARACTERISTIC) THEN
             Q.PAT_ASSUM `!v x.p` (K ALL_TAC) THEN
             `WF_TR (translate_condition cond,translate ir)` by METIS_TAC [WF_TR_LEM_1] THEN
-	    FULL_SIMP_TAC std_ss [WELL_FORMED_SUB_thm, HSPEC_def, run_ir_def, run_arm_def, translate_def, eval_il_cond_def] THEN
-	    Q.ABBREV_TAC `arm = translate ir` THEN
-	    IMP_RES_TAC (SIMP_RULE set_ss [] (Q.SPECL [`translate_condition cond`,`arm`,`(\i. ARB)`,`(0,0w,st):STATE`,`{}`]
+            FULL_SIMP_TAC std_ss [WELL_FORMED_SUB_thm, HSPEC_def, run_ir_def, run_arm_def, translate_def, eval_il_cond_def] THEN
+            Q.ABBREV_TAC `arm = translate ir` THEN
+            IMP_RES_TAC (SIMP_RULE set_ss [] (Q.SPECL [`translate_condition cond`,`arm`,`(\i. ARB)`,`(0,0w,st):STATE`,`{}`]
                               ARMCompositionTheory.UNROLL_TR_LEM)) THEN
-	    POP_ASSUM (ASSUME_TAC o Q.SPEC `st`) THEN
-	    FULL_SIMP_TAC std_ss [FUNPOW, ARMCompositionTheory.get_st_def] THEN
-	    NTAC 2 (POP_ASSUM (K ALL_TAC)) THEN
-	    Induct_on `loopNum (translate_condition cond) arm (\i.ARB) ((0,0w,st),{})` THENL [
-	      REWRITE_TAC [Once EQ_SYM_EQ] THEN RW_TAC std_ss [FUNPOW,ARMCompositionTheory.get_st_def] THEN
-	      IMP_RES_TAC ARMCompositionTheory.LOOPNUM_BASIC THEN
-	      FULL_SIMP_TAC arith_ss [Once WHILE, ARMCompositionTheory.get_st_def],
+            POP_ASSUM (ASSUME_TAC o Q.SPEC `st`) THEN
+            FULL_SIMP_TAC std_ss [FUNPOW, ARMCompositionTheory.get_st_def] THEN
+            NTAC 2 (POP_ASSUM (K ALL_TAC)) THEN
+            Induct_on `loopNum (translate_condition cond) arm (\i.ARB) ((0,0w,st),{})` THENL [
+              REWRITE_TAC [Once EQ_SYM_EQ] THEN RW_TAC std_ss [FUNPOW,ARMCompositionTheory.get_st_def] THEN
+              IMP_RES_TAC ARMCompositionTheory.LOOPNUM_BASIC THEN
+              FULL_SIMP_TAC arith_ss [Once WHILE, ARMCompositionTheory.get_st_def],
 
-	    REWRITE_TAC [Once EQ_SYM_EQ] THEN RW_TAC std_ss [FUNPOW] THEN
+            REWRITE_TAC [Once EQ_SYM_EQ] THEN RW_TAC std_ss [FUNPOW] THEN
         IMP_RES_TAC ARMCompositionTheory.LOOPNUM_INDUCTIVE THEN
-	      `v = loopNum (translate_condition cond) arm (\i.ARB) ((0,0w,SND (SND (FST (runTo (upload arm (\i.ARB) 0) (LENGTH arm)
+              `v = loopNum (translate_condition cond) arm (\i.ARB) ((0,0w,SND (SND (FST (runTo (upload arm (\i.ARB) 0) (LENGTH arm)
                    ((0,0w,st),{}))))),{})` by METIS_TAC [ABS_PAIR_THM,DECIDE (Term`!x.0+x=x`),
                        ARMCompositionTheory.LOOPNUM_INDEPENDENT_OF_CPSR_PCS, ARMCompositionTheory.get_st_def,
                        FST, SND, ARMCompositionTheory.DSTATE_IRRELEVANT_PCS,ARMCompositionTheory.well_formed_def] THEN
-	      RES_TAC THEN Q.PAT_ASSUM `v = x` (ASSUME_TAC o GSYM) THEN
+              RES_TAC THEN Q.PAT_ASSUM `v = x` (ASSUME_TAC o GSYM) THEN
               FULL_SIMP_TAC std_ss [] THEN POP_ASSUM (K ALL_TAC) THEN
-	      Q.PAT_ASSUM `v = x` (ASSUME_TAC o GSYM) THEN FULL_SIMP_TAC std_ss [] THEN POP_ASSUM (K ALL_TAC) THEN
-	      Q.PAT_ASSUM `~x` (ASSUME_TAC o SIMP_RULE std_ss [ARMCompositionTheory.get_st_def]) THEN
-	      RW_TAC std_ss [Once WHILE] THEN
-	      Q.UNABBREV_TAC `arm` THEN
-	      `run_ir ir st = SND (SND (FST (runTo (upload (translate ir) (\i. ARB) 0) (LENGTH (translate ir))
+              Q.PAT_ASSUM `v = x` (ASSUME_TAC o GSYM) THEN FULL_SIMP_TAC std_ss [] THEN POP_ASSUM (K ALL_TAC) THEN
+              Q.PAT_ASSUM `~x` (ASSUME_TAC o SIMP_RULE std_ss [ARMCompositionTheory.get_st_def]) THEN
+              RW_TAC std_ss [Once WHILE] THEN
+              Q.UNABBREV_TAC `arm` THEN
+              `run_ir ir st = SND (SND (FST (runTo (upload (translate ir) (\i. ARB) 0) (LENGTH (translate ir))
                   ((0,0w,st),{}))))` by RW_TAC arith_ss [
                    ARMCompositionTheory.get_st_def, run_ir_def, run_arm_def] THEN
-	      METIS_TAC [SND,FST,ARMCompositionTheory.get_st_def,ARMCompositionTheory.FUNPOW_DSTATE, ABS_PAIR_THM]
-	    ]
+              METIS_TAC [SND,FST,ARMCompositionTheory.get_st_def,ARMCompositionTheory.FUNPOW_DSTATE, ABS_PAIR_THM]
+            ]
      ]
    );
 
@@ -404,7 +402,7 @@ val PRJ_TR_RULE_2 = Q.store_thm (
         WELL_FORMED ir /\ (!st. cond_f (prj_f st) = eval_il_cond cond st) /\
         (?R. WF R /\ !t0 t1. ~cond_f t0 ==> R (f t0) t0) /\
            PSPEC ir ((\st.T),(\st.T)) stk_f (prj_f,f,prj_f) ==>
-		    PSPEC (TR cond ir) ((\st.T),(\st.T)) stk_f (prj_f, WHILE ($~ o cond_f) f, prj_f)`,
+                    PSPEC (TR cond ir) ((\st.T),(\st.T)) stk_f (prj_f, WHILE ($~ o cond_f) f, prj_f)`,
 
     SIMP_TAC std_ss [PSPEC_def, HSPEC_def] THEN
     REPEAT GEN_TAC THEN NTAC 2 STRIP_TAC THEN
@@ -448,7 +446,7 @@ val PRJ_POP_RULE = Q.store_thm (
    "PRJ_POP_RULE",
    `!ir pre_p post_p stk_f in_f f out_f stk_f' in_f' g out_f'.
       PSPEC ir (pre_p,post_p) stk_f (in_f,f,out_f) /\
-	valid_push (stk_f,in_f,f,out_f) (stk_f',in_f',g,out_f')
+        valid_push (stk_f,in_f,f,out_f) (stk_f',in_f',g,out_f')
        ==>
         PSPEC ir (pre_p,post_p) stk_f' (in_f', g, out_f')`,
     RW_TAC list_ss [PSPEC_def, HSPEC_def, valid_push_def]
@@ -621,9 +619,9 @@ val WELL_FORMED_TR_RULE = Q.store_thm (
 
 val IR_CJ_UNCHANGED = store_thm ("IR_CJ_UNCHANGED",
 ``!cond ir_t ir_f s.
-	(WELL_FORMED ir_t /\ WELL_FORMED ir_f /\
-	UNCHANGED s ir_t /\ UNCHANGED s ir_f)  ==>
-	UNCHANGED s (CJ cond ir_t ir_f)``,
+        (WELL_FORMED ir_t /\ WELL_FORMED ir_f /\
+        UNCHANGED s ir_t /\ UNCHANGED s ir_f)  ==>
+        UNCHANGED s (CJ cond ir_t ir_f)``,
 
 
 REWRITE_TAC[UNCHANGED_def] THEN
@@ -634,9 +632,9 @@ PROVE_TAC[]);
 
 val IR_SC_UNCHANGED = store_thm ("IR_SC_UNCHANGED",
 ``!ir1 ir2 s.
-	(WELL_FORMED ir1 /\ WELL_FORMED ir2 /\
-	UNCHANGED s ir1 /\ UNCHANGED s ir2)  ==>
-	UNCHANGED s (SC ir1 ir2)``,
+        (WELL_FORMED ir1 /\ WELL_FORMED ir2 /\
+        UNCHANGED s ir1 /\ UNCHANGED s ir2)  ==>
+        UNCHANGED s (SC ir1 ir2)``,
 
 
 REWRITE_TAC[UNCHANGED_def] THEN
@@ -646,8 +644,8 @@ PROVE_TAC[])
 
 val UNCHANGED_TR_RULE = store_thm ("UNCHANGED_TR_RULE",
 ``!c ir s.
-	(WELL_FORMED (TR c ir) /\ UNCHANGED s ir) ==>
-	UNCHANGED s (TR c ir)``,
+        (WELL_FORMED (TR c ir) /\ UNCHANGED s ir) ==>
+        UNCHANGED s (TR c ir)``,
 
   REWRITE_TAC [UNCHANGED_def, WELL_FORMED_def] THEN
   REPEAT STRIP_TAC THEN
@@ -655,8 +653,8 @@ val UNCHANGED_TR_RULE = store_thm ("UNCHANGED_TR_RULE",
   Q.ABBREV_TAC `n = (shortest (eval_il_cond c) (run_ir ir) st)` THEN
   POP_ASSUM (fn x => ALL_TAC) THEN
   Induct_on `n` THENL [
-	 REWRITE_TAC[FUNPOW],
-	 REWRITE_TAC[FUNPOW_SUC] THEN PROVE_TAC[]
+         REWRITE_TAC[FUNPOW],
+         REWRITE_TAC[FUNPOW_SUC] THEN PROVE_TAC[]
   ]);
 
 
@@ -664,9 +662,9 @@ val UNCHANGED_TR_RULE = store_thm ("UNCHANGED_TR_RULE",
 
 val IR_CJ_USED_STACK = store_thm ("IR_CJ_USED_STACK",
 ``!cond ir_t ir_f s s'.
-	(WELL_FORMED ir_t /\ WELL_FORMED ir_f /\
-	USED_STACK s' ir_f /\ USED_STACK s ir_t)  ==>
-	USED_STACK (MAX s s') (CJ cond ir_t ir_f)``,
+        (WELL_FORMED ir_t /\ WELL_FORMED ir_f /\
+        USED_STACK s' ir_f /\ USED_STACK s ir_t)  ==>
+        USED_STACK (MAX s s') (CJ cond ir_t ir_f)``,
 
 
 REPEAT STRIP_TAC THEN
@@ -680,9 +678,9 @@ METIS_TAC[])
 
 val IR_CJ_UNCHANGED_STACK = store_thm ("IR_CJ_UNCHANGED_STACK",
 ``!cond ir_t ir_f l s s'.
-	(WELL_FORMED ir_t /\ WELL_FORMED ir_f /\
-	UNCHANGED_STACK l s' ir_f /\ UNCHANGED_STACK l s ir_t)  ==>
-	UNCHANGED_STACK l (MAX s s') (CJ cond ir_t ir_f)``,
+        (WELL_FORMED ir_t /\ WELL_FORMED ir_f /\
+        UNCHANGED_STACK l s' ir_f /\ UNCHANGED_STACK l s ir_t)  ==>
+        UNCHANGED_STACK l (MAX s s') (CJ cond ir_t ir_f)``,
 
 SIMP_TAC std_ss [UNCHANGED_STACK_def, IR_CJ_USED_STACK, IR_CJ_UNCHANGED])
 
@@ -690,38 +688,38 @@ SIMP_TAC std_ss [UNCHANGED_STACK_def, IR_CJ_USED_STACK, IR_CJ_UNCHANGED])
 
 val IR_SC_USED_STACK = store_thm ("IR_SC_USED_STACK",
 ``!x ir1 ir2 s s'.
-	(WELL_FORMED ir1 /\ WELL_FORMED ir2 /\
-	 USED_STACK s ir1 /\ USED_STACK s' ir2 /\
-	 (s' + x < 2**30) /\ (s < 2**30) /\
-	 (!r m. read (run_ir ir1 (r,m)) (REG 13) =
-			 read (r,m) (REG 13) - n2w (4*x)))  ==>
-	 USED_STACK (MAX s (s'+x)) (SC ir1 ir2)``,
+        (WELL_FORMED ir1 /\ WELL_FORMED ir2 /\
+         USED_STACK s ir1 /\ USED_STACK s' ir2 /\
+         (s' + x < 2**30) /\ (s < 2**30) /\
+         (!r m. read (run_ir ir1 (r,m)) (REG 13) =
+                         read (r,m) (REG 13) - n2w (4*x)))  ==>
+         USED_STACK (MAX s (s'+x)) (SC ir1 ir2)``,
 
 
-	REPEAT STRIP_TAC THEN
-	FULL_SIMP_TAC std_ss [USED_STACK_THM, SEMANTICS_OF_IR] THEN
-	REPEAT STRIP_TAC THEN
+        REPEAT STRIP_TAC THEN
+        FULL_SIMP_TAC std_ss [USED_STACK_THM, SEMANTICS_OF_IR] THEN
+        REPEAT STRIP_TAC THEN
 
-	`read (run_ir ir1 (r,m)) (REG 13) = (read (r,m) (REG 13) - (n2w (4*x)))` by METIS_TAC[] THEN
-	`?r'' m''. run_ir ir1 (r,m) = (r'',m'')` by METIS_TAC[pairTheory.PAIR] THEN
-	FULL_SIMP_TAC std_ss [toREG_def, read_thm, index_of_reg_def, MEM_MAP, MEM_LIST_COUNT] THEN
-	`m ' l = m'' ' l` by METIS_TAC[] THEN
-	ASM_SIMP_TAC std_ss [] THEN
-	RES_TAC THEN
-	POP_ASSUM MATCH_MP_TAC THEN
-	FULL_SIMP_TAC arith_ss [word_sub_def, word_2comp_n2w, dimword_32,
-		dimword_30] THEN
-	GEN_TAC THEN
-	Q.PAT_ASSUM `!off:num. P off` (fn thm => MP_TAC
-		(SPEC ``(off:num) + (x:num)`` thm)) THEN
-	Cases_on `off < s'` THEN ASM_REWRITE_TAC[] THEN
-	ONCE_REWRITE_TAC [prove(``(4294967296:num - 4 * x) = (1073741824 - x)*4``, DECIDE_TAC)] THEN
-	ASM_SIMP_TAC arith_ss [MEM_ADDR_ADD_CONST_MULT, GSYM WORD_ADD_ASSOC, word_add_n2w] THEN
-	ONCE_REWRITE_TAC[GSYM n2w_mod] THEN
-	SIMP_TAC arith_ss [dimword_30, dimword_4] THEN
-	`((2147483648 - (off + x)) =
-	 (1073741824 + (1073741824 - (off + x))))` by DECIDE_TAC THEN
-	ASM_SIMP_TAC std_ss [ADD_MODULUS_RIGHT])
+        `read (run_ir ir1 (r,m)) (REG 13) = (read (r,m) (REG 13) - (n2w (4*x)))` by METIS_TAC[] THEN
+        `?r'' m''. run_ir ir1 (r,m) = (r'',m'')` by METIS_TAC[pairTheory.PAIR] THEN
+        FULL_SIMP_TAC std_ss [toREG_def, read_thm, index_of_reg_def, MEM_MAP, MEM_LIST_COUNT] THEN
+        `m ' l = m'' ' l` by METIS_TAC[] THEN
+        ASM_SIMP_TAC std_ss [] THEN
+        RES_TAC THEN
+        POP_ASSUM MATCH_MP_TAC THEN
+        FULL_SIMP_TAC arith_ss [word_sub_def, word_2comp_n2w, dimword_32,
+                dimword_30] THEN
+        GEN_TAC THEN
+        Q.PAT_ASSUM `!off:num. P off` (fn thm => MP_TAC
+                (SPEC ``(off:num) + (x:num)`` thm)) THEN
+        Cases_on `off < s'` THEN ASM_REWRITE_TAC[] THEN
+        ONCE_REWRITE_TAC [prove(``(4294967296:num - 4 * x) = (1073741824 - x)*4``, DECIDE_TAC)] THEN
+        ASM_SIMP_TAC arith_ss [MEM_ADDR_ADD_CONST_MULT, GSYM WORD_ADD_ASSOC, word_add_n2w] THEN
+        ONCE_REWRITE_TAC[GSYM n2w_mod] THEN
+        SIMP_TAC arith_ss [dimword_30, dimword_4] THEN
+        `((2147483648 - (off + x)) =
+         (1073741824 + (1073741824 - (off + x))))` by DECIDE_TAC THEN
+        ASM_SIMP_TAC std_ss [ADD_MODULUS_RIGHT])
 
 
 
@@ -729,107 +727,107 @@ val IR_SC_USED_STACK = store_thm ("IR_SC_USED_STACK",
 
 val IR_SC_USED_STACK = store_thm ("IR_SC_USED_STACK",
 ``!x y ir1 ir2 s s'.
-	(WELL_FORMED ir1 /\ WELL_FORMED ir2 /\
-	 USED_STACK s ir1 /\ USED_STACK s' ir2 /\
-	 (s' + x < 2**30) /\ (s < 2**30) /\  (y <= x) /\
-	 (!r m. read (run_ir ir1 (r,m)) (REG 13) =
-			 read (r,m) (REG 13) - n2w (4*y)))  ==>
-	 USED_STACK (MAX s (s'+x)) (SC ir1 ir2)``,
+        (WELL_FORMED ir1 /\ WELL_FORMED ir2 /\
+         USED_STACK s ir1 /\ USED_STACK s' ir2 /\
+         (s' + x < 2**30) /\ (s < 2**30) /\  (y <= x) /\
+         (!r m. read (run_ir ir1 (r,m)) (REG 13) =
+                         read (r,m) (REG 13) - n2w (4*y)))  ==>
+         USED_STACK (MAX s (s'+x)) (SC ir1 ir2)``,
 
-	REPEAT STRIP_TAC THEN
-	FULL_SIMP_TAC std_ss [USED_STACK_THM, SEMANTICS_OF_IR] THEN
-	REPEAT STRIP_TAC THEN
+        REPEAT STRIP_TAC THEN
+        FULL_SIMP_TAC std_ss [USED_STACK_THM, SEMANTICS_OF_IR] THEN
+        REPEAT STRIP_TAC THEN
 
-	`read (run_ir ir1 (r,m)) (REG 13) = (read (r,m) (REG 13) - (n2w (4*y)))` by METIS_TAC[] THEN
-	`?r'' m''. run_ir ir1 (r,m) = (r'',m'')` by METIS_TAC[pairTheory.PAIR] THEN
-	FULL_SIMP_TAC std_ss [toREG_def, read_thm, index_of_reg_def, MEM_MAP, MEM_LIST_COUNT] THEN
-	`m ' l = m'' ' l` by METIS_TAC[] THEN
-	ASM_SIMP_TAC std_ss [] THEN
-	RES_TAC THEN
-	POP_ASSUM MATCH_MP_TAC THEN
-	FULL_SIMP_TAC arith_ss [word_sub_def, word_2comp_n2w, dimword_32,
-		dimword_30] THEN
-	GEN_TAC THEN
-	Q.PAT_ASSUM `!off:num. P off` (fn thm => MP_TAC
-		(SPEC ``(off:num) + (y:num)`` thm)) THEN
-	Cases_on `off < s'` THEN ASM_REWRITE_TAC[] THEN
-	ONCE_REWRITE_TAC [prove(``(4294967296:num - 4 * y) = (1073741824 - y)*4``, DECIDE_TAC)] THEN
-	ASM_SIMP_TAC arith_ss [MEM_ADDR_ADD_CONST_MULT, GSYM WORD_ADD_ASSOC, word_add_n2w] THEN
-	ONCE_REWRITE_TAC[GSYM n2w_mod] THEN
-	SIMP_TAC arith_ss [dimword_30, dimword_4] THEN
-	`((2147483648 - (off + y)) =
-	 (1073741824 + (1073741824 - (off + y))))` by DECIDE_TAC THEN
-	ASM_SIMP_TAC std_ss [ADD_MODULUS_RIGHT])
+        `read (run_ir ir1 (r,m)) (REG 13) = (read (r,m) (REG 13) - (n2w (4*y)))` by METIS_TAC[] THEN
+        `?r'' m''. run_ir ir1 (r,m) = (r'',m'')` by METIS_TAC[pairTheory.PAIR] THEN
+        FULL_SIMP_TAC std_ss [toREG_def, read_thm, index_of_reg_def, MEM_MAP, MEM_LIST_COUNT] THEN
+        `m ' l = m'' ' l` by METIS_TAC[] THEN
+        ASM_SIMP_TAC std_ss [] THEN
+        RES_TAC THEN
+        POP_ASSUM MATCH_MP_TAC THEN
+        FULL_SIMP_TAC arith_ss [word_sub_def, word_2comp_n2w, dimword_32,
+                dimword_30] THEN
+        GEN_TAC THEN
+        Q.PAT_ASSUM `!off:num. P off` (fn thm => MP_TAC
+                (SPEC ``(off:num) + (y:num)`` thm)) THEN
+        Cases_on `off < s'` THEN ASM_REWRITE_TAC[] THEN
+        ONCE_REWRITE_TAC [prove(``(4294967296:num - 4 * y) = (1073741824 - y)*4``, DECIDE_TAC)] THEN
+        ASM_SIMP_TAC arith_ss [MEM_ADDR_ADD_CONST_MULT, GSYM WORD_ADD_ASSOC, word_add_n2w] THEN
+        ONCE_REWRITE_TAC[GSYM n2w_mod] THEN
+        SIMP_TAC arith_ss [dimword_30, dimword_4] THEN
+        `((2147483648 - (off + y)) =
+         (1073741824 + (1073741824 - (off + y))))` by DECIDE_TAC THEN
+        ASM_SIMP_TAC std_ss [ADD_MODULUS_RIGHT])
 
 
 
 val IR_SC_USED_STACK___FC_CASE1 = store_thm ("IR_SC_USED_STACK___FC_CASE1",
 ``!ir1 ir2 s s' s''.
-	(USED_STACK (s+s') ir1 /\ (USED_STACK s'' ir2 /\
-	 WELL_FORMED ir1 /\ WELL_FORMED ir2  /\
-	 (s + s' + s'' < 2**30) /\
-	 (!r m. read (run_ir ir1 (r,m)) (REG 13) =
-			 read (r,m) (REG 13) - n2w (4*s))))  ==>
-	 USED_STACK (s+s'+s'') (SC ir1 ir2)``,
+        (USED_STACK (s+s') ir1 /\ (USED_STACK s'' ir2 /\
+         WELL_FORMED ir1 /\ WELL_FORMED ir2  /\
+         (s + s' + s'' < 2**30) /\
+         (!r m. read (run_ir ir1 (r,m)) (REG 13) =
+                         read (r,m) (REG 13) - n2w (4*s))))  ==>
+         USED_STACK (s+s'+s'') (SC ir1 ir2)``,
 
-	REPEAT STRIP_TAC THEN
-	`(s:num) + s' + s'' = MAX (s+s') (s'' + (s+s'))` by ALL_TAC THEN1 (
-		SIMP_TAC arith_ss [MAX_DEF]
-	) THEN
-	ASM_REWRITE_TAC[] THEN
-	MATCH_MP_TAC IR_SC_USED_STACK THEN
-	Q_TAC EXISTS_TAC `s` THEN
-	FULL_SIMP_TAC std_ss [])
+        REPEAT STRIP_TAC THEN
+        `(s:num) + s' + s'' = MAX (s+s') (s'' + (s+s'))` by ALL_TAC THEN1 (
+                SIMP_TAC arith_ss [MAX_DEF]
+        ) THEN
+        ASM_REWRITE_TAC[] THEN
+        MATCH_MP_TAC IR_SC_USED_STACK THEN
+        Q_TAC EXISTS_TAC `s` THEN
+        FULL_SIMP_TAC std_ss [])
 
 
 val IR_SC_USED_STACK___FC_CASE2 = store_thm ("IR_SC_USED_STACK___FC_CASE2",
 ``!ir1 ir2 s s'.
-	(USED_STACK s ir1 /\ (USED_STACK s' ir2 /\
-	 WELL_FORMED ir1 /\ WELL_FORMED ir2  /\
-	 (s + s' < 2**30) /\
-	 (!r m. read (run_ir ir1 (r,m)) (REG 13) =
-			 read (r,m) (REG 13) - n2w (4*s))))  ==>
-	 USED_STACK (s+s') (SC ir1 ir2)``,
+        (USED_STACK s ir1 /\ (USED_STACK s' ir2 /\
+         WELL_FORMED ir1 /\ WELL_FORMED ir2  /\
+         (s + s' < 2**30) /\
+         (!r m. read (run_ir ir1 (r,m)) (REG 13) =
+                         read (r,m) (REG 13) - n2w (4*s))))  ==>
+         USED_STACK (s+s') (SC ir1 ir2)``,
 
-	REPEAT STRIP_TAC THEN
-	`(s:num) + s' = MAX s (s' + s)` by ALL_TAC THEN1 (
-		SIMP_TAC std_ss [MAX_DEF] THEN
-		Cases_on `0 < s'` THEN ASM_SIMP_TAC arith_ss []
-	) THEN
-	ASM_REWRITE_TAC[] THEN
-	MATCH_MP_TAC IR_SC_USED_STACK THEN
-	Q_TAC EXISTS_TAC `s` THEN
-	FULL_SIMP_TAC std_ss [])
+        REPEAT STRIP_TAC THEN
+        `(s:num) + s' = MAX s (s' + s)` by ALL_TAC THEN1 (
+                SIMP_TAC std_ss [MAX_DEF] THEN
+                Cases_on `0 < s'` THEN ASM_SIMP_TAC arith_ss []
+        ) THEN
+        ASM_REWRITE_TAC[] THEN
+        MATCH_MP_TAC IR_SC_USED_STACK THEN
+        Q_TAC EXISTS_TAC `s` THEN
+        FULL_SIMP_TAC std_ss [])
 
 
 val IR_SC_UNCHANGED_STACK = store_thm ("IR_SC_UNCHANGED_STACK",
 ``!ir1 ir2 l s s'.
-	(WELL_FORMED ir1 /\ WELL_FORMED ir2 /\
-	 UNCHANGED_STACK l s ir1 /\ UNCHANGED_STACK l s' ir2 /\
-	 MEM R13 l)  ==>
-	 UNCHANGED_STACK l (MAX s s') (SC ir1 ir2)``,
+        (WELL_FORMED ir1 /\ WELL_FORMED ir2 /\
+         UNCHANGED_STACK l s ir1 /\ UNCHANGED_STACK l s' ir2 /\
+         MEM R13 l)  ==>
+         UNCHANGED_STACK l (MAX s s') (SC ir1 ir2)``,
 
 
-	SIMP_TAC std_ss [UNCHANGED_STACK_def, IR_SC_UNCHANGED] THEN
-	REPEAT STRIP_TAC THEN
-	`(s <= MAX s s') /\ (s' <= MAX s s')` by SIMP_TAC arith_ss [] THEN
-	`(USED_STACK (MAX s s') ir1) /\
-	 (USED_STACK (MAX s s') ir2)` by PROVE_TAC [USED_STACK_ENLARGE] THEN
-	FULL_SIMP_TAC std_ss [USED_STACK_THM, UNCHANGED_THM, EVERY_MEM,
-		SEMANTICS_OF_IR] THEN
-	REPEAT STRIP_TAC THEN
+        SIMP_TAC std_ss [UNCHANGED_STACK_def, IR_SC_UNCHANGED] THEN
+        REPEAT STRIP_TAC THEN
+        `(s <= MAX s s') /\ (s' <= MAX s s')` by SIMP_TAC arith_ss [] THEN
+        `(USED_STACK (MAX s s') ir1) /\
+         (USED_STACK (MAX s s') ir2)` by PROVE_TAC [USED_STACK_ENLARGE] THEN
+        FULL_SIMP_TAC std_ss [USED_STACK_THM, UNCHANGED_THM, EVERY_MEM,
+                SEMANTICS_OF_IR] THEN
+        REPEAT STRIP_TAC THEN
 
-	FULL_SIMP_TAC std_ss [read_thm] THEN
-	`(read (r,m) (toREG R13) =
+        FULL_SIMP_TAC std_ss [read_thm] THEN
+        `(read (r,m) (toREG R13) =
     read (run_ir ir1 (r,m)) (toREG R13))` by METIS_TAC[] THEN
-	`?r'' m''. run_ir ir1 (r,m) = (r'',m'')` by METIS_TAC[pairTheory.PAIR] THEN
-	FULL_SIMP_TAC std_ss [toREG_def, read_thm, index_of_reg_def] THEN
-	METIS_TAC[])
+        `?r'' m''. run_ir ir1 (r,m) = (r'',m'')` by METIS_TAC[pairTheory.PAIR] THEN
+        FULL_SIMP_TAC std_ss [toREG_def, read_thm, index_of_reg_def] THEN
+        METIS_TAC[])
 
 val UNCHANGED_STACK_TR_RULE = store_thm ("UNCHANGED_STACK_TR_RULE",
 ``!c ir l s.
-	(WELL_FORMED (TR c ir) /\ UNCHANGED_STACK l s ir /\ MEM R13 l) ==>
-	UNCHANGED_STACK l s (TR c ir)``,
+        (WELL_FORMED (TR c ir) /\ UNCHANGED_STACK l s ir /\ MEM R13 l) ==>
+        UNCHANGED_STACK l s (TR c ir)``,
 
 
   SIMP_TAC std_ss [UNCHANGED_STACK_def] THEN
@@ -853,45 +851,45 @@ val UNCHANGED_STACK_TR_RULE = store_thm ("UNCHANGED_STACK_TR_RULE",
   FULL_SIMP_TAC std_ss [USED_STACK_THM] THEN
   REPEAT DISCH_TAC THEN
   Induct_on `n` THENL [
-	 SIMP_TAC std_ss [FUNPOW],
+         SIMP_TAC std_ss [FUNPOW],
 
-	 ASM_SIMP_TAC std_ss [FUNPOW_SUC] THEN
-	 REPEAT STRIP_TAC THEN
-	 `?r'' m''. (FUNPOW (run_ir ir) n (r,m)) = (r'',m'')` by METIS_TAC[pairTheory.PAIR] THEN
-	 FULL_SIMP_TAC std_ss [read_thm] THEN
-	 METIS_TAC[]
+         ASM_SIMP_TAC std_ss [FUNPOW_SUC] THEN
+         REPEAT STRIP_TAC THEN
+         `?r'' m''. (FUNPOW (run_ir ir) n (r,m)) = (r'',m'')` by METIS_TAC[pairTheory.PAIR] THEN
+         FULL_SIMP_TAC std_ss [read_thm] THEN
+         METIS_TAC[]
   ]);
 
 
 val UNCHANGED_STACK___READ_STACK_IMP =
-	store_thm ("UNCHANGED_STACK___READ_STACK_IMP",
+        store_thm ("UNCHANGED_STACK___READ_STACK_IMP",
 ``!s st l ir n. ((0 < n) /\ (n + l < 2**30) /\ MEM R13 s) ==>
 (UNCHANGED_STACK s l ir ==>
 (read (run_ir ir st) (toMEM (R13, POS n)) = read st (toMEM (R13, POS n))))``,
 
 REPEAT STRIP_TAC THEN
 `read (run_ir ir st) (REG 13) = read st (REG 13)` by ALL_TAC THEN1 (
-	FULL_SIMP_TAC std_ss [UNCHANGED_STACK_def, UNCHANGED_THM, EVERY_MEM] THEN
-	RES_TAC THEN
-	Cases_on `st` THEN
-	FULL_SIMP_TAC std_ss [toREG_def, index_of_reg_def]
+        FULL_SIMP_TAC std_ss [UNCHANGED_STACK_def, UNCHANGED_THM, EVERY_MEM] THEN
+        RES_TAC THEN
+        Cases_on `st` THEN
+        FULL_SIMP_TAC std_ss [toREG_def, index_of_reg_def]
 ) THEN
 
 `?r m. run_ir ir st = (r, m)` by METIS_TAC[pairTheory.PAIR] THEN
 Cases_on `st` THEN
 FULL_SIMP_TAC std_ss [toMEM_def, index_of_reg_def, read_thm,
-	UNCHANGED_STACK_def, USED_STACK_def, MEM_MAP, MEM_LIST_COUNT] THEN
+        UNCHANGED_STACK_def, USED_STACK_def, MEM_MAP, MEM_LIST_COUNT] THEN
 Q.PAT_ASSUM `!r''. P r''` (fn thm => MP_TAC (SPECL [
-	``q:REGISTER |-> DATA``,
-	``r':ADDR |-> DATA``,
-	``r:REGISTER |-> DATA``,
-	``m:ADDR |-> DATA``] thm)) THEN
+        ``q:REGISTER |-> DATA``,
+        ``r':ADDR |-> DATA``,
+        ``r:REGISTER |-> DATA``,
+        ``m:ADDR |-> DATA``] thm)) THEN
 ASM_SIMP_TAC std_ss [prove (``(a \/ b) = (~a ==> b)``, PROVE_TAC[])] THEN
 STRIP_TAC THEN
 POP_ASSUM (fn thm => MATCH_MP_TAC (GSYM thm)) THEN
 GEN_TAC THEN
 SIMP_TAC std_ss [WORD_EQ_ADD_LCANCEL, word_sub_def, word_2comp_n2w,
-	n2w_11, dimword_30] THEN
+        n2w_11, dimword_30] THEN
 Cases_on `off < l` THEN ASM_SIMP_TAC std_ss [] THEN
 Cases_on `off = 0` THEN
 ASM_SIMP_TAC arith_ss [])

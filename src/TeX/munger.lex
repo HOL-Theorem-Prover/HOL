@@ -40,10 +40,10 @@ fun pp_to_mathstring spacing width f x = let
       else if CharVector.all Char.isSpace s then
         acc := String.concat(List.tabulate(size s, (fn _ => spacing))) :: !acc
       else acc := s :: !acc
-  val ppc = {consumer = consumer, linewidth = width, flush = fn () => ()}
+  val _ = PP.prettyPrint(consumer, width) (f x)
+  val slist = case !acc of "\\\\\n" :: rest => rest | sl => sl
 in
-  PP.with_pp ppc (fn ppstrm => f ppstrm x);
-  String.concat (List.rev (!acc))
+  String.concat (List.rev slist)
 end
 
 fun replace (pos, argpos, comm, optstring, args) = let

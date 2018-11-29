@@ -29,6 +29,8 @@ val arith_ss = old_arith_ss
 
 val _ = new_theory "rat";
 
+val ERR = mk_HOL_ERR "ratScript"
+
 (*--------------------------------------------------------------------------*
  *  rat_equiv: definition and proof of equivalence relation
  *--------------------------------------------------------------------------*)
@@ -143,7 +145,8 @@ val RAT_EQUIV_ALT = store_thm("RAT_EQUIV_ALT",
     EXISTS_TAC ``frac_dnm x`` THEN EXISTS_TAC ``frac_dnm a`` THEN
       ASM_SIMP_TAC bool_ss [FRAC_DNMPOS, NMR, DNM] THEN
       VALIDATE (CONV_TAC (feqconv FRAC_EQ)) THEN
-      TRY (irule INT_MUL_POS_SIGN THEN irule FRAC_DNMPOS) THEN CONJ_TAC
+      TRY (irule INT_MUL_POS_SIGN >> conj_tac >> irule FRAC_DNMPOS) THEN
+      CONJ_TAC
       (* ASM_SIMP_TAC bool_ss [] does nothing - why ??? *)
       THENL [ POP_ASSUM ACCEPT_TAC, ASM_SIMP_TAC bool_ss [INT_MUL_COMM] ],
       REPEAT STRIP_TAC THEN
@@ -403,7 +406,7 @@ val FRAC_ADD_EQUIV1 = store_thm ("FRAC_ADD_EQUIV1",
   ``rat_equiv x x' ==> rat_equiv (frac_add x y) (frac_add x' y)``,
   REWRITE_TAC[frac_add_def, rat_equiv_def] THEN
   VALIDATE (CONV_TAC (feqconv NMR THENC feqconv DNM)) THEN
-  TRY (irule INT_MUL_POS_SIGN THEN irule FRAC_DNMPOS) THEN
+  TRY (irule INT_MUL_POS_SIGN >> conj_tac >> irule FRAC_DNMPOS) THEN
   REWRITE_TAC[INT_RDISTRIB] THEN DISCH_TAC THEN
   MK_COMB_TAC THENL [AP_TERM_TAC, ALL_TAC]
   THENL [
@@ -440,7 +443,7 @@ val FRAC_MUL_EQUIV1 = store_thm ("FRAC_MUL_EQUIV1",
   ``rat_equiv x x' ==> rat_equiv (frac_mul x y) (frac_mul x' y)``,
   REWRITE_TAC[frac_mul_def, rat_equiv_def] THEN
   VALIDATE (CONV_TAC (feqconv NMR THENC feqconv DNM)) THEN
-  TRY (irule INT_MUL_POS_SIGN THEN irule FRAC_DNMPOS) THEN DISCH_TAC THEN
+  TRY (irule INT_MUL_POS_SIGN >> conj_tac >> irule FRAC_DNMPOS) >> DISCH_TAC >>
   RULE_ASSUM_TAC (AP_TERM ``int_mul (frac_nmr y * frac_dnm y)``) THEN
   POP_ASSUM (fn th => MATCH_MP_TAC (MATCH_MP box_equals th)) THEN
   CONJ_TAC THEN CONV_TAC (AC_CONV (INT_MUL_ASSOC,INT_MUL_SYM)) ) ;
@@ -960,7 +963,7 @@ val RAT_ADD_RINV = store_thm("RAT_ADD_RINV",
         SIMP_TAC bool_ss [NMR, DNM, FRAC_DNMPOS] THEN
         REWRITE_TAC[RAT_ABS_EQUIV,rat_equiv_def] THEN
         VALIDATE (CONV_TAC (feqconv NMR THENC feqconv DNM)) THEN
-        TRY (irule INT_MUL_POS_SIGN THEN irule FRAC_DNMPOS) THEN
+        simp[INT_MUL_POS_SIGN, FRAC_DNMPOS] THEN
         REWRITE_TAC [INT_MUL_LZERO, INT_MUL_RID, INT_LT_01,
           GSYM INT_NEG_LMUL, INT_ADD_RINV]) ;
 
@@ -976,7 +979,7 @@ val RAT_MUL_RINV = store_thm("RAT_MUL_RINV",
   REWRITE_TAC[frac_mul_def, frac_minv_def, frac_1_def] THEN
   REWRITE_TAC[RAT_ABS_EQUIV, rat_equiv_def] THEN
   VALIDATE (CONV_TAC (feqconv NMR THENC feqconv DNM)) THEN
-  TRY (irule INT_MUL_POS_SIGN) THEN
+  TRY (irule INT_MUL_POS_SIGN >> conj_tac) THEN
   TRY (irule FRAC_DNMPOS) THEN
   TRY (irule INT_LT_01) THEN
   TRY (irule INT_ABS_NOT0POS) THEN
@@ -1005,10 +1008,10 @@ val RAT_RDISTRIB = store_thm("RAT_RDISTRIB",
         REWRITE_TAC[RAT_MUL_CONG, RAT_ADD_CONG] THEN
         REWRITE_TAC[frac_mul_def,frac_add_def] THEN
         VALIDATE (CONV_TAC (feqconv NMR THENC feqconv DNM)) THEN
-        TRY (irule INT_MUL_POS_SIGN THEN irule FRAC_DNMPOS) THEN
+        simp[INT_MUL_POS_SIGN, FRAC_DNMPOS] THEN
         REWRITE_TAC[RAT_ABS_EQUIV, rat_equiv_def] THEN
         VALIDATE (CONV_TAC (feqconv NMR THENC feqconv DNM)) THEN
-        REPEAT (irule INT_MUL_POS_SIGN ORELSE irule FRAC_DNMPOS) THEN
+        simp[INT_MUL_POS_SIGN, FRAC_DNMPOS] THEN
         REWRITE_TAC[INT_RDISTRIB] THEN BINOP_TAC THEN
         CONV_TAC (AC_CONV (INT_MUL_ASSOC, INT_MUL_COMM))) ;
 

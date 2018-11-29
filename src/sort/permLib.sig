@@ -106,4 +106,13 @@ sig
   (* brings the permutation assumptions in normal form *)
   val NORMALISE_ASM_PERM_TAC : tactic
 
+  (* Prove `ALL_DISTINCT xs = T` by permuting to a sorted list
+     (using theorems ALL_DISTINCT_PERM and SORTED_ALL_DISTINCT).
+
+     Requires a relation R, a theorem `irreflexive R /\ transitive R`
+     a sorting function f which sorts the terms of xs in ML, and a
+     conversion that shows `R x y = T` whenever f `x` `y`.
+  *)
+  val ALL_DISTINCT_CONV : thm -> (term -> term -> bool) -> conv -> conv
+
 end

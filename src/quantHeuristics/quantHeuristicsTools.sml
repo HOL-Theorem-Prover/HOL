@@ -623,7 +623,7 @@ fun list_variant avoid_vL rename_vL =
 let
    val (_,sub,fvL') =
       foldl (fn (fv, (vL,sub,fvL)) =>
-	  let
+          let
              val fv' = variant vL fv
              val vL' = fv'::vL
              val fvL' = fv'::fvL

@@ -21,7 +21,6 @@ val op|| = op ORELSE;
 
 type 'a thunk = unit -> 'a;
 type 'a susp = 'a Susp.susp
-type ppstream = Portable.ppstream
 type ('a, 'b) maplet = {redex : 'a, residue : 'b}
 type ('a, 'b) subst = ('a, 'b) Lib.subst
 
@@ -389,59 +388,27 @@ fun tree_partial_trans f_b f_l state (LEAF l) = option_to_list (f_l l state)
 (* Pretty-printing helper-functions.                                     *)
 (* --------------------------------------------------------------------- *)
 
-fun pp_map f pp_a (ppstrm : ppstream) x : unit = pp_a ppstrm (f x);
+fun pp_map f pp_a x = pp_a (f x);
 
-fun pp_string ppstrm =
-  let
-    val {add_string,add_break,begin_block,end_block,add_newline,...}
-      = Portable.with_ppstream ppstrm
+val pp_string = PP.add_string
 
-  in
-    fn s => (begin_block Portable.CONSISTENT 1;
-             add_string s;
-             end_block ())
-  end;
+fun pp_unknown _ = pp_string "_";
 
-fun pp_unknown ppstrm _ = pp_string ppstrm "_";
+fun pp_int i = pp_string (int_to_string i);
 
-fun pp_int ppstrm i = pp_string ppstrm (int_to_string i);
+open PP
+fun pp_pair pp1 pp2 =
+  fn (a, b) => block CONSISTENT 1 [
+                add_string "(", pp1 a, add_string ",",
+                add_break (1, 0), pp2 b, add_string ")"
+              ]
 
-fun pp_pair pp1 pp2 ppstrm =
-  let
-    val {add_string,add_break,begin_block,end_block,add_newline,...}
-      = Portable.with_ppstream ppstrm
-
-  in
-    fn (a, b) => (begin_block Portable.CONSISTENT 1;
-                  add_string "(";
-                  pp1 ppstrm a:unit;
-                  add_string ",";
-                  add_break (1, 0);
-                  pp2 ppstrm b:unit;
-                  add_string ")";
-                  end_block())
-  end;
-
-fun pp_list pp ppstrm =
-  let
-    val {add_string,add_break,begin_block,end_block,add_newline,...}
-      = Portable.with_ppstream ppstrm
-
-    val pp_elt = pp ppstrm
-
-    fun pp_seq [] = ()
-      | pp_seq (h::t) = (add_string ",";
-                         add_break (1, 0);
-                         pp_elt h:unit;
-                         pp_seq t)
-  in
-    fn l => (begin_block Portable.INCONSISTENT 1;
-             add_string "[";
-             (case l of [] => ()
-              | h::t => (pp_elt h; pp_seq t));
-             add_string "]";
-             end_block())
-  end;
+fun pp_list pp =
+    fn l => block INCONSISTENT 1 (
+             add_string "[" ::
+             pr_list pp [add_string ",", add_break(1,0)] l @
+             [add_string "]"]
+           )
 
 (* --------------------------------------------------------------------- *)
 (* Substitution operations.                                              *)

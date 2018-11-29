@@ -147,10 +147,10 @@ fun ac_term_ord(tm1,tm2) =
       fn solver => fn stack => fn tm =>
        (let val conditional_eqn = instth tm
             val (conditions,eqn) = strip_imp (concl conditional_eqn)
-	    val _ = if exists (C (op_mem aconv) stack) conditions
-			then (trace(1, TEXT "looping - cut");
+            val _ = if exists (C (op_mem aconv) stack) conditions
+                        then (trace(1, TEXT "looping - cut");
                               failwith "looping!") else ()
-	    val _ = if length stack + length conditions > (!stack_limit)
+            val _ = if length stack + length conditions > (!stack_limit)
                     then (trace(1, TEXT "looping - stack limit reached");
                           failwith "stack limit") else ()
             val (l,r) = dest_eq eqn
@@ -168,7 +168,7 @@ fun ac_term_ord(tm1,tm2) =
                     else ()
             val _ = if null conditions then ()
                     else trace(if isperm then 2 else 1, REWRITING(tm,th))
-	    val new_stack = conditions@stack
+            val new_stack = conditions@stack
             fun solver' condition =
                  let val _   = trace(2,SIDECOND_ATTEMPT condition)
                      val res = solver new_stack condition
@@ -188,7 +188,7 @@ fun ac_term_ord(tm1,tm2) =
                       then used_rewrites := th :: !used_rewrites
                       else ()
         in trace(if isperm then 3 else 2,PRODUCE(tm,"rewrite",final_thm));
-	    final_thm
+            final_thm
         end
         handle e => WRAP_ERR("COND_REWR_CONV (application)",e))
       end
@@ -279,6 +279,7 @@ val FT_EQ_F = PROVE_HYP (UNDISCH_ALL (NOT_ELIM (CONJUNCT2 BOOL_EQ_DISTINCT)))
 
 fun IMP_EQ_CANON (thm,bnd) = let
   val conditions = #1 (strip_imp (concl thm))
+  val hypfvs = hyp_frees thm
   val undisch_thm = UNDISCH_ALL thm
   val conc = concl undisch_thm
   fun IMP_EQ_CANONb th = IMP_EQ_CANON (th, bnd)
@@ -292,19 +293,23 @@ fun IMP_EQ_CANON (thm,bnd) = let
             val (l,r) = dest_eq conc
           in
             if aconv l truth_tm then
-              if aconv r false_tm then [(PROVE_HYP thm TF_EQ_F, bnd)]
-              else [(CONV_RULE (REWR_CONV EQ_SYM_EQ) thm, bnd)]
+              if aconv r false_tm then [(PROVE_HYP undisch_thm TF_EQ_F, bnd)]
+              else [(CONV_RULE (REWR_CONV EQ_SYM_EQ) undisch_thm, bnd)]
             else if aconv l false_tm then
-              if aconv r truth_tm then [(PROVE_HYP thm FT_EQ_F,bnd)]
-              else [(CONV_RULE (REWR_CONV EQ_SYM_EQ) thm, bnd)]
+              if aconv r truth_tm then [(PROVE_HYP undisch_thm FT_EQ_F,bnd)]
+              else [(CONV_RULE (REWR_CONV EQ_SYM_EQ) undisch_thm, bnd)]
             else
               let
+                fun safelhs t =
+                  not (is_var t) orelse type_of t <> bool orelse
+                  t IN hypfvs orelse bnd <> BoundedRewrites.UNBOUNDED
                 val base =
                     if HOLset.isEmpty
                          (HOLset.difference(FVL [r] empty_tmset,
                                             FVL (l::hyp thm) empty_tmset))
-		    then undisch_thm
-		    else
+                       andalso safelhs l
+                    then undisch_thm
+                    else
                       (trace(1,IGNORE("rewrite with existential vars (adding \
                                       \EQT version(s))",thm));
                        EQT_INTRO undisch_thm)
@@ -319,17 +324,18 @@ fun IMP_EQ_CANON (thm,bnd) = let
                 else [(base,bnd)]
               end
           end
-      else if is_conj conc then
-        undisch_thm |> CONJ_PAIR
-                    |> (IMP_EQ_CANONb ## IMP_EQ_CANONb)
-                    |> op @
-      else if is_forall conc then
-        undisch_thm |> SPEC_VAR |> snd |> IMP_EQ_CANONb
       else if is_neg conc then
-        if is_eq (dest_neg conc) then
-          [(EQF_INTRO undisch_thm, bnd), (EQF_INTRO (GSYM undisch_thm), bnd)]
-        else [(EQF_INTRO undisch_thm, bnd)]
-      else if aconv conc truth_tm then
+        let
+          val n = dest_neg conc
+        in
+          if is_eq n then
+            [(EQF_INTRO undisch_thm, bnd), (EQF_INTRO (GSYM undisch_thm), bnd)]
+          else if is_var n andalso not (n IN hypfvs) then
+            (trace(1, IGNORE ("boolean variable conclusion", thm)); [])
+          else
+            [(EQF_INTRO undisch_thm, bnd)]
+        end
+      else if conc ~~ truth_tm then
         (trace(2,IGNORE ("pointless rewrite",thm)); [])
       else if aconv conc false_tm then [(MP x_eq_false undisch_thm, bnd)]
       else if is_comb conc andalso same_const (rator conc) Abbrev_tm then let
@@ -346,13 +352,17 @@ fun IMP_EQ_CANON (thm,bnd) = let
               val base_eqns = bth |> SYM |> IMP_EQ_CANONb
             in
               if is_abs (rhs rnd) then
-                base_eqns @ (bth |> CONV_RULE funeqconv |> IMP_EQ_CANONb)
+                base_eqns @
+                (bth |> CONV_RULE funeqconv |> SPEC_ALL |> IMP_EQ_CANONb)
               else
                 base_eqns
             end
           else []
         end
-      else [(EQT_INTRO undisch_thm, bnd)]
+      else if is_var conc andalso not (conc IN hypfvs) then
+        (trace(1, IGNORE ("boolean variable conclusion", thm)); [])
+      else
+        [(EQT_INTRO undisch_thm, bnd)]
 in
   map (fn (th,bnd) => (CONJ_DISCH conditions th, bnd)) undisch_rewrites
 end handle e => WRAP_ERR("IMP_EQ_CANON",e);

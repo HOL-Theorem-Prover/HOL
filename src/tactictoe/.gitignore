@@ -1,3 +1,5 @@
-gen_*
-log_*
-fea_*
+debug/*
+code/*
+eval/*
+scripts/*
+ttt_tacdata/*

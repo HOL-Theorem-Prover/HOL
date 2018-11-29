@@ -61,36 +61,36 @@ end
   const       int
 
   Values:
-  ?	      bvec_copy
+  ?           bvec_copy
   bvectrue    bvec_true
   bvecfalse   bvec_false
-  con	      bvec_con
-  var	      bvec_var
+  con         bvec_con
+  var         bvec_var
   varfdd      bvec_varfdd
-  ?	      bvec_varvec
+  ?           bvec_varvec
   coerce      bvec_coerce
   isConst     bvec_isconst
   getConst    bvec_val
   lookupConst ?                       Uses isConst and getConst
-  ?	      bvec_free
-  ?	      bvec_addref
-  ?	      bvec_delref
-  ?	      bvec_map1
-  ?	      bvec_map2
-  ?	      bvec_map3
-  add	      bvec_add
-  sub	      bvec_sub
-  mul	      bvec_mul
+  ?           bvec_free
+  ?           bvec_addref
+  ?           bvec_delref
+  ?           bvec_map1
+  ?           bvec_map2
+  ?           bvec_map3
+  add         bvec_add
+  sub         bvec_sub
+  mul         bvec_mul
   div         bvec_div
-  divi	      bvec_div                (See also modu)
-  modu	      bvec_div                (See also divi)
-  shl	      bvec_shl
-  shr	      bvec_shr
-  lth	      bvec_lth
-  lte	      bvec_lte
-  gth	      bvec_gth
-  gte	      bvec_gte
-  equ	      bvec_equ
-  neq	      bvec_neq
+  divi        bvec_div                (See also modu)
+  modu        bvec_div                (See also divi)
+  shl         bvec_shl
+  shr         bvec_shr
+  lth         bvec_lth
+  lte         bvec_lte
+  gth         bvec_gth
+  gte         bvec_gte
+  equ         bvec_equ
+  neq         bvec_neq
 
 *)

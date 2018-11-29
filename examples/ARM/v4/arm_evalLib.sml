@@ -20,6 +20,8 @@ open Q Parse computeLib combinTheory pairTheory wordsTheory wordsSyntax
      optionTheory rich_listTheory armTheory arm_evalTheory
      updateTheory systemTheory instructionTheory instructionSyntax assemblerML;
 
+val ERR = mk_HOL_ERR "arm_evalLib"
+
 (* ------------------------------------------------------------------------- *)
 (* Some conversions *)
 
@@ -783,7 +785,7 @@ fun myprint Gs backend sys ppfns (pg,lg,rg) d t = let
   open Portable term_pp_types smpp
   infix >>
   val {add_string=strn,add_break=brk,ublock,add_newline,...} =
-      ppfns :ppstream_funs
+      ppfns : ppstream_funs
   val (l,typ) = listSyntax.dest_list t
   val _ = typ = ``:word32`` andalso not (null l) orelse raise UserPP_Failed
   fun delim act =

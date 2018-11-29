@@ -1,9 +1,9 @@
 (* =====================================================================*)
-(* FILE		: stringScript.sml				        *)
+(* FILE         : stringScript.sml                                      *)
 (* DESCRIPTION  : A theory of 8-bit characters and strings built        *)
 (*                from them.                                            *)
 (*                                                                      *)
-(* AUTHOR	: Konrad Slind, University of Cambridge, 2001           *)
+(* AUTHOR       : Konrad Slind, University of Cambridge, 2001           *)
 (* =====================================================================*)
 
 (* interactive use:
@@ -14,7 +14,7 @@ open HolKernel boolLib bossLib Parse;
 open numLib numSyntax listTheory rich_listTheory arithmeticTheory;
 
 (* ---------------------------------------------------------------------*)
-(* Create the new theory						*)
+(* Create the new theory                                                *)
 (* ---------------------------------------------------------------------*)
 
 val _ = new_theory "string";
@@ -159,7 +159,7 @@ val char_size_def = Define `char_size (c:char) = 0`;
       representation.
  ---------------------------------------------------------------------------*)
 
-val _ = type_abbrev ("string", ``:char list``)
+val _ = type_abbrev_pp ("string", ``:char list``)
 
 val _ = overload_on ("STRING", ``CONS : char -> string -> string``)
 val _ = overload_on ("EMPTYSTRING", ``[] : string``)
@@ -490,8 +490,9 @@ val _ = computeLib.add_persistent_funs
           ["IMPLODE_EXPLODE_I", "ORD_CHR_COMPUTE", "CHAR_EQ_THM"];
 
 fun adjoin_to_theory_struct l = adjoin_to_theory {sig_ps = NONE,
-  struct_ps = SOME (fn ppstrm =>
-    app (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm)) l)};
+  struct_ps = SOME (fn _ =>
+                       PP.block PP.CONSISTENT 0
+                                (PP.pr_list PP.add_string [PP.NL] l))};
 
 val _ = adjoin_to_theory_struct [
   "val _ =",

@@ -45,3 +45,38 @@ val _ = tpp_expected{
   output="foo",
   testf = (fn _ => "Printing after definition on unoverloaded name")
 };
+
+fun define q =
+  let
+    val (tm, names) = Defn.parse_absyn (Parse.Absyn q)
+  in
+    Defn.mk_defn (hd names) tm
+  end
+fun exnlookfor sl (Exn (HOL_ERR {message,...})) =
+     if List.all (fn s => String.isSubstring s message) sl then OK()
+     else
+       die ("\nBad exception message:\n  "^message)
+  | exnlookfor _ (Exn e) =
+      die ("\nException not a HOL_ERR;\n  "^General.exnMessage e)
+  | exnlookfor _ _ = die ("\nExecution unexpectedly successful")
+
+fun badvarcheck r =
+  exnlookfor ["Simple definition failed", "Free variables in rhs"] r
+
+fun wfunivq r =
+  exnlookfor ["Universally quantified equation as argument"] r
+
+val _ = tprint "Excess vars on RHS of def reported correctly(=,no !)"
+val _ = timed define badvarcheck `ll20180807A x = (x /\ y)`
+
+val _ = tprint "Excess vars on RHS of def reported correctly(=,!)"
+val _ = timed define badvarcheck `!x. ll20180807B x = (x /\ y)`;
+
+val _ = tprint "Excess vars on RHS of def reported correctly(<=>,no !)"
+val _ = timed define badvarcheck `ll20180807C x <=> x /\ y`;
+
+val _ = tprint "Excess vars on RHS of def reported correctly(<=>,!)"
+val _ = timed define badvarcheck `!x. ll20180807D x <=> x /\ y`;
+
+val _ = tprint "Better message for use of q-fied eqn in wfrec def"
+val _ = timed define wfunivq `!x. ll20180807E x <=> y /\ ll20180807E (x ==> y)`;

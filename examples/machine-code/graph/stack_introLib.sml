@@ -1,15 +1,10 @@
-structure stack_introLib =
+structure stack_introLib :> stack_introLib =
 struct
 
 open HolKernel boolLib bossLib Parse;
-open listTheory wordsTheory pred_setTheory arithmeticTheory wordsLib pairTheory;
-open set_sepTheory progTheory helperLib addressTheory combinTheory;
-
-open backgroundLib file_readerLib writerLib;
+open helperLib backgroundLib file_readerLib writerLib;
 
 open GraphLangTheory
-
-infix \\ val op \\ = op THEN;
 
 fun STACK_MEMORY_INTRO_RULE th = let
   val (_,p,_,_) = th |> concl |> dest_spec

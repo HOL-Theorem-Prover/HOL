@@ -1,29 +1,27 @@
-(* ========================================================================== *)
-(* FILE          : tttUnfold.sml                                              *)
-(* DESCRIPTION   : Partial unfolding of SML code.                             *)
-(*                 Produces SML strings re-usable in different context.       *)
-(* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck             *)
-(* DATE          : 2017                                                       *)
-(* ========================================================================== *)
+(* ======================================================================== *)
+(* FILE          : tttUnfold.sml                                            *)
+(* DESCRIPTION   : Partial unfolding of SML code.                           *)
+(*                 Produces SML strings re-usable in different context.     *)
+(* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck           *)
+(* DATE          : 2017                                                     *)
+(* ======================================================================== *)
 
 structure tttUnfold :> tttUnfold =
 struct
 
-open HolKernel Abbrev boolLib tttLexer tttTools tttInfix tttOpen tttSetup
+open HolKernel Abbrev boolLib aiLib
+  smlLexer smlInfix smlOpen
+  mlTacticData
+  tttSetup
 
 val ERR = mk_HOL_ERR "tttUnfold"
+fun debug s = debug_in_dir ttt_debugdir "tttUnfold" s
 
-(* --------------------------------------------------------------------------
-   Debugging
-   -------------------------------------------------------------------------- *)
-
-val dirorg_glob = ref "/temp"
-
-(* --------------------------------------------------------------------------
+(* -----------------------------------------------------------------------
    Program representation and stack
-   -------------------------------------------------------------------------- *)
+   ----------------------------------------------------------------------- *)
 
-datatype stack_t =
+datatype stack =
     Protect
   | Watch
   | Undecided
@@ -38,25 +36,26 @@ fun protect x = (x, Protect)
 fun watch x   = (x, Watch)
 fun undecided x = (x, Undecided)
 
-datatype sketch_t =
-    Pattern  of string * sketch_t list * string * sketch_t list
+datatype sketch =
+    Pattern  of string * sketch list * string * sketch list
   | Open     of string list
   | Infix    of (string * infixity_t) list
-  | Code     of string * stack_t
+  | Code     of string * stack
   | Start    of string
   | End
   | In
 
-(* --------------------------------------------------------------------------
+(* ------------------------------------------------------------------------
    Global references
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------ *)
 
 val (infix_glob : (string * infixity_t) list ref) = ref []
 val open_cache = ref []
+val ttt_unfold_cthy = ref "scratch"
 
-(* --------------------------------------------------------------------------
+(* ------------------------------------------------------------------------
    Test starting parentheses
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------ *)
 
 fun hd_code_par2 m =
   (hd m = Code ("(",Protect) orelse hd m = Code ("{",Protect))
@@ -65,9 +64,9 @@ fun hd_code_par2 m =
 fun hd_code_par m =
   hd m = Code ("(",Protect) handle _ => false
 
-(* --------------------------------------------------------------------------
+(* ------------------------------------------------------------------------
    Program extraction
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------ *)
 
 fun stringl_of_infix (a,b) = case b of
     Inf_left n  => ["infix" ,int_to_string n,a]
@@ -121,7 +120,7 @@ fun replace_code1 st = case st of
     (_,Replace sl)  => sl
   | (_,SReplace sl) => sl
   | (s,Protect)     => singleton s
-  | (s,Watch)       => (debug_unfold ("replace_code1: " ^ s); singleton s)
+  | (s,Watch)       => (debug ("replace_code1: " ^ s); singleton s)
   | _               => raise ERR "replace_code1" ""
 
 fun replace_code2 st = case st of
@@ -134,7 +133,7 @@ fun replace_code2 st = case st of
     )
   | (s,SReplace sl) => mlquote_singleton (String.concatWith " " sl)
   | (s,Protect)     => mlquote_singleton s
-  | (s,Watch)       => (debug_unfold ("replace_code2: " ^ s);
+  | (s,Watch)       => (debug ("replace_code2: " ^ s);
                        singleton (String.concatWith " " (record_fetch s []))
                        )
   | _               => raise ERR "replace_code2" ""
@@ -165,19 +164,18 @@ fun replace_program f g p = case p of
 fun replace_program1 p = replace_program replace_code1 singleton p
 fun replace_program2 p = replace_program replace_code2 mlquote_singleton p
 
-(* --------------------------------------------------------------------------
+(* ------------------------------------------------------------------------
    Profiling
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------ *)
 
 val open_time = ref 0.0
 val replace_special_time = ref 0.0
 val replace_id_time = ref 0.0
 
-(* --------------------------------------------------------------------------
-   Poly/ML 5.7
-   rlwrap poly
+(* ------------------------------------------------------------------------
+   Poly/ML 5.7 rlwrap poly
    val l = map (fn (a,b) => a) (#allVal (PolyML.globalNameSpace) ());
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------ *)
 
 val basis = String.tokens Char.isSpace
 (
@@ -188,9 +186,9 @@ val basis = String.tokens Char.isSpace
 "false abs <> exnName Domain Bind true >= valOf <= not := hd chr concat floor"
 );
 
-(* --------------------------------------------------------------------------
+(* ------------------------------------------------------------------------
    Rebuild store_thm calls
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------ *)
 
 fun rm_squote s =
   if String.sub (s,0) = #"\"" andalso String.sub (s,String.size s - 1) = #"\""
@@ -208,9 +206,9 @@ fun rm_bbra bbra charl =
 
 fun rm_bbra_str s = implode (rm_bbra false (explode s))
 
-(* --------------------------------------------------------------------------
+(* ------------------------------------------------------------------------
    Record global values as string for further references
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------ *)
 
 fun is_endtype opar s =
   opar <= 0 andalso
@@ -247,9 +245,9 @@ fun split_endval_aux test opar acc sl =
 fun split_endval sl = split_endval_aux is_endval 0 [] sl
 fun split_endtype sl = split_endval_aux is_endtype 0 [] sl
 
-(* --------------------------------------------------------------------------
+(* ------------------------------------------------------------------------
    Extract pattern and identifiers.
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------ *)
 
 fun extract_pattern s sl =
   let
@@ -281,12 +279,12 @@ fun extract_infix inf_constr l =
     (map (f n) body, cont)
   end
 
-(* ---------------------------------------------------------------------------
+(* ------------------------------------------------------------------------
    Watching and replacing some special values:
    functions calling save_thm
    functions making a definitions
    functions with side effects (export_rewrites) which can be unfolded.
-   -------------------------------------------------------------------------- *)
+   ----------------------------------------------------------------------- *)
 
 val store_thm_list =
   ["store_thm","maybe_thm","Store_thm","asm_store_thm"]
@@ -328,9 +326,9 @@ val watch_list_init =
 
 val watch_dict = dnew String.compare (map (fn x => (x,())) watch_list_init)
 
-(* --------------------------------------------------------------------------
+(* ------------------------------------------------------------------------
    Extract calls
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------ *)
 
 val let_flag = ref false
 
@@ -370,7 +368,7 @@ fun extract_store_thm sl =
     val (term,qtac) = split_codelevel "," l0
     val name = original_code (last namel)
   in
-    if is_string name
+    if is_quoted name
     then SOME (rm_bbra_str (rm_squote name), namel, term, qtac, lflag, cont)
     else NONE
   end
@@ -390,7 +388,7 @@ fun extract_thmname sl =
     val (namel,_) = split_codelevel "," body
     val name = original_code (last namel)
   in
-    if is_string name
+    if is_quoted name
     then SOME (rm_bbra_str (rm_squote name),cont)
     else NONE
   end
@@ -403,15 +401,15 @@ fun extract_recordname sl =
     val ll1 = map (split_codelevel "=") ll0
     val name = original_code (last (assoc [Code ("name",Protect)] ll1))
   in
-    if is_string name
+    if is_quoted name
     then SOME (rm_bbra_str (rm_squote name),cont)
     else NONE
   end
   handle _ => NONE
 
-(* --------------------------------------------------------------------------
+(* ------------------------------------------------------------------------
    Extract a program sketch
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------ *)
 
 fun concat_with el ll = case ll of
     []     => []
@@ -491,9 +489,9 @@ and sketch_record m =
     concat_with (Code (",",Protect)) l @ [Code ("}",Protect)] @ sketch cont
   end
 
-(* --------------------------------------------------------------------------
+(* ------------------------------------------------------------------------
    Stack
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------ *)
 
 val push_time = ref 0.0
 
@@ -524,7 +522,7 @@ fun replace_struct stack id =
     SOME (Structure full_id) => [full_id]
   | _ =>
     (if mem #"." (explode id) then ()
-     else debug_unfold ("warning: replace_struct: " ^ id); [id])
+     else debug ("warning: replace_struct: " ^ id); [id])
 
 fun stack_find stack id = case stack of
     []        => NONE
@@ -539,7 +537,7 @@ fun replace_id stack id =
   | SOME (SException full_id) => SReplace [full_id]
   | SOME (Structure full_id) => SReplace [full_id]
   | _ =>
-    (if mem #"." (explode id) then () else debug_unfold ("id: " ^ id);
+    (if mem #"." (explode id) then () else debug ("id: " ^ id);
     SReplace [id])
 
 fun let_in_end s head body id =
@@ -567,31 +565,39 @@ fun ppstring_stac qtac =
     String.concatWith " " ["(","String.concatWith",mlquote " ","\n",tac3,")"]
   end
 
-(* --------------------------------------------------------------------------
+(* ------------------------------------------------------------------------
    Final modifications of the scripts
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------ *)
 
 val is_thm_flag = ref false
-val in_pattern_level = ref 0
 
-fun modified_program inh p = case p of
+fun modified_program (h,d) p =
+  let fun continue m' = modified_program (h,d) m' in
+  case p of
     [] => []
-  | Open sl :: m    => ["open"] @ sl @ modified_program inh m
-  | Infix l :: m    =>
-    List.concat (map stringl_of_infix l) @ modified_program inh m
-  | In :: m         => "in" :: modified_program inh m
-  | Start s :: m    => s :: modified_program inh m
-  | End :: m        => "end" :: modified_program inh m
+  | Open sl :: m    => ["open"] @ sl @ continue m
+  | Infix l :: m    => List.concat (map stringl_of_infix l) @ continue m
+  | In :: m         => "in" :: continue m
+  | Start s :: m    => s :: continue m
+  | End :: m        => "end" :: continue m
+  | Pattern (s,head,sep,body) :: m =>
+    let
+      val _ = if d = 0 then is_thm_flag := false else ()
+      val head' = modified_program (true, d+1) head
+      val body' = modified_program ((s <> "val") orelse h, d+1) body
+      val semicolon =
+        if d = 0 andalso !is_thm_flag then [";"] else []
+    in
+      semicolon @ [s] @ head' @ [sep] @ body' @ continue m
+    end
   | Code (a,_) :: m =>
     (
-    if mem (drop_sig a) ["export_theory"]
-      then modified_program inh m
-    else if inh
-      then a :: modified_program inh m
+    if mem (drop_sig a) ["export_theory"] then continue m
+    else if h orelse d > 1 then a :: continue m
     else if mem (drop_sig a) store_thm_list andalso hd_code_par m
       then
       case extract_store_thm (tl m) of
-        NONE => a :: modified_program inh m
+        NONE => a :: continue m
       | SOME (name,namel,term,qtac,lflag,cont) =>
         let
           val _ = is_thm_flag := true
@@ -608,12 +614,12 @@ fun modified_program inh p = case p of
             ["in","tttRecord.record_proof",
              mlquote name,lflag_name,"tactictoe_tac2","tactictoe_tac1","end"] @
           [")"]
-          @ modified_program inh cont
+          @ continue cont
         end
     else if mem (drop_sig a) prove_list andalso hd_code_par m
       then
       case extract_prove (tl m) of
-        NONE => a :: modified_program inh m
+        NONE => a :: continue m
       | SOME (term,qtac,lflag,cont) =>
         let
           val _ = is_thm_flag := true
@@ -631,30 +637,16 @@ fun modified_program inh p = case p of
             ["in","tttRecord.record_proof",
              mlquote name,lflag_name,"tactictoe_tac2","tactictoe_tac1","end"] @
           [")"]
-          @ modified_program inh cont
+          @ continue cont
         end
-    else a :: modified_program inh m
+    else a :: continue m
     )
-  | Pattern (s,head,sep,body) :: m =>
-    let 
-      val _ = if !in_pattern_level <= 0 then is_thm_flag := false else ()
-      val _ = incr in_pattern_level
-      val head' = modified_program true head
-      val body' = modified_program (s <> "val") body
-      val semicolon = 
-        if mem s ["val"] andalso 
-           !in_pattern_level <= 1 andalso
-           !is_thm_flag = true
-        then [";"] 
-        else []
-      val _ = decr in_pattern_level
-    in
-      semicolon @ [s] @ head' @ [sep] @ body' @ modified_program false m
-    end
 
-(* --------------------------------------------------------------------------
+
+  end
+(* ------------------------------------------------------------------------
    Stack continued
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------ *)
 
 fun stackvl_of_value idl head body =
   let
@@ -698,7 +690,7 @@ fun open_struct_aux stack s'=
       let
         val l0 = String.tokens (fn x => x = #".") s
         val (l1,l2,l3,l4) = import_struct s handle Io _ =>
-          export_import_struct (!dirorg_glob) s
+          export_import_struct s
         fun f constr a =
           let fun g l =
             (String.concatWith "." (l @ [a]), constr (s ^ "." ^ a))
@@ -719,10 +711,10 @@ fun open_struct stack s = total_time open_time (open_struct_aux stack) s
 
 fun open_structure s = open_struct_aux [] s
 
-(* ---------------------------------------------------------------------------
+(* ------------------------------------------------------------------------
    Functions for which we know how to extract the name of the theorem from
    its arguments.
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------ *)
 
 fun is_watch_name x = mem (drop_sig x) (store_thm_list @ name_thm_list)
 
@@ -894,44 +886,52 @@ fun print_sl oc sl = case sl of
   | a :: m => (if is_break a then os oc ("\n" ^ a) else os oc (" " ^ a);
                print_sl oc m)
 
-val infix_decl = tactictoe_dir ^ "/src/infix_file.sml"
+fun string_of_bool flag = if flag then "true" else "false"
+
+fun output_flag oc s x =
+  osn oc ("val _ = " ^ s ^ " := " ^ string_of_bool (!x));
 
 fun output_header oc cthy =
   (
   app (osn oc)
   [
-  "(* ========================================================================== *)",
-  "(* This file was modifed by TacticToe.                                        *)",
-  "(* ========================================================================== *)"
+  "(* =================================================================== *)",
+  "(* This file was modifed by TacticToe.                                 *)",
+  "(* =================================================================== *)"
   ];
-  app (os oc) (bare_readl infix_decl);
-  if !eprover_eval_flag 
-    then osn oc ("val _ = tttSetup.eprover_eval_flag := true")
-    else ()
+  (* infix operators *)
+  app (os oc) (bare_readl infix_file);
+  (* debugging *)
+  output_flag oc "aiLib.debug_flag" debug_flag;
+  (* recording *)
+  output_flag oc "tttSetup.ttt_recprove_flag" ttt_recprove_flag;
+  output_flag oc "tttSetup.ttt_reclet_flag" ttt_reclet_flag;
+  (* evaluation *)
+  if !ttt_ttteval_flag then osn oc
+    "val _ = tttSetup.ttt_evalfun_glob := Option.SOME tacticToe.ttt_eval"
+  else if !ttt_hheval_flag then osn oc
+    "val _ = tttSetup.ttt_evalfun_glob := Option.SOME holyHammer.hh_eval"
+  else osn oc  "val _ = tttSetup.ttt_evalfun_glob := Option.NONE"
   ;
-  if !ttt_eval_flag 
-    then osn oc ("val _ = tttSetup.ttt_eval_flag := true")
-    else ()
-  ;
+  (* global references *)
+  osn oc ("val _ = tttSetup.ttt_search_time := " ^
+    Real.toString (!ttt_search_time));
+  osn oc ("val _ = tttSetup.ttt_tactic_time := " ^
+    Real.toString (!ttt_tactic_time));
+  (* hook *)
   osn oc ("val _ = tttRecord.start_record_thy " ^ mlquote cthy)
   )
 
-
 fun output_foot oc cthy =
-  osn oc ("val _ = tttRecord.end_record_thy " ^ mlquote cthy)
+  osn oc ("\nval _ = tttRecord.end_record_thy " ^ mlquote cthy)
 
 fun start_unfold_thy cthy =
   (
-  debug_unfold ("start_unfold_thy: " ^ cthy);
+  debug ("start_unfold_thy: " ^ cthy);
   ttt_unfold_cthy := cthy;
-  mkDir_err ttt_open_dir; mkDir_err ttt_unfold_dir;
-  erase_file (ttt_unfold_dir ^ "/" ^ cthy);
   (* statistics *)
-  n_store_thm := 0;
-  open_time := 0.0;
-  replace_special_time := 0.0;
-  replace_id_time := 0.0;
-  push_time := 0.0;
+  n_store_thm := 0; open_time := 0.0; replace_special_time := 0.0;
+  replace_id_time := 0.0; push_time := 0.0;
   (* initial stack *)
   infix_glob := overlay_infixity;
   (* cache *)
@@ -941,10 +941,10 @@ fun start_unfold_thy cthy =
 fun end_unfold_thy () =
   let
     val n = !n_store_thm
-    fun f s r = debug_unfold (s ^ ": " ^ Real.toString (!r))
+    fun f s r = debug (s ^ ": " ^ Real.toString (!r))
   in
     print_endline (int_to_string n ^ " proofs unfolded");
-    debug_unfold (int_to_string n ^ " proofs unfolded");
+    debug (int_to_string n ^ " proofs unfolded");
     f "Push" push_time;
     f "Open" open_time;
     f "Replace special" replace_special_time;
@@ -953,9 +953,10 @@ fun end_unfold_thy () =
 
 fun unquoteString thy s =
   let
-    val _ = mkDir_err ttt_code_dir
-    val fin  = ttt_code_dir ^ "/quoteString1" ^ thy
-    val fout = ttt_code_dir ^ "/quoteString2" ^ thy
+    val dir = tactictoe_dir ^ "/code"
+    val _ = mkDir_err dir
+    val fin  = dir ^ "/quoteString1" ^ thy
+    val fout = dir ^ "/quoteString2" ^ thy
     val cmd = HOLDIR ^ "/bin/unquote" ^ " " ^ fin ^ " " ^ fout
   in
     writel fin [s];
@@ -969,30 +970,30 @@ fun sketch_wrap thy file =
     val s1 = String.concatWith " " sl
     val s2 = unquoteString thy s1
     val s3 = rm_endline (rm_comment s2)
-    val sl3 = ttt_lex s3
+    val sl3 = partial_sml_lexer s3
   in
     sketch sl3
   end
 
 fun unfold_wrap p = unfold 0 [dnew String.compare (map protect basis)] p
 
-(* ---------------------------------------------------------------------------
+(* --------------------------------------------------------------------------
    Rewriting script
    -------------------------------------------------------------------------- *)
 
 fun tttsml_of file = OS.Path.base file ^ "_ttt.sml"
 
 fun print_program cthy fileorg sl =
-  let 
-    val _ = debug_unfold ("print_program: " ^ fileorg)
+  let
+    val _ = debug ("print_program: " ^ fileorg)
     val fileout = tttsml_of fileorg
-    val save_dir = tactictoe_dir ^ "/log_scripts"
+    val scriptdir = tactictoe_dir ^ "/scripts"
+    val _ = mkDir_err scriptdir
     val oc = TextIO.openOut fileout
-    fun script_save () = 
-      let 
-        val _ = mkDir_err save_dir
-        val cmd = "cp " ^ fileout ^ " " ^ 
-          (save_dir ^ "/" ^ cthy ^ "_debugScript.sml")
+    fun script_save () =
+      let
+        val cmd = "cp " ^ fileout ^ " " ^
+          (scriptdir ^ "/" ^ cthy ^ "_debugScript")
       in
         cmd_in_dir tactictoe_dir cmd
       end
@@ -1007,13 +1008,13 @@ fun print_program cthy fileorg sl =
 fun rewrite_script thy fileorg =
   let
     val _ = start_unfold_thy thy
-    val _ = debug_unfold ("sketch_wrap: " ^ fileorg)
+    val _ = debug ("sketch_wrap: " ^ fileorg)
     val p0 = sketch_wrap thy fileorg
-    val _ = debug_unfold "unfold_wrap"
+    val _ = debug "unfold_wrap"
     val p2 = unfold_wrap p0
-    val _ = debug_unfold "modified_program"
-    val _ = (is_thm_flag := false; in_pattern_level := 0)
-    val sl5 = modified_program false p2
+    val _ = debug "modified_program"
+    val _ = is_thm_flag := false
+    val sl5 = modified_program (false,0) p2
   in
     print_program thy fileorg sl5;
     end_unfold_thy ()
@@ -1030,33 +1031,31 @@ fun find_script x =
 fun clean_dir cthy dir = (mkDir_err dir; erase_file (dir ^ "/" ^ cthy))
 
 fun ttt_rewrite_thy thy =
+  if mem thy ["bool","min"] then () else
   let
-    val _ = clean_dir thy ttt_unfold_dir
     val scriptorg = find_script thy
     val dirorg = OS.Path.dir scriptorg
-    val _ = print_endline ("TacticToe: ttt_rewrite_thy: " ^ thy ^ 
+    val _ = print_endline ("TacticToe: ttt_rewrite_thy: " ^ thy ^
       "\n  " ^ scriptorg)
   in
-    dirorg_glob := dirorg;
     rewrite_script thy scriptorg
   end
- 
-fun exists_thy thy = exists_file (ttt_tacfea_dir ^ "/" ^ thy)  
-  
+
 fun ttt_rewrite () =
   let
     val thyl0 = ancestry (current_theory ())
     val thyl1 = sort_thyl thyl0
     val thyl2 = filter (fn x => not (mem x ["min","bool"])) thyl1
-    val thyl3 = filter (not o exists_thy) thyl2
+    val thyl3 = filter (not o exists_tacdata_thy) thyl2
   in
     app ttt_rewrite_thy thyl3;
     thyl3
   end
 
-(* ---------------------------------------------------------------------------
+(* ------------------------------------------------------------------------
    Extra safety during recording
-   -------------------------------------------------------------------------- *)
+   (in case of export_theory is not catched)
+   ------------------------------------------------------------------------ *)
 
 fun save_file file =
   let
@@ -1068,7 +1067,7 @@ fun save_file file =
 
 fun restore_file file =
   let
-    val dir = #dir (OS.Path.splitDirFile file)
+   val dir = #dir (OS.Path.splitDirFile file)
     val cmd1 = "cp -p " ^ (file ^ ".tttsave") ^ " " ^ file
     val cmd2 = "rm " ^ (file ^ ".tttsave")
   in
@@ -1076,18 +1075,18 @@ fun restore_file file =
   end
 
 fun save_scripts script = app save_file (script :: theory_files script)
-
 fun restore_scripts script = app restore_file (script :: theory_files script)
 
-(* ---------------------------------------------------------------------------
+(* -------------------------------------------------------------------------
    Recording
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------ *)
 
 fun ttt_record_thy thy =
+  if mem thy ["bool","min"] then () else
   let val scriptorg = find_script thy in
     let
       val _ = save_scripts scriptorg
-      val _ = print_endline ("TacticToe: ttt_record_thy: " ^ thy ^ 
+      val _ = print_endline ("TacticToe: ttt_record_thy: " ^ thy ^
         "\n  " ^ scriptorg)
     in
       run_rm_script (mem thy core_theories) (tttsml_of scriptorg);
@@ -1101,41 +1100,13 @@ fun ttt_record_thyl thyl = app ttt_record_thy thyl
 fun ttt_record () =
   let val thyl = ttt_rewrite () in ttt_record_thyl thyl end
 
-fun split_n_aux i n nl =
-  if i >= 0
-  then filter (fn x => (fst x) mod n = i) nl :: split_n_aux (i-1) n nl
-  else []
-
-fun split_n n l =
-  let 
-    val ll = split_n_aux (n-1) n (number_list 0 l) 
-  in
-    rev (map (map snd) ll)
-  end
- 
-fun ttt_record_parallel n =
-  let 
-    val thyl = ttt_rewrite () 
-    val thyll = split_n n thyl
-    fun rec_fork thyl = Thread.Thread.fork (fn () => ttt_record_thyl thyl, []) 
-    val threadl = map rec_fork thyll
-    fun loop () = 
-      (
-      OS.Process.sleep (Time.fromReal 1.0);
-      if exists Thread.Thread.isActive threadl
-      then loop ()
-      else print_endline "Recording is successful"
-      )
-  in
-    loop ()
-  end
-
-(* ---------------------------------------------------------------------------
-   Recording tools
-   -------------------------------------------------------------------------- *)
+(* ------------------------------------------------------------------------
+   Theories of the standard library
+   ------------------------------------------------------------------------ *)
 
 fun sigobj_theories () =
   let
+    val ttt_code_dir = tactictoe_dir ^ "/code"
     val _    = mkDir_err ttt_code_dir
     val file = ttt_code_dir ^ "/theory_list"
     val sigdir = HOLDIR ^ "/sigobj"
@@ -1154,69 +1125,5 @@ fun load_sigobj () =
   in
     app load l1
   end
-
-fun ttt_clean_all () =
-  (
-  rmDir_rec ttt_open_dir;
-  rmDir_rec ttt_thmfea_dir;
-  rmDir_rec ttt_tacfea_dir;
-  rmDir_rec ttt_glfea_dir
-  )
-
-(* ---------------------------------------------------------------------------
-   Evaluation
-   -------------------------------------------------------------------------- *)
-
-fun ttt_eval_thy thy =
-  (
-  ttt_eval_flag := true; 
-  ttt_rewrite_thy thy; 
-  ttt_record_thy thy; 
-  ttt_eval_flag := false
-  )
-
-fun ttt_eval_parallel n thyl =
-  let 
-    val thyll = split_n n thyl
-    fun rec_fork thyl = 
-      Thread.Thread.fork (fn () => app ttt_eval_thy thyl, []) 
-    val threadl = map rec_fork thyll
-    fun loop () = 
-      (
-      OS.Process.sleep (Time.fromReal 1.0);
-      if exists Thread.Thread.isActive threadl
-      then loop ()
-      else print_endline "Evaluation is successful"
-      )
-  in
-    loop ()
-  end
-
-fun eprover_eval_thy thy =
-  (
-  eprover_eval_flag := true; 
-  ttt_rewrite_thy thy; 
-  ttt_record_thy thy; 
-  ttt_eprover_flag := false
-  )
-
-fun eprover_eval_parallel n thyl =
-  let 
-    val thyll = split_n n thyl
-    fun rec_fork thyl = 
-      Thread.Thread.fork (fn () => app eprover_eval_thy thyl, []) 
-    val threadl = map rec_fork thyll
-    fun loop () = 
-      (
-      OS.Process.sleep (Time.fromReal 1.0);
-      if exists Thread.Thread.isActive threadl
-      then loop ()
-      else print_endline "Evaluation is successful"
-      )
-  in
-    loop ()
-  end
-
-
 
 end (* struct *)

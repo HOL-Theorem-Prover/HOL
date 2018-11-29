@@ -3,9 +3,9 @@ open Theory Datatype Drule Thm Term Lib listTheory ratTheory;
 val types = ref ([] : hol_type list);
 
 fun DataType t def =
-let	val _ = (Parse.Type t ; ()) handle _ => Hol_datatype def
+let     val _ = (Parse.Type t ; ()) handle _ => Hol_datatype def
 in
-	(types := Parse.Type t :: (!types))
+        (types := Parse.Type t :: (!types))
 end;
 
 fun AddType t = (types := Parse.Type t :: (!types));
@@ -32,7 +32,7 @@ val _ = DataType `:'a BTree` `BTree = BT of 'a + BTree # BTree`;
 
 val _ = DataType `:'a RoseTree` `RoseTree = RTBranch of ('a # RoseTree) List`;
 val _ = DataType `:'a BRoseTree`
-      		 `BRoseTree = BRTBranch of ('a # BRoseTree) BList`;
+                 `BRoseTree = BRTBranch of ('a # BRoseTree) BList`;
 val _ = DataType `:RoseBush` `RoseBush = RBush of RoseBush RoseTree`;
 val _ = DataType `:BRoseBush` `BRoseBush = BBush of BRoseBush BRoseTree`;
 val _ = DataType `:Thicket` `Thicket = TStalk of Thicket Tre`;
@@ -48,9 +48,9 @@ val _ = DataType `:'a CS1` `CS1 = CS1C of 'a CS2 => 'a CS4`;
 
 
 val _ = DataType `:'a DListL`
-      	`DListL = DLR of DListR ; DListR = DLRNil | DLRCons of 'a => DListL`;
+        `DListL = DLR of DListR ; DListR = DLRNil | DLRCons of 'a => DListL`;
 (* val _ = DataType `:'a DLTree`
-       	   `DLTree = DLBranch of ('a # DLTree DListR)` --> Fails!! *)
+           `DLTree = DLBranch of ('a # DLTree DListR)` --> Fails!! *)
 val _ = DataType `:'a CSList` `CSList = CSNil | CSCons of 'a => CSList CS1`;
 
 (*****************************************************************************)
@@ -58,11 +58,11 @@ val _ = DataType `:'a CSList` `CSList = CSNil | CSCons of 'a => CSList CS1`;
 (*****************************************************************************)
 
 val _ = DataType `:NumProdList`
-		`NumProdList = NPLNull | NPLCons of num # num => NumProdList`;
+                `NumProdList = NPLNull | NPLCons of num # num => NumProdList`;
 
 val _ = DataType `:UncurriedNPL`
-		 `UncurriedNPL = UNPLNull |
-		 	       	 UNPLCons of num # num # UncurriedNPL`;
+                 `UncurriedNPL = UNPLNull |
+                                 UNPLCons of num # num # UncurriedNPL`;
 
 (*****************************************************************************)
 (* Previous types from earlier incarnations                                  *)
@@ -76,33 +76,33 @@ val _ = DataType `:('a,'b) test3`  `test3 = Sum1 of 'a | Sum2 of 'b`;
 val _ = DataType `:test4`  `test4 = Recursive of test4 | End`;
 val _ = DataType `:test5`  `test5 = RecursiveList of test5 list | EndList`;
 val _ = DataType `:test6`
-      		 `test6 = DoubleList of test6 list => test6 list | EndD`;
+                 `test6 = DoubleList of test6 list => test6 list | EndD`;
 val _ = DataType `:'a test7`  `test7 = Node of test7 # test7 | Leaf of 'a`;
 val _ = DataType `:test8`  `test8 = Double of test8 test7 # test8 list | End8`;
 val _ = DataType `:test9l`
-      		 `test9l = R9 of test9r | EndL ; test9r = L9 of test9l | EndR`;
+                 `test9l = R9 of test9r | EndL ; test9r = L9 of test9l | EndR`;
 val _ = DataType `:testA`
-      		 `testA = <| Reg1 : num; Reg2 : num; Waiting : bool |>`;
+                 `testA = <| Reg1 : num; Reg2 : num; Waiting : bool |>`;
 val _ = DataType `:testBa`
-      		 `testBa = Aa of num | Ba of testBb | Ca of testBc ;
-		  testBb = Bb of int | Ab of testBa | Cb of testBc ;
-		  testBc = Cc of rat | Bc of testBb | Ac of testBa`;
+                 `testBa = Aa of num | Ba of testBb | Ca of testBc ;
+                  testBb = Bb of int | Ab of testBa | Cb of testBc ;
+                  testBc = Cc of rat | Bc of testBb | Ac of testBa`;
 val _ = DataType `:('a,'b) testCR`
-      		 `testCR = CR of ('a # testCL) list ;
-		  testCL = CL of ('b # testCR) list`;
+                 `testCR = CR of ('a # testCL) list ;
+                  testCL = CL of ('b # testCR) list`;
 val _ = DataType `:testDX`
-      		 `testDX = dL of testDZ => testDY | DeL ;
-		  testDY = dR of testDX ; testDZ = dRec of testDX`;
+                 `testDX = dL of testDZ => testDY | DeL ;
+                  testDY = dR of testDX ; testDZ = dRec of testDX`;
 val _ = DataType `:testEX`
-      		 `testEX = eL of testEZ => testEY | EeL ;
-		  testEY = eR of testEZ => testEX | EeR ;
-		  testEZ = twoRec of testEX => testEY`;
+                 `testEX = eL of testEZ => testEY | EeL ;
+                  testEY = eR of testEZ => testEX | EeR ;
+                  testEZ = twoRec of testEX => testEY`;
 val _ = DataType `:('a,'b) testFX`
-      		 `testFX = fL of testFZ => testFY | FeL ;
-		  testFY = fR of testFZ => testFX | FeR ;
-		  testFZ = fRec of testFX => 'a => 'b => testFY`;
+                 `testFX = fL of testFZ => testFY | FeL ;
+                  testFY = fR of testFZ => testFX | FeR ;
+                  testFZ = fRec of testFX => 'a => 'b => testFY`;
 val _ = DataType `:('a,'b) state_out`
-      		 `state_out = <| state : 'a; out : 'b |>`;
+                 `state_out = <| state : 'a; out : 'b |>`;
 val _ = DataType `:register`
 `register =
  r0     | r1     | r2      | r3      | r4      | r5      | r6      | r7  |
@@ -119,7 +119,7 @@ val _ = DataType `:exceptions`
                 dabort | address |interrupt | fast`;
 val _ = DataType `:('a,'b,'c) sumpair` `sumpair = Lsp of 'a | Rsp of 'b => 'c`;
 val _ = DataType `:'a my_tree`
-      		 `my_tree = Branch of ('a,my_tree,my_tree) sumpair`;
+                 `my_tree = Branch of ('a,my_tree,my_tree) sumpair`;
 
 (*****************************************************************************)
 (* Red-Black trees                                                           *)
@@ -136,14 +136,14 @@ val _ = DataType  `:One` `One = Single_contructor`;
 
 val _ = DataType
         `:('A,'B) Term`
-	`Term = Var of 'A => 'B
+        `Term = Var of 'A => 'B
                | App of bool => Termlist;
       Termlist = Emp
                | Consp of Term => Termlist`;
 
 val _ = DataType
-	`:('A,'B) Btree`
-    	`Btree = Lf of 'A
+        `:('A,'B) Btree`
+        `Btree = Lf of 'A
            | Nd of 'B => Btree => Btree`;;
 
 val _ = DataType
@@ -320,6 +320,6 @@ val _ = DataType
              | RECvalbind_e   of valbind_e`;;
 
 val _ = save_thm("LIST",LIST_CONJ (map (REFL o curry mk_var "a")
-      				  (rev (!types))));
+                                  (rev (!types))));
 
 val _ = export_theory();

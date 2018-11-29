@@ -1,13 +1,11 @@
-open HolKernel Parse boolLib bossLib;
+open HolKernel Parse boolLib
 
 open proj2ATheory
 val _ = new_theory "proj2B";
 
-val thm2B = Q.store_thm(
+val thm2B = store_thm(
   "thm2B",
-  ‘ODD (bar n) ⇔ 0 < n’,
-  simp[bar_def] >> Cases_on ‘n’ >> simp[] >>
-  simp[arithmeticTheory.MULT_CLAUSES, arithmeticTheory.ODD_ADD,
-       arithmeticTheory.ODD_MULT]);
+  “~bar m n <=> (m <=> F) \/ (n <=> F)”,
+  REWRITE_TAC[bar_def, DE_MORGAN_THM]);
 
 val _ = export_theory();

@@ -3222,7 +3222,7 @@ val VAR_RES_STRUCTURE_NORMALISE_CONV =
 fun QUANT_INSTANTIATE_HEURISTIC___VAR_RES_FRAME_SPLIT___bool (sys:quant_heuristic_base) v tt =
 let
    val (_,_,_,_,_,_,sfb_imp,_) = dest_VAR_RES_FRAME_SPLIT tt
-			  handle HOL_ERR _ => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp;
+                          handle HOL_ERR _ => raise QUANT_INSTANTIATE_HEURISTIC___no_guess_exp;
 
    val (sfs,_) = bagSyntax.dest_bag sfb_imp;
    val sfs' = filter is_var_res_bool_proposition sfs;

@@ -18,6 +18,7 @@ open Q wordsSyntax instructionTheory Data assemblerML;
 
 (* ------------------------------------------------------------------------- *)
 
+val ERR = mk_HOL_ERR "instructionSyntax"
 fun mk_bool b = if b then T else F;
 
 fun mk_word t n = mk_n2w(numLib.mk_numeral n, t);

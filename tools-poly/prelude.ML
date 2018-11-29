@@ -7,29 +7,26 @@ open HolKernel Parse boolLib proofManagerLib
 (* Install pretty-printers *)
 
 local
-  fun pp2polypp (ppfn: PP.ppstream -> 'b -> unit) =
+  fun pp2polypp (ppfn: 'b -> HOLPP.pretty) =
     let
-      fun f pps x = Parse.respect_width_ref Globals.linewidth ppfn pps x
-                    handle e => Raise e
     in
-      fn depth => fn printArgTypes => fn e: 'b =>
-        PolyML.PrettyString (PP.pp_to_string (!Globals.linewidth) f e)
+      fn depth => fn printArgTypes => fn e: 'b => ppfn e
     end
-  fun gprint g pps t =
+  fun gprint g =
     let
       val tyg = Parse.type_grammar ()
       val (_, ppt) = Parse.print_from_grammars (tyg, g)
     in
-      ppt pps t
+      smpp.lift ppt
     end
-  val ppg = term_grammar.prettyprint_grammar gprint
-  val ppgrules = term_grammar.prettyprint_grammar_rules gprint
-  fun locpp pps l = PP.add_string pps (locn.toShortString l)
-  fun pp_redblackmap pps (d: ('a,'b) Redblackmap.dict) =
-    PP.add_string pps
+  val ppg = Parse.mlower o term_grammar.prettyprint_grammar gprint
+  val ppgrules = Parse.mlower o term_grammar.prettyprint_grammar_rules gprint
+  fun locpp l = PP.add_string (locn.toShortString l)
+  fun pp_redblackmap (d: ('a,'b) Redblackmap.dict) =
+    PP.add_string
       ("<Redblackmap(" ^ Int.toString (Redblackmap.numItems d) ^ ")>")
-  fun pp_redblackset pps (s: 'a Redblackset.set) =
-    PP.add_string pps
+  fun pp_redblackset (s: 'a Redblackset.set) =
+    PP.add_string
       ("<Redblackset(" ^ Int.toString (Redblackset.numItems s) ^ ")>")
 in
   val () =
@@ -41,7 +38,7 @@ in
       in
         PolyML.addPrettyPrinter pp_typebase
       ; PolyML.addPrettyPrinter pp_seq
-      ; PolyML.addPrettyPrinter (pp2polypp HOLset.pp_holset)
+      ; PolyML.addPrettyPrinter HOLset.pp_holset
       end
     else
       let
@@ -88,13 +85,23 @@ in
             (case b of
                HOLPP.CONSISTENT => "CONSISTENT"
              | HOLPP.INCONSISTENT => "INCONSISTENT")
+        fun pp_symtab d printArgTypes (t : 'a Symtab.table) =
+          Symtab.pp (fn a => printArgTypes(a,d-1)) t
+        fun pp_inttab d printArgTypes (t : 'a Inttab.table) =
+          Inttab.pp (fn a => printArgTypes(a,d-1)) t
+        fun pp_knametab d printArgTypes (t : 'a KNametab.table) =
+          KNametab.pp (fn a => printArgTypes(a,d-1)) t
       in
         PolyML.addPrettyPrinter pp_db
       ; PolyML.addPrettyPrinter pp_delta
       ; PolyML.addPrettyPrinter pp_verdict
       ; PolyML.addPrettyPrinter pp_frag
       ; PolyML.addPrettyPrinter pp_breakstyle
+      ; PolyML.addPrettyPrinter pp_symtab
+      ; PolyML.addPrettyPrinter pp_inttab
+      ; PolyML.addPrettyPrinter pp_knametab
       end
+  ; PolyML.addPrettyPrinter (pp2polypp HOLPP.pp_pretty)
   ; PolyML.addPrettyPrinter (pp2polypp ppg)
   ; PolyML.addPrettyPrinter (pp2polypp ppgrules)
   ; PolyML.addPrettyPrinter (pp2polypp locpp)
@@ -116,6 +123,7 @@ in
   ; PolyML.addPrettyPrinter (pp2polypp Arbnum.pp_num)
   ; PolyML.addPrettyPrinter (pp2polypp Arbint.pp_int)
   ; PolyML.addPrettyPrinter (pp2polypp Arbrat.pp_rat)
+  ; PolyML.addPrettyPrinter (pp2polypp Tag.pp_tag)
   )
 end
 

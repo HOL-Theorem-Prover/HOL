@@ -19,9 +19,9 @@
 (*
 quietdec := true;
 app load
- ["bossLib", "SyntaxTheory", "PathTheory", "KripkeTheory",
+ ["bossLib", "SyntaxTheory", "PSLPathTheory", "KripkeTheory",
   "UnclockedSemanticsTheory", "rich_listTheory", "intLib","res_quanLib"];
-open SyntaxTheory PathTheory KripkeTheory
+open SyntaxTheory PSLPathTheory KripkeTheory
      UnclockedSemanticsTheory        (* Needed for S_SEM w c (S_CLOCK(r,c1)) *)
      listTheory rich_listTheory;
 val _ = intLib.deprecate_int();
@@ -36,7 +36,7 @@ open HolKernel Parse boolLib bossLib;
 (******************************************************************************
 * Open theories of paths and lists
 ******************************************************************************)
-open SyntaxTheory PathTheory KripkeTheory
+open SyntaxTheory PSLPathTheory KripkeTheory
      UnclockedSemanticsTheory        (* Needed for S_SEM w c (S_CLOCK(r,c1)) *)
      listTheory rich_listTheory res_quanLib;
 
@@ -383,16 +383,16 @@ val F_SEM =
        THEN RW_TAC arith_ss []
        THENL
         [Q.EXISTS_TAC `k`
-          THEN RW_TAC arith_ss [FinitePathTheory.LENGTH_RESTN],
+          THEN RW_TAC arith_ss [FinitePSLPathTheory.LENGTH_RESTN],
          Q.EXISTS_TAC `k`
-          THEN RW_TAC arith_ss [FinitePathTheory.LENGTH_RESTN],
+          THEN RW_TAC arith_ss [FinitePSLPathTheory.LENGTH_RESTN],
          REPEAT DISJ2_TAC
           THEN Q.EXISTS_TAC `i`
-          THEN RW_TAC arith_ss [FinitePathTheory.LENGTH_RESTN]
+          THEN RW_TAC arith_ss [FinitePSLPathTheory.LENGTH_RESTN]
           THEN PROVE_TAC[],
          REPEAT DISJ2_TAC
           THEN Q.EXISTS_TAC `i`
-          THEN RW_TAC arith_ss [FinitePathTheory.LENGTH_RESTN]
+          THEN RW_TAC arith_ss [FinitePSLPathTheory.LENGTH_RESTN]
           THEN PROVE_TAC[]]);
 
 val _ = export_theory();

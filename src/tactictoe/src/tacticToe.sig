@@ -3,29 +3,28 @@ sig
 
   include Abbrev
 
-  (* TacticToe *)
-  val ttt       : tactic
-  val tactictoe : term -> tactic
-
-  (* Settings *)
   val set_timeout : real -> unit
+  val ttt : tactic
+  val tactictoe : term -> thm
 
-  (* Step by step exploration *)
-  val next_tac : goal -> unit
-  val next     : int -> tactic
+  (* contains recorded data from the ancestries of the current theory *)
+  val clean_ttt_tacdata_cache : unit -> unit
+  (* remembers the goal proven by tactictoe *)
+  val clean_ttt_goaltac_cache : unit -> unit
 
-  (* Recording *)
-  val ttt_record          : unit -> unit
-  val ttt_record_parallel : int -> unit
-  val load_sigobj         : unit -> unit
-  val ttt_clean_all       : unit -> unit
-
-  (* Evaluation *)
-  val eval_tactictoe        : goal -> unit
-  val eval_eprover          : goal -> unit
-  val ttt_eval_thy          : string -> unit
-  val eprover_eval_thy      : string -> unit
-  val ttt_eval_parallel     : int -> string list -> unit
-  val eprover_eval_parallel : int -> string list -> unit
+  (* evaluation *)
+  type lbl = (string * real * goal * goal list)
+  type fea = int list
+  type thmdata =
+    (int, real) Redblackmap.dict *
+    (string, int list) Redblackmap.dict
+  type tacdata =
+    {
+    tacfea : (lbl,fea) Redblackmap.dict,
+    tacfea_cthy : (lbl,fea) Redblackmap.dict,
+    taccov : (string, int) Redblackmap.dict,
+    tacdep : (goal, lbl list) Redblackmap.dict
+    }
+  val ttt_eval : thmdata * tacdata -> goal -> unit
 
 end

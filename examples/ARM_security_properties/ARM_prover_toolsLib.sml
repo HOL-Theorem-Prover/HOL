@@ -118,23 +118,23 @@ fun go_on_p cnt = go_on cnt;
 
 
 fun thm_prove a =
-	    let val (cplx_thm, _) = (prove_it a ``assert_mode 16w`` ``assert_mode 16w`` ``empty_unt`` ``empty_sim``)
-	    in
-	       cplx_thm
-	    end;
+            let val (cplx_thm, _) = (prove_it a ``assert_mode 16w`` ``assert_mode 16w`` ``empty_unt`` ``empty_sim``)
+            in
+               cplx_thm
+            end;
 
 fun thm_proveP a =
-	    let val (cplx_thm, _) = (prove_it a ``assert_mode 16w`` ``comb_mode 16w 27w`` ``priv_mode_constraints`` ``priv_mode_similar``)
-	    in
-	       cplx_thm
-	    end;
+            let val (cplx_thm, _) = (prove_it a ``assert_mode 16w`` ``comb_mode 16w 27w`` ``priv_mode_constraints`` ``priv_mode_similar``)
+            in
+               cplx_thm
+            end;
 
 
 fun thm_proveS a =
-	    let val (cplx_thm, _) = (prove_it a ``assert_mode 16w`` ``assert_mode 16w`` ``strict_unt`` ``empty_sim``)
-	    in
-	       cplx_thm
-	    end;
+            let val (cplx_thm, _) = (prove_it a ``assert_mode 16w`` ``assert_mode 16w`` ``strict_unt`` ``empty_sim``)
+            in
+               cplx_thm
+            end;
 
 
 fun prove_and_save (a, name) =
