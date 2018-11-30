@@ -133,13 +133,14 @@ quoteend = "`" | "\226\128\153";
 )
                  else ECHO yyarg yytext);
 <INITIAL>"Theorem"{ws}+{alphaMLid}("["{alphaMLid_list}"]")? => (
-  let
-    val (thmname,with_attrs_string) = dest_ml_thm_binding yytext
-  in
-    ECHO yyarg ("val " ^ thmname ^ " = " ^
-                "(fn q => fn tac => Q.store_thm(\"" ^ with_attrs_string ^
-                "\",q,tac))")
-  end
+  ifscript yyarg
+    (let
+      val (thmname,with_attrs_string) = dest_ml_thm_binding yytext
+    in
+      ECHO yyarg ("val " ^ thmname ^ " = " ^
+                  "(fn q => fn tac => Q.store_thm(\"" ^ with_attrs_string ^
+                  "\",q,tac))")
+    end) yytext
 );
 <INITIAL>{fullquotebegin} {ws}* ":" ({letter} | {ws} | [('] | {digit} | {lowergreek}) => (
                  YYBEGIN tyquote;

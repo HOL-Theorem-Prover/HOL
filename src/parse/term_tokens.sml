@@ -213,7 +213,8 @@ and alphaIdentPrimeDigits locn A0 (acc as (A,pc)) cpts =
       | cp :: rest =>
         if c0 <= cp andalso cp <= c9 then
           alphaIdentPrimeDigits locn (cp::A0) (A,pc*10 + (cp - c0)) rest
-        else alphaIdent locn A0 rest
+        else if isIdent_i cp then alphaIdent locn (cp::A0) rest
+        else ((A_to_string A0,0), cpts)
 
 and alphaIdentFinishedDigits locn A0 (A,pc) cpts =
     (* head of A0 is a prime *)

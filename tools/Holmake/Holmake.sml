@@ -36,6 +36,17 @@ val HOLDIR0 = Systeml.HOLDIR;
 val DEPDIR = ".HOLMK";
 val LOGDIR = ".hollogs";
 
+local
+  val sigobj = OS.Path.concat(HOLDIR0, "sigobj")
+  val frakS = String.implode (map Char.chr [0xF0,0x9D,0x94,0x96])
+in
+fun ppath s = if String.isPrefix sigobj s then
+                frakS ^ String.extract(s,size sigobj,NONE)
+              else s
+fun pflist fs = String.concatWith ", " (map (ppath o fromFile) fs)
+end
+
+
 (**** get_dependencies *)
 (* figures out whether or not a dependency file is a suitable place to read
    information about current target or not, and then either does so, or makes
@@ -494,11 +505,12 @@ end
    in DEPDIR somewhere. *)
 
 fun get_implicit_dependencies incinfo (f: File) : File list = let
-  val _ = diag (fn _ => "Calling get_implicit_dependencies on "^fromFile f)
   val file_dependencies0 =
       get_direct_dependencies {incinfo = incinfo, extra_targets = extra_targets,
                                output_functions = outputfns,
                                DEPDIR = DEPDIR} f
+  val _ = diag (fn _ => "get_implicit_dependencies("^fromFile f^"), " ^
+                        "directdeps = " ^ pflist file_dependencies0)
   val file_dependencies =
       case actual_overlay of
         NONE => file_dependencies0
@@ -521,10 +533,16 @@ in
           get_direct_dependencies {incinfo = incinfo, DEPDIR = DEPDIR,
                                    output_functions = outputfns,
                                    extra_targets = extra_targets}
+      val starters = get_direct_dependencies f
+      (* ignore theories as we don't want to depend on the script files
+         behind them *)
       fun collect_all_dependencies sofar tovisit =
           case tovisit of
             [] => sofar
-          | (f::fs) => let
+          | (UO (Theory _)::fs) => collect_all_dependencies sofar fs
+          | (UI (Theory _)::fs) => collect_all_dependencies sofar fs
+          | f::fs =>
+            let
               val deps =
                   if Path.dir (string_part f) <> "" then []
                   else
@@ -537,7 +555,9 @@ in
               collect_all_dependencies (sofar @ newdeps)
                                        (set_union newdeps fs)
             end
-      val tcdeps = collect_all_dependencies [] [f]
+      val tcdeps = collect_all_dependencies starters starters
+      val _ = diag (fn _ => "get_implicit_dependencies("^fromFile f^"), " ^
+                            "tcdeps = " ^ pflist tcdeps)
       val uo_deps =
           List.mapPartial (fn (UI x) => SOME (UO x) | _ => NONE) tcdeps
       val alldeps = set_union (set_union tcdeps uo_deps)
@@ -565,9 +585,16 @@ in
 end
 
 fun get_explicit_dependencies (f : File) : File list =
-    case (extra_deps (fromFile f)) of
-      SOME deps => map toFile deps
-    | NONE => []
+    let
+      val result = case (extra_deps (fromFile f)) of
+                       SOME deps => map toFile deps
+                     | NONE => []
+    in
+      diag (fn _ => fromFile f ^ " -explicitdeps-> " ^ pflist result);
+      result
+    end
+
+
 
 (** Build graph *)
 
@@ -645,6 +672,8 @@ in
           val (g1, pnode) = build pdep g0
           val secondaries = set_union (get_implicit_dependencies incinfo target)
                                       (get_explicit_dependencies target)
+          val _ = diag (fn _ => target_s ^ "-secondaries-> " ^
+                                pflist secondaries)
           fun foldthis (d, (g, secnodes)) =
             let
               val (g', n) = build d g

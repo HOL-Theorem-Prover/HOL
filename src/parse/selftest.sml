@@ -259,6 +259,10 @@ val _ = app test [
       ("$var$(% foo*\\z)", [Ident "% foo*"]),
       ("(')", [Ident "(", Ident "'", Ident ")"]),   (* e.g., finite_mapScript *)
       ("λx.x", [Ident "λ", Ident "x", Ident ".", Ident "x"]),
+      ("x'0,y)", [Ident "x'0", Ident ",", Ident "y", Ident ")"]),
+      ("x'0)", [Ident "x'0", Ident ")"]),
+      ("(x'0)", [Ident "(", Ident "x'0", Ident ")"]),
+      ("x'²,y)", [Ident "x'", Ident "²", Ident ",", Ident "y", Ident ")"]),
       ("x'", [Ident "x'"]),
       ("x''", [Ident "x''"]),
       ("x'3'", [Ident "x'''"]),
