@@ -1,5 +1,6 @@
 open testutils
 
+infix ++
 val op++ = OS.Path.concat
 
 val hm = Globals.HOLDIR ++ "bin" ++ "Holmake"
