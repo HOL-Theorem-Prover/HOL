@@ -12,9 +12,9 @@ fun main() = let
      linked executable as Interrupt exceptions *)
   val _ = Signal.signal(2, Signal.SIG_HANDLE
                                (fn _ => Thread.Thread.broadcastInterrupt()))
-  val (instream, outstream) =
+  val (instream, outstream, intp) =
       case CommandLine.arguments() of
-        [] => (TextIO.stdIn, TextIO.stdOut)
+        [] => (TextIO.stdIn, TextIO.stdOut, true)
       | [ifile, ofile] => let
           open TextIO
           val is = TextIO.openIn ifile
@@ -28,7 +28,7 @@ fun main() = let
                       | NONE => ();
                       exit failure)
         in
-          (is, os)
+          (is, os, false)
         end
       | _ => (TextIO.output(TextIO.stdErr,
                             "Usage:\n  " ^ CommandLine.name() ^
@@ -39,7 +39,7 @@ fun main() = let
    Kenn Heinrich who helped me see the light with respect to this code *)
 
   open QuoteFilter.UserDeclarations
-  val state as QFS args = newstate true
+  val state as QFS args = newstate intp
 
   fun loop() =
     let
