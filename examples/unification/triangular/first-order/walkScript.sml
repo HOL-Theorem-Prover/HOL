@@ -66,7 +66,7 @@ val walk_FEMPTY = RWstore_thm(
 "walk_FEMPTY",
 `(walk FEMPTY t = t) /\
  (vwalk FEMPTY v = Var v)`,
-Cases_on `t` THEN NTAC 2 (SRW_TAC [][Once(DISCH_ALL vwalk_def)]));
+Cases_on `t` THEN NTAC 2 (simp[Once(DISCH_ALL vwalk_def)]));
 
 val walk_var_vwalk = Q.store_thm(
 "walk_var_vwalk",
