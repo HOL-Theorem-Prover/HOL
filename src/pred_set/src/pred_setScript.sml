@@ -3445,7 +3445,7 @@ val enum_in_s = TAC_PROOF(
 
 (* "define" injection *)
 val inj_def =
-   “∀x. inj (x:'a) = case some n. enum n = x of
+   “!x. inj (x:'a) = case some n. enum n = x of
                      NONE => x
                    | SOME n => enum (n + 1)”
 
