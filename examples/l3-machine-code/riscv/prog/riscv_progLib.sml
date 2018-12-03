@@ -25,6 +25,7 @@ val riscv_2 = syn 3 HolKernel.dest_binop HolKernel.mk_binop
 val riscv_3 = syn 4 HolKernel.dest_triop HolKernel.mk_triop
 val byte = wordsSyntax.mk_int_word_type 8
 val word5 = wordsSyntax.mk_int_word_type 5
+val half = wordsSyntax.mk_int_word_type 16
 val word = wordsSyntax.mk_int_word_type 32
 val dword = wordsSyntax.mk_int_word_type 64
 val (_, mk_riscv_procID, dest_riscv_procID, _) = riscv_1 "riscv_procID"
@@ -44,23 +45,29 @@ val riscv_select_state_thms =
             riscv_comp_defs
 
 val riscv_select_state_pool_thm =
-  pool_select_state_thm riscv_proj_def []
-    (utilsLib.SRW_CONV
-       [pred_setTheory.INSERT_UNION_EQ, stateTheory.CODE_POOL, riscv_instr_def]
-       ``CODE_POOL riscv_instr {(pc, opcode)}``)
+  CONJ
+   (pool_select_state_thm riscv_proj_def []
+      (utilsLib.SRW_CONV
+         [pred_setTheory.INSERT_UNION_EQ, stateTheory.CODE_POOL, riscv_instr_def]
+         ``CODE_POOL riscv_instr {(pc, [w1;w2])}``))
+   (pool_select_state_thm riscv_proj_def []
+      (utilsLib.SRW_CONV
+         [pred_setTheory.INSERT_UNION_EQ, stateTheory.CODE_POOL, riscv_instr_def]
+         ``CODE_POOL riscv_instr {(pc, [w1;w2;w3;w4])}``))
 
 local
   val riscv_instr_tm =
      Term.prim_mk_const {Thy = "riscv_prog", Name = "riscv_instr"}
   val strip_concat =
     HolKernel.strip_binop (Lib.total wordsSyntax.dest_word_concat)
+  val pc_tm = ``^st.c_PC ^id_tm``
+  val pc_var = stateLib.gvar "pc" dword
   fun is_mem_access tm =
      case Lib.total boolSyntax.dest_eq tm of
         SOME (l, r) =>
-           List.length (strip_concat l) = 4 andalso
            (bitstringSyntax.is_v2w r orelse wordsSyntax.is_word_literal r)
+           andalso can (match_term ``^st.MEM8 _``) l
       | NONE => false
-  val pc_tm = ``^st.c_PC ^id_tm``
   fun hide_with_genvar (x: term) = x |-> Term.genvar (Term.type_of x)
   fun to_hide tm =
     case boolSyntax.dest_strip_comb tm of
@@ -76,17 +83,27 @@ local
     in
       boolSyntax.mk_eq (l, optionSyntax.mk_some (Term.subst sbst s))
     end
+  fun mem_to_int tm =
+    tm |> lhs |> rand |> rand |> rand |> numSyntax.int_of_term
+    handle HOL_ERR _ => 0
 in
+  val last_input = ref TRUTH;
+(*
+  val thm = !last_input
+*)
   fun mk_riscv_code_pool thm =
     let
+      val _ = (last_input := thm)
       val id = stateLib.gvar "id" byte
       val pc = stateLib.gvar "pc" dword
       val pc_subst = Term.subst [id_tm |-> id, pc_tm |-> pc]
+      val thm = thm |> DISCH_ALL |> REWRITE_RULE [GSYM AND_IMP_INTRO] |> UNDISCH_ALL
       val (a, tm) = (List.map pc_subst ## pc_subst) (Thm.dest_thm thm)
       val (m, a) = List.partition is_mem_access a
-      val opc = case m of
-                  [tm] => boolSyntax.rhs tm
-                | _ => raise ERR "mk_riscv_code_pool" "more than one opcode"
+      val _ = length m = 2 orelse length m = 4 orelse
+              failwith "cannot find code assumptions"
+      val m = sort (fn x => fn y => mem_to_int x <= mem_to_int y) m
+      val opc = listSyntax.mk_list(map rand m,type_of (rand (hd m)))
     in
       (mk_riscv_c_PC (id, pc),
        boolSyntax.rand (stateLib.mk_code_pool (riscv_instr_tm, pc, opc)),
@@ -288,24 +305,31 @@ local
          RISCV_TEMPORAL_PC_INTRO, RISCV_TEMPORAL_PC_INTRO0]
   val cnv = REWRITE_CONV [alignmentTheory.aligned_numeric,
                           cond_branch_aligned]
-  val RISCV_PC_bump_intro =
-    SPEC_IMP_RULE o
-    Conv.CONV_RULE (Conv.LAND_CONV cnv) o
-    MP_RISCV_PC_INTRO o
-    Conv.CONV_RULE
-      (helperLib.POST_CONV (helperLib.MOVE_OUT_CONV ``riscv_c_PC id``))
+  fun RISCV_PC_bump_intro th =
+    let
+      val c = riscv_c_PC_def |> SPEC_ALL |> concl |> lhs |> repeat rator
+    in if can (find_term (fn x => x = c)) (th |> concl |> rand)
+       then th
+       else
+        (SPEC_IMP_RULE o
+         Conv.CONV_RULE (Conv.LAND_CONV cnv) o
+         MP_RISCV_PC_INTRO o
+         Conv.CONV_RULE
+          (helperLib.POST_CONV (helperLib.MOVE_OUT_CONV ``riscv_c_PC id``))) th
+    end
 in
-  val riscv_introduction =
-    spec_to_rv64 o
-    PURE_REWRITE_RULE [jal_aligned, jalr_aligned,
-                       DECIDE ``a /\ (b ==> a) = a``,
-                       DECIDE ``a /\ c /\ (b ==> a) = c /\ a``] o
-    helperLib.MERGE_CONDS_RULE o
-    RISCV_PC_bump_intro o
-    stateLib.introduce_triple_definition
-       (false, riscv_progTheory.riscv_ID_PC_def) o
-    stateLib.introduce_triple_definition (true, riscv_progTheory.riscv_ID_def) o
-    riscv_rename
+  fun riscv_introduction th =
+    th |> PURE_REWRITE_RULE [aligned_1_intro]
+       |> riscv_rename
+       |> stateLib.introduce_triple_definition (true, riscv_progTheory.riscv_ID_def)
+       |> stateLib.introduce_triple_definition
+             (false, riscv_progTheory.riscv_ID_PC_def)
+       |> RISCV_PC_bump_intro
+       |> helperLib.MERGE_CONDS_RULE
+       |> PURE_REWRITE_RULE [jal_aligned, jalr_aligned,
+                             DECIDE ``a /\ (b ==> a) = a``,
+                             DECIDE ``a /\ c /\ (b ==> a) = c /\ a``]
+       |> spec_to_rv64
 end
 
 local
@@ -336,6 +360,10 @@ in
        val thm = riscv_stepLib.riscv_step tm
        val t = riscv_mk_pre_post thm
        val thm_ts = combinations (thm, t)
+(*
+       val x = hd thm_ts
+       val th = spec x
+*)
     in
        List.map (fn x => (print "."; intro_spec x)) thm_ts
     end
@@ -450,6 +478,21 @@ end
 (* Testing...
 
 val s = "800000EF"
+val s = "943a"
+val s = "072a"
+val s = "e436"
+val tm = bitstringSyntax.bitstring_of_hexstring s
+
+fun riscv_spec_from_hex s = let
+  val tm = bitstringSyntax.bitstring_of_hexstring s
+  in riscv_spec tm end
+
+filter (not o can riscv_spec_from_hex) vs
+
+(* currently failing: *)
+val xs = ["e436", "fc06", "f822", "e82a", "e032"]
+
+riscv_spec_hex s
 
 open riscv_progLib
 
@@ -497,6 +540,8 @@ val SOME (_, tm) = Lib.assoc1 "ADD" riscv_stepLib.riscv_dict
 val s = random_hex tm
 val thms = tst tm
 
+
+val tm = bitstringSyntax.bitstring_of_hexstring "8082"
 
 *)
 

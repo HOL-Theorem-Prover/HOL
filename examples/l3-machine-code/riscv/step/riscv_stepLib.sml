@@ -25,24 +25,50 @@ val s = ``s:riscv_state``
    ------------------------------------------------------------------------- *)
 
 local
+  val i16 = fcpSyntax.mk_int_numeric_type 16
   val i32 = fcpSyntax.mk_int_numeric_type 32
-  val x = Term.mk_var ("x", wordsSyntax.mk_int_word_type 32)
+  val x = Term.mk_var ("x", ``:rawInstType``)
   fun padded_opcode v =
     let
       val (l, ty) = listSyntax.dest_list v
       val () = ignore (ty = Type.bool andalso List.length l <= 32 orelse
                raise ERR "mk_opcode" "bad opcode")
+      fun ends_in_TT [] = false
+        | ends_in_TT [x] = false
+        | ends_in_TT [x,y] = aconv x y andalso aconv x boolSyntax.T
+        | ends_in_TT (x::xs) = ends_in_TT xs
     in
-      listSyntax.mk_list (utilsLib.padLeft boolSyntax.F 32 l, ty)
+      if ends_in_TT l then
+        listSyntax.mk_list (utilsLib.padLeft boolSyntax.F 32 l, ty)
+      else
+        listSyntax.mk_list (utilsLib.padLeft boolSyntax.F 16 l, ty)
     end
-  fun pad_opcode v = bitstringSyntax.mk_v2w (padded_opcode v, i32)
+  fun pad_opcode v =
+    let
+      val xs = padded_opcode v
+      val (l,ty) = listSyntax.dest_list xs
+    in
+      if length l < 32 then mk_comb(``Half``,bitstringSyntax.mk_v2w (xs, i16))
+                       else mk_comb(``Word``,bitstringSyntax.mk_v2w (xs, i32))
+    end
   val opc = riscv_stepTheory.Fetch
+            |> SIMP_RULE std_ss [boolify16_def]
             |> utilsLib.rhsc
             |> pairSyntax.dest_pair |> fst
-  val Fetch = REWRITE_RULE [ASSUME ``^opc = ^x``] riscv_stepTheory.Fetch
+  val Fetch = REWRITE_RULE [ASSUME ``^opc = ^x``,boolify16_def,
+                            pairTheory.FST,pairTheory.SND]
+                riscv_stepTheory.Fetch
+  val word_bit_pat = wordsTheory.word_bit_def |> SPEC_ALL |> concl |> dest_eq |> fst
 in
   val padded_opcode = padded_opcode
-  fun fetch v = Thm.INST [x |-> pad_opcode v] Fetch
+  fun fetch v = let
+    val th = Thm.INST [x |-> pad_opcode v] Fetch
+             |> DISCH_ALL
+             |> SIMP_RULE std_ss [fetch_simp]
+    val lemmas = find_terms (can (match_term word_bit_pat)) (concl th)
+                 |> map EVAL
+    val th = SIMP_RULE std_ss lemmas th |> UNDISCH_ALL
+    in th end
   val fetch_hex = fetch o bitstringSyntax.bitstring_of_hexstring
 end
 
@@ -61,11 +87,29 @@ local
           THENC Conv.DEPTH_CONV PairedLambda.let_CONV
           THENC EVAL
          )
-  val v = fst (bitstringSyntax.dest_v2w (bitstringSyntax.mk_vec 32 0))
+  val DecodeRVC =
+    riscvTheory.DecodeRVC_def
+    |> Thm.SPEC (bitstringSyntax.mk_vec 16 0)
+    |> Conv.RIGHT_CONV_RULE
+         (REWRITE_CONV [riscvTheory.boolify16_v2w]
+          THENC Conv.DEPTH_CONV PairedLambda.let_CONV
+          THENC EVAL
+         )
+  val v32 = fst (bitstringSyntax.dest_v2w (bitstringSyntax.mk_vec 32 0))
+  val v16 = fst (bitstringSyntax.dest_v2w (bitstringSyntax.mk_vec 16 0))
 in
   val get_opc = boolSyntax.rand o boolSyntax.rand o utilsLib.lhsc
-  fun DecodeMIPS tm =
-    Decode |> Thm.INST (fst (Term.match_term v tm)) |> REWRITE_RULE []
+  fun DecodeRISCV tm =
+    let
+      val (l,ty) = listSyntax.dest_list tm
+    in
+      if length l < 32 then
+        DecodeRVC |> Thm.INST (fst (Term.match_term v16 tm)) |> REWRITE_RULE []
+                  |> MATCH_MP DecodeRVC_IMP_DecodeAny
+      else
+        Decode |> Thm.INST (fst (Term.match_term v32 tm)) |> REWRITE_RULE []
+               |> MATCH_MP Decode_IMP_DecodeAny
+    end
 end
 
 fun make_nop (s, p) =
@@ -73,7 +117,7 @@ fun make_nop (s, p) =
    String.substring (p, 0, 20) ^ "FFFFF" ^ String.extract (p, 25, NONE))
 
 
-val riscv_decodes = List.map (I ## (DecodeMIPS o utilsLib.pattern))
+val riscv_decodes = List.map (I ## (DecodeRISCV o utilsLib.pattern))
   (let
      val l =
   [
@@ -156,7 +200,7 @@ in
       val tm = padded_opcode v
     in
       case LVTermNet.match (net, tm) of
-         [] => DecodeMIPS tm (* fallback *)
+         [] => DecodeRISCV tm (* fallback *)
        | [(([], opc), th)] => Thm.INST (fst (Term.match_term opc tm)) th
        | [(([], opc), th), _] => Thm.INST (fst (Term.match_term opc tm)) th
        | _ => raise ERR "decode" (utilsLib.long_term_to_string v)
@@ -183,6 +227,8 @@ val STATE_CONV =
 
 val state_rule = Conv.RIGHT_CONV_RULE STATE_CONV
 val full_state_rule = utilsLib.ALL_HYP_CONV_RULE STATE_CONV o state_rule
+
+
 
 val fetch_inst =
   Thm.INST [s |-> snd (pairSyntax.dest_pair (utilsLib.rhsc (fetch ``[F]``)))]
@@ -237,6 +283,21 @@ local
   val MP_Next_c = next riscv_stepTheory.NextRISCV_cond_branch
   val MP_Next_b = next riscv_stepTheory.NextRISCV_branch
   val Run_CONV = utilsLib.Run_CONV ("riscv", s) o utilsLib.rhsc
+  fun tidy_up_signalAddressException th =
+    let
+      val rw = UNDISCH avoid_signalAddressException
+      fun FORCE_REWR_CONV rw tm =
+        let
+          val (p,_) = match_term (rw |> concl |> rator |> rand) tm
+        in INST p rw end handle HOL_ERR _ => NO_CONV tm;
+    in
+      CONV_RULE (DEPTH_CONV (FORCE_REWR_CONV rw)) th
+      |> DISCH_ALL |> SIMP_RULE std_ss [word_bit_add_lsl_simp] |> UNDISCH_ALL
+    end
+  fun simp_Skip th =
+    th |> DISCH_ALL
+       |> DISCH ``~(word_bit 0 (^s.c_PC s.procID))``
+       |> SIMP_RULE (srw_ss()) [Skip] |> UNDISCH_ALL
 in
   fun riscv_step v =
     let
@@ -245,6 +306,7 @@ in
       val thm3 = fetch_inst (Drule.SPEC_ALL (Run_CONV thm2))
       val tm = utilsLib.rhsc thm3
       val ethm = run tm
+      val ethm = tidy_up_signalAddressException ethm
       val thm4 = Conv.RIGHT_CONV_RULE (Conv.REWR_CONV ethm) thm3
       val thm5 = proj_exception thm4
       val thm6 = proj_NextFetch_procID thm4
@@ -252,10 +314,10 @@ in
       val tm = utilsLib.rhsc thm6
     in
       if optionSyntax.is_none tm
-        then MP_Next_n thm
+        then MP_Next_n thm |> simp_Skip
       else if boolSyntax.is_cond tm
-        then MP_Next_c thm
-      else MP_Next_b thm
+        then MP_Next_c thm |> simp_Skip
+      else MP_Next_b thm |> simp_Skip
     end
 end
 
@@ -273,6 +335,14 @@ val v = find_opc "JAL"
 val v = find_opc "ADDI"
 val v = bitstringSyntax.bitstring_of_hexstring "B3"
 val thms = List.map (Count.apply riscv_step o snd) riscv_dict
+
+val v = (v |> rand)
+val th = riscv_step v
+
+val v = bitstringSyntax.bitstring_of_hexstring "56fd"
+val th = riscv_step v
+
+filter (not o can (riscv_step o bitstringSyntax.bitstring_of_hexstring)) vs
 
 open riscv_stepLib
 *)

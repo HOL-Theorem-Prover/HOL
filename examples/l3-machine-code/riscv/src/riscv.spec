@@ -658,7 +658,6 @@ declare
   c_fpr         :: id -> RegFile                -- floating-point registers
 
   c_PC          :: id -> regType                -- program counter
-  c_Skip        :: id -> regType                -- bytes to next instruction
 
   c_UCSR        :: id -> UserCSR                -- user-level CSRs
   c_SCSR        :: id -> SupervisorCSR          -- supervisor-level CSRs
@@ -712,11 +711,6 @@ component fpr(n::reg) :: regType
 component PC :: regType
 { value        = c_PC(procID)
   assign value = c_PC(procID) <- value
-}
-
-component Skip :: regType
-{ value        = c_Skip(procID)
-  assign value = c_Skip(procID) <- value
 }
 
 component UCSR :: UserCSR
@@ -1660,6 +1654,14 @@ unit initMem(val::regType) =
 
 declare MEM8 :: pAddr -> byte
 
+component Skip :: regType
+{ value        = { vPC = c_PC(procID)
+                 ; h = MEM8 (vPC)
+                 ; match h { case '_ 11' => 4
+                             case _      => 2}}
+  assign value = c_PC(procID) <- value
+}
+
 component MEM (a::pAddrIdx) :: regType
 {
   value =
@@ -1741,10 +1743,10 @@ half rawReadHalf(pAddr::pAddr) =
 }
 
 rawInstType rawReadInst(pAddr::pAddr) =
-{ h = rawReadHalf(pAddr)
+{ h = MEM8 (pAddr)
 ; match h
-  { case '_ 11' => Word(rawReadHalf(pAddr + 2) : h)
-    case _      => Half(h)
+  { case '_ 11' => Word (MEM8 (pAddr + 3) : MEM8 (pAddr + 2) : MEM8 (pAddr + 1) : MEM8 (pAddr))
+    case _      => Half (MEM8 (pAddr + 1) : MEM8 (pAddr))
   }
 }
 
