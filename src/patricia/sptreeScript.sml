@@ -1288,7 +1288,7 @@ val fromAList_toAList = store_thm("fromAList_toAList",
   metis_tac[wf_fromAList,lookup_fromAList_toAList,spt_eq_thm])
 
 Theorem union_insert_LN
-  `∀x y t2. union (insert x y LN) t2 = insert x y t2`
+  `!x y t2. union (insert x y LN) t2 = insert x y t2`
   (recInduct insert_ind
    \\ rw[]
    \\ rw[Once insert_def]
@@ -1296,7 +1296,7 @@ Theorem union_insert_LN
    \\ rw[union_def]);
 
 Theorem fromAList_append
-  `∀l1 l2. fromAList (l1 ++ l2) = union (fromAList l1) (fromAList l2)`
+  `!l1 l2. fromAList (l1 ++ l2) = union (fromAList l1) (fromAList l2)`
   (recInduct fromAList_ind
   \\ rw[fromAList_def]
   \\ rw[Once insert_union]
@@ -1355,7 +1355,7 @@ val map_insert = store_thm("map_insert",
   fs[map_def]);
 
 Theorem map_fromAList
-  `map f (fromAList ls) = fromAList (MAP (λ(k,v). (k, f v)) ls)`
+  `map f (fromAList ls) = fromAList (MAP (\ (k,v). (k, f v)) ls)`
   (Induct_on`ls` >> simp[fromAList_def] >>
    Cases >> simp[fromAList_def] >>
    simp[wf_fromAList,map_insert]);
@@ -1736,7 +1736,7 @@ Theorem domain_list_insert
  (Induct \\ full_simp_tac(srw_ss())[list_insert_def] \\ METIS_TAC []);
 
 Theorem domain_FOLDR_delete
-  `∀ls live. domain (FOLDR delete live ls) = (domain live) DIFF (set ls)`
+  `!ls live. domain (FOLDR delete live ls) = (domain live) DIFF (set ls)`
  (Induct>>
   full_simp_tac(srw_ss())[DIFF_INSERT,EXTENSION]>>
   metis_tac[]);
@@ -1746,7 +1746,7 @@ Theorem lookup_list_to_num_set
  (Induct \\ srw_tac [] [list_to_num_set_def,lookup_def,lookup_insert] \\ full_simp_tac(srw_ss())[]);
 
 Theorem list_to_num_set_append
-  `∀l1 l2. list_to_num_set (l1 ++ l2) = union (list_to_num_set l1) (list_to_num_set l2)`
+  `!l1 l2. list_to_num_set (l1 ++ l2) = union (list_to_num_set l1) (list_to_num_set l2)`
  (Induct \\ rw[list_to_num_set_def]
   \\ rw[Once insert_union]
   \\ rw[Once insert_union,SimpRHS]
