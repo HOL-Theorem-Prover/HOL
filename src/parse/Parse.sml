@@ -815,6 +815,7 @@ fun temp_remove_absyn_postprocessor s =
     val (g, res) = term_grammar.remove_absyn_postprocessor s (!the_term_grammar)
   in
     the_term_grammar := g;
+    term_grammar_changed := true;
     res
   end
 
@@ -826,6 +827,7 @@ fun temp_remove_preterm_processor k =
     val (g, res) = term_grammar.remove_preterm_processor k (!the_term_grammar)
   in
     the_term_grammar := g;
+    term_grammar_changed := true;
     res
   end
 
