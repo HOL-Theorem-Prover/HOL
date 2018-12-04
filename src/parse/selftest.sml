@@ -797,3 +797,43 @@ val _ = List.app (ignore o test) [
       ("aa(", "aa"), ("((a", "("), ("¬¬", "¬"), ("¬¬p", "¬")
     ]
 end (* local open term_tokens *)
+
+val _ = let
+  open term_grammar Absyn Portable
+  val rTOK = RE o TOK
+  datatype sexp = id of string | app of string * sexp list
+  fun toString (id s) = s
+    | toString (app(f,xs)) =
+      "(" ^ f ^
+      (case xs of [] => ""
+                | _ => " " ^ String.concatWith " " (map toString xs)) ^ ")"
+  fun dropA A a =
+      case a of
+          APP (_, a1, a2) => dropA (dropA [] a2::A) a1
+        | IDENT (_, s) => case A of [] => id s | _ => app(s, A)
+  val G = min_grammar
+            |> add_rule {block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
+                         fixity = Suffix 2100,
+                         paren_style = OnlyIfNecessary,
+                         pp_elements = [
+                           rTOK "{",
+                           ListForm {
+                             separator = [rTOK ";", BreakSpace(1,0)],
+                             block_info = (PP.CONSISTENT, 1),
+                             cons = "icons",
+                             nilstr = "inil"
+                           },
+                           rTOK "}"],
+                         term_name = "top"}
+  val testfn =
+      toString o dropA [] o absyn G type_grammar.min_grammar o single o QUOTE
+  fun test (s,expected) =
+      (tprint ("listspec-suffix: " ^ s);
+       require_msg (check_result (equal expected)) (fn s => s) testfn s)
+in
+  List.app test [
+    ("x {y}", "(top x (icons y inil))"),
+    ("x {y;z;}", "(top x (icons y (icons z inil)))"),
+    ("x {}", "(top x inil)")
+  ]
+end;
