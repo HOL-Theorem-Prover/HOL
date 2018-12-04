@@ -70,9 +70,10 @@ fun invoke_solver solver lfn ntm clauseth cnfv vc is_proved svm sva in_name =
                              lfn ntm NONE
         end
       else (* do not have execute access to solver binary, or it doesn't exist*)
-        if nr > !sat_limit then
-          warn "SAT solver not found. Using slow internal prover." else ();
-      DPLL_TAUT (dest_neg ntm))
+        (if nr > !sat_limit then
+           warn "SAT solver not found. Using slow internal prover."
+         else ();
+         DPLL_TAUT (dest_neg ntm))
     end
 end
 

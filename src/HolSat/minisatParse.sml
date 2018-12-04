@@ -153,7 +153,8 @@ fun readTrace lfn cl sva vc clauseth fin id =
         else
           let val isch = addBranch lfn cl sva fin tmp id
           in if isch then readTrace lfn cl sva vc clauseth fin (id+1) (* chain*)
-             else readTrace lfn cl sva vc clauseth fin id end) (* deletion *)
+             else readTrace lfn cl sva vc clauseth fin id
+          end (* deletion *)
         end
 
 exception Trivial
