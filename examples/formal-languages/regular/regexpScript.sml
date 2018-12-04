@@ -662,8 +662,8 @@ val regexp_compareW_trans_eq = Q.store_thm
             >> rw_tac list_ss [ZIP_def])
 );
 
-val regexp_compare_trans = Q.store_thm
-("regexp_compare_trans",
+val regexp_compare_trans_eq = Q.store_thm
+("regexp_compare_trans_eq",
  `!r s u. (regexp_compare r s = Less) /\ (regexp_compare s u = Equal)
          ==>
          (regexp_compare r u = Less)`,
@@ -680,7 +680,7 @@ val regexp_compare_good = Q.store_thm
  `good_cmp regexp_compare`,
  rw_tac std_ss [good_cmp_thm,regexp_compare_eq]
   >> metis_tac [regexp_compare_antisym,
-                regexp_compare_trans,regexp_compare_trans]);
+                regexp_compare_trans,regexp_compare_trans_eq]);
 
 val regexp_leq_total = Q.store_thm
 ("regexp_leq_total",
