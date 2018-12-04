@@ -39,18 +39,22 @@ fun sat_getint is =
         else
         case toInt((byte0 andb (0wx60)) >> (Word.fromInt 5)) of
          0 => let val byte1 = sat_getChar is
-             in toInt(((byte0 andb (0wx1F)) << (Word.fromInt 8)) orb byte1) end (* 16 *)
+              in toInt(((byte0 andb (0wx1F)) << (Word.fromInt 8)) orb byte1)
+              end (* 16 *)
         | 1 => let val byte1 = sat_getChar is
                    val byte2 = sat_getChar is
-            in  toInt((((byte0 andb (0wx1F)) << (Word.fromInt 16))
-                           orb (byte1 << (Word.fromInt 8))) orb byte2) end
+               in  toInt((((byte0 andb (0wx1F)) << (Word.fromInt 16))
+                            orb (byte1 << (Word.fromInt 8))) orb byte2)
+               end
         | 2 => let val byte1 = sat_getChar is
                    val byte2 = sat_getChar is
                    val byte3 = sat_getChar is
-            in toInt(((((byte0 andb (0wx1F)) << (Word.fromInt 24))
-                           orb (byte1 << (Word.fromInt 16)))
-                          orb (byte2 << (Word.fromInt 8))) orb byte3) end
-        (* default case is only place where int64 is needed since we do a << 32*)
+               in toInt(((((byte0 andb (0wx1F)) << (Word.fromInt 24))
+                            orb (byte1 << (Word.fromInt 16)))
+                           orb (byte2 << (Word.fromInt 8))) orb byte3)
+               end
+        (* default case is only place where int64 is needed since we
+           do a << 32*)
         | _ => let val byte0 = sat_getChar is
                    val byte1 = sat_getChar is
                    val byte2 = sat_getChar is
@@ -77,8 +81,9 @@ fun rshift w = Word.toInt((op Word.>>) (Word.fromInt w,Word.fromInt 1))
 fun getIntBranch fin id h =
     let
         fun loop acc len =
-            let val v = (sat_getint fin)-1 (*-1 is purely a decoding step
-                                           (i.e. not translating b/w HolSat and ms)*)
+            let val v = (sat_getint fin)-1
+              (*-1 is purely a decoding step (i.e. not translating b/w HolSat
+                and ms)*)
             in if v=(~1) then ((v,h)::(rev acc),len+1)
                else let val ci = id-(sat_getint fin)
                     in loop ((v,ci)::acc) (len+1) end
@@ -95,7 +100,8 @@ fun addBranch lfn cl sva fin tc id =
                   else
                       ((*print "\nB ";print( (int_to_string id)^": ");
                        List.app (fn (i,j) =>
-                                    print ((int_to_string i)^","^(int_to_string j)^" ")) br; *)
+                                    print (int_to_string i ^ "," ^
+                                           int_to_string j ^" ")) br; *)
                       resolveChain lfn sva cl (br,brl) id; true) (* resolve *)
     in res end
 
@@ -112,35 +118,42 @@ fun getIntRoot fin idx =
    This advances the file read pointer
         but we pick up the actual clause term from the vector
         of clauses we already have, using the orc value.
-   This is because minisat-p removes duplicate literals and sorts the literals so I can't
-     efficiently find the corresponding clause term in HOL
-   So this is faster (time and space) than building the clause term from the proof log.
+   This is because minisat-p removes duplicate literals and sorts the
+   literals so I can't efficiently find the corresponding clause term in HOL
+
+   So this is faster (time and space) than building the clause term from the
+   proof log.
 *)
 fun addClause lfn cl  sva vc clauseth fin lit1 id =
-    let val orc = (rshift lit1)-1 (*-1 because right now orc's in proof log start at 1*)
+    let val orc = (rshift lit1)-1
+          (*-1 because right now orc's in proof log start at 1*)
         val l = getIntRoot fin (sat_getint fin)
-        (*val _ = (print "\nR ";print((int_to_string orc)^"~"^(int_to_string id)^": ");
-                 List.app (fn i => print ((int_to_string i)^" ")) l) *)
+          (*val _ = (print "\nR ";
+                     print(int_to_string orc ^ "~" ^ int_to_string id)^ ": ");
+                     List.app (fn i => print (int_to_string i ^ " ")) l) *)
     in case l of
-           []  => failwith ("addClause:Failed parsing clause "^(int_to_string id)^"\n")
+           []  => failwith
+                    ("addClause:Failed parsing clause "^Int.toString id^"\n")
          | _ => prepareRootClause lfn orc clauseth cl id
     end
 
 (* SML equivalent of  C-style eval of v&1=0 *)
-fun isRoot v = Word.compare(Word.andb(Word.fromInt v,Word.fromInt 1),(Word.fromInt 0))=EQUAL
+fun isRoot v =
+    Word.compare(Word.andb(Word.fromInt v,Word.fromInt 1),(Word.fromInt 0)) =
+    EQUAL
 
 fun readTrace lfn cl sva vc clauseth fin id =
-    if BinIO.endOfStream fin
-    then id
+    if BinIO.endOfStream fin then id
     else
-        let val tmp = sat_getint fin
-        in if isRoot tmp
-           then let val _ = addClause lfn cl sva vc clauseth fin tmp id
-                in readTrace lfn cl  sva vc clauseth fin (id+1) end
-           else (let val isch = addBranch lfn cl sva fin tmp id
-                 in if isch
-                    then readTrace lfn cl sva vc clauseth fin (id+1) (* chain *)
-                    else readTrace lfn cl sva vc clauseth fin id end) (* deletion *)
+      let val tmp = sat_getint fin
+      in
+        if isRoot tmp then
+          let val _ = addClause lfn cl sva vc clauseth fin tmp id
+          in readTrace lfn cl  sva vc clauseth fin (id+1) end
+        else
+          let val isch = addBranch lfn cl sva fin tmp id
+          in if isch then readTrace lfn cl sva vc clauseth fin (id+1) (* chain*)
+             else readTrace lfn cl sva vc clauseth fin id end) (* deletion *)
         end
 
 exception Trivial
@@ -159,7 +172,8 @@ handle Io _ => NONE
 nr: number of root clauses
 fname: filename of proof log
 vc: number of variables (includes variables added by def CNF conversion)
-clauseth: root clause vector. clauseth[i] is i'th root clause from original problem
+clauseth: root clause vector. clauseth[i] is i'th root clause from original
+          problem
 *)
 fun replayProof sva nr fname solver vc clauseth lfn proof =
     let val _ = (minisatResolve.counter:=0)
