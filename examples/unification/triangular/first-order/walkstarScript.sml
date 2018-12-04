@@ -77,7 +77,7 @@ SRW_TAC [][WF_TC, WF_LEX, WF_mlt1]);
 
 fun walkstar_wfs_hyp th =
   th |>
-  PROVE_HYP (UNDISCH th1) |>
+  PROVE_HYP (UNDISCH walkstar_th1) |>
   PROVE_HYP (UNDISCH walkstar_th2) |>
   PROVE_HYP (UNDISCH walkstar_thWF);
 
