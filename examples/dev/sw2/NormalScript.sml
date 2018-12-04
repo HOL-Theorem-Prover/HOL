@@ -335,7 +335,7 @@ val LET_FUN = store_thm (
 
 
 val TOP_LEVEL_ABS = store_thm (
-  "TOP_LEVEL",
+  "TOP_LEVEL_ABS",
   ``(\x. let f = fun e1 in e2 f) = (let f = fun e1 in (\x. e2 f))``,
    SIMP_TAC std_ss [LET_THM]
   );

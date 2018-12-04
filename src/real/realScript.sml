@@ -3826,7 +3826,7 @@ val NUM_FLOOR_LOWER_BOUND = store_thm(
   MP_TAC (Q.INST [`x` |-> `x + 1`, `y` |-> `n`] NUM_FLOOR_LET) THEN
   SIMP_TAC (srw_ss()) []);
 
-val NUM_FLOOR_UPPER_BOUND = store_thm(
+val NUM_FLOOR_upper_bound = store_thm(
   "NUM_FLOOR_upper_bound",
   ``(&n <= x:real) = (n < NUM_FLOOR(x + 1))``,
   MP_TAC (AP_TERM negation NUM_FLOOR_LOWER_BOUND) THEN

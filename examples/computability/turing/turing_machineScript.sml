@@ -352,7 +352,7 @@ val FST_SND_DECODE_TM_TAPE_FULL = Q.store_thm(
   rw[DECODE_TM_TAPE_def] >> metis_tac[EVEN_AND_ODD]);
 
 val FST_SND_DECODE_TM_TAPE_EVEN_FULL = Q.store_thm(
-  "FST_SND_DECODE_TM_TAPE_FULL[simp]",
+  "FST_SND_DECODE_TM_TAPE_EVEN_FULL[simp]",
   `EVEN (nsnd (t)) ==> (FST (SND (DECODE_TM_TAPE (t))) = Z)`,
   rw[DECODE_TM_TAPE_def]);
 

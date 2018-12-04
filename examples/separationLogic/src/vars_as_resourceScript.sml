@@ -4146,7 +4146,7 @@ ASM_SIMP_TAC std_ss [IN_INTER]);
 
 
 val VAR_RES_IS_STACK_IMPRECISE___var_res_exp_full_prop =
-store_thm ("VAR_RES_IS_STACK_IMPRECISE___var_res_exp_prop",
+store_thm ("VAR_RES_IS_STACK_IMPRECISE___var_res_exp_full_prop",
 ``!eL P. EVERY (\e. IS_SOME (VAR_RES_IS_STACK_IMPRECISE_EXPRESSION___USED_VARS e)) eL ==>
          VAR_RES_IS_STACK_IMPRECISE (var_res_exp_full_prop P eL)``,
 

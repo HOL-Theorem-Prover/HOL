@@ -391,7 +391,7 @@ val zero_lt_twoexp = Q.prove(
    THEN TRY (MATCH_MP_TAC LESS_MULT2)
    THEN DECIDE_TAC);
 
-val LOG2_MOD = Q.store_thm("LOG_MOD",
+val LOG_MOD = Q.store_thm("LOG_MOD",
    `!n. 0 < n ==> (n = 2 ** LOG 2 n + n MOD 2 ** LOG 2 n)`,
   REPEAT STRIP_TAC
   THEN Cases_on `?b c. (n = b + 2 ** c) /\ b < 2 ** c`

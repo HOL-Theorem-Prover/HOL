@@ -624,7 +624,7 @@ val effempty_def = Define`
   effempty p <=> FDOM p ⊆ {(a,b) | (a,b) | a = 0}
 `;
 
-val containment_lem_nzero = Q.store_thm("tm_eq_tm_with_state",
+val containment_lem_nzero = Q.store_thm("containment_lem_nzero",
   `((OLEAST n. (nfst n,CELL_NUM (nsnd n)) ∈ FDOM p ∧ nfst n <>0) = NONE)
      ⇔
    effempty p`,
@@ -641,7 +641,7 @@ val effempty_no_update = Q.store_thm("effempty_no_update",
   Cases_on `(tm.state,tm.tape_h) ∈ FDOM tm.prog`>> simp[]>>
   fs[SUBSET_DEF] >> res_tac >> fs[]);
 
-val CELL_NUM_LEM11 = Q.store_thm("CELL_NUM_LEM1",
+val CELL_NUM_LEM1 = Q.store_thm("CELL_NUM_LEM1",
   `(∀n'. n' < n ⊗ c ⇒ nfst n' ≠ 0 ⇒
      (nfst n',CELL_NUM (nsnd n')) ∉ FDOM p) ∧
    (n,CELL_NUM c) ∈ FDOM p ∧ n<>0
@@ -673,7 +673,7 @@ val tmstepf_update_equiv = Q.store_thm("tmstepf_update_equiv",
   fs[UPDATE_TAPE_ACT_STATE_TM_thm,NUM_TO_CELL_TO_NUM,
      FULL_ENCODE_TM_STATE] >>
   `NUM_CELL (CELL_NUM c) = c`
-    by metis_tac[CELL_NUM_LEM11,NUM_TO_CELL_TO_NUM] >> simp[] >> fs[] >>
+    by metis_tac[CELL_NUM_LEM1,NUM_TO_CELL_TO_NUM] >> simp[] >> fs[] >>
   rfs[NUM_CELL_INJ] >>
   Cases_on `(tm.state = n) ∧ (NUM_CELL tm.tape_h = c)` >> rw[]
   >- (fs[updn_UPDATE_TAPE]) >>
@@ -732,7 +732,7 @@ val primrec_of_tmstepf = Q.store_thm("primrec_of_tmstepf",
   rpt (MATCH_MP_TAC primrec_cn >> SRW_TAC [][primrec_rules]) >>
   fs[UPDATE_TM_NUM_PRIMREC]);
 
-val primrec_tmstepf = Q.store_thm ("primerec_tmstepf",
+val primrec_tmstepf = Q.store_thm ("primrec_tmstepf",
   `primrec (pr1 (tmstepf p)) 1`,
   Induct_on `CARD (FDOM p)`
   >- (rpt strip_tac >>
@@ -762,7 +762,7 @@ val primrec_tmstepf = Q.store_thm ("primerec_tmstepf",
       qabbrev_tac`q = p \\ (nfst k,CELL_NUM (nsnd k))` >>
       `primrec (pr1 (tmstepf q)) 1` by fs[] >>
       `NUM_CELL (CELL_NUM (nsnd k)) = nsnd k`
-        by metis_tac[npair_11,npair,CELL_NUM_LEM11,NUM_TO_CELL_TO_NUM] >>
+        by metis_tac[npair_11,npair,CELL_NUM_LEM1,NUM_TO_CELL_TO_NUM] >>
       fs[] >>
       qabbrev_tac`anum = ACT_TO_NUM a` >>
       qexists_tac`
@@ -1285,8 +1285,8 @@ strip_tac >> fs[concatWith_Z_empty]
 
 val nfst_zero = Q.store_thm("nfst_zero[simp]", `nfst 0 = 0`, EVAL_TAC)
 val nsnd_zero = Q.store_thm("nsnd_zero[simp]", `nsnd 0 = 0`, EVAL_TAC)
-val nhd_zero = Q.store_thm("nfst_zero[simp]", `nhd 0 = 0`, EVAL_TAC)
-val ntl_zero = Q.store_thm("nsnd_zero[simp]", `ntl 0 = 0`, EVAL_TAC)
+val nhd_zero = Q.store_thm("nhd_zero[simp]", `nhd 0 = 0`, EVAL_TAC)
+val ntl_zero = Q.store_thm("nstl_zero[simp]", `ntl 0 = 0`, EVAL_TAC)
 
 val num_cell_encode_hd_concat = Q.store_thm("num_cell_encode_hd_concat",
 `(concatWith [Z] (MAP (GENLIST (K O)) args) <> []) ==> (NUM_CELL (HD (concatWith [Z] (MAP (GENLIST (K O)) args))) = 1 - pr_eq [ nhd  (nlist_of args);0])`,

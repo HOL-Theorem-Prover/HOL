@@ -418,7 +418,7 @@ val wf_pred_bnum_total = store_thm
    >> Q.EXISTS_TAC `0`
    >> REWRITE_TAC [ZERO_LESS_EXP, TWO]);
 
-val wf_pred_bnum_collision_free = store_thm
+val wf_pred_bnum = store_thm
   ("wf_pred_bnum",
    ``!m p. wf_pred_bnum m p ==> collision_free m p``,
    RW_TAC std_ss [wf_pred_bnum_def, collision_free_def]
@@ -517,7 +517,7 @@ val wf_encode_bnum_collision_free = store_thm
 val wf_encode_bnum = store_thm
   ("wf_encode_bnum",
    ``!m p. wf_pred_bnum m p ==> wf_encoder p (encode_bnum m)``,
-   PROVE_TAC [wf_encode_bnum_collision_free, wf_pred_bnum_collision_free]);
+   PROVE_TAC [wf_encode_bnum_collision_free, wf_pred_bnum]);
 
 (*---------------------------------------------------------------------------
         Datatype of polymorphic n-ary trees.
