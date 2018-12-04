@@ -464,7 +464,7 @@ RW_TAC bool_ss []
        subgoals here, so we have to take round-about measures.
  ---------------------------------------------------------------------------*)
 
-val PARTS_HAVE_PROP = Q.store_thm
+val PARTs_HAVE_PROP = Q.store_thm
 ("PARTs_HAVE_PROP",
  `!P L A B l1 l2.
    ((A,B) = PART P L l1 l2) /\
@@ -588,7 +588,7 @@ Q.store_thm
   THEN ((RES_TAC THEN NO_TAC) ORELSE ALL_TAC)
   THEN Q.PAT_X_ASSUM `_ = _` (MP_TAC o MATCH_MP
         (REWRITE_RULE[PROVE [] (Term `x/\y/\z ==> w = x ==> y/\z ==> w`)]
-            PARTS_HAVE_PROP))
+            PARTs_HAVE_PROP))
   THEN RW_TAC std_ss [MEM]
   THEN PROVE_TAC [transitive_def,total_def]);
 

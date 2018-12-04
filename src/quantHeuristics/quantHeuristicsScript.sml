@@ -956,7 +956,7 @@ SIMP_TAC list_ss [arithmeticTheory.LESS_EQ_EXISTS, LENGTH_EQ_NUM, GSYM LEFT_EXIS
 val LENGTH_NIL_SYM = save_thm ("LENGTH_NIL_SYM",
   CONV_RULE (LHS_CONV SYM_CONV) (SPEC_ALL listTheory.LENGTH_NIL))
 
-val LIST_LENGTH_COMPARE_1_0 = store_thm ("LIST_LENGTH_COMPARE_1",
+val LIST_LENGTH_COMPARE_1 = store_thm ("LIST_LENGTH_COMPARE_1",
   ``((LENGTH l < 1) <=> (l = [])) /\
     ((1 > LENGTH l) <=> (l = [])) /\
     ((0 >= LENGTH l) <=> (l = [])) /\
@@ -969,7 +969,7 @@ ASM_SIMP_TAC arith_ss [LENGTH_NIL]);
 
 val LIST_LENGTH_THMS_0 = ((SPEC_ALL listTheory.LENGTH_NIL)::
                           (SPEC_ALL LENGTH_NIL_SYM)::
-                          (BODY_CONJUNCTS LIST_LENGTH_COMPARE_1_0))
+                          (BODY_CONJUNCTS LIST_LENGTH_COMPARE_1))
 
 (* prove length theormes generally *)
 

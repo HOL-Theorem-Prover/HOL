@@ -1445,7 +1445,7 @@ val insertMin_thm = Q.store_thm ("insertMin_thm",
  rw [FUNION_FUPDATE_1] >>
  metis_tac [FUPDATE_COMMUTES, cmp_thms, key_set_cmp_thm]);
 
-val deleteFindMin_thm = Q.store_thm ("deleteFindMin",
+val deleteFindMin = Q.store_thm ("deleteFindMin",
 `∀t t' k v.
   good_cmp cmp ∧
   invariant cmp t ∧
@@ -1574,7 +1574,7 @@ val deleteFindMin_thm = Q.store_thm ("deleteFindMin",
      rw [] >>
      metis_tac [cmp_thms, key_set_eq, key_set_cmp_thm]));
 
-val deleteFindMax_thm = Q.store_thm ("deleteFindMax",
+val deleteFindMax = Q.store_thm ("deleteFindMax",
 `∀t t' k v.
   good_cmp cmp ∧
   invariant cmp t ∧
@@ -1727,7 +1727,7 @@ val glue_thm = Q.store_thm ("glue_thm",
      inv_mp_tac balanceR_thm >>
      simp [] >>
      inv_to_front_tac ``invariant`` >>
-     inv_mp_tac deleteFindMax_thm >>
+     inv_mp_tac deleteFindMax >>
      simp [Once SWAP_EXISTS_THM] >>
      qexists_tac `Bin n k v b b0` >>
      simp [null_def] >>
@@ -1764,7 +1764,7 @@ val glue_thm = Q.store_thm ("glue_thm",
      inv_mp_tac balanceL_thm >>
      simp [] >>
      inv_to_front_tac ``invariant`` >>
-     inv_mp_tac deleteFindMin_thm >>
+     inv_mp_tac deleteFindMin >>
      simp [Once SWAP_EXISTS_THM] >>
      qexists_tac `Bin n' k' v' b' b0'` >>
      simp [null_def] >>

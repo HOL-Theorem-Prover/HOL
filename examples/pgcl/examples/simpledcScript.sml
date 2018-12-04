@@ -221,7 +221,7 @@ val MEM_zero_to_n_Int_list_implies_Int = store_thm
    ++ FULL_SIMP_TAC std_ss []);
 
 val MEM_zero_to_n_Int_list_implies_ge_zero = store_thm
-  ("MEM_zero_to_n_Int_list_implies_zero",
+  ("MEM_zero_to_n_Int_list_implies_ge_zero",
    ``!i n. MEM (Int i) (zero_to_n_Int_list n) ==> (0 <= i)``,
    REPEAT STRIP_TAC
    ++ Induct_on `n`
@@ -3397,7 +3397,7 @@ val wp_and_bool_exp = store_thm
    ++ METIS_TAC [wp_conj, conj_of_bool_exp, leq_antisym, Leq_wp_bool_exp_One]);
 
 val wp_set_payer_lemma_for_wlp = store_thm
-  ("wp_initialize_lemma_for_wlp",
+  ("wp_set_payer_lemma_for_wlp",
    ``!n nsapays. (n > 0) ==> Leq (bool_exp (\s. (s "N" = Int (& n)) /\
                                 (if nsapays then
                                    s "NSApays" = Yes

@@ -1045,7 +1045,7 @@ val MEM_EL_FILTER = store_thm("MEM_EL_FILTER",
     RW_TAC arith_ss [LENGTH,EL,HD,TL] THEN
     METIS_TAC []);
 
-val EL_MAP_FILTER = store_thm("EL_MAP_FITLE",
+val EL_MAP_FILTER = store_thm("EL_MAP_FILTER",
     ``!f x. (MAP f l1 = MAP f l2) /\ x < LENGTH l1 /\ (FILTER ($= (f (EL x l1)) o f) l1 = FILTER ($= (f (EL x l2)) o f) l2) ==> (EL x l1 = EL x l2)``,
     completeInduct_on `LENGTH l1 + LENGTH l2` THEN REPEAT Cases THEN
     RW_TAC std_ss [LENGTH, rich_listTheory.EL_CONS, MEM, MAP, FILTER] THEN

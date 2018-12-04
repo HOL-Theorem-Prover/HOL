@@ -3468,7 +3468,7 @@ val COLLINEAR_DIST_IN_OPEN_SEGMENT = store_thm ("COLLINEAR_DIST_IN_OPEN_SEGMENT"
   REWRITE_TAC[IN_OPEN_SEGMENT] THEN
   METIS_TAC[COLLINEAR_DIST_IN_CLOSED_SEGMENT, REAL_LT_LE, DIST_SYM]);
 
-val DIST_IN_OPEN_CLOSED_SEGMENT = store_thm ("BILINEAR_BOUNDED",
+val DIST_IN_OPEN_CLOSED_SEGMENT = store_thm ("DIST_IN_OPEN_CLOSED_SEGMENT",
  ``(!a b x:real.
     x IN segment[a,b] ==> dist(x,a) <= dist(a,b) /\ dist(x,b) <= dist(a,b)) /\
    (!a b x:real.
@@ -4683,7 +4683,7 @@ REPEAT GEN_TAC THEN DISCH_TAC THEN EQ_TAC THENL
 [ASM_MESON_TAC[SUBSET_UNION, SUBSET_INTERIOR, SUBSET_EMPTY],
  ASM_MESON_TAC[UNION_COMM, INTERIOR_CLOSED_UNION_EMPTY_INTERIOR]]);
 
-val INTERIOR_BIGUNION_OPEN_SUBSETS = store_thm ("INTERIOR_UNIONS_OPEN_SUBSETS",
+val INTERIOR_UNIONS_OPEN_SUBSETS = store_thm ("INTERIOR_UNIONS_OPEN_SUBSETS",
  ``!s:real->bool. BIGUNION {t | open t /\ t SUBSET s} = interior s``,
   GEN_TAC THEN CONV_TAC SYM_CONV THEN MATCH_MP_TAC INTERIOR_UNIQUE THEN
   SIMP_TAC std_ss [OPEN_BIGUNION, GSPECIFICATION] THEN SET_TAC[]);
@@ -13356,7 +13356,7 @@ val OPEN = store_thm ("OPEN",
         !x. x IN s ==> ?e. &0 < e /\ !x'. abs(x' - x) < e ==> x' IN s``,
   REWRITE_TAC[open_def, dist]);
 
-val CLOSED = store_thm ("LIMPT_APPROACHABLE",
+val CLOSED = store_thm ("CLOSED",
  ``!s. closed s <=>
         !x. (!e. &0 < e ==> ?x'. x' IN s /\ ~(x' = x) /\ abs(x' - x) < e)
             ==> x IN s``,

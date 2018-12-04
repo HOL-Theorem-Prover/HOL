@@ -1540,7 +1540,7 @@ val init_st_with_clock = Q.prove(
   `init_st a b c with clock := d = init_st d b c`,
   EVAL_TAC)
 
-val prefix_chain_sem_t_io_trace_over_all_c = Q.store_thm("lprefix_chain_sem_t_io_trace_over_all_c",
+val lprefix_chain_sem_t_io_trace_over_all_c = Q.store_thm("lprefix_chain_sem_t_io_trace_over_all_c",
   `prefix_chain (over_all (λc. (SND (sem_t (init_st c nd input) t)).io_trace))`,
   rw[lprefix_lubTheory.prefix_chain_def,over_all_def] >>
   qspecl_then[`c`,`c'`]strip_assume_tac arithmeticTheory.LESS_EQ_CASES >|[disj1_tac,disj2_tac] >>
@@ -1563,7 +1563,7 @@ val _ = Parse.add_rule{term_name="BIGSUP",fixity=Parse.Binder,pp_elements=[TOK"B
 val semantics_alt = save_thm("semantics_alt",
   semantics_def
     |> SIMP_RULE bool_ss [image_intro]
-    |> SIMP_RULE bool_ss [prefix_chain_sem_t_io_trace_over_all_c,lprefix_lubTheory.prefix_chain_FILTER,lprefix_lubTheory.prefix_chain_lprefix_chain,lprefix_lubTheory.build_prefix_lub_intro]
+    |> SIMP_RULE bool_ss [lprefix_chain_sem_t_io_trace_over_all_c,lprefix_lubTheory.prefix_chain_FILTER,lprefix_lubTheory.prefix_chain_lprefix_chain,lprefix_lubTheory.build_prefix_lub_intro]
     |> SIMP_RULE bool_ss [IMAGE_over_all]
     |> SIMP_RULE bool_ss [prove(``f o g = λc. f (g c)``,rw[FUN_EQ_THM])]
     |> SIMP_RULE bool_ss [GSYM BIGSUP_def])

@@ -1132,7 +1132,7 @@ val union_mk_wf = store_thm("union_mk_wf[simp]",
   \\ POP_ASSUM (fn th => once_rewrite_tac [th])
   \\ ASM_SIMP_TAC std_ss [mk_wf_eq] \\ fs [lookup_union]);
 
-val inter_mk_wf = store_thm("union_mk_wf[simp]",
+val inter_mk_wf = store_thm("inter_mk_wf[simp]",
   ``!t1 t2. inter (mk_wf t1) (mk_wf t2) = mk_wf (inter t1 t2)``,
   REPEAT STRIP_TAC
   \\ `inter (mk_wf t1) (mk_wf t2) = mk_wf (inter (mk_wf t1) (mk_wf t2))` by

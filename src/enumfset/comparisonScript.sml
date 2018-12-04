@@ -79,7 +79,7 @@ val string_cmp_def = save_thm(
   ternaryComparisonsTheory.string_compare_def)
 (* relationship to toto *)
 
-val TotOrd_imp_good_cmp = store_thm("TotOrder_imp_good_cmp",
+val TotOrder_imp_good_cmp = store_thm("TotOrder_imp_good_cmp",
   ``!cmp. TotOrd cmp ==> good_cmp cmp``,
   rw[TotOrd,good_cmp_thm] >> metis_tac[])
 

@@ -35,7 +35,7 @@ val inst_walkstar =  Q.INST [`R` |-> `walkstarR s`]
 
 val [h2,h1,h3] = hyp (inst_walkstar pre_walkstar_def)
 
-val th1 = Q.store_thm("walkstar_th1",`wfs s ⇒ ^h1`,
+val walkstar_th1 = Q.store_thm("walkstar_th1",`wfs s ⇒ ^h1`,
 SRW_TAC [][inv_image_def,LEX_DEF,walkstarR_def] THEN
 Q.PAT_X_ASSUM `wfs s` ASSUME_TAC THEN
 Cases_on `t` THEN FULL_SIMP_TAC (srw_ss()) [] THENL [
@@ -50,7 +50,7 @@ Cases_on `t` THEN FULL_SIMP_TAC (srw_ss()) [] THENL [
   SRW_TAC [][]
 ]);
 
-val th2 = Q.store_thm("walkstar_th2",`wfs s ⇒ ^h2`,
+val walkstar_th2 = Q.store_thm("walkstar_th2",`wfs s ⇒ ^h2`,
 SRW_TAC [][inv_image_def,LEX_DEF,walkstarR_def] THEN
 Q.PAT_X_ASSUM `wfs s` ASSUME_TAC THEN
 Cases_on `t` THEN FULL_SIMP_TAC (srw_ss()) [] THENL [
@@ -70,7 +70,7 @@ Cases_on `t` THEN FULL_SIMP_TAC (srw_ss()) [] THENL [
   SRW_TAC [][]
 ]);
 
-val th3 = Q.store_thm("walkstar_thWF",`wfs s ⇒ ^h3`,
+val walkstar_thWF = Q.store_thm("walkstar_thWF",`wfs s ⇒ ^h3`,
 SRW_TAC [][wfs_def,walkstarR_def] THEN
 MATCH_MP_TAC WF_inv_image THEN
 SRW_TAC [][WF_TC, WF_LEX, WF_mlt1]);
@@ -78,8 +78,8 @@ SRW_TAC [][WF_TC, WF_LEX, WF_mlt1]);
 fun walkstar_wfs_hyp th =
   th |>
   PROVE_HYP (UNDISCH th1) |>
-  PROVE_HYP (UNDISCH th2) |>
-  PROVE_HYP (UNDISCH th3);
+  PROVE_HYP (UNDISCH walkstar_th2) |>
+  PROVE_HYP (UNDISCH walkstar_thWF);
 
 val walkstar_def = save_thm("walkstar_def",DISCH_ALL(walkstar_wfs_hyp (inst_walkstar pre_walkstar_def)));
 val walkstar_ind = save_thm("walkstar_ind",walkstar_wfs_hyp (inst_walkstar (theorem "pre_walkstar_ind")));

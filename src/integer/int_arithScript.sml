@@ -651,7 +651,7 @@ val gcdthm2 = store_thm(
     CONV_TAC (AC_CONV(INT_MUL_ASSOC, INT_MUL_COMM))
   ]);
 
-val gcd1_thm = store_thm(
+val gcd1thm = store_thm(
   "gcd1thm",
   ``!m n p q. (p * &m + q * &n = 1i) ==> (gcd m n = 1n)``,
   REPEAT STRIP_TAC THEN
@@ -686,7 +686,7 @@ val gcd21_thm = store_thm(
       (p * &a + q * &m = 1i) /\ ~(m = 0) /\ ~(a = 0) ==>
       (&m int_divides &a * x + b = ?t. x = ~p * b + t * &m)``,
   REPEAT STRIP_TAC THEN
-  `1 = gcd a m` by PROVE_TAC [gcd1_thm] THEN
+  `1 = gcd a m` by PROVE_TAC [gcd1thm] THEN
   `~(1n = 0)` by ASM_SIMP_TAC arith_ss []  THEN
   Q.PAT_X_ASSUM `_ = 1i` (ASSUME_TAC o SYM) THEN
   Q.SPECL_THEN [`m`, `a`, `x`, `b`, `1`, `p`, `q`] MP_TAC gcdthm2 THEN

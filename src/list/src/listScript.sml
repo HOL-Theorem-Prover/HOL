@@ -1863,7 +1863,7 @@ val ALL_DISTINCT_MAP = store_thm(
 ``!f ls. ALL_DISTINCT (MAP f ls) ==> ALL_DISTINCT ls``,
 GEN_TAC THEN Induct THEN SRW_TAC[][ALL_DISTINCT, MAP, MEM_MAP] THEN PROVE_TAC[])
 
-val ALL_DISTINCT_EL_EQ = store_thm (
+val EL_ALL_DISTINCT_EL_EQ = store_thm (
    "EL_ALL_DISTINCT_EL_EQ",
    ``!l. ALL_DISTINCT l =
          (!n1 n2. n1 < LENGTH l /\ n2 < LENGTH l ==>
@@ -1886,7 +1886,7 @@ val ALL_DISTINCT_EL_IMP = store_thm (
    "ALL_DISTINCT_EL_IMP",
    ``!l n1 n2. ALL_DISTINCT l /\ n1 < LENGTH l /\ n2 < LENGTH l ==>
                ((EL n1 l = EL n2 l) = (n1 = n2))``,
-   PROVE_TAC[ALL_DISTINCT_EL_EQ]);
+   PROVE_TAC[EL_ALL_DISTINCT_EL_EQ]);
 
 
 val ALL_DISTINCT_APPEND = store_thm (
@@ -1914,7 +1914,7 @@ val ALL_DISTINCT_ZIP = store_thm(
 val ALL_DISTINCT_ZIP_SWAP = store_thm(
    "ALL_DISTINCT_ZIP_SWAP",
    ``!l1 l2. ALL_DISTINCT (ZIP (l1,l2)) /\ (LENGTH l1 = LENGTH l2) ==> ALL_DISTINCT (ZIP (l2,l1))``,
-   SRW_TAC [] [ALL_DISTINCT_EL_EQ] THEN
+   SRW_TAC [] [EL_ALL_DISTINCT_EL_EQ] THEN
    Q.PAT_X_ASSUM `X = Y` (ASSUME_TAC o SYM) THEN
    FULL_SIMP_TAC (srw_ss()) [EL_ZIP, LENGTH_ZIP] THEN
    METIS_TAC [])
