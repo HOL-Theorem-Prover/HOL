@@ -35,7 +35,7 @@ val EXTRACT_THM = store_thm(
     Induct_on `l`
     >- rw[extract_def]
     >> map_every Cases_on [`i`,`j`]
-    >> rw[extract_def] 
+    >> rw[extract_def]
     >> rw[GENLIST_CONS]
     >> simp[combinTheory.o_DEF]
     >> simp[ADD_CLAUSES]
@@ -69,7 +69,7 @@ val uniqueElems_def =
     Define
     `
     (uniqueElems [] = []) /\
-    (uniqueElems (x::rst) = 
+    (uniqueElems (x::rst) =
         let
             uniTail = uniqueElems rst
         in
@@ -99,7 +99,7 @@ val UNIQUE_ELEMS_THM = store_thm(
             >> Cases_on `MEM h (uniqueElems inString)`
             >- simp[EL,uniqueElems_def]
             >- simp[])
-        )            
+        )
     );
 
 (* -- FIND ELEMS FUNCTION -- *)
@@ -266,7 +266,7 @@ val CHECK_PAIRS_BND = store_thm(
 val checkPrefixRL_def =
     Define
     `
-    checkPrefixRL pat search = 
+    checkPrefixRL pat search =
         let
             (L = LENGTH pat);
             (S = LENGTH search)

@@ -14,7 +14,7 @@ val _ = new_theory"set_lemmas";
 (* Upper bound on members of set puts upper bound on MIN_SET *)
 val MIN_SET_UPPER_BOUND = store_thm(
     "MIN_SET_UPPER_BOUND",
-    ``(s <> {}) /\ (!e. e IN s ==> e <= l) 
+    ``(s <> {}) /\ (!e. e IN s ==> e <= l)
      ==> (MIN_SET s <= l)``,
     rw[]
     >> irule LESS_EQ_TRANS

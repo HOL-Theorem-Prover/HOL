@@ -89,7 +89,7 @@ val CMRECUR_BND_THM = store_thm(
         >> ONCE_REWRITE_TAC [cmRecur_def]
         >> simp[checkDeltaC_def])
     >- (fs[]
-        >> rpt STRIP_TAC 
+        >> rpt STRIP_TAC
         >> `cmRecur pat all_chars j a (SUC x) <= d` by fs[ADD_CLAUSES]
         >> `cmRecur pat all_chars j a x <= cmRecur pat all_chars j a (SUC x)` suffices_by fs[]
         >> qabbrev_tac `L = cmRecur pat all_chars j a (SUC x)`
@@ -123,7 +123,7 @@ val CMRECUR_COR_THM = store_thm(
     >- (rpt STRIP_TAC
         >> ONCE_REWRITE_TAC[cmRecur_def]
         >> fs[checkDeltaC_def,valid_cha_shifts_def])
-    >- (rpt STRIP_TAC  
+    >- (rpt STRIP_TAC
         >> `v = j + 1 - SUC d` by fs[]
         >> `SUC d <= j + 1` by fs[]
         >> `SUC d <= cmRecur pat all_chars j a (SUC d)`
@@ -186,7 +186,7 @@ val CMVAL_BND = store_thm(
             suffices_by metis_tac[MIN_SET_LEM, LESS_EQ_TRANS, MEMBER_NOT_EMPTY]
         >> simp[valid_cha_shifts_def]
         >> qexists_tac `j+1`
-        >> simp[])        
+        >> simp[])
     );
 
 (* -- IMPLICIT SUFFIX MATCH TABLE CONSTRUCTION -- *)
@@ -194,7 +194,7 @@ val CMVAL_BND = store_thm(
 val checkDeltaS_def =
     Define
     `
-    checkDeltaS pat j d = 
+    checkDeltaS pat j d =
         ((d >= SUC j) \/ ~(EL (j-d) pat = EL j pat)) /\
         (extract (MAX (SUC j) d,LENGTH pat) pat
             = extract ((MAX (SUC j) d) - d,LENGTH pat - d) pat)
@@ -294,7 +294,7 @@ val SMRECUR_BND_THM = store_thm(
         >> ONCE_REWRITE_TAC [smRecur_def]
         >> fs[CHECK_DELTAS_SET])
     >- (fs[]
-        >> rpt STRIP_TAC 
+        >> rpt STRIP_TAC
         >> `smRecur pat j (SUC x) <= d` by fs[ADD_CLAUSES]
         >> `smRecur pat j x <= smRecur pat j (SUC x)` suffices_by fs[]
         >> qabbrev_tac `L = smRecur pat j (SUC x)`
@@ -327,7 +327,7 @@ val SMRECUR_COR_THM = store_thm(
             >> fs[])
     >> Induct_on `LENGTH pat - d`
     >- (rpt STRIP_TAC
-        >> `d = LENGTH pat` by simp[] 
+        >> `d = LENGTH pat` by simp[]
         >> `LENGTH pat = smRecur pat j d` by fs[SMRECUR_LEM, LESS_EQUAL_ANTISYM]
         >> `LENGTH pat IN valid_suf_shifts pat j` suffices_by fs[]
         >> `checkDeltaS pat j (LENGTH pat)`
@@ -342,7 +342,7 @@ val SMRECUR_COR_THM = store_thm(
                     >> fs[])
         >> ONCE_REWRITE_TAC[CHECK_DELTAS_THM]
         >> fs[])
-    >- (rpt STRIP_TAC  
+    >- (rpt STRIP_TAC
         >> `v = LENGTH pat - SUC d` by fs[]
         >> `SUC d <= LENGTH pat` by fs[]
         >> `SUC d <= smRecur pat j (SUC d)`
@@ -408,7 +408,7 @@ val SMVAL_BND = store_thm(
             >> simp[valid_suf_shifts_def]
             >> qexists_tac `LENGTH pat`
             >> simp[])
-        )         
+        )
     );
 
 
@@ -477,7 +477,7 @@ val MTAB_THM = store_thm(
     >> strip_tac
     >> strip_tac
     >> strip_tac
-    >> `(EL a (EL j (mTab pat all_chars)) = (smVal pat j)) \/ 
+    >> `(EL a (EL j (mTab pat all_chars)) = (smVal pat j)) \/
         (EL a (EL j (mTab pat all_chars)) = (cmVal pat all_chars j a))`
             by rw[mTab_def,mSubTab_def,mVal_def,EL_GENLIST,MAX_DEF]
     >- (fs[]
@@ -529,7 +529,7 @@ val bmRecur_def =
                         then
                             (LENGTH search + 1)
                         else
-                            let 
+                            let
                                 (d = EL a (EL j patTab))
                             in
                                 if
@@ -596,7 +596,7 @@ val BMRECUR_THM = store_thm(
                          /\ a < LENGTH all_chars
                          /\ (EL (k+j) search = EL a all_chars)
                          ==> !d. d < EL a (EL j patTab)
-                                 ==> ~((k+d) IN solutions pat search))   
+                                 ==> ~((k+d) IN solutions pat search))
      ==> (!j. j < LENGTH search ==> MEM (EL j search) all_chars)
          ==> (bmRecur pat patTab all_chars search = solution pat search)``,
     strip_tac
@@ -689,7 +689,7 @@ val BMSEARCH_THM = store_thm(
     >- rw [MTAB_BND]
     >- rw [MTAB_DIM]
     >- rw [UNIQUE_ELEMS_THM]
-    >- rw [MTAB_DIM]   
+    >- rw [MTAB_DIM]
     );
 
 (* STRING SPECIALISATION *)
@@ -785,7 +785,7 @@ val bmRecurString_def =
                         then
                             (LENGTH search + 1)
                         else
-                            let 
+                            let
                                 (d = EL a (EL j patTab))
                             in
                                 if

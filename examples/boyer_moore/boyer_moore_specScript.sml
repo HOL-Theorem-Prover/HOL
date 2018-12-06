@@ -13,7 +13,7 @@ open set_lemmasTheory;
 
 val _ = new_theory"boyer_moore_spec";
 
-(*                                                    
+(*
     SOLUTION DEFINITION AND BEHAVIOUR
     ---------------------------------
                                         *)
@@ -197,7 +197,7 @@ val valid_cha_shifts_def =
    valid_cha_shifts pat all_chars j a =
         (j+1) INSERT {d | 1 <= d /\ d <= j
                           /\ (EL (j-d) pat = EL a all_chars)}
-   `;     
+   `;
 
 (* Confirmation that a valid character shift exists *)
 val CHA_SHIFT_EXISTS_THM = store_thm(
@@ -214,7 +214,7 @@ val CHA_SKIP_NOT_SOL = store_thm(
      /\ (j < LENGTH pat)
      /\ (EL j pat <> EL (k+j) search)
      /\ (EL (k+j) search = EL a all_chars)
-     ) 
+     )
      ==> (!d. d < MIN_SET (valid_cha_shifts pat all_chars j a)
               ==> ~((k+d) IN solutions pat search))``,
     DISCH_TAC
@@ -248,12 +248,12 @@ val CHA_SKIP_NOT_SOL = store_thm(
 val valid_suf_shifts_def =
     Define
     `
-    valid_suf_shifts pat j  =   
+    valid_suf_shifts pat j  =
         {d | 1 <= d /\ d <= LENGTH pat
             /\ (!i. (MAX (j+1) d <= i) /\ (i <= LENGTH pat - 1)
                     ==> (EL (i-d) pat = EL i pat))
             /\ ((d >= j+1) \/ (EL (j-d) pat <> EL j pat))
-        } 
+        }
     `;
 
 (* Confirmation that a valid suffix shift exists in correct circumstances *)
@@ -278,7 +278,7 @@ val SUF_SKIP_NOT_SOL = store_thm(
     /\ (!i. (j<i /\ i < LENGTH pat)
            ==> (EL i pat = EL (k+i) search))
     /\ (EL j pat <> EL (k+j) search)
-    ) 
+    )
     ==> (!d. d < MIN_SET (valid_suf_shifts pat j)
            ==> ~((k+d) IN solutions pat search)
         )
