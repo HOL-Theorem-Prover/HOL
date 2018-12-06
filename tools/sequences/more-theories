@@ -54,3 +54,4 @@ src/search
 !examples/PSL/1.01/executable-semantics
 !examples/PSL/1.1/official-semantics
 !examples/temporal_deep
+!examples/boyer_moore
