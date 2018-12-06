@@ -205,6 +205,7 @@ fun ap1 f (x,y,z) = (f x, y, z)
 
 fun remove_listrels lsps rels =
   let
+    (* rels = "rule elements", i.e., TMs and TOKs *)
     fun recurse (A as (outrels, listbits, tmc)) lsps rels =
       case lsps of
           [] => ap1 (fn l => l @ rels) (rev2 A)
@@ -222,7 +223,7 @@ fun remove_listrels lsps rels =
                          TOK tk' :: later_rels =>
                            if tk' = rd then
                              recurse
-                               (A |> c1 rel |> c1 TM |> c2 (lsp,[]))
+                               (A |> c1 rel |> c1 TM |> c2 (lsp,tmc,0))
                                more_lsps
                                more_rels
                            else
@@ -231,11 +232,11 @@ fun remove_listrels lsps rels =
                        | TM :: (inter_rels as (TOK sep' :: later_rels)) =>
                            if sep = sep' then
                              consume_list
-                               (A |> c1 rel |> c1 TM |> inc) (lsp, [#3 A]) rd
+                               (A |> c1 rel |> c1 TM |> inc) (lsp, tmc, 1) rd
                                more_lsps later_rels
                            else if sep' = rd then
                              recurse
-                               (A |> c1 rel |> c1 TM |> inc |> c2 (lsp, [#3 A]))
+                               (A |> c1 rel |> c1 TM |> inc |> c2 (lsp, tmc, 1))
                                more_lsps inter_rels
                            else (* probably an error *)
                              recurse (A |> c1 rel |> c1 TM |> inc)
@@ -244,14 +245,14 @@ fun remove_listrels lsps rels =
                        | _ => raise Fail "remove_listrels: malformed RHS"
                    end
              | _ => raise Fail "remove_listrels: malformed RHS(2)")
-    and consume_list A (curr as (lsp, idxs)) rdelim lsps rels =
+    and consume_list A (curr as (lsp, start, c)) rdelim lsps rels =
         case rels of
-            [] => (* probably an error *) rev2 (A |> c2 (lsp, List.rev idxs))
-          | TM :: rest => consume_list (A |> inc) (lsp, #3 A :: idxs)
+            [] => (* probably an error *) rev2 (A |> c2 (lsp, start, c))
+          | TM :: rest => consume_list (A |> inc) (lsp, start, c + 1)
                                        rdelim lsps rest
           | TOK t :: rest =>
             if t = rdelim then
-              recurse (A |> c2 (lsp, List.rev idxs)) lsps rels
+              recurse (A |> c2 (lsp, start, c)) lsps rels
             else (* it's assumed to be the sep *)
               consume_list A curr rdelim lsps rest
           | _ => raise Fail "consume_list: malformed RHS"
