@@ -205,7 +205,7 @@ val ai = Arbnum.fromInt
 fun snum i = Numeral(ai i, NONE)
 
 in
-val _ = app test [
+val _ = app (ignore o test) [
       ("abc", [Ident "abc"]),
       ("12", [snum 12]),
       ("-12", [Ident "-", snum 12]),
@@ -271,7 +271,7 @@ val _ = app test [
       ("map:=λh.", [Ident "map", Ident ":=", Ident "λ", Ident "h", Ident "."]),
       ("map:=\\h.", [Ident "map", Ident ":=\\", Ident "h", Ident "."])
     ]
-val _ = List.app failtest [
+val _ = List.app (ignore o failtest) [
       ("thy$$$", "qualified ident"),
       ("$var$(ab\n c)", "quoted variable"),
       ("'a", "can't begin with prime")
@@ -700,9 +700,7 @@ val _ = List.app pdtest [
   ("h", "C = foo bool bool; D = bar bool|baz", expected6)
 ]
 
-val _ = List.app pdfail [
-  ("h", "C = foo bool->bool")
-]
+val _ = List.app (ignore o pdfail) [("h", "C = foo bool->bool")]
 
 
 (* string find-replace *)
@@ -795,6 +793,7 @@ local
       require_msg check pr (lex []) (qbuf.new_buffer [QUOTE s])
     end
 in
-val _ = List.app test [("aa(", "aa"), ("((a", "("), ("¬¬", "¬"),
-                       ("¬¬p", "¬")]
+val _ = List.app (ignore o test) [
+      ("aa(", "aa"), ("((a", "("), ("¬¬", "¬"), ("¬¬p", "¬")
+    ]
 end (* local open term_tokens *)

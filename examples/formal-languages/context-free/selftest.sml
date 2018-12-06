@@ -34,7 +34,7 @@ in
 end
 val _ = temp_overload_on ("Ok", ``λt. (Result (SOME ([], t)))``)
 
-val _ = print "\n" before app test [
+val _ = print "\n" before app (ignore o test) [
   ("123", ``123s``),
   ("(123)", ``⦇123⦈``),
   (" (123 10) ", ``⦇123; 10⦈``),

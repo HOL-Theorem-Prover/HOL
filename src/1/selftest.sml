@@ -1102,7 +1102,8 @@ fun dolvtests(modname,empty,insert,match) = let
     in
       require (check_result (equal expected))
               (fn pat => List.map snd (match (n,pat)))
-              pat
+              pat;
+      ()
     end
 in
   List.app test [("exact", ``f x y : bool``, [1]),
@@ -1155,7 +1156,7 @@ in
     | _ => die ""
 end
 
-val _ = List.app substtest tests
+val _ = List.app (ignore o substtest) tests
 
 val _ = print "Testing cond-printer after set_grammar_ancestry\n"
 val _ = set_trace "PP.avoid_unicode" 1
