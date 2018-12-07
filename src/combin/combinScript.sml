@@ -30,8 +30,8 @@ val UPDATE_def = Q.new_definition("UPDATE_def",
    `UPDATE a b = \f c. if a = c then b else f c`);
 
 val _ = set_fixity ":>" (Infixl 310);
-val _ = set_fixity "=+" (Infix(NONASSOC, 320));
-val _ = overload_on("=+", ``UPDATE``);
+val _ = set_mapped_fixity {tok = "=+", fixity = Infix(NONASSOC, 320),
+                           term_name = "UPDATE"}
 val _ = Parse.Unicode.unicode_version {tmnm = "o", u = UTF8.chr 0x2218}
 val _ = TeX_notation {hol = "o", TeX = ("\\HOLTokenCompose", 1)}
 val _ = TeX_notation {hol = UTF8.chr 0x2218, TeX = ("\\HOLTokenCompose", 1)}
@@ -63,7 +63,8 @@ in
   addlform UnicodeChars.lensel UnicodeChars.lenser;
   add_ML_dependency "combinpp";
   add_absyn_postprocessor "combin.UPDATE";
-  inferior_overload_on (update_constname, ``UPDATE``)
+  inferior_overload_on (update_constname, ``UPDATE``);
+  add_user_printer ("combin.updpp", “UPDATE k v f”)
 end;
 
 

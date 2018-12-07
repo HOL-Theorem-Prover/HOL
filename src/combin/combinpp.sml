@@ -1,7 +1,7 @@
 structure combinpp :> combinpp =
 struct
 
-open Absyn
+open HolKernel boolLib Absyn
 val toplevel_updname = "  combinpp.toplevelupd"
 val internal_consupd = "  combinpp.cons"
 val internal_idupd = "  combinpp.nil"
@@ -66,9 +66,77 @@ fun upd_processor G a =
 val _ = term_grammar.userSyntaxFns.register_absynPostProcessor
           {name = "combin.UPDATE", code = upd_processor}
 
+fun has_name_by_parser G s tm = let
+  open GrammarSpecials
+  val oinfo = term_grammar.overload_info G
+in
+  case dest_term tm of
+      VAR(vnm, _) => vnm = s orelse
+                     (case dest_fakeconst_name vnm of
+                          SOME{fake,...} => fake = s
+                        | NONE => false)
+    | _ =>
+      (case Overload.info_for_name oinfo s of
+           NONE => false
+         | SOME {actual_ops,...} =>
+             List.exists (fn t => can (match_term t) tm) actual_ops)
+end
+fun isupdate_tm G t = has_name_by_parser G "UPDATE" t
 
+fun strip_upd G t =
+    let
+      fun recurse A t =
+          case strip_comb t of
+              (u, [k,v,f]) => if isupdate_tm G u then
+                                recurse ((k,v)::A) f
+                              else (List.rev A, t)
+            | _ => (List.rev A, t)
+    in
+      recurse [] t
+    end
 
+fun upd_printer (tyg,tmg) backend printer ppfns (pgr,lgr,rgr) depth tm =
+    let
+      open term_pp_utils term_pp_types smpp
+      val unicodep = get_tracefn "PP.avoid_unicode" () = 0
+      val (kvs, f) = strip_upd tmg tm
+      val _ = not (null kvs) orelse raise UserPP_Failed
+      val {add_string,add_break,...} = ppfns
+      val (arrow_s,ld_s,rd_s) = if unicodep then ("↦", "⦇", "⦈") (* UOK *)
+                                else ("|->", "(|", "|)")
+      val paren =
+          case lgr of
+              Prec(i, _) => if i > 2100 then
+                              fn p => block PP.INCONSISTENT 1 (
+                                       add_string "(" >> p >>
+                                       add_string ")"
+                                     )
+                            else (fn p => p)
+            | _ => fn p => p
+      val arrow_grav = Prec(100, mapsto_special)
+      fun prkv (k,v) =
+          block PP.INCONSISTENT 2 (
+            printer {gravs = (arrow_grav,Top,arrow_grav),
+                     depth = decdepth depth, binderp = false} k >>
+            add_string " " >> add_string arrow_s >> add_break(1,0) >>
+            printer {gravs = (arrow_grav,Top,arrow_grav),
+                     depth = decdepth depth, binderp = false} v
+          )
+    in
+      paren (
+        block PP.CONSISTENT 0 (
+          printer {gravs = (pgr,lgr,Top), depth = decdepth depth,
+                   binderp = false} f >>
+          block PP.INCONSISTENT (UTF8.size ld_s) (
+            add_string ld_s >>
+            pr_list prkv (add_string ";" >> add_break(1,0)) kvs >>
+            add_string rd_s
+          )
+        )
+      )
+    end
 
-
+val _ = term_grammar.userSyntaxFns.register_userPP
+          {name = "combin.updpp", code = upd_printer}
 
 end (* struct *)
