@@ -43,8 +43,8 @@ val LUPDATE_def = xDefine "LUPDATE"
         EL (w2n b - w2n a) l
       else m b`;
 
-val Ua_def = xDefine "Ua" `$=+> = $=+`;
-val Ub_def = xDefine "Ub" `$=+< = $=+`;
+val Ua_def = xDefine "Ua" `$=+> = UPDATE`;
+val Ub_def = xDefine "Ub" `$=+< = UPDATE`;
 
 val LUa_def = xDefine "LUa" `$|:> = $|:`;
 val LUb_def = xDefine "LUb" `$|:< = $|:`;
