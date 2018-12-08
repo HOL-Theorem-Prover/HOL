@@ -659,39 +659,47 @@ and \ml{C},
 \index{C, the HOL constant@\ml{C}, the \HOL{} constant}
 
 \begin{hol}
-\begin{verbatim}
-     o_DEF |- f o g = (\x. f(g x))
-   APP_DEF |- x :> f = f x
-UPDATE_DEF |- (k =+ v) = (\f c. if k = c then v else f c)
-     K_DEF |- K = (\x y. x)
-     S_DEF |- S = (\f g x. f x(g x))
-     I_DEF |- I = S K K
-     W_DEF |- W = (\f x. f x x)
-     C_DEF |- C = (\f x y. f y x)
-\end{verbatim}
+\begin{alltt}
+>>__ open combinTheory
+##thm o_DEF
+##thm APP_DEF
+##thm UPDATE_def
+##thm K_DEF
+##thm S_DEF
+##thm I_DEF
+##thm W_DEF
+##thm C_DEF
+\end{alltt}
 \end{hol}
 
 \noindent The following elementary properties are proved in the theory
 \ml{combin}:
 
 \begin{hol}
-\begin{verbatim}
-   o_THM   |- !f g x. (f o g) x = f(g x)
-   o_ASSOC |- !f g h. f o (g o h) = (f o g) o h
+\begin{alltt}
+##thm o_THM
+##thm o_ASSOC
 
-   UPDATE_EQ
-           |- !f a b c. (a =+ c) ((a =+ b) f) = (a =+ c) f
-   UPDATE_COMMUTES
-           |- !f a b c d. a <> b ==>
-                          ((a =+ c) ((b =+ d) f) = (b =+ d) ((a =+ c) f))
+##thm UPDATE_EQ
+##thm UPDATE_COMMUTES
 
-   K_THM   |- !x y. K x y = x
-   S_THM   |- !f g x. S f g x = f x (g x)
-   I_THM   |- !x. I x = x
-   W_THM   |- !f x. W f x = f x x
-   C_THM   |- !f x y. C f x y = f y x
-\end{verbatim}
+##thm K_THM
+##thm S_THM
+##thm I_THM
+##thm W_THM
+##thm C_THM
+\end{alltt}
 \end{hol}
+
+The above illustrates that there are two ways of writing function update terms.
+As per the definition above (\ml{UPDATE\_def}), the infix \holtxt{=+} takes a key $k$ and a value $v$, and returns a higher-order function, which when in turn is passed a function $f$, returns a version of that function that has been updated to return $v$ when applied to $k$, and is otherwise the same as $f$.
+The same effect can be achieved with the ``substitution style'' syntax: $f\llparenthesis{}k\mapsto v\rrparenthesis$.
+There is an ASCII form of this notation as well:
+\begin{session}
+\begin{alltt}
+>> ``f (| k |-> v |)``;
+\end{alltt}
+\end{session}
 
 \index{ function application operator, in HOL logic@\ml{:>} ((reversed) function application operator), in \HOL{} logic}
 There are no theorems about \ml{:>}; its use is as a convenient syntax for function applications.
@@ -714,15 +722,14 @@ range over outputs).\footnote{Constants declared in new theories can
   freely re-use these names, with ambiguous inputs resolved by type
   inference.}  Variables with these names can be used in the current
 system if \ml{o}, \ml{S}, \ml{K}, \ml{I}, \ml{W}, and \ml{C} are first
-hidden (see Section~\ref{hidden}).  In fact, this happens so often
-with the constant \holtxt{C} that it is ``hidden'' by default.  While
-hidden, it must be written in fully-qualified form, as
-\holtxt{combin\$C}.
+hidden (see Section~\ref{hidden}).
+In fact, this happens so often with the constant \holtxt{C} that it is ``hidden'' by default.
+While hidden, it must be written in fully-qualified form, as \holtxt{combin\$C}.
+It is also printed this way, as can be seen above.
 %
 \index{ function composition operator, in HOL logic@\ml{o} (function composition operator), in \HOL{} logic|)}
 \index{function composition, in HOL logic@function composition, in \HOL{} logic|)}
 \index{constants, in HOL logic@constants, in \HOL{} logic!fully-qualified names of}
-
 
 \subsection{Pairs}\label{prod}
 
