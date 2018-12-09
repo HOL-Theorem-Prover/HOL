@@ -369,8 +369,8 @@
 (define-key hol-unicode-leftarrow-map (kbd "~") "↜")
 
 (define-key hol-unicode-rightarrow-map (kbd "-") "→")
-(define-key hol-unicode-rightarrow-map (kbd "C-<") "↠")
-(define-key hol-unicode-rightarrow-map (kbd "<") "↣")
+(define-key hol-unicode-rightarrow-map (kbd "C->") "↠")
+(define-key hol-unicode-rightarrow-map (kbd ">") "↣")
 (define-key hol-unicode-rightarrow-map (kbd "|") "↦")
 (define-key hol-unicode-rightarrow-map (kbd "`") "⇀")
 (define-key hol-unicode-rightarrow-map (kbd ",") "⇁")
