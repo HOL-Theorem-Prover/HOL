@@ -1,0 +1,6 @@
+The fact that AScript uses badLib shouldn’t introduce a dependency on
+badLib for BScript. In fact, having such a dependency causes its
+otherwise working proof to fail.
+
+Worse, interactive testing of BScript can’t induce the fault, because
+there’s nothing in BScript to push the session to load badLib.

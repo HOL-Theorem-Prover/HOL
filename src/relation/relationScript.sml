@@ -994,7 +994,7 @@ val _ = Unicode.unicode_version {u = UnicodeChars.emptyset ^ UnicodeChars.sub_r,
                                  tmnm = "EMPTY_REL"}
 
 
-val WF_Empty =
+val WF_EMPTY_REL =
 Q.store_thm
   ("WF_EMPTY_REL",
    `WF (EMPTY_REL:'a->'a->bool)`,

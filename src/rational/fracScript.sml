@@ -774,7 +774,7 @@ val FRAC_ABS_SGN = store_thm("FRAC_ABS_SGN", ``!f1. ~(frac_nmr f1 = 0i) ==> (ABS
  * TODO: was FRAC_SGN_MUL2
  *--------------------------------------------------------------------------*)
 
-val FRAC_SGN_MUL = store_thm("FRAC_SGN_MUL2", ``!f1 f2. frac_sgn (frac_mul f1 f2) = frac_sgn f1 * frac_sgn f2``,
+val FRAC_SGN_MUL2 = store_thm("FRAC_SGN_MUL2", ``!f1 f2. frac_sgn (frac_mul f1 f2) = frac_sgn f1 * frac_sgn f2``,
         REPEAT GEN_TAC THEN
         REWRITE_TAC[frac_sgn_def, frac_mul_def] THEN
         FRAC_NMRDNM_TAC THEN

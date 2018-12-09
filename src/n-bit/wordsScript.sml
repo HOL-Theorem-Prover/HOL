@@ -2087,7 +2087,7 @@ val mk_word_reduce_thms =
     [("foldl_reduce_and",  ``$reduce_and``,  word_and_def,  reduce_and_def,
       ``(&&):unit word->unit word->unit word``, ``(/\)``),
      ("foldl_reduce_or",   ``$reduce_or``,   word_or_def,   reduce_or_def,
-      ``(||):unit word->unit word->unit word``, ``(\/)``),
+      ``( || ):unit word->unit word->unit word``, ``(\/)``),
      ("foldl_reduce_xor",   ``$reduce_xor``,  word_xor_def, reduce_xor_def,
       ``(??):unit word->unit word->unit word``, ``(<>):bool->bool->bool``),
      ("foldl_reduce_nand", ``$reduce_nand``, word_nand_def, reduce_nand_def,

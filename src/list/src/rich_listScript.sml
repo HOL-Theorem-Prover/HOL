@@ -1401,7 +1401,7 @@ val EVERY_BUTLASTN = Q.store_thm ("EVERY_BUTLASTN",
          THEN RES_TAC
          THEN ASM_REWRITE_TAC []]]);
 
-val TAKE_TAKE_T = Q.store_thm ("TAKE_TAKE",
+val TAKE_TAKE_T = Q.store_thm ("TAKE_TAKE_T",
    `!m l n. n <= m ==> (TAKE n (TAKE m l) = TAKE n l)`,
   Induct THEN1 SIMP_TAC list_ss [TAKE, listTheory.TAKE_def]
   THEN Cases THEN1 SIMP_TAC list_ss [TAKE, listTheory.TAKE_def]
@@ -1582,7 +1582,7 @@ val SEG_APPEND2 = Q.store_thm ("SEG_APPEND2",
    THEN FIRST_ASSUM MATCH_MP_TAC
    THEN ASM_REWRITE_TAC [LENGTH, LESS_EQ_MONO]);
 
-val SEG_TAKE_DROP = Q.store_thm ("SEG_TAKE_BUTFISTN",
+val SEG_TAKE_DROP = Q.store_thm ("SEG_TAKE_DROP",
    `!n m l. n + m <= LENGTH l ==> (SEG n m l = TAKE n (DROP m l))`,
    REPEAT INDUCT_TAC
    THEN LIST_INDUCT_TAC

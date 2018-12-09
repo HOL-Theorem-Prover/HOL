@@ -260,7 +260,7 @@ val ITAdvance_0 = ustore_thm("ITAdvance_0",
 
 (* ------------------------------------------------------------------------ *)
 
-val RoudingMode = Q.store_thm("RoundingMode",
+val RoundingMode = Q.store_thm("RoundingMode",
    `!s. RoundingMode s = DecodeRoundingMode s.FP.FPSCR.RMode`,
    rw [DecodeRoundingMode_def, RoundingMode_def]
    \\ blastLib.FULL_BBLAST_TAC

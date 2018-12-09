@@ -146,7 +146,7 @@ val LIST_TO_BAG_FILTER = store_thm ("LIST_TO_BAG_FILTER",
     ASM_SIMP_TAC list_ss [LIST_TO_BAG_def, BAG_FILTER_BAG_INSERT] ] ) ;
 
 
-val INN_LIST_TO_BAG = store_thm ("IN_LIST_TO_BAG",
+val INN_LIST_TO_BAG = store_thm ("INN_LIST_TO_BAG",
 ``!n h l. BAG_INN h n (LIST_TO_BAG l) = (LENGTH (FILTER ($= h) l) >= n)``,
 Induct_on `l` THENL [
   SIMP_TAC list_ss [LIST_TO_BAG_def, BAG_INN_EMPTY_BAG],

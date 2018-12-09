@@ -505,7 +505,7 @@ val regexp_compare_eq = Q.store_thm
   >> mp_tac (Q.SPECL [`[(r,s)]`, `[r]`, `[s]`] regexp_compareW_eq)
   >> rw_tac list_ss [ZIP_def]);
 
-val regexp_compareW_strict = Q.store_thm
+val regexp_compareW_antisym = Q.store_thm
 ("regexp_compareW_antisym",
   `!plist l1 l2.
     (LENGTH l1 = LENGTH l2) /\ (ZIP (l1,l2) = plist)
@@ -542,7 +542,7 @@ val regexp_compare_antisym = Q.store_thm
 ("regexp_compare_antisym",
 `!r s. (regexp_compare r s = Greater) ⇔ (regexp_compare s r = Less)`,
  rw_tac list_ss [regexp_compare_def]
-  >> mp_tac (Q.SPECL [`[(r,s)]`, `[r]`, `[s]`] regexp_compareW_strict)
+  >> mp_tac (Q.SPECL [`[(r,s)]`, `[r]`, `[s]`] regexp_compareW_antisym)
   >> rw_tac list_ss [ZIP_def]);
 
 val regexp_compareW_trans = Q.store_thm
@@ -663,7 +663,7 @@ val regexp_compareW_trans_eq = Q.store_thm
 );
 
 val regexp_compare_trans_eq = Q.store_thm
-("regexp_compare_trans",
+("regexp_compare_trans_eq",
  `!r s u. (regexp_compare r s = Less) /\ (regexp_compare s u = Equal)
          ==>
          (regexp_compare r u = Less)`,

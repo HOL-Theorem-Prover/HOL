@@ -67,7 +67,7 @@ val gfp_greatest_dense = store_thm(
     FULL_SIMP_TAC (srw_ss())[dense_def] THEN PROVE_TAC []
   ]);
 
-val lfp_least_fixedpoint = store_thm(
+val lfp_fixedpoint = store_thm(
   "lfp_fixedpoint",
   ``!f. monotone f ==> (lfp f = f (lfp f)) /\
                        (!X. (X = f X) ==> lfp f SUBSET X)``,
@@ -110,7 +110,7 @@ val gfp_coinduction = store_thm(
 val lfp_strong_induction = let
   val lemma = prove(``monotone f ==> !X. f (X INTER lfp f) SUBSET lfp f``,
                     PROVE_TAC [INTER_SUBSET, monotone_def,
-                               lfp_least_fixedpoint])
+                               lfp_fixedpoint])
 in
   save_thm("lfp_strong_induction",
            (GEN_ALL o DISCH_ALL o GEN ``X:'a -> bool`` o
@@ -190,7 +190,7 @@ val lfp_rule_applied = store_thm(
   ``!f X y. monotone f /\ X SUBSET lfp f /\ y IN f X ==> y IN lfp f``,
   REPEAT STRIP_TAC THEN
   `f X SUBSET f (lfp f)` by PROVE_TAC [monotone_def] THEN
-  PROVE_TAC [lfp_least_fixedpoint, SUBSET_DEF]);
+  PROVE_TAC [lfp_fixedpoint, SUBSET_DEF]);
 
 val lfp_empty = store_thm(
   "lfp_empty",

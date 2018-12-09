@@ -21,16 +21,16 @@ val timed : ('a -> 'b) -> ('b testresult -> unit) -> 'a -> unit
 val exncheck : ('a -> unit) -> 'a testresult -> unit
 val shouldfail : {testfn: 'a -> 'b, printresult: 'b -> string,
                   printarg : 'a -> string,
-                  checkexn: exn -> bool} -> 'a -> unit
+                  checkexn: exn -> bool} -> 'a -> 'b testresult
 
 val is_struct_HOL_ERR : string -> exn -> bool
 val check_HOL_ERRexn : (string * string * string -> bool) -> exn -> bool
 val check_HOL_ERR : (string * string * string -> bool) -> 'a testresult ->
                     bool
 val check_result : ('a -> bool) -> ('a testresult -> bool)
-val require : ('b testresult -> bool) -> ('a -> 'b) -> 'a -> unit
+val require : ('b testresult -> bool) -> ('a -> 'b) -> 'a -> 'b testresult
 val require_msg : ('b testresult -> bool) -> ('b -> string) -> ('a -> 'b) ->
-                  'a -> unit
+                  'a -> 'b testresult
 
 val bold : string -> string
 val boldred : string -> string

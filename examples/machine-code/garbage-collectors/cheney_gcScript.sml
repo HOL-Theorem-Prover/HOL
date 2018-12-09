@@ -824,7 +824,7 @@ val FINITE_RANGE = prove(
   \\ ASM_SIMP_TAC bool_ss [FINITE_INSERT,CARD_INSERT,EXTENSION,IN_INSERT]
   \\ SIMP_TAC std_ss [IN_DEF,RANGE_def] \\ DECIDE_TAC);
 
-val FINITE_RANGE2 = store_thm("FINITE_RANGE",
+val FINITE_RANGE = store_thm("FINITE_RANGE",
   ``!i j. FINITE (RANGE(i,j)) /\ (CARD (RANGE(i,j)) = j - i)``,
   NTAC 2 STRIP_TAC \\ Cases_on `i <= j`
   THEN1 (FULL_SIMP_TAC bool_ss [LESS_EQ_EXISTS,FINITE_RANGE] \\ DECIDE_TAC)
@@ -832,7 +832,7 @@ val FINITE_RANGE2 = store_thm("FINITE_RANGE",
   \\ FULL_SIMP_TAC bool_ss [EXTENSION,NOT_IN_EMPTY]
   \\ SIMP_TAC std_ss [IN_DEF,RANGE_def] \\ DECIDE_TAC);
 
-val WFS_inv_IMP_cheney_inv = store_thm("ok_state_IMP_cheney_inv",
+val ok_state_IMP_cheney_inv = store_thm("ok_state_IMP_cheney_inv",
   ``ok_state (i,e6,r,l,u,m) ==>
     let b = if ~u then 1 + l else 1 in
       cheney_inv (b,b,b,b,b,b + l,l+l+1,m,m,m,{}) /\
@@ -874,15 +874,15 @@ val WFS_inv_IMP_cheney_inv = store_thm("ok_state_IMP_cheney_inv",
   THEN1 METIS_TAC [heap_type_distinct]
   THEN1
    (MATCH_MP_TAC LESS_EQ_TRANS \\ Q.EXISTS_TAC `CARD (RANGE(b,i))` \\ STRIP_TAC
-    THENL [ALL_TAC, REWRITE_TAC [FINITE_RANGE2] \\ DECIDE_TAC]
+    THENL [ALL_TAC, REWRITE_TAC [FINITE_RANGE] \\ DECIDE_TAC]
     \\ MATCH_MP_TAC ((GEN_ALL o RW [AND_IMP_INTRO] o DISCH_ALL o
                      SPEC_ALL o UNDISCH o SPEC_ALL) CARD_SUBSET)
-    \\ FULL_SIMP_TAC std_ss [FINITE_RANGE2,SUBSET_DEF,IN_DEF,D0]
+    \\ FULL_SIMP_TAC std_ss [FINITE_RANGE,SUBSET_DEF,IN_DEF,D0]
     \\ METIS_TAC [heap_type_distinct])
   THEN1
    (MATCH_MP_TAC ((GEN_ALL o RW [AND_IMP_INTRO] o DISCH_ALL o
                   SPEC_ALL o UNDISCH o SPEC_ALL) SUBSET_FINITE)
-    \\ Q.EXISTS_TAC `RANGE(b,i)` \\ FULL_SIMP_TAC std_ss [D0,SUBSET_DEF,IN_DEF,ICUT_def,FINITE_RANGE2]
+    \\ Q.EXISTS_TAC `RANGE(b,i)` \\ FULL_SIMP_TAC std_ss [D0,SUBSET_DEF,IN_DEF,ICUT_def,FINITE_RANGE]
     \\ METIS_TAC [heap_type_distinct])
   THEN1
    (Q.PAT_X_ASSUM `!k. ~bbb:bool ==> c` MATCH_MP_TAC
@@ -1062,7 +1062,7 @@ val move_roots_spec = prove(
   \\ REPEAT STRIP_TAC THEN1 METIS_TAC []
   \\ Cases_on `k = 0` \\ ASM_SIMP_TAC bool_ss [] \\ METIS_TAC []);
 
-val cheney_inv_intro = store_thm("cheney_inv_setup",
+val cheney_inv_setup = store_thm("cheney_inv_setup",
   ``cheney_inv (b,b,b,j,b,e,f,m',m,m,{}) ==> cheney_inv (b,j,b,j,j,e,f,m',m',m,RANGE(b,j))``,
   SIMP_TAC bool_ss [cheney_inv_def,LESS_EQ_REFL] \\ REPEAT STRIP_TAC
   THEN1 METIS_TAC [] THEN1 METIS_TAC []
@@ -1103,13 +1103,13 @@ val cheney_collector_spec = store_thm("cheney_collector_spec",
   \\ ONCE_REWRITE_TAC [EQ_SYM_EQ]
   \\ SIMP_TAC std_ss [] \\ STRIP_TAC
   \\ Q.UNABBREV_TAC `b`
-  \\ IMP_RES_TAC (SIMP_RULE std_ss [LET_DEF] WFS_inv_IMP_cheney_inv)
+  \\ IMP_RES_TAC (SIMP_RULE std_ss [LET_DEF] ok_state_IMP_cheney_inv)
   \\ Q.ABBREV_TAC `b = if ~u then 1 + l else 1`
   \\ `(if ~u then 1 + l else 1) = b` by METIS_TAC []
   \\ (STRIP_ASSUME_TAC o RW [AND_IMP_INTRO] o
      UNDISCH_ALL o RW [GSYM AND_IMP_INTRO] o Q.INST [`f`|->`l+l+1`] o
      Q.SPECL [`r`,`b`,`m`,`r'`,`j'`,`m'`,`m`,`{}`,`m`] o UNDISCH o Q.SPEC `1`) move_roots_spec
-  \\ `cheney_inv (b,j',b,j',j',b + l,l+l+1,m',m',m,RANGE(b,j'))` by METIS_TAC [cheney_inv_intro]
+  \\ `cheney_inv (b,j',b,j',j',b + l,l+l+1,m',m',m,RANGE(b,j'))` by METIS_TAC [cheney_inv_setup]
   \\ Q.UNABBREV_TAC `e` \\ Q.ABBREV_TAC `e = b + l`
   \\ `cheney_inv (b,j',j'',j'',j'',e,l+l+1,m'',m',m,RANGE (b,j')) /\ j' <= j''` by METIS_TAC [cheney_inv_maintained]
   \\ STRIP_TAC THEN1

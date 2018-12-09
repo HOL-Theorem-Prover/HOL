@@ -454,7 +454,7 @@ val merge_tail_correct2 = Q.store_thm ("merge_tail_correct2",
      `R x' x` by metis_tac [mem_sorted_append, MEM_REVERSE, MEM] >>
      metis_tac [transitive_def]));
 
-val mergesortN_tail_correct = Q.store_thm ("mergesortN_correct",
+val mergesortN_correct = Q.store_thm ("mergesortN_correct",
 `!negate R n l.
   total R /\
   transitive R
@@ -478,7 +478,7 @@ val mergesort_tail_correct = Q.store_thm ("mergesort_tail_correct",
   transitive R
   ==>
   mergesort_tail R l = mergesort R l`,
- srw_tac[][mergesort_tail_def, mergesort_def, mergesortN_tail_correct]);
+ srw_tac[][mergesort_tail_def, mergesort_def, mergesortN_correct]);
 
 
  (*

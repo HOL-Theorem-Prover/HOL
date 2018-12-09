@@ -2,6 +2,8 @@ open HolKernel Parse boolLib bossLib pred_setTheory categoryTheory lcsymtacs;
 
 val _ = new_theory "functor";
 
+val _ = remove_termtok { term_name = combinpp.toplevel_updname, tok = "(|" }
+
 val _ = type_abbrev("functor",
 ``:((α,β) category, (γ,δ) category, (α,β) mor -> (γ,δ) mor)
    morphism``)

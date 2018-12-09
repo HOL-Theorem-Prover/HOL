@@ -15,4 +15,6 @@ use "../../tools/Holmake/hmcore.ML";
 use "../../tools/Holmake/FunctionalRecordUpdate.sml";
 use "../../tools/Holmake/GetOpt.sig";
 use "../../tools/Holmake/GetOpt.sml";
+use "../../src/portableML/UTF8.sig";
+use "../../src/portableML/UTF8.sml";
 use "ugrep.sml";

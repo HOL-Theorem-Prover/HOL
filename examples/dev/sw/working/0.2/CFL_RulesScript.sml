@@ -128,7 +128,7 @@ val EMPTY_BLK_AXIOM = Q.store_thm (
     RW_TAC std_ss [HSPEC_def, CFL_SEMANTICS_BLK]
   );
 
-val CFL_BLK_RULE = Q.store_thm (
+val BLK_RULE = Q.store_thm (
    "BLK_RULE",
    `!P Q R stm stmL. HSPEC Q (BLK [stm]) R /\
               HSPEC P (BLK stmL) Q ==>

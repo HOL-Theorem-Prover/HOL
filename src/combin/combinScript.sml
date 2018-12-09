@@ -30,11 +30,43 @@ val UPDATE_def = Q.new_definition("UPDATE_def",
    `UPDATE a b = \f c. if a = c then b else f c`);
 
 val _ = set_fixity ":>" (Infixl 310);
-val _ = set_fixity "=+" (Infix(NONASSOC, 320));
-val _ = overload_on("=+", ``UPDATE``);
+val _ = set_mapped_fixity {tok = "=+", fixity = Infix(NONASSOC, 320),
+                           term_name = "UPDATE"}
 val _ = Parse.Unicode.unicode_version {tmnm = "o", u = UTF8.chr 0x2218}
 val _ = TeX_notation {hol = "o", TeX = ("\\HOLTokenCompose", 1)}
 val _ = TeX_notation {hol = UTF8.chr 0x2218, TeX = ("\\HOLTokenCompose", 1)}
+
+val _ = let
+  open combinpp
+  fun addlform l r =
+      add_rule {block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
+                fixity = Suffix 2100,
+                paren_style = OnlyIfNecessary,
+                pp_elements = [
+                  TOK l,
+                  ListForm {
+                    separator = [TOK ";", BreakSpace(1,0)],
+                    block_info = (PP.CONSISTENT, 1),
+                    cons = internal_consupd,
+                    nilstr = internal_idupd
+                  },
+                  TOK r],
+                term_name = toplevel_updname};
+in
+  set_mapped_fixity {fixity = Infix(NONASSOC,100),
+                     term_name = mapsto_special,
+                     tok = "|->"};
+  set_mapped_fixity {fixity = Infix(NONASSOC,100),
+                     term_name = mapsto_special,
+                     tok = "↦"}; (* UOK *)
+  addlform "(|" "|)";
+  addlform UnicodeChars.lensel UnicodeChars.lenser;
+  add_ML_dependency "combinpp";
+  add_absyn_postprocessor "combin.UPDATE";
+  inferior_overload_on (update_constname, ``UPDATE``);
+  add_user_printer ("combin.updpp", “UPDATE k v f”)
+end;
+
 
 local open OpenTheoryMap in
   val _ = OpenTheory_const_name {const={Thy="combin",Name="K"},name=(["Function"],"const")}

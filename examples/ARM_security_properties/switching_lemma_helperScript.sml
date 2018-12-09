@@ -174,7 +174,7 @@ val exc_vector_base_constlem =
 
 
 val read_cpsr_quintuple_par_effect_lem = store_thm(
-    "read_cpsr_quintule_par_effect_lem",
+    "read_cpsr_quintuple_par_effect_lem",
     ``!s A B C D H . (const_comp A) ==>  (const_comp B) ==>  (const_comp C) ==>
                      ((((A ||| B ||| C ||| read_cpsr <|proc:=0|> ||| D) >>= (\ (a, b, c, cpsr, d). H (a, b, c, cpsr, d))) s)
                     = (((A ||| B ||| C ||| read_cpsr <|proc:=0|> ||| D) >>= (\ (a, b, c, cpsr, d). H (a, b, c, (s.psrs (0, CPSR)), d))) s))``,
@@ -201,7 +201,7 @@ val cpsr_quintuple_simp_lem = store_thm(
 
 
 val read_cpsr_quintuple_par_effect_with_16_lem = store_thm(
-    "read_cpsr_quintule_par_effect_with_16_lem",
+    "read_cpsr_quintuple_par_effect_with_16_lem",
     ``!s A B C D H . (const_comp A) ==>  (const_comp B) ==>  (const_comp C) ==>
                      ((((A ||| B ||| C ||| read_cpsr <|proc:=0|> ||| D) >>= (\ (a, b, c, cpsr, d). H (a, b, c, (cpsr with M := 16w), d))) s)
                     = (((A ||| B ||| C ||| read_cpsr <|proc:=0|> ||| D) >>= (\ (a, b, c, cpsr, d). H (a, b, c, ((s.psrs (0, CPSR)) with M := 16w), d))) s))``,
@@ -227,7 +227,7 @@ val cpsr_quintuple_simp_rel_lem = store_thm(
 
 
 val read_cpsr_quintuple_par_effect_lem2 = store_thm(
-    "read_cpsr_quintule_par_effect_lem2",
+    "read_cpsr_quintuple_par_effect_lem2",
     ``!s A B D E H . (const_comp A) ==>  (const_comp B) ==>
                      ((((A ||| B ||| read_cpsr <|proc:=0|> ||| D ||| E) >>= (\ (a, b, cpsr, d, e). H (a, b, cpsr, d, e))) s)
                     = (((A ||| B ||| read_cpsr <|proc:=0|> ||| D ||| E) >>= (\ (a, b, cpsr, d, e). H (a, b, (s.psrs (0, CPSR)), d, e))) s))``,
@@ -244,7 +244,7 @@ val read_cpsr_quintuple_par_effect_lem2 = store_thm(
        THEN RW_TAC (srw_ss()) []);
 
 val read_cpsr_quintuple_par_effect_with_16_lem2 = store_thm(
-    "read_cpsr_quintule_par_effect_with_16_lem2",
+    "read_cpsr_quintuple_par_effect_with_16_lem2",
     ``!s A B D E H . (const_comp A) ==>  (const_comp B) ==>
                      ((((A ||| B ||| read_cpsr <|proc:=0|> ||| D ||| E) >>= (\ (a, b, cpsr, d, e). H (a, b, (cpsr with M := 16w), d, e))) s)
                     = (((A ||| B ||| read_cpsr <|proc:=0|> ||| D ||| E) >>= (\ (a, b, cpsr, d, e). H (a, b, ((s.psrs (0, CPSR)) with M := 16w), d, e))) s))``,
@@ -836,7 +836,7 @@ val  fixed_sctrl_abt_irq_thm = store_thm(
                        );
 
 val read_cpsr_quintuple_par_effect_lem1 = store_thm(
-    "read_cpsr_quintule_par_effect_lem1",
+    "read_cpsr_quintuple_par_effect_lem1",
     ``!s A B C D H . (const_comp A) ==>  (const_comp B) ==>  (const_comp C) ==>
                      ((((A ||| B ||| C ||| read_cpsr <|proc:=0|> ||| D ||| E) >>= (\ (a, b, c, cpsr, d,e). H (a, b, c, cpsr, d,e))) s)
                     = (((A ||| B ||| C ||| read_cpsr <|proc:=0|> ||| D ||| E) >>= (\ (a, b, c, cpsr, d,e). H (a, b, c, (s.psrs (0, CPSR)), d,e))) s))``,

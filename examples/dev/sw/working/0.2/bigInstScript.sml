@@ -943,7 +943,7 @@ val PUSH_LIST_ADDR_IN_RANGE = Q.store_thm (
    );
 
 val UNIQUE_LIST_THM = Q.store_thm (
-    "UNIEQUE_LIST_THM",
+    "UNIQUE_LIST_THM",
     `!st st'. (read st FP = read st' FP) /\ unique_exp_list st l ==>
             unique_exp_list st' l`,
     Induct_on `l` THEN

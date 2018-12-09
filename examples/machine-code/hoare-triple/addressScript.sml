@@ -129,7 +129,7 @@ val EXISTS_ADDR30 = store_thm("EXISTS_ADDR30",
     \\ SRW_TAC [WORD_EXTRACT_ss] []
     \\ FULL_SIMP_TAC (std_ss++WORD_BIT_EQ_ss++wordsLib.BIT_ss) [n2w_def]);
 
-val add32_ADDR30 = store_thm("ADDR32_ADDR30",
+val ADDR32_ADDR30 = store_thm("ADDR32_ADDR30",
   ``!x. (x && 3w = 0w) ==> (ADDR32 (ADDR30 x) = x)``,
   REPEAT STRIP_TAC \\ IMP_RES_TAC EXISTS_ADDR30
     \\ ASM_REWRITE_TAC [ADDR30_ADDR32]);
