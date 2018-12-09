@@ -47,7 +47,7 @@ fun mk_less_thm (i,j) =
 fun mk_size_thm (i,ty) = mk_less_thm (i, wordsSyntax.mk_dimindex ty)
 
 local
-   val e_tys = ref (Redblackset.empty Type.compare)
+   val e_tys = Sref.new (Redblackset.empty Type.compare)
    val cmp = reduceLib.num_compset ()
    val () = computeLib.add_thms [combinTheory.o_THM, combinTheory.K_THM] cmp
    val cnv = computeLib.CBV_CONV cmp
@@ -73,8 +73,8 @@ local
 
    fun is_new tm =
       case Lib.total wordsSyntax.dim_of tm of
-         SOME ty => not (Redblackset.member (!e_tys, ty)) andalso
-                    (e_tys := Redblackset.add (!e_tys, ty); true)
+         SOME ty => not (Redblackset.member (Sref.value e_tys, ty)) andalso
+                    (Sref.update e_tys (fn m => Redblackset.add (m, ty)); true)
        | NONE => false
 
    val new_index_thms =
@@ -463,13 +463,13 @@ local
 
    val FCP_EQ_CONV = Conv.REWR_CONV FCP_EQ_EVERY THENC EVAL_CONV
 
-   val fcp_map = ref (Redblackmap.mkDict Arbnum.compare)
-                   : (Arbnum.num, Thm.thm) Redblackmap.dict ref
+   val fcp_map = Sref.new (Redblackmap.mkDict Arbnum.compare)
+                   : (Arbnum.num, Thm.thm) Redblackmap.dict Sref.t
 in
    fun fcp_eq_thm ty =
       case Lib.total (fcpLib.index_to_num o wordsSyntax.dest_word_type) ty of
          SOME n =>
-             (case Redblackmap.peek (!fcp_map, n) of
+             (case Redblackmap.peek (Sref.value fcp_map, n) of
                  SOME thm => thm
                | _ =>
                   let
@@ -477,7 +477,8 @@ in
                      val b = Term.mk_var ("b", ty)
                      val thm = FCP_EQ_CONV (boolSyntax.mk_eq (a,b))
                      val thm = Thm.GEN a (Thm.GEN b thm)
-                     val () = fcp_map := Redblackmap.insert (!fcp_map, n, thm)
+                     val () = Sref.update fcp_map
+                                (fn m => Redblackmap.insert (m, n, thm))
                   in
                      thm
                   end)
@@ -711,19 +712,19 @@ local
      end
 
   fun BV_CONV last mk_bv tm =
-     Conv.REWR_CONV (!last) tm
+     Conv.REWR_CONV (Sref.value last) tm
      handle HOL_ERR _ =>
         let
            val thm = mk_bv (wordsSyntax.dim_of tm)
         in
-           (last := thm; Conv.REWR_CONV thm tm)
+           (Sref.update last (K thm); Conv.REWR_CONV thm tm)
         end
 
-  val last_lsl_thm = ref combinTheory.I_THM
-  val last_lsr_thm = ref combinTheory.I_THM
-  val last_asr_thm = ref combinTheory.I_THM
-  val last_ror_thm = ref combinTheory.I_THM
-  val last_rol_thm = ref combinTheory.I_THM
+  val last_lsl_thm = Sref.new combinTheory.I_THM
+  val last_lsr_thm = Sref.new combinTheory.I_THM
+  val last_asr_thm = Sref.new combinTheory.I_THM
+  val last_ror_thm = Sref.new combinTheory.I_THM
+  val last_rol_thm = Sref.new combinTheory.I_THM
 in
   fun LSL_BV_CONV tm = BV_CONV last_lsl_thm
                            (mk_bv_thm blastTheory.word_lsl_bv_expand) tm
@@ -749,7 +750,7 @@ local
             (Conv.STRIP_QUANT_CONV (Conv.RHS_CONV
                 (EVAL_CONV THENC PURE_REWRITE_CONV [wordsTheory.WORD_ADD_0])))
 
-   val mul_rwts = ref ([]: thm list)
+   val mul_rwts = Sref.new ([]: thm list)
 in
    fun BLAST_MUL_CONV tm =
       let
@@ -758,10 +759,10 @@ in
          val _ = sz <= !blast_multiply_limit orelse
                  raise ERR "BLAST_MUL_CONV" "bigger than multiply limit"
       in
-         PURE_REWRITE_CONV (!mul_rwts) tm
+         PURE_REWRITE_CONV (Sref.value mul_rwts) tm
          handle Conv.UNCHANGED =>
-            (mul_rwts := mk_bitwise_mul sz :: !mul_rwts
-             ; PURE_REWRITE_CONV (!mul_rwts) tm)
+            (Sref.update mul_rwts (cons (mk_bitwise_mul sz));
+             PURE_REWRITE_CONV (Sref.value mul_rwts) tm)
       end
 end
 
