@@ -1065,7 +1065,7 @@ val CJ_IS_WELL_FORMED = Q.store_thm (
 
 
 val HOARE_CJ_FLAT_LEM_1 = Q.store_thm (
-   "HAORE_CJ_FLAT_LEM_1",
+   "HOARE_CJ_FLAT_LEM_1",
    `!cond arm_t arm_f (P:P_DSTATE) (Q:P_DSTATE) (R:P_DSTATE).
           well_formed arm_t /\ well_formed arm_f /\
           (!st. P st ==> Q (eval_fl arm_t st)) /\ (!st. P st ==> R (eval_fl arm_f st))
@@ -1101,7 +1101,7 @@ val HOARE_CJ_FLAT_LEM_1 = Q.store_thm (
 
 
 val HOARE_CJ_FLAT_LEM_2 = Q.store_thm (
-   "HAORE_CJ_FLAT_LEM_2",
+   "HOARE_CJ_FLAT_LEM_2",
    `!cond arm_t arm_f (P:P_DSTATE) (Q:P_DSTATE) (R:P_DSTATE).
           well_formed arm_t /\ well_formed arm_f /\
           (!st. P st ==> Q (eval_fl arm_t st)) /\ (!st. P st ==> R (eval_fl arm_f st))

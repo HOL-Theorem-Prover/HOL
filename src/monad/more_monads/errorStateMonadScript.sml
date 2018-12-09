@@ -312,7 +312,7 @@ val ES_CHOICE_FAIL_RID = store_thm(
   SRW_TAC[][FUN_EQ_THM, ES_CHOICE_DEF, ES_FAIL_DEF] THEN
   Q.RENAME1_TAC `option_CASE (xM s)` THEN Cases_on `xM s` THEN SRW_TAC[][]);
 
-val BIND_FAIL = store_thm(
+val BIND_FAIL_L = store_thm(
   "BIND_FAIL_L[simp]",
   ``BIND ES_FAIL fM = ES_FAIL``,
   SRW_TAC[][FUN_EQ_THM, ES_FAIL_DEF, BIND_DEF]);

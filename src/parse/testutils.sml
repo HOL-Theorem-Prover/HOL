@@ -184,7 +184,7 @@ fun check_result P (Res r) = P r
 fun require_msg P pr f x =
     let
       fun check res =
-          if P res then OK()
+          if P res then (OK(); res)
           else
             case res of
                 Exn e => die ("  Unexpected exception:\n    " ^

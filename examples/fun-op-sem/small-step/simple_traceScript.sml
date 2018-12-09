@@ -189,7 +189,7 @@ val check_trace_twice_take = Q.store_thm ("check_trace_twice_take",
  first_x_assum (qspec_then `h'::t''` strip_assume_tac) >>
  rfs []);
 
-val check_trace_twice_take = Q.store_thm ("check_trace_twice_suff",
+val check_trace_twice_suff = Q.store_thm ("check_trace_twice_suff",
 `!tr tr'.
   tr ≠ [] ∧ tr' ≠ [] ∧
   HD tr = HD tr' ∧

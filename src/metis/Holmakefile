@@ -1,5 +1,5 @@
 .PHONY: all
 all: selftest.exe $(DEFAULT_TARGETS)
 
-selftest.exe: selftest.uo
+selftest.exe: selftest.uo normalForms.uo
 	$(HOLMOSMLC) -o $@ $<

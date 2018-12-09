@@ -1026,7 +1026,7 @@ val REPL_IN_0 = store_thm
   );
 
 val RUN_FOR_CONJ_LEMM = store_thm
-  ("RUN_FOR_DISJ_LEMM",
+  ("RUN_FOR_CONJ_LEMM",
    ``!f1 f2 f w.
      (?r. runForAA (ltl2vwaa_free_alph (POW (props f)) f1) r w)
   /\ (?r. runForAA (ltl2vwaa_free_alph (POW (props f)) f2) r w)

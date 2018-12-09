@@ -82,7 +82,7 @@ Making constants have pure alphanumeric names is generally a good idea.
 \begin{session}
 \begin{alltt}
 >> set_mapped_fixity {fixity = Infix(NONASSOC, 450),
-                      tok = "-->", term_name = "redn"}
+                      tok = "-->", term_name = "redn"};
 \end{alltt}
 \end{session}
 We make our arrow symbol non-associative, thereby making it a
@@ -376,7 +376,7 @@ In fact, we don't even need to provide this witness explicitly: \texttt{metis\_t
     And what of this remaining goal?  Assumptions one and four
     between them are the top of an $R$-diamond.  Let's use the fact
     that we have the diamond property for $R$ and infer that there
-    exists a $v$ to which $y$ and $z'$ can both take single steps:
+    exists a $v$ to which $x'$ and $z$ can both take single steps:
 \begin{session}
 \begin{alltt}
 >> e (`?v. R x' v /\ R z v` by metis_tac [diamond_def]);
@@ -418,7 +418,7 @@ It's very tempting to state the goal as the obvious \[
 \con{diamond}\;R\;\Rightarrow\;\con{diamond}\,(R^*)
 \]
 but doing so will actually make it harder to apply the induction principle when the time is right.
-Better to start out with a statement of the goal that is very near in form to the induction princple.
+Better to start out with a statement of the goal that is very near in form to the induction principle.
 So, we manually expand the meaning of \con{diamond} and state our next goal thus:
 \begin{session}
 \begin{alltt}

@@ -205,7 +205,7 @@ val ai = Arbnum.fromInt
 fun snum i = Numeral(ai i, NONE)
 
 in
-val _ = app test [
+val _ = app (ignore o test) [
       ("abc", [Ident "abc"]),
       ("12", [snum 12]),
       ("-12", [Ident "-", snum 12]),
@@ -271,7 +271,7 @@ val _ = app test [
       ("map:=λh.", [Ident "map", Ident ":=", Ident "λ", Ident "h", Ident "."]),
       ("map:=\\h.", [Ident "map", Ident ":=\\", Ident "h", Ident "."])
     ]
-val _ = List.app failtest [
+val _ = List.app (ignore o failtest) [
       ("thy$$$", "qualified ident"),
       ("$var$(ab\n c)", "quoted variable"),
       ("'a", "can't begin with prime")
@@ -428,38 +428,75 @@ fun check (s1,s2) =
 val f = PrecAnalysis.check_for_listreductions check
 
 open term_grammar_dtype GrammarSpecials
-val _ = tprint "PrecAnalysis.check_for_listreductions 1"
+fun prmsp {nilstr,cons,sep} = "{" ^ nilstr ^ "," ^ cons ^ "," ^ sep ^ "}"
+fun prlr (s1,s2,sp) = "(" ^ s1 ^ ", " ^ s2 ^ ", " ^ prmsp sp ^ ")"
+fun prlist p l = "[" ^ String.concatWith ", " (map p l) ^ "]"
+fun prlrs lrs = prlist prlr lrs
+fun prrel (TOK s) = "TOK \""^s^"\""
+  | prrel TM = "TM"
+fun prlspi (lsp,i1,i2) =
+    "(" ^ prmsp lsp ^ "," ^ Int.toString i1 ^ "," ^ Int.toString i2 ^ ")"
+fun prrm_result (rels,lspis) =
+    "(" ^ prlist prrel rels ^ ", " ^ prlist prlspi lspis ^ ")"
+fun require_msg_eq v pr f x = require_msg (check_result (equal v)) pr f x
+fun require_eq v f x = require (check_result (equal v)) f x
+fun rmlistrels r i = PrecAnalysis.remove_listrels (Exn.release r) i
+
+val _ = tprint "check_for_listreductions (1 element prefix)"
 val input = [TOK "let", TM, TOK "in", TM]
-val result = f input
-val _ = if result = [("let", "in", lsp1)] then OK() else die "FAILED";
+val result = require_msg_eq [("let", "in", lsp1)] prlrs f input
+val _ = tprint "remove_listrels (1 element prefix)"
+val _ = require_msg_eq ([TOK "let", TM, TOK "in", TM], [(lsp1, 0, 1)])
+                       prrm_result (rmlistrels result) input
 
-val _ = tprint "PrecAnalysis.remove_listrels 1"
-val remove_result = PrecAnalysis.remove_listrels result input
-val _ = if remove_result = ([TOK "let", TM, TOK "in", TM], [(lsp1, [0])])
-        then OK()
-        else die "FAILED";
+val _ = tprint "check_for_listreductions (0 element prefix)"
+val input = [TOK "let", TOK "in", TM]
+val result = require_msg_eq [("let", "in", lsp1)] prlrs f input
+val _ = tprint "remove_listrels (0 element prefix)"
+val _ = require_msg_eq ([TOK "let", TM, TOK "in", TM], [(lsp1, 0, 0)])
+                       prrm_result (rmlistrels result) input
 
-val _ = tprint "PrecAnalysis.check_for_listreductions 2"
+val _ = tprint "check_for_listreductions (1 element + ; prefix)"
 val input = [TOK "let", TM, TOK ";", TOK "in", TM]
-val result = f input
-val _ = if result = [("let", "in", lsp1)] then OK() else die "FAILED";
+val result = require_msg_eq [("let", "in", lsp1)] prlrs f input
+val _ = tprint "remove_listrels (1 element + ; prefix)"
+val _ = require_msg_eq ([TOK "let", TM, TOK "in", TM], [(lsp1, 0, 1)])
+                       prrm_result (rmlistrels result) input
 
-val _ = tprint "PrecAnalysis.remove_listrels 2"
-val remove_result = PrecAnalysis.remove_listrels result input
-val _ = if remove_result = ([TOK "let", TM, TOK "in", TM], [(lsp1, [0])])
-        then OK()
-        else die "FAILED";
-
-val _ = tprint "PrecAnalysis.check_for_listreductions 3"
+val _ = tprint "check_for_listreductions (2 element prefix)"
 val input = [TOK "let", TM, TOK ";", TM, TOK "in", TM]
-val result = f input
-val _ = if result = [("let", "in", lsp1)] then OK() else die "FAILED";
+val result = require_msg_eq [("let", "in", lsp1)] prlrs f input
+val _ = tprint "remove_listrels (2 element prefix)"
+val _ = require_msg_eq ([TOK "let", TM, TOK "in", TM], [(lsp1, 0, 2)])
+                       prrm_result (rmlistrels result) input
 
-val _ = tprint "PrecAnalysis.remove_listrels 3"
-val remove_result = PrecAnalysis.remove_listrels result input
-val _ = if remove_result = ([TOK "let", TM, TOK "in", TM], [(lsp1, [0,1])])
-        then OK()
-        else die "FAILED";
+val _ = tprint "check_for_listreductions (1 element suffix)"
+val input = [TM, TOK "let", TM, TOK "in"]
+val result = require_msg_eq [("let", "in", lsp1)] prlrs f input
+val _ = tprint "remove_listrels (1 element suffix)"
+val _ = require_msg_eq ([TM, TOK "let", TM, TOK "in"], [(lsp1, 1, 1)])
+                       prrm_result (rmlistrels result) input
+
+val _ = tprint "check_for_listreductions (2 element suffix)"
+val input = [TM, TOK "let", TM, TOK ";", TM, TOK "in"]
+val result = require_msg_eq [("let", "in", lsp1)] prlrs f input
+val _ = tprint "remove_listrels (2 element suffix)"
+val _ = require_msg_eq ([TM, TOK "let", TM, TOK "in"], [(lsp1,1,2)])
+                       prrm_result (rmlistrels result) input
+
+val _ = tprint "check_for_listreductions (2 element + ; suffix)"
+val input = [TM, TOK "let", TM, TOK ";", TM, TOK ";", TOK "in"]
+val result = require_msg_eq [("let", "in", lsp1)] prlrs f input
+val _ = tprint "remove_listrels (2 element + ; suffix)"
+val _ = require_msg_eq ([TM, TOK "let", TM, TOK "in"], [(lsp1,1,2)])
+                       prrm_result (rmlistrels result) input
+
+val _ = tprint "check_for_listreductions (0 element suffix)"
+val input = [TM, TOK "let", TOK "in"]
+val result = require_msg_eq [("let", "in", lsp1)] prlrs f input
+val _ = tprint "remove_listrels (0 element suffix)"
+val _ = require_msg_eq ([TM, TOK "let", TM, TOK "in"], [(lsp1, 1, 0)])
+                       prrm_result (rmlistrels result) input
 
 val mk_var = Term.mk_var
 val mk_comb = Term.mk_comb
@@ -700,9 +737,7 @@ val _ = List.app pdtest [
   ("h", "C = foo bool bool; D = bar bool|baz", expected6)
 ]
 
-val _ = List.app pdfail [
-  ("h", "C = foo bool->bool")
-]
+val _ = List.app (ignore o pdfail) [("h", "C = foo bool->bool")]
 
 
 (* string find-replace *)
@@ -795,6 +830,49 @@ local
       require_msg check pr (lex []) (qbuf.new_buffer [QUOTE s])
     end
 in
-val _ = List.app test [("aa(", "aa"), ("((a", "("), ("¬¬", "¬"),
-                       ("¬¬p", "¬")]
+val _ = List.app (ignore o test) [
+      ("aa(", "aa"), ("((a", "("), ("¬¬", "¬"), ("¬¬p", "¬")
+    ]
 end (* local open term_tokens *)
+
+val _ = let
+  open term_grammar Absyn Portable
+  val rTOK = RE o TOK
+  datatype sexp = id of string | app of string * sexp list
+  fun toString (id s) = s
+    | toString (app(f,xs)) =
+      "(" ^ f ^
+      (case xs of [] => ""
+                | _ => " " ^ String.concatWith " " (map toString xs)) ^ ")"
+  fun dropA A a =
+      case a of
+          APP (_, a1, a2) => dropA (dropA [] a2::A) a1
+        | IDENT (_, s) => (case A of [] => id s | _ => app(s, A))
+        | _ => raise Fail "Unexpected Absyn form"
+  val G = min_grammar
+            |> add_rule {block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
+                         fixity = Suffix 2100,
+                         paren_style = OnlyIfNecessary,
+                         pp_elements = [
+                           rTOK "{",
+                           ListForm {
+                             separator = [rTOK ";", BreakSpace(1,0)],
+                             block_info = (PP.CONSISTENT, 1),
+                             cons = "icons",
+                             nilstr = "inil"
+                           },
+                           rTOK "}"],
+                         term_name = "top"}
+  val testfn =
+      toString o dropA [] o TermParse.absyn G type_grammar.min_grammar o
+      single o QUOTE
+  fun test (s,expected) =
+      (tprint ("listspec-suffix: " ^ s);
+       require_msg_eq expected (fn s => s) testfn s)
+in
+  List.app (ignore o test) [
+    ("x {y}", "(top x (icons y inil))"),
+    ("x {y;z;}", "(top x (icons y (icons z inil)))"),
+    ("x {}", "(top x inil)")
+  ]
+end;
