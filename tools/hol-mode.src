@@ -1840,6 +1840,8 @@ second is to show the new term.
                 (buffer-substring (point-min) (point-max))
               (delete-region (point-min) (point-max))))))))
 
+(font-lock-add-keywords 'sml-mode '("\\<Theorem\\>"))
+
 (defgroup hol-faces nil "Faces used in pretty-printing HOL values"
   :group 'faces
   :group 'hol)
