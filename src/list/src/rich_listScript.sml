@@ -396,9 +396,6 @@ val EL_FILTER = Q.prove(
 val FILTER_EQ_lem = Q.prove(
    `!l l2 P h. ~P h ==> (FILTER P l <> h :: l2)`,
    SRW_TAC [] [listTheory.LIST_EQ_REWRITE]
-   THEN Cases_on `LENGTH (FILTER P l) = 0`
-   THEN SRW_TAC [] []
-   THEN DISJ2_TAC
    THEN Q.EXISTS_TAC `0`
    THEN SRW_TAC [numSimps.ARITH_ss] []
    THEN `0 < LENGTH (FILTER P l)` by numLib.DECIDE_TAC
