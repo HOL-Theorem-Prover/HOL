@@ -1797,44 +1797,33 @@ val nth_min_surj_lem2 = Q.prove (
    SOME x')
   ==>
   (nth_min r' (s, r) (SUC (m + m')) = SOME x')`,
-Induct_on `m` THEN
-SRW_TAC [] [nth_min_def] THEN
-UNABBREV_ALL_TAC THEN
+Induct_on `m` THEN SRW_TAC [] [nth_min_def, LET_THM] THEN
 SRW_TAC [] [DELETE_DEF] THEN
-FULL_SIMP_TAC (srw_ss()) [LET_THM] THEN
 Cases_on `get_min r' (s, r)` THEN
 FULL_SIMP_TAC (srw_ss()) [DELETE_DEF] THEN
 SRW_TAC [] [arithmeticTheory.ADD] THEN
-Q.PAT_ASSUM `!r' s r m' x x'. P r' s r m' x x'` MATCH_MP_TAC THEN
+first_x_assum irule THEN
 SRW_TAC [] [] THEN
 `s DIFF {x''} DIFF
         {x | ?n. n <= m /\ (nth_min r' (s DIFF {x''}, r) n = SOME x)} =
  s DIFF {x | ?n.  n <= SUC m /\ (nth_min r' (s,r) n = SOME x)}`
-        by (SRW_TAC [] [EXTENSION] THEN
-            EQ_TAC THEN
-            SRW_TAC [] [] THENL
-            [Cases_on `n` THEN
-                 SRW_TAC [] [nth_min_def] THEN
-                 UNABBREV_ALL_TAC THEN
-                 SRW_TAC [] [DELETE_DEF] THEN
-                 POP_ASSUM (MP_TAC o Q.SPEC `n'`) THEN
-                 SRW_TAC [] [] THENL
-                 [DISJ1_TAC THEN
-                      DECIDE_TAC,
-                  METIS_TAC []],
-             CCONTR_TAC THEN
-                 SRW_TAC [] [] THEN
-                 POP_ASSUM (MP_TAC o Q.SPEC `0`) THEN
-                 SRW_TAC [] [nth_min_def],
-             POP_ASSUM (MP_TAC o Q.SPEC `SUC n`) THEN
-                 SRW_TAC [] [] THENL
-                 [DISJ1_TAC THEN
-                      DECIDE_TAC,
-                  FULL_SIMP_TAC (srw_ss()) [nth_min_def, LET_THM] THEN
-                  POP_ASSUM MP_TAC THEN
-                  SRW_TAC [] [DELETE_DEF]]]) THEN
-SRW_TAC [] []);
+   suffices_by asm_simp_tac (srw_ss()) [] THEN
+SRW_TAC [] [EXTENSION] THEN
+EQ_TAC THEN SRW_TAC [] [] THENL [
+  Q.RENAME_TAC [‘nth_min R (s,r) n = SOME y’] >> pop_assum mp_tac >>
+  Cases_on ‘n’ THEN SRW_TAC[][nth_min_def, LET_THM] THEN
+  FULL_SIMP_TAC (srw_ss()) [DELETE_DEF] THEN RES_TAC >> DECIDE_TAC,
 
+  CCONTR_TAC THEN SRW_TAC [] [] THEN POP_ASSUM (MP_TAC o Q.SPEC `0`) THEN
+  SRW_TAC [] [nth_min_def],
+
+  Q.RENAME_TAC [‘nth_min R (s DIFF {m},r) n = SOME y’] >> pop_assum mp_tac >>
+  first_x_assum (MP_TAC o Q.SPEC `SUC n`) THEN
+  SRW_TAC [] [] THEN
+  FULL_SIMP_TAC (srw_ss()) [nth_min_def, LET_THM] THEN
+  REV_FULL_SIMP_TAC (srw_ss()) [DELETE_DEF] THEN
+  FULL_SIMP_TAC (srw_ss()) [] >> DECIDE_TAC
+]);
 
 val nth_min_surj_lem3 = Q.prove (
 `!r' s r s' x.
