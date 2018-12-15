@@ -320,25 +320,26 @@ Cases_on `x = f k v` THENL [
    )
 ]);
 
-val BAG_IN_BAG_OF_FMAP = store_thm ("BAG_IN_BAG_OF_FMAP",
-``!x f b. BAG_IN x (BAG_OF_FMAP f b) =
-          ?k. k IN FDOM b /\ (x = f k (b ' k))``,
-SIMP_TAC std_ss [BAG_OF_FMAP, BAG_IN, BAG_INN] THEN
-`!X. (X >= (1:num)) = ~(X = 0)` by bossLib.DECIDE_TAC THEN
-ONCE_ASM_REWRITE_TAC[] THEN POP_ASSUM (K ALL_TAC) THEN
-REPEAT GEN_TAC THEN
-`FINITE (\k. k IN FDOM b /\ (x = f k (b ' k)))` by (
-   `(\k. k IN FDOM b /\ (x = f k (b ' k))) =
-    (\k. k IN FDOM b /\ (x = f k (b ' k))) INTER (FDOM b)` by (
-      SIMP_TAC std_ss [EXTENSION, IN_INTER, IN_ABS] THEN
-      METIS_TAC[]
-   ) THEN
-   ONCE_ASM_REWRITE_TAC[] THEN
-   MATCH_MP_TAC FINITE_INTER THEN
-   REWRITE_TAC[FDOM_FINITE]
-) THEN
-ASM_SIMP_TAC std_ss [CARD_EQ_0] THEN
-SIMP_TAC std_ss [EXTENSION, NOT_IN_EMPTY, IN_ABS]);
+Theorem BAG_IN_BAG_OF_FMAP
+  `!x f b. BAG_IN x (BAG_OF_FMAP f b) <=>
+           ?k. k IN FDOM b /\ (x = f k (b ' k))`
+(
+  SIMP_TAC std_ss [BAG_OF_FMAP, BAG_IN, BAG_INN] THEN
+  `!X. (X >= (1:num)) = ~(X = 0)` by bossLib.DECIDE_TAC THEN
+  ONCE_ASM_REWRITE_TAC[] THEN POP_ASSUM (K ALL_TAC) THEN
+  REPEAT GEN_TAC THEN
+  `FINITE (\k. k IN FDOM b /\ (x = f k (b ' k)))` by (
+     `(\k. k IN FDOM b /\ (x = f k (b ' k))) =
+      (\k. k IN FDOM b /\ (x = f k (b ' k))) INTER (FDOM b)` by (
+        SIMP_TAC std_ss [EXTENSION, IN_INTER, IN_ABS] THEN
+        METIS_TAC[]
+     ) THEN
+     ONCE_ASM_REWRITE_TAC[] THEN
+     MATCH_MP_TAC FINITE_INTER THEN
+     REWRITE_TAC[FDOM_FINITE]
+  ) THEN
+  SRW_TAC[][CARD_EQ_0, EXTENSION] THEN METIS_TAC[]
+);
 
 val FINITE_BAG_OF_FMAP = store_thm ("FINITE_BAG_OF_FMAP",
 ``!f b. FINITE_BAG (BAG_OF_FMAP f b)``,
