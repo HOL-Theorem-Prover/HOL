@@ -942,7 +942,7 @@ end
 val isEmpty_toListA = store_thm("isEmpty_toListA",
   ``!t acc. wf t ==> ((t = LN) <=> (toListA acc t = acc))``,
   Induct >> simp[toListA_def,wf_def] >>
-  rw[] >> fs[] >>
+  rw[] >> fs[] >> Cases_on ‘t = LN’ >> fs[] >>
   fs[Once toListA_append] >>
   simp[Once toListA_append,SimpR``$++``])
 
@@ -950,10 +950,10 @@ val toList_def = Define`toList m = toListA [] m`
 
 val isEmpty_toList = store_thm("isEmpty_toList",
   ``!t. wf t ==> ((t = LN) <=> (toList t = []))``,
-  rw[toList_def,isEmpty_toListA])
+  rw[toList_def,isEmpty_toListA]);
 
 val lem2 =
-  SIMP_RULE (srw_ss()) [] (Q.SPECL[`2`,`1`]DIV_MULT)
+  SIMP_RULE (srw_ss()) [] (Q.SPECL[`2`,`1`]DIV_MULT);
 
 fun tac () = (
   (disj2_tac >> qexists_tac`0` >> simp[] >> NO_TAC) ORELSE
@@ -967,7 +967,7 @@ fun tac () = (
    REWRITE_TAC[Once MULT_COMM] >> simp[lem2] >>
    rw[] >> `F` suffices_by rw[] >> pop_assum mp_tac >>
    simp[lemmas] >> NO_TAC) ORELSE
-  (metis_tac[]))
+  (metis_tac[]));
 
 val MEM_toListA = prove(
   ``!t acc x. MEM x (toListA acc t) <=> (MEM x acc \/ ?k. lookup k t = SOME x)``,
@@ -981,11 +981,11 @@ val MEM_toListA = prove(
   >- (tac())
   >- (tac())
   >- (tac())
-  >- (tac()))
+  >- (tac()));
 
 val MEM_toList = store_thm("MEM_toList",
   ``!x t. MEM x (toList t) <=> ?k. lookup k t = SOME x``,
-  rw[toList_def,MEM_toListA])
+  rw[toList_def,MEM_toListA]);
 
 val div2_even_lemma = prove(
   ``!x. ?n. (x = (n - 1) DIV 2) /\ EVEN n /\ 0 < n``,
@@ -999,7 +999,7 @@ val div2_even_lemma = prove(
   simp[] >> disch_then kall_tac >>
   qspec_then`2`mp_tac ADD_DIV_ADD_DIV >> simp[] >>
   disch_then(qspecl_then[`m`,`1`]mp_tac) >>
-  simp[])
+  simp[]);
 
 val div2_odd_lemma = prove(
   ``!x. ?n. (x = (n - 1) DIV 2) /\ ODD n /\ 0 < n``,
@@ -1013,11 +1013,11 @@ val div2_odd_lemma = prove(
   simp[] >> disch_then kall_tac >>
   qspec_then`2`mp_tac ADD_DIV_ADD_DIV >> simp[] >>
   disch_then(qspecl_then[`m`,`0`]mp_tac) >>
-  simp[])
+  simp[]);
 
 val spt_eq_thm = store_thm("spt_eq_thm",
   ``!t1 t2. wf t1 /\ wf t2 ==>
-    ((t1 = t2) <=> !n. lookup n t1 = lookup n t2)``,
+            ((t1 = t2) <=> !n. lookup n t1 = lookup n t2)``,
   Induct >> simp[wf_def,lookup_def]
   >- (
     rw[EQ_IMP_THM] >> rw[lookup_def] >>
@@ -1031,17 +1031,17 @@ val spt_eq_thm = store_thm("spt_eq_thm",
     Cases_on`t2`>>fs[lookup_def]
     >- (first_x_assum(qspec_then`0`mp_tac)>>simp[])
     >- (first_x_assum(qspec_then`0`mp_tac)>>simp[]) >>
-    fs[wf_def] >>
+    fs[wf_def] >> Cases_on ‘s = LN’ >>
     rfs[domain_empty] >>
     fs[GSYM MEMBER_NOT_EMPTY] >>
     fs[domain_lookup] >|
-      [ qspec_then`x`strip_assume_tac div2_even_lemma
-      , qspec_then`x`strip_assume_tac div2_odd_lemma
+      [ qspec_then`x`strip_assume_tac div2_odd_lemma,
+        qspec_then`x`strip_assume_tac div2_even_lemma
       ] >>
     first_x_assum(qspec_then`n`mp_tac) >>
     fs[ODD_EVEN] >> simp[] )
   >- (
-    rw[EQ_IMP_THM] >> rw[lookup_def] >>
+    rw[EQ_IMP_THM] >> rw[lookup_def] >> Cases_on ‘t1 = LN’ >>
     rfs[domain_empty] >>
     fs[GSYM MEMBER_NOT_EMPTY] >>
     fs[domain_lookup] >>
@@ -1066,7 +1066,7 @@ val spt_eq_thm = store_thm("spt_eq_thm",
     metis_tac[prim_recTheory.LESS_REFL,div2_even_lemma,div2_odd_lemma
              ,EVEN_ODD] )
   >- (
-    rw[EQ_IMP_THM] >> rw[lookup_def] >>
+    rw[EQ_IMP_THM] >> rw[lookup_def] >> Cases_on ‘t1 = LN’ >>
     rfs[domain_empty] >>
     fs[GSYM MEMBER_NOT_EMPTY] >>
     fs[domain_lookup] >>
@@ -1439,7 +1439,7 @@ val subspt_lookup = Q.store_thm("subspt_lookup",
    (Cases_on `t2`
     \\ fs [lookup_def,spt_center_def,spt_left_def,spt_right_def]
     \\ eq_tac \\ rw []
-    \\ TRY (Cases_on `x = 0` \\ fs [] \\ rw [] \\ fs [] \\ NO_TAC)
+    \\ TRY (pop_assum mp_tac >> srw_tac[][] >> NO_TAC)
     \\ TRY (first_x_assum (fn th => qspec_then `2 * x + 1` mp_tac th THEN
                                     qspec_then `(2 * x + 1) + 1` mp_tac th))
     \\ fs [MULT_DIV |> ONCE_REWRITE_RULE [MULT_COMM],
@@ -1461,7 +1461,7 @@ val subspt_lookup = Q.store_thm("subspt_lookup",
   \\ Cases_on `t2`
   \\ fs [lookup_def,spt_center_def,spt_left_def,spt_right_def]
   \\ eq_tac \\ rw []
-  \\ TRY (Cases_on `x = 0` \\ fs [] \\ rw [] \\ fs [] \\ NO_TAC)
+  \\ TRY (pop_assum mp_tac >> srw_tac[][] >> NO_TAC)
   \\ TRY (first_x_assum (fn th => qspec_then `2 * x + 1` mp_tac th THEN
                                   qspec_then `(2 * x + 1) + 1` mp_tac th))
   \\ fs [MULT_DIV |> ONCE_REWRITE_RULE [MULT_COMM],
