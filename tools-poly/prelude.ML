@@ -236,6 +236,3 @@ in
 end
 
 val _ = HOL_Interactive.toggle_quietdec ()
-val _ = List.app holpathdb.extend_db
-                 (holpathdb.search_for_extensions ReadHMF.find_includes
-                                                  [OS.FileSys.getDir()])
