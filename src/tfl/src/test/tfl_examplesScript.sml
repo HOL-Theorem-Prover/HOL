@@ -8,7 +8,8 @@ val nested_function = LIST_CONJ o map #1 o #extracta o
 
 val _ = new_theory "tfl_examples"
 
-val fact_cond_def = function "fact_cond" `fact x = if x = 0 then 1 else x * fact(x-1)`;
+val fact_cond_def = function "fact_cond"
+                             `fact x = if x = 0 then 1 else x * fact(x-1)`;
 
 val fact_pattern_def = function "fact_pattern"
    `(Fact 0 = 1) /\

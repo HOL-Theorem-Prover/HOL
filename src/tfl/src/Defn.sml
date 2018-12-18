@@ -125,7 +125,8 @@ fun inject ty [v] = [v]
   | inject ty [] = raise Match
 
 
-fun project [] _ _ = raise ERR "project" "catastrophic invariant failure (eqns was empty!?)"
+fun project [] _ _ = raise ERR "project"
+                           "catastrophic invariant failure (eqns was empty!?)"
   | project [_] ty M = [M]
   | project (_::ls) ty M = let
       val (lty,rty) = sumSyntax.dest_sum ty
@@ -266,7 +267,8 @@ fun inst_defn (STDREC{eqs,ind,R,SV,stem}) theta =
       NONREC {eqs=INST_THM theta eqs,
               ind=INST_THM theta ind,
               SV=map (isubst theta) SV,stem=stem}
-  | inst_defn (ABBREV {eqn,bind}) theta = ABBREV {eqn=INST_THM theta eqn,bind=bind}
+  | inst_defn (ABBREV {eqn,bind}) theta =
+      ABBREV {eqn=INST_THM theta eqn,bind=bind}
   | inst_defn (TAILREC{eqs,ind,R,SV,stem}) theta =
       TAILREC {eqs=map (INST_THM theta) eqs,
               ind=INST_THM theta ind,
@@ -418,7 +420,8 @@ fun add_persistent_funs l =
             val name = s^"_compute"
             val name = let
               val used = Lib.C Lib.mem (#1 (Lib.unzip (current_theorems())))
-              fun loop n = let val x = (name^(Int.toString n)) in if used x then loop (n+1) else x end
+              fun loop n = let val x = (name^(Int.toString n))
+                           in if used x then loop (n+1) else x end
               in if used name then loop 0 else name end
             val th_compute = CONV_RULE (!SUC_TO_NUMERAL_DEFN_CONV_hook) th
             val _ = save_thm(name,th_compute)
@@ -700,7 +703,8 @@ fun stdrec thy bindstem {proto_def,SV,WFR,pats,extracta} =
      val def' = MP inst'd (SPEC_ALL def)
      val var_wits = LIST_CONJ (map ASSUME full_rqt)
      val TC_choice_thm =
-           MP (CONV_RULE(BINOP_CONV BETA_CONV)(ISPECL[R2abs, R1] boolTheory.SELECT_AX)) var_wits
+           MP (CONV_RULE(BINOP_CONV BETA_CONV)
+                        (ISPECL[R2abs, R1] boolTheory.SELECT_AX)) var_wits
  in
     {theory = theory, R=R1, SV=SV,
      rules = CONJUNCTS
@@ -720,7 +724,8 @@ fun nestrec thy bindstem {proto_def,SV,WFR,pats,extracta} =
      (* make parameterized definition *)
      val (Name,Ty) = Lib.trye dest_var f
      val aux_name = Name^"_aux"
-     val aux_fvar = mk_var(aux_name,itlist(curry(op-->)) (map type_of (R1::SV)) Ty)
+     val aux_fvar =
+         mk_var(aux_name,itlist(curry(op-->)) (map type_of (R1::SV)) Ty)
      val aux_bindstem = auxStem bindstem
      val (def,theory) =
            make_definition thy (defSuffix aux_bindstem)
@@ -946,7 +951,8 @@ fun mutrec thy bindstem eqns =
           mk_comb(mut,beta_conv (mk_comb(op_assoc aconv f injmap,arg)))
       val L1 = map (mk_lhs_mut_app o dest_comb) L
       val gv_mut_rng = genvar mut_rng
-      val outfns = map (curry mk_abs gv_mut_rng) (project rng_tyl mut_rng gv_mut_rng)
+      val outfns = map (curry mk_abs gv_mut_rng)
+                       (project rng_tyl mut_rng gv_mut_rng)
       val ty_outs = zip rng_tyl outfns
       (* now replace each f by \x. outbar(mut(inbar x)) *)
       fun fout f = (f,assoc (#2(dom_rng(type_of f))) ty_outs)
@@ -1345,9 +1351,10 @@ fun TC rels_0 =
        in (x,(Y',fringe''))
        end
      fun steps rels =
-       case Lib.partition (null o (snd o snd)) rels
-        of (_,[]) => map (fn (x,(Y,_)) => (x,Y)) rels
-         | (nullrels,nnullrels) => steps (map (relstep rels) nnullrels @ nullrels)
+       case Lib.partition (null o (snd o snd)) rels of
+           (_,[]) => map (fn (x,(Y,_)) => (x,Y)) rels
+         | (nullrels,nnullrels) =>
+             steps (map (relstep rels) nnullrels @ nullrels)
  in
    steps (map (fn (x,Y) => (x,(Y,Y))) rels_0)
  end;
@@ -1919,7 +1926,8 @@ fun tprove2 tgoal0 (defn,tactic) =
 
 fun tprove1 tgoal0 p =
   let
-    val (eqns,ind) = Lib.with_flag (proofManagerLib.chatting,false) (tprove2 tgoal0) p
+    val (eqns,ind) = Lib.with_flag (proofManagerLib.chatting,false)
+                                   (tprove2 tgoal0) p
     val () = if not (!computeLib.auto_import_definitions) then ()
              else computeLib.add_funs
                     [eqns, CONV_RULE (!SUC_TO_NUMERAL_DEFN_CONV_hook) eqns]
