@@ -64,7 +64,7 @@ sig
   val SSFRAG :
     {name : string option,
      convs: convdata list,
-     rewrs: thm list,
+     rewrs: (string option * thm) list,
         ac: (thm * thm) list,
     filter: (controlled_thm -> controlled_thm list) option,
     dprocs: Traverse.reducer list,
@@ -90,6 +90,7 @@ sig
   val named_rewrites : string -> thm list -> ssfrag
   val named_merge_ss : string -> ssfrag list -> ssfrag
   val type_ssfrag    : hol_type -> ssfrag
+  val tyi_to_ssdata  : TypeBasePure.tyinfo -> ssfrag
 
   val partition_ssfrags : string list -> ssfrag list ->
                           (ssfrag list * ssfrag list)
@@ -112,7 +113,6 @@ sig
   val ssfrags_of      : simpset -> ssfrag list
   val mk_simpset      : ssfrag list -> simpset
   val remove_ssfrags  : simpset -> string list -> simpset
-  val remove_theorems : term list -> simpset -> simpset
   val ssfrag_names_of : simpset -> string list
   val ++              : simpset * ssfrag -> simpset  (* infix *)
   val &&              : simpset * thm list -> simpset  (* infix *)

@@ -622,17 +622,8 @@ in
 val BOSS_STRIP_TAC = Tactical.FIRST [GEN_TAC,CONJ_TAC, DTHEN STRIP_ASSUME_TAC]
 end;
 
-fun tyi_to_ssdata tyinfo =
- let open simpLib
-  val (thy,tyop) = TypeBasePure.ty_name_of tyinfo
-  val {rewrs, convs} = TypeBasePure.simpls_of tyinfo;
-in
-  SSFRAG {name = SOME("Datatype "^thy^"$"^tyop),
-          convs = convs, rewrs = rewrs, filter = NONE,
-           dprocs = [], ac = [], congs = []}
-end
-
-fun add_simpls tyinfo ss = (ss ++ tyi_to_ssdata tyinfo) handle HOL_ERR _ => ss;
+fun add_simpls tyinfo ss =
+    (ss ++ simpLib.tyi_to_ssdata tyinfo) handle HOL_ERR _ => ss;
 
 fun is_dneg tm = 1 < snd(strip_neg tm);
 
@@ -934,7 +925,7 @@ fun diminish_srw_ss names =
       end;
 
 fun update_fn tyi =
-  augment_srw_ss ([tyi_to_ssdata tyi] handle HOL_ERR _ => [])
+  augment_srw_ss ([simpLib.tyi_to_ssdata tyi] handle HOL_ERR _ => [])
 
 val () =
   TypeBase.register_update_fn (fn tyinfos => (app update_fn tyinfos; tyinfos))
