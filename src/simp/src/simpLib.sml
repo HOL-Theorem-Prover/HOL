@@ -102,6 +102,10 @@ fun rewrites rewrs =
                rewrs=map (fn th => (NONE, th)) rewrs,
                filter=NONE,ac=[],dprocs=[],congs=[]};
 
+fun rewrites_with_names rewrs =
+   SSFRAG_CON {name=NONE, relsimps=[], convs=[], rewrs = map (apfst SOME) rewrs,
+               filter=NONE,ac=[],dprocs=[],congs=[]};
+
 fun dproc_ss dproc =
    SSFRAG_CON {name=NONE, relsimps = [],
            convs=[],rewrs=[],filter=NONE,ac=[],dprocs=[dproc],congs=[]};
@@ -149,6 +153,7 @@ fun merge_ss (s:ssfrag list) =
     }
 
 fun named_rewrites name = (name_ss name) o rewrites;
+fun named_rewrites_with_names name = (name_ss name) o rewrites_with_names;
 fun named_merge_ss name = (name_ss name) o merge_ss;
 
 fun std_conv_ss {name,conv,pats} =

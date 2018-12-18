@@ -80,6 +80,7 @@ sig
   val AC          : thm -> thm -> thm
 
   val rewrites       : thm list -> ssfrag
+  val rewrites_with_names : (string * thm) list -> ssfrag
   val dproc_ss       : Traverse.reducer -> ssfrag
   val ac_ss          : (thm * thm) list -> ssfrag
   val conv_ss        : convdata -> ssfrag
@@ -88,6 +89,7 @@ sig
   val merge_ss       : ssfrag list -> ssfrag
   val name_ss        : string -> ssfrag -> ssfrag
   val named_rewrites : string -> thm list -> ssfrag
+  val named_rewrites_with_names : string -> (string * thm) list -> ssfrag
   val named_merge_ss : string -> ssfrag list -> ssfrag
   val type_ssfrag    : hol_type -> ssfrag
   val tyi_to_ssdata  : TypeBasePure.tyinfo -> ssfrag
