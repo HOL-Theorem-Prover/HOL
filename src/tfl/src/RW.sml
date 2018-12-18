@@ -562,7 +562,8 @@ fun try_cong cnv (cps as {context,prover,simpls}) tm =
     val (rhsv,_) = dest_combn rhs nvars
     val vstrl = #1(strip_pabs f)
     val vstructs = vstrl_variants (union ant_frees context_frees) vstrl
-    val ceqn' = if null vstrl then ceqn else subst (map (op|->) (zip args vstructs)) ceqn
+    val ceqn' = if null vstrl then ceqn
+                else subst (map (op|->) (zip args vstructs)) ceqn
 
 (*    val ceqn' = if null vstrl then ceqn
                  else subst (map2_total (curry op|->) args vstructs) ceqn
@@ -625,8 +626,9 @@ fun try_cong cnv (cps as {context,prover,simpls}) tm =
                val g = list_mk_pabs(vstructs,rcore)
                val gvstructs = list_mk_comb(g,vstructs)
 
-               val rhs_eq = if not_lambda_app then REFL gvstructs
-                            else SYM(Conv.QCONV (DEPTH_CONV GEN_BETA_CONV) gvstructs)
+               val rhs_eq =
+                   if not_lambda_app then REFL gvstructs
+                   else SYM(Conv.QCONV (DEPTH_CONV GEN_BETA_CONV) gvstructs)
                val th1 = TRANS th rhs_eq (* |- f vstructs = g vstructs *)
                          handle HOL_ERR _ => th
             in (g,th1)

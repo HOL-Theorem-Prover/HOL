@@ -168,11 +168,7 @@ fun pull_prefix ps l =
 val unzip = ListPair.unzip
 val split = unzip
 
-fun mapfilter f list =
-   itlist (fn i => fn L => (f i :: L)
-                handle Interrupt => raise Interrupt
-                     | otherwise => L)
-          list []
+fun mapfilter f = List.mapPartial (total f)
 
 val flatten = List.concat
 

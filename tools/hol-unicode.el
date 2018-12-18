@@ -33,6 +33,7 @@
 (define-prefix-command 'hol-unicode-dquote-map)
 (define-prefix-command 'hol-unicode-squote-map)
 (define-prefix-command 'hol-unicode-frak-map)
+(define-prefix-command 'hol-unicode-bboard-map)
 (define-prefix-command 'hol-unicode-specialalphabet-map)
 (define-key global-map (kbd "C-S-f") 'hol-unicode-shift-map)
 (define-key global-map (kbd "C-S-p") 'hol-unicode-p-map)
@@ -369,8 +370,8 @@
 (define-key hol-unicode-leftarrow-map (kbd "~") "↜")
 
 (define-key hol-unicode-rightarrow-map (kbd "-") "→")
-(define-key hol-unicode-rightarrow-map (kbd "C-<") "↠")
-(define-key hol-unicode-rightarrow-map (kbd "<") "↣")
+(define-key hol-unicode-rightarrow-map (kbd "C->") "↠")
+(define-key hol-unicode-rightarrow-map (kbd ">") "↣")
 (define-key hol-unicode-rightarrow-map (kbd "|") "↦")
 (define-key hol-unicode-rightarrow-map (kbd "`") "⇀")
 (define-key hol-unicode-rightarrow-map (kbd ",") "⇁")

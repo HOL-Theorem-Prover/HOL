@@ -374,7 +374,8 @@ fun mk_defs tm =
 fun cross_prod [] l2 = []
   | cross_prod (h::t) l2 = map (pair h) l2 @ cross_prod t l2;
 
-fun merge pn ((alist,b),(blist,e)) = (alist@[if pn then b else mk_neg b]@blist,e);
+fun merge pn ((alist,b),(blist,e)) =
+    (alist@[if pn then b else mk_neg b]@blist,e);
 
 fun merge_paths bpaths pospaths negpaths =
   map (merge true) (cross_prod bpaths pospaths) @
@@ -389,15 +390,16 @@ fun paths vfns tm =
    then let val (b,t1,t2) = dest_cond tm
         in merge_paths (paths vfns b) (paths vfns t1) (paths vfns t2)
         end else
- if TypeBase.is_case tm
-   then let val (cconst,ob,clauses) = TypeBase.dest_case tm
-            val (pats,rhsl) = unzip clauses
-            val plists = map (paths vfns) rhsl
-            fun patch pat plist = map (fn (ctxt,e) => (mk_eq(ob,pat)::ctxt,e)) plist
-            val patched = map2 patch pats plists
-        in flatten patched
-        end else
- if is_let tm
+ if TypeBase.is_case tm then
+   let
+     val (cconst,ob,clauses) = TypeBase.dest_case tm
+     val (pats,rhsl) = unzip clauses
+     val plists = map (paths vfns) rhsl
+     fun patch pat plist = map (fn (ctxt,e) => (mk_eq(ob,pat)::ctxt,e)) plist
+     val patched = map2 patch pats plists
+   in flatten patched
+   end
+ else if is_let tm
    then let val (binds, body) = dest_anylet tm
             val plist = paths vfns body
             fun patch (x,M) (ctxt,e) = (mk_eq(x,M)::ctxt, body)

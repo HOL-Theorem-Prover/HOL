@@ -228,7 +228,7 @@ in
          val tm = Term.prim_mk_const {Name = name, Thy = thy}
          val () =
             ignore (List.length (args tm) = n
-                    orelse raise ERR "systax_fns" "bad number of arguments")
+                    orelse raise ERR "syntax_fns" "bad number of arguments")
          val d = dest tm (ERR ("dest_" ^ name) "")
       in
          (tm,
