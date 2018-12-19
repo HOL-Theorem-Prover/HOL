@@ -3992,6 +3992,9 @@ val _ =
                        (TypeBasePure.ORIG list_induction)
                   |> TypeBasePure.put_nchotomy list_nchotomy
   in
+    (* this exports a tyinfo with simpls included, but that's OK given how
+       small they are; seems easier than taking them out again only for the
+       benefit of a tiny amount of file size in the .dat file *)
     TypeBase.export [list_info']
   end;
 

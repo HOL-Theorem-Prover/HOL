@@ -52,7 +52,6 @@ in
         dBase := insert (theTypeBase()) tyinfo
         handle HOL_ERR _ => ()
       val tyinfos = map resolve_ssfragconvs tyinfos
-      val tyinfos = map add_std_simpls tyinfos
       val tyinfos = list_compose (!update_fns) tyinfos
       val () = app write1 tyinfos
     in
@@ -64,6 +63,34 @@ fun read {Thy,Tyop} = prim_get (theTypeBase()) (Thy,Tyop);
 
 fun fetch ty = TypeBasePure.fetch (theTypeBase()) ty;
 
+fun one_one_for c th =
+    let
+      open boolSyntax
+      val clauses = th |> concl |> strip_conj |> map (#2 o strip_forall)
+      fun ok_clause t =
+          let
+            val (l,_,ty) = dest_eq_ty t
+            val _ = assert (equal bool) ty
+            val f1 = l |> lhs |> strip_comb |> #1
+          in
+            same_const f1 c
+          end handle HOL_ERR _ => false
+    in
+      List.exists ok_clause clauses
+    end
+
+fun maybe_add_simpls tyi =
+    let
+      open boolSyntax
+      val cs = TypeBasePure.constructors_of tyi
+    in
+      case List.find (can dom_rng o type_of) cs of
+          NONE => tyi
+        | SOME c =>
+          if List.exists (one_one_for c) (#rewrs (simpls_of tyi)) then tyi
+          else add_std_simpls tyi
+    end
+
 fun load_from_disk {thyname, data} =
   case data of
       ThyDataSexp.List tyi_sexps =>
@@ -71,7 +98,7 @@ fun load_from_disk {thyname, data} =
         val tyis = List.mapPartial fromSEXP tyi_sexps
       in
         if length tyis = length tyi_sexps then
-          ignore (write tyis)
+          ignore (write (map maybe_add_simpls tyis))
         else (HOL_WARNING "TypeBase" "load_from_disk"
                 ("{thyname=" ^ thyname ^ "}: " ^
                  Int.toString (length tyi_sexps - length tyis) ^
