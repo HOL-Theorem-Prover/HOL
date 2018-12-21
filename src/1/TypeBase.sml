@@ -63,33 +63,17 @@ fun read {Thy,Tyop} = prim_get (theTypeBase()) (Thy,Tyop);
 
 fun fetch ty = TypeBasePure.fetch (theTypeBase()) ty;
 
-fun one_one_for c th =
-    let
-      open boolSyntax
-      val clauses = th |> concl |> strip_conj |> map (#2 o strip_forall)
-      fun ok_clause t =
-          let
-            val (l,_,ty) = dest_eq_ty t
-            val _ = assert (equal bool) ty
-            val f1 = l |> lhs |> strip_comb |> #1
-          in
-            same_const f1 c
-          end handle HOL_ERR _ => false
-    in
-      List.exists ok_clause clauses
-    end
-
 fun maybe_add_simpls tyi =
     let
       open boolSyntax
-      val cs = TypeBasePure.constructors_of tyi
+      val cc = case_const_of tyi
+      val rwts = #rewrs (simpls_of tyi) |> map Drule.CONJUNCTS |> List.concat
+                        |> map (#2 o strip_forall o concl)
+      fun iscasedef t =
+          same_const cc (t |> lhs |> strip_comb |> #1) handle HOL_ERR _ => false
     in
-      case List.find (can dom_rng o type_of) cs of
-          NONE => tyi
-        | SOME c =>
-          if List.exists (one_one_for c) (#rewrs (simpls_of tyi)) then tyi
-          else add_std_simpls tyi
-    end
+      if List.exists iscasedef rwts then tyi else add_std_simpls tyi
+    end handle HOL_ERR _ => tyi
 
 fun load_from_disk {thyname, data} =
   case data of
