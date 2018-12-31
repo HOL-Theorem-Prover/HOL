@@ -8,13 +8,16 @@ fun printq [] = ""
   | printq (x::xs) = q x ^ " " ^ printq xs
 
 open stringSyntax
-val testdata = [(`#"("`, fromMLchar #"("),
-                (`"\n^`)"`, fromMLstring "\n`)"),
-                (`"foo\
+val testdata = [
+  (`#"("`, fromMLchar #"("),
+  (`"\n^`)"`, fromMLstring "\n`)"),
+  (`"foo\
     \bar"`, fromMLstring "foobar"),
-                (`"foo\n\
-\bar"`, fromMLstring "foo\nbar"),
-                (`[#"c"]`, listSyntax.mk_list ([fromMLchar #"c"], ``:char``))]
+  (`"foo\n\
+    \bar"`, fromMLstring "foo\nbar"),
+  (`[#"c"]`, listSyntax.mk_list ([fromMLchar #"c"], ``:char``)),
+  (`"\172"`, ``[CHR 172]``)
+]
 
 fun do_test (q,res) = let
   val l_s = StringCvt.padRight #" " 40 (printq q)
