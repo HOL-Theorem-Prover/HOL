@@ -374,7 +374,7 @@ fun split_ident mixedset octalok s locn qb = let
   fun pushstring (s,loc) = replace_current (BT_Ident s, loc)
   val s0 = String.sub(s, 0)
   val is_char = s0 = #"#" andalso size s > 1 andalso String.sub(s,1) = #"\""
-  val cpts = UTF8.explodei s
+  val cpts = if is_char orelse s0 = #"\"" then [34] else UTF8.explodei s
   val (cp0, cpts0) =
       case cpts of [] => raise Fail "split_ident: invariant failure"
                  | h::t => (h,t)

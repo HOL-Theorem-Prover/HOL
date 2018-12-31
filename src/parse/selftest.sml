@@ -207,6 +207,7 @@ fun snum i = Numeral(ai i, NONE)
 in
 val _ = app (ignore o test) [
       ("abc", [Ident "abc"]),
+      ("\"\\172\"", [Ident "\"\172\""]),
       ("12", [snum 12]),
       ("-12", [Ident "-", snum 12]),
       ("((-12", [Ident "(", Ident "(", Ident "-", snum 12]),
