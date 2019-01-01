@@ -88,10 +88,10 @@ creturn = \013;
 newline = {linefeed} | {creturn} | {creturn}{linefeed};
 locpragma = "(*#loc" {space}+ {numeric}* {space}+ {numeric}* {space}* "*)";
 qvarinterior = {coresymbol} | {alpha} | {numeric} | {space} | "(" | "\\n" |
-               "\\t" | "\\)" | "\\\\" | "\\z" | "*";
+               "\\t" | "\\)" | "\\\\" | "\\z" | "*" | "\\" {numeric} | "\"";
 
 %%
-<INITIAL>"$var$(" {qvarinterior}* ")" => (
+<INITIAL>"$" ? "$var$(" {qvarinterior}* ")" => (
   (BT_Ident yytext, getLoc yyarg yypos yytext)
 );
 <INITIAL>{locpragma} => (dolocpragma yyarg yypos yytext; continue());
@@ -127,6 +127,16 @@ qvarinterior = {coresymbol} | {alpha} | {numeric} | {space} | "(" | "\\n" |
                        i := yypos + size yytext;
                        continue()
                      end);
+<INITIAL>\$? {anysymb} "\"" => (
+  (* needed to cope with stuff smashed up against char literals *)
+  let
+    val s = LocP(nf,!r,yypos - !(#i yyarg))
+  in
+    stracc := (String.substring(yytext,0,size yytext - 1), [#"\""], s);
+    YYBEGIN string;
+    continue()
+  end
+);
 <INITIAL>\$ ? {anysymb} "(*" => (YYBEGIN comment;
                                  incommentp := 1;
                                  (BT_Ident(String.substring(yytext,0,size yytext - 2)),

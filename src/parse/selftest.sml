@@ -208,6 +208,8 @@ in
 val _ = app (ignore o test) [
       ("abc", [Ident "abc"]),
       ("\"\\172\"", [Ident "\"\172\""]),
+      ("#\"c\"", [Ident "#\"c\""]),
+      ("f#\"c\"", [Ident "f", Ident "#\"c\""]),
       ("(\"ab\\172\"++z)",
        [Ident "(", Ident "\"ab\172\"", Ident "++", Ident "z", Ident ")"]),
       ("f\"ab\\172x\"++", [Ident "f", Ident "\"ab\172x\"", Ident "++"]),
@@ -242,6 +244,7 @@ val _ = app (ignore o test) [
        [Ident "$", Ident "$$", Ident "$$$", Ident "$+", Ident "$if",
         Ident "$a"]),
       ("thy$id", [QIdent("thy", "id")]),
+      ("(thy$id", [Ident "(", QIdent("thy", "id")]),
       ("$+a", [Ident "$+", Ident "a"]),
       ("$==>", [Ident "$==>"]),
       ("bool$~", [QIdent("bool", "~")]),
@@ -263,6 +266,11 @@ val _ = app (ignore o test) [
       ("$var$(% foo )", [Ident "% foo "]),
       ("$var$(% foo* )", [Ident "% foo* "]),
       ("$var$(% foo*\\z)", [Ident "% foo*"]),
+      ("$var$(((foo)", [Ident "((foo"]),
+      ("$var$(foo\"bar)", [Ident "foo\"bar"]),
+      ("$var$(foo\\172bar)", [Ident "foo\172bar"]),
+      (* ("($var$(foo\"bar)", [Ident "(", Ident "foo\"bar"]), *)
+      ("$$var$(foo\"bar)", [Ident "$foo\"bar"]),
       ("(')", [Ident "(", Ident "'", Ident ")"]),   (* e.g., finite_mapScript *)
       ("λx.x", [Ident "λ", Ident "x", Ident ".", Ident "x"]),
       ("x'0,y)", [Ident "x'0", Ident ",", Ident "y", Ident ")"]),
