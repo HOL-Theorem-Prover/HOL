@@ -208,6 +208,11 @@ in
 val _ = app (ignore o test) [
       ("abc", [Ident "abc"]),
       ("\"\\172\"", [Ident "\"\172\""]),
+      ("(\"ab\\172\"++z)",
+       [Ident "(", Ident "\"ab\172\"", Ident "++", Ident "z", Ident ")"]),
+      ("f\"ab\\172x\"++", [Ident "f", Ident "\"ab\172x\"", Ident "++"]),
+      ("+\"ab\\172\"++", [Ident "+", Ident "\"ab\172\"", Ident "++"]),
+      ("$+\"ab\\172\"++", [Ident "$+", Ident "\"ab\172\"", Ident "++"]),
       ("12", [snum 12]),
       ("-12", [Ident "-", snum 12]),
       ("((-12", [Ident "(", Ident "(", Ident "-", snum 12]),
