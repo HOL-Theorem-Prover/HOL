@@ -450,7 +450,8 @@ val odd_imposs = Q.prove(
 
 fun writeL th = CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [th]))
 
-Theorem IN_domain
+val IN_domain = Q.store_thm (
+   "IN_domain",
   `!n x t1 t2.
       (n IN domain LN <=> F) /\
       (n IN domain (LS x) <=> (n = 0)) /\
@@ -459,8 +460,8 @@ Theorem IN_domain
                     else ((n-1) DIV 2) IN domain t2)) /\
       (n IN domain (BS t1 x t2) <=>
          (n = 0) \/ (if EVEN n then ((n-1) DIV 2) IN domain t1
-                     else ((n-1) DIV 2) IN domain t2))`
- (simp[domain_def] >> rpt strip_tac >> Cases_on ‘n = 0’ >> simp[] >>
+                     else ((n-1) DIV 2) IN domain t2))`,
+  simp[domain_def] >> rpt strip_tac >> Cases_on ‘n = 0’ >> simp[] >>
   Cases_on ‘EVEN n’ >> simp[] >>
   (drule_then assume_tac even_imposs ORELSE drule_then assume_tac odd_imposs) >>
   simp[] >>
@@ -1287,17 +1288,19 @@ val fromAList_toAList = store_thm("fromAList_toAList",
   ``!t. wf t ==> (fromAList (toAList t) = t)``,
   metis_tac[wf_fromAList,lookup_fromAList_toAList,spt_eq_thm])
 
-Theorem union_insert_LN
-  `!x y t2. union (insert x y LN) t2 = insert x y t2`
-  (recInduct insert_ind
+val union_insert_LN = Q.store_thm (
+   "union_insert_LN",
+  `!x y t2. union (insert x y LN) t2 = insert x y t2`,
+   recInduct insert_ind
    \\ rw[]
    \\ rw[Once insert_def]
    \\ rw[Once insert_def,SimpRHS]
    \\ rw[union_def]);
 
-Theorem fromAList_append
-  `!l1 l2. fromAList (l1 ++ l2) = union (fromAList l1) (fromAList l2)`
-  (recInduct fromAList_ind
+val fromAList_append = Q.store_thm (
+   "fromAList_append",
+  `!l1 l2. fromAList (l1 ++ l2) = union (fromAList l1) (fromAList l2)`,
+   recInduct fromAList_ind
   \\ rw[fromAList_def]
   \\ rw[Once insert_union]
   \\ rw[union_assoc]
@@ -1354,9 +1357,10 @@ val map_insert = store_thm("map_insert",
     DECIDE_TAC)>>
   fs[map_def]);
 
-Theorem map_fromAList
-  `map f (fromAList ls) = fromAList (MAP (\ (k,v). (k, f v)) ls)`
-  (Induct_on`ls` >> simp[fromAList_def] >>
+val map_fromAList = Q.store_thm (
+   "map_fromAList",
+  `map f (fromAList ls) = fromAList (MAP (\ (k,v). (k, f v)) ls)`,
+   Induct_on`ls` >> simp[fromAList_def] >>
    Cases >> simp[fromAList_def] >>
    simp[wf_fromAList,map_insert]);
 
@@ -1726,31 +1730,36 @@ val list_insert_def = Define `
   (list_insert [] t = t) /\
   (list_insert (n::ns) t = list_insert ns (insert n () t))`;
 
-Theorem domain_list_to_num_set
-  `!xs. x IN domain (list_to_num_set xs) <=> MEM x xs`
- (Induct \\ full_simp_tac(srw_ss())[list_to_num_set_def]);
+val domain_list_to_num_set = Q.store_thm (
+   "domain_list_to_num_set",
+  `!xs. x IN domain (list_to_num_set xs) <=> MEM x xs`,
+  Induct \\ full_simp_tac(srw_ss())[list_to_num_set_def]);
 
-Theorem domain_list_insert
+val domain_list_insert = Q.store_thm (
+   "domain_list_insert",
   `!xs x t.
-      x IN domain (list_insert xs t) <=> MEM x xs \/ x IN domain t`
- (Induct \\ full_simp_tac(srw_ss())[list_insert_def] \\ METIS_TAC []);
+      x IN domain (list_insert xs t) <=> MEM x xs \/ x IN domain t`,
+  Induct \\ full_simp_tac(srw_ss())[list_insert_def] \\ METIS_TAC []);
 
-Theorem domain_FOLDR_delete
-  `!ls live. domain (FOLDR delete live ls) = (domain live) DIFF (set ls)`
- (Induct>>
-  full_simp_tac(srw_ss())[DIFF_INSERT,EXTENSION]>>
+val domain_FOLDR_delete = Q.store_thm (
+   "domain_FOLDR_delete",
+  `!ls live. domain (FOLDR delete live ls) = (domain live) DIFF (set ls)`,
+  Induct \\
+  full_simp_tac(srw_ss())[DIFF_INSERT,EXTENSION] \\
   metis_tac[]);
 
-Theorem lookup_list_to_num_set
-  `!xs. lookup x (list_to_num_set xs) = if MEM x xs then SOME () else NONE`
- (Induct \\ srw_tac [] [list_to_num_set_def,lookup_def,lookup_insert] \\ full_simp_tac(srw_ss())[]);
+val lookup_list_to_num_set = Q.store_thm (
+   "lookup_list_to_num_set",
+  `!xs. lookup x (list_to_num_set xs) = if MEM x xs then SOME () else NONE`,
+  Induct \\ srw_tac [] [list_to_num_set_def,lookup_def,lookup_insert] \\
+  full_simp_tac(srw_ss())[]);
 
-Theorem list_to_num_set_append
-  `!l1 l2. list_to_num_set (l1 ++ l2) = union (list_to_num_set l1) (list_to_num_set l2)`
- (Induct \\ rw[list_to_num_set_def]
+val list_to_num_set_append = Q.store_thm (
+   "list_to_num_set_append",
+  `!l1 l2. list_to_num_set (l1 ++ l2) = union (list_to_num_set l1) (list_to_num_set l2)`,
+  Induct \\ rw[list_to_num_set_def]
   \\ rw[Once insert_union]
   \\ rw[Once insert_union,SimpRHS]
   \\ rw[union_assoc]);
-
 
 val _ = export_theory();
