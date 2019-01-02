@@ -245,6 +245,11 @@ val _ = app (ignore o test) [
         Ident "$a"]),
       ("thy$id", [QIdent("thy", "id")]),
       ("(thy$id", [Ident "(", QIdent("thy", "id")]),
+      ("(thy$id +", [Ident "(", QIdent("thy", "id"), Ident "+"]),
+      ("(thy$id+", [Ident "(", QIdent("thy", "id"), Ident "+"]),
+      ("thy$0", [QIdent("thy", "0")]),
+      ("(thy$id\"foo\"", [Ident "(", QIdent ("thy", "id"), Ident "\"foo\""]),
+      ("nm_sub$id", [QIdent ("nm_sub", "id")]),
       ("$+a", [Ident "$+", Ident "a"]),
       ("$==>", [Ident "$==>"]),
       ("bool$~", [QIdent("bool", "~")]),
@@ -269,7 +274,7 @@ val _ = app (ignore o test) [
       ("$var$(((foo)", [Ident "((foo"]),
       ("$var$(foo\"bar)", [Ident "foo\"bar"]),
       ("$var$(foo\\172bar)", [Ident "foo\172bar"]),
-      (* ("($var$(foo\"bar)", [Ident "(", Ident "foo\"bar"]), *)
+      ("($var$(foo\"bar)", [Ident "(", Ident "foo\"bar"]),
       ("$$var$(foo\"bar)", [Ident "$foo\"bar"]),
       ("(')", [Ident "(", Ident "'", Ident ")"]),   (* e.g., finite_mapScript *)
       ("λx.x", [Ident "λ", Ident "x", Ident ".", Ident "x"]),
@@ -288,7 +293,8 @@ val _ = app (ignore o test) [
 val _ = List.app (ignore o failtest) [
       ("thy$$$", "qualified ident"),
       ("$var$(ab\n c)", "quoted variable"),
-      ("'a", "can't begin with prime")
+      ("'a", "can't begin with prime"),
+      ("thy$1", "qualified ident")
 ]
 end (* local - tests of term lexer *)
 
