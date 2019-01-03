@@ -7,28 +7,37 @@ val _ = catch_interrupt true;
 
 fun read_from_stream is n = TextIO.input is
 
-val (instream, outstream, intp) =
-    case CommandLine.arguments() of
-      [] => (TextIO.stdIn, TextIO.stdOut, true)
-    | [ifile, ofile] => let
-        open TextIO
-        val is = TextIO.openIn ifile
-                 handle OS.SysErr _ =>
-                        (output(stdErr, "Error opening "^ifile^"\n");
-                         exit failure)
-        val os = TextIO.openOut ofile
-                 handle Io {cause = OS.SysErr (_, eo), ...} =>
-                        (case eo of
+fun open_files b infn outfn =
+    let
+      open TextIO
+      val is = TextIO.openIn infn
+               handle OS.SysErr _ =>
+                      (output(stdErr, "Error opening "^infn^"\n");
+                       exit failure)
+      val os = TextIO.openOut outfn
+               handle Io {cause = OS.SysErr (_, eo), ...} =>
+                      (case eo of
                            SOME e => output(stdErr, OS.errorMsg e)
                          | NONE => ();
-                         exit failure)
+                       exit failure)
       in
-        (is, os, false)
-      end
-    | _ => (TextIO.output(TextIO.stdErr,
-                          "Usage:\n  " ^ CommandLine.name() ^
-                          " [<inputfile> <outputfile>]\n");
-            exit failure)
+        (is, os, b)
+    end
+
+fun usage status =
+    (TextIO.output(TextIO.stdErr,
+                   "Usage:\n  " ^ CommandLine.name() ^
+                   " [[-i] <inputfile> <outputfile>] | -h | -n\n");
+     exit status)
+
+val (instream, outstream, intp) =
+    case CommandLine.arguments() of
+        [] => (TextIO.stdIn, TextIO.stdOut, true)
+      | ["-h"] => usage success
+      | ["-n"] => (TextIO.stdIn, TextIO.stdOut, false)
+      | [ifile, ofile] => open_files false ifile ofile
+      | ["-i", ifile, ofile] => open_files true ifile ofile
+      | _ => usage failure
 
 open QuoteFilter.UserDeclarations
 val state as QFS args = newstate intp
