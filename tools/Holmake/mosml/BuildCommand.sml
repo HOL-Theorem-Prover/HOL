@@ -26,7 +26,8 @@ fun includify [] = []
 val SYSTEML = Systeml.systeml
 val UNQUOTER  = xable_string(fullPath [HOLDIR, "bin/unquote"])
 fun has_unquoter() = FileSys.access(UNQUOTER, [FileSys.A_EXEC])
-fun unquote_to file1 file2 = SYSTEML [UNQUOTER, file1, file2]
+fun unquote_to intp file1 file2 =
+    SYSTEML (UNQUOTER :: (if intp then ["-i"] else []) @ [file1, file2])
 
 
 val failed_script_cache = ref (Binaryset.empty String.compare)
@@ -66,6 +67,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
         Compile _ (* deps *) =>
         let
           val file = fromFile arg
+          val intp = case arg of SML (Script _) => true | _ => false
           val _ = exists_readable file orelse
                   (print ("Wanted to compile "^file^", but it wasn't there\n");
                    raise FileNotFound)
@@ -87,7 +89,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                      FileSys.rename{old=clone, new=file})
                   else ()
               in
-                (if Process.isSuccess (unquote_to clone file)
+                (if Process.isSuccess (unquote_to intp clone file)
                     handle e => (revert();
                                  print ("Unquoting "^file^
                                         " raised exception\n");
