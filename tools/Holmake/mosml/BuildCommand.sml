@@ -80,7 +80,10 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                 val _ = FileSys.rename {old=file, new=clone}
                 fun revert() =
                   if FileSys.access (clone, [FileSys.A_READ]) then
-                    (FileSys.remove file handle _ => ();
+                    ((if debug then
+                        FileSys.rename{old=file, new=file ^ ".quoted"}
+                      else
+                        FileSys.remove file) handle _ => ();
                      FileSys.rename{old=clone, new=file})
                   else ()
               in
