@@ -6,7 +6,7 @@ val _ = new_theory "GraphLang";
 open wordsTheory wordsLib pairTheory listTheory relationTheory;
 open pred_setTheory arithmeticTheory combinTheory;
 open arm_decompTheory set_sepTheory progTheory addressTheory;
-open m0_decompTheory lcsymtacs;
+open m0_decompTheory riscv_progTheory lcsymtacs;
 
 val op by = BasicProvers.byA
 
@@ -287,6 +287,12 @@ val m0_STATE_thm = save_thm("m0_STATE_thm",
   |> REWRITE_RULE [m0_STATE_PSR_def,m0_STATE_REGS_def,STAR_ASSOC]
   |> SPEC_ALL);
 
+(* representation in RISCV-V SPEC *)
+
+val riscv_STATE_def = Define `
+  riscv_STATE s =
+    riscv_REG 0w (var_word "r0" s)`
+
 (* misc *)
 
 val var_update_thm = store_thm("var_update_thm",
@@ -344,21 +350,24 @@ val next_ok_def = Define `
      (MAP FST u = ret_and_all_names) /\ jump_ok j /\
      !st. check_ret j st (apply_update u st))`
 
-val _ = Datatype `code = ARM ((word32 # word32) set)
-                       | M0 ((word32 # (word16 + word32)) set)
-                       | RISCV ((word64 # (word16 + word32)) set)`;
-
 val IMPL_INST_def = Define `
-  IMPL_INST code locs (Inst n assert next) =
+  IMPL_INST code locs (Inst (n:'a word) assert next) =
     next_ok next /\ EVEN (w2n n) /\
     !s t call w.
       assert s /\ exec_next locs next s t w call ==>
-      case code of
-      | ARM arm_c => SPEC ARM_MODEL (arm_STATE s * arm_PC (w2w n)) arm_c
-                                    (arm_STATE t * arm_PC (w2w w))
-      | M0 m0_c => SPEC M0_MODEL (m0_STATE s * m0_PC (w2w n)) m0_c
-                                 (m0_STATE t * m0_PC (w2w w))
-      | RISCV riscv_c => T`;
+      let (c,m,x,p) = code in SPEC m (x s * p n) c (x t * p w)`;
+
+val a_tools = ``(ARM_MODEL,arm_STATE,arm_PC)``
+val m_tools = ``(M0_MODEL,m0_STATE,m0_PC)``
+val r_tools = ``(RISCV_MODEL,riscv_STATE,riscv_PC)``
+
+val ARM_def = Define `ARM (c:((word32 # word32) set)) = (c,^a_tools)`;
+val M0_def = Define `M0 (c:(word32 # (word16 + word32)) set) = (c,^m_tools)`;
+val RISCV_def = Define `RISCV (c:(word64 # word32) set) = (c,^r_tools)`;
+
+val _ = ``IMPL_INST (ARM _)``;
+val _ = ``IMPL_INST (M0 _)``;
+val _ = ``IMPL_INST (RISCV _)``;
 
 val IMPL_INST_IF = store_thm("IMPL_INST_IF",
   ``IMPL_INST code locs (Inst pc1 assert1 next1) /\
@@ -425,46 +434,42 @@ val IMPL_INST_IF_COMPOSE1 = store_thm("IMPL_INST_IF_COMPOSE1",
     IMPL_INST c locs (Inst w g (ASM NONE [] (Jump j))) ==>
     (!s. g s ==> g (apply_update u1 s)) ==>
     IMPL_INST c locs (Inst n b (IF g (ASM pre u1 (Jump j)) next))``,
-  Cases_on `c`
+  PairCases_on `c`
+  \\ rename [`(c,m,c6,c7)`]
   \\ SIMP_TAC (srw_ss()) [IMPL_INST_def,check_jump_def,exec_next_def,next_ok_def]
   \\ REPEAT STRIP_TAC \\ REVERSE (Cases_on `g s`)
   \\ FULL_SIMP_TAC std_ss []
   \\ TRY (Q.PAT_ASSUM `!s t cc. bbb` (MP_TAC o Q.SPECL [`s`,`t`,`call`,`w'`])
           \\ FULL_SIMP_TAC std_ss [] \\ NO_TAC)
+  \\ rpt BasicProvers.TOP_CASE_TAC \\ rpt var_eq_tac \\ fs []
   \\ MATCH_MP_TAC (progTheory.SPEC_COMPOSE
                    |> Q.SPECL [`x`,`p`,`c`,`m`,`c`,`q`]
                    |> SIMP_RULE std_ss [UNION_IDEMPOT] |> GEN_ALL)
-  THEN1 (Q.EXISTS_TAC `arm_STATE t * arm_PC w`
-    \\ FULL_SIMP_TAC std_ss [apply_update_def]
-    \\ REPEAT STRIP_TAC \\ FIRST_X_ASSUM MATCH_MP_TAC
-    \\ FULL_SIMP_TAC std_ss [get_assert_def] \\ METIS_TAC [])
-  THEN1 (Q.EXISTS_TAC `m0_STATE t * m0_PC w`
-    \\ FULL_SIMP_TAC std_ss [apply_update_def]
-    \\ REPEAT STRIP_TAC \\ FIRST_X_ASSUM MATCH_MP_TAC
-    \\ FULL_SIMP_TAC std_ss [get_assert_def] \\ METIS_TAC []));
+  \\ fs []
+  \\ first_x_assum (qspecl_then [`s`,`apply_update u1 s`] mp_tac)
+  \\ fs [] \\ strip_tac
+  \\ FULL_SIMP_TAC std_ss [get_assert_def,apply_update_def] \\ METIS_TAC []);
 
 val IMPL_INST_IF_COMPOSE2 = store_thm("IMPL_INST_IF_COMPOSE2",
   ``IMPL_INST c locs (Inst n b (IF g next (ASM pre u1 (Jump w)))) /\
     IMPL_INST c locs (Inst w ($~ o g) (ASM NONE [] (Jump j))) ==>
     (!s. g (apply_update u1 s) <=> g s) ==>
     IMPL_INST c locs (Inst n b (IF g next (ASM pre u1 (Jump j))))``,
-  Cases_on `c`
+  PairCases_on `c`
+  \\ rename [`(c,m,c6,c7)`]
   \\ SIMP_TAC (srw_ss()) [IMPL_INST_def,check_jump_def,exec_next_def,next_ok_def]
   \\ REPEAT STRIP_TAC \\ Cases_on `g s`
   \\ FULL_SIMP_TAC std_ss []
   \\ TRY (Q.PAT_ASSUM `!s t cc. bbb` (MP_TAC o Q.SPECL [`s`,`t`,`call`,`w'`])
           \\ FULL_SIMP_TAC std_ss [] \\ NO_TAC)
+  \\ rpt BasicProvers.TOP_CASE_TAC \\ rpt var_eq_tac \\ fs []
   \\ MATCH_MP_TAC (progTheory.SPEC_COMPOSE
                    |> Q.SPECL [`x`,`p`,`c`,`m`,`c`,`q`]
                    |> SIMP_RULE std_ss [UNION_IDEMPOT] |> GEN_ALL)
-  THEN1 (Q.EXISTS_TAC `arm_STATE t * arm_PC w`
-    \\ FULL_SIMP_TAC std_ss [apply_update_def]
-    \\ REPEAT STRIP_TAC \\ FIRST_X_ASSUM MATCH_MP_TAC
-    \\ FULL_SIMP_TAC std_ss [get_assert_def] \\ METIS_TAC [])
-  THEN1 (Q.EXISTS_TAC `m0_STATE t * m0_PC w`
-    \\ FULL_SIMP_TAC std_ss [apply_update_def]
-    \\ REPEAT STRIP_TAC \\ FIRST_X_ASSUM MATCH_MP_TAC
-    \\ FULL_SIMP_TAC std_ss [get_assert_def] \\ METIS_TAC []));
+  \\ fs []
+  \\ first_x_assum (qspecl_then [`s`,`apply_update u1 s`] mp_tac)
+  \\ fs [] \\ strip_tac
+  \\ FULL_SIMP_TAC std_ss [get_assert_def,apply_update_def] \\ METIS_TAC []);
 
 val LESS_EQ_APPEND = store_thm("LESS_EQ_APPEND",
   ``!xs n. n <= LENGTH xs ==> ?ys zs. (xs = ys ++ zs) /\ (LENGTH ys = n)``,
@@ -1032,15 +1037,15 @@ val good_stack_tail_return_vars = prove(
 val func_ok_EXPEND_CODE = store_thm("func_ok_EXPEND_CODE",
   ``func_ok code locs f ==>
     !c. (case (code,c) of
-         | (ARM c1, ARM c2) => c1 SUBSET c2
-         | (M0  c1, M0  c2) => c1 SUBSET c2
-         | _ => F) ==>
+         | ((c1,x1), (c2,x2)) => (c1 SUBSET c2 /\ (x1 = x2))) ==>
         func_ok c locs f``,
   Cases_on `f` \\ SIMP_TAC std_ss [func_ok_def,IMPL_INST_def]
-  \\ Cases_on `code` \\ FULL_SIMP_TAC (srw_ss()) []
-  \\ REPEAT STRIP_TAC \\ Cases_on `c'` \\ FULL_SIMP_TAC (srw_ss()) []
+  \\ PairCases_on `code` \\ FULL_SIMP_TAC (srw_ss()) []
+  \\ REPEAT STRIP_TAC \\ PairCases_on `c'` \\ FULL_SIMP_TAC (srw_ss()) []
   \\ RES_TAC \\ FULL_SIMP_TAC std_ss []
-  \\ IMP_RES_TAC SPEC_SUBSET_CODE);
+  \\ IMP_RES_TAC SPEC_SUBSET_CODE
+  \\ every_case_tac \\ fs []
+  \\ metis_tac [SPEC_SUBSET_CODE]);
 
 val return_vars_SAME = prove(
   ``!n. MEM n all_names ==>
@@ -1094,7 +1099,7 @@ fun exec_graph_step_IMP_exec_next arch = let
   in prove(
   ``!next i k n.
       NRC (exec_graph_step (list_func_trans fs)) n
-        ((NextNode i,st,name)::t) s2 /\ n <> 0 /\ funcs_ok ^code fs /\
+        ((NextNode i,st,name)::t) s2 /\ n <> 0/\ funcs_ok ^code fs /\
       (list_func_trans fs name = SOME (GraphFunction x1 x2 (graph nodes) x3)) /\
       ODD k /\ LIST_SUBSET (SND (next_trans i k next)) nodes /\
       ALL_DISTINCT (MAP FST nodes) /\ next_ok next /\
@@ -1325,6 +1330,7 @@ fun exec_inst_progress arch = let
   \\ FULL_SIMP_TAC std_ss []
   \\ FULL_SIMP_TAC std_ss [good_stack_def]
   \\ REPEAT STRIP_TAC \\ RES_TAC
+  \\ fs [ARM_def,M0_def,RISCV_def]
   \\ Q.LIST_EXISTS_TAC [`s4`,`j`,`j1`] \\ FULL_SIMP_TAC std_ss []) end;
 
 fun exec_func_step_IMP arch = let
@@ -1840,7 +1846,7 @@ val rw4 = let
   val lemma3 = CONJ lemma1 lemma2 |> RW [GSYM CONJ_ASSOC]
   in lemma3 end;
 
-val rw = prove(
+val rw1 = prove(
   ``EVERY (\i. ((w:word32) ' i = ((w && n2w (2 ** i)) <> 0w)) /\
                (word_bit i w = ((w && n2w (2 ** i)) <> 0w)) /\
                (word_lsr w i = ShiftRight w ((n2w i):word32)) /\
@@ -1927,7 +1933,7 @@ val blast_append_0_lemma = prove(
 val graph_format_preprocessing = save_thm("graph_format_preprocessing",
   LIST_CONJ [MemAcc8_def, MemAcc32_def, ShiftLeft_def, ShiftRight_def,
              MemUpdate8_def, MemUpdate32_def] |> GSYM
-  |> CONJ rw |> CONJ rw3 |> CONJ rw64 |> CONJ rw16 |> CONJ rw8 |> CONJ rw4
+  |> CONJ rw1 |> CONJ rw3 |> CONJ rw64 |> CONJ rw16 |> CONJ rw8 |> CONJ rw4
   |> CONJ w2w_carry |> CONJ w2w_carry_alt
   |> CONJ carry_out_eq
   |> CONJ word_add_with_carry_eq
@@ -2001,15 +2007,15 @@ val NEQ_SYM = store_thm("NEQ_SYM",
   ``~(x = y) <=> ~(y = x)``,
   METIS_TAC []);
 
-val SKIP_TAG_IMP_CALL = store_thm("SKIP_TAG_IMP_CALL",
-  ``IMPL_INST code locs
+val SKIP_TAG_IMP_CALL_ARM = store_thm("SKIP_TAG_IMP_CALL_ARM",
+  ``IMPL_INST (ARM code) locs
      (Inst entry (K T)
         (ASM (SOME (\s. SKIP_TAG str)) []
            (Jump exit))) ==>
     !old. (old = str) ==>
     !name.
       (locs name = SOME entry) ==>
-      IMPL_INST code locs
+      IMPL_INST (ARM code) locs
        (Inst entry (K T)
          (CALL NONE
            [("ret",(\s. VarWord exit)); ("r0",var_acc "r0");
@@ -2029,7 +2035,7 @@ val SKIP_TAG_IMP_CALL = store_thm("SKIP_TAG_IMP_CALL",
           name (Jump exit)))``,
   fs [IMPL_INST_def,next_ok_def,check_ret_def,exec_next_def,
       check_jump_def,get_assert_def,LET_THM]
-  \\ Cases_on `code`
+  \\ fs [ARM_def] \\ rpt BasicProvers.TOP_CASE_TAC \\ fs []
   \\ fs [apply_update_def,APPLY_UPDATE_THM,arm_STATE_def,m0_STATE_def,
          arm_STATE_CPSR_def,var_bool_def,var_nat_def,m0_STATE_PSR_def,
          var_word_def,var_acc_def,ret_and_all_names_def,all_names_def,
@@ -2040,7 +2046,90 @@ val SKIP_TAG_IMP_CALL = store_thm("SKIP_TAG_IMP_CALL",
          var_word_def,var_acc_def,ret_and_all_names_def,all_names_def,
          var_dom_def,var_word_def,var_mem_def,var_word8_def]
   \\ fs [apply_update_def,APPLY_UPDATE_THM,arm_STATE_def,m0_STATE_def,
-      arm_STATE_REGS_def,STAR_ASSOC,SPEC_REFL])
+      arm_STATE_REGS_def,STAR_ASSOC,SPEC_REFL]);
+
+val SKIP_TAG_IMP_CALL_M0 = store_thm("SKIP_TAG_IMP_CALL_M0",
+  ``IMPL_INST (M0 code) locs
+     (Inst entry (K T)
+        (ASM (SOME (\s. SKIP_TAG str)) []
+           (Jump exit))) ==>
+    !old. (old = str) ==>
+    !name.
+      (locs name = SOME entry) ==>
+      IMPL_INST (M0 code) locs
+       (Inst entry (K T)
+         (CALL NONE
+           [("ret",(\s. VarWord exit)); ("r0",var_acc "r0");
+            ("r1",var_acc "r1"); ("r2",var_acc "r2");
+            ("r3",var_acc "r3"); ("r4",var_acc "r4");
+            ("r5",var_acc "r5"); ("r6",var_acc "r6");
+            ("r7",var_acc "r7"); ("r8",var_acc "r8");
+            ("r9",var_acc "r9"); ("r10",var_acc "r10");
+            ("r11",var_acc "r11"); ("r12",var_acc "r12");
+            ("r13",var_acc "r13"); ("r14",var_acc "r14");
+            ("mode",var_acc "mode"); ("n",var_acc "n");
+            ("z",var_acc "z"); ("c",var_acc "c"); ("v",var_acc "v");
+            ("mem",var_acc "mem"); ("dom",var_acc "dom");
+            ("stack",var_acc "stack");
+            ("dom_stack",var_acc "dom_stack");
+            ("clock",var_acc "clock"); ("r0_input",var_acc "r0")]
+          name (Jump exit)))``,
+  fs [IMPL_INST_def,next_ok_def,check_ret_def,exec_next_def,
+      check_jump_def,get_assert_def,LET_THM]
+  \\ fs [M0_def] \\ rpt BasicProvers.TOP_CASE_TAC \\ fs []
+  \\ fs [apply_update_def,APPLY_UPDATE_THM,arm_STATE_def,m0_STATE_def,
+         arm_STATE_CPSR_def,var_bool_def,var_nat_def,m0_STATE_PSR_def,
+         var_word_def,var_acc_def,ret_and_all_names_def,all_names_def,
+         var_dom_def,var_word_def,var_mem_def,var_word8_def]
+  \\ fs [apply_update_def,APPLY_UPDATE_THM,arm_STATE_def,m0_STATE_def,
+         arm_STATE_CPSR_def,var_bool_def,arm_STATE_REGS_def,
+         m0_STATE_REGS_def,var_nat_def,m0_STATE_PSR_def,
+         var_word_def,var_acc_def,ret_and_all_names_def,all_names_def,
+         var_dom_def,var_word_def,var_mem_def,var_word8_def]
+  \\ fs [apply_update_def,APPLY_UPDATE_THM,arm_STATE_def,m0_STATE_def,
+      arm_STATE_REGS_def,STAR_ASSOC,SPEC_REFL]);
+
+val SKIP_TAG_IMP_CALL_RISCV = store_thm("SKIP_TAG_IMP_CALL_RISCV",
+  ``IMPL_INST (RISCV c) locs
+     (Inst entry (K T)
+        (ASM (SOME (\s. SKIP_TAG str)) []
+           (Jump exit))) ==>
+    !old. (old = str) ==>
+    !name.
+      (locs name = SOME entry) ==>
+      IMPL_INST (RISCV code) locs
+       (Inst entry (K T)
+         (CALL NONE
+           [("ret",(\s. VarWord exit)); ("r0",var_acc "r0");
+            ("r1",var_acc "r1"); ("r2",var_acc "r2");
+            ("r3",var_acc "r3"); ("r4",var_acc "r4");
+            ("r5",var_acc "r5"); ("r6",var_acc "r6");
+            ("r7",var_acc "r7"); ("r8",var_acc "r8");
+            ("r9",var_acc "r9"); ("r10",var_acc "r10");
+            ("r11",var_acc "r11"); ("r12",var_acc "r12");
+            ("r13",var_acc "r13"); ("r14",var_acc "r14");
+            ("mode",var_acc "mode"); ("n",var_acc "n");
+            ("z",var_acc "z"); ("c",var_acc "c"); ("v",var_acc "v");
+            ("mem",var_acc "mem"); ("dom",var_acc "dom");
+            ("stack",var_acc "stack");
+            ("dom_stack",var_acc "dom_stack");
+            ("clock",var_acc "clock"); ("r0_input",var_acc "r0")]
+          name (Jump exit)))``,
+  fs [IMPL_INST_def,next_ok_def,check_ret_def,exec_next_def,
+      check_jump_def,get_assert_def,LET_THM]
+  \\ fs [RISCV_def] \\ rpt BasicProvers.TOP_CASE_TAC \\ fs []
+  \\ fs [apply_update_def,APPLY_UPDATE_THM,arm_STATE_def,m0_STATE_def,
+         arm_STATE_CPSR_def,var_bool_def,var_nat_def,m0_STATE_PSR_def,
+         var_word_def,var_acc_def,ret_and_all_names_def,all_names_def,
+         var_dom_def,var_word_def,var_mem_def,var_word8_def]
+  \\ fs [apply_update_def,APPLY_UPDATE_THM,arm_STATE_def,m0_STATE_def,
+         arm_STATE_CPSR_def,var_bool_def,arm_STATE_REGS_def,
+         m0_STATE_REGS_def,var_nat_def,m0_STATE_PSR_def,
+         riscv_STATE_def,
+         var_word_def,var_acc_def,ret_and_all_names_def,all_names_def,
+         var_dom_def,var_word_def,var_mem_def,var_word8_def]
+  \\ fs [apply_update_def,APPLY_UPDATE_THM,arm_STATE_def,m0_STATE_def,
+      arm_STATE_REGS_def,STAR_ASSOC,SPEC_REFL]);
 
 val fixwidth_w2v = prove(
   ``fixwidth (dimindex (:'a)) (w2v (w:'a word)) = w2v w``,
