@@ -299,7 +299,7 @@ fun Fupd (m, i, e) = Term.mk_comb (combinSyntax.mk_update (i, e), m)
 fun CS (x, cs) =
    Term.beta_conv (Term.mk_comb
      (Lib.with_flag (Feedback.emit_MESG, false)
-        (Lib.with_flag (Globals.priming, SOME "_")
+        ((* Lib.with_flag (Globals.priming, SOME "_") *)
            TypeBase.mk_pattern_fn) cs, x))
    before resetAnon ()
 

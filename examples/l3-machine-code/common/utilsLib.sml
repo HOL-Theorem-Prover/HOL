@@ -723,7 +723,7 @@ fun avoid_name_clashes tm2 tm1 =
       val sb = List.foldl
                   (fn (v, (sb, avoids)) =>
                      let
-                        val v' = Lib.with_flag (Globals.priming, SOME "_")
+                        val v' = (* Lib.with_flag (Globals.priming, SOME "_") *)
                                     (Term.variant avoids) v
                      in
                         ((v |-> v') :: sb, v' :: avoids)

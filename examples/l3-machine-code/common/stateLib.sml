@@ -956,6 +956,9 @@ fun rename_vars (rmap, bump) =
 
    The "duplicate" flag controls whether or not conditions in "r" are
    added to the postcondition in order to introduce "f".
+
+val (duplicate, thm_def) = (false, riscv_ID_PC_def)
+
    ------------------------------------------------------------------------ *)
 
 local
@@ -1747,6 +1750,18 @@ end
 val () = set_trace "Goalstack.print_goal_at_top" 0
 val () = set_trace "Goalstack.print_goal_at_top" 1
 val () = set_trace "stateLib.spec" 1
+
+val (imp_spec, imp_temp, read_thms, write_thms, select_state_thms,
+     frame_thms, component_11, map_tys) =
+     (riscv_progTheory.RISCV_IMP_SPEC,
+      riscv_progTheory.RISCV_IMP_TEMPORAL,
+      [riscv_opcode_bytes, boolTheory.DE_MORGAN_THM],
+      [],
+      (riscv_select_state_pool_thm :: riscv_select_state_thms),
+      [riscv_frame, ricv_frame_hidden, state_id],
+      component_11,
+      [dword, word5])
+
 *)
 
 local
@@ -1852,6 +1867,9 @@ in
                )
             \\ POST_TAC
       in
+(*
+val (thm,t) = hd thm_ts
+*)
          fn (thm, t) =>
             let
                val v = optionSyntax.dest_some (utilsLib.rhsc thm)
