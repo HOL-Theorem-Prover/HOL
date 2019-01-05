@@ -28,7 +28,7 @@ fun uprove a b = utilsLib.STRIP_UNDISCH (Q.prove (a, b))
 val Fetch_def = Define`
   Fetch s =
   let (w, s) = translateAddr (PC s, Instruction, Read) s in
-    (rawReadInst (THE w) s, s)`
+    (rawReadInst (THE w) s)`
 
 val update_pc_def = Define `update_pc v s = SOME (write'PC v s)`
 
@@ -632,41 +632,39 @@ val write'GPR =
   ev [write'GPR_def, write'gpr_def] [[``d <> 0w:word5``]] []
   ``write'GPR (n, d)`` |> hd
 
-val Fetch = Theory.save_thm("Fetch",
-  EV [Fetch_def, PC, translateAddr, rawReadInst, boolify8_def] [[aligned]] []
-    ``Fetch``
-  )
-
 val update_pc = Theory.save_thm("update_pc",
   EV [update_pc_def, write'PC_def] [] [] ``update_pc v``)
 
-(* extra simp *)
+val Fetch =
+  EV [Fetch_def, PC, translateAddr, rawReadInst, boolify8_def,
+      write'Skip_def] [[aligned]] []
+    ``Fetch``
 
-val Word_tm = Fetch |> concl |> find_term (can (match_term ``Word _``))
-val Half_tm = Fetch |> concl |> find_term (can (match_term ``Half _``))
+val Fetch32 = store_thm("Fetch32",
+  ``!xs x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 xA xB xC xD xE xF
+        y0 y1 y2 y3 y4 y5 y6 y7 y8 y9 yA yB yC yD yE yF.
+       (xs = [y0; y1; y2; y3; y4; y5; y6; y7; y8; y9; yA; yB; yC; yD; yE; yF;
+              x0; x1; x2; x3; x4; x5; x6; x7; x8; x9; xA; xB; xC; xD; xE; xF]) /\
+       ((s.c_MCSR s.procID).mstatus.VM = 0w) ∧
+       (s.MEM8 (s.c_PC s.procID + 3w) = v2w [y0; y1; y2; y3; y4; y5; y6; y7]) ∧
+       (s.MEM8 (s.c_PC s.procID + 2w) = v2w [y8; y9; yA; yB; yC; yD; yE; yF]) ∧
+       (s.MEM8 (s.c_PC s.procID + 1w) = v2w [x0; x1; x2; x3; x4; x5; x6; x7]) ∧
+       (s.MEM8 (s.c_PC s.procID) = v2w [x8; x9; xA; xB; xC; xD; xE; xF]) ∧
+       xE ∧ xF ⇒
+       (Fetch s =
+        (Word (v2w xs), s with c_Skip := (s.procID =+ 4w) s.c_Skip))``,
+  simp [Fetch |> DISCH_ALL] \\ rw [] \\ blastLib.BBLAST_TAC);
 
-val fetch_simp = store_thm("fetch_simp",
-  ``(((if
-         word_bit 1 (s.MEM8 (s.c_PC s.procID)) ∧
-         word_bit 0 (s.MEM8 (s.c_PC s.procID))
-       then ^Word_tm else ^Half_tm) =
-      Half (v2w [x0;x1;x2;x3;x4;x5;x6;x7;x8;x9;xA;xB;xC;xD;xE;xF])) <=>
-    ~(xE /\ xF) /\
-    (s.MEM8 (s.c_PC s.procID + 1w) = v2w [x0;x1;x2;x3;x4;x5;x6;x7]) /\
-    (s.MEM8 (s.c_PC s.procID) = v2w [x8;x9;xA;xB;xC;xD;xE;xF])) /\
-    (((if
-         word_bit 1 (s.MEM8 (s.c_PC s.procID)) ∧
-         word_bit 0 (s.MEM8 (s.c_PC s.procID))
-       then ^Word_tm else ^Half_tm) =
-      Word (v2w [y0;y1;y2;y3;y4;y5;y6;y7;y8;y9;yA;yB;yC;yD;yE;yF;
-                 x0;x1;x2;x3;x4;x5;x6;x7;x8;x9;xA;xB;xC;xD;xE;xF])) <=>
-    xE /\ xF /\
-    (s.MEM8 (s.c_PC s.procID + 3w) = v2w [y0;y1;y2;y3;y4;y5;y6;y7]) /\
-    (s.MEM8 (s.c_PC s.procID + 2w) = v2w [y8;y9;yA;yB;yC;yD;yE;yF]) /\
-    (s.MEM8 (s.c_PC s.procID + 1w) = v2w [x0;x1;x2;x3;x4;x5;x6;x7]) /\
-    (s.MEM8 (s.c_PC s.procID) = v2w [x8;x9;xA;xB;xC;xD;xE;xF]))``,
-  conj_tac
-  \\ rw [] \\ rpt (pop_assum mp_tac) \\ blastLib.BBLAST_TAC);
+val Fetch16 = store_thm("Fetch16",
+  ``!xs x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 xA xB xC xD xE xF.
+       (xs = [x0; x1; x2; x3; x4; x5; x6; x7; x8; x9; xA; xB; xC; xD; xE; xF]) /\
+       ((s.c_MCSR s.procID).mstatus.VM = 0w) ∧
+       (s.MEM8 (s.c_PC s.procID + 1w) = v2w [x0; x1; x2; x3; x4; x5; x6; x7]) ∧
+       (s.MEM8 (s.c_PC s.procID) = v2w [x8; x9; xA; xB; xC; xD; xE; xF]) ∧
+       ~(xE ∧ xF) ⇒
+       (Fetch s =
+        (Half (v2w xs), s with c_Skip := (s.procID =+ 2w) s.c_Skip))``,
+  simp [Fetch |> DISCH_ALL] \\ rw [] \\ blastLib.BBLAST_TAC);
 
 (* ------------------------------------------------------------------------
    Memory Store Rewrites

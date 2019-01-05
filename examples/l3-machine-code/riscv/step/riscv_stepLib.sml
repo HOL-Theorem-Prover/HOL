@@ -51,24 +51,15 @@ local
       if length l < 32 then mk_comb(``Half``,bitstringSyntax.mk_v2w (xs, i16))
                        else mk_comb(``Word``,bitstringSyntax.mk_v2w (xs, i32))
     end
-  val opc = riscv_stepTheory.Fetch
-            |> SIMP_RULE std_ss [boolify16_def]
-            |> utilsLib.rhsc
-            |> pairSyntax.dest_pair |> fst
-  val Fetch = REWRITE_RULE [ASSUME ``^opc = ^x``,boolify16_def,
-                            pairTheory.FST,pairTheory.SND]
-                riscv_stepTheory.Fetch
-  val word_bit_pat = wordsTheory.word_bit_def |> SPEC_ALL |> concl |> dest_eq |> fst
 in
   val padded_opcode = padded_opcode
   fun fetch v = let
-    val th = Thm.INST [x |-> pad_opcode v] Fetch
-             |> DISCH_ALL
-             |> SIMP_RULE std_ss [fetch_simp]
-    val lemmas = find_terms (can (match_term word_bit_pat)) (concl th)
-                 |> map EVAL
-    val th = SIMP_RULE std_ss lemmas th |> UNDISCH_ALL
-    in th end
+    val vs = pad_opcode v
+    val lemma = if can (match_term ``Word _``) vs
+                then riscv_stepTheory.Fetch32 else riscv_stepTheory.Fetch16
+    val bs = vs |> rand |> rand
+    in lemma |> SPEC bs |> SIMP_RULE std_ss [listTheory.CONS_11]
+             |> REWRITE_RULE [GSYM AND_IMP_INTRO] |> UNDISCH_ALL end
   val fetch_hex = fetch o bitstringSyntax.bitstring_of_hexstring
 end
 
@@ -231,7 +222,7 @@ val full_state_rule = utilsLib.ALL_HYP_CONV_RULE STATE_CONV o state_rule
 
 
 val fetch_inst =
-  Thm.INST [s |-> snd (pairSyntax.dest_pair (utilsLib.rhsc (fetch ``[F]``)))]
+  Thm.INST [] (* [s |-> snd (pairSyntax.dest_pair (utilsLib.rhsc (fetch ``[F]``)))] *)
 
 local
   val rwts = List.map (full_state_rule o fetch_inst o DB.fetch "riscv_step")
@@ -292,18 +283,17 @@ local
         in INST p rw end handle HOL_ERR _ => NO_CONV tm;
     in
       CONV_RULE (DEPTH_CONV (FORCE_REWR_CONV rw)) th
-      |> DISCH_ALL |> SIMP_RULE std_ss [word_bit_add_lsl_simp] |> UNDISCH_ALL
+      |> DISCH_ALL |> SIMP_RULE std_ss [word_bit_add_lsl_simp]
+      |> SIMP_RULE (srw_ss ()) []
+      |> DISCH ``¬word_bit 0 (s.c_PC s.procID)`` |> UNDISCH_ALL
     end
-  fun simp_Skip th =
-    th |> DISCH_ALL
-       |> DISCH ``~(word_bit 0 (^s.c_PC s.procID))``
-       |> SIMP_RULE (srw_ss()) [Skip] |> UNDISCH_ALL
 in
   fun riscv_step v =
     let
       val thm1 = fetch v
       val thm2 = riscv_decode v
-      val thm3 = fetch_inst (Drule.SPEC_ALL (Run_CONV thm2))
+      val new_s = thm1 |> concl |> rand |> rand
+      val thm3 = fetch_inst (Drule.SPEC_ALL (Run_CONV thm2)) |> INST [s |-> new_s]
       val tm = utilsLib.rhsc thm3
       val ethm = run tm
       val ethm = tidy_up_signalAddressException ethm
@@ -314,10 +304,10 @@ in
       val tm = utilsLib.rhsc thm6
     in
       if optionSyntax.is_none tm
-        then MP_Next_n thm |> simp_Skip
+        then MP_Next_n thm
       else if boolSyntax.is_cond tm
-        then MP_Next_c thm |> simp_Skip
-      else MP_Next_b thm |> simp_Skip
+        then MP_Next_c thm
+      else MP_Next_b thm
     end
 end
 
