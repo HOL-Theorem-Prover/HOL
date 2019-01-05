@@ -1,10 +1,13 @@
 INCLUDES = $(HOLDIR)/examples/l3-machine-code/common \
            $(HOLDIR)/examples/l3-machine-code/arm/model \
            $(HOLDIR)/examples/l3-machine-code/m0/model \
+           $(HOLDIR)/examples/l3-machine-code/riscv/model \
            $(HOLDIR)/examples/l3-machine-code/arm/step \
            $(HOLDIR)/examples/l3-machine-code/m0/step \
+           $(HOLDIR)/examples/l3-machine-code/riscv/step \
            $(HOLDIR)/examples/l3-machine-code/arm/prog \
            $(HOLDIR)/examples/l3-machine-code/m0/prog \
+           $(HOLDIR)/examples/l3-machine-code/riscv/prog \
            $(HOLDIR)/examples/l3-machine-code/arm/decompiler \
            $(HOLDIR)/examples/l3-machine-code/m0/decompiler \
            $(HOLDIR)/examples/machine-code/hoare-triple \
