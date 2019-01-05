@@ -17,20 +17,20 @@ val _ = Datatype `variable =
     VarNone
   | VarNat num
   | VarWord8 word8
-  | VarWord32 word32
-  | VarMem (word32 -> word8)
-  | VarDom (word32 set)
+  | VarWord ('a word)
+  | VarMem ('a word -> word8)
+  | VarDom ('a word set)
   | VarBool bool`;
 
 (* States are a mapping from names to the variable type, which is
    a union of the available names. *)
 
-val _ = type_abbrev("state",``:string -> variable``);
+val _ = type_abbrev("state",``:string -> 'a variable``);
 
 (* Accessors for grabbing variables by name and expected type. *)
 
 val var_acc_def = zDefine `
-  var_acc nm (f:state) = f nm`;
+  var_acc nm (f:'a state) = f nm`;
 
 val var_nat_def = zDefine `
   var_nat nm st = case var_acc nm st of VarNat n => n | _ => 0`;
@@ -38,8 +38,8 @@ val var_nat_def = zDefine `
 val var_word8_def = zDefine `
   var_word8 nm st = case var_acc nm st of VarWord8 w => w | _ => 0w`;
 
-val var_word32_def = zDefine `
-  var_word32 nm st = case var_acc nm st of VarWord32 w => w | _ => 0w`;
+val var_word_def = zDefine `
+  var_word nm st = case var_acc nm st of VarWord w => w | _ => 0w`;
 
 val var_mem_def = zDefine `
   var_mem nm st = case var_acc nm st of VarMem m => m | _ => (\x. 0w)`;
@@ -63,9 +63,9 @@ val _ = zDefine `
 val _ = Datatype `next_node = NextNode num | Ret | Err`;
 
 val _ = Datatype `node =
-    Basic next_node ((string # (state -> variable)) list)
-  | Cond next_node next_node (state -> bool)
-  | Call next_node string ((state -> variable) list) (string list)`;
+    Basic next_node ((string # ('a state -> 'a variable)) list)
+  | Cond next_node next_node ('a state -> bool)
+  | Call next_node string (('a state -> 'a variable) list) (string list)`;
 
 val _ = zDefine `
   Skip nn = Cond nn nn (\x. T)`;
@@ -74,7 +74,7 @@ val _ = zDefine `
    of outputs, graph, and entry point. *)
 
 val _ = Datatype `graph_function =
-  GraphFunction (string list) (string list) (num -> node option) num`;
+  GraphFunction (string list) (string list) (num -> 'a node option) num`;
 
 (* The definition of execution of a single node. *)
 
@@ -98,11 +98,11 @@ val upd_vars_def = zDefine `
   upd_vars upds st =
     save_vals (MAP FST upds) (MAP (\(nm, vf). vf st) upds) st`;
 
-val _ = type_abbrev("stack",``:(next_node # state # string) list``);
+val _ = type_abbrev("stack",``:(next_node # 'a state # string) list``);
 
 val upd_stack_def = zDefine `
   (upd_stack nn stf (x :: xs) = (nn, stf (FST (SND x)), SND (SND x)) :: xs) /\
-  (upd_stack nn stf [] = []:stack)`;
+  (upd_stack nn stf [] = []:'a stack)`;
 
 val exec_node_def = zDefine `
   (exec_node Gamma st (Basic cont upds) stack =
@@ -152,22 +152,22 @@ val exec_graph_n_def = zDefine `
 
 (* more abstract representation of graph *)
 
-val _ = type_abbrev("update",``:(string # (state -> variable)) list``)
-val _ = type_abbrev("assert",``:state->bool``)
+val _ = type_abbrev("update",``:(string # ('a state -> 'a variable)) list``)
+val _ = type_abbrev("assert",``:'a state->bool``)
 
 val _ = Datatype `
-  jump = Jump word32 | Return`
+  jump = Jump ('a word) | Return`
 
 val _ = Datatype `
-  next = IF assert next next (* if ... then ... else ... *)
-       | ASM (assert option) update jump
-       | CALL (assert option) update string jump`;
+  next = IF ('a assert) next next (* if ... then ... else ... *)
+       | ASM ('a assert option) ('a update) ('a jump)
+       | CALL ('a assert option) ('a update) string ('a jump)`;
 
 val _ = Datatype `
-  inst = Inst word32 assert next (* name, inv, what happens *)`
+  inst = Inst ('a word) ('a assert) ('a next) (* name, inv, what happens *)`
 
 val _ = Datatype `
-  func = Func string word32 (inst list) (* name, entry point, insts *)`;
+  func = Func string ('a word) ('a inst list) (* name, entry point, insts *)`;
 
 (* execution *)
 
@@ -181,11 +181,11 @@ val apply_update_def = Define `
 
 val check_jump_def = Define `
   (check_jump (Jump p) s w = (w = p)) /\
-  (check_jump Return s w = (var_word32 "ret" s = w))`;
+  (check_jump Return s w = (var_word "ret" s = w))`;
 
 val check_ret_def = Define `
-  (check_ret (Jump p) s t = (var_word32 "ret" t = p)) /\
-  (check_ret Return s t = (var_word32 "ret" t = var_word32 "ret" s))`;
+  (check_ret (Jump p) s t = (var_word "ret" t = p)) /\
+  (check_ret Return s t = (var_word "ret" t = var_word "ret" s))`;
 
 val exec_next_def = Define `
   (exec_next locs (IF guard n1 n2) s t w call =
@@ -213,21 +213,21 @@ val arm_STATE_CPSR_def = Define `
 
 val arm_STATE_REGS_def = Define `
   arm_STATE_REGS s =
-    arm_REG (R_mode (w2w (var_word8 "mode" s)) 0w) (var_word32 "r0" s) *
-    arm_REG (R_mode (w2w (var_word8 "mode" s)) 1w) (var_word32 "r1" s) *
-    arm_REG (R_mode (w2w (var_word8 "mode" s)) 2w) (var_word32 "r2" s) *
-    arm_REG (R_mode (w2w (var_word8 "mode" s)) 3w) (var_word32 "r3" s) *
-    arm_REG (R_mode (w2w (var_word8 "mode" s)) 4w) (var_word32 "r4" s) *
-    arm_REG (R_mode (w2w (var_word8 "mode" s)) 5w) (var_word32 "r5" s) *
-    arm_REG (R_mode (w2w (var_word8 "mode" s)) 6w) (var_word32 "r6" s) *
-    arm_REG (R_mode (w2w (var_word8 "mode" s)) 7w) (var_word32 "r7" s) *
-    arm_REG (R_mode (w2w (var_word8 "mode" s)) 8w) (var_word32 "r8" s) *
-    arm_REG (R_mode (w2w (var_word8 "mode" s)) 9w) (var_word32 "r9" s) *
-    arm_REG (R_mode (w2w (var_word8 "mode" s)) 10w) (var_word32 "r10" s) *
-    arm_REG (R_mode (w2w (var_word8 "mode" s)) 11w) (var_word32 "r11" s) *
-    arm_REG (R_mode (w2w (var_word8 "mode" s)) 12w) (var_word32 "r12" s) *
-    arm_REG (R_mode (w2w (var_word8 "mode" s)) 13w) (var_word32 "r13" s) *
-    arm_REG (R_mode (w2w (var_word8 "mode" s)) 14w) (var_word32 "r14" s)`;
+    arm_REG (R_mode (w2w (var_word8 "mode" s)) 0w) (var_word "r0" s) *
+    arm_REG (R_mode (w2w (var_word8 "mode" s)) 1w) (var_word "r1" s) *
+    arm_REG (R_mode (w2w (var_word8 "mode" s)) 2w) (var_word "r2" s) *
+    arm_REG (R_mode (w2w (var_word8 "mode" s)) 3w) (var_word "r3" s) *
+    arm_REG (R_mode (w2w (var_word8 "mode" s)) 4w) (var_word "r4" s) *
+    arm_REG (R_mode (w2w (var_word8 "mode" s)) 5w) (var_word "r5" s) *
+    arm_REG (R_mode (w2w (var_word8 "mode" s)) 6w) (var_word "r6" s) *
+    arm_REG (R_mode (w2w (var_word8 "mode" s)) 7w) (var_word "r7" s) *
+    arm_REG (R_mode (w2w (var_word8 "mode" s)) 8w) (var_word "r8" s) *
+    arm_REG (R_mode (w2w (var_word8 "mode" s)) 9w) (var_word "r9" s) *
+    arm_REG (R_mode (w2w (var_word8 "mode" s)) 10w) (var_word "r10" s) *
+    arm_REG (R_mode (w2w (var_word8 "mode" s)) 11w) (var_word "r11" s) *
+    arm_REG (R_mode (w2w (var_word8 "mode" s)) 12w) (var_word "r12" s) *
+    arm_REG (R_mode (w2w (var_word8 "mode" s)) 13w) (var_word "r13" s) *
+    arm_REG (R_mode (w2w (var_word8 "mode" s)) 14w) (var_word "r14" s)`;
 
 val arm_STACK_MEMORY_def = Define `
   arm_STACK_MEMORY = arm_MEMORY`;
@@ -255,21 +255,21 @@ val m0_STATE_PSR_def = Define `
 
 val m0_STATE_REGS_def = Define `
   m0_STATE_REGS s =
-    m0_REG RName_0 (var_word32 "r0" s) *
-    m0_REG RName_1 (var_word32 "r1" s) *
-    m0_REG RName_2 (var_word32 "r2" s) *
-    m0_REG RName_3 (var_word32 "r3" s) *
-    m0_REG RName_4 (var_word32 "r4" s) *
-    m0_REG RName_5 (var_word32 "r5" s) *
-    m0_REG RName_6 (var_word32 "r6" s) *
-    m0_REG RName_7 (var_word32 "r7" s) *
-    m0_REG RName_8 (var_word32 "r8" s) *
-    m0_REG RName_9 (var_word32 "r9" s) *
-    m0_REG RName_10 (var_word32 "r10" s) *
-    m0_REG RName_11 (var_word32 "r11" s) *
-    m0_REG RName_12 (var_word32 "r12" s) *
-    m0_REG RName_SP_main (var_word32 "r13" s) *
-    m0_REG RName_LR (var_word32 "r14" s)`;
+    m0_REG RName_0 (var_word "r0" s) *
+    m0_REG RName_1 (var_word "r1" s) *
+    m0_REG RName_2 (var_word "r2" s) *
+    m0_REG RName_3 (var_word "r3" s) *
+    m0_REG RName_4 (var_word "r4" s) *
+    m0_REG RName_5 (var_word "r5" s) *
+    m0_REG RName_6 (var_word "r6" s) *
+    m0_REG RName_7 (var_word "r7" s) *
+    m0_REG RName_8 (var_word "r8" s) *
+    m0_REG RName_9 (var_word "r9" s) *
+    m0_REG RName_10 (var_word "r10" s) *
+    m0_REG RName_11 (var_word "r11" s) *
+    m0_REG RName_12 (var_word "r12" s) *
+    m0_REG RName_SP_main (var_word "r13" s) *
+    m0_REG RName_LR (var_word "r14" s)`;
 
 val m0_STACK_MEMORY_def = Define `
   m0_STACK_MEMORY = m0_MEMORY`;
@@ -299,9 +299,9 @@ val var_update_thm = store_thm("var_update_thm",
     (var_word8 n ((n1 =+ x) s) =
       if n = n1 then (case x of VarWord8 y => y | _ => 0w) else
         var_word8 n s) /\
-    (var_word32 n ((n1 =+ x) s) =
-      if n = n1 then (case x of VarWord32 y => y | _ => 0w) else
-        var_word32 n s) /\
+    (var_word n ((n1 =+ x) s) =
+      if n = n1 then (case x of VarWord y => y | _ => 0w) else
+        var_word n s) /\
     (var_mem n ((n1 =+ x) s) =
       if n = n1 then (case x of VarMem y => y | _ => \x. 0w) else
         var_mem n s) /\
@@ -309,8 +309,7 @@ val var_update_thm = store_thm("var_update_thm",
       if n = n1 then (case x of VarBool y => y | _ => F) else
         var_bool n s)``,
   SRW_TAC [] [var_dom_def,var_mem_def,var_bool_def,var_nat_def,
-     var_word8_def,var_word32_def,var_acc_def,
-     APPLY_UPDATE_THM]);
+     var_word8_def,var_word_def,var_acc_def,APPLY_UPDATE_THM]);
 
 val all_names_def = Define `
   all_names =
@@ -346,7 +345,8 @@ val next_ok_def = Define `
      !st. check_ret j st (apply_update u st))`
 
 val _ = Datatype `code = ARM ((word32 # word32) set)
-                       | M0 ((word32 # (word16 + word32)) set)`;
+                       | M0 ((word32 # (word16 + word32)) set)
+                       | RISCV ((word64 # (word16 + word32)) set)`;
 
 val IMPL_INST_def = Define `
   IMPL_INST code locs (Inst n assert next) =
@@ -354,10 +354,11 @@ val IMPL_INST_def = Define `
     !s t call w.
       assert s /\ exec_next locs next s t w call ==>
       case code of
-      | ARM arm_c => SPEC ARM_MODEL (arm_STATE s * arm_PC n) arm_c
-                                    (arm_STATE t * arm_PC w)
-      | M0 m0_c => SPEC M0_MODEL (m0_STATE s * m0_PC n) m0_c
-                                 (m0_STATE t * m0_PC w)`;
+      | ARM arm_c => SPEC ARM_MODEL (arm_STATE s * arm_PC (w2w n)) arm_c
+                                    (arm_STATE t * arm_PC (w2w w))
+      | M0 m0_c => SPEC M0_MODEL (m0_STATE s * m0_PC (w2w n)) m0_c
+                                 (m0_STATE t * m0_PC (w2w w))
+      | RISCV riscv_c => T`;
 
 val IMPL_INST_IF = store_thm("IMPL_INST_IF",
   ``IMPL_INST code locs (Inst pc1 assert1 next1) /\
@@ -496,14 +497,14 @@ val arm_STATE_all_names = store_thm("arm_STATE_all_names",
     (arm_STATE s1 = arm_STATE s2)``,
   SIMP_TAC std_ss [arm_STATE_thm,EVERY_DEF,all_names_def,
     var_word8_def,var_dom_def,var_mem_def,var_nat_def,
-    var_word32_def,STAR_ASSOC,var_acc_def,var_bool_def]);
+    var_word_def,STAR_ASSOC,var_acc_def,var_bool_def]);
 
 val m0_STATE_all_names = store_thm("m0_STATE_all_names",
   ``EVERY (\n. s1 n = s2 n) all_names ==>
     (m0_STATE s1 = m0_STATE s2)``,
   SIMP_TAC std_ss [m0_STATE_thm,EVERY_DEF,all_names_def,
     var_word8_def,var_dom_def,var_mem_def,var_nat_def,
-    var_word32_def,STAR_ASSOC,var_acc_def,var_bool_def]);
+    var_word_def,STAR_ASSOC,var_acc_def,var_bool_def]);
 
 (* translation from my graph lang to Tom's *)
 
@@ -581,7 +582,7 @@ val find_func_def = Define `
      if n = name then SOME (Func name entry insts) else find_func n xs)`;
 
 val good_stack_tail_def = Define `
-  (good_stack_tail fs ([]:stack) = T) /\
+  (good_stack_tail fs ([]:'a stack) = T) /\
   (good_stack_tail fs [x] = T) /\
   (good_stack_tail fs ((l1,s1,n1)::(l2,s2,n2)::xs) =
      good_stack_tail fs ((l2,s2,n2)::xs) /\
@@ -590,8 +591,8 @@ val good_stack_tail_def = Define `
        (list_func_trans fs n2 = SOME (GraphFunction x1 x2 g x3)) /\
        (g n = SOME (Call ret y1 y2 y3)) /\
        (case ret of
-        | NextNode i => (var_word32 "ret" s1 = n2w i) /\ EVEN i
-        | Ret => (var_word32 "ret" s1 = var_word32 "ret" s2)
+        | NextNode i => (var_word "ret" s1 = n2w i) /\ EVEN i
+        | Ret => (var_word "ret" s1 = var_word "ret" s2)
         | Err => F))`
 
 val good_stack_def = Define `
@@ -691,9 +692,9 @@ val graph_APPEND_ODD = prove(
 
 val graph_list_inst_trans_EQ_SOME_IMP = prove(
   ``!l k n x.
-      ODD k /\ EVEN n /\ n < 2**32 /\
+      ODD k /\ EVEN n /\ n < dimword (:'a) /\
       (graph (list_inst_trans k l) n = SOME x) ==>
-      ?a t. find_inst (n2w n) l = SOME (Inst (n2w n) a t)``,
+      ?a t. find_inst ((n2w n) :'a word) l = SOME (Inst (n2w n) a t)``,
   Induct \\ FULL_SIMP_TAC std_ss [list_inst_trans_def,graph_def]
   \\ Cases_on `h` \\ FULL_SIMP_TAC std_ss [inst_trans_def,find_inst_def]
   \\ REPEAT STRIP_TAC
@@ -704,7 +705,7 @@ val graph_list_inst_trans_EQ_SOME_IMP = prove(
   \\ SRW_TAC [] []
   \\ FULL_SIMP_TAC std_ss [APPEND,graph_def,APPLY_UPDATE_THM]
   \\ Cases_on `c` \\ FULL_SIMP_TAC (srw_ss()) []
-  \\ Q.MATCH_ASSUM_RENAME_TAC `n1 ≠ n2 MOD 4294967296`
+  \\ Q.MATCH_ASSUM_RENAME_TAC `n1 ≠ n2 MOD dimword (:'a)`
   \\ IMP_RES_TAC (EVEN_ODD_EXISTS |> SPEC_ALL |> CONJUNCT1)
   \\ FIRST_X_ASSUM MATCH_MP_TAC
   \\ Q.EXISTS_TAC `q` \\ FULL_SIMP_TAC std_ss []
@@ -789,12 +790,12 @@ val fold_EQ_apply_update = prove(
   \\ FULL_SIMP_TAC std_ss [APPLY_UPDATE_THM]
   \\ METIS_TAC []);
 
-val upd_ok_IMP_var_word32_ret = prove(
+val upd_ok_IMP_var_word_ret = prove(
   ``!l. upd_ok l ==>
-        (var_word32 "ret" (apply_update l st) = var_word32 "ret" st)``,
+        (var_word "ret" (apply_update l st) = var_word "ret" st)``,
   Induct \\ FULL_SIMP_TAC std_ss [FORALL_PROD]
   \\ FULL_SIMP_TAC std_ss [apply_update_def,upd_ok_def,MAP,LIST_SUBSET_def,
-       EVERY_DEF,ALL_DISTINCT,var_word32_def,var_acc_def,
+       EVERY_DEF,ALL_DISTINCT,var_word_def,var_acc_def,
        APPLY_UPDATE_THM]
   \\ `~MEM "ret" all_names` by ALL_TAC
   THEN1 (SIMP_TAC std_ss [all_names_def] \\ EVAL_TAC)
@@ -806,7 +807,7 @@ val good_stack_tail_UPDATE = prove(
   Cases_on `t` \\ FULL_SIMP_TAC std_ss [good_stack_tail_def]
   \\ PairCases_on `h` \\ FULL_SIMP_TAC std_ss [good_stack_tail_def]
   \\ Cases_on `upd_ok l` \\ FULL_SIMP_TAC std_ss []
-  \\ IMP_RES_TAC upd_ok_IMP_var_word32_ret \\ FULL_SIMP_TAC std_ss []);
+  \\ IMP_RES_TAC upd_ok_IMP_var_word_ret \\ FULL_SIMP_TAC std_ss []);
 
 val good_stack_tail_STEP = prove(
   ``good_stack_tail fs ((i,st,name)::t) ==>
@@ -814,21 +815,21 @@ val good_stack_tail_STEP = prove(
   Cases_on `t` \\ FULL_SIMP_TAC std_ss [good_stack_tail_def]
   \\ PairCases_on `h` \\ FULL_SIMP_TAC std_ss [good_stack_tail_def]);
 
-val var_word32_fold_IGNORE = prove(
+val var_word_fold_IGNORE = prove(
   ``!t s st.
       ~(MEM x (MAP FST t)) ==>
-      (var_word32 x
+      (var_word x
         (fold (\(var,val). var_upd var val) (MAP (\x. (FST x,SND x st)) t) s) =
-       var_word32 x s)``,
+       var_word x s)``,
   Induct \\ FULL_SIMP_TAC std_ss [MAP,fold_def,MEM,MAP]
-  \\ FULL_SIMP_TAC std_ss [var_word32_def,var_upd_def,var_acc_def,
+  \\ FULL_SIMP_TAC std_ss [var_word_def,var_upd_def,var_acc_def,
        APPLY_UPDATE_THM]);
 
 val save_vals_lemma = prove(
   ``(MAP FST l = ("ret"::all_names ++ ["r0_input"])) ==>
-    (var_word32 "ret" (save_vals ("ret"::all_names ++ ["r0_input"])
+    (var_word "ret" (save_vals ("ret"::all_names ++ ["r0_input"])
       (MAP (\i. i st) (MAP SND l)) s) =
-     var_word32 "ret" (apply_update l st))``,
+     var_word "ret" (apply_update l st))``,
   Cases_on `l` \\ FULL_SIMP_TAC (srw_ss()) [MAP,save_vals_def,fold_def]
   \\ FULL_SIMP_TAC std_ss [var_upd_def] \\ REPEAT STRIP_TAC
   \\ POP_ASSUM (ASSUME_TAC o GSYM)
@@ -836,8 +837,8 @@ val save_vals_lemma = prove(
   \\ `~(MEM "ret" (MAP FST t))` by ALL_TAC
   THEN1 (POP_ASSUM (ASSUME_TAC o GSYM)
          \\ FULL_SIMP_TAC std_ss [all_names_def] \\ EVAL_TAC)
-  \\ FULL_SIMP_TAC std_ss [var_word32_fold_IGNORE] \\ Cases_on `h`
-  \\ FULL_SIMP_TAC std_ss [apply_update_def,var_word32_def,var_acc_def,
+  \\ FULL_SIMP_TAC std_ss [var_word_fold_IGNORE] \\ Cases_on `h`
+  \\ FULL_SIMP_TAC std_ss [apply_update_def,var_word_def,var_acc_def,
        APPLY_UPDATE_THM]);
 
 val find_func_IMP_EVEN = prove(
@@ -853,8 +854,8 @@ val find_func_IMP_EVEN = prove(
 
 val find_inst_IMP_LIST_SUBSET = prove(
   ``!l k1.
-      i < 4294967296 /\ ALL_DISTINCT (MAP inst_loc l) /\ ODD k1 /\
-      (find_inst (n2w i) l = SOME (Inst (n2w i) a next)) ==>
+      i < dimword (:'a) /\ ALL_DISTINCT (MAP inst_loc l) /\ ODD k1 /\
+      (find_inst (n2w i) l = SOME (Inst ((n2w i) :'a word) a next)) ==>
       ?k2. ODD k2 /\
         (LIST_SUBSET (SND (next_trans i k2 next)) (list_inst_trans k1 l))``,
   Induct \\ FULL_SIMP_TAC std_ss [find_inst_def] \\ Cases_on `h`
@@ -868,7 +869,7 @@ val find_inst_IMP_LIST_SUBSET = prove(
   \\ FULL_SIMP_TAC std_ss []
   \\ FULL_SIMP_TAC (srw_ss()) [LIST_SUBSET_def,EVERY_MEM,list_inst_trans_def,
          inst_trans_def,w2n_n2w]
-  \\ Cases_on `next_trans (w2n (c:word32)) k1 n`
+  \\ Cases_on `next_trans (w2n (c:'a word)) k1 n`
   \\ FULL_SIMP_TAC std_ss [MEM_APPEND,LET_DEF]
   \\ `ODD q` by IMP_RES_TAC next_trans_IMP
   \\ METIS_TAC []) |> Q.SPECL [`l`,`1`] |> SIMP_RULE std_ss [];
@@ -903,7 +904,7 @@ val EVEN_ODD_MEM_list_inst_trans = prove(
   \\ FULL_SIMP_TAC std_ss [LET_DEF,MEM,MAP_APPEND,inst_trans_def]
   \\ FULL_SIMP_TAC std_ss [EVERY_DEF,inst_loc_def]
   \\ Q.MATCH_ASSUM_RENAME_TAC `next_trans (w2n c) k nn = (k1,xs)`
-  \\ MP_TAC (next_trans_IMP |> Q.SPECL [`nn`,`w2n (c:word32)`] |> SPEC_ALL)
+  \\ MP_TAC (next_trans_IMP |> Q.SPECL [`nn`,`w2n (c:'a word)`] |> SPEC_ALL)
   \\ FULL_SIMP_TAC std_ss [] \\ REPEAT STRIP_TAC
   \\ FULL_SIMP_TAC std_ss [MEM_APPEND,MEM,MAP,inst_loc_def,TL]
   THEN1 (Q.PAT_ASSUM `xs = yyy` ASSUME_TAC
@@ -950,7 +951,7 @@ val ALL_DISTINCT_list_inst_trans = prove(
   \\ FULL_SIMP_TAC std_ss [inst_trans_def]
   \\ `ODD q` by IMP_RES_TAC next_trans_IMP
   \\ FULL_SIMP_TAC std_ss []
-  \\ MP_TAC (next_trans_IMP |> Q.SPECL [`n`,`w2n (c:word32)`,`k`,`q`,`r`])
+  \\ MP_TAC (next_trans_IMP |> Q.SPECL [`n`,`w2n (c:'a word)`,`k`,`q`,`r`])
   \\ FULL_SIMP_TAC std_ss [] \\ REPEAT STRIP_TAC
   THEN1 (IMP_RES_TAC sortingTheory.ALL_DISTINCT_PERM
     \\ FULL_SIMP_TAC std_ss [TL,ALL_DISTINCT,ALL_DISTINCT_odd_nums]
@@ -995,8 +996,9 @@ val graph_APPEND = prove(
 
 val list_inst_trans_IMP_LESS = prove(
   ``!l k n x.
-      (graph (list_inst_trans k l) n = SOME x) /\ EVEN n /\ ODD k ==>
-      n < 2**32``,
+      (graph (list_inst_trans k (l:'a inst list)) n = SOME x) /\
+      EVEN n /\ ODD k ==>
+      n < dimword (:'a)``,
   Induct \\ FULL_SIMP_TAC std_ss [graph_def,FORALL_PROD,
        APPLY_UPDATE_THM,MEM,list_inst_trans_def,LET_DEF]
   \\ REPEAT STRIP_TAC \\ Cases_on `inst_trans k h`
@@ -1008,7 +1010,7 @@ val list_inst_trans_IMP_LESS = prove(
   \\ IMP_RES_TAC graph_SOME_IMP
   \\ IMP_RES_TAC next_trans_IMP
   \\ FULL_SIMP_TAC std_ss [MEM]
-  \\ `w2n c < dimword(:32)` by METIS_TAC [w2n_lt]
+  \\ `w2n c < dimword(:'a)` by METIS_TAC [w2n_lt]
   \\ FULL_SIMP_TAC (srw_ss()) []
   \\ SRW_TAC [] [] \\ FULL_SIMP_TAC std_ss [EVERY_MEM,FORALL_PROD]
   \\ RES_TAC \\ FULL_SIMP_TAC std_ss [EVEN_ODD]);
@@ -1019,12 +1021,12 @@ val good_stack_tail_return_vars = prove(
                                all_names_ignore st st1,name1)::t)``,
   Cases_on `t` \\ FULL_SIMP_TAC std_ss [good_stack_tail_def]
   \\ PairCases_on `h` \\ FULL_SIMP_TAC std_ss [good_stack_tail_def]
-  \\ `var_word32 "ret" (return_vars all_names_with_input all_names_ignore st st1) =
-      var_word32 "ret" st1` by ALL_TAC
+  \\ `var_word "ret" (return_vars all_names_with_input all_names_ignore st st1) =
+      var_word "ret" st1` by ALL_TAC
   \\ FULL_SIMP_TAC std_ss []
-  \\ FULL_SIMP_TAC std_ss [var_word32_def,var_acc_def,return_vars_def,
+  \\ FULL_SIMP_TAC std_ss [var_word_def,var_acc_def,return_vars_def,
            save_vals_def,fold_def,var_upd_def,all_names_def] \\ EVAL_TAC
-  \\ FULL_SIMP_TAC std_ss [var_word32_def,var_acc_def,return_vars_def,
+  \\ FULL_SIMP_TAC std_ss [var_word_def,var_acc_def,return_vars_def,
            save_vals_def,fold_def,var_upd_def] \\ EVAL_TAC)
 
 val func_ok_EXPEND_CODE = store_thm("func_ok_EXPEND_CODE",
@@ -1045,9 +1047,9 @@ val return_vars_SAME = prove(
         (st n = return_vars all_names_with_input all_names_ignore st st1 n)``,
   FULL_SIMP_TAC std_ss [GSYM EVERY_MEM]
   \\ FULL_SIMP_TAC std_ss [all_names_def,EVERY_DEF,return_vars_def]
-  \\ FULL_SIMP_TAC std_ss [var_word32_def,var_acc_def,return_vars_def,
+  \\ FULL_SIMP_TAC std_ss [var_word_def,var_acc_def,return_vars_def,
            save_vals_def,fold_def,var_upd_def] \\ EVAL_TAC
-  \\ FULL_SIMP_TAC std_ss [var_word32_def,var_acc_def,return_vars_def,
+  \\ FULL_SIMP_TAC std_ss [var_word_def,var_acc_def,return_vars_def,
            save_vals_def,fold_def,var_upd_def] \\ EVAL_TAC)
 
 val MEM_CAll_next_trans = prove(
@@ -1070,16 +1072,16 @@ val MEM_Call_list_inst_trans = prove(
   \\ IMP_RES_TAC MEM_CAll_next_trans);
 
 val arm_assert_for_def = Define `
-  (arm_assert_for ([]:stack) = SEP_F) /\
+  (arm_assert_for ([]:32 stack) = SEP_F) /\
   (arm_assert_for ((loc,state,name)::rest) =
      arm_STATE state * arm_PC (case loc of NextNode n => n2w n
-                                         | _ => var_word32 "ret" state))`;
+                                         | _ => var_word "ret" state))`;
 
 val m0_assert_for_def = Define `
-  (m0_assert_for ([]:stack) = SEP_F) /\
+  (m0_assert_for ([]:32 stack) = SEP_F) /\
   (m0_assert_for ((loc,state,name)::rest) =
      m0_STATE state * m0_PC (case loc of NextNode n => n2w n
-                                       | _ => var_word32 "ret" state))`;
+                                       | _ => var_word "ret" state))`;
 
 fun exec_graph_step_IMP_exec_next arch = let
   val (assert_for_def,code,tm) =
@@ -1145,7 +1147,7 @@ fun exec_graph_step_IMP_exec_next arch = let
       \\ REWRITE_TAC [NRC]
       \\ FULL_SIMP_TAC (srw_ss()) [exec_graph_step_def,exec_node_def,upd_stack_def]))
   THEN1 (* ASM *)
-   (Cases_on `^(mk_var("o'",``:assert option``))` THEN1
+   (Cases_on `^(mk_var("o'",``:32 assert option``))` THEN1
      (Cases_on `n` \\ FULL_SIMP_TAC std_ss [NRC] \\ REPEAT STRIP_TAC
       \\ Q.PAT_X_ASSUM `exec_graph_step (list_func_trans fs)
            ((NextNode i,st,name)::t) z` MP_TAC
@@ -1163,8 +1165,8 @@ fun exec_graph_step_IMP_exec_next arch = let
       \\ FULL_SIMP_TAC std_ss [get_assert_def]
       \\ Q.EXISTS_TAC `(case get_jump j of
             NextNode n => n2w n
-          | Ret => var_word32 "ret" (apply_update l st)
-          | Err => var_word32 "ret" (apply_update l st))`
+          | Ret => var_word "ret" (apply_update l st)
+          | Err => var_word "ret" (apply_update l st))`
       \\ FULL_SIMP_TAC std_ss []
       \\ REVERSE (REPEAT STRIP_TAC)
       THEN1 (REWRITE_TAC [NRC,DECIDE ``1 = SUC 0``]
@@ -1204,8 +1206,8 @@ fun exec_graph_step_IMP_exec_next arch = let
     \\ FULL_SIMP_TAC std_ss []
     \\ Q.EXISTS_TAC `(case get_jump j of
           NextNode n => n2w n
-        | Ret => var_word32 "ret" (apply_update l st)
-        | Err => var_word32 "ret" (apply_update l st))`
+        | Ret => var_word "ret" (apply_update l st)
+        | Err => var_word "ret" (apply_update l st))`
     \\ FULL_SIMP_TAC std_ss []
     \\ REVERSE (REPEAT STRIP_TAC) THEN1 DECIDE_TAC
     THEN1 (REWRITE_TAC [NRC,DECIDE ``2 = SUC (SUC 0)``]
@@ -1406,9 +1408,9 @@ fun exec_func_step_IMP arch = let
         \\ METIS_TAC [return_vars_SAME])
       \\ Cases_on `ret` \\ FULL_SIMP_TAC (srw_ss()) []
       \\ AP_TERM_TAC
-      \\ FULL_SIMP_TAC std_ss [var_word32_def,var_acc_def,return_vars_def,
+      \\ FULL_SIMP_TAC std_ss [var_word_def,var_acc_def,return_vars_def,
            save_vals_def,fold_def,var_upd_def,all_names_def] \\ EVAL_TAC
-      \\ FULL_SIMP_TAC std_ss [var_word32_def,var_acc_def,return_vars_def,
+      \\ FULL_SIMP_TAC std_ss [var_word_def,var_acc_def,return_vars_def,
            save_vals_def,fold_def,var_upd_def] \\ EVAL_TAC)
     \\ FULL_SIMP_TAC std_ss [SPEC_REFL,PULL_FORALL,AND_IMP_INTRO]
     \\ FIRST_X_ASSUM MATCH_MP_TAC
@@ -1426,10 +1428,13 @@ fun exec_func_step_IMP arch = let
   \\ IMP_RES_TAC list_func_trans_EQ_SOME_IMP
   \\ FULL_SIMP_TAC std_ss [] \\ SRW_TAC [] []
   \\ `EVEN n'` by ALL_TAC THEN1 (FULL_SIMP_TAC (srw_ss()) [good_stack_def])
-  \\ `n' < 2 ** 32` by ALL_TAC THEN1
+  \\ `n' < 2 ** 32` by
    (IMP_RES_TAC list_inst_trans_IMP_LESS
-    \\ FULL_SIMP_TAC std_ss [])
-  \\ IMP_RES_TAC graph_list_inst_trans_EQ_SOME_IMP
+    \\ FULL_SIMP_TAC std_ss [] \\ fs [])
+  \\ fs []
+  \\ IMP_RES_TAC (graph_list_inst_trans_EQ_SOME_IMP
+                  |> INST_TYPE [``:'a``|->``:32``]
+                  |> SIMP_RULE (srw_ss()) [])
   \\ FULL_SIMP_TAC std_ss []
   \\ Q.MATCH_ASSUM_RENAME_TAC `graph (list_inst_trans 1 l) i = SOME x`
   \\ Q.MATCH_ASSUM_RENAME_TAC `find_inst (n2w i) l = SOME (Inst (n2w i) a next)`
@@ -1439,7 +1444,9 @@ fun exec_func_step_IMP arch = let
   \\ IMP_RES_TAC find_inst_IMP_MEM
   \\ RES_TAC \\ FULL_SIMP_TAC std_ss []
   \\ `i < 4294967296` by DECIDE_TAC
-  \\ IMP_RES_TAC find_inst_IMP_LIST_SUBSET
+  \\ IMP_RES_TAC (find_inst_IMP_LIST_SUBSET
+                  |> INST_TYPE [``:'a``|->``:32``]
+                  |> SIMP_RULE (srw_ss()) [])
   \\ MP_TAC (lemma
              |> Q.INST [`x1`|->`ret_and_all_names`,
                         `x2`|->`all_names_with_input`,
@@ -1945,18 +1952,18 @@ val T_IMP = store_thm("T_IMP",``(T ==> b) ==> b``,SIMP_TAC std_ss [])
 val EQ_T = store_thm("EQ_T",``(x = T) ==> x``,SIMP_TAC std_ss [])
 
 val ret_lemma = store_thm("ret_lemma",
-  ``(s "ret" = VarWord32 w) ==> (w = var_word32 "ret" s)``,
-  SRW_TAC [] [var_word32_def,var_acc_def]);
+  ``(s "ret" = VarWord w) ==> (w = var_word "ret" s)``,
+  SRW_TAC [] [var_word_def,var_acc_def]);
 
 val apply_update_NIL = store_thm("apply_update_NIL",
   ``apply_update [] s = (s:'a->'b)``,
   SIMP_TAC std_ss [apply_update_def]);
 
-val var_word32_apply_update = store_thm("var_word32_apply_update",
-  ``var_word32 n (apply_update ((x,y)::xs) s) =
-      if n = x then (case y s of VarWord32 w => w | _ => 0w) else
-        var_word32 n (apply_update xs s)``,
-  SRW_TAC [] [var_word32_def,var_acc_def,apply_update_def,APPLY_UPDATE_THM]);
+val var_word_apply_update = store_thm("var_word_apply_update",
+  ``var_word n (apply_update ((x,y)::xs) s) =
+      if n = x then (case y s of VarWord w => w | _ => 0w) else
+        var_word n (apply_update xs s)``,
+  SRW_TAC [] [var_word_def,var_acc_def,apply_update_def,APPLY_UPDATE_THM]);
 
 val I_LEMMA = store_thm("I_LEMMA",
   ``(\x.x:'a) = I``,
@@ -2005,7 +2012,7 @@ val SKIP_TAG_IMP_CALL = store_thm("SKIP_TAG_IMP_CALL",
       IMPL_INST code locs
        (Inst entry (K T)
          (CALL NONE
-           [("ret",(\s. VarWord32 exit)); ("r0",var_acc "r0");
+           [("ret",(\s. VarWord exit)); ("r0",var_acc "r0");
             ("r1",var_acc "r1"); ("r2",var_acc "r2");
             ("r3",var_acc "r3"); ("r4",var_acc "r4");
             ("r5",var_acc "r5"); ("r6",var_acc "r6");
@@ -2025,13 +2032,13 @@ val SKIP_TAG_IMP_CALL = store_thm("SKIP_TAG_IMP_CALL",
   \\ Cases_on `code`
   \\ fs [apply_update_def,APPLY_UPDATE_THM,arm_STATE_def,m0_STATE_def,
          arm_STATE_CPSR_def,var_bool_def,var_nat_def,m0_STATE_PSR_def,
-         var_word32_def,var_acc_def,ret_and_all_names_def,all_names_def,
-         var_dom_def,var_word32_def,var_mem_def,var_word8_def]
+         var_word_def,var_acc_def,ret_and_all_names_def,all_names_def,
+         var_dom_def,var_word_def,var_mem_def,var_word8_def]
   \\ fs [apply_update_def,APPLY_UPDATE_THM,arm_STATE_def,m0_STATE_def,
          arm_STATE_CPSR_def,var_bool_def,arm_STATE_REGS_def,
          m0_STATE_REGS_def,var_nat_def,m0_STATE_PSR_def,
-         var_word32_def,var_acc_def,ret_and_all_names_def,all_names_def,
-         var_dom_def,var_word32_def,var_mem_def,var_word8_def]
+         var_word_def,var_acc_def,ret_and_all_names_def,all_names_def,
+         var_dom_def,var_word_def,var_mem_def,var_word8_def]
   \\ fs [apply_update_def,APPLY_UPDATE_THM,arm_STATE_def,m0_STATE_def,
       arm_STATE_REGS_def,STAR_ASSOC,SPEC_REFL])
 
