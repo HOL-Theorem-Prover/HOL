@@ -346,7 +346,7 @@ fun approx n r =
     Real.fromInt (Real.round (r * mult)) / mult
   end
 
-fun pad n pads s = 
+fun pad n pads s =
   if pads = "" then raise ERR "pad_with" "" else
   if String.size s >= n then s else pad n pads (s ^ pads)
 
