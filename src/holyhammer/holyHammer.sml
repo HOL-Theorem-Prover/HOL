@@ -173,7 +173,7 @@ fun translate_write_dir dir (premises,cj) =
 (* Warning: limits the number of selected premises (even in hh_pb) *)
 fun translate_write_atp premises cj atp =
   let val new_premises = first_n (npremises_of atp) premises in
-    translate_write_dir (provdir_of atp) (new_premises,cj) 
+    translate_write_dir (provdir_of atp) (new_premises,cj)
   end
 
 fun exists_atp atp =

@@ -187,7 +187,7 @@ fun value_choice player tree vtot ((move,polv),cid) =
    Selection of a node to extend by traversing the tree
    ------------------------------------------------------------------------- *)
 
-datatype ('a,'b) select = 
+datatype ('a,'b) select =
   TreeUpdate of ('a,'b) tree | NodeSelect of (int list * int list)
 
 fun select_child decay tree id =
@@ -196,7 +196,7 @@ fun select_child decay tree id =
     val pol   = filter (access_child tree) (#pol node)
   in
     if null pol then
-      case #status (dfind id tree) of 
+      case #status (dfind id tree) of
           Undecided => raise ERR "select_child" ""
         | Win => TreeUpdate (backup decay tree (id,1.0))
         | Lose => TreeUpdate (backup decay tree (id,0.0))
@@ -254,7 +254,7 @@ fun mcts (nsim,decay) fevalpoli status_of apply_move starttree =
       let
         val selecto = select_timer (select_child decay tree) [0]
         val newtree  = case selecto of
-            TreeUpdate tree_upd => tree_upd 
+            TreeUpdate tree_upd => tree_upd
           | NodeSelect (id,cid) => expand decay
           fevalpoli_timed status_of_timed apply_move_timed tree (id,cid)
       in
@@ -403,14 +403,14 @@ fun make_distrib tree id =
 
 fun swap (a,b) = (b,a)
 
-fun move_of_cid node cid = 
+fun move_of_cid node cid =
   let val pol = #pol node in
     fst (assoc cid (map swap pol))
   end
 
 fun poli_example tree id =
-  let 
-    val dis0 = make_distrib tree id 
+  let
+    val dis0 = make_distrib tree id
     val dis1 = map (fn (_,x) => if isSome x then valOf x else 0.0) dis0
     val tot = sum_real dis1
   in

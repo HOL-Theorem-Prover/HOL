@@ -34,7 +34,7 @@ fun random_opdict dimin cal =
 fun random_headnn (dimin,dimout) =
   random_nn (tanh,dtanh) (tanh,dtanh) [dimin+1,dimin,dimout]
 
-fun random_treenn (dimin,dimout) cal = 
+fun random_treenn (dimin,dimout) cal =
   (random_opdict dimin cal, random_headnn (dimin,dimout))
 
 fun string_of_opdictone ((oper,a),nn) =
@@ -269,7 +269,7 @@ fun train_treenn_nepoch n dim (treenn,trainloss) size (ptrain,ptest) =
     val batchl = mk_batch size (shuffle ptrain)
     val (newtreenn,newtrainloss) = train_treenn_epoch dim treenn batchl
     val testloss = calc_testloss newtreenn ptest
-    val _ = print_endline 
+    val _ = print_endline
       ("train: " ^ pad 8 "0" (Real.toString (approx 6 newtrainloss)) ^
        " test: " ^ pad 8 "0" (Real.toString (approx 6 testloss)))
   in
@@ -277,7 +277,7 @@ fun train_treenn_nepoch n dim (treenn,trainloss) size (ptrain,ptest) =
     (ptrain,ptest)
   end
 
-fun train_treenn_schedule_aux dim (treenn,trainloss) bsize 
+fun train_treenn_schedule_aux dim (treenn,trainloss) bsize
   (ptrain,ptest) schedule =
   case schedule of
     [] => (treenn,trainloss)
@@ -288,7 +288,7 @@ fun train_treenn_schedule_aux dim (treenn,trainloss) bsize
       val (newtreenn,newtrainloss) =
         train_treenn_nepoch nepoch dim (treenn,trainloss) bsize (ptrain,ptest)
     in
-      train_treenn_schedule_aux dim (newtreenn,newtrainloss) 
+      train_treenn_schedule_aux dim (newtreenn,newtrainloss)
       bsize (ptrain,ptest) m
     end
 

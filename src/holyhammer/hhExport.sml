@@ -170,7 +170,7 @@ fun write_dep ocdep thy ((name,thm),role) =
     in
       os ocdep (role ^ "\n");
       os ocdep (if b then  "intact\n" else "broken\n");
-      oiter ocdep " " os depl3; 
+      oiter ocdep " " os depl3;
       os ocdep "\n"
     end
   else os ocdep (role ^ "\n"));
@@ -212,7 +212,7 @@ fun sexpr_write_thy thy =
     val thml = dict_sort cmp (axl @ defl)
   in
     app (sexpr_write_thm oc ocdep thy) thml
-    handle Interrupt => (TextIO.closeOut oc; TextIO.closeOut ocdep; 
+    handle Interrupt => (TextIO.closeOut oc; TextIO.closeOut ocdep;
                          raise Interrupt);
     TextIO.closeOut oc; TextIO.closeOut ocdep
   end
@@ -250,7 +250,7 @@ fun fof_export_thy thy =
     val pbl1 = map_snd (fn x => (intactdep_of_thm x, x)) thml
     val pbl2 = filter (fn (_,x) => fst (fst x)) pbl1
     val pbl3 = map_snd (fn (a,b) => (snd a, list_mk_imp (dest_thm b))) pbl2
-    val pbl4 = 
+    val pbl4 =
       map_fst (fn x => fof_problems_dir ^ "/" ^ sexpr_of_thm (thy,x)) pbl3
   in
     app fof_export_pb pbl4
@@ -259,7 +259,7 @@ fun fof_export_thy thy =
 end (* struct *)
 
 (* Example
-  
+
   load "hhExport"; open hhTranslate hhExport;
 
   (* fof export *)

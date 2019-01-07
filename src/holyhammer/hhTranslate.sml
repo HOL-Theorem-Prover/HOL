@@ -379,7 +379,7 @@ fun translate_pb premises cj =
     val ax_tml = map f premises
     val big_tm =
       list_mk_conj (map list_mk_conj (cj_tml :: (map snd ax_tml)))
-    val ari_thml = if !complete_flag 
+    val ari_thml = if !complete_flag
                    then all_arity_eq big_tm
                    else optim_arity_eq big_tm
     val ari_tml =  map only_concl ari_thml

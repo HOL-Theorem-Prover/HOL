@@ -58,7 +58,7 @@ sig
   val move_of_cid : ('a,'b) node -> int list -> 'b
   val eval_example : ('a,'b) tree -> int list -> real
   val poli_example : ('a,'b) tree -> int list -> real list option
- 
+
   (* choosing a big step *)
   val select_bigstep : ('a,'b) tree -> int list -> int list option
 

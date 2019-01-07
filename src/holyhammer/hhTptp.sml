@@ -164,7 +164,7 @@ fun write_tptp_file file axl cj =
     (app (write_ax oc) axl; write_cj oc cj)
       handle Interrupt => (TextIO.closeOut oc; raise Interrupt);
     TextIO.closeOut oc
-  end 
+  end
 
 fun write_tptp dir axl cj =
   let
