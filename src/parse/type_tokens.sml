@@ -5,18 +5,7 @@ val greek_tyvars = ref true
 
 val _ = Feedback.register_btrace ("Greek tyvars", greek_tyvars)
 
-datatype 'a type_token
-     = TypeIdent of string
-     | QTypeIdent of string * string
-     | TypeSymbol of string
-     | TypeVar of string
-     | Comma
-     | LParen
-     | RParen
-     | LBracket
-     | RBracket
-     | AQ of 'a
-     | Error of 'a base_tokens.base_token
+datatype type_token = datatype type_tokens_dtype.type_token
 
 fun toksize tt =
     case tt of
