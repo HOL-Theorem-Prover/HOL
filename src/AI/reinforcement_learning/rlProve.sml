@@ -17,7 +17,7 @@ val ERR = mk_HOL_ERR "rlProve"
    Evaluation log
    ------------------------------------------------------------------------- *)
 
-val eval_dir = HOLDIR ^ "/src/AI/work_in_progress/eval"
+val eval_dir = HOLDIR ^ "/src/AI/reinforcement_learning/eval"
 fun log_eval file s =
   let val path = eval_dir ^ "/" ^ file in
     mkDir_err eval_dir;

@@ -11,7 +11,7 @@ struct
 open HolKernel boolLib Abbrev aiLib rlLib
 
 val ERR = mk_HOL_ERR "rlMiniRules"
-val debugdir = HOLDIR ^ "/src/AI/work_in_progress/debug"
+val debugdir = HOLDIR ^ "/src/AI/reinforcement_learning/debug"
 fun debug s = debug_in_dir debugdir "rlMiniRules" s
 
 (* -------------------------------------------------------------------------

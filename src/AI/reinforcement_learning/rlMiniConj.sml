@@ -1,5 +1,5 @@
 (* ========================================================================= *)
-(* FILE          : rlrlMiniConj.sml                                          *)
+(* FILE          : rlMiniConj.sml                                          *)
 (* DESCRIPTION   : Extract examples form proofs                              *)
 (* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck            *)
 (* DATE          : 2018                                                      *)
@@ -21,7 +21,7 @@ val ERR = mk_HOL_ERR "rlMiniConj"
    Evaluation log
    ------------------------------------------------------------------------- *)
 
-val eval_dir = HOLDIR ^ "/src/AI/work_in_progress/eval"
+val eval_dir = HOLDIR ^ "/src/AI/reinforcement_learning/eval"
 fun log_eval file s =
   let val path = eval_dir ^ "/" ^ file in
     mkDir_err eval_dir;
