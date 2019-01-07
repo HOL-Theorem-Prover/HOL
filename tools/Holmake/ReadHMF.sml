@@ -337,7 +337,15 @@ fun extend_path_with_includes cfg =
   if OS.FileSys.access ("Holmakefile", [OS.FileSys.A_READ]) then
     let
       open Holmake_types
-      val (env, _, _) = read "Holmakefile" (base_environment())
+      val extensions =
+          holpathdb.search_for_extensions find_includes [OS.FileSys.getDir()]
+      val _ = List.app holpathdb.extend_db extensions
+      val base_env = let
+        fun foldthis ({vname,path}, env) = env_extend (vname, [LIT path]) env
+      in
+        List.foldl foldthis (base_environment()) extensions
+      end
+      val (env, _, _) = read "Holmakefile" base_env
       fun envlist id =
         map dequote (tokenize (perform_substitution env [VREF id]))
     in

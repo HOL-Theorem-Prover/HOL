@@ -15,6 +15,6 @@ all: $(HOLHEAP)
 BARE_THYS = ../proj1/proj1ATheory ../proj1/proj1BTheory
 DEPS = $(patsubst %,%.uo,$(BARE_THYS))
 
-$(HOLHEAP): $(DEPS)
-	$(protect $(HOLDIR)/bin/buildheap) -o $(HOLHEAP) $(BARE_THYS)
+$(HOLHEAP): $(DEPS) $(dprot $(HOLDIR)/bin/hol.state0)
+	$(protect $(HOLDIR)/bin/buildheap) -b $(protect $(HOLDIR)/bin/hol.state0) -o $(HOLHEAP) $(BARE_THYS)
 endif

@@ -623,7 +623,7 @@ val write__psr_und_thm =
               prove_write__psr_thm ``27w:bool[5]`` ``SPSR_und``);
 
 val write__psr_svc_thm =
-    store_thm("write__psr_undef_thm",
+    store_thm("write__psr_svc_thm",
               `` preserve_relation_mmu (write__psr <|proc := 0|>
                        (SPSR_svc) (cpsr with M := 16w))
              (assert_mode 19w) (assert_mode 19w) ^uf1 ^uy1 ``,
@@ -644,7 +644,7 @@ val write__psr_fiq_thm =
               prove_write__psr_thm ``17w:bool[5]`` ``SPSR_fiq``);
 
 val write__psr_abt_thm =
-    store_thm("write__svc_abt_thm",
+    store_thm("write__psr_abt_thm",
               `` preserve_relation_mmu (write__psr <|proc := 0|>
                        (SPSR_abt) (cpsr with M := 16w))
              (assert_mode 23w) (assert_mode 23w) ^uf1 ^uy1 ``,
@@ -1413,7 +1413,7 @@ val take_data_abort_exception_nav_thm =
 
 
 val take_prefetch_abort_exception_nav_thm =
-    store_thm ("take_prefetch_exception_nav_thm",
+    store_thm ("take_prefetch_abort_exception_nav_thm",
                ``preserve_relation_mmu
               (take_prefetch_abort_exception <|proc := 0|> )
               (assert_mode_no_access_violation 16w )

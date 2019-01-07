@@ -755,7 +755,7 @@ val reflexive_reln_to_rel_conv_UNIV = Q.store_thm ("reflexive_reln_to_rel_conv_U
 `(set_relation$reflexive) r UNIV = (relation$reflexive) (reln_to_rel r)`,
 REWRITE_TAC[reflexive_reln_to_rel_conv, RREFL_EXP_UNIV])
 
-val transitive_reln_to_rel_conv = Q.store_thm ("reflexive_reln_to_rel_conv",
+val transitive_reln_to_rel_conv = Q.store_thm ("transitive_reln_to_rel_conv",
 `(set_relation$transitive) r = (relation$transitive) (reln_to_rel r)`,
 SRW_TAC [] [transitive_def, relationTheory.transitive_def, reln_rel_conv_props])
 
@@ -978,7 +978,7 @@ METIS_TAC []);
 
 in
 
-val maximal_tc = Q.store_thm ("maximal_TC",
+val maximal_TC = Q.store_thm ("maximal_TC",
 `!s r.
   domain r SUBSET s /\ range r SUBSET s
   ==>
@@ -1001,7 +1001,7 @@ METIS_TAC []);
 
 in
 
-val minimal_tc = Q.store_thm ("minimal_TC",
+val minimal_TC = Q.store_thm ("minimal_TC",
 `!s r.
   domain r SUBSET s /\ range r SUBSET s
   ==>

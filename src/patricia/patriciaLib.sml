@@ -859,7 +859,7 @@ fun const_variant c =
       val (name, typ) = root_name c handle HOL_ERR _ => ("ptree", type_of c)
       val v = mk_var (name, typ)
    in
-      with_flag (priming, SOME "") (uncurry variant) ([], v)
+      numvariant [] v
    end
 
 fun is_ptree_const tm = isSome (List.find (term_eq tm) (!ptree_consts_ref))

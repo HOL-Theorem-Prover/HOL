@@ -348,10 +348,15 @@ val _ = app tpp ["(if P then q else r) s",
                  "P (!x. Q x)",
                  "\\x. ?y. P x y",
                  "P (\\x. ?y. Q x y)",
-                 "(:'a)"]
+                 "(:'a)",
+                 "$var$(\\172)"]
 
 val _ = tpp "x = y"
 val _ = Lib.with_flag (testutils.linewidth, 10) tpp "xxxxxx =\nyyyyyy"
+
+val _ = temp_overload_on ("RM*", ``\x y. x /\ y``)
+val _ = tpp "RM* p q"
+val _ = clear_overloads_on "RM*"
 
 val _ = add_rule {term_name = "=",
                   fixity = Infix(NONASSOC, 100),
@@ -1098,7 +1103,8 @@ fun dolvtests(modname,empty,insert,match) = let
     in
       require (check_result (equal expected))
               (fn pat => List.map snd (match (n,pat)))
-              pat
+              pat;
+      ()
     end
 in
   List.app test [("exact", ``f x y : bool``, [1]),
@@ -1151,7 +1157,7 @@ in
     | _ => die ""
 end
 
-val _ = List.app substtest tests
+val _ = List.app (ignore o substtest) tests
 
 val _ = print "Testing cond-printer after set_grammar_ancestry\n"
 val _ = set_trace "PP.avoid_unicode" 1

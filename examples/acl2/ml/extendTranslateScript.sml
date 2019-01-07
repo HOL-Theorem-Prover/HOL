@@ -1211,7 +1211,7 @@ val acl2_subseq_def = acl2Define "ACL2::SUBSEQ-LIST"
         `acl2_subseq lst start end = acl2_take (nfix (add end (unary_minus start))) (acl2_nthcdr start lst)`;
 
 val LIST_SEG = prove(``n + s <= LENGTH l ==> (list f (SEG n s l) = acl2_subseq (list f l) (nat s) (nat (n + s)))``,
-        RW_TAC arith_ss [SEG_FIRSTN_BUTFISTN,acl2_subseq_def,LIST_BUTFIRSTN,LENGTH_BUTFIRSTN,LIST_FIRSTN] THEN
+        RW_TAC arith_ss [SEG_TAKE_DROP,acl2_subseq_def,LIST_BUTFIRSTN,LENGTH_BUTFIRSTN,LIST_FIRSTN] THEN
         RW_TAC int_ss [GSYM NAT_SUB]);
 
 val len_cons = prove(``len (cons a b) = add (int 1) (len b)``,

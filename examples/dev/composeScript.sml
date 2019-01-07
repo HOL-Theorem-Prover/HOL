@@ -811,7 +811,7 @@ val HOLDF_DEL = Q.store_thm("HOLDF_DEL",
              `SUC n = n+1` by RW_TAC arith_ss []
              THEN RW_TAC arith_ss []]);
 
-val HOLDF_SUC = Q.store_thm("HOLD_SUC",
+val HOLDF_SUC = Q.store_thm("HOLDF_SUC",
       `HOLDF (n+1,m+1) s ==> !t. (n < t /\ t <= m) ==> ~(s t)`,
       RW_TAC arith_ss [HOLDF_def]);
 

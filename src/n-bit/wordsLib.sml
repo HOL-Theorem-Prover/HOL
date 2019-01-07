@@ -8,11 +8,9 @@ open numposrepTheory numposrepLib
 open ASCIInumbersTheory ASCIInumbersSyntax ASCIInumbersLib
 open stringSyntax
 
-structure Parse = struct
-  open Parse
-  val (Type, Term) = parse_from_grammars wordsTheory.words_grammars
-end
-open Parse
+(* Fix the grammar used by this file *)
+val ambient_grammars = Parse.current_grammars();
+val _ = Parse.temp_set_grammars wordsTheory.words_grammars
 
 val () = ignore (Lib.with_flag (Feedback.emit_MESG, false) bossLib.srw_ss ())
 
@@ -2641,7 +2639,7 @@ fun mk_word_size n =
                      (SIMP_RULE std_ss [INT_MIN] o
                       Thm.INST_TYPE [``:'a`` |-> typ]) dimword_IS_TWICE_INT_MIN)
    in
-      type_abbrev ("word" ^ SN, TYPE)
+      type_abbrev_pp ("word" ^ SN, TYPE)
    end
 
 val dest_word_literal = fst o wordsSyntax.dest_mod_word_literal
@@ -2982,5 +2980,7 @@ fun prefer_word () =
          handle HOL_ERR _ => ()) operators
 
 val _ = Defn.const_eq_ref := (!Defn.const_eq_ref ORELSEC word_EQ_CONV)
+
+val _ = Parse.temp_set_grammars ambient_grammars
 
 end

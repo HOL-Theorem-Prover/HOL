@@ -158,7 +158,7 @@ local
        let
          val (v', sub') =
            if not (is_genvar v) then (v, sub) else
-             let val v' = variant avoid (mk_var ("v", type_of v))
+             let val v' = numvariant avoid (mk_var ("v", type_of v))
              in (v', (v |-> v') :: sub)
              end
        in
@@ -169,8 +169,7 @@ in
   fun prettify_vars tm = ren (all_vars tm) [] [INR ([], tm)];
 end;
 
-fun PRETTIFY_VARS_CONV tm =
-  ALPHA tm (Lib.with_flag (Globals.priming, SOME "") prettify_vars tm);
+fun PRETTIFY_VARS_CONV tm = ALPHA tm (prettify_vars tm);
 
 (* ------------------------------------------------------------------------- *)
 (* Conversion to combinators {S,K,I}.                                        *)
@@ -1384,7 +1383,6 @@ fun MIN_CNF ths =
 val Term = Parse.Term;
 val Type = Parse.Type;
 Globals.guessing_tyvars := true; (* OK *)
-Globals.priming := SOME ""; (* OK *)
 app load ["numLib", "arithmeticTheory", "pred_setTheory", "bossLib"];
 open numLib arithmeticTheory pred_setTheory bossLib;
 Parse.reveal "C";

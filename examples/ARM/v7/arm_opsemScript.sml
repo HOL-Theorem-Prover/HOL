@@ -3446,7 +3446,7 @@ val condition_passed_def = Define`
        else
          constT result)`;
 
-val branch_instruction_def = with_flag (priming, SOME "_") Define`
+val branch_instruction_def = Define`
   branch_instruction ii (enc,inst) =
     case inst
     of Branch_Target imm24 =>
@@ -3470,7 +3470,7 @@ val branch_instruction_def = with_flag (priming, SOME "_") Define`
      | Handler_Branch_Parameter imm3 handler =>
          handler_branch_parameter_instr ii inst`;
 
-val data_processing_instruction_def = with_flag (priming, SOME "_") Define`
+val data_processing_instruction_def = Define`
   data_processing_instruction ii (enc,inst) =
     case inst
     of Data_Processing opc s rn rd mode1 =>
@@ -3542,7 +3542,7 @@ val data_processing_instruction_def = with_flag (priming, SOME "_") Define`
      | Divide u rn rd rm =>
          divide_instr ii inst`;
 
-val status_access_instruction_def = with_flag (priming, SOME "_") Define`
+val status_access_instruction_def = Define`
   status_access_instruction ii (enc,inst) =
     case inst
     of Status_to_Register r rd =>
@@ -3556,7 +3556,7 @@ val status_access_instruction_def = with_flag (priming, SOME "_") Define`
      | Set_Endianness set_bigend =>
          set_endianness_instr ii enc inst`;
 
-val load_store_instruction_def = with_flag (priming, SOME "_") Define`
+val load_store_instruction_def = Define`
   load_store_instruction ii (enc,inst) =
     case inst
     of Load p u b w unpriv rn rt mode2 =>
@@ -3596,7 +3596,7 @@ val load_store_instruction_def = with_flag (priming, SOME "_") Define`
      | Return_From_Exception p u w rn =>
          return_from_exception_instr ii enc inst`;
 
-val miscellaneous_instruction_def = with_flag (priming, SOME "_") Define`
+val miscellaneous_instruction_def = Define`
   miscellaneous_instruction ii (enc,inst) =
     case inst
     of Hint Hint_nop =>
@@ -3636,7 +3636,7 @@ val miscellaneous_instruction_def = with_flag (priming, SOME "_") Define`
      | If_Then firstcond mask =>
          if_then_instr ii inst`;
 
-val coprocessor_instruction_def = with_flag (priming, SOME "_") Define`
+val coprocessor_instruction_def = Define`
   coprocessor_instruction ii (enc,cond,inst) =
     case inst
     of Coprocessor_Load p u d w rn crd coproc mode5 =>
@@ -3654,7 +3654,7 @@ val coprocessor_instruction_def = with_flag (priming, SOME "_") Define`
      | Coprocessor_Transfer_Two T rt2 rt coproc opc1 crm =>
          coprocessor_register_to_arm_two_instr ii enc cond inst`;
 
-val arm_instr_def = with_flag (priming, SOME "_") Define`
+val arm_instr_def = Define`
   arm_instr ii (enc,cond,inst) =
     (condition_passed ii cond >>=
     (\pass.

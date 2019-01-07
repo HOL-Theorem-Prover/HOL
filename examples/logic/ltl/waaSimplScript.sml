@@ -501,7 +501,7 @@ val EQUIV_STATES_SYMM = store_thm
   );
 
 val EQUIV_STATES_REFL = store_thm
-  ("EQUIV_STATES_SYMM",
+  ("EQUIV_STATES_REFL",
   ``!f t x. equivalentStates f t x x``,
    metis_tac[equivalentStates_def]
   );

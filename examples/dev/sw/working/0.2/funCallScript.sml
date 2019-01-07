@@ -54,7 +54,7 @@ val same_content_def = Define `
     `;
 
 val same_content_thm = Q.store_thm (
-    "same_content_htm",
+    "same_content_thm",
     `!s st m. same_content s st m =
          !x. valid_TEXP x m ==> (tread s x = reade st (conv_exp x))`,
 
