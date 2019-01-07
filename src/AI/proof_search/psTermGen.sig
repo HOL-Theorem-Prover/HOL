@@ -11,9 +11,11 @@ sig
   val uniform_term : int -> term list -> int * hol_type -> term list
 
   (* randorm terms up to a fixed size: bottom-up *)
-  val synthetize :
+ (* val synthetize :
     (term list -> term list) -> (int * int) -> (hol_type * term list) ->
     term list
-
+*)
+  val gen_term_size : int -> (hol_type * term list) -> term list
+  val gen_term_nmax : int -> (hol_type * term list) -> term list
 
 end

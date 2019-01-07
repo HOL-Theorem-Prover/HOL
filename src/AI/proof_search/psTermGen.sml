@@ -70,44 +70,52 @@ fun all_mk_comb d1 d2 (ty1,ty2) =
     map mk_comb l
   end
 
-fun synthetize filterf (maxgen,maxdepth) (targettype,cset) =
+fun gen_size cache n =
+  (if n <= 0 then dempty Type.compare else dfind n (!cache))
+  handle NotFound =>
+  let
+    val l = map pair_of_list (number_partition 2 n)
+    fun all_comb (n1,n2) =
+      let
+        val d1     = gen_size cache n1
+        val d2     = gen_size cache n2
+        val tytyl  = cartesian_product (dkeys d1) (dkeys d2)
+        val tytyl' = filter is_applicable tytyl
+      in
+        List.concat (map (all_mk_comb d1 d2) tytyl')
+      end
+    val tml1 = List.concat (map all_comb l)
+    val tml2  = map (fn x => (type_of x, x)) tml1
+    val d3 = dregroup Type.compare tml2
+  in
+    cache := dadd n d3 (!cache); d3
+  end
+
+fun gen_term_size size (ty,cset) =
   let
     val tycset = map (fn x => (type_of x, x)) cset
-    val d1 = dregroup Type.compare tycset
-    val gen_size_cache = ref (dnew Int.compare [(1,d1)])
-    fun gen_size n =
-      (if n <= 0 then raise ERR "gen_size" "" else dfind n (!gen_size_cache))
-      handle NotFound =>
+    val d = dregroup Type.compare tycset
+    val cache = ref (dnew Int.compare [(1,d)])
+    fun g n = dfind ty (gen_size cache n) handle NotFound => []
+  in
+    List.concat (List.tabulate (size, g))
+  end
+
+fun gen_term_nmax nmax (ty,cset) =
+  let
+    val tycset = map (fn x => (type_of x, x)) cset
+    val d = dregroup Type.compare tycset
+    val cache = ref (dnew Int.compare [(1,d)])
+    fun f acc size =
+      if length acc >= nmax then first_n nmax acc else
       let
-        val l = map pair_of_list (number_partition 2 n)
-        fun all_comb (n1,n2) =
-          let
-            val d1     = gen_size n1
-            val d2     = gen_size n2
-            val tytyl  = cartesian_product (dkeys d1) (dkeys d2)
-            val tytyl' = filter is_applicable tytyl
-          in
-            List.concat (map (all_mk_comb d1 d2) tytyl')
-          end
-        val combl = List.concat (map all_comb l)
-        val tml1  = filterf combl
-        val tml2  = map (fn x => (type_of x, x)) tml1
-        val r     = dregroup Type.compare tml2
-      in
-        gen_size_cache := dadd n r (!gen_size_cache);
-        r
-      end
-    fun filter_with_targettype acc n depth =
-      if length acc >= maxgen orelse depth > maxdepth
-        then first_n maxgen acc else
-      let
-        val tml    = dfind targettype (gen_size depth) handle NotFound => []
+        val tml = dfind ty (gen_size cache size) handle NotFound => []
         val newacc = acc @ tml
       in
-        filter_with_targettype newacc n (depth + 1)
+        f newacc (size + 1)
       end
   in
-    filter_with_targettype [] maxgen 1
+    f [] 1
   end
 
 
