@@ -5,7 +5,9 @@ sig
 
   val typetok_of : 'a qbuf.qbuf -> ((unit -> unit) * 'a type_token locn.located)
 
-  val token_string : 'a type_token -> string
+  val lextest : string -> unit type_token list
+
+  val token_string : ('a -> string) -> 'a type_token -> string
   val dest_aq : 'a type_token -> 'a
 
   val is_ident : 'a type_token -> bool
