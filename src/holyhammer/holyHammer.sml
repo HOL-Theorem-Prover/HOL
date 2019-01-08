@@ -138,7 +138,6 @@ fun launch_atp dir atp t =
     r
   end
 
-
 (* -------------------------------------------------------------------------
    HolyHammer
    ------------------------------------------------------------------------- *)
@@ -153,14 +152,28 @@ val extra_premises =
   [("truth", TRUTH), ("notfalse", notfalse),
    ("bool_cases_ax", BOOL_CASES_AX), ("eq_ext", EQ_EXT)]
 
-fun translate_write_atp premises cj atp =
+fun translate_write_file file (premises,cj) =
   let
-    val new_premises = first_n (npremises_of atp) premises
-    val thml = extra_premises @ thml_of_namel new_premises
+    val thml = extra_premises @ thml_of_namel premises
     val pb = translate_pb thml cj
     val (axl,new_cj) = name_pb pb
   in
-    write_tptp (provdir_of atp) axl new_cj
+    write_tptp_file file axl new_cj
+  end
+
+fun translate_write_dir dir (premises,cj) =
+  let
+    val thml = extra_premises @ thml_of_namel premises
+    val pb = translate_pb thml cj
+    val (axl,new_cj) = name_pb pb
+  in
+    write_tptp dir axl new_cj
+  end
+
+(* Warning: limits the number of selected premises (even in hh_pb) *)
+fun translate_write_atp premises cj atp =
+  let val new_premises = first_n (npremises_of atp) premises in
+    translate_write_dir (provdir_of atp) (new_premises,cj)
   end
 
 fun exists_atp atp =

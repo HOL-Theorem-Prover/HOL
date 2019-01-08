@@ -118,7 +118,7 @@ fun distrib l = case l of
 
 (* sets *)
 fun dset cmp l = dnew cmp (map (fn x => (x,())) l)
-fun daddset l d = daddl (map (fn x => (x,())) l)
+fun daddset l d = daddl (map (fn x => (x,())) l) d
 
 (* more *)
 fun union_dict cmp dl = dnew cmp (List.concat (map dlist dl))
@@ -345,6 +345,10 @@ fun approx n r =
   let val mult = pow 10.0 n in
     Real.fromInt (Real.round (r * mult)) / mult
   end
+
+fun pad n pads s =
+  if pads = "" then raise ERR "pad_with" "" else
+  if String.size s >= n then s else pad n pads (s ^ pads)
 
 fun percent x = approx 2 (100.0 * x)
 
