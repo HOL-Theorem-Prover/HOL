@@ -119,7 +119,7 @@ qvarinterior = {coresymbol} | {alpha} | {numeric} | {space} | "(" | "\\n" |
   raise LEX_ERR ("Illegal form for quoted variable", getLoc yyarg yypos yytext)
 );
 <INITIAL>{locpragma} => (dolocpragma yyarg yypos yytext; continue());
-<INITIAL>"$" ? {anysymb} {ident} "$" ({anysymb} | "0") => (
+<INITIAL>"$" ? {anysymb} {ident} "$" ({ident} | "0" | ({coresymbol}|\\)+) => (
   let val (part1, part2) = cut_qid yytext
   in
     if size part1 = 0 then (BT_Ident yytext, getLoc yyarg yypos yytext)
@@ -130,10 +130,10 @@ qvarinterior = {coresymbol} | {alpha} | {numeric} | {space} | "(" | "\\n" |
     )
   end
 );
-<INITIAL>{ident} \$ ({anysymb} | "0") => (
+<INITIAL>{ident} \$ ({ident} | "0" | ({coresymbol}|\\)+) => (
   (BT_Ident yytext, getLoc yyarg yypos yytext)
 );
-<INITIAL>{anysymb} ? {ident} \$ [1-9] => (
+<INITIAL>{anysymb} ? {ident} \$ [1-9()$] => (
   raise LEX_ERR ("Bad qualified ident", getLoc yyarg yypos yytext)
 );
 <INITIAL>\$ ? {anysymb} \$ \$ + => (
