@@ -51,7 +51,7 @@ fun rotate_goal_state (GOAL tm) = Option.map GOAL (rotate_goal_term tm)
 
 fun apply_tactic_goal_term (tactic:bossLib.tactic) (LEAF g) =
   (let
-    val (subgoals,v) = tttTimeout.timeOut 0.1 tactic g
+    val (subgoals,v) = smlTimeout.timeout 0.1 tactic g
   in
     if List.null subgoals then
       SUCCESS (v [])
@@ -59,7 +59,7 @@ fun apply_tactic_goal_term (tactic:bossLib.tactic) (LEAF g) =
       GOAL (NODE (v, List.map LEAF subgoals))
   end
   handle SML90.Interrupt => raise SML90.Interrupt
-         | tttTimeout.TacTimeOut => ERROR ("tactic application timeout")
+         | smlTimeout.FunctionTimeout => ERROR ("tactic application timeout")
          | e => ERROR (exnMessage e))
 |   apply_tactic_goal_term tactic (NODE (v, gs)) =
   if List.null gs then failwith("node with no subgoals")

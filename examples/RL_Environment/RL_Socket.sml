@@ -1,5 +1,7 @@
 structure RL_Socket :> RL_Socket = struct
 
+fun ERR f msg = Feedback.mk_HOL_ERR "RL_Socket" f msg
+
 fun sendStr(sock, str) =
   let
     val vec = Word8Vector.tabulate(
@@ -27,11 +29,11 @@ fun receive(sock) =
         then String.concat(List.rev(
           String.extract(datar, 0, SOME (String.size datar - 1))
           ::acc))
-        else if Char.contains datar (Char.chr 0)
-             then raise HolKernel.ERR "receive" "found deliminator within response"
-             else if size datar = 0
-                  then raise HolKernel.ERR "receive" "found empty string, maybe a broken socket"
-                  else rec_k(sock, datar::acc)
+        else if Char.contains datar (Char.chr 0) then
+          raise ERR "receive" "found deliminator within response"
+        else if size datar = 0 then
+          raise ERR "receive" "found empty string, maybe a broken socket"
+        else rec_k(sock, datar::acc)
       end
   in
     rec_k(sock, [])
