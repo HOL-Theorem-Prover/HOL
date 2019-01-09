@@ -252,7 +252,7 @@ fun record_proof name lflag tac1 tac2 g =
           else (debug "record_proof: not null"; tac2 g)
         end
         (* expected to catch interrupts *)
-        handle _ => (debug "record_proof: exception"; tac2 g)       
+        handle _ => (debug "record_proof: exception"; tac2 g)
   in
     result
   end

@@ -22,14 +22,14 @@ fun timeLimit t f x =
   let
     val resultref = ref NONE
     val worker = Thread.fork (fn () => resultref := SOME (capture f x), [])
-    val watcher = Thread.fork (fn () => 
+    val watcher = Thread.fork (fn () =>
       (OS.Process.sleep t; interruptkill worker), [])
     fun self_wait () =
       (
       if Thread.isActive worker then self_wait () else
-	  case !resultref of
-	    NONE => Exn FunctionTimeout
-	  | SOME s => s
+    case !resultref of
+      NONE => Exn FunctionTimeout
+    | SOME s => s
       )
     val result = self_wait ()
   in
@@ -54,7 +54,7 @@ end (* struct *)
   timeout 1.0 wait10 ();
   timeout 1.0 loop (); (* killed *)
 *)
-  
+
 
 
 

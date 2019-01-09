@@ -703,12 +703,12 @@ fun is_exn (Res y) = false
 (* Warning: small overhead due to waiting for closing thread *)
 fun interruptkill worker =
    if not (Thread.isActive worker) then () else
-     let 
+     let
        val _ = Thread.interrupt worker handle Thread _ => ()
-       fun loop n = 
+       fun loop n =
          if not (Thread.isActive worker) then () else
-           if n > 0 
-           then (OS.Process.sleep (Time.fromReal 0.0001); loop (n-1)) 
+           if n > 0
+           then (OS.Process.sleep (Time.fromReal 0.0001); loop (n-1))
            else (print_endline "Warning: thread killed"; Thread.kill worker)
      in
        loop 10
