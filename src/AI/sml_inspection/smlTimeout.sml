@@ -50,10 +50,15 @@ end (* struct *)
 (* test
   load "smlTimeout"; open smlTimeout;
   fun loop () = loop ();
-  fun wait10 () = OS.Process.sleep (Time.fromReal 10.0);
-  timeout 1.0 wait10 ();
+  fun wait100 () = OS.Process.sleep (Time.fromReal 100.0);
+  timeout 1.0 wait100 ();
   timeout 1.0 loop (); (* killed *)
+
+  val worker = Thread.fork (fn () => ignore (METIS_TAC (map snd (DB.thms "arithmetic")) ([],``1=2``)),[Thread.InterruptState Thread.InterruptAsynch]);
+  fun loop () = loop ();
+  val worker = Thread.fork (fn () => loop (),[Thread.InterruptState Thread.InterruptAsynch]);
 *)
+
 
 
 
