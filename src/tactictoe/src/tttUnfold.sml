@@ -1028,8 +1028,6 @@ fun find_script x =
     dir ^ "/" ^ x ^ "Script.sml"
   end
 
-fun clean_dir cthy dir = (mkDir_err dir; erase_file (dir ^ "/" ^ cthy))
-
 fun ttt_rewrite_thy thy =
   if mem thy ["bool","min"] then () else
   let
@@ -1127,3 +1125,12 @@ fun load_sigobj () =
   end
 
 end (* struct *)
+
+(* test 
+  load "tttUnfold"; open aiLib tttUnfold;
+  debug_flag := true;
+  ttt_record ();
+  ttt_rewrite_thy "list";
+  ttt_record_thy "list";
+*)
+

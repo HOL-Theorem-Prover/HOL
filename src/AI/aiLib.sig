@@ -159,4 +159,9 @@ sig
   val has_boolty : term -> bool
   val only_concl : thm -> term
 
+  (* parallelism *)
+  val interruptkill : Thread.thread -> unit
+
+
+
 end

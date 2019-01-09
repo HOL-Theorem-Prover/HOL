@@ -700,16 +700,19 @@ fun is_res (Res y) = true
 fun is_exn (Res y) = false
   | is_exn (Exn x) = true
 
+(* Warning: small overhead due to waiting for closing thread *)
 fun interruptkill worker =
-   if Thread.isActive worker
-   then
-     (
-     Thread.interrupt worker handle Thread _ => ();
-     if Thread.isActive worker
-       then Thread.kill worker
-       else ()
-     )
-   else ()
+   if not (Thread.isActive worker) then () else
+     let 
+       val _ = Thread.interrupt worker handle Thread _ => ()
+       fun loop n = 
+         if not (Thread.isActive worker) then () else
+           if n > 0 
+           then (OS.Process.sleep (Time.fromReal 0.0001); loop (n-1)) 
+           else (print_endline "Warning: thread killed"; Thread.kill worker)
+     in
+       loop 10
+     end
 
 fun compare_imin (a,b) = Int.compare (snd a, snd b)
 
@@ -768,6 +771,5 @@ fun parmap ncores f l =
   map release (parmap_err ncores f l)
 
 fun parapp ncores f l = ignore (parmap ncores f l)
-
 
 end (* struct *)

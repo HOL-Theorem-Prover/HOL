@@ -110,11 +110,7 @@ fun tactic_err msg stac g =
   (tactic_msg msg stac g; raise ERR "record_tactic" "")
 
 fun record_tactic_aux (tac,stac) g =
-  let
-    val ((gl,v),t) = add_time (timeout (!ttt_rectac_time) tac) g
-      handle FunctionTimeout => tactic_err "timed out" stac g
-            | x      => raise x
-  in
+  let val ((gl,v),t) = add_time tac g in
     tactic_time := (!tactic_time) + t;
     n_tactic_replay_glob := (!n_tactic_replay_glob) + 1;
     goalstep_glob := ((stac,t,g,gl),v) :: !goalstep_glob;
@@ -255,8 +251,8 @@ fun record_proof name lflag tac1 tac2 g =
           if null (fst r) then r
           else (debug "record_proof: not null"; tac2 g)
         end
-        handle Interrupt => raise Interrupt
-          | _ => (debug "record_proof: exception"; tac2 g)
+        (* expected to catch interrupts *)
+        handle _ => (debug "record_proof: exception"; tac2 g)       
   in
     result
   end

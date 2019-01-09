@@ -17,9 +17,3 @@ USAGE: (after RECORDING)
 NOTES FOR DEVELOPERS:
   Keep up-to-date: 
     infix tokens in hhsInfix.sml, polyml values in tttUnfold.sml.
-  Issue: 
-    (Metis/or some other mechanism) seems to not exit cleanly, 
-      when it is killed by the timeout function, 
-      so the subsequent call with the same input may not work.
-      Currently "fixed" by raising the tactic timeout from 2.0 to 20.0 seconds
-      during recording.

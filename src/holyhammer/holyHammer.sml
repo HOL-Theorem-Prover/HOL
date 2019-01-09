@@ -86,12 +86,6 @@ fun log_eval s =
 
 val (parallel_result : string list option ref) = ref NONE
 
-fun close_thread thread =
-  if Thread.isActive thread
-  then (Thread.interrupt thread;
-        if Thread.isActive thread then Thread.kill thread else ())
-  else ()
-
 fun parallel_call t fl =
   let
     val _ = parallel_result := NONE
@@ -104,7 +98,7 @@ fun parallel_call t fl =
       if isSome (!parallel_result) orelse
          not (exists Thread.isActive threadl) orelse
          Timer.checkRealTimer rt  > Time.fromReal t
-      then (app close_thread threadl; !parallel_result)
+      then (app interruptkill threadl; !parallel_result)
       else loop ()
       )
   in
