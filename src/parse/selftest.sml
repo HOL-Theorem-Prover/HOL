@@ -262,6 +262,7 @@ val _ = app (ignore o test) [
       ("nm_sub$id", [QIdent ("nm_sub", "id")]),
       ("+nm$id\"bar\"", [Ident "+", QIdent ("nm", "id"), Ident "\"bar\""]),
       ("+nm$id\"\"", [Ident "+", QIdent ("nm", "id"), Ident "\"\""]),
+      ("nm$**", [QIdent("nm", "**")]),
       ("$+a", [Ident "$+", Ident "a"]),
       ("$==>", [Ident "$==>"]),
       ("bool$~", [QIdent("bool", "~")]),

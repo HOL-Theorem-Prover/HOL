@@ -110,7 +110,7 @@ newline = {linefeed} | {creturn} | {creturn}{linefeed};
 locpragma = "(*#loc" {space}+ {numeric}* {space}+ {numeric}* {space}* "*)";
 qvarinterior = {coresymbol} | {alpha} | {numeric} | {space} | "(" | "\\n" |
                "\\t" | "\\)" | "\\\\" | "\\z" | "*" | "\\" {numeric} | "\"";
-
+constname = {ident} | "0" | ({coresymbol}|\\|\*)+;
 %%
 <INITIAL>"$" ? "$var$(" {qvarinterior}* ")" => (
   (BT_Ident yytext, getLoc yyarg yypos yytext)
@@ -119,7 +119,8 @@ qvarinterior = {coresymbol} | {alpha} | {numeric} | {space} | "(" | "\\n" |
   raise LEX_ERR ("Illegal form for quoted variable", getLoc yyarg yypos yytext)
 );
 <INITIAL>{locpragma} => (dolocpragma yyarg yypos yytext; continue());
-<INITIAL>"$" ? {anysymb} {ident} "$" ({ident} | "0" | ({coresymbol}|\\)+) => (
+<INITIAL>"$" ? {anysymb} {ident} "$" {constname} =>
+(
   let val (part1, part2) = cut_qid yytext
   in
     if size part1 = 0 then (BT_Ident yytext, getLoc yyarg yypos yytext)
@@ -130,7 +131,7 @@ qvarinterior = {coresymbol} | {alpha} | {numeric} | {space} | "(" | "\\n" |
     )
   end
 );
-<INITIAL>{ident} \$ ({ident} | "0" | ({coresymbol}|\\)+) => (
+<INITIAL>{ident} \$ {constname} => (
   (BT_Ident yytext, getLoc yyarg yypos yytext)
 );
 <INITIAL>{anysymb} ? {ident} \$ [1-9()$] => (
