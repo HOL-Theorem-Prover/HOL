@@ -264,6 +264,7 @@ in
 end
 
 fun RCACHE (dpfvs, check, conv) = let
+  open Unsynchronized
   val cache = new_cache()
   fun build_up_ctxt mp th = let
     val c = concl th
@@ -272,9 +273,9 @@ fun RCACHE (dpfvs, check, conv) = let
       [] => ()
     | (v::_) => let
         val r = Binarymap.find(mp,v)
-        val (oldhyps, oldthms) = Unsynchronized.!r
+        val (oldhyps, oldthms) = !r
       in
-        Unsynchronized.:= (r, (hypinfo_addth(th, oldhyps), th::oldthms))
+        r := (hypinfo_addth(th, oldhyps), th::oldthms)
       end
   end
   fun decider ctxt t = let
@@ -311,14 +312,14 @@ fun RCACHE (dpfvs, check, conv) = let
         (* now extract the ctxt relevant for the goal statement *)
         val (group_map', glstmtref) =
           case dpfvs t of
-            [] => (group_map, Unsynchronized.ref (empty_hypinfo, []))
+            [] => (group_map, ref (empty_hypinfo, []))
           | (glvar::_) => Binarymap.remove(group_map, glvar)
 
         (* and the remaining contexts, ensuring there are no
            duplicate copies *)
         fun foldthis (k, v, acc as (setlist, seenreflist)) =
             if mem v seenreflist then acc
-            else (Unsynchronized.!v::setlist, v::seenreflist)
+            else (!v::setlist, v::seenreflist)
         val (divided_clist0, _) =
             Binarymap.foldl foldthis ([], [glstmtref]) group_map'
 
@@ -329,7 +330,7 @@ fun RCACHE (dpfvs, check, conv) = let
             map (fn th => (hypinfo_addth(th, empty_hypinfo), [th]))
                 ground_ctxt_ths
 
-        val (glhyps, thmlist) = Unsynchronized.!glstmtref
+        val (glhyps, thmlist) = !glstmtref
         fun oknone (prev, NONE) = glhyps << prev
           | oknone _ = false
       in

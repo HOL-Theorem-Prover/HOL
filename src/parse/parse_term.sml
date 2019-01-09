@@ -86,7 +86,7 @@ val complained_already = ref false;
 
 structure Polyhash =
 struct
-  open Unsynchronized
+   open Unsynchronized
    fun peek (dict) k = Binarymap.peek(!dict,k)
    fun peekInsert r (k,v) =
        let val dict = !r in
