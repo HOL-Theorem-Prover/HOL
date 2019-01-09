@@ -7,6 +7,7 @@ open wordsTheory wordsLib pairTheory listTheory relationTheory;
 open pred_setTheory arithmeticTheory combinTheory;
 open arm_decompTheory set_sepTheory progTheory addressTheory;
 open m0_decompTheory riscv_progTheory lcsymtacs;
+open arm_decompLib m0_decompLib;
 
 val op by = BasicProvers.byA
 

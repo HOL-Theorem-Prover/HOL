@@ -42,8 +42,8 @@ fun func_export sec_name th funcs_def = let
   val _ = write_subsection "Evaluating graph"
   val c = REWRITE_CONV [func_body_trans_def,func_trans_def,funcs_def]
           THENC REWRITE_CONV [wordsTheory.word_extract_mask,export_init_rw]
-          THENC (DEPTH_CONV remove_bif_field_insert_conv)
           THENC EVAL THENC PURE_REWRITE_CONV [GSYM word_sub_def]
+          THENC (DEPTH_CONV remove_bif_field_insert_conv)
           THENC prepare_for_export_conv
   val lemma = trans_def |> CONV_RULE (RAND_CONV c)
   val xs = lemma |> concl |> rand |> rator |> rand |> rand
@@ -225,10 +225,13 @@ fun prove_funcs_ok names = let
 
   val base_name = "loop-m0/example"
   val base_name = "kernel-gcc-O1/kernel"
+  val base_name = "loop/example"
   val () = read_files base_name ["f"]
   val _ = (skip_proofs := true)
   val _ = (skip_proofs := false)
   val names = section_names()
+
+  val sec_name = "g"
 
   local val randgen = Random.newgen()
   in fun get_rand_name () =

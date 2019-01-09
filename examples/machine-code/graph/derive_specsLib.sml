@@ -694,9 +694,24 @@ fun derive_specs_for sec_name = let
 
 (*
 
-  val base_name = ...
+  val base_name = "loop/example"
   val _ = read_files base_name []
   val _ = open_current "test"
+  val sec_name = "g"
+
+val l3_arm_tools = arm_decompLib.l3_arm_tools
+val (arm_spec,_,_,_) = l3_arm_tools
+val instruction = "e200300f"
+val th = arm_spec instruction
+
+  val (f,_,_,_) = l3_arm_tools
+
+  ``increment``
+
+
+   [(0, "e200300f", "and\tr3, r0, #15"),
+    (4, "e0830180", "add\tr0, r3, r0, lsl #3"),
+    (8, "e12fff1e", "bx\tlr")]:
 
 *)
 

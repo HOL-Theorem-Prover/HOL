@@ -80,7 +80,8 @@ in
     val _ = can (match_term pat) tm orelse fail()
     val next = tm |> rator |> rand
     val (xs,ty) = tm |> rand |> listSyntax.dest_list
-    val _ = (ty = ``:string # (state -> variable)``) orelse fail()
+    val _ = (ty = ``:string # (32 state -> 32 variable)``) orelse
+            (ty = ``:string # (64 state -> 64 variable)``) orelse fail()
     val ys = xs |> map pairSyntax.dest_pair
                 |> map (fn (x,y) => (stringSyntax.fromHOLstring x,y))
     in (next,ys) end
@@ -108,7 +109,9 @@ in
     val strs = strs |> map stringSyntax.fromHOLstring
     val name = tm |> rator |> rator |> rand |> stringSyntax.fromHOLstring
     val (args,ty) = tm |> rator |> rand |> listSyntax.dest_list
-    val _ = (ty = ``:state -> variable``) orelse fail()
+    val _ = (ty = ``:32 state -> 32 variable``) orelse
+            (ty = ``:64 state -> 64 variable``) orelse
+            fail()
     in (next,name,args,strs) end
 end
 
@@ -144,7 +147,7 @@ local
     val x2 = tm |> rand
     in (x1,x2) end
 in
-  val dest_var_word32 = any_var_acc ``var_word32 str s``
+  val dest_var_word = any_var_acc ``var_word str s``
   val dest_var_word8 = any_var_acc ``var_word8 str s``
   val dest_var_nat = any_var_acc ``var_nat str s``
   val dest_var_bool = any_var_acc ``var_bool str s``
@@ -217,7 +220,7 @@ fun export_graph name rhs = let
     if ty = ``:bool`` then "Bool" else
     if ty = ``:num`` then "Word 64" else failwith("type")
   fun is_var_acc tm =
-    can dest_var_word32 tm orelse
+    can dest_var_word tm orelse
     can dest_var_word8 tm orelse
     can dest_var_nat tm orelse
     can dest_var_bool tm orelse
@@ -247,16 +250,17 @@ fun export_graph name rhs = let
       in "Op " ^ n ^ " " ^ ty ^ " " ^ export_list (map term xs) end
     ) handle HOL_ERR err => (print (exn_to_string (HOL_ERR err));
             add_tm_fail tm; fail())
-  val types = [``VarNat``,``VarWord8``,``VarWord32``,
+  val types = [``VarNat``,``VarWord8``,``VarWord``,
                ``VarMem``,``VarDom``,``VarBool``]
-  val s_var = mk_var("s",``:state``)
+  val s_var = mk_var("s",``:32 state``)
   fun bool_exp tm =
     if can dest_var_acc tm then let
       val n = dest_var_acc tm
       in "Var " ^ n ^ " " ^ get_var_type n end
     else let
       val (s,e) = dest_abs tm
-      val _ = type_of s = ``:state`` orelse failwith("bad exp")
+      val _ = type_of s = ``:32 state`` orelse
+              type_of s = ``:64 state`` orelse failwith("bad exp")
       val _ = type_of e = ``:bool`` orelse failwith("bad exp")
       in term e end
   fun exp tm =
@@ -265,7 +269,8 @@ fun export_graph name rhs = let
       in "Var " ^ n ^ " " ^ get_var_type n end
     else let
       val (s,e) = dest_abs tm
-      val _ = type_of s = ``:state`` orelse failwith("bad exp")
+      val _ = type_of s = ``:32 state`` orelse
+              type_of s = ``:64 state`` orelse failwith("bad exp")
       val (t,tm) = dest_comb e
       val _ = mem t types
       in term tm end
@@ -328,6 +333,10 @@ fun export_graph name rhs = let
   val _ = if List.null nodes then () else write_graph last_line
   in () end
 
+(*
+val tm = !last_fail_node_tm
+*)
+
 
 (* export constant definition *)
 
@@ -358,7 +367,7 @@ val prepare_for_export_conv = let
       val ty = rand tm |> type_of |> dest_type |> snd |> hd
       in (RAND_CONV (REWR_CONV (GSYM ETA_AX))) tm end else NO_CONV tm
   val foldback = (unbeta_conv ``var_bool str``) ORELSEC
-                 (unbeta_conv ``var_word32 str``) ORELSEC
+                 (unbeta_conv ``var_word str``) ORELSEC
                  (unbeta_conv ``var_word8 str``) ORELSEC
                  (unbeta_conv ``var_nat str``) ORELSEC
                  (unbeta_conv ``var_mem str``) ORELSEC

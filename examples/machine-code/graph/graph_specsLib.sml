@@ -8,10 +8,10 @@ open writerLib;
 
 open GraphLangTheory
 
-val code_case_of = TypeBase.case_def_of ``:code``;
+val code_case_of = TRUTH (* TypeBase.case_def_of ``:code`` *);
 
 val emp_pat = ``emp:'a set set``
-val s_var = mk_var("s",``:state``)
+val s_var = mk_var("s",``:32 state``)
 
 fun get_pc_pat () = let
   val (_,_,_,pc) = get_tools ()
@@ -21,26 +21,31 @@ local
   val var_bool_pat = ``var_bool n s``
   val var_nat_pat = ``var_nat n s``
   val var_word8_pat = ``var_word8 n s``
-  val var_word32_pat = ``var_word32 n s``
+  val var_word_pat = ``var_word n s``
   val var_mem_pat = ``var_mem n s``
 in
   fun var_lookup tm =
     can (match_term var_bool_pat) tm orelse
     can (match_term var_nat_pat) tm orelse
     can (match_term var_word8_pat) tm orelse
-    can (match_term var_word32_pat) tm orelse
+    can (match_term var_word_pat) tm orelse
     can (match_term var_mem_pat) tm
   fun mk_update (x,y) =
     if can (match_term var_bool_pat) x then
-      pairSyntax.mk_pair(x |> rator |> rand,mk_abs(s_var,mk_comb(``VarBool``,y)))
+      pairSyntax.mk_pair(x |> rator |> rand,
+      mk_abs(s_var,mk_comb(``VarBool: bool -> 32 variable``,y)))
     else if can (match_term var_nat_pat) x then
-      pairSyntax.mk_pair(x |> rator |> rand,mk_abs(s_var,mk_comb(``VarNat``,y)))
+      pairSyntax.mk_pair(x |> rator |> rand,
+      mk_abs(s_var,mk_comb(``VarNat: num -> 32 variable``,y)))
     else if can (match_term var_word8_pat) x then
-      pairSyntax.mk_pair(x |> rator |> rand,mk_abs(s_var,mk_comb(``VarWord8``,y)))
-    else if can (match_term var_word32_pat) x then
-      pairSyntax.mk_pair(x |> rator |> rand,mk_abs(s_var,mk_comb(``VarWord32``,y)))
+      pairSyntax.mk_pair(x |> rator |> rand,
+      mk_abs(s_var,mk_comb(``VarWord8: word8 -> 32 variable``,y)))
+    else if can (match_term var_word_pat) x then
+      pairSyntax.mk_pair(x |> rator |> rand,
+      mk_abs(s_var,mk_comb(``VarWord: word32 -> 32 variable``,y)))
     else if can (match_term var_mem_pat) x then
-      pairSyntax.mk_pair(x |> rator |> rand,mk_abs(s_var,mk_comb(``VarMem``,y)))
+      pairSyntax.mk_pair(x |> rator |> rand,
+      mk_abs(s_var,mk_comb(``VarMem: (32 word -> word8) -> 32 variable``,y)))
     else failwith "should not happen (mk_update)"
 end
 
@@ -52,11 +57,11 @@ local
               val ty = type_of tm
             in mk_var(str,ty) |-> tm end)
           |> (fn x => (``dmem:word32 set`` |->
-                       ``(var_dom "dom" s):word32 set``)::
+                       ``(var_dom "dom" ^s_var):word32 set``)::
                       (``dom_stack:word32 set`` |->
-                       ``(var_dom "dom_stack" s):word32 set``)::
+                       ``(var_dom "dom_stack" ^s_var):word32 set``)::
                       (``mode:word5`` |->
-                       ``w2w (var_word8 "mode" s):word5``)::x) |> INST
+                       ``w2w (var_word8 "mode" ^s_var):word5``)::x) |> INST
   val arm_state = arm_STATE_thm |> concl |> rator |> rand
   val arm_state_parts = arm_STATE_thm |> concl |> rand |> list_dest dest_star
   val arm_state_type = arm_state_parts |> hd |> type_of
@@ -69,11 +74,11 @@ local
               val ty = type_of tm
             in mk_var(str,ty) |-> tm end)
           |> (fn x => (``dmem:word32 set`` |->
-                       ``(var_dom "dom" s):word32 set``)::
+                       ``(var_dom "dom" ^s_var):word32 set``)::
                       (``dom_stack:word32 set`` |->
-                       ``(var_dom "dom_stack" s):word32 set``)::
+                       ``(var_dom "dom_stack" ^s_var):word32 set``)::
                       (mk_var("count",``:num``) |->
-                       ``(var_nat "clock" s):num``)::
+                       ``(var_nat "clock" ^s_var):num``)::
                       (``mode:Mode`` |->
                        ``Mode_Thread:Mode``)::x) |> INST
   val m0_state = m0_STATE_thm |> concl |> rator |> rand
@@ -141,7 +146,7 @@ fun STATE_INTRO_RULE th = let
                 |> filter (fn (x,y) => x <> y) |> all_distinct
     val new_s = listSyntax.mk_list(
                   foldl (fn ((x,y),s) => mk_update(x,y)::s) [] qs,
-                  ``:string # (state -> variable)``)
+                  ``:string # (32 state -> 32 variable)``)
     val new_s = ``apply_update ^new_s ^s_var``
     val goal = mk_eq(post,mk_star(mk_comb(rator state,new_s),pc))
     val conv = (REWRITE_CONV [state_thm,var_update_thm,
@@ -178,17 +183,21 @@ val make_ASM_input = ref TRUTH;
 val make_CALL_input = ref TRUTH;
 val make_SWITCH_input = ref TRUTH;
 
+(*
+val th = !make_ASM_input
+*)
+
 local
   fun read_pc_assum hs = let
-    val h = first (can (match_term ``var_word32 "pc" s = w``)) hs
+    val h = first (can (match_term ``var_word "pc" s = w``)) hs
     in (h |> rand,filter (fn tm => tm <> h) hs) end
   fun read_pc_update th = let
-    val tm = find_term (can (match_term ``("pc" =+ VarWord32 (n2w n))``))
+    val tm = find_term (can (match_term ``("pc" =+ VarWord (n2w n))``))
                (concl th) |> rand |> rand
     in (mk_comb(``Jump``,tm),th) end
     handle HOL_ERR _ => let
     val tm = find_term (can (match_term ``("pc" =+ pat)``)) (concl th)
-    val x = ``var_word32 "ret" s``
+    val x = ``var_word "ret" s``
     val assum = mk_eq(tm |> rand,``^s_var "ret"``)
     val rw = RAND_CONV (fn tm => ASSUME assum) tm
     val th = RW1 [rw] th
@@ -218,7 +227,7 @@ local
     val r0_input_str = ``"r0_input"``
     val (is_tail_call,ret) = let
       val u = first (fn (t,x) => t = r14) supdate |> snd
-      val res = EVAL ``(^u s = VarWord32 (^pc1+4w)) \/ (^u s = VarWord32 (^pc1+2w))``
+      val res = EVAL ``(^u s = VarWord (^pc1+4w)) \/ (^u s = VarWord (^pc1+2w))``
         |> concl |> rand
       in if res = T then
            (false,mk_comb(``Jump``,u |> dest_abs |> snd |> rand))
@@ -277,13 +286,13 @@ local
     val lemma = auto_prove "make_CALL" (goal,
       CONV_TAC simp \\ REPEAT STRIP_TAC \\ IMP_RES_TAC ret_lemma
       \\ ASM_SIMP_TAC std_ss [code_case_of]
-      \\ NTAC 20 (ONCE_REWRITE_TAC [var_word32_apply_update])
+      \\ NTAC 20 (ONCE_REWRITE_TAC [var_word_apply_update])
       \\ CONV_TAC (DEPTH_CONV stringLib.string_EQ_CONV)
       \\ ASM_REWRITE_TAC [apply_update_NIL]
       \\ SIMP_TAC std_ss [next_ok_def,check_ret_def]
       \\ TRY (REWRITE_TAC [ret_and_all_names_def,all_names_def,MAP,APPEND]
         \\ REWRITE_TAC [all_names_def,EVERY_DEF,apply_update_def,
-             combinTheory.APPLY_UPDATE_THM,var_acc_def,var_word32_def]
+             combinTheory.APPLY_UPDATE_THM,var_acc_def,var_word_def]
         \\ EVAL_TAC \\ NO_TAC)
       \\ (DISCH_ALL th |> DISCH T
             |> PURE_REWRITE_RULE [AND_IMP_INTRO] |> MATCH_MP_TAC)
@@ -304,11 +313,11 @@ local
     val pc2 = post |> rand |> rand
     val supdate = post |> rator |> rand |> rand |> rator |> rand
     val (jmp,th) = if wordsSyntax.is_n2w pc2 then (``Jump ^pc2``,th) else
-      (``Return``,let
-         val lemma = ASSUME (mk_eq(pc2,``var_word32 "ret" s``))
+      (``Return: 32 jump``,let
+         val lemma = ASSUME (mk_eq(pc2,``var_word "ret" ^s_var``))
          in CONV_RULE (RAND_CONV (RAND_CONV (RAND_CONV (fn tm => lemma)))) th end)
     val hs = filter (fn tm => tm <> T) (hyp th)
-    val side = if length hs = 0 then ``NONE:(state->bool) option``
+    val side = if length hs = 0 then ``NONE:(32 state->bool) option``
                else ``SOME ^(mk_abs(s_var,list_mk_conj hs))``
     val i = ``Inst ^pc1 (K T) (ASM ^side ^supdate ^jmp)``
     val th = RW [apply_update_NIL] th
@@ -319,8 +328,8 @@ local
 *)
     val lemma = auto_prove "make_ASM" (goal,
       CONV_TAC simp \\ REPEAT STRIP_TAC \\ IMP_RES_TAC ret_lemma
-      \\ ASM_SIMP_TAC std_ss [code_case_of]
-      \\ NTAC 20 (ONCE_REWRITE_TAC [var_word32_apply_update])
+      \\ ASM_SIMP_TAC std_ss [code_case_of,ARM_def,LET_THM]
+      \\ NTAC 20 (ONCE_REWRITE_TAC [var_word_apply_update])
       \\ CONV_TAC (DEPTH_CONV stringLib.string_EQ_CONV)
       \\ ASM_REWRITE_TAC [apply_update_NIL] THEN1 EVAL_TAC THEN1 EVAL_TAC
       \\ (DISCH_ALL th |> DISCH T
@@ -367,7 +376,7 @@ local
       \\ ASM_REWRITE_TAC []
       \\ STRIP_TAC
       \\ TRY (POP_ASSUM MATCH_MP_TAC)
-      \\ ASM_REWRITE_TAC [var_word32_def,var_acc_def]
+      \\ ASM_REWRITE_TAC [var_word_def,var_acc_def]
       \\ EVAL_TAC)
     in lemma end
     handle HOL_ERR e =>
@@ -461,7 +470,9 @@ fun derive_insts_for sec_name = let
     val pos = th |> concl |> rand |> rator |> rator |> rand |> rand
                  |> numSyntax.dest_numeral
                  |> Arbnumcore.toHexString
-    val th = MATCH_MP SKIP_TAG_IMP_CALL th
+    val th = MATCH_MP SKIP_TAG_IMP_CALL_ARM th handle HOL_ERR _ =>
+             MATCH_MP SKIP_TAG_IMP_CALL_M0 th handle HOL_ERR _ =>
+             MATCH_MP SKIP_TAG_IMP_CALL_RISCV th
     val name = find_term (can stringLib.dest_string) (concl th)
     fun join [] = ""
       | join [x] = x
