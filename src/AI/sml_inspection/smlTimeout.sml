@@ -18,10 +18,12 @@ fun capture f x = Res (f x) handle e => Exn e
 fun release (Res y) = y
   | release (Exn x) = raise x
 
+val attrib = [Thread.InterruptState Thread.InterruptAsynch, Thread.EnableBroadcastInterrupt true]
+
 fun timeLimit t f x =
   let
     val resultref = ref NONE
-    val worker = Thread.fork (fn () => resultref := SOME (capture f x), [])
+    val worker = Thread.fork (fn () => resultref := SOME (capture f x), attrib)
     val watcher = Thread.fork (fn () =>
       (OS.Process.sleep t; interruptkill worker), [])
     fun self_wait () =
@@ -42,7 +44,8 @@ val (TC_OFF : tactic -> tactic) = trace ("show_typecheck_errors", 0)
 
 fun timeout_tactic t tac g =
   SOME (fst (timeout t (TC_OFF tac) g))
-  handle Interrupt => raise Interrupt | _ => NONE
+  (* expected to catch Interrupt exception *)
+  handle _ => NONE
 
 
 end (* struct *)
@@ -54,9 +57,15 @@ end (* struct *)
   timeout 1.0 wait100 ();
   timeout 1.0 loop (); (* killed *)
 
-  val worker = Thread.fork (fn () => ignore (METIS_TAC (map snd (DB.thms "arithmetic")) ([],``1=2``)),[Thread.InterruptState Thread.InterruptAsynch]);
   fun loop () = loop ();
-  val worker = Thread.fork (fn () => loop (),[Thread.InterruptState Thread.InterruptAsynch]);
+  fun loop () = loop ();
+  val worker = Thread.fork (fn () => loop (), [Thread.InterruptState Thread.InterruptAsynch, Thread.EnableBroadcastInterrupt true]);
+
+  val worker = Thread.fork (fn () => ignore (METIS_TAC (map snd (DB.thms "arithmetic")) ([],``1=2``)),[Thread.InterruptState Thread.InterruptAsynch, Thread.EnableBroadcastInterrupt true]);
+  Thread.isActive worker;
+  Thread.interrupt worker;
+  Thread.isActive worker;
+
 *)
 
 
