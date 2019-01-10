@@ -49,9 +49,9 @@ struct
 
   exception GETOUT
 
-  local open Unsynchronized in
+  local open Uref in
   fun update (set as (compare, tree, n), key, data) =
-      let val addone = ref true
+      let val addone = uref true
           fun ins LEAF = RED(key,data NONE,LEAF,LEAF)
             | ins (BLACK(k,x,left,right)) =
               (case compare(key, k) of

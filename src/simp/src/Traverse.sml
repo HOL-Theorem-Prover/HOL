@@ -216,11 +216,11 @@ fun mapfilter2 f (h1::t1) (h2::t2) =
 
 
 fun TRAVERSE_IN_CONTEXT limit rewriters dprocs travrules stack ctxt tm = let
-  open Unsynchronized
+  open Uref
   val TRAVRULES {relations,congprocs,weakenprocs,...} = travrules
   val add_context' = add_context rewriters dprocs
   val change_relation' = change_relation travrules
-  val lim_r = ref limit
+  val lim_r = uref limit
   fun check r = case !r of NONE => ()
     | SOME n => if n <= 0 then
                                (trace(2,TEXT "Limit exhausted");
