@@ -86,7 +86,7 @@ fun new_time_meter () =
 fun new_inference_meter () =
   let
     open Uref
-    val infs = uref 0
+    val infs = Uref.new 0
     fun read () = !infs
   in
     (read, fn n => infs := !infs + n) (* OK *)

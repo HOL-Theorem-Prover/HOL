@@ -400,7 +400,7 @@ fun cacheconts f =
  if !cache
  then let
         open Uref
-        val memory = uref []
+        val memory = Uref.new []
       in fn input as (gg, (insts,offset,(size:int))) =>
            if exists (fn (_,(insts',_,size')) =>
                        insts=insts' andalso (size <= size' orelse !depth))

@@ -80,7 +80,7 @@ val GCONJUNCTS  =
               val ths0 = if is_neg tm andalso is_neg (rand tm)
                          then CONJUNCTSR (CONV_RULE NOT_NOT_CONV th) else [th]
               val ths1 = List.map GCONJUNCTS'' ths0
-              val is_cnf = uref true
+              val is_cnf = Uref.new true
               val ths2 =
                   List.map (fn th =>
                                if is_clausal (concl th) then (true,th)

@@ -530,7 +530,7 @@ fun user_split_ident keywords = let
 in
   fn s => let
        open Uref
-       val pushback = uref ""
+       val pushback = Uref.new ""
        fun rc (btid, _) =
            case btid of
              BT_Ident s => (pushback := s)

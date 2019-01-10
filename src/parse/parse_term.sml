@@ -98,7 +98,7 @@ struct
        r := Binarymap.insert(!r,k,v)
    fun listItems dict = Binarymap.listItems (!dict)
    fun mkDict cmp = let
-     val newref = uref (Binarymap.mkDict cmp)
+     val newref = Uref.new (Binarymap.mkDict cmp)
    in
      newref
    end

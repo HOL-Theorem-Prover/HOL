@@ -51,7 +51,7 @@ struct
 
   local open Uref in
   fun update (set as (compare, tree, n), key, data) =
-      let val addone = uref true
+      let val addone = Uref.new true
           fun ins LEAF = RED(key,data NONE,LEAF,LEAF)
             | ins (BLACK(k,x,left,right)) =
               (case compare(key, k) of

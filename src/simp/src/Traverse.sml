@@ -220,7 +220,7 @@ fun TRAVERSE_IN_CONTEXT limit rewriters dprocs travrules stack ctxt tm = let
   val TRAVRULES {relations,congprocs,weakenprocs,...} = travrules
   val add_context' = add_context rewriters dprocs
   val change_relation' = change_relation travrules
-  val lim_r = uref limit
+  val lim_r = Uref.new limit
   fun check r = case !r of NONE => ()
     | SOME n => if n <= 0 then
                                (trace(2,TEXT "Limit exhausted");

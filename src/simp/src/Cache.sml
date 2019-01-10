@@ -189,7 +189,7 @@ fun build_graph fvs_of tmlist =
    in the same list point to the same updatable reference cell *)
 val build_var_to_group_map = let
   fun foldthis (tlist, acc) = let
-    val r = Uref.uref (empty_hypinfo, [] : thm list)
+    val r = Uref.new (empty_hypinfo, [] : thm list)
   in
     List.foldl (fn (t, acc) => Binarymap.insert(acc, t, r)) acc tlist
   end
@@ -312,7 +312,7 @@ fun RCACHE (dpfvs, check, conv) = let
         (* now extract the ctxt relevant for the goal statement *)
         val (group_map', glstmtref) =
           case dpfvs t of
-            [] => (group_map, uref (empty_hypinfo, []))
+            [] => (group_map, Uref.new (empty_hypinfo, []))
           | (glvar::_) => Binarymap.remove(group_map, glvar)
 
         (* and the remaining contexts, ensuring there are no

@@ -28,7 +28,7 @@ struct
                   'a frag list) Uref.t
 
   fun read_from_string s = let
-    val state = uref (Substring.full s)
+    val state = Uref.new (Substring.full s)
     fun reader n = let
       open Substring
     in
@@ -77,7 +77,7 @@ struct
               (NONE, (BT_AQ x,maybe (locfrag nf)), nf+1, rest)
       end
 
-  fun new_buffer q = uref (new_buffer0 NONE 0 q)
+  fun new_buffer q = Uref.new (new_buffer0 NONE 0 q)
 
   fun current r = case !r of (_, x, _, _) => x
 
