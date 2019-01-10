@@ -86,10 +86,12 @@ fun log_eval s =
 
 val (parallel_result : string list option ref) = ref NONE
 
+val attrib = [Thread.InterruptState Thread.InterruptAsynch, Thread.EnableBroadcastInterrupt true]
+
 fun parallel_call t fl =
   let
     val _ = parallel_result := NONE
-    fun rec_fork f = Thread.fork (fn () => f (), [])
+    fun rec_fork f = Thread.fork (fn () => f (), attrib)
     val threadl = map rec_fork fl
     val rt = Timer.startRealTimer ()
     fun loop () =
@@ -220,7 +222,7 @@ fun hh_goal goal =
   end
   handle NotFound => main_hh (create_thmdata ()) goal
 
-fun hh_fork goal = Thread.fork (fn () => ignore (hh_goal goal), [])
+fun hh_fork goal = Thread.fork (fn () => ignore (hh_goal goal), attrib)
 fun hh goal = (hh_goal goal) goal
 fun holyhammer tm = TAC_PROOF (([],tm), hh_goal ([],tm));
 
