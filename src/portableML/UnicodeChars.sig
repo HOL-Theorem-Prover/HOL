@@ -156,5 +156,19 @@ sig
   val isAlphaNum : string -> bool
   val isSymbolic : string -> bool
   val isMLIdent : string -> bool
+  val isSpace : string -> bool
+  val isSupDigit : string -> bool
+
+  val isAlpha_i : int -> bool
+  val isDigit_i : int -> bool
+  val isAlphaNum_i : int -> bool
+  val isSymbolic_i : int -> bool
+  val isMLIdent_i : int -> bool
+  val isSpace_i : int -> bool
+  val isSupDigit_i : int -> bool
+
+  val supDigitVal : string -> int option
+  val supDigitVal_i : int -> int option
+
 
 end

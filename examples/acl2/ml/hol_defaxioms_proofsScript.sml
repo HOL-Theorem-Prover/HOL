@@ -1130,7 +1130,7 @@ val complex_definition_defaxiom =
      |- |= implies (complex_rationalp x) (not (equal (nat 0) (imagpart x))),
 *)
 
-val nonzero_imagpart_defaxiom =
+val non_zero_imagpart_defaxiom =
  store_thm
   ("non_zero_imagpart_defaxiom",
    ``|= implies (complex_rationalp x) (not (equal (nat 0) (imagpart x)))``,
@@ -1619,7 +1619,7 @@ val lowest_terms_defaxiom =
 
 val car_cdr_elim_defaxiom =
  store_thm
-  ("car_dr_elim_defaxiom",
+  ("car_cdr_elim_defaxiom",
    ``|= implies (consp x) (equal (cons (car x) (cdr x)) x)``,
    Cases_on `x`
     THEN ACL2_SIMP_TAC[]);

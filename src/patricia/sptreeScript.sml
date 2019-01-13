@@ -3,6 +3,7 @@ open arithmeticTheory
 open logrootTheory
 open listTheory
 open alistTheory
+open pred_setTheory
 
 val _ = new_theory "sptree";
 
@@ -437,6 +438,35 @@ val odd_lem = Q.prove(
   fs[EVEN_ADD, EVEN_MULT] >>
   `(r = 0) \/ (r = 1)` by simp[] >> fs[])
 
+val even_lem' = CONV_RULE (RAND_CONV (ONCE_REWRITE_CONV [EQ_SYM_EQ])) even_lem
+val odd_lem' = CONV_RULE (RAND_CONV (ONCE_REWRITE_CONV [EQ_SYM_EQ])) odd_lem
+
+val even_imposs = Q.prove(
+  ‘EVEN n ==> !m. n <> 2 * m + 1’,
+  rpt strip_tac >> fs[EVEN_ADD, EVEN_MULT]);
+val odd_imposs = Q.prove(
+  ‘~EVEN n ==> !m. n <> 2 * m + 2’,
+  rpt strip_tac >> fs[EVEN_ADD, EVEN_MULT]);
+
+fun writeL th = CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [th]))
+
+Theorem IN_domain
+  `!n x t1 t2.
+      (n IN domain LN <=> F) /\
+      (n IN domain (LS x) <=> (n = 0)) /\
+      (n IN domain (BN t1 t2) <=>
+         n <> 0 /\ (if EVEN n then ((n-1) DIV 2) IN domain t1
+                    else ((n-1) DIV 2) IN domain t2)) /\
+      (n IN domain (BS t1 x t2) <=>
+         (n = 0) \/ (if EVEN n then ((n-1) DIV 2) IN domain t1
+                     else ((n-1) DIV 2) IN domain t2))`
+ (simp[domain_def] >> rpt strip_tac >> Cases_on ‘n = 0’ >> simp[] >>
+  Cases_on ‘EVEN n’ >> simp[] >>
+  (drule_then assume_tac even_imposs ORELSE drule_then assume_tac odd_imposs) >>
+  simp[] >>
+  (drule_all_then writeL even_lem' ORELSE drule_all_then writeL odd_lem') >>
+  simp[]);
+
 val size_insert = Q.store_thm(
   "size_insert",
   `!k v m. size (insert k v m) = if k IN domain m then size m else size m + 1`,
@@ -518,26 +548,26 @@ val lookup_NONE_domain = store_thm(
 val domain_union = store_thm(
   "domain_union",
   ``domain (union t1 t2) = domain t1 UNION domain t2``,
-  simp[pred_setTheory.EXTENSION, domain_lookup, lookup_union] >>
+  simp[EXTENSION, domain_lookup, lookup_union] >>
   qx_gen_tac `k` >> Cases_on `lookup k t1` >> simp[]);
 
 val domain_inter = store_thm(
   "domain_inter",
   ``domain (inter t1 t2) = domain t1 INTER domain t2``,
-  simp[pred_setTheory.EXTENSION, domain_lookup, lookup_inter] >>
+  simp[EXTENSION, domain_lookup, lookup_inter] >>
   rw [] >> Cases_on `lookup x t1` >> fs[] >>
   BasicProvers.CASE_TAC);
 
 val domain_insert = store_thm(
   "domain_insert[simp]",
   ``domain (insert k v t) = k INSERT domain t``,
-  simp[domain_lookup, pred_setTheory.EXTENSION, lookup_insert] >>
+  simp[domain_lookup, EXTENSION, lookup_insert] >>
   metis_tac[]);
 
 val domain_difference = Q.store_thm(
   "domain_difference",
   `!t1 t2 . domain (difference t1 t2) = (domain t1) DIFF (domain t2)`,
-  simp[pred_setTheory.EXTENSION, domain_lookup, lookup_difference] >>
+  simp[EXTENSION, domain_lookup, lookup_difference] >>
   rw [] >> Cases_on `lookup x t1`
   >> fs[] >> Cases_on `lookup x t2` >> rw[]);
 
@@ -551,8 +581,8 @@ val domain_fromList = store_thm(
   simp[fromList_def] >>
   `!i t. domain (SND (FOLDL (\ (i,t) a. (i + 1, insert i a t)) (i,t) l)) =
          domain t UNION IMAGE ((+) i) (count (LENGTH l))`
-    suffices_by (simp[] >> strip_tac >> simp[pred_setTheory.EXTENSION]) >>
-  Induct_on `l` >> simp[pred_setTheory.EXTENSION, EQ_IMP_THM] >>
+    suffices_by (simp[] >> strip_tac >> simp[EXTENSION]) >>
+  Induct_on `l` >> simp[EXTENSION, EQ_IMP_THM] >>
   rpt strip_tac >> simp[DECIDE ``(x = x + y) <=> (y = 0)``] >>
   qmatch_assum_rename_tac `nn < SUC (LENGTH l)` >>
   Cases_on `nn` >> fs[] >> metis_tac[ADD1]);
@@ -576,7 +606,7 @@ val lookup_delete = store_thm(
 val domain_delete = store_thm(
   "domain_delete[simp]",
   ``domain (delete k t) = domain t DELETE k``,
-  simp[pred_setTheory.EXTENSION, domain_lookup, lookup_delete] >>
+  simp[EXTENSION, domain_lookup, lookup_delete] >>
   metis_tac[]);
 
 val foldi_def = Define`
@@ -676,12 +706,12 @@ val set_foldi_keys = store_thm(
   "set_foldi_keys",
   ``!t a i. foldi (\k v a. k INSERT a) i a t =
             a UNION IMAGE (\n. i + lrnext i * n) (domain t)``,
-  Induct_on `t` >> simp[foldi_def, GSYM pred_setTheory.IMAGE_COMPOSE,
+  Induct_on `t` >> simp[foldi_def, GSYM IMAGE_COMPOSE,
                         combinTheory.o_ABS_R]
-  >- simp[Once pred_setTheory.INSERT_SING_UNION, pred_setTheory.UNION_COMM]
-  >- (simp[pred_setTheory.EXTENSION] >> rpt gen_tac >>
+  >- simp[Once INSERT_SING_UNION, UNION_COMM]
+  >- (simp[EXTENSION] >> rpt gen_tac >>
       Cases_on `x IN a` >> simp[lrlemma1, lrlemma2, LEFT_ADD_DISTRIB]) >>
-  simp[pred_setTheory.EXTENSION] >> rpt gen_tac >>
+  simp[EXTENSION] >> rpt gen_tac >>
   Cases_on `x IN a'` >> simp[lrlemma1, lrlemma2, LEFT_ADD_DISTRIB])
 
 val domain_foldi = save_thm(
@@ -726,17 +756,17 @@ val set_toAList_lemma = prove(
             set a UNION IMAGE (\n. (i + lrnext i * n,
                     THE (lookup n t))) (domain t)``,
   Induct_on `t`
-  \\ fs [foldi_def,GSYM pred_setTheory.IMAGE_COMPOSE,lookup_def]
-  THEN1 fs [Once pred_setTheory.INSERT_SING_UNION, pred_setTheory.UNION_COMM]
-  THEN1 (simp[pred_setTheory.EXTENSION] \\ rpt gen_tac \\
+  \\ fs [foldi_def,GSYM IMAGE_COMPOSE,lookup_def]
+  THEN1 fs [Once INSERT_SING_UNION, UNION_COMM]
+  THEN1 (simp[EXTENSION] \\ rpt gen_tac \\
          Cases_on `MEM x a` \\ simp[lrlemma1, lrlemma2, LEFT_ADD_DISTRIB]
          \\ fs [MULT2_DIV',EVEN_ADD,EVEN_DOUBLE])
-  \\ simp[pred_setTheory.EXTENSION] \\ rpt gen_tac
+  \\ simp[EXTENSION] \\ rpt gen_tac
   \\ Cases_on `MEM x a'` \\ simp[lrlemma1, lrlemma2, LEFT_ADD_DISTRIB]
   \\ fs [MULT2_DIV',EVEN_ADD,EVEN_DOUBLE])
   |> Q.SPECL [`t`,`[]`,`0`] |> GEN_ALL
   |> SIMP_RULE (srw_ss()) [GSYM toAList_def,lrnext_thm,MEM,LIST_TO_SET,
-       pred_setTheory.UNION_EMPTY,pred_setTheory.EXTENSION,
+       UNION_EMPTY,EXTENSION,
        pairTheory.FORALL_PROD]
 
 val MEM_toAList = store_thm("MEM_toAList",
@@ -992,7 +1022,7 @@ val spt_eq_thm = store_thm("spt_eq_thm",
   >- (
     rw[EQ_IMP_THM] >> rw[lookup_def] >>
     `domain t2 = {}` by (
-      simp[pred_setTheory.EXTENSION] >>
+      simp[EXTENSION] >>
       metis_tac[lookup_NONE_domain] ) >>
     Cases_on`t2`>>fs[domain_def,wf_def] >>
     metis_tac[domain_empty] )
@@ -1003,7 +1033,7 @@ val spt_eq_thm = store_thm("spt_eq_thm",
     >- (first_x_assum(qspec_then`0`mp_tac)>>simp[]) >>
     fs[wf_def] >>
     rfs[domain_empty] >>
-    fs[GSYM pred_setTheory.MEMBER_NOT_EMPTY] >>
+    fs[GSYM MEMBER_NOT_EMPTY] >>
     fs[domain_lookup] >|
       [ qspec_then`x`strip_assume_tac div2_even_lemma
       , qspec_then`x`strip_assume_tac div2_odd_lemma
@@ -1013,7 +1043,7 @@ val spt_eq_thm = store_thm("spt_eq_thm",
   >- (
     rw[EQ_IMP_THM] >> rw[lookup_def] >>
     rfs[domain_empty] >>
-    fs[GSYM pred_setTheory.MEMBER_NOT_EMPTY] >>
+    fs[GSYM MEMBER_NOT_EMPTY] >>
     fs[domain_lookup] >>
     Cases_on`t2`>>fs[] >>
     TRY (
@@ -1038,7 +1068,7 @@ val spt_eq_thm = store_thm("spt_eq_thm",
   >- (
     rw[EQ_IMP_THM] >> rw[lookup_def] >>
     rfs[domain_empty] >>
-    fs[GSYM pred_setTheory.MEMBER_NOT_EMPTY] >>
+    fs[GSYM MEMBER_NOT_EMPTY] >>
     fs[domain_lookup] >>
     Cases_on`t2`>>fs[] >>
     TRY (
@@ -1082,7 +1112,7 @@ val lookup_mk_wf = store_thm("lookup_mk_wf[simp]",
 
 val domain_mk_wf = store_thm("domain_mk_wf[simp]",
   ``!t. domain (mk_wf t) = domain t``,
-  fs [pred_setTheory.EXTENSION,domain_lookup]);
+  fs [EXTENSION,domain_lookup]);
 
 val mk_wf_eq = store_thm("mk_wf_eq[simp]",
   ``!t1 t2. (mk_wf t1 = mk_wf t2) <=> !x. lookup x t1 = lookup x t2``,
@@ -1102,7 +1132,7 @@ val union_mk_wf = store_thm("union_mk_wf[simp]",
   \\ POP_ASSUM (fn th => once_rewrite_tac [th])
   \\ ASM_SIMP_TAC std_ss [mk_wf_eq] \\ fs [lookup_union]);
 
-val inter_mk_wf = store_thm("union_mk_wf[simp]",
+val inter_mk_wf = store_thm("inter_mk_wf[simp]",
   ``!t1 t2. inter (mk_wf t1) (mk_wf t2) = mk_wf (inter t1 t2)``,
   REPEAT STRIP_TAC
   \\ `inter (mk_wf t1) (mk_wf t2) = mk_wf (inter (mk_wf t1) (mk_wf t2))` by
@@ -1225,15 +1255,17 @@ val fromAList_def = Define `
   (fromAList [] = LN) /\
   (fromAList ((x,y)::xs) = insert x y (fromAList xs))`;
 
+val fromAList_ind = theorem "fromAList_ind"
+
 val lookup_fromAList = store_thm("lookup_fromAList",
   ``!ls x.lookup x (fromAList ls) = ALOOKUP ls x``,
-  ho_match_mp_tac (fetch "-" "fromAList_ind")>>
-  rw[fromAList_def,lookup_def]>>
+  ho_match_mp_tac fromAList_ind >>
+  rw[fromAList_def,lookup_def] >>
   fs[lookup_insert]>> simp[EQ_SYM_EQ])
 
 val domain_fromAList = store_thm("domain_fromAList",
   ``!ls. domain (fromAList ls) = set (MAP FST ls)``,
-  simp[pred_setTheory.EXTENSION,domain_lookup,lookup_fromAList,
+  simp[EXTENSION,domain_lookup,lookup_fromAList,
        MEM_MAP,pairTheory.EXISTS_PROD]>>
   metis_tac[ALOOKUP_MEM,ALOOKUP_FAILS,
             optionTheory.option_CASES,
@@ -1254,6 +1286,24 @@ val wf_fromAList = store_thm("wf_fromAList",
 val fromAList_toAList = store_thm("fromAList_toAList",
   ``!t. wf t ==> (fromAList (toAList t) = t)``,
   metis_tac[wf_fromAList,lookup_fromAList_toAList,spt_eq_thm])
+
+Theorem union_insert_LN
+  `!x y t2. union (insert x y LN) t2 = insert x y t2`
+  (recInduct insert_ind
+   \\ rw[]
+   \\ rw[Once insert_def]
+   \\ rw[Once insert_def,SimpRHS]
+   \\ rw[union_def]);
+
+Theorem fromAList_append
+  `!l1 l2. fromAList (l1 ++ l2) = union (fromAList l1) (fromAList l2)`
+  (recInduct fromAList_ind
+  \\ rw[fromAList_def]
+  \\ rw[Once insert_union]
+  \\ rw[union_assoc]
+  \\ AP_THM_TAC
+  \\ AP_TERM_TAC
+  \\ rw[union_insert_LN]);
 
 val map_def = Define`
   (map f LN = LN) /\
@@ -1302,7 +1352,13 @@ val map_insert = store_thm("map_insert",
     imp_res_tac DIV_LT_X>>
     first_x_assum match_mp_tac>>
     DECIDE_TAC)>>
-  fs[map_def])
+  fs[map_def]);
+
+Theorem map_fromAList
+  `map f (fromAList ls) = fromAList (MAP (\ (k,v). (k, f v)) ls)`
+  (Induct_on`ls` >> simp[fromAList_def] >>
+   Cases >> simp[fromAList_def] >>
+   simp[wf_fromAList,map_insert]);
 
 val insert_insert = store_thm("insert_insert",
   ``!x1 x2 v1 v2 t.
@@ -1415,7 +1471,7 @@ val subspt_lookup = Q.store_thm("subspt_lookup",
 val subspt_domain = Q.store_thm("subspt_domain",
   `!t1 (t2:unit spt).
      subspt t1 t2 <=> domain t1 SUBSET domain t2`,
-  fs [subspt_lookup,domain_lookup,pred_setTheory.SUBSET_DEF]);
+  fs [subspt_lookup,domain_lookup,SUBSET_DEF]);
 
 val subspt_def = Q.store_thm("subspt_def",
   `!sp1 sp2.
@@ -1438,7 +1494,7 @@ val subspt_trans = Q.store_thm(
 val subspt_LN = Q.store_thm(
   "subspt_LN[simp]",
   `(subspt LN sp <=> T) /\ (subspt sp LN <=> (domain sp = {}))`,
-  simp[subspt_def, pred_setTheory.EXTENSION]);
+  simp[subspt_def, EXTENSION]);
 
 (* filter values stored in sptree *)
 
@@ -1505,25 +1561,25 @@ val mapi_Alist = Q.store_thm(
 
 val domain_mapi = Q.store_thm("domain_mapi",
   `domain (mapi f pt) = domain pt`,
-  rw[pred_setTheory.EXTENSION,domain_lookup,lookup_mapi]);
+  rw[EXTENSION,domain_lookup,lookup_mapi]);
 
 val size_domain = Q.store_thm("size_domain",
   `!t. size t = CARD (domain t)`,
   Induct_on `t`
   >- rw[size_def, domain_def]
   >- rw[size_def, domain_def]
-  >> rw[pred_setTheory.CARD_UNION_EQN, pred_setTheory.CARD_INJ_IMAGE]
+  >> rw[CARD_UNION_EQN, CARD_INJ_IMAGE]
   >-
    (`IMAGE (\n. 2 * n + 2) (domain t) INTER
      IMAGE (\n. 2 * n + 1) (domain t') = {}`
-      by (rw[GSYM pred_setTheory.DISJOINT_DEF, pred_setTheory.IN_DISJOINT]
+      by (rw[GSYM DISJOINT_DEF, IN_DISJOINT]
           >> Cases_on `ODD x`
           >> fs[ODD_EXISTS, ADD1, oddevenlemma])
     >> simp[]) >>
   `(({0} INTER IMAGE (\n. 2 * n + 2) (domain t)) = {}) /\
    (({0} UNION (IMAGE (\n. 2 * n + 2) (domain t)))
         INTER (IMAGE (\n. 2 * n + 1) (domain t')) = {})`
-  by (rw[GSYM pred_setTheory.DISJOINT_DEF, pred_setTheory.IN_DISJOINT]
+  by (rw[GSYM DISJOINT_DEF, IN_DISJOINT]
       >> Cases_on `ODD x`
       >> fs[ODD_EXISTS, ADD1, oddevenlemma])
   >> simp[]);
@@ -1533,7 +1589,7 @@ val num_set_domain_eq = Q.store_thm("num_set_domain_eq",
      wf t1 /\ wf t2 ==>
      ((domain t1 = domain t2) <=> (t1 = t2))`,
   rw[] >> EQ_TAC >> rw[spt_eq_thm] >>
-  fs[pred_setTheory.EXTENSION, domain_lookup] >>
+  fs[EXTENSION, domain_lookup] >>
   pop_assum (qspec_then `n` mp_tac) >> strip_tac >>
   Cases_on `lookup n t1` >> fs[] >> Cases_on `lookup n t2` >> fs[]);
 
@@ -1545,7 +1601,7 @@ val difference_sub = Q.store_thm("difference_sub",
   `(difference a b = LN) ==> (domain a SUBSET domain b)`,
   rw[] >>
   `(domain (difference a b) = {})` by rw[domain_def] >>
-  fs[pred_setTheory.EXTENSION, domain_difference, pred_setTheory.SUBSET_DEF] >>
+  fs[EXTENSION, domain_difference, SUBSET_DEF] >>
   metis_tac[]);
 
 val wf_difference = Q.store_thm("wf_difference",
@@ -1629,16 +1685,16 @@ val IMP_size_LESS_size = store_thm("IMP_size_LESS_size",
   \\ `?t. (domain y = domain x UNION t) /\ t <> EMPTY /\
           (domain x INTER t = EMPTY)` by
    (qexists_tac `domain y DIFF domain x`
-    \\ fs [pred_setTheory.EXTENSION]
+    \\ fs [EXTENSION]
     \\ qsuff_tac `domain x SUBSET domain y`
-    THEN1 (fs [pred_setTheory.EXTENSION,pred_setTheory.SUBSET_DEF] \\ metis_tac [])
-    \\ fs [domain_lookup,subspt_lookup,pred_setTheory.SUBSET_DEF]
+    THEN1 (fs [EXTENSION,SUBSET_DEF] \\ metis_tac [])
+    \\ fs [domain_lookup,subspt_lookup,SUBSET_DEF]
     \\ rw [] \\ res_tac \\ fs [])
   \\ asm_rewrite_tac []
   \\ `FINITE (domain y)` by fs [FINITE_domain]
-  \\ `FINITE t` by metis_tac [pred_setTheory.FINITE_UNION]
-  \\ fs [pred_setTheory.CARD_UNION_EQN]
-  \\ `CARD t <> 0` by metis_tac [pred_setTheory.CARD_EQ_0] \\ fs []);
+  \\ `FINITE t` by metis_tac [FINITE_UNION]
+  \\ fs [CARD_UNION_EQN]
+  \\ `CARD t <> 0` by metis_tac [CARD_EQ_0] \\ fs []);
 
 val size_diff_less = store_thm("size_diff_less",
   ``!x y z t.
@@ -1647,10 +1703,10 @@ val size_diff_less = store_thm("size_diff_less",
       size (difference x y) < size (difference x z)``,
   rw []
   \\ match_mp_tac IMP_size_LESS_size
-  \\ fs [domain_difference,pred_setTheory.EXTENSION]
+  \\ fs [domain_difference,EXTENSION]
   \\ reverse conj_tac THEN1 metis_tac []
   \\ fs [subspt_lookup,lookup_difference]
-  \\ rw [] \\ fs [pred_setTheory.SUBSET_DEF,domain_lookup,PULL_EXISTS]
+  \\ rw [] \\ fs [SUBSET_DEF,domain_lookup,PULL_EXISTS]
   \\ CCONTR_TAC
   \\ Cases_on `lookup x' z` \\ fs []
   \\ res_tac \\ fs []);
@@ -1658,8 +1714,43 @@ val size_diff_less = store_thm("size_diff_less",
 val inter_eq_LN = store_thm("inter_eq_LN",
   ``!x y. (inter x y = LN) <=> DISJOINT (domain x) (domain y)``,
   fs [spt_eq_thm,wf_inter,wf_def,lookup_def,lookup_inter_alt]
-  \\ fs [domain_lookup,pred_setTheory.IN_DISJOINT]
+  \\ fs [domain_lookup,IN_DISJOINT]
   \\ metis_tac [optionTheory.NOT_SOME_NONE,optionTheory.SOME_11,
                 optionTheory.option_CASES]);
+
+val list_to_num_set_def = Define `
+  (list_to_num_set [] = LN) /\
+  (list_to_num_set (n::ns) = insert n () (list_to_num_set ns))`;
+
+val list_insert_def = Define `
+  (list_insert [] t = t) /\
+  (list_insert (n::ns) t = list_insert ns (insert n () t))`;
+
+Theorem domain_list_to_num_set
+  `!xs. x IN domain (list_to_num_set xs) <=> MEM x xs`
+ (Induct \\ full_simp_tac(srw_ss())[list_to_num_set_def]);
+
+Theorem domain_list_insert
+  `!xs x t.
+      x IN domain (list_insert xs t) <=> MEM x xs \/ x IN domain t`
+ (Induct \\ full_simp_tac(srw_ss())[list_insert_def] \\ METIS_TAC []);
+
+Theorem domain_FOLDR_delete
+  `!ls live. domain (FOLDR delete live ls) = (domain live) DIFF (set ls)`
+ (Induct>>
+  full_simp_tac(srw_ss())[DIFF_INSERT,EXTENSION]>>
+  metis_tac[]);
+
+Theorem lookup_list_to_num_set
+  `!xs. lookup x (list_to_num_set xs) = if MEM x xs then SOME () else NONE`
+ (Induct \\ srw_tac [] [list_to_num_set_def,lookup_def,lookup_insert] \\ full_simp_tac(srw_ss())[]);
+
+Theorem list_to_num_set_append
+  `!l1 l2. list_to_num_set (l1 ++ l2) = union (list_to_num_set l1) (list_to_num_set l2)`
+ (Induct \\ rw[list_to_num_set_def]
+  \\ rw[Once insert_union]
+  \\ rw[Once insert_union,SimpRHS]
+  \\ rw[union_assoc]);
+
 
 val _ = export_theory();

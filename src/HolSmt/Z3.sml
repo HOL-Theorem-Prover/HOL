@@ -60,9 +60,15 @@ structure Z3 = struct
         | SOME p =>
           let
             val outfile = OS.FileSys.tmpName()
-            val _ = OS.Process.system (p ^ " -version > " ^ outfile)
+            fun work () = let
+              val _ = OS.Process.system (p ^ " -version > " ^ outfile)
+            in
+              parse_Z3_version outfile
+            end
+            fun finish () =
+                OS.FileSys.remove outfile handle SysErr _ => ()
           in
-            parse_Z3_version outfile
+            Portable.finally finish work ()
           end
 
   val doproofs =

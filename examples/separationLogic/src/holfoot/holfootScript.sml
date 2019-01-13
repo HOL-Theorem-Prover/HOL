@@ -96,10 +96,10 @@ val _ = type_abbrev_pp("holfoot_stack", “:(num, holfoot_var) var_res_state”)
 val _ = type_abbrev_pp("holfoot_state", “:(holfoot_stack # holfoot_heap)”)
 
 (* equivalent to x:(num,holfoot_var) var_res_expression*)
-val _ = type_abbrev_pp("holfoot_a_expression", “:holfoot_stack -> num option”)
+val _ = type_abbrev_pp("holfoot_a_expression", “:holfoot_stack -> num option”);
 
 (* equivalent to (num,holfoot_var,holfoot_heap) var_res_proposition*)
-val _ = type_abbrev_pp("holfoot_a_proposition", “:holfoot_state -> bool”;
+val _ = type_abbrev_pp("holfoot_a_proposition", “:holfoot_state -> bool”);
 
 
 
@@ -8085,7 +8085,7 @@ val holfoot___varlist_update_NO_VAR_THM =
  * Holfoot actions and programs
  **************************************)
 
-val _ = type_abbrev("holfoot_program",
+val _ = type_abbrev_pp("holfoot_program",
 Type `:((holfoot_var list # num list), (*procedure args*)
         string (*locks*),
         string, (*procedure names*)

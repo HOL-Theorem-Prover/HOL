@@ -102,6 +102,6 @@ val CCS_TRANS_tests =
           (In "ask-esp"..rec "VM1" (Out "esp-coffee"..var "VM") +
            In "ask-am"..rec "VM2" (Out "am-coffee"..var "VM")))))”)];
 
-val _ = List.app CCS_TRANS_test CCS_TRANS_tests;
+val _ = List.app (ignore o CCS_TRANS_test) CCS_TRANS_tests;
 
 val _ = Process.exit Process.success;

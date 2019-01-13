@@ -30,36 +30,46 @@ fun INSTANTIATE_UNDERLYING lfn th =
     in INST (map2 (fn t => fn fv => fv |-> t) tms fvs) th end
 in
 
-(* let xi denote cnf definition variables such that pi is the rhs of the definition    *)
-(* clauseth[i] gives i'th clause of CNF, as a pair (t,[tm] |- t')                      *)
-(* where t = (x0 \/ ... \/ xn) and t' = (p0 \/ ... \/ pn), i.e. the "expanded" t       *)
+(* let
+     - xi denote cnf definition variables such that pi is the rhs of the
+       definition
+     - clauseth[i] gives i'th clause of CNF, as a pair (t,[tm] |- t')
+   where t = (x0 \/ ... \/ xn) and t' = (p0 \/ ... \/ pn),
+   i.e. the "expanded" t
+*)
 fun dualise lfn orc clauseth ci =
     let
-        fun dualise' th =
-            let val c = rand (land (concl th)) in
-                if is_disj c
-                then
-                    let val (d0,d1) = dest_disj c
-                        val th1 =
-                            if is_neg d0
-                            then EQ_MP (INST [A |-> dest_neg d0,B |-> d1] OR_DUAL3) th
-                            else EQ_MP (INST [A|->d0,B |-> d1] OR_DUAL2) th
-                    in dualise' (UNDISCH th1) end
-                else
-                    UNDISCH
-                        (if is_neg c
-                         then CONV_RULE (LAND_CONV NOT_NOT_CONV) th
-                         else MP (INST [A |-> c] AND_INV2) th)
+      fun dualise' th =
+          let
+            val c = rand (land (concl th))
+          in
+            if is_disj c then
+              let val (d0,d1) = dest_disj c
+                  val th1 =
+                      if is_neg d0
+                      then EQ_MP (INST [A |-> dest_neg d0,B |-> d1] OR_DUAL3) th
+                      else EQ_MP (INST [A|->d0,B |-> d1] OR_DUAL2) th
+              in dualise' (UNDISCH th1) end
+            else
+              UNDISCH (if is_neg c
+                       then CONV_RULE (LAND_CONV NOT_NOT_CONV) th
+                       else MP (INST [A |-> c] AND_INV2) th)
             end
         val (t1,th1) = Array.sub(clauseth,orc) (* t, [tm] |- t') *)
             handle Subscript => failwith("dualise"^(int_to_string (ci))^"\n")
         val res =
-            if RBM.numItems lfn = 0 (* original problem in CNF, so th1 is [tm] |- t *)
-            then let val  th2 = MP (INST [A|->t1] AND_INV_IMP2) th1 (*[tm] |- ~t ==> F*)
-                 in dualise' th2 end else (* [~p0,...,~pn,tm] |- F *)
-            let val th2 = MP (INST [A|->t1] AND_INV_IMP2) (ASSUME t1) (*[tm,t] |- ~t ==> F *)
-                val dth =  dualise' th2 (* [~x0,...,~xn,tm,t] |- F *)
-                in PROVE_HYP th1 (INSTANTIATE_UNDERLYING lfn dth) end (* [~p0,...,~pn,tm] |- F *)
+            if RBM.numItems lfn = 0 then
+              (* original problem in CNF, so th1 is [tm] |- t *)
+              let val th2 = MP (INST [A|->t1] AND_INV_IMP2) th1
+                               (*[tm] |- ~t ==> F*)
+              in dualise' th2 end
+            else (* [~p0,...,~pn,tm] |- F *)
+              let val th2 = MP (INST [A|->t1] AND_INV_IMP2) (ASSUME t1)
+                            (*[tm,t] |- ~t ==> F *)
+                  val dth =  dualise' th2 (* [~x0,...,~xn,tm,t] |- F *)
+              in
+                PROVE_HYP th1 (INSTANTIATE_UNDERLYING lfn dth)
+              end (* [~p0,...,~pn,tm] |- F *)
      in res end
 end
 
@@ -76,7 +86,8 @@ fun getClause cl ci = Dynarray.sub(cl,ci)
 
 (* ground resolve clauses c0 and c1 on v,
    where v is the only var that occurs with opposite signs in c0 and c1 *)
-(* if n0 then v negated in c0 (but remember we are working with dualised clauses)*)
+(* if n0 then v negated in c0 (but remember we are working with dualised
+   clauses)*)
 fun resolve v n0 rth0 rth1 =
     let
         val th' = if n0 then DISCH v rth0 else DISCH v rth1
@@ -88,13 +99,14 @@ val counter = ref 0
 (* resolve c0 against c1 wrt v *)
 fun resolveClause lfn sva cl piv rth0 c1i =
     let
-         val rth1 = getClause cl c1i
-        (* piv is the pivot lit in c1i. if piv mode 2 = 0, then must be negated in c0i *)
-        val n0 = (piv mod 2 = 0)
-        val v = mk_sat_var lfn sva (piv div 2)
-        val rth  = resolve v n0 rth0 rth1
-        val _ = (counter:=(!counter)+1)
-     in rth end
+      val rth1 = getClause cl c1i
+      (* piv is the pivot lit in c1i. if piv mode 2 = 0, then must be
+         negated in c0i *)
+      val n0 = (piv mod 2 = 0)
+      val v = mk_sat_var lfn sva (piv div 2)
+      val rth  = resolve v n0 rth0 rth1
+      val _ = (counter:=(!counter)+1)
+    in rth end
 
 fun resolveChain lfn sva cl (nl,lnl) rci =
     let val ((_,c0i),(vi,c1i),nlt) = l2hh nl

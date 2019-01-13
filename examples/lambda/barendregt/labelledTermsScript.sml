@@ -374,7 +374,7 @@ val ltpm_ALPHAi = store_thm(
   ``~(v IN FV t) ==> (LAMi n u t M = LAMi n v (ltpm [(v,u)] t) M)``,
   SRW_TAC [boolSimps.CONJ_ss][LAMi_eq_thm, pmact_flip_args]);
 
-val tpm_apart = store_thm(
+val ltpm_apart = store_thm(
   "ltpm_apart",
   ``!t. x IN FV t /\ y NOTIN FV t ==> ~(ltpm [(x,y)] t = t)``,
   srw_tac [][supp_apart])

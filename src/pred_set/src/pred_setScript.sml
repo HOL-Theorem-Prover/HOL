@@ -1696,6 +1696,12 @@ val IMAGE_11 = store_thm(
   STRIP_TAC THEN SIMP_TAC (srw_ss()) [EQ_IMP_THM] THEN
   SRW_TAC [boolSimps.DNF_ss][EXTENSION, EQ_IMP_THM]);
 
+val DISJOINT_IMAGE = Q.store_thm(
+  "DISJOINT_IMAGE",
+  ‘(!x y. (f x = f y) <=> (x = y)) ==>
+   (DISJOINT (IMAGE f s1) (IMAGE f s2) <=> DISJOINT s1 s2)’,
+  simp[DISJOINT_DEF, EQ_IMP_THM, EXTENSION] >> METIS_TAC[]);
+
 val IMAGE_CONG = store_thm(
 "IMAGE_CONG",
 ``!f s f' s'. (s = s') /\ (!x. x IN s' ==> (f x = f' x))
@@ -1788,6 +1794,12 @@ val INJ_INSERT = store_thm(
    INJ f s t /\ (f x) IN t /\
    (!y. y IN s /\ (f x = f y) ==> (x = y))``,
 SRW_TAC[][INJ_DEF] THEN METIS_TAC[])
+
+val INJ_EXTEND = Q.store_thm(
+  "INJ_EXTEND",
+  `INJ b s t /\ x NOTIN s /\ y NOTIN t ==>
+    INJ ((x =+ y) b) (x INSERT s) (y INSERT t)`,
+  fs[INJ_DEF,combinTheory.APPLY_UPDATE_THM] >> METIS_TAC []);
 
 val INJ_SUBSET = store_thm(
 "INJ_SUBSET",
@@ -3348,16 +3360,27 @@ val INFINITE_INJ = store_thm (* from util_prob *)
 
 val gdef = map Term
     [    `g  0      = ({}:'a set)`,
-     `!n. g (SUC n) = (@x:'a.~(x IN (g n))) INSERT (g n)`];
+     `!n. g (SUC n) =
+             case some x. x IN s /\ x NOTIN g n of
+                 NONE => g n
+               | SOME x => x INSERT g n`]
 
 (* ---------------------------------------------------------------------*)
 (* Lemma: g n is finite for all n.                                      *)
 (* ---------------------------------------------------------------------*)
 
+val optcases = optionTheory.option_CASES
+val optinfo = {case_def= optionTheory.option_case_def, nchotomy = optcases}
+val rand_case = prove_case_rand_thm optinfo
+val optcase_elim = Q.prove(
+  ‘option_CASE optv n fv:bool <=>
+     (optv = NONE) /\ n \/ ?x. (optv = SOME x) /\ fv x’,
+  Cases_on `optv` >> simp[]);
+
 val g_finite =
     TAC_PROOF
     ((gdef, ``!n:num. FINITE (g n:'a set)``),
-     INDUCT_TAC THEN ASM_REWRITE_TAC[FINITE_EMPTY,FINITE_INSERT]);
+     INDUCT_TAC >> simp[rand_case, optcase_elim] >> METIS_TAC[optcases]);
 
 (* ---------------------------------------------------------------------*)
 (* Lemma: g n is contained in g (n+i) for all i.                        *)
@@ -3367,7 +3390,8 @@ val g_subset =
     TAC_PROOF
     ((gdef, ``!n. !x:'a. x IN (g n) ==> !i. x IN (g (n+i))``),
      REPEAT GEN_TAC THEN DISCH_TAC THEN INDUCT_TAC THEN
-     ASM_REWRITE_TAC [ADD_CLAUSES,IN_INSERT]);
+     ASM_REWRITE_TAC [ADD_CLAUSES,IN_INSERT] >>
+     simp[optcase_elim, rand_case] >> METIS_TAC[optcases]);
 
 (* ---------------------------------------------------------------------*)
 (* Lemma: if x is in g(n) then {x} = g(n+1)-g(n) for some n.            *)
@@ -3379,283 +3403,111 @@ val lemma =
 
 val g_cases =
     TAC_PROOF
-    ((gdef, (“(!s. FINITE s ==> ?x:'a. ~(x IN s)) ==>
-              !x:'a. (?n. x IN (g n)) ==>
+    ((gdef, (“!x:'a. (?n. x IN (g n)) ==>
                     (?m. (x IN (g (SUC m))) /\ ~(x IN (g m)))”)),
-     DISCH_TAC THEN GEN_TAC THEN
+     GEN_TAC >>
      DISCH_THEN (STRIP_THM_THEN MP_TAC o
-                 CONV_RULE numLib.EXISTS_LEAST_CONV) THEN
-     REPEAT_TCL STRIP_THM_THEN SUBST1_TAC (SPEC (“n:num”) num_CASES) THEN
-     ASM_REWRITE_TAC [NOT_IN_EMPTY,IN_INSERT] THEN STRIP_TAC THENL
-     [REWRITE_TAC [lemma] THEN EXISTS_TAC (“n':num”) THEN
-      CONJ_TAC THEN TRY(FIRST_ASSUM ACCEPT_TAC) THEN
-      FIRST_ASSUM (fn th => fn g => SUBST1_TAC th g) THEN
-      CONV_TAC SELECT_CONV THEN
-      FIRST_ASSUM MATCH_MP_TAC THEN
-      MATCH_ACCEPT_TAC g_finite,
-      REWRITE_TAC [lemma] THEN
-      FIRST_ASSUM (fn th => fn g => MP_TAC (SPEC (“n':num”) th) g) THEN
-      REWRITE_TAC [LESS_SUC_REFL] THEN
-      DISCH_THEN IMP_RES_TAC]);
+                 CONV_RULE numLib.EXISTS_LEAST_CONV) >>
+     Cases_on ‘n’ >- simp[] >> Q.RENAME_TAC [‘x IN g (SUC N)’] >>
+     STRIP_TAC >> Q.EXISTS_TAC ‘N’ >> conj_tac >- first_assum ACCEPT_TAC >>
+     first_x_assum MATCH_MP_TAC >> simp[]);
 
-(* ---------------------------------------------------------------------*)
-(* Lemma: @x.~(x IN {}) is an element of every g(n+1).                  *)
-(* ---------------------------------------------------------------------*)
+val g_in_s = TAC_PROOF(
+  (gdef, “!n:num. g n SUBSET (s:'a set)”),
+  Induct >> simp[] >> DEEP_INTRO_TAC optionTheory.some_intro >> simp[] >>
+  SRW_TAC[][INSERT_SUBSET]);
 
-val z_in_g1 =
-    TAC_PROOF
-    ((gdef, (“(@x:'a.~(x IN {})) IN (g (SUC 0))”)),
-     ASM_REWRITE_TAC [NOT_IN_EMPTY,IN_INSERT]);
+val inf = “INFINITE (s:'a set)”
+val infinite_g_grows = TAC_PROOF(
+  (inf::gdef, “!n. ?e:'a. e IN g (SUC n) /\ e NOTIN g n”),
+  rpt strip_tac >> simp[] >> ONCE_REWRITE_TAC [rand_case] >>
+  simp_tac (srw_ss() ++ boolSimps.DNF_ss) [optcase_elim] >>
+  simp_tac (srw_ss() ++ boolSimps.CONJ_ss) [] >>
+  DEEP_INTRO_TAC optionTheory.some_intro >> simp[] >>
+  METIS_TAC [IN_INFINITE_NOT_FINITE, g_finite])
 
-val z_in_gn =
-    TAC_PROOF
-    ((gdef, (“!n:num. (@x:'a. ~(x IN {})) IN (g (SUC n))”)),
-     PURE_ONCE_REWRITE_TAC [ADD1] THEN
-     PURE_ONCE_REWRITE_TAC [ADD_SYM] THEN
-     MATCH_MP_TAC g_subset THEN
-     REWRITE_TAC [ONE,z_in_g1]);
+val enum_exists = infinite_g_grows |> CONV_RULE SKOLEM_CONV
+val enum_def = subst[“e:num->'a” |-> “enum: num -> 'a”]
+                    (enum_exists |> concl |> dest_exists |> #2)
 
-(* ---------------------------------------------------------------------*)
-(* Lemma: @x. ~(x IN g n) is an element of g(n+1).                      *)
-(* ---------------------------------------------------------------------*)
+val enum_11 = TAC_PROOF(
+  (enum_def::inf::gdef, “!m:num n. (enum m:'a = enum n) <=> (m = n)”),
+  simp[EQ_IMP_THM] >> SPOSE_NOT_THEN strip_assume_tac >>
+  wlogLib.wlog_tac ‘m < n’ [‘m’, ‘n’] >- METIS_TAC[NOT_LESS, LESS_OR_EQ] >>
+  `enum m NOTIN g m /\ enum m IN (g (SUC m))` by simp[] >>
+  ‘?i. n = SUC m + i’ by METIS_TAC[LESS_EQ_EXISTS,LESS_OR] >>
+  ‘enum m IN g n’ by METIS_TAC[g_subset] >> METIS_TAC[])
 
-val in_lemma =
-    TAC_PROOF
-    ((gdef, (“!n:num. (@x:'a. ~(x IN (g n))) IN (g(SUC n))”)),
-     ASM_REWRITE_TAC [IN_INSERT]);
+val enum_in_s = TAC_PROOF(
+  (enum_def::inf::gdef, “!n:num. enum n : 'a IN s”),
+  strip_tac >> ‘enum n IN g (SUC n)’ by simp[] >>
+  ‘g (SUC n) SUBSET s’ by simp[g_in_s] >> METIS_TAC[SUBSET_DEF]);
 
-(* ---------------------------------------------------------------------*)
-(* Lemma: the x added to g(n+1) is not in g(n)                          *)
-(* ---------------------------------------------------------------------*)
+(* "define" injection *)
+val inj_def =
+   “!x. inj (x:'a) = case some n. enum n = x of
+                     NONE => x
+                   | SOME n => enum (n + 1)”
 
-val not_in_lemma =
-    TAC_PROOF
-    ((gdef, (“(!s. FINITE s ==>
-                     ?x:'a. ~(x IN s)) ==>
-                     !i n. ~((@x:'a. ~(x IN (g (n+i)))) IN g n)”)),
-     DISCH_TAC THEN INDUCT_TAC THENL
-     [ASM_REWRITE_TAC [ADD_CLAUSES] THEN
-      GEN_TAC THEN CONV_TAC SELECT_CONV THEN
-      FIRST_ASSUM MATCH_MP_TAC THEN
-      MATCH_ACCEPT_TAC g_finite,
-      PURE_ONCE_REWRITE_TAC [ADD_CLAUSES] THEN
-      PURE_ONCE_REWRITE_TAC [SYM(el 3 (CONJUNCTS ADD_CLAUSES))] THEN
-      GEN_TAC THEN FIRST_ASSUM (fn th => fn g =>
-                                  MP_TAC(SPEC (“SUC n”) th) g) THEN
-      REWRITE_TAC (map ASSUME gdef) THEN
-      REWRITE_TAC [IN_INSERT,DE_MORGAN_THM] THEN
-      REPEAT STRIP_TAC THEN RES_TAC]);
+val result_part1_0 = TAC_PROOF(
+  (inj_def::enum_def::inf::gdef, “INJ inj (s:'a set) s /\ ~SURJ inj s s”),
+  simp_tac (srw_ss()) [INJ_DEF, SURJ_DEF] >> rpt strip_tac
+  >- (simp[] >> DEEP_INTRO_TAC optionTheory.some_intro >> simp[enum_in_s])
+  >- (pop_assum mp_tac >> simp[] >> DEEP_INTRO_TAC optionTheory.some_intro >>
+      DEEP_INTRO_TAC optionTheory.some_intro >> simp[enum_11])
+  >- (disj2_tac >> Q.EXISTS_TAC ‘enum 0’ >> conj_tac >- simp[enum_in_s] >>
+      Q.X_GEN_TAC ‘y’ >> Cases_on ‘y IN s’ >> simp[] >>
+      DEEP_INTRO_TAC optionTheory.some_intro >> simp[enum_11]))
 
-(* ---------------------------------------------------------------------*)
-(* Lemma: each value is added to a unique g(n).                         *)
-(* ---------------------------------------------------------------------*)
+val gexists =
+    num_Axiom
+      |> INST_TYPE [alpha |-> ``:'a set``]
+      |> SPECL [“EMPTY : 'a set”,
+                “\n:num r:'a set.
+                    case some x. x IN s /\ x NOTIN r of
+                           NONE => r
+                         | SOME x => x INSERT r”]
+      |> SIMP_RULE bool_ss []
 
-val less_lemma = numLib.ARITH_PROVE ``!m n. ~(m = n) = ((m < n) \/ (n < m))``
+val result_part1 =
+  result_part1_0
+    |> EXISTS (mk_exists(“inj:'a -> 'a”, concl result_part1_0), “inj:'a -> 'a”)
+    |> DISCH inj_def
+    |> INST [“inj:'a -> 'a” |-> “\x:'a. ^(inj_def |> dest_forall |> #2 |> rhs)”]
+    |> SIMP_RULE bool_ss []
+    |> CHOOSE(``enum:num->'a``, enum_exists)
+    |> itlist PROVE_HYP (CONJUNCTS (ASSUME (list_mk_conj gdef)))
+    |> CHOOSE(``g:num ->'a set``, gexists)
+    |> DISCH_ALL
 
-val gn_unique = TAC_PROOF
-((gdef,
- (“(!s. FINITE s ==>
-        ?x:'a. ~(x IN s)) ==>
-        !(n:num) m. ((@x:'a.~(x IN (g n))) = @x:'a.~(x IN (g m))) = (n=m)”)),
-     DISCH_TAC THEN REPEAT GEN_TAC THEN EQ_TAC THENL
-     [CONV_TAC CONTRAPOS_CONV THEN
-      REWRITE_TAC [less_lemma] THEN
-      DISCH_THEN (STRIP_THM_THEN MP_TAC) THEN
-      DISCH_THEN (STRIP_THM_THEN SUBST1_TAC o MATCH_MP LESS_ADD_1) THEN
-      REWRITE_TAC [num_CONV (“1”),ADD_CLAUSES] THEN
-      REWRITE_TAC [SYM(el 3 (CONJUNCTS ADD_CLAUSES))] THEN
-      IMP_RES_TAC not_in_lemma THEN
-      DISCH_TAC THENL
-      [MP_TAC (SPEC (“n:num”) in_lemma) THEN
-       EVERY_ASSUM (fn th => fn g => SUBST1_TAC th g handle _ => ALL_TAC g)
-       THEN DISCH_TAC THEN RES_TAC,
-       MP_TAC (SPEC (“m:num”) in_lemma) THEN
-       EVERY_ASSUM (fn th=>fn g => SUBST1_TAC (SYM th) g handle _ => ALL_TAC g)
-       THEN DISCH_TAC THEN RES_TAC],
-      DISCH_THEN SUBST1_TAC THEN REFL_TAC]);
-
-(* ---------------------------------------------------------------------*)
-(* Lemma: the value added to g(n) to get g(n+1) is unique.              *)
-(* ---------------------------------------------------------------------*)
-
-val x_unique =
-    TAC_PROOF
-    ((gdef, (“!n. !x. !y:'a.
-               (~(x IN g n) /\ ~(y IN g n))
-                ==> (x IN g(SUC n))
-                ==> (y IN g(SUC n))
-                ==> (x = y)”)),
-     REPEAT GEN_TAC THEN STRIP_TAC THEN ASM_REWRITE_TAC [IN_INSERT] THEN
-     REPEAT (DISCH_THEN SUBST1_TAC) THEN REFL_TAC);
-
-(* ---------------------------------------------------------------------*)
-(* Now, show the existence of a non-onto one-one fuction.  The required *)
-(* function is denoted by fdef.  The theorem cases is:                  *)
-(*                                                                      *)
-(*   |- (?n. x IN (g n)) \/ (!n. ~x IN (g n))                           *)
-(*                                                                      *)
-(* and is used to do case splits on the condition of the conditional    *)
-(* present in fdef.                                                     *)
-(* ---------------------------------------------------------------------*)
-
-val fdef = Term
-   `\x:'a. if (?n. x IN (g n))
-           then (@y. ~(y IN (g (SUC @n. x IN g(SUC n) /\ ~(x IN (g n))))))
-           else  x`;
-
-val cases =
-   let val thm = GEN (“x:'a”)
-                     (SPEC (“?n:num.(x:'a) IN (g n)”) EXCLUDED_MIDDLE)
-   in CONV_RULE (ONCE_DEPTH_CONV NOT_EXISTS_CONV) thm
-   end;
-
-
-val INF_IMP_INFINITY = TAC_PROOF(([],
-“(!s. FINITE s ==> ?x:'a. ~(x IN s)) ==>
-   ?f:'a->'a.
-       (!x y. (f x = f y) ==> (x=y)) /\
-       ?y. !x. ~(f x = y)”),
- let val xcases = SPEC (“x:'a”) cases
-     and ycases = SPEC (“y:'a”) cases
-     fun nv x = (“SUC(@n. ^x IN (g(SUC n)) /\ ~(^x IN (g n)))”)
- in
- STRIP_ASSUME_TAC (prove_rec_fn_exists num_Axiom (list_mk_conj gdef)) THEN
- STRIP_TAC THEN EXISTS_TAC fdef THEN
- CONV_TAC (ONCE_DEPTH_CONV BETA_CONV) THEN CONJ_TAC THENL
- [REPEAT GEN_TAC THEN
-  DISJ_CASES_THEN (fn th => REWRITE_TAC[th] THEN STRIP_ASSUME_TAC th) xcases
-  THEN
-  DISJ_CASES_THEN (fn th => REWRITE_TAC[th] THEN STRIP_ASSUME_TAC th) ycases
-  THENL
-  [REWRITE_TAC [UNDISCH gn_unique,INV_SUC_EQ] THEN
-   IMP_RES_THEN (IMP_RES_THEN(STRIP_ASSUME_TAC o SELECT_RULE)) g_cases THEN
-   DISCH_THEN SUBST_ALL_TAC THEN IMP_RES_TAC x_unique,
-   ASSUME_TAC (SPEC (nv (“x:'a”)) in_lemma) THEN
-   DISCH_THEN (SUBST_ALL_TAC o SYM) THEN RES_TAC,
-   ASSUME_TAC (SPEC (nv (“y:'a”)) in_lemma) THEN
-   DISCH_THEN SUBST_ALL_TAC THEN RES_TAC],
-   EXISTS_TAC (“@x:'a.~(x IN g 0)”) THEN GEN_TAC THEN
-   DISJ_CASES_THEN (fn th => REWRITE_TAC[th] THEN ASSUME_TAC th) xcases
-   THENL
-   [REWRITE_TAC [UNDISCH gn_unique,NOT_SUC],
-    ASSUME_TAC (SPEC (“n:num”) z_in_gn) THEN
-    FIRST_ASSUM (fn th => fn g => SUBST1_TAC th g) THEN
-    DISCH_THEN SUBST_ALL_TAC THEN RES_TAC]]
-  end);
-
-(* --------------------------------------------------------------------- *)
-(* We now also prove the converse, namely that if :'a satisfies an axiom *)
-(* of infinity then UNIV:'a set is INFINITE.                             *)
-(* --------------------------------------------------------------------- *)
-
-(* --------------------------------------------------------------------- *)
-(* First, a version of the primitive recursion theorem                   *)
-(* --------------------------------------------------------------------- *)
-
-val prth =
-    prove_rec_fn_exists num_Axiom
-    (Term`(fn f x 0       = x) /\
-          (fn f x (SUC n) = (f:'a->'a) (fn f x n))`);
-
-val prmth =
-    TAC_PROOF
-    (([], (“!x:'a. !f. ?fn. (fn 0 = x) /\ !n. fn (SUC n) = f(fn n)”)),
-     REPEAT GEN_TAC THEN STRIP_ASSUME_TAC prth THEN
-     EXISTS_TAC (“fn (f:'a->'a) (x:'a) : num->'a”) THEN
-     ASM_REWRITE_TAC []);
-
-(* --------------------------------------------------------------------- *)
-(* Lemma: if f is one-to-one and not onto, there is a one-one f:num->'a. *)
-(* --------------------------------------------------------------------- *)
-
-val num_fn_thm = TAC_PROOF(([],
-(“(?f:'a->'a. (!x y. (f x = f y) ==> (x=y)) /\ ?y. !x. ~(f x = y))
-    ==>
-    (?fn:num->'a. (!n m. (fn n = fn m) ==> (n=m)))”)),
-     STRIP_TAC THEN
-     STRIP_ASSUME_TAC (SPECL [(“y:'a”),(“f:'a->'a”)] prmth) THEN
-     EXISTS_TAC (“fn:num->'a”) THEN INDUCT_TAC THENL
-     [CONV_TAC (ONCE_DEPTH_CONV SYM_CONV) THEN
-      INDUCT_TAC THEN ASM_REWRITE_TAC[],
-      INDUCT_TAC THEN ASM_REWRITE_TAC [INV_SUC_EQ] THEN
-      REPEAT STRIP_TAC THEN RES_TAC THEN RES_TAC]);
-
-(* --------------------------------------------------------------------- *)
-(* Lemma: every finite set of numbers has an upper bound.               *)
-(* --------------------------------------------------------------------- *)
-
-val finite_N_bounded =
-    TAC_PROOF
-    (([], (“!s. FINITE s ==> ?m. !n. (n IN s) ==> n < m”)),
-     SET_INDUCT_TAC THENL
-     [REWRITE_TAC [NOT_IN_EMPTY],
-      FIRST_ASSUM (fn th => fn g => CHOOSE_THEN ASSUME_TAC th g) THEN
-      EXISTS_TAC (“(SUC m) + e”) THEN REWRITE_TAC [IN_INSERT] THEN
-      REPEAT STRIP_TAC THENL
-      [PURE_ONCE_REWRITE_TAC [ADD_SYM] THEN ASM_REWRITE_TAC [LESS_ADD_SUC],
-       RES_TAC THEN IMP_RES_TAC LESS_IMP_LESS_ADD THEN
-       let val [_,_,c1,c2] = CONJUNCTS ADD_CLAUSES
-       in ASM_REWRITE_TAC [c1,SYM c2]
-       end]]);
-
-(* --------------------------------------------------------------------- *)
-(* Lemma: the set UNIV:(num->bool) is infinite.                         *)
-(* --------------------------------------------------------------------- *)
-
-val N_lemma =
-    TAC_PROOF
-    (([], (“INFINITE(UNIV:(num->bool))”)),
-     REWRITE_TAC [] THEN STRIP_TAC THEN
-     IMP_RES_THEN MP_TAC finite_N_bounded THEN
-     REWRITE_TAC [IN_UNIV] THEN
-     CONV_TAC NOT_EXISTS_CONV THEN GEN_TAC THEN
-     CONV_TAC NOT_FORALL_CONV THEN EXISTS_TAC (“SUC m”) THEN
-     REWRITE_TAC [NOT_LESS,LESS_OR_EQ,LESS_SUC_REFL]);
-
-(* --------------------------------------------------------------------- *)
-(* Lemma: if s is finite, f:num->'a is one-one, then ?n. f(n) not in s  *)
-(* --------------------------------------------------------------------- *)
-
-val main_lemma =
-    TAC_PROOF
-    (([], (“!s:'a set. FINITE s ==>
-           !f:num->'a. (!n m. (f n = f m) ==> (n=m)) ==> ?n. ~(f n IN s)”)),
-     REPEAT STRIP_TAC THEN
-     ASSUME_TAC N_lemma THEN
-     IMP_RES_TAC IMAGE_11_INFINITE THEN
-     IMP_RES_THEN (TRY o IMP_RES_THEN MP_TAC) IN_INFINITE_NOT_FINITE THEN
-     REWRITE_TAC [IN_IMAGE,IN_UNIV] THEN
-     REPEAT STRIP_TAC THEN EXISTS_TAC (“x':num”) THEN
-     EVERY_ASSUM (fn th => fn g => SUBST1_TAC (SYM th) g handle _ => ALL_TAC g)
-     THEN FIRST_ASSUM ACCEPT_TAC);
-
-(* ---------------------------------------------------------------------*)
-(* Now show that we can always choose an element not in a finite set.   *)
-(* ---------------------------------------------------------------------*)
-
-val INFINITY_IMP_INF =
-    TAC_PROOF
-    (([],(“(?f:'a->'a. (!x y. (f x = f y) ==> (x=y)) /\ ?y. !x. ~(f x = y))
-          ==> (!s. FINITE s ==> ?x:'a. ~(x IN s))”)),
-     DISCH_THEN (STRIP_ASSUME_TAC o MATCH_MP num_fn_thm) THEN
-     GEN_TAC THEN STRIP_TAC THEN
-     IMP_RES_TAC main_lemma THEN
-     EXISTS_TAC (“(fn:num->'a) n”) THEN
-     FIRST_ASSUM ACCEPT_TAC);
-
+val result_part2 = Q.prove(
+  ‘!s. FINITE s ==> !f. INJ f s s ==> SURJ f s s’,
+  ho_match_mp_tac FINITE_COMPLETE_INDUCTION >>
+  simp[INJ_IFF, SURJ_DEF] >>
+  rpt strip_tac >> SPOSE_NOT_THEN strip_assume_tac >>
+  Q.RENAME_TAC [‘x IN s’] >>
+  Q.ABBREV_TAC ‘s0 = s DELETE x’ >>
+  ‘INJ f s s0’ by simp[INJ_DEF, Abbr‘s0’] >>
+  ‘FINITE s0’ by simp[Abbr‘s0’] >>
+  ‘CARD s0 < CARD s’ suffices_by METIS_TAC[PHP] >>
+  simp[Abbr‘s0’, CARD_DELETE] >> Cases_on ‘s’ >> fs[])
 
 (* ---------------------------------------------------------------------*)
 (* Finally, we can prove the desired theorem.                           *)
 (* ---------------------------------------------------------------------*)
 
-val INFINITE_UNIV =
-    store_thm
-    ("INFINITE_UNIV",
-     (“INFINITE (UNIV:'a set)
+val INFINITE_INJ_NOT_SURJ = Q.store_thm("INFINITE_INJ_NOT_SURJ",
+  `!s. INFINITE s <=> ?f. INJ f s s /\ ~SURJ f s s`,
+  METIS_TAC[result_part1, result_part2]);
+
+(* and applying to the UNIV set *)
+val INFINITE_UNIV = store_thm (
+  "INFINITE_UNIV",
+  “INFINITE (UNIV:'a set)
         =
-      (?f:'a->'a. (!x y. (f x = f y) ==> (x = y)) /\ (?y. !x. ~(f x = y)))”),
-     PURE_ONCE_REWRITE_TAC [NOT_IN_FINITE] THEN
-     ACCEPT_TAC (IMP_ANTISYM_RULE INF_IMP_INFINITY INFINITY_IMP_INF));
+   ?f:'a->'a. (!x y. (f x = f y) ==> (x = y)) /\ (?y. !x. ~(f x = y))”,
+
+  simp[INFINITE_INJ_NOT_SURJ, INJ_DEF, SURJ_DEF]);
 
 (* a natural consequence *)
 val INFINITE_NUM_UNIV = store_thm(

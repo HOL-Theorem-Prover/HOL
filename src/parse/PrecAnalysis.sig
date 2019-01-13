@@ -17,6 +17,26 @@ sig
       (string * string -> 'a option) -> rel list ->
       (string * string * 'a) list
   val remove_listrels : (string * string * mlsp) list -> rel list ->
-                        rel list * (mlsp * int list) list
+                        rel list * (mlsp * int * int) list
 
 end
+
+(* [remove_listrels lspinfo rels] returns an (rel', info) pair, where rel'
+   is an adjusted rel list where internal list blocks have been removed
+   and replaced with single TM values. The info is information about where
+   those list blocks are and how many TMs of the original have been consumed
+   to form them.
+
+   For example,
+
+     remove_listrels [("let","in",lsp)]
+                     [TM, TOK "let", TM, TOK ";", TM, TOK "in"]
+
+   will return
+
+     ([TM, TOK "let", TM, TOK "in"], [(lsp, 1, 2)]
+
+   reflecting the fact the "list" that will be injected at the 2nd TM position
+   is built from two arguments starting at index 1 (indexing into the list of
+   "args", that is, the list of TMs).
+*)

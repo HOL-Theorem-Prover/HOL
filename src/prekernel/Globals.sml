@@ -148,13 +148,6 @@ val old =
    end
 
 (*---------------------------------------------------------------------------*
- * Flag used to tell how to do renaming: if it's NONE, do priming; if it's   *
- * SOME s, increment a numerical suffix and append it to s.                  *
- *---------------------------------------------------------------------------*)
-
-val priming = ref (NONE: string option)
-
-(*---------------------------------------------------------------------------*
  *    Flag allowing schematic definitions. Used by code in TotalDefn.        *
  *---------------------------------------------------------------------------*)
 

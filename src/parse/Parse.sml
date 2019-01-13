@@ -815,6 +815,7 @@ fun temp_remove_absyn_postprocessor s =
     val (g, res) = term_grammar.remove_absyn_postprocessor s (!the_term_grammar)
   in
     the_term_grammar := g;
+    term_grammar_changed := true;
     res
   end
 
@@ -826,6 +827,7 @@ fun temp_remove_preterm_processor k =
     val (g, res) = term_grammar.remove_preterm_processor k (!the_term_grammar)
   in
     the_term_grammar := g;
+    term_grammar_changed := true;
     res
   end
 
@@ -1127,7 +1129,13 @@ fun merge_into (gname, (G, gset)) =
 fun merge_grammars slist =
   case slist of
       [] => raise ERROR "merge_grammars" "Empty grammar list"
-    | h::t => List.foldl merge_into (valOf (grammarDB h), gancestry h) t |> #1
+    | h::t =>
+      let
+        val g = valOf (grammarDB h)
+          handle Option => raise ERROR "merge_grammars" ("No such theory: "^h)
+      in
+        List.foldl merge_into (g, gancestry h) t |> #1
+      end
 
 fun set_grammar_ancestry slist =
   let

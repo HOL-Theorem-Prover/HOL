@@ -28,8 +28,6 @@ val _ = new_theory "tea";
 (* General stuff                                                             *)
 (*---------------------------------------------------------------------------*)
 
-val _ = Globals.priming := SOME"_";
-
 val WORD_PRED_EXISTS = Q.prove
 (`!w:'a word. ~(w = 0w) ==> ?u. w = u + 1w`,
   RW_TAC std_ss [] THEN
@@ -203,6 +201,7 @@ val tea_correct = Q.store_thm
  `!plaintext keys.
      teaDecrypt (keys,teaEncrypt (keys,plaintext)) = plaintext`,
  RW_TAC list_ss [teaEncrypt_def, teaDecrypt_def, DELTA_SHIFT]
+  THEN rename [‘Rounds(_,_,keys,_) = (_,keys_1,sum)’]
   THEN `(keys_1 = keys) /\ (sum = DELTA * 32w)`
         by METIS_TAC [lemma2,WORD_ADD_0,PAIR_EQ]
   THEN RW_TAC std_ss []

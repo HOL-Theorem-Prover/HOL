@@ -250,8 +250,9 @@ local fun num2name s i = s^Lib.int_to_string i
           next
         end
 in
-fun nameStrm s =
-  (case !Globals.priming of NONE => primes | SOME x => subscripts x) s
+(* don't eta-contract *)
+fun nameStrm NONE s = primes s
+  | nameStrm (SOME x) s = subscripts x s
 end;
 
 

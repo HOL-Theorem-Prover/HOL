@@ -25,7 +25,6 @@ sig
   val pp_flags                : {show_types         : bool ref,
                                  show_numeral_types : bool ref}
 
-  val priming                 : string option ref
   val guessing_tyvars         : bool ref
   val guessing_overloads      : bool ref
   val notify_on_tyvar_guess   : bool ref

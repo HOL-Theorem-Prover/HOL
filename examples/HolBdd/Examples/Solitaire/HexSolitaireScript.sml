@@ -72,8 +72,6 @@ open bossLib;
 
 val _ = new_theory "HexSolitaire";
 
-val _ = Globals.priming := SOME "";
-
 val vl = [01,02,03,04,05,06,07,08,09,10,11,12,13,14,15,16,17,18,19];
 
 fun mk_v n =

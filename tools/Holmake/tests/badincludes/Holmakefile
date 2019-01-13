@@ -1,0 +1,6 @@
+CLINE_OPTIONS = --no_overlay
+
+selftest.exe: selftest.uo
+	$(HOLMOSMLC) -o $@ $<
+
+EXTRA_CLEANS = selftest.exe

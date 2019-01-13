@@ -20,8 +20,7 @@ sig
   val is_ident     : 'a term_token -> bool
   val is_aq        : 'a term_token -> bool
 
-  val nonagg_c     : char -> bool
-
   val lextest : string list -> string -> 'a term_token list
+  val toString : ('a -> string) -> 'a term_token -> string (* for debugging *)
 
 end

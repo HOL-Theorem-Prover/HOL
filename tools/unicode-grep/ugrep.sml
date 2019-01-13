@@ -107,11 +107,9 @@ fun check_tabs qp fname linenum (line,ss) =
 
 fun check_length qp fname linenum (line,ss) =
   let
-    val sz = String.size line
+    val sz = UTF8.size line
   in
-    if String.sub(line, sz - 1) <> #"\n" then
-      line_error qp fname linenum "Last char not NL" line
-    else if sz > 81 then
+    if sz > 81 then (* allowing for NL character on end of line *)
       line_error qp fname linenum "Line-length > 80" line
     else true
   end
@@ -231,7 +229,7 @@ val default : t =
     { help = false, chattiness = 1, files_wmatches = false,
       tests = [("unicode", (check_unicode, "Unicode present")),
                ("tabs", (check_tabs, "TAB present")),
-               ("linelength", (check_length, "Line too long (or no final NL)")),
+               ("linelength", (check_length, "Line too long")),
                ("trailing_wspace", (check_twspace, "Trailing whitespace"))]
     }
 

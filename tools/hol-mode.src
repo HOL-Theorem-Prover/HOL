@@ -696,7 +696,8 @@ that the buffer has already had HOL terms, comments and strings removed."
       (concat ";\\|"
               (word-list-to-regexp
                '("val" "fun" "in" "infix[lr]?" "open" "local" "type"
-                 "datatype" "nonfix" "exception" "end" "structure"))))
+                 "datatype" "nonfix" "exception" "end" "structure"
+                 "Theorem"))))
 
 (setq sml-struct-id-regexp "[A-Za-z][A-Za-z0-9_]*")
 
@@ -803,7 +804,7 @@ file to \"use\" first."
   (if (< 500 (buffer-size))
           (let ((fname (if (fboundp 'make-temp-file)
                               ;; then
-                                    (make-temp-file "hol")
+                                    (make-temp-file "hol" nil "Script.sml")
                               ;; else
                                     (make-temp-file-xemacs "hol")
                                  )))
@@ -1838,6 +1839,8 @@ second is to show the new term.
             (prog1
                 (buffer-substring (point-min) (point-max))
               (delete-region (point-min) (point-max))))))))
+
+(font-lock-add-keywords 'sml-mode '("\\<Theorem\\>"))
 
 (defgroup hol-faces nil "Faces used in pretty-printing HOL values"
   :group 'faces

@@ -22,58 +22,65 @@ structure SolverSpec = struct
     (* call 'pre goal' to generate SMT solver input *)
     val (x, inputs) = pre goal
     val infile = FileSys.tmpName ()
-    val _ = Library.write_strings_to_file infile inputs
     val outfile = FileSys.tmpName ()
-    val cmd = cmd_stem ^ infile ^ " > " ^ outfile
-    (* the actual system call to the SMT solver *)
-    val _ = if !Library.trace > 1 then
-        Feedback.HOL_MESG ("HolSmtLib: calling external command '" ^ cmd ^ "'")
-      else ()
-    val _ = Systeml.system_ps cmd
-    (* call 'post' to determine the result *)
-    val result = post x outfile
-    val _ = if !Library.trace > 1 then
-        Feedback.HOL_MESG ("HolSmtLib: solver reports negated term to be '" ^
-          (case result of
-             SAT NONE => "satisfiable' (no model given)"
-           | SAT (SOME _) => "satisfiable' (model given)"
-           | UNSAT NONE => "unsatisfiable' (no proof given)"
-           | UNSAT (SOME thm) =>
-             if !Library.trace > 2 then
-               "unsatisfiable' (theorem: " ^ Hol_pp.thm_to_string thm ^ ")"
-             else
-               "unsatisfiable' (proof checked)"
-           | UNKNOWN NONE => "unknown' (no reason given)"
-           | UNKNOWN (SOME _) => "unknown' (reason given)"))
-      else ()
-    (* if the SMT solver returned a theorem 'thm', then this should be of the
-       form "A' |- g" with A' \subseteq A, where (A, g) is the input goal *)
-    val _ = if !Library.trace > 0 then
-        case result of
-          UNSAT (SOME thm) =>
-            let
-              val (As, g) = goal
-              val As = HOLset.fromList Term.compare As
-            in
-              if not (HOLset.isSubset (Thm.hypset thm, As)) then
-                Feedback.HOL_WARNING "SolverSpec" "make_solver"
-                  "theorem contains additional hyp(s)"
-              else ();
-              if not (Term.aconv (Thm.concl thm) g) then
-                Feedback.HOL_WARNING "SolverSpec" "make_solver"
-                  "conclusion of theorem does not match goal"
+    fun work() = let
+      val _ = Library.write_strings_to_file infile inputs
+      val cmd = cmd_stem ^ infile ^ " > " ^ outfile
+      (* the actual system call to the SMT solver *)
+      val _ = if !Library.trace > 1 then
+                Feedback.HOL_MESG ("HolSmtLib: calling external command '" ^
+                                   cmd ^ "'")
               else ()
-            end
-        | _ =>
-          ()
-      else ()
-    (* delete all temporary files *)
-    val _ = if !Library.trace < 4 then
-        List.app (fn path => OS.FileSys.remove path handle SysErr _ => ())
-          [infile, outfile]
-      else ()
+      val _ = Systeml.system_ps cmd
+      (* call 'post' to determine the result *)
+      val result = post x outfile
+      val _ =
+          if !Library.trace > 1 then
+            Feedback.HOL_MESG(
+              "HolSmtLib: solver reports negated term to be '" ^
+              (case result of
+                   SAT NONE => "satisfiable' (no model given)"
+                 | SAT (SOME _) => "satisfiable' (model given)"
+                 | UNSAT NONE => "unsatisfiable' (no proof given)"
+                 | UNSAT (SOME thm) =>
+                   if !Library.trace > 2 then
+                     "unsatisfiable' (theorem: " ^Hol_pp.thm_to_string thm ^ ")"
+                   else
+                     "unsatisfiable' (proof checked)"
+                 | UNKNOWN NONE => "unknown' (no reason given)"
+                 | UNKNOWN (SOME _) => "unknown' (reason given)"))
+          else ()
+      (* if the SMT solver returned a theorem 'thm', then this should be of the
+         form "A' |- g" with A' \subseteq A, where (A, g) is the input goal *)
+      val _ = if !Library.trace > 0 then
+                case result of
+                    UNSAT (SOME thm) =>
+                    let
+                      val (As, g) = goal
+                      val As = HOLset.fromList Term.compare As
+                    in
+                      if not (HOLset.isSubset (Thm.hypset thm, As)) then
+                        Feedback.HOL_WARNING "SolverSpec" "make_solver"
+                                    "theorem contains additional hyp(s)"
+                      else ();
+                      if not (Term.aconv (Thm.concl thm) g) then
+                        Feedback.HOL_WARNING "SolverSpec" "make_solver"
+                             "conclusion of theorem does not match goal"
+                      else ()
+                    end
+                  | _ => ()
+              else ()
+    in
+      result
+    end
+    fun finish () =
+        (* delete all temporary files *)
+        if !Library.trace < 4 then
+          List.app (fn path => OS.FileSys.remove path handle SysErr _ => ())
+                   [infile, outfile]
+        else ()
   in
-    result
+    Portable.finally finish work ()
   end
 
   (* simplifies the goal to eliminate (some) terms that are not supported by

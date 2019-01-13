@@ -64,7 +64,7 @@ sig
   val dset : ('a * 'a -> order) -> 'a list ->
     ('a, unit) Redblackmap.dict
   val daddset :
-    'a list -> 'b -> ('a, unit) Redblackmap.dict ->
+    'a list -> ('a, unit) Redblackmap.dict ->
     ('a, unit) Redblackmap.dict
   val distrib : ('a * 'b list) list -> ('a * 'b) list
   val union_dict : ('a * 'a -> order) ->
@@ -150,6 +150,7 @@ sig
   val pow : real -> int -> real
   val approx : int -> real -> real
   val percent : real -> real
+  val pad : int -> string -> string -> string
 
   (* term *)
   val rename_bvarl : (string -> string) -> term -> term
@@ -157,5 +158,10 @@ sig
   val strip_type : hol_type -> (hol_type list * hol_type)
   val has_boolty : term -> bool
   val only_concl : thm -> term
+
+  (* parallelism *)
+  val interruptkill : Thread.thread -> unit
+
+
 
 end

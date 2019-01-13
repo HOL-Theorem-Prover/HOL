@@ -20,8 +20,6 @@
 open HolKernel Parse boolLib bossLib
      arithmeticTheory pairTheory listTheory wordsLib;
 
-val _ = Globals.priming := SOME"_";
-
 (*---------------------------------------------------------------------------*)
 (* Make bindings to pre-existing stuff                                       *)
 (*---------------------------------------------------------------------------*)

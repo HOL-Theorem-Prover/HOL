@@ -1,4 +1,4 @@
-signature tttRobberBasic =
+signature rlMiniTrans =
 sig
 
   include Abbrev

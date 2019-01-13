@@ -40,7 +40,7 @@ val _ = store_thm
 ;
 
 
-val     thmAbstractFunction =
+val     IMPERATIVE_FN_ABSTRACTION =
         store_thm
         (
                 "IMPERATIVE_FN_ABSTRACTION",
@@ -114,7 +114,7 @@ val     thmConditionalFunction =
                                                                                 (t = (\y. if a y then b y else c y))
                                                         *)
                                         THEN
-                                                (SUBST_TAC [(BETA_RULE (SPECL specializedTerm0 thmAbstractFunction))])
+                                                (SUBST_TAC [(BETA_RULE (SPECL specializedTerm0 IMPERATIVE_FN_ABSTRACTION))])
                                                         (*      [
                                                                         (!y. if a y then t y = b y else t y = c y)
                                                                   ]     |-
@@ -178,7 +178,7 @@ val     thmConditionalFunction =
                                                                                 (
                                                                                         BETA_RULE
                                                                                         (
-                                                                                                SPECL specializedTerm0 thmAbstractFunction
+                                                                                                SPECL specializedTerm0 IMPERATIVE_FN_ABSTRACTION
                                                                                         )
                                                                                 )
                                                                         ))
@@ -205,7 +205,7 @@ val     thmConditionalFunction =
         end
 ;
 
-val     SPEC_EQ_THM =
+val     IMPERATIVE_SPEQ_EQ_THM =
         store_thm
         (
                 "IMPERATIVE_SPEC_EQ_THM",
@@ -287,7 +287,7 @@ val     SPEC_EQ_THM =
 val thmAbstractSpecification =
                 INST_TYPE [
                         alpha |-> ``:'a -> 'b``, beta |-> ``:'a -> 'b``, gamma |-> ``:bool``
-                ] SPEC_EQ_THM
+                ] IMPERATIVE_SPEQ_EQ_THM
                         (*
                                 [] |- (!s s'. f s s' <=> g s s') <=> (f = g)   : thm
                         *)
@@ -360,7 +360,7 @@ val thmForwardSubstitution =
                                                                                 ``s'':'a->'b``,
                                                                                 ``\ (y:'a).if (x:'a) = y then (e:('a->'b)->'b) (s:'a->'b) else s y``
                                                                         ]
-                                                                                thmAbstractFunction
+                                                                                IMPERATIVE_FN_ABSTRACTION
                                                         )
                                                 )
         and
@@ -371,7 +371,7 @@ val thmForwardSubstitution =
                                                                         ``s'':'a->'b``,
                                                                         ``\(y:'a).if (x:'a) = y then (e:('a->'b)->'b) (s:'a->'b) else s y``
                                                                 ]
-                                                                        thmAbstractFunction
+                                                                        IMPERATIVE_FN_ABSTRACTION
                                                 )
         and
                 lemma1  =       imperativeLib.VSUB ``t:'c`` ``s':'c``

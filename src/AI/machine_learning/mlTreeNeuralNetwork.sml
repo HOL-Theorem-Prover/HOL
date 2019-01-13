@@ -26,15 +26,16 @@ fun const_nn dim activ arity =
   then random_nn activ activ [1,dim]
   else random_nn activ activ [arity * dim + 1, dim, dim]
 
-fun random_opdict dim cal =
-  let val l = map_assoc (fn (_,a) => const_nn dim (tanh,dtanh) a) cal in
+fun random_opdict dimin cal =
+  let val l = map_assoc (fn (_,a) => const_nn dimin (tanh,dtanh) a) cal in
     dnew (cpl_compare Term.compare Int.compare) l
   end
 
-fun random_headnn dim =
-  random_nn (tanh,dtanh) (tanh,dtanh) [dim+1,dim,1]
+fun random_headnn (dimin,dimout) =
+  random_nn (tanh,dtanh) (tanh,dtanh) [dimin+1,dimin,dimout]
 
-fun random_treenn dim cal = (random_opdict dim cal, random_headnn dim)
+fun random_treenn (dimin,dimout) cal =
+  (random_opdict dimin cal, random_headnn (dimin,dimout))
 
 fun string_of_opdictone ((oper,a),nn) =
   term_to_string oper ^ " " ^ int_to_string a ^ "\n\n" ^ string_of_nn nn
@@ -180,6 +181,11 @@ fun string_of_trainset_eval trainset =
    Inference
    ------------------------------------------------------------------------- *)
 
+fun out_treenn treenn tml =
+  let val (_,fpdatal) = fp_treenn treenn tml in
+    (#outnv (last fpdatal))
+  end
+
 fun poli_treenn treenn tm =
   let val (_,fpdatal) = fp_treenn treenn (order_subtm tm) in
     vector_to_list (denorm_vect (#outnv (last fpdatal)))
@@ -192,10 +198,8 @@ fun eval_treenn treenn tm = hd (poli_treenn treenn tm)
    ------------------------------------------------------------------------- *)
 
 fun train_treenn_one dim treenn (tml,expectv) =
-  let
-    val (fpdict,fpdatal) = fp_treenn treenn tml
-  in
-     bp_treenn dim (fpdict,fpdatal) (tml,expectv)
+  let val (fpdict,fpdatal) = fp_treenn treenn tml in
+    bp_treenn dim (fpdict,fpdatal) (tml,expectv)
   end
 
 fun update_head bsize headnn bpdatall =
@@ -245,10 +249,7 @@ fun train_treenn_batch dim (treenn as (opdict,headnn)) batch =
   end
 
 fun train_treenn_epoch_aux dim lossl treenn batchl = case batchl of
-    [] =>
-    let val loss = average_real lossl in
-     print_endline ("loss: " ^ Real.toString loss); (treenn, loss)
-    end
+    [] => (treenn, average_real lossl)
   | batch :: m =>
     let val (newtreenn,loss) = train_treenn_batch dim treenn batch in
       train_treenn_epoch_aux dim (loss :: lossl) newtreenn m
@@ -257,125 +258,42 @@ fun train_treenn_epoch_aux dim lossl treenn batchl = case batchl of
 fun train_treenn_epoch dim treenn batchl =
   train_treenn_epoch_aux dim [] treenn batchl
 
-fun train_treenn_nepoch n dim (treenn,loss) size trainset =
-  if n <= 0 then (treenn,loss) else
-  let
-    val batchl              = mk_batch size (shuffle trainset)
-    val (newtreenn,newloss) = train_treenn_epoch dim treenn batchl
-  in
-    train_treenn_nepoch (n - 1) dim (newtreenn,newloss) size trainset
+fun calc_testloss treenn ptest =
+  let fun f (tml,ev) = calc_loss (diff_rvect ev (out_treenn treenn tml)) in
+    average_real (map f ptest)
   end
 
-fun train_treenn_schedule_aux dim (treenn,loss) bsize prepset schedule =
+fun train_treenn_nepoch n dim (treenn,trainloss) size (ptrain,ptest) =
+  if n <= 0 then (treenn,trainloss) else
+  let
+    val batchl = mk_batch size (shuffle ptrain)
+    val (newtreenn,newtrainloss) = train_treenn_epoch dim treenn batchl
+    val testloss = calc_testloss newtreenn ptest
+    val _ = print_endline
+      ("train: " ^ pad 8 "0" (Real.toString (approx 6 newtrainloss)) ^
+       " test: " ^ pad 8 "0" (Real.toString (approx 6 testloss)))
+  in
+    train_treenn_nepoch (n - 1) dim (newtreenn,newtrainloss) size
+    (ptrain,ptest)
+  end
+
+fun train_treenn_schedule_aux dim (treenn,trainloss) bsize
+  (ptrain,ptest) schedule =
   case schedule of
-    [] => (treenn,loss)
+    [] => (treenn,trainloss)
   | (nepoch, lrate) :: m =>
     let
       val _ = learning_rate := lrate
       val _ = print_endline ("learning_rate: " ^ Real.toString lrate)
-      val (newtreenn,newloss) =
-        train_treenn_nepoch nepoch dim (treenn,loss) bsize prepset
+      val (newtreenn,newtrainloss) =
+        train_treenn_nepoch nepoch dim (treenn,trainloss) bsize (ptrain,ptest)
     in
-      train_treenn_schedule_aux dim (newtreenn,newloss) bsize prepset m
+      train_treenn_schedule_aux dim (newtreenn,newtrainloss)
+      bsize (ptrain,ptest) m
     end
 
-fun train_treenn_schedule dim treenn bsize prepset schedule =
-  train_treenn_schedule_aux dim (treenn,0.0) bsize prepset schedule
-
-(* -------------------------------------------------------------------------
-   Input terms for the tree neural networks
-   ------------------------------------------------------------------------- *)
-
-(* new operators *)
-val seq_sym      = mk_var ("seq_sym", ``:bool -> bool -> bool``)
-val asm_cat      = mk_var ("asm_cat", ``:bool -> bool -> bool``)
-val goal_cat     = mk_var ("goal_cat", ``:bool -> bool -> bool``)
-val forget_relation =
-  mk_var ("forget_relation", ``:bool -> bool -> bool``)
-val cut_relation =
-  mk_var ("cut_relation", ``:bool -> bool -> bool``)
-val cutpos_relation =
-  mk_var ("cutpos_relation", ``:bool -> bool -> bool``)
-val initcut_relation =
-  mk_var ("initcut_relation", ``:bool -> bool -> bool``)
-val buildcut_relation =
-  mk_var ("buildcut_relation", ``:bool -> bool -> bool``)
-val goalchoice_relation =
-  mk_var ("goalchoice_relation", ``:bool -> bool -> bool``)
-
-
-(* contructors for those operators *)
-fun mk_seqsym (a,b) = list_mk_comb (seq_sym,[a,b])
-fun mk_asmcat (a,b) = list_mk_comb (asm_cat,[a,b])
-fun list_mk_asmcat (asm,asml)  = case asml of
-    []     => asm
-  | a :: m => mk_asmcat (asm, list_mk_asmcat (a,m))
-fun strip_asml tm = case strip_comb tm of
-    (a,[b,c]) => (if a <> asm_cat then [tm] else b :: strip_asml c)
-  | _         => [tm]
-fun mk_goalcat (a,b) = list_mk_comb (goal_cat,[a,b])
-fun list_mk_goalcat (tm,tml)  = case tml of
-    []     => tm
-  | a :: m => mk_goalcat (tm, list_mk_goalcat (a,m))
-
-(* representing a goal as a nnterm *)
-fun goal_to_nnterm (asm,w) = case asm of
-    []     => w
-  | a :: m => mk_seqsym (list_mk_asmcat (a,m),w)
-
-fun goallist_to_nnterm gl = case map goal_to_nnterm gl of
-    []     => raise ERR "goallist_to_nnterm" ""
-  | a :: m => list_mk_goalcat (a,m)
-
-(* board state/move to nnterm transformation *)
-fun forget_to_nnterm (g,t) =
-  list_mk_comb (forget_relation, [goal_to_nnterm g, t])
-
-fun cut_to_nnterm (g,t) =
-  list_mk_comb (cut_relation, [goal_to_nnterm g, t])
-
-fun cutpos_to_nnterm (g,t) =
-  list_mk_comb (cutpos_relation, [goal_to_nnterm g, t])
-
-fun initcut_to_nnterm (g,t) =
-  list_mk_comb (initcut_relation, [goal_to_nnterm g, t])
-
-fun buildcut_to_nnterm ((g,t1),t2) =
-  list_mk_comb (buildcut_relation, [cut_to_nnterm (g,t1), t2])
-
-fun goalchoice_to_nnterm (gl,g) =
-  list_mk_comb (goalchoice_relation, [goallist_to_nnterm gl, goal_to_nnterm g])
-
-(* -------------------------------------------------------------------------
-   Set of operators of a tree neural network
-   ------------------------------------------------------------------------- *)
-
-fun fo_terms tm =
-  let val (oper,argl) = strip_comb tm in
-    tm :: List.concat (map fo_terms argl)
-  end
-
-val extra_operators =
-  [
-   (seq_sym,2),
-   (asm_cat,2),
-   (goal_cat,2),
-   (forget_relation,2),
-   (cut_relation,2),
-   (initcut_relation,2),
-   (buildcut_relation,2),
-   (cutpos_relation,2),
-   (goalchoice_relation,2)
-  ]
-
-fun operl_of_term tm =
-  let
-    val tml = mk_fast_set Term.compare (fo_terms tm)
-    fun f x = let val (oper,argl) = strip_comb x in (oper, length argl) end
-  in
-    extra_operators @
-    mk_fast_set (cpl_compare Term.compare Int.compare) (map f tml)
-  end
+fun train_treenn_schedule dim treenn bsize (ptrain,ptest) schedule =
+  train_treenn_schedule_aux dim (treenn,0.0) bsize (ptrain,ptest) schedule
 
 end (* struct *)
 

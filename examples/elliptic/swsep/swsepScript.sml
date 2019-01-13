@@ -643,7 +643,7 @@ val index_of_reg_lt = store_thm ("index_of_reg_lt",
   ``!r. index_of_reg r < 15``,
   Cases_on `r` THEN EVAL_TAC)
 
-val index_of_reg_11 = store_thm ("index_or_reg_11",
+val index_of_reg_11 = store_thm ("index_of_reg_11",
   ``!r r'. ((index_of_reg r = index_of_reg r') = (r = r'))``,
   Cases_on `r` THEN Cases_on `r'` THEN EVAL_TAC);
 

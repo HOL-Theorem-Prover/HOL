@@ -8,23 +8,26 @@ fun printq [] = ""
   | printq (x::xs) = q x ^ " " ^ printq xs
 
 open stringSyntax
-val testdata = [(`#"("`, fromMLchar #"("),
-                (`"\n^`)"`, fromMLstring "\n`)"),
-                (`"foo\
+val testdata = [
+  (`#"("`, fromMLchar #"("),
+  (`"\n^`)"`, fromMLstring "\n`)"),
+  (`"foo\
     \bar"`, fromMLstring "foobar"),
-                (`"foo\n\
-\bar"`, fromMLstring "foo\nbar"),
-                (`[#"c"]`, listSyntax.mk_list ([fromMLchar #"c"], ``:char``))]
+  (`"foo\n\
+    \bar"`, fromMLstring "foo\nbar"),
+  (`[#"c"]`, listSyntax.mk_list ([fromMLchar #"c"], ``:char``)),
+  (`"\172"`, ``[CHR 172]``)
+]
 
 fun do_test (q,res) = let
   val l_s = StringCvt.padRight #" " 40 (printq q)
   val r_s = StringCvt.padLeft #" " 15 ("``" ^ term_to_string res ^ "``")
   val _ = tprint (l_s ^ " = " ^ r_s)
 in
-  if aconv (Term q) res then OK() else die "FAILED!"
+  require_msg (check_result (aconv res)) term_to_string Term q
 end
 
-val _ = app do_test testdata
+val _ = app (ignore o do_test) testdata
 
 val foo =
  Define
@@ -95,5 +98,31 @@ val s = term_to_string t
 val _ = if s = "\"\\042)\"" then OK()
         else die "FAILED!"
 
+
+(* ----------------------------------------------------------------------
+    ASCIInumbersLib's compsets
+   ---------------------------------------------------------------------- *)
+
+val cs = let
+  val cs = listLib.list_compset()
+in
+  stringLib.add_string_compset cs;
+  numposrepLib.add_numposrep_compset cs;
+  bitLib.add_bit_compset cs;
+  ASCIInumbersLib.add_ASCIInumbers_compset cs;
+  cs
+end
+
+fun test (in_t, expected_t) =
+    convtest ("ASCIInumbersLib: " ^ term_to_string in_t ^ " = " ^
+              term_to_string expected_t,
+              computeLib.CBV_CONV cs, in_t, expected_t)
+
+val _ = app test [
+  (“fromDecString "101"”, “SOME 101n”),
+  (“fromDecString "101a"”, “NONE : num option”),
+  (“fromHexString "10A"”, “SOME 266n”),
+  (“num_from_oct_string "126"”, “86n”)
+]
 
 val _ = OS.Process.exit OS.Process.success

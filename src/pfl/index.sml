@@ -234,11 +234,10 @@ fun mysubst theta v = Option.valOf(subst_assoc (equal v) theta);
 fun mk_typed_vars name vlist tylist =
  let fun vary (away,[],vars) = rev vars
        | vary (away,ty::tyl,vars) =
-          let val v = variant away (mk_var(name,ty))
+          let val v = numvariant away (mk_var(name,ty))
           in vary (v::away,tyl,v::vars)
           end
- in Lib.with_flag
-       (Globals.priming, SOME"") vary (vlist,tylist,[])
+ in vary (vlist,tylist,[])
  end;
 
 fun single x = [x];
@@ -311,8 +310,7 @@ fun limit_spec_def base_case =
      val (fname,ty) = dest_var fvar
      val fconst = mk_const (fname,ty)
      val lim_name = fname^"Lim"
-     val limvar = Lib.with_flag(Globals.priming,SOME"_")
-                   (variant (all_vars base_case)) (mk_var(lim_name,num))
+     val limvar = numvariant (all_vars base_case) (mk_var(lim_name,num))
      val fapp = mk_is_some(list_mk_comb(fconst, limvar::args'))
      val tm' = list_mk_forall(args',mk_exists(limvar,fapp))
  in
@@ -376,7 +374,8 @@ fun mk_defs tm =
 fun cross_prod [] l2 = []
   | cross_prod (h::t) l2 = map (pair h) l2 @ cross_prod t l2;
 
-fun merge pn ((alist,b),(blist,e)) = (alist@[if pn then b else mk_neg b]@blist,e);
+fun merge pn ((alist,b),(blist,e)) =
+    (alist@[if pn then b else mk_neg b]@blist,e);
 
 fun merge_paths bpaths pospaths negpaths =
   map (merge true) (cross_prod bpaths pospaths) @
@@ -391,15 +390,16 @@ fun paths vfns tm =
    then let val (b,t1,t2) = dest_cond tm
         in merge_paths (paths vfns b) (paths vfns t1) (paths vfns t2)
         end else
- if TypeBase.is_case tm
-   then let val (cconst,ob,clauses) = TypeBase.dest_case tm
-            val (pats,rhsl) = unzip clauses
-            val plists = map (paths vfns) rhsl
-            fun patch pat plist = map (fn (ctxt,e) => (mk_eq(ob,pat)::ctxt,e)) plist
-            val patched = map2 patch pats plists
-        in flatten patched
-        end else
- if is_let tm
+ if TypeBase.is_case tm then
+   let
+     val (cconst,ob,clauses) = TypeBase.dest_case tm
+     val (pats,rhsl) = unzip clauses
+     val plists = map (paths vfns) rhsl
+     fun patch pat plist = map (fn (ctxt,e) => (mk_eq(ob,pat)::ctxt,e)) plist
+     val patched = map2 patch pats plists
+   in flatten patched
+   end
+ else if is_let tm
    then let val (binds, body) = dest_anylet tm
             val plist = paths vfns body
             fun patch (x,M) (ctxt,e) = (mk_eq(x,M)::ctxt, body)

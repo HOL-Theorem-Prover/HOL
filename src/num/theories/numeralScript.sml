@@ -683,7 +683,7 @@ val _ = print "DIVMOD for numerals\n"
 (* For calculation                                                           *)
 (*---------------------------------------------------------------------------*)
 
-val DIVMOD_POS = Q.store_thm
+val divmod_POS = Q.store_thm
 ("divmod_POS",
  `!n. 0<n ==>
     (DIVMOD (a,m,n) =

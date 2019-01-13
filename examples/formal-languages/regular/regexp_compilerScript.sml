@@ -1170,7 +1170,7 @@ val mem_oin_inst =
    |> Q.GEN `list`
 
 val fdom_oimage = Q.store_thm
-("fdom_image",
+("fdom_oimage",
  `!aset:'a oset.
      eq_cmp (cmp1:'a->'a->ordering) /\
      eq_cmp (cmp2:'b->'b->ordering) /\ invariant cmp1 aset

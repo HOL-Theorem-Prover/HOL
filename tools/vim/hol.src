@@ -21,10 +21,10 @@ hide
 let s:tmpprefix =
 fu! TempName()
   let l:n = 0
-  while glob(s:tmpprefix.l:n) != ""
+  while glob(s:tmpprefix.l:n."Script.sml") != ""
     let l:n = l:n + 1
   endwhile
-  return s:tmpprefix.l:n
+  return s:tmpprefix.l:n."Script.sml"
 endf
 
 fu! HOLCStart()

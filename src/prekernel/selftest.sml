@@ -3,8 +3,7 @@ fun die s = (print (s^"\n"); OS.Process.exit OS.Process.failure)
 
 val _ = tprint "nameStream in subscripting mode starts at 1";
 
-val _ = Globals.priming := SOME ""
-val f = Lexis.nameStrm "foo"
+val f = Lexis.nameStrm (SOME "") "foo"
 val l = List.tabulate(10, fn i => f())
 val expected = List.tabulate(10, fn i => "foo" ^ Int.toString (i + 1))
 

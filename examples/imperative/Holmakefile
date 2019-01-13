@@ -1,12 +1,7 @@
-THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
-TARGETS0 = $(patsubst %Theory.sml,,$(THYFILES))
-TARGETS = $(patsubst %.sml,%.uo,$(TARGETS0))
-
 UNITTESTS = reflectOnFailure.uo necec2010.uo
 
 .PHONY: all
-all: $(TARGETS) selftest.exe
+all: $(DEFAULT_TARGETS) selftest.exe
 
 selftest.exe: $(UNITTESTS)
 	$(HOLMOSMLC) -o $@ $(UNITTESTS)
-

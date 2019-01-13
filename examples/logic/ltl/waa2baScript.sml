@@ -354,7 +354,7 @@ val vwaa2gba_gba_V_def = Define`
 ∧ (vwaa2gba_gba_V waa_run v' (SUC i) = v' i (vwaa2gba_gba_V waa_run v' i))`;
 
 val WAA_IN_GBA = store_thm
-  ("GBA_IN_WAA",
+  ("WAA_IN_GBA",
    ``!aut. isVeryWeakAlterA aut ∧ FINITE aut.alphabet ∧ FINITE aut.states
      ∧ isValidAlterA aut
    ==> alterA_lang aut ⊆ GBA_lang (vwaa2gba aut)``,

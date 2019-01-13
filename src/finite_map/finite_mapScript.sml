@@ -370,7 +370,7 @@ val FDOM_FUPDATE_ABSORB = Q.prove
    THEN MATCH_MP_TAC FUPDATE_ABSORB_THM
    THEN ASM_REWRITE_TAC []);
 
-val FDOM_F_FEMPTY = Q.store_thm
+val FDOM_F_FEMPTY1 = Q.store_thm
 ("FDOM_F_FEMPTY1",
  `!f:'a |-> 'b. (!a. ~(a IN FDOM f)) = (f = FEMPTY)`,
  HO_MATCH_MP_TAC fmap_SIMPLE_INDUCT THEN
@@ -1749,7 +1749,7 @@ val lemma = prove(
   Cases_on `MEM p_1 (MAP FST kvl)` THEN
   SRW_TAC [][FUPDATE_LIST_APPLY_NOT_MEM]);
 
-val FM_CONCRETE_EQ_ENUMERATE_CASES = store_thm(
+val FMEQ_ENUMERATE_CASES = store_thm(
   "FMEQ_ENUMERATE_CASES",
   ``!f1 kvl p. (f1 |+ p = FEMPTY |++ kvl) ==> MEM p kvl``,
   SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, GSYM fmap_EQ_THM,
@@ -1767,7 +1767,7 @@ val FMEQ_SINGLE_SIMPLE_ELIM = store_thm(
   REPEAT GEN_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
     `FEMPTY |+ (ck, cv) = FEMPTY |++ [(ck,cv)]`
        by SRW_TAC [][FUPDATE_LIST_THM] THEN
-    `MEM (k,v) [(ck, cv)]` by PROVE_TAC [FM_CONCRETE_EQ_ENUMERATE_CASES] THEN
+    `MEM (k,v) [(ck, cv)]` by PROVE_TAC [FMEQ_ENUMERATE_CASES] THEN
     FULL_SIMP_TAC (srw_ss()) [FUPDATE_LIST_THM] THEN
     PROVE_TAC [FUPD_SAME_KEY_UNWIND],
     Q.EXISTS_TAC `FEMPTY` THEN SRW_TAC [][]
@@ -2227,7 +2227,7 @@ val fmap_rel_OPTREL_FLOOKUP = store_thm("fmap_rel_OPTREL_FLOOKUP",
   rw[fmap_rel_def,optionTheory.OPTREL_def,FLOOKUP_DEF,EXTENSION] >>
   PROVE_TAC[]);
 
-val fmap_rel_FLOOKUP_E = Q.store_thm("fmap_rel_FLOOKUP_imp",
+val fmap_rel_FLOOKUP_imp = Q.store_thm("fmap_rel_FLOOKUP_imp",
   `fmap_rel R f1 f2 ==>
    (!k. FLOOKUP f1 k = NONE ==> FLOOKUP f2 k = NONE) /\
    (!k v1. FLOOKUP f1 k = SOME v1 ==> ?v2. FLOOKUP f2 k = SOME v2 /\ R v1 v2)`,
