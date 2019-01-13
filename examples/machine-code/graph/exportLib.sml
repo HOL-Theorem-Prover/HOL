@@ -250,8 +250,12 @@ fun export_graph name rhs = let
       in "Op " ^ n ^ " " ^ ty ^ " " ^ export_list (map term xs) end
     ) handle HOL_ERR err => (print (exn_to_string (HOL_ERR err));
             add_tm_fail tm; fail())
-  val types = [``VarNat``,``VarWord8``,``VarWord``,
-               ``VarMem``,``VarDom``,``VarBool``]
+  val types = [``VarNat :num -> 'a variable``,
+               ``VarWord8 :word8 -> 'a variable``,
+               ``VarWord :'a word -> 'a variable``,
+               ``VarMem :('a word -> word8) -> 'a variable``,
+               ``VarDom :('a word -> bool) -> 'a variable``,
+               ``VarBool :bool -> 'a variable``]
   val s_var = mk_var("s",``:32 state``)
   fun bool_exp tm =
     if can dest_var_acc tm then let

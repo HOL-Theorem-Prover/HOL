@@ -76,8 +76,8 @@ fun func_decompile print_title sec_name = let
 (*  val thms = clean_conds thms *)
   val code = thms |> hd |> concl |> rator |> rator |> rand
              handle Empty => (if !arch_name = ARM
-                              then ``(ARM {}):code``
-                              else ``(M0 {}):code``)
+                              then ``ARM {}``
+                              else ``M0 {}``)
   val lemma = prove(``LIST_IMPL_INST ^code locs []``,
                     SIMP_TAC std_ss [LIST_IMPL_INST_def])
   fun combine [] = lemma
@@ -131,17 +131,17 @@ fun prove_funcs_ok names = let
   val code_name = all_code |> hd |> rator
   val all_code = mk_comb(code_name, (all_code |> map rand |> list_mk_union))
   val all_code_def = new_definition("all_code",``all_code = ^all_code``);
-  val code_case_of = TypeBase.case_def_of ``:code``;
   val pair_case_of = TypeBase.case_def_of ``:'a # 'b``;
   fun expend_code th = let
     val th = MATCH_MP func_ok_EXPEND_CODE th |> Q.SPEC `all_code`
     val goal = th |> concl |> dest_imp |> fst
     val lemma = auto_prove "expand_code" (goal,
-      REWRITE_TAC [all_code_def,SUBSET_DEF,IN_UNION,code_case_of,pair_case_of]
+      REWRITE_TAC [all_code_def,SUBSET_DEF,IN_UNION,pair_case_of,
+                   ARM_def,M0_def,RISCV_def]
       \\ CONV_TAC (DEPTH_CONV BETA_CONV)
-      \\ REWRITE_TAC [all_code_def,SUBSET_DEF,IN_UNION,code_case_of,pair_case_of]
+      \\ REWRITE_TAC [all_code_def,SUBSET_DEF,IN_UNION,pair_case_of]
       \\ CONV_TAC (DEPTH_CONV BETA_CONV)
-      \\ REWRITE_TAC [all_code_def,SUBSET_DEF,IN_UNION,code_case_of,pair_case_of]
+      \\ REWRITE_TAC [all_code_def,SUBSET_DEF,IN_UNION,pair_case_of]
       \\ REPEAT STRIP_TAC \\ ASM_REWRITE_TAC [])
     in MP th lemma end
   val fs = map expend_code fs
