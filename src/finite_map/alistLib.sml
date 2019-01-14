@@ -4,14 +4,12 @@ struct
 open computeLib alistTheory
 
 
-fun add_alist_compset cs =
+val add_alist_compset =
     extend_compset [
       Defs [
         alist_to_fmap_def,
         ALOOKUP_def
       ]
     ]
-
-
 
 end
