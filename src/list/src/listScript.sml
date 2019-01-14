@@ -1767,6 +1767,14 @@ val DROP_NIL = store_thm(
 ``!ls n. (DROP n ls = []) = (n >= LENGTH ls)``,
 Induct THEN SRW_TAC[] [DROP_def] THEN numLib.DECIDE_TAC)
 
+val LT_SUC = Q.prove(
+  ‘x < SUC y <=> (x = 0) \/ ?x0. (x = SUC x0) /\ x0 < y’,
+  Cases_on ‘x’ >> simp[]);
+
+Theorem HD_DROP
+  `!n l. n < LENGTH l ==> (HD (DROP n l) = EL n l)`
+  (Induct_on `l` >> asm_simp_tac (srw_ss() ++ DNF_ss) [LT_SUC]);
+
 (* More functions for operating on pairs of lists *)
 
 val FOLDL2_def = Define`
@@ -2510,6 +2518,10 @@ val GENLIST_CONS = store_thm(
   "GENLIST_CONS",
   ``GENLIST f (SUC n) = f 0 :: (GENLIST (f o SUC) n)``,
   Induct_on `n` THEN SRW_TAC [] [GENLIST, SNOC]);
+
+Theorem GENLIST_ID
+  `!x. GENLIST (\i. EL i x) (LENGTH x) = x`
+  (Induct >> simp[GENLIST_CONS, GENLIST, combinTheory.o_ABS_L]);
 
 val NULL_GENLIST = Q.store_thm("NULL_GENLIST",
   `!n f. NULL (GENLIST f n) = (n = 0)`,
@@ -3501,6 +3513,11 @@ val LIST_REL_trans = Q.store_thm("LIST_REL_trans",
    >> rw []
    >> FIRST_X_ASSUM (Q.SPEC_THEN `SUC n` MP_TAC)
    >> simp []);
+
+Theorem LIST_REL_eq[simp]
+  `LIST_REL (=) = (=)`
+  (simp[FUN_EQ_THM] >> Induct >> rpt gen_tac >>
+   Q.RENAME_TAC [`LIST_REL _ _ ys`] >> Cases_on `ys` >> fs []);
 
 val SWAP_REVERSE = Q.store_thm("SWAP_REVERSE",
    `!l1 l2. (l1 = REVERSE l2) = (l2 = REVERSE l1)`,

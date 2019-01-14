@@ -635,6 +635,12 @@ THEN ASM_REWRITE_TAC(OPTREL_def::option_rws)
 THEN PROVE_TAC[])
 val _ = export_rewrites["OPTREL_refl"]
 
+Theorem OPTREL_eq[simp]
+  `OPTREL (=) = (=)`
+  (REWRITE_TAC[FUN_EQ_THM] >> rpt strip_tac >> Q.RENAME_TAC [‘OPTREL _ x y’] >>
+   MAP_EVERY OPTION_CASES_TAC [“x:'a option”, “y:'a option”] >>
+   simpLib.SIMP_TAC bool_ss (OPTREL_def::option_rws) >> METIS_TAC[]);
+
 (* ----------------------------------------------------------------------
     some (Hilbert choice "lifted" to the option type)
 
