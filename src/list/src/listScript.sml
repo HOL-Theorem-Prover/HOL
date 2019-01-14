@@ -3555,6 +3555,10 @@ Theorem LIST_REL_APPEND_EQ
    (LIST_REL R (x1 ++ y1) (x2 ++ y2) <=> LIST_REL R x1 x2 /\ LIST_REL R y1 y2)`
   (metis_tac[LIST_REL_APPEND_IMP, EVERY2_LENGTH, LIST_REL_APPEND_suff]);
 
+Theorem LIST_REL_MAP_inv_image
+  `LIST_REL R (MAP f l1) (MAP f l2) = LIST_REL (inv_image R f) l1 l2`
+  (rw[LIST_REL_EL_EQN, EQ_IMP_THM, EL_MAP, LENGTH_MAP] >> metis_tac[EL_MAP]);
+
 val SWAP_REVERSE = Q.store_thm("SWAP_REVERSE",
    `!l1 l2. (l1 = REVERSE l2) = (l2 = REVERSE l1)`,
    SRW_TAC [] [EQ_IMP_THM])
