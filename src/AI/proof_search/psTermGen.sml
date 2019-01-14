@@ -118,5 +118,34 @@ fun gen_term_nmax nmax (ty,cset) =
     f [] 1
   end
 
+(* -------------------------------------------------------------------------
+   Mini-game 1 problem of Deciding if something is true or not.
+   Pick for itself what it thinks it would train it better.
+   Improve upon Mini-Game 2. Faster training by online training.
+   ------------------------------------------------------------------------- *)
+
+val tml = gen_term_nmax 100000 (bool,
+[``0``,``SUC``,``$+``,``$*``,
+ ``$= :num -> num -> bool``]);
+
+fun f tm = 
+  let 
+    val d = count_dict (dempty Term.compare) (find_terms is_var tm)
+    fun test (_,b) = b >= 2 
+  in
+    all test (dlist d) andalso dlength d > 1
+  end
+
+val tml' = filter f tml;
+
+val thml = mapfilter DECIDE tml';
+
+
+
+
+
+
+
+
 
 end (* struct *)

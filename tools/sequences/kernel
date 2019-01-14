@@ -30,6 +30,7 @@ src/proofman/tests
 [poly]src/AI/sml_inspection
 [poly]src/AI/machine_learning
 [poly]src/AI/proof_search
+[poly]src/AI/reinforcement_learning
 [poly]src/tactictoe/src
 [poly]src/holyhammer
 !tools/Holmake/tests/holpathdb/proj2

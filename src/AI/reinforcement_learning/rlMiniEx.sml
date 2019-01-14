@@ -159,9 +159,6 @@ fun select_mg3 x = List.concat (map (random_subset 10) x)
 
 fun data_mg3 () = select_mg3 (predata_mg3 ());
 
-
-
-
 end (* struct *)
 
 
