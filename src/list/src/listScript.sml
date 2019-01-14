@@ -3519,6 +3519,42 @@ Theorem LIST_REL_eq[simp]
   (simp[FUN_EQ_THM] >> Induct >> rpt gen_tac >>
    Q.RENAME_TAC [`LIST_REL _ _ ys`] >> Cases_on `ys` >> fs []);
 
+Theorem LIST_REL_MEM_IMP
+  `!xs ys P x. LIST_REL P xs ys /\ MEM x xs ==> ?y. MEM y ys /\ P x y`
+  (simp[LIST_REL_EL_EQN] >> metis_tac[MEM_EL]);
+
+Theorem LIST_REL_SNOC
+  `(LIST_REL R (SNOC x xs) yys <=>
+      ?y ys. (yys = SNOC y ys) /\ LIST_REL R xs ys /\ R x y) /\
+   (LIST_REL R xxs (SNOC y ys) <=>
+      ?x xs. (xxs = SNOC x xs) /\ LIST_REL R xs ys /\ R x y)`
+  (simp[EQ_IMP_THM, PULL_EXISTS, SNOC_APPEND] >> rpt strip_tac >>
+   fs[LIST_REL_SPLIT1, LIST_REL_SPLIT2] >> metis_tac[]);
+
+Theorem LIST_REL_APPEND_IMP
+  `!xs ys xs1 ys1.
+      LIST_REL P (xs ++ xs1) (ys ++ ys1) /\ (LENGTH xs = LENGTH ys) ==>
+      LIST_REL P xs ys /\ LIST_REL P xs1 ys1`
+  (Induct >> Cases_on `ys` >> FULL_SIMP_TAC (srw_ss()) [] >> METIS_TAC []);
+
+Theorem LIST_REL_APPEND
+   `EVERY2 R l1 l2 /\ EVERY2 R l3 l4 <=>
+    EVERY2 R (l1 ++ l3) (l2 ++ l4) /\
+    (LENGTH l1 = LENGTH l2) /\ (LENGTH l3 = LENGTH l4)`
+   (rw[LIST_REL_EL_EQN, EL_APPEND_EQN, EQ_IMP_THM] >> rw[]
+    >- (first_x_assum irule >> simp[])
+    >- (first_x_assum (Q.SPEC_THEN `n` mp_tac) >> simp[])
+    >- (first_x_assum (Q.SPEC_THEN `LENGTH l2 + n` mp_tac) >> simp[]));
+
+Theorem LIST_REL_APPEND_suff
+   `EVERY2 R l1 l2 /\ EVERY2 R l3 l4 ==> EVERY2 R (l1 ++ l3) (l2 ++ l4)`
+   (metis_tac[LIST_REL_APPEND]);
+
+Theorem LIST_REL_APPEND_EQ
+  `(LENGTH x1 = LENGTH x2) ==>
+   (LIST_REL R (x1 ++ y1) (x2 ++ y2) <=> LIST_REL R x1 x2 /\ LIST_REL R y1 y2)`
+  (metis_tac[LIST_REL_APPEND_IMP, EVERY2_LENGTH, LIST_REL_APPEND_suff]);
+
 val SWAP_REVERSE = Q.store_thm("SWAP_REVERSE",
    `!l1 l2. (l1 = REVERSE l2) = (l2 = REVERSE l1)`,
    SRW_TAC [] [EQ_IMP_THM])

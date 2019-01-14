@@ -3168,21 +3168,11 @@ val LENGTH_FILTER_LESS = Q.store_thm("LENGTH_FILTER_LESS",
    THEN MATCH_MP_TAC LESS_EQ_IMP_LESS_SUC
    THEN MATCH_ACCEPT_TAC LENGTH_FILTER_LEQ)
 
-val EVERY2_APPEND = Q.store_thm("EVERY2_APPEND",
-   `EVERY2 R l1 l2 /\ EVERY2 R l3 l4 <=>
-    EVERY2 R (l1 ++ l3) (l2 ++ l4) /\
-    (LENGTH l1 = LENGTH l2) /\ (LENGTH l3 = LENGTH l4)`,
-   rw[EVERY2_EVERY,EVERY_MEM] >> metis_tac[ZIP_APPEND,MEM_APPEND])
+val EVERY2_APPEND = save_thm(
+  "EVERY2_APPEND", listTheory.LIST_REL_APPEND);
 
-val LIST_REL_APPEND_IMP = store_thm("LIST_REL_APPEND_IMP",
-  ``!xs ys xs1 ys1.
-      LIST_REL P (xs ++ xs1) (ys ++ ys1) /\ (LENGTH xs = LENGTH ys) ==>
-      LIST_REL P xs ys /\ LIST_REL P xs1 ys1``,
-  Induct >> Cases_on `ys` >> FULL_SIMP_TAC (srw_ss()) [] >> METIS_TAC []);
-
-val EVERY2_APPEND_suff = Q.store_thm("EVERY2_APPEND_suff",
-   `EVERY2 R l1 l2 /\ EVERY2 R l3 l4 ==> EVERY2 R (l1 ++ l3) (l2 ++ l4)`,
-   metis_tac[EVERY2_APPEND])
+val EVERY2_APPEND_suff = save_thm(
+  "EVERY2_APPEND_suff", listTheory.LIST_REL_APPEND_suff);
 
 val EVERY2_DROP = Q.store_thm("EVERY2_DROP",
    `!R l1 l2 n.
