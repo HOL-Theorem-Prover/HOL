@@ -6,7 +6,7 @@ struct
   val add_sorting_compset =
       extend_compset [
         Defs [
-          PARTIION_DEF, PART_DEF, QSORT_DEF
+          PARTITION_DEF, PART_DEF, QSORT_DEF
         ]
       ]
 
