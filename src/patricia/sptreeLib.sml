@@ -62,32 +62,38 @@ val toAList_CONV =
   RATOR_CONV (Conv.REWR_CONV sptreeTheory.toAList_def) THENC foldi_CONV
 
 fun add_sptree_compset compset =
-  ( computeLib.add_thms
-     [sptreeTheory.delete_compute,
-      sptreeTheory.difference_def,
-      sptreeTheory.fromAList_def,
-      sptreeTheory.fromList_def,
-      sptreeTheory.insert_compute,
-      sptreeTheory.inter_def,
-      sptreeTheory.lookup_compute,
-      sptreeTheory.lrnext_thm,
-      sptreeTheory.map_def,
-      sptreeTheory.filter_v_def,
-      sptreeTheory.mk_BN_def,
-      sptreeTheory.mk_BS_def,
-      sptreeTheory.mk_wf_def,
-      sptreeTheory.size_def,
-      sptreeTheory.toListA_def,
-      sptreeTheory.toList_def,
-      sptreeTheory.union_def,
-      sptreeTheory.wf_def
-     ] compset
-  ; computeLib.add_conv (sptreeSyntax.foldi_tm, 4, foldi_CONV) compset
-  ; computeLib.add_conv (sptreeSyntax.domain_tm, 1, domain_CONV) compset
-  ; computeLib.add_conv (sptreeSyntax.toAList_tm, 1, toAList_CONV) compset
-  ; computeLib.add_datatype_info compset
-      (Option.valOf (TypeBase.fetch ``:'a sptree$spt``))
-  )
+    let
+      open sptreeTheory
+    in
+      computeLib.add_thms [
+        delete_compute,
+        difference_def,
+        filter_v_def,
+        fromAList_def,
+        fromList_def,
+        insert_compute,
+        inter_def,
+        inter_eq_def,
+        list_insert_def,
+        list_to_num_set_def,
+        lookup_compute,
+        lrnext_thm,
+        map_def,
+        mk_BN_def,
+        mk_BS_def,
+        mk_wf_def,
+        size_def,
+        toListA_def,
+        toList_def,
+        union_def,
+        wf_def
+      ] compset
+    ; computeLib.add_conv (sptreeSyntax.foldi_tm, 4, foldi_CONV) compset
+    ; computeLib.add_conv (sptreeSyntax.domain_tm, 1, domain_CONV) compset
+    ; computeLib.add_conv (sptreeSyntax.toAList_tm, 1, toAList_CONV) compset
+    ; computeLib.add_datatype_info compset
+            (Option.valOf (TypeBase.fetch ``:'a sptree$spt``))
+    end
 
 val SPTREE_CONV =
    let
