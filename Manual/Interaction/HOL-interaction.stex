@@ -125,14 +125,7 @@ Most HOL4 proofs are constructed using an interactive \emph{goal
 \end{enum}
 The HOL4 window should look something like this:
 \begin{code}
-> val it =
-     Proof manager status: 1 proof.
-  1. Incomplete goalstack:
-       Initial goal:
-       \(\forall\)n. n < n + 1
-
-   : proofs
-> val it = () : unit
+>>- g `!n. n < n + 1`
 \end{code}
 
 \mysubsec{Applying a tactic\label{apply}}
@@ -157,8 +150,7 @@ To go all the way back to the start of the proof (to restart), press \texttt{M-h
 
 One can pop goals off the goal stack by pressing {\tt M-h d}, which gives:
 \begin{code}
-> OK..
-val it = There are currently no proofs. : proofs
+>>- drop();
 \end{code}
 
 \mysubsec{Saving the resulting theorem\label{prove1}}
@@ -172,7 +164,8 @@ val LESS_ADD_1 = Q.prove(`!n. n < n + 1`, decide_tac);
 When the above line is copied into HOL4 (using text-selection then
 {\tt M-h M-r}, as described in Section~\ref{copy}), HOL4 responds with:
 \begin{code}
-> val LESS_ADD_1 = |- !n. n < n + 1 : thm
+>>__ open arithmeticTheory
+>>- LESS_ADD_1
 \end{code}
 
 \mysubsec{Saving proofs based on multiple tactics\label{prove2}}
@@ -252,7 +245,7 @@ val MAP_TREE_def = Define `
   (MAP_TREE f (BRANCH u v) = BRANCH (MAP_TREE f u) (MAP_TREE f v))`;
 \end{code}
 {\tt  SQUARE\_def} and {\tt  MAP\_TREE\_def} are theorems containing the
-above definitions. Theorems describing {\tt  TREE} can be retrieved by coping
+above definitions. Theorems describing {\tt  TREE} can be retrieved by copying
 the following into HOL4 (by pressing {\tt C-space} then {\tt M-h M-r}, Section~\ref{copy}).
 \begin{code}
 val TREE_11 = fetch "-" "TREE_11";
@@ -321,17 +314,7 @@ print_match [] {`}`n DIV m <= k{`}`
 \end{code}
 prints a list of theorems containing $n\; \texttt{\small DIV} \;m \leq k$ for some $n,m,k$:
 \begin{code}
-arithmeticTheory.DIV_LE_MONOTONE (THEOREM)
-------------------------------------------
-|- !n x y. 0 < n \(\land\) x <= y ==> x DIV n <= y DIV n
-
-arithmeticTheory.DIV_LE_X (THEOREM)
------------------------------------
-|- !x y z. 0 < z ==> (y DIV z <= x <=> y < (x + 1) * z)
-
-arithmeticTheory.DIV_LESS_EQ (THEOREM)
---------------------------------------
-|- !n. 0 < n ==> !k. k DIV n <= k
+>>- print_match [] ``n DIV m <= k``
 \end{code}
 Try to write increasingly specific queries if the returned list is long, \eg{}
 {\tt\small print\_match [] \sq \sq n DIV m\sq\sq} returns a list of length 32. Note that {\tt\small print\_match [] \sq \sq DIV\sq\sq}

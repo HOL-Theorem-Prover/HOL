@@ -1,0 +1,12 @@
+INCLUDES = $(HOLDIR)/Manual/Tools
+
+SCRIPTER = $(HOLDIR)/Manual/Tools/polyscripter
+
+all: HOL-interaction.pdf
+.PHONY: all
+
+HOL-interaction.pdf: HOL-interaction.tex
+	latexmk -pdf HOL-interaction
+
+HOL-interaction.tex: HOL-interaction.stex $(SCRIPTER)
+	$(SCRIPTER) $(HOLDIR)/Manual/Tools/umap < $< > $@
