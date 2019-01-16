@@ -328,7 +328,7 @@ local
 *)
     val lemma = auto_prove "make_ASM" (goal,
       CONV_TAC simp \\ REPEAT STRIP_TAC \\ IMP_RES_TAC ret_lemma
-      \\ ASM_SIMP_TAC std_ss [code_case_of,ARM_def,LET_THM]
+      \\ ASM_SIMP_TAC std_ss [code_case_of,ARM_def,M0_def,RISCV_def,LET_THM]
       \\ NTAC 20 (ONCE_REWRITE_TAC [var_word_apply_update])
       \\ CONV_TAC (DEPTH_CONV stringLib.string_EQ_CONV)
       \\ ASM_REWRITE_TAC [apply_update_NIL] THEN1 EVAL_TAC THEN1 EVAL_TAC
@@ -489,5 +489,12 @@ fun derive_insts_for sec_name = let
   val inst_count = int_to_string (length insts)
   val _ = write_line (inst_count ^ " inst theorems describe instructions.")
   in insts end;
+
+(*
+  val base_name = "loop-m0/example"
+  val _ = read_files base_name []
+  val _ = open_current "test"
+  val sec_name = "g"
+*)
 
 end
