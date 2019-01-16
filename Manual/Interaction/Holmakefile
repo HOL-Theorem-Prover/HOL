@@ -8,5 +8,7 @@ all: HOL-interaction.pdf
 HOL-interaction.pdf: HOL-interaction.tex
 	latexmk -pdf HOL-interaction
 
-HOL-interaction.tex: HOL-interaction.stex $(SCRIPTER)
-	$(SCRIPTER) $(HOLDIR)/Manual/Tools/umap < $< > $@
+HOL-interaction.tex: HOL-interaction.stex $(dprot $(SCRIPTER))
+	$(protect $(SCRIPTER)) $(protect $(HOLDIR)/Manual/Tools/umap) < $< > $@
+
+EXTRA_CLEANS = $(patsubst %,HOL-interaction.%,aux fdb_latexmk fls log pdf tex)
