@@ -130,7 +130,7 @@ quoteend = "`" | "\226\128\153";
                               ECHO yyarg
                                 (")),QUOTE \""^
                                  locpragma yyarg (yytext, yypos) 0)
-)
+                             )
                  else ECHO yyarg yytext);
 <INITIAL>"Theorem"{ws}+{alphaMLid}("["{alphaMLid_list}"]")? => (
   ifscript yyarg
@@ -140,6 +140,22 @@ quoteend = "`" | "\226\128\153";
       ECHO yyarg ("val " ^ thmname ^ " = " ^
                   "(fn q => fn tac => Q.store_thm(\"" ^ with_attrs_string ^
                   "\",q,tac))")
+    end) yytext
+);
+<INITIAL>"Theorem"{ws}+{alphaMLid}("["{alphaMLid_list}"]")?({ws}|{newline})+"("
+ => (
+  ifscript yyarg
+    (let
+      infix |> fun x |> f = f x
+      val s0 = String.extract(yytext,0,SOME (size yytext - 1)) (* drop lparen *)
+      val s = s0 |> Substring.full |> Substring.dropr Char.isSpace
+                 |> Substring.string (* drop wspace between name and lparen *)
+      val (thmname,with_attrs_string) = dest_ml_thm_binding s
+    in
+      ECHO yyarg (
+        "val " ^ thmname ^ " = " ^ "(fn rule => Theory.save_thm(\"" ^
+        with_attrs_string ^ "\",rule)) ("
+      )
     end) yytext
 );
 <INITIAL>{fullquotebegin} {ws}* ":" ({letter} | {ws} | [('] | {digit} | {lowergreek}) => (
