@@ -3,51 +3,29 @@ sig
 
   include Abbrev
 
-  (* Training set *)
-  type allex = {
-    tacevalex : (term * real) list,
-    tacpoliex : (term * real list) list,
-    stopevalex : (term * real) list,
-    stoppoliex : (term * real list) list,
-    lrevalex : (term * real) list,
-    lrpoliex : (term * real list) list,
-    imitevalex : (term * real) list,
-    imitpoliex : (term * real list) list,
-    conjunctevalex : (term * real) list,
-    conjunctpoliex : (term * real list) list
-    }
-  val empty_allex : allex
+  (* tool *)
+  val split_traintest :
+    real -> (''a * 'b) list -> (''a * 'b) list * (''a * 'b) list
 
-  val add_simulex : (rlRules.board,rlRules.move) psMCTS.tree * allex -> allex
-
-  val discard_oldex : allex -> int -> allex
-
-  (* Neural networks *)
-  type alltnn =
-    {
-    taceval : mlTreeNeuralNetwork.treenn,
-    tacpoli : mlTreeNeuralNetwork.treenn,
-    stopeval : mlTreeNeuralNetwork.treenn,
-    stoppoli : mlTreeNeuralNetwork.treenn,
-    lreval : mlTreeNeuralNetwork.treenn,
-    lrpoli : mlTreeNeuralNetwork.treenn,
-    imiteval : mlTreeNeuralNetwork.treenn,
-    imitpoli : mlTreeNeuralNetwork.treenn,
-    conjuncteval : mlTreeNeuralNetwork.treenn,
-    conjunctpoli : mlTreeNeuralNetwork.treenn
-    }
-  val random_alltnn : int -> (term * int) list -> alltnn
-
-  (* Training *)
-  val train_tnn_eval :
-    int -> mlTreeNeuralNetwork.treenn -> (term * real) list ->
+  (* tree neural network *)
+  val train_tnn_eval : int ->
+    mlTreeNeuralNetwork.treenn -> (term * real) list * (term * real) list ->
+    mlTreeNeuralNetwork.treenn
+  val train_tnn_poli : int ->
+    mlTreeNeuralNetwork.treenn ->
+    (term * real list) list * (term * real list) list ->
     mlTreeNeuralNetwork.treenn
 
-  val train_tnn_poli :
-    int -> mlTreeNeuralNetwork.treenn -> (term * real list) list ->
-    mlTreeNeuralNetwork.treenn
+  (* nearest neighbor *)
+  type knninfo = (int, real) Redblackmap.dict * (term, int list) Redblackmap.dict
+  val train_knn : (term * 'a) list -> (knninfo *  (term, 'a) Redblackmap.dict)
+  val infer_knn : (knninfo *  (term, 'a) Redblackmap.dict) -> term -> 'a
 
-  val all_train : int -> (term * int) list -> allex -> alltnn
+  (* binary classification accuracy *) 
+  val tnn_accuracy : 
+    mlTreeNeuralNetwork.treenn -> (term * real) list -> real
+  val knn_accuracy :
+    knninfo * (term, real) Redblackmap.dict -> (term * real) list -> real
 
 
 end

@@ -268,7 +268,9 @@ fun train_treenn_nepoch n dim (treenn,trainloss) size (ptrain,ptest) =
   let
     val batchl = mk_batch size (shuffle ptrain)
     val (newtreenn,newtrainloss) = train_treenn_epoch dim treenn batchl
-    val testloss = calc_testloss newtreenn ptest
+    val testloss = if length ptest > 0
+                   then calc_testloss newtreenn ptest
+                   else 0.0
     val _ = print_endline
       ("train: " ^ pad 8 "0" (Real.toString (approx 6 newtrainloss)) ^
        " test: " ^ pad 8 "0" (Real.toString (approx 6 testloss)))

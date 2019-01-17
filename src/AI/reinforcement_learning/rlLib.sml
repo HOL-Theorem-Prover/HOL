@@ -36,7 +36,6 @@ fun ground_decide thml tm =
   let val (gl,v) = REWRITE_TAC thml ([],tm) in null gl end
   handle HOL_ERR _ => false
 
-
 (* -------------------------------------------------------------------------
    Readability
    ------------------------------------------------------------------------- *)
@@ -80,10 +79,14 @@ fun negate x = if is_neg x then dest_neg x else mk_neg x
 
 fun is_subtm a b = can (find_term (fn x => x = a)) b
 
+fun is_refl tm =
+  let val (a,b) = dest_eq tm in a = b end handle HOL_ERR _ => false
+
 (* -------------------------------------------------------------------------
    Position in term
    ------------------------------------------------------------------------- *)
 
+(* todo: standardize these *)
 fun sub_at_pos tm (pos,res) =
   if null pos then res else
   let
@@ -158,6 +161,22 @@ fun match_subtm subtm (tm1,tm2) =
     match_subtm subtm (newtm1,newtm2)
   end
 
+fun sub_tac (tm,pos) ax =
+  let val subtm = subtm_at_pos pos tm in
+    if can (match_term (lhs ax)) subtm then
+      let
+        val (sub,_) = match_term (lhs ax) subtm
+        val res = subst sub (rhs ax)
+        val holetm = hole_position (tm,pos)
+        val holesub = [{redex = numhole_var, residue = res}]
+      in
+        subst holesub holetm
+      end
+    else raise ERR "sub_tac" ""
+  end
+
+fun sym_tac tm = let val (a,b) = dest_eq tm in mk_eq (b,a) end;
+
 (* -------------------------------------------------------------------------
    Arithmetic tools
    ------------------------------------------------------------------------- *)
@@ -227,7 +246,7 @@ fun train_tnn_either preparef infof dim randtnn (trainset,testset) =
   if null trainset then (print_endline "empty set"; randtnn) else
   let
     val _        = print_endline (infof trainset)
-    val bsize    = if length trainset < 16 then 1 else 16
+    val bsize    = 64
     val schedule = [(50,0.1),(50,0.01)]
     val pset  = (preparef trainset, preparef testset)
     val ((tnn,loss), nn_tim) =
@@ -269,6 +288,4 @@ fun infer_knn (knninfo,d) tm =
   end
 
 end (* struct *)
-
-
 

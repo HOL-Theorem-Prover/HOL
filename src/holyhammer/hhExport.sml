@@ -220,12 +220,23 @@ fun sexpr_write_thy thy =
 fun sexpr_write_thy_ancestry thy =
   app sexpr_write_thy (sort_thyl (thy :: ancestry thy))
 
+fun sexpr_write_thyl_ancestry thyl =
+  app sexpr_write_thy (sort_thyl thyl)
+
 fun write_thy_ancestry_order thy =
   let
     val _ = mkDir_err casc_sexpr_dir
     val file = casc_sexpr_dir ^ "/theory_order"
   in
     writel file [String.concatWith " " (sort_thyl (thy :: ancestry thy))]
+  end
+
+fun write_thyl_ancestry_order thyl =
+  let
+    val _ = mkDir_err casc_sexpr_dir
+    val file = casc_sexpr_dir ^ "/theory_order"
+  in
+    writel file [String.concatWith " " (sort_thyl thyl)]
   end
 
 (* -------------------------------------------------------------------------
@@ -235,6 +246,7 @@ fun write_thy_ancestry_order thy =
 val fof_export_dir = HOLDIR ^ "/src/holyhammer/fof_export"
 val fof_targets_file = fof_export_dir ^ "/fof_targets"
 val fof_problems_dir = fof_export_dir ^ "/fof_problems"
+val fof_chainy_dir = fof_export_dir ^ "/fof_chainy"
 
 fun fof_export_pb (file,(premises,cj)) =
   (
@@ -255,6 +267,21 @@ fun fof_export_thy thy =
   in
     app fof_export_pb pbl4
   end
+(*
+fun fof_export_statement_thy thy =
+  let
+    val _ = mkDir_err fof_export_dir
+    val _ = mkDir_err fof_problems_dir
+    val thml = DB.thms thy
+    fun cmp ((_,th1),(_,th2)) =
+      Int.compare (depnumber_of_thm th1, depnumber_of_thm th2)
+    val pbl1 = map_snd (fn x => ([], x)) thml
+    val pbl3 = map_snd (fn (a,b) => (a, list_mk_imp (dest_thm b))) pbl1
+    val pbl4 = map_fst (fn x => fof_problems_dir ^ "/" ^ sexpr_of_thm (thy,x)) pbl3
+  in
+    app fof_export_pb pbl4
+  end
+*)
 
 end (* struct *)
 
@@ -264,12 +291,13 @@ end (* struct *)
 
   (* fof export *)
   val _ = complete_flag := true;
-  app fof_export_thy (sort_thyl ("list" :: ancestry "list"));
+  app fof_export_thy thyl;
 
   (* sexpr export *)
-  sexpr_write_thy_ancestry "list";
-  write_thy_ancestry_order "list";
+  load "tttUnfold"; open tttUnfold; load_sigobj ();
+  val thyl = ancestry "scratch";
+  sexpr_write_thyl_ancestry thyl;
+  write_thyl_ancestry_order thyl;
 
 *)
-
 

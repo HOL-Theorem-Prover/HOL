@@ -34,6 +34,8 @@ fun string_of_genvar iref =
     3 applying beta conversion whenever possible
   -------------------------------------------------------------------------- *)
 
+
+
 fun ELIM_LAMBDA_EQ tm =
   let val (l, r) = dest_eq tm in
     (

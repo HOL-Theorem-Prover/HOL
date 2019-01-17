@@ -1,1 +1,1 @@
-local open rlProve rlMiniProve in end
+local open rlEnv in end

@@ -1,38 +1,19 @@
 (* ========================================================================= *)
-(* FILE          : rlMiniRules.sml                                           *)
+(* FILE          : rlGameRewrite.sml                                         *)
 (* DESCRIPTION   : Theorem prover based on cut introduction                  *)
 (* AUTHOR        : (c) Thibault Gauthier, Czech Technical University         *)
 (* DATE          : 2018                                                      *)
 (* ========================================================================= *)
 
-structure rlMiniRules :> rlMiniRules =
+structure rlGameRewrite :> rlGameRewrite =
 struct
 
 open HolKernel boolLib Abbrev aiLib rlLib
 
-val ERR = mk_HOL_ERR "rlMiniRules"
+val ERR = mk_HOL_ERR "rlGameRewrite"
 val debugdir = HOLDIR ^ "/src/AI/reinforcement_learning/debug"
-fun debug s = debug_in_dir debugdir "rlMiniRules" s
+fun debug s = debug_in_dir debugdir "rlGameRewrite" s
 
-(* -------------------------------------------------------------------------
-   Helpers
-   ------------------------------------------------------------------------- *)
-
-fun is_refl tm =
-  let val (a,b) = dest_eq tm in a = b end handle HOL_ERR _ => false
-fun sub_tac (tm,pos) ax =
-  let val subtm = subtm_at_pos pos tm in
-    if can (match_term (lhs ax)) subtm then
-      let
-        val (sub,_) = match_term (lhs ax) subtm
-        val res = subst sub (rhs ax)
-        val holetm = hole_position (tm,pos)
-        val holesub = [{redex = numhole_var, residue = res}]
-      in
-        subst holesub holetm
-      end
-    else raise ERR "sub_tac" ""
-  end
 
 (* -------------------------------------------------------------------------
    Board
@@ -42,14 +23,16 @@ fun sub_tac (tm,pos) ax =
 datatype board =
   StopBoard of (term * int list) |
   LrBoard of (term * int list) |
-  SubBoard of (term * int list)
+  SubBoard of (term * int list) |
+  FailBoard 
 
 type situation = bool * board
 
-val failsit = (true, LrBoard (F,[]))
+fun startpos target = (true, LrBoard (target,[]))
+
+val failsit = (true, FailBoard)
 
 (* axioms *)
-fun sym_tac tm = let val (a,b) = dest_eq tm in mk_eq (b,a) end;
 val ax1 = ``x + 0 = x``;
 val ax2 = ``x * 0 = 0``;
 val ax3 = ``x + SUC y = SUC (x + y)``;
@@ -57,12 +40,6 @@ val ax4 = ``x * SUC y = x * y + x``;
 val ax5 = sym_tac ax3;
 val ax6 = sym_tac ax4;
 val ax7 = sym_tac ax1;
-
-(*
-load "holyHammer"; open holyHammer;
-val axl_glob = [ax1,ax2,ax3,ax4,ax5,ax6,ax7];
-val thml = map holyhammer axl_glob;
-*)
 
 fun nntm_of_sit sit = case sit of
     (true, StopBoard (tm,pos)) =>
@@ -165,6 +142,5 @@ fun string_of_move move = case move of
     StopMove stop => string_of_stopchoice stop
   | LrMove lr => string_of_lrchoice lr
   | SubMove imit => string_of_subchoice imit
-
 
 end (* struct *)
