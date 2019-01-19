@@ -157,8 +157,11 @@ fun backup decay tree (id,eval) =
    Adding dirichlet noise (alpha = 0.5)
    ------------------------------------------------------------------------- *)
 
-fun gamma_density x = 
-  (Math.pow (x, 0.5 - 1.0) * Math.exp (~ x)) / (Math.sqrt Math.pi)
+val alpha = 0.5
+
+fun gamma_density x =
+  (Math.pow (x, alpha - 1.0) * Math.exp (~ x)) / (Math.sqrt Math.pi)
+(* Gamma (alpha) *)
 
 fun interval (step:real) (a,b) =
   if a + (step / 2.0) > b then [b] else a :: interval step (a + step,b)
@@ -167,11 +170,11 @@ val gamma_distrib = map_assoc gamma_density (interval 0.01 (0.01,10.0));
 
 fun proba_norm l =
   let val sum = sum_real l in
-    if sum <= 0.0 then raise ERR "proba_norm" "" else 
+    if sum <= 0.0 then raise ERR "proba_norm" "" else
     map (fn x => x / sum) l
   end
 
-fun dirichlet_noise n = 
+fun dirichlet_noise n =
   if n = 0 then [] else
   let val l = List.tabulate (n, fn _ => select_in_distrib gamma_distrib) in
     proba_norm l
@@ -179,7 +182,7 @@ fun dirichlet_noise n =
 
 fun add_root_noise tree =
   let
-    val {pol,sit,sum,vis,status} = dfind [0] tree 
+    val {pol,sit,sum,vis,status} = dfind [0] tree
     val noisel = dirichlet_noise (length pol)
     fun f (((move,polv),cid),noise) = ((move, 0.75 * polv + 0.25 * noise), cid)
     val newpol = map f (combine (pol,noisel))
@@ -187,7 +190,7 @@ fun add_root_noise tree =
     dadd [0] {pol=newpol,sit=sit,sum=sum,vis=vis,status=status} tree
   end
 
-(* --------------------------------------------------------------------------
+(* -------------------------------------------------------------------------
    Node creation
    ------------------------------------------------------------------------- *)
 
@@ -284,7 +287,7 @@ fun starttree_of decay ((status_of,apply_move),fep) startsit =
 
 fun mcts (nsim,decay) ((status_of,apply_move),fep) starttree =
   let
-    val starttree_noise = add_root_noise starttree
+    val starttree_noise = (* add_root_noise *) starttree
     val fep_timed = fevalpoli_timer fep
     val status_of_timed = status_of_timer status_of
     val apply_move_timed = apply_move_timer apply_move
@@ -438,7 +441,8 @@ fun make_distrib tree id =
   end
 
 (* -------------------------------------------------------------------------
-   Rescaling the distribution for the training examples
+   Rescaling the distribution for the training examples.
+   Make the training example not ignore the status.
    ------------------------------------------------------------------------- *)
 
 fun swap (a,b) = (b,a)
@@ -458,11 +462,11 @@ fun evalpoli_example tree id =
   end
 
 (* -------------------------------------------------------------------------
-   Big step selection 
+   Big step selection
    (todo: change the temperature to something close to zero?)
    ------------------------------------------------------------------------- *)
 
-fun best_in_distrib distrib = 
+fun best_in_distrib distrib =
   let fun cmp (a,b) = Real.compare (snd a,snd b) in
     fst (hd (dict_sort cmp distrib))
   end
@@ -479,7 +483,7 @@ fun select_bigstep tree id =
   in
     if tot < 0.5
     then (print_endline "  This is the END."; NONE)
-    else SOME (best_in_distrib dis1)
+    else SOME (select_in_distrib dis1)
   end
 
 

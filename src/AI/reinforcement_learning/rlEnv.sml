@@ -20,12 +20,12 @@ val ERR = mk_HOL_ERR "rlEnv"
 
 val knn_flag = ref false (* use nearest neighbor instead for comparison *)
 
-type ('a,''b,'c,'d) sittools = 
+type ('a,''b,'c,'d) sittools =
   {
   class_of_sit: 'a sit -> ''b,
   mk_startsit: 'c -> 'a sit,
   movel_in_sit: ''b -> 'd list,
-  nntm_of_sit: 'a sit -> term, 
+  nntm_of_sit: 'a sit -> term,
   sitclassl: ''b list
   }
 
@@ -50,8 +50,7 @@ fun log_eval file s =
     append_endline path s
   end
 
-fun summary s = 
-  log_eval ("rlEnv_test2" ^ (if !knn_flag then "knn" else "tnn"))  s
+fun summary s = log_eval "rlEnv_test3"  s
 
 (* -------------------------------------------------------------------------
    Evaluation and policy
@@ -71,8 +70,8 @@ fun mk_fep_alltnn sittools alltnn sit =
    Examples
    ------------------------------------------------------------------------- *)
 
-fun update_allex (sitclass,(nntm,(e,p))) allex = 
-  let 
+fun update_allex (sitclass,(nntm,(e,p))) allex =
+  let
     val (eex,pex) = assoc sitclass allex
     val (neweex,newpex) = ((nntm,e) :: eex, (nntm,p) :: pex)
     fun f x = if fst x = sitclass then (sitclass,(neweex,newpex)) else x
@@ -87,28 +86,29 @@ fun update_allex_from_tree sittools tree allex =
     val sit  = #sit root
     val nntm = (#nntm_of_sit sittools) sit
   in
-    if can (#class_of_sit sittools) sit then 
+    if can (#class_of_sit sittools) sit then
       let val sitclass = (#class_of_sit sittools) sit in
         case epo of
-          NONE    => allex 
+          NONE    => allex
         | SOME ep => update_allex (sitclass,(nntm,ep)) allex
       end
     else allex
   end
-  
 
-fun discard_oldex allex n = 
+
+fun discard_oldex allex n =
   map_snd (fn (a,b) => (first_n n a, first_n n b)) allex
 
-fun empty_allex sitclassl = 
-  let fun f _ = ([],[]) in map_assoc f sitclassl end 
+fun empty_allex sitclassl =
+  let fun f _ = ([],[]) in map_assoc f sitclassl end
 
 (* -------------------------------------------------------------------------
    MCTS big steps
    ------------------------------------------------------------------------- *)
 
-fun n_bigsteps (n,nmax) sittools pbspec (allex,allroot,endroot) tree =
-  if n >= nmax then (allex,allroot,endroot) else
+fun n_bigsteps (n,nmax) sittools pbspec (allex,allroot,endroot,provenl)
+  target tree =
+  if n >= nmax then (allex,allroot,endroot,provenl) else
   let
     val nntm_of_sit = #nntm_of_sit sittools
     val sit = #sit (dfind [0] tree)
@@ -118,9 +118,13 @@ fun n_bigsteps (n,nmax) sittools pbspec (allex,allroot,endroot) tree =
     val cido = select_bigstep newtree [0]
   in
     case cido of NONE =>
-      let val root = dfind [0] newtree in
-        (update_allex_from_tree sittools newtree allex, 
-         root :: allroot, root :: endroot)
+      let
+        val root = dfind [0] newtree
+        val status = (fst (fst pbspec)) (#sit root)
+        val newprovenl = if status = Win then target :: provenl else provenl
+      in
+        (update_allex_from_tree sittools newtree allex,
+         root :: allroot, root :: endroot, newprovenl)
       end
    | SOME cid =>
       let
@@ -130,16 +134,19 @@ fun n_bigsteps (n,nmax) sittools pbspec (allex,allroot,endroot) tree =
         val newallex = update_allex_from_tree sittools newtree allex
       in
         (* print_endline ("  " ^ string_of_move (move_of_cid root cid)); *)
-        n_bigsteps (n+1,nmax) sittools pbspec (newallex,newallroot,endroot) cuttree
+        n_bigsteps (n+1,nmax) sittools pbspec
+        (newallex,newallroot,endroot,provenl) target cuttree
       end
   end
 
-fun n_bigsteps_target n sittools pbspec (target,(allex,allroot,endroot)) =
-  let 
+fun n_bigsteps_target n sittools pbspec
+  (target,(allex,allroot,endroot,provenl)) =
+  let
     val mk_startsit = #mk_startsit sittools
-    val tree = starttree_of decay_glob pbspec (mk_startsit target) 
+    val tree = starttree_of decay_glob pbspec (mk_startsit target)
   in
-    n_bigsteps (0,n) sittools pbspec (allex,allroot,endroot) tree
+    n_bigsteps (0,n) sittools pbspec 
+    (allex,allroot,endroot,provenl) target tree
   end
 
 (* -------------------------------------------------------------------------
@@ -152,8 +159,8 @@ fun random_eptnn movel_in_sit (operl,dim) sitclass =
   end
 
 fun train_alltnn movel_in_sit (operl,dim) allex =
-  let 
-    fun f (sitclass,(evalex,poliex)) = 
+  let
+    fun f (sitclass,(evalex,poliex)) =
       let val (etnn,ptnn) = random_eptnn movel_in_sit (operl,dim) sitclass in
         (sitclass,
         (train_tnn_eval dim etnn (split_traintest trainsplit_glob evalex),
@@ -182,14 +189,14 @@ fun summary_wins pbspec (allroot,endroot) =
    ------------------------------------------------------------------------- *)
 
 fun explore_f sittools pbspec allex targetl =
-  let 
-    val ((new_allex,allroot,endroot),t) =
-      add_time (foldl (n_bigsteps_target bigsteps_glob sittools pbspec) 
-      (allex,[],[])) targetl
+  let
+    val ((new_allex,allroot,endroot,provenl),t) =
+      add_time (foldl (n_bigsteps_target bigsteps_glob sittools pbspec)
+      (allex,[],[],[])) targetl
     val _ = summary ("Exploration time : " ^ Real.toString t)
     val _ = summary_wins pbspec (allroot,endroot)
   in
-    new_allex
+    (new_allex,provenl)
   end
 
 fun train_f movel_in_sit tnnspec allex =
@@ -200,17 +207,18 @@ fun train_f movel_in_sit tnnspec allex =
     alltnn
   end
 
-fun rl_start sittools tnnspec rulespec targetl =
+fun rl_start sittools tnnspec rulespec targetdata =
   let
-    val _ = summary "Generation 0" 
+    val _ = summary "Generation 0"
     val sitclassl = #sitclassl sittools
-    val alltnn = 
+    val alltnn =
       map_assoc (random_eptnn (#movel_in_sit sittools) tnnspec) sitclassl
     val pbspec = (rulespec, mk_fep_alltnn sittools alltnn)
     val allex = empty_allex sitclassl
-    val new_allex = explore_f sittools pbspec allex targetl
+    val targetl = first_n 200 (snd targetdata)
+    val (new_allex,provenl) = explore_f sittools pbspec allex targetl
   in
-    discard_oldex new_allex exwindow_glob
+    (discard_oldex new_allex exwindow_glob,provenl)
   end
 
 fun rl_one n sittools tnnspec rulespec targetl allex =
@@ -218,30 +226,32 @@ fun rl_one n sittools tnnspec rulespec targetl allex =
     val _ = summary ("Generation " ^ int_to_string n)
     val alltnn = train_f (#movel_in_sit sittools) tnnspec allex
     val pbspec = (rulespec, mk_fep_alltnn sittools alltnn)
-    val new_allex = explore_f sittools pbspec allex targetl
+    val (newallex,provenl) = explore_f sittools pbspec allex targetl
   in
-    discard_oldex new_allex exwindow_glob
+    (discard_oldex newallex exwindow_glob,provenl)
   end
 
-fun rl_loop (n,nmax) sittools tnnspec rulespec targetl allex =
-  if n >= nmax then allex else
-    let val new_allex = rl_one n sittools tnnspec rulespec targetl allex in
-      rl_loop (n+1, nmax) sittools tnnspec rulespec targetl new_allex
+fun rl_loop (n,nmax) sittools tnnspec rulespec 
+  targetdata update_targetdata allex =
+  if n >= nmax then (targetdata,allex) else
+    let
+      val targetl = first_n 200 (snd targetdata) (* match rlData value *)
+      val (newallex,provenl) =
+      rl_one n sittools tnnspec rulespec targetl allex
+      (* todo: make generic *)
+      val newtargetdata = update_targetdata provenl targetdata
+    in
+      rl_loop (n+1, nmax) sittools tnnspec rulespec 
+      newtargetdata update_targetdata newallex
     end
 
-fun start_rl_loop nmax sittools tnnspec rulespec targetl =
-  let val allex = rl_start sittools tnnspec rulespec targetl in
-    rl_loop (1,nmax) sittools tnnspec rulespec targetl allex
+fun start_rl_loop nmax sittools tnnspec rulespec targetdata update_targetdata =
+  let 
+    val (allex,provenl) = rl_start sittools tnnspec rulespec targetdata 
+    val newtargetdata = update_targetdata provenl targetdata
+  in
+    rl_loop (1,nmax) sittools tnnspec rulespec newtargetdata update_targetdata allex
   end
-
-
-
-(* todo: restore support for the knn predictor 
-   maybe a flag ? 
-   init_alltnn 
-   init_allknn 
-   mk_fep_allknn 
- *)
 
 (*
 load "rlLib"; load "rlGameCopy"; load "rlEnv"; load "rlData";
@@ -251,9 +261,9 @@ ignorestatus_flag := true;
 val operl = (numtag_var,1) :: operl_of_term ``SUC 0 + 0 = 0``;
 val dim = 6;
 val tnnspec = (operl,dim);
-val targetl = data_copy ();
+val targetdata = init_incdata ();
 val nmax = 10;
-val allex = start_rl_loop nmax sittools tnnspec rulespec targetl;
+val allex = start_rl_loop nmax sittools tnnspec rulespec targetdata update_incdata;
 *)
 
 

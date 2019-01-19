@@ -217,16 +217,45 @@ fun data_mg2 () = select_mg2 (predata_mg2 ())
 fun predata_copy () =
   let
     val cset = [``0``,``$+``,``SUC``]
-    val tml0 = gen_term_size 10 (``:num``,cset)
+    val tml0 = gen_term_size 15 (``:num``,cset)
     fun f x = (term_size x, x)
     val tmld = dregroup Int.compare (map f tml0)
   in
-    map snd (dlist tmld)  
+    map snd (dlist tmld)
   end
 
-fun select_copy x = first_n 100 (List.concat (map (random_subset 20) x));
+fun select_copy x = first_n 200 (List.concat (map (random_subset 20) x));
 
+(* ground truth *)
 fun data_copy () = select_copy (predata_copy ());
+
+fun init_incdata () =
+  let
+    val cset = [``0``,``$+``,``SUC``]
+    val tml0 = gen_term_size 10 (``:num``,cset)
+  in
+    ([],tml0)
+  end
+
+fun update_incdata provenl (pl,ul) =
+  let
+    val (targetl,ulr) = part_n 200 ul (* should match rlEnv value *)
+    fun is_proven x = mem x provenl
+    val (pl',ul') = partition is_proven targetl
+  in
+    (pl @ pl', ul' @ ulr)
+  end
+
+
+
+
+
+
+
+
+
+
+
 
 end (* struct *)
 

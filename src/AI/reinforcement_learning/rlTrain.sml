@@ -123,9 +123,12 @@ fun f_accuracy f testset =
 fun tnn_accuracy tnn testset = f_accuracy (eval_treenn tnn) testset
 fun knn_accuracy knn testset = f_accuracy (infer_knn knn) testset
 
+(* Move to rlSupervisedExp
 
-    
-(* Move to rlExp
+tree-edit distance.
+make a dataset see if it can learn the tree edit distance.
+
+
 load "rlMiniTruth"; open rlLib rlMiniEx rlMiniTruth mlTreeNeuralNetwork;
 val (trainset,testset) = data_nboccurSUC ();
 val operl = operl_of_term ``SUC 0 + 0 * 0``;

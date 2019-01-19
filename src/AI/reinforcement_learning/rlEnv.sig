@@ -9,12 +9,12 @@ sig
    'c is the type of targets (term usually)
    'd is the type of move
   *)
-  type ('a,''b,'c,'d) sittools = 
+  type ('a,''b,'c,'d) sittools =
     {
     class_of_sit: 'a psMCTS.sit -> ''b,
     mk_startsit: 'c -> 'a psMCTS.sit,
     movel_in_sit: ''b -> 'd list,
-    nntm_of_sit: 'a psMCTS.sit -> term, 
+    nntm_of_sit: 'a psMCTS.sit -> term,
     sitclassl: ''b list
     }
 
@@ -22,7 +22,9 @@ sig
     ('a,''b,'c,'d) sittools ->
     ((term * int) list * int) ->
     ('a psMCTS.sit -> psMCTS.status) * ('d -> 'a psMCTS.sit -> 'a psMCTS.sit) ->
-    'c list ->
-    (''b * ((term * real) list * (term * real list) list)) list
+    ('c list * 'c list) ->
+    ('c list -> ('c list * 'c list) -> ('c list * 'c list)) ->
+      ('c list * 'c list) *
+      (''b * ((term * real) list * (term * real list) list)) list
 
 end
