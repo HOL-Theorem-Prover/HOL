@@ -33,9 +33,9 @@ type ('a,''b,'c,'d) sittools =
    Hard-coded parameters
    ------------------------------------------------------------------------- *)
 
-val exwindow_glob = 10000
+val exwindow_glob = 100000
 val bigsteps_glob = 50
-val nsim_glob = 100
+val nsim_glob = 400
 val decay_glob = 0.99
 val trainsplit_glob = 0.9 (* 10 percent of the data used for testing *)
 
@@ -50,7 +50,7 @@ fun log_eval file s =
     append_endline path s
   end
 
-fun summary s = log_eval "rlEnv_test3"  s
+fun summary s = log_eval "rlEnv_test8"  s
 
 (* -------------------------------------------------------------------------
    Evaluation and policy
@@ -82,7 +82,7 @@ fun update_allex (sitclass,(nntm,(e,p))) allex =
 fun update_allex_from_tree sittools tree allex =
   let
     val root = dfind [0] tree
-    val epo  = evalpoli_example tree [0]
+    val epo  = evalpoli_example tree
     val sit  = #sit root
     val nntm = (#nntm_of_sit sittools) sit
   in
@@ -106,49 +106,43 @@ fun empty_allex sitclassl =
    MCTS big steps
    ------------------------------------------------------------------------- *)
 
-fun n_bigsteps (n,nmax) sittools pbspec (allex,allroot,endroot,provenl)
-  target tree =
-  if n >= nmax then (allex,allroot,endroot,provenl) else
+fun n_bigsteps_loop (n,nmax) sittools pbspec (allex,allroot) tree =
+  if n >= nmax then (allex,allroot) else
   let
     val nntm_of_sit = #nntm_of_sit sittools
     val sit = #sit (dfind [0] tree)
     val _ = print_endline (int_to_string n ^ ": " ^
                            term_to_string (nntm_of_sit sit))
     val newtree = mcts (nsim_glob, decay_glob) pbspec tree
+    val root = dfind [0] newtree
     val cido = select_bigstep newtree [0]
   in
-    case cido of NONE =>
-      let
-        val root = dfind [0] newtree
-        val status = (fst (fst pbspec)) (#sit root)
-        val newprovenl = if status = Win then target :: provenl else provenl
-      in
-        (update_allex_from_tree sittools newtree allex,
-         root :: allroot, root :: endroot, newprovenl)
-      end
+    case cido of
+     NONE => (allex, root :: allroot)
    | SOME cid =>
       let
-        val root = dfind [0] newtree
-        val newallroot = root :: allroot
         val cuttree = cut_tree newtree cid
         val newallex = update_allex_from_tree sittools newtree allex
       in
         (* print_endline ("  " ^ string_of_move (move_of_cid root cid)); *)
-        n_bigsteps (n+1,nmax) sittools pbspec
-        (newallex,newallroot,endroot,provenl) target cuttree
+        n_bigsteps_loop (n+1,nmax) sittools pbspec
+        (newallex, root :: allroot) cuttree
       end
   end
 
-fun n_bigsteps_target n sittools pbspec
-  (target,(allex,allroot,endroot,provenl)) =
+fun n_bigsteps n sittools pbspec target =
   let
     val mk_startsit = #mk_startsit sittools
     val tree = starttree_of decay_glob pbspec (mk_startsit target)
+    val allex = empty_allex (#sitclassl sittools)
   in
-    n_bigsteps (0,n) sittools pbspec 
-    (allex,allroot,endroot,provenl) target tree
+    n_bigsteps_loop (0,n) sittools pbspec (allex,[]) tree
   end
 
+(*
+  val status = (fst (fst pbspec)) (#sit root)
+  val newprovenl = if status = Win then target :: provenl else provenl
+*)
 (* -------------------------------------------------------------------------
    Training
    ------------------------------------------------------------------------- *)
@@ -174,29 +168,49 @@ fun train_alltnn movel_in_sit (operl,dim) allex =
    Results
    ------------------------------------------------------------------------- *)
 
-fun summary_wins pbspec (allroot,endroot) =
+fun summary_wins pbspec allrootl =
   let
+    val endrootl = map hd allrootl
+    val startrootl = map last allrootl
+    fun value x = #sum x / #vis x
+    val w5 = average_real (map value startrootl)
     val status_of = fst (fst pbspec)
-    val w1 = length (filter (fn x => status_of (#sit x) = Win) endroot)
-    val w2 = length (filter (fn x => #status x = Win) endroot)
-    val w3 = length (filter (fn x => #status x = Win) allroot)
+    val w1 = length (filter (fn x => status_of (#sit x) = Win) endrootl)
+    val w2 = length (filter (fn x => #status x = Win) endrootl)
+    val w3 = length (filter (fn x => #status x = Win) (List.concat allrootl))
+    val w4 = length (filter (fn x => #status x = Win) startrootl)
+    val r1 = Real.fromInt (length (List.concat allrootl)) / 50.0
+    val r2 = Real.fromInt w3 / 50.0
   in
-    summary ("Wins: " ^ String.concatWith " " (map int_to_string [w1,w2,w3]))
+    summary ("Win start: " ^ int_to_string w4);
+    summary ("Value start: " ^ Real.toString w5);
+    summary ("Win end: " ^ String.concatWith " " (map int_to_string [w1,w2]));
+    summary ("Big steps (average): " ^ Real.toString r1);
+    summary ("Win nodes (average): " ^ Real.toString r2)
   end
 
 (* -------------------------------------------------------------------------
    Reinforcement learning loop
    ------------------------------------------------------------------------- *)
 
+fun merge_ex (exl,allex) =
+  let
+    val l = combine (exl,allex)
+    fun f ((_,(e1,p1)),(x,(e2,p2))) = (x, (e1 @ e2, p1 @ p2))
+  in
+    map f l
+  end
+
 fun explore_f sittools pbspec allex targetl =
   let
-    val ((new_allex,allroot,endroot,provenl),t) =
-      add_time (foldl (n_bigsteps_target bigsteps_glob sittools pbspec)
-      (allex,[],[],[])) targetl
+    val (result,t) =
+      add_time (map (n_bigsteps bigsteps_glob sittools pbspec)) targetl
+    val (allexl,allrootl) = split result
     val _ = summary ("Exploration time : " ^ Real.toString t)
-    val _ = summary_wins pbspec (allroot,endroot)
+    val _ = summary_wins pbspec allrootl
+    val newallex = foldl merge_ex allex allexl
   in
-    (new_allex,provenl)
+    (newallex,[])
   end
 
 fun train_f movel_in_sit tnnspec allex =
@@ -215,7 +229,7 @@ fun rl_start sittools tnnspec rulespec targetdata =
       map_assoc (random_eptnn (#movel_in_sit sittools) tnnspec) sitclassl
     val pbspec = (rulespec, mk_fep_alltnn sittools alltnn)
     val allex = empty_allex sitclassl
-    val targetl = first_n 200 (snd targetdata)
+    val targetl = first_n 50 (snd targetdata)
     val (new_allex,provenl) = explore_f sittools pbspec allex targetl
   in
     (discard_oldex new_allex exwindow_glob,provenl)
@@ -231,23 +245,21 @@ fun rl_one n sittools tnnspec rulespec targetl allex =
     (discard_oldex newallex exwindow_glob,provenl)
   end
 
-fun rl_loop (n,nmax) sittools tnnspec rulespec 
+fun rl_loop (n,nmax) sittools tnnspec rulespec
   targetdata update_targetdata allex =
-  if n >= nmax then (targetdata,allex) else
+  if n >= nmax then (allex,targetdata) else
     let
-      val targetl = first_n 200 (snd targetdata) (* match rlData value *)
-      val (newallex,provenl) =
-      rl_one n sittools tnnspec rulespec targetl allex
-      (* todo: make generic *)
+      val targetl = first_n 50 (snd targetdata) (* match rlData value *)
+      val (newallex,provenl) = rl_one n sittools tnnspec rulespec targetl allex
       val newtargetdata = update_targetdata provenl targetdata
     in
-      rl_loop (n+1, nmax) sittools tnnspec rulespec 
+      rl_loop (n+1, nmax) sittools tnnspec rulespec
       newtargetdata update_targetdata newallex
     end
 
 fun start_rl_loop nmax sittools tnnspec rulespec targetdata update_targetdata =
-  let 
-    val (allex,provenl) = rl_start sittools tnnspec rulespec targetdata 
+  let
+    val (allex,provenl) = rl_start sittools tnnspec rulespec targetdata
     val newtargetdata = update_targetdata provenl targetdata
   in
     rl_loop (1,nmax) sittools tnnspec rulespec newtargetdata update_targetdata allex
@@ -258,12 +270,20 @@ load "rlLib"; load "rlGameCopy"; load "rlEnv"; load "rlData";
 load "psMCTS";
 open aiLib psMCTS rlLib rlGameCopy rlEnv rlData;
 ignorestatus_flag := true;
-val operl = (numtag_var,1) :: operl_of_term ``SUC 0 + 0 = 0``;
-val dim = 6;
-val tnnspec = (operl,dim);
+
 val targetdata = init_incdata ();
-val nmax = 10;
-val allex = start_rl_loop nmax sittools tnnspec rulespec targetdata update_incdata;
+
+fun update_incdata _ x = x;
+val nmax = 20;
+val (allex,targetdata) = start_rl_loop nmax sittools tnnspec rulespec targetdata update_incdata;
+
+
+(* post analysis *)
+val (evalex, poliex) = snd (hd allex);
+length (fst targetdata);
+open mlTreeNeuralNetwork rlTrain;
+val etnn = random_treenn (dim,1) operl;
+val etnn' = train_tnn_eval dim etnn (split_traintest 0.9 evalex);
 *)
 
 

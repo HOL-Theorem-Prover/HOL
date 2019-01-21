@@ -44,7 +44,7 @@ sig
 
   (* restart *)
   val cut_tree : ('a,'b) tree -> int list -> ('a,'b) tree
-  
+
   (* statistics *)
   val backuptime : real ref
   val selecttime : real ref
@@ -54,7 +54,7 @@ sig
 
   (* constructing a training example *)
   val move_of_cid : ('a,'b) node -> int list -> 'b
-  val evalpoli_example : ('a,'b) tree -> int list -> (real * real list) option
+  val evalpoli_example : ('a,'b) tree -> (real * real list) option
 
   (* choosing a big step *)
   val select_bigstep : ('a,'b) tree -> int list -> int list option

@@ -158,9 +158,10 @@ fun backup decay tree (id,eval) =
    ------------------------------------------------------------------------- *)
 
 val alpha = 0.5
+val gamma_of_alpha = Math.sqrt Math.pi
 
 fun gamma_density x =
-  (Math.pow (x, alpha - 1.0) * Math.exp (~ x)) / (Math.sqrt Math.pi)
+  (Math.pow (x, alpha - 1.0) * Math.exp (~ x)) / gamma_of_alpha
 (* Gamma (alpha) *)
 
 fun interval (step:real) (a,b) =
@@ -287,13 +288,12 @@ fun starttree_of decay ((status_of,apply_move),fep) startsit =
 
 fun mcts (nsim,decay) ((status_of,apply_move),fep) starttree =
   let
-    val starttree_noise = (* add_root_noise *) starttree
+    val starttree_noise = add_root_noise starttree
     val fep_timed = fevalpoli_timer fep
     val status_of_timed = status_of_timer status_of
     val apply_move_timed = apply_move_timer apply_move
     fun loop tree =
-      if dlength tree > nsim orelse
-         #status (dfind [0] tree) <> Undecided then tree else
+      if #vis (dfind [0] tree) > Real.fromInt nsim + 0.5 then tree else
       let
         val selecto = select_timer (select_child decay tree) [0]
         val newtree  = case selecto of
@@ -389,6 +389,8 @@ fun node_variation tree id =
 
 fun root_variation tree = node_variation tree [0]
 
+
+(*
 (* -------------------------------------------------------------------------
    Creating the distribution
    ------------------------------------------------------------------------- *)
@@ -460,6 +462,44 @@ fun evalpoli_example tree id =
      (let val node = dfind id tree in #sum node / #vis node end,
       map (fn x => x / tot) dis1)
   end
+*)
+
+(* -------------------------------------------------------------------------
+   Policy distribution (todo print priors with without no)
+   ------------------------------------------------------------------------- *)
+
+fun print_distrib l =
+  print_endline
+    ("  " ^ String.concatWith " " (map (Real.toString o approx 4 o snd) l))
+
+fun make_distrib tree id =
+  let
+    val node = dfind id tree
+    val cidl = map snd (#pol node)
+    fun f x = SOME (#vis (dfind x tree)) handle NotFound => NONE
+  in
+    map_assoc f cidl
+  end
+
+(* -------------------------------------------------------------------------
+   Rescaling the distribution for the training examples.
+   ------------------------------------------------------------------------- *)
+
+fun swap (a,b) = (b,a)
+
+fun move_of_cid node cid =
+  let val pol = #pol node in fst (assoc cid (map swap pol)) end
+
+fun evalpoli_example tree =
+  let
+    val root = dfind [0] tree
+    val dis0 = make_distrib tree [0]
+    val dis1 = map (fn (_,x) => if isSome x then valOf x else 0.0) dis0
+    val tot  = sum_real dis1
+  in
+    if tot < 0.5 then NONE else
+      SOME (#sum root / #vis root, map (fn x => x / tot) dis1)
+  end
 
 (* -------------------------------------------------------------------------
    Big step selection
@@ -467,24 +507,24 @@ fun evalpoli_example tree id =
    ------------------------------------------------------------------------- *)
 
 fun best_in_distrib distrib =
-  let fun cmp (a,b) = Real.compare (snd a,snd b) in
+  let fun cmp (a,b) = Real.compare (snd b,snd a) in
     fst (hd (dict_sort cmp distrib))
   end
 
 fun select_bigstep tree id =
   let
     val node = dfind id tree
-    val _    = print_distrib (map fst (#pol node))
     val dis0 = make_distrib tree id
     val disstats = map_snd (fn x => if isSome x then valOf x else 0.0) dis0
     val _    = print_distrib disstats
     val dis1 = mapfilter (fn (a,b) => (a, valOf b)) dis0
     val tot  = sum_real (map snd dis1)
   in
-    if tot < 0.5
+    if tot < 0.5 (* ends when no moves are available *)
     then (print_endline "  This is the END."; NONE)
-    else SOME (select_in_distrib dis1)
+    else SOME (best_in_distrib dis1)
   end
+
 
 
 end (* struct *)

@@ -248,6 +248,26 @@ fun train_treenn_batch dim (treenn as (opdict,headnn)) batch =
     ((newopdict,newheadnn), loss)
   end
 
+(* training double headed treenn together 
+fun train_dhtnn_batch dim (opdict,headnn1,headnn2) batch1 batch2 =
+  let
+    val (bpdictl1,bpdatall1) =
+      split (map (train_treenn_one dim (opdict,headnn1)) batch1)
+    val (bpdictl2,bpdatall2) =
+      split (map (train_treenn_one dim (opdict,headnn2)) batch2)
+    val bsize1 = length batch1
+    val bsize2 = length batch2 
+    val bsize = bsize1 + bsize2
+    val (newheadnn1,loss1) = update_head bsize headnn1 bpdatall1
+    val (newheadnn2,loss2) = update_head bsize headnn2 bpdatall2
+    val bpdict = merge_bpdict (bpdictl1 @ bpdictl2)
+    val newnnl = map (update_opernn bsize opdict) (dlist bpdict)
+    val newopdict = daddl newnnl opdict
+  in
+    ((newopdict,newheadnn1,newheadnn2), (loss1,loss2))
+  end
+*)
+
 fun train_treenn_epoch_aux dim lossl treenn batchl = case batchl of
     [] => (treenn, average_real lossl)
   | batch :: m =>

@@ -8,8 +8,8 @@
 structure rlTrain :> rlTrain =
 struct
 
-open HolKernel Abbrev boolLib aiLib mlFeature mlNearestNeighbor 
-mlTreeNeuralNetwork psMCTS rlLib 
+open HolKernel Abbrev boolLib aiLib mlFeature mlNearestNeighbor
+mlTreeNeuralNetwork psMCTS rlLib
 
 val ERR = mk_HOL_ERR "rlTrain"
 
@@ -35,7 +35,7 @@ fun split_traintest percent l =
   end
 
 fun trainset_info_eval trainset =
-  if not (null trainset) then 
+  if not (null trainset) then
     let
       val mean = average_real (map snd trainset)
       val dev = standard_deviation (map snd trainset)
@@ -47,7 +47,7 @@ fun trainset_info_eval trainset =
   else "empty testset"
 
 fun trainset_info_poli trainset =
-  if not (null trainset) then 
+  if not (null trainset) then
     let
       val splitpoli = list_split (map snd trainset)
       val meanl = map (Real.toString o approx 6 o average_real) splitpoli
@@ -110,7 +110,7 @@ fun infer_knn (knninfo,trainsetd) tm =
   end
 
 (* -------------------------------------------------------------------------
-   Accuracy of a binary classifier    
+   Accuracy of a binary classifier
    ------------------------------------------------------------------------- *)
 
 fun f_accuracy f testset =
@@ -140,8 +140,4 @@ val mat = aiLib.dfind (``x:num``,0) (fst tnn);
 *)
 
 end (* struct *)
-
-
-
-
 

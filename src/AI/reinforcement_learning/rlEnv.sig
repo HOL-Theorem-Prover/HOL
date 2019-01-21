@@ -24,7 +24,6 @@ sig
     ('a psMCTS.sit -> psMCTS.status) * ('d -> 'a psMCTS.sit -> 'a psMCTS.sit) ->
     ('c list * 'c list) ->
     ('c list -> ('c list * 'c list) -> ('c list * 'c list)) ->
-      ('c list * 'c list) *
-      (''b * ((term * real) list * (term * real list) list)) list
-
+      (''b * ((term * real) list * (term * real list) list)) list *
+      ('c list * 'c list) 
 end

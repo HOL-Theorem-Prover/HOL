@@ -18,55 +18,43 @@ open HolKernel Abbrev boolLib aiLib rlLib psMCTS mlTreeNeuralNetwork
 val ERR = mk_HOL_ERR "rlGameCopy"
 
 datatype board =
-  ScBoard of (term * (term * pos)) |
-  LrBoard of (term * (term * pos)) |
-  SucBoard of (term * (term * pos)) |
-  AddBoard of (term * (term * pos)) |
-  FailBoard
+  Board of (term * (term * pos)) | FailBoard
 
-datatype sitclass = ScClass | LrClass | SucClass | AddClass
+datatype sitclass = Class
 
 fun class_of_sit sit = case snd sit of
-    ScBoard _  => ScClass
-  | LrBoard _  => LrClass
-  | SucBoard _ => SucClass
-  | AddBoard _ => AddClass
+    Board _  => Class
   | _ => raise ERR "class_of_sit" ""
 
 fun nntm_of (ctm,(tm,pos)) = mk_eq (ctm, tag_position (tm,pos))
 
 fun nntm_of_sit sit = case snd sit of
-    ScBoard x  => nntm_of x
-  | LrBoard x  => nntm_of x
-  | AddBoard x => nntm_of x
-  | SucBoard x => nntm_of x
+    Board x  => nntm_of x
   | FailBoard  => F
 
 fun status_of sit = case snd sit of
-    ScBoard (tm1,(tm2,[])) =>
+    Board (tm1,(tm2,[])) =>
     (
     if tm1 = tm2 then Win
     else if term_size tm2 > term_size tm1 + 2 then Lose
     else Undecided
     )
+  | Board _ => Undecided
   | FailBoard => Lose
-  | _ => Undecided
 
-fun mk_startsit target = (true, ScBoard (target,(zero,[])))
+fun mk_startsit target = (true, Board (target,(zero,[])))
 
 (* -------------------------------------------------------------------------
    Move
    ------------------------------------------------------------------------- *)
 
 datatype move =
-  Stop | Cont |
-  Left | Right |
+  Down | Left | Right |
   Sz | Sal | Sar | Sss |
   Asa | Asl | Asr | Aac | Aasl | Aasr
 
 fun string_of_move move = case move of
-    Stop  => "Stop"
-  | Cont  => "Cont"
+    Down => "Down"
   | Left  => "Left"
   | Right => "Right"
   | Sz  => "Sz"
@@ -80,14 +68,10 @@ fun string_of_move move = case move of
   | Aasl => "Aasl"
   | Aasr => "Aasr"
 
-val all_scchoice = [Stop,Cont]
-val all_lrchoice = [Left,Right]
-val all_succhoice = [Sz, Sal, Sar, Sss]
-val all_addchoice = [Asa, Asl, Asr, Aac, Aasl, Aasr]
+val all_choice =
+  [Down,Left,Right,Sz, Sal, Sar, Sss,Asa, Asl, Asr, Aac, Aasl, Aasr]
 
-val all_class = 
-  [(ScClass,all_scchoice),(LrClass,all_lrchoice), 
-   (SucClass,all_succhoice),(AddClass,all_addchoice)]
+val all_class = [(Class,all_choice)]
 
 fun movel_in_sit sitclass = assoc sitclass all_class
 
@@ -95,89 +79,98 @@ fun movel_in_sit sitclass = assoc sitclass all_class
    Effect of moves
    ------------------------------------------------------------------------- *)
 
-fun action_stop (ctm,(tm,pos)) =
-  let val subtm = subtm_at_pos pos tm in
-      if can dest_suc subtm then SucBoard (ctm,(tm,pos))
-      else if can dest_add subtm then AddBoard (ctm,(tm,pos))
-      else ScBoard (ctm, (sub_at_pos tm (pos, mk_suc zero),[]))
-    end
+fun is_zero (tm,pos) = subtm_at_pos pos tm = zero
+fun is_suc (tm,pos) = can dest_suc (subtm_at_pos pos tm)
+fun is_add (tm,pos) = can dest_add (subtm_at_pos pos tm)
 
-fun action_cont (ctm,(tm,pos)) =
-  let val (_,argl) = strip_comb (subtm_at_pos pos tm) in
-    case argl of
-      []    => FailBoard
-    | [a]   => ScBoard (ctm,(tm,pos @ [0]))
-    | [a,b] => LrBoard (ctm,(tm,pos))
-    | _     => raise ERR "descend_pos" " "
-  end
+fun replace_by (ctm,(tm,pos)) x =
+   Board (ctm,(sub_at_pos tm (pos,x), []))
 
-fun action_sc move (ctm,(tm,pos)) = case move of
-    Stop => action_stop (ctm,(tm,pos))
-  | Cont => action_cont (ctm,(tm,pos))
-  | _ => raise ERR "action_sc" ""
-
-fun action_lr move (ctm,(tm,pos)) = case move of
-    Left => ScBoard (ctm,(tm, pos @ [0]))
-  | Right => ScBoard (ctm,(tm, pos @ [1]))
-  | _ => raise ERR "action_lr" ""
+fun action_zero move (ctm,(tm,pos)) = case move of
+    Down => replace_by (ctm,(tm,pos)) (mk_suc zero)
+  | _ => FailBoard
 
 fun action_suc move (ctm,(tm,pos)) =
   let
     val subtm1 = subtm_at_pos pos tm
     val subtm2 = dest_suc subtm1
-    fun f x = sub_at_pos tm (pos,x)
-    val newtm = case move of
-        Sz  => f zero
-      | Sal => f (mk_add (subtm2,zero))
-      | Sar => f (mk_add (zero,subtm2))
-      | Sss => f (mk_suc (mk_suc subtm2))
-      | _   => raise ERR "action_suc" ""
+    fun f x = replace_by (ctm,(tm,pos)) x
   in
-    ScBoard (ctm,(newtm,[]))
+    case move of
+      Down => if is_zero (tm,pos @ [0])
+              then replace_by (ctm,(tm,pos @ [0])) ``SUC 0``
+              else Board (ctm,(tm,pos @ [0]))
+    | Sz   => f zero
+    | Sal  => f (mk_add (subtm2,zero))
+    | Sar  => f (mk_add (zero,subtm2))
+    | Sss  => f (mk_suc (mk_suc subtm2))
+    | _    => FailBoard
   end
 
 fun action_add move (ctm,(tm,pos)) =
   let
     val subtm1 = subtm_at_pos pos tm
     val (l,r) = dest_add subtm1
-    fun f x = sub_at_pos tm (pos,x)
-    val newtm = case move of
-        Asa  => f (mk_suc (mk_add (l,r)))
-      | Asl  => f (mk_suc l)
-      | Asr  => f (mk_suc r)
-      | Aac  => mk_add (r,l)
-      | Aasl => mk_add (mk_suc l, r)
-      | Aasr => mk_add (l, mk_suc r)
-      | _ => raise ERR "action_add" ""
+    fun f x = replace_by (ctm,(tm,pos)) x
   in
-    ScBoard (ctm,(newtm,[]))
+    case move of
+      Left => if is_zero (tm,pos @ [0])
+              then replace_by (ctm,(tm,pos @ [0])) ``SUC 0``
+              else Board (ctm,(tm,pos @ [0]))
+    | Right => if is_zero (tm,pos @ [1])
+              then replace_by (ctm,(tm,pos @ [1])) ``SUC 0``
+              else Board (ctm,(tm,pos @ [1]))
+    | Asa  => f (mk_suc (mk_add (l,r)))
+    | Asl  => f (mk_suc l)
+    | Asr  => f (mk_suc r)
+    | Aac  => f (mk_add (r,l))
+    | Aasl => f (mk_add (mk_suc l, r))
+    | Aasr => f (mk_add (l, mk_suc r))
+    | _ => FailBoard
   end
 
 fun apply_move move sit = (true, case snd sit of
-    ScBoard x => action_sc move x
-  | LrBoard x => action_lr move x
-  | SucBoard x => action_suc move x
-  | AddBoard x => action_add move x
+    Board (ctm,(tm,pos)) =>
+      if is_add (tm,pos) then action_add move (ctm,(tm,pos))
+      else if is_suc (tm,pos) then action_suc move (ctm,(tm,pos))
+      else action_zero move (ctm,(tm,pos))
   | FailBoard => raise ERR "apply_move" ""
   )
+
+(* -------------------------------------------------------------------------
+   Build random treenn
+   ------------------------------------------------------------------------- *)
+
+(*
+val operl = (numtag_var,1) :: operl_of_term ``SUC 0 + 0 = 0``;
+val dim = 8;
+val tnnspec = (operl,dim);
+
+random_eptnn (#movel_in_sit sittools) tnnspec
+
+fun random_eptnn movel_in_sit (operl,dim) sitclass =
+  let val polin = length (movel_in_sit sitclass) in
+    (random_treenn (dim,1) operl, random_treenn (dim,polin) operl)
+  end
+*)
 
 (* -------------------------------------------------------------------------
    Regroup all situation tools under one record
    ------------------------------------------------------------------------- *)
 
-type sittools = 
+type sittools =
   {
   class_of_sit: board sit -> sitclass,
   mk_startsit: term -> board sit,
   movel_in_sit: sitclass -> move list,
-  nntm_of_sit: board sit -> term, 
+  nntm_of_sit: board sit -> term,
   sitclassl: sitclass list
   }
 
-val sittools : sittools = 
+val sittools : sittools =
   {
   class_of_sit = class_of_sit,
-  mk_startsit = mk_startsit, 
+  mk_startsit = mk_startsit,
   movel_in_sit = movel_in_sit,
   nntm_of_sit = nntm_of_sit,
   sitclassl = (map fst all_class)
