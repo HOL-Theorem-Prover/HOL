@@ -24,7 +24,7 @@ type ('a,''b,'c,'d) sittools =
   {
   class_of_sit: 'a sit -> ''b,
   mk_startsit: 'c -> 'a sit,
-  movel_in_sit: ''b -> 'd list,
+  movel_in_sit: ''b -> 'd list, 
   nntm_of_sit: 'a sit -> term,
   sitclassl: ''b list
   }
@@ -50,17 +50,31 @@ fun log_eval file s =
     append_endline path s
   end
 
-fun summary s = log_eval "rlEnv_test8"  s
+fun summary s = log_eval "rlEnv_test9"  s
 
 (* -------------------------------------------------------------------------
    Evaluation and policy
    ------------------------------------------------------------------------- *)
 
+(*
 fun mk_fep_alltnn sittools alltnn sit =
   let
     val sitclass = (#class_of_sit sittools) sit
     val movel = (#movel_in_sit sittools) sitclass
     val (etnn,ptnn) =  assoc sitclass alltnn
+    val nntm = (#nntm_of_sit sittools) sit
+  in
+    (eval_treenn etnn nntm, combine (movel, poli_treenn ptnn nntm))
+  end
+*)
+
+fun mk_fep_alltnn sittools alltnn sit =
+  let
+    val sitclass = (#class_of_sit sittools) sit
+    val movel = (#movel_in_sit sittools) sitclass
+    val (opdict,(nn1,nn2)) =  assoc sitclass alltnn
+    val etnn = (opdict,nn1)
+    val ptnn = (opdict,nn2)
     val nntm = (#nntm_of_sit sittools) sit
   in
     (eval_treenn etnn nntm, combine (movel, poli_treenn ptnn nntm))
@@ -164,6 +178,30 @@ fun train_alltnn movel_in_sit (operl,dim) allex =
     map f allex
   end
 
+fun random_dhtnn movel_in_sit (operl,dim) sitclass =
+  let val polin = length (movel_in_sit sitclass) in
+    (random_opdict dim operl, 
+      (random_headnn (dim,1), random_headnn (dim,polin)))
+  end
+
+
+fun train_alldhtnn movel_in_sit (operl,dim) allex =
+  let
+    val schedule = [(50,0.1),(50,0.01)]
+    fun f (sitclass,(evalex,poliex)) =
+      let 
+        val bsize = if length evalex < 64 then 1 else 64
+        val dhtnn = random_dhtnn movel_in_sit (operl,dim) sitclass 
+        val (etrain,ptrain) = 
+          (prepare_trainset_eval evalex, prepare_trainset_poli poliex)
+      in
+        (sitclass, 
+         train_dhtnn_schedule dim dhtnn bsize (etrain,ptrain) schedule) 
+      end
+  in
+    map f allex
+  end
+
 (* -------------------------------------------------------------------------
    Results
    ------------------------------------------------------------------------- *)
@@ -193,7 +231,7 @@ fun summary_wins pbspec allrootl =
    Reinforcement learning loop
    ------------------------------------------------------------------------- *)
 
-fun merge_ex (exl,allex) =
+fun concat_ex (exl,allex) =
   let
     val l = combine (exl,allex)
     fun f ((_,(e1,p1)),(x,(e2,p2))) = (x, (e1 @ e2, p1 @ p2))
@@ -208,14 +246,14 @@ fun explore_f sittools pbspec allex targetl =
     val (allexl,allrootl) = split result
     val _ = summary ("Exploration time : " ^ Real.toString t)
     val _ = summary_wins pbspec allrootl
-    val newallex = foldl merge_ex allex allexl
+    val newallex = foldl concat_ex allex allexl
   in
     (newallex,[])
   end
 
 fun train_f movel_in_sit tnnspec allex =
   let
-    val (alltnn,t) = add_time (train_alltnn movel_in_sit tnnspec) allex
+    val (alltnn,t) = add_time (train_alldhtnn movel_in_sit tnnspec) allex
     val _ = summary ("Training time : " ^ Real.toString t)
   in
     alltnn
@@ -226,7 +264,7 @@ fun rl_start sittools tnnspec rulespec targetdata =
     val _ = summary "Generation 0"
     val sitclassl = #sitclassl sittools
     val alltnn =
-      map_assoc (random_eptnn (#movel_in_sit sittools) tnnspec) sitclassl
+      map_assoc (random_dhtnn (#movel_in_sit sittools) tnnspec) sitclassl
     val pbspec = (rulespec, mk_fep_alltnn sittools alltnn)
     val allex = empty_allex sitclassl
     val targetl = first_n 50 (snd targetdata)
@@ -237,7 +275,7 @@ fun rl_start sittools tnnspec rulespec targetdata =
 
 fun rl_one n sittools tnnspec rulespec targetl allex =
   let
-    val _ = summary ("Generation " ^ int_to_string n)
+    val _ = summary ("\nGeneration " ^ int_to_string n)
     val alltnn = train_f (#movel_in_sit sittools) tnnspec allex
     val pbspec = (rulespec, mk_fep_alltnn sittools alltnn)
     val (newallex,provenl) = explore_f sittools pbspec allex targetl
@@ -257,7 +295,8 @@ fun rl_loop (n,nmax) sittools tnnspec rulespec
       newtargetdata update_targetdata newallex
     end
 
-fun start_rl_loop nmax sittools tnnspec rulespec targetdata update_targetdata =
+fun start_rl_loop nmax (sittools : ('a,''b,'c,'d) sittools) 
+  tnnspec rulespec targetdata update_targetdata =
   let
     val (allex,provenl) = rl_start sittools tnnspec rulespec targetdata
     val newtargetdata = update_targetdata provenl targetdata

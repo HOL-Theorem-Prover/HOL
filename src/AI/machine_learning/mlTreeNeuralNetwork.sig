@@ -21,6 +21,7 @@ include Abbrev
   (* Tree NN *)
   type opdict = ((term * int),nn) Redblackmap.dict
   type treenn = opdict * nn
+  type dhtnn = (opdict * (nn * nn))  
 
   (* initialization of the treenn *)
   val random_headnn : (int * int) -> nn
@@ -57,6 +58,11 @@ include Abbrev
     (term list * real vector) list * (term list * real vector) list ->
     (int * real) list ->
     (treenn * real)
+
+  val train_dhtnn_schedule :
+    int -> dhtnn -> int ->
+    (term list * real vector) list * (term list * real vector) list ->
+    (int * real) list -> dhtnn
 
   (* printing *)
   val string_of_treenn : treenn -> string

@@ -81,7 +81,7 @@ fun compare_rmax ((_,r2),(_,r1)) = Real.compare (r1,r2)
 fun compare_rmin ((_,r1),(_,r2)) = Real.compare (r1,r2)
 
 (* -------------------------------------------------------------------------
-    Dictionaries shortcuts
+    Dictionaries
    ------------------------------------------------------------------------- *)
 
 fun dfind k m  = Redblackmap.find (m,k)
@@ -100,7 +100,7 @@ fun dkeys d    = map fst (dlist d)
 
 fun inv_dict cmp d = dnew cmp (map (fn (a,b) => (b,a)) (dlist d))
 
-(* one to many transformations *)
+(* list of values *)
 fun dregroup cmp l =
   let
     val d = ref (dempty cmp)
@@ -112,17 +112,32 @@ fun dregroup cmp l =
     app update l; !d
   end
 
-fun distrib l = case l of
-    [] => []
-  | (a,al) :: m => map (fn x => (a,x)) al @ distrib m
+fun distrib l = (* inverse of dregroup *)
+  let fun f (a,al) = map (fn x => (a,x)) al in List.concat (map f l) end
+
+fun dappend (k,v) d =
+  let val oldl = dfind k d handle NotFound => [] in
+    dadd k (v :: oldl) d
+  end
+
+fun dappendl kvl d = foldl (uncurry dappend) d kvl
+
+
+
+fun dconcat cmp dictl =
+  let
+    val l0 = List.concat (map dlist dictl)
+    val l1 = distrib l0
+  in
+    dappendl l1 (dempty cmp)
+  end
 
 (* sets *)
 fun dset cmp l = dnew cmp (map (fn x => (x,())) l)
 fun daddset l d = daddl (map (fn x => (x,())) l) d
-
-(* more *)
 fun union_dict cmp dl = dnew cmp (List.concat (map dlist dl))
 
+(* multi sets *)
 fun count_dict startdict l =
   let
     fun f (k,dict) =

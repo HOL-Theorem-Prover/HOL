@@ -13,6 +13,8 @@ struct
   load "mlNearestNeighbor";
 *)
 
+(* todo: make a general version for any HOL4 terms (including lambdas) *)
+
 open HolKernel Abbrev boolLib aiLib rlLib psMCTS mlTreeNeuralNetwork
 
 val ERR = mk_HOL_ERR "rlGameCopy"
@@ -83,7 +85,7 @@ fun is_zero (tm,pos) = subtm_at_pos pos tm = zero
 fun is_suc (tm,pos) = can dest_suc (subtm_at_pos pos tm)
 fun is_add (tm,pos) = can dest_add (subtm_at_pos pos tm)
 
-fun replace_by (ctm,(tm,pos)) x =
+fun replace_by (ctm,(tm,pos)) x = 
    Board (ctm,(sub_at_pos tm (pos,x), []))
 
 fun action_zero move (ctm,(tm,pos)) = case move of
@@ -97,7 +99,7 @@ fun action_suc move (ctm,(tm,pos)) =
     fun f x = replace_by (ctm,(tm,pos)) x
   in
     case move of
-      Down => if is_zero (tm,pos @ [0])
+      Down => if is_zero (tm,pos @ [0]) 
               then replace_by (ctm,(tm,pos @ [0])) ``SUC 0``
               else Board (ctm,(tm,pos @ [0]))
     | Sz   => f zero
@@ -114,10 +116,10 @@ fun action_add move (ctm,(tm,pos)) =
     fun f x = replace_by (ctm,(tm,pos)) x
   in
     case move of
-      Left => if is_zero (tm,pos @ [0])
+      Left => if is_zero (tm,pos @ [0]) 
               then replace_by (ctm,(tm,pos @ [0])) ``SUC 0``
               else Board (ctm,(tm,pos @ [0]))
-    | Right => if is_zero (tm,pos @ [1])
+    | Right => if is_zero (tm,pos @ [1]) 
               then replace_by (ctm,(tm,pos @ [1])) ``SUC 0``
               else Board (ctm,(tm,pos @ [1]))
     | Asa  => f (mk_suc (mk_add (l,r)))
@@ -130,7 +132,7 @@ fun action_add move (ctm,(tm,pos)) =
   end
 
 fun apply_move move sit = (true, case snd sit of
-    Board (ctm,(tm,pos)) =>
+    Board (ctm,(tm,pos)) => 
       if is_add (tm,pos) then action_add move (ctm,(tm,pos))
       else if is_suc (tm,pos) then action_suc move (ctm,(tm,pos))
       else action_zero move (ctm,(tm,pos))
@@ -138,39 +140,22 @@ fun apply_move move sit = (true, case snd sit of
   )
 
 (* -------------------------------------------------------------------------
-   Build random treenn
-   ------------------------------------------------------------------------- *)
-
-(*
-val operl = (numtag_var,1) :: operl_of_term ``SUC 0 + 0 = 0``;
-val dim = 8;
-val tnnspec = (operl,dim);
-
-random_eptnn (#movel_in_sit sittools) tnnspec
-
-fun random_eptnn movel_in_sit (operl,dim) sitclass =
-  let val polin = length (movel_in_sit sitclass) in
-    (random_treenn (dim,1) operl, random_treenn (dim,polin) operl)
-  end
-*)
-
-(* -------------------------------------------------------------------------
    Regroup all situation tools under one record
    ------------------------------------------------------------------------- *)
 
-type sittools =
+type sittools = 
   {
   class_of_sit: board sit -> sitclass,
   mk_startsit: term -> board sit,
   movel_in_sit: sitclass -> move list,
-  nntm_of_sit: board sit -> term,
+  nntm_of_sit: board sit -> term, 
   sitclassl: sitclass list
   }
 
-val sittools : sittools =
+val sittools : sittools = 
   {
   class_of_sit = class_of_sit,
-  mk_startsit = mk_startsit,
+  mk_startsit = mk_startsit, 
   movel_in_sit = movel_in_sit,
   nntm_of_sit = nntm_of_sit,
   sitclassl = (map fst all_class)

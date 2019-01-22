@@ -20,6 +20,7 @@ fun debug s = debug_in_dir debugdir "mlTreeNeuralNetwork" s
 
 type opdict = ((term * int),nn) Redblackmap.dict
 type treenn = opdict * nn
+type dhtnn = opdict * (nn * nn)
 
 fun const_nn dim activ arity =
   if arity = 0
@@ -99,13 +100,6 @@ fun fp_treenn (opdict,headnn) tml =
    Backward propagation
    ------------------------------------------------------------------------- *)
 
-fun dsave (k,v) d =
-  let val oldl = dfind k d handle NotFound => [] in
-    dadd k (v :: oldl) d
-  end
-
-fun dsavel kvl d = foldl (uncurry dsave) d kvl
-
 fun bp_treenn_aux dim doutnvdict fpdict bpdict revtml = case revtml of
     []      => bpdict
   | tm :: m =>
@@ -126,8 +120,8 @@ fun bp_treenn_aux dim doutnvdict fpdict bpdict revtml = case revtml of
       val rl            = map f doutnvl
       val operbpdatall  = map fst rl
       val tmdinvl       = List.concat (map snd rl)
-      val newdoutnvdict = dsavel tmdinvl doutnvdict
-      val newbpdict     = dsavel operbpdatall bpdict
+      val newdoutnvdict = dappendl tmdinvl doutnvdict
+      val newbpdict     = dappendl operbpdatall bpdict
     in
       bp_treenn_aux dim newdoutnvdict fpdict newbpdict m
     end
@@ -139,7 +133,7 @@ fun bp_treenn dim (fpdict,fpdatal) (tml,expectv) =
     val bpdatal    = bp_nn_wocost fpdatal doutnv
     val newdoutnv  =
       (Vector.fromList o tl o vector_to_list o #dinv o hd) bpdatal
-    val doutnvdict = dsave (last tml,newdoutnv) (dempty Term.compare)
+    val doutnvdict = dappend (last tml,newdoutnv) (dempty Term.compare)
     val bpdict     = dempty (cpl_compare Term.compare Int.compare)
   in
     (bp_treenn_aux dim doutnvdict fpdict bpdict (rev tml), bpdatal)
@@ -212,15 +206,6 @@ fun update_head bsize headnn bpdatall =
     (newheadnn, loss)
   end
 
-fun merge_bpdict bpdictl =
-  let
-    fun f (x,l) = map (fn y => (x,y)) l
-    val l0 = List.concat (map dlist bpdictl)
-    val l1 = List.concat (map f l0)
-  in
-    dsavel l1 (dempty (cpl_compare Term.compare Int.compare))
-  end
-
 fun string_of_oper (optm,i) = term_to_string optm ^ " " ^ int_to_string i
 
 fun update_opernn bsize opdict (oper,bpdatall) =
@@ -241,32 +226,12 @@ fun train_treenn_batch dim (treenn as (opdict,headnn)) batch =
       split (map (train_treenn_one dim treenn) batch)
     val bsize = length batch
     val (newheadnn,loss) = update_head bsize headnn bpdatall
-    val bpdict    = merge_bpdict bpdictl
+    val bpdict    = dconcat (cpl_compare Term.compare Int.compare) bpdictl
     val newnnl    = map (update_opernn bsize opdict) (dlist bpdict)
     val newopdict = daddl newnnl opdict
   in
     ((newopdict,newheadnn), loss)
   end
-
-(* training double headed treenn together 
-fun train_dhtnn_batch dim (opdict,headnn1,headnn2) batch1 batch2 =
-  let
-    val (bpdictl1,bpdatall1) =
-      split (map (train_treenn_one dim (opdict,headnn1)) batch1)
-    val (bpdictl2,bpdatall2) =
-      split (map (train_treenn_one dim (opdict,headnn2)) batch2)
-    val bsize1 = length batch1
-    val bsize2 = length batch2 
-    val bsize = bsize1 + bsize2
-    val (newheadnn1,loss1) = update_head bsize headnn1 bpdatall1
-    val (newheadnn2,loss2) = update_head bsize headnn2 bpdatall2
-    val bpdict = merge_bpdict (bpdictl1 @ bpdictl2)
-    val newnnl = map (update_opernn bsize opdict) (dlist bpdict)
-    val newopdict = daddl newnnl opdict
-  in
-    ((newopdict,newheadnn1,newheadnn2), (loss1,loss2))
-  end
-*)
 
 fun train_treenn_epoch_aux dim lossl treenn batchl = case batchl of
     [] => (treenn, average_real lossl)
@@ -317,5 +282,67 @@ fun train_treenn_schedule_aux dim (treenn,trainloss) bsize
 fun train_treenn_schedule dim treenn bsize (ptrain,ptest) schedule =
   train_treenn_schedule_aux dim (treenn,0.0) bsize (ptrain,ptest) schedule
 
-end (* struct *)
+(* -------------------------------------------------------------------------
+   Training a double-headed treenn
+   ------------------------------------------------------------------------- *)
 
+fun train_dhtnn_batch dim (opdict,(headnn1,headnn2)) batch1 batch2 =
+  let
+    val (bpdictl1,bpdatall1) =
+      split (map (train_treenn_one dim (opdict,headnn1)) batch1)
+    val (bpdictl2,bpdatall2) =
+      split (map (train_treenn_one dim (opdict,headnn2)) batch2)
+    val bsize = length batch1 + length batch2
+    val (newheadnn1,loss1) = update_head bsize headnn1 bpdatall1
+    val (newheadnn2,loss2) = update_head bsize headnn2 bpdatall2
+    val bpdict = 
+      dconcat (cpl_compare Term.compare Int.compare) (bpdictl1 @ bpdictl2)
+    val newnnl = map (update_opernn bsize opdict) (dlist bpdict)
+    val newopdict = daddl newnnl opdict
+  in
+    ((newopdict,(newheadnn1,newheadnn2)), (loss1,loss2))
+  end
+
+fun train_dhtnn_epoch_aux dim (lossl1,lossl2) dhtnn batchl1 batchl2 = 
+  case (batchl1,batchl2) of
+    ([],_) => (dhtnn, (average_real lossl1, average_real lossl2))
+  | (_,[]) => (dhtnn, (average_real lossl1, average_real lossl2))
+  | (batch1 :: m1, batch2 :: m2) =>
+    let val (newdhtnn,(loss1,loss2)) = 
+      train_dhtnn_batch dim dhtnn batch1 batch2 
+    in
+      train_dhtnn_epoch_aux dim (loss1 :: lossl1, loss2 :: lossl2) 
+      newdhtnn m1 m2
+    end
+
+fun train_dhtnn_epoch dim dhtnn batchl1 batchl2 =
+  train_dhtnn_epoch_aux dim ([],[]) dhtnn batchl1 batchl2
+
+fun train_dhtnn_nepoch n dim dhtnn size (etrain,ptrain) =
+  if n <= 0 then dhtnn else
+  let
+    val batchl1 = mk_batch size (shuffle etrain)
+    val batchl2 = mk_batch size (shuffle ptrain)
+    val (newdhtnn,(newloss1,newloss2)) = 
+      train_dhtnn_epoch dim dhtnn batchl1 batchl2
+    val _ = print_endline
+      ("eval loss: " ^ pad 8 "0" (Real.toString (approx 6 newloss1)) ^ "\n" ^
+       "poli loss; " ^ pad 8 "0" (Real.toString (approx 6 newloss2)))
+  in
+    train_dhtnn_nepoch (n - 1) dim newdhtnn size (etrain,ptrain) 
+  end
+
+fun train_dhtnn_schedule dim dhtnn bsize (etrain,ptrain) schedule =
+  case schedule of
+    [] => dhtnn
+  | (nepoch, lrate) :: m =>
+    let
+      val _ = learning_rate := lrate
+      val _ = print_endline ("learning_rate: " ^ Real.toString lrate)
+      val newdhtnn = train_dhtnn_nepoch nepoch dim dhtnn bsize (etrain,ptrain)
+    in
+      train_dhtnn_schedule dim newdhtnn bsize (etrain,ptrain) m
+    end
+
+
+end (* struct *)

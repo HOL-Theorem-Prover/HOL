@@ -61,12 +61,18 @@ sig
     ('b, 'a) Redblackmap.dict -> ('a, 'b) Redblackmap.dict
   val dregroup : ('a * 'a -> order) -> ('a * 'b) list ->
     ('a, 'b list) Redblackmap.dict
+  val distrib : ('a * 'b list) list -> ('a * 'b) list
+  val dappend : 'a * 'b ->
+    ('a, 'b list) Redblackmap.dict -> ('a, 'b list) Redblackmap.dict
+  val dappendl : ('a * 'b) list ->
+    ('a, 'b list) Redblackmap.dict -> ('a, 'b list) Redblackmap.dict
+  val dconcat : ('a * 'a -> order) ->
+    ('a, 'b list) Redblackmap.dict list -> ('a, 'b list) Redblackmap.dict
+
   val dset : ('a * 'a -> order) -> 'a list ->
     ('a, unit) Redblackmap.dict
-  val daddset :
-    'a list -> ('a, unit) Redblackmap.dict ->
-    ('a, unit) Redblackmap.dict
-  val distrib : ('a * 'b list) list -> ('a * 'b) list
+  val daddset : 'a list -> 
+    ('a, unit) Redblackmap.dict -> ('a, unit) Redblackmap.dict
   val union_dict : ('a * 'a -> order) ->
      ('a, 'b) Redblackmap.dict list -> ('a, 'b) Redblackmap.dict
   val count_dict :
