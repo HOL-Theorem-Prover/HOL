@@ -304,6 +304,13 @@ val EL_MAP2 = Q.store_thm("EL_MAP2",
       (EL n (MAP2 f ts tt) = f (EL n ts) (EL n tt))`,
   Induct \\ rw [] \\ Cases_on `tt` \\ Cases_on `n` \\ fs [EL]);
 
+Theorem MAP2_APPEND:
+  !xs ys xs1 ys1 f.
+     (LENGTH xs = LENGTH xs1) ==>
+     (MAP2 f (xs ++ ys) (xs1 ++ ys1) = MAP2 f xs xs1 ++ MAP2 f ys ys1)
+Proof Induct >> Cases_on ‘xs1’ >> fs [MAP2]
+QED
+
 (* Some searches *)
 
 val INDEX_FIND_def = Define`
@@ -438,9 +445,11 @@ val MAP_ID = store_thm(
   Induct_on `l` THEN SRW_TAC [] [MAP]);
 val _ = export_rewrites ["MAP_ID"]
 
-val LENGTH_MAP = store_thm ("LENGTH_MAP",
- “!l. !(f:'a->'b). LENGTH (MAP f l) = LENGTH l”,
-     LIST_INDUCT_TAC THEN ASM_REWRITE_TAC [MAP, LENGTH]);
+Theorem LENGTH_MAP[simp]:
+  !l (f:'a->'b). LENGTH (MAP f l) = LENGTH l
+Proof
+  LIST_INDUCT_TAC THEN ASM_REWRITE_TAC [MAP, LENGTH]
+QED
 
 val MAP_EQ_NIL = store_thm(
   "MAP_EQ_NIL[simp]",
@@ -611,6 +620,10 @@ val FLAT_compute = Q.store_thm(
    (FLAT ((h::t1)::t2) = h::FLAT (t1::t2))`,
   SIMP_TAC (srw_ss()) []);
 
+Theorem EVERY_FLAT
+  `EVERY P (FLAT ls) <=> EVERY (EVERY P) ls`
+  (rw[EVERY_MEM,MEM_FLAT,PULL_EXISTS] >> metis_tac[]);
+
 val EVERY_APPEND = store_thm(
   "EVERY_APPEND",
   ``!P (l1:'a list) l2.
@@ -655,13 +668,20 @@ val LENGTH_NIL_SYM = store_thm (
    ``(0 = LENGTH l) = (l = [])``,
    PROVE_TAC[LENGTH_NIL]);
 
+Theorem SING_HD[simp]:
+  (([HD xs] = xs) <=> (LENGTH xs = 1)) /\
+  ((xs = [HD xs]) <=> (LENGTH xs = 1))
+Proof
+  Cases_on `xs` >> full_simp_tac(srw_ss())[LENGTH_NIL] >> metis_tac []
+QED
+
 val NULL_EQ = store_thm("NULL_EQ",
  “!l. NULL l = (l = [])”,
    Cases_on `l` THEN REWRITE_TAC[NULL, NOT_CONS_NIL]);
 
 val NULL_LENGTH = Q.store_thm("NULL_LENGTH",
   `!l. NULL l = (LENGTH l = 0)`,
-  REWRITE_TAC[NULL_EQ, LENGTH_NIL])
+  REWRITE_TAC[NULL_EQ, LENGTH_NIL]);
 
 val LENGTH_CONS = store_thm("LENGTH_CONS",
  “!l n. (LENGTH l = SUC n) =
@@ -732,6 +752,10 @@ CONJ_TAC THEN
    THEN REWRITE_TAC [CONS_11, NOT_NIL_CONS, NOT_CONS_NIL, APPEND]
    THEN GEN_TAC THEN MATCH_ACCEPT_TAC EQ_SYM_EQ);
 val _ = export_rewrites ["APPEND_eq_NIL"]
+
+Theorem NULL_APPEND[simp]
+  `NULL (l1 ++ l2) <=> NULL l1 /\ NULL l2`
+  (simp[NULL_LENGTH]);
 
 val MAP_EQ_APPEND = store_thm(
   "MAP_EQ_APPEND",
@@ -925,6 +949,16 @@ EQ_TAC THEN REPEAT STRIP_TAC THENL [
                            COND_RAND, NOT_CONS_NIL]
   ]
 ]);
+
+Theorem FILTER_F[simp]:
+  !xs. FILTER (\x. F) xs = []
+Proof Induct >> simp[]
+QED
+
+Theorem FILTER_T[simp]:
+  !xs. FILTER (\x. T) xs = xs
+Proof Induct >> simp[]
+QED
 
 val FILTER_APPEND_DISTRIB = Q.store_thm
 ("FILTER_APPEND_DISTRIB",
@@ -1409,6 +1443,13 @@ val LENGTH_ZIP = store_thm("LENGTH_ZIP",
   REWRITE_TAC[ZIP, LENGTH, NOT_SUC, SUC_NOT, INV_SUC_EQ] THEN
   DISCH_TAC THEN RES_TAC THEN ASM_REWRITE_TAC[]);
 
+Theorem LENGTH_ZIP_MIN[simp]:
+  !xs ys. LENGTH (ZIP (xs,ys)) = MIN (LENGTH xs) (LENGTH ys)
+Proof
+  Induct >> fs [LENGTH,ZIP_def] >> Cases_on ‘ys’ >> fs [LENGTH,ZIP_def] >>
+  rw [arithmeticTheory.MIN_DEF]
+QED
+
 val LENGTH_UNZIP = store_thm(
   "LENGTH_UNZIP",
   ``!pl. (LENGTH (FST (UNZIP pl)) = LENGTH pl) /\
@@ -1719,6 +1760,27 @@ val LENGTH_TAKE = store_thm(
   Induct_on `l` THEN SRW_TAC [numSimps.ARITH_ss] [TAKE_def]);
 val _ = export_rewrites ["LENGTH_TAKE"]
 
+Theorem TAKE_LENGTH_TOO_LONG:
+  !l n. LENGTH l <= n ==> (TAKE n l = l)
+Proof
+  Induct THEN SRW_TAC [numSimps.ARITH_ss] []
+QED
+
+Theorem LENGTH_TAKE_EQ:
+  LENGTH (TAKE n xs) = if n <= LENGTH xs then n else LENGTH xs
+Proof
+  SRW_TAC [] [] THEN fs [GSYM NOT_LESS] THEN AP_TERM_TAC
+  THEN MATCH_MP_TAC TAKE_LENGTH_TOO_LONG THEN numLib.DECIDE_TAC
+QED
+
+Theorem EL_TAKE:
+  !n x l. x < n ==> (EL x (TAKE n l) = EL x l)
+Proof
+  Induct_on `n` >> ASM_SIMP_TAC (srw_ss()) [TAKE_def] >>
+  Cases_on `x` >> Cases_on `l` >>
+  ASM_SIMP_TAC (srw_ss()) [TAKE_def]
+QED
+
 val MAP_TAKE = store_thm(
   "MAP_TAKE",
   ``!f n l. MAP f (TAKE n l) = TAKE n (MAP f l)``,
@@ -1746,11 +1808,43 @@ val TAKE_DROP = store_thm(
   Induct_on `l` THEN SRW_TAC [numSimps.ARITH_ss] [TAKE_def]);
 val _ = export_rewrites ["TAKE_DROP"]
 
+Theorem TAKE1:
+  !l. l <> [] ==> (TAKE 1 l = [EL 0 l])
+Proof Induct_on `l` >> srw_tac[][]
+QED
+
+Theorem TAKE1_DROP:
+  !n l. n < LENGTH l ==> (TAKE 1 (DROP n l) = [EL n l])
+Proof
+  Induct_on `l` >> rw[] >> Cases_on `n` >> fs[EL_restricted]
+QED
+
+Theorem TAKE_EQ_NIL[simp]:
+  (TAKE n l = []) <=> (n = 0) \/ (l = [])
+Proof
+  Q.ID_SPEC_TAC `l` THEN Induct_on `n` THEN ASM_SIMP_TAC (srw_ss()) [] THEN
+  Cases THEN ASM_SIMP_TAC (srw_ss()) []
+QED
+
+Theorem TAKE_TAKE_MIN:
+  !m n. TAKE n (TAKE m l) = TAKE (MIN n m) l
+Proof
+  Induct_on`l` >> rw[] >>
+  Cases_on`m` >> Cases_on`n` >>
+  SRW_TAC[numSimps.ARITH_ss][arithmeticTheory.MIN_DEF, arithmeticTheory.ADD1] >>
+  FULL_SIMP_TAC (srw_ss() ++ numSimps.ARITH_ss) []
+QED
+
 val LENGTH_DROP = store_thm(
   "LENGTH_DROP",
   ``!n l. LENGTH (DROP n l) = LENGTH l - n``,
   Induct_on `l` THEN SRW_TAC [numSimps.ARITH_ss] [DROP_def]);
 val _ = export_rewrites ["LENGTH_DROP"]
+
+Theorem DROP_LENGTH_TOO_LONG:
+  !l n. LENGTH l <= n ==> (DROP n l = [])
+Proof Induct THEN SRW_TAC [numSimps.ARITH_ss] []
+QED
 
 val MEM_DROP = store_thm(
 "MEM_DROP",
@@ -1774,6 +1868,25 @@ val LT_SUC = Q.prove(
 Theorem HD_DROP
   `!n l. n < LENGTH l ==> (HD (DROP n l) = EL n l)`
   (Induct_on `l` >> asm_simp_tac (srw_ss() ++ DNF_ss) [LT_SUC]);
+
+Theorem EL_DROP:
+  !m n l. m + n < LENGTH l ==> (EL m (DROP n l) = EL (m + n) l)
+Proof
+  Induct_on `l` >> SIMP_TAC (srw_ss()) [] >> Cases_on `n` >>
+  FULL_SIMP_TAC (srw_ss()) [DROP_def, ADD_CLAUSES]
+QED
+
+Theorem MAP_DROP
+  `!l i. MAP f (DROP i l) = DROP i (MAP f l)`
+  (Induct \\ simp[DROP_def] \\ rw[]);
+
+Theorem MAP_FRONT
+  `!ls. ls <> [] ==> (MAP f (FRONT ls) = FRONT (MAP f ls))`
+  (Induct \\ simp[] \\ Cases_on`ls`\\fs[])
+
+Theorem LAST_MAP
+  `!ls. ls <> [] ==> (LAST (MAP f ls) = f (LAST ls))`
+  (Induct \\ simp[] \\ Cases_on`ls`\\fs[])
 
 (* More functions for operating on pairs of lists *)
 
@@ -2580,6 +2693,31 @@ SRW_TAC [] [EQ_IMP_THM] THEN1 (
 METIS_TAC [LESS_SUC] )
 end
 
+Theorem TAKE_GENLIST:
+  TAKE n (GENLIST f m) = GENLIST f (MIN n m)
+Proof
+  SRW_TAC[numSimps.ARITH_ss][LIST_EQ_REWRITE, LENGTH_TAKE_EQ,
+                             arithmeticTheory.MIN_DEF, EL_TAKE]
+QED
+
+Theorem DROP_GENLIST:
+  DROP n (GENLIST f m) = GENLIST (f o (+) n) (m-n)
+Proof
+  SRW_TAC[numSimps.ARITH_ss][LIST_EQ_REWRITE,EL_DROP]
+QED
+
+Theorem LIST_REL_O:
+  !R1 R2. LIST_REL (R1 O R2) = LIST_REL R1 O LIST_REL R2
+Proof
+  simp[FUN_EQ_THM, O_DEF, LIST_REL_EL_EQN, EQ_IMP_THM] >> rw[]
+  >- (full_simp_tac(srw_ss())[GSYM RIGHT_EXISTS_IMP_THM,SKOLEM_THM] >>
+      Q.RENAME_TAC [‘LENGTH as = LENGTH cs’, ‘R2 (EL _ as) (f _)’,
+                    ‘R1 (f _) (EL _ cs)’] >>
+      Q.EXISTS_TAC`GENLIST f (LENGTH cs)` >> simp[])
+  >- simp[]
+  >- metis_tac[]
+QED
+
 (* ---------------------------------------------------------------------- *)
 
 val FOLDL_SNOC = store_thm("FOLDL_SNOC",
@@ -2952,16 +3090,6 @@ val splitAtPki_EQN = store_thm(
       suffices_by SRW_TAC [] [] THEN
   fs[whileTheory.OLEAST_EQ_SOME] >> Cases >> SRW_TAC[][]);
 
-val TAKE_LENGTH_TOO_LONG = store_thm(
-  "TAKE_LENGTH_TOO_LONG",
-  ``!l n. LENGTH l <= n ==> (TAKE n l = l)``,
-  Induct THEN SRW_TAC [numSimps.ARITH_ss] []);
-
-val DROP_LENGTH_TOO_LONG = store_thm(
-  "DROP_LENGTH_TOO_LONG",
-  ``!l n. LENGTH l <= n ==> (DROP n l = [])``,
-  Induct THEN SRW_TAC [numSimps.ARITH_ss] []);
-
 val TAKE_splitAtPki = store_thm(
   "TAKE_splitAtPki",
   ``TAKE n l = splitAtPki (K o (=) n) K l``,
@@ -2975,6 +3103,30 @@ val DROP_splitAtPki = store_thm(
   SRW_TAC [] [splitAtPki_EQN] THEN
   DEEP_INTRO_TAC whileTheory.OLEAST_INTRO THEN
   SRW_TAC[numSimps.ARITH_ss] [DROP_LENGTH_TOO_LONG]);
+
+Theorem splitAtPki_RAND:
+  f (splitAtPki P k l) = splitAtPki P ($o ($o f) k) l
+Proof
+  rw[splitAtPki_EQN] >> BasicProvers.CASE_TAC >> simp[]
+QED
+
+Theorem splitAtPki_MAP:
+  splitAtPki P k (MAP f l) =
+  splitAtPki (combin$C ($o $o P) f) (combin$C ($o o k o MAP f) (MAP f)) l
+Proof
+  rw[splitAtPki_EQN,MAP_TAKE,MAP_DROP]
+  \\ rpt(AP_THM_TAC ORELSE AP_TERM_TAC)
+  \\ simp[FUN_EQ_THM]
+  \\ rw[EQ_IMP_THM] \\ REV_FULL_SIMP_TAC (srw_ss())[EL_MAP]
+QED
+
+Theorem splitAtPki_change_predicate:
+  (!i. i < LENGTH l ==> (P1 i (EL i l) <=> P2 i (EL i l))) ==>
+  (splitAtPki P1 k l = splitAtPki P2 k l)
+Proof
+  rw[splitAtPki_EQN] >> rpt(AP_THM_TAC ORELSE AP_TERM_TAC) >>
+  simp[FUN_EQ_THM] >> metis_tac[]
+QED
 
 (* ----------------------------------------------------------------------
     List monad related stuff
@@ -3819,11 +3971,6 @@ val EL_LENGTH_dropWhile_REVERSE = Q.store_thm("EL_LENGTH_dropWhile_REVERSE",
    THEN1 (fs [dropWhile_APPEND_EVERY, GSYM dropWhile_eq_nil])
    >> fs [NOT_EVERY, dropWhile_APPEND_EXISTS, arithmeticTheory.ADD1])
 end
-
-val LENGTH_TAKE_EQ = store_thm("LENGTH_TAKE_EQ",
-  ``LENGTH (TAKE n xs) = if n <= LENGTH xs then n else LENGTH xs``,
-  SRW_TAC [] [] THEN fs [GSYM NOT_LESS] THEN AP_TERM_TAC
-  THEN MATCH_MP_TAC TAKE_LENGTH_TOO_LONG THEN numLib.DECIDE_TAC);
 
 val IMP_EVERY_LUPDATE = store_thm("IMP_EVERY_LUPDATE",
   ``!xs h i. P h /\ EVERY P xs ==> EVERY P (LUPDATE h i xs)``,
