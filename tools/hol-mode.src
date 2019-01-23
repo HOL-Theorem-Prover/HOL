@@ -116,11 +116,12 @@ evaluations.")
 (put 'hol-term 'beginning-op
      (function
       (lambda ()
-        (let ((beg (cond
-                   ((equal hol-term-end-delim "`") "`")
-                   ((equal hol-term-end-delim "’") "‘")
-                   ((equal hol-term-end-delim "Proof")
-                    "Theorem [A-Za-z_]*\\(\\[[A-Za-z]+\\]\\)?[[:space:]]*:"))))
+        (let ((beg
+               (cond
+                ((equal hol-term-end-delim "`") "`")
+                ((equal hol-term-end-delim "’") "‘")
+                ((equal hol-term-end-delim "Proof")
+                 "Theorem [A-Za-z0-9_]*\\(\\[[A-Za-z]+\\]\\)?[[:space:]]*:"))))
           (re-search-backward beg nil t)
           (goto-char (match-end 0))
           (setq hol-beg-pos (point))))))
