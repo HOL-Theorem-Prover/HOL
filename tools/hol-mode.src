@@ -106,11 +106,25 @@ evaluations.")
     (and (fboundp 'zmacs-activate-region) (zmacs-activate-region))
     (and (boundp 'mark-active) (setq mark-active t))))
 
+(defvar-local hol-term-end-delim nil)
 (put 'hol-term 'end-op
-     (function (lambda () (skip-chars-forward "^`’”"))))
+     (function (lambda ()
+                 (re-search-forward "[`’]\\|^Proof" nil t)
+                 (setq hol-term-end-delim (match-string 0))
+                 (goto-char (match-beginning 0)))))
 (defvar hol-beg-pos nil) ; ugh, global, but easiest this way
 (put 'hol-term 'beginning-op
-     (function (lambda () (skip-chars-backward "^`‘“") (setq hol-beg-pos (point)))))
+     (function
+      (lambda ()
+        (let ((beg (cond
+                   ((equal hol-term-end-delim "`") "`")
+                   ((equal hol-term-end-delim "’") "‘")
+                   ((equal hol-term-end-delim "Proof")
+                    "Theorem [A-Za-z_]*\\(\\[[A-Za-z]+\\]\\)?[[:space:]]*:"))))
+          (re-search-backward beg nil t)
+          (goto-char (match-end 0))
+          (setq hol-beg-pos (point))))))
+
 (defun hol-term-at-point ()
   (let ((s (thing-at-point 'hol-term)))
     (with-hol-locpragma hol-beg-pos s)))
