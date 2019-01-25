@@ -2,6 +2,7 @@ ifdef POLY
 EXTRA_CLEANS = $(TARGET)
 
 TARGET = $(dprot $(HOLDIR)/bin/hol.state)
+HOLHEAP = $(TARGET)
 
 builder0 = $(HOLDIR)/src/num/termination/numheap
 

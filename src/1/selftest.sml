@@ -348,7 +348,8 @@ val _ = app tpp ["(if P then q else r) s",
                  "P (!x. Q x)",
                  "\\x. ?y. P x y",
                  "P (\\x. ?y. Q x y)",
-                 "(:'a)"]
+                 "(:'a)",
+                 "$var$(\\172)"]
 
 val _ = tpp "x = y"
 val _ = Lib.with_flag (testutils.linewidth, 10) tpp "xxxxxx =\nyyyyyy"

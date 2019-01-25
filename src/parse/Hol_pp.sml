@@ -10,6 +10,8 @@ open HolKernel DB Parse;
 val CONSISTENT   = Portable.CONSISTENT
 val INCONSISTENT = Portable.INCONSISTENT;
 
+fun print s = !Feedback.MESG_outstream s
+
 fun pp_theory (THEORY(name, {parents, types, consts,
                              axioms,definitions,theorems})) =
 let
@@ -74,11 +76,12 @@ end;
      Support for print_theory
  ---------------------------------------------------------------------------*)
 
+fun print_theory0 pfn thy =
+    HOLPP.prettyPrint(pfn, 80) (pp_theory (dest_theory thy))
 fun print_theory_to_outstream thy ostrm =
-  HOLPP.prettyPrint((fn s => TextIO.output(ostrm, s)), 80)
-                   (pp_theory (dest_theory thy))
+    print_theory0 (fn s => TextIO.output(ostrm, s)) thy
 
-fun print_theory thy = print_theory_to_outstream thy TextIO.stdOut;
+val print_theory = print_theory0 print
 
 fun print_theory_to_file thy file =
   let open TextIO

@@ -38,6 +38,18 @@ fun knn_sort (symweight,feav) feao =
   end
 
 (* ------------------------------------------------------------------------
+   Term predictions
+   ------------------------------------------------------------------------ *)
+
+fun termknn (symweight,feavdict) n fea =
+  let
+    val l1 = map (fst o fst) (knn_sort (symweight, dlist feavdict) fea)
+    val l2 = mk_sameorder_set Term.compare l1
+  in
+    first_n n l2
+  end
+
+(* ------------------------------------------------------------------------
    Theorem predictions
    ------------------------------------------------------------------------ *)
 

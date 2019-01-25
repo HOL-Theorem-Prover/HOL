@@ -893,14 +893,7 @@ val LENGTH_DELETE_ELEMENT_LEQ = store_thm (
     rpt GEN_TAC
  >> REWRITE_TAC [DELETE_ELEMENT_FILTER]
  >> MP_TAC (Q.SPECL [`\y. e <> y`, `\y. T`] LENGTH_FILTER_LEQ_MONO)
- >> BETA_TAC >> simp []
- >> STRIP_TAC
- >> POP_ASSUM (ASSUME_TAC o (Q.SPEC `L`))
- >> Know `FILTER (\y. T) L = L`
- >- ( KILL_TAC \\
-      Induct_on `L` >- REWRITE_TAC [FILTER] \\
-      GEN_TAC >> REWRITE_TAC [FILTER] >> simp [] )
- >> DISCH_TAC >> fs []);
+ >> BETA_TAC >> simp []);
 
 val LENGTH_DELETE_ELEMENT_LE = store_thm (
    "LENGTH_DELETE_ELEMENT_LE",

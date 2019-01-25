@@ -23,9 +23,9 @@ include Abbrev
   type treenn = opdict * nn
 
   (* initialization of the treenn *)
-  val random_headnn : int -> nn
+  val random_headnn : (int * int) -> nn
   val random_opdict : int -> (term * int) list -> opdict
-  val random_treenn : int -> (term * int) list -> treenn
+  val random_treenn : (int * int) -> (term * int) list -> treenn
 
   (* forward and backward propagation *)
   val fp_treenn : treenn -> term list ->
@@ -54,7 +54,7 @@ include Abbrev
   (* training *)
   val train_treenn_schedule :
     int -> treenn -> int ->
-    (term list * real vector) list ->
+    (term list * real vector) list * (term list * real vector) list ->
     (int * real) list ->
     (treenn * real)
 
@@ -62,18 +62,5 @@ include Abbrev
   val string_of_treenn : treenn -> string
   val string_of_trainset_poli : (term * real list) list -> string
   val string_of_trainset_eval : (term * real) list -> string
-
-  (* input terms *)
-  val goal_to_nnterm     : goal -> term
-  val goallist_to_nnterm : goal list -> term
-  val forget_to_nnterm   : (goal * term) -> term
-  val cut_to_nnterm      : (goal * term) -> term
-  val cutpos_to_nnterm   : (goal * term) -> term
-  val initcut_to_nnterm  : (goal * term) -> term
-  val buildcut_to_nnterm : ((goal * term) * term) -> term
-  val goalchoice_to_nnterm : (goal list * goal) -> term
-
-  (* operators *)
-  val operl_of_term : term -> (term * int) list
 
 end

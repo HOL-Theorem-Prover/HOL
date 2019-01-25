@@ -17,6 +17,7 @@ val ERR = mk_HOL_ERR "psMCTS"
    ------------------------------------------------------------------------- *)
 
 val exploration_coeff = 1.0
+val ignorestatus_flag = ref false
 
 (* -------------------------------------------------------------------------
    Timers
@@ -77,13 +78,13 @@ fun string_of_status status = case status of
   | Lose      => "Lose"
   | Win       => "Win"
 
-type 'a pos    = bool * 'a
+type 'a sit    = bool * 'a
 type 'b choice = (('b * real) * int list)
 
 type ('a,'b) node =
 {
   pol    : 'b choice list,
-  pos    : 'a pos,
+  sit    : 'a sit,
   sum    : real,
   vis    : real,
   status : status
@@ -95,8 +96,9 @@ fun genealogy id =
   if null id then [] else id :: genealogy (tl id)
 
 fun access_child tree (_,cid) =
-  (case #status (dfind cid tree) of Undecided => true | _ => false)
-  handle NotFound => true
+  if !ignorestatus_flag then true else
+    ((case #status (dfind cid tree) of Undecided => true | _ => false)
+    handle NotFound => true)
 
 fun access_poli tree pol = filter (access_child tree) pol
 
@@ -118,11 +120,11 @@ fun all_lose tree pol    = quant_status all Lose tree pol
 fun exists_win tree pol  = quant_status exists Win tree pol
 fun exists_lose tree pol = quant_status exists Lose tree pol
 
-fun update_node decay tree eval {pol,pos,sum,vis,status} =
+fun update_node decay tree eval {pol,sit,sum,vis,status} =
   let
     val newstatus =
       if status = Undecided then
-        if fst pos then
+        if fst sit then
           (if exists_win tree pol then Win else
            if all_lose tree pol   then Lose else
            Undecided)
@@ -132,7 +134,7 @@ fun update_node decay tree eval {pol,pos,sum,vis,status} =
            Undecided)
       else status
   in
-    {pol=pol, pos=pos, sum=sum + decay * eval, vis=vis+1.0, status=newstatus}
+    {pol=pol, sit=sit, sum=sum+eval, vis=vis+1.0, status=newstatus}
   end
 
 fun backup decay tree (id,eval) =
@@ -143,23 +145,23 @@ fun backup decay tree (id,eval) =
   in
     case tl id of
       []  => newtree
-    | pid => backup decay newtree (pid,eval)
+    | pid => backup decay newtree (pid, decay * eval)
   end
 
 (* --------------------------------------------------------------------------
    Node creation
    ------------------------------------------------------------------------- *)
 
-fun node_create_backup decay fevalpoli status_of tree (id,pos) =
+fun node_create_backup decay fevalpoli status_of tree (id,sit) =
   let
     fun wrap_poli poli = let fun f i x = (x, i :: id) in mapi f poli end
     val ((eval,poli),status) =
-      case status_of pos of
+      case status_of sit of
         Win       => ((1.0,[]),Win)
       | Lose      => ((0.0,[]),Lose)
-      | Undecided => (fevalpoli pos,Undecided)
-    val node           =
-      {pol=wrap_poli poli, pos=pos, sum=0.0, vis=0.0, status=status}
+      | Undecided => (fevalpoli sit,Undecided)
+    val node =
+      {pol=wrap_poli poli, sit=sit, sum=0.0, vis=0.0, status=status}
     val tree1 = dadd id node tree
     val tree2 = backup_timer (backup decay tree1) (id,eval)
   in
@@ -185,22 +187,30 @@ fun value_choice player tree vtot ((move,polv),cid) =
    Selection of a node to extend by traversing the tree
    ------------------------------------------------------------------------- *)
 
-fun select_child tree id =
+datatype ('a,'b) select =
+  TreeUpdate of ('a,'b) tree | NodeSelect of (int list * int list)
+
+fun select_child decay tree id =
   let
     val node  = dfind id tree handle NotFound => raise ERR "select_child" ""
     val pol   = filter (access_child tree) (#pol node)
   in
-    if null pol then raise ERR "select_child" "empty policy" else
+    if null pol then
+      case #status (dfind id tree) of
+          Undecided => raise ERR "select_child" ""
+        | Win => TreeUpdate (backup decay tree (id,1.0))
+        | Lose => TreeUpdate (backup decay tree (id,0.0))
+    else
       let
-        val player  = fst (#pos node)
+        val player  = fst (#sit node)
         val l1      = map_assoc (value_choice player tree (#vis node)) pol
         val l2      = dict_sort compare_rmax l1
         val choice  = fst (hd l2)
         val cid     = snd choice
       in
         if not (dmem cid tree)
-        then (id,cid)
-        else select_child tree cid
+        then NodeSelect (id,cid)
+        else select_child decay tree cid
       end
   end
 
@@ -217,20 +227,20 @@ fun find_move pol cid =
 fun expand decay fevalpoli status_of apply_move tree (id,cid) =
   let
     val node = dfind id tree
-    val pos1 = #pos node
+    val sit1 = #sit node
     val move = find_move (#pol node) cid
-    val pos2 = apply_move move pos1
+    val sit2 = apply_move move sit1
   in
-    node_create_backup decay fevalpoli status_of tree (cid,pos2)
+    node_create_backup decay fevalpoli status_of tree (cid,sit2)
   end
 
 (* -------------------------------------------------------------------------
    MCTS
    ------------------------------------------------------------------------- *)
 
-fun starttree_of decay fevalpoli status_of startpos =
+fun starttree_of decay fevalpoli status_of startsit =
   let val empty_tree = dempty (list_compare Int.compare) in
-    node_create_backup decay fevalpoli status_of empty_tree ([0],startpos)
+    node_create_backup decay fevalpoli status_of empty_tree ([0],startsit)
   end
 
 fun mcts (nsim,decay) fevalpoli status_of apply_move starttree =
@@ -242,8 +252,10 @@ fun mcts (nsim,decay) fevalpoli status_of apply_move starttree =
       if dlength tree > nsim orelse
          #status (dfind [0] tree) <> Undecided then tree else
       let
-        val (id,cid) = select_timer (select_child tree) [0]
-        val newtree  = expand decay
+        val selecto = select_timer (select_child decay tree) [0]
+        val newtree  = case selecto of
+            TreeUpdate tree_upd => tree_upd
+          | NodeSelect (id,cid) => expand decay
           fevalpoli_timed status_of_timed apply_move_timed tree (id,cid)
       in
         loop newtree
@@ -269,13 +281,13 @@ fun remove_suffix_add0 suffix l =
 fun cut_tree tree suffix =
   let
     val l0 = dlist tree
-    fun change_entry (id,{pol,pos,sum,vis,status}) =
+    fun change_entry (id,{pol,sit,sum,vis,status}) =
       let
         fun f x = remove_suffix_add0 suffix x
         val newid = f id
         val newpol = map_snd f pol
       in
-        (newid, {pol=newpol, pos=pos, sum=sum, vis=vis, status=status})
+        (newid, {pol=newpol, sit=sit, sum=sum, vis=vis, status=status})
       end
     val l1 = mapfilter change_entry l0
   in
@@ -380,7 +392,7 @@ fun make_distrib tree id =
     val node = dfind id tree
     val cidl = map snd (#pol node)
   in
-    if fst (#pos node)
+    if fst (#sit node)
     then inac_distrib p1_distrib tree cidl
     else inac_distrib p2_distrib tree cidl
   end
@@ -389,14 +401,24 @@ fun make_distrib tree id =
    Rescaling the distribution for the training examples
    ------------------------------------------------------------------------- *)
 
-fun policy_example tree id =
+fun swap (a,b) = (b,a)
+
+fun move_of_cid node cid =
+  let val pol = #pol node in
+    fst (assoc cid (map swap pol))
+  end
+
+fun poli_example tree id =
   let
     val dis0 = make_distrib tree id
-    val dis1 = map_snd (fn x => if isSome x then valOf x else 0.0) dis0
-    val tot  = sum_real (map snd dis1)
+    val dis1 = map (fn (_,x) => if isSome x then valOf x else 0.0) dis0
+    val tot = sum_real dis1
   in
-    if tot < 0.5 then [] else map_snd (fn x => x / tot) dis1
+    if tot < 0.5 then NONE else SOME (map (fn x => x / tot) dis1)
   end
+
+fun eval_example tree id =
+  let val node = dfind id tree in #sum node / #vis node end
 
 (* -------------------------------------------------------------------------
    Big step selection

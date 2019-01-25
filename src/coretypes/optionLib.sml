@@ -23,7 +23,8 @@ val OPTION_rewrites =
     SOME_11, NOT_NONE_SOME, NOT_SOME_NONE,
     option_case_def, OPTION_MAP_DEF,
     OPTION_BIND_def, OPTION_GUARD_def,
-    OPTION_IGNORE_BIND_def, OPTION_CHOICE_def ];
+    OPTION_IGNORE_BIND_def, OPTION_JOIN_DEF, OPTION_CHOICE_def,
+    OPTION_MAP2_THM];
 
 val OPTION_rws =
   computeLib.add_thms (List.map computeLib.lazyfy_thm OPTION_rewrites);

@@ -356,7 +356,8 @@ fun bvk_find_term P k =
 
 fun find_terms P =
    let
-      val tms = ref []
+      open Uref
+      val tms = Uref.new []
       fun find_tms tm =
          (if P tm then tms := tm :: (!tms) else ()
           ; find_tms (body tm)

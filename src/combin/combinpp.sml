@@ -101,7 +101,7 @@ fun upd_printer (tyg,tmg) backend printer ppfns (pgr,lgr,rgr) depth tm =
       val unicodep = get_tracefn "PP.avoid_unicode" () = 0
       val (kvs, f) = strip_upd tmg tm
       val _ = not (null kvs) orelse raise UserPP_Failed
-      val {add_string,add_break,...} = ppfns
+      val {add_string,add_break,...} = ppfns : term_pp_types.ppstream_funs
       val (arrow_s,ld_s,rd_s) = if unicodep then ("↦", "⦇", "⦈") (* UOK *)
                                 else ("|->", "(|", "|)")
       val paren =
