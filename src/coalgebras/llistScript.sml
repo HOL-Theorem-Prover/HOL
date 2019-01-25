@@ -2395,6 +2395,27 @@ val LDROP_SUC = Q.store_thm("LDROP_SUC",
   `LDROP (SUC n) ls = OPTION_BIND (LDROP n ls) LTL`,
   SIMP_TAC std_ss [LDROP_FUNPOW, arithmeticTheory.FUNPOW_SUC]) ;
 
+Theorem LDROP_1[simp]:
+  LDROP (1: num) (h:::t) = SOME t
+Proof `LDROP (SUC 0) (h:::t) = SOME t` by fs[LDROP] >>
+      metis_tac[arithmeticTheory.ONE]
+QED
+
+Theorem LDROP_NONE_LFINITE
+  `(LDROP k l = NONE) ==> LFINITE l`
+  (metis_tac[NOT_LFINITE_DROP,NOT_SOME_NONE]);
+
+Theorem LDROP_LDROP:
+  !ll k1 k2. ~ LFINITE ll ==>
+             (THE (LDROP k2 (THE (LDROP k1 ll))) =
+              THE (LDROP k1 (THE (LDROP k2 ll))))
+Proof
+  rw[] >>
+  `LDROP (k1+k2) ll = LDROP (k2 + k1) ll` by fs[] >>
+  fs[LDROP_ADD] >>
+  NTAC 2 (full_case_tac >- imp_res_tac LDROP_NONE_LFINITE) >> fs[]
+QED
+
 (* ----------------------------------------------------------------------
     LGENLIST : (num -> 'a) -> num option -> 'a llist
    ---------------------------------------------------------------------- *)
