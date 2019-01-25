@@ -27,7 +27,6 @@ src/finite_maps
 src/ring/src
 src/integer
 src/topology
-src/enumfset
 !examples/rings
 src/coalgebras
 !src/integer/testing

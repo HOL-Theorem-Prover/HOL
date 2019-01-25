@@ -69,7 +69,7 @@ val cpn_nchotomy = TypeBase.nchotomy_of ``:ordering``
 
 (* Define being a (cpn-valued) total order: *)
 
-val _ = temp_type_abbrev ("cpn", ``:ordering``)
+val _ = type_abbrev ("cpn", ``:ordering``)
 val _ = type_abbrev ("comp", Type`:'a->'a->cpn`);
 
 val TotOrd = Define`TotOrd (c: 'a comp) =
