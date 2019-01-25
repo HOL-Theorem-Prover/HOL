@@ -52,14 +52,12 @@ val _ = augment_srw_ss[rewrites[listTheory.TAKE_def,listTheory.DROP_def]];
 val FRONT_TAKE = store_thm(
   "FRONT_TAKE",
   ``∀l n. 0 < n ∧ n ≤ LENGTH l ⇒ (FRONT (TAKE n l) = TAKE (n - 1) l)``,
-  Induct THEN SRW_TAC [ARITH_ss][] THENL [
-    `n = 1` by DECIDE_TAC THEN SRW_TAC [][],
-    `0 < n - 1 ∧ n - 1 ≤ LENGTH l` by DECIDE_TAC THEN
-    SRW_TAC [][listTheory.FRONT_DEF] THENL [
-      METIS_TAC [take_lemma],
-      `(n - 1) - 1 = n - 2` by DECIDE_TAC THEN
-      SRW_TAC [][]
-    ]
+  Induct THEN SRW_TAC [ARITH_ss][] >>
+  `0 < n - 1 ∧ n - 1 ≤ LENGTH l` by DECIDE_TAC THEN
+  SRW_TAC [][listTheory.FRONT_DEF] THENL [
+    fs [],
+    `(n - 1) - 1 = n - 2` by DECIDE_TAC THEN
+    SRW_TAC [][]
   ]);
 
 val DROP_PREn_LAST_CONS = store_thm(
@@ -94,23 +92,19 @@ val appstar_eq_appstar = store_thm(
 
       SRW_TAC [ARITH_ss][ADD1] THEN EQ_TAC THEN SRW_TAC [][] THEN
       FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [] THENL [
-        FULL_SIMP_TAC (srw_ss()) [app_eq_appstar] THENL [
-          `0 < LENGTH t - LENGTH a₁` by DECIDE_TAC THEN
-          `LENGTH t - LENGTH a₁ ≤ LENGTH t` by DECIDE_TAC THEN
-          METIS_TAC [take_lemma],
-          SRW_TAC [][] THEN DISJ2_TAC THEN
-          SRW_TAC [ARITH_ss][FRONT_TAKE] THEN
-          `LENGTH t - (LENGTH a₁ + 1) = LENGTH t - LENGTH a₁ - 1`
-             by DECIDE_TAC THEN
-          Q.ABBREV_TAC `N = LENGTH t - LENGTH a₁` THEN
-          ASM_SIMP_TAC bool_ss [] THEN ONCE_REWRITE_TAC [EQ_SYM_EQ] THEN
-          MATCH_MP_TAC DROP_PREn_LAST_CONS THEN
-          Q.UNABBREV_TAC `N` THEN DECIDE_TAC
-        ],
+        FULL_SIMP_TAC (srw_ss()) [app_eq_appstar] THEN fs[] >>
+        SRW_TAC [][] THEN DISJ2_TAC THEN
+        SRW_TAC [ARITH_ss][FRONT_TAKE] THEN
+        `LENGTH t - (LENGTH a₁ + 1) = LENGTH t - LENGTH a₁ - 1`
+           by DECIDE_TAC THEN
+        Q.ABBREV_TAC `N = LENGTH t - LENGTH a₁` THEN
+        ASM_SIMP_TAC bool_ss [] THEN ONCE_REWRITE_TAC [EQ_SYM_EQ] THEN
+        MATCH_MP_TAC DROP_PREn_LAST_CONS THEN
+        Q.UNABBREV_TAC `N` THEN DECIDE_TAC,
 
         DISJ2_TAC THEN SRW_TAC [][app_eq_appstar] THENL [
           DISJ2_TAC THEN SRW_TAC [ARITH_ss][FRONT_TAKE] THENL [
-            MATCH_MP_TAC take_lemma THEN DECIDE_TAC,
+            strip_tac >> fs[],
             Q.ABBREV_TAC `N = LENGTH t - LENGTH a₁` THEN
             `0 < N ∧ N ≤ LENGTH t` by SRW_TAC [ARITH_ss][Abbr`N`] THEN
             `LENGTH t - (LENGTH a₁ + 1) = N - 1`
@@ -143,12 +137,11 @@ val appstar_eq_appstar = store_thm(
     ]
   ]);
 
-val varappstar_11 = Store_thm(
-  "varappstar_11",
-  ``(VAR v₁ ·· a₁ = VAR v₂ ·· a₂) ⇔ (v₁ = v₂) ∧ (a₁ = a₂)``,
+Theorem varappstar_11[simp]:
+  (VAR v₁ ·· a₁ = VAR v₂ ·· a₂) ⇔ (v₁ = v₂) ∧ (a₁ = a₂)
+Proof
   SRW_TAC [][appstar_eq_appstar, var_eq_appstar] THEN
-  METIS_TAC [DECIDE ``x < y ⇒ 0 < y - x``, DECIDE ``x - y ≤ x``,
-             take_lemma]);
-
+  csimp[DECIDE ``(x:num) < y ==> ~(y <= x)``] >> csimp[] >> metis_tac[]
+QED
 
 val _ = export_theory ()
