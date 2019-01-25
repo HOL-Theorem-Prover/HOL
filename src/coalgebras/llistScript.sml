@@ -2633,4 +2633,84 @@ val _ = TypeBase.export
    )
   ]
 
+(* ----------------------------------------------------------------------
+    Temporal logic style operators
+   ---------------------------------------------------------------------- *)
+
+val (eventually_rules,eventually_ind,eventually_cases) = Hol_reln‘
+  (!ll. P ll ==> eventually P ll) /\
+  (!h t. eventually P t ==> eventually P (h:::t))
+’;
+
+Theorem eventually_thm[simp]:
+  (eventually P [||] = P [||]) /\
+  (eventually P (h:::t) = (P (h:::t) \/ eventually P t))
+Proof
+  CONJ_TAC THEN
+  CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [eventually_cases])) THEN
+  SRW_TAC [][Cong (REWRITE_RULE [GSYM AND_IMP_INTRO] OR_CONG)]
+QED
+
+val (always_rules,always_coind,always_cases) = Hol_coreln‘
+  (!h t. (P (h ::: t) /\ always P t) ==> always P (h ::: t))
+’;
+
+Theorem always_thm[simp]:
+  (always P [||] <=> F) /\
+  !h t. always P (h:::t) <=> P (h:::t) /\ always P t
+Proof conj_tac >> simp[Once always_cases]
+QED
+
+Theorem always_conj_l:
+  !ll. always (\x. P x /\ Q x) ll ==> always P ll
+Proof
+  ho_match_mp_tac always_coind >> rw[] >> Cases_on`ll` >> fs[]
+QED
+
+Theorem always_eventually_ind:
+  (!ll. (P ll \/ (~P ll /\ Q (THE(LTL ll)))) ==> Q ll) ==>
+  !ll. ll <> [||] ==> always(eventually P) ll ==> Q ll
+Proof
+  `(!ll. (P ll \/ (~P ll /\ Q (THE(LTL ll)))) ==> Q ll) ==>
+   (!ll. eventually P ll ==> (Q ll))`
+     by (strip_tac >> ho_match_mp_tac eventually_ind >>
+         fs[DISJ_IMP_THM, FORALL_AND_THM] >> rw[] >>
+         Cases_on ‘P (h:::t)’ >> simp[]) >>
+  rw[] >> Cases_on`ll` >> fs[] >> res_tac >> first_x_assum irule >> simp[]
+QED
+
+Theorem always_DROP:
+  !ll. always P ll ==> always P (THE(LDROP k ll))
+Proof
+  Induct_on`k` >> Cases_on`ll` >> fs[always_thm,LDROP] >>
+  rw[] >> imp_res_tac always_thm >> fs[]
+QED
+
+val (until_rules,until_ind,until_cases) = Hol_reln‘
+  (!ll. Q ll ==> until P Q ll) /\
+  (!h t. P (h:::t) /\ until P Q t ==> until P Q (h:::t))
+’;
+
+Theorem eventually_until_EQN: eventually P = until (K T) P
+Proof
+  simp[FUN_EQ_THM, EQ_IMP_THM, FORALL_AND_THM] >> conj_tac
+  >- (Induct_on ‘eventually’ >> rpt strip_tac
+      >- (irule (CONJUNCT1 (SPEC_ALL until_rules)) >> simp[])
+      >- (irule (CONJUNCT2 (SPEC_ALL until_rules)) >> simp[]))
+  >- (Induct_on ‘until’ >> simp[eventually_rules])
+QED
+
+(* might be nice if this was also true, but behaviour of eventually at LNIL
+   as written doesn't allow it; we would have to have
+     eventually P [||] <=> T
+*)
+(*
+Theorem eventually_NOT_always_EQN: eventually P = $~ o always ($~ o P)
+Proof
+  simp[FUN_EQ_THM, EQ_IMP_THM, FORALL_AND_THM] >> conj_tac
+  >- (Induct_on ‘eventually’ >> simp[] >> Cases >> simp[]) >>
+  CONV_TAC (STRIP_QUANT_CONV CONTRAPOS_CONV) >> simp[] >>
+  ho_match_mp_tac always_coind >> Cases >> simp[]
+QED
+*)
 val _ = export_theory();
