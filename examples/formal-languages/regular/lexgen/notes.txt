@@ -13,48 +13,50 @@ Important Definitions and Theorems
      type abbrev ("lexer_spec", 
                   ``:(regexp # (string->'a)) list``);
 
-- The rough idea is that, given (r,tokfn) in a lexer spec, r is used
-  to break off a prefix of the input, and tokfn is applied to that
-  prefix in order to get the next token. In order to defend against
-  ambiguity problems, the "maximal munch" property is adopted: a
-  correct lexer breaks a string into a sequence of non-null lexemes,
+- `correct_lex`: the idea is that, given (r,tokfn) in a lexer spec, r
+  is used to break off a prefix of the input, and tokfn is applied to
+  that prefix in order to get the next token. In order to defend
+  against ambiguity problems, the "maximal munch" property is adopted:
+  a correct lexer breaks a string into a sequence of non-null lexemes,
   each being matched by one of the regexps given in the spec, and each
   of max possible length. If multiple regexps in the spec match the
   max. length lexeme, the earliest action in the list of actions is
   taken.
 
-  The HOL definition: 
+  Formal definition:
 
   (correct_lex lexer_spec s [] = (s = [])) /\
   (correct_lex lexer_spec s (tok::toks) =
-     ?lexeme n s_rest.
-       (lexeme <> []) /\
-       lexer_spec_matches_prefix lexer_spec n tok lexeme s_rest s /\
-       correct_lex lexer_spec s_rest toks /\
+     ?prefix n suffix.
+       (prefix <> []) /\
+       lexer_spec_matches_prefix lexer_spec n tok prefix suffix s /\
+       correct_lex lexer_spec suffix toks /\
        (* Ensure a longest match  *)
-       (!n' tok' lexeme' s_rest'.
-           lexer_spec_matches_prefix lexer_spec n' tok' lexeme' s_rest' s 
+       (!n' tok' prefix' suffix'.
+           lexer_spec_matches_prefix lexer_spec n' tok' prefix' suffix' s 
             ==>
-           LENGTH lexeme' <= LENGTH lexeme) /\
+           LENGTH prefix' <= LENGTH prefix) /\
        (* Ensure the earliest match of equal length *)
-       (!n' tok' lexeme' s_rest'.
-           lexer_spec_matches_prefix lexer_spec n' tok' lexeme' s_rest' s
+       (!n' tok' prefix' suffix'.
+           lexer_spec_matches_prefix lexer_spec n' tok' prefix' suffix' s
              ==>
-           (LENGTH lexeme' <> LENGTH lexeme) \/ n <= n'))
+           (LENGTH prefix' <> LENGTH prefix) \/ n <= n'))
 
   where
 
   lexer_spec_matches_prefix lexer_spec n token prefix suffix s =
      ?r f.
-      n < LENGTH lexer_spec     /\
-      (EL n lexer_spec = (r,f)) /\
-      (token = f prefix)        /\
-      regexp_lang r prefix      /\
+      n < LENGTH lexer_spec      /\
+      (EL n lexer_spec = (r,f))  /\
+      (token = f prefix)         /\
+      prefix IN (regexp_lang r)  /\
       (s = prefix ++ suffix)
 
 
 Conditional correctness of a lexer (lexer_runtimeScript.sml)
 ------------------------------------------------------------
+
+A lexer is correct if it always gives the correct lex:
 
 val lexer_correct = Q.store_thm 
 ("lexer_correct",

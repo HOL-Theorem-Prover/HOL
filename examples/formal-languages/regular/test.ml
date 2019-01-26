@@ -330,6 +330,29 @@ Lib.all (equal false) (map (test o int2string 3) (upto ~119999 ~116536));
 Lib.all (equal false) (map (test o int2string 3) (upto ~122 ~1));
 Lib.all (equal false) (map (test o int2string 3) (upto ~122 1000));
 
+(* Tests showing that "full intervals" get mapped to "dot" *)
+
+fun twoE i = IntInf.pow (IntInf.fromInt 2,i);
+
+val lo = ~(twoE 15)
+val hi = twoE 15 -1;
+
+Regexp_Type.regexp_interval lo hi Regexp_Type.LSB;
+
+val lo = ~(twoE 31)
+val hi = twoE 31 -1;
+
+Regexp_Type.regexp_interval lo hi Regexp_Type.LSB;
+
+val lo = ~(twoE 63)
+val hi = twoE 63 -1;
+
+Regexp_Type.regexp_interval lo hi Regexp_Type.LSB;
+
+(* 64 bit signed 2scomp *)
+
+val test = matcher `\i{~9223372036854775808,9223372036854775807}`;
+
 (*---------------------------------------------------------------------------*)
 (* Test numeric constants                                                    *)
 (*---------------------------------------------------------------------------*)
@@ -473,7 +496,7 @@ dom `\w{1,500}`;
 (*---------------------------------------------------------------------------*)
 
 dom `(201\d|202[0-5])-([1-9]|1[0-2])-([1-9]|[1-2]\d|3[0-1]) (1?\d|2[0-3]):(\d|[1-5]\d):(\d|[1-5]\d)`;
-(* 0.25s; 24 states *)
+(* 0.016s; 24 states *)
 
 dom `\[\{"time":"\d{13}(:\d{3})?","\w{1,20}":\{("\w{1,25}":"\w{1,30}",?)+\}\}\]`;
 (* 119 states *)

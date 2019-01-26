@@ -44,9 +44,15 @@ sig
  val EPSILON    : regexp
  val SIGMASTAR  : regexp
 
- (* parsing *)
-
  datatype direction = MSB | LSB
+
+ val replicate : regexp -> int -> regexp
+ val catlist : regexp list -> regexp
+ val dots : int -> regexp list
+ val ranged : regexp -> int -> int -> regexp
+ val regexp_interval : IntInf.int -> IntInf.int -> direction -> regexp
+  
+ (* parsing *)
 
  datatype packelt
    = Span of IntInf.int * IntInf.int
