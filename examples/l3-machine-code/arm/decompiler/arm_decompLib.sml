@@ -14,8 +14,9 @@ local
    fun w_var i = Term.mk_var ("w" ^ Int.toString i, ``:word32``)
    fun word32 w = wordsSyntax.mk_wordi (Arbnum.fromHexString w, 32)
    val ok_rule = PURE_ONCE_REWRITE_RULE [GSYM arm_OK_def]
-   val sbst = [``vfp:VFPExtension`` |-> ``VFPv3``,
-               ``arch:Architecture`` |-> ``ARMv7_A``]
+   fun one_subst s c = mk_var(s,type_of c) |-> c
+   val sbst = [one_subst "vfp" ``arm$VFPv3``,
+               one_subst "arch" ``arm$ARMv7_A``]
    fun arm_OK_intro l = ok_rule o Thm.INST (l @ sbst)
    fun format_thm th =
       (th, 4,
