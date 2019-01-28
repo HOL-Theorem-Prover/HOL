@@ -113,6 +113,17 @@ end
 
 (* -- *)
 
+local
+   val addr_eq_conv =
+      SIMP_CONV (bool_ss++wordsLib.WORD_ARITH_ss++wordsLib.WORD_ARITH_EQ_ss) []
+in
+   val memory_introduction =
+      stateLib.introduce_map_definition
+         (riscv_progTheory.riscv_MEMORY_INSERT, addr_eq_conv)
+end
+
+(* -- *)
+
 val state_id =
    utilsLib.mk_state_id_thm riscvTheory.riscv_state_component_equality
       [["c_PC", "c_gpr"],
@@ -272,6 +283,9 @@ local
   val (_, mk_ArchBase, _, _) = HolKernel.syntax_fns1 "riscv" "mcpuid_ArchBase"
   val pre = progSyntax.strip_star o temporal_stateSyntax.dest_pre' o Thm.concl
   fun specialize_to_rv64i th =
+(*
+val SOME tm = List.find is_riscv_ID (pre th)
+*)
     case List.find is_riscv_ID (pre th) of
        SOME tm =>
          let
@@ -344,6 +358,7 @@ in
                              DECIDE ``a /\ (b ==> a) = a``,
                              DECIDE ``a /\ c /\ (b ==> a) = c /\ a``]
        |> spec_to_rv64
+       |> memory_introduction
 end
 
 local
@@ -482,6 +497,9 @@ in
     ; spec_label_set := Redblackset.empty String.compare
     ; spec_rwts := init_net
     )
+(*
+val (s,tm) = hd (find_opc opc)
+*)
   fun addInstruction (s, tm) =
     if Redblackset.member (!spec_label_set, s)
       then false
@@ -512,6 +530,34 @@ end
 (* ------------------------------------------------------------------------ *)
 
 (* Testing...
+
+   [(2147580452, "c591", "beqz\ta1,ffffffff80017a30 <memzero+0xc>\r"),
+    (2147580454, "00053023", "sd\tzero,0(a0)\r"),
+    (2147580458, "15e1", "addi\ta1,a1,-8\r"),
+    (2147580460, "0521", "addi\ta0,a0,8\r"),
+    (2147580462, "fde5", "bnez\ta1,ffffffff80017a26 <memzero+0x2>\r"),
+    (2147580464, "8082", "ret\r")]: (int * string * string) list
+
+   [(2147580516, "ca19", "beqz\ta2,ffffffff80017a7a <memcpy+0x16>\r"),
+    (2147580518, "962a", "add\ta2,a2,a0\r"),
+    (2147580520, "87aa", "mv\ta5,a0\r"),
+    (2147580522, "0005c703", "lbu\ta4,0(a1)\r"),
+    (2147580526, "0785", "addi\ta5,a5,1\r"),
+    (2147580528, "0585", "addi\ta1,a1,1\r"),
+    (2147580530, "fee78fa3", "sb\ta4,-1(a5)\r"),
+    (2147580534, "fec79ae3", "bne\ta5,a2,ffffffff80017a6a <memcpy+0x6>\r"),
+    (2147580538, "8082", "ret\r")]: (int * string * string) list
+
+val riscv_tools = riscv_decompLib.riscv_tools
+val (riscv_spec,_,_,_) = riscv_tools
+
+riscv_progLib.riscv_spec_hex s
+
+val s = "fee78fa3"; riscv_spec_hex s;
+val s = "0005c703"; riscv_spec_hex s;
+
+val th = hd (riscv_spec_hex s)
+memory_introduction th
 
 val s = "410093"; riscv_spec_hex s;
 val s = "21180B3"; riscv_spec_hex s;

@@ -114,6 +114,13 @@ val jalr_aligned = Q.store_thm("jalr_aligned",
 
 (* ------------------------------------------------------------------------ *)
 
+val riscv_MEM8_def = fetch "-" "riscv_MEM8_def";
+
+val (riscv_MEMORY_def, riscv_MEMORY_INSERT) =
+   stateLib.define_map_component ("riscv_MEMORY", "mem", riscv_MEM8_def)
+
+(* ------------------------------------------------------------------------ *)
+
 val c_gpr_frame = Q.store_thm("c_gpr_frame",
   `!c_gpr a b w s x.
      riscv_c_c_gpr a b IN x ==>
