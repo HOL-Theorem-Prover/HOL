@@ -130,7 +130,8 @@ fun prove_funcs_ok names = let
   val all_code = fs |> map (rand o rator o rator o concl)
   val code_name = all_code |> hd |> rator
   val all_code = mk_comb(code_name, (all_code |> map rand |> list_mk_union))
-  val all_code_def = new_definition("all_code",``all_code = ^all_code``);
+  val all_code_var = mk_var("all_code",type_of all_code)
+  val all_code_def = new_definition("all_code",mk_eq(all_code_var,all_code))
   val pair_case_of = TypeBase.case_def_of ``:'a # 'b``;
   fun expend_code th = let
     val th = MATCH_MP func_ok_EXPEND_CODE th |> Q.SPEC `all_code`

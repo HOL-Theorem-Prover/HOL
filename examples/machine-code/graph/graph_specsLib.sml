@@ -92,7 +92,8 @@ in
       ARM => (arm_state_inst, arm_state, arm_state_parts,
               arm_state_type, arm_state_combs, arm_state_thm)
     | M0 => (m0_state_inst, m0_state, m0_state_parts, m0_state_type,
-              m0_state_combs, m0_state_thm)
+             m0_state_combs, m0_state_thm)
+    | RISCV => failwith "state_tools RISCV"
 end
 
 val STATE_INTRO_RULE_input = ref TRUTH
@@ -177,7 +178,9 @@ fun write_transform th1 th2_opt th_res = let
   in th_res end
 
 fun mk_code_term c =
-  case (!arch_name) of ARM => ``ARM ^c`` | M0 => ``M0 ^c``;
+  case (!arch_name) of ARM => ``ARM ^c``
+                     | M0 => ``M0 ^c``
+                     | RISCV => ``RISCV ^c``;
 
 val make_ASM_input = ref TRUTH;
 val make_CALL_input = ref TRUTH;

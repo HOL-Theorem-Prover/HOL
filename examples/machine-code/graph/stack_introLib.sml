@@ -11,6 +11,7 @@ fun STACK_MEMORY_INTRO_RULE th = let
   val ps = list_dest dest_star p
   val pat = case !arch_name of ARM => ``arm_MEMORY d m``
                              | M0 => ``m0_MEMORY d m``
+                             | RISCV => ``riscv_MEMORY d m``
   val x = first (can (match_term pat)) ps
   val d = x |> rator |> rand
   val m = x |> rand
@@ -46,6 +47,7 @@ local
     val r13_pat = case !arch_name of
                     ARM => ``arm_REG (R_mode mode 13w) r13``
                   | M0 => ``m0_REG RName_SP_main r13``
+                  | RISCV => ``riscv_REG RName_SP_main r13``
     val tm = find_term (can (match_term r13_pat)) q |> rand
     in let val (x,y) = wordsSyntax.dest_word_add tm
            val _ = x = r13 orelse fail()

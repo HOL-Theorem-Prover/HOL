@@ -10,8 +10,9 @@ open GraphLangTheory
 
 fun spec_rule x =
   case !arch_name of
-    ARM => arm_spec x
-  | M0  => m0_spec x;
+    ARM   => arm_spec x
+  | M0    => m0_spec x
+  | RISCV => riscv_spec x;
 
 (* code abbrevs *)
 
@@ -693,6 +694,12 @@ fun derive_specs_for sec_name = let
   in thms end;
 
 (*
+
+  val base_name = "loop-riscv/example"
+  val _ = read_files base_name []
+  val _ = open_current "test"
+  val sec_name = "memcpy"
+  val sec_name = "memzero"
 
   val base_name = "loop/example"
   val _ = read_files base_name []

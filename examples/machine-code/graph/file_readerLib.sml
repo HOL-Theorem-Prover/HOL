@@ -4,7 +4,7 @@ struct
 open HolKernel boolLib bossLib Parse;
 open helperLib backgroundLib writerLib;
 
-datatype arch = ARM | M0
+datatype arch = ARM | M0 | RISCV
 
 (* refs begin *)
 
@@ -20,7 +20,7 @@ val complete_sections = ref ([]:(string * (* sec_name *)
 (* refs end *)
 
 fun arch_str () =
-  case (!arch_name) of ARM => "ARM" | M0 => "M0"
+  case (!arch_name) of ARM => "ARM" | M0 => "M0" | RISCV => "RISC-V"
 
 fun HOL_commit () = let
   val path = Globals.HOLDIR
@@ -50,10 +50,15 @@ fun read_sections filename = let
   fun is_hex_char c = mem c (explode "0123456789abcdefABCDEF")
   fun is_hex_string str = every is_hex_char (explode str)
   fun dest_section_declaration line = let
-    val hex = String.substring(line,0,8)
-    val _ = String.substring(line,8,2) = " <" orelse fail()
-    val rest = String.substring(line,10,size line - 10)
+    val _ = String.substring(line,8,2) = " <" orelse
+            String.substring(line,16,2) = " <" orelse fail()
+    val rest = if String.substring(line,8,2) = " <"
+               then String.substring(line,10,size line - 10)
+               else String.substring(line,18,size line - 18)
     val sec_name = hd (String.tokens (fn x => x = #">") rest)
+    val hex = if String.substring(line,8,2) = " <"
+              then String.substring(line,0,8)
+              else String.substring(line,0,16)
     in (hex,sec_name) end handle Empty => fail()
                                | Subscript => fail()
   val ys = drop_until (can dest_section_declaration) xs
@@ -61,8 +66,8 @@ fun read_sections filename = let
     | split_by_sections (y::ys) =
         if y = "\n" then split_by_sections ys else (let
           val (location,sec_name) = dest_section_declaration y
-          val body = take_until (fn x => x = "\n") ys
-          val ys = drop_until (fn x => x = "\n") ys
+          val body = take_until (fn x => x = "\n" orelse x="\r\n") ys
+          val ys = drop_until (fn x => x = "\n" orelse x="\r\n") ys
           in (sec_name,location,body) :: split_by_sections ys end
           handle HOL_ERR _ => split_by_sections ys)
   in split_by_sections ys end
@@ -88,6 +93,7 @@ fun format_line sec_name = let
     val s2 = String.extract(s2,1,NONE)
     val (s2,s3) = split_at #"\t" s2
     val s3 = String.extract(s3,0,SOME (size s3 - 1))
+    val s1 = if size s1 < 16 then s1 else String.substring(s1,8,size s1 - 8)
     val i = Arbnum.toInt(Arbnum.fromHexString s1)
     val s2 = if String.isPrefix ".word" s3 then "const:" ^ s2 else s2
     val s2 = if String.isPrefix "ldrls\tpc," s3 then "switch:" ^ s2 else s2
@@ -165,9 +171,12 @@ fun read_complete_sections filename filename_sigs ignore = let
     if length deps2 < length deps1 then false else
       (length body1 <= length deps2)
   val arch = let
+    val xs = lines_from_file filename
+    val is_riscv = exists (fn s => String.isSubstring "riscv" s) xs
     fun has_short_instr (_,_,_,lines,_) =
       exists (fn (_,hex,_) => size hex < 8) lines
-    in if exists has_short_instr all_sections then M0 else ARM end
+    in if is_riscv then RISCV else
+       if exists has_short_instr all_sections then M0 else ARM end
   val _ = (arch_name := arch)
   in complete_sections := sort compare_secs all_sections end
 
@@ -187,7 +196,7 @@ fun section_deps name = (snd o snd o snd o section_info) name handle HOL_ERR _ =
 fun section_length name = length (section_body name) handle HOL_ERR _ => 0
 
 (*
-  val base_name = "/Users/mom22/graph-decompiler/loop-m0/example"
+  val base_name = "loop-riscv/example"
   val ignore = [""]
 *)
 
@@ -271,9 +280,14 @@ val () = m0_progLib.m0_config false (* not bigendian *) "mapped"
 val m0_tools = m0_decompLib.l3_m0_tools
 val (m0_spec,_,_,_) = m0_tools
 
+val () = riscv_progLib.riscv_config true (* set id yo 0 *)
+val riscv_tools = riscv_decompLib.riscv_tools
+val (riscv_spec,_,_,_) = riscv_tools
+
 fun get_tools () =
   case !arch_name of
-    ARM => arm_tools
-  | M0  => m0_tools ;
+    ARM   => arm_tools
+  | M0    => m0_tools
+  | RISCV => riscv_tools ;
 
 end
