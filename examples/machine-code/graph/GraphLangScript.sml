@@ -364,7 +364,7 @@ val r_tools = ``(RISCV_MODEL,riscv_STATE,riscv_PC)``
 
 val ARM_def = Define `ARM (c:((word32 # word32) set)) = (c,^a_tools)`;
 val M0_def = Define `M0 (c:(word32 # (word16 + word32)) set) = (c,^m_tools)`;
-val RISCV_def = Define `RISCV (c:(word64 # word32) set) = (c,^r_tools)`;
+val RISCV_def = Define `RISCV (c:(word64 # (word8 list)) set) = (c,^r_tools)`;
 
 val _ = ``IMPL_INST (ARM _)``;
 val _ = ``IMPL_INST (M0 _)``;
