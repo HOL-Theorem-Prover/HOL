@@ -148,12 +148,13 @@ fun quoteToString [QUOTE s] = "`"^s^"`"
 
 fun test (q, slist) = let
   val _ = tprint ("Testing " ^ quoteToString q)
+  fun prs s = "\"" ^ String.toString s ^ "\""
+  fun prsl sl = "[" ^ String.concatWith ", " (map prs sl) ^ "]"
 in
-  if map (base_tokens.toString o #1) (qbuf.lex_to_toklist q) <> slist then
-    die "FAILED!"
-  else OK()
-end handle LEX_ERR (s,_) => die ("FAILED!\n  [LEX_ERR "^s^"]")
-         | e => die ("FAILED\n ["^exnMessage e^"]")
+  require_msg (check_result (equal slist)) prsl
+              (map (base_tokens.toString o #1) o qbuf.lex_to_toklist) q;
+  ()
+end
 
 val _ = app test [(`abc`, ["abc"]),
                   (`12`, ["12"]),
@@ -173,7 +174,10 @@ val _ = app test [(`abc`, ["abc"]),
                   (`+(**)y`, ["+", "y"]),
                   (`((*x*)`, ["("]),
                   (`+(%*%((*"*)-*foo`,["+(%*%(", "-*foo"]),
-                  (`"(*"`, ["\"(*\""])
+                  (`"(*"`, ["\"(*\""]),
+                  (`foo$bar`, ["foo$bar"]),
+                  (`+foo$bar`, ["+", "foo$bar"]),
+                  (`+foo$bar+`, ["+", "foo$bar", "+"])
                  ]
 
 (* tests of the term lexer *)
@@ -207,6 +211,14 @@ fun snum i = Numeral(ai i, NONE)
 in
 val _ = app (ignore o test) [
       ("abc", [Ident "abc"]),
+      ("\"\\172\"", [Ident "\"\172\""]),
+      ("#\"c\"", [Ident "#\"c\""]),
+      ("f#\"c\"", [Ident "f", Ident "#\"c\""]),
+      ("(\"ab\\172\"++z)",
+       [Ident "(", Ident "\"ab\172\"", Ident "++", Ident "z", Ident ")"]),
+      ("f\"ab\\172x\"++", [Ident "f", Ident "\"ab\172x\"", Ident "++"]),
+      ("+\"ab\\172\"++", [Ident "+", Ident "\"ab\172\"", Ident "++"]),
+      ("$+\"ab\\172\"++", [Ident "$+", Ident "\"ab\172\"", Ident "++"]),
       ("12", [snum 12]),
       ("-12", [Ident "-", snum 12]),
       ("((-12", [Ident "(", Ident "(", Ident "-", snum 12]),
@@ -236,6 +248,21 @@ val _ = app (ignore o test) [
        [Ident "$", Ident "$$", Ident "$$$", Ident "$+", Ident "$if",
         Ident "$a"]),
       ("thy$id", [QIdent("thy", "id")]),
+      ("(thy$id", [Ident "(", QIdent("thy", "id")]),
+      ("(thy$id +", [Ident "(", QIdent("thy", "id"), Ident "+"]),
+      ("(thy$id+", [Ident "(", QIdent("thy", "id"), Ident "+"]),
+      ("+thy$id", [Ident "+", QIdent("thy", "id")]),
+      ("thy$0", [QIdent("thy", "0")]),
+      ("(thy$id\"foo\"", [Ident "(", QIdent ("thy", "id"), Ident "\"foo\""]),
+      ("foo$bar<foo$baz", [QIdent ("foo", "bar"), Ident "<",
+                           QIdent ("foo", "baz")]),
+      ("(bool$/\\", [Ident "(", QIdent ("bool", "/\\")]),
+      ("*foo$bar<foo$baz", [Ident "*", QIdent ("foo", "bar"), Ident "<",
+                            QIdent ("foo", "baz")]),
+      ("nm_sub$id", [QIdent ("nm_sub", "id")]),
+      ("+nm$id\"bar\"", [Ident "+", QIdent ("nm", "id"), Ident "\"bar\""]),
+      ("+nm$id\"\"", [Ident "+", QIdent ("nm", "id"), Ident "\"\""]),
+      ("nm$**", [QIdent("nm", "**")]),
       ("$+a", [Ident "$+", Ident "a"]),
       ("$==>", [Ident "$==>"]),
       ("bool$~", [QIdent("bool", "~")]),
@@ -257,6 +284,11 @@ val _ = app (ignore o test) [
       ("$var$(% foo )", [Ident "% foo "]),
       ("$var$(% foo* )", [Ident "% foo* "]),
       ("$var$(% foo*\\z)", [Ident "% foo*"]),
+      ("$var$(((foo)", [Ident "((foo"]),
+      ("$var$(foo\"bar)", [Ident "foo\"bar"]),
+      ("$var$(foo\\172bar)", [Ident "foo\172bar"]),
+      ("($var$(foo\"bar)", [Ident "(", Ident "foo\"bar"]),
+      ("$$var$(foo\"bar)", [Ident "$foo\"bar"]),
       ("(')", [Ident "(", Ident "'", Ident ")"]),   (* e.g., finite_mapScript *)
       ("λx.x", [Ident "λ", Ident "x", Ident ".", Ident "x"]),
       ("x'0,y)", [Ident "x'0", Ident ",", Ident "y", Ident ")"]),
@@ -274,9 +306,35 @@ val _ = app (ignore o test) [
 val _ = List.app (ignore o failtest) [
       ("thy$$$", "qualified ident"),
       ("$var$(ab\n c)", "quoted variable"),
-      ("'a", "can't begin with prime")
+      ("'a", "can't begin with prime"),
+      ("thy$1", "qualified ident")
 ]
 end (* local - tests of term lexer *)
+
+(* tests of type lexer *)
+val _ = let
+  open type_tokens
+  fun prtoklist ts =
+      "[" ^ String.concatWith ", " (map (token_string (fn _ => "_")) ts) ^ "]"
+  fun test (s,toklist) =
+      (tprint ("Type-lexing \"" ^ s ^ "\"");
+       require_msg (check_result (equal toklist)) prtoklist lextest s)
+in
+  List.app (ignore o test) [
+    ("bool", [TypeIdent "bool"]),
+    ("min$bool", [QTypeIdent("min", "bool")]),
+    ("α", [TypeVar "α"]),
+    ("'a", [TypeVar "'a"]),
+    ("bool->'a", [TypeIdent "bool", TypeSymbol "->", TypeVar "'a"]),
+    ("min$bool1->min$bool2", [QTypeIdent("min", "bool1"), TypeSymbol "->",
+                              QTypeIdent("min", "bool2")]),
+    ("(α,bool)fun", [LParen, TypeVar "α", Comma, TypeIdent "bool", RParen,
+                     TypeIdent "fun"]),
+    ("(foo$ty2,foo$ty2) ty1",
+     [LParen, QTypeIdent("foo", "ty2"), Comma, QTypeIdent("foo", "ty2"),
+      RParen, TypeIdent"ty1"])
+  ]
+end (* let - tests of type lexer *)
 
 val g0 = term_grammar.stdhol;
 fun mTOK s = term_grammar_dtype.RE (HOLgrammars.TOK s)

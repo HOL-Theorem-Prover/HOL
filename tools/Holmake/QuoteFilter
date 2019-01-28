@@ -130,8 +130,24 @@ quoteend = "`" | "\226\128\153";
                               ECHO yyarg
                                 (")),QUOTE \""^
                                  locpragma yyarg (yytext, yypos) 0)
-)
+                             )
                  else ECHO yyarg yytext);
+<INITIAL>"Theorem"{ws}+{alphaMLid}("["{alphaMLid_list}"]")?{ws}*":" => (
+  ifscript yyarg
+    (let
+      infix |> fun x |> f = f x
+      val s0 = String.extract(yytext,0,SOME (size yytext - 1)) (* drop colon *)
+      val s = s0 |> Substring.full |> Substring.dropr Char.isSpace
+                 |> Substring.string (* drop wspace between name and lparen *)
+      val (thname,with_attrs_string) = dest_ml_thm_binding s
+    in
+      YYBEGIN quote;
+      ECHO yyarg ("val " ^ thname ^ " = Q.store_thm(\"" ^ with_attrs_string ^
+                  "\"," ^
+                  "[QUOTE \""^locpragma yyarg (yytext,yypos) 0)
+    end) yytext
+);
+<INITIAL>^"QED" => (ifscript yyarg (ECHO yyarg ");") yytext);
 <INITIAL>"Theorem"{ws}+{alphaMLid}("["{alphaMLid_list}"]")? => (
   ifscript yyarg
     (let
@@ -140,6 +156,22 @@ quoteend = "`" | "\226\128\153";
       ECHO yyarg ("val " ^ thmname ^ " = " ^
                   "(fn q => fn tac => Q.store_thm(\"" ^ with_attrs_string ^
                   "\",q,tac))")
+    end) yytext
+);
+<INITIAL>"Theorem"{ws}+{alphaMLid}("["{alphaMLid_list}"]")?({ws}|{newline})+"("
+ => (
+  ifscript yyarg
+    (let
+      infix |> fun x |> f = f x
+      val s0 = String.extract(yytext,0,SOME (size yytext - 1)) (* drop lparen *)
+      val s = s0 |> Substring.full |> Substring.dropr Char.isSpace
+                 |> Substring.string (* drop wspace between name and lparen *)
+      val (thmname,with_attrs_string) = dest_ml_thm_binding s
+    in
+      ECHO yyarg (
+        "val " ^ thmname ^ " = " ^ "(fn rule => Theory.save_thm(\"" ^
+        with_attrs_string ^ "\",rule)) ("
+      )
     end) yytext
 );
 <INITIAL>{fullquotebegin} {ws}* ":" ({letter} | {ws} | [('] | {digit} | {lowergreek}) => (
@@ -210,6 +242,10 @@ quoteend = "`" | "\226\128\153";
 <tmcomment,tycomment,qcomment>"^`" => (ECHO yyarg "`");
 <tmcomment,tycomment>{fullquoteend} =>
    (comdepth := 0; YYBEGIN INITIAL; ECHO yyarg "\"])");
+<qcomment>{newline}"Proof" => (
+  comdepth := 0; YYBEGIN INITIAL; nextline yyarg (yypos + size yytext);
+  ECHO yyarg "\"],"
+);
 <qcomment>{quoteend} => (comdepth := 0; YYBEGIN INITIAL; ECHO yyarg "\"]");
 <tmcomment,tycomment,qcomment>[\128-\255] =>
   (ECHO yyarg (bslash_escape yytext));
@@ -225,6 +261,10 @@ quoteend = "`" | "\226\128\153";
 <quote,tmquote,tyquote>{newline} => (qnewline yyarg (yypos,yytext));
 
 <quote>{quoteend} => (YYBEGIN INITIAL; ECHO yyarg "\"]");
+<quote>{newline}"Proof" => (
+  YYBEGIN INITIAL; nextline yyarg (yypos + size yytext);
+  ECHO yyarg "\"],\n"
+);
 <tmquote,tyquote>{fullquoteend} => (YYBEGIN INITIAL; ECHO yyarg "\"])");
 
 <quote>"(*" => (inc comdepth; YYBEGIN qcomment; ECHO yyarg yytext);

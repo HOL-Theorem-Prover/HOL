@@ -59,6 +59,7 @@ hL          Send region to be split into words and each word "load"ed.
 hl          Same as above, but also send the region as a command afterwards.
 
 hg          Send region (should be a quotation) to g, to start a new proof.
+hG          Send region to g after quoting it, to start a new proof.
 he          Send region (should be a tactic) to e, to expand a tactic.
 hS          Send region (should be a quotation) as a new subgoal.
 hF          Send region (should be a quotation) to be proved sufficient then proved.

@@ -191,5 +191,17 @@ val _ = case sgs of
                                 else die()
           | _ => die()
 
+val _ = Feedback.emit_MESG := false
+val _ = Feedback.emit_WARNING := false
+val _ = delete_const "v"
+
+val _ = tprint "simp (srw_ss()) on one_CASE"
+local open BasicProvers simpLib
+in
+val _ = require_msg (check_result (aconv ``v:'a``)) term_to_string
+                    (rhs o concl o SIMP_CONV (srw_ss()) [])
+                    ``one_CASE () (v:'a)``
+end
+
 
 val _ = Process.exit Process.success

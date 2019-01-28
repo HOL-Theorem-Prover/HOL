@@ -154,8 +154,11 @@ fun parse_type_fns tyfns allow_unknown_suffixes G = let
 
   fun parse_binop (stlist:{parse_string:string,opname:string}list) fb = let
     val (adv, (t,locn)) = typetok_of fb
+    fun tokstring (TypeIdent s) = s
+      | tokstring (TypeSymbol s) = s
+      | tokstring _ = ""
     fun doit (t,locn) =
-      case List.find (fn r => (#parse_string r = token_string t)) stlist of
+      case List.find (fn r => (#parse_string r = tokstring t)) stlist of
         NONE => raise InternalFailure locn
       | SOME r => (adv(); (TypeIdent (#opname r),locn))
   in
