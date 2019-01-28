@@ -116,17 +116,25 @@ end
 val state_id =
    utilsLib.mk_state_id_thm riscvTheory.riscv_state_component_equality
       [["c_PC", "c_gpr"],
+       ["c_PC", "c_Skip", "c_gpr"],
+       ["c_Skip", "c_gpr"],
        ["c_PC"],
+       ["c_PC","c_Skip"],
+       ["c_Skip"],
        ["c_gpr"],
+       ["c_Skip","c_gpr"],
        ["c_NextFetch", "c_PC"],
        ["c_NextFetch", "c_PC", "c_gpr"],
-       ["MEM8", "c_PC"]
+       ["c_NextFetch", "c_PC", "c_Skip"],
+       ["c_NextFetch", "c_PC", "c_Skip", "c_gpr"],
+       ["MEM8", "c_PC"],
+       ["MEM8", "c_PC", "c_Skip"]
       ]
 
 val riscv_frame =
    Thm.CONJ riscv_progTheory.c_gpr_frame
      (stateLib.update_frame_state_thm riscv_proj_def
-        (["c_NextFetch", "c_PC", "MEM8"]))
+        (["c_NextFetch", "c_PC", "MEM8", "c_Skip"]))
 
 val ricv_frame_hidden =
   stateLib.update_hidden_frame_state_thm riscv_proj_def
@@ -204,7 +212,8 @@ in
      [("riscv$riscv_state_MEM8_fupd", "riscv_MEM8", ``^st.MEM8``),
       ("riscv$riscv_state_c_PC_fupd", "riscv_c_PC", ``^st.c_PC``),
       ("riscv$riscv_state_c_NextFetch_fupd", "riscv_c_NextFetch",
-       ``^st.c_NextFetch``)
+       ``^st.c_NextFetch``),
+      ("riscv$riscv_state_c_Skip_fupd", "riscv_c_Skip", ``^st.c_Skip``)
      ] [] []
      [("riscv$riscv_state_c_gpr_fupd", c_gpr_write)
      ]
@@ -308,20 +317,25 @@ local
   fun RISCV_PC_bump_intro th =
     let
       val c = riscv_c_PC_def |> SPEC_ALL |> concl |> lhs |> repeat rator
-    in if can (find_term (fn x => x = c)) (th |> concl |> rand)
-       then th
-       else
-        (SPEC_IMP_RULE o
-         Conv.CONV_RULE (Conv.LAND_CONV cnv) o
-         MP_RISCV_PC_INTRO o
-         Conv.CONV_RULE
-          (helperLib.POST_CONV (helperLib.MOVE_OUT_CONV ``riscv_c_PC id``))) th
+    in
+      if not (can (find_term (fn x => x = c)) (th |> concl |> rand)) then
+        th
+      else
+        th |> helperLib.HIDE_POST_RULE ``riscv_c_Skip id``
+           |> Conv.CONV_RULE
+               (helperLib.POST_CONV (helperLib.MOVE_OUT_CONV ``riscv_c_PC id``))
+           |> Conv.CONV_RULE
+               (helperLib.POST_CONV (helperLib.MOVE_OUT_CONV ``riscv_c_Skip id``))
+           |> MP_RISCV_PC_INTRO
+           |> Conv.CONV_RULE (Conv.LAND_CONV cnv)
+           |> SPEC_IMP_RULE
     end
 in
   fun riscv_introduction th =
     th |> PURE_REWRITE_RULE [aligned_1_intro]
        |> riscv_rename
        |> stateLib.introduce_triple_definition (true, riscv_progTheory.riscv_ID_def)
+       |> helperLib.HIDE_PRE_RULE ``riscv_c_Skip id``
        |> stateLib.introduce_triple_definition
              (false, riscv_progTheory.riscv_ID_PC_def)
        |> RISCV_PC_bump_intro
@@ -342,6 +356,13 @@ local
     Q.PAT_ASSUM `xxx /\ yyy`
       (fn th => SIMP_TAC std_ss [SIMP_RULE (std_ss++boolSimps.CONJ_ss) [] th])
       )
+  fun eval_Skip thm =
+    let
+      val pat = riscvTheory.Skip_def |> SPEC_ALL |> concl |> lhs
+      val tms = find_terms (can (match_term pat)) (concl thm)
+      val Skip_conv = SIMP_CONV (srw_ss())
+                       [riscvTheory.Skip_def,combinTheory.APPLY_UPDATE_THM]
+    in REWRITE_RULE (map Skip_conv tms) thm end
 in
   val spec =
     stateLib.spec
@@ -358,11 +379,13 @@ in
   fun riscv_spec tm =
     let
        val thm = riscv_stepLib.riscv_step tm
+       val thm = eval_Skip thm
        val t = riscv_mk_pre_post thm
        val thm_ts = combinations (thm, t)
 (*
        val x = hd thm_ts
        val th = spec x
+       val res = riscv_introduction th
 *)
     in
        List.map (fn x => (print "."; intro_spec x)) thm_ts
@@ -388,7 +411,11 @@ local
          else raise ERR "COND_CONV" "")
   val POST_CONV = Conv.RAND_CONV
   val POOL_CONV = Conv.RATOR_CONV o Conv.RAND_CONV
-  val OPC_CONV = POOL_CONV o Conv.RATOR_CONV o Conv.RAND_CONV o Conv.RAND_CONV
+  fun LIST_CONV c tm =
+    if listSyntax.is_nil tm then ALL_CONV tm else
+      (RAND_CONV (LIST_CONV c) THENC RATOR_CONV (RAND_CONV c)) tm
+  val OPC_CONV =
+    POOL_CONV o Conv.RATOR_CONV o Conv.RAND_CONV o Conv.RAND_CONV o LIST_CONV
   exception FalseTerm
   fun NOT_F_CONV tm =
     if tm = boolSyntax.F then raise FalseTerm else Conv.ALL_CONV tm
@@ -416,8 +443,12 @@ in
 end
 
 local
+  fun dest_v2w_list tm =
+    listSyntax.dest_list tm
+    |> fst |> map (fst o listSyntax.dest_list o rand)
+    |> rev |> flatten |> (fn xs => listSyntax.mk_list(xs,type_of T))
   val get_opcode =
-    fst o bitstringSyntax.dest_v2w o
+    dest_v2w_list o
     snd o pairSyntax.dest_pair o
     hd o pred_setSyntax.strip_set o
     temporal_stateSyntax.dest_code' o
@@ -428,13 +459,18 @@ local
   val add1 = utilsLib.add_to_rw_net get_opcode
   val add_specs = List.app (fn thm => spec_rwts := add1 (thm, !spec_rwts))
   fun find_spec opc = Lib.total (utilsLib.find_rw (!spec_rwts)) opc
+  val spec_spec_last_fail = ref (T,TRUTH)
+  (*
+  val (opc, thm) = !spec_spec_last_fail
+  *)
   fun spec_spec opc thm =
     let
        val thm_opc = get_opcode thm
        val a = fst (Term.match_term thm_opc opc)
+       val thm = Thm.INST a thm
     in
-       simp_triple_rule (Thm.INST a thm)
-    end
+       simp_triple_rule thm
+    end handle HOL_ERR e => (spec_spec_last_fail := (opc,thm); raise HOL_ERR e)
   fun err e s = raise ERR "riscv_spec_hex" (e ^ ": " ^ s)
   fun find_opc opc =
     List.filter (fn (_, p) => Lib.can (Term.match_term p) opc)
@@ -477,10 +513,25 @@ end
 
 (* Testing...
 
+val s = "410093"; riscv_spec_hex s;
+val s = "21180B3"; riscv_spec_hex s;
+val s = "108133"; riscv_spec_hex s;
+val s = "800000EF"; riscv_spec_hex s;
+val s = "943a"; riscv_spec_hex s;
+val s = "072a"; riscv_spec_hex s;
+val s = "e436"; riscv_spec_hex s;
+
+riscv_spec_hex "410093"
+riscv_spec_hex "21180B3"
+riscv_spec_hex "108133"
+riscv_spec_hex "FFF08093"
+riscv_spec_hex "FE008EE3"
+
+val tm = bitstringSyntax.bitstring_of_hexstring s
+val th = riscv_spec tm
+val thm = riscv_stepLib.riscv_step tm
+
 val s = "800000EF"
-val s = "943a"
-val s = "072a"
-val s = "e436"
 val tm = bitstringSyntax.bitstring_of_hexstring s
 
 fun riscv_spec_from_hex s = let

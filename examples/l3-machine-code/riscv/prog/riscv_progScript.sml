@@ -49,7 +49,7 @@ val riscv_ID_def = Define`
    riscv_c_MCSR id mcsr * cond (mcsr.mstatus.VM = 0w)`
 
 val riscv_ID_PC_def = Define`
-  riscv_ID_PC id pc = riscv_c_PC id pc * cond (aligned 1 pc)`
+  riscv_ID_PC id pc = riscv_c_PC id pc * cond (aligned 1 pc) * ~ riscv_c_Skip id`
 
 (* ------------------------------------------------------------------------
    Specialize to RV64I, core 0
@@ -68,20 +68,22 @@ val aligned_1_intro = store_thm("aligned_1_intro",
   fs [alignmentTheory.aligned_bitwise_and] \\ blastLib.BBLAST_TAC);
 
 val RISCV_PC_INTRO = Q.store_thm("RISCV_PC_INTRO",
-   `SPEC m (p1 * riscv_ID_PC c pc) code (p2 * riscv_c_PC c pc') ==>
+   `SPEC m (p1 * riscv_ID_PC c pc) code
+           (p2 * riscv_c_PC c pc' * ~ riscv_c_Skip c) ==>
     (aligned 1 pc ==> aligned 1 pc') ==>
     SPEC m (p1 * riscv_ID_PC c pc) code (p2 * riscv_ID_PC c pc')`,
    REPEAT STRIP_TAC
-   \\ FULL_SIMP_TAC std_ss
+   \\ FULL_SIMP_TAC (std_ss++helperLib.sep_cond_ss)
         [riscv_ID_PC_def, SPEC_MOVE_COND, STAR_ASSOC, SEP_CLAUSES]
    )
 
 val RISCV_TEMPORAL_PC_INTRO = Q.store_thm("RISCV_TEMPORAL_PC_INTRO",
-   `TEMPORAL_NEXT m (p1 * riscv_ID_PC c pc) code (p2 * riscv_c_PC c pc') ==>
+   `TEMPORAL_NEXT m (p1 * riscv_ID_PC c pc) code
+                    (p2 * riscv_c_PC c pc' * ~ riscv_c_Skip c) ==>
     (aligned 1 pc ==> aligned 1 pc') ==>
     TEMPORAL_NEXT m (p1 * riscv_ID_PC c pc) code (p2 * riscv_ID_PC c pc')`,
    REPEAT STRIP_TAC
-   \\ FULL_SIMP_TAC std_ss
+   \\ FULL_SIMP_TAC (std_ss++helperLib.sep_cond_ss)
         [riscv_ID_PC_def, temporal_stateTheory.TEMPORAL_NEXT_MOVE_COND,
          STAR_ASSOC, SEP_CLAUSES]
    )

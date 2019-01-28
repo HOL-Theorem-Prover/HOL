@@ -107,8 +107,38 @@ fun make_nop (s, p) =
   (s ^ "_NOP",
    String.substring (p, 0, 20) ^ "FFFFF" ^ String.extract (p, 25, NONE))
 
+fun find_all_rvc s =
+  let
+    val tm = utilsLib.pattern s
+    val th = DecodeRISCV tm
+    val tm = th |> concl |> rand
+  in
+    if not (is_cond tm) then [s] else let
+      val (b,_,_) = dest_cond tm
+      val v = hd (free_vars b |> rev)
+      val index = dest_var v |> fst |> explode |> tl |> implode |> string_to_int
+      fun flip_nth_underscore n [] = fail ()
+        | flip_nth_underscore n (x::xs) =
+             if x <> #"_" then let
+               val (ys,zs) = flip_nth_underscore n xs
+               in (x::ys,x::zs) end
+             else if n = 0 then (#"F" :: xs, #"T" :: xs) else let
+               val (ys,zs) = flip_nth_underscore (n-1) xs
+               in (x::ys,x::zs) end
+      val (s1,s2) = flip_nth_underscore index (explode s)
+    in
+      find_all_rvc (implode s1) @ find_all_rvc (implode s2)
+    end
+  end;
 
-val riscv_decodes = List.map (I ## (DecodeRISCV o utilsLib.pattern))
+val rvc_pats = map (fn s => ("RVC_" ^ s, s))
+  (find_all_rvc "______________TF" @
+   find_all_rvc "______________FT" @
+   find_all_rvc "______________FF")
+
+val riscv_decodes =
+  List.map (I ## (DecodeRISCV o utilsLib.pattern)) rvc_pats @
+  List.map (I ## (DecodeRISCV o utilsLib.pattern))
   (let
      val l =
   [
@@ -197,7 +227,7 @@ in
        | _ => raise ERR "decode" (utilsLib.long_term_to_string v)
     end
   val riscv_decode_hex = riscv_decode o bitstringSyntax.bitstring_of_hexstring
-  val riscv_dict = List.map (I ## get_opc) riscv_decodes
+  val riscv_dict = List.map (I ## (rand o get_opc)) riscv_decodes
 end
 
 (*
