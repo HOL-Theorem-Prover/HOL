@@ -15,12 +15,12 @@ src/res_quan/src
 src/quotient/src
 src/hol88
 !src/quotient/examples
-!!examples/decidable_separationLogic/src/
 src/bag
-!!examples/unification/triangular/first-order
 src/n-bit
 [poly]!src/n-bit/interactive_tests
 src/finite_maps
+!!examples/unification/triangular/first-order
+!!examples/decidable_separationLogic/src/
 !examples/ind_def
 !examples/ARM/arm6-verification
 !!examples/ARM/arm6-verification/correctness
