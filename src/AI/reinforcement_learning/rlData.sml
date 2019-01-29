@@ -56,7 +56,6 @@ fun term_to_int tm =
     [(``5``,5),(``6``,6),(``7``,7),(``8``,8),(``9``,9)]);
 
 
-
 (* -------------------------------------------------------------------------
    Supervised learning
    ------------------------------------------------------------------------- *)
@@ -186,31 +185,6 @@ fun data_truth_existsvar () =
   end
 
 (* -------------------------------------------------------------------------
-   Reinforcement learning targets for rlGameRewrite
-   ------------------------------------------------------------------------- *)
-
-(*
-fun predata_mg2 () =
-  let
-    val cset = [``0``,``$+``,``SUC``,``$*``];
-    val tml0 = gen_term_size 7 (``:num``,cset);
-    val tml1 =
-      mapfilter (fn x => ((term_to_int o rhs o concl o EVAL) x,x)) tml0
-    val tmld = dregroup Int.compare tml1
-    val eql = (fst o gen_valeq tmld (10000000,0)) (0,0)
-    val onestepl = map_assoc all_rewrites eql
-    val (p0,q0) = partition (is_refl o fst) onestepl
-    val tb = mk_tb [] (p0,q0)
-  in
-    tl (fst tb)
-  end
-
-fun select_mg2 x = List.concat (map (random_subset 20) (first_n 5 x))
-
-fun data_mg2 () = select_mg2 (predata_mg2 ())
-*)
-
-(* -------------------------------------------------------------------------
    Reinforcement learning targets for rlGameCopy
    ------------------------------------------------------------------------- *)
 
@@ -245,16 +219,6 @@ fun update_incdata provenl (pl,ul) =
   in
     (pl @ pl', ul' @ ulr)
   end
-
-
-
-
-
-
-
-
-
-
 
 
 end (* struct *)

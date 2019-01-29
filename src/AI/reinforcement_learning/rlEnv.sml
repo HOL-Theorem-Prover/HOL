@@ -18,15 +18,15 @@ rlLib rlTrain
 
 val ERR = mk_HOL_ERR "rlEnv"
 
-val knn_flag = ref false (* use nearest neighbor instead for comparison *)
-
-type ('a,''b,'c,'d) sittools =
+type ('a,'b,'c) gamespec =
   {
-  class_of_sit: 'a sit -> ''b,
-  mk_startsit: 'c -> 'a sit,
-  movel_in_sit: ''b -> 'd list, 
-  nntm_of_sit: 'a sit -> term,
-  sitclassl: ''b list
+  mk_startsit: 'c -> 'a psMCTS.sit,
+  movel: 'b list,
+  status_of : ('a psMCTS.sit -> psMCTS.status),
+  apply_move : ('b -> 'a psMCTS.sit -> 'a psMCTS.sit),
+  operl : (term * int) list,
+  dim : int,
+  nntm_of_sit: 'a psMCTS.sit -> term
   }
 
 (* -------------------------------------------------------------------------
@@ -35,9 +35,9 @@ type ('a,''b,'c,'d) sittools =
 
 val exwindow_glob = 100000
 val bigsteps_glob = 50
-val nsim_glob = 400
+val nsim_glob = 1600
 val decay_glob = 0.99
-val trainsplit_glob = 0.9 (* 10 percent of the data used for testing *)
+val logfile_glob = ref "rlEnv"
 
 (* -------------------------------------------------------------------------
    Log
@@ -50,32 +50,19 @@ fun log_eval file s =
     append_endline path s
   end
 
-fun summary s = log_eval "rlEnv_test9"  s
+fun summary s = log_eval (!logfile_glob) s
 
 (* -------------------------------------------------------------------------
    Evaluation and policy
    ------------------------------------------------------------------------- *)
 
-(*
-fun mk_fep_alltnn sittools alltnn sit =
+fun mk_fep_tnn gamespec tnn sit =
   let
-    val sitclass = (#class_of_sit sittools) sit
-    val movel = (#movel_in_sit sittools) sitclass
-    val (etnn,ptnn) =  assoc sitclass alltnn
-    val nntm = (#nntm_of_sit sittools) sit
-  in
-    (eval_treenn etnn nntm, combine (movel, poli_treenn ptnn nntm))
-  end
-*)
-
-fun mk_fep_alltnn sittools alltnn sit =
-  let
-    val sitclass = (#class_of_sit sittools) sit
-    val movel = (#movel_in_sit sittools) sitclass
-    val (opdict,(nn1,nn2)) =  assoc sitclass alltnn
+    val movel = (#movel gamespec)
+    val (opdict,(nn1,nn2)) = tnn
     val etnn = (opdict,nn1)
     val ptnn = (opdict,nn2)
-    val nntm = (#nntm_of_sit sittools) sit
+    val nntm = (#nntm_of_sit gamespec) sit
   in
     (eval_treenn etnn nntm, combine (movel, poli_treenn ptnn nntm))
   end
@@ -84,50 +71,35 @@ fun mk_fep_alltnn sittools alltnn sit =
    Examples
    ------------------------------------------------------------------------- *)
 
-fun update_allex (sitclass,(nntm,(e,p))) allex =
-  let
-    val (eex,pex) = assoc sitclass allex
-    val (neweex,newpex) = ((nntm,e) :: eex, (nntm,p) :: pex)
-    fun f x = if fst x = sitclass then (sitclass,(neweex,newpex)) else x
-  in
-    map f allex
-  end
+val emptyallex = ([],[])
 
-fun update_allex_from_tree sittools tree allex =
+fun update_allex (nntm,(e,p)) (eex,pex) = ((nntm,e) :: eex, (nntm,p) :: pex)
+
+fun update_allex_from_tree gamespec tree allex =
   let
     val root = dfind [0] tree
     val epo  = evalpoli_example tree
     val sit  = #sit root
-    val nntm = (#nntm_of_sit sittools) sit
+    val nntm = (#nntm_of_sit gamespec) sit
   in
-    if can (#class_of_sit sittools) sit then
-      let val sitclass = (#class_of_sit sittools) sit in
-        case epo of
-          NONE    => allex
-        | SOME ep => update_allex (sitclass,(nntm,ep)) allex
-      end
-    else allex
+    case epo of
+      NONE    => allex
+    | SOME ep => update_allex (nntm,ep) allex
   end
 
-
-fun discard_oldex allex n =
-  map_snd (fn (a,b) => (first_n n a, first_n n b)) allex
-
-fun empty_allex sitclassl =
-  let fun f _ = ([],[]) in map_assoc f sitclassl end
+fun discard_oldex (a,b) n = (first_n n a, first_n n b)
 
 (* -------------------------------------------------------------------------
-   MCTS big steps
+   MCTS big steps. Ending the search when there is no move available.
    ------------------------------------------------------------------------- *)
 
-fun n_bigsteps_loop (n,nmax) sittools pbspec (allex,allroot) tree =
-  if n >= nmax then (allex,allroot) else
+fun n_bigsteps_loop (n,nmax) gamespec pbspec (allex,allroot) tree =
+  if n >= nmax then (print_endline "Max depth\n"; (allex,allroot)) else
   let
-    val nntm_of_sit = #nntm_of_sit sittools
+    val nntm_of_sit = #nntm_of_sit gamespec
     val sit = #sit (dfind [0] tree)
-    val _ = print_endline (int_to_string n ^ ": " ^
-                           term_to_string (nntm_of_sit sit))
-    val newtree = mcts (nsim_glob, decay_glob) pbspec tree
+    val _ = print_endline (its n ^ ": " ^ tts (nntm_of_sit sit))
+    val newtree = mcts (nsim_glob, decay_glob, true) pbspec tree
     val root = dfind [0] newtree
     val cido = select_bigstep newtree [0]
   in
@@ -136,193 +108,172 @@ fun n_bigsteps_loop (n,nmax) sittools pbspec (allex,allroot) tree =
    | SOME cid =>
       let
         val cuttree = cut_tree newtree cid
-        val newallex = update_allex_from_tree sittools newtree allex
+        val newallex = update_allex_from_tree gamespec newtree allex
       in
-        (* print_endline ("  " ^ string_of_move (move_of_cid root cid)); *)
-        n_bigsteps_loop (n+1,nmax) sittools pbspec
+        n_bigsteps_loop (n+1,nmax) gamespec pbspec
         (newallex, root :: allroot) cuttree
       end
   end
 
-fun n_bigsteps n sittools pbspec target =
-  let
-    val mk_startsit = #mk_startsit sittools
-    val tree = starttree_of decay_glob pbspec (mk_startsit target)
-    val allex = empty_allex (#sitclassl sittools)
-  in
-    n_bigsteps_loop (0,n) sittools pbspec (allex,[]) tree
+fun n_bigsteps n gamespec pbspec target =
+  let val tree = starttree_of decay_glob pbspec target in
+    n_bigsteps_loop (0,n) gamespec pbspec (emptyallex,[]) tree
   end
 
-(*
-  val status = (fst (fst pbspec)) (#sit root)
-  val newprovenl = if status = Win then target :: provenl else provenl
-*)
 (* -------------------------------------------------------------------------
    Training
    ------------------------------------------------------------------------- *)
 
-fun random_eptnn movel_in_sit (operl,dim) sitclass =
-  let val polin = length (movel_in_sit sitclass) in
-    (random_treenn (dim,1) operl, random_treenn (dim,polin) operl)
-  end
-
-fun train_alltnn movel_in_sit (operl,dim) allex =
+fun random_dhtnn gamespec =
   let
-    fun f (sitclass,(evalex,poliex)) =
-      let val (etnn,ptnn) = random_eptnn movel_in_sit (operl,dim) sitclass in
-        (sitclass,
-        (train_tnn_eval dim etnn (split_traintest trainsplit_glob evalex),
-         train_tnn_poli dim ptnn (split_traintest trainsplit_glob poliex)))
-      end
+    val polin = length (#movel gamespec)
+    val operl = #operl gamespec
+    val dim = #dim gamespec
   in
-    map f allex
+    (random_opdict dim operl,
+    (random_headnn (dim,1), random_headnn (dim,polin)))
   end
 
-fun random_dhtnn movel_in_sit (operl,dim) sitclass =
-  let val polin = length (movel_in_sit sitclass) in
-    (random_opdict dim operl, 
-      (random_headnn (dim,1), random_headnn (dim,polin)))
-  end
-
-
-fun train_alldhtnn movel_in_sit (operl,dim) allex =
+fun train_dhtnn gamespec (evalex,poliex) =
   let
-    val schedule = [(50,0.1),(50,0.01)]
-    fun f (sitclass,(evalex,poliex)) =
-      let 
-        val bsize = if length evalex < 64 then 1 else 64
-        val dhtnn = random_dhtnn movel_in_sit (operl,dim) sitclass 
-        val (etrain,ptrain) = 
-          (prepare_trainset_eval evalex, prepare_trainset_poli poliex)
-      in
-        (sitclass, 
-         train_dhtnn_schedule dim dhtnn bsize (etrain,ptrain) schedule) 
-      end
+    val schedule = [(100,0.1)]
+    val bsize = if length evalex < 32 then 1 else 32
+    val dhtnn = random_dhtnn gamespec
+    val dim = #dim gamespec
+    val (etrain,ptrain) =
+      (prepare_trainset_eval evalex, prepare_trainset_poli poliex)
   in
-    map f allex
+     train_dhtnn_schedule dim dhtnn bsize (etrain,ptrain) schedule
   end
 
 (* -------------------------------------------------------------------------
    Results
    ------------------------------------------------------------------------- *)
 
-fun summary_wins pbspec allrootl =
+fun summary_wins gamespec allrootl =
   let
+    val r0 = Real.fromInt (length allrootl)
     val endrootl = map hd allrootl
     val startrootl = map last allrootl
     fun value x = #sum x / #vis x
     val w5 = average_real (map value startrootl)
-    val status_of = fst (fst pbspec)
+    val status_of = #status_of gamespec
     val w1 = length (filter (fn x => status_of (#sit x) = Win) endrootl)
     val w2 = length (filter (fn x => #status x = Win) endrootl)
     val w3 = length (filter (fn x => #status x = Win) (List.concat allrootl))
     val w4 = length (filter (fn x => #status x = Win) startrootl)
-    val r1 = Real.fromInt (length (List.concat allrootl)) / 50.0
-    val r2 = Real.fromInt w3 / 50.0
+    val r1 = Real.fromInt (length (List.concat allrootl)) / r0
+    val r2 = Real.fromInt w3 / r0
   in
-    summary ("Win start: " ^ int_to_string w4);
-    summary ("Value start: " ^ Real.toString w5);
-    summary ("Win end: " ^ String.concatWith " " (map int_to_string [w1,w2]));
-    summary ("Big steps (average): " ^ Real.toString r1);
-    summary ("Win nodes (average): " ^ Real.toString r2)
+    summary ("  Win start: " ^ its w4);
+    summary ("  Value start (average): " ^ rts w5);
+    summary ("  Win end: " ^ String.concatWith " " (map its [w1,w2]));
+    summary ("  Big steps (average): " ^ rts r1);
+    summary ("  Win nodes (average): " ^ rts r2)
+  end
+
+(* -------------------------------------------------------------------------
+   Adaptive difficulty
+   ------------------------------------------------------------------------- *)
+
+fun eval_targetl gamespec tnn targetl = 
+  let
+    val (opdict,(nn1,nn2)) = tnn
+    val etnn = (opdict,nn1)
+    fun f sit = eval_treenn etnn ((#nntm_of_sit gamespec) sit)
+    val l = map_assoc f targetl
+    val r = rts (average_real (map snd l))
+  in
+    summary ("  Average value (full dataset): " ^ r);
+    l
+  end
+
+fun interval (step:real) (a,b) =
+  if a + (step / 2.0) > b then [b] else a :: interval step (a + step,b)
+
+fun choose_uniform gamespec tnn (targetl,ntarget) =
+  let 
+    val l = eval_targetl gamespec tnn targetl
+    fun f r = map fst (filter (fn (_,x) => x >= r andalso x < r + 0.1) l)
+    val ll = map f (interval 0.1 (0.0,0.9))
+    val _ = 
+      summary ("  Repartition (self-assessed): " ^ String.concatWith " " 
+               (map (its o length) ll))
+    fun g x = first_n (ntarget div 10) (shuffle x)
+  in
+    List.concat (map g ll)
   end
 
 (* -------------------------------------------------------------------------
    Reinforcement learning loop
    ------------------------------------------------------------------------- *)
 
-fun concat_ex (exl,allex) =
-  let
-    val l = combine (exl,allex)
-    fun f ((_,(e1,p1)),(x,(e2,p2))) = (x, (e1 @ e2, p1 @ p2))
-  in
-    map f l
-  end
+fun concat_ex ((exE,exP),(allexE,allexP)) = (exE @ allexE, exP @ allexP)
 
-fun explore_f sittools pbspec allex targetl =
+fun explore_f gamespec allex tnn targetl =
   let
+    val pbspec =
+      ((#status_of gamespec, #apply_move gamespec), mk_fep_tnn gamespec tnn)
     val (result,t) =
-      add_time (map (n_bigsteps bigsteps_glob sittools pbspec)) targetl
-    val (allexl,allrootl) = split result
-    val _ = summary ("Exploration time : " ^ Real.toString t)
-    val _ = summary_wins pbspec allrootl
-    val newallex = foldl concat_ex allex allexl
+      add_time (map (n_bigsteps bigsteps_glob gamespec pbspec)) targetl
+    val (exl,allrootl) = split result
+    val _ = summary ("Exploration time : " ^ rts t)
+    val _ = summary_wins gamespec allrootl
   in
-    (newallex,[])
+    foldl concat_ex allex exl
   end
 
-fun train_f movel_in_sit tnnspec allex =
+fun train_f gamespec allex =
   let
-    val (alltnn,t) = add_time (train_alldhtnn movel_in_sit tnnspec) allex
-    val _ = summary ("Training time : " ^ Real.toString t)
+    val _ = summary ("Examples : " ^ its (length (fst allex)))
+    val (tnn,t) = add_time (train_dhtnn gamespec) allex
   in
-    alltnn
+    summary ("Training time : " ^ rts t); tnn
   end
 
-fun rl_start sittools tnnspec rulespec targetdata =
+fun rl_start gamespec (targetl,ntarget) =
   let
     val _ = summary "Generation 0"
-    val sitclassl = #sitclassl sittools
-    val alltnn =
-      map_assoc (random_dhtnn (#movel_in_sit sittools) tnnspec) sitclassl
-    val pbspec = (rulespec, mk_fep_alltnn sittools alltnn)
-    val allex = empty_allex sitclassl
-    val targetl = first_n 50 (snd targetdata)
-    val (new_allex,provenl) = explore_f sittools pbspec allex targetl
+    val tnn = random_dhtnn gamespec
+    val targetl' = first_n ntarget (shuffle targetl)
+    val newallex = explore_f gamespec emptyallex tnn targetl'
   in
-    (discard_oldex new_allex exwindow_glob,provenl)
+    discard_oldex newallex exwindow_glob
   end
 
-fun rl_one n sittools tnnspec rulespec targetl allex =
+fun rl_one n gamespec (targetl,ntarget) allex =
   let
-    val _ = summary ("\nGeneration " ^ int_to_string n)
-    val alltnn = train_f (#movel_in_sit sittools) tnnspec allex
-    val pbspec = (rulespec, mk_fep_alltnn sittools alltnn)
-    val (newallex,provenl) = explore_f sittools pbspec allex targetl
+    val _ = summary ("\nGeneration " ^ its n)
+    val tnn = train_f gamespec allex
+    val targetl' = choose_uniform gamespec tnn (targetl,ntarget)
+    val newallex = explore_f gamespec allex tnn targetl'
   in
-    (discard_oldex newallex exwindow_glob,provenl)
+    discard_oldex newallex exwindow_glob
   end
 
-fun rl_loop (n,nmax) sittools tnnspec rulespec
-  targetdata update_targetdata allex =
-  if n >= nmax then (allex,targetdata) else
-    let
-      val targetl = first_n 50 (snd targetdata) (* match rlData value *)
-      val (newallex,provenl) = rl_one n sittools tnnspec rulespec targetl allex
-      val newtargetdata = update_targetdata provenl targetdata
-    in
-      rl_loop (n+1, nmax) sittools tnnspec rulespec
-      newtargetdata update_targetdata newallex
+fun rl_loop (n,nmax) gamespec (targetl,ntarget) allex =
+  if n >= nmax then allex else
+    let val newallex = rl_one n gamespec (targetl,ntarget) allex in
+      rl_loop (n+1, nmax) gamespec (targetl,ntarget) newallex
     end
 
-fun start_rl_loop nmax (sittools : ('a,''b,'c,'d) sittools) 
-  tnnspec rulespec targetdata update_targetdata =
-  let
-    val (allex,provenl) = rl_start sittools tnnspec rulespec targetdata
-    val newtargetdata = update_targetdata provenl targetdata
-  in
-    rl_loop (1,nmax) sittools tnnspec rulespec newtargetdata update_targetdata allex
+fun start_rl_loop (gamespec : ('a,'b,'c) gamespec) (targetl,ntarget) nmax =
+  let val allex = rl_start gamespec (targetl,ntarget) in
+    rl_loop (1,nmax) gamespec (targetl,ntarget) allex
   end
 
 (*
-load "rlLib"; load "rlGameCopy"; load "rlEnv"; load "rlData";
-load "psMCTS";
-open aiLib psMCTS rlLib rlGameCopy rlEnv rlData;
+
+app load ["rlGameParamod","rlEnv"];
+open aiLib psMCTS rlGameParamod rlEnv;
 ignorestatus_flag := true;
-
-val targetdata = init_incdata ();
-
-fun update_incdata _ x = x;
+val maxsize = 9;
+val targetl = mk_targetl maxsize 10000;
 val nmax = 20;
-val (allex,targetdata) = start_rl_loop nmax sittools tnnspec rulespec targetdata update_incdata;
+val ntarget = 100;
+logfile_glob := "paramod0";
+val allex = start_rl_loop gamespec (targetl,ntarget) nmax;
 
-
-(* post analysis *)
-val (evalex, poliex) = snd (hd allex);
-length (fst targetdata);
-open mlTreeNeuralNetwork rlTrain;
-val etnn = random_treenn (dim,1) operl;
-val etnn' = train_tnn_eval dim etnn (split_traintest 0.9 evalex);
 *)
 
 

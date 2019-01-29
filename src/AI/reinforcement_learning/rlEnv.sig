@@ -5,25 +5,25 @@ sig
 
   (*
    'a is the type of board
-   ''b is the type for situation_class
-   'c is the type of targets (term usually)
-   'd is the type of move
+   'b is the type for move
+   'c is the type of targets
   *)
-  type ('a,''b,'c,'d) sittools =
+
+  val logfile_glob : string ref
+
+  type ('a,'b,'c) gamespec =
     {
-    class_of_sit: 'a psMCTS.sit -> ''b,
     mk_startsit: 'c -> 'a psMCTS.sit,
-    movel_in_sit: ''b -> 'd list,
-    nntm_of_sit: 'a psMCTS.sit -> term,
-    sitclassl: ''b list
+    movel: 'b list,
+    status_of : ('a psMCTS.sit -> psMCTS.status),
+    apply_move : ('b -> 'a psMCTS.sit -> 'a psMCTS.sit),
+    operl : (term * int) list,
+    dim : int,
+    nntm_of_sit: 'a psMCTS.sit -> term
     }
 
-  val start_rl_loop : int ->
-    ('a,''b,'c,'d) sittools ->
-    ((term * int) list * int) ->
-    ('a psMCTS.sit -> psMCTS.status) * ('d -> 'a psMCTS.sit -> 'a psMCTS.sit) ->
-    ('c list * 'c list) ->
-    ('c list -> ('c list * 'c list) -> ('c list * 'c list)) ->
-      (''b * ((term * real) list * (term * real list) list)) list *
-      ('c list * 'c list) 
+  val start_rl_loop : ('a, 'b, 'c) gamespec ->
+    ('a psMCTS.sit list * int) -> int ->
+    (term * real) list * (term * real list) list
+
 end

@@ -36,7 +36,7 @@ sig
   val ignorestatus_flag : bool ref (* plain mcts *)
 
   val mcts :
-    (int * real) ->
+    (int * real * bool) ->
     (('a sit -> status) * ('b -> 'a sit -> 'a sit)) *
       ('a sit -> real * ('b * real) list) ->
     ('a,'b) tree ->

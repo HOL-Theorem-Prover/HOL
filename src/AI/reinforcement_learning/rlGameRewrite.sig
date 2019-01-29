@@ -3,35 +3,28 @@ sig
 
   include Abbrev
 
-  (* board *)
-  datatype board =
-    StopBoard of (term * int list) |
-    LrBoard of (term * int list) |
-    SubBoard of (term * int list) |
-    FailBoard
+  type pos = int list
 
-  type sit = bool * board
-  val nntm_of_sit : sit -> term
+  datatype board = Board of (term * pos) | FailBoard
 
-  (* moves *)
-  datatype stopchoice = Stop | Cont
-  val move_stop : stopchoice -> sit -> sit
-  val all_stopchoice : stopchoice list
-
-  datatype lrchoice = Left | Right
-  val all_lrchoice : lrchoice list
-  val move_lr : lrchoice -> sit -> sit
-
-  datatype subchoice =
+  datatype move =
+    Down | Left | Right |
     AddZero | MultZero | AddReduce | MultReduce | AddExpand | MultExpand |
     AddZeroExpand
-  val all_subchoice : subchoice list
-  val move_sub : subchoice -> sit -> sit
 
-  (* all moves *)
-  datatype move =
-    StopMove of stopchoice | LrMove of lrchoice | SubMove of subchoice
-  val apply_move : move -> situation -> situation
-  val string_of_move : move -> string
+  type gamespec =
+    {
+    mk_startsit: term -> board psMCTS.sit,
+    nntm_of_sit: board psMCTS.sit -> term,
+    movel: move list,
+    status_of : (board psMCTS.sit -> psMCTS.status),
+    apply_move : (move -> board psMCTS.sit -> board psMCTS.sit),
+    operl : (term * int) list,
+    dim : int
+    }
+
+  val gamespec : gamespec
+
+  val mk_targetl : int -> int -> board psMCTS.sit list
 
 end

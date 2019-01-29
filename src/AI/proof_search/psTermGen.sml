@@ -128,10 +128,10 @@ val tml = gen_term_nmax 100000 (bool,
 [``0``,``SUC``,``$+``,``$*``,
  ``$= :num -> num -> bool``]);
 
-fun f tm = 
-  let 
+fun f tm =
+  let
     val d = count_dict (dempty Term.compare) (find_terms is_var tm)
-    fun test (_,b) = b >= 2 
+    fun test (_,b) = b >= 2
   in
     all test (dlist d) andalso dlength d > 1
   end
@@ -139,13 +139,6 @@ fun f tm =
 val tml' = filter f tml;
 
 val thml = mapfilter DECIDE tml';
-
-
-
-
-
-
-
 
 
 end (* struct *)

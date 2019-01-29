@@ -71,7 +71,7 @@ sig
 
   val dset : ('a * 'a -> order) -> 'a list ->
     ('a, unit) Redblackmap.dict
-  val daddset : 'a list -> 
+  val daddset : 'a list ->
     ('a, unit) Redblackmap.dict -> ('a, unit) Redblackmap.dict
   val union_dict : ('a * 'a -> order) ->
      ('a, 'b) Redblackmap.dict list -> ('a, 'b) Redblackmap.dict
@@ -108,6 +108,8 @@ sig
   (* random *)
   val random_real : unit -> real
   val shuffle   : 'a list -> 'a list
+  val random_elem : 'a list -> 'a
+  val random_int : (int * int) -> int
   val select_in_distrib : ('a * real) list -> 'a
 
   (* input/output *)
@@ -164,6 +166,11 @@ sig
   val strip_type : hol_type -> (hol_type list * hol_type)
   val has_boolty : term -> bool
   val only_concl : thm -> term
+  
+  (* printing *)
+  val tts : term -> string
+  val its : int -> string
+  val rts : real -> string
 
   (* parallelism *)
   val interruptkill : Thread.thread -> unit

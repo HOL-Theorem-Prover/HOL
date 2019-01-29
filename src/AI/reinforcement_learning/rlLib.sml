@@ -123,7 +123,7 @@ fun all_posred_aux curpos tm =
 fun all_posred tm = map_fst rev (all_posred_aux [] tm)
 
 fun tag_position (tm,pos) =
-  if null pos then (if is_eq tm then tm else mk_comb (numtag_var, tm)) else
+  if null pos then (if is_eq tm then tm else mk_comb (numtag_var,tm)) else
   let
     val (oper,argl) = strip_comb tm
     fun f i arg =

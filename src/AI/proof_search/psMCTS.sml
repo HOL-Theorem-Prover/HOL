@@ -195,6 +195,14 @@ fun add_root_noise tree =
    Node creation
    ------------------------------------------------------------------------- *)
 
+fun rescale_pol pol =
+  let
+    val tot = sum_real (map (snd o fst) pol)
+    fun norm ((move,polv),cid) = ((move,polv / tot),cid)
+  in
+    if tot > 0.01 then map norm pol else pol
+  end
+
 fun node_create_backup decay fevalpoli status_of tree (id,sit) =
   let
     fun wrap_poli poli = let fun f i x = (x, i :: id) in mapi f poli end
@@ -204,7 +212,8 @@ fun node_create_backup decay fevalpoli status_of tree (id,sit) =
       | Lose      => ((0.0,[]),Lose)
       | Undecided => (fevalpoli sit,Undecided)
     val node =
-      {pol=wrap_poli poli, sit=sit, sum=0.0, vis=0.0, status=status}
+      {pol=rescale_pol (wrap_poli poli), 
+       sit=sit, sum=0.0, vis=0.0, status=status}
     val tree1 = dadd id node tree
     val tree2 = backup_timer (backup decay tree1) (id,eval)
   in
@@ -286,9 +295,10 @@ fun starttree_of decay ((status_of,apply_move),fep) startsit =
     node_create_backup decay fep status_of empty_tree ([0],startsit)
   end
 
-fun mcts (nsim,decay) ((status_of,apply_move),fep) starttree =
+fun mcts (nsim,decay,noiseb) ((status_of,apply_move),fep) starttree =
   let
-    val starttree_noise = add_root_noise starttree
+    val starttree_noise = 
+      if noiseb then add_root_noise starttree else starttree
     val fep_timed = fevalpoli_timer fep
     val status_of_timed = status_of_timer status_of
     val apply_move_timed = apply_move_timer apply_move
@@ -389,18 +399,17 @@ fun node_variation tree id =
 
 fun root_variation tree = node_variation tree [0]
 
+fun print_distrib l =
+  if null l then () else
+    print_endline
+    ("  " ^ String.concatWith " " (map (Real.toString o approx 4 o snd) l))
 
-(*
 (* -------------------------------------------------------------------------
    Creating the distribution
    ------------------------------------------------------------------------- *)
 
 fun move_win tree cid = #status (dfind cid tree) = Win
 fun move_lose tree cid = #status (dfind cid tree) = Lose
-
-fun print_distrib l =
-  print_endline
-    ("  " ^ String.concatWith " " (map (Real.toString o approx 4 o snd) l))
 
 (* Player1 *)
 fun p1_distrib tree cidl =
@@ -432,7 +441,7 @@ fun inac_distrib f tree cidl =
     map_assoc (fn x => (dfind x d handle NotFound => NONE)) cidl
   end
 
-fun make_distrib tree id =
+fun make_distrib_wstatus (tree: ('a,'b) tree) id =
   let
     val node = dfind id tree
     val cidl = map snd (#pol node)
@@ -441,36 +450,6 @@ fun make_distrib tree id =
     then inac_distrib p1_distrib tree cidl
     else inac_distrib p2_distrib tree cidl
   end
-
-(* -------------------------------------------------------------------------
-   Rescaling the distribution for the training examples.
-   Make the training example not ignore the status.
-   ------------------------------------------------------------------------- *)
-
-fun swap (a,b) = (b,a)
-
-fun move_of_cid node cid =
-  let val pol = #pol node in fst (assoc cid (map swap pol)) end
-
-fun evalpoli_example tree id =
-  let
-    val dis0 = make_distrib tree id
-    val dis1 = map (fn (_,x) => if isSome x then valOf x else 0.0) dis0
-    val tot = sum_real dis1
-  in
-    if tot < 0.5 then NONE else SOME
-     (let val node = dfind id tree in #sum node / #vis node end,
-      map (fn x => x / tot) dis1)
-  end
-*)
-
-(* -------------------------------------------------------------------------
-   Policy distribution (todo print priors with without no)
-   ------------------------------------------------------------------------- *)
-
-fun print_distrib l =
-  print_endline
-    ("  " ^ String.concatWith " " (map (Real.toString o approx 4 o snd) l))
 
 fun make_distrib tree id =
   let
@@ -484,8 +463,6 @@ fun make_distrib tree id =
 (* -------------------------------------------------------------------------
    Rescaling the distribution for the training examples.
    ------------------------------------------------------------------------- *)
-
-fun swap (a,b) = (b,a)
 
 fun move_of_cid node cid =
   let val pol = #pol node in fst (assoc cid (map swap pol)) end
@@ -503,7 +480,6 @@ fun evalpoli_example tree =
 
 (* -------------------------------------------------------------------------
    Big step selection
-   (todo: change the temperature to something close to zero?)
    ------------------------------------------------------------------------- *)
 
 fun best_in_distrib distrib =
@@ -521,7 +497,7 @@ fun select_bigstep tree id =
     val tot  = sum_real (map snd dis1)
   in
     if tot < 0.5 (* ends when no moves are available *)
-    then (print_endline "  This is the END."; NONE)
+    then (print_endline "End\n"; NONE)
     else SOME (best_in_distrib dis1)
   end
 

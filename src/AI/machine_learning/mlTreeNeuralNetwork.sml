@@ -38,6 +38,8 @@ fun random_headnn (dimin,dimout) =
 fun random_treenn (dimin,dimout) cal =
   (random_opdict dimin cal, random_headnn (dimin,dimout))
 
+fun oper_to_string (f,n) = (tts f ^ "," ^ its n)
+
 fun string_of_opdictone ((oper,a),nn) =
   term_to_string oper ^ " " ^ int_to_string a ^ "\n\n" ^ string_of_nn nn
 
@@ -78,7 +80,8 @@ fun fp_opdict opdict fpdict tml = case tml of
     let
       val (f,argl) = strip_comb tm
       val nn = dfind (f,length argl) opdict
-        handle NotFound => raise ERR "fp_treenn" ""
+        handle NotFound =>
+          raise ERR "fp_treenn" (oper_to_string (f,length argl))
       val invl = map (fn x => #outnv (last (dfind x fpdict))) argl
       val inv = Vector.concat (Vector.fromList [1.0] :: invl)
       val fpdatal = fp_nn nn inv
@@ -295,7 +298,7 @@ fun train_dhtnn_batch dim (opdict,(headnn1,headnn2)) batch1 batch2 =
     val bsize = length batch1 + length batch2
     val (newheadnn1,loss1) = update_head bsize headnn1 bpdatall1
     val (newheadnn2,loss2) = update_head bsize headnn2 bpdatall2
-    val bpdict = 
+    val bpdict =
       dconcat (cpl_compare Term.compare Int.compare) (bpdictl1 @ bpdictl2)
     val newnnl = map (update_opernn bsize opdict) (dlist bpdict)
     val newopdict = daddl newnnl opdict
@@ -303,15 +306,15 @@ fun train_dhtnn_batch dim (opdict,(headnn1,headnn2)) batch1 batch2 =
     ((newopdict,(newheadnn1,newheadnn2)), (loss1,loss2))
   end
 
-fun train_dhtnn_epoch_aux dim (lossl1,lossl2) dhtnn batchl1 batchl2 = 
+fun train_dhtnn_epoch_aux dim (lossl1,lossl2) dhtnn batchl1 batchl2 =
   case (batchl1,batchl2) of
     ([],_) => (dhtnn, (average_real lossl1, average_real lossl2))
   | (_,[]) => (dhtnn, (average_real lossl1, average_real lossl2))
   | (batch1 :: m1, batch2 :: m2) =>
-    let val (newdhtnn,(loss1,loss2)) = 
-      train_dhtnn_batch dim dhtnn batch1 batch2 
+    let val (newdhtnn,(loss1,loss2)) =
+      train_dhtnn_batch dim dhtnn batch1 batch2
     in
-      train_dhtnn_epoch_aux dim (loss1 :: lossl1, loss2 :: lossl2) 
+      train_dhtnn_epoch_aux dim (loss1 :: lossl1, loss2 :: lossl2)
       newdhtnn m1 m2
     end
 
@@ -323,13 +326,13 @@ fun train_dhtnn_nepoch n dim dhtnn size (etrain,ptrain) =
   let
     val batchl1 = mk_batch size (shuffle etrain)
     val batchl2 = mk_batch size (shuffle ptrain)
-    val (newdhtnn,(newloss1,newloss2)) = 
+    val (newdhtnn,(newloss1,newloss2)) =
       train_dhtnn_epoch dim dhtnn batchl1 batchl2
     val _ = print_endline
-      ("eval loss: " ^ pad 8 "0" (Real.toString (approx 6 newloss1)) ^ "\n" ^
-       "poli loss; " ^ pad 8 "0" (Real.toString (approx 6 newloss2)))
+      ("eval_loss: " ^ pad 8 "0" (Real.toString (approx 6 newloss1)) ^ " " ^
+       "poli_loss: " ^ pad 8 "0" (Real.toString (approx 6 newloss2)))
   in
-    train_dhtnn_nepoch (n - 1) dim newdhtnn size (etrain,ptrain) 
+    train_dhtnn_nepoch (n - 1) dim newdhtnn size (etrain,ptrain)
   end
 
 fun train_dhtnn_schedule dim dhtnn bsize (etrain,ptrain) schedule =

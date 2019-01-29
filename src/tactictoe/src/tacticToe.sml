@@ -107,8 +107,9 @@ fun read_status r = case r of
    Interface
    ------------------------------------------------------------------------- *)
 
-val ttt_tacdata_cache = ref (dempty String.compare)
-fun clean_ttt_tacdata_cache () = ttt_tacdata_cache := dempty String.compare
+val ttt_tacdata_cache = ref (dempty (list_compare String.compare))
+fun clean_ttt_tacdata_cache () =
+  ttt_tacdata_cache := dempty (list_compare String.compare)
 
 val ttt_goaltac_cache = ref (dempty goal_compare)
 fun clean_ttt_goaltac_cache () = ttt_goaltac_cache := dempty goal_compare
@@ -120,13 +121,13 @@ fun tactictoe_aux goal =
   handle NotFound =>
   let
     val _ = hide_out QUse.use infix_file
-    val cthy = current_theory ()
+    val cthyl = current_theory () :: ancestry (current_theory ())
     val _ = init_metis ()
     val thmdata = create_thmdata ()
     val tacdata =
-      dfind cthy (!ttt_tacdata_cache) handle NotFound =>
+      dfind cthyl (!ttt_tacdata_cache) handle NotFound =>
       let val tacdata_aux = ttt_create_tacdata () in
-        ttt_tacdata_cache := dadd cthy tacdata_aux (!ttt_tacdata_cache);
+        ttt_tacdata_cache := dadd cthyl tacdata_aux (!ttt_tacdata_cache);
         tacdata_aux
       end
     val proofstatus = hide_out (main_tactictoe (thmdata,tacdata)) goal

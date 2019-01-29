@@ -1,20 +1,17 @@
-signature rlGameCopy =
+signature rlGameBool =
 sig
 
   include Abbrev
 
-  type pos = int list
+  type pb = ((term * bool) list) list
 
-  datatype board = Board of (term * (term * pos)) | FailBoard
+  datatype board = Board of pb | FailBoard
 
-  datatype move =
-    Down | Left | Right |
-    Sz | Sal | Sar | Sss |
-    Asa | Asl | Asr | Aac | Aasl | Aasr
+  datatype move = Rotate | Swap | RotateCl | Resolve | Delete
 
   type gamespec =
     {
-    mk_startsit: term -> board psMCTS.sit,
+    mk_startsit: pb -> board psMCTS.sit,
     nntm_of_sit: board psMCTS.sit -> term,
     movel: move list,
     status_of : (board psMCTS.sit -> psMCTS.status),
@@ -24,5 +21,8 @@ sig
     }
 
   val gamespec : gamespec
+
+  val nntm_of_pb : pb -> term
+  val mk_targetl : int -> pb list
 
 end

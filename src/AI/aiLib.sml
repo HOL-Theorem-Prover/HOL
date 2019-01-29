@@ -432,6 +432,19 @@ fun only_concl x =
     if null a then b else raise ERR "only_concl" ""
   end
 
+fun tts tm = case dest_term tm of
+    VAR(Name,Ty)       => Name
+  | CONST{Name,Thy,Ty} => Name
+  | COMB _ => 
+    let val (oper,argl) = strip_comb tm in 
+      case argl of
+        [a,b] => "(" ^ String.concatWith " " (map tts [a,oper,b]) ^ ")"
+      | _ => tts oper ^ "(" ^ String.concatWith "," (map tts argl) ^ ")"
+    end
+  | LAMB(Var,Bod)      => "(LAMB " ^ tts Var ^ "." ^ tts Bod ^ ")"
+
+fun its i = int_to_string i
+fun rts r = Real.toString r
 
 (* -------------------------------------------------------------------------
    I/O
@@ -680,6 +693,13 @@ fun shuffle l =
     val l' = map (fn x => (x, random_real ())) l in
       map fst (dict_sort compare_rmin l')
   end
+
+fun random_elem l = hd (shuffle l) 
+  handle Empty => raise ERR "random_elem" "empty"
+
+fun random_int (a,b) = 
+  if a > b then raise ERR "random_int" ""
+  else a + random_elem (List.tabulate ((b - a + 1),I)) 
 
 fun cumul_proba (tot:real) l = case l of
     [] => []

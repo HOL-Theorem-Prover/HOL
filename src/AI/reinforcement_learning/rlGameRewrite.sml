@@ -8,31 +8,55 @@
 structure rlGameRewrite :> rlGameRewrite =
 struct
 
-open HolKernel boolLib Abbrev aiLib rlLib
+open HolKernel boolLib Abbrev aiLib rlLib psMCTS psTermGen
 
 val ERR = mk_HOL_ERR "rlGameRewrite"
 val debugdir = HOLDIR ^ "/src/AI/reinforcement_learning/debug"
 fun debug s = debug_in_dir debugdir "rlGameRewrite" s
 
-
 (* -------------------------------------------------------------------------
-   Board
+   State
    ------------------------------------------------------------------------- *)
 
-(* position *)
-datatype board =
-  StopBoard of (term * int list) |
-  LrBoard of (term * int list) |
-  SubBoard of (term * int list) |
-  FailBoard 
+datatype board = Board of (term * pos) | FailBoard
 
-type situation = bool * board
+fun mk_startsit target = (true, Board (target,[]))
 
-fun startpos target = (true, LrBoard (target,[]))
+fun status_of sit = case snd sit of
+    Board (tm,[]) => if is_refl tm then Win else Undecided
+  | Board (tm,_) => Undecided
+  | FailBoard => Lose
 
-val failsit = (true, FailBoard)
+(* -------------------------------------------------------------------------
+   State representation
+   ------------------------------------------------------------------------- *)
 
-(* axioms *)
+val operl = (numtag_var,1) :: operl_of_term ``SUC 0 + 0 = 0 * 0``;
+val dim = 10;
+
+fun nntm_of_sit sit = case snd sit of
+    Board (tm,pos) => tag_position (tm,pos)
+  | FailBoard => F
+
+(* -------------------------------------------------------------------------
+   Action
+   ------------------------------------------------------------------------- *)
+
+datatype move =
+  Down | Left | Right |
+  AddZero | MultZero | AddReduce | MultReduce | AddExpand | MultExpand |
+  AddZeroExpand
+
+val movel =
+  [Down, Left, Right,
+   AddZero, MultZero, AddReduce, MultReduce, AddExpand, MultExpand,
+   AddZeroExpand]
+
+fun n_arg n (tm,pos) =
+  let val (_,argl) = strip_comb (subtm_at_pos pos tm) in
+    length argl = n
+  end
+
 val ax1 = ``x + 0 = x``;
 val ax2 = ``x * 0 = 0``;
 val ax3 = ``x + SUC y = SUC (x + y)``;
@@ -41,77 +65,12 @@ val ax5 = sym_tac ax3;
 val ax6 = sym_tac ax4;
 val ax7 = sym_tac ax1;
 
-fun nntm_of_sit sit = case sit of
-    (true, StopBoard (tm,pos)) =>
-    if null pos then tm else tag_position (tm,pos)
-  | (true, LrBoard (tm,pos)) =>
-    if null pos then tm else tag_position (tm,pos)
-  | (true, SubBoard (tm,pos)) =>
-    if null pos then tm else tag_position (tm,pos)
-  | _ => raise ERR "nntm_of_sit" ""
-
-(* -------------------------------------------------------------------------
-   Position move
-   ------------------------------------------------------------------------- *)
-
-datatype stopchoice = Stop | Cont
-val all_stopchoice = [Stop,Cont]
-fun string_of_stopchoice stop = case stop of
-    Stop => "Stop" | Cont => "Cont"
-
-fun move_stop stop sit = case sit of (p, StopBoard (tm,pos)) =>
-    (
-    case stop of
-      Stop => (p, SubBoard (tm,pos))
-    | Cont =>
-      let val (_,argl) = strip_comb (subtm_at_pos pos tm) in
-        case argl of
-          []    => failsit
-        | [a]   => (p, StopBoard (tm, pos @ [0]))
-        | [a,b] => (p, LrBoard (tm,pos))
-        | _     => raise ERR "descend_pos" " "
-      end
-    )
-  | _ => raise ERR "move_stop" ""
-
-datatype lrchoice = Left | Right
-val all_lrchoice = [Left,Right]
-fun string_of_lrchoice lr = case lr of
-    Left  => "Left"
-  | Right => "Right"
-
-fun move_lr lr sit = case sit of (p, LrBoard (tm,pos)) =>
-   (
-   case lr of
-     Left  => (p, StopBoard (tm, pos @ [0]))
-   | Right => (p, StopBoard (tm, pos @ [1]))
-   )
- | _ => raise ERR "move_lr" ""
-
-(* -------------------------------------------------------------------------
-   Sub Move
-   ------------------------------------------------------------------------- *)
-
-datatype subchoice =
-  AddZero | MultZero | AddReduce | MultReduce | AddExpand | MultExpand |
-  AddZeroExpand
-
-val all_subchoice =
-  [AddZero, MultZero, AddReduce, MultReduce, AddExpand, MultExpand,
-   AddZeroExpand]
-
-fun string_of_subchoice sub = case sub of
-    AddZero => "AddZero"
-  | MultZero => "MultZero"
-  | AddReduce => "AddReduce"
-  | MultReduce => "MultReduce"
-  | AddExpand => "AddExpand"
-  | MultExpand => "MultExpand"
-  | AddZeroExpand => "AddZeroExpand"
-
-fun move_sub sub sit = case sit of (p, SubBoard (tm,pos)) =>
-  let fun f ax = (p, LrBoard (sub_tac (tm,pos) ax,[]))
-    handle HOL_ERR _ => failsit
+fun action_sub sub (tm,pos) =
+  let fun f ax =
+    let val tm' = sub_tac (tm,pos) ax in
+      if tm' <> tm then Board (tm',[]) else FailBoard
+    end
+    handle HOL_ERR _ => FailBoard
   in
     case sub of
       AddZero => f ax1
@@ -121,26 +80,62 @@ fun move_sub sub sit = case sit of (p, SubBoard (tm,pos)) =>
     | AddExpand => f ax5
     | MultExpand => f ax6
     | AddZeroExpand => f ax7
+    | _ => FailBoard
   end
+
+fun apply_move move sit = (true,
+  case snd sit of Board (tm,pos) =>
+    (
+    case move of
+      Down => if n_arg 1 (tm,pos) then Board (tm, pos @ [0]) else FailBoard
+    | Left => if n_arg 2 (tm,pos) then Board (tm, pos @ [0]) else FailBoard
+    | Right => if n_arg 2 (tm,pos) then Board (tm, pos @ [1]) else FailBoard
+    | _ => action_sub move (tm,pos)
+    )
   | _ => raise ERR "move_sub" ""
+  )
 
 (* -------------------------------------------------------------------------
-   All moves
+   Interface
    ------------------------------------------------------------------------- *)
 
-datatype move =
-  StopMove of stopchoice |
-  LrMove of lrchoice |
-  SubMove of subchoice
+type gamespec =
+  {
+  mk_startsit: term -> board sit,
+  movel: move list,
+  status_of : (board psMCTS.sit -> psMCTS.status),
+  apply_move : (move -> board psMCTS.sit -> board psMCTS.sit),
+  operl : (term * int) list,
+  dim : int,
+  nntm_of_sit: board sit -> term
+  }
 
-fun apply_move move sit = case move of
-    StopMove stop => move_stop stop sit
-  | LrMove lr => move_lr lr sit
-  | SubMove imit => move_sub imit sit
+val gamespec : gamespec =
+  {
+  mk_startsit = mk_startsit,
+  movel = movel,
+  status_of = status_of,
+  apply_move = apply_move,
+  operl = operl,
+  dim = dim,
+  nntm_of_sit = nntm_of_sit
+  }
 
-fun string_of_move move = case move of
-    StopMove stop => string_of_stopchoice stop
-  | LrMove lr => string_of_lrchoice lr
-  | SubMove imit => string_of_subchoice imit
+(* -------------------------------------------------------------------------
+   Target generator
+   ------------------------------------------------------------------------- *)
+
+fun eval_ground tm = (rhs o concl o EVAL) tm
+
+fun mk_targetl maxsize n =
+  let
+    val cset = [``0``,``$+``,``SUC``,``$*``]
+    val tml0 = gen_term_size maxsize (``:num``,cset)
+    val tml1 = filter (fn x => eval_ground x = ``0``) tml0
+    fun f () = mk_eq (random_elem tml1, random_elem tml1)
+  in
+    mk_startsit (List.tabulate (n, fn _ => f ()))
+  end
+
 
 end (* struct *)
