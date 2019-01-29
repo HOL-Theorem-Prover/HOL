@@ -296,6 +296,7 @@ other common term operations.  See \REFERENCE{} for more details.
 
 
 \section{Quotations, Parsing and Printing}
+\label{sec:parsing}
 \label{quotation}\label{gen-abs}\label{let}
 \index{type checking, in HOL logic@type checking, in \HOL{} logic!of quotation syntax|(}
 \index{quotation, in HOL logic@quotation, in \HOL{} logic|(}
@@ -1707,24 +1708,105 @@ Failure occurs if:
   types that have been re-declared after $t$ was built.
 \end{myenumerate}
 
+\noindent
 Once a theorem has been proved, it can be saved with the function
 
 \begin{holboxed}
+\index{theorems, in HOL logic@theorems, in \HOL{} logic!saving of|(}%
+\index{saving theorems|(}%
 \index{save_thm@\ml{save\_thm}|pin}
 \begin{verbatim}
    save_thm : (string * thm) -> thm
 \end{verbatim}
 \end{holboxed}
 
+{
+\newcommand{\mname}{\(\mathit{name}\)}
+\newcommand{\mth}{\(\mathit{th}\)}
+\newcommand{\mtac}{\(\mathit{tac}\)}
+
 \noindent
-Evaluating \ml{save\_thm("}$\mathit{name}$\ml{",}$\mathit{th}$\ml{)}
-will save the theorem
+Evaluating \ml{save\_thm("}\mname\ml{",}\mth\ml{)} will save the theorem \mth{} with name \mname{} in the current theory segment.
+\index{theorem attributes|(}
+In addition, various tools can be primed to pay particular attention to saved theorems through the use of special attributes.
+Such attributes are indicated by appending the list of the attribute names to the \mname.
+Thus, to indicate the \ml{simp} attribute (for which, see discussion of the stateful simpset in Section~\ref{sec:srw-ss}), one can write
+\begin{alltt}
+   save_thm("\mname[simp]", \mth)
+\end{alltt}
+Multiple attributes can be listed between the square brackets, separated by commas.
+
+\index{Theorem keyword@\ml{Theorem} keyword|(}
+\smallskip\noindent
+Equivalently, a special \ml{Theorem} syntax is available for use in script files.
+One can write
+\begin{alltt}
+   Theorem \mname = \mth
+\end{alltt}
+to achieve the same effect as an SML declaration
+\begin{alltt}
+   val \mname = save_thm("\mname", \mth);
+\end{alltt}
+Attributes can also be added; for example:
+\begin{alltt}
+   Theorem \mname{}[simp] = \mth
+\end{alltt}
+
+\smallskip \noindent
+If one wishes to prove a goal with a tactic (see Chapter~\ref{tactics-and-tacticals}), and store the resulting theorem, the combination of these actions can be achieved with the \ml{store\_thm} function:
+\begin{holboxed}
+\index{store_thm@\ml{store\_thm}|pin}
+\begin{verbatim}
+   store_thm : (string * term * tactic) -> thm
+\end{verbatim}
+\end{holboxed}
+A call to \ml{store\_thm(\mname,$t$,\mtac)} results in the application of \mtac{} to goal $t$.
+If the tactic is successful, the resulting theorem is saved under the name \mname, as before.
+Also as before, theorem attributes can be added to the name.
+
+Finally, there are two special \ml{Theorem} syntaxes for use in script files to reduce the need to write the same name twice.
+One can write\index{Proof keyword@\ml{Proof} keyword}\index{QED keyword@\ml{QED} keyword}
+\begin{alltt}
+   Theorem \mname[attr1,attr2,...]:
+     ...goal statement...
+   Proof
+     ...tactic...
+   QED
+\end{alltt}
+The goal statement in this form is not an arbitrary term value, but must use the surface syntax used by the system parser (see Sections~\ref{sec:parsing} and~\ref{sec:parsing-printing}).
+For example:
+\begin{alltt}
+   Theorem IMP_CLAUSE[simp]:
+     !p. (p ==> p) = T
+   Proof
+     rpt strip_tac
+   QED
+\end{alltt}
+Note further that the \ml{Proof} and \ml{QED} keywords must occur in column 1 of the script file so that the parser can know when the term and tactic arguments terminate.
+
+The second \ml{store\_thm} syntax drops the colon character, uses parentheses to delimit the tactic, and takes a quotation as the first argument.
+The above example might be rendered:
+\begin{alltt}
+   Theorem IMP_CLAUSE[simp]
+     `!p. (p ==> p) = T`
+     (rpt strip_tac);
+\end{alltt}
+There is no requirement for this form to make use of column 1 as the constituents are self-delimiting in ways that are a standard part of \ML{}.
+One might also write something like
+\begin{alltt}
+   val q = `!p. (p ==> p) = T`;
+   Theorem IMP_CLAUSE[simp] q (rpt strip_tac);
+\end{alltt}
+because the second argument is an \ML{} expression not \HOL{} syntax.
+
+The choice of which \ml{Theorem} syntax to use, or indeed, to use \ml{store\_thm} directly, is a matter of users' aesthetic preference.
+But recall: if writing library code to prove and store theorems, the underlying \ml{store\_thm} must be used, as the special treatment of the \ml{Theorem} keyword is only available in script files.
 %
-\index{theorems, in HOL logic@theorems, in \HOL{} logic!saving of}%
-\index{saving theorems}%
+\index{theorems, in HOL logic@theorems, in \HOL{} logic!saving of|)}%
+\index{saving theorems|)}%
+\index{theorem attributes|)}
 %
-$\mathit{th}$ with name $\mathit{name}$ in the current theory
-segment.
+} % end local definition of mname, mth macros etc
 
 \paragraph{Exporting a theory}
 
