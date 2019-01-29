@@ -110,28 +110,10 @@ fun paramod eq (tm,pos) =
   let
     val eqrenamed = rename_varl (fn x => "_eq") eq
     val tmrenamed = rename_varl (fn x => "_tm") tm
-    (*
-    val _ = print_endline ("  eq: " ^ term_to_string eqrenamed)
-    val _ = print_endline ("  tm: " ^ term_to_string tmrenamed)
-    *)
     val (s,t) = dest_eq eqrenamed
-    (*
-    val _ = print_endline ("  s: " ^ term_to_string s)
-    val _ = print_endline ("  t: " ^ term_to_string t)
-    *)
     val u = subtm_at_pos pos tmrenamed
-    (*
-    val _ = print_endline ("  u: " ^ term_to_string u)
-    *)
     val sigma = Unify.simp_unify_terms [] s u
-    (*
-    val _ = print_endline ("  ssigma: " ^ term_to_string (subst sigma s))
-    val _ = print_endline ("  usigma: " ^ term_to_string (subst sigma u))
-    *)
     val tsigma = subst sigma t
-    (*
-    val _ = print_endline ("  tsigma: " ^ term_to_string tsigma)
-    *)
     val tmsigma = subst sigma tmrenamed
     val r = sub_at_pos tmsigma (pos,tsigma)
   in
