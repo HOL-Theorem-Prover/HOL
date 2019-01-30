@@ -45,10 +45,10 @@ fun replace_cvar tm =
 fun transform_ex (t,v) = (replace_cvar t, Real.fromInt v / 11.0);
 
 (*
-app load ["aiLib", "rlLib", "smlLexer", "rlTrain", "mlTreeNeuralNetwork"]; 
+app load ["rlAim", "aiLib", "rlLib", "smlLexer", "rlTrain", "mlTreeNeuralNetwork"]; 
 open rlAim aiLib rlLib smlLexer rlTrain mlTreeNeuralNetwork;
 
-val dir = "/home/thibault/aimleapinfoJan292019";
+val dir = "/home/thibault/big/aimleapinfoJan292019";
 val filel = 
   let fun f i = dir ^ "/trainingdatapart" ^ its i ^ ".lisp" in
     List.tabulate (10,f)
@@ -66,6 +66,7 @@ val testset = last setl1;
 val dim = 15;
 val randtnn = random_treenn (dim,1) operl;
 
+load "smlRedirect";
 val tnn = train_tnn_eval dim randtnn (trainset,testset);
 
 *)

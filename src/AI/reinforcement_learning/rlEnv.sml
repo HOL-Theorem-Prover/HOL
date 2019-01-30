@@ -267,11 +267,11 @@ fun start_rl_loop (gamespec : ('a,'b,'c) gamespec) (targetl,ntarget) nmax =
 app load ["rlGameParamod","rlEnv"];
 open aiLib psMCTS rlGameParamod rlEnv;
 ignorestatus_flag := true;
-val maxsize = 9;
+val maxsize = 7;
 val targetl = mk_targetl maxsize 10000;
 val nmax = 20;
 val ntarget = 100;
-logfile_glob := "paramod0";
+logfile_glob := "paramod_hotm";
 val allex = start_rl_loop gamespec (targetl,ntarget) nmax;
 
 *)

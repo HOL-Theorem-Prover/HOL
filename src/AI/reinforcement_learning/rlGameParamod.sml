@@ -48,7 +48,6 @@ fun status_of sit = case snd sit of
    Neural network interface
    ------------------------------------------------------------------------- *)
 
-val operl1 = (numtag_var,1) :: operl_of_term ``SUC 0 + 0 = 0 * 0``;
 val dim = 10;
 val max_var = 5;
 
@@ -68,12 +67,40 @@ val varl3 =
     List.tabulate (length axl,f)
   end
 
+fun LET_CONV_MIN tm =
+  let val (rator,rand) = dest_comb tm in
+    SYM (ISPECL [rator,rand] LET_THM)
+  end
+
+fun LET_CONV_AUX tm =
+ (TRY_CONV (RATOR_CONV LET_CONV_AUX) THENC LET_CONV_MIN) tm
+
+fun is_let f = 
+  let val {Name,Thy,Ty} = dest_thy_const f in
+    Name = "LET" andalso Thy = "bool"
+  end
+
+fun LET_CONV tm =
+  if not (is_comb tm) then NO_CONV tm else 
+    let val f = fst (strip_comb tm) in
+      if is_let f then NO_CONV tm else LET_CONV_AUX tm
+    end
+
+fun LET_CONV_ALL tm = TOP_SWEEP_CONV LET_CONV tm
+
+fun let_rw tm = rhs (concl (LET_CONV_ALL tm))
+
 val axvl = combine (axl,varl3)
 
-val operl2 = (map (fn x => (x,0)) (varl2 @ varl3) @ operl_of_term ``~ (V0:num = V0) /\ (V0:num = V0)``);
+val extm0 = ``(SUC 0 + 0 = 0 * 0) /\ (~ Ax0)``;
+val extm1 = let_rw extm0;
 
-val operl = 
-  mk_fast_set (cpl_compare Term.compare Int.compare) (operl1 @ operl2);
+val operl0 = 
+  [(numtag_var,1)] @
+  (map (fn x => (x,0)) (varl2 @ varl3)) @ 
+  operl_of_term extm1;
+
+val operl = mk_fast_set (cpl_compare Term.compare Int.compare) operl0;
 
 fun nntm_of_cl ((tm,b),pos) =
   let val tm' = tag_position (tm, pos) in
@@ -83,8 +110,8 @@ fun nntm_of_cl ((tm,b),pos) =
 fun nntm_of_ax ((ax,_),_) = assoc ax axvl 
 
 fun nntm_of_pb pb = case pb of 
-    [] => T
-  | a :: m => list_mk_conj (nntm_of_cl a :: map nntm_of_ax m)
+    a :: b :: m => (list_mk_conj [let_rw (nntm_of_cl a), nntm_of_ax b])
+  | _ => T
 
 fun nntm_of_sit sit = case snd sit of
     Board pb => nntm_of_pb pb
