@@ -105,6 +105,7 @@ val _ = ot0 "BIT2" "bit2"
 val _ = add_numeral_form (#"n", NONE);
 
 val _ = set_fixity "-" (Infixl 500);
+val _ = Unicode.unicode_version {u = UTF8.chr 0x2212, tmnm = "-"};
 val _ = TeX_notation {hol = "-", TeX = ("\\ensuremath{-}", 1)}
 
 val SUB = new_recursive_definition
