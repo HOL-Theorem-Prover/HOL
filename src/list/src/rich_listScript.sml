@@ -3417,7 +3417,7 @@ val UNIQUE_LIST_ELEM_COUNT = store_thm (
  >> RW_TAC std_ss [UNIQUE_LENGTH_FILTER]);
 
 Theorem LIST_ELEM_COUNT_CARD_EL:
-  !ls. LIST_ELEM_COUNT x ls = CARD { n | n < LENGTH ls ∧ (EL n ls = x) }
+  !ls. LIST_ELEM_COUNT x ls = CARD { n | n < LENGTH ls /\ (EL n ls = x) }
 Proof
   Induct
   \\ rw[LIST_ELEM_COUNT_THM]
