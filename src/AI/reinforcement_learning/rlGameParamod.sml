@@ -110,7 +110,7 @@ fun nntm_of_cl ((tm,b),pos) =
 fun nntm_of_ax ((ax,_),_) = assoc ax axvl 
 
 fun nntm_of_pb pb = case pb of 
-    a :: b :: m => (list_mk_conj [let_rw (nntm_of_cl a), nntm_of_ax b])
+    a :: b :: m => let_rw (list_mk_conj [nntm_of_cl a, nntm_of_ax b])
   | _ => T
 
 fun nntm_of_sit sit = case snd sit of
