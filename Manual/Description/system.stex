@@ -863,7 +863,8 @@ $t\ t_1 \cdots t_n$ &
 \\ \hline
 \end{tabular}
 \end{center}
-
+\index{term constructors, in HOL logic@term constructors, in \HOL{} logic|)}
+\index{terms, in HOL logic@terms, in \HOL{} logic!constructors for|)}
 
 \section{Theorems}
 \label{sec:theorems-in-ml}
