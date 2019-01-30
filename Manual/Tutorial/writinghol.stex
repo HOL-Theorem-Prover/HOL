@@ -55,8 +55,8 @@ $\;\forall$ & \texttt{!} & $\;\;\in$ & \texttt{IN} & $\;\;\le$ & \texttt{<=}\\
 $\;\exists$ & \texttt{?} & $\;\;\not\in$ & \texttt{NOTIN} & $\;\;\ge$ & \texttt{>=}\\
 $\;\neg$ & \td & $\;\;\cup$ & \texttt{UNION} \\
 $\;\land$ & \texttt{/\bs} & $\;\;\cap$ & \texttt{INTER}  & \multicolumn{2}{l}{Delimiters}\\
-$\;\lor$ & \texttt{\bs/} & $\;\;\subseteq$ & \texttt{SUBSET} & $\;\;$``\dots'' & \dq\dots\dq\\
-$\;\;\Rightarrow$ & \texttt{==>} & $\;\;\emptyset$ & \texttt{EMPTY} & $\;\;$`\dots' & \texttt{\char'140}\dots\texttt{\char'140}\\
+$\;\lor$ & \texttt{\bs/} & $\;\;\subseteq$ & \texttt{SUBSET} & $\;\;$``\dots'' & \texttt{\`{}\`}\dots\texttt{\`{}\`}\\
+$\;\;\Rightarrow$ & \texttt{==>} & $\;\;\emptyset$ & \texttt{EMPTY} & $\;\;$`\dots' & \texttt{\`}\dots\texttt{\`}\\
 $\;\;\iff$ & \texttt{<=>} & $\;\;\mathbb{U}(:\alpha)$ & \texttt{univ(:'a)}\\
 $\;\;\mkern14mu\not\mathrel{\mkern-14mu}\iff$ & \texttt{<=/=>} & $\;\;\times$ & \texttt{CROSS}\\
 \end{tabular}
