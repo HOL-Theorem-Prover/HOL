@@ -1,5 +1,9 @@
 open HolKernel Parse boolLib bossLib;
 
+local open listTheory in end
+(* the dependency on bossLib equates to an unnecessary dependency on
+   listTheory *)
+
 val _ = new_theory "readerMonad";
 
 val BIND_def = Define‘
