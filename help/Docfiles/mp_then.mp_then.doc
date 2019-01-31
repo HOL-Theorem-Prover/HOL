@@ -1,6 +1,6 @@
 \DOC
 
-\TYPE {mp_then : thm_tactic -> match_position -> thm -> thm -> tactic}
+\TYPE {mp_then : match_position -> thm_tactic -> thm -> thm -> tactic}
 
 \SYNOPSIS
 Matches two theorems against each other and then continues
