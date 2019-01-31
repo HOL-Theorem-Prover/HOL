@@ -9,6 +9,6 @@ sig
     | Pos of (term list -> term)
     | Concl
 
-  val mp_then : thm_tactic -> match_position -> thm -> thm -> tactic
+  val mp_then : match_position -> thm_tactic -> thm -> thm -> tactic
 
 end
