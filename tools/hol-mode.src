@@ -1608,6 +1608,8 @@ second is to show the new term.
   (t "⇄" "#>>")
   (t "⇆" "#<<")
   (t "∘" "o")
+  (t "∘ᵣ" "O")
+  (t "−" "-")
 ))
 
 
