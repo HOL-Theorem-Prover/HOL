@@ -3,13 +3,13 @@
 src/TeX
 src/string
 src/sort
-src/finite_map
 src/bag
 src/n-bit
 src/res_quan/src
 src/quotient/src
 src/ring/src
 src/integer
+src/finite_maps
 src/coalgebras
 src/patricia
 src/emit
