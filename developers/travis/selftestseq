@@ -7,8 +7,6 @@ src/res_quan/src
 src/quotient/src
 src/n-bit
 src/bag
-src/ring/src
-src/integer
 src/finite_maps
 src/coalgebras
 !examples/ind_def
