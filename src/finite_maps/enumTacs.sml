@@ -17,6 +17,12 @@ open totoTheory reduceLib bossLib
  relationTheory listTheory pairTheory optionTheory enumeralTheory pred_setLib
  totoTacs finite_mapTheory;
 
+structure Parse = struct
+  open Parse
+  val (Type,Term) = parse_from_grammars enumeralTheory.enumeral_grammars
+end
+open Parse
+
 val AR = ASM_REWRITE_TAC [];
 fun ulist x = [x];
 

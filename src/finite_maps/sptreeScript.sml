@@ -37,7 +37,7 @@ val wf_def = Define`
   (wf (LS a) <=> T) /\
   (wf (BN t1 t2) <=> wf t1 /\ wf t2 /\ ~(isEmpty t1 /\ isEmpty t2)) /\
   (wf (BS t1 a t2) <=> wf t1 /\ wf t2 /\ ~(isEmpty t1 /\ isEmpty t2))
-`
+`;
 
 fun tzDefine s q = Lib.with_flag (computeLib.auto_import_definitions,false) (tDefine s q)
 val lookup_def = tzDefine "lookup" `
@@ -1017,7 +1017,7 @@ val div2_odd_lemma = prove(
 
 val spt_eq_thm = store_thm("spt_eq_thm",
   ``!t1 t2. wf t1 /\ wf t2 ==>
-    ((t1 = t2) <=> !n. lookup n t1 = lookup n t2)``,
+           ((t1 = t2) <=> !n. lookup n t1 = lookup n t2)``,
   Induct >> simp[wf_def,lookup_def]
   >- (
     rw[EQ_IMP_THM] >> rw[lookup_def] >>
@@ -1751,6 +1751,114 @@ Theorem list_to_num_set_append
   \\ rw[Once insert_union]
   \\ rw[Once insert_union,SimpRHS]
   \\ rw[union_assoc]);
+
+Theorem map_map_K[simp]
+  `!t. map (K a) (map f t) = map (K a) t`
+  (Induct \\ fs[map_def]);
+
+Theorem lookup_map_K
+  `!t n. lookup n (map (K x) t) = if n IN domain t then SOME x else NONE`
+  (Induct >> fs[IN_domain,map_def,lookup_def] >>
+   rpt strip_tac >> Cases_on `n = 0` >> fs[] >>
+   Cases_on `EVEN n` >> fs[]);
+
+val alist_insert_def = Define `
+  (alist_insert [] xs t = t) /\
+  (alist_insert vs [] t = t) /\
+  (alist_insert (v::vs) (x::xs) t = insert v x (alist_insert vs xs t))`
+
+val alist_insert_ind = theorem "alist_insert_ind";
+
+Theorem lookup_alist_insert
+  `!x y t z.
+    (LENGTH x = LENGTH y) ==>
+    (lookup z (alist_insert x y t) =
+     case ALOOKUP (ZIP(x,y)) z of SOME a => SOME a | NONE => lookup z t)`
+  (ho_match_mp_tac alist_insert_ind >>
+   srw_tac[][] >- fs[LENGTH,alist_insert_def] >>
+   Cases_on`z=x`>> srw_tac[][lookup_def,alist_insert_def]>>
+   full_simp_tac(srw_ss())[lookup_insert]);
+
+Theorem domain_alist_insert
+  `!a b locs. (LENGTH a = LENGTH b) ==>
+              (domain (alist_insert a b locs) = domain locs UNION set a)`
+  (Induct_on`a`>>Cases_on`b`>>full_simp_tac(srw_ss())[alist_insert_def]>>
+   srw_tac[][]>> metis_tac[INSERT_UNION_EQ,UNION_COMM]);
+
+Theorem alist_insert_append
+  `!a1 a2 s b1 b2.
+     (LENGTH a1 = LENGTH a2) ==>
+     (alist_insert (a1++b1) (a2++b2) s =
+      alist_insert a1 a2 (alist_insert b1 b2 s))`
+  (ho_match_mp_tac alist_insert_ind
+  \\ simp[alist_insert_def,LENGTH_NIL_SYM]);
+
+Theorem wf_LN[simp] `wf LN` (rw[wf_def]);
+
+val splem1 = Q.prove(`
+  a <> 0 ==> (a-1) DIV 2 < a`,
+  simp[DIV_LT_X]);
+
+val DIV2_P_UNIV =
+  DIV_P_UNIV |> SPEC_ALL |> Q.INST [`n` |-> `2`] |> SIMP_RULE (srw_ss()) []
+             |> EQ_IMP_RULE |> #2 |> Q.GENL [`P`, `m`]
+
+val splem3 = Q.prove(
+  `(EVEN c /\ EVEN a \/ ODD a /\ ODD c) /\ a <> c /\ a <> 0 /\ c <> 0 ==>
+   (a-1) DIV 2 <> (c-1) DIV 2`,
+  map_every Cases_on [`a`, `c`] >>
+  simp[DIV_LT_X, EVEN, ODD] >> DEEP_INTRO_TAC DIV2_P_UNIV >> rpt gen_tac >>
+  rw[] >> fs[EVEN_ADD, EVEN_MULT, ODD_ADD, ODD_MULT] >>
+  DEEP_INTRO_TAC DIV2_P_UNIV >> rw[] >>
+  fs[EVEN_ADD, EVEN_MULT, ODD_ADD, ODD_MULT] >>
+  rpt (rename [‘x < 2’] >> ‘(x = 0) \/ (x = 1)’ by simp[] >> fs[]));
+
+Theorem insert_swap `
+  !t a b c d.
+    a <> c ==> (insert a b (insert c d t) = insert c d (insert a b t))`
+  (completeInduct_on`a`>>
+  completeInduct_on`c`>>
+  Induct>>
+  rw[]>>
+  simp[Once insert_def,SimpRHS]>>
+  simp[Once insert_def]>>
+  ntac 2 IF_CASES_TAC>>
+  fs[]>>
+  rw[]>>
+  simp[Once insert_def,SimpRHS]>>
+  simp[Once insert_def]>>
+  imp_res_tac splem1>>
+  imp_res_tac splem3>>
+  metis_tac[EVEN_ODD])
+
+Theorem alist_insert_pull_insert
+  `!xs ys z. ~MEM x xs ==>
+             (alist_insert xs ys (insert x y z) =
+              insert x y (alist_insert xs ys z))`
+  (ho_match_mp_tac alist_insert_ind
+  \\ simp[alist_insert_def] \\ rw[] \\ fs[]
+  \\ metis_tac[insert_swap]);
+
+Theorem alist_insert_REVERSE
+  `!xs ys s.
+   ALL_DISTINCT xs /\ (LENGTH xs = LENGTH ys) ==>
+   (alist_insert (REVERSE xs) (REVERSE ys) s = alist_insert xs ys s)`
+  (Induct \\ simp[alist_insert_def]
+  \\ gen_tac \\ Cases \\ simp[alist_insert_def]
+  \\ simp[alist_insert_append,alist_insert_def]
+  \\ rw[] \\ simp[alist_insert_pull_insert]);
+
+Theorem insert_unchanged `
+  !t x.
+    (lookup x t = SOME y) ==> (insert x y t = t)`
+  (completeInduct_on`x`>>
+  Induct>>
+  fs[lookup_def]>>rw[]>>
+  simp[Once insert_def,SimpRHS]>>
+  simp[Once insert_def]>>
+  imp_res_tac splem1>>
+  metis_tac[])
+
 
 
 val _ = export_theory();

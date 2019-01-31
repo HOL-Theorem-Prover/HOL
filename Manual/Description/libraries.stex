@@ -2106,14 +2106,15 @@ added in future sessions when the current theory is reloaded.
 \end{alltt}
 \end{session}
 
+\index{theorem attributes}
 Alternatively, the user may also flag theorems directly when using \ml{store\_thm} or \ml{save\_thm} by appending the \ml{simp} attribute to the name of the theorem.
 Thus:
 \begin{session}
 \begin{verbatim}
-val useful_rwt = store_thm(
-  "useful_rwt[simp]",
-  ...term...,
-  ...tactic...);
+Theorem useful_rwt[simp]:
+  ...term...
+Proof ...tactic...
+QED
 \end{verbatim}
 \end{session}
 is a way of avoiding having to write a call to \ml{export\_rewrites}.

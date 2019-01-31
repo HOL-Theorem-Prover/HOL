@@ -127,6 +127,12 @@ val ALOOKUP_MAP = store_thm(
 ``!f al. ALOOKUP (MAP (\(x,y). (x,f y)) al) = OPTION_MAP f o (ALOOKUP al)``,
 gen_tac >> Induct >- rw[FUN_EQ_THM] >> Cases >> rw[FUN_EQ_THM] >> rw[])
 
+Theorem ALOOKUP_MAP_2
+  `!f al x.
+    ALOOKUP (MAP (\ (x,y). (x,f x y)) al) x =
+    OPTION_MAP (f x) (ALOOKUP al x)`
+  (gen_tac >> Induct >> simp[] >> Cases >> simp[] >> srw_tac[][]);
+
 val FDOM_alist_to_fmap = Q.store_thm(
 "FDOM_alist_to_fmap",
 `!al.FDOM (alist_to_fmap al) = set (MAP FST al)`,
@@ -600,5 +606,7 @@ val ALOOKUP_ALL_DISTINCT_PERM_same = store_thm("ALOOKUP_ALL_DISTINCT_PERM_same",
     metis_tac[ALL_DISTINCT_PERM]) >>
   imp_res_tac ALOOKUP_ALL_DISTINCT_MEM >>
   metis_tac[])
+
+
 
 val _ = export_theory ();

@@ -28,6 +28,7 @@ val DECIDE = numLib.ARITH_PROVE
    of srw_ss() *)
 fun fs thl = FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) thl
 fun simp thl = ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) thl
+fun rw thl = SRW_TAC[ARITH_ss]thl
 
 fun store_thm(r as(n,t,tac)) = let
   val th = boolLib.store_thm r
@@ -1991,6 +1992,9 @@ val BIJ_INV = store_thm
    >> RW_TAC std_ss []
    >> PROVE_TAC []);
 
+
+
+
 (* ===================================================================== *)
 (* Fun set and Schroeder Bernstein Theorems (from util_probTheory)       *)
 (* ===================================================================== *)
@@ -2277,6 +2281,15 @@ EQ_TAC THEN STRIP_TAC THEN1 (
   METIS_TAC [BIJ_LINV_INV] ) THEN
 SRW_TAC [][BIJ_DEF,INJ_DEF,SURJ_DEF] THEN
 METIS_TAC []);
+
+Theorem BIJ_support
+  `!f s' s.
+      BIJ f s' s' /\ s' SUBSET s /\ (!x. x NOTIN s' ==> (f x = x)) ==>
+      BIJ f s s`
+  (rw[BIJ_IFF_INV,SUBSET_DEF]
+  >- METIS_TAC[]
+  \\ Q.EXISTS_TAC`\x. if x IN s' then g x else x`
+  \\ rw[] \\ METIS_TAC[]);
 
 val BIJ_INSERT = store_thm(
   "BIJ_INSERT",
