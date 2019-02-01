@@ -53,4 +53,5 @@ src/proofman/tests
 !tools/Holmake/tests/indepchildren
 !tools/Holmake/tests/empty_script
 !tools/Holmake/tests/deps_of_depthys
+!tools/Holmake/tests/gh604
 !src/1/theory_tests
