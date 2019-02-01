@@ -210,8 +210,9 @@ fun paramod eq (tm,pos) =
     val tsigma = subst sigma t
     val tmsigma = subst sigma tmrenamed
     val r = sub_at_pos tmsigma (pos,tsigma)
+    val vl = filter (fn x => mem x evarlinter) (free_vars_lr r)
   in
-    if r = tmrenamed orelse length (free_vars_lr r) >= max_evar 
+    if r = tmrenamed orelse length vl >= max_evar 
     then NONE 
     else SOME (renameb_evarl (fn x => "") r)
   end

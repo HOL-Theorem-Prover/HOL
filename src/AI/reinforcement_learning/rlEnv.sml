@@ -262,7 +262,7 @@ app load ["rlGameAim","rlEnv"];
 open aiLib psMCTS rlGameAim rlEnv;
 ignorestatus_flag := true;
 val ntarget = 1000;
-val nmax = 200;
+val nmax = 100;
 logfile_glob := "aim_test";
 val allex = start_rl_loop gamespec (targetl,ntarget) nmax;
 
