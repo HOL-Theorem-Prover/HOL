@@ -4,6 +4,7 @@ open logrootTheory
 open listTheory
 open alistTheory
 open pred_setTheory
+open dep_rewrite
 
 val _ = new_theory "sptree";
 
@@ -15,16 +16,21 @@ val _ = new_theory "sptree";
    possible to update at an index past the current maximum index. It
    is also possible to delete values at any index.
 
-   Should EVAL well. Big drawback is that there doesn't seem to be an
-   efficient way (i.e., O(n)) to do an in index-order traversal of the
-   elements. There is an O(n) fold function that gives you access to
-   all the key-value pairs, but these will come out in an inconvenient
-   order. If you iterate over the keys with an increment, you will get
-   O(n log n) performance.
+   Should EVAL well.
 
    The insert, delete and union operations all preserve a
    well-formedness condition ("wf") that ensures there is only one
    possible representation for any given finite-map.
+
+   It is tricky to traverse the array and extract a list of elements.
+   There are three O(n) array->list operations defined:
+   - toAList: produces an association list in a mixed-up order. Defined via a
+     fold operation. Seems to EVAL the slowest. Has the most theorems.
+   - toList: roughly equals MAP SND (toAList t), although in a different mixed
+     up order.  By far the fastest to EVAL.
+   - toSortedAList: produces an assocation list in index order. Recently added.
+     It is O(n) in the largest index, not the number of elements, and will be
+     very slow for very sparse arrays.
 *)
 
 val _ = Datatype`spt = LN | LS 'a | BN spt spt | BS spt 'a spt`
@@ -1859,6 +1865,250 @@ Theorem insert_unchanged `
   imp_res_tac splem1>>
   metis_tac[])
 
+val spt_centers_def = Define `
+  (spt_centers i [] = []) /\
+  (spt_centers i (x :: xs) = ((case spt_center x of
+    NONE => [] | SOME y => [(i, y)]) ++ spt_centers (SUC i) xs))`;
 
+Theorem spt_centers_eq_map
+  `!xs i. spt_centers i xs = MAP THE (FILTER (\x. ~ (x = NONE))
+    (MAPi (\j t. case spt_center t of NONE => NONE
+        | SOME x => SOME (i + j, x)) xs))`
+  (
+  Induct \\ fs [spt_centers_def]
+  \\ rpt strip_tac
+  \\ BasicProvers.EVERY_CASE_TAC
+  \\ fs [combinTheory.o_DEF, ADD_CLAUSES]
+  );
+
+Theorem list_size_APPEND
+  `list_size f (xs ++ ys) = list_size f xs + list_size f ys`
+  (Induct_on `xs` \\ fs [list_size_def])
+
+val spt_size_alt_def = Define `
+  (spt_size_alt LN = 0)
+  /\ (spt_size_alt (LS a) = 1)
+  /\ (spt_size_alt (BN t1 t2) = (spt_size_alt t1 + spt_size_alt t2 + 1))
+  /\ (spt_size_alt (BS t1 a t2)
+    = (spt_size_alt t1 + spt_size_alt t2 + 1))`;
+
+Theorem sum_spt_size_alt_lemma
+  `let mksum = (\f. SUM (MAP (spt_size_alt o f) xs)) in
+    let tsum = mksum spt_left + mksum spt_right in
+    tsum <= mksum I
+      /\ (EXISTS ($~ o (\x. isEmpty x)) xs ==> tsum < mksum I)`
+  (
+  Induct_on `xs` \\ fs []
+  \\ GEN_TAC
+  \\ Cases_on `h` \\ fs [list_size_def, spt_left_def,
+        spt_right_def, spt_size_alt_def]
+  \\ rw []
+  \\ fs []
+  );
+
+Theorem sum_spt_size_less
+  = (sum_spt_size_alt_lemma
+        |> SIMP_RULE bool_ss [LET_THM, combinTheory.I_o_ID]
+        |> CONJUNCT2);
+
+val aux_alist_def = tDefine "aux_alist" `
+  aux_alist i xs = if EVERY (\x. x = LN) xs
+    then []
+    else spt_centers i xs ++ aux_alist (LENGTH xs + i)
+        (MAP spt_right xs ++ MAP spt_left xs)`
+  (
+  WF_REL_TAC `measure (SUM o MAP spt_size_alt o SND)`
+  \\ rpt strip_tac
+  \\ fs [SUM_APPEND, MAP_MAP_o, sum_spt_size_less]
+  );
+
+val toSortedAList_def = Define `toSortedAList spt = aux_alist 0 [spt]`;
+
+fun test () = EVAL ``toSortedAList (delete 12 (fromList (COUNT_LIST 25)))``;
+
+Theorem spt_centers_add_lemma
+  `!xs i j. MAP (\(j, v). (i + j,v)) (spt_centers j xs)
+    = spt_centers (i + j) xs`
+  (
+  Induct \\ fs [spt_centers_def]
+  \\ rpt strip_tac
+  \\ FIRST_X_ASSUM (ASSUME_TAC o Q.SPEC `SUC j`)
+  \\ BasicProvers.EVERY_CASE_TAC
+  \\ fs [ADD_CLAUSES]
+  );
+
+Theorem EL_CONS_IF
+  `EL n (x :: xs) = (if n = 0 then x else EL (PRE n) xs)`
+  ( Cases_on `n` \\ fs [] );
+
+Theorem ADD_1_SUC
+  `(N + 1 = SUC N) /\ (1 + N = SUC N)`
+  ( fs [] );
+
+Theorem ALOOKUP_spt_centers
+  `!i j. (ALOOKUP (spt_centers j xs) i
+    = if j <= i /\ i - j < LENGTH xs then spt_center (EL (i - j) xs) else NONE)`
+  (
+  Induct_on `xs` \\ fs [spt_centers_def]
+  \\ rpt strip_tac
+  \\ fs [ALOOKUP_APPEND]
+  \\ BasicProvers.EVERY_CASE_TAC \\ fs [] \\ rfs []
+  \\ fs [EL_CONS_IF, PRE_SUB1, ADD_1_SUC]
+  );
+
+Theorem lookup_0_spt_center
+  `!spt. lookup 0 spt = spt_center spt`
+  ( Cases \\ EVAL_TAC );
+
+Theorem lookup_spt_right
+  `lookup i (spt_right spt) = lookup ((i * 2) + 1) spt`
+  (
+  ASSUME_TAC (Q.SPEC `2` MULT_DIV)
+  \\ Cases_on `spt` \\ fs [spt_right_def, lookup_def]
+  \\ fs [EVEN_MULT, EVEN_ADD]
+  );
+
+Theorem lookup_spt_left
+  `lookup i (spt_left spt) = lookup ((i * 2) + 2) spt`
+  (
+  ASSUME_TAC (Q.SPEC `2` MULT_DIV)
+  \\ Cases_on `spt` \\ fs [spt_left_def, lookup_def]
+  \\ fs [EVEN_MULT, EVEN_ADD, ADD_DIV_RWT]
+  );
+
+Theorem DIV_MOD_TIMES_2
+  `!n i. 0 < n ==> (((i DIV n) = 2 * (i DIV (2 * n))
+            + (if i MOD (2 * n) < n then 0 else 1))
+        /\ ((i MOD n) = i MOD (2 * n)
+            - (if i MOD (2 * n) < n then 0 else n)))`
+  (
+  rpt (GEN_TAC ORELSE DISCH_TAC)
+  \\ qabbrev_tac `tn = 2 * n`
+  \\ subgoal `0 < tn` >- (unabbrev_all_tac \\ fs [])
+  \\ subgoal `?q r. r < tn /\ (i = q * tn + r)`
+  >- metis_tac [MOD_LESS, DIVISION]
+  \\ fs [ADD_DIV_RWT, MULT_DIV, LESS_DIV_EQ_ZERO]
+  \\ Q.SUBGOAL_THEN `(q * tn) DIV n = q * 2` ASSUME_TAC
+  >- metis_tac [markerTheory.Abbrev_def, MULT_DIV, MULT_ASSOC]
+  \\ fs [markerTheory.Abbrev_def, ADD_DIV_RWT]
+  \\ BasicProvers.EVERY_CASE_TAC \\ fs [LESS_DIV_EQ_ZERO]
+  \\ fs [NOT_LESS]
+  \\ drule LESS_EQUAL_ADD
+  \\ rw []
+  \\ fs [ADD_DIV_RWT, LESS_DIV_EQ_ZERO]
+  );
+
+Theorem ALOOKUP_aux_alist
+  `!i j. (LENGTH xs > 0) ==> (ALOOKUP (aux_alist j xs) i
+    = if i < j then NONE else lookup ((i - j) DIV (LENGTH xs))
+        (EL ((i - j) MOD (LENGTH xs)) xs))`
+  (
+  measureInduct_on `(SUM o MAP spt_size_alt) xs`
+  \\ rpt strip_tac
+  \\ simp [Once aux_alist_def]
+  \\ BasicProvers.TOP_CASE_TAC
+  >- fs [EVERY_EL, lookup_def, MOD_LESS]
+  \\ fs [ALOOKUP_APPEND, ALOOKUP_spt_centers]
+  \\ Q.PAT_X_ASSUM `!y. _` (fn t => dep_rewrite.DEP_REWRITE_TAC [IRULE_CANON t])
+  \\ fs [SUM_APPEND, MAP_MAP_o, sum_spt_size_less]
+  \\ Cases_on `i < j` \\ fs []
+  \\ Cases_on `i - j < LENGTH xs`
+  >-
+    (
+    fs [LESS_DIV_EQ_ZERO, lookup_0_spt_center]
+    \\ BasicProvers.TOP_CASE_TAC
+    )
+  \\ fs [] \\ rfs []
+  \\ Cases_on `0 < i` \\ fs []
+  \\ fs [NOT_LESS]
+  \\ drule LESS_EQUAL_ADD
+  \\ rw []
+  \\ full_simp_tac arith_ss []
+  \\ fs [ADD_MODULUS_LEFT, ADD_DIV_RWT]
+  \\ ASSUME_TAC (Q.SPEC `LENGTH (xs : 'a spt list)` DIV_MOD_TIMES_2)
+  \\ fs []
+  \\ CASE_TAC
+  \\ fs [EL_APPEND_EQN, EL_MAP, lookup_spt_right, lookup_spt_left]
+  );
+
+Theorem ALOOKUP_toSortedAList
+  `ALOOKUP (toSortedAList t) k = lookup k t`
+  ( fs [toSortedAList_def, ALOOKUP_aux_alist] );
+
+Theorem SORTED_spt_centers
+  `!xs i. SORTED $< (MAP FST (spt_centers i xs))`
+  (
+  Induct \\ fs [spt_centers_def]
+  \\ rpt (strip_tac ORELSE CASE_TAC) \\ fs []
+  \\ fs [sortingTheory.SORTED_EQ]
+  \\ simp [spt_centers_eq_map, MEM_MAP, pairTheory.EXISTS_PROD,
+        MEM_FILTER, indexedListsTheory.MEM_MAPi]
+  \\ rpt strip_tac
+  \\ BasicProvers.EVERY_CASE_TAC \\ fs []
+  );
+
+Theorem LESS_spt_centers
+  `!xs i. MEM p (spt_centers i xs) ==> FST p < i + LENGTH xs`
+  (
+  Induct \\ fs [spt_centers_def]
+  \\ rpt (GEN_TAC ORELSE CASE_TAC ORELSE DISCH_TAC) \\ fs []
+  \\ FIRST_X_ASSUM drule \\ fs []
+  );
+
+Theorem MEM_FST_ALOOKUP_SOME
+  `MEM x xs ==> ?y. ALOOKUP xs (FST x) = SOME y`
+  (
+  Cases_on `ALOOKUP xs (FST x)`
+  \\ fs [ALOOKUP_NONE, MEM_MAP]
+  \\ metis_tac []
+  );
+
+Theorem GREATER_EQ_alist_aux
+  `MEM x (aux_alist i xs) ==> i <= FST x`
+  (
+  Cases_on `ALOOKUP (aux_alist i xs) (FST x)`
+  >- (
+    fs [ALOOKUP_NONE, MEM_MAP]
+    \\ metis_tac []
+    )
+  \\ Cases_on `0 < LENGTH xs` \\ fs [Once (Q.SPEC `[]` aux_alist_def)]
+  \\ fs [ALOOKUP_aux_alist]
+  );
+
+Theorem SORTED_MAP_FST_alist_aux
+  `!i. SORTED (<) (MAP FST (aux_alist i xs))`
+  (
+  measureInduct_on `(SUM o MAP spt_size_alt) xs`
+  \\ simp [Once aux_alist_def]
+  \\ strip_tac \\ CASE_TAC \\ fs []
+  \\ irule sortingTheory.SORTED_APPEND
+  \\ fs [SORTED_spt_centers, MEM_MAP, pairTheory.EXISTS_PROD]
+  \\ reverse CONJ_TAC
+  >-
+    (
+    FIRST_X_ASSUM irule
+    \\ fs [SUM_APPEND, MAP_MAP_o, sum_spt_size_less]
+    )
+  \\ fs [MEM_MAP, pairTheory.EXISTS_PROD]
+  \\ rw []
+  \\ drule LESS_spt_centers
+  \\ drule GREATER_EQ_alist_aux
+  \\ fs []
+  );
+
+Theorem SORTED_MAP_FST_toSortedAList
+  `SORTED (<) (MAP FST (toSortedAList t))`
+  ( fs [toSortedAList_def, SORTED_MAP_FST_alist_aux] );
+
+Theorem MEM_toSortedAList
+  `!t k v. MEM (k,v) (toSortedAList t) <=> (lookup k t = SOME v)`
+  (
+  rw [GSYM ALOOKUP_toSortedAList] \\ EQ_TAC \\ rw [ALOOKUP_MEM]
+  \\ irule ALOOKUP_ALL_DISTINCT_MEM
+  \\ fs []
+  \\ irule sortingTheory.SORTED_ALL_DISTINCT
+  \\ qexists_tac `$<`
+  \\ fs [relationTheory.irreflexive_def, SORTED_MAP_FST_toSortedAList]
+  );
 
 val _ = export_theory();
