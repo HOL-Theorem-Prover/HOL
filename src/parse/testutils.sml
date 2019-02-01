@@ -20,8 +20,9 @@ fun crush extra w s =
     else
       UTF8.substring(s,0,w-exsize) ^ extra
   end
+val rmNLs = String.translate (fn #"\n" => " " | c => str c)
 
-fun tprint s = print (crush " ...  " (output_linewidth - 3) s)
+fun tprint s = print (crush " ...  " (output_linewidth - 3) (rmNLs s))
 
 fun printsize s =
     let
