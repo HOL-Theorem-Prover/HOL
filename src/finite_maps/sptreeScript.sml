@@ -1907,8 +1907,9 @@ Theorem sum_spt_size_alt_lemma
   );
 
 Theorem sum_spt_size_less
-  (sum_spt_size_alt_lemma |> SIMP_RULE bool_ss [LET_THM, combinTheory.I_o_ID]
-    |> CONJUNCT2);
+  = (sum_spt_size_alt_lemma
+        |> SIMP_RULE bool_ss [LET_THM, combinTheory.I_o_ID]
+        |> CONJUNCT2);
 
 val aux_alist_def = tDefine "aux_alist" `
   aux_alist i xs = if EVERY (\x. x = LN) xs
