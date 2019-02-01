@@ -1896,7 +1896,7 @@ Theorem sum_spt_size_alt_lemma
   `let mksum = (\f. SUM (MAP (spt_size_alt o f) xs)) in
     let tsum = mksum spt_left + mksum spt_right in
     tsum <= mksum I
-      /\ (EXISTS ($~ o (λx. isEmpty x)) xs ==> tsum < mksum I)`
+      /\ (EXISTS ($~ o (\x. isEmpty x)) xs ==> tsum < mksum I)`
   (
   Induct_on `xs` \\ fs []
   \\ GEN_TAC
