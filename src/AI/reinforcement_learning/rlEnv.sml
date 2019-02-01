@@ -8,13 +8,7 @@
 structure rlEnv :> rlEnv =
 struct
 
-(*
-  load "mlTreeNeuralNetwork"; load "rlLib"; load "psTermGen";
-  load "mlNearestNeighbor";
-*)
-
-open HolKernel Abbrev boolLib aiLib psMCTS mlTreeNeuralNetwork
-rlLib rlTrain
+open HolKernel Abbrev boolLib aiLib rlLib psMCTS mlTreeNeuralNetwork
 
 val ERR = mk_HOL_ERR "rlEnv"
 
@@ -34,7 +28,7 @@ type ('a,'b,'c) gamespec =
    ------------------------------------------------------------------------- *)
 
 val exwindow_glob = 100000
-val bigsteps_glob = 50
+val bigsteps_glob = 100
 val nsim_glob = 1600
 val decay_glob = 0.99
 val logfile_glob = ref "rlEnv"
@@ -56,15 +50,15 @@ fun summary s = log_eval (!logfile_glob) s
    Evaluation and policy
    ------------------------------------------------------------------------- *)
 
-fun mk_fep_tnn gamespec tnn sit =
+fun mk_fep_dhtnn gamespec dhtnn sit =
   let
-    val movel = (#movel gamespec)
-    val (opdict,(nn1,nn2)) = tnn
-    val etnn = (opdict,nn1)
-    val ptnn = (opdict,nn2)
+    val movel = #movel gamespec
+    val {opdict,headeval,headpoli,dimin,dimout} = dhtnn
+    val etnn = {opdict=opdict,headnn=headeval,dimin=dimin,dimout=1}
+    val ptnn = {opdict=opdict,headnn=headpoli,dimin=dimin,dimout=dimout}
     val nntm = (#nntm_of_sit gamespec) sit
   in
-    (eval_treenn etnn nntm, combine (movel, poli_treenn ptnn nntm))
+    (only_hd (infer_tnn etnn nntm), combine (movel, infer_tnn ptnn nntm))
   end
 
 (* -------------------------------------------------------------------------
@@ -73,7 +67,8 @@ fun mk_fep_tnn gamespec tnn sit =
 
 val emptyallex = ([],[])
 
-fun update_allex (nntm,(e,p)) (eex,pex) = ((nntm,e) :: eex, (nntm,p) :: pex)
+fun update_allex (nntm,(e,p)) (eex,pex) = 
+  ((nntm,[e]) :: eex, (nntm,p) :: pex)
 
 fun update_allex_from_tree gamespec tree allex =
   let
@@ -124,26 +119,24 @@ fun n_bigsteps n gamespec pbspec target =
    Training
    ------------------------------------------------------------------------- *)
 
-fun random_dhtnn gamespec =
+fun random_dhtnn_gamespec gamespec =
   let
-    val polin = length (#movel gamespec)
+    val dimin = #dim gamespec
+    val dimout = length (#movel gamespec)
     val operl = #operl gamespec
-    val dim = #dim gamespec
   in
-    (random_opdict dim operl,
-    (random_headnn (dim,1), random_headnn (dim,polin)))
+    random_dhtnn (dimin,dimout) operl
   end
 
 fun train_dhtnn gamespec (evalex,poliex) =
   let
     val schedule = [(100,0.1)]
-    val bsize = if length evalex < 32 then 1 else 32
-    val dhtnn = random_dhtnn gamespec
+    val bsize = if length evalex < 64 then 1 else 64
+    val dhtnn = random_dhtnn_gamespec gamespec
     val dim = #dim gamespec
-    val (etrain,ptrain) =
-      (prepare_trainset_eval evalex, prepare_trainset_poli poliex)
+    val (etrain,ptrain) = (prepare_trainset evalex, prepare_trainset poliex)
   in
-     train_dhtnn_schedule dim dhtnn bsize (etrain,ptrain) schedule
+     train_dhtnn_schedule dhtnn bsize (etrain,ptrain) schedule
   end
 
 (* -------------------------------------------------------------------------
@@ -176,11 +169,11 @@ fun summary_wins gamespec allrootl =
    Adaptive difficulty
    ------------------------------------------------------------------------- *)
 
-fun eval_targetl gamespec tnn targetl = 
+fun eval_targetl gamespec dhtnn targetl = 
   let
-    val (opdict,(nn1,nn2)) = tnn
-    val etnn = (opdict,nn1)
-    fun f sit = eval_treenn etnn ((#nntm_of_sit gamespec) sit)
+    val {opdict,headeval,headpoli,dimin,dimout} = dhtnn
+    val etnn = {opdict=opdict,headnn=headeval,dimin=dimin,dimout=1}
+    fun f sit = only_hd (infer_tnn etnn ((#nntm_of_sit gamespec) sit))
     val l = map_assoc f targetl
     val r = rts (average_real (map snd l))
   in
@@ -191,9 +184,9 @@ fun eval_targetl gamespec tnn targetl =
 fun interval (step:real) (a,b) =
   if a + (step / 2.0) > b then [b] else a :: interval step (a + step,b)
 
-fun choose_uniform gamespec tnn (targetl,ntarget) =
+fun choose_uniform gamespec dhtnn (targetl,ntarget) =
   let 
-    val l = eval_targetl gamespec tnn targetl
+    val l = eval_targetl gamespec dhtnn targetl
     fun f r = map fst (filter (fn (_,x) => x >= r andalso x < r + 0.1) l)
     val ll = map f (interval 0.1 (0.0,0.9))
     val _ = 
@@ -210,10 +203,11 @@ fun choose_uniform gamespec tnn (targetl,ntarget) =
 
 fun concat_ex ((exE,exP),(allexE,allexP)) = (exE @ allexE, exP @ allexP)
 
-fun explore_f gamespec allex tnn targetl =
+fun explore_f (gamespec : ('a,'b,'c) gamespec) allex dhtnn targetl =
   let
     val pbspec =
-      ((#status_of gamespec, #apply_move gamespec), mk_fep_tnn gamespec tnn)
+      ((#status_of gamespec, #apply_move gamespec), 
+        mk_fep_dhtnn gamespec dhtnn)
     val (result,t) =
       add_time (map (n_bigsteps bigsteps_glob gamespec pbspec)) targetl
     val (exl,allrootl) = split result
@@ -226,17 +220,17 @@ fun explore_f gamespec allex tnn targetl =
 fun train_f gamespec allex =
   let
     val _ = summary ("Examples : " ^ its (length (fst allex)))
-    val (tnn,t) = add_time (train_dhtnn gamespec) allex
+    val (dhtnn,t) = add_time (train_dhtnn gamespec) allex
   in
-    summary ("Training time : " ^ rts t); tnn
+    summary ("Training time : " ^ rts t); dhtnn
   end
 
-fun rl_start gamespec (targetl,ntarget) =
+fun rl_start (gamespec : ('a,'b,'c) gamespec) (targetl,ntarget) =
   let
     val _ = summary "Generation 0"
-    val tnn = random_dhtnn gamespec
+    val dhtnn = random_dhtnn_gamespec gamespec
     val targetl' = first_n ntarget (shuffle targetl)
-    val newallex = explore_f gamespec emptyallex tnn targetl'
+    val newallex = explore_f gamespec emptyallex dhtnn targetl'
   in
     discard_oldex newallex exwindow_glob
   end
@@ -244,9 +238,9 @@ fun rl_start gamespec (targetl,ntarget) =
 fun rl_one n gamespec (targetl,ntarget) allex =
   let
     val _ = summary ("\nGeneration " ^ its n)
-    val tnn = train_f gamespec allex
-    val targetl' = choose_uniform gamespec tnn (targetl,ntarget)
-    val newallex = explore_f gamespec allex tnn targetl'
+    val dhtnn = train_f gamespec allex
+    val targetl' = choose_uniform gamespec dhtnn (targetl,ntarget)
+    val newallex = explore_f gamespec allex dhtnn targetl'
   in
     discard_oldex newallex exwindow_glob
   end
@@ -264,14 +258,12 @@ fun start_rl_loop (gamespec : ('a,'b,'c) gamespec) (targetl,ntarget) nmax =
 
 (*
 
-app load ["rlGameParamod","rlEnv"];
-open aiLib psMCTS rlGameParamod rlEnv;
+app load ["rlGameAim","rlEnv"];
+open aiLib psMCTS rlGameAim rlEnv;
 ignorestatus_flag := true;
-val maxsize = 7;
-val targetl = mk_targetl maxsize 10000;
-val nmax = 20;
-val ntarget = 100;
-logfile_glob := "paramod_hotm";
+val ntarget = 1000;
+val nmax = 200;
+logfile_glob := "aim_test";
 val allex = start_rl_loop gamespec (targetl,ntarget) nmax;
 
 *)

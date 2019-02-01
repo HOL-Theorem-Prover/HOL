@@ -289,9 +289,18 @@ fun duplicate n l =
 
 fun indent n = implode (duplicate n [#" "])
 
-(* ---------------------------------------------------------------------------
+fun list_combine ll = case ll of
+    [] => []
+  | [l] => map (fn x => [x]) l
+  | l :: m => let val m' = list_combine m in
+                map (fn (a,b) => a :: b) (combine (l,m'))
+              end
+
+
+
+(* --------------------------------------------------------------------------
    Parsing
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------- *)
 
 datatype lisp = Lterm of lisp list | Lstring of string
 
@@ -306,9 +315,14 @@ fun lisp_aux acc sl = case sl of
 
 fun lisp_of sl = fst (lisp_aux [] sl)
 
+fun lisp_lower_case s = 
+  if String.sub (s,0) = #"\""
+  then s
+  else String.translate (Char.toString o Char.toLower) s
+
 fun strip_lisp x = case x of
-    Lterm (Lstring x :: m) => (x, m)
-  | Lstring x              => (x ,[])
+    Lterm (Lstring x :: m) => (lisp_lower_case x, m)
+  | Lstring x              => (lisp_lower_case x ,[])
   | _                      => raise ERR "strip_lisp" "operator is a comb"
 
 fun rec_fun_type n ty =
@@ -439,7 +453,7 @@ fun tts tm = case dest_term tm of
     let val (oper,argl) = strip_comb tm in 
       case argl of
         [a,b] => "(" ^ String.concatWith " " (map tts [a,oper,b]) ^ ")"
-      | _ => tts oper ^ "(" ^ String.concatWith "," (map tts argl) ^ ")"
+      | _ => "(" ^ String.concatWith " " (map tts (oper :: argl)) ^ ")"
     end
   | LAMB(Var,Bod)      => "(LAMB " ^ tts Var ^ "." ^ tts Bod ^ ")"
 
@@ -717,6 +731,9 @@ fun select_in_distrib l =
   in
     find_cumul (random_real () * tot) l'
   end
+
+fun random_percent percent l =
+  part_n (Real.floor (percent * Real.fromInt (length l))) (shuffle l)
 
 (* -------------------------------------------------------------------------
    Parallelism

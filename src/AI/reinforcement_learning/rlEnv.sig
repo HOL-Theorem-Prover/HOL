@@ -24,6 +24,6 @@ sig
 
   val start_rl_loop : ('a, 'b, 'c) gamespec ->
     ('a psMCTS.sit list * int) -> int ->
-    (term * real) list * (term * real list) list
+    (term * real list) list * (term * real list) list
 
 end

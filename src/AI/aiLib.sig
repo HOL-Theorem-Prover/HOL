@@ -104,6 +104,7 @@ sig
   val number_partition : int -> int -> int list list
   val duplicate : int -> 'a list -> 'a list
   val indent: int -> string
+  val list_combine : 'a list list -> 'a list list
 
   (* random *)
   val random_real : unit -> real
@@ -111,6 +112,7 @@ sig
   val random_elem : 'a list -> 'a
   val random_int : (int * int) -> int
   val select_in_distrib : ('a * real) list -> 'a
+  val random_percent : real -> 'a list -> 'a list * 'a list
 
   (* input/output *)
   val string_of_goal : goal -> string
