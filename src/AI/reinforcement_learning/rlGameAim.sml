@@ -206,7 +206,7 @@ fun paramod eq (tm,pos) =
     val tmrenamed = rename_evarl (fn x => "_tm") tm
     val (s,t) = aim_dest_eq eqrenamed
     val u = subtm_at_pos pos tmrenamed
-    val sigma = Unify.simp_unify_terms [] s u
+    val sigma = Unify.simp_unify_terms constl s u
     val tsigma = subst sigma t
     val tmsigma = subst sigma tmrenamed
     val r = sub_at_pos tmsigma (pos,tsigma)
