@@ -45,6 +45,8 @@ include Abbrev
     dhtnn
   
   (* prepare the dataset before training *)
+  val trainset_info : (term * real list) list -> string
+
   val prepare_trainset : (term * real list) list -> (term list * vect) list  
 
   val prepare_train_tnn :

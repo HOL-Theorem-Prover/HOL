@@ -12,30 +12,23 @@ open HolKernel Abbrev boolLib aiLib rlLib psMCTS mlTreeNeuralNetwork
 
 val ERR = mk_HOL_ERR "rlEnv"
 
-type ('a,'b,'c) gamespec =
+type ('a,''b,'c) gamespec =
   {
-  mk_startsit: 'c -> 'a psMCTS.sit,
-  movel: 'b list,
+  movel : ''b list,
+  string_of_move : ''b -> string,
+  filter_sit : 'a psMCTS.sit -> ((''b * real) list -> (''b * real) list),
   status_of : ('a psMCTS.sit -> psMCTS.status),
-  apply_move : ('b -> 'a psMCTS.sit -> 'a psMCTS.sit),
+  apply_move : (''b -> 'a psMCTS.sit -> 'a psMCTS.sit),
   operl : (term * int) list,
   dim : int,
   nntm_of_sit: 'a psMCTS.sit -> term
   }
 
 (* -------------------------------------------------------------------------
-   Hard-coded parameters
-   ------------------------------------------------------------------------- *)
-
-val exwindow_glob = 100000
-val bigsteps_glob = 100
-val nsim_glob = 1600
-val decay_glob = 0.99
-val logfile_glob = ref "rlEnv"
-
-(* -------------------------------------------------------------------------
    Log
    ------------------------------------------------------------------------- *)
+
+val logfile_glob = ref "rlEnv"
 
 val eval_dir = HOLDIR ^ "/src/AI/reinforcement_learning/eval"
 fun log_eval file s =
@@ -47,18 +40,54 @@ fun log_eval file s =
 fun summary s = log_eval (!logfile_glob) s
 
 (* -------------------------------------------------------------------------
+   Hard-coded parameters
+   ------------------------------------------------------------------------- *)
+
+val ngen_glob = ref 20
+val ntarget_glob = ref 400
+val exwindow_glob = ref 20000
+val bigsteps_glob = ref 50
+val nsim_glob = ref 1600
+val decay_glob = ref 0.99
+val noise_flag = ref true
+
+
+fun bool_to_string b = if b then "true" else "false"
+
+fun summary_param targetl =
+  let 
+    val file = "file: " ^ (!logfile_glob) 
+    val s0 = "number_of_targets: " ^ (its (length targetl))
+    val s1 = "example_window: " ^ its (!exwindow_glob)
+    val s2 = "big_steps: " ^ its (!bigsteps_glob)
+    val s3 = "simulation: " ^ its (!nsim_glob)
+    val s4 = "decay: " ^ rts (!decay_glob)
+    val s5 = "noise: " ^ bool_to_string (!noise_flag)
+    val s6 = "max_generation: " ^ its (!ngen_glob)
+    val s7 = "target_per_generation: " ^ its (!ntarget_glob)
+  in
+    summary "Global parameters";
+    summary (String.concatWith "\n  " [file,s0,s6,s7,s1,s2,s3,s4,s5] ^ "\n")
+  end
+
+(* -------------------------------------------------------------------------
    Evaluation and policy
    ------------------------------------------------------------------------- *)
 
-fun mk_fep_dhtnn gamespec dhtnn sit =
+fun mk_fep_dhtnn bstart gamespec dhtnn sit =
   let
     val movel = #movel gamespec
+    val filter_sit = (#filter_sit gamespec) sit
     val {opdict,headeval,headpoli,dimin,dimout} = dhtnn
     val etnn = {opdict=opdict,headnn=headeval,dimin=dimin,dimout=1}
     val ptnn = {opdict=opdict,headnn=headpoli,dimin=dimin,dimout=dimout}
     val nntm = (#nntm_of_sit gamespec) sit
   in
-    (only_hd (infer_tnn etnn nntm), combine (movel, infer_tnn ptnn nntm))
+    if bstart then (0.05, filter_sit (map_assoc (fn x => 1.0) movel)) else
+    (
+    only_hd (infer_tnn etnn nntm), 
+    filter_sit (combine (movel, infer_tnn ptnn nntm))
+    )
   end
 
 (* -------------------------------------------------------------------------
@@ -67,19 +96,24 @@ fun mk_fep_dhtnn gamespec dhtnn sit =
 
 val emptyallex = ([],[])
 
-fun update_allex (nntm,(e,p)) (eex,pex) = 
-  ((nntm,[e]) :: eex, (nntm,p) :: pex)
+fun complete_pol movel mrl =
+  let fun f move = assoc move mrl handle HOL_ERR _ => 0.0 in 
+    map f movel
+  end
+
+fun update_allex movel (nntm,(e,p)) (eex,pex) = 
+  ((nntm,[e]) :: eex, (nntm, complete_pol movel p) :: pex)
 
 fun update_allex_from_tree gamespec tree allex =
   let
     val root = dfind [0] tree
-    val epo  = evalpoli_example tree
     val sit  = #sit root
     val nntm = (#nntm_of_sit gamespec) sit
+    val movel = #movel gamespec
   in
-    case epo of
+    case evalpoli_example tree of
       NONE    => allex
-    | SOME ep => update_allex (nntm,ep) allex
+    | SOME ep => update_allex movel (nntm,ep) allex
   end
 
 fun discard_oldex (a,b) n = (first_n n a, first_n n b)
@@ -94,24 +128,32 @@ fun n_bigsteps_loop (n,nmax) gamespec pbspec (allex,allroot) tree =
     val nntm_of_sit = #nntm_of_sit gamespec
     val sit = #sit (dfind [0] tree)
     val _ = print_endline (its n ^ ": " ^ tts (nntm_of_sit sit))
-    val newtree = mcts (nsim_glob, decay_glob, true) pbspec tree
+    val newtree = mcts (!nsim_glob, !decay_glob, !noise_flag) pbspec tree
     val root = dfind [0] newtree
-    val cido = select_bigstep newtree [0]
+    val filter_sit = (#filter_sit gamespec) sit
+    val movel = #movel gamespec
   in
-    case cido of
-     NONE => (allex, root :: allroot)
-   | SOME cid =>
-      let
-        val cuttree = cut_tree newtree cid
-        val newallex = update_allex_from_tree gamespec newtree allex
-      in
-        n_bigsteps_loop (n+1,nmax) gamespec pbspec
-        (newallex, root :: allroot) cuttree
-      end
+   if null (filter_sit (map_assoc (fn x => 0.0) movel))
+   then (print_endline "No move available\n"; (allex, root :: allroot))
+   else
+     let val (dis,cido) = select_bigstep newtree [0] in
+     case cido of
+       NONE => (allex, root :: allroot)
+     | SOME cid =>
+        let
+          val _ = print_distrib (#string_of_move gamespec) dis
+          val cuttree = cut_tree newtree cid
+          val newallex = update_allex_from_tree gamespec newtree allex
+        in
+          n_bigsteps_loop (n+1,nmax) gamespec pbspec
+          (newallex, root :: allroot) cuttree
+        end
+    end
   end
 
-fun n_bigsteps n gamespec pbspec target =
-  let val tree = starttree_of decay_glob pbspec target in
+fun n_bigsteps n gamespec pbspec ntarg target =
+  let val tree = starttree_of (!decay_glob) pbspec target in
+    print_endline ("Target " ^ its ntarg);
     n_bigsteps_loop (0,n) gamespec pbspec (emptyallex,[]) tree
   end
 
@@ -130,6 +172,8 @@ fun random_dhtnn_gamespec gamespec =
 
 fun train_dhtnn gamespec (evalex,poliex) =
   let
+    val _ = summary ("Eval examples: " ^ trainset_info evalex)
+    val _ = summary ("Poli examples: " ^ trainset_info poliex)
     val schedule = [(100,0.1)]
     val bsize = if length evalex < 64 then 1 else 64
     val dhtnn = random_dhtnn_gamespec gamespec
@@ -188,13 +232,16 @@ fun choose_uniform gamespec dhtnn (targetl,ntarget) =
   let 
     val l = eval_targetl gamespec dhtnn targetl
     fun f r = map fst (filter (fn (_,x) => x >= r andalso x < r + 0.1) l)
-    val ll = map f (interval 0.1 (0.0,0.9))
+    val ll0 = map f (interval 0.1 (0.0,0.9))
     val _ = 
       summary ("  Repartition (self-assessed): " ^ String.concatWith " " 
-               (map (its o length) ll))
-    fun g x = first_n (ntarget div 10) (shuffle x)
+               (map (its o length) ll0))
+    fun g x = part_n (ntarget div 10) (shuffle x)
+    val ll1 = map g ll0
+    val chosenl = List.concat (map fst ll1)
+    val otherl = List.concat (map snd ll1)
   in
-    List.concat (map g ll)
+    chosenl @ first_n (ntarget - (length chosenl)) (shuffle otherl)
   end
 
 (* -------------------------------------------------------------------------
@@ -203,13 +250,13 @@ fun choose_uniform gamespec dhtnn (targetl,ntarget) =
 
 fun concat_ex ((exE,exP),(allexE,allexP)) = (exE @ allexE, exP @ allexP)
 
-fun explore_f (gamespec : ('a,'b,'c) gamespec) allex dhtnn targetl =
+fun explore_f bstart (gamespec : ('a,''b,'c) gamespec) allex dhtnn targetl =
   let
     val pbspec =
       ((#status_of gamespec, #apply_move gamespec), 
-        mk_fep_dhtnn gamespec dhtnn)
+        mk_fep_dhtnn bstart gamespec dhtnn)
     val (result,t) =
-      add_time (map (n_bigsteps bigsteps_glob gamespec pbspec)) targetl
+      add_time (mapi (n_bigsteps (!bigsteps_glob) gamespec pbspec)) targetl
     val (exl,allrootl) = split result
     val _ = summary ("Exploration time : " ^ rts t)
     val _ = summary_wins gamespec allrootl
@@ -218,56 +265,58 @@ fun explore_f (gamespec : ('a,'b,'c) gamespec) allex dhtnn targetl =
   end
 
 fun train_f gamespec allex =
-  let
-    val _ = summary ("Examples : " ^ its (length (fst allex)))
-    val (dhtnn,t) = add_time (train_dhtnn gamespec) allex
-  in
+  let val (dhtnn,t) = add_time (train_dhtnn gamespec) allex in
     summary ("Training time : " ^ rts t); dhtnn
   end
 
-fun rl_start (gamespec : ('a,'b,'c) gamespec) (targetl,ntarget) =
+fun rl_start gamespec targetl =
   let
     val _ = summary "Generation 0"
     val dhtnn = random_dhtnn_gamespec gamespec
-    val targetl' = first_n ntarget (shuffle targetl)
-    val newallex = explore_f gamespec emptyallex dhtnn targetl'
+    val targetl' = first_n (!ntarget_glob) (shuffle targetl)
+    val newallex = explore_f true gamespec emptyallex dhtnn targetl'
   in
-    discard_oldex newallex exwindow_glob
+    discard_oldex newallex (!exwindow_glob)
   end
 
-fun rl_one n gamespec (targetl,ntarget) allex =
+fun rl_one n gamespec targetl allex =
   let
     val _ = summary ("\nGeneration " ^ its n)
     val dhtnn = train_f gamespec allex
-    val targetl' = choose_uniform gamespec dhtnn (targetl,ntarget)
-    val newallex = explore_f gamespec allex dhtnn targetl'
+    val targetl' = choose_uniform gamespec dhtnn (targetl,!ntarget_glob)
+    val newallex = explore_f false gamespec allex dhtnn targetl'
   in
-    discard_oldex newallex exwindow_glob
+    discard_oldex newallex (!exwindow_glob)
   end
 
-fun rl_loop (n,nmax) gamespec (targetl,ntarget) allex =
+fun rl_loop (n,nmax) gamespec targetl allex =
   if n >= nmax then allex else
-    let val newallex = rl_one n gamespec (targetl,ntarget) allex in
-      rl_loop (n+1, nmax) gamespec (targetl,ntarget) newallex
+    let val newallex = rl_one n gamespec targetl allex in
+      rl_loop (n+1, nmax) gamespec targetl newallex
     end
 
-fun start_rl_loop (gamespec : ('a,'b,'c) gamespec) (targetl,ntarget) nmax =
-  let val allex = rl_start gamespec (targetl,ntarget) in
-    rl_loop (1,nmax) gamespec (targetl,ntarget) allex
+fun start_rl_loop gamespec targetl =
+  let 
+    val _ = summary_param targetl
+    val allex = rl_start gamespec targetl
+  in
+    rl_loop (1,!ngen_glob) gamespec targetl allex
   end
-
-(*
-
-app load ["rlGameAim","rlEnv"];
-open aiLib psMCTS rlGameAim rlEnv;
-ignorestatus_flag := true;
-val ntarget = 1000;
-val nmax = 100;
-logfile_glob := "aim_test";
-val allex = start_rl_loop gamespec (targetl,ntarget) nmax;
-
-*)
-
 
 
 end (* struct *)
+
+(*
+app load ["rlGameArithGround","rlEnv"];
+open aiLib psMCTS rlGameArithGround rlEnv;
+
+logfile_glob := "arith_n4_test6";
+ngen_glob := 20;
+ntarget_glob := 100;
+bigsteps_glob := 20;
+nsim_glob := 3200;
+
+val allex = start_rl_loop gamespec targetl_n4;
+*)
+
+

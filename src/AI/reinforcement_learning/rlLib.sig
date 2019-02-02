@@ -5,23 +5,14 @@ sig
 
   type pos = int list
 
-  (* variables *)
-  val numtag_var : term
-  val numhole_var : term
-  val active_var : term
-  val pending_var : term
-  val extra_operl : (term * int) list
+  (* neural network units *)
+  val oper_compare : (term * int) * (term * int) -> order
+  val operl_of : term -> (term * int) list
 
   (* position *)
-  val sub_at_pos    : term -> pos * term -> term
-  val subtm_at_pos  : pos -> term -> term
-  val recover_cut   : term -> pos * term -> term
-  val all_posred    : term -> (pos * term) list
-  val tag_position  : term * pos -> term
-  val hole_position : term * pos -> term
-  val match_subtm   : term -> (term * term) -> term
-  val sub_tac       : term * pos -> term -> term
-  val sym_tac       : term -> term
+  val subst_pos : term * pos -> term -> term
+  val find_subtm : term * pos -> term
+  val narg_ge : int -> term * pos -> bool  
 
   (* arithmetic *)
   val mk_suc : term -> term
@@ -32,12 +23,12 @@ sig
   val dest_suc : term -> term
   val dest_add : term -> (term * term)
 
-  (* terms *)
-  val human_readable : term -> term
-  val fo_terms : term -> term list
-  val operl_of_term : term -> (term * int) list
-  val negate : term -> term
-  val is_subtm : term -> term -> bool
-  val is_refl : term -> bool
+  (* equality *)
+  val sym : term -> term
+
+  (* higher-order *)
+  val let_rw : term -> term
+
+
 
 end

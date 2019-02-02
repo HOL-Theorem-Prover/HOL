@@ -33,8 +33,6 @@ sig
     'a sit ->
     ('a,'b) tree
 
-  val ignorestatus_flag : bool ref (* plain mcts *)
-
   val mcts :
     (int * real * bool) ->
     (('a sit -> status) * ('b -> 'a sit -> 'a sit)) *
@@ -54,9 +52,13 @@ sig
 
   (* constructing a training example *)
   val move_of_cid : ('a,'b) node -> int list -> 'b
-  val evalpoli_example : ('a,'b) tree -> (real * real list) option
+  val evalpoli_example : ('a,'b) tree -> (real * ('b * real) list) option
 
   (* choosing a big step *)
-  val select_bigstep : ('a,'b) tree -> int list -> int list option
+  val print_distrib : ('b -> string) -> 
+    ((('b * real) * int list) * real) list -> unit
+  val select_bigstep : ('a,'b) tree -> int list -> 
+    ('b choice * real) list * int list option
+
 
 end

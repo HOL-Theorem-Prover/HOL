@@ -98,15 +98,6 @@ type ('a,'b) tree = (int list, ('a,'b) node) Redblackmap.dict
 fun genealogy id =
   if null id then [] else id :: genealogy (tl id)
 
-val ignorestatus_flag = ref false
-
-fun access_child tree (_,cid) =
-  if !ignorestatus_flag then true else
-  (
-  (case #status (dfind cid tree) of Undecided => true | _ => false)
-  handle NotFound => true
-  )
-
 (* -------------------------------------------------------------------------
    Backup: not efficient but conceptually simple
    ------------------------------------------------------------------------- *)
@@ -236,7 +227,8 @@ fun value_choice player tree vtot ((move,polv),cid) =
   end
 
 (* -------------------------------------------------------------------------
-   Selection of a node to extend by traversing the tree
+   Selection of a node to extend by traversing the tree.
+   Arbitrary choice: if no move available then the first player loses.
    ------------------------------------------------------------------------- *)
 
 datatype ('a,'b) select =
@@ -244,12 +236,13 @@ datatype ('a,'b) select =
 
 fun select_child decay tree id =
   let
-    val node  = dfind id tree handle NotFound => raise ERR "select_child" ""
-    val pol   = filter (access_child tree) (#pol node)
+    val node = dfind id tree handle NotFound => raise ERR "select_child" ""
+    val pol = #pol node
   in
     if null pol then
       case #status (dfind id tree) of
-          Undecided => raise ERR "select_child" ""
+          Undecided => TreeUpdate (backup decay tree (id,0.0))
+          (* raise ERR "select_child" "" *)
         | Win => TreeUpdate (backup decay tree (id,1.0))
         | Lose => TreeUpdate (backup decay tree (id,0.0))
     else
@@ -399,69 +392,21 @@ fun node_variation tree id =
 
 fun root_variation tree = node_variation tree [0]
 
-fun print_distrib l =
-  if null l then () else
-    print_endline
-    ("  " ^ String.concatWith " " (map (Real.toString o approx 4 o snd) l))
-
 (* -------------------------------------------------------------------------
-   Creating the distribution
+   Policy distribution
    ------------------------------------------------------------------------- *)
-
-fun move_win tree cid = #status (dfind cid tree) = Win
-fun move_lose tree cid = #status (dfind cid tree) = Lose
-
-(* Player1 *)
-fun p1_distrib tree cidl =
-  if exists (move_win tree) cidl then
-    map_assoc (fn x => if move_win tree x then SOME 1.0 else NONE) cidl
-  else if all (move_lose tree) cidl then
-    map_assoc (fn x => SOME (#vis (dfind x tree))) cidl
-  else
-    map_assoc (fn x => if move_lose tree x
-      then NONE else SOME (#vis (dfind x tree))) cidl
-
-(* Player 2 *)
-fun p2_distrib tree cidl =
-  if exists (move_lose tree) cidl then
-    map_assoc (fn x => if move_lose tree x then SOME 1.0 else NONE) cidl
-  else if all (move_win tree) cidl then
-    map_assoc (fn x => SOME (#vis (dfind x tree))) cidl
-  else
-    map_assoc (fn x => if move_win tree x
-      then NONE else SOME (#vis (dfind x tree))) cidl
-
-(* Wrap with innaccessible *)
-fun inac_distrib f tree cidl =
-  let
-    val cidl' = filter (fn x => dmem x tree) cidl
-    val dis   = f tree cidl'
-    val d     = dnew (list_compare Int.compare) dis
-  in
-    map_assoc (fn x => (dfind x d handle NotFound => NONE)) cidl
-  end
-
-fun make_distrib_wstatus (tree: ('a,'b) tree) id =
-  let
-    val node = dfind id tree
-    val cidl = map snd (#pol node)
-  in
-    if fst (#sit node)
-    then inac_distrib p1_distrib tree cidl
-    else inac_distrib p2_distrib tree cidl
-  end
 
 fun make_distrib tree id =
   let
     val node = dfind id tree
-    val cidl = map snd (#pol node)
-    fun f x = SOME (#vis (dfind x tree)) handle NotFound => NONE
+    val pol = #pol node
+    fun f (_,cid) = SOME (#vis (dfind cid tree)) handle NotFound => NONE
   in
-    map_assoc f cidl
+    map_assoc f pol
   end
 
 (* -------------------------------------------------------------------------
-   Rescaling the distribution for the training examples.
+   Policy distribution : training examples
    ------------------------------------------------------------------------- *)
 
 fun move_of_cid node cid =
@@ -471,16 +416,26 @@ fun evalpoli_example tree =
   let
     val root = dfind [0] tree
     val dis0 = make_distrib tree [0]
-    val dis1 = map (fn (_,x) => if isSome x then valOf x else 0.0) dis0
-    val tot  = sum_real dis1
+    val dis1 = map_snd (fn x => if isSome x then valOf x else 0.0) dis0
+    val tot  = sum_real (map snd dis1)
   in
-    if tot < 0.5 then NONE else
-      SOME (#sum root / #vis root, map (fn x => x / tot) dis1)
+    if tot < 0.5 then NONE else 
+    let
+      val eval = #sum root / #vis root
+      val poli = map (fn (((move,_),_),r) => (move,r / tot)) dis1
+    in
+      SOME (eval,poli)
+    end
   end
 
 (* -------------------------------------------------------------------------
-   Big step selection
+   Policy distribution: big step selection
    ------------------------------------------------------------------------- *)
+
+fun print_distrib g l =
+  let fun f (((move,_),_),r) = g move ^ " " ^ (rts (approx 4 r)) in
+    print_endline ("  " ^ String.concatWith ", " (map f l))
+  end
 
 fun best_in_distrib distrib =
   let fun cmp (a,b) = Real.compare (snd b,snd a) in
@@ -491,14 +446,13 @@ fun select_bigstep tree id =
   let
     val node = dfind id tree
     val dis0 = make_distrib tree id
-    val disstats = map_snd (fn x => if isSome x then valOf x else 0.0) dis0
-    val _    = print_distrib disstats
-    val dis1 = mapfilter (fn (a,b) => (a, valOf b)) dis0
+    val dis1 = map_snd (fn x => if isSome x then valOf x else 0.0) dis0
+    val dis2 = mapfilter (fn ((_,cid),b) => (cid, valOf b)) dis0
     val tot  = sum_real (map snd dis1)
   in
     if tot < 0.5 (* ends when no moves are available *)
-    then (print_endline "End\n"; NONE)
-    else SOME (best_in_distrib dis1)
+    then (print_endline "MCTS: no move available\n"; ([], NONE))
+    else (dis1, SOME (best_in_distrib dis2))
   end
 
 

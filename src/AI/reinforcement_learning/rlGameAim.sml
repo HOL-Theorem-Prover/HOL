@@ -92,12 +92,14 @@ fun aim_dest_eq tm = case strip_comb tm of
     (aim_eq, [a,b]) => (a,b)
   | _ => raise ERR "aim_dest_eq" "" 
 
-val aim_conj = mk_var ("=",``:'a -> 'a -> 'a``)
+val aim_conj = mk_var ("aim_conj",``:'a -> 'a -> 'a``)
 fun aim_mk_conj (a,b) = list_mk_comb (aim_conj, [a,b])
 
 fun thm_of_ivy l = case l of 
-    [Lterm (Lstring "TOP" :: _ :: Lstring ns :: t1 :: t2 :: m)] => 
+    [Lterm (Lstring "TOP" :: _ :: Lstring _ :: t1 :: t2 :: m)] => 
     SOME (aim_mk_eq (term_of_lisp t1, term_of_lisp t2))
+ (* | [Lterm (Lstring "TOP" :: _ :: Lstring _ :: t1 :: t2 :: m)] => 
+    NONE *)
   | [Lterm (Lstring "INTERM" :: m)] => NONE
   | _ => raise ERR "thm_of_ivy" ""
 
@@ -143,6 +145,8 @@ val operl =
 
 val constl = list_diff (map fst operl) evarl;
 
+fun aim_unify a b = Unify.simp_unify_terms constl a b
+
 (* -------------------------------------------------------------------------
    Board
    ------------------------------------------------------------------------- *)
@@ -153,7 +157,8 @@ datatype board = Board of pb | FailBoard
 
 fun mk_startsit pb = (true, Board pb)
 
-fun is_proven ((tm,_),_) = let val (t1,t2) = aim_dest_eq tm in t1 = t2 end
+fun is_proven ((tm,_),_) = 
+  let val (t1,t2) = aim_dest_eq tm in can (aim_unify t1) t2 end
 
 fun status_of sit = case snd sit of
     Board pb => if is_proven pb then Win else Undecided
@@ -192,11 +197,13 @@ fun nntm_of_sit sit = case snd sit of
 
 datatype move = ChooseAx of int | Arg0 | Arg1 | Arg2 | ParamodL | ParamodR
 
-val movel = List.tabulate (length axl, ChooseAx) @
+val movel = List.tabulate (length axl, ChooseAx) @ 
   [Arg0, Arg1, Arg2, ParamodL, ParamodR]
 
-fun more_arg n (tm,pos) =
-  let val (_,argl) = strip_comb (subtm_at_pos pos tm) in length argl >= n end
+fun filter_sit sit = case snd sit of
+    Board ((tm,pos),NONE) => (fn l => first_n (length axl) l)
+  | Board ((tm,pos),SOME i) => (fn l => (rev o (first_n 5) o rev) l)
+  | FailBoard => (fn l => [])
 
 (* simp unify terms may be slow *)
 fun paramod eq (tm,pos) =
@@ -206,7 +213,7 @@ fun paramod eq (tm,pos) =
     val tmrenamed = rename_evarl (fn x => "_tm") tm
     val (s,t) = aim_dest_eq eqrenamed
     val u = subtm_at_pos pos tmrenamed
-    val sigma = Unify.simp_unify_terms constl s u
+    val sigma = aim_unify s u
     val tsigma = subst sigma t
     val tmsigma = subst sigma tmrenamed
     val r = sub_at_pos tmsigma (pos,tsigma)
@@ -261,8 +268,9 @@ val dimin = 10
 
 type gamespec =
   {
-  mk_startsit: pb -> board sit,
-  movel: move list,
+  mk_startsit : pb -> board sit,
+  filter_sit : board sit -> ((move * real) list -> (move * real) list),
+  movel : move list,
   status_of : (board psMCTS.sit -> psMCTS.status),
   apply_move : (move -> board psMCTS.sit -> board psMCTS.sit),
   operl : (term * int) list,
@@ -273,6 +281,7 @@ type gamespec =
 val gamespec : gamespec =
   {
   mk_startsit = mk_startsit,
+  filter_sit = filter_sit,
   movel = movel,
   status_of = status_of,
   apply_move = apply_move,
@@ -280,6 +289,7 @@ val gamespec : gamespec =
   dim = dimin,
   nntm_of_sit = nntm_of_sit
   }
+
 
 
 end (* struct *)
