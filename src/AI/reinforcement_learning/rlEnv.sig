@@ -17,7 +17,7 @@ sig
   val nsim_glob : int ref
   val decay_glob : real ref
   val noise_flag : bool ref
-
+  val tmsize_flag : bool ref
 
   type ('a,''b,'c) gamespec =
     {
