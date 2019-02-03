@@ -699,7 +699,7 @@ conv ``(PERM l1 m1 /\
 *)
 
 fun SORTED_CONV conv = let
-    fun safe_conv t = if is_conj t orelse t = ``T``
+    fun safe_conv t = if is_conj t orelse t ~~ boolSyntax.T
         then NO_CONV t else CHANGED_CONV conv t
   in
     REWRITE_CONV [SORTED_DEF]
@@ -719,7 +719,7 @@ fun ALL_DISTINCT_CONV rel_thm ord_f conv tm = let
         handle HOL_ERR _ => raise UNCHANGED
     val xs_ord = sort ord_f xs
     val xs_ord_t = listSyntax.mk_list (xs_ord, elT)
-    val part1 = if xs_ord = xs then (fn t => raise UNCHANGED)
+    val part1 = if list_eq aconv xs_ord xs then (fn t => raise UNCHANGED)
       else (fn t => sortingTheory.ALL_DISTINCT_PERM
           |> ISPEC xs_t |> SPEC xs_ord_t
           |> ASSUM_BY_CONV PERM_ELIM_DUPLICATES_CONV)

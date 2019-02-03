@@ -210,7 +210,7 @@ fun LET_CONV_AUX tm =
 fun LET_CONV_BV bvl tm =
   if not (is_comb tm) then NO_CONV tm else
     let val (f,_) = strip_comb tm in
-      if mem f bvl then LET_CONV_AUX tm else NO_CONV tm
+      if tmem f bvl then LET_CONV_AUX tm else NO_CONV tm
     end
 
 (* Warning: assumes free variables and bound variables have distinct names *)
