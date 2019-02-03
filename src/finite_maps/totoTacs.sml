@@ -15,6 +15,12 @@ app load ["totoTheory", "pred_setLib", "bossLib",
 *)
 open Parse HolKernel boolLib bossLib;
 
+structure Parse = struct
+  open Parse
+  val (Type,Term) = parse_from_grammars totoTheory.toto_grammars
+end
+open Parse
+
 val _ = set_trace "Unicode" 0;
 open totoTheory reduceLib relationTheory
      listTheory pairTheory optionTheory pred_setLib stringLib;
@@ -116,12 +122,16 @@ val numeralOrd_CONV = BINOP_CONV num_pre_CONV THENC
 fun numOrd_CONV t =
  let val (Na, Nb) = dest_binop (Term`numOrd`)
                     (ERR "numOrd_CONV" "not a numOrd N N' comparison") t
- in if Na = Nb then SPEC Na refl_clause_num else
-  let val eqn = numeralOrd_CONV t;
-      val ans = rand (concl eqn)
-  in if is_const ans andalso type_of ans = Type`:cpn` then eqn else
-            Raise (ERR "numOrd_CONV" "not a numOrd test")
- end end;
+ in
+   if Na ~~ Nb then SPEC Na refl_clause_num
+   else
+     let val eqn = numeralOrd_CONV t;
+         val ans = rand (concl eqn)
+     in if is_const ans andalso type_of ans = Type`:cpn` then eqn
+        else
+          Raise (ERR "numOrd_CONV" "not a numOrd test")
+     end
+ end;
 
 val numto_CONV =
 RATOR_CONV (RATOR_CONV (REWR_CONV apnumto_thm)) THENC
@@ -133,12 +143,12 @@ fun charOrd_CONV t =
      val (a, b) = (rand Ca, rand Cb);
      val dictum = numOrd_CONV (mk_comb (mk_comb (Term`numOrd`, a), b));
      val outcome = rand (concl dictum)
- in if outcome = Term`EQUAL` then PURE_MATCH_MP charOrd_eq_lem dictum
-    else if outcome = Term`LESS` then
+ in if outcome ~~ Term`EQUAL` then PURE_MATCH_MP charOrd_eq_lem dictum
+    else if outcome ~~ Term`LESS` then
     let val bless = numeral_lt_CONV (mk_comb (mk_comb (Term`($<):num reln`, b),
                                               Term`256`))
     in PURE_MATCH_MP (PURE_MATCH_MP charOrd_lt_lem dictum) bless end
-    else if outcome = Term`GREATER` then
+    else if outcome ~~ Term`GREATER` then
     let val aless = numeral_lt_CONV (mk_comb (mk_comb (Term`($<):num reln`, a),
                                               Term`256`))
     in PURE_MATCH_MP (PURE_MATCH_MP charOrd_gt_lem dictum) aless end
@@ -158,7 +168,7 @@ val qk_numeralOrd_CONV = BINOP_CONV num_pre_CONV THENC
 fun qk_numOrd_CONV t =
  let val (Na, Nb) = dest_binop (Term`qk_numOrd`)
                     (ERR "qk_numOrd_CONV" "not a qk_numOrd N N' comparison") t
- in if Na = Nb then SPEC Na refl_clause_qk_num else
+ in if Na ~~ Nb then SPEC Na refl_clause_qk_num else
   let val eqn = qk_numeralOrd_CONV t;
       val ans = rand (concl eqn)
   in if is_const ans andalso type_of ans = Type`:cpn` then eqn else
@@ -213,7 +223,7 @@ val refl_clause_string = MATCH_MP TO_refl
                          (ISPEC (Term`stringto`) TotOrd_apto);
 
 fun stringto_CONV t =
-if rand (rator t) = rand t then SPEC (rand t) refl_clause_string else
+if rand (rator t) ~~ rand t then SPEC (rand t) refl_clause_string else
  (RATOR_CONV (RATOR_CONV (RAND_CONV (REWR_CONV stringto))) THENC
   listoto_CONV charto_CONV) t;
 
