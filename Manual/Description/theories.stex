@@ -585,9 +585,9 @@ $t\ t_1 \cdots t_n$ &
 for conjunctions, disjunctions, and implications respectively.
 The corresponding destructor functions are called \ml{strip\_comb} \etc
 %
-\index{term constructors, in HOL logic@term constructors, in \HOL{} logic|)}
+\index{term constructors, in HOL logic@term constructors, in \HOL{} logic}
 %
-\index{terms, in HOL logic@terms, in \HOL{} logic!constructors for|)}
+\index{terms, in HOL logic@terms, in \HOL{} logic!constructors for}
 %
 \index{quotation, in HOL logic@quotation, in \HOL{} logic!of non-primitive terms|)}
 
