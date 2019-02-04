@@ -1502,6 +1502,49 @@ val subspt_LN = Q.store_thm(
   `(subspt LN sp <=> T) /\ (subspt sp LN <=> (domain sp = {}))`,
   simp[subspt_def, EXTENSION]);
 
+Theorem subspt_union: subspt s (union s t)
+Proof fs[subspt_lookup,lookup_union]
+QED
+
+Theorem subspt_FOLDL_union:
+  !ls t. subspt t (FOLDL union t ls)
+Proof
+  Induct \\ rw[] \\ metis_tac[subspt_union,subspt_trans]
+QED
+
+Theorem domain_mapi[simp]:
+  domain (mapi f x) = domain x
+Proof fs [domain_lookup,EXTENSION,lookup_mapi]
+QED
+
+Theorem lookup_FOLDL_union:
+  lookup k (FOLDL union t ls) =
+  FOLDL OPTION_CHOICE (lookup k t) (MAP (lookup k) ls)
+Proof
+  qid_spec_tac‘t’ >> Induct_on‘ls’ >> rw[lookup_union] >>
+  BasicProvers.TOP_CASE_TAC >> simp[]
+QED
+
+Theorem map_union:
+  !t1 t2. map f (union t1 t2) = union (map f t1) (map f t2)
+Proof
+  Induct >> rw[map_def,union_def] >>
+  BasicProvers.TOP_CASE_TAC >> rw[map_def,union_def]
+QED
+
+Theorem domain_eq:
+  !t1 t2. (domain t1 = domain t2) <=>
+          !k. (lookup k t1 = NONE) <=> (lookup k t2 = NONE)
+Proof
+  rw [domain_lookup,EXTENSION] \\ eq_tac \\ rw []
+  >- (pop_assum (qspec_then `k` mp_tac)
+      \\ Cases_on `lookup k t1` \\ fs []
+      \\ Cases_on `lookup k t2` \\ fs [])
+  >- (pop_assum (qspec_then `x` mp_tac)
+     \\ Cases_on `lookup x t1` \\ fs []
+     \\ Cases_on `lookup x t2` \\ fs [])
+QED
+
 (* filter values stored in sptree *)
 
 val filter_v_def = Define `
