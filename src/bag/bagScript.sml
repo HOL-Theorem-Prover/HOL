@@ -1,6 +1,7 @@
 open HolKernel Parse boolLib boolSimps bossLib
      numLib Prim_rec pred_setTheory BasicProvers
      metisLib dividesTheory arithmeticTheory
+     combinTheory
 
 fun ARITH q = EQT_ELIM (ARITH_CONV (Parse.Term q));
 
@@ -2058,6 +2059,35 @@ val BAG_ALL_DISTINCT_EXTENSION = store_thm (
             ((b1 = b2) = (!x. BAG_IN x b1 = BAG_IN x b2))``,
   SIMP_TAC std_ss [BAG_EXTENSION, BAG_ALL_DISTINCT_BAG_INN] THEN
   SIMP_TAC (std_ss++EQUIV_EXTRACT_ss) [])
+
+Theorem BAG_ALL_DISTINCT_SUB_BAG:
+  !s t.  s <= t /\ BAG_ALL_DISTINCT t ==> BAG_ALL_DISTINCT s
+Proof
+  rw[BAG_ALL_DISTINCT,SUB_BAG,BAG_INN] >>
+  CCONTR_TAC >> `s e >= 2` by fs[] >>
+  metis_tac[DECIDE “y >= 2 ==> ~(y <= 1)”]
+QED
+
+Theorem BAG_DISJOINT_SUB_BAG:
+  !b1 b2 b3. b1 <= b2 /\ BAG_DISJOINT b2 b3 ==> BAG_DISJOINT b1 b3
+Proof
+  rw [BAG_DISJOINT_BAG_IN] \\ metis_tac [SUB_BAG, BAG_IN]
+QED
+
+Theorem BAG_DISJOINT_SYM:
+  !b1 b2. BAG_DISJOINT b1 b2 <=> BAG_DISJOINT b2 b1
+Proof simp [BAG_DISJOINT, DISJOINT_SYM]
+QED
+
+Theorem MONOID_BAG_UNION_EMPTY_BAG:     MONOID $+ {||}
+Proof simp [MONOID_DEF, RIGHT_ID_DEF, LEFT_ID_DEF, ASSOC_DEF, ASSOC_BAG_UNION]
+QED
+
+Theorem BAG_DISJOINT_FOLDR_BAG_UNION:
+  !ls b0 b1.
+    BAG_DISJOINT b1 (FOLDR BAG_UNION b0 ls) <=> EVERY (BAG_DISJOINT b1) (b0::ls)
+Proof Induct \\ rw[] \\ metis_tac[]
+QED
 
 val NOT_BAG_IN = Q.store_thm
 ("NOT_BAG_IN",
