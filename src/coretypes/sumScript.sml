@@ -414,6 +414,12 @@ val SUM_MAP_I = store_thm (
   ``(I ++ I) = (I : 'a + 'b -> 'a + 'b)``,
   SIMP_TAC (srw_ss()) [FORALL_SUM, FUN_EQ_THM]);
 
+Theorem SUM_MAP_o:
+  (f ++ g) o (h ++ k) = (f o h) ++ (g o k)
+Proof
+  SIMP_TAC (srw_ss()) [FORALL_SUM, FUN_EQ_THM]
+QED
+
 val cond_sum_expand = store_thm("cond_sum_expand",
 ``(!x y z. ((if P then INR x else INL y) = INR z) = (P /\ (z = x))) /\
   (!x y z. ((if P then INR x else INL y) = INL z) = (~P /\ (z = y))) /\
