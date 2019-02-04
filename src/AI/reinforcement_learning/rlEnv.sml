@@ -309,21 +309,20 @@ fun start_rl_loop gamespec targetl =
     rl_loop (1,!ngen_glob) gamespec targetl allex
   end
 
-
 end (* struct *)
 
 (*
 app load ["rlGameArithGround","rlEnv"];
 open aiLib psMCTS rlGameArithGround rlEnv;
 
-logfile_glob := "arith_n4_test10";
-ngen_glob := 40;
-ntarget_glob := 100;
-bigsteps_glob := 10;
+logfile_glob := "arith_n4_test12";
+ngen_glob := 100;
+ntarget_glob := 1000;
+bigsteps_glob := 20;
 nsim_glob := 1600;
-tmsize_flag := true;
-
+tmsize_flag := false;
 val allex = start_rl_loop gamespec targetl_n4;
+
 *)
 
 

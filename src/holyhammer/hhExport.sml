@@ -13,10 +13,23 @@ open HolKernel boolLib aiLib mlThmData hhTranslate holyHammer
 val ERR = mk_HOL_ERR "hhExport"
 
 (* -------------------------------------------------------------------------
+   Tools
+   ------------------------------------------------------------------------- *)
+
+fun endline_to_space x = case x of #"\n" => #" " | a => a
+
+fun rm_endline x = implode (map endline_to_space (explode x))
+
+fun type_vars_in_term tm =
+  type_varsl (map type_of (find_terms is_const tm @ all_vars tm))
+
+(* -------------------------------------------------------------------------
    Writer shortcuts
    ------------------------------------------------------------------------- *)
 
 fun os oc s = TextIO.output (oc,s)
+
+fun osn oc s = TextIO.output (oc,s ^ "\n")
 
 fun oiter_aux oc sep f l = case l of
     []     => ()
@@ -25,47 +38,11 @@ fun oiter_aux oc sep f l = case l of
 
 fun oiter oc sep f l = oiter_aux oc sep f l
 
-fun double_quote s = "\"" ^ s ^ "\""
-
 (* -------------------------------------------------------------------------
-   S-expression escaping
+   Preparing and analysing the formula
    ------------------------------------------------------------------------- *)
 
-(* "V" is used as prefix in rename_bvarl *)
-fun sexpr_prep_tm tm =
-  rename_bvarl escape (list_mk_forall (free_vars_lr tm, tm))
-
-(* variables are already escaped by sexpr_prep_tm *)
-fun sexpr_of_var v = double_quote (fst (dest_var v))
-
-fun sexpr_of_const c =
-  let val {Name, Thy, Ty} = dest_thy_const c in
-    double_quote (escape ("c." ^ Thy ^ "." ^ Name))
-  end
-
-fun sexpr_of_vartype ty =
-  double_quote ("A" ^ (escape (dest_vartype ty)))
-
-fun sexpr_of_tyop ty =
-  let val {Args, Thy, Tyop} = dest_thy_type ty in
-    double_quote (escape ("ty" ^ "." ^ Thy ^ "." ^ Tyop))
-  end
-
-fun sexpr_of_thm (thy,name) =
-   double_quote (escape ("thm" ^ "." ^ thy ^ "." ^ name))
-
-(* -------------------------------------------------------------------------
-   Terms
-   ------------------------------------------------------------------------- *)
-
-fun sexpr_write_type oc ty =
-  if is_vartype ty then os oc (sexpr_of_vartype ty) else
-    let val {Args, Thy, Tyop} = dest_thy_type ty in
-      if null Args
-      then os oc (sexpr_of_tyop ty)
-      else (os oc "("; os oc (sexpr_of_tyop ty);
-            os oc " "; oiter oc " " sexpr_write_type Args; os oc ")")
-    end
+fun prep_tm tm = rename_bvarl escape (list_mk_forall (free_vars_lr tm, tm))
 
 fun full_match_type t1 t2 =
   let
@@ -77,8 +54,176 @@ fun full_match_type t1 t2 =
     dict_sort cmp (sub1 @ sub2)
   end
 
-fun sexpr_write_term oc tm =
-  if is_var tm then os oc (sexpr_of_var tm)
+fun typearg_of_const tm =
+  let
+    val {Thy, Name, Ty} = dest_thy_const tm
+    val mgty = type_of (prim_mk_const {Thy = Thy, Name = Name})
+    val subst = full_match_type mgty Ty
+  in 
+    map #residue subst
+  end
+
+(* -------------------------------------------------------------------------
+   thf escaping : variables escaped by prep_tm
+   ------------------------------------------------------------------------- *)
+
+fun th1_var v = fst (dest_var v)
+fun th1b_const (thy,name) = escape ("c." ^ thy ^ "." ^ name)
+fun th1_const c =
+  let val {Name,Thy,Ty} = dest_thy_const c in th1b_const (Thy,Name) end
+
+fun th1_vartype ty = "A" ^ (escape (dest_vartype ty))
+
+fun th1b_tyop (thy,tyop) = escape ("ty." ^ thy ^ "." ^ tyop)
+fun th1_tyop ty =
+  let val {Args,Thy,Tyop} = dest_thy_type ty in th1b_tyop (Thy,Tyop) end
+
+fun th1b_thm (thy,name) = escape ("thm" ^ "." ^ thy ^ "." ^ name)
+
+(* -------------------------------------------------------------------------
+   TPTP TH1 terms
+   ------------------------------------------------------------------------- *)
+
+fun th1_type oc ty =
+  if is_vartype ty then os oc (th1_vartype ty) else
+    let val {Args, Thy, Tyop} = dest_thy_type ty in
+      if null Args then os oc (th1_tyop ty)
+      else if Thy = "min" andalso Tyop = "fun" then
+        let val (tya,tyb) = pair_of_list Args in    
+          os oc "("; th1_type oc tya;
+          os oc " > "; th1_type oc tyb; os oc ")"
+        end
+      else (os oc "("; os oc (th1_tyop ty);
+            os oc " "; oiter oc " " th1_type Args; os oc ")")
+    end
+
+fun th1_var_and_type oc v =  
+  let val (vs,ty) = dest_var v in os oc (vs ^ ":"); th1_type oc ty end
+
+fun th1_term oc tm =
+  if is_var tm then os oc (th1_var tm)
+  else if is_const tm then
+    let val resl = typearg_of_const tm in
+      if null resl
+      then os oc (th1_const tm)
+      else (os oc "("; os oc (th1_const tm); os oc " @ ";
+            oiter oc " @ " th1_type resl; os oc ")")
+    end
+  else if is_comb tm then
+    let val (rator,argl) = strip_comb tm in
+      os oc "("; th1_term oc rator;
+      os oc " @ "; oiter oc " @ " th1_term argl; os oc ")"
+    end
+  else if is_abs tm then
+    let val (bvar,body) = dest_abs tm in
+      os oc "("; os oc "^"; os oc "[";
+      os oc (th1_var bvar); os oc "]"; (* todo add the type *)
+      th1_type oc (type_of bvar); os oc " ";
+      th1_term oc body; os oc ")"
+    end
+  else raise ERR "th1_term" ""
+
+fun th1_pred oc tm =
+  if is_forall tm then th1_quant oc "!" (strip_forall tm)
+  else if is_exists tm then th1_quant oc "?" (strip_exists tm)
+  else if is_conj tm then th1_binop oc "&" (dest_conj tm)
+  else if is_disj tm then th1_binop oc "|" (dest_disj tm)
+  else if is_imp_only tm then th1_binop oc "=>" (dest_imp tm)
+  else if is_neg tm then
+    (os oc "(~ "; th1_pred oc (dest_neg tm); os oc ")")
+  else if is_eq tm then
+    let val (l,r) = dest_eq tm in
+      if must_pred l orelse must_pred r (* optimization *)
+      then th1_binop oc "<=>" (l,r)
+      else (os oc "("; 
+            th1_term oc l; os oc " = ";  
+            th1_term oc r; os oc ")")
+    end
+  else th1_term oc tm
+and th1_binop oc s (l,r) =
+  (os oc "("; th1_pred oc l; os oc (" " ^ s ^ " "); 
+   th1_pred oc r; os oc ")")
+and th1_quant oc s (vl,bod) =
+  (os oc "("; os oc s; os oc "[";
+   oiter oc ", " th1_var_and_type vl;
+   os oc "]: "; th1_pred oc bod ; os oc ")")
+
+fun th1_formula oc tm =
+  let 
+    val tvl = type_vars_in_term tm 
+    val tvls = map ((fn x => x ^ ":$tType") o th1_vartype) tvl
+    val s = String.concatWith "," tvls
+  in
+    if null tvl then () else os oc ("![" ^ s ^ "]: ");
+    th1_pred oc tm
+  end
+
+(* -------------------------------------------------------------------------
+   TPTP TH1 definitions
+   ------------------------------------------------------------------------- *)
+
+fun th1_ttype arity =
+  String.concatWith " > " (List.tabulate (arity, fn _ => "$tType"))
+
+fun th1_tydef oc thy (tyop,arity) =
+  (os oc ("thf(" ^ th1b_tyop (thy,tyop) ^ ",type,");
+   os oc (th1_ttype arity); osn oc ").")
+
+fun th1_tyquant_type oc ty =
+  let 
+    val tvl = dict_sort Type.compare (type_vars ty) 
+    val tvls = map ((fn x => x ^ ":$tType") o th1_vartype) tvl
+    val s = String.concatWith "," tvls
+  in
+    if null tvl then () else os oc ("![" ^ s ^ "]: ");
+    th1_type oc ty
+  end
+
+(* most general type expected *)
+fun th1_constdef oc thy (name,ty) =
+  (
+  osn oc ("# c." ^ thy ^ "." ^ name ^ ": " ^ rm_endline (type_to_string ty));
+  os oc ("thf(" ^ th1b_const (thy,name) ^ ",type,");
+  th1_tyquant_type oc ty; osn oc ")."
+  )
+
+fun th1_thmdef oc thy ((name,thm),role) =
+  let val tm = prep_tm (concl (DISCH_ALL thm)) in
+    osn oc ("# " ^ thy ^ "." ^ name ^ ": " ^ rm_endline (term_to_string tm));
+    os oc ("thf(" ^ (th1b_thm (thy,name)) ^ "," ^ role ^ ",");
+    th1_formula oc tm; osn oc ")."
+  end
+
+(* -------------------------------------------------------------------------
+   S-expression escaping 
+   Double quotes needed because lisp is not case senstive.
+   ------------------------------------------------------------------------- *)
+
+fun double_quote s = "\"" ^ s ^ "\""
+val sexpr_var = double_quote o th1_var
+val sexpr_const = double_quote o th1_const
+val sexpr_vartype = double_quote o th1_vartype
+val sexpr_tyop = double_quote o th1_tyop
+
+val sexprb_const = double_quote o th1b_const
+val sexprb_tyop = double_quote o th1b_tyop
+val sexprb_thm = double_quote o th1b_thm
+
+(* -------------------------------------------------------------------------
+   S-expressions terms
+   ------------------------------------------------------------------------- *)
+
+fun sexpr_type oc ty =
+  if is_vartype ty then os oc (sexpr_vartype ty) else
+    let val {Args, Thy, Tyop} = dest_thy_type ty in
+      if null Args
+      then os oc (sexpr_tyop ty)
+      else (os oc "("; os oc (sexpr_tyop ty);
+            os oc " "; oiter oc " " sexpr_type Args; os oc ")")
+    end
+
+fun sexpr_term oc tm =
+  if is_var tm then os oc (sexpr_var tm)
   else if is_const tm then
     let
       val {Thy, Name, Ty} = dest_thy_const tm
@@ -87,44 +232,44 @@ fun sexpr_write_term oc tm =
       val resl = map #residue subst
     in
       if null resl
-      then os oc (sexpr_of_const tm)
-      else (os oc "("; os oc (sexpr_of_const tm); os oc " ";
-            oiter oc " " sexpr_write_type resl; os oc ")")
+      then os oc (sexpr_const tm)
+      else (os oc "("; os oc (sexpr_const tm); os oc " ";
+            oiter oc " " sexpr_type resl; os oc ")")
     end
   else if is_comb tm then
     let val (rator,argl) = strip_comb tm in
-      os oc "("; sexpr_write_term oc rator;
-      os oc " "; oiter oc " " sexpr_write_term argl; os oc ")"
+      os oc "("; sexpr_term oc rator;
+      os oc " "; oiter oc " " sexpr_term argl; os oc ")"
     end
   else if is_abs tm then
     let val (bvar,body) = dest_abs tm in
       os oc "("; os oc "lambda"; os oc " ";
-      os oc (sexpr_of_var bvar); os oc " ";
-      sexpr_write_type oc (type_of bvar); os oc " ";
-      sexpr_write_term oc body; os oc ")"
+      os oc (sexpr_var bvar); os oc " ";
+      sexpr_type oc (type_of bvar); os oc " ";
+      sexpr_term oc body; os oc ")"
     end
-  else raise ERR "sexpr_write_term" ""
+  else raise ERR "sexpr_term" ""
 
 (* -------------------------------------------------------------------------
-   Definitions (types,terms,theorems)
+   S-expressions definitions
    ------------------------------------------------------------------------- *)
 
 fun sexpr_tydef oc thy (tyop,arity) =
   (
-  os oc "("; os oc "type_definition"; os oc " ";
-  os oc (double_quote (escape ("ty" ^ "." ^ thy ^ "." ^ tyop))); os oc " ";
+  os oc "(type_definition ";
+  os oc (sexprb_tyop (thy,tyop)); os oc " ";
   os oc (int_to_string arity); os oc ")\n"
   )
 
 fun sexpr_tyquant_type oc ty =
   let val tvl = dict_sort Type.compare (type_vars ty) in
     if null tvl
-    then sexpr_write_type oc ty
+    then sexpr_type oc ty
     else
       (
-      os oc "("; os oc "forall_tyvarl_type"; os oc " ";
-      os oc "("; oiter oc " " sexpr_write_type tvl; os oc ")"; os oc " ";
-      sexpr_write_type oc ty; os oc ")"
+      os oc "(forall_tyvarl_type ";
+      os oc "("; oiter oc " " sexpr_type tvl; os oc ")"; os oc " ";
+      sexpr_type oc ty; os oc ")"
       )
   end
 
@@ -134,116 +279,268 @@ fun sexpr_tyquant_term oc tm =
     val tvl = dict_sort Type.compare (type_varsl tyl)
   in
     if null tvl
-    then sexpr_write_term oc tm
+    then sexpr_term oc tm
     else
       (
       os oc "("; os oc "forall_tyvarl_term"; os oc " ";
-      os oc "("; oiter oc " " sexpr_write_type tvl; os oc ")"; os oc " ";
-      sexpr_write_term oc tm; os oc ")"
+      os oc "("; oiter oc " " sexpr_type tvl; os oc ")"; os oc " ";
+      sexpr_term oc tm; os oc ")"
       )
   end
-
-fun endline_to_space x = case x of #"\n" => #" " | a => a
-
-fun rm_endline x = implode (map endline_to_space (explode x))
 
 (* most general type expected *)
 fun sexpr_constdef oc thy (name,ty) =
   (
-  os oc "; "; os oc ("c." ^ thy ^ "." ^ name); os oc "\n";
-  os oc "; ";
-  os oc (rm_endline (type_to_string ty));
-  os oc "\n";
+  osn oc ("; c." ^ thy ^ "." ^ name ^ ": " ^ rm_endline (type_to_string ty));
   os oc "("; os oc "constant_definition"; os oc " ";
-  os oc (double_quote (escape ("c." ^ thy ^ "." ^ name))); os oc " ";
+  os oc (sexprb_const (thy,name)); os oc " ";
   sexpr_tyquant_type oc ty; os oc ")\n"
   )
 
-fun write_dep ocdep thy ((name,thm),role) =
+fun sexpr_thmdef oc thy ((name,thm),role) =
+  let val tm = prep_tm (concl (DISCH_ALL thm)) in
+    osn oc ("# " ^ thy ^ "." ^ name ^ ": " ^ rm_endline (term_to_string tm));
+    os oc "("; os oc role; os oc " ";
+    os oc (sexprb_thm (thy,name)); os oc " ";
+    sexpr_tyquant_term oc tm; os oc ")\n"
+  end
+
+(* -------------------------------------------------------------------------
+   Exporting theories using one of the format defined above.
+   ------------------------------------------------------------------------- *)
+
+val hh_dir = HOLDIR ^ "/src/holyhammer"
+val sexpr_dir = hh_dir ^ "/export_sexpr"
+
+val th1_dir = hh_dir ^ "/export_th1"
+val th1_ax_dir = hh_dir ^ "/export_th1_ax"
+val th1_decl_dir = hh_dir ^ "/export_th1_decl"
+val th1_bushy_dir = hh_dir ^ "/export_th1_bushy"
+val th1_chainy_dir = hh_dir ^ "/export_th1_chainy"
+
+(* -------------------------------------------------------------------------
+   Standard export
+   ------------------------------------------------------------------------- *)
+
+fun th1_dep_of_thm thm =
+  let
+    val (b,depl1) = intactdep_of_thm thm
+    val depl2 = map (split_string "Theory.") depl1
+    val depl3 = map (fn (a,b) => (a, th1b_thm (a,b))) depl2
+  in
+    if b then SOME depl3 else NONE
+  end
+
+fun write_dep ocdep fb_thm thy ((name,thm),role) =
   (
-  os ocdep (sexpr_of_thm (thy,name) ^ "\n");
+  osn ocdep (fb_thm (thy,name));
   (if role = "conjecture" then
     let
       val (b,depl1) = intactdep_of_thm thm
       val depl2 = map (split_string "Theory.") depl1
-      val depl3 = map sexpr_of_thm depl2
+      val depl3 = map fb_thm depl2
     in
-      os ocdep (role ^ "\n");
-      os ocdep (if b then  "intact\n" else "broken\n");
-      oiter ocdep " " os depl3;
-      os ocdep "\n"
+      osn ocdep role;
+      osn ocdep (if b then  "intact" else "broken");
+      oiter ocdep " " os depl3; os ocdep "\n"
     end
-  else os ocdep (role ^ "\n"));
-  os ocdep "\n"
+  else osn ocdep role;
+  osn ocdep "")
   )
 
-fun sexpr_write_thm oc ocdep thy ((name,thm),role) =
-  let val tm = concl (DISCH_ALL thm) in
-    write_dep ocdep thy ((name,thm),role);
-    os oc "; "; os oc (thy ^ "." ^ name); os oc "\n";
-    os oc "; ";
-    os oc (rm_endline (term_to_string tm));
-    os oc "\n";
-    os oc "("; os oc role; os oc " ";
-    os oc (sexpr_of_thm (thy,name)); os oc " ";
-    sexpr_tyquant_term oc (sexpr_prep_tm tm); os oc ")\n"
-  end
-
-(* -------------------------------------------------------------------------
-   Theories
-   ------------------------------------------------------------------------- *)
-
-val casc_sexpr_dir = HOLDIR ^ "/src/holyhammer/casc_sexpr"
-
-fun sexpr_write_thy thy =
+fun write_thy (f_tydef,f_constdef,f_thmdef,fb_thm) export_dir thy =
   let
-    val _ = mkDir_err casc_sexpr_dir
-    val filedep = casc_sexpr_dir ^ "/" ^ thy ^ ".dep"
-    val file = casc_sexpr_dir ^ "/" ^ thy
+    val _ = print (thy ^ " ")
+    val filedep = export_dir ^ "/" ^ thy ^ ".dep"
+    val file = export_dir ^ "/" ^ thy ^ ".pb"
     val oc = TextIO.openOut file
     val ocdep = TextIO.openOut filedep
-    val THEORY(_,t) = dest_theory thy
-    val _ = app (sexpr_tydef oc thy) (#types t)
-    val _ = app (sexpr_constdef oc thy) (#consts t)
-    val axl = map (fn x => (x,"conjecture")) (DB.theorems thy)
-    val defl = map (fn x => (x,"axiom")) (DB.axioms thy @ DB.definitions thy)
-    fun cmp (((_,th1),_),((_,th2),_)) =
-      Int.compare (depnumber_of_thm th1, depnumber_of_thm th2)
-    val thml = dict_sort cmp (axl @ defl)
   in
-    app (sexpr_write_thm oc ocdep thy) thml
-    handle Interrupt => (TextIO.closeOut oc; TextIO.closeOut ocdep;
-                         raise Interrupt);
-    TextIO.closeOut oc; TextIO.closeOut ocdep
-  end
-
-fun sexpr_write_thy_ancestry thy =
-  app sexpr_write_thy (sort_thyl (thy :: ancestry thy))
-
-fun sexpr_write_thyl_ancestry thyl =
-  app sexpr_write_thy (sort_thyl thyl)
-
-fun write_thy_ancestry_order thy =
-  let
-    val _ = mkDir_err casc_sexpr_dir
-    val file = casc_sexpr_dir ^ "/theory_order"
-  in
-    writel file [String.concatWith " " (sort_thyl (thy :: ancestry thy))]
-  end
-
-fun write_thyl_ancestry_order thyl =
-  let
-    val _ = mkDir_err casc_sexpr_dir
-    val file = casc_sexpr_dir ^ "/theory_order"
-  in
-    writel file [String.concatWith " " (sort_thyl thyl)]
+    let
+      val THEORY(_,t) = dest_theory thy
+      val _ = app (f_tydef oc thy) (#types t)
+      val _ = app (f_constdef oc thy) (#consts t)
+      val cjl = map (fn x => (x,"conjecture")) (DB.theorems thy)
+      val axl = map (fn x => (x,"axiom")) (DB.axioms thy @ DB.definitions thy)
+      fun cmp (((_,th1),_),((_,th2),_)) =
+        Int.compare (depnumber_of_thm th1, depnumber_of_thm th2)
+      val thml = dict_sort cmp (cjl @ axl)
+    in
+      app (write_dep ocdep fb_thm thy) thml; 
+      app (f_thmdef oc thy) thml;
+      app TextIO.closeOut [oc,ocdep]
+    end 
+    handle Interrupt => (app TextIO.closeOut [oc,ocdep]; raise Interrupt)
   end
 
 (* -------------------------------------------------------------------------
-   FOF export
+   Bushy and chainy exports
    ------------------------------------------------------------------------- *)
 
-val fof_export_dir = HOLDIR ^ "/src/holyhammer/fof_export"
+(* Declarations *)
+fun write_thy_decl (f_tydef,f_constdef) dir thy =
+  let
+    val file = dir ^ "/" ^ thy ^ ".decl"
+    val oc = TextIO.openOut file
+  in
+    let val THEORY(_,t) = dest_theory thy in
+      print (thy ^ " ");
+      app (f_tydef oc thy) (#types t);
+      app (f_constdef oc thy) (#consts t);
+      TextIO.closeOut oc
+    end 
+    handle Interrupt => (TextIO.closeOut oc; raise Interrupt)
+  end
+
+(* All theorems as axioms *)
+fun write_thy_ax f_thmdef dir thy =
+  let
+    val file = dir ^ "/" ^ thy ^ ".ax"
+    val oc = TextIO.openOut file
+  in
+    let
+      val THEORY(_,t) = dest_theory thy
+      val axl = map (fn x => (x,"axiom")) (DB.thms thy)
+      fun cmp (((_,th1),_),((_,th2),_)) =
+        Int.compare (depnumber_of_thm th1, depnumber_of_thm th2)
+      val thml = dict_sort cmp axl
+    in
+      print (thy ^ " "); app (f_thmdef oc thy) thml; TextIO.closeOut oc
+    end 
+    handle Interrupt => (TextIO.closeOut oc; raise Interrupt)
+  end
+
+fun tptp_include_ax oc (thy,name) = 
+  osn oc ("include(" ^ thy ^ ".ax" ^ "[" ^ name ^ "]" ^ ").")
+
+fun tptp_include_axl oc (thy,namel) = 
+  osn oc ("include(" ^ thy ^ ".ax" ^ 
+    "[" ^ String.concatWith "," namel ^ "]" ^ ").")
+
+fun tptp_include_axthy oc thy = 
+  osn oc ("include(" ^ thy ^ ".ax).")
+
+fun tptp_include_declthy oc thy = 
+  osn oc ("include(" ^ thy ^ ".decl).")
+
+fun write_cj_bushy thy f_thmdef ((name,thm),depl) =
+  let 
+    val thyl = sort_thyl (thy :: ancestry thy)
+    val file = th1_bushy_dir ^ "/" ^ th1b_thm (thy,name)
+    val oc = TextIO.openOut file 
+  in
+    (app (tptp_include_declthy oc) thyl; 
+     app (tptp_include_ax oc) depl;
+     f_thmdef oc thy ((name,thm),"conjecture"); 
+     TextIO.closeOut oc)
+    handle Interrupt => (TextIO.closeOut oc; raise Interrupt)
+  end
+
+fun write_thy_bushy f_thmdef thy =
+  let 
+    val cjl = DB.theorems thy
+    fun f (name,thm) = case th1_dep_of_thm thm of
+        NONE => NONE
+      | SOME depl => SOME ((name,thm), depl)
+    val cjdepl = List.mapPartial f cjl
+  in
+    print (thy ^ " "); app (write_cj_bushy thy f_thmdef) cjdepl
+  end 
+
+fun write_cj_chainy thy f_thmdef ((name,thm),depl) =
+  let 
+    val thyl1 = sort_thyl (thy :: ancestry thy)
+    val thyl2 = sort_thyl (ancestry thy)
+    val file = th1_chainy_dir ^ "/" ^ th1b_thm (thy,name)
+    val oc = TextIO.openOut file 
+  in
+    (app (tptp_include_declthy oc) thyl1;
+     app (tptp_include_axthy oc) thyl2;  
+     app (tptp_include_ax oc) depl;
+     f_thmdef oc thy ((name,thm),"conjecture"); 
+     TextIO.closeOut oc)
+    handle Interrupt => (TextIO.closeOut oc; raise Interrupt)
+  end
+
+fun write_thy_chainy f_thmdef thy =
+  let 
+    val cjl = DB.theorems thy
+    fun is_older_than th1 (_,th2) = 
+      depnumber_of_thm th2 < depnumber_of_thm th1
+    fun f (name,thm) = 
+      let 
+        val l1 = filter (is_older_than thm) cjl
+        val l2 = map (fn (depname,_) => (thy,th1b_thm (thy,depname))) l1
+      in
+        ((name,thm),l2)
+      end
+    val cjdepl = map f cjl
+  in
+    print (thy ^ " "); app (write_cj_chainy thy f_thmdef) cjdepl
+  end 
+
+(* -------------------------------------------------------------------------
+   Export functions
+   ------------------------------------------------------------------------- *)
+
+fun add_ancestry thy = thy :: ancestry thy
+fun sorted_ancestry thyl = 
+  sort_thyl (mk_string_set (List.concat (map add_ancestry thyl)))
+
+fun th1_export_bushy thyl =
+  let val thyl = sorted_ancestry thyl in
+    mkDir_err th1_bushy_dir; 
+    app (write_thy_bushy th1_thmdef) thyl
+  end
+
+fun th1_export_chainy thyl =
+  let val thyl = sorted_ancestry thyl in
+    mkDir_err th1_chainy_dir; 
+    app (write_thy_chainy th1_thmdef) thyl
+  end
+
+fun th1_export thyl =
+  let
+    val file = th1_dir ^ "/theory_order.info"
+    val fl = (th1_tydef, th1_constdef, th1_thmdef, th1b_thm)
+    val thyl = sorted_ancestry thyl
+  in
+    mkDir_err th1_dir;
+    app (write_thy fl th1_dir) thyl;
+    writel file [String.concatWith " " (sorted_ancestry thyl)]
+  end
+
+fun th1_export_decl thyl =
+  let
+    val fl = (th1_tydef, th1_constdef)
+    val thyl = sorted_ancestry thyl
+  in
+    mkDir_err th1_decl_dir; app (write_thy_decl fl th1_decl_dir) thyl
+  end
+
+fun th1_export_ax thyl =
+  let val thyl = sorted_ancestry thyl in
+    mkDir_err th1_ax_dir; 
+    app (write_thy_ax th1_thmdef th1_ax_dir) thyl
+  end
+
+fun sexpr_export thyl =
+  let
+    val file = sexpr_dir ^ "/theory_order.info"
+    val fl = (sexpr_tydef, sexpr_constdef, sexpr_thmdef, sexprb_thm)
+    val thyl = sorted_ancestry thyl
+  in
+    mkDir_err sexpr_dir;
+    app (write_thy fl sexpr_dir) thyl;
+    writel file [String.concatWith " " (sorted_ancestry thyl)]
+  end
+
+
+(* -------------------------------------------------------------------------
+   TPTP FOF bushy
+   ------------------------------------------------------------------------- *)
+
+val fof_export_dir = HOLDIR ^ "/src/holyhammer/export_fof"
 val fof_targets_file = fof_export_dir ^ "/fof_targets"
 val fof_problems_dir = fof_export_dir ^ "/fof_problems"
 val fof_chainy_dir = fof_export_dir ^ "/fof_chainy"
@@ -262,11 +559,11 @@ fun fof_export_thy thy =
     val pbl1 = map_snd (fn x => (intactdep_of_thm x, x)) thml
     val pbl2 = filter (fn (_,x) => fst (fst x)) pbl1
     val pbl3 = map_snd (fn (a,b) => (snd a, list_mk_imp (dest_thm b))) pbl2
-    val pbl4 =
-      map_fst (fn x => fof_problems_dir ^ "/" ^ sexpr_of_thm (thy,x)) pbl3
+    val pbl4 = map_fst (fn x => fof_problems_dir ^ "/" ^ th1b_thm (thy,x)) pbl3
   in
     app fof_export_pb pbl4
   end
+
 (*
 fun fof_export_statement_thy thy =
   let
@@ -277,7 +574,7 @@ fun fof_export_statement_thy thy =
       Int.compare (depnumber_of_thm th1, depnumber_of_thm th2)
     val pbl1 = map_snd (fn x => ([], x)) thml
     val pbl3 = map_snd (fn (a,b) => (a, list_mk_imp (dest_thm b))) pbl1
-    val pbl4 = map_fst (fn x => fof_problems_dir ^ "/" ^ sexpr_of_thm (thy,x)) pbl3
+    val pbl4 = map_fst (fn x => fof_problems_dir ^ "/" ^ sexpr_thm (thy,x)) pbl3
   in
     app fof_export_pb pbl4
   end
@@ -286,9 +583,10 @@ fun fof_export_statement_thy thy =
 end (* struct *)
 
 (* Example
+  load "hhExport"; open hhExport;
+  th1_export_chainy ["list"];
 
-  load "hhExport"; open hhTranslate hhExport;
-
+  load "hhExport"; open Translate;
   (* fof export *)
   val _ = complete_flag := true;
   app fof_export_thy thyl;
@@ -296,7 +594,7 @@ end (* struct *)
   (* sexpr export *)
   load "tttUnfold"; open tttUnfold; load_sigobj ();
   val thyl = ancestry "scratch";
-  sexpr_write_thyl_ancestry thyl;
+  sexpr_thyl_ancestry thyl;
   write_thyl_ancestry_order thyl;
 
 *)

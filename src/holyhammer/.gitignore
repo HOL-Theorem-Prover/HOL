@@ -1,3 +1,5 @@
 debug/*
 eval/*
-fof_export/*
+export_*
+chainy_*
+bushy_*
