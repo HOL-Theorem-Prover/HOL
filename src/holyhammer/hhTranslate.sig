@@ -35,14 +35,4 @@ include Abbrev
     term list * (string * term list) list * term list ->
     (string * term) list * term
 
-  (* monomorphization *)
-  val regroup_cid : term list -> (string * hol_type list) list
-  val inst_mono_one : hol_type -> hol_type list ->
-    (hol_type, hol_type) Lib.subst list
-  val inst_mono : hol_type list -> hol_type list ->
-    (hol_type, hol_type) Lib.subst list
-  val find_cid : string -> term -> term list
-  val mono_cid : (string * hol_type list) * term list -> term list
-  val monomorphize : term list -> term -> term list
-
 end

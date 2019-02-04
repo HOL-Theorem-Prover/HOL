@@ -45,8 +45,7 @@ fun tptp_of_constvar arity tm =
   else if is_var tm then tptp_of_var arity tm
   else raise raise ERR "tptp_of_constvar" ""
 
-fun tptp_of_vartype ty =
-  "A" ^ (escape (dest_vartype ty))
+fun tptp_of_vartype ty = "A" ^ (escape (dest_vartype ty))
 
 fun tptp_of_tyop ty =
   let val {Args, Thy, Tyop} = dest_thy_type ty in

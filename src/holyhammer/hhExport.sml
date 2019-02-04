@@ -12,6 +12,8 @@ open HolKernel boolLib aiLib mlThmData hhTranslate holyHammer
 
 val ERR = mk_HOL_ERR "hhExport"
 
+val ttype = "$tType"
+
 (* -------------------------------------------------------------------------
    Tools
    ------------------------------------------------------------------------- *)
@@ -22,6 +24,20 @@ fun rm_endline x = implode (map endline_to_space (explode x))
 
 fun type_vars_in_term tm =
   type_varsl (map type_of (find_terms is_const tm @ all_vars tm))
+
+fun strip_funty_aux ty =
+  if is_vartype ty then [ty] else
+    let val {Args, Thy, Tyop} = dest_thy_type ty in
+      if Thy = "min" andalso Tyop = "fun" then
+        let val (tya,tyb) = pair_of_list Args in
+          tya :: strip_funty_aux tyb
+        end
+      else [ty]
+    end
+
+fun strip_funty ty = case strip_funty_aux ty of
+    [] => raise ERR "strip_funty" ""
+  | x => (last x, butlast x)
 
 (* -------------------------------------------------------------------------
    Writer shortcuts
@@ -37,6 +53,9 @@ fun oiter_aux oc sep f l = case l of
   | a :: m => (f oc a; os oc sep; oiter_aux oc sep f m)
 
 fun oiter oc sep f l = oiter_aux oc sep f l
+
+val comment_flag = ref false
+fun comment oc s = if !comment_flag then osn oc ("% " ^ s) else ()
 
 (* -------------------------------------------------------------------------
    Preparing and analysing the formula
@@ -54,6 +73,7 @@ fun full_match_type t1 t2 =
     dict_sort cmp (sub1 @ sub2)
   end
 
+(* warning: some variables are considered constant.*)
 fun typearg_of_const tm =
   let
     val {Thy, Name, Ty} = dest_thy_const tm
@@ -81,20 +101,21 @@ fun th1_tyop ty =
 fun th1b_thm (thy,name) = escape ("thm" ^ "." ^ thy ^ "." ^ name)
 
 (* -------------------------------------------------------------------------
-   TPTP TH1 terms
+    TH1 terms
    ------------------------------------------------------------------------- *)
 
 fun th1_type oc ty =
   if is_vartype ty then os oc (th1_vartype ty) else
     let val {Args, Thy, Tyop} = dest_thy_type ty in
-      if null Args then os oc (th1_tyop ty)
+      if Thy = "min" andalso Tyop = "bool" then os oc "$o"
       else if Thy = "min" andalso Tyop = "fun" then
         let val (tya,tyb) = pair_of_list Args in    
           os oc "("; th1_type oc tya;
           os oc " > "; th1_type oc tyb; os oc ")"
         end
-      else (os oc "("; os oc (th1_tyop ty);
-            os oc " "; oiter oc " " th1_type Args; os oc ")")
+      else if null Args then os oc (th1_tyop ty)
+      else (os oc "("; os oc (th1_tyop ty); os oc " @ ";
+            oiter oc " @ " th1_type Args; os oc ")")
     end
 
 fun th1_var_and_type oc v =  
@@ -115,11 +136,10 @@ fun th1_term oc tm =
       os oc " @ "; oiter oc " @ " th1_term argl; os oc ")"
     end
   else if is_abs tm then
-    let val (bvar,body) = dest_abs tm in
-      os oc "("; os oc "^"; os oc "[";
-      os oc (th1_var bvar); os oc "]"; (* todo add the type *)
-      th1_type oc (type_of bvar); os oc " ";
-      th1_term oc body; os oc ")"
+    let val (vl,bod) = strip_abs tm in
+      os oc "("; os oc "^[";
+      oiter oc ", " th1_var_and_type vl;
+      os oc "]: "; th1_term oc bod ; os oc ")"
     end
   else raise ERR "th1_term" ""
 
@@ -151,7 +171,7 @@ and th1_quant oc s (vl,bod) =
 fun th1_formula oc tm =
   let 
     val tvl = type_vars_in_term tm 
-    val tvls = map ((fn x => x ^ ":$tType") o th1_vartype) tvl
+    val tvls = map ((fn x => x ^ ":" ^ ttype) o th1_vartype) tvl
     val s = String.concatWith "," tvls
   in
     if null tvl then () else os oc ("![" ^ s ^ "]: ");
@@ -159,11 +179,11 @@ fun th1_formula oc tm =
   end
 
 (* -------------------------------------------------------------------------
-   TPTP TH1 definitions
+    TH1 definitions
    ------------------------------------------------------------------------- *)
 
 fun th1_ttype arity =
-  String.concatWith " > " (List.tabulate (arity, fn _ => "$tType"))
+  String.concatWith " > " (List.tabulate (arity + 1, fn _ => ttype))
 
 fun th1_tydef oc thy (tyop,arity) =
   (os oc ("thf(" ^ th1b_tyop (thy,tyop) ^ ",type,");
@@ -172,7 +192,7 @@ fun th1_tydef oc thy (tyop,arity) =
 fun th1_tyquant_type oc ty =
   let 
     val tvl = dict_sort Type.compare (type_vars ty) 
-    val tvls = map ((fn x => x ^ ":$tType") o th1_vartype) tvl
+    val tvls = map ((fn x => x ^ ":" ^ ttype) o th1_vartype) tvl
     val s = String.concatWith "," tvls
   in
     if null tvl then () else os oc ("![" ^ s ^ "]: ");
@@ -182,16 +202,147 @@ fun th1_tyquant_type oc ty =
 (* most general type expected *)
 fun th1_constdef oc thy (name,ty) =
   (
-  osn oc ("# c." ^ thy ^ "." ^ name ^ ": " ^ rm_endline (type_to_string ty));
+  comment oc ("c." ^ thy ^ "." ^ name ^ ": " ^ rm_endline (type_to_string ty));
   os oc ("thf(" ^ th1b_const (thy,name) ^ ",type,");
   th1_tyquant_type oc ty; osn oc ")."
   )
 
 fun th1_thmdef oc thy ((name,thm),role) =
   let val tm = prep_tm (concl (DISCH_ALL thm)) in
-    osn oc ("# " ^ thy ^ "." ^ name ^ ": " ^ rm_endline (term_to_string tm));
+    comment oc (thy ^ "." ^ name ^ ": " ^ rm_endline (term_to_string tm));
     os oc ("thf(" ^ (th1b_thm (thy,name)) ^ "," ^ role ^ ",");
     th1_formula oc tm; osn oc ")."
+  end
+
+(* -------------------------------------------------------------------------
+   tf1 escaping : variables escaped by prep_tm
+   ------------------------------------------------------------------------- *)
+
+fun tf1_var arity v = fst (dest_var v) ^ "_" ^ int_to_string arity
+fun tf1b_const arity (thy,name) = 
+  escape ("c." ^ thy ^ "." ^ name) ^ "_" ^ int_to_string arity
+fun tf1_const arity c =
+  let val {Name,Thy,Ty} = dest_thy_const c in tf1b_const arity (Thy,Name) end
+
+fun tf1_constvar arity tm =
+  if is_const tm then tf1_const arity tm
+  else if is_var tm then tf1_var arity tm
+  else "!!Abstraction!!"
+
+fun tf1_vartype ty = "A" ^ (escape (dest_vartype ty))
+fun tf1b_tyop (thy,tyop) = escape ("ty." ^ thy ^ "." ^ tyop)
+fun tf1_tyop ty =
+  let val {Args,Thy,Tyop} = dest_thy_type ty in tf1b_tyop (Thy,Tyop) end
+
+fun tf1b_thm (thy,name) = escape ("thm" ^ "." ^ thy ^ "." ^ name)
+
+(* -------------------------------------------------------------------------
+   tf1 terms
+   ------------------------------------------------------------------------- *)
+
+fun tf1_utype oc ty =
+  if is_vartype ty then os oc (tf1_vartype ty) else
+    let val {Args, Thy, Tyop} = dest_thy_type ty in
+      if null Args then os oc (tf1_tyop ty) else 
+        (os oc (tf1_tyop ty);
+         os oc "["; oiter oc "," tf1_utype Args; os oc "]")
+    end
+
+fun tf1_type oc ty =
+  let val (imty,args) = strip_funty ty in
+    if null args then tf1_utype oc imty else
+    (os oc "("; oiter oc " * " tf1_utype args; os oc ") > ";
+     tf1_utype oc imty)
+  end
+
+fun tf1_var_and_type oc v =  
+  let val (_,ty) = dest_var v in 
+    os oc (tf1_var 0 v ^ ":"); tf1_utype oc ty 
+  end
+
+fun tf1_term oc tm =
+  if is_var tm then os oc (tf1_var 0 tm)
+  else if is_const tm then os oc (th1_const tm)   
+  else if is_comb tm then
+    let 
+      val (rator,argl) = strip_comb tm 
+      (* todo: should also looks for mgu of some variables introduced in the
+         translation *)
+      val tyargl = 
+        if is_abs rator orelse is_var rator then [] else typearg_of_const rator
+    in
+      os oc (tf1_constvar (length tyargl) rator); 
+      os oc "("; 
+      if null tyargl then () else (oiter oc "," tf1_type tyargl; os oc ",");
+      oiter oc "," tf1_term argl; 
+      os oc ")"
+    end
+  else if is_abs tm then os oc "!!Abstraction!!"
+  else raise ERR "tf1_term" ""
+
+fun tf1_pred oc tm =
+  if is_forall tm then tf1_quant oc "!" (strip_forall tm)
+  else if is_exists tm then tf1_quant oc "?" (strip_exists tm)
+  else if is_conj tm then tf1_binop oc "&" (dest_conj tm)
+  else if is_disj tm then tf1_binop oc "|" (dest_disj tm)
+  else if is_imp_only tm then tf1_binop oc "=>" (dest_imp tm)
+  else if is_neg tm then
+    (os oc "(~ "; tf1_pred oc (dest_neg tm); os oc ")")
+  else if is_eq tm then
+    let val (l,r) = dest_eq tm in
+      if must_pred l orelse must_pred r
+      then tf1_binop oc "<=>" (l,r)
+      else (os oc "("; tf1_term oc l; os oc " = ";  
+            tf1_term oc r; os oc ")")
+    end
+  else tf1_term oc tm
+and tf1_binop oc s (l,r) =
+  (os oc "("; tf1_pred oc l; os oc (" " ^ s ^ " "); 
+   tf1_pred oc r; os oc ")")
+and tf1_quant oc s (vl,bod) =
+  (os oc "("; os oc s; os oc "[";
+   oiter oc ", " tf1_var_and_type vl;
+   os oc "]: "; tf1_pred oc bod ; os oc ")")
+
+fun tf1_formula oc tm = tf1_pred oc tm
+
+(* -------------------------------------------------------------------------
+    tf1 definitions
+   ------------------------------------------------------------------------- *)
+
+fun tf1_ttype arity =
+  if arity = 0 then ttype else
+  "(" ^ String.concatWith " * " (List.tabulate (arity - 1, fn _ => ttype)) ^
+  ") > " ^ ttype
+
+fun tf1_tydef oc thy (tyop,arity) =
+  (os oc ("tff(" ^ tf1b_tyop (thy,tyop) ^ ",type,");
+   os oc (tf1_ttype arity); osn oc ").")
+
+fun tf1_tyquant_type oc ty =
+  let 
+    val tvl = dict_sort Type.compare (type_vars ty) 
+    val tvls = map ((fn x => x ^ ":" ^ ttype) o tf1_vartype) tvl
+    val s = String.concatWith "," tvls
+  in
+    if null tvl then () else os oc ("![" ^ s ^ "]: ");
+    tf1_type oc ty
+  end
+
+(* most general type expected *)
+(* todo: make a different definition for each possible arity *)
+fun tf1_constdef oc thy (name,ty) =
+  (
+  comment oc ("c." ^ thy ^ "." ^ name ^ ": " ^ rm_endline (type_to_string ty));
+  os oc ("tff(" ^ tf1b_const 1000 (thy,name) ^ ",type,");
+  tf1_tyquant_type oc ty; osn oc ")."
+  )
+
+fun tf1_thmdef oc thy ((name,thm),role) =
+  let val tm = prep_tm (concl (DISCH_ALL thm)) in
+    comment oc ("thm." ^ thy ^ "." ^ name ^ ": " ^ rm_endline (term_to_string tm));
+    os oc ("tff(" ^ (tf1b_thm (thy,name)) ^ "," ^ role ^ ",");
+    tf1_formula oc tm; osn oc ")."
   end
 
 (* -------------------------------------------------------------------------
@@ -299,7 +450,7 @@ fun sexpr_constdef oc thy (name,ty) =
 
 fun sexpr_thmdef oc thy ((name,thm),role) =
   let val tm = prep_tm (concl (DISCH_ALL thm)) in
-    osn oc ("# " ^ thy ^ "." ^ name ^ ": " ^ rm_endline (term_to_string tm));
+    osn oc ("; " ^ thy ^ "." ^ name ^ ": " ^ rm_endline (term_to_string tm));
     os oc "("; os oc role; os oc " ";
     os oc (sexprb_thm (thy,name)); os oc " ";
     sexpr_tyquant_term oc tm; os oc ")\n"
@@ -317,6 +468,12 @@ val th1_ax_dir = hh_dir ^ "/export_th1_ax"
 val th1_decl_dir = hh_dir ^ "/export_th1_decl"
 val th1_bushy_dir = hh_dir ^ "/export_th1_bushy"
 val th1_chainy_dir = hh_dir ^ "/export_th1_chainy"
+
+val tf1_dir = hh_dir ^ "/export_tf1"
+val tf1_ax_dir = hh_dir ^ "/export_tf1_ax"
+val tf1_decl_dir = hh_dir ^ "/export_tf1_decl"
+val tf1_bushy_dir = hh_dir ^ "/export_tf1_bushy"
+val tf1_chainy_dir = hh_dir ^ "/export_tf1_chainy"
 
 (* -------------------------------------------------------------------------
    Standard export
@@ -409,6 +566,8 @@ fun write_thy_ax f_thmdef dir thy =
     end 
     handle Interrupt => (TextIO.closeOut oc; raise Interrupt)
   end
+
+val include_flag = ref false
 
 fun tptp_include_ax oc (thy,name) = 
   osn oc ("include(" ^ thy ^ ".ax" ^ "[" ^ name ^ "]" ^ ").")
@@ -524,6 +683,17 @@ fun th1_export_ax thyl =
     app (write_thy_ax th1_thmdef th1_ax_dir) thyl
   end
 
+fun tf1_export thyl =
+  let
+    val file = tf1_dir ^ "/theory_order.info"
+    val fl = (tf1_tydef, tf1_constdef, tf1_thmdef, tf1b_thm)
+    val thyl = sorted_ancestry thyl
+  in
+    mkDir_err tf1_dir;
+    app (write_thy fl tf1_dir) thyl;
+    writel file [String.concatWith " " (sorted_ancestry thyl)]
+  end
+
 fun sexpr_export thyl =
   let
     val file = sexpr_dir ^ "/theory_order.info"
@@ -535,9 +705,8 @@ fun sexpr_export thyl =
     writel file [String.concatWith " " (sorted_ancestry thyl)]
   end
 
-
 (* -------------------------------------------------------------------------
-   TPTP FOF bushy
+   fof
    ------------------------------------------------------------------------- *)
 
 val fof_export_dir = HOLDIR ^ "/src/holyhammer/export_fof"
@@ -584,7 +753,7 @@ end (* struct *)
 
 (* Example
   load "hhExport"; open hhExport;
-  th1_export_chainy ["list"];
+  th1_export ["list"];
 
   load "hhExport"; open Translate;
   (* fof export *)
@@ -596,6 +765,5 @@ end (* struct *)
   val thyl = ancestry "scratch";
   sexpr_thyl_ancestry thyl;
   write_thyl_ancestry_order thyl;
-
 *)
 
