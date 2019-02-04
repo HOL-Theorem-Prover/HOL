@@ -389,11 +389,12 @@ val sum_case_cong = save_thm("sum_case_cong",
 
 val SUM_MAP_def = Prim_rec.new_recursive_definition{
   name = "SUM_MAP_def",
-  def = ``(($++ f g) (INL (a:'a)) = INL ((f a):'c)) /\
-          (($++ f g) (INR (b:'b)) = INR ((g b):'d))``,
+  def = ``(SUM_MAP f g (INL (a:'a)) = INL (f a:'c)) /\
+          (SUM_MAP f g (INR (b:'b)) = INR (g b:'d))``,
   rec_axiom = sum_Axiom};
-val _ = set_fixity "++" (Infixl 480)
 val _ = export_rewrites ["SUM_MAP_def"]
+val _ = temp_set_mapped_fixity{tok = "++", term_name = "SUM_MAP",
+                               fixity = Infixl 480}
 
 val SUM_MAP = store_thm (
   "SUM_MAP",
@@ -497,5 +498,7 @@ val datatype_sum = store_thm(
   "datatype_sum",
   ``DATATYPE (sum (INL:'a -> 'a + 'b) (INR:'b -> 'a + 'b))``,
   REWRITE_TAC[DATATYPE_TAG_THM]);
+
+val _ = temp_remove_termtok {term_name = "SUM_MAP", tok = "++"}
 
 val _ = export_theory();
