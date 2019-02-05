@@ -20,6 +20,53 @@ Contents
 New features:
 -------------
 
+*   We have implemented new syntaxes for `store_thm` and `save_thm`, which better satisfy the recommendation that `name1` and `name2` below should be the same:
+
+           val name1 = store_thm("name2", tm, tac);
+
+    Now we can remove the “code smell” by writing either
+
+           Theorem name tm-quotation tac
+
+    which will typically look like
+
+           Theorem name
+             ‘∀x. P x ⇒ Q x’
+             (rpt strip_tac >> ...);
+
+    or by writing with the general pattern
+
+           Theorem name: term-syntax
+           Proof tac
+           QED
+
+    which might look like
+
+           Theorem name:
+             ∀x. P x ⇒ Q x
+           Proof
+             rpt strip_tac >> ...
+           QED
+
+    This latter form must have the `Proof` and `QED` keywords in column 0 in order for the lexing machinery to detect the end of the term and tactic respectively.
+    Both forms map to applications of `Q.store_thm` underneath, with an ML binding also made to the appropriate name.
+    Both forms allow for theorem attributes to be associated with the name, so that one can write
+
+           Theorem ADD0[simp]: ∀x. x + 0 = x
+           Proof tactic
+           QED
+
+    Finally, to replace
+
+           val nm = save_thm(“nm”, thm_expr);
+
+    one can now write
+
+           Theorem nm = thm_expr
+
+    These names can also be given attributes in the same way.
+
+
 Bugs fixed:
 -----------
 
