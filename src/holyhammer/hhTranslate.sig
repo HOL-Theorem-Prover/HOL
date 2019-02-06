@@ -3,8 +3,6 @@ sig
 
 include Abbrev
 
-  val complete_flag : bool ref
-
   val must_pred : term -> bool
   val no_lambda : term -> bool
   val no_pred   : term -> bool

@@ -34,13 +34,10 @@ fun string_of_genvar iref =
     3 applying beta conversion whenever possible
   -------------------------------------------------------------------------- *)
 
-
-
 fun ELIM_LAMBDA_EQ tm =
   let val (l, r) = dest_eq tm in
     (
-    if is_abs l orelse is_abs r
-    then
+    if is_abs l orelse is_abs r then
       CHANGED_CONV (ONCE_REWRITE_CONV [FUN_EQ_THM] THENC
       (TRY_CONV (QUANT_CONV (BINOP_CONV BETA_CONV))))
     else NO_CONV
@@ -48,15 +45,8 @@ fun ELIM_LAMBDA_EQ tm =
     tm
   end
 
-fun PREP_CONV tm =
-  (
-  (* PURE_REWRITE_CONV [EXISTS_UNIQUE_THM, EXISTS_UNIQUE_DEF] THENC
-     Commented out because it can create very large term.
-   *)
-  TOP_DEPTH_CONV ELIM_LAMBDA_EQ THENC
-  REDEPTH_CONV BETA_CONV
-  )
-  tm
+fun PREP_CONV tm = 
+  (TOP_DEPTH_CONV ELIM_LAMBDA_EQ THENC REDEPTH_CONV BETA_CONV) tm
 
 fun prep_rw tm = rand (only_concl (QCONV PREP_CONV tm))
 
@@ -207,7 +197,7 @@ fun LET_CONV_MIN tm =
   end
 
 fun LET_CONV_AUX tm =
- (TRY_CONV (RATOR_CONV LET_CONV_AUX) THENC LET_CONV_MIN) tm
+  (TRY_CONV (RATOR_CONV LET_CONV_AUX) THENC LET_CONV_MIN) tm
 
 fun LET_CONV_BV bvl tm =
   if not (is_comb tm) then NO_CONV tm else
@@ -236,20 +226,6 @@ fun mk_arity_eq f n =
     GENL vl (LET_CONV_AUX t1)
   end
 
-fun optim_arity_eq tm =
-  let
-    val l = dlist (collect_arity tm)
-    fun g x = x <> 0
-    fun f (tm,nl) =
-      if is_abs tm orelse is_comb tm then raise ERR "optim_arity_eq" ""
-      else
-        if length nl >= 2
-        then map (mk_arity_eq tm) (filter g nl)
-        else []
-  in
-    List.concat (map f l)
-  end
-
 fun all_arity_eq tm =
   let
     val l = dlist (collect_arity tm)
@@ -260,7 +236,6 @@ fun all_arity_eq tm =
   in
     List.concat (map f l)
   end
-
 (* -------------------------------------------------------------------------
    Full FOF translation
    ------------------------------------------------------------------------- *)
@@ -307,8 +282,6 @@ fun translate_tm tm =
     translate_cache := dadd tm tml (!translate_cache); tml
   end
 
-val complete_flag = ref false
-
 fun translate_pb premises cj =
   let
     fun f (name,thm) = (debug ("\n" ^ name);
@@ -317,9 +290,7 @@ fun translate_pb premises cj =
     val ax_tml = map f premises
     val big_tm =
       list_mk_conj (map list_mk_conj (cj_tml :: (map snd ax_tml)))
-    val ari_thml = if !complete_flag
-                   then all_arity_eq big_tm
-                   else optim_arity_eq big_tm
+    val ari_thml = all_arity_eq big_tm
     val ari_tml =  map only_concl ari_thml
   in
     (ari_tml, ax_tml, cj_tml)

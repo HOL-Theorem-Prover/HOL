@@ -121,13 +121,13 @@ fun write_ax oc (name,tm) =
 fun write_cj oc cj =
   (os oc "fof(conjecture, conjecture, "; write_formula oc cj; os oc ").\n")
 
+(* todo: add the possibility to give a name to the conjecture *)
 fun write_tptp_file file axl cj =
   let val oc = TextIO.openOut file in
     (app (write_ax oc) axl; write_cj oc cj)
     handle Interrupt => (TextIO.closeOut oc; raise Interrupt);    
     TextIO.closeOut oc
   end
-  
 
 fun write_tptp dir axl cj =
   let

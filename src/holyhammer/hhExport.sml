@@ -35,6 +35,16 @@ fun strip_funty_aux ty =
       else [ty]
     end
 
+fun strip_funty_n n ty =
+  if is_vartype ty orelse n <= 0 then [ty] else
+    let val {Args, Thy, Tyop} = dest_thy_type ty in
+      if Thy = "min" andalso Tyop = "fun" then
+        let val (tya,tyb) = pair_of_list Args in
+          tya :: strip_funty_n (n-1) tyb
+        end
+      else [ty]
+    end
+
 fun strip_funty ty = case strip_funty_aux ty of
     [] => raise ERR "strip_funty" ""
   | x => (last x, butlast x)
@@ -137,9 +147,9 @@ fun th1_term oc tm =
     end
   else if is_abs tm then
     let val (vl,bod) = strip_abs tm in
-      os oc "("; os oc "^[";
+      os oc "^[";
       oiter oc ", " th1_var_and_type vl;
-      os oc "]: "; th1_term oc bod ; os oc ")"
+      os oc "]: "; th1_term oc bod
     end
   else raise ERR "th1_term" ""
 
@@ -164,15 +174,15 @@ and th1_binop oc s (l,r) =
   (os oc "("; th1_pred oc l; os oc (" " ^ s ^ " "); 
    th1_pred oc r; os oc ")")
 and th1_quant oc s (vl,bod) =
-  (os oc "("; os oc s; os oc "[";
+  (os oc s; os oc "[";
    oiter oc ", " th1_var_and_type vl;
-   os oc "]: "; th1_pred oc bod ; os oc ")")
+   os oc "]: "; th1_pred oc bod)
 
 fun th1_formula oc tm =
   let 
     val tvl = type_vars_in_term tm 
     val tvls = map ((fn x => x ^ ":" ^ ttype) o th1_vartype) tvl
-    val s = String.concatWith "," tvls
+    val s = String.concatWith ", " tvls
   in
     if null tvl then () else os oc ("![" ^ s ^ "]: ");
     th1_pred oc tm
@@ -187,7 +197,7 @@ fun th1_ttype arity =
 
 fun th1_tydef oc thy (tyop,arity) =
   (os oc ("thf(" ^ th1b_tyop (thy,tyop) ^ ",type,");
-   os oc (th1_ttype arity); osn oc ").")
+   os oc (th1b_tyop (thy,tyop) ^ ":"); os oc (th1_ttype arity); osn oc ").")
 
 fun th1_tyquant_type oc ty =
   let 
@@ -195,7 +205,7 @@ fun th1_tyquant_type oc ty =
     val tvls = map ((fn x => x ^ ":" ^ ttype) o th1_vartype) tvl
     val s = String.concatWith "," tvls
   in
-    if null tvl then () else os oc ("![" ^ s ^ "]: ");
+    if null tvl then () else os oc ("!>[" ^ s ^ "]: ");
     th1_type oc ty
   end
 
@@ -204,7 +214,7 @@ fun th1_constdef oc thy (name,ty) =
   (
   comment oc ("c." ^ thy ^ "." ^ name ^ ": " ^ rm_endline (type_to_string ty));
   os oc ("thf(" ^ th1b_const (thy,name) ^ ",type,");
-  th1_tyquant_type oc ty; osn oc ")."
+  os oc (th1b_const (thy,name) ^ ":"); th1_tyquant_type oc ty; osn oc ")."
   )
 
 fun th1_thmdef oc thy ((name,thm),role) =
@@ -245,35 +255,41 @@ fun tf1_utype oc ty =
     let val {Args, Thy, Tyop} = dest_thy_type ty in
       if null Args then os oc (tf1_tyop ty) else 
         (os oc (tf1_tyop ty);
-         os oc "["; oiter oc "," tf1_utype Args; os oc "]")
+         os oc "("; oiter oc "," tf1_utype Args; os oc ")")
     end
 
-fun tf1_type oc ty =
-  let val (imty,args) = strip_funty ty in
-    if null args then tf1_utype oc imty else
-    (os oc "("; oiter oc " * " tf1_utype args; os oc ") > ";
-     tf1_utype oc imty)
-  end
+fun tf1_type arity oc ty = case strip_funty_n arity ty of
+    [] => raise ERR "tf1_type" ""
+  | [imty] => tf1_utype oc imty
+  | [imty,uty] => 
+    (os oc "("; tf1_utype oc uty; os oc " > "; tf1_utype oc imty;
+     os oc ")")
+  | l =>
+    (os oc "(("; 
+     oiter oc " * " tf1_utype (butlast l); os oc ") > "; 
+     tf1_utype oc (last l); os oc ")")
 
-fun tf1_var_and_type oc v =  
+fun tf1_var_and_type arity oc v =  
   let val (_,ty) = dest_var v in 
-    os oc (tf1_var 0 v ^ ":"); tf1_utype oc ty 
+    os oc (tf1_var arity v ^ ":"); tf1_utype oc ty 
   end
 
 fun tf1_term oc tm =
   if is_var tm then os oc (tf1_var 0 tm)
-  else if is_const tm then os oc (th1_const tm)   
+  else if is_const tm then os oc (tf1_const 0 tm)
   else if is_comb tm then
     let 
-      val (rator,argl) = strip_comb tm 
+      val (rator,argl) = strip_comb tm
+      val arity = length argl
       (* todo: should also looks for mgu of some variables introduced in the
          translation *)
       val tyargl = 
         if is_abs rator orelse is_var rator then [] else typearg_of_const rator
     in
-      os oc (tf1_constvar (length tyargl) rator); 
+      os oc (tf1_constvar arity rator); 
       os oc "("; 
-      if null tyargl then () else (oiter oc "," tf1_type tyargl; os oc ",");
+      if null tyargl then () else 
+      (oiter oc "," tf1_utype tyargl; os oc ",");
       oiter oc "," tf1_term argl; 
       os oc ")"
     end
@@ -300,49 +316,134 @@ and tf1_binop oc s (l,r) =
   (os oc "("; tf1_pred oc l; os oc (" " ^ s ^ " "); 
    tf1_pred oc r; os oc ")")
 and tf1_quant oc s (vl,bod) =
-  (os oc "("; os oc s; os oc "[";
-   oiter oc ", " tf1_var_and_type vl;
-   os oc "]: "; tf1_pred oc bod ; os oc ")")
+  (os oc s; os oc "[";
+   oiter oc ", " (tf1_var_and_type 0) vl;
+   os oc "]: "; tf1_pred oc bod)
 
-fun tf1_formula oc tm = tf1_pred oc tm
+fun tf1_formula oc tm =
+  let 
+    val tvl = type_vars_in_term tm 
+    val tvls = map ((fn x => x ^ ":" ^ ttype) o tf1_vartype) tvl
+    val s = String.concatWith ", " tvls
+  in
+    if null tvl then () else os oc ("![" ^ s ^ "]: ");
+    tf1_pred oc tm
+  end
 
 (* -------------------------------------------------------------------------
     tf1 definitions
    ------------------------------------------------------------------------- *)
 
 fun tf1_ttype arity =
-  if arity = 0 then ttype else
-  "(" ^ String.concatWith " * " (List.tabulate (arity - 1, fn _ => ttype)) ^
-  ") > " ^ ttype
+  if arity <= 1 then String.concatWith " > " [ttype,ttype] else
+  "(" ^ String.concatWith " * " (List.tabulate (arity, fn _ => ttype)) ^ ")"
+  ^ " > " ^ ttype 
 
 fun tf1_tydef oc thy (tyop,arity) =
-  (os oc ("tff(" ^ tf1b_tyop (thy,tyop) ^ ",type,");
-   os oc (tf1_ttype arity); osn oc ").")
+  let val tfname = tf1b_tyop (thy,tyop) in
+    os oc ("tff(" ^ tfname ^ ",type," ^ tfname ^ ":");
+    os oc (tf1_ttype arity); osn oc ")."
+  end
 
-fun tf1_tyquant_type oc ty =
+fun tf1_tyquant_type oc arity ty =
   let 
     val tvl = dict_sort Type.compare (type_vars ty) 
     val tvls = map ((fn x => x ^ ":" ^ ttype) o tf1_vartype) tvl
     val s = String.concatWith "," tvls
   in
-    if null tvl then () else os oc ("![" ^ s ^ "]: ");
-    tf1_type oc ty
+    if null tvl then () else os oc ("!>[" ^ s ^ "]: ");
+    tf1_type arity oc ty
   end
 
-(* most general type expected *)
-(* todo: make a different definition for each possible arity *)
+fun tf1_constdef_arity_alone oc thy arity c (name,ty) =
+  let val tfname = tf1b_const arity (thy,name) in
+    os oc ("tff(" ^ tfname ^ ",type," ^ tfname ^ ":");
+    tf1_tyquant_type oc arity ty; osn oc ")."
+  end
+
+(* todo: exclude the decl/def of combin *)
+fun tf1_constdef_arity oc thy arity c (name,ty) =
+  let 
+    val tfname = tf1b_const arity (thy,name) 
+  in
+    if thy = "bool" andalso name = "LET" andalso arity = 2 then () 
+    else (os oc ("tff(" ^ tfname ^ ",type," ^ tfname ^ ":");
+          tf1_tyquant_type oc arity ty; osn oc ").");
+    (
+    if arity = 0 then () else 
+    let 
+      val eq = only_concl (mk_arity_eq c arity) 
+      val arity_prefix = escape ("arity" ^ its arity ^ ".")
+    in
+      (os oc ("tff(" ^ arity_prefix ^ tfname ^ ",axiom,");
+       tf1_formula oc eq; osn oc ").")
+    end
+    )
+  end
+
+fun tf1_vardef_arity oc (v,arity) =
+  let 
+    val tfname = tf1_var arity v 
+    val ty = snd (dest_var v)
+  in
+    os oc ("tff(" ^ tfname ^ ",type," ^ tfname ^ ":");
+    tf1_tyquant_type oc arity ty; osn oc ").";
+    (
+    if arity = 0 then () else 
+    let 
+      val eq = only_concl (mk_arity_eq v arity) 
+      val arity_prefix = escape ("arity" ^ its arity ^ ".")
+    in
+      (os oc ("tff(" ^ arity_prefix ^ tfname ^ ",axiom,");
+       tf1_formula oc eq; osn oc ").")
+    end
+    )
+  end
+
 fun tf1_constdef oc thy (name,ty) =
-  (
-  comment oc ("c." ^ thy ^ "." ^ name ^ ": " ^ rm_endline (type_to_string ty));
-  os oc ("tff(" ^ tf1b_const 1000 (thy,name) ^ ",type,");
-  tf1_tyquant_type oc ty; osn oc ")."
-  )
+  let
+    val maxarity = length (snd (strip_funty ty))
+    val c = mk_thy_const {Name=name,Thy=thy,Ty=ty}
+    fun f n = tf1_constdef_arity oc thy n c (name,ty)
+  in
+    comment oc ("c." ^ thy ^ "." ^ name ^ ": " ^ 
+      rm_endline (type_to_string ty));
+    ignore (List.tabulate (maxarity + 1, f))
+  end
+
+
+
+
+fun tf1_vardef oc v =
+  let 
+    val ty = snd (dest_var v)
+    val maxarity = length (snd (strip_funty ty))
+    fun f n = tf1_vardef_arity oc (v,n) 
+  in
+    comment oc ("fdef." ^ fst (dest_var v) ^ ": " ^ 
+      rm_endline (type_to_string ty));
+    ignore (List.tabulate (maxarity + 1, f))
+  end
 
 fun tf1_thmdef oc thy ((name,thm),role) =
-  let val tm = prep_tm (concl (DISCH_ALL thm)) in
-    comment oc ("thm." ^ thy ^ "." ^ name ^ ": " ^ rm_endline (term_to_string tm));
+  let 
+    val tm = concl (DISCH_ALL thm)
+    val tml = translate_tm tm
+    val vl = free_vars_lr (list_mk_conj (rev tml))
+    val (cj,defl) = (hd tml, rev (tl tml))
+    fun f i def = 
+      (
+      os oc ("tff(" ^ escape ("fthm" ^ its i ^ ".") ^
+      (tf1b_thm (thy,name)) ^ "," ^ role ^ ",");
+      tf1_formula oc def; osn oc ")."
+      )
+  in
+    comment oc ("thm." ^ thy ^ "." ^ name ^ ": " ^ 
+      rm_endline (term_to_string tm));
+    app (tf1_vardef oc) vl;
+    ignore (mapi f defl);
     os oc ("tff(" ^ (tf1b_thm (thy,name)) ^ "," ^ role ^ ",");
-    tf1_formula oc tm; osn oc ")."
+    tf1_formula oc cj; osn oc ")."
   end
 
 (* -------------------------------------------------------------------------
@@ -439,7 +540,6 @@ fun sexpr_tyquant_term oc tm =
       )
   end
 
-(* most general type expected *)
 fun sexpr_constdef oc thy (name,ty) =
   (
   osn oc ("; c." ^ thy ^ "." ^ name ^ ": " ^ rm_endline (type_to_string ty));
@@ -505,6 +605,7 @@ fun write_dep ocdep fb_thm thy ((name,thm),role) =
   osn ocdep "")
   )
 
+
 fun write_thy (f_tydef,f_constdef,f_thmdef,fb_thm) export_dir thy =
   let
     val _ = print (thy ^ " ")
@@ -528,6 +629,111 @@ fun write_thy (f_tydef,f_constdef,f_thmdef,fb_thm) export_dir thy =
       app TextIO.closeOut [oc,ocdep]
     end 
     handle Interrupt => (app TextIO.closeOut [oc,ocdep]; raise Interrupt)
+  end
+
+(* -------------------------------------------------------------------------
+   Combinator for making it less theorem decreasing. (i.e. complete)
+   ------------------------------------------------------------------------- *)
+
+(* Maybe remove everything and put it inside min *)
+fun write_combin (f_tydef,f_constdef,f_thmdef,fb_thm) dir = 
+  let
+    val file = dir ^ "/combin.extra"
+    val oc = TextIO.openOut file
+  in
+    let
+      val thy = "combin"
+      val cl0 = ["S","K","I","o","C","W"]
+      val axl0 = map (fn x => x ^ "_DEF") cl0
+      val THEORY(_,t1) = dest_theory thy
+      val cl1 = #consts t1
+      val cl2 = filter (fn x => mem (fst x) cl0) cl1
+      val _ = app (f_constdef oc thy) cl2
+      val axl1 = filter (fn x => mem (fst x) axl0) (DB.definitions thy)
+      val axl2 = map (fn x => (x,"axiom")) axl1
+      fun cmp (((_,th1),_),((_,th2),_)) =
+        Int.compare (depnumber_of_thm th1, depnumber_of_thm th2)
+      val thml = dict_sort cmp axl2
+    in
+      app (f_thmdef oc thy) thml;
+      TextIO.closeOut oc
+    end 
+    handle Interrupt => (TextIO.closeOut oc; raise Interrupt)
+  end 
+
+fun write_let f_constdef dir = 
+  let
+    val file = dir ^ "/let.extra"
+    val oc = TextIO.openOut file
+  in
+    let
+      val thy = "bool"
+      val name = "LET"
+      val THEORY(_,t) = dest_theory thy
+      val cl = #consts t
+      val (_,ty) = only_hd (filter (fn x => fst x = name) cl)
+      val c = mk_thy_const {Name=name,Thy=thy,Ty=ty}
+    in
+      tf1_constdef_arity_alone oc thy 2 c (name,ty);
+      TextIO.closeOut oc
+    end 
+    handle Interrupt => (TextIO.closeOut oc; raise Interrupt)
+  end 
+
+
+
+(* -------------------------------------------------------------------------
+   Logical operators equations with term level counterpart.
+   ------------------------------------------------------------------------- *)
+
+val conj_rel = ``V1 /\ V2``;
+
+fun th1_logicformula oc tm = 
+  let 
+    val tvl = type_vars_in_term tm 
+    val tvls = map ((fn x => x ^ ":" ^ ttype) o th1_vartype) tvl
+    val s = String.concatWith ", " tvls
+    val vl = free_vars_lr tm 
+  in
+    if null tvl then () else os oc ("![" ^ s ^ "]: ");
+    os oc "!["; oiter oc ", " th1_var_and_type vl; os oc "]: ";
+    os oc "("; th1_term oc tm ; os oc " <=> "; th1_pred oc tm; os oc ")"
+  end
+
+fun th1_logicdef oc (name,tm) =
+  (
+  comment oc (term_to_string tm);
+  os oc ("thf(" ^ escape ("logic." ^ name) ^ ",axiom,"); th1_logicformula oc tm; osn oc ")."
+  )
+
+val logicdefl = [
+  ("and", ``V0 /\ V1``),
+  ("or", ``V0 \/ V1``),
+  ("neg", ``~V0``),
+  ("imply", ``V0 ==> V1``),
+  ("equiv", ``V0 <=> V1``),
+  ("eq", ``V0:'a = V1``)]
+
+val quantdefl = [("forall", FORALL_THM),("exists", EXISTS_THM)];
+
+fun th1_quantdef oc (name,thm) =
+  let val tm = concl thm in
+    comment oc (term_to_string tm);
+    os oc ("thf(" ^ escape ("logic." ^ name) ^ ",axiom,"); 
+    th1_formula oc tm; osn oc ")."
+  end
+
+fun write_logic dir = 
+  let
+    val file = dir ^ "/bool.extra"
+    val oc = TextIO.openOut file
+  in
+    (
+    app (th1_logicdef oc) logicdefl;
+    app (th1_quantdef oc) quantdefl;
+    TextIO.closeOut oc
+    )
+    handle Interrupt => (TextIO.closeOut oc; raise Interrupt)
   end
 
 (* -------------------------------------------------------------------------
@@ -665,6 +871,8 @@ fun th1_export thyl =
     val thyl = sorted_ancestry thyl
   in
     mkDir_err th1_dir;
+    write_combin fl th1_dir;
+    write_logic th1_dir;
     app (write_thy fl th1_dir) thyl;
     writel file [String.concatWith " " (sorted_ancestry thyl)]
   end
@@ -690,6 +898,9 @@ fun tf1_export thyl =
     val thyl = sorted_ancestry thyl
   in
     mkDir_err tf1_dir;
+    write_combin fl tf1_dir;
+    write_logic tf1_dir;
+    write_let tf1_constdef tf1_dir;
     app (write_thy fl tf1_dir) thyl;
     writel file [String.concatWith " " (sorted_ancestry thyl)]
   end
@@ -753,7 +964,8 @@ end (* struct *)
 
 (* Example
   load "hhExport"; open hhExport;
-  th1_export ["list"];
+  comment_flag := true;
+  tf1_export ["list"];
 
   load "hhExport"; open Translate;
   (* fof export *)
