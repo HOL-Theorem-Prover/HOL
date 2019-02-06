@@ -337,17 +337,17 @@ fun twoE i = IntInf.pow (IntInf.fromInt 2,i);
 val lo = ~(twoE 15)
 val hi = twoE 15 -1;
 
-Regexp_Type.regexp_interval lo hi Regexp_Type.LSB;
+Regexp_Type.interval_regexp lo hi Regexp_Type.LSB;
 
 val lo = ~(twoE 31)
 val hi = twoE 31 -1;
 
-Regexp_Type.regexp_interval lo hi Regexp_Type.LSB;
+Regexp_Type.interval_regexp lo hi Regexp_Type.LSB;
 
 val lo = ~(twoE 63)
 val hi = twoE 63 -1;
 
-Regexp_Type.regexp_interval lo hi Regexp_Type.LSB;
+Regexp_Type.interval_regexp lo hi Regexp_Type.LSB;
 
 (* 64 bit signed 2scomp *)
 
@@ -532,3 +532,4 @@ dom `\i{~90,90}\i{0,59}\i{0,5999}\p{(~180,180)(0,59).{1}}\i{0,5999}`;
    dom `\p{(0,41)(0,42)(0,43)(0,48)}`;
    dom `\p{(0,63)(0,42)(0,63)(0,63)}`;
 *)
+

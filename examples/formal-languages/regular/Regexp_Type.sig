@@ -50,7 +50,8 @@ sig
  val catlist : regexp list -> regexp
  val dots : int -> regexp list
  val ranged : regexp -> int -> int -> regexp
- val regexp_interval : IntInf.int -> IntInf.int -> direction -> regexp
+ val num_interval : IntInf.int -> IntInf.int -> int -> direction -> regexp
+ val interval_regexp : IntInf.int -> IntInf.int -> direction -> regexp
   
  (* parsing *)
 

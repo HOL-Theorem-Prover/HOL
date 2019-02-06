@@ -1,0 +1,79 @@
+(*---------------------------------------------------------------------------*)
+(* even(n) predicate realized by regexp                                      *)
+(*---------------------------------------------------------------------------*)
+
+app load ["numposrepTheory","regexpLib"];
+
+open numposrepTheory regexpTheory FormalLangTheory stringTheory;
+
+fun qspec q th = th |> Q.SPEC q 
+fun qspec_arith q th = qspec q th |> SIMP_RULE arith_ss [];
+
+val [regexp_lang_chset,regexp_lang_cat, 
+     regexp_lang_star, regexp_lang_neg, regexp_lang_or] = CONJUNCTS regexp_lang_def;
+
+val even_def = Define `even n <=> (n MOD 2 = 0)`;
+
+val small_evens = filter (fn x => x mod 2 = 0) (upto 0 255);
+val sm_charset = Regexp_Type.charset_of (map Char.chr small_evens);
+val even_regexp = let open Regexp_Type in Cat(Chset sm_charset,Star DOT) end;
+val even_regexp_term = regexpSyntax.mk_regexp even_regexp;
+
+g `!n. even(n) <=> MAP CHR (n2l 256 n) IN regexp_lang ^even_regexp_term`
+completeInduct_on `n`
+ >> rw_tac list_ss [even_def,Once n2l_def]
+   >- (WEAKEN_TAC is_forall
+       >> rw_tac list_ss [EQ_IMP_THM,regexp_lang_cat,regexp_lang_star,IN_dot,IN_KSTAR_LIST]
+       >- (qexists_tac `STRING (CHR n) ""` >> qexists_tac `""`
+           >> rpt conj_tac
+	      >- rw_tac list_ss []
+	      >- (rw_tac (list_ss ++ regexpLib.charset_conv_ss) []
+	          >> ntac 2 (pop_assum mp_tac)
+	          >> Q.ID_SPEC_TAC `n`
+                  >> CONV_TAC (REPEATC(numLib.BOUNDED_FORALL_CONV EVAL))
+                  >> simp_tac bool_ss [])
+	      >- (qexists_tac `[]` >> simp_tac list_ss [])
+          )
+       >- (pop_assum kall_tac
+           >> qpat_x_assum `u IN _` mp_tac
+           >> simp_tac (list_ss ++ regexpLib.charset_conv_ss) []
+           >> rw_tac list_ss []
+           >> full_simp_tac list_ss []
+           >> qpat_x_assum `"" = CONCAT wlist` kall_tac
+           >> pop_assum mp_tac 
+           >> rw_tac list_ss [CHR_11]))
+   >- (WEAKEN_TAC is_forall
+           
+       >- 
+   >-
+
+(* What we are really proving *)
+
+g `!B n. (B=256) ==> (even(n) <=> LAST (n2l B n) IN {n | n < B /\ even(n)})`;
+recInduct n2l_ind
+>> rw_tac list_ss []
+>> rw_tac list_ss [Once n2l_def]
+
+g `even(n) <=> LAST (n2l 256 n) IN {n | n < 256 /\ even(n)}`;
+simp_tac arith_ss [even_def]
+ >> completeInduct_on `n`
+ >> 
+
+
+(*
+fun testcase n = 
+ let val nums = upto 0 n
+     val v = mk_var("v",numSyntax.num)
+ in
+    ``!v. v < ^(term_of_int (n+1)) ==> 
+       ^(list_mk_disj(map (fn n => mk_eq(v,term_of_int n)) nums))``
+ end;
+
+val test =
+ let val Fn = REPEATC(numLib.BOUNDED_FORALL_CONV EVAL)
+ in 
+   fn n => time Fn (testcase n)
+ end
+ 
+List.app (K () o test) (upto 2 30);
+*)

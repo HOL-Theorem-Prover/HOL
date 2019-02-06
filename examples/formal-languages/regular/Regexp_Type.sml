@@ -9,6 +9,11 @@ open Lib Feedback regexpMisc WordOps Interval;
 
 val ERR = mk_HOL_ERR "Regexp_Type";
 
+fun copy x n = if n <= 0 then [] else x::copy x (n-1);
+
+fun padL list x width = copy x (width - length list) @ list;
+fun padR list x width = list @ copy x (width - length list);
+
 (*---------------------------------------------------------------------------*)
 (* Alphabet                                                                  *)
 (*---------------------------------------------------------------------------*)
@@ -128,81 +133,43 @@ val DOT        = SIGMA;
 val EPSILON    = Star EMPTY;
 val SIGMASTAR  = Star SIGMA;
 
-fun replicate x (n:int) =
- if n <= 0 then EPSILON else
- if n = 1 then x
-  else Cat(x,replicate x (n-1));
+fun mk_or [] = EMPTY
+  | mk_or [x] = x
+  | mk_or list = Or list;
 
 fun catlist [] = EPSILON
   | catlist [x] = x
   | catlist (h::t) = Cat (h,catlist t);
 
-fun num2chset n =
- if 0 <= n andalso n <= 255
-   then Chset(charset_of[Char.chr n])
- else raise ERR "num2chset" "";
+val dots = copy DOT;
 
-val zero_chset = num2chset 0;
-
-fun copy x n = if n <= 0 then [] else x::copy x (n-1);
-
-val zeros = copy zero_chset;
-val dots = copy SIGMA;
+fun replicate x (n:int) = catlist (copy x n);
 
 fun ranged r i j =
  if j < i then EMPTY
  else Or (map (replicate r) (upto i j));
 
-
 (*---------------------------------------------------------------------------*)
 (* compressed version of ranged. Not used since it is hard for derivative    *)
 (* taker to do well with the nesting.                                        *)
 (*---------------------------------------------------------------------------*)
-(*
-fun ranged r i j =
+
+fun ranged_alt r i j =
  if j < i then EMPTY
  else Cat (replicate r i,replicate (Or [EPSILON,r]) (j-i))
-*)
+
+fun num2regexp n =
+ if 0 <= n andalso n <= 255
+   then Chset(charset_of[Char.chr n])
+ else raise ERR "num2regexp" "";
+
+val zero_regexp = num2regexp 0;
 
 (*---------------------------------------------------------------------------*)
-(* Character sets represented as (256-bit) bigints.                          *)
-(*---------------------------------------------------------------------------*)
-(*
-type charset = IntInf.int;
-
-val charset_empty = WordOps.allzero;
-
-val powers =
-  Vector.fromList (map (curry IntInf.pow 2) (upto 0 (alphabet_size-1)));
-
-fun setbit n w = IntInf.orb(Vector.sub(powers,n),w);
-
-fun charset_insert ch cset = setbit (Char.ord ch) cset;
-
-fun charset_of clist = itlist charset_insert clist charset_empty;
-
-fun charset_sing c = charset_of [c]
-
-val charset_full = charset_of (map Char.chr (upto 0 (alphabet_size-1)))
-
-val charset_mem =
- let open IntInf
- in fn c => fn (cs:charset) =>
-    not (andb(cs,Vector.sub(powers, Char.ord c)) = 0)
- end;
-
-fun charset_elts cs = filter (C charset_mem cs) alphabet;
-
-fun charset_union cs1 cs2 = IntInf.orb(cs1,cs2);
-
-fun charset_diff cs1 cs2 = IntInf.andb(cs1,IntInf.notb cs2)
-
-(*---------------------------------------------------------------------------*)
-(* charset_compare assumes argument vectors are of equal length              *)
+(* Contiguous char lists.                                                    *)
 (*---------------------------------------------------------------------------*)
 
-val charset_compare = IntInf.compare;
-*)
+fun interval_charset b t = Chset(charset_of (map Char.chr (upto b t)))
 
 (*---------------------------------------------------------------------------*)
 (* Prettyprinting                                                            *)
@@ -295,6 +262,10 @@ val _ = PolyML.addPrettyPrinter (fn d => fn _ => fn r => pp_regexp r);
 
 val print_regexp = Portable.pprint pp_regexp;
 fun println_regexp r = (print_regexp r; print "\n");
+
+(*---------------------------------------------------------------------------*)
+(* regexp comparison                                                         *)
+(*---------------------------------------------------------------------------*)
 
 fun list_cmp cmp pair =
  case pair
@@ -897,72 +868,11 @@ fun quote_to_tree input =
 (* Support for numeric intervals                                             *)
 (*===========================================================================*)
 
-val num2byte = Word8.fromInt;
-val byte2num = Word8.toInt;
-val byte2char = Char.chr o Word8.toInt;
-val char2byte = num2byte o Char.ord;
-
-val byte2charset = num2chset o byte2num;
-
-(*---------------------------------------------------------------------------*)
-(* Contiguous char lists.                                                    *)
-(*---------------------------------------------------------------------------*)
-
-fun interval_charset b t = Chset(charset_of (map Char.chr (upto b t)))
-
-fun nat_span n = if 0 <= n andalso n <= 255 then interval_charset 0 n else EMPTY;
-fun neg_span i = if 0 <= i andalso i <= 255 then interval_charset i 255 else EMPTY;
-
-(*---------------------------------------------------------------------------*)
-(* Treats list as being in LSB order, and partitions it into a suffix block  *)
-(* of zeros and a prefix block of non-zero numbers. We make a redundant      *)
-(* check that the list is non-empty. If it happens that the prefix is empty  *)
-(* that means that the input list was all zeroes, so we set the nums to [0]. *)
-(*---------------------------------------------------------------------------*)
-
-val lsb_split =
- let fun R [] = ([],[])
-       | R (h::t) =
-         case R t
-          of ([],Z) => if h=0 then ([],0::Z) else ([h],Z)
-           | (N,Z) => (h::N,Z)
- in fn list =>
-    if null list then raise ERR "lsb_split" ""
-    else case R list
-          of ([],z::t) => ([z],t)
-           | other => other
- end;
-
-fun msb_split list =
- if null list then raise ERR "msb_split" "empty list"
- else
-   let fun split [] = ([],[])
-         | split (0::t) = (cons 0 ## I) (split t)
-         | split list = ([],list)
-  in case split list
-      of (z::t,[]) => (t,[z])
-       | other => other
-  end;
-
-(*---------------------------------------------------------------------------*)
-(* Regexp for the interval {n | 0 <= lo <= n <= hi}.                         *)
-(*---------------------------------------------------------------------------*)
-
-fun fill list x width = list @ copy x (width - length list);
-
-fun optlist NONE = []
-  | optlist (SOME x) = [x];
- 
 fun n2l (n:IntInf.int) = 
   if n <= 0 then [] else IntInf.toInt(n mod 256)::n2l (n div 256)
 
-fun num2regexp dir w n = 
- let val bytes = fill (n2l n) 0 w
-     val bytes' = if dir = LSB then bytes else rev bytes
- in catlist (map num2chset bytes')
- end;
-
-fun span i j = interval_charset (IntInf.toInt i) (IntInf.toInt j)
+fun l2n [] = 0
+  | l2n (h::t) = h + 256 * l2n t;
 
 val n256 = IntInf.fromInt 256;
 fun log256 n = IntInf.log2 n div 8;
@@ -970,240 +880,115 @@ fun exp256 n = IntInf.pow(n256,n);
 
 fun byte_width n = if n = 0 then 1 else 1 + log256 n;
 
-val lo = IntInf.fromInt 117;
-val hi = IntInf.fromInt 2356;
-val width = byte_width hi;
+(*---------------------------------------------------------------------------*)
+(* Regexp for the interval {n | 0 <= lo <= n <= hi}.                         *)
+(*---------------------------------------------------------------------------*)
 
-fun ivl (lo,hi)  =
- if hi < 256
-    then span lo hi
- else
- let val loE = log256 lo handle Domain => 0
-     val hiE = log256 hi
- in
-    if loE < hiE
-    then let val loceiling = exp256(loE+1)
-             val k = exp256 hiE
-             val hiq = hi div k
-             val hir = hi mod k
-             val hifloor = k * hiq
-          val hiqregexp = num2chset (IntInf.toInt hiq)
-      in 
-        Or [ivl (lo,loceiling - 1), 
-            ivl (loceiling,hifloor-1), 
-            Cat(hiqregexp, ivl(0,hir))]
-      end
- else (* loE = hiE and 0 < loE *)
-   if lo = hi
-   then num2regexp LSB width lo
-   else
-   let val k = exp256 loE  (* lo = k * loq + lor ; hi = k * hiq + hir *)
-       val loq = lo div k
-       val lor = lo mod k
-       val hiq = hi div k
-       val hir = hi mod k
-       val loqregexp = num2chset (IntInf.toInt loq)
-       val hiqregexp = num2chset (IntInf.toInt hiq)
-      (* The possible cases: (1) lor=0 (so ivl1 and ivl2 can be merged); 
-         (2) hir=255 (so ivl2 and ivl3 can be merged). These are independent, 
-         giving 4 cases to consider.
-      *)
-   in case (lor=0,hir=255)
-       of (true,true) => catlist (span loq hiq :: dots loE)
-        | (true,false) => Or[catlist (span loq (hiq-1) :: dots loE),
-                             Cat(hiqregexp,ivl (0,hir))]
-        | (false,true) => Or [Cat(loqregexp,ivl (lor,k-1)),
-                              catlist (span (loq+1) hiq :: dots loE)]
-        | (false,false) => Or [Cat(loqregexp,ivl (lor,k-1)),
-                               catlist (span loq (hiq-1) :: dots loE),
-                               Cat(hiqregexp,ivl (0,hir))]
-   end
- end;
-
-fun ivli i j = ivl (IntInf.fromInt i,IntInf.fromInt j)
-
-(*
-val lobytes = n2l lo
-     val hibytes = n2l hi
-     val lobytes' = extend (0:int) lobytes width
-     val hibytes' = extend (0:int) hibytes width
+fun num_interval lo hi width dir =
+ let val _ = if width < byte_width hi orelse hi < lo 
+              then raise ERR "num_interval" "malformed input" else ()
+     val lorep = rev(padR (n2l lo) 0 width)
+     val hirep = rev(padR (n2l hi) 0 width)
+     fun finalize LoL = 
+         case dir
+	  of LSB => rev (map catlist LoL)
+	   | MSB => rev (map (catlist o rev) LoL)
+     fun mk_ivls [] acc = mk_or (finalize acc)
+       | mk_ivls ((prefix,[],[])::t) acc = raise ERR "num_interval" "empty lists"
+       | mk_ivls ((prefix,[r1],[r2])::t) acc =
+	        mk_ivls t ((interval_charset r1 r2::prefix)::acc)
+       | mk_ivls ((prefix,q1::r1,q2::r2)::t) acc = 
+          if q1=q2 then
+             mk_ivls ((num2regexp q1::prefix,r1,r2)::t) acc
+          else (* have q1 < q2 *)
+          if Lib.all (equal 0) r1 andalso Lib.all (equal 255) r2 then
+             let val thing = dots (length r1) @ (interval_charset q1 q2 :: prefix)
+             in mk_ivls t (thing::acc)
+             end
+          else 
+          if q1=0 then  (* fill up to e2 slot *)
+             let val w = 1 + length r1
+                 val ceil = padR [1] 0 w
+                 val preceil = padR [255] 255 (w-1)
+                 val thing1 = (num2regexp 0::prefix,r1,preceil)
+                 val thing2 = (prefix,ceil,q2::r2)
+(*       following needs more thought to be better than current version
+         val thing1 = (prefix,q1::r1,padR [q2-1] 255 w)
+         val thing2 = (prefix,padR [q2] 0 w,q2::r2)
 *)
-
-(*
-fun num_interval lo hi width =
- let val univ = twoE (width * 8)
+	     in
+                mk_ivls (thing1::thing2::t) acc
+             end
+          else 
+          let val w = 1 + length r1
+          in case (Lib.all (equal 0) r1,Lib.all (equal 255) r2)
+              of (true,true)  => raise ERR "mk_ivls" "inaccessible"
+               | (true,false) => 
+                   let val thing1 = (prefix,q1::r1,padR [q2-1] 255 w)
+                       val thing2 = (prefix,padR [q2] 0 w,q2::r2)
+                   in mk_ivls (thing1::thing2::t) acc
+                   end
+               | (false,true) =>
+                   let val thing1 = (prefix,q1::r1,padR [q1] 255 w)
+                       val thing2 = (prefix,padR [q1+1] 0 w,q2::r2)
+                   in mk_ivls (thing1::thing2::t) acc
+                   end
+               | (false,false) =>
+                   let val thing1 = (prefix,q1::r1,padR [q1] 255 w)
+                       val thing2 = 
+                          if (q1 + 1 < q2)
+                           then [(prefix,padR [q1+1] 0 w,padR [q2-1] 255 w)]
+                           else []
+                       val thing3 = (prefix,padR [q2] 0 w,q2::r2)
+                   in 
+                     mk_ivls ([thing1] @ thing2 @ [thing3] @ t) acc
+                   end
+	  end
+       | mk_ivls other wise = raise ERR "num_interval" "lists of different length"
  in 
-   if lo < 0 orelse lo > hi orelse univ < hi
-   then raise ERR "match_ivl" "bad inputs"
-   else let val (q,r) = (lo div 256,lo mod 256)
-	    val (q',r') = (hi div 256, hi mod 256)
-	    val stem = map (num2chset o IntInf.toInt) (n2l q)
-            val (prefix,suffix) = 
-              if q = q'
-	       then ([span r r'],[])
-              else ([span (256 - r) 255], [span 0 r'])
-            val qdist = q' - (q + 1)
-            val dotlen = if qdist <= 0 then 0 else IntInf.log2 qdist mod 8
-            val cslen = length stem + length prefix + dotlen + length suffix
-	    val padlen = width - cslen
-	in 
-	  catlist (stem @ prefix @ dots dotlen @ suffix @ zeros padlen)
-	end
- end;
+   mk_ivls [([]:regexp list,lorep,hirep)] []
+ end
 
-fun ivlr i j w = num_interval (IntInf.fromInt i) (IntInf.fromInt j) w;
-
-ivlr (65536 - 180) 65535 2;
-ivlr (65536 - 180) 65535 3;
-
-ivlr 0 180 2;
-
-ivlr 0 180000 3;
-*)
-
-(*---------------------------------------------------------------------------*)
-(* To match the numbers from 0 to j, represented in n bytes, we first        *)
-(* convert j into base 256, least-significant-byte first, so                 *)
-(*                                                                           *)
-(*   j = [k_1, ..., k_j, 0,...,0]                                            *)
-(*                                                                           *)
-(* where the trailing zeros are positions needed to bridge between the given *)
-(* width n and the number of bytes needed to express the numbers from 0 to j *)
-(*                                                                           *)
-(* Then the regexp we are after is r1 + r2 where                             *)
-(*                                                                           *)
-(*   r1 = [0-k_1]...[0-k_(n-1)][k_n]zeros                                    *)
-(*                                                                           *)
-(* and                                                                       *)
-(*                                                                           *)
-(*   r2 = ...[0 - (k_n - 1)]zeros      ; n-1 dots (dot means any char)       *)
-(*                                                                           *)
-(*---------------------------------------------------------------------------*)
-
-val lsb_match_upto =
- let val _ = if alphabet_size <> 256
-        then raise ERR "lsb_match_upto" "alphabet_size != 256"
-        else ()
-     fun list2regexp [] = raise ERR "list2regexp" "null list"
-       | list2regexp [x] = nat_span x
-       | list2regexp (h::t) =
-         let val hpreds = catlist (dots (length t) @ [nat_span (h-1)])
-             val hfixed = Cat(list2regexp t,num2chset h)
-         in Or[hpreds, hfixed]
-         end
- in fn j => fn width =>
-    let val rep_256 = map byte2num (bytes_of j width)
-    in case lsb_split rep_256
-        of ([],_) => raise ERR "lsb_match_upto" "unreachable"
-         | (numbers,zeros) =>
-            catlist (list2regexp (rev numbers)
-            :: List.map (K zero_chset) zeros)
-    end
- end;
 
 (*
-val lo = IntInf.fromInt 117;
-val hi = IntInf.fromInt 2356;
-
-fun ivl lo hi width =
- if lo = 0 then 
-    lsb_match_upto hi width else 
- let val crumb = 256 - lo mod 256
-     val prefix = span crumb 255
- in Or [prefix, lsb_match_upto (hi - crumb) width]
- end;
+fun Ninterval lo hi = 
+  num_interval (IntInf.fromInt lo) 
+               (IntInf.fromInt hi) 
+               (byte_width (IntInf.fromInt hi))
+               MSB;
+Ninterval 38 23567900;
+Ninterval 67537 81005;
+Ninterval 0 4611686018427387903;  (* Int63.maxInt *)
 *)
-
-val msb_match_upto =
- let val _ = if alphabet_size <> 256
-        then raise ERR "msb_match_upto" "alphabet_size != 256"
-        else ()
-     fun list2regexp [] = raise ERR "msb_match_upto" "list2regexp: null list"
-       | list2regexp [x] = nat_span x
-       | list2regexp (h::t) =
-         let val hpreds = catlist (nat_span (h-1) :: dots (length t))
-             val hfixed = Cat(num2chset h,list2regexp t)
-         in Or[hpreds, hfixed]
-         end
- in fn j => fn width =>
-    let val rep_256 = map byte2num (bytes_of j width)
-    in case msb_split rep_256
-        of ([],_) => raise ERR "msb_match_upto" "unreachable"
-         | (zeros,numbers) =>
-            catlist (List.map (K zero_chset) zeros @ [list2regexp numbers])
-    end
- end;
-
-val lsb_sing =
- let val _ = if alphabet_size <> 256
-             then raise ERR "lsb_sing" "alphabet_size != 256"
-             else ()
- in fn i => fn width =>
-    let val rep_256 = bytes_of i width
-    in catlist (List.map (num2chset o byte2num) rep_256)
-    end
- end;
-
-val msb_sing =
- let val _ = if alphabet_size <> 256
-             then raise ERR "msb_sing" "alphabet_size != 256"
-             else ()
- in fn i => fn width =>
-    let val rep_256 = map (num2chset o byte2num) (bytes_of i width)
-    in catlist (rev rep_256)
-    end
- end;
-
-fun match_upto LSB = lsb_match_upto
-  | match_upto MSB = msb_match_upto;
-
-(*---------------------------------------------------------------------------*)
-(* Lang (regexp_interval i j) = {x | i <= to_num x <= j}                     *)
-(*---------------------------------------------------------------------------*)
 
 fun twoE i = IntInf.pow (IntInf.fromInt 2,i);
 
-fun regexp_interval lo hi order =
+fun interval_regexp lo hi dir =
  if lo > hi
-     then raise ERR "regexp_interval" "trivial interval"
+     then raise ERR "interval_regexp" "trivial interval"
  else
  if 0 <= lo andalso 0 <= hi then
-    let val width = unsigned_width_256 hi
-    in if lo = 0 then
-          match_upto order hi width
-       else
-          Diff (match_upto order hi width, match_upto order (lo-1) width)
-    end
+    num_interval lo hi (byte_width hi) dir
  else
  if lo < 0 andalso hi >= 0 then
      let val width = Int.max(signed_width_256 lo, signed_width_256 hi)
          val top = twoE (width * 8)
-	 val lo' = top + lo
-     in 
-        if hi + 1 = lo'  (* adjacent intervals *)
+     in if hi + 1 = top + lo  (* contiguous *)
         then catlist (dots width)
-        else Or [match_upto order hi width,
-                 Diff (match_upto order (top-1) width,
-                       match_upto order (lo' - 1) width)]
+        else 
+         Or [num_interval (top + lo) (top-1) width dir, 
+             num_interval 0 hi width dir]
      end
   else
   if lo < 0 andalso hi < 0 then
   let val width = signed_width_256 lo
       val top = twoE (width * 8)
-      val lo' = top + lo
-      val hi' = top + hi
 
-  in Diff (match_upto order hi' width,match_upto order (lo'-1) width)
+  in num_interval (top+lo) (top+hi) width dir
   end
-  else raise ERR "regexp_interval" "unexpected values for lo and hi"
+  else raise ERR "interval_regexp" "unexpected values for lo and hi"
 
-fun sing_interval i order =
- let val width = if i < 0 then signed_width_256 i else unsigned_width_256 i
- in
-   case order
-    of LSB => lsb_sing i width
-     | MSB => msb_sing i width
- end;
+fun sing_interval i dir = interval_regexp i i dir
 
 
 (* Interval approach
@@ -1235,6 +1020,13 @@ fun packed_intervals lists width order =
    Or (map interval2regexp intervals)
  end
 *)
+
+val num2byte = Word8.fromInt;
+val byte2num = Word8.toInt;
+val byte2char = Char.chr o Word8.toInt;
+val char2byte = num2byte o Char.ord;
+
+val byte2charset = num2regexp o byte2num;
 
 fun dest_chset (Chset cs) = cs
   | dest_chset other = raise ERR "dest_chset" "";
@@ -1436,7 +1228,7 @@ fun tree_to_regexp tree =
      in Cat(replicate r i, Star r)
      end
    | Range (t,NONE,NONE) => Star (tree_to_regexp t)
-   | Interval(i,j,dir) => regexp_interval i j dir
+   | Interval(i,j,dir) => interval_regexp i j dir
    | Const (k,dir) => sing_interval k dir
    | Pack list => pack_intervals list
    | Ap("dot",[]) => DOT
