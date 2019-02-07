@@ -11,18 +11,18 @@ open GraphLangTheory
 val code_case_of = TRUTH (* TypeBase.case_def_of ``:code`` *);
 
 val emp_pat = ``emp:'a set set``
-val s_var = mk_var("s",``:32 state``)
+fun s_var() = mk_var("s",``:^(tysize ()) state``)
 
 fun get_pc_pat () = let
   val (_,_,_,pc) = get_tools ()
   in ``^pc w`` end
 
 local
-  val var_bool_pat = ``var_bool n s``
-  val var_nat_pat = ``var_nat n s``
-  val var_word8_pat = ``var_word8 n s``
-  val var_word_pat = ``var_word n s``
-  val var_mem_pat = ``var_mem n s``
+  val var_bool_pat = ``var_bool n (s:string -> 'a variable)``
+  val var_nat_pat = ``var_nat n (s:string -> 'a variable)``
+  val var_word8_pat = ``var_word8 n (s:string -> 'a variable)``
+  val var_word_pat = ``var_word n (s:string -> 'a variable)``
+  val var_mem_pat = ``var_mem n (s:string -> 'a variable)``
 in
   fun var_lookup tm =
     can (match_term var_bool_pat) tm orelse
@@ -30,26 +30,35 @@ in
     can (match_term var_word8_pat) tm orelse
     can (match_term var_word_pat) tm orelse
     can (match_term var_mem_pat) tm
-  fun mk_update (x,y) =
+  fun mk_update (x,y) = let
+    val ty = tysize ()
+    val var_bool = mk_const("VarBool",``: bool -> ^ty variable``)
+    val var_nat = mk_const("VarNat",``: num -> ^ty variable``)
+    val var_word8 = mk_const("VarWord8",``: word8 -> ^ty variable``)
+    val var_word = mk_const("VarWord",``: ^ty word -> ^ty variable``)
+    val var_mem = mk_const("VarMem",``: (^ty word -> word8) -> ^ty variable``)
+    in
     if can (match_term var_bool_pat) x then
       pairSyntax.mk_pair(x |> rator |> rand,
-      mk_abs(s_var,mk_comb(``VarBool: bool -> 32 variable``,y)))
+      mk_abs(s_var(),mk_comb(var_bool,y)))
     else if can (match_term var_nat_pat) x then
       pairSyntax.mk_pair(x |> rator |> rand,
-      mk_abs(s_var,mk_comb(``VarNat: num -> 32 variable``,y)))
+      mk_abs(s_var(),mk_comb(var_nat,y)))
     else if can (match_term var_word8_pat) x then
       pairSyntax.mk_pair(x |> rator |> rand,
-      mk_abs(s_var,mk_comb(``VarWord8: word8 -> 32 variable``,y)))
+      mk_abs(s_var(),mk_comb(var_word8,y)))
     else if can (match_term var_word_pat) x then
       pairSyntax.mk_pair(x |> rator |> rand,
-      mk_abs(s_var,mk_comb(``VarWord: word32 -> 32 variable``,y)))
+      mk_abs(s_var(),mk_comb(var_word,y)))
     else if can (match_term var_mem_pat) x then
       pairSyntax.mk_pair(x |> rator |> rand,
-      mk_abs(s_var,mk_comb(``VarMem: (32 word -> word8) -> 32 variable``,y)))
-    else failwith "should not happen (mk_update)"
+      mk_abs(s_var(),mk_comb(var_mem,y)))
+    else failwith "should not happen (mk_update)" end
 end
 
 local
+  val s32 = mk_var("s",``:string -> 32 variable``)
+  val s64 = mk_var("s",``:string -> 64 variable``)
   val arm_state_inst = arm_STATE_thm |> concl |> find_terms var_lookup
           |> map (fn tm =>
             let
@@ -57,11 +66,11 @@ local
               val ty = type_of tm
             in mk_var(str,ty) |-> tm end)
           |> (fn x => (``dmem:word32 set`` |->
-                       ``(var_dom "dom" ^s_var):word32 set``)::
+                       ``(var_dom "dom" ^s32):word32 set``)::
                       (``dom_stack:word32 set`` |->
-                       ``(var_dom "dom_stack" ^s_var):word32 set``)::
+                       ``(var_dom "dom_stack" ^s32):word32 set``)::
                       (``mode:word5`` |->
-                       ``w2w (var_word8 "mode" ^s_var):word5``)::x) |> INST
+                       ``w2w (var_word8 "mode" ^s32):word5``)::x) |> INST
   val arm_state = arm_STATE_thm |> concl |> rator |> rand
   val arm_state_parts = arm_STATE_thm |> concl |> rand |> list_dest dest_star
   val arm_state_type = arm_state_parts |> hd |> type_of
@@ -74,11 +83,11 @@ local
               val ty = type_of tm
             in mk_var(str,ty) |-> tm end)
           |> (fn x => (``dmem:word32 set`` |->
-                       ``(var_dom "dom" ^s_var):word32 set``)::
+                       ``(var_dom "dom" ^s32):word32 set``)::
                       (``dom_stack:word32 set`` |->
-                       ``(var_dom "dom_stack" ^s_var):word32 set``)::
+                       ``(var_dom "dom_stack" ^s32):word32 set``)::
                       (mk_var("count",``:num``) |->
-                       ``(var_nat "clock" ^s_var):num``)::
+                       ``(var_nat "clock" ^s32):num``)::
                       (``mode:Mode`` |->
                        ``Mode_Thread:Mode``)::x) |> INST
   val m0_state = m0_STATE_thm |> concl |> rator |> rand
@@ -86,6 +95,21 @@ local
   val m0_state_type = m0_state_parts |> hd |> type_of
   val m0_state_combs = map (fn tm => (rator tm,rand tm)) m0_state_parts
   val m0_state_thm = m0_STATE_thm
+  val riscv_state_inst = riscv_STATE_thm |> concl |> find_terms var_lookup
+          |> map (fn tm =>
+            let
+              val str = tm |> rator |> rand |> stringSyntax.fromHOLstring
+              val ty = type_of tm
+            in mk_var(str,ty) |-> tm end)
+          |> (fn x => (``dmem:word64 set`` |->
+                       ``(var_dom "dom" ^s64):word64 set``)::
+                      (``dom_stack:word64 set`` |->
+                       ``(var_dom "dom_stack" ^s64):word64 set``)::x) |> INST
+  val riscv_state = riscv_STATE_thm |> concl |> rator |> rand
+  val riscv_state_parts = riscv_STATE_thm |> concl |> rand |> list_dest dest_star
+  val riscv_state_type = riscv_state_parts |> hd |> type_of
+  val riscv_state_combs = map (fn tm => (rator tm,rand tm)) riscv_state_parts
+  val riscv_state_thm = riscv_STATE_thm
 in
   fun state_tools () =
     case (!arch_name) of
@@ -93,7 +117,8 @@ in
               arm_state_type, arm_state_combs, arm_state_thm)
     | M0 => (m0_state_inst, m0_state, m0_state_parts, m0_state_type,
              m0_state_combs, m0_state_thm)
-    | RISCV => failwith "state_tools RISCV"
+    | RISCV => (riscv_state_inst, riscv_state, riscv_state_parts, riscv_state_type,
+                riscv_state_combs, riscv_state_thm)
 end
 
 val STATE_INTRO_RULE_input = ref TRUTH
@@ -120,6 +145,7 @@ fun STATE_INTRO_RULE th = let
   val conv = PURE_REWRITE_CONV [state_thm,emp_STAR] THENC
              BINOP_CONV STAR_AC_CONV THENC REWRITE_CONV []
   val lemma = auto_conv_prove "STATE_INTRO_RULE - 1" goal conv
+
   val th = th |> CONV_RULE (PRE_CONV (REWR_CONV lemma))
   (* make post into just state *)
   val th = PURE_REWRITE_RULE [STAR_IF] th
@@ -145,10 +171,11 @@ fun STATE_INTRO_RULE th = let
         in xs end
     val qs = ps |> map find_all_matches |> flatten
                 |> filter (fn (x,y) => x <> y) |> all_distinct
+    val ty = tysize ()
     val new_s = listSyntax.mk_list(
                   foldl (fn ((x,y),s) => mk_update(x,y)::s) [] qs,
-                  ``:string # (32 state -> 32 variable)``)
-    val new_s = ``apply_update ^new_s ^s_var``
+                  ``:string # (^ty state -> ^ty variable)``)
+    val new_s = ``apply_update ^new_s ^(s_var())``
     val goal = mk_eq(post,mk_star(mk_comb(rator state,new_s),pc))
     val conv = (REWRITE_CONV [state_thm,var_update_thm,
                   apply_update_def,
@@ -201,7 +228,7 @@ local
     handle HOL_ERR _ => let
     val tm = find_term (can (match_term ``("pc" =+ pat)``)) (concl th)
     val x = ``var_word "ret" s``
-    val assum = mk_eq(tm |> rand,``^s_var "ret"``)
+    val assum = mk_eq(tm |> rand,``^(s_var()) "ret"``)
     val rw = RAND_CONV (fn tm => ASSUME assum) tm
     val th = RW1 [rw] th
     in (``Return``,th) end
@@ -233,16 +260,21 @@ local
       val res = EVAL ``(^u s = VarWord (^pc1+4w)) \/ (^u s = VarWord (^pc1+2w))``
         |> concl |> rand
       in if res = T then
-           (false,mk_comb(``Jump``,u |> dest_abs |> snd |> rand))
-         else (true,``Return``) end handle HOL_ERR _ => (true,``Return``)
+           (false,mk_comb(mk_const("Jump",``:^(tysize()) word -> ^(tysize()) jump``),
+                          u |> dest_abs |> snd |> rand))
+         else (true,mk_const("Return",``:^(tysize()) jump``)) end
+         handle HOL_ERR _ => (true,mk_const("Return",``:^(tysize()) jump``))
+    val var_acc_ty = ``:string -> (string -> ^(tysize()) variable) -> ^(tysize()) variable``
+    val var_acc = mk_const ("var_acc",var_acc_ty)
     fun get_assign tm =
-      if tm = r0_input_str then
-        pairSyntax.mk_pair(r0_input_str,``var_acc ^r0``)
+      if tm = r0_input_str then let
+        val var_acc_r0 = mk_comb(var_acc,r0)
+        in pairSyntax.mk_pair(r0_input_str,var_acc_r0) end
       else let
         val tm2 = if is_tail_call then tm else
                   if tm = ret_str then r14 else tm
         val rhs = first (fn (t,x) => (t = tm2)) supdate |> snd
-                  handle HOL_ERR _ => ``var_acc ^tm``
+                  handle HOL_ERR _ => mk_comb(var_acc,tm)
         in pairSyntax.mk_pair(tm,rhs) end
     val new_supdate = map get_assign ret_and_all_names
     val new_supdate = listSyntax.mk_list(new_supdate,type_of (hd new_supdate))
@@ -251,6 +283,7 @@ local
     val lemma = auto_prove "prepare_supdate_for_call" (goal,
       TRY (MATCH_MP_TAC arm_STATE_all_names)
       \\ TRY (MATCH_MP_TAC m0_STATE_all_names)
+      \\ TRY (MATCH_MP_TAC riscv_STATE_all_names)
       \\ REWRITE_TAC [all_names_def,EVERY_DEF,apply_update_def,
            combinTheory.APPLY_UPDATE_THM,var_acc_def]
       \\ CONV_TAC (DEPTH_CONV BETA_CONV)
@@ -274,8 +307,9 @@ local
     val pc2 = post |> rand |> rand
     val supdate = post |> rator |> rand |> rand |> rator |> rand
     val hs = filter (fn tm => tm <> T) (hyp th)
-    val side = if length hs = 0 then ``NONE:(state->bool) option``
-               else ``SOME ^(mk_abs(s_var,list_mk_conj hs))``
+    val side = if length hs = 0
+               then mk_const("NONE",``:(^(tysize())state->bool) option``)
+               else ``SOME ^(mk_abs(s_var(),list_mk_conj hs))``
     val (th,ret) = prepare_supdate_for_call th
     val (_,pre,_,post) = dest_spec (concl th)
     val supdate = post |> rator |> rand |> rand |> rator |> rand
@@ -292,7 +326,8 @@ local
       \\ NTAC 20 (ONCE_REWRITE_TAC [var_word_apply_update])
       \\ CONV_TAC (DEPTH_CONV stringLib.string_EQ_CONV)
       \\ ASM_REWRITE_TAC [apply_update_NIL]
-      \\ SIMP_TAC std_ss [next_ok_def,check_ret_def]
+      \\ SIMP_TAC std_ss [next_ok_def,check_ret_def,
+                          ARM_def,M0_def,RISCV_def,LET_THM]
       \\ TRY (REWRITE_TAC [ret_and_all_names_def,all_names_def,MAP,APPEND]
         \\ REWRITE_TAC [all_names_def,EVERY_DEF,apply_update_def,
              combinTheory.APPLY_UPDATE_THM,var_acc_def,var_word_def]
@@ -315,13 +350,14 @@ local
     val pc1 = pre |> rand |> rand
     val pc2 = post |> rand |> rand
     val supdate = post |> rator |> rand |> rand |> rator |> rand
+    val ty = tysize ()
     val (jmp,th) = if wordsSyntax.is_n2w pc2 then (``Jump ^pc2``,th) else
-      (``Return: 32 jump``,let
-         val lemma = ASSUME (mk_eq(pc2,``var_word "ret" ^s_var``))
+      (mk_const("Return",``: ^ty jump``),let
+         val lemma = ASSUME (mk_eq(pc2,``var_word "ret" ^(s_var())``))
          in CONV_RULE (RAND_CONV (RAND_CONV (RAND_CONV (fn tm => lemma)))) th end)
     val hs = filter (fn tm => tm <> T) (hyp th)
-    val side = if length hs = 0 then ``NONE:(32 state->bool) option``
-               else ``SOME ^(mk_abs(s_var,list_mk_conj hs))``
+    val side = if length hs = 0 then mk_const("NONE",``:(^ty state->bool) option``)
+               else ``SOME ^(mk_abs(s_var(),list_mk_conj hs))``
     val i = ``Inst ^pc1 (K T) (ASM ^side ^supdate ^jmp)``
     val th = RW [apply_update_NIL] th
     val (m,_,c,_) = dest_spec (concl th)
@@ -353,7 +389,7 @@ local
       th |> DISCH_ALL |> DISCH T |> PURE_REWRITE_RULE [AND_IMP_INTRO]
          |> CONV_RULE ((RATOR_CONV o RAND_CONV) (REWRITE_CONV []))
          |> concl |> dest_imp |> fst
-    val pre = mk_abs(s_var,pre)
+    val pre = mk_abs(s_var(),pre)
     fun get_simp_asm x1 = let
       val upd = x1 |> rator |> rand |> rand |> rator |> rand
       val pc = x1 |> rand |> rand
@@ -399,7 +435,7 @@ in
         val c = (RAND_CONV o RATOR_CONV o RAND_CONV) (SIMP_CONV std_ss [])
         val th = MATCH_MP IMPL_INST_IF (CONJ th1 th2)
                  |> CONV_RULE (BINOP1_CONV (SIMP_CONV std_ss []))
-                 |> MATCH_MP T_IMP |> SPEC (mk_abs(s_var,guard))
+                 |> MATCH_MP T_IMP |> SPEC (mk_abs(s_var(),guard))
         val th = RW1 [IMPL_INST_SIMP_IF] th
                  |> SIMP_RULE std_ss [IMPL_INST_IF_RW]
         in write_transform th1' (SOME th2') th end
@@ -494,10 +530,18 @@ fun derive_insts_for sec_name = let
   in insts end;
 
 (*
+
+  val base_name = "loop-riscv/example"
+  val _ = read_files base_name []
+  val _ = open_current "test"
+  val sec_name = "memcpy"
+  val sec_name = "memzero"
+
   val base_name = "loop-m0/example"
   val _ = read_files base_name []
   val _ = open_current "test"
-  val sec_name = "g"
+  val sec_name = "f"
+
 *)
 
 end

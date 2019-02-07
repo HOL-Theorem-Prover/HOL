@@ -290,4 +290,12 @@ fun get_tools () =
   | M0    => m0_tools
   | RISCV => riscv_tools ;
 
+fun tysize () =
+  case !arch_name of
+    ARM   => ``:32``
+  | M0    => ``:32``
+  | RISCV => ``:64`` ;
+
+fun wsize () = ``:^(tysize ()) word``;
+
 end

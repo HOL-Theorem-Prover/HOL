@@ -68,6 +68,8 @@ fun get_loction_as_word sec_name = let
            |> Arbnumcore.fromHexString |> numSyntax.mk_numeral
   in ``n2w (^tm):word32`` end
 
+val sec_name = "f"
+
 fun func_decompile print_title sec_name = let
   val _ = (writer_prints := true)
   val _ = open_current sec_name
@@ -149,8 +151,9 @@ fun prove_funcs_ok names = let
   (* complete fs *)
   val fs = let
     val all = fs |> map (rand o concl)
-    val pat = ``locs (name:string) = SOME (w:word32)``
-    fun f tm = subst (fst (match_term pat tm)) ``Func name w []``
+    val w_var = mk_var("w",wsize ())
+    val pat = ``locs (name:string) = SOME ^w_var``
+    fun f tm = subst (fst (match_term pat tm)) ``Func name ^w_var []``
     val extra = graph_specsLib.try_map (fn x => x) f (flatten (map hyp fs))
     val all_rator = map rator all
     val extra = filter (fn ex => not (mem (rator ex) all_rator)) extra
@@ -224,10 +227,17 @@ fun prove_funcs_ok names = let
 
 (*
 
-  val base_name = "loop-m0/example"
+  val base_name = "loop-riscv/example"
+  val _ = read_files base_name []
+  val _ = open_current "test"
+  val sec_name = "memcpy"
+  val sec_name = "memzero"
+  val names = section_names()
+
   val base_name = "kernel-gcc-O1/kernel"
   val base_name = "loop/example"
-  val () = read_files base_name ["f"]
+  val base_name = "loop-m0/example"
+  val () = read_files base_name []
   val _ = (skip_proofs := true)
   val _ = (skip_proofs := false)
   val names = section_names()

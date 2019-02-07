@@ -290,9 +290,54 @@ val m0_STATE_thm = save_thm("m0_STATE_thm",
 
 (* representation in RISCV-V SPEC *)
 
+val riscv_STATE_REGS_def = Define `
+  riscv_STATE_REGS s =
+    riscv_REG 0w (var_word "r0" s) *
+    riscv_REG 1w (var_word "r1" s) *
+    riscv_REG 2w (var_word "r2" s) *
+    riscv_REG 3w (var_word "r3" s) *
+    riscv_REG 4w (var_word "r4" s) *
+    riscv_REG 5w (var_word "r5" s) *
+    riscv_REG 6w (var_word "r6" s) *
+    riscv_REG 7w (var_word "r7" s) *
+    riscv_REG 8w (var_word "r8" s) *
+    riscv_REG 9w (var_word "r9" s) *
+    riscv_REG 10w (var_word "r10" s) *
+    riscv_REG 11w (var_word "r11" s) *
+    riscv_REG 12w (var_word "r12" s) *
+    riscv_REG 13w (var_word "r13" s) *
+    riscv_REG 14w (var_word "r14" s) *
+    riscv_REG 15w (var_word "r15" s) *
+    riscv_REG 16w (var_word "r16" s) *
+    riscv_REG 17w (var_word "r17" s) *
+    riscv_REG 18w (var_word "r18" s) *
+    riscv_REG 19w (var_word "r19" s) *
+    riscv_REG 20w (var_word "r20" s) *
+    riscv_REG 21w (var_word "r21" s) *
+    riscv_REG 22w (var_word "r22" s) *
+    riscv_REG 23w (var_word "r23" s) *
+    riscv_REG 24w (var_word "r24" s) *
+    riscv_REG 25w (var_word "r25" s) *
+    riscv_REG 26w (var_word "r26" s) *
+    riscv_REG 27w (var_word "r27" s) *
+    riscv_REG 28w (var_word "r28" s) *
+    riscv_REG 29w (var_word "r29" s) *
+    riscv_REG 30w (var_word "r30" s) *
+    riscv_REG 31w (var_word "r31" s)`;
+
+val riscv_STACK_MEMORY_def = Define `
+  riscv_STACK_MEMORY = riscv_MEMORY`;
+
 val riscv_STATE_def = Define `
   riscv_STATE s =
-    riscv_REG 0w (var_word "r0" s)`
+    riscv_STATE_REGS s * ~riscv_RV64I *
+    riscv_MEMORY (var_dom "dom" s) (var_mem "mem" s) *
+    riscv_STACK_MEMORY (var_dom "dom_stack" s) (var_mem "stack" s)`;
+
+val riscv_STATE_thm = save_thm("riscv_STATE_thm",
+  riscv_STATE_def
+  |> REWRITE_RULE [riscv_STATE_REGS_def,STAR_ASSOC]
+  |> SPEC_ALL);
 
 (* misc *)
 
@@ -321,7 +366,9 @@ val var_update_thm = store_thm("var_update_thm",
 val all_names_def = Define `
   all_names =
     ["r0"; "r1"; "r2"; "r3"; "r4"; "r5"; "r6"; "r7"; "r8"; "r9";
-     "r10"; "r11"; "r12"; "r13"; "r14"; "mode"; "n"; "z"; "c"; "v";
+     "r10"; "r11"; "r12"; "r13"; "r14"; "r15"; "r16"; "r17"; "r18"; "r19";
+     "r20"; "r21"; "r22"; "r23"; "r24"; "r25"; "r26"; "r27"; "r28"; "r29";
+     "r30"; "r31"; "mode"; "n"; "z"; "c"; "v";
      "mem"; "dom"; "stack"; "dom_stack"; "clock"]`;
 
 val ret_and_all_names_def = Define `
@@ -509,6 +556,13 @@ val m0_STATE_all_names = store_thm("m0_STATE_all_names",
   ``EVERY (\n. s1 n = s2 n) all_names ==>
     (m0_STATE s1 = m0_STATE s2)``,
   SIMP_TAC std_ss [m0_STATE_thm,EVERY_DEF,all_names_def,
+    var_word8_def,var_dom_def,var_mem_def,var_nat_def,
+    var_word_def,STAR_ASSOC,var_acc_def,var_bool_def]);
+
+val riscv_STATE_all_names = store_thm("riscv_STATE_all_names",
+  ``EVERY (\n. s1 n = s2 n) all_names ==>
+    (riscv_STATE s1 = riscv_STATE s2)``,
+  SIMP_TAC std_ss [riscv_STATE_thm,EVERY_DEF,all_names_def,
     var_word8_def,var_dom_def,var_mem_def,var_nat_def,
     var_word_def,STAR_ASSOC,var_acc_def,var_bool_def]);
 
@@ -1513,11 +1567,21 @@ val word32_def = Define `
   (word32 (b1:word8) (b2:word8) (b3:word8) (b4:word8)) :word32 =
     b1 @@ b2 @@ b3 @@ b4`;
 
+val word64_def = Define `
+  (word64 (b1:word8) (b2:word8) (b3:word8) (b4:word8)
+          (b5:word8) (b6:word8) (b7:word8) (b8:word8)) :word64 =
+    b1 @@ b2 @@ b3 @@ b4 @@ b5 @@ b6 @@ b7 @@ b8`;
+
 val READ32_def = zDefine `
   READ32 a mem = word32 (mem (a + 3w)) (mem (a + 2w)) (mem (a + 1w)) (mem a)`;
 
+val READ64_def = zDefine `
+  READ64 a mem =
+    word64 (mem (a + 7w)) (mem (a + 6w)) (mem (a + 5w)) (mem (a + 4w))
+           (mem (a + 3w)) (mem (a + 2w)) (mem (a + 1w)) (mem a)`;
+
 val READ8_def = zDefine `
-  READ8 a mem = (mem:word32 -> word8) a`;
+  READ8 a mem = (mem:'a word -> word8) a`;
 
 val WRITE32_def = zDefine `
   WRITE32 (a:word32) (w:word32) (mem:word32->word8) =
@@ -1526,8 +1590,19 @@ val WRITE32_def = zDefine `
                    ((a + 2w =+ w2w (w >>> 16))
                    ((a + 3w =+ w2w (w >>> 24)) mem)))`;
 
+val WRITE64_def = zDefine `
+  WRITE64 (a:word64) (w:word64) (mem:word64->word8) =
+                    (a =+ w2w w)
+                   ((a + 1w =+ w2w (w >>> 8))
+                   ((a + 2w =+ w2w (w >>> 16))
+                   ((a + 3w =+ w2w (w >>> 24))
+                   ((a + 4w =+ w2w (w >>> 32))
+                   ((a + 5w =+ w2w (w >>> 40))
+                   ((a + 6w =+ w2w (w >>> 48))
+                   ((a + 7w =+ w2w (w >>> 56)) mem)))))))`;
+
 val WRITE8_def = zDefine `
-  WRITE8 (a:word32) (w:word8) (mem:word32->word8) = (a =+ w) mem`;
+  WRITE8 (a:'a word) (w:word8) (mem:'a word->word8) = (a =+ w) mem`;
 
 val func_name_def = Define `
   func_name (Func name entry l) = name`;
@@ -1731,16 +1806,22 @@ val word_add_with_carry_def = zDefine `
 (* graph format helpers *)
 
 val MemAcc8_def = Define `
-  MemAcc8 m a = READ8 a (m:word32->word8)`;
+  MemAcc8 m a = READ8 a m`;
 
 val MemAcc32_def = Define `
   MemAcc32 m a = READ32 a (m:word32->word8)`;
 
+val MemAcc64_def = Define `
+  MemAcc64 m a = READ64 a (m:word64->word8)`;
+
 val MemUpdate8_def = Define `
-  MemUpdate8 m a w = WRITE8 a w (m:word32->word8)`;
+  MemUpdate8 m a w = WRITE8 a w m`;
 
 val MemUpdate32_def = Define `
   MemUpdate32 m a w = WRITE32 a w (m:word32->word8)`;
+
+val MemUpdate64_def = Define `
+  MemUpdate64 m a w = WRITE64 a w (m:word64->word8)`;
 
 val ShiftLeft_def = Define `
   ShiftLeft (w:'a word) (y:'a word) = word_lsl w (w2n y)`;
@@ -1905,7 +1986,13 @@ val rw3 = prove(
   \\ `n' < 4294967296` by DECIDE_TAC \\ fs []);
 
 val fix_align = blastLib.BBLAST_PROVE
-  ``(((31 '' 2) w = w:word32) <=> (w && 1w = 0w) /\ (w && 2w = 0w)) /\
+  ``(((63 '' 3) v = v:word64) <=> (v && 7w = 0w)) /\
+    ((v = ((63 '' 3) v):word64) <=> (v && 7w = 0w)) /\
+    (((63 '' 2) v = v:word64) <=> (v && 3w = 0w)) /\
+    ((v = ((63 '' 2) v):word64) <=> (v && 3w = 0w)) /\
+    (((63 '' 1) v = v:word64) <=> (v && 1w = 0w)) /\
+    ((v = ((63 '' 1) v):word64) <=> (v && 1w = 0w)) /\
+    (((31 '' 2) w = w:word32) <=> (w && 1w = 0w) /\ (w && 2w = 0w)) /\
     ((w = (31 '' 2) w:word32) <=> (w && 1w = 0w) /\ (w && 2w = 0w)) /\
     (((31 '' 1) w = w:word32) <=> (w && 1w = 0w)) /\
     ((w = (31 '' 1) w:word32) <=> (w && 1w = 0w)) /\
@@ -1932,8 +2019,9 @@ val blast_append_0_lemma = prove(
   blastLib.BBLAST_TAC);
 
 val graph_format_preprocessing = save_thm("graph_format_preprocessing",
-  LIST_CONJ [MemAcc8_def, MemAcc32_def, ShiftLeft_def, ShiftRight_def,
-             MemUpdate8_def, MemUpdate32_def] |> GSYM
+  LIST_CONJ [MemAcc8_def, MemAcc32_def, MemAcc64_def,
+             ShiftLeft_def, ShiftRight_def,
+             MemUpdate8_def, MemUpdate32_def, MemUpdate64_def] |> GSYM
   |> CONJ rw1 |> CONJ rw3 |> CONJ rw64 |> CONJ rw16 |> CONJ rw8 |> CONJ rw4
   |> CONJ w2w_carry |> CONJ w2w_carry_alt
   |> CONJ carry_out_eq
@@ -2019,14 +2107,39 @@ val SKIP_TAG_IMP_CALL_ARM = store_thm("SKIP_TAG_IMP_CALL_ARM",
       IMPL_INST (ARM code) locs
        (Inst entry (K T)
          (CALL NONE
-           [("ret",(\s. VarWord exit)); ("r0",var_acc "r0");
-            ("r1",var_acc "r1"); ("r2",var_acc "r2");
-            ("r3",var_acc "r3"); ("r4",var_acc "r4");
-            ("r5",var_acc "r5"); ("r6",var_acc "r6");
-            ("r7",var_acc "r7"); ("r8",var_acc "r8");
-            ("r9",var_acc "r9"); ("r10",var_acc "r10");
-            ("r11",var_acc "r11"); ("r12",var_acc "r12");
-            ("r13",var_acc "r13"); ("r14",var_acc "r14");
+           [("ret",(\s. VarWord exit));
+            ("r0",var_acc "r0");
+            ("r1",var_acc "r1");
+            ("r2",var_acc "r2");
+            ("r3",var_acc "r3");
+            ("r4",var_acc "r4");
+            ("r5",var_acc "r5");
+            ("r6",var_acc "r6");
+            ("r7",var_acc "r7");
+            ("r8",var_acc "r8");
+            ("r9",var_acc "r9");
+            ("r10",var_acc "r10");
+            ("r11",var_acc "r11");
+            ("r12",var_acc "r12");
+            ("r13",var_acc "r13");
+            ("r14",var_acc "r14");
+            ("r15",var_acc "r15");
+            ("r16",var_acc "r16");
+            ("r17",var_acc "r17");
+            ("r18",var_acc "r18");
+            ("r19",var_acc "r19");
+            ("r20",var_acc "r20");
+            ("r21",var_acc "r21");
+            ("r22",var_acc "r22");
+            ("r23",var_acc "r23");
+            ("r24",var_acc "r24");
+            ("r25",var_acc "r25");
+            ("r26",var_acc "r26");
+            ("r27",var_acc "r27");
+            ("r28",var_acc "r28");
+            ("r29",var_acc "r29");
+            ("r30",var_acc "r30");
+            ("r31",var_acc "r31");
             ("mode",var_acc "mode"); ("n",var_acc "n");
             ("z",var_acc "z"); ("c",var_acc "c"); ("v",var_acc "v");
             ("mem",var_acc "mem"); ("dom",var_acc "dom");
@@ -2060,14 +2173,39 @@ val SKIP_TAG_IMP_CALL_M0 = store_thm("SKIP_TAG_IMP_CALL_M0",
       IMPL_INST (M0 code) locs
        (Inst entry (K T)
          (CALL NONE
-           [("ret",(\s. VarWord exit)); ("r0",var_acc "r0");
-            ("r1",var_acc "r1"); ("r2",var_acc "r2");
-            ("r3",var_acc "r3"); ("r4",var_acc "r4");
-            ("r5",var_acc "r5"); ("r6",var_acc "r6");
-            ("r7",var_acc "r7"); ("r8",var_acc "r8");
-            ("r9",var_acc "r9"); ("r10",var_acc "r10");
-            ("r11",var_acc "r11"); ("r12",var_acc "r12");
-            ("r13",var_acc "r13"); ("r14",var_acc "r14");
+           [("ret",(\s. VarWord exit));
+            ("r0",var_acc "r0");
+            ("r1",var_acc "r1");
+            ("r2",var_acc "r2");
+            ("r3",var_acc "r3");
+            ("r4",var_acc "r4");
+            ("r5",var_acc "r5");
+            ("r6",var_acc "r6");
+            ("r7",var_acc "r7");
+            ("r8",var_acc "r8");
+            ("r9",var_acc "r9");
+            ("r10",var_acc "r10");
+            ("r11",var_acc "r11");
+            ("r12",var_acc "r12");
+            ("r13",var_acc "r13");
+            ("r14",var_acc "r14");
+            ("r15",var_acc "r15");
+            ("r16",var_acc "r16");
+            ("r17",var_acc "r17");
+            ("r18",var_acc "r18");
+            ("r19",var_acc "r19");
+            ("r20",var_acc "r20");
+            ("r21",var_acc "r21");
+            ("r22",var_acc "r22");
+            ("r23",var_acc "r23");
+            ("r24",var_acc "r24");
+            ("r25",var_acc "r25");
+            ("r26",var_acc "r26");
+            ("r27",var_acc "r27");
+            ("r28",var_acc "r28");
+            ("r29",var_acc "r29");
+            ("r30",var_acc "r30");
+            ("r31",var_acc "r31");
             ("mode",var_acc "mode"); ("n",var_acc "n");
             ("z",var_acc "z"); ("c",var_acc "c"); ("v",var_acc "v");
             ("mem",var_acc "mem"); ("dom",var_acc "dom");
@@ -2101,14 +2239,39 @@ val SKIP_TAG_IMP_CALL_RISCV = store_thm("SKIP_TAG_IMP_CALL_RISCV",
       IMPL_INST (RISCV code) locs
        (Inst entry (K T)
          (CALL NONE
-           [("ret",(\s. VarWord exit)); ("r0",var_acc "r0");
-            ("r1",var_acc "r1"); ("r2",var_acc "r2");
-            ("r3",var_acc "r3"); ("r4",var_acc "r4");
-            ("r5",var_acc "r5"); ("r6",var_acc "r6");
-            ("r7",var_acc "r7"); ("r8",var_acc "r8");
-            ("r9",var_acc "r9"); ("r10",var_acc "r10");
-            ("r11",var_acc "r11"); ("r12",var_acc "r12");
-            ("r13",var_acc "r13"); ("r14",var_acc "r14");
+           [("ret",(\s. VarWord exit));
+            ("r0",var_acc "r0");
+            ("r1",var_acc "r1");
+            ("r2",var_acc "r2");
+            ("r3",var_acc "r3");
+            ("r4",var_acc "r4");
+            ("r5",var_acc "r5");
+            ("r6",var_acc "r6");
+            ("r7",var_acc "r7");
+            ("r8",var_acc "r8");
+            ("r9",var_acc "r9");
+            ("r10",var_acc "r10");
+            ("r11",var_acc "r11");
+            ("r12",var_acc "r12");
+            ("r13",var_acc "r13");
+            ("r14",var_acc "r14");
+            ("r15",var_acc "r15");
+            ("r16",var_acc "r16");
+            ("r17",var_acc "r17");
+            ("r18",var_acc "r18");
+            ("r19",var_acc "r19");
+            ("r20",var_acc "r20");
+            ("r21",var_acc "r21");
+            ("r22",var_acc "r22");
+            ("r23",var_acc "r23");
+            ("r24",var_acc "r24");
+            ("r25",var_acc "r25");
+            ("r26",var_acc "r26");
+            ("r27",var_acc "r27");
+            ("r28",var_acc "r28");
+            ("r29",var_acc "r29");
+            ("r30",var_acc "r30");
+            ("r31",var_acc "r31");
             ("mode",var_acc "mode"); ("n",var_acc "n");
             ("z",var_acc "z"); ("c",var_acc "c"); ("v",var_acc "v");
             ("mem",var_acc "mem"); ("dom",var_acc "dom");
@@ -2125,7 +2288,7 @@ val SKIP_TAG_IMP_CALL_RISCV = store_thm("SKIP_TAG_IMP_CALL_RISCV",
          var_dom_def,var_word_def,var_mem_def,var_word8_def]
   \\ fs [apply_update_def,APPLY_UPDATE_THM,arm_STATE_def,m0_STATE_def,
          arm_STATE_CPSR_def,var_bool_def,arm_STATE_REGS_def,
-         m0_STATE_REGS_def,var_nat_def,m0_STATE_PSR_def,
+         m0_STATE_REGS_def,var_nat_def,m0_STATE_PSR_def,riscv_STATE_REGS_def,
          riscv_STATE_def,
          var_word_def,var_acc_def,ret_and_all_names_def,all_names_def,
          var_dom_def,var_word_def,var_mem_def,var_word8_def]
@@ -2149,6 +2312,15 @@ val v2w_field_insert_31_16 = prove(
   \\ EVAL_TAC \\ Cases_on `i` \\ fs []
   \\ rpt (Cases_on `n` \\ fs [] \\ Cases_on `n'` \\ fs []));
 
+val word_cancel_extra = store_thm("word_cancel_extra",
+  ``(w + x − w = x:'a word) /\
+    (w + x − (w + y) = x - y:'a word) /\
+    (w + x − (w - y) = x + y:'a word)``,
+  fs [WORD_LEFT_ADD_DISTRIB]);
+
 val export_init_rw = save_thm("export_init_rw",v2w_field_insert_31_16);
+
+val m0_preprocessing = save_thm("m0_preprocessing",
+  CONJ (EVAL ``RName_LR = RName_PC``) (EVAL ``RName_PC = RName_LR``));
 
 val _ = export_theory();

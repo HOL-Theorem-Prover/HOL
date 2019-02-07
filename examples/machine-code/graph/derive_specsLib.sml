@@ -174,23 +174,29 @@ end
 
 local
   val d32 = CONJ (EVAL ``dimindex (:32)``) (EVAL ``dimword (:32)``)
+  val d64 = CONJ (EVAL ``dimindex (:64)``) (EVAL ``dimword (:64)``)
   val word32_mem_pat = ``word32 (READ8 w1 m) (READ8 w2 m) (READ8 w3 m) (READ8 w4 m)``
+  val word64_mem_pat = ``word64 (READ8 w1 m) (READ8 w2 m) (READ8 w3 m) (READ8 w4 m)
+                                (READ8 w5 m) (READ8 w6 m) (READ8 w7 m) (READ8 w8 m)``
   val Align_pat1 = ``arm$Align (w:'a word,n)``
   val Align_pat2 = ``m0$Align (w:'a word,n)``
   (* ``b /\ ~(w ' 0) /\ b2 /\ (b3 ==> ALIGNED w) /\ ~(w ' 1)`` *)
   val clean_ALIGNED_CONV =
     SIMP_CONV (bool_ss++boolSimps.CONJ_ss) [BITS_01_IMP_ALIGNED] THENC
     SIMP_CONV (bool_ss++boolSimps.CONJ_ss) [ALIGNED_IMP_BITS_01]
+  val n2w_64 =
+    n2w_11 |> INST_TYPE [alpha|->``:64``] |> REWRITE_RULE [EVAL ``dimword (:64)``]
   val word_arith_lemma_CONV =
     SIMP_CONV std_ss [word_arith_lemma1] THENC
-    SIMP_CONV std_ss [word_arith_lemma3,word_arith_lemma4]
+    SIMP_CONV std_ss [word_arith_lemma3,word_arith_lemma4,WORD_EQ_SUB_ZERO,n2w_64]
   val flag_conv =
     SIMP_CONV std_ss
       [OVERFLOW_EQ,WORD_MSB_1COMP,WORD_NOT_NOT,
        GSYM carry_out_def,WORD_0_POS,WORD_SUB_RZERO,
-       GSYM (EVAL ``~(0w:word32)``),d32] THENC
+       GSYM (EVAL ``~(0w:word32)``),d32,
+       GSYM (EVAL ``~(0w:word64)``),d64] THENC
     ONCE_REWRITE_CONV [word_1comp_n2w,word32_msb_n2w] THENC
-    SIMP_CONV std_ss [d32]
+    SIMP_CONV std_ss [d32,d64]
   val finalise_pre_cond =
     PRE_CONV (SIMP_CONV (pure_ss++sep_cond_ss) [] THENC
               TRY_CONV (STAR_cond_CONV wordsLib.WORD_SUB_CONV))
@@ -213,15 +219,29 @@ local
   val lemma31 = blastLib.BBLAST_PROVE
     ``(((((31 >< 1) (w:word32)):31 word) @@ (0w:1 word)) : word32) =
       w && 0xFFFFFFFEw``
+  val fix_sub_word64 = prove(
+    ``(n2w n + w = if n < dimword (:'a) DIV 2 then (w:'a word) + n2w n
+                   else w - n2w (dimword (:'a) - n MOD dimword (:'a))) /\
+      (w + n2w n = if n < dimword (:'a) DIV 2 then w + n2w n
+                   else w - n2w (dimword (:'a) - n MOD dimword (:'a)))``,
+    simp [Once WORD_ADD_COMM] \\ rw []
+    \\ CONV_TAC (RATOR_CONV (ONCE_REWRITE_CONV [GSYM WORD_NEG_NEG]))
+    \\ rewrite_tac [WORD_EQ_NEG,word_2comp_n2w])
+    |> INST_TYPE [alpha|->``:64``]
+    |> SIMP_RULE std_ss [EVAL ``dimword (:64)``]
 in
   fun clean_spec_thm th = let
-    val th = th |> REWRITE_RULE [GSYM word32_def,decomp_simp1,GSYM READ32_def,
-                     GSYM WRITE32_def,word_extract_thm,GSYM word_add_with_carry_def]
+    val th = th |> REWRITE_RULE [GSYM word32_def, GSYM word64_def,
+                     decomp_simp1,GSYM READ32_def,GSYM READ64_def,
+                     GSYM WRITE32_def,GSYM WRITE64_def,
+                     word_extract_thm,GSYM word_add_with_carry_def]
                 |> CONV_RULE (DEPTH_CONV READ8_INTRO_CONV)
                 |> REWRITE_RULE [GSYM WRITE8_def]
-                |> SIMP_RULE std_ss [AC CONJ_COMM CONJ_ASSOC,word_bit_def,d32,
+                |> SIMP_RULE std_ss [AC CONJ_COMM CONJ_ASSOC,word_bit_def,d32,d64,
+                     SHIFT_ZERO(*,WORD_MUL_LSL,word_mul_n2w*),
                      GSYM ADD_ASSOC,lemma31,count_leading_zero_bits_thm]
-    val tms = find_terms (can (match_term word32_mem_pat)) (concl th)
+    val tms32 = find_terms (can (match_term word32_mem_pat)) (concl th)
+    val tms64 = find_terms (can (match_term word64_mem_pat)) (concl th)
     fun READ32_RW tm = let
       val (y,x) = tm |> rand |> dest_comb
       val goal = mk_eq(tm,``READ32 ^(rand y) ^x``)
@@ -229,9 +249,21 @@ in
         SIMP_CONV std_ss [READ32_def,word_arith_lemma1,READ8_def] THENC
         SIMP_CONV std_ss [word_arith_lemma2,word_arith_lemma3,word_arith_lemma4]
       in MATCH_MP EQ_T (c goal) end handle HOL_ERR _ => TRUTH;
-    val th = th |> PURE_REWRITE_RULE (ALIGNED_Align::map READ32_RW tms)
+    fun READ64_RW tm = let
+      val (y,x) = tm |> rand |> dest_comb
+      val goal = mk_eq(tm,``READ64 ^(rand y) ^x``)
+      val c =
+        SIMP_CONV std_ss [READ64_def,word_arith_lemma1,READ8_def] THENC
+        SIMP_CONV std_ss [word_arith_lemma2,word_arith_lemma3,word_arith_lemma4]
+      in MATCH_MP EQ_T (c goal) end handle HOL_ERR _ => TRUTH;
+    val th = th |> PURE_REWRITE_RULE ([ALIGNED_Align] @ map READ32_RW tms32
+                                                      @ map READ64_RW tms64)
     val th = remove_Align th
     val th = CONV_RULE final_conv th
+    val th = SIMP_RULE std_ss [word_cancel_extra] th
+             |> CONV_RULE word_arith_lemma_CONV
+    val th = th |> ONCE_REWRITE_RULE [fix_sub_word64]
+                |> SIMP_RULE std_ss [m0_preprocessing]
     in th end
 end
 
@@ -360,14 +392,21 @@ fun pull_let_wider_CONV tm = let
   in lemma end handle HOL_ERR _ => NO_CONV tm;
 
 local
-  val pc_var1 = mk_var("pc",``:word32``)
-  val pc_var2 = mk_var("p",``:word32``)
-  val arm_PC_pat = ``arm_PC t``
+  val pc_var1_32 = mk_var("pc",``:word32``)
+  val pc_var2_32 = mk_var("p",``:word32``)
+  val pc_var1_64 = mk_var("pc",``:word64``)
+  val pc_var2_64 = mk_var("p",``:word64``)
+  fun get_pc_pat () = let
+    val (_,_,_,pc) = get_tools ()
+    in ``^pc w`` end
 in
   fun inst_pc pos th = let
-    val new_pc = ``n2w ^(numSyntax.term_of_int pos):word32``
-    val th = INST [pc_var1 |-> new_pc, pc_var2 |-> new_pc] th
-    val tms = find_terms (can (match_term ``arm_PC t``)) (rand (concl th))
+    val new_pc_32 = ``n2w ^(numSyntax.term_of_int pos):word32``
+    val new_pc_64 = ``n2w ^(numSyntax.term_of_int pos):word64``
+    val th = INST [pc_var1_32 |-> new_pc_32, pc_var2_32 |-> new_pc_32,
+                   pc_var1_64 |-> new_pc_64, pc_var2_64 |-> new_pc_64] th
+    val pc_pat = get_pc_pat ()
+    val tms = find_terms (can (match_term pc_pat)) (rand (concl th))
     val rws = map (QCONV (RAND_CONV EVAL)) tms
     val th = ONCE_REWRITE_RULE rws th
     in th end
@@ -698,8 +737,8 @@ fun derive_specs_for sec_name = let
   val base_name = "loop-riscv/example"
   val _ = read_files base_name []
   val _ = open_current "test"
-  val sec_name = "memcpy"
   val sec_name = "memzero"
+  val sec_name = "memcpy"
 
   val base_name = "loop/example"
   val _ = read_files base_name []

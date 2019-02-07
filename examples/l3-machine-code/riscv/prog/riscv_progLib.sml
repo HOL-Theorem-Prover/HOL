@@ -282,6 +282,8 @@ local
   val (_, mk_mcpuid, _, _) = HolKernel.syntax_fns1 "riscv" "MachineCSR_mcpuid"
   val (_, mk_ArchBase, _, _) = HolKernel.syntax_fns1 "riscv" "mcpuid_ArchBase"
   val pre = progSyntax.strip_star o temporal_stateSyntax.dest_pre' o Thm.concl
+
+
   fun specialize_to_rv64i th =
 (*
 val SOME tm = List.find is_riscv_ID (pre th)
@@ -293,6 +295,8 @@ val SOME tm = List.find is_riscv_ID (pre th)
            val archbase = boolSyntax.mk_eq (mk_ArchBase (mk_mcpuid mcsr), rv64)
          in
            th |> Thm.INST [id |-> id0]
+
+
               |> rv64_rule
               |> PURE_REWRITE_RULE [ASSUME archbase]
               |> Conv.CONV_RULE (Conv.DEPTH_CONV wordsLib.word_EQ_CONV)
@@ -359,6 +363,8 @@ in
                              DECIDE ``a /\ c /\ (b ==> a) = c /\ a``]
        |> spec_to_rv64
        |> memory_introduction
+       |> helperLib.HIDE_POST_RULE ``riscv_RV64I``
+       |> helperLib.HIDE_PRE_RULE ``riscv_RV64I``
 end
 
 local
@@ -572,6 +578,8 @@ riscv_spec_hex "21180B3"
 riscv_spec_hex "108133"
 riscv_spec_hex "FFF08093"
 riscv_spec_hex "FE008EE3"
+
+val s = "00053023"
 
 val tm = bitstringSyntax.bitstring_of_hexstring s
 val th = riscv_spec tm

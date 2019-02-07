@@ -16,4 +16,7 @@ sig
   val section_names : unit -> string list
   val show_annotated_code : (int -> string) -> string -> unit
 
+  val tysize : unit -> Type.hol_type
+  val wsize  : unit -> Type.hol_type
+
 end

@@ -2,7 +2,7 @@ structure exportLib :> exportLib =
 struct
 
 open HolKernel boolLib bossLib Parse;
-open helperLib graph_specsLib backgroundLib writerLib;
+open helperLib graph_specsLib backgroundLib writerLib file_readerLib;
 open GraphLangTheory;
 
 
@@ -206,7 +206,7 @@ fun export_graph name rhs = let
     | get_var_type "c" = "Bool"
     | get_var_type "v" = "Bool"
     | get_var_type "clock" = "Word 64"
-    | get_var_type _ = "Word 32"
+    | get_var_type _ = "Word " ^ substring(type_to_string(tysize()),1,2)
   fun arg s = "" ^ s ^ " " ^ get_var_type s
   fun commas [] = ""
     | commas [x] = x
@@ -216,9 +216,11 @@ fun export_graph name rhs = let
     SOME ("cart", [_, idx]) => "Word "
         ^ Arbnum.toString (fcpLib.index_to_num idx)
   | _ => if ty = ``:word32->word8`` then "Mem" else
-    if ty = ``:word32->bool`` then "Dom" else
-    if ty = ``:bool`` then "Bool" else
-    if ty = ``:num`` then "Word 64" else failwith("type")
+         if ty = ``:word32->bool`` then "Dom" else
+         if ty = ``:word64->word8`` then "Mem" else
+         if ty = ``:word64->bool`` then "Dom" else
+         if ty = ``:bool`` then "Bool" else
+         if ty = ``:num`` then "Word 64" else failwith("type")
   fun is_var_acc tm =
     can dest_var_word tm orelse
     can dest_var_word8 tm orelse
@@ -237,8 +239,8 @@ fun export_graph name rhs = let
     (if numSyntax.is_numeral tm then
       "Num " ^ int_to_string (tm |> numSyntax.int_of_term) ^ " Nat"
     else if wordsSyntax.is_n2w tm then
-      let val i = tm |> rand |> numSyntax.int_of_term
-      in "Num " ^ int_to_string i ^ " " ^ export_type (type_of tm) end
+      let val i = tm |> rand |> numSyntax.dest_numeral
+      in "Num " ^ Arbnum.toString i ^ " " ^ export_type (type_of tm) end
     (* Var *)
     else if is_var_acc tm then
       let val name = tm |> rator |> rand |> stringSyntax.fromHOLstring
@@ -256,7 +258,6 @@ fun export_graph name rhs = let
                ``VarMem :('a word -> word8) -> 'a variable``,
                ``VarDom :('a word -> bool) -> 'a variable``,
                ``VarBool :bool -> 'a variable``]
-  val s_var = mk_var("s",``:32 state``)
   fun bool_exp tm =
     if can dest_var_acc tm then let
       val n = dest_var_acc tm
@@ -325,7 +326,8 @@ fun export_graph name rhs = let
   val _ = write_graph decl
   fun my_map f [] = []
     | my_map f (x::xs) =
-    (let val y = f x in y end
+    ((let val y = f x in y end
+      handle Overflow => failwith "Overflow")
      handle HOL_ERR e =>
      let val _ = print "\n\nFailed to translate node: \n\n"
          val _ = print_term (snd x)
