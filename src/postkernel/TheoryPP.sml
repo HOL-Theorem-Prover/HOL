@@ -364,10 +364,19 @@ fun pp_thydata info_record = let
 
   fun pp_dep ((s,n),dl) =
   let
-    fun f (thy,l) = (mlquote thy :: map int_to_string l)
-    val l = (mlquote s :: int_to_string n :: List.concat (map f dl))
+    fun f (thy,l) =
+        add_string (mlquote thy) >> add_break(1,0) >>
+        pr_list (add_string o Int.toString) (add_break(1,0)) l
   in
-    pp_sml_list add_string l
+    add_string "[" >>
+    block INCONSISTENT 1 (
+      add_string (mlquote s) >> add_break (1,0) >>
+      add_string (Int.toString n) >>
+      (if not (null dl) then
+        add_string "," >> add_break(1,0) >>
+        pr_list f (add_string "," >> add_break (1,0)) dl
+      else nothing)
+    ) >> add_string "]"
   end
 
   fun dest_dep d = case d of

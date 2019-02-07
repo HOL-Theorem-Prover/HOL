@@ -10,6 +10,6 @@ sig
   val advance : buffer -> unit
   val eof : buffer -> bool
 
-  val datBuffer : {filename:string} -> buffer
+  val datBuffer : TextIO.instream -> buffer
 
 end

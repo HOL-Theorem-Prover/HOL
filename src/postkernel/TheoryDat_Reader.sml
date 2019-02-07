@@ -22,21 +22,18 @@ fun tokstream reader =
     end
 
 type buffer = {lexer: unit -> TheoryDatTokens_dtype.t,
-               istrm : TextIO.instream,
                current : TheoryDatTokens_dtype.t ref}
 
 fun current (b : buffer) = !(#current b)
 fun eof (b:buffer) = current b = EOF
-fun checkForEOF b = if eof b then TextIO.closeIn (#istrm b) else ()
 fun advance (b as {current,lexer,...} : buffer) =
-    if eof b then () else (current := lexer(); checkForEOF b)
+    if eof b then () else current := lexer()
 
-fun datBuffer {filename} =
+fun datBuffer istrm =
     let
-      val istrm = TextIO.openIn filename
       val lex = tokstream (fn i => TextIO.inputN (istrm,i))
     in
-      {lexer = lex, istrm = istrm, current = ref (lex())}
+      {lexer = lex, current = ref (lex())}
     end
 
 end
