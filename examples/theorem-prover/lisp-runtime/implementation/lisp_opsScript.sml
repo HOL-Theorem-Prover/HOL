@@ -157,7 +157,8 @@ fun prove_spec th imp def pre_tm post_tm = let
   val res3 = map dest_comb (filter (not o can dest_sep_hide) res2)
   val fill3 = map dest_comb (filter (not o can dest_sep_hide) fill2)
   fun rename [] (y1,y2) = (y2,y2)
-    | rename ((x1,x2)::xs) (y1,y2) = if x1 = y1 then (y2,x2) else rename xs (y1,y2)
+    | rename ((x1,x2)::xs) (y1,y2) = if x1 ~~ y1 then (y2,x2)
+                                     else rename xs (y1,y2)
   val s = map (fn (x,y) => x |-> y)
               (filter (fn x => is_var (fst x))
               (map (fn (x,y) => if is_comb x then (cdr x,cdr y handle HOL_ERR _ => y) else (x,y)) (map (rename fill3) res3)))
@@ -166,9 +167,9 @@ fun prove_spec th imp def pre_tm post_tm = let
   val (m,p,_,q) = (dest_spec o concl o SPEC_ALL) th
   val fill = list_dest dest_star tm
   val res = list_dest dest_star p
-  val fs = (filter (fn x => not (mem x res)) fill)
-  val fs = if can (find_term (fn tm => ``zCODE_MEMORY`` = tm)) (concl th) then
-              filter (fn tm => not (repeat car tm = ``zCODE_MEMORY``)) fs else fs
+  val fs = (filter (fn x => not (tmem x res)) fill)
+  val fs = if can (find_term (aconv ``zCODE_MEMORY``)) (concl th) then
+              filter (fn tm => repeat car tm !~ ``zCODE_MEMORY``) fs else fs
   val f = list_mk_star fs (type_of (hd fill))
   val th = SPEC f (MATCH_MP SPEC_FRAME th)
   val pre = (fst o dest_imp o snd o dest_imp) (concl imp) handle e => ``T:bool``
@@ -233,7 +234,8 @@ fun prove_spec th imp def pre_tm post_tm = let
 
 fun set_pc th = let
   val (_,_,_,q) = (dest_spec o concl o UNDISCH_ALL) th
-  val tm = find_term (fn x => mem (car x) [``zPC``,``xPC``,``aPC``,``pPC``] handle e => false) q
+  val tm = find_term (fn x => tmem (car x) [``zPC``,``xPC``,``aPC``,``pPC``]
+                              handle e => false) q
   in subst [``p:word64``|->cdr tm,``rip:word64``|->cdr tm] end
 
 fun swap_thm 0 = lisp_inv_swap0
@@ -3159,4 +3161,3 @@ fun get_code th = let
 
 val _ = print_compiler_grammar()
 val _ = export_theory();
-
