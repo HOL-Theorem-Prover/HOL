@@ -1678,7 +1678,7 @@ fun X64_LISP_PUSH i = let
   val thj = CONJUNCT2 (UNDISCH (imp))
   val thj = DISCH_ALL (MATCH_MP (DISCH_ALL thj) (UNDISCH (swap_thm i)))
   val imp = (CONJ (UNDISCH_ALL thi) (UNDISCH_ALL thj))
-  val assum2 = hd (filter (fn x => not (x = assum)) (hyp imp))
+  val assum2 = hd (filter (fn x => x !~ assum) (hyp imp))
   val imp = DISCH assum2 imp
   val result = prove_spec th imp def pre_tm post_tm
   val result = RW [GSYM zLISP_raw] result
@@ -1734,7 +1734,7 @@ fun X64_LISP_CONS (i,j) = if i = j then TRUTH else let
   val post_tm = subst s post_tm
   val imp = generate_cons i j
   val h = lisp_inv_cons_alt |> concl |> dest_imp |> fst
-  val assum = hd (filter (fn x => not (x = h)) (hyp imp))
+  val assum = hd (filter (fn x => x !~ h) (hyp imp))
   val imp = DISCH assum imp
   val result = prove_spec th imp def pre_tm post_tm
   val result = RW [GSYM zLISP_raw] result
