@@ -58,6 +58,14 @@ rbr = \];
   stracc := apfst (cons yytext) (!stracc);
   continue()
 );
+<string>"\\"[0-9][0-9][0-9] => (
+  let
+    val i = valOf (Int.fromString (String.extract(yytext,1,NONE)))
+  in
+    stracc := apfst (cons (str (Char.chr i))) (!stracc);
+    continue()
+  end
+);
 <string>"\\\\" => (
   stracc := apfst (cons "\\") (!stracc);
   continue()
