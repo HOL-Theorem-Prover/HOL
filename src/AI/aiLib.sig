@@ -95,6 +95,7 @@ sig
   val mk_fast_set : ('a * 'a -> order) -> 'a list -> 'a list
   val mk_string_set : string list -> string list
   val mk_term_set : term list -> term list
+  val mk_type_set : hol_type list -> hol_type list 
   val mk_sameorder_set : ('a * 'a -> order) -> 'a list -> 'a list
   val dict_sort : ('a * 'a -> order) -> 'a list -> 'a list
   val topo_sort : (''a * ''a list) list -> ''a list

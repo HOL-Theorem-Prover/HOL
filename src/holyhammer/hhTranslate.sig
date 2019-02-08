@@ -15,7 +15,7 @@ include Abbrev
   val ATOM_CONV     : conv -> conv
   val LIFT_CONV     : (int * int) ref -> conv
   val RPT_LIFT_CONV : (int * int) ref -> term -> thm list
-  val LET_CONV_BVL  : conv
+  val APP_CONV_BVL  : conv
 
   (* arity equations *)
   val strip_type  : hol_type -> (hol_type list * hol_type)

@@ -191,24 +191,36 @@ fun RPT_LIFT_CONV iref tm =
    Lowest arity for bound variables. Arity 0.
    ------------------------------------------------------------------------- *)
 
-fun LET_CONV_MIN tm =
-  let val (rator,rand) = dest_comb tm in
-    SYM (ISPECL [rator,rand] LET_THM)
+fun APP_CONV_MIN tm =
+  let 
+    val (rator,rand) = dest_comb tm
+    val f = mk_var ("f",type_of rator)
+    val v = mk_var ("v",type_of rand)
+    val bod = mk_comb (f,v) 
+    val lam = list_mk_abs (free_vars_lr bod, bod)
+    val app = mk_var ("app",type_of lam)
+    val eq = mk_eq (app, lam)
+    val thm1 = ASSUME eq
+    val thm2 = AP_THM (AP_THM thm1 f) v
+    val thm3 = CONV_RULE (REDEPTH_CONV BETA_CONV) thm2
+    val thm4 = GENL [f,v] thm3
+  in
+    SYM (ISPECL [rator,rand] thm4)
   end
 
-fun LET_CONV_AUX tm =
-  (TRY_CONV (RATOR_CONV LET_CONV_AUX) THENC LET_CONV_MIN) tm
+fun APP_CONV_AUX tm =
+  (TRY_CONV (RATOR_CONV APP_CONV_AUX) THENC APP_CONV_MIN) tm
 
-fun LET_CONV_BV bvl tm =
+fun APP_CONV_BV bvl tm =
   if not (is_comb tm) then NO_CONV tm else
     let val (f,_) = strip_comb tm in
-      if mem f bvl then LET_CONV_AUX tm else NO_CONV tm
+      if mem f bvl then APP_CONV_AUX tm else NO_CONV tm
     end
 
 (* Warning: assumes free variables and bound variables have distinct names *)
-fun LET_CONV_BVL tm =
+fun APP_CONV_BVL tm =
   let val bvl = all_bvar tm in
-    TOP_SWEEP_CONV (LET_CONV_BV bvl) tm
+    TOP_SWEEP_CONV (APP_CONV_BV bvl) tm
   end
 
 (* -------------------------------------------------------------------------
@@ -223,7 +235,7 @@ fun mk_arity_eq f n =
     val vl = genvarl_arity tyl
     val t1 = list_mk_comb (f, List.take (vl,n))
   in
-    GENL vl (LET_CONV_AUX t1)
+    GENL vl (APP_CONV_AUX t1)
   end
 
 fun all_arity_eq tm =
@@ -257,7 +269,7 @@ fun debug_translate_tm (tmn,tm) =
     val tml1 = map (rand o concl) thml1
     val _ = debug ("Lifting lambdas and predicates:\n  " ^
       String.concatWith "\n  " (map term_to_string tml1))
-    val thml2 = (map (TRY_CONV LET_CONV_BVL THENC REFL)) tml1
+    val thml2 = (map (TRY_CONV APP_CONV_BVL THENC REFL)) tml1
     val tml2 = map (rand o concl) thml2
   in
     tml2
@@ -269,7 +281,7 @@ fun translate_tm_aux (tmn,tm) =
     val tm1   = prepare_tm tm
     val thml1 = RPT_LIFT_CONV iref tm1
     val tml1  = map (rand o concl) thml1
-    val thml2 = (map (TRY_CONV LET_CONV_BVL THENC REFL)) tml1
+    val thml2 = (map (TRY_CONV APP_CONV_BVL THENC REFL)) tml1
     val tml2  = map (rand o concl) thml2
   in
     tml2
@@ -291,7 +303,7 @@ fun translate_pb premises cj =
     val big_tm =
       list_mk_conj (map list_mk_conj (cj_tml :: (map snd ax_tml)))
     val ari_thml = all_arity_eq big_tm
-    val ari_tml =  map only_concl ari_thml
+    val ari_tml =  map concl ari_thml
   in
     (ari_tml, ax_tml, cj_tml)
   end

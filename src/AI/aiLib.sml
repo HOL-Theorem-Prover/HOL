@@ -237,7 +237,7 @@ fun dict_sort compare l =
 
 fun mk_string_set l = mk_fast_set String.compare l
 fun mk_term_set l = mk_fast_set Term.compare l
-
+fun mk_type_set l = mk_fast_set Type.compare l
 
 fun fold_left f l orig = case l of
     [] => orig

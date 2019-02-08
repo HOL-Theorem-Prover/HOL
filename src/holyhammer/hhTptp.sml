@@ -115,16 +115,15 @@ fun write_formula oc tm =
   end
 
 fun write_ax oc (name,tm) =
-  (os oc ("fof(" ^ tptp_of_thm (name,tm) ^ ", axiom, ");
+  (os oc ("fof(" ^ tptp_of_thm (name,tm) ^ ",axiom,");
    write_formula oc tm; os oc ").\n")
 
-fun write_cj oc cj =
-  (os oc "fof(conjecture, conjecture, "; write_formula oc cj; os oc ").\n")
+fun write_cj oc (name,cj) =
+  (os oc "fof(" ^ name ^ ",conjecture,"; write_formula oc cj; os oc ").\n")
 
-(* todo: add the possibility to give a name to the conjecture *)
 fun write_tptp_file file axl cj =
   let val oc = TextIO.openOut file in
-    (app (write_ax oc) axl; write_cj oc cj)
+    (app (write_ax oc) axl; write_cj oc ("conjecture",cj))
     handle Interrupt => (TextIO.closeOut oc; raise Interrupt);    
     TextIO.closeOut oc
   end
