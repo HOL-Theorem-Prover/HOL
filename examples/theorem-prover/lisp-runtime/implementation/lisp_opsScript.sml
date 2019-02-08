@@ -2604,8 +2604,8 @@ val (X64_LISP_WRITE_THMS,iLOAD_LEMMA,iSTORE_LEMMA) = let
   fun fsts (x::y::xs) = x::fsts xs | fsts _ = []
   fun snds (x::y::xs) = y::snds xs | snds _ = []
   val xs = zip (fsts xs) (snds xs)
-  fun is_iSTORE (x,y) = can (find_term (fn tm => tm = ``iSTORE``)) (concl y)
-  fun is_iLOAD (x,y) = can (find_term (fn tm => tm = ``iLOAD``)) (concl y)
+  fun is_iSTORE (x,y) = can (find_term (aconv ``iSTORE``)) (concl y)
+  fun is_iLOAD (x,y) = can (find_term (aconv ``iLOAD``)) (concl y)
   val ys = filter (fn x => not (is_iSTORE x) andalso not (is_iLOAD x)) xs
   in (map (X64_LISP_WRITE true) ys,
       X64_LISP_WRITE false (first is_iLOAD xs),
