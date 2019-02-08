@@ -86,6 +86,9 @@ val BAG_INTER = Q.new_definition(
   "BAG_INTER",
   `BAG_INTER b1 b2 = (\x. if (b1 x < b2 x) then b1 x else b2 x)`);
 
+
+val _ = print "Properties and definition of BAG_MERGE\n"
+
 val BAG_MERGE = Q.new_definition(
   "BAG_MERGE",
   `BAG_MERGE b1 b2 = (\x. if (b1 x < b2 x) then b2 x else b1 x)`);
@@ -95,6 +98,59 @@ val BAG_MERGE_IDEM = store_thm (
   ``!b. BAG_MERGE b b = b``,
   SIMP_TAC std_ss [BAG_MERGE, FUN_EQ_THM]);
 val _ = export_rewrites ["BAG_MERGE_IDEM"]
+
+Theorem BAG_MERGE_SUB_BAG_UNION `!s t. ((BAG_MERGE s t) <= (s + t))` (
+  simp[SUB_BAG,BAG_MERGE,BAG_UNION,BAG_INN]);
+
+Theorem BAG_MERGE_EMPTY
+`!b. ((BAG_MERGE {||} b) = b) /\ ((BAG_MERGE b {||}) = b)` (
+  rw[BAG_MERGE,FUN_EQ_THM,EMPTY_BAG]);
+
+Theorem BAG_MERGE_ELBAG_SUB_BAG_INSERT 
+        `!A b. (BAG_MERGE {|A|} b) <= (BAG_INSERT A b)` (
+  rw[] >> simp[BAG_MERGE,BAG_INSERT,EMPTY_BAG,SUB_BAG,BAG_INN] >> rw[]);
+
+Theorem BAG_MERGE_EQ_EMPTY[simp]
+`!a b. (BAG_MERGE a b = {||}) = (a = {||}) ∧ (b = {||})` (
+  rw[BAG_MERGE,EMPTY_BAG,FUN_EQ_THM] >>
+  EQ_TAC >>
+  rw[] >>
+  first_x_assum (qspec_then `x` mp_tac) >>
+  simp[] );
+
+Theorem BAG_INSERT_EQ_MERGE_DIFF
+`!a b c e. (BAG_INSERT e a = BAG_MERGE b c) 
+      ==> ((BAG_MERGE b c = BAG_INSERT e (BAG_MERGE (b - {|e|}) (c - {|e|}))))`
+(rw[BAG_DIFF] >>
+    fs[BAG_INSERT,BAG_MERGE,EMPTY_BAG,FUN_EQ_THM] >>
+    reverse(rw[])
+    >- (`b e - 1 + 1 = b e` suffices_by simp[EQ_SYM_EQ] >>
+        irule arithmeticTheory.SUB_ADD >>
+        `c e <= b e` by simp[] >>
+        first_x_assum (qspec_then `e` mp_tac) >>
+        rw[]) >> fs[]);
+
+Theorem BAG_MERGE_BAG_INSERT
+`!e a b.
+((a e <= b e) ==> ((BAG_MERGE a (BAG_INSERT e b))
+                   = (BAG_INSERT e (BAG_MERGE a b)))) ∧
+((b e < a e) ==> ((BAG_MERGE a (BAG_INSERT e b)) 
+                   = (BAG_MERGE a b))) ∧
+((a e < b e) ==> ((BAG_MERGE (BAG_INSERT e a) b)
+                   = ((BAG_MERGE a b)))) ∧
+((b e <= a e) ==> ((BAG_MERGE (BAG_INSERT e a) b) 
+                   = (BAG_INSERT e (BAG_MERGE a b)))) ∧
+((a e = b e) ==> ((BAG_MERGE (BAG_INSERT e a) (BAG_INSERT e b))
+                   = (BAG_INSERT e (BAG_MERGE a b))))` (
+  rw[]
+    >- (simp[BAG_MERGE,BAG_INSERT,EMPTY_BAG,FUN_EQ_THM] >>
+        rw[] >- (Cases_on `x=e` >> fs[]) >> fs[])
+    >- (simp[BAG_MERGE,BAG_INSERT,EMPTY_BAG,FUN_EQ_THM] >>
+        reverse (rw[]) >- (Cases_on `x=e` >> fs[]) >> fs[])
+    >- (simp[BAG_MERGE,BAG_INSERT,EMPTY_BAG,FUN_EQ_THM] >>
+        rw[] >- (Cases_on `x=e` >> fs[]) >> fs[])
+    >> (simp[BAG_MERGE,BAG_INSERT,EMPTY_BAG,FUN_EQ_THM] >>
+        rw[] >> fs[]));
 
 val _ = print "Properties relating BAG_IN(N) to other functions\n"
 val BAG_INN_0 = store_thm (
@@ -888,12 +944,56 @@ val BAG_OF_SET = new_definition(
   "BAG_OF_SET",
   ``BAG_OF_SET (P:'a->bool) = \x. if x IN P then 1 else 0``);
 
+Theorem BAG_OF_SET_UNION `!b b'. BAG_OF_SET (b ∪ b')
+                          = (BAG_MERGE (BAG_OF_SET b) (BAG_OF_SET b'))` (
+rw[UNION_DEF,BAG_OF_SET,BAG_MERGE,FUN_EQ_THM] >> rw[] >> fs[]);
 
+Theorem BAG_OF_SET_DIFF `BAG_OF_SET (b DIFF b')
+                         = BAG_FILTER (COMPL b') (BAG_OF_SET b)` (
+simp[DIFF_DEF,BAG_OF_SET,BAG_FILTER_DEF] >> metis_tac[]);
+
+Theorem BAG_OF_SET_INSERT
+`!e s. BAG_OF_SET (e INSERT s) = BAG_MERGE {|e|} (BAG_OF_SET s)` (
+rw[BAG_OF_SET,INSERT_DEF,BAG_MERGE,EMPTY_BAG,FUN_EQ_THM,BAG_INSERT] >> 
+rw[IN_DEF]
+ >- (fs[] >>
+     `s e = F` by metis_tac[] >>
+     fs[COND_CLAUSES])
+ >- (`(x = e) = F` by metis_tac[] >>
+     fs[COND_CLAUSES])
+ >- (`(x = e) = F` by metis_tac[] >>
+     `(s x) = T` by metis_tac[] >>
+     fs[COND_CLAUSES]));
+
+ Theorem BAG_OF_SET_EQ_INSERT
+`!e b s. (BAG_INSERT e b = BAG_OF_SET s) ==>
+         (?s'. s = (e INSERT s'))` (
+  rw[] >>
+  qexists_tac `s DELETE e` >>
+  rw[INSERT_DEF,DELETE_DEF] >>
+  simp[FUN_EQ_THM] >>
+  rw[IN_DEF] >>
+  EQ_TAC
+  >- simp[]
+  >- (rw[] >>
+      `?t. s = (e INSERT t)`
+        by metis_tac[DECOMPOSITION, BAG_IN_BAG_OF_SET, BAG_IN_BAG_INSERT] >>
+      fs[]));
+
+Theorem BAG_OF_SET_BAG_DIFF_DIFF
+`!b s. (BAG_OF_SET s) - b = (BAG_OF_SET (s DIFF (SET_OF_BAG b)))` (
+  simp[BAG_OF_SET,DIFF_DEF,FUN_EQ_THM,BAG_DIFF] >>
+  rw[BAG_IN,BAG_INN,IN_DEF] >> fs[]);
+  
 val SET_OF_EMPTY = store_thm (
   "SET_OF_EMPTY",
   ``BAG_OF_SET (EMPTY:'a->bool) = EMPTY_BAG``,
   SIMP_TAC (srw_ss()) [BAG_OF_SET, EMPTY_BAG, FUN_EQ_THM])
 val _ = export_rewrites ["SET_OF_EMPTY"];
+
+Theorem SET_OF_EL_BAG
+`!e. SET_OF_BAG {|e|} = {e}` (rw[SET_OF_BAG,FUN_EQ_THM]);
+
 
 val BAG_IN_BAG_OF_SET = store_thm (
   "BAG_IN_BAG_OF_SET",
@@ -1048,6 +1148,9 @@ val FINITE_BAG_INSERT = Q.store_thm(
   `!b. FINITE_BAG b ==> (!e. FINITE_BAG (BAG_INSERT e b))`,
   REWRITE_TAC [FINITE_BAG] THEN MESON_TAC []);
 
+Theorem FINITE_BAG_INSERT_EQUIV[simp] `!e b. FINITE_BAG b 
+                                   <=> FINITE_BAG (BAG_INSERT e b)` (rw[]);
+
 val FINITE_BAG_INDUCT = Q.store_thm(
   "FINITE_BAG_INDUCT",
   `!P. P EMPTY_BAG /\
@@ -1147,6 +1250,26 @@ val FINITE_SUB_BAG = Q.store_thm(
     ELIM_TAC THEN FULL_SIMP_TAC std_ss [SUB_BAG_INSERT, FINITE_BAG_THM],
     ASM_MESON_TAC [NOT_IN_SUB_BAG_INSERT]
   ]);
+
+Theorem FINITE_BAG_MERGE[simp]
+`!a b. FINITE_BAG (BAG_MERGE a b) <=> FINITE_BAG a /\ FINITE_BAG b ` (
+  rw[] >>
+  reverse(EQ_TAC)
+    >- (`BAG_MERGE a b <= a + b` by metis_tac[BAG_MERGE_SUB_BAG_UNION] >>
+        rw[] >>
+        `FINITE_BAG (a + b)` by metis_tac[FINITE_BAG_UNION] >>
+        metis_tac[FINITE_SUB_BAG])
+    >- (`!c:'a bag. FINITE_BAG c ==> !a b. (c = BAG_MERGE a b)
+             ==> FINITE_BAG a /\ FINITE_BAG b` suffices_by metis_tac[] >>
+        Induct_on `c` >>
+        rw[] >>
+        `BAG_MERGE a b = BAG_INSERT e (BAG_MERGE (a - {|e|}) (b - {|e|}))`
+          by metis_tac[BAG_INSERT_EQ_MERGE_DIFF] >>
+        fs[] >>
+        rw[] >>
+        first_x_assum (qspecl_then [`a - {|e|}`,`b - {|e|}`] mp_tac) >>
+        rw[] >>
+        metis_tac[FINITE_BAG_DIFF_dual,FINITE_BAG]));
 
 val _ = print "Developing theory of bag cardinality\n"
 
@@ -1341,6 +1464,17 @@ RW_TAC bool_ss []
   THEN RW_TAC arith_ss [BAG_UNION_EMPTY,BAG_UNION_INSERT]
   THEN PROVE_TAC [BAG_CARD_THM,FINITE_BAG_UNION,ARITH `x <=y ==> x <= y+1`]);
 
+Theorem BAG_MERGE_CARD
+`!a b. FINITE_BAG a /\ FINITE_BAG b ==>
+       BAG_CARD (BAG_MERGE a b) <= (BAG_CARD a + BAG_CARD b)` (
+  rw[] >>
+  `(BAG_MERGE a b) <= (a + b)`
+    by metis_tac[BAG_MERGE_SUB_BAG_UNION] >>
+  `FINITE_BAG (a + b)` by metis_tac[FINITE_BAG_UNION] >>
+  `BAG_CARD (BAG_MERGE a b) <= BAG_CARD (a + b)`
+    by metis_tac[SUB_BAG_CARD] >>
+  metis_tac[BAG_CARD_UNION]);
+
 val _ = ParseExtras.temp_tight_equality()
 val BAG_CARD_DIFF = store_thm(
   "BAG_CARD_DIFF",
@@ -1482,6 +1616,40 @@ val FINITE_SET_OF_BAG = store_thm(
   ])
  before
  export_rewrites ["FINITE_SET_OF_BAG"];
+
+Theorem FINITE_BAG_OF_SET
+`!s. FINITE s <=> FINITE_BAG (BAG_OF_SET s)` (
+  rw[] >> EQ_TAC
+  >- (rw[] >>
+      Induct_on `s` >>
+      simp[SET_OF_EMPTY] >>
+      rw[] >>
+      simp[BAG_OF_SET_INSERT] >>
+      simp[FINITE_BAG_MERGE])
+  >- (`!c. FINITE_BAG c ==> !s. (c = BAG_OF_SET s) ==> FINITE s`
+        suffices_by metis_tac[] >>
+      Induct_on `c` >>
+      rw[]
+        >- (Cases_on `s={}` >- rw[] >>
+            `?e. e ∈ s` by metis_tac[MEMBER_NOT_EMPTY] >>
+            fs[BAG_OF_SET,EMPTY_BAG_alt,FUN_EQ_THM] >>
+            first_x_assum (qspec_then `e` mp_tac) >>
+            rw[])
+        >- (`e IN s`
+              by metis_tac[BAG_IN_BAG_OF_SET,BAG_DECOMPOSE,BAG_IN_BAG_INSERT] >>
+            `?t. s = (e INSERT t)` by metis_tac[BAG_OF_SET_EQ_INSERT] >>
+            fs[] >>
+            fs[BAG_OF_SET_INSERT] >>
+            `(BAG_MERGE {|e|} (BAG_OF_SET t)) 
+                = (BAG_INSERT e 
+                  (BAG_MERGE ({|e|}-{|e|}) ((BAG_OF_SET t)-{|e|})))`
+              by metis_tac[BAG_INSERT_EQ_MERGE_DIFF] >>
+            fs[BAG_MERGE_EMPTY] >>
+            `BAG_OF_SET t - {|e|} = BAG_OF_SET (t DIFF {e})`
+              by simp[BAG_OF_SET_BAG_DIFF_DIFF,SET_OF_EL_BAG] >>
+            first_x_assum (qspec_then `t DIFF {e}` mp_tac) >> DISCH_TAC >>
+            metis_tac[FINITE_DIFF_down,FINITE_DEF])));
+
 
 (* ----------------------------------------------------------------------
     IMAGE for bags.
