@@ -1,4 +1,5 @@
 open HolKernel Parse boolLib bossLib;
+open bagTheory;
 
 val _ = new_theory "unibag";
 
@@ -39,7 +40,7 @@ Theorem unibag_IN `!e b. BAG_IN e b ==> BAG_IN e (unibag b)` (
 
 Theorem unibag_EL_MERGE_cases `!e b.
 ((BAG_IN e b) ==> (BAG_MERGE {|e|} (unibag b) = (unibag b)))
-∧ (¬(BAG_IN e b) ==> (BAG_MERGE {|e|} (unibag b) = BAG_INSERT e (unibag b)))` (
+ /\ (~(BAG_IN e b) ==> (BAG_MERGE {|e|} (unibag b) = BAG_INSERT e (unibag b)))` (
   rw[]
     >- (`BAG_ALL_DISTINCT (unibag b)` by metis_tac[unibag_ALL_DISTINCT] >>
         `BAG_ALL_DISTINCT {|e|}` by simp[BAG_ALL_DISTINCT_THM] >>
