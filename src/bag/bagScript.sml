@@ -106,7 +106,7 @@ Theorem BAG_MERGE_EMPTY
 `!b. ((BAG_MERGE {||} b) = b) /\ ((BAG_MERGE b {||}) = b)` (
   rw[BAG_MERGE,FUN_EQ_THM,EMPTY_BAG]);
 
-Theorem BAG_MERGE_ELBAG_SUB_BAG_INSERT 
+Theorem BAG_MERGE_ELBAG_SUB_BAG_INSERT
         `!A b. SUB_BAG (BAG_MERGE {|A|} b) (BAG_INSERT A b)` (
   rw[] >> simp[BAG_MERGE,BAG_INSERT,EMPTY_BAG,SUB_BAG,BAG_INN] >> rw[]);
 
@@ -950,7 +950,7 @@ rw[UNION_DEF,BAG_OF_SET,BAG_MERGE,FUN_EQ_THM] >> rw[] >> fs[]);
 
 Theorem BAG_OF_SET_INSERT
 `!e s. BAG_OF_SET (e INSERT s) = BAG_MERGE {|e|} (BAG_OF_SET s)` (
-rw[BAG_OF_SET,INSERT_DEF,BAG_MERGE,EMPTY_BAG,FUN_EQ_THM,BAG_INSERT] >> 
+rw[BAG_OF_SET,INSERT_DEF,BAG_MERGE,EMPTY_BAG,FUN_EQ_THM,BAG_INSERT] >>
 rw[IN_DEF]
  >- (fs[] >>
      `s e = F` by metis_tac[] >>
@@ -965,7 +965,7 @@ Theorem BAG_OF_SET_BAG_DIFF_DIFF
 `!b s. (BAG_OF_SET s) - b = (BAG_OF_SET (s DIFF (SET_OF_BAG b)))` (
   simp[BAG_OF_SET,DIFF_DEF,FUN_EQ_THM,BAG_DIFF,SET_OF_BAG] >>
   rw[BAG_IN,BAG_INN,IN_DEF] >> fs[]);
-  
+
 val SET_OF_EMPTY = store_thm (
   "SET_OF_EMPTY",
   ``BAG_OF_SET (EMPTY:'a->bool) = EMPTY_BAG``,
@@ -1716,7 +1716,7 @@ val BAG_IMAGE_FINITE = store_thm(
 
 val BAG_IMAGE_COMPOSE = store_thm (
   "BAG_IMAGE_COMPOSE",
-  ``!f g b. FINITE_BAG b ==> 
+  ``!f g b. FINITE_BAG b ==>
      ((BAG_IMAGE (f o g) b = BAG_IMAGE f (BAG_IMAGE g b)))``,
   GEN_TAC THEN GEN_TAC THEN
   HO_MATCH_MP_TAC STRONG_FINITE_BAG_INDUCT THEN
@@ -2100,7 +2100,7 @@ val SET_OF_BAG_IMAGE = Q.store_thm(
     SRW_TAC [ARITH_ss][BAG_CARD_THM],
     FULL_SIMP_TAC (srw_ss()) [],
     ALL_TAC ] THEN
-  `~BAG_EVERY ($~ o (\e0. f e0 = x)) b` 
+  `~BAG_EVERY ($~ o (\e0. f e0 = x)) b`
     by PROVE_TAC [BAG_FILTER_EQ_EMPTY,BAG_INSERT_NOT_EMPTY] THEN
   FULL_SIMP_TAC (srw_ss()) [BAG_EVERY,BAG_IN,BAG_INN] THEN
   PROVE_TAC []);

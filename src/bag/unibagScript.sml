@@ -56,7 +56,7 @@ Theorem unibag_EL_MERGE_cases `!e b.
           by simp[BAG_ALL_DISTINCT_BAG_MERGE] >>
         `BAG_ALL_DISTINCT (BAG_INSERT e (unibag b))`
           by simp[BAG_ALL_DISTINCT] >>
-        qspecl_then [`BAG_MERGE {|e|} (unibag b)`,`BAG_INSERT e (unibag b)`] 
+        qspecl_then [`BAG_MERGE {|e|} (unibag b)`,`BAG_INSERT e (unibag b)`]
           mp_tac BAG_ALL_DISTINCT_EXTENSION >>
         rw[]));
 
@@ -70,7 +70,7 @@ Theorem unibag_DECOMPOSE `unibag g <> g ==> ?A g0. g = {|A;A|} + g0` (
         simp[FUN_EQ_THM,BAG_UNION,
              BAG_INSERT,EMPTY_BAG,combinTheory.APPLY_UPDATE_THM] >>
         qx_gen_tac `y` >>
-        Cases_on `x=y` >> 
+        Cases_on `x=y` >>
         rw[])
     >- fs[BAG_IN,BAG_INN]);
 
