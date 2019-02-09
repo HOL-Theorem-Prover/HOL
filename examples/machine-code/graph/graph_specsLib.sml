@@ -254,7 +254,7 @@ local
     val r0 = ``"r0"``
     val r14 = ``"r14"``
     val ret_str = ``"ret"``
-    val r0_input_str = ``"r0_input"``
+    val ret_addr_input_str = ``"ret_addr_input"``
     val (is_tail_call,ret) = let
       val u = first (fn (t,x) => t = r14) supdate |> snd
       val res = EVAL ``(^u s = VarWord (^pc1+4w)) \/ (^u s = VarWord (^pc1+2w))``
@@ -267,9 +267,9 @@ local
     val var_acc_ty = ``:string -> (string -> ^(tysize()) variable) -> ^(tysize()) variable``
     val var_acc = mk_const ("var_acc",var_acc_ty)
     fun get_assign tm =
-      if tm = r0_input_str then let
+      if tm = ret_addr_input_str then let
         val var_acc_r0 = mk_comb(var_acc,r0)
-        in pairSyntax.mk_pair(r0_input_str,var_acc_r0) end
+        in pairSyntax.mk_pair(ret_addr_input_str,var_acc_r0) end
       else let
         val tm2 = if is_tail_call then tm else
                   if tm = ret_str then r14 else tm
@@ -536,6 +536,8 @@ fun derive_insts_for sec_name = let
   val _ = open_current "test"
   val sec_name = "memcpy"
   val sec_name = "memzero"
+  val sec_name = "lookupSlot"
+  val sec_name = "resolveAddressBits"
 
   val base_name = "loop-m0/example"
   val _ = read_files base_name []

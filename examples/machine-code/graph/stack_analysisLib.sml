@@ -116,10 +116,13 @@ in
 end
 
 fun find_stack_accesses_for all_summaries sec_name = let
-  val r13 = ``r13:word32``
+  val sp_var = (case !arch_name of
+                  ARM   => ``r13:word32``
+                | M0    => ``r13:word32``
+                | RISCV => ``r2:word64``)
   val (init_pc,_,_,_,_) = hd all_summaries
-  val state = (init_pc,(r13,r13)::(if stack_offset_in_r0 sec_name then
-                                    [(``r0:word32``,``^r13 + offset``)]
+  val state = (init_pc,(sp_var,sp_var)::(if stack_offset_in_r0 sec_name then
+                                    [(``r0:word32``,``^sp_var + offset``)]
                                    else []),T)
   val (pc,s,t) = state
   val us = filter (fn (p,_,_,_,_) => p = pc) all_summaries
@@ -139,14 +142,14 @@ fun find_stack_accesses_for all_summaries sec_name = let
                   |> (fn (x,_) => length x = 0)
       in not (can_prove_by_cases test) end
   fun is_sp_add_or_sub a =
-    if a = r13 then true else let
+    if a = sp_var then true else let
       val (w1,w2) = wordsSyntax.dest_word_add a
-      in (w1 = r13 andalso wordsSyntax.is_n2w w2) orelse
-         (w2 = r13 andalso wordsSyntax.is_n2w w1) end
+      in (w1 = sp_var andalso wordsSyntax.is_n2w w2) orelse
+         (w2 = sp_var andalso wordsSyntax.is_n2w w1) end
     handle HOL_ERR _ => let
       val (w1,w2) = wordsSyntax.dest_word_sub a
-      in (w1 = r13 andalso wordsSyntax.is_n2w w2) orelse
-         (w2 = r13 andalso wordsSyntax.is_n2w w1) end
+      in (w1 = sp_var andalso wordsSyntax.is_n2w w2) orelse
+         (w2 = sp_var andalso wordsSyntax.is_n2w w1) end
     handle HOL_ERR _ => false
   val stack_read32_pat = ``READ32 (a:word32) m``
   fun is_simple_or_stack_read32 (x,y) =
@@ -188,7 +191,7 @@ fun find_stack_accesses_for all_summaries sec_name = let
   fun check_for_stack_accesses (pc,s,t) NONE = ()
     | check_for_stack_accesses (pc,s,t) (SOME a) = let
     val i = remove_read32 o word_simp_tm o subst (map (fn (x,y) => x |-> y) s)
-    fun contains_sp tm = mem r13 (free_vars tm)
+    fun contains_sp tm = mem sp_var (free_vars tm)
     in if contains_sp (i a)
        then found_stack_access pc (filter (fn (x,y) => contains_sp y)
                                      (map (fn (x,y) => (x,i y)) s))

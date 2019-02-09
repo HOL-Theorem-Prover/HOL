@@ -161,8 +161,10 @@ end;
 val patterns =
      [(``MemAcc8 m a``,"MemAcc"),
       (``MemAcc32 m a``,"MemAcc"),
+      (``MemAcc64 m a``,"MemAcc"),
       (``MemUpdate8 m a w``,"MemUpdate"),
       (``MemUpdate32 m a w``,"MemUpdate"),
+      (``MemUpdate64 m a w``,"MemUpdate"),
       (``x = (y:'a)``,"Equals"),
       (``T``,"True"),
       (``F``,"False"),

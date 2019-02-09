@@ -372,13 +372,13 @@ val all_names_def = Define `
      "mem"; "dom"; "stack"; "dom_stack"; "clock"]`;
 
 val ret_and_all_names_def = Define `
-  ret_and_all_names = "ret"::all_names ++ ["r0_input"]`;
+  ret_and_all_names = "ret"::all_names ++ ["ret_addr_input"]`;
 
 val all_names_ignore_def = Define `
-  all_names_ignore = all_names ++ ["r0_input_ignore"]`;
+  all_names_ignore = all_names ++ ["ret_addr_input_ignore"]`;
 
 val all_names_with_input_def = Define `
-  all_names_with_input = all_names ++ ["r0_input"]`;
+  all_names_with_input = all_names ++ ["ret_addr_input"]`;
 
 val LIST_SUBSET_def = Define `
   LIST_SUBSET xs ys = EVERY (\x. MEM x ys) xs`;
@@ -886,8 +886,8 @@ val var_word_fold_IGNORE = prove(
        APPLY_UPDATE_THM]);
 
 val save_vals_lemma = prove(
-  ``(MAP FST l = ("ret"::all_names ++ ["r0_input"])) ==>
-    (var_word "ret" (save_vals ("ret"::all_names ++ ["r0_input"])
+  ``(MAP FST l = ("ret"::all_names ++ ["ret_addr_input"])) ==>
+    (var_word "ret" (save_vals ("ret"::all_names ++ ["ret_addr_input"])
       (MAP (\i. i st) (MAP SND l)) s) =
      var_word "ret" (apply_update l st))``,
   Cases_on `l` \\ FULL_SIMP_TAC (srw_ss()) [MAP,save_vals_def,fold_def]
@@ -2145,7 +2145,7 @@ val SKIP_TAG_IMP_CALL_ARM = store_thm("SKIP_TAG_IMP_CALL_ARM",
             ("mem",var_acc "mem"); ("dom",var_acc "dom");
             ("stack",var_acc "stack");
             ("dom_stack",var_acc "dom_stack");
-            ("clock",var_acc "clock"); ("r0_input",var_acc "r0")]
+            ("clock",var_acc "clock"); ("ret_addr_input",var_acc "r0")]
           name (Jump exit)))``,
   fs [IMPL_INST_def,next_ok_def,check_ret_def,exec_next_def,
       check_jump_def,get_assert_def,LET_THM]
@@ -2211,7 +2211,7 @@ val SKIP_TAG_IMP_CALL_M0 = store_thm("SKIP_TAG_IMP_CALL_M0",
             ("mem",var_acc "mem"); ("dom",var_acc "dom");
             ("stack",var_acc "stack");
             ("dom_stack",var_acc "dom_stack");
-            ("clock",var_acc "clock"); ("r0_input",var_acc "r0")]
+            ("clock",var_acc "clock"); ("ret_addr_input",var_acc "r0")]
           name (Jump exit)))``,
   fs [IMPL_INST_def,next_ok_def,check_ret_def,exec_next_def,
       check_jump_def,get_assert_def,LET_THM]
@@ -2277,7 +2277,7 @@ val SKIP_TAG_IMP_CALL_RISCV = store_thm("SKIP_TAG_IMP_CALL_RISCV",
             ("mem",var_acc "mem"); ("dom",var_acc "dom");
             ("stack",var_acc "stack");
             ("dom_stack",var_acc "dom_stack");
-            ("clock",var_acc "clock"); ("r0_input",var_acc "r0")]
+            ("clock",var_acc "clock"); ("ret_addr_input",var_acc "r1")]
           name (Jump exit)))``,
   fs [IMPL_INST_def,next_ok_def,check_ret_def,exec_next_def,
       check_jump_def,get_assert_def,LET_THM]
@@ -2322,5 +2322,15 @@ val export_init_rw = save_thm("export_init_rw",v2w_field_insert_31_16);
 
 val m0_preprocessing = save_thm("m0_preprocessing",
   CONJ (EVAL ``RName_LR = RName_PC``) (EVAL ``RName_PC = RName_LR``));
+
+val WRITE64_intro = store_thm("WRITE64_intro",
+  ``m⦇a ↦ (7 >< 0) w; a + 1w ↦ (15 >< 8) w;
+        a + 3w ↦ (31 >< 24) w; a + 7w ↦ (63 >< 56) w;
+        a + 5w ↦ (47 >< 40) w; a + 2w ↦ (23 >< 16) w;
+        a + 4w ↦ (39 >< 32) w; a + 6w ↦ (55 >< 48) w⦈ =
+    WRITE64 (a:word64) (w:word64) (m:word64->word8)``,
+  fs [WRITE64_def,FUN_EQ_THM,combinTheory.APPLY_UPDATE_THM]
+  \\ rw [] \\ fs [] \\ fs [WORD_EQ_ADD_CANCEL]
+  \\ blastLib.BBLAST_TAC);
 
 val _ = export_theory();

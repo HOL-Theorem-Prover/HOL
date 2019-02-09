@@ -220,7 +220,7 @@ local
     ``(((((31 >< 1) (w:word32)):31 word) @@ (0w:1 word)) : word32) =
       w && 0xFFFFFFFEw``
   val fix_sub_word64 = prove(
-    ``(n2w n + w = if n < dimword (:'a) DIV 2 then (w:'a word) + n2w n
+    ``(n2w n + w = if n < dimword (:'a) DIV 2 then n2w n + (w:'a word)
                    else w - n2w (dimword (:'a) - n MOD dimword (:'a))) /\
       (w + n2w n = if n < dimword (:'a) DIV 2 then w + n2w n
                    else w - n2w (dimword (:'a) - n MOD dimword (:'a)))``,
@@ -229,11 +229,13 @@ local
     \\ rewrite_tac [WORD_EQ_NEG,word_2comp_n2w])
     |> INST_TYPE [alpha|->``:64``]
     |> SIMP_RULE std_ss [EVAL ``dimword (:64)``]
+  val riscv_mask_byte =
+    blastLib.BBLAST_PROVE ``w2w (w && 2w ≪ 7 − 1w) = (w2w (w:word64)) : word8``
 in
   fun clean_spec_thm th = let
     val th = th |> REWRITE_RULE [GSYM word32_def, GSYM word64_def,
                      decomp_simp1,GSYM READ32_def,GSYM READ64_def,
-                     GSYM WRITE32_def,GSYM WRITE64_def,
+                     GSYM WRITE32_def,GSYM WRITE64_def,WRITE64_intro,riscv_mask_byte,
                      word_extract_thm,GSYM word_add_with_carry_def]
                 |> CONV_RULE (DEPTH_CONV READ8_INTRO_CONV)
                 |> REWRITE_RULE [GSYM WRITE8_def]
@@ -737,6 +739,7 @@ fun derive_specs_for sec_name = let
   val base_name = "loop-riscv/example"
   val _ = read_files base_name []
   val _ = open_current "test"
+  val sec_name = "lookupSlot"
   val sec_name = "memzero"
   val sec_name = "memcpy"
 

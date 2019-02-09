@@ -16,7 +16,8 @@ fun STACK_MEMORY_INTRO_RULE th = let
   val d = x |> rator |> rand
   val m = x |> rand
   val th = th |> RW1 [GSYM arm_STACK_MEMORY_def,
-                      GSYM m0_STACK_MEMORY_def]
+                      GSYM m0_STACK_MEMORY_def,
+                      GSYM riscv_STACK_MEMORY_def]
   val th = th |> INST [m |-> mk_var("stack" ,type_of m),
                        d |-> mk_var("dom_stack" ,type_of d)]
   in th end handle HOL_ERR _ => th;
