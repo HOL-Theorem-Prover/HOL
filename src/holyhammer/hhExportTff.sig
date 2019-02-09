@@ -1,9 +1,10 @@
-signature hhExportLib =
+signature hhExportTff =
 sig
 
 include Abbrev
 
-  val os : int
-  val oiter : int
+  val tf1_export : string list -> unit
+  val tf1_export_bushy : string list -> unit
+  val tf1_export_chainy : string list -> unit
 
 end

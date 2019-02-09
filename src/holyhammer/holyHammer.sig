@@ -29,7 +29,7 @@ sig
   type lbl = (string * real * goal * goal list)
   type fea = int list
   type thmdata =
-    (int, real) Redblackmap.dict *
+    (int, real) Redblackmap.dict * 
     (string, int list) Redblackmap.dict
   type tacdata =
     {

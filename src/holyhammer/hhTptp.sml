@@ -9,20 +9,7 @@
 structure hhTptp :> hhTptp =
 struct
 
-open HolKernel boolLib aiLib hhTranslate
-
-(* -------------------------------------------------------------------------
-   Writer shortcuts
-   ------------------------------------------------------------------------- *)
-
-fun os oc s = TextIO.output (oc,s)
-
-fun oiter_aux oc sep f l = case l of
-    []     => ()
-  | [a]    => f oc a
-  | a :: m => (f oc a; os oc sep; oiter_aux oc sep f m)
-
-fun oiter oc sep f l = oiter_aux oc sep f l
+open HolKernel boolLib aiLib hhTranslate hhExportLib
 
 (* -------------------------------------------------------------------------
    Escaping constants, variables and theorems
@@ -119,7 +106,7 @@ fun write_ax oc (name,tm) =
    write_formula oc tm; os oc ").\n")
 
 fun write_cj oc (name,cj) =
-  (os oc "fof(" ^ name ^ ",conjecture,"; write_formula oc cj; os oc ").\n")
+  (os oc ("fof(" ^ name ^ ",conjecture,"); write_formula oc cj; os oc ").\n")
 
 fun write_tptp_file file axl cj =
   let val oc = TextIO.openOut file in

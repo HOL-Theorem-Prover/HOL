@@ -27,12 +27,9 @@ fun incr_genvar iref =
 fun string_of_genvar iref =
   let val (a,b) = !iref in int_to_string a ^ "_" ^ int_to_string b end
 
-(* --------------------------------------------------------------------------
-   Preprocessing of the formula:
-    (* 1 unfolding ?! *)
-    2 fully applying lambdas if at the top of an equality
-    3 applying beta conversion whenever possible
-  -------------------------------------------------------------------------- *)
+(* -------------------------------------------------------------------------
+   Eliminating some lambdas without lambda-lifting
+   ------------------------------------------------------------------------- *)
 
 fun ELIM_LAMBDA_EQ tm =
   let val (l, r) = dest_eq tm in

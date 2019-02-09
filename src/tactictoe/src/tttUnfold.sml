@@ -1052,7 +1052,7 @@ fun ttt_rewrite () =
 
 (* ------------------------------------------------------------------------
    Extra safety during recording
-   (in case of export_theory is not catched)
+   (if export_theory is not catched)
    ------------------------------------------------------------------------ *)
 
 fun save_file file =
