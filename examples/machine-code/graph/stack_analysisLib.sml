@@ -6,7 +6,7 @@ open wordsTheory set_sepTheory progTheory helperLib addressTheory combinTheory;
 open backgroundLib file_readerLib writerLib;
 open GraphLangTheory
 
-fun stack_offset_in_r0 sec_name = let
+fun stack_offset_in_fst_arg sec_name = let
   val (_,ret_word_count,_) = section_io sec_name
   in 1 < ret_word_count end
 
@@ -58,11 +58,12 @@ local
   fun get_pc_val tm = let
     val pc_pat = get_pc_pat ()
     in find_term (can (match_term pc_pat)) tm |> rand end
-  val dmem_type = ``:word32 set``
+  val dmem32_type = ``:word32 set``
+  val dmem64_type = ``:word64 set``
   fun dest_dmem_test tm = let
     val (x,y) = pred_setSyntax.dest_in tm
     val (v,ty) = dest_var y
-    val _ = (ty = dmem_type) orelse fail()
+    val _ = (ty = dmem32_type) orelse (ty = dmem64_type) orelse fail()
     in x end
   fun get_mem_access [] = NONE
     | get_mem_access (tm::tms) =
@@ -100,19 +101,27 @@ local
         if z = F then false else fail()) end
   fun has_call_tag th =
     can (find_term (can dest_call_tag)) (concl (DISCH_ALL th))
-  val call_update = let
+  fun call_update () = let
     fun mk_arb_pair tm = (tm,mk_arb(type_of tm))
-    in map mk_arb_pair [``r0:word32``,
-             ``r1:word32``, ``r2:word32``, ``r3:word32``, ``r14:word32``,
-             ``n:bool``, ``z:bool``, ``c:bool``, ``v:bool``] end
+    val wty = wsize()
+    val regs = (case !arch_name of
+                  RISCV => ["r3"]
+                | ARM => ["r0","r1","r2","r3","r14"]
+                | M0 => ["r0","r1","r2","r3","r14"])
+    in map mk_arb_pair
+         (map (fn s => mk_var(s,wty)) regs @
+         [``n:bool``, ``z:bool``, ``c:bool``, ``v:bool``]) end
 in
   fun approx_summary (i,(th1,i1,i2),thi2) =
     if not (has_call_tag th1) then summary (i,(th1,i1,i2),thi2) else let
       val res = summary (i,(th1,i1,i2),thi2)
       val (p1,assum1,u1,addr,q1) = hd res
-      val r14 = mk_var("r14",``:word32``)
-      val dest = first (fn (x,_) => x = r14) u1 |> snd handle HOL_ERR _ => T
-      in (p1,assum1,call_update,addr,dest) :: tl res end
+      val linkreg = (case !arch_name of
+                       RISCV => mk_var("r1",``:word64``)
+                     | M0 => mk_var("r14",``:word32``)
+                     | ARM => mk_var("r14",``:word32``))
+      val dest = first (fn (x,_) => aconv x linkreg) u1 |> snd handle HOL_ERR _ => T
+      in (p1,assum1,call_update(),addr,dest) :: tl res end
 end
 
 fun find_stack_accesses_for all_summaries sec_name = let
@@ -121,9 +130,12 @@ fun find_stack_accesses_for all_summaries sec_name = let
                 | M0    => ``r13:word32``
                 | RISCV => ``r2:word64``)
   val (init_pc,_,_,_,_) = hd all_summaries
-  val state = (init_pc,(sp_var,sp_var)::(if stack_offset_in_r0 sec_name then
-                                    [(``r0:word32``,``^sp_var + offset``)]
-                                   else []),T)
+  val state = (init_pc,(sp_var,sp_var)::
+              (if stack_offset_in_fst_arg sec_name then
+                 (case !arch_name of
+                    RISCV => [(``r10:word64``,``^sp_var + offset``)]
+                  | _ => [(``r0:word32``,``^sp_var + offset``)])
+               else []),T)
   val (pc,s,t) = state
   val us = filter (fn (p,_,_,_,_) => p = pc) all_summaries
   val (pc1,assum,u,addr,pc2) = hd us
@@ -152,25 +164,34 @@ fun find_stack_accesses_for all_summaries sec_name = let
          (w2 = sp_var andalso wordsSyntax.is_n2w w1) end
     handle HOL_ERR _ => false
   val stack_read32_pat = ``READ32 (a:word32) m``
+  val stack_read64_pat = ``READ64 (a:word64) m``
   fun is_simple_or_stack_read32 (x,y) =
     if is_var x then true else
     if can (match_term stack_read32_pat) x then
       (x |> rator |> rand |> is_sp_add_or_sub)
     else false
+  fun is_simple_or_stack_read64 (x,y) =
+    if is_var x then true else
+    if can (match_term stack_read64_pat) x then
+      (x |> rator |> rand |> is_sp_add_or_sub)
+    else false
+  val is_simple_or_stack_read = (if !arch_name = RISCV
+                                 then is_simple_or_stack_read64
+                                 else is_simple_or_stack_read32)
   val word_simp_tm = rand o concl o QCONV (SIMP_CONV std_ss [word_arith_lemma1] THENC
         SIMP_CONV std_ss [word_arith_lemma3,word_arith_lemma4,WORD_ADD_0])
   fun exec_step s t (pc1,assum,u,addr,pc2) = let
     val s_simple = filter (fn (x,_) => is_var x) s
-    val s_read32 = filter (fn (x,_) => not (is_var x)) s
+    val s_read_word = filter (fn (x,_) => not (is_var x)) s
     val i_simple = word_simp_tm o subst (map (fn (x,y) => x |-> y) s_simple)
-    val i = word_simp_tm o subst (map (fn (x,y) => x |-> y) s_read32) o i_simple
-    fun i_read32_only tm = if is_comb tm then i_simple tm else tm
-    val new_u_part = map (fn (x,y) => (i_read32_only x,i y)) u
+    val i = word_simp_tm o subst (map (fn (x,y) => x |-> y) s_read_word) o i_simple
+    fun i_read_word_only tm = if is_comb tm then i_simple tm else tm
+    val new_u_part = map (fn (x,y) => (i_read_word_only x,i y)) u
     val u_domain = map fst new_u_part
     val new_u = new_u_part @ filter (fn (x,y) => not (mem x u_domain)) s
     val new_t = if assum = T then t else assum
     val new_t = if intersect u_domain (free_vars new_t) <> [] then T else new_t
-    in (pc2,filter is_simple_or_stack_read32 new_u,new_t) end
+    in (pc2,filter is_simple_or_stack_read new_u,new_t) end
   fun register_state (pc,s,t) = let
     val _ = print ("\nRegister state:\n  pc = " ^ term_to_string pc ^ "\n")
     val _ = print ("  assumes " ^ term_to_string t ^ "\n")
@@ -178,19 +199,20 @@ fun find_stack_accesses_for all_summaries sec_name = let
     val _ = map (fn (x,y) => print ("  " ^ term_to_string x ^ " is " ^
                                            term_to_string y ^ "\n")) s
     in () end
-  val read32_pat = ``READ32 a (m:word32->word8)``
-  fun remove_read32 tm = let
-    val xs = find_terms (can (match_term read32_pat)) tm
+  val read_word_pat = (if !arch_name = RISCV then ``READ64 a (m:word64->word8)``
+                                             else ``READ32 a (m:word32->word8)``)
+  fun remove_read_word tm = let
+    val xs = find_terms (can (match_term read_word_pat)) tm
     val ss = map (fn x => x |-> (mk_arb(type_of x))) xs
     in subst ss tm end
   fun found_stack_access pc s = let
     val _ = add_stack_access pc
-(*    val _ = print ("Stack found access at pc = " ^ term_to_string pc ^ "\n") *)
-(*    val _ =  print "\n" *)
+(*  val _ = print ("Stack found access at pc = " ^ term_to_string pc ^ "\n") *)
+(*  val _ =  print "\n" *)
     in () end
   fun check_for_stack_accesses (pc,s,t) NONE = ()
     | check_for_stack_accesses (pc,s,t) (SOME a) = let
-    val i = remove_read32 o word_simp_tm o subst (map (fn (x,y) => x |-> y) s)
+    val i = remove_read_word o word_simp_tm o subst (map (fn (x,y) => x |-> y) s)
     fun contains_sp tm = mem sp_var (free_vars tm)
     in if contains_sp (i a)
        then found_stack_access pc (filter (fn (x,y) => contains_sp y)
@@ -210,16 +232,18 @@ fun find_stack_accesses_for all_summaries sec_name = let
     in () end
   fun exec_steps state =
     if has_visited state then () else let
-     (* val _ = register_state state *)
+   (* val _ = register_state state *)
       val (pc,s,t) = state
-(*      val _ = print_state state *)
+   (* val _ = print_state state *)
       val us = filter (fn (p,_,_,_,_) => p = pc) all_summaries
       val us = filter (can_exec_step t) us
       val addresses = map (fn (_,_,_,a,_) => a) us
       val _ = map (check_for_stack_accesses state) addresses
-(*      val (pc1,assum,u,addr,pc2) = hd us *)
+   (* val (pc1,assum,u,addr,pc2) = hd us *)
       val states = map (exec_step s t) us
-(*      val state = hd states handle Empty => state *)
+   (*
+      val state = hd states handle Empty => state
+   *)
       val _ = map exec_steps states
       in () end
   val _ = exec_steps state
@@ -227,7 +251,7 @@ fun find_stack_accesses_for all_summaries sec_name = let
   in xs end;
 
 fun find_stack_accesses sec_name thms = let
-  val _ = write_subsection "Stack analysis"
+  val _ = write_subsection "\nStack analysis"
   val all_summaries = map approx_summary thms |> flatten
   val all_simple_summaries = all_summaries
     |> map (fn (x,a,u,z,y) => (x,a,filter (is_var o fst) u,z,y))
@@ -236,8 +260,10 @@ fun find_stack_accesses sec_name thms = let
   fun annotation loc =
     if mem loc simple_stack_accesses then "stack access" else
     if mem loc all_stack_accesses then "indirect stack access" else fail()
-  val _ = if stack_offset_in_r0 sec_name then
-            write_line ("Section `" ^ sec_name ^ "` expects pointer to stack in r0.")
+  val _ = if stack_offset_in_fst_arg sec_name then let
+            val r = (case !arch_name of RISCV => "a0" | _ => "r0")
+            in write_line ("Section `" ^ sec_name ^ "` expects pointer "^
+                           "to stack in "^r^".") end
           else ()
   val l = all_stack_accesses |> all_distinct |> length |> int_to_string
   val _ = (if l = "0" then

@@ -110,6 +110,12 @@ fun list_mk_union [] = ``{}:'a set``
   | list_mk_union [x] = x
   | list_mk_union (x::xs) = pred_setSyntax.mk_union(list_mk_union xs,x)
 
+fun arch_to_string () =
+  case !arch_name of
+    RISCV => "riscv"
+  | ARM => "arm"
+  | M0 => "m0";
+
 (*
   val sec_name = "bi_finalise"
 *)
@@ -132,11 +138,13 @@ fun prove_funcs_ok names = let
   val all_code = fs |> map (rand o rator o rator o concl)
   val code_name = all_code |> hd |> rator
   val all_code = mk_comb(code_name, (all_code |> map rand |> list_mk_union))
-  val all_code_var = mk_var("all_code",type_of all_code)
-  val all_code_def = new_definition("all_code",mk_eq(all_code_var,all_code))
+  val all_code_name = "all_" ^ arch_to_string () ^ "_code"
+  val all_code_var = mk_var(all_code_name,type_of all_code)
+  val all_code_def = new_definition(all_code_name,mk_eq(all_code_var,all_code))
+  val all_code_const = all_code_def |> concl |> dest_eq |> fst
   val pair_case_of = TypeBase.case_def_of ``:'a # 'b``;
   fun expend_code th = let
-    val th = MATCH_MP func_ok_EXPEND_CODE th |> Q.SPEC `all_code`
+    val th = MATCH_MP func_ok_EXPEND_CODE th |> SPEC all_code_const
     val goal = th |> concl |> dest_imp |> fst
     val lemma = auto_prove "expand_code" (goal,
       REWRITE_TAC [all_code_def,SUBSET_DEF,IN_UNION,pair_case_of,

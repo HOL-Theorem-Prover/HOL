@@ -114,20 +114,25 @@ fun read_complete_sections filename filename_sigs ignore = let
     | try_map f (x::xs) = (f x :: try_map f xs) handle HOL_ERR _ => try_map f xs
   (* read basic section info *)
   val all_sections = read_sections filename
+  val is_riscv = let
+    val xs = lines_from_file filename
+    in exists (fn s => String.isSubstring "riscv" s) xs end
   (* read in signature file *)
   val ss = lines_from_file filename_sigs
   fun every p [] = true
     | every p (x::xs) = p x andalso every p xs
   val is_blank = every (fn c => mem c [#" ",#"\n",#"\t"]) o explode
   val ss = filter (not o is_blank) ss
+  val bytes_in_word = (if is_riscv then 8 else 4)
   fun process_sig_line line = let
     val ts0 = String.tokens (fn x => mem x [#" ",#"\n"]) line
     val ts = filter (fn s => s <> "struct") ts0
     val sec_name = el 2 ts
     val returns_struct = (hd ts0 = "struct")
-    val ret_length = if hd ts = "0" then 0 else max(string_to_int (hd ts),4) div 4
+    val ret_length = if hd ts = "0" then 0 else
+                     max(string_to_int (hd ts),bytes_in_word) div bytes_in_word
     val arg_lengths = map string_to_int (tl (tl ts))
-    val arg_lengths = map (fn x => max(x,4) div 4) arg_lengths
+    val arg_lengths = map (fn x => max(x,bytes_in_word) div bytes_in_word) arg_lengths
     in (sec_name,(arg_lengths,ret_length,returns_struct)) end
   val ss_alist = map process_sig_line ss
   (* combine section info with signatures *)
@@ -170,9 +175,8 @@ fun read_complete_sections filename filename_sigs ignore = let
     if length deps1 < length deps2 then true else
     if length deps2 < length deps1 then false else
       (length body1 <= length deps2)
+  (* guess arch *)
   val arch = let
-    val xs = lines_from_file filename
-    val is_riscv = exists (fn s => String.isSubstring "riscv" s) xs
     fun has_short_instr (_,_,_,lines,_) =
       exists (fn (_,hex,_) => size hex < 8) lines
     in if is_riscv then RISCV else
@@ -260,7 +264,8 @@ fun show_annotated_code ann sec_name = let
     val s1 = left_pad loc_width (int_to_hex loc)
     val s2 = left_pad offset_width (int_to_hex offset)
     val asm = String.tokens (fn c => c = #";") asm |> hd
-              |> String.translate (fn c => if c = #"\t" then " " else implode [c])
+              |> String.translate (fn c => if c = #"\r" then "" else
+                                           if c = #"\t" then " " else implode [c])
     val s3 = right_pad 20 asm ^ "  ; " ^ ann loc handle HOL_ERR _ => asm
     in s1 ^ s2 ^ "    " ^ s3 ^ "\n" end
   val _ = write_blank_line ()
