@@ -5000,11 +5000,11 @@ instruction DecodeRVC(h::half) =
      case '100 1 rs1 00000 10' => Branch(JALR( 1, rs1,   0)) -- rs1 /= 0
      case '100 1 r   rs2   10' => ArithR( ADD( r,   r, rs2)) -- rd /= 0
 
-     case '101 ilo`3 ihi`3 rs2 10' => FPStore(FSD(rs2, 2, '000'  : ihi : ilo : '000' )) -- 32/64
-     -- case '101 ilo`2 ihi`4 rs2 10' => Store(   SQ(rs2, 2, '00'   : ihi : ilo : '0000')) -- 128
-     case '110 ilo`4 ihi`2 rs2 10' => Store(   SW(rs2, 2, '0000' : ihi : ilo : '00'  ))
-     -- case '111 ilo`4 ihi`2 rs2 10' => FPStore(FSW(rs2, 2, '0000' : ihi : ilo : '00'  )) -- 32
-     case '111 ilo`3 ihi`3 rs2 10' => Store(   SD(rs2, 2, '000'  : ihi : ilo : '000' )) -- 64/128
+     case '101 ilo`3 ihi`3 rs2 10' => FPStore(FSD(2, rs2, '000'  : ihi : ilo : '000' )) -- 32/64
+     -- case '101 ilo`2 ihi`4 rs2 10' => Store(   SQ(2, rs2, '00'   : ihi : ilo : '0000')) -- 128
+     case '110 ilo`4 ihi`2 rs2 10' => Store(   SW(2, rs2, '0000' : ihi : ilo : '00'  ))
+     -- case '111 ilo`4 ihi`2 rs2 10' => FPStore(FSW(2, rs2, '0000' : ihi : ilo : '00'  )) -- 32
+     case '111 ilo`3 ihi`3 rs2 10' => Store(   SD(2, rs2, '000'  : ihi : ilo : '000' )) -- 64/128
 
      -- unsupported instructions
      case _ => UnknownInstruction
