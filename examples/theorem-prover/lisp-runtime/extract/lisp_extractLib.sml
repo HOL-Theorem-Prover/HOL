@@ -924,7 +924,7 @@ fun deep_embeddings base_name defs_inds = let
     val goal = mk_imp(hd (hyp (get_lookup_thm())),th6 |> concl |> rand)
     val f = foldr mk_abs goal params
     val forall_goal = foldr mk_forall goal params
-    val result = if concl ind = T then RW [] th6 else let
+    val result = if concl ind ~~ T then RW [] th6 else let
           val i = ISPEC f ind |> CONV_RULE (DEPTH_CONV BETA_CONV)
           val i = REWRITE_RULE [isTrue_INTRO] i
           val result = prove(i |> concl |> rand,
