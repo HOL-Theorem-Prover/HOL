@@ -1,4 +1,4 @@
-signature hhExportTff =
+signature hhExportTf1 =
 sig
 
 include Abbrev

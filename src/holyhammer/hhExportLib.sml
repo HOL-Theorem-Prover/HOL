@@ -119,8 +119,42 @@ fun typearg_of_appvar tm =
   end
 
 (* -------------------------------------------------------------------------
+   Names
+   ------------------------------------------------------------------------- *)
+
+val combin_namespace_flag = ref false
+
+fun cid_of c = let val {Name,Thy,Ty} = dest_thy_const c in (Thy,Name) end
+
+fun name_v v = fst (dest_var v)
+fun namea_v arity v = name_v v ^ (escape ".") ^ its arity
+fun name_vartype ty = "A" ^ (escape (dest_vartype ty))
+
+fun name_cid (thy,name) = 
+  if !combin_namespace_flag 
+  then escape ("ccombin." ^ thy ^ "." ^ name)
+  else escape ("c." ^ thy ^ "." ^ name)
+
+fun namea_cid arity cid = name_cid cid ^ (escape ".") ^ its arity
+fun name_c c = name_cid (cid_of c)
+fun namea_c arity c = namea_cid arity (cid_of c)
+
+fun namea_cv arity tm =
+  if is_const tm then namea_c arity tm else
+  if is_var tm then namea_v arity tm else raise ERR "namea_cv" ""
+
+fun name_tyop (thy,tyop) = escape ("ty." ^ thy ^ "." ^ tyop)
+fun name_thm (thy,name) = 
+  if !combin_namespace_flag
+  then escape ("thmcombin" ^ "." ^ thy ^ "." ^ name)
+  else escape ("thm" ^ "." ^ thy ^ "." ^ name)
+
+(* -------------------------------------------------------------------------
    Dependencies of terms
    ------------------------------------------------------------------------- *)
+
+val id_compare = cpl_compare String.compare String.compare
+val ida_compare = cpl_compare id_compare Int.compare
 
 fun atoms_of tm =
   if is_eq tm andalso type_of (lhs tm) = bool
@@ -133,10 +167,37 @@ fun atoms_of tm =
   else if is_exists tm then atoms_of (snd (dest_exists tm))
   else [tm]
 
+fun type_set tm = mk_type_set (map type_of (find_terms (fn _ => true) tm))
+fun tyop_set topty = 
+  let 
+    val l = ref [] 
+    fun loop ty = 
+      if is_vartype ty then () else
+      let val {Args,Thy,Tyop} = dest_thy_type ty in
+        l := ((Thy,Tyop),length Args) :: !l; app loop Args 
+      end
+  in 
+    loop topty; mk_fast_set ida_compare (!l)
+  end
+
+fun const_set tm = mk_term_set (find_terms is_const tm) 
+
+fun required_def tml =
+  let
+    val tml' = mk_term_set (List.concat (map atoms_of tml))
+    val tyl = mk_type_set (List.concat (map type_set tml'))
+    val tyopl = mk_fast_set ida_compare (List.concat (map tyop_set tyl))
+    val cl = mk_term_set (List.concat (map const_set tml'))
+    val cidl = mk_fast_set id_compare (map cid_of cl)
+  in
+    (tyopl,cidl)
+  end
 
 (* -------------------------------------------------------------------------
-   Theory and theorem ordering for chainy and bushy experiments
+   Theorem and theory order
    ------------------------------------------------------------------------- *)
+
+fun fetch_thm (a,b) = DB.fetch a b
 
 fun before_elem e l = case l of
     [] => raise ERR "before_elem" ""
@@ -149,37 +210,6 @@ fun add_ancestry thy = thy :: ancestry thy
 fun sorted_ancestry thyl = 
   sort_thyl (mk_string_set (List.concat (map add_ancestry thyl)))
 
-(* -------------------------------------------------------------------------
-   Shared printing functions : fl = (f_vty, f_term)
-   ------------------------------------------------------------------------- *)
-
-fun shared_pred fl oc tm =
-  if is_forall tm then shared_quant fl oc "!" (strip_forall tm)
-  else if is_exists tm then shared_quant fl oc "?" (strip_exists tm)
-  else if is_conj tm then shared_binop fl oc "&" (dest_conj tm)
-  else if is_disj tm then shared_binop fl oc "|" (dest_disj tm)
-  else if is_imp_only tm then shared_binop fl oc "=>" (dest_imp tm)
-  else if is_neg tm then
-    (os oc "(~ "; shared_pred fl oc (dest_neg tm); os oc ")")
-  else if is_eq tm then
-    let val (l,r) = dest_eq tm in
-      if must_pred l orelse must_pred r
-      then shared_binop fl oc "<=>" (l,r)
-      else (os oc "("; (snd fl) oc l; os oc " = "; (snd fl) oc r; os oc ")")
-    end
-  else (snd fl) oc tm
-and shared_binop fl oc s (l,r) =
-  (os oc "("; shared_pred fl oc l; os oc (" " ^ s ^ " "); 
-   shared_pred fl oc r; os oc ")")
-and shared_quant fl oc s (vl,bod) =
-  (os oc s; os oc "["; oiter oc ", " (fst fl) vl;
-   os oc "]: "; shared_pred fl oc bod)
-
-
-(* -------------------------------------------------------------------------
-   Standard export
-   ------------------------------------------------------------------------- *)
-
 fun depo_of_thm thm =
   let
     val (b,depl1) = intactdep_of_thm thm
@@ -188,49 +218,160 @@ fun depo_of_thm thm =
     if b then SOME depl2 else NONE
   end
 
-fun write_dep ocdep fb_thm thy ((name,thm),role) =
-  (
-  osn ocdep (fb_thm (thy,name));
-  (if role = "conjecture" then
-    let
-      val (b,depl1) = intactdep_of_thm thm
-      val depl2 = map (split_string "Theory.") depl1
-      val depl3 = map fb_thm depl2
-    in
-      osn ocdep role;
-      osn ocdep (if b then  "intact" else "broken");
-      oiter ocdep " " os depl3; os ocdep "\n"
-    end
-  else osn ocdep role;
-  osn ocdep "")
-  )
+(* -------------------------------------------------------------------------
+   Includes
+   ------------------------------------------------------------------------- *)
 
-fun write_thy (f_tydef,f_constdef,f_thmdef,fb_thm) export_dir thy =
-  let
-    val _ = print (thy ^ " ")
-    val filedep = export_dir ^ "/" ^ thy ^ ".dependency"
-    val file = export_dir ^ "/" ^ thy ^ ".theory"
+fun include_thy oc thy = osn oc ("include('" ^ thy ^ ".ax').")
+fun include_thytyopdef oc thy = osn oc ("include('" ^ thy ^ "-tyopdef.ax').")
+fun include_thycdef oc thy = osn oc ("include('" ^ thy ^ "-cdef.ax').")
+fun include_thyax oc thy = osn oc ("include('" ^ thy ^ "-ax.ax').")
+
+(* -------------------------------------------------------------------------
+   Bushy
+   ------------------------------------------------------------------------- *)
+
+fun write_cj_bushy dir (i1,i2,i3) (f_tyopdef,f_cdef,f_thmdef)
+  formulal_of_pb (thmid,depl) =
+  let 
+    val file = dir ^ "/" ^ name_thm thmid ^ ".p"
     val oc = TextIO.openOut file
-    val ocdep = TextIO.openOut filedep
+    val tml = formulal_of_pb (thmid,depl)  
+    val (tyopl,cidl) = required_def tml
   in
-    let
-      val THEORY(_,t) = dest_theory thy
-      val _ = app (f_tydef oc thy) (#types t)
-      val cl = map (fn (name,_) => (thy,name)) (#consts t)
-      val _ = app (f_constdef oc) cl
-      val cjl = map (fn x => (x,"conjecture")) (DB.theorems thy)
-      val axl = map (fn x => (x,"axiom")) (DB.axioms thy @ DB.definitions thy)
-      fun cmp (((_,th1),_),((_,th2),_)) =
-        Int.compare (depnumber_of_thm th1, depnumber_of_thm th2)
-      val thml = dict_sort cmp (cjl @ axl)
-    in
-      app (write_dep ocdep fb_thm thy) thml; 
-      app (f_thmdef oc thy) thml;
-      app TextIO.closeOut [oc,ocdep]
-    end 
-    handle Interrupt => (app TextIO.closeOut [oc,ocdep]; raise Interrupt)
+    (
+    app (include_thy oc) i1;
+    app (f_tyopdef oc) tyopl; 
+    app (include_thy oc) i2;
+    app (f_cdef oc) cidl;
+    app (include_thy oc) i3;
+    app (f_thmdef "axiom" oc) depl; 
+    f_thmdef "conjecture" oc thmid; 
+    TextIO.closeOut oc
+    )
+    handle Interrupt => (TextIO.closeOut oc; raise Interrupt)
   end
 
-(* (f_vty 0) for fof or fff *)
+fun write_thy_bushy dir (i1,i2,i3) (f_tyopdef,f_cdef,f_thmdef)
+  formulal_of_pb thy =
+  let 
+    val cjl = DB.theorems thy
+    fun f (name,thm) = case depo_of_thm thm of
+        NONE => NONE
+      | SOME depl => SOME ((thy,name), depl)
+    val cjdepl = List.mapPartial f cjl
+  in
+    print (thy ^ " "); 
+    app (write_cj_bushy dir (i1,i2,i3) (f_tyopdef,f_cdef,f_thmdef)
+    formulal_of_pb) cjdepl
+  end
+
+(* -------------------------------------------------------------------------
+   Chainy
+   ------------------------------------------------------------------------- *)
+
+fun compare_namethm ((_,th1),(_,th2)) =
+  Int.compare (depnumber_of_thm th1, depnumber_of_thm th2)
+
+fun write_thytyopdef dir f_tyopdef thy =
+  let
+    val file = dir ^ "/" ^ thy ^ "-tyopdef.ax"
+    val oc = TextIO.openOut file
+    fun mk_tyop (name,arity) = ((thy,name),arity) 
+    val THEORY(_,t) = dest_theory thy
+    val tyopl = map mk_tyop (#types t)
+  in
+    (app (f_tyopdef oc) tyopl; TextIO.closeOut oc)
+    handle Interrupt => (TextIO.closeOut oc; raise Interrupt)
+  end
+
+fun write_thycdef dir f_cdef thy =
+  let
+    val file = dir ^ "/" ^ thy ^ "-cdef.ax"
+    val oc = TextIO.openOut file
+    fun mk_id (name,_) = (thy,name)
+    val THEORY(_,t) = dest_theory thy
+    val cl = map mk_id (#consts t)
+  in
+    (app (f_cdef oc) cl; TextIO.closeOut oc)
+    handle Interrupt => (TextIO.closeOut oc; raise Interrupt)
+  end
+
+fun write_thyax dir f_thmdef thy =
+  let
+    val file = dir ^ "/" ^ thy ^ "-ax.ax"
+    val oc = TextIO.openOut file
+    fun mk_id (name,_) = (thy,name)
+    val THEORY(_,t) = dest_theory thy
+    val axl = map mk_id (dict_sort compare_namethm (DB.thms thy)) 
+  in
+    (app (f_thmdef "axiom" oc) axl; TextIO.closeOut oc)
+    handle Interrupt => (TextIO.closeOut oc; raise Interrupt)
+  end
+
+fun write_cj_chainy dir (i1,i2,i3) f_thmdef (thyl,thy) (name,thm) =
+  let 
+    val file = dir ^ "/" ^ name_thm (thy,name) ^ ".p"
+    val oc = TextIO.openOut file
+    fun mk_id (x,_) = (thy,x)
+    val axl1 = filter (older_than thm) (DB.thms thy)
+    val axl2 = map mk_id (dict_sort compare_namethm axl1)
+  in
+    (
+    app (include_thy oc) i1;
+    app (include_thytyopdef oc) (thyl @ [thy]);
+    app (include_thy oc) i2;
+    app (include_thycdef oc) (thyl @ [thy]);
+    app (include_thy oc) i3;
+    app (include_thyax oc) thyl;
+    app (f_thmdef "axiom" oc) axl2; 
+    f_thmdef "conjecture" oc (thy,name); 
+    TextIO.closeOut oc
+    )
+    handle Interrupt => (TextIO.closeOut oc; raise Interrupt)
+  end
+
+fun write_thy_chainy dir (i1,i2,i3) f_thmdef thyl thy =
+  let val thyl_before = before_elem thy thyl in
+    print (thy ^ " ");
+    app (write_cj_chainy 
+      dir (i1,i2,i3) f_thmdef (thyl_before,thy)) (DB.theorems thy)
+  end
+
 
 end (* struct *)
+
+(*
+
+fun tf1_top_cdef oc arity (tfname,ty) =
+  (os oc ("tff(" ^ tfname ^ ",type," ^ tfname ^ ":");
+   tf1_tyquant_type oc arity ty; osn oc ").")
+(* -------------------------------------------------------------------------
+   Combinator for making it less theorem decreasing. (i.e. complete)
+   ------------------------------------------------------------------------- *)
+
+fun write_combin (f_constdef,f_thmdef) dir = 
+  let
+    val file = dir ^ "/combin-extra.ax"
+    val oc = TextIO.openOut file
+  in
+    let
+      val _ = combin_extra_flag := true
+      val cl0 = ["S","K","I"]
+      val axl0 = map (fn x => x ^ "_DEF") cl0
+      val thy = "combin"
+      val THEORY(_,t) = dest_theory thy
+      val cl1 = #consts t
+      val cl2 = filter (fn x => mem (fst x) cl0) cl1
+      val _ = app (f_constdef oc thy) cl2
+      val axl1 = filter (fn x => mem (fst x) axl0) (DB.definitions thy)
+      val axl2 = map (fn x => (x,"axiom")) axl1
+    in
+      app (f_thmdef oc thy) axl2;
+      combin_extra_flag := false;
+      TextIO.closeOut oc
+    end 
+    handle Interrupt => 
+    (TextIO.closeOut oc; combin_extra_flag := false; raise Interrupt)
+  end 
+*)

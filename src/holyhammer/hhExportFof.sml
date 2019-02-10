@@ -14,40 +14,15 @@ open HolKernel boolLib aiLib mlThmData hhTranslate hhExportLib
 val ERR = mk_HOL_ERR "hhExportFof"
 
 (* -------------------------------------------------------------------------
-   FOF names : variables escaped by translate_tm
-   ------------------------------------------------------------------------- *)
-
-fun fof_var arity v = fst (dest_var v) ^ "_" ^ int_to_string arity
-
-fun fof_const arity c =
-  let val {Name, Thy, Ty} = dest_thy_const c in
-    escape ("c" ^ int_to_string arity ^ "." ^ Thy ^ "." ^ Name)
-  end
-
-fun fof_constvar arity tm =
-  if is_const tm then fof_const arity tm
-  else if is_var tm then fof_var arity tm
-  else raise raise ERR "fof_constvar" ""
-
-fun fof_vartype ty = "A" ^ (escape (dest_vartype ty))
-
-fun fof_tyop ty =
-  let val {Args, Thy, Tyop} = dest_thy_type ty in
-    escape ("ty" ^ "." ^ Thy ^ "." ^ Tyop)
-  end
-
-fun fof_thm (thy,name) = escape ("thm" ^ "." ^ thy ^ "." ^ name)
-
-(* -------------------------------------------------------------------------
    FOF terms
    ------------------------------------------------------------------------- *)
 
 (* every fof type is a unit type *)
 fun fof_type oc ty =
-  if is_vartype ty then os oc (fof_vartype ty) else
+  if is_vartype ty then os oc (name_vartype ty) else
     let
       val {Args, Thy, Tyop} = dest_thy_type ty
-      val tyops = fof_tyop ty
+      val tyops = name_tyop ty
     in
       os oc tyops;
       if null Args then ()
@@ -57,7 +32,7 @@ fun fof_type oc ty =
 fun fof_term oc tm =
   let val (rator,argl) = strip_comb tm in
     os oc "s("; fof_type oc (type_of tm); os oc ",";
-    os oc (fof_constvar (length argl) rator);
+    os oc (namea_cv (length argl) rator);
     if null argl then ()
     else (os oc "("; oiter oc "," fof_term argl; os oc ")");
     os oc ")"
@@ -83,7 +58,7 @@ and fof_binop oc s (l,r) =
    fof_pred oc r; os oc ")")
 and fof_quant oc s (vl,bod) =
   (os oc s; os oc "[";
-   oiter oc ", " (fn x => (fn v => os x (fof_var 0 v))) vl;
+   oiter oc ", " (fn x => (fn v => os x (namea_v 0 v))) vl;
    os oc "]: "; fof_pred oc bod)
 
 fun type_vars_in_term tm =
@@ -105,7 +80,7 @@ val fofpar = "fof("
 fun fof_tydef oc _ _ = ()
 
 fun fof_constdef_arity oc (c,arity) =
-  let val tfname = fof_const arity c in
+  let val tfname = namea_c arity c in
     (if arity = 0 then () else 
     let 
       val eq = concl (mk_arity_eq c arity) 
@@ -137,8 +112,6 @@ fun fof_vardef_arity oc (v,arity) =
      fof_formula oc eq; osn oc ").")
   end
 
-(* free variables are used for new constants *)
-(* type of free variable is always most general type except for app *)
 fun fof_vardef oc v = 
   let 
     val ty = snd (dest_var v)
@@ -158,13 +131,13 @@ fun fof_thmdef oc thy ((name,thm),role) =
     fun f i def = 
       (
       os oc (fofpar ^ escape ("fthm" ^ its i ^ ".") ^
-      (fof_thm (thy,name)) ^ ",axiom,");
+      (name_thm (thy,name)) ^ ",axiom,");
       fof_formula oc def; osn oc ")."
       )
   in
     app (fof_vardef oc) vl;
     ignore (mapi f defl);
-    os oc (fofpar ^ (fof_thm (thy,name)) ^ "," ^ role ^ ",");
+    os oc (fofpar ^ (name_thm (thy,name)) ^ "," ^ role ^ ",");
     fof_formula oc cj; osn oc ")."
   end
 
@@ -177,7 +150,7 @@ val fof_dir = hh_dir ^ "/export_fof"
 fun fof_export thyl =
   let
     val file = fof_dir ^ "/theory_order.info"
-    val fl = (fof_tydef, fof_constdef, fof_thmdef, fof_thm)
+    val fl = (fof_tydef, fof_constdef, fof_thmdef, name_thm)
     val thyl = sorted_ancestry thyl
   in
     mkDir_err fof_dir; app (write_thy fl fof_dir) thyl;
@@ -195,7 +168,7 @@ fun const_set tm = mk_term_set (find_terms is_const tm)
 
 fun write_cj_bushy thy ((name,thm),depl) =
   let 
-    val file = fof_bushy_dir ^ "/" ^ fof_thm (thy,name) ^ ".p"
+    val file = fof_bushy_dir ^ "/" ^ name_thm (thy,name) ^ ".p"
     val oc = TextIO.openOut file
     fun thmfetch (a,b) = DB.fetch a b
     val pretml1 = map (fof_prep_thm o thmfetch) ((thy,name) :: depl)
@@ -292,7 +265,7 @@ fun write_thydecl dir thy =
 
 fun write_cj_chainy thyl thy (name,thm) =
   let 
-    val file = fof_chainy_dir ^ "/" ^ fof_thm (thy,name) ^ ".p"
+    val file = fof_chainy_dir ^ "/" ^ name_thm (thy,name) ^ ".p"
     val oc = TextIO.openOut file
     fun thmfetch (a,b) = DB.fetch a b
     val axl0 = DB.thms thy
