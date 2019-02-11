@@ -36,14 +36,14 @@ fun ELIM_LAMBDA_EQ tm =
     (
     if is_abs l orelse is_abs r then
       CHANGED_CONV (ONCE_REWRITE_CONV [FUN_EQ_THM] THENC
-      (TRY_CONV (QUANT_CONV (BINOP_CONV BETA_CONV))))
+                    REDEPTH_CONV BETA_CONV)
     else NO_CONV
     )
     tm
   end
 
 fun PREP_CONV tm = 
-  (TOP_DEPTH_CONV ELIM_LAMBDA_EQ THENC REDEPTH_CONV BETA_CONV) tm
+  (REDEPTH_CONV ELIM_LAMBDA_EQ THENC REDEPTH_CONV BETA_CONV) tm
 
 fun prep_rw tm = rand (only_concl (QCONV PREP_CONV tm))
 
@@ -59,7 +59,7 @@ fun genvar_lifting iref ty =
 
 (* arity *)
 fun genvarl_arity tyl =
-  let fun f i ty =  mk_var ("X" ^ int_to_string i, ty) in
+  let fun f i ty = mk_var ("X" ^ int_to_string i, ty) in
     mapi f tyl
   end
 
@@ -111,6 +111,29 @@ fun collect_arity tm =
   in
     app (collect_arity_aux adict) (atoms tm);
     Redblackmap.map f (!adict)
+  end
+
+fun collect_va tm = 
+  let 
+    val l = filter (is_var o fst) (dlist (collect_arity tm)) 
+    val vl = free_vars_lr tm
+    fun f (x,l) = 
+      if mem x vl then SOME (x, mk_fast_set Int.compare l) else NONE
+  in
+    List.mapPartial f l
+  end
+
+val id_compare = cpl_compare String.compare String.compare
+val ida_compare = cpl_compare id_compare Int.compare
+
+
+fun cid_of c = let val {Name,Thy,Ty} = dest_thy_const c in (Thy,Name) end
+fun collect_ca tm = 
+  let
+    val l0 = filter (is_const o fst) (dlist (collect_arity tm))
+    val l1 = map_fst cid_of (distrib l0)
+  in
+    mk_fast_set ida_compare l1
   end
 
 (* -------------------------------------------------------------------------

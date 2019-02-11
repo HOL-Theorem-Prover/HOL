@@ -13,11 +13,16 @@ open HolKernel boolLib aiLib mlThmData hhTranslate hhExportLib
 
 val ERR = mk_HOL_ERR "hhExportFof"
 
+val fofpar = "fof("
+fun fof_prep_thm thm = 
+  let val tml = translate_tm (concl (DISCH_ALL thm)) in
+    (hd tml, rev (tl tml))
+  end
+
 (* -------------------------------------------------------------------------
    FOF terms
    ------------------------------------------------------------------------- *)
 
-(* every fof type is a unit type *)
 fun fof_type oc ty =
   if is_vartype ty then os oc (name_vartype ty) else
     let
@@ -48,7 +53,7 @@ fun fof_pred oc tm =
     (os oc "~ ("; fof_pred oc (dest_neg tm); os oc ")")
   else if is_eq tm then
     let val (l,r) = dest_eq tm in
-      if must_pred l orelse must_pred r (* optimization *)
+      if must_pred l orelse must_pred r
       then fof_binop oc "<=>" (l,r)
       else (fof_term oc l; os oc " = "; fof_term oc r)
     end
@@ -72,14 +77,55 @@ fun fof_formula oc tm =
   end
 
 (* -------------------------------------------------------------------------
+   Logical operators equations with term level counterpart.
+   ------------------------------------------------------------------------- *)
+
+fun fof_logicformula oc (thy,name) = 
+  let 
+    val c = prim_mk_const {Thy = thy, Name = name}
+    val tm = full_apply_const c
+    val tvl = type_vars_in_term tm 
+    val tvls = map ((fn x => x ^ ":" ^ ttype) o name_vartype) tvl
+    val s = String.concatWith ", " tvls
+    val vl = free_vars_lr tm 
+  in
+    if null tvl then () else os oc ("![" ^ s ^ "]: ");
+    os oc "!["; oiter oc ", " fof_vty vl; os oc "]: ";
+    os oc "("; fof_term oc tm ; os oc " <=> "; fof_pred oc tm; os oc ")"
+  end
+
+fun fof_logicdef oc (thy,name) =
+  (os oc (fofpar ^ escape ("logicdef." ^ name) ^ ",axiom,"); 
+   fof_logicformula oc (thy,name); osn oc ").")
+
+fun fof_quantdef oc (thy,name) =
+  let 
+    val thm = assoc name [("!", FORALL_THM),("?", EXISTS_THM)]
+    val (tm,_) = fof_prep_thm thm
+  in
+    os oc (fofpar ^ escape ("quantdef." ^ name) ^ ",axiom,"); 
+    fof_formula oc tm; osn oc ")."
+  end
+
+fun fof_boolopdef oc (thy,name) = 
+  let
+    val l1 = map cid_of [``$/\``,``$\/``,``$~``,``$==>``,
+      ``$= : 'a -> 'a -> bool``]
+    val l2 = map cid_of [``$! : ('a -> bool) -> bool``,
+      ``$? : ('a -> bool) -> bool``]
+  in
+    if mem (thy,name) l1 then fof_logicdef oc (thy,name)
+    else if mem (thy,name) l2 then fof_quantdef oc (thy,name)
+    else ()
+  end
+
+(* -------------------------------------------------------------------------
    FOF definitions
    ------------------------------------------------------------------------- *)
 
-val fofpar = "fof("
+fun fof_tyopdef oc _ = ()
 
-fun fof_tydef oc _ _ = ()
-
-fun fof_constdef_arity oc (c,arity) =
+fun fof_cdef_arity oc (c,arity) =
   let val tfname = namea_c arity c in
     (if arity = 0 then () else 
     let 
@@ -91,14 +137,15 @@ fun fof_constdef_arity oc (c,arity) =
     end)
   end
 
-fun fof_constdef oc (thy,name) =
+fun fof_cdef oc (thy,name) =
   let
     val c = prim_mk_const {Thy = thy, Name = name}
     val ty = type_of c
     val maxarity = length (snd (strip_funty ty))
-    fun f n = fof_constdef_arity oc (c,n)
+    fun f n = fof_cdef_arity oc (c,n)
   in
-    ignore (List.tabulate (maxarity + 1, f))
+    ignore (List.tabulate (maxarity + 1, f));
+    fof_boolopdef oc (thy,name)
   end
 
 fun fof_vardef_arity oc (v,arity) =
@@ -121,187 +168,81 @@ fun fof_vardef oc v =
     ignore (List.tabulate (maxarity + 1, f))
   end
 
-fun fof_prep_thm thm = translate_tm (concl (DISCH_ALL thm))
-
-fun fof_thmdef oc thy ((name,thm),role) =
+fun fof_thmdef role oc (thy,name) =
   let 
-    val tml = fof_prep_thm thm
-    val vl = free_vars_lr (list_mk_conj (rev tml))
-    val (cj,defl) = (hd tml, rev (tl tml))
+    val thm = DB.fetch thy name
+    val (cj,defl) = fof_prep_thm thm
+    val vl = free_vars_lr (list_mk_conj (cj :: defl))
+    val tf1name = name_thm (thy,name)
     fun f i def = 
       (
-      os oc (fofpar ^ escape ("fthm" ^ its i ^ ".") ^
-      (name_thm (thy,name)) ^ ",axiom,");
+      os oc (fofpar ^ escape ("def" ^ its i ^ ".") ^ tf1name ^ ",axiom,");
       fof_formula oc def; osn oc ")."
       )
   in
-    app (fof_vardef oc) vl;
+    app (fof_vdef oc) vl;
     ignore (mapi f defl);
-    os oc (fofpar ^ (name_thm (thy,name)) ^ "," ^ role ^ ",");
+    os oc (fofpar ^ tf1name ^ "," ^ role ^ ",");
     fof_formula oc cj; osn oc ")."
   end
+
+(* -------------------------------------------------------------------------
+   Higher-order caster
+   ------------------------------------------------------------------------- *)
+
+val hocaster_extra = "hocaster-extra"
+
+val notfalse = EQT_ELIM (last (CONJ_LIST 3 NOT_CLAUSES))
+
+val pcaster_axioml =
+  [("truth", TRUTH), ("notfalse", notfalse), ("bool_cases_ax", BOOL_CASES_AX)]
+
+fun fof_caster_thmdef oc (name,thm) =
+  let 
+    val (cj,defl) = fof_prep_thm thm
+    val _ = if null defl then () else raise ERR "fof_caster_thmdef" ""
+  in
+    os oc (fofpar ^ name_thm (hocaster_extra,name) ^ ",axiom,");
+    fof_formula oc cj; osn oc ")."
+  end
+
+fun fof_caster_app oc = fof_caster_thmdef oc ("eq_ext", EQ_EXT)
+fun fof_caster_p oc = app (fof_caster_thmdef oc) pcaster_axioml
+
+fun write_hocaster_extra dir = 
+  let
+    val file = dir ^ "/" ^ hocaster_extra ^ ".ax"
+    val oc = TextIO.openOut file
+  in
+    let
+      val thy = "combin"
+      fun mk_id (name,_) = (thy,name)
+      val THEORY(_,t) = dest_theory thy
+      val cl0 = ["S","K","I"]
+      val cl1 = #consts t
+      val cl2 = filter (fn x => mem (fst x) cl0) cl1
+      val axl0 = map (fn x => x ^ "_DEF") cl0
+      val axl1 = filter (fn x => mem (fst x) axl0) (DB.definitions thy)
+    in
+      (
+      fof_caster_app oc; fof_caster_p oc;
+      combin_namespace_flag := true;
+      app (fof_cdef oc) (map mk_id cl2);
+      app (fof_thmdef "axiom" oc) (map mk_id axl1);
+      combin_namespace_flag := false;
+      TextIO.closeOut oc
+      )
+    end 
+    handle Interrupt => 
+    (TextIO.closeOut oc; combin_namespace_flag := false; raise Interrupt)
+  end
+
 
 (* -------------------------------------------------------------------------
    Export standard
    ------------------------------------------------------------------------- *)
 
-val fof_dir = hh_dir ^ "/export_fof"
 
-fun fof_export thyl =
-  let
-    val file = fof_dir ^ "/theory_order.info"
-    val fl = (fof_tydef, fof_constdef, fof_thmdef, name_thm)
-    val thyl = sorted_ancestry thyl
-  in
-    mkDir_err fof_dir; app (write_thy fl fof_dir) thyl;
-    writel file [String.concatWith " " (sorted_ancestry thyl)]
-  end
 
-(* -------------------------------------------------------------------------
-   Export bushy
-   ------------------------------------------------------------------------- *)
-
-val fof_bushy_dir = hh_dir ^ "/export_fof_bushy"
-
-val id_compare = cpl_compare String.compare String.compare
-fun const_set tm = mk_term_set (find_terms is_const tm) 
-
-fun write_cj_bushy thy ((name,thm),depl) =
-  let 
-    val file = fof_bushy_dir ^ "/" ^ name_thm (thy,name) ^ ".p"
-    val oc = TextIO.openOut file
-    fun thmfetch (a,b) = DB.fetch a b
-    val pretml1 = map (fof_prep_thm o thmfetch) ((thy,name) :: depl)
-    val pretml2 = mk_term_set (List.concat pretml1)
-    val tml = mk_term_set (List.concat (map atoms_of pretml2))
-    val cl = mk_term_set (List.concat (map const_set tml)) 
-    fun fc c =
-      let 
-        val {Name=cname,Thy=cthy,...} = dest_thy_const c 
-        val cid = (cthy,cname)
-      in
-        fof_constdef oc cid
-        (* better to put them in a include file 
-         if is_logicconst cid then fof_logicdef oc cid
-         else if is_quantconst cid then fof_quantdef oc cid
-         else ()
-         *)
-      end
-    fun fax (axthy,axname) =
-      let val axthm = DB.fetch axthy axname in
-        fof_thmdef oc axthy ((axname,axthm),"axiom") 
-      end
-  in
-    (
-    app fc cl; app fax depl;
-    fof_thmdef oc thy ((name,thm),"conjecture"); 
-    TextIO.closeOut oc
-    )
-    handle Interrupt => (TextIO.closeOut oc; raise Interrupt)
-  end
-
-fun write_thy_bushy thy =
-  let 
-    val cjl = DB.theorems thy
-    fun f (name,thm) = case depo_of_thm thm of
-        NONE => NONE
-      | SOME depl => SOME ((name,thm), depl)
-    val cjdepl = List.mapPartial f cjl
-  in
-    print (thy ^ " ");
-    app (write_cj_bushy thy) cjdepl
-  end
-
-fun fof_export_bushy thyl =
-  let val thyl = sorted_ancestry thyl in
-    mkDir_err fof_bushy_dir; app write_thy_bushy thyl
-  end
-
-(* -------------------------------------------------------------------------
-   Export chainy
-   ------------------------------------------------------------------------- *)
-
-val fof_chainy_dir = hh_dir ^ "/export_fof_chainy"
-
-fun include_thy oc thy = osn oc ("include('" ^ thy ^ ".ax').")
-fun include_thydecl oc thy = osn oc ("include('" ^ thy ^ "-decl.ax').")
-
-fun write_thyaxiom dir thy =
-  let
-    val file = dir ^ "/" ^ thy ^ ".ax"
-    val oc = TextIO.openOut file
-  in
-    let
-      val THEORY(_,t) = dest_theory thy
-      val _ = app (fof_tydef oc thy) (#types t)
-      val cl = map (fn (name,_) => (thy,name)) (#consts t)
-      val _ = app (fof_constdef oc) cl
-      val axl0 = map (fn x => (x,"axiom")) (DB.thms thy)
-      fun cmp (((_,th1),_),((_,th2),_)) =
-        Int.compare (depnumber_of_thm th1, depnumber_of_thm th2)
-      val axl1 = dict_sort cmp axl0
-    in
-      app (fof_thmdef oc thy) axl1;
-      TextIO.closeOut oc
-    end
-    handle Interrupt => (TextIO.closeOut oc; raise Interrupt)
-  end
-
-fun write_thydecl dir thy =
-  let
-    val file = dir ^ "/" ^ thy ^ "-decl.ax"
-    val oc = TextIO.openOut file
-  in
-    let
-      val THEORY(_,t) = dest_theory thy
-      val _ = app (fof_tydef oc thy) (#types t)
-      val cl = map (fn (name,_) => (thy,name)) (#consts t)
-      val _ = app (fof_constdef oc) cl
-    in
-      TextIO.closeOut oc
-    end
-    handle Interrupt => (TextIO.closeOut oc; raise Interrupt)
-  end
-
-fun write_cj_chainy thyl thy (name,thm) =
-  let 
-    val file = fof_chainy_dir ^ "/" ^ name_thm (thy,name) ^ ".p"
-    val oc = TextIO.openOut file
-    fun thmfetch (a,b) = DB.fetch a b
-    val axl0 = DB.thms thy
-    val axl1 = filter (older_than thm) axl0
-    fun cmp ((_,th1),(_,th2)) =
-      Int.compare (depnumber_of_thm th1, depnumber_of_thm th2)
-    val axl2 = map (fn (x,_) => (thy,x)) (dict_sort cmp axl1)
-    fun fax (axthy,axname) =
-      let val axthm = DB.fetch axthy axname in
-        fof_thmdef oc axthy ((axname,axthm),"axiom") 
-      end
-  in
-    (
-    app (include_thy oc) thyl;
-    include_thydecl oc thy;
-    include_thy oc "bool-extra";
-    app fax axl2;
-    fof_thmdef oc thy ((name,thm),"conjecture"); 
-    TextIO.closeOut oc
-    )
-    handle Interrupt => (TextIO.closeOut oc; raise Interrupt)
-  end
-
-fun write_thy_chainy thyl thy =
-  let val thyl_before = before_elem thy thyl in
-    print (thy ^ " ");
-    app (write_cj_chainy thyl_before thy) (DB.theorems thy)
-  end
-
-fun fof_export_chainy thyl =
-  let val thyl = sorted_ancestry thyl in
-    mkDir_err fof_chainy_dir; 
-    (* write_boolextra fof_chainy_dir; *)
-    app (write_thyaxiom fof_chainy_dir) thyl;
-    app (write_thydecl fof_chainy_dir) thyl;
-    app (write_thy_chainy thyl) thyl
-  end
 
 end (* struct *)

@@ -11,8 +11,6 @@ include Abbrev
     string -> (TextIO.outstream -> 'a -> unit) -> 'a list -> unit
 
   (* naming *)
-  val combin_namespace_flag : bool ref
-  
   val cid_of : term -> (string * string)
 
   val name_v : term -> string
@@ -56,7 +54,7 @@ include Abbrev
   val tyop_set : hol_type -> ((string * string) * int) list
   val const_set : term -> term list 
   val required_def : term list -> 
-    ((string * string) * int) list * (string * string) list
+    ((string * string) * int) list * ((string * string) * int list) list
 
   (* thm *)
   val older_than : thm -> 'a * thm -> bool
@@ -75,7 +73,7 @@ include Abbrev
 
   val write_thy_bushy : string -> string list * string list * string list ->
      (TextIO.outstream -> (string * string) * int -> unit) *
-     (TextIO.outstream -> string * string -> unit) *
+     (TextIO.outstream -> (string * string) * int list -> unit) *
      (string -> TextIO.outstream -> string * string -> unit) ->
        ((string * string) * (string * string) list -> term list) ->
          string -> unit
@@ -84,7 +82,7 @@ include Abbrev
     (TextIO.outstream -> (string * string) * int -> unit) ->
       string -> unit
   val write_thycdef : string ->
-    (TextIO.outstream -> string * string -> unit) ->
+    (TextIO.outstream -> (string * string) * int list -> unit) ->
       string -> unit
   val write_thyax : string ->
     (string -> TextIO.outstream -> string * string -> unit) ->

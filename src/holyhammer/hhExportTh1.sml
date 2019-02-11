@@ -13,10 +13,7 @@ open HolKernel boolLib aiLib mlThmData hhTranslate hhExportLib
 
 val ERR = mk_HOL_ERR "hhExportThf"
 
-(* -------------------------------------------------------------------------
-   Preparing and analysing the formula
-   ------------------------------------------------------------------------- *)
-
+val thfpar = "thf("
 fun th1_prep_tm tm = rename_bvarl escape (list_mk_forall (free_vars_lr tm, tm))
 fun th1_prep_thm thm = th1_prep_tm (concl (DISCH_ALL thm))
 
@@ -97,50 +94,8 @@ fun th1_formula oc tm =
   end
 
 (* -------------------------------------------------------------------------
-    TH1 definitions
-   ------------------------------------------------------------------------- *)
-
-val thfpar = "thf("
-
-fun th1_ttype arity =
-  String.concatWith " > " (List.tabulate (arity + 1, fn _ => ttype))
-
-fun th1_tyopdef oc ((thy,tyop),arity) =
-  let val thfname = name_tyop (thy,tyop) in
-    os oc (thfpar ^ thfname ^ ",type," ^ thfname ^ ":");
-    os oc (th1_ttype arity); osn oc ")."
-  end
-
-fun th1_tyquant_type oc ty =
-  let 
-    val tvl = dict_sort Type.compare (type_vars ty) 
-    val tvls = map ((fn x => x ^ ":" ^ ttype) o name_vartype) tvl
-    val s = String.concatWith "," tvls
-  in
-    if null tvl then () else os oc ("!>[" ^ s ^ "]: ");
-    th1_type oc ty
-  end
-
-fun th1_cdef oc (thy,name) =
-  let val ty = type_of (prim_mk_const {Thy = thy, Name = name}) in
-    os oc (thfpar ^ name_cid (thy,name) ^ ",type,");
-    os oc (name_cid (thy,name) ^ ":"); th1_tyquant_type oc ty; osn oc ")."
-  end
-
-fun th1_thmdef role oc (thy,name) =
-  let
-    val thm = DB.fetch thy name
-    val tm = th1_prep_thm thm 
-  in
-    os oc (thfpar ^ (name_thm (thy,name)) ^ "," ^ role ^ ",");
-    th1_formula oc tm; osn oc ")."
-  end
-
-(* -------------------------------------------------------------------------
    Logical operators equations with term level counterpart.
    ------------------------------------------------------------------------- *)
-
-val boolop_extra = "boolop-extra"
 
 fun th1_logicformula oc (thy,name) = 
   let 
@@ -171,18 +126,55 @@ fun th1_quantdef oc (thy,name) =
     th1_formula oc tm; osn oc ")."
   end
 
-fun write_boolop_extra dir = 
+fun th1_boolopdef oc (thy,name) = 
   let
-    val file = dir ^ "/" ^ boolop_extra ^ ".ax"
-    val oc = TextIO.openOut file
     val l1 = map cid_of [``$/\``,``$\/``,``$~``,``$==>``,
       ``$= : 'a -> 'a -> bool``]
     val l2 = map cid_of [``$! : ('a -> bool) -> bool``,
       ``$? : ('a -> bool) -> bool``]
   in
-    (app (th1_logicdef oc) l1; app (th1_quantdef oc) l2;
-     TextIO.closeOut oc)
-    handle Interrupt => (TextIO.closeOut oc; raise Interrupt)
+    if mem (thy,name) l1 then th1_logicdef oc (thy,name)
+    else if mem (thy,name) l2 then th1_quantdef oc (thy,name)
+    else ()
+  end
+
+(* -------------------------------------------------------------------------
+    TH1 definitions
+   ------------------------------------------------------------------------- *)
+
+fun th1_ttype arity =
+  String.concatWith " > " (List.tabulate (arity + 1, fn _ => ttype))
+
+fun th1_tyopdef oc ((thy,tyop),arity) =
+  let val thfname = name_tyop (thy,tyop) in
+    os oc (thfpar ^ thfname ^ ",type," ^ thfname ^ ":");
+    os oc (th1_ttype arity); osn oc ")."
+  end
+
+fun th1_tyquant_type oc ty =
+  let 
+    val tvl = dict_sort Type.compare (type_vars ty) 
+    val tvls = map ((fn x => x ^ ":" ^ ttype) o name_vartype) tvl
+    val s = String.concatWith "," tvls
+  in
+    if null tvl then () else os oc ("!>[" ^ s ^ "]: ");
+    th1_type oc ty
+  end
+
+fun th1_cdef oc ((cid as (thy,name)),_) =
+  let val ty = type_of (prim_mk_const {Thy = thy, Name = name}) in
+    os oc (thfpar ^ name_cid cid ^ ",type,");
+    os oc (name_cid cid ^ ":"); th1_tyquant_type oc ty; osn oc ").";
+    th1_boolopdef oc cid
+  end
+
+fun th1_thmdef role oc (thy,name) =
+  let
+    val thm = DB.fetch thy name
+    val tm = th1_prep_thm thm 
+  in
+    os oc (thfpar ^ (name_thm (thy,name)) ^ "," ^ role ^ ",");
+    th1_formula oc tm; osn oc ")."
   end
 
 (* -------------------------------------------------------------------------
@@ -197,13 +189,13 @@ fun th1_export_bushy thyl =
   let 
     val thyl = sorted_ancestry thyl 
     val dir = th1_bushy_dir
-    val inl = ([],[],[boolop_extra])
+    val inl = ([],[],[])
     fun f thy =
       write_thy_bushy dir inl
         (th1_tyopdef,th1_cdef,th1_thmdef)
         th1_formulal_of_pb thy
   in
-    mkDir_err dir; write_boolop_extra dir; app f thyl
+    mkDir_err dir; app f thyl
   end
 
 val th1_chainy_dir = hh_dir ^ "/export_th1_chainy"
@@ -211,11 +203,10 @@ fun th1_export_chainy oldthyl =
   let 
     val thyl = sorted_ancestry oldthyl
     val dir = th1_chainy_dir
-    val inl = ([],[],[boolop_extra])
+    val inl = ([],[],[])
     fun f thy = write_thy_chainy dir inl th1_thmdef thyl thy 
   in
-    mkDir_err dir; 
-    write_boolop_extra dir;
+    mkDir_err dir;
     app (write_thytyopdef dir th1_tyopdef) thyl;
     app (write_thycdef dir th1_cdef) thyl;
     app (write_thyax dir th1_thmdef) thyl;

@@ -122,18 +122,13 @@ fun typearg_of_appvar tm =
    Names
    ------------------------------------------------------------------------- *)
 
-val combin_namespace_flag = ref false
-
 fun cid_of c = let val {Name,Thy,Ty} = dest_thy_const c in (Thy,Name) end
 
 fun name_v v = fst (dest_var v)
 fun namea_v arity v = name_v v ^ (escape ".") ^ its arity
 fun name_vartype ty = "A" ^ (escape (dest_vartype ty))
 
-fun name_cid (thy,name) = 
-  if !combin_namespace_flag 
-  then escape ("ccombin." ^ thy ^ "." ^ name)
-  else escape ("c." ^ thy ^ "." ^ name)
+fun name_cid (thy,name) = escape ("c." ^ thy ^ "." ^ name)
 
 fun namea_cid arity cid = name_cid cid ^ (escape ".") ^ its arity
 fun name_c c = name_cid (cid_of c)
@@ -143,11 +138,8 @@ fun namea_cv arity tm =
   if is_const tm then namea_c arity tm else
   if is_var tm then namea_v arity tm else raise ERR "namea_cv" ""
 
-fun name_tyop (thy,tyop) = escape ("ty." ^ thy ^ "." ^ tyop)
-fun name_thm (thy,name) = 
-  if !combin_namespace_flag
-  then escape ("thmcombin" ^ "." ^ thy ^ "." ^ name)
-  else escape ("thm" ^ "." ^ thy ^ "." ^ name)
+fun name_tyop (thy,tyop) = escape ("tyop." ^ thy ^ "." ^ tyop)
+fun name_thm (thy,name) = escape ("thm." ^ thy ^ "." ^ name)
 
 (* -------------------------------------------------------------------------
    Dependencies of terms
@@ -185,12 +177,11 @@ fun const_set tm = mk_term_set (find_terms is_const tm)
 fun required_def tml =
   let
     val tml' = mk_term_set (List.concat (map atoms_of tml))
-    val tyl = mk_type_set (List.concat (map type_set tml'))
+    val tyl  = mk_type_set (List.concat (map type_set tml'))
     val tyopl = mk_fast_set ida_compare (List.concat (map tyop_set tyl))
-    val cl = mk_term_set (List.concat (map const_set tml'))
-    val cidl = mk_fast_set id_compare (map cid_of cl)
+    val cidal = mk_fast_set ida_compare (List.concat (map collect_ca tml'))
   in
-    (tyopl,cidl)
+    (tyopl, dlist (dregroup id_compare cidal))
   end
 
 (* -------------------------------------------------------------------------
@@ -237,13 +228,13 @@ fun write_cj_bushy dir (i1,i2,i3) (f_tyopdef,f_cdef,f_thmdef)
     val file = dir ^ "/" ^ name_thm thmid ^ ".p"
     val oc = TextIO.openOut file
     val tml = formulal_of_pb (thmid,depl)  
-    val (tyopl,cidl) = required_def tml
+    val (tyopl,cidal) = required_def tml
   in
     (
     app (include_thy oc) i1;
     app (f_tyopdef oc) tyopl; 
     app (include_thy oc) i2;
-    app (f_cdef oc) cidl;
+    app (f_cdef oc) cidal;
     app (include_thy oc) i3;
     app (f_thmdef "axiom" oc) depl; 
     f_thmdef "conjecture" oc thmid; 
@@ -289,7 +280,13 @@ fun write_thycdef dir f_cdef thy =
   let
     val file = dir ^ "/" ^ thy ^ "-cdef.ax"
     val oc = TextIO.openOut file
-    fun mk_id (name,_) = (thy,name)
+    fun mk_id (name,_) = 
+      let
+        val ty = type_of (prim_mk_const {Thy = thy, Name = name})
+        val maxarity = length (snd (strip_funty ty))
+      in
+        ((thy,name),List.tabulate (maxarity + 1, I))
+      end
     val THEORY(_,t) = dest_theory thy
     val cl = map mk_id (#consts t)
   in
@@ -338,40 +335,4 @@ fun write_thy_chainy dir (i1,i2,i3) f_thmdef thyl thy =
       dir (i1,i2,i3) f_thmdef (thyl_before,thy)) (DB.theorems thy)
   end
 
-
 end (* struct *)
-
-(*
-
-fun tf1_top_cdef oc arity (tfname,ty) =
-  (os oc ("tff(" ^ tfname ^ ",type," ^ tfname ^ ":");
-   tf1_tyquant_type oc arity ty; osn oc ").")
-(* -------------------------------------------------------------------------
-   Combinator for making it less theorem decreasing. (i.e. complete)
-   ------------------------------------------------------------------------- *)
-
-fun write_combin (f_constdef,f_thmdef) dir = 
-  let
-    val file = dir ^ "/combin-extra.ax"
-    val oc = TextIO.openOut file
-  in
-    let
-      val _ = combin_extra_flag := true
-      val cl0 = ["S","K","I"]
-      val axl0 = map (fn x => x ^ "_DEF") cl0
-      val thy = "combin"
-      val THEORY(_,t) = dest_theory thy
-      val cl1 = #consts t
-      val cl2 = filter (fn x => mem (fst x) cl0) cl1
-      val _ = app (f_constdef oc thy) cl2
-      val axl1 = filter (fn x => mem (fst x) axl0) (DB.definitions thy)
-      val axl2 = map (fn x => (x,"axiom")) axl1
-    in
-      app (f_thmdef oc thy) axl2;
-      combin_extra_flag := false;
-      TextIO.closeOut oc
-    end 
-    handle Interrupt => 
-    (TextIO.closeOut oc; combin_extra_flag := false; raise Interrupt)
-  end 
-*)
