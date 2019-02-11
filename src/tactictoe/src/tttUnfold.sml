@@ -1098,7 +1098,6 @@ fun ttt_record_thyl thyl = app ttt_record_thy thyl
 fun ttt_record () =
   let val thyl = ttt_rewrite () in ttt_record_thyl thyl end
 
-
 (* ------------------------------------------------------------------------
    Evaluation
    ------------------------------------------------------------------------ *)

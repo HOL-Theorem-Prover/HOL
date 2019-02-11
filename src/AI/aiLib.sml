@@ -766,6 +766,8 @@ fun interruptkill worker =
 
 fun compare_imin (a,b) = Int.compare (snd a, snd b)
 
+val attrib = [Thread.InterruptState Thread.InterruptAsynch, Thread.EnableBroadcastInterrupt true]
+
 fun parmap_err ncores forg lorg =
   let
     (* input *)
@@ -803,7 +805,7 @@ fun parmap_err ncores forg lorg =
             process pi
           end
       end
-    fun fork_on pi = Thread.fork (fn () => process pi, [])
+    fun fork_on pi = Thread.fork (fn () => process pi, attrib)
     val threadl = map fork_on (List.tabulate (ncores,I))
     fun loop () =
       (
