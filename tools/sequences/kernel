@@ -54,4 +54,6 @@ src/proofman/tests
 !tools/Holmake/tests/empty_script
 !tools/Holmake/tests/deps_of_depthys
 !tools/Holmake/tests/gh604
+!tools/Holmake/tests/ignore_errors/j1
+[poly]!tools/Holmake/tests/ignore_errors/j4
 !src/1/theory_tests
