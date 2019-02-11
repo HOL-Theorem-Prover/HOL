@@ -3939,7 +3939,7 @@ val core_admit_defun_thm = prove(
       \\ IMP_RES_TAC logic_variable_listp_IMP_EVERY
       \\ FS [EVERY_MEM])
     \\ ((CONJUNCTS MilawaTrue_rules)
-          |> filter (can (find_term (fn tm => tm = ``BODY_FUN``) o concl))
+          |> filter (can (find_term (aconv ``BODY_FUN``) o concl))
           |> hd |> MATCH_MP_TAC)
     \\ FS [FDOM_FUPDATE,IN_INSERT,
          FAPPLY_FUPDATE_THM]
@@ -4430,7 +4430,7 @@ val core_admit_witness_thm = prove(
     \\ FS [thms_inv_def,EVERY_DEF] \\ REPEAT STRIP_TAC \\ Q.UNABBREV_TAC `new_axiom`
     \\ FULL_SIMP_TAC std_ss [def_axiom_def] THEN1
      (((CONJUNCTS MilawaTrue_rules)
-            |> filter (can (find_term (fn tm => tm = ``WITNESS_FUN``) o concl))
+            |> filter (can (find_term (aconv ``WITNESS_FUN``) o concl))
             |> hd |> MATCH_MP_TAC)
       \\ Q.EXISTS_TAC `ef` \\ FULL_SIMP_TAC std_ss [ALL_DISTINCT_LEMMA]
       \\ FS [FDOM_FUPDATE,IN_INSERT,FAPPLY_FUPDATE_THM]
