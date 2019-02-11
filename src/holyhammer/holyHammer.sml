@@ -144,6 +144,7 @@ fun clean_hh_goaltac_cache () = hh_goaltac_cache := dempty goal_compare
 
 val notfalse = EQT_ELIM (last (CONJ_LIST 3 NOT_CLAUSES))
 
+(* todo move to export *)
 val extra_premises =
   [("truth", TRUTH), ("notfalse", notfalse),
    ("bool_cases_ax", BOOL_CASES_AX), ("eq_ext", EQ_EXT)]
@@ -269,14 +270,16 @@ fun hh_pb_eval_thy atpl thy =
    Function called by the tactictoe evaluation framework
    ------------------------------------------------------------------------- *)
 
-fun hh_eval (thmdata,tacdata) goal =
-  (
-  eval_flag := true; eval_thy := current_theory ();
-  mkDir_err hh_eval_dir;
-  log_eval ("Goal: " ^ string_of_goal goal);
-  ignore (main_hh thmdata goal);
-  eval_flag := false; eval_thy := "scratch"
-  )
+fun hh_eval (thmdata,tacdata) (thy,name) goal =
+  let val tptpname = escape ("thm." ^ thy ^ "." ^ name) in
+    eval_flag := true; 
+    eval_thy := current_theory ();
+    mkDir_err hh_eval_dir;
+    log_eval ("Theorem: " ^ tptpname);
+    log_eval ("Goal: " ^ string_of_goal goal);
+    ignore (main_hh thmdata goal);
+    eval_flag := false; eval_thy := "scratch"
+  end
 
 (* -------------------------------------------------------------------------
    Usage:

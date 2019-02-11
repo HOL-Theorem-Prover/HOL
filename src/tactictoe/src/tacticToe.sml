@@ -151,23 +151,28 @@ val ttt_eval_dir = tactictoe_dir ^ "/eval"
 fun log_eval s =
   let val file = ttt_eval_dir ^ "/" ^ current_theory () in
     print_endline s;
-    mkDir_err ttt_eval_dir;
-    append_endline file s
+    mkDir_err ttt_eval_dir; append_endline file s
   end
 
-fun log_status r = case r of
+fun log_status tptpname r = case r of
    ProofError     => log_eval "  tactictoe: error"
  | ProofSaturated => log_eval "  tactictoe: saturated"
  | ProofTimeOut   => log_eval "  tactictoe: time out"
- | Proof s        => log_eval ("  tactictoe found a proof:\n  " ^ s)
+ | Proof s        => 
+   (
+   log_eval ("  tactictoe found a proof:\n  " ^ s);
+   log_eval ("Proven: " ^ tptpname)
+   )
 
-fun ttt_eval (thmdata,tacdata) goal =
+fun ttt_eval (thmdata,tacdata) (thy,name) goal =
   let
+    val tptpname = escape ("thm." ^ thy ^ "." ^ name)
+    val _ = log_eval ("Theorem: " ^ tptpname)
     val _ = log_eval ("Goal: " ^ string_of_goal goal)
     val (status,t) = add_time (main_tactictoe (thmdata,tacdata)) goal
   in
-    log_status status;
-    log_eval ("  time: " ^ Real.toString t)
+    log_status tptpname status;
+    log_eval ("  time: " ^ Real.toString t ^ "\n")
   end
 
 (* -------------------------------------------------------------------------
