@@ -3,11 +3,10 @@ struct
 
 open HolKernel liteLib Trace Abbrev boolSyntax boolLib
 
-infix <<;  (* A subsetof B *)
-fun x << y = HOLset.isSubset(x,y)
 
 type key = term
-type data = (term HOLset.set * thm option) list
+type hypinfo = {hyps : term HOLset.set, thms : term HOLset.set}
+type data = (hypinfo * thm option) list
 
 type table = (key, data) Redblackmap.dict
 val empty_table = Redblackmap.mkDict Term.compare : table
@@ -17,27 +16,23 @@ fun c_insert c (k,v) = Sref.update c (fn t => Redblackmap.insert(t,k,v))
 fun cvalue (c:cache) = Sref.value c
 fun new_cache() : cache = Sref.new empty_table
 
-fun all_hyps thmlist = let
-  fun foldthis (th, acc) = let
-    val hyps = hypset th
-  in
-    HOLset.union(hyps, acc)
-  end
-in
-  List.foldl foldthis empty_tmset thmlist
-end
+val empty_hypinfo = {hyps = empty_tmset, thms = empty_tmset}
+fun hypinfo_addth (th, {hyps,thms}) =
+    {hyps = HOLset.union(hyps, hypset th), thms = HOLset.add(thms, concl th)}
+val all_hyps = List.foldl hypinfo_addth empty_hypinfo
+
+infix <<;  (* A subsetof B *)
+fun {hyps=h1,thms=ths1} << {hyps=h2,thms=ths2} =
+    HOLset.isSubset(h1,h2) andalso HOLset.isSubset(ths1, ths2)
+val _ = op<< : hypinfo * hypinfo -> bool
+fun hypinfo_list {hyps,thms} = HOLset.foldl op:: (HOLset.listItems hyps) thms
+fun hypinfo_isEmpty ({hyps,thms}:hypinfo) =
+    HOLset.isEmpty hyps andalso HOLset.isEmpty thms
 
 exception NOT_FOUND
 exception FIRST
 fun first p [] = raise FIRST
   | first p (h::t) = if p h then h else first p t
-fun all_aconv [] [] = true
-  | all_aconv [] _ = false
-  | all_aconv _ [] = false
-  | all_aconv (h1::t1) (h2::t2) = aconv h1 h2 andalso all_aconv t1 t2
-
-val thmcompare = inv_img_cmp concl Term.compare
-val empty_thmset = HOLset.empty thmcompare
 
 fun CACHE (filt,conv) = let
   val cache = new_cache()
@@ -58,11 +53,10 @@ fun CACHE (filt,conv) = let
                  handle e as (HOL_ERR _) =>
                         (trace(2,
                                REDUCE("Inserting failed ctxt",
-                                      if HOLset.isEmpty curr then tm
+                                      if hypinfo_isEmpty curr then tm
                                       else
-                                        mk_imp(list_mk_conj
-                                                 (HOLset.listItems curr),
-                                                 tm))) ;
+                                        mk_imp(list_mk_conj (hypinfo_list curr),
+                                               tm))) ;
                          c_insert cache (tm, (curr,NONE)::prevs);
                          raise e)
            in
@@ -79,7 +73,7 @@ fun clear_cache cache = (Sref.update cache (fn c => empty_table))
 
 fun cache_values (cache : cache) = let
   val items = Redblackmap.listItems (cvalue cache)
-  fun tolist (set, thmopt) = (HOLset.listItems set, thmopt)
+  fun tolist (set, thmopt) = (hypinfo_list set, thmopt)
   fun ToList (k, stlist) = (k, map tolist stlist)
 in
   map ToList items
@@ -195,7 +189,7 @@ fun build_graph fvs_of tmlist =
    in the same list point to the same updatable reference cell *)
 val build_var_to_group_map = let
   fun foldthis (tlist, acc) = let
-    val r = ref (empty_tmset, [] : thm list)
+    val r = Uref.new (empty_hypinfo, [] : thm list)
   in
     List.foldl (fn (t, acc) => Binarymap.insert(acc, t, r)) acc tlist
   end
@@ -208,9 +202,7 @@ fun thmlistrefcmp(r1, r2) =
     if r1 = r2 then EQUAL
     else Term.compare (concl (hd (!r1)), concl (hd (!r2)))
 
-fun addconcl (th, set) = HOLset.add(set, concl th)
-
-type context = term set * thm list
+type context = hypinfo * thm list
                (* terms are the union of all the theorems hypotheses *)
 datatype result = proved_it of thm
                 | possible_ctxts of context list
@@ -272,6 +264,7 @@ in
 end
 
 fun RCACHE (dpfvs, check, conv) = let
+  open Uref
   val cache = new_cache()
   fun build_up_ctxt mp th = let
     val c = concl th
@@ -282,7 +275,7 @@ fun RCACHE (dpfvs, check, conv) = let
         val r = Binarymap.find(mp,v)
         val (oldhyps, oldthms) = !r
       in
-        r := (HOLset.union(oldhyps, hypset th), th::oldthms)
+        r := (hypinfo_addth(th, oldhyps), th::oldthms)
       end
   end
   fun decider ctxt t = let
@@ -319,7 +312,7 @@ fun RCACHE (dpfvs, check, conv) = let
         (* now extract the ctxt relevant for the goal statement *)
         val (group_map', glstmtref) =
           case dpfvs t of
-            [] => (group_map, ref (empty_tmset, []))
+            [] => (group_map, Uref.new (empty_hypinfo, []))
           | (glvar::_) => Binarymap.remove(group_map, glvar)
 
         (* and the remaining contexts, ensuring there are no
@@ -334,7 +327,7 @@ fun RCACHE (dpfvs, check, conv) = let
            unto itself *)
         val divided_clist =
             divided_clist0 @
-            map (fn th => (HOLset.add(empty_tmset, concl th), [th]))
+            map (fn th => (hypinfo_addth(th, empty_hypinfo), [th]))
                 ground_ctxt_ths
 
         val (glhyps, thmlist) = !glstmtref
@@ -364,7 +357,7 @@ fun RCACHE (dpfvs, check, conv) = let
                 | NONE => let
                   in
                     trace(2, REDUCE("Inserting failure to prove",
-                                    if HOLset.isEmpty glhyps then t
+                                    if hypinfo_isEmpty glhyps then t
                                     else mk_imp(list_mk_conj
                                                   (map concl thmlist), t)));
                     c_insert cache (t, (glhyps, NONE)::prevs);

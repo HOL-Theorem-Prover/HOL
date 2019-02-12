@@ -309,12 +309,6 @@ val mk_var = Fv
 
 fun inST s = not(null(KernelSig.listName termsig s))
 
-fun mk_primed_var (Name,Ty) =
-  let val next = Lexis.nameStrm Name
-      fun spin s = if inST s then spin (next()) else s
-  in mk_var(spin Name, Ty)
-  end;
-
 (*---------------------------------------------------------------------------*
  *   "genvars" are a Lisp-style "gensym" for HOL variables.                  *
  *---------------------------------------------------------------------------*)
@@ -345,17 +339,15 @@ end;
  * sessions.                                                                 *
  *---------------------------------------------------------------------------*)
 
+
 fun gen_variant P caller =
   let fun var_name _ (Fv(Name,_)) = Name
         | var_name caller _ = raise ERR caller "not a variable"
       fun vary vlist (Fv(Name,Ty)) =
-          let val next = Lexis.nameStrm Name
-              val L = map (var_name caller) vlist
-              fun away s = if mem s L then away (next()) else s
-              fun loop name =
-                 let val s = away name
-                 in if P s then loop (next()) else s
-                 end
+          let val L = map (var_name caller) vlist
+              fun loop s =
+                  if mem s L orelse P s then loop (s ^ "'")
+                  else s
           in mk_var(loop Name, Ty)
           end
         | vary _ _ = raise ERR caller "2nd argument should be a variable"
@@ -365,6 +357,24 @@ fun gen_variant P caller =
 val variant      = gen_variant inST "variant"
 val prim_variant = gen_variant (K false) "prim_variant";
 
+fun numvariant avoids (Fv(Name,Ty)) =
+    let
+      fun var_name (Fv(Name,_)) = Name
+        | var_name _ =
+             raise ERR "numvariant" "Avoids list contains non-variable"
+      val nms = map var_name avoids
+      fun vary s = let val s' = Lexis.tmvar_vary s
+                   in
+                     if inST s' then vary s' else s'
+                   end
+    in
+      Fv(Lexis.gen_variant vary nms Name, Ty)
+    end
+  | numvariant _ _ =
+      raise ERR "numvariant" "2nd argument should be a variable"
+
+fun mk_primed_var (Name,Ty) =
+    gen_variant inST "mk_primed_var" [] (Fv(Name,Ty))
 
 (*---------------------------------------------------------------------------*
  *             Making constants.                                             *
@@ -707,8 +717,9 @@ fun strip_binder opt =
                                     end handle HOL_ERR _ => NONE)
  in fn tm =>
    let
+     open Uref
      val (prefixl,body) = peel f tm []
-     val AV = ref (Redblackmap.mkDict String.compare) : ((string,occtype)Redblackmap.dict) ref
+     val AV = Uref.new (Redblackmap.mkDict String.compare) : ((string,occtype)Redblackmap.dict) Uref.t
      fun peekInsert (key,data) =
         let open Redblackmap
         in case peek (!AV,key)
@@ -733,10 +744,7 @@ fun strip_binder opt =
             dupls)
         end
      fun variantAV n =
-       let val next = Lexis.nameStrm n
-           fun loop s = case lookAV s of NONE => s | SOME _ => loop (next())
-       in loop n
-       end
+         gen_variant (fn s => isSome (lookAV s)) "strip_binder" [] n
      fun CVs (v as Fv(n,_)) capt k =
           (case lookAV n
             of SOME (PREFIX i) => k (add_vi capt (vmap i,i))
@@ -748,9 +756,8 @@ fun strip_binder opt =
        | CVs tm capt k = k capt
      fun unclash insert [] = ()
        | unclash insert ((v,i)::rst) =
-           let val (n,ty) = dest_var v
-               val n' = variantAV n
-               val v' = mk_var(n',ty)
+           let val v' = variantAV v
+               val n' = #1 (dest_var v')
            in Array.update(prefix,i,v')
             ; insert (n',i)
             ; unclash insert rst

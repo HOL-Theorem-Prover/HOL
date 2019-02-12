@@ -2,6 +2,7 @@
  open base_tokens locn
 
   type extrastate = {nf : int, r : int ref, i: int ref,
+                     stash : string ref,
                      rcopt : (int * int) option ref,
                      stracc : (string * char list * locn_point) ref,
                      incommentp : int ref}
@@ -25,7 +26,7 @@
       end
 
   fun newstate nf =
-      {nf = nf, r = ref 0, i = ref 0, rcopt = ref NONE,
+      {nf = nf, r = ref 0, i = ref 0, rcopt = ref NONE, stash = ref "",
        stracc = ref ("", [], LocP(0,0,0) (* meaningless locn *)),
        incommentp = ref 0}
 
@@ -44,13 +45,15 @@
       end
    type lexresult = unit base_token * locn
    fun eof (st:extrastate) = let
-     val comment = !(#incommentp st) <> 0
-     val ok = not comment andalso List.null (#2 (!(#stracc st)))
-     val loc = locn.locp (case !(#rcopt st) of
+     val {incommentp,stash,stracc,rcopt,...} = st
+     val comment = !incommentp <> 0
+     val ok = not comment andalso List.null (#2 (!stracc)) andalso !stash = ""
+     val loc = locn.locp (case !rcopt of
                               SOME a => LocA a |
                               _ => LocPEnd (#nf st))
    in
      if ok then (BT_EOI, loc)
+     else if !stash <> "" then (BT_Ident (!stash), loc) before stash := ""
      else raise LEX_ERR
             ("eof/antiquote inside " ^
              (if comment then "comment" else "quote-delimited string"), loc)
@@ -62,32 +65,81 @@
                         else raise LEX_ERR ("bad character constant", loc)
        | _ => raise LEX_ERR ("Very bad character constant", loc)
 
+fun cut_qid s =
+    let
+      open Substring
+      val ss = full s
+      fun equal x y = x = y
+      val (uptodol, id) = splitr (not o equal #"$") ss
+    in
+      if size uptodol > 0 then
+        let
+          val beforedol = trimr 1 uptodol
+          fun thyname c = c = #"_" orelse not (Char.isPunct c)
+          val (first, thy) = splitr thyname beforedol
+        in
+          (string first, string thy ^ "$" ^ string id)
+        end
+      else ("", s)
+    end
+
 %%
 %structure base_lexer
-%arg ({rcopt,nf,r,i,incommentp,stracc} : UserDeclarations.extrastate);
+%arg ({rcopt,nf,r,i,incommentp,stracc,stash} : UserDeclarations.extrastate);
 %full
-%s string comment;
+%s string comment recover_stash;
 
 alpha = [A-Za-z_'];
 numeric = [0-9];
 digitseq = ({numeric} | _)* {numeric} ({numeric} | _)*;
 hexdigit = [A-Fa-f] | {numeric};
 hexdigitseq = ({hexdigit} | _)* {hexdigit} ({hexdigit} | _)*;
-symbol = [-`|!#%&)=+[{};:@~\\,.<>?/^$\128-\255] | ];
+coresymbol = [-`|!#%&=+[{};:@~,.<>?/^\128-\255] | ];
+symbol = {coresymbol} | [)\\];
 nonparen = {symbol} | \* | {alpha} | {numeric};
 nonstar_nonparen = {symbol} | {alpha} | {numeric};
 nonparen_nondigit = {symbol} | {alpha} | \*;
 ident = {alpha} ({alpha} | {numeric})*;
 lparen = \(;
+rparen = \);
 anysymb = (({nonparen_nondigit} | ({lparen}+ {nonstar_nonparen})) ({nonparen} | {lparen}+ {nonstar_nonparen}) * {lparen} ?) | {lparen};
 space = [\ \t];
 linefeed = \n;
 creturn = \013;
 newline = {linefeed} | {creturn} | {creturn}{linefeed};
 locpragma = "(*#loc" {space}+ {numeric}* {space}+ {numeric}* {space}* "*)";
-
+qvarinterior = {coresymbol} | {alpha} | {numeric} | {space} | "(" | "\\n" |
+               "\\t" | "\\)" | "\\\\" | "\\z" | "*" | "\\" {numeric} | "\"";
+constname = {ident} | "0" | ({coresymbol}|\\|\*)+;
 %%
+<INITIAL>"$" ? "$var$(" {qvarinterior}* ")" => (
+  (BT_Ident yytext, getLoc yyarg yypos yytext)
+);
+<INITIAL>"$" ? "$var$(" {qvarinterior}* "\n" => (
+  raise LEX_ERR ("Illegal form for quoted variable", getLoc yyarg yypos yytext)
+);
 <INITIAL>{locpragma} => (dolocpragma yyarg yypos yytext; continue());
+<INITIAL>"$" ? {anysymb} {ident} "$" {constname} =>
+(
+  let val (part1, part2) = cut_qid yytext
+  in
+    if size part1 = 0 then (BT_Ident yytext, getLoc yyarg yypos yytext)
+    else (
+      YYBEGIN recover_stash;
+      stash := part2;
+      (BT_Ident part1, getLoc yyarg yypos yytext)
+    )
+  end
+);
+<INITIAL>{ident} \$ {constname} => (
+  (BT_Ident yytext, getLoc yyarg yypos yytext)
+);
+<INITIAL>{anysymb} ? {ident} \$ [1-9()$] => (
+  raise LEX_ERR ("Bad qualified ident", getLoc yyarg yypos yytext)
+);
+<INITIAL>\$ ? {anysymb} \$ \$ + => (
+  raise LEX_ERR ("Bad qualified ident", getLoc yyarg yypos yytext)
+);
 <INITIAL>"(*" => (YYBEGIN comment; incommentp := 1; continue());
 <INITIAL>{numeric} ({numeric}| "_")* "." {digitseq} =>
   (let val loc = getLoc yyarg yypos yytext
@@ -120,18 +172,22 @@ locpragma = "(*#loc" {space}+ {numeric}* {space}+ {numeric}* {space}* "*)";
                        i := yypos + size yytext;
                        continue()
                      end);
+<INITIAL>\$? {anysymb} "\"" => (
+  (* needed to cope with stuff smashed up against char literals *)
+  let
+    val s = LocP(nf,!r,yypos - !(#i yyarg))
+  in
+    stracc := (String.substring(yytext,0,size yytext - 1), [#"\""], s);
+    YYBEGIN string;
+    continue()
+  end
+);
 <INITIAL>\$ ? {anysymb} "(*" => (YYBEGIN comment;
                                  incommentp := 1;
                                  (BT_Ident(String.substring(yytext,0,size yytext - 2)),
                                   getLoc yyarg yypos yytext));
-<INITIAL>\$ ? {anysymb} \" => (let
-  val s = LocP(nf,!r,yypos - !(#i yyarg))
-in
-  stracc := (String.substring(yytext,0,size yytext - 1), [#"\""], s);
-  YYBEGIN string;
-  continue()
-end);
 <INITIAL>\$ ? {anysymb} => ((BT_Ident yytext, getLoc yyarg yypos yytext));
+<INITIAL>\$ + => ((BT_Ident yytext, getLoc yyarg yypos yytext));
 <INITIAL>. => (raise LEX_ERR("Character \""^yytext^"\" is a lexical error",
                              getLoc yyarg yypos yytext));
 
@@ -189,3 +245,30 @@ end);
                        continue()
                      end);
 <comment>. => (continue());
+
+<recover_stash>"\"" * => (
+  let
+    val s = LocP(nf,!r,yypos - !(#i yyarg))
+  in
+    if size (!stash) = 0 then (YYBEGIN INITIAL; continue())
+    else
+      case String.sub(!stash, 0) of
+          #"\"" => (if size (!stash) > 1 then
+                      (stash := String.extract (!stash, 2, NONE);
+                       (BT_Ident (String.extract(!stash, 0, SOME 2)),
+                        getLoc yyarg yypos yytext))
+                    else (YYBEGIN string; stracc := ("", [#"\""], s);
+                          continue()))
+        | _ =>
+          (case size yytext of
+               0 => (YYBEGIN INITIAL;
+                     (BT_Ident (!stash), getLoc yyarg yypos yytext) before
+                     stash := "")
+             | 1 => (YYBEGIN string;
+                     stracc := ("", [#"\""], s);
+                     (BT_Ident (!stash), getLoc yyarg yypos yytext) before
+                     stash := "")
+             | n => ((BT_Ident (!stash), getLoc yyarg yypos yytext) before
+                     stash := yytext))
+  end
+);

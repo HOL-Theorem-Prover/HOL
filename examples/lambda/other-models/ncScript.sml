@@ -149,7 +149,7 @@ RW_TAC std_ss [SUB_THM]);
 (* carrying terms. Open question: prove the independence of ALPHA.       *)
 (* --------------------------------------------------------------------- *)
 
-val ALPHAa =
+val ALPHA =
  Q.store_thm ("ALPHA",
   `!x y ^u.
        ~(y IN (FV (LAM x u))) ==> (LAM x u = LAM y ([VAR y/x]u))`,
@@ -162,7 +162,7 @@ RW_TAC std_ss [FV_THM,DE_MORGAN_THM,IN_DELETE,FV, LAM, SUB_DEF, VARR]
 
 val ALPHA_LEMMA = Q.prove(
     `!x u. LAM x ([VAR x/x]u) = LAM x u`,
-PROVE_TAC [ALPHAa,FV_THM,IN_DELETE]);
+PROVE_TAC [ALPHA,FV_THM,IN_DELETE]);
 
 
 (* --------------------------------------------------------------------- *)
@@ -173,7 +173,7 @@ val SIMPLE_ALPHA =
  Q.store_thm ("SIMPLE_ALPHA",
    `!y u.
       ~(y IN FV u) ==> !x. LAM x u = LAM y ([VAR y/x]u)`,
-PROVE_TAC [ALPHAa,FV_THM,IN_DELETE]);
+PROVE_TAC [ALPHA,FV_THM,IN_DELETE]);
 
 
 (* --------------------------------------------------------------------- *)
@@ -249,7 +249,7 @@ val ABS_DEF = new_specification ("ABS_DEF", ["ABS"], ABS_EXISTS);
 val (ALT_FV,ALT_SUB_THM,ALT_ALPHA,ALT_ITERATOR)
   = let val f = REWRITE_RULE [GSYM ABS_DEF]
     in
-       (f FV_THM, f SUB_THM, f ALPHAa, f nc_ITERATOR)
+       (f FV_THM, f SUB_THM, f ALPHA, f nc_ITERATOR)
     end;
 val _ = save_thm("ALT_FV", ALT_FV);
 val _ = save_thm("ALT_SUB_THM", ALT_SUB_THM);

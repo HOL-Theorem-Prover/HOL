@@ -41,7 +41,7 @@ val STRONG_EQUIV_SUBST_REC = store_thm (
 (*                                                                            *)
 (******************************************************************************)
 
-val _ = type_abbrev ("context", ``:('a, 'b) CCS -> ('a, 'b) CCS``);
+val _ = type_abbrev_pp ("context", ``:('a, 'b) CCS -> ('a, 'b) CCS``);
 
 (* ONE HOLE CONTEXT for CCS *)
 val (OH_CONTEXT_rules, OH_CONTEXT_ind, OH_CONTEXT_cases) = Hol_reln `

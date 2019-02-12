@@ -10,17 +10,21 @@ structure Process = OS.Process
 fun die s = (TextIO.output(TextIO.stdErr, s ^ "\n");
              Process.exit Process.failure)
 
-fun mkquiet {bequiet, diffsort, files} =
-    {bequiet = true, diffsort = diffsort, files = files}
-fun mkdiff {bequiet, diffsort, files} =
-    {bequiet = bequiet, diffsort = true, files = files}
+fun mkquiet {bequiet, diffsort, files, averages} =
+    {bequiet = true, diffsort = diffsort, files = files, averages = averages}
+fun mkdiff {bequiet, diffsort, files, averages} =
+    {bequiet = bequiet, diffsort = true, files = files, averages = averages}
+fun mkaverages {bequiet, diffsort, files, averages} =
+    {bequiet = bequiet, diffsort = diffsort, files = files, averages = true}
+
 
 fun usage_msg appname =
     "Usage:\n  " ^ appname ^ " file1 file2 ... filen\n\n" ^
     "Options:\n\
+    \  -a    Ouput averages for each line\n\
     \  -d    Sort results in order of the differences (only with two files)\n\
-    \  -q    Print raw data only, no sums, or fancy lines; (output to other tools)\n\
     \  -h    Show this help message\n\
+    \  -q    Print raw data only, no sums, or fancy lines; (output to other tools)\n\
     \  -?    Show this help message\n"
 
 fun show_usage appname =
@@ -31,12 +35,13 @@ fun getargs appname args =
   let
     fun recurse args =
       case args of
-        [] => {bequiet = false, diffsort = false, files = []}
-      | "-q" :: rest => mkquiet (recurse rest)
-      | "-d" :: rest => mkdiff (recurse rest)
-      | "-h" :: _ => show_usage appname
-      | "-?" :: _ => show_usage appname
-      | _ => {bequiet = false, diffsort = false, files = args}
+        [] => {bequiet = false, diffsort = false, files = [], averages = false}
+       | "-a" :: rest => mkaverages (recurse rest)
+       | "-q" :: rest => mkquiet (recurse rest)
+       | "-d" :: rest => mkdiff (recurse rest)
+       | "-h" :: _ => show_usage appname
+       | "-?" :: _ => show_usage appname
+       | _ => {bequiet = false, diffsort = false, files = args,averages = false}
   in
     recurse args
   end
@@ -82,6 +87,11 @@ in
   padLeft #" " 15 s
 end
 
+fun suml [] = 0.0
+  | suml (r::rs) = r + suml rs
+fun average [] = 0.0
+  | average ls = suml ls / real (length ls)
+
 fun fmt_real r = centered25 (Real.fmt (StringCvt.FIX (SOME 3)) r)
 fun print_line m args thyname = let
   open StringCvt
@@ -103,7 +113,8 @@ end
 
 fun main() = let
   val args0 = CommandLine.arguments()
-  val {bequiet,diffsort,files = args} = getargs (CommandLine.name()) args0
+  val {bequiet,diffsort,files = args,averages} =
+      getargs (CommandLine.name()) args0
 
   val _ = if null args then die "Must specify at least one file to \"analyse\""
           else ()
@@ -111,6 +122,13 @@ fun main() = let
   val _ = if length args <> 2 andalso diffsort then
             die "-d option not appropriate when #files <> 2"
           else ()
+
+  val _ = if averages then
+            if diffsort then die "-d and -a incompatible"
+            else if length args < 2 then die "Need >= 2 files for -a option"
+            else ()
+          else ()
+
   val base = hd args
   val final_map = List.foldl read_file (Binarymap.mkDict String.compare) args
   val base_theories =
@@ -148,23 +166,56 @@ fun main() = let
     List.foldl calc_file (Binarymap.mkDict String.compare) args
   end
 
-  val _ = if not bequiet then
+  fun insert_list (m, k, v) =
+      case Binarymap.peek (m,k) of
+          NONE => Binarymap.insert(m,k,[v])
+        | SOME vs => Binarymap.insert(m,k,v::vs)
+  fun combine_for_averages m =
+      let
+        (* m a map from filenames to maps from theory-names to times;
+           output a map from theory-names to average times
+        *)
+        fun perfile(fname, fmap, A) =
+            let
+              fun pertheory (thyname, thytime, A) =
+                  insert_list (A, thyname, thytime)
+            in
+              Binarymap.foldl pertheory A fmap
+            end
+      in
+        Binarymap.foldl perfile (Binarymap.mkDict String.compare) m
+      end
+
+  val _ = if not bequiet andalso not averages then
             (print (StringCvt.padLeft #" " theory_width "");
              app (print o fmt_fname) args;
              print "\n";
              print_dashes (length args))
           else ()
-
-  val _ = app (print_line final_map args) base_theories
-
-  val total_map = calc_totals final_map
 in
-  if not bequiet then
-    (print_dashes (length args);
-     print (StringCvt.padRight #" " theory_width "Total");
-     app (print_entry total_map) args;
-     print "\n")
-  else ()
+  if averages then
+    let
+      val map' = combine_for_averages final_map
+      fun pertheory(thy, times, A) = (thy, average times) :: A
+      val data = Binarymap.foldr pertheory [] map'
+    in
+      app (fn (thy,avgtime) =>
+              print (StringCvt.padRight #" " theory_width thy ^
+                     fmt_real avgtime ^ "\n"))
+          data
+    end
+  else
+    let
+      val _ = app (print_line final_map args) base_theories
+      val total_map = calc_totals final_map
+    in
+      if not bequiet then
+        (print_dashes (length args);
+         print (StringCvt.padRight #" " theory_width "Total");
+         app (print_entry total_map) args;
+         print "\n")
+      else ()
+    end
 end
 
 end (* struct *)

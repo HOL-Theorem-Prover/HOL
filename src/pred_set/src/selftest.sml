@@ -40,7 +40,12 @@ val tpp_cases = [
       "{x | x < (case y of 0 => 3 | SUC n => 2)}",
       "univ(:'a)",
       "univ(:num)",
-      "univ(:num) x"
+      "univ(:num) x",
+      "{longfunctionname longarg1 longarg2 longarg3 |\n\
+      \ longarg1 * longconstantfactor + longarg2 < longarg3}",
+      "{longfunctionname longarg1 longarg2 longarg3 |\n\
+      \ longarg2 |\n\
+      \ longarg1 * longconstantfactor + longarg2 < longarg3}"
     ]
 
 val _ = app testutils.tpp tpp_cases
@@ -55,6 +60,10 @@ val _ = temp_add_rule {
           pp_elements = [TOK "{", HardSpace 1, TM, BreakSpace(1,0),
                          TOK "<..", BreakSpace(1,0), TM, HardSpace 1,
                          TOK "}"]}
+
+val _ = temp_add_user_printer(
+  "",``{ i | m < i /\ i <= n}``, term_pp_types.dummyprinter
+)
 val _ = temp_overload_on ("lterange", ``\m n. { i | m < i /\ i <= n}``)
 
 val _ = app testutils.tpp ["{ 3 <.. 5 }", "{x | x < 6}"]
@@ -95,6 +104,7 @@ end
 
 val feq_def = new_definition("feq_def", ``feq f x y = (f x = f y)``);
 val _ = temp_overload_on("equiv_class", ``\R s x. {y | y IN s /\ R x y}``);
+val _ = add_user_printer ("",``{y | y IN s /\ R x y}``)
 val _ = testutils.tpp "equiv_class (feq f) s x"
 
 val _ = set_grammar_ancestry ["pred_set"]

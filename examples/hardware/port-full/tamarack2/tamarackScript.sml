@@ -753,7 +753,7 @@ ASM_SIMP_TAC std_ss [NextState_def, LET_DEF, Inst_def, Opc_def,
   ADDn_def, Addr_def]);
 
 
-val SUB_INST_THM = store_thm ("ADD_INST_THM",
+val SUB_INST_THM = store_thm ("SUB_INST_THM",
 ``!n mpc mem mar pc acc ir arg buf.
   Tamarack n (mpc,mem,mar,pc,acc,ir,arg,buf)
   ==>

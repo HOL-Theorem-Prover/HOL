@@ -21,10 +21,10 @@ hide
 let s:tmpprefix =
 fu! TempName()
   let l:n = 0
-  while glob(s:tmpprefix.l:n) != ""
+  while glob(s:tmpprefix.l:n."Script.sml") != ""
     let l:n = l:n + 1
   endwhile
-  return s:tmpprefix.l:n
+  return s:tmpprefix.l:n."Script.sml"
 endf
 
 fu! HOLCStart()
@@ -101,6 +101,11 @@ fu! HOLGoal()
     silent keepjumps normal vG$"_dG$a)
   endw
   keepjumps normal gg0iproofManagerLib.g(
+endf
+
+fu! HOLUQGoal()
+  silent keepjumps normal pG$a`)
+  silent keepjumps normal gg0iproofManagerLib.g(`
 endf
 
 let s:stripStart     = ')\|\]\|\['
@@ -195,6 +200,7 @@ vn <silent> <LocalLeader>L :call YankThenHOLCall(function("HOLLoad"),[])<CR>
 vn <silent> <LocalLeader>s :call YankThenHOLCall(function("HOLSend"),[])<CR>
 vn <silent> <LocalLeader>u :call YankThenHOLCall(function("HOLSendQuiet"),[])<CR>
 vn <silent> <LocalLeader>g :call YankThenHOLCall(function("HOLGoal"),[])<CR>
+vn <silent> <LocalLeader>G :call YankThenHOLCall(function("HOLUQGoal"),[])<CR>
 vn <silent> <LocalLeader>e :call YankThenHOLCall(function("HOLExpand"),[])<CR>
 vn <silent> <LocalLeader>S :call YankThenHOLCall(function("HOLSubgoal"),[])<CR>
 vn <silent> <LocalLeader>F :call YankThenHOLCall(function("HOLSuffices"),[])<CR>
@@ -203,6 +209,7 @@ nm <silent><expr> <LocalLeader>L "V".maplocalleader."L"
 nm <silent><expr> <LocalLeader>s "V".maplocalleader."s"
 nm <silent><expr> <LocalLeader>u "V".maplocalleader."u"
 nm <silent><expr> <LocalLeader>g "V".maplocalleader."g"
+nm <silent><expr> <LocalLeader>G "V".maplocalleader."G"
 nm <silent><expr> <LocalLeader>e "V".maplocalleader."e"
 nm <silent><expr> <LocalLeader>S "V".maplocalleader."S"
 nm <silent><expr> <LocalLeader>F "V".maplocalleader."F"

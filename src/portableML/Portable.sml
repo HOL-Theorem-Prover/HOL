@@ -23,6 +23,13 @@ exception Mod = General.Div
 
 fun assert_exn P x e = if P x then x else raise e
 fun with_exn f x e = f x handle Interrupt => raise Interrupt | _ => raise e
+fun finally finish f x =
+    let
+      val result = Exn.capture f x
+    in
+      finish();
+      Exn.release result
+    end
 
 val int_to_string = Int.toString
 
@@ -161,11 +168,7 @@ fun pull_prefix ps l =
 val unzip = ListPair.unzip
 val split = unzip
 
-fun mapfilter f list =
-   itlist (fn i => fn L => (f i :: L)
-                handle Interrupt => raise Interrupt
-                     | otherwise => L)
-          list []
+fun mapfilter f = List.mapPartial (total f)
 
 val flatten = List.concat
 

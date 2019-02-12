@@ -12,7 +12,6 @@ sig
   val get_lemmas : (string * string) -> string list option
 
   (* Reconstruction *)
-  val mk_metis_call  : string list -> string
   val hh_reconstruct : string list -> goal -> (string * tactic)
 
 end

@@ -56,6 +56,7 @@ sig
    val enumerate : int -> 'a list -> (int * 'a) list
    val equal : ''a -> ''a -> bool
    val exists : ('a -> bool) -> 'a list -> bool
+   val extract_pc : string -> string * int (* "pc" = "prime count" *)
    val filter : ('a -> bool) -> 'a list -> 'a list
    val first : ('a -> bool) -> 'a list -> 'a
    val first_opt : (int -> 'a -> 'b option) -> 'a list -> 'b option

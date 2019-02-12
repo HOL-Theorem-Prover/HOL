@@ -39,7 +39,7 @@ val _ = if type_to_string ty2 = ":('a + 'b)[32]" then OK()
 
 val _ = tprint "Parsing abbreviated word types"
 val u8 = fcpSyntax.mk_cart_type(bool, fcpSyntax.mk_int_numeric_type 8)
-val _ = type_abbrev("u8", u8)
+val _ = type_abbrev_pp("u8", u8)
 val _ = if Type.compare(Parse.Type`:u8`, u8) <> EQUAL then die "FAILED!"
         else OK()
 val _ = tprint "Printing abbreviated word types"
@@ -105,13 +105,27 @@ local
       if aconv r expected then OK()
       else die ("FAILED\n  Got ``" ^ term_to_string r ^ "``")
     end
-  val quote_to_term_list =
-    fn [QUOTE s] =>
-        List.mapPartial (fn s => if List.all Char.isSpace (String.explode s)
-                                    then NONE
-                                 else SOME (Parse.Term [QUOTE s]))
-          (String.tokens (Lib.equal #"\n") s)
-     | _ => raise ERR "" ""
+  fun getlocpragma s =
+      let
+        open Substring
+        val ss = full s
+        val sr = dropl (not o Char.isDigit) ss
+        val sc = dropl Char.isDigit sr
+      in
+        (valOf (Int.fromString (string sr)), valOf (Int.fromString (string sc)))
+      end
+  fun mkpragma (r,c) = "(*#loc " ^ Int.toString r ^ " " ^ Int.toString c ^ "*)"
+  fun quote_to_term_list q =
+   let
+     val s = case q of [QUOTE s] => s | _ => raise ERR "quote_to_term_list" ""
+     val lines = String.tokens (Lib.equal #"\n") s
+     val (r, _) = getlocpragma s
+     fun foldthis (s, (r,ts)) =
+         if CharVector.all Char.isSpace s then (r+1, ts)
+         else (r+1, Parse.Term [QUOTE (mkpragma(r,1) ^ s)] :: ts)
+   in
+     #2 (List.foldl foldthis (r,[]) lines)
+   end
 in
   fun qtest_conv conv q = List.app (test_conv conv) (quote_to_term_list q)
 end

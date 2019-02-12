@@ -228,7 +228,7 @@ in
          val tm = Term.prim_mk_const {Name = name, Thy = thy}
          val () =
             ignore (List.length (args tm) = n
-                    orelse raise ERR "systax_fns" "bad number of arguments")
+                    orelse raise ERR "syntax_fns" "bad number of arguments")
          val d = dest tm (ERR ("dest_" ^ name) "")
       in
          (tm,
@@ -356,7 +356,8 @@ fun bvk_find_term P k =
 
 fun find_terms P =
    let
-      val tms = ref []
+      open Uref
+      val tms = Uref.new []
       fun find_tms tm =
          (if P tm then tms := tm :: (!tms) else ()
           ; find_tms (body tm)

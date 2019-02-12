@@ -11,7 +11,9 @@ in
    val CONS_11 = CONS_11
    val EL = EL
    val EL_APPEND_EQN = EL_APPEND_EQN
+   val EL_DROP = EL_DROP
    val EL_LUPDATE = EL_LUPDATE
+   val EL_TAKE = EL_TAKE
    val EVERY_DEF = EVERY_DEF
    val EVERY_SNOC = EVERY_SNOC
    val EXISTS_DEF = EXISTS_DEF
@@ -104,6 +106,39 @@ val SPLITP_AUX_def = TotalDefn.Define`
    (SPLITP_AUX acc P [] = (acc,[])) /\
    (SPLITP_AUX acc P (h::t) =
       if P h then (acc, h::t) else SPLITP_AUX (acc ++ [h]) P t)`;
+
+Theorem SPLITP_splitAtPki:
+  SPLITP P = splitAtPki (K P) $,
+Proof
+  simp[FUN_EQ_THM] >> Induct >> simp[SPLITP,listTheory.splitAtPki_def] >>
+  rw[o_DEF] >> Q.HO_MATCH_ABBREV_TAC`f (splitAtPki (K P) $, x) = _` >>
+  CONV_TAC(LAND_CONV(REWRITE_CONV[listTheory.splitAtPki_RAND])) >>
+  simp[Abbr‘f’, o_DEF]
+QED
+
+Theorem SPLITP_JOIN:
+  !ls l r.
+    (SPLITP P ls = (l, r)) ==> (ls = l ++ r)
+Proof
+  Induct >> rw[SPLITP] >> Cases_on `SPLITP P ls` >> rw[]
+QED
+
+Theorem SPLITP_IMP:
+  !P ls l r.
+     (SPLITP P ls = (l,r)) ==>
+     EVERY ($~ o P) l /\ (~NULL r ==> P (HD r))
+Proof
+  Induct_on`ls` >> rw[SPLITP] >> rw[] >> fs[] >>
+  Cases_on`SPLITP P ls` >> fs[]
+QED
+
+Theorem SPLITP_NIL_SND_EVERY:
+  !ls r. (SPLITP P ls = (r, [])) <=> (r = ls) /\ (EVERY ($~ o P) ls)
+Proof
+  rw[] >> EQ_TAC
+  >- (rw[] >> imp_res_tac SPLITP_IMP >> imp_res_tac SPLITP_JOIN >> fs[]) >>
+  rw[] >> Induct_on `ls` >> rw[SPLITP]
+QED
 
 val SPLITL_def = TotalDefn.Define `SPLITL P = SPLITP ((~) o P)`;
 
@@ -656,6 +691,14 @@ val IS_SUFFIX_IS_SUBLIST = Q.store_thm ("IS_SUFFIX_IS_SUBLIST",
    THEN DISCH_THEN (CHOOSE_THEN SUBST1_TAC)
    THEN MAP_EVERY EXISTS_TAC [``l:'a list``, ``[]:'a list``]
    THEN REWRITE_TAC [APPEND_NIL]);
+
+Theorem IS_SUFFIX_CONS
+  `!l1 l2 a. IS_SUFFIX l1 l2 ==> IS_SUFFIX (a::l1) l2`
+  (srw_tac[][IS_SUFFIX_APPEND] >> Q.EXISTS_TAC ‘a::l’ >> srw_tac[][])
+
+Theorem IS_SUFFIX_TRANS
+  `!l1 l2 l3. IS_SUFFIX l1 l2 /\ IS_SUFFIX l2 l3 ==> IS_SUFFIX l1 l3`
+  (rw[IS_SUFFIX_APPEND] \\ metis_tac[APPEND_ASSOC]);
 
 val NOT_NIL_APPEND_SNOC2 = Q.prove(
    `!l1 l2 x. ~([] = (APPEND l1 (SNOC x l2)))`,
@@ -1401,7 +1444,7 @@ val EVERY_BUTLASTN = Q.store_thm ("EVERY_BUTLASTN",
          THEN RES_TAC
          THEN ASM_REWRITE_TAC []]]);
 
-val TAKE_TAKE_T = Q.store_thm ("TAKE_TAKE",
+val TAKE_TAKE_T = Q.store_thm ("TAKE_TAKE_T",
    `!m l n. n <= m ==> (TAKE n (TAKE m l) = TAKE n l)`,
   Induct THEN1 SIMP_TAC list_ss [TAKE, listTheory.TAKE_def]
   THEN Cases THEN1 SIMP_TAC list_ss [TAKE, listTheory.TAKE_def]
@@ -1582,7 +1625,7 @@ val SEG_APPEND2 = Q.store_thm ("SEG_APPEND2",
    THEN FIRST_ASSUM MATCH_MP_TAC
    THEN ASM_REWRITE_TAC [LENGTH, LESS_EQ_MONO]);
 
-val SEG_TAKE_DROP = Q.store_thm ("SEG_TAKE_BUTFISTN",
+val SEG_TAKE_DROP = Q.store_thm ("SEG_TAKE_DROP",
    `!n m l. n + m <= LENGTH l ==> (SEG n m l = TAKE n (DROP m l))`,
    REPEAT INDUCT_TAC
    THEN LIST_INDUCT_TAC
@@ -2908,17 +2951,14 @@ val COUNT_LIST_ADD = Q.store_thm ("COUNT_LIST_ADD",
            listTheory.SNOC_APPEND, GSYM APPEND_ASSOC, APPEND]
    THEN SIMP_TAC std_ss [arithmeticTheory.ADD_CLAUSES]);
 
+Theorem MAP_COUNT_LIST
+  `MAP f (COUNT_LIST n) = GENLIST f n`
+  (rw[COUNT_LIST_GENLIST,listTheory.MAP_GENLIST]);
+
 (*---------------------------------------------------------------------------
    General theorems about lists. From Anthony Fox's and Thomas Tuerk's theories.
    Added by Thomas Tuerk
  ---------------------------------------------------------------------------*)
-
-val EL_DROP = Q.store_thm ("EL_DROP",
-   `!m n l. m + n < LENGTH l ==> (EL m (DROP n l) = EL (m + n) l)`,
-   Induct_on `l`
-   THEN SIMP_TAC list_ss []
-   THEN Cases_on `n`
-   THEN FULL_SIMP_TAC list_ss [DROP, ADD_CLAUSES]);
 
 val SNOC_EL_TAKE = Q.store_thm ("SNOC_EL_TAKE",
    `!n l. n < LENGTH l ==> (SNOC (EL n l) (TAKE n l) = TAKE (SUC n) l)`,
@@ -2939,14 +2979,6 @@ val ZIP_TAKE = Q.store_thm ("ZIP_TAKE",
       n <= LENGTH a /\ (LENGTH a = LENGTH b) ==>
       (ZIP (TAKE n a, TAKE n b) = TAKE n (ZIP (a, b)))`,
   SIMP_TAC arith_ss [ZIP_TAKE_LEQ, listTheory.TAKE_LENGTH_ID]);
-
-val EL_TAKE = Q.store_thm ("EL_TAKE",
-   `!n x l. x < n ==> (EL x (TAKE n l) = EL x l)`,
-   Induct_on `n`
-   THEN ASM_SIMP_TAC list_ss [TAKE]
-   THEN Cases_on `x`
-   THEN Cases_on `l`
-   THEN ASM_SIMP_TAC list_ss [TAKE]);
 
 val ZIP_APPEND = Q.store_thm ("ZIP_APPEND",
   `!a b c d.
@@ -3168,21 +3200,11 @@ val LENGTH_FILTER_LESS = Q.store_thm("LENGTH_FILTER_LESS",
    THEN MATCH_MP_TAC LESS_EQ_IMP_LESS_SUC
    THEN MATCH_ACCEPT_TAC LENGTH_FILTER_LEQ)
 
-val EVERY2_APPEND = Q.store_thm("EVERY2_APPEND",
-   `EVERY2 R l1 l2 /\ EVERY2 R l3 l4 <=>
-    EVERY2 R (l1 ++ l3) (l2 ++ l4) /\
-    (LENGTH l1 = LENGTH l2) /\ (LENGTH l3 = LENGTH l4)`,
-   rw[EVERY2_EVERY,EVERY_MEM] >> metis_tac[ZIP_APPEND,MEM_APPEND])
+val EVERY2_APPEND = save_thm(
+  "EVERY2_APPEND", listTheory.LIST_REL_APPEND);
 
-val LIST_REL_APPEND_IMP = store_thm("LIST_REL_APPEND_IMP",
-  ``!xs ys xs1 ys1.
-      LIST_REL P (xs ++ xs1) (ys ++ ys1) /\ (LENGTH xs = LENGTH ys) ==>
-      LIST_REL P xs ys /\ LIST_REL P xs1 ys1``,
-  Induct >> Cases_on `ys` >> FULL_SIMP_TAC (srw_ss()) [] >> METIS_TAC []);
-
-val EVERY2_APPEND_suff = Q.store_thm("EVERY2_APPEND_suff",
-   `EVERY2 R l1 l2 /\ EVERY2 R l3 l4 ==> EVERY2 R (l1 ++ l3) (l2 ++ l4)`,
-   metis_tac[EVERY2_APPEND])
+val EVERY2_APPEND_suff = save_thm(
+  "EVERY2_APPEND_suff", listTheory.LIST_REL_APPEND_suff);
 
 val EVERY2_DROP = Q.store_thm("EVERY2_DROP",
    `!R l1 l2 n.
@@ -3313,7 +3335,24 @@ val LIST_REL_REPLICATE_same = store_thm("LIST_REL_REPLICATE_same",
   simp[LIST_REL_EL_EQN,REPLICATE_GENLIST] >>
   Cases_on`n`>>simp[EQ_IMP_THM] >> rw[] >>
   FIRST_X_ASSUM MATCH_MP_TAC >>
-  Q.EXISTS_TAC`0`>>simp[])
+  Q.EXISTS_TAC`0`>>simp[]);
+
+Theorem SNOC_REPLICATE
+  `!n x. SNOC x (REPLICATE n x) = REPLICATE (SUC n) x`
+  (Induct \\ fs [REPLICATE]);
+
+Theorem REVERSE_REPLICATE[simp]
+  `!n x. REVERSE (REPLICATE n x) = REPLICATE n x`
+  (Induct \\ fs [REPLICATE] \\ fs [GSYM REPLICATE,GSYM SNOC_REPLICATE]);
+
+Theorem SUM_REPLICATE[simp]
+  `!n k. SUM (REPLICATE n k) = n * k`
+  (Induct >>
+   full_simp_tac(srw_ss())[REPLICATE,MULT_CLAUSES,AC ADD_COMM ADD_ASSOC]);
+
+Theorem LENGTH_FLAT_REPLICATE[simp]
+  `!n. LENGTH (FLAT (REPLICATE n ls)) = n * LENGTH ls`
+  (Induct >> simp[REPLICATE,MULT]);
 
 val take_drop_partition = Q.store_thm ("take_drop_partition",
    `!n m l. m <= n ==> (TAKE m l ++ TAKE (n - m) (DROP m l) = TAKE n l)`,
@@ -3376,6 +3415,23 @@ val UNIQUE_LIST_ELEM_COUNT = store_thm (
       METIS_TAC [] )
  >> DISCH_TAC >> ASM_REWRITE_TAC []
  >> RW_TAC std_ss [UNIQUE_LENGTH_FILTER]);
+
+Theorem LIST_ELEM_COUNT_CARD_EL:
+  !ls. LIST_ELEM_COUNT x ls = CARD { n | n < LENGTH ls /\ (EL n ls = x) }
+Proof
+  Induct
+  \\ rw[LIST_ELEM_COUNT_THM]
+  \\ Q.MATCH_GOALSUB_ABBREV_TAC`_ = CARD B`
+  \\ Q.MATCH_ASMSUB_ABBREV_TAC`_ = CARD A`
+  \\ `A SUBSET count (LENGTH ls)` by simp[Abbr`A`, SUBSET_DEF]
+  \\ `B SUBSET count (SUC (LENGTH ls))` by simp[Abbr`B`, SUBSET_DEF]
+  \\ `FINITE A /\ FINITE B` by metis_tac[SUBSET_FINITE, FINITE_COUNT]
+  \\ `B = IMAGE SUC A UNION (if x = h then {0} else {})`
+  by ( simp[Abbr`A`, Abbr`B`, EXTENSION] \\ Cases \\ rw[] )
+  \\ Cases_on`x = h` \\ simp[LIST_ELEM_COUNT_THM, CARD_UNION_EQN, ADD1, CARD_INJ_IMAGE]
+  \\ `IMAGE SUC A INTER {0} = {}` by rw[EXTENSION]
+  \\ simp[]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Add evaluation theorems to computeLib.the_compset                         *)
@@ -3543,11 +3599,13 @@ local
        ("CONS", "CONS"),
        ("CONS_11", "CONS_11"),
        ("EL", "EL"),
+       ("EL_DROP", "EL_DROP"),
        ("EL_GENLIST", "EL_GENLIST"),
        ("EL_LENGTH_SNOC", "EL_LENGTH_SNOC"),
        ("EL_MAP", "EL_MAP"),
        ("EL_REVERSE", "EL_REVERSE"),
        ("EL_SNOC", "EL_SNOC"),
+       ("EL_TAKE", "EL_TAKE"),
        ("EQ_LIST", "EQ_LIST"),
        ("EVERY_GENLIST", "EVERY_GENLIST"),
        ("EXISTS_GENLIST", "EXISTS_GENLIST"),
@@ -3652,7 +3710,7 @@ in
                 PP.add_string ("val " ^ s1 ^ " = " ^ p ^ s2)
               fun L p l = B (PP.pr_list (S p) [PP.NL] l)
            in
-              B [L "" alias, PP.add_break(1,0), L "listTheory." moved]
+              B [L "listTheory." moved, PP.add_break(1,0), L "" alias]
            end)}
 end
 

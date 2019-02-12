@@ -5,8 +5,7 @@
 open HolKernel Parse boolLib bossLib;
 open combinTheory pairTheory relationTheory listTheory
      markerLib metisLib BasicProvers
-
-local open rich_listTheory in end
+     arithmeticTheory pred_setTheory rich_listTheory
 
 val _ = new_theory "sorting";
 val _ = set_grammar_ancestry ["rich_list"]
@@ -364,12 +363,57 @@ val PERM_MEM_EQ = Q.store_thm(
   `!l1 l2. PERM l1 l2 ==> !x. MEM x l1 = MEM x l2`,
   HO_MATCH_MP_TAC PERM_IND THEN SRW_TAC [][AC DISJ_ASSOC DISJ_COMM]);
 
-local open pred_setTheory in
-val PERM_LIST_TO_SET = store_thm(
-"PERM_LIST_TO_SET",
-``!l1 l2. PERM l1 l2 ==> (set l1 = set l2)``,
-SRW_TAC[][EXTENSION,PERM_MEM_EQ])
-end
+Theorem PERM_LIST_TO_SET:
+  !l1 l2. PERM l1 l2 ==> (set l1 = set l2)
+Proof SRW_TAC[][EXTENSION,PERM_MEM_EQ]
+QED
+
+Theorem PERM_BIJ:
+  !l1 l2. PERM l1 l2 ==>
+          ?f. (BIJ f (count(LENGTH l1)) (count(LENGTH l1)) /\
+              (l2 = GENLIST (\i. EL (f i) l1) (LENGTH l1)))
+Proof
+  Induct_on ‘PERM’ >> simp[BIJ_EMPTY] >> conj_tac
+  >- (
+    simp[GENLIST_CONS] >>
+    srw_tac[][combinTheory.o_DEF] >>
+    qexists_tac`\i. case i of 0 => 0 | SUC i => SUC(f i)` >>
+    fs[BIJ_IFF_INV, EL_CONS, PRE_SUB1] >>
+    conj_tac >- (Cases >> simp[]) >>
+    qexists_tac ‘\i. case i of 0 => 0 | SUC i => SUC(g i)’ >>
+    conj_tac >- (Cases >> simp[]) >>
+    conj_tac >- (Cases >> simp[]) >>
+    (Cases >> simp[])
+  ) >> conj_tac >- (
+    simp[GENLIST_CONS] >>
+    srw_tac[][combinTheory.o_DEF] >>
+    qexists_tac
+      ‘\i. case i of 0 => 1 | SUC 0 => 0 | SUC(SUC n) => SUC(SUC(f n))’ >>
+    simp[PRE_SUB1,EL_CONS] >>
+    REWRITE_TAC[ONE] >> simp[] >> fs[BIJ_IFF_INV] >>
+    conj_tac >- (Cases >> simp[]>> Cases_on`n`>>simp[]) >>
+    qexists_tac
+      ‘\i. case i of 0 => 1 | SUC 0 => 0 | SUC(SUC n) => SUC(SUC(g n))’ >>
+    simp[] >>
+    conj_tac >- (Cases >> simp[]>> Cases_on`n`>>simp[]) >>
+    conj_tac >- (Cases >> simp[]>> TRY(Cases_on`n`)>>simp[] >> REWRITE_TAC[ONE]>>simp[]) >>
+    (Cases >> simp[]>> TRY(Cases_on`n`)>>simp[] >> REWRITE_TAC[ONE]>>simp[])
+  ) >>
+  ntac 2 (srw_tac[][LENGTH_GENLIST]) >>
+  simp[LIST_EQ_REWRITE,EL_GENLIST] >>
+  full_simp_tac(srw_ss())[LENGTH_GENLIST] >>
+  qexists_tac`f o f'` >>
+  simp[combinTheory.o_DEF] >>
+  full_simp_tac(srw_ss())[BIJ_IFF_INV] >>
+  qexists_tac`g' o g` >>
+  simp[combinTheory.o_DEF]
+QED
+
+Theorem PERM_EVERY:
+  !ls ls'. PERM ls ls' ==> (EVERY P ls <=> EVERY P ls')
+Proof Induct_on ‘PERM’ >> srw_tac[][] >> metis_tac[]
+QED
+
 
 (*---------------------------------------------------------------------------*
  * The idea of sortedness requires a "permutation" relation for lists, and   *
@@ -464,7 +508,7 @@ RW_TAC bool_ss []
        subgoals here, so we have to take round-about measures.
  ---------------------------------------------------------------------------*)
 
-val PARTS_HAVE_PROP = Q.store_thm
+val PARTs_HAVE_PROP = Q.store_thm
 ("PARTs_HAVE_PROP",
  `!P L A B l1 l2.
    ((A,B) = PART P L l1 l2) /\
@@ -588,7 +632,7 @@ Q.store_thm
   THEN ((RES_TAC THEN NO_TAC) ORELSE ALL_TAC)
   THEN Q.PAT_X_ASSUM `_ = _` (MP_TAC o MATCH_MP
         (REWRITE_RULE[PROVE [] (Term `x/\y/\z ==> w = x ==> y/\z ==> w`)]
-            PARTS_HAVE_PROP))
+            PARTs_HAVE_PROP))
   THEN RW_TAC std_ss [MEM]
   THEN PROVE_TAC [transitive_def,total_def]);
 
@@ -647,12 +691,13 @@ val PERM_SINGLE_SWAP_CONS = Q.store_thm ("PERM_SINGLE_SWAP_CONS",
     Q.EXISTS_TAC `x :: x1` >> Q.EXISTS_TAC `x2` >> Q.EXISTS_TAC `x3` >>
     ASM_SIMP_TAC list_ss [] ) ;
 
-val PERM_SINGLE_SWAP_TC_CONS = Q.store_thm ("PERM_SINGLE_SWAP_TC_CONS",
-  `!M N. TC PERM_SINGLE_SWAP M N ==> TC PERM_SINGLE_SWAP (x :: M) (x :: N)`,
-  HO_MATCH_MP_TAC TC_INDUCT >>
-    REVERSE CONJ_TAC THEN1 MATCH_ACCEPT_TAC TC_TRANS >>
-    REPEAT STRIP_TAC >> irule TC_SUBSET >>
-    irule PERM_SINGLE_SWAP_CONS >> FIRST_ASSUM ACCEPT_TAC) ;
+Theorem PERM_SINGLE_SWAP_TC_CONS:
+  !M N. TC PERM_SINGLE_SWAP M N ==> TC PERM_SINGLE_SWAP (x :: M) (x :: N)
+Proof
+  HO_MATCH_MP_TAC TC_INDUCT >> reverse CONJ_TAC >- MATCH_ACCEPT_TAC TC_TRANS >>
+  rpt strip_tac >> irule TC_SUBSET >>
+  irule PERM_SINGLE_SWAP_CONS >> FIRST_ASSUM ACCEPT_TAC
+QED
 
 val PERM_is_TC_PSS = Q.prove (
   `!l1 l2. PERM l1 l2 ==> TC PERM_SINGLE_SWAP l1 l2`,

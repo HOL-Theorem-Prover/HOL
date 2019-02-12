@@ -1,0 +1,87 @@
+(* this is an -*- sml -*- file, or near enough *)
+ open TheoryDatTokens_dtype
+
+  type extrastate = {stracc : (string list * int) ref, linenum : int ref}
+  (* mutable state argument to each rule has a field for building up the
+     contents of the string literals *)
+
+  fun newstate () : extrastate = {stracc = ref ([],0), linenum = ref 1}
+
+  type lexresult = t
+  fun eof (st:extrastate) = let
+    val {stracc,...} = st
+    val (strbuf,strstart) = !stracc
+  in
+    if List.null strbuf then EOF
+    else
+      raise DatTokenError ("eof inside quote-delimited string that began on \
+                                  \line " ^ Int.toString strstart)
+  end
+
+  fun apfst f (x,y) = (f x, y)
+  fun cons h t = h::t
+
+%%
+%structure TheoryDatTokens
+%arg ({stracc,linenum} : UserDeclarations.extrastate);
+%full
+%s string;
+
+alpha = [A-Za-z_'];
+numeric = [0-9];
+digitseq = {numeric} {numeric}*;
+ident = {alpha} ({alpha} | {numeric})*;
+space = " ";
+linefeed = \n;
+creturn = \013;
+newline = {linefeed} | {creturn} | {creturn}{linefeed};
+lbr = \[;
+rbr = \];
+%%
+<INITIAL>{ident} => (ID yytext);
+<INITIAL>{digitseq} => (Num (Arbnum.fromString yytext));
+<INITIAL>{lbr} => (LBr);
+<INITIAL>{rbr} => (RBr);
+<INITIAL>"," => (Comma);
+<INITIAL>\" => ((
+  stracc := ([],!linenum);
+  YYBEGIN string;
+  continue()
+));
+<INITIAL>{space} => (continue());
+<INITIAL>{newline} => (linenum := !linenum + 1; continue());
+<INITIAL>. => (
+  raise DatTokenError ("line " ^ Int.toString (!linenum) ^
+                       ": character \""^yytext^"\" is a lexical error")
+);
+<string>([A-Za-z0-9`~'_!@#$%^&*()+={}[\]|;:,.<>?/]|{space}|"-")+ => (
+  stracc := apfst (cons yytext) (!stracc);
+  continue()
+);
+<string>"\\"[0-9][0-9][0-9] => (
+  let
+    val i = valOf (Int.fromString (String.extract(yytext,1,NONE)))
+  in
+    stracc := apfst (cons (str (Char.chr i))) (!stracc);
+    continue()
+  end
+);
+<string>"\\\\" => (
+  stracc := apfst (cons "\\") (!stracc);
+  continue()
+);
+<string>"\\\"" => (
+  stracc := apfst (cons "\"") (!stracc);
+  continue()
+);
+<string>"\"" => (
+  YYBEGIN INITIAL;
+  QString (String.concat (List.rev (#1 (!stracc)))) before
+  stracc := ([], 0)
+);
+<string>. => (
+  raise DatTokenError (
+    "line " ^ Int.toString (!linenum) ^
+    ": illegal character \"" ^ yytext ^ "\" in quoted string"
+  )
+);

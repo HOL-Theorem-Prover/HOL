@@ -36,7 +36,8 @@ sig
 
   val new_qtyop        : kernelname -> grammar -> grammar
   val hide_tyop        : string -> grammar -> grammar
-  val new_abbreviation : grammar -> kernelname * Type.hol_type -> grammar
+  val new_abbreviation : {knm : kernelname, ty : Type.hol_type, print : bool} ->
+                         grammar -> grammar
   val remove_abbreviation : grammar -> string -> grammar
   val num_params : type_structure -> int
 

@@ -1,0 +1,8 @@
+Two tests in this directory:
+
+1.  heaps should be built successfully even when object files (such as
+    those coming from ../proj1) in this example refer to holpathdb
+    variables (other than $(HOLDIR))
+
+2.  (Tested in proj1/subdir.) holpathdb variables should be visible in
+    Holmakefiles.

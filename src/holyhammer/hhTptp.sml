@@ -1,73 +1,20 @@
-(* ========================================================================== *)
-(* FILE          : hhTptp.sml                                                 *)
-(* DESCRIPTION   : TPTP writer for essentially first-order HOL formulas       *)
-(* AUTHOR        : (c) Thibault Gauthier, Czech Technical University          *)
-(*                     Cezary Kaliszyk, University of Innsbruck               *)
-(* DATE          : 2018                                                       *)
-(* ========================================================================== *)
+(* ========================================================================= *)
+(* FILE          : hhTptp.sml                                                *)
+(* DESCRIPTION   : TPTP writer for essentially first-order HOL formulas      *)
+(* AUTHOR        : (c) Thibault Gauthier, Czech Technical University         *)
+(*                     Cezary Kaliszyk, University of Innsbruck              *)
+(* DATE          : 2018                                                      *)
+(* ========================================================================= *)
 
 structure hhTptp :> hhTptp =
 struct
 
-open HolKernel boolLib tttTools hhTranslate
+open HolKernel boolLib aiLib hhTranslate
 
-(*----------------------------------------------------------------------------
-   Escaping constants , variables and theorems
-  ----------------------------------------------------------------------------*)
+(* -------------------------------------------------------------------------
+   Writer shortcuts
+   ------------------------------------------------------------------------- *)
 
-val ERR = mk_HOL_ERR "hhTptp"
-
-val readable_flag = ref false
-
-fun tptp_of_var arity v =
-  if not (!readable_flag)
-  then
-    if arity = 0
-    then fst (dest_var v)
-    else fst (dest_var v) ^ "_" ^ int_to_string arity
-  else fst (dest_var v)
-
-fun tptp_of_const arity c =
-  let val {Name, Thy, Ty} = dest_thy_const c in
-    if not (!readable_flag)
-    then escape
-      ("c" ^ (if arity = 0 then "" else int_to_string arity) ^
-       "." ^ Thy ^ "." ^ Name)
-    else Name
-  end
-
-fun tptp_of_constvar arity tm =
-  if is_const tm then tptp_of_const arity tm
-  else if is_var tm then tptp_of_var arity tm
-  else raise raise ERR "tptp_of_constvar" (term_to_string tm)
-
-fun tptp_of_vartype ty =
-  if not (!readable_flag)
-  then ("A" ^ (escape (dest_vartype ty)))
-  else dest_vartype ty
-
-fun tptp_of_tyop ty =
-  let
-    val {Args, Thy, Tyop} = dest_thy_type ty
-  in
-    if not (!readable_flag)
-    then escape ("ty" ^ "." ^ Thy ^ "." ^ Tyop)
-    else Tyop
-  end
-
-fun tptp_of_thm (name,tm) =
-  if not (!readable_flag)
-  then
-    if can (split_string "Theory.") name
-    then escape ("thm." ^ name)
-    else escape ("reserved." ^ name)
-  else name
-
-(*----------------------------------------------------------------------------
-   FOF writer
- -----------------------------------------------------------------------------*)
-
-(* helpers *)
 fun os oc s = TextIO.output (oc,s)
 
 fun oiter_aux oc sep f l = case l of
@@ -76,6 +23,42 @@ fun oiter_aux oc sep f l = case l of
   | a :: m => (f oc a; os oc sep; oiter_aux oc sep f m)
 
 fun oiter oc sep f l = oiter_aux oc sep f l
+
+(* -------------------------------------------------------------------------
+   Escaping constants , variables and theorems
+   ------------------------------------------------------------------------- *)
+
+val ERR = mk_HOL_ERR "hhTptp"
+
+fun tptp_of_var arity v =
+  fst (dest_var v) ^ "_" ^ int_to_string arity
+
+fun tptp_of_const arity c =
+  let val {Name, Thy, Ty} = dest_thy_const c in
+    escape ("c" ^ int_to_string arity ^ "." ^ Thy ^ "." ^ Name)
+  end
+
+fun tptp_of_constvar arity tm =
+  if is_const tm then tptp_of_const arity tm
+  else if is_var tm then tptp_of_var arity tm
+  else raise raise ERR "tptp_of_constvar" ""
+
+fun tptp_of_vartype ty =
+  "A" ^ (escape (dest_vartype ty))
+
+fun tptp_of_tyop ty =
+  let val {Args, Thy, Tyop} = dest_thy_type ty in
+    escape ("ty" ^ "." ^ Thy ^ "." ^ Tyop)
+  end
+
+fun tptp_of_thm (name,tm) =
+  if can (split_string "Theory.") name
+  then escape ("thm." ^ name)
+  else escape ("reserved." ^ name)
+
+(* -------------------------------------------------------------------------
+   FOF writer
+   ------------------------------------------------------------------------- *)
 
 fun write_type oc ty =
   if is_vartype ty then os oc (tptp_of_vartype ty)
@@ -97,17 +80,6 @@ fun write_term oc tm =
     os oc (tptp_of_constvar (length argl) rator);
     if null argl then ()
     else (os oc "("; oiter oc "," write_term argl; os oc ")");
-    os oc ")"
-  end
-
-(* Type unsafe version *)
-fun write_term_unsafe oc tm =
-  let
-    val (rator,argl) = strip_comb tm
-  in
-    os oc (tptp_of_constvar (length argl) rator);
-    if null argl then ()
-    else (os oc "("; oiter oc "," write_term_unsafe argl; os oc ")");
     os oc ")"
   end
 
@@ -170,7 +142,6 @@ fun write_formula oc tm =
 
 fun write_ax oc (name,tm) =
   (
-  if !readable_flag then os oc "% " else ();
   os oc ("fof(" ^ tptp_of_thm (name,tm) ^ ", axiom, ");
   write_formula oc tm;
   os oc ").\n"
@@ -178,7 +149,6 @@ fun write_ax oc (name,tm) =
 
 fun write_cj oc cj =
   (
-  if !readable_flag then os oc "% " else ();
   os oc "fof(conjecture, conjecture, ";
   write_formula oc cj;
   os oc ").\n"
@@ -189,14 +159,22 @@ fun write_cj oc cj =
   that all variables have different names
 *)
 
+fun write_tptp_file file axl cj =
+  let val oc = TextIO.openOut file in
+    (app (write_ax oc) axl; write_cj oc cj)
+      handle Interrupt => (TextIO.closeOut oc; raise Interrupt);
+    TextIO.closeOut oc
+  end
+
 fun write_tptp dir axl cj =
   let
-    val _ = clean_dir dir
-    val oc = TextIO.openOut (dir ^ "/atp_in")
+    val _ = mkDir_err dir
+    val _ = remove_file (dir ^ "/status")
+    val _ = remove_file (dir ^ "/out")
+    val _ = remove_file (dir ^ "/error")
+    val _ = remove_file (dir ^ "/out1")
   in
-    ((readable_flag := false; app (write_ax oc) axl; write_cj oc cj)
-    handle Interrupt => ());
-    TextIO.closeOut oc
+    write_tptp_file (dir ^ "/atp_in") axl cj
   end
 
 

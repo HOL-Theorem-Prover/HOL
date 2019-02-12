@@ -1,0 +1,2 @@
+holrlenv.exe: $(patsubst %.sml,%.uo,$(wildcard *.sml))
+	$(protect $(HOLDIR)/bin/buildheap) --defaultout=$@ --exe=main RL_Environment.uo

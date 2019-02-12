@@ -13,17 +13,20 @@ open BisimulationUptoTheory UniqueSolutionsTheory;
 
 open testutils;
 
+val _ = srw_ss()
+val term_to_string = Portable.with_flag (Globals.linewidth, 3000) term_to_string
+
 fun CCS_TRANS_test (problem, result) = let
   val padr = StringCvt.padRight #" ";
   val padl = StringCvt.padLeft #" ";
   val p_s = padr 30 (term_to_string problem);
   val r_s = padl 10 (term_to_string result);
   val _ = tprint (p_s ^ " = " ^ r_s);
-  val (thm, _) = CCS_TRANS problem;
-  val answer = concl thm
 in
-  if aconv answer result then OK ()
-  else die ("FAILED!\n  Got "^term_to_string answer)
+  require_msg (check_result (aconv result o concl o #1))
+              (term_to_string o concl o #1)
+              CCS_TRANS
+              problem
 end;
 
 val CCS_TRANS_tests =
@@ -99,6 +102,6 @@ val CCS_TRANS_tests =
           (In "ask-esp"..rec "VM1" (Out "esp-coffee"..var "VM") +
            In "ask-am"..rec "VM2" (Out "am-coffee"..var "VM")))))”)];
 
-val _ = List.app CCS_TRANS_test CCS_TRANS_tests;
+val _ = List.app (ignore o CCS_TRANS_test) CCS_TRANS_tests;
 
 val _ = Process.exit Process.success;

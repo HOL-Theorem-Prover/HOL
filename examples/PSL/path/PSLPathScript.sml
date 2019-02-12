@@ -682,7 +682,7 @@ val CAT_INFINITE =
 
 val LENGTH_CAT_INFINITE =
  store_thm
-  ("LENGTH_CAT_FINITE",
+  ("LENGTH_CAT_INFINITE",
    ``!l p. LENGTH(CAT(l, INFINITE p)) = INFINITY``,
    Induct
     THEN RW_TAC list_ss

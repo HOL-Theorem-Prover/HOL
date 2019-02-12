@@ -1,0 +1,2 @@
+INCLUDES = ../dir2
+CLINE_OPTIIONS = --no_overlay

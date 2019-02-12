@@ -107,7 +107,7 @@ val CARDEQ_0 = store_thm(
   ``(x =~ {} <=> (x = {})) /\ (({} =~ x) <=> (x = {}))``,
   rw[cardeq_def, BIJ_EMPTY]);
 
-val CARDEQ_INSERT = store_thm(
+val cardeq_INSERT = store_thm(
   "cardeq_INSERT",
   ``(x INSERT s) =~ s <=> x IN s \/ INFINITE s``,
   simp[EQ_IMP_THM] >> conj_tac
@@ -141,7 +141,7 @@ val CARDEQ_INSERT = store_thm(
 val CARDEQ_INSERT_RWT = save_thm(
   "CARDEQ_INSERT_RWT",
   ``INFINITE (s:'a set)`` |> ASSUME |> DISJ2 ``(x:'a) IN s``
-                          |> EQ_MP (SYM CARDEQ_INSERT) |> DISCH_ALL
+                          |> EQ_MP (SYM cardeq_INSERT) |> DISCH_ALL
                           |> Q.GEN `s`)
 
 val EMPTY_CARDLEQ = store_thm(
@@ -203,7 +203,7 @@ val _ = type_abbrev ("inf", ``:num + 'a``)
 val INFINITE_UNIV_INF = store_thm(
   "INFINITE_UNIV_INF",
   ``INFINITE univ(:'a inf)``,
-  simp[INFINITE_UNIV] >> qexists_tac `SUC ++ I` >>
+  simp[INFINITE_UNIV] >> qexists_tac `SUM_MAP SUC I` >>
   simp[sumTheory.FORALL_SUM] >> qexists_tac `INL 0` >> simp[]);
 val _ = export_rewrites ["INFINITE_UNIV_INF"]
 
@@ -1512,7 +1512,7 @@ val RIGHT_IMP_FORALL_THM = store_thm ("RIGHT_IMP_FORALL_THM",
  ``!P Q. P ==> (!x. Q x) <=> (!x. P ==> Q x)``,
  REWRITE_TAC [GSYM RIGHT_FORALL_IMP_THM]);
 
-val FINITE_FINITE_BIGUNION = store_thm ("FINITE_FINITE_BIGUNIONS",
+val FINITE_FINITE_BIGUNIONS = store_thm ("FINITE_FINITE_BIGUNIONS",
  ``!s. FINITE(s) ==> (FINITE(BIGUNION s) <=> (!t. t IN s ==> FINITE(t)))``,
   ONCE_REWRITE_TAC [METIS []
    ``!s. (FINITE (BIGUNION s) <=> !t. t IN s ==> FINITE t) =

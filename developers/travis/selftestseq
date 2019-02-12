@@ -3,11 +3,11 @@
 
 src/string
 src/sort
-src/finite_map
 src/res_quan/src
 src/quotient/src
 src/n-bit
 src/bag
+src/finite_maps
 src/coalgebras
 !examples/ind_def
 !examples/lambda/basics

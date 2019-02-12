@@ -3,9 +3,10 @@ val _ =print "\n"
 
 fun die s = (print (s^"\n"); OS.Process.exit OS.Process.failure)
 
+fun tprint s = print (UTF8.padRight #" " 65 s)
+
 fun assert (s, b) =
-    (print (UTF8.padRight #" " 65 s);
-     if b() then print "OK\n" else die "FAILED!")
+    (tprint s; if b() then print "OK\n" else die "FAILED!")
 
 
 open Redblackset
@@ -44,5 +45,19 @@ val _ = List.app assert [
     ("padRight #\" \" on ∀", fn () => UTF8.padRight #" " 5 "∀" = "∀    "),
     ("padRight #\"a\" on ∀", fn () => UTF8.padRight #"a" 5 "∀" = "∀aaaa")
     ]
+
+val _ = tprint "mapFilter executes L-to-R"
+val _ = let
+  val r = ref 0
+  fun f x = (r := x; if x mod 2 = 1 then raise Fail "foo" else x + 1)
+  val res = Portable.mapfilter f [1,2,3,4]
+in
+  if res = [3,5] then
+    if !r = 4 then print "OK\n"
+    else die ("\n Evaluation in wrong order; !r = " ^ Int.toString (!r))
+  else
+    die ("\n Evaluation gave wrong result: [" ^
+         String.concatWith ", " (map Int.toString res) ^ "]")
+end
 
 val _ = OS.Process.exit OS.Process.success

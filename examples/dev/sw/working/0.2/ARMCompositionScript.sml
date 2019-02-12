@@ -13,8 +13,6 @@ open HolKernel Parse boolLib bossLib numLib pred_setSimps pred_setTheory wordsLi
 
 val _ = new_theory "ARMComposition";
 
-val _ = Globals.priming := NONE;
-
 (*------------------------------------------------------------------------------------------------------*)
 (* Additional theorems for finite maps                                                                  *)
 (*------------------------------------------------------------------------------------------------------*)
@@ -1098,7 +1096,7 @@ val CJ_IS_WELL_FORMED = Q.store_thm (
 
 
 val HOARE_CJ_FLAT_LEM_1 = Q.store_thm (
-   "HAORE_CJ_FLAT_LEM_1",
+   "HOARE_CJ_FLAT_LEM_1",
    `!cond arm_t arm_f (P:P_DSTATE) (Q:P_DSTATE) (R:P_DSTATE).
           well_formed arm_t /\ well_formed arm_f /\
           (!st. P st ==> Q (eval_fl arm_t st)) /\ (!st. P st ==> R (eval_fl arm_f st))
@@ -1134,7 +1132,7 @@ val HOARE_CJ_FLAT_LEM_1 = Q.store_thm (
 
 
 val HOARE_CJ_FLAT_LEM_2 = Q.store_thm (
-   "HAORE_CJ_FLAT_LEM_2",
+   "HOARE_CJ_FLAT_LEM_2",
    `!cond arm_t arm_f (P:P_DSTATE) (Q:P_DSTATE) (R:P_DSTATE).
           well_formed arm_t /\ well_formed arm_f /\
           (!st. P st ==> Q (eval_fl arm_t st)) /\ (!st. P st ==> R (eval_fl arm_f st))
@@ -1530,8 +1528,6 @@ val FUNPOW_DSTATE = Q.store_thm (
    ]
    );
 
-val _ = (Globals.priming := SOME "");
-
 val UNROLL_TR_LEM = Q.store_thm (
    "UNROLL_TR_LEM",
    `!cond arm iB s pcS.
@@ -1670,8 +1666,6 @@ val UNROLL_TR_LEM = Q.store_thm (
   );
 
 
-val _ = (Globals.priming := NONE);
-
 val TR_IS_WELL_FORMED = Q.store_thm (
    "TR_IS_WELL_FORMED",
    `!cond arm. well_formed arm /\ WF_TR (cond,arm)
@@ -1800,4 +1794,3 @@ val WELL_FORMED_INSTB = Q.store_thm (
 
 
 val _ = export_theory();
-

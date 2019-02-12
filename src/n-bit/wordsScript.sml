@@ -28,7 +28,7 @@ val INT_MAX_def  =  Define `INT_MAX (:'a) = INT_MIN(:'a) - 1`
 val dimword_ML = rhs (#2 (strip_forall (concl dimword_def)))
 val INT_MIN_ML = rhs (#2 (strip_forall (concl INT_MIN_def)))
 
-val _ = type_abbrev ("word", ``:bool['a]``)
+val _ = type_abbrev_pp ("word", ``:bool['a]``)
 
 fun add_infixes n assoc =
   List.app (fn (s, t) => ( Parse.add_infix (s, n, assoc)
@@ -2087,7 +2087,7 @@ val mk_word_reduce_thms =
     [("foldl_reduce_and",  ``$reduce_and``,  word_and_def,  reduce_and_def,
       ``(&&):unit word->unit word->unit word``, ``(/\)``),
      ("foldl_reduce_or",   ``$reduce_or``,   word_or_def,   reduce_or_def,
-      ``(||):unit word->unit word->unit word``, ``(\/)``),
+      ``( || ):unit word->unit word->unit word``, ``(\/)``),
      ("foldl_reduce_xor",   ``$reduce_xor``,  word_xor_def, reduce_xor_def,
       ``(??):unit word->unit word->unit word``, ``(<>):bool->bool->bool``),
      ("foldl_reduce_nand", ``$reduce_nand``, word_nand_def, reduce_nand_def,
@@ -4841,7 +4841,7 @@ fun mk_word_size n =
                      (SIMP_RULE std_ss [INT_MIN] o
                       Thm.INST_TYPE [``:'a`` |-> typ]) dimword_IS_TWICE_INT_MIN)
   in
-    type_abbrev("word" ^ SN, TYPE)
+    type_abbrev_pp("word" ^ SN, TYPE)
   end
 
 val _ = List.app mk_word_size sizes

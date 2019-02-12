@@ -106,11 +106,26 @@ evaluations.")
     (and (fboundp 'zmacs-activate-region) (zmacs-activate-region))
     (and (boundp 'mark-active) (setq mark-active t))))
 
+(defvar-local hol-term-end-delim nil)
 (put 'hol-term 'end-op
-     (function (lambda () (skip-chars-forward "^`’”"))))
+     (function (lambda ()
+                 (re-search-forward "[`’]\\|^Proof" nil t)
+                 (setq hol-term-end-delim (match-string 0))
+                 (goto-char (match-beginning 0)))))
 (defvar hol-beg-pos nil) ; ugh, global, but easiest this way
 (put 'hol-term 'beginning-op
-     (function (lambda () (skip-chars-backward "^`‘“") (setq hol-beg-pos (point)))))
+     (function
+      (lambda ()
+        (let ((beg
+               (cond
+                ((equal hol-term-end-delim "`") "`")
+                ((equal hol-term-end-delim "’") "‘")
+                ((equal hol-term-end-delim "Proof")
+                 "Theorem[[:space:]]+[A-Za-z0-9_]*\\(\\[[A-Za-z0-9_,]+\\]\\)?[[:space:]]*:"))))
+          (re-search-backward beg nil t)
+          (goto-char (match-end 0))
+          (setq hol-beg-pos (point))))))
+
 (defun hol-term-at-point ()
   (let ((s (thing-at-point 'hol-term)))
     (with-hol-locpragma hol-beg-pos s)))
@@ -696,7 +711,8 @@ that the buffer has already had HOL terms, comments and strings removed."
       (concat ";\\|"
               (word-list-to-regexp
                '("val" "fun" "in" "infix[lr]?" "open" "local" "type"
-                 "datatype" "nonfix" "exception" "end" "structure"))))
+                 "datatype" "nonfix" "exception" "end" "structure"
+                 "Theorem"))))
 
 (setq sml-struct-id-regexp "[A-Za-z][A-Za-z0-9_]*")
 
@@ -803,7 +819,7 @@ file to \"use\" first."
   (if (< 500 (buffer-size))
           (let ((fname (if (fboundp 'make-temp-file)
                               ;; then
-                                    (make-temp-file "hol")
+                                    (make-temp-file "hol" nil "Script.sml")
                               ;; else
                                     (make-temp-file-xemacs "hol")
                                  )))
@@ -1579,8 +1595,8 @@ second is to show the new term.
   (t "⊆ᵣ" "RSUBSET")
   (t "∪ᵣ" "RUNION")
   (t "∩ᵣ" "RINTER")
-  (t "∅" "EMPTY")
-  (t "𝕌" "UNIV")
+  (t "∅" "{}")
+  (nil "𝕌" "univ")
   (t "⊆" "SUBSET")
   (t "∪" "UNION")
   (t "∩" "INTER")
@@ -1591,6 +1607,9 @@ second is to show the new term.
   (t "⋙" ">>>")
   (t "⇄" "#>>")
   (t "⇆" "#<<")
+  (t "∘" "o")
+  (t "∘ᵣ" "O")
+  (t "−" "-")
 ))
 
 
@@ -1838,6 +1857,8 @@ second is to show the new term.
             (prog1
                 (buffer-substring (point-min) (point-max))
               (delete-region (point-min) (point-max))))))))
+
+(font-lock-add-keywords 'sml-mode '("\\<Theorem\\>" "^Proof\\>" "^QED\\>"))
 
 (defgroup hol-faces nil "Faces used in pretty-printing HOL values"
   :group 'faces

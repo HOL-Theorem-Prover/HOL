@@ -1218,7 +1218,7 @@ srw_tac [DNF_ss][EQ_IMP_THM] >|[
   srw_tac [][Abbr`p1`,Abbr`p2`]]);
 
 val pre_product_cat_id = Q.store_thm(
-"pre_product_cat",
+"pre_product_cat_id",
 `∀c1 c2 x y. x ∈ c1.obj ∧ y ∈ c2.obj ⇒
   (id (x,y) -:(pre_product_cat c1 c2) =
    product_mor (id x -:c1, id y -:c2))`,

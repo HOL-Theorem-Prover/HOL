@@ -86,6 +86,7 @@ val complained_already = ref false;
 
 structure Polyhash =
 struct
+   open Uref
    fun peek (dict) k = Binarymap.peek(!dict,k)
    fun peekInsert r (k,v) =
        let val dict = !r in
@@ -97,7 +98,7 @@ struct
        r := Binarymap.insert(!r,k,v)
    fun listItems dict = Binarymap.listItems (!dict)
    fun mkDict cmp = let
-     val newref = ref (Binarymap.mkDict cmp)
+     val newref = Uref.new (Binarymap.mkDict cmp)
    in
      newref
    end
@@ -193,7 +194,7 @@ fun mk_prec_matrix G = let
   exception NotFound = Binarymap.NotFound
   exception BadTokList
   type dict = ((stack_terminal * bool) * stack_terminal,
-               mx_order) Binarymap.dict ref
+               mx_order) Binarymap.dict Uref.t
   val {lambda, endbinding, type_intro, restr_binders, ...} = specials G
   val specs = grammar_tokens G
   val Grules = term_grammar.grammar_rules G
@@ -556,7 +557,7 @@ fun suffix_rule (rels,nm) =
 
 fun mk_ruledb (G:grammar) = let
   val Grules = term_grammar.grammar_rules G
-  val table:(rule_element list, rule_summary)Binarymap.dict ref =
+  val table:(rule_element list, rule_summary)Binarymap.dict Uref.t =
        Polyhash.mkDict (Lib.list_compare RE_compare)
   fun insert_rule mkfix (rr:rule_record) =
     let
@@ -993,9 +994,24 @@ fun parse_term (G : grammar) (typeparser : term qbuf -> Pretype.pretype) = let
         val args_w_seglocs0 = seglocs rhs' [] NONE
         fun CCOMB((x,locn),y) = (COMB(y,x),locn.between (#2 y) locn)
         fun process_lspinfos A i lspis args =
+            (* let
+                fun pr (VAR s, _) = s
+                  | pr (COMB(t1,t2), _) = pr t1 ^ " $ " ^ pr t2
+                fun prl p l = "[" ^ String.concatWith "," (map p l) ^ "]"
+            in
+              if not (null lspis) then
+                (print ("\nA = "^prl (pr o #1) A^", i="^Int.toString i^"\n");
+                 print ("lspinfo = (" ^ #cons (#1 (hd lspis)) ^ "," ^
+                        #nilstr (#1 (hd lspis)) ^
+                        "), ");
+                 print ("i = " ^ Int.toString (#2 (hd lspis)) ^ ", ");
+                 print ("c = " ^ Int.toString (#3 (hd lspis)) ^ ", ");
+                 print ("args = " ^ prl (pr o #1) args ^ "\n"))
+              else (); *)
+
           case lspis of
               [] => List.revAppend(A,args)
-            | ({cons,nilstr,...}, is) :: more_lsps =>
+            | ({cons,nilstr,...}, start, cnt) :: more_lsps =>
               let
                 fun mk_list [] = ((VAR nilstr,rlocn), rlocn)
                   | mk_list ((lpt,l)::xs) =
@@ -1007,20 +1023,17 @@ fun parse_term (G : grammar) (typeparser : term qbuf -> Pretype.pretype) = let
                        locn.between (#2 lpt) rlocn)
                     end
               in
-                case is of
-                    [] => process_lspinfos (mk_list []::A) i more_lsps args
-                  | i1 :: _ =>
-                    if i1 = i then
-                      let
-                        val (listtms, rest) = Lib.split_after (length is) args
-                      in
-                        process_lspinfos (mk_list listtms :: A) (i + length is)
-                                         more_lsps
-                                         rest
-                      end
-                    else
-                      process_lspinfos (hd args :: A) (i + 1) lspis (tl args)
+                if start = i then
+                  let
+                    val (listtms, rest) = Lib.split_after cnt args
+                  in
+                    process_lspinfos (mk_list listtms :: A) (i + cnt)
+                                     more_lsps
+                                     rest
+                  end
+                else process_lspinfos (hd args :: A) (i + 1) lspis (tl args)
               end
+            (* end *)
         val args_w_seglocs = process_lspinfos [] 0 lspinfo args_w_seglocs0
         val newterm =
             case rule of

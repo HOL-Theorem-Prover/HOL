@@ -519,7 +519,8 @@ fun clean_sigobj() = let
   val _ = print ("Cleaning out "^SIGOBJ^"\n")
   val lowcase = String.map Char.toLower
   val sigobj_extras =
-      if ML_SYSNAME = "mosml" then ["basis2002"] else []
+      if ML_SYSNAME = "mosml" andalso not HAVE_BASIS2002 then ["basis2002"]
+      else []
   fun sigobj_rem_file s = let
     val f = Path.file s
     val n = lowcase (hd (String.fields (equal #".") f))

@@ -3,15 +3,14 @@
 src/TeX
 src/string
 src/sort
-src/finite_map
 src/bag
 src/n-bit
 src/res_quan/src
 src/quotient/src
+src/finite_maps
 src/ring/src
 src/integer
 src/coalgebras
-src/patricia
 src/emit
 !examples/parity
 !examples/MLsyntax

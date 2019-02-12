@@ -1,1 +1,1 @@
-local open tacticToe in end
+local open tacticToe tttLearn tttRecord tttSearch tttSetup tttUnfold in end

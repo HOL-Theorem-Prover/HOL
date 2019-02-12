@@ -437,7 +437,7 @@ fun main () =
           | [name] => read_umap name
           | _ => die (usage())
     val (obuf as {push = obPush, ...}) = HM_SimpleBuffer.mkBuffer()
-    val _ = ReadHMF.extend_path_with_includes {quietp = true, lpref = loadPath}
+    val _ = ReadHMF.extend_path_with_includes {verbosity = 0, lpref = loadPath}
     val _ = Feedback.ERR_outstream := obPush
     val _ = Feedback.WARNING_outstream := obPush
     val _ = Feedback.MESG_outstream := obPush

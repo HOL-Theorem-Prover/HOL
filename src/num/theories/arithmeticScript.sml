@@ -106,7 +106,7 @@ val _ = add_numeral_form (#"n", NONE);
 
 val _ = set_fixity "-" (Infixl 500);
 val _ = Unicode.unicode_version {u = UTF8.chr 0x2212, tmnm = "-"};
-val _ = TeX_notation {hol = UTF8.chr 0x2212, TeX = ("\\ensuremath{-}", 1)}
+val _ = TeX_notation {hol = "-", TeX = ("\\ensuremath{-}", 1)}
 
 val SUB = new_recursive_definition
    {name = "SUB",
@@ -3903,5 +3903,43 @@ val datatype_num = store_thm(
   "datatype_num",
   “DATATYPE (num 0 SUC)”,
   REWRITE_TAC[DATATYPE_TAG_THM]);
+
+Theorem binary_induct:
+  !P. P (0:num) /\ (!n. P n ==> P (2*n) /\ P (2*n+1)) ==> !n. P n
+Proof
+  gen_tac >> strip_tac >>
+  ho_match_mp_tac COMPLETE_INDUCTION >> gen_tac >>
+  Q.ASM_CASES_TAC‘n=0’ >> ASM_SIMP_TAC (srw_ss()) [] >>
+  ‘n DIV 2 < n /\ ((n = 2 * (n DIV 2)) \/ (n = 2 * (n DIV 2) + 1))’ by (
+    ‘0 < 2’ by SIMP_TAC (srw_ss()) [TWO, ONE, LESS_0] >>
+    ASM_SIMP_TAC (srw_ss()) [DIV_LT_X, LT_MULT_CANCEL_LBARE] >> conj_tac
+    >- (FULL_SIMP_TAC (srw_ss()) [NOT_ZERO_LT_ZERO] >>
+        SIMP_TAC (srw_ss()) [TWO, ONE, LESS_MONO_EQ, LESS_0]) >>
+    drule_then (Q.SPEC_THEN `n` strip_assume_tac) DIVISION >>
+    Q.ABBREV_TAC ‘q = n DIV 2’ >>
+    Q.ABBREV_TAC ‘r = n MOD 2’ >>
+    ASM_SIMP_TAC (srw_ss()) [MULT_COMM, ADD_INV_0_EQ, EQ_ADD_LCANCEL] >>
+    Q.SPEC_THEN ‘r’ FULL_STRUCT_CASES_TAC num_CASES >>
+    ASM_SIMP_TAC (srw_ss()) [] >>
+    FULL_SIMP_TAC (srw_ss()) [TWO, LESS_MONO_EQ, ONE] >>
+    Q.RENAME_TAC [‘m < SUC 0’] >>
+    Q.SPEC_THEN ‘m’ FULL_STRUCT_CASES_TAC num_CASES >>
+    FULL_SIMP_TAC (srw_ss()) [LESS_MONO_EQ, NOT_LESS_0]) >>
+  METIS_TAC[]
+QED
+
+Theorem EVEN_SUB:
+  !m n. m <= n ==> (EVEN (n - m) <=> (EVEN n <=> EVEN m))
+Proof INDUCT_TAC >> ASM_SIMP_TAC (srw_ss()) [SUB_0, EVEN] >> GEN_TAC >>
+  Q.RENAME_TAC [‘SUC m <= n’] >>
+  Q.SPEC_THEN ‘n’ STRUCT_CASES_TAC num_CASES >>
+  ASM_SIMP_TAC (srw_ss()) [NOT_SUC_LESS_EQ_0, LESS_EQ_MONO, SUB_MONO_EQ, EVEN]
+QED
+
+Theorem ODD_SUB:
+  !m n. m <= n ==> (ODD (n - m) <=> (ODD n <=/=> ODD m))
+Proof
+  SRW_TAC [][ODD_EVEN,EVEN_SUB]
+QED
 
 val _ = export_theory()

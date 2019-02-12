@@ -187,7 +187,7 @@ in
   val _ = loadPath := tl (!loadPath)
 end;
 
-val _ = ReadHMF.extend_path_with_includes {quietp = false, lpref = loadPath};
+val _ = ReadHMF.extend_path_with_includes {verbosity = 1, lpref = loadPath};
 
 use (Path.concat(Globals.HOLDIR, "tools/check-intconfig.sml"));
 

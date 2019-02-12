@@ -25,39 +25,40 @@ end
 end (* local *)
 
 fun test (s, exp) = let
-  val result = test0 ``sxnt_sexp`` s
   val exp_t = ``Result (SOME ([], ^exp)) : (char, sexpNT, sexp) evalcase``
 in
-  tprint (s ^ " --> " ^ term_to_string result);
-  if aconv exp_t result then OK() else die "FAILED\n"
+  tprint (s ^ " --> " ^ term_to_string exp_t);
+  require_msg (check_result (aconv exp_t))
+              term_to_string (test0 ``sxnt_sexp``)
+              s
 end
 val _ = temp_overload_on ("Ok", ``λt. (Result (SOME ([], t)))``)
 
-val _ = print "\n" before app test [
+val _ = print "\n" before app (ignore o test) [
   ("123", ``123s``),
-  ("(123)", ``⦇123⦈``),
-  (" (123 10) ", ``⦇123; 10⦈``),
-  (" (123 10 (1 2 3)) ", ``⦇ 123; 10; ⦇1; 2; 3⦈ ⦈``),
-  (" ( (123   10 ))   ", ``⦇ ⦇ 123; 10 ⦈ ⦈``),
-  ("'(1 2)", ``’ ⦇1; 2⦈``),
-  ("(1(2(3)))", ``⦇1; ⦇ 2; ⦇ 3 ⦈ ⦈ ⦈``),
+  ("(123)", ``⟪123⟫``),
+  (" (123 10) ", ``⟪123; 10⟫``),
+  (" (123 10 (1 2 3)) ", ``⟪ 123; 10; ⟪1; 2; 3⟫ ⟫``),
+  (" ( (123   10 ))   ", ``⟪ ⟪ 123; 10 ⟫ ⟫``),
+  ("'(1 2)", ``’ ⟪1; 2⟫``),
+  ("(1(2(3)))", ``⟪1; ⟪ 2; ⟪ 3 ⟫ ⟫ ⟫``),
   ("'1", ``’ 1``),
   ("foo", ``SX_SYM "foo"``),
-  ("(foo)", ``⦇SX_SYM "foo"⦈``),
+  ("(foo)", ``⟪SX_SYM "foo"⟫``),
   ("()", ``nil``),
-  ("(foo )", ``⦇SX_SYM "foo"⦈``),
+  ("(foo )", ``⟪SX_SYM "foo"⟫``),
   ("foo2", ``SX_SYM "foo2"``),
-  ("(foo bar 3 4)", ``⦇ SX_SYM "foo"; SX_SYM "bar"; 3; 4 ⦈``),
+  ("(foo bar 3 4)", ``⟪ SX_SYM "foo"; SX_SYM "bar"; 3; 4 ⟫``),
   ("(1 2 3 . 4)", ``SX_CONS 1 (SX_CONS 2 (SX_CONS 3 4))``),
   ("(1 . (2 . (3 . 4)))", ``SX_CONS 1 (SX_CONS 2 (SX_CONS 3 4))``),
   ("(3 . 4)", ``SX_CONS 3 4``),
   ("\"foo bar\"", ``SX_STR "foo bar"``),
-  ("( \" foo \"  \"bar\" )", ``⦇ SX_STR " foo "; SX_STR "bar" ⦈``),
+  ("( \" foo \"  \"bar\" )", ``⟪ SX_STR " foo "; SX_STR "bar" ⟫``),
   ("\"foo\\\"\"", ``SX_STR "foo\""``),
   ("\"foo\\\\\"", ``SX_STR "foo\\"``),
-  ("(1sym)", ``⦇1; SX_SYM "sym"⦈``),
+  ("(1sym)", ``⟪1; SX_SYM "sym"⟫``),
   ("symq\"9", ``SX_SYM "symq\"9"``),
   ("symd.9", ``SX_SYM "symd.9"``)
 ]
 
-val _ = app tpp ["⦇2; 3⦈", "⦇ ⦈", "⦇SX_SYM \"foo\"⦈", "⦇ ⦇3 • 4⦈; ⦇3; 4⦈ ⦈"]
+val _ = app tpp ["⟪2; 3⟫", "⟪ ⟫", "⟪SX_SYM \"foo\"⟫", "⟪ ⟪3 • 4⟫; ⟪3; 4⟫ ⟫"]

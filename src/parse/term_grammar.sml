@@ -1056,14 +1056,18 @@ fun add_delta ud G =
     | CLR_OVL s =>
         fupdate_overload_info (#1 o Overload.remove_overloaded_form s) G
     | ADD_UPRINTER {codename = s, pattern} =>
-      let
-        val code = userSyntaxFns.get_userPP s
-          handle Binarymap.NotFound =>
-                 raise ERROR "add_delta"
-                    ("No code named "^s^" registered for add user-printer")
-      in
-        add_user_printer (s,pattern,code) G
-      end
+      if s = "" then
+        add_user_printer("", pattern, term_pp_types.dummyprinter) G
+      else
+        let
+          val code = userSyntaxFns.get_userPP s
+                     handle Binarymap.NotFound =>
+                            raise ERROR "add_delta"
+                                  ("No code named "^s^
+                                   " registered for add user-printer")
+        in
+          add_user_printer (s,pattern,code) G
+        end
     | ADD_ABSYN_POSTP {codename} =>
       let
         val code = userSyntaxFns.get_absynPostProcessor codename

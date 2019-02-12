@@ -1,19 +1,25 @@
-(* ========================================================================== *)
-(* FILE          : hhTranslate.sml                                            *)
-(* DESCRIPTION   : HOL to FOL translations                                    *)
-(* AUTHOR        : (c) Thibault Gauthier, Czech Technical University          *)
-(*                                                                            *)
-(* DATE          : 2018                                                       *)
-(* ========================================================================== *)
+(* ========================================================================= *)
+(* FILE          : hhTranslate.sml                                           *)
+(* DESCRIPTION   : HOL to FOL translation                                    *)
+(* AUTHOR        : (c) Thibault Gauthier, Czech Technical University         *)
+(* DATE          : 2018                                                      *)
+(* ========================================================================= *)
 
 structure hhTranslate :> hhTranslate =
 struct
 
-open HolKernel boolLib tttTools
+open HolKernel boolLib aiLib
 
 val ERR = mk_HOL_ERR "hhTranslate"
+val debugdir = HOLDIR ^ "/src/holyhammer/debug"
+fun debug s = debug_in_dir debugdir "hhTranslate" s
+
+(* -------------------------------------------------------------------------
+   Numbering terms and variables
+   ------------------------------------------------------------------------- *)
 
 val tmn_glob = ref 0 (* number terms for parallel use *)
+val translate_cache = ref (dempty Term.compare)
 
 fun incr_genvar iref =
   let val (a,b) = !iref in iref := (a, b+1) end
@@ -21,33 +27,12 @@ fun incr_genvar iref =
 fun string_of_genvar iref =
   let val (a,b) = !iref in int_to_string a ^ "_" ^ int_to_string b end
 
-(*----------------------------------------------------------------------------
-   Debug functions.
-  ----------------------------------------------------------------------------*)
-
-val hh_dir = HOLDIR ^ "/src/holyhammer"
-val log_translate_flag = ref false
-
-fun log_translate s =
-  if !log_translate_flag
-  then append_endline (hh_dir ^ "/translate_log") s
-  else ()
-
-fun time_translate s f x =
-  let
-    val _ = log_translate s
-    val (r,t) = add_time f x
-    val _ = log_translate (s ^ " " ^ Real.toString t)
-  in
-    r
-  end
-
-(*----------------------------------------------------------------------------
-  Preprocessing of the formula:
+(* --------------------------------------------------------------------------
+   Preprocessing of the formula:
     (* 1 unfolding ?! *)
     2 fully applying lambdas if at the top of an equality
     3 applying beta conversion whenever possible
-  ----------------------------------------------------------------------------*)
+  -------------------------------------------------------------------------- *)
 
 fun ELIM_LAMBDA_EQ tm =
   let val (l, r) = dest_eq tm in
@@ -73,9 +58,9 @@ fun PREP_CONV tm =
 
 fun prep_rw tm = rand (only_concl (QCONV PREP_CONV tm))
 
-(*----------------------------------------------------------------------------
+(* -------------------------------------------------------------------------
    Variable names
-  ----------------------------------------------------------------------------*)
+   ------------------------------------------------------------------------- *)
 
 (* lifting *)
 fun genvar_lifting iref ty =
@@ -89,10 +74,10 @@ fun genvarl_arity tyl =
     mapi f tyl
   end
 
-(*----------------------------------------------------------------------------
+(* -------------------------------------------------------------------------
    First-order atoms
    Warning: a and b are considered atoms is !a. a = b instead of a = b
-  ----------------------------------------------------------------------------*)
+   ------------------------------------------------------------------------- *)
 
 fun must_pred tm =
   is_forall tm orelse is_exists tm orelse is_conj tm orelse is_disj tm orelse
@@ -111,9 +96,9 @@ in
   fun atoms tm = (atoml := []; atoms_aux tm; !atoml)
 end
 
-(*----------------------------------------------------------------------------
-  Arity
-  ----------------------------------------------------------------------------*)
+(* -------------------------------------------------------------------------
+   Arity
+   ------------------------------------------------------------------------- *)
 
 fun update_adict adict arity tm =
   let val oldl = dfind tm (!adict) handle NotFound => [] in
@@ -139,9 +124,9 @@ fun collect_arity tm =
     Redblackmap.map f (!adict)
   end
 
-(*----------------------------------------------------------------------------
-   FOF Checks
- -----------------------------------------------------------------------------*)
+(* -------------------------------------------------------------------------
+   FOF checks
+   ------------------------------------------------------------------------- *)
 
 (* Lambda *)
 fun no_lambda tm = not (exists (can (find_term is_abs)) (atoms tm))
@@ -155,9 +140,9 @@ fun has_fofarity_bv tm =
     all f (all_bvar tm)
   end
 
-(*----------------------------------------------------------------------------
-  Lifting proposition and lambdas in the same pass.
-  ----------------------------------------------------------------------------*)
+(* -------------------------------------------------------------------------
+   Lifting proposition and lambdas
+   ------------------------------------------------------------------------- *)
 
 fun ATOM_CONV conv tm =
   if is_forall tm orelse is_exists tm
@@ -210,9 +195,9 @@ fun RPT_LIFT_CONV iref tm =
     | NONE => [REFL tm]
   end
 
-(*----------------------------------------------------------------------------
-  Lowest arity for bound variables. Arity 0.
-  ----------------------------------------------------------------------------*)
+(* -------------------------------------------------------------------------
+   Lowest arity for bound variables. Arity 0.
+   ------------------------------------------------------------------------- *)
 
 fun LET_CONV_MIN tm =
   let val (rator,rand) = dest_comb tm in
@@ -234,20 +219,11 @@ fun LET_CONV_BVL tm =
     TOP_SWEEP_CONV (LET_CONV_BV bvl) tm
   end
 
-(*----------------------------------------------------------------------------
-  Arity equations for constants and free variables.
-  Naming is important here as we do not want free variables to have the same
-  name across statements unless their definition are alpha equivalent.
-  ----------------------------------------------------------------------------*)
-
-fun strip_type ty =
-  if is_vartype ty then ([],ty) else
-    case dest_type ty of
-      ("fun",[a,b]) =>
-      let val (tyl,im) = strip_type b in
-        (a :: tyl, im)
-      end
-    | _             => ([],ty)
+(* -------------------------------------------------------------------------
+   Arity equations for constants and free variables.
+   Naming is important here as we do not want free variables to have the same
+   name across statements unless their definition are alpha equivalent.
+   ------------------------------------------------------------------------- *)
 
 fun mk_arity_eq f n =
   let
@@ -283,9 +259,9 @@ fun all_arity_eq tm =
     List.concat (map f l)
   end
 
-(*----------------------------------------------------------------------------
-  Monorphization: not used in the current FOF translation.
-  ----------------------------------------------------------------------------*)
+(* -------------------------------------------------------------------------
+   Monorphization: not used in the current FOF translation.
+   ------------------------------------------------------------------------- *)
 
 val mk_term_set = mk_fast_set Term.compare
 val mk_type_set = mk_fast_set Type.compare
@@ -347,12 +323,9 @@ fun monomorphize tml cj =
     foldl mono_cid tml cidl
   end
 
-(*----------------------------------------------------------------------------
-  Full FOF translation.
-
-  ----------------------------------------------------------------------------*)
-
-val translate_cache = ref (dempty Term.compare)
+(* -------------------------------------------------------------------------
+   Full FOF translation
+   ------------------------------------------------------------------------- *)
 
 (* Guarantees that there are no free variables in the term *)
 fun prepare_tm tm =
@@ -360,24 +333,24 @@ fun prepare_tm tm =
     rename_bvarl escape (list_mk_forall (free_vars_lr tm', tm'))
   end
 
-fun debug_translate (tmn,tm) =
+(* Slow because of term_to_string *)
+fun debug_translate_tm (tmn,tm) =
   let
     val iref = ref (tmn,0)
-    val _ = log_translate ("  " ^ term_to_string tm)
-    val tm1 = time_translate "prepare_tm" prepare_tm tm
-    val _ = log_translate ("Renaming variables:\n  " ^ term_to_string tm1)
-    val thml1 = time_translate "RPT_LIFT_CONV" RPT_LIFT_CONV iref tm1
+    val _ = debug ("  " ^ term_to_string tm)
+    val tm1 = prepare_tm tm
+    val _ = debug ("Renaming variables:\n  " ^ term_to_string tm1)
+    val thml1 = RPT_LIFT_CONV iref tm1
     val tml1 = map (rand o concl) thml1
-    val _ = log_translate ("Lifting lambdas and predicates:\n  " ^
+    val _ = debug ("Lifting lambdas and predicates:\n  " ^
       String.concatWith "\n  " (map term_to_string tml1))
-    val thml2 = time_translate "LET_CONV"
-      (map (TRY_CONV LET_CONV_BVL THENC REFL)) tml1
+    val thml2 = (map (TRY_CONV LET_CONV_BVL THENC REFL)) tml1
     val tml2 = map (rand o concl) thml2
   in
     tml2
   end
 
-fun translate (tmn,tm) =
+fun translate_tm_aux (tmn,tm) =
   let
     val iref  = ref (tmn,0)
     val tm1   = prepare_tm tm
@@ -389,38 +362,26 @@ fun translate (tmn,tm) =
     tml2
   end
 
-fun cached_translate tm =
+fun translate_tm tm =
   dfind tm (!translate_cache) handle NotFound =>
-  let
-    val tml = translate ((!tmn_glob),tm)
-    val _ = incr tmn_glob
-  in
+  let val tml = translate_tm_aux ((!tmn_glob),tm) in
+    incr tmn_glob;
     translate_cache := dadd tm tml (!translate_cache); tml
   end
 
-fun parallel_translate ncores tml =
-  let
-    val tml' = filter (fn x => not (dmem x (!translate_cache))) tml
-    val ntml = number_list (!tmn_glob) tml'
-    fun f (n,tm) = (tm, translate (n,tm))
-    fun save (tm,trans) =
-      translate_cache := dadd tm trans (!translate_cache);
-    val transl = parmap ncores f ntml
-  in
-    tmn_glob := !tmn_glob + length tml';
-    app save transl;
-    map cached_translate tml
-  end
+val complete_flag = ref false
 
 fun translate_pb premises cj =
   let
-    fun f (name,thm) = (log_translate ("\n" ^ name);
-      (name, cached_translate (concl (DISCH_ALL thm))))
-    val cj_tml = cached_translate cj
+    fun f (name,thm) = (debug ("\n" ^ name);
+      (name, translate_tm (concl (DISCH_ALL thm))))
+    val cj_tml = translate_tm cj
     val ax_tml = map f premises
     val big_tm =
       list_mk_conj (map list_mk_conj (cj_tml :: (map snd ax_tml)))
-    val ari_thml = time_translate "optim_arity" optim_arity_eq big_tm
+    val ari_thml = if !complete_flag
+                   then all_arity_eq big_tm
+                   else optim_arity_eq big_tm
     val ari_tml =  map only_concl ari_thml
   in
     (ari_tml, ax_tml, cj_tml)

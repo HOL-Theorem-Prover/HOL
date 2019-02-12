@@ -279,7 +279,7 @@ val DIV2_MULT_SUB1 = store_thm("DIV2_MULT_SUB1",
     RW_TAC arith_ss [ADD1,LEFT_ADD_DISTRIB,
            ONCE_REWRITE_RULE [MULT_COMM] DIV_MULT]);
 
-val NOT_MOD2 = store_thm("NOT_MOD",
+val NOT_MOD2 = store_thm("NOT_MOD2",
     ``(!c. ~(c MOD 2 = 0) = (c MOD 2 = 1n)) /\
       (!c. ~(c MOD 2 = 1n) = (c MOD 2 = 0n))``,
     PROVE_TAC [MOD2_ODD_EVEN,EVEN_OR_ODD,EVEN_ODD]);

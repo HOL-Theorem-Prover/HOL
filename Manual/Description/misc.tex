@@ -615,6 +615,7 @@ might be
 \end{alltt}
 Under Poly/ML, the similar \texttt{POLY\_CLINE\_OPTIONS} variable can be used to pass run-time options to the Poly/ML executable that is run during theory construction.
 
+
 \index{EXTRA_CLEANS (Holmakefile variable)@\texttt{EXTRA\_CLEANS} (Holmakefile variable)}%
 The \texttt{EXTRA\_CLEANS} variable is used to
 specify the name of additional files that should be deleted when a
@@ -634,6 +635,15 @@ useful information:
   expands to \texttt{/bin/cp}; under Windows, it expands to
   \texttt{copy}.)
 \item[\texttt{DEBUG\_FLAG}] This variable is replaced by \texttt{"-{}-dbg"} if that flag was passed to \holmake, or the empty string if not.
+\item[\texttt{DEFAULT\_TARGETS}]\index{DEFAULT_TARGETS (Holmakefile variable)@\texttt{DEFAULT\_TARGETS} (Holmakefile variable)}%
+This variable expands to a list of the targets in the current directory that \holmake{} would build if there was no target in the Holmakefile, and no target was specified on the command-line.
+Thus, if one wishes to continue to have all these defaults built alongside an additional target, an appropriate idiom to use at the head of the file would be
+\begin{alltt}
+    all: $(DEFAULT_TARGETS) mytarget1 mytarget2
+    .PHONY: all
+\end{alltt}
+followed by rules for building the new target(s).
+
 \item[\texttt{HOLDIR}] The root of the HOL installation.
 \item[\texttt{HOLHEAP}]
 Under Poly/ML, this variable expands to the name of the heap that should be used to build this directory (to be used instead of the heap that underlies the \texttt{hol} executable).
@@ -1613,8 +1623,7 @@ option names available:
     For theorems it is of the form \texttt{theory.theorem}.
   \item[\texttt{options}]
     formatting options for the munger as described in section~\ref{sec:munging-commands}.
-    Please use the Holindex commands for typsetting inline or as a block instead
-    of the options \texttt{tt} or \texttt{alltt}.
+    Please use the Holindex commands for typesetting inline or as a block instead of the options \texttt{tt} or \texttt{alltt}.
   \item[\texttt{label}] the label that will appear in the index. For
     theorems the label is by default its name and the label given here
     will be added after the name.

@@ -1,7 +1,13 @@
+(* ----------------------------------------------------------------------
+    contains configuration info for HolSatLib that is independent of the
+    SAT solver
 
-(* contains configuration info for HolSatLib that is independent of the SAT solver *)
-(* SAT solver specific config is in SatSolver.sml *)
-(* the main reason for having this as an opaque type is to give HolSatLib a stable signature *)
+    SAT solver specific config is in SatSolver.sml
+
+    the main reason for having this as an opaque type is to give
+    HolSatLib a stable signature
+   ---------------------------------------------------------------------- *)
+
 structure satConfig :> satConfig =
 struct
 
@@ -18,12 +24,15 @@ type sat_config =
       pterm : term, (* input problem term *)
       solver: sat_solver, (* solver to use *)
       infile: string option, (* DIMACS input file; overrides pterm if SOME *)
-      proof : string option, (* proof trace file in HolSatLib format; overrides solver if SOME*)
-      flags : {is_cnf:bool,is_proved:bool} (* problem already in cnf, result is checked in HOL *)
+      proof : string option,
+        (* proof trace file in HolSatLib format; overrides solver if SOME*)
+      flags : {is_cnf:bool,is_proved:bool}
+        (* problem already in cnf, result is checked in HOL *)
      }
 
-val base_config = {pterm = boolSyntax.T, solver = minisatp, infile = NONE, proof = NONE,
-                   flags = {is_cnf=false,is_proved=true}}
+val base_config =
+    {pterm = boolSyntax.T, solver = minisatp, infile = NONE, proof = NONE,
+     flags = {is_cnf=false,is_proved=true}}
 
 (* getters *)
 
@@ -31,10 +40,11 @@ fun get_term (c:sat_config) = (#pterm c)
 
 fun get_solver (c:sat_config) = (#solver c)
 
-(* if SOME, then valOf is name of cnf file on disk that is to be used directly *)
+(* if SOME, then valOf is name of cnf file on disk that is to be used directly*)
 fun get_infile (c:sat_config) = (#infile c)
 
-(* if SOME, then valOf is name of proof file (HolSat format) on disk that is to be used directly *)
+(* if SOME, then valOf is name of proof file (HolSat format) on disk that is
+   to be used directly *)
 fun get_proof (c:sat_config) = (#proof c)
 
 (* if true, then we skip the def_cnf conversion.

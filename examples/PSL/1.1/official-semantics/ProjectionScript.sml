@@ -390,7 +390,7 @@ val TAKE_FIRSTN_def =
 
 val BUTFIRSTN_AUX =
  store_thm
-  ("FIRSTN_AUX",
+  ("BUTFIRSTN_AUX",
    ``BUTFIRSTN n l =
       if n=0 then l
              else (if NULL l then BUTFIRSTN n []
@@ -2727,7 +2727,7 @@ val F_PROJ_F_NOT_BOOL =
 
 val F_PROJ_F_NOT_BOOL_FINITE =
  store_thm
-  ("F_PROJ_F_NOT_BOOL",
+  ("F_PROJ_F_NOT_BOOL_FINITE",
    ``(F_CLOCK_FREE f ==>
       !l.
         PATH_TOP_FREE (FINITE l) /\ PATH_BOTTOM_FREE (FINITE l) ==>
