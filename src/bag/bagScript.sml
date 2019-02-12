@@ -1612,8 +1612,8 @@ val FINITE_SET_OF_BAG = store_thm(
  before
  export_rewrites ["FINITE_SET_OF_BAG"];
 
-Theorem FINITE_BAG_OF_SET
 `!s. FINITE s <=> FINITE_BAG (BAG_OF_SET s)` (
+Theorem FINITE_BAG_OF_SET[simp]
   rw[] >> EQ_TAC
   >- (rw[] >>
       Induct_on `s` >>
