@@ -688,8 +688,6 @@ val monotone_kolmog_complexity_def = Define`mkolmog_complexity x U =
                                    else SOME (MIN_SET {LENGTH p | ?y. (U p = SOME y) /\(x ≼ n2bl y)}) 
                                 else NONE`
 
-val kolmog_def = Define`kolmog x = kolmog_complexity x universal_tm`
-
 
 val bar_def = Define`bar x = (Tpow (LENGTH x)) ++ [F] ++ x`
 
@@ -743,35 +741,109 @@ val barred_def = Define`barred x = ∃y. x=bar y`
 
 val bar2_def = Define`bar2 (x,y) = (bar x) ++ (bar y)`
 
-val bar2ed_def = Define`bar2ed x = ∃y z. x = (bar y)++z`
+val bar2ed_def = Define`bar2ed x = ∃y z. x = (bar y)++(bar z)`
 
 val unbar2_def = Define`unbar2 i (T::rest) = unbar2 (i+1) rest ∧
-                        unbar2 i (F::rest) = (TAKE i rest,DROP i rest)`
+                        unbar2 i (F::rest) = (TAKE i rest,unbar (DROP i rest))`
 
 val unbar2_induct_bar2 = Q.store_thm("unbar2_induct_bar2",
-`∀i. unbar2 i (Tpow j ++ F::rest) = (TAKE (i+j) rest,DROP (i+j) rest)`,
+`∀i. unbar2 i (Tpow j ++ F::rest) = (TAKE (i+j) rest,unbar (DROP (i+j) rest))`,
 simp[Tpow_def] >> Induct_on`j` >> simp[unbar2_def,GENLIST_CONS,ADD1]) 
 
-(** up to here **)
-(* In Process of proving   *)
+val bar_lt_bar_f = Q.store_thm("bar_lt_bar_f[simp]",
+`bar x ≺ bar y <=> F`,
+MP_TAC (Q.INST[`s`|->`{x;y}`]prefix_free_bar) >> simp[prefix_free_def,PULL_EXISTS])
+
+val Tpow_LENGTH = Q.store_thm("Tpow_LENGTH[simp]",
+`LENGTH (Tpow x) = x`,
+fs[Tpow_def,LENGTH_GENLIST])
+
+val bar_one_to_one =  Q.store_thm("bar_one_to_one[simp]",
+`bar x = bar y <=> x=y`,
+eq_tac >> fs[bar_def] >> Cases_on`LENGTH x = LENGTH y`>> fs[]>> rw[] >> 
+`LENGTH (Tpow (LENGTH x) ++ [F] ++ x) = LENGTH (Tpow (LENGTH y) ++ [F] ++ y)` by metis_tac[] >>
+fs[LENGTH_APPEND] )
+
+val bar_eq_bar_append = Q.store_thm("bar_eq_bar_append[simp]",
+`bar x = bar y ++ l <=> x=y ∧ l=[]`,
+eq_tac >> simp[] >> strip_tac >> `l=[]` by metis_tac[prefix_append,bar_lt_bar_f] >> fs[])
+
+val bar_eq_nil = Q.store_thm("bar_eq_nil[simp]",
+`bar a <> []`,
+fs[bar_def])
+
+val bar2_PF = Q.store_thm("bar2_PF",
+`prefix_free (IMAGE bar2 s)`,
+fs[prefix_free_def,PULL_EXISTS,pairTheory.FORALL_PROD,bar2_def] >> rw[] >> strip_tac >>
+drule prefix_length_lt >> rw[] >> strip_tac >> fs[prefix_append] >>
+rename[`bar p ++ bar q = bar a ++ bar b ++ r`]>> fs[APPEND_EQ_APPEND] >> rw[] >> fs[] >>
+full_simp_tac bool_ss [GSYM APPEND_ASSOC,bar_eq_bar_append,APPEND_eq_NIL] >> rw[]>>fs[] )
 
 val unbar2_bar2_inv = Q.store_thm("unbar2_bar_inv",
 `unbar2 0 (bar2 x) = x`,
-Cases_on`x` >> rw[bar2_def,bar_def] >> REWRITE_TAC [GSYM APPEND_ASSOC,APPEND,unbar2_induct_bar2]>>
-simp[] >>
-`LENGTH q <= LENGTH q` by fs[] >> 
-`TAKE (LENGTH q) (q ++  (Tpow (LENGTH r) ++ [F] ++ r)) = q ++ TAKE (LENGTH q − LENGTH q)  (Tpow (LENGTH r) ++ [F] ++ r)` by metis_tac[rich_listTheory.TAKE_APPEND2] >>
-`DROP (LENGTH q) (q ++ (Tpow (LENGTH r) ++ [F] ++ r)) = DROP (LENGTH q − LENGTH q) (Tpow (LENGTH r) ++ [F] ++ r)` by metis_tac[rich_listTheory.DROP_APPEND2] >> fs[Once (GSYM APPEND_ASSOC)] >>
-metis_tac[GSYM APPEND_ASSOC]
-)
+Cases_on`x` >> rw[bar2_def,bar_def] >> 
+REWRITE_TAC [GSYM APPEND_ASSOC,APPEND,unbar2_induct_bar2,rich_listTheory.TAKE_LENGTH_APPEND,
+             rich_listTheory.DROP_LENGTH_APPEND,ADD_CLAUSES] >> simp[GSYM bar_def] )
 
+val bar2_one_to_one = Q.store_thm("bar2_one_to_one[simp]",
+`bar2 (x,y) = bar2 (a,b) <=> x = a ∧ y = b`,
+eq_tac  >> fs[bar2_def] >> rw[APPEND_EQ_APPEND] >> fs[] )
 
+(* Not sure if needed *)
 
 val prefix_rec_fun_def = Define`prefix_rec_fun i = prefix_free (IMAGE n2bl {x|Phi i x <> NONE})`
 
 val nbar_def = Define`nbar n = bl2n (bar (n2bl n))`
 
 val pr_log2_def = Define`pr_log2 = WFM (λf n. if n<=1 then 1 else 1+(f (n DIV 2)) )`
+
+
+
+(* Prefix Universal Turing Machine *)
+
+val PUTM_def = Define`PUTM x = if bar2ed x then recPhi [bl2n (FST (unbar2 0 x));bl2n (SND (unbar2 0 x))] else NONE`
+
+val PUTM_universal = Q.store_thm("PUTM_universal",
+`∀f. ∃g. ∀x. ∃y. recPhi [f;x] = PUTM (g++y)`,
+fs[PUTM_def] >> rw[] >> qexists_tac`bar (n2bl f)` >> rw[] >> qexists_tac`bar (n2bl x)` >>
+fs[bar2ed_def] >> rw[] 
+>- (fs[unbar2_bar2_inv,GSYM bar2_def] >> rw[] )
+>- (fs[] >> metis_tac[])  )
+
+val prefix_free_subset = Q.store_thm("prefix_free_subset",
+`prefix_free s ∧ t ⊆ s ==> prefix_free t`,
+rw[prefix_free_def,SUBSET_DEF] )
+
+val PUTM_prefix_free = Q.store_thm("PUTM_prefix_free",
+`prefix_free {x | ∃y.  PUTM x = SOME y}`,
+irule prefix_free_subset >> qexists_tac`{x| bar2ed x}` >> rw[SUBSET_DEF,PUTM_def] >> 
+simp[bar2ed_def] >> irule prefix_free_subset >> qexists_tac`IMAGE bar2 UNIV` >> simp[bar2_PF]>>
+simp[SUBSET_DEF,bar2_def,pairTheory.EXISTS_PROD])
+
+
+val kolmog_def = Define`kolmog x = kolmog_complexity x PUTM`
+
+(** up to here **)
+(* Theorems to prove *)
+
+val kolmog_kraft = Q.store_thm("kolmog_kraft",
+`SIGMA (\s. (2 rpow -&(kolmog s))) UNIVERSE`,
+)
+
+(*    *)
+
+val tmax_def = Define`tmax n = if _ then NONE else `
+
+
+val kolmog_non_comp = Q.store_thm("kolmog_non_comp",
+`¬∃f. ∀x. kolmog x = recPhi [f;x]`,
+strip_tac >> )
+
+
+
+(* Not sure if needed  *)
+
+(*
 
 val pr_log2_pr = Q.store_thm("pr_log2_pr",
 `primrec (pr_log2) 1`,
@@ -787,50 +859,7 @@ val recfn_nbar = Q.store_thm("recfn_nbar",
 irule recfn_rec1 >> qexists_tac`SOME o (λl. nbar (HD l))` >> rw[] >> irule primrec_recfn >>
 )
 
-(* f will be nbar *)
-(* U will num_unbar then call recPhi on the undone npair *)
 
-val num_unbar_def = Define`num_unbar n = bl2n (unbar (n2bl n))`
-
-val pfU_def = Define`pfU = rec1 (λn. let m = num_unbar n in recPhi [nfst m;nsnd m])`
-
-val prefix_rec_fun_exists = Q.store_thm("prefix_rec_fun_exists",
-`∃U. prefix_rec_fun U`,
-qexists_tac`UMi` >> simp[prefix_rec_fun_def] >> simp[UMi_def,nlist_of_onto])
-
-val prefix_universal_rec_fun = Q.store_thm("prefix_universal_rec_fun",
-`∃U f. ∀x y. Phi f (npair x y) <> NONE ∧ Phi U (THE (Phi f (npair x y))) = Phi x y  ∧ prefix_rec_fun U`
-)
-
-
-
-
-val pref_utm_def = Define`pref_utm p = if bar2ed p then 
-                                         (let (a,b) = unbar2 0 p in Phi (bl2n a) (bl2n b)) 
-				       else NONE`
-
-val prefix_pref_utm = Q.store_thm("prefix_pref_utm",
-`prefix_machine pref_utm`,
-simp[prefix_machine_def] >> qexists_tac` IMAGE bar {x| universal_tm x <> NONE}` >> 
-rw[prefix_free_bar] >> rw[pref_utm_def]>>
-eq_tac  >>rw[]
->- (simp[barred_def] >> metis_tac[optionTheory.option_CASES])
->- (fs[barred_def] >> rw[] >> fs[] >>  metis_tac[optionTheory.NOT_SOME_NONE])  )
-
-
-val pref_utm_is_universal = Q.store_thm("pref_utm_is_universal",
-`pr_is_universal (pref_utm o n2bl)`,
-fs[pr_is_universal_def,pref_utm_def] >> rw[]
->- ()
->- (simp[bldemunge_inv] >> qexists_tac `SOME o proj 0` >> 
-    simp[recfn_rules,bldmunge_bld_eq,bool_list_to_num_def] >> rw[] >>
-    Induct_on`y` >> simp[blpair_encode_def,blmunge_def,unbar2_def,Once num_to_bool_list_def,Once bool_list_to_num_def]  )
-
-
-assume_tac(SIMP_RULE (srw_ss())[LET_THM] universal_Phi ) >> 
-fs[universal_tm_def,combinTheory.o_DEF,pref_utm_def])
-
-(*
 
 val leastR_def = Define`leastR R A = @a. a IN A /\ !b. b IN A ==> ~R b a`
 
