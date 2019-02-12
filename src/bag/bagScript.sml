@@ -971,7 +971,7 @@ val SET_OF_EMPTY = store_thm (
   SIMP_TAC (srw_ss()) [BAG_OF_SET, EMPTY_BAG, FUN_EQ_THM])
 val _ = export_rewrites ["SET_OF_EMPTY"];
 
-Theorem SET_OF_EL_BAG
+Theorem SET_OF_EL_BAG[simp]
 `!e. SET_OF_BAG {|e|} = {e}` (rw[SET_OF_BAG,FUN_EQ_THM]);
 
 val BAG_IN_BAG_OF_SET = store_thm (
