@@ -1644,13 +1644,7 @@ Theorem FINITE_BAG_OF_SET[simp]:
   !s. FINITE_BAG (BAG_OF_SET s) <=> FINITE s
 Proof
   rw[] >> EQ_TAC
-  >- (rw[] >>
-      Induct_on `s` >>
-      simp[SET_OF_EMPTY] >>
-      rw[] >>
-      simp[BAG_OF_SET_INSERT] >>
-      simp[FINITE_BAG_MERGE])
-  >- (`!c. FINITE_BAG c ==> !s. (c = BAG_OF_SET s) ==> FINITE s`
+    >- (`!c. FINITE_BAG c ==> !s. (c = BAG_OF_SET s) ==> FINITE s`
         suffices_by metis_tac[] >>
       HO_MATCH_MP_TAC STRONG_FINITE_BAG_INDUCT >>
       rw[]
@@ -1675,6 +1669,12 @@ Proof
                   metis_tac[SET_OF_EL_BAG,EL_BAG]) >>
             first_x_assum (qspec_then `t DIFF {e}` mp_tac) >> DISCH_TAC >>
             metis_tac[FINITE_DIFF_down,FINITE_DEF]))
+    >- (rw[] >>
+        Induct_on `s` >>
+        simp[SET_OF_EMPTY] >>
+        rw[] >>
+        simp[BAG_OF_SET_INSERT] >>
+        simp[FINITE_BAG_MERGE])
 QED
 
 
