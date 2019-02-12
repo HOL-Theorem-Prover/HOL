@@ -86,70 +86,34 @@ in
 end
 
 (* -------------------------------------------------------------------------
-   Arity
+   Extract constants in a term
    ------------------------------------------------------------------------- *)
 
-fun update_adict adict arity tm =
-  let val oldl = dfind tm (!adict) handle NotFound => [] in
-    adict := dadd tm (arity :: oldl) (!adict)
-  end
+fun is_app tm = is_var tm andalso fst (dest_var tm) = "app" 
 
-fun collect_arity_aux adict tm =
-  if is_const tm orelse is_var tm then update_adict adict 0 tm
-  else if is_comb tm then
-    let val (oper,argl) = strip_comb tm in
-      update_adict adict (length argl) oper;
-      app (collect_arity_aux adict) argl
-    end
-  else if is_abs tm then collect_arity_aux adict (snd (dest_abs tm))
-  else raise ERR "collect_arity_aux" ""
+fun is_tptp_fv tm = 
+  is_var tm andalso Char.isLower (String.sub (fst (dest_var tm),0))
+  andalso fst (dest_var tm) <> "app"
+fun is_tptp_bv tm = 
+  is_var tm andalso Char.isUpper (String.sub (fst (dest_var tm),0))
+
+fun all_fosubtm tm =
+  let val (oper,argl) = strip_comb tm in 
+    tm :: List.concat (map all_fosubtm argl)
+  end
 
 fun collect_arity tm =
-  let
-    val adict = ref (dempty Term.compare)
-    fun f (_,l) = mk_fast_set Int.compare l
-  in
-    app (collect_arity_aux adict) (atoms tm);
-    Redblackmap.map f (!adict)
-  end
-
-fun collect_va tm = 
   let 
-    val l = filter (is_var o fst) (dlist (collect_arity tm)) 
-    val vl = free_vars_lr tm
-    fun f (x,l) = 
-      if mem x vl then SOME (x, mk_fast_set Int.compare l) else NONE
+    val tml1 = List.concat (map all_fosubtm (atoms tm))
+    val tml2 = mk_term_set tml1
+    fun f subtm = 
+      let val (oper,argl) = strip_comb subtm in
+        if is_tptp_fv oper orelse is_const oper 
+        then SOME (oper,length argl)
+        else NONE
+      end
   in
-    List.mapPartial f l
-  end
-
-val id_compare = cpl_compare String.compare String.compare
-val ida_compare = cpl_compare id_compare Int.compare
-
-
-fun cid_of c = let val {Name,Thy,Ty} = dest_thy_const c in (Thy,Name) end
-fun collect_ca tm = 
-  let
-    val l0 = filter (is_const o fst) (dlist (collect_arity tm))
-    val l1 = map_fst cid_of (distrib l0)
-  in
-    mk_fast_set ida_compare l1
-  end
-
-(* -------------------------------------------------------------------------
-   FOF checks
-   ------------------------------------------------------------------------- *)
-
-(* Lambda *)
-fun no_lambda tm = not (exists (can (find_term is_abs)) (atoms tm))
-fun no_pred tm   = not (exists (can (find_term must_pred)) (atoms tm))
-
-fun has_fofarity_bv tm =
-  let
-    val adict = collect_arity tm
-    fun f x = length (dfind x adict) <= 1 handle NotFound => true
-  in
-    all f (all_bvar tm)
+    mk_fast_set (cpl_compare Term.compare Int.compare) (List.mapPartial f tml2)
   end
 
 (* -------------------------------------------------------------------------
@@ -231,17 +195,13 @@ fun APP_CONV_MIN tm =
 fun APP_CONV_AUX tm =
   (TRY_CONV (RATOR_CONV APP_CONV_AUX) THENC APP_CONV_MIN) tm
 
-fun APP_CONV_BV bvl tm =
+fun APP_CONV_BV tm =
   if not (is_comb tm) then NO_CONV tm else
-    let val (f,_) = strip_comb tm in
-      if mem f bvl then APP_CONV_AUX tm else NO_CONV tm
+    let val (oper,_) = strip_comb tm in
+      if is_tptp_bv oper then APP_CONV_AUX tm else NO_CONV tm
     end
 
-(* Warning: assumes free variables and bound variables have distinct names *)
-fun APP_CONV_BVL tm =
-  let val bvl = all_bvar tm in
-    TOP_SWEEP_CONV (APP_CONV_BV bvl) tm
-  end
+fun APP_CONV_BVL tm = TOP_SWEEP_CONV APP_CONV_BV tm
 
 (* -------------------------------------------------------------------------
    Arity equations for constants and free variables.
@@ -249,53 +209,31 @@ fun APP_CONV_BVL tm =
    name across statements unless their definition are alpha equivalent.
    ------------------------------------------------------------------------- *)
 
-fun mk_arity_eq f n =
+fun mk_arity_eq (f,n) =
   let
     val (tyl,_) = strip_type (type_of f)
     val vl = genvarl_arity tyl
-    val t1 = list_mk_comb (f, List.take (vl,n))
+    val vl' =  List.take (vl,n)
+    val tm = list_mk_comb (f,vl')
   in
-    GENL vl (APP_CONV_AUX t1)
+    concl (GENL vl' (APP_CONV_AUX tm))
   end
 
 fun all_arity_eq tm =
-  let
-    val l = dlist (collect_arity tm)
-    fun g x = x <> 0
-    fun f (tm,nl) =
-      if is_abs tm orelse is_comb tm then raise ERR "all_arity_eq" ""
-      else map (mk_arity_eq tm) (filter g nl)
-  in
-    List.concat (map f l)
-  end
+  map mk_arity_eq (filter (fn (_,a) => a <> 0) (collect_arity tm))
+
 (* -------------------------------------------------------------------------
-   Full FOF translation
+   FOF Translation
    ------------------------------------------------------------------------- *)
 
-(* Guarantees that there are no free variables in the term *)
 fun prepare_tm tm =
   let val tm' = prep_rw tm in
     rename_bvarl escape (list_mk_forall (free_vars_lr tm', tm'))
   end
 
-(* Slow because of term_to_string *)
-fun debug_translate_tm (tmn,tm) =
-  let
-    val iref = ref (tmn,0)
-    val _ = debug ("  " ^ term_to_string tm)
-    val tm1 = prepare_tm tm
-    val _ = debug ("Renaming variables:\n  " ^ term_to_string tm1)
-    val thml1 = RPT_LIFT_CONV iref tm1
-    val tml1 = map (rand o concl) thml1
-    val _ = debug ("Lifting lambdas and predicates:\n  " ^
-      String.concatWith "\n  " (map term_to_string tml1))
-    val thml2 = (map (TRY_CONV APP_CONV_BVL THENC REFL)) tml1
-    val tml2 = map (rand o concl) thml2
-  in
-    tml2
-  end
+fun sym_def tm = (rhs o concl o STRIP_QUANT_CONV SYM_CONV) tm
 
-fun translate_tm_aux (tmn,tm) =
+fun fof_translate_aux (tmn,tm) =
   let
     val iref  = ref (tmn,0)
     val tm1   = prepare_tm tm
@@ -304,48 +242,64 @@ fun translate_tm_aux (tmn,tm) =
     val thml2 = (map (TRY_CONV APP_CONV_BVL THENC REFL)) tml1
     val tml2  = map (rand o concl) thml2
   in
-    tml2
+    (hd tml2, map sym_def (rev (tl tml2)))
   end
 
-fun translate_tm tm =
+fun fof_translate tm =
   dfind tm (!translate_cache) handle NotFound =>
-  let val tml = translate_tm_aux ((!tmn_glob),tm) in
+  let val x = fof_translate_aux ((!tmn_glob),tm) in
     incr tmn_glob;
-    translate_cache := dadd tm tml (!translate_cache); tml
+    translate_cache := dadd tm x (!translate_cache); x
   end
 
-fun translate_pb premises cj =
-  let
-    fun f (name,thm) = (debug ("\n" ^ name);
-      (name, translate_tm (concl (DISCH_ALL thm))))
-    val cj_tml = translate_tm cj
-    val ax_tml = map f premises
-    val big_tm =
-      list_mk_conj (map list_mk_conj (cj_tml :: (map snd ax_tml)))
-    val ari_thml = all_arity_eq big_tm
-    val ari_tml =  map concl ari_thml
+fun fof_translate_thm thm = 
+  let val tm = (concl o GEN_ALL o DISCH_ALL) thm in fof_translate tm end
+
+(* -------------------------------------------------------------------------
+   TFF Translation
+   ------------------------------------------------------------------------- *)
+
+fun strip_funty_aux ty =
+  if is_vartype ty then [ty] else
+    let val {Args, Thy, Tyop} = dest_thy_type ty in
+      if Thy = "min" andalso Tyop = "fun" then
+        let val (tya,tyb) = pair_of_list Args in
+          tya :: strip_funty_aux tyb
+        end
+      else [ty]
+    end
+
+fun strip_funty ty = case strip_funty_aux ty of
+    [] => raise ERR "strip_funty" ""
+  | x => (last x, butlast x)
+
+fun mgty_of c =
+  let val {Thy, Name, Ty} = dest_thy_const c in
+    type_of (prim_mk_const {Thy = Thy, Name = Name})
+  end
+
+fun max_tff_arity c = length (snd (strip_funty (mgty_of c)))
+
+fun APP_CONV_TFF tm =
+  if not (is_comb tm) then NO_CONV tm else
+    let val (oper,argl) = strip_comb tm in
+      if is_const oper andalso length argl > max_tff_arity oper  
+      then APP_CONV_MIN tm 
+      else NO_CONV tm
+    end
+
+val APP_CONV_TFF_REC = TRY_CONV (TOP_SWEEP_CONV APP_CONV_TFF) THENC REFL
+  
+
+fun tff_translate tm =
+  let 
+    val (formula,defl) = fof_translate tm 
+    fun rw x = (rhs o concl o APP_CONV_TFF_REC) x
   in
-    (ari_tml, ax_tml, cj_tml)
+    (rw formula, map rw defl)
   end
 
-fun name_pb (ari_tml, ax_tml, cj_tml) =
-  let
-    (* arity *)
-    fun name_ari i tm = ("arity" ^ int_to_string i, tm)
-    val axl1 = mapi name_ari ari_tml
-    (* axioms *)
-    fun name_ax (name,tml) =
-      let fun name_axi i tm = (name ^ "." ^ int_to_string i, tm) in
-        mapi name_axi tml
-      end
-    val axl2 = List.concat (map name_ax ax_tml)
-    (* conjecture *)
-    fun name_cjdef i tm = ("cj_def" ^ int_to_string i, tm)
-    val cj = hd cj_tml (* Relies on the behavior of RPT_LIFT_CONV *)
-    val axl3 = mapi name_cjdef (tl cj_tml)
-  in
-    (axl1 @ axl2 @ axl3, cj)
-  end
-
+fun tff_translate_thm thm = 
+  let val tm = (concl o GEN_ALL o DISCH_ALL) thm in tff_translate tm end
 
 end

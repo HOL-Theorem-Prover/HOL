@@ -3,37 +3,33 @@ sig
 
 include Abbrev
 
+  val is_tptp_fv : term -> bool
+  val is_tptp_bv : term -> bool
+  val is_app : term -> bool
+  val atoms : term -> term list
   val must_pred : term -> bool
-  val no_lambda : term -> bool
-  val no_pred   : term -> bool
-  val collect_arity : term -> (term, int list) Redblackmap.dict
-  val has_fofarity_bv : term -> bool
-
-  val prepare_tm    : term -> term
-
+  
   (* conversions *)
   val ATOM_CONV     : conv -> conv
   val LIFT_CONV     : (int * int) ref -> conv
   val RPT_LIFT_CONV : (int * int) ref -> term -> thm list
+  val APP_CONV_MIN  : conv
   val APP_CONV_AUX  : conv
   val APP_CONV_BVL  : conv
+  val APP_CONV_TFF  : conv
+  val APP_CONV_TFF_REC : conv  
 
   (* arity equations *)
   val strip_type : hol_type -> (hol_type list * hol_type)
-  val collect_va : term -> (term * int list) list
-  val collect_ca : term -> ((string * string) * int) list
-  val mk_arity_eq : term -> int -> thm
-  val all_arity_eq : term -> thm list
+  val collect_arity : term -> (term * int) list
+  val mk_arity_eq : (term * int) -> term
+  val all_arity_eq : term -> term list
 
   (* translation *)
-  val debug_translate_tm : int * term -> term list
-  val translate_tm : term -> term list (* uses a cache *)
+  val fof_translate : term -> (term * term list) (* uses a cache *)
+  val tff_translate : term -> (term * term list)
 
-  (* problem *)
-  val translate_pb  : (string * thm) list -> term ->
-    term list * (string * term list) list * term list
-  val name_pb :
-    term list * (string * term list) list * term list ->
-    (string * term) list * term
+  val fof_translate_thm : thm -> (term * term list)
+  val tff_translate_thm : thm -> (term * term list)
 
 end

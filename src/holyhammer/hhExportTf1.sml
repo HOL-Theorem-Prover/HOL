@@ -14,10 +14,6 @@ open HolKernel boolLib aiLib mlThmData hhTranslate hhExportLib
 val ERR = mk_HOL_ERR "hhExportTf1"
 
 val tffpar = "tff("
-fun tf1_prep_thm thm = 
-  let val tml = translate_tm (concl (DISCH_ALL thm)) in
-    (hd tml, rev (tl tml))
-  end
 
 (* -------------------------------------------------------------------------
    TF1 types,terms,formulas
@@ -28,13 +24,17 @@ fun fo_fun oc (s,f_arg,argl) =
   (os oc s; os oc "("; oiter oc "," f_arg argl; os oc ")")
 
 fun tf1_fun oc (s,f_tyarg,f_arg,tyargl,argl) =
-  if null argl then raise ERR "tf1_fun" "" else
-  (
-  os oc s; os oc "(";
-  oiter oc "," f_tyarg tyargl;
-  if null tyargl then () else os oc ",";
-  oiter oc "," f_arg argl; os oc ")"
-  )
+  if null tyargl andalso null argl then os oc s 
+  else if null tyargl then 
+    (os oc s; os oc "("; oiter oc "," f_arg argl; os oc ")")
+  else if null argl then
+    (os oc s; os oc "("; oiter oc "," f_tyarg tyargl; os oc ")")
+  else
+    (
+    os oc s; os oc "(";
+    oiter oc "," f_tyarg tyargl; os oc ",";
+    oiter oc "," f_arg argl; os oc ")"
+    )
 
 fun tf1_utype oc ty =
   if is_vartype ty then os oc (name_vartype ty) else
@@ -48,7 +48,7 @@ fun tf1_utype oc ty =
 fun tf1_type arity oc ty = case strip_funty_n arity ty of
     [] => raise ERR "tf1_type" ""
   | [imty] => tf1_utype oc imty
-  | [imty,uty] => 
+  | [uty,imty] => 
     (os oc "("; tf1_utype oc uty; os oc " > "; tf1_utype oc imty;
      os oc ")")
   | l =>
@@ -58,43 +58,23 @@ fun tf1_type arity oc ty = case strip_funty_n arity ty of
 
 fun tf1_vty oc v =  
   let val (_,ty) = dest_var v in 
-    os oc (namea_v 0 v ^ ":"); tf1_utype oc ty 
-  end
-
-fun maxarity_of c = 
-  let
-    val (thy,name) = cid_of c
-    val genc = prim_mk_const {Thy = thy, Name = name}
-    val ty = type_of genc
-  in
-    length (snd (strip_funty ty))
+    os oc (namea_v (v,0) ^ ":"); tf1_utype oc ty 
   end
 
 fun tf1_term oc tm =
-  if is_var tm then os oc (namea_v 0 tm)
-  else if is_const tm then os oc (namea_c 0 tm)
-  else if is_comb tm then
-    let 
-      val (rator_aux,argl_aux) = strip_comb tm 
-      val newtm =
-        if is_const rator_aux andalso maxarity_of rator_aux < length argl_aux
-        then (rhs o concl o APP_CONV_AUX) tm
-        else tm
-      val (rator,argl) = strip_comb newtm
-      val arity = length argl
-      val tyargl = 
-        if is_var rator then  
-          if fst (dest_var rator) = "app" 
-          then typearg_of_appvar rator
-          else typearg_of_var rator
-        else typearg_of_const rator
-      val cvs = namea_cv arity rator
-    in
-      
-
-      tf1_fun oc (cvs, tf1_utype, tf1_term, tyargl,argl) 
-    end
-  else raise ERR "tf1_term" "abstraction"
+  if is_tptp_bv tm then os oc (namea_v (tm,0)) else
+  let 
+    val (rator,argl) = strip_comb tm
+      handle _ => raise ERR "tf1_term" "abstraction"
+    val arity = length argl
+    val tyargl = 
+      if is_app rator then typearg_of_app rator
+      else if is_tptp_fv rator then typearg_of_fv rator
+      else typearg_of_c rator
+    val cvs = namea_cv (rator,arity)
+  in
+    tf1_fun oc (cvs, tf1_utype, tf1_term, tyargl, argl) 
+  end
 
 fun tf1_pred oc tm =
   if is_forall tm then tf1_quant oc "!" (strip_forall tm)
@@ -144,7 +124,7 @@ fun tf1_logicformula oc (thy,name) =
   in
     if null tvl then () else os oc ("![" ^ s ^ "]: ");
     os oc "!["; oiter oc ", " tf1_vty vl; os oc "]: ";
-    os oc "("; tf1_term oc tm ; os oc " <=> "; tf1_pred oc tm; os oc ")"
+    os oc "(p("; tf1_term oc tm ; os oc ") <=> "; tf1_pred oc tm; os oc ")"
   end
 
 fun tf1_logicdef oc (thy,name) =
@@ -156,30 +136,31 @@ fun tf1_logicdef oc (thy,name) =
 fun tf1_quantdef oc (thy,name) =
   let 
     val thm = assoc name [("!", FORALL_THM),("?", EXISTS_THM)]
-    val (tm,_) = tf1_prep_thm thm
+    val (tm,_) = translate_tff_thm thm
   in
     os oc (tffpar ^ escape ("quantdef." ^ name) ^ ",axiom,"); 
     tf1_formula oc tm; osn oc ")."
   end
 
-fun tf1_boolopdef oc (thy,name) = 
-  let
-    val l1 = map cid_of [``$/\``,``$\/``,``$~``,``$==>``,
-      ``$= : 'a -> 'a -> bool``]
-    val l2 = map cid_of [``$! : ('a -> bool) -> bool``,
-      ``$? : ('a -> bool) -> bool``]
-  in
-    if mem (thy,name) l1 then tf1_logicdef oc (thy,name)
-    else if mem (thy,name) l2 then tf1_quantdef oc (thy,name)
-    else ()
-  end
+val logic_l1 = map cid_of [``$/\``,``$\/``,``$~``,``$==>``,
+  ``$= : 'a -> 'a -> bool``]
+val quant_l2 = map cid_of [``$! : ('a -> bool) -> bool``,
+  ``$? : ('a -> bool) -> bool``]
+
+val boolop_cval = 
+  [
+   (``$/\``,2),(``$\/``,2),(``$~``,1),(``$==>``,2),
+   (``$= : 'a -> 'a -> bool``,2),
+   (``$! : ('a -> bool) -> bool``,1),(``$? : ('a -> bool) -> bool``,1)
+  ]
 
 (* -------------------------------------------------------------------------
     TF1 definitions
    ------------------------------------------------------------------------- *)
 
 fun tf1_ttype arity =
-  if arity <= 1 then String.concatWith " > " [ttype,ttype] else
+  if arity = 0 then ttype else
+  if arity = 1 then String.concatWith " > " [ttype,ttype] else
   "(" ^ String.concatWith " * " (List.tabulate (arity, fn _ => ttype)) ^ ")"
   ^ " > " ^ ttype 
 
@@ -199,59 +180,41 @@ fun tf1_tyquant_type oc arity ty =
     tf1_type arity oc ty
   end
 
-fun tf1_vdef_arity oc (v,arity) =
-  if fst (dest_var v) = "app" then () else 
+(* new free variables are alwasy with most general type *)
+(*
+  (if arity = 0 then () else 
   let 
-    val tf1name = namea_v arity v 
-    val ty = snd (dest_var v)
+    val eq = mk_arity_eq c arity
+    val arity_prefix = escape ("arity" ^ its arity ^ ".")
   in
+    (os oc (tffpar ^ arity_prefix ^ tf1name ^ ",axiom,");
+     tf1_formula oc eq; osn oc ").")
+  end)
+*)
+
+fun tf1_vadef oc (v,a) =
+  if fst (dest_var v) = "app" then () else 
+  let val tf1name = namea_v (v,a) in
     os oc (tffpar ^ tf1name ^ ",type," ^ tf1name ^ ":");
-    tf1_tyquant_type oc arity ty; osn oc ").";
-    (
-    if arity = 0 then () else 
-    let 
-      val eq = concl (mk_arity_eq v arity) 
-      val arity_prefix = escape ("arity" ^ its arity ^ ".")
-    in
-      (os oc (tffpar ^ arity_prefix ^ tf1name ^ ",axiom,");
-       tf1_formula oc eq; osn oc ").")
-    end
-    )
+    tf1_tyquant_type oc a (type_of v); osn oc ")."
   end
 
-fun tf1_vdef oc (v,al) =
-  let fun f a = tf1_vdef_arity oc (v,a) in app f al end
-
-fun tf1_cdef_arity oc thy arity c (name,ty) =
-  let val tf1name = namea_cid arity (thy,name) in
+fun tf1_cadef oc a (c,a) =
+  let val tf1name = namea_c (c,a) in
     os oc (tffpar ^ tf1name ^ ",type," ^ tf1name ^ ":");
-    tf1_tyquant_type oc arity ty; osn oc ").";
-    (if arity = 0 then () else 
-    let 
-      val eq = concl (mk_arity_eq c arity) 
-      val arity_prefix = escape ("arity" ^ its arity ^ ".")
-    in
-      (os oc (tffpar ^ arity_prefix ^ tf1name ^ ",axiom,");
-       tf1_formula oc eq; osn oc ").")
-    end)
+    tf1_tyquant_type oc a (type_of c); osn oc ")."
   end
 
-fun tf1_cdef oc ((thy,name),al) =
-  let
-    val c = prim_mk_const {Thy = thy, Name = name}
-    val ty = type_of c
-    fun f a = tf1_cdef_arity oc thy a c (name,ty)
-  in
-    app f (List.tabulate (maxarity_of c + 1,I)); 
-    tf1_boolopdef oc (thy,name)
-  end
-  handle _ => raise ERR "tf1_cdef" (name ^ String.concatWith " " (map its al))
+fun tf1_cvdef oc (tm,a) =
+  if is_const tm then tf1_cadef oc (tm,a)
+  else if is_tptp_fv tm then tf1_vadef oc (tm,a)
+  else raise ERR "tf1_cvdef" ""
+
 
 fun tf1_thmdef role oc (thy,name) =
   let 
     val thm = DB.fetch thy name
-    val (cj,defl) = tf1_prep_thm thm
-    val v_al_list = collect_va (list_mk_conj (cj :: defl))
+    val (cj,defl) = translate_tff_thm thm
     val tf1name = name_thm (thy,name)
     fun f i def = 
       (
@@ -259,134 +222,139 @@ fun tf1_thmdef role oc (thy,name) =
       tf1_formula oc def; osn oc ")."
       )
   in
-    app (tf1_vdef oc) v_al_list;
     ignore (mapi f defl);
     os oc (tffpar ^ tf1name ^ "," ^ role ^ ",");
     tf1_formula oc cj; osn oc ")."
   end
 
 (* -------------------------------------------------------------------------
-   Higher-order caster
+   Higher-order constants (p,app)
    ------------------------------------------------------------------------- *)
 
-val hocaster_extra = "hocaster-extra"
+val hocaster_extra = "extra-ho"
 
-val notfalse = EQT_ELIM (last (CONJ_LIST 3 NOT_CLAUSES))
+fun tf1_cdef_app oc = 
+  let
+    val ty = type_of (prim_mk_const {Thy = "bool", Name = "LET"})
+    val tf1name = namea_v (mk_var ("app",bool),2) (* bool is dummy type *)
+  in
+    os oc (tffpar ^ tf1name ^ ",type," ^ tf1name ^ ":");
+    tf1_tyquant_type oc 2 ty; osn oc ")."
+  end
 
-val pcaster_axioml =
-  [("truth", TRUTH), ("notfalse", notfalse), ("bool_cases_ax", BOOL_CASES_AX)]
+fun tf1_cdef_p oc = 
+  let val tf1name = "p" in
+    os oc (tffpar ^ tf1name ^ ",type," ^ tf1name ^ ":");
+    tf1_utype oc bool; os oc " > $o"; osn oc ")."
+  end
 
-fun tf1_caster_thmdef oc (name,thm) =
+fun tf1_cvdef_extra oc = (tf1_cdef_app oc; tf1_cdef_p oc) 
+
+(* -------------------------------------------------------------------------
+   Higher-order theorems
+   ------------------------------------------------------------------------- *)
+
+fun tf1_boolext oc = 
   let 
-    val (cj,defl) = tf1_prep_thm thm
-    val _ = if null defl then () else raise ERR "tf1_caster_thmdef" ""
+    val c = mk_thy_const {Name = "=", Thy = "min", 
+      Ty = ``:bool -> bool -> bool``}
+    val tm = full_apply_const c
+    val vl = free_vars_lr tm 
+  in
+    os oc "!["; oiter oc ", " tf1_vty vl; os oc "]: ";
+    os oc "((p(V0_2E0) <=> p(V1_2E0)) => (V0_2E0 = V1_2E0))"
+  end
+
+fun tf1_thmdef_boolext oc =
+  let val tf1name = name_thm (hocaster_extra,"boolext") in
+    os oc (tffpar ^ tf1name ^ ",axiom,"); tf1_boolext oc; osn oc ")."
+  end
+
+fun tf1_thmdef_caster oc (name,thm) =
+  let 
+    val (cj,defl) = translate_tff_thm thm
+    val _ = if null defl then () else raise ERR "tf1_thmdef_caster" ""
   in
     os oc (tffpar ^ name_thm (hocaster_extra,name) ^ ",axiom,");
     tf1_formula oc cj; osn oc ")."
   end
 
-fun tf1_caster_app oc = 
-  let
-    val ty = type_of (prim_mk_const {Thy = "bool", Name = "LET"})
-    val tf1name = namea_v 2 (mk_var ("app",bool)) (* bool is dummy type *)
-  in
-    os oc (tffpar ^ tf1name ^ ",type," ^ tf1name ^ ":");
-    tf1_tyquant_type oc 2 ty; osn oc ").";
-    tf1_caster_thmdef oc ("eq_ext", EQ_EXT)
+fun tf1_thmdef_combin oc (name,tm) =
+  let val tf1name = name_thm (hocaster_extra,name) in
+    os oc (tffpar ^ tf1name ^ ",axiom,"); tf1_formula oc tm; osn oc ")."
   end
 
-fun tf1_caster_p oc = 
-  let val tf1name = "p" in
-    os oc (tffpar ^ tf1name ^ ",type," ^ tf1name ^ ":");
-    tf1_utype oc bool; os oc " > $o"; osn oc ").";
-    app (tf1_caster_thmdef oc) pcaster_axioml
+fun tf1_thmdef_extra oc = 
+  (
+  app (tf1_thmdef_caster oc) app_axioml;
+  tf1_thmdef_boolext oc;
+  app (tf1_thmdef_caster oc) p_axioml;
+  app (tf1_thmdef_combin oc) combin_axioml;
+  app (tf1_logicdef oc) logic_l1;
+  app (tf1_quantdef oc) quant_l2
+  )
+
+val tyopl_extra = tyopl_of_tyl [``:bool -> bool``]
+
+val app_p_cval =
+  let val tml = map (fst o translate_tff_thm o snd) (app_axioml @ p_axioml) in
+    mk_fast_set tma_compare (List.concat (map collect_arity tml)) 
   end
 
-fun tf1_combin_thmdef oc (name,tm) =
-  let
-    val v_al_list = collect_va tm
-    val tf1name = name_thm (hocaster_extra,name)
-  in
-    app (tf1_vdef oc) v_al_list;
-    os oc (tffpar ^ tf1name ^ ",axiom,");
-    tf1_formula oc tm; osn oc ")."
+val combin_cval = 
+  let val tml = map snd combin_axioml in
+    mk_fast_set tma_compare (List.concat (map collect_arity tml)) 
   end
 
-val combin_conv = 
-  STRIP_QUANT_CONV (LHS_CONV APP_CONV_AUX THENC RHS_CONV APP_CONV_AUX)
+val cval_extra = add_zeroarity (boolop_cval @ combin_cval @ app_p_cval) 
 
-val lhs_combin_conv = STRIP_QUANT_CONV (LHS_CONV APP_CONV_AUX)
+(* -------------------------------------------------------------------------
+   Arity equations
+   ------------------------------------------------------------------------- *)
 
-fun mk_combin_thm thmname vname conv =
+fun tf1_arityeq oc (cv,a) = 
+  if a = 0 then () else
   let 
-    val thm = DB.fetch "combin" thmname
-    val tm0 = concl thm
-    val oper = (fst o strip_comb o lhs o snd o strip_forall) tm0
-    val tm1 = rename_bvarl escape tm0
-    val tm2 = (rhs o concl o conv) tm1
-    val sub = [{redex = oper, residue = mk_var (vname,type_of oper)}]
+    val tf1name = "arityeq" ^ its a ^ escape "." ^ namea_cv (cv,a) 
+    val tm = mk_arity_eq (cv,a)
   in
-    subst sub tm2
-  end
-
-val i_thm = mk_combin_thm "I_THM" "combin_i" lhs_combin_conv
-val k_thm = mk_combin_thm "K_THM" "combin_k" lhs_combin_conv
-val s_thm = mk_combin_thm "S_THM" "combin_s" combin_conv
-
-fun write_hocaster_extra dir = 
-  let
-    val file = dir ^ "/" ^ hocaster_extra ^ ".ax"
-    val oc = TextIO.openOut file
-  in
-    (
-    tf1_caster_app oc; tf1_caster_p oc;
-    app (tf1_combin_thmdef oc) 
-      [("i_thm",i_thm),("k_thm",k_thm),("s_thm",s_thm)];
-    TextIO.closeOut oc
-    )
-    handle Interrupt => (TextIO.closeOut oc; raise Interrupt)
+    os oc (tffpar ^ tf1name ^ ",axiom,"); tf1_formula oc tm; osn oc ")."
   end
 
 (* -------------------------------------------------------------------------
    Export
    ------------------------------------------------------------------------- *)
 
-fun tf1_formulal_of_pb (thmid,depl) = 
-  let fun f (a,b) = a :: b in
-    mk_term_set (List.concat (
-    map (f o tf1_prep_thm o fetch_thm) (thmid :: depl)))
-  end
-
 val tf1_bushy_dir = hh_dir ^ "/export_tf1_bushy"
 fun tf1_export_bushy thyl =
   let 
     val thyl = sorted_ancestry thyl 
-    val dir = tf1_bushy_dir
-    val inl = ([],[hocaster_extra],[])
+    val dir = (mkDir_err tf1_bushy_dir; tf1_bushy_dir)
     fun f thy =
-      write_thy_bushy dir inl
-        (tf1_tyopdef,tf1_cdef,tf1_thmdef)
-         tf1_formulal_of_pb thy
+      write_thy_bushy dir tff_translate_thm uniq_cvdef_mgc 
+       (tyopl_extra,cval_extra)
+       (tf1_tyopdef, tf1_cvdef_extra, tf1_cvdef, 
+        tf1_thmdef_extra, tf1_arityeq, tf1_thmdef)
+      thy
   in
-    mkDir_err dir; write_hocaster_extra dir; app f thyl
+    mkDir_err dir; app f thyl
   end
 
 val tf1_chainy_dir = hh_dir ^ "/export_tf1_chainy"
-fun tf1_export_chainy oldthyl =
+fun tf1_export_chainy thyl =
   let 
-    val thyl = sorted_ancestry oldthyl
-    val dir = tf1_chainy_dir
-    val inl = ([],[hocaster_extra],[])
-    fun f thy = write_thy_chainy dir inl tf1_thmdef thyl thy 
+    val thyl = sorted_ancestry thyl 
+    val dir = (mkDir_err tf1_chainy_dir; tf1_chainy_dir)
+    fun f thy =
+      write_thy_chainy dir thyl tff_translate_thm uniq_cvdef_mgc
+        (tyopl_extra,cval_extra)
+        (tf1_tyopdef, tf1_cvdef_extra, tf1_cvdef, 
+         tf1_thmdef_extra, tf1_arityeq, tf1_thmdef)
+      thy
   in
-    mkDir_err dir;
-    write_hocaster_extra dir;
-    app (write_thytyopdef dir tf1_tyopdef) thyl;
-    app (write_thycdef dir tf1_cdef) thyl;
-    app (write_thyax dir tf1_thmdef) thyl;
-    app f thyl
+    mkDir_err dir; app f thyl
   end
 
-(* load "hhExportTf1"; open hhExportTf1; tf1_export_bushy ["list"]; *)
+(* load "hhExportTf1"; open hhExportTf1; tf1_export_chainy ["arithmetic"]; *)
 
 end (* struct *)

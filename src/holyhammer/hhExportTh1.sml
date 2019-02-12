@@ -14,8 +14,10 @@ open HolKernel boolLib aiLib mlThmData hhTranslate hhExportLib
 val ERR = mk_HOL_ERR "hhExportThf"
 
 val thfpar = "thf("
-fun th1_prep_tm tm = rename_bvarl escape (list_mk_forall (free_vars_lr tm, tm))
-fun th1_prep_thm thm = th1_prep_tm (concl (DISCH_ALL thm))
+fun th1_translate_tm tm = 
+  (rename_bvarl escape (list_mk_forall (free_vars_lr tm, tm)), []:term list)
+fun th1_translate_thm thm = 
+  (th1_translate_tm o concl o GEN_ALL  o DISCH_ALL) thm
 
 (* -------------------------------------------------------------------------
     TH1 types,terms,formulas
@@ -39,9 +41,9 @@ fun th1_vty oc v =
   let val (vs,ty) = dest_var v in os oc (vs ^ ":"); th1_type oc ty end
 
 fun th1_term oc tm =
-  if is_var tm then os oc (name_v tm)
+  if is_var tm then os oc (name_v tm) (* no free variables *)
   else if is_const tm then
-    let val resl = typearg_of_const tm in
+    let val resl = typearg_of_c tm in
       if null resl
       then os oc (name_c tm)
       else (os oc "("; os oc (name_c tm); os oc " @ ";
@@ -120,7 +122,7 @@ fun th1_logicdef oc (thy,name) =
 fun th1_quantdef oc (thy,name) =
   let 
     val thm = assoc name [("!", FORALL_THM),("?", EXISTS_THM)]
-    val tm = th1_prep_thm thm
+    val (tm,_) = th1_translate_thm thm
   in
     os oc (thfpar ^ escape ("quantdef." ^ name) ^ ",axiom,"); 
     th1_formula oc tm; osn oc ")."
@@ -137,6 +139,18 @@ fun th1_boolopdef oc (thy,name) =
     else if mem (thy,name) l2 then th1_quantdef oc (thy,name)
     else ()
   end
+
+val logic_l1 = map cid_of [``$/\``,``$\/``,``$~``,``$==>``,
+  ``$= : 'a -> 'a -> bool``]
+val quant_l2 = map cid_of [``$! : ('a -> bool) -> bool``,
+  ``$? : ('a -> bool) -> bool``]
+
+val boolop_cval = 
+  [
+   (``$/\``,2),(``$\/``,2),(``$~``,1),(``$==>``,2),
+   (``$= : 'a -> 'a -> bool``,2),
+   (``$! : ('a -> bool) -> bool``,1),(``$? : ('a -> bool) -> bool``,1)
+  ]
 
 (* -------------------------------------------------------------------------
     TH1 definitions
@@ -161,58 +175,71 @@ fun th1_tyquant_type oc ty =
     th1_type oc ty
   end
 
-fun th1_cdef oc ((cid as (thy,name)),_) =
-  let val ty = type_of (prim_mk_const {Thy = thy, Name = name}) in
-    os oc (thfpar ^ name_cid cid ^ ",type,");
-    os oc (name_cid cid ^ ":"); th1_tyquant_type oc ty; osn oc ").";
-    th1_boolopdef oc cid
+fun th1_cvdef oc (c,a) =
+  let val th1name = name_c c in
+    os oc (thfpar ^ th1name ^ ",type," ^ th1name ^ ":");
+    th1_tyquant_type oc (type_of c); osn oc ")."
   end
 
 fun th1_thmdef role oc (thy,name) =
   let
     val thm = DB.fetch thy name
-    val tm = th1_prep_thm thm 
+    val (tm,_) = th1_translate_thm thm 
   in
     os oc (thfpar ^ (name_thm (thy,name)) ^ "," ^ role ^ ",");
     th1_formula oc tm; osn oc ")."
   end
 
 (* -------------------------------------------------------------------------
-   Export
+   Extra information
    ------------------------------------------------------------------------- *)
 
-fun th1_formulal_of_pb (thmid,depl) = 
-  map (th1_prep_thm o fetch_thm) (thmid :: depl)
+val tyopl_extra = tyopl_of_tyl [``:bool -> bool``]
+val cval_extra = boolop_cval
+
+fun th1_cvdef_extra oc = () 
+
+fun th1_thmdef_extra oc =
+  (app (th1_logicdef oc) logic_l1; app (th1_quantdef oc) quant_l2)
+
+fun th1_arityeq oc (cv,a) = ()
+
+(* -------------------------------------------------------------------------
+   Export
+   ------------------------------------------------------------------------- *)
 
 val th1_bushy_dir = hh_dir ^ "/export_th1_bushy"
 fun th1_export_bushy thyl =
   let 
     val thyl = sorted_ancestry thyl 
-    val dir = th1_bushy_dir
-    val inl = ([],[],[])
+    val dir = (mkDir_err th1_bushy_dir; th1_bushy_dir)
     fun f thy =
-      write_thy_bushy dir inl
-        (th1_tyopdef,th1_cdef,th1_thmdef)
-        th1_formulal_of_pb thy
+      write_thy_bushy dir th1_translate_thm 
+        (uniq_cvdef_arity o uniq_cvdef_mgc)
+        (tyopl_extra,cval_extra)
+        (th1_tyopdef, th1_cvdef_extra, th1_cvdef, 
+         th1_thmdef_extra, th1_arityeq, th1_thmdef)
+      thy
   in
     mkDir_err dir; app f thyl
   end
 
 val th1_chainy_dir = hh_dir ^ "/export_th1_chainy"
-fun th1_export_chainy oldthyl =
+fun th1_export_chainy thyl =
   let 
-    val thyl = sorted_ancestry oldthyl
-    val dir = th1_chainy_dir
-    val inl = ([],[],[])
-    fun f thy = write_thy_chainy dir inl th1_thmdef thyl thy 
+    val thyl = sorted_ancestry thyl 
+    val dir = (mkDir_err th1_chainy_dir; th1_chainy_dir)
+    fun f thy =
+      write_thy_chainy dir thyl th1_translate_thm 
+        (uniq_cvdef_arity o uniq_cvdef_mgc)
+        (tyopl_extra,cval_extra)
+        (th1_tyopdef, th1_cvdef_extra, th1_cvdef, 
+         th1_thmdef_extra, th1_arityeq, th1_thmdef)
+      thy
   in
-    mkDir_err dir;
-    app (write_thytyopdef dir th1_tyopdef) thyl;
-    app (write_thycdef dir th1_cdef) thyl;
-    app (write_thyax dir th1_thmdef) thyl;
-    app f thyl
+    mkDir_err dir; app f thyl
   end
 
-
+(* load "hhExportTh1"; open hhExportTh1; th1_export_bushy ["arithmetic"]; *)
 
 end (* struct *)
