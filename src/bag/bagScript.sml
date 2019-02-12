@@ -1243,7 +1243,7 @@ val FINITE_SUB_BAG = Q.store_thm(
   ]);
 
 Theorem FINITE_BAG_MERGE[simp]
-`!a b. FINITE_BAG (BAG_MERGE a b) <=> FINITE_BAG a /\ FINITE_BAG b ` (
+`!a b. FINITE_BAG (BAG_MERGE a b) <=> FINITE_BAG a /\ FINITE_BAG b` (
   rw[] >>
   reverse(EQ_TAC)
     >- (`BAG_MERGE a b <= a + b` by metis_tac[BAG_MERGE_SUB_BAG_UNION] >>
