@@ -61,7 +61,7 @@ val regexp_compute_thms =
    charset_cmp_def, numeral_cmp_thm, len_cmp_def,
    regexp_compare_def,regexp_compareW_def,regexp_compare_eq,regexp_leq_def,
 
-   build_char_set_def, Sigma_def, Empty_def, Epsilon_def, catstring_def,
+   build_char_set_def, DOT_def, Empty_def, Epsilon_def, catstring_def,
    assoc_cat_def, build_cat_def, build_neg_def, build_star_def,
    flatten_or_def, remove_dups_def, build_or_def,
    nullable_def, nullableW_def, smart_deriv_thm, (* smart_deriv_def *) normalize_def,

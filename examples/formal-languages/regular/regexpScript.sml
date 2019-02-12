@@ -132,7 +132,7 @@ val And_def =
 (*---------------------------------------------------------------------------*)
 
 val Empty_def   = Define `Empty = Chset charset_empty`;
-val Sigma_def   = Define `Sigma = Chset charset_full`;
+val DOT_def   = Define `DOT = Chset charset_full`;
 val Epsilon_def = Define `Epsilon = Star (Chset charset_empty)`;
 
 (*---------------------------------------------------------------------------*)
@@ -246,10 +246,10 @@ val regexp_lang_empty_thm = Q.store_thm
  `!s. regexp_lang Empty s <=> F`,
  METIS_TAC [regexp_lang_empty,EMPTY_DEF]);
 
-val regexp_lang_sigma = Q.store_thm
-("regexp_lang_sigma",
- `regexp_lang Sigma = \w. ?c. w = [c]`,
-rw_tac set_ss [Sigma_def, regexp_lang_def, EXTENSION, EQ_IMP_THM]
+val regexp_lang_dot = Q.store_thm
+("regexp_lang_dot",
+ `regexp_lang DOT = \w. ?c. w = [c]`,
+rw_tac set_ss [DOT_def, regexp_lang_def, EXTENSION, EQ_IMP_THM]
  >> Cases_on `c`
  >> qexists_tac `n`
  >> pop_assum mp_tac
@@ -257,10 +257,10 @@ rw_tac set_ss [Sigma_def, regexp_lang_def, EXTENSION, EQ_IMP_THM]
  >> REPEAT (CONV_TAC (numLib.BOUNDED_FORALL_CONV EVAL))
  >> rw_tac bool_ss []);
 
-val regexp_lang_sigma_star = Q.store_thm
-("regexp_lang_sigma_star",
- `regexp_lang (Star Sigma) = \w. T`,
-rw_tac set_ss [regexp_lang_def, regexp_lang_sigma]
+val regexp_lang_dot_star = Q.store_thm
+("regexp_lang_dot_star",
+ `regexp_lang (Star DOT) = \w. T`,
+rw_tac set_ss [regexp_lang_def, regexp_lang_dot]
  >> Induct_on `w`
   >- metis_tac [IN_DEF,IN_KSTAR_THM]
   >- (rw_tac set_ss [Once (SIMP_RULE bool_ss [IN_DEF] IN_KSTAR_THM)]
@@ -279,15 +279,15 @@ rw_tac set_ss [regexp_lang_def]
  >> EVAL_TAC
  >> rw_tac set_ss [union_compl]);
 
-val regexp_lang_invol_sigma_star = Q.store_thm
-("regexp_lang_invol_sigma_star",
- `!r. regexp_lang (Or [r ; Neg r]) = regexp_lang (Star Sigma)`,
- rw_tac bool_ss [regexp_lang_invol, GSYM regexp_lang_sigma_star]);
+val regexp_lang_invol_dot_star = Q.store_thm
+("regexp_lang_invol_dot_star",
+ `!r. regexp_lang (Or [r ; Neg r]) = regexp_lang (Star DOT)`,
+ rw_tac bool_ss [regexp_lang_invol, GSYM regexp_lang_dot_star]);
 
-val regexp_lang_sigmastar_negempty = Q.store_thm
-("regexp_lang_sigmastar_negempty",
- `regexp_lang (Star Sigma) = regexp_lang (Neg Empty)`,
- rw_tac set_ss [regexp_lang_sigma_star,Empty_def]
+val regexp_lang_dot_star_negempty = Q.store_thm
+("regexp_lang_dot_star_negempty",
+ `regexp_lang (Star DOT) = regexp_lang (Neg Empty)`,
+ rw_tac set_ss [regexp_lang_dot_star,Empty_def]
   >> rw_tac set_ss [regexp_lang_def]
   >> metis_tac [charset_mem_empty]);
 
