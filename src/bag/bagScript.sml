@@ -101,7 +101,7 @@ val _ = export_rewrites ["BAG_MERGE_IDEM"]
 
 Theorem BAG_MERGE_SUB_BAG_UNION[simp]:
   !s t. (SUB_BAG (BAG_MERGE s t) (s + t))
-Proof (simp[SUB_BAG,BAG_MERGE,BAG_UNION,BAG_INN]
+Proof simp[SUB_BAG,BAG_MERGE,BAG_UNION,BAG_INN]
 QED
 
 Theorem BAG_MERGE_EMPTY:
