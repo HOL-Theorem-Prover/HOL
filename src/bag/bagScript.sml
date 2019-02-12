@@ -1724,9 +1724,9 @@ val BAG_IMAGE_FINITE_INSERT = store_thm(
 
 val BAG_IMAGE_FINITE_UNION = store_thm (
   "BAG_IMAGE_FINITE_UNION",
-  ``!b1 b2 f. (FINITE_BAG b1 /\ FINITE_BAG b2) ==>
-    (BAG_IMAGE f (BAG_UNION b1 b2)
-     = (BAG_UNION (BAG_IMAGE f b1) (BAG_IMAGE f b2)))``,
+  ``!b1 b2 f. (FINITE_BAG b1 /\ FINITE_BAG b2)
+              ==> (BAG_IMAGE f (BAG_UNION b1 b2)
+                  = (BAG_UNION (BAG_IMAGE f b1) (BAG_IMAGE f b2)))``,
   REPEAT STRIP_TAC THEN
   Q.PAT_X_ASSUM `FINITE_BAG b1` MP_TAC THEN
   Q.SPEC_TAC (`b1`, `b1`) THEN
