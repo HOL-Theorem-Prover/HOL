@@ -132,16 +132,15 @@ Theorem BAG_INSERT_EQ_MERGE_DIFF
 
 Theorem BAG_MERGE_BAG_INSERT
 `!e a b.
-((a e <= b e) ==> ((BAG_MERGE a (BAG_INSERT e b))
-                   = (BAG_INSERT e (BAG_MERGE a b)))) /\
-((b e < a e) ==> ((BAG_MERGE a (BAG_INSERT e b))
-                   = (BAG_MERGE a b))) /\
-((a e < b e) ==> ((BAG_MERGE (BAG_INSERT e a) b)
-                   = ((BAG_MERGE a b)))) /\
-((b e <= a e) ==> ((BAG_MERGE (BAG_INSERT e a) b)
-                   = (BAG_INSERT e (BAG_MERGE a b)))) /\
-((a e = b e) ==> ((BAG_MERGE (BAG_INSERT e a) (BAG_INSERT e b))
-                   = (BAG_INSERT e (BAG_MERGE a b))))` (
+  ((a e <= b e)
+    ==> ((BAG_MERGE a (BAG_INSERT e b)) = (BAG_INSERT e (BAG_MERGE a b)))) /\
+  ((b e < a e) ==> ((BAG_MERGE a (BAG_INSERT e b)) = (BAG_MERGE a b))) /\
+  ((a e < b e) ==> ((BAG_MERGE (BAG_INSERT e a) b) = ((BAG_MERGE a b)))) /\
+  ((b e <= a e)
+    ==> ((BAG_MERGE (BAG_INSERT e a) b) = (BAG_INSERT e (BAG_MERGE a b)))) /\
+  ((a e = b e)
+    ==> ((BAG_MERGE (BAG_INSERT e a) (BAG_INSERT e b))
+          = (BAG_INSERT e (BAG_MERGE a b))))` (
   rw[]
     >- (simp[BAG_MERGE,BAG_INSERT,EMPTY_BAG,FUN_EQ_THM] >>
         rw[] >- (Cases_on `x=e` >> fs[]) >> fs[])
