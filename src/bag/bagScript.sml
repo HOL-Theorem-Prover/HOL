@@ -949,16 +949,16 @@ Theorem BAG_OF_SET_UNION
 
 Theorem BAG_OF_SET_INSERT
 `!e s. BAG_OF_SET (e INSERT s) = BAG_MERGE {|e|} (BAG_OF_SET s)` (
-rw[BAG_OF_SET,INSERT_DEF,BAG_MERGE,EMPTY_BAG,FUN_EQ_THM,BAG_INSERT] >>
-rw[IN_DEF]
- >- (fs[] >>
-     `s e = F` by metis_tac[] >>
-     fs[COND_CLAUSES])
- >- (`(x = e) = F` by metis_tac[] >>
-     fs[COND_CLAUSES])
- >- (`(x = e) = F` by metis_tac[] >>
-     `(s x) = T` by metis_tac[] >>
-     fs[COND_CLAUSES]));
+  rw[BAG_OF_SET,INSERT_DEF,BAG_MERGE,EMPTY_BAG,FUN_EQ_THM,BAG_INSERT] >>
+  rw[IN_DEF]
+   >- (fs[] >>
+       `s e = F` by metis_tac[] >>
+       fs[COND_CLAUSES])
+   >- (`(x = e) = F` by metis_tac[] >>
+       fs[COND_CLAUSES])
+   >- (`(x = e) = F` by metis_tac[] >>
+       `(s x) = T` by metis_tac[] >>
+       fs[COND_CLAUSES]));
 
 Theorem BAG_OF_SET_BAG_DIFF_DIFF
 `!b s. (BAG_OF_SET s) - b = (BAG_OF_SET (s DIFF (SET_OF_BAG b)))` (
