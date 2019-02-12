@@ -943,9 +943,9 @@ val BAG_OF_SET = new_definition(
   "BAG_OF_SET",
   ``BAG_OF_SET (P:'a->bool) = \x. if x IN P then 1 else 0``);
 
-Theorem BAG_OF_SET_UNION `!b b'. BAG_OF_SET (b UNION b')
-                          = (BAG_MERGE (BAG_OF_SET b) (BAG_OF_SET b'))` (
-rw[UNION_DEF,BAG_OF_SET,BAG_MERGE,FUN_EQ_THM] >> rw[] >> fs[]);
+Theorem BAG_OF_SET_UNION
+`!b b'. BAG_OF_SET (b UNION b') = (BAG_MERGE (BAG_OF_SET b) (BAG_OF_SET b'))` (
+  rw[UNION_DEF,BAG_OF_SET,BAG_MERGE,FUN_EQ_THM] >> rw[] >> fs[]);
 
 Theorem BAG_OF_SET_INSERT
 `!e s. BAG_OF_SET (e INSERT s) = BAG_MERGE {|e|} (BAG_OF_SET s)` (
