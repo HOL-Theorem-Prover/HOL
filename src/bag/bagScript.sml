@@ -1060,8 +1060,7 @@ val SET_OF_BAG_EQ_EMPTY = store_thm(
  export_rewrites ["SET_OF_BAG_EQ_EMPTY"];
 
  Theorem BAG_OF_SET_EQ_INSERT
-`!e b s. (BAG_INSERT e b = BAG_OF_SET s) ==>
-         (?s'. s = (e INSERT s'))` (
+`!e b s. (BAG_INSERT e b = BAG_OF_SET s) ==> (?s'. s = (e INSERT s'))` (
   rw[] >>
   qexists_tac `s DELETE e` >>
   rw[INSERT_DEF,DELETE_DEF] >>
