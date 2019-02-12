@@ -99,7 +99,7 @@ val BAG_MERGE_IDEM = store_thm (
   SIMP_TAC std_ss [BAG_MERGE, FUN_EQ_THM]);
 val _ = export_rewrites ["BAG_MERGE_IDEM"]
 
-Theorem BAG_MERGE_SUB_BAG_UNION[simp]:
+Theorem BAG_MERGE_SUB_BAG_UNION:
   !s t. (SUB_BAG (BAG_MERGE s t) (s + t))
 Proof simp[SUB_BAG,BAG_MERGE,BAG_UNION,BAG_INN]
 QED
