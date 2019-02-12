@@ -1537,9 +1537,9 @@ val BAG_FILTER_SUB_BAG = store_thm(
   ``!P b. BAG_FILTER P b <= b``,
   dsimp[BAG_FILTER_DEF, SUB_BAG]);
 
-Theorem BAG_OF_SET_DIFF `BAG_OF_SET (b DIFF b')
-                         = BAG_FILTER (COMPL b') (BAG_OF_SET b)` (
-simp[DIFF_DEF,BAG_OF_SET,BAG_FILTER_DEF] >> metis_tac[]);
+Theorem BAG_OF_SET_DIFF
+`BAG_OF_SET (b DIFF b') = BAG_FILTER (COMPL b') (BAG_OF_SET b)` (
+  simp[DIFF_DEF,BAG_OF_SET,BAG_FILTER_DEF] >> metis_tac[]);
 
 val SET_OF_BAG_EQ_INSERT = store_thm(
   "SET_OF_BAG_EQ_INSERT",
