@@ -2429,8 +2429,8 @@ SRW_TAC [][BIG_BAG_UNION_def,SUM_IMAGE_UNION,FUN_EQ_THM,BAG_UNION,BAG_DIFF]);
 
 val BIG_BAG_UNION_EQ_ELEMENT = Q.store_thm(
 "BIG_BAG_UNION_EQ_ELEMENT",
-`FINITE sob /\ b IN sob ==> ((BIG_BAG_UNION sob = b)
-  <=> (!b'. b' IN sob ==> (b' = b) \/ (b' = {||})))`,
+`FINITE sob /\ b IN sob ==>
+((BIG_BAG_UNION sob = b) <=> (!b'. b' IN sob ==> (b' = b) \/ (b' = {||})))`,
 STRIP_TAC THEN
 `sob = b INSERT sob DELETE b` by SRW_TAC [][] THEN
 Q.ABBREV_TAC `sob0 = sob DELETE b` THEN
