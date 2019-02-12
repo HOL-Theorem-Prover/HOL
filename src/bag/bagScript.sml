@@ -2355,8 +2355,8 @@ val _ = export_rewrites ["BIG_BAG_UNION_EMPTY"];
 
 val BIG_BAG_UNION_INSERT = Q.store_thm(
 "BIG_BAG_UNION_INSERT",
-`FINITE sob ==> (BIG_BAG_UNION (b INSERT sob)
-  = b + BIG_BAG_UNION (sob DELETE b))`,
+`FINITE sob ==>
+ (BIG_BAG_UNION (b INSERT sob) = b + BIG_BAG_UNION (sob DELETE b))`,
 SRW_TAC [][BIG_BAG_UNION_def,SUM_IMAGE_THM,BAG_UNION,FUN_EQ_THM]);
 
 val BIG_BAG_UNION_DELETE = Q.store_thm(
