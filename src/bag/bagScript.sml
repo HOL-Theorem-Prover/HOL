@@ -2382,8 +2382,8 @@ val _ = export_rewrites ["BAG_IN_BIG_BAG_UNION"];
 
 val BIG_BAG_UNION_EQ_EMPTY_BAG = Q.store_thm(
 "BIG_BAG_UNION_EQ_EMPTY_BAG",
-`!sob. FINITE sob ==> ((BIG_BAG_UNION sob = {||})
-       <=> (!b. b IN sob ==> (b = {||})))`,
+`!sob. FINITE sob
+       ==> ((BIG_BAG_UNION sob = {||}) <=> (!b. b IN sob ==> (b = {||})))`,
 HO_MATCH_MP_TAC FINITE_INDUCT THEN
 SRW_TAC [][BIG_BAG_UNION_INSERT] THEN
 FULL_SIMP_TAC (srw_ss()) [DELETE_NON_ELEMENT] THEN
