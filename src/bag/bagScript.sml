@@ -99,23 +99,23 @@ val BAG_MERGE_IDEM = store_thm (
   SIMP_TAC std_ss [BAG_MERGE, FUN_EQ_THM]);
 val _ = export_rewrites ["BAG_MERGE_IDEM"]
 
-Theorem BAG_MERGE_SUB_BAG_UNION[simp]
+Theorem BAG_MERGE_SUB_BAG_UNION[simp]:
   !s t. (SUB_BAG (BAG_MERGE s t) (s + t))
 Proof (simp[SUB_BAG,BAG_MERGE,BAG_UNION,BAG_INN]
 QED
 
-Theorem BAG_MERGE_EMPTY
+Theorem BAG_MERGE_EMPTY:
   !b. ((BAG_MERGE {||} b) = b) /\ ((BAG_MERGE b {||}) = b)
 Proof rw[BAG_MERGE,FUN_EQ_THM,EMPTY_BAG]
 QED
 
-Theorem BAG_MERGE_ELBAG_SUB_BAG_INSERT
+Theorem BAG_MERGE_ELBAG_SUB_BAG_INSERT:
   !A b. SUB_BAG (BAG_MERGE {|A|} b) (BAG_INSERT A b)
 Proof
   rw[] >> simp[BAG_MERGE,BAG_INSERT,EMPTY_BAG,SUB_BAG,BAG_INN] >> rw[]
 QED
 
-Theorem BAG_MERGE_EQ_EMPTY[simp]
+Theorem BAG_MERGE_EQ_EMPTY[simp]:
   !a b. (BAG_MERGE a b = {||}) = (a = {||}) /\ (b = {||})
 Proof
   rw[BAG_MERGE,EMPTY_BAG,FUN_EQ_THM] >>
@@ -125,7 +125,7 @@ Proof
   simp[]
 QED
 
-Theorem BAG_INSERT_EQ_MERGE_DIFF
+Theorem BAG_INSERT_EQ_MERGE_DIFF:
   !a b c e. (BAG_INSERT e a = BAG_MERGE b c)
         ==> ((BAG_MERGE b c = BAG_INSERT e (BAG_MERGE (b - {|e|}) (c - {|e|}))))
 Proof
@@ -140,7 +140,7 @@ Proof
     fs[]
 QED
 
-Theorem BAG_MERGE_BAG_INSERT
+Theorem BAG_MERGE_BAG_INSERT:
   !e a b.
     ((a e <= b e)
       ==> ((BAG_MERGE a (BAG_INSERT e b)) = (BAG_INSERT e (BAG_MERGE a b)))) /\
@@ -955,13 +955,13 @@ val BAG_OF_SET = new_definition(
   "BAG_OF_SET",
   ``BAG_OF_SET (P:'a->bool) = \x. if x IN P then 1 else 0``);
 
-Theorem BAG_OF_SET_UNION
+Theorem BAG_OF_SET_UNION:
   !b b'. BAG_OF_SET (b UNION b') = (BAG_MERGE (BAG_OF_SET b) (BAG_OF_SET b'))
 Proof
   rw[UNION_DEF,BAG_OF_SET,BAG_MERGE,FUN_EQ_THM] >> rw[] >> fs[]
 QED
 
-Theorem BAG_OF_SET_INSERT
+Theorem BAG_OF_SET_INSERT:
   !e s. BAG_OF_SET (e INSERT s) = BAG_MERGE {|e|} (BAG_OF_SET s)
 Proof
   rw[BAG_OF_SET,INSERT_DEF,BAG_MERGE,EMPTY_BAG,FUN_EQ_THM,BAG_INSERT] >>
@@ -976,7 +976,7 @@ Proof
        fs[COND_CLAUSES])
 QED
 
-Theorem BAG_OF_SET_BAG_DIFF_DIFF
+Theorem BAG_OF_SET_BAG_DIFF_DIFF:
   !b s. (BAG_OF_SET s) - b = (BAG_OF_SET (s DIFF (SET_OF_BAG b)))
 Proof
   simp[BAG_OF_SET,DIFF_DEF,FUN_EQ_THM,BAG_DIFF,SET_OF_BAG] >>
@@ -1079,7 +1079,7 @@ val SET_OF_BAG_EQ_EMPTY = store_thm(
  before
  export_rewrites ["SET_OF_BAG_EQ_EMPTY"];
 
-Theorem BAG_OF_SET_EQ_INSERT
+Theorem BAG_OF_SET_EQ_INSERT:
   !e b s. (BAG_INSERT e b = BAG_OF_SET s) ==> (?s'. s = (e INSERT s'))
 Proof
   rw[] >>
@@ -1264,7 +1264,7 @@ val FINITE_SUB_BAG = Q.store_thm(
     ASM_MESON_TAC [NOT_IN_SUB_BAG_INSERT]
   ]);
 
-Theorem FINITE_BAG_MERGE[simp]
+Theorem FINITE_BAG_MERGE[simp]:
   !a b. FINITE_BAG (BAG_MERGE a b) <=> FINITE_BAG a /\ FINITE_BAG b
 Proof
   rw[] >>
@@ -1479,7 +1479,7 @@ RW_TAC bool_ss []
   THEN RW_TAC arith_ss [BAG_UNION_EMPTY,BAG_UNION_INSERT]
   THEN PROVE_TAC [BAG_CARD_THM,FINITE_BAG_UNION,ARITH `x <=y ==> x <= y+1`]);
 
-Theorem BAG_MERGE_CARD
+Theorem BAG_MERGE_CARD:
   !a b. FINITE_BAG a /\ FINITE_BAG b ==>
         BAG_CARD (BAG_MERGE a b) <= (BAG_CARD a + BAG_CARD b)
 Proof
@@ -1563,7 +1563,7 @@ val BAG_FILTER_SUB_BAG = store_thm(
   ``!P b. BAG_FILTER P b <= b``,
   dsimp[BAG_FILTER_DEF, SUB_BAG]);
 
-Theorem BAG_OF_SET_DIFF
+Theorem BAG_OF_SET_DIFF:
   !b b'. BAG_OF_SET (b DIFF b') = BAG_FILTER (COMPL b') (BAG_OF_SET b)
 Proof
   rw[DIFF_DEF,BAG_OF_SET,BAG_FILTER_DEF] >> metis_tac[]
@@ -1640,7 +1640,7 @@ val FINITE_SET_OF_BAG = store_thm(
  before
  export_rewrites ["FINITE_SET_OF_BAG"];
 
-Theorem FINITE_BAG_OF_SET[simp]
+Theorem FINITE_BAG_OF_SET[simp]:
   !s. FINITE_BAG (BAG_OF_SET s) <=> FINITE s
 Proof
   rw[] >> EQ_TAC
@@ -3054,22 +3054,22 @@ val _ = overload_on ("unibag", ``\b. BAG_OF_SET (SET_OF_BAG b)``);
 
 val unibag_thm = save_thm("unibag_thm", CONJ BAG_OF_SET SET_OF_BAG);
 
-Theorem unibag_INSERT
+Theorem unibag_INSERT:
   !a b. (unibag (BAG_INSERT a b)) = BAG_MERGE {|a|} (unibag b)
 Proof rw[BAG_OF_SET_INSERT,SET_OF_BAG_INSERT]
 QED
 
-Theorem unibag_UNION
+Theorem unibag_UNION:
   !a b. unibag (a + b) = BAG_MERGE (unibag a) (unibag b)
 Proof rw[SET_OF_BAG_UNION,BAG_OF_SET_UNION]
 QED
 
-Theorem unibag_IN
+Theorem unibag_IN:
   !e b. BAG_IN e b ==> BAG_IN e (unibag b)
 Proof rw[IN_SET_OF_BAG,BAG_IN_BAG_OF_SET]
 QED
 
-Theorem unibag_EQ_BAG_INSERT
+Theorem unibag_EQ_BAG_INSERT:
   !e b b'. (unibag b = BAG_INSERT e b') ==> ?c. (b' = unibag c)
 Proof
   rw[] >>
@@ -3082,24 +3082,24 @@ Proof
     rw[]
 QED
 
-Theorem unibag_FINITE
+Theorem unibag_FINITE:
   !b. FINITE_BAG b = FINITE_BAG (unibag b)
 Proof
   rw[] >> EQ_TAC >> metis_tac[FINITE_SET_OF_BAG, FINITE_BAG_OF_SET]
 QED
 
 
-Theorem unibag_ALL_DISTINCT
+Theorem unibag_ALL_DISTINCT:
   !b. BAG_ALL_DISTINCT (unibag b)
 Proof rw[BAG_ALL_DISTINCT]
 QED
 
-Theorem unibag_IN
+Theorem unibag_IN:
   !e b. BAG_IN e b ==> BAG_IN e (unibag b)
 Proof rw[BAG_IN]
 QED
 
-Theorem unibag_EL_MERGE_cases
+Theorem unibag_EL_MERGE_cases:
   !e b. ((BAG_IN e b) ==> (BAG_MERGE {|e|} (unibag b) = (unibag b))) /\
         (~(BAG_IN e b) ==> (BAG_MERGE {|e|} (unibag b) = BAG_INSERT e (unibag b)))
 Proof
@@ -3123,7 +3123,7 @@ Proof
       rw[])
 QED
 
-Theorem unibag_DECOMPOSE
+Theorem unibag_DECOMPOSE:
   unibag g <> g ==> ?A g0. g = {|A;A|} + g0
 Proof
   simp[unibag_thm] >>
@@ -3140,7 +3140,7 @@ Proof
     >- fs[BAG_IN,BAG_INN]
 QED
 
-Theorem unibag_SUB_BAG
+Theorem unibag_SUB_BAG:
   !b. unibag b <= b
 Proof rw[unibag_thm,SUB_BAG,BAG_IN,BAG_INN]
 QED
