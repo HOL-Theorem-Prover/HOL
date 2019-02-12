@@ -104,7 +104,7 @@ Theorem BAG_MERGE_SUB_BAG_UNION[simp]:
 Proof simp[SUB_BAG,BAG_MERGE,BAG_UNION,BAG_INN]
 QED
 
-Theorem BAG_MERGE_EMPTY:
+Theorem BAG_MERGE_EMPTY[simp]:
   !b. ((BAG_MERGE {||} b) = b) /\ ((BAG_MERGE b {||}) = b)
 Proof rw[BAG_MERGE,FUN_EQ_THM,EMPTY_BAG]
 QED
