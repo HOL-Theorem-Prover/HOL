@@ -67,7 +67,15 @@ val monadtpp_test3 =
         "od\n",                                                       (* 0 *)
     "od"])
 
-val _ = app tpp' [monadtpp_test1, monadtpp_test2, monadtpp_test3]
+val monadtpp_test4 =
+    ("do (x:α) <- f (x:α); g x; od",
+     String.concat [
+       "do ", bx, " <- ", free "f", " ", free "x", "; ",
+       free "g", " ", bx, " od"
+     ])
+
+val _ = app tpp' [monadtpp_test1, monadtpp_test2, monadtpp_test3,
+                  monadtpp_test4]
 
 val _ = clear_overloads_on "monad_bind"
 
@@ -116,7 +124,8 @@ val _ = same_const f ``option$OPTION_BIND`` andalso
         hd (tl args) = ``K (SOME 4) : num -> num option`` andalso
         (OK(); true) orelse udie()
 
-val _ = app tpp' [monadtpp_test1, monadtpp_test2, monadtpp_test3]
+val _ = app tpp' [monadtpp_test1, monadtpp_test2, monadtpp_test3,
+                  monadtpp_test4]
 
 val _ = disable_monad "option"
 val _ = enable_monad "errorState"
