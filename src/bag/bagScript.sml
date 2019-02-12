@@ -99,48 +99,59 @@ val BAG_MERGE_IDEM = store_thm (
   SIMP_TAC std_ss [BAG_MERGE, FUN_EQ_THM]);
 val _ = export_rewrites ["BAG_MERGE_IDEM"]
 
-Theorem BAG_MERGE_SUB_BAG_UNION[simp] `!s t. (SUB_BAG (BAG_MERGE s t) (s + t))`
-  (simp[SUB_BAG,BAG_MERGE,BAG_UNION,BAG_INN]);
+Theorem BAG_MERGE_SUB_BAG_UNION[simp]
+  !s t. (SUB_BAG (BAG_MERGE s t) (s + t))
+Proof (simp[SUB_BAG,BAG_MERGE,BAG_UNION,BAG_INN]
+QED
 
 Theorem BAG_MERGE_EMPTY
-`!b. ((BAG_MERGE {||} b) = b) /\ ((BAG_MERGE b {||}) = b)` (
-  rw[BAG_MERGE,FUN_EQ_THM,EMPTY_BAG]);
+  !b. ((BAG_MERGE {||} b) = b) /\ ((BAG_MERGE b {||}) = b)
+Proof rw[BAG_MERGE,FUN_EQ_THM,EMPTY_BAG]
+QED
 
 Theorem BAG_MERGE_ELBAG_SUB_BAG_INSERT
-        `!A b. SUB_BAG (BAG_MERGE {|A|} b) (BAG_INSERT A b)` (
-  rw[] >> simp[BAG_MERGE,BAG_INSERT,EMPTY_BAG,SUB_BAG,BAG_INN] >> rw[]);
+  !A b. SUB_BAG (BAG_MERGE {|A|} b) (BAG_INSERT A b)
+Proof
+  rw[] >> simp[BAG_MERGE,BAG_INSERT,EMPTY_BAG,SUB_BAG,BAG_INN] >> rw[]
+QED
 
 Theorem BAG_MERGE_EQ_EMPTY[simp]
-`!a b. (BAG_MERGE a b = {||}) = (a = {||}) /\ (b = {||})` (
+  !a b. (BAG_MERGE a b = {||}) = (a = {||}) /\ (b = {||})
+Proof
   rw[BAG_MERGE,EMPTY_BAG,FUN_EQ_THM] >>
   EQ_TAC >>
   rw[] >>
   first_x_assum (qspec_then `x` mp_tac) >>
-  simp[] );
+  simp[]
+QED
 
 Theorem BAG_INSERT_EQ_MERGE_DIFF
-`!a b c e. (BAG_INSERT e a = BAG_MERGE b c)
-      ==> ((BAG_MERGE b c = BAG_INSERT e (BAG_MERGE (b - {|e|}) (c - {|e|}))))`
-(rw[BAG_DIFF] >>
+  !a b c e. (BAG_INSERT e a = BAG_MERGE b c)
+        ==> ((BAG_MERGE b c = BAG_INSERT e (BAG_MERGE (b - {|e|}) (c - {|e|}))))
+Proof
+  rw[BAG_DIFF] >>
     fs[BAG_INSERT,BAG_MERGE,EMPTY_BAG,FUN_EQ_THM] >>
     reverse(rw[])
     >- (`b e - 1 + 1 = b e` suffices_by simp[EQ_SYM_EQ] >>
         irule arithmeticTheory.SUB_ADD >>
         `c e <= b e` by simp[] >>
         first_x_assum (qspec_then `e` mp_tac) >>
-        rw[]) >> fs[]);
+        rw[]) >>
+    fs[]
+QED
 
 Theorem BAG_MERGE_BAG_INSERT
-`!e a b.
-  ((a e <= b e)
-    ==> ((BAG_MERGE a (BAG_INSERT e b)) = (BAG_INSERT e (BAG_MERGE a b)))) /\
-  ((b e < a e) ==> ((BAG_MERGE a (BAG_INSERT e b)) = (BAG_MERGE a b))) /\
-  ((a e < b e) ==> ((BAG_MERGE (BAG_INSERT e a) b) = ((BAG_MERGE a b)))) /\
-  ((b e <= a e)
-    ==> ((BAG_MERGE (BAG_INSERT e a) b) = (BAG_INSERT e (BAG_MERGE a b)))) /\
-  ((a e = b e)
-    ==> ((BAG_MERGE (BAG_INSERT e a) (BAG_INSERT e b))
-          = (BAG_INSERT e (BAG_MERGE a b))))` (
+  !e a b.
+    ((a e <= b e)
+      ==> ((BAG_MERGE a (BAG_INSERT e b)) = (BAG_INSERT e (BAG_MERGE a b)))) /\
+    ((b e < a e) ==> ((BAG_MERGE a (BAG_INSERT e b)) = (BAG_MERGE a b))) /\
+    ((a e < b e) ==> ((BAG_MERGE (BAG_INSERT e a) b) = ((BAG_MERGE a b)))) /\
+    ((b e <= a e)
+      ==> ((BAG_MERGE (BAG_INSERT e a) b) = (BAG_INSERT e (BAG_MERGE a b)))) /\
+    ((a e = b e)
+      ==> ((BAG_MERGE (BAG_INSERT e a) (BAG_INSERT e b))
+            = (BAG_INSERT e (BAG_MERGE a b))))
+Proof
   rw[]
     >- (simp[BAG_MERGE,BAG_INSERT,EMPTY_BAG,FUN_EQ_THM] >>
         rw[] >- (Cases_on `x=e` >> fs[]) >> fs[])
@@ -149,7 +160,8 @@ Theorem BAG_MERGE_BAG_INSERT
     >- (simp[BAG_MERGE,BAG_INSERT,EMPTY_BAG,FUN_EQ_THM] >>
         rw[] >- (Cases_on `x=e` >> fs[]) >> fs[])
     >> (simp[BAG_MERGE,BAG_INSERT,EMPTY_BAG,FUN_EQ_THM] >>
-        rw[] >> fs[]));
+        rw[] >> fs[])
+QED
 
 val _ = print "Properties relating BAG_IN(N) to other functions\n"
 val BAG_INN_0 = store_thm (
@@ -944,11 +956,14 @@ val BAG_OF_SET = new_definition(
   ``BAG_OF_SET (P:'a->bool) = \x. if x IN P then 1 else 0``);
 
 Theorem BAG_OF_SET_UNION
-`!b b'. BAG_OF_SET (b UNION b') = (BAG_MERGE (BAG_OF_SET b) (BAG_OF_SET b'))` (
-  rw[UNION_DEF,BAG_OF_SET,BAG_MERGE,FUN_EQ_THM] >> rw[] >> fs[]);
+  !b b'. BAG_OF_SET (b UNION b') = (BAG_MERGE (BAG_OF_SET b) (BAG_OF_SET b'))
+Proof
+  rw[UNION_DEF,BAG_OF_SET,BAG_MERGE,FUN_EQ_THM] >> rw[] >> fs[]
+QED
 
 Theorem BAG_OF_SET_INSERT
-`!e s. BAG_OF_SET (e INSERT s) = BAG_MERGE {|e|} (BAG_OF_SET s)` (
+  !e s. BAG_OF_SET (e INSERT s) = BAG_MERGE {|e|} (BAG_OF_SET s)
+Proof
   rw[BAG_OF_SET,INSERT_DEF,BAG_MERGE,EMPTY_BAG,FUN_EQ_THM,BAG_INSERT] >>
   rw[IN_DEF]
    >- (fs[] >>
@@ -958,12 +973,15 @@ Theorem BAG_OF_SET_INSERT
        fs[COND_CLAUSES])
    >- (`(x = e) = F` by metis_tac[] >>
        `(s x) = T` by metis_tac[] >>
-       fs[COND_CLAUSES]));
+       fs[COND_CLAUSES])
+QED
 
 Theorem BAG_OF_SET_BAG_DIFF_DIFF
-`!b s. (BAG_OF_SET s) - b = (BAG_OF_SET (s DIFF (SET_OF_BAG b)))` (
+  !b s. (BAG_OF_SET s) - b = (BAG_OF_SET (s DIFF (SET_OF_BAG b)))
+Proof
   simp[BAG_OF_SET,DIFF_DEF,FUN_EQ_THM,BAG_DIFF,SET_OF_BAG] >>
-  rw[BAG_IN,BAG_INN,IN_DEF] >> fs[]);
+  rw[BAG_IN,BAG_INN,IN_DEF] >> fs[]
+QED
 
 val SET_OF_EMPTY = store_thm (
   "SET_OF_EMPTY",
@@ -972,7 +990,9 @@ val SET_OF_EMPTY = store_thm (
 val _ = export_rewrites ["SET_OF_EMPTY"];
 
 Theorem SET_OF_EL_BAG[simp]
-`!e. SET_OF_BAG {|e|} = {e}` (rw[SET_OF_BAG,FUN_EQ_THM]);
+  !e. SET_OF_BAG {|e|} = {e}
+Proof rw[SET_OF_BAG,FUN_EQ_THM]
+QED
 
 val BAG_IN_BAG_OF_SET = store_thm (
   "BAG_IN_BAG_OF_SET",
@@ -1059,8 +1079,9 @@ val SET_OF_BAG_EQ_EMPTY = store_thm(
  before
  export_rewrites ["SET_OF_BAG_EQ_EMPTY"];
 
- Theorem BAG_OF_SET_EQ_INSERT
-`!e b s. (BAG_INSERT e b = BAG_OF_SET s) ==> (?s'. s = (e INSERT s'))` (
+Theorem BAG_OF_SET_EQ_INSERT
+  !e b s. (BAG_INSERT e b = BAG_OF_SET s) ==> (?s'. s = (e INSERT s'))
+Proof
   rw[] >>
   qexists_tac `s DELETE e` >>
   rw[INSERT_DEF,DELETE_DEF] >>
@@ -1071,7 +1092,8 @@ val SET_OF_BAG_EQ_EMPTY = store_thm(
   >- (rw[] >>
       `?t. s = (e INSERT t)`
         by metis_tac[DECOMPOSITION, BAG_IN_BAG_OF_SET, BAG_IN_BAG_INSERT] >>
-      fs[]));
+      fs[])
+QED
 
 
 val _ = print "Bag disjointness\n"
@@ -1243,7 +1265,8 @@ val FINITE_SUB_BAG = Q.store_thm(
   ]);
 
 Theorem FINITE_BAG_MERGE[simp]
-`!a b. FINITE_BAG (BAG_MERGE a b) <=> FINITE_BAG a /\ FINITE_BAG b` (
+  !a b. FINITE_BAG (BAG_MERGE a b) <=> FINITE_BAG a /\ FINITE_BAG b
+Proof
   rw[] >>
   reverse(EQ_TAC)
     >- (`BAG_MERGE a b <= a + b` by metis_tac[BAG_MERGE_SUB_BAG_UNION] >>
@@ -1260,7 +1283,8 @@ Theorem FINITE_BAG_MERGE[simp]
         rw[] >>
         first_x_assum (qspecl_then [`a - {|e|}`,`b - {|e|}`] mp_tac) >>
         rw[] >>
-        metis_tac[FINITE_BAG_DIFF_dual,FINITE_BAG]));
+        metis_tac[FINITE_BAG_DIFF_dual,FINITE_BAG])
+QED
 
 val _ = print "Developing theory of bag cardinality\n"
 
@@ -1456,15 +1480,17 @@ RW_TAC bool_ss []
   THEN PROVE_TAC [BAG_CARD_THM,FINITE_BAG_UNION,ARITH `x <=y ==> x <= y+1`]);
 
 Theorem BAG_MERGE_CARD
-`!a b. FINITE_BAG a /\ FINITE_BAG b ==>
-       BAG_CARD (BAG_MERGE a b) <= (BAG_CARD a + BAG_CARD b)` (
+  !a b. FINITE_BAG a /\ FINITE_BAG b ==>
+        BAG_CARD (BAG_MERGE a b) <= (BAG_CARD a + BAG_CARD b)
+Proof
   rw[] >>
   `(BAG_MERGE a b) <= (a + b)`
     by metis_tac[BAG_MERGE_SUB_BAG_UNION] >>
   `FINITE_BAG (a + b)` by metis_tac[FINITE_BAG_UNION] >>
   `BAG_CARD (BAG_MERGE a b) <= BAG_CARD (a + b)`
     by metis_tac[SUB_BAG_CARD] >>
-  metis_tac[BAG_CARD_UNION]);
+  metis_tac[BAG_CARD_UNION]
+QED
 
 val _ = ParseExtras.temp_tight_equality()
 val BAG_CARD_DIFF = store_thm(
@@ -1538,8 +1564,10 @@ val BAG_FILTER_SUB_BAG = store_thm(
   dsimp[BAG_FILTER_DEF, SUB_BAG]);
 
 Theorem BAG_OF_SET_DIFF
-`BAG_OF_SET (b DIFF b') = BAG_FILTER (COMPL b') (BAG_OF_SET b)` (
-  simp[DIFF_DEF,BAG_OF_SET,BAG_FILTER_DEF] >> metis_tac[]);
+  !b b'. BAG_OF_SET (b DIFF b') = BAG_FILTER (COMPL b') (BAG_OF_SET b)
+Proof
+  rw[DIFF_DEF,BAG_OF_SET,BAG_FILTER_DEF] >> metis_tac[]
+QED
 
 val SET_OF_BAG_EQ_INSERT = store_thm(
   "SET_OF_BAG_EQ_INSERT",
@@ -1613,7 +1641,8 @@ val FINITE_SET_OF_BAG = store_thm(
  export_rewrites ["FINITE_SET_OF_BAG"];
 
 Theorem FINITE_BAG_OF_SET[simp]
-`!s. FINITE_BAG (BAG_OF_SET s) <=> FINITE s` (
+  !s. FINITE_BAG (BAG_OF_SET s) <=> FINITE s
+Proof
   rw[] >> EQ_TAC
   >- (rw[] >>
       Induct_on `s` >>
@@ -1645,7 +1674,8 @@ Theorem FINITE_BAG_OF_SET[simp]
               by (simp[BAG_OF_SET_BAG_DIFF_DIFF] >>
                   metis_tac[SET_OF_EL_BAG,EL_BAG]) >>
             first_x_assum (qspec_then `t DIFF {e}` mp_tac) >> DISCH_TAC >>
-            metis_tac[FINITE_DIFF_down,FINITE_DEF])));
+            metis_tac[FINITE_DIFF_down,FINITE_DEF]))
+QED
 
 
 (* ----------------------------------------------------------------------
