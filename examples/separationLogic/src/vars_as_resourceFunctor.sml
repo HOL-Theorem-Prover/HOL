@@ -802,7 +802,7 @@ fun ASL_PROGRAM_ABSTRACTION___var_res_cond_critical_section pf abstL sys xenv pe
       val (wpL,P) =
            (pairSyntax.dest_pair o snd o pairSyntax.dest_pair) (
            first (fn tt =>
-              (fst (pairSyntax.dest_pair tt) = res))
+              (fst (pairSyntax.dest_pair tt) ~~ res))
               (fst (listSyntax.dest_list lock_decls)))
 
       val thm0 = ISPECL [
@@ -4116,5 +4116,3 @@ val VAR_RES_ENTAILMENT_INIT_TAC =
    CONSEQ_CONV_TAC (K VAR_RES_ENTAILMENT_INIT___CONSEQ_CONV);
 
 end
-
-

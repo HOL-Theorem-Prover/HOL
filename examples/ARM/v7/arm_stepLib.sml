@@ -781,7 +781,7 @@ in
     val A = arch_to_term arch
     val inp = mk_inp instr
   in
-    if mk_inp instr <> armSyntax.NoInterrupt_tm then
+    if mk_inp instr !~ armSyntax.NoInterrupt_tm then
       let
         val CPSR = mk_irpt_cpsr the_state Thumb ThumbEE M
         val (ext,state') = init the_state CPSR A thumbee

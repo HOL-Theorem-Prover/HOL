@@ -238,6 +238,12 @@ fun op_assoc eq_func k l =
       [] => raise ERR "op_assoc" "not found"
     | (key,ob) :: rst => if eq_func k key then ob else op_assoc eq_func k rst
 
+fun op_rev_assoc eq_func k l =
+  case l of
+      [] => raise ERR "op_rev_assoc" "not found"
+    | (ob,key) :: rest => if eq_func k key then ob
+                          else op_rev_assoc eq_func k rest
+
 (*---------------------------------------------------------------------------*)
 (* Topologically sort a list wrt partial order R.                            *)
 (*---------------------------------------------------------------------------*)
@@ -421,5 +427,8 @@ fun op Un p = HOLset.union p
 fun op Isct p = HOLset.intersection p
 fun op -- p = HOLset.difference p
 fun op IN (e,s) = HOLset.member(s,e)
+
+(* more equality function functions *)
+fun subst_eq aeq beq = list_eq (redres_eq aeq beq)
 
 end (* Lib *)

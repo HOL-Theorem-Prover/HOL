@@ -4,6 +4,7 @@ sig
    datatype frag = datatype HOLPP.frag
    datatype ('a, 'b) verdict = PASS of 'a | FAIL of 'b
    type 'a cmp = 'a * 'a -> order
+   type 'a eqf = 'a -> 'a -> bool
    type ('a, 'b) istream
    type ('a, 'b) subst = {redex: 'a, residue: 'b} list
    type 'a set = 'a HOLset.set
@@ -83,6 +84,7 @@ sig
    val last : 'a list -> 'a
    val lex_cmp : ('b cmp * 'c cmp) -> (('a -> 'b) * ('a -> 'c)) -> 'a cmp
    val list_compare : 'a cmp -> 'a list cmp
+   val list_eq : 'a eqf -> 'a list eqf
    val list_of_pair : 'a * 'a -> 'a list
    val list_of_quadruple : 'a * 'a * 'a * 'a -> 'a list
    val list_of_singleton : 'a -> 'a list
@@ -105,11 +107,14 @@ sig
    val op_intersect : ('a -> 'a -> bool) -> 'a list -> 'a list -> 'a list
    val op_mem : ('a -> 'a -> bool) -> 'a -> 'a list -> bool
    val op_mk_set : ('a -> 'a -> bool) -> 'a list -> 'a list
+   val op_rev_assoc : ('a -> 'a -> bool) -> 'a -> ('b * 'a) list -> 'b
    val op_set_diff : ('a -> 'a -> bool) -> 'a list -> 'a list -> 'a list
    val op_union : ('a -> 'a -> bool) -> 'a list -> 'a list -> 'a list
    val option_compare : 'a cmp -> 'a option cmp
+   val option_eq : 'a eqf -> 'a option eqf
    val pair : 'a -> 'b -> 'a * 'b
    val pair_compare : ('a cmp * 'b cmp) -> ('a * 'b) cmp
+   val pair_eq : 'a eqf -> 'b eqf -> ('a * 'b) eqf
    val pair_of_list : 'a list -> 'a * 'a
    val partial : exn -> ('a -> 'b option) -> 'a -> 'b
    val partition : ('a -> bool) -> 'a list -> 'a list * 'a list
@@ -120,6 +125,7 @@ sig
    val quadruple_of_list : 'a list -> 'a * 'a * 'a * 'a
    val quote : string -> string
    val real_time : ('a -> 'b) -> 'a -> 'b
+   val redres_eq : 'a eqf -> 'b eqf -> {redex:'a,residue:'b} eqf
    val repeat : ('a -> 'a) -> 'a -> 'a
    val reset : ('a, 'b) istream -> ('a, 'b) istream
    val rev_assoc : ''a -> ('b * ''a) list -> 'b
@@ -143,6 +149,7 @@ sig
    val strcat : string -> string -> string
    val string_to_int : string -> int
    val subst_assoc : ('a -> bool) -> ('a, 'b)subst -> 'b option
+   val subst_eq : 'a eqf -> 'b eqf -> ('a,'b) subst eqf
    val subtract : ''a list -> ''a list -> ''a list
    val swap : 'a * 'b -> 'b * 'a
    val time : ('a -> 'b) -> 'a -> 'b

@@ -94,7 +94,7 @@ end
 fun char_of_bool b = if b then #"1" else #"0"
 
 fun bool_of_term t =
-   t = boolSyntax.T orelse t <> boolSyntax.F andalso raise ERR "bool_of_term" ""
+   boolLib.Teq t orelse not (boolLib.Feq t) andalso raise ERR "bool_of_term" ""
 
 val char_of_term = char_of_bool o bool_of_term
 val list_of_term = fst o listSyntax.dest_list
@@ -181,9 +181,9 @@ fun padded_fixedwidth_of_num (m, n) =
 (* ----------------------------------------------------------------------- *)
 
 fun dest_b tm =
-   if tm = boolSyntax.T
+   if boolLib.Teq tm
       then true
-   else if tm = boolSyntax.F
+   else if boolLib.Feq tm
       then false
    else raise ERR "dest_b" ""
 

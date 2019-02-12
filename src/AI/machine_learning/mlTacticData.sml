@@ -459,7 +459,7 @@ fun ttt_update_tacdata_aux {tacfea, tacfea_cthy, taccov, tacdep} (lbl,fea) =
   }
 
 fun ttt_update_tacdata (lbl as (stac,t,g,gl), tacdata) =
-  if mem g gl orelse dmem lbl (#tacfea tacdata)
+  if op_mem goaleq g gl orelse dmem lbl (#tacfea tacdata)
   then tacdata
   else ttt_update_tacdata_aux tacdata (lbl, feahash_of_goal g)
 

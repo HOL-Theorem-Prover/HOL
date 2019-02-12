@@ -77,8 +77,7 @@ struct
         (CLAUSE_TO_SEQUENT (Thm.ASSUME p)) (CLAUSE_TO_SEQUENT (Thm.ASSUME q))
     end
     handle Feedback.HOL_ERR _ =>  (* 'concl' is not a disjunction *)
-      if concl = boolSyntax.F then
-        thm
+      if boolLib.Feq concl then thm
       else (
         Thm.MP (Thm.NOT_ELIM thm) (Thm.ASSUME (boolSyntax.dest_neg concl))
         handle Feedback.HOL_ERR _ =>  (* 'concl' is not a negation *)

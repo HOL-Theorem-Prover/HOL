@@ -579,7 +579,7 @@ fun measure_constructorFamily (cf : constructorFamily) col = let
     #cl_constructors (#constructors cf))
 
   fun row_is_missed (vs, p) =
-    if (is_var p andalso mem p vs) then
+    if is_var p andalso tmem p vs then
       (* bound variables are fine *)
       false
     else let
@@ -636,8 +636,9 @@ end
 fun lookup_constructorFamily force_exh (db : pmatch_compile_db) col = let
   val _ = if (List.null col) then (failwith "constructorFamiliesLib" "lookup_constructorFamilies: null col") else ()
 
-  val _ = if List.all (fn (vs, c) => is_var c andalso Lib.mem c vs) col then
-            (failwith "constructorFamiliesLib" "lookup_constructorFamilies: var col")
+  val _ = if List.all (fn (vs, c) => is_var c andalso tmem c vs) col then
+            (failwith "constructorFamiliesLib"
+                      "lookup_constructorFamilies: var col")
           else ()
 
   val ty = type_of (snd (hd col))

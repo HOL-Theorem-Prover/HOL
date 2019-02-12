@@ -49,13 +49,13 @@ let
    val (l_f, l_args) = strip_comb l_term;
    fun split_vars [] acc = ([], acc)
      | split_vars (t::ts) acc =
-       if mem t vars then
+       if tmem t vars then
            split_vars ts (t::acc)
        else
            (rev (t::ts), acc)
-   val (rest_args, elim_args) = split_vars (rev l_args) [];
-   val _ = if (elim_args = []) then raise UNCHANGED else ();
-   val rest_vars = filter (fn v => not (mem v elim_args)) vars;
+   val (rest_args, elim_args) = split_vars (rev l_args) []
+   val _ = if null elim_args then raise UNCHANGED else ()
+   val rest_vars = filter (fn v => not (tmem v elim_args)) vars
 
    val l_term' = list_mk_comb (l_f, rest_args);
    val r_term' = list_mk_abs (elim_args, r_term);

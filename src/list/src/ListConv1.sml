@@ -216,7 +216,7 @@ fun itfn cnv [leq,lne,nel] (h1,h2) th =
    else let val {lhs=l1,rhs=l2} = dest_eq(concl th)
             val heq = cnv (mk_eq{lhs=h1,rhs=h2})
         in
-        if (rand(concl heq) = T)
+        if Teq (rand(concl heq))
         then let val th1 = MP (SPEC h2 (SPEC h1 leq)) (EQT_ELIM heq)
              in  MP (SPEC l2 (SPEC l1 th1)) th
              end
@@ -231,8 +231,7 @@ fun list_EQ_CONV cnv tm =
        val l1 = fst(dest_list lhs)
        val l2 = fst(dest_list rhs)
    in
-   if (l1=l2)
-   then EQT_INTRO(REFL (rand tm))
+   if tmleq l1 l2 then EQT_INTRO(REFL (rand tm))
    else let val ty = case dest_type(type_of(rand tm))
                      of {Args=[ty],...} => ty
                       | _ => raise ERR "list_EQ_CONV" ""
@@ -523,7 +522,7 @@ val list_FOLD_CONV =
         val const = fst(strip_comb left)
         val f = #Name(dest_const(fst(strip_comb right)))
     in
-    if (not(cname = const))
+    if not (aconv cname const)
         then raise ERR"list_FOLD_CONV"
                    ("theorem and term are different:"^
                     (term_to_string cname)^" vs "^(term_to_string const))
@@ -791,7 +790,9 @@ val MAP2_CONV =
 (* |- ALL_EL P [x0,...,xn] = F otherwise                                 *)
 (* --------------------------------------------------------------------- *)
 
-fun thm_eq th1 th2 = (Thm.dest_thm th1 = Thm.dest_thm th2);
+fun thm_eq th1 th2 =
+  pair_compare (list_compare Term.compare, Term.compare)
+               (dest_thm th1, dest_thm th2) = EQUAL
 
 val ALL_EL_CONV =
     let val (bth,ith) = CONJ_PAIR (rich_listTheory.ALL_EL)

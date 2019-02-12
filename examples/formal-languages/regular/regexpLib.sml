@@ -158,15 +158,16 @@ fun hol_matcher r =
           val dfa_thm2 = dfa_thm1
           val _ = stdErr_print ("Running DFA on string: "^Lib.quote s^" ... ")
           val dfa_exec_thm = regexpEval (lhs(concl dfa_thm2))
-          val verdict = (boolSyntax.T = rhs(concl dfa_exec_thm))
-          val _ = if verdict then stdErr_print "accepted.\n" else stdErr_print "rejected.\n"
+          val verdict = Teq (rhs(concl dfa_exec_thm))
+          val _ = if verdict then stdErr_print "accepted.\n"
+                  else stdErr_print "rejected.\n"
       in
         verdict
       end
      val eq_tm = snd(strip_forall (concl dfa_thm))
      val (_,[final,table,start,_]) = strip_comb(boolSyntax.lhs eq_tm)
-     val ifinal = List.map (equal boolSyntax.T)
-                  (fst(listSyntax.dest_list (dest_vector final)))
+     val ifinal = List.map (aconv boolSyntax.T)
+                           (fst(listSyntax.dest_list (dest_vector final)))
      val istart = numSyntax.int_of_term start
      val rows1 = dest_vector table
      fun dest_row row =

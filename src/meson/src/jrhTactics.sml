@@ -100,7 +100,7 @@ structure jrhTactics :> jrhTactics =
     fun FIRST_ASSUM ttac (asl, g) = tryfind (fn th => ttac th (asl, g)) asl
 
     fun UNDISCH_THEN tm ttac (asl,g) =
-      let val (th, asl') = Lib.pluck (fn th => concl th = tm) asl
+      let val (th, asl') = Lib.pluck (fn th => aconv (concl th) tm) asl
       in ttac th (asl', g)
       end
 
@@ -129,12 +129,10 @@ structure jrhTactics :> jrhTactics =
       end
       handle HOL_ERR _ => raise ERR "X_CHOOSE_TAC" ""
 
-    fun thm_frees thm =
-      itlist (union o free_vars) (hyp thm) (free_vars (concl thm))
-
     fun CHOOSE_TAC xth (asl, g) =
       let val x = fst (dest_exists (concl xth))
-          handle HOL_ERR _ => raise ERR "CHOOSE_TAC" ""
+                  handle HOL_ERR _ => raise ERR "CHOOSE_TAC" ""
+          val union = op_union aconv
           val avoids = itlist (union o free_vars o concl) asl
                               (union (free_vars g) (thm_frees xth))
           val newvar = variant avoids x

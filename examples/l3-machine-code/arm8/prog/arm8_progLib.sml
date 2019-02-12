@@ -127,7 +127,7 @@ in
             Conv.CONV_RULE cnv
                (Drule.SPECL [a, pc_tm, x, y] arm8_progTheory.DISJOINT_arm_instr)
       in
-         if Thm.concl thm = tm
+         if Thm.concl thm ~~ tm
             then Drule.EQT_INTRO thm
          else raise err
       end
@@ -136,7 +136,7 @@ end
 local
    fun is_pc_relative tm =
       case Lib.total dest_arm8_MEM tm of
-         SOME (t, _) => fst (utilsLib.strip_add_or_sub t) = pc_tm
+         SOME (t, _) => fst (utilsLib.strip_add_or_sub t) ~~ pc_tm
        | NONE => false
    fun rwt (w, a) =
       [Drule.SPECL [a, w] arm8_progTheory.MOVE_TO_TEMPORAL_ARM_CODE_POOL,
@@ -218,7 +218,7 @@ local
          ("arm8$ProcState_C_fupd", "arm8_PSTATE_C"),
          ("arm8$ProcState_V_fupd", "arm8_PSTATE_V")
          ] [] []
-        (fn (s, l) => s = "arm8$arm8_state_PSTATE" andalso l = [st])
+        (fn (s, l) => s = "arm8$arm8_state_PSTATE" andalso tmleq l [st])
 in
    val arm_write_footprint =
       stateLib.write_footprint arm_1 arm_2
@@ -400,6 +400,8 @@ in
       end
 end
 
+fun tdistinct tl = HOLset.numItems (listset tl) = length tl
+
 local
    val rwt = utilsLib.map_conv (SIMP_CONV bool_ss [])
                [``if b then x else T``, ``if b then x else F``]
@@ -408,13 +410,13 @@ local
          val p = progSyntax.strip_star (temporal_stateSyntax.dest_pre' tm)
          val rp = List.mapPartial (Lib.total (fst o dest_arm8_REG)) p
       in
-         if Lib.mk_set rp = rp
+         if tdistinct rp
             then Conv.ALL_CONV tm
          else raise ERR "check_unique_reg_CONV" "duplicate register"
       end
    exception FalseTerm
    fun NOT_F_CONV tm =
-      if tm = boolSyntax.F then raise FalseTerm else Conv.ALL_CONV tm
+      if Feq tm then raise FalseTerm else Conv.ALL_CONV tm
    fun is_reducible tm =
       case Lib.total boolSyntax.dest_strip_comb tm of
          SOME ("arm8$LSL", [_]) => true
@@ -556,7 +558,7 @@ local
          SOME (c, v, _) =>
            (Lib.total wordsSyntax.uint_of_word v = SOME 0 andalso
             case Lib.total boolSyntax.dest_eq c of
-               SOME (l, r) => r = v31 andalso bitstringSyntax.is_v2w l
+               SOME (l, r) => r ~~ v31 andalso bitstringSyntax.is_v2w l
              | NONE => false)
        | NONE => false
    fun all_assigns acc =
@@ -570,7 +572,7 @@ in
    fun split_on_31 th =
       let
          val tm = boolSyntax.list_mk_conj (Thm.concl th :: Thm.hyp th)
-         val l = Lib.mk_set (HolKernel.find_terms is_cond_31 tm)
+         val l = Lib.op_mk_set aconv (HolKernel.find_terms is_cond_31 tm)
       in
          if List.null l
             then [th]
