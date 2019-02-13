@@ -194,7 +194,7 @@ val th1_bushy_dir = hh_dir ^ "/export_th1_bushy"
 fun th1_export_bushy thyl =
   let 
     val thyorder = sorted_ancestry thyl 
-    val dir = (mkDir_err th1_bushy_dir; th1_bushy_dir)
+    val dir = th1_bushy_dir
     fun f thy =
       write_thy_bushy dir th1_translate_thm 
         (uniq_cvdef_arity o uniq_cvdef_mgc)
@@ -210,7 +210,7 @@ val th1_chainy_dir = hh_dir ^ "/export_th1_chainy"
 fun th1_export_chainy thyl =
   let 
     val thyorder = sorted_ancestry thyl 
-    val dir = (mkDir_err th1_chainy_dir; th1_chainy_dir)
+    val dir = th1_chainy_dir
     fun f thy =
       write_thy_chainy dir thyorder th1_translate_thm 
         (uniq_cvdef_arity o uniq_cvdef_mgc)
@@ -222,6 +222,14 @@ fun th1_export_chainy thyl =
     mkDir_err dir; app f thyorder
   end
 
-(* load "hhExportTh1"; open hhExportTh1; th1_export_bushy ["arithmetic"]; *)
+(* load "hhExportTh1"; open hhExportTh1; th1_export_bushy ["bool"]; *)
+
+(* Full export 
+load "hhExportTh1"; open hhExportTh1;
+load "tttUnfold"; tttUnfold.load_sigobj ();
+val thyl = ancestry (current_theory ());
+th1_export_bushy thyl;
+*)
+
 
 end (* struct *)

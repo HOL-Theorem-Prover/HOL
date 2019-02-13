@@ -154,9 +154,9 @@ val hocaster_extra = "extra-ho" (* fake theory for these theorems *)
 fun fof_boolext oc = 
   let val (v0,v1) = (mk_var ("V0",bool),mk_var ("V1",bool)) in
     fof_quant_vl oc "!" [v0,v1];
-    os oc "(("; fof_pred oc v0; oc os " <=> "; fof_pred oc v1; os oc ")";
+    os oc "(("; fof_pred oc v0; os oc " <=> "; fof_pred oc v1; os oc ")";
     os oc " => ";
-    os oc "("; fof_term oc v0; oc os " = "; fof_term oc v1; os oc "))"
+    os oc "("; fof_term oc v0; os oc " = "; fof_term oc v1; os oc "))"
   end
 
 fun fof_thmdef_boolext oc =
@@ -211,7 +211,7 @@ val fof_bushy_dir = hh_dir ^ "/export_fof_bushy"
 fun fof_export_bushy thyl =
   let 
     val thyorder = sorted_ancestry thyl 
-    val dir = (mkDir_err fof_bushy_dir; fof_bushy_dir)
+    val dir = fof_bushy_dir
     fun f thy =
       write_thy_bushy dir fof_translate_thm uniq_cvdef_mgc 
        (tyopl_extra,cval_extra)
@@ -226,7 +226,7 @@ val fof_chainy_dir = hh_dir ^ "/export_fof_chainy"
 fun fof_export_chainy thyl =
   let 
     val thyorder = sorted_ancestry thyl 
-    val dir = (mkDir_err fof_chainy_dir; fof_chainy_dir)
+    val dir = fof_chainy_dir
     fun f thy =
       write_thy_chainy dir thyorder fof_translate_thm uniq_cvdef_mgc
         (tyopl_extra,cval_extra)
@@ -238,5 +238,12 @@ fun fof_export_chainy thyl =
   end
 
 (* load "hhExportFof"; open hhExportFof; fof_export_bushy ["arithmetic"]; *)
+
+(* Full export 
+  load "hhExportFof"; open hhExportFof;
+  load "tttUnfold"; tttUnfold.load_sigobj ();
+  val thyl = ancestry (current_theory ());
+  fof_export_bushy thyl;
+*)
 
 end (* struct *)

@@ -293,7 +293,7 @@ val tf1_bushy_dir = hh_dir ^ "/export_tf1_bushy"
 fun tf1_export_bushy thyl =
   let 
     val thyorder = sorted_ancestry thyl 
-    val dir = (mkDir_err tf1_bushy_dir; tf1_bushy_dir)
+    val dir = tf1_bushy_dir
     fun f thy =
       write_thy_bushy dir tff_translate_thm uniq_cvdef_mgc 
        (tyopl_extra,cval_extra)
@@ -308,7 +308,7 @@ val tf1_chainy_dir = hh_dir ^ "/export_tf1_chainy"
 fun tf1_export_chainy thyl =
   let 
     val thyorder = sorted_ancestry thyl 
-    val dir = (mkDir_err tf1_chainy_dir; tf1_chainy_dir)
+    val dir = tf1_chainy_dir
     fun f thy =
       write_thy_chainy dir thyorder tff_translate_thm uniq_cvdef_mgc
         (tyopl_extra,cval_extra)

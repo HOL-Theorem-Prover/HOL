@@ -250,7 +250,7 @@ fun tf0_thmdef_extra oc =
 
 (* todo: declare types as constants in domains *)
 
-val tyopl_extra = []
+val tyopl_extra = tyopl_of_tyl [``:bool -> bool``]
 
 val app_p_cval =
   let val tml = map (fst o fof_translate_thm o snd) (app_axioml @ p_axioml) in
@@ -285,7 +285,7 @@ val tf0_bushy_dir = hh_dir ^ "/export_tf0_bushy"
 fun tf0_export_bushy thyl =
   let 
     val thyorder = sorted_ancestry thyl 
-    val dir = (mkDir_err tf0_bushy_dir; tf0_bushy_dir)
+    val dir = tf0_bushy_dir
     fun f thy =
       write_thy_bushy dir fof_translate_thm uniq_cvdef_mgc 
        (tyopl_extra,cval_extra)
@@ -300,7 +300,7 @@ val tf0_chainy_dir = hh_dir ^ "/export_tf0_chainy"
 fun tf0_export_chainy thyl =
   let 
     val thyorder = sorted_ancestry thyl 
-    val dir = (mkDir_err tf0_chainy_dir; tf0_chainy_dir)
+    val dir = tf0_chainy_dir
     fun f thy =
       write_thy_chainy dir thyorder fof_translate_thm uniq_cvdef_mgc
         (tyopl_extra,cval_extra)
@@ -311,6 +311,6 @@ fun tf0_export_chainy thyl =
     mkDir_err dir; app f thyorder
   end
 
-(* load "hhExportTf0"; open hhExportTf0; tf0_export_bushy ["arithmetic"]; *)
+(* load "hhExportTf0"; open hhExportTf0; tf0_export_bushy ["bool"]; *)
 
 end (* struct *)
