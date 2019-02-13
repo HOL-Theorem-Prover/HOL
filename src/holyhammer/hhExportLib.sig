@@ -85,6 +85,7 @@ include Abbrev
     (thm -> term * term list) ->
     ((term * int) list -> (term * int) list) ->
     ((string * string) * int) list * (term * int) list ->
+      (TextIO.outstream -> unit) *
       (TextIO.outstream -> (string * string) * int -> unit) *
       (TextIO.outstream -> unit) *
       (TextIO.outstream -> (term * int) -> unit) *
@@ -97,6 +98,7 @@ include Abbrev
     (thm -> term * term list) ->
     ((term * int) list -> (term * int) list) ->
     ((string * string) * int) list * (term * int) list ->
+      (TextIO.outstream -> unit) *
       (TextIO.outstream -> (string * string) * int -> unit) *
       (TextIO.outstream -> unit) *
       (TextIO.outstream -> term * int -> unit) *

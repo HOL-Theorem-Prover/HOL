@@ -287,7 +287,8 @@ fun compare_namethm ((_,th1),(_,th2)) =
    ------------------------------------------------------------------------- *)
 
 fun write_cj dir f_translate uniq_def (tyopl_extra,cval_extra)
-  (f_tyopdef,f_cvdef_extra,f_cvdef,f_thmdef_extra,f_arityeq,f_thmdef)
+  (f_tyopdef_extra,
+   f_tyopdef,f_cvdef_extra,f_cvdef,f_thmdef_extra,f_arityeq,f_thmdef)
   (thmid,depl) =
   let 
     val file = dir ^ "/" ^ name_thm thmid ^ ".p"
@@ -302,6 +303,7 @@ fun write_cj dir f_translate uniq_def (tyopl_extra,cval_extra)
       (List.concat (cval_extra :: #cval cjinfo :: map #cval axinfol))
   in
     (
+    f_tyopdef_extra oc;
     app (f_tyopdef oc) tyopl;
     f_cvdef_extra oc;
     app (f_cvdef oc) (uniq_def cval);

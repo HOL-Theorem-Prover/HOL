@@ -205,6 +205,8 @@ fun fof_arityeq oc (cv,a) =
    Export
    ------------------------------------------------------------------------- *)
 
+fun fof_tyopdef_extra oc = ()
+
 val fof_bushy_dir = hh_dir ^ "/export_fof_bushy"
 fun fof_export_bushy thyl =
   let 
@@ -213,7 +215,7 @@ fun fof_export_bushy thyl =
     fun f thy =
       write_thy_bushy dir fof_translate_thm uniq_cvdef_mgc 
        (tyopl_extra,cval_extra)
-       (fof_tyopdef, fof_cvdef_extra, fof_cvdef, 
+       (fof_tyopdef_extra, fof_tyopdef, fof_cvdef_extra, fof_cvdef, 
         fof_thmdef_extra, fof_arityeq, fof_thmdef)
       thy
   in
@@ -228,7 +230,7 @@ fun fof_export_chainy thyl =
     fun f thy =
       write_thy_chainy dir thyorder fof_translate_thm uniq_cvdef_mgc
         (tyopl_extra,cval_extra)
-        (fof_tyopdef, fof_cvdef_extra, fof_cvdef, 
+        (fof_tyopdef_extra, fof_tyopdef, fof_cvdef_extra, fof_cvdef, 
          fof_thmdef_extra, fof_arityeq, fof_thmdef)
       thy
   in

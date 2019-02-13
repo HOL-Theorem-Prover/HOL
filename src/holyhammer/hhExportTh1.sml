@@ -184,6 +184,8 @@ fun th1_thmdef_extra oc =
 
 fun th1_arityeq oc (cv,a) = ()
 
+fun th1_tyopdef_extra oc = ()
+
 (* -------------------------------------------------------------------------
    Export
    ------------------------------------------------------------------------- *)
@@ -197,7 +199,7 @@ fun th1_export_bushy thyl =
       write_thy_bushy dir th1_translate_thm 
         (uniq_cvdef_arity o uniq_cvdef_mgc)
         (tyopl_extra,cval_extra)
-        (th1_tyopdef, th1_cvdef_extra, th1_cvdef, 
+        (th1_tyopdef_extra, th1_tyopdef, th1_cvdef_extra, th1_cvdef, 
          th1_thmdef_extra, th1_arityeq, th1_thmdef)
       thy
   in
@@ -213,7 +215,7 @@ fun th1_export_chainy thyl =
       write_thy_chainy dir thyorder th1_translate_thm 
         (uniq_cvdef_arity o uniq_cvdef_mgc)
         (tyopl_extra,cval_extra)
-        (th1_tyopdef, th1_cvdef_extra, th1_cvdef, 
+        (th1_tyopdef_extra, th1_tyopdef, th1_cvdef_extra, th1_cvdef, 
          th1_thmdef_extra, th1_arityeq, th1_thmdef)
       thy
   in

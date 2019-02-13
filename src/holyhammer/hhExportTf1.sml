@@ -287,6 +287,8 @@ fun tf1_arityeq oc (cv,a) =
    Export
    ------------------------------------------------------------------------- *)
 
+fun tf1_tyopdef_extra oc = ()
+
 val tf1_bushy_dir = hh_dir ^ "/export_tf1_bushy"
 fun tf1_export_bushy thyl =
   let 
@@ -295,7 +297,7 @@ fun tf1_export_bushy thyl =
     fun f thy =
       write_thy_bushy dir tff_translate_thm uniq_cvdef_mgc 
        (tyopl_extra,cval_extra)
-       (tf1_tyopdef, tf1_cvdef_extra, tf1_cvdef, 
+       (tf1_tyopdef_extra, tf1_tyopdef, tf1_cvdef_extra, tf1_cvdef, 
         tf1_thmdef_extra, tf1_arityeq, tf1_thmdef)
       thy
   in
@@ -310,7 +312,7 @@ fun tf1_export_chainy thyl =
     fun f thy =
       write_thy_chainy dir thyorder tff_translate_thm uniq_cvdef_mgc
         (tyopl_extra,cval_extra)
-        (tf1_tyopdef, tf1_cvdef_extra, tf1_cvdef, 
+        (tf1_tyopdef_extra, tf1_tyopdef, tf1_cvdef_extra, tf1_cvdef, 
          tf1_thmdef_extra, tf1_arityeq, tf1_thmdef)
       thy
   in

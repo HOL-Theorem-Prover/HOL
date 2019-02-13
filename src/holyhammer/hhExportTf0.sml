@@ -131,7 +131,18 @@ fun tf0_quantdef oc (thy,name) =
 fun tf0_tyopdef_polyw oc tf0name =
   osn oc (tffpar ^ tf0name ^ ",type," ^ tf0name ^ ":" ^ ttype ^ ").")
 
-fun tf0_tyopdef oc ((thy,tyop),arity) = ()
+fun tf0_polyw_tyopty a =
+  if a <= 0 then dtype 
+  else if a = 1 then dtype ^ " > " ^ dtype 
+  else 
+    "(" ^ String.concatWith " * " (List.tabulate (a,fn _ => dtype)) ^ ")"
+    ^ " > " ^ dtype
+
+fun tf0_tyopdef oc ((thy,tyop),a) = 
+  let val tf0name = name_tyop (thy,tyop) in
+    (os oc (tffpar ^ tf0name ^ ",type," ^ tf0name ^ ":");
+     os oc (tf0_polyw_tyopty a); osn oc ").")
+  end
 
 (* Constants *)
 fun tf0_polyw_cvty a =
@@ -169,6 +180,8 @@ fun tf0_thmdef role oc (thy,name) =
    Higher-order constants + sort function
    ------------------------------------------------------------------------- *)
 
+fun tf0_tyopdef_extra oc = app (tf0_tyopdef_polyw oc) polyw_typel;
+
 fun tf0_cdef_app oc = 
   let
     val a = 2
@@ -190,8 +203,7 @@ fun tf0_cdef_s oc =
   end 
 
 fun tf0_cvdef_extra oc =
-  (app (tf0_tyopdef_polyw oc) polyw_typel; (* hack: exporting types here *)
-   tf0_cdef_s oc; tf0_cdef_app oc; tf0_cdef_p oc) 
+  (tf0_cdef_s oc; tf0_cdef_app oc; tf0_cdef_p oc) 
 
 (* -------------------------------------------------------------------------
    Higher-order theorems
@@ -275,9 +287,9 @@ fun tf0_export_bushy thyl =
     val thyorder = sorted_ancestry thyl 
     val dir = (mkDir_err tf0_bushy_dir; tf0_bushy_dir)
     fun f thy =
-      write_thy_bushy dir tff_translate_thm uniq_cvdef_mgc 
+      write_thy_bushy dir fof_translate_thm uniq_cvdef_mgc 
        (tyopl_extra,cval_extra)
-       (tf0_tyopdef, tf0_cvdef_extra, tf0_polyw_cvdef, 
+       (tf0_tyopdef_extra, tf0_tyopdef, tf0_cvdef_extra, tf0_polyw_cvdef, 
         tf0_thmdef_extra, tf0_arityeq, tf0_thmdef)
       thy
   in
@@ -290,9 +302,9 @@ fun tf0_export_chainy thyl =
     val thyorder = sorted_ancestry thyl 
     val dir = (mkDir_err tf0_chainy_dir; tf0_chainy_dir)
     fun f thy =
-      write_thy_chainy dir thyorder tff_translate_thm uniq_cvdef_mgc
+      write_thy_chainy dir thyorder fof_translate_thm uniq_cvdef_mgc
         (tyopl_extra,cval_extra)
-        (tf0_tyopdef, tf0_cvdef_extra, tf0_polyw_cvdef, 
+        (tf0_tyopdef_extra, tf0_tyopdef, tf0_cvdef_extra, tf0_polyw_cvdef, 
          tf0_thmdef_extra, tf0_arityeq, tf0_thmdef)
       thy
   in
