@@ -218,7 +218,7 @@ local
          ("arm8$ProcState_C_fupd", "arm8_PSTATE_C"),
          ("arm8$ProcState_V_fupd", "arm8_PSTATE_V")
          ] [] []
-        (fn (s, l) => s = "arm8$arm8_state_PSTATE" andalso tmleq l [st])
+        (fn (s, l) => s = "arm8$arm8_state_PSTATE" andalso tml_eq l [st])
 in
    val arm_write_footprint =
       stateLib.write_footprint arm_1 arm_2

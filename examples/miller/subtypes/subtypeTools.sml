@@ -695,7 +695,7 @@ local
       val tm' = fold (C (curry mk_comb)) tm_pretty_abs bvars
       val tm_th = QCONV (N n (fn c => RATOR_CONV c THENC BETA_CONV) ALL_CONV) tm'
       val (r_var, r_bvs) = list_dest_comb r
-      val _ = assert (tmleq bvars (rev r_bvs)) (BUG "match_align" "bvar panic")
+      val _ = assert (tml_eq bvars (rev r_bvs)) (BUG "match_align" "bvar panic")
       val res = (([r_var |-> tm_pretty_abs], []), SYM tm_th)
     in
       res

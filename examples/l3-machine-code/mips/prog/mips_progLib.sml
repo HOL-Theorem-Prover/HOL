@@ -177,7 +177,7 @@ local
          [("mips$StatusRegister_ERL_fupd", "mips_CP0_Status_ERL"),
           ("mips$StatusRegister_EXL_fupd", "mips_CP0_Status_EXL")]
          []
-         (fn (s, l) => s = "mips$CP0_Status" andalso tmleq l [``^st.CP0``])
+         (fn (s, l) => s = "mips$CP0_Status" andalso tml_eq l [``^st.CP0``])
    val cp0_write_footprint =
       stateLib.write_footprint mips_1 mips_2 []
          [("mips$CP0_Cause_fupd", "mips_CP0_Cause"),
@@ -187,12 +187,12 @@ local
           ("mips$CP0_ErrCtl_fupd", "mips_CP0_ErrCtl")]
          [("mips$CP0_Count_fupd", "mips_CP0_Count")]
          [("mips$CP0_Status_fupd", cp0_status_write_footprint)]
-         (fn (s, l) => s = "mips$mips_state_CP0" andalso tmleq l [st])
+         (fn (s, l) => s = "mips$mips_state_CP0" andalso tml_eq l [st])
    val fcsr_write_footprint =
       stateLib.write_footprint mips_1 mips_2 [] []
          [("mips$FCSR_FCC_fupd", "mips_fcsr_FCC")]
          []
-         (fn (s, l) => s = "mips$mips_state_fcsr" andalso tmleq l [st])
+         (fn (s, l) => s = "mips$mips_state_fcsr" andalso tml_eq l [st])
 in
    val mips_write_footprint =
       stateLib.write_footprint mips_1 mips_2

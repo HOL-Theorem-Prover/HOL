@@ -362,7 +362,7 @@ fun glob_productive pardict trydict g glo =
     NONE => NONE
   | SOME gl =>
     (
-    if op_mem goaleq g gl orelse exists (fn x => dmem x pardict) gl orelse
+    if op_mem goal_eq g gl orelse exists (fn x => dmem x pardict) gl orelse
        dmem gl trydict
     then NONE
     else SOME gl

@@ -602,7 +602,7 @@ fun new_vars (tm_vars, ty_vars) =
     ((map (inst_ty ty_old_to_new) tm_gvars, ty_gvars), (old_to_new, new_to_old))
   end;
 
-val vars_eq : vars eqf = pair_eq tmleq equal
+val vars_eq : vars eqf = pair_eq tml_eq equal
 fun vars_union (tml1, tyl1) (tml2, tyl2) =
   (tunion tml1 tml2, union tyl1 tyl2)
 

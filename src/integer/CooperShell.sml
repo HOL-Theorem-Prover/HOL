@@ -582,7 +582,7 @@ in
         SOME vset => let
           fun my_constraint tm =
               is_divides tm andalso
-              tmleq (canonicalise_varsets (free_vars (#2 (dest_divides tm))))
+              tml_eq (canonicalise_varsets (free_vars (#2 (dest_divides tm))))
                     vset
           val (var_to_eliminate, var_to_keep) =
               find_triangle_eliminable

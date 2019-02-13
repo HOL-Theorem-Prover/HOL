@@ -376,7 +376,7 @@ fun is_vconstraint v tm = let
   val (f, args) = strip_comb tm
 in
   f ~~ constraint_tm andalso length args = 2 andalso
-  tmleq (free_vars (hd (tl args))) [v]
+  tml_eq (free_vars (hd (tl args))) [v]
 end
 fun constraint_var tm = rand tm
 val lhand = rand o rator
@@ -510,7 +510,7 @@ fun simple_divides var tm = let
      free variable is the parameter var *)
   val (l,r) = dest_divides tm
 in
-  tmleq (free_vars r) [var]
+  tml_eq (free_vars r) [var]
 end handle HOL_ERR _ => false
 
 

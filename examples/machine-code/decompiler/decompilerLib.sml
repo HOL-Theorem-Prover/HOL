@@ -1273,7 +1273,7 @@ fun GUIDED_INST_EXISTS_TAC finder1 cc2 (hs,goal) = let
   val zs = dest_tuple rhs
   val _ = if length zs = length ys then () else hd []
   val cond_var = mk_var("cond",``:bool``)
-  in (if tmleq ys [cond_var] then ALL_TAC (hs,goal)
+  in (if tml_eq ys [cond_var] then ALL_TAC (hs,goal)
       else CONV_TAC (cc2 (SUBST_EXISTS_CONV ys zs)) (hs,goal)) end
   handle e => let
     val _ = print "\n\nGUIDED_INST_EXISTS_TAC should not fail.\n\nGoal:\n\n"

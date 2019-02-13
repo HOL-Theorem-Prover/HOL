@@ -1973,7 +1973,7 @@ fun col_get_constr_set db (_, rows) =
     SOME (cL_rows'', cL_cf, exh)
   end
 
-fun tmltm_eq (tml1,tm1) (tml2,tm2) = tmleq tml1 tml2 andalso tm1 ~~ tm2
+fun tmltm_eq (tml1,tm1) (tml2,tm2) = tml_eq tml1 tml2 andalso tm1 ~~ tm2
 fun col_get_nonvar_set (_, rows) =
   let
      val cL' = List.filter (fn (vs, p) => not (is_var p andalso tmem p vs)) rows

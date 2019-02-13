@@ -22,7 +22,7 @@ val tactic_time = 0.1
    Tests
    ------------------------------------------------------------------------- *)
 
-val glopt_eq = option_eq (list_eq goaleq)
+val glopt_eq = option_eq (list_eq goal_eq)
 
 fun same_effect tim stac1 stac2 g =
   let

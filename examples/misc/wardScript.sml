@@ -213,7 +213,7 @@ in
       val possibilities2 = find_app_matches db app_args2
       fun nilf t = if listSyntax.is_nil t then [] else [t]
       fun check (p1, (_, (res1, _)), s1) (p2, (_, (res2, _)), s2) =
-          tmleq (p1 @ nilf res1 @ s1) (p2 @ nilf res2 @ s2)
+          tml_eq (p1 @ nilf res1 @ s1) (p2 @ nilf res2 @ s2)
       fun checkl t = List.mapPartial (fn t' => if check t t' then SOME (t,t')
                                                else NONE)
       fun checkll [] p2 = []

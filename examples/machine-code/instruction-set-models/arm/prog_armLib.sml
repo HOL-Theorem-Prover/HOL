@@ -76,7 +76,7 @@ fun arm_pre_post s g = let
                    ``(r15:word32,(n2w (c:num)):word32)``
   fun is_pc_relative tm = tmem (mk_var("r15",``:word32``)) (free_vars tm)
   val mems_pc_rel = filter is_pc_relative mems
-  val has_read_from_mem = (tmleq mems_pc_rel mems) andalso (length mems = 4)
+  val has_read_from_mem = (tml_eq mems_pc_rel mems) andalso (length mems = 4)
   val (mems,assignments,code) =
     if not has_read_from_mem then
       (mems,assignments,subst [mk_var("x",``:word32#word32``)|->code] ``{x:word32#word32}``)

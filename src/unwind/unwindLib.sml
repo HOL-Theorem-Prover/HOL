@@ -515,7 +515,7 @@ fun op_set_eq eqf l1 l2 =
 fun equal_loops lp1 lp2 =
    if (op_set_eq aconv lp1 lp2)
    then let val (befre,rest) = chop_at (Lib.trye hd lp1) lp2
-        in tmleq lp1 (rest @ befre)
+        in tml_eq lp1 (rest @ befre)
         end
    else false
 

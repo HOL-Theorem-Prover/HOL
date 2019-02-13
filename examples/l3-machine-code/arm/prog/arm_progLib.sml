@@ -301,7 +301,7 @@ local
    val cpsr_footprint =
       stateLib.write_footprint arm_1 arm_2 []
         (mk_rec ("PSR", "CPSR") PSR_components) [] []
-        (fn (s, l) => s = "arm$arm_state_CPSR" andalso tmleq l [st])
+        (fn (s, l) => s = "arm$arm_state_CPSR" andalso tml_eq l [st])
    val fpscr_footprint =
       stateLib.write_footprint arm_1 arm_2 []
         (mk_rec ("FPSCR", "FP_FPSCR") FPSCR_components) [] []
@@ -310,7 +310,7 @@ local
       stateLib.write_footprint arm_1 arm_2
         [("arm$FP_REG_fupd", "arm_FP_REG", ``^st.FP.REG``)] [] []
         [("arm$FP_FPSCR_fupd", fpscr_footprint)]
-        (fn (s, l) => s = "arm$arm_state_FP" andalso tmleq l [st])
+        (fn (s, l) => s = "arm$arm_state_FP" andalso tml_eq l [st])
 in
    val arm_write_footprint =
       stateLib.write_footprint arm_1 arm_2
@@ -778,7 +778,7 @@ local
          val opt = process_rule_options options
          val cfg = arm_configLib.mk_config_terms config
       in
-         if tmleq (!current_config) cfg andalso
+         if tml_eq (!current_config) cfg andalso
             #temporal (get_current_opt ()) = #temporal opt
             then ()
          else ( reset_specs ()

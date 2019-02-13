@@ -240,7 +240,7 @@ local
          ("m0$PSR_Z_fupd", "m0_PSR_Z"),
          ("m0$PSR_C_fupd", "m0_PSR_C"),
          ("m0$PSR_V_fupd", "m0_PSR_V")] [] []
-        (fn (s, l) => s = "m0$m0_state_PSR" andalso tmleq l [st])
+        (fn (s, l) => s = "m0$m0_state_PSR" andalso tml_eq l [st])
 in
    val m0_write_footprint =
       stateLib.write_footprint m0_1 m0_2

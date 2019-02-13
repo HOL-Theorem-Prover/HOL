@@ -1218,7 +1218,7 @@ local
          val pt = Drule.EQT_INTRO (Thm.ASSUME b)
          val nt = Drule.EQF_INTRO (Thm.ASSUME nb)
          val pth = PURE_REWRITE_RULE [pt, boolTheory.COND_CLAUSES] th
-         val _ = tmleq (Thm.hyp pth) [b] orelse raise ERR "spec_cases" ""
+         val _ = tml_eq (Thm.hyp pth) [b] orelse raise ERR "spec_cases" ""
          val nth = PURE_REWRITE_RULE [nt, boolTheory.COND_CLAUSES] th
          val r = rule pre
       in

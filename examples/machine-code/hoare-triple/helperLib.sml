@@ -850,7 +850,7 @@ fun HIDE_STATUS_RULE in_post hide_th th = let
   val th = RW [hide_th,STAR_ASSOC] th
   val (_,p,_,_) = dest_spec (concl th)
   val ys = filter (fn x => not (can (find_term (fn y => x ~~ y)) p)) xs
-  val ys = if tmleq ys xs then [] else ys
+  val ys = if tml_eq ys xs then [] else ys
   val ys = if can (find_term (fn x => s ~~ x)) p then [] else map mk_sep_hide ys
   val th = SPEC_FRAME_RULE th (list_mk_star ys (type_of s))
   val th = SIMP_RULE std_ss [SEP_CLAUSES,STAR_ASSOC] th

@@ -114,7 +114,7 @@ fun test_stac g gl (stac, istac) =
     )
   in
     case glo of NONE => NONE | SOME newgl =>
-      (if op_subset goaleq newgl gl then
+      (if op_subset goal_eq newgl gl then
          SOME (stac,0.0,g,newgl)
        else NONE)
   end

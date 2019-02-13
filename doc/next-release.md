@@ -107,7 +107,9 @@ Incompatibilities:
     If broken code is directly calling `=` on terms, the `~~` infix operator can be used instead (this is the tupled version of `aconv`).
     Similarly, `<>` can be replaced by `!~`.
     If broken code includes something like `expr <> NONE` and `expr` has type `term option`, then combinators from `Portable` for building equality tests should be used.
-    In particular, the above could be rewritten to `not (option_eq aconv expr NONE)`.
+    In particular, the above could be rewritten to
+
+           not (option_eq aconv expr NONE)
 
     It is possible that a tool will want to compare terms for exact syntactic equality up to choice of bound names.
     The `identical` function can be used for this.
@@ -118,8 +120,9 @@ Incompatibilities:
     For example
 
            val memt : term list -> term -> bool
-           val goaleq : (term list * term) -> (term list * term) -> bool
+           val goal_eq : (term list * term) -> (term list * term) -> bool
            val tassoc : term -> (term * ‘a) list -> ‘a
+           val xtm_eq : (‘’a * term) -> (‘’a * term) -> bool
 
 *   The `Holmake` tool now behaves with the `--qof` behaviour enabled by default.
     This means that script files which have a tactic failure occur will cause the building of the corresponding theory to fail, rather than having the build continue with the theorem “cheated”.

@@ -643,8 +643,8 @@ fun elim_double_guesses_int r [] = r
   | elim_double_guesses_int r ((((i:term, fvL),g)::gL)::gLL) =
 let
    val already_present =
-       tmleq fvL [i] orelse
-       exists (fn ((i', fvL'), _) => i ~~ i' andalso tmleq fvL fvL') r
+       tml_eq fvL [i] orelse
+       exists (fn ((i', fvL'), _) => i ~~ i' andalso tml_eq fvL fvL') r
    val r' = if already_present then r else ((i, fvL), g)::r
 in
    elim_double_guesses_int r' (gL::gLL)
@@ -1726,7 +1726,7 @@ local
           RATOR_CONV (fL_BETA_CONV fL)
      | fL_BETA_CONV (false::fL) =
           RATOR_CONV (fL_BETA_CONV fL)
-   fun tmtml_eq (tm1,tml1) (tm2,tml2) = tm1 ~~ tm2 andalso tmleq tml1 tml2
+   fun tmtml_eq (tm1,tml1) (tm2,tml2) = tm1 ~~ tm2 andalso tml_eq tml1 tml2
 in
 
 fun QUANT_INSTANTIATE_HEURISTIC___THM_GENERAL_SIMPLE guesses_net_simple sys v t =

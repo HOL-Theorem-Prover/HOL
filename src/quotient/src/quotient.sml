@@ -655,7 +655,7 @@ fun dest_QUOTIENT_cond tm =
                 val (Q, R_abs_rep) = strip_comb ant
                 val Qname = #Name (Rsyntax.dest_const Q)
                 val _ = assert (curry op = "QUOTIENT") Qname
-                val _ = assert (tmleq vrs) R_abs_rep
+                val _ = assert (tml_eq vrs) R_abs_rep
                 val _ = assert (curry op = 3) (length R_abs_rep)
                 val R = el 1 R_abs_rep
                 val abs = el 2 R_abs_rep

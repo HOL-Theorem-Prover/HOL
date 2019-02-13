@@ -231,7 +231,7 @@ fun list_EQ_CONV cnv tm =
        val l1 = fst(dest_list lhs)
        val l2 = fst(dest_list rhs)
    in
-   if tmleq l1 l2 then EQT_INTRO(REFL (rand tm))
+   if tml_eq l1 l2 then EQT_INTRO(REFL (rand tm))
    else let val ty = case dest_type(type_of(rand tm))
                      of {Args=[ty],...} => ty
                       | _ => raise ERR "list_EQ_CONV" ""
