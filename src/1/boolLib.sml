@@ -219,6 +219,8 @@ fun term_diff t1 t2 =
     recurse [] t1 t2
   end
 
+open Portable
+val aconv = Term.aconv
 fun Teq tm = Term.same_const boolSyntax.T tm
 fun Feq tm = Term.same_const boolSyntax.F tm
 val tmleq = list_eq aconv
