@@ -43,13 +43,13 @@ fun tf0_domain oc ty =
    TF0 quantifier
    ------------------------------------------------------------------------- *)
 
-fun fof_vzero oc v = os oc (namea_v (v,0) ^ ":" ^ utype)
+fun tf0_vzero oc v = os oc (namea_v (v,0) ^ ":" ^ utype)
 
-fun fof_quant_vl oc s vl =
+fun tf0_quant_vl oc s vl =
   if null vl then () else
-  (os oc s; os oc "["; oiter oc ", " fof_vzero vl; os oc "]: ")
+  (os oc s; os oc "["; oiter oc ", " tf0_vzero vl; os oc "]: ")
 
-fun fof_forall_tyvarl_tm oc tm =
+fun tf0_forall_tyvarl_tm oc tm =
   let
     val tvl = dict_sort Type.compare (type_vars_in_term tm)
     fun f oc x = os oc (name_vartype x ^ ":" ^ dtype)
@@ -111,7 +111,7 @@ fun tf0_logicformula oc (thy,name) =
   end
 
 fun tf0_logicdef oc (thy,name) =
-  (os oc (tf0par ^ escape ("logicdef." ^ name) ^ ",axiom,"); 
+  (os oc (tffpar ^ escape ("logicdef." ^ name) ^ ",axiom,"); 
    tf0_logicformula oc (thy,name); osn oc ").")
 
 fun tf0_quantdef oc (thy,name) =
@@ -129,7 +129,7 @@ fun tf0_quantdef oc (thy,name) =
 
 (* Types *)
 fun tf0_tyopdef_polyw oc tf0name =
-  os oc (tffpar ^ tf0name ^ ",type," ^ tf0name ^ ":" ^ ttype ^ ").")
+  osn oc (tffpar ^ tf0name ^ ",type," ^ tf0name ^ ":" ^ ttype ^ ").")
 
 fun tf0_tyopdef oc ((thy,tyop),arity) = ()
 
@@ -143,7 +143,7 @@ fun tf0_polyw_cvty a =
 
 fun tf0_polyw_cvdef_named oc (tf0name,a) =
   (os oc (tffpar ^ tf0name ^ ",type," ^ tf0name ^ ":");
-   os os (tf0_polyw_cvty a); osn oc ").")
+   os oc (tf0_polyw_cvty a); osn oc ").")
 
 fun tf0_polyw_cvdef oc (tm,a) =
   tf0_polyw_cvdef_named oc (namea_cv (tm,a), a) 
@@ -171,8 +171,8 @@ fun tf0_thmdef role oc (thy,name) =
 
 fun tf0_cdef_app oc = 
   let
-    val arity = 2
-    val tf0name = namea_v (mk_var ("app",bool),arity) (* bool is dummy type *)
+    val a = 2
+    val tf0name = namea_v (mk_var ("app",bool),a) (* bool is dummy type *)
   in
     tf0_polyw_cvdef_named oc (tf0name,a)
   end
@@ -186,10 +186,12 @@ fun tf0_cdef_p oc =
 fun tf0_cdef_s oc =
   let val tf0name = "s" in
     os oc (tffpar ^ tf0name ^ ",type," ^ tf0name ^ ":");
-    os oc ("(" ^ dtype " * " utype ^ ") > " ^ dutype); osn oc ")."
+    os oc ("(" ^ dtype ^ " * " ^ utype ^ ") > " ^ dutype); osn oc ")."
   end 
 
-fun tf0_cvdef_extra oc = (tf0_cdef_s oc; tf0_cdef_app oc; tf0_cdef_p oc) 
+fun tf0_cvdef_extra oc =
+  (app (tf0_tyopdef_polyw oc) polyw_typel; (* hack: exporting types here *)
+   tf0_cdef_s oc; tf0_cdef_app oc; tf0_cdef_p oc) 
 
 (* -------------------------------------------------------------------------
    Higher-order theorems
@@ -200,9 +202,9 @@ val hocaster_extra = "extra-ho" (* fake theory for these theorems *)
 fun tf0_boolext oc = 
   let val (v0,v1) = (mk_var ("V0",bool),mk_var ("V1",bool)) in
     tf0_quant_vl oc "!" [v0,v1];
-    os oc "("; tf0_pred oc v0; oc os " <=> "; tf0_pred oc v1; os oc ")";
+    os oc "(("; tf0_pred oc v0; os oc " <=> "; tf0_pred oc v1; os oc ")";
     os oc " => ";
-    os oc "("; tf0_term oc v0; oc os " = "; tf0_term oc v1; os oc ")"
+    os oc "("; tf0_term oc v0; os oc " = "; tf0_term oc v1; os oc "))"
   end
 
 fun tf0_thmdef_boolext oc =
@@ -275,7 +277,7 @@ fun tf0_export_bushy thyl =
     fun f thy =
       write_thy_bushy dir tff_translate_thm uniq_cvdef_mgc 
        (tyopl_extra,cval_extra)
-       (tf0_tyopdef, tf0_cvdef_extra, tf0_cvdef, 
+       (tf0_tyopdef, tf0_cvdef_extra, tf0_polyw_cvdef, 
         tf0_thmdef_extra, tf0_arityeq, tf0_thmdef)
       thy
   in
@@ -290,12 +292,13 @@ fun tf0_export_chainy thyl =
     fun f thy =
       write_thy_chainy dir thyorder tff_translate_thm uniq_cvdef_mgc
         (tyopl_extra,cval_extra)
-        (tf0_tyopdef, tf0_cvdef_extra, tf0_cvdef, 
+        (tf0_tyopdef, tf0_cvdef_extra, tf0_polyw_cvdef, 
          tf0_thmdef_extra, tf0_arityeq, tf0_thmdef)
       thy
   in
     mkDir_err dir; app f thyorder
   end
 
+(* load "hhExportTf0"; open hhExportTf0; tf0_export_bushy ["arithmetic"]; *)
 
 end (* struct *)
