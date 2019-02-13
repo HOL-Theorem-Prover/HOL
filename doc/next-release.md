@@ -96,6 +96,31 @@ New examples:
 Incompatibilities:
 ------------------
 
+*   The `term` type is now declared so that it is no longer what SML refers to as an “equality type”.
+    This means that SML code that attempts to use `=` or `<>` on types that include terms will now fail to compile.
+    Unlike in Haskell, we cannot redefine the behaviour of equality and must accept the SML implementation’s best guess as to what equality is.
+    Unfortunately, the SML equality on terms is *not* correct.
+    As has long been appreciated, it distinguishes `“λx.x”` and `“λy.y”`, which is bad enough.
+    However, in the standard kernel, where explicit substitutions may be present in a term representation, it can also distinguish terms that are not only semantically identical, but also even print the same.
+
+    This incompatibility will mostly affect people writing SML code.
+    If broken code is directly calling `=` on terms, the `~~` infix operator can be used instead (this is the tupled version of `aconv`).
+    Similarly, `<>` can be replaced by `!~`.
+    If broken code includes something like `expr <> NONE` and `expr` has type `term option`, then combinators from `Portable` for building equality tests should be used.
+    In particular, the above could be rewritten to `not (option_eq aconv expr NONE)`.
+
+    It is possible that a tool will want to compare terms for exact syntactic equality up to choice of bound names.
+    The `identical` function can be used for this.
+    Note that we strongly believe that uses of this function will only occur in very niche cases.
+    For example, it is used just twice in the distribution as of February 2019.
+
+    There are a number of term-specific helper functions defined in `boolLib` to help in writing specific cases.
+    For example
+
+           val memt : term list -> term -> bool
+           val goaleq : (term list * term) -> (term list * term) -> bool
+           val tassoc : term -> (term * ‘a) list -> ‘a
+
 *   The `Holmake` tool now behaves with the `--qof` behaviour enabled by default.
     This means that script files which have a tactic failure occur will cause the building of the corresponding theory to fail, rather than having the build continue with the theorem “cheated”.
     We think this will be less confusing for new users.
