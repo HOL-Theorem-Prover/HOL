@@ -2,7 +2,6 @@
 (* FILE          : hhExportLib.sml                                           *)
 (* DESCRIPTION   :                                                           *)
 (* AUTHOR        : (c) Thibault Gauthier, Czech Technical University         *)
-(*                     Cezary Kaliszyk, University of Innsbruck              *)
 (* DATE          : 2018                                                      *)
 (* ========================================================================= *)
 
@@ -141,6 +140,24 @@ fun namea_cv (tm,a) =
 fun name_tyop (thy,tyop) = escape ("tyop." ^ thy ^ "." ^ tyop)
 fun name_thm (thy,name) = escape ("thm." ^ thy ^ "." ^ name)
 
+
+(* -------------------------------------------------------------------------
+   Definitions of boolean operators
+   ------------------------------------------------------------------------- *)
+
+val logic_l1 = map cid_of [``$/\``,``$\/``,``$~``,``$==>``,
+  ``$= : 'a -> 'a -> bool``]
+val quant_l2 = map cid_of [``$! : ('a -> bool) -> bool``,
+  ``$? : ('a -> bool) -> bool``]
+
+val boolop_cval = 
+  [
+   (``$/\``,2),(``$\/``,2),(``$~``,1),(``$==>``,2),
+   (``$= : 'a -> 'a -> bool``,2),
+   (``$! : ('a -> bool) -> bool``,1),(``$? : ('a -> bool) -> bool``,1)
+  ]
+
+
 (* -------------------------------------------------------------------------
    Higher-order theorems in a first-order embedding
    ------------------------------------------------------------------------- *)
@@ -179,7 +196,6 @@ val id_compare = cpl_compare String.compare String.compare
 val tma_compare = cpl_compare Term.compare Int.compare
 val ida_compare = cpl_compare id_compare Int.compare
 
-fun type_set tm = mk_type_set (map type_of (find_terms (fn _ => true) tm))
 fun tyop_set topty = 
   let 
     val l = ref [] 
@@ -196,7 +212,10 @@ fun tyopl_of_tyl tyl =
   mk_fast_set ida_compare (List.concat (map tyop_set tyl))
 
 fun collect_tyop tm = 
-  let val tyl = mk_type_set (List.concat (map type_set (atoms tm))) in
+  let 
+    fun type_set tm = map type_of (find_terms is_const tm @ all_vars tm)  
+    val tyl = mk_type_set (List.concat (map type_set (atoms tm))) 
+  in
     tyopl_of_tyl tyl
   end
 

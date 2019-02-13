@@ -2,7 +2,6 @@
 (* FILE          : hhExportTf0.sml                                           *)
 (* DESCRIPTION   :                                                           *)
 (* AUTHOR        : (c) Thibault Gauthier, Czech Technical University         *)
-(*                     Cezary Kaliszyk, University of Innsbruck              *)
 (* DATE          : 2018                                                      *)
 (* ========================================================================= *)
 

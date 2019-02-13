@@ -5,7 +5,7 @@
 (*                 found by the provers help Metis to reconstruct the    *)
 (*                 proof.                                                *)
 (* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck        *)
-(* DATE          : 2015                                                  *)
+(* DATE          : 2018                                                  *)
 (* ===================================================================== *)
 
 structure holyHammer :> holyHammer =
