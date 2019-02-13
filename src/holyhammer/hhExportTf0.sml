@@ -12,91 +12,66 @@ open HolKernel boolLib aiLib mlThmData hhTranslate hhExportLib
 
 val ERR = mk_HOL_ERR "hhExportTf0"
 
-(* -------------------------------------------------------------------------
-   FOF names : variables escaped by translate_tm
-   ------------------------------------------------------------------------- *)
-
-fun tf0_var arity v = fst (dest_var v) ^ "_" ^ int_to_string arity
-
-fun tf0_const arity c =
-  let val {Name, Thy, Ty} = dest_thy_const c in
-    escape ("c" ^ int_to_string arity ^ "." ^ Thy ^ "." ^ Name)
-  end
-
-fun tf0_constvar arity tm =
-  if is_const tm then tf0_const arity tm
-  else if is_var tm then tf0_var arity tm
-  else raise raise ERR "tf0_constvar" ""
-
-fun tf0_vardomain ty = "A" ^ (escape (dest_vartype ty))
-
-fun tf0_opdomain ty =
-  let val {Args, Thy, Tyop} = dest_thy_type ty in
-    escape ("ty" ^ "." ^ Thy ^ "." ^ Tyop)
-  end
-
-fun tf0_thm (thy,name) = escape ("thm" ^ "." ^ thy ^ "." ^ name)
+val tffpar = "tff("
 
 (* -------------------------------------------------------------------------
-   FOF terms
+   Polyworld (deep embedding) and Monoworld (shallow embeddding)
+   Todo: first do everything in polyworld.
    ------------------------------------------------------------------------- *)
 
-(* every fof type is a unit type *)
+val (utype,dtype,dutype) = ("u","d","du")
+val polyw_typel = [utype,dtype,dutype]
 
-val itype = "$i" (* use to represent the result of s *)
+(* -------------------------------------------------------------------------
+   TF0 domains
+   ------------------------------------------------------------------------- *)
 
-fun tf0_type n =
-  if n <= 0 then itype else
-  if n = 1 then itype ^ " > " ^ itype
-  else 
-    "(" ^ String.concatWith " * " (List.tabulate (n,fn _ => itype)) ^ ")"
-    ^ " > " ^ itype
+fun fo_fun oc (s,f_arg,argl) = 
+  if null argl then os oc s else 
+  (os oc s; os oc "("; oiter oc "," f_arg argl; os oc ")")
 
 fun tf0_domain oc ty =
-  if is_vartype ty then os oc (tf0_vardomain ty) else
+  if is_vartype ty then os oc (name_vartype ty) else
     let
       val {Args, Thy, Tyop} = dest_thy_type ty
-      val tyops = tf0_opdomain ty
+      val tyops = name_tyop (Thy,Tyop)
     in
-      os oc tyops;
-      if null Args then ()
-      else (os oc "("; oiter oc "," tf0_domain Args; os oc ")")
+      fo_fun oc (tyops, tf0_domain, Args)
     end
 
-fun tf0_domain_string oc ty =
-  if is_vartype ty then os oc (tf0_vardomain ty) else
-    let
-      val {Args, Thy, Tyop} = dest_thy_type ty
-      val tyops = tf0_opdomain ty
-    in
-      os oc tyops;
-      if null Args then ()
-      else (os oc (escape "( "); oiter oc (escape " , ") 
-            tf0_domain_string Args; os oc (escape " )"))
-    end
+(* -------------------------------------------------------------------------
+   TF0 quantifier
+   ------------------------------------------------------------------------- *)
 
-fun tf0_term oc tm =
-  let 
-    val (rator,argl) = strip_comb tm
-    val ty = type_of tm
+fun fof_vzero oc v = os oc (namea_v (v,0) ^ ":" ^ utype)
+
+fun fof_quant_vl oc s vl =
+  if null vl then () else
+  (os oc s; os oc "["; oiter oc ", " fof_vzero vl; os oc "]: ")
+
+fun fof_forall_tyvarl_tm oc tm =
+  let
+    val tvl = dict_sort Type.compare (type_vars_in_term tm)
+    fun f oc x = os oc (name_vartype x ^ ":" ^ dtype)
   in
-    os oc "s("; tf0_domain oc ty; os oc ",";
-    (
-    if polymorphic ty 
-    then tf0_apply oc (rator,argl)
-    else 
-      (os oc "i_"; tf0_domain_string oc ty; os oc "("
-       tf0_apply oc (rator,argl)
-       os oc ")")
-    );
+    if null tvl then () else (os oc "!["; oiter oc ", " f tvl; os oc "]: ")
+  end
+
+(* -------------------------------------------------------------------------
+   TF0 term
+   ------------------------------------------------------------------------- *)
+
+(* todo: add i here later *)
+fun tf0_term oc tm =
+  let val (rator,argl) = strip_comb tm in
+    os oc "s("; tf0_domain oc (type_of tm); os oc ",";
+    fo_fun oc (namea_cv (rator,length argl), tf0_term, argl);
     os oc ")"
   end
-and tf0_apply oc (rator,argl) =
-  (
-  os oc (tf0_constvar (length argl) rator);
-  if null argl then ()
-  else (os oc "("; oiter oc "," tf0_term argl; os oc ")")
-  )
+
+(* -------------------------------------------------------------------------
+   TF0 formula
+   ------------------------------------------------------------------------- *)
 
 fun tf0_pred oc tm =
   if is_forall tm then tf0_quant oc "!" (strip_forall tm)
@@ -108,296 +83,219 @@ fun tf0_pred oc tm =
     (os oc "~ ("; tf0_pred oc (dest_neg tm); os oc ")")
   else if is_eq tm then
     let val (l,r) = dest_eq tm in
-      if must_pred l orelse must_pred r (* optimization *)
+      if must_pred l orelse must_pred r
       then tf0_binop oc "<=>" (l,r)
-      else (tf0_term oc l; os oc " = "; tf0_term oc r)
+      else (os oc "("; tf0_term oc l; os oc " = "; tf0_term oc r; os oc ")")
     end
   else (os oc "p("; tf0_term oc tm; os oc ")")
 and tf0_binop oc s (l,r) =
   (os oc "("; tf0_pred oc l; os oc (" " ^ s ^ " "); 
    tf0_pred oc r; os oc ")")
 and tf0_quant oc s (vl,bod) =
-  (os oc s; os oc "[";
-   oiter oc ", " (fn x => (fn v => os x (tf0_var 0 v))) vl;
-   os oc "]: "; tf0_pred oc bod)
+  (tf0_quant_vl oc s vl; tf0_pred oc bod)
 
-fun type_vars_in_term tm =
-  type_varsl (map type_of (find_terms is_const tm @ all_vars tm))
+fun tf0_formula oc tm = (tf0_forall_tyvarl_tm oc tm; tf0_pred oc tm)
 
-fun tf0_formula oc tm =
-  let val tvl = type_vars_in_term tm in
-    if null tvl then ()
-    else (os oc "!["; oiter oc "," tf0_domain tvl; os oc "]: ");
-    tf0_pred oc tm
+(* -------------------------------------------------------------------------
+   Term-level logical operators equations
+   ------------------------------------------------------------------------- *)
+
+fun tf0_logicformula oc (thy,name) = 
+  let 
+    val c = prim_mk_const {Thy = thy, Name = name}
+    val tm = full_apply_const c
+    val vl = free_vars_lr tm 
+  in
+    tf0_forall_tyvarl_tm oc tm; tf0_quant_vl oc "!" vl;
+    os oc "(p("; tf0_term oc tm ; os oc ") <=> "; tf0_pred oc tm; os oc ")"
+  end
+
+fun tf0_logicdef oc (thy,name) =
+  (os oc (tf0par ^ escape ("logicdef." ^ name) ^ ",axiom,"); 
+   tf0_logicformula oc (thy,name); osn oc ").")
+
+fun tf0_quantdef oc (thy,name) =
+  let 
+    val thm = assoc name [("!", FORALL_THM),("?", EXISTS_THM)]
+    val (tm,_) = fof_translate_thm thm
+  in
+    os oc (tffpar ^ escape ("quantdef." ^ name) ^ ",axiom,"); 
+    tf0_formula oc tm; osn oc ")."
   end
 
 (* -------------------------------------------------------------------------
-   FOF definitions
+   TF0 definitions
    ------------------------------------------------------------------------- *)
 
-val tffpar = "tff("
+(* Types *)
+fun tf0_tyopdef_polyw oc tf0name =
+  os oc (tffpar ^ tf0name ^ ",type," ^ tf0name ^ ":" ^ ttype ^ ").")
 
-(*
-fun tf0_tydef oc thy (tyop,arity) =
-  let val tfname = tf1b_tyop (thy,tyop) in
-    os oc ("tff(" ^ tfname ^ ",type," ^ tfname ^ ":" ^ ttype);
-    os oc (tf1_ttype arity); osn oc ")."
-  end
-*)
+fun tf0_tyopdef oc ((thy,tyop),arity) = ()
 
-fun tf0_tydef oc thy (tyop,arity) = ()
+(* Constants *)
+fun tf0_polyw_cvty a =
+  if a <= 0 then utype 
+  else if a = 1 then dutype ^ " > " ^ utype 
+  else 
+    "(" ^ String.concatWith " * " (List.tabulate (a,fn _ => dutype)) ^ ")"
+    ^ " > " ^ utype
 
-fun tf0_nameadef oc (name,arity) =
-  (
-  os oc (tffpar ^ name ^ ",type," ^ name ^ ":");
-  os oc (tf0_type arity); osn oc ")."
-  )
+fun tf0_polyw_cvdef_named oc (tf0name,a) =
+  (os oc (tffpar ^ tf0name ^ ",type," ^ tf0name ^ ":");
+   os os (tf0_polyw_cvty a); osn oc ").")
 
-fun tf0_nametysdef oc (name,tys) =
-  (
-  os oc (tffpar ^ name ^ ",type," ^ name ^ ":");
-  os oc tys; osn oc ")."
-  )
+fun tf0_polyw_cvdef oc (tm,a) =
+  tf0_polyw_cvdef_named oc (namea_cv (tm,a), a) 
 
-fun tf0_constdef_arity oc (c,arity) =
-  let val tfname = tf0_const arity c in
-    os oc (tffpar ^ tfname ^ ",type," ^ tfname ^ ":");
-    os oc (tf0_type arity); osn oc ").";
-    (if arity = 0 then () else 
-    let 
-      val eq = concl (mk_arity_eq c arity) 
-      val arity_prefix = escape ("arity" ^ its arity ^ ".")
-    in
-      (os oc (tffpar ^ arity_prefix ^ tfname ^ ",axiom,");
-       tf0_formula oc eq; osn oc ").")
-    end)
-  end
-
-fun tf0_constdef oc (thy,name) =
-  let
-    val c = prim_mk_const {Thy = thy, Name = name}
-    val ty = type_of c
-    val maxarity = length (snd (strip_funty ty))
-    fun f n = tf0_constdef_arity oc (c,n)
-  in
-    ignore (List.tabulate (maxarity + 1, f))
-  end
-
-fun tf0_vardef_arity oc (v,arity) =
-  if fst (dest_var v) = "app" then () else 
-  let val tfname = tf0_var arity v in
-    os oc (tffpar ^ tfname ^ ",type," ^ tfname ^ ":");
-    os oc (tf0_type arity); osn oc ").";
-    (if arity = 0 then () else
-    let
-      val eq = concl (mk_arity_eq v arity) 
-      val arity_prefix = escape ("arity" ^ its arity ^ ".")
-    in
-      os oc (tffpar ^ arity_prefix ^ tfname ^ ",axiom,");
-      tf0_formula oc eq; osn oc ")."
-    end)
-  end
-
-(* define type of app,p,s *)
-fun tf0_casterdef oc =
-  (
-  app (tf0_nameadef oc) [("app_2",2),("s",2)];
-  tf0_nametysdef oc ("p","$i > $o")
-  )
-(* free variables are used for new constants *)
-(* type of free variable is always most general type except for app *)
-fun tf0_vardef oc v = 
+(* Theorems *)
+fun tf0_thmdef role oc (thy,name) =
   let 
-    val ty = snd (dest_var v)
-    val maxarity = length (snd (strip_funty ty))
-    fun f n = tf0_vardef_arity oc (v,n)
-  in
-    ignore (List.tabulate (maxarity + 1, f))
-  end
-
-fun tf0_prep_thm thm = translate_tm (concl (DISCH_ALL thm))
-
-fun tf0_thmdef oc thy ((name,thm),role) =
-  let 
-    val tml = tf0_prep_thm thm
-    val vl = free_vars_lr (list_mk_conj (rev tml))
-    val (cj,defl) = (hd tml, rev (tl tml))
+    val thm = DB.fetch thy name
+    val (cj,defl) = fof_translate_thm thm
+    val tf0name = name_thm (thy,name)
     fun f i def = 
       (
-      os oc (tffpar ^ escape ("fthm" ^ its i ^ ".") ^
-      (tf0_thm (thy,name)) ^ ",axiom,");
+      os oc (tffpar ^ escape ("def" ^ its i ^ ".") ^ tf0name ^ ",axiom,");
       tf0_formula oc def; osn oc ")."
       )
   in
-    app (tf0_vardef oc) vl;
     ignore (mapi f defl);
-    os oc (tffpar ^ (tf0_thm (thy,name)) ^ "," ^ role ^ ",");
-    tf0_formula oc cj; 
-    osn oc ")."
+    os oc (tffpar ^ tf0name ^ "," ^ role ^ ",");
+    tf0_formula oc cj; osn oc ")."
   end
-  
 
 (* -------------------------------------------------------------------------
-   Export standard
+   Higher-order constants + sort function
    ------------------------------------------------------------------------- *)
 
-val tf0_dir = hh_dir ^ "/export_tf0"
-
-fun tf0_export thyl =
+fun tf0_cdef_app oc = 
   let
-    val file = tf0_dir ^ "/theory_order.info"
-    val fl = (tf0_tydef, tf0_constdef, tf0_thmdef, tf0_thm)
-    val thyl = sorted_ancestry thyl
+    val arity = 2
+    val tf0name = namea_v (mk_var ("app",bool),arity) (* bool is dummy type *)
   in
-    mkDir_err tf0_dir; app (write_thy fl tf0_dir) thyl;
-    writel file [String.concatWith " " (sorted_ancestry thyl)]
+    tf0_polyw_cvdef_named oc (tf0name,a)
+  end
+
+fun tf0_cdef_p oc =
+  let val tf0name = "p" in
+    os oc (tffpar ^ tf0name ^ ",type," ^ tf0name ^ ":");
+    os oc (dutype ^ " > $o"); osn oc ")."
+  end
+
+fun tf0_cdef_s oc =
+  let val tf0name = "s" in
+    os oc (tffpar ^ tf0name ^ ",type," ^ tf0name ^ ":");
+    os oc ("(" ^ dtype " * " utype ^ ") > " ^ dutype); osn oc ")."
+  end 
+
+fun tf0_cvdef_extra oc = (tf0_cdef_s oc; tf0_cdef_app oc; tf0_cdef_p oc) 
+
+(* -------------------------------------------------------------------------
+   Higher-order theorems
+   ------------------------------------------------------------------------- *)
+
+val hocaster_extra = "extra-ho" (* fake theory for these theorems *)
+
+fun tf0_boolext oc = 
+  let val (v0,v1) = (mk_var ("V0",bool),mk_var ("V1",bool)) in
+    tf0_quant_vl oc "!" [v0,v1];
+    os oc "("; tf0_pred oc v0; oc os " <=> "; tf0_pred oc v1; os oc ")";
+    os oc " => ";
+    os oc "("; tf0_term oc v0; oc os " = "; tf0_term oc v1; os oc ")"
+  end
+
+fun tf0_thmdef_boolext oc =
+  let val tf0name = name_thm (hocaster_extra,"boolext") in
+    os oc (tffpar ^ tf0name ^ ",axiom,"); tf0_boolext oc; osn oc ")."
+  end
+
+fun tf0_thmdef_caster oc (name,thm) =
+  let 
+    val (cj,defl) = fof_translate_thm thm
+    val _ = if null defl then () else raise ERR "tf0_thmdef_caster" ""
+  in
+    os oc (tffpar ^ name_thm (hocaster_extra,name) ^ ",axiom,");
+    tf0_formula oc cj; osn oc ")."
+  end
+
+fun tf0_thmdef_combin oc (name,tm) =
+  let val tf0name = name_thm (hocaster_extra,name) in
+    os oc (tffpar ^ tf0name ^ ",axiom,"); tf0_formula oc tm; osn oc ")."
+  end
+
+fun tf0_thmdef_extra oc = 
+  (
+  app (tf0_thmdef_caster oc) app_axioml;
+  tf0_thmdef_boolext oc;
+  app (tf0_thmdef_caster oc) p_axioml;
+  app (tf0_thmdef_combin oc) combin_axioml;
+  app (tf0_logicdef oc) logic_l1;
+  app (tf0_quantdef oc) quant_l2
+  )
+
+(* todo: declare types as constants in domains *)
+
+val tyopl_extra = []
+
+val app_p_cval =
+  let val tml = map (fst o fof_translate_thm o snd) (app_axioml @ p_axioml) in
+    mk_fast_set tma_compare (List.concat (map collect_arity tml)) 
+  end
+
+val combin_cval = 
+  let val tml = map snd combin_axioml in
+    mk_fast_set tma_compare (List.concat (map collect_arity tml)) 
+  end
+
+val cval_extra = add_zeroarity (boolop_cval @ combin_cval @ app_p_cval)
+
+(* -------------------------------------------------------------------------
+   Arity equations
+   ------------------------------------------------------------------------- *)
+
+fun tf0_arityeq oc (cv,a) = 
+  if a = 0 then () else
+  let 
+    val tf0name = "arityeq" ^ its a ^ escape "." ^ namea_cv (cv,a) 
+    val tm = mk_arity_eq (cv,a)
+  in
+    os oc (tffpar ^ tf0name ^ ",axiom,"); tf0_formula oc tm; osn oc ")."
   end
 
 (* -------------------------------------------------------------------------
-   Export bushy
+   Export
    ------------------------------------------------------------------------- *)
 
 val tf0_bushy_dir = hh_dir ^ "/export_tf0_bushy"
-
-val id_compare = cpl_compare String.compare String.compare
-fun const_set tm = mk_term_set (find_terms is_const tm) 
-
-fun write_cj_bushy thy ((name,thm),depl) =
-  let 
-    val file = tf0_bushy_dir ^ "/" ^ tf0_thm (thy,name) ^ ".p"
-    val oc = TextIO.openOut file
-    fun thmfetch (a,b) = DB.fetch a b
-    val pretml1 = map (tf0_prep_thm o thmfetch) ((thy,name) :: depl)
-    val pretml2 = mk_term_set (List.concat pretml1)
-    val tml = mk_term_set (List.concat (map atoms_of pretml2))
-    val cl = mk_term_set (List.concat (map const_set tml)) 
-    fun fc c =
-      let 
-        val {Name=cname,Thy=cthy,...} = dest_thy_const c 
-        val cid = (cthy,cname)
-      in
-        tf0_constdef oc cid
-        (* better to put them in a include file 
-         if is_logicconst cid then tf0_logicdef oc cid
-         else if is_quantconst cid then tf0_quantdef oc cid
-         else ()
-         *)
-      end
-    fun fax (axthy,axname) =
-      let val axthm = DB.fetch axthy axname in
-        tf0_thmdef oc axthy ((axname,axthm),"axiom") 
-      end
-  in
-    (
-    tf0_casterdef oc; app fc cl; app fax depl;
-    tf0_thmdef oc thy ((name,thm),"conjecture"); 
-    TextIO.closeOut oc
-    )
-    handle Interrupt => (TextIO.closeOut oc; raise Interrupt)
-  end
-
-fun write_thy_bushy thy =
-  let 
-    val cjl = DB.theorems thy
-    fun f (name,thm) = case depo_of_thm thm of
-        NONE => NONE
-      | SOME depl => SOME ((name,thm), depl)
-    val cjdepl = List.mapPartial f cjl
-  in
-    print (thy ^ " ");
-    app (write_cj_bushy thy) cjdepl
-  end
-
 fun tf0_export_bushy thyl =
-  let val thyl = sorted_ancestry thyl in
-    mkDir_err tf0_bushy_dir; app write_thy_bushy thyl
+  let 
+    val thyorder = sorted_ancestry thyl 
+    val dir = (mkDir_err tf0_bushy_dir; tf0_bushy_dir)
+    fun f thy =
+      write_thy_bushy dir tff_translate_thm uniq_cvdef_mgc 
+       (tyopl_extra,cval_extra)
+       (tf0_tyopdef, tf0_cvdef_extra, tf0_cvdef, 
+        tf0_thmdef_extra, tf0_arityeq, tf0_thmdef)
+      thy
+  in
+    mkDir_err dir; app f thyorder
   end
-
-(* -------------------------------------------------------------------------
-   Export chainy
-   ------------------------------------------------------------------------- *)
 
 val tf0_chainy_dir = hh_dir ^ "/export_tf0_chainy"
-
-fun include_thy oc thy = osn oc ("include('" ^ thy ^ ".ax').")
-fun include_thydecl oc thy = osn oc ("include('" ^ thy ^ "-decl.ax').")
-
-fun write_thyaxiom dir thy =
-  let
-    val file = dir ^ "/" ^ thy ^ ".ax"
-    val oc = TextIO.openOut file
-  in
-    let
-      val THEORY(_,t) = dest_theory thy
-      val _ = app (tf0_tydef oc thy) (#types t)
-      val cl = map (fn (name,_) => (thy,name)) (#consts t)
-      val _ = app (tf0_constdef oc) cl
-      val axl0 = map (fn x => (x,"axiom")) (DB.thms thy)
-      fun cmp (((_,th1),_),((_,th2),_)) =
-        Int.compare (depnumber_of_thm th1, depnumber_of_thm th2)
-      val axl1 = dict_sort cmp axl0
-    in
-      app (tf0_thmdef oc thy) axl1;
-      TextIO.closeOut oc
-    end
-    handle Interrupt => (TextIO.closeOut oc; raise Interrupt)
-  end
-
-fun write_thydecl dir thy =
-  let
-    val file = dir ^ "/" ^ thy ^ "-decl.ax"
-    val oc = TextIO.openOut file
-  in
-    let
-      val THEORY(_,t) = dest_theory thy
-      val _ = app (tf0_tydef oc thy) (#types t)
-      val cl = map (fn (name,_) => (thy,name)) (#consts t)
-      val _ = app (tf0_constdef oc) cl
-    in
-      TextIO.closeOut oc
-    end
-    handle Interrupt => (TextIO.closeOut oc; raise Interrupt)
-  end
-
-fun write_cj_chainy thyl thy (name,thm) =
-  let 
-    val file = tf0_chainy_dir ^ "/" ^ tf0_thm (thy,name) ^ ".p"
-    val oc = TextIO.openOut file
-    fun thmfetch (a,b) = DB.fetch a b
-    val axl0 = DB.thms thy
-    val axl1 = filter (older_than thm) axl0
-    fun cmp ((_,th1),(_,th2)) =
-      Int.compare (depnumber_of_thm th1, depnumber_of_thm th2)
-    val axl2 = map (fn (x,_) => (thy,x)) (dict_sort cmp axl1)
-    fun fax (axthy,axname) =
-      let val axthm = DB.fetch axthy axname in
-        tf0_thmdef oc axthy ((axname,axthm),"axiom") 
-      end
-  in
-    (
-    app (include_thy oc) thyl;
-    include_thydecl oc thy;
-    include_thy oc "bool-extra";
-    app fax axl2;
-    tf0_thmdef oc thy ((name,thm),"conjecture"); 
-    TextIO.closeOut oc
-    )
-    handle Interrupt => (TextIO.closeOut oc; raise Interrupt)
-  end
-
-fun write_thy_chainy thyl thy =
-  let val thyl_before = before_elem thy thyl in
-    print (thy ^ " ");
-    app (write_cj_chainy thyl_before thy) (DB.theorems thy)
-  end
-
 fun tf0_export_chainy thyl =
-  let val thyl = sorted_ancestry thyl in
-    mkDir_err tf0_chainy_dir; 
-    (* write_boolextra tf0_chainy_dir; *)
-    app (write_thyaxiom tf0_chainy_dir) thyl;
-    app (write_thydecl tf0_chainy_dir) thyl;
-    app (write_thy_chainy thyl) thyl
+  let 
+    val thyorder = sorted_ancestry thyl 
+    val dir = (mkDir_err tf0_chainy_dir; tf0_chainy_dir)
+    fun f thy =
+      write_thy_chainy dir thyorder tff_translate_thm uniq_cvdef_mgc
+        (tyopl_extra,cval_extra)
+        (tf0_tyopdef, tf0_cvdef_extra, tf0_cvdef, 
+         tf0_thmdef_extra, tf0_arityeq, tf0_thmdef)
+      thy
+  in
+    mkDir_err dir; app f thyorder
   end
+
 
 end (* struct *)

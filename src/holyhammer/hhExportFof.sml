@@ -49,14 +49,6 @@ fun fof_forall_tyvarl_tm oc tm =
     if null tvl then () else (os oc "!["; oiter oc ", " f tvl; os oc "]: ")
   end
 
-fun fof_forall_tyvarl_ty oc ty =
-  let 
-    val tvl = dict_sort Type.compare (type_vars ty) 
-    fun f oc x = os oc (name_vartype x)
-  in
-    if null tvl then () else (os oc "!>["; oiter oc ", " f tvl; os oc "]: ")
-  end
-
 (* -------------------------------------------------------------------------
    FOF term
    ------------------------------------------------------------------------- *)
@@ -64,9 +56,7 @@ fun fof_forall_tyvarl_ty oc ty =
 fun fof_term oc tm =
   let val (rator,argl) = strip_comb tm in
     os oc "s("; fof_type oc (type_of tm); os oc ",";
-    os oc (namea_cv (rator,length argl));
-    if null argl then ()
-    else (os oc "("; oiter oc "," fof_term argl; os oc ")");
+    fo_fun oc (namea_cv (rator,length argl), fof_term, argl);
     os oc ")"
   end
 
@@ -86,7 +76,7 @@ fun fof_pred oc tm =
     let val (l,r) = dest_eq tm in
       if must_pred l orelse must_pred r
       then fof_binop oc "<=>" (l,r)
-      else (fof_term oc l; os oc " = "; fof_term oc r)
+      else (os oc "("; fof_term oc l; os oc " = "; fof_term oc r; os oc ")")
     end
   else (os oc "p("; fof_term oc tm; os oc ")")
 and fof_binop oc s (l,r) =
@@ -162,9 +152,11 @@ val cval_extra = []
 val hocaster_extra = "extra-ho" (* fake theory for these theorems *)
 
 fun fof_boolext oc = 
-  let val vl = map mk_var [("V0",bool),("V1",bool)] in
-    fof_quant_vl oc "!" vl;
-    os oc "((p(V0_2E0) <=> p(V1_2E0)) => (V0_2E0 = V1_2E0))"
+  let val (v0,v1) = (mk_var ("V0",bool),mk_var ("V1",bool)) in
+    fof_quant_vl oc "!" [v0,v1];
+    os oc "("; fof_pred oc v0; oc os " <=> "; fof_pred oc v1; os oc ")";
+    os oc " => ";
+    os oc "("; fof_term oc v0; oc os " = "; fof_term oc v1; os oc ")"
   end
 
 fun fof_thmdef_boolext oc =

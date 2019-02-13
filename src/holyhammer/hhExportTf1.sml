@@ -220,9 +220,11 @@ fun tf1_cvdef_extra oc = (tf1_cdef_app oc; tf1_cdef_p oc)
 val hocaster_extra = "extra-ho" (* fake theory for these theorems *)
 
 fun tf1_boolext oc = 
-  let val vl = map mk_var [("V0",bool),("V1",bool)] in
-    tf1_quant_vl oc "!" vl;
-    os oc "((p(V0_2E0) <=> p(V1_2E0)) => (V0_2E0 = V1_2E0))"
+  let val (v0,v1) = (mk_var ("V0",bool),mk_var ("V1",bool)) in
+    tf1_quant_vl oc "!" [v0,v1];
+    os oc "("; tf1_pred oc v0; oc os " <=> "; tf1_pred oc v1; os oc ")";
+    os oc " => ";
+    os oc "("; tf1_term oc v0; oc os " = "; tf1_term oc v1; os oc ")"
   end
 
 fun tf1_thmdef_boolext oc =
