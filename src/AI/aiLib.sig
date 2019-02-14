@@ -129,6 +129,8 @@ sig
   val writel_path : string -> string -> string list -> unit
   val debug_flag  : bool ref
   val debug_in_dir : string -> string -> string -> unit
+  val stream_to_string : 
+    string -> (TextIO.outstream -> unit) -> string list
 
   (* parse *)
   val unquote_string : string -> string

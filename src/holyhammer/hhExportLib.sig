@@ -29,7 +29,8 @@ include Abbrev
   val namea_cv : (term * int) -> string
   val name_tyop : (string * string) -> string
   val name_thm : (string * string) -> string
-  
+  val name_ty : hol_type -> string
+
   (* comparison *)
   val id_compare : (string * string) * (string * string) -> order
   val ida_compare : 
@@ -48,9 +49,8 @@ include Abbrev
 
   val full_match_type : 
     hol_type -> hol_type -> {redex: hol_type, residue: hol_type} list
-  val typearg_of_c : term -> hol_type list
-  val typearg_of_fv : term -> hol_type list
-  val typearg_of_app : term -> hol_type list
+  val typearg_of_cvapp : term -> hol_type list
+  val add_tyargltag : string -> term -> string
 
   (* term *)
   val full_apply_const : term -> term

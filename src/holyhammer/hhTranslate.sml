@@ -204,22 +204,6 @@ fun APP_CONV_BV tm =
 val APP_CONV_BV_REC = TRY_CONV (TOP_SWEEP_CONV APP_CONV_BV) THENC REFL 
 
 (* -------------------------------------------------------------------------
-   Arity equations for constants and free variables.
-   Naming is important here as we do not want free variables to have the same
-   name across statements unless their definition are alpha equivalent.
-   ------------------------------------------------------------------------- *)
-
-fun mk_arity_eq (f,n) =
-  let
-    val (tyl,_) = strip_type (type_of f)
-    val vl  = genvarl_arity tyl
-    val vl' = List.take (vl,n)
-    val tm  = list_mk_comb (f,vl')
-  in
-    concl (GENL vl' (APP_CONV_STRIPCOMB tm))
-  end
-
-(* -------------------------------------------------------------------------
    Optional (included by default): 
    Avoiding polymorphic higher-oder to exceeds max arity 
    (e.g. I_2 I_1 1 => app (I_1 (I_0), 1) 
@@ -288,5 +272,26 @@ fun translate tm =
 
 fun translate_thm thm = 
   let val tm = (concl o GEN_ALL o DISCH_ALL) thm in translate tm end
+
+(* -------------------------------------------------------------------------
+   Arity equations for constants and free variables.
+   Naming is important here as we do not want free variables to have the same
+   name across statements unless their definition are alpha equivalent.
+   ------------------------------------------------------------------------- *)
+
+fun mk_arity_eq (f,n) =
+  let
+    val (tyl,_) = strip_type (type_of f)
+    val vl  = genvarl_arity tyl
+    val vl' = List.take (vl,n)
+    val tm  = list_mk_comb (f,vl')
+  in
+    concl (GENL vl' (APP_CONV_STRIPCOMB tm))
+  end
+
+
+
+
+
 
 end

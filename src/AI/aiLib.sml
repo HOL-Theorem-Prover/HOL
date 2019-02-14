@@ -507,6 +507,13 @@ fun write_file file s =
     TextIO.output (oc,s); TextIO.closeOut oc
   end
 
+fun stream_to_string path f =
+  let val oc = TextIO.openOut path in 
+    f oc; TextIO.closeOut oc; readl path 
+  end
+
+
+
 fun erase_file file = write_file file "" handle _ => ()
 
 fun writel file sl =

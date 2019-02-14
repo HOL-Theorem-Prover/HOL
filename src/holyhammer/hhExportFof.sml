@@ -108,7 +108,7 @@ fun fof_logicdef oc (thy,name) =
 fun fof_quantdef oc (thy,name) =
   let 
     val thm = assoc name [("!", FORALL_THM),("?", EXISTS_THM)]
-    val (tm,_) = fof_translate_thm thm
+    val (tm,_) = translate_thm thm
   in
     os oc (fofpar ^ escape ("quantdef." ^ name) ^ ",axiom,"); 
     fof_formula oc tm; osn oc ")."
@@ -124,7 +124,7 @@ fun fof_cvdef oc (tm,a) = ()
 fun fof_thmdef role oc (thy,name) =
   let 
     val thm = DB.fetch thy name
-    val (cj,defl) = fof_translate_thm thm
+    val (cj,defl) = translate_thm thm
     val fofname = name_thm (thy,name)
     fun f i def = 
       (
@@ -166,7 +166,7 @@ fun fof_thmdef_boolext oc =
 
 fun fof_thmdef_caster oc (name,thm) =
   let 
-    val (cj,defl) = fof_translate_thm thm
+    val (cj,defl) = translate_thm thm
     val _ = if null defl then () else raise ERR "fof_thmdef_caster" ""
   in
     os oc (fofpar ^ name_thm (hocaster_extra,name) ^ ",axiom,");
@@ -194,8 +194,9 @@ fun fof_thmdef_extra oc =
 
 fun fof_arityeq oc (cv,a) = 
   if a = 0 then () else
-  let 
-    val fofname = "arityeq" ^ its a ^ escape "." ^ namea_cv (cv,a) 
+  let
+    val fofname = 
+      add_tyargltag ("arityeq" ^ its a ^ escape "." ^ namea_cv (cv,a)) cv
     val tm = mk_arity_eq (cv,a)
   in
     os oc (fofpar ^ fofname ^ ",axiom,"); fof_formula oc tm; osn oc ")."
@@ -213,7 +214,7 @@ fun fof_export_bushy thyl =
     val thyorder = sorted_ancestry thyl 
     val dir = fof_bushy_dir
     fun f thy =
-      write_thy_bushy dir fof_translate_thm uniq_cvdef_mgc 
+      write_thy_bushy dir translate_thm uniq_cvdef_mgc 
        (tyopl_extra,cval_extra)
        (fof_tyopdef_extra, fof_tyopdef, fof_cvdef_extra, fof_cvdef, 
         fof_thmdef_extra, fof_arityeq, fof_thmdef)
@@ -228,7 +229,7 @@ fun fof_export_chainy thyl =
     val thyorder = sorted_ancestry thyl 
     val dir = fof_chainy_dir
     fun f thy =
-      write_thy_chainy dir thyorder fof_translate_thm uniq_cvdef_mgc
+      write_thy_chainy dir thyorder translate_thm uniq_cvdef_mgc
         (tyopl_extra,cval_extra)
         (fof_tyopdef_extra, fof_tyopdef, fof_cvdef_extra, fof_cvdef, 
          fof_thmdef_extra, fof_arityeq, fof_thmdef)
@@ -237,7 +238,7 @@ fun fof_export_chainy thyl =
     mkDir_err dir; app f thyorder
   end
 
-(* load "hhExportFof"; open hhExportFof; fof_export_bushy ["arithmetic"]; *)
+(* load "hhExportFof"; open hhExportFof; fof_export_bushy ["bool"]; *)
 
 (* Full export 
   load "hhExportFof"; open hhExportFof;

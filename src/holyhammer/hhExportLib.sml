@@ -117,6 +117,14 @@ fun typearg_of_app tm =
     map #residue subst
   end
 
+fun typearg_of_cvapp tm =
+  if is_const tm then typearg_of_c tm
+  else if is_tptp_fv tm then typearg_of_fv tm
+  else if is_app tm then typearg_of_app tm
+  else raise ERR "typearg_of_cvapp" ""
+
+
+
 (* -------------------------------------------------------------------------
    Names
    ------------------------------------------------------------------------- *)
@@ -140,6 +148,29 @@ fun namea_cv (tm,a) =
 fun name_tyop (thy,tyop) = escape ("tyop." ^ thy ^ "." ^ tyop)
 fun name_thm (thy,name) = escape ("thm." ^ thy ^ "." ^ name)
 
+(* -------------------------------------------------------------------------
+   Naming types
+   ------------------------------------------------------------------------- *)
+
+fun name_fo_fun (s,f_arg,argl) = 
+  if null argl then s else 
+  (s ^ escape "(" ^ String.concatWith (escape ",") (map f_arg argl) ^ 
+   escape ")")
+
+fun name_ty ty =
+  if is_vartype ty then name_vartype ty else
+  let
+    val {Args, Thy, Tyop} = dest_thy_type ty
+    val tyops = name_tyop (Thy,Tyop)
+  in
+    name_fo_fun (tyops,name_ty,Args)
+  end
+
+fun add_tyargltag s cv =
+  let val tyargl = typearg_of_cvapp cv in
+    if null tyargl then s else
+    (s ^ escape "." ^ String.concatWith (escape " ") (map name_ty tyargl))
+  end
 
 (* -------------------------------------------------------------------------
    Definitions of boolean operators
@@ -167,7 +198,7 @@ fun mk_combin_thm thmname fvname =
     val (tm0,defl) = translate_thm thm
     val _ = if null defl then () else raise ERR "mk_combin_thm" ""
     val oper = (fst o strip_comb o lhs o snd o strip_forall) tm0
-    val lhs_combin_conv = STRIP_QUANT_CONV (LHS_CONV APP_CONV_AUX)
+    val lhs_combin_conv = STRIP_QUANT_CONV (LHS_CONV APP_CONV_STRIPCOMB)
     val tm1 = (rhs o concl o lhs_combin_conv) tm0
     val sub = [{redex = oper, residue = mk_var (fvname,type_of oper)}]
   in

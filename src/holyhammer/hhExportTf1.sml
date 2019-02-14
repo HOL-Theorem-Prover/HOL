@@ -89,12 +89,8 @@ fun tf1_term oc tm =
   if is_tptp_bv tm then os oc (namea_v (tm,0)) else
   let 
     val (rator,argl) = strip_comb tm
-      handle _ => raise ERR "tf1_term" "abstraction"
     val arity = length argl
-    val tyargl = 
-      if is_app rator then typearg_of_app rator
-      else if is_tptp_fv rator then typearg_of_fv rator
-      else typearg_of_c rator
+    val tyargl = typearg_of_cvapp rator
     val cvs = namea_cv (rator,arity)
   in
     tf1_fun oc (cvs, tf1_utype, tf1_term, tyargl, argl) 
@@ -148,7 +144,7 @@ fun tf1_logicdef oc (thy,name) =
 fun tf1_quantdef oc (thy,name) =
   let 
     val thm = assoc name [("!", FORALL_THM),("?", EXISTS_THM)]
-    val (tm,_) = tff_translate_thm thm
+    val (tm,_) = translate_thm thm
   in
     os oc (tffpar ^ escape ("quantdef." ^ name) ^ ",axiom,"); 
     tf1_formula oc tm; osn oc ")."
@@ -179,7 +175,7 @@ fun tf1_cvdef oc (tm,a) =
 fun tf1_thmdef role oc (thy,name) =
   let 
     val thm = DB.fetch thy name
-    val (cj,defl) = tff_translate_thm thm
+    val (cj,defl) = translate_thm thm
     val tf1name = name_thm (thy,name)
     fun f i def = 
       (
@@ -234,7 +230,7 @@ fun tf1_thmdef_boolext oc =
 
 fun tf1_thmdef_caster oc (name,thm) =
   let 
-    val (cj,defl) = tff_translate_thm thm
+    val (cj,defl) = translate_thm thm
     val _ = if null defl then () else raise ERR "tf1_thmdef_caster" ""
   in
     os oc (tffpar ^ name_thm (hocaster_extra,name) ^ ",axiom,");
@@ -259,7 +255,7 @@ fun tf1_thmdef_extra oc =
 val tyopl_extra = tyopl_of_tyl [``:bool -> bool``]
 
 val app_p_cval =
-  let val tml = map (fst o tff_translate_thm o snd) (app_axioml @ p_axioml) in
+  let val tml = map (fst o translate_thm o snd) (app_axioml @ p_axioml) in
     mk_fast_set tma_compare (List.concat (map collect_arity tml)) 
   end
 
@@ -276,8 +272,9 @@ val cval_extra = add_zeroarity (boolop_cval @ combin_cval @ app_p_cval)
 
 fun tf1_arityeq oc (cv,a) = 
   if a = 0 then () else
-  let 
-    val tf1name = "arityeq" ^ its a ^ escape "." ^ namea_cv (cv,a) 
+  let
+    val tf1name = 
+      add_tyargltag ("arityeq" ^ its a ^ escape "." ^ namea_cv (cv,a)) cv
     val tm = mk_arity_eq (cv,a)
   in
     os oc (tffpar ^ tf1name ^ ",axiom,"); tf1_formula oc tm; osn oc ")."
@@ -295,7 +292,7 @@ fun tf1_export_bushy thyl =
     val thyorder = sorted_ancestry thyl 
     val dir = tf1_bushy_dir
     fun f thy =
-      write_thy_bushy dir tff_translate_thm uniq_cvdef_mgc 
+      write_thy_bushy dir translate_thm uniq_cvdef_mgc 
        (tyopl_extra,cval_extra)
        (tf1_tyopdef_extra, tf1_tyopdef, tf1_cvdef_extra, tf1_cvdef, 
         tf1_thmdef_extra, tf1_arityeq, tf1_thmdef)
@@ -310,7 +307,7 @@ fun tf1_export_chainy thyl =
     val thyorder = sorted_ancestry thyl 
     val dir = tf1_chainy_dir
     fun f thy =
-      write_thy_chainy dir thyorder tff_translate_thm uniq_cvdef_mgc
+      write_thy_chainy dir thyorder translate_thm uniq_cvdef_mgc
         (tyopl_extra,cval_extra)
         (tf1_tyopdef_extra, tf1_tyopdef, tf1_cvdef_extra, tf1_cvdef, 
          tf1_thmdef_extra, tf1_arityeq, tf1_thmdef)
