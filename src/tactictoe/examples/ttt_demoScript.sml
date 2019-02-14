@@ -10,12 +10,10 @@ open HolKernel boolLib bossLib tacticToe;
 val _ = new_theory "ttt_demo";
 
 (* --------------------------------------------------------------------------
-   Record ancestries of the current theory. Takes a while.
-   To rebuild tactictoe for a theory, delete the corresponding ttt.sml file.
+   Record ancestries of the current theory. 
    ------------------------------------------------------------------------- *)
 
-(* val () = ttt_record (); *)
-
+(* val () = tttUnfold.ttt_record (); *)
 (* load "tacticToe"; open tacticToe; *)
 
 (* --------------------------------------------------------------------------
