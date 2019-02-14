@@ -49,6 +49,7 @@ include Abbrev
 
   val full_match_type : 
     hol_type -> hol_type -> {redex: hol_type, residue: hol_type} list
+  val typearg_of_c : term -> hol_type list
   val typearg_of_cvapp : term -> hol_type list
   val add_tyargltag : string -> term -> string
 
