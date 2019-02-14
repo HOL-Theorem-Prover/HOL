@@ -19,7 +19,7 @@ fun debug s = debug_in_dir debugdir "hhTranslate" s
    ------------------------------------------------------------------------- *)
 
 val tmn_glob = ref 0 (* number terms for parallel use *)
-val translate_cache = ref (dempty Term.compare)
+val translate_cache_glob = ref (dempty Term.compare)
 
 fun incr_genvar iref =
   let val (a,b) = !iref in iref := (a, b+1) end
@@ -137,7 +137,7 @@ fun LIFT_CONV iref tm =
   let
     fun test x = must_pred x orelse is_abs x
     val subtm = find_term test tm handle _ => raise ERR "LIFT_CONV" ""
-    val fvl = free_vars_lr subtm
+    val fvl = filter is_tptp_bv (free_vars_lr subtm)
     val v = genvar_lifting iref (type_of (list_mk_abs (fvl,subtm)))
     val rep = list_mk_comb (v,fvl)
     val eq  = list_mk_forall (fvl, (mk_eq (subtm,rep)))
@@ -265,10 +265,10 @@ fun prepare_tm tm =
     rename_bvarl escape (list_mk_forall (free_vars_lr tm', tm'))
   end
 
-fun rw_conv tm = (rhs o concl o conv) tm
+fun rw_conv conv tm = (rhs o concl o conv) tm
 fun sym_def tm = rw_conv (STRIP_QUANT_CONV SYM_CONV) tm
 
-fun translate_aux (tmn,tm) =
+fun translate_nocache (tmn,tm) =
   let
     val iref = ref (tmn,0)
     val tm1  = prepare_tm tm
@@ -280,10 +280,10 @@ fun translate_aux (tmn,tm) =
   end
 
 fun translate tm =
-  dfind tm (!translate_cache) handle NotFound =>
-  let val x = translate_aux ((!tmn_glob),tm) in
+  dfind tm (!translate_cache_glob) handle NotFound =>
+  let val x = translate_nocache ((!tmn_glob),tm) in
     incr tmn_glob;
-    translate_cache := dadd tm x (!translate_cache); x
+    translate_cache_glob := dadd tm x (!translate_cache_glob); x
   end
 
 fun translate_thm thm = 

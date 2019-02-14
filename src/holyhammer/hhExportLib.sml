@@ -157,7 +157,6 @@ val boolop_cval =
    (``$! : ('a -> bool) -> bool``,1),(``$? : ('a -> bool) -> bool``,1)
   ]
 
-
 (* -------------------------------------------------------------------------
    Higher-order theorems in a first-order embedding
    ------------------------------------------------------------------------- *)
@@ -165,7 +164,7 @@ val boolop_cval =
 fun mk_combin_thm thmname fvname =
   let 
     val thm = DB.fetch "combin" thmname
-    val (tm0,defl) = fof_translate_thm thm
+    val (tm0,defl) = translate_thm thm
     val _ = if null defl then () else raise ERR "mk_combin_thm" ""
     val oper = (fst o strip_comb o lhs o snd o strip_forall) tm0
     val lhs_combin_conv = STRIP_QUANT_CONV (LHS_CONV APP_CONV_AUX)
