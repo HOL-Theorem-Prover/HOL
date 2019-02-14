@@ -16,4 +16,4 @@ EXAMPLE: see more examples in examples/ttt_demoScript.sml.
   cd examples; Holmake
 
 NOTES FOR DEVELOPERS:
-  Keep up-to-date: infix tokens in hhsInfix.sml, polyml values in tttUnfold.sml.
+  Keep up-to-date: infix tokens in tttInfix.sml, polyml values in tttUnfold.sml.
