@@ -25,11 +25,9 @@ include Abbrev
   val mk_arity_eq : (term * int) -> term
   val all_arity_eq : term -> term list
 
-  (* translation *)
-  val fof_translate : term -> (term * term list) (* uses a cache *)
-  val tff_translate : term -> (term * term list)
+  (* translation: uses a cache *)
+  val translate : term -> (term * term list)
+  val translate_thm : thm -> (term * term list)
 
-  val fof_translate_thm : thm -> (term * term list)
-  val tff_translate_thm : thm -> (term * term list)
 
 end

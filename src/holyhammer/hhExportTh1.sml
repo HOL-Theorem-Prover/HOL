@@ -225,10 +225,10 @@ fun th1_export_chainy thyl =
 (* load "hhExportTh1"; open hhExportTh1; th1_export_bushy ["bool"]; *)
 
 (* Full export 
-load "hhExportTh1"; open hhExportTh1;
-load "tttUnfold"; tttUnfold.load_sigobj ();
-val thyl = ancestry (current_theory ());
-th1_export_bushy thyl;
+  load "hhExportTh1"; open hhExportTh1;
+  load "tttUnfold"; tttUnfold.load_sigobj ();
+  val thyl = ancestry (current_theory ());
+  th1_export_bushy thyl;
 *)
 
 

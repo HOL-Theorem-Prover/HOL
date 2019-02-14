@@ -175,7 +175,7 @@ fun RPT_LIFT_CONV iref tm =
    Lowest arity for bound variables. Arity 0.
    ------------------------------------------------------------------------- *)
 
-fun APP_CONV_MIN tm =
+fun APP_CONV_ONCE tm =
   let 
     val (rator,rand) = dest_comb tm
     val f = mk_var ("f",type_of rator)
@@ -192,16 +192,16 @@ fun APP_CONV_MIN tm =
     SYM (ISPECL [rator,rand] thm4)
   end
 
-fun APP_CONV_AUX tm =
-  (TRY_CONV (RATOR_CONV APP_CONV_AUX) THENC APP_CONV_MIN) tm
+fun APP_CONV_STRIPCOMB tm =
+  (TRY_CONV (RATOR_CONV APP_CONV_STRIPCOMB) THENC APP_CONV_ONCE) tm
 
 fun APP_CONV_BV tm =
   if not (is_comb tm) then NO_CONV tm else
     let val (oper,_) = strip_comb tm in
-      if is_tptp_bv oper then APP_CONV_AUX tm else NO_CONV tm
+      if is_tptp_bv oper then APP_CONV_STRIPCOMB tm else NO_CONV tm
     end
 
-fun APP_CONV_BVL tm = TOP_SWEEP_CONV APP_CONV_BV tm
+val APP_CONV_BV_REC = TRY_CONV (TOP_SWEEP_CONV APP_CONV_BV) THENC REFL 
 
 (* -------------------------------------------------------------------------
    Arity equations for constants and free variables.
@@ -212,51 +212,17 @@ fun APP_CONV_BVL tm = TOP_SWEEP_CONV APP_CONV_BV tm
 fun mk_arity_eq (f,n) =
   let
     val (tyl,_) = strip_type (type_of f)
-    val vl = genvarl_arity tyl
-    val vl' =  List.take (vl,n)
-    val tm = list_mk_comb (f,vl')
+    val vl  = genvarl_arity tyl
+    val vl' = List.take (vl,n)
+    val tm  = list_mk_comb (f,vl')
   in
-    concl (GENL vl' (APP_CONV_AUX tm))
+    concl (GENL vl' (APP_CONV_STRIPCOMB tm))
   end
-
-fun all_arity_eq tm =
-  map mk_arity_eq (filter (fn (_,a) => a <> 0) (collect_arity tm))
 
 (* -------------------------------------------------------------------------
-   FOF Translation
-   ------------------------------------------------------------------------- *)
-
-fun prepare_tm tm =
-  let val tm' = prep_rw tm in
-    rename_bvarl escape (list_mk_forall (free_vars_lr tm', tm'))
-  end
-
-fun sym_def tm = (rhs o concl o STRIP_QUANT_CONV SYM_CONV) tm
-
-fun fof_translate_aux (tmn,tm) =
-  let
-    val iref  = ref (tmn,0)
-    val tm1   = prepare_tm tm
-    val thml1 = RPT_LIFT_CONV iref tm1
-    val tml1  = map (rand o concl) thml1
-    val thml2 = (map (TRY_CONV APP_CONV_BVL THENC REFL)) tml1
-    val tml2  = map (rand o concl) thml2
-  in
-    (hd tml2, map sym_def (rev (tl tml2)))
-  end
-
-fun fof_translate tm =
-  dfind tm (!translate_cache) handle NotFound =>
-  let val x = fof_translate_aux ((!tmn_glob),tm) in
-    incr tmn_glob;
-    translate_cache := dadd tm x (!translate_cache); x
-  end
-
-fun fof_translate_thm thm = 
-  let val tm = (concl o GEN_ALL o DISCH_ALL) thm in fof_translate tm end
-
-(* -------------------------------------------------------------------------
-   TFF Translation
+   Optional (included by default): 
+   Avoiding polymorphic higher-oder to exceeds max arity 
+   (e.g. I_2 I_1 1 => app (I_1 (I_0), 1) 
    ------------------------------------------------------------------------- *)
 
 fun strip_funty_aux ty =
@@ -278,28 +244,49 @@ fun mgty_of c =
     type_of (prim_mk_const {Thy = Thy, Name = Name})
   end
 
-fun max_tff_arity c = length (snd (strip_funty (mgty_of c)))
+fun max_arity c = length (snd (strip_funty (mgty_of c)))
 
-fun APP_CONV_TFF tm =
+fun APP_CONV_MAX tm =
   if not (is_comb tm) then NO_CONV tm else
     let val (oper,argl) = strip_comb tm in
-      if is_const oper andalso length argl > max_tff_arity oper  
-      then APP_CONV_MIN tm 
+      if is_const oper andalso length argl > max_arity oper  
+      then APP_CONV_ONCE tm 
       else NO_CONV tm
     end
 
-val APP_CONV_TFF_REC = TRY_CONV (TOP_SWEEP_CONV APP_CONV_TFF) THENC REFL
-  
+val APP_CONV_MAX_REC = TRY_CONV (TOP_SWEEP_CONV APP_CONV_MAX) THENC REFL
+ 
+(* -------------------------------------------------------------------------
+   FOF Translation
+   ------------------------------------------------------------------------- *)
 
-fun tff_translate tm =
-  let 
-    val (formula,defl) = fof_translate tm 
-    fun rw x = (rhs o concl o APP_CONV_TFF_REC) x
-  in
-    (rw formula, map rw defl)
+fun prepare_tm tm =
+  let val tm' = prep_rw tm in
+    rename_bvarl escape (list_mk_forall (free_vars_lr tm', tm'))
   end
 
-fun tff_translate_thm thm = 
-  let val tm = (concl o GEN_ALL o DISCH_ALL) thm in tff_translate tm end
+fun rw_conv tm = (rhs o concl o conv) tm
+fun sym_def tm = rw_conv (STRIP_QUANT_CONV SYM_CONV) tm
+
+fun translate_aux (tmn,tm) =
+  let
+    val iref = ref (tmn,0)
+    val tm1  = prepare_tm tm
+    val tml1 = map (rand o concl) (RPT_LIFT_CONV iref tm1)
+    val tml2 = map (rw_conv APP_CONV_BV_REC) tml1
+    val tml3 = map (rw_conv APP_CONV_MAX_REC) tml2
+  in
+    (hd tml3, map sym_def (rev (tl tml3)))
+  end
+
+fun translate tm =
+  dfind tm (!translate_cache) handle NotFound =>
+  let val x = translate_aux ((!tmn_glob),tm) in
+    incr tmn_glob;
+    translate_cache := dadd tm x (!translate_cache); x
+  end
+
+fun translate_thm thm = 
+  let val tm = (concl o GEN_ALL o DISCH_ALL) thm in translate tm end
 
 end

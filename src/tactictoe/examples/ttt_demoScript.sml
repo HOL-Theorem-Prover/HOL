@@ -14,7 +14,7 @@ val _ = new_theory "ttt_demo";
    To rebuild tactictoe for a theory, delete the corresponding ttt.sml file.
    ------------------------------------------------------------------------- *)
 
-val () = ttt_record ();
+(* val () = ttt_record (); *)
 
 (* load "tacticToe"; open tacticToe; *)
 

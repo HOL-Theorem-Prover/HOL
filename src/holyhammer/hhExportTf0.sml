@@ -39,6 +39,23 @@ fun tf0_domain oc ty =
       fo_fun oc (tyops, tf0_domain, Args)
     end
 
+
+fun fo_fun_mono oc (s,f_arg,argl) = 
+  if null argl then os oc s else 
+  (os oc s; os oc (escape "("); oiter oc (escape ",") f_arg argl; 
+   os oc (escape ")"))
+
+fun tf0_monoty_aux oc ty =
+  if is_vartype ty then os oc (name_vartype ty) else
+    let
+      val {Args, Thy, Tyop} = dest_thy_type ty
+      val tyops = name_tyop (Thy,Tyop)
+    in
+      fo_fun_mono oc (tyops, tf0_monoty_aux, Args)
+    end
+
+fun tf0_monoty oc ty = (os oc (escape "mono."); tf0_monoty_aux oc ty)
+
 (* -------------------------------------------------------------------------
    TF0 quantifier
    ------------------------------------------------------------------------- *)
@@ -122,6 +139,58 @@ fun tf0_quantdef oc (thy,name) =
     os oc (tffpar ^ escape ("quantdef." ^ name) ^ ",axiom,"); 
     tf0_formula oc tm; osn oc ")."
   end
+
+(* -------------------------------------------------------------------------
+   I-J axioms
+   ------------------------------------------------------------------------- *)
+
+fun iname oc ty = (os oc "i_"; tf0_monoty oc ty)
+fun jname oc ty = (os oc "j_"; tf0_monoty oc ty)
+
+fun ij_axiom oc ty =
+  let
+    val v = mk_var ("V0",ty)
+    val vs = namea_v (v,0)
+  in
+    tf0_quant_vl oc "!" [v];
+    os oc "("; 
+      iname oc ty; os oc "("; jname oc ty; os oc "("; 
+        os oc "s(" ; tf0_domain oc ty; os oc ("," ^ vs ^ ")");
+      os oc "))"; os oc " = ";
+      os oc "s(" ; tf0_domain oc ty; os oc ("," ^ vs ^ ")");
+    os oc ")"
+  end
+
+(* 
+  load "hhExportTf0"; open hhExportTf0; 
+  ij_axiom TextIO.stdOut ``:num``;
+*)
+
+fun tf0_mono_vzero oc v = 
+  (os oc (namea_v (v,0) ^ ":"); tf0_monoty oc (type_of v))
+
+fun tf0_monoquant_vl oc s vl =
+  if null vl then () else
+  (os oc s; os oc "["; oiter oc ", " tf0_mono_vzero vl; os oc "]: ")
+
+fun ji_axiom oc ty =
+  let 
+    val v = mk_var ("V0",ty)
+    val vs = namea_v (v,0)
+  in
+    tf0_monoquant_vl oc "!" [v];
+    os oc "("; 
+      jname oc ty; os oc "(s("; iname oc ty; os oc "("; 
+        os oc ("," ^ vs ^ ")))");
+      os oc " = "; os oc vs;
+    os oc ")"
+  end
+
+(* 
+  load "hhExportTf0"; open hhExportTf0; 
+  ji_axiom TextIO.stdOut ``:num``;
+*)
+
 
 (* -------------------------------------------------------------------------
    TF0 definitions

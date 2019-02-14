@@ -2,8 +2,7 @@ TacticToe is a tactic-based prover.
 
 It searches for a proof by repeatedly applying suitable tactics for each goal state that it produces. 
 
-RECORDING: 
-  
+RECORDING:
   load "tttUnfold"; open tttUnfold;
   load "fooTheory";
   ttt_record (); (* takes a long time (2-12h) *)
@@ -12,8 +11,9 @@ USAGE: (after RECORDING)
   load "tacticToe"; open tacticToe;
   tactictoe ``1+1=2``;
   
-  See more examples in examples/ttt_demoScript.sml.
+EXAMPLE: see more examples in examples/ttt_demoScript.sml.
+  To create the ttt_demoTheory do:
+  cd examples; Holmake
 
 NOTES FOR DEVELOPERS:
-  Keep up-to-date: 
-    infix tokens in hhsInfix.sml, polyml values in tttUnfold.sml.
+  Keep up-to-date: infix tokens in hhsInfix.sml, polyml values in tttUnfold.sml.
