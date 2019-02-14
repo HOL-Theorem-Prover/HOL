@@ -218,9 +218,9 @@ val hocaster_extra = "extra-ho" (* fake theory for these theorems *)
 fun tf1_boolext oc = 
   let val (v0,v1) = (mk_var ("V0",bool),mk_var ("V1",bool)) in
     tf1_quant_vl oc "!" [v0,v1];
-    os oc "(("; tf1_pred oc v0; oc os " <=> "; tf1_pred oc v1; os oc ")";
+    os oc "(("; tf1_pred oc v0; os oc " <=> "; tf1_pred oc v1; os oc ")";
     os oc " => ";
-    os oc "("; tf1_term oc v0; oc os " = "; tf1_term oc v1; os oc "))"
+    os oc "("; tf1_term oc v0; os oc " = "; tf1_term oc v1; os oc "))"
   end
 
 fun tf1_thmdef_boolext oc =
