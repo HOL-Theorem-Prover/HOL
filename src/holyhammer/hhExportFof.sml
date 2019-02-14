@@ -102,7 +102,7 @@ fun fof_logicformula oc (thy,name) =
   end
 
 fun fof_logicdef oc (thy,name) =
-  (os oc (fofpar ^ escape ("logicdef." ^ name) ^ ",axiom,"); 
+  (os oc (fofpar ^ escape ("reserved.logicdef." ^ name) ^ ",axiom,"); 
    fof_logicformula oc (thy,name); osn oc ").")
 
 fun fof_quantdef oc (thy,name) =
@@ -110,7 +110,7 @@ fun fof_quantdef oc (thy,name) =
     val thm = assoc name [("!", FORALL_THM),("?", EXISTS_THM)]
     val (tm,_) = translate_thm thm
   in
-    os oc (fofpar ^ escape ("quantdef." ^ name) ^ ",axiom,"); 
+    os oc (fofpar ^ escape ("reserved.quantdef." ^ name) ^ ",axiom,"); 
     fof_formula oc tm; osn oc ")."
   end
 
@@ -124,7 +124,7 @@ fun fof_cvdef oc (tm,a) = ()
 fun fof_thmdef role oc (thy,name) =
   let 
     val thm = DB.fetch thy name
-    val (cj,defl) = translate_thm thm
+    val (statement,defl) = translate_thm thm
     val fofname = name_thm (thy,name)
     fun f i def = 
       (
@@ -134,7 +134,7 @@ fun fof_thmdef role oc (thy,name) =
   in
     ignore (mapi f defl);
     os oc (fofpar ^ fofname ^ "," ^ role ^ ",");
-    fof_formula oc cj; osn oc ")."
+    fof_formula oc statement; osn oc ")."
   end
 
 (* -------------------------------------------------------------------------
@@ -160,21 +160,24 @@ fun fof_boolext oc =
   end
 
 fun fof_thmdef_boolext oc =
-  let val fofname = name_thm (hocaster_extra,"boolext") in
+  let val fofname = 
+    escape "reserved." ^ (name_thm (hocaster_extra,"boolext")) 
+  in
     os oc (fofpar ^ fofname ^ ",axiom,"); fof_boolext oc; osn oc ")."
   end
 
 fun fof_thmdef_caster oc (name,thm) =
   let 
-    val (cj,defl) = translate_thm thm
+    val (statement,defl) = translate_thm thm
     val _ = if null defl then () else raise ERR "fof_thmdef_caster" ""
   in
-    os oc (fofpar ^ name_thm (hocaster_extra,name) ^ ",axiom,");
-    fof_formula oc cj; osn oc ")."
+    os oc (fofpar ^ escape "reserved." ^ 
+    name_thm (hocaster_extra,name) ^ ",axiom,");
+    fof_formula oc statement; osn oc ")."
   end
 
 fun fof_thmdef_combin oc (name,tm) =
-  let val fofname = name_thm (hocaster_extra,name) in
+  let val fofname = escape "reserved." ^ name_thm (hocaster_extra,name) in
     os oc (fofpar ^ fofname ^ ",axiom,"); fof_formula oc tm; osn oc ")."
   end
 
@@ -196,7 +199,8 @@ fun fof_arityeq oc (cv,a) =
   if a = 0 then () else
   let
     val fofname = 
-      add_tyargltag ("arityeq" ^ its a ^ escape "." ^ namea_cv (cv,a)) cv
+      add_tyargltag 
+      (escape "reserved.arityeq" ^ its a ^ escape "." ^ namea_cv (cv,a)) cv
     val tm = mk_arity_eq (cv,a)
   in
     os oc (fofpar ^ fofname ^ ",axiom,"); fof_formula oc tm; osn oc ")."
@@ -246,5 +250,95 @@ fun fof_export_chainy thyl =
   val thyl = ancestry (current_theory ());
   fof_export_bushy thyl;
 *)
+
+(* -------------------------------------------------------------------------
+   Interface to holyhammer
+   ------------------------------------------------------------------------- *)
+
+fun fof_collect_arity_thm thm =
+  let 
+    val (formula,defl) = translate_thm thm
+    val tml = formula :: defl 
+  in
+    mk_fast_set tma_compare (List.concat (map collect_arity tml))
+  end
+
+fun fof_collect_arity_cj cj =
+  let 
+    val (formula,defl) = translate cj
+    val tml = formula :: defl
+  in
+    mk_fast_set tma_compare (List.concat (map collect_arity tml))
+  end
+
+fun collect_arity_pb (cj,namethml) =
+  let 
+    val ll = fof_collect_arity_cj cj :: 
+             map (fof_collect_arity_thm o snd) namethml
+  in
+    mk_fast_set tma_compare (List.concat ll)
+  end
+
+fun fof_cjdef oc cj =
+  let 
+    val (statement,defl) = translate cj
+    val fofname = "conjecture"
+    fun f i def = 
+      (os oc (fofpar ^ escape "reserved.def" ^ its i ^ escape "." ^ fofname ^ ",axiom,");
+       fof_formula oc def; osn oc ").")
+  in
+    ignore (mapi f defl);
+    os oc (fofpar ^ fofname ^ ",conjecture,");
+    fof_formula oc statement; osn oc ")."
+  end
+
+fun fof_axdef oc (name,thm) =
+  let 
+    val (statement,defl) = translate_thm thm
+    val fofname = escape ("thm." ^ name)
+    fun f i def = 
+      (os oc (fofpar ^ escape "reserved.def" ^ 
+       its i ^ escape "." ^ fofname ^ ",axiom,");
+       fof_formula oc def; osn oc ").")
+  in
+    ignore (mapi f defl);
+    os oc (fofpar ^ fofname ^ ",axiom,");
+    fof_formula oc statement; osn oc ")."
+  end
+
+fun fof_export_pb dir (cj,namethml) =
+  let 
+    val file = dir ^ "/atp_in" 
+    val oc = TextIO.openOut file
+    val cval = collect_arity_pb (cj,namethml)
+  in
+    (fof_thmdef_extra oc;
+     app (fof_arityeq oc) cval;
+     app (fof_axdef oc) namethml; 
+     fof_cjdef oc cj; 
+     TextIO.closeOut oc)
+    handle Interrupt => (TextIO.closeOut oc; raise Interrupt)
+  end
+
+(* 
+load "holyHammer"; open holyhammer;
+load "hhExportFof"; open hhExportFof;
+load "mlThmData"; open mlThmData;
+load "mlFeature"; open mlFeature;
+val cj = ``1+1=2``;
+val goal : goal = ([],cj);
+val n = 32;
+load "mlNearestNeighbor"; open mlNearestNeighbor;
+val thmdata = create_thmdata ();
+val premises = thmknn_wdep thmdata n (feahash_of_goal goal);
+val namethml = thml_of_namel premises;
+
+val hh_dir = HOLDIR ^ "/src/holyhammer";
+fof_export_pb hh_dir (cj,namethml);
+
+*)
+
+
+
 
 end (* struct *)

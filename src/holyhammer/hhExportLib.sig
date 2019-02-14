@@ -6,7 +6,6 @@ include Abbrev
   val hh_dir : string
 
   type formula_info = {
-    thmid : string * string,
     cval : (term * int) list,
     tyopl : ((string * string) * int) list
   }
@@ -58,10 +57,7 @@ include Abbrev
   
   val tyopl_of_tyl : hol_type list -> ((string * string) * int) list
   val add_zeroarity : (term * int) list -> (term * int) list 
-
-  val formula_info : 
-    (thm -> (term * term list)) -> string * string -> formula_info
-
+  
   (* thm *)
   val older_than : thm -> 'a * thm -> bool
   val depo_of_thm : thm -> (string * string) list option 

@@ -222,7 +222,7 @@ fun th1_export_chainy thyl =
     mkDir_err dir; app f thyorder
   end
 
-(* load "hhExportTh1"; open hhExportTh1; th1_export_bushy ["bool"]; *)
+(* load "hhExportTh1"; open hhExportTh1; th1_export_chainy ["arithmetic"]; *)
 
 (* Full export 
   load "hhExportTh1"; open hhExportTh1;

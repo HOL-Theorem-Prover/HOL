@@ -40,7 +40,4 @@ sig
     }
   val hh_eval : (thmdata * tacdata) -> (string * string) -> goal -> unit
 
-  (* Standalone translation of a problem *)
-  val translate_write_file: string -> (string list * term) -> unit
-
 end

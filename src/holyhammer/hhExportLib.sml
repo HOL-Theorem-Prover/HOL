@@ -254,8 +254,8 @@ fun add_zeroarity cval =
     mk_fast_set tma_compare (List.concat (map f cval))
   end
 
-type formula_info = {
-  thmid : string * string,
+type formula_info = 
+  {
   cval : (term * int) list,
   tyopl : ((string * string) * int) list
   }
@@ -273,7 +273,7 @@ fun zeroed_arity (c,a) = (c,0)
  
 fun uniq_cvdef_arity cval = mk_fast_set tma_compare (map zeroed_arity cval) 
 
-fun formula_info f_translate (thy,name) =
+fun formula_info_thm f_translate (thy,name) =
   let 
     val thm = DB.fetch thy name
     val (formula,defl) = f_translate thm
@@ -281,7 +281,7 @@ fun formula_info f_translate (thy,name) =
     val cval = mk_fast_set tma_compare (List.concat (map collect_arity tml))
     val tyopl = mk_fast_set ida_compare (List.concat (map collect_tyop tml))
   in
-    {thmid = (thy,name), cval = add_zeroarity cval, tyopl = tyopl}
+    {cval = add_zeroarity cval, tyopl = tyopl}
   end
 
 (* -------------------------------------------------------------------------
@@ -323,14 +323,14 @@ fun write_cj dir f_translate uniq_def (tyopl_extra,cval_extra)
   let 
     val file = dir ^ "/" ^ name_thm thmid ^ ".p"
     val oc = TextIO.openOut file
-    val cjinfo = formula_info f_translate thmid
-    val axinfol = map (formula_info f_translate) depl
+    val thmidinfo = formula_info_thm f_translate thmid
+    val axinfol = map (formula_info_thm f_translate) depl
     val tyopl = 
       mk_fast_set ida_compare 
-      (List.concat (tyopl_extra :: #tyopl cjinfo :: map #tyopl axinfol))
+      (List.concat (tyopl_extra :: #tyopl thmidinfo :: map #tyopl axinfol))
     val cval = 
       mk_fast_set tma_compare 
-      (List.concat (cval_extra :: #cval cjinfo :: map #cval axinfol))
+      (List.concat (cval_extra :: #cval thmidinfo :: map #cval axinfol))
   in
     (
     f_tyopdef_extra oc;
@@ -359,6 +359,10 @@ fun write_thy_bushy dir a b c d thy =
   let val cjdepl = add_bushy_dep thy (DB.theorems thy) in
     print (thy ^ " "); app (write_cj dir a b c d) cjdepl
   end
+
+(* -------------------------------------------------------------------------
+   Chainy
+   ------------------------------------------------------------------------- *)
 
 fun thmidl_in_thyl thyl =
   let fun f thy = map (fn (name,_) => (thy,name)) (DB.thms thy) in

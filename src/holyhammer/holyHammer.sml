@@ -5,7 +5,7 @@
 (*                 found by the provers help Metis to reconstruct the    *)
 (*                 proof.                                                *)
 (* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck        *)
-(* DATE          : 2018                                                  *)
+(* DATE          : 2015                                                  *)
 (* ===================================================================== *)
 
 structure holyHammer :> holyHammer =
@@ -13,7 +13,7 @@ struct
 
 open HolKernel boolLib Thread aiLib smlExecute smlRedirect
   mlFeature mlThmData mlTacticData mlNearestNeighbor
-  hhReconstruct hhTranslate hhTptp
+  hhExportFof hhReconstruct hhTranslate hhTptp
 
 val ERR = mk_HOL_ERR "holyHammer"
 val debugdir = HOLDIR ^ "/src/holyhammer/debug"
@@ -142,35 +142,13 @@ val hh_goaltac_cache = ref (dempty goal_compare)
 
 fun clean_hh_goaltac_cache () = hh_goaltac_cache := dempty goal_compare
 
-val notfalse = EQT_ELIM (last (CONJ_LIST 3 NOT_CLAUSES))
-
-(* todo move to export *)
-val extra_premises =
-  [("truth", TRUTH), ("notfalse", notfalse),
-   ("bool_cases_ax", BOOL_CASES_AX), ("eq_ext", EQ_EXT)]
-
-fun translate_write_file file (premises,cj) =
-  let
-    val thml = extra_premises @ thml_of_namel premises
-    val pb = translate_pb thml cj
-    val (axl,new_cj) = name_pb pb
-  in
-    write_tptp_file file axl new_cj
-  end
-
-fun translate_write_dir dir (premises,cj) =
-  let
-    val thml = extra_premises @ thml_of_namel premises
-    val pb = translate_pb thml cj
-    val (axl,new_cj) = name_pb pb
-  in
-    write_tptp dir axl new_cj
-  end
-
 (* Warning: limits the number of selected premises (even in hh_pb) *)
-fun translate_write_atp premises cj atp =
-  let val new_premises = first_n (npremises_of atp) premises in
-    translate_write_dir (provdir_of atp) (new_premises,cj)
+fun export_to_atp premises cj atp =
+  let 
+    val new_premises = first_n (npremises_of atp) premises 
+    val namethml = thml_of_namel new_premises
+  in
+    fof_export_pb (provdir_of atp) (cj,namethml)
   end
 
 fun exists_atp atp =
@@ -186,7 +164,7 @@ fun hh_pb wanted_atpl premises goal =
   let
     val atpl = filter exists_atp_err wanted_atpl
     val cj = list_mk_imp goal
-    val _  = app (translate_write_atp premises cj) atpl
+    val _  = app (export_to_atp premises cj) atpl
     val t1 = !timeout_glob
     val t2 = Real.fromInt t1 + 2.0
     fun f x = fn () => ignore (launch_atp (provdir_of x) x t1)
@@ -195,7 +173,7 @@ fun hh_pb wanted_atpl premises goal =
     case olemmas of
       NONE =>
         (log_eval "  ATPs could not find a proof";
-        raise ERR "holyhammer" "ATPs could not find a proof")
+        raise ERR "hh_pb" "ATPs could not find a proof")
     | SOME lemmas =>
       let
         val (stac,tac) = hh_reconstruct lemmas goal
