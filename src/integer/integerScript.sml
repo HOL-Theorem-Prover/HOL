@@ -465,7 +465,7 @@ val NUM_POSTINT_EX =
 val _ = print "Establish type of integers\n";
 
 local
-    fun mk_def (d,t,n,f) = {def_name=d, fixity=f, fname=n, func=t}
+    fun mk_def (d,t,n) = {def_name=d, fixity=NONE, fname=n, func=t}
 in
     val [INT_10, INT_ADD_SYM, INT_MUL_SYM,
          INT_ADD_ASSOC, INT_MUL_ASSOC, INT_LDISTRIB,
@@ -475,25 +475,21 @@ in
          int_of_num, INT_INJ, NUM_POSINT_EX] =
         define_equivalence_type
         {name = "int", equiv = TINT_EQ_EQUIV,
-         defs = [mk_def ("int_0", Term `tint_0`,     "int_0", NONE),
-                 mk_def ("int_1", Term `tint_1`,     "int_1", NONE),
-                 mk_def ("int_neg",Term `tint_neg`,  "int_neg",   NONE),
-                 mk_def ("int_add",Term `$tint_add`, "int_add",   NONE),
-                 mk_def ("int_mul",Term `$tint_mul`, "int_mul",   NONE),
-                 mk_def ("int_lt",Term `$tint_lt`,   "int_lt",    NONE),
-                 mk_def ("int_of_num",Term `tint_of_num`,"int_of_num",NONE)],
+         defs = [mk_def ("int_0"      , “tint_0”,      "int_0"),
+                 mk_def ("int_1"      , “tint_1”,      "int_1"),
+                 mk_def ("int_neg"    , “tint_neg”,    "int_neg"),
+                 mk_def ("int_add"    , “$tint_add”,   "int_add"),
+                 mk_def ("int_mul"    , “$tint_mul”,   "int_mul"),
+                 mk_def ("int_lt"     , “$tint_lt”,    "int_lt"),
+                 mk_def ("int_of_num" , “tint_of_num”, "int_of_num")],
 
          welldefs = [TINT_NEG_WELLDEF, TINT_LT_WELLDEF,
                      TINT_ADD_WELLDEF, TINT_MUL_WELLDEF],
-         old_thms = ([TINT_10] @
-                     (map (GEN_ALL o MATCH_MP TINT_EQ_AP o SPEC_ALL)
-                      [TINT_ADD_SYM, TINT_MUL_SYM, TINT_ADD_ASSOC,
-                       TINT_MUL_ASSOC, TINT_LDISTRIB]) @
-                     [TINT_ADD_LID, TINT_MUL_LID, TINT_ADD_LINV,
+         old_thms = ([TINT_10, TINT_ADD_SYM, TINT_MUL_SYM, TINT_ADD_ASSOC,
+                      TINT_MUL_ASSOC, TINT_LDISTRIB,
+                      TINT_ADD_LID, TINT_MUL_LID, TINT_ADD_LINV,
                       TINT_LT_TOTAL, TINT_LT_REFL, TINT_LT_TRANS,
-                      TINT_LT_ADD, TINT_LT_MUL,
-                      LIST_CONJ (map (GEN_ALL o MATCH_MP TINT_EQ_AP o SPEC_ALL)
-                                     (CONJUNCTS tint_of_num)),
+                      TINT_LT_ADD, TINT_LT_MUL, tint_of_num,
                       TINT_INJ, NUM_POSTINT_EX])}
 end;
 
