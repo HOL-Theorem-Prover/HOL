@@ -62,7 +62,7 @@ fun assume_prems thm = if not (is_imp (concl thm)) then thm
   else let
     val thm = CONV_RULE (RATOR_CONV simp_count_append) thm
     val l_asm = fst (dest_imp (concl thm))
-    val prem = if l_asm = T then TRUTH else ASSUME l_asm
+    val prem = if l_asm ~~ T then TRUTH else ASSUME l_asm
   in
     assume_prems (MP thm prem)
   end
@@ -194,7 +194,8 @@ fun dest_alookup_single tm = let
 fun mk_repr_step rs tm = let
     val (AList_Reprs inn_rs) = rs
     val (f, xs) = strip_comb tm
-    val is_short = dest_alookup_single tm <> NONE
+    val is_short =
+        not (option_eq (option_eq aconv) (dest_alookup_single tm) NONE)
     val is_merge = same_const option_choice_tm f
     val is_repr_merge = is_merge andalso (case peek_repr rs (hd xs) of
         SOME _ => true | NONE => false)

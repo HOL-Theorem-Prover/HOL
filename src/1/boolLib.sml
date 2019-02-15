@@ -219,18 +219,23 @@ fun term_diff t1 t2 =
     recurse [] t1 t2
   end
 
+local
+open Portable
+val aconv = Term.aconv
+in
 fun Teq tm = Term.same_const boolSyntax.T tm
 fun Feq tm = Term.same_const boolSyntax.F tm
-fun tmleq tl1 tl2 = ListPair.allEq op~~ (tl1,tl2)
-fun goaleq (tl1,t1) (tl2,t2) = tmleq tl1 tl2 andalso t1 ~~ t2
-fun goals_eq gl1 gl2 = ListPair.allEq (fn (g1,g2) => goaleq g1 g2) (gl1,gl2)
+val tml_eq = list_eq aconv
+val tmp_eq = pair_eq aconv aconv
+val goal_eq = pair_eq tml_eq aconv
+val goals_eq = list_eq goal_eq
 val tmem = Lib.op_mem Term.aconv
+fun memt tlist t = Lib.op_mem Term.aconv t tlist
 val tunion = Lib.op_union Term.aconv
 fun tassoc t l = Lib.op_assoc Term.aconv t l
 
 fun tmx_eq (tm1,x1) (tm2,x2) = x1 = x2 andalso Term.aconv tm1 tm2
 fun xtm_eq (x1,tm1) (x2,tm2) = x1 = x2 andalso Term.aconv tm1 tm2
-fun tmp_eq (tm1,tm2) (tma,tmb) = tm1 ~~ tma andalso tm2 ~~ tmb
-
+end
 
 end;

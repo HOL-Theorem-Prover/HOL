@@ -37,7 +37,8 @@ fun assoc2 item =
     in assc
     end;
 
-fun allpairs f l1 l2 = itlist (union o C map l2 o f) l1 [];;
+fun tmpair_eq (t11,t12) (t21,t22) = aconv t11 t21 andalso aconv t12 t22
+fun allpairs f l1 l2 = itlist (op_union tmpair_eq o C map l2 o f) l1 []
 
 fun thm_eq th1 th2 = let
   val (h1, c1) = dest_thm th1
@@ -49,6 +50,8 @@ fun thm_eq th1 th2 = let
 in
   all_aconv h1 h2 andalso aconv c1 c2
 end
+
+fun tmi_eq (tm1,i1:int) (tm2,i2) = aconv tm1 tm2 andalso i1 = i2
 
 val the_true = T
 val the_false = F
@@ -158,7 +161,7 @@ in
   fun new_vardb () : vardb = (ref [], ref [], ref 0)
   fun fol_of_var ((vstore,_,vcounter):vardb) (v:term) =
     let val currentvars = !vstore
-    in case assoc1 v currentvars
+    in case op_assoc1 aconv v currentvars
         of SOME x => x
          | NONE =>
             let val n = inc_vcounter vcounter
@@ -190,10 +193,10 @@ fun hol_of_const ((cstore,_):cdb) c =
      | NONE => failwith "hol_of_const"
 
 fun fol_of_term env consts (cvdb as (cdb,vdb)) tm =
-  if is_var tm andalso not (mem tm consts) then Var(fol_of_var vdb tm)
+  if is_var tm andalso not (op_mem aconv tm consts) then Var(fol_of_var vdb tm)
   else
     let val (f,args) = strip_comb tm
-    in if mem f env then failwith "fol_of_term: higher order"
+    in if op_mem aconv f env then failwith "fol_of_term: higher order"
        else let val ff = fol_of_const cdb f
             in Fnapp(ff, map (fol_of_term env consts cvdb) args)
             end
@@ -201,7 +204,7 @@ fun fol_of_term env consts (cvdb as (cdb,vdb)) tm =
 
 fun fol_of_atom env consts (cvdb as (cdb,_)) tm =
   let val (f,args) = strip_comb tm
-  in if mem f env then failwith "fol_of_atom: higher order"
+  in if op_mem aconv f env then failwith "fol_of_atom: higher order"
      else (fol_of_const cdb f, map (fol_of_term env consts cvdb) args)
   end
 
@@ -688,8 +691,9 @@ in
   fun make_hol_contrapos memory (n,th) =
     let val tm = concl th
         val key = (n,tm)
+        fun key_eq (i1,tm1) (i2,tm2) = aconv tm1 tm2 andalso i1 = i2
     in
-     case (assoc1 key (!memory))
+     case op_assoc1 key_eq key (!memory)
       of SOME x => x
        | NONE =>
          if n < 0 then CONV_RULE (pull_CONV THENC imf_CONV) th
@@ -727,7 +731,7 @@ in
         val (cdv, vdb) = cvdb
         val ths    = map (meson_to_hol newins cpos_cache cvdb) gs
         val hth =
-           if concl th = the_true then ASSUME hol_g
+           if aconv (concl th) the_true then ASSUME hol_g
            else let val cth = make_hol_contrapos cpos_cache (n,th)
                 in if null ths then cth
                    else Drule.MATCH_MP cth (Lib.end_itlist Thm.CONJ ths)
@@ -795,10 +799,11 @@ val create_equality_axioms =
       let val tyins = type_match (type_of veq_tm) (type_of eq) []
       in map (INST_TYPE tyins) eq_thms
       end
+    val insert_tmi = op_insert tmi_eq
     fun tm_consts tm acc =
       let val (fnc,args) = strip_comb tm
-      in if args = [] then acc
-        else itlist tm_consts args (insert (fnc,length args) acc)
+      in if null args then acc
+        else itlist tm_consts args (insert_tmi (fnc,length args) acc)
       end
     fun fm_consts tm (acc as (preds,funs)) =
       fm_consts(snd(dest_forall tm)) acc
@@ -818,8 +823,8 @@ val create_equality_axioms =
            end
         handle HOL_ERR _ =>
            let val (pred,args) = strip_comb tm
-           in if args = [] then acc
-              else (insert (pred,length args) preds,
+           in if null args then acc
+              else (insert_tmi (pred,length args) preds,
                     itlist tm_consts args funs)
            end;
 
@@ -842,13 +847,13 @@ val create_equality_axioms =
     fn tms =>
     let val (preds,funs) = itlist fm_consts tms ([],[])
         val (eqs0,noneqs) = partition (is_eqc o fst) preds
-    in if eqs0 = [] then []
+    in if null eqs0 then []
        else let val pcongs = map (create_congruence_axiom true) noneqs
                 and fcongs = map (create_congruence_axiom false) funs
                 val (preds1,_) =
                   itlist fm_consts (map concl (pcongs @ fcongs)) ([],[])
                 val eqs1 = filter (is_eqc o fst) preds1
-                val eqs = union eqs0 eqs1
+                val eqs = op_union tmi_eq eqs0 eqs1
                 val equivs = itlist
                   (Lib.op_union thm_eq o create_equivalence_axioms) eqs []
             in
@@ -873,7 +878,7 @@ val (POLY_ASSUME_TAC:thm list -> jrhTactics.Tactic) =
         else
           if is_neg tm then
             grab_constants (rand tm) acc
-          else union (find_terms is_const tm) acc
+          else op_union aconv (find_terms is_const tm) acc
     fun match_consts (tm1,tm2) =
       let val {Name=s1,Thy=thy1,Ty=ty1} = dest_thy_const tm1
           and {Name=s2,Thy=thy2,Ty=ty2} = dest_thy_const tm2
@@ -883,8 +888,8 @@ val (POLY_ASSUME_TAC:thm list -> jrhTactics.Tactic) =
         else failwith "match_consts"
       end
     fun polymorph mconsts th =
-      let val tvs = subtract (type_vars_in_term (concl th))
-                             (Lib.U (map type_vars_in_term (hyp th)))
+      let val tvs = Lib.subtract (type_vars_in_term (concl th))
+                                 (Lib.U (map type_vars_in_term (hyp th)))
       in
         if tvs = [] then [th] else
           let

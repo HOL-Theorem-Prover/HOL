@@ -494,7 +494,8 @@ val io_stats_tm =
 
 (* definition of IO assertions *)
 
-fun genall tm v = foldr mk_forall tm (filter (fn x => not (x = v)) (free_vars tm));
+fun genall tm v =
+    foldr mk_forall tm (filter (fn x => x !~ v) (free_vars tm));
 
 val io_assums_def = Define `
   io_assums ^IO = ^(genall io_stats_tm IO) /\

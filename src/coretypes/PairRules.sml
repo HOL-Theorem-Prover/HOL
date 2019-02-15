@@ -416,7 +416,7 @@ fun GEN_PALPHA_CONV p tm =
 (* ------------------------------------------------------------------------- *)
 
 fun PALPHA t1 t2 =
-   if t1 = t2 then REFL t1 else
+   if aconv t1 t2 then REFL t1 else
    if (is_pabs t1) andalso (is_pabs t2)
    then let val (p1,b1) = dest_pabs t1
             val (p2,b2) = dest_pabs t2
@@ -622,7 +622,7 @@ fun AND_PFORALL_CONV tm =
         val (x,P) = dest_pforall conj1
         and (y,Q) = dest_pforall conj2
     in
-        if (not (x=y)) then failwith""
+        if not (aconv x y) then failwith""
         else
             let val f = mk_pabs (x,P)
                 val g = mk_pabs(x,Q)
@@ -694,7 +694,7 @@ fun OR_PEXISTS_CONV tm =
         val (x,P) = dest_pexists disj1
         and (y,Q) = dest_pexists disj2
     in
-        if (not (x=y)) then failwith""
+        if not (aconv x y) then failwith""
         else
             let val f = mk_pabs(x,P)
                 val g = mk_pabs(x,Q)
@@ -848,7 +848,7 @@ fun AND_PEXISTS_CONV tm =
         val (y,Q) = dest_pexists conj2
             handle HOL_ERR _ => failwith "expecting `(?x.P) /\\ (?x.Q)`"
         in
-            if not (x=y) then
+            if not (aconv x y) then
                 failwith "expecting `(?x.P) /\\ (?x.Q)`"
             else if (occs_in x P) orelse (occs_in x Q) then
                 failwith ("`" ^ (fst(dest_var x)) ^ "` free in conjunct(s)")
@@ -1002,7 +1002,7 @@ fun OR_PFORALL_CONV tm =
         end
     handle HOL_ERR _ => failwith "expecting `(!x.P) \\/ (!x.Q)`"
     in
-        if not (x=y) then
+        if not (aconv x y) then
             failwith "expecting `(!x.P) \\/ (!x.Q)'"
         else if (occs_in x P) orelse (occs_in x Q) then
             failwith "quantified variables free in disjuncts(s)"
@@ -1569,7 +1569,7 @@ val IPSPECL =
 
 val pvariant =
     let fun uniq [] = []
-          | uniq (h::t) = h::uniq (filter (not o equal h) t)
+          | uniq (h::t) = h::uniq (filter (not o aconv h) t)
         fun variantl avl [] = []
           | variantl avl (h::t) =
             let val h' = variant (avl@(filter is_var t)) h
@@ -1702,7 +1702,7 @@ val PGEN_TAC : tactic = fn (a,t)  =>
     end;
 
 fun FILTER_PGEN_TAC tm : tactic = fn (a,t) =>
-    if (is_pforall t) andalso (not (tm = (fst (dest_pforall t)))) then
+    if is_pforall t andalso not (aconv tm (fst (dest_pforall t))) then
         PGEN_TAC (a,t)
     else
         failwith "FILTER_PGEN_TAC";
@@ -1760,12 +1760,14 @@ val PSELECT_CONV =
             failwith""
     in
         fn tm =>
-        let fun right t = is_pselect t andalso
-                           (rhs (concl (PBETA_CONV (mk_comb(rand t,t)))) = tm)
-            val epi = find_first right tm
-            val (p,b) = dest_pselect epi
+        let
+          fun right t =
+            is_pselect t andalso
+            aconv (rhs (concl (PBETA_CONV (mk_comb(rand t,t))))) tm
+          val epi = find_first right tm
+          val (p,b) = dest_pselect epi
         in
-            SYM (PEXISTS_CONV (mk_pexists(p,b)))
+          SYM (PEXISTS_CONV (mk_pexists(p,b)))
         end
     end
 handle HOL_ERR _ => failwith "PSELECT_CONV" ;
@@ -2430,7 +2432,7 @@ val PMATCH_MP_TAC : thm_tactic =
 (* --------------------------------------------------------------------- *)
 
 fun gen_assoc (keyf,resf)item =
- let fun assc (v::rst) = if (item = keyf v) then resf v else assc rst
+ let fun assc (v::rst) = if aconv item (keyf v) then resf v else assc rst
        | assc [] = raise ERR "gen_assoc" "not found"
  in
     assc
@@ -2440,10 +2442,10 @@ fun gen_assoc (keyf,resf)item =
 val PMATCH_MP =
     let fun variants asl [] = []
           | variants asl (h::t) =
-            let val h' = variant (asl@(filter (fn e => not (e = h)) t)) h
+            let val h' = variant (asl@(filter (fn e => not (aconv e h)) t)) h
             in {residue=h',redex=h}::(variants (h'::asl) t)
             end
-        fun frev_assoc e2 (l:(''a,''a)subst) = gen_assoc(#redex,#residue)e2 l
+        fun frev_assoc e2 (l:(term,term)subst) = gen_assoc(#redex,#residue)e2 l
             handle HOL_ERR _ => e2
     in
         fn ith =>
@@ -2463,15 +2465,20 @@ val PMATCH_MP =
                 val tm_inst = fst (match_term t_ t')
                 val (match_vs, unmatch_vs) = partition (C free_in t_)
                                                        (free_vars u_)
-                val rename = subtract unmatch_vs (subtract A_vs pvs)
+                val rename =
+                    op_set_diff aconv unmatch_vs (op_set_diff aconv A_vs pvs)
                 val new_vs = free_varsl (map (C frev_assoc tm_inst) match_vs)
                 val renaming = variants (new_vs@A_vs@B_vs) rename
-                val (specs,insts) = partition (C mem (free_varsl pvs) o #redex)
-                    (renaming@tm_inst)
+                val (specs,insts) =
+                    partition (C (op_mem aconv) (free_varsl pvs) o #redex)
+                              (renaming@tm_inst)
                 val spec_list = map (subst specs) ps_
                 val mp_th = MP (PSPECL spec_list (INST insts ith_)) th
-                val gen_ps = (filter (fn p => null (subtract (strip_pair p)
-                                                             rename)) ps_)
+                val gen_ps =
+                    filter (fn p => null (op_set_diff aconv
+                                                      (strip_pair p)
+                                                      rename))
+                           ps_
                 val qs = map (subst renaming) gen_ps
             in
                 PGENL qs mp_th

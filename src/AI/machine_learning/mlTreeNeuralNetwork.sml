@@ -59,7 +59,7 @@ fun order_subtm tm =
     fun cmp (a,b) = Term.compare (fst a, fst b)
     fun g x = mk_fast_set cmp (f x)
   in
-    topo_sort (g tm)
+    topo_sort Term.compare (g tm)
   end
 
 fun norm_vect v = Vector.map (fn x => 2.0 * (x - 0.5)) v
@@ -296,4 +296,3 @@ fun train_treenn_schedule dim treenn bsize (ptrain,ptest) schedule =
   train_treenn_schedule_aux dim (treenn,0.0) bsize (ptrain,ptest) schedule
 
 end (* struct *)
-

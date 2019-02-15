@@ -1,11 +1,13 @@
 structure QFRead :> QFRead =
 struct
 
+type reader =
+     {read : unit -> char option, reset : unit -> unit, eof : unit -> bool}
 fun die s = (TextIO.output(TextIO.stdErr, s ^ "\n");
              OS.Process.exit OS.Process.failure)
 fun exndie e = die ("Exception raised " ^ General.exnMessage e)
 
-fun exhaust_lexer (read, close) =
+fun exhaust_lexer (read, close, _) =
   let
     fun recurse acc =
       case read () of
@@ -15,6 +17,8 @@ fun exhaust_lexer (read, close) =
     recurse []
   end
 
+fun reset st = fn () => QuoteFilter.UserDeclarations.resetstate st
+
 fun file_to_lexer fname =
   let
     val instrm = TextIO.openIn fname handle e => exndie e
@@ -22,7 +26,7 @@ fun file_to_lexer fname =
     val qstate = QuoteFilter.UserDeclarations.newstate isscript
     val read = QuoteFilter.makeLexer (fn n => TextIO.input instrm) qstate
   in
-    (read, (fn () => TextIO.closeIn instrm))
+    (read, (fn () => TextIO.closeIn instrm), reset qstate)
   end
 
 fun string_to_lexer s =
@@ -32,7 +36,7 @@ fun string_to_lexer s =
     fun str_read _ = (!sr before sr := "")
     val read = QuoteFilter.makeLexer str_read qstate
   in
-    (read, (fn () => ()))
+    (read, (fn () => ()), reset qstate)
   end
 
 fun stream_to_lexer isscriptp strm =
@@ -40,14 +44,13 @@ fun stream_to_lexer isscriptp strm =
     val qstate = QuoteFilter.UserDeclarations.newstate isscriptp
     val read = QuoteFilter.makeLexer (fn n => TextIO.input strm) qstate
   in
-    (read, (fn () => ()))
+    (read, (fn () => ()), reset qstate)
   end
-
 
 fun inputFile fname = exhaust_lexer (file_to_lexer fname)
 fun fromString s = exhaust_lexer (string_to_lexer s)
 
-fun mkReaderEOF (read, close) = let
+fun mkReaderEOF (read, close, reset) = let
   val i = ref 0
   val s = ref ""
   val sz = ref 0
@@ -60,12 +63,11 @@ fun mkReaderEOF (read, close) = let
     else (pull(); doit())
   fun eof () = !eofp
 in
-  (doit, eof)
+  {read = doit, eof = eof, reset = reset}
 end
 
-fun fileToReaderEOF fname = mkReaderEOF (file_to_lexer fname)
-fun fileToReader fname = #1 (fileToReaderEOF fname)
-fun stringToReader s = #1 (mkReaderEOF (string_to_lexer s))
-fun streamToReader b strm = #1 (mkReaderEOF (stream_to_lexer b strm))
+fun fileToReader fname = mkReaderEOF (file_to_lexer fname)
+fun stringToReader s = mkReaderEOF (string_to_lexer s)
+fun streamToReader b strm = mkReaderEOF (stream_to_lexer b strm)
 
 end

@@ -262,7 +262,7 @@ val _ =
       SOME ([([],subgoal)],_) => if aconv subgoal expected then OK()
                                  else die ""
     | _ => die ""
-end (* local *)
+end; (* local *)
 
 val _ = app testutils.convtest [
   ("COND_CONV(1)", Conv.COND_CONV, “if b then (\x:'a. x) else (\y.y)”,
@@ -684,7 +684,7 @@ val _ = let
       (REPEAT_LT (ALLGOALS (POP_ASSUM (fn _ => ALL_TAC))
           THEN_LT HEADGOAL (POP_ASSUM ACCEPT_TAC))) ] ;
   val th = prove (``a ==> b ==> c ==> d ==> a /\ b /\ c /\ d``, tac) ;
-in if hyp th = [] then OK() else die ""
+in if null (hyp th) then OK() else die ""
 end handle _ => die ""
 
 val _ = let
@@ -693,7 +693,7 @@ val _ = let
     THENL [POP_ASSUM MATCH_MP_TAC THEN CONJ_TAC, DISJ1_TAC]
     THEN (FIRST_ASSUM ACCEPT_TAC)
   val th = prove (``p ==> q ==> (p /\ q ==> r) ==> r /\ (r \/ s)``, tac) ;
-in if hyp th = [] then OK() else die ""
+in if null (hyp th) then OK() else die ""
 end handle _ => die ""
 
 val _ = let
@@ -707,7 +707,7 @@ val _ = let
   val g = ``(p ==> q ==> (p /\ q ==> r) ==> r) /\
     (p ==> q ==> (p ==> r) ==> r)``
   val th = prove (g, tac) ;
-in if hyp th = [] then OK() else die ""
+in if null (hyp th) then OK() else die ""
 end handle _ => die ""
 
 val _ = let

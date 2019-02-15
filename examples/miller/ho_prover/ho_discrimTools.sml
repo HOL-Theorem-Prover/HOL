@@ -67,6 +67,17 @@ datatype pattern
   | BVAR of int
   | FVAR of term * int list;
 
+fun pat_eq p1 p2 =
+  case (p1,p2) of
+      (COMB_BEGIN, COMB_BEGIN) => true
+    | (COMB_END, COMB_END) => true
+    | (ABS_BEGIN ty1, ABS_BEGIN ty2) => Type.compare(ty1,ty2) = EQUAL
+    | (ABS_END, ABS_END) => true
+    | (CONSTANT t1, CONSTANT t2) => aconv t1 t2
+    | (BVAR i1, BVAR i2) => i1 = i2
+    | (FVAR p1, FVAR p2) => pair_eq aconv equal p1 p2
+    | _ => false
+
 datatype 'a discrim = DISCRIM of int * (pattern, 'a) tree list;
 
 val empty_discrim = DISCRIM (0, []);
@@ -143,8 +154,8 @@ local
   fun add a ts [] = LEAF a :: ts
     | add a [] (pat :: next) = [BRANCH (pat, add a [] next)]
     | add a ((b as BRANCH (pat', ts')) :: rest) (ps as pat :: next) =
-    if pat = pat' then BRANCH (pat', add a ts' next) :: rest
-    else b :: add a rest ps
+        if pat_eq pat pat' then BRANCH (pat', add a ts' next) :: rest
+        else b :: add a rest ps
     | add _ (LEAF _::_) (_::_) =
     raise BUG "discrim_add" "expected a branch, got a leaf"
 in
@@ -321,9 +332,3 @@ fun mk_ovdiscrim l = trans ovdiscrim_add empty_discrim l;
 (* non-interactive mode
 *)
 end;
-
-
-
-
-
-

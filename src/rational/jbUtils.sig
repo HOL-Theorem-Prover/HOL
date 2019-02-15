@@ -22,8 +22,5 @@ sig
 
         val extract_terms_of_type : hol_type -> term -> term list
         val store_thm_verbose : string * term * tactic -> thm
-        val in_list : ''a list -> ''a -> bool
-        val list_merge : ''a list -> ''a list -> ''a list
-        val list_xmerge : ''a list list -> ''a list
         val dest_binop_triple : term -> term * term * term
 end

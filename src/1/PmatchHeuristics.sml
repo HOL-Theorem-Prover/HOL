@@ -90,7 +90,7 @@ fun prheu_get_constr_set tybase pL =
      val constrL = constructors_of tyinfo;
      val cL = List.map (fn p => fst (strip_comb p)) pL;
      val cL' = List.filter (fn c => op_mem same_const c constrL) cL;
-     val cL'' = Lib.mk_set cL';
+     val cL'' = op_mk_set aconv cL';
   in
     SOME (cL'', constrL)
   end
@@ -100,7 +100,7 @@ fun prheu_get_nonvar_set pL =
   let
      val cL = List.map (fn p => fst (strip_comb p)) pL;
      val cL' = List.filter (fn c => not (is_var c)) cL;
-     val cL'' = Lib.mk_set cL';
+     val cL'' = op_mk_set aconv cL';
   in
     cL''
   end

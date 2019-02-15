@@ -211,7 +211,7 @@ fun v2w_eq_CONV tm =
 *)
 
 local
-   fun is_bool tm = tm = boolSyntax.T orelse tm = boolSyntax.F
+   fun is_bool tm = Teq tm orelse Feq tm
    val cnv =
      Conv.REWR_CONV bitstringTheory.v2w_11
      THENC change_compset_conv (listSimps.list_compset())

@@ -60,10 +60,10 @@ Examining and Traversing the Stack
 fun eqf_elim thm = let
     val concl = (rconcl thm) handle HOL_ERR _ => ``F``
 in
-    if concl = ``F`` then
-        STRIP_FORALL_RULE EQF_ELIM thm
+    if Feq concl then
+      STRIP_FORALL_RULE EQF_ELIM thm
     else
-        thm
+      thm
 end;
 
 (* Conversion for executing the operational semantics. *)
@@ -75,7 +75,7 @@ in
 fun strip_trans (thm) = let
     val concl = (rconcl thm) handle HOL_ERR _ => ``F``
 in
-    if concl = ``F`` then []
+    if Feq concl then []
     else
         map (list2_pair o f) (strip_disj concl)
 end;
@@ -104,36 +104,37 @@ fun CCS_TRANS_CONV tm =
 
 (* case 4: restr *)
   else if is_restr tm then
-      let fun extr_acts [] _ = []
-            | extr_acts actl L = let
-                val act = hd actl
-            in
-                if is_tau act then
-                    act :: (extr_acts (tl actl) L)
+    let
+      fun extr_acts [] _ = []
+        | extr_acts actl L =
+          let
+            val act = hd actl
+          in
+            if is_tau act then
+              act :: (extr_acts (tl actl) L)
+            else
+              let val l = arg_action act;
+                  val thml = Label_IN_CONV l L
+              in
+                if Teq (rconcl thml) then extr_acts (tl actl) L
                 else
-                    let val l = arg_action act;
-                        val thml = Label_IN_CONV l L
-                    in
-                        if (rconcl thml = ``T``) then
-                            extr_acts (tl actl) L
-                        else
-                            let val thmlc = Label_IN_CONV
-                                              (rconcl
-                                                (REWRITE_CONV [COMPL_LAB_def] ``COMPL ^l``))
-                                              L
-                            in
-                                if (rconcl thmlc = ``T``) then
-                                    extr_acts (tl actl) L
-                                else
-                                    act :: (extr_acts (tl actl) L)
-                            end (* val thmlc *)
-                    end (* val l *)
-            end; (* val act *)
-          val (P, L) = args_restr tm;
-          val thm = CCS_TRANS_CONV P
-      in
-          if (rconcl thm = ``F``) then
-              prove (``!u E. TRANS ^tm u E = F``,
+                  let   val thmlc = Label_IN_CONV
+                                      (rconcl
+                                         (REWRITE_CONV [COMPL_LAB_def]
+                                                       ``COMPL ^l``))
+                                      L
+                  in
+                    if Teq (rconcl thmlc) then extr_acts (tl actl) L
+                    else
+                      act :: (extr_acts (tl actl) L)
+                  end (* val thmlc *)
+              end (* val l *)
+          end; (* val act *)
+      val (P, L) = args_restr tm;
+      val thm = CCS_TRANS_CONV P
+    in
+      if Feq (rconcl thm) then
+        prove (``!u E. TRANS ^tm u E = F``,
 (** PROOF BEGIN ***************************************************************)
     REPEAT GEN_TAC
  >> EQ_TAC
@@ -194,7 +195,7 @@ fun CCS_TRANS_CONV tm =
                             end;
                           val lp = map (list2_pair o f)
                                        (filter (fn c =>
-                                                   mem ((snd o dest_eq o hd o strip_conj
+                                                   tmem ((snd o dest_eq o hd o strip_conj
                                                                        o hd o strip_disj) c)
                                                        actl_not) dl);
                           val dsjt = build_disj lp L;
@@ -260,7 +261,7 @@ fun CCS_TRANS_CONV tm =
       let val (P, rf) = args_relab tm;
           val thm = CCS_TRANS_CONV P
       in
-          if (rconcl thm = ``F``) then
+          if Feq (rconcl thm) then
               prove (``!u E. TRANS ^tm u E = F``,
 (** PROOF BEGIN ***************************************************************)
     REPEAT GEN_TAC
@@ -365,7 +366,7 @@ fun CCS_TRANS_CONV tm =
             | act_sync dl1 dl2 = let
                 val (act, p) = hd dl1;
                 val syncl = filter (fn (a, p) =>
-                                       a = (if is_tau act then
+                                       a ~~ (if is_tau act then
                                                 act
                                             else
                                                 rconcl (REWRITE_CONV [COMPL_ACT_def, COMPL_LAB_def]
@@ -380,7 +381,7 @@ fun CCS_TRANS_CONV tm =
           fun build_sync dl1 dl2 =
             let val (act, p) = hd dl1;
                 val syncl = filter (fn (a, p) =>
-                                       a = (if is_tau act then
+                                       a ~~ (if is_tau act then
                                                 act
                                             else
                                                 rconcl (REWRITE_CONV [COMPL_ACT_def, COMPL_LAB_def]
@@ -396,7 +397,7 @@ fun CCS_TRANS_CONV tm =
           val thm1 = CCS_TRANS_CONV P1
           and thm2 = CCS_TRANS_CONV P2
       in
-          if (rconcl thm1 = ``F``) andalso (rconcl thm2 = ``F``) then
+          if Feq (rconcl thm1) andalso Feq (rconcl thm2) then
               prove (``!u E. TRANS ^tm u E = F``,
 (** PROOF BEGIN ***************************************************************)
     REPEAT GEN_TAC
@@ -408,7 +409,7 @@ fun CCS_TRANS_CONV tm =
       (* goal 2 *)
       REWRITE_TAC [] ])
 (****************************************************************** Q. E. D. **)
-          else if (rconcl thm1 = ``F``) then
+          else if Feq (rconcl thm1) then
               let val dl2 = map (list2_pair o f) (strip_disj (rconcl thm2));
                   val actl2 = map fst dl2
                   and disj_nosync = build_disj2 dl2 P1
@@ -430,7 +431,7 @@ fun CCS_TRANS_CONV tm =
                  REWRITE_TAC [GEN_ALL thm2]) actl2) ])
 (****************************************************************** Q. E. D. **)
               end
-          else if (rconcl thm2 = ``F``) then
+          else if Feq (rconcl thm2) then
               let val dl1 = map (list2_pair o f) (strip_disj (rconcl thm1));
                   val actl1 = map fst dl1
                   and disj_nosync = build_disj1 dl1 P2
@@ -459,7 +460,7 @@ fun CCS_TRANS_CONV tm =
                   and disj_nosync = mk_disj (build_disj1 dl1 P2, build_disj2 dl2 P1)
                   and disj_sync = rconcl (QCONV (REWRITE_CONV []) (build_sync dl1 dl2))
               in
-                  if (disj_sync = ``F``) then
+                  if Feq disj_sync then
                       prove (``!u E. TRANS ^tm u E = ^disj_nosync``,
 (** PROOF BEGIN ***************************************************************)
     REPEAT GEN_TAC

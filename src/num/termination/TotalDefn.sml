@@ -59,7 +59,7 @@ fun rm x [] = []
   | rm x (h::t) = if aconv x h then rm x t else h::rm x t;
 
 fun mk_term_set [] = []
-  | mk_term_set (h::t) = h::mk_set (rm h t);
+  | mk_term_set (h::t) = h::mk_term_set (rm h t);
 
 fun imk_var(i,ty) = mk_var("v"^Int.toString i,ty);
 
@@ -119,7 +119,7 @@ fun is_recd_proj tm1 tm2 =
       val projlist = mapfilter
          (fst o dest_comb o boolSyntax.lhs o snd o strip_forall o concl)
          (TypeBase.accessors_of aty)
-  in TypeBase.is_record_type aty andalso mem proj projlist
+  in TypeBase.is_record_type aty andalso op_mem aconv proj projlist
   end
   handle HOL_ERR _ => false;
 
@@ -371,7 +371,7 @@ fun guessR defn =
        let val domty = fst(dom_rng(type_of R))
            val (_,tcs0) = Lib.pluck isWFR (tcs_of defn)
            val tcs = map (rhs o concl o QCONV (SIMP_CONV bool_ss [])) tcs0
-           val tcs = filter (not o equal T) tcs
+           val tcs = filter (not o aconv T) tcs
            val matrix  = map dest tcs
            val check1  = map (map (uncurry proper_subterm)) matrix
            val chf1    = projects check1
@@ -515,7 +515,8 @@ local open Defn
      let
         val tcs = tcs_of defn
      in
-        not(null tcs) andalso null (intersect (free_varsl tcs) rhs_frees)
+        not(null tcs) andalso
+        null (op_intersect aconv (free_varsl tcs) rhs_frees)
      end
   fun fvs_on_rhs V =
      let

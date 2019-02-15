@@ -25,7 +25,7 @@ fun PART_MATCH' f th t =
     val hypfvs = HOLset.listItems hypfvs_set
     val hyptyvs = HOLset.listItems (hyp_tyvars th)
     val tfvs = free_vars t
-    val dontspec = union tfvs hypfvs
+    val dontspec = op_union aconv tfvs hypfvs
     val (vs, speccedth) = avSPEC_ALL dontspec th
     val s as (tmsig,tysig) =
         match_terml hyptyvs hypfvs_set (f (concl speccedth)) t
