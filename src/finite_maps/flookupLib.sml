@@ -56,7 +56,7 @@ fun eq_conv ty =
             THENC (fn tm =>
                       case Lib.total boolSyntax.dest_eq tm of
                          SOME (l, r) =>
-                            if l = r
+                            if l ~~ r
                                then Drule.ISPEC l boolTheory.REFL_CLAUSE
                             else eq_conv (Term.type_of l) tm
                        | NONE => ALL_CONV tm))
@@ -97,7 +97,7 @@ local
          val d = l2 - l1
       in
          if 0 <= d
-            then ( List.drop (u2, d) = u1 orelse raise err
+            then ( list_eq aconv (List.drop (u2, d)) u1 orelse raise err
                  ; (List.take (u2, d), u1) )
          else raise err
       end
@@ -111,7 +111,7 @@ local
       end
    fun is_refl th =
       case Lib.total boolSyntax.dest_eq (Thm.concl th) of
-         SOME (l, r) => l = r
+         SOME (l, r) => l ~~ r
        | NONE => false
 in
    fun extend_flookup_thms (dict, rest) tm =
