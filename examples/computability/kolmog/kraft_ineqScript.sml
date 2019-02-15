@@ -823,17 +823,66 @@ simp[SUBSET_DEF,bar2_def,pairTheory.EXISTS_PROD])
 
 val kolmog_def = Define`kolmog x = kolmog_complexity x PUTM`
 
+(* Should we define a non option? since print x is always a program *)
+
+val arg_kolmog_complexity_def = Define`arg_kolmog_complexity x U =
+                           if  { p | U p = SOME x} = {} then []
+                           else @q. U q = SOME x ∧ LENGTH q=(MIN_SET {LENGTH p | U p = SOME x})`;
+
+val arg_kolmog_def = Define`arg_kolmog x = arg_kolmog_complexity x PUTM`
+
+
 (** up to here **)
 (* Theorems to prove *)
 
+
+
 val kolmog_kraft = Q.store_thm("kolmog_kraft",
-`SIGMA (\s. (2 rpow -&(kolmog s))) UNIVERSE`,
+`SIGMA (\s. if kolmog s = NONE then 0 else  Normal (2 rpow (real_neg &((kolmog s))))) UNIVERSE`,
 )
 
 (*    *)
 
 val tmax_def = Define`tmax n = if _ then NONE else `
 
+val HALT_def = Define`HALT = {(M,x)|recfn M 1 ∧ ∃y. M x = SOME y}`
+
+val prime_tm_def = Define`prime_tm M x y = if M x = NONE then NONE else (M x)`
+
+val M_prime_exists = Q.store_thm("M_prime_exists",
+`∀M x. recfn M 1 ==> ∃M'. recfn M' 1 ∧ M' [] = M x`,
+rw[] >> qexists_tac`prime_tm M x` >> simp[ prime_tm_def] >> rw[] >>  )
+
+val _ = Q.store_thm("_",
+`∀n. n>const1 ==> ∃Z. tm_size Z <2*n ∧ `,
+)
+val _ Q.store_thm("_",
+`¬∃f. ∀x. kolmog x = recPhi [f;x] ==> ∀y. LENGTH y = l ==> kolmog y`,
+)
+
+val y_set_def = Define`y_set n = {yi| LENGTH (n2bl yi) = 2*n ∧ (kolmog yi) <= SOME (2*n-1)}`
+
+val M_set_def = Define`M_set n = {arg_kolmog yi| LENGTH (n2bl yi) = 2*n ∧ kolmog yi <= SOME (2*n-1)}`
+
+val tm_time_def = Define`tm_time M y = 10`
+
+val t_set = Define`t_set n = {t| ∀Mi yi. Mi ∈ M_set n ∧ yi ∈ y_set n ==> tm_time Mi yi = t }`
+
+val big_T_def = Define`big_T n = MAX_SET (t_set n)`
+
+val ub_tmax = Q.store_thm("ub_tmax",
+`big_T n > t_max n`,
+)
+
+val ub_implies_halt = Q.store_thm("ub_implies_halt",
+`big_T > t_max (tm_size M') ==> (M',[]) ∈ HALT`,
+)
+
+val m_prime_implies_halt = Q.store_thm("m_prime_implies_halt",
+`(M',[]) ∈ HALT ==> (M,x)∈HALT`,
+)
+
+(* maybe want arg kolmog *)
 
 val kolmog_non_comp = Q.store_thm("kolmog_non_comp",
 `¬∃f. ∀x. kolmog x = recPhi [f;x]`,
