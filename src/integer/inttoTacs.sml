@@ -33,8 +33,8 @@ val _ = intLib.deprecate_int ();
 
 fun intOrd_CONV t =
 let val (l, r) = (rand (rator t), rand t)
-in if rator l = ``numeric_negate``
-   then if rator r = ``numeric_negate``
+in if rator l ~~ ``numeric_negate``
+   then if rator r ~~ ``numeric_negate``
         then (REWR_CONV neg_neg_thm THENC numOrd_CONV) t
         else (FORK_CONV
               (RAND_CONV (RAND_CONV num_pre_CONV), RAND_CONV num_pre_CONV) THENC
@@ -43,7 +43,7 @@ in if rator l = ``numeric_negate``
                REWR_CONV neg_lt_BIT1_thm ORELSEC
                REWR_CONV neg_lt_BIT2_thm ORELSEC
                REWR_CONV neg_ZERO_eq_ZERO_thm)) t
-   else if rator r = ``numeric_negate``
+   else if rator r ~~ ``numeric_negate``
         then (FORK_CONV
               (RAND_CONV num_pre_CONV, RAND_CONV (RAND_CONV num_pre_CONV)) THENC
               (REWR_CONV gt_neg_BIT1_thm ORELSEC
