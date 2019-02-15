@@ -2,8 +2,8 @@ val _ = use "../../tools-poly/prelude.ML";
 val _ = use "../../tools-poly/prelude2.ML";
 val _ = PolyML.print_depth 0;
 
-fun exnMessage (e:exn) = 
-  let 
+fun exnMessage (e:exn) =
+  let
     fun p (e:exn) = PolyML.prettyRepresentation (e, 10000)
   in
     PP.pp_to_string 75 p e
@@ -268,6 +268,7 @@ fun process_line umap obuf origline lbuf = let
     end
   val assertcmd = "##assert "
   val assertcmdsz = size assertcmd
+  val stringCReader = #read o QFRead.stringToReader
 in
   if String.isPrefix ">>>" line then
     (advance lbuf; (ws ^ String.extract(line, 1, NONE), NONE))
@@ -278,9 +279,9 @@ in
       val e = String.substring(line, assertcmdsz, size line - assertcmdsz - 1)
                               (* for \n at end *)
       val _ = compiler obuf (lnumdie (linenum lbuf))
-                (QFRead.stringToReader ("val _ = if (" ^ e ^ ") then () " ^
-                                        "else die \"Assertion failed: line " ^
-                                        Int.toString (linenum lbuf) ^ "\";"))
+                (stringCReader ("val _ = if (" ^ e ^ ") then () " ^
+                                "else die \"Assertion failed: line " ^
+                                Int.toString (linenum lbuf) ^ "\";"))
       val _ = advance lbuf
     in
       ("", NONE)
@@ -289,9 +290,9 @@ in
     let
       val thm_name = String.extract(line, 5, NONE) |> dropLWS
       val raw_output = compiler obuf (lnumdie (linenum lbuf))
-                                (QFRead.stringToReader (thm_name ^ " :Thm.thm"))
+                                (stringCReader (thm_name ^ " :Thm.thm"))
       val output = transformOutput umap ws (strip_for_thm raw_output)
-                        |> deleteTrailingWhiteSpace 
+                        |> deleteTrailingWhiteSpace
                         |> (fn s => "  " ^ s)
       val _ = advance lbuf
     in
@@ -320,7 +321,7 @@ in
       val input = getRest (indent + 1) [firstline]
       val _ = compiler obuf
                        (lnumdie (linenum lbuf))
-                       (QFRead.stringToReader (inputpfx ^ input))
+                       (stringCReader (inputpfx ^ input))
     in
       (ws ^ umunge umap input, NONE)
     end
@@ -334,7 +335,7 @@ in
       val (firstline, indent) = (String.extract(line, 3, NONE), 10)
       val input = getRest (indent + 1) [firstline]
       val _ = compiler obuf (lnumdie (linenum lbuf))
-                       (QFRead.stringToReader ("``" ^ pfx ^ input ^ "``"))
+                       (stringCReader ("``" ^ pfx ^ input ^ "``"))
     in
       (ws ^ umunge umap input, NONE)
     end
@@ -351,7 +352,7 @@ in
       val firstline = String.extract(line, 3, NONE)
       val input = getRest 3 [firstline]
       val raw_output = compiler obuf (lnumdie (linenum lbuf))
-                                (QFRead.stringToReader input)
+                                (stringCReader input)
     in
       ("", SOME (transformOutput umap ws raw_output))
     end
@@ -360,7 +361,7 @@ in
       val firstline = String.extract(line, 4, NONE)
       val input = getRest 4 [firstline]
       val _ = compiler obuf (lnumdie (linenum lbuf))
-                       (QFRead.stringToReader input)
+                       (stringCReader input)
     in
       ("", NONE)
     end
@@ -369,7 +370,7 @@ in
       val firstline = String.extract(line, 3, NONE)
       val input = getRest 3 [firstline]
       val _ = compiler obuf (lnumdie (linenum lbuf))
-                       (QFRead.stringToReader input)
+                       (stringCReader input)
       fun removeNL s = String.substring(s, 0, size s - 1)
     in
       (ws ^ ">" ^ removeNL (umunge umap input), SOME (!elision_string1))
@@ -379,7 +380,7 @@ in
       val firstline = String.extract(line, 3, NONE)
       val input = getRest 3 [firstline]
       fun handle_exn extra exn = raise Fail (extra ^ exnMessage exn)
-      val raw_output = compiler obuf handle_exn (QFRead.stringToReader input)
+      val raw_output = compiler obuf handle_exn (stringCReader input)
                        handle Fail s => "Exception- " ^ s ^ " raised\n"
     in
       (ws ^ ">" ^ umunge umap input, SOME (transformOutput umap ws raw_output))
@@ -390,7 +391,7 @@ in
       val firstline = String.extract(line, 2, NONE)
       val input = getRest 2 [firstline]
       val raw_output = compiler obuf (lnumdie (linenum lbuf))
-                                (QFRead.stringToReader input)
+                                (stringCReader input)
     in
       (ws ^ ">" ^ umunge umap input, SOME (transformOutput umap ws raw_output))
     end
