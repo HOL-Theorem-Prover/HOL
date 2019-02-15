@@ -28,7 +28,6 @@ src/num/termination
 # bossLib
 src/num/extra_theories
 src/pred_set/src
-src/datatype/equiv
 src/datatype/record
 src/datatype
 !src/datatype/theory_tests
