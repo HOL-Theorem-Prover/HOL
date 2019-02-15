@@ -240,14 +240,14 @@ val TINT_10 =
 
 val TINT_ADD_SYM =
     store_thm("TINT_ADD_SYM",
-              Term `!x y. x tint_add y = y tint_add x`,
+              Term `!y x. x tint_add y = y tint_add x`,
               REPEAT GEN_PAIR_TAC
               THEN REWRITE_TAC[tint_eq,tint_add,pairTheory.PAIR_EQ]
               THEN ARITH_TAC)
 
 val TINT_MUL_SYM =
     store_thm("TINT_MUL_SYM",
-              Term `!x y. x tint_mul y = y tint_mul x`,
+              Term `!y x. x tint_mul y = y tint_mul x`,
               REPEAT GEN_PAIR_TAC
               THEN REWRITE_TAC[tint_eq,tint_mul,pairTheory.PAIR_EQ]
               THEN SIMP_TAC int_ss [MULT_SYM])
@@ -255,14 +255,14 @@ val TINT_MUL_SYM =
 val TINT_ADD_ASSOC =
     store_thm
     ("TINT_ADD_ASSOC",
-     Term `!x y z. x tint_add (y tint_add z) = (x tint_add y) tint_add z`,
+     Term `!z y x. x tint_add (y tint_add z) = (x tint_add y) tint_add z`,
      REPEAT GEN_PAIR_TAC
      THEN REWRITE_TAC[tint_add,pairTheory.PAIR_EQ,ADD_ASSOC])
 
 val TINT_MUL_ASSOC =
     store_thm
     ("TINT_MUL_ASSOC",
-     Term `!x y z. x tint_mul (y tint_mul z) = (x tint_mul y) tint_mul z`,
+     Term `!z y x. x tint_mul (y tint_mul z) = (x tint_mul y) tint_mul z`,
      REPEAT GEN_PAIR_TAC
      THEN
      REWRITE_TAC[tint_mul, pairTheory.PAIR_EQ, LEFT_ADD_DISTRIB,
@@ -273,7 +273,7 @@ val TINT_MUL_ASSOC =
 val TINT_LDISTRIB =
     store_thm
     ("TINT_LDISTRIB",
-     Term `!x y z. x tint_mul (y tint_add z) =
+     Term `!z y x. x tint_mul (y tint_add z) =
                    (x tint_mul y) tint_add (x tint_mul z)`,
      REPEAT GEN_PAIR_TAC THEN
      REWRITE_TAC[tint_mul, tint_add,pairTheory.PAIR_EQ, LEFT_ADD_DISTRIB]
