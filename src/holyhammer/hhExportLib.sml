@@ -57,7 +57,7 @@ fun strip_funty_n n ty =
         let val (tya,tyb) = pair_of_list Args in
           tya :: strip_funty_n (n-1) tyb
         end
-      else [ty]
+      else raise ERR "strip_funty_n" ""
     end
 
 fun strip_funty ty = case strip_funty_aux ty of
@@ -83,6 +83,17 @@ fun full_apply_const c =
   in
     list_mk_comb (c,vl)
   end
+
+fun apply_cva (cv,a) =
+  let 
+    val argtyl = butlast (strip_funty_n a (type_of cv))
+    fun f i x = mk_var ("V" ^ its i,x)
+    val vl = mapi f argtyl 
+  in
+    (list_mk_comb (cv,vl),vl)
+  end
+
+
 
 (* -------------------------------------------------------------------------
    Polymorphism and types
@@ -123,8 +134,6 @@ fun typearg_of_cvapp tm =
   else if is_app tm then typearg_of_app tm
   else raise ERR "typearg_of_cvapp" ""
 
-
-
 (* -------------------------------------------------------------------------
    Names
    ------------------------------------------------------------------------- *)
@@ -133,44 +142,63 @@ fun cid_of c = let val {Name,Thy,Ty} = dest_thy_const c in (Thy,Name) end
 
 fun name_v v = fst (dest_var v)
 fun namea_v (v,a) = name_v v ^ (escape ".") ^ its a
-fun name_vartype ty = "A" ^ (escape (dest_vartype ty))
-
 fun name_cid (thy,name) = escape ("c." ^ thy ^ "." ^ name)
-
-fun namea_cid (cid,a) = name_cid cid ^ (escape ".") ^ its a
 fun name_c c = name_cid (cid_of c)
-fun namea_c (c,a) = namea_cid (cid_of c,a)
+fun name_vartype ty = "A" ^ (escape (dest_vartype ty))
+fun name_tyop (thy,tyop) = escape ("tyop." ^ thy ^ "." ^ tyop)
+fun name_thm (thy,name) = escape ("thm." ^ thy ^ "." ^ name)
 
+(* first-order names *)
+fun namea_cid (cid,a) = name_cid cid ^ (escape ".") ^ its a
+fun namea_c (c,a) = namea_cid (cid_of c,a)
 fun namea_cv (tm,a) =
   if is_const tm then namea_c (tm,a) else
   if is_var tm then namea_v (tm,a) else raise ERR "namea_cv" ""
 
-fun name_tyop (thy,tyop) = escape ("tyop." ^ thy ^ "." ^ tyop)
-fun name_thm (thy,name) = escape ("thm." ^ thy ^ "." ^ name)
 
-(* -------------------------------------------------------------------------
-   Naming types
-   ------------------------------------------------------------------------- *)
 
-fun name_fo_fun (s,f_arg,argl) = 
+(* polymorphic / monomorphic names *)
+fun name_fo_fun_mono (s,f_arg,argl) = 
   if null argl then s else 
   (s ^ escape "(" ^ String.concatWith (escape ",") (map f_arg argl) ^ 
    escape ")")
 
-fun name_ty ty =
+fun name_tyu_mono_aux ty =
   if is_vartype ty then name_vartype ty else
   let
     val {Args, Thy, Tyop} = dest_thy_type ty
     val tyops = name_tyop (Thy,Tyop)
   in
-    name_fo_fun (tyops,name_ty,Args)
+    name_fo_fun_mono (tyops,name_tyu_mono_aux,Args)
   end
+
+fun name_tyu_mono ty = escape "mono." ^ name_tyu_mono_aux ty
 
 fun add_tyargltag s cv =
   let val tyargl = typearg_of_cvapp cv in
     if null tyargl then s else
-    (s ^ escape "." ^ String.concatWith (escape " ") (map name_ty tyargl))
+    (s ^ escape "." ^ String.concatWith (escape " ") 
+    (map name_tyu_mono tyargl))
   end
+
+(* obj: constants, bound variables and free variables *)
+
+fun namea_obj_mono (cv,a) =
+  if is_tptp_bv cv then namea_v (cv,a)  
+  else add_tyargltag (escape "mono." ^ namea_cv (cv,a)) cv
+  
+fun namea_obj_poly (cv,a) =
+  if is_tptp_bv cv then namea_v (cv,a) else namea_cv (cv,a)
+
+
+
+(* -------------------------------------------------------------------------
+   Naming types
+   ------------------------------------------------------------------------- *)
+
+
+
+
 
 (* -------------------------------------------------------------------------
    Definitions of boolean operators
@@ -226,7 +254,7 @@ val id_compare = cpl_compare String.compare String.compare
 val tma_compare = cpl_compare Term.compare Int.compare
 val ida_compare = cpl_compare id_compare Int.compare
 
-fun tyop_set topty = 
+fun all_tyop topty = 
   let 
     val l = ref [] 
     fun loop ty = 
@@ -235,18 +263,21 @@ fun tyop_set topty =
         l := ((Thy,Tyop),length Args) :: !l; app loop Args 
       end
   in 
-    loop topty; mk_fast_set ida_compare (!l)
+    loop topty; (!l)
   end
 
-fun tyopl_of_tyl tyl = 
+fun tyop_set topty = mk_fast_set ida_compare (all_tyop topty)
+
+
+fun tyopset_of_tyl tyl = 
   mk_fast_set ida_compare (List.concat (map tyop_set tyl))
 
+fun type_set tm = 
+  mk_type_set (map type_of (find_terms is_const tm @ all_vars tm))
+
 fun collect_tyop tm = 
-  let 
-    fun type_set tm = map type_of (find_terms is_const tm @ all_vars tm)  
-    val tyl = mk_type_set (List.concat (map type_set (atoms tm))) 
-  in
-    tyopl_of_tyl tyl
+  let val tyl = mk_type_set (List.concat (map type_set (atoms tm))) in
+    tyopset_of_tyl tyl
   end
 
 fun add_zeroarity cval =
@@ -354,6 +385,10 @@ fun add_bushy_dep thy namethml =
   in
     List.mapPartial f namethml
   end
+
+fun fetch_thmid (a,b) = DB.fetch a b
+
+fun depo_of_thmid thmid = depo_of_thm (fetch_thmid thmid)
 
 fun write_thy_bushy dir a b c d thy =
   let val cjdepl = add_bushy_dep thy (DB.theorems thy) in

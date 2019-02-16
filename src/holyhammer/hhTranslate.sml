@@ -102,6 +102,7 @@ fun all_fosubtm tm =
     tm :: List.concat (map all_fosubtm argl)
   end
 
+(* works for higher-order but seems weird *)
 fun collect_arity tm =
   let 
     val tml1 = List.concat (map all_fosubtm (atoms tm))

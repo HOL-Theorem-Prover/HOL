@@ -240,7 +240,7 @@ fun hh_pb_eval_thy atpl thy =
    Usage:
      load "holyHammer"; load "gcdTheory"; open holyHammer;
      set_timeout 5;
-     hh_eval_thy [Eprover] "gcd";
+     hh_pb_eval_thy [Eprover] "gcd";
    Results can be found in HOLDIR/src/holyhammer/eval.
   ------------------------------------------------------------------------- *)
 

@@ -28,7 +28,12 @@ include Abbrev
   val namea_cv : (term * int) -> string
   val name_tyop : (string * string) -> string
   val name_thm : (string * string) -> string
-  val name_ty : hol_type -> string
+  
+  val name_tyu_mono : hol_type -> string
+  val namea_obj_mono : (term * int) -> string
+  val namea_obj_poly : (term * int) -> string
+
+  val all_tyop : hol_type -> ((string * string) * int) list
 
   (* comparison *)
   val id_compare : (string * string) * (string * string) -> order
@@ -37,7 +42,8 @@ include Abbrev
   val tma_compare : (term * int) * (term * int) -> order
 
   val compare_namethm : (string * thm) * (string * thm) -> order    
-
+  val type_set : term -> hol_type list
+   
   (* type *)
   val ttype : string
   val otype : string
@@ -54,13 +60,16 @@ include Abbrev
 
   (* term *)
   val full_apply_const : term -> term
-  
-  val tyopl_of_tyl : hol_type list -> ((string * string) * int) list
+  val apply_cva : (term * int) -> (term * term list) 
+
+  val tyopset_of_tyl : hol_type list -> ((string * string) * int) list
   val add_zeroarity : (term * int) list -> (term * int) list 
   
   (* thm *)
   val older_than : thm -> 'a * thm -> bool
   val depo_of_thm : thm -> (string * string) list option 
+  val depo_of_thmid : (string * string) -> (string * string) list option 
+
   val fetch_thm : (string * string) -> thm 
 
   val combin_axioml : (string * term) list

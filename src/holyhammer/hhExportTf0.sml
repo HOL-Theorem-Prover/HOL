@@ -14,57 +14,44 @@ val ERR = mk_HOL_ERR "hhExportTf0"
 
 val tffpar = "tff("
 
+(* bool is polymorphic *)
+val bool_tyop = 
+  let val {Args,Thy,Tyop} = dest_thy_type bool in (Thy,Tyop) end
+
+fun polyorbool ty = 
+  polymorphic ty orelse mem bool_tyop (map fst (all_tyop ty))
+
 (* -------------------------------------------------------------------------
-   Polyworld (deep embedding) and Monoworld (shallow embeddding)
-   Todo: first do everything in polyworld.
+   TF0 types
    ------------------------------------------------------------------------- *)
+
+fun tf0def_name_ttype oc tf0name =
+  osn oc (tffpar ^ tf0name ^ ",type," ^ tf0name ^ ":" ^ ttype ^ ").")
+
+fun tf0def_ttype_mono oc ty =
+  let val tf0name = name_tyu_mono ty in
+    tf0def_name_ttype oc tf0name
+  end
 
 val (utype,dtype,dutype) = ("u","d","du")
-val polyw_typel = [utype,dtype,dutype]
-
-(* -------------------------------------------------------------------------
-   TF0 domains
-   ------------------------------------------------------------------------- *)
+val sortl = [utype,dtype,dutype]
 
 fun fo_fun oc (s,f_arg,argl) = 
   if null argl then os oc s else 
   (os oc s; os oc "("; oiter oc "," f_arg argl; os oc ")")
 
-fun tf0_domain oc ty =
+fun tf0_ty_poly oc ty =
   if is_vartype ty then os oc (name_vartype ty) else
     let
       val {Args, Thy, Tyop} = dest_thy_type ty
       val tyops = name_tyop (Thy,Tyop)
     in
-      fo_fun oc (tyops, tf0_domain, Args)
+      fo_fun oc (tyops, tf0_ty_poly, Args)
     end
-
-
-fun fo_fun_mono oc (s,f_arg,argl) = 
-  if null argl then os oc s else 
-  (os oc s; os oc (escape "("); oiter oc (escape ",") f_arg argl; 
-   os oc (escape ")"))
-
-fun tf0_monoty_aux oc ty =
-  if is_vartype ty then os oc (name_vartype ty) else
-    let
-      val {Args, Thy, Tyop} = dest_thy_type ty
-      val tyops = name_tyop (Thy,Tyop)
-    in
-      fo_fun_mono oc (tyops, tf0_monoty_aux, Args)
-    end
-
-fun tf0_monoty oc ty = (os oc (escape "mono."); tf0_monoty_aux oc ty)
 
 (* -------------------------------------------------------------------------
    TF0 quantifier
    ------------------------------------------------------------------------- *)
-
-fun tf0_vzero oc v = os oc (namea_v (v,0) ^ ":" ^ utype)
-
-fun tf0_quant_vl oc s vl =
-  if null vl then () else
-  (os oc s; os oc "["; oiter oc ", " tf0_vzero vl; os oc "]: ")
 
 fun tf0_forall_tyvarl_tm oc tm =
   let
@@ -74,17 +61,86 @@ fun tf0_forall_tyvarl_tm oc tm =
     if null tvl then () else (os oc "!["; oiter oc ", " f tvl; os oc "]: ")
   end
 
+(* mono *)
+fun tf0_quantv_mono oc v = 
+  let val ty = type_of v in
+    os oc (namea_v (v,0) ^ ":"); os oc (name_tyu_mono ty)
+  end
+
+fun tf0_quant_vl_mono oc s vl =
+  if null vl then () else
+  (os oc s; os oc "["; oiter oc ", " tf0_quantv_mono vl; os oc "]: ")
+
+(* poly *)
+fun tf0_quantv_poly oc v = 
+  let val ty = type_of v in
+    os oc (namea_v (v,0) ^ ":"); os oc utype
+  end
+
+fun tf0_quant_vl_poly oc s vl =
+  if null vl then () else
+  (os oc s; os oc "["; oiter oc ", " tf0_quantv_poly vl; os oc "]: ")
+
+(* adaptive *)
+fun tf0_quantv oc v = 
+  let val ty = type_of v in
+    os oc (namea_v (v,0) ^ ":"); 
+    if polyorbool ty then os oc utype else os oc (name_tyu_mono ty)
+  end
+
+fun tf0_quant_vl oc s vl =
+  if null vl then () else
+  (os oc s; os oc "["; oiter oc ", " tf0_quantv vl; os oc "]: ")
+
 (* -------------------------------------------------------------------------
    TF0 term
    ------------------------------------------------------------------------- *)
 
-(* todo: add i here later *)
-fun tf0_term oc tm =
+fun iname oc ty = os oc ("i_" ^ name_tyu_mono ty)
+fun jname oc ty = os oc ("j_" ^ name_tyu_mono ty)
+
+fun tf0_term_poly oc tm =
   let val (rator,argl) = strip_comb tm in
-    os oc "s("; tf0_domain oc (type_of tm); os oc ",";
-    fo_fun oc (namea_cv (rator,length argl), tf0_term, argl);
+    os oc "s("; tf0_ty_poly oc (type_of tm); os oc ",";
+    fo_fun oc (namea_obj_poly (rator,length argl), tf0_iterm, argl);
     os oc ")"
   end
+and tf0_term_mono oc tm =
+  let val (rator,argl) = strip_comb tm in
+    fo_fun oc (namea_obj_mono (rator,length argl), tf0_jterm, argl)
+  end
+and tf0_iterm oc tm =
+  let 
+    val (rator,argl) = strip_comb tm
+    val ty = type_of tm
+  in
+    if polyorbool (type_of rator)
+    then tf0_term_poly oc tm
+    else (
+      os oc "s("; tf0_ty_poly oc ty; os oc ",";
+      iname oc ty; os oc "("; tf0_term_mono oc tm; os oc ")";
+      os oc ")"
+      )
+  end
+and tf0_jterm oc tm =
+  let
+    val (rator,argl) = strip_comb tm
+    val ty = type_of tm
+  in
+    if polyorbool (type_of rator)
+    then (jname oc ty; os oc "("; tf0_term_poly oc tm; os oc ")")
+    else tf0_term_mono oc tm
+  end
+
+
+(* test term 
+
+ f 0 = f_poly (s(num,(i(0))))
+load "hhExportTf0"; open hhExportTf0;
+val tm =  ``(V + 0) + (zero (X:'a))``; 
+tf0_term_mono TextIO.stdOut tm;
+tf0_term_poly TextIO.stdOut tm;
+*)
 
 (* -------------------------------------------------------------------------
    TF0 formula
@@ -102,9 +158,9 @@ fun tf0_pred oc tm =
     let val (l,r) = dest_eq tm in
       if must_pred l orelse must_pred r
       then tf0_binop oc "<=>" (l,r)
-      else (os oc "("; tf0_term oc l; os oc " = "; tf0_term oc r; os oc ")")
+      else (os oc "("; tf0_iterm oc l; os oc " = "; tf0_iterm oc r; os oc ")")
     end
-  else (os oc "p("; tf0_term oc tm; os oc ")")
+  else (os oc "p("; tf0_iterm oc tm; os oc ")")
 and tf0_binop oc s (l,r) =
   (os oc "("; tf0_pred oc l; os oc (" " ^ s ^ " "); 
    tf0_pred oc r; os oc ")")
@@ -112,6 +168,15 @@ and tf0_quant oc s (vl,bod) =
   (tf0_quant_vl oc s vl; tf0_pred oc bod)
 
 fun tf0_formula oc tm = (tf0_forall_tyvarl_tm oc tm; tf0_pred oc tm)
+
+(* test term 
+load "hhExportTf0"; open hhExportTf0;
+val tm = ``!V0 V1. (V0 + 0) + (zero (V1:'a)) = 0``; 
+tf0_formula TextIO.stdOut tm;
+tf0_term_poly TextIO.stdOut tm;
+tf0_term TextIO.stdOut tm;
+*)
+
 
 (* -------------------------------------------------------------------------
    Term-level logical operators equations
@@ -124,7 +189,7 @@ fun tf0_logicformula oc (thy,name) =
     val vl = free_vars_lr tm 
   in
     tf0_forall_tyvarl_tm oc tm; tf0_quant_vl oc "!" vl;
-    os oc "(p("; tf0_term oc tm ; os oc ") <=> "; tf0_pred oc tm; os oc ")"
+    os oc "(p("; tf0_iterm oc tm ; os oc ") <=> "; tf0_pred oc tm; os oc ")"
   end
 
 fun tf0_logicdef oc (thy,name) =
@@ -134,57 +199,61 @@ fun tf0_logicdef oc (thy,name) =
 fun tf0_quantdef oc (thy,name) =
   let 
     val thm = assoc name [("!", FORALL_THM),("?", EXISTS_THM)]
-    val (tm,_) = fof_translate_thm thm
+    val (tm,_) = translate_thm thm
   in
     os oc (tffpar ^ escape ("quantdef." ^ name) ^ ",axiom,"); 
     tf0_formula oc tm; osn oc ")."
   end
 
+
 (* -------------------------------------------------------------------------
    I-J axioms
    ------------------------------------------------------------------------- *)
 
-fun iname oc ty = (os oc "i_"; tf0_monoty oc ty)
-fun jname oc ty = (os oc "j_"; tf0_monoty oc ty)
+fun tf0def_iname oc ty = 
+  (
+  os oc tffpar; iname oc ty; os oc ",type,"; iname oc ty; os oc ":";
+  os oc (name_tyu_mono ty ^ " > u"); osn oc ")."
+  )
 
+fun tf0def_jname oc ty = 
+  (
+  os oc tffpar; jname oc ty; os oc ",type,"; jname oc ty; os oc ":";
+  os oc ("du > " ^ name_tyu_mono ty); osn oc ")."
+  )
+
+(* for monomorphic types *)
 fun ij_axiom oc ty =
-  let
-    val v = mk_var ("V0",ty)
-    val vs = namea_v (v,0)
-  in
-    tf0_quant_vl oc "!" [v];
+  let val v = mk_var ("V0",ty) in
+    tf0_quant_vl_poly oc "!" [v];
     os oc "("; 
-      iname oc ty; os oc "("; jname oc ty; os oc "("; 
-        os oc "s(" ; tf0_domain oc ty; os oc ("," ^ vs ^ ")");
+      iname oc ty; os oc "("; jname oc ty; os oc "("; tf0_term_poly oc v;
       os oc "))"; os oc " = ";
-      os oc "s(" ; tf0_domain oc ty; os oc ("," ^ vs ^ ")");
+      os oc (namea_obj_poly (v,0));
     os oc ")"
   end
+
+fun tf0def_ij_axiom oc ty =
+  (os oc (tffpar ^ escape "ij." ^ name_tyu_mono ty ^ ",axiom,");
+   ij_axiom oc ty; osn oc ").")
 
 (* 
   load "hhExportTf0"; open hhExportTf0; 
   ij_axiom TextIO.stdOut ``:num``;
 *)
 
-fun tf0_mono_vzero oc v = 
-  (os oc (namea_v (v,0) ^ ":"); tf0_monoty oc (type_of v))
-
-fun tf0_monoquant_vl oc s vl =
-  if null vl then () else
-  (os oc s; os oc "["; oiter oc ", " tf0_mono_vzero vl; os oc "]: ")
-
+(* for monomorphic types *)
 fun ji_axiom oc ty =
-  let 
-    val v = mk_var ("V0",ty)
-    val vs = namea_v (v,0)
-  in
-    tf0_monoquant_vl oc "!" [v];
-    os oc "("; 
-      jname oc ty; os oc "(s("; iname oc ty; os oc "("; 
-        os oc ("," ^ vs ^ ")))");
-      os oc " = "; os oc vs;
+  let val v = mk_var ("V0",ty) in
+    tf0_quant_vl oc "!" [v]; os oc "("; 
+      jname oc ty; os oc "("; tf0_iterm oc v; os oc ")";
+      os oc " = "; os oc (namea_obj_mono (v,0));
     os oc ")"
   end
+
+fun tf0def_ji_axiom oc ty =
+  (os oc (tffpar ^ escape "ji." ^ name_tyu_mono ty ^ ",axiom,");
+   ji_axiom oc ty; osn oc ").")
 
 (* 
   load "hhExportTf0"; open hhExportTf0; 
@@ -197,42 +266,54 @@ fun ji_axiom oc ty =
    ------------------------------------------------------------------------- *)
 
 (* Types *)
-fun tf0_tyopdef_polyw oc tf0name =
-  osn oc (tffpar ^ tf0name ^ ",type," ^ tf0name ^ ":" ^ ttype ^ ").")
-
-fun tf0_polyw_tyopty a =
+fun tf0_tyop_poly a =
   if a <= 0 then dtype 
   else if a = 1 then dtype ^ " > " ^ dtype 
   else 
     "(" ^ String.concatWith " * " (List.tabulate (a,fn _ => dtype)) ^ ")"
     ^ " > " ^ dtype
 
-fun tf0_tyopdef oc ((thy,tyop),a) = 
+fun tf0def_tyop_poly oc ((thy,tyop),a) = 
   let val tf0name = name_tyop (thy,tyop) in
     (os oc (tffpar ^ tf0name ^ ",type," ^ tf0name ^ ":");
-     os oc (tf0_polyw_tyopty a); osn oc ").")
+     os oc (tf0_tyop_poly a); osn oc ").")
   end
 
 (* Constants *)
-fun tf0_polyw_cvty a =
+fun tf0_fun_sort a =
   if a <= 0 then utype 
   else if a = 1 then dutype ^ " > " ^ utype 
   else 
     "(" ^ String.concatWith " * " (List.tabulate (a,fn _ => dutype)) ^ ")"
     ^ " > " ^ utype
 
-fun tf0_polyw_cvdef_named oc (tf0name,a) =
-  (os oc (tffpar ^ tf0name ^ ",type," ^ tf0name ^ ":");
-   os oc (tf0_polyw_cvty a); osn oc ").")
+fun tf0def_objnamed_poly oc (name,a) =
+  (os oc (tffpar ^ name ^ ",type," ^ name ^ ":");
+   os oc (tf0_fun_sort a); osn oc ").")
 
-fun tf0_polyw_cvdef oc (tm,a) =
-  tf0_polyw_cvdef_named oc (namea_cv (tm,a), a) 
+fun tf0def_obj_poly oc (tm,a) =
+  tf0def_objnamed_poly oc (namea_cv (tm,a), a) 
+
+fun name_ty_mono (ty,arity) = case strip_funty_n arity ty of
+    [] => raise ERR "name_ty_mono" ""
+  | [a] => name_tyu_mono a
+  | [a,b] => name_tyu_mono a ^ " > " ^ name_tyu_mono b
+  | l => "(" ^ String.concatWith " * " (map name_tyu_mono (butlast l)) 
+    ^ ") > " ^ name_tyu_mono (last l)
+
+fun tf0def_objnamed_mono oc (name,ty,a) =
+  (os oc (tffpar ^ name ^ ",type," ^ name ^ ":");
+   os oc (name_ty_mono (ty,a)); osn oc ").")
+
+fun tf0def_obj_mono oc (tm,a) =
+  tf0def_objnamed_mono oc (namea_obj_mono (tm,a), type_of tm, a)
+
 
 (* Theorems *)
-fun tf0_thmdef role oc (thy,name) =
+fun tf0def_thm role oc (thy,name) =
   let 
     val thm = DB.fetch thy name
-    val (cj,defl) = fof_translate_thm thm
+    val (cj,defl) = translate_thm thm
     val tf0name = name_thm (thy,name)
     fun f i def = 
       (
@@ -249,14 +330,12 @@ fun tf0_thmdef role oc (thy,name) =
    Higher-order constants + sort function
    ------------------------------------------------------------------------- *)
 
-fun tf0_tyopdef_extra oc = app (tf0_tyopdef_polyw oc) polyw_typel;
-
 fun tf0_cdef_app oc = 
   let
     val a = 2
     val tf0name = namea_v (mk_var ("app",bool),a) (* bool is dummy type *)
   in
-    tf0_polyw_cvdef_named oc (tf0name,a)
+    tf0def_objnamed_poly oc (tf0name,a)
   end
 
 fun tf0_cdef_p oc =
@@ -274,6 +353,7 @@ fun tf0_cdef_s oc =
 fun tf0_cvdef_extra oc =
   (tf0_cdef_s oc; tf0_cdef_app oc; tf0_cdef_p oc) 
 
+
 (* -------------------------------------------------------------------------
    Higher-order theorems
    ------------------------------------------------------------------------- *)
@@ -285,44 +365,44 @@ fun tf0_boolext oc =
     tf0_quant_vl oc "!" [v0,v1];
     os oc "(("; tf0_pred oc v0; os oc " <=> "; tf0_pred oc v1; os oc ")";
     os oc " => ";
-    os oc "("; tf0_term oc v0; os oc " = "; tf0_term oc v1; os oc "))"
+    os oc "("; tf0_iterm oc v0; os oc " = "; tf0_iterm oc v1; os oc "))"
   end
 
-fun tf0_thmdef_boolext oc =
+fun tf0def_thm_boolext oc =
   let val tf0name = name_thm (hocaster_extra,"boolext") in
     os oc (tffpar ^ tf0name ^ ",axiom,"); tf0_boolext oc; osn oc ")."
   end
 
-fun tf0_thmdef_caster oc (name,thm) =
+fun tf0def_thm_caster oc (name,thm) =
   let 
-    val (cj,defl) = fof_translate_thm thm
-    val _ = if null defl then () else raise ERR "tf0_thmdef_caster" ""
+    val (cj,defl) = translate_thm thm
+    val _ = if null defl then () else raise ERR "tf0def_thm_caster" ""
   in
     os oc (tffpar ^ name_thm (hocaster_extra,name) ^ ",axiom,");
     tf0_formula oc cj; osn oc ")."
   end
 
-fun tf0_thmdef_combin oc (name,tm) =
+fun tf0def_thm_combin oc (name,tm) =
   let val tf0name = name_thm (hocaster_extra,name) in
     os oc (tffpar ^ tf0name ^ ",axiom,"); tf0_formula oc tm; osn oc ")."
   end
 
-fun tf0_thmdef_extra oc = 
+fun tf0def_thm_extra oc = 
   (
-  app (tf0_thmdef_caster oc) app_axioml;
-  tf0_thmdef_boolext oc;
-  app (tf0_thmdef_caster oc) p_axioml;
-  app (tf0_thmdef_combin oc) combin_axioml;
+  app (tf0def_thm_caster oc) app_axioml;
+  tf0def_thm_boolext oc;
+  app (tf0def_thm_caster oc) p_axioml;
+  app (tf0def_thm_combin oc) combin_axioml;
   app (tf0_logicdef oc) logic_l1;
   app (tf0_quantdef oc) quant_l2
   )
 
 (* todo: declare types as constants in domains *)
 
-val tyopl_extra = tyopl_of_tyl [``:bool -> bool``]
+val tyopl_extra_poly = tyopset_of_tyl [``:bool -> bool``]
 
 val app_p_cval =
-  let val tml = map (fst o fof_translate_thm o snd) (app_axioml @ p_axioml) in
+  let val tml = map (fst o translate_thm o snd) (app_axioml @ p_axioml) in
     mk_fast_set tma_compare (List.concat (map collect_arity tml)) 
   end
 
@@ -331,13 +411,37 @@ val combin_cval =
     mk_fast_set tma_compare (List.concat (map collect_arity tml)) 
   end
 
-val cval_extra = add_zeroarity (boolop_cval @ combin_cval @ app_p_cval)
+val cval_extra = boolop_cval @ combin_cval @ app_p_cval
+
+
+(* -------------------------------------------------------------------------
+   Monomorphism equations (only for monomorphic constants)
+   todo: should not forget app equations
+   ------------------------------------------------------------------------- *)
+
+fun tf0_monoeq oc (cv,a) =
+  let val (tm,vl) = apply_cva (cv,a) in
+    tf0_quant_vl oc "!" vl;
+    os oc "("; tf0_iterm oc tm; os oc " = "; tf0_term_poly oc tm; os oc ")"
+  end
+
+fun tf0def_monoeq oc (cv,a) =
+  let val tf0name = escape "monoeq." ^ namea_obj_mono (cv,a) in
+    os oc (tffpar ^ tf0name ^ ",axiom,"); tf0_monoeq oc (cv,a); osn oc ")."
+  end
+
+(* 
+  load "hhExportTf0"; open hhExportTf0; 
+  tf0_monoeq TextIO.stdOut (``I:num -> num``,1);
+
+![V0_2E0:mono_2Etyop_2Enum_2Enum]: (mono_2Ef_2E1_2Emono_2EA_27a(V0_2E0) = s(A_27a,f_2E1(s(tyop_2Enum_2Enum,i_mono_2Etyop_2Enum_2Enum(V0_2E0)))))
+*)
 
 (* -------------------------------------------------------------------------
    Arity equations
    ------------------------------------------------------------------------- *)
 
-fun tf0_arityeq oc (cv,a) = 
+fun tf0def_arityeq oc (cv,a) = 
   if a = 0 then () else
   let 
     val tf0name = "arityeq" ^ its a ^ escape "." ^ namea_cv (cv,a) 
@@ -350,36 +454,79 @@ fun tf0_arityeq oc (cv,a) =
    Export
    ------------------------------------------------------------------------- *)
 
-val tf0_bushy_dir = hh_dir ^ "/export_tf0_bushy"
-fun tf0_export_bushy thyl =
-  let 
-    val thyorder = sorted_ancestry thyl 
-    val dir = tf0_bushy_dir
-    fun f thy =
-      write_thy_bushy dir fof_translate_thm uniq_cvdef_mgc 
-       (tyopl_extra,cval_extra)
-       (tf0_tyopdef_extra, tf0_tyopdef, tf0_cvdef_extra, tf0_polyw_cvdef, 
-        tf0_thmdef_extra, tf0_arityeq, tf0_thmdef)
-      thy
-  in
-    mkDir_err dir; app f thyorder
+val cval_extra = boolop_cval @ combin_cval @ app_p_cval 
+fun all_obja_aux tm =
+  let val (oper,argl) = strip_comb tm in 
+    (oper,length argl) :: List.concat (map all_obja_aux argl)
   end
 
-val tf0_chainy_dir = hh_dir ^ "/export_tf0_chainy"
-fun tf0_export_chainy thyl =
+fun all_obja tm = mk_fast_set tma_compare (all_obja_aux tm)
+
+fun fetch_thmid (a,b) = DB.fetch a b
+
+fun tf0_write_pb dir (thmid,depl) =
   let 
-    val thyorder = sorted_ancestry thyl 
-    val dir = tf0_chainy_dir
-    fun f thy =
-      write_thy_chainy dir thyorder fof_translate_thm uniq_cvdef_mgc
-        (tyopl_extra,cval_extra)
-        (tf0_tyopdef_extra, tf0_tyopdef, tf0_cvdef_extra, tf0_polyw_cvdef, 
-         tf0_thmdef_extra, tf0_arityeq, tf0_thmdef)
-      thy
+    val _ = mkDir_err dir
+    val file  = dir ^ "/" ^ name_thm thmid ^ ".p"
+    val oc    = TextIO.openOut file
+    val tml1  = map ((op ::) o translate_thm o fetch_thmid) (thmid :: depl)
+    val tml2  = mk_term_set (List.concat (map atoms (List.concat tml1)))
+    val objal = mk_fast_set tma_compare (List.concat (map all_obja tml2))
+    val cval_poly1 = filter (fn (x,_) => is_tptp_fv x orelse is_const x) objal
+    val cval_poly2 = uniq_cvdef_mgc 
+      (mk_fast_set tma_compare (cval_poly1 @ cval_extra))
+    val tml3  = mk_term_set (map mk_arity_eq 
+      (filter (fn x => snd x <> 0) cval_poly2))
+    val tml4  = mk_term_set (List.concat (map atoms tml3))
+    val objal_aux = 
+        mk_fast_set tma_compare (List.concat (map all_obja (tml2 @ tml4)))
+    val tyal  = mk_fast_set (cpl_compare Type.compare Int.compare)
+      (map_fst type_of objal_aux) 
+    val tyal_mono = filter (not o polyorbool o fst) tyal
+    val tyul_mono =
+      mk_type_set (List.concat (
+        map (fn (ty,a) => strip_funty_n a ty) tyal_mono))
+    val tyopl_poly = tyopset_of_tyl (map fst tyal)
+    val cval_poly1_aux = 
+       filter (fn (x,_) => is_tptp_fv x orelse is_const x) objal_aux
+    val cval_poly2_aux = uniq_cvdef_mgc 
+      (mk_fast_set tma_compare (cval_poly1_aux @ cval_extra))
+    val cval_mono1 = filter (fn (x,_) => is_tptp_fv x orelse is_const x
+      orelse is_app x) objal_aux
+    val cval_mono2 = 
+      (* should not add the zero arity for app *)
+      filter (not o polyorbool o type_of o fst) 
+      (mk_fast_set tma_compare (cval_mono1 @ cval_extra))
   in
-    mkDir_err dir; app f thyorder
+    (
+    app (tf0def_name_ttype oc) sortl;
+    app (tf0def_ttype_mono oc) tyul_mono;
+    app (tf0def_tyop_poly oc) 
+      (mk_fast_set ida_compare (tyopl_extra_poly @ tyopl_poly));
+    tf0_cvdef_extra oc;
+    app (tf0def_obj_poly oc) cval_poly2_aux;
+    app (tf0def_obj_mono oc) cval_mono2;
+    app (tf0def_iname oc) tyul_mono;
+    app (tf0def_jname oc) tyul_mono;
+    tf0def_thm_extra oc;
+    app (tf0def_ij_axiom oc) tyul_mono;
+    app (tf0def_ji_axiom oc) tyul_mono;
+    app (tf0def_arityeq oc) cval_poly1_aux;
+    app (tf0def_monoeq oc) cval_mono2;
+    app (tf0def_thm "axiom" oc) depl; 
+    tf0def_thm "conjecture" oc thmid;
+    TextIO.closeOut oc
+    )
+    handle Interrupt => (TextIO.closeOut oc; raise Interrupt)
   end
 
-(* load "hhExportTf0"; open hhExportTf0; tf0_export_bushy ["bool"]; *)
+
+(* 
+  load "hhExportTf0"; open hhExportTf0; 
+  val thmid = ("arithmetic","ADD1");
+  val depl = valOf (hhExportLib.depo_of_thmid thmid);
+  val dir = HOLDIR ^ "/src/holyhammer/export_tf0_test";
+  tf0_write_pb dir (thmid,depl);
+*)
 
 end (* struct *)
