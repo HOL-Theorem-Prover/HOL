@@ -24,6 +24,7 @@ include Abbrev
   val name_cid : (string * string) -> string
   val namea_cid : ((string * string) * int) -> string
   val name_c: term -> string
+  val name_cv: term -> string
   val namea_c : (term * int) -> string
   val namea_cv : (term * int) -> string
   val name_tyop : (string * string) -> string

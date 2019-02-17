@@ -144,9 +144,17 @@ fun name_v v = fst (dest_var v)
 fun namea_v (v,a) = name_v v ^ (escape ".") ^ its a
 fun name_cid (thy,name) = escape ("c." ^ thy ^ "." ^ name)
 fun name_c c = name_cid (cid_of c)
+fun name_cv tm =
+  if is_const tm then name_c tm else
+  if is_var tm then name_v tm else raise ERR "name_cv" ""
+
 fun name_vartype ty = "A" ^ (escape (dest_vartype ty))
 fun name_tyop (thy,tyop) = escape ("tyop." ^ thy ^ "." ^ tyop)
 fun name_thm (thy,name) = escape ("thm." ^ thy ^ "." ^ name)
+
+
+
+
 
 (* first-order names *)
 fun namea_cid (cid,a) = name_cid cid ^ (escape ".") ^ its a
