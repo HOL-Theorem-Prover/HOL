@@ -14,9 +14,12 @@ val ERR = mk_HOL_ERR "hhExportTh0"
 
 val thfpar = "thf("
 
+fun is_monoapp (app,_) = is_app app andalso not (polymorphic (type_of app))
+
 fun name_obj_mono cv =
-  if is_tptp_bv cv then name_v cv  
-  else add_tyargltag (escape "mono." ^ name_cv cv) cv
+  (if is_tptp_bv cv then name_v cv  
+  else add_tyargltag (escape "mono." ^ name_cv cv) cv)
+  handle HOL_ERR _ => raise ERR "name_obj_mono" (term_to_string cv)
 
 (* -------------------------------------------------------------------------
    TF0 types
@@ -32,7 +35,7 @@ fun name_ty_mono ty =
         let val (ty1,ty2) = pair_of_list Args in
           "(" ^ name_ty_mono ty1 ^ " > " ^ name_ty_mono ty2 ^ ")"
         end
-      else namea_ty_mono_and_o ty
+      else name_tyu_mono_and_o ty
     end
 
 fun th0def_name_ttype oc th0name =
@@ -47,9 +50,9 @@ fun th0def_ttype_mono oc ty =
 val (utype,dtype,dutype) = ("u","d","du")
 val sortl = [utype,dtype,dutype]
 
-fun ho_fun oc (s,f_arg,argl) = 
-  if null argl then os oc s else 
-  (os oc "("; os oc s; os oc " @ "; oiter oc " @ " f_arg argl; os oc ")")
+fun ho_fun oc (f_oper,f_arg,argl) = 
+  if null argl then f_oper oc else 
+  (os oc "("; f_oper oc; os oc " @ "; oiter oc " @ " f_arg argl; os oc ")")
 
 fun th0_ty_poly oc ty =
   if is_vartype ty then os oc (name_vartype ty) else
@@ -57,7 +60,7 @@ fun th0_ty_poly oc ty =
       val {Args, Thy, Tyop} = dest_thy_type ty
       val tyops = name_tyop (Thy,Tyop)
     in
-      ho_fun oc (tyops, th0_ty_poly, Args)
+      ho_fun oc (fn oc_loc => os oc_loc tyops, th0_ty_poly, Args)
     end
 
 (* -------------------------------------------------------------------------
@@ -118,13 +121,26 @@ fun th0_term_poly oc tm =
   let 
     val (rator,argl) = strip_comb tm 
     fun f_tm oc = 
-      ho_fun oc (namea_obj_poly (rator,length argl), th0_iterm, argl)
+      ho_fun oc (
+        fn oc_loc => os oc_loc (namea_obj_poly (rator,length argl)),
+        th0_iterm, argl)
   in  
     s_of oc (type_of tm,f_tm) 
   end
 and th0_term_mono oc tm =
+  if is_var tm orelse is_const tm then os oc (name_obj_mono tm) 
+  else if is_abs tm then
+    let val (vl,bod) = strip_abs tm in
+      (th0_quant_vl oc "^" vl; th0_jterm oc bod)  
+    end
+  else
   let val (rator,argl) = strip_comb tm in
-    ho_fun oc (name_obj_mono rator, th0_jterm, argl)
+    if is_monoapp (rator,length argl) then 
+      let val (fx,vx) = pair_of_list argl in
+        os oc "("; th0_jterm oc fx; os oc " @ "; th0_jterm oc vx; 
+        os oc ")"  
+      end
+    else ho_fun oc (fn oc_loc => th0_term_mono oc_loc rator, th0_jterm, argl)
   end
 and th0_iterm oc tm =
   let 
@@ -135,7 +151,7 @@ and th0_iterm oc tm =
     then th0_term_poly oc tm
     else 
       let fun f_tm oc = 
-        ho_fun oc ("i_" ^ name_tyu_mono ty,th0_term_mono,[tm])
+        ho_fun oc (fn oc_loc => iname oc_loc ty,th0_term_mono,[tm])
       in
         s_of oc (ty,f_tm)
       end
@@ -146,7 +162,7 @@ and th0_jterm oc tm =
     val ty = type_of tm
   in
     if polymorphic (type_of rator)
-    then ho_fun oc ("j_" ^ name_tyu_mono ty,th0_term_poly,[tm])
+    then ho_fun oc (fn oc_loc => jname oc_loc ty,th0_term_poly,[tm])
     else th0_term_mono oc tm
   end
 
@@ -182,7 +198,7 @@ fun th0_pred oc tm =
         else
           (os oc "("; th0_jterm oc l; os oc " = "; th0_jterm oc r; os oc ")")
     end
-  else (os oc "(p @ "; th0_jterm oc tm; os oc ")")
+  else th0_jterm oc tm
 and th0_binop oc s (l,r) =
   (os oc "("; th0_pred oc l; os oc (" " ^ s ^ " "); 
    th0_pred oc r; os oc ")")
@@ -210,8 +226,11 @@ fun th0_logicformula oc (thy,name) =
     val tm = full_apply_const c
     val vl = free_vars_lr tm 
   in
-    th0_forall_tyvarl_tm oc tm; th0_quant_vl oc "!" vl;
-    os oc "((p @ "; th0_jterm oc tm ; os oc ") <=> "; th0_pred oc tm; os oc ")"
+    if name = "~" 
+    then os oc "mono_2Ec_2Ebool_2E_7E = ~" (* fix for Leo-3 *)
+    else
+    (th0_forall_tyvarl_tm oc tm; th0_quant_vl oc "!" vl;
+     os oc "("; th0_jterm oc tm ; os oc " <=> "; th0_pred oc tm; os oc ")")
   end
 
 fun th0_logicdef oc (thy,name) =
@@ -322,6 +341,7 @@ fun th0def_objnamed_mono oc (name,ty) =
 fun th0def_obj_mono oc (tm,a) =
   th0def_objnamed_mono oc (name_obj_mono tm, type_of tm)
 
+fun rw_conv conv tm = (rhs o concl o conv) tm
 
 (* Theorems *)
 fun th0def_thm role oc (thy,name) =
@@ -330,14 +350,24 @@ fun th0def_thm role oc (thy,name) =
     val (cj,defl) = translate_thm thm
     val th0name = name_thm (thy,name)
     fun f i def = 
-      (
-      os oc (thfpar ^ escape ("def" ^ its i ^ ".") ^ th0name ^ ",axiom,");
-      th0_formula oc def; osn oc ")."
-      )
+      let 
+        val (t1,t2) = (dest_eq o snd o strip_forall) def
+        val (rator,argl) = strip_comb t1
+        val lambda = list_mk_abs (argl,t2)
+      in
+        if polymorphic (type_of rator)
+        then
+          (
+          os oc (thfpar ^ escape ("def" ^ its i ^ ".") ^ th0name ^ ",axiom,");
+          th0_formula oc def; osn oc ")."; NONE
+          )
+        else SOME {redex = rator, residue = lambda} 
+      end
+    val lambdal = List.mapPartial I (mapi f defl)
+    val new_cj = rw_conv (REDEPTH_CONV BETA_CONV) (subst lambdal cj)
   in
-    ignore (mapi f defl);
     os oc (thfpar ^ th0name ^ "," ^ role ^ ",");
-    th0_formula oc cj; osn oc ")."
+    th0_formula oc new_cj; osn oc ")."
   end
 
 (* -------------------------------------------------------------------------
@@ -352,13 +382,6 @@ fun th0_cdef_app oc =
     th0def_objnamed_poly oc (th0name,a)
   end
 
-(* p is not necessary in higher-order: replace mono.bool by $o *)
-fun th0_cdef_p oc =
-  let val th0name = "p" in
-    os oc (thfpar ^ th0name ^ ",type," ^ th0name ^ ":");
-    os oc (name_tyu_mono_and_o bool ^ " > $o"); osn oc ")."
-  end
-
 fun th0_cdef_s oc =
   let val th0name = "s" in
     os oc (thfpar ^ th0name ^ ",type," ^ th0name ^ ":");
@@ -366,25 +389,12 @@ fun th0_cdef_s oc =
   end
 
 fun th0_cvdef_extra oc =
-  (th0_cdef_s oc; th0_cdef_app oc; th0_cdef_p oc) 
+  (th0_cdef_s oc; th0_cdef_app oc) 
 
 
 (* -------------------------------------------------------------------------
    Higher-order theorems
    ------------------------------------------------------------------------- *)
-
-fun th0_boolext oc = 
-  let val (v0,v1) = (mk_var ("V0",bool),mk_var ("V1",bool)) in
-    th0_quant_vl oc "!" [v0,v1];
-    os oc "(("; th0_pred oc v0; os oc " <=> "; th0_pred oc v1; os oc ")";
-    os oc " => ";
-    os oc "("; th0_jterm oc v0; os oc " = "; th0_jterm oc v1; os oc "))"
-  end
-
-fun th0def_thm_boolext oc =
-  let val th0name = escape "reserved.ho.boolext" in
-    os oc (thfpar ^ th0name ^ ",axiom,"); th0_boolext oc; osn oc ")."
-  end
 
 fun th0def_thm_caster oc (name,thm) =
   let 
@@ -403,8 +413,6 @@ fun th0def_thm_combin oc (name,tm) =
 fun th0def_thm_extra oc = 
   (
   app (th0def_thm_caster oc) app_axioml;
-  th0def_thm_boolext oc;
-  app (th0def_thm_caster oc) p_axioml;
   app (th0def_thm_combin oc) combin_axioml;
   app (th0_logicdef oc) logic_l1;
   app (th0_quantdef oc) quant_l2
@@ -428,8 +436,7 @@ val cval_extra = boolop_cval @ combin_cval @ app_p_cval
 
 
 (* -------------------------------------------------------------------------
-   Monomorphism equations (only for monomorphic constants)
-   todo: should not forget app equations
+   Monomorphism equations (only for monomorphic constants including app)
    ------------------------------------------------------------------------- *)
 
 fun th0_monoeq oc (cv,a) =
@@ -455,13 +462,28 @@ fun th0def_monoeq oc (cv,a) =
    ------------------------------------------------------------------------- *)
 
 fun th0def_arityeq oc (cv,a) =
-  if a = 0 then () else
+  if a = 0 orelse not (polymorphic (type_of cv)) then () else
   let 
     val th0name = "arityeq" ^ its a ^ escape "." ^ namea_cv (cv,a) 
     val tm = mk_arity_eq (cv,a)
   in
     os oc (thfpar ^ th0name ^ ",axiom,"); th0_formula oc tm; osn oc ")."
   end
+
+(* -------------------------------------------------------------------------
+   Monomorphic app equations
+   ------------------------------------------------------------------------- *)
+
+fun th0def_monoapp oc (app,a) =
+  if a <> 2 then raise ERR "th0def_monoapp" "" else
+    let 
+      val th0name = escape "monoapp." ^ name_obj_mono app
+      val (tm,l) = apply_cva (app,a)
+      val (fv,xv) = pair_of_list l
+      val formula = list_mk_forall ([fv,xv], mk_eq (tm,mk_comb (fv,xv)))
+    in
+      os oc (thfpar ^ th0name ^ ",axiom,"); th0_formula oc formula; osn oc ")."
+    end
 
 (* -------------------------------------------------------------------------
    Export
@@ -479,16 +501,6 @@ fun fetch_thmid (a,b) = DB.fetch a b
 
 fun has_tyarg (cv,_) = 
   let val tyargl = typearg_of_cvapp cv in not (null tyargl) end
-
-fun collect_tyul ty = 
-  if is_vartype ty then [ty] else
-    let val {Args, Thy, Tyop} = dest_thy_type ty in
-      if Thy = "min" andalso Tyop = "fun" then
-        let val (tya,tyb) = pair_of_list Args in
-          collect_tyul tya @ collect_tyul tyb
-        end
-      else [ty]
-    end
 
 fun th0_write_pb dir (thmid,depl) =
   let 
@@ -511,7 +523,7 @@ fun th0_write_pb dir (thmid,depl) =
     val tyal_mono = filter (not o polymorphic o fst) tyal
     val tyul_mono =
       mk_type_set (List.concat (
-        map (fn (ty,a) => collect_tyul ty) tyal_mono))
+        map (fn (ty,a) => strip_funty_n a ty) tyal_mono))
     val tyopl_poly = tyopset_of_tyl (map fst tyal)
     val cval_poly1_aux = 
        filter (fn (x,_) => is_tptp_fv x orelse is_const x) objal_aux
@@ -519,8 +531,7 @@ fun th0_write_pb dir (thmid,depl) =
       (mk_fast_set tma_compare (cval_poly1_aux @ cval_extra))
     val cval_mono1 = filter (fn (x,_) => is_tptp_fv x orelse is_const x
       orelse is_app x) objal_aux
-    val cval_mono2 = 
-      (* should not add the zero arity for app *)
+    val cval_mono2 =
       filter (not o polymorphic o type_of o fst) 
       (mk_fast_set tma_compare (cval_mono1 @ cval_extra))
   in
@@ -539,18 +550,19 @@ fun th0_write_pb dir (thmid,depl) =
     app (th0def_ji_axiom oc) tyul_mono;
     app (th0def_arityeq oc) cval_poly1_aux;
     app (th0def_monoeq oc) (filter has_tyarg cval_mono2);
-    app (th0def_thm "axiom" oc) depl; 
+    app (th0def_monoapp oc) (filter is_monoapp cval_mono2);
+    app (th0def_thm "axiom" oc) depl;
     th0def_thm "conjecture" oc thmid;
     TextIO.closeOut oc
     )
     handle Interrupt => (TextIO.closeOut oc; raise Interrupt)
   end
 
-
 (* 
   load "hhExportTh0"; open hhExportTh0; 
-  val thmid = ("arithmetic","ADD1");
-  val depl = valOf (hhExportLib.depo_of_thmid thmid);
+  load "realTheory";
+  val thmid = ("real", "SUM_OFFSET");
+  val depl = [];
   val dir = HOLDIR ^ "/src/holyhammer/export_th0_test";
   th0_write_pb dir (thmid,depl);
 *)

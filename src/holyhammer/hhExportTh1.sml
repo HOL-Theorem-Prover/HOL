@@ -174,7 +174,7 @@ fun th1_thmdef role oc (thy,name) =
    Extra information
    ------------------------------------------------------------------------- *)
 
-val tyopl_extra = tyopl_of_tyl [``:bool -> bool``]
+val tyopl_extra = tyopset_of_tyl [``:bool -> bool``]
 val cval_extra = boolop_cval
 
 fun th1_cvdef_extra oc = () 
@@ -222,7 +222,7 @@ fun th1_export_chainy thyl =
     mkDir_err dir; app f thyorder
   end
 
-(* load "hhExportTh1"; open hhExportTh1; th1_export_chainy ["arithmetic"]; *)
+(* load "hhExportTh1"; open hhExportTh1; th1_export_chainy ["bool"]; *)
 
 (* Full export 
   load "hhExportTh1"; open hhExportTh1;
