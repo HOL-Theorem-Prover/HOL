@@ -558,6 +558,41 @@ fun th0_write_pb dir (thmid,depl) =
     handle Interrupt => (TextIO.closeOut oc; raise Interrupt)
   end
 
+
+(* -------------------------------------------------------------------------
+   Export theories
+   ------------------------------------------------------------------------- *)
+
+fun write_thy_bushy dir thy =
+  let val cjdepl = add_bushy_dep thy (DB.theorems thy) in
+    print (thy ^ " "); app (th0_write_pb dir) cjdepl
+  end
+
+val th0_bushy_dir = hh_dir ^ "/export_th0_bushy"
+fun th0_export_bushy thyl =
+  let 
+    val thyorder = sorted_ancestry thyl 
+    val dir = th0_bushy_dir
+  in
+    mkDir_err dir; app (write_thy_bushy dir) thyorder
+  end
+
+fun write_thy_chainy dir thyorder thy =
+  let val cjdepl = add_chainy_dep thyorder thy (DB.theorems thy) in
+    print (thy ^ " "); app (th0_write_pb dir) cjdepl
+  end
+
+val th0_chainy_dir = hh_dir ^ "/export_th0_chainy"
+fun th0_export_chainy thyl =
+  let 
+    val thyorder = sorted_ancestry thyl 
+    val dir = th0_chainy_dir
+  in
+    mkDir_err dir; app (write_thy_chainy dir thyorder) thyorder
+  end
+
+
+
 (* 
   load "hhExportTh0"; open hhExportTh0; 
   load "realTheory";

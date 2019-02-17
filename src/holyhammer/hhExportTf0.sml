@@ -528,6 +528,40 @@ fun tf0_write_pb dir (thmid,depl) =
     handle Interrupt => (TextIO.closeOut oc; raise Interrupt)
   end
 
+(* -------------------------------------------------------------------------
+   Export theories
+   ------------------------------------------------------------------------- *)
+
+fun write_thy_bushy dir thy =
+  let val cjdepl = add_bushy_dep thy (DB.theorems thy) in
+    print (thy ^ " "); app (tf0_write_pb dir) cjdepl
+  end
+
+val tf0_bushy_dir = hh_dir ^ "/export_tf0_bushy"
+fun tf0_export_bushy thyl =
+  let 
+    val thyorder = sorted_ancestry thyl 
+    val dir = tf0_bushy_dir
+  in
+    mkDir_err dir; app (write_thy_bushy dir) thyorder
+  end
+
+fun write_thy_chainy dir thyorder thy =
+  let val cjdepl = add_chainy_dep thyorder thy (DB.theorems thy) in
+    print (thy ^ " "); app (tf0_write_pb dir) cjdepl
+  end
+
+val tf0_chainy_dir = hh_dir ^ "/export_tf0_chainy"
+fun tf0_export_chainy thyl =
+  let 
+    val thyorder = sorted_ancestry thyl 
+    val dir = tf0_chainy_dir
+  in
+    mkDir_err dir; app (write_thy_chainy dir thyorder) thyorder
+  end
+
+
+
 
 (* 
   load "hhExportTf0"; open hhExportTf0; 
@@ -535,6 +569,9 @@ fun tf0_write_pb dir (thmid,depl) =
   val depl = valOf (hhExportLib.depo_of_thmid thmid);
   val dir = HOLDIR ^ "/src/holyhammer/export_tf0_test";
   tf0_write_pb dir (thmid,depl);
+
+  val 
+
 *)
 
 end (* struct *)

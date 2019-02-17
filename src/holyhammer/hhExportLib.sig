@@ -88,6 +88,15 @@ include Abbrev
   val before_elem: ''a -> ''a list -> ''a list
   val sorted_ancestry : string list -> string list
 
+  val add_chainy_dep : 
+    string list -> string ->
+    (string * thm) list ->
+    ((string * string) * (string * string) list) list
+
+  val add_bushy_dep :  
+    string -> (string * thm) list -> 
+    ((string * string) * (string * string) list) list
+
   val write_thy_bushy : string ->
     (thm -> term * term list) ->
     ((term * int) list -> (term * int) list) ->
