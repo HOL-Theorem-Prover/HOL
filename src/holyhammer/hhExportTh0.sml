@@ -22,6 +22,9 @@ fun name_obj_mono cv =
    TF0 types
    ------------------------------------------------------------------------- *)
 
+fun name_tyu_mono_and_o ty = 
+  if ty = bool then "$o" else name_tyu_mono ty
+ 
 fun name_ty_mono ty = 
   if is_vartype ty then raise ERR "name_ty_mono" "" else
     let val {Args, Thy, Tyop} = dest_thy_type ty in
@@ -29,13 +32,14 @@ fun name_ty_mono ty =
         let val (ty1,ty2) = pair_of_list Args in
           "(" ^ name_ty_mono ty1 ^ " > " ^ name_ty_mono ty2 ^ ")"
         end
-      else name_tyu_mono ty
+      else namea_ty_mono_and_o ty
     end
 
 fun th0def_name_ttype oc th0name =
   osn oc (thfpar ^ th0name ^ ",type," ^ th0name ^ ":" ^ ttype ^ ").")
 
 fun th0def_ttype_mono oc ty =
+  if ty = bool then () else
   let val th0name = name_tyu_mono ty in
     th0def_name_ttype oc th0name
   end
@@ -231,13 +235,13 @@ fun th0_quantdef oc (thy,name) =
 fun th0def_iname oc ty = 
   (
   os oc thfpar; iname oc ty; os oc ",type,"; iname oc ty; os oc ":";
-  os oc (name_tyu_mono ty ^ " > u"); osn oc ")."
+  os oc (name_tyu_mono_and_o ty ^ " > u"); osn oc ")."
   )
 
 fun th0def_jname oc ty = 
   (
   os oc thfpar; jname oc ty; os oc ",type,"; jname oc ty; os oc ":";
-  os oc ("du > " ^ name_tyu_mono ty); osn oc ")."
+  os oc ("du > " ^ name_tyu_mono_and_o ty); osn oc ")."
   )
 
 (* for monomorphic types *)
@@ -352,7 +356,7 @@ fun th0_cdef_app oc =
 fun th0_cdef_p oc =
   let val th0name = "p" in
     os oc (thfpar ^ th0name ^ ",type," ^ th0name ^ ":");
-    os oc (name_tyu_mono bool ^ " > $o"); osn oc ")."
+    os oc (name_tyu_mono_and_o bool ^ " > $o"); osn oc ")."
   end
 
 fun th0_cdef_s oc =
