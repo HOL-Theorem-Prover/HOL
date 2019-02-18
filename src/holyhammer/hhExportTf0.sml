@@ -500,15 +500,22 @@ val tyopl_extra_poly = tyopset_of_tyl [``:bool -> bool``]
 
 val tya_compare = cpl_compare Type.compare Int.compare
 
-fun prepare_tyopl_poly tyal = 
-  let val l = tyopset_of_tyl (map fst tyal) in
+fun fo_subterms tm = 
+  let val (oper,argl) = strip_comb tm in
+    tm :: List.concat (map fo_subterms argl)
+  end
+
+fun fo_subterms_tml atoml =
+  mk_term_set (List.concat (map fo_subterms atoml))
+
+fun prepare_tyopl_poly subtml = 
+  let val l = tyopset_of_tyl (map type_of subtml) in
     mk_fast_set ida_compare (tyopl_extra_poly @ l)
   end
 
-fun prepare_tyul_mono tyal =
-  let val tyal_mono = filter (not o polymorphic o fst) tyal in
-    mk_type_set (List.concat (
-      map (fn (ty,a) => strip_funty_n a ty) tyal_mono))
+fun prepare_tyul_mono subtml =
+  let val tyl = mk_type_set (bool :: (map type_of subtml)) in
+    filter (not o polymorphic) tyl
   end
 
 (* problem *)
@@ -523,9 +530,9 @@ fun tf0_write_pb dir (thmid,depl) =
     val objal = all_obja_tml atoml2
     val cval_poly = prepare_cval_poly objal
     val cval_mono = prepare_cval_mono objal
-    val tyal = mk_fast_set tya_compare (map_fst type_of objal)
-    val tyopl_poly = prepare_tyopl_poly tyal
-    val tyul_mono = prepare_tyul_mono tyal
+    val subtml = fo_subterms_tml atoml2
+    val tyopl_poly = prepare_tyopl_poly subtml
+    val tyul_mono = prepare_tyul_mono subtml
   in
     (
     app (tf0def_name_ttype oc) sortl;

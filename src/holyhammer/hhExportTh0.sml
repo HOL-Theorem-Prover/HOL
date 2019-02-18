@@ -186,7 +186,7 @@ fun th0_pred oc tm =
   else if is_disj tm then th0_binop oc "|" (dest_disj tm)
   else if is_imp_only tm then th0_binop oc "=>" (dest_imp tm)
   else if is_neg tm then
-    (os oc "(~ "; th0_pred oc (dest_neg tm); os oc ")")
+    (os oc "(~ @ "; th0_pred oc (dest_neg tm); os oc ")")
   else if is_eq tm then
     let val (l,r) = dest_eq tm in
       if must_pred l orelse must_pred r
@@ -229,6 +229,7 @@ fun th0_logicformula oc (thy,name) =
      os oc "("; th0_jterm oc tm ; os oc " <=> "; th0_pred oc tm; os oc ")")
   end
 
+(* to remove when satallax and leo-3 are fixed *)
 fun th0_logicdef oc (thy,name) =
   (os oc (thfpar ^ escape ("reserved.logic." ^ name) ^ ",axiom,"); 
    th0_logicformula oc (thy,name); osn oc ").")
@@ -372,9 +373,7 @@ fun th0_cdef_s oc =
     os oc (dtype ^ " > " ^ utype ^ " > " ^ dutype); osn oc ")."
   end
 
-fun th0_cvdef_extra oc =
-  (th0_cdef_s oc; th0_cdef_app oc) 
-
+fun th0_cvdef_extra oc = (th0_cdef_s oc; th0_cdef_app oc) 
 
 (* -------------------------------------------------------------------------
    Higher-order theorems
@@ -541,13 +540,46 @@ fun extract_ho_tyu ty =
       else [ty]
     end
 
-fun prepare_tyul_mono tyal =
+fun fo_subterms tm = 
+  let val (oper,argl) = strip_comb tm in
+    tm :: List.concat (map fo_subterms argl)
+  end
+
+fun fo_subterms_tml atoml =
+  mk_term_set (List.concat (map fo_subterms atoml))
+
+fun ho_subterms_tml atoml = 
+  mk_term_set (List.concat (map (find_terms (fn _ => true)) atoml))
+
+
+fun fo_subterms tm = 
+  let val (oper,argl) = strip_comb tm in
+    tm :: List.concat (map fo_subterms argl)
+  end
+
+fun fo_subterms_tml atoml =
+  mk_term_set (List.concat (map fo_subterms atoml))
+
+fun prepare_tyopl_poly subtml = 
+  let val l = tyopset_of_tyl (map type_of subtml) in
+    mk_fast_set ida_compare (tyopl_extra_poly @ l)
+  end
+
+fun prepare_tyul_mono_fo atoml =
   let 
-    val tyal_mono = filter (not o polymorphic o fst) tyal
-    val ho_tyl = mk_type_set (List.concat (
-      map (fn (ty,a) => extract_ho_tyu ty) tyal_mono))
+    val tml = fo_subterms_tml atoml
+    val tyl = mk_type_set (bool :: (map type_of tml)) 
   in
-    ho_tyl
+    filter (not o polymorphic) tyl
+  end
+
+fun prepare_tyul_mono_ho atoml =
+  let 
+    val tml = ho_subterms_tml atoml
+    val tyl1 = mk_type_set (bool :: (map type_of tml)) 
+    val tyl2 = filter (not o polymorphic) tyl1
+  in
+    mk_type_set (List.concat (map extract_ho_tyu tyl2))
   end
 
 (* problem *)
@@ -563,21 +595,22 @@ fun th0_write_pb dir (thmid,depl) =
     val cval_poly = prepare_cval_poly objal
     val cval_mono = prepare_cval_mono objal
     val tyal = mk_fast_set tya_compare (map_fst type_of objal)
-    val tyopl_poly = prepare_tyopl_poly tyal
-    val tyul_mono = prepare_tyul_mono tyal
+    val tyopl_poly = prepare_tyopl_poly (fo_subterms_tml atoml2)
+    val tyul_mono_fo = prepare_tyul_mono_fo atoml2
+    val tyul_mono_ho = prepare_tyul_mono_ho atoml2
   in
     (
     app (th0def_name_ttype oc) sortl;
-    app (th0def_ttype_mono oc) tyul_mono;
+    app (th0def_ttype_mono oc) tyul_mono_ho;
     app (th0def_tyop_poly oc) tyopl_poly;
-    tf0_cvdef_extra oc;
+    th0_cvdef_extra oc;
     app (th0def_obj_poly oc) cval_poly;
     app (th0def_obj_mono oc) (uniq_cvdef_arity cval_mono);
-    app (th0def_iname oc) tyul_mono;
-    app (th0def_jname oc) tyul_mono;
+    app (th0def_iname oc) tyul_mono_fo;
+    app (th0def_jname oc) tyul_mono_fo;
     th0def_thm_extra oc;
-    app (th0def_ij_axiom oc) tyul_mono;
-    app (th0def_ji_axiom oc) tyul_mono;
+    app (th0def_ij_axiom oc) tyul_mono_fo;
+    app (th0def_ji_axiom oc) tyul_mono_fo;
     app (th0def_arityeq oc) cval_arityeq;
     app (th0def_monoeq oc) (filter has_tyarg cval_mono);
     app (th0def_monoapp oc) (filter is_monoapp cval_mono);
@@ -631,7 +664,15 @@ fun th0_export_chainy thyl =
   load "hhExportTh0"; open hhExportTh0; 
   load "tttUnfold"; tttUnfold.load_sigobj ();
   val thyl = ancestry (current_theory ());
-  th0_export_bushy thyl; 
+  th0_export_bushy thyl;
+
+  load "hhExportTh0"; open hhExportTh0;
+  load "DecodeTheory";
+    val thmid = ("Decode","dec2enc_decode_option");
+  val depl = valOf (hhExportLib.depo_of_thmid thmid);
+  val dir = HOLDIR ^ "/src/holyhammer/export_th0_test";
+  th0_write_pb dir (thmid,depl);  
+
 *)
 
 end (* struct *)
