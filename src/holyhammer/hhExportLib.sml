@@ -93,8 +93,6 @@ fun apply_cva (cv,a) =
     (list_mk_comb (cv,vl),vl)
   end
 
-
-
 (* -------------------------------------------------------------------------
    Polymorphism and types
    ------------------------------------------------------------------------- *)
@@ -152,18 +150,12 @@ fun name_vartype ty = "A" ^ (escape (dest_vartype ty))
 fun name_tyop (thy,tyop) = escape ("tyop." ^ thy ^ "." ^ tyop)
 fun name_thm (thy,name) = escape ("thm." ^ thy ^ "." ^ name)
 
-
-
-
-
 (* first-order names *)
 fun namea_cid (cid,a) = name_cid cid ^ (escape ".") ^ its a
 fun namea_c (c,a) = namea_cid (cid_of c,a)
 fun namea_cv (tm,a) =
   if is_const tm then namea_c (tm,a) else
   if is_var tm then namea_v (tm,a) else raise ERR "namea_cv" ""
-
-
 
 (* polymorphic / monomorphic names *)
 fun name_fo_fun_mono (s,f_arg,argl) = 
@@ -197,16 +189,6 @@ fun namea_obj_mono (cv,a) =
   
 fun namea_obj_poly (cv,a) =
   if is_tptp_bv cv then namea_v (cv,a) else namea_cv (cv,a)
-
-
-
-(* -------------------------------------------------------------------------
-   Naming types
-   ------------------------------------------------------------------------- *)
-
-
-
-
 
 (* -------------------------------------------------------------------------
    Definitions of boolean operators

@@ -102,7 +102,7 @@ fun all_fosubtm tm =
     tm :: List.concat (map all_fosubtm argl)
   end
 
-(* works for higher-order but seems weird *)
+(* ignores app *)
 fun collect_arity tm =
   let 
     val tml1 = List.concat (map all_fosubtm (atoms tm))
@@ -289,10 +289,6 @@ fun mk_arity_eq (f,n) =
   in
     concl (GENL vl' (APP_CONV_STRIPCOMB tm))
   end
-
-
-
-
 
 
 end

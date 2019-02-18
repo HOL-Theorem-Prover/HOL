@@ -102,7 +102,7 @@ fun fof_logicformula oc (thy,name) =
   end
 
 fun fof_logicdef oc (thy,name) =
-  (os oc (fofpar ^ escape ("reserved.logicdef." ^ name) ^ ",axiom,"); 
+  (os oc (fofpar ^ escape ("reserved.logic." ^ name) ^ ",axiom,"); 
    fof_logicformula oc (thy,name); osn oc ").")
 
 fun fof_quantdef oc (thy,name) =
@@ -110,7 +110,7 @@ fun fof_quantdef oc (thy,name) =
     val thm = assoc name [("!", FORALL_THM),("?", EXISTS_THM)]
     val (tm,_) = translate_thm thm
   in
-    os oc (fofpar ^ escape ("reserved.quantdef." ^ name) ^ ",axiom,"); 
+    os oc (fofpar ^ escape ("reserved.quant." ^ name) ^ ",axiom,"); 
     fof_formula oc tm; osn oc ")."
   end
 
@@ -118,8 +118,6 @@ fun fof_quantdef oc (thy,name) =
    FOF definitions
    ------------------------------------------------------------------------- *)
 
-fun fof_tyopdef oc _ = ()
-fun fof_cvdef oc (tm,a) = ()
 
 fun fof_thmdef role oc (thy,name) =
   let 
@@ -137,13 +135,17 @@ fun fof_thmdef role oc (thy,name) =
     fof_formula oc statement; osn oc ")."
   end
 
-(* -------------------------------------------------------------------------
-   Do not print constant definitions
-   ------------------------------------------------------------------------- *)
+val app_p_cval =
+  let val tml = map (fst o translate_thm o snd) (app_axioml @ p_axioml) in
+    mk_fast_set tma_compare (List.concat (map collect_arity tml)) 
+  end
 
-fun fof_cvdef_extra oc = () 
-val tyopl_extra = []
-val cval_extra = []
+val combin_cval = 
+  let val tml = map snd combin_axioml in
+    mk_fast_set tma_compare (List.concat (map collect_arity tml)) 
+  end
+
+val cval_extra = boolop_cval @ combin_cval @ app_p_cval
 
 (* -------------------------------------------------------------------------
    Higher-order theorems
@@ -160,9 +162,7 @@ fun fof_boolext oc =
   end
 
 fun fof_thmdef_boolext oc =
-  let val fofname = 
-    escape "reserved." ^ (name_thm (hocaster_extra,"boolext")) 
-  in
+  let val fofname = escape "reserved.ho.boolext" in
     os oc (fofpar ^ fofname ^ ",axiom,"); fof_boolext oc; osn oc ")."
   end
 
@@ -171,15 +171,15 @@ fun fof_thmdef_caster oc (name,thm) =
     val (statement,defl) = translate_thm thm
     val _ = if null defl then () else raise ERR "fof_thmdef_caster" ""
   in
-    os oc (fofpar ^ escape "reserved." ^ 
-    name_thm (hocaster_extra,name) ^ ",axiom,");
+    os oc (fofpar ^ escape ("reserved.ho." ^ name) ^ ",axiom,");
     fof_formula oc statement; osn oc ")."
   end
 
 fun fof_thmdef_combin oc (name,tm) =
-  let val fofname = escape "reserved." ^ name_thm (hocaster_extra,name) in
-    os oc (fofpar ^ fofname ^ ",axiom,"); fof_formula oc tm; osn oc ")."
-  end
+  (
+  os oc (fofpar ^ escape ("reserved.ho." ^ name) ^ ",axiom,"); 
+  fof_formula oc tm; osn oc ")."
+  )
 
 fun fof_thmdef_extra oc = 
   (
@@ -207,24 +207,61 @@ fun fof_arityeq oc (cv,a) =
   end
 
 (* -------------------------------------------------------------------------
-   Export
+   Write problem
    ------------------------------------------------------------------------- *)
 
-fun fof_tyopdef_extra oc = ()
+fun collect_tml (thmid,depl) =
+  let fun f x = 
+    let val (formula,defl) = translate_thm (uncurry DB.fetch x) in 
+      mk_term_set (List.concat (map atoms (formula :: defl)))
+    end
+  in
+    mk_term_set (List.concat (map f (thmid :: depl)))
+  end
+
+fun fof_write_pb dir (thmid,depl) =
+  let 
+    val _ = mkDir_err dir
+    val file  = dir ^ "/" ^ name_thm thmid ^ ".p"
+    val oc  = TextIO.openOut file
+    val tml = collect_tml (thmid,depl)
+    val cval = mk_sameorder_set tma_compare 
+      (List.concat (cval_extra :: map collect_arity tml))
+  in
+    (
+    fof_thmdef_extra oc;
+    app (fof_arityeq oc) cval;
+    app (fof_thmdef "axiom" oc) depl;
+    fof_thmdef "conjecture" oc thmid; 
+    TextIO.closeOut oc
+    )
+    handle Interrupt => (TextIO.closeOut oc; raise Interrupt)
+  end
+
+(* -------------------------------------------------------------------------
+   Export theories
+   ------------------------------------------------------------------------- *)
+
+val fof_bushy_dir = hh_dir ^ "/export_fof_bushy"
+val fof_chainy_dir = hh_dir ^ "/export_fof_chainy"
+
+fun write_thy_bushy dir thy =
+  let val cjdepl = add_bushy_dep thy (DB.theorems thy) in
+    print (thy ^ " "); app (fof_write_pb dir) cjdepl
+  end
 
 val fof_bushy_dir = hh_dir ^ "/export_fof_bushy"
 fun fof_export_bushy thyl =
   let 
     val thyorder = sorted_ancestry thyl 
     val dir = fof_bushy_dir
-    fun f thy =
-      write_thy_bushy dir translate_thm uniq_cvdef_mgc 
-       (tyopl_extra,cval_extra)
-       (fof_tyopdef_extra, fof_tyopdef, fof_cvdef_extra, fof_cvdef, 
-        fof_thmdef_extra, fof_arityeq, fof_thmdef)
-      thy
   in
-    mkDir_err dir; app f thyorder
+    mkDir_err dir; app (write_thy_bushy dir) thyorder
+  end
+
+fun write_thy_chainy dir thyorder thy =
+  let val cjdepl = add_chainy_dep thyorder thy (DB.theorems thy) in
+    print (thy ^ " "); app (fof_write_pb dir) cjdepl
   end
 
 val fof_chainy_dir = hh_dir ^ "/export_fof_chainy"
@@ -232,23 +269,17 @@ fun fof_export_chainy thyl =
   let 
     val thyorder = sorted_ancestry thyl 
     val dir = fof_chainy_dir
-    fun f thy =
-      write_thy_chainy dir thyorder translate_thm uniq_cvdef_mgc
-        (tyopl_extra,cval_extra)
-        (fof_tyopdef_extra, fof_tyopdef, fof_cvdef_extra, fof_cvdef, 
-         fof_thmdef_extra, fof_arityeq, fof_thmdef)
-      thy
   in
-    mkDir_err dir; app f thyorder
+    mkDir_err dir; app (write_thy_chainy dir thyorder) thyorder
   end
 
-(* load "hhExportFof"; open hhExportFof; fof_export_bushy ["bool"]; *)
-
-(* Full export 
-  load "hhExportFof"; open hhExportFof;
-  load "tttUnfold"; tttUnfold.load_sigobj ();
-  val thyl = ancestry (current_theory ());
-  fof_export_bushy thyl;
+(* 
+load "hhExportFof"; open hhExportFof; 
+val thmid = ("arithmetic","ADD1");
+val depl = valOf (hhExportLib.depo_of_thmid thmid);
+val dir = HOLDIR ^ "/src/holyhammer/export_fof_test";
+fof_write_pb dir (thmid,depl);
+fof_export_chainy ["bool"]; 
 *)
 
 (* -------------------------------------------------------------------------
@@ -313,7 +344,7 @@ fun fof_export_pb dir (cj,namethml) =
     val cval = collect_arity_pb (cj,namethml)
   in
     (fof_thmdef_extra oc;
-     app (fof_arityeq oc) cval;
+     app (fof_arityeq oc) (mk_sameorder_set tma_compare (cval_extra @ cval));
      app (fof_axdef oc) namethml; 
      fof_cjdef oc cj; 
      TextIO.closeOut oc)
@@ -332,13 +363,8 @@ load "mlNearestNeighbor"; open mlNearestNeighbor;
 val thmdata = create_thmdata ();
 val premises = thmknn_wdep thmdata n (feahash_of_goal goal);
 val namethml = thml_of_namel premises;
-
 val hh_dir = HOLDIR ^ "/src/holyhammer";
 fof_export_pb hh_dir (cj,namethml);
-
 *)
-
-
-
 
 end (* struct *)

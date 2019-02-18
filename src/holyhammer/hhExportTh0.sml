@@ -226,9 +226,6 @@ fun th0_logicformula oc (thy,name) =
     val tm = full_apply_const c
     val vl = free_vars_lr tm 
   in
-    if name = "~" 
-    then os oc "mono_2Ec_2Ebool_2E_7E = ~" (* fix for Leo-3 *)
-    else
     (th0_forall_tyvarl_tm oc tm; th0_quant_vl oc "!" vl;
      os oc "("; th0_jterm oc tm ; os oc " <=> "; th0_pred oc tm; os oc ")")
   end
@@ -254,13 +251,13 @@ fun th0_quantdef oc (thy,name) =
 fun th0def_iname oc ty = 
   (
   os oc thfpar; iname oc ty; os oc ",type,"; iname oc ty; os oc ":";
-  os oc (name_tyu_mono_and_o ty ^ " > u"); osn oc ")."
+  os oc (name_ty_mono ty ^ " > u"); osn oc ")."
   )
 
 fun th0def_jname oc ty = 
   (
   os oc thfpar; jname oc ty; os oc ",type,"; jname oc ty; os oc ":";
-  os oc ("du > " ^ name_tyu_mono_and_o ty); osn oc ")."
+  os oc ("du > " ^ name_ty_mono ty); osn oc ")."
   )
 
 (* for monomorphic types *)
@@ -364,7 +361,8 @@ fun th0def_thm role oc (thy,name) =
         else SOME {redex = rator, residue = lambda} 
       end
     val lambdal = List.mapPartial I (mapi f defl)
-    val new_cj = rw_conv (REDEPTH_CONV BETA_CONV) (subst lambdal cj)
+    val new_cj = rw_conv (TRY_CONV (REDEPTH_CONV BETA_CONV)
+      THENC REFL) (subst lambdal cj)
   in
     os oc (thfpar ^ th0name ^ "," ^ role ^ ",");
     th0_formula oc new_cj; osn oc ")."
@@ -591,15 +589,18 @@ fun th0_export_chainy thyl =
     mkDir_err dir; app (write_thy_chainy dir thyorder) thyorder
   end
 
-
-
 (* 
   load "hhExportTh0"; open hhExportTh0; 
-  load "realTheory";
-  val thmid = ("real", "SUM_OFFSET");
-  val depl = [];
+
+  val thmid = ("arithmetic","ADD1");
+  val depl = valOf (hhExportLib.depo_of_thmid thmid);
   val dir = HOLDIR ^ "/src/holyhammer/export_th0_test";
   th0_write_pb dir (thmid,depl);
+
+  th0_export_bushy ["list"];
+
+ load "realTheory";
+val thmid = ("real", "SUM_OFFSET");
 *)
 
 end (* struct *)

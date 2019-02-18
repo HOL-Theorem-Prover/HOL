@@ -252,7 +252,7 @@ fun tf1_thmdef_extra oc =
   app (tf1_quantdef oc) quant_l2
   )
 
-val tyopl_extra = tyopl_of_tyl [``:bool -> bool``]
+val tyopl_extra = tyopset_of_tyl [``:bool -> bool``]
 
 val app_p_cval =
   let val tml = map (fst o translate_thm o snd) (app_axioml @ p_axioml) in
@@ -264,7 +264,7 @@ val combin_cval =
     mk_fast_set tma_compare (List.concat (map collect_arity tml)) 
   end
 
-val cval_extra = add_zeroarity (boolop_cval @ combin_cval @ app_p_cval) 
+val cval_extra = boolop_cval @ combin_cval @ app_p_cval
 
 (* -------------------------------------------------------------------------
    Arity equations
@@ -281,24 +281,66 @@ fun tf1_arityeq oc (cv,a) =
   end
 
 (* -------------------------------------------------------------------------
-   Export
+   Write problem
    ------------------------------------------------------------------------- *)
 
-fun tf1_tyopdef_extra oc = ()
+fun collect_tml (thmid,depl) =
+  let fun f x = 
+    let val (formula,defl) = translate_thm (uncurry DB.fetch x) in 
+      mk_term_set (List.concat (map atoms (formula :: defl)))
+    end
+  in
+    mk_term_set (List.concat (map f (thmid :: depl)))
+  end
+
+fun tf1_write_pb dir (thmid,depl) =
+  let 
+    val _ = mkDir_err dir
+    val file  = dir ^ "/" ^ name_thm thmid ^ ".p"
+    val oc  = TextIO.openOut file
+    val tml = collect_tml (thmid,depl)
+    val cval = mk_fast_set tma_compare 
+      (List.concat (cval_extra :: map collect_arity tml))
+    val tyopl =  mk_fast_set ida_compare 
+      (List.concat (tyopl_extra :: map collect_tyop tml))
+  in
+    (
+    app (tf1_tyopdef oc) tyopl;
+    tf1_cvdef_extra oc;
+    app (tf1_cvdef oc) (uniq_cvdef_mgc (add_zeroarity cval));
+    tf1_thmdef_extra oc;
+    app (tf1_arityeq oc) cval;
+    app (tf1_thmdef "axiom" oc) depl;
+    tf1_thmdef "conjecture" oc thmid; 
+    TextIO.closeOut oc
+    )
+    handle Interrupt => (TextIO.closeOut oc; raise Interrupt)
+  end
+
+(* -------------------------------------------------------------------------
+   Export theories
+   ------------------------------------------------------------------------- *)
+
+val tf1_bushy_dir = hh_dir ^ "/export_tf1_bushy"
+val tf1_chainy_dir = hh_dir ^ "/export_tf1_chainy"
+
+fun write_thy_bushy dir thy =
+  let val cjdepl = add_bushy_dep thy (DB.theorems thy) in
+    print (thy ^ " "); app (tf1_write_pb dir) cjdepl
+  end
 
 val tf1_bushy_dir = hh_dir ^ "/export_tf1_bushy"
 fun tf1_export_bushy thyl =
   let 
     val thyorder = sorted_ancestry thyl 
     val dir = tf1_bushy_dir
-    fun f thy =
-      write_thy_bushy dir translate_thm uniq_cvdef_mgc 
-       (tyopl_extra,cval_extra)
-       (tf1_tyopdef_extra, tf1_tyopdef, tf1_cvdef_extra, tf1_cvdef, 
-        tf1_thmdef_extra, tf1_arityeq, tf1_thmdef)
-      thy
   in
-    mkDir_err dir; app f thyorder
+    mkDir_err dir; app (write_thy_bushy dir) thyorder
+  end
+
+fun write_thy_chainy dir thyorder thy =
+  let val cjdepl = add_chainy_dep thyorder thy (DB.theorems thy) in
+    print (thy ^ " "); app (tf1_write_pb dir) cjdepl
   end
 
 val tf1_chainy_dir = hh_dir ^ "/export_tf1_chainy"
@@ -306,16 +348,17 @@ fun tf1_export_chainy thyl =
   let 
     val thyorder = sorted_ancestry thyl 
     val dir = tf1_chainy_dir
-    fun f thy =
-      write_thy_chainy dir thyorder translate_thm uniq_cvdef_mgc
-        (tyopl_extra,cval_extra)
-        (tf1_tyopdef_extra, tf1_tyopdef, tf1_cvdef_extra, tf1_cvdef, 
-         tf1_thmdef_extra, tf1_arityeq, tf1_thmdef)
-      thy
   in
-    mkDir_err dir; app f thyorder
+    mkDir_err dir; app (write_thy_chainy dir thyorder) thyorder
   end
 
-(* load "hhExportTf1"; open hhExportTf1; tf1_export_chainy ["arithmetic"]; *)
+(* 
+load "hhExportTf1"; open hhExportTf1; 
+val thmid = ("arithmetic","ADD1");
+val depl = valOf (hhExportLib.depo_of_thmid thmid);
+val dir = HOLDIR ^ "/src/holyhammer/export_tf1_test";
+tf1_write_pb dir (thmid,depl);
+tf1_export_chainy ["bool"]; 
+*)
 
 end (* struct *)

@@ -65,7 +65,8 @@ include Abbrev
 
   val tyopset_of_tyl : hol_type list -> ((string * string) * int) list
   val add_zeroarity : (term * int) list -> (term * int) list 
-  
+  val collect_tyop : term -> ((string * string) * int) list 
+
   (* thm *)
   val older_than : thm -> 'a * thm -> bool
   val depo_of_thm : thm -> (string * string) list option 

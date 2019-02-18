@@ -501,8 +501,7 @@ fun tf0_write_pb dir (thmid,depl) =
       (mk_fast_set tma_compare (cval_poly1_aux @ cval_extra))
     val cval_mono1 = filter (fn (x,_) => is_tptp_fv x orelse is_const x
       orelse is_app x) objal_aux
-    val cval_mono2 = 
-      (* should not add the zero arity for app *)
+    val cval_mono2 =
       filter (not o polymorphic o type_of o fst) 
       (mk_fast_set tma_compare (cval_mono1 @ cval_extra))
   in
@@ -570,7 +569,7 @@ fun tf0_export_chainy thyl =
   val dir = HOLDIR ^ "/src/holyhammer/export_tf0_test";
   tf0_write_pb dir (thmid,depl);
 
-  val 
+  tf0_export_bushy ["list"];
 
 *)
 
