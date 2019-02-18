@@ -433,7 +433,7 @@ fun tf0def_monoeq oc (cv,a) =
 fun tf0def_arityeq oc (cv,a) =
   if a = 0 then () else
   let 
-    val tf0name = "arityeq" ^ its a ^ escape "." ^ namea_cv (cv,a) 
+    val tf0name = "arityeq" ^ its a ^ escape "." ^ namea_obj_mono (cv,a)
     val tm = mk_arity_eq (cv,a)
   in
     os oc (tffpar ^ tf0name ^ ",axiom,"); tf0_formula oc tm; osn oc ")."

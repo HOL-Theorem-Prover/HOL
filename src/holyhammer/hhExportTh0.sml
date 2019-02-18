@@ -322,12 +322,13 @@ fun th0def_objnamed_mono oc (name,ty) =
   (os oc (thfpar ^ name ^ ",type," ^ name ^ ":");
    os oc (name_ty_mono ty); osn oc ").")
 
-fun th0def_obj_mono oc (tm,a) =
+fun th0def_obj_mono oc tm =
   th0def_objnamed_mono oc (name_obj_mono tm, type_of tm)
 
 fun rw_conv conv tm = (rhs o concl o conv) tm
 
-(* Theorems *)
+(* Theorems: caused problems in declaration of equality *)
+(*
 fun th0def_thm role oc (thy,name) =
   let 
     val thm = DB.fetch thy name
@@ -351,6 +352,24 @@ fun th0def_thm role oc (thy,name) =
     val new_cj = rw_conv (TRY_CONV (REDEPTH_CONV BETA_CONV)
       THENC REFL) (subst lambdal cj)
   in
+    os oc (thfpar ^ th0name ^ "," ^ role ^ ",");
+    th0_formula oc new_cj; osn oc ")."
+  end
+*)
+
+(* Theorems *)
+fun th0def_thm role oc (thy,name) =
+  let 
+    val thm = DB.fetch thy name
+    val (cj,defl) = translate_thm thm
+    val th0name = name_thm (thy,name)
+    fun f i def = 
+      (
+      os oc (thfpar ^ escape ("def" ^ its i ^ ".") ^ th0name ^ ",axiom,");
+      th0_formula oc def; osn oc ")."
+      )
+  in
+    ignore (mapi f defl);
     os oc (thfpar ^ th0name ^ "," ^ role ^ ",");
     th0_formula oc new_cj; osn oc ")."
   end
@@ -441,7 +460,7 @@ fun th0def_monoeq oc (cv,a) =
 fun th0def_arityeq oc (cv,a) =
   if a = 0 orelse not (polymorphic (type_of cv)) then () else
   let 
-    val th0name = "arityeq" ^ its a ^ escape "." ^ namea_cv (cv,a) 
+    val th0name = "arityeq" ^ its a ^ escape "." ^ namea_obj_mono (cv,a)
     val tm = mk_arity_eq (cv,a)
   in
     os oc (thfpar ^ th0name ^ ",axiom,"); th0_formula oc tm; osn oc ")."

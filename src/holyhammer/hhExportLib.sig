@@ -83,7 +83,7 @@ include Abbrev
   val quant_l2 : (string * string) list
   val boolop_cval : (term * int) list
   val uniq_cvdef_mgc : (term * int) list -> (term * int) list
-  val uniq_cvdef_arity : (term * int) list -> (term * int) list
+  val uniq_cvdef_arity : (term * int) list -> term list
 
   (* theory *)
   val before_elem: ''a -> ''a list -> ''a list

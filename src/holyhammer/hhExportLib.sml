@@ -291,10 +291,8 @@ fun mgc_of (tm,a) =
   else (tm,a)
 
 fun uniq_cvdef_mgc cval = mk_fast_set tma_compare (map mgc_of cval)
-
-fun zeroed_arity (c,a) = (c,0)
  
-fun uniq_cvdef_arity cval = mk_fast_set tma_compare (map zeroed_arity cval) 
+fun uniq_cvdef_arity cval = mk_term_set (map fst cval) 
 
 fun formula_info_thm f_translate (thy,name) =
   let 
