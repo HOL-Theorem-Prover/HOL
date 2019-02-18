@@ -23,7 +23,9 @@ fun temp_encoded_update tmvector thyname {data,ty} =
       data = data
     }
 
-fun read_thm tmvector {name,depinfo,tagnames,encoded_hypscon} =
+type depinfo = {head : string * int, deps : (string * int list) list}
+
+fun read_thm tmvector {name,depinfo:depinfo,tagnames,encoded_hypscon} =
     let
       val dd = (#head depinfo, #deps depinfo)
       val terms = map (Term.read_raw tmvector) encoded_hypscon
