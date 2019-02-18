@@ -2,6 +2,16 @@
 
 set -e
 
+if [ "$SML" == "mosml" ]
+then
+    mkdir mosml
+    wget -qO- https://github.com/kfl/mosml/tarball/master | \
+      tar xvz -C mosml --strip-components 1
+    cd mosml/src
+    make world
+    sudo make install
+else
+
 POLY_BASE="https://github.com/polyml/polyml"
 
 # Defaults:
@@ -56,3 +66,4 @@ then
     make polyml && bin/polyml/opentheory help && sudo mv bin/polyml/opentheory /usr/bin
     popd
 fi
+fi # matches test on SML == mosml
