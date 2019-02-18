@@ -45,3 +45,12 @@ if [ $(uname) = "Darwin" ]
 then
   perl -pi -e 's/-R/-rpath /g' $HOME/bin/polyc
 fi
+
+if [ "$OPENTHEORY" == "T" ]
+then
+    wget -qO- http://www.gilith.com/software/opentheory/opentheory.tar.gz | \
+      tar xvz -C opentheory --strip-components 1
+    pushd opentheory
+    make polyml && bin/polyml/opentheory help && sudo mv bin/polyml/opentheory /usr/bin
+    popd
+fi
