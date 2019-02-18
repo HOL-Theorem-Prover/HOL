@@ -46,8 +46,10 @@ then
   perl -pi -e 's/-R/-rpath /g' $HOME/bin/polyc
 fi
 
+cd
 if [ "$OPENTHEORY" == "T" ]
 then
+    mkdir opentheory
     wget -qO- http://www.gilith.com/software/opentheory/opentheory.tar.gz | \
       tar xvz -C opentheory --strip-components 1
     pushd opentheory
