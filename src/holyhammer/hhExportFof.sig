@@ -8,4 +8,7 @@ include Abbrev
   val fof_write_pb : string -> 
     ((string * string) * (string * string) list) -> unit 
 
+  (* holyhammer interface *)
+  val fof_export_pb : string -> term * (string * thm) list -> unit
+
 end

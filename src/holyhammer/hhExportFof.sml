@@ -287,25 +287,18 @@ fof_export_chainy ["bool"];
    ------------------------------------------------------------------------- *)
 
 fun fof_collect_arity_thm thm =
-  let 
-    val (formula,defl) = translate_thm thm
-    val tml = formula :: defl 
-  in
+  let val tml = (op ::) (translate_thm thm) in
     mk_fast_set tma_compare (List.concat (map collect_arity tml))
   end
 
 fun fof_collect_arity_cj cj =
-  let 
-    val (formula,defl) = translate cj
-    val tml = formula :: defl
-  in
+  let val tml = (op ::) (translate cj) in
     mk_fast_set tma_compare (List.concat (map collect_arity tml))
   end
 
 fun collect_arity_pb (cj,namethml) =
-  let 
-    val ll = fof_collect_arity_cj cj :: 
-             map (fof_collect_arity_thm o snd) namethml
+  let val ll = 
+    fof_collect_arity_cj cj :: map (fof_collect_arity_thm o snd) namethml
   in
     mk_fast_set tma_compare (List.concat ll)
   end

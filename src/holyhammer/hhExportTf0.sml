@@ -360,7 +360,6 @@ fun tf0_cdef_s oc =
 fun tf0_cvdef_extra oc =
   (tf0_cdef_s oc; tf0_cdef_app oc; tf0_cdef_p oc) 
 
-
 (* -------------------------------------------------------------------------
    Higher-order theorems
    ------------------------------------------------------------------------- *)
@@ -402,10 +401,6 @@ fun tf0def_thm_extra oc =
   app (tf0_quantdef oc) quant_l2
   )
 
-(* todo: declare types as constants in domains *)
-
-val tyopl_extra_poly = tyopset_of_tyl [``:bool -> bool``]
-
 val app_p_cval =
   let val tml = map (fst o translate_thm o snd) (app_axioml @ p_axioml) in
     mk_fast_set tma_compare (List.concat (map collect_arity tml)) 
@@ -416,12 +411,8 @@ val combin_cval =
     mk_fast_set tma_compare (List.concat (map collect_arity tml)) 
   end
 
-val cval_extra = boolop_cval @ combin_cval @ app_p_cval
-
-
 (* -------------------------------------------------------------------------
-   Monomorphism equations (only for monomorphic constants)
-   todo: should not forget app equations
+   Monomorphism equations (including app)
    ------------------------------------------------------------------------- *)
 
 fun tf0_monoeq oc (cv,a) =
@@ -434,13 +425,6 @@ fun tf0def_monoeq oc (cv,a) =
   let val tf0name = escape "monoeq." ^ namea_obj_mono (cv,a) in
     os oc (tffpar ^ tf0name ^ ",axiom,"); tf0_monoeq oc (cv,a); osn oc ")."
   end
-
-(* 
-  load "hhExportTf0"; open hhExportTf0; 
-  tf0_monoeq TextIO.stdOut (``I:num -> num``,1);
-
-![V0_2E0:mono_2Etyop_2Enum_2Enum]: (mono_2Ef_2E1_2Emono_2EA_27a(V0_2E0) = s(A_27a,f_2E1(s(tyop_2Enum_2Enum,i_mono_2Etyop_2Enum_2Enum(V0_2E0)))))
-*)
 
 (* -------------------------------------------------------------------------
    Arity equations
@@ -459,7 +443,20 @@ fun tf0def_arityeq oc (cv,a) =
    Export
    ------------------------------------------------------------------------- *)
 
-val cval_extra = boolop_cval @ combin_cval @ app_p_cval 
+fun has_tyarg (cv,_) = 
+  let val tyargl = typearg_of_cvapp cv in not (null tyargl) end
+
+(* atom *)
+fun collect_atoml (thmid,depl) =
+  let fun f x = 
+    let val (formula,defl) = translate_thm (uncurry DB.fetch x) in 
+      mk_term_set (List.concat (map atoms (formula :: defl)))
+    end
+  in
+    mk_term_set (List.concat (map f (thmid :: depl)))
+  end
+
+(* objects (operators) *)
 fun all_obja_aux tm =
   let val (oper,argl) = strip_comb tm in 
     (oper,length argl) :: List.concat (map all_obja_aux argl)
@@ -467,59 +464,83 @@ fun all_obja_aux tm =
 
 fun all_obja tm = mk_fast_set tma_compare (all_obja_aux tm)
 
-fun fetch_thmid (a,b) = DB.fetch a b
+fun all_obja_tml tml = 
+  mk_fast_set tma_compare (List.concat (map all_obja tml))
 
-fun has_tyarg (cv,_) = 
-  let val tyargl = typearg_of_cvapp cv in not (null tyargl) end
+(* constant *)
+val cval_extra = boolop_cval @ combin_cval @ app_p_cval
 
+fun prepare_arityeq tml =
+ let
+   val objal = all_obja_tml tml
+   val cval = filter (fn (x,_) => is_tptp_fv x orelse is_const x) objal
+   val cval_arityeq = mk_fast_set tma_compare (cval @ cval_extra)
+   val tml_arityeq  = mk_term_set (map mk_arity_eq  
+      (filter (fn x => snd x <> 0) cval_arityeq))
+   val atoml_arityeq  = mk_term_set (List.concat (map atoms tml_arityeq)) 
+ in
+   (cval_arityeq, atoml_arityeq)
+ end
+
+fun prepare_cval_poly objal =
+  let val l = filter (fn (x,_) => is_tptp_fv x orelse is_const x) objal in
+    uniq_cvdef_mgc (mk_fast_set tma_compare (l @ cval_extra))
+  end
+
+fun prepare_cval_mono objal =
+  let val l = 
+    filter (fn (x,_) => is_tptp_fv x orelse is_const x orelse is_app x) objal
+  in
+    filter (not o polymorphic o type_of o fst) 
+      (mk_fast_set tma_compare (l @ cval_extra))
+  end
+
+(* types *)
+val tyopl_extra_poly = tyopset_of_tyl [``:bool -> bool``]
+
+val tya_compare = cpl_compare Type.compare Int.compare
+
+fun prepare_tyopl_poly tyal = 
+  let val l = tyopset_of_tyl (map fst tyal) in
+    mk_fast_set ida_compare (tyopl_extra_poly @ l)
+  end
+
+fun prepare_tyul_mono tyal =
+  let val tyal_mono = filter (not o polymorphic o fst) tyal in
+    mk_type_set (List.concat (
+      map (fn (ty,a) => strip_funty_n a ty) tyal_mono))
+  end
+
+(* problem *)
 fun tf0_write_pb dir (thmid,depl) =
   let 
     val _ = mkDir_err dir
-    val file  = dir ^ "/" ^ name_thm thmid ^ ".p"
-    val oc    = TextIO.openOut file
-    val tml1  = map ((op ::) o translate_thm o fetch_thmid) (thmid :: depl)
-    val tml2  = mk_term_set (List.concat (map atoms (List.concat tml1)))
-    val objal = mk_fast_set tma_compare (List.concat (map all_obja tml2))
-    val cval_poly1 = filter (fn (x,_) => is_tptp_fv x orelse is_const x) objal
-    val cval_poly2 = uniq_cvdef_mgc 
-      (mk_fast_set tma_compare (cval_poly1 @ cval_extra))
-    val tml3  = mk_term_set (map mk_arity_eq 
-      (filter (fn x => snd x <> 0) cval_poly2))
-    val tml4  = mk_term_set (List.concat (map atoms tml3))
-    val objal_aux = 
-        mk_fast_set tma_compare (List.concat (map all_obja (tml2 @ tml4)))
-    val tyal  = mk_fast_set (cpl_compare Type.compare Int.compare)
-      (map_fst type_of objal_aux) 
-    val tyal_mono = filter (not o polymorphic o fst) tyal
-    val tyul_mono =
-      mk_type_set (List.concat (
-        map (fn (ty,a) => strip_funty_n a ty) tyal_mono))
-    val tyopl_poly = tyopset_of_tyl (map fst tyal)
-    val cval_poly1_aux = 
-       filter (fn (x,_) => is_tptp_fv x orelse is_const x) objal_aux
-    val cval_poly2_aux = uniq_cvdef_mgc 
-      (mk_fast_set tma_compare (cval_poly1_aux @ cval_extra))
-    val cval_mono1 = filter (fn (x,_) => is_tptp_fv x orelse is_const x
-      orelse is_app x) objal_aux
-    val cval_mono2 =
-      filter (not o polymorphic o type_of o fst) 
-      (mk_fast_set tma_compare (cval_mono1 @ cval_extra))
+    val file = dir ^ "/" ^ name_thm thmid ^ ".p"
+    val oc  = TextIO.openOut file
+    val atoml1 = collect_atoml (thmid,depl)
+    val (cval_arityeq, atoml_arityeq) = prepare_arityeq atoml1
+    val atoml2 = atoml_arityeq @ atoml1
+    val objal = all_obja_tml atoml2
+    val cval_poly = prepare_cval_poly objal
+    val cval_mono = prepare_cval_mono objal
+    val tyal = mk_fast_set tya_compare (map_fst type_of objal)
+    val tyopl_poly = prepare_tyopl_poly tyal
+    val tyul_mono = prepare_tyul_mono tyal
   in
     (
     app (tf0def_name_ttype oc) sortl;
     app (tf0def_ttype_mono oc) tyul_mono;
-    app (tf0def_tyop_poly oc) 
-      (mk_fast_set ida_compare (tyopl_extra_poly @ tyopl_poly));
+    app (tf0def_tyop_poly oc) tyopl_poly;
     tf0_cvdef_extra oc;
-    app (tf0def_obj_poly oc) cval_poly2_aux;
-    app (tf0def_obj_mono oc) cval_mono2;
-    app (tf0def_iname oc) tyul_mono;
+    app (tf0def_obj_poly oc) cval_poly;
+    app (tf0def_obj_mono oc) cval_mono;
+    app (tf0def_iname oc) tyul_mono; 
     app (tf0def_jname oc) tyul_mono;
     tf0def_thm_extra oc;
-    app (tf0def_ij_axiom oc) tyul_mono;
+    app (tf0def_ij_axiom oc) tyul_mono; 
     app (tf0def_ji_axiom oc) tyul_mono;
-    app (tf0def_arityeq oc) cval_poly1_aux;
-    app (tf0def_monoeq oc) (filter has_tyarg cval_mono2);
+    app (tf0def_arityeq oc) cval_arityeq;
+    app (tf0def_monoeq oc) (filter has_tyarg cval_mono);
     app (tf0def_thm "axiom" oc) depl; 
     tf0def_thm "conjecture" oc thmid;
     TextIO.closeOut oc
@@ -559,17 +580,20 @@ fun tf0_export_chainy thyl =
     mkDir_err dir; app (write_thy_chainy dir thyorder) thyorder
   end
 
-
-
-
 (* 
-  load "hhExportTf0"; open hhExportTf0; 
-  val thmid = ("arithmetic","ADD1");
-  val depl = valOf (hhExportLib.depo_of_thmid thmid);
-  val dir = HOLDIR ^ "/src/holyhammer/export_tf0_test";
-  tf0_write_pb dir (thmid,depl);
+load "hhExportTf0"; open hhExportTf0; 
+load "ASCIInumbersTheory";
+val thmid = ("ASCIInumbers","BIT_num_from_bin_string");
+val depl = valOf (hhExportLib.depo_of_thmid thmid);
+val dir = HOLDIR ^ "/src/holyhammer/export_tf0_test";
+tf0_write_pb dir (thmid,depl);
+load "tttUnfold"; tttUnfold.load_sigobj ();
+tf0_export_bushy ["ASCIInumbers"];
 
-  tf0_export_bushy ["list"];
+load "hhExportTf0"; open hhExportTf0; 
+load "tttUnfold"; tttUnfold.load_sigobj ();
+val thyl = ancestry (current_theory ());
+tf0_export_bushy thyl; 
 
 *)
 

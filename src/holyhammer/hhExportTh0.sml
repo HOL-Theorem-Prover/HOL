@@ -215,7 +215,6 @@ th0_term_poly TextIO.stdOut tm;
 th0_term TextIO.stdOut tm;
 *)
 
-
 (* -------------------------------------------------------------------------
    Term-level logical operators equations
    ------------------------------------------------------------------------- *)
@@ -260,7 +259,6 @@ fun th0def_jname oc ty =
   os oc ("du > " ^ name_ty_mono ty); osn oc ")."
   )
 
-(* for monomorphic types *)
 fun ij_axiom oc ty =
   let 
     val v = mk_var ("V0",ty)
@@ -280,12 +278,6 @@ fun th0def_ij_axiom oc ty =
   (os oc (thfpar ^ escape "ij." ^ name_tyu_mono ty ^ ",axiom,");
    ij_axiom oc ty; osn oc ").")
 
-(* 
-  load "hhExportTh0"; open hhExportTh0; 
-  ij_axiom TextIO.stdOut ``:num``;
-*)
-
-(* for monomorphic types *)
 fun ji_axiom oc ty =
   let val v = mk_var ("V0",ty) in
     th0_quant_vl oc "!" [v]; os oc "("; 
@@ -297,12 +289,6 @@ fun ji_axiom oc ty =
 fun th0def_ji_axiom oc ty =
   (os oc (thfpar ^ escape "ji." ^ name_tyu_mono ty ^ ",axiom,");
    ji_axiom oc ty; osn oc ").")
-
-(* 
-  load "hhExportTh0"; open hhExportTh0; 
-  ji_axiom TextIO.stdOut ``:num``;
-*)
-
 
 (* -------------------------------------------------------------------------
    TF0 definitions
@@ -417,9 +403,6 @@ fun th0def_thm_extra oc =
   )
 
 (* todo: declare types as constants in domains *)
-
-val tyopl_extra_poly = tyopset_of_tyl [``:bool -> bool``]
-
 val app_p_cval =
   let val tml = map (fst o translate_thm o snd) (app_axioml @ p_axioml) in
     mk_fast_set tma_compare (List.concat (map collect_arity tml)) 
@@ -429,9 +412,6 @@ val combin_cval =
   let val tml = map snd combin_axioml in
     mk_fast_set tma_compare (List.concat (map collect_arity tml)) 
   end
-
-val cval_extra = boolop_cval @ combin_cval @ app_p_cval
-
 
 (* -------------------------------------------------------------------------
    Monomorphism equations (only for monomorphic constants including app)
@@ -487,7 +467,20 @@ fun th0def_monoapp oc (app,a) =
    Export
    ------------------------------------------------------------------------- *)
 
-val cval_extra = boolop_cval @ combin_cval @ app_p_cval 
+fun has_tyarg (cv,_) = 
+  let val tyargl = typearg_of_cvapp cv in not (null tyargl) end
+
+(* atom *)
+fun collect_atoml (thmid,depl) =
+  let fun f x = 
+    let val (formula,defl) = translate_thm (uncurry DB.fetch x) in 
+      mk_term_set (List.concat (map atoms (formula :: defl)))
+    end
+  in
+    mk_term_set (List.concat (map f (thmid :: depl)))
+  end
+
+(* objects *)
 fun all_obja_aux tm =
   let val (oper,argl) = strip_comb tm in 
     (oper,length argl) :: List.concat (map all_obja_aux argl)
@@ -495,67 +488,104 @@ fun all_obja_aux tm =
 
 fun all_obja tm = mk_fast_set tma_compare (all_obja_aux tm)
 
-fun fetch_thmid (a,b) = DB.fetch a b
+fun all_obja_tml tml = 
+  mk_fast_set tma_compare (List.concat (map all_obja tml))
 
-fun has_tyarg (cv,_) = 
-  let val tyargl = typearg_of_cvapp cv in not (null tyargl) end
+(* constant *)
 
+val cval_extra = boolop_cval @ combin_cval @ app_p_cval 
+
+fun prepare_arityeq tml =
+ let
+   val objal = all_obja_tml tml
+   val cval = filter (fn (x,_) => is_tptp_fv x orelse is_const x) objal
+   val cval_arityeq = mk_fast_set tma_compare (cval @ cval_extra)
+   val tml_arityeq  = mk_term_set (map mk_arity_eq  
+      (filter (fn x => snd x <> 0) cval_arityeq))
+   val atoml_arityeq  = mk_term_set (List.concat (map atoms tml_arityeq)) 
+ in
+   (cval_arityeq, atoml_arityeq)
+ end
+
+fun prepare_cval_poly objal =
+  let val l = filter (fn (x,_) => is_tptp_fv x orelse is_const x) objal in
+    uniq_cvdef_mgc (mk_fast_set tma_compare (l @ cval_extra))
+  end
+
+fun prepare_cval_mono objal =
+  let val l = 
+    filter (fn (x,_) => is_tptp_fv x orelse is_const x orelse is_app x) objal
+  in
+    filter (not o polymorphic o type_of o fst) 
+      (mk_fast_set tma_compare (l @ cval_extra))
+  end
+
+(* types *)
+val tya_compare = cpl_compare Type.compare Int.compare
+
+val tyopl_extra_poly = tyopset_of_tyl [``:bool -> bool``]
+
+fun prepare_tyopl_poly tyal = 
+  let val l = tyopset_of_tyl (map fst tyal) in
+    mk_fast_set ida_compare (tyopl_extra_poly @ l)
+  end
+
+(* different from tf0 *)
+fun extract_ho_tyu ty = 
+  if is_vartype ty then raise ERR "extract_ho_tyu" "" else
+    let val {Args, Thy, Tyop} = dest_thy_type ty in
+      if Thy = "min" andalso Tyop = "fun" then
+        let val (ty1,ty2) = pair_of_list Args in
+          extract_ho_tyu ty1 @ extract_ho_tyu ty2
+        end
+      else [ty]
+    end
+
+fun prepare_tyul_mono tyal =
+  let 
+    val tyal_mono = filter (not o polymorphic o fst) tyal
+    val ho_tyl = mk_type_set (List.concat (
+      map (fn (ty,a) => extract_ho_tyu ty) tyal_mono))
+  in
+    ho_tyl
+  end
+
+(* problem *)
 fun th0_write_pb dir (thmid,depl) =
   let 
     val _ = mkDir_err dir
-    val file  = dir ^ "/" ^ name_thm thmid ^ ".p"
-    val oc    = TextIO.openOut file
-    val tml1  = map ((op ::) o translate_thm o fetch_thmid) (thmid :: depl)
-    val tml2  = mk_term_set (List.concat (map atoms (List.concat tml1)))
-    val objal = mk_fast_set tma_compare (List.concat (map all_obja tml2))
-    val cval_poly1 = filter (fn (x,_) => is_tptp_fv x orelse is_const x) objal
-    val cval_poly2 = uniq_cvdef_mgc 
-      (mk_fast_set tma_compare (cval_poly1 @ cval_extra))
-    val tml3  = mk_term_set (map mk_arity_eq 
-      (filter (fn x => snd x <> 0) cval_poly2))
-    val tml4  = mk_term_set (List.concat (map atoms tml3))
-    val objal_aux = 
-        mk_fast_set tma_compare (List.concat (map all_obja (tml2 @ tml4)))
-    val tyal  = mk_fast_set (cpl_compare Type.compare Int.compare)
-      (map_fst type_of objal_aux) 
-    val tyal_mono = filter (not o polymorphic o fst) tyal
-    val tyul_mono =
-      mk_type_set (List.concat (
-        map (fn (ty,a) => strip_funty_n a ty) tyal_mono))
-    val tyopl_poly = tyopset_of_tyl (map fst tyal)
-    val cval_poly1_aux = 
-       filter (fn (x,_) => is_tptp_fv x orelse is_const x) objal_aux
-    val cval_poly2_aux = uniq_cvdef_mgc 
-      (mk_fast_set tma_compare (cval_poly1_aux @ cval_extra))
-    val cval_mono1 = filter (fn (x,_) => is_tptp_fv x orelse is_const x
-      orelse is_app x) objal_aux
-    val cval_mono2 =
-      filter (not o polymorphic o type_of o fst) 
-      (mk_fast_set tma_compare (cval_mono1 @ cval_extra))
+    val file = dir ^ "/" ^ name_thm thmid ^ ".p"
+    val oc  = TextIO.openOut file
+    val atoml1 = collect_atoml (thmid,depl)
+    val (cval_arityeq, atoml_arityeq) = prepare_arityeq atoml1
+    val atoml2 = atoml_arityeq @ atoml1
+    val objal = all_obja_tml atoml2
+    val cval_poly = prepare_cval_poly objal
+    val cval_mono = prepare_cval_mono objal
+    val tyal = mk_fast_set tya_compare (map_fst type_of objal)
+    val tyopl_poly = prepare_tyopl_poly tyal
+    val tyul_mono = prepare_tyul_mono tyal
   in
     (
     app (th0def_name_ttype oc) sortl;
     app (th0def_ttype_mono oc) tyul_mono;
-    app (th0def_tyop_poly oc) 
-      (mk_fast_set ida_compare (tyopl_extra_poly @ tyopl_poly));
-    th0_cvdef_extra oc;
-    app (th0def_obj_poly oc) cval_poly2_aux;
-    app (th0def_obj_mono oc) (uniq_cvdef_arity cval_mono2);
+    app (th0def_tyop_poly oc) tyopl_poly;
+    app (th0def_obj_poly oc) cval_poly;
+    app (th0def_obj_mono oc) (uniq_cvdef_arity cval_mono);
     app (th0def_iname oc) tyul_mono;
     app (th0def_jname oc) tyul_mono;
     th0def_thm_extra oc;
     app (th0def_ij_axiom oc) tyul_mono;
     app (th0def_ji_axiom oc) tyul_mono;
-    app (th0def_arityeq oc) cval_poly1_aux;
-    app (th0def_monoeq oc) (filter has_tyarg cval_mono2);
-    app (th0def_monoapp oc) (filter is_monoapp cval_mono2);
+    app (th0def_arityeq oc) cval_arityeq;
+    app (th0def_monoeq oc) (filter has_tyarg cval_mono);
+    app (th0def_monoapp oc) (filter is_monoapp cval_mono);
     app (th0def_thm "axiom" oc) depl;
     th0def_thm "conjecture" oc thmid;
     TextIO.closeOut oc
     )
     handle Interrupt => (TextIO.closeOut oc; raise Interrupt)
   end
-
 
 (* -------------------------------------------------------------------------
    Export theories
@@ -590,17 +620,17 @@ fun th0_export_chainy thyl =
   end
 
 (* 
-  load "hhExportTh0"; open hhExportTh0; 
-
+  load "hhExportTh0"; open hhExportTh0;
   val thmid = ("arithmetic","ADD1");
   val depl = valOf (hhExportLib.depo_of_thmid thmid);
   val dir = HOLDIR ^ "/src/holyhammer/export_th0_test";
   th0_write_pb dir (thmid,depl);
-
   th0_export_bushy ["list"];
 
- load "realTheory";
-val thmid = ("real", "SUM_OFFSET");
+  load "hhExportTh0"; open hhExportTh0; 
+  load "tttUnfold"; tttUnfold.load_sigobj ();
+  val thyl = ancestry (current_theory ());
+  th0_export_bushy thyl; 
 *)
 
 end (* struct *)
