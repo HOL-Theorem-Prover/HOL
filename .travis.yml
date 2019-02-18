@@ -29,7 +29,7 @@ matrix:
       env: BUILDOPTS=
     - env: POLY_ROOT=T BUILDOPTS="--seq developers/travis/selftestseq"
       sudo: true
-    - env: OPENTHEORY=T BUILDOPTS="--otknl --seq developers/travis/selftestseq"
+    - env: OPENTHEORY=T BUILDOPTS="--otknl --seq developers/travis/smallseq"
   allow_failures:
     - os: osx
     - env: POLY_GIT=T BUILDOPTS="--seq=developers/travis/selftestseq"
