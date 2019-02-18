@@ -570,6 +570,7 @@ fun th0_write_pb dir (thmid,depl) =
     app (th0def_name_ttype oc) sortl;
     app (th0def_ttype_mono oc) tyul_mono;
     app (th0def_tyop_poly oc) tyopl_poly;
+    tf0_cvdef_extra oc;
     app (th0def_obj_poly oc) cval_poly;
     app (th0def_obj_mono oc) (uniq_cvdef_arity cval_mono);
     app (th0def_iname oc) tyul_mono;
