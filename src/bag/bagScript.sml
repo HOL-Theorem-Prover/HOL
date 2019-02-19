@@ -3066,11 +3066,6 @@ Theorem unibag_UNION:
 Proof rw[SET_OF_BAG_UNION,BAG_OF_SET_UNION]
 QED
 
-Theorem unibag_IN:
-  !e b. BAG_IN e b ==> BAG_IN e (unibag b)
-Proof rw[IN_SET_OF_BAG,BAG_IN_BAG_OF_SET]
-QED
-
 Theorem unibag_EQ_BAG_INSERT:
   !e b b'. (unibag b = BAG_INSERT e b') ==> ?c. (b' = unibag c)
 Proof
@@ -3089,7 +3084,6 @@ Theorem unibag_FINITE:
 Proof
   rw[] >> EQ_TAC >> metis_tac[FINITE_SET_OF_BAG, FINITE_BAG_OF_SET]
 QED
-
 
 Theorem unibag_ALL_DISTINCT:
   !b. BAG_ALL_DISTINCT (unibag b)
