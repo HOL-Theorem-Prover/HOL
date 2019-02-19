@@ -1,0 +1,40 @@
+
+kernel.elf:     file format elf64-littleriscv
+
+
+Disassembly of section .boot:
+
+ffffffff80017a24 <memzero>:
+ffffffff80017a24:	c591                	beqz	a1,ffffffff80017a30 <memzero+0xc>
+ffffffff80017a26:	00053023          	sd	zero,0(a0)
+ffffffff80017a2a:	15e1                	addi	a1,a1,-8
+ffffffff80017a2c:	0521                	addi	a0,a0,8
+ffffffff80017a2e:	fde5                	bnez	a1,ffffffff80017a26 <memzero+0x2>
+ffffffff80017a30:	8082                	ret
+
+ffffffff80017a64 <memcpy>:
+ffffffff80017a64:	ca19                	beqz	a2,ffffffff80017a7a <memcpy+0x16>
+ffffffff80017a66:	962a                	add	a2,a2,a0
+ffffffff80017a68:	87aa                	mv	a5,a0
+ffffffff80017a6a:	0005c703          	lbu	a4,0(a1)
+ffffffff80017a6e:	0785                	addi	a5,a5,1
+ffffffff80017a70:	0585                	addi	a1,a1,1
+ffffffff80017a72:	fee78fa3          	sb	a4,-1(a5)
+ffffffff80017a76:	fec79ae3          	bne	a5,a2,ffffffff80017a6a <memcpy+0x6>
+ffffffff80017a7a:	8082                	ret
+
+ffffffff800116fa <lookupSlot>:
+ffffffff800116fa:	c0057513          	andi	a0,a0,-1024
+ffffffff800116fe:	86ae                	mv	a3,a1
+ffffffff80011700:	6510                	ld	a2,8(a0)
+ffffffff80011702:	610c                	ld	a1,0(a0)
+ffffffff80011704:	715d                	addi	sp,sp,-80
+ffffffff80011706:	1028                	addi	a0,sp,40
+ffffffff80011708:	04000713          	li	a4,64
+ffffffff8001170c:	e486                	sd	ra,72(sp)
+ffffffff8001170e:	eb7ff0ef          	jal	ra,ffffffff800115c4 <resolveAddressBits>
+ffffffff80011712:	60a6                	ld	ra,72(sp)
+ffffffff80011714:	7522                	ld	a0,40(sp)
+ffffffff80011716:	75c2                	ld	a1,48(sp)
+ffffffff80011718:	6161                	addi	sp,sp,80
+ffffffff8001171a:	8082                	ret
