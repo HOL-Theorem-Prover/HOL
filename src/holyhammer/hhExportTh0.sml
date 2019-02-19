@@ -229,7 +229,6 @@ fun th0_logicformula oc (thy,name) =
      os oc "("; th0_jterm oc tm ; os oc " <=> "; th0_pred oc tm; os oc ")")
   end
 
-(* to remove when satallax and leo-3 are fixed *)
 fun th0_logicdef oc (thy,name) =
   (os oc (thfpar ^ escape ("reserved.logic." ^ name) ^ ",axiom,"); 
    th0_logicformula oc (thy,name); osn oc ").")
@@ -327,37 +326,6 @@ fun th0def_obj_mono oc tm =
 
 fun rw_conv conv tm = (rhs o concl o conv) tm
 
-(* Theorems: caused problems in declaration of equality *)
-(*
-fun th0def_thm role oc (thy,name) =
-  let 
-    val thm = DB.fetch thy name
-    val (cj,defl) = translate_thm thm
-    val th0name = name_thm (thy,name)
-    fun f i def = 
-      let 
-        val (t1,t2) = (dest_eq o snd o strip_forall) def
-        val (rator,argl) = strip_comb t1
-        val lambda = list_mk_abs (argl,t2)
-      in
-        if polymorphic (type_of rator)
-        then
-          (
-          os oc (thfpar ^ escape ("def" ^ its i ^ ".") ^ th0name ^ ",axiom,");
-          th0_formula oc def; osn oc ")."; NONE
-          )
-        else SOME {redex = rator, residue = lambda} 
-      end
-    val lambdal = List.mapPartial I (mapi f defl)
-    val new_cj = rw_conv (TRY_CONV (REDEPTH_CONV BETA_CONV)
-      THENC REFL) (subst lambdal cj)
-  in
-    os oc (thfpar ^ th0name ^ "," ^ role ^ ",");
-    th0_formula oc new_cj; osn oc ")."
-  end
-*)
-
-(* Theorems *)
 fun th0def_thm role oc (thy,name) =
   let 
     val thm = DB.fetch thy name
@@ -371,7 +339,7 @@ fun th0def_thm role oc (thy,name) =
   in
     ignore (mapi f defl);
     os oc (thfpar ^ th0name ^ "," ^ role ^ ",");
-    th0_formula oc new_cj; osn oc ")."
+    th0_formula oc cj; osn oc ")."
   end
 
 (* -------------------------------------------------------------------------
@@ -492,7 +460,7 @@ fun has_tyarg (cv,_) =
 fun collect_atoml (thmid,depl) =
   let fun f x = 
     let val (formula,defl) = translate_thm (uncurry DB.fetch x) in 
-      mk_term_set (List.concat (map atoms (formula :: defl)))
+      mk_term_set (atoms formula @ List.concat (map atoms defl))
     end
   in
     mk_term_set (List.concat (map f (thmid :: depl)))
@@ -673,13 +641,6 @@ fun th0_export_chainy thyl =
   end
 
 (* 
-  load "hhExportTh0"; open hhExportTh0;
-  val thmid = ("arithmetic","ADD1");
-  val depl = valOf (hhExportLib.depo_of_thmid thmid);
-  val dir = HOLDIR ^ "/src/holyhammer/export_th0_test";
-  th0_write_pb dir (thmid,depl);
-  th0_export_bushy ["list"];
-
   load "hhExportTh0"; open hhExportTh0; 
   load "tttUnfold"; tttUnfold.load_sigobj ();
   val thyl = ancestry (current_theory ());
@@ -687,11 +648,10 @@ fun th0_export_chainy thyl =
 
   load "hhExportTh0"; open hhExportTh0;
   load "DecodeTheory";
-    val thmid = ("Decode","dec2enc_decode_option");
+    val thmid = ("Decode","wf_dec2enc");
   val depl = valOf (hhExportLib.depo_of_thmid thmid);
   val dir = HOLDIR ^ "/src/holyhammer/export_th0_test";
-  th0_write_pb dir (thmid,depl);  
-
+  th0_write_pb dir (thmid,depl);
 *)
 
 end (* struct *)
