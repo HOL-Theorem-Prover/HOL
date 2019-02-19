@@ -179,7 +179,7 @@ fun tf1_thmdef role oc (thy,name) =
     val tf1name = name_thm (thy,name)
     fun f i def = 
       (
-      os oc (tffpar ^ escape ("def" ^ its i ^ ".") ^ tf1name ^ ",axiom,");
+      os oc (tffpar ^ name_def i tf1name ^ ",axiom,");
       tf1_formula oc def; osn oc ")."
       )
   in
@@ -256,12 +256,12 @@ val tyopl_extra = tyopset_of_tyl [``:bool -> bool``]
 
 val app_p_cval =
   let val tml = map (fst o translate_thm o snd) (app_axioml @ p_axioml) in
-    mk_fast_set tma_compare (List.concat (map collect_arity tml)) 
+    mk_fast_set tma_compare (List.concat (map collect_arity_noapp tml)) 
   end
 
 val combin_cval = 
   let val tml = map snd combin_axioml in
-    mk_fast_set tma_compare (List.concat (map collect_arity tml)) 
+    mk_fast_set tma_compare (List.concat (map collect_arity_noapp tml)) 
   end
 
 val cval_extra = boolop_cval @ combin_cval @ app_p_cval
@@ -273,8 +273,7 @@ val cval_extra = boolop_cval @ combin_cval @ app_p_cval
 fun tf1_arityeq oc (cv,a) = 
   if a = 0 then () else
   let
-    val tf1name = 
-      add_tyargltag ("arityeq" ^ its a ^ escape "." ^ namea_cv (cv,a)) cv
+    val tf1name = name_arityeq (cv,a)
     val tm = mk_arity_eq (cv,a)
   in
     os oc (tffpar ^ tf1name ^ ",axiom,"); tf1_formula oc tm; osn oc ")."
@@ -300,7 +299,7 @@ fun tf1_write_pb dir (thmid,depl) =
     val oc  = TextIO.openOut file
     val tml = collect_tml (thmid,depl)
     val cval = mk_fast_set tma_compare 
-      (List.concat (cval_extra :: map collect_arity tml))
+      (List.concat (cval_extra :: map collect_arity_noapp tml))
     val tyopl =  mk_fast_set ida_compare 
       (List.concat (tyopl_extra :: map collect_tyop tml))
   in

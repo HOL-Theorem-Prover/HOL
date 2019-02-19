@@ -34,6 +34,9 @@ include Abbrev
   val namea_obj_mono : (term * int) -> string
   val namea_obj_poly : (term * int) -> string
 
+  val name_def : int -> string -> string
+  val name_arityeq : term * int -> string
+  
   val all_tyop : hol_type -> ((string * string) * int) list
 
   (* comparison *)
@@ -85,10 +88,7 @@ include Abbrev
   val uniq_cvdef_mgc : (term * int) list -> (term * int) list
   val uniq_cvdef_arity : (term * int) list -> term list
 
-  (* theory *)
-  val before_elem: ''a -> ''a list -> ''a list
-  val sorted_ancestry : string list -> string list
-
+  (* dependencies *)
   val add_chainy_dep : 
     string list -> string ->
     (string * thm) list ->
@@ -98,30 +98,9 @@ include Abbrev
     string -> (string * thm) list -> 
     ((string * string) * (string * string) list) list
 
-  val write_thy_bushy : string ->
-    (thm -> term * term list) ->
-    ((term * int) list -> (term * int) list) ->
-    ((string * string) * int) list * (term * int) list ->
-      (TextIO.outstream -> unit) *
-      (TextIO.outstream -> (string * string) * int -> unit) *
-      (TextIO.outstream -> unit) *
-      (TextIO.outstream -> (term * int) -> unit) *
-      (TextIO.outstream -> unit) *
-      (TextIO.outstream -> (term * int) -> unit) *
-      (string -> TextIO.outstream -> string * string -> unit) ->
-    string -> unit
+  (* theory order *)
+  val before_elem: ''a -> ''a list -> ''a list
+  val sorted_ancestry : string list -> string list
 
-  val write_thy_chainy : string -> string list ->
-    (thm -> term * term list) ->
-    ((term * int) list -> (term * int) list) ->
-    ((string * string) * int) list * (term * int) list ->
-      (TextIO.outstream -> unit) *
-      (TextIO.outstream -> (string * string) * int -> unit) *
-      (TextIO.outstream -> unit) *
-      (TextIO.outstream -> term * int -> unit) *
-      (TextIO.outstream -> unit) *
-      (TextIO.outstream -> term * int -> unit) *
-      (string -> TextIO.outstream -> string * string -> unit) ->
-    string -> unit
 
 end

@@ -181,8 +181,6 @@ fun add_tyargltag s cv =
     (map name_tyu_mono tyargl))
   end
 
-
-
 (* obj: constants, bound variables and free variables *)
 
 fun namea_obj_mono (cv,a) =
@@ -191,6 +189,16 @@ fun namea_obj_mono (cv,a) =
   
 fun namea_obj_poly (cv,a) =
   if is_tptp_bv cv then namea_v (cv,a) else namea_cv (cv,a)
+
+
+(* -------------------------------------------------------------------------
+   Naming theorems
+   ------------------------------------------------------------------------- *)
+
+fun name_def i thmname = escape ("def" ^ its i ^ ".") ^ thmname
+
+fun name_arityeq (cv,a) = 
+  add_tyargltag ("arityeq" ^ its a ^ escape "." ^ namea_cv (cv,a)) cv
 
 (* -------------------------------------------------------------------------
    Definitions of boolean operators
@@ -294,17 +302,6 @@ fun uniq_cvdef_mgc cval = mk_fast_set tma_compare (map mgc_of cval)
  
 fun uniq_cvdef_arity cval = mk_term_set (map fst cval) 
 
-fun formula_info_thm f_translate (thy,name) =
-  let 
-    val thm = DB.fetch thy name
-    val (formula,defl) = f_translate thm
-    val tml = formula :: defl 
-    val cval = mk_fast_set tma_compare (List.concat (map collect_arity tml))
-    val tyopl = mk_fast_set ida_compare (List.concat (map collect_tyop tml))
-  in
-    {cval = add_zeroarity cval, tyopl = tyopl}
-  end
-
 (* -------------------------------------------------------------------------
    Theorem and theory order
    ------------------------------------------------------------------------- *)
@@ -337,36 +334,6 @@ fun compare_namethm ((_,th1),(_,th2)) =
    Bushy
    ------------------------------------------------------------------------- *)
 
-fun write_cj dir f_translate uniq_def (tyopl_extra,cval_extra)
-  (f_tyopdef_extra,
-   f_tyopdef,f_cvdef_extra,f_cvdef,f_thmdef_extra,f_arityeq,f_thmdef)
-  (thmid,depl) =
-  let 
-    val file = dir ^ "/" ^ name_thm thmid ^ ".p"
-    val oc = TextIO.openOut file
-    val thmidinfo = formula_info_thm f_translate thmid
-    val axinfol = map (formula_info_thm f_translate) depl
-    val tyopl = 
-      mk_fast_set ida_compare 
-      (List.concat (tyopl_extra :: #tyopl thmidinfo :: map #tyopl axinfol))
-    val cval = 
-      mk_fast_set tma_compare 
-      (List.concat (cval_extra :: #cval thmidinfo :: map #cval axinfol))
-  in
-    (
-    f_tyopdef_extra oc;
-    app (f_tyopdef oc) tyopl;
-    f_cvdef_extra oc;
-    app (f_cvdef oc) (uniq_def cval);
-    f_thmdef_extra oc;
-    app (f_arityeq oc) cval;
-    app (f_thmdef "axiom" oc) depl; 
-    f_thmdef "conjecture" oc thmid; 
-    TextIO.closeOut oc
-    )
-    handle Interrupt => (TextIO.closeOut oc; raise Interrupt)
-  end
-
 fun add_bushy_dep thy namethml =
   let
      fun f (name,thm) = case depo_of_thm thm of
@@ -376,17 +343,10 @@ fun add_bushy_dep thy namethml =
     List.mapPartial f namethml
   end
 
-fun fetch_thmid (a,b) = DB.fetch a b
-
-fun depo_of_thmid thmid = depo_of_thm (fetch_thmid thmid)
-
-fun write_thy_bushy dir a b c d thy =
-  let val cjdepl = add_bushy_dep thy (DB.theorems thy) in
-    print (thy ^ " "); app (write_cj dir a b c d) cjdepl
-  end
+fun depo_of_thmid thmid = depo_of_thm (uncurry DB.fetch thmid)
 
 (* -------------------------------------------------------------------------
-   Chainy
+   Chainy dependencies
    ------------------------------------------------------------------------- *)
 
 fun thmidl_in_thyl thyl =
@@ -409,9 +369,6 @@ fun add_chainy_dep thyorder thy namethml =
     map f namethml
   end
 
-fun write_thy_chainy dir thyorder a b c d thy =
-  let val cjdepl = add_chainy_dep thyorder thy (DB.theorems thy) in
-    print (thy ^ " "); app (write_cj dir a b c d) cjdepl
-  end
+
 
 end (* struct *)

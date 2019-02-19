@@ -155,7 +155,7 @@ fun th1_tyopdef oc ((thy,tyop),arity) =
     os oc (th1_ttype arity); osn oc ")."
   end
 
-fun th1_cvdef oc (c,a) =
+fun th1_cvdef oc c =
   let val (th1name,ty) = (name_c c, type_of c) in
     os oc (thfpar ^ th1name ^ ",type," ^ th1name ^ ":");
     th1_forall_tyvarl_ty oc ty; th1_type oc ty; osn oc ")."
@@ -195,8 +195,9 @@ fun th1_write_pb dir (thmid,depl) =
     val file  = dir ^ "/" ^ name_thm thmid ^ ".p"
     val oc  = TextIO.openOut file
     val tml = collect_tml (thmid,depl)
+    (* todo: remove unnecessary collection of first-order arity *)
     val cval = mk_fast_set tma_compare 
-      (List.concat (cval_extra :: map collect_arity tml))
+      (List.concat (cval_extra :: map collect_arity_noapp tml))
     val tyopl =  mk_fast_set ida_compare 
       (List.concat (tyopl_extra :: map collect_tyop tml))
   in
@@ -262,6 +263,9 @@ val thyl = ancestry (current_theory ());
 th1_export_bushy thyl; 
 th1_export_chainy thyl;
 *)
+
+(* load "hhExportTh1"; load "hhExportTf1"; load "hhExportFof"; 
+  load "hhExportTf0"; load "hhExportTh0"; *)
 
 
 end (* struct *)

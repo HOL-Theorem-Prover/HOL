@@ -30,7 +30,7 @@ include Abbrev
 
   (* arity equations *)
   val strip_type : hol_type -> (hol_type list * hol_type)
-  val collect_arity : term -> (term * int) list
+  val collect_arity_noapp : term -> (term * int) list
   val mk_arity_eq : (term * int) -> term
 
 

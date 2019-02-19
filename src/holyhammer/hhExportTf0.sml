@@ -324,7 +324,7 @@ fun tf0def_thm role oc (thy,name) =
     val tf0name = name_thm (thy,name)
     fun f i def = 
       (
-      os oc (tffpar ^ escape ("def" ^ its i ^ ".") ^ tf0name ^ ",axiom,");
+      os oc (tffpar ^ name_def i tf0name ^ ",axiom,");
       tf0_formula oc def; osn oc ")."
       )
   in
@@ -401,14 +401,15 @@ fun tf0def_thm_extra oc =
   app (tf0_quantdef oc) quant_l2
   )
 
+(* polymorphic *)
 val app_p_cval =
   let val tml = map (fst o translate_thm o snd) (app_axioml @ p_axioml) in
-    mk_fast_set tma_compare (List.concat (map collect_arity tml)) 
+    mk_fast_set tma_compare (List.concat (map collect_arity_noapp tml)) 
   end
 
 val combin_cval = 
   let val tml = map snd combin_axioml in
-    mk_fast_set tma_compare (List.concat (map collect_arity tml)) 
+    mk_fast_set tma_compare (List.concat (map collect_arity_noapp tml)) 
   end
 
 (* -------------------------------------------------------------------------
@@ -433,7 +434,7 @@ fun tf0def_monoeq oc (cv,a) =
 fun tf0def_arityeq oc (cv,a) =
   if a = 0 then () else
   let 
-    val tf0name = "arityeq" ^ its a ^ escape "." ^ namea_obj_mono (cv,a)
+    val tf0name = name_arityeq (cv,a)
     val tm = mk_arity_eq (cv,a)
   in
     os oc (tffpar ^ tf0name ^ ",axiom,"); tf0_formula oc tm; osn oc ")."

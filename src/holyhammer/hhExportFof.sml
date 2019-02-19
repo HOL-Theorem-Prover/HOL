@@ -118,7 +118,6 @@ fun fof_quantdef oc (thy,name) =
    FOF definitions
    ------------------------------------------------------------------------- *)
 
-
 fun fof_thmdef role oc (thy,name) =
   let 
     val thm = DB.fetch thy name
@@ -126,7 +125,7 @@ fun fof_thmdef role oc (thy,name) =
     val fofname = name_thm (thy,name)
     fun f i def = 
       (
-      os oc (fofpar ^ escape ("def" ^ its i ^ ".") ^ fofname ^ ",axiom,");
+      os oc (fofpar ^ name_def i fofname ^ ",axiom,");
       fof_formula oc def; osn oc ")."
       )
   in
@@ -137,12 +136,12 @@ fun fof_thmdef role oc (thy,name) =
 
 val app_p_cval =
   let val tml = map (fst o translate_thm o snd) (app_axioml @ p_axioml) in
-    mk_fast_set tma_compare (List.concat (map collect_arity tml)) 
+    mk_fast_set tma_compare (List.concat (map collect_arity_noapp tml)) 
   end
 
 val combin_cval = 
   let val tml = map snd combin_axioml in
-    mk_fast_set tma_compare (List.concat (map collect_arity tml)) 
+    mk_fast_set tma_compare (List.concat (map collect_arity_noapp tml)) 
   end
 
 val cval_extra = boolop_cval @ combin_cval @ app_p_cval
@@ -198,9 +197,7 @@ fun fof_thmdef_extra oc =
 fun fof_arityeq oc (cv,a) = 
   if a = 0 then () else
   let
-    val fofname = 
-      add_tyargltag 
-      (escape "reserved.arityeq" ^ its a ^ escape "." ^ namea_cv (cv,a)) cv
+    val fofname = name_arityeq (cv,a)
     val tm = mk_arity_eq (cv,a)
   in
     os oc (fofpar ^ fofname ^ ",axiom,"); fof_formula oc tm; osn oc ")."
@@ -226,7 +223,7 @@ fun fof_write_pb dir (thmid,depl) =
     val oc  = TextIO.openOut file
     val tml = collect_tml (thmid,depl)
     val cval = mk_sameorder_set tma_compare 
-      (List.concat (cval_extra :: map collect_arity tml))
+      (List.concat (cval_extra :: map collect_arity_noapp tml))
   in
     (
     fof_thmdef_extra oc;
@@ -286,21 +283,17 @@ fof_export_chainy ["bool"];
    Interface to holyhammer
    ------------------------------------------------------------------------- *)
 
-fun fof_collect_arity_thm thm =
-  let val tml = (op ::) (translate_thm thm) in
-    mk_fast_set tma_compare (List.concat (map collect_arity tml))
-  end
-
-fun fof_collect_arity_cj cj =
-  let val tml = (op ::) (translate cj) in
-    mk_fast_set tma_compare (List.concat (map collect_arity tml))
+fun tml_of_pb (cj,namethml) = 
+  let
+    val tml_cj = (op ::) (translate cj)
+    val tmll_axl = map ((op ::) o translate_thm o snd) namethml
+  in
+    mk_term_set (tml_cj @ List.concat (tmll_axl))
   end
 
 fun collect_arity_pb (cj,namethml) =
-  let val ll = 
-    fof_collect_arity_cj cj :: map (fof_collect_arity_thm o snd) namethml
-  in
-    mk_fast_set tma_compare (List.concat ll)
+  let val tml = tml_of_pb (cj,namethml) in 
+    mk_fast_set tma_compare (List.concat (map collect_arity_noapp tml))
   end
 
 fun fof_cjdef oc cj =
@@ -308,7 +301,7 @@ fun fof_cjdef oc cj =
     val (statement,defl) = translate cj
     val fofname = "conjecture"
     fun f i def = 
-      (os oc (fofpar ^ escape "reserved.def" ^ its i ^ escape "." ^ fofname ^ ",axiom,");
+      (os oc (fofpar ^ name_def i fofname ^ ",axiom,");
        fof_formula oc def; osn oc ").")
   in
     ignore (mapi f defl);
@@ -321,8 +314,7 @@ fun fof_axdef oc (name,thm) =
     val (statement,defl) = translate_thm thm
     val fofname = escape ("thm." ^ name)
     fun f i def = 
-      (os oc (fofpar ^ escape "reserved.def" ^ 
-       its i ^ escape "." ^ fofname ^ ",axiom,");
+      (os oc (fofpar ^ name_def i fofname  ^ ",axiom,");
        fof_formula oc def; osn oc ").")
   in
     ignore (mapi f defl);

@@ -103,7 +103,7 @@ fun all_fosubtm tm =
   end
 
 (* ignores app *)
-fun collect_arity tm =
+fun collect_arity_noapp tm =
   let 
     val tml1 = List.concat (map all_fosubtm (atoms tm))
     val tml2 = mk_term_set tml1
