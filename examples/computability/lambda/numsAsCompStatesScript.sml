@@ -4,12 +4,14 @@ open prtermTheory
 
 val _ = new_theory "numsAsCompStates";
 
+val _ = Datatype ‘compstate = CS num’;
+
 val terminated_def = Define‘
-  terminated cs ⇔ (pr_bnf [cs] = 1)
+  terminated (CS cs) ⇔ (pr_bnf [cs] = 1)
 ’
 
 val step1_def = Define‘
-  step1 cs = pr_noreduct [cs]
+  step1 (CS cs) = CS (pr_noreduct [cs])
 ’;
 
 val steps_def = Define‘
@@ -17,7 +19,7 @@ val steps_def = Define‘
 ’;
 
 Theorem steps_pr_steps[simp]:
-  ∀cs. steps n cs = pr_steps [n; cs]
+  ∀cs. steps n (CS cs) = CS (pr_steps [n; cs])
 Proof
   simp[pr_steps_def,steps_def] >> Induct_on ‘n’ >>
   simp[arithmeticTheory.FUNPOW_SUC, step1_def] >>
@@ -27,11 +29,11 @@ Proof
 QED
 
 val cs_to_num_def = Define‘
-  cs_to_num cs = pr_forcenum [cs]
+  cs_to_num (CS cs) = pr_forcenum [cs]
 ’;
 
 val mk_initial_state_def = Define‘
-  mk_initial_state i n = pr_dAPP [i; pr_church [n]]
+  mk_initial_state i n = CS (pr_dAPP [i; pr_church [n]])
 ’;
 
 val comp_count_def = Define‘
@@ -40,17 +42,18 @@ val comp_count_def = Define‘
 
 Theorem correctness_on_termination:
   (cs0 = mk_initial_state i n) ∧
-  (comp_count cs0 = SOME m) ⇒
+  (comp_count cs0 = SOME m)
+ ⇒
   terminated (steps m cs0) ∧
   (Phi i n = SOME (cs_to_num (steps m cs0)))
 Proof
   simp[mk_initial_state_def, terminated_def, comp_count_def, steps_pr_steps] >>
-  DEEP_INTRO_TAC whileTheory.OLEAST_INTRO >> simp[] >> rw[]
-  >- simp[] >>
-  simp[cs_to_num_def] >>
+  DEEP_INTRO_TAC whileTheory.OLEAST_INTRO >> simp[] >>
+  Cases_on ‘steps m cs0’ >> simp[cs_to_num_def, terminated_def] >>
+  rw[] >> fs[steps_pr_steps] >>
   REWRITE_TAC [GSYM recPhi_correct, recPhi_def] >>
   fs[recursivefnsTheory.recCn_def, pr_steps_correct] >>
-  qabbrev_tac ‘M = toTerm (numdB i) @@ church n’ >>
+  qabbrev_tac ‘M = toTerm (numdB i) @@ church n’ >> rw[] >> fs[] >>
   ‘bnf_of M = SOME (steps m M)’ by metis_tac [stepsTheory.bnf_steps] >>
   simp[]
 QED
@@ -75,9 +78,9 @@ Theorem correctness_on_nontermination:
   (cs0 = mk_initial_state i n) ∧ (comp_count cs0 = NONE) ⇒
   (Phi i n = NONE)
 Proof
-  simp[mk_initial_state_def, comp_count_def, terminated_def, steps_pr_steps,
-       pr_steps_correct] >>
-  rw[] >> fs[] >> simp[recfunsTheory.Phi_def] >> simp[bnf_of_EQ_NONE_steps]
+  csimp[mk_initial_state_def, comp_count_def, terminated_def, steps_pr_steps,
+        pr_steps_correct] >>
+  rw[] >> simp[recfunsTheory.Phi_def] >> simp[bnf_of_EQ_NONE_steps]
 QED
 
 Theorem Phi_steps:
@@ -107,8 +110,8 @@ QED
 Theorem unterminated_take_steps:
   (step1 cs = cs') ∧ cs' ≠ cs ⇒ ¬terminated cs
 Proof
-  dsimp[terminated_def, step1_def, pr_noreduct_correct, CaseEq "bool",
-        DISJ_IMP_THM]
+  Cases_on ‘cs’ >> simp[terminated_def, step1_def] >> rw[] >> strip_tac >>
+  fs[pr_noreduct_correct]
 QED
 
 Theorem terminated_step_in_place:
