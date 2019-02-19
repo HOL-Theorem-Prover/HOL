@@ -589,14 +589,14 @@ val thmid = ("ASCIInumbers","BIT_num_from_bin_string");
 val depl = valOf (hhExportLib.depo_of_thmid thmid);
 val dir = HOLDIR ^ "/src/holyhammer/export_tf0_test";
 tf0_write_pb dir (thmid,depl);
-load "tttUnfold"; tttUnfold.load_sigobj ();
-tf0_export_bushy ["ASCIInumbers"];
 
 load "hhExportTf0"; open hhExportTf0; 
 load "tttUnfold"; tttUnfold.load_sigobj ();
 val thyl = ancestry (current_theory ());
-tf0_export_bushy thyl; 
-
+val bushydir = "/local1/thibault/tf0_bushy";
+tf0_export_bushy bushydir thyl; 
+val chainydir = "/local1/thibault/tf0_chainy";
+tf0_export_chainy chainydir thyl;
 *)
 
 end (* struct *)

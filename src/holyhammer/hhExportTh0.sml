@@ -634,17 +634,20 @@ fun th0_export_chainy dir thyl =
   end
 
 (* 
-  load "hhExportTh0"; open hhExportTh0; 
-  load "tttUnfold"; tttUnfold.load_sigobj ();
-  val thyl = ancestry (current_theory ());
-  th0_export_bushy thyl;
+load "hhExportTh0"; open hhExportTh0;
+load "DecodeTheory";
+val thmid = ("Decode","wf_dec2enc");
+val depl = valOf (hhExportLib.depo_of_thmid thmid);
+val dir = HOLDIR ^ "/src/holyhammer/export_th0_test";
+th0_write_pb dir (thmid,depl);
 
-  load "hhExportTh0"; open hhExportTh0;
-  load "DecodeTheory";
-    val thmid = ("Decode","wf_dec2enc");
-  val depl = valOf (hhExportLib.depo_of_thmid thmid);
-  val dir = HOLDIR ^ "/src/holyhammer/export_th0_test";
-  th0_write_pb dir (thmid,depl);
+load "hhExportTh0"; open hhExportTh0; 
+load "tttUnfold"; tttUnfold.load_sigobj ();
+val thyl = ancestry (current_theory ());
+val bushydir = "/local1/thibault/th0_bushy";
+th0_export_bushy bushydir thyl; 
+val chainydir = "/local1/thibault/th0_chainy";
+th0_export_chainy chainydir thyl;
 *)
 
 end (* struct *)

@@ -224,12 +224,8 @@ fun write_thy_bushy dir thy =
     print (thy ^ " "); app (th1_write_pb dir) cjdepl
   end
 
-val th1_bushy_dir = hh_dir ^ "/export_th1_bushy"
-fun th1_export_bushy thyl =
-  let 
-    val thyorder = sorted_ancestry thyl 
-    val dir = th1_bushy_dir
-  in
+fun th1_export_bushy dir thyl =
+  let val thyorder = sorted_ancestry thyl in
     mkDir_err dir; app (write_thy_bushy dir) thyorder
   end
 
@@ -238,12 +234,8 @@ fun write_thy_chainy dir thyorder thy =
     print (thy ^ " "); app (th1_write_pb dir) cjdepl
   end
 
-val th1_chainy_dir = hh_dir ^ "/export_th1_chainy"
-fun th1_export_chainy thyl =
-  let 
-    val thyorder = sorted_ancestry thyl 
-    val dir = th1_chainy_dir
-  in
+fun th1_export_chainy dir thyl =
+  let val thyorder = sorted_ancestry thyl in
     mkDir_err dir; app (write_thy_chainy dir thyorder) thyorder
   end
 
