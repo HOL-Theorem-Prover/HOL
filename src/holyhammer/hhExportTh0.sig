@@ -14,7 +14,9 @@ include Abbrev
   val th0_write_pb : string -> 
     ((string * string) * (string * string) list) -> unit
 
-  val th0_export_bushy : string list -> unit
-  val th0_export_chainy : string list -> unit
+  val th0_bushy_dir : string
+  val th0_chainy_dir : string
+  val th0_export_bushy : string -> string list -> unit
+  val th0_export_chainy : string -> string list -> unit
 
 end

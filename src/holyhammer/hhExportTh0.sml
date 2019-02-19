@@ -617,11 +617,8 @@ fun write_thy_bushy dir thy =
   end
 
 val th0_bushy_dir = hh_dir ^ "/export_th0_bushy"
-fun th0_export_bushy thyl =
-  let 
-    val thyorder = sorted_ancestry thyl 
-    val dir = th0_bushy_dir
-  in
+fun th0_export_bushy dir thyl =
+  let val thyorder = sorted_ancestry thyl in
     mkDir_err dir; app (write_thy_bushy dir) thyorder
   end
 
@@ -631,11 +628,8 @@ fun write_thy_chainy dir thyorder thy =
   end
 
 val th0_chainy_dir = hh_dir ^ "/export_th0_chainy"
-fun th0_export_chainy thyl =
-  let 
-    val thyorder = sorted_ancestry thyl 
-    val dir = th0_chainy_dir
-  in
+fun th0_export_chainy dir thyl =
+  let val thyorder = sorted_ancestry thyl in
     mkDir_err dir; app (write_thy_chainy dir thyorder) thyorder
   end
 
