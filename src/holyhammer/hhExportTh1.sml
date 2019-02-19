@@ -249,11 +249,13 @@ th1_export_chainy ["bool"];
 *)
 
 (* 
-load "hhExportTh1"; open hhExportTh1;
+load "hhExportTh1"; open hhExportTh1; 
 load "tttUnfold"; tttUnfold.load_sigobj ();
 val thyl = ancestry (current_theory ());
-th1_export_bushy thyl; 
-th1_export_chainy thyl;
+val bushydir = "/local1/thibault/th1_bushy";
+th1_export_bushy bushydir thyl; 
+val chainydir = "/local1/thibault/th1_chainy";
+th1_export_chainy chainydir thyl;
 *)
 
 (* load "hhExportTh1"; load "hhExportTf1"; load "hhExportFof"; 

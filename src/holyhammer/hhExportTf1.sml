@@ -349,7 +349,14 @@ val thmid = ("arithmetic","ADD1");
 val depl = valOf (hhExportLib.depo_of_thmid thmid);
 val dir = HOLDIR ^ "/src/holyhammer/export_tf1_test";
 tf1_write_pb dir (thmid,depl);
-tf1_export_chainy ["bool"]; 
+
+load "hhExportTf1"; open hhExportTf1; 
+load "tttUnfold"; tttUnfold.load_sigobj ();
+val thyl = ancestry (current_theory ());
+val bushydir = "/local1/thibault/tf1_bushy";
+tf1_export_bushy bushydir thyl; 
+val chainydir = "/local1/thibault/tf1_chainy";
+tf1_export_chainy chainydir thyl;
 *)
 
 end (* struct *)

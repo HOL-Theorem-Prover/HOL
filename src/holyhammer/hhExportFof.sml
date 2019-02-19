@@ -268,7 +268,14 @@ val thmid = ("arithmetic","ADD1");
 val depl = valOf (hhExportLib.depo_of_thmid thmid);
 val dir = HOLDIR ^ "/src/holyhammer/export_fof_test";
 fof_write_pb dir (thmid,depl);
-fof_export_chainy ["bool"]; 
+
+load "hhExportFof"; open hhExportFof; 
+load "tttUnfold"; tttUnfold.load_sigobj ();
+val thyl = ancestry (current_theory ());
+val bushydir = "/local1/thibault/fof_bushy";
+fof_export_bushy bushydir thyl; 
+val chainydir = "/local1/thibault/fof_chainy";
+fof_export_chainy chainydir thyl;
 *)
 
 (* -------------------------------------------------------------------------
