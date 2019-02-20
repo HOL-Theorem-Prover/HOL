@@ -200,10 +200,11 @@ Contrarily, the batch compiler will reject files having occurrences of \ml{load}
 In addition, simply referring to a theory's theorems using the `dot-notation' will make that theory an ancestor.
 For example,
 \begin{alltt}
-    val mytheorem = store_thm(
-      "mytheorem",
-      ``...``,
-      SIMP_TAC (srw_ss()) [ThirdAncestorTheory.important_lemma] ...);
+   Theorem mytheorem:
+     ...
+   Proof
+     simp[ThirdAncestorTheory.important_lemma] ...
+   QED
 \end{alltt}
 will record a dependency on \texttt{ThirdAncestoryTheory}, making it just as much an ancestor as the theories that have been explicitly \texttt{open}-ed elsewhere.
 
