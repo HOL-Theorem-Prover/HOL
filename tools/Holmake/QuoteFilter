@@ -186,7 +186,7 @@ declforms = "val"|"fun"|"structure"|"signature"|"functor"|"abstype"|"datatype"|"
       YYBEGIN thmval;
       ret_to_initial := false;
       ECHO yyarg (
-        pfx ^ "val " ^ thmname ^ " = " ^ "(fn rule => Theory.save_thm(\"" ^
+        pfx ^ "val " ^ thmname ^ " = " ^ "(fn rule => boolLib.save_thm(\"" ^
         with_attrs_string ^ "\",rule)) ("
       )
     end) yytext
