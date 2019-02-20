@@ -30,7 +30,7 @@ matrix:
       env: SML=poly BUILDOPTS=
     - env: SML=poly POLY_ROOT=T BUILDOPTS="--seq developers/travis/selftestseq"
       sudo: true
-    - env: SML=poly OPENTHEORY=T BUILDOPTS="--otknl --seq developers/travis/smallseq"
+    - env: SML=poly OPENTHEORY=T BUILDOPTS="--otknl --seq developers/travis/vsmallseq"
   allow_failures:
     - os: osx
     - env: SML=poly POLY_GIT=T BUILDOPTS="--seq=developers/travis/selftestseq"
