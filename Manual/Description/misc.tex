@@ -41,17 +41,15 @@ an evaluation, and timing it.
   and often accurate; however, it can be out-of-date, refer to earlier
   versions of the system, or even be missing!
 
-\item [\HOL{} structure information.]  For most structures in the
-  \HOL{} source, one can get a listing of the entrypoints found in the
-  accompanying signature. This is helpful for locating functions and
-  is automatically derived from the system sources, so it is alway
-  up-to-date.
+\item [\HOL{} structure information.]
+  For most structures in the \HOL{} source, one can get a listing of the entrypoints found in the accompanying signature.
+  This is helpful for locating functions and is automatically derived from the system sources, so it is always up-to-date.
 
-\item [Theory facts.] These are automatically derived from theory
-  files, so they are always up-to-date. The signature of each theory
-  is available (since theories are represented by structures in
-  \HOL{}). Also, each axiom, definition, and theorem in the theory can
-  be accessed by name in the help system; the theorem itself is given.
+\item [Theory facts.]
+  These are automatically derived from theory files, so they are always up-to-date.
+  The signature of each theory is available (since theories are represented by structures in \HOL{}).
+  Also, each axiom, definition, and theorem in the theory can be accessed by name in the help system.
+  As such theorems are pretty-printed into the corresponding \texttt{Theory.sig} file, the help system will find both the declaration in the signature (\eg, \ml{val~nm~:thm}), and the entry for that theorem in the comment-block.
 \end{description}
 
 Therefore the following example queries can be made:
