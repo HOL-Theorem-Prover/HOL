@@ -3080,7 +3080,7 @@ Proof
 QED
 
 Theorem unibag_FINITE:
-  !b. FINITE_BAG b = FINITE_BAG (unibag b)
+  !b. FINITE_BAG (unibag b) = FINITE_BAG b
 Proof
   rw[] >> EQ_TAC >> metis_tac[FINITE_SET_OF_BAG, FINITE_BAG_OF_SET]
 QED
@@ -3090,8 +3090,8 @@ Theorem unibag_ALL_DISTINCT:
 Proof rw[BAG_ALL_DISTINCT]
 QED
 
-Theorem unibag_IN:
-  !e b. BAG_IN e b ==> BAG_IN e (unibag b)
+Theorem BAG_IN_unibag[simp]:
+  !e b. BAG_IN e (unibag b) <=> BAG_IN e b
 Proof rw[BAG_IN]
 QED
 
