@@ -4684,6 +4684,32 @@ val SUM_SET_UNION = store_thm(
              SUM_SET s + SUM_SET t - SUM_SET (s INTER t))``,
   SRW_TAC [][SUM_SET_DEF, SUM_IMAGE_UNION]);
 
+Theorem SUM_SET_count_2:
+  !n. 2 * SUM_SET (count n) = n * (n - 1)
+Proof
+  Induct >>
+  rw [
+    COUNT_SUC, SUM_SET_THM, LEFT_ADD_DISTRIB, SUM_SET_DELETE, ADD1,
+    LEFT_SUB_DISTRIB, RIGHT_ADD_DISTRIB, SUM_SQUARED
+  ] >>
+  `n <= n ** 2` by rw[] >>
+  rw[]
+QED
+
+Theorem SUM_SET_count:
+  SUM_SET (count n) = n * (n - 1) DIV 2
+Proof
+  Q.MATCH_ABBREV_TAC `a = b` >>
+  ‘2 * a = 2 * b’ suffices_by simp[] >>
+  markerLib.UNABBREV_ALL_TAC >>
+  REWRITE_TAC[SUM_SET_count_2] >>
+  Q.SPEC_THEN ‘2’ mp_tac DIVISION >> simp[] >>
+  disch_then (Q.SPEC_THEN ‘n * (n - 1)’ assume_tac) >>
+  Q.MATCH_ABBREV_TAC ‘(a = 2 * (a DIV 2))’ >>
+  ‘a MOD 2 = 0’ suffices_by (strip_tac >> fs[]) >>
+  simp[Abbr`a`,GSYM EVEN_MOD2, LEFT_SUB_DISTRIB, EVEN_SUB, EVEN_EXP_IFF]
+QED
+
 (* ----------------------------------------------------------------------
     PROD_IMAGE
 
