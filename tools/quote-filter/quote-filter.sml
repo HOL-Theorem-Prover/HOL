@@ -47,7 +47,7 @@ val state as QFS args = newstate intp
    Kenn Heinrich who helped me see the light with respect to this code *)
 fun loop() =
   let
-    val lexer = QuoteFilter.makeLexer (read_from_stream instream) state
+    val lexer = #2 o QuoteFilter.makeLexer (read_from_stream instream) state
     fun coreloop () =
       case lexer() of
           "" => ()
