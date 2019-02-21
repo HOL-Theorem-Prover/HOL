@@ -26,7 +26,7 @@ fun file_to_lexer fname =
     val qstate = QuoteFilter.UserDeclarations.newstate isscript
     val read = QuoteFilter.makeLexer (fn n => TextIO.input instrm) qstate
   in
-    (read, (fn () => TextIO.closeIn instrm), reset qstate)
+    (#2 o read, (fn () => TextIO.closeIn instrm), reset qstate)
   end
 
 fun string_to_lexer s =
@@ -36,7 +36,7 @@ fun string_to_lexer s =
     fun str_read _ = (!sr before sr := "")
     val read = QuoteFilter.makeLexer str_read qstate
   in
-    (read, (fn () => ()), reset qstate)
+    (#2 o read, (fn () => ()), reset qstate)
   end
 
 fun stream_to_lexer isscriptp strm =
@@ -44,7 +44,7 @@ fun stream_to_lexer isscriptp strm =
     val qstate = QuoteFilter.UserDeclarations.newstate isscriptp
     val read = QuoteFilter.makeLexer (fn n => TextIO.input strm) qstate
   in
-    (read, (fn () => ()), reset qstate)
+    (#2 o read, (fn () => ()), reset qstate)
   end
 
 fun inputFile fname = exhaust_lexer (file_to_lexer fname)

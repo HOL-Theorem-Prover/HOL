@@ -54,7 +54,7 @@ fun main() = let
 
   fun loop() =
     let
-      val lexer = QuoteFilter.makeLexer (read_from_stream instream) state
+      val lexer = #2 o QuoteFilter.makeLexer (read_from_stream instream) state
       fun coreloop () =
         case lexer() of
             "" => ()
