@@ -18,6 +18,7 @@ open real_sigmaTheory;
 open lebesgueTheory;
 open transcTheory;
 open kolmog_complexTheory;
+open numsAsCompStatesTheory
 val _ = new_theory "kraft_ineq";
 val _ =ParseExtras.tight_equality();
 
@@ -779,7 +780,7 @@ drule prefix_length_lt >> rw[] >> strip_tac >> fs[prefix_append] >>
 rename[`bar p ++ bar q = bar a ++ bar b ++ r`]>> fs[APPEND_EQ_APPEND] >> rw[] >> fs[] >>
 full_simp_tac bool_ss [GSYM APPEND_ASSOC,bar_eq_bar_append,APPEND_eq_NIL] >> rw[]>>fs[] )
 
-val unbar2_bar2_inv = Q.store_thm("unbar2_bar_inv",
+val unbar2_bar2_inv = Q.store_thm("unbar2_bar_inv[simp]",
 `unbar2 0 (bar2 x) = x`,
 Cases_on`x` >> rw[bar2_def,bar_def] >> 
 REWRITE_TAC [GSYM APPEND_ASSOC,APPEND,unbar2_induct_bar2,rich_listTheory.TAKE_LENGTH_APPEND,
@@ -821,52 +822,114 @@ simp[bar2ed_def] >> irule prefix_free_subset >> qexists_tac`IMAGE bar2 UNIV` >> 
 simp[SUBSET_DEF,bar2_def,pairTheory.EXISTS_PROD])
 
 
-val kolmog_def = Define`kolmog x = kolmog_complexity x PUTM`
 
-(* Should we define a non option? since print x is always a program *)
+Theorem bar2ed_bar2[simp]:
+  bar2ed (bar2 p)
+Proof
+  Cases_on`p` >> simp[bar2ed_def,bar2_def] >> metis_tac[]
+QED
+val the_lemma = MATCH_MP normal_orderTheory.lameq_bnf_of_cong chap2Theory.lameq_K
 
-val arg_kolmog_complexity_def = Define`arg_kolmog_complexity x U =
-                           if  { p | U p = SOME x} = {} then []
-                           else @q. U q = SOME x ∧ LENGTH q=(MIN_SET {LENGTH p | U p = SOME x})`;
+Theorem print_exists:
+  ∀x. ∃m. PUTM (bar2 (m,[])) = SOME x
+Proof
+  rw[PUTM_def,bool_list_to_num_def] >> Q.REFINE_EXISTS_TAC`n2bl m` >> simp[Phi_def] >> 
+  qexists_tac`dBnum (fromTerm (K @@ church x))` >> simp[] >> qexists_tac`church x` >>
+  simp[the_lemma,normal_orderTheory.bnf_bnf_of]
+QED
 
-val arg_kolmog_def = Define`arg_kolmog x = arg_kolmog_complexity x PUTM`
 
 
-(** up to here **)
+Theorem kolmog_exists:
+  ∀x. ∃y. kolmog_complexity x PUTM = SOME y
+Proof
+  rw[kolmog_complexity_def,EXTENSION] >> metis_tac[print_exists]
+QED  
+
+val kolmog_def = Define`kolmog x = THE (kolmog_complexity x PUTM)`
+
+val arg_kolmog_def = Define`arg_kolmog x =
+                           @q. PUTM q = SOME x ∧ LENGTH q=(MIN_SET {LENGTH p | PUTM p = SOME x})`;
+
+Theorem arg_kolmog_thm:
+  arg_kolmog x = @q. PUTM q = SOME x ∧ LENGTH q = kolmog x
+Proof
+  fs[arg_kolmog_def,kolmog_def,kolmog_complexity_def] >> `{p| PUTM p = SOME x}<> {}` by 
+    (simp[EXTENSION] >> metis_tac[print_exists]) >> simp[]
+QED
+
+val univ_rf_def = Define`univ_rf U <=> ∀f. ∃g. ∀x. ∃y. recPhi [f;x] = U (g++y)`
+
 (* Theorems to prove *)
 
+(* Invariance theorem *)
 
+Theorem invariance_theorem:
+  univ_rf U ∧ univ_rf U' ==> ∃C. (kolmog_complexity x U) <= (kolmog_complexity x U') + (C U U')
+Proof
+  rw[]
+QED
 
-val kolmog_kraft = Q.store_thm("kolmog_kraft",
-`SIGMA (\s. if kolmog s = NONE then 0 else  Normal (2 rpow (real_neg &((kolmog s))))) UNIVERSE`,
-)
+(* Kolmogorov kraft inequality *)
+
+Theorem kolmog_kraft:
+  REAL_SUM_IMAGE (\s.   (2 rpow (real_neg &((kolmog s))))) UNIV <=1
+Proof
+  
+QED
 
 (*    *)
 
-val tmax_def = Define`tmax n = if _ then NONE else `
+open logrootTheory
 
-val HALT_def = Define`HALT = {(M,x)|recfn M 1 ∧ ∃y. M x = SOME y}`
+val tmax_def = Define`tmax n = MAX_SET {t | ∃m. terminated (steps t (mk_initial_state m 0)) ∧ 
+                                                (LOG 2 m = n) } `
 
-val prime_tm_def = Define`prime_tm M x y = if M x = NONE then NONE else (M x)`
+val BB_def = Define`BB n = @m. terminated (steps (tmax n) (mk_initial_state m 0)) ∧ 
+                                                (LOG 2 m = n) `
 
-val M_prime_exists = Q.store_thm("M_prime_exists",
-`∀M x. recfn M 1 ==> ∃M'. recfn M' 1 ∧ M' [] = M x`,
-rw[] >> qexists_tac`prime_tm M x` >> simp[ prime_tm_def] >> rw[] >>  )
+val HALT_def = Define`HALT = {(M,x)| ∃t. terminated (steps t (mk_initial_state M x)) }`
+
+val _ = overload_on ("N2T",``λt. toTerm (numdB t)``)
+
+val prime_tm_def = Define`prime_tm M x = dBnum (fromTerm (K @@ (N2T M @@ church x)))`
+
+Theorem prime_tm_corr:
+  Phi (prime_tm M x) 0 = Phi M x
+Proof
+  simp[prime_tm_def,Phi_def,the_lemma]
+QED
+
+(** up to here **)
+
+val OGENLIST_def = Define`OGENLIST f 0 = [] ∧ OGENLIST f (SUC n) = OGENLIST f n ++ (case f n of NONE => []| SOME r => [r])`
+
+val Z_lam_def = Define`Z_lam M n = λx. case comp_count (mk_initial_state M 0) of 
+					   NONE => NONE 
+					 | SOME s =>  
+				       let results = 
+					   OGENLIST  (λmi. 
+					     if terminated (steps s (mk_initial_state mi 0)) 
+					     then SOME (cs_to_num (steps s (mk_initial_state mi 0)))
+				             else NONE) (4**n DIV 2) in 
+                                            SOME (LEAST x.  ¬MEM x results ∧ LOG 2 x = 2*n)`
+
 
 val _ = Q.store_thm("_",
 `∀n. n>const1 ==> ∃Z. tm_size Z <2*n ∧ `,
 )
+
 val _ Q.store_thm("_",
 `¬∃f. ∀x. kolmog x = recPhi [f;x] ==> ∀y. LENGTH y = l ==> kolmog y`,
 )
 
-val y_set_def = Define`y_set n = {yi| LENGTH (n2bl yi) = 2*n ∧ (kolmog yi) <= SOME (2*n-1)}`
-
-val M_set_def = Define`M_set n = {arg_kolmog yi| LENGTH (n2bl yi) = 2*n ∧ kolmog yi <= SOME (2*n-1)}`
-
-val tm_time_def = Define`tm_time M y = 10`
-
-val t_set = Define`t_set n = {t| ∀Mi yi. Mi ∈ M_set n ∧ yi ∈ y_set n ==> tm_time Mi yi = t }`
+val yMt_set_def = Define`yMt_set n = {(yi,Mi,t) | Mi = bl2n (arg_kolmog yi) ∧ 
+                                              LENGTH (n2bl yi) = 2*n ∧ 
+                                              kolmog yi < 2*n ∧
+				              terminated (steps t (mk_initial_state Mi 0)) ∧
+				              cs_to_num (steps t (mk_initial_state Mi 0)) = yi ∧
+				              ∀t'. terminated (steps t' (mk_initial_state Mi 0)) ==>
+						t<=t'}`
 
 val big_T_def = Define`big_T n = MAX_SET (t_set n)`
 
