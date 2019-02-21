@@ -2774,6 +2774,20 @@ val X_LE_X_EXP = store_thm ("X_LE_X_EXP",
   REWRITE_TAC [ZERO_LESS_EQ, LE_MULT_CANCEL_LBARE, NOT_SUC, ZERO_LT_EXP,
                LESS_0]);
 
+Theorem X_LE_X_SQUARED[simp]:
+  x <= x ** 2
+Proof
+  irule X_LE_X_EXP >> REWRITE_TAC[TWO, prim_recTheory.LESS_0]
+QED
+
+Theorem X_LT_X_SQUARED[simp]:
+  x < x ** 2 <=> 1 < x
+Proof
+  REWRITE_TAC[EXP,TWO,EXP_1,LT_MULT_CANCEL_LBARE] >> EQ_TAC >> STRIP_TAC >>
+  ASM_REWRITE_TAC[] >> irule LESS_TRANS >> Q.EXISTS_TAC ‘1’ >>
+  ASM_REWRITE_TAC[] >> ASM_REWRITE_TAC[ONE,LESS_0]
+QED
+
 val X_LT_EXP_X = Q.store_thm ("X_LT_EXP_X",
    `1 < b ==> x < b ** x`,
    Q.ID_SPEC_TAC `x` THEN INDUCT_TAC THEN1
@@ -2909,6 +2923,14 @@ val EXP_BASE_MULT = store_thm ("EXP_BASE_MULT",
 val EXP_EXP_MULT = store_thm ("EXP_EXP_MULT",
  “!z x y. x ** (y * z) = (x ** y) ** z”,
   INDUCT_TAC THEN ASM_REWRITE_TAC [EXP, MULT_CLAUSES, EXP_1, EXP_ADD]);
+
+Theorem SUM_SQUARED:
+  (x + y) ** 2 = x ** 2 + 2 * x * y + y ** 2
+Proof
+  REWRITE_TAC[EXP,TWO,ONE,MULT_CLAUSES, ADD_CLAUSES, RIGHT_ADD_DISTRIB,
+              LEFT_ADD_DISTRIB] >>
+  SIMP_TAC bool_ss [AC ADD_COMM ADD_ASSOC, AC MULT_COMM MULT_ASSOC]
+QED
 
 (* ********************************************************************** *)
 (* Maximum and minimum                                                    *)
