@@ -2613,6 +2613,13 @@ val SUB_ELIM_THM = store_thm ("SUB_ELIM_THM",
       DISCH_THEN(MATCH_MP_TAC o CONJUNCT2)]] THEN
   ASM_REWRITE_TAC[]);
 
+(* |- P (a - b) <=> (?d. (b = a + d) /\ P 0) \/ (?d. (a = b + d) /\ P d) *)
+Theorem SUB_ELIM_THM_EXISTS =
+  SUB_ELIM_THM |> AP_TERM “$~”
+               |> CONV_RULE (RAND_CONV (SIMP_CONV bool_ss [EXISTS_OR_THM]))
+               |> Q.INST [‘P’ |-> ‘\n. ~P n’]
+               |> SIMP_RULE bool_ss []
+
 val PRE_ELIM_THM = store_thm ("PRE_ELIM_THM",
   “P (PRE n) = !m. ((n = 0) ==> P 0) /\ ((n = SUC m) ==> P m)”,
   SPEC_TAC(“n:num”,“n:num”) THEN INDUCT_TAC THEN
