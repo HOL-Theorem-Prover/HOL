@@ -36,6 +36,7 @@ src/list/src
 src/quantHeuristics
 src/unwind
 src/pattern_matches
+!src/pattern_matches/interactive_tests
 src/HolSat/vector_def_CNF
 src/boss/ml_evaluation
 src/boss

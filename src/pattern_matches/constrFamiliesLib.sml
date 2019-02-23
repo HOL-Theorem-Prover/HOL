@@ -4,6 +4,14 @@ struct
 open HolKernel Parse boolLib Drule BasicProvers
 open boolLib simpLib patternMatchesSyntax numLib
 
+structure Parse =
+struct
+  open Parse
+  val (Type,Term) =
+      parse_from_grammars patternMatchesTheory.patternMatches_grammars
+end
+open Parse
+
 (***************************************************)
 (* Auxiliary definitions                           *)
 (***************************************************)
@@ -810,7 +818,7 @@ fun pmatch_compile_db_clear_type ty =
 
 val COND_CONG_APPLY = prove (``(if (x:'a) = c then (ff x):'b else ff x) =
   (if x = c then ff c else ff x)``,
-Cases_on `x = c` THEN ASM_REWRITE_TAC[])
+ASM_CASES_TAC ``x:'a = c`` THEN ASM_REWRITE_TAC[])
 
 
 fun literals_compile_fun (col:(term list * term) list) = let
