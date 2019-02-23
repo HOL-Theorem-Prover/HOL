@@ -408,4 +408,51 @@ val cmem_cvlist = store_thm(
                             churchnumTheory.ceqnat_behaviour] THEN
   Cases_on `m = n` THEN SRW_TAC [][]);
 
+val sing_def = Define‘sing = LAM "x" (ccons @@ VAR "x" @@ cnil)’;
+Theorem FV_sing[simp]: FV sing = ∅
+Proof rw[sing_def, pred_setTheory.EXTENSION]
+QED
+
+val sing_eqn = brackabs.brackabs_equiv [] sing_def
+Theorem sing_behaviour:
+  sing @@ x == cvlist [x]
+Proof
+  SIMP_TAC (bsrw_ss())[sing_eqn, wh_ccons]
+QED
+
+val cogenlist_def = Define‘
+  cogenlist =
+  LAM "f" (LAM "n" (
+     natrec @@ cnil
+            @@ (LAM "m"
+                 (LAM "r"
+                    (cappend @@ VAR "r" @@
+                       (VAR "f" @@ VAR "m" @@ cnil @@ sing))))
+            @@ VAR "n"
+  ))
+’;
+
+Theorem FV_cogenlist[simp]:
+  FV ctabulate = ∅
+Proof SRW_TAC [][ctabulate_def, pred_setTheory.EXTENSION]
+QED
+
+val cogenlist_eqn = brackabs.brackabs_equiv [] cogenlist_def
+
+(* would be defined in HOL as
+     ogenlist f 0 = [] /\
+     ogenlist f (SUC n) =
+       ogenlist f n ++
+       case f n of NONE => [] | SOME x => [x]
+   with type :(num -> 'a option) -> num -> 'a list
+*)
+Theorem cogenlist_behaviour:
+  cogenlist @@ f @@ church 0 == cnil ∧
+  cogenlist @@ f @@ church (SUC n) ==
+      cappend @@ (cogenlist @@ f @@ church n)
+              @@ (f @@ church n @@ cnil @@ sing)
+Proof
+  SIMP_TAC (bsrw_ss()) [cogenlist_eqn, natrec_behaviour]
+QED
+
 val _ = export_theory()
