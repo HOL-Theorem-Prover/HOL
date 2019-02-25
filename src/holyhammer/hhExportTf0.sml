@@ -584,8 +584,7 @@ fun tf0_export_chainy dir thyl =
 
 (* 
 load "hhExportTf0"; open hhExportTf0; 
-load "ASCIInumbersTheory";
-val thmid = ("ASCIInumbers","BIT_num_from_bin_string");
+val thmid = ("arithmetic","ADD1");
 val depl = valOf (hhExportLib.depo_of_thmid thmid);
 val dir = HOLDIR ^ "/src/holyhammer/export_tf0_test";
 tf0_write_pb dir (thmid,depl);

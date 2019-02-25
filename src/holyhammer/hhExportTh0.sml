@@ -635,8 +635,7 @@ fun th0_export_chainy dir thyl =
 
 (* 
 load "hhExportTh0"; open hhExportTh0;
-load "DecodeTheory";
-val thmid = ("Decode","wf_dec2enc");
+val thmid = ("arithmetic","ADD1");
 val depl = valOf (hhExportLib.depo_of_thmid thmid);
 val dir = HOLDIR ^ "/src/holyhammer/export_th0_test";
 th0_write_pb dir (thmid,depl);
