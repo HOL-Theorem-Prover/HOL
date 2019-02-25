@@ -97,7 +97,7 @@ fun th1_pred oc tm =
   else if is_disj tm then th1_binop oc "|" (dest_disj tm)
   else if is_imp_only tm then th1_binop oc "=>" (dest_imp tm)
   else if is_neg tm then
-    (os oc "(~ @ "; th1_pred oc (dest_neg tm); os oc ")")
+    (os oc "((~) @ "; th1_pred oc (dest_neg tm); os oc ")")
   else if is_eq tm then
     let val (l,r) = dest_eq tm in
       if must_pred l orelse must_pred r
@@ -252,7 +252,7 @@ th1_export_chainy ["bool"];
 load "hhExportTh1"; open hhExportTh1; 
 load "tttUnfold"; tttUnfold.load_sigobj ();
 val thyl = ancestry (current_theory ());
-val bushydir = "/local1/thibault/th1_bushy";
+val bushydir = "/home/thibault/HOL/src/holyhammer/th1_bushy";
 th1_export_bushy bushydir thyl; 
 val chainydir = "/local1/thibault/th1_chainy";
 th1_export_chainy chainydir thyl;
