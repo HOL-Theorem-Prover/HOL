@@ -496,7 +496,7 @@ val condprinter_tests =
                \  (if really quite a long guard when looked at closely then\n\
                \     a moderately complicated then_branch\n\
                \   else an else_branch)",
-       testf = K "Ladge COND as rand",
+       testf = K "Large COND as rand",
        output = "f\n\
                 \  (if really quite a long guard when looked at closely then\n\
                 \     a moderately complicated then_branch\n\
