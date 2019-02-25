@@ -5,17 +5,6 @@ DESCRIPTION   : Signature for restricted quantification inference rules
 AUTHOR        : P Curzon
 DATE          : May 1993
 UPDATED       : Joe Hurd, October 2001
-UPDATED       : Mario Castelán Castro, 2017                                UOK
-
-This file as a whole is assumed to be under the license in the file
-"COPYRIGHT" in the HOL4 distribution (note added by Mario Castelán         UOK
-Castro).
-
-For the avoidance of legal uncertainty, I (Mario Castelán Castro) hereby   UOK
-place my modifications to this file in the public domain per the Creative
-Commons CC0 public domain dedication <https://creativecommons.org/publicdo
-main/zero/1.0/legalcode>. This should not be interpreted as a personal
-endorsement of permissive (non-Copyleft) licenses.
 
 ============================================================================*)
 

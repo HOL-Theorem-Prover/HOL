@@ -5,17 +5,6 @@ DATE: 1 Aug 92
 CHANGED BY: Joe Hurd, June 2001 (to use predicate sets)
 CHANGED BY: Joe Hurd, June 2001 (to remove the ARB from RES_ABSTRACT)
 CHANGED BY: Joe Hurd, October 2001 (moved definitions to boolTheory)
-CHANGED BY: Mario Castelán Castro, 2017                                    UOK
-
-This file as a whole is assumed to be under the license in the file
-"COPYRIGHT" in the HOL4 distribution (note added by Mario Castelán         UOK
-Castro).
-
-For the avoidance of legal uncertainty, I (Mario Castelán Castro) hereby   UOK
-place my modifications to this file in the public domain per the Creative
-Commons CC0 public domain dedication <https://creativecommons.org/publicdo
-main/zero/1.0/legalcode>. This should not be interpreted as a personal
-endorsement of permissive (non-Copyleft) licenses.
 
 ============================================================================*)
 
