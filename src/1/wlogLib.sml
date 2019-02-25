@@ -1,6 +1,6 @@
 (* wlogLib.sml - Without loss of generality tacticals
 
-   by Mario Castelán Castro
+   by Mario Castelán Castro                                                  UOK
       (see doc/copyrights/public-domain-contributions.txt)
 *)
 
