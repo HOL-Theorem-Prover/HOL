@@ -26,7 +26,7 @@ src/1
 (otknl)src/opentheory/postbool
 src/proofman
 [poly]bin/hol.bare
-src/proofman/tests
+!src/proofman/tests
 [poly]src/AI
 [poly]src/AI/sml_inspection
 [poly]src/AI/machine_learning
