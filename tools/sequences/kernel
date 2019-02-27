@@ -2,6 +2,7 @@
 !tools/Holmake/tests/depchainloop
 !tools/Holmake/tests/recursiveclean
 !tools/Holmake/tests/wildcard
+!tools/Holmake/tests/dashn_works
 tools/set_mtime
 tools/mlyacc/mlyacclib
 [mosml]src/portableML/mosml
