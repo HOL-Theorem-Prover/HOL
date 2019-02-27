@@ -10,7 +10,7 @@ in \HOL. All three originate with Milner
 for Edinburgh \LCF.
 The first is the theory as
 a record of (among other things) facts already proved
-and thence available as lemmas
+and hence available as lemmas
 \index{lemmas}
 without having to be re-proved.  The second,
 the subject of Chapter~\ref{derived-rules}, is the
