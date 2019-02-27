@@ -385,10 +385,11 @@ fun mk_primed_var (Name,Ty) =
  * polymorphic.                                                              *
  *---------------------------------------------------------------------------*)
 
-val decls =
+fun decls nm =
     let
-      fun f (_, info as (_, ty), A) =
-          if Type.uptodate_type (to_hol_type ty) then Const info :: A
+      fun f ({Name,...}, info as (_, ty), A) =
+          if nm = Name andalso Type.uptodate_type (to_hol_type ty) then
+            Const info :: A
           else A
     in
       KernelSig.foldl f [] termsig
