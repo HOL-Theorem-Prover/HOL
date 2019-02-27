@@ -62,7 +62,7 @@ sig
  val thy_types : string -> (string * int) list
  val del_segment : string -> unit
  val uptodate_type : hol_type -> bool
-
+ val uptodate_kname : KernelSig.kernelname -> bool
 
 
 end
