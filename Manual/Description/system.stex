@@ -311,14 +311,14 @@ to be input using a fairly standard syntax. For example, the \ML{}
 expression $\uholquote{\ml{:bool -> bool}}$ denotes exactly the same
 value (of \ML\ type \ml{hol\_type}) as
 
-\begin{hol}
+\begin{session}
 \index{bool, the type in HOL logic@\ml{bool}, the type in \HOL{} logic}
-\begin{verbatim}
-   mk_thy_type{Tyop = "fun",Thy = "min",
-               Args = [mk_thy_type{Tyop = "bool", Thy = "bool", Args = []},
-                       mk_thy_type{Tyop = "bool", Thy = "bool", Args = []}]}
-\end{verbatim}
-\end{hol}
+\begin{alltt}
+>> mk_thy_type{Tyop = "fun",Thy = "min",
+               Args = [mk_thy_type{Tyop = "bool", Thy = "min", Args = []},
+                       mk_thy_type{Tyop = "bool", Thy = "min", Args = []}]}
+\end{alltt}
+\end{session}
 
 \noindent and the expression \holtxt{\uholquote{\bs{}x.~x~+~1}}
 %
