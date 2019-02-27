@@ -33,11 +33,16 @@ in
     handle HOL_ERR _ => NO_CONV tm
 end
 
+(*
+val funcs_def = TRUTH
+*)
+
 fun func_export sec_name th funcs_def = let
   val f = th |> concl |> rand
   val name = sec_name
   val rhs = ``func_body_trans ^f``
   val lhs = mk_var(name,type_of rhs)
+  val name = tidy_up_name name
   val trans_def = new_definition(name,mk_eq(lhs,rhs))
   val _ = write_subsection "Evaluating graph"
   val c = REWRITE_CONV [func_body_trans_def,func_trans_def,funcs_def]
@@ -64,9 +69,10 @@ fun func_export sec_name th funcs_def = let
 fun print_title (s:string) = ()
 
 fun get_loction_as_word sec_name = let
-  val tm = section_location sec_name
-           |> Arbnumcore.fromHexString |> numSyntax.mk_numeral
-  in ``n2w (^tm):word32`` end
+  val str = section_location sec_name
+  val str = if size str <= 8 then str else String.substring(str,8,size str - 8)
+  val tm = str |> Arbnumcore.fromHexString |> numSyntax.mk_numeral
+  in wordsSyntax.mk_n2w(tm,tysize ()) end
 
 val sec_name = "f"
 
@@ -77,9 +83,10 @@ fun func_decompile print_title sec_name = let
   val thms = derive_insts_for sec_name
 (*  val thms = clean_conds thms *)
   val code = thms |> hd |> concl |> rator |> rator |> rand
-             handle Empty => (if !arch_name = ARM
-                              then ``ARM {}``
-                              else ``M0 {}``)
+             handle Empty => (case !arch_name of
+                                ARM => ``ARM {}``
+                              | M0 => ``M0 {}``
+                              | RISCV => ``RISCV {}``)
   val lemma = prove(``LIST_IMPL_INST ^code locs []``,
                     SIMP_TAC std_ss [LIST_IMPL_INST_def])
   fun combine [] = lemma
@@ -101,6 +108,7 @@ fun func_decompile print_title sec_name = let
   val th = th |> Q.INST [`name`|->`^name`,`entry`|->`^entry`]
   val funcs_def_rhs = th |> concl |> rand |> rand
   val funcs_name = sec_name ^ "_funcs"
+  val funcs_name = tidy_up_name funcs_name
   val funcs_def_lhs = mk_var(funcs_name,type_of funcs_def_rhs)
   val funcs_def = new_definition(funcs_name,``^funcs_def_lhs = ^funcs_def_rhs``)
   val th = CONV_RULE (RAND_CONV (RAND_CONV (REWR_CONV (GSYM funcs_def)))) th
@@ -135,6 +143,12 @@ fun prove_funcs_ok names = let
   val fs_and_trans_defs = map (func_decompile print_title) names
   val fs = map fst fs_and_trans_defs
   (* abbreviate all codes *)
+(*
+  val bad_fs = fs |> filter (can (find_term pred_setSyntax.is_empty) o
+                             rand o rator o rator o concl)
+  val fs = fs |> filter (not o can (find_term pred_setSyntax.is_empty) o
+                         rand o rator o rator o concl)
+*)
   val all_code = fs |> map (rand o rator o rator o concl)
   val code_name = all_code |> hd |> rator
   val all_code = mk_comb(code_name, (all_code |> map rand |> list_mk_union))
@@ -157,6 +171,7 @@ fun prove_funcs_ok names = let
     in MP th lemma end
   val fs = map expend_code fs
   (* complete fs *)
+  val _ = write_subsection "\nCompleting graph"
   val fs = let
     val all = fs |> map (rand o concl)
     val w_var = mk_var("w",wsize ())
@@ -168,6 +183,10 @@ fun prove_funcs_ok names = let
     val r = fs |> hd |> concl |> rator
     val extra_fs = map (fn tm => prove(mk_comb(r,tm),
                      SIMP_TAC (srw_ss()) [func_ok_def])) extra
+    (*
+    val th = hd extra_fs
+    val th = mk_thm([],``func_ok all_riscv_code locs (Func "__ctzdi2" 2147580890w [])``)
+    *)
     fun export_empty th = let
       val sec_name = th |> concl |> rand |> rator |> rator |> rand
                         |> stringLib.fromHOLstring
@@ -234,6 +253,21 @@ fun prove_funcs_ok names = let
   in th end
 
 (*
+
+  val base_name = "loop-riscv/example"
+  val base_name = "kernel-riscv/kernel-riscv"
+  val _ = read_files base_name []
+  val _ = open_current "test"
+  val sec_name = "lookupSlot"
+  val sec_name = "memzero"
+  val sec_name = "memcpy"
+  val sec_name = "isIRQPending"
+  val sec_name = "get_num_avail_p_regs"
+  val sec_name = "ndks_boot"
+  val sec_name = "num_avail_p_regs"
+
+  val names = ["performInvocation_Reply","performInvocation_Endpoint"]
+  val names = section_names()
 
   val base_name = "loop-riscv/example"
   val _ = read_files base_name []

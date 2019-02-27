@@ -111,10 +111,23 @@ local
     in map mk_arb_pair
          (map (fn s => mk_var(s,wty)) regs @
          [``n:bool``, ``z:bool``, ``c:bool``, ``v:bool``]) end
+  val write8_pat = WRITE8_def |> SPEC_ALL |> concl |> dest_eq |> fst
+  fun remove_write8 (name,tm) = let
+    val xs = find_terms (can (match_term write8_pat)) tm
+    in (name,subst (map (fn t => t |-> mk_arb(type_of t)) xs) tm) end
+  fun tidy_up_summary (p1,assum1,u1,addr,q1) = let
+    val u1 = map remove_write8 u1
+    in (p1,assum1,u1,addr,q1) end
 in
+(*
+val (i,(th1,i1,i2),thi2) = el 3 (rev thms)
+val tm = u1 |> hd |> snd
+*)
   fun approx_summary (i,(th1,i1,i2),thi2) =
-    if not (has_call_tag th1) then summary (i,(th1,i1,i2),thi2) else let
-      val res = summary (i,(th1,i1,i2),thi2)
+    if not (has_call_tag th1)
+    then map tidy_up_summary (summary (i,(th1,i1,i2),thi2))
+    else let
+      val res = map tidy_up_summary (summary (i,(th1,i1,i2),thi2))
       val (p1,assum1,u1,addr,q1) = hd res
       val linkreg = (case !arch_name of
                        RISCV => mk_var("r1",``:word64``)

@@ -82,12 +82,17 @@ fun format_line sec_name = let
     (String.substring(s,0,find_first 0 c s),
      String.extract(s,find_first 0 c s+1,NONE))
   fun is_subroutine_call s3 =
-    (String.isPrefix "bl" s3 andalso not (String.isPrefix "bls" s3)
-                             andalso not (String.isPrefix "ble" s3)
-                             andalso not (String.isPrefix "blt" s3)) orelse let
-    val ts = String.tokens (fn c => mem c [#"<",#">"]) s3
-    in 1 < length ts andalso not (el 2 ts = sec_name) andalso
-       length (String.tokens (fn x => x = #"+") (el 2 ts)) < 2 end
+    not (String.isPrefix "addi" s3) andalso
+    not (String.isPrefix "sd" s3) andalso
+    not (String.isPrefix "sw" s3) andalso
+    not (String.isPrefix "ld" s3) andalso
+    not (String.isPrefix "lbu" s3) andalso
+    ((String.isPrefix "bl" s3 andalso not (String.isPrefix "bls" s3)
+                              andalso not (String.isPrefix "ble" s3)
+                              andalso not (String.isPrefix "blt" s3)) orelse let
+     val ts = String.tokens (fn c => mem c [#"<",#">"]) s3
+     in 1 < length ts andalso not (el 2 ts = sec_name) andalso
+        length (String.tokens (fn x => x = #"+") (el 2 ts)) < 2 end)
   fun format_line_aux line = let
     val (s1,s2) = split_at #":" line
     val s2 = String.extract(s2,1,NONE)
@@ -136,7 +141,8 @@ fun read_complete_sections filename filename_sigs ignore = let
     in (sec_name,(arg_lengths,ret_length,returns_struct)) end
   val ss_alist = map process_sig_line ss
   (* combine section info with signatures *)
-  fun lookup x [] = (add_missing_sig x; fail())
+  val default_sig = ([]:int list,0,false)
+  fun lookup x [] = (add_missing_sig x; default_sig(*fail()*))
     | lookup x ((y,z)::ys) = if x = y then z else lookup x ys
   fun combine_ss (sec_name,location,body) =
     (sec_name,lookup (hd (String.tokens (fn x => x = #".") sec_name)) ss_alist,location,body)
@@ -201,6 +207,7 @@ fun section_length name = length (section_body name) handle HOL_ERR _ => 0
 
 (*
   val base_name = "loop-riscv/example"
+  val base_name = "kernel-riscv/kernel-riscv"
   val ignore = [""]
 *)
 

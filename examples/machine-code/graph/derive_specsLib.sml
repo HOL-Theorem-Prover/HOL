@@ -482,11 +482,16 @@ fun derive_individual_specs code = let
 
   fun remove_tab s =
     s |> explode |> map (fn c => if c = #"\t" then #" " else c) |> implode
-  fun placeholder_spec asm = let
+  fun placeholder_spec asm len = let
     val t = String.tokens (fn x => x = #":") asm |> last |> remove_tab
-    in (SPEC (stringSyntax.fromMLstring t) SKIP_SPEC,4,SOME 4) end
+    in (SPECL [stringSyntax.fromMLstring t, numSyntax.term_of_int len]
+          (case !arch_name of
+             ARM => SKIP_SPEC_ARM
+           | M0 => SKIP_SPEC_M0
+           | RISCV => SKIP_SPEC_RISCV), len, SOME len) end
 
 (*
+  val ((pos,instruction,asm)::code) = code
   val ((pos,instruction,asm)::code) = drop 1 code
   val ((pos,instruction,asm)::code) = drop 17 code
 *)
@@ -533,10 +538,16 @@ fun derive_individual_specs code = let
                   inst_pc_rel_const o
                   inst_pc pos o RW [precond_def]
           val res = wrap_get_spec f instruction
+                    handle HOL_ERR _ => raise NoInstructionSpec
           val (x,y) = pair_apply g res
           in (pos,x,y) :: get_specs code end
       end handle NoInstructionSpec => let
-        val (thi,x1,x2) = (placeholder_spec asm)
+        val asm = String.translate (fn c =>
+                      if c = #"\r" then "" else
+                      if c = #"\t" then " " else implode [c]) asm
+        val _ = write_line ("Skipping " ^ instruction ^ " " ^ asm)
+        val len = if size instruction (* in hex *) < 8 then 2 else 4 (* bytes *)
+        val (thi,x1,x2) = (placeholder_spec asm len)
         in (pos,(inst_pc pos thi,x1,x2),NONE) :: get_specs code end
 
 (*
@@ -645,6 +656,10 @@ fun UNABBREV_CODE_RULE th = let
   val th = CONV_RULE ((RATOR_CONV o RAND_CONV) c) th
   in th end;
 
+fun tidy_up_name name = let
+  val name = if String.isPrefix "_" name then "fun" ^ name else name
+  in String.translate (fn c => if c = #"-" then "_" else implode [c]) name end
+
 fun abbreviate_code name thms = let
   fun extract_code (_,(th,_,_),_) = let val (_,_,c,_) = dest_spec (concl th) in c end
   val cs = map extract_code thms
@@ -657,6 +672,7 @@ fun abbreviate_code name thms = let
   val model_name = (to_lower o implode o take_until (fn x => x = #"_") o explode o fst o dest_const) m
   val x = list_mk_pair (free_vars c)
   val def_name = name ^ "_" ^ model_name
+  val def_name = tidy_up_name def_name
   val v = if x = ``():unit`` then mk_var(def_name,type_of c)
           else mk_var(def_name,type_of(mk_pabs(x,c)))
   val code_def = new_definition(def_name ^ "_def",
@@ -737,11 +753,18 @@ fun derive_specs_for sec_name = let
 (*
 
   val base_name = "loop-riscv/example"
+  val base_name = "kernel-riscv/kernel-riscv"
   val _ = read_files base_name []
   val _ = open_current "test"
   val sec_name = "lookupSlot"
   val sec_name = "memzero"
   val sec_name = "memcpy"
+  val sec_name = "isIRQPending"
+  val sec_name = "createNewObjects"
+  val sec_name = "get_num_avail_p_regs"
+  val sec_name = "ensureEmptySlot"
+
+  val _ = file_readerLib.show_code sec_name
 
   val base_name = "loop/example"
   val _ = read_files base_name []

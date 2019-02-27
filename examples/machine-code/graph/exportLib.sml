@@ -385,7 +385,11 @@ val prepare_for_export_conv = let
             all_names_ignore_def, all_names_with_input_def] THENC
           PURE_REWRITE_CONV [decomp_simp2] THENC
           PURE_REWRITE_CONV [decomp_simp3] THENC
-          PURE_REWRITE_CONV [GSYM wordsTheory.WORD_NOT_LOWER] THENC
+          PURE_REWRITE_CONV [GSYM wordsTheory.WORD_NOT_LOWER,v2w_sing,
+                             wordsTheory.WORD_HIGHER_EQ,
+                             wordsTheory.WORD_HIGHER,
+                             wordsTheory.WORD_GREATER_EQ,
+                             wordsTheory.WORD_GREATER] THENC
           DEPTH_CONV foldback
   in QCONV c end;
 

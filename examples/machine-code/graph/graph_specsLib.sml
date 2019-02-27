@@ -506,12 +506,16 @@ fun derive_insts_for sec_name = let
     "ABCDEFGHIJKLMNOPQRSTUVWXYZ" ^
     "0123456789_")
   fun remove_SKIP_TAG th = let
+    val code = th |> concl |> rator |> rator |> rand |> rand
     val pos = th |> concl |> rand |> rator |> rator |> rand |> rand
                  |> numSyntax.dest_numeral
                  |> Arbnumcore.toHexString
     val th = MATCH_MP SKIP_TAG_IMP_CALL_ARM th handle HOL_ERR _ =>
              MATCH_MP SKIP_TAG_IMP_CALL_M0 th handle HOL_ERR _ =>
              MATCH_MP SKIP_TAG_IMP_CALL_RISCV th
+    val cs = filter (fn v => fst (dest_var v) = "code") (free_vars (concl th))
+             |> map (fn c => c |-> code)
+    val th = (INST cs th handle HOL_ERR _ => th)
     val name = find_term (can stringLib.dest_string) (concl th)
     fun join [] = ""
       | join [x] = x
@@ -530,6 +534,15 @@ fun derive_insts_for sec_name = let
   in insts end;
 
 (*
+
+  val base_name = "loop-riscv/example"
+  val base_name = "kernel-riscv/kernel-riscv"
+  val _ = read_files base_name []
+  val _ = open_current "test"
+  val sec_name = "lookupSlot"
+  val sec_name = "memzero"
+  val sec_name = "memcpy"
+  val sec_name = "isIRQPending"
 
   val base_name = "loop-riscv/example"
   val _ = read_files base_name []

@@ -1604,6 +1604,14 @@ val WRITE64_def = zDefine `
 val WRITE8_def = zDefine `
   WRITE8 (a:'a word) (w:word8) (mem:'a word->word8) = (a =+ w) mem`;
 
+val READ32_expand64 = store_thm("READ32_expand64",
+  ``READ32 (a:word64) m =
+    w2w (READ8 a m) ||
+    (w2w (READ8 (a+1w) m) << 8) ||
+    (w2w (READ8 (a+2w) m) << 16) ||
+    (w2w (READ8 (a+3w) m) << 24)``,
+  fs [READ32_def,READ8_def,word32_def] \\ blastLib.BBLAST_TAC);
+
 val func_name_def = Define `
   func_name (Func name entry l) = name`;
 
@@ -1718,9 +1726,19 @@ val unspecified_pre_def = zDefine `unspecified_pre = F`;
 val SKIP_TAG_def = zDefine `
   SKIP_TAG (s:string) = unspecified_pre`;
 
-val SKIP_SPEC = store_thm("SKIP_SPEC",
-  ``!asm.
-      SPEC ARM_MODEL (arm_PC p * cond (SKIP_TAG asm)) {} (arm_PC (p + 4w))``,
+val SKIP_SPEC_ARM = store_thm("SKIP_SPEC_ARM",
+  ``!asm n.
+      SPEC ARM_MODEL (arm_PC p * cond (SKIP_TAG asm)) {} (arm_PC (p + n2w n))``,
+  SIMP_TAC std_ss [SKIP_TAG_def,SPEC_MOVE_COND,unspecified_pre_def]);
+
+val SKIP_SPEC_M0 = store_thm("SKIP_SPEC_M0",
+  ``!asm n.
+      SPEC ARM_MODEL (arm_PC p * cond (SKIP_TAG asm)) {} (arm_PC (p + n2w n))``,
+  SIMP_TAC std_ss [SKIP_TAG_def,SPEC_MOVE_COND,unspecified_pre_def]);
+
+val SKIP_SPEC_RISCV = store_thm("SKIP_SPEC_RISCV",
+  ``!asm n.
+      SPEC RISCV_MODEL (riscv_PC p * cond (SKIP_TAG asm)) {} (riscv_PC (p + n2w n))``,
   SIMP_TAC std_ss [SKIP_TAG_def,SPEC_MOVE_COND,unspecified_pre_def]);
 
 val fake_spec = store_thm("fake_spec",
@@ -2025,6 +2043,7 @@ val graph_format_preprocessing = save_thm("graph_format_preprocessing",
   |> CONJ rw1 |> CONJ rw3 |> CONJ rw64 |> CONJ rw16 |> CONJ rw8 |> CONJ rw4
   |> CONJ w2w_carry |> CONJ w2w_carry_alt
   |> CONJ carry_out_eq
+  |> CONJ READ32_expand64
   |> CONJ word_add_with_carry_eq
   |> CONJ fix_align
   |> CONJ Shift_intro
@@ -2332,5 +2351,9 @@ val WRITE64_intro = store_thm("WRITE64_intro",
   fs [WRITE64_def,FUN_EQ_THM,combinTheory.APPLY_UPDATE_THM]
   \\ rw [] \\ fs [] \\ fs [WORD_EQ_ADD_CANCEL]
   \\ blastLib.BBLAST_TAC);
+
+val v2w_sing = store_thm("v2w_sing",
+  ``v2w [x] = if x then 1w else 0w``,
+  Cases_on `x` \\ EVAL_TAC);
 
 val _ = export_theory();
