@@ -24,28 +24,26 @@ ifeq ($(KERNELID),otknl)
 Thm.sml: otknl-thm.ML
 	$(CP) $< $@
 
-Thm.sig: otknl-thmsig.ML
+Thm-sig.sml: otknl-thmsig.ML
 	$(CP) $< $@
 
 else
 Thm.sml: std-thm.ML
 	$(CP) $< $@
 
-Thm.sig: std-thmsig.ML
+Thm-sig.sml: std-thmsig.ML
 	$(CP) $< $@
 
 endif
 
-Thm.ui: Thm.sig $(FTHM_UID) $(TERM_UID) $(TAG_UOD)
-	$(HOLMOSMLC) -c $(FTHM_UI) $<
+Thm-sig.uo: Thm-sig.sml $(FTHM_UID) $(TERM_UID) $(TAG_UOD)
+	$(HOLMOSMLC) -c -toplevel $(FTHM_UI) $<
 
-Thm.uo: Thm.ui
-
-Overlay.uo: Overlay.sml $(TYPE_UID) $(NET_UOD) $(TERM_UOD) $(FTAG_UID) Thm.uo $(FNET_UID)
+Overlay.uo: Overlay.sml $(TYPE_UID) $(NET_UOD) $(TERM_UOD) $(FTAG_UID) Thm.uo Thm-sig.uo $(FNET_UID)
 	$(HOLMOSMLC) -c -toplevel \
               $(FTAG_UI) $(FTYPE_UI) $(FTERM_UI) $(FNET_UI) $(FTHM_UI) \
               $(TYPE_UID) \
-	      Thm.ui Overlay.sml
+	      Thm-sig.ui Overlay.sml
 
 
 

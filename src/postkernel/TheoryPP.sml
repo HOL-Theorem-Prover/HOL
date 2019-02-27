@@ -253,9 +253,12 @@ fun pp_struct info_record = let
   fun pr_psl l =
        block CONSISTENT 0
          (pr_list pr_ps (add_newline >> add_newline) l)
-  val cwd = holpathdb.reverse_lookup {path=OS.FileSys.getDir()}
   val datfile =
-      mlquote (OS.Path.concat(cwd, name ^ "Theory.dat"))
+      mlquote (
+        holpathdb.reverse_lookup {
+          path = OS.Path.concat(OS.FileSys.getDir(), name ^ "Theory.dat")
+        }
+      )
   val m =
       block CONSISTENT 0 (
        add_string (String.concatWith " "

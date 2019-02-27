@@ -23,9 +23,9 @@ sig
   structure Type : FinalType
   structure Term : FinalTerm where type hol_type = Type.hol_type
   structure Net : FinalNet where type term = Term.term
-  structure Thm : FinalThm where type tag = Tag.tag
-                             and type hol_type = Type.hol_type
-                             and type term = Term.term
+  structure Thm : Thm where type tag = Tag.tag
+                            and type hol_type = Type.hol_type
+                            and type term = Term.term
 end
 
 structure Kernel :> KERNEL =

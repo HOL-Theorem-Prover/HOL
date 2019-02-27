@@ -41,17 +41,15 @@ an evaluation, and timing it.
   and often accurate; however, it can be out-of-date, refer to earlier
   versions of the system, or even be missing!
 
-\item [\HOL{} structure information.]  For most structures in the
-  \HOL{} source, one can get a listing of the entrypoints found in the
-  accompanying signature. This is helpful for locating functions and
-  is automatically derived from the system sources, so it is alway
-  up-to-date.
+\item [\HOL{} structure information.]
+  For most structures in the \HOL{} source, one can get a listing of the entrypoints found in the accompanying signature.
+  This is helpful for locating functions and is automatically derived from the system sources, so it is always up-to-date.
 
-\item [Theory facts.] These are automatically derived from theory
-  files, so they are always up-to-date. The signature of each theory
-  is available (since theories are represented by structures in
-  \HOL{}). Also, each axiom, definition, and theorem in the theory can
-  be accessed by name in the help system; the theorem itself is given.
+\item [Theory facts.]
+  These are automatically derived from theory files, so they are always up-to-date.
+  The signature of each theory is available (since theories are represented by structures in \HOL{}).
+  Also, each axiom, definition, and theorem in the theory can be accessed by name in the help system.
+  As such theorems are pretty-printed into the corresponding \texttt{Theory.sig} file, the help system will find both the declaration in the signature (\eg, \ml{val~nm~:thm}), and the entry for that theorem in the comment-block.
 \end{description}
 
 Therefore the following example queries can be made:
@@ -202,10 +200,11 @@ Contrarily, the batch compiler will reject files having occurrences of \ml{load}
 In addition, simply referring to a theory's theorems using the `dot-notation' will make that theory an ancestor.
 For example,
 \begin{alltt}
-    val mytheorem = store_thm(
-      "mytheorem",
-      ``...``,
-      SIMP_TAC (srw_ss()) [ThirdAncestorTheory.important_lemma] ...);
+   Theorem mytheorem:
+     ...
+   Proof
+     simp[ThirdAncestorTheory.important_lemma] ...
+   QED
 \end{alltt}
 will record a dependency on \texttt{ThirdAncestoryTheory}, making it just as much an ancestor as the theories that have been explicitly \texttt{open}-ed elsewhere.
 

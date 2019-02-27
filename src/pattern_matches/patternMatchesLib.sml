@@ -102,12 +102,9 @@ fun does_conv_loop thm = let
 (***********************************************)
 
 val PAIR_EQ_COLLAPSE = prove (
-``(((FST x = (a:'a)) /\ (SND x = (b:'b))) = (x = (a, b)))``,
-Cases_on `x` THEN SIMP_TAC std_ss [] THEN METIS_TAC[])
-
-val PAIR_EQ_COLLAPSE = prove (
-``(((FST x = (a:'a)) /\ (SND x = (b:'b))) = (x = (a, b)))``,
-Cases_on `x` THEN SIMP_TAC std_ss [])
+  ``(((FST x = (a:'a)) /\ (SND x = (b:'b))) = (x = (a, b)))``,
+  STRUCT_CASES_TAC (SPEC ``x:'a#'b`` pairTheory.pair_CASES) THEN
+  SIMP_TAC std_ss []);
 
 fun is_FST_eq x t = let
   val (l, r) = dest_eq t
@@ -3061,8 +3058,7 @@ val rc_arg = ([], NONE)
 *)
 
 
-val neg_imp_rewr = prove (``(~A ==> B) = (~B ==> A)``,
-  Cases_on `A` THEN   Cases_on `B` THEN REWRITE_TAC[]);
+val neg_imp_rewr = prove (``(~A ==> B) = (~B ==> A)``, tautLib.PTAUT_TAC);
 
 fun nchotomy_PMATCH_ROW_COND_EX_CONSEQ_CONV_GEN rc_arg db col_heu tt = let
   (* destruct everything *)

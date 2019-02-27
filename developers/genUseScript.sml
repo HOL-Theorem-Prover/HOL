@@ -1,6 +1,6 @@
 
-use "../src/portableML/GetOpt.sig";
-use "../src/portableML/GetOpt.sml";
+use "../tools/Holmake/GetOpt.sig";
+use "../tools/Holmake/GetOpt.sml";
 use "../tools-poly/poly/Binaryset.sig";
 use "../tools-poly/poly/Binaryset.sml";
 use "../tools-poly/poly/Binarymap.sig";
@@ -167,9 +167,10 @@ fun main () =
                        handle e => die (General.exnMessage e)
             val result =
                 dowork {worklist =
-                        Binaryset.foldr (fn (s,acc) => ("toplevel", s) :: acc)
-                                        []
-                                        deps,
+                        Binarymap.foldr
+                          (fn (s,_,acc) => ("toplevel", s) :: acc)
+                          []
+                          deps,
                         acc = [], alreadySeen = Binaryset.empty String.compare}
           in
             print (#prelude config) ;

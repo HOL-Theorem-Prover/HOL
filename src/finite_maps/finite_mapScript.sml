@@ -1137,11 +1137,16 @@ val o_f_FAPPLY = Q.store_thm
  SRW_TAC [][o_f_DEF]);
 val _ = export_rewrites ["o_f_FAPPLY"]
 
-val o_f_FEMPTY = store_thm(
-  "o_f_FEMPTY",
-  ``f o_f FEMPTY = FEMPTY``,
-  SRW_TAC [][GSYM fmap_EQ_THM, FDOM_o_f])
-val _ = export_rewrites ["o_f_FEMPTY"]
+Theorem o_f_FEMPTY[simp]:
+  f o_f FEMPTY = FEMPTY
+Proof
+  SRW_TAC [][GSYM fmap_EQ_THM, FDOM_o_f]
+QED
+
+Theorem o_f_id[simp]:
+  !m. (\x.x) o_f m = m
+Proof rw [fmap_EXT]
+QED
 
 val FEVERY_o_f = store_thm (
   "FEVERY_o_f",
@@ -1218,6 +1223,13 @@ val FRANGE_FUNION = store_thm(
          METIS_TAC []) THEN
   ASM_SIMP_TAC (srw_ss() ++ boolSimps.DNF_ss ++ boolSimps.CONJ_ss)
                [FRANGE_DEF, FUNION_DEF, EXTENSION]);
+
+Theorem o_f_cong[defncong]:
+  !f fm f' fm'.
+     (fm = fm') /\ (!v. v IN FRANGE fm ==> (f v = f' v)) ==>
+     (f o_f fm = f' o_f fm')
+Proof SRW_TAC[boolSimps.DNF_ss][fmap_EXT,FRANGE_DEF]
+QED
 
 (*---------------------------------------------------------------------------
         Range restriction
@@ -2760,6 +2772,18 @@ val fevery_funion = Q.store_thm ("fevery_funion",
  rw [FEVERY_ALL_FLOOKUP, FLOOKUP_FUNION] >>
  BasicProvers.EVERY_CASE_TAC >>
  fs []);
+
+Theorem DISJOINT_FEVERY_FUNION:
+  DISJOINT (FDOM m1) (FDOM m2) ==>
+  (FEVERY P (FUNION m1 m2) <=> FEVERY P m1 /\ FEVERY P m2)
+Proof
+  rw[EQ_IMP_THM,fevery_funion]
+  \\ fs[FEVERY_ALL_FLOOKUP,FLOOKUP_FUNION,IN_DISJOINT] \\ rw[]
+  \\ first_x_assum match_mp_tac
+  \\ CASE_TAC
+  \\ fs[FLOOKUP_DEF]
+  \\ metis_tac[]
+QED
 
  (* Sorting stuff *)
 

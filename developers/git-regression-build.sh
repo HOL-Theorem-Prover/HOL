@@ -146,6 +146,7 @@ maybeBuild ()
  echo "Uname info (srm): $(uname -srm)" &&
  echo "Cpu: $cpu" &&
  echo "Memory: $mem MB" &&
+ echo "PATH: $PATH" &&
  echo "ML Implementation: $mlsys" &&
  echo "Started: "$(date +"%a, %d %b %Y %H:%M:%S %z") &&
  echo "Extra commandline arguments: $@" &&

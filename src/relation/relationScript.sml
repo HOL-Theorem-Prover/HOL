@@ -1848,6 +1848,15 @@ val transitive_RINTER = Q.store_thm(
   SRW_TAC [SatisfySimps.SATISFY_ss][transitive_def,RINTER]);
 val _ = export_rewrites ["transitive_RINTER"]
 
+Theorem RTC_RINTER:
+  !R1 R2 x y. RTC (R1 RINTER R2) x y ==> ((RTC R1) RINTER (RTC R2)) x y
+Proof
+  ntac 2 gen_tac >>
+  match_mp_tac RTC_INDUCT >>
+  asm_simp_tac(srw_ss())[RINTER] >>
+  METIS_TAC[RTC_CASES1]
+QED
+
 (* ----------------------------------------------------------------------
     relational complement
    ---------------------------------------------------------------------- *)

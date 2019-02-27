@@ -100,6 +100,9 @@ val _ = TRUE_ARITH
                else (if i < j then i + 1 else i − 1) − j) <
               if i < j then j − i else i − j``
 
+val _ = TRUE_ARITH "Existential in implication on left"
+                   “(2 < j ==> ?u. 0 < u ∧ u <= j − 1) ∧ 0 < j ==> 1 <= j”
+
 val _ = pr "Testing r-cache behaviour with CONJ_ss"
 val _ = let
   val t = ``(168 = 0) /\ (13 = 13) /\ (105 = 1)``
@@ -212,6 +215,33 @@ val _ = let
   val _ = require (check_result (uncurry (list_eq tac_result_eq))) testseq seq3
 in
   app delete_const ["c1", "c2", "c3", "foo"]
+end
+
+val _ = let
+  open numSimps boolSimps
+  val asm = “(2 < j ==> ?u. 0 < u /\ u <= j - 1) /\ 0 < j”
+  val g = mk_imp(asm, “1 <= j”)
+  val g' = “!u. (2 < j ==> 0 < u /\ u <= j - 1) /\ 0 < j ==> 1<= j”
+  fun tts t = "“" ^ term_to_string t ^ "”"
+  fun pr_goal (asl,g) = "([" ^ String.concatWith ", " (map term_to_string asl) ^
+                        "], " ^ tts g ^ ")"
+  fun pr_result (sgs, _) =
+      "[" ^ String.concatWith ", " (map pr_goal sgs) ^ "]"
+  fun test0 g =
+      (clear_arith_caches(); simp_tac (bool_ss ++ ARITH_ss) [] ([], g))
+  fun test (msg, g) =
+      (tprint msg;
+       require_msg
+         (check_result (fn (sgs, vfn) => null sgs andalso concl (vfn []) ~~ g))
+         pr_result
+         test0
+         g)
+
+in
+  app (ignore o test) [
+    ("Github issue 642 assumption handling (1)", g'),
+    ("Github issue 642 assumption handling (2)", g)
+  ]
 end
 
 val _ = Process.exit Process.success

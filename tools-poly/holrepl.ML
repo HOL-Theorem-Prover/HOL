@@ -17,6 +17,10 @@ fun printOut s =
 val prompt1 = PolyML.Compiler.prompt1
 val prompt2 = PolyML.Compiler.prompt2
 val timing = PolyML.Compiler.timing
+
+(* code here derived from Poly/ML's implementation of its REPL.  Poly/ML code
+   is all under LGPL; see required copy at doc/copyrights/lgpl2.1.txt
+*)
 fun topLevel diag {nameSpace, exitLoop, exitOnError, isInteractive, startExec,
                    endExec} =
   let
