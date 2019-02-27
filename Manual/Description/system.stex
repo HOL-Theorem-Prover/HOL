@@ -91,30 +91,27 @@ fails if
 but its arity is not $n$.
 \end{myenumerate}
 %
-For example, \ml{mk\_thy\_type\lb{}Tyop="bool", Thy="bool", Args=[]\rb{}}
+For example, \ml{mk\_thy\_type\lb{}Tyop="bool", Thy="min", Args=[]\rb{}}
 \index{truth values, in HOL logic@truth values, in \HOL{} logic}%
 \index{bool, the type in HOL logic@\ml{bool}, the type in \HOL{} logic}%
-evaluates to an \ML{} value of type \ml{term} representing the type
+evaluates to an \ML{} value of type \ml{hol\_type} representing the type
 \ty{bool}.
 %
 %\paragraph{Support for constructing types}
 
-Type constants may be
-bound to \ML\ values and need not be repeatedly constructed: \eg, the type built by
-\ml{mk\_thy\_type\lb{}Tyop="bool", Thy="bool", Args=[]\rb{}} is abbreviated
-by the \ML\ value \ml{bool}. Similarly, function types may be constructed
-with the infix \ML\ function \ml{-->}. A few common type variables
-have been constructed and bound to \ML{} identifers, \eg, \ml{alpha}
-is the type variable \ml{'a} and \ml{beta} is the type variable
-\ml{'b}.  Thus the \ML\ code \ml{alpha --> bool} is equal to, but much more concise than
+Type constants may be bound to \ML\ values and need not be repeatedly constructed: \eg, the type built by \ml{mk\_thy\_type\lb{}Tyop="bool", Thy="min", Args=[]\rb{}} is abbreviated by the \ML{} value \ml{bool}.
+Similarly, function types may be constructed with the infix \ML\ function \ml{-->}.
+A few common type variables
+have been constructed and bound to \ML{} identifers, \eg, \ml{alpha} is the type variable \ml{'a} and \ml{beta} is the type variable \ml{'b}.
+Thus the \ML{} code \ml{alpha --> bool} is equal to, but much more concise than
 %
-\begin{hol}
-\begin{verbatim}
-  mk_thy_type{Tyop="fun", Thy="min",
-              Args=[mk_vartype "'a",
-                    mk_thy_type{Tyop="bool", Thy="bool", Args=[]}}
-\end{verbatim}
-\end{hol}
+\begin{session}
+\begin{alltt}
+>> mk_thy_type{Tyop="fun", Thy="min",
+               Args=[mk_vartype "'a",
+                     mk_thy_type{Tyop="bool", Thy="min", Args=[]}]}
+\end{alltt}
+\end{session}
 
 %\paragraph{Taking types apart}
 
