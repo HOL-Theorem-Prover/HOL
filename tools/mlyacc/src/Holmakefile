@@ -66,7 +66,7 @@ verbose.uo: verbose.sml sigs.uo utils.uo
 	$(MOSMLC) -toplevel -c $(MLYLIBUIS) sigs.ui utils.ui $<
 
 yacc.uo: yacc.sml sigs.uo utils.uo absyn-sig.uo
-	$(MOSMLC) -toplevel -c $(if $(HAVE_BASIS2002),,basis2002.ui) $(MLYLIBUIS) sigs.ui utils.ui absyn-sig.ui $<
+	$(MOSMLC) -toplevel -c $(MLYLIBUIS) sigs.ui utils.ui absyn-sig.ui $<
 
 absyn-sig.uo: absyn-sig.sml sigs.uo utils.uo
 	$(MOSMLC) -toplevel -c $(MLYLIBUIS) sigs.ui utils.ui $<
@@ -84,4 +84,3 @@ link.uo: link.sml verbose.uo yacc-grm.uo hdr.uo yacc.lex.uo parse.uo \
 
 main.uo: main.sml link.uo
 	$(MOSMLC) -toplevel -c link.ui $<
-
