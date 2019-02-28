@@ -811,6 +811,20 @@ fs[bar2ed_def] >> rw[]
 >- (fs[unbar2_bar2_inv,GSYM bar2_def] >> rw[] )
 >- (fs[] >> metis_tac[])  )
 
+Theorem PUTM_universal_input:
+  ∀f. ∃g. ∀x. recPhi [f;x] = PUTM (g++(bar (n2bl x)))
+Proof
+  fs[PUTM_def] >> rw[] >> qexists_tac`bar (n2bl f)` >> rw[]
+  >- (fs[unbar2_bar2_inv,GSYM bar2_def] >> rw[])
+  >- (fs[bar2ed_def] >> metis_tac[])
+QED
+
+Theorem bar_length[simp]:
+  LENGTH (bar x) = 2 * LENGTH x + 1
+Proof
+  fs[bar_def]
+QED
+
 val prefix_free_subset = Q.store_thm("prefix_free_subset",
 `prefix_free s ∧ t ⊆ s ==> prefix_free t`,
 rw[prefix_free_def,SUBSET_DEF] )
@@ -838,8 +852,6 @@ Proof
   simp[the_lemma,normal_orderTheory.bnf_bnf_of]
 QED
 
-
-
 Theorem kolmog_exists:
   ∀x. ∃y. kolmog_complexity x PUTM = SOME y
 Proof
@@ -858,17 +870,71 @@ Proof
     (simp[EXTENSION] >> metis_tac[print_exists]) >> simp[]
 QED
 
-val univ_rf_def = Define`univ_rf U <=> ∀f. ∃g. ∀x. ∃y. recPhi [f;x] = U (g++y)`
+val univ_rf_def = Define`univ_rf U <=> ∀f. ∃g. ∀x. recPhi [f;x] = U (g++(n2bl x))`
+
+Theorem univ_rf_nonempty:
+  univ_rf U ==> {p | U p = SOME x} <> {}
+Proof
+  rw[univ_rf_def,EXTENSION] >> `∃m. Phi m 0 = SOME x` by (simp[Phi_def] >> 
+  qexists_tac`dBnum (fromTerm (K @@ church x))` >> simp[] >> qexists_tac`church x` >>
+  simp[the_lemma,normal_orderTheory.bnf_bnf_of]) >> `∃g. ∀x. Phi m x = U (g++(n2bl x))` by fs[]>>
+  `Phi m 0 = U (g++(n2bl 0))` by fs[] >> qexists_tac`g++(n2bl 0)` >> fs[]
+QED
+
+Theorem MIN_SET_ladd:
+  s <> {} ==>  a + MIN_SET {b | b ∈ s} = MIN_SET { a+b | b ∈ s}
+Proof
+  rw[] >> `MIN_SET s ∈ s ∧ ∀x. x ∈ s ⇒ MIN_SET s ≤ x` by fs[MIN_SET_LEM] >>
+  `(a+MIN_SET s) ∈ {a + b | b ∈ s}` by fs[] >> 
+  `{a + b | b ∈ s} <> {}` by (`{a + b | b ∈ s} = IMAGE (λx. a+x) s` by metis_tac[IMAGE_DEF]>>
+    fs[]) >>
+  `MIN_SET {a + b | b ∈ s} ∈ {a + b | b ∈ s} ∧ 
+    ∀x. x ∈ {a + b | b ∈ s} ⇒ MIN_SET {a + b | b ∈ s} ≤ x` by fs[MIN_SET_LEM] >>
+  `MIN_SET {a + b | b ∈ s} <= a + MIN_SET s` by fs[] >>
+  `∀x. x ∈ s ⇒ a + MIN_SET s ≤ a + x` by fs[] >>
+  `{a + b | b ∈ s} = IMAGE (λx. a+x) s` by metis_tac[IMAGE_DEF]>>fs[] >>
+  rw[] >> `MIN_SET s <= b` by fs[] >> `b <= MIN_SET s` by fs[] >> fs[]
+QED
 
 (* Theorems to prove *)
 
 (* Invariance theorem *)
 
+
 Theorem invariance_theorem:
-  univ_rf U ∧ univ_rf U' ==> ∃C. (kolmog_complexity x U) <= (kolmog_complexity x U') + (C U U')
+  ∀U T. univ_rf U ==> ∃C. ∀x. (kolmog_complexity x U) <= (kolmog_complexity x (λy. recPhi [T;bl2n y])) + (C U T)
 Proof
-  rw[]
+  rw[univ_rf_def,kolmog_complexity_def] >>  fs[univ_rf_def] >>
+  `∃g. ∀x. Phi T' x = U (g++ (n2bl x))` by fs[] >>
+  qexists_tac`λx y. SOME (LENGTH g)` >> rw[]
+  >- (`univ_rf U` by fs[univ_rf_def] >>`{p| U p = SOME x} <> {}` by fs[univ_rf_nonempty] >> fs[])
+  >- (`MIN_SET (IMAGE LENGTH {p | U p = SOME x}) ∈ 
+        IMAGE LENGTH ({p | U p = SOME x})` by fs[MIN_SET_LEM] >> fs[IMAGE_DEF] >>
+      qabbrev_tac`U_x = x'` >>
+      `MIN_SET (IMAGE LENGTH {y | U (g ++ y) = SOME x}) ∈ 
+        IMAGE LENGTH ({y | U (g ++ y) = SOME x})` by fs[MIN_SET_LEM] >> fs[IMAGE_DEF] >>
+      qabbrev_tac`T_x = x''` >>
+      `{LENGTH y | U (g ++ y) = SOME x} <> {}` by (fs[EXTENSION] >> qexists_tac`T_x`>>fs[])>>
+      qabbrev_tac`a=LENGTH g` >>
+      `a + MIN_SET {b | b ∈  {LENGTH y | U (g ++ y) = SOME x}} = 
+        MIN_SET {a + b | b ∈  {LENGTH y | U (g ++ y) = SOME x}}` by fs[MIN_SET_ladd] >>
+      fs[] >> 
+      `{LENGTH p | U p = SOME x} <> {}` by (`IMAGE LENGTH { p | U p = SOME x} ≠ ∅` by 
+        fs[IMAGE_EQ_EMPTY] >>
+        `{LENGTH p | p ∈ {q | U q= SOME x}} ≠ ∅` by metis_tac[IMAGE_DEF] >> fs[]) >>
+      `MIN_SET {LENGTH p | U p = SOME x} ∈ {LENGTH p | U p = SOME x} ∧ 
+        ∀q. q ∈ {LENGTH p | U p = SOME x} ⇒ MIN_SET {LENGTH p | U p = SOME x} ≤ q` by 
+        fs[MIN_SET_LEM] >> 
+      `MIN_SET {LENGTH x' | U x' = SOME x} ≤
+       MIN_SET {a + b | (∃y. b = LENGTH y ∧ U (g ++ y) = SOME x)}` suffices_by fs[]>>
+      irule SUBSET_MIN_SET >> rw[]
+      >- (fs[EXTENSION] >> qexists_tac`T_x`>>fs[])
+      >- (rw[SUBSET_DEF] >>qexists_tac`g++y`>>fs[Abbr`a`] )  )
 QED
+
+
+
+
 
 (* Kolmogorov kraft inequality *)
 
@@ -901,6 +967,7 @@ Proof
 QED
 
 (** up to here **)
+open churchoptionTheory;
 
 val OGENLIST_def = Define`OGENLIST f 0 = [] ∧ OGENLIST f (SUC n) = OGENLIST f n ++ (case f n of NONE => []| SOME r => [r])`
 
@@ -914,6 +981,56 @@ val Z_lam_def = Define`Z_lam M n = λx. case comp_count (mk_initial_state M 0) o
 				             else NONE) (4**n DIV 2) in 
                                             SOME (LEAST x.  ¬MEM x results ∧ LOG 2 x = 2*n)`
 
+
+val cap3_def = Define`cap3 = LAM "f" (
+  LAM "p" (
+    cpair @@ (cfst @@ VAR "p")
+          @@ (cpair @@ (cfst @@ (csnd @@ VAR "p")) 
+                    @@ (VAR "f" @@ (csnd @@ (csnd @@ VAR "p"))))
+  )
+)`
+
+Theorem FV_cap3[simp]: FV cap3 = {}
+Proof simp[EXTENSION,cap3_def]
+QED
+
+val dt0_def = Define`dt0 = LAM "p" (LAM "ms" (LAM "i" 
+ (cfilter 
+   @@ (B @@ VAR "p" @@ (B @@ csnd @@ csnd ) )
+   @@ (cmap @@ (cap3 @@ cforce_num) 
+            @@ (cfilter @@ (B @@ cbnf @@ (B @@ csnd @@ csnd) ))
+                        @@ (cmap @@ (LAM "pair" (
+                                       (LAM "m" (LAM "j" (
+                                          cpair @@ VAR "m" 
+                                                @@ (cpair 
+                                                      @@ VAR "j" 
+                                                      @@ (csteps @@ VAR "i" 
+								 @@ (cdAPP @@ VAR "m" @@ VAR "j")))))) @@
+ (cfst @@ VAR"pair") @@ (csnd @@ VAR "pair")))
+                                        @@ (VAR "ms") )  ) 
+ 
+ ) ) )`
+
+val dt_def = Define`dt = LAM "p" (LAM "ms" 
+ (cfindleast @@ (LAM "n" (dt0 @@ VAR "p" @@ VAR "ms" @@ VAR"n" @@ cB T @@ (K @@ (K @@ cB F)) ) )
+             @@ (LAM "n" (chd @@ (dt0 @@ VAR "p" @@ VAR "ms" @@ VAR"n")) ) ))`
+
+val size_dovetail_def = Define`size_dovetail0 P ms i = let results = map (λ(m,j). steps i (mk_initial_state m j) ms ); term_results = filter terminsted results;`
+
+(* Make fn which takes n and gives list of nats st log 2 nats = n *)
+
+val clog2list_def = Define`clog2list = `
+
+val find_m_of_size_n_gen_y_def = Define`find_m_of_size_n_gen_y = LAM "n" (LAM "y" 
+  (dt @@ (ceqnat @@ VAR "y")
+      @@ (cmap @@ (C @@ cpair @@ cnil)
+               @@ (ctabulate ) )) )`
+
+Theorem kol_dove:
+  (∀x. Phi f x = SOME (kolmog x)) ==> 
+Proof
+
+QED
 
 val _ = Q.store_thm("_",
 `∀n. n>const1 ==> ∃Z. tm_size Z <2*n ∧ `,
@@ -931,18 +1048,19 @@ val yMt_set_def = Define`yMt_set n = {(yi,Mi,t) | Mi = bl2n (arg_kolmog yi) ∧
 				              ∀t'. terminated (steps t' (mk_initial_state Mi 0)) ==>
 						t<=t'}`
 
-val big_T_def = Define`big_T n = MAX_SET (t_set n)`
+val big_T_def = Define`big_T n = MAX_SET (IMAGE SND (IMAGE SND (yMt_set n)))`
 
-val ub_tmax = Q.store_thm("ub_tmax",
-`big_T n > t_max n`,
-)
+Theorem ub_tmax: big_T n > tmax n
+Proof
+  fs[big_T_def,tmax_def]
+QED
 
 val ub_implies_halt = Q.store_thm("ub_implies_halt",
 `big_T > t_max (tm_size M') ==> (M',[]) ∈ HALT`,
 )
 
 val m_prime_implies_halt = Q.store_thm("m_prime_implies_halt",
-`(M',[]) ∈ HALT ==> (M,x)∈HALT`,
+`(primt_tm M,[]) ∈ HALT ==> (M,x)∈HALT`,
 )
 
 (* maybe want arg kolmog *)
