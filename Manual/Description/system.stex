@@ -642,11 +642,8 @@ For example, in the following session, we see that the type grammar used in the 
 \end{alltt}
 \end{session}
 
-Also, \verb+fun+, \verb+sum+, and \verb+prod+ have infix
-notation (\verb+->+), (\verb|+|), and (\verb+#+), respectively, with
-different binding strengths: \verb+#+ (with 70) binds stronger than
-\verb|+| (60), which  binds stronger than \verb+->+ (50). All postfix
-type operators (with 100) bind more strongly than the infixes.
+Also, \verb+fun+, \verb+sum+, and \verb+prod+ have infix notation (\verb+->+), (\verb|+|), and (\verb+#+), respectively, with different binding strengths: \verb+#+~(with 70) binds stronger than \verb|+|~(60), which  binds stronger than \verb+->+~(50).
+All postfix type operators bind more strongly than the infixes.
 
 The next session, in Figure~\ref{fig:term-grammar}, shows the
 (abbreviated) output from invoking the \ml{term\_grammar} function in
