@@ -9,7 +9,7 @@ structure rlLib :> rlLib =
 struct
 
 open HolKernel Abbrev boolLib aiLib
-mlFeature mlNearestNeighbor mlTreeNeuralNetwork
+mlFeature mlNearestNeighbor mlTreeNeuralNetwork numTheory
 
 val ERR = mk_HOL_ERR "rlProve"
 
@@ -63,7 +63,7 @@ fun narg_ge n (tm,pos) =
 
 fun mk_suc x = mk_comb (``SUC``,x);
 fun mk_add (a,b) = list_mk_comb (``$+``,[a,b]);
-val zero = ``0``;
+val zero = ``0:num``;
 fun mk_sucn n = funpow n mk_suc zero;
 fun mk_mult (a,b) = list_mk_comb (``$*``,[a,b]);
 
