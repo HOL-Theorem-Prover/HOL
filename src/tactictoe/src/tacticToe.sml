@@ -158,7 +158,7 @@ fun log_status tptpname r = case r of
    ProofError     => log_eval "  tactictoe: error"
  | ProofSaturated => log_eval "  tactictoe: saturated"
  | ProofTimeOut   => log_eval "  tactictoe: time out"
- | Proof s        => 
+ | Proof s        =>
    (
    log_eval ("  tactictoe found a proof:\n  " ^ s);
    log_eval ("Proven: " ^ tptpname)

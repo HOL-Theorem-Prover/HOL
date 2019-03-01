@@ -4,8 +4,8 @@ sig
 include Abbrev
 
 
-  val fof_write_pb : string -> 
-    ((string * string) * (string * string) list) -> unit 
+  val fof_write_pb : string ->
+    ((string * string) * (string * string) list) -> unit
 
   val fof_bushy_dir : string
   val fof_chainy_dir : string

@@ -40,7 +40,7 @@ sig
     tacdep : (goal, lbl list) Redblackmap.dict
     }
   (* global carrying the evaluation function (instantiated in tttUnfold) *)
-  val ttt_evalfun_glob : 
+  val ttt_evalfun_glob :
     (thmdata * tacdata -> string * string -> goal -> unit) option ref
   val ttt_hheval_flag : bool ref
   val ttt_ttteval_flag : bool ref

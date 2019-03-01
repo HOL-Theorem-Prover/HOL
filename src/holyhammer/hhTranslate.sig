@@ -8,19 +8,19 @@ include Abbrev
   val is_app : term -> bool
   val atoms : term -> term list
   val must_pred : term -> bool
-  
+
   (* new definitions using free variables *)
   val ATOM_CONV     : conv -> conv
   val LIFT_CONV     : (int * int) ref -> conv
   val RPT_LIFT_CONV : (int * int) ref -> term -> thm list
-  
+
   (* inserting apply operators *)
   val APP_CONV_ONCE      : conv
   val APP_CONV_STRIPCOMB : conv
   val APP_CONV_BV        : conv
   val APP_CONV_BV_REC    : conv
   val APP_CONV_MAX       : conv
-  val APP_CONV_MAX_REC   : conv  
+  val APP_CONV_MAX_REC   : conv
 
   (* translation *)
   val translate_nocache : (int * term) -> (term * term list)

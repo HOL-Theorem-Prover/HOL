@@ -1106,7 +1106,7 @@ fun ttt_parallel_eval ncores thyl =
   let
     val _ = ttt_ttteval_flag := true
     fun f thy = (ttt_rewrite_thy thy; ttt_record_thy thy)
-  in 
+  in
     parapp ncores f thyl; ttt_ttteval_flag := false
   end
 
@@ -1139,7 +1139,7 @@ fun load_sigobj () =
 end (* struct *)
 
 (* test
-  load "tttSetup"; load "tttUnfold"; 
+  load "tttSetup"; load "tttUnfold";
   open tttUnfold;
   load_sigobj ();
   val thyl = ancestry (current_theory ());
