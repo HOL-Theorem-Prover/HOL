@@ -250,14 +250,13 @@ fun add_alist_repr rs thm = let
 fun timeit msg f v = let
     val start = Portable.timestamp ()
     val r = f v
-    val time = Portable.timestamp () - start
+    val time = Time.-(Portable.timestamp (), start)
   in print ("Time to " ^ msg ^ ": " ^ Portable.time_to_string time ^ "\n");
     r end
 
 (* testing *)
 
 fun test_rs () = let
-    val _ = load "comparisonTheory";
     val thm1 = DB.fetch "comparison" "good_cmp_Less_irrefl_trans"
     val thm2 = DB.fetch "comparison" "num_cmp_good"
     val R_thm = MATCH_MP thm1 thm2
