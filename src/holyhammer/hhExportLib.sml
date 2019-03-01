@@ -220,9 +220,8 @@ val boolop_cval =
    Higher-order theorems in a first-order embedding
    ------------------------------------------------------------------------- *)
 
-fun mk_combin_thm thmname fvname =
+fun mk_combin_thm thm fvname =
   let
-    val thm = DB.fetch "combin" thmname
     val (tm0,defl) = translate_thm thm
     val _ = if null defl then () else raise ERR "mk_combin_thm" ""
     val oper = (fst o strip_comb o lhs o snd o strip_forall) tm0
@@ -233,9 +232,9 @@ fun mk_combin_thm thmname fvname =
     subst sub tm1
   end
 
-val i_thm = mk_combin_thm "I_THM" "combin_i"
-val k_thm = mk_combin_thm "K_THM" "combin_k"
-val s_thm = mk_combin_thm "S_THM" "combin_s"
+val i_thm = mk_combin_thm combinTheory.I_THM "combin_i"
+val k_thm = mk_combin_thm combinTheory.K_THM "combin_k"
+val s_thm = mk_combin_thm combinTheory.S_THM "combin_s"
 
 (* combin_axioml are already translated *)
 val combin_axioml = [("i_thm",i_thm),("k_thm",k_thm),("s_thm",s_thm)]
