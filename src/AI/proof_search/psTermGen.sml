@@ -124,6 +124,7 @@ fun gen_term_nmax nmax (ty,cset) =
    Improve upon Mini-Game 2. Faster training by online training.
    ------------------------------------------------------------------------- *)
 
+(*
 val tml = gen_term_nmax 100000 (bool,
 [``0``,``SUC``,``$+``,``$*``,
  ``$= :num -> num -> bool``]);
@@ -139,6 +140,6 @@ fun f tm =
 val tml' = filter f tml;
 
 val thml = mapfilter DECIDE tml';
-
+*)
 
 end (* struct *)
