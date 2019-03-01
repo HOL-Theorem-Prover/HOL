@@ -23,6 +23,14 @@ src/num/arith/src
 src/num
 src/num/termination
 
+[poly]src/AI
+[poly]src/AI/sml_inspection
+[poly]src/AI/machine_learning
+[poly]src/AI/proof_search
+[poly]src/AI/reinforcement_learning
+[poly]src/tactictoe/src
+[poly]src/holyhammer
+
 # A Poly/ML heap, numheap, is deposited in src/num/termination to
 # speed up the last few theories (sets, extra numbers, and lists) before
 # bossLib
