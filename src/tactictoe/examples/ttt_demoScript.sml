@@ -10,7 +10,7 @@ open HolKernel boolLib bossLib tacticToe;
 val _ = new_theory "ttt_demo";
 
 (* --------------------------------------------------------------------------
-   Record ancestries of the current theory. 
+   Record ancestries of the current theory.
    ------------------------------------------------------------------------- *)
 
 (* val () = tttUnfold.ttt_record (); *)
