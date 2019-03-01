@@ -22,7 +22,7 @@ type pos = int list
 val oper_compare = cpl_compare Term.compare Int.compare
 
 fun all_fosubtm tm =
-  let val (oper,argl) = strip_comb tm in 
+  let val (oper,argl) = strip_comb tm in
     tm :: List.concat (map all_fosubtm argl)
   end
 
@@ -93,13 +93,13 @@ fun LET_CONV_MIN tm =
 fun LET_CONV_AUX tm =
  (TRY_CONV (RATOR_CONV LET_CONV_AUX) THENC LET_CONV_MIN) tm
 
-fun is_let f = 
+fun is_let f =
   let val {Name,Thy,Ty} = dest_thy_const f in
     Name = "LET" andalso Thy = "bool"
   end
 
 fun LET_CONV tm =
-  if not (is_comb tm) then NO_CONV tm else 
+  if not (is_comb tm) then NO_CONV tm else
     let val f = fst (strip_comb tm) in
       if is_let f then NO_CONV tm else LET_CONV_AUX tm
     end

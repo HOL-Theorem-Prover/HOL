@@ -12,7 +12,7 @@ sig
   (* position *)
   val subst_pos : term * pos -> term -> term
   val find_subtm : term * pos -> term
-  val narg_ge : int -> term * pos -> bool  
+  val narg_ge : int -> term * pos -> bool
 
   (* arithmetic *)
   val mk_suc : term -> term

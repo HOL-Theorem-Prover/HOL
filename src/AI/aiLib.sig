@@ -95,7 +95,7 @@ sig
   val mk_fast_set : ('a * 'a -> order) -> 'a list -> 'a list
   val mk_string_set : string list -> string list
   val mk_term_set : term list -> term list
-  val mk_type_set : hol_type list -> hol_type list 
+  val mk_type_set : hol_type list -> hol_type list
   val mk_sameorder_set : ('a * 'a -> order) -> 'a list -> 'a list
   val dict_sort : ('a * 'a -> order) -> 'a list -> 'a list
   val topo_sort : (''a * ''a list) list -> ''a list
@@ -129,7 +129,7 @@ sig
   val writel_path : string -> string -> string list -> unit
   val debug_flag  : bool ref
   val debug_in_dir : string -> string -> string -> unit
-  val stream_to_string : 
+  val stream_to_string :
     string -> (TextIO.outstream -> unit) -> string list
 
   (* parse *)
@@ -171,7 +171,7 @@ sig
   val strip_type : hol_type -> (hol_type list * hol_type)
   val has_boolty : term -> bool
   val only_concl : thm -> term
-  
+
   (* printing *)
   val tts : term -> string
   val its : int -> string

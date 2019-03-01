@@ -21,9 +21,9 @@ fun debug s = debug_in_dir debugdir "mlTreeNeuralNetwork" s
 type vect = real vector
 type mat = real vector vector
 type opdict = ((term * int),nn) Redblackmap.dict
-type tnn = 
+type tnn =
   {opdict: opdict, headnn: nn, dimin: int, dimout: int}
-type dhtnn = 
+type dhtnn =
   {opdict: opdict, headeval: nn, headpoli: nn, dimin: int, dimout: int}
 
 (* -------------------------------------------------------------------------
@@ -78,8 +78,8 @@ fun string_of_tnn {opdict,headnn,dimin,dimout} =
   "head\n\n" ^ string_of_nn headnn ^ "\n\n\n" ^ string_of_opdict opdict
 
 fun string_of_trainset trainset =
-  let fun f (tm,rl) = 
-    tts tm ^ ": " ^ String.concatWith " " (map (rts o (approx 4)) rl) 
+  let fun f (tm,rl) =
+    tts tm ^ ": " ^ String.concatWith " " (map (rts o (approx 4)) rl)
   in
     String.concatWith "\n" (map f trainset)
   end
@@ -182,9 +182,9 @@ fun bp_tnn dim (fpdict,fpdatal) (tml,expectv) =
    ------------------------------------------------------------------------- *)
 
 fun infer_tnn (tnn: tnn) tm =
-  let 
+  let
     val tnn' = (#opdict tnn, #headnn tnn)
-    val (_,fpdatal) = fp_tnn tnn' (order_subtm tm) 
+    val (_,fpdatal) = fp_tnn tnn' (order_subtm tm)
   in
     vector_to_list (denorm_vect (#outnv (last fpdatal)))
   end
@@ -194,10 +194,10 @@ fun infer_tnn (tnn: tnn) tm =
    ------------------------------------------------------------------------- *)
 
 fun train_tnn_one tnn (tml,expectv) =
-  let 
+  let
     val tnn' = (#opdict tnn, #headnn tnn)
     val dim = #dimin tnn
-    val (fpdict,fpdatal) = fp_tnn tnn' tml 
+    val (fpdict,fpdatal) = fp_tnn tnn' tml
   in
     bp_tnn dim (fpdict,fpdatal) (tml,expectv)
   end
@@ -250,11 +250,11 @@ fun train_tnn_epoch_aux lossl tnn batchl = case batchl of
 fun train_tnn_epoch tnn batchl = train_tnn_epoch_aux [] tnn batchl
 
 fun out_tnn tnn tml =
-  let val (_,fpdatal) = fp_tnn (#opdict tnn, #headnn tnn) tml in 
-    (#outnv (last fpdatal)) 
+  let val (_,fpdatal) = fp_tnn (#opdict tnn, #headnn tnn) tml in
+    (#outnv (last fpdatal))
   end
 
-fun infer_mse tnn (tml,ev) = 
+fun infer_mse tnn (tml,ev) =
   mean_square_error (diff_rvect ev (out_tnn tnn tml))
 
 (* choose a uniform distribution on the difficulty to create ptrain *)
@@ -263,12 +263,12 @@ fun interval (step:real) (a,b) =
 
 (* 1000 examples (10 groups of 100) *)
 fun uniform_subset tnn pset =
-  let 
+  let
     val l = map_assoc (infer_mse tnn) pset
     fun test r (_,x) = x >= r andalso x < r + 0.1
     fun f r = map fst (filter (test r) l)
     val ll = map f (interval 0.01 (0.0,0.9))
-    val _ =  print_endline ("  repart: " ^ String.concatWith " " 
+    val _ =  print_endline ("  repart: " ^ String.concatWith " "
         (map (its o length) ll))
     fun g x = first_n 100 (shuffle x)
   in
@@ -285,7 +285,7 @@ fun train_tnn_nepoch n tnn bsize (ptrain,ptest) =
     val (newtnn,trainloss) = train_tnn_epoch tnn batchl
     val testloss = average_real (map (infer_mse tnn) ptest)
     fun nice r = pad 8 "0" (rts (approx 6 (r / 2.0)))
-    val _ = print_endline 
+    val _ = print_endline
       ("train: " ^ nice trainloss ^ " test: " ^ nice testloss)
   in
     train_tnn_nepoch (n - 1) newtnn bsize (ptrain,ptest)
@@ -313,9 +313,9 @@ fun train_tnn_schedule tnn bsize (ptrain,ptest) schedule =
 fun train_dhtnn_batch dhtnn batch1 batch2 =
   let
     val {opdict, headeval, headpoli, dimin, dimout} = dhtnn
-    val tnneval = {opdict = opdict, headnn = headeval, 
+    val tnneval = {opdict = opdict, headnn = headeval,
                    dimin = dimin, dimout = 1}
-    val tnnpoli = {opdict = opdict, headnn = headpoli, 
+    val tnnpoli = {opdict = opdict, headnn = headpoli,
                    dimin = dimin, dimout = dimout}
     val (bpdictl1,bpdatall1) =
       split (map (train_tnn_one tnneval) batch1)
@@ -328,7 +328,7 @@ fun train_dhtnn_batch dhtnn batch1 batch2 =
     val newnnl = map (update_opernn bsize opdict) (dlist bpdict)
     val newopdict = daddl newnnl opdict
   in
-    ({opdict = newopdict, headeval = newheadeval, headpoli = newheadpoli, 
+    ({opdict = newopdict, headeval = newheadeval, headpoli = newheadpoli,
      dimin = dimin, dimout = dimout},
      (loss1,loss2))
   end

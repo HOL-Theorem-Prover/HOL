@@ -33,7 +33,7 @@ datatype board = Board of pb | FailBoard
 
 fun mk_startsit pb = (true, Board pb)
 
-fun is_proven (tm,pos) = 
+fun is_proven (tm,pos) =
   null pos andalso let val (t1,t2) = dest_eq tm in t1 = t2 end
 
 fun status_of sit = case snd sit of
@@ -82,16 +82,16 @@ fun pb_of_thm thm = (thm,[])
 
 val nl0 = List.tabulate (10,I);
 val nl1 = cartesian_product nl0 nl0;
-val nl2 = cartesian_product nl1 nl1; 
+val nl2 = cartesian_product nl1 nl1;
 
 fun thm_of_n4 ((a,b),(c,d)) =
   let val e = a + b + c + d in
-    if e <= 9 
+    if e <= 9
     then SOME
-      let 
+      let
         val (at,bt,ct,dt) = (mk_sucn a, mk_sucn b, mk_sucn c, mk_sucn d)
         val lt = mk_add (at,bt)
-        val rt = mk_add (ct,dt) 
+        val rt = mk_add (ct,dt)
       in
         mk_eq (mk_add (lt,rt), mk_sucn e)
       end
@@ -107,7 +107,7 @@ val targetl_n4 = map mk_startsit (map (fn x => (x,[])) thml_n4);
 
 val dimin = 8;
 
-val operl = 
+val operl =
   let val operl' = (numtag,1) :: operl_of (``0 * SUC 0 + 0 = 0``) in
     mk_fast_set oper_compare operl'
   end
@@ -131,7 +131,7 @@ fun paramod eq (tm,pos) =
     val result = subst_pos (tmsig,pos) eqrsig
   in
     if result = tm orelse length (free_vars_lr result) > 0
-    then NONE 
+    then NONE
     else SOME result
   end
   handle HOL_ERR _ => NONE
@@ -142,7 +142,7 @@ fun paramod eq (tm,pos) =
 
 datatype move = Arg of int | Paramod of (int * bool)
 
-val movel = 
+val movel =
   map Arg [0,1] @
   List.concat (
   List.tabulate (length axl, fn i => [Paramod (i,true),Paramod (i,false)]))
@@ -158,9 +158,9 @@ fun narg tm = length (snd (strip_comb tm))
 fun argn_pb n (tm,pos) = SOME (tm,pos @ [n])
 
 fun paramod_pb (i,b) (tm,pos) =
-  let 
+  let
     val ax = Vector.sub (ax_vect,i)
-    val tmo = paramod (if b then ax else sym ax) (tm,pos) 
+    val tmo = paramod (if b then ax else sym ax) (tm,pos)
   in
     SOME (valOf tmo,[]) handle Option => NONE
   end
@@ -168,18 +168,18 @@ fun paramod_pb (i,b) (tm,pos) =
 fun available subtm (move,r:real) = case move of
     Arg i => (narg subtm >= i + 1)
   | Paramod (i,b) => if is_eq subtm then false else
-    let val ax = Vector.sub (ax_vect,i) in 
-      if b 
+    let val ax = Vector.sub (ax_vect,i) in
+      if b
       then can (unify (lhs ax)) subtm
       else can (unify (rhs ax)) subtm
     end
 
 fun filter_sit sit = case snd sit of
-    Board (tm,pos) => 
+    Board (tm,pos) =>
       let val subtm = find_subtm (tm,pos) in List.filter (available subtm) end
   | FailBoard => (fn l => [])
 
-fun apply_move move sit = 
+fun apply_move move sit =
   (true, case snd sit of Board pb =>
     Board (valOf (
       case move of

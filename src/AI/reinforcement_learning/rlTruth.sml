@@ -30,13 +30,13 @@ fun mk_ttset_ground (maxsize,maxvalue) ntarget =
     val tml1 = mapfilter (fn x => (eval_ground x,x)) tml0
     val tmld = dregroup Int.compare tml1
     val nl = List.tabulate (maxvalue + 1, I)
-    fun random_true _ = 
+    fun random_true _ =
       let val tml = dfind (random_elem nl) tmld in
         (mk_eq (random_elem tml, random_elem tml), [1.0])
       end
-    fun random_false _ = 
-      let 
-        val (n1,n2) = pair_of_list (first_n 2 (shuffle nl)) 
+    fun random_false _ =
+      let
+        val (n1,n2) = pair_of_list (first_n 2 (shuffle nl))
         val tml1 = dfind n1 tmld
         val tml2 = dfind n2 tmld
       in
@@ -46,7 +46,7 @@ fun mk_ttset_ground (maxsize,maxvalue) ntarget =
     (
     List.tabulate (ntarget div 2, random_true) @
     List.tabulate (ntarget div 2, random_false),
-    List.tabulate (ntarget div 2, random_true) @ 
+    List.tabulate (ntarget div 2, random_true) @
     List.tabulate (ntarget div 2, random_false)
     )
   end
@@ -54,11 +54,11 @@ fun mk_ttset_ground (maxsize,maxvalue) ntarget =
 
 end (* struct *)
 
-(* 
-app load ["rlTruth", "aiLib", "rlLib", "mlTreeNeuralNetwork", "psTermGen"]; 
+(*
+app load ["rlTruth", "aiLib", "rlLib", "mlTreeNeuralNetwork", "psTermGen"];
 open rlTruth aiLib rlLib mlTreeNeuralNetwork psTermGen;
 
-val maxsize = 9; val maxvalue = 4; val ntarget = 40000; 
+val maxsize = 9; val maxvalue = 4; val ntarget = 40000;
 val (trainset,testset) = mk_ttset_ground (maxsize,maxvalue) ntarget;
 
 val operl = mk_fast_set oper_compare (operl_of_term ``0 + SUC 0 * 0 = 0``);
@@ -73,19 +73,19 @@ val tm = mk_eq (mk_mult (mk_sucn 2, mk_sucn 2), mk_sucn 4);
 infer_tnn tnn tm; (* todo: scale this learning to arbitrary large terms *)
 
 (*
-select a distribution of a uniform distribution 
+select a distribution of a uniform distribution
 for each epoch? easy/middle/hard examples.
 *)
 
 (* could be in rlLib
   fun int_to_numtm =
   fun numtm_to_suctm =
-    let 
+    let
       val tml = [``0``,``1``,``2``,``3``,``4``,``5``,``6``,``7``,``8``,``9``]
       val
-  test class of the polynomial by looking at this table 
+  test class of the polynomial by looking at this table
   fun instx i tm = subst [{redex = ``x:num``, residue = i}] tm;
-  
+
   fun graph_of tm = map (eval_ground o C instx tm) inputl
 *)
 

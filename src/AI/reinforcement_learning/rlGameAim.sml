@@ -8,7 +8,7 @@
 structure rlGameAim :> rlGameAim =
 struct
 
-open HolKernel Abbrev boolLib aiLib rlLib smlLexer 
+open HolKernel Abbrev boolLib aiLib rlLib smlLexer
   mlTreeNeuralNetwork psMCTS
 
 val ERR = mk_HOL_ERR "rlGameAim"
@@ -46,33 +46,33 @@ val evarl =
 val evarltm =
   let fun f i = mk_var ("v" ^ int_to_string i ^ "_tm", alpha) in
     List.tabulate (max_evar,f)
-  end; 
+  end;
 
 val evarleq =
   let fun f i = mk_var ("v" ^ int_to_string i ^ "_eq", alpha) in
     List.tabulate (max_evar,f)
-  end; 
+  end;
 
 val evarlinter = evarltm @ evarleq
 
 fun rename_evarl f tm =
-  let val vl = filter (fn x => mem x evarl) (free_vars_lr tm) in 
+  let val vl = filter (fn x => mem x evarl) (free_vars_lr tm) in
     snd (strip_abs (rename_evarl_aux f (list_mk_abs (vl,tm))))
   end
 
 fun renameb_evarl f tm =
-  let val vl = filter (fn x => mem x evarlinter) (free_vars_lr tm) in 
+  let val vl = filter (fn x => mem x evarlinter) (free_vars_lr tm) in
     snd (strip_abs (rename_evarl_aux f (list_mk_abs (vl,tm))))
   end
 
 fun rename_skolem toptm =
-  let 
+  let
     val dref = ref (dempty Term.compare)
     fun loop tm = case dest_term tm of
-      VAR(Name,Ty) => 
-      if String.sub (Name,0) = #"v" then 
-        if dmem tm (!dref) then dfind tm (!dref) else 
-          let val newvar = mk_var ("c" ^ its (dlength (!dref)), Ty) in 
+      VAR(Name,Ty) =>
+      if String.sub (Name,0) = #"v" then
+        if dmem tm (!dref) then dfind tm (!dref) else
+          let val newvar = mk_var ("c" ^ its (dlength (!dref)), Ty) in
             dref := dadd tm newvar (!dref); newvar
           end
       else tm
@@ -90,20 +90,20 @@ val aim_eq = mk_var ("=",``:'a -> 'a -> 'a``)
 fun aim_mk_eq (a,b) = list_mk_comb (aim_eq, [a,b])
 fun aim_dest_eq tm = case strip_comb tm of
     (aim_eq, [a,b]) => (a,b)
-  | _ => raise ERR "aim_dest_eq" "" 
+  | _ => raise ERR "aim_dest_eq" ""
 
 val aim_conj = mk_var ("aim_conj",``:'a -> 'a -> 'a``)
 fun aim_mk_conj (a,b) = list_mk_comb (aim_conj, [a,b])
 
-fun thm_of_ivy l = case l of 
-    [Lterm (Lstring "TOP" :: _ :: Lstring _ :: t1 :: t2 :: m)] => 
+fun thm_of_ivy l = case l of
+    [Lterm (Lstring "TOP" :: _ :: Lstring _ :: t1 :: t2 :: m)] =>
     SOME (aim_mk_eq (term_of_lisp t1, term_of_lisp t2))
- (* | [Lterm (Lstring "TOP" :: _ :: Lstring _ :: t1 :: t2 :: m)] => 
+ (* | [Lterm (Lstring "TOP" :: _ :: Lstring _ :: t1 :: t2 :: m)] =>
     NONE *)
   | [Lterm (Lstring "INTERM" :: m)] => NONE
   | _ => raise ERR "thm_of_ivy" ""
 
-fun ax_of_ivy l = case l of 
+fun ax_of_ivy l = case l of
     [Lterm (Lstring "IVYKNOWN" :: _ :: t :: m)] => term_of_lisp t
   | _ => raise ERR "ax_of_ivy" ""
 
@@ -124,7 +124,7 @@ val axl = read_axl axfile;
 val ax_vect = Vector.fromList axl;
 
 val dir = "/home/thibault/big/aimleapinfoJan292019";
-val filel = 
+val filel =
   let fun f i = dir ^ "/trainingdatapart" ^ its i ^ ".lisp" in
     List.tabulate (10,f)
   end;
@@ -137,7 +137,7 @@ val axvarl =
 
 val aim_tag = mk_var ("aim_tag",``:'a->'a``)
 
-val operl = 
+val operl =
   let val operl_aux = List.concat (map operl_of_term (thml @ axl)) in
     (aim_tag,1) :: (aim_conj,2) :: map (fn x => (x,0)) (axvarl @ evarl) @
     mk_fast_set oper_compare operl_aux
@@ -157,7 +157,7 @@ datatype board = Board of pb | FailBoard
 
 fun mk_startsit pb = (true, Board pb)
 
-fun is_proven ((tm,_),_) = 
+fun is_proven ((tm,_),_) =
   let val (t1,t2) = aim_dest_eq tm in can (aim_unify t1) t2 end
 
 fun status_of sit = case snd sit of
@@ -182,8 +182,8 @@ fun aim_tag_pos (tm,pos) =
     list_mk_comb (oper, mapi f argl)
   end
 
-fun nntm_of_pb pb = case pb of 
-    ((tm,pos), SOME i) => 
+fun nntm_of_pb pb = case pb of
+    ((tm,pos), SOME i) =>
     aim_mk_conj (aim_tag_pos (tm,pos), mk_var ("A" ^ int_to_string i, alpha))
   | ((tm,_), NONE) => tm
 
@@ -197,7 +197,7 @@ fun nntm_of_sit sit = case snd sit of
 
 datatype move = ChooseAx of int | Arg0 | Arg1 | Arg2 | ParamodL | ParamodR
 
-val movel = List.tabulate (length axl, ChooseAx) @ 
+val movel = List.tabulate (length axl, ChooseAx) @
   [Arg0, Arg1, Arg2, ParamodL, ParamodR]
 
 fun filter_sit sit = case snd sit of
@@ -219,14 +219,14 @@ fun paramod eq (tm,pos) =
     val r = sub_at_pos tmsigma (pos,tsigma)
     val vl = filter (fn x => mem x evarlinter) (free_vars_lr r)
   in
-    if r = tmrenamed orelse length vl >= max_evar 
-    then NONE 
+    if r = tmrenamed orelse length vl >= max_evar
+    then NONE
     else SOME (renameb_evarl (fn x => "") r)
   end
   handle HOL_ERR _ => NONE
 
 fun argn_pb n pb = case pb of
-    ((tm,pos), SOME i) => if not (more_arg (n+1) (tm,pos)) then NONE else 
+    ((tm,pos), SOME i) => if not (more_arg (n+1) (tm,pos)) then NONE else
     SOME ((tm,pos @ [n]), SOME i)
   | _ => NONE
 
@@ -234,16 +234,16 @@ fun sym tm = aim_mk_eq (swap (aim_dest_eq tm))
 
 fun paramod_pb direction pb = case pb of
     ((tm,pos), SOME i) =>
-    let 
+    let
       val eq  = Vector.sub (ax_vect,i)
       val eq' = if direction then eq else sym eq
-      val tmo = paramod eq' (tm,pos) 
+      val tmo = paramod eq' (tm,pos)
     in
       SOME ((valOf tmo, []), NONE) handle Option => NONE
     end
   | _ => NONE
 
-fun chooseax_pb i pb = 
+fun chooseax_pb i pb =
   case pb of (x, NONE) => SOME (x, SOME i) | _ => NONE
 
 fun apply_move move sit = (true, case snd sit of Board pb =>
@@ -295,7 +295,7 @@ val gamespec : gamespec =
 end (* struct *)
 
 (*
-app load ["rlAim", "aiLib", "rlLib", "smlLexer", "mlTreeNeuralNetwork"]; 
+app load ["rlAim", "aiLib", "rlLib", "smlLexer", "mlTreeNeuralNetwork"];
 open rlAim aiLib rlLib smlLexer mlTreeNeuralNetwork;
 
 val dim = 10;

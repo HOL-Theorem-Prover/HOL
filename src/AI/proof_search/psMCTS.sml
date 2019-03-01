@@ -203,7 +203,7 @@ fun node_create_backup decay fevalpoli status_of tree (id,sit) =
       | Lose      => ((0.0,[]),Lose)
       | Undecided => (fevalpoli sit,Undecided)
     val node =
-      {pol=rescale_pol (wrap_poli poli), 
+      {pol=rescale_pol (wrap_poli poli),
        sit=sit, sum=0.0, vis=0.0, status=status}
     val tree1 = dadd id node tree
     val tree2 = backup_timer (backup decay tree1) (id,eval)
@@ -290,7 +290,7 @@ fun starttree_of decay ((status_of,apply_move),fep) startsit =
 
 fun mcts (nsim,decay,noiseb) ((status_of,apply_move),fep) starttree =
   let
-    val starttree_noise = 
+    val starttree_noise =
       if noiseb then add_root_noise starttree else starttree
     val fep_timed = fevalpoli_timer fep
     val status_of_timed = status_of_timer status_of
@@ -419,7 +419,7 @@ fun evalpoli_example tree =
     val dis1 = map_snd (fn x => if isSome x then valOf x else 0.0) dis0
     val tot  = sum_real (map snd dis1)
   in
-    if tot < 0.5 then NONE else 
+    if tot < 0.5 then NONE else
     let
       val eval = #sum root / #vis root
       val poli = map (fn (((move,_),_),r) => (move,r / tot)) dis1

@@ -11,7 +11,7 @@ include Abbrev
   type bpdata = {doutnv : vect, doutv  : vect, dinv : vect, dw : mat}
   type opdict = ((term * int),nn) Redblackmap.dict
   type tnn = {opdict: opdict, headnn: nn, dimin: int, dimout: int}
-  type dhtnn = 
+  type dhtnn =
     {opdict: opdict, headeval: nn, headpoli: nn, dimin: int, dimout: int}
 
   val oper_compare : (term * int) * (term * int) -> order
@@ -31,26 +31,26 @@ include Abbrev
 
   (* training *)
   val adaptive_flag : bool ref
-  
+
   val train_tnn_schedule :
-    tnn -> 
+    tnn ->
     int -> (term list * vect) list * (term list * vect) list ->
     (int * real) list ->
     tnn
 
-  val train_dhtnn_schedule : 
-    dhtnn -> 
+  val train_dhtnn_schedule :
+    dhtnn ->
     int -> (term list * vect) list * (term list * vect) list ->
-    (int * real) list -> 
+    (int * real) list ->
     dhtnn
-  
+
   (* prepare the dataset before training *)
   val trainset_info : (term * real list) list -> string
 
-  val prepare_trainset : (term * real list) list -> (term list * vect) list  
+  val prepare_trainset : (term * real list) list -> (term list * vect) list
 
   val prepare_train_tnn :
-    tnn -> 
+    tnn ->
     int -> (term * real list) list * (term * real list) list ->
     (int * real) list ->
     tnn

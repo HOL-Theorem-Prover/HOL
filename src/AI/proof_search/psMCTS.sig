@@ -55,9 +55,9 @@ sig
   val evalpoli_example : ('a,'b) tree -> (real * ('b * real) list) option
 
   (* choosing a big step *)
-  val print_distrib : ('b -> string) -> 
+  val print_distrib : ('b -> string) ->
     ((('b * real) * int list) * real) list -> unit
-  val select_bigstep : ('a,'b) tree -> int list -> 
+  val select_bigstep : ('a,'b) tree -> int list ->
     ('b choice * real) list * int list option
 
 

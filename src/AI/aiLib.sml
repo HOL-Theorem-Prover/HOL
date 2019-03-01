@@ -313,7 +313,7 @@ fun lisp_aux acc sl = case sl of
 
 fun lisp_of sl = fst (lisp_aux [] sl)
 
-fun lisp_lower_case s = 
+fun lisp_lower_case s =
   if String.sub (s,0) = #"\""
   then s
   else String.translate (Char.toString o Char.toLower) s
@@ -447,8 +447,8 @@ fun only_concl x =
 fun tts tm = case dest_term tm of
     VAR(Name,Ty)       => Name
   | CONST{Name,Thy,Ty} => Name
-  | COMB _ => 
-    let val (oper,argl) = strip_comb tm in 
+  | COMB _ =>
+    let val (oper,argl) = strip_comb tm in
       case argl of
         [a,b] => "(" ^ String.concatWith " " (map tts [a,oper,b]) ^ ")"
       | _ => "(" ^ String.concatWith " " (map tts (oper :: argl)) ^ ")"
@@ -508,8 +508,8 @@ fun write_file file s =
   end
 
 fun stream_to_string path f =
-  let val oc = TextIO.openOut path in 
-    f oc; TextIO.closeOut oc; readl path 
+  let val oc = TextIO.openOut path in
+    f oc; TextIO.closeOut oc; readl path
   end
 
 
@@ -713,12 +713,12 @@ fun shuffle l =
       map fst (dict_sort compare_rmin l')
   end
 
-fun random_elem l = hd (shuffle l) 
+fun random_elem l = hd (shuffle l)
   handle Empty => raise ERR "random_elem" "empty"
 
-fun random_int (a,b) = 
+fun random_int (a,b) =
   if a > b then raise ERR "random_int" ""
-  else a + random_elem (List.tabulate ((b - a + 1),I)) 
+  else a + random_elem (List.tabulate ((b - a + 1),I))
 
 fun cumul_proba (tot:real) l = case l of
     [] => []

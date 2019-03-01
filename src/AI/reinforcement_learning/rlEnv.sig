@@ -31,7 +31,7 @@ sig
     nntm_of_sit: 'a psMCTS.sit -> term
     }
 
-  val start_rl_loop : ('a, ''b, 'c) gamespec -> 'a psMCTS.sit list -> 
+  val start_rl_loop : ('a, ''b, 'c) gamespec -> 'a psMCTS.sit list ->
     (term * real list) list * (term * real list) list
 
 end

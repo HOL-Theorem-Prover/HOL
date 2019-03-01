@@ -24,21 +24,21 @@ datatype board = Board of pb | FailBoard
 
 val clause_compare = list_compare (cpl_compare Term.compare bool_compare)
 
-fun simplify_cl cl = 
+fun simplify_cl cl =
   let val d = dregroup Term.compare cl in
     if exists (fn (_,l) => length l > 1) (dlist d)
     then NONE
     else SOME (mk_sameorder_set (cpl_compare Term.compare bool_compare) cl)
   end
 
-fun simplify_pb pb = 
+fun simplify_pb pb =
   mk_sameorder_set clause_compare (List.mapPartial simplify_cl pb)
 
 fun mk_startsit pb = (true, Board pb)
 
 fun status_of sit = case snd sit of
-    Board pb => 
-      if null pb then Lose else 
+    Board pb =>
+      if null pb then Lose else
       (if exists null pb then Win else Undecided)
   | FailBoard => Lose
 
@@ -46,12 +46,12 @@ fun status_of sit = case snd sit of
    State representation
    ------------------------------------------------------------------------- *)
 
-val varl = 
+val varl =
   let fun f i = mk_var ("x" ^ int_to_string i, bool) in
     List.tabulate (3,f)
   end
 
-val operl = 
+val operl =
   mk_fast_set (cpl_compare Term.compare Int.compare)
     (map (fn x => (x,0)) varl @ operl_of_term ``(~x0 \/ x0 /\ x0)``);
 
@@ -63,7 +63,7 @@ fun nntm_of_cl cl = list_mk_disj (map mk_lit cl)
 fun nntm_of_pb pb = list_mk_conj (map nntm_of_cl pb)
 
 fun nntm_of_sit sit = case snd sit of
-    Board pb => if null pb then T else 
+    Board pb => if null pb then T else
                 if exists null pb then F else nntm_of_pb pb
   | FailBoard => T
 
@@ -79,7 +79,7 @@ fun rotate_pb pb = case pb of
     a :: m => if null m then NONE else SOME (m @ [a])
   | _ => NONE
 
-fun swap_pb pb = case pb of 
+fun swap_pb pb = case pb of
     a :: b :: m => SOME (b :: a :: m)
   | _ => NONE
 
@@ -88,7 +88,7 @@ fun rotate_cl pb = case pb of
   | _ => NONE
 
 fun resolve_pb pb = case pb of
-    ((a1,true) :: m1) :: ((a2,false) :: m2) :: m => 
+    ((a1,true) :: m1) :: ((a2,false) :: m2) :: m =>
      if a1 = a2
      then SOME (simplify_pb ((m1 @ m2) :: pb))
      else NONE
@@ -114,7 +114,7 @@ fun apply_move move sit = ((true,
    Target generation
    ------------------------------------------------------------------------- *)
 
-fun random_lit () = 
+fun random_lit () =
   let val x = random_elem varl in
     random_elem [(x,true), (x,false)]
   end
@@ -122,26 +122,26 @@ fun random_lit () =
 fun random_clause () =
   map random_lit (List.tabulate (random_int (1,2), fn _ => ()))
 
-fun random_problem () = 
+fun random_problem () =
   map random_clause (List.tabulate (random_int (2,5), fn _ => ()))
 
-fun mk_targetl n = 
-  let 
+fun mk_targetl n =
+  let
     val l = ref []
-    fun f () = 
-      let 
-        val pb = 
+    fun f () =
+      let
+        val pb =
           let fun loop () =
             let val pb' = simplify_pb (random_problem ()) in
               if (null pb' orelse exists null pb') then loop () else pb'
             end
-          in loop () end   
+          in loop () end
         val tm = mk_imp (nntm_of_pb pb, F)
       in
         if can (BasicProvers.PROVE []) tm
         then l := pb :: !l
         else ()
-      end 
+      end
   in
     while length (!l) < n do f ();
     !l

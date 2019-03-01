@@ -27,6 +27,6 @@ sig
   val gamespec : gamespec
 
   val targetl : board psMCTS.sit list
- 
+
 
 end

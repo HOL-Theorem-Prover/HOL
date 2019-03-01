@@ -55,8 +55,8 @@ val tmsize_flag = ref false
 fun bool_to_string b = if b then "true" else "false"
 
 fun summary_param targetl =
-  let 
-    val file = "File: " ^ (!logfile_glob) 
+  let
+    val file = "File: " ^ (!logfile_glob)
     val s0 = "number_of_targets: " ^ (its (length targetl))
     val s1 = "example_window: " ^ its (!exwindow_glob)
     val s2 = "big_steps: " ^ its (!bigsteps_glob)
@@ -86,12 +86,12 @@ fun mk_fep_dhtnn bstart gamespec dhtnn sit =
     val nntm = (#nntm_of_sit gamespec) sit
     fun f x = x / (1.0 + (Real.fromInt (term_size nntm) / 100.0))
   in
-    if bstart then 
-      ((if !tmsize_flag then f else I) 0.05, 
-      filter_sit (map_assoc (fn x => 1.0) movel)) 
+    if bstart then
+      ((if !tmsize_flag then f else I) 0.05,
+      filter_sit (map_assoc (fn x => 1.0) movel))
     else
     (
-    (if !tmsize_flag then f else I) (only_hd (infer_tnn etnn nntm)), 
+    (if !tmsize_flag then f else I) (only_hd (infer_tnn etnn nntm)),
     filter_sit (combine (movel, infer_tnn ptnn nntm))
     )
   end
@@ -103,11 +103,11 @@ fun mk_fep_dhtnn bstart gamespec dhtnn sit =
 val emptyallex = ([],[])
 
 fun complete_pol movel mrl =
-  let fun f move = assoc move mrl handle HOL_ERR _ => 0.0 in 
+  let fun f move = assoc move mrl handle HOL_ERR _ => 0.0 in
     map f movel
   end
 
-fun update_allex movel (nntm,(e,p)) (eex,pex) = 
+fun update_allex movel (nntm,(e,p)) (eex,pex) =
   ((nntm,[e]) :: eex, (nntm, complete_pol movel p) :: pex)
 
 fun update_allex_from_tree gamespec tree allex =
@@ -219,7 +219,7 @@ fun summary_wins gamespec allrootl =
    Adaptive difficulty
    ------------------------------------------------------------------------- *)
 
-fun eval_targetl gamespec dhtnn targetl = 
+fun eval_targetl gamespec dhtnn targetl =
   let
     val {opdict,headeval,headpoli,dimin,dimout} = dhtnn
     val etnn = {opdict=opdict,headnn=headeval,dimin=dimin,dimout=1}
@@ -235,12 +235,12 @@ fun interval (step:real) (a,b) =
   if a + (step / 2.0) > b then [b] else a :: interval step (a + step,b)
 
 fun choose_uniform gamespec dhtnn (targetl,ntarget) =
-  let 
+  let
     val l = eval_targetl gamespec dhtnn targetl
     fun f r = map fst (filter (fn (_,x) => x >= r andalso x < r + 0.1) l)
     val ll0 = map f (interval 0.1 (0.0,0.9))
-    val _ = 
-      summary ("  Repartition (self-assessed): " ^ String.concatWith " " 
+    val _ =
+      summary ("  Repartition (self-assessed): " ^ String.concatWith " "
                (map (its o length) ll0))
     fun g x = part_n (ntarget div 10) (shuffle x)
     val ll1 = map g ll0
@@ -259,7 +259,7 @@ fun concat_ex ((exE,exP),(allexE,allexP)) = (exE @ allexE, exP @ allexP)
 fun explore_f bstart (gamespec : ('a,''b,'c) gamespec) allex dhtnn targetl =
   let
     val pbspec =
-      ((#status_of gamespec, #apply_move gamespec), 
+      ((#status_of gamespec, #apply_move gamespec),
         mk_fep_dhtnn bstart gamespec dhtnn)
     val (result,t) =
       add_time (mapi (n_bigsteps (!bigsteps_glob) gamespec pbspec)) targetl
@@ -302,7 +302,7 @@ fun rl_loop (n,nmax) gamespec targetl allex =
     end
 
 fun start_rl_loop gamespec targetl =
-  let 
+  let
     val _ = summary_param targetl
     val allex = rl_start gamespec targetl
   in
