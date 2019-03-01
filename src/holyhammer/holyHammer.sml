@@ -144,8 +144,8 @@ fun clean_hh_goaltac_cache () = hh_goaltac_cache := dempty goal_compare
 
 (* Warning: limits the number of selected premises (even in hh_pb) *)
 fun export_to_atp premises cj atp =
-  let 
-    val new_premises = first_n (npremises_of atp) premises 
+  let
+    val new_premises = first_n (npremises_of atp) premises
     val namethml = thml_of_namel new_premises
   in
     fof_export_pb (provdir_of atp) (cj,namethml)
@@ -250,7 +250,7 @@ fun hh_pb_eval_thy atpl thy =
 
 fun hh_eval (thmdata,tacdata) (thy,name) goal =
   let val tptpname = escape ("thm." ^ thy ^ "." ^ name) in
-    eval_flag := true; 
+    eval_flag := true;
     eval_thy := current_theory ();
     mkDir_err hh_eval_dir;
     log_eval ("Theorem: " ^ tptpname);

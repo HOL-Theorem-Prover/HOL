@@ -83,7 +83,7 @@ fun write_pred oc tm =
     end
   else (os oc "p("; write_term oc tm; os oc ")")
 and write_binop oc s (l,r) =
-  (os oc "("; write_pred oc l; os oc (" " ^ s ^ " "); 
+  (os oc "("; write_pred oc l; os oc (" " ^ s ^ " ");
    write_pred oc r; os oc ")")
 and write_quant oc s (vl,bod) =
   (os oc s; os oc "[";
@@ -110,7 +110,7 @@ fun write_cj oc (name,cj) =
 fun write_tptp_file file axl cj =
   let val oc = TextIO.openOut file in
     (app (write_ax oc) axl; write_cj oc ("conjecture",cj))
-    handle Interrupt => (TextIO.closeOut oc; raise Interrupt);    
+    handle Interrupt => (TextIO.closeOut oc; raise Interrupt);
     TextIO.closeOut oc
   end
 

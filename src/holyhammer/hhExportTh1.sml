@@ -13,9 +13,9 @@ open HolKernel boolLib aiLib mlThmData hhTranslate hhExportLib
 val ERR = mk_HOL_ERR "hhExportThf"
 
 val thfpar = "thf("
-fun th1_translate_tm tm = 
+fun th1_translate_tm tm =
   rename_bvarl escape (list_mk_forall (free_vars_lr tm, tm))
-fun th1_translate_thm thm = 
+fun th1_translate_thm thm =
   (th1_translate_tm o concl o GEN_ALL  o DISCH_ALL) thm
 
 (* -------------------------------------------------------------------------
@@ -27,7 +27,7 @@ fun th1_type oc ty =
     let val {Args, Thy, Tyop} = dest_thy_type ty in
       if Thy = "min" andalso Tyop = "bool" then os oc "$o"
       else if Thy = "min" andalso Tyop = "fun" then
-        let val (tya,tyb) = pair_of_list Args in    
+        let val (tya,tyb) = pair_of_list Args in
           os oc "("; th1_type oc tya;
           os oc " > "; th1_type oc tyb; os oc ")"
         end
@@ -55,8 +55,8 @@ fun th1_forall_tyvarl_tm oc tm =
   end
 
 fun th1_forall_tyvarl_ty oc ty =
-  let 
-    val tvl = dict_sort Type.compare (type_vars ty) 
+  let
+    val tvl = dict_sort Type.compare (type_vars ty)
     fun f oc x = os oc (name_vartype x ^ ":" ^ ttype)
   in
     if null tvl then () else (os oc "!>["; oiter oc ", " f tvl; os oc "]: ")
@@ -102,7 +102,7 @@ fun th1_pred oc tm =
     let val (l,r) = dest_eq tm in
       if must_pred l orelse must_pred r
       then th1_binop oc "<=>" (l,r)
-      else (os oc "("; th1_term oc l; os oc " = ";  
+      else (os oc "("; th1_term oc l; os oc " = ";
             th1_term oc r; os oc ")")
     end
   else th1_term oc tm
@@ -117,11 +117,11 @@ fun th1_formula oc tm = (th1_forall_tyvarl_tm oc tm; th1_pred oc tm)
    Term-level logical operators equations
    ------------------------------------------------------------------------- *)
 
-fun th1_logicformula oc (thy,name) = 
-  let 
+fun th1_logicformula oc (thy,name) =
+  let
     val c = prim_mk_const {Thy = thy, Name = name}
     val tm = full_apply_const c
-    val vl = free_vars_lr tm 
+    val vl = free_vars_lr tm
   in
     th1_forall_tyvarl_tm oc tm; th1_quant_vl oc "!" vl;
     os oc "("; th1_term oc tm ; os oc " <=> "; th1_pred oc tm; os oc ")"
@@ -129,16 +129,16 @@ fun th1_logicformula oc (thy,name) =
 
 fun th1_logicdef oc (thy,name) =
   (
-  os oc (thfpar ^ escape ("logicdef." ^ name) ^ ",axiom,"); 
+  os oc (thfpar ^ escape ("logicdef." ^ name) ^ ",axiom,");
   th1_logicformula oc (thy,name); osn oc ")."
   )
 
 fun th1_quantdef oc (thy,name) =
-  let 
+  let
     val thm = assoc name [("!", FORALL_THM),("?", EXISTS_THM)]
     val tm = th1_translate_thm thm
   in
-    os oc (thfpar ^ escape ("quantdef." ^ name) ^ ",axiom,"); 
+    os oc (thfpar ^ escape ("quantdef." ^ name) ^ ",axiom,");
     th1_formula oc tm; osn oc ")."
   end
 
@@ -164,7 +164,7 @@ fun th1_cvdef oc c =
 fun th1_thmdef role oc (thy,name) =
   let
     val thm = DB.fetch thy name
-    val tm = th1_translate_thm thm 
+    val tm = th1_translate_thm thm
   in
     os oc (thfpar ^ (name_thm (thy,name)) ^ "," ^ role ^ ",");
     th1_formula oc tm; osn oc ")."
@@ -190,15 +190,15 @@ fun collect_tml (thmid,depl) =
   end
 
 fun th1_write_pb dir (thmid,depl) =
-  let 
+  let
     val _ = mkDir_err dir
     val file  = dir ^ "/" ^ name_thm thmid ^ ".p"
     val oc  = TextIO.openOut file
     val tml = collect_tml (thmid,depl)
     (* todo: remove unnecessary collection of first-order arity *)
-    val cval = mk_fast_set tma_compare 
+    val cval = mk_fast_set tma_compare
       (List.concat (cval_extra :: map collect_arity_noapp tml))
-    val tyopl =  mk_fast_set ida_compare 
+    val tyopl =  mk_fast_set ida_compare
       (List.concat (tyopl_extra :: map collect_tyop tml))
   in
     (
@@ -206,7 +206,7 @@ fun th1_write_pb dir (thmid,depl) =
     app (th1_cvdef oc) ((uniq_cvdef_arity o uniq_cvdef_mgc) cval);
     th1_thmdef_extra oc;
     app (th1_thmdef "axiom" oc) depl;
-    th1_thmdef "conjecture" oc thmid; 
+    th1_thmdef "conjecture" oc thmid;
     TextIO.closeOut oc
     )
     handle Interrupt => (TextIO.closeOut oc; raise Interrupt)
@@ -239,26 +239,26 @@ fun th1_export_chainy dir thyl =
     mkDir_err dir; app (write_thy_chainy dir thyorder) thyorder
   end
 
-(* 
-load "hhExportTh1"; open hhExportTh1; 
+(*
+load "hhExportTh1"; open hhExportTh1;
 val thmid = ("arithmetic","ADD1");
 val depl = valOf (hhExportLib.depo_of_thmid thmid);
 val dir = HOLDIR ^ "/src/holyhammer/export_th1_test";
 th1_write_pb dir (thmid,depl);
-th1_export_chainy ["bool"]; 
+th1_export_chainy ["bool"];
 *)
 
-(* 
-load "hhExportTh1"; open hhExportTh1; 
+(*
+load "hhExportTh1"; open hhExportTh1;
 load "tttUnfold"; tttUnfold.load_sigobj ();
 val thyl = ancestry (current_theory ());
 val bushydir = "/home/thibault/HOL/src/holyhammer/th1_bushy";
-th1_export_bushy bushydir thyl; 
+th1_export_bushy bushydir thyl;
 val chainydir = "/local1/thibault/th1_chainy";
 th1_export_chainy chainydir thyl;
 *)
 
-(* load "hhExportTh1"; load "hhExportTf1"; load "hhExportFof"; 
+(* load "hhExportTh1"; load "hhExportTf1"; load "hhExportFof";
   load "hhExportTf0"; load "hhExportTh0"; *)
 
 

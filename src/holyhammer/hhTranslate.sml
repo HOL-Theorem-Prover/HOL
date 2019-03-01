@@ -42,7 +42,7 @@ fun ELIM_LAMBDA_EQ tm =
     tm
   end
 
-fun PREP_CONV tm = 
+fun PREP_CONV tm =
   (REDEPTH_CONV ELIM_LAMBDA_EQ THENC REDEPTH_CONV BETA_CONV) tm
 
 fun prep_rw tm = rand (only_concl (QCONV PREP_CONV tm))
@@ -89,27 +89,27 @@ end
    Extract constants in a term
    ------------------------------------------------------------------------- *)
 
-fun is_app tm = is_var tm andalso fst (dest_var tm) = "app" 
+fun is_app tm = is_var tm andalso fst (dest_var tm) = "app"
 
-fun is_tptp_fv tm = 
+fun is_tptp_fv tm =
   is_var tm andalso Char.isLower (String.sub (fst (dest_var tm),0))
   andalso fst (dest_var tm) <> "app"
-fun is_tptp_bv tm = 
+fun is_tptp_bv tm =
   is_var tm andalso Char.isUpper (String.sub (fst (dest_var tm),0))
 
 fun all_fosubtm tm =
-  let val (oper,argl) = strip_comb tm in 
+  let val (oper,argl) = strip_comb tm in
     tm :: List.concat (map all_fosubtm argl)
   end
 
 (* ignores app *)
 fun collect_arity_noapp tm =
-  let 
+  let
     val tml1 = List.concat (map all_fosubtm (atoms tm))
     val tml2 = mk_term_set tml1
-    fun f subtm = 
+    fun f subtm =
       let val (oper,argl) = strip_comb subtm in
-        if is_tptp_fv oper orelse is_const oper 
+        if is_tptp_fv oper orelse is_const oper
         then SOME (oper,length argl)
         else NONE
       end
@@ -177,11 +177,11 @@ fun RPT_LIFT_CONV iref tm =
    ------------------------------------------------------------------------- *)
 
 fun APP_CONV_ONCE tm =
-  let 
+  let
     val (rator,rand) = dest_comb tm
     val f = mk_var ("f",type_of rator)
     val v = mk_var ("v",type_of rand)
-    val bod = mk_comb (f,v) 
+    val bod = mk_comb (f,v)
     val lam = list_mk_abs (free_vars_lr bod, bod)
     val app = mk_var ("app",type_of lam)
     val eq = mk_eq (app, lam)
@@ -202,12 +202,12 @@ fun APP_CONV_BV tm =
       if is_tptp_bv oper then APP_CONV_STRIPCOMB tm else NO_CONV tm
     end
 
-val APP_CONV_BV_REC = TRY_CONV (TOP_SWEEP_CONV APP_CONV_BV) THENC REFL 
+val APP_CONV_BV_REC = TRY_CONV (TOP_SWEEP_CONV APP_CONV_BV) THENC REFL
 
 (* -------------------------------------------------------------------------
-   Optional (included by default): 
-   Avoiding polymorphic higher-oder to exceeds max arity 
-   (e.g. I_2 I_1 1 => app (I_1 (I_0), 1) 
+   Optional (included by default):
+   Avoiding polymorphic higher-oder to exceeds max arity
+   (e.g. I_2 I_1 1 => app (I_1 (I_0), 1)
    ------------------------------------------------------------------------- *)
 
 fun strip_funty_aux ty =
@@ -234,13 +234,13 @@ fun max_arity c = length (snd (strip_funty (mgty_of c)))
 fun APP_CONV_MAX tm =
   if not (is_comb tm) then NO_CONV tm else
     let val (oper,argl) = strip_comb tm in
-      if is_const oper andalso length argl > max_arity oper  
-      then APP_CONV_ONCE tm 
+      if is_const oper andalso length argl > max_arity oper
+      then APP_CONV_ONCE tm
       else NO_CONV tm
     end
 
 val APP_CONV_MAX_REC = TRY_CONV (TOP_SWEEP_CONV APP_CONV_MAX) THENC REFL
- 
+
 (* -------------------------------------------------------------------------
    FOF Translation
    ------------------------------------------------------------------------- *)
@@ -271,7 +271,7 @@ fun translate tm =
     translate_cache_glob := dadd tm x (!translate_cache_glob); x
   end
 
-fun translate_thm thm = 
+fun translate_thm thm =
   let val tm = (concl o GEN_ALL o DISCH_ALL) thm in translate tm end
 
 (* -------------------------------------------------------------------------
