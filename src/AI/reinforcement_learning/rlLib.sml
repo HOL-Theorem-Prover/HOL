@@ -69,12 +69,12 @@ fun mk_mult (a,b) = list_mk_comb (``$*``,[a,b]);
 
 fun dest_suc x =
   let val (a,b) = dest_comb x in
-    if not (term_eq (a,``SUC``)) then raise ERR "" "" else b
+    if not (term_eq  a ``SUC``) then raise ERR "" "" else b
   end
 
 fun dest_add tm =
   let val (oper,argl) = strip_comb tm in
-    if not (term_eq (oper,``$+``)) then raise ERR "" "" else pair_of_list argl
+    if not (term_eq oper ``$+``) then raise ERR "" "" else pair_of_list argl
   end
 
 (* -------------------------------------------------------------------------

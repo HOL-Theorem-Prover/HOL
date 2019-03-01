@@ -38,9 +38,8 @@ fun tf1_type oc (ty,a) = case strip_funty_n a ty of
     (os oc "("; tf1_utype oc uty; os oc " > "; tf1_utype oc imty;
      os oc ")")
   | l =>
-    (os oc "((";
-     oiter oc " * " tf1_utype (butlast l); os oc ") > ";
-     tf1_utype oc (last l); os oc ")")
+    (os oc "("; oiter oc " * " tf1_utype (butlast l); os oc ") > ";
+     tf1_utype oc (last l))
 
 (* -------------------------------------------------------------------------
    TF1 quantifier
