@@ -10,9 +10,17 @@ val tytag = "TypeGrammarDeltas"
 
 fun ty_as_term ty = mk_var("x", ty)
 
+fun mk_kidty (knm as {Thy,Name}) =
+    case Type.op_arity {Thy = Thy, Tyop = Name} of
+        SOME i => mk_thy_type {Thy = Thy, Tyop = Name,
+                               Args = List.tabulate(i, fn _ => alpha)}
+      | NONE => raise ERROR "mk_kidty"
+                      ("Bad name: "^KernelSig.name_toString knm)
+
 fun tydelta_terms (d:type_grammar.delta) =
   case d of
       TYABBREV (_, ty, _) => [ty_as_term ty]
+    | NEW_TYPE kid => [ty_as_term (mk_kidty kid)]
     | _ => []
 
 val tydeltal_terms = List.foldl (fn (d,acc) => tydelta_terms d @ acc) []
@@ -56,6 +64,14 @@ fun tydelta_encode wtm tyd =
       | RM_TYABBREV s => "RTY" ^ StringData.encode s
   end
 
+fun check_tydelta (d: type_grammar.delta) =
+  case d of
+      NEW_TYPE knm => Type.uptodate_kname knm
+    | TYABBREV (_, ty, _) => Type.uptodate_type ty
+    | _ => true
+
+
+
 val (tyd_toData, tyd_fromData) = LoadableThyData.new {
       thydataty = tytag,
       merge = op@,
@@ -63,6 +79,24 @@ val (tyd_toData, tyd_fromData) = LoadableThyData.new {
       read = (fn rtm => Coding.lift (Coding.many (tydelta_reader rtm))),
       write = (fn wtm => String.concat o map (tydelta_encode wtm))
     }
+
+fun revise_tydata td =
+  case segment_data {thy = current_theory(), thydataty = tytag} of
+      NONE => ()
+    | SOME d =>
+      let
+        val deltas = valOf (tyd_fromData d)
+        val (ok,notok) = Lib.partition check_tydelta deltas
+      in
+        case notok of
+            [] => ()
+          | _ => (HOL_WARNING "GrammarDeltas" "revise_tydata"
+                              ("\n  TyGrammar-deltas:\n    " ^
+                               String.concatWith ", "
+                                 (map type_grammar.delta_toString notok)^
+                               "\n  invalidated by " ^ TheoryDelta.toString td);
+                  set_theory_data {thydataty = tytag, data = tyd_toData ok})
+      end
 
 fun record_tydelta d =
    write_data_update {thydataty = tytag, data = tyd_toData [d]}
@@ -149,9 +183,9 @@ fun hook td =
     case td of
         TheoryLoaded _ => () (* should ultimately change grammars *)
       | DelConstant _ => revise_data td
-      | DelTypeOp _ => revise_data td
+      | DelTypeOp _ => (revise_tydata td; revise_data td)
       | NewConstant _ => revise_data td
-      | NewTypeOp _ => revise_data td
+      | NewTypeOp _ => (revise_tydata td; revise_data td)
       | _ => ()
   end
 

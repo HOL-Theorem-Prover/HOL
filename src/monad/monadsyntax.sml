@@ -265,13 +265,14 @@ fun print_monads (tyg, tmg) backend sysprinter ppfns (p,l,r) depth t = let
       case v of
         NONE => syspr false (Top,Top,Top) action
       | SOME v => let
-          val bvars = free_vars v
+          val new_bvars = free_vars v
         in
-          addbvs bvars >>
           ublock PP.INCONSISTENT 0
-            (syspr true (Top,Top,Prec(100, "monad_assign")) v >>
+            (record_bvars new_bvars
+                          (syspr true (Top,Top,Prec(100, "monad_assign")) v) >>
              strn " " >> strn "<-" >> brk(1,2) >>
-             syspr false (Top,Prec(100, "monad_assign"),Top) action)
+             syspr false (Top,Prec(100, "monad_assign"),Top) action) >>
+          addbvs new_bvars
         end
   fun brk_bind binder arg1 arg2 =
       if binder = monad_bind then let

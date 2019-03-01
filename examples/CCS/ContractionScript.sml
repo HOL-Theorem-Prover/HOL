@@ -1402,7 +1402,7 @@ val OBS_contracts_SUBST_SUM_R = save_thm (
 
 (* this belongs to ContractionLib.sml *)
 fun C_TRANS thm1 thm2 =
-    if (rhs_tm thm1 = lhs_tm thm2) then
+    if (rhs_tm thm1 ~~ lhs_tm thm2) then
         MATCH_MP contracts_TRANS (CONJ thm1 thm2)
     else
         failwith "transitivity of contraction not applicable";

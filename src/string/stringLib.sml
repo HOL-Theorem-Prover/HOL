@@ -36,7 +36,7 @@ val char_EQ_CONV =
             val (c1, c2) = Lib.with_exn boolSyntax.dest_eq tm err
             val _ = is_char_lit c1 andalso is_char_lit c2 orelse raise err
          in
-            if c1 = c2 then Thm.SPEC c1 refl_clause_char else conv tm
+            if c1 ~~ c2 then Thm.SPEC c1 refl_clause_char else conv tm
          end
    end
 
@@ -54,8 +54,7 @@ local
       let
          val (c1, c2) = Lib.with_exn boolSyntax.dest_eq tm err
       in
-         if c1 = c2
-            then Thm.SPEC c1 refl_clause_string
+         if c1 ~~ c2 then Thm.SPEC c1 refl_clause_string
          else case (total_dest_cons c1, total_dest_cons c2) of
                  (SOME (a, b), NONE) => eqf_spec (b, a) not_cons_nil_s
                | (NONE, SOME (a, b)) => eqf_spec (b, a) not_nil_cons_s
@@ -64,7 +63,7 @@ local
                       val c_th = char_EQ_CONV (boolSyntax.mk_eq (a, c))
                       val th = Drule.SPECL [a, b, c, d] cons_11_s
                    in
-                      if boolSyntax.rhs (Thm.concl c_th) = boolSyntax.T
+                      if Teq (boolSyntax.rhs (Thm.concl c_th))
                          then Conv.RIGHT_CONV_RULE
                                  (Conv.FORK_CONV (Lib.K c_th, string_EQ_CONV')
                                   THENC bool_conv) th

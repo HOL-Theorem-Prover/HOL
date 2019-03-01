@@ -162,7 +162,7 @@ fun wrap_tactics_in name qtac goal =
         total_time replay_time
         (timeout (!ttt_recproof_time) final_tac) goal
     in
-      if gl = []
+      if null gl
         then (
              success_flag := SOME (gl,v);
              n_replay_glob := (!n_replay_glob + 1)

@@ -20,5 +20,5 @@ ml.tex: ml.stex ../Tools/umap ../Tools/polyscripter
 combin.tex: combin.stex ../Tools/umap ../Tools/polyscripter
 	../Tools/polyscripter ../Tools/umap < $< > $@
 
-proof-tools.tex: proof-tools.stex ../Tools/umap ../Tools/polyscripter
+proof-tools.tex: proof-tools.stex ../Tools/umap ../Tools/polyscripter ../../examples/dpll.sml
 	../Tools/polyscripter ../Tools/umap < $< > $@

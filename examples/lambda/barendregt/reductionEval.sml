@@ -290,7 +290,7 @@ fun unvarify_tac th (w as (asl,g)) = let
   val (strs, sets) =
       List.foldl binderLib.find_avoids (empty_tmset, empty_tmset) (g::asl)
   val finite_sets = List.mapPartial (total pred_setSyntax.dest_finite) asl
-  fun filterthis t = not (is_var t) orelse mem t finite_sets
+  fun filterthis t = not (is_var t) orelse tmem t finite_sets
   val sets = List.filter filterthis (HOLset.listItems sets)
   fun do_them (strs,sets) ys (w as (asl,g)) =
       case ys of
@@ -299,7 +299,7 @@ fun unvarify_tac th (w as (asl,g)) = let
           val newname = Lexis.gen_variant Lexis.tmvar_vary
                                           (goalnames w)
                                           (#1 (dest_var y) ^ "s")
-          val sets = List.filter (fn t => rand t <> y) sets
+          val sets = List.filter (fn t => rand t !~ y) sets
           val new_tac = let
             open pred_setSyntax
           in

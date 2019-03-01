@@ -302,10 +302,11 @@ datatype simpset =
        (VAR v1,VAR v2)   => (snd v1 = snd v2)
      | (LAMB t1,LAMB t2) => vperm(snd t1, snd t2)
      | (COMB t1,COMB t2) => vperm(fst t1,fst t2) andalso vperm(snd t1,snd t2)
-     | (x,y) => (x = y)
+     | (x,y) => aconv tm1 tm2
 
  fun is_var_perm(tm1,tm2) =
-     vperm(tm1,tm2) andalso set_eq (free_vars tm1) (free_vars tm2)
+     vperm(tm1,tm2) andalso
+     HOLset.equal(FVL [tm1] empty_tmset, FVL [tm2] empty_tmset)
 
  datatype munge_action = TH of thm | POP
 

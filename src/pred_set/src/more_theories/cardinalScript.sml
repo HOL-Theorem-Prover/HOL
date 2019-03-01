@@ -203,7 +203,7 @@ val _ = type_abbrev ("inf", ``:num + 'a``)
 val INFINITE_UNIV_INF = store_thm(
   "INFINITE_UNIV_INF",
   ``INFINITE univ(:'a inf)``,
-  simp[INFINITE_UNIV] >> qexists_tac `SUC ++ I` >>
+  simp[INFINITE_UNIV] >> qexists_tac `SUM_MAP SUC I` >>
   simp[sumTheory.FORALL_SUM] >> qexists_tac `INL 0` >> simp[]);
 val _ = export_rewrites ["INFINITE_UNIV_INF"]
 

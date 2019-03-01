@@ -97,7 +97,7 @@ fun order_subtm tm =
     fun cmp (a,b) = Term.compare (fst a, fst b)
     fun g x = mk_fast_set cmp (f x)
   in
-    topo_sort (g tm)
+    topo_sort Term.compare (g tm)
   end
 
 fun norm_vect v = Vector.map (fn x => 2.0 * (x - 0.5)) v
@@ -375,7 +375,7 @@ fun train_dhtnn_schedule dhtnn bsize (etrain,ptrain) schedule =
     end
 
 (* -------------------------------------------------------------------------
-   Training a double-headed tnn
+   Preparation of the training set
    ------------------------------------------------------------------------- *)
 
 fun prepare_trainset trainset =
@@ -408,10 +408,6 @@ fun prepare_train_tnn randtnn bsize (trainset,testset) schedule =
     print_endline ("  NN Time: " ^ rts nn_tim);
     tnn
   end
-
-
-
-
 
 
 

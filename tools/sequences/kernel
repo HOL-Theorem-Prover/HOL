@@ -2,6 +2,7 @@
 !tools/Holmake/tests/depchainloop
 !tools/Holmake/tests/recursiveclean
 !tools/Holmake/tests/wildcard
+!tools/Holmake/tests/dashn_works
 tools/set_mtime
 tools/mlyacc/mlyacclib
 [mosml]src/portableML/mosml
@@ -25,7 +26,7 @@ src/1
 (otknl)src/opentheory/postbool
 src/proofman
 [poly]bin/hol.bare
-src/proofman/tests
+!src/proofman/tests
 !tools/Holmake/tests/holpathdb/proj2
 !tools/Holmake/tests/holpathdb/proj2/proj2A
 !tools/Holmake/tests/depchain1/dir3
@@ -47,4 +48,7 @@ src/proofman/tests
 !tools/Holmake/tests/indepchildren
 !tools/Holmake/tests/empty_script
 !tools/Holmake/tests/deps_of_depthys
+!tools/Holmake/tests/gh604
+!tools/Holmake/tests/ignore_errors/j1
+[poly]!tools/Holmake/tests/ignore_errors/j4
 !src/1/theory_tests

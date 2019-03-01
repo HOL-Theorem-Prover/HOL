@@ -14,7 +14,13 @@
 structure PGspec :> PGspec =
 struct
 
-open HolKernel Parse boolLib pairSyntax PairedLambda
+open HolKernel boolLib pairSyntax PairedLambda
+
+structure Parse = struct
+  open Parse
+  val (Type,Term) = parse_from_grammars pairTheory.pair_grammars
+end
+open Parse
 
 val PAIR = pairTheory.PAIR;
 

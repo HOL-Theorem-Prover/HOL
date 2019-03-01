@@ -121,7 +121,7 @@ fun find_mode_update cpsr_with_x =
     let
         val (update_indicator, [constant, rest]) = strip_comb cpsr_with_x
     in
-        if (update_indicator = ``ARMpsr_M_fupd``)
+        if (update_indicator ~~ ``ARMpsr_M_fupd``)
         then constant
         else find_mode_update rest
     end;

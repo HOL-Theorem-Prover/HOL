@@ -124,10 +124,10 @@ fun arm_remove_annotations c =
   String.translate (fn x => if x = #"?" then "" else implode [x]) c
 
 fun arm_cond_code tm =
-  (* carry    *) if tm = ``aS1 psrC`` then ("cs","cc") else
-  (* zero     *) if tm = ``aS1 psrZ`` then ("eq","ne") else
-  (* negative *) if tm = ``aS1 psrN`` then ("mi","pl") else
-  (* overflow *) if tm = ``aS1 psrV`` then ("vs","vc") else fail()
+  (* carry    *) if tm ~~ ``aS1 psrC`` then ("cs","cc") else
+  (* zero     *) if tm ~~ ``aS1 psrZ`` then ("eq","ne") else
+  (* negative *) if tm ~~ ``aS1 psrN`` then ("mi","pl") else
+  (* overflow *) if tm ~~ ``aS1 psrV`` then ("vs","vc") else fail()
 
 fun arm_encode_instruction s = (prog_armLib.arm_enc s,4)
 

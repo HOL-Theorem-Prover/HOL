@@ -15,8 +15,9 @@ fun write_code_to_file filename th = let
   val vs = map (fn (x,y) => (if is_var x then ``0:num`` else cdr (cdr x),y)) vs
   val vs = map (fn (x,y) => (Arbnum.toInt (numSyntax.dest_numeral x),y)) vs
   val vs = sort (fn (x,_) => fn (y:int,_) => x <= y) vs
-  fun del_repetations (x::y::xs) = if x = y then del_repetations (x::xs) else
-                                     x :: del_repetations (y::xs)
+  fun del_repetations (x::y::xs) =
+      if pair_eq equal aconv x y then del_repetations (x::xs)
+      else x :: del_repetations (y::xs)
     | del_repetations zs = zs
   val vs = del_repetations vs
   fun no_duplicates (x::y::xs) = if fst x = fst y then fail() else no_duplicates (y::xs)

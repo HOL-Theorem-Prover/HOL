@@ -18,8 +18,8 @@ open HolKernel Parse boolLib metisLib;
      Make sure that sumTheory and oneTheory is loaded.
  ---------------------------------------------------------------------------*)
 
-local open sumTheory oneTheory in end;
-open BasicProvers
+local open sumTheory oneTheory relationTheory in end;
+open simpLib BasicProvers
 
 (* ---------------------------------------------------------------------*)
 (* Create the new theory                                                *)
@@ -484,6 +484,12 @@ val IS_SOME_BIND = Q.store_thm ("IS_SOME_BIND",
   OPTION_CASES_TAC “x:'a option” THEN
   REWRITE_TAC [IS_SOME_DEF, OPTION_BIND_def]) ;
 
+Theorem OPTION_BIND_SOME:
+  !opt:'a option. OPTION_BIND opt SOME = opt
+Proof
+  GEN_TAC >> OPTION_CASES_TAC “opt: 'a option” >> REWRITE_TAC[OPTION_BIND_def]
+QED
+
 val OPTION_IGNORE_BIND_def = new_definition(
   "OPTION_IGNORE_BIND_def",
   ``OPTION_IGNORE_BIND m1 m2 = OPTION_BIND m1 (K m2)``);
@@ -634,6 +640,31 @@ THEN OPTION_CASES_TAC ``x:'a option``
 THEN ASM_REWRITE_TAC(OPTREL_def::option_rws)
 THEN PROVE_TAC[])
 val _ = export_rewrites["OPTREL_refl"]
+
+Theorem OPTREL_eq[simp]
+  `OPTREL (=) = (=)`
+  (REWRITE_TAC[FUN_EQ_THM] >> rpt strip_tac >> Q.RENAME_TAC [‘OPTREL _ x y’] >>
+   MAP_EVERY OPTION_CASES_TAC [“x:'a option”, “y:'a option”] >>
+   simpLib.SIMP_TAC bool_ss (OPTREL_def::option_rws) >> METIS_TAC[]);
+
+Theorem OPTREL_SOME:
+  (!R x y. OPTREL R (SOME x) y <=> ?z. (y = SOME z) /\ R x z) /\
+  (!R x y. OPTREL R x (SOME y) <=> ?z. (x = SOME z) /\ R z y)
+Proof
+  SRW_TAC[][OPTREL_def]
+QED
+
+val OPTREL_O_lemma = Q.prove(
+  `!R1 R2 l1 l2.
+     OPTREL (R1 O R2) l1 l2 <=> ?l3. OPTREL R2 l1 l3 /\ OPTREL R1 l3 l2`,
+  SRW_TAC [][OPTREL_def,EQ_IMP_THM,relationTheory.O_DEF,PULL_EXISTS] >>
+  FULL_SIMP_TAC (srw_ss()) [PULL_EXISTS] >> METIS_TAC[]);
+
+Theorem OPTREL_O:
+  !R1 R2. OPTREL (R1 O R2) = OPTREL R1 O OPTREL R2
+Proof
+  SRW_TAC[][FUN_EQ_THM,OPTREL_O_lemma,relationTheory.O_DEF]
+QED
 
 (* ----------------------------------------------------------------------
     some (Hilbert choice "lifted" to the option type)

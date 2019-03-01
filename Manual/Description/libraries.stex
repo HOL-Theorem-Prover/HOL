@@ -376,17 +376,11 @@ practice to only use alphanumerics in the names of constants, and to
 then use functions like \ml{overload\_on} and \ml{add\_rule} to create
 Unicode syntax for the underlying constant.
 
-If users have fonts with the appropriate repertoire of characters to
-display their syntax, and are confident that any other users of their
-theories will too, then this is perfectly reasonable.  However, if
-users wish to retain some backwards compatibility with pure ASCII
-syntax, they can do so by defining a pure ASCII syntax first.  Having
-done this, they can create a Unicode version of the syntax with the
-function \ml{Unicode.unicode\_version}.  Then, while the trace
-variable \ml{"Unicode"} is $0$, the ASCII syntax will be used for
-parsing and printing.  If the trace is set to $1$, then the Unicode
-syntax will also work in the parser, and the pretty-printer will
-prefer it when terms are printed.
+If users have fonts with the appropriate repertoire of characters to display their syntax, and are confident that any other users of their theories will too, then this is perfectly reasonable.
+However, if users wish to retain some backwards compatibility a provide a pure ASCII syntax, they can do so by defining that pure ASCII syntax first.
+Having done this, they can create a Unicode version of the syntax with the function \ml{Unicode.unicode\_version}.
+Then, either Unicode or ASCII characters can be used to input the syntax, and, while the trace variable \ml{"PP.avoid_unicode"} is $1$, the ASCII syntax will be used for printing.
+If the trace is set to $0$, then again, both syntaxes can be used to \emph{write} the terms, but the pretty-printer will prefer the Unicode syntax when the terms are printed by the system.
 
 For example, in \ml{boolScript.sml}, the Unicode character for logical
 and (\texttt{$\land$}), is set up as a Unicode alternative for
@@ -1132,7 +1126,6 @@ terms, antiquoting a type into a term quotation requires the use of
 >>+ ``!P:^pred. P x ==> Q x``;
 
 >> ``!P:^(ty_antiq pred). P x ==> Q x``;
-> val it = `!P. P x ==> Q x` : term
 \end{alltt}
 \end{session}
 %
@@ -2106,14 +2099,15 @@ added in future sessions when the current theory is reloaded.
 \end{alltt}
 \end{session}
 
+\index{theorem attributes}
 Alternatively, the user may also flag theorems directly when using \ml{store\_thm} or \ml{save\_thm} by appending the \ml{simp} attribute to the name of the theorem.
 Thus:
 \begin{session}
 \begin{verbatim}
-val useful_rwt = store_thm(
-  "useful_rwt[simp]",
-  ...term...,
-  ...tactic...);
+Theorem useful_rwt[simp]:
+  ...term...
+Proof ...tactic...
+QED
 \end{verbatim}
 \end{session}
 is a way of avoiding having to write a call to \ml{export\_rewrites}.

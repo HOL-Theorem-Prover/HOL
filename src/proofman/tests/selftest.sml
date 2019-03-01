@@ -64,7 +64,9 @@ val _ = let
     val gstk = flatn gstk 2 ; val 5 = length (top_goals gstk) ;
     val gstk = expand_list (ALLGOALS (FIRST_ASSUM ACCEPT_TAC)) gstk ;
     val th = extract_thm gstk ;
-  in if (hyp th, concl th) = g then OK() else die "FAILED" end ;
+  in if pair_eq (list_eq aconv) aconv (hyp th, concl th) g then OK()
+     else die "FAILED"
+  end ;
 
 fun mkstk0 t tacopt =
   let

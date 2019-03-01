@@ -157,8 +157,8 @@ in
                                       [mk_x64_mem128 (a, d)]
                               |  _ => err ()
                             )
-                       | (l, t) => ( t = MEM_tm orelse err ()
-                                   ; List.map mk_x64_MEM l )
+                       | (l, t) => (t ~~ MEM_tm orelse err ()
+                                    ; List.map mk_x64_MEM l)
                 in
                    (p, l @ q)
                 end)]

@@ -118,18 +118,20 @@ val SC_SYMMETRIC = store_thm(
   ``!R. symmetric (SC R)``,
   REWRITE_TAC [symmetric_def, SC_DEF] THEN MESON_TAC []);
 
-val TC_TRANSITIVE = Q.store_thm("TC_TRANSITIVE",
- `!R:'a->'a->bool. transitive(TC R)`,
-REWRITE_TAC[transitive_def,TC_DEF]
+Theorem TC_TRANSITIVE[simp]:
+  !R:'a->'a->bool. transitive(TC R)
+Proof
+ REWRITE_TAC[transitive_def,TC_DEF]
  THEN REPEAT STRIP_TAC
- THEN RES_TAC THEN ASM_MESON_TAC[]);
-val _ = export_rewrites ["TC_TRANSITIVE"]
+ THEN RES_TAC THEN ASM_MESON_TAC[]
+QED
 
-val RTC_INDUCT = store_thm(
-  "RTC_INDUCT",
-  ``!R P. (!x. P x x) /\ (!x y z. R x y /\ P y z ==> P x z) ==>
-          (!x (y:'a). RTC R x y ==> P x y)``,
-  REWRITE_TAC [RTC_DEF] THEN MESON_TAC []);
+Theorem RTC_INDUCT:
+  !R P. (!x. P x x) /\ (!x y z. R x y /\ P y z ==> P x z) ==>
+        (!x (y:'a). RTC R x y ==> P x y)
+Proof
+  REWRITE_TAC [RTC_DEF] THEN MESON_TAC []
+QED
 
 val TC_RULES = store_thm(
   "TC_RULES",
@@ -1845,6 +1847,15 @@ val transitive_RINTER = Q.store_thm(
   `transitive R1 /\ transitive R2 ==> transitive (R1 RINTER R2)`,
   SRW_TAC [SatisfySimps.SATISFY_ss][transitive_def,RINTER]);
 val _ = export_rewrites ["transitive_RINTER"]
+
+Theorem RTC_RINTER:
+  !R1 R2 x y. RTC (R1 RINTER R2) x y ==> ((RTC R1) RINTER (RTC R2)) x y
+Proof
+  ntac 2 gen_tac >>
+  match_mp_tac RTC_INDUCT >>
+  asm_simp_tac(srw_ss())[RINTER] >>
+  METIS_TAC[RTC_CASES1]
+QED
 
 (* ----------------------------------------------------------------------
     relational complement

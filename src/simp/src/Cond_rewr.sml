@@ -131,10 +131,11 @@ fun ac_term_ord(tm1,tm2) =
      of (VAR v1,VAR v2)   => (snd v1 = snd v2)
       | (LAMB t1,LAMB t2) => vperm(snd t1, snd t2)
       | (COMB t1,COMB t2) => vperm(fst t1,fst t2) andalso vperm(snd t1,snd t2)
-      | (x,y) => (x = y)
+      | (x,y) => aconv tm1 tm2
 
    fun is_var_perm(tm1,tm2) =
-       vperm(tm1,tm2) andalso set_eq (free_vars tm1) (free_vars tm2)
+       vperm(tm1,tm2) andalso
+       HOLset.equal(FVL [tm1] empty_tmset, FVL [tm2] empty_tmset)
 
    fun COND_REWR_CONV th bounded =
       let val eqn = snd (strip_imp (concl th))
@@ -178,7 +179,7 @@ fun ac_term_ord(tm1,tm2) =
                  end
             val condition_thms = map solver' conditions
             val disch_eqn = rev_itlist (C MP) condition_thms conditional_eqn
-            val final_thm = if (l = tm) then disch_eqn
+            val final_thm = if aconv l tm then disch_eqn
                             else TRANS (ALPHA tm l) disch_eqn
             val _ = if null conditions then
               trace(if isperm then 2 else 1, REWRITING(tm,th))
@@ -291,11 +292,11 @@ fun IMP_EQ_CANON (thm,bnd) = let
           let
             val (l,r) = dest_eq conc
           in
-            if l = truth_tm then
-              if r = false_tm then [(PROVE_HYP undisch_thm TF_EQ_F, bnd)]
+            if aconv l truth_tm then
+              if aconv r false_tm then [(PROVE_HYP undisch_thm TF_EQ_F, bnd)]
               else [(CONV_RULE (REWR_CONV EQ_SYM_EQ) undisch_thm, bnd)]
-            else if l = false_tm then
-              if r = truth_tm then [(PROVE_HYP undisch_thm FT_EQ_F,bnd)]
+            else if aconv l false_tm then
+              if aconv r truth_tm then [(PROVE_HYP undisch_thm FT_EQ_F,bnd)]
               else [(CONV_RULE (REWR_CONV EQ_SYM_EQ) undisch_thm, bnd)]
             else
               let
@@ -303,11 +304,13 @@ fun IMP_EQ_CANON (thm,bnd) = let
                   not (is_var t) orelse type_of t <> bool orelse
                   t IN hypfvs orelse bnd <> BoundedRewrites.UNBOUNDED
                 val base =
-                    if null (subtract (free_vars r) (free_varsl (l::hyp thm)))
+                    if HOLset.isEmpty
+                         (HOLset.difference(FVL [r] empty_tmset,
+                                            FVL (l::hyp thm) empty_tmset))
                        andalso safelhs l
                     then undisch_thm
                     else
-                      (trace(1,IGNORE("rewrite with bad vars (adding \
+                      (trace(1,IGNORE("rewrite with existential vars (adding \
                                       \EQT version(s))",thm));
                        EQT_INTRO undisch_thm)
                 val flip_eqp = let val (l,r) = dest_eq (concl base)
@@ -332,9 +335,9 @@ fun IMP_EQ_CANON (thm,bnd) = let
           else
             [(EQF_INTRO undisch_thm, bnd)]
         end
-      else if conc = truth_tm then
+      else if conc ~~ truth_tm then
         (trace(2,IGNORE ("pointless rewrite",thm)); [])
-      else if conc = false_tm then [(MP x_eq_false undisch_thm, bnd)]
+      else if aconv conc false_tm then [(MP x_eq_false undisch_thm, bnd)]
       else if is_comb conc andalso same_const (rator conc) Abbrev_tm then let
           val rnd = rand conc
           fun funeqconv t =
@@ -366,12 +369,15 @@ end handle e => WRAP_ERR("IMP_EQ_CANON",e);
 
 
 fun QUANTIFY_CONDITIONS (thm, bnd) =
-    if is_imp (concl thm) then let
-        val free_in_eqn = (free_vars (snd(dest_imp (concl thm))))
-        val free_in_thm = (free_vars (concl thm))
-        val free_in_hyp = free_varsl (hyp thm)
-        val free_in_conditions =
-            subtract (subtract free_in_thm free_in_eqn) free_in_hyp
+    if is_imp (concl thm) then
+      let
+        fun subtract p = HOLset.difference p
+        val free_in_eqn = FVL [snd(dest_imp (concl thm))] empty_tmset
+        val free_in_thm = FVL [concl thm] empty_tmset
+        val free_in_hyp = FVL (hyp thm) empty_tmset
+        val free_in_conditions0 =
+            subtract (subtract(free_in_thm, free_in_eqn), free_in_hyp)
+        val free_in_conditions = HOLset.listItems free_in_conditions0
         fun quantify fv = CONV_RULE (HO_REWR_CONV LEFT_FORALL_IMP_THM) o GEN fv
         val quan_thm = itlist quantify free_in_conditions thm
       in
@@ -425,7 +431,7 @@ fun IMP_CANON acc thl =
               in
                 IMP_CANON acc ((ants, newth, bnd) :: ths)
               end
-            else if c = boolSyntax.F then
+            else if aconv c boolSyntax.F then
               IMP_CANON ((ants, NOT_INTRO th, bnd) :: acc) ths
               (* we want [.] |- F theorems to rewrite to [.] |- x = F,
                  done above in IMP_EQ_CANON, but we don't want this to

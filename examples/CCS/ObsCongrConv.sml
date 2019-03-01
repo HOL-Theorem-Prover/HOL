@@ -75,7 +75,7 @@ fun OC_TOP_DEPTH_CONV (c: conv) t =
 fun OC_SUBST thm tm = let
     val (ti, ti') = args_thm thm
 in
-    if (tm = ti) then thm
+    if tm ~~ ti then thm
     else if is_prefix tm then
         let val (u, t) = args_prefix tm;
             val thm1 = OC_SUBST thm t
@@ -118,12 +118,12 @@ fun OC_LHS_SUBST1_TAC thm :tactic =
   fn (asl, w) => let
       val (opt, t1, t2) = args_equiv w
   in
-      if (opt = ``OBS_CONGR``) then
+      if opt ~~ ``OBS_CONGR`` then
           let val thm' = OC_SUBST thm t1;
               val (t1', t') = args_thm thm' (* t1' = t1 *)
           in
-              if (t' = t2) then
-                  ([], fn [] => OC_TRANS thm' (ISPEC t' OBS_CONGR_REFL))
+              if (t' ~~ t2) then
+                  ([], fn _ => OC_TRANS thm' (ISPEC t' OBS_CONGR_REFL))
               else
                   ([(asl, ``OBS_CONGR ^t' ^t2``)], fn [thm''] => OC_TRANS thm' thm'')
           end
@@ -193,17 +193,17 @@ fun TAU1_CONV tm =
  *)
 fun TAU2_CONV tm =
   if is_sum tm then
-      let val (tm1, tm2) = args_sum tm
-      in
-          if is_prefix tm2 then
-              let val (u, t) = args_prefix tm2
-              in
-                  if is_tau u andalso tm1 = t then
-                      ISPEC t TAU2
-                  else failwith "TAU2_CONV"
-              end
+    let
+      val (tm1, tm2) = args_sum tm
+    in
+      if is_prefix tm2 then
+        let val (u, t) = args_prefix tm2
+        in
+          if is_tau u andalso tm1 ~~ t then ISPEC t TAU2
           else failwith "TAU2_CONV"
-      end
+        end
+      else failwith "TAU2_CONV"
+    end
   else failwith "TAU2_CONV";
 
 (* Conversion for the application of the tau-law TAU3:
@@ -221,13 +221,13 @@ fun TAU3_CONV tm =
                   if is_prefix tm1 then
                       let val (u', tm3) = args_prefix tm1
                       in
-                          if u = u' andalso is_sum tm3 then
+                          if u ~~ u' andalso is_sum tm3 then
                               let val (t1, tm4) = args_sum tm3
                               in
                                   if is_prefix tm4 then
                                       let val (u'', tm5) = args_prefix tm4
                                       in
-                                          if is_tau u'' andalso tm5 = t2 then
+                                          if is_tau u'' andalso tm5 ~~ t2 then
                                               ISPECL [u, t1, t2] TAU3
                                           else failwith "TAU3_CONV"
                                       end

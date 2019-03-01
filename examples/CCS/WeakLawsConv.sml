@@ -50,11 +50,11 @@ val OE_EXP_THM_TAC :tactic =
     fn (asl, w) => let
         val (opt, t1, t2) = args_equiv w
     in
-        if opt = mk_const ("WEAK_EQUIV", type_of opt) then
+        if opt ~~ mk_const ("WEAK_EQUIV", type_of opt) then
             let val thm = MATCH_MP STRONG_IMP_WEAK_EQUIV (STRONG_EXP_THM_CONV t1);
                 val (t1', t') = args_thm thm (* t1' = t1 *)
             in
-                if (t' = t2) then
+                if (t' ~~ t2) then
                     ([], fn [] => OE_TRANS thm (ISPEC t' WEAK_EQUIV_REFL))
                 else
                     ([(asl, ``WEAK_EQUIV ^t' ^t2``)], fn [thm'] => OE_TRANS thm thm')
@@ -111,12 +111,12 @@ fun OE_SUB_CONV (c: conv) tm =
           val (t1', t1'') = args_thm thm1 (* t1' = t1, t2' = t2 *)
           and (t2', t2'') = args_thm thm2
       in
-          if (t1' = t1'') andalso (t2' = t2'') then
+          if t1' ~~ t1'' andalso t2' ~~ t2'' then
               ISPEC (mk_sum (t1', t2')) WEAK_EQUIV_REFL
-          else if (t1' = t1'') then
+          else if t1' ~~ t1'' then
               ISPEC t1' (MATCH_MP WEAK_EQUIV_SUBST_SUM_L
                                   (LIST_CONJ [thm2, STABLE_CONV t2', STABLE_CONV t2'']))
-          else if (t2' = t2'') then
+          else if t2' ~~ t2'' then
               ISPEC t2' (MATCH_MP WEAK_EQUIV_SUBST_SUM_R
                                   (LIST_CONJ [thm1, STABLE_CONV t1', STABLE_CONV t1'']))
           else
@@ -162,8 +162,7 @@ fun OE_TOP_DEPTH_CONV (c: conv) t =
 fun OE_SUBST thm tm = let
     val (ti, ti') = args_thm thm
 in
-    if (tm = ti) then
-        thm
+    if tm ~~ ti then thm
     else if is_prefix tm then
         let val (u, t) = args_prefix tm;
             val thm1 = OE_SUBST thm t
@@ -177,12 +176,12 @@ in
             val (t1', t1'') = args_thm thm1 (* t1' = t1, t2' = t2 *)
             and (t2', t2'') = args_thm thm2
         in
-            if (t1' = t1'') andalso (t2' = t2'') then
+            if (t1' ~~ t1'') andalso (t2' ~~ t2'') then
                 ISPEC (mk_sum (t1', t2')) WEAK_EQUIV_REFL
-            else if (t1' = t1'') then
+            else if (t1' ~~ t1'') then
                 ISPEC t1' (MATCH_MP WEAK_EQUIV_SUBST_SUM_L
                                     (LIST_CONJ [thm2, STABLE_CONV t2', STABLE_CONV t2'']))
-            else if (t2' = t2'') then
+            else if (t2' ~~ t2'') then
                 ISPEC t2' (MATCH_MP WEAK_EQUIV_SUBST_SUM_R
                                     (LIST_CONJ [thm1, STABLE_CONV t1', STABLE_CONV t1'']))
             else
@@ -221,11 +220,11 @@ fun OE_LHS_SUBST1_TAC thm :tactic =
   fn (asl, w) => let
       val (opt, t1, t2) = args_equiv w
   in
-      if opt = mk_const ("WEAK_EQUIV", type_of opt) then
+      if opt ~~ mk_const ("WEAK_EQUIV", type_of opt) then
           let val thm' = OE_SUBST thm t1;
               val (t1', t') = args_thm thm' (* t1' = t1 *)
           in
-              if (t' = t2) then
+              if (t' ~~ t2) then
                   ([], fn [] => OE_TRANS thm' (ISPEC t' WEAK_EQUIV_REFL))
               else
                   ([(asl, ``WEAK_EQUIV ^t' ^t2``)], fn [thm''] => OE_TRANS thm' thm'')

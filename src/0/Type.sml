@@ -146,6 +146,7 @@ fun op_arity {Thy,Tyop} =
     case KernelSig.peek(typesig,{Thy=Thy,Name=Tyop}) of
       SOME (id, a) => SOME a
     | NONE => NONE
+fun uptodate_kname knm = isSome (KernelSig.peek(typesig,knm))
 
 (*---------------------------------------------------------------------------
        Declared types in a theory segment

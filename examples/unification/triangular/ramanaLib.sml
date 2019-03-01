@@ -46,7 +46,7 @@ fun SPEC_ALL_TAC except (g as (asl,t)) = let
 val fvs = free_vars t in
 (MAP_EVERY ID_SPEC_TAC
  (filter
-  (not o (C mem (map (parse_in_context fvs) except)))
+  (not o (C tmem (map (parse_in_context fvs) except)))
   fvs))
 end g
 val spec_all_tac = SPEC_ALL_TAC

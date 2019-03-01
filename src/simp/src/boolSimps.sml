@@ -230,7 +230,7 @@ fun COND_ABS_CONV tm = let
   infix |-> THENC
   val {Bvar=v,Body=bdy} = dest_abs tm
   val {cond,larm=x,rarm=y} = Rsyntax.dest_cond bdy
-  val b = assert (not o Lib.mem v o free_vars) cond
+  val b = assert (not o op_mem aconv v o free_vars) cond
   val xf = mk_abs{Bvar=v,Body=x}
   val yf = mk_abs{Bvar=v,Body=y}
   val th1 = INST_TYPE [alpha |-> type_of v, beta |-> type_of x] COND_ABS
