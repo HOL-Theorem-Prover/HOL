@@ -182,6 +182,26 @@ handle e => raise (wrap_exn "IndDefLib" "Hol_mono_reln" e);
 
 fun xHol_reln name q = Hol_mono_reln name (!the_monoset) (term_of q)
 
+fun destl_forall l = let
+  val ldf = map dest_forall l
+in
+  (fst (hd ldf), map snd ldf)
+end
+
+fun Hol_list_reln name ql = let
+  val toql = map term_of ql
+  val (tml, locll) = (map fst toql, map snd toql)
+  val locl = List.concat locll
+  val (rel, l) = destl_forall tml
+  val conj_tm = list_mk_conj l
+  val new_rel = mk_var (name, type_of rel)
+  val new_rel_conj = subst [rel |-> new_rel] conj_tm
+  val reln_tm = (new_rel_conj, locl)
+in
+  Hol_mono_reln name (!the_monoset) reln_tm
+end
+handle e => raise (wrap_exn "IndDefLib" "Hol_list_reln" e);
+
 fun name_from_def t = let
   open boolSyntax
   val cs = strip_conj t
