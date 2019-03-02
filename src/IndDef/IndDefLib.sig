@@ -7,6 +7,7 @@ sig
   val term_of_absyn : Absyn.absyn -> term * locn.locn list
 
   val name_from_def : term -> string
+  val destl_forall  : term list -> term * term list
 
   val Hol_reln      : term quotation -> thm * thm * thm
   val xHol_reln     : string -> term quotation -> thm * thm * thm
