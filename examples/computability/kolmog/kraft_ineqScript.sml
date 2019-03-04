@@ -938,10 +938,19 @@ QED
 
 (* Kolmogorov kraft inequality *)
 
-Theorem kolmog_kraft:
-  REAL_SUM_IMAGE (\s.   (2 rpow (real_neg &((kolmog s))))) UNIV <=1
+Theorem kolmog_prefix_free:
+  prefix_free { x| ∃y. (kolmog y = LENGTH x) ∧ ( (PUTM x) = SOME y) }
 Proof
-  
+  fs[kolmog_def,kolmog_complexity_def,prefix_free_def] >> rw[] >> 
+  `prefix_free {x | (∃y. PUTM x = SOME y)}` by fs[PUTM_prefix_free] >> fs[prefix_free_def]
+QED
+
+Theorem kolmog_kraft:
+  REAL_SUM_IMAGE (\s. (2 rpow (real_neg &((LENGTH s))))) {q | q ∈ {x| ∃y. (kolmog y = LENGTH x) ∧ ((PUTM x) = SOME y) } ∧ LENGTH q <n} <=1
+Proof
+  `prefix_free {x| ∃y. (kolmog y = LENGTH x) ∧ ((PUTM x) = SOME y) }` by fs[kolmog_prefix_free]>>
+  `bls_size {x| ∃y. (kolmog y = LENGTH x) ∧ ((PUTM x) = SOME y) } n <= 1` by fs[kraft_ineq1]>>
+  fs[bls_size_def]
 QED
 
 (*    *)
