@@ -307,13 +307,17 @@ end (* struct *)
 app load ["rlGameArithGround","rlEnv"];
 open aiLib psMCTS rlGameArithGround rlEnv;
 
-logfile_glob := "arith_uniform_1";
+logfile_glob := "arith_2";
 ngen_glob := 100;
 ntarget_glob := 100;
-exwindow_glob := 20000;
+exwindow_glob := 40000;
 bigsteps_glob := 20;
-nsim_glob := 400;
-val allex = start_rl_loop gamespec targetl_n4;
+nsim_glob := 1600;
+val maxsize = 8;
+val maxvalue = 2;
+val ntarget = 4000;
+val targetl = mk_targetl (maxsize,maxvalue) ntarget;
+val allex = start_rl_loop gamespec targetl;
 
 *)
 
