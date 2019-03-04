@@ -20,6 +20,7 @@ sig
     }
 
   val gamespec : gamespec
-  val targetl_n4 : board psMCTS.sit list
+  
+   val mk_targetl : (int * int) -> int -> board psMCTS.sit list
 
 end

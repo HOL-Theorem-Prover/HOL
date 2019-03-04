@@ -50,7 +50,6 @@ val bigsteps_glob = ref 50
 val nsim_glob = ref 1600
 val decay_glob = ref 0.99
 val noise_flag = ref true
-val tmsize_flag = ref false
 
 fun bool_to_string b = if b then "true" else "false"
 
@@ -63,12 +62,11 @@ fun summary_param targetl =
     val s3 = "simulation: " ^ its (!nsim_glob)
     val s4 = "decay: " ^ rts (!decay_glob)
     val s5 = "noise: " ^ bool_to_string (!noise_flag)
-    val s5' = "term_size: " ^ bool_to_string (!tmsize_flag)
     val s6 = "max_generation: " ^ its (!ngen_glob)
     val s7 = "target_per_generation: " ^ its (!ntarget_glob)
   in
     summary "Global parameters";
-    summary (String.concatWith "\n  " [file,s0,s6,s7,s1,s2,s3,s4,s5,s5'] ^
+    summary (String.concatWith "\n  " [file,s0,s6,s7,s1,s2,s3,s4,s5] ^
     "\n")
   end
 
@@ -84,16 +82,10 @@ fun mk_fep_dhtnn bstart gamespec dhtnn sit =
     val etnn = {opdict=opdict,headnn=headeval,dimin=dimin,dimout=1}
     val ptnn = {opdict=opdict,headnn=headpoli,dimin=dimin,dimout=dimout}
     val nntm = (#nntm_of_sit gamespec) sit
-    fun f x = x / (1.0 + (Real.fromInt (term_size nntm) / 100.0))
   in
-    if bstart then
-      ((if !tmsize_flag then f else I) 0.05,
-      filter_sit (map_assoc (fn x => 1.0) movel))
-    else
-    (
-    (if !tmsize_flag then f else I) (only_hd (infer_tnn etnn nntm)),
-    filter_sit (combine (movel, infer_tnn ptnn nntm))
-    )
+    if bstart then (0.05, filter_sit (map_assoc (fn x => 1.0) movel)) else
+    (only_hd (infer_tnn etnn nntm),
+     filter_sit (combine (movel, infer_tnn ptnn nntm)))
   end
 
 (* -------------------------------------------------------------------------
@@ -315,12 +307,12 @@ end (* struct *)
 app load ["rlGameArithGround","rlEnv"];
 open aiLib psMCTS rlGameArithGround rlEnv;
 
-logfile_glob := "arith_n4_test12";
+logfile_glob := "arith_uniform_1";
 ngen_glob := 100;
-ntarget_glob := 1000;
+ntarget_glob := 100;
+exwindow_glob := 20000;
 bigsteps_glob := 20;
-nsim_glob := 1600;
-tmsize_flag := false;
+nsim_glob := 400;
 val allex = start_rl_loop gamespec targetl_n4;
 
 *)

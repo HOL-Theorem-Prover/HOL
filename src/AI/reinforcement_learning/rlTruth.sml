@@ -51,6 +51,21 @@ fun mk_ttset_ground (maxsize,maxvalue) ntarget =
     )
   end
 
+fun mk_true_arith_eq (maxsize,maxvalue) ntarget =
+  let
+    val cset = [``0``,``$+``,``SUC``,``$*``]
+    val tml0 = gen_term_size maxsize (``:num``,cset)
+    val tml1 = mapfilter (fn x => (eval_ground x,x)) tml0
+    val tmld = dregroup Int.compare tml1
+    val nl = List.tabulate (maxvalue + 1, I)
+    fun random_true _ =
+      let val tml = dfind (random_elem nl) tmld in
+        mk_eq (random_elem tml, random_elem tml)
+      end
+  in
+    List.tabulate (ntarget, random_true)
+  end
+
 
 end (* struct *)
 

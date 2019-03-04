@@ -3,11 +3,9 @@ sig
 
   include Abbrev
 
-  (*
-   'a is the type of board
-   ''b is the type for move
-   'c is the type of targets
-  *)
+  (* 'a is the type of board
+     ''b is the type for move
+     'c is the type of targets *)
 
   val ntarget_glob : int ref
   val ngen_glob : int ref
@@ -17,7 +15,6 @@ sig
   val nsim_glob : int ref
   val decay_glob : real ref
   val noise_flag : bool ref
-  val tmsize_flag : bool ref
 
   type ('a,''b,'c) gamespec =
     {

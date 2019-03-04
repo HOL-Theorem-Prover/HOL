@@ -8,7 +8,7 @@
 structure rlGameArithGround :> rlGameArithGround =
 struct
 
-open HolKernel boolLib Abbrev aiLib rlLib psMCTS psTermGen
+open HolKernel boolLib Abbrev aiLib rlLib rlTruth psMCTS psTermGen
 
 val ERR = mk_HOL_ERR "rlGameArithGround"
 val debugdir = HOLDIR ^ "/src/AI/reinforcement_learning/debug"
@@ -31,10 +31,10 @@ type pos = int list
 type pb = (term * pos)
 datatype board = Board of pb | FailBoard
 
-fun mk_startsit pb = (true, Board pb)
+fun mk_startsit tm = (true, Board (tm,[]))
 
 fun is_proven (tm,pos) =
-  null pos andalso let val (t1,t2) = dest_eq tm in t1 = t2 end
+  null pos andalso let val (t1,t2) = dest_eq tm in term_eq t1 t2 end
 
 fun status_of sit = case snd sit of
     Board pb => if is_proven pb then Win else Undecided
@@ -66,41 +66,6 @@ val ax4 = ``x * SUC y = x * y + x``
 val axl = map (rename_varl (fn x => "")) [ax1,ax3]
 val ax_vect = Vector.fromList axl
 
-(*
-fun eval_ground tm = (rhs o concl o EVAL) tm
-fun mk_thml maxsize n =
-  let
-    val cset = [``0``,``$+``,``SUC``,``$*``]
-    val tml0 = gen_term_size maxsize (``:num``,cset)
-    fun random_eq () = mk_eq (random_elem tml0, random_elem tml0)
-  in
-    map mk_startsit (List.tabulate (n, fn _ => random_eq ()))
-  end
-
-fun pb_of_thm thm = (thm,[])
-*)
-
-val nl0 = List.tabulate (10,I);
-val nl1 = cartesian_product nl0 nl0;
-val nl2 = cartesian_product nl1 nl1;
-
-fun thm_of_n4 ((a,b),(c,d)) =
-  let val e = a + b + c + d in
-    if e <= 9
-    then SOME
-      let
-        val (at,bt,ct,dt) = (mk_sucn a, mk_sucn b, mk_sucn c, mk_sucn d)
-        val lt = mk_add (at,bt)
-        val rt = mk_add (ct,dt)
-      in
-        mk_eq (mk_add (lt,rt), mk_sucn e)
-      end
-    else NONE
-  end
-
-val thml_n4 = List.mapPartial thm_of_n4 nl2;
-val targetl_n4 = map mk_startsit (map (fn x => (x,[])) thml_n4);
-
 (* -------------------------------------------------------------------------
    Neural network units and inputs
    ------------------------------------------------------------------------- *)
@@ -130,7 +95,7 @@ fun paramod eq (tm,pos) =
     val tmsig = subst sigma tm
     val result = subst_pos (tmsig,pos) eqrsig
   in
-    if result = tm orelse length (free_vars_lr result) > 0
+    if term_eq result tm orelse length (free_vars_lr result) > 0
     then NONE
     else SOME result
   end
@@ -218,6 +183,13 @@ val gamespec : gamespec =
   nntm_of_sit = nntm_of_sit
   }
 
+(* -------------------------------------------------------------------------
+   Targets
+   ------------------------------------------------------------------------- *)
 
+fun mk_targetl (maxsize,maxvalue) ntarget = 
+  let val tml = mk_true_arith_eq (maxsize,maxvalue) ntarget in
+    map mk_startsit tml
+  end
 
 end (* struct *)
