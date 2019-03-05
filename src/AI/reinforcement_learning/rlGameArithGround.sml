@@ -188,7 +188,7 @@ val gamespec : gamespec =
    ------------------------------------------------------------------------- *)
 
 fun mk_targetl (maxsize,maxvalue) ntarget = 
-  let val tml = mk_true_arith_eq (maxsize,maxvalue) ntarget in
+  let val tml = mk_term_set (mk_true_arith_eq (maxsize,maxvalue) ntarget) in
     map mk_startsit tml
   end
 

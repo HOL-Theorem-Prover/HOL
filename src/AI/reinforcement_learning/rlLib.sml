@@ -11,7 +11,7 @@ struct
 open HolKernel Abbrev boolLib aiLib
 mlFeature mlNearestNeighbor mlTreeNeuralNetwork numTheory
 
-val ERR = mk_HOL_ERR "rlProve"
+val ERR = mk_HOL_ERR "rlLib"
 
 type pos = int list
 
