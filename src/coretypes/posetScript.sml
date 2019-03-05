@@ -65,7 +65,7 @@ val () = type_abbrev ("poset", ``:('a -> bool) # ('a -> 'a -> bool)``);
 
 val poset_def = new_definition
   ("poset_def",
-   ``poset ((s,r) : 'a poset) =
+   ``poset ((s,r) : 'a poset) <=>
      (?x. s x) /\
      (!x. s x ==> r x x) /\
      (!x y. s x /\ s y /\ r x y /\ r y x ==> (x = y)) /\
@@ -81,26 +81,26 @@ val relation_def = new_definition
 
 val top_def = new_definition
   ("top_def",
-   ``top ((s,r) : 'a poset) x = s x /\ !y. s y ==> r y x``);
+   ``top ((s,r) : 'a poset) x <=> s x /\ !y. s y ==> r y x``);
 
 val bottom_def = new_definition
   ("bottom_def",
-   ``bottom ((s,r) : 'a poset) x = s x /\ !y. s y ==> r x y``);
+   ``bottom ((s,r) : 'a poset) x <=> s x /\ !y. s y ==> r x y``);
 
 val chain_def = new_definition
   ("chain_def",
-   ``chain ((s,r) : 'a poset) c =
+   ``chain ((s,r) : 'a poset) c <=>
      !x y. s x /\ s y /\ c x /\ c y ==> r x y \/ r y x``);
 
 val lub_def = new_definition
   ("lub_def",
-   ``lub ((s,r) : 'a poset) p x =
+   ``lub ((s,r) : 'a poset) p x <=>
      s x /\ (!y. s y /\ p y ==> r y x) /\
      !z. s z /\ (!y. s y /\ p y ==> r y z) ==> r x z``);
 
 val glb_def = new_definition
   ("glb_def",
-   ``glb ((s,r) : 'a poset) p x =
+   ``glb ((s,r) : 'a poset) p x <=>
      s x /\ (!y. s y /\ p y ==> r x y) /\
      !z. s z /\ (!y. s y /\ p y ==> r z y) ==> r z x``);
 
@@ -276,7 +276,7 @@ val down_continuous_def = new_definition
 
 val continuous_def = new_definition
   ("continuous_def",
-   ``continuous (p : 'a poset) f = up_continuous p f /\ down_continuous p f``);
+   “continuous (p : 'a poset) f <=> up_continuous p f /\ down_continuous p f”);
 
 (* ------------------------------------------------------------------------- *)
 (* Least and greatest fixed points.                                          *)
@@ -284,12 +284,12 @@ val continuous_def = new_definition
 
 val lfp_def = new_definition
   ("lfp_def",
-   ``lfp ((s,r) : 'a poset) f x =
+   ``lfp ((s,r) : 'a poset) f x <=>
      s x /\ (f x = x) /\ !y. s y /\ r (f y) y ==> r x y``);
 
 val gfp_def = new_definition
   ("gfp_def",
-   ``gfp ((s,r) : 'a poset) f x =
+   ``gfp ((s,r) : 'a poset) f x <=>
      s x /\ (f x = x) /\ !y. s y /\ r y (f y) ==> r y x``);
 
 val lfp_unique = store_thm

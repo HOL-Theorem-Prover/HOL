@@ -83,7 +83,7 @@ fun AVOID_SPEC_TAC (tm, v) =
 
 local
   open tautLib;
-  val th = prove (``(a = b) /\ (c = d) ==> (a /\ c = b /\ d)``, TAUT_TAC);
+  val th = prove (``(a = b) /\ (c = d) ==> (a /\ c <=> b /\ d)``, TAUT_TAC);
   val (a, b, c, d) = (``a:bool``, ``b:bool``, ``c:bool``, ``d:bool``);
 in
   fun MK_CONJ_EQ th1 th2 =
@@ -96,7 +96,7 @@ in
 end;
 
 local
-  val th = prove (``(a /\ b) /\ c = b /\ (a /\ c)``, tautLib.TAUT_TAC);
+  val th = prove (``(a /\ b) /\ c <=> b /\ (a /\ c)``, tautLib.TAUT_TAC);
   val (a, b, c) = (``a:bool``, ``b:bool``, ``c:bool``);
 in
   fun CONJ_RASSOC_CONV tm =
@@ -109,7 +109,7 @@ in
 end;
 
 local
-  val th = prove (``(a \/ b) \/ c = b \/ (a \/ c)``, tautLib.TAUT_TAC);
+  val th = prove (``(a \/ b) \/ c <=> b \/ (a \/ c)``, tautLib.TAUT_TAC);
   val (a, b, c) = (``a:bool``, ``b:bool``, ``c:bool``);
 in
   fun DISJ_RASSOC_CONV tm =
@@ -301,39 +301,39 @@ val NOT_TRUE = prove (``~T = F``, tautLib.TAUT_TAC);
 val NOT_FALSE = prove (``~F = T``, tautLib.TAUT_TAC);
 
 val IMP_DISJ_THM' = prove
-  (``!x y. x ==> y = y \/ ~x``,
+  (``!x y. x ==> y <=> y \/ ~x``,
    tautLib.TAUT_TAC);
 
 val NIMP_CONJ_THM = prove
-  (``!x y. ~(x ==> y) = x /\ ~y``,
+  (``!x y. ~(x ==> y) <=> x /\ ~y``,
    tautLib.TAUT_TAC);
 
 val EQ_EXPAND' = prove
-  (``!x y. (x = y) = (x \/ ~y) /\ (~x \/ y)``,
+  (``!x y. (x <=> y) <=> (x \/ ~y) /\ (~x \/ y)``,
    tautLib.TAUT_TAC);
 
 val NEQ_EXPAND = prove
-  (``!x y. ~(x = y) = (x \/ y) /\ (~x \/ ~y)``,
+  (``!x y. ~(x <=> y) <=> (x \/ y) /\ (~x \/ ~y)``,
    tautLib.TAUT_TAC);
 
 val COND_EXPAND' = prove
-  (``!c a b. (if c then a else b) = ((~c \/ a) /\ (c \/ b))``,
+  (``!c a b. (if c then a else b) <=> ((~c \/ a) /\ (c \/ b))``,
    tautLib.TAUT_TAC);
 
 val NCOND_EXPAND = prove
-  (``!c a b. ~(if c then a else b) = ((~c \/ ~a) /\ (c \/ ~b))``,
+  (``!c a b. ~(if c then a else b) <=> ((~c \/ ~a) /\ (c \/ ~b))``,
    tautLib.TAUT_TAC);
 
 val DE_MORGAN_THM1 = prove
-  (``!x y. ~(x /\ y) = (~x \/ ~y)``,
+  (``!x y. ~(x /\ y) <=> (~x \/ ~y)``,
    tautLib.TAUT_TAC);
 
 val DE_MORGAN_THM2 = prove
-  (``!x y. ~(x \/ y) = (~x /\ ~y)``,
+  (``!x y. ~(x \/ y) <=> (~x /\ ~y)``,
    tautLib.TAUT_TAC);
 
 val NNF_EXISTS_UNIQUE = prove
-  (``!p. $?! p = ((?(x : 'a). p x) /\ !x y. p x /\ p y ==> (x = y))``,
+  (``!p. $?! p <=> ((?(x : 'a). p x) /\ !x y. p x /\ p y ==> (x = y))``,
    GEN_TAC THEN
    (KNOW_TAC ``$?! p = ?!(x : 'a). p x`` THEN1
     (CONV_TAC (DEPTH_CONV (ETA_CONV)) THEN REWRITE_TAC [])) THEN
@@ -341,7 +341,7 @@ val NNF_EXISTS_UNIQUE = prove
    REWRITE_TAC [EXISTS_UNIQUE_THM]);
 
 val NOT_EXISTS_UNIQUE = prove
-  (``!p. ~($?! p) = ((!(x : 'a). ~p x) \/ ?x y. p x /\ p y /\ ~(x = y))``,
+  (``!p. ~($?! p) <=> ((!(x : 'a). ~p x) \/ ?x y. p x /\ p y /\ ~(x = y))``,
    REWRITE_TAC [NNF_EXISTS_UNIQUE, DE_MORGAN_THM1] THEN
    CONV_TAC (TOP_DEPTH_CONV (NOT_EXISTS_CONV ORELSEC NOT_FORALL_CONV)) THEN
    REWRITE_TAC [NOT_IMP, CONJ_ASSOC]);
@@ -460,23 +460,23 @@ val BOOL_CASES = prove
    tautLib.TAUT_TAC);
 
 val T_OR = prove
-  (``!t. T \/ t = T``,
+  (``!t. T \/ t <=> T``,
    tautLib.TAUT_TAC);
 
 val OR_T = prove
-  (``!t. t \/ T = T``,
+  (``!t. t \/ T <=> T``,
    tautLib.TAUT_TAC);
 
 val T_AND = prove
-  (``!t. T /\ t = t``,
+  (``!t. T /\ t <=> t``,
    tautLib.TAUT_TAC);
 
 val AND_T = prove
-  (``!t. t /\ T = t``,
+  (``!t. t /\ T <=> t``,
    tautLib.TAUT_TAC);
 
 val OR_F = prove
-  (``!t. t \/ F = t``,
+  (``!t. t \/ F <=> t``,
    tautLib.TAUT_TAC);
 
 val CONTRACT_DISJ = prove
@@ -631,7 +631,7 @@ val DNF_CONV = DNF_CONV' NO_CONV;
 (* ------------------------------------------------------------------------- *)
 
 val NEG_EQ = prove
-  (``!a b. ~(a = b) = (a = ~b)``,
+  (``!a b. ~(a <=> b) <=> (a <=> ~b)``,
    tautLib.TAUT_TAC);
 
 fun DEF_NNF_SUB_CONV c tm =
@@ -716,16 +716,16 @@ fun ATOM_CONV c tm = (if is_neg tm then RAND_CONV c else c) tm;
 
 val EQ_DEFCNF = prove
   (``!x y z.
-       (x = (y = z)) =
+       (x = (y = z)) <=>
        (z \/ ~y \/ ~x) /\ (y \/ ~z \/ ~x) /\ (x \/ ~y \/ ~z) /\ (x \/ y \/ z)``,
    CONV_TAC CNF_CONV);
 
 val AND_DEFCNF = prove
-  (``!x y z. (x = (y /\ z)) = (y \/ ~x) /\ (z \/ ~x) /\ (x \/ ~y \/ ~z)``,
+  (``!x y z. (x = (y /\ z)) <=> (y \/ ~x) /\ (z \/ ~x) /\ (x \/ ~y \/ ~z)``,
    CONV_TAC CNF_CONV);
 
 val OR_DEFCNF = prove
-  (``!x y z. (x = (y \/ z)) = (y \/ z \/ ~x) /\ (x \/ ~y) /\ (x \/ ~z)``,
+  (``!x y z. (x = (y \/ z)) <=> (y \/ z \/ ~x) /\ (x \/ ~y) /\ (x \/ ~z)``,
    CONV_TAC CNF_CONV);
 
 fun sub_cnf f con defs (a, b) =
@@ -1057,19 +1057,19 @@ val COND_NOT = prove
    SIMP_TAC boolSimps.bool_ss []);
 
 val COND_AND = prove
-  (``!a b. a /\ b = (if a then b else F)``,
+  (``!a b. a /\ b <=> (if a then b else F)``,
    SIMP_TAC boolSimps.bool_ss []);
 
 val COND_OR = prove
-  (``!a b. a \/ b = if a then T else b``,
+  (``!a b. a \/ b <=> if a then T else b``,
    SIMP_TAC boolSimps.bool_ss []);
 
 val COND_IMP = prove
-  (``!a b. a ==> b = if a then b else T``,
+  (``!a b. a ==> b <=> if a then b else T``,
    SIMP_TAC boolSimps.bool_ss []);
 
 val COND_EQ = prove
-  (``!a b. (a = b) = if a then b else ~b``,
+  (``!a b. (a = b) <=> if a then b else ~b``,
    SIMP_TAC boolSimps.bool_ss [EQ_IMP_THM, COND_EXPAND]
    THEN tautLib.TAUT_TAC);
 

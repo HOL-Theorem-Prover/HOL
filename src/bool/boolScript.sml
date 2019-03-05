@@ -28,6 +28,13 @@ val _ = TeX_notation {hol = UChar.lambda, TeX = ("\\HOLTokenLambda{}", 1)}
 
 val _ = TeX_notation {hol = "@", TeX = ("\\HOLTokenHilbert{}", 1)}
 
+(* iff *)
+val _ = overload_on ("<=>", “(=) : bool -> bool -> bool”)
+val _ = set_fixity "<=>" (Infix(NONASSOC, 100))
+val _ = unicode_version {u = UChar.iff, tmnm = "<=>"}
+val _ = TeX_notation {hol = "<=>", TeX = ("\\HOLTokenEquiv{}",3)}
+val _ = TeX_notation {hol = UChar.iff, TeX = ("\\HOLTokenEquiv{}",3)}
+
 (* records *)
 val _ = TeX_notation {hol = "<|", TeX = ("\\HOLTokenLeftrec{}", 2)}
 val _ = TeX_notation {hol = "|>", TeX = ("\\HOLTokenRightrec{}", 2)}
@@ -97,6 +104,17 @@ val F_DEF =
 val NOT_DEF =
  Definition.new_definition
    ("NOT_DEF",        “~ = \t. t ==> F”);
+
+(* now allows parsing of not equal *)
+val _ = overload_on ("<>", “\x:'a y:'a. ~(x = y)”)
+val _ = set_fixity "<>" (Infix(NONASSOC, 450))
+val _ = TeX_notation {hol="<>", TeX = ("\\HOLTokenNotEqual{}",1)}
+
+val _ = set_fixity UChar.neq (Infix(NONASSOC, 450))
+val _ = overload_on (UChar.neq, “\x:'a y:'a. ~(x = y)”)
+val _ = TeX_notation {hol=UChar.neq, TeX = ("\\HOLTokenNotEqual{}",1)}
+
+
 
 val EXISTS_UNIQUE_DEF =
 Definition.new_definition
@@ -2247,7 +2265,7 @@ let val t1 = “t1:bool”
     and thFr = TRANS (AP_THM (AP_TERM imp (SPEC t2 AND3)) t3)(SPEC t3 IMP3)
     val thT1 = TRANS thTl (SYM thTr)
     and thF1 = TRANS thFl (SYM thFr)
-    val tm   = “t1 ==> t2 ==> t3 = t1 /\ t2 ==> t3”
+    val tm   = “t1 ==> t2 ==> t3 <=> t1 /\ t2 ==> t3”
     val thT2 = SUBST_CONV [t1 |-> ASSUME “t1 = T”] tm tm
     and thF2 = SUBST_CONV [t1 |-> ASSUME “t1 = F”] tm tm
     val thT3 = EQ_MP (SYM thT2) thT1
@@ -2279,7 +2297,7 @@ let val t1 = “t1:bool”
                      (SPEC (mk_neg t2) AND1)
     val thT1 = TRANS thTl (SYM thTr)
     and thF1 = TRANS thFl (SYM thFr)
-    val tm = “(t1 = t2) = (t1 ==> t2) /\ (t2 ==> t1)”
+    val tm = “(t1 = t2) <=> (t1 ==> t2) /\ (t2 ==> t1)”
     val thT2 = SUBST_CONV [t1 |-> ASSUME “t1 = T”] tm tm
     and thF2 = SUBST_CONV [t1 |-> ASSUME “t1 = F”] tm tm
     val thT3 = EQ_MP (SYM thT2) thT1
@@ -2312,7 +2330,7 @@ let val t1 = “t1:bool” and t2 = “t2:bool”
                      (SPEC (mk_neg t2) OR3)
     val thT1 = TRANS thTl (SYM thTr)
     and thF1 = TRANS thFl (SYM thFr)
-    val tm = “(t1 = t2) = ((t1 /\ t2) \/ (~t1 /\ ~t2))”
+    val tm = “(t1 = t2) <=> (t1 /\ t2) \/ (~t1 /\ ~t2)”
     val thT2 = SUBST_CONV [t1 |-> ASSUME “t1 = T”] tm tm
     and thF2 = SUBST_CONV [t1 |-> ASSUME “t1 = F”] tm tm
     val thT3 = EQ_MP (SYM thT2) thT1
@@ -4237,22 +4255,6 @@ in
 end
 
 (* Parsing additions *)
-(* iff *)
-val _ = overload_on ("<=>", “(=) : bool -> bool -> bool”)
-val _ = set_fixity "<=>" (Infix(NONASSOC, 100))
-val _ = unicode_version {u = UChar.iff, tmnm = "<=>"}
-val _ = TeX_notation {hol = "<=>", TeX = ("\\HOLTokenEquiv{}",3)}
-val _ = TeX_notation {hol = UChar.iff, TeX = ("\\HOLTokenEquiv{}",3)}
-
-(* not equal *)
-val _ = overload_on ("<>", “\x:'a y:'a. ~(x = y)”)
-val _ = set_fixity "<>" (Infix(NONASSOC, 450))
-val _ = TeX_notation {hol="<>", TeX = ("\\HOLTokenNotEqual{}",1)}
-
-val _ = set_fixity UChar.neq (Infix(NONASSOC, 450))
-val _ = overload_on (UChar.neq, “\x:'a y:'a. ~(x = y)”)
-val _ = TeX_notation {hol=UChar.neq, TeX = ("\\HOLTokenNotEqual{}",1)}
-
 (* not an element of *)
 val _ = overload_on ("NOTIN", “\x:'a y:('a -> bool). ~(x IN y)”)
 val _ = set_fixity "NOTIN" (Infix(NONASSOC, 425))

@@ -682,7 +682,7 @@ local
                                      (SPEC_ALL boolTheory.IMP_F);
 
   val DISJ_AC   = EQT_ELIM o AC_CONV (DISJ_ASSOC', DISJ_SYM')
-  val imp_CONV  = REWR_CONV(TAUT `a \/ b = ~b ==> a`)
+  val imp_CONV  = REWR_CONV(TAUT `a \/ b <=> ~b ==> a`)
   val push_CONV = GEN_REWRITE_CONV TOP_SWEEP_CONV [DEMORG_DISJ, NOT2]
   and pull_CONV = GEN_REWRITE_CONV DEPTH_CONV [DEMORG_AND]
   and imf_CONV  = REWR_CONV NOT_IMP
@@ -792,7 +792,7 @@ val create_equality_axioms =
       REWRITE_TAC[] THEN ASM_CASES_TAC ``x:'a = y`` THEN
       ASM_REWRITE_TAC[ONCE_REWRITE_RULE[boolTheory.DISJ_SYM]
                        (REWRITE_RULE[] boolTheory.BOOL_CASES_AX)])
-    val imp_elim_CONV = REWR_CONV (TAUT `(a ==> b) = ~a \/ b`)
+    val imp_elim_CONV = REWR_CONV (TAUT `(a ==> b) <=> ~a \/ b`)
     val eq_elim_RULE = MATCH_MP(TAUT `(a = b) ==> b \/ ~a`)
     val veq_tm = rator(rator(concl(hd eq_thms)))
     fun create_equivalence_axioms (eq,_) =

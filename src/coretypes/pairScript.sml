@@ -88,7 +88,7 @@ val _ = add_rule {term_name = ",", fixity = Infixr 50,
 
 val PAIR_EQ = Q.store_thm
 ("PAIR_EQ",
- `((x,y) = (a,b)) = (x=a) /\ (y=b)`,
+ `((x,y) = (a,b)) <=> (x=a) /\ (y=b)`,
  EQ_TAC THENL
  [REWRITE_TAC[COMMA_DEF]
    THEN DISCH_THEN(MP_TAC o Q.AP_TERM `REP_prod`)
@@ -146,7 +146,7 @@ val _ = ot0 "SND" "snd"
 
 val PAIR_FST_SND_EQ = store_thm(
   "PAIR_FST_SND_EQ",
-  ``!(p:'a # 'b) q. (p = q) = (FST p = FST q) /\ (SND p = SND q)``,
+  ``!(p:'a # 'b) q. (p = q) <=> (FST p = FST q) /\ (SND p = SND q)``,
   REPEAT GEN_TAC THEN
   X_CHOOSE_THEN ``p1:'a`` (X_CHOOSE_THEN ``p2:'b`` SUBST_ALL_TAC)
                 (SPEC ``p:'a # 'b`` ABS_PAIR_THM) THEN
@@ -627,7 +627,7 @@ Q.new_infixr_definition
 
 val LEX_DEF_THM = Q.store_thm
 ("LEX_DEF_THM",
- `(R1 LEX R2) (a,b) (c,d) = R1 a c \/ (a = c) /\ R2 b d`,
+ `(R1 LEX R2) (a,b) (c,d) <=> R1 a c \/ (a = c) /\ R2 b d`,
   REWRITE_TAC [LEX_DEF,UNCURRY_DEF] THEN BETA_TAC THEN
   REWRITE_TAC [UNCURRY_DEF] THEN BETA_TAC THEN REFL_TAC);
 
