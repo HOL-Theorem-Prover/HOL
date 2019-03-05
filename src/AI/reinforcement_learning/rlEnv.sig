@@ -9,7 +9,6 @@ sig
 
   val ntarget_glob : int ref
   val ngen_glob : int ref
-  val logfile_glob : string ref
   val exwindow_glob : int ref
   val bigsteps_glob : int ref
   val nsim_glob : int ref
@@ -27,6 +26,9 @@ sig
     dim : int,
     nntm_of_sit: 'a psMCTS.sit -> term
     }
+
+  val logfile_glob : string ref
+  val summary : string -> unit
 
   val start_rl_loop : ('a, ''b, 'c) gamespec -> 'a psMCTS.sit list ->
     (term * real list) list * (term * real list) list

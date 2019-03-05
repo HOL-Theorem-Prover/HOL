@@ -318,8 +318,8 @@ val maxvalue = 0;
 val ntarget = 10000;
 val targetl = mk_targetl (maxsize,maxvalue) ntarget;
 
-summary ("maxsize: " ^ its (maxsize));
-summary ("total targets: " ^ its (length targetl));
+rlLib.summary ("maxsize: " ^ its (maxsize));
+rlLib.summary ("total targets: " ^ its (length targetl));
 val allex = start_rl_loop gamespec targetl;
 
 *)
