@@ -243,6 +243,42 @@ fun choose_uniform gamespec dhtnn (targetl,ntarget) =
   end
 
 (* -------------------------------------------------------------------------
+   Competition: comparing n dhtnn
+   ------------------------------------------------------------------------- *)
+
+fun compete_one dhtnn gamespec targetl' =
+  let
+    val _ = noise_flag := false
+    val status_of = #status_of gamespec
+    val pbspec =
+      ((#status_of gamespec, #apply_move gamespec),
+        mk_fep_dhtnn false gamespec dhtnn)
+    val (result,t) =
+      add_time (mapi (n_bigsteps (!bigsteps_glob) gamespec pbspec)) targetl'
+    val (_,allrootl) = split result
+    val _ = summary ("Competition time : " ^ rts t)
+    val endrootl = map hd allrootl
+  in
+    noise_flag := true;
+    length (filter (fn x => status_of (#sit x) = Win) endrootl)
+  end
+
+val ntarget_compete = ref 400
+
+fun compete dhtnn_old dhtnn_new gamespec targetl =
+  let
+    val targetl' = first_n (!ntarget_compete) (shuffle targetl)
+    val w_old = compete_one dhtnn_old gamespec targetl'
+    val w_new = compete_one dhtnn_new gamespec targetl'
+    val b = w_new > w_old
+  in
+    summary 
+      ((if b then "Passed" else "Failed") ^ ": " ^ 
+      its w_old ^ " " ^ its w_new);
+    b
+  end
+
+(* -------------------------------------------------------------------------
    Reinforcement learning loop
    ------------------------------------------------------------------------- *)
 
@@ -274,31 +310,33 @@ fun rl_start gamespec targetl =
     val targetl' = first_n (!ntarget_glob) (shuffle targetl)
     val newallex = explore_f true gamespec emptyallex dhtnn targetl'
   in
-    discard_oldex newallex (!exwindow_glob)
+    (discard_oldex newallex (!exwindow_glob), dhtnn)
   end
 
-fun rl_one n gamespec targetl allex =
+fun rl_one n gamespec targetl dhtnn_old allex =
   let
     val _ = summary ("\nGeneration " ^ its n)
-    val dhtnn = train_f gamespec allex
-    val targetl' = choose_uniform gamespec dhtnn (targetl,!ntarget_glob)
-    val newallex = explore_f false gamespec allex dhtnn targetl'
+    val dhtnn_new = train_f gamespec allex
+    val b = compete dhtnn_old dhtnn_new gamespec targetl
+    val dhtnn_best = if b then dhtnn_new else dhtnn_old
+    val targetl' = choose_uniform gamespec dhtnn_best (targetl,!ntarget_glob)
+    val newallex = explore_f false gamespec allex dhtnn_best targetl'
   in
-    discard_oldex newallex (!exwindow_glob)
+    (discard_oldex newallex (!exwindow_glob), dhtnn_best)
   end
 
-fun rl_loop (n,nmax) gamespec targetl allex =
+fun rl_loop (n,nmax) gamespec targetl dhtnn allex =
   if n >= nmax then allex else
-    let val newallex = rl_one n gamespec targetl allex in
-      rl_loop (n+1, nmax) gamespec targetl newallex
+    let val (newallex, dhtnn_best) = rl_one n gamespec targetl dhtnn allex in
+      rl_loop (n+1, nmax) gamespec targetl dhtnn_best newallex
     end
 
 fun start_rl_loop gamespec targetl =
   let
     val _ = summary_param targetl
-    val allex = rl_start gamespec targetl
+    val (allex,dhtnn) = rl_start gamespec targetl
   in
-    rl_loop (1,!ngen_glob) gamespec targetl allex
+    rl_loop (1,!ngen_glob) gamespec targetl dhtnn allex
   end
 
 end (* struct *)
@@ -307,7 +345,7 @@ end (* struct *)
 app load ["rlGameArithGround","rlEnv"];
 open aiLib psMCTS rlGameArithGround rlEnv;
 
-logfile_glob := "arith_4";
+logfile_glob := "arith_5";
 ngen_glob := 100;
 ntarget_glob := 100;
 exwindow_glob := 40000;
@@ -318,8 +356,8 @@ val maxvalue = 0;
 val ntarget = 10000;
 val targetl = mk_targetl (maxsize,maxvalue) ntarget;
 
-rlLib.summary ("maxsize: " ^ its (maxsize));
-rlLib.summary ("total targets: " ^ its (length targetl));
+summary ("maxsize: " ^ its (maxsize));
+summary ("maxvalue: " ^ its (maxvalue));
 val allex = start_rl_loop gamespec targetl;
 
 *)
