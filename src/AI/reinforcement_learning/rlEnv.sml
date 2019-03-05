@@ -345,9 +345,9 @@ end (* struct *)
 app load ["rlGameArithGround","rlEnv"];
 open aiLib psMCTS rlGameArithGround rlEnv;
 
-logfile_glob := "arith_5";
+logfile_glob := "arith_6";
 ngen_glob := 100;
-ntarget_glob := 100;
+ntarget_glob := 400;
 exwindow_glob := 40000;
 bigsteps_glob := 20;
 nsim_glob := 1600;

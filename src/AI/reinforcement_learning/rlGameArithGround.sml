@@ -63,7 +63,7 @@ val ax1 = ``x + 0 = x``;
 val ax2 = ``x * 0 = 0``
 val ax3 = ``x + SUC y = SUC (x + y)``
 val ax4 = ``x * SUC y = x * y + x``
-val axl = map (rename_varl (fn x => "")) [ax1,ax3]
+val axl = map (rename_varl (fn x => "")) [ax1,ax2,ax3,ax4]
 val ax_vect = Vector.fromList axl
 
 (* -------------------------------------------------------------------------
