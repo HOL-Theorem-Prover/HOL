@@ -14,6 +14,7 @@ sig
   val nsim_glob : int ref
   val decay_glob : real ref
   val noise_flag : bool ref
+  val maxsize_glob : int ref
 
   type ('a,''b,'c) gamespec =
     {
@@ -30,7 +31,10 @@ sig
   val logfile_glob : string ref
   val summary : string -> unit
 
-  val start_rl_loop : ('a, ''b, 'c) gamespec -> 'a psMCTS.sit list ->
-    (term * real list) list * (term * real list) list
+  val start_rl_loop : 
+    (rlGameArithGround.board, ''a, 'b) gamespec ->
+      rlGameArithGround.board psMCTS.sit list ->
+        (term * real list) list * (term * real list) list
+
 
 end

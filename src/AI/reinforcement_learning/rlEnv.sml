@@ -270,17 +270,20 @@ fun compete dhtnn_old dhtnn_new gamespec targetl =
     val targetl' = first_n (!ntarget_compete) (shuffle targetl)
     val w_old = compete_one dhtnn_old gamespec targetl'
     val w_new = compete_one dhtnn_new gamespec targetl'
-    val b = w_new > w_old
+    val b1 = w_new > w_old
+    val b2 = int_div (Int.max (w_new,w_old)) (!ntarget_compete) > 0.75
   in
     summary 
-      ((if b then "Passed" else "Failed") ^ ": " ^ 
+      ((if b1 then "Passed" else "Failed") ^ ": " ^ 
       its w_old ^ " " ^ its w_new);
-    b
+    (b1, b2)
   end
 
 (* -------------------------------------------------------------------------
    Reinforcement learning loop
    ------------------------------------------------------------------------- *)
+
+val maxsize_glob = ref 7
 
 fun concat_ex ((exE,exP),(allexE,allexP)) = (exE @ allexE, exP @ allexP)
 
@@ -316,19 +319,29 @@ fun rl_start gamespec targetl =
 fun rl_one n gamespec targetl dhtnn_old allex =
   let
     val _ = summary ("\nGeneration " ^ its n)
+    val _ = summary ("Maxsize: " ^ its (!maxsize_glob))
     val dhtnn_new = train_f gamespec allex
-    val b = compete dhtnn_old dhtnn_new gamespec targetl
-    val dhtnn_best = if b then dhtnn_new else dhtnn_old
-    val targetl' = choose_uniform gamespec dhtnn_best (targetl,!ntarget_glob)
+    val (b1,b2) = compete dhtnn_old dhtnn_new gamespec targetl
+    val dhtnn_best = if b1 then dhtnn_new else dhtnn_old
+    val _ = if b2 then 
+      (incr maxsize_glob; 
+       summary ("Increasing maxsize to: " ^ its (!maxsize_glob)))
+      else ()
+    val (targetl_new,t) = 
+      add_time (rlGameArithGround.mk_targetl (!maxsize_glob,0)) 10000;
+    val _ = summary ("Creating new targets: " ^ 
+      its (length targetl_new) ^ "," ^ rts t)
+    val targetl' = 
+      choose_uniform gamespec dhtnn_best (targetl_new,!ntarget_glob)
     val newallex = explore_f false gamespec allex dhtnn_best targetl'
   in
-    (discard_oldex newallex (!exwindow_glob), dhtnn_best)
+    (discard_oldex newallex (!exwindow_glob), dhtnn_best, targetl_new)
   end
 
 fun rl_loop (n,nmax) gamespec targetl dhtnn allex =
   if n >= nmax then allex else
-    let val (newallex, dhtnn_best) = rl_one n gamespec targetl dhtnn allex in
-      rl_loop (n+1, nmax) gamespec targetl dhtnn_best newallex
+    let val (newallex, dhtnn_best, targetl_new) = rl_one n gamespec targetl dhtnn allex in
+      rl_loop (n+1, nmax) gamespec targetl_new dhtnn_best newallex
     end
 
 fun start_rl_loop gamespec targetl =
@@ -345,19 +358,17 @@ end (* struct *)
 app load ["rlGameArithGround","rlEnv"];
 open aiLib psMCTS rlGameArithGround rlEnv;
 
-logfile_glob := "arith_6";
+logfile_glob := "arith_2";
 ngen_glob := 100;
 ntarget_glob := 400;
 exwindow_glob := 40000;
-bigsteps_glob := 20;
+bigsteps_glob := 30;
 nsim_glob := 1600;
 val maxsize = 7;
-val maxvalue = 0;
+maxsize_glob := maxsize;
 val ntarget = 10000;
-val targetl = mk_targetl (maxsize,maxvalue) ntarget;
+val targetl = mk_targetl (maxsize,0) 10000;
 
-summary ("maxsize: " ^ its (maxsize));
-summary ("maxvalue: " ^ its (maxvalue));
 val allex = start_rl_loop gamespec targetl;
 
 *)
