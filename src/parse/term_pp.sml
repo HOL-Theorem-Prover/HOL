@@ -447,7 +447,10 @@ fun is_identish_var s =
     UTF8.all UnicodeChars.isMLIdent s andalso
     not (badpc_encode s)
 
-fun is_symbolish_var s = UTF8.all UnicodeChars.isSymbolic s
+fun is_symbolish_var s =
+    UTF8.all UnicodeChars.isSymbolic s andalso
+    not (String.isSubstring "(*" s) andalso
+    not (String.isSubstring "*)" s)
 
 fun is_safe_varname s =
     s <> "" andalso (is_identish_var s orelse is_symbolish_var s)
