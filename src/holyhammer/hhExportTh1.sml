@@ -253,7 +253,7 @@ th1_export_chainy ["bool"];
 load "hhExportTh1"; open hhExportTh1;
 load "tttUnfold"; tttUnfold.load_sigobj ();
 val thyl = ancestry (current_theory ());
-val bushydir = "/home/thibault/HOL/src/holyhammer/th1_bushy";
+val bushydir =  HOLDIR ^ "/src/holyhammer/th1_bushy";
 th1_export_bushy bushydir thyl;
 val chainydir = "/local1/thibault/th1_chainy";
 th1_export_chainy chainydir thyl;

@@ -198,7 +198,8 @@ fun tf1_cdef_app oc =
     val tf1name = namea_v (mk_var ("app",bool),2) (* bool is dummy type *)
   in
     os oc (tffpar ^ tf1name ^ ",type," ^ tf1name ^ ":");
-    tf1_forall_tyvarl_ty oc ty; tf1_type oc (ty,2); osn oc ")."
+    tf1_forall_tyvarl_ty oc ty; 
+    os oc "("; tf1_type oc (ty,2); osn oc "))."
   end
 
 fun tf1_cdef_p oc =
@@ -353,7 +354,7 @@ tf1_write_pb dir (thmid,depl);
 load "hhExportTf1"; open hhExportTf1;
 load "tttUnfold"; tttUnfold.load_sigobj ();
 val thyl = ancestry (current_theory ());
-val bushydir = "/local1/thibault/tf1_bushy";
+val bushydir =  HOLDIR ^ "/src/holyhammer/tf1_bushy";
 tf1_export_bushy bushydir thyl;
 val chainydir = "/local1/thibault/tf1_chainy";
 tf1_export_chainy chainydir thyl;
