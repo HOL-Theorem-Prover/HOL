@@ -284,6 +284,7 @@ fun compete dhtnn_old dhtnn_new gamespec targetl =
    ------------------------------------------------------------------------- *)
 
 val maxsize_glob = ref 7
+val ntarget_preselect = ref 10000
 
 fun concat_ex ((exE,exP),(allexE,allexP)) = (exE @ allexE, exP @ allexP)
 
@@ -328,7 +329,8 @@ fun rl_one n gamespec targetl dhtnn_old allex =
        summary ("Increasing maxsize to: " ^ its (!maxsize_glob)))
       else ()
     val (targetl_new,t) = 
-      add_time (rlGameArithGround.mk_targetl (!maxsize_glob,0)) 10000;
+      add_time (rlGameArithGround.mk_targetl (!maxsize_glob,0))
+      (!ntarget_preselect);
     val _ = summary ("Creating new targets: " ^ 
       its (length targetl_new) ^ "," ^ rts t)
     val targetl' = 

@@ -7,7 +7,7 @@ sig
      ''b is the type for move
      'c is the type of targets *)
 
-  val ntarget_glob : int ref
+  
   val ngen_glob : int ref
   val exwindow_glob : int ref
   val bigsteps_glob : int ref
@@ -15,6 +15,9 @@ sig
   val decay_glob : real ref
   val noise_flag : bool ref
   val maxsize_glob : int ref
+  val ntarget_glob : int ref
+  val ntarget_preselect : int ref
+  val ntarget_compete : int ref  
 
   type ('a,''b,'c) gamespec =
     {
