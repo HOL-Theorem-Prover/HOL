@@ -170,7 +170,7 @@ fun letprinter (tyg, tmg) backend printer ppfns (pgr,lgr,rgr) depth tm =
              (pr_list pr_vstruct (spacep true) args >>
               spacep (not (null args)) >>
               add_string "=" >> add_break (1, 0) >>
-              block PP.INCONSISTENT 0 (syspr (eqprec, Top, eqprec) rhs_t))) >>
+              block PP.INCONSISTENT 0 (syspr (eqprec, eqprec, Top) rhs_t))) >>
         return bvfvs
     end
 

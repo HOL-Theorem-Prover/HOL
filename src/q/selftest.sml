@@ -191,7 +191,7 @@ val (sgs, _) =
     Q.PAT_ABBREV_TAC `v = (x < SUC w)` ([], ``y < SUC zero ==> y < z``)
 val _ = case sgs of
             [([abb], sg)] =>
-            if Term.aconv abb ``Abbrev(v = y < SUC zero)`` andalso
+            if Term.aconv abb ``Abbrev(v <=> y < SUC zero)`` andalso
                Term.aconv sg ``v ==> y < z``
             then OK()
             else die "FAILED!"
@@ -214,7 +214,7 @@ val (sgs,_) = Q.PAT_ABBREV_TAC `v = (x < SUC z)`
                   ([], ``(!y. y < SUC zero) /\ u < SUC (SUC zero)``)
 val _ = case sgs of
             [([abb], sg)] =>
-            if Term.aconv abb ``Abbrev (v = u < SUC (SUC zero))`` andalso
+            if Term.aconv abb ``Abbrev (v <=> u < SUC (SUC zero))`` andalso
                Term.aconv sg ``(!y. y < SUC zero) /\ v``
             then OK()
             else die "FAILED!"
@@ -225,7 +225,7 @@ val (sgs,_) = Q.PAT_ABBREV_TAC `v = (x < SUC z)`
                   ([], ``(!x. x < SUC zero) /\ u < SUC (SUC zero)``)
 val _ = case sgs of
             [([abb], sg)] =>
-            if Term.aconv abb ``Abbrev (v = u < SUC (SUC zero))`` andalso
+            if Term.aconv abb ``Abbrev (v <=> u < SUC (SUC zero))`` andalso
                Term.aconv sg ``(!y. y < SUC zero) /\ v``
             then OK()
             else die "FAILED!"

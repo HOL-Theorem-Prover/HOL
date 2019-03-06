@@ -14,7 +14,7 @@ val _ = test "Parse quantified eqn" Defn.parse_absyn (Absyn`∀x. bar x = foo x`
 
 val x_def = new_definition("x_def", ``x = \y. F``)
 
-val def3 = test "Constant as parameter (=)" (Hol_defn "baz1") `baz1 x = x /\ F`
+val def3 = test "Constant as parameter (=)" (Hol_defn "baz1") `baz1 x = (x /\ F)`
 val def4 =
     test "Constant as parameter (<=>)" (Hol_defn "baz2") `baz2 x <=> x /\ F`
 val def5 =
@@ -22,7 +22,7 @@ val def5 =
          (Hol_defn "baz3") `baz3 (x:bool) <=> x /\ F`
 val _ =
     test "Constant as parameter under quantifier"
-         Defn.parse_absyn (Absyn`!y. baz4 x y = x /\ y`)
+         Defn.parse_absyn (Absyn`!y. baz4 x y = (x /\ y)`)
 
 val def6 = test "Case expression with multiple underscores"
                 (Hol_defn "f1")
@@ -36,7 +36,7 @@ val def8 = test "Case expression with variables of different types"
                 `f3 x = case x of (f,T,_) => ~f | (_,F,f) => f F`;
 
 val _ = overload_on ("=", ``T``)
-val _ = test "Definition with overloaded =" (Hol_defn "f4") `f4 x y = x /\ y`
+val _ = test "Definition with overloaded =" (Hol_defn "f4") `f4 x y = (x /\ y)`
 
 val _ = temp_overload_on("foo", ``bool$F``)
 val _ = Hol_defn "F" `F f x <=> x \/ f x`;
