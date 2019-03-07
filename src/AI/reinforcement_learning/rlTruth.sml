@@ -101,11 +101,10 @@ fun mk_addsuceq_one maxsize =
 fun mk_addsuceq maxsize =
   List.concat (List.tabulate (maxsize - 3, fn x => mk_addsuceq_one (x + 4)))
 
+(* -------------------------------------------------------------------------
+   Length of a proof (including term traversal)
+   ------------------------------------------------------------------------- *)
 
-(*
-load "rlTruth"; open rlTruth; load "aiLib"; open aiLib; 
-load "rlLib"; open rlLib;
-val ERR = mk_HOL_ERR "test";
 val tm = aiLib.random_elem (mk_addsuceq 7);
 fun norm tm =
   PURE_ONCE_REWRITE_CONV [arithmeticTheory.ADD_0,GSYM arithmeticTheory.ADD_SUC] tm;
@@ -139,9 +138,7 @@ fun list_cost tm =
 fun total_cost tm = sum_int (list_cost tm)
 
 
-
-
-
+(*
 *)
 
 (*

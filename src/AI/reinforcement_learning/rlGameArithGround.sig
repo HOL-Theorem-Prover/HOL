@@ -21,6 +21,7 @@ sig
 
   val gamespec : gamespec
   
-   val mk_targetl : int -> board psMCTS.sit list
+  val mk_targetl : int -> board psMCTS.sit list
+  val total_cost_target : board psMCTS.sit -> int
 
 end

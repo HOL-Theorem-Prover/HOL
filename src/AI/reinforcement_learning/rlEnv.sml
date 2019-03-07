@@ -149,9 +149,13 @@ fun n_bigsteps_loop (n,nmax) gamespec pbspec (allex,allroot) tree =
   end
 
 fun n_bigsteps n gamespec pbspec ntarg target =
-  let val tree = starttree_of (!decay_glob) pbspec target in
+  let 
+    val tree = starttree_of (!decay_glob) pbspec target 
+    val nvary = rlGameArithGround.total_cost_target target
+  in
     print_endline ("Target " ^ its ntarg);
-    n_bigsteps_loop (0,n) gamespec pbspec (emptyallex,[]) tree
+    print_endline ("  expected proof length: " ^ its nvary);
+    n_bigsteps_loop (0,nvary) gamespec pbspec (emptyallex,[]) tree
   end
 
 (* -------------------------------------------------------------------------
@@ -215,10 +219,13 @@ fun eval_targetl gamespec dhtnn targetl =
     val {opdict,headeval,headpoli,dimin,dimout} = dhtnn
     val etnn = {opdict=opdict,headnn=headeval,dimin=dimin,dimout=1}
     fun f sit = only_hd (infer_tnn etnn ((#nntm_of_sit gamespec) sit))
-    val l = map_assoc f targetl
+    val l = map_assoc f targetl    
     val r = rts (average_real (map snd l))
+    val l2 = map (rlGameArithGround.total_cost_target) targetl
+    val r2 = rts (average_real (map Real.fromInt l2))
   in
     summary ("  Average value (full dataset): " ^ r);
+    summary ("  Average expected proof length (full dataset): " ^ r2);
     l
   end
 
@@ -287,7 +294,7 @@ val ntarget_preselect = ref 10000
 
 fun concat_ex ((exE,exP),(allexE,allexP)) = (exE @ allexE, exP @ allexP)
 
-fun explore_f (gamespec : ('a,''b,'c) gamespec) allex dhtnn targetl =
+fun explore_f gamespec allex dhtnn targetl =
   let
     val pbspec =
       ((#status_of gamespec, #apply_move gamespec), 

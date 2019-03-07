@@ -187,6 +187,11 @@ val gamespec : gamespec =
    Targets
    ------------------------------------------------------------------------- *)
 
+fun total_cost_target target = case target of
+    (true, Board (tm,[])) => total_cost tm
+  | _ => raise ERR "total_cost_target" ""
+
+
 fun mk_targetl maxsize = 
   let val tml = mk_term_set (mk_addsuceq maxsize) in
     map mk_startsit tml
