@@ -158,8 +158,7 @@ fun th1_tyopdef oc ((thy,tyop),arity) =
 fun th1_cvdef oc c =
   let val (th1name,ty) = (name_c c, type_of c) in
     os oc (thfpar ^ th1name ^ ",type," ^ th1name ^ ":");
-    th1_forall_tyvarl_ty oc ty; os oc "("; 
-    th1_type oc ty; os oc ")"; osn oc ")."
+    th1_forall_tyvarl_ty oc ty; th1_type oc ty; osn oc ")."
   end
 
 fun th1_thmdef role oc (thy,name) =

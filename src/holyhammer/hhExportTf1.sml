@@ -38,8 +38,8 @@ fun tf1_type oc (ty,a) = case strip_funty_n a ty of
     (os oc "("; tf1_utype oc uty; os oc " > "; tf1_utype oc imty;
      os oc ")")
   | l =>
-    (os oc "("; oiter oc " * " tf1_utype (butlast l); os oc ") > ";
-     tf1_utype oc (last l))
+    (os oc "(("; oiter oc " * " tf1_utype (butlast l); os oc ") > ";
+     tf1_utype oc (last l); os oc ")")
 
 (* -------------------------------------------------------------------------
    TF1 quantifier
@@ -168,8 +168,7 @@ fun tf1_tyopdef oc ((thy,tyop),arity) =
 fun tf1_cvdef oc (tm,a) =
   let val (tf1name,ty) = (namea_cv (tm,a), type_of tm) in
     os oc (tffpar ^ tf1name ^ ",type," ^ tf1name ^ ":");
-    tf1_forall_tyvarl_ty oc ty; 
-    os oc "("; tf1_type oc (ty,a); osn oc "))."
+    tf1_forall_tyvarl_ty oc ty; tf1_type oc (ty,a); osn oc ")."
   end
 
 fun tf1_thmdef role oc (thy,name) =
@@ -198,8 +197,7 @@ fun tf1_cdef_app oc =
     val tf1name = namea_v (mk_var ("app",bool),2) (* bool is dummy type *)
   in
     os oc (tffpar ^ tf1name ^ ",type," ^ tf1name ^ ":");
-    tf1_forall_tyvarl_ty oc ty; 
-    os oc "("; tf1_type oc (ty,2); osn oc "))."
+    tf1_forall_tyvarl_ty oc ty; tf1_type oc (ty,2); osn oc ")."
   end
 
 fun tf1_cdef_p oc =

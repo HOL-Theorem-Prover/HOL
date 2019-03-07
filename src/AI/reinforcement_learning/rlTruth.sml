@@ -103,6 +103,48 @@ fun mk_addsuceq maxsize =
 
 
 (*
+load "rlTruth"; open rlTruth; load "aiLib"; open aiLib; 
+load "rlLib"; open rlLib;
+val ERR = mk_HOL_ERR "test";
+val tm = aiLib.random_elem (mk_addsuceq 7);
+fun norm tm =
+  PURE_ONCE_REWRITE_CONV [arithmeticTheory.ADD_0,GSYM arithmeticTheory.ADD_SUC] tm;
+
+fun imin l = hd (dict_sort Int.compare l)
+
+fun depth_diff (tm1,tm2) = 
+  let 
+    val (oper1,argl1) = strip_comb tm1
+    val (oper2,argl2) = strip_comb tm2
+  in
+    if term_eq oper1 oper2 andalso length argl1 = length argl2
+    then 
+      let val l = List.mapPartial depth_diff (combine (argl1,argl2)) in
+        if null l then NONE else SOME (1 + imin l)
+      end
+    else SOME 0
+  end
+
+fun is_refl tm = let val (a,b) = dest_eq tm in term_eq a b end
+
+fun list_cost tm =
+  let val newtm = (rhs o concl) (norm tm) in
+    if term_eq newtm tm then raise ERR "total_cost" "" else
+    if is_refl newtm then [0] else
+      let val cost = 1 + valOf (depth_diff (tm,newtm)) in
+        cost :: list_cost newtm
+      end
+  end
+
+fun total_cost tm = sum_int (list_cost tm)
+
+
+
+
+
+*)
+
+(*
 fun random_starttm n = 
   let val tm = rlLib.mk_sucn (aiLib.random_int (0,n)) in
     mk_eq (tm,tm)

@@ -359,11 +359,11 @@ end (* struct *)
 app load ["rlGameArithGround","rlEnv"];
 open aiLib psMCTS rlGameArithGround rlEnv;
 
-logfile_glob := "arith_6";
+logfile_glob := "arith_7";
 ngen_glob := 100;
 ntarget_glob := 400;
 exwindow_glob := 40000;
-bigsteps_glob := 10;
+bigsteps_glob := 30;
 nsim_glob := 1600;
 val maxsize = 5;
 maxsize_glob := maxsize;
