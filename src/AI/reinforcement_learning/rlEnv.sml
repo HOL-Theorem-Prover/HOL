@@ -329,10 +329,10 @@ fun rl_one n gamespec targetl dhtnn_old allex =
        summary ("Increasing maxsize to: " ^ its (!maxsize_glob)))
       else ()
     val (targetl_new,t) = 
-      add_time (rlGameArithGround.mk_targetl (!maxsize_glob,0))
-      (!ntarget_preselect);
-    val _ = summary ("Creating new targets: " ^ 
-      its (length targetl_new) ^ "," ^ rts t)
+      add_time rlGameArithGround.mk_targetl (!maxsize_glob);
+    val _ = summary (
+      "Creating " ^ its (length targetl_new) ^ " new targets in " ^
+       rts t ^ " seconds")
     val targetl' = 
       choose_uniform gamespec dhtnn_best (targetl_new,!ntarget_glob)
     val newallex = explore_f false gamespec allex dhtnn_best targetl'
@@ -360,7 +360,7 @@ end (* struct *)
 app load ["rlGameArithGround","rlEnv"];
 open aiLib psMCTS rlGameArithGround rlEnv;
 
-logfile_glob := "arith_2";
+logfile_glob := "arith_3";
 ngen_glob := 100;
 ntarget_glob := 400;
 exwindow_glob := 40000;
@@ -369,7 +369,7 @@ nsim_glob := 1600;
 val maxsize = 7;
 maxsize_glob := maxsize;
 val ntarget = 10000;
-val targetl = mk_targetl (maxsize,0) 10000;
+val targetl = mk_targetl (maxsize) 10000;
 
 val allex = start_rl_loop gamespec targetl;
 

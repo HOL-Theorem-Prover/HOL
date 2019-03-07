@@ -66,6 +66,114 @@ fun mk_true_arith_eq (maxsize,maxvalue) ntarget =
     List.tabulate (ntarget, random_true)
   end
 
+(* do up until 4 *)
+
+fun mk_add2 (n1,n2) = mk_add (mk_sucn n1, mk_sucn n2)
+
+fun mk_add3 (n1,n2,n3) =
+  [mk_add (mk_add2 (n1,n2), mk_sucn n3),
+   mk_add (mk_sucn n1, mk_add2 (n2,n3))]
+
+fun mk_add4 (n1,n2,n3,n4) =
+  let 
+    val (t1,t2,t3,t4) = (mk_sucn n1,mk_sucn n2,mk_sucn n3,mk_sucn n4)
+  in
+    map (fn x => (mk_add (t1,x))) (mk_add3 (n2,n3,n4)) @
+    map (fn x => (mk_add (x,t4))) (mk_add3 (n1,n2,n3)) @
+    [mk_add (mk_add (t1,t2), mk_add (t3,t4))]
+  end
+ 
+
+fun eq_maxsize maxsize tm = mk_eq (tm, mk_sucn maxsize)
+
+fun mk_addsuceq_one maxsize =
+  let 
+    val l2 = number_partition 2 maxsize
+    val tml2 = map (mk_add2 o pair_of_list) l2
+    val l3 = number_partition 3 maxsize
+    val tml3 = List.concat (map (mk_add3 o triple_of_list) l3)
+    val l4 = number_partition 4 maxsize
+    val tml4 = List.concat (map (mk_add4 o quadruple_of_list) l4)
+  in
+    map (eq_maxsize maxsize) (tml2 @ tml3 @ tml4)
+  end
+
+fun mk_addsuceq maxsize =
+  List.concat (List.tabulate (maxsize - 3, fn x => mk_addsuceq_one (x + 4)))
+
+
+(*
+fun random_starttm n = 
+  let val tm = rlLib.mk_sucn (aiLib.random_int (0,n)) in
+    mk_eq (tm,tm)
+  end
+
+(* -------------------------------------------------------------------------
+   Axioms and theorems
+   ------------------------------------------------------------------------- *)
+
+val ax1 = ``x + 0 = x``;
+val ax2 = ``x * 0 = 0``
+val ax3 = ``x + SUC y = SUC (x + y)``
+val ax4 = ``x * SUC y = x * y + x``
+val ax5 = ``x * SUC 0 = x``
+
+val axl = [ax1,ax2,ax3,ax4,ax5,sym ax1,sym ax3,sym ax4,sym ax5]
+
+(* -------------------------------------------------------------------------
+   Paramodulation (used as a rewrite tool here since targets are ground)
+   ------------------------------------------------------------------------- *)
+
+fun unify a b = Unify.simp_unify_terms [] a b
+
+fun paramod eq (tm,pos) =
+  if null pos then NONE else
+  let
+    val (eql,eqr) = dest_eq eq
+    val subtm = find_subtm (tm,pos)
+    val sigma = unify eql subtm
+    val eqrsig = subst sigma eqr
+    val tmsig = subst sigma tm
+    val result = subst_pos (tmsig,pos) eqrsig
+  in
+    if term_eq result tm then NONE else SOME (result,pos)
+  end
+  handle HOL_ERR _ => NONE
+
+fun all_pos (tm,pos) =
+  let 
+    val (oper,argl) = strip_comb tm 
+    fun f i arg = all_pos (arg,pos @ [i])
+  in
+    pos :: List.concat (mapi f argl)
+  end
+
+fun all_rw tm = 
+  let 
+    val posl = all_pos (lhs tm,[0]) @ all_pos (rhs tm,[1]) 
+    fun f (eq,pos) = paramod eq (tm,pos)
+    fun g (k,vl) = hd (dict_sort Int.compare (map length vl))
+    val l = List.mapPartial f (cartesian_product axl posl)
+    val d = dregroup Term.compare l
+  in
+    dlist (dmap g d)
+  end
+
+fun random_nstep (tm,n) =
+  if n <= 0 then tm else 
+  let val (newtm,cost) = random_elem (all_rw tm) in
+    if n - cost <= 0 then tm else random_nstep (newtm, n - cost)
+  end
+
+
+fun random_target (maxstart,maxstep) =
+  let 
+    val tm1 = random_starttm maxstart;
+    val tm2 = random_nstep (tm1,random_int (1,maxstep))
+  in
+    tm2
+  end
+*)
 
 end (* struct *)
 

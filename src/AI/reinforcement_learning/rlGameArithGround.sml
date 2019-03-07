@@ -63,7 +63,7 @@ val ax1 = ``x + 0 = x``;
 val ax2 = ``x * 0 = 0``
 val ax3 = ``x + SUC y = SUC (x + y)``
 val ax4 = ``x * SUC y = x * y + x``
-val axl = map (rename_varl (fn x => "")) [ax1,ax2,ax3,ax4]
+val axl = map (rename_varl (fn x => "")) [ax1,ax3]
 val ax_vect = Vector.fromList axl
 
 (* -------------------------------------------------------------------------
@@ -108,9 +108,9 @@ fun paramod eq (tm,pos) =
 datatype move = Arg of int | Paramod of (int * bool)
 
 val movel =
-  map Arg [0,1] @
-  List.concat (
-  List.tabulate (length axl, fn i => [Paramod (i,true),Paramod (i,false)]))
+  let fun f i = [Paramod (i,true),Paramod (i,false)] in 
+    map Arg [0,1] @ List.concat (List.tabulate (length axl, f))
+  end
 
 fun bts b = if b then "t" else "f"
 
@@ -187,8 +187,8 @@ val gamespec : gamespec =
    Targets
    ------------------------------------------------------------------------- *)
 
-fun mk_targetl (maxsize,maxvalue) ntarget = 
-  let val tml = mk_term_set (mk_true_arith_eq (maxsize,maxvalue) ntarget) in
+fun mk_targetl maxsize = 
+  let val tml = mk_term_set (mk_addsuceq maxsize) in
     map mk_startsit tml
   end
 
