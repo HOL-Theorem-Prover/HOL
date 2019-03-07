@@ -104,14 +104,14 @@ val numeral_distrib = store_thm(
    (!n. (NUMERAL n = 0) = (n = ZERO)) /\
    (!n. (0 = NUMERAL n) = (n = ZERO)) /\
    (!n m. (NUMERAL n = NUMERAL m) = (n=m)) /\
-   (!n. n < 0 = F) /\ (!n. 0 < NUMERAL n = ZERO < n) /\
-   (!n m. NUMERAL n < NUMERAL m  = n<m)  /\
-   (!n. 0 > n = F) /\ (!n. NUMERAL n > 0 = ZERO < n) /\
-   (!n m. NUMERAL n > NUMERAL m  = m<n)  /\
-   (!n. 0 <= n = T) /\ (!n. NUMERAL n <= 0 = n <= ZERO) /\
-   (!n m. NUMERAL n <= NUMERAL m = n<=m) /\
-   (!n. n >= 0 = T) /\ (!n. 0 >= n = (n = 0)) /\
-   (!n m. NUMERAL n >= NUMERAL m = m <= n) /\
+   (!n. n < 0 <=> F) /\ (!n. 0 < NUMERAL n <=> ZERO < n) /\
+   (!n m. NUMERAL n < NUMERAL m  <=> n<m)  /\
+   (!n. 0 > n <=> F) /\ (!n. NUMERAL n > 0 <=> ZERO < n) /\
+   (!n m. NUMERAL n > NUMERAL m  <=> m<n)  /\
+   (!n. 0 <= n <=> T) /\ (!n. NUMERAL n <= 0 <=> n <= ZERO) /\
+   (!n m. NUMERAL n <= NUMERAL m <=> n<=m) /\
+   (!n. n >= 0 <=> T) /\ (!n. 0 >= n <=> (n = 0)) /\
+   (!n m. NUMERAL n >= NUMERAL m <=> m <= n) /\
    (!n. ODD (NUMERAL n) = ODD n) /\ (!n. EVEN (NUMERAL n) = EVEN n) /\
    ~ODD 0 /\ EVEN 0`,
   SIMP_TAC bool_ss [NUMERAL_DEF, GREATER_DEF, iZ, GREATER_OR_EQ,
@@ -208,27 +208,27 @@ fun ncases str n0 =
                    (SPEC (mk_var(str, (==`:num`==))) num_CASES)
 
 val double_less = prove(Term
-  `!n m. (n + n < m + m = n < m) /\ (n + n <= m + m = n <= m)`,
+  `!n m. (n + n < m + m <=> n < m) /\ (n + n <= m + m <=> n <= m)`,
   INDUCT_TAC THEN GEN_TAC THEN ncases "m" "m0" THEN
   ASM_SIMP_TAC bool_ss [ADD_CLAUSES, NOT_LESS_0, LESS_0, LESS_MONO_EQ,
                         ZERO_LESS_EQ, NOT_SUC_LESS_EQ_0, LESS_EQ_MONO]);
 
 
 val double_1suc_less = prove(Term
-  `!x y. (SUC(x + x) < y + y = x < y) /\
-         (SUC(x + x) <= y + y = x < y) /\
-         (x + x < SUC(y + y) = ~(y < x)) /\
-         (x + x <= SUC(y + y) = ~(y < x))`,
+  `!x y. (SUC(x + x) < y + y <=> x < y) /\
+         (SUC(x + x) <= y + y <=> x < y) /\
+         (x + x < SUC(y + y) <=> ~(y < x)) /\
+         (x + x <= SUC(y + y) <=> ~(y < x))`,
   INDUCT_TAC THEN GEN_TAC THEN ncases "y" "y0" THEN
   ASM_SIMP_TAC bool_ss [ADD_CLAUSES, LESS_EQ_MONO, NOT_LESS_0,
                         ZERO_LESS_EQ, NOT_SUC_LESS_EQ_0, LESS_0,
                         LESS_MONO_EQ]);
 
 val double_2suc_less = prove(Term
-`!n m. (n + n < SUC (SUC (m + m)) = n < SUC m) /\
-       (SUC (SUC (m + m)) < n + n = SUC m < n) /\
-       (n + n <= SUC (SUC (m + m)) = n <= SUC m) /\
-       (SUC (SUC (m + m)) <= n + n = SUC m <= n)`,
+`!n m. (n + n < SUC (SUC (m + m)) <=> n < SUC m) /\
+       (SUC (SUC (m + m)) < n + n <=> SUC m < n) /\
+       (n + n <= SUC (SUC (m + m)) <=> n <= SUC m) /\
+       (SUC (SUC (m + m)) <= n + n <=> SUC m <= n)`,
 ONCE_REWRITE_TAC [GSYM (el 4 (CONJUNCTS ADD_CLAUSES))] THEN
 ONCE_REWRITE_TAC [GSYM (el 3 (CONJUNCTS ADD_CLAUSES))] THEN
 REWRITE_TAC [double_less]);
@@ -239,13 +239,13 @@ val numeral_lt = store_thm(
   "numeral_lt",
   Term
   `!n m.
-    (ZERO < BIT1 n = T) /\
-    (ZERO < BIT2 n = T) /\
-    (n < ZERO = F) /\
-    (BIT1 n < BIT1 m = n < m) /\
-    (BIT2 n < BIT2 m = n < m) /\
-    (BIT1 n < BIT2 m = ~(m < n)) /\
-    (BIT2 n < BIT1 m = n < m)`,
+    (ZERO < BIT1 n <=> T) /\
+    (ZERO < BIT2 n <=> T) /\
+    (n < ZERO <=> F) /\
+    (BIT1 n < BIT1 m <=> n < m) /\
+    (BIT2 n < BIT2 m <=> n < m) /\
+    (BIT1 n < BIT2 m <=> ~(m < n)) /\
+    (BIT2 n < BIT1 m <=> n < m)`,
   SIMP_TAC bool_ss (DOUBLE_FACTS::LESS_MONO_EQ::numeral_proof_rwts));
 
 (*---------------------------------------------------------------------------*)
@@ -255,13 +255,13 @@ val numeral_lt = store_thm(
 
 val numeral_lte = store_thm(
   "numeral_lte", Term
-  `!n m. (ZERO <= n = T) /\
-         (BIT1 n <= ZERO = F) /\
-         (BIT2 n <= ZERO = F) /\
-         (BIT1 n <= BIT1 m = n <= m) /\
-         (BIT1 n <= BIT2 m = n <= m) /\
-         (BIT2 n <= BIT1 m = ~(m <= n)) /\
-         (BIT2 n <= BIT2 m = n <= m)`,
+  `!n m. (ZERO <= n         <=> T) /\
+         (BIT1 n <= ZERO    <=> F) /\
+         (BIT2 n <= ZERO    <=> F) /\
+         (BIT1 n <= BIT1 m  <=> n <= m) /\
+         (BIT1 n <= BIT2 m  <=> n <= m) /\
+         (BIT2 n <= BIT1 m  <=> ~(m <= n)) /\
+         (BIT2 n <= BIT2 m  <=> n <= m)`,
   SIMP_TAC bool_ss ([DOUBLE_FACTS, LESS_MONO_EQ, LESS_EQ_MONO] @
                     (map (REWRITE_RULE [NUMERAL_DEF])
                          [ZERO_LESS_EQ, NOT_SUC_LESS_EQ_0, NOT_LESS]) @
@@ -487,9 +487,9 @@ val iSUB_THM = store_thm(
 (*---------------------------------------------------------------------------*)
 
 val less_less_eqs = prove(
-  Term`!n m. (n < m ==> ~(m <= n) /\ (m <= SUC n = (m = SUC n)) /\
+  Term`!n m. (n < m ==> ~(m <= n) /\ (m <= SUC n <=> (m = SUC n)) /\
                         ~(m + m <= n)) /\
-             (n <= m ==> ~(m < n) /\ (m <= n = (m = n)) /\
+             (n <= m ==> ~(m < n) /\ (m <= n <=> (m = n)) /\
                          ~(SUC m <= n))`,
   REPEAT GEN_TAC THEN CONJ_TAC THEN STRIP_TAC THEN REPEAT CONJ_TAC THENL [
     STRIP_TAC THEN MAP_EVERY IMP_RES_TAC [LESS_LESS_EQ_TRANS, LESS_REFL],

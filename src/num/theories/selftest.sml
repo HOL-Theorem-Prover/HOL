@@ -38,7 +38,7 @@ in
     "(case x of 0 => (\\x. x) | SUC n => (\\m. m + n)) y",
     "!a b c d e f g.\n\
     \    foo' a b /\\ bar a c /\\ baz a c d /\\ qux f g /\\ foo' f g ==>\n\
-    \    (a + b * c = 10 * d + e + f + g)"
+    \    a + b * c = 10 * d + e + f + g"
   ] ;
   trace ("PP.print_firstcasebar", 1) tpp "case e of | 0 => 1 | SUC n => n + 2";
   trace ("PP.print_firstcasebar", 1) tpp
