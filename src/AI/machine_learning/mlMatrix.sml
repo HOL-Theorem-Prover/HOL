@@ -69,10 +69,15 @@ fun mat_transpose m1 =
     mat_tabulate f (inv_dim (mat_dim m1))
   end
 
-fun mat_random dim =
-  let fun f i j = 2.0 * random_real () - 1.0 in
+fun mat_random (dim as (a,b)) =
+  let 
+    val r = Math.sqrt (6.0 / (Real.fromInt (a + b)))  
+    fun f i j = r * (2.0 * random_real () - 1.0) 
+  in
     mat_tabulate f dim
   end
+
+
 
 fun string_of_vect v =
   String.concatWith " " (map (Real.toString o approx 2) (vector_to_list v))
