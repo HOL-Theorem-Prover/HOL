@@ -933,9 +933,6 @@ Proof
 QED
 
 
-
-
-
 (* Kolmogorov kraft inequality *)
 
 Theorem kolmog_prefix_free:
@@ -946,14 +943,140 @@ Proof
 QED
 
 Theorem kolmog_kraft:
-  REAL_SUM_IMAGE (\s. (2 rpow (real_neg &((LENGTH s))))) {q | q ∈ {x| ∃y. (kolmog y = LENGTH x) ∧ ((PUTM x) = SOME y) } ∧ LENGTH q <n} <=1
+  REAL_SUM_IMAGE (\s. (2 rpow (real_neg &(LENGTH s)))) {q | q ∈ {x| ∃y. (kolmog y = LENGTH x) ∧ ((PUTM x) = SOME y) } ∧ LENGTH q <n} <=1
 Proof
   `prefix_free {x| ∃y. (kolmog y = LENGTH x) ∧ ((PUTM x) = SOME y) }` by fs[kolmog_prefix_free]>>
   `bls_size {x| ∃y. (kolmog y = LENGTH x) ∧ ((PUTM x) = SOME y) } n <= 1` by fs[kraft_ineq1]>>
   fs[bls_size_def]
 QED
 
-(*    *)
+(* Working on other Kolmog theorems  *)
+
+(* UTM from theorem 2.7 of UAI, with bar in place of dash *)
+
+val bar2ed_plus_def = Define`bar2ed_plus x <=> ∃y i q. x=(bar y)++(bar i)++q`
+
+val unbar2p_def = Define`unbar2p i (T::rest) = unbar2p (i+1) rest ∧
+                         unbar2p i (F::rest) = (TAKE i rest, (DROP i rest))`
+
+val unbar2_plus_def = Define`unbar2_plus x = 
+  (FST (unbar2 0 x), FST (unbar2p 0 (SND (unbar2p 0 x))), SND (unbar2p 0 (SND (unbar2p 0 x))) )`
+
+Theorem unbar2p_induct:
+  ∀i. unbar2p i (Tpow j ++ F::rest) =
+       (TAKE (i + j) rest, (DROP (i + j) rest))
+Proof
+  simp[Tpow_def] >> Induct_on`j` >> simp[unbar2p_def,GENLIST_CONS,ADD1]
+QED
+
+Theorem unbar2_plus_corr:
+  unbar2_plus ((bar y) ++ (bar i) ++q) = (y,i,q)
+Proof
+  fs[unbar2_plus_def] >>rw[bar2_def,bar_def] >> 
+  REWRITE_TAC [GSYM APPEND_ASSOC,APPEND,unbar2_induct_bar2,unbar2p_induct,
+               rich_listTheory.TAKE_LENGTH_APPEND, rich_listTheory.DROP_LENGTH_APPEND,ADD_CLAUSES]
+QED
+
+val HUTM_w_side_inf_def = Define`HUTM_w_side_inf p = 
+  if bar2ed_plus p then (Phi (bl2n (FST (SND (unbar2_plus p) ) )) 
+                             (bl2n (bar (FST  (unbar2_plus p)) ++ 
+                                   (SND (SND (unbar2_plus p) ))) )) 
+  else NONE`
+
+val bar2ped_def = Define`bar2ped x <=> ∃i q. x = (bar i) ++ q`
+
+val HUTM_def =  Define`HUTM p = 
+  if bar2ped p then (Phi (bl2n (FST (unbar2p 0 p) ) ) 
+                         (bl2n (SND (unbar2p 0 p) ) )) 
+  else NONE`
+
+Theorem HUTM_w_side_inf_corr:
+  HUTM_w_side_inf ((bar y) ++ (bar i) ++ q) = Phi (bl2n i) (bl2n ((bar y) ++ q))
+Proof
+  fs[bar2ed_plus_def,HUTM_w_side_inf_def,unbar2_plus_corr] >> rw[] >> metis_tac[]
+QED
+
+Theorem HUTM_corr:
+  HUTM ((bar i) ++ q) = Phi (bl2n i) (bl2n q)
+Proof
+  fs[unbar2p_def,bar2ped_def,HUTM_def,unbar2p_induct,bar_def] >>  rw[unbar2p_induct]
+  >- (`Tpow (LENGTH i) ++ [F] ++ i ++ q = (Tpow (LENGTH i)) ++ F::(i ++ q)` by fs[] >>
+      rw[unbar2p_induct] >> 
+      REWRITE_TAC [GSYM APPEND_ASSOC,APPEND,rich_listTheory.TAKE_LENGTH_APPEND, 
+                   rich_listTheory.DROP_LENGTH_APPEND,ADD_CLAUSES]) >> 
+  metis_tac[]
+QED
+
+Theorem HUTM_univ:
+  univ_rf HUTM
+Proof
+  fs[univ_rf_def] >> rw[] >> qexists_tac`bar (n2bl (f))` >> rw[HUTM_corr]
+QED
+
+val undop_def = Define` (undop i (T::rest) = undop (i + 1) rest) ∧
+                         undop i (F::rest) = (n2bl (i-1), (DROP i rest))`
+
+Theorem undop_corr:
+  undop 0 ((Tpow f) ++ [F]++x) = (n2bl f,x)
+Proof
+  simp[Tpow_def] >> Induct_on`f` >- simp[undop_def] >> simp[GENLIST_CONS,ADD1]
+QED
+
+val CUTM_def = Define`CUTM p = Phi (bl2n  (FST (undop 0 p))) (bl2n (SND (undop 0 p)) )`
+
+(* prefix invariance theorem  *)
+
+Theorem pf_invariance_theorem:
+  ∀M. prefix_free {x | (∃y. recPhi [M;bl2n x] = SOME y)} ==>  ∃C. ∀x. (kolmog_complexity x HUTM) <= (kolmog_complexity x (λy. recPhi [M;bl2n y])) + (C U T)
+Proof
+  rw[kolmog_complexity_def] >>  `univ_rf HUTM` by fs[HUTM_univ] >> fs[univ_rf_def] >>
+  `∃g. ∀x. Phi M' x = HUTM (g++ (n2bl x))` by fs[] >>
+  qexists_tac`λx y. SOME (LENGTH g)` >> rw[]
+  >- (`univ_rf HUTM` by fs[univ_rf_def] >>`{p| HUTM p = SOME x} <> {}` by fs[univ_rf_nonempty] >> 
+      fs[])
+  >- (`MIN_SET (IMAGE LENGTH {p | U p = SOME x}) ∈ 
+        IMAGE LENGTH ({p | U p = SOME x})` by fs[MIN_SET_LEM] >> fs[IMAGE_DEF] >>
+      qabbrev_tac`U_x = x'` >>
+      `MIN_SET (IMAGE LENGTH {y | U (g ++ y) = SOME x}) ∈ 
+        IMAGE LENGTH ({y | U (g ++ y) = SOME x})` by fs[MIN_SET_LEM] >> fs[IMAGE_DEF] >>
+      qabbrev_tac`T_x = x''` >>
+      `{LENGTH y | U (g ++ y) = SOME x} <> {}` by (fs[EXTENSION] >> qexists_tac`T_x`>>fs[])>>
+      qabbrev_tac`a=LENGTH g` >>
+      `a + MIN_SET {b | b ∈  {LENGTH y | U (g ++ y) = SOME x}} = 
+        MIN_SET {a + b | b ∈  {LENGTH y | U (g ++ y) = SOME x}}` by fs[MIN_SET_ladd] >>
+      fs[] >> 
+      `{LENGTH p | U p = SOME x} <> {}` by (`IMAGE LENGTH { p | U p = SOME x} ≠ ∅` by 
+        fs[IMAGE_EQ_EMPTY] >>
+        `{LENGTH p | p ∈ {q | U q= SOME x}} ≠ ∅` by metis_tac[IMAGE_DEF] >> fs[]) >>
+      `MIN_SET {LENGTH p | U p = SOME x} ∈ {LENGTH p | U p = SOME x} ∧ 
+        ∀q. q ∈ {LENGTH p | U p = SOME x} ⇒ MIN_SET {LENGTH p | U p = SOME x} ≤ q` by 
+        fs[MIN_SET_LEM] >> 
+      `MIN_SET {LENGTH x' | U x' = SOME x} ≤
+       MIN_SET {a + b | (∃y. b = LENGTH y ∧ U (g ++ y) = SOME x)}` suffices_by fs[]>>
+      irule SUBSET_MIN_SET >> rw[]
+      >- (fs[EXTENSION] >> qexists_tac`T_x`>>fs[])
+      >- (rw[SUBSET_DEF] >>qexists_tac`g++y`>>fs[Abbr`a`] )  )
+QED
+
+Theorem kolmog_recfun:
+  ∀f x. ∃C. primrec f 1 ==> kolmog (f [x]) <= (kolmog x) + (kolmog f) + C
+Proof
+
+QED
+
+val PUTM_fnum_define = Define`PUTM_fnum f = if recfn f 1 then @p. ∀x.   else NONE`
+
+Theorem kolmog_concat:
+  ∀x y. ∃C. kolmog (x ⊗ y) <= (kolmog x) + (kolmog y) + C
+Proof
+  rw[] >> qexists_tac`10` >> fs[kolmog_def,kolmog_complexity_def] >> 
+  `∃m1. PUTM (bar2 (m1,[])) = SOME (x ⊗ y)`by fs[print_exists] >>
+  `∃m2. PUTM (bar2 (m2,[])) = SOME (x)`by fs[print_exists] >>
+  `∃m3. PUTM (bar2 (m3,[])) = SOME (y)`by fs[print_exists] >> rw[] >> fs[EXTENSION] >>
+  fs[recfns_in_Phi]
+QED
+
+(*  Proving kolmog is not computable  *)
 
 open logrootTheory
 
@@ -1028,7 +1151,53 @@ val size_dovetail_def = Define`size_dovetail0 P ms i = let results = map (λ(m,j
 
 (* Make fn which takes n and gives list of nats st log 2 nats = n *)
 
-val clog2list_def = Define`clog2list = `
+open churchlistTheory;
+open reductionEval;
+
+val log2list_def = Define`log2list n = GENLIST (λx. x+2**n) (2**n) `
+
+val cexp_def = Define`cexp = LAM "m" (LAM "n" (VAR "n" @@ church 1 @@ (cmult @@ VAR "m")))`
+
+Theorem FV_cexp[simp]:
+  FV cexp = {}
+Proof
+  rw[cexp_def,EXTENSION]
+QED
+
+val cexp_eqn = brackabs.brackabs_equiv [] cexp_def
+
+Theorem cexp_behaviour:
+  cexp @@ m @@ church 0 == church 1 ∧ 
+  cexp @@ m @@ church (SUC n) == cmult @@ m @@ (cexp @@ m @@ church n)
+Proof
+  asm_simp_tac(bsrw_ss())[cexp_eqn]
+QED
+
+Theorem cexp_corr:
+  cexp @@ church m @@ church n == church (m**n)
+Proof
+  Induct_on`n` >>  asm_simp_tac(bsrw_ss())[cexp_behaviour,EXP]
+QED
+
+val clog2list_def = Define`clog2list = 
+  LAM "n" (ctabulate @@ (cexp @@ church 2 @@ VAR "n")
+		     @@ (cplus @@ (cexp @@ church 2 @@ VAR "n")))`
+
+Theorem FV_clog2list[simp]:
+  FV clog2list = {}
+Proof
+  rw[clog2list_def,EXTENSION]
+QED
+
+val clog2list_eqn = brackabs.brackabs_equiv [] clog2list_def
+
+Theorem clog2list_behaviour:
+  clog2list @@ church n == cvlist (MAP church (log2list n))
+Proof
+  asm_simp_tac(bsrw_ss())[clog2list_eqn,log2list_def,MAP_GENLIST,ctabulate_cvlist,cexp_corr] >> 
+  HO_MATCH_MP_TAC cvlist_genlist_cong >>  
+  asm_simp_tac(bsrw_ss())[churchnumTheory.cplus_behaviour,ADD_COMM]
+QED
 
 val find_m_of_size_n_gen_y_def = Define`find_m_of_size_n_gen_y = LAM "n" (LAM "y" 
   (dt @@ (ceqnat @@ VAR "y")
