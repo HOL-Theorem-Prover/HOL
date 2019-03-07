@@ -193,8 +193,17 @@ fun total_cost_target target = case target of
 
 
 fun mk_targetl maxsize = 
-  let val tml = mk_term_set (mk_addsuceq maxsize) in
-    map mk_startsit tml
+  let 
+    fun cmp (a,b) = Int.compare (snd a,snd b)
+    val tml1 = mk_term_set (mk_addsuceq 10) 
+    val tml2 = map_assoc total_cost tml1
+    val tml3 = map fst (dict_sort cmp tml2)
+  in
+    map mk_startsit (first_n (maxsize * 100) tml3) 
   end
+
+
+
+
 
 end (* struct *)
