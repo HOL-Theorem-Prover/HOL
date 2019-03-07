@@ -152,10 +152,12 @@ fun n_bigsteps n gamespec pbspec ntarg target =
   let 
     val tree = starttree_of (!decay_glob) pbspec target 
     val nvary = rlGameArithGround.total_cost_target target
+    val nvary' = nvary + 5 + ((20 * nvary) div 100)
   in
     print_endline ("Target " ^ its ntarg);
     print_endline ("  expected proof length: " ^ its nvary);
-    n_bigsteps_loop (0,nvary) gamespec pbspec (emptyallex,[]) tree
+    n_bigsteps_loop (0,nvary') 
+      gamespec pbspec (emptyallex,[]) tree
   end
 
 (* -------------------------------------------------------------------------
@@ -366,12 +368,12 @@ end (* struct *)
 app load ["rlGameArithGround","rlEnv"];
 open aiLib psMCTS rlGameArithGround rlEnv;
 
-logfile_glob := "arith_7";
+logfile_glob := "arith_9";
 ngen_glob := 100;
 ntarget_glob := 400;
 exwindow_glob := 40000;
 bigsteps_glob := 30;
-nsim_glob := 1600;
+nsim_glob := 3200;
 val maxsize = 5;
 maxsize_glob := maxsize;
 val targetl = mk_targetl maxsize;
