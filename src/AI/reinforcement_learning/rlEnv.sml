@@ -283,6 +283,7 @@ fun compete dhtnn_old dhtnn_new gamespec targetl =
     val w_new = compete_one dhtnn_new gamespec targetl'
     val levelup = int_div (Int.max (w_new,w_old)) (length targetl') > 0.75
   in
+    summary_compete (w_old,w_new);
     if levelup then incr level_glob else ();
     if w_new > w_old then dhtnn_new else dhtnn_old
   end
@@ -371,15 +372,15 @@ end (* struct *)
 app load ["rlGameArithGround","rlEnv"];
 open aiLib psMCTS rlGameArithGround rlEnv;
 
-logfile_glob := "arith_13";
+logfile_glob := "arith_14";
 ngen_glob := 100;
 ntarget_compete := 400;
 ntarget_explore := 400;
 exwindow_glob := 40000;
-dim_glob := 4;
+dim_glob := 8;
 batchsize_glob := 64;
-nsim_glob := 800;
-decay_glob := 0.999;
+nsim_glob := 1600;
+decay_glob := 0.99;
 level_glob := 1;
 
 val allex = start_rl_loop gamespec;
