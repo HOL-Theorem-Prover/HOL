@@ -18,7 +18,7 @@ val _ = new_theory "ind_type";
 val INJ_INVERSE2 = store_thm(
   "INJ_INVERSE2",
   ``!P:'A->'B->'C.
-     (!x1 y1 x2 y2. (P x1 y1 = P x2 y2) = (x1 = x2) /\ (y1 = y2)) ==>
+     (!x1 y1 x2 y2. (P x1 y1 = P x2 y2) <=> (x1 = x2) /\ (y1 = y2)) ==>
      ?X Y. !x y. (X(P x y) = x) /\ (Y(P x y) = y)``,
   GEN_TAC THEN DISCH_TAC THEN
   Q.EXISTS_TAC `\z:'C. @x:'A. ?y:'B. P x y = z` THEN
@@ -45,7 +45,7 @@ val NUMPAIR_INJ_LEMMA = store_thm(
 
 val NUMPAIR_INJ = store_thm (
   "NUMPAIR_INJ",
-  ``!x1 y1 x2 y2. (NUMPAIR x1 y1 = NUMPAIR x2 y2) = (x1 = x2) /\ (y1 = y2)``,
+  ``!x1 y1 x2 y2. (NUMPAIR x1 y1 = NUMPAIR x2 y2) <=> (x1 = x2) /\ (y1 = y2)``,
   REPEAT GEN_TAC THEN EQ_TAC THEN DISCH_TAC THEN ASM_REWRITE_TAC[] THEN
   FIRST_ASSUM(SUBST_ALL_TAC o MATCH_MP NUMPAIR_INJ_LEMMA) THEN
   POP_ASSUM MP_TAC THEN REWRITE_TAC[NUMPAIR] THEN
@@ -64,14 +64,15 @@ val NUMPAIR_DEST = Rsyntax.new_specification {
 val NUMSUM = new_definition("NUMSUM",
   Term`NUMSUM b x = if b then SUC(2 * x) else 2 * x`);
 
-val NUMSUM_INJ = store_thm(
-  "NUMSUM_INJ",
-  Term`!b1 x1 b2 x2. (NUMSUM b1 x1 = NUMSUM b2 x2) = (b1 = b2) /\ (x1 = x2)`,
+Theorem NUMSUM_INJ:
+  !b1 x1 b2 x2. (NUMSUM b1 x1 = NUMSUM b2 x2) <=> (b1 = b2) /\ (x1 = x2)
+Proof
   REPEAT GEN_TAC THEN EQ_TAC THEN DISCH_TAC THEN ASM_REWRITE_TAC[] THEN
   POP_ASSUM(MP_TAC o REWRITE_RULE[NUMSUM]) THEN
   DISCH_THEN(fn th => MP_TAC th THEN MP_TAC(Q.AP_TERM `EVEN` th)) THEN
   REPEAT COND_CASES_TAC THEN REWRITE_TAC[EVEN, EVEN_DOUBLE] THEN
-  SIMP_TAC hol_ss [INV_SUC_EQ, EQ_MULT_LCANCEL]);
+  SIMP_TAC hol_ss [INV_SUC_EQ, EQ_MULT_LCANCEL]
+QED
 
 val NUMSUM_DEST = Rsyntax.new_specification{
   consts = [{const_name = "NUMLEFT", fixity = NONE},
@@ -138,17 +139,18 @@ val INJP = new_definition(
   Term`INJP f1 f2:num->'a->bool =
         \n a. if NUMLEFT n then f1 (NUMRIGHT n) a else f2 (NUMRIGHT n) a`);
 
-val INJP_INJ = store_thm(
-  "INJP_INJ",
-  Term`!(f1:num->'a->bool) f1' f2 f2'.
-        (INJP f1 f2 = INJP f1' f2') = (f1 = f1') /\ (f2 = f2')`,
+Theorem INJP_INJ:
+  !(f1:num->'a->bool) f1' f2 f2'.
+        (INJP f1 f2 = INJP f1' f2') <=> (f1 = f1') /\ (f2 = f2')
+Proof
   REPEAT GEN_TAC THEN EQ_TAC THEN DISCH_TAC THEN ASM_REWRITE_TAC[] THEN
   ONCE_REWRITE_TAC[FUN_EQ_THM] THEN
   SIMP_TAC bool_ss [AND_FORALL_THM] THEN
   Q.X_GEN_TAC `n:num` THEN POP_ASSUM(MP_TAC o REWRITE_RULE[INJP]) THEN
   DISCH_THEN(MP_TAC o GEN ``b:bool`` o C Q.AP_THM `NUMSUM b n`) THEN
   DISCH_THEN(fn th => MP_TAC(Q.SPEC `T` th) THEN MP_TAC(Q.SPEC `F` th)) THEN
-  SIMP_TAC (bool_ss ++ ETA_ss) [NUMSUM_DEST]);
+  SIMP_TAC (bool_ss ++ ETA_ss) [NUMSUM_DEST]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Now, set up "constructor" and "bottom" element.                           *)
@@ -241,10 +243,10 @@ val CONSTR_BOT = store_thm(
   MATCH_MP_TAC(CONJUNCT2 ZRECSPACE_RULES) THEN
   SIMP_TAC bool_ss [fst recspace_tydef, snd recspace_tydef]);
 
-val CONSTR_INJ = store_thm(
-  "CONSTR_INJ",
-  ``!c1 i1 r1 c2 i2 r2. (CONSTR c1 i1 r1 :'a recspace = CONSTR c2 i2 r2) =
-                        (c1 = c2) /\ (i1 = i2) /\ (r1 = r2)``,
+Theorem CONSTR_INJ:
+  !c1 i1 r1 c2 i2 r2. (CONSTR c1 i1 r1 :'a recspace = CONSTR c2 i2 r2) <=>
+                      (c1 = c2) /\ (i1 = i2) /\ (r1 = r2)
+Proof
   REPEAT GEN_TAC THEN EQ_TAC THEN DISCH_TAC THEN ASM_REWRITE_TAC[] THEN
   POP_ASSUM(MP_TAC o REWRITE_RULE[CONSTR]) THEN
   DISCH_THEN(MP_TAC o MATCH_MP MK_REC_INJ) THEN
@@ -255,7 +257,8 @@ val CONSTR_INJ = store_thm(
     REWRITE_TAC[INJP_INJ, INJN_INJ, INJF_INJ, INJA_INJ] THEN
     ONCE_REWRITE_TAC[FUN_EQ_THM] THEN BETA_TAC THEN
     REWRITE_TAC[INV_SUC_EQ, DEST_REC_INJ]
-  ]);
+  ]
+QED
 
 val CONSTR_IND = store_thm(
   "CONSTR_IND",
@@ -364,7 +367,7 @@ val FCONS_DEST = Q.store_thm
 
 val ISO = new_definition(
   "ISO",
-  Term`ISO (f:'a->'b) (g:'b->'a) = (!x. f(g x) = x) /\ (!y. g(f y) = y)`);
+  Term`ISO (f:'a->'b) (g:'b->'a) <=> (!x. f(g x) = x) /\ (!y. g(f y) = y)`);
 
 (* ------------------------------------------------------------------------- *)
 (* Composition theorems.                                                     *)
