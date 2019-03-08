@@ -196,10 +196,13 @@ fun mk_targetl maxsize =
   let 
     fun cmp (a,b) = Int.compare (snd a,snd b)
     val tml1 = mk_term_set (mk_addsuceq 10) 
-    val tml2 = map_assoc total_cost tml1
-    val tml3 = map fst (dict_sort cmp tml2)
+    val tml2 = map (fn x => x :: (map fst (butlast (list_cost x)))) tml1
+    val tml3 = mk_term_set (List.concat tml2)
+    val tml4 = map_assoc total_cost tml3
+    val tml5 = dict_sort cmp tml4
+    val tml6 = map fst tml5
   in
-    map mk_startsit (first_n (maxsize * 100) tml3) 
+    map mk_startsit (first_n (maxsize * 400) tml6) 
   end
 
 

@@ -279,7 +279,7 @@ fun compete dhtnn_old dhtnn_new gamespec targetl =
     val w_old = compete_one dhtnn_old gamespec targetl'
     val w_new = compete_one dhtnn_new gamespec targetl'
     val b1 = w_new > w_old
-    val b2 = int_div (Int.max (w_new,w_old)) (!ntarget_compete) > 0.75
+    val b2 = int_div (Int.max (w_new,w_old)) (length targetl') > 0.75
   in
     summary 
       ((if b1 then "Passed" else "Failed") ^ ": " ^ 
@@ -368,7 +368,7 @@ end (* struct *)
 app load ["rlGameArithGround","rlEnv"];
 open aiLib psMCTS rlGameArithGround rlEnv;
 
-logfile_glob := "arith_10";
+logfile_glob := "arith_11";
 ngen_glob := 100;
 ntarget_glob := 400;
 exwindow_glob := 40000;

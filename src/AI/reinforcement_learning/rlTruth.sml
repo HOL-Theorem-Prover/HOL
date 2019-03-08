@@ -129,13 +129,13 @@ fun is_refl tm = let val (a,b) = dest_eq tm in term_eq a b end
 fun list_cost tm =
   let val newtm = (rhs o concl) (norm tm) in
     if term_eq newtm tm then raise ERR "total_cost" "" else
-    if is_refl newtm then [0] else
+    if is_refl newtm then [(newtm,0)] else
       let val cost = 1 + valOf (depth_diff (tm,newtm)) in
-        cost :: list_cost newtm
+        (newtm,cost) :: list_cost newtm
       end
   end
 
-fun total_cost tm = sum_int (list_cost tm)
+fun total_cost tm = sum_int (map snd (list_cost tm))
 
 
 (*
