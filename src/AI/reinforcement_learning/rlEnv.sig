@@ -7,17 +7,20 @@ sig
      ''b is the type for move
      'c is the type of targets *)
 
-  
+  (* rl parameters *)
   val ngen_glob : int ref
+  val ntarget_compete : int ref    
+  val ntarget_explore : int ref
+  (* nn parameters *)
   val exwindow_glob : int ref
-  val bigsteps_glob : int ref
+  val dim_glob : int ref
+  val batchsize_glob : int ref 
+  (* mcts parameters *)
   val nsim_glob : int ref
   val decay_glob : real ref
-  val noise_flag : bool ref
-  val maxsize_glob : int ref
-  val ntarget_glob : int ref
-  val ntarget_preselect : int ref
-  val ntarget_compete : int ref  
+
+  (* adaptative difficulty *)
+  val level_glob : int ref
 
   type ('a,''b,'c) gamespec =
     {
@@ -27,7 +30,6 @@ sig
     status_of : ('a psMCTS.sit -> psMCTS.status),
     apply_move : (''b -> 'a psMCTS.sit -> 'a psMCTS.sit),
     operl : (term * int) list,
-    dim : int,
     nntm_of_sit: 'a psMCTS.sit -> term
     }
 
@@ -36,8 +38,13 @@ sig
 
   val start_rl_loop : 
     (rlGameArithGround.board, ''a, 'b) gamespec ->
-      rlGameArithGround.board psMCTS.sit list ->
-        (term * real list) list * (term * real list) list
+    ((term * real list) list * (term * real list) list) *
+     {dimin: int,
+       dimout: int,
+       headeval: mlTreeNeuralNetwork.nn,
+       headpoli: mlTreeNeuralNetwork.nn,
+       opdict: mlTreeNeuralNetwork.opdict} *
+     rlGameArithGround.board psMCTS.sit list
 
 
 end

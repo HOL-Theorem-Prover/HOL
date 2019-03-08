@@ -156,41 +156,12 @@ fun apply_move move sit =
   handle Option => (true, FailBoard)
 
 (* -------------------------------------------------------------------------
-   Interface
-   ------------------------------------------------------------------------- *)
-
-type gamespec =
-  {
-  filter_sit : board sit -> ((move * real) list -> (move * real) list),
-  movel : move list,
-  string_of_move : move -> string,
-  status_of : (board psMCTS.sit -> psMCTS.status),
-  apply_move : (move -> board psMCTS.sit -> board psMCTS.sit),
-  operl : (term * int) list,
-  dim : int,
-  nntm_of_sit: board sit -> term
-  }
-
-val gamespec : gamespec =
-  {
-  filter_sit = filter_sit,
-  string_of_move = string_of_move,
-  movel = movel,
-  status_of = status_of,
-  apply_move = apply_move,
-  operl = operl,
-  dim = dimin,
-  nntm_of_sit = nntm_of_sit
-  }
-
-(* -------------------------------------------------------------------------
    Targets
    ------------------------------------------------------------------------- *)
 
 fun total_cost_target target = case target of
     (true, Board (tm,[])) => total_cost tm
   | _ => raise ERR "total_cost_target" ""
-
 
 fun mk_targetl maxsize = 
   let 
@@ -206,6 +177,31 @@ fun mk_targetl maxsize =
   end
 
 
+(* -------------------------------------------------------------------------
+   Interface
+   ------------------------------------------------------------------------- *)
+
+type gamespec =
+  {
+  filter_sit : board sit -> ((move * real) list -> (move * real) list),
+  movel : move list,
+  string_of_move : move -> string,
+  status_of : (board psMCTS.sit -> psMCTS.status),
+  apply_move : (move -> board psMCTS.sit -> board psMCTS.sit),
+  operl : (term * int) list,
+  nntm_of_sit: board sit -> term
+  }
+
+val gamespec : gamespec =
+  {
+  filter_sit = filter_sit,
+  string_of_move = string_of_move,
+  movel = movel,
+  status_of = status_of,
+  apply_move = apply_move,
+  operl = operl,
+  nntm_of_sit = nntm_of_sit
+  }
 
 
 

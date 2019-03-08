@@ -15,13 +15,11 @@ sig
     status_of : (board psMCTS.sit -> psMCTS.status),
     apply_move : (move -> board psMCTS.sit -> board psMCTS.sit),
     operl : (term * int) list,
-    dim : int,
     nntm_of_sit: board psMCTS.sit -> term
     }
-
   val gamespec : gamespec
-  
-  val mk_targetl : int -> board psMCTS.sit list
+
+  val mk_targetl : int -> board psMCTS.sit list 
   val total_cost_target : board psMCTS.sit -> int
 
 end

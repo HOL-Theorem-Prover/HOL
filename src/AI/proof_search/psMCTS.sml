@@ -283,12 +283,12 @@ fun expand decay fevalpoli status_of apply_move tree (id,cid) =
    MCTS
    ------------------------------------------------------------------------- *)
 
-fun starttree_of decay ((status_of,apply_move),fep) startsit =
+fun starttree_of (nsim,decay,noiseb,status_of,apply_move,fep) startsit =
   let val empty_tree = dempty (list_compare Int.compare) in
     node_create_backup decay fep status_of empty_tree ([0],startsit)
   end
 
-fun mcts (nsim,decay,noiseb) ((status_of,apply_move),fep) starttree =
+fun mcts (nsim,decay,noiseb,status_of,apply_move,fep) starttree =
   let
     val starttree_noise =
       if noiseb then add_root_noise starttree else starttree

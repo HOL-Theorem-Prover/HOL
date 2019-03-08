@@ -27,18 +27,19 @@ sig
 
   (* search function *)
   val starttree_of :
-    real ->
-    (('a sit -> status) * ('b -> 'a sit -> 'a sit)) *
-      ('a sit -> real * ('b * real) list) ->
+    (int * real * bool *
+      ('a sit -> status) * ('b -> 'a sit -> 'a sit) *
+      ('a sit -> real * ('b * real) list)
+    ) ->
     'a sit ->
     ('a,'b) tree
 
   val mcts :
-    (int * real * bool) ->
-    (('a sit -> status) * ('b -> 'a sit -> 'a sit)) *
-      ('a sit -> real * ('b * real) list) ->
-    ('a,'b) tree ->
-    ('a,'b) tree
+    (int * real * bool *
+      ('a sit -> status) * ('b -> 'a sit -> 'a sit) *
+      ('a sit -> real * ('b * real) list)
+    ) ->
+    ('a,'b) tree -> ('a,'b) tree
 
   (* restart *)
   val cut_tree : ('a,'b) tree -> int list -> ('a,'b) tree
