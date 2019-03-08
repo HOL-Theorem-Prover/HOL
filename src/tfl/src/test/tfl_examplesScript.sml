@@ -45,9 +45,9 @@ val Mmap2_def = function "Mmap2"
 
 val order = ty_antiq(==`:'a -> 'a -> bool`==);
 val sorted_def = function "sorted"
-   `(sorted (R:^order, []) = T) /\
-    (sorted (R,       [x]) = T) /\
-    (sorted (R, CONS x (CONS y rst)) = R x y /\ sorted(R, CONS y rst))`;
+   `(sorted (R:^order, []) <=> T) /\
+    (sorted (R,       [x]) <=> T) /\
+    (sorted (R, CONS x (CONS y rst)) <=> R x y /\ sorted(R, CONS y rst))`;
 
 val fin_def = function "fin" `(fin(R:^order,[x:'a]) = T)`;
 val _ = overload_on("filter", ``FILTER``)
