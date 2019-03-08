@@ -151,7 +151,7 @@ fun n_bigsteps gamespec mctsparam ntarg target =
   let 
     val tree = starttree_of mctsparam target 
     val nvary = rlGameArithGround.total_cost_target target
-    val nvary' = nvary + 5 + ((20 * nvary) div 100)
+    val nvary' = 2 * nvary + 5
   in
     print_endline ("Target " ^ its ntarg);
     print_endline ("  expected proof length: " ^ its nvary);
@@ -319,18 +319,6 @@ fun train_f gamespec allex =
     summary ("Training time : " ^ rts t); dhtnn
   end
 
-fun rl_start gamespec =
-  let
-    val _ = summary "Generation 0"
-    val dhtnn = random_dhtnn_gamespec gamespec
-    val targetl = 
-      first_n (!ntarget_explore) 
-      (shuffle (rlGameArithGround.mk_targetl (!level_glob)))
-    val newallex = explore_f gamespec emptyallex dhtnn targetl
-  in
-    (discard_oldex newallex (!exwindow_glob), dhtnn, targetl)
-  end
-
 fun update_targetl () =  
   let
     val _ = summary ("Level: " ^ its (!level_glob))
@@ -340,6 +328,16 @@ fun update_targetl () =
             " in " ^ rts t ^ " seconds")
   in
     targetl
+  end
+
+fun rl_start gamespec =
+  let
+    val _ = summary "Generation 0"
+    val dhtnn = random_dhtnn_gamespec gamespec
+    val targetl = update_targetl ()
+    val newallex = explore_f gamespec emptyallex dhtnn targetl
+  in
+    (discard_oldex newallex (!exwindow_glob), dhtnn, targetl)
   end
 
 fun rl_one n gamespec (allex,dhtnn,targetl) =
