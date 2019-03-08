@@ -56,6 +56,15 @@ in
     end
   else th
 end
+structure Q = struct
+  val foo = store_thm
+  open Q
+  fun store_thm(n,q,tac) =
+    let val t = Parse.typed_parse_in_context Type.bool [] q
+    in
+      foo(n,t,tac)
+    end
+end
 
 (* from util_prob *)
 fun K_TAC _ = ALL_TAC;
