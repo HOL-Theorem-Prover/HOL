@@ -1,0 +1,580 @@
+0 Arch_activateIdleThread 8
+8 Arch_checkIRQ 8
+0 Arch_configureIdleThread 8
+16 Arch_createObject 8 8 4 8
+8 Arch_decodeIRQControlInvocation 8 8 8 24 8
+8 Arch_decodeInvocation 8 4 8 8 16 24 8 8
+8 Arch_decodeTransfer 8
+24 Arch_deriveCap 8 16
+32 Arch_finaliseCap 16 8
+0 Arch_finaliseInterrupt
+8 Arch_getObjectSize 8
+8 Arch_getSanitiseRegisterInfo 8
+8 Arch_handleFaultReply 8 8 8
+0 Arch_initContext 8
+8 Arch_isCapRevocable 16 16
+8 Arch_isFrameType 8
+16 Arch_maskCapRights 8 16
+8 Arch_performTransfer 8 8 8
+0 Arch_postCapDeletion 16
+0 Arch_postModifyRegisters 8
+0 Arch_prepareThreadDelete 8
+8 Arch_sameObjectAs 16 16
+8 Arch_sameRegionAs 16 16
+8 Arch_setMRs_fault 8 8 8 8
+0 Arch_setTCBIPCBuffer 8 8
+0 Arch_switchToIdleThread
+0 Arch_switchToThread 8
+16 Arch_updateCapData 8 8 16
+8 RISCVGetReadFromVMRights 4
+8 RISCVGetUserFromVMRights 4
+8 RISCVGetWriteFromVMRights 4
+4 StrictC'__builtin_clzl 8
+4 StrictC'__builtin_ctzl 8
+4 StrictC'__builtin_popcountl 8
+0 StrictC'__builtin_unreachable
+4 StrictC'__clzdi2 8
+4 StrictC'__clzsi2 4
+4 StrictC'__ctzdi2 8
+4 StrictC'__ctzsi2 4
+16 Zombie_new 8 8 8
+0 ackInterrupt 4
+0 activateThread
+0 activate_kernel_vspace
+0 addToBitmap 8 8 8
+8 add_avail_p_reg 16
+8 addrFromPPtr 8
+8 alignUp 8 8
+8 alloc_region 8
+8 allocate_bi_frame 8 8 8
+16 allocate_extra_bi_region 8
+0 arch_c_entry_hook
+0 arch_c_exit_hook
+0 bi_finalise
+0 bindNotification 8 8
+4 bswap 4
+0 c_entry_hook
+0 c_exit_hook
+0 c_handle_exception
+0 c_handle_interrupt
+0 c_handle_syscall 8 8 8 8 8 8 8 8
+0 cancelAllIPC 8
+0 cancelAllSignals 8
+0 cancelBadgedSends 8 8
+0 cancelIPC 8
+0 cancelSignal 8 8
+8 capCyclicZombie 16 8
+8 capRemovable 16 8
+0 capSwapForDelete 8 8
+24 capTransferFromWords 8
+16 cap_asid_control_cap_new
+8 cap_asid_pool_cap_get_capASIDBase 16
+8 cap_asid_pool_cap_get_capASIDPool 16
+16 cap_asid_pool_cap_new 8 8
+4 cap_capType_equals 16 8
+8 cap_cnode_cap_get_capCNodeGuard 16
+8 cap_cnode_cap_get_capCNodeGuardSize 16
+8 cap_cnode_cap_get_capCNodePtr 16
+8 cap_cnode_cap_get_capCNodeRadix 16
+16 cap_cnode_cap_new 8 8 8 8
+16 cap_cnode_cap_set_capCNodeGuard 16 8
+16 cap_cnode_cap_set_capCNodeGuardSize 16 8
+16 cap_domain_cap_new
+8 cap_endpoint_cap_get_capCanGrant 16
+8 cap_endpoint_cap_get_capCanGrantReply 16
+8 cap_endpoint_cap_get_capCanReceive 16
+8 cap_endpoint_cap_get_capCanSend 16
+8 cap_endpoint_cap_get_capEPBadge 16
+8 cap_endpoint_cap_get_capEPPtr 16
+16 cap_endpoint_cap_new 8 8 8 8 8 8
+16 cap_endpoint_cap_set_capCanGrant 16 8
+16 cap_endpoint_cap_set_capCanGrantReply 16 8
+16 cap_endpoint_cap_set_capCanReceive 16 8
+16 cap_endpoint_cap_set_capCanSend 16 8
+16 cap_endpoint_cap_set_capEPBadge 16 8
+8 cap_frame_cap_get_capFBasePtr 16
+8 cap_frame_cap_get_capFIsDevice 16
+8 cap_frame_cap_get_capFMappedASID 16
+8 cap_frame_cap_get_capFMappedAddress 16
+8 cap_frame_cap_get_capFSize 16
+8 cap_frame_cap_get_capFVMRights 16
+16 cap_frame_cap_new 8 8 8 8 8 8
+16 cap_frame_cap_set_capFMappedASID 16 8
+16 cap_frame_cap_set_capFMappedAddress 16 8
+16 cap_frame_cap_set_capFVMRights 16 8
+8 cap_get_archCapIsPhysical 16
+8 cap_get_archCapPtr 16
+4 cap_get_archCapSizeBits 16
+8 cap_get_capIsPhysical 16
+8 cap_get_capPtr 16
+8 cap_get_capSizeBits 16
+8 cap_get_capType 16
+16 cap_irq_control_cap_new
+8 cap_irq_handler_cap_get_capIRQ 16
+16 cap_irq_handler_cap_new 8
+8 cap_notification_cap_get_capNtfnBadge 16
+8 cap_notification_cap_get_capNtfnCanReceive 16
+8 cap_notification_cap_get_capNtfnCanSend 16
+8 cap_notification_cap_get_capNtfnPtr 16
+16 cap_notification_cap_new 8 8 8 8
+16 cap_notification_cap_set_capNtfnBadge 16 8
+16 cap_notification_cap_set_capNtfnCanReceive 16 8
+16 cap_notification_cap_set_capNtfnCanSend 16 8
+16 cap_null_cap_new
+8 cap_page_table_cap_get_capPTBasePtr 16
+8 cap_page_table_cap_get_capPTIsMapped 16
+8 cap_page_table_cap_get_capPTMappedASID 16
+8 cap_page_table_cap_get_capPTMappedAddress 16
+16 cap_page_table_cap_new 8 8 8 8
+0 cap_page_table_cap_ptr_set_capPTIsMapped 8 8
+16 cap_page_table_cap_set_capPTIsMapped 16 8
+16 cap_page_table_cap_set_capPTMappedASID 16 8
+16 cap_page_table_cap_set_capPTMappedAddress 16 8
+8 cap_reply_cap_get_capReplyCanGrant 16
+8 cap_reply_cap_get_capReplyMaster 16
+8 cap_reply_cap_get_capTCBPtr 16
+16 cap_reply_cap_new 8 8 8
+0 cap_reply_cap_ptr_new_np 8 8 8 8
+16 cap_reply_cap_set_capReplyCanGrant 16 8
+8 cap_thread_cap_get_capTCBPtr 16
+16 cap_thread_cap_new 8
+8 cap_untyped_cap_get_capBlockSize 16
+8 cap_untyped_cap_get_capFreeIndex 16
+8 cap_untyped_cap_get_capIsDevice 16
+8 cap_untyped_cap_get_capPtr 16
+16 cap_untyped_cap_new 8 8 8 8
+0 cap_untyped_cap_ptr_set_capFreeIndex 8 8
+16 cap_untyped_cap_set_capFreeIndex 16 8
+8 cap_zombie_cap_get_capZombieBits 16
+8 cap_zombie_cap_get_capZombieID 16
+8 cap_zombie_cap_get_capZombieNumber 16
+8 cap_zombie_cap_get_capZombiePtr 16
+8 cap_zombie_cap_get_capZombieType 16
+16 cap_zombie_cap_new 8 8
+16 cap_zombie_cap_set_capZombieID 16 8
+16 cap_zombie_cap_set_capZombieNumber 16 8
+8 char_to_long 1
+8 checkPrio 8 8
+8 checkVPAlignment 4 8
+8 checkValidIPCBuffer 8 16
+0 chooseThread
+0 clearMemory 8 4
+0 clear_sie_mask 8
+0 clear_sip_mask 8
+8 clzl 8
+0 completeSignal 8 8
+0 configureIdleThread 8
+0 copyGlobalMappings 8
+8 copyMRs 8 8 8 8 8
+0 copyMRsFault 8 8 4 8 8
+0 copyMRsFaultReply 8 8 4 8
+0 createNewObjects 8 8 24 8 8 8
+16 createObject 8 8 8 8
+0 create_bi_frame_cap 16 16 8 8
+0 create_domain_cap 16
+24 create_frames_of_region 16 16 16 8 8
+8 create_idle_thread
+8 create_initial_thread 16 16 8 8 8 16
+16 create_ipcbuf_frame 16 16 8
+8 create_irq_cnode
+16 create_it_address_space 16 16
+16 create_it_asid_pool 16
+16 create_it_pd_pts 16 16 8 8
+16 create_it_pt_cap 16 8 8 8
+8 create_kernel_untypeds 16 16 8
+16 create_mapped_it_frame_cap 16 8 8 8 8 8
+16 create_root_cnode
+16 create_unmapped_it_frame_cap 8 8
+8 create_untypeds 16 16
+8 create_untypeds_for_region 16 8 16 8
+8 cteDelete 8 8
+0 cteDeleteOne 8
+0 cteInsert 16 8 8
+0 cteMove 16 8 8
+8 cteRevoke 8
+0 cteSwap 16 8 16 8
+8 ctzl 8
+8 decodeBindNotification 16 24
+8 decodeCNodeInvocation 8 8 16 24 8
+8 decodeCopyRegisters 16 8 24 8
+8 decodeDomainInvocation 8 8 24 8
+8 decodeIRQControlInvocation 8 8 8 24 8
+8 decodeIRQHandlerInvocation 8 4 24
+8 decodeInvocation 8 8 8 8 16 24 8 8 8
+8 decodeRISCVFrameInvocation 8 4 8 16 24 8
+8 decodeRISCVMMUInvocation 8 4 8 8 16 24 8
+8 decodeRISCVPageTableInvocation 8 4 8 16 24 8
+8 decodeReadRegisters 16 8 8 8
+8 decodeSetIPCBuffer 16 8 8 24 8
+8 decodeSetMCPriority 16 8 24 8
+8 decodeSetPriority 16 8 24 8
+8 decodeSetSchedParams 16 8 24 8
+8 decodeSetSpace 16 8 8 24 8
+8 decodeSetTLSBase 16 8 8
+8 decodeTCBConfigure 16 8 8 24 8
+8 decodeTCBInvocation 8 8 16 8 24 8 8
+8 decodeUnbindNotification 16
+8 decodeUntypedInvocation 8 8 8 16 24 8 8
+8 decodeWriteRegisters 16 8 8
+0 deleteASID 8 8
+0 deleteASIDPool 8 8
+0 deleteCallerCap 8
+0 deletedIRQHandler 4
+0 deletingIRQHandler 4
+24 deriveCap 8 16
+0 doFaultTransfer 8 8 8 8
+0 doIPCTransfer 8 8 8 8 8
+0 doNBRecvFailedTransfer 8
+0 doNormalTransfer 8 8 8 8 8 8 8
+0 doReplyTransfer 8 8 8 8
+0 doUnbindNotification 8 8
+0 emptySlot 8 16
+8 endpoint_ptr_get_epQueue_head 8
+8 endpoint_ptr_get_epQueue_tail 8
+8 endpoint_ptr_get_state 8
+0 endpoint_ptr_mset_epQueue_tail_state 8 8 8
+0 endpoint_ptr_set_epQueue_head 8 8
+0 endpoint_ptr_set_epQueue_head_np 8 8
+0 endpoint_ptr_set_epQueue_tail 8 8
+0 endpoint_ptr_set_state 8 8
+8 ensureEmptySlot 8
+8 ensureNoChildren 8
+16 ep_ptr_get_queue 8
+0 ep_ptr_set_queue 8 16
+0 fastpath_call 8 8
+0 fastpath_copy_mrs 8 8 8
+4 fastpath_mi_check 8
+4 fastpath_reply_cap_check 16
+0 fastpath_reply_recv 8 8
+0 fastpath_restore 8 8 8
+8 fdt_get_address 8 8 8
+8 fdt_get_size 8 8 8
+8 fdt_scan_helper 8 8 8 8
+4 fdt_size 8
+32 finaliseCap 16 8 8
+32 finaliseSlot 8 8
+16 findVSpaceForASID 8
+4 getActiveIRQ
+8 getExtraCPtr 8 8
+8 getHighestPrio 8
+8 getObjectSize 8 8
+8 getPPtrFromHWPTE 8
+8 getReceiveSlots 8 8
+8 getRegister 8 8
+8 getRestartPC 8
+8 getSyscallArg 8 8
+16 get_avail_p_reg 4
+8 get_cycles
+4 get_num_avail_p_regs
+0 halt
+0 handleDoubleFault 8 16
+0 handleFault 8
+8 handleFaultReply 8 8
+0 handleInterrupt 4
+8 handleInterruptEntry
+8 handleInvocation 8 8
+0 handleRecv 8
+0 handleReply
+0 handleReservedIRQ 4
+0 handleSpuriousIRQ
+8 handleSyscall 8
+8 handleUnknownSyscall 8
+8 handleUserLevelFault 8 8
+8 handleVMFault 8 4
+8 handleVMFaultEvent 4
+0 handleYield
+0 handle_exception
+8 hasCancelSendRights 16
+0 hwASIDFlush 8
+0 idle_thread
+0 initIRQController
+0 initL2Cache
+0 initTimer
+0 init_core_state 8
+0 init_cpu
+0 init_freemem 16 16
+0 init_irqs 16
+0 init_kernel 8 8 8 8 8 8
+0 init_plat 16
+0 insertNewCap 8 8 16
+8 insert_region 16
+16 insert_region_excluded 16 16
+8 invert_l1index 8
+8 invokeCNodeCancelBadgedSends 16
+8 invokeCNodeDelete 8
+8 invokeCNodeInsert 16 8 8
+8 invokeCNodeMove 16 8 8
+8 invokeCNodeRevoke 8
+8 invokeCNodeRotate 16 16 8 8 8
+8 invokeCNodeSaveCaller 8
+8 invokeIRQControl 4 8 8
+0 invokeIRQHandler_AckIRQ 4
+0 invokeIRQHandler_ClearIRQHandler 4
+0 invokeIRQHandler_SetIRQHandler 4 16 8
+8 invokeSetTLSBase 8 8
+8 invokeTCB_CopyRegisters 8 8 8 8 8 8 8
+8 invokeTCB_NotificationControl 8 8
+8 invokeTCB_ReadRegisters 8 8 8 8 8
+8 invokeTCB_Resume 8
+8 invokeTCB_Suspend 8
+8 invokeTCB_ThreadControl 8 8 8 8 8 16 8 16 8 8 16 8 8
+8 invokeTCB_WriteRegisters 8 8 8 8 8
+8 invokeUntyped_Retype 8 8 8 8 8 24 8
+8 isArchCap 16
+8 isBlocked 8
+8 isCapRevocable 16 16
+8 isFinalCapability 8
+8 isHighestPrio 8 8
+8 isIRQActive 4
+8 isIRQPending
+8 isMDBParentOf 8 8
+8 isPTEPageTable 8
+8 isReservedIRQ 4
+8 isRunnable 8
+8 isValidVTableRoot 16
+8 isValidVTableRoot_fp 16
+8 is_reg_empty 16
+8 kpptr_to_paddr 8
+8 l1index_to_prio 8
+24 loadCapTransfer 8
+24 lookupCap 8 8
+32 lookupCapAndSlot 8 8
+8 lookupExtraCaps 8 8 8
+8 lookupIPCBuffer 8 8
+16 lookupPTSlot 8 8
+16 lookupPivotSlot 16 8 8
+16 lookupSlot 8 8
+16 lookupSlotForCNodeOp 8 16 8 8
+16 lookupSourceSlot 16 8 8
+16 lookupTargetSlot 16 8 8
+8 lookup_fault_depth_mismatch_get_bitsFound 16
+8 lookup_fault_depth_mismatch_get_bitsLeft 16
+16 lookup_fault_depth_mismatch_new 8 8
+8 lookup_fault_get_lufType 16
+8 lookup_fault_guard_mismatch_get_bitsFound 16
+8 lookup_fault_guard_mismatch_get_bitsLeft 16
+8 lookup_fault_guard_mismatch_get_guardFound 16
+16 lookup_fault_guard_mismatch_new 8 8 8
+16 lookup_fault_invalid_root_new
+8 lookup_fault_missing_capability_get_bitsLeft 16
+16 lookup_fault_missing_capability_new 8
+16 lookup_fp 16 8
+8 makeUserPTE 8 8 4
+0 map_it_frame_cap 16 16
+0 map_it_pt_cap 16 16
+0 map_kernel_devices
+0 map_kernel_frame 8 8 4
+0 map_kernel_window
+16 maskCapRights 8 16
+0 maskInterrupt 8 4
+4 maskVMRights 4 8
+8 mdb_node_get_mdbFirstBadged 16
+8 mdb_node_get_mdbNext 16
+8 mdb_node_get_mdbPrev 16
+8 mdb_node_get_mdbRevocable 16
+16 mdb_node_new 8 8 8 8
+0 mdb_node_ptr_mset_mdbNext_mdbRevocable_mdbFirstBadged 8 8 8 8
+0 mdb_node_ptr_set_mdbFirstBadged 8 8
+0 mdb_node_ptr_set_mdbNext 8 8
+0 mdb_node_ptr_set_mdbPrev 8 8
+0 mdb_node_ptr_set_mdbPrev_np 8 8
+0 mdb_node_ptr_set_mdbRevocable 8 8
+16 mdb_node_set_mdbFirstBadged 16 8
+16 mdb_node_set_mdbPrev 16 8
+16 mdb_node_set_mdbRevocable 16 8
+8 memcpy 8 8 8
+8 memset 8 8 8
+0 memzero 8 8
+8 messageInfoFromWord 8
+8 messageInfoFromWord_raw 8
+0 nextDomain
+8 notification_ptr_get_ntfnBoundTCB 8
+8 notification_ptr_get_ntfnMsgIdentifier 8
+8 notification_ptr_get_ntfnQueue_head 8
+8 notification_ptr_get_ntfnQueue_tail 8
+8 notification_ptr_get_state 8
+0 notification_ptr_set_ntfnBoundTCB 8 8
+0 notification_ptr_set_ntfnMsgIdentifier 8 8
+0 notification_ptr_set_ntfnQueue_head 8 8
+0 notification_ptr_set_ntfnQueue_tail 8 8
+0 notification_ptr_set_state 8 8
+16 ntfn_ptr_get_queue 8
+0 ntfn_ptr_set_queue 8 16
+0 ntfn_set_active 8 8
+8 paddr_to_kpptr 8
+16 paddr_to_pptr_reg 16
+4 pageBitsForSize 4
+0 parseFDT 8
+8 performASIDControlInvocation 8 8 8 8
+8 performASIDPoolInvocation 8 8 8
+8 performInvocation_Endpoint 8 8 8 8 8 8
+8 performInvocation_Notification 8 8
+8 performInvocation_Reply 8 8 8
+8 performPageGetAddress 8
+8 performPageInvocationMapPTE 16 8 8 8
+8 performPageInvocationRemapPTE 8 8
+8 performPageInvocationUnmap 16 8
+8 performPageTableInvocationMap 16 8 8 8
+8 performPageTableInvocationUnmap 16 8
+0 plat_cleanInvalidateL2Range 8 8
+0 plat_cleanL2Range 8 8
+0 plat_invalidateL2Range 8 8
+8 popcountl 8
+0 possibleSwitchTo 8
+0 postCapDeletion 16
+16 pptr_to_paddr_reg 16
+8 preemptionPoint
+0 print_format_cause 4
+8 prio_to_l1index 8
+8 provide_cap 16 16
+8 provide_untyped_cap 16 8 8 8 8
+8 pte_new 8 8 8 8 8 8 8 8 8 8
+8 pte_next 8 8
+8 pte_pte_invalid_new
+8 pte_ptr_get_execute 8
+8 pte_ptr_get_ppn 8
+8 pte_ptr_get_read 8
+8 pte_ptr_get_valid 8
+8 pte_ptr_get_write 8
+8 ptrFromPAddr 8
+4 read_current_timer 8
+8 read_sbadaddr
+8 read_scause
+8 read_sepc
+8 read_sstatus
+8 ready_queues_index 8 8
+0 receiveIPC 8 16 8
+0 receiveSignal 8 16 8
+8 reduceZombie 8 8
+8 reg_size 16
+0 removeFromBitmap 8 8 8
+0 replyFromKernel_error 8
+0 replyFromKernel_success_empty 8
+0 rescheduleRequired
+0 resetTimer
+8 resetUntypedCap 8
+24 resolveAddressBits 16 8 8
+0 restart 8
+0 restore_user_context
+8 rightsFromWord 8
+8 sameObjectAs 16 16
+8 sameRegionAs 16 16
+8 sanitiseRegister 8 8 8
+8 satp_new 8 8 8
+8 sbi_call 8 8 8 8
+0 sbi_clear_ipi
+4 sbi_console_getchar
+0 sbi_console_putchar 4
+0 sbi_remote_fence_i 8
+0 sbi_remote_sfence_vma 8 8 8
+0 sbi_remote_sfence_vma_asid 8 8 8 8
+0 sbi_send_ipi 8
+0 sbi_set_timer 8
+0 sbi_shutdown
+0 schedule
+0 scheduleChooseNewThread
+0 scheduleTCB 8
+8 seL4_CNode_CapData_get_guard 8
+8 seL4_CNode_CapData_get_guardSize 8
+8 seL4_CapRights_get_capAllowGrant 8
+8 seL4_CapRights_get_capAllowGrantReply 8
+8 seL4_CapRights_get_capAllowRead 8
+8 seL4_CapRights_get_capAllowWrite 8
+8 seL4_Fault_CapFault_get_address 16
+8 seL4_Fault_CapFault_get_inReceivePhase 16
+16 seL4_Fault_CapFault_new 8 8
+16 seL4_Fault_NullFault_new
+8 seL4_Fault_UnknownSyscall_get_syscallNumber 16
+16 seL4_Fault_UnknownSyscall_new 8
+8 seL4_Fault_UserException_get_code 16
+8 seL4_Fault_UserException_get_number 16
+16 seL4_Fault_UserException_new 8 8
+8 seL4_Fault_VMFault_get_FSR 16
+8 seL4_Fault_VMFault_get_address 16
+8 seL4_Fault_VMFault_get_instructionFault 16
+16 seL4_Fault_VMFault_new 8 8 8
+8 seL4_Fault_get_seL4_FaultType 16
+8 seL4_MessageInfo_get_capsUnwrapped 8
+8 seL4_MessageInfo_get_extraCaps 8
+8 seL4_MessageInfo_get_label 8
+8 seL4_MessageInfo_get_length 8
+8 seL4_MessageInfo_new 8 8 8 8
+8 seL4_MessageInfo_set_capsUnwrapped 8 8
+8 seL4_MessageInfo_set_extraCaps 8 8
+8 seL4_MessageInfo_set_length 8 8
+8 sendFaultIPC 8
+0 sendIPC 8 8 8 8 8 8 8
+0 sendSignal 8 8
+0 setDomain 8 8
+0 setExtraBadge 8 8 8
+0 setIRQState 8 4
+0 setInterruptMode 4 8 8
+0 setMCPriority 8 8
+4 setMR 8 8 4 8
+8 setMRs_fault 8 8 8
+4 setMRs_lookup_failure 8 8 16 4
+8 setMRs_syscall_error 8 8
+0 setNextPC 8 8
+0 setPriority 8 8
+0 setRegister 8 8 8
+0 setThreadState 8 8
+0 setUntypedCapAsFull 16 16 8
+0 setVMRoot 8
+0 setVSpaceRoot 8 8
+0 set_sie_mask 8
+0 setupCallerCap 8 8 8
+0 setupReplyMaster 8
+0 sfence
+8 slotCapLongRunningDelete 8
+0 slowpath 8
+8 str_to_long 8
+8 strlcat 8 8 8
+8 strlcpy 8 8 8
+4 strncmp 8 8 4
+8 strnlen 8 8
+0 suspend 8
+0 switchToIdleThread
+0 switchToThread 8
+0 switchToThread_fp 8 8 8
+16 tcbEPAppend 8 16
+16 tcbEPDequeue 8 16
+0 tcbSchedAppend 8
+0 tcbSchedDequeue 8
+0 tcbSchedEnqueue 8
+8 thread_state_get_tcbQueued 24
+8 thread_state_get_tsType 24
+8 thread_state_ptr_get_blockingIPCBadge 8
+8 thread_state_ptr_get_blockingIPCCanGrant 8
+8 thread_state_ptr_get_blockingIPCCanGrantReply 8
+8 thread_state_ptr_get_blockingIPCIsCall 8
+8 thread_state_ptr_get_blockingObject 8
+8 thread_state_ptr_get_tsType 8
+0 thread_state_ptr_mset_blockingObject_tsType 8 8 8
+0 thread_state_ptr_set_blockingIPCBadge 8 8
+0 thread_state_ptr_set_blockingIPCCanGrant 8 8
+0 thread_state_ptr_set_blockingIPCCanGrantReply 8 8
+0 thread_state_ptr_set_blockingIPCIsCall 8 8
+0 thread_state_ptr_set_blockingObject 8 8
+0 thread_state_ptr_set_tcbQueued 8 8
+0 thread_state_ptr_set_tsType 8 8
+0 thread_state_ptr_set_tsType_np 8 8
+0 timerTick
+8 transferCaps 8 24 8 8 8
+8 try_init_kernel 8 8 8 8 4 8
+0 unbindMaybeNotification 8
+0 unbindNotification 8
+0 unmapPage 4 8 8 8
+0 unmapPageTable 8 8 8
+16 updateCapData 8 8 16
+8 updatePTE 8 8
+8 vmAttributesFromWord 8
+4 vmRightsFromWord 8
+8 vm_attributes_get_riscvExecuteNever 8
+8 wordFromMessageInfo 8
+8 wordFromRights 8
+8 wordFromVMRights 4
+0 write_it_asid_pool 16 16
+0 write_it_pd_pts 16 16
+0 write_slot 8 16
+0 write_sptbr 8
+0 write_stvec 8
