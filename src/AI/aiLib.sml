@@ -787,7 +787,7 @@ val attrib = [Thread.InterruptState Thread.InterruptAsynch, Thread.EnableBroadca
 
 fun parmap_exact ncores forg lorg =
   if length lorg <> ncores then raise ERR "parmap_exact" "" else 
-  let 
+  let
     val ain = Vector.fromList (List.map ref lorg)
     val aout = Vector.fromList (List.map (fn _ => ref NONE) lorg) 
     fun process pi =
@@ -800,7 +800,7 @@ fun parmap_exact ncores forg lorg =
     fun fork_on pi = Thread.fork (fn () => process pi, attrib)
     val threadl = map fork_on (List.tabulate (ncores,I))
     fun loop () =
-      (if exists Thread.isActive threadl then loop () else ())
+      (if Vector.all (isSome o !) aout then loop () else ())
   in
     loop ();
     map (release o valOf o !) (vector_to_list aout)
