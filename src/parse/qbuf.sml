@@ -1,7 +1,7 @@
 structure qbuf :> qbuf =
 struct
 
-  open base_tokens locn Portable Lib
+  open base_tokens locn Portable Lib Uref
 
 (* For SML/NJ *)
 
@@ -25,10 +25,10 @@ struct
   type 'a qbuf = ((unit -> 'a base_token located) option *
                   'a base_token located *
                   int *
-                  'a frag list) ref
+                  'a frag list) Uref.t
 
   fun read_from_string s = let
-    val state = ref (Substring.full s)
+    val state = Uref.new (Substring.full s)
     fun reader n = let
       open Substring
     in
@@ -77,7 +77,7 @@ struct
               (NONE, (BT_AQ x,maybe (locfrag nf)), nf+1, rest)
       end
 
-  fun new_buffer q = ref (new_buffer0 NONE 0 q)
+  fun new_buffer q = Uref.new (new_buffer0 NONE 0 q)
 
   fun current r = case !r of (_, x, _, _) => x
 

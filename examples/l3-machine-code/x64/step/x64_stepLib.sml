@@ -356,8 +356,9 @@ val ea_op =
     [`size1` |-> ``Z64``, `ea` |-> ``Zea_m (Z64, a)``]] : utilsLib.cover
 
 val monops = TypeBase.constructors_of ``:Zmonop_name``
-val binops = Lib.set_diff (TypeBase.constructors_of ``:Zbinop_name``)
-                          [``Zrcl``, ``Zrcr``]
+val binops = Lib.op_set_diff aconv
+                             (TypeBase.constructors_of ``:Zbinop_name``)
+                             [``Zrcl``, ``Zrcr``]
 
 val () = resetEvConv ()
 
@@ -1084,7 +1085,7 @@ in
               val v = Term.mk_var ("v", Term.type_of wv)
               val tv = boolSyntax.mk_eq (l, v)
            in
-              if List.exists (Lib.equal tv) rst
+              if List.exists (aconv tv) rst
                  then Thm.INST [wv |-> v] thm
               else thm
            end

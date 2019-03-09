@@ -100,6 +100,7 @@ fun inst_stacl thmidl stacl = map_assoc (inst_stac thmidl) stacl
    Orthogonalization
    ------------------------------------------------------------------------- *)
 
+fun op_subset eqf l1 l2 = null (op_set_diff eqf l1 l2)
 fun test_stac g gl (stac, istac) =
   let val glo =
     (
@@ -113,7 +114,9 @@ fun test_stac g gl (stac, istac) =
     )
   in
     case glo of NONE => NONE | SOME newgl =>
-      (if subset newgl gl then SOME (stac,0.0,g,newgl) else NONE)
+      (if op_subset goal_eq newgl gl then
+         SOME (stac,0.0,g,newgl)
+       else NONE)
   end
 
 fun orthogonalize (thmdata,tacdata) (lbl as (ostac,t,g,gl)) =

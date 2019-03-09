@@ -22,16 +22,19 @@ val tactic_time = 0.1
    Tests
    ------------------------------------------------------------------------- *)
 
+val glopt_eq = option_eq (list_eq goal_eq)
+
 fun same_effect tim stac1 stac2 g =
   let
     val gl1o = app_stac tim stac1 g
     val gl2o = app_stac tim stac2 g
   in
-    gl1o <> NONE andalso gl2o <> NONE andalso gl1o = gl2o
+    not (glopt_eq gl1o NONE) andalso not (glopt_eq gl2o NONE) andalso
+    glopt_eq gl1o gl2o
   end
 
-fun is_proof tim stac g = (app_stac stac tim g = SOME [])
-fun is_effect tim stac g gl = (app_stac tim stac g = SOME gl)
+fun is_proof tim stac g = glopt_eq (app_stac stac tim g) (SOME [])
+fun is_effect tim stac g gl = glopt_eq (app_stac tim stac g) (SOME gl)
 
 (* -------------------------------------------------------------------------
    Pretty tactic string

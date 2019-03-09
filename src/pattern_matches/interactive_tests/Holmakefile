@@ -1,0 +1,5 @@
+test: $(dprot $(SIGOBJ)/patternMatchesLib.uo)
+	echo 'load "numLib"; new_definition("B_def", ``B = 6``); new_definition("x_def", ``x = 3``); load "patternMatchesLib" handle _ => OS.Process.exit OS.Process.failure;' | $(protect $(HOLDIR)/bin/hol.bare)
+	touch $@
+
+EXTRA_CLEANS = test

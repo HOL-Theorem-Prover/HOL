@@ -1265,6 +1265,7 @@ local
           (LDM1 (R_mode m) b registers s r n RName_PC = r RName_PC)`,
       REPEAT strip_tac
       \\ RULE_ASSUM_TAC (Conv.CONV_RULE wordsLib.LESS_CONV)
+      \\ full_simp_tac bool_ss []
       \\ fs [R_mode_def, LDM1_def, combinTheory.UPDATE_def]
       \\ lrw [])
 in

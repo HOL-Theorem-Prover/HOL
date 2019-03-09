@@ -3,8 +3,7 @@ struct
 
 fun use fname =
   let
-    open QFRead
-    val (infn0, eof) = fileToReaderEOF fname
+    val {read = infn0, eof, reset} = QFRead.fileToReader fname
     val lineNo = ref 1
     fun infn () =
       case infn0 () of

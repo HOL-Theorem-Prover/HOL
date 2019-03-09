@@ -854,17 +854,13 @@ local
    end
 
    fun mk_from_bool (x as (tm, a, b)) =
-      if tm = boolSyntax.T
-         then a
-      else if tm = boolSyntax.F
-         then b
+      if Teq tm then a
+      else if Feq tm then b
       else boolSyntax.mk_cond x
 
    fun mk_word_from_bool (tm, ty) =
-      if tm = boolSyntax.T
-         then mk_word1 ty
-      else if tm = boolSyntax.F
-         then mk_word0 ty
+      if Teq tm then mk_word1 ty
+      else if Feq tm then mk_word0 ty
       else bitstringSyntax.mk_v2w
              (listSyntax.mk_list ([tm], Type.bool),
               wordsSyntax.dest_word_type ty)
@@ -1237,7 +1233,7 @@ fun Def (s, a, b) =
    let
       val ty = Type.--> (Term.type_of a, Term.type_of b)
       val c = Term.mk_var (s, ty)
-      val isrec = (HolKernel.find_term (Lib.equal c) b; true)
+      val isrec = (HolKernel.find_term (aconv c) b; true)
                   handle HOL_ERR _ => false
       val def = if isrec andalso Term.is_abs b
                    then let

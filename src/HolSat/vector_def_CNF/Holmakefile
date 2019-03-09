@@ -1,3 +1,11 @@
 ifdef POLY
 HOLHEAP = ../../num/termination/numheap
 endif
+
+.PHONY: all
+all: $(DEFAULT_TARGETS) selftest.exe
+
+selftest.exe: selftest.uo defCNF.uo
+	$(HOLMOSMLC) -o $@ $<
+
+EXTRA_CLEANS = selftest.exe

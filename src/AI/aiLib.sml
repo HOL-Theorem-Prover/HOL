@@ -232,21 +232,30 @@ fun list_diff l1 l2 = filter (fn x => not (mem x l2)) l1
 
 fun subset l1 l2 = all (fn x => mem x l2) l1
 
-fun topo_sort graph =
-  let val (topl,downl) = List.partition (fn (x,xl) => null xl) graph in
+fun topo_sort cmp graph =
+  let
+    val (topl,downl) = List.partition (fn (x,xl) => null xl) graph
+    fun list_diff l1 l2 =
+        let
+          open HOLset
+        in
+          listItems (difference (fromList cmp l1, fromList cmp l2))
+        end
+  in
     case (topl,downl) of
-    ([],[]) => []
-  | ([],_)  => raise ERR "topo_sort" "loop or missing nodes"
-  | _       =>
-    let
-      val topl' = List.map fst topl
-      val graph' = List.map (fn (x,xl) => (x,list_diff xl topl')) downl
-    in
-      topl' @ topo_sort graph'
-    end
+        ([],[]) => []
+      | ([],_)  => raise ERR "topo_sort" "loop or missing nodes"
+      | _       =>
+        let
+          val topl' = List.map fst topl
+          val graph' = List.map (fn (x,xl) => (x,list_diff xl topl')) downl
+        in
+          topl' @ topo_sort cmp graph'
+        end
   end
 
-fun sort_thyl thyl = topo_sort (map (fn x => (x, ancestry x)) thyl)
+fun sort_thyl thyl =
+    topo_sort String.compare (map (fn x => (x, ancestry x)) thyl)
 
 (* keeps the order *)
 fun mk_batch_aux size acc res l =
@@ -400,7 +409,7 @@ fun string_of_goal (asm,w) =
     val mem = !show_types
     val _   = show_types := false
     val s   =
-      (if asm = []
+      (if null asm
          then "[]"
          else "[``" ^ String.concatWith "``,``" (map term_to_string asm) ^
               "``]")

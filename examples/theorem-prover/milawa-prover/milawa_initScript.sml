@@ -108,7 +108,7 @@ fun list_dest f tm = let val (x,y) = f tm in list_dest f x @ list_dest f y end
 fun REWRITE_EQS th = let
   val tm = fst (dest_imp (concl th))
   fun dest_var_eq tm = let val (x,y) = dest_eq tm
-                           val _ = not (x = y) orelse fail()
+                           val _ = x !~ y orelse fail()
                            val _ = is_var x orelse fail() in (x,y) end
   val (v,exp) = dest_eq (first (can dest_var_eq) (list_dest dest_conj tm))
   in REWRITE_EQS (INST [v|->exp] th) end handle HOL_ERR _ => th
@@ -376,4 +376,3 @@ val core_assum_thm = store_thm("core_assum_thm",
 
 
 val _ = export_theory();
-

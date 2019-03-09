@@ -417,12 +417,23 @@ fun pp_list pp =
 fun redex {redex, residue = _} = redex;
 fun residue {redex = _, residue} = residue;
 fun find_redex r = first (fn rr as {redex, residue} => r = redex);
-fun clean_subst s = filter (fn {redex, residue} => not (redex = residue)) s;
+fun tfind_redex r = first (fn rr as {redex, residue} => r ~~ redex);
+fun clean_subst s = filter (fn {redex, residue} => redex <> residue) s;
+fun clean_tsubst s = filter (fn {redex, residue} => redex !~ residue) s;
 fun subst_vars sub = map redex sub;
 fun maplet_map (redf, resf) {redex, residue} = (redf redex |-> resf residue);
 fun subst_map fg = map (maplet_map fg);
 fun redex_map f = subst_map (f, I);
 fun residue_map f = subst_map (I, f);
+
+fun tdistinct tml = HOLset.numItems(listset tml) = length tml
+
+fun is_renaming_tsubst vars sub =
+  let
+    val residues = map residue sub
+  in
+    forall (C tmem vars) residues andalso tdistinct residues
+  end;
 
 fun is_renaming_subst vars sub =
   let
@@ -508,14 +519,15 @@ fun type_subst_vars_in_set (sub : type_subst) vars =
 
 fun subst_vars_in_set ((tm_sub, ty_sub) : substitution) (tm_vars, ty_vars) =
   type_subst_vars_in_set ty_sub ty_vars andalso
-  subset (subst_vars tm_sub) (map (inst_ty ty_sub) tm_vars);
+  HOLset.isSubset (listset (subst_vars tm_sub),
+                   listset (map (inst_ty ty_sub) tm_vars));
 
 (* Note: cyclic substitutions are right out! *)
 fun type_refine_subst ty1 ty2 : (hol_type, hol_type) subst =
   ty2 @ (clean_subst o residue_map (type_inst ty2)) ty1;
 
 fun refine_subst (tm1, ty1) (tm2, ty2) =
-  (tm2 @ (clean_subst o subst_map (inst_ty ty2, pinst (tm2, ty2))) tm1,
+  (tm2 @ (clean_tsubst o subst_map (inst_ty ty2, pinst (tm2, ty2))) tm1,
    type_refine_subst ty1 ty2);
 
 (*
@@ -536,7 +548,7 @@ fun type_vars_after_subst vars (sub : (hol_type, hol_type) subst) =
   subtract vars (subst_vars sub);
 
 fun vars_after_subst (tm_vars, ty_vars) (tm_sub, ty_sub) =
-  (subtract (map (inst_ty ty_sub) tm_vars) (subst_vars tm_sub),
+  (op_set_diff aconv (map (inst_ty ty_sub) tm_vars) (subst_vars tm_sub),
    type_vars_after_subst ty_vars ty_sub);
 
 fun type_invert_subst vars (sub : (hol_type, hol_type) subst) =
@@ -545,7 +557,7 @@ fun type_invert_subst vars (sub : (hol_type, hol_type) subst) =
 fun invert_subst (tm_vars, ty_vars) (tm_sub, ty_sub) =
   let
     val _ =
-      assert (is_renaming_subst tm_vars tm_sub)
+      assert (is_renaming_tsubst tm_vars tm_sub)
       (ERR "invert_subst" "not a renaming term subst")
     val ty_sub' = type_invert_subst ty_vars ty_sub
     fun inv {redex, residue} =
@@ -560,7 +572,7 @@ fun invert_subst (tm_vars, ty_vars) (tm_sub, ty_sub) =
 
 val empty_vars = ([], []) : vars;
 fun is_tyvar ((_, tyvars) : vars) ty = is_vartype ty andalso mem ty tyvars;
-fun is_tmvar ((tmvars, _) : vars) tm = is_var tm andalso mem tm tmvars;
+fun is_tmvar ((tmvars, _) : vars) tm = is_var tm andalso tmem tm tmvars;
 
 fun type_new_vars (vars : hol_type list) =
   let
@@ -590,6 +602,10 @@ fun new_vars (tm_vars, ty_vars) =
     ((map (inst_ty ty_old_to_new) tm_gvars, ty_gvars), (old_to_new, new_to_old))
   end;
 
+val vars_eq : vars eqf = pair_eq tml_eq equal
+fun vars_union (tml1, tyl1) (tml2, tyl2) =
+  (tunion tml1 tml2, union tyl1 tyl2)
+
 (* ------------------------------------------------------------------------- *)
 (* Bound variables.                                                          *)
 (* ------------------------------------------------------------------------- *)
@@ -598,7 +614,7 @@ fun dest_bv bvs tm =
   let
     val _ = assert (is_var tm) (ERR "dest_bv" "not a var")
   in
-    index (equal tm) bvs
+    index (aconv tm) bvs
   end;
 fun is_bv bvs = can (dest_bv bvs);
 fun mk_bv bvs n : term = nth n bvs;
@@ -687,7 +703,7 @@ val FUN_EQ = prove (``!f g. (f = g) = (!x. f x = g x)``, PROVE_TAC [EQ_EXT]);
 val SET_EQ = prove (``!s t. (s = t) = (!x. x IN s = x IN t)``,
                     PROVE_TAC [SPECIFICATION, FUN_EQ]);
 
-val hyps = foldl (fn (h,t) => union (hyp h) t) [];
+val hyps = foldl (fn (h,t) => tunion (hyp h) t) [];
 
 val LHS = lhs o concl;
 val RHS = rhs o concl;
@@ -738,7 +754,7 @@ fun CONJUNCT_CONV c tm =
 
 (* Conversions *)
 
-fun EXACT_CONV exact tm = QCONV (if tm = exact then ALL_CONV else NO_CONV) tm;
+fun EXACT_CONV exact tm = QCONV (if tm ~~ exact then ALL_CONV else NO_CONV) tm;
 
 val NEGNEG_CONV = REWR_CONV (CONJUNCT1 NOT_CLAUSES);
 
@@ -881,7 +897,7 @@ fun clean_vthm ((tm_vars, ty_vars), th) =
   let
     val tms = concl th :: hyp th
     val ty_vars' = intersect (type_vars_in_terms tms) ty_vars
-    val tm_vars' = intersect (free_varsl tms) tm_vars
+    val tm_vars' = op_intersect aconv (free_varsl tms) tm_vars
   in
     ((tm_vars', ty_vars'), ZAP_CONSTS_RULE th)
   end;
@@ -1192,7 +1208,7 @@ local
     let
       val tm = concl th
     in
-      if mem tm concls then (concls, ths) else (tm :: concls, th :: ths)
+      if tmem tm concls then (concls, ths) else (tm :: concls, th :: ths)
     end
 
   fun clean_add_thms ths = snd o trans add_thm (map concl ths, ths)

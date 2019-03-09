@@ -2,6 +2,16 @@
 
 set -e
 
+if [ "$SML" == "mosml" ]
+then
+    mkdir mosml
+    wget -qO- https://github.com/kfl/mosml/tarball/master | \
+      tar xvz -C mosml --strip-components 1
+    cd mosml/src
+    make world
+    sudo make install
+else
+
 POLY_BASE="https://github.com/polyml/polyml"
 
 # Defaults:
@@ -45,3 +55,15 @@ if [ $(uname) = "Darwin" ]
 then
   perl -pi -e 's/-R/-rpath /g' $HOME/bin/polyc
 fi
+
+cd
+if [ "$OPENTHEORY" == "T" ]
+then
+    mkdir opentheory
+    wget -qO- http://www.gilith.com/software/opentheory/opentheory.tar.gz | \
+      tar xvz -C opentheory --strip-components 1
+    pushd opentheory
+    make polyml && bin/polyml/opentheory help && sudo mv bin/polyml/opentheory /usr/bin
+    popd
+fi
+fi # matches test on SML == mosml

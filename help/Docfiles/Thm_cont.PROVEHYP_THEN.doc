@@ -25,7 +25,7 @@ Fails if the theorem argument is not an implication or negation.
 \EXAMPLE
 {
    > FIRST_X_ASSUM (PROVEHYP_THEN (K MP_TAC)) ([“p”, “p ==> q”], “r”)
-   val it = ([([“p”], “p”), ([“p”], “q ⇒ r”)], fn):
+   val it = ([([“p”], “p”), ([“p”], “q ==> r”)], fn):
             goal list * validation
 }
 The use of {FIRST_X_ASSUM} pulls out the first implicational theorem, and gives the user the requirement to prove {p} as a subgoal. In the other subgoal, {q} has become a new antecedent in the goal (thanks to the action of {MP_TAC}).

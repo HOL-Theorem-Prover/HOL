@@ -100,7 +100,7 @@ fun BETAS fnns body =
         then ABS_CONV (BETAS fnns (snd(dest_abs body)))
         else let val (Rator,Rand) = dest_comb body
              in
-             if mem Rator fnns then BETA_CONV
+             if op_mem aconv Rator fnns then BETA_CONV
              else let val cnv1 = BETAS fnns Rator
                       and cnv2 = BETAS fnns Rand
                       fun f (Rator,Rand) = (cnv1 Rator, cnv2 Rand)

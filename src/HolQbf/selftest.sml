@@ -65,12 +65,14 @@ fun disprove t =
         ", message: " ^ message ^ ")")
   else ()
 
+val thmeq = Lib.pair_eq (Lib.list_eq Term.aconv) Term.aconv
 fun decide t =
   if squolem_installed then let
     val th = HolQbfLib.decide t
-    val _ = if let open Thm Term boolSyntax in
-                 concl th = t orelse
-                 dest_thm th = ([list_mk_forall(free_vars t,t)],F)
+    val _ = if let open Thm Term boolSyntax
+               in
+                 concl th ~~ t orelse
+                 thmeq (dest_thm th) ([list_mk_forall(free_vars t,t)],F)
                end
             then ()
             else die ("Decide proved bad theorem on term '" ^

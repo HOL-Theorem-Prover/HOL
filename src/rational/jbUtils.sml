@@ -95,48 +95,21 @@ fun store_thm_verbose (s:string, t:term, tac:tactic) =
         end;
 
 (*--------------------------------------------------------------------------
- *  in_list : ''a list -> ''a -> bool
- *--------------------------------------------------------------------------*)
-
-fun in_list l1 p1 =
-        (exists  (fn (x) => (x = p1)) l1);
-
-(*--------------------------------------------------------------------------
- *  list_merge : ''a list -> ''a list -> ''a list
- *--------------------------------------------------------------------------*)
-
-fun list_merge l1 l2 =
-        l1 @ filter (fn x => not (in_list l1 x)) l2;
-
-(*--------------------------------------------------------------------------
- *  list_xmerge : ''a list list -> ''a list
- *--------------------------------------------------------------------------*)
-
-fun       list_xmerge (nil) = []
-        | list_xmerge (first::nil) = first
-        | list_xmerge (first::rest) = list_merge first (list_xmerge rest);
-
-(* ---------- test cases ---------- *
-        list_xmerge [[``f1:frac``]];
-        list_xmerge [[``f1:frac``,``f2:frac``],[``f2:frac``,``f3:frac``]];
- * ---------- test cases ---------- *)
-
-(*--------------------------------------------------------------------------
  *  extract_terms_of_type : hol_type -> term -> term list
  *--------------------------------------------------------------------------*)
 
 fun extract_terms_of_type (typ1:hol_type) (t1:term) =
-        if type_of t1 = typ1 then
-                [t1]
-        else
-                if is_comb t1 then
-                        let
-                                val (top_rator, top_rand) = dest_comb t1;
-                        in
-                                list_merge (extract_terms_of_type typ1 top_rator) (extract_terms_of_type typ1 top_rand)
-                        end
-                else
-                        [];
+  if type_of t1 = typ1 then [t1]
+  else if is_comb t1 then
+    let
+      val (top_rator, top_rand) = dest_comb t1
+    in
+      op_U aconv
+           [extract_terms_of_type typ1 top_rator,
+            extract_terms_of_type typ1 top_rand]
+    end
+  else
+    [];
 
 (*--------------------------------------------------------------------------
  *  dest_binop_triple : term -> term * term * term

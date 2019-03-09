@@ -127,7 +127,7 @@ fun uqfname_holdep fname =
   let
     val reader = QFRead.fileToReader fname
   in
-    Holdep_tokens.reader_deps (fname, reader)
+    Holdep_tokens.reader_deps (fname, #read reader)
   end
 
 fun read {assumes, includes, srcext, objext, filename} = let

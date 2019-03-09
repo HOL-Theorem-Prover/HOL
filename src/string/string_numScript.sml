@@ -149,19 +149,19 @@ val nsum2n_n2nsum = store_thm(
   rw[n2nsum_def, odd_lemma]);
 
 val s2ssum_def = Define`
-  s2ssum s = (n2s ++ n2s) (n2nsum (s2n s))
+  s2ssum s = SUM_MAP n2s n2s (n2nsum (s2n s))
 `;
 
 val ssum2s_def = Define`
-  ssum2s sm = n2s (nsum2n ((s2n ++ s2n) sm))
+  ssum2s sm = n2s (nsum2n (SUM_MAP s2n s2n sm))
 `;
 
 val sumpp_compose = prove(
-  ``(f ++ g) ((a ++ b) x) = ((f o a) ++ (g o b)) x``,
+  ``SUM_MAP f g (SUM_MAP a b x) = SUM_MAP (f o a) (g o b) x``,
   Cases_on `x` >> simp[]);
 
 val sumpp_I = prove(
-  ``((\x. x) ++ (\x. x)) y = y``,
+  ``SUM_MAP (\x. x) (\x. x) y = y``,
   Cases_on `y` >> simp[]);
 
 val s2ssum_ssum2s = store_thm(

@@ -226,11 +226,11 @@ val HIGHER_REWRITE_CONV =
                     (lookup t mnet)
       in fn tm =>
           let val ts = find_terms
-                        (fn t => not (look_fn t = []) andalso free_in t tm) tm
+                        (fn t => not (null (look_fn t)) andalso free_in t tm) tm
               val stm = Lib.trye hd (sort free_in ts)
               val pat = Lib.trye hd (look_fn stm)
               val (tmin,tyin) = ho_match_term [] empty_tmset pat stm
-              val (pred,(th,beta_fn)) = assoc pat ass_list
+              val (pred,(th,beta_fn)) = op_assoc aconv pat ass_list
               val gv = genvar(type_of stm)
               val abs = mk_abs(gv,subst[stm |-> gv] tm)
               val (tmin0,tyin0) = ho_match_term [] empty_tmset pred abs

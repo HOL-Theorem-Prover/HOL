@@ -170,7 +170,7 @@ fun prim_mk_set_spec (tm1, tm2, sharedvars) =
 
 fun mk_set_spec (tm1, tm2) =
    let
-      val shared = intersect (free_vars_lr tm1) (free_vars_lr tm2)
+      val shared = op_intersect aconv (free_vars_lr tm1) (free_vars_lr tm2)
    in
       prim_mk_set_spec (tm1, tm2, shared)
    end

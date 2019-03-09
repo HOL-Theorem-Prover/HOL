@@ -4,6 +4,14 @@ struct
 open HolKernel Parse boolLib Drule BasicProvers
 open boolLib simpLib patternMatchesSyntax numLib
 
+structure Parse =
+struct
+  open Parse
+  val (Type,Term) =
+      parse_from_grammars patternMatchesTheory.patternMatches_grammars
+end
+open Parse
+
 (***************************************************)
 (* Auxiliary definitions                           *)
 (***************************************************)
@@ -579,7 +587,7 @@ fun measure_constructorFamily (cf : constructorFamily) col = let
     #cl_constructors (#constructors cf))
 
   fun row_is_missed (vs, p) =
-    if (is_var p andalso mem p vs) then
+    if is_var p andalso tmem p vs then
       (* bound variables are fine *)
       false
     else let
@@ -636,8 +644,9 @@ end
 fun lookup_constructorFamily force_exh (db : pmatch_compile_db) col = let
   val _ = if (List.null col) then (failwith "constructorFamiliesLib" "lookup_constructorFamilies: null col") else ()
 
-  val _ = if List.all (fn (vs, c) => is_var c andalso Lib.mem c vs) col then
-            (failwith "constructorFamiliesLib" "lookup_constructorFamilies: var col")
+  val _ = if List.all (fn (vs, c) => is_var c andalso tmem c vs) col then
+            (failwith "constructorFamiliesLib"
+                      "lookup_constructorFamilies: var col")
           else ()
 
   val ty = type_of (snd (hd col))
@@ -809,7 +818,7 @@ fun pmatch_compile_db_clear_type ty =
 
 val COND_CONG_APPLY = prove (``(if (x:'a) = c then (ff x):'b else ff x) =
   (if x = c then ff c else ff x)``,
-Cases_on `x = c` THEN ASM_REWRITE_TAC[])
+ASM_CASES_TAC ``x:'a = c`` THEN ASM_REWRITE_TAC[])
 
 
 fun literals_compile_fun (col:(term list * term) list) = let

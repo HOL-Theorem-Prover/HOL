@@ -3,7 +3,7 @@
 \TYPE {ASM_QUANT_INSTANTIATE_TAC : quant_param list -> tactic}
 
 \SYNOPSIS
-A tactic to intantiate quantifiers in a term using a given list of
+A tactic to instantiate quantifiers in a term using a given list of
 quantifier heuristic parameters.
 
 \DESCRIBE
@@ -11,6 +11,7 @@ This tactic is based on {quantHeuristicsLib.QUANT_INSTANTIATE_CONV}.
 It tries to instantiate quantifiers. Free variables of the goal are
 seen as universally quantified by this tactic. Therefore, it tries to
 instantiate these free variables.
+
 In contrast to {quantHeuristicsLib.QUANT_INSTANTIATE_TAC} this tactic
 takes the assumptions of the goal into account.
 

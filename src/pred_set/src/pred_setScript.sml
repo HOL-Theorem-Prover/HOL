@@ -28,6 +28,7 @@ val DECIDE = numLib.ARITH_PROVE
    of srw_ss() *)
 fun fs thl = FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) thl
 fun simp thl = ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) thl
+fun rw thl = SRW_TAC[ARITH_ss]thl
 
 fun store_thm(r as(n,t,tac)) = let
   val th = boolLib.store_thm r
@@ -1991,6 +1992,9 @@ val BIJ_INV = store_thm
    >> RW_TAC std_ss []
    >> PROVE_TAC []);
 
+
+
+
 (* ===================================================================== *)
 (* Fun set and Schroeder Bernstein Theorems (from util_probTheory)       *)
 (* ===================================================================== *)
@@ -2277,6 +2281,15 @@ EQ_TAC THEN STRIP_TAC THEN1 (
   METIS_TAC [BIJ_LINV_INV] ) THEN
 SRW_TAC [][BIJ_DEF,INJ_DEF,SURJ_DEF] THEN
 METIS_TAC []);
+
+Theorem BIJ_support
+  `!f s' s.
+      BIJ f s' s' /\ s' SUBSET s /\ (!x. x NOTIN s' ==> (f x = x)) ==>
+      BIJ f s s`
+  (rw[BIJ_IFF_INV,SUBSET_DEF]
+  >- METIS_TAC[]
+  \\ Q.EXISTS_TAC`\x. if x IN s' then g x else x`
+  \\ rw[] \\ METIS_TAC[]);
 
 val BIJ_INSERT = store_thm(
   "BIJ_INSERT",
@@ -4550,52 +4563,57 @@ HO_MATCH_MP_TAC FINITE_INDUCT THEN
 SRW_TAC [][SUM_IMAGE_THM,SUM_IMAGE_DELETE])
 val _ = DefnBase.export_cong "SUM_IMAGE_CONG"
 
-val SUM_IMAGE_ZERO = Q.store_thm(
-"SUM_IMAGE_ZERO",
-`!s. FINITE s ==> ((SIGMA f s = 0) <=> (!x. x IN s ==> (f x = 0)))`,
-HO_MATCH_MP_TAC FINITE_INDUCT THEN
-CONJ_TAC THEN1 SIMP_TAC bool_ss [SUM_IMAGE_THM,NOT_IN_EMPTY] THEN
-SIMP_TAC bool_ss [SUM_IMAGE_THM,DELETE_NON_ELEMENT,ADD_EQ_0,IN_INSERT] THEN
-METIS_TAC [])
+Theorem SUM_IMAGE_ZERO:
+  !s. FINITE s ==> ((SIGMA f s = 0) <=> (!x. x IN s ==> (f x = 0)))
+Proof
+  HO_MATCH_MP_TAC FINITE_INDUCT THEN
+  CONJ_TAC THEN1 SIMP_TAC bool_ss [SUM_IMAGE_THM,NOT_IN_EMPTY] THEN
+  SIMP_TAC bool_ss [SUM_IMAGE_THM,DELETE_NON_ELEMENT,ADD_EQ_0,IN_INSERT] THEN
+  METIS_TAC []
+QED
 
-val ABS_DIFF_SUM_IMAGE = Q.store_thm(
-"ABS_DIFF_SUM_IMAGE",
-`!s. FINITE s ==> (ABS_DIFF (SIGMA f s) (SIGMA g s) <= SIGMA (\x. ABS_DIFF (f x) (g x)) s)`,
-HO_MATCH_MP_TAC FINITE_INDUCT THEN
-SRW_TAC [][] THEN1 (
-  SRW_TAC [][SUM_IMAGE_THM,ABS_DIFF_EQS] ) THEN
-SRW_TAC [][SUM_IMAGE_THM] THEN
-FULL_SIMP_TAC (srw_ss()) [DELETE_NON_ELEMENT] THEN
-MATCH_MP_TAC LESS_EQ_TRANS THEN
-Q.EXISTS_TAC `ABS_DIFF (f e) (g e) + ABS_DIFF (SIGMA f s) (SIGMA g s)` THEN
-SRW_TAC [][ABS_DIFF_SUMS])
+Theorem ABS_DIFF_SUM_IMAGE:
+  !s. FINITE s ==>
+      (ABS_DIFF (SIGMA f s) (SIGMA g s) <= SIGMA (\x. ABS_DIFF (f x) (g x)) s)
+Proof
+  HO_MATCH_MP_TAC FINITE_INDUCT THEN
+  SRW_TAC [][] THEN1 (
+    SRW_TAC [][SUM_IMAGE_THM,ABS_DIFF_EQS] ) THEN
+  SRW_TAC [][SUM_IMAGE_THM] THEN
+  FULL_SIMP_TAC (srw_ss()) [DELETE_NON_ELEMENT] THEN
+  MATCH_MP_TAC LESS_EQ_TRANS THEN
+  Q.EXISTS_TAC `ABS_DIFF (f e) (g e) + ABS_DIFF (SIGMA f s) (SIGMA g s)` THEN
+  SRW_TAC [][ABS_DIFF_SUMS]
+QED
 
-val SUM_IMAGE_MONO_LESS_EQ = Q.store_thm(
-"SUM_IMAGE_MONO_LESS_EQ",
-`!s. FINITE s ==> (!x. x IN s ==> f x <= g x)
-  ==> SUM_IMAGE f s <= SUM_IMAGE g s`,
-HO_MATCH_MP_TAC FINITE_INDUCT THEN
-SRW_TAC [][SUM_IMAGE_THM] THEN
-FULL_SIMP_TAC (srw_ss()) [DELETE_NON_ELEMENT] THEN
-MATCH_MP_TAC LESS_EQ_LESS_EQ_MONO THEN
-SRW_TAC [][]);
+Theorem SUM_IMAGE_MONO_LESS_EQ:
+  !s. FINITE s ==>
+      (!x. x IN s ==> f x <= g x) ==> SUM_IMAGE f s <= SUM_IMAGE g s
+Proof
+  HO_MATCH_MP_TAC FINITE_INDUCT THEN
+  SRW_TAC [][SUM_IMAGE_THM] THEN
+  FULL_SIMP_TAC (srw_ss()) [DELETE_NON_ELEMENT] THEN
+  MATCH_MP_TAC LESS_EQ_LESS_EQ_MONO THEN
+  SRW_TAC [][]
+QED
 
-val SUM_IMAGE_MONO_LESS = Q.store_thm(
-"SUM_IMAGE_MONO_LESS",
-`!s. FINITE s ==> (?x. x IN s /\ f x < g x) /\ (!x. x IN s ==> f x <= g x)
-  ==> SUM_IMAGE f s < SUM_IMAGE g s`,
-HO_MATCH_MP_TAC FINITE_INDUCT THEN
-SRW_TAC [][SUM_IMAGE_THM] THEN
-FULL_SIMP_TAC (srw_ss()) [DELETE_NON_ELEMENT] THEN1 (
+Theorem SUM_IMAGE_MONO_LESS:
+  !s. FINITE s ==> (?x. x IN s /\ f x < g x) /\ (!x. x IN s ==> f x <= g x) ==>
+      SUM_IMAGE f s < SUM_IMAGE g s
+Proof
+  HO_MATCH_MP_TAC FINITE_INDUCT THEN
+  SRW_TAC [][SUM_IMAGE_THM] THEN
+  FULL_SIMP_TAC (srw_ss()) [DELETE_NON_ELEMENT] THEN1 (
+    MATCH_MP_TAC LESS_LESS_EQ_TRANS THEN
+    Q.EXISTS_TAC `g e + SIGMA f s` THEN
+    SRW_TAC [][] THEN
+    MATCH_MP_TAC (MP_CANON SUM_IMAGE_MONO_LESS_EQ) THEN
+    SRW_TAC [][] ) THEN
+  `SIGMA f s < SIGMA g s` by METIS_TAC [] THEN
   MATCH_MP_TAC LESS_LESS_EQ_TRANS THEN
-  Q.EXISTS_TAC `g e + SIGMA f s` THEN
-  SRW_TAC [][] THEN
-  MATCH_MP_TAC (MP_CANON SUM_IMAGE_MONO_LESS_EQ) THEN
-  SRW_TAC [][] ) THEN
-`SIGMA f s < SIGMA g s` by METIS_TAC [] THEN
-MATCH_MP_TAC LESS_LESS_EQ_TRANS THEN
-Q.EXISTS_TAC `f e + SIGMA g s` THEN
-SRW_TAC [][]);
+  Q.EXISTS_TAC `f e + SIGMA g s` THEN
+  SRW_TAC [][]
+QED
 
 val SUM_IMAGE_INJ_o = store_thm(
   "SUM_IMAGE_INJ_o",
@@ -4638,14 +4656,13 @@ val SUM_SET_THM = store_thm(
     (!x s. FINITE s ==> (SUM_SET (x INSERT s) = x + SUM_SET (s DELETE x)))``,
   SRW_TAC [][SUM_SET_DEF, SUM_IMAGE_THM]);
 
-val SUM_SET_EMPTY = save_thm("SUM_SET_EMPTY", CONJUNCT1 SUM_SET_THM)
-val _ = export_rewrites ["SUM_SET_EMPTY"]
+Theorem SUM_SET_EMPTY[simp] = CONJUNCT1 SUM_SET_THM;
 
-val SUM_SET_SING = store_thm(
-  "SUM_SET_SING",
-  ``!n. SUM_SET {n} = n``,
-  SRW_TAC [][SUM_SET_DEF, SUM_IMAGE_SING]);
-val _ = export_rewrites ["SUM_SET_SING"]
+Theorem SUM_SET_SING[simp]:
+  !n. SUM_SET {n} = n
+Proof
+  SRW_TAC [][SUM_SET_DEF, SUM_IMAGE_SING]
+QED
 
 val SUM_SET_SUBSET_LE = store_thm(
   "SUM_SET_SUBSET_LE",
@@ -4670,6 +4687,32 @@ val SUM_SET_UNION = store_thm(
           (SUM_SET (s UNION t) =
              SUM_SET s + SUM_SET t - SUM_SET (s INTER t))``,
   SRW_TAC [][SUM_SET_DEF, SUM_IMAGE_UNION]);
+
+Theorem SUM_SET_count_2:
+  !n. 2 * SUM_SET (count n) = n * (n - 1)
+Proof
+  Induct >>
+  rw [
+    COUNT_SUC, SUM_SET_THM, LEFT_ADD_DISTRIB, SUM_SET_DELETE, ADD1,
+    LEFT_SUB_DISTRIB, RIGHT_ADD_DISTRIB, SUM_SQUARED
+  ] >>
+  `n <= n ** 2` by rw[] >>
+  rw[]
+QED
+
+Theorem SUM_SET_count:
+  SUM_SET (count n) = n * (n - 1) DIV 2
+Proof
+  Q.MATCH_ABBREV_TAC `a = b` >>
+  ‘2 * a = 2 * b’ suffices_by simp[] >>
+  markerLib.UNABBREV_ALL_TAC >>
+  REWRITE_TAC[SUM_SET_count_2] >>
+  Q.SPEC_THEN ‘2’ mp_tac DIVISION >> simp[] >>
+  disch_then (Q.SPEC_THEN ‘n * (n - 1)’ assume_tac) >>
+  Q.MATCH_ABBREV_TAC ‘(a = 2 * (a DIV 2))’ >>
+  ‘a MOD 2 = 0’ suffices_by (strip_tac >> fs[]) >>
+  simp[Abbr`a`,GSYM EVEN_MOD2, LEFT_SUB_DISTRIB, EVEN_SUB, EVEN_EXP_IFF]
+QED
 
 (* ----------------------------------------------------------------------
     PROD_IMAGE

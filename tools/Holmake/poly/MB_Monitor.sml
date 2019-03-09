@@ -108,7 +108,7 @@ fun delsml_sfx s =
 
 val width_check_delay = Time.fromMilliseconds 1000
 
-fun new {info,warn,genLogFile,keep_going,time_limit} =
+fun new {info,warn,genLogFile,time_limit} =
   let
     val monitor_map = ref (Binarymap.mkDict String.compare)
     val last_width_check = ref (Time.now())
@@ -253,8 +253,7 @@ fun new {info,warn,genLogFile,keep_going,time_limit} =
                   TextIO.closeOut strm;
                   monitor_map := #1 (Binarymap.remove(!monitor_map, tag));
                   display_map();
-                  if st = W_EXITED orelse keep_going then NONE
-                  else SOME KillAll
+                  NONE
                 end)
         | MonitorKilled((_, tag), _) =>
           stdhandle tag

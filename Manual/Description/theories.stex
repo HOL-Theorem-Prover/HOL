@@ -585,9 +585,9 @@ $t\ t_1 \cdots t_n$ &
 for conjunctions, disjunctions, and implications respectively.
 The corresponding destructor functions are called \ml{strip\_comb} \etc
 %
-\index{term constructors, in HOL logic@term constructors, in \HOL{} logic|)}
+\index{term constructors, in HOL logic@term constructors, in \HOL{} logic}
 %
-\index{terms, in HOL logic@terms, in \HOL{} logic!constructors for|)}
+\index{terms, in HOL logic@terms, in \HOL{} logic!constructors for}
 %
 \index{quotation, in HOL logic@quotation, in \HOL{} logic!of non-primitive terms|)}
 
@@ -1161,35 +1161,45 @@ The following theorem is proved in the theory \ml{sum}. It provides a
 complete and abstract characterization of the disjoint sum type, and
 is used to justify the definition of functions over sums.
 
+>>__ open sumTheory
 \begin{hol}
-\begin{verbatim}
-  sum_Axiom  |- !f g. ?! h. (!x. h(INL x) = f x) /\ (!x. h(INR x) = g x)
-\end{verbatim}
+\begin{alltt}
+   ##thm sum_Axiom
+\end{alltt}
 \end{hol}
 
 \noindent Also provided are the following theorems having to
 do with the discriminator functions \ml{ISL} and \ml{ISR}:
 
 \begin{hol}
-\begin{verbatim}
-   ISL         |- (!x. ISL(INL x)) /\ (!y. ~ISL(INR y))
-   ISR         |- (!x. ISR(INR x)) /\ (!y. ~ISR(INL y))
+\begin{alltt}
+   ##thm ISL
+   ##thm ISR
 
-   ISL_OR_ISR  |- !x. ISL x \/ ISR x
-\end{verbatim}
+   ##thm ISL_OR_ISR
+\end{alltt}
 \end{hol}
 
 \noindent The \ml{sum} theory also provides the following theorems
 relating the projection functions and the discriminators.
 
 \begin{hol}
-\begin{verbatim}
-   OUTL        |- !x. OUTL(INL x) = x
-   OUTR        |- !x. OUTR(INR x) = x
+\begin{alltt}
+   ##thm OUTL
+   ##thm OUTR
 
-   INL         |- !x. ISL x ==> (INL(OUTL x) = x)
-   INR         |- !x. ISR x ==> (INR(OUTR x) = x)
-\end{verbatim}
+   ##thm INL
+   ##thm INR
+\end{alltt}
+\end{hol}
+
+The sum type operator can be seen as functorial over its arguments and so has a ``map'' function, \holtxt{SUM\_MAP}, with definition and results showing its functoriality:
+\begin{hol}
+\begin{alltt}
+   ##thm SUM_MAP_def
+   ##thm SUM_MAP_I
+   ##thm SUM_MAP_o
+\end{alltt}
 \end{hol}
 
 \index{disjoint unions, the HOL theory of@disjoint unions, the \HOL{} theory of|)}

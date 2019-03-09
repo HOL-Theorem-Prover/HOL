@@ -356,7 +356,8 @@ fun bvk_find_term P k =
 
 fun find_terms P =
    let
-      val tms = ref []
+      open Uref
+      val tms = Uref.new []
       fun find_tms tm =
          (if P tm then tms := tm :: (!tms) else ()
           ; find_tms (body tm)
@@ -484,22 +485,32 @@ end
 local
   exception NOT_FOUND
   fun find_residue red [] = raise NOT_FOUND
-    | find_residue red ({redex, residue}::rest) = if red = redex then residue
-                                                 else find_residue red rest
+    | find_residue red ({redex, residue}::rest) =
+        if aconv red redex then residue else find_residue red rest
+  fun find_residue_eq red [] = raise NOT_FOUND
+    | find_residue_eq red ({redex, residue}::rest) =
+        if red = redex then residue else find_residue_eq red rest
   fun in_dom x [] = false
-    | in_dom x ({redex, residue}::rest) = (x = redex) orelse in_dom x rest
-  fun safe_insert (n as {redex, residue}) l = let
-    val z = find_residue redex l
-  in
-    if residue = z then l
-    else failwith "match: safe_insert"
-  end handle NOT_FOUND => n::l  (* binding not there *)
-  fun safe_inserta (n as {redex, residue}) l = let
-    val z = find_residue redex l
-  in
-    if aconv residue z then l
-    else failwith "match: safe_inserta"
-  end handle NOT_FOUND => n::l
+    | in_dom x ({redex, residue}::rest) = aconv x redex orelse in_dom x rest
+  fun in_domeq x [] = false
+    | in_domeq x ({redex,residue}::rest) = x = redex orelse in_domeq x rest
+
+  (* for terms *)
+  fun safe_insert (n as {redex, residue}) l =
+    let
+      val z = find_residue redex l
+    in
+      if aconv residue z then l
+      else failwith "match: safe_insert"
+    end handle NOT_FOUND => n::l
+
+  fun safe_inserteq (n as {redex,residue}) l =
+    let
+      val z = find_residue redex l
+    in
+      if residue = z then l
+      else failwith "match: safe_insert"
+    end handle NOT_FOUND => n::l
   val mk_dummy = let
     val name = fst (dest_var (genvar Type.alpha))
   in fn ty => mk_var (name, ty)
@@ -510,13 +521,13 @@ local
     if is_var vtm then let
         val ctm' = find_residue vtm env
       in
-        if ctm' = ctm then sofar else failwith "term_pmatch"
+        if aconv ctm' ctm then sofar else failwith "term_pmatch"
       end handle NOT_FOUND =>
                  if HOLset.member (lconsts, vtm) then
-                   if ctm = vtm then sofar
+                   if aconv ctm vtm then sofar
                    else
                      failwith "term_pmatch: can't instantiate local constant"
-                 else (safe_inserta (vtm |-> ctm) insts, homs)
+                 else (safe_insert (vtm |-> ctm) insts, homs)
     else if is_const vtm then let
         val {Thy = vthy, Name = vname, Ty = vty} = dest_thy_const vtm
         val {Thy = cthy, Name = cname, Ty = cty} = dest_thy_const ctm
@@ -585,13 +596,13 @@ fun get_type_insts avoids L (tyS, Id) =
 fun separate_insts tyavoids insts = let
   val (realinsts, patterns) = partition (is_var o #redex) insts
   val betacounts =
-      if patterns = [] then []
+      if null patterns then []
       else
         itlist (fn {redex = p, ...} =>
                    fn sof => let
                         val (hop, args) = strip_comb p
                       in
-                        safe_insert (hop |-> length args) sof
+                        safe_inserteq (hop |-> length args) sof
                       end handle HOL_ERR _ =>
                                  (HOL_WARNING "" ""
                                   "Inconsistent patterning in h.o. match";
@@ -606,14 +617,15 @@ in
                               mk_var (xn, type_subst (#1 tyins) xty)
                             end
                  in
-                   if t = x' then failwith "" else {redex = x', residue = t}
+                   if aconv t x' then failwith "" else {redex = x', residue = t}
                  end) realinsts,
    tyins)
 end
 
-fun tyenv_in_dom x (env, idlist) = mem x idlist orelse in_dom x env
+val tmmem = op_mem aconv
+fun tyenv_in_dom x (env, idlist) = mem x idlist orelse in_domeq x env
 fun tyenv_find_residue x (env, idlist) = if mem x idlist then x
-                                         else find_residue x env
+                                         else find_residue_eq x env
 fun tyenv_safe_insert (t as {redex, residue}) (E as (env, idlist)) = let
   val existing = tyenv_find_residue redex E
 in
@@ -653,12 +665,12 @@ fun term_homatch tyavoids lconsts tyins (insts, homs) = let
   (* local constants of both terms and types never change *)
   val term_homatch = term_homatch tyavoids lconsts
 in
-  if homs = [] then insts
+  if null homs then insts
   else let
       val (env, ctm, vtm) = hd homs
     in
       if is_var vtm then
-        if ctm = vtm then term_homatch tyins (insts, tl homs)
+        if aconv ctm vtm then term_homatch tyins (insts, tl homs)
         else let
             val newtyins =
                 tyenv_safe_insert (snd (dest_var vtm) |-> type_of ctm) tyins
@@ -690,8 +702,8 @@ in
                val (chop, cargs) = strip_comb ctm
              in
                if all_abconv cargs pats then
-                 if chop = vhop then insts
-                 else safe_inserta (vhop |-> chop) insts
+                 if aconv chop vhop then insts
+                 else safe_insert (vhop |-> chop) insts
                else let
                    val ginsts = map (fn p => (p |->
                                                 (if is_var p then p
@@ -700,7 +712,7 @@ in
                    val ctm' = Term.subst ginsts ctm
                    val gvs = map #residue ginsts
                    val abstm = list_mk_abs (gvs, ctm')
-                   val vinsts = safe_inserta (vhop |-> abstm) insts
+                   val vinsts = safe_insert (vhop |-> abstm) insts
                    val icpair = (list_mk_comb (vhop', gvs) |-> ctm')
                  in
                    icpair::vinsts

@@ -529,7 +529,8 @@ fun user_split_ident keywords = let
   val split = split_ident mixedset (!base_tokens.allow_octal_input)
 in
   fn s => let
-       val pushback = ref ""
+       open Uref
+       val pushback = Uref.new ""
        fun rc (btid, _) =
            case btid of
              BT_Ident s => (pushback := s)

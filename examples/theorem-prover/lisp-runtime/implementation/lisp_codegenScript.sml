@@ -1604,8 +1604,8 @@ fun straight_line_decompile func_name code in_out_vars = let
   val (_,p,_,q) = dest_spec (concl (UNDISCH_ALL (RW [progTheory.SPEC_MOVE_COND] th)))
   val ps = filter (not o can dest_sep_hide) (list_dest dest_star p)
   val qs = filter (not o can dest_sep_hide) (list_dest dest_star q)
-  val ps = filter (fn tm => not (car tm = pc) handle HOL_ERR _ => true) ps
-  val qs = filter (fn tm => not (car tm = pc) handle HOL_ERR _ => true) qs
+  val ps = filter (fn tm => (car tm !~ pc) handle HOL_ERR _ => true) ps
+  val qs = filter (fn tm => (car tm !~ pc) handle HOL_ERR _ => true) qs
   fun safe_car tm = car tm handle HOL_ERR _ => tm
   val sorter = sort (fn t1 => fn t2 => term_to_string (safe_car t1) <= term_to_string (safe_car t2))
   val ps = sorter ps

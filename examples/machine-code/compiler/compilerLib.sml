@@ -187,8 +187,9 @@ fun all_distinct [] = []
 
 fun generate_pre fname args tm = let
   val h = fst o dest_eq o concl o SPEC_ALL
-  val aux_pre = map ((fn (x,y) => (h x,h y)) o snd)
-                (filter (fn (_,(_,y)) => not (cdr (concl y) = T)) (!to_compile))
+  val aux_pre =
+      map ((fn (x,y) => (h x,h y)) o snd)
+          (filter (fn (_,(_,y)) => cdr (concl y) !~ T) (!to_compile))
   fun mk_ALIGNED b = (fst o dest_eq o concl o SPEC b) addressTheory.ALIGNED_def
   fun word32_read_write tm = let
     val xs1 = find_terms (fn x => is_comb x andalso is_var (car x) andalso
@@ -205,11 +206,12 @@ fun generate_pre fname args tm = let
   fun aux_fun_pre tm (def,pre) = let
     val xs = find_terms (fn x => can (match_term def) x) tm
     in map (fn x => subst (fst (match_term def x)) pre) xs end
-  fun all_aux_fun_pre tm = all_distinct (append_lists (map (aux_fun_pre tm) aux_pre))
+  fun all_aux_fun_pre tm =
+      op_mk_set aconv (append_lists (map (aux_fun_pre tm) aux_pre))
   fun get_pre tm = word32_read_write tm @ all_aux_fun_pre tm
   fun cond_pre tm f = let
     val pre = get_pre tm
-    in if pre = [] then f else FUN_COND (list_mk_conj pre, f) end
+    in if null pre then f else FUN_COND (list_mk_conj pre, f) end
   val cond_var = mk_var("cond",``:bool``)
   fun get_name tm = fst (dest_var (car tm)) handle HOL_ERR _ =>
                     fst (dest_const (car tm)) handle _ => "    "
@@ -250,9 +252,12 @@ fun collect_aux_fnames fname = let
   val fconst = car o fst o dest_eq o concl o SPEC_ALL
   val all_fconsts = map (fconst o fst o snd) (!to_compile)
   fun uses def =
-    (all_distinct o map (fst o dest_const) o filter (fn x => not (x = fconst def)) o
-     find_terms (fn x => mem x all_fconsts) o concl) def
-  val all_uses = map (fn (_,(def,_)) => ((fst o dest_const o fconst) def, uses def)) (!to_compile)
+    (all_distinct o map (fst o dest_const) o
+     filter (fn x => x !~ fconst def) o
+     find_terms (fn x => tmem x all_fconsts) o concl) def
+  val all_uses =
+      map (fn (_,(def,_)) => ((fst o dest_const o fconst) def, uses def))
+          (!to_compile)
   fun rec_uses fname =
     fname :: append_lists (map rec_uses (list_find fname all_uses))
   val fnames = all_distinct (rec_uses fname)

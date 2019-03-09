@@ -97,7 +97,8 @@ fun ppc_step s = let
   fun f th = (DISCH_ALL o CONV_RULE (RAND_CONV (SIMP_CONV std_ss [pull_if_lemma])) o
               UNDISCH_ALL o SIMP_RULE (std_ss++ss) [LET_DEF] o
               DISCH_ALL o cc) th
-  fun change f x = let val y = f x in if concl y = concl x then x else change f y end
+  fun change f x = let val y = f x in if concl y ~~ concl x then x
+                                      else change f y end
   val th1 = change f th1
   val th1 = EVAL_word_and_eq th1
   val th1 = DISCH_ALL (MATCH_MP th (UNDISCH_ALL (REWRITE_RULE [if_SOME] th1)))
@@ -203,7 +204,7 @@ fun ppc_test_aux inst input output = let
   val xs = map (snd o dest_comb o fst o dest_comb) xs
   val output1 = f "(THE (PPC_NEXT s))" output
   val output2 = Lib.zip (map (snd o dest_comb o fst o dest_comb o fst o dest_eq) output1) output1
-  val output3 = filter (fn (x,y) => not (mem x xs)) output2
+  val output3 = filter (fn (x,y) => not (tmem x xs)) output2
   val tm = list_mk_conj (map snd output3)
   val tm2 = (hd o hyp o UNDISCH) th
   val goal = mk_imp(tm2,tm)

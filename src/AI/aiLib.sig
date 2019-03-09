@@ -91,7 +91,7 @@ sig
   val mk_term_set : term list -> term list
   val mk_sameorder_set : ('a * 'a -> order) -> 'a list -> 'a list
   val dict_sort : ('a * 'a -> order) -> 'a list -> 'a list
-  val topo_sort : (''a * ''a list) list -> ''a list
+  val topo_sort : ('a * 'a -> order) -> ('a * 'a list) list -> 'a list
   val sort_thyl : string list -> string list
   val fold_left : ('a -> 'b -> 'b) -> 'a list -> 'b -> 'b
   val mk_batch : int -> 'a list -> 'a list list

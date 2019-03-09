@@ -17,6 +17,8 @@ sig
     | FUN_COND of term * ftree_type
     | FUN_VAL of term;
 
+    val ftree_type_cmp          : ftree_type * ftree_type -> order
+
     val \\                     : tactic * tactic -> tactic
     val RW                     : thm list -> rule
     val RW1                    : thm list -> rule
