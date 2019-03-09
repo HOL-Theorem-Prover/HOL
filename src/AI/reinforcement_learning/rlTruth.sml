@@ -138,81 +138,8 @@ fun list_cost tm =
 fun total_cost tm = sum_int (map snd (list_cost tm))
 
 
-(*
-*)
-
-(*
-fun random_starttm n = 
-  let val tm = rlLib.mk_sucn (aiLib.random_int (0,n)) in
-    mk_eq (tm,tm)
-  end
-
-(* -------------------------------------------------------------------------
-   Axioms and theorems
-   ------------------------------------------------------------------------- *)
-
-val ax1 = ``x + 0 = x``;
-val ax2 = ``x * 0 = 0``
-val ax3 = ``x + SUC y = SUC (x + y)``
-val ax4 = ``x * SUC y = x * y + x``
-val ax5 = ``x * SUC 0 = x``
-
-val axl = [ax1,ax2,ax3,ax4,ax5,sym ax1,sym ax3,sym ax4,sym ax5]
-
-(* -------------------------------------------------------------------------
-   Paramodulation (used as a rewrite tool here since targets are ground)
-   ------------------------------------------------------------------------- *)
-
-fun unify a b = Unify.simp_unify_terms [] a b
-
-fun paramod eq (tm,pos) =
-  if null pos then NONE else
-  let
-    val (eql,eqr) = dest_eq eq
-    val subtm = find_subtm (tm,pos)
-    val sigma = unify eql subtm
-    val eqrsig = subst sigma eqr
-    val tmsig = subst sigma tm
-    val result = subst_pos (tmsig,pos) eqrsig
-  in
-    if term_eq result tm then NONE else SOME (result,pos)
-  end
-  handle HOL_ERR _ => NONE
-
-fun all_pos (tm,pos) =
-  let 
-    val (oper,argl) = strip_comb tm 
-    fun f i arg = all_pos (arg,pos @ [i])
-  in
-    pos :: List.concat (mapi f argl)
-  end
-
-fun all_rw tm = 
-  let 
-    val posl = all_pos (lhs tm,[0]) @ all_pos (rhs tm,[1]) 
-    fun f (eq,pos) = paramod eq (tm,pos)
-    fun g (k,vl) = hd (dict_sort Int.compare (map length vl))
-    val l = List.mapPartial f (cartesian_product axl posl)
-    val d = dregroup Term.compare l
-  in
-    dlist (dmap g d)
-  end
-
-fun random_nstep (tm,n) =
-  if n <= 0 then tm else 
-  let val (newtm,cost) = random_elem (all_rw tm) in
-    if n - cost <= 0 then tm else random_nstep (newtm, n - cost)
-  end
 
 
-fun random_target (maxstart,maxstep) =
-  let 
-    val tm1 = random_starttm maxstart;
-    val tm2 = random_nstep (tm1,random_int (1,maxstep))
-  in
-    tm2
-  end
-*)
 
 end (* struct *)
 
@@ -223,46 +150,19 @@ open rlTruth aiLib rlLib mlTreeNeuralNetwork psTermGen;
 val maxsize = 9; val maxvalue = 4; val ntarget = 40000;
 val (trainset,testset) = mk_ttset_ground (maxsize,maxvalue) ntarget;
 
-val operl = mk_fast_set oper_compare (operl_of_term ``0 + SUC 0 * 0 = 0``);
+val operl = mk_fast_set oper_compare (operl_of ``0 + SUC 0 * 0 = 0``);
 val randtnn = random_tnn (4,1) operl;
 
 val bsize = 64;
-val schedule = [(100,0.1)];
-adaptive_flag := false; (* to be tested *)
+val schedule = [(10,0.1)];
 val tnn = prepare_train_tnn randtnn bsize (trainset,testset) schedule;
 
 val tm = mk_eq (mk_mult (mk_sucn 2, mk_sucn 2), mk_sucn 4);
 infer_tnn tnn tm; (* todo: scale this learning to arbitrary large terms *)
 
-(*
-select a distribution of a uniform distribution
-for each epoch? easy/middle/hard examples.
 *)
 
-(* could be in rlLib
-  fun int_to_numtm =
-  fun numtm_to_suctm =
-    let
-      val tml = [``0``,``1``,``2``,``3``,``4``,``5``,``6``,``7``,``8``,``9``]
-      val
-  test class of the polynomial by looking at this table
-  fun instx i tm = subst [{redex = ``x:num``, residue = i}] tm;
 
-  fun graph_of tm = map (eval_ground o C instx tm) inputl
-*)
-
-(*
-fun f_accuracy f testset =
-  let fun correct (tm,expectv) =
-    let val v = f tm in if expectv > 0.5 then v > 0.5 else v < 0.5 end
-  in
-    int_div (length (filter correct testset)) (length testset)
-  end
-
-fun tnn_accuracy tnn testset = f_accuracy (eval_tnn tnn) testset
-fun knn_accuracy knn testset = f_accuracy (infer_knn knn) testset
-*)
-*)
 
 
 

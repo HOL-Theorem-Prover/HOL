@@ -131,6 +131,7 @@ fun n_bigsteps_loop (n,nmax) gamespec mctsparam (allex,allroot) tree =
     val root = dfind [0] newtree
     val filter_sit = (#filter_sit gamespec) sit
     val movel = #movel gamespec
+    val _ = print_endline (its n ^ ": " ^ tts (nntm_of_sit sit))
   in
    if null (filter_sit (map_assoc (fn x => 0.0) movel))
    then (allex, root :: allroot)
@@ -152,7 +153,7 @@ fun n_bigsteps_loop (n,nmax) gamespec mctsparam (allex,allroot) tree =
 
 (*
 print_endline "Max depth\n"; 
-print_endline (its n ^ ": " ^ tts (nntm_of_sit sit))
+
 print_endline "No move available\n";
 print_endline ("Target " ^ its ntarg);
 print_endline ("  expected proof length: " ^ its nvary);
@@ -384,8 +385,8 @@ end (* struct *)
 app load ["rlGameArithGround","rlEnv"];
 open aiLib psMCTS rlGameArithGround rlEnv;
 
-logfile_glob := "3";
-ncore_glob := 40;
+logfile_glob := "3.1";
+ncore_glob := 8;
 ngen_glob := 100;
 ntarget_compete := 400;
 ntarget_explore := 400;

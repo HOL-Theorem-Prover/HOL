@@ -784,8 +784,31 @@ fun compare_imin (a,b) = Int.compare (snd a, snd b)
 
 val attrib = [Thread.InterruptState Thread.InterruptAsynch, Thread.EnableBroadcastInterrupt true]
 
+
+fun parmap_exact ncores forg lorg =
+  if length lorg <> ncores then raise ERR "parmap_exact" "" else 
+  let 
+    val ain = Vector.fromList (List.map ref lorg)
+    val aout = Vector.fromList (List.map (fn _ => ref NONE) lorg) 
+    fun process pi =
+      let 
+        val inref = Vector.sub (ain,pi) 
+        val outref = Vector.sub (aout,pi)
+      in
+        outref := SOME (capture forg (!inref))
+      end
+    fun fork_on pi = Thread.fork (fn () => process pi, attrib)
+    val threadl = map fork_on (List.tabulate (ncores,I))
+    fun loop () =
+      (if exists Thread.isActive threadl then loop () else ())
+  in
+    loop ();
+    map (release o valOf o !) (vector_to_list aout)
+  end
+
 fun parmap_err ncores forg lorg =
   let
+    val end_flag = ref false
     (* input *)
     val sizeorg = length lorg
     val lin = List.tabulate (ncores,(fn x => (x, ref NONE)))
@@ -806,6 +829,7 @@ fun parmap_err ncores forg lorg =
     val dcount = dnew Int.compare lcount
     (* process *)
     fun process pi =
+      if !end_flag then () else 
       let val inref = dfind pi din in
         case !inref of
           NONE => process pi
@@ -827,7 +851,7 @@ fun parmap_err ncores forg lorg =
       (
       dispatcher ();
       if null (!queue) andalso sum_int (map (! o snd) lcount) >= sizeorg
-      then app interruptkill threadl
+      then end_flag := true
       else loop ()
       )
   in
@@ -839,5 +863,14 @@ fun parmap ncores f l =
   map release (parmap_err ncores f l)
 
 fun parapp ncores f l = ignore (parmap ncores f l)
+
+(* Speed Test 
+load "aiLib"; open aiLib;
+val (_,t) = add_time (parmap 2 I) [2,3];
+val (_,t) = add_time (parmap_exact 2 I) [2,3];
+val (_,t) = add_time (map I) [2,3];
+
+*)
+
 
 end (* struct *)

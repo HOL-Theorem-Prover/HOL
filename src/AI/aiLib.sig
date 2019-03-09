@@ -179,6 +179,8 @@ sig
 
   (* parallelism *)
   val interruptkill : Thread.thread -> unit
+  
+  val parmap_exact : int -> ('a -> 'b) -> 'a list -> 'b list
   val parmap : int -> ('a -> 'b) -> 'a list -> 'b list
   val parapp : int -> ('a -> 'b) -> 'a list -> unit
 
