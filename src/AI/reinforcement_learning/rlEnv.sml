@@ -73,7 +73,7 @@ fun summary_param () =
    Evaluation and policy
    ------------------------------------------------------------------------- *)
 
-fun mk_fep_dhtnn gamespec dhtnn sit =
+fun mk_fep_dhtnn startb gamespec dhtnn sit =
   let
     val movel = #movel gamespec
     val filter_sit = (#filter_sit gamespec) sit
@@ -82,8 +82,10 @@ fun mk_fep_dhtnn gamespec dhtnn sit =
     val ptnn = {opdict=opdict,headnn=headpoli,dimin=dimin,dimout=dimout}
     val nntm = (#nntm_of_sit gamespec) sit
   in
-    (only_hd (infer_tnn etnn nntm),
-     filter_sit (combine (movel, infer_tnn ptnn nntm)))
+    if startb 
+    then (0.05, filter_sit (map (fn x => (x,1.0) movel)))
+    else (only_hd (infer_tnn etnn nntm),
+      filter_sit (combine (movel, infer_tnn ptnn nntm)))
   end
 
 (* -------------------------------------------------------------------------
@@ -295,13 +297,13 @@ fun compete dhtnn_old dhtnn_new gamespec targetl =
 
 fun concat_ex ((exE,exP),(allexE,allexP)) = (exE @ allexE, exP @ allexP)
 
-fun explore_f gamespec allex dhtnn targetl =
+fun explore_f startb gamespec allex dhtnn targetl =
   let
     val targetl' = choose_uniform gamespec dhtnn (targetl,!ntarget_explore)
     val mctsparam =
       (!nsim_glob, !decay_glob, true,
        #status_of gamespec, #apply_move gamespec, 
-       mk_fep_dhtnn gamespec dhtnn)
+       mk_fep_dhtnn startb gamespec dhtnn)
     val (result,t) =
       add_time (mapi (n_bigsteps gamespec mctsparam)) targetl'
     val (exl,allrootl) = split result
@@ -334,11 +336,13 @@ fun update_targetl () =
 fun rl_start gamespec =
   let
     val _ = summary "Generation 0"
-    val dhtnn = random_dhtnn_gamespec gamespec
+    val dhtnn_random = random_dhtnn_gamespec gamespec
     val targetl = update_targetl ()
-    val newallex = explore_f gamespec emptyallex dhtnn targetl
+    val allex1 = explore_f true gamespec emptyallex dhtnn_random targetl
+    val allex2 = discard_oldex allex1 (!exwindow_glob)
+    val dhtnn = train_f gamespec allex2
   in
-    (discard_oldex newallex (!exwindow_glob), dhtnn, targetl)
+    (allex2 , dhtnn, targetl)
   end
 
 fun rl_one n gamespec (allex,dhtnn,targetl) =
@@ -347,7 +351,7 @@ fun rl_one n gamespec (allex,dhtnn,targetl) =
     val dhtnn_new = train_f gamespec allex
     val dhtnn_best = compete dhtnn dhtnn_new gamespec targetl
     val targetl_new = update_targetl ()
-    val newallex = explore_f gamespec allex dhtnn_best targetl_new
+    val newallex = explore_f false gamespec allex dhtnn_best targetl_new
   in
     (discard_oldex newallex (!exwindow_glob), dhtnn_best, targetl_new)
   end
@@ -372,7 +376,7 @@ end (* struct *)
 app load ["rlGameArithGround","rlEnv"];
 open aiLib psMCTS rlGameArithGround rlEnv;
 
-logfile_glob := "arith_14";
+logfile_glob := "1";
 ngen_glob := 100;
 ntarget_compete := 400;
 ntarget_explore := 400;
