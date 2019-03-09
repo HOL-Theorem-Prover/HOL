@@ -18,6 +18,7 @@ sig
   (* mcts parameters *)
   val nsim_glob : int ref
   val decay_glob : real ref
+  val ncore_glob : int ref  
 
   (* adaptative difficulty *)
   val level_glob : int ref

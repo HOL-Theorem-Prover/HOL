@@ -50,10 +50,12 @@ val batchsize_glob = ref 64
 
 val nsim_glob = ref 1600
 val decay_glob = ref 0.99
+val ncore_glob = ref 40
 
 fun summary_param () =
   let
-    val file  = "file: " ^ (!logfile_glob)
+    val file  = "  file: " ^ (!logfile_glob)
+    val ncore = "ncores: " ^ its (!ncore_glob)
     val gen1  = "gen max: " ^ its (!ngen_glob)
     val gen2  = "target_compete: " ^ its (!ntarget_compete)
     val gen3  = "target_explore: " ^ its (!ntarget_explore)
@@ -61,11 +63,11 @@ fun summary_param () =
     val nn2   = "nn dim: " ^ its (!dim_glob)
     val nn3   = "nn batchsize: " ^ its (!batchsize_glob)
     val mcts2 = "mcts simulation: " ^ its (!nsim_glob)
-    val mcts3 = "mcts decay: " ^ rts (!decay_glob)
+    val mcts3 = "mcts decay: " ^ rts (!decay_glob) 
   in
     summary "Global parameters";
     summary (String.concatWith "\n  " 
-     ([file] @ [gen1,gen2,gen3] @ [nn1,nn2,nn3] @ [mcts2,mcts3])
+     ([file,ncore] @ [gen1,gen2,gen3] @ [nn1,nn2,nn3] @ [mcts2,mcts3])
      ^ "\n")
   end
 
@@ -83,7 +85,7 @@ fun mk_fep_dhtnn startb gamespec dhtnn sit =
     val nntm = (#nntm_of_sit gamespec) sit
   in
     if startb 
-    then (0.05, filter_sit (map (fn x => (x,1.0) movel)))
+    then (0.05, filter_sit (map (fn x => (x,1.0)) movel))
     else (only_hd (infer_tnn etnn nntm),
       filter_sit (combine (movel, infer_tnn ptnn nntm)))
   end
@@ -121,25 +123,24 @@ fun discard_oldex (a,b) n = (first_n n a, first_n n b)
    ------------------------------------------------------------------------- *)
 
 fun n_bigsteps_loop (n,nmax) gamespec mctsparam (allex,allroot) tree =
-  if n >= nmax then (print_endline "Max depth\n"; (allex,allroot)) else
+  if n >= nmax then (allex,allroot) else
   let
     val nntm_of_sit = #nntm_of_sit gamespec
     val sit = #sit (dfind [0] tree)
-    val _ = print_endline (its n ^ ": " ^ tts (nntm_of_sit sit))
     val newtree = mcts mctsparam tree
     val root = dfind [0] newtree
     val filter_sit = (#filter_sit gamespec) sit
     val movel = #movel gamespec
   in
    if null (filter_sit (map_assoc (fn x => 0.0) movel))
-   then (print_endline "No move available\n"; (allex, root :: allroot))
+   then (allex, root :: allroot)
    else
      let val (dis,cido) = select_bigstep newtree [0] in
      case cido of
        NONE => (allex, root :: allroot)
      | SOME cid =>
         let
-          val _ = print_distrib (#string_of_move gamespec) dis
+          (* val _ = print_distrib (#string_of_move gamespec) dis *)
           val cuttree = cut_tree newtree cid
           val newallex = update_allex_from_tree gamespec newtree allex
         in
@@ -149,14 +150,21 @@ fun n_bigsteps_loop (n,nmax) gamespec mctsparam (allex,allroot) tree =
     end
   end
 
-fun n_bigsteps gamespec mctsparam ntarg target =
+(*
+print_endline "Max depth\n"; 
+print_endline (its n ^ ": " ^ tts (nntm_of_sit sit))
+print_endline "No move available\n";
+print_endline ("Target " ^ its ntarg);
+print_endline ("  expected proof length: " ^ its nvary);
+print_endline "MCTS: no move available\n"; 
+*)
+
+fun n_bigsteps gamespec mctsparam target =
   let 
     val tree = starttree_of mctsparam target 
     val nvary = rlGameArithGround.total_cost_target target
     val nvary' = 2 * nvary + 5
   in
-    print_endline ("Target " ^ its ntarg);
-    print_endline ("  expected proof length: " ^ its nvary);
     n_bigsteps_loop (0,nvary') gamespec mctsparam (emptyallex,[]) tree
   end
 
@@ -185,6 +193,11 @@ fun train_dhtnn gamespec (evalex,poliex) =
     val (etrain,ptrain) = (prepare_trainset evalex, prepare_trainset poliex)
   in
      train_dhtnn_schedule dhtnn bsize (etrain,ptrain) schedule
+  end
+
+fun train_f gamespec allex =
+  let val (dhtnn,t) = add_time (train_dhtnn gamespec) allex in
+    summary ("Training time : " ^ rts t); dhtnn
   end
 
 (* -------------------------------------------------------------------------
@@ -257,15 +270,15 @@ fun choose_uniform gamespec dhtnn (targetl,ntarget) =
    Competition: comparing n dhtnn
    ------------------------------------------------------------------------- *)
 
-fun compete_one dhtnn gamespec targetl' =
+fun compete_one dhtnn gamespec targetl =
   let
     val status_of = #status_of gamespec
     val mctsparam =
       (!nsim_glob, !decay_glob, false,
        #status_of gamespec, #apply_move gamespec, 
-       mk_fep_dhtnn gamespec dhtnn)
-    val (result,t) =
-      add_time (mapi (n_bigsteps gamespec mctsparam)) targetl'
+       mk_fep_dhtnn false gamespec dhtnn)
+    val (result,t) = add_time (parmap (!ncore_glob) 
+      (n_bigsteps gamespec mctsparam)) targetl
     val (_,allrootl) = split result
     val _ = summary ("Competition time : " ^ rts t)
     val endrootl = map hd allrootl
@@ -304,8 +317,8 @@ fun explore_f startb gamespec allex dhtnn targetl =
       (!nsim_glob, !decay_glob, true,
        #status_of gamespec, #apply_move gamespec, 
        mk_fep_dhtnn startb gamespec dhtnn)
-    val (result,t) =
-      add_time (mapi (n_bigsteps gamespec mctsparam)) targetl'
+    val (result,t) = add_time (parmap (!ncore_glob) 
+      (n_bigsteps gamespec mctsparam)) targetl'
     val (exl,allrootl) = split result
     val _ = summary ("Exploration time : " ^ rts t)
     val _ = summary_wins gamespec allrootl
@@ -316,11 +329,6 @@ fun explore_f startb gamespec allex dhtnn targetl =
 (* -------------------------------------------------------------------------
    Reinforcement learning loop
    ------------------------------------------------------------------------- *)
-
-fun train_f gamespec allex =
-  let val (dhtnn,t) = add_time (train_dhtnn gamespec) allex in
-    summary ("Training time : " ^ rts t); dhtnn
-  end
 
 fun update_targetl () =  
   let
@@ -376,7 +384,8 @@ end (* struct *)
 app load ["rlGameArithGround","rlEnv"];
 open aiLib psMCTS rlGameArithGround rlEnv;
 
-logfile_glob := "1";
+logfile_glob := "3";
+ncore_glob := 40;
 ngen_glob := 100;
 ntarget_compete := 400;
 ntarget_explore := 400;

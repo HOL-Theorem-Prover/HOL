@@ -451,7 +451,7 @@ fun select_bigstep tree id =
     val tot  = sum_real (map snd dis1)
   in
     if tot < 0.5 (* ends when no moves are available *)
-    then (print_endline "MCTS: no move available\n"; ([], NONE))
+    then ([], NONE)
     else (dis1, SOME (best_in_distrib dis2))
   end
 
