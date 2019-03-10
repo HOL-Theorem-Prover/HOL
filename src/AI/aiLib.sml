@@ -800,7 +800,7 @@ fun parmap_exact ncores forg lorg =
     fun fork_on pi = Thread.fork (fn () => process pi, attrib)
     val threadl = map fork_on (List.tabulate (ncores,I))
     fun loop () =
-      (if Vector.all (isSome o !) aout then loop () else ())
+      (if Vector.all (isSome o !) aout then () else loop ())
   in
     loop ();
     map (release o valOf o !) (vector_to_list aout)
@@ -860,15 +860,17 @@ fun parmap_err ncores forg lorg =
   end
 
 fun parmap ncores f l =
-  map release (parmap_err ncores f l)
+  if ncores = 1 
+  then map f l 
+  else map release (parmap_err ncores f l)
 
 fun parapp ncores f l = ignore (parmap ncores f l)
 
 (* Speed Test 
 load "aiLib"; open aiLib;
-val (_,t) = add_time (parmap 2 I) [2,3];
-val (_,t) = add_time (parmap_exact 2 I) [2,3];
-val (_,t) = add_time (map I) [2,3];
+val (_,t1) = add_time (parmap 2 I) [2,3];
+val (_,t2) = add_time (parmap_exact 2 I) [2,3];
+val (_,t3) = add_time (map I) [2,3];
 
 *)
 

@@ -208,7 +208,6 @@ fun update_head bsize headnn bpdatall =
     val newheadnn = update_nn headnn dwl
     val loss      = average_loss bpdatall
   in
-    debug ("head loss: " ^ rts loss);
     (newheadnn, loss)
   end
 
@@ -220,34 +219,44 @@ fun update_opernn bsize opdict (oper,bpdatall) =
       handle NotFound => raise ERR "update_opernn" (string_of_oper oper)
     val dwl      = average_bpdatall bsize bpdatall
     val loss     = average_loss bpdatall
-    val _        = debug (string_of_oper oper ^ ": " ^ rts loss)
     val newnn    = update_nn nn dwl
   in
     (oper,newnn)
   end
 
-fun train_tnn_batch (tnn as {opdict,headnn,dimin,dimout}) batch =
+val tto_timer = ref 0.0
+val upd_timer1 = ref 0.0
+val upd_timer2 = ref 0.0
+val upd_timer3 = ref 0.0
+val upd_timer4 = ref 0.0
+
+fun train_tnn_batch ncore (tnn as {opdict,headnn,dimin,dimout}) batch =
   let
     val (bpdictl,bpdatall) =
-      split (map (train_tnn_one tnn) batch)
+      split (
+        total_time tto_timer (parmap ncore (train_tnn_one tnn)) batch
+      )
     val bsize = length batch
-    val (newheadnn,loss) = update_head bsize headnn bpdatall
-    val bpdict    = dconcat oper_compare bpdictl
-    val newnnl    = map (update_opernn bsize opdict) (dlist bpdict)
-    val newopdict = daddl newnnl opdict
+    val (newheadnn,loss) = total_time upd_timer1 
+      (update_head bsize headnn) bpdatall
+    val bpdict    = total_time upd_timer2 (dconcat oper_compare) bpdictl
+    val newnnl    = total_time upd_timer3 
+      (map (update_opernn bsize opdict)) (dlist bpdict)
+    val newopdict = total_time upd_timer4 (daddl newnnl) opdict
   in
     ({opdict = newopdict, headnn = newheadnn, dimin = dimin, dimout = dimout},
       loss)
   end
 
-fun train_tnn_epoch_aux lossl tnn batchl = case batchl of
+fun train_tnn_epoch_aux ncore lossl tnn batchl = case batchl of
     [] => (tnn, average_real lossl)
   | batch :: m =>
-    let val (newtnn,loss) = train_tnn_batch tnn batch in
-      train_tnn_epoch_aux (loss :: lossl) newtnn m
+    let val (newtnn,loss) = train_tnn_batch ncore tnn batch in
+      train_tnn_epoch_aux ncore (loss :: lossl) newtnn m
     end
 
-fun train_tnn_epoch tnn batchl = train_tnn_epoch_aux [] tnn batchl
+fun train_tnn_epoch ncore tnn batchl = 
+  train_tnn_epoch_aux ncore [] tnn batchl
 
 fun out_tnn tnn tml =
   let val (_,fpdatal) = fp_tnn (#opdict tnn, #headnn tnn) tml in
@@ -261,56 +270,39 @@ fun infer_mse tnn (tml,ev) =
 fun interval (step:real) (a,b) =
   if a + (step / 2.0) > b then [b] else a :: interval step (a + step,b)
 
-(* 1000 examples (10 groups of 100) *)
-fun uniform_subset tnn pset =
-  let
-    val l = map_assoc (infer_mse tnn) pset
-    fun test r (_,x) = x >= r andalso x < r + 0.1
-    fun f r = map fst (filter (test r) l)
-    val ll = map f (interval 0.01 (0.0,0.9))
-    val _ =  print_endline ("  repart: " ^ String.concatWith " "
-        (map (its o length) ll))
-    fun g x = first_n 100 (shuffle x)
-  in
-    List.concat (map g ll)
-  end
-
-val adaptive_flag = ref false
-
-fun train_tnn_nepoch n tnn bsize (ptrain,ptest) =
+fun train_tnn_nepoch (ncore,bsize) n tnn (ptrain,ptest) =
   if n <= 0 then tnn else
   let
-    val batchl = (mk_batch bsize o shuffle)
-      (if !adaptive_flag then uniform_subset tnn ptrain else ptrain)
-    val (newtnn,trainloss) = train_tnn_epoch tnn batchl
+    val batchl = (mk_batch bsize o shuffle) ptrain
+    val (newtnn,trainloss) = train_tnn_epoch ncore tnn batchl
     val testloss = average_real (map (infer_mse tnn) ptest)
     fun nice r = pad 8 "0" (rts (approx 6 (r / 2.0)))
     val _ = print_endline
       ("train: " ^ nice trainloss ^ " test: " ^ nice testloss)
   in
-    train_tnn_nepoch (n - 1) newtnn bsize (ptrain,ptest)
+    train_tnn_nepoch (ncore,bsize) (n - 1) newtnn (ptrain,ptest)
   end
 
-fun train_tnn_schedule_aux tnn bsize (ptrain,ptest) schedule =
+fun train_tnn_schedule_aux (ncore,bsize) tnn (ptrain,ptest) schedule =
   case schedule of
     [] => tnn
   | (nepoch, lrate) :: m =>
     let
       val _ = learning_rate := lrate
       val _ = print_endline ("learning_rate: " ^ rts lrate)
-      val newtnn = train_tnn_nepoch nepoch tnn bsize (ptrain,ptest)
+      val newtnn = train_tnn_nepoch (ncore,bsize) nepoch tnn (ptrain,ptest)
     in
-      train_tnn_schedule_aux newtnn bsize (ptrain,ptest) m
+      train_tnn_schedule_aux (ncore,bsize) newtnn (ptrain,ptest) m
     end
 
-fun train_tnn_schedule tnn bsize (ptrain,ptest) schedule =
-  train_tnn_schedule_aux tnn bsize (ptrain,ptest) schedule
+fun train_tnn_schedule (ncore,bsize) tnn (ptrain,ptest) schedule =
+  train_tnn_schedule_aux (ncore,bsize) tnn (ptrain,ptest) schedule
 
 (* -------------------------------------------------------------------------
    Training a double-headed tnn
    ------------------------------------------------------------------------- *)
 
-fun train_dhtnn_batch dhtnn batch1 batch2 =
+fun train_dhtnn_batch ncore dhtnn batch1 batch2 =
   let
     val {opdict, headeval, headpoli, dimin, dimout} = dhtnn
     val tnneval = {opdict = opdict, headnn = headeval,
@@ -318,9 +310,9 @@ fun train_dhtnn_batch dhtnn batch1 batch2 =
     val tnnpoli = {opdict = opdict, headnn = headpoli,
                    dimin = dimin, dimout = dimout}
     val (bpdictl1,bpdatall1) =
-      split (map (train_tnn_one tnneval) batch1)
+      split (parmap ncore (train_tnn_one tnneval) batch1)
     val (bpdictl2,bpdatall2) =
-      split (map (train_tnn_one tnnpoli) batch2)
+      split (parmap ncore (train_tnn_one tnnpoli) batch2)
     val bsize = length batch1 + length batch2
     val (newheadeval,loss1) = update_head bsize headeval bpdatall1
     val (newheadpoli,loss2) = update_head bsize headpoli bpdatall2
@@ -333,45 +325,46 @@ fun train_dhtnn_batch dhtnn batch1 batch2 =
      (loss1,loss2))
   end
 
-fun train_dhtnn_epoch_aux (lossl1,lossl2) dhtnn batchl1 batchl2 =
+fun train_dhtnn_epoch_aux ncore (lossl1,lossl2) dhtnn batchl1 batchl2 =
   case (batchl1,batchl2) of
     ([],_) => (dhtnn, (average_real lossl1, average_real lossl2))
   | (_,[]) => (dhtnn, (average_real lossl1, average_real lossl2))
   | (batch1 :: m1, batch2 :: m2) =>
     let val (newdhtnn,(loss1,loss2)) =
-      train_dhtnn_batch dhtnn batch1 batch2
+      train_dhtnn_batch ncore dhtnn batch1 batch2
     in
-      train_dhtnn_epoch_aux (loss1 :: lossl1, loss2 :: lossl2)
+      train_dhtnn_epoch_aux ncore (loss1 :: lossl1, loss2 :: lossl2)
       newdhtnn m1 m2
     end
 
-fun train_dhtnn_epoch dhtnn batchl1 batchl2 =
-  train_dhtnn_epoch_aux ([],[]) dhtnn batchl1 batchl2
+fun train_dhtnn_epoch ncore dhtnn batchl1 batchl2 =
+  train_dhtnn_epoch_aux ncore ([],[]) dhtnn batchl1 batchl2
 
-fun train_dhtnn_nepoch n dhtnn size (etrain,ptrain) =
+fun train_dhtnn_nepoch ncore n dhtnn size (etrain,ptrain) =
   if n <= 0 then dhtnn else
   let
     val batchl1 = mk_batch size (shuffle etrain)
     val batchl2 = mk_batch size (shuffle ptrain)
     val (newdhtnn,(newloss1,newloss2)) =
-      train_dhtnn_epoch dhtnn batchl1 batchl2
+      train_dhtnn_epoch ncore dhtnn batchl1 batchl2
     val _ = print_endline
       ("eval_loss: " ^ pad 8 "0" (rts (approx 6 newloss1)) ^ " " ^
        "poli_loss: " ^ pad 8 "0" (rts (approx 6 newloss2)))
   in
-    train_dhtnn_nepoch (n - 1) newdhtnn size (etrain,ptrain)
+    train_dhtnn_nepoch ncore (n - 1) newdhtnn size (etrain,ptrain)
   end
 
-fun train_dhtnn_schedule dhtnn bsize (etrain,ptrain) schedule =
+fun train_dhtnn_schedule ncore dhtnn bsize (etrain,ptrain) schedule =
   case schedule of
     [] => dhtnn
   | (nepoch, lrate) :: m =>
     let
       val _ = learning_rate := lrate
       val _ = print_endline ("learning_rate: " ^ rts lrate)
-      val newdhtnn = train_dhtnn_nepoch nepoch dhtnn bsize (etrain,ptrain)
+      val newdhtnn = 
+        train_dhtnn_nepoch ncore nepoch dhtnn bsize (etrain,ptrain)
     in
-      train_dhtnn_schedule newdhtnn bsize (etrain,ptrain) m
+      train_dhtnn_schedule ncore newdhtnn bsize (etrain,ptrain) m
     end
 
 (* -------------------------------------------------------------------------
@@ -395,7 +388,7 @@ fun trainset_info trainset =
     "  deviation: " ^ String.concatWith " " devl
   end
 
-fun prepare_train_tnn randtnn bsize (trainset,testset) schedule =
+fun prepare_train_tnn (ncore,bsize) randtnn (trainset,testset) schedule =
   if null trainset then (print_endline "empty trainset"; randtnn) else
   let
     val _ = print_endline ("trainset " ^ trainset_info trainset)
@@ -403,7 +396,7 @@ fun prepare_train_tnn randtnn bsize (trainset,testset) schedule =
     val bsize    = if length trainset < bsize then 1 else bsize
     val pset = (prepare_trainset trainset, prepare_trainset testset)
     val (tnn, nn_tim) =
-      add_time (train_tnn_schedule randtnn bsize pset) schedule
+      add_time (train_tnn_schedule (ncore,bsize) randtnn pset) schedule
   in
     print_endline ("  NN Time: " ^ rts nn_tim);
     tnn

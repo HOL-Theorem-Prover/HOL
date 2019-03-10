@@ -151,11 +151,36 @@ val maxsize = 9; val maxvalue = 4; val ntarget = 40000;
 val (trainset,testset) = mk_ttset_ground (maxsize,maxvalue) ntarget;
 
 val operl = mk_fast_set oper_compare (operl_of ``0 + SUC 0 * 0 = 0``);
-val randtnn = random_tnn (4,1) operl;
+val randtnn = random_tnn (8,1) operl;
+val bsize = 2;
+val schedule = [(1,0.1)];
 
-val bsize = 64;
-val schedule = [(10,0.1)];
-val tnn = prepare_train_tnn randtnn bsize (trainset,testset) schedule;
+fun reset_timers () =
+  (tto_timer := 0.0; 
+   upd_timer1 := 0.0;
+  upd_timer2 := 0.0;
+upd_timer3 := 0.0;
+upd_timer4 := 0.0)
+
+
+val ncore = 2;
+val _ = reset_timers ()
+val tnn = prepare_train_tnn (ncore,bsize) randtnn (trainset,testset) schedule;
+!tto_timer;
+!upd_timer1;
+!upd_timer2;
+!upd_timer3;
+!upd_timer4;
+
+val ncore = 1;
+val _ = reset_timers ()
+val tnn = prepare_train_tnn (ncore,bsize) randtnn (trainset,testset) schedule;
+!tto_timer;
+!upd_timer1;
+!upd_timer2;
+!upd_timer3;
+!upd_timer4;
+
 
 val tm = mk_eq (mk_mult (mk_sucn 2, mk_sucn 2), mk_sucn 4);
 infer_tnn tnn tm; (* todo: scale this learning to arbitrary large terms *)

@@ -30,16 +30,20 @@ include Abbrev
   val infer_tnn : tnn -> term -> real list
 
   (* training *)
-  val adaptive_flag : bool ref
+  val tto_timer : real ref
+  val upd_timer1 : real ref
+  val upd_timer2 : real ref
+  val upd_timer3 : real ref
+  val upd_timer4 : real ref
 
   val train_tnn_schedule :
-    tnn ->
-    int -> (term list * vect) list * (term list * vect) list ->
+    (int * int) -> tnn ->
+    (term list * vect) list * (term list * vect) list ->
     (int * real) list ->
     tnn
 
   val train_dhtnn_schedule :
-    dhtnn ->
+    int -> dhtnn ->
     int -> (term list * vect) list * (term list * vect) list ->
     (int * real) list ->
     dhtnn
@@ -50,8 +54,8 @@ include Abbrev
   val prepare_trainset : (term * real list) list -> (term list * vect) list
 
   val prepare_train_tnn :
-    tnn ->
-    int -> (term * real list) list * (term * real list) list ->
+    (int * int) -> tnn ->
+    (term * real list) list * (term * real list) list ->
     (int * real) list ->
     tnn
 
