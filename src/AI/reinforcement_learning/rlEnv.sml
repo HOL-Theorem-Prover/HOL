@@ -193,7 +193,7 @@ fun train_dhtnn gamespec (evalex,poliex) =
     val dhtnn = random_dhtnn_gamespec gamespec
     val (etrain,ptrain) = (prepare_trainset evalex, prepare_trainset poliex)
   in
-     train_dhtnn_schedule 1git c dhtnn bsize (etrain,ptrain) schedule
+     train_dhtnn_schedule 1 dhtnn bsize (etrain,ptrain) schedule
   end
 
 fun train_f gamespec allex =
