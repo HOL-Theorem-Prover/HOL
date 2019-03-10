@@ -806,6 +806,28 @@ fun parmap_exact ncores forg lorg =
     map (release o valOf o !) (vector_to_list aout)
   end
 
+fun mk_fbatch_aux size acc res l =
+  if length acc >= size
+  then mk_fbatch_aux size [] (rev acc :: res) l
+  else case l of
+     [] => rev (if null acc then res else rev acc :: res)
+   | a :: m => mk_fbatch_aux size (a :: acc) res m
+
+fun mk_fbatch size l = mk_fbatch_aux size [] [] l
+
+fun cut_n n l = 
+  let 
+    val n1 = length l 
+    val bsize = if n1 mod n = 0 then n1 div n else (n1 div n) + 1 
+  in 
+    mk_fbatch bsize l
+  end
+
+fun parmap_batch ncores f l = 
+  if ncores = 1 
+  then map f l
+  else List.concat (parmap_exact ncores (map f) (cut_n ncores l)) 
+
 fun parmap_err ncores forg lorg =
   let
     val end_flag = ref false
@@ -868,10 +890,10 @@ fun parapp ncores f l = ignore (parmap ncores f l)
 
 (* Speed Test 
 load "aiLib"; open aiLib;
-val (_,t1) = add_time (parmap 2 I) [2,3];
-val (_,t2) = add_time (parmap_exact 2 I) [2,3];
-val (_,t3) = add_time (map I) [2,3];
-
+val l0 =  List.tabulate (100,I);
+val (_,t1) = add_time (parmap_batch 2 I) l0;
+val (_,t2) = add_time (parmap 2 I) l0;
+val (_,t3) = add_time (map I) l0;
 *)
 
 

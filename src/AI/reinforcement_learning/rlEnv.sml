@@ -34,7 +34,7 @@ fun log_eval file s =
     mkDir_err eval_dir;
     append_endline path s
   end
-fun summary s = log_eval (!logfile_glob) s
+fun summary s = (log_eval (!logfile_glob) s; print_endline s)
 
 (* -------------------------------------------------------------------------
    Hard-coded parameters
@@ -131,7 +131,6 @@ fun n_bigsteps_loop (n,nmax) gamespec mctsparam (allex,allroot) tree =
     val root = dfind [0] newtree
     val filter_sit = (#filter_sit gamespec) sit
     val movel = #movel gamespec
-    val _ = print_endline (its n ^ ": " ^ tts (nntm_of_sit sit))
   in
    if null (filter_sit (map_assoc (fn x => 0.0) movel))
    then (allex, root :: allroot)
@@ -184,6 +183,9 @@ fun random_dhtnn_gamespec gamespec =
 
 fun train_dhtnn gamespec (evalex,poliex) =
   let
+    val l1 = (dlist (dregroup Term.compare evalex))
+    val r1 = average_real (map (Real.fromInt o length o snd) l1)
+    val _ = summary ("Average duplicates: " ^ rts r1) 
     val _ = summary ("Eval examples: " ^ trainset_info evalex)
     val _ = summary ("Poli examples: " ^ trainset_info poliex)
     val schedule = [(100,0.1)]
@@ -309,7 +311,13 @@ fun compete dhtnn_old dhtnn_new gamespec targetl =
    Exploration
    ------------------------------------------------------------------------- *)
 
-fun concat_ex ((exE,exP),(allexE,allexP)) = (exE @ allexE, exP @ allexP)
+fun concat_ex ((exE,exP),(allexE,allexP)) = 
+  let 
+    val (dE,dP) = (dnew Term.compare exE,dnew Term.compare exP) 
+    fun out_d d (x,_) = not (dmem x d)
+  in
+    (exE @ filter (out_d dE) allexE, exP @ filter (out_d dP) allexP)
+  end
 
 fun explore_f startb gamespec allex dhtnn targetl =
   let
@@ -324,7 +332,7 @@ fun explore_f startb gamespec allex dhtnn targetl =
     val _ = summary ("Exploration time : " ^ rts t)
     val _ = summary_wins gamespec allrootl
   in
-    foldl concat_ex allex exl
+    discard_oldex (foldl concat_ex allex exl) (!exwindow_glob)
   end
 
 (* -------------------------------------------------------------------------
@@ -347,11 +355,10 @@ fun rl_start gamespec =
     val _ = summary "Generation 0"
     val dhtnn_random = random_dhtnn_gamespec gamespec
     val targetl = update_targetl ()
-    val allex1 = explore_f true gamespec emptyallex dhtnn_random targetl
-    val allex2 = discard_oldex allex1 (!exwindow_glob)
-    val dhtnn = train_f gamespec allex2
+    val allex = explore_f true gamespec emptyallex dhtnn_random targetl
+    val dhtnn = train_f gamespec allex
   in
-    (allex2 , dhtnn, targetl)
+    (allex , dhtnn, targetl)
   end
 
 fun rl_one n gamespec (allex,dhtnn,targetl) =
@@ -362,7 +369,7 @@ fun rl_one n gamespec (allex,dhtnn,targetl) =
     val targetl_new = update_targetl ()
     val newallex = explore_f false gamespec allex dhtnn_best targetl_new
   in
-    (discard_oldex newallex (!exwindow_glob), dhtnn_best, targetl_new)
+    (newallex, dhtnn_best, targetl_new)
   end
 
 fun rl_loop (n,nmax) gamespec rldata =
@@ -385,13 +392,13 @@ end (* struct *)
 app load ["rlGameArithGround","rlEnv"];
 open aiLib psMCTS rlGameArithGround rlEnv;
 
-logfile_glob := "test8";
+logfile_glob := "6";
 ncore_glob := 8;
-ngen_glob := 2;
+ngen_glob := 100;
 ntarget_compete := 100;
 ntarget_explore := 100;
 exwindow_glob := 40000;
-dim_glob := 4;
+dim_glob := 8;
 batchsize_glob := 64;
 nsim_glob := 1600;
 decay_glob := 0.99;
