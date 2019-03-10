@@ -7,9 +7,6 @@ notifications:
       - hol-builds@lists.sourceforge.net
     on_success: always
     on_failure: always
-  irc:
-    channels:
-      - "irc.freenode.net#hol"
 
 env:
   global:
