@@ -137,7 +137,7 @@ fun STATE_INTRO_RULE th = let
   val (_,pre,_,_) = dest_spec (concl th)
   val ps = list_dest dest_star pre
   val pc = first (can (match_term pc_pat)) ps
-  val missing_parts = diff state_parts ps
+  val missing_parts = term_diff state_parts ps
   val frame = list_mk_star missing_parts state_type
   val th = SPEC_FRAME_RULE th frame
   val (_,pre,_,_) = dest_spec (concl th)
@@ -150,6 +150,9 @@ fun STATE_INTRO_RULE th = let
   (* make post into just state *)
   val th = PURE_REWRITE_RULE [STAR_IF] th
   val (_,_,_,post) = dest_spec (concl th)
+  fun term_term_all_distinct [] = []
+    | term_term_all_distinct ((x,y)::xs) =
+        (x,y) :: filter (fn (t1,t2) => not (aconv t1 x andalso aconv t2 y)) xs
   fun fix_post_conv post = let
     val ps = list_dest dest_star post
     val pc = first (can (match_term pc_pat)) ps
@@ -157,12 +160,12 @@ fun STATE_INTRO_RULE th = let
     val ps = filter (not o can (match_term emp_pat)) ps
     fun find_match x [] = fail ()
       | find_match x ((n,y)::xs) =
-          if x = n then y else find_match x xs
+          if aconv x n then y else find_match x xs
     fun find_all_matches tm =
       [(find_match (rator tm) state_combs,rand tm)]
       handle HOL_ERR _ => let
         val x = repeat rator tm
-        val y = first (fn tm => x = repeat rator tm) state_parts
+        val y = first (fn tm => aconv x (repeat rator tm)) state_parts
         fun dest_app tm = let
           val (x,y) = dest_comb tm
           val (f,xs) = dest_app x
@@ -170,7 +173,8 @@ fun STATE_INTRO_RULE th = let
         val xs = zip (dest_app y |> snd) (dest_app tm |> snd)
         in xs end
     val qs = ps |> map find_all_matches |> flatten
-                |> filter (fn (x,y) => x <> y) |> all_distinct
+                |> filter (fn (x,y) => not (aconv x y))
+                |> term_term_all_distinct
     val ty = tysize ()
     val new_s = listSyntax.mk_list(
                   foldl (fn ((x,y),s) => mk_update(x,y)::s) [] qs,
@@ -220,7 +224,7 @@ val th = !make_ASM_input
 local
   fun read_pc_assum hs = let
     val h = first (can (match_term ``var_word "pc" s = w``)) hs
-    in (h |> rand,filter (fn tm => tm <> h) hs) end
+    in (h |> rand,filter (fn tm => not (aconv tm h)) hs) end
   fun read_pc_update th = let
     val tm = find_term (can (match_term ``("pc" =+ VarWord (n2w n))``))
                (concl th) |> rand |> rand
@@ -256,10 +260,10 @@ local
     val ret_str = ``"ret"``
     val ret_addr_input_str = ``"ret_addr_input"``
     val (is_tail_call,ret) = let
-      val u = first (fn (t,x) => t = r14) supdate |> snd
+      val u = first (fn (t,x) => aconv t r14) supdate |> snd
       val res = EVAL ``(^u s = VarWord (^pc1+4w)) \/ (^u s = VarWord (^pc1+2w))``
         |> concl |> rand
-      in if res = T then
+      in if aconv res T then
            (false,mk_comb(mk_const("Jump",``:^(tysize()) word -> ^(tysize()) jump``),
                           u |> dest_abs |> snd |> rand))
          else (true,mk_const("Return",``:^(tysize()) jump``)) end
@@ -267,13 +271,13 @@ local
     val var_acc_ty = ``:string -> (string -> ^(tysize()) variable) -> ^(tysize()) variable``
     val var_acc = mk_const ("var_acc",var_acc_ty)
     fun get_assign tm =
-      if tm = ret_addr_input_str then let
+      if aconv tm ret_addr_input_str then let
         val var_acc_r0 = mk_comb(var_acc,r0)
         in pairSyntax.mk_pair(ret_addr_input_str,var_acc_r0) end
       else let
         val tm2 = if is_tail_call then tm else
-                  if tm = ret_str then r14 else tm
-        val rhs = first (fn (t,x) => (t = tm2)) supdate |> snd
+                  if aconv tm ret_str then r14 else tm
+        val rhs = first (fn (t,x) => (aconv t tm2)) supdate |> snd
                   handle HOL_ERR _ => mk_comb(var_acc,tm)
         in pairSyntax.mk_pair(tm,rhs) end
     val new_supdate = map get_assign ret_and_all_names
@@ -298,7 +302,7 @@ local
 *)
   fun make_CALL th = let
     val th = STATE_INTRO_RULE th
-    val hs = filter (fn tm => tm <> T) (hyp th)
+    val hs = filter (fn tm => not (aconv tm T)) (hyp th)
     val tag = first (can dest_call_tag) hs
     val fname = fst (dest_call_tag tag)
     val th = th |> DISCH_ALL |> PURE_REWRITE_RULE [CALL_TAG_def] |> UNDISCH_ALL
@@ -306,7 +310,7 @@ local
     val pc1 = pre |> rand |> rand
     val pc2 = post |> rand |> rand
     val supdate = post |> rator |> rand |> rand |> rator |> rand
-    val hs = filter (fn tm => tm <> T) (hyp th)
+    val hs = filter (fn tm => not (aconv tm T)) (hyp th)
     val side = if length hs = 0
                then mk_const("NONE",``:(^(tysize())state->bool) option``)
                else ``SOME ^(mk_abs(s_var(),list_mk_conj hs))``
@@ -355,7 +359,7 @@ local
       (mk_const("Return",``: ^ty jump``),let
          val lemma = ASSUME (mk_eq(pc2,``var_word "ret" ^(s_var())``))
          in CONV_RULE (RAND_CONV (RAND_CONV (RAND_CONV (fn tm => lemma)))) th end)
-    val hs = filter (fn tm => tm <> T) (hyp th)
+    val hs = filter (fn tm => not (aconv tm T)) (hyp th)
     val side = if length hs = 0 then mk_const("NONE",``:(^ty state->bool) option``)
                else ``SOME ^(mk_abs(s_var(),list_mk_conj hs))``
     val i = ``Inst ^pc1 (K T) (ASM ^side ^supdate ^jmp)``

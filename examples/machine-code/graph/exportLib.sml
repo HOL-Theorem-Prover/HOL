@@ -279,7 +279,7 @@ fun export_graph name rhs = let
       val _ = type_of s = ``:32 state`` orelse
               type_of s = ``:64 state`` orelse failwith("bad exp")
       val (t,tm) = dest_comb e
-      val _ = mem t types
+      val _ = term_mem t types
       in term tm end
   fun dest_abs_skip_tag test = let
     val (v,x) = dest_abs test
@@ -289,9 +289,9 @@ fun export_graph name rhs = let
     "" ^ n ^ " " ^ get_var_type n ^ " " ^ exp tm
   val ret_node = ``Ret``
   val err_node = ``Err``
-  fun export_nextnode tm =
-    if tm = ret_node then "Ret" else
-    if tm = err_node then "Err" else let
+  fun export_nextnode (tm:term) =
+    if aconv tm ret_node then "Ret" else
+    if aconv tm err_node then "Err" else let
       val i = dest_NextNode tm
       in int_to_hex i end
   fun export_node (n,tm) = let
@@ -363,7 +363,7 @@ fun print_export_report () = let
        val xs = map (fn ty => "Failed to translate type: " ^ type_to_string ty)
                        (all_distinct (!failed_ty_translations)) @
                 map (fn tm => "Failed to translate term: " ^ term_to_string tm)
-                       (all_distinct (!failed_tm_translations))
+                       (term_all_distinct (!failed_tm_translations))
        in (map write_line xs; ()) end end
 
 

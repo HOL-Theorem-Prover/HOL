@@ -31,12 +31,12 @@ in
     val qs = list_dest dest_star post
     fun find_same q [] = failwith "not found"
       | find_same q (y::ys) =
-          (if rator y = q then rand y else find_same q ys)
+          (if aconv (rator y) q then rand y else find_same q ys)
           handle HOL_ERR _ => find_same q ys
     fun dest_write (x,y) =
       if type_of x <> mem_type then [(x,y)] else list_dest_write32 y
     in map (fn tm => (rand tm,find_same (rator tm) qs)) ps
-       |> filter (fn (x,y) => is_var x andalso x <> y)
+       |> filter (fn (x,y) => is_var x andalso not (aconv x y))
        |> map (fn (x,y) => if type_of x = ``:bool`` then (x,bool_arb) else (x,y))
        |> map dest_write |> Lib.flatten
     end
@@ -95,10 +95,10 @@ local
   fun dest_call_tag tm = let
     val (xy,z) = dest_comb tm
     val (x,y) = dest_comb xy
-    val _ = (x = ``CALL_TAG``) orelse fail()
+    val _ = (aconv x ``CALL_TAG``) orelse fail()
     in (stringSyntax.fromHOLstring y,
-        if z = T then true else
-        if z = F then false else fail()) end
+        if aconv z T then true else
+        if aconv z F then false else fail()) end
   fun has_call_tag th =
     can (find_term (can dest_call_tag)) (concl (DISCH_ALL th))
   fun call_update () = let
@@ -150,7 +150,7 @@ fun find_stack_accesses_for all_summaries sec_name = let
                   | _ => [(``r0:word32``,``^sp_var + offset``)])
                else []),T)
   val (pc,s,t) = state
-  val us = filter (fn (p,_,_,_,_) => p = pc) all_summaries
+  val us = filter (fn (p,_,_,_,_) => aconv p pc) all_summaries
   val (pc1,assum,u,addr,pc2) = hd us
   val stack_accesses = ref ([]:int list);
   fun add_stack_access pc = let
@@ -158,7 +158,7 @@ fun find_stack_accesses_for all_summaries sec_name = let
     val a = !stack_accesses
     in if mem n a then () else (stack_accesses := n::a) end
   fun can_exec_step t (pc1,assum,u,addr,pc2) =
-    if assum = T then true else let
+    if aconv assum T then true else let
       val test = mk_imp(t,mk_neg assum)
       val vs = free_vars test
       val test = list_mk_forall(vs,test)
@@ -167,14 +167,14 @@ fun find_stack_accesses_for all_summaries sec_name = let
                   |> (fn (x,_) => length x = 0)
       in not (can_prove_by_cases test) end
   fun is_sp_add_or_sub a =
-    if a = sp_var then true else let
+    if aconv a sp_var then true else let
       val (w1,w2) = wordsSyntax.dest_word_add a
-      in (w1 = sp_var andalso wordsSyntax.is_n2w w2) orelse
-         (w2 = sp_var andalso wordsSyntax.is_n2w w1) end
+      in (aconv w1 sp_var andalso wordsSyntax.is_n2w w2) orelse
+         (aconv w2 sp_var andalso wordsSyntax.is_n2w w1) end
     handle HOL_ERR _ => let
       val (w1,w2) = wordsSyntax.dest_word_sub a
-      in (w1 = sp_var andalso wordsSyntax.is_n2w w2) orelse
-         (w2 = sp_var andalso wordsSyntax.is_n2w w1) end
+      in (aconv w1 sp_var andalso wordsSyntax.is_n2w w2) orelse
+         (aconv w2 sp_var andalso wordsSyntax.is_n2w w1) end
     handle HOL_ERR _ => false
   val stack_read32_pat = ``READ32 (a:word32) m``
   val stack_read64_pat = ``READ64 (a:word64) m``
@@ -201,9 +201,9 @@ fun find_stack_accesses_for all_summaries sec_name = let
     fun i_read_word_only tm = if is_comb tm then i_simple tm else tm
     val new_u_part = map (fn (x,y) => (i_read_word_only x,i y)) u
     val u_domain = map fst new_u_part
-    val new_u = new_u_part @ filter (fn (x,y) => not (mem x u_domain)) s
-    val new_t = if assum = T then t else assum
-    val new_t = if intersect u_domain (free_vars new_t) <> [] then T else new_t
+    val new_u = new_u_part @ filter (fn (x,y) => not (term_mem x u_domain)) s
+    val new_t = if aconv assum T then t else assum
+    val new_t = if null (term_intersect u_domain (free_vars new_t)) then new_t else T
     in (pc2,filter is_simple_or_stack_read new_u,new_t) end
   fun register_state (pc,s,t) = let
     val _ = print ("\nRegister state:\n  pc = " ^ term_to_string pc ^ "\n")
@@ -226,16 +226,19 @@ fun find_stack_accesses_for all_summaries sec_name = let
   fun check_for_stack_accesses (pc,s,t) NONE = ()
     | check_for_stack_accesses (pc,s,t) (SOME a) = let
     val i = remove_read_word o word_simp_tm o subst (map (fn (x,y) => x |-> y) s)
-    fun contains_sp tm = mem sp_var (free_vars tm)
+    fun contains_sp tm = term_mem sp_var (free_vars tm)
     in if contains_sp (i a)
        then found_stack_access pc (filter (fn (x,y) => contains_sp y)
                                      (map (fn (x,y) => (x,i y)) s))
        else () end
   fun get_pc (pc,s,t) = pc
+  fun term_term_mem (t1,t2) [] = false
+    | term_term_mem (t1,t2) ((x,y)::xs) =
+        (aconv t1 x andalso aconv t2 y) orelse term_term_mem (t1,t2) xs
   val seen_nodes = ref ([]:(term * term) list)
   fun has_visited (pc,s,t) = let
     val seen = !seen_nodes
-    in if can (first (fn x => x = (t,pc))) seen then true else
+    in if term_term_mem (t,pc) seen then true else
          (seen_nodes := ((t,pc)::seen); false) end
   fun print_state (pc,s,t) = let
     val _ = print ("Looking at pc = " ^ term_to_string pc ^ "\n")
@@ -248,7 +251,7 @@ fun find_stack_accesses_for all_summaries sec_name = let
    (* val _ = register_state state *)
       val (pc,s,t) = state
    (* val _ = print_state state *)
-      val us = filter (fn (p,_,_,_,_) => p = pc) all_summaries
+      val us = filter (fn (p,_,_,_,_) => aconv p pc) all_summaries
       val us = filter (can_exec_step t) us
       val addresses = map (fn (_,_,_,a,_) => a) us
       val _ = map (check_for_stack_accesses state) addresses

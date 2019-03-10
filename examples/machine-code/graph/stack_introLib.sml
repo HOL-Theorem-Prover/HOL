@@ -51,14 +51,14 @@ local
     val sp = sp_pat |> rand
     val tm = find_term (can (match_term sp_pat)) q |> rand
     in let val (x,y) = wordsSyntax.dest_word_add tm
-           val _ = x = sp orelse fail()
+           val _ = aconv x sp orelse fail()
        in y |> wordsSyntax.dest_n2w |> fst |> numSyntax.int_of_term end
        handle HOL_ERR _ =>
        let val (x,y) = wordsSyntax.dest_word_sub tm
-           val _ = x = sp orelse fail()
+           val _ = aconv x sp orelse fail()
        in 0-(y |> wordsSyntax.dest_n2w |> fst |> numSyntax.int_of_term) end
        handle HOL_ERR _ =>
-       if tm = sp then 0 else failwith "unexpected value assigned to sp" end
+       if aconv tm sp then 0 else failwith "unexpected value assigned to sp" end
   fun get_pc_num th = let
     val pc_pat = get_pc_pat ()
     val (_,p,_,_) = dest_spec (concl th)

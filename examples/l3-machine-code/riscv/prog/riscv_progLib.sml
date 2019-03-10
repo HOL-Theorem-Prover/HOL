@@ -336,7 +336,7 @@ local
     let
       val c = riscv_c_PC_def |> SPEC_ALL |> concl |> lhs |> repeat rator
     in
-      if not (can (find_term (fn x => x = c)) (th |> concl |> rand)) then
+      if not (can (find_term (fn x => aconv x c)) (th |> concl |> rand)) then
         th
       else
         th |> helperLib.HIDE_POST_RULE ``riscv_c_Skip id``

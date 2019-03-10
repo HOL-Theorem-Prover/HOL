@@ -179,7 +179,7 @@ fun prove_funcs_ok names = let
     fun f tm = subst (fst (match_term pat tm)) ``Func name ^w_var []``
     val extra = graph_specsLib.try_map (fn x => x) f (flatten (map hyp fs))
     val all_rator = map rator all
-    val extra = filter (fn ex => not (mem (rator ex) all_rator)) extra
+    val extra = filter (fn ex => not (term_mem (rator ex) all_rator)) extra
     val r = fs |> hd |> concl |> rator
     val extra_fs = map (fn tm => prove(mk_comb(r,tm),
                      SIMP_TAC (srw_ss()) [func_ok_def])) extra
@@ -210,7 +210,7 @@ fun prove_funcs_ok names = let
   val _ = write_line ""
   val _ = write_section "Proving correctness of call offsets"
   fun prove_fs_locs goal =
-    if goal = T then (TRUTH,true) else
+    if aconv goal T then (TRUTH,true) else
     if is_conj goal then let
       val (x,y) = dest_conj goal
       val (th1,s1) = prove_fs_locs x
@@ -254,8 +254,8 @@ fun prove_funcs_ok names = let
 
 (*
 
-  val base_name = "loop-riscv/example"
   val base_name = "kernel-riscv/kernel-riscv"
+  val base_name = "loop-riscv/example"
   val _ = read_files base_name []
   val _ = open_current "test"
   val sec_name = "lookupSlot"

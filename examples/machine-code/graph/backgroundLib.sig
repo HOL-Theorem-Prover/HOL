@@ -36,4 +36,9 @@ sig
   val print_error : Term.term -> unit
   val report_error : string -> exn -> 'a
 
+  val term_diff : Term.term list -> Term.term list -> Term.term list
+  val term_mem : Term.term -> Term.term list -> bool
+  val term_intersect : Term.term list -> Term.term list -> Term.term list
+  val term_all_distinct : Term.term list -> Term.term list
+
 end
