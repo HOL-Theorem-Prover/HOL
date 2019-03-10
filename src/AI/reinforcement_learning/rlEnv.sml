@@ -193,7 +193,7 @@ fun train_dhtnn gamespec (evalex,poliex) =
     val dhtnn = random_dhtnn_gamespec gamespec
     val (etrain,ptrain) = (prepare_trainset evalex, prepare_trainset poliex)
   in
-     train_dhtnn_schedule (!ncore_glob) dhtnn bsize (etrain,ptrain) schedule
+     train_dhtnn_schedule 1git c dhtnn bsize (etrain,ptrain) schedule
   end
 
 fun train_f gamespec allex =
@@ -385,13 +385,13 @@ end (* struct *)
 app load ["rlGameArithGround","rlEnv"];
 open aiLib psMCTS rlGameArithGround rlEnv;
 
-logfile_glob := "3.2";
+logfile_glob := "test8";
 ncore_glob := 8;
-ngen_glob := 100;
+ngen_glob := 2;
 ntarget_compete := 100;
 ntarget_explore := 100;
 exwindow_glob := 40000;
-dim_glob := 8;
+dim_glob := 4;
 batchsize_glob := 64;
 nsim_glob := 1600;
 decay_glob := 0.99;
