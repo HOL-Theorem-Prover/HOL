@@ -314,14 +314,13 @@ local
     in
       CONV_RULE (DEPTH_CONV (FORCE_REWR_CONV rw)) th
       |> DISCH_ALL |> SIMP_RULE std_ss [word_bit_add_lsl_simp]
-      |> SIMP_RULE (srw_ss ()) []
-      |> DISCH ``¬word_bit 0 (s.c_PC s.procID)`` |> UNDISCH_ALL
+      |> SIMP_RULE (srw_ss ()) [] |> UNDISCH_ALL
     end
 in
   fun riscv_step v =
     let
       val thm1 = fetch v
-      val thm2 = riscv_decode v
+      val thm2 = riscv_decode v |> SIMP_RULE std_ss []
       val new_s = thm1 |> concl |> rand |> rand
       val thm3 = fetch_inst (Drule.SPEC_ALL (Run_CONV thm2)) |> INST [s |-> new_s]
       val tm = utilsLib.rhsc thm3
