@@ -140,6 +140,13 @@ Incompatibilities:
     This also means that this is the only form of variation introduced by the `variant` function.
     However, there is also a new `numvariant` function, which makes the varying function behave as if the old `Globals.priming` was set to `SOME ""` (introduces and increments a numeric suffix).
 
+*   We have made equality a tightly binding infix rather than a loose one.
+    This means that a term like `“p = q ∧ r”` now parses differently, and means `“(p = q) ∧ r”`, rather than `“p = (q ∧ r)”`.
+    For the weak binding, the “iff” alternative is probably better; thus: `“p <=> q ∧ r”` (or use the Unicode `⇔`).
+    To fix a whole script file at one stroke, one can revert to the old, loosely binding equality with
+
+           val _ = ParseExtras.temp_loose_equality()
+
 * * * * *
 
 <div class="footer">
