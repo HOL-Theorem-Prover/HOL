@@ -4,7 +4,7 @@ val _ = new_theory "bag248";
 
 val BAG_IN = new_definition (
   "BAG_IN",
-  ``BAG_IN (e:'a) b = 1 <= b e``);
+  ``BAG_IN (e:'a) b <=> 1 <= b e``);
 
 val _ = set_fixity "<:" (Infix(NONASSOC, 425))
 val _ = overload_on ("<:", ``BAG_IN``)
