@@ -425,27 +425,28 @@ val SORTED_DEF =
  Define
   `(SORTED R [] = T) /\
    (SORTED R [x] = T) /\
-   (SORTED R (x::y::rst) = R x y /\ SORTED R (y::rst))`;
+   (SORTED R (x::y::rst) <=> R x y /\ SORTED R (y::rst))`;
 
 
 val SORTED_IND = theorem"SORTED_IND";
 
 val SORTS_DEF =
  Define
-    `SORTS f R = !l. PERM l (f R l) /\ SORTED R (f R l)`;
+    `SORTS f R <=> !l. PERM l (f R l) /\ SORTED R (f R l)`;
 
 
 (*---------------------------------------------------------------------------*
  *    When consing onto a sorted list yields a sorted list                   *
  *---------------------------------------------------------------------------*)
 
-val SORTED_EQ = Q.store_thm
-("SORTED_EQ",
- `!R L x.
-    transitive R ==> (SORTED R (x::L) = SORTED R L /\ !y. MEM y L ==> R x y)`,
+Theorem SORTED_EQ:
+  !R L x.
+    transitive R ==> (SORTED R (x::L) <=> SORTED R L /\ !y. MEM y L ==> R x y)
+Proof
 Induct_on `L`
  THEN RW_TAC list_ss [SORTED_DEF,MEM]
- THEN PROVE_TAC [relationTheory.transitive_def]);
+ THEN PROVE_TAC [relationTheory.transitive_def]
+QED
 
 
 (*---------------------------------------------------------------------------*
@@ -618,10 +619,9 @@ val QSORT_PERM = Q.store_thm
  * The result list is sorted.
  *---------------------------------------------------------------------------*)
 
-val QSORT_SORTED =
-Q.store_thm
-("QSORT_SORTED",
-`!R L. transitive R /\ total R ==> SORTED R (QSORT R L)`,
+Theorem QSORT_SORTED:
+  !R L. transitive R /\ total R ==> SORTED R (QSORT R L)
+Proof
  recInduct QSORT_IND
   THEN RW_TAC bool_ss [QSORT_DEF, SORTED_DEF, PARTITION_DEF]
   THEN REWRITE_TAC [GSYM APPEND_ASSOC, APPEND]
@@ -631,10 +631,11 @@ Q.store_thm
   THEN RW_TAC list_ss [MEM_FILTER,MEM,QSORT_MEM]
   THEN ((RES_TAC THEN NO_TAC) ORELSE ALL_TAC)
   THEN Q.PAT_X_ASSUM `_ = _` (MP_TAC o MATCH_MP
-        (REWRITE_RULE[PROVE [] (Term `x/\y/\z ==> w = x ==> y/\z ==> w`)]
+        (REWRITE_RULE[PROVE [] (Term `x/\y/\z ==> w <=> x ==> y/\z ==> w`)]
             PARTs_HAVE_PROP))
   THEN RW_TAC std_ss [MEM]
-  THEN PROVE_TAC [transitive_def,total_def]);
+  THEN PROVE_TAC [transitive_def,total_def]
+QED
 
 
 (*---------------------------------------------------------------------------
@@ -964,17 +965,19 @@ FULL_SIMP_TAC (srw_ss()) [MEM_EL] THEN
 FIRST_X_ASSUM (Q.SPECL_THEN [`0`,`SUC n`] MP_TAC) THEN
 SRW_TAC [][])
 
-val SORTED_APPEND_IFF = Q.store_thm ("SORTED_APPEND_IFF",
-  `!R. !L1 L2. SORTED R (L1 ++ L2) =
-    SORTED R L1 /\ SORTED R L2 /\
-      ((L1 = []) \/ (L2 = []) \/ (R (LAST L1) (HD L2)))`,
+Theorem SORTED_APPEND_IFF:
+  !R L1 L2. SORTED R (L1 ++ L2) <=>
+              SORTED R L1 /\ SORTED R L2 /\
+                ((L1 = []) \/ (L2 = []) \/ (R (LAST L1) (HD L2)))
+Proof
   REPEAT STRIP_TAC >> Induct_on `L1` >>
     ASM_SIMP_TAC list_ss [SORTED_DEF] >> GEN_TAC >>
     Cases_on `L1` >> Cases_on `L2` >>
     FULL_SIMP_TAC list_ss [SORTED_DEF]
   THENL [
     SIMP_TAC bool_ss [CONJ_COMM],
-    SIMP_TAC bool_ss [CONJ_ASSOC] ] ) ;
+    SIMP_TAC bool_ss [CONJ_ASSOC] ]
+QED
 
 val MEM_PERM =
   store_thm(
@@ -1213,10 +1216,10 @@ SIMP_TAC list_ss [PERM_REFL, PERM_CONS_IFF, PERM_CENTRE1, PERM_CENTRE2]
 (*---------------------------------------------------------------------------*)
 
 val STABLE_DEF = Define `
-    STABLE sort r =
-    SORTS sort r /\
-    !p. (!x y. p x /\ p y ==> r x y) ==>
-        (!l. FILTER p l = FILTER p (sort r l))`;
+    STABLE sort r <=>
+      SORTS sort r /\
+      !p. (!x y. p x /\ p y ==> r x y) ==>
+          (!l. FILTER p l = FILTER p (sort r l))`;
 
 (*---------------------------------------------------------------------------*)
 (* PART3 - Split a list into < h, = h and > h                                *)
