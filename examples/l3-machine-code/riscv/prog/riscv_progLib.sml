@@ -295,8 +295,6 @@ val SOME tm = List.find is_riscv_ID (pre th)
            val archbase = boolSyntax.mk_eq (mk_ArchBase (mk_mcpuid mcsr), rv64)
          in
            th |> Thm.INST [id |-> id0]
-
-
               |> rv64_rule
               |> PURE_REWRITE_RULE [ASSUME archbase]
               |> Conv.CONV_RULE (Conv.DEPTH_CONV wordsLib.word_EQ_CONV)
@@ -384,6 +382,7 @@ local
       val Skip_conv = SIMP_CONV (srw_ss())
                        [riscvTheory.Skip_def,combinTheory.APPLY_UPDATE_THM]
     in REWRITE_RULE (map Skip_conv tms) thm end
+  val pc_assum = ``¬word_bit 0 (s.c_PC s.procID)``
 in
   val spec =
     stateLib.spec
@@ -400,6 +399,7 @@ in
   fun riscv_spec tm =
     let
        val thm = riscv_stepLib.riscv_step tm
+       val thm = DISCH pc_assum thm |> UNDISCH
        val thm = eval_Skip thm
        val t = riscv_mk_pre_post thm
        val thm_ts = combinations (thm, t)
