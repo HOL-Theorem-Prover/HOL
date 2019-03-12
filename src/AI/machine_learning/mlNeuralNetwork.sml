@@ -47,9 +47,9 @@ type bpdata =
   {doutnv: real vector, doutv: real vector, dinv: real vector,
    dw: real vector vector}
 
-(*----------------------------------------------------------------------------
+(*---------------------------------------------------------------------------
   Initialization
-  ----------------------------------------------------------------------------*)
+  ---------------------------------------------------------------------------*)
 
 fun diml_aux insize sizel = case sizel of
     [] => []
@@ -68,9 +68,9 @@ fun random_nn (a1,da1) (a2,da2) sizel =
     map f (butlast l) @ [g (last l)]
   end
 
-(*----------------------------------------------------------------------------
-  Forward propagration (fp) with memory of the steps
-  ----------------------------------------------------------------------------*)
+(*---------------------------------------------------------------------------
+  Forward propagation (fp) with memory of the steps
+  ---------------------------------------------------------------------------*)
 
 fun fp_layer (layer : layer) inv =
   let
@@ -182,9 +182,9 @@ fun bp_loss bpdatal = mean_square_error (#doutnv (last bpdatal))
 
 fun average_loss bpdatall = average_real (map bp_loss bpdatall)
 
-(*---------------------------------------------------------------------------
+(*--------------------------------------------------------------------------
   Weight udpate
-  --------------------------------------------------------------------------- *)
+  -------------------------------------------------------------------------- *)
 
 fun clip (a,b) m =
   let fun f x = if x < a then a else (if x > b then b else x) in
@@ -202,9 +202,9 @@ fun update_layer (layer, layerwu) =
 
 fun update_nn nn wu = map update_layer (combine (nn,wu))
 
-(*---------------------------------------------------------------------------
+(*--------------------------------------------------------------------------
   Training schedule
-  --------------------------------------------------------------------------- *)
+  -------------------------------------------------------------------------- *)
 
 fun train_nn_batch batch nn =
   let
@@ -235,18 +235,54 @@ fun train_nn_nepoch n nn size trainset =
     train_nn_nepoch (n - 1) new_nn size trainset
   end
 
-(*---------------------------------------------------------------------------
+(*--------------------------------------------------------------------------
   Printing
-  --------------------------------------------------------------------------- *)
+  -------------------------------------------------------------------------- *)
 
-fun string_of_nn nn = String.concatWith "\n\n" (map (string_of_mat o #w) nn)
+fun string_of_nn nn = 
+  let 
+    val diml = map (mat_dim o #w) nn
+    fun f (a,b) = its a ^ "," ^ its b
+  in 
+    String.concatWith " " (map f diml) ^ "\n" ^
+    String.concatWith "\n\n" (map (string_of_mat o #w) nn)
+  end
+
+fun split_nl nl l = case nl of
+    [] => raise ERR "split_nl" ""
+  | [a] => if length l = a then [l] else raise ERR "split_nl" ""
+  | a :: m => 
+    let val (l1,l2) = part_n a l in 
+      l1 :: split_nl m l2
+    end
+
+fun read_nn_sl sl =
+  let 
+    val nl = map fst (read_diml (hd sl)) 
+    val matsl = split_nl nl (tl sl)
+    val matl =  map read_mat_sl matsl
+    fun f m = {a = tanh, da = dtanh, w = m}
+  in
+    map f matl
+  end
+  handle Empty => raise ERR "read_nn_sl" ""
+
+(*
+load "mlNeuralNetwork"; load "aiLib"; open mlMatrix mlNeuralNetwork aiLib; 
+val dir = HOLDIR ^ "/src/AI";
+val nn1 = random_nn (tanh,dtanh) (tanh,dtanh) [4,3,2,1];
+val file = dir ^ "/test";
+writel file [string_of_nn nn1];
+val sl = readl file;
+val nn2 = read_nn_sl sl;
+*)
 
 end (* struct *)
 
 (*---------------------------------------------------------------------------
 load "mlNeuralNetwork";
 open mlTools mlMatrix mlNeuralNetwork;
-val starting_nn = random_nn (leakyrelu,dleakyrelu) (tanh,dtanh) [2,5,2];
+val starting_nn = random_nn (tanh,dtanh) (tanh,dtanh) [2,5,2];
 
 fun rev_vector v =
   let val vn = Vector.length v in

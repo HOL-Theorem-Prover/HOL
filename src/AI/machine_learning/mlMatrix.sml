@@ -80,10 +80,43 @@ fun mat_random (dim as (a,b)) =
 
 
 fun string_of_vect v =
-  String.concatWith " " (map (Real.toString o approx 2) (vector_to_list v))
+  String.concatWith " " (map Real.toString (vector_to_list v))
 
 fun string_of_mat m =
   String.concatWith "\n" (map string_of_vect (vector_to_list m))
+
+fun read_mat_sl sl =
+  let 
+    val l2 = map (String.tokens Char.isSpace) sl
+    val l3 = map (map (valOf o Real.fromString)) l2
+  in
+    Vector.fromList (map Vector.fromList l3)
+  end
+
+fun read_mat file = read_mat_sl (readl file)
+
+
+fun is_comma c = c = #","
+
+fun read_diml s =
+  let 
+    val l1 = String.tokens Char.isSpace s
+    val l2 = map (map string_to_int o String.tokens is_comma) l1
+  in
+    map pair_of_list l2
+  end
+
+
+(* 
+load "mlMatrix"; load "aiLib"; open mlMatrix aiLib; 
+val dir = HOLDIR ^ "/src/AI";
+val m1 = mat_random (9,2);
+val file = dir ^ "/test";
+writel file [string_of_mat m1];
+val m2 = read_mat file;
+*)
+
+
 
 
 end (* struct *)

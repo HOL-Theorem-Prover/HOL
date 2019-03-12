@@ -20,8 +20,11 @@ sig
     real vector vector -> real vector vector -> real vector vector
   val mat_transpose : 'a vector vector -> 'a vector vector
   val mat_random    : int * int -> real vector vector
-  (* output *)
+  (* input/output *)
   val string_of_vect : real vector -> string
   val string_of_mat : real vector vector -> string
+  val read_mat_sl: string list -> real vector vector
+  val read_mat : string -> real vector vector
+  val read_diml : string -> (int * int) list
 
 end

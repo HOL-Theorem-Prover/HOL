@@ -18,7 +18,7 @@ open HolKernel Abbrev boolLib aiLib rlLib psTermGen
 val ERR = mk_HOL_ERR "rlMiniEx"
 
 (* -------------------------------------------------------------------------
-   Ground arithmetic
+   Ground arithmetic truth
    ------------------------------------------------------------------------- *)
 
 fun eval_ground tm = (string_to_int o term_to_string o rhs o concl o EVAL) tm
@@ -51,22 +51,9 @@ fun mk_ttset_ground (maxsize,maxvalue) ntarget =
     )
   end
 
-fun mk_true_arith_eq (maxsize,maxvalue) ntarget =
-  let
-    val cset = [``0``,``$+``,``SUC``,``$*``]
-    val tml0 = gen_term_size maxsize (``:num``,cset)
-    val tml1 = mapfilter (fn x => (eval_ground x,x)) tml0
-    val tmld = dregroup Int.compare tml1
-    val nl = List.tabulate (maxvalue + 1, I)
-    fun random_true _ =
-      let val tml = dfind (random_elem nl) tmld in
-        mk_eq (random_elem tml, random_elem tml)
-      end
-  in
-    List.tabulate (ntarget, random_true)
-  end
-
-(* do up until 4 *)
+(* -------------------------------------------------------------------------
+   Ground arithmetic proof
+   ------------------------------------------------------------------------- *)
 
 fun mk_add2 (n1,n2) = mk_add (mk_sucn n1, mk_sucn n2)
 
@@ -83,7 +70,6 @@ fun mk_add4 (n1,n2,n3,n4) =
     [mk_add (mk_add (t1,t2), mk_add (t3,t4))]
   end
  
-
 fun eq_maxsize maxsize tm = mk_eq (tm, mk_sucn maxsize)
 
 fun mk_addsuceq_one maxsize =
@@ -101,13 +87,8 @@ fun mk_addsuceq_one maxsize =
 fun mk_addsuceq maxsize =
   List.concat (List.tabulate (maxsize - 3, fn x => mk_addsuceq_one (x + 4)))
 
-(* -------------------------------------------------------------------------
-   Length of a proof (including term traversal)
-   ------------------------------------------------------------------------- *)
 
-val tm = aiLib.random_elem (mk_addsuceq 7);
-fun norm tm =
-  PURE_ONCE_REWRITE_CONV [arithmeticTheory.ADD_0,GSYM arithmeticTheory.ADD_SUC] tm;
+fun norm tm = PURE_ONCE_REWRITE_CONV [arithmeticTheory.ADD_0,GSYM   arithmeticTheory.ADD_SUC] tm;
 
 fun imin l = hd (dict_sort Int.compare l)
 
@@ -147,39 +128,46 @@ end (* struct *)
 app load ["rlTruth", "aiLib", "rlLib", "mlTreeNeuralNetwork", "psTermGen"];
 open rlTruth aiLib rlLib mlTreeNeuralNetwork psTermGen;
 
-val maxsize = 9; val maxvalue = 4; val ntarget = 40000;
+val maxsize = 9; val maxvalue = 4; val ntarget = 10000;
 val (trainset,testset) = mk_ttset_ground (maxsize,maxvalue) ntarget;
 
 val operl = mk_fast_set oper_compare (operl_of ``0 + SUC 0 * 0 = 0``);
 val randtnn = random_tnn (8,1) operl;
-val bsize = 2;
-val schedule = [(1,0.1)];
+val bsize = 64;
+val schedule = [(10,0.1)];
 
-fun reset_timers () =
-  (tto_timer := 0.0; 
-   upd_timer1 := 0.0;
-  upd_timer2 := 0.0;
-upd_timer3 := 0.0;
-upd_timer4 := 0.0)
+val ncore = 1;
+val _ = map  (prepare_train_tnn (ncore,bsize) randtnn (trainset,testset)) 
+  (List.tabulate (10, fn _ => schedule));
+
+use_thread_flag := true;
+val ncore = 1;
+val _ = prepare_train_tnn (ncore,bsize) randtnn (trainset,testset) schedule;
+
+use_thread_flag := false;
+val ncore = 1;
+val _ = prepare_train_tnn (ncore,bsize) randtnn (trainset,testset) schedule;
+
+use_thread_flag := true;
+val ncore = 1;
+val _ = prepare_train_tnn (ncore,bsize) randtnn (trainset,testset) schedule;
+
+
+
+
 
 
 val ncore = 2;
-val _ = reset_timers ()
-val tnn = prepare_train_tnn (ncore,bsize) randtnn (trainset,testset) schedule;
-!tto_timer;
-!upd_timer1;
-!upd_timer2;
-!upd_timer3;
-!upd_timer4;
+val _ = prepare_train_tnn (ncore,bsize) randtnn (trainset,testset) schedule;
+
+
+
 
 val ncore = 1;
-val _ = reset_timers ()
-val tnn = prepare_train_tnn (ncore,bsize) randtnn (trainset,testset) schedule;
-!tto_timer;
-!upd_timer1;
-!upd_timer2;
-!upd_timer3;
-!upd_timer4;
+val _ = 
+  parmap 2
+  (prepare_train_tnn (ncore,bsize) randtnn (trainset,testset)) 
+  [schedule,schedule];
 
 
 val tm = mk_eq (mk_mult (mk_sucn 2, mk_sucn 2), mk_sucn 4);

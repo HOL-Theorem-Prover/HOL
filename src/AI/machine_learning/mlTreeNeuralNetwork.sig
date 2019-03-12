@@ -24,18 +24,14 @@ include Abbrev
 
   (* printing *)
   val string_of_tnn : tnn -> string
+  val string_of_dhtnn : dhtnn -> string
   val string_of_trainset : (term * real list) list -> string
+  val read_dhtnn_sl : string list -> dhtnn
 
   (* inference *)
   val infer_tnn : tnn -> term -> real list
 
   (* training *)
-  val tto_timer : real ref
-  val upd_timer1 : real ref
-  val upd_timer2 : real ref
-  val upd_timer3 : real ref
-  val upd_timer4 : real ref
-
   val train_tnn_schedule :
     (int * int) -> tnn ->
     (term list * vect) list * (term list * vect) list ->

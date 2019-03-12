@@ -823,8 +823,10 @@ fun cut_n n l =
     mk_fbatch bsize l
   end
 
+val use_thread_flag = ref false
+
 fun parmap_batch ncores f l = 
-  if ncores = 1 
+  if ncores = 1 andalso not (!use_thread_flag)
   then map f l
   else List.concat (parmap_exact ncores (map f) (cut_n ncores l)) 
 
@@ -882,7 +884,7 @@ fun parmap_err ncores forg lorg =
   end
 
 fun parmap ncores f l =
-  if ncores = 1 
+  if ncores = 1 andalso not (!use_thread_flag)
   then map f l 
   else map release (parmap_err ncores f l)
 
@@ -891,9 +893,13 @@ fun parapp ncores f l = ignore (parmap ncores f l)
 (* Speed Test 
 load "aiLib"; open aiLib;
 val l0 =  List.tabulate (100,I);
+val (l1,l2) = part_n 50 l0;
 val (_,t1) = add_time (parmap_batch 2 I) l0;
 val (_,t2) = add_time (parmap 2 I) l0;
 val (_,t3) = add_time (map I) l0;
+
+load "Parmap";
+val (_,t3) = add_time (Parmap.parmap (map I)) [l1,l2];
 *)
 
 

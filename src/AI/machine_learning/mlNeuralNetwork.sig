@@ -55,5 +55,6 @@ sig
 
   (* printing *)
   val string_of_nn : nn -> string
+  val read_nn_sl : string list -> nn
 
 end

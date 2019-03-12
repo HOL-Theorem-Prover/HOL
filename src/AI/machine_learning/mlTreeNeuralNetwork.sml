@@ -69,13 +69,58 @@ fun random_dhtnn (dimin,dimout) operl =
 fun string_of_oper (f,n) = (tts f ^ "," ^ its n)
 
 fun string_of_opdictone ((oper,a),nn) =
-  tts oper ^ " " ^ its a ^ "\n\n" ^ string_of_nn nn
+  tts oper ^ " " ^ its a ^ "\n\n" ^ string_of_nn nn ^ "\nnnstop\n"
 
 fun string_of_opdict opdict =
   String.concatWith "\n\n\n" (map string_of_opdictone (dlist opdict))
 
 fun string_of_tnn {opdict,headnn,dimin,dimout} =
-  "head\n\n" ^ string_of_nn headnn ^ "\n\n\n" ^ string_of_opdict opdict
+  string_of_nn headnn ^ "\nheadstop\n" ^ string_of_opdict opdict
+
+fun string_of_dhtnn {opdict,headeval,headpoli,dimin,dimout} =
+  string_of_nn headeval ^ 
+  "\nheadevalstop\n" ^ 
+  string_of_nn headpoli ^ 
+  "\nheadpolistop\n" ^ 
+  string_of_opdict opdict ^
+  "\nopdictstop"
+
+(* Warning: operators identifiers are not unique *)
+fun read_operdict_one sl =
+  let 
+    fun term_of_string s = assoc s [(tts ``SUC``,``SUC``),(tts ``0``,``0``)]
+    val (opers,ns) = pair_of_list (String.tokens Char.isSpace (hd sl))
+    val (oper,n) = (term_of_string opers, string_to_int ns)
+  in
+    ((oper,n),read_nn_sl (tl sl))
+  end
+
+fun read_dhtnn_sl sl =
+  let
+    val (l1,contl1) = split_sl "headevalstop" sl
+    val headeval = read_nn_sl l1
+    val (l2,contl2) = split_sl "headpolistop" contl1
+    val headpoli = read_nn_sl l2
+    val (l3,_) = split_sl "opdictstop" contl2
+    val ll4 = rpt_split_sl "nnstop" l3
+    val opdict = dnew oper_compare (map read_operdict_one ll4)
+    val dimin = ((snd o mat_dim o #w o hd) headpoli) - 1
+    val dimout = (fst o mat_dim o #w o last) headpoli
+  in
+    {opdict=opdict,headeval=headeval,headpoli=headpoli,
+     dimin=dimin,dimout=dimout}
+  end
+
+(* 
+load "mlTreeNeuralNetwork"; 
+open aiLib mlNeuralNetwork mlTreeNeuralNetwork mlMatrix;
+val file = HOLDIR ^ "/src/AI/test";
+val dhtnn1 = random_dhtnn (4,2) [(``SUC``,1),(``0``,0)];
+writel file [string_of_dhtnn dhtnn1];
+val sl = readl file;
+val dhtnn2 = read_dhtnn_sl sl;
+*)
+
 
 fun string_of_trainset trainset =
   let fun f (tm,rl) =
@@ -190,6 +235,24 @@ fun infer_tnn (tnn: tnn) tm =
   end
 
 (* -------------------------------------------------------------------------
+   Timers
+   ------------------------------------------------------------------------- *)
+
+val tto_timer = ref 0.0
+val upd_timer1 = ref 0.0
+val upd_timer2 = ref 0.0
+val upd_timer3 = ref 0.0
+val upd_timer4 = ref 0.0
+
+fun reset_timers () =
+  (tto_timer := 0.0; upd_timer1 := 0.0;
+   upd_timer2 := 0.0; upd_timer3 := 0.0; upd_timer4 := 0.0)
+
+fun print_timers () =
+  print_endline (String.concatWith " " 
+    (map (rts o !) [tto_timer,upd_timer1,upd_timer2,upd_timer3,upd_timer4]))
+
+(* -------------------------------------------------------------------------
    Training a tnn for one epoch
    ------------------------------------------------------------------------- *)
 
@@ -223,12 +286,6 @@ fun update_opernn bsize opdict (oper,bpdatall) =
   in
     (oper,newnn)
   end
-
-val tto_timer = ref 0.0
-val upd_timer1 = ref 0.0
-val upd_timer2 = ref 0.0
-val upd_timer3 = ref 0.0
-val upd_timer4 = ref 0.0
 
 fun train_tnn_batch ncore (tnn as {opdict,headnn,dimin,dimout}) batch =
   let
@@ -296,8 +353,14 @@ fun train_tnn_schedule_aux (ncore,bsize) tnn (ptrain,ptest) schedule =
     end
 
 fun train_tnn_schedule (ncore,bsize) tnn (ptrain,ptest) schedule =
-  train_tnn_schedule_aux (ncore,bsize) tnn (ptrain,ptest) schedule
-
+  let 
+    val _ = reset_timers ()
+    val r = train_tnn_schedule_aux (ncore,bsize) tnn (ptrain,ptest) schedule
+    val _ = print_timers ()
+  in
+    r
+  end
+  
 (* -------------------------------------------------------------------------
    Training a double-headed tnn
    ------------------------------------------------------------------------- *)
