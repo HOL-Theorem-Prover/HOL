@@ -15,13 +15,14 @@ struct
 
 open HolKernel Abbrev boolLib aiLib rlLib psTermGen
 
-val ERR = mk_HOL_ERR "rlMiniEx"
+val ERR = mk_HOL_ERR "rlTruth"
 
 (* -------------------------------------------------------------------------
    Ground arithmetic truth
    ------------------------------------------------------------------------- *)
 
-fun eval_ground tm = (string_to_int o term_to_string o rhs o concl o EVAL) tm
+fun eval_ground tm = 
+  (string_to_int o term_to_string o rhs o concl o bossLib.EVAL) tm
 
 fun mk_ttset_ground (maxsize,maxvalue) ntarget =
   let
@@ -133,42 +134,23 @@ val (trainset,testset) = mk_ttset_ground (maxsize,maxvalue) ntarget;
 
 val operl = mk_fast_set oper_compare (operl_of ``0 + SUC 0 * 0 = 0``);
 val randtnn = random_tnn (8,1) operl;
-val bsize = 64;
+val bsize = 10000;
 val schedule = [(10,0.1)];
-
-val ncore = 1;
-val _ = map  (prepare_train_tnn (ncore,bsize) randtnn (trainset,testset)) 
-  (List.tabulate (10, fn _ => schedule));
 
 use_thread_flag := true;
 val ncore = 1;
+val _ = prepare_train_tnn (ncore,bsize) randtnn (trainset,testset) schedule;
+val ncore = 2;
+val _ = prepare_train_tnn (ncore,bsize) randtnn (trainset,testset) schedule;
+val ncore = 3;
 val _ = prepare_train_tnn (ncore,bsize) randtnn (trainset,testset) schedule;
 
 use_thread_flag := false;
-val ncore = 1;
-val _ = prepare_train_tnn (ncore,bsize) randtnn (trainset,testset) schedule;
-
-use_thread_flag := true;
-val ncore = 1;
-val _ = prepare_train_tnn (ncore,bsize) randtnn (trainset,testset) schedule;
-
-
-
-
-
-
-val ncore = 2;
-val _ = prepare_train_tnn (ncore,bsize) randtnn (trainset,testset) schedule;
-
-
-
-
-val ncore = 1;
+val _ = prepare_train_tnn (1,bsize) randtnn (trainset,testset) schedule;
 val _ = 
-  parmap 2
-  (prepare_train_tnn (ncore,bsize) randtnn (trainset,testset)) 
+  parmap 3
+  (prepare_train_tnn (1,bsize) randtnn (trainset,testset)) 
   [schedule,schedule];
-
 
 val tm = mk_eq (mk_mult (mk_sucn 2, mk_sucn 2), mk_sucn 4);
 infer_tnn tnn tm; (* todo: scale this learning to arbitrary large terms *)

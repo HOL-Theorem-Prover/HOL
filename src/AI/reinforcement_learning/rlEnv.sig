@@ -23,6 +23,12 @@ sig
   (* adaptative difficulty *)
   val level_glob : int ref
 
+  (* external calls *)
+  val mcts_gencode : int -> unit
+  val parmap_ext : mlTreeNeuralNetwork.dhtnn -> int -> unit
+  
+
+  (* *)
   type ('a,''b,'c) gamespec =
     {
     movel : ''b list,
@@ -33,6 +39,13 @@ sig
     operl : (term * int) list,
     nntm_of_sit: 'a psMCTS.sit -> term
     }
+
+  val mcts_ext : string -> mlTreeNeuralNetwork.dhtnn -> 
+     (rlGameArithGround.board, ''a, 'b) gamespec
+               -> rlGameArithGround.board psMCTS.sit -> unit
+
+  val random_dhtnn_gamespec : 
+    (rlGameArithGround.board, ''a, 'b) gamespec -> mlTreeNeuralNetwork.dhtnn
 
   val logfile_glob : string ref
   val summary : string -> unit

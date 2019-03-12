@@ -750,7 +750,7 @@ fun random_percent percent l =
   part_n (Real.floor (percent * Real.fromInt (length l))) (shuffle l)
 
 (* -------------------------------------------------------------------------
-   Parallelism
+   Parallelism (currently slowing functions inside threads)
    ------------------------------------------------------------------------- *)
 
 datatype 'a result = Res of 'a | Exn of exn;
@@ -783,7 +783,6 @@ fun interruptkill worker =
 fun compare_imin (a,b) = Int.compare (snd a, snd b)
 
 val attrib = [Thread.InterruptState Thread.InterruptAsynch, Thread.EnableBroadcastInterrupt true]
-
 
 fun parmap_exact ncores forg lorg =
   if length lorg <> ncores then raise ERR "parmap_exact" "" else 
@@ -853,7 +852,7 @@ fun parmap_err ncores forg lorg =
     val dcount = dnew Int.compare lcount
     (* process *)
     fun process pi =
-      if !end_flag then () else 
+      if !end_flag then Thread.exit () else 
       let val inref = dfind pi din in
         case !inref of
           NONE => process pi
@@ -892,13 +891,13 @@ fun parapp ncores f l = ignore (parmap ncores f l)
 
 (* Speed Test 
 load "aiLib"; open aiLib;
-val l0 =  List.tabulate (100,I);
-val (l1,l2) = part_n 50 l0;
-val (_,t1) = add_time (parmap_batch 2 I) l0;
+val l0 =  List.tabulate (10000,I);
+val (_,t1) = add_time (map I) l0;
 val (_,t2) = add_time (parmap 2 I) l0;
-val (_,t3) = add_time (map I) l0;
+val (_,t3) = add_time (parmap 3 I) l0;
 
 load "Parmap";
+val (l1,l2) = part_n 50 l0;
 val (_,t3) = add_time (Parmap.parmap (map I)) [l1,l2];
 *)
 

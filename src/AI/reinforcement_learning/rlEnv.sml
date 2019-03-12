@@ -273,6 +273,90 @@ fun choose_uniform gamespec dhtnn (targetl,ntarget) =
    Competition: comparing n dhtnn
    ------------------------------------------------------------------------- *)
 
+fun mcts_ext fileout dhtnn gamespec target =
+  let
+    val status_of = #status_of gamespec
+    val mctsparam =
+      (!nsim_glob, !decay_glob, false,
+       #status_of gamespec, #apply_move gamespec, 
+       mk_fep_dhtnn false gamespec dhtnn)
+    val ((_,allroot),t) = add_time (n_bigsteps gamespec mctsparam) target
+    val endroot = hd allroot
+    val winb = status_of (#sit endroot) = Win
+  in
+    if winb then writel fileout ["Win"] else writel fileout ["Lose"]
+  end
+
+(*
+val gencode_dir = HOLDIR ^ "/src/AI/reinforcement_learning/gencode"
+val dhtnn_file = gencode_dir ^ "/dhtnn"
+val operl_file = gencode_dir ^ "/operl"
+
+fun mcts_gencode n =
+  let
+    val local_dir = gencode_dir ^ "/" ^ its n
+    val _ = mkDir_err local_dir
+    val file_out = local_dir ^ "/out" ^ its n
+    val sl =
+    [
+     "open HolKernel rlEnv aiLib",
+     "val gamespec = rlGameArithGround.gamespec;",
+     "val dhtnn_file = " ^ quote dhtnn_file ^ ";",
+     "val operl_file = " ^ quote operl_file ^ ";",
+     "val dhtnn = mlTreeNeuralNetwork.read_dhtnn_sl" ^  
+     " operl_file (readl dhtnn_file);",
+     "val targetl = rlGameArithGround.mk_targetl 1;", (* slow *)
+     "val targetn = " ^ its n ^ ";",
+     "val target = List.nth (targetl,targetn);",
+     "val _ = nsim_glob := " ^ its (!nsim_glob) ^ ";",
+     "val _ = decay_glob := " ^ rts (!decay_glob) ^ ";",
+     "val file_out = " ^ quote file_out ^ ";",
+     "val _ = mcts_ext file_out dhtnn gamespec target;"
+    ]  
+    val file = local_dir ^ "/in" ^ its n ^ ".sml"
+  in
+    remove_file file_out;
+    writel file sl;
+    smlOpen.run_buildheap false file
+  end
+
+fun parmap_ext dhtnn ntot =
+  let
+    val _ = mkDir_err gencode_dir
+    val targetl = first_n ntot (rlGameArithGround.mk_targetl 1)
+    val _ = writel dhtnn_file [mlTreeNeuralNetwork.string_of_dhtnn dhtnn]
+    val operl = 
+      mk_sameorder_set Term.compare (map fst (dkeys (#opdict dhtnn)))
+    val _ = mlTacticData.export_terml operl_file operl  
+  in
+    ignore (map mcts_gencode (List.tabulate (ntot,I)))
+  end
+*)
+
+(*
+load "rlEnv"; open rlEnv; open aiLib;
+val dhtnn = random_dhtnn_gamespec rlGameArithGround.gamespec;
+val ntot = 100;
+val targetl = first_n ntot (rlGameArithGround.mk_targetl 1);
+val gamespec = rlGameArithGround.gamespec;
+val gencode_dir = HOLDIR ^ "/src/AI/reinforcement_learning/gencode";
+
+fun file_out2 n = gencode_dir ^ "/int" ^ its n;
+fun g n = mcts_ext (file_out2 n) dhtnn gamespec (List.nth (targetl,n));
+val (_,t2) = add_time (app g) (List.tabulate (ntot,I));
+
+val _ = mkDir_err gencode_dir;
+val l2 = map (readl o file_out2) (List.tabulate (ntot,I));
+val (_,t3) = add_time (parapp 2 g) (List.tabulate (ntot,I));
+
+
+fun file_out1 n = gencode_dir ^ "/" ^ its n ^ "/out" ^ its n;
+val (_,t1) = add_time (parmap_ext dhtnn) ntot;
+val l1 = map (readl o file_out1) (List.tabulate (ntot,I));
+
+*)
+
+
 fun compete_one dhtnn gamespec targetl =
   let
     val status_of = #status_of gamespec
@@ -360,6 +444,23 @@ fun rl_start gamespec =
   in
     (allex , dhtnn, targetl)
   end
+
+fun test () =
+  let
+    val _ = summary "Generation 0"
+    val dhtnn_random = random_dhtnn_gamespec gamespec
+    val targetl = update_targetl ()
+    val _ = ncore_glob := 1
+    val (allex1,t1) = 
+      add_time (explore_f true gamespec emptyallex dhtnn_random) targetl
+    val (allex2,t2) = 
+      add_time (explore_f true gamespec emptyallex dhtnn_random) targetl
+    val (allex3,t3) = 
+      add_time (explore_f true gamespec emptyallex dhtnn_random) targetl
+  in
+    [(allex1,t1),(allex2,t2),(allex3,t3)]
+  end
+
 
 fun rl_one n gamespec (allex,dhtnn,targetl) =
   let

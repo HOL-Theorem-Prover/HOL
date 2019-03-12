@@ -26,7 +26,7 @@ include Abbrev
   val string_of_tnn : tnn -> string
   val string_of_dhtnn : dhtnn -> string
   val string_of_trainset : (term * real list) list -> string
-  val read_dhtnn_sl : string list -> dhtnn
+  val read_dhtnn_sl : string -> string list -> dhtnn
 
   (* inference *)
   val infer_tnn : tnn -> term -> real list

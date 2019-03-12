@@ -68,42 +68,54 @@ fun random_dhtnn (dimin,dimout) operl =
 
 fun string_of_oper (f,n) = (tts f ^ "," ^ its n)
 
-fun string_of_opdictone ((oper,a),nn) =
-  tts oper ^ " " ^ its a ^ "\n\n" ^ string_of_nn nn ^ "\nnnstop\n"
+fun string_of_opdict_one d ((oper,a),nn) =
+  its (dfind oper d) ^ " " ^ its a ^ "\n" ^ string_of_nn nn ^ "\nnnstop\n"
 
 fun string_of_opdict opdict =
-  String.concatWith "\n\n\n" (map string_of_opdictone (dlist opdict))
+  let 
+    val tml = mk_sameorder_set Term.compare (map fst (dkeys opdict))
+    val d = dnew Term.compare (number_snd 0 tml)
+  in
+    String.concatWith "\n" (map (string_of_opdict_one d) (dlist opdict))
+  end
 
 fun string_of_tnn {opdict,headnn,dimin,dimout} =
-  string_of_nn headnn ^ "\nheadstop\n" ^ string_of_opdict opdict
+  string_of_nn headnn ^ "\nheadstop\n\n" ^ string_of_opdict opdict
 
 fun string_of_dhtnn {opdict,headeval,headpoli,dimin,dimout} =
   string_of_nn headeval ^ 
-  "\nheadevalstop\n" ^ 
+  "\nheadevalstop\n\n" ^ 
   string_of_nn headpoli ^ 
-  "\nheadpolistop\n" ^ 
+  "\nheadpolistop\n\n" ^ 
   string_of_opdict opdict ^
   "\nopdictstop"
 
-(* Warning: operators identifiers are not unique *)
-fun read_operdict_one sl =
+fun read_opdict_one tos sl =
   let 
-    fun term_of_string s = assoc s [(tts ``SUC``,``SUC``),(tts ``0``,``0``)]
     val (opers,ns) = pair_of_list (String.tokens Char.isSpace (hd sl))
-    val (oper,n) = (term_of_string opers, string_to_int ns)
+    val (oper,n) = (tos (string_to_int opers), string_to_int ns)
   in
     ((oper,n),read_nn_sl (tl sl))
   end
 
-fun read_dhtnn_sl sl =
+fun read_opdict terml_file sl =
+  let 
+    val tml = mlTacticData.import_terml terml_file
+    val d = dnew Int.compare (number_fst 0 tml)
+    fun tos i = dfind i d
+    val sll = rpt_split_sl "nnstop" sl
+  in
+    dnew oper_compare (map (read_opdict_one tos) sll)
+  end
+
+fun read_dhtnn_sl terml_file sl =
   let
     val (l1,contl1) = split_sl "headevalstop" sl
     val headeval = read_nn_sl l1
     val (l2,contl2) = split_sl "headpolistop" contl1
     val headpoli = read_nn_sl l2
     val (l3,_) = split_sl "opdictstop" contl2
-    val ll4 = rpt_split_sl "nnstop" l3
-    val opdict = dnew oper_compare (map read_operdict_one ll4)
+    val opdict = read_opdict terml_file l3
     val dimin = ((snd o mat_dim o #w o hd) headpoli) - 1
     val dimout = (fst o mat_dim o #w o last) headpoli
   in
@@ -112,15 +124,16 @@ fun read_dhtnn_sl sl =
   end
 
 (* 
-load "mlTreeNeuralNetwork"; 
+load "mlTreeNeuralNetwork"; load "mlTacticData";
 open aiLib mlNeuralNetwork mlTreeNeuralNetwork mlMatrix;
 val file = HOLDIR ^ "/src/AI/test";
 val dhtnn1 = random_dhtnn (4,2) [(``SUC``,1),(``0``,0)];
 writel file [string_of_dhtnn dhtnn1];
+val terml_file = HOLDIR ^ "/src/AI/test_terml";
+mlTacticData.export_terml terml_file (map fst (dkeys (#opdict dhtnn1)));
 val sl = readl file;
-val dhtnn2 = read_dhtnn_sl sl;
+val dhtnn2 = read_dhtnn_sl terml_file sl;
 *)
-
 
 fun string_of_trainset trainset =
   let fun f (tm,rl) =
