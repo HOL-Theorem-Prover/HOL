@@ -22,12 +22,21 @@ include Abbrev
   val random_tnn : (int * int) -> (term * int) list -> tnn
   val random_dhtnn  : (int * int) -> (term * int) list -> dhtnn
 
-  (* printing *)
+  (* I/O *)
   val string_of_tnn : tnn -> string
   val string_of_dhtnn : dhtnn -> string
-  val string_of_trainset : (term * real list) list -> string
+  
   val read_dhtnn_sl : string -> string list -> dhtnn
 
+  val write_trainset : string -> 
+    (term * real list) list -> unit
+  val write_dhtrainset : string -> 
+    (term * real list) list * (term * real list) list -> unit
+
+  val read_trainset : string -> 
+    (term * real list) list
+  val read_dhtrainset : string ->
+    (term * real list) list * (term * real list) list
   (* inference *)
   val infer_tnn : tnn -> term -> real list
 

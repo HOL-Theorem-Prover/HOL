@@ -135,12 +135,47 @@ val sl = readl file;
 val dhtnn2 = read_dhtnn_sl terml_file sl;
 *)
 
-fun string_of_trainset trainset =
-  let fun f (tm,rl) =
-    tts tm ^ ": " ^ String.concatWith " " (map (rts o (approx 4)) rl)
+fun write_trainset file trainset =
+  let 
+    val file_real = file ^ "_real"
+    val file_term = file ^ "_term"
+    val (terml,rll) = split trainset
+    fun f rl = String.concatWith " " (map rts rl)
   in
-    String.concatWith "\n" (map f trainset)
+    mlTacticData.export_terml file_term terml;
+    writel file_real (map f rll)
   end
+
+fun read_trainset file =
+  let
+    val file_real = file ^ "_real"
+    val file_term = file ^ "_term"
+    fun f rls = map (valOf o Real.fromString) (String.tokens Char.isSpace rls)
+    val rll = map f (readl file_real)
+    val terml = mlTacticData.import_terml file_term 
+  in
+    combine (terml,rll)
+  end
+
+fun write_dhtrainset file (etrain,ptrain) =
+  (
+  write_trainset (file ^ "_eval") etrain;
+  write_trainset (file ^ "_poli") ptrain
+  )
+
+fun read_dhtrainset file = 
+  (
+  read_trainset (file ^ "_eval"),
+  read_trainset (file ^ "_poli")
+  )
+ 
+(* 
+load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
+val trainset = [(``0``,[1.0])];
+val file = HOLDIR ^ "/src/AI/trainset";
+write_trainset file trainset;
+val trainset1 = read_trainset file;
+*)
 
 (* -------------------------------------------------------------------------
    Normalization/Denormalization

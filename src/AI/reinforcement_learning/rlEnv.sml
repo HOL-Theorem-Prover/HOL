@@ -519,11 +519,12 @@ level_glob := 1;
 val allex = start_rl_loop gamespec;
 
 load "rlEnv"; open rlEnv;
+nsim_glob := 160;
 dim_glob := 8;
 val ncore_max = 4;
 val level = 10;
 val bstart = false;
-val ntarget = 30;
+val ntarget = 20;
 test ncore_max level bstart ntarget;
 
 *)

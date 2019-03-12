@@ -852,7 +852,7 @@ fun parmap_err ncores forg lorg =
     val dcount = dnew Int.compare lcount
     (* process *)
     fun process pi =
-      if !end_flag then Thread.exit () else 
+      if !end_flag then () else 
       let val inref = dfind pi din in
         case !inref of
           NONE => process pi
