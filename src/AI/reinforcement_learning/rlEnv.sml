@@ -50,7 +50,7 @@ val batchsize_glob = ref 64
 
 val nsim_glob = ref 1600
 val decay_glob = ref 0.99
-val ncore_glob = ref 40
+val ncore_glob = ref 8
 
 fun summary_param () =
   let
@@ -195,7 +195,7 @@ fun train_dhtnn gamespec (evalex,poliex) =
     val dhtnn = random_dhtnn_gamespec gamespec
     val (etrain,ptrain) = (prepare_trainset evalex, prepare_trainset poliex)
   in
-     train_dhtnn_schedule 1 dhtnn bsize (etrain,ptrain) schedule
+     train_dhtnn_schedule (!ncore_glob) dhtnn bsize (etrain,ptrain) schedule
   end
 
 fun train_f gamespec allex =
@@ -459,7 +459,7 @@ fun rl_start gamespec =
     (allex , dhtnn, targetl)
   end
 
-fun test ncore_max level bstart ntarget =
+fun test ncorel level bstart ntarget =
   let
     val gamespec = rlGameArithGround.gamespec
     val dhtnn = random_dhtnn_gamespec gamespec
@@ -467,10 +467,10 @@ fun test ncore_max level bstart ntarget =
     val targetl = update_targetl ()
     val _ = ntarget_explore := ntarget
     fun f n = 
-      (ncore_glob := (n + 1);
+      (ncore_glob := n;
        explore_f bstart gamespec emptyallex dhtnn targetl)
   in
-    ignore (List.tabulate (ncore_max,f))
+    map (fn x => snd (add_time f x)) ncorel
   end
 
 fun rl_one n gamespec (allex,dhtnn,targetl) =
@@ -518,14 +518,17 @@ level_glob := 1;
 
 val allex = start_rl_loop gamespec;
 
+
+
+
 load "rlEnv"; open rlEnv;
-nsim_glob := 160;
+nsim_glob := 1600;
 dim_glob := 8;
-val ncore_max = 4;
+val ncorel = [32,16,8,4,2,1];
 val level = 10;
 val bstart = false;
 val ntarget = 20;
-test ncore_max level bstart ntarget;
+val rl = test ncorel level bstart ntarget;
 
 *)
 
