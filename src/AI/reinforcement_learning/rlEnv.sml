@@ -445,7 +445,7 @@ fun update_targetl () =
     val _ = summary ("Creating " ^ its (length targetl) ^ " new targets" ^ 
             " in " ^ rts t ^ " seconds")
   in
-    targetl
+    shuffle targetl
   end
 
 fun rl_start gamespec =
@@ -459,26 +459,19 @@ fun rl_start gamespec =
     (allex , dhtnn, targetl)
   end
 
-fun test () =
+fun test ncore_max level bstart ntarget =
   let
-    val _ = summary "Generation 0"
     val gamespec = rlGameArithGround.gamespec
     val dhtnn = random_dhtnn_gamespec gamespec
+    val _ = level_glob := level
     val targetl = update_targetl ()
-    val _ = ntarget_explore := 100
-    val _ = ncore_glob := 1
-    val (allex1,t1) = 
-      add_time (explore_f true gamespec emptyallex dhtnn) targetl
-    val _ = ncore_glob := 2
-    val (allex2,t2) = 
-      add_time (explore_f true gamespec emptyallex dhtnn) targetl
-    val _ = ncore_glob := 3    
-    val (allex3,t3) = 
-      add_time (explore_f true gamespec emptyallex dhtnn) targetl
+    val _ = ntarget_explore := ntarget
+    fun f n = 
+      (ncore_glob := (n + 1);
+       explore_f bstart gamespec emptyallex dhtnn targetl)
   in
-    [(allex1,t1),(allex2,t2),(allex3,t3)]
+    ignore (List.tabulate (ncore_max,f))
   end
-
 
 fun rl_one n gamespec (allex,dhtnn,targetl) =
   let
@@ -524,6 +517,14 @@ decay_glob := 0.99;
 level_glob := 1;
 
 val allex = start_rl_loop gamespec;
+
+load "rlEnv"; open rlEnv;
+dim_glob := 8;
+val ncore_max = 4;
+val level = 10;
+val bstart = false;
+val ntarget = 30;
+test ncore_max level bstart ntarget;
 
 *)
 

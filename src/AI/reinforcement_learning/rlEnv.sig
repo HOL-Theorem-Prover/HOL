@@ -27,8 +27,7 @@ sig
   val mcts_gencode : int -> unit
   val create_savestate : unit -> unit
   val parmap_ext : mlTreeNeuralNetwork.dhtnn -> int -> unit
-  val test : unit ->
-        (((term * real list) list * (term * real list) list) * real) list
+  val test : int -> int -> bool -> int -> unit
 
 
   (* *)
