@@ -25,8 +25,11 @@ sig
 
   (* external calls *)
   val mcts_gencode : int -> unit
+  val create_savestate : unit -> unit
   val parmap_ext : mlTreeNeuralNetwork.dhtnn -> int -> unit
-  
+  val test : unit ->
+        (((term * real list) list * (term * real list) list) * real) list
+
 
   (* *)
   type ('a,''b,'c) gamespec =

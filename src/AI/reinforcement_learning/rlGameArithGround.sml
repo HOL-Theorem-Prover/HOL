@@ -163,7 +163,7 @@ fun total_cost_target target = case target of
     (true, Board (tm,[])) => total_cost tm
   | _ => raise ERR "total_cost_target" ""
 
-fun mk_targetl maxsize = 
+fun mk_pretargetl level = 
   let 
     fun cmp (a,b) = Int.compare (snd a,snd b)
     val tml1 = mk_term_set (mk_addsuceq 10) 
@@ -173,8 +173,10 @@ fun mk_targetl maxsize =
     val tml5 = dict_sort cmp tml4
     val tml6 = map fst tml5
   in
-    map mk_startsit (first_n (maxsize * 400) tml6) 
+    first_n (level * 400) tml6
   end
+
+fun mk_targetl level = map mk_startsit (mk_pretargetl level)
 
 
 (* -------------------------------------------------------------------------

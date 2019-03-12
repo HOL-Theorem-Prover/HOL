@@ -287,16 +287,14 @@ fun mcts_ext fileout dhtnn gamespec target =
     if winb then writel fileout ["Win"] else writel fileout ["Lose"]
   end
 
-(*
+
 val gencode_dir = HOLDIR ^ "/src/AI/reinforcement_learning/gencode"
+val savestate_file = gencode_dir ^ "/savestate"
 val dhtnn_file = gencode_dir ^ "/dhtnn"
 val operl_file = gencode_dir ^ "/operl"
 
-fun mcts_gencode n =
+fun create_savestate () =
   let
-    val local_dir = gencode_dir ^ "/" ^ its n
-    val _ = mkDir_err local_dir
-    val file_out = local_dir ^ "/out" ^ its n
     val sl =
     [
      "open HolKernel rlEnv aiLib",
@@ -306,18 +304,34 @@ fun mcts_gencode n =
      "val dhtnn = mlTreeNeuralNetwork.read_dhtnn_sl" ^  
      " operl_file (readl dhtnn_file);",
      "val targetl = rlGameArithGround.mk_targetl 1;", (* slow *)
-     "val targetn = " ^ its n ^ ";",
-     "val target = List.nth (targetl,targetn);",
      "val _ = nsim_glob := " ^ its (!nsim_glob) ^ ";",
      "val _ = decay_glob := " ^ rts (!decay_glob) ^ ";",
-     "val file_out = " ^ quote file_out ^ ";",
-     "val _ = mcts_ext file_out dhtnn gamespec target;"
+     "PolyML.SaveState.saveState " ^ quote savestate_file ^ ";"
     ]  
-    val file = local_dir ^ "/in" ^ its n ^ ".sml"
+    val file = gencode_dir ^ "/savestate_script.sml"
   in
-    remove_file file_out;
     writel file sl;
     smlOpen.run_buildheap false file
+  end
+
+fun mcts_gencode n =
+  let
+    val local_dir = gencode_dir ^ "/" ^ its n
+    val _ = mkDir_err local_dir
+    val file_in = local_dir ^ "/in_script" ^ its n ^ ".sml"
+    val file_out = local_dir ^ "/out" ^ its n
+    val sl =
+    [
+     "PolyML.SaveState.loadState " ^ quote savestate_file ^ ";",
+     "val file_out = " ^ quote file_out ^ ";",
+     "val targetn = " ^ its n ^ ";",
+     "val target = List.nth (targetl,targetn);", 
+     "val _ = rlEnv.mcts_ext file_out dhtnn gamespec target;"
+    ]  
+  in
+    remove_file file_out;
+    writel file_in sl;
+    smlOpen.run_buildheap false file_in
   end
 
 fun parmap_ext dhtnn ntot =
@@ -329,30 +343,30 @@ fun parmap_ext dhtnn ntot =
       mk_sameorder_set Term.compare (map fst (dkeys (#opdict dhtnn)))
     val _ = mlTacticData.export_terml operl_file operl  
   in
-    ignore (map mcts_gencode (List.tabulate (ntot,I)))
+    ignore (parmap 2 mcts_gencode (List.tabulate (ntot,I)))
   end
-*)
 
 (*
-load "rlEnv"; open rlEnv; open aiLib;
+load "rlEnv"; open rlEnv aiLib;
+
 val dhtnn = random_dhtnn_gamespec rlGameArithGround.gamespec;
 val ntot = 100;
 val targetl = first_n ntot (rlGameArithGround.mk_targetl 1);
 val gamespec = rlGameArithGround.gamespec;
 val gencode_dir = HOLDIR ^ "/src/AI/reinforcement_learning/gencode";
 
-fun file_out2 n = gencode_dir ^ "/int" ^ its n;
-fun g n = mcts_ext (file_out2 n) dhtnn gamespec (List.nth (targetl,n));
-val (_,t2) = add_time (app g) (List.tabulate (ntot,I));
-
 val _ = mkDir_err gencode_dir;
-val l2 = map (readl o file_out2) (List.tabulate (ntot,I));
-val (_,t3) = add_time (parapp 2 g) (List.tabulate (ntot,I));
-
-
+val _ = create_savestate ();
 fun file_out1 n = gencode_dir ^ "/" ^ its n ^ "/out" ^ its n;
 val (_,t1) = add_time (parmap_ext dhtnn) ntot;
 val l1 = map (readl o file_out1) (List.tabulate (ntot,I));
+
+val _ = mkDir_err gencode_dir;
+fun file_out2 n = gencode_dir ^ "/int" ^ its n;
+fun g n = mcts_ext (file_out2 n) dhtnn gamespec (List.nth (targetl,n));
+val (_,t2) = add_time (parapp 2 g) (List.tabulate (ntot,I));
+val l2 = map (readl o file_out2) (List.tabulate (ntot,I));
+test ();
 
 *)
 
@@ -448,15 +462,19 @@ fun rl_start gamespec =
 fun test () =
   let
     val _ = summary "Generation 0"
-    val dhtnn_random = random_dhtnn_gamespec gamespec
+    val gamespec = rlGameArithGround.gamespec
+    val dhtnn = random_dhtnn_gamespec gamespec
     val targetl = update_targetl ()
+    val _ = ntarget_explore := 100
     val _ = ncore_glob := 1
     val (allex1,t1) = 
-      add_time (explore_f true gamespec emptyallex dhtnn_random) targetl
+      add_time (explore_f true gamespec emptyallex dhtnn) targetl
+    val _ = ncore_glob := 2
     val (allex2,t2) = 
-      add_time (explore_f true gamespec emptyallex dhtnn_random) targetl
+      add_time (explore_f true gamespec emptyallex dhtnn) targetl
+    val _ = ncore_glob := 3    
     val (allex3,t3) = 
-      add_time (explore_f true gamespec emptyallex dhtnn_random) targetl
+      add_time (explore_f true gamespec emptyallex dhtnn) targetl
   in
     [(allex1,t1),(allex2,t2),(allex3,t3)]
   end
