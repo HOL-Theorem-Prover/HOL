@@ -291,14 +291,18 @@ val upd_timer1 = ref 0.0
 val upd_timer2 = ref 0.0
 val upd_timer3 = ref 0.0
 val upd_timer4 = ref 0.0
+val upd_timer5 = ref 0.0
+val aver_timer5 = ref 0.0
+val loss_timer = ref 0.0
 
-fun reset_timers () =
-  (tto_timer := 0.0; upd_timer1 := 0.0;
-   upd_timer2 := 0.0; upd_timer3 := 0.0; upd_timer4 := 0.0)
+val all_ref = 
+  [tto_timer,upd_timer1,upd_timer2,upd_timer3,upd_timer4,
+   aver_timer5, upd_timer5, loss_timer, sum_timer]
+
+fun reset_timers () = map (fn x => (x := 0.0)) all_ref
 
 fun print_timers () =
-  print_endline (String.concatWith " " 
-    (map (rts o !) [tto_timer,upd_timer1,upd_timer2,upd_timer3,upd_timer4]))
+  print_endline (String.concatWith " " (map (rts o !) all_ref))
 
 (* -------------------------------------------------------------------------
    Training a tnn for one epoch
@@ -315,9 +319,9 @@ fun train_tnn_one tnn (tml,expectv) =
 
 fun update_head bsize headnn bpdatall =
   let
-    val dwl       = average_bpdatall bsize bpdatall
-    val newheadnn = update_nn headnn dwl
-    val loss      = average_loss bpdatall
+    val dwl       = total_time aver_timer5 sum_bpdatall bpdatall
+    val newheadnn = total_time upd_timer5 (update_nn headnn) dwl
+    val loss      = total_time loss_timer average_loss bpdatall
   in
     (newheadnn, loss)
   end
@@ -328,9 +332,9 @@ fun update_opernn bsize opdict (oper,bpdatall) =
   let
     val nn       = dfind oper opdict
       handle NotFound => raise ERR "update_opernn" (string_of_oper oper)
-    val dwl      = average_bpdatall bsize bpdatall
-    val loss     = average_loss bpdatall
-    val newnn    = update_nn nn dwl
+    val dwl      = total_time aver_timer5 sum_bpdatall bpdatall
+    val loss     = total_time loss_timer average_loss bpdatall
+    val newnn    = total_time upd_timer5 (update_nn nn) dwl
   in
     (oper,newnn)
   end

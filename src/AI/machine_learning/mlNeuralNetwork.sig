@@ -3,6 +3,7 @@ sig
 
   (* hyperparameters *)
   val learning_rate : real ref
+  val sum_timer : real ref
 
   (* activation *)
   val tanh : real -> real
@@ -42,9 +43,7 @@ sig
 
   (* weight updates *)
   val update_nn         : nn -> real vector vector list -> nn
-  val average_bpdatall  : int -> bpdata list list -> real vector vector list
-  val average_dwll      : real vector vector list list -> real vector vector list
-  val sum_dwll          : real vector vector list list -> real vector vector list
+  val sum_bpdatall      : bpdata list list -> real vector vector list
   val mean_square_error : real vector -> real
   val average_loss      : bpdata list list -> real
 

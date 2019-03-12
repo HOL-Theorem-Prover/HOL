@@ -62,6 +62,11 @@ fun mat_add m1 m2 =
     mat_tabulate f (mat_dim m1)
   end
 
+fun matl_add ml = case ml of
+    [] => raise ERR "mat_addl" ""
+  | [m] => m 
+  | m :: contl => mat_add m (matl_add contl)
+
 fun inv_dim (a,b) = (b,a)
 
 fun mat_transpose m1 =
@@ -114,6 +119,38 @@ val m1 = mat_random (9,2);
 val file = dir ^ "/test";
 writel file [string_of_mat m1];
 val m2 = read_mat file;
+
+load "mlMatrix"; load "aiLib"; open mlMatrix aiLib; 
+
+val l1 = List.tabulate (10000,fn _ => random_real ());
+val l2 = List.tabulate (10000,fn _ => random_real ());
+val v1 = Vector.fromList l1;
+val v2 = Vector.fromList l2;
+
+fun f0 l1 (l2 : real list) =  map (op +) (combine (l1,l2));
+val (_,t1) = add_time (f0 l1) l2;
+fun f1 v1 (v2 : real vector) = 
+  Vector.tabulate 
+    (Vector.length v1, fn i => Vector.sub (v1,i) + Vector.sub (v2,i))
+;
+val (_,t2) = add_time (f1 v1) v2;
+
+val m1 = mat_random (100,100);
+val m2 = mat_random (100,100);
+
+val (m,t3) = add_time (mat_add m1) m2;
+
+
+val a1 = Array.fromList l1;
+val a2 = Array.fromList l2;
+
+fun f2 a1 (a2 : real array) = 
+  Array.tabulate 
+    (Array.length a1, fn i => Array.sub (a1,i) + Array.sub (a2,i))
+
+val (_,t4) = add_time (f2 a1) a2;
+
+
 *)
 
 

@@ -120,26 +120,21 @@ fun list_cost tm =
 fun total_cost tm = sum_int (map snd (list_cost tm))
 
 
-
-
-
 end (* struct *)
 
 (*
 app load ["rlTruth", "aiLib", "rlLib", "mlTreeNeuralNetwork", "psTermGen"];
 open rlTruth aiLib rlLib mlTreeNeuralNetwork psTermGen;
-
 val maxsize = 9; val maxvalue = 4; val ntarget = 10000;
 val (trainset,testset) = mk_ttset_ground (maxsize,maxvalue) ntarget;
-
 val operl = mk_fast_set oper_compare (operl_of ``0 + SUC 0 * 0 = 0``);
 val randtnn = random_tnn (8,1) operl;
-val bsize = 10000;
-val schedule = [(10,0.1)];
-
-use_thread_flag := true;
+val bsize = 64;
+val schedule = [(1,0.1 / (Real.fromInt bsize))];
+use_thread_flag := false;
 val ncore = 1;
 val _ = prepare_train_tnn (ncore,bsize) randtnn (trainset,testset) schedule;
+
 val ncore = 2;
 val _ = prepare_train_tnn (ncore,bsize) randtnn (trainset,testset) schedule;
 val ncore = 3;

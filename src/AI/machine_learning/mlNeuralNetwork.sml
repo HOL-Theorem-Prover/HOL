@@ -131,42 +131,32 @@ fun bp_nn fpdatal expectv =
     rev (bp_nn_aux rev_fpdatal doutnv)
   end
 
-(*---------------------------------------------------------------------------
-  Average the updates over a batch.
-  --------------------------------------------------------------------------- *)
+(* -------------------------------------------------------------------------
+   Average the updates over a batch.
+   ------------------------------------------------------------------------- *)
 
 fun train_nn_one nn (inputv,expectv) =
   let val fpdatal = fp_nn nn inputv in
     bp_nn fpdatal expectv
   end
 
-fun regroup_by_layers nndwl = case nndwl of
-    [] => raise ERR "regroup_by_layers" ""
-  | [] :: cont => []
-  | (a :: m) :: cont => map hd nndwl :: regroup_by_layers (map tl nndwl)
+fun transpose_ll ll = case ll of
+    [] :: _ => []
+  | _ => map hd ll :: transpose_ll (map tl ll) 
 
-fun average_dwl dwl =
-  let fun f i j = average_real (map (fn w => mat_sub w i j) dwl) in
-    mat_tabulate f (mat_dim (hd dwl))
-  end
-
-fun average_dwll dwll = map average_dwl (regroup_by_layers dwll)
 
 fun sum_dwl dwl =
   let fun f i j = sum_real (map (fn w => mat_sub w i j) dwl) in
     mat_tabulate f (mat_dim (hd dwl))
   end
 
-fun sum_dwll dwll = map sum_dwl (regroup_by_layers dwll)
+fun sum_dwll dwll = map matl_add (transpose_ll dwll)
 
-fun average_bpdatall size bpdatall =
-  let
-    val invsize  = 1.0 / (Real.fromInt size)
-    val dwll     = map (map #dw) bpdatall
-    val dwl1     = sum_dwll dwll
-    val dwl2     = map (mat_smult invsize) dwl1
-  in
-    dwl2
+val sum_timer = ref 0.0
+
+fun sum_bpdatall bpdatall =
+  let val dwll = map (map #dw) bpdatall in
+    total_time sum_timer sum_dwll dwll
   end
 
 (* -------------------------------------------------------------------------
@@ -209,16 +199,15 @@ fun update_nn nn wu = map update_layer (combine (nn,wu))
 fun train_nn_batch batch nn =
   let
     val bpdatall = map (train_nn_one nn) batch
-    val dwl      = average_bpdatall (length batch) bpdatall
+    val dwl      = sum_bpdatall bpdatall
     val newnn    = update_nn nn dwl
   in
     (newnn, average_loss bpdatall)
   end
 
 fun train_nn_epoch_aux lossl nn batchl  = case batchl of
-    [] =>
-    (print_endline ("loss: " ^ Real.toString (average_real lossl));
-     nn)
+    [] => (print_endline ("loss: " ^ Real.toString (average_real lossl));
+           nn)
   | batch :: m =>
     let val (newnn,loss) = train_nn_batch batch nn in
       train_nn_epoch_aux (loss :: lossl) newnn m

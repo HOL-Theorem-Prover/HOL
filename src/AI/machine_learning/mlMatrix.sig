@@ -18,6 +18,8 @@ sig
   val mat_sub      : 'a vector vector -> int -> int -> 'a
   val mat_add      :
     real vector vector -> real vector vector -> real vector vector
+  val matl_add : 
+    real vector vector list -> real vector vector
   val mat_transpose : 'a vector vector -> 'a vector vector
   val mat_random    : int * int -> real vector vector
   (* input/output *)
