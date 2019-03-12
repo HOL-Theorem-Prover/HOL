@@ -212,6 +212,20 @@ local open rich_listTheory arithmeticTheory in
     Cases_on `h = e` THEN SRW_TAC [][LIST_ELEM_COUNT_THM,BAG_INSERT,ADD1]);
 end
 
+Theorem LIST_TO_BAG_SUB_BAG_FLAT_suff:
+  !ls1 ls2. LIST_REL (\l1 l2. LIST_TO_BAG l1 <= LIST_TO_BAG l2) ls1 ls2 ==>
+            LIST_TO_BAG (FLAT ls1) <= LIST_TO_BAG (FLAT ls2)
+Proof
+  Induct_on ‘LIST_REL’ >> srw_tac [bagLib.SBAG_SOLVE_ss] [LIST_TO_BAG_APPEND]
+QED
+
+Theorem LIST_TO_BAG_SUBSET:
+  !l1 l2. LIST_TO_BAG l1 <= LIST_TO_BAG l2 ==> set l1 SUBSET set l2
+Proof
+  Induct >> rw[LIST_TO_BAG_def] >> imp_res_tac BAG_INSERT_SUB_BAG_E >>
+  imp_res_tac IN_LIST_TO_BAG >> fs[]
+QED
+
 (*---------------------------------------------------------------------------*)
 (* Following packaging of multiset order applied to lists is easier to use   *)
 (* in some termination proofs, typically those of worklist algorithms, where *)

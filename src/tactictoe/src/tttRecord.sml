@@ -162,7 +162,7 @@ fun wrap_tactics_in name qtac goal =
         total_time replay_time
         (timeout (!ttt_recproof_time) final_tac) goal
     in
-      if gl = []
+      if null gl
         then (
              success_flag := SOME (gl,v);
              n_replay_glob := (!n_replay_glob + 1)
@@ -242,7 +242,8 @@ fun record_proof name lflag tac1 tac2 g =
         let
           val _ = if eval_ignore then () else
             let val (thmdata,tacdata) = (create_thmdata (), !tacdata_glob) in
-              (valOf (!ttt_evalfun_glob)) (thmdata,tacdata) g
+              (valOf (!ttt_evalfun_glob)) (thmdata,tacdata)
+              (current_theory (), name) g
             end
           val (r,t) = add_time tac1 g
           val _ = debug ("Recording proof time: " ^ Real.toString t)

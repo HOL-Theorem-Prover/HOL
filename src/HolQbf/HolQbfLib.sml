@@ -80,13 +80,13 @@ structure HolQbfLib :> HolQbfLib = struct
      assumptions. *)
   fun decide t =
   let
-    open Thm Drule boolSyntax
+    open Thm Drule boolSyntax boolLib
     val fvs = Term.free_vars t
     val t = list_mk_forall (fvs,t)
     val tt = QbfConv.qbf_prenex_conv t
     val t' = rhs (concl tt)
-    in if t' = T then SPECL fvs (EQ_MP (SYM tt) boolTheory.TRUTH) else
-       if t' = F then EQ_MP tt (ASSUME t) else let
+    in if Teq t' then SPECL fvs (EQ_MP (SYM tt) boolTheory.TRUTH) else
+       if Feq t' then EQ_MP tt (ASSUME t) else let
     val (dict, cert) = get_certificate t'
     val th = QbfCertificate.check t' dict cert
   in case cert of

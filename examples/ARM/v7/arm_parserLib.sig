@@ -8,6 +8,9 @@ sig
     | Word of Abbrev.term list
     | Instruction of Abbrev.term * Abbrev.term * Abbrev.term
 
+  val arm_code_eq : arm_code -> arm_code -> bool
+  val arm_code_cmp : arm_code * arm_code -> order
+
   val expr : int -> string
   val calc_itstate : string * string -> int
 

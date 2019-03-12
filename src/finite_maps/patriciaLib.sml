@@ -69,10 +69,13 @@ fun every_leaf P Empty = true
   | every_leaf P (Leaf (j, d)) = P j d
   | every_leaf P (Branch (p, m, l, r)) = every_leaf P l andalso every_leaf P r
 
+fun is_Empty Empty = true
+  | is_Empty _ = false
+
 fun is_ptree Empty = true
   | is_ptree (Leaf (k, d)) = true
   | is_ptree (Branch (p, m, l, r)) =
-      lt_2exp p m andalso l <> Empty andalso r <> Empty andalso
+      lt_2exp p m andalso not(is_Empty l) andalso not(is_Empty r) andalso
       every_leaf (fn k => fn d => mod_2exp_eq m k p andalso bit m k) l andalso
       every_leaf (fn k => fn d => mod_2exp_eq m k p andalso not (bit m k)) r
       andalso is_ptree l andalso is_ptree r

@@ -47,6 +47,7 @@ fun die s =
 (* provable terms: theorem expected *)
 fun expect_thm name smt_tac t =
   let
+    open boolLib
     val thm = Tactical.TAC_PROOF (([], t), smt_tac)
       handle Feedback.HOL_ERR {origin_structure, origin_function, message} =>
         die ("Test of solver '" ^ name ^ "' failed on term '" ^
@@ -54,7 +55,7 @@ fun expect_thm name smt_tac t =
           origin_structure ^ "." ^ origin_function ^ ", message: " ^ message ^
           ")")
   in
-    if Thm.hyp thm = [] andalso Thm.concl thm = t then ()
+    if null (Thm.hyp thm) andalso Thm.concl thm ~~ t then ()
     else
       die ("Test of solver '" ^ name ^ "' failed on term '" ^
         Hol_pp.term_to_string t ^ "': theorem differs (" ^

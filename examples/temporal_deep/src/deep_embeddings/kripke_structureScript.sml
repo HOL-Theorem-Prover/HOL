@@ -874,12 +874,8 @@ val IS_BISIMULATION_RELATION_def =
       (\s1 s2. P s2 s1))`;
 
 
-
-
-val IS_BISIMULATION_RELATION___DIRECT_DEF =
-  store_thm (
-    "IS_BISIMULATION_RELATION___DIRECT_DEF",
-    ``!K1 K2 P.
+Theorem IS_BISIMULATION_RELATION___DIRECT_DEF:
+    !K1 K2 P.
         (IS_WELL_FORMED_KRIPKE_STRUCTURE K1 /\
          IS_WELL_FORMED_KRIPKE_STRUCTURE K2) ==>
 
@@ -892,8 +888,8 @@ val IS_BISIMULATION_RELATION___DIRECT_DEF =
           (!s2 s2' s1. (P s1 s2 /\ (s2, s2') IN K2.R) ==>
                   ?s1'. (P s1' s2'/\ (s1, s1') IN K1.R)) /\
           (!s1. s1 IN K1.S0 ==> ?s2. s2 IN K2.S0 /\ P s1 s2) /\
-          (!s2. s2 IN K2.S0 ==> ?s1. s1 IN K1.S0 /\ P s1 s2)))``,
-
+          (!s2. s2 IN K2.S0 ==> ?s1. s1 IN K1.S0 /\ P s1 s2)))
+Proof
     SIMP_TAC std_ss [IS_BISIMULATION_RELATION_def,
                      IS_SIMULATION_RELATION_def,
                      IS_WELL_FORMED_KRIPKE_STRUCTURE_def] THEN
@@ -902,18 +898,14 @@ val IS_BISIMULATION_RELATION___DIRECT_DEF =
     EQ_TAC THEN REPEAT STRIP_TAC THENL [
       PROVE_TAC[SET_EQ_SUBSET],
       SIMP_ALL_TAC std_ss [EXTENSION, IN_INTER, SUBSET_DEF] THEN  METIS_TAC[],
-      PROVE_TAC[],
-      PROVE_TAC[],
       PROVE_TAC[SET_EQ_SUBSET],
       SIMP_ALL_TAC std_ss [EXTENSION, IN_INTER, SUBSET_DEF] THEN  METIS_TAC[],
       PROVE_TAC[SET_EQ_SUBSET],
-      PROVE_TAC[],
-      PROVE_TAC[],
       SIMP_ALL_TAC std_ss [EXTENSION, IN_INTER, SUBSET_DEF] THEN  METIS_TAC[],
       PROVE_TAC[],
-      PROVE_TAC[]
-    ]);
-
+      SIMP_ALL_TAC std_ss [EXTENSION, IN_INTER, SUBSET_DEF] THEN  METIS_TAC[]
+    ]
+QED
 
 val IS_BISIMULATION_RELATION___SYM =
   store_thm (

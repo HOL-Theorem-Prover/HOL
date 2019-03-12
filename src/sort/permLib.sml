@@ -455,12 +455,13 @@ end;
    val t = ``((TAKE n l)++l2++x::l3++(DROP n l))``
    val t = ``((TAKE n l)++(DROP m l2)++l2++x::l3++(TAKE m l2)++(DROP n l))``
 *)
+fun tmpair_eq (t1,t2) (ta,tb) = t1 ~~ ta andalso t2 ~~ tb
 fun PERM_TAKE_DROP t =
    let
       val (_, ls) = strip_perm_list t;
       val drop_ls = mapfilter listSyntax.dest_drop ls
       val take_ls = mapfilter listSyntax.dest_take ls
-      val common = first (fn e => mem e drop_ls) take_ls;
+      val common = first (fn e => op_mem tmpair_eq e drop_ls) take_ls;
 
       val common_t = listSyntax.mk_append (listSyntax.mk_take common, listSyntax.mk_drop common);
       val thm0 = PERM_SPLIT common_t t;
@@ -698,7 +699,7 @@ conv ``(PERM l1 m1 /\
 *)
 
 fun SORTED_CONV conv = let
-    fun safe_conv t = if is_conj t orelse t = ``T``
+    fun safe_conv t = if is_conj t orelse t ~~ boolSyntax.T
         then NO_CONV t else CHANGED_CONV conv t
   in
     REWRITE_CONV [SORTED_DEF]
@@ -718,7 +719,7 @@ fun ALL_DISTINCT_CONV rel_thm ord_f conv tm = let
         handle HOL_ERR _ => raise UNCHANGED
     val xs_ord = sort ord_f xs
     val xs_ord_t = listSyntax.mk_list (xs_ord, elT)
-    val part1 = if xs_ord = xs then (fn t => raise UNCHANGED)
+    val part1 = if list_eq aconv xs_ord xs then (fn t => raise UNCHANGED)
       else (fn t => sortingTheory.ALL_DISTINCT_PERM
           |> ISPEC xs_t |> SPEC xs_ord_t
           |> ASSUM_BY_CONV PERM_ELIM_DUPLICATES_CONV)

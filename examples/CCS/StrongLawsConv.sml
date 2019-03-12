@@ -57,17 +57,19 @@ fun STRONG_SUM_NIL_CONV tm =
 
 (* Find repeated occurrences of a summand to be then deleted by applying
    STRONG_SUM_IDEMP. *)
-fun STRONG_FIND_IDEMP tm l = let
+fun STRONG_FIND_IDEMP tm l =
+  let
     val h::t = l
-in
-    if (null t) then
-        failwith "term not a CCS summation"
+  in
+    if null t then
+      failwith "term not a CCS summation"
     else
-        let val tm' = fst (args_sum tm)
-        in
-            if (mem h t) then
-                let val (l1, l2) = FIND_SMD [] h [] tm'
-                in
+      let
+        val tm' = fst (args_sum tm)
+      in
+        if tmem h t then
+          let val (l1, l2) = FIND_SMD [] h [] tm'
+          in
                     if (null l2) then
                         if (null l1) then
                             ISPEC h STRONG_SUM_IDEMP
@@ -137,14 +139,14 @@ fun STRONG_RESTR_ELIM_CONV tm =
                       let val l = arg_action u;
                           val thm = Label_IN_CONV l L
                       in
-                          if (rconcl thm = ``T``) then
+                          if Teq (rconcl thm) then
                               ISPEC P' (MP (ISPECL [l, L] STRONG_RESTR_PR_LAB_NIL)
                                           (DISJ1 (EQT_ELIM thm) ``COMPL_LAB ^l IN ^L``))
                           else
                               let val thmc = REWRITE_RHS_RULE [COMPL_LAB_def] (REFL ``COMPL_LAB ^l``);
                                   val thm' = Label_IN_CONV (rconcl thmc) L
                               in
-                                  if (rconcl thm' = ``T``) then
+                                  if Teq (rconcl thm') then
                                       ISPEC P' (MP (ONCE_REWRITE_RULE [COMPL_LAB_def]
                                                         (ISPECL [l, L] STRONG_RESTR_PR_LAB_NIL))
                                                   (DISJ2 ``^l IN ^L`` (EQT_ELIM thm')))
@@ -210,7 +212,7 @@ fun COND_EVAL_CONV (c :term) :thm =
           val thm1 = num_CONV b
           and thm2 = ISPECL [l, r] CCS_COND_CLAUSES
       in
-          if (rconcl thm1) = ``T`` then
+          if Teq (rconcl thm1) then
               SUBS [SYM thm1] (CONJUNCT1 thm2)
           else
               TRANS (SUBS [SYM thm1] (CONJUNCT2 thm2)) (COND_EVAL_CONV r)
@@ -276,9 +278,9 @@ fun PREFIX_EXTRACT tm = let
     val (opr, opd) = dest_comb tm;
     val (act, proc) = args_prefix opd
 in
-    if opr = mk_const ("PREF_ACT", type_of opr) then
+    if opr ~~ mk_const ("PREF_ACT", type_of opr) then
         ISPECL [act, proc] PREF_ACT_def
-    else if opr = mk_const ("PREF_PROC", type_of opr) then
+    else if opr ~~ mk_const ("PREF_PROC", type_of opr) then
         ISPECL [act, proc] PREF_PROC_def
     else
         failwith "PREFIX_EXTRACT"
@@ -367,10 +369,10 @@ fun STRONG_PAR_PREFIX_CONV (u, P) (v, Q) =
           let val [l1, l2] = map arg_action [u, v];
               val thmc = REWRITE_RHS_RULE [COMPL_LAB_def] (REFL ``^l1 = COMPL ^l2``)
           in
-              if (rconcl thmc = ``T``) then (* synchronization between l1 and l2 *)
-                  ISPECL [P, Q] (MP (ISPECL [l1, l2] STRONG_PAR_PREF_SYNCR)
-                                   (EQT_ELIM thmc))
-              else (* no synchronization between l1 and l2 *)
+            if Teq (rconcl thmc) then (* synchronization between l1 and l2 *)
+              ISPECL [P, Q] (MP (ISPECL [l1, l2] STRONG_PAR_PREF_SYNCR)
+                                (EQT_ELIM thmc))
+            else (* no synchronization between l1 and l2 *)
                   let val thm_lab = TRANS thmc (Label_EQ_CONV (rconcl thmc)) in
                       ISPECL [P, Q] (MP (ISPECL [l1, l2] STRONG_PAR_PREF_NO_SYNCR)
                                        (EQF_ELIM thm_lab))

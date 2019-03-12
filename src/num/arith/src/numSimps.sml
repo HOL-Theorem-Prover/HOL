@@ -348,7 +348,7 @@ fun contains_minus t = List.exists numSyntax.is_minus (numSyntax.strip_plus t)
 fun CTXT_ARITH thms tm =
   if
     (type_of tm = Type.bool) andalso
-    (is_arith tm orelse (tm = F andalso not (null thms)))
+    (is_arith tm orelse (aconv tm F andalso not (null thms)))
   then let
       val context = map concl thms
       fun try gl = let
@@ -361,7 +361,7 @@ fun CTXT_ARITH thms tm =
       val thm = if not (is_conj tm) then
                   EQT_INTRO (try tm)
                   handle (e as HOL_ERR _) =>
-                         if tm <> F andalso not (is_disj tm) then
+                         if not (aconv tm F) andalso not (is_disj tm) then
                            EQF_INTRO (try(mk_neg tm))
                          else raise e
                 else EQF_INTRO (try (mk_neg tm))
@@ -461,7 +461,7 @@ val (CACHED_ARITH,arith_cache) = let
   in
     (ty = num_ty andalso not (is_boring tm))
          orelse
-    (ty=Type.bool andalso (is_arith tm orelse tm = F))
+    (ty=Type.bool andalso (is_arith tm orelse aconv tm F))
   end
 in
   RCACHE (dp_vars, check, CTXT_ARITH)
@@ -560,9 +560,9 @@ fun eliminate_single_SUC th = let
   val lsucs = find_terms (fn t => is_suc t andalso is_var (rand t)) l
   fun is_v_sucless v t =
       case dest_term t of
-        COMB(f, x) => if x = v then not (f = suc_tm)
+        COMB(f, x) => if aconv x v then not (aconv f suc_tm)
                       else is_v_sucless v f orelse is_v_sucless v x
-      | VAR _ => t = v
+      | VAR _ => aconv t v
       | LAMB(bv, body) => free_in v t andalso is_v_sucless v body
       | CONST _ => false
   val v = rand (valOf (List.find (not o C is_v_sucless l o rand) lsucs))

@@ -41,12 +41,12 @@ sig
   val bp_nn_wocost : fpdata list -> real vector -> bpdata list
 
   (* weight updates *)
-  val update_nn        : nn -> real vector vector list -> nn
-  val average_bpdatall : int -> bpdata list list -> real vector vector list
-  val average_dwll     : real vector vector list list -> real vector vector list
-  val sum_dwll         : real vector vector list list -> real vector vector list
-  val calc_loss        : real vector -> real
-  val average_loss     : bpdata list list -> real
+  val update_nn         : nn -> real vector vector list -> nn
+  val average_bpdatall  : int -> bpdata list list -> real vector vector list
+  val average_dwll      : real vector vector list list -> real vector vector list
+  val sum_dwll          : real vector vector list list -> real vector vector list
+  val mean_square_error : real vector -> real
+  val average_loss      : bpdata list list -> real
 
   (* training schedule *)
   val train_nn_epoch  : nn -> (real vector * real vector) list list -> nn

@@ -2061,31 +2061,33 @@ fun sexp_lets exp = let
     if is_var tm then [] else let
       val (xs,rest) = pairSyntax.dest_anylet tm
       val (lhs,rhs) = hd xs
-      in if not (mem v (free_vars rest)) then [] else
+      in if not (tmem v (free_vars rest)) then [] else
            free_vars lhs @ all_clashes v rest end
   fun select_reg lhs tm = let
     val vs = free_vars tm
-    val possible_regs = if is_var tm then regs else filter (fn x => not (mem x vs)) regs
+    val possible_regs = if is_var tm then regs
+                        else filter (fn x => tmem x vs) regs
     val clashes = all_clashes lhs tm
-    in hd (filter (fn x => not (mem x clashes)) regs) end
+    in hd (filter (fn x => not (tmem x clashes)) regs) end
   fun build ([],v) = v
     | build ((lhs,rhs)::xs,v) =
-        if mem lhs regs then pairSyntax.mk_anylet([(lhs,rhs)],build (xs,v)) else let
-        val tm = build (xs,v)
-        val reg_name = select_reg lhs tm
-        val tm = subst [lhs |-> reg_name] tm
+        if tmem lhs regs then pairSyntax.mk_anylet([(lhs,rhs)],build (xs,v))
+        else let
+          val tm = build (xs,v)
+          val reg_name = select_reg lhs tm
+          val tm = subst [lhs |-> reg_name] tm
         in pairSyntax.mk_anylet([(reg_name,rhs)],tm) end
   fun clean_up tm =
     if is_var tm then tm else let
       val (xs,rest) = pairSyntax.dest_anylet tm
       val rest = clean_up rest
       val (lhs,rhs) = hd xs
-      in if lhs = rhs then rest else
+      in if lhs ~~ rhs then rest else
            pairSyntax.mk_anylet([(lhs,rhs)],rest) end
   val full = clean_up o build o flatten o expand
   val result = full exp
   val thm = SIMP_CONV std_ss [LET_DEF] (mk_eq(result,expand exp))
-  val _ = (cdr (concl thm) = ``T``) orelse fail()
+  val _ = (cdr (concl thm) ~~ ``T``) orelse fail()
   in result end
 
 val (_,mc_expand_macro_def,mc_expand_macro_pre_def) = compile "x64" ``

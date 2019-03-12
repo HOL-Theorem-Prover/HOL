@@ -1,5 +1,6 @@
 open HolKernel Parse boolLib bossLib sptreeSyntax testutils
 open totoTheory  totoTacs tcTacs enumTacs fmapalTacs;
+open alist_treeLib
 
 fun testeval (s, t, expected) =
   let

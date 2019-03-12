@@ -60,9 +60,9 @@ fun CoreDPLL form = let
   fun recurse th = let
     val c = concl th
   in
-    if c = boolSyntax.T then
+    if c ~~ boolSyntax.T then
       mk_satmap th
-    else if c = boolSyntax.F then
+    else if c ~~ boolSyntax.F then
       Unsat th
     else let
         val v = find_splitting_var c
@@ -143,8 +143,8 @@ in
 end handle HOL_ERR _ =>
            if type_of t <> bool then
              raise mk_HOL_ERR "dpll" "var_leaves" "Term not boolean"
-           else if t = boolSyntax.T then acc
-           else if t = boolSyntax.F then acc
+           else if t ~~ boolSyntax.T then acc
+           else if t ~~ boolSyntax.F then acc
            else HOLset.add(acc, t)
 
 fun DPLL_TAUT tm =

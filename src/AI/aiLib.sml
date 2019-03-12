@@ -81,7 +81,7 @@ fun compare_rmax ((_,r2),(_,r1)) = Real.compare (r1,r2)
 fun compare_rmin ((_,r1),(_,r2)) = Real.compare (r1,r2)
 
 (* -------------------------------------------------------------------------
-    Dictionaries shortcuts
+    Dictionaries
    ------------------------------------------------------------------------- *)
 
 fun dfind k m  = Redblackmap.find (m,k)
@@ -100,7 +100,7 @@ fun dkeys d    = map fst (dlist d)
 
 fun inv_dict cmp d = dnew cmp (map (fn (a,b) => (b,a)) (dlist d))
 
-(* one to many transformations *)
+(* list of values *)
 fun dregroup cmp l =
   let
     val d = ref (dempty cmp)
@@ -112,17 +112,32 @@ fun dregroup cmp l =
     app update l; !d
   end
 
-fun distrib l = case l of
-    [] => []
-  | (a,al) :: m => map (fn x => (a,x)) al @ distrib m
+fun distrib l = (* inverse of dregroup *)
+  let fun f (a,al) = map (fn x => (a,x)) al in List.concat (map f l) end
+
+fun dappend (k,v) d =
+  let val oldl = dfind k d handle NotFound => [] in
+    dadd k (v :: oldl) d
+  end
+
+fun dappendl kvl d = foldl (uncurry dappend) d kvl
+
+
+
+fun dconcat cmp dictl =
+  let
+    val l0 = List.concat (map dlist dictl)
+    val l1 = distrib l0
+  in
+    dappendl l1 (dempty cmp)
+  end
 
 (* sets *)
 fun dset cmp l = dnew cmp (map (fn x => (x,())) l)
 fun daddset l d = daddl (map (fn x => (x,())) l) d
-
-(* more *)
 fun union_dict cmp dl = dnew cmp (List.concat (map dlist dl))
 
+(* multi sets *)
 fun count_dict startdict l =
   let
     fun f (k,dict) =
@@ -222,7 +237,7 @@ fun dict_sort compare l =
 
 fun mk_string_set l = mk_fast_set String.compare l
 fun mk_term_set l = mk_fast_set Term.compare l
-
+fun mk_type_set l = mk_fast_set Type.compare l
 
 fun fold_left f l orig = case l of
     [] => orig
@@ -232,21 +247,30 @@ fun list_diff l1 l2 = filter (fn x => not (mem x l2)) l1
 
 fun subset l1 l2 = all (fn x => mem x l2) l1
 
-fun topo_sort graph =
-  let val (topl,downl) = List.partition (fn (x,xl) => null xl) graph in
+fun topo_sort cmp graph =
+  let
+    val (topl,downl) = List.partition (fn (x,xl) => null xl) graph
+    fun list_diff l1 l2 =
+        let
+          open HOLset
+        in
+          listItems (difference (fromList cmp l1, fromList cmp l2))
+        end
+  in
     case (topl,downl) of
-    ([],[]) => []
-  | ([],_)  => raise ERR "topo_sort" "loop or missing nodes"
-  | _       =>
-    let
-      val topl' = List.map fst topl
-      val graph' = List.map (fn (x,xl) => (x,list_diff xl topl')) downl
-    in
-      topl' @ topo_sort graph'
-    end
+        ([],[]) => []
+      | ([],_)  => raise ERR "topo_sort" "loop or missing nodes"
+      | _       =>
+        let
+          val topl' = List.map fst topl
+          val graph' = List.map (fn (x,xl) => (x,list_diff xl topl')) downl
+        in
+          topl' @ topo_sort cmp graph'
+        end
   end
 
-fun sort_thyl thyl = topo_sort (map (fn x => (x, ancestry x)) thyl)
+fun sort_thyl thyl =
+    topo_sort String.compare (map (fn x => (x, ancestry x)) thyl)
 
 (* keeps the order *)
 fun mk_batch_aux size acc res l =
@@ -274,9 +298,16 @@ fun duplicate n l =
 
 fun indent n = implode (duplicate n [#" "])
 
-(* ---------------------------------------------------------------------------
+fun list_combine ll = case ll of
+    [] => []
+  | [l] => map (fn x => [x]) l
+  | l :: m => let val m' = list_combine m in
+                map (fn (a,b) => a :: b) (combine (l,m'))
+              end
+
+(* --------------------------------------------------------------------------
    Parsing
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------- *)
 
 datatype lisp = Lterm of lisp list | Lstring of string
 
@@ -291,9 +322,14 @@ fun lisp_aux acc sl = case sl of
 
 fun lisp_of sl = fst (lisp_aux [] sl)
 
+fun lisp_lower_case s =
+  if String.sub (s,0) = #"\""
+  then s
+  else String.translate (Char.toString o Char.toLower) s
+
 fun strip_lisp x = case x of
-    Lterm (Lstring x :: m) => (x, m)
-  | Lstring x              => (x ,[])
+    Lterm (Lstring x :: m) => (lisp_lower_case x, m)
+  | Lstring x              => (lisp_lower_case x ,[])
   | _                      => raise ERR "strip_lisp" "operator is a comb"
 
 fun rec_fun_type n ty =
@@ -400,7 +436,7 @@ fun string_of_goal (asm,w) =
     val mem = !show_types
     val _   = show_types := false
     val s   =
-      (if asm = []
+      (if null asm
          then "[]"
          else "[``" ^ String.concatWith "``,``" (map term_to_string asm) ^
               "``]")
@@ -417,6 +453,19 @@ fun only_concl x =
     if null a then b else raise ERR "only_concl" ""
   end
 
+fun tts tm = case dest_term tm of
+    VAR(Name,Ty)       => Name
+  | CONST{Name,Thy,Ty} => Name
+  | COMB _ =>
+    let val (oper,argl) = strip_comb tm in
+      case argl of
+        [a,b] => "(" ^ String.concatWith " " (map tts [a,oper,b]) ^ ")"
+      | _ => "(" ^ String.concatWith " " (map tts (oper :: argl)) ^ ")"
+    end
+  | LAMB(Var,Bod)      => "(LAMB " ^ tts Var ^ "." ^ tts Bod ^ ")"
+
+fun its i = int_to_string i
+fun rts r = Real.toString r
 
 (* -------------------------------------------------------------------------
    I/O
@@ -466,6 +515,13 @@ fun write_file file s =
   let val oc = TextIO.openOut file in
     TextIO.output (oc,s); TextIO.closeOut oc
   end
+
+fun stream_to_string path f =
+  let val oc = TextIO.openOut path in
+    f oc; TextIO.closeOut oc; readl path
+  end
+
+
 
 fun erase_file file = write_file file "" handle _ => ()
 
@@ -666,6 +722,13 @@ fun shuffle l =
       map fst (dict_sort compare_rmin l')
   end
 
+fun random_elem l = hd (shuffle l)
+  handle Empty => raise ERR "random_elem" "empty"
+
+fun random_int (a,b) =
+  if a > b then raise ERR "random_int" ""
+  else a + random_elem (List.tabulate ((b - a + 1),I))
+
 fun cumul_proba (tot:real) l = case l of
     [] => []
   | (mv,p) :: m => (mv, tot + p) :: cumul_proba (tot + p) m
@@ -682,6 +745,9 @@ fun select_in_distrib l =
   in
     find_cumul (random_real () * tot) l'
   end
+
+fun random_percent percent l =
+  part_n (Real.floor (percent * Real.fromInt (length l))) (shuffle l)
 
 (* -------------------------------------------------------------------------
    Parallelism
@@ -715,6 +781,8 @@ fun interruptkill worker =
      end
 
 fun compare_imin (a,b) = Int.compare (snd a, snd b)
+
+val attrib = [Thread.InterruptState Thread.InterruptAsynch, Thread.EnableBroadcastInterrupt true]
 
 fun parmap_err ncores forg lorg =
   let
@@ -753,7 +821,7 @@ fun parmap_err ncores forg lorg =
             process pi
           end
       end
-    fun fork_on pi = Thread.fork (fn () => process pi, [])
+    fun fork_on pi = Thread.fork (fn () => process pi, attrib)
     val threadl = map fork_on (List.tabulate (ncores,I))
     fun loop () =
       (

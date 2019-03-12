@@ -106,7 +106,7 @@ val _ = add_numeral_form (#"n", NONE);
 
 val _ = set_fixity "-" (Infixl 500);
 val _ = Unicode.unicode_version {u = UTF8.chr 0x2212, tmnm = "-"};
-val _ = TeX_notation {hol = UTF8.chr 0x2212, TeX = ("\\ensuremath{-}", 1)}
+val _ = TeX_notation {hol = "-", TeX = ("\\ensuremath{-}", 1)}
 
 val SUB = new_recursive_definition
    {name = "SUB",
@@ -2613,6 +2613,13 @@ val SUB_ELIM_THM = store_thm ("SUB_ELIM_THM",
       DISCH_THEN(MATCH_MP_TAC o CONJUNCT2)]] THEN
   ASM_REWRITE_TAC[]);
 
+(* |- P (a - b) <=> (?d. (b = a + d) /\ P 0) \/ (?d. (a = b + d) /\ P d) *)
+Theorem SUB_ELIM_THM_EXISTS =
+  SUB_ELIM_THM |> AP_TERM “$~”
+               |> CONV_RULE (RAND_CONV (SIMP_CONV bool_ss [EXISTS_OR_THM]))
+               |> Q.INST [‘P’ |-> ‘\n. ~P n’]
+               |> SIMP_RULE bool_ss []
+
 val PRE_ELIM_THM = store_thm ("PRE_ELIM_THM",
   “P (PRE n) = !m. ((n = 0) ==> P 0) /\ ((n = SUC m) ==> P m)”,
   SPEC_TAC(“n:num”,“n:num”) THEN INDUCT_TAC THEN
@@ -2774,6 +2781,20 @@ val X_LE_X_EXP = store_thm ("X_LE_X_EXP",
   REWRITE_TAC [ZERO_LESS_EQ, LE_MULT_CANCEL_LBARE, NOT_SUC, ZERO_LT_EXP,
                LESS_0]);
 
+Theorem X_LE_X_SQUARED[simp]:
+  x <= x ** 2
+Proof
+  irule X_LE_X_EXP >> REWRITE_TAC[TWO, prim_recTheory.LESS_0]
+QED
+
+Theorem X_LT_X_SQUARED[simp]:
+  x < x ** 2 <=> 1 < x
+Proof
+  REWRITE_TAC[EXP,TWO,EXP_1,LT_MULT_CANCEL_LBARE] >> EQ_TAC >> STRIP_TAC >>
+  ASM_REWRITE_TAC[] >> irule LESS_TRANS >> Q.EXISTS_TAC ‘1’ >>
+  ASM_REWRITE_TAC[] >> ASM_REWRITE_TAC[ONE,LESS_0]
+QED
+
 val X_LT_EXP_X = Q.store_thm ("X_LT_EXP_X",
    `1 < b ==> x < b ** x`,
    Q.ID_SPEC_TAC `x` THEN INDUCT_TAC THEN1
@@ -2909,6 +2930,14 @@ val EXP_BASE_MULT = store_thm ("EXP_BASE_MULT",
 val EXP_EXP_MULT = store_thm ("EXP_EXP_MULT",
  “!z x y. x ** (y * z) = (x ** y) ** z”,
   INDUCT_TAC THEN ASM_REWRITE_TAC [EXP, MULT_CLAUSES, EXP_1, EXP_ADD]);
+
+Theorem SUM_SQUARED:
+  (x + y) ** 2 = x ** 2 + 2 * x * y + y ** 2
+Proof
+  REWRITE_TAC[EXP,TWO,ONE,MULT_CLAUSES, ADD_CLAUSES, RIGHT_ADD_DISTRIB,
+              LEFT_ADD_DISTRIB] >>
+  SIMP_TAC bool_ss [AC ADD_COMM ADD_ASSOC, AC MULT_COMM MULT_ASSOC]
+QED
 
 (* ********************************************************************** *)
 (* Maximum and minimum                                                    *)

@@ -64,7 +64,9 @@ val _ = let
     val gstk = flatn gstk 2 ; val 5 = length (top_goals gstk) ;
     val gstk = expand_list (ALLGOALS (FIRST_ASSUM ACCEPT_TAC)) gstk ;
     val th = extract_thm gstk ;
-  in if (hyp th, concl th) = g then OK() else die "FAILED" end ;
+  in if pair_eq (list_eq aconv) aconv (hyp th, concl th) g then OK()
+     else die "FAILED"
+  end ;
 
 fun mkstk0 t tacopt =
   let
@@ -217,5 +219,27 @@ val _ = app (fn (w,s) => Portable.with_flag(testutils.linewidth,w) tpp s)
                   \     y = long expression ;\n\
                   \     z = long expression\n\
                   \   in\n\
-                  \     x /\\ y /\\ z)")
+                  \     x /\\ y /\\ z)"),
+             (80, ">")
             ]
+
+val _ = List.app tpp ["$var$(*\\))", "$var$((*\\z)"]
+
+val _ = let
+  open boolSyntax
+  fun parse s = trace("notify type variable guesses", 0) Parse.Term [QUOTE s]
+  fun tts t = trace("types", 1) term_to_string t
+  fun roundtrip t =
+    (tprint ("Round-tripping "^term_to_string t);
+     require_msg (check_result (aconv t)) term_to_string (parse o tts) t)
+in
+  List.app (ignore o roundtrip) [
+    mk_var(" ", alpha),
+    mk_conj(mk_var("(*", bool), mk_var("*)", bool)),
+    mk_comb(mk_var("(**", bool --> bool),
+            mk_disj(mk_var("p", bool), mk_var("**)", bool))),
+    mk_comb(mk_var("f", beta-->beta), mk_var("x", beta)),
+    list_mk_comb(mk_var("f", alpha-->(beta-->beta)),
+                 [mk_var("  ", alpha), mk_var("x", beta)])
+  ]
+end

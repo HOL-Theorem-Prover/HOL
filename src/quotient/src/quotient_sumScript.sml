@@ -25,6 +25,8 @@ val REWRITE_ALL_THM = fn th => RULE_ASSUM_TAC (REWRITE_RULE[th])
                                THEN REWRITE_TAC[th];
 
 val POP_TAC = POP_ASSUM (fn th => ALL_TAC);
+val _ = temp_set_mapped_fixity { term_name = "SUM_MAP", tok = "++",
+                                 fixity = Infixl 480}
 
 
 (* =================================================================== *)
@@ -280,7 +282,7 @@ val SUM_MAP_RSP = store_thm
    );
 
 
-
+val _ = temp_remove_termtok {term_name = "SUM_MAP", tok = "++"}
 
 
 val _ = export_theory();

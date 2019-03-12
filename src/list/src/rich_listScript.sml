@@ -3416,6 +3416,23 @@ val UNIQUE_LIST_ELEM_COUNT = store_thm (
  >> DISCH_TAC >> ASM_REWRITE_TAC []
  >> RW_TAC std_ss [UNIQUE_LENGTH_FILTER]);
 
+Theorem LIST_ELEM_COUNT_CARD_EL:
+  !ls. LIST_ELEM_COUNT x ls = CARD { n | n < LENGTH ls /\ (EL n ls = x) }
+Proof
+  Induct
+  \\ rw[LIST_ELEM_COUNT_THM]
+  \\ Q.MATCH_GOALSUB_ABBREV_TAC`_ = CARD B`
+  \\ Q.MATCH_ASMSUB_ABBREV_TAC`_ = CARD A`
+  \\ `A SUBSET count (LENGTH ls)` by simp[Abbr`A`, SUBSET_DEF]
+  \\ `B SUBSET count (SUC (LENGTH ls))` by simp[Abbr`B`, SUBSET_DEF]
+  \\ `FINITE A /\ FINITE B` by metis_tac[SUBSET_FINITE, FINITE_COUNT]
+  \\ `B = IMAGE SUC A UNION (if x = h then {0} else {})`
+  by ( simp[Abbr`A`, Abbr`B`, EXTENSION] \\ Cases \\ rw[] )
+  \\ Cases_on`x = h` \\ simp[LIST_ELEM_COUNT_THM, CARD_UNION_EQN, ADD1, CARD_INJ_IMAGE]
+  \\ `IMAGE SUC A INTER {0} = {}` by rw[EXTENSION]
+  \\ simp[]
+QED
+
 (*---------------------------------------------------------------------------*)
 (* Add evaluation theorems to computeLib.the_compset                         *)
 (*---------------------------------------------------------------------------*)

@@ -65,8 +65,8 @@ in
 end
 
 fun thy_consts s = let
-  fun f (k, info, acc) =
-      if #Thy k = s then Const info :: acc
+  fun f (k, info as (_, ty), acc) =
+      if #Thy k = s andalso Type.uptodate_type ty then Const info :: acc
       else acc
 in
   KernelSig.foldl f [] const_table
@@ -77,14 +77,15 @@ fun del_segment s = KernelSig.del_segment(const_table, s)
 fun prim_decls s = KernelSig.listName const_table s
 
 fun decls s = let
-  fun foldthis (k,v,acc) =
-      if #Name k = s then Const v::acc else acc
+  fun foldthis (k,cinfo as (_, v),acc) =
+      if #Name k = s andalso Type.uptodate_type v then Const cinfo::acc else acc
 in
   KernelSig.foldl foldthis  [] const_table
 end
 
 fun all_consts () = let
-  fun foldthis (_,v,acc) = Const v :: acc
+  fun foldthis (_,cinfo as (_, v),acc) =
+      if Type.uptodate_type v then Const cinfo :: acc else acc
 in
   KernelSig.foldl foldthis [] const_table
 end

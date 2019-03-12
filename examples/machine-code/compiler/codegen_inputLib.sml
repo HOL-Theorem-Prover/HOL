@@ -72,8 +72,12 @@ fun dest_var_char c tm =
     (string_to_int o implode o tl o explode o fst o dest_var) tm
 val dest_reg = dest_var_char #"r"
 val dest_stack = dest_var_char #"s"
-fun dest_n2w tm = if car tm = ``n2w:num->word32`` then numSyntax.dest_numeral (cdr tm) else fail()
-fun dest_n2w_byte tm = if car tm = ``n2w:num->word8`` then numSyntax.dest_numeral (cdr tm) else fail()
+fun dest_n2w tm = if car tm ~~ ``n2w:num->word32`` then
+                    numSyntax.dest_numeral (cdr tm)
+                  else fail()
+fun dest_n2w_byte tm = if car tm ~~ ``n2w:num->word8`` then
+                         numSyntax.dest_numeral (cdr tm)
+                       else fail()
 fun dest_x tm = ASSIGN_X_REG (dest_reg tm) handle e => ASSIGN_X_CONST (dest_n2w tm)
 fun dest_address tm = ASSIGN_ADDRESS_REG (dest_reg tm) handle e =>
   (if not ((fst o dest_const o car o car) tm = "word_add") then fail() else

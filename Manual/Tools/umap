@@ -26,8 +26,8 @@
 ₊ \({}\sb{+}\)
 ∅ \(\emptyset\)
 ⊢ \(\!\!\!{\turn}\!\!\!\!\)
-“ \mbox{\textrm{``}}
-” \mbox{\textrm{''}}
+“ \mbox{\textrm{\textquotedblleft}}
+” \mbox{\textrm{\textquotedblright}}
 ‘ \mbox{\textrm{`}}
 ’ \mbox{\textrm{'}}
 ³ \(\sp{3}\)
@@ -40,3 +40,5 @@
 ⦇ \(\llparenthesis\)
 ⦈ \(\rrparenthesis\)
 ↦ \(\mapsto\)
+` \`{}
+𝕌 \(\cal{U}\)

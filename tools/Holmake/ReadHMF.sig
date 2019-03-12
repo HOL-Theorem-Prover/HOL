@@ -7,7 +7,7 @@ sig
 
   val find_includes : string -> string list
   val extend_path_with_includes :
-      {quietp : bool, lpref : string list ref} -> unit
+      {verbosity : int, lpref : string list ref} -> unit
 
 end;
 

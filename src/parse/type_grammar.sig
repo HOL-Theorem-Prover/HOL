@@ -45,6 +45,7 @@ sig
 
   val apply_delta : delta -> grammar -> grammar
   val apply_deltas : delta list -> grammar -> grammar
+  val delta_toString : delta -> string
 
   val prettyprint_grammar   : grammar -> HOLPP.pretty
   val initialise_typrinter

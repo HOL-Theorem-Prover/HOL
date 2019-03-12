@@ -3,7 +3,6 @@ EXTRA_CLEANS = Doc2Html.exe Doc2Tex.exe Doc2Txt.exe makebase.exe \
                Lexer.lex.sml Parser.grm-sig.sml Parser.grm.sml
 MLYACCLIB = $(protect $(HOLDIR)/tools/mlyacc/mlyacclib/)
 MLYACCLIB_UIS = $(patsubst %,MLY_%.ui,base-sig join lrtable parser2 stream)
-BASIS02 = $(if $(HAVE_BASIS2002),,$(dprot $(SIGOBJ)/basis2002.uo))
 
 all: makebase.exe Doc2Html.exe Doc2Tex.exe Doc2Txt.exe
 
@@ -38,13 +37,13 @@ MyDatabase.uo MyDatabase.ui: MyDatabase.sml MyDatabase-sig.ui
 MyDatabase-sig.uo MyDatabase-sig.ui: MyDatabase-sig.sml
 	$(MOSMLC) -c -toplevel $<
 
-HOLPage.uo: HOLPage.sml MyDatabase.ui $(BASIS02)
+HOLPage.uo: HOLPage.sml MyDatabase.ui
 	$(HOLMOSMLC) -c MyDatabase.ui $<
 
 Htmlsigs.uo: Htmlsigs.sml Htmlsigs.ui MyDatabase.ui
 	$(HOLMOSMLC) -c MyDatabase.ui $<
 
-Htmlsigs.ui: Htmlsigs.sig MyDatabase.ui $(BASIS02)
+Htmlsigs.ui: Htmlsigs.sig MyDatabase.ui
 	$(MOSMLC) -c MyDatabase.ui $<
 
 Parsspec.uo: Parsspec.sml Parser.grm.uo Lexer.lex.ui MySML90.ui MyDatabase.ui

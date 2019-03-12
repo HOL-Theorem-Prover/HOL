@@ -729,7 +729,7 @@ in
       val name = "dfn'" ^ n
       val read = if Lib.mem n ["LD"] then [address_aligned3] else []
       val (write, n) =
-        if List.exists (Lib.mem rd0) avoid then
+        if List.exists (tmem rd0) avoid then
           ([write'GPR0], n ^ "_NOP")
         else
           ([write'GPR], n)
