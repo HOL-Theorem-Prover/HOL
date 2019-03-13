@@ -188,7 +188,7 @@ fun train_dhtnn gamespec (evalex,poliex) =
     val _ = summary ("Average duplicates: " ^ rts r1) 
     val _ = summary ("Eval examples: " ^ trainset_info evalex)
     val _ = summary ("Poli examples: " ^ trainset_info poliex)
-    val schedule = [(50,0.1 / Real.fromInt (!batchsize_glob))]
+    val schedule = [(100,0.1 / Real.fromInt (!batchsize_glob))]
     val bsize = if length evalex < (!batchsize_glob) then 1 
                 else !batchsize_glob
     val dhtnn = random_dhtnn_gamespec gamespec
@@ -504,8 +504,8 @@ open aiLib psMCTS rlGameArithGround rlEnv;
 logfile_glob := "march13";
 ncore_glob := 8;
 ngen_glob := 100;
-ntarget_compete := 100;
-ntarget_explore := 100;
+ntarget_compete := 400;
+ntarget_explore := 400;
 exwindow_glob := 40000;
 dim_glob := 8;
 batchsize_glob := 128;
