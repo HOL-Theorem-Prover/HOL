@@ -188,14 +188,13 @@ fun train_dhtnn gamespec (evalex,poliex) =
     val _ = summary ("Average duplicates: " ^ rts r1) 
     val _ = summary ("Eval examples: " ^ trainset_info evalex)
     val _ = summary ("Poli examples: " ^ trainset_info poliex)
-    val schedule = [(100,0.1)]
-    val bsize = if length evalex < (!batchsize_glob) 
-                then 1 
+    val schedule = [(50,0.1 / Real.fromInt (!batchsize_glob))]
+    val bsize = if length evalex < (!batchsize_glob) then 1 
                 else !batchsize_glob
     val dhtnn = random_dhtnn_gamespec gamespec
     val (etrain,ptrain) = (prepare_trainset evalex, prepare_trainset poliex)
   in
-     train_dhtnn_schedule (!ncore_glob) dhtnn bsize (etrain,ptrain) schedule
+    train_dhtnn_schedule (!ncore_glob) dhtnn bsize (etrain,ptrain) schedule
   end
 
 fun train_f gamespec allex =
@@ -409,14 +408,6 @@ fun compete dhtnn_old dhtnn_new gamespec targetl =
    Exploration
    ------------------------------------------------------------------------- *)
 
-fun concat_ex ((exE,exP),(allexE,allexP)) = 
-  let 
-    val (dE,dP) = (dnew Term.compare exE,dnew Term.compare exP) 
-    fun out_d d (x,_) = not (dmem x d)
-  in
-    (exE @ filter (out_d dE) allexE, exP @ filter (out_d dP) allexP)
-  end
-
 fun explore_f startb gamespec allex dhtnn targetl =
   let
     val targetl' = choose_uniform gamespec dhtnn (targetl,!ntarget_explore)
@@ -429,8 +420,14 @@ fun explore_f startb gamespec allex dhtnn targetl =
     val (exl,allrootl) = split result
     val _ = summary ("Exploration time : " ^ rts t)
     val _ = summary_wins gamespec allrootl
+    fun concat_ex ((exE,exP),(allexE,allexP)) = (exE @  allexE, exP @ allexP)
+    val exl1 = foldl concat_ex allex exl
+    fun cmp (a,b) = Term.compare (fst a,fst b)
+    (* Optional: seems to provide a little more space for more examples *)
+    val exl2 = (mk_sameorder_set cmp (fst exl1), 
+                mk_sameorder_set cmp (snd exl1))
   in
-    discard_oldex (foldl concat_ex allex exl) (!exwindow_glob)
+    discard_oldex exl2 (!exwindow_glob)
   end
 
 (* -------------------------------------------------------------------------
@@ -504,14 +501,14 @@ end (* struct *)
 app load ["rlGameArithGround","rlEnv"];
 open aiLib psMCTS rlGameArithGround rlEnv;
 
-logfile_glob := "6";
+logfile_glob := "march13";
 ncore_glob := 8;
 ngen_glob := 100;
 ntarget_compete := 100;
 ntarget_explore := 100;
 exwindow_glob := 40000;
 dim_glob := 8;
-batchsize_glob := 64;
+batchsize_glob := 128;
 nsim_glob := 1600;
 decay_glob := 0.99;
 level_glob := 1;
@@ -522,13 +519,17 @@ val allex = start_rl_loop gamespec;
 
 
 load "rlEnv"; open rlEnv;
+logfile_glob := "test_mcts_1";
 nsim_glob := 1600;
 dim_glob := 8;
-val ncorel = [32,16,8,4,2,1];
-val level = 10;
+val ncorel = [1,2,4,8];
+val level = 5;
 val bstart = false;
-val ntarget = 20;
+val ntarget = 100;
 val rl = test ncorel level bstart ntarget;
+
+(* todo: do a similar test for training with saved data *)
+
 
 *)
 

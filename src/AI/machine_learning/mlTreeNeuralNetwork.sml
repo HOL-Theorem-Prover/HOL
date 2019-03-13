@@ -317,24 +317,24 @@ fun train_tnn_one tnn (tml,expectv) =
     bp_tnn dim (fpdict,fpdatal) (tml,expectv)
   end
 
-fun update_head bsize headnn bpdatall =
+fun update_head headnn bpdatall =
   let
-    val dwl       = total_time aver_timer5 sum_bpdatall bpdatall
-    val newheadnn = total_time upd_timer5 (update_nn headnn) dwl
-    val loss      = total_time loss_timer average_loss bpdatall
+    val dwl       = sum_bpdatall bpdatall
+    val newheadnn = update_nn headnn dwl
+    val loss      = average_loss bpdatall
   in
     (newheadnn, loss)
   end
 
 fun string_of_oper (optm,i) = term_to_string optm ^ " " ^ int_to_string i
 
-fun update_opernn bsize opdict (oper,bpdatall) =
+fun update_opernn opdict (oper,bpdatall) =
   let
     val nn       = dfind oper opdict
       handle NotFound => raise ERR "update_opernn" (string_of_oper oper)
-    val dwl      = total_time aver_timer5 sum_bpdatall bpdatall
-    val loss     = total_time loss_timer average_loss bpdatall
-    val newnn    = total_time upd_timer5 (update_nn nn) dwl
+    val dwl      = sum_bpdatall bpdatall
+    val loss     = average_loss bpdatall
+    val newnn    = update_nn nn dwl
   in
     (oper,newnn)
   end
@@ -342,16 +342,11 @@ fun update_opernn bsize opdict (oper,bpdatall) =
 fun train_tnn_batch ncore (tnn as {opdict,headnn,dimin,dimout}) batch =
   let
     val (bpdictl,bpdatall) =
-      split (
-        total_time tto_timer (parmap ncore (train_tnn_one tnn)) batch
-      )
-    val bsize = length batch
-    val (newheadnn,loss) = total_time upd_timer1 
-      (update_head bsize headnn) bpdatall
-    val bpdict    = total_time upd_timer2 (dconcat oper_compare) bpdictl
-    val newnnl    = total_time upd_timer3 
-      (map (update_opernn bsize opdict)) (dlist bpdict)
-    val newopdict = total_time upd_timer4 (daddl newnnl) opdict
+      split (parmap ncore (train_tnn_one tnn) batch)
+    val (newheadnn,loss) = update_head headnn bpdatall
+    val bpdict = dconcat oper_compare bpdictl
+    val newnnl = map (update_opernn opdict) (dlist bpdict)
+    val newopdict = daddl newnnl opdict
   in
     ({opdict = newopdict, headnn = newheadnn, dimin = dimin, dimout = dimout},
       loss)
@@ -428,11 +423,10 @@ fun train_dhtnn_batch ncore dhtnn batch1 batch2 =
       split (parmap ncore (train_tnn_one tnneval) batch1)
     val (bpdictl2,bpdatall2) =
       split (parmap ncore (train_tnn_one tnnpoli) batch2)
-    val bsize = length batch1 + length batch2
-    val (newheadeval,loss1) = update_head bsize headeval bpdatall1
-    val (newheadpoli,loss2) = update_head bsize headpoli bpdatall2
+    val (newheadeval,loss1) = update_head headeval bpdatall1
+    val (newheadpoli,loss2) = update_head headpoli bpdatall2
     val bpdict = dconcat oper_compare (bpdictl1 @ bpdictl2)
-    val newnnl = map (update_opernn bsize opdict) (dlist bpdict)
+    val newnnl = map (update_opernn opdict) (dlist bpdict)
     val newopdict = daddl newnnl opdict
   in
     ({opdict = newopdict, headeval = newheadeval, headpoli = newheadpoli,

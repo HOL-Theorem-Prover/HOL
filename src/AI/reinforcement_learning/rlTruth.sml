@@ -133,7 +133,9 @@ val bsize = 128;
 val schedule = [(10,0.1 / (Real.fromInt bsize))];
 use_thread_flag := false;
 val ncore = 1;
-val _ = prepare_train_tnn (ncore,bsize) randtnn (trainset,testset) schedule;
+val _ = time 
+  (prepare_train_tnn (ncore,bsize) randtnn (trainset,testset)) schedule;
+
 val ncore = 2;
 val _ = prepare_train_tnn (ncore,bsize) randtnn (trainset,testset) schedule;
 
