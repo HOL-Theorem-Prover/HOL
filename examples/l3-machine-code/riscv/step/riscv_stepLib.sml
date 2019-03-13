@@ -299,7 +299,7 @@ local
   fun spec_run thm3 ethm =
     Conv.RIGHT_CONV_RULE
       (Conv.RAND_CONV (Conv.REWR_CONV ethm) THENC snd_conv) (ap_snd thm3)
-  fun next th = state_rule o Drule.MATCH_MP th
+  fun next th = PURE_REWRITE_RULE [word_bit_0_lemmas] o state_rule o Drule.MATCH_MP th
   val MP_Next_n = next riscv_stepTheory.NextRISCV
   val MP_Next_c = next riscv_stepTheory.NextRISCV_cond_branch
   val MP_Next_b = next riscv_stepTheory.NextRISCV_branch

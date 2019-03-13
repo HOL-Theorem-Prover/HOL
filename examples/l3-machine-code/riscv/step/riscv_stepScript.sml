@@ -136,6 +136,11 @@ val cond_rand_shift = Q.prove(
   rw []
   )
 
+val word_bit_0_lemmas = Q.store_thm("word_bit_0_lemmas",
+  `!w. ¬word_bit 0 (0xFFFFFFFFFFFFFFFEw && w:word64) /\
+       word_bit 0 ((0xFFFFFFFFFFFFFFFEw && w:word64) + v) = word_bit 0 v`,
+  blastLib.BBLAST_TAC)
+
 val cond_rand_thms =
   utilsLib.mk_cond_rand_thms
     [pairSyntax.fst_tm,
@@ -154,7 +159,8 @@ val cond_rand_thms =
 val ifTF = Q.prove(`(if b then T else F) = b`, rw [])
 
 val v2w_0_rwts = Q.store_thm("v2w_0_rwts",
-  `((v2w [F; F; F; F; F] = 0w: word5)) /\
+  `((v2w [F; F; F; F; T] = 1w: word5)) /\
+   ((v2w [F; F; F; F; F] = 0w: word5)) /\
    ((v2w [T; b3; b2; b1; b0] = 0w: word5) = F) /\
    ((v2w [b3; T; b2; b1; b0] = 0w: word5) = F) /\
    ((v2w [b3; b2; T; b1; b0] = 0w: word5) = F) /\
