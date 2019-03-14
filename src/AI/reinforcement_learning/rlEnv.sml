@@ -349,7 +349,8 @@ fun boss_readresult ((wid,job),x) =
   end
 
 fun stat_jobs (remainingl,freel,runningl,completedl) = 
-  if not (null freel) andalso not (null remainingl) then
+  if not (null freel)
+  then
     print_endline
       ("target: " ^ its (length remainingl) ^ " "  ^ 
          its (length runningl) ^ " " ^ its (length completedl) ^ 
