@@ -283,8 +283,6 @@ fun widout_file wid = gencode_dir ^ "/" ^ its wid ^ "/out"
 fun widscript_file wid = gencode_dir ^ "/" ^ its wid ^ "/script.sml"
 fun widexl_file wid = gencode_dir ^ "/" ^ its wid ^ "/exl"
 
-fun widdbg_file wid = gencode_dir ^ "/" ^ its wid ^ "/debug"
-
 (* Workers *)
 fun explore_standalone flags wid dhtnn target =
   let
@@ -299,9 +297,7 @@ fun explore_standalone flags wid dhtnn target =
     val endroot = hd rootl
     val bstatus = status_of (#sit endroot) = Win
   in
-    writel_atomic (widdbg_file wid) ["in_progress"];
     write_dhtrainset (widexl_file wid) exl;
-    writel_atomic (widdbg_file wid) ["done"];
     writel_atomic (widout_file wid) [bstatus_to_string bstatus]     
   end
 
@@ -348,9 +344,7 @@ fun boss_end ncore completedl =
 
 fun boss_readresult ((wid,job),x) =
   let 
-    val _ = print_endline "reading_start" 
     val exl = read_dhtrainset (widexl_file wid) 
-    val _ = print_endline "reading_end" 
   in
     (job, (string_to_bstatus (valOf x), exl))
   end
@@ -358,11 +352,10 @@ fun boss_readresult ((wid,job),x) =
 fun stat_jobs (remainingl,freel,runningl,completedl) = 
   if not (null freel) andalso not (null remainingl)
   then
-  (
-  print_endline ("target: " ^ its (length remainingl)
-    ^ " "  ^ its (length runningl) ^ " " ^ its (length completedl));
-  print_endline ("free core: " ^ String.concatWith " " (map its freel))
-  )
+    print_endline
+      ("target: " ^ its (length remainingl) ^ " "  ^ 
+         its (length runningl) ^ " " ^ its (length completedl) ^ ;
+       " free core: " ^ String.concatWith " " (map its freel))
   else ()
 
 fun boss_send ncore (remainingl,runningl,completedl) =
@@ -493,7 +486,7 @@ fun update_allex exll allex =
 (* todo: change allex and split it when making batches *)
 fun explore_f_aux startb gamespec allex dhtnn selectl =
   let
-    val ((nwin,exll),t) = add_time 
+    val ((nwin,exll),t) = add_time
       (boss_start (!ncore_glob) (true,startb) dhtnn) selectl 
     val _ = summary ("Exploration time: " ^ rts t)
     val _ = summary ("Exploration wins: " ^ its nwin)
@@ -563,7 +556,7 @@ end (* struct *)
 app load ["rlEnv"];
 open rlEnv;
 
-logfile_glob := "march14-02";
+logfile_glob := "march14-test";
 ncore_glob := 2;
 ngen_glob := 1;
 ntarget_compete := 100;
