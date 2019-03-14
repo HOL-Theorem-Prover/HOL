@@ -173,6 +173,8 @@ fun read_trainset file =
     val terml = mlTacticData.import_terml file_term 
   in
     combine (terml,rll)
+    handle _ => raise ERR "read_trainset" 
+     (its (length terml) ^ " " ^ its (length rll))
   end
 
 fun write_dhtrainset file (etrain,ptrain) =

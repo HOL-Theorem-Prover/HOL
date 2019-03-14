@@ -23,4 +23,7 @@ sig
   val mk_targetl : int -> board psMCTS.sit list 
   val total_cost_target : board psMCTS.sit -> int
 
+  val mk_startsit : term -> board psMCTS.sit
+  val dest_startsit : board psMCTS.sit -> term
+
 end

@@ -32,6 +32,9 @@ type pb = (term * pos)
 datatype board = Board of pb | FailBoard
 
 fun mk_startsit tm = (true, Board (tm,[]))
+fun dest_startsit target = case target of
+    (true, Board (tm,[])) => tm
+  | _ => raise ERR "dest_startsit" ""
 
 fun is_proven (tm,pos) =
   null pos andalso let val (t1,t2) = dest_eq tm in term_eq t1 t2 end
@@ -177,6 +180,7 @@ fun mk_pretargetl level =
   end
 
 fun mk_targetl level = map mk_startsit (mk_pretargetl level)
+
 
 
 (* -------------------------------------------------------------------------

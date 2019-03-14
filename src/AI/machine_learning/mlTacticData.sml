@@ -180,7 +180,7 @@ fun create_sharing_tables_feavl feavl =
 
 fun pp_tml tml =
   let
-    val ((terml,termdict),(idtable,tytable,tmtable)) =
+    val ((_,termdict),(idtable,tytable,tmtable)) =
       create_sharing_tables_termset (HOLset.fromList Term.compare tml)
     fun pp_sml_list pfun l =
       PP.block INCONSISTENT 0 (
@@ -191,7 +191,7 @@ fun pp_tml tml =
     fun raw_term_to_string term =
       quote ((Term.write_raw (fn t => Map.find(#termmap tmtable, t))) term)
     fun pp_tm tm = PP.add_string (raw_term_to_string tm)
-    val pp_terml = PP.pr_list pp_tm [PP.add_newline] terml
+    val pp_terml = PP.pr_list pp_tm [PP.add_newline] tml
   in
     PP.block CONSISTENT 0 (
       [

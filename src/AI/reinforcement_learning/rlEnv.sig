@@ -34,8 +34,11 @@ sig
   val level_glob : int ref
 
   (* external calls *)
-  val worker_start : int -> unit
-  val boss_start : int -> (int * bool) list
+  val worker_start : bool * bool -> int -> unit
+  val boss_start : int -> bool * bool ->
+    mlTreeNeuralNetwork.dhtnn ->
+    rlGameArithGround.board psMCTS.sit list ->
+    int * ((term * real list) list * (term * real list) list) list
 
   (* *)
   val random_dhtnn_gamespec : 

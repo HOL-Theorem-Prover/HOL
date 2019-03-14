@@ -45,7 +45,7 @@ val ntarget_compete = ref 400
 val ntarget_explore = ref 400
 
 val exwindow_glob = ref 40000
-val dim_glob = ref 4
+val dim_glob = ref 8
 val batchsize_glob = ref 64
 
 val nsim_glob = ref 1600
@@ -140,7 +140,6 @@ fun n_bigsteps_loop (n,nmax) gamespec mctsparam (allex,allroot) tree =
        NONE => (allex, root :: allroot)
      | SOME cid =>
         let
-          (* val _ = print_distrib (#string_of_move gamespec) dis *)
           val cuttree = cut_tree newtree cid
           val newallex = update_allex_from_tree gamespec newtree allex
         in
@@ -150,44 +149,35 @@ fun n_bigsteps_loop (n,nmax) gamespec mctsparam (allex,allroot) tree =
     end
   end
 
-(*
-print_endline "Max depth\n"; 
-
-print_endline "No move available\n";
-print_endline ("Target " ^ its ntarg);
-print_endline ("  expected proof length: " ^ its nvary);
-print_endline "MCTS: no move available\n"; 
-*)
-
 fun n_bigsteps gamespec mctsparam target =
   let 
     val tree = starttree_of mctsparam target 
-    val nvary = rlGameArithGround.total_cost_target target
-    val nvary' = 2 * nvary + 5
+    val cost1 = rlGameArithGround.total_cost_target target
+    val cost2 = 2 * cost1 + 5
   in
-    n_bigsteps_loop (0,nvary') gamespec mctsparam (emptyallex,[]) tree
+    n_bigsteps_loop (0,cost2) gamespec mctsparam (emptyallex,[]) tree
   end
 
 (* -------------------------------------------------------------------------
    Training
    ------------------------------------------------------------------------- *)
 
-fun random_dhtnn_gamespec gamespec =
-  let
-    val dimin = !dim_glob
-    val dimout = length (#movel gamespec)
-    val operl = #operl gamespec
+fun exl_stat (evalex,poliex) =
+  let  
+    val l1 = (dlist (dregroup Term.compare evalex))
+    val r1 = average_real (map (Real.fromInt o length o snd) l1)
   in
-    random_dhtnn (dimin,dimout) operl
+    summary ("Average duplicates: " ^ rts r1);
+    summary ("Eval examples: " ^ trainset_info evalex);
+    summary ("Poli examples: " ^ trainset_info poliex)
   end
+
+fun random_dhtnn_gamespec gamespec =
+  random_dhtnn (!dim_glob, length (#movel gamespec)) (#operl gamespec)
 
 fun train_dhtnn gamespec (evalex,poliex) =
   let
-    val l1 = (dlist (dregroup Term.compare evalex))
-    val r1 = average_real (map (Real.fromInt o length o snd) l1)
-    val _ = summary ("Average duplicates: " ^ rts r1) 
-    val _ = summary ("Eval examples: " ^ trainset_info evalex)
-    val _ = summary ("Poli examples: " ^ trainset_info poliex)
+    val _ = exl_stat (evalex,poliex)
     val schedule = [(100,0.1 / Real.fromInt (!batchsize_glob))]
     val bsize = if length evalex < (!batchsize_glob) then 1 
                 else !batchsize_glob
@@ -206,6 +196,7 @@ fun train_f gamespec allex =
    Results
    ------------------------------------------------------------------------- *)
 
+(* todo: should return stats and examples in file out 
 fun summary_wins gamespec allrootl =
   let
     val r0 = Real.fromInt (length allrootl)
@@ -227,6 +218,7 @@ fun summary_wins gamespec allrootl =
     summary ("  Big steps (average): " ^ rts r1);
     summary ("  Win nodes (average): " ^ rts r2)
   end
+*)
 
 (* -------------------------------------------------------------------------
    Adaptive difficulty
@@ -285,51 +277,57 @@ fun destruct_readl file =
 
 val gencode_dir = HOLDIR ^ "/src/AI/reinforcement_learning/gencode"
 val dhtnn_file = gencode_dir ^ "/dhtnn"
+val targetl_file = gencode_dir ^ "/targetl"
 fun widin_file wid = gencode_dir ^ "/" ^ its wid ^ "/in"
 fun widout_file wid = gencode_dir ^ "/" ^ its wid ^ "/out"
 fun widscript_file wid = gencode_dir ^ "/" ^ its wid ^ "/script.sml"
+fun widexl_file wid = gencode_dir ^ "/" ^ its wid ^ "/exl"
+
+fun widdbg_file wid = gencode_dir ^ "/" ^ its wid ^ "/debug"
 
 (* Workers *)
-fun explore_standalone wid dhtnn target =
+fun explore_standalone flags wid dhtnn target =
   let
+    val (noise,bstart) = flags
     val gamespec = rlGameArithGround.gamespec
     val status_of = #status_of gamespec
-    val noise = false (* Todo: turn on the noise during exploration *)
-    val bstart = false
     val mctsparam =
       (!nsim_glob, !decay_glob, noise,
        #status_of gamespec, #apply_move gamespec, 
        mk_fep_dhtnn bstart gamespec dhtnn)
-    val (_,allroot) = n_bigsteps gamespec mctsparam target
-    val endroot = hd allroot
+    val (exl,rootl) = n_bigsteps gamespec mctsparam target
+    val endroot = hd rootl
     val bstatus = status_of (#sit endroot) = Win
   in
+    writel_atomic (widdbg_file wid) ["in_progress"];
+    write_dhtrainset (widexl_file wid) exl;
+    writel_atomic (widdbg_file wid) ["done"];
     writel_atomic (widout_file wid) [bstatus_to_string bstatus]     
   end
 
-fun worker_process wid (dhtnn,targetl) i =
+fun worker_process flags wid (dhtnn,targetl) i =
   (
-  explore_standalone wid dhtnn (List.nth (targetl,i));
-  worker_listen wid (dhtnn,targetl)
+  explore_standalone flags wid dhtnn (List.nth (targetl,i));
+  worker_listen flags wid (dhtnn,targetl)
   )
 
-and worker_listen wid (dhtnn,targetl) = 
+and worker_listen flags wid (dhtnn,targetl) = 
   if exists_file (widin_file wid) 
   then 
     let val s = hd (destruct_readl (widin_file wid)) in
       if s = "stop" then () else 
-      worker_process wid (dhtnn,targetl) (string_to_int s)
+      worker_process flags wid (dhtnn,targetl) (string_to_int s)
     end 
   else (OS.Process.sleep (Time.fromReal 0.001); 
-        worker_listen wid (dhtnn,targetl))
+        worker_listen flags wid (dhtnn,targetl))
 
-(* warning : 100 hard-coded here *)
-fun worker_start wid =
+fun worker_start flags wid =
   let 
-    val targetl = first_n 100 (rlGameArithGround.mk_targetl 1)
+    val targetl = map rlGameArithGround.mk_startsit 
+      (mlTacticData.import_terml targetl_file)
     val dhtnn = read_dhtnn dhtnn_file
   in
-    worker_listen wid (dhtnn,targetl)
+    worker_listen flags wid (dhtnn,targetl)
   end
 
 (* Boss *)
@@ -338,19 +336,40 @@ fun boss_stopall ncore =
     app send_stop (List.tabulate (ncore,I))
   end
 
-fun boss_end ncore completedl  = (boss_stopall ncore; completedl)
+fun boss_end ncore completedl = 
+  let 
+    val _ = boss_stopall ncore
+    val l1 = map snd completedl
+    val nwin = length (filter (I o fst) l1)
+    val exll = map snd l1
+  in
+    (nwin,exll)
+  end
+
+fun boss_readresult ((wid,job),x) =
+  let 
+    val _ = print_endline "reading_start" 
+    val exl = read_dhtrainset (widexl_file wid) 
+    val _ = print_endline "reading_end" 
+  in
+    (job, (string_to_bstatus (valOf x), exl))
+  end
+
+fun stat_jobs (remainingl,freel,runningl,completedl) = 
+  if not (null freel) andalso not (null remainingl)
+  then
+  (
+  print_endline ("target: " ^ its (length remainingl)
+    ^ " "  ^ its (length runningl) ^ " " ^ its (length completedl));
+  print_endline ("free core: " ^ String.concatWith " " (map its freel))
+  )
+  else ()
 
 fun boss_send ncore (remainingl,runningl,completedl) =
   let
     fun is_running x = mem x (map fst runningl)
     val freel = filter (not o is_running) (List.tabulate (ncore,I))
-     val _ = 
-      if not (null freel) andalso not (null remainingl)
-      then 
-      print_endline (String.concatWith " " 
-      [its (length remainingl),
-       its (length runningl), its (length completedl)])
-      else ()
+    val _ = stat_jobs (remainingl,freel,runningl,completedl)
     val (al,remainingl_new) = part_n (length freel) remainingl
     val runningl_new = combine (first_n (length al) freel, al)
     fun send_job (wid,job) = writel_atomic (widin_file wid) [its job]
@@ -358,6 +377,7 @@ fun boss_send ncore (remainingl,runningl,completedl) =
     app send_job runningl_new;
     boss_collect ncore (remainingl_new, runningl_new @ runningl, completedl)
   end
+
 and boss_collect ncore (remainingl,runningl,completedl) =
   if null remainingl andalso null runningl 
     then boss_end ncore completedl
@@ -371,19 +391,24 @@ and boss_collect ncore (remainingl,runningl,completedl) =
       end
     val (al,bl) = partition (isSome o snd) (map_assoc f runningl)
     val runningl_new = map fst bl
-    val completedl_new = 
-      map (fn ((wid,job),x) => (job, string_to_bstatus (valOf x))) al
+    val completedl_new = map boss_readresult al
   in
     boss_send ncore (remainingl,runningl_new,completedl_new @ completedl)
   end
 
-fun boss_start_worker wid =
+fun bts b = if b then "true" else "false"
+fun flags_to_string (b1,b2) = "(" ^ bts b1 ^ "," ^  bts b2 ^ ")"
+
+fun boss_start_worker flags wid =
   let
     val codel =
-    ["open rlEnv;",
+    [
+     "open rlEnv;",
      "val _ = nsim_glob := " ^ its (!nsim_glob) ^ ";",
      "val _ = decay_glob := " ^ rts (!decay_glob) ^ ";",
-     "val _ = worker_start " ^ its wid ^ ";"]  
+     "val _ = dim_glob := " ^ its (!dim_glob) ^ ";",
+     "val _ = worker_start " ^ flags_to_string flags ^ " " ^ its wid ^ ";"
+    ]  
   in
     writel (widscript_file wid) codel;
     smlOpen.run_buildheap false (widscript_file wid);
@@ -392,16 +417,17 @@ fun boss_start_worker wid =
 
 val attrib = [Thread.InterruptState Thread.InterruptAsynch, Thread.EnableBroadcastInterrupt true]
 
-fun boss_start ncore =
+fun boss_start ncore flags dhtnn targetl =
   let 
-    val remainingl = List.tabulate (100,I)
-    val dhtnn = random_dhtnn_gamespec rlGameArithGround.gamespec
+    val remainingl = List.tabulate (length targetl,I)
     val _ = mkDir_err gencode_dir
     fun mk_local_dir wid = mkDir_err (gencode_dir ^ "/" ^ its wid) 
     val _ = app mk_local_dir (List.tabulate (ncore,I))
     val _ = write_dhtnn dhtnn_file dhtnn
+    val _ = mlTacticData.export_terml targetl_file 
+      (map rlGameArithGround.dest_startsit targetl)
     val _ = print_endline ("starting " ^ its ncore ^ " workers")
-    fun fork wid = Thread.fork (fn () => boss_start_worker wid, attrib)
+    fun fork wid = Thread.fork (fn () => boss_start_worker flags wid, attrib)
     val threadl = map fork (List.tabulate (ncore,I))
   in
     print_endline "sending orders";
@@ -409,73 +435,39 @@ fun boss_start ncore =
   end
 
 (*
-load "rlEnv"; open rlEnv;
+load "rlEnv"; open aiLib rlEnv;
 val ncore = 2;
-val completedl = boss_start ncore;
+val targetl1 = rlGameArithGround.mk_targetl 1;
+val targetl2 = first_n 100 (shuffle targetl1);
+val dhtnn = random_dhtnn_gamespec rlGameArithGround.gamespec;
+val (nwin,exll) = boss_start ncore (true,false) dhtnn targetl2;
 val ntot = length completedl;
 val nwin = length (filter I (map snd completedl));
-*)
 
-(*
-load "rlEnv"; open rlEnv aiLib;
-val gamespec = rlGameArithGround.gamespec;
-val dhtnn = random_dhtnn_gamespec rlGameArithGround.gamespec;
-val ntot = 100;
-val targetl = first_n ntot (rlGameArithGround.mk_targetl 1);
-val (_,t) = add_time (parmap 2 (worker_process 0 (dhtnn,gamespec,targetl))) 
-  (List.tabulate (ntot,I));
-*)
-
-(*
-fun test ncorel level bstart ntarget =
-  let
-    val gamespec = rlGameArithGround.gamespec
-    val dhtnn = random_dhtnn_gamespec gamespec
-    val _ = level_glob := level
-    val targetl = update_targetl ()
-    val _ = ntarget_explore := ntarget
-    fun f n = 
-      (ncore_glob := n;
-       explore_f bstart gamespec emptyallex dhtnn targetl)
-  in
-    map (fn x => snd (add_time f x)) ncorel
-  end
-fun file_out1 n = gencode_dir ^ "/" ^ its n ^ "/out" ^ its n;
-val (_,t1) = add_time (parmap_ext dhtnn) ntot;
-val l1 = map (readl o file_out1) (List.tabulate (ntot,I));
 *)
 
 (* -------------------------------------------------------------------------
    Competition: comparing n dhtnn
    ------------------------------------------------------------------------- *)
 
-fun compete_one dhtnn gamespec targetl =
-  let
-    val status_of = #status_of gamespec
-    val mctsparam =
-      (!nsim_glob, !decay_glob, false,
-       #status_of gamespec, #apply_move gamespec, 
-       mk_fep_dhtnn false gamespec dhtnn)
-    val (result,t) = add_time (parmap (!ncore_glob) 
-      (n_bigsteps gamespec mctsparam)) targetl
-    val (_,allrootl) = split result
-    val _ = summary ("Competition time : " ^ rts t)
-    val endrootl = map hd allrootl
+fun compete_one dhtnn targetl =
+  let val ((nwin,_),t) = add_time 
+    (boss_start (!ncore_glob) (false,false) dhtnn) targetl 
   in
-    length (filter (fn x => status_of (#sit x) = Win) endrootl)
+    summary ("Competition time : " ^ rts t); nwin
   end
 
 fun summary_compete (w_old,w_new) =
-  summary 
-     ((if w_new > w_old then "Passed" else "Failed") ^ ": " ^ 
-      its w_old ^ " " ^ its w_new);
+  let val s = if w_new > w_old then "Passed" else "Failed" in
+    summary (s ^ ": " ^ its w_old ^ " " ^ its w_new)
+  end
 
 fun compete dhtnn_old dhtnn_new gamespec targetl =
   let
-    val targetl' = first_n (!ntarget_compete) (shuffle targetl)
-    val w_old = compete_one dhtnn_old gamespec targetl'
-    val w_new = compete_one dhtnn_new gamespec targetl'
-    val levelup = int_div (Int.max (w_new,w_old)) (length targetl') > 0.75
+    val selectl = first_n (!ntarget_compete) (shuffle targetl)
+    val w_old = compete_one dhtnn_old selectl
+    val w_new = compete_one dhtnn_new selectl
+    val levelup = int_div (Int.max (w_new,w_old)) (length selectl) > 0.75
   in
     summary_compete (w_old,w_new);
     if levelup then incr level_glob else ();
@@ -487,26 +479,31 @@ fun compete dhtnn_old dhtnn_new gamespec targetl =
    Exploration
    ------------------------------------------------------------------------- *)
 
-fun explore_f startb gamespec allex dhtnn targetl =
+fun update_allex exll allex =
   let
-    val targetl' = choose_uniform gamespec dhtnn (targetl,!ntarget_explore)
-    val mctsparam =
-      (!nsim_glob, !decay_glob, true,
-       #status_of gamespec, #apply_move gamespec, 
-       mk_fep_dhtnn startb gamespec dhtnn)
-    val (result,t) = add_time (parmap (!ncore_glob) 
-      (n_bigsteps gamespec mctsparam)) targetl'
-    val (exl,allrootl) = split result
-    val _ = summary ("Exploration time : " ^ rts t)
-    val _ = summary_wins gamespec allrootl
-    fun concat_ex ((exE,exP),(allexE,allexP)) = (exE @  allexE, exP @ allexP)
-    val exl1 = foldl concat_ex allex exl
+    fun concat_ex ((exE,exP),(allexE,allexP)) = (exE @ allexE, exP @ allexP)
+    val exl1 = foldl concat_ex allex exll
     fun cmp (a,b) = Term.compare (fst a,fst b)
-    (* Optional: seems to provide a little more space for more examples *)
     val exl2 = (mk_sameorder_set cmp (fst exl1), 
                 mk_sameorder_set cmp (snd exl1))
   in
     discard_oldex exl2 (!exwindow_glob)
+  end
+
+(* todo: change allex and split it when making batches *)
+fun explore_f_aux startb gamespec allex dhtnn selectl =
+  let
+    val ((nwin,exll),t) = add_time 
+      (boss_start (!ncore_glob) (true,startb) dhtnn) selectl 
+    val _ = summary ("Exploration time: " ^ rts t)
+    val _ = summary ("Exploration wins: " ^ its nwin)
+  in
+    update_allex exll allex
+  end
+
+fun explore_f startb gamespec allex dhtnn targetl =
+  let val selectl = choose_uniform gamespec dhtnn (targetl,!ntarget_explore) in
+    explore_f_aux startb gamespec allex dhtnn selectl
   end
 
 (* -------------------------------------------------------------------------
@@ -563,14 +560,14 @@ fun start_rl_loop gamespec =
 end (* struct *)
 
 (*
-app load ["rlGameArithGround","rlEnv"];
-open aiLib psMCTS rlGameArithGround rlEnv;
+app load ["rlEnv"];
+open rlEnv;
 
-logfile_glob := "march14";
-ncore_glob := 8;
-ngen_glob := 100;
-ntarget_compete := 400;
-ntarget_explore := 400;
+logfile_glob := "march14-02";
+ncore_glob := 2;
+ngen_glob := 1;
+ntarget_compete := 100;
+ntarget_explore := 100;
 exwindow_glob := 40000;
 dim_glob := 8;
 batchsize_glob := 64;
@@ -578,23 +575,7 @@ nsim_glob := 1600;
 decay_glob := 0.99;
 level_glob := 1;
 
-val allex = start_rl_loop gamespec;
-
-
-
-
-load "rlEnv"; open rlEnv;
-logfile_glob := "test_mcts_1";
-nsim_glob := 1600;
-dim_glob := 8;
-val ncorel = [1,2,4,8];
-val level = 5;
-val bstart = false;
-val ntarget = 100;
-val rl = test ncorel level bstart ntarget;
-
-(* todo: do a similar test for training with saved data *)
-
+val allex = start_rl_loop rlGameArithGround.gamespec;
 
 *)
 
