@@ -269,106 +269,185 @@ fun choose_uniform gamespec dhtnn (targetl,ntarget) =
   end
 
 (* -------------------------------------------------------------------------
-   Competition: comparing n dhtnn
+   External parallelization of competition/explorationn calls
    ------------------------------------------------------------------------- *)
 
-fun mcts_ext fileout dhtnn gamespec target =
-  let
-    val status_of = #status_of gamespec
-    val mctsparam =
-      (!nsim_glob, !decay_glob, false,
-       #status_of gamespec, #apply_move gamespec, 
-       mk_fep_dhtnn false gamespec dhtnn)
-    val ((_,allroot),t) = add_time (n_bigsteps gamespec mctsparam) target
-    val endroot = hd allroot
-    val winb = status_of (#sit endroot) = Win
-  in
-    if winb then writel fileout ["Win"] else writel fileout ["Lose"]
-  end
+fun bstatus_to_string b = if b then "win" else "lose"
+fun string_to_bstatus s = 
+  assoc s [("win",true),("lose",false)]
+  handle HOL_ERR _ => raise ERR "string_to_status" ""
 
+fun writel_atomic file sl =
+  (writel (file ^ "_temp") sl; 
+   OS.FileSys.rename {old = file ^ "_temp", new=file})
+fun destruct_readl file =
+  let val sl = readl file in OS.FileSys.remove file; sl end
 
 val gencode_dir = HOLDIR ^ "/src/AI/reinforcement_learning/gencode"
-val savestate_file = gencode_dir ^ "/savestate"
 val dhtnn_file = gencode_dir ^ "/dhtnn"
-val operl_file = gencode_dir ^ "/operl"
+fun widin_file wid = gencode_dir ^ "/" ^ its wid ^ "/in"
+fun widout_file wid = gencode_dir ^ "/" ^ its wid ^ "/out"
+fun widscript_file wid = gencode_dir ^ "/" ^ its wid ^ "/script.sml"
 
-fun create_savestate () =
+(* Workers *)
+fun explore_standalone wid dhtnn target =
   let
-    val sl =
-    [
-     "open HolKernel rlEnv aiLib",
-     "val gamespec = rlGameArithGround.gamespec;",
-     "val dhtnn_file = " ^ quote dhtnn_file ^ ";",
-     "val operl_file = " ^ quote operl_file ^ ";",
-     "val dhtnn = mlTreeNeuralNetwork.read_dhtnn_sl" ^  
-     " operl_file (readl dhtnn_file);",
-     "val targetl = rlGameArithGround.mk_targetl 1;", (* slow *)
+    val gamespec = rlGameArithGround.gamespec
+    val status_of = #status_of gamespec
+    val noise = false (* Todo: turn on the noise during exploration *)
+    val bstart = false
+    val mctsparam =
+      (!nsim_glob, !decay_glob, noise,
+       #status_of gamespec, #apply_move gamespec, 
+       mk_fep_dhtnn bstart gamespec dhtnn)
+    val (_,allroot) = n_bigsteps gamespec mctsparam target
+    val endroot = hd allroot
+    val bstatus = status_of (#sit endroot) = Win
+  in
+    writel_atomic (widout_file wid) [bstatus_to_string bstatus]     
+  end
+
+fun worker_process wid (dhtnn,targetl) i =
+  (
+  explore_standalone wid dhtnn (List.nth (targetl,i));
+  worker_listen wid (dhtnn,targetl)
+  )
+
+and worker_listen wid (dhtnn,targetl) = 
+  if exists_file (widin_file wid) 
+  then 
+    let val s = hd (destruct_readl (widin_file wid)) in
+      if s = "stop" then () else 
+      worker_process wid (dhtnn,targetl) (string_to_int s)
+    end 
+  else (OS.Process.sleep (Time.fromReal 0.001); 
+        worker_listen wid (dhtnn,targetl))
+
+(* warning : 100 hard-coded here *)
+fun worker_start wid =
+  let 
+    val targetl = first_n 100 (rlGameArithGround.mk_targetl 1)
+    val dhtnn = read_dhtnn dhtnn_file
+  in
+    worker_listen wid (dhtnn,targetl)
+  end
+
+(* Boss *)
+fun boss_stopall ncore =
+  let fun send_stop wid = writel_atomic (widin_file wid) ["stop"] in
+    app send_stop (List.tabulate (ncore,I))
+  end
+
+fun boss_end ncore completedl  = (boss_stopall ncore; completedl)
+
+fun boss_send ncore (remainingl,runningl,completedl) =
+  let
+    fun is_running x = mem x (map fst runningl)
+    val freel = filter (not o is_running) (List.tabulate (ncore,I))
+     val _ = 
+      if not (null freel) andalso not (null remainingl)
+      then 
+      print_endline (String.concatWith " " 
+      [its (length remainingl),
+       its (length runningl), its (length completedl)])
+      else ()
+    val (al,remainingl_new) = part_n (length freel) remainingl
+    val runningl_new = combine (first_n (length al) freel, al)
+    fun send_job (wid,job) = writel_atomic (widin_file wid) [its job]
+  in
+    app send_job runningl_new;
+    boss_collect ncore (remainingl_new, runningl_new @ runningl, completedl)
+  end
+and boss_collect ncore (remainingl,runningl,completedl) =
+  if null remainingl andalso null runningl 
+    then boss_end ncore completedl
+  else
+  let
+    fun f (wid,job) =
+      let val file = widout_file wid in
+        if exists_file file
+        then SOME (hd (destruct_readl file)) 
+        else NONE
+      end
+    val (al,bl) = partition (isSome o snd) (map_assoc f runningl)
+    val runningl_new = map fst bl
+    val completedl_new = 
+      map (fn ((wid,job),x) => (job, string_to_bstatus (valOf x))) al
+  in
+    boss_send ncore (remainingl,runningl_new,completedl_new @ completedl)
+  end
+
+fun boss_start_worker wid =
+  let
+    val codel =
+    ["open rlEnv;",
      "val _ = nsim_glob := " ^ its (!nsim_glob) ^ ";",
      "val _ = decay_glob := " ^ rts (!decay_glob) ^ ";",
-     "PolyML.SaveState.saveState " ^ quote savestate_file ^ ";"
-    ]  
-    val file = gencode_dir ^ "/savestate_script.sml"
+     "val _ = worker_start " ^ its wid ^ ";"]  
   in
-    writel file sl;
-    smlOpen.run_buildheap false file
+    writel (widscript_file wid) codel;
+    smlOpen.run_buildheap false (widscript_file wid);
+    remove_file (widscript_file wid)
   end
 
-fun mcts_gencode n =
-  let
-    val local_dir = gencode_dir ^ "/" ^ its n
-    val _ = mkDir_err local_dir
-    val file_in = local_dir ^ "/in_script" ^ its n ^ ".sml"
-    val file_out = local_dir ^ "/out" ^ its n
-    val sl =
-    [
-     "PolyML.SaveState.loadState " ^ quote savestate_file ^ ";",
-     "val file_out = " ^ quote file_out ^ ";",
-     "val targetn = " ^ its n ^ ";",
-     "val target = List.nth (targetl,targetn);", 
-     "val _ = rlEnv.mcts_ext file_out dhtnn gamespec target;"
-    ]  
-  in
-    remove_file file_out;
-    writel file_in sl;
-    smlOpen.run_buildheap false file_in
-  end
+val attrib = [Thread.InterruptState Thread.InterruptAsynch, Thread.EnableBroadcastInterrupt true]
 
-fun parmap_ext dhtnn ntot =
-  let
+fun boss_start ncore =
+  let 
+    val remainingl = List.tabulate (100,I)
+    val dhtnn = random_dhtnn_gamespec rlGameArithGround.gamespec
     val _ = mkDir_err gencode_dir
-    val targetl = first_n ntot (rlGameArithGround.mk_targetl 1)
-    val _ = writel dhtnn_file [mlTreeNeuralNetwork.string_of_dhtnn dhtnn]
-    val operl = 
-      mk_sameorder_set Term.compare (map fst (dkeys (#opdict dhtnn)))
-    val _ = mlTacticData.export_terml operl_file operl  
+    fun mk_local_dir wid = mkDir_err (gencode_dir ^ "/" ^ its wid) 
+    val _ = app mk_local_dir (List.tabulate (ncore,I))
+    val _ = write_dhtnn dhtnn_file dhtnn
+    val _ = print_endline ("starting " ^ its ncore ^ " workers")
+    fun fork wid = Thread.fork (fn () => boss_start_worker wid, attrib)
+    val threadl = map fork (List.tabulate (ncore,I))
   in
-    ignore (parmap 2 mcts_gencode (List.tabulate (ntot,I)))
+    print_endline "sending orders";
+    boss_send ncore (remainingl,[],[])
   end
 
 (*
-load "rlEnv"; open rlEnv aiLib;
+load "rlEnv"; open rlEnv;
+val ncore = 2;
+val completedl = boss_start ncore;
+val ntot = length completedl;
+val nwin = length (filter I (map snd completedl));
+*)
 
+(*
+load "rlEnv"; open rlEnv aiLib;
+val gamespec = rlGameArithGround.gamespec;
 val dhtnn = random_dhtnn_gamespec rlGameArithGround.gamespec;
 val ntot = 100;
 val targetl = first_n ntot (rlGameArithGround.mk_targetl 1);
-val gamespec = rlGameArithGround.gamespec;
-val gencode_dir = HOLDIR ^ "/src/AI/reinforcement_learning/gencode";
+val (_,t) = add_time (parmap 2 (worker_process 0 (dhtnn,gamespec,targetl))) 
+  (List.tabulate (ntot,I));
+*)
 
-val _ = mkDir_err gencode_dir;
-val _ = create_savestate ();
+(*
+fun test ncorel level bstart ntarget =
+  let
+    val gamespec = rlGameArithGround.gamespec
+    val dhtnn = random_dhtnn_gamespec gamespec
+    val _ = level_glob := level
+    val targetl = update_targetl ()
+    val _ = ntarget_explore := ntarget
+    fun f n = 
+      (ncore_glob := n;
+       explore_f bstart gamespec emptyallex dhtnn targetl)
+  in
+    map (fn x => snd (add_time f x)) ncorel
+  end
 fun file_out1 n = gencode_dir ^ "/" ^ its n ^ "/out" ^ its n;
 val (_,t1) = add_time (parmap_ext dhtnn) ntot;
 val l1 = map (readl o file_out1) (List.tabulate (ntot,I));
-
-val _ = mkDir_err gencode_dir;
-fun file_out2 n = gencode_dir ^ "/int" ^ its n;
-fun g n = mcts_ext (file_out2 n) dhtnn gamespec (List.nth (targetl,n));
-val (_,t2) = add_time (parapp 2 g) (List.tabulate (ntot,I));
-val l2 = map (readl o file_out2) (List.tabulate (ntot,I));
-test ();
-
 *)
 
+(* -------------------------------------------------------------------------
+   Competition: comparing n dhtnn
+   ------------------------------------------------------------------------- *)
 
 fun compete_one dhtnn gamespec targetl =
   let
@@ -456,20 +535,6 @@ fun rl_start gamespec =
     (allex , dhtnn, targetl)
   end
 
-fun test ncorel level bstart ntarget =
-  let
-    val gamespec = rlGameArithGround.gamespec
-    val dhtnn = random_dhtnn_gamespec gamespec
-    val _ = level_glob := level
-    val targetl = update_targetl ()
-    val _ = ntarget_explore := ntarget
-    fun f n = 
-      (ncore_glob := n;
-       explore_f bstart gamespec emptyallex dhtnn targetl)
-  in
-    map (fn x => snd (add_time f x)) ncorel
-  end
-
 fun rl_one n gamespec (allex,dhtnn,targetl) =
   let
     val _ = summary ("\nGeneration " ^ its n)
@@ -501,14 +566,14 @@ end (* struct *)
 app load ["rlGameArithGround","rlEnv"];
 open aiLib psMCTS rlGameArithGround rlEnv;
 
-logfile_glob := "march13";
+logfile_glob := "march14";
 ncore_glob := 8;
 ngen_glob := 100;
 ntarget_compete := 400;
 ntarget_explore := 400;
 exwindow_glob := 40000;
 dim_glob := 8;
-batchsize_glob := 128;
+batchsize_glob := 64;
 nsim_glob := 1600;
 decay_glob := 0.99;
 level_glob := 1;

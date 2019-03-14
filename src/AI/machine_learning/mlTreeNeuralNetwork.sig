@@ -25,18 +25,18 @@ include Abbrev
   (* I/O *)
   val string_of_tnn : tnn -> string
   val string_of_dhtnn : dhtnn -> string
+  val write_dhtnn : string -> dhtnn -> unit
+  val read_dhtnn : string -> dhtnn
   
-  val read_dhtnn_sl : string -> string list -> dhtnn
-
   val write_trainset : string -> 
     (term * real list) list -> unit
   val write_dhtrainset : string -> 
     (term * real list) list * (term * real list) list -> unit
-
   val read_trainset : string -> 
     (term * real list) list
   val read_dhtrainset : string ->
     (term * real list) list * (term * real list) list
+  
   (* inference *)
   val infer_tnn : tnn -> term -> real list
 

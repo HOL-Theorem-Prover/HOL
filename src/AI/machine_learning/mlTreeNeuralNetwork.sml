@@ -63,7 +63,7 @@ fun random_dhtnn (dimin,dimout) operl =
   }
 
 (* -------------------------------------------------------------------------
-   Printing
+   Output
    ------------------------------------------------------------------------- *)
 
 fun string_of_oper (f,n) = (tts f ^ "," ^ its n)
@@ -83,12 +83,24 @@ fun string_of_tnn {opdict,headnn,dimin,dimout} =
   string_of_nn headnn ^ "\nheadstop\n\n" ^ string_of_opdict opdict
 
 fun string_of_dhtnn {opdict,headeval,headpoli,dimin,dimout} =
-  string_of_nn headeval ^ 
-  "\nheadevalstop\n\n" ^ 
-  string_of_nn headpoli ^ 
-  "\nheadpolistop\n\n" ^ 
-  string_of_opdict opdict ^
-  "\nopdictstop"
+  string_of_nn headeval ^ "\nheadevalstop\n\n" ^ 
+  string_of_nn headpoli ^ "\nheadpolistop\n\n" ^ 
+  string_of_opdict opdict ^ "\nopdictstop"
+
+fun write_dhtnn file dhtnn =
+  let
+    val file_operl = file ^ "_operl"
+    val file_dhtnn = file ^ "_dhtnn"
+    val operl1 = map fst (dkeys (#opdict dhtnn))
+    val operl2 = mk_sameorder_set Term.compare operl1
+  in
+    writel file_dhtnn [string_of_dhtnn dhtnn];
+    mlTacticData.export_terml file_operl operl2
+  end
+
+(* -------------------------------------------------------------------------
+   Input
+   ------------------------------------------------------------------------- *)
 
 fun read_opdict_one tos sl =
   let 
@@ -98,24 +110,23 @@ fun read_opdict_one tos sl =
     ((oper,n),read_nn_sl (tl sl))
   end
 
-fun read_opdict terml_file sl =
-  let 
-    val tml = mlTacticData.import_terml terml_file
-    val d = dnew Int.compare (number_fst 0 tml)
+fun read_opdict operl sl =
+  let
+    val d = dnew Int.compare (number_fst 0 operl)
     fun tos i = dfind i d
     val sll = rpt_split_sl "nnstop" sl
   in
     dnew oper_compare (map (read_opdict_one tos) sll)
   end
 
-fun read_dhtnn_sl terml_file sl =
+fun read_dhtnn_sl operl sl =
   let
     val (l1,contl1) = split_sl "headevalstop" sl
     val headeval = read_nn_sl l1
     val (l2,contl2) = split_sl "headpolistop" contl1
     val headpoli = read_nn_sl l2
     val (l3,_) = split_sl "opdictstop" contl2
-    val opdict = read_opdict terml_file l3
+    val opdict = read_opdict operl l3
     val dimin = ((snd o mat_dim o #w o hd) headpoli) - 1
     val dimout = (fst o mat_dim o #w o last) headpoli
   in
@@ -123,16 +134,23 @@ fun read_dhtnn_sl terml_file sl =
      dimin=dimin,dimout=dimout}
   end
 
+fun read_dhtnn file =
+  let 
+    val file_operl = file ^ "_operl"
+    val file_dhtnn = file ^ "_dhtnn"
+    val operl = mlTacticData.import_terml file_operl
+    val sl = readl file_dhtnn
+  in
+    read_dhtnn_sl operl sl
+  end
+
 (* 
-load "mlTreeNeuralNetwork"; load "mlTacticData";
-open aiLib mlNeuralNetwork mlTreeNeuralNetwork mlMatrix;
+load "mlTreeNeuralNetwork"; 
+open aiLib mlNeuralNetwork mlTreeNeuralNetwork;
 val file = HOLDIR ^ "/src/AI/test";
 val dhtnn1 = random_dhtnn (4,2) [(``SUC``,1),(``0``,0)];
-writel file [string_of_dhtnn dhtnn1];
-val terml_file = HOLDIR ^ "/src/AI/test_terml";
-mlTacticData.export_terml terml_file (map fst (dkeys (#opdict dhtnn1)));
-val sl = readl file;
-val dhtnn2 = read_dhtnn_sl terml_file sl;
+val (_,t1) = add_time (write_dhtnn file) dhtnn1;
+val (dhtnn2,t2) = add_time read_dhtnn file;
 *)
 
 fun write_trainset file trainset =

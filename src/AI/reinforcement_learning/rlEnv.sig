@@ -6,6 +6,16 @@ sig
   (* 'a is the type of board
      ''b is the type for move
      'c is the type of targets *)
+  type ('a,''b,'c) gamespec =
+    {
+    movel : ''b list,
+    string_of_move : ''b -> string,
+    filter_sit : 'a psMCTS.sit -> ((''b * real) list -> (''b * real) list),
+    status_of : ('a psMCTS.sit -> psMCTS.status),
+    apply_move : (''b -> 'a psMCTS.sit -> 'a psMCTS.sit),
+    operl : (term * int) list,
+    nntm_of_sit: 'a psMCTS.sit -> term
+    }
 
   (* rl parameters *)
   val ngen_glob : int ref
@@ -24,28 +34,10 @@ sig
   val level_glob : int ref
 
   (* external calls *)
-  val mcts_gencode : int -> unit
-  val create_savestate : unit -> unit
-  val parmap_ext : mlTreeNeuralNetwork.dhtnn -> int -> unit
-  val test : int list -> int -> bool -> int -> real list
-
+  val worker_start : int -> unit
+  val boss_start : int -> (int * bool) list
 
   (* *)
-  type ('a,''b,'c) gamespec =
-    {
-    movel : ''b list,
-    string_of_move : ''b -> string,
-    filter_sit : 'a psMCTS.sit -> ((''b * real) list -> (''b * real) list),
-    status_of : ('a psMCTS.sit -> psMCTS.status),
-    apply_move : (''b -> 'a psMCTS.sit -> 'a psMCTS.sit),
-    operl : (term * int) list,
-    nntm_of_sit: 'a psMCTS.sit -> term
-    }
-
-  val mcts_ext : string -> mlTreeNeuralNetwork.dhtnn -> 
-     (rlGameArithGround.board, ''a, 'b) gamespec
-               -> rlGameArithGround.board psMCTS.sit -> unit
-
   val random_dhtnn_gamespec : 
     (rlGameArithGround.board, ''a, 'b) gamespec -> mlTreeNeuralNetwork.dhtnn
 
