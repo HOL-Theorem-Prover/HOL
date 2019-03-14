@@ -334,6 +334,7 @@ fun boss_stopall ncore =
 
 fun boss_end ncore completedl = 
   let 
+    val _ = print_endline ("stop " ^ its ncore ^ " workers")
     val _ = boss_stopall ncore
     val l1 = map snd completedl
     val nwin = length (filter (I o fst) l1)
@@ -343,14 +344,15 @@ fun boss_end ncore completedl =
   end
 
 fun boss_readresult ((wid,job),x) =
-  let 
-    val exl = read_dhtrainset (widexl_file wid) 
-  in
+  let val exl = read_dhtrainset (widexl_file wid) in
     (job, (string_to_bstatus (valOf x), exl))
   end
 
 fun stat_jobs (remainingl,freel,runningl,completedl) = 
-  if not (null freel) andalso not (null remainingl)
+  if not (null freel) andalso 
+     not (null remainingl) 
+     orelse 
+     (length freel >= 1)
   then
     print_endline
       ("target: " ^ its (length remainingl) ^ " "  ^ 
@@ -363,8 +365,9 @@ fun boss_send ncore (remainingl,runningl,completedl) =
     fun is_running x = mem x (map fst runningl)
     val freel = filter (not o is_running) (List.tabulate (ncore,I))
     val _ = stat_jobs (remainingl,freel,runningl,completedl)
-    val (al,remainingl_new) = part_n (length freel) remainingl
-    val runningl_new = combine (first_n (length al) freel, al)
+    val njob = Int.min (length freel, length remainingl)
+    val (al,remainingl_new) = part_n njob remainingl
+    val runningl_new = combine (first_n njob freel, al)
     fun send_job (wid,job) = writel_atomic (widin_file wid) [its job]
   in
     app send_job runningl_new;
@@ -419,11 +422,11 @@ fun boss_start ncore flags dhtnn targetl =
     val _ = write_dhtnn dhtnn_file dhtnn
     val _ = mlTacticData.export_terml targetl_file 
       (map rlGameArithGround.dest_startsit targetl)
-    val _ = print_endline ("starting " ^ its ncore ^ " workers")
+    val _ = print_endline ("start " ^ its ncore ^ " workers")
     fun fork wid = Thread.fork (fn () => boss_start_worker flags wid, attrib)
     val threadl = map fork (List.tabulate (ncore,I))
   in
-    print_endline "sending orders";
+    print_endline "send orders";
     boss_send ncore (remainingl,[],[])
   end
 
@@ -556,9 +559,9 @@ end (* struct *)
 app load ["rlEnv"];
 open rlEnv;
 
-logfile_glob := "march14-test";
-ncore_glob := 2;
-ngen_glob := 1;
+logfile_glob := "march15";
+ncore_glob := 8;
+ngen_glob := 50;
 ntarget_compete := 100;
 ntarget_explore := 100;
 exwindow_glob := 40000;
