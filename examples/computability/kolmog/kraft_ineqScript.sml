@@ -1030,33 +1030,47 @@ Theorem pf_invariance_theorem:
   ∀M. prefix_free {x | (∃y. recPhi [M;bl2n x] = SOME y)} ==>  ∃C. ∀x. (kolmog_complexity x HUTM) <= (kolmog_complexity x (λy. recPhi [M;bl2n y])) + (C U T)
 Proof
   rw[kolmog_complexity_def] >>  `univ_rf HUTM` by fs[HUTM_univ] >> fs[univ_rf_def] >>
-  `∃g. ∀x. Phi M' x = HUTM (g++ (n2bl x))` by fs[] >>
+  `∃g. ∀x. Phi M x = HUTM (g++ (n2bl x))` by fs[] >>
   qexists_tac`λx y. SOME (LENGTH g)` >> rw[]
   >- (`univ_rf HUTM` by fs[univ_rf_def] >>`{p| HUTM p = SOME x} <> {}` by fs[univ_rf_nonempty] >> 
       fs[])
-  >- (`MIN_SET (IMAGE LENGTH {p | U p = SOME x}) ∈ 
-        IMAGE LENGTH ({p | U p = SOME x})` by fs[MIN_SET_LEM] >> fs[IMAGE_DEF] >>
-      qabbrev_tac`U_x = x'` >>
-      `MIN_SET (IMAGE LENGTH {y | U (g ++ y) = SOME x}) ∈ 
-        IMAGE LENGTH ({y | U (g ++ y) = SOME x})` by fs[MIN_SET_LEM] >> fs[IMAGE_DEF] >>
-      qabbrev_tac`T_x = x''` >>
-      `{LENGTH y | U (g ++ y) = SOME x} <> {}` by (fs[EXTENSION] >> qexists_tac`T_x`>>fs[])>>
+  >- (`MIN_SET (IMAGE LENGTH {p | HUTM p = SOME x}) ∈ 
+        IMAGE LENGTH ({p | HUTM p = SOME x})` by fs[MIN_SET_LEM] >> fs[IMAGE_DEF] >>
+      qabbrev_tac`HUTM_x = x'` >>
+      `MIN_SET (IMAGE LENGTH {y | HUTM (g ++ y) = SOME x}) ∈ 
+        IMAGE LENGTH ({y | HUTM (g ++ y) = SOME x})` by fs[MIN_SET_LEM] >> fs[IMAGE_DEF] >>
+      qabbrev_tac`M_x = x''` >>
+      `{LENGTH y | HUTM (g ++ y) = SOME x} <> {}` by (fs[EXTENSION] >> qexists_tac`M_x`>>fs[])>>
       qabbrev_tac`a=LENGTH g` >>
-      `a + MIN_SET {b | b ∈  {LENGTH y | U (g ++ y) = SOME x}} = 
-        MIN_SET {a + b | b ∈  {LENGTH y | U (g ++ y) = SOME x}}` by fs[MIN_SET_ladd] >>
+      `a + MIN_SET {b | b ∈  {LENGTH y | HUTM (g ++ y) = SOME x}} = 
+        MIN_SET {a + b | b ∈  {LENGTH y | HUTM (g ++ y) = SOME x}}` by fs[MIN_SET_ladd] >>
       fs[] >> 
-      `{LENGTH p | U p = SOME x} <> {}` by (`IMAGE LENGTH { p | U p = SOME x} ≠ ∅` by 
+      `{LENGTH p | HUTM p = SOME x} <> {}` by (`IMAGE LENGTH { p | HUTM p = SOME x} ≠ ∅` by 
         fs[IMAGE_EQ_EMPTY] >>
-        `{LENGTH p | p ∈ {q | U q= SOME x}} ≠ ∅` by metis_tac[IMAGE_DEF] >> fs[]) >>
-      `MIN_SET {LENGTH p | U p = SOME x} ∈ {LENGTH p | U p = SOME x} ∧ 
-        ∀q. q ∈ {LENGTH p | U p = SOME x} ⇒ MIN_SET {LENGTH p | U p = SOME x} ≤ q` by 
+        `{LENGTH p | p ∈ {q | HUTM q= SOME x}} ≠ ∅` by metis_tac[IMAGE_DEF] >> fs[]) >>
+      `MIN_SET {LENGTH p | HUTM p = SOME x} ∈ {LENGTH p | HUTM p = SOME x} ∧ 
+        ∀q. q ∈ {LENGTH p | HUTM p = SOME x} ⇒ MIN_SET {LENGTH p | HUTM p = SOME x} ≤ q` by 
         fs[MIN_SET_LEM] >> 
-      `MIN_SET {LENGTH x' | U x' = SOME x} ≤
-       MIN_SET {a + b | (∃y. b = LENGTH y ∧ U (g ++ y) = SOME x)}` suffices_by fs[]>>
+      `MIN_SET {LENGTH x' | HUTM x' = SOME x} ≤
+       MIN_SET {a + b | (∃y. b = LENGTH y ∧ HUTM (g ++ y) = SOME x)}` suffices_by fs[]>>
       irule SUBSET_MIN_SET >> rw[]
-      >- (fs[EXTENSION] >> qexists_tac`T_x`>>fs[])
+      >- (fs[EXTENSION] >> qexists_tac`M_x`>>fs[])
       >- (rw[SUBSET_DEF] >>qexists_tac`g++y`>>fs[Abbr`a`] )  )
 QED
+
+Theorem HUTM_prefix_free:
+  ∀M. prefix_free {x | (∃y. Phi M (bl2n x) = SOME y)} ==> 
+      prefix_free {x | (∃p. x = bar (n2bl M) ++ p) ∧ (∃y. HUTM x = SOME y)}
+Proof
+  rw[] >> fs[prefix_free_def] >> rw[] >> 
+  `(∃y. Phi M (bl2n p) = SOME y) ∧ (∃y. Phi M (bl2n p') = SOME y) ⇒ ¬( p ≺  p')` 
+    by metis_tac[] >> 
+  `Phi M (bl2n p) = SOME y` by fs[HUTM_corr] >>
+  `Phi M (bl2n p') = SOME y'` by fs[HUTM_corr] >> fs[] >>
+  spose_not_then assume_tac >> fs[prefix_append]
+QED
+
+(*  To do in the future)
 
 Theorem kolmog_recfun:
   ∀f x. ∃C. primrec f 1 ==> kolmog (f [x]) <= (kolmog x) + (kolmog f) + C
@@ -1064,6 +1078,8 @@ Proof
 
 QED
 
+
+(* Find the PUTM number for a given recfn *)
 val PUTM_fnum_define = Define`PUTM_fnum f = if recfn f 1 then @p. ∀x.   else NONE`
 
 Theorem kolmog_concat:
@@ -1075,6 +1091,8 @@ Proof
   `∃m3. PUTM (bar2 (m3,[])) = SOME (y)`by fs[print_exists] >> rw[] >> fs[EXTENSION] >>
   fs[recfns_in_Phi]
 QED
+
+*)
 
 (*  Proving kolmog is not computable  *)
 
