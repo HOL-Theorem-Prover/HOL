@@ -354,7 +354,7 @@ fun stat_jobs (remainingl,freel,runningl,completedl) =
   then
     print_endline
       ("target: " ^ its (length remainingl) ^ " "  ^ 
-         its (length runningl) ^ " " ^ its (length completedl) ^ ;
+         its (length runningl) ^ " " ^ its (length completedl) ^ 
        " free core: " ^ String.concatWith " " (map its freel))
   else ()
 
