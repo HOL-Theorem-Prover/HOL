@@ -349,13 +349,15 @@ fun boss_readresult ((wid,job),x) =
   end
 
 fun stat_jobs (remainingl,freel,runningl,completedl) = 
-  if not (null freel)
+  if not (null freel) and not (null remainingl)
   then
     print_endline
       ("target: " ^ its (length remainingl) ^ " "  ^ 
          its (length runningl) ^ " " ^ its (length completedl) ^ 
        " free core: " ^ String.concatWith " " (map its freel))
   else ()
+
+fun send_job (wid,job) = writel_atomic (widin_file wid) [its job]
 
 fun boss_send ncore (remainingl,runningl,completedl) =
   let
@@ -364,8 +366,7 @@ fun boss_send ncore (remainingl,runningl,completedl) =
     val _ = stat_jobs (remainingl,freel,runningl,completedl)
     val njob = Int.min (length freel, length remainingl)
     val (al,remainingl_new) = part_n njob remainingl
-    val runningl_new = combine (first_n njob freel, al)
-    fun send_job (wid,job) = writel_atomic (widin_file wid) [its job]
+    val runningl_new = combine (first_n njob freel, al)    
   in
     app send_job runningl_new;
     boss_collect ncore (remainingl_new, runningl_new @ runningl, completedl)
@@ -410,12 +411,19 @@ fun boss_start_worker flags wid =
 
 val attrib = [Thread.InterruptState Thread.InterruptAsynch, Thread.EnableBroadcastInterrupt true]
 
+fun  = gencode_dir ^ "/" ^ its wid ^ "/in"
+fun widout_file wid =
+
 fun boss_start ncore flags dhtnn targetl =
   let 
     val remainingl = List.tabulate (length targetl,I)
     val _ = mkDir_err gencode_dir
     fun mk_local_dir wid = mkDir_err (gencode_dir ^ "/" ^ its wid) 
     val _ = app mk_local_dir (List.tabulate (ncore,I))
+    fun erase wid = 
+      (erase_file (widin_file wid); erase_file (widout_file wid))
+    val _ = app erase (List.tabulate (ncore,I))
+    
     val _ = write_dhtnn dhtnn_file dhtnn
     val _ = mlTacticData.export_terml targetl_file 
       (map rlGameArithGround.dest_startsit targetl)
@@ -557,8 +565,8 @@ app load ["rlEnv"];
 open rlEnv;
 
 logfile_glob := "march15";
-ncore_glob := 8;
-ngen_glob := 50;
+ncore_glob := 2;
+ngen_glob := 1;
 ntarget_compete := 100;
 ntarget_explore := 100;
 exwindow_glob := 40000;
