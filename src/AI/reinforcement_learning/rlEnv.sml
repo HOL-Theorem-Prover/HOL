@@ -282,7 +282,8 @@ val dhtnn_file = gencode_dir ^ "/dhtnn"
 val targetl_file = gencode_dir ^ "/targetl"
 fun widin_file wid = gencode_dir ^ "/" ^ its wid ^ "/in"
 fun widout_file wid = gencode_dir ^ "/" ^ its wid ^ "/out"
-fun widscript_file wid = gencode_dir ^ "/" ^ its wid ^ "/script.sml"
+fun widscript_file wid = 
+  gencode_dir ^ "/" ^ its wid ^ "/script" ^ its wid ^ ".sml"
 fun widexl_file wid = gencode_dir ^ "/" ^ its wid ^ "/exl"
 
 (* Workers *)
@@ -324,6 +325,7 @@ fun worker_start flags wid =
     val targetl = map rlGameArithGround.mk_startsit 
       (mlTacticData.import_terml targetl_file)
     val dhtnn = read_dhtnn dhtnn_file
+    val _ = writel_atomic (widout_file wid) ["up"] 
   in
     worker_listen flags wid (dhtnn,targetl)
   end
@@ -348,7 +350,10 @@ fun boss_end threadl completedl =
     val ncore = length threadl
     val _ = print_endline ("stop " ^ its ncore ^ " workers")
     val _ = boss_stop_workers threadl
-    val _ = print_endline (its ncore ^ " workers stopped")
+    val _ = print_endline ("  " ^ its ncore ^ " workers stopped")
+    val l0 = dict_sort Int.compare (map fst completedl)
+    val _ = print_endline 
+      ("  completed jobs: " ^ String.concatWith " " (map its l0))
     val l1 = map snd completedl
     val nwin = length (filter (I o fst) l1)
     val exll = map snd l1
@@ -361,26 +366,30 @@ fun boss_readresult ((wid,job),x) =
     (job, (string_to_bstatus (valOf x), exl))
   end
 
-fun stat_jobs (remainingl,freel,runningl,completedl) = 
+fun stat_jobs (remainingl,freewidl,runningl,completedl) = 
   print_endline
     ("target: " ^ its (length remainingl) ^ " "  ^ 
        its (length runningl) ^ " " ^ its (length completedl) ^ 
-     " free core: " ^ String.concatWith " " (map its freel))
+     " free core: " ^ String.concatWith " " (map its freewidl))
 
 fun send_job (wid,job) = 
   if exists_file (widin_file wid) 
   then raise ERR "send_job" ""
-  else writel_atomic (widin_file wid) [its job]
+  else 
+    (
+    print_endline ("  send job " ^ its job ^ " to worker " ^ its wid); 
+    writel_atomic (widin_file wid) [its job]
+    )
 
 fun boss_send threadl (remainingl,runningl,completedl) =
   let
     fun is_running x = mem x (map fst runningl)
     val ncore = length threadl
-    val freel = filter (not o is_running) (List.tabulate (ncore,I))
-    val _ = stat_jobs (remainingl,freel,runningl,completedl)
-    val njob = Int.min (length freel, length remainingl)
-    val (al,remainingl_new) = part_n njob remainingl
-    val runningl_new = combine (first_n njob freel, al)    
+    val freewidl = filter (not o is_running) (List.tabulate (ncore,I))
+    val _ = stat_jobs (remainingl,freewidl,runningl,completedl)
+    val njob = Int.min (length freewidl, length remainingl)
+    val (jobl,remainingl_new) = part_n njob remainingl
+    val runningl_new = combine (first_n njob freewidl, jobl)    
   in
     app send_job runningl_new;
     boss_collect threadl
@@ -395,7 +404,12 @@ and boss_collect threadl (remainingl,runningl,completedl) =
     val _ = OS.Process.sleep (Time.fromReal 0.001)
     fun f (wid,job) =
       let val file = widout_file wid in
-        if exists_file file then SOME (hd (readl_rm file)) else NONE
+        if exists_file file 
+        then 
+          (print_endline 
+           ("  completed job " ^ its job ^ " by worker " ^ its wid);  
+           SOME (hd (readl_rm file))) 
+        else NONE
       end
     val (al,bl) = partition (isSome o snd) (map_assoc f runningl)
   in
@@ -435,8 +449,17 @@ fun boss_start_worker flags wid =
 
 val attrib = [Thread.InterruptState Thread.InterruptAsynch, Thread.EnableBroadcastInterrupt true]
 
-fun boss_start ncore flags dhtnn targetl =
+fun rm_out wid = remove_file (widout_file wid) 
+
+fun boss_wait_upl widl =
   let 
+    fun is_up wid = hd (readl (widout_file wid)) = "up" handle Io _ => false 
+  in
+    if all is_up widl then app rm_out widl else boss_wait_upl widl
+  end
+
+fun boss_start ncore flags dhtnn targetl =
+  let
     val remainingl = List.tabulate (length targetl,I)
     val _ = mkDir_err gencode_dir
     fun mk_local_dir wid = mkDir_err (gencode_dir ^ "/" ^ its wid) 
@@ -448,12 +471,22 @@ fun boss_start ncore flags dhtnn targetl =
     val _ = mlTacticData.export_terml targetl_file 
       (map rlGameArithGround.dest_startsit targetl)
     val _ = print_endline ("start " ^ its ncore ^ " workers")
+    val widl = List.tabulate (ncore,I)
     fun fork wid = Thread.fork (fn () => boss_start_worker flags wid, attrib)
-    val threadl = map fork (List.tabulate (ncore,I))
+    val threadl = map fork widl
   in
-    print_endline "send orders";
+    boss_wait_upl widl;
+    print_endline ("  " ^ its ncore ^ " workers started");
     boss_send threadl (remainingl,[],[])
   end
+
+
+
+
+
+(* todo: 
+   wait for all the worker to be up. 
+*)
 
 (*
 load "rlEnv"; open aiLib rlEnv;
@@ -586,8 +619,8 @@ load "rlEnv";
 open rlEnv;
 
 logfile_glob := "march15";
-ncore_glob := 16;
-ngen_glob := 2;
+ncore_glob := 3;
+ngen_glob := 1;
 ntarget_compete := 100;
 ntarget_explore := 100;
 exwindow_glob := 40000;
@@ -596,7 +629,7 @@ batchsize_glob := 64;
 nepoch_glob := 1;
 nsim_glob := 1600;
 decay_glob := 0.99;
-level_glob := 1;
+level_glob := 2;
 
 val allex = start_rl_loop rlGameArithGround.gamespec;
 
