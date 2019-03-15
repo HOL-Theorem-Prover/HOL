@@ -272,7 +272,7 @@ fun string_to_bstatus s =
 fun writel_atomic file sl =
   (writel (file ^ "_temp") sl; 
    OS.FileSys.rename {old = file ^ "_temp", new=file})
-fun destruct_readl file =
+fun readl_rm file =
   let val sl = readl file in OS.FileSys.remove file; sl end
 
 val gencode_dir = HOLDIR ^ "/src/AI/reinforcement_learning/gencode"
@@ -310,7 +310,7 @@ fun worker_process flags wid (dhtnn,targetl) i =
 and worker_listen flags wid (dhtnn,targetl) = 
   if exists_file (widin_file wid) 
   then 
-    let val s = hd (destruct_readl (widin_file wid)) in
+    let val s = hd (readl_rm (widin_file wid)) in
       if s = "stop" then () else 
       worker_process flags wid (dhtnn,targetl) (string_to_int s)
     end 
@@ -349,13 +349,10 @@ fun boss_readresult ((wid,job),x) =
   end
 
 fun stat_jobs (remainingl,freel,runningl,completedl) = 
-  if not (null freel) andalso not (null remainingl)
-  then
-    print_endline
-      ("target: " ^ its (length remainingl) ^ " "  ^ 
-         its (length runningl) ^ " " ^ its (length completedl) ^ 
-       " free core: " ^ String.concatWith " " (map its freel))
-  else ()
+  print_endline
+    ("target: " ^ its (length remainingl) ^ " "  ^ 
+       its (length runningl) ^ " " ^ its (length completedl) ^ 
+     " free core: " ^ String.concatWith " " (map its freel))
 
 fun send_job (wid,job) = writel_atomic (widin_file wid) [its job]
 
@@ -377,17 +374,26 @@ and boss_collect ncore (remainingl,runningl,completedl) =
     then boss_end ncore completedl
   else
   let
+    val _ = OS.Process.sleep (Time.fromReal 0.001)
     fun f (wid,job) =
       let val file = widout_file wid in
-        if exists_file file
-        then SOME (hd (destruct_readl file)) 
-        else NONE
+        if exists_file file then SOME (hd (readl_rm file)) else NONE
       end
     val (al,bl) = partition (isSome o snd) (map_assoc f runningl)
-    val runningl_new = map fst bl
-    val completedl_new = map boss_readresult al
   in
-    boss_send ncore (remainingl,runningl_new,completedl_new @ completedl)
+    if null al 
+    then boss_collect ncore (remainingl,runningl,completedl)
+    else 
+      let
+        val runningl_new = map fst bl
+        val completedl_new = map boss_readresult al
+      in
+        if null remainingl 
+        then boss_collect ncore
+          (remainingl,runningl_new,completedl_new @ completedl)
+        else
+          boss_send ncore (remainingl,runningl_new,completedl_new @ completedl)
+      end
   end
 
 fun bts b = if b then "true" else "false"
@@ -417,10 +423,9 @@ fun boss_start ncore flags dhtnn targetl =
     val _ = mkDir_err gencode_dir
     fun mk_local_dir wid = mkDir_err (gencode_dir ^ "/" ^ its wid) 
     val _ = app mk_local_dir (List.tabulate (ncore,I))
-    fun erase wid = 
-      (erase_file (widin_file wid); erase_file (widout_file wid))
-    val _ = app erase (List.tabulate (ncore,I))
-    
+    fun rm wid = 
+      (remove_file (widin_file wid); remove_file (widout_file wid))
+    val _ = app rm (List.tabulate (ncore,I))
     val _ = write_dhtnn dhtnn_file dhtnn
     val _ = mlTacticData.export_terml targetl_file 
       (map rlGameArithGround.dest_startsit targetl)
@@ -562,7 +567,7 @@ app load ["rlEnv"];
 open rlEnv;
 
 logfile_glob := "march15";
-ncore_glob := 2;
+ncore_glob := 3;
 ngen_glob := 1;
 ntarget_compete := 100;
 ntarget_explore := 100;
