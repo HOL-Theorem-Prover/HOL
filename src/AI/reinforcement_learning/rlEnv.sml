@@ -349,7 +349,7 @@ fun boss_readresult ((wid,job),x) =
   end
 
 fun stat_jobs (remainingl,freel,runningl,completedl) = 
-  if not (null freel) and not (null remainingl)
+  if not (null freel) andalso not (null remainingl)
   then
     print_endline
       ("target: " ^ its (length remainingl) ^ " "  ^ 
@@ -410,9 +410,6 @@ fun boss_start_worker flags wid =
   end
 
 val attrib = [Thread.InterruptState Thread.InterruptAsynch, Thread.EnableBroadcastInterrupt true]
-
-fun  = gencode_dir ^ "/" ^ its wid ^ "/in"
-fun widout_file wid =
 
 fun boss_start ncore flags dhtnn targetl =
   let 
