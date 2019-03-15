@@ -47,6 +47,7 @@ val ntarget_explore = ref 400
 val exwindow_glob = ref 40000
 val dim_glob = ref 8
 val batchsize_glob = ref 64
+val nepoch_glob = ref 100
 
 val nsim_glob = ref 1600
 val decay_glob = ref 0.99
@@ -62,12 +63,13 @@ fun summary_param () =
     val nn1   = "example_window: " ^ its (!exwindow_glob)
     val nn2   = "nn dim: " ^ its (!dim_glob)
     val nn3   = "nn batchsize: " ^ its (!batchsize_glob)
+    val nn4   = "nn epoch: " ^ its (!nepoch_glob)
     val mcts2 = "mcts simulation: " ^ its (!nsim_glob)
     val mcts3 = "mcts decay: " ^ rts (!decay_glob) 
   in
     summary "Global parameters";
     summary (String.concatWith "\n  " 
-     ([file,ncore] @ [gen1,gen2,gen3] @ [nn1,nn2,nn3] @ [mcts2,mcts3])
+     ([file,ncore] @ [gen1,gen2,gen3] @ [nn1,nn2,nn3,nn4] @ [mcts2,mcts3])
      ^ "\n")
   end
 
@@ -178,7 +180,7 @@ fun random_dhtnn_gamespec gamespec =
 fun train_dhtnn gamespec (evalex,poliex) =
   let
     val _ = exl_stat (evalex,poliex)
-    val schedule = [(100,0.1 / Real.fromInt (!batchsize_glob))]
+    val schedule = [(!nepoch_glob,0.1 / Real.fromInt (!batchsize_glob))]
     val bsize = if length evalex < (!batchsize_glob) then 1 
                 else !batchsize_glob
     val dhtnn = random_dhtnn_gamespec gamespec
@@ -327,15 +329,26 @@ fun worker_start flags wid =
   end
 
 (* Boss *)
-fun boss_stopall ncore =
-  let fun send_stop wid = writel_atomic (widin_file wid) ["stop"] in
-    app send_stop (List.tabulate (ncore,I))
+fun boss_stop_workers threadl =
+  let 
+    val ncore = length threadl 
+    fun send_stop wid = writel_atomic (widin_file wid) ["stop"] 
+    fun loop threadl =
+      (
+      OS.Process.sleep (Time.fromReal (0.001));
+      if exists Thread.isActive threadl then loop threadl else ()
+      )
+  in
+    app send_stop (List.tabulate (ncore,I));
+    loop threadl
   end
 
-fun boss_end ncore completedl = 
+fun boss_end threadl completedl = 
   let 
+    val ncore = length threadl
     val _ = print_endline ("stop " ^ its ncore ^ " workers")
-    val _ = boss_stopall ncore
+    val _ = boss_stop_workers threadl
+    val _ = print_endline (its ncore ^ " workers stopped")
     val l1 = map snd completedl
     val nwin = length (filter (I o fst) l1)
     val exll = map snd l1
@@ -354,11 +367,15 @@ fun stat_jobs (remainingl,freel,runningl,completedl) =
        its (length runningl) ^ " " ^ its (length completedl) ^ 
      " free core: " ^ String.concatWith " " (map its freel))
 
-fun send_job (wid,job) = writel_atomic (widin_file wid) [its job]
+fun send_job (wid,job) = 
+  if exists_file (widin_file wid) 
+  then raise ERR "send_job" ""
+  else writel_atomic (widin_file wid) [its job]
 
-fun boss_send ncore (remainingl,runningl,completedl) =
+fun boss_send threadl (remainingl,runningl,completedl) =
   let
     fun is_running x = mem x (map fst runningl)
+    val ncore = length threadl
     val freel = filter (not o is_running) (List.tabulate (ncore,I))
     val _ = stat_jobs (remainingl,freel,runningl,completedl)
     val njob = Int.min (length freel, length remainingl)
@@ -366,12 +383,13 @@ fun boss_send ncore (remainingl,runningl,completedl) =
     val runningl_new = combine (first_n njob freel, al)    
   in
     app send_job runningl_new;
-    boss_collect ncore (remainingl_new, runningl_new @ runningl, completedl)
+    boss_collect threadl
+      (remainingl_new, runningl_new @ runningl, completedl)
   end
 
-and boss_collect ncore (remainingl,runningl,completedl) =
+and boss_collect threadl (remainingl,runningl,completedl) =
   if null remainingl andalso null runningl 
-    then boss_end ncore completedl
+    then boss_end threadl completedl
   else
   let
     val _ = OS.Process.sleep (Time.fromReal 0.001)
@@ -382,17 +400,17 @@ and boss_collect ncore (remainingl,runningl,completedl) =
     val (al,bl) = partition (isSome o snd) (map_assoc f runningl)
   in
     if null al 
-    then boss_collect ncore (remainingl,runningl,completedl)
+    then boss_collect threadl (remainingl,runningl,completedl)
     else 
       let
         val runningl_new = map fst bl
         val completedl_new = map boss_readresult al
       in
         if null remainingl 
-        then boss_collect ncore
+        then boss_collect threadl
           (remainingl,runningl_new,completedl_new @ completedl)
-        else
-          boss_send ncore (remainingl,runningl_new,completedl_new @ completedl)
+        else boss_send threadl
+          (remainingl,runningl_new,completedl_new @ completedl)
       end
   end
 
@@ -434,7 +452,7 @@ fun boss_start ncore flags dhtnn targetl =
     val threadl = map fork (List.tabulate (ncore,I))
   in
     print_endline "send orders";
-    boss_send ncore (remainingl,[],[])
+    boss_send threadl (remainingl,[],[])
   end
 
 (*
@@ -526,6 +544,7 @@ fun update_targetl () =
 
 fun rl_start gamespec =
   let
+    val _ = remove_file (eval_dir ^ "/" ^ (!logfile_glob))
     val _ = summary "Generation 0"
     val dhtnn_random = random_dhtnn_gamespec gamespec
     val targetl = update_targetl ()
@@ -563,23 +582,25 @@ fun start_rl_loop gamespec =
 end (* struct *)
 
 (*
-app load ["rlEnv"];
+load "rlEnv";
 open rlEnv;
 
 logfile_glob := "march15";
-ncore_glob := 3;
-ngen_glob := 1;
+ncore_glob := 16;
+ngen_glob := 2;
 ntarget_compete := 100;
 ntarget_explore := 100;
 exwindow_glob := 40000;
 dim_glob := 8;
 batchsize_glob := 64;
+nepoch_glob := 1;
 nsim_glob := 1600;
 decay_glob := 0.99;
 level_glob := 1;
 
 val allex = start_rl_loop rlGameArithGround.gamespec;
 
+(* todo: flags for nbig_steps and n_epoch *)
 *)
 
 

@@ -25,6 +25,7 @@ sig
   val exwindow_glob : int ref
   val dim_glob : int ref
   val batchsize_glob : int ref 
+  val nepoch_glob : int ref
   (* mcts parameters *)
   val nsim_glob : int ref
   val decay_glob : real ref
