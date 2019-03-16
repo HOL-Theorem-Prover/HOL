@@ -631,31 +631,24 @@ dim_glob := 8;
 val dhtnn = random_dhtnn_gamespec rlGameArithGround.gamespec;
 val operl = map fst (dkeys (#opdict dhtnn));
 
-
-val size = 10;
-val nex = 6400;
+val size = 15;
+val nex = 10240;
 val trainex = 
   split (List.tabulate (nex, fn _ => random_example operl size));
-batchsize_glob := 64;
+batchsize_glob := 1024;
 nepoch_glob := 1;
 
+fun test_ncore n =
+  (
+  ncore_glob := n;
+  ignore (profile (its n) (train_dhtnn rlGameArithGround.gamespec) trainex)
+  );
+
 reset_all ();
-ncore_glob := 1;
-val dhtnn_new = 
-  profile "hello1" (train_dhtnn rlGameArithGround.gamespec) trainex;
-
-ncore_glob := 2;
-val dhtnn_new = 
-  profile "hello2" (train_dhtnn rlGameArithGround.gamespec) trainex;
+List.tabulate (8, fn n => test_ncore (n + 1));
 results ();
-
-
-
-
-
-
-
 *)
+
 end (* struct *)
 
 (*

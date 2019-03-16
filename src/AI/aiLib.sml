@@ -784,6 +784,10 @@ fun compare_imin (a,b) = Int.compare (snd a, snd b)
 
 val attrib = [Thread.InterruptState Thread.InterruptAsynch, Thread.EnableBroadcastInterrupt true]
 
+
+
+
+
 fun parmap_exact ncores forg lorg =
   if length lorg <> ncores then raise ERR "parmap_exact" "" else 
   let
@@ -885,11 +889,87 @@ fun parmap_err ncores forg lorg =
     map fst (dict_sort compare_imin (List.concat (map (! o snd) lout)))
   end
 
+(* make repeated calles to parmap on the same function faster
+   by not closing threads between calls *)
+
+fun parmap_threadl ncore f =
+  let 
+    val endflag = ref false
+    val inv = Vector.tabulate (ncore, fn _ => ref NONE)
+    val outv = Vector.tabulate (ncore, fn _ => ref NONE) 
+    val endv = Vector.tabulate (ncore, fn _ => ref false)     
+    val waitv = Vector.tabulate (ncore, fn _ => ref false)
+    fun reset_outv () = 
+       let fun init_one pi = 
+         let val outref = Vector.sub (outv,pi) in outref := NONE end
+       in
+         ignore (List.tabulate (ncore, init_one)) 
+       end
+    fun process pi =
+      if !endflag then 
+        let val endref = Vector.sub (endv,pi) in endref := true end
+      else
+      let val inref = Vector.sub (inv,pi) in
+        case !inref of
+          NONE => process pi
+        | SOME x =>
+          let val outref = Vector.sub (outv,pi) in
+            inref := NONE; outref := SOME (map f x); process pi
+          end
+      end
+    fun fork_on pi = Thread.fork (fn () => process pi, attrib)
+    val threadl = List.tabulate (ncore,fork_on)
+    fun wait_resultl () = 
+      if Vector.all (isSome o !) outv then () else wait_resultl ()
+    fun parmap_f l =
+      let
+        val _ = reset_outv ()
+        val inv_loc = Vector.fromList (cut_n ncore l)
+        fun assign pi = 
+          let val inref = Vector.sub (inv,pi) in 
+            inref := SOME (Vector.sub (inv_loc,pi)) 
+          end
+        val _ = List.tabulate (ncore, assign) 
+        val _ = wait_resultl ()
+
+        val ll = vector_to_list (Vector.map (valOf o !) outv)
+      in
+        reset_outv ();  List.concat ll
+      end 
+    fun wait_close () = 
+      if exists Thread.isActive threadl then wait_close () else ()
+    fun close_threadl () = (endflag := true; wait_close ())
+      
+ in
+   (parmap_f, close_threadl)
+ end
+
 fun parmap ncores f l =
   if ncores = 1 andalso not (!use_thread_flag)
   then map f l 
   else map release (parmap_err ncores f l)
 
 fun parapp ncores f l = ignore (parmap ncores f l)
+
+(* 
+load "aiLib"; load "Profile"; open Profile; open aiLib;
+fun test1 () =
+  let 
+    val (parmap_f, close_threadl) = parmap_threadl 2 (I:int -> int);
+    val _ = List.tabulate (1000, fn _ => parmap_f [1,2]);
+    val _ = close_threadl ()
+  in
+    ()
+  end
+fun test2 () = ignore (List.tabulate (1000, fn _ => parmap 2 I [1,2]));
+
+reset_all ();
+profile "test1" test1 ();
+profile "test2" test2 ();
+results ();
+
+
+*)
+
 
 end (* struct *)
