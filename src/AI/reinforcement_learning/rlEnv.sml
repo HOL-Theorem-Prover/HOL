@@ -619,14 +619,14 @@ load "rlEnv";
 open rlEnv;
 
 logfile_glob := "march15";
-ncore_glob := 3;
-ngen_glob := 1;
+ncore_glob := 16;
+ngen_glob := 50;
 ntarget_compete := 100;
 ntarget_explore := 100;
 exwindow_glob := 40000;
 dim_glob := 8;
 batchsize_glob := 64;
-nepoch_glob := 1;
+nepoch_glob := 20;
 nsim_glob := 1600;
 decay_glob := 0.99;
 level_glob := 2;

@@ -283,7 +283,7 @@ fun mk_batch_aux size acc res l =
 fun mk_batch size l = mk_batch_aux size [] [] l
 
 fun number_partition m n =
-  if m > n then raise ERR "partition" "" else
+  if m > n orelse m <= 0 then raise ERR "partition" "" else
   if m = 1 then [[n]] else
   let
     fun f x l = x :: l

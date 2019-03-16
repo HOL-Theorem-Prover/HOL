@@ -125,7 +125,6 @@ fun bp_nn fpdatal expectv =
   let
     val rev_fpdatal = rev fpdatal
     val outnv = #outnv (hd rev_fpdatal)
-    (* cost is mean square error *)
     val doutnv = diff_rvect expectv outnv
   in
     rev (bp_nn_aux rev_fpdatal doutnv)
@@ -143,12 +142,6 @@ fun train_nn_one nn (inputv,expectv) =
 fun transpose_ll ll = case ll of
     [] :: _ => []
   | _ => map hd ll :: transpose_ll (map tl ll) 
-
-
-fun sum_dwl dwl =
-  let fun f i j = sum_real (map (fn w => mat_sub w i j) dwl) in
-    mat_tabulate f (mat_dim (hd dwl))
-  end
 
 fun sum_dwll dwll = map matl_add (transpose_ll dwll)
 
