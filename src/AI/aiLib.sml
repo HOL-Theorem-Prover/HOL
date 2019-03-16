@@ -899,7 +899,8 @@ fun parmap_threadl ncore f =
     val outv = Vector.tabulate (ncore, fn _ => ref NONE) 
     val endv = Vector.tabulate (ncore, fn _ => ref false)     
     val waitv = Vector.tabulate (ncore, fn _ => ref false)
-    fun reset_outv () = 
+    val param_ref = ref NONE
+      fun reset_outv () = 
        let fun init_one pi = 
          let val outref = Vector.sub (outv,pi) in outref := NONE end
        in
@@ -911,18 +912,20 @@ fun parmap_threadl ncore f =
       else
       let val inref = Vector.sub (inv,pi) in
         case !inref of
-          NONE => process pi
+          NONE => (OS.Process.sleep (Time.fromReal (0.001)); process pi)
         | SOME x =>
           let val outref = Vector.sub (outv,pi) in
-            inref := NONE; outref := SOME (map f x); process pi
+            inref := NONE; outref := SOME (map (f (valOf (!param_ref))) x); 
+            process pi
           end
       end
     fun fork_on pi = Thread.fork (fn () => process pi, attrib)
     val threadl = List.tabulate (ncore,fork_on)
     fun wait_resultl () = 
       if Vector.all (isSome o !) outv then () else wait_resultl ()
-    fun parmap_f l =
+    fun parmap_f param l =
       let
+        val _ = param_ref := SOME param
         val _ = reset_outv ()
         val inv_loc = Vector.fromList (cut_n ncore l)
         fun assign pi = 
@@ -934,15 +937,14 @@ fun parmap_threadl ncore f =
 
         val ll = vector_to_list (Vector.map (valOf o !) outv)
       in
-        reset_outv ();  List.concat ll
-      end 
+        reset_outv (); List.concat ll
+      end
     fun wait_close () = 
       if exists Thread.isActive threadl then wait_close () else ()
     fun close_threadl () = (endflag := true; wait_close ())
-      
- in
-   (parmap_f, close_threadl)
- end
+  in
+    (parmap_f, close_threadl)
+  end
 
 fun parmap ncores f l =
   if ncores = 1 andalso not (!use_thread_flag)
@@ -953,10 +955,11 @@ fun parapp ncores f l = ignore (parmap ncores f l)
 
 (* 
 load "aiLib"; load "Profile"; open Profile; open aiLib;
+val add = curry (op +);
 fun test1 () =
   let 
-    val (parmap_f, close_threadl) = parmap_threadl 2 (I:int -> int);
-    val _ = List.tabulate (1000, fn _ => parmap_f [1,2]);
+    val (parmap_f, close_threadl) = parmap_threadl 2 add;
+    val _ = List.tabulate (1000, fn x => parmap_f x [0,1]);
     val _ = close_threadl ()
   in
     ()

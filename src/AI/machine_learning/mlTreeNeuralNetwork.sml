@@ -14,6 +14,10 @@ val ERR = mk_HOL_ERR "mlTreeNeuralNetwork"
 val debugdir = HOLDIR ^ "/src/AI/machine_learning/debug"
 fun debug s = debug_in_dir debugdir "mlTreeNeuralNetwork" s
 
+val pmb_flag = ref false
+val pmt_flag = ref false
+val parmap_threadl_glob = ref NONE
+
 (* -------------------------------------------------------------------------
    Type
    ------------------------------------------------------------------------- *)
@@ -303,28 +307,6 @@ fun infer_tnn (tnn: tnn) tm =
   end
 
 (* -------------------------------------------------------------------------
-   Timers
-   ------------------------------------------------------------------------- *)
-
-val tto_timer = ref 0.0
-val upd_timer1 = ref 0.0
-val upd_timer2 = ref 0.0
-val upd_timer3 = ref 0.0
-val upd_timer4 = ref 0.0
-val upd_timer5 = ref 0.0
-val aver_timer5 = ref 0.0
-val loss_timer = ref 0.0
-
-val all_ref = 
-  [tto_timer,upd_timer1,upd_timer2,upd_timer3,upd_timer4,
-   aver_timer5, upd_timer5, loss_timer, sum_timer]
-
-fun reset_timers () = map (fn x => (x := 0.0)) all_ref
-
-fun print_timers () =
-  print_endline (String.concatWith " " (map (rts o !) all_ref))
-
-(* -------------------------------------------------------------------------
    Training a tnn for one epoch
    ------------------------------------------------------------------------- *)
 
@@ -359,10 +341,18 @@ fun update_opernn opdict (oper,bpdatall) =
     (oper,newnn)
   end
 
+fun get_parmap_loc ncore train_tnn_one tnn =
+  if !pmt_flag
+    then (valOf (!parmap_threadl_glob)) tnn
+  else if !pmb_flag 
+    then parmap_batch ncore (train_tnn_one tnn)
+  else parmap ncore (train_tnn_one tnn)  
+
 fun train_tnn_batch ncore (tnn as {opdict,headnn,dimin,dimout}) batch =
   let
-    val (bpdictl,bpdatall) =
-      split (parmap ncore (train_tnn_one tnn) batch)
+    val parmap_loc = get_parmap_loc ncore train_tnn_one tnn
+    val (bpdictl,bpdatall) = 
+      split (Profile.profile "parmap_loc" parmap_loc batch)
     val (newheadnn,loss) = update_head headnn bpdatall
     val bpdict = dconcat oper_compare bpdictl
     val newnnl = map (update_opernn opdict) (dlist bpdict)
@@ -419,11 +409,20 @@ fun train_tnn_schedule_aux (ncore,bsize) tnn (ptrain,ptest) schedule =
       train_tnn_schedule_aux (ncore,bsize) newtnn (ptrain,ptest) m
     end
 
+
+fun init_pmt ncore =
+  if !pmt_flag then 
+    let val (parmap_f,close_threadl) = parmap_threadl ncore train_tnn_one in
+      parmap_threadl_glob := SOME parmap_f; SOME close_threadl
+    end
+  else NONE
+
+
 fun train_tnn_schedule (ncore,bsize) tnn (ptrain,ptest) schedule =
   let 
-    val _ = reset_timers ()
+    val closefo = init_pmt ncore 
     val r = train_tnn_schedule_aux (ncore,bsize) tnn (ptrain,ptest) schedule
-    val _ = print_timers ()
+    val _ = if !pmt_flag then (valOf closefo) () else ()
   in
     r
   end
@@ -439,10 +438,14 @@ fun train_dhtnn_batch ncore dhtnn batch1 batch2 =
                    dimin = dimin, dimout = 1}
     val tnnpoli = {opdict = opdict, headnn = headpoli,
                    dimin = dimin, dimout = dimout}
-    val (bpdictl1,bpdatall1) =
-      split (parmap ncore (train_tnn_one tnneval) batch1)
-    val (bpdictl2,bpdatall2) =
-      split (parmap ncore (train_tnn_one tnnpoli) batch2)
+    val parmap_loc1 = get_parmap_loc ncore train_tnn_one tnneval
+    val (bpdictl1,bpdatall1) = split (Profile.profile 
+      (its ncore ^ "parmap")
+      parmap_loc1 batch1)
+    val parmap_loc2 = get_parmap_loc ncore train_tnn_one tnnpoli
+    val (bpdictl2,bpdatall2) = split (Profile.profile 
+      (its ncore ^ "parmap")
+      parmap_loc2 batch2)
     val (newheadeval,loss1) = update_head headeval bpdatall1
     val (newheadpoli,loss2) = update_head headpoli bpdatall2
     val bpdict = dconcat oper_compare (bpdictl1 @ bpdictl2)
@@ -483,7 +486,7 @@ fun train_dhtnn_nepoch ncore n dhtnn size (etrain,ptrain) =
     train_dhtnn_nepoch ncore (n - 1) newdhtnn size (etrain,ptrain)
   end
 
-fun train_dhtnn_schedule ncore dhtnn bsize (etrain,ptrain) schedule =
+fun train_dhtnn_schedule_aux ncore dhtnn bsize (etrain,ptrain) schedule =
   case schedule of
     [] => dhtnn
   | (nepoch, lrate) :: m =>
@@ -493,8 +496,17 @@ fun train_dhtnn_schedule ncore dhtnn bsize (etrain,ptrain) schedule =
       val newdhtnn = 
         train_dhtnn_nepoch ncore nepoch dhtnn bsize (etrain,ptrain)
     in
-      train_dhtnn_schedule ncore newdhtnn bsize (etrain,ptrain) m
+      train_dhtnn_schedule_aux ncore newdhtnn bsize (etrain,ptrain) m
     end
+ 
+fun train_dhtnn_schedule ncore dhtnn bsize (etrain,ptrain) schedule =
+  let 
+    val closefo = init_pmt ncore 
+    val r = train_dhtnn_schedule_aux ncore dhtnn bsize (etrain,ptrain) schedule
+    val _ = if !pmt_flag then (valOf closefo) () else ()
+  in
+    r
+  end
 
 (* -------------------------------------------------------------------------
    Preparation of the training set

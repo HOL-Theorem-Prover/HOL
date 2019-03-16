@@ -48,15 +48,15 @@ val exwindow_glob = ref 40000
 val dim_glob = ref 8
 val batchsize_glob = ref 64
 val nepoch_glob = ref 100
+val ncore_train_glob = ref 4
 
 val nsim_glob = ref 1600
 val decay_glob = ref 0.99
-val ncore_glob = ref 8
+val ncore_mcts_glob = ref 8
 
 fun summary_param () =
   let
     val file  = "  file: " ^ (!logfile_glob)
-    val ncore = "ncores: " ^ its (!ncore_glob)
     val gen1  = "gen max: " ^ its (!ngen_glob)
     val gen2  = "target_compete: " ^ its (!ntarget_compete)
     val gen3  = "target_explore: " ^ its (!ntarget_explore)
@@ -64,12 +64,15 @@ fun summary_param () =
     val nn2   = "nn dim: " ^ its (!dim_glob)
     val nn3   = "nn batchsize: " ^ its (!batchsize_glob)
     val nn4   = "nn epoch: " ^ its (!nepoch_glob)
+    val nn5   = "nn ncore: " ^ its (!ncore_train_glob)
     val mcts2 = "mcts simulation: " ^ its (!nsim_glob)
-    val mcts3 = "mcts decay: " ^ rts (!decay_glob) 
+    val mcts3 = "mcts decay: " ^ rts (!decay_glob)
+    val mcts4 = "mcts ncore: " ^ its (!ncore_mcts_glob)
   in
     summary "Global parameters";
     summary (String.concatWith "\n  " 
-     ([file,ncore] @ [gen1,gen2,gen3] @ [nn1,nn2,nn3,nn4] @ [mcts2,mcts3])
+     ([file] @ [gen1,gen2,gen3] @ [nn1,nn2,nn3,nn4] @ 
+      [mcts2,mcts3,mcts4])
      ^ "\n")
   end
 
@@ -186,7 +189,8 @@ fun train_dhtnn gamespec (evalex,poliex) =
     val dhtnn = random_dhtnn_gamespec gamespec
     val (etrain,ptrain) = (prepare_trainset evalex, prepare_trainset poliex)
   in
-    train_dhtnn_schedule (!ncore_glob) dhtnn bsize (etrain,ptrain) schedule
+    train_dhtnn_schedule (!ncore_train_glob) 
+      dhtnn bsize (etrain,ptrain) schedule
   end
 
 fun train_f gamespec allex =
@@ -506,7 +510,7 @@ val nwin = length (filter I (map snd completedl));
 
 fun compete_one dhtnn targetl =
   let val ((nwin,_),t) = add_time 
-    (boss_start (!ncore_glob) (false,false) dhtnn) targetl 
+    (boss_start (!ncore_mcts_glob) (false,false) dhtnn) targetl 
   in
     summary ("Competition time : " ^ rts t); nwin
   end
@@ -528,7 +532,6 @@ fun compete dhtnn_old dhtnn_new gamespec targetl =
     if w_new > w_old then dhtnn_new else dhtnn_old
   end
 
-
 (* -------------------------------------------------------------------------
    Exploration
    ------------------------------------------------------------------------- *)
@@ -548,7 +551,7 @@ fun update_allex exll allex =
 fun explore_f_aux startb gamespec allex dhtnn selectl =
   let
     val ((nwin,exll),t) = add_time
-      (boss_start (!ncore_glob) (true,startb) dhtnn) selectl 
+      (boss_start (!ncore_mcts_glob) (true,startb) dhtnn) selectl 
     val _ = summary ("Exploration time: " ^ rts t)
     val _ = summary ("Exploration wins: " ^ its nwin)
   in
@@ -626,27 +629,59 @@ fun random_example operl size =
   end
 
 (*
-load "rlEnv"; load "Profile"; open aiLib Profile rlEnv;
+load "rlEnv";
+load "Profile"; open aiLib Profile rlEnv;
 dim_glob := 8;
 val dhtnn = random_dhtnn_gamespec rlGameArithGround.gamespec;
 val operl = map fst (dkeys (#opdict dhtnn));
 
 val size = 15;
-val nex = 10240;
+val nex = 12800;
 val trainex = 
   split (List.tabulate (nex, fn _ => random_example operl size));
-batchsize_glob := 1024;
+batchsize_glob := 128;
 nepoch_glob := 1;
 
 fun test_ncore n =
   (
-  ncore_glob := n;
-  ignore (profile (its n) (train_dhtnn rlGameArithGround.gamespec) trainex)
+  reset_all ();
+  PolyML.fullGC ();
+  ncore_train_glob := n;
+  ignore (profile (its n) (train_dhtnn rlGameArithGround.gamespec) trainex);
+  results ()
   );
 
-reset_all ();
-List.tabulate (8, fn n => test_ncore (n + 1));
-results ();
+fun test_ncore_nmax nmax =
+  let fun f n = 
+    (
+    ncore_train_glob := (n + 1);
+    PolyML.fullGC (); 
+    ignore (profile (its (n+1)) 
+    (train_dhtnn rlGameArithGround.gamespec) trainex)
+    )
+  in
+    reset_all ();
+    List.tabulate (nmax,f); 
+    results ()
+  end
+;
+
+val result1 = test_ncore_nmax 2;
+
+mlTreeNeuralNetwork.pmt_flag := true;
+val result2 = test_ncore 2;
+mlTreeNeuralNetwork.pmt_flag := false;
+
+mlTreeNeuralNetwork.pmb_flag := true;
+val result3 = test_ncore 2;
+mlTreeNeuralNetwork.pmb_flag := false;
+
+
+map_snd #real result1;
+map_snd #real result2;
+map_snd #real result3;
+
+
 *)
 
 end (* struct *)
@@ -655,8 +690,10 @@ end (* struct *)
 load "rlEnv";
 open rlEnv;
 
+mlTreeNeuralNetwork.pmb_flag := false;
 logfile_glob := "march15";
-ncore_glob := 16;
+ncore_mcts_glob := 16;
+ncore_train_glob := 4;
 ngen_glob := 50;
 ntarget_compete := 100;
 ntarget_explore := 100;

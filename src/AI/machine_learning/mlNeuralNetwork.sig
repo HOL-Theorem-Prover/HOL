@@ -3,7 +3,6 @@ sig
 
   (* hyperparameters *)
   val learning_rate : real ref
-  val sum_timer : real ref
 
   (* activation *)
   val tanh : real -> real

@@ -187,6 +187,8 @@ sig
   val parapp : int -> ('a -> 'b) -> 'a list -> unit
 
   val parmap_threadl : 
-   int -> ('a -> 'b) -> ('a list -> 'b list) * (unit -> unit)
+    int ->
+    ('a -> 'b -> 'c) ->
+    ('a -> 'b list -> 'c list) * (unit -> unit)
 
 end

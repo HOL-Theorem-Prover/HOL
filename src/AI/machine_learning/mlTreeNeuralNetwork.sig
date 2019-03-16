@@ -41,6 +41,9 @@ include Abbrev
   val infer_tnn : tnn -> term -> real list
 
   (* training *)
+  val pmb_flag : bool ref
+  val pmt_flag : bool ref  
+
   val train_tnn_schedule :
     (int * int) -> tnn ->
     (term list * vect) list * (term list * vect) list ->

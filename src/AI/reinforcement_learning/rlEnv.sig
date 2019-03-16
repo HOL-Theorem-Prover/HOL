@@ -26,10 +26,11 @@ sig
   val dim_glob : int ref
   val batchsize_glob : int ref 
   val nepoch_glob : int ref
+  val ncore_train_glob : int ref  
   (* mcts parameters *)
   val nsim_glob : int ref
   val decay_glob : real ref
-  val ncore_glob : int ref  
+  val ncore_mcts_glob : int ref
 
   (* adaptative difficulty *)
   val level_glob : int ref

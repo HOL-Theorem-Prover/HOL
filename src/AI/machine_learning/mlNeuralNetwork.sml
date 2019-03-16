@@ -145,12 +145,8 @@ fun transpose_ll ll = case ll of
 
 fun sum_dwll dwll = map matl_add (transpose_ll dwll)
 
-val sum_timer = ref 0.0
-
 fun sum_bpdatall bpdatall =
-  let val dwll = map (map #dw) bpdatall in
-    total_time sum_timer sum_dwll dwll
-  end
+  let val dwll = map (map #dw) bpdatall in sum_dwll dwll end
 
 (* -------------------------------------------------------------------------
    Loss
