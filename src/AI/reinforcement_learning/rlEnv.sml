@@ -612,6 +612,50 @@ fun start_rl_loop gamespec =
     rl_loop (1,!ngen_glob) gamespec (allex,dhtnn,targetl)
   end
 
+(* -------------------------------------------------------------------------
+   Training speed test
+   ------------------------------------------------------------------------- *)
+
+fun random_example operl size =
+  let 
+    val polin = length (#movel rlGameArithGround.gamespec) 
+    val tm = psTermGen.random_term operl (size,bool)
+  in
+    ((tm, [random_real ()]), 
+     (tm, List.tabulate (polin,fn _ => random_real ())))
+  end
+
+(*
+load "rlEnv"; load "Profile"; open aiLib Profile rlEnv;
+dim_glob := 8;
+val dhtnn = random_dhtnn_gamespec rlGameArithGround.gamespec;
+val operl = map fst (dkeys (#opdict dhtnn));
+
+
+val size = 10;
+val nex = 6400;
+val trainex = 
+  split (List.tabulate (nex, fn _ => random_example operl size));
+batchsize_glob := 64;
+nepoch_glob := 1;
+
+reset_all ();
+ncore_glob := 1;
+val dhtnn_new = 
+  profile "hello1" (train_dhtnn rlGameArithGround.gamespec) trainex;
+
+ncore_glob := 2;
+val dhtnn_new = 
+  profile "hello2" (train_dhtnn rlGameArithGround.gamespec) trainex;
+results ();
+
+
+
+
+
+
+
+*)
 end (* struct *)
 
 (*

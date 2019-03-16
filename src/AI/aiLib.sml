@@ -799,7 +799,7 @@ fun parmap_exact ncores forg lorg =
     fun fork_on pi = Thread.fork (fn () => process pi, attrib)
     val threadl = map fork_on (List.tabulate (ncores,I))
     fun loop () =
-      (if Vector.all (isSome o !) aout then () else loop ())
+      (if exists Thread.isActive threadl then loop () else ())
   in
     loop ();
     map (release o valOf o !) (vector_to_list aout)
@@ -877,8 +877,11 @@ fun parmap_err ncores forg lorg =
       then end_flag := true
       else loop ()
       )
+    fun wait_close () = 
+      if exists Thread.isActive threadl then wait_close () else ()
   in
     loop ();
+    wait_close ();
     map fst (dict_sort compare_imin (List.concat (map (! o snd) lout)))
   end
 
@@ -888,18 +891,5 @@ fun parmap ncores f l =
   else map release (parmap_err ncores f l)
 
 fun parapp ncores f l = ignore (parmap ncores f l)
-
-(* Speed Test 
-load "aiLib"; open aiLib;
-val l0 =  List.tabulate (10000,I);
-val (_,t1) = add_time (map I) l0;
-val (_,t2) = add_time (parmap 2 I) l0;
-val (_,t3) = add_time (parmap 3 I) l0;
-
-load "Parmap";
-val (l1,l2) = part_n 50 l0;
-val (_,t3) = add_time (Parmap.parmap (map I)) [l1,l2];
-*)
-
 
 end (* struct *)

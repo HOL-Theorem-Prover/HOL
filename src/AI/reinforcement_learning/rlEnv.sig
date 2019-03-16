@@ -41,9 +41,17 @@ sig
     rlGameArithGround.board psMCTS.sit list ->
     int * ((term * real list) list * (term * real list) list) list
 
-  (* *)
+  (* training *)
   val random_dhtnn_gamespec : 
-    (rlGameArithGround.board, ''a, 'b) gamespec -> mlTreeNeuralNetwork.dhtnn
+    (rlGameArithGround.board, ''a, 'b) gamespec -> 
+    mlTreeNeuralNetwork.dhtnn
+  val random_example : term list -> int -> 
+    (term * real list) * (term * real list)
+  val train_dhtnn : 
+    (rlGameArithGround.board, ''a, 'b) gamespec ->
+    (term * real list) list * (term * real list) list ->
+    mlTreeNeuralNetwork.dhtnn
+  
 
   val logfile_glob : string ref
   val summary : string -> unit
