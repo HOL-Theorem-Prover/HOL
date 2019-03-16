@@ -581,6 +581,7 @@ fun update_targetl () =
 fun rl_start gamespec =
   let
     val _ = remove_file (eval_dir ^ "/" ^ (!logfile_glob))
+    val _ = summary_param ()
     val _ = summary "Generation 0"
     val dhtnn_random = random_dhtnn_gamespec gamespec
     val targetl = update_targetl ()
@@ -608,10 +609,7 @@ fun rl_loop (n,nmax) gamespec rldata =
     end
 
 fun start_rl_loop gamespec =
-  let
-    val _ = summary_param ()
-    val (allex,dhtnn,targetl) = rl_start gamespec
-  in
+  let val (allex,dhtnn,targetl) = rl_start gamespec in
     rl_loop (1,!ngen_glob) gamespec (allex,dhtnn,targetl)
   end
 
@@ -651,35 +649,19 @@ fun test_ncore n =
   results ()
   );
 
-fun test_ncore_nmax nmax =
-  let fun f n = 
-    (
-    ncore_train_glob := (n + 1);
-    PolyML.fullGC (); 
-    ignore (profile (its (n+1)) 
-    (train_dhtnn rlGameArithGround.gamespec) trainex)
-    )
-  in
-    reset_all ();
-    List.tabulate (nmax,f); 
-    results ()
-  end
-;
-
-val result1 = test_ncore_nmax 2;
+val result1l = map test_ncore [32];
 
 mlTreeNeuralNetwork.pmt_flag := true;
-val result2 = test_ncore 2;
+val result2l = map test_ncore [32];
 mlTreeNeuralNetwork.pmt_flag := false;
 
 mlTreeNeuralNetwork.pmb_flag := true;
-val result3 = test_ncore 2;
+val result3l = map test_ncore [32];
 mlTreeNeuralNetwork.pmb_flag := false;
 
-
-map_snd #real result1;
-map_snd #real result2;
-map_snd #real result3;
+result1l;
+result2l;
+result3l;
 
 
 *)
@@ -690,20 +672,19 @@ end (* struct *)
 load "rlEnv";
 open rlEnv;
 
-mlTreeNeuralNetwork.pmb_flag := false;
-logfile_glob := "march15";
+logfile_glob := "march16-run2";
 ncore_mcts_glob := 16;
-ncore_train_glob := 4;
+ncore_train_glob := 8;
 ngen_glob := 50;
 ntarget_compete := 100;
 ntarget_explore := 100;
 exwindow_glob := 40000;
 dim_glob := 8;
 batchsize_glob := 64;
-nepoch_glob := 20;
+nepoch_glob := 100;
 nsim_glob := 1600;
 decay_glob := 0.99;
-level_glob := 2;
+level_glob := 1;
 
 val allex = start_rl_loop rlGameArithGround.gamespec;
 
