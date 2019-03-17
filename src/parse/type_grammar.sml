@@ -639,4 +639,12 @@ fun apply_delta d g =
 fun apply_deltas ds g =
   List.foldl (uncurry apply_delta) g ds
 
+fun delta_toString d =
+    case d of
+        NEW_TYPE kid => "NEW_TYPE" ^ KernelSig.name_toString kid
+      | NEW_INFIX {Name,ParseName,Assoc,Prec} =>
+          "NEW_INFIX{Name=\"" ^ String.toString Name ^ "\",ParseName=\"" ^
+          String.toString ParseName ^ "...}"
+      | _ => ""
+
 end

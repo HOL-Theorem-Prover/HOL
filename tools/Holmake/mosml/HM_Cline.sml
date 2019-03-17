@@ -3,25 +3,24 @@ struct
 
 type t = {
   core : HM_Core_Cline.t,
-  mosmldir : string option,
-  no_basis2002 : bool
+  mosmldir : string option
 }
 
 local
   open FunctionalRecordUpdate
-  fun makeUpdateT z = makeUpdate3 z
+  fun makeUpdateT z = makeUpdate2 z
 in
 fun updateT z = let
-  fun from  core mosmldir no_basis2002 =
+  fun from  core mosmldir =
     {
-      no_basis2002 = no_basis2002, mosmldir = mosmldir, core = core
+      mosmldir = mosmldir, core = core
     }
-  fun from' no_basis2002 mosmldir core =
+  fun from' mosmldir core =
     {
-      no_basis2002 = no_basis2002, mosmldir = mosmldir, core = core
+      mosmldir = mosmldir, core = core
     }
-  fun to f {core, mosmldir, no_basis2002} =
-    f core mosmldir no_basis2002
+  fun to f {core, mosmldir} =
+    f core mosmldir
 in
   makeUpdateT (from, from', to)
 end z
@@ -31,7 +30,6 @@ end (* local *)
 
 
 val default_options = {
-  no_basis2002 = false,
   mosmldir = NONE,
   core = HM_Core_Cline.fupd_jobs (fn _ => 1) HM_Core_Cline.default_core_options
 }
@@ -60,10 +58,6 @@ fun set_mosmldir s =
              else ();
              updateT t (U #mosmldir (SOME s)) $$))
 val mosml_option_descriptions = [
-  {help = "don't use HOL's provided basis 2002", long = ["no_basis2002"],
-   short = "",
-   desc = NoArg (fn () =>
-                    resfn (fn (wn,t) => updateT t (U #no_basis2002 true) $$))},
   {help = "specify Moscow ML's base directory", long = ["mosmldir"],
    short = "",
    desc = ReqArg (set_mosmldir, "directory")}

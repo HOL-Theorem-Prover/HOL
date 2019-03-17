@@ -10,13 +10,8 @@ fun die s = (TextIO.output(TextIO.stdErr, s ^ "\n");
 val version_string =
     List.nth([], 1) handle Option => "2.01" | Subscript => "2.10";
 
-val _ = if version_string = "2.01" then let
-            val _ = print "\n\nUsing Basis 2002 update for Moscow ML 2.01\n"
-            val _ = app load ["CharVector", "Math", "ListPair"]
-            infix ++ val op++ = OS.Path.concat
-          in
-            use ("tools" ++ "Holmake" ++ "basis2002.sml")
-          end
+val _ = if version_string = "2.01" then
+          die "HOL requires at least Moscow ML 2.10"
         else ();
 
 structure FileSys = OS.FileSys

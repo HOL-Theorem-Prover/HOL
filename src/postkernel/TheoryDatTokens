@@ -54,7 +54,7 @@ rbr = \];
   raise DatTokenError ("line " ^ Int.toString (!linenum) ^
                        ": character \""^yytext^"\" is a lexical error")
 );
-<string>([A-Za-z0-9`~'_!@#$%^&*()+={}[\]|;:,.<>?/]|{space}|"-")+ => (
+<string>([A-Za-z0-9`~'_!@#$%^&*()+={}[\]|;:,.<>?/]|{space}|"-"){1,200} => (
   stracc := apfst (cons yytext) (!stracc);
   continue()
 );

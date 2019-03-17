@@ -165,7 +165,7 @@ fun nodeInfo_toString tstr (nI : 'a nodeInfo) =
     open Holmake_tools
     val {target,status,command,dependencies,seqnum,phony,dir} = nI
   in
-    OS.Path.concat(hmdir.toString dir, tstr target) ^
+    hmdir.toString (hmdir.extendp {base = dir, extension = tstr target}) ^
     (if phony then "[PHONY]" else "") ^
     "(" ^ Int.toString seqnum ^ ") " ^
     status_toString status ^ " : " ^

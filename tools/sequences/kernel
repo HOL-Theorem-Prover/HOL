@@ -2,6 +2,7 @@
 !tools/Holmake/tests/depchainloop
 !tools/Holmake/tests/recursiveclean
 !tools/Holmake/tests/wildcard
+!tools/Holmake/tests/dashn_works
 tools/set_mtime
 tools/mlyacc/mlyacclib
 [mosml]src/portableML/mosml
@@ -25,13 +26,7 @@ src/1
 (otknl)src/opentheory/postbool
 src/proofman
 [poly]bin/hol.bare
-src/proofman/tests
-[poly]src/AI
-[poly]src/AI/sml_inspection
-[poly]src/AI/machine_learning
-[poly]src/AI/proof_search
-[poly]src/tactictoe/src
-[poly]src/holyhammer
+!src/proofman/tests
 !tools/Holmake/tests/holpathdb/proj2
 !tools/Holmake/tests/holpathdb/proj2/proj2A
 !tools/Holmake/tests/depchain1/dir3

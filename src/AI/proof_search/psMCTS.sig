@@ -8,9 +8,6 @@ sig
   (* Debug *)
   val string_of_status : status -> string
 
-  (* Globals *)
-  val ignorestatus_flag : bool ref
-
   (* 'a is the representation of a board *)
   type 'a sit = bool * 'a
 
@@ -31,16 +28,15 @@ sig
   (* search function *)
   val starttree_of :
     real ->
-    ('a sit -> real * ('b * real) list) ->
-    ('a sit -> status) ->
+    (('a sit -> status) * ('b -> 'a sit -> 'a sit)) *
+      ('a sit -> real * ('b * real) list) ->
     'a sit ->
     ('a,'b) tree
 
   val mcts :
-    (int * real) ->
-    ('a sit -> real * ('b * real) list) ->
-    ('a sit -> status) ->
-    ('b -> 'a sit -> 'a sit) ->
+    (int * real * bool) ->
+    (('a sit -> status) * ('b -> 'a sit -> 'a sit)) *
+      ('a sit -> real * ('b * real) list) ->
     ('a,'b) tree ->
     ('a,'b) tree
 
@@ -56,10 +52,13 @@ sig
 
   (* constructing a training example *)
   val move_of_cid : ('a,'b) node -> int list -> 'b
-  val eval_example : ('a,'b) tree -> int list -> real
-  val poli_example : ('a,'b) tree -> int list -> real list option
+  val evalpoli_example : ('a,'b) tree -> (real * ('b * real) list) option
 
   (* choosing a big step *)
-  val select_bigstep : ('a,'b) tree -> int list -> int list option
+  val print_distrib : ('b -> string) ->
+    ((('b * real) * int list) * real) list -> unit
+  val select_bigstep : ('a,'b) tree -> int list ->
+    ('b choice * real) list * int list option
+
 
 end

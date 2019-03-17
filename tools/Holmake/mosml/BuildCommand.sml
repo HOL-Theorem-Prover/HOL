@@ -44,11 +44,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
   val no_sigobj = member "NO_SIGOBJ" hmake_options
   val hmake_no_overlay = member "NO_OVERLAY" hmake_options
   val no_overlay = #no_overlay (#core optv)
-  val nob2002 = #no_basis2002 optv orelse HAVE_BASIS2002
-  val overlay_stringl =
-      case actual_overlay of
-        NONE => if not nob2002 then ["basis2002.ui"] else []
-      | SOME s => if Systeml.HAVE_BASIS2002 then [s] else ["basis2002.ui", s]
+  val overlay_stringl = case actual_overlay of NONE => [] | SOME s => [s]
   val MOSMLDIR =  case #mosmldir optv of NONE => MOSMLDIR0 | SOME s => s
   val MOSMLCOMP = fullPath [MOSMLDIR, "mosmlc"]
   fun compile debug args = let
@@ -189,9 +185,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
                                    system = Systeml.system_ps,
                                    hmenv = hmenv}
 in
-  {extra_impl_deps = if nob2002 then []
-                     else [toFile (fullPath [SIGOBJ, "basis2002.uo"])],
-   build_graph = build_graph}
+  {extra_impl_deps = [], build_graph = build_graph}
 end (* make_build_command's let *)
 
 end (* struct *)

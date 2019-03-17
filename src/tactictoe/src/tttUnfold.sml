@@ -1052,7 +1052,7 @@ fun ttt_rewrite () =
 
 (* ------------------------------------------------------------------------
    Extra safety during recording
-   (in case of export_theory is not catched)
+   (if export_theory is not catched)
    ------------------------------------------------------------------------ *)
 
 fun save_file file =
@@ -1099,6 +1099,18 @@ fun ttt_record () =
   let val thyl = ttt_rewrite () in ttt_record_thyl thyl end
 
 (* ------------------------------------------------------------------------
+   Evaluation
+   ------------------------------------------------------------------------ *)
+
+fun ttt_parallel_eval ncores thyl =
+  let
+    val _ = ttt_ttteval_flag := true
+    fun f thy = (ttt_rewrite_thy thy; ttt_record_thy thy)
+  in
+    parapp ncores f thyl; ttt_ttteval_flag := false
+  end
+
+(* ------------------------------------------------------------------------
    Theories of the standard library
    ------------------------------------------------------------------------ *)
 
@@ -1127,10 +1139,12 @@ fun load_sigobj () =
 end (* struct *)
 
 (* test
-  load "tttUnfold"; open aiLib tttUnfold;
-  debug_flag := true;
-  ttt_record ();
-  ttt_rewrite_thy "list";
-  ttt_record_thy "list";
+  load "tttSetup"; load "tttUnfold";
+  open tttUnfold;
+  load_sigobj ();
+  val thyl = ancestry (current_theory ());
+  tttSetup.ttt_search_time := 60.0;
+  val ncores = 20;
+  ttt_parallel_eval ncores thyl
 *)
 

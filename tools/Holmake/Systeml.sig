@@ -27,7 +27,6 @@ sig
   val POLY_LDFLAGS_STATIC : string list
   val CC : string
   val MOSMLDIR : string
-  val HAVE_BASIS2002 : bool
   val OS : string
   val DEPDIR : string
   val GNUMAKE : string

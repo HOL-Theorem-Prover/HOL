@@ -439,14 +439,22 @@ fun badpc_encode s =
       recurse false (sz - 2)
     end
 
-fun is_safe_varname s =
-    s <> "" andalso
+fun is_identish_var s =
     (let val v0 = #1 (valOf (UTF8.firstChar s))
      in
        UnicodeChars.isAlpha v0 orelse v0 = "_"
      end) andalso
     UTF8.all UnicodeChars.isMLIdent s andalso
-    not (badpc_encode s) handle UTF8.BadUTF8 _ => false
+    not (badpc_encode s)
+
+fun is_symbolish_var s =
+    UTF8.all UnicodeChars.isSymbolic s andalso
+    not (String.isSubstring "(*" s) andalso
+    not (String.isSubstring "*)" s)
+
+fun is_safe_varname s =
+    s <> "" andalso (is_identish_var s orelse is_symbolish_var s)
+    handle UTF8.BadUTF8 _ => false
 fun unsafe_style s =
     let
       open UTF8
