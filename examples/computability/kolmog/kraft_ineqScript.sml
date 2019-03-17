@@ -990,6 +990,16 @@ val HUTM_def =  Define`HUTM p =
                          (bl2n (SND (unbar2p 0 p) ) )) 
   else NONE`
 
+val prefix_free_fn_def = Define`prefix_free_fn M <=> prefix_free {x | (∃y. Phi M (bl2n x) = SOME y)}`
+
+val HUTMpf_def =  Define`HUTMpf p = 
+  if bar2ped p then
+    if prefix_free_fn (bl2n (FST (unbar2p 0 p) ) )  then 
+      (Phi (bl2n (FST (unbar2p 0 p) ) ) 
+           (bl2n (SND (unbar2p 0 p) ) ))
+    else NONE 
+  else NONE`
+
 Theorem HUTM_w_side_inf_corr:
   HUTM_w_side_inf ((bar y) ++ (bar i) ++ q) = Phi (bl2n i) (bl2n ((bar y) ++ q))
 Proof
@@ -1004,6 +1014,77 @@ Proof
       rw[unbar2p_induct] >> 
       REWRITE_TAC [GSYM APPEND_ASSOC,APPEND,rich_listTheory.TAKE_LENGTH_APPEND, 
                    rich_listTheory.DROP_LENGTH_APPEND,ADD_CLAUSES]) >> 
+  metis_tac[]
+QED
+
+Theorem Tpow_F_eq[simp]:
+  Tpow a ++ [F] = Tpow b ++ [F] ==> a=b
+Proof
+  `TAKE a (Tpow a ++ [F]) = Tpow a` by 
+    (fs[Tpow_def,TAKE_GENLIST] >> `LENGTH (GENLIST (K T) a) = a` by fs[] >> 
+     metis_tac[rich_listTheory.TAKE_LENGTH_APPEND] ) >> 
+  `TAKE b (Tpow b ++ [F]) = Tpow b` by 
+    (fs[Tpow_def,TAKE_GENLIST] >> `LENGTH (GENLIST (K T) b) = b` by fs[] >> 
+     metis_tac[rich_listTheory.TAKE_LENGTH_APPEND] ) >> 
+  fs[Tpow_def] >>
+  `LENGTH (GENLIST (K T) a) = a` by fs[LENGTH_GENLIST] >>
+  `LENGTH (GENLIST (K T) b) = b` by fs[LENGTH_GENLIST] >> metis_tac[]
+QED
+
+Theorem DROP_Tpow[simp]:
+  DROP a (Tpow b) = Tpow (b-a)
+Proof
+  simp[Tpow_def,DROP_GENLIST]
+QED
+
+Theorem Tpow_Fapp_eq[simp]:
+  Tpow a ++ [F] ++ x = Tpow b ++ [F] ++ y <=> a=b ∧ x=y
+Proof
+  wlog_tac `a<=b` []
+  >- (`b<=a` by fs[] >> metis_tac[]) >> eq_tac>>simp[] >> strip_tac >> 
+  Cases_on`a=b`>> fs[] >> `a<b` by fs[] >> 
+  `DROP a (Tpow a ++ [F] ++ x) = [F]++x` by 
+    metis_tac[GSYM APPEND_ASSOC,APPEND,rich_listTheory.DROP_LENGTH_APPEND,Tpow_LENGTH] >>
+  `DROP a (Tpow b ++ [F] ++ y) = Tpow (b-a) ++ [F]++y` by
+    simp[rich_listTheory.DROP_APPEND1,Tpow_LENGTH] >>
+  last_x_assum SUBST_ALL_TAC>>
+  Cases_on`b-a`>>fs[tpow_suc]
+QED
+
+(*  change bar ++[F] to barf? *)
+
+Theorem HUTMpf_corr:
+  prefix_free_fn M ==> HUTMpf ((bar (n2bl M)) ++ q) = Phi M (bl2n q)
+Proof
+  rw[] >>  fs[unbar2p_def,bar2ped_def,HUTMpf_def,unbar2p_induct,bar_def] >>  rw[unbar2p_induct]
+  >- (`Tpow (LENGTH i) ++ [F] ++ i ++ q = (Tpow (LENGTH i)) ++ F::(i ++ q)` by fs[] >>
+      rw[unbar2p_induct] >> 
+      REWRITE_TAC [GSYM APPEND_ASSOC,APPEND,rich_listTheory.TAKE_LENGTH_APPEND, 
+                   rich_listTheory.DROP_LENGTH_APPEND,ADD_CLAUSES] >>
+      rw[unbar2p_induct] >> 
+      REWRITE_TAC [GSYM APPEND_ASSOC,APPEND,rich_listTheory.TAKE_LENGTH_APPEND, 
+                   rich_listTheory.DROP_LENGTH_APPEND,ADD_CLAUSES] >>
+      `Tpow (ℓ M) ++ [F] ++ (n2bl M ++ q) = Tpow (LENGTH i) ++ [F] ++ (i ++ q')` by 
+        metis_tac[APPEND_ASSOC] >>
+      `ℓ M = LENGTH i` by fs[] >>
+      `n2bl M ++ q = i++q'` by fs[] >>
+      `q=q'` by (`DROP (LENGTH i) (i++q') = q'` by simp[rich_listTheory.DROP_LENGTH_APPEND] >>
+                 `DROP (LENGTH i) (n2bl M ++ q) = q'` by fs[] >>
+                 `DROP (ℓ M) (n2bl M ++ q) = q'` by fs[] >> 
+                 `DROP (LENGTH (n2bl M)) (n2bl M ++ q) = q` by 
+                   rw[rich_listTheory.DROP_LENGTH_APPEND] >> fs[] ) >> 
+      `bl2n i = M` suffices_by fs[] >> `n2bl M = i` by fs[] >>
+      `bl2n (n2bl M) = bl2n i` by fs[] >> rw[bool_num_inv]
+       )
+  >- (`¬prefix_free_fn
+           (bl2n (FST (unbar2p 0 ( Tpow (ℓ M) ++ [F] ++ n2bl M ++ q))))` by fs[] >>
+       `Tpow (ℓ M) ++ [F] ++ n2bl M ++ q= Tpow (ℓ M) ++ F::(n2bl M ++ q)` by fs[] >>
+       `¬prefix_free_fn
+           (bl2n (FST (unbar2p 0 ( Tpow (ℓ M) ++ F::(n2bl M ++ q)))))` by metis_tac[] >>
+       `unbar2p 0 (Tpow (ℓ M)  ++ F::(n2bl M ++ q)) =
+         (TAKE (0 + (ℓ M) ) (n2bl M ++ q),DROP (0+ (ℓ M) ) (n2bl M ++ q))` by fs[unbar2p_induct] >>
+       fs[] >> `(TAKE (LENGTH (n2bl M)) (n2bl M ++ q)) = n2bl M` by 
+                 metis_tac[rich_listTheory.TAKE_LENGTH_APPEND] >> fs[] )  >> 
   metis_tac[]
 QED
 
@@ -1027,7 +1108,7 @@ val CUTM_def = Define`CUTM p = Phi (bl2n  (FST (undop 0 p))) (bl2n (SND (undop 0
 (* prefix invariance theorem  *)
 
 Theorem pf_invariance_theorem:
-  ∀M. prefix_free {x | (∃y. recPhi [M;bl2n x] = SOME y)} ==>  ∃C. ∀x. (kolmog_complexity x HUTM) <= (kolmog_complexity x (λy. recPhi [M;bl2n y])) + (C U T)
+  ∀M. prefix_free {x | (∃y. recPhi [M;bl2n x] = SOME y)} ==>  ∃C. ∀x. (kolmog_complexity x HUTM) <= (kolmog_complexity x (λy. recPhi [M;bl2n y])) + (C HUTM M)
 Proof
   rw[kolmog_complexity_def] >>  `univ_rf HUTM` by fs[HUTM_univ] >> fs[univ_rf_def] >>
   `∃g. ∀x. Phi M x = HUTM (g++ (n2bl x))` by fs[] >>
@@ -1058,6 +1139,112 @@ Proof
       >- (rw[SUBSET_DEF] >>qexists_tac`g++y`>>fs[Abbr`a`] )  )
 QED
 
+Theorem HUTMpf_univpf:
+  ∀f. prefix_free_fn f ==> ∃g. ∀x. recPhi [f; x] = HUTMpf (g ++ n2bl x)
+Proof
+  rw[] >> qexists_tac`bar (n2bl (f))` >> rw[HUTMpf_corr]
+QED
+
+val HUTMpf_print_def = Define`HUTMpf_print x = bar (n2bl (dBnum (fromTerm (K @@ church x))))`
+
+Theorem bar2ped_HUTMpf_print:
+  bar2ped (HUTMpf_print x)
+Proof
+  fs[bar2ped_def,HUTMpf_print_def]
+QED
+
+Theorem unbar2p_bar[simp]:
+  unbar2p 0 (bar x) = (x,[])
+Proof
+  fs[bar_def] >> `Tpow (LENGTH x) ++ [F] ++ x = Tpow (LENGTH x) ++ F::x` by fs[] >> 
+  rw[unbar2p_induct] >> `DROP (LENGTH x) x = DROP (LENGTH x) (x++[])` by fs[] >> 
+  rw[rich_listTheory.DROP_LENGTH_APPEND]
+QED
+
+Theorem unbar2p_0[simp]:
+  unbar2p 0 (Tpow j ++ [F] ++ rest) = (TAKE j rest,DROP j rest)
+Proof
+  `Tpow j ++ [F] ++ rest = Tpow j ++ F::rest` by fs[] >> rw[unbar2p_induct]
+QED
+
+Theorem drop_n2bl[simp]:
+  DROP (ℓ x) (n2bl x) = []
+Proof
+  `n2bl x = n2bl x ++ []` by fs[] >> metis_tac[rich_listTheory.DROP_LENGTH_APPEND]
+QED
+
+Theorem HUTMpf_print_pf:
+  prefix_free_fn (bl2n (FST (unbar2p 0 (HUTMpf_print x))))
+Proof
+  fs[prefix_free_fn_def,HUTMpf_print_def,unbar2p_bar] >>  simp[Phi_def,the_lemma,normal_orderTheory.bnf_bnf_of]
+QED
+
+Theorem HUTMpf_prefix_fee:
+  prefix_free {x | (∃y. HUTMpf x = SOME y)}
+Proof
+  irule prefix_free_subset >> 
+  qexists_tac`{x| bar2ped x ∧ prefix_free_fn (bl2n (FST (unbar2p 0 x)))}` >> 
+  rw[SUBSET_DEF,HUTMpf_def] >> 
+  simp[bar2ped_def,prefix_free_fn_def] >> 
+  simp[prefix_free_def,EXTENSION] >> rw[] >> fs[bar_def]
+  irule prefix_free_subset >> qexists_tac`IMAGE bar2 UNIV` >> simp[bar2_PF]>>
+  simp[SUBSET_DEF,bar2_def,pairTheory.EXISTS_PROD]
+
+
+  rw[] >> fs[prefix_free_def] >> rw[HUTMpf_def] >> 
+  spose_not_then assume_tac >> fs[prefix_append,bar2ped_def,prefix_free_fn_def] >>
+  fs[bar_def] >>
+  `a++s = Tpow (LENGTH i) ++ [F] ++ (i ++ q++s)` by fs[] >> fs[] >>
+  `Tpow (LENGTH i) ++ [F] ++ i ++ q  = Tpow (LENGTH i) ++ [F] ++ ( i ++ q)` by fs[] >>fs[]>>
+  rw[unbar2p_0] >> 
+QED
+
+Theorem HUTMpf_print_corr2:
+  HUTMpf ((HUTMpf_print x)) = SOME x
+Proof
+  simp[HUTMpf_def,bar_def,bar2ped_HUTMpf_print,HUTMpf_print_pf,Phi_def,HUTMpf_print_def] >> 
+  qexists_tac`church x` >>
+  simp[the_lemma,normal_orderTheory.bnf_bnf_of]
+QED
+
+Theorem HUTMpf_nonempty:
+  {p | HUTMpf p = SOME x} <> {}
+Proof
+  fs[EXTENSION,HUTMpf_def] >> qexists_tac`n2bl (HUTMpf_print x)` >> fs[HUTMpf_print_corr]
+QED
+
+Theorem HUTMpf_invariance_theorem:
+  prefix_free_fn M ==> 
+  ∃C. ∀x. (kolmog_complexity x HUTMpf) <= (kolmog_complexity x (λy. recPhi [M;bl2n y])) + (C HUTMpf M)
+Proof
+  rw[kolmog_complexity_def] >> `∃g. ∀x. recPhi [M; x] = HUTMpf (g ++ n2bl x)` by 
+    fs[HUTMpf_univpf] >> qexists_tac`λx y. SOME (LENGTH g)` >> rw[]
+  >- (fs[HUTMpf_nonempty])
+  >- (`MIN_SET (IMAGE LENGTH {p | HUTMpf p = SOME x}) ∈ 
+        IMAGE LENGTH ({p | HUTMpf p = SOME x})` by fs[MIN_SET_LEM] >> fs[IMAGE_DEF] >>
+      qabbrev_tac`HUTMpf_x = x'` >>
+      `∀x'. Phi M (bl2n x') = HUTMpf (g ++ x')`  by fs[] >>
+      `MIN_SET (IMAGE LENGTH {y | HUTMpf (g ++ y) = SOME x}) ∈ 
+        IMAGE LENGTH ({y | HUTMpf (g ++ y) = SOME x})` by fs[MIN_SET_LEM] >> fs[IMAGE_DEF] >>
+      qabbrev_tac`M_x = x''` >>
+      `{LENGTH y | HUTMpf (g ++ y) = SOME x} <> {}` by (fs[EXTENSION] >> qexists_tac`M_x`>>fs[])>>
+      qabbrev_tac`a=LENGTH g` >>
+      `a + MIN_SET {b | b ∈  {LENGTH y | HUTMpf (g ++ y) = SOME x}} = 
+        MIN_SET {a + b | b ∈  {LENGTH y | HUTMpf (g ++ y) = SOME x}}` by fs[MIN_SET_ladd] >>
+      fs[] >> 
+      `{LENGTH p | HUTMpf p = SOME x} <> {}` by (`IMAGE LENGTH { p | HUTMpf p = SOME x} ≠ ∅` by 
+        fs[IMAGE_EQ_EMPTY] >>
+        `{LENGTH p | p ∈ {q | HUTMpf q= SOME x}} ≠ ∅` by metis_tac[IMAGE_DEF] >> fs[]) >>
+      `MIN_SET {LENGTH p | HUTMpf p = SOME x} ∈ {LENGTH p | HUTMpf p = SOME x} ∧ 
+        ∀q. q ∈ {LENGTH p | HUTMpf p = SOME x} ⇒ MIN_SET {LENGTH p | HUTMpf p = SOME x} ≤ q` by 
+        fs[MIN_SET_LEM] >> 
+      `MIN_SET {LENGTH x' | HUTMpf x' = SOME x} ≤
+       MIN_SET {a + b | (∃y. b = LENGTH y ∧ HUTMpf (g ++ y) = SOME x)}` suffices_by fs[]>>
+      irule SUBSET_MIN_SET >> rw[]
+      >- (fs[EXTENSION] >> qexists_tac`M_x`>>fs[])
+      >- (rw[SUBSET_DEF] >>qexists_tac`g++y`>>fs[Abbr`a`] ))
+QED
+
 Theorem HUTM_prefix_free:
   ∀M. prefix_free {x | (∃y. Phi M (bl2n x) = SOME y)} ==> 
       prefix_free {x | (∃p. x = bar (n2bl M) ++ p) ∧ (∃y. HUTM x = SOME y)}
@@ -1069,6 +1256,14 @@ Proof
   `Phi M (bl2n p') = SOME y'` by fs[HUTM_corr] >> fs[] >>
   spose_not_then assume_tac >> fs[prefix_append]
 QED
+
+val recfn_index_def = 
+new_specification("recfn_index_def", ["recfn_index"], 
+		  recfns_in_Phi 
+		      |> SIMP_RULE (srw_ss()) [LEFT_FORALL_IMP_THM]
+		      |> SIMP_RULE (srw_ss()) [GSYM RIGHT_EXISTS_IMP_THM, SKOLEM_THM])
+
+
 
 (*  To do in the future)
 
