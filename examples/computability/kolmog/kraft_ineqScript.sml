@@ -1170,6 +1170,18 @@ Proof
   `Tpow j ++ [F] ++ rest = Tpow j ++ F::rest` by fs[] >> rw[unbar2p_induct]
 QED
 
+Theorem unbar2p_0_double[simp]:
+ unbar2p 0 (Tpow j ++ [F] ++ rest1 ++ rest2) = (TAKE j (rest1 ++ rest2),DROP j (rest1++rest2))
+Proof
+  `Tpow j ++ [F] ++ rest1++rest2 = Tpow j ++ F::(rest1 ++ rest2)` by fs[] >> rw[unbar2p_induct]
+QED
+
+Theorem unbar2p_0_triple[simp]:
+ unbar2p 0 (Tpow j ++ [F] ++ rest1 ++ rest2 ++ rest3) = (TAKE j (rest1 ++ rest2++rest3),DROP j (rest1++rest2++rest3))
+Proof
+  `Tpow j ++ [F] ++ rest1++rest2++rest3 = Tpow j ++ F::(rest1 ++ rest2 ++ rest3)` by fs[] >> rw[unbar2p_induct]
+QED
+
 Theorem drop_n2bl[simp]:
   DROP (ℓ x) (n2bl x) = []
 Proof
@@ -1182,24 +1194,33 @@ Proof
   fs[prefix_free_fn_def,HUTMpf_print_def,unbar2p_bar] >>  simp[Phi_def,the_lemma,normal_orderTheory.bnf_bnf_of]
 QED
 
+Theorem TAKE_LENGTH_APPEND2[simp]:
+  TAKE (LENGTH l1) (l1 ++ l2 ++ l3) = l1
+Proof
+  `l1++l2++l3 = l1 ++ (l2++l3)` by fs[] >> 
+  REWRITE_TAC [APPEND,GSYM APPEND_ASSOC,rich_listTheory.TAKE_LENGTH_APPEND]
+QED
+
+Theorem DROP_LENGTH_APPEND2[simp]:
+  DROP (LENGTH l1) (l1 ++ l2 ++ l3) = l2++l3
+Proof
+  `l1++l2++l3 = l1 ++ (l2++l3)` by fs[] >> 
+  REWRITE_TAC [APPEND,GSYM APPEND_ASSOC,rich_listTheory.DROP_LENGTH_APPEND]
+QED
+
 Theorem HUTMpf_prefix_fee:
   prefix_free {x | (∃y. HUTMpf x = SOME y)}
 Proof
-  irule prefix_free_subset >> 
-  qexists_tac`{x| bar2ped x ∧ prefix_free_fn (bl2n (FST (unbar2p 0 x)))}` >> 
-  rw[SUBSET_DEF,HUTMpf_def] >> 
-  simp[bar2ped_def,prefix_free_fn_def] >> 
-  simp[prefix_free_def,EXTENSION] >> rw[] >> fs[bar_def]
-  irule prefix_free_subset >> qexists_tac`IMAGE bar2 UNIV` >> simp[bar2_PF]>>
-  simp[SUBSET_DEF,bar2_def,pairTheory.EXISTS_PROD]
-
-
   rw[] >> fs[prefix_free_def] >> rw[HUTMpf_def] >> 
   spose_not_then assume_tac >> fs[prefix_append,bar2ped_def,prefix_free_fn_def] >>
   fs[bar_def] >>
   `a++s = Tpow (LENGTH i) ++ [F] ++ (i ++ q++s)` by fs[] >> fs[] >>
   `Tpow (LENGTH i) ++ [F] ++ i ++ q  = Tpow (LENGTH i) ++ [F] ++ ( i ++ q)` by fs[] >>fs[]>>
-  rw[unbar2p_0] >> 
+  rw[] >> fs[rich_listTheory.TAKE_LENGTH_APPEND,rich_listTheory.DROP_LENGTH_APPEND] >>
+  fs[prefix_free_def] >> 
+  ` (∃y. Phi (bl2n i) (bl2n q) = SOME y) ∧
+             (∃y. Phi (bl2n i) (bl2n (q++s)) = SOME y) ⇒
+             ¬(q ≺ q++s)` by fs[] >> `¬(q ≺ q++s)` by fs[] >> fs[prefix_def]
 QED
 
 Theorem HUTMpf_print_corr2:
