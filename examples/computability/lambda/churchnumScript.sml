@@ -513,6 +513,35 @@ val cmod_behaviour = bstore_thm(
   SIMP_TAC (bsrw_ss()) [cdivmodt_behaviour, cmod_def]);
 
 (* ----------------------------------------------------------------------
+    Exponentiation
+   ---------------------------------------------------------------------- *)
+
+val cexp_def = Define`
+  cexp = LAM "m" (LAM "n" (VAR "n" @@ church 1 @@ (cmult @@ VAR "m")))
+`;
+
+Theorem FV_cexp[simp]:
+  FV cexp = {}
+Proof
+  rw[cexp_def,EXTENSION] >> metis_tac[]
+QED
+
+val cexp_eqn = brackabs.brackabs_equiv [] cexp_def
+
+Theorem cexp_behaviour:
+  cexp @@ m @@ church 0 == church 1 ∧
+  cexp @@ m @@ church (SUC n) == cmult @@ m @@ (cexp @@ m @@ church n)
+Proof
+  asm_simp_tac(bsrw_ss())[cexp_eqn]
+QED
+
+Theorem cexp_corr[betasimp]:
+  cexp @@ church m @@ church n == church (m**n)
+Proof
+  Induct_on`n` >>  asm_simp_tac(bsrw_ss())[cexp_behaviour,arithmeticTheory.EXP]
+QED
+
+(* ----------------------------------------------------------------------
     Pairs of numbers
    ---------------------------------------------------------------------- *)
 
@@ -909,4 +938,3 @@ val cfindleast_bnfE = store_thm(
   ]);
 
 val _ = export_theory()
-

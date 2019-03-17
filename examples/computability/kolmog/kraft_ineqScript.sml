@@ -1095,12 +1095,15 @@ Proof
 QED
 
 val undop_def = Define` (undop i (T::rest) = undop (i + 1) rest) ∧
-                         undop i (F::rest) = (n2bl (i-1), (DROP i rest))`
+                         undop i (F::rest) = (n2bl i, rest)
+`;
 
+(* never used! *)
 Theorem undop_corr:
-  undop 0 ((Tpow f) ++ [F]++x) = (n2bl f,x)
+  ∀n. undop n ((Tpow f) ++ [F]++x) = (n2bl (f + n), x)
 Proof
-  simp[Tpow_def] >> Induct_on`f` >- simp[undop_def] >> simp[GENLIST_CONS,ADD1]
+  simp[Tpow_def] >> Induct_on`f` >- simp[undop_def] >>
+  simp[GENLIST_CONS,ADD1,undop_def]
 QED
 
 val CUTM_def = Define`CUTM p = Phi (bl2n  (FST (undop 0 p))) (bl2n (SND (undop 0 p)) )`
@@ -1356,41 +1359,18 @@ val dt0_def = Define`dt0 = LAM "p" (LAM "ms" (LAM "i"
 
  ) ) )`
 
-val dt_def = Define`dt = LAM "p" (LAM "ms"
+(*val dt_def = Define`dt = LAM "p" (LAM "ms"
  (cfindleast @@ (LAM "n" (dt0 @@ VAR "p" @@ VAR "ms" @@ VAR"n" @@ cB T @@ (K @@ (K @@ cB F)) ) )
              @@ (LAM "n" (chd @@ (dt0 @@ VAR "p" @@ VAR "ms" @@ VAR"n")) ) ))`
 
 val size_dovetail_def = Define`size_dovetail0 P ms i = let results = map (λ(m,j). steps i (mk_initial_state m j) ms ); term_results = filter terminsted results;`
 
 (* Make fn which takes n and gives list of nats st log 2 nats = n *)
-
+*)
 open churchlistTheory;
 open reductionEval;
 
 val log2list_def = Define`log2list n = GENLIST (λx. x+2**n) (2**n) `
-
-val cexp_def = Define`cexp = LAM "m" (LAM "n" (VAR "n" @@ church 1 @@ (cmult @@ VAR "m")))`
-
-Theorem FV_cexp[simp]:
-  FV cexp = {}
-Proof
-  rw[cexp_def,EXTENSION]
-QED
-
-val cexp_eqn = brackabs.brackabs_equiv [] cexp_def
-
-Theorem cexp_behaviour:
-  cexp @@ m @@ church 0 == church 1 ∧
-  cexp @@ m @@ church (SUC n) == cmult @@ m @@ (cexp @@ m @@ church n)
-Proof
-  asm_simp_tac(bsrw_ss())[cexp_eqn]
-QED
-
-Theorem cexp_corr:
-  cexp @@ church m @@ church n == church (m**n)
-Proof
-  Induct_on`n` >>  asm_simp_tac(bsrw_ss())[cexp_behaviour,EXP]
-QED
 
 val clog2list_def = Define`clog2list =
   LAM "n" (ctabulate @@ (cexp @@ church 2 @@ VAR "n")
@@ -1407,11 +1387,13 @@ val clog2list_eqn = brackabs.brackabs_equiv [] clog2list_def
 Theorem clog2list_behaviour:
   clog2list @@ church n == cvlist (MAP church (log2list n))
 Proof
-  asm_simp_tac(bsrw_ss())[clog2list_eqn,log2list_def,MAP_GENLIST,ctabulate_cvlist,cexp_corr] >>
+  asm_simp_tac(bsrw_ss())[clog2list_eqn,log2list_def,MAP_GENLIST,
+                          ctabulate_cvlist] >>
   HO_MATCH_MP_TAC cvlist_genlist_cong >>
   asm_simp_tac(bsrw_ss())[churchnumTheory.cplus_behaviour,ADD_COMM]
 QED
 
+(*
 val find_m_of_size_n_gen_y_def = Define`find_m_of_size_n_gen_y = LAM "n" (LAM "y"
   (dt @@ (ceqnat @@ VAR "y")
       @@ (cmap @@ (C @@ cpair @@ cnil)
@@ -1599,5 +1581,5 @@ rw[LESS_EQ_TRANS,solomonoff_thm_claim_11,solomonoff_thm_claim_2])
 
 
 
-
+*)
 val _ = export_theory();
