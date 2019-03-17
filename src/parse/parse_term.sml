@@ -212,10 +212,10 @@ fun mk_prec_matrix G = let
       *)
 
   val rule_elements = term_grammar.rule_elements o #elements
-  val complained_this_iteration = ref false
+  val complained_this_iteration = Uref.new false
   fun insert_bail k =
       (Polyhash.insert matrix (k, PM_LESS MS_Multi);
-       complained_this_iteration := true;
+       let open Uref in complained_this_iteration := true end;
        if not (!complained_already) andalso
           (!Globals.interactive orelse !ambigrm = 2)
        then let
@@ -507,7 +507,7 @@ in
   insert_rhs_relns () ;
   insert_lhs_relns () ;
   apply_them_all process_rule Grules;
-  if (not (!complained_this_iteration)) then complained_already := false
+  if (not (Uref.!complained_this_iteration)) then complained_already := false
   else ();
   matrix
 end
