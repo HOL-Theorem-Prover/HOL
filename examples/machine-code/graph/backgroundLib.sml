@@ -71,7 +71,7 @@ fun measure_it name f x = let
   in y end;
 
 fun dest_tuple tm =
-  if tm = ``():unit`` then [] else
+  if aconv tm ``():unit`` then [] else
   let val (x,y) = pairSyntax.dest_pair tm in x :: dest_tuple y end
   handle HOL_ERR e => [tm];
 
@@ -119,7 +119,7 @@ fun auto_prove proof_name (goal,tac) =
 fun auto_conv_prove proof_name goal conv =
   if !skip_proofs then prove(goal,cheat) else let
     val th = conv goal
-    in if rand (concl th) = T then MATCH_MP GraphLangTheory.EQ_T th
+    in if aconv (rand (concl th)) T then MATCH_MP GraphLangTheory.EQ_T th
        else (print_error goal;
              failwith("auto_conv_prove failed for " ^ proof_name)) end
 
@@ -135,6 +135,19 @@ fun modify_message f e =
 fun report_error name e = let
   val _ = "\n\n" ^ name ^ " failed.\n\n"
   in raise (modify_message (fn s => s ^ " << " ^ name) e) end
+
+(* aconv *)
+
+fun term_mem x [] = false
+  | term_mem x (y::ys) = aconv x y orelse term_mem x ys
+
+fun term_diff xs ys = filter (fn x => not (term_mem x ys)) xs;
+
+fun term_intersect xs ys = filter (fn x => term_mem x ys) xs;
+
+fun term_all_distinct [] = []
+  | term_all_distinct (tm::tms) =
+      tm :: filter (fn x => not (aconv tm x)) tms;
 
 (* misc *)
 

@@ -37,6 +37,12 @@ type fpval    = bits(64)
 
 type exc_code = bits(4)
 
+-- raw instructions
+construct rawInstType
+{ Half :: half
+  Word :: word
+}
+
 -- instruction fields
 type opcode   = bits(7)
 type imm12    = bits(12)
@@ -652,6 +658,7 @@ declare
   c_fpr         :: id -> RegFile                -- floating-point registers
 
   c_PC          :: id -> regType                -- program counter
+  c_Skip        :: id -> regType                -- bytes to next instruction
 
   c_UCSR        :: id -> UserCSR                -- user-level CSRs
   c_SCSR        :: id -> SupervisorCSR          -- supervisor-level CSRs
@@ -705,6 +712,11 @@ component fpr(n::reg) :: regType
 component PC :: regType
 { value        = c_PC(procID)
   assign value = c_PC(procID) <- value
+}
+
+component Skip :: regType
+{ value        = c_Skip(procID)
+  assign value = c_Skip(procID) <- value
 }
 
 component UCSR :: UserCSR
@@ -1233,7 +1245,7 @@ record StateDelta
   fetch_exc     :: bool                 -- whether that exception occured on fetch
                                 --   if so, the retired instruction (rinstr) is undefined
   pc            :: regType              -- PC of retired instruction
-  rinstr        :: word                 -- the retired instruction
+  rinstr        :: rawInstType          -- the retired instruction
 
   addr          :: regType option       -- address argument for instruction:
                                 --   new control flow target for jump, exception branch, ERET
@@ -1261,7 +1273,7 @@ component Delta :: StateDelta
   assign value = c_update(procID) <- value
 }
 
-inline unit setupDelta(pc::regType, instr::word) =
+inline unit setupDelta(pc::regType, instr::rawInstType) =
 { Delta.exc_taken <- false
 ; Delta.fetch_exc <- false
 ; Delta.pc        <- pc
@@ -1716,11 +1728,27 @@ unit rawWriteData(pAddr::pAddr, data::regType, nbytes::nat) =
        }
 }
 
-word rawReadInst(pAddr::pAddr) =
+half rawReadHalf(pAddr::pAddr) =
 { pAddrIdx = pAddr<63:3>
 ; data     = MEM(pAddrIdx)
 ; mark_log(LOG_MEM, log_r_mem(pAddrIdx, pAddr, data))
-; if pAddr<2> then data<63:32> else data<31:0>
+; match pAddr<2:1>
+  { case '00' => data<63:48>
+    case '01' => data<47:32>
+    case '10' => data<31:16>
+    case '11' => data<15:0>
+  }
+}
+
+rawInstType rawReadInst(pAddr::pAddr) =
+{ h = MEM8 (pAddr)
+; match h
+  { case '_ 11' => { Skip <- 4 ;
+                     Word (MEM8 (pAddr + 3) : MEM8 (pAddr + 2) :
+                           MEM8 (pAddr + 1) : MEM8 (pAddr)) }
+    case _      => { Skip <- 2 ;
+                     Half (MEM8 (pAddr + 1) : MEM8 (pAddr)) }
+  }
 }
 
 -- helper used to preload memory contents
@@ -2400,9 +2428,9 @@ define MulDiv > REMUW(rd::reg, rs1::reg, rs2::reg) =
 -----------------------------------
 define Branch > JAL(rd::reg, imm::imm20) =
 { addr = PC + SignExtend(imm) << 1
-; if addr<1:0> != 0
+; if addr<0>
   then signalAddressException(Fetch_Misaligned, addr)
-  else { writeRD(rd, PC + 4)
+  else { writeRD(rd, PC + Skip)
        ; branchTo(addr)
        }
 }
@@ -2412,9 +2440,9 @@ define Branch > JAL(rd::reg, imm::imm20) =
 -----------------------------------
 define Branch > JALR(rd::reg, rs1::reg, imm::imm12) =
 { addr = (GPR(rs1) + SignExtend(imm)) && SignExtend('10')
-; if addr<1:0> != 0
+; if addr<0>
   then signalAddressException(Fetch_Misaligned, addr)
-  else { writeRD(rd, PC + 4)
+  else { writeRD(rd, PC + Skip)
        ; branchTo(addr)
        }
 }
@@ -2429,7 +2457,7 @@ define Branch > BEQ(rs1::reg, rs2::reg, offs::imm12) =
 ; v2 = if in32BitMode() then SignExtend(GPR(rs2)<31:0>) else GPR(rs2)
 ; if v1 == v2
   then branchTo(PC + (SignExtend(offs) << 1))
-  else noBranch(PC + 4)
+  else noBranch(PC + Skip)
 }
 
 -----------------------------------
@@ -2440,7 +2468,7 @@ define Branch > BNE(rs1::reg, rs2::reg, offs::imm12) =
 ; v2 = if in32BitMode() then SignExtend(GPR(rs2)<31:0>) else GPR(rs2)
 ; if v1 <> v2
   then branchTo(PC + (SignExtend(offs) << 1))
-  else noBranch(PC + 4)
+  else noBranch(PC + Skip)
 }
 
 -----------------------------------
@@ -2451,7 +2479,7 @@ define Branch > BLT(rs1::reg, rs2::reg, offs::imm12) =
 ; v2 = if in32BitMode() then SignExtend(GPR(rs2)<31:0>) else GPR(rs2)
 ; if v1 < v2
   then branchTo(PC + (SignExtend(offs) << 1))
-  else noBranch(PC + 4)
+  else noBranch(PC + Skip)
 }
 
 -----------------------------------
@@ -2462,7 +2490,7 @@ define Branch > BLTU(rs1::reg, rs2::reg, offs::imm12) =
 ; v2 = if in32BitMode() then SignExtend(GPR(rs2)<31:0>) else GPR(rs2)
 ; if v1 <+ v2
   then branchTo(PC + (SignExtend(offs) << 1))
-  else noBranch(PC + 4)
+  else noBranch(PC + Skip)
 }
 
 -----------------------------------
@@ -2473,7 +2501,7 @@ define Branch > BGE(rs1::reg, rs2::reg, offs::imm12) =
 ; v2 = if in32BitMode() then SignExtend(GPR(rs2)<31:0>) else GPR(rs2)
 ; if v1 >= v2
   then branchTo(PC + (SignExtend(offs) << 1))
-  else noBranch(PC + 4)
+  else noBranch(PC + Skip)
 }
 
 -----------------------------------
@@ -2484,7 +2512,7 @@ define Branch > BGEU(rs1::reg, rs2::reg, offs::imm12) =
 ; v2 = if in32BitMode() then SignExtend(GPR(rs2)<31:0>) else GPR(rs2)
 ; if v1 >=+ v2
   then branchTo(PC + (SignExtend(offs) << 1))
-  else noBranch(PC + 4)
+  else noBranch(PC + Skip)
 }
 
 ---------------------------------------------------------------------------
@@ -4179,12 +4207,12 @@ define Run
 
 construct FetchResult
 { F_Error   :: instruction
-, F_Result  :: word
+, F_Result  :: rawInstType
 }
 
 FetchResult Fetch() =
-{ vPC    = PC
-; if vPC<1:0> != 0
+{ vPC = PC
+; if vPC<0>
   then F_Error(Internal(FETCH_MISALIGNED(vPC)))
   else match translateAddr(vPC, Instruction, Read)
        { case Some(pPC) => { instw = rawReadInst(pPC)
@@ -4900,6 +4928,294 @@ word Encode(i::instruction) =
    }
 
 ---------------------------------------------------------------------------
+-- RVC instruction decoding
+---------------------------------------------------------------------------
+
+instruction DecodeRVC(h::half) =
+   match h
+   { -- case '000 00000000 000 00' => _ -- illegal
+
+     case '000 ilo`2 ihi`4 i2`1 i3`1 rd 00' => ArithI(ADDI('01' : rd, 2, '00' : ihi : ilo : i3 : i2 : '00')) -- imm /= 0
+
+     case '001 ilo`3      rs1 ihi`2     rd 00' => FPLoad(FLD('01' : rd, '01' : rs1, '0000'        : ihi : ilo : '000' )) -- 32/64
+     -- case '001 ilo`2 i8`1 rs1 ihi`2     rd 00' => Load(   LQ('01' : rd, '01' : rs1, '000'   : i8  : ihi : ilo : '0000')) -- 128
+     case '010 imi`3      rs1 i2`1 i6`1 rd 00' => Load(   LW('01' : rd, '01' : rs1, '00000' : i6  : imi : i2  : '00'  ))
+     -- case '011 imi`3      rs1 i2`1 i6`1 rd 00' => FPLoad(FLW('01' : rd, '01' : rs1, '00000' : i6  : imi : i2  : '00'  )) -- 32
+     case '011 ilo`3      rs1 ihi`2     rd 00' => Load(   LD('01' : rd, '01' : rs1, '0000'        : ihi : ilo : '000' )) -- 64/128
+
+     -- -- case '100 _ 00' => _ -- reserved
+
+     case '101 ilo`3      rs1 ihi`2     rs2 00' => FPStore(FSD('01' : rs2, '01' : rs1, '0000'        : ihi : ilo : '000' )) -- 32/64
+     -- case '101 ilo`2 i8`1 rs1 ihi`2     rs2 00' => Store(   SQ('01' : rs2, '01' : rs1, '000'   : i8  : ihi : ilo : '0000')) -- 128
+     case '110 imi`3      rs1 i2`1 i6`1 rs2 00' => Store(   SW('01' : rs2, '01' : rs1, '00000' : i6  : imi : i2  : '00'  ))
+     -- case '111 imi`3      rs1 i2`1 i6`1 rs2 00' => FPStore(FSW('01' : rs2, '01' : rs1, '00000' : i6  : imi : i2  : '00'  )) -- 32
+     case '111 ilo`3      rs1 ihi`2     rs2 00' => Store(   SD('01' : rs2, '01' : rs1, '0000'        : ihi : ilo : '000' )) -- 64/128
+
+     case '000 0 00000 00000 01' => ArithI(ADDI(0, 0, 0))
+
+     -- case '001 i11`1 i4`1 ihi`2 i10`1 i6`1 i7`1 ilo`3 i5`1 01' => Branch(JAL(1, i11 ^ 10 : i10 : ihi : i7 : i6 : i5 : i4 : ilo)) -- 32, (moved)
+
+     case '000 i5`1 r     imi`5                01' => ArithI( ADDI( r, r, i5 ^ 7 : imi)) -- rd /= 0, imm /= 0
+     case '001 i5`1 r     imi`5                01' => ArithI(ADDIW( r, r, i5 ^ 7 : imi)) -- rd /= 0, 64/128
+     case '010 i5`1 rd    imi`5                01' => ArithI( ADDI(rd, 0, i5 ^ 7 : imi)) -- rd /= 0
+     case '011 i9`1 00010 i4`1 i6`1 imi`2 i5`1 01' => ArithI( ADDI( 2, 2, i9 ^ 3 : imi : i6 : i5 : i4 : '0000')) -- imm /= 0
+
+     case '011 i17`1 rd imi`5 01' => ArithI(LUI(rd, i17 ^ 4 : imi : '00000000000')) -- rd /= 0/2, imm /= 0
+
+     case '100 i5`1 00 r imi`5 01' => Shift(SRLI('01' : r, '01' : r, i5 : imi)) -- ? 32 [i5 /= 1]
+     -- case '100 0    00 r 00000 01' => Shift(SRLI('01' : r, '01' : r, 64)) -- 128
+     case '100 i5`1 01 r imi`5 01' => Shift(SRAI('01' : r, '01' : r, i5 : imi)) -- ? 32 [i5 /= 1]
+     -- case '100 0    01 r 00000 01' => Shift(SRAI('01' : r, '01' : r, 64)) -- 128
+
+     case '100 i5`1 10 r imi`5 01' => ArithI(ANDI('01' : r, '01' : r, i5 ^ 7 : imi))
+
+     case '100 0 11 r 00 rs2 01' => ArithR( SUB('01' : r, '01' : r, '01' : rs2))
+     case '100 0 11 r 01 rs2 01' => ArithR( XOR('01' : r, '01' : r, '01' : rs2))
+     case '100 0 11 r 10 rs2 01' => ArithR(  OR('01' : r, '01' : r, '01' : rs2))
+     case '100 0 11 r 11 rs2 01' => ArithR( AND('01' : r, '01' : r, '01' : rs2))
+     case '100 1 11 r 00 rs2 01' => ArithR(SUBW('01' : r, '01' : r, '01' : rs2)) -- 64/128
+     case '100 1 11 r 01 rs2 01' => ArithR(ADDW('01' : r, '01' : r, '01' : rs2)) -- 64/128
+
+     -- case '100 1 11 _ 10 _ 01' => _ -- reserved
+     -- case '100 1 11 _ 11 _ 01' => _ -- reserved
+
+     case '101 i11`1 i4`1 ihi`2 i10`1 i6`1 i7`1 ilo`3 i5`1 01' => Branch(JAL(0, i11 ^ 10 : i10 : ihi : i7 : i6 : i5 : i4 : ilo))
+
+     case '110 i8`1 imi`2 rs1 ihi`2 ilo`2 i5`1 01' => Branch(BEQ('01' : rs1, 0, i8 ^ 5 : ihi : i5 : imi : ilo))
+     case '111 i8`1 imi`2 rs1 ihi`2 ilo`2 i5`1 01' => Branch(BNE('01' : rs1, 0, i8 ^ 5 : ihi : i5 : imi : ilo))
+
+     case '000 i5`1 r imi`5 10' => Shift(SLLI(r, r, i5 : imi)) -- rd /= 0, ? 32 [i5 /= 1]
+     -- case '000 0    r 00000 10' => Shift(SLLI(r, r, 64)) -- rd /= 0, 128
+
+     case '001 i5`1 rd ilo`2 ihi`3 10' => FPLoad(FLD(rd, 2, '000'  : ihi : i5 : ilo : '000' )) -- 32/64
+     -- case '001 i5`1 rd i4    imi`4 10' => Load(   LQ(rd, 2, '00'   : imi : i5 : i4  : '0000')) -- rd /= 0, 128
+     case '010 i5`1 rd ilo`3 ihi`2 10' => Load(   LW(rd, 2, '0000' : ihi : i5 : ilo : '00'  )) -- rd /= 0
+     -- case '011 i5`1 rd ilo`3 ihi`2 10' => FPLoad(FLW(rd, 2, '0000' : ihi : i5 : ilo : '00'  )) -- 32
+     case '011 i5`1 rd ilo`2 ihi`3 10' => Load(   LD(rd, 2, '000'  : ihi : i5 : ilo : '000' )) -- rd /= 0, 64/128
+
+     case '100 1 00000 00000 10' => System(EBREAK) -- (moved)
+
+     case '100 0 rs1 00000 10' => Branch(JALR( 0, rs1,   0)) -- rs1 /= 0
+     case '100 0 rd  rs2   10' => ArithR( ADD(rd,   0, rs2)) -- rd /= 0, rs2 /= 0
+     case '100 1 rs1 00000 10' => Branch(JALR( 1, rs1,   0)) -- rs1 /= 0
+     case '100 1 r   rs2   10' => ArithR( ADD( r,   r, rs2)) -- rd /= 0
+
+     case '101 ilo`3 ihi`3 rs2 10' => FPStore(FSD(2, rs2, '000'  : ihi : ilo : '000' )) -- 32/64
+     -- case '101 ilo`2 ihi`4 rs2 10' => Store(   SQ(2, rs2, '00'   : ihi : ilo : '0000')) -- 128
+     case '110 ilo`4 ihi`2 rs2 10' => Store(   SW(2, rs2, '0000' : ihi : ilo : '00'  ))
+     -- case '111 ilo`4 ihi`2 rs2 10' => FPStore(FSW(2, rs2, '0000' : ihi : ilo : '00'  )) -- 32
+     case '111 ilo`3 ihi`3 rs2 10' => Store(   SD(2, rs2, '000'  : ihi : ilo : '000' )) -- 64/128
+
+     -- unsupported instructions
+     case _ => UnknownInstruction
+   }
+
+type rvcreg = bits(3)
+
+half CBtype(o::bits(2), f3::bits(3), rs1::rvcreg, imm::bits(8)) =
+    f3 : [imm<7>]::bits(1) : imm<3:2> : rs1 : imm<6:5> : imm<1:0> : [imm<5>]::bits(1) : o
+
+construct rvc { Comp :: half, Full :: word }
+
+rvc EncodeRVC(i::instruction) =
+   match i
+   { case Branch(  BEQ('01 rs1', '00000', '00000 imm')) => Comp(CBtype(1, 0, rs1, '0' : imm))
+     case Branch(  BEQ('01 rs1', '00000', '11111 imm')) => Comp(CBtype(1, 0, rs1, '1' : imm))
+     -- case Branch(  BNE(rs1, rs2, imm))      => SBtype(opc(0x18), 1, rs1, rs2, imm)
+     -- case Branch(  BLT(rs1, rs2, imm))      => SBtype(opc(0x18), 4, rs1, rs2, imm)
+     -- case Branch(  BGE(rs1, rs2, imm))      => SBtype(opc(0x18), 5, rs1, rs2, imm)
+     -- case Branch( BLTU(rs1, rs2, imm))      => SBtype(opc(0x18), 6, rs1, rs2, imm)
+     -- case Branch( BGEU(rs1, rs2, imm))      => SBtype(opc(0x18), 7, rs1, rs2, imm)
+
+     -- case Branch( JALR(rd, rs1, imm))       =>  Itype(opc(0x19), 0, rd, rs1, imm)
+     -- case Branch(  JAL(rd, imm))            => UJtype(opc(0x1b), rd, imm)
+
+     -- case ArithI(  LUI(rd, imm))            =>  Utype(opc(0x0D), rd, imm)
+     -- case ArithI(AUIPC(rd, imm))            =>  Utype(opc(0x05), rd, imm)
+
+     -- case ArithI( ADDI(rd, rs1, imm))       =>  Itype(opc(0x04), 0, rd, rs1, imm)
+     -- case  Shift( SLLI(rd, rs1, imm))       =>  Itype(opc(0x04), 1, rd, rs1, '000000' : imm)
+     -- case ArithI( SLTI(rd, rs1, imm))       =>  Itype(opc(0x04), 2, rd, rs1, imm)
+     -- case ArithI(SLTIU(rd, rs1, imm))       =>  Itype(opc(0x04), 3, rd, rs1, imm)
+     -- case ArithI( XORI(rd, rs1, imm))       =>  Itype(opc(0x04), 4, rd, rs1, imm)
+     -- case  Shift( SRLI(rd, rs1, imm))       =>  Itype(opc(0x04), 5, rd, rs1, '000000' : imm)
+     -- case  Shift( SRAI(rd, rs1, imm))       =>  Itype(opc(0x04), 5, rd, rs1, '010000' : imm)
+     -- case ArithI(  ORI(rd, rs1, imm))       =>  Itype(opc(0x04), 6, rd, rs1, imm)
+     -- case ArithI( ANDI(rd, rs1, imm))       =>  Itype(opc(0x04), 7, rd, rs1, imm)
+
+     -- case ArithR(  ADD(rd, rs1, rs2))       =>  Rtype(opc(0x0C), 0, rd, rs1, rs2, 0)
+     -- case ArithR(  SUB(rd, rs1, rs2))       =>  Rtype(opc(0x0C), 0, rd, rs1, rs2, 0x20)
+     -- case  Shift(  SLL(rd, rs1, rs2))       =>  Rtype(opc(0x0C), 1, rd, rs1, rs2, 0)
+     -- case ArithR(  SLT(rd, rs1, rs2))       =>  Rtype(opc(0x0C), 2, rd, rs1, rs2, 0)
+     -- case ArithR( SLTU(rd, rs1, rs2))       =>  Rtype(opc(0x0C), 3, rd, rs1, rs2, 0)
+     -- case ArithR(  XOR(rd, rs1, rs2))       =>  Rtype(opc(0x0C), 4, rd, rs1, rs2, 0)
+     -- case  Shift(  SRL(rd, rs1, rs2))       =>  Rtype(opc(0x0C), 5, rd, rs1, rs2, 0)
+     -- case  Shift(  SRA(rd, rs1, rs2))       =>  Rtype(opc(0x0C), 5, rd, rs1, rs2, 0x20)
+     -- case ArithR(   OR(rd, rs1, rs2))       =>  Rtype(opc(0x0C), 6, rd, rs1, rs2, 0)
+     -- case ArithR(  AND(rd, rs1, rs2))       =>  Rtype(opc(0x0C), 7, rd, rs1, rs2, 0)
+
+     -- case ArithI(ADDIW(rd, rs1, imm))       =>  Itype(opc(0x06), 0, rd, rs1, imm)
+     -- case  Shift(SLLIW(rd, rs1, imm))       =>  Itype(opc(0x06), 1, rd, rs1, '0000000' : imm)
+     -- case  Shift(SRLIW(rd, rs1, imm))       =>  Itype(opc(0x06), 5, rd, rs1, '0000000' : imm)
+     -- case  Shift(SRAIW(rd, rs1, imm))       =>  Itype(opc(0x06), 5, rd, rs1, '0100000' : imm)
+
+     -- case ArithR( ADDW(rd, rs1, rs2))       =>  Rtype(opc(0x0E), 0, rd, rs1, rs2, '0000000')
+     -- case ArithR( SUBW(rd, rs1, rs2))       =>  Rtype(opc(0x0E), 0, rd, rs1, rs2, '0100000')
+     -- case  Shift( SLLW(rd, rs1, rs2))       =>  Rtype(opc(0x0E), 1, rd, rs1, rs2, '0000000')
+     -- case  Shift( SRLW(rd, rs1, rs2))       =>  Rtype(opc(0x0E), 5, rd, rs1, rs2, '0000000')
+     -- case  Shift( SRAW(rd, rs1, rs2))       =>  Rtype(opc(0x0E), 5, rd, rs1, rs2, '0100000')
+
+     -- case MulDiv(    MUL(rd, rs1, rs2))     =>  Rtype(opc(0x0C), 0, rd, rs1, rs2, '0000001')
+     -- case MulDiv(   MULH(rd, rs1, rs2))     =>  Rtype(opc(0x0C), 1, rd, rs1, rs2, '0000001')
+     -- case MulDiv( MULHSU(rd, rs1, rs2))     =>  Rtype(opc(0x0C), 2, rd, rs1, rs2, '0000001')
+     -- case MulDiv(  MULHU(rd, rs1, rs2))     =>  Rtype(opc(0x0C), 3, rd, rs1, rs2, '0000001')
+     -- case MulDiv(    DIV(rd, rs1, rs2))     =>  Rtype(opc(0x0C), 4, rd, rs1, rs2, '0000001')
+     -- case MulDiv(   DIVU(rd, rs1, rs2))     =>  Rtype(opc(0x0C), 5, rd, rs1, rs2, '0000001')
+     -- case MulDiv(    REM(rd, rs1, rs2))     =>  Rtype(opc(0x0C), 6, rd, rs1, rs2, '0000001')
+     -- case MulDiv(   REMU(rd, rs1, rs2))     =>  Rtype(opc(0x0C), 7, rd, rs1, rs2, '0000001')
+
+     -- case MulDiv(   MULW(rd, rs1, rs2))     =>  Rtype(opc(0x0E), 0, rd, rs1, rs2, '0000001')
+     -- case MulDiv(   DIVW(rd, rs1, rs2))     =>  Rtype(opc(0x0E), 4, rd, rs1, rs2, '0000001')
+     -- case MulDiv(  DIVUW(rd, rs1, rs2))     =>  Rtype(opc(0x0E), 5, rd, rs1, rs2, '0000001')
+     -- case MulDiv(   REMW(rd, rs1, rs2))     =>  Rtype(opc(0x0E), 6, rd, rs1, rs2, '0000001')
+     -- case MulDiv(  REMUW(rd, rs1, rs2))     =>  Rtype(opc(0x0E), 7, rd, rs1, rs2, '0000001')
+
+     -- case   Load(   LB(rd, rs1, imm))       =>  Itype(opc(0x00), 0, rd, rs1, imm)
+     -- case   Load(   LH(rd, rs1, imm))       =>  Itype(opc(0x00), 1, rd, rs1, imm)
+     -- case   Load(   LW(rd, rs1, imm))       =>  Itype(opc(0x00), 2, rd, rs1, imm)
+     -- case   Load(   LD(rd, rs1, imm))       =>  Itype(opc(0x00), 3, rd, rs1, imm)
+     -- case   Load(  LBU(rd, rs1, imm))       =>  Itype(opc(0x00), 4, rd, rs1, imm)
+     -- case   Load(  LHU(rd, rs1, imm))       =>  Itype(opc(0x00), 5, rd, rs1, imm)
+     -- case   Load(  LWU(rd, rs1, imm))       =>  Itype(opc(0x00), 6, rd, rs1, imm)
+
+     -- case  Store(   SB(rs1, rs2, imm))      =>  Stype(opc(0x08), 0, rs1, rs2, imm)
+     -- case  Store(   SH(rs1, rs2, imm))      =>  Stype(opc(0x08), 1, rs1, rs2, imm)
+     -- case  Store(   SW(rs1, rs2, imm))      =>  Stype(opc(0x08), 2, rs1, rs2, imm)
+     -- case  Store(   SD(rs1, rs2, imm))      =>  Stype(opc(0x08), 3, rs1, rs2, imm)
+
+     -- case   FENCE(rd, rs1, pred, succ)      =>  Itype(opc(0x03), 0, rd, rs1, '0000' : pred : succ)
+     -- case FENCE_I(rd, rs1, imm)             =>  Itype(opc(0x03), 1, rd, rs1, imm)
+
+     -- case FArith(  FADD_S(rd, rs1, rs2, frm)) => Rtype(opc(0x14), frm, rd, rs1, rs2, 0x00)
+     -- case FArith(  FSUB_S(rd, rs1, rs2, frm)) => Rtype(opc(0x14), frm, rd, rs1, rs2, 0x04)
+     -- case FArith(  FMUL_S(rd, rs1, rs2, frm)) => Rtype(opc(0x14), frm, rd, rs1, rs2, 0x08)
+     -- case FArith(  FDIV_S(rd, rs1, rs2, frm)) => Rtype(opc(0x14), frm, rd, rs1, rs2, 0x0c)
+     -- case FArith( FSQRT_S(rd, rs, frm))       => Rtype(opc(0x14), frm, rd, rs,    0, 0x2c)
+     -- case FArith(  FMIN_S(rd, rs1, rs2))      => Rtype(opc(0x14), 0,   rd, rs1, rs2, 0x14)
+     -- case FArith(  FMAX_S(rd, rs1, rs2))      => Rtype(opc(0x14), 1,   rd, rs1, rs2, 0x14)
+     -- case FArith(   FEQ_S(rd, rs1, rs2))      => Rtype(opc(0x14), 2,   rd, rs1, rs2, 0x50)
+     -- case FArith(   FLT_S(rd, rs1, rs2))      => Rtype(opc(0x14), 1,   rd, rs1, rs2, 0x50)
+     -- case FArith(   FLE_S(rd, rs1, rs2))      => Rtype(opc(0x14), 0,   rd, rs1, rs2, 0x50)
+
+     -- case FArith(  FADD_D(rd, rs1, rs2, frm)) => Rtype(opc(0x14), frm, rd, rs1, rs2, 0x01)
+     -- case FArith(  FSUB_D(rd, rs1, rs2, frm)) => Rtype(opc(0x14), frm, rd, rs1, rs2, 0x05)
+     -- case FArith(  FMUL_D(rd, rs1, rs2, frm)) => Rtype(opc(0x14), frm, rd, rs1, rs2, 0x09)
+     -- case FArith(  FDIV_D(rd, rs1, rs2, frm)) => Rtype(opc(0x14), frm, rd, rs1, rs2, 0x0d)
+     -- case FArith( FSQRT_D(rd, rs, frm))       => Rtype(opc(0x14), frm, rd, rs,    0, 0x2d)
+     -- case FArith(  FMIN_D(rd, rs1, rs2))      => Rtype(opc(0x14), 0,   rd, rs1, rs2, 0x15)
+     -- case FArith(  FMAX_D(rd, rs1, rs2))      => Rtype(opc(0x14), 1,   rd, rs1, rs2, 0x15)
+     -- case FArith(   FEQ_D(rd, rs1, rs2))      => Rtype(opc(0x14), 2,   rd, rs1, rs2, 0x51)
+     -- case FArith(   FLT_D(rd, rs1, rs2))      => Rtype(opc(0x14), 1,   rd, rs1, rs2, 0x51)
+     -- case FArith(   FLE_D(rd, rs1, rs2))      => Rtype(opc(0x14), 0,   rd, rs1, rs2, 0x51)
+
+     -- case FPLoad(  FLW(rd, rs1, imm))         => Itype(opc(0x01), 2, rd, rs1, imm)
+     -- case FPLoad(  FLD(rd, rs1, imm))         => Itype(opc(0x01), 3, rd, rs1, imm)
+     -- case FPStore( FSW(rs1, rs2, imm))        => Stype(opc(0x09), 2, rs1, rs2, imm)
+     -- case FPStore( FSD(rs1, rs2, imm))        => Stype(opc(0x09), 3, rs1, rs2, imm)
+
+     -- case FArith( FMADD_S(rd, rs1, rs2, rs3, frm)) => R4type(opc(0x10), frm, rd, rs1, rs2, rs3, 0)
+     -- case FArith( FMSUB_S(rd, rs1, rs2, rs3, frm)) => R4type(opc(0x11), frm, rd, rs1, rs2, rs3, 0)
+     -- case FArith(FNMSUB_S(rd, rs1, rs2, rs3, frm)) => R4type(opc(0x12), frm, rd, rs1, rs2, rs3, 0)
+     -- case FArith(FNMADD_S(rd, rs1, rs2, rs3, frm)) => R4type(opc(0x13), frm, rd, rs1, rs2, rs3, 0)
+
+     -- case FArith( FMADD_D(rd, rs1, rs2, rs3, frm)) => R4type(opc(0x10), frm, rd, rs1, rs2, rs3, 1)
+     -- case FArith( FMSUB_D(rd, rs1, rs2, rs3, frm)) => R4type(opc(0x11), frm, rd, rs1, rs2, rs3, 1)
+     -- case FArith(FNMSUB_D(rd, rs1, rs2, rs3, frm)) => R4type(opc(0x12), frm, rd, rs1, rs2, rs3, 1)
+     -- case FArith(FNMADD_D(rd, rs1, rs2, rs3, frm)) => R4type(opc(0x13), frm, rd, rs1, rs2, rs3, 1)
+
+     -- case FConv(  FSGNJ_S(rd, rs1, rs2))      => Rtype(opc(0x14), 0, rd, rs1, rs2, 0x10)
+     -- case FConv( FSGNJN_S(rd, rs1, rs2))      => Rtype(opc(0x14), 1, rd, rs1, rs2, 0x10)
+     -- case FConv( FSGNJX_S(rd, rs1, rs2))      => Rtype(opc(0x14), 2, rd, rs1, rs2, 0x10)
+
+     -- case FConv( FCVT_W_S(rd, rs, frm))       => Rtype(opc(0x14), frm, rd, rs, 0, 0x60)
+     -- case FConv(FCVT_WU_S(rd, rs, frm))       => Rtype(opc(0x14), frm, rd, rs, 1, 0x60)
+     -- case FConv(  FMV_X_S(rd, rs))            => Rtype(opc(0x14), 0,   rd, rs, 0, 0x70)
+     -- case FConv( FCLASS_S(rd, rs))            => Rtype(opc(0x14), 1,   rd, rs, 0, 0x70)
+     -- case FConv( FCVT_S_W(rd, rs, frm))       => Rtype(opc(0x14), frm, rd, rs, 0, 0x68)
+     -- case FConv(FCVT_S_WU(rd, rs, frm))       => Rtype(opc(0x14), frm, rd, rs, 1, 0x68)
+     -- case FConv(  FMV_S_X(rd, rs))            => Rtype(opc(0x14), 0,   rd, rs, 0, 0x78)
+
+     -- case FConv(  FSGNJ_D(rd, rs1, rs2))      => Rtype(opc(0x14), 0, rd, rs1, rs2, 0x11)
+     -- case FConv( FSGNJN_D(rd, rs1, rs2))      => Rtype(opc(0x14), 1, rd, rs1, rs2, 0x11)
+     -- case FConv( FSGNJX_D(rd, rs1, rs2))      => Rtype(opc(0x14), 2, rd, rs1, rs2, 0x11)
+
+     -- case FConv( FCVT_W_D(rd, rs, frm))       => Rtype(opc(0x14), frm, rd, rs, 0, 0x61)
+     -- case FConv(FCVT_WU_D(rd, rs, frm))       => Rtype(opc(0x14), frm, rd, rs, 1, 0x61)
+     -- case FConv( FCLASS_D(rd, rs))            => Rtype(opc(0x14), 1,   rd, rs, 0, 0x71)
+     -- case FConv( FCVT_D_W(rd, rs, frm))       => Rtype(opc(0x14), frm, rd, rs, 0, 0x69)
+     -- case FConv(FCVT_D_WU(rd, rs, frm))       => Rtype(opc(0x14), frm, rd, rs, 1, 0x69)
+     -- case FConv( FCVT_S_D(rd, rs, frm))       => Rtype(opc(0x14), frm, rd, rs, 1, 0x20)
+     -- case FConv( FCVT_D_S(rd, rs, frm))       => Rtype(opc(0x14), frm, rd, rs, 0, 0x21)
+
+     -- case FConv( FCVT_L_S(rd, rs, frm))       => Rtype(opc(0x14), frm, rd, rs, 2, 0x60)
+     -- case FConv(FCVT_LU_S(rd, rs, frm))       => Rtype(opc(0x14), frm, rd, rs, 3, 0x60)
+     -- case FConv( FCVT_S_L(rd, rs, frm))       => Rtype(opc(0x14), frm, rd, rs, 2, 0x68)
+     -- case FConv(FCVT_S_LU(rd, rs, frm))       => Rtype(opc(0x14), frm, rd, rs, 3, 0x68)
+     -- case FConv( FCVT_L_D(rd, rs, frm))       => Rtype(opc(0x14), frm, rd, rs, 2, 0x61)
+     -- case FConv(FCVT_LU_D(rd, rs, frm))       => Rtype(opc(0x14), frm, rd, rs, 3, 0x61)
+     -- case FConv(  FMV_X_D(rd, rs))            => Rtype(opc(0x14), 0,   rd, rs, 0, 0x71)
+     -- case FConv( FCVT_D_L(rd, rs, frm))       => Rtype(opc(0x14), frm, rd, rs, 2, 0x69)
+     -- case FConv(FCVT_D_LU(rd, rs, frm))       => Rtype(opc(0x14), frm, rd, rs, 3, 0x69)
+     -- case FConv(  FMV_D_X(rd, rs))            => Rtype(opc(0x14), 0,   rd, rs, 0, 0x79)
+
+     -- case AMO(     LR_W(aq, rl, rd, rs1))       => Rtype(opc(0x0B), 2, rd, rs1, 0,   amofunc('00010', aq, rl))
+     -- case AMO(     LR_D(aq, rl, rd, rs1))       => Rtype(opc(0x0B), 3, rd, rs1, 0,   amofunc('00010', aq, rl))
+     -- case AMO(     SC_W(aq, rl, rd, rs1, rs2))  => Rtype(opc(0x0B), 2, rd, rs1, rs2, amofunc('00011', aq, rl))
+     -- case AMO(     SC_D(aq, rl, rd, rs1, rs2))  => Rtype(opc(0x0B), 3, rd, rs1, rs2, amofunc('00010', aq, rl))
+
+     -- case AMO(AMOSWAP_W(aq, rl, rd, rs1, rs2))  => Rtype(opc(0x0B), 2, rd, rs1, rs2, amofunc('00001', aq, rl))
+     -- case AMO( AMOADD_W(aq, rl, rd, rs1, rs2))  => Rtype(opc(0x0B), 2, rd, rs1, rs2, amofunc('00000', aq, rl))
+     -- case AMO( AMOXOR_W(aq, rl, rd, rs1, rs2))  => Rtype(opc(0x0B), 2, rd, rs1, rs2, amofunc('00100', aq, rl))
+     -- case AMO( AMOAND_W(aq, rl, rd, rs1, rs2))  => Rtype(opc(0x0B), 2, rd, rs1, rs2, amofunc('01100', aq, rl))
+     -- case AMO(  AMOOR_W(aq, rl, rd, rs1, rs2))  => Rtype(opc(0x0B), 2, rd, rs1, rs2, amofunc('01000', aq, rl))
+     -- case AMO( AMOMIN_W(aq, rl, rd, rs1, rs2))  => Rtype(opc(0x0B), 2, rd, rs1, rs2, amofunc('10000', aq, rl))
+     -- case AMO( AMOMAX_W(aq, rl, rd, rs1, rs2))  => Rtype(opc(0x0B), 2, rd, rs1, rs2, amofunc('10100', aq, rl))
+     -- case AMO(AMOMINU_W(aq, rl, rd, rs1, rs2))  => Rtype(opc(0x0B), 2, rd, rs1, rs2, amofunc('11000', aq, rl))
+     -- case AMO(AMOMAXU_W(aq, rl, rd, rs1, rs2))  => Rtype(opc(0x0B), 2, rd, rs1, rs2, amofunc('11100', aq, rl))
+
+     -- case AMO(AMOSWAP_D(aq, rl, rd, rs1, rs2))  => Rtype(opc(0x0B), 3, rd, rs1, rs2, amofunc('00001', aq, rl))
+     -- case AMO( AMOADD_D(aq, rl, rd, rs1, rs2))  => Rtype(opc(0x0B), 3, rd, rs1, rs2, amofunc('00000', aq, rl))
+     -- case AMO( AMOXOR_D(aq, rl, rd, rs1, rs2))  => Rtype(opc(0x0B), 3, rd, rs1, rs2, amofunc('00100', aq, rl))
+     -- case AMO( AMOAND_D(aq, rl, rd, rs1, rs2))  => Rtype(opc(0x0B), 3, rd, rs1, rs2, amofunc('01100', aq, rl))
+     -- case AMO(  AMOOR_D(aq, rl, rd, rs1, rs2))  => Rtype(opc(0x0B), 3, rd, rs1, rs2, amofunc('01000', aq, rl))
+     -- case AMO( AMOMIN_D(aq, rl, rd, rs1, rs2))  => Rtype(opc(0x0B), 3, rd, rs1, rs2, amofunc('10000', aq, rl))
+     -- case AMO( AMOMAX_D(aq, rl, rd, rs1, rs2))  => Rtype(opc(0x0B), 3, rd, rs1, rs2, amofunc('10100', aq, rl))
+     -- case AMO(AMOMINU_D(aq, rl, rd, rs1, rs2))  => Rtype(opc(0x0B), 3, rd, rs1, rs2, amofunc('11000', aq, rl))
+     -- case AMO(AMOMAXU_D(aq, rl, rd, rs1, rs2))  => Rtype(opc(0x0B), 3, rd, rs1, rs2, amofunc('11100', aq, rl))
+
+     -- case System( ECALL)                    =>  Itype(opc(0x1C), 0, 0, 0, 0x000)
+     -- case System(EBREAK)                    =>  Itype(opc(0x1C), 0, 0, 0, 0x001)
+     -- case System(  ERET)                    =>  Itype(opc(0x1C), 0, 0, 0, 0x100)
+     -- case System(  MRTS)                    =>  Itype(opc(0x1C), 0, 0, 0, 0x305)
+     -- case System(   WFI)                    =>  Itype(opc(0x1C), 0, 0, 0, 0x102)
+
+     -- case System(SFENCE_VM(rs1))            =>  Itype(opc(0x1C), 0, 0, rs1, 0x101)
+
+     -- case System( CSRRW(rd, rs1, csr))      =>  Itype(opc(0x1C), 1, rd, rs1, csr)
+     -- case System( CSRRS(rd, rs1, csr))      =>  Itype(opc(0x1C), 2, rd, rs1, csr)
+     -- case System( CSRRC(rd, rs1, csr))      =>  Itype(opc(0x1C), 3, rd, rs1, csr)
+     -- case System(CSRRWI(rd, imm, csr))      =>  Itype(opc(0x1C), 5, rd, imm, csr)
+     -- case System(CSRRSI(rd, imm, csr))      =>  Itype(opc(0x1C), 6, rd, imm, csr)
+     -- case System(CSRRCI(rd, imm, csr))      =>  Itype(opc(0x1C), 7, rd, imm, csr)
+
+     -- case UnknownInstruction                => 0
+
+     -- case Internal(FETCH_MISALIGNED(_))     => 0
+     -- case Internal(FETCH_FAULT(_))          => 0
+     case _ => Full(Encode(i))
+   }
+
+---------------------------------------------------------------------------
 -- The next state function
 ---------------------------------------------------------------------------
 
@@ -4950,7 +5266,12 @@ unit Next =
        }
 
 ; match Fetch()
-  { case F_Result(w) =>
+  { case F_Result(Half(h)) =>
+    { inst = DecodeRVC(h)
+    ; mark_log(LOG_INSN, log_instruction(ZeroExtend(h), inst))
+    ; Run(inst)
+    }
+    case F_Result(Word(w)) =>
     { inst = Decode(w)
     ; mark_log(LOG_INSN, log_instruction(w, inst))
     ; Run(inst)
@@ -4966,11 +5287,11 @@ unit Next =
 ; match NextFetch, checkInterrupts()
   { case None, None =>
              { incrInstret()
-             ; PC <- PC + 4
+             ; PC <- PC + Skip
              }
     case None, Some(i, p) =>
              { incrInstret()
-             ; takeTrap(true, interruptIndex(i), PC + 4, None, p)
+             ; takeTrap(true, interruptIndex(i), PC + Skip, None, p)
              }
     case Some(BranchTo(addr)), _ =>
              { incrInstret()
