@@ -1094,6 +1094,7 @@ Proof
   fs[univ_rf_def] >> rw[] >> qexists_tac`bar (n2bl (f))` >> rw[HUTM_corr]
 QED
 
+(* (* Another pf machine *)
 val undop_def = Define` (undop i (T::rest) = undop (i + 1) rest) ∧
                          undop i (F::rest) = (n2bl i, rest)
 `;
@@ -1108,6 +1109,7 @@ QED
 
 val CUTM_def = Define`CUTM p = Phi (bl2n  (FST (undop 0 p))) (bl2n (SND (undop 0 p)) )`
 
+*)
 (* prefix invariance theorem  *)
 
 Theorem pf_invariance_theorem:
@@ -1148,13 +1150,6 @@ Proof
   rw[] >> qexists_tac`bar (n2bl (f))` >> rw[HUTMpf_corr]
 QED
 
-val HUTMpf_print_def = Define`HUTMpf_print x = bar (n2bl (dBnum (fromTerm (K @@ church x))))`
-
-Theorem bar2ped_HUTMpf_print:
-  bar2ped (HUTMpf_print x)
-Proof
-  fs[bar2ped_def,HUTMpf_print_def]
-QED
 
 Theorem unbar2p_bar[simp]:
   unbar2p 0 (bar x) = (x,[])
@@ -1188,11 +1183,6 @@ Proof
   `n2bl x = n2bl x ++ []` by fs[] >> metis_tac[rich_listTheory.DROP_LENGTH_APPEND]
 QED
 
-Theorem HUTMpf_print_pf:
-  prefix_free_fn (bl2n (FST (unbar2p 0 (HUTMpf_print x))))
-Proof
-  fs[prefix_free_fn_def,HUTMpf_print_def,unbar2p_bar] >>  simp[Phi_def,the_lemma,normal_orderTheory.bnf_bnf_of]
-QED
 
 Theorem TAKE_LENGTH_APPEND2[simp]:
   TAKE (LENGTH l1) (l1 ++ l2 ++ l3) = l1
@@ -1223,26 +1213,77 @@ Proof
              ¬(q ≺ q++s)` by fs[] >> `¬(q ≺ q++s)` by fs[] >> fs[prefix_def]
 QED
 
-Theorem HUTMpf_print_corr2:
-  HUTMpf ((HUTMpf_print x)) = SOME x
+
+
+Theorem HUTM_prefix_free:
+  ∀M. prefix_free {x | (∃y. Phi M (bl2n x) = SOME y)} ==> 
+      prefix_free {x | (∃p. x = bar (n2bl M) ++ p) ∧ (∃y. HUTM x = SOME y)}
 Proof
-  simp[HUTMpf_def,bar_def,bar2ped_HUTMpf_print,HUTMpf_print_pf,Phi_def,HUTMpf_print_def] >> 
+  rw[] >> fs[prefix_free_def] >> rw[] >> 
+  `(∃y. Phi M (bl2n p) = SOME y) ∧ (∃y. Phi M (bl2n p') = SOME y) ⇒ ¬( p ≺  p')` 
+    by metis_tac[] >> 
+  `Phi M (bl2n p) = SOME y` by fs[HUTM_corr] >>
+  `Phi M (bl2n p') = SOME y'` by fs[HUTM_corr] >> fs[] >>
+  spose_not_then assume_tac >> fs[prefix_append]
+QED
+
+val recfn_index_def = 
+new_specification("recfn_index_def", ["recfn_index"], 
+		  recfns_in_Phi 
+		      |> SIMP_RULE (srw_ss()) [LEFT_FORALL_IMP_THM]
+		      |> SIMP_RULE (srw_ss()) [GSYM RIGHT_EXISTS_IMP_THM, SKOLEM_THM])
+
+
+
+(* Unproven *)
+
+val HUTMpf_print_def = Define`HUTMpf_print x = bar ( (n2bl (dBnum (fromTerm (C @@ (C @@ I @@ church x) @@ (K @@ Omega) )))))`
+
+Theorem bar2ped_HUTMpf_print:
+  bar2ped (HUTMpf_print x)
+Proof
+  fs[bar2ped_def,HUTMpf_print_def]
+QED
+
+open reductionEval;
+
+Theorem HUTMpf_print_pf:
+  prefix_free_fn (bl2n (FST (unbar2p 0 (HUTMpf_print x))))
+Proof
+  fs[prefix_free_fn_def,HUTMpf_print_def,unbar2p_bar] >>  
+  simp[Phi_def,the_lemma,normal_orderTheory.bnf_bnf_of] >>
+  qmatch_abbrev_tac`prefix_free s` >> `s = {[]}` suffices_by fs[] >>
+  fs[Abbr`s`,EXTENSION] >> rw[] >> Cases_on`x'` >> fs[] >>
+  asm_simp_tac(bsrw_ss())[bool_list_to_num_def,normal_orderTheory.bnf_bnf_of,churchnumTheory.bnf_church] >> 
+  Cases_on`(if h then 2 else 1) + 2 * bl2n t` >> rw[] >- (fs[] >> Cases_on`h`>>fs[]) >>
+  asm_simp_tac(bsrw_ss())[churchnumTheory.church_thm]
+QED
+
+Theorem HUTMpf_print_corr:
+  HUTMpf (HUTMpf_print x) = SOME x
+Proof
+  simp[HUTMpf_def,bar_def,bar2ped_HUTMpf_print,Phi_def,HUTMpf_print_pf,bar2ped_HUTMpf_print] >> 
   qexists_tac`church x` >>
-  simp[the_lemma,normal_orderTheory.bnf_bnf_of]
+  simp[the_lemma,normal_orderTheory.bnf_bnf_of,HUTMpf_print_def] >>
+  asm_simp_tac(bsrw_ss())[bool_list_to_num_def,churchnumTheory.church_thm,normal_orderTheory.bnf_bnf_of,churchnumTheory.bnf_church]
 QED
 
 Theorem HUTMpf_nonempty:
   {p | HUTMpf p = SOME x} <> {}
 Proof
-  fs[EXTENSION,HUTMpf_def] >> qexists_tac`n2bl (HUTMpf_print x)` >> fs[HUTMpf_print_corr]
+  fs[EXTENSION,HUTMpf_def] >> qexists_tac`(HUTMpf_print x)` >> 
+  rw[HUTMpf_print_pf,bar2ped_HUTMpf_print] >> fs[HUTMpf_print_def,Phi_def] >>
+  qexists_tac`church x` >>
+  simp[the_lemma,normal_orderTheory.bnf_bnf_of,bool_list_to_num_def] >>
+  asm_simp_tac(bsrw_ss())[churchnumTheory.church_thm,normal_orderTheory.bnf_bnf_of,churchnumTheory.bnf_church]
 QED
 
 Theorem HUTMpf_invariance_theorem:
   prefix_free_fn M ==> 
-  ∃C. ∀x. (kolmog_complexity x HUTMpf) <= (kolmog_complexity x (λy. recPhi [M;bl2n y])) + (C HUTMpf M)
+  ∃C. ∀x. (kolmog_complexity x HUTMpf) <= (kolmog_complexity x (λy. recPhi [M;bl2n y])) + (C M)
 Proof
   rw[kolmog_complexity_def] >> `∃g. ∀x. recPhi [M; x] = HUTMpf (g ++ n2bl x)` by 
-    fs[HUTMpf_univpf] >> qexists_tac`λx y. SOME (LENGTH g)` >> rw[]
+    fs[HUTMpf_univpf] >> qexists_tac`λx. SOME (LENGTH g)` >> rw[]
   >- (fs[HUTMpf_nonempty])
   >- (`MIN_SET (IMAGE LENGTH {p | HUTMpf p = SOME x}) ∈ 
         IMAGE LENGTH ({p | HUTMpf p = SOME x})` by fs[MIN_SET_LEM] >> fs[IMAGE_DEF] >>
@@ -1268,24 +1309,6 @@ Proof
       >- (fs[EXTENSION] >> qexists_tac`M_x`>>fs[])
       >- (rw[SUBSET_DEF] >>qexists_tac`g++y`>>fs[Abbr`a`] ))
 QED
-
-Theorem HUTM_prefix_free:
-  ∀M. prefix_free {x | (∃y. Phi M (bl2n x) = SOME y)} ==>
-      prefix_free {x | (∃p. x = bar (n2bl M) ++ p) ∧ (∃y. HUTM x = SOME y)}
-Proof
-  rw[] >> fs[prefix_free_def] >> rw[] >>
-  `(∃y. Phi M (bl2n p) = SOME y) ∧ (∃y. Phi M (bl2n p') = SOME y) ⇒ ¬( p ≺  p')`
-    by metis_tac[] >>
-  `Phi M (bl2n p) = SOME y` by fs[HUTM_corr] >>
-  `Phi M (bl2n p') = SOME y'` by fs[HUTM_corr] >> fs[] >>
-  spose_not_then assume_tac >> fs[prefix_append]
-QED
-
-val recfn_index_def = 
-new_specification("recfn_index_def", ["recfn_index"], 
-		  recfns_in_Phi 
-		      |> SIMP_RULE (srw_ss()) [LEFT_FORALL_IMP_THM]
-		      |> SIMP_RULE (srw_ss()) [GSYM RIGHT_EXISTS_IMP_THM, SKOLEM_THM])
 
 
 
