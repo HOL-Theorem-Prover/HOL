@@ -58,6 +58,7 @@
 (global-set-key (kbd "C-S-g") "γ")
 (global-set-key (kbd "C-S-d") "δ")
 (global-set-key (kbd "C-S-e") "ε")
+(global-set-key (kbd "C-S-h") "χ")
 (global-set-key (kbd "C-S-l") "λ")
 (global-set-key (kbd "C-S-m") "μ")
 (global-set-key (kbd "C-S-n") "ν")
