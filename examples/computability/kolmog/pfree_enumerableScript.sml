@@ -1,7 +1,7 @@
 open HolKernel Parse boolLib bossLib;
 
 open kraft_ineqTheory
-open recSetsTheory
+open recsetsTheory
 
 val _ = new_theory "pfree_enumerable";
 
