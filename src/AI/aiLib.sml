@@ -305,6 +305,20 @@ fun list_combine ll = case ll of
                 map (fn (a,b) => a :: b) (combine (l,m'))
               end
 
+fun split_triple l = case l of 
+    [] => ([], [], [])
+  | (a1,a2,a3) :: m => 
+    let val (acc1, acc2, acc3) = split_triple m in
+      (a1 :: acc1, a2 :: acc2, a3 :: acc3)
+    end
+
+fun combine_triple (l1,l2,l3) = case (l1,l2,l3) of
+    ([],[],[]) => []
+  | (a1 :: m1, a2 :: m2, a3 :: m3) => (a1,a2,a3) :: combine_triple (m1,m2,m3)
+  | _ => raise ERR "combine_triple" "different lengths"
+
+
+
 (* --------------------------------------------------------------------------
    Parsing
    ------------------------------------------------------------------------- *)

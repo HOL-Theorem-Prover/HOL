@@ -1,32 +1,33 @@
 signature mlMatrix =
 sig
 
+  type vect = real vector
+  type mat = real vector vector
+
   (* vector *)
-  val vector_to_list : real vector -> real list
-  val sum_rvect      : real vector -> real
-  val average_rvect  : real vector -> real
-  val diff_rvect     : real vector -> real vector -> real vector
-  val mult_rvect     : real vector -> real vector -> real vector
-  val scalar_product : real vector -> real vector -> real
-  val scalar_mult    : real -> real vector -> real vector
+  val vector_to_list : vect -> real list
+  val sum_rvect      : vect -> real
+  val average_rvect  : vect -> real
+  val diff_rvect     : vect -> vect -> vect
+  val mult_rvect     : vect -> vect -> vect
+  val scalar_product : vect -> vect -> real
+  val scalar_mult    : real -> vect -> vect
   (* matrix *)
-  val mat_mult     : real vector vector -> real vector -> real vector
-  val mat_smult    : real -> real vector vector -> real vector vector
+  val mat_mult     : mat -> vect -> vect
+  val mat_smult    : real -> mat -> mat
   val mat_map      : ('a -> 'b) -> 'a vector vector -> 'b vector vector
   val mat_tabulate : (int -> int -> 'a) -> int * int -> 'a vector vector
   val mat_dim      : 'a vector vector -> int * int
   val mat_sub      : 'a vector vector -> int -> int -> 'a
-  val mat_add      :
-    real vector vector -> real vector vector -> real vector vector
-  val matl_add : 
-    real vector vector list -> real vector vector
-  val mat_transpose : 'a vector vector -> 'a vector vector
-  val mat_random    : int * int -> real vector vector
+  val mat_add      : mat -> mat -> mat
+  val matl_add     : mat list -> mat
+  val mat_transpose : mat -> mat
+  val mat_random    : int * int -> mat
   (* input/output *)
-  val string_of_vect : real vector -> string
-  val string_of_mat : real vector vector -> string
-  val read_mat_sl: string list -> real vector vector
-  val read_mat : string -> real vector vector
+  val string_of_vect : vect -> string
+  val string_of_mat : mat -> string
+  val read_mat_sl: string list -> mat
+  val read_mat : string -> mat
   val read_diml : string -> (int * int) list
 
 end

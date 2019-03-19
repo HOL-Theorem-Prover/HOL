@@ -71,7 +71,7 @@ fun summary_param () =
   in
     summary "Global parameters";
     summary (String.concatWith "\n  " 
-     ([file] @ [gen1,gen2,gen3] @ [nn1,nn2,nn3,nn4] @ 
+     ([file] @ [gen1,gen2,gen3] @ [nn1,nn2,nn3,nn4,nn5] @ 
       [mcts2,mcts3,mcts4])
      ^ "\n")
   end
@@ -99,18 +99,15 @@ fun mk_fep_dhtnn startb gamespec dhtnn sit =
    Examples
    ------------------------------------------------------------------------- *)
 
-val emptyallex = ([],[])
+val emptyallex = []
 
 fun complete_pol movel mrl =
   let fun f move = assoc move mrl handle HOL_ERR _ => 0.0 in
     map f movel
   end
 
-fun update_allex movel (nntm,(e,p)) (eex,pex) =
-  ((nntm,[e]) :: eex, (nntm, complete_pol movel p) :: pex)
-
-fun update_allex_from_tree gamespec tree allex =
-  let
+fun add_rootex gamespec tree allex =
+  let  
     val root = dfind [0] tree
     val sit  = #sit root
     val nntm = (#nntm_of_sit gamespec) sit
@@ -118,10 +115,8 @@ fun update_allex_from_tree gamespec tree allex =
   in
     case evalpoli_example tree of
       NONE    => allex
-    | SOME ep => update_allex movel (nntm,ep) allex
+    | SOME (e,p) => (nntm,[e],complete_pol movel p) :: allex
   end
-
-fun discard_oldex (a,b) n = (first_n n a, first_n n b)
 
 (* -------------------------------------------------------------------------
    MCTS big steps. Ending the search when there is no move available.
@@ -146,7 +141,7 @@ fun n_bigsteps_loop (n,nmax) gamespec mctsparam (allex,allroot) tree =
      | SOME cid =>
         let
           val cuttree = cut_tree newtree cid
-          val newallex = update_allex_from_tree gamespec newtree allex
+          val newallex = add_rootex gamespec newtree allex
         in
           n_bigsteps_loop (n+1,nmax) gamespec mctsparam
           (newallex, root :: allroot) cuttree
@@ -167,30 +162,27 @@ fun n_bigsteps gamespec mctsparam target =
    Training
    ------------------------------------------------------------------------- *)
 
-fun exl_stat (evalex,poliex) =
+fun epex_stats epex =
   let  
-    val l1 = (dlist (dregroup Term.compare evalex))
-    val r1 = average_real (map (Real.fromInt o length o snd) l1)
+    val d = count_dict (dempty Term.compare) (map #1 epex)
+    val r = average_real (map (Real.fromInt o snd) (dlist d))
   in
-    summary ("Average duplicates: " ^ rts r1);
-    summary ("Eval examples: " ^ trainset_info evalex);
-    summary ("Poli examples: " ^ trainset_info poliex)
+    summary ("examples: " ^ its (length epex));
+    summary ("average duplicates: " ^ rts r)
   end
 
 fun random_dhtnn_gamespec gamespec =
   random_dhtnn (!dim_glob, length (#movel gamespec)) (#operl gamespec)
 
-fun train_dhtnn gamespec (evalex,poliex) =
+fun train_dhtnn gamespec epex =
   let
-    val _ = exl_stat (evalex,poliex)
+    val _ = epex_stats epex
     val schedule = [(!nepoch_glob,0.1 / Real.fromInt (!batchsize_glob))]
-    val bsize = if length evalex < (!batchsize_glob) then 1 
-                else !batchsize_glob
+    val bsize = 
+      if length epex < !batchsize_glob then 1 else !batchsize_glob
     val dhtnn = random_dhtnn_gamespec gamespec
-    val (etrain,ptrain) = (prepare_trainset evalex, prepare_trainset poliex)
   in
-    train_dhtnn_schedule (!ncore_train_glob) 
-      dhtnn bsize (etrain,ptrain) schedule
+    train_dhtnn_schedule (!ncore_train_glob) dhtnn bsize epex schedule
   end
 
 fun train_f gamespec allex =
@@ -304,7 +296,7 @@ fun explore_standalone flags wid dhtnn target =
     val endroot = hd rootl
     val bstatus = status_of (#sit endroot) = Win
   in
-    write_dhtrainset (widexl_file wid) exl;
+    write_dhex (widexl_file wid) exl;
     writel_atomic (widout_file wid) [bstatus_to_string bstatus]     
   end
 
@@ -366,8 +358,8 @@ fun boss_end threadl completedl =
   end
 
 fun boss_readresult ((wid,job),x) =
-  let val exl = read_dhtrainset (widexl_file wid) in
-    (job, (string_to_bstatus (valOf x), exl))
+  let val dhex = read_dhex (widexl_file wid) in
+    (job, (string_to_bstatus (valOf x), dhex))
   end
 
 fun stat_jobs (remainingl,freewidl,runningl,completedl) = 
@@ -484,14 +476,6 @@ fun boss_start ncore flags dhtnn targetl =
     boss_send threadl (remainingl,[],[])
   end
 
-
-
-
-
-(* todo: 
-   wait for all the worker to be up. 
-*)
-
 (*
 load "rlEnv"; open aiLib rlEnv;
 val ncore = 2;
@@ -536,18 +520,6 @@ fun compete dhtnn_old dhtnn_new gamespec targetl =
    Exploration
    ------------------------------------------------------------------------- *)
 
-fun update_allex exll allex =
-  let
-    fun concat_ex ((exE,exP),(allexE,allexP)) = (exE @ allexE, exP @ allexP)
-    val exl1 = foldl concat_ex allex exll
-    fun cmp (a,b) = Term.compare (fst a,fst b)
-    val exl2 = (mk_sameorder_set cmp (fst exl1), 
-                mk_sameorder_set cmp (snd exl1))
-  in
-    discard_oldex exl2 (!exwindow_glob)
-  end
-
-(* todo: change allex and split it when making batches *)
 fun explore_f_aux startb gamespec allex dhtnn selectl =
   let
     val ((nwin,exll),t) = add_time
@@ -555,7 +527,7 @@ fun explore_f_aux startb gamespec allex dhtnn selectl =
     val _ = summary ("Exploration time: " ^ rts t)
     val _ = summary ("Exploration wins: " ^ its nwin)
   in
-    update_allex exll allex
+    first_n (!exwindow_glob) (List.concat exll @ allex) 
   end
 
 fun explore_f startb gamespec allex dhtnn targetl =
@@ -622,8 +594,7 @@ fun random_example operl size =
     val polin = length (#movel rlGameArithGround.gamespec) 
     val tm = psTermGen.random_term operl (size,bool)
   in
-    ((tm, [random_real ()]), 
-     (tm, List.tabulate (polin,fn _ => random_real ())))
+    (tm, [random_real ()], List.tabulate (polin,fn _ => random_real ()))
   end
 
 (*
@@ -635,8 +606,7 @@ val operl = map fst (dkeys (#opdict dhtnn));
 
 val size = 15;
 val nex = 12800;
-val trainex = 
-  split (List.tabulate (nex, fn _ => random_example operl size));
+val epex = List.tabulate (nex, fn _ => random_example operl size);
 batchsize_glob := 128;
 nepoch_glob := 1;
 
@@ -645,25 +615,23 @@ fun test_ncore n =
   reset_all ();
   PolyML.fullGC ();
   ncore_train_glob := n;
-  ignore (profile (its n) (train_dhtnn rlGameArithGround.gamespec) trainex);
+  ignore (train_dhtnn rlGameArithGround.gamespec epex);
   results ()
   );
 
-val result1l = map test_ncore [32];
+val resultl1 = map test_ncore [2];
+mlTreeNeuralNetwork.parext_flag := true;
+val resultl2 = map test_ncore [2];
+mlTreeNeuralNetwork.parext_flag := false;
+*)
 
-mlTreeNeuralNetwork.pmt_flag := true;
-val result2l = map test_ncore [32];
-mlTreeNeuralNetwork.pmt_flag := false;
-
-mlTreeNeuralNetwork.pmb_flag := true;
-val result3l = map test_ncore [32];
-mlTreeNeuralNetwork.pmb_flag := false;
-
-result1l;
-result2l;
-result3l;
-
-
+(*
+load "rlEnv"; open rlEnv aiLib;
+dim_glob := 8;
+val dhtnn = random_dhtnn_gamespec rlGameArithGround.gamespec;
+open mlTreeNeuralNetwork;
+fun loop dhtnn = (write_dhtnn "hello" dhtnn; read_dhtnn "hello");
+val (dhtnn1,t) = add_time loop dhtnn;
 *)
 
 end (* struct *)
@@ -672,7 +640,8 @@ end (* struct *)
 load "rlEnv";
 open rlEnv;
 
-logfile_glob := "march16-run2";
+mlTreeNeuralNetwork.pmb_flag := true;
+logfile_glob := "march16";
 ncore_mcts_glob := 16;
 ncore_train_glob := 8;
 ngen_glob := 50;

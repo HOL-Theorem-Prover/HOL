@@ -40,17 +40,17 @@ sig
   val boss_start : int -> bool * bool ->
     mlTreeNeuralNetwork.dhtnn ->
     rlGameArithGround.board psMCTS.sit list ->
-    int * ((term * real list) list * (term * real list) list) list
+    int * (term * real list * real list) list list
 
   (* training *)
   val random_dhtnn_gamespec : 
     (rlGameArithGround.board, ''a, 'b) gamespec -> 
     mlTreeNeuralNetwork.dhtnn
   val random_example : term list -> int -> 
-    (term * real list) * (term * real list)
+    (term * real list * real list)
   val train_dhtnn : 
     (rlGameArithGround.board, ''a, 'b) gamespec ->
-    (term * real list) list * (term * real list) list ->
+    (term * real list * real list) list  ->
     mlTreeNeuralNetwork.dhtnn
   
 
@@ -59,13 +59,9 @@ sig
 
   val start_rl_loop : 
     (rlGameArithGround.board, ''a, 'b) gamespec ->
-    ((term * real list) list * (term * real list) list) *
-     {dimin: int,
-       dimout: int,
-       headeval: mlTreeNeuralNetwork.nn,
-       headpoli: mlTreeNeuralNetwork.nn,
-       opdict: mlTreeNeuralNetwork.opdict} *
-     rlGameArithGround.board psMCTS.sit list
+    (term * real list * real list) list  *
+    mlTreeNeuralNetwork.dhtnn *
+    rlGameArithGround.board psMCTS.sit list
 
 
 end

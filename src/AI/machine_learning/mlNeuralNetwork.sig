@@ -42,7 +42,7 @@ sig
 
   (* weight updates *)
   val update_nn         : nn -> real vector vector list -> nn
-  val sum_bpdatall      : bpdata list list -> real vector vector list
+  val sum_dwll          : real vector vector list list -> real vector vector list
   val mean_square_error : real vector -> real
   val average_loss      : bpdata list list -> real
 
@@ -52,7 +52,10 @@ sig
     int -> nn -> int -> (real vector * real vector) list -> nn
 
   (* printing *)
+  val string_of_wl : real vector vector list -> string 
   val string_of_nn : nn -> string
+  val read_wl_sl : string list -> real vector vector list
   val read_nn_sl : string list -> nn
+
 
 end

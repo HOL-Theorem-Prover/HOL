@@ -102,10 +102,14 @@ sig
   val sort_thyl : string list -> string list
   val fold_left : ('a -> 'b -> 'b) -> 'a list -> 'b -> 'b
   val mk_batch : int -> 'a list -> 'a list list
+  val cut_n : int -> 'a list -> 'a list list
   val number_partition : int -> int -> int list list
   val duplicate : int -> 'a list -> 'a list
   val indent: int -> string
+  (* todo check if list_combine and transpose_ll do the same thing *)
   val list_combine : 'a list list -> 'a list list
+  val combine_triple : 'a list * 'b list * 'c list -> ('a * 'b * 'c) list
+  val split_triple : ('a * 'b * 'c) list -> 'a list * 'b list * 'c list
 
   (* random *)
   val random_real : unit -> real

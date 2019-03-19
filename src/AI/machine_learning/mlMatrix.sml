@@ -1,10 +1,10 @@
-(* ========================================================================== *)
-(* FILE          : mlMatrix.sml                                               *)
-(* DESCRIPTION   : Matrix operations.                                         *)
-(*                 Matrix are represented as lists of lines                   *)
-(* AUTHOR        : (c) Thibault Gauthier, Czech Technical University          *)
-(* DATE          : 2018                                                       *)
-(* ========================================================================== *)
+(* ========================================================================= *)
+(* FILE          : mlMatrix.sml                                              *)
+(* DESCRIPTION   : Matrix operations.                                        *)
+(*                 Matrix are represented as lists of lines                  *)
+(* AUTHOR        : (c) Thibault Gauthier, Czech Technical University         *)
+(* DATE          : 2018                                                      *)
+(* ========================================================================= *)
 
 structure mlMatrix :> mlMatrix =
 struct
@@ -13,9 +13,12 @@ open HolKernel Abbrev boolLib aiLib
 
 val ERR = mk_HOL_ERR "mlMatrix"
 
-(*----------------------------------------------------------------------------
+type vect = real vector
+type mat = real vector vector
+
+(*---------------------------------------------------------------------------
  * Vectors
- *----------------------------------------------------------------------------*)
+ *---------------------------------------------------------------------------*)
 
 fun sum_rvect v = Vector.foldl (op +) 0.0 v
 
@@ -35,9 +38,9 @@ fun scalar_product v1 v2 = sum_rvect (mult_rvect v1 v2)
 
 fun scalar_mult (k:real) v = Vector.map (fn x => (k:real) * x) v
 
-(*----------------------------------------------------------------------------
+(*---------------------------------------------------------------------------
  * Matrix
- *----------------------------------------------------------------------------*)
+ *---------------------------------------------------------------------------*)
 
 fun mat_mult m inv =
   let fun f line = scalar_product line inv in

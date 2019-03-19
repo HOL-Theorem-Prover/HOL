@@ -87,11 +87,11 @@ fun fp_nn nn v = case nn of
       fpdata :: fp_nn m (#outnv fpdata)
     end
 
-(*---------------------------------------------------------------------------
+(*--------------------------------------------------------------------------
   Backward propagation (bp)
   Takes the data from the forward pass, computes the loss and weight updates
   by gradient descent. Input is j. Output is i. Matrix is Mij.
-  --------------------------------------------------------------------------- *)
+  -------------------------------------------------------------------------- *)
 
 fun bp_layer (fpdata:fpdata) doutnv =
   let
@@ -143,10 +143,9 @@ fun transpose_ll ll = case ll of
     [] :: _ => []
   | _ => map hd ll :: transpose_ll (map tl ll) 
 
-fun sum_dwll dwll = map matl_add (transpose_ll dwll)
-
-fun sum_bpdatall bpdatall =
-  let val dwll = map (map #dw) bpdatall in sum_dwll dwll end
+fun sum_dwll dwll = case dwll of
+     [dwl] => dwl
+   | _ => map matl_add (transpose_ll dwll)
 
 (* -------------------------------------------------------------------------
    Loss
@@ -188,7 +187,8 @@ fun update_nn nn wu = map update_layer (combine (nn,wu))
 fun train_nn_batch batch nn =
   let
     val bpdatall = map (train_nn_one nn) batch
-    val dwl      = sum_bpdatall bpdatall
+    val dwll     = map (map #dw) bpdatall
+    val dwl      = sum_dwll dwll
     val newnn    = update_nn nn dwl
   in
     (newnn, average_loss bpdatall)
@@ -217,6 +217,15 @@ fun train_nn_nepoch n nn size trainset =
   Printing
   -------------------------------------------------------------------------- *)
 
+fun string_of_wl wl = 
+  let 
+    val diml = map (mat_dim) wl 
+    fun f (a,b) = its a ^ "," ^ its b
+  in
+    String.concatWith " " (map f diml) ^ "\n" ^
+    String.concatWith "\n\n" (map string_of_mat wl)
+  end
+
 fun string_of_nn nn = 
   let 
     val diml = map (mat_dim o #w) nn
@@ -233,6 +242,14 @@ fun split_nl nl l = case nl of
     let val (l1,l2) = part_n a l in 
       l1 :: split_nl m l2
     end
+
+fun read_wl_sl sl =
+  let 
+    val nl = map fst (read_diml (hd sl)) 
+    val matsl = split_nl nl (tl sl)
+  in
+    map read_mat_sl matsl
+  end 
 
 fun read_nn_sl sl =
   let 

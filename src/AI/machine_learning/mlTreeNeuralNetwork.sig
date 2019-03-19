@@ -28,21 +28,25 @@ include Abbrev
   val write_dhtnn : string -> dhtnn -> unit
   val read_dhtnn : string -> dhtnn
   
-  val write_trainset : string -> 
-    (term * real list) list -> unit
-  val write_dhtrainset : string -> 
-    (term * real list) list * (term * real list) list -> unit
-  val read_trainset : string -> 
-    (term * real list) list
-  val read_dhtrainset : string ->
-    (term * real list) list * (term * real list) list
+  val write_dhex : string -> 
+    (term * real list * real list) list -> unit
+  val read_dhex : string ->
+    (term * real list * real list) list
   
   (* inference *)
   val infer_tnn : tnn -> term -> real list
 
   (* training *)
-  val pmb_flag : bool ref
-  val pmt_flag : bool ref  
+  val parext_flag : bool ref
+  
+  (* val distrib_exl : 
+    int -> (term list * real vector * real vector) list -> 
+    (term list * real vector * real vector) list list *)
+
+  val tnn_worker_start : int -> unit
+  
+  (* val tnn_boss_start : int -> (term * real list * real list) list list
+    -> dhtnn list *)
 
   val train_tnn_schedule :
     (int * int) -> tnn ->
@@ -52,7 +56,7 @@ include Abbrev
 
   val train_dhtnn_schedule :
     int -> dhtnn ->
-    int -> (term list * vect) list * (term list * vect) list ->
+    int -> (term * real list * real list) list ->
     (int * real) list ->
     dhtnn
 
@@ -66,6 +70,9 @@ include Abbrev
     (term * real list) list * (term * real list) list ->
     (int * real) list ->
     tnn
+
+  val prepare_dhtrainset : 
+    (term * real list * real list) list -> (term list * vect * vect) list
 
 
 end
