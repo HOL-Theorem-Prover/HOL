@@ -10,11 +10,10 @@ val pfree_idx_def = Define‘
 ’;
 
 (* prefix-free enumerator given index j and argument x
-     dovetail over lists of increasing size.
-   If a termination is found on a strict prefix of x then loop.
+     dovetail over
+       all prefixes of x, x itself and all strings that have x as a prefix.
+   If a termination is found on string not equal to x then loop.
    If termination is found on x, return that.
-   If a termination is found on shorter or equal length string, keep going.
-   If termination on longer string, loop.
 *)
 
 (*
