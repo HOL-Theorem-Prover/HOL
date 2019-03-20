@@ -117,6 +117,7 @@ sig
   val remove_ssfrags  : simpset -> string list -> simpset
   val ssfrag_names_of : simpset -> string list
   val ++              : simpset * ssfrag -> simpset  (* infix *)
+  val -*              : simpset * string list -> simpset (* infix *)
   val &&              : simpset * thm list -> simpset  (* infix *)
   val limit           : int -> simpset -> simpset
   val unlimit         : simpset -> simpset

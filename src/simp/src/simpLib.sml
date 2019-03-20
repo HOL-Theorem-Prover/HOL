@@ -50,13 +50,13 @@ fun appconv (c,UNBOUNDED) solver stk tm = c false solver stk tm
 
 fun mk_rewr_convdata (nmopt,(thm,tag)) : convdata option = let
   val th = SPEC_ALL thm
+  val nm = case nmopt of NONE => "rewrite: anonymous" | SOME s => "rewrite " ^ s
 in
-  SOME {name  = case nmopt of NONE => "rewrite: anonymous"
-                            | SOME s => "rewrite " ^ s,
+  SOME {name  = nm,
         key   = SOME (free_varsl (hyp th), lhs(#2 (strip_imp(concl th)))),
         trace = 100, (* no need to provide extra tracing here;
                       COND_REWR_CONV provides enough tracing itself *)
-        conv  = appconv (COND_REWR_CONV th, tag)} before
+        conv  = appconv (COND_REWR_CONV (nm,th), tag)} before
   trace(2, LZ_TEXT(fn () => "New rewrite: " ^ thm_to_string th))
   handle HOL_ERR _ =>
          (trace (2, LZ_TEXT(fn () =>
@@ -199,6 +199,22 @@ datatype simpset =
                     dprocs=[],travrules=EQ_tr};
 
  fun ssfrags_of (SS x) = #ssfrags x;
+
+fun name_match (nm : string (* key as stored in simpset *)) =
+    List.exists (fn nm' : string (* user-provided *) =>
+                    nm' = nm orelse
+                    "rewrite " ^ nm' = nm orelse
+                    String.isPrefix ("rewrite " ^ nm') nm
+                )
+fun (SS{mk_rewrs,ssfrags,initial_net,dprocs,travrules,limit}) -* nms =
+    SS{initial_net =
+         Ho_Net.vfilter (fn (nm, _) => not (name_match nm nms)) initial_net,
+       ssfrags = ssfrags,
+       mk_rewrs = mk_rewrs,
+       dprocs = dprocs,
+       travrules = travrules,
+       limit = limit}
+
 
   (* ---------------------------------------------------------------------
    * USER_CONV wraps a bit of tracing around a user conversion.
@@ -420,7 +436,7 @@ datatype simpset =
          in
            do_sideconds (MP th scond)
          end
-       else (dec(); trace(2,REWRITING(t,th)); th)
+       else (dec(); trace(2,REWRITING("?",t,th)); th)
    in
      do_sideconds matched
    end
@@ -483,12 +499,12 @@ datatype simpset =
  fun mk_named_rewrs mk_rewrs (nmopt, th) =
      let
        val ths = mk_rewrs th
-       fun reduce s (th, (i,A)) =
+       fun reduce s th (i,A) =
            (i + 1, (SOME (s ^ " " ^ Int.toString i), th) :: A)
      in
        case nmopt of
            NONE => map (fn th => (NONE, th)) ths
-         | SOME s => foldr (reduce s) (1, []) ths |> #2
+         | SOME s => (1,[]) |> Portable.foldl' (reduce s) ths |> #2 |> List.rev
      end
 
 
@@ -750,7 +766,7 @@ fun pp_ssfrag (SSFRAG_CON {name,convs,rewrs,ac,dprocs,congs,...}) =
          ) >> add_break(1,0)
  in
    block CONSISTENT 0 (
-     add_string ("Simplification set: "^name) >> add_newline >>
+     add_string ("Simplification set fragment: "^name) >> add_newline >>
      vblock("Conversions",pp_conv_info,convs) >>
      vblock("Decision procedures",add_string,dps) >>
      vblock("Congruence rules",pp_thm,congs) >>
@@ -759,13 +775,24 @@ fun pp_ssfrag (SSFRAG_CON {name,convs,rewrs,ac,dprocs,congs,...}) =
    )
  end
 
-fun pp_simpset ss =
+fun pp_simpset (ss as SS {initial_net,...}) =
   let
     open Portable smpp
+    val keys = Ho_Net.fold' (fn (nm, _) => fn A => nm::A) initial_net []
+                            |> Listsort.sort String.compare
   in
-    Parse.mlower (pr_list pp_ssfrag add_newline (rev (ssfrags_of ss)))
+    block CONSISTENT 0 (
+      pr_list pp_ssfrag add_newline (rev (ssfrags_of ss)) >> add_break(1,0) >>
+      block CONSISTENT 0 (
+        add_string "Net names/keys:" >> add_break(1,3) >>
+        block INCONSISTENT 0 (
+          pr_list add_string (add_string "," >> add_break(1,0)) keys
+        )
+      )
+    )
   end;
 
 val pp_ssfrag = Parse.mlower o pp_ssfrag
+val pp_simpset = Parse.mlower o pp_simpset
 
 end (* struct *)
