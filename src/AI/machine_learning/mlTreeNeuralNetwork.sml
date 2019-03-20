@@ -393,9 +393,9 @@ fun worker_train_dhtnn wid dhtnn batch =
       (its (dfind oper operndict), sum_dwll dwll)
     val l = map f (dlist bpdict)
   in
-    writel_atomic (widout_file wid) ["done"];
     writel (widdwl_file wid) 
-      (map string_of_namedwl (dwleval :: dwlpoli :: l))
+      (map string_of_namedwl (dwleval :: dwlpoli :: l));
+    writel_atomic (widout_file wid) ["done"]
   end
 
 fun read_namedwl dhtnn wid = 
@@ -409,13 +409,14 @@ fun read_namedwl dhtnn wid =
     fun f opersl = 
       let 
         val oper = dfind (string_to_int (hd opersl)) noperdict  
-        val dwl  = read_wl_sl (tl opersl) 
+        val dwl  = read_wl_sl (tl opersl)
       in
         (oper,dwl)
       end
   in
     (dwleval, dwlpoli, map f sll) 
   end
+  
 
 (* -------------------------------------------------------------------------
    Estimation of the computational cost of a training example
@@ -470,7 +471,7 @@ fun worker_listen wid (traind,batchl) =
       "stop" => ()
     | "batch" => 
       let 
-        val dhtnn = read_dhtnn dhtnn_file 
+        val dhtnn = read_dhtnn dhtnn_file
         val batch = map (fn x => dfind x traind) (hd batchl) 
       in
         worker_train_dhtnn wid dhtnn batch;
@@ -597,7 +598,7 @@ fun boss_process_onebatch widl dhtnn =
 fun boss_process_nbatch widl nbatch dhtnn =
   if nbatch <= 0 then dhtnn else 
   let val dhtnn_new = boss_process_onebatch widl dhtnn in
-    if nbatch mod 100 = 0 then print_endline (its nbatch) else ();
+    if nbatch mod 10 = 0 then print_endline (its nbatch) else ();
     boss_process_nbatch widl (nbatch - 1) dhtnn_new
   end
 

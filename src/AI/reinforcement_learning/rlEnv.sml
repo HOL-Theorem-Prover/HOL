@@ -619,10 +619,11 @@ fun test_ncore n =
   results ()
   );
 
-val resultl1 = map test_ncore [2];
+
 mlTreeNeuralNetwork.parext_flag := true;
-val resultl2 = map test_ncore [2];
+val resultl2 = map test_ncore [1,2,3];
 mlTreeNeuralNetwork.parext_flag := false;
+val resultl1 = map test_ncore [1,2,3];
 *)
 
 (*
@@ -654,6 +655,7 @@ nepoch_glob := 100;
 nsim_glob := 1600;
 decay_glob := 0.99;
 level_glob := 1;
+mlTreeNeuralNetwork.parext_flag := true;
 
 val allex = start_rl_loop rlGameArithGround.gamespec;
 
