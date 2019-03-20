@@ -1235,7 +1235,6 @@ new_specification("recfn_index_def", ["recfn_index"],
 
 
 
-(* Unproven *)
 
 val HUTMpf_print_def = Define`HUTMpf_print x = bar ( (n2bl (dBnum (fromTerm (C @@ (C @@ I @@ church x) @@ (K @@ Omega) )))))`
 
@@ -1311,8 +1310,74 @@ Proof
 QED
 
 
+val kolmogpf_def = Define`kolmogpf x = THE (kolmog_complexity x HUTMpf)`
+
+Theorem recfn_SOMEnpair:
+  recfn (SOME o (pr2 npair)) 2
+Proof
+  fs[primrec_recfn,primrec_npair]
+QED
+
+Theorem MIN_SET_ADD:
+  s<> {} ∧ t <> {} ==> (MIN_SET {b | b∈s} + MIN_SET {a | a∈t} = MIN_SET {a+b | a∈t ∧ b∈s})
+Proof
+  rw[] >> `MIN_SET s ∈ s ∧ ∀x. x ∈ s ⇒ MIN_SET s ≤ x` by fs[MIN_SET_LEM] >>
+  `MIN_SET t ∈ t ∧ ∀x. x ∈ t ⇒ MIN_SET t ≤ x` by fs[MIN_SET_LEM] >> 
+  
+  `((MIN_SET t) + (MIN_SET s)) ∈ {a + b | a ∈ t ∧ b ∈ s}` by 
+    (fs[] >> qexists_tac`MIN_SET t` >> qexists_tac`MIN_SET s` >> fs[] ) >>
+
+  `{a + b | a∈t ∧ b ∈ s} <> {}` by (fs[EXTENSION] >> qexists_tac`x'` >> qexists_tac`x` >>fs[]) >>
+  `MIN_SET {a + b | a ∈ t ∧ b ∈ s} ∈ {a + b | a ∈ t ∧ b ∈ s} ∧
+    ∀x. x ∈ {a + b |a∈t ∧ b ∈ s} ⇒ MIN_SET {a + b | a∈t ∧ b ∈ s} ≤ x` by fs[MIN_SET_LEM] >>
+  `MIN_SET {a + b | a ∈ t ∧ b ∈ s} <= MIN_SET t + MIN_SET s` by metis_tac[] >>
+  `∀x y. x ∈ s ∧ y∈t ⇒ MIN_SET t + MIN_SET s ≤ y + x` by 
+    (rw[] >> `MIN_SET s <= x ∧ MIN_SET t <=y` by fs[] >> fs[]) >>
+  fs[] >> `MIN_SET s + MIN_SET t <= b'+a'` by fs[] >>
+  `a'+b' <= MIN_SET s + MIN_SET t` by fs[] >> fs[]
+QED
+
+Theorem MIN_SET_ADD2:
+  s<> {} ∧ t <> {} ==> (MIN_SET s + MIN_SET t = MIN_SET {a+b | a∈t ∧ b∈s})
+Proof
+  `s<> {} ∧ t <> {} ==> (MIN_SET {b | b∈s} + MIN_SET {a | a∈t} = MIN_SET {a+b | a∈t ∧ b∈s})` 
+    by fs[MIN_SET_ADD] >> fs[]
+QED
+
+val kolmog_fn_def = Define`kolmog_fn f = if (∃n. recfn f n) 
+                                           then SOME (MIN_SET {p | p=recfn_index f})
+                                         else NONE`
 
 (*  To do in the future)
+
+
+Theorem kolmog_recfun:
+  ∀f x y. ∃C. recfn f 1 ∧ f[x] = SOME y ==> kolmog (THE (f [x])) <= (kolmog x) + (THE (kolmog_fn f)) + C
+Proof
+  rw[]
+QED
+
+Theorem kolmog_concat:
+  ∀x y. ∃C. kolmogpf (x ⊗ y) <= (kolmogpf x) + (kolmogpf y) + C
+Proof
+  rw[] >> qexists_tac`recfn_index (SOME o (pr2 npair))` >> 
+  fs[kolmogpf_def,kolmog_complexity_def,HUTMpf_nonempty] >>
+  `({LENGTH p | HUTMpf p = SOME x} <> {}) ∧ {LENGTH p | HUTMpf p = SOME y} <> {}` by 
+    (rw[EXTENSION] >-( qexists_tac`HUTMpf_print x` >> fs[HUTMpf_print_corr]) 
+                   >-( qexists_tac`HUTMpf_print y` >> fs[HUTMpf_print_corr]))
+  `MIN_SET {LENGTH p | HUTMpf p = SOME x} +
+   MIN_SET {LENGTH p | HUTMpf p = SOME y} = 
+   MIN_SET { l1 + l2 | (l1 ∈ ({LENGTH p | HUTMpf p = SOME y} )) ∧ (l2 ∈ ( {LENGTH p | HUTMpf p = SOME x}) ) }` by fs[MIN_SET_ADD2] >>
+  ` MIN_SET {LENGTH p | HUTMpf p = SOME x} +
+   (MIN_SET {LENGTH p | HUTMpf p = SOME y} + recfn_index (SOME ∘ pr2 $*,)) =  (MIN_SET {LENGTH p | HUTMpf p = SOME x} +
+   MIN_SET {LENGTH p | HUTMpf p = SOME y}) + recfn_index (SOME ∘ pr2 $*,)` by fs[] >> rw[] >>
+
+  fs[HUTMpf_def] >> 
+  rw[recfn_index_def]
+QED
+
+
+
 
 Theorem kolmog_recfun:
   ∀f x. ∃C. primrec f 1 ==> kolmog (f [x]) <= (kolmog x) + (kolmog f) + C
@@ -1321,18 +1386,6 @@ Proof
 QED
 
 
-(* Find the PUTM number for a given recfn *)
-val PUTM_fnum_define = Define`PUTM_fnum f = if recfn f 1 then @p. ∀x.   else NONE`
-
-Theorem kolmog_concat:
-  ∀x y. ∃C. kolmog (x ⊗ y) <= (kolmog x) + (kolmog y) + C
-Proof
-  rw[] >> qexists_tac`10` >> fs[kolmog_def,kolmog_complexity_def] >>
-  `∃m1. PUTM (bar2 (m1,[])) = SOME (x ⊗ y)`by fs[print_exists] >>
-  `∃m2. PUTM (bar2 (m2,[])) = SOME (x)`by fs[print_exists] >>
-  `∃m3. PUTM (bar2 (m3,[])) = SOME (y)`by fs[print_exists] >> rw[] >> fs[EXTENSION] >>
-  fs[recfns_in_Phi]
-QED
 
 *)
 
@@ -1341,6 +1394,7 @@ QED
 open logrootTheory
 
 val tmax_def = Define`tmax n = MAX_SET {t | ∃m. terminated (steps t (mk_initial_state m 0)) ∧
+                                                ¬terminated (steps (t-1) (mk_initial_state m 0)) ∧
                                                 (LOG 2 m = n) } `
 
 val BB_def = Define`BB n = @m. terminated (steps (tmax n) (mk_initial_state m 0)) ∧
@@ -1414,6 +1468,29 @@ val size_dovetail_def = Define`size_dovetail0 P ms i = let results = map (λ(m,j
 open churchlistTheory;
 open reductionEval;
 
+val cexp_def = Define`cexp = LAM "m" (LAM "n" (VAR "n" @@ church 1 @@ (cmult @@ VAR "m")))`
+
+Theorem FV_cexp[simp]:
+  FV cexp = {}
+Proof
+  rw[cexp_def,EXTENSION]
+QED
+
+val cexp_eqn = brackabs.brackabs_equiv [] cexp_def
+
+Theorem cexp_behaviour:
+  cexp @@ m @@ church 0 == church 1 ∧
+  cexp @@ m @@ church (SUC n) == cmult @@ m @@ (cexp @@ m @@ church n)
+Proof
+  asm_simp_tac(bsrw_ss())[cexp_eqn]
+QED
+
+Theorem cexp_corr:
+  cexp @@ church m @@ church n == church (m**n)
+Proof
+  Induct_on`n` >>  asm_simp_tac(bsrw_ss())[cexp_behaviour,EXP]
+QED
+
 val log2list_def = Define`log2list n = GENLIST (λx. x+2**n) (2**n) `
 
 val clog2list_def = Define`clog2list =
@@ -1428,6 +1505,8 @@ QED
 
 val clog2list_eqn = brackabs.brackabs_equiv [] clog2list_def
 
+
+(* still too prove is true *)
 Theorem clog2list_behaviour:
   clog2list @@ church n == cvlist (MAP church (log2list n))
 Proof
@@ -1435,6 +1514,59 @@ Proof
                           ctabulate_cvlist] >>
   HO_MATCH_MP_TAC cvlist_genlist_cong >>
   asm_simp_tac(bsrw_ss())[churchnumTheory.cplus_behaviour,ADD_COMM]
+QED
+
+
+val yMt_set_def = Define`yMt_set n = {(yi,Mi,t) | Mi = bl2n (arg_kolmog yi) ∧
+                                              LENGTH (n2bl yi) = 2*n ∧
+                                              kolmog yi < 2*n ∧
+                                              terminated (steps t (mk_initial_state Mi 0)) ∧
+                                              cs_to_num (steps t (mk_initial_state Mi 0)) = yi ∧
+                                              ∀t'. terminated (steps t' (mk_initial_state Mi 0)) ==>
+                                                t<=t'}`
+
+val big_T_def = Define`big_T n = MAX_SET (IMAGE SND (IMAGE SND (yMt_set n)))`
+
+open whileTheory;
+
+Theorem terminated_ge:
+  (a > b) ==> (terminated (steps b cs) ==> terminated (steps a cs))
+Proof
+  rw[] >> `∃c. c>0 ∧  a = b+c` by (qexists_tac`a-b` >> fs[]) >> rw[] >> 
+  `step1 (steps b cs) = steps b cs` by fs[terminated_step_in_place] >>
+  `terminated (steps (c + b) cs)` suffices_by fs[] >>
+  simp[steps_def,FUNPOW_ADD] >>
+  Induct_on`c` >> rw[] >> Cases_on`c` >> fs[]
+  >- (fs[steps_def])
+  >- (fs[FUNPOW,steps_def] >> metis_tac[])
+QED
+
+Theorem big_T_Tmax_imp:
+  (big_T (LOG 2 (prime_tm M x) ) > tmax (LOG 2 (prime_tm M x) )) ==> 
+   ( terminated (steps (big_T  (LOG 2 (prime_tm M x))) (mk_initial_state (prime_tm M x) 0 ))  <=> ((M,x)∈HALT ))
+Proof
+  rw[] >> eq_tac >> rw[]
+  >- (fs[HALT_def] >> qexists_tac`big_T (LOG 2 (prime_tm M x))` >> 
+      `∃m. comp_count  (mk_initial_state (prime_tm M x) 0) = SOME m` by 
+        (fs[comp_count_def]>> 
+         `¬((OLEAST n. terminated (steps n (mk_initial_state (prime_tm M x) 0))) = NONE)` by 
+           (fs[OLEAST_EQ_NONE] >> qexists_tac` (big_T (LOG 2 (prime_tm M x)))` >> fs[]) >>
+        qexists_tac`THE (OLEAST n. terminated (steps n (mk_initial_state (prime_tm M x) 0)))`>> 
+        `IS_SOME  (OLEAST n. terminated (steps n (mk_initial_state (prime_tm M x) 0)))` 
+          suffices_by fs[quantHeuristicsTheory.SOME_THE_EQ ]  >> 
+        fs[quantHeuristicsTheory.IS_SOME_EQ_NOT_NONE] >>
+        qexists_tac`n` >> fs[]) >> 
+      `terminated (steps m (mk_initial_state (prime_tm M x) 0)) ∧ Phi (prime_tm M x) 0 = 
+       SOME (cs_to_num (steps m (mk_initial_state (prime_tm M x) 0)))` by 
+        (fs[correctness_on_termination] >> fs[comp_count_def,OLEAST_EQ_SOME]) >>
+      fs[prime_tm_corr] >> 
+      `tmax (LOG 2 (prime_tm M x)) > m` by (fs[tmax_def])
+
+       `terminated (steps (tmax (LOG (prime_tm M x) 2)) (mk_initial_state M x))` suffices_by 
+         metis_tac[terminated_ge] >>  ) 
+  >- ()
+  fs[big_T_def] >> fs[tmax_def],yMt_set_def,IMAGE_DEF] >>  >>
+  comp_count_def,correctness_on_termination
 QED
 
 (*
@@ -1457,15 +1589,7 @@ val _ Q.store_thm("_",
 `¬∃f. ∀x. kolmog x = recPhi [f;x] ==> ∀y. LENGTH y = l ==> kolmog y`,
 )
 
-val yMt_set_def = Define`yMt_set n = {(yi,Mi,t) | Mi = bl2n (arg_kolmog yi) ∧
-                                              LENGTH (n2bl yi) = 2*n ∧
-                                              kolmog yi < 2*n ∧
-                                              terminated (steps t (mk_initial_state Mi 0)) ∧
-                                              cs_to_num (steps t (mk_initial_state Mi 0)) = yi ∧
-                                              ∀t'. terminated (steps t' (mk_initial_state Mi 0)) ==>
-                                                t<=t'}`
 
-val big_T_def = Define`big_T n = MAX_SET (IMAGE SND (IMAGE SND (yMt_set n)))`
 
 Theorem ub_tmax: big_T n > tmax n
 Proof
