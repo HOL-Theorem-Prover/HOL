@@ -33,17 +33,22 @@ in
     handle HOL_ERR _ => NO_CONV tm
 end
 
+(*
+val funcs_def = TRUTH
+*)
+
 fun func_export sec_name th funcs_def = let
   val f = th |> concl |> rand
   val name = sec_name
   val rhs = ``func_body_trans ^f``
   val lhs = mk_var(name,type_of rhs)
+  val name = tidy_up_name name
   val trans_def = new_definition(name,mk_eq(lhs,rhs))
   val _ = write_subsection "Evaluating graph"
   val c = REWRITE_CONV [func_body_trans_def,func_trans_def,funcs_def]
           THENC REWRITE_CONV [wordsTheory.word_extract_mask,export_init_rw]
-          THENC (DEPTH_CONV remove_bif_field_insert_conv)
           THENC EVAL THENC PURE_REWRITE_CONV [GSYM word_sub_def]
+          THENC (DEPTH_CONV remove_bif_field_insert_conv)
           THENC prepare_for_export_conv
   val lemma = trans_def |> CONV_RULE (RAND_CONV c)
   val xs = lemma |> concl |> rand |> rator |> rand |> rand
@@ -64,9 +69,12 @@ fun func_export sec_name th funcs_def = let
 fun print_title (s:string) = ()
 
 fun get_loction_as_word sec_name = let
-  val tm = section_location sec_name
-           |> Arbnumcore.fromHexString |> numSyntax.mk_numeral
-  in ``n2w (^tm):word32`` end
+  val str = section_location sec_name
+  val str = if size str <= 8 then str else String.substring(str,8,size str - 8)
+  val tm = str |> Arbnumcore.fromHexString |> numSyntax.mk_numeral
+  in wordsSyntax.mk_n2w(tm,tysize ()) end
+
+val sec_name = "f"
 
 fun func_decompile print_title sec_name = let
   val _ = (writer_prints := true)
@@ -75,9 +83,10 @@ fun func_decompile print_title sec_name = let
   val thms = derive_insts_for sec_name
 (*  val thms = clean_conds thms *)
   val code = thms |> hd |> concl |> rator |> rator |> rand
-             handle Empty => (if !arch_name = ARM
-                              then ``(ARM {}):code``
-                              else ``(M0 {}):code``)
+             handle Empty => (case !arch_name of
+                                ARM => ``ARM {}``
+                              | M0 => ``M0 {}``
+                              | RISCV => ``RISCV {}``)
   val lemma = prove(``LIST_IMPL_INST ^code locs []``,
                     SIMP_TAC std_ss [LIST_IMPL_INST_def])
   fun combine [] = lemma
@@ -99,6 +108,7 @@ fun func_decompile print_title sec_name = let
   val th = th |> Q.INST [`name`|->`^name`,`entry`|->`^entry`]
   val funcs_def_rhs = th |> concl |> rand |> rand
   val funcs_name = sec_name ^ "_funcs"
+  val funcs_name = tidy_up_name funcs_name
   val funcs_def_lhs = mk_var(funcs_name,type_of funcs_def_rhs)
   val funcs_def = new_definition(funcs_name,``^funcs_def_lhs = ^funcs_def_rhs``)
   val th = CONV_RULE (RAND_CONV (RAND_CONV (REWR_CONV (GSYM funcs_def)))) th
@@ -107,6 +117,12 @@ fun func_decompile print_title sec_name = let
 fun list_mk_union [] = ``{}:'a set``
   | list_mk_union [x] = x
   | list_mk_union (x::xs) = pred_setSyntax.mk_union(list_mk_union xs,x)
+
+fun arch_to_string () =
+  case !arch_name of
+    RISCV => "riscv"
+  | ARM => "arm"
+  | M0 => "m0";
 
 (*
   val sec_name = "bi_finalise"
@@ -127,35 +143,50 @@ fun prove_funcs_ok names = let
   val fs_and_trans_defs = map (func_decompile print_title) names
   val fs = map fst fs_and_trans_defs
   (* abbreviate all codes *)
+(*
+  val bad_fs = fs |> filter (can (find_term pred_setSyntax.is_empty) o
+                             rand o rator o rator o concl)
+  val fs = fs |> filter (not o can (find_term pred_setSyntax.is_empty) o
+                         rand o rator o rator o concl)
+*)
   val all_code = fs |> map (rand o rator o rator o concl)
   val code_name = all_code |> hd |> rator
   val all_code = mk_comb(code_name, (all_code |> map rand |> list_mk_union))
-  val all_code_def = new_definition("all_code",``all_code = ^all_code``);
-  val code_case_of = TypeBase.case_def_of ``:code``;
+  val all_code_name = "all_" ^ arch_to_string () ^ "_code"
+  val all_code_var = mk_var(all_code_name,type_of all_code)
+  val all_code_def = new_definition(all_code_name,mk_eq(all_code_var,all_code))
+  val all_code_const = all_code_def |> concl |> dest_eq |> fst
   val pair_case_of = TypeBase.case_def_of ``:'a # 'b``;
   fun expend_code th = let
-    val th = MATCH_MP func_ok_EXPEND_CODE th |> Q.SPEC `all_code`
+    val th = MATCH_MP func_ok_EXPEND_CODE th |> SPEC all_code_const
     val goal = th |> concl |> dest_imp |> fst
     val lemma = auto_prove "expand_code" (goal,
-      REWRITE_TAC [all_code_def,SUBSET_DEF,IN_UNION,code_case_of,pair_case_of]
+      REWRITE_TAC [all_code_def,SUBSET_DEF,IN_UNION,pair_case_of,
+                   ARM_def,M0_def,RISCV_def]
       \\ CONV_TAC (DEPTH_CONV BETA_CONV)
-      \\ REWRITE_TAC [all_code_def,SUBSET_DEF,IN_UNION,code_case_of,pair_case_of]
+      \\ REWRITE_TAC [all_code_def,SUBSET_DEF,IN_UNION,pair_case_of]
       \\ CONV_TAC (DEPTH_CONV BETA_CONV)
-      \\ REWRITE_TAC [all_code_def,SUBSET_DEF,IN_UNION,code_case_of,pair_case_of]
+      \\ REWRITE_TAC [all_code_def,SUBSET_DEF,IN_UNION,pair_case_of]
       \\ REPEAT STRIP_TAC \\ ASM_REWRITE_TAC [])
     in MP th lemma end
   val fs = map expend_code fs
   (* complete fs *)
+  val _ = write_subsection "\nCompleting graph"
   val fs = let
     val all = fs |> map (rand o concl)
-    val pat = ``locs (name:string) = SOME (w:word32)``
-    fun f tm = subst (fst (match_term pat tm)) ``Func name w []``
+    val w_var = mk_var("w",wsize ())
+    val pat = ``locs (name:string) = SOME ^w_var``
+    fun f tm = subst (fst (match_term pat tm)) ``Func name ^w_var []``
     val extra = graph_specsLib.try_map (fn x => x) f (flatten (map hyp fs))
     val all_rator = map rator all
-    val extra = filter (fn ex => not (mem (rator ex) all_rator)) extra
+    val extra = filter (fn ex => not (term_mem (rator ex) all_rator)) extra
     val r = fs |> hd |> concl |> rator
     val extra_fs = map (fn tm => prove(mk_comb(r,tm),
                      SIMP_TAC (srw_ss()) [func_ok_def])) extra
+    (*
+    val th = hd extra_fs
+    val th = mk_thm([],``func_ok all_riscv_code locs (Func "__ctzdi2" 2147580890w [])``)
+    *)
     fun export_empty th = let
       val sec_name = th |> concl |> rand |> rator |> rator |> rand
                         |> stringLib.fromHOLstring
@@ -179,7 +210,7 @@ fun prove_funcs_ok names = let
   val _ = write_line ""
   val _ = write_section "Proving correctness of call offsets"
   fun prove_fs_locs goal =
-    if goal = T then (TRUTH,true) else
+    if aconv goal T then (TRUTH,true) else
     if is_conj goal then let
       val (x,y) = dest_conj goal
       val (th1,s1) = prove_fs_locs x
@@ -223,12 +254,37 @@ fun prove_funcs_ok names = let
 
 (*
 
-  val base_name = "loop-m0/example"
+  val base_name = "kernel-riscv/kernel-riscv"
+  val base_name = "loop-riscv/example"
+  val _ = read_files base_name []
+  val _ = open_current "test"
+  val sec_name = "lookupSlot"
+  val sec_name = "memzero"
+  val sec_name = "memcpy"
+  val sec_name = "isIRQPending"
+  val sec_name = "get_num_avail_p_regs"
+  val sec_name = "ndks_boot"
+  val sec_name = "num_avail_p_regs"
+
+  val names = ["performInvocation_Reply","performInvocation_Endpoint"]
+  val names = section_names()
+
+  val base_name = "loop-riscv/example"
+  val _ = read_files base_name []
+  val _ = open_current "test"
+  val sec_name = "memcpy"
+  val sec_name = "memzero"
+  val names = section_names()
+
   val base_name = "kernel-gcc-O1/kernel"
-  val () = read_files base_name ["f"]
+  val base_name = "loop/example"
+  val base_name = "loop-m0/example"
+  val () = read_files base_name []
   val _ = (skip_proofs := true)
   val _ = (skip_proofs := false)
   val names = section_names()
+
+  val sec_name = "g"
 
   local val randgen = Random.newgen()
   in fun get_rand_name () =
