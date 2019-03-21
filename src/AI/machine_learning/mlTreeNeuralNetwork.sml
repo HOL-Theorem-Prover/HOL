@@ -14,15 +14,22 @@ val ERR = mk_HOL_ERR "mlTreeNeuralNetwork"
 val debugdir = HOLDIR ^ "/src/AI/machine_learning/debug"
 fun debug s = debug_in_dir debugdir "mlTreeNeuralNetwork" s
 
-val gencode_dir = HOLDIR ^ "/src/AI/machine_learning/gencode"
-val dhtnn_file = gencode_dir ^ "/dhtnn"
-val exl_file = gencode_dir ^ "/exl"
-fun widin_file wid = gencode_dir ^ "/" ^ its wid ^ "/in"
-fun widout_file wid = gencode_dir ^ "/" ^ its wid ^ "/out"
+
+(* -------------------------------------------------------------------------
+   External parallelism
+   ------------------------------------------------------------------------- *)
+
+val ml_gencode_dir = ref (HOLDIR ^ "/src/AI/machine_learning/gencode")
+fun gencode_dir () = !ml_gencode_dir
+
+fun dhtnn_file () = gencode_dir () ^ "/dhtnn"
+fun exl_file () = gencode_dir () ^ "/exl"
+fun widin_file wid = gencode_dir () ^ "/" ^ its wid ^ "/in"
+fun widout_file wid = gencode_dir () ^ "/" ^ its wid ^ "/out"
 fun widscript_file wid = 
-  gencode_dir ^ "/" ^ its wid ^ "/script" ^ its wid ^ ".sml"
-fun widbatchl_file wid = gencode_dir ^ "/" ^ its wid ^ "/batchl"
-fun widdwl_file wid = gencode_dir ^ "/" ^ its wid ^ "/dwl"
+  gencode_dir () ^ "/" ^ its wid ^ "/script" ^ its wid ^ ".sml"
+fun widbatchl_file wid = gencode_dir () ^ "/" ^ its wid ^ "/batchl"
+fun widdwl_file wid = gencode_dir () ^ "/" ^ its wid ^ "/dwl"
 
 fun writel_atomic file sl =
   (writel (file ^ "_temp") sl; 
@@ -110,11 +117,23 @@ fun write_dhtnn file dhtnn =
   let
     val file_operl = file ^ "_operl"
     val file_dhtnn = file ^ "_dhtnn"
-    val operl1 = map fst (dkeys (#opdict dhtnn))
-    val operl2 = mk_sameorder_set Term.compare operl1
+    val operl = mk_sameorder_set Term.compare (map fst (dkeys (#opdict dhtnn)))
   in
     writel file_dhtnn [string_of_dhtnn dhtnn];
-    mlTacticData.export_terml file_operl operl2
+    mlTacticData.export_terml file_operl operl
+  end
+
+fun write_operl file dhtnn =
+  let
+    val file_operl = file ^ "_operl"
+    val operl = mk_sameorder_set Term.compare (map fst (dkeys (#opdict dhtnn)))
+  in
+    mlTacticData.export_terml file_operl operl
+  end
+
+fun write_dhtnn_nooper file dhtnn =
+  let val file_dhtnn = file ^ "_dhtnn" in
+    writel file_dhtnn [string_of_dhtnn dhtnn]
   end
 
 (* -------------------------------------------------------------------------
@@ -162,6 +181,11 @@ fun read_dhtnn file =
   in
     read_dhtnn_sl operl sl
   end
+
+fun read_operl file = mlTacticData.import_terml (file ^ "_operl")
+
+fun read_dhtnn_nooper operl file =
+  read_dhtnn_sl operl (readl (file ^ "_dhtnn"))
 
 (* 
 load "mlTreeNeuralNetwork"; 
@@ -465,20 +489,20 @@ fun distrib_exl ncore exl =
 
 val operl_test = [(``$+``,2),(``SUC``,1),(``0``,0)]
 
-fun worker_listen wid (traind,batchl) = 
+fun worker_listen wid operl (traind,batchl) = 
   if exists_file (widin_file wid) 
   then case hd (readl_rm (widin_file wid)) of
       "stop" => ()
     | "batch" => 
       let 
-        val dhtnn = read_dhtnn dhtnn_file
+        val dhtnn = read_dhtnn_nooper operl (dhtnn_file ())
         val batch = map (fn x => dfind x traind) (hd batchl) 
       in
         worker_train_dhtnn wid dhtnn batch;
-        worker_listen wid (traind, tl batchl) 
+        worker_listen wid operl (traind, tl batchl) 
       end
     | _ => raise ERR "worker_listen" ""
-  else worker_listen wid (traind,batchl)
+  else worker_listen wid operl (traind,batchl)
 
 fun read_batchl file = 
   let fun f s = map string_to_int (String.tokens Char.isSpace s) in
@@ -497,13 +521,14 @@ fun mk_batchl (nepoch,bsize) nex =
 
 fun tnn_worker_start wid =
   let 
-    val exl = read_dhex exl_file
+    val operl = read_operl (dhtnn_file ())
+    val exl = read_dhex (exl_file ())
     val extrain = prepare_dhtrainset exl
     val traind = dnew Int.compare (number_fst 0 extrain)
     val batchl = read_batchl (widbatchl_file wid)
   in
     writel_atomic (widout_file wid) ["up"];
-    worker_listen wid (traind,batchl)
+    worker_listen wid operl (traind,batchl)
   end
 
 (* Boss *)
@@ -529,7 +554,11 @@ fun flags_to_string (b1,b2) = "(" ^ bts b1 ^ "," ^  bts b2 ^ ")"
 fun boss_start_worker wid =
   let
     val codel =
-    ["val _ = mlTreeNeuralNetwork.tnn_worker_start " ^ its wid ^ ";"]  
+    [
+     "open mlTreeNeuralNetwork;",
+     "val _ = ml_gencode_dir := " ^ quote (!ml_gencode_dir) ^ ";",
+     "val _ = tnn_worker_start " ^ its wid ^ ";"
+    ]  
   in
     writel (widscript_file wid) codel;
     smlOpen.run_buildheap false (widscript_file wid);
@@ -590,7 +619,7 @@ fun boss_collect_dwl widl dhtnn =
 
 fun boss_process_onebatch widl dhtnn =
   let fun send_batch wid = writel_atomic (widin_file wid) ["batch"] in
-    write_dhtnn dhtnn_file dhtnn;
+    write_dhtnn_nooper (dhtnn_file ()) dhtnn;
     app send_batch widl;
     boss_collect_dwl widl dhtnn
   end
@@ -769,17 +798,18 @@ fun train_dhtnn_schedule_aux ncore dhtnn bsize eptrain schedule =
       train_dhtnn_schedule_aux ncore newdhtnn bsize eptrain m
     end
 
-fun start_parext ncore (nepoch,bsize) epex = 
+fun start_parext ncore (nepoch,bsize) dhtnn epex = 
   let
     val nex = length epex
-    val _ = mkDir_err gencode_dir
-    fun mk_local_dir wid = mkDir_err (gencode_dir ^ "/" ^ its wid) 
+    val _ = mkDir_err (gencode_dir ())
+    fun mk_local_dir wid = mkDir_err ((gencode_dir ()) ^ "/" ^ its wid) 
     val _ = app mk_local_dir (List.tabulate (ncore,I))
     fun rm wid = (remove_file (widin_file wid); remove_file (widout_file wid))
     val _ = app rm (List.tabulate (ncore,I))
     val _ = print_endline ("start " ^ its ncore ^ " workers")
     val widl = List.tabulate (ncore,I)
-    val _ = write_dhex exl_file epex
+    val _ = write_dhex (exl_file ()) epex
+    val _ = write_operl (dhtnn_file ()) dhtnn
     val batchl = mk_batchl (nepoch,bsize) nex
     fun write_widbatchl wid = 
       let 
@@ -804,7 +834,7 @@ fun train_dhtnn_schedule ncore dhtnn bsize epex schedule =
     val widl = List.tabulate (ncore,I)
     val (stop_workers,nbatch) = 
       if !parext_flag 
-      then start_parext ncore (nepoch,bsize) epex
+      then start_parext ncore (nepoch,bsize) dhtnn epex
       else (fn () => (), 0)
     val dhtnn_new = 
       if !parext_flag 

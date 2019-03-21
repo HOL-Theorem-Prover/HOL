@@ -3,6 +3,8 @@ sig
 
   include Abbrev
 
+  val rl_gencode_dir : string ref
+
   (* 'a is the type of board
      ''b is the type for move
      'c is the type of targets *)

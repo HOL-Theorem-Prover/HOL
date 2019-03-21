@@ -3,6 +3,8 @@ sig
 
 include Abbrev
 
+  val ml_gencode_dir : string ref
+
   type vect = real vector
   type mat = real vector vector
   type layer = {a  : real -> real, da : real -> real, w : mat}

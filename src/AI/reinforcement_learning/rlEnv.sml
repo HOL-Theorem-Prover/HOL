@@ -273,14 +273,17 @@ fun writel_atomic file sl =
 fun readl_rm file =
   let val sl = readl file in OS.FileSys.remove file; sl end
 
-val gencode_dir = HOLDIR ^ "/src/AI/reinforcement_learning/gencode"
-val dhtnn_file = gencode_dir ^ "/dhtnn"
-val targetl_file = gencode_dir ^ "/targetl"
-fun widin_file wid = gencode_dir ^ "/" ^ its wid ^ "/in"
-fun widout_file wid = gencode_dir ^ "/" ^ its wid ^ "/out"
-fun widscript_file wid = 
-  gencode_dir ^ "/" ^ its wid ^ "/script" ^ its wid ^ ".sml"
-fun widexl_file wid = gencode_dir ^ "/" ^ its wid ^ "/exl"
+val rl_gencode_dir = 
+  ref (HOLDIR ^ "/src/AI/reinforcement_learning/gencode")
+
+fun gencode_dir () = !rl_gencode_dir
+fun gencode_dir_wid wid = gencode_dir () ^ "/" ^ its wid
+fun dhtnn_file () = gencode_dir () ^ "/dhtnn"
+fun targetl_file () = gencode_dir () ^ "/targetl"
+fun widin_file wid = gencode_dir_wid wid ^ "/in"
+fun widout_file wid = gencode_dir_wid wid ^ "/out"
+fun widscript_file wid = gencode_dir_wid wid ^ "/script" ^ its wid ^ ".sml"
+fun widexl_file wid = gencode_dir_wid wid ^ "/exl"
 
 (* Workers *)
 fun explore_standalone flags wid dhtnn target =
@@ -319,8 +322,8 @@ and worker_listen flags wid (dhtnn,targetl) =
 fun worker_start flags wid =
   let 
     val targetl = map rlGameArithGround.mk_startsit 
-      (mlTacticData.import_terml targetl_file)
-    val dhtnn = read_dhtnn dhtnn_file
+      (mlTacticData.import_terml (targetl_file ()))
+    val dhtnn = read_dhtnn (dhtnn_file ())
     val _ = writel_atomic (widout_file wid) ["up"] 
   in
     worker_listen flags wid (dhtnn,targetl)
@@ -432,6 +435,7 @@ fun boss_start_worker flags wid =
     val codel =
     [
      "open rlEnv;",
+     "val _ = rl_gencode_dir := " ^ quote (!rl_gencode_dir) ^ ";",
      "val _ = nsim_glob := " ^ its (!nsim_glob) ^ ";",
      "val _ = decay_glob := " ^ rts (!decay_glob) ^ ";",
      "val _ = dim_glob := " ^ its (!dim_glob) ^ ";",
@@ -457,14 +461,14 @@ fun boss_wait_upl widl =
 fun boss_start ncore flags dhtnn targetl =
   let
     val remainingl = List.tabulate (length targetl,I)
-    val _ = mkDir_err gencode_dir
-    fun mk_local_dir wid = mkDir_err (gencode_dir ^ "/" ^ its wid) 
+    val _ = mkDir_err (gencode_dir ())
+    fun mk_local_dir wid = mkDir_err ((gencode_dir ()) ^ "/" ^ its wid) 
     val _ = app mk_local_dir (List.tabulate (ncore,I))
     fun rm wid = 
       (remove_file (widin_file wid); remove_file (widout_file wid))
     val _ = app rm (List.tabulate (ncore,I))
-    val _ = write_dhtnn dhtnn_file dhtnn
-    val _ = mlTacticData.export_terml targetl_file 
+    val _ = write_dhtnn (dhtnn_file ()) dhtnn
+    val _ = mlTacticData.export_terml (targetl_file ())
       (map rlGameArithGround.dest_startsit targetl)
     val _ = print_endline ("start " ^ its ncore ^ " workers")
     val widl = List.tabulate (ncore,I)
@@ -604,7 +608,7 @@ dim_glob := 8;
 val dhtnn = random_dhtnn_gamespec rlGameArithGround.gamespec;
 val operl = map fst (dkeys (#opdict dhtnn));
 
-val size = 15;
+val size = 20;
 val nex = 12800;
 val epex = List.tabulate (nex, fn _ => random_example operl size);
 batchsize_glob := 128;
@@ -619,11 +623,12 @@ fun test_ncore n =
   results ()
   );
 
+mlTreeNeuralNetwork.ml_gencode_dir := "/home/thibault/gencode";
 
 mlTreeNeuralNetwork.parext_flag := true;
-val resultl2 = map test_ncore [1,2,3];
+val resultl2 = map test_ncore [1,2,4,8];
 mlTreeNeuralNetwork.parext_flag := false;
-val resultl1 = map test_ncore [1,2,3];
+val resultl1 = map test_ncore [1,2,4,8];
 *)
 
 (*
@@ -641,8 +646,7 @@ end (* struct *)
 load "rlEnv";
 open rlEnv;
 
-mlTreeNeuralNetwork.pmb_flag := true;
-logfile_glob := "march16";
+logfile_glob := "march20";
 ncore_mcts_glob := 16;
 ncore_train_glob := 8;
 ngen_glob := 50;
@@ -650,7 +654,7 @@ ntarget_compete := 100;
 ntarget_explore := 100;
 exwindow_glob := 40000;
 dim_glob := 8;
-batchsize_glob := 64;
+batchsize_glob := 128;
 nepoch_glob := 100;
 nsim_glob := 1600;
 decay_glob := 0.99;
