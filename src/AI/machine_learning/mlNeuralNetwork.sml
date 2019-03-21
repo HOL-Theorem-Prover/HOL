@@ -169,16 +169,16 @@ fun average_bpdatall size bpdatall =
     dwl2
   end
 
-(*---------------------------------------------------------------------------
-  Loss (only used for statistics)
-  --------------------------------------------------------------------------- *)
+(* -------------------------------------------------------------------------
+   Loss
+   ------------------------------------------------------------------------- *)
 
-fun calc_loss v =
+fun mean_square_error v =
   let fun square x = (x:real) * x in
     Math.sqrt (average_rvect (Vector.map square v))
   end
 
-fun bp_loss bpdatal = calc_loss (#doutnv (last bpdatal))
+fun bp_loss bpdatal = mean_square_error (#doutnv (last bpdatal))
 
 fun average_loss bpdatall = average_real (map bp_loss bpdatall)
 

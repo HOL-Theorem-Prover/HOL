@@ -69,7 +69,8 @@ struct
   fun listItems r = Binarymap.listItems (!r)
   fun listThy tab thy = let
     fun foldthis ({Thy,Name},(kid,v),acc) =
-        if Thy = thy then ({Thy = Thy,Name = Name},(kid,v)) :: acc
+        if Thy = thy andalso uptodate_id kid then
+          ({Thy = Thy,Name = Name},(kid,v)) :: acc
         else acc
   in
     foldl foldthis [] tab

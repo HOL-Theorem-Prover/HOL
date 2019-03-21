@@ -86,7 +86,6 @@ fun fullPath slist =
 (* these values are filled in by configure.sml *)
 val HOLDIR = ""
 val MOSMLDIR = ""
-val HAVE_BASIS2002 = false
 val POLYMLLIBDIR = ""
 val POLY = ""
 val POLYC = ""
