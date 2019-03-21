@@ -26,6 +26,7 @@ sig
   (* nn parameters *)
   val exwindow_glob : int ref
   val uniqex_flag : bool ref
+  val lr_glob : real ref
   val dim_glob : int ref
   val batchsize_glob : int ref 
   val nepoch_glob : int ref

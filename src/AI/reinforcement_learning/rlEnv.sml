@@ -51,6 +51,7 @@ val uniqex_flag = ref true
 val dim_glob = ref 8
 val batchsize_glob = ref 64
 val nepoch_glob = ref 100
+val lr_glob = ref 0.1
 val ncore_train_glob = ref 4
 
 val nsim_glob = ref 1600
@@ -68,6 +69,7 @@ fun summary_param () =
     val nn2   = "nn dim: " ^ its (!dim_glob)
     val nn3   = "nn batchsize: " ^ its (!batchsize_glob)
     val nn4   = "nn epoch: " ^ its (!nepoch_glob)
+    val nn6   = "nn lr: " ^ rts (!lr_glob)
     val nn5   = "nn ncore: " ^ its (!ncore_train_glob)
     val mcts2 = "mcts simulation: " ^ its (!nsim_glob)
     val mcts3 = "mcts decay: " ^ rts (!decay_glob)
@@ -75,7 +77,7 @@ fun summary_param () =
   in
     summary "Global parameters";
     summary (String.concatWith "\n  " 
-     ([file] @ [gen1,gen2,gen3] @ [nn0,nn1,nn2,nn3,nn4,nn5] @ 
+     ([file] @ [gen1,gen2,gen3] @ [nn0,nn1,nn2,nn3,nn4,nn6,nn5] @ 
       [mcts2,mcts3,mcts4])
      ^ "\n")
   end
@@ -178,12 +180,12 @@ fun epex_stats epex =
 fun random_dhtnn_gamespec gamespec =
   random_dhtnn (!dim_glob, length (#movel gamespec)) (#operl gamespec)
 
+
+
 fun train_dhtnn gamespec epex =
   let
     val _ = epex_stats epex
-    val schedule = 
-      [(!nepoch_glob div 2, 0.01 / Real.fromInt (!batchsize_glob)),
-       (!nepoch_glob div 2, 0.001 / Real.fromInt (!batchsize_glob))]
+    val schedule = [(!nepoch_glob, !lr_glob / Real.fromInt (!batchsize_glob))]
     val bsize = 
       if length epex < !batchsize_glob then 1 else !batchsize_glob
     val dhtnn = random_dhtnn_gamespec gamespec
@@ -671,7 +673,7 @@ end (* struct *)
 load "rlEnv";
 open rlEnv;
 
-logfile_glob := "march24";
+logfile_glob := "march26";
 mlTreeNeuralNetwork.ml_gencode_dir := 
   (!mlTreeNeuralNetwork.ml_gencode_dir) ^ (!logfile_glob);
   rl_gencode_dir := (!rl_gencode_dir) ^ (!logfile_glob);
@@ -680,14 +682,15 @@ mlTreeNeuralNetwork.ml_gencode_dir :=
 ncore_mcts_glob := 16;
 ncore_train_glob := 8;
 ngen_glob := 50;
-ntarget_compete := 400;
-ntarget_explore := 400;
+ntarget_compete := 100;
+ntarget_explore := 100;
 exwindow_glob := 40000;
 uniqex_flag := true;
 dim_glob := 8;
-batchsize_glob := 128;
+batchsize_glob := 64;
 nepoch_glob := 50;
-nsim_glob := 1600;
+lr_glob := 0.05;
+nsim_glob := 3200;
 decay_glob := 0.99;
 level_glob := 1;
 
