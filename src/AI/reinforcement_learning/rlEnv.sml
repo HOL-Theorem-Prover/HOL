@@ -181,7 +181,9 @@ fun random_dhtnn_gamespec gamespec =
 fun train_dhtnn gamespec epex =
   let
     val _ = epex_stats epex
-    val schedule = [(!nepoch_glob,0.1 / Real.fromInt (!batchsize_glob))]
+    val schedule = 
+      [(!nepoch_glob div 2, 0.01 / Real.fromInt (!batchsize_glob)),
+       (!nepoch_glob div 2, 0.001 / Real.fromInt (!batchsize_glob))]
     val bsize = 
       if length epex < !batchsize_glob then 1 else !batchsize_glob
     val dhtnn = random_dhtnn_gamespec gamespec
@@ -669,7 +671,7 @@ end (* struct *)
 load "rlEnv";
 open rlEnv;
 
-logfile_glob := "march23";
+logfile_glob := "march24";
 mlTreeNeuralNetwork.ml_gencode_dir := 
   (!mlTreeNeuralNetwork.ml_gencode_dir) ^ (!logfile_glob);
   rl_gencode_dir := (!rl_gencode_dir) ^ (!logfile_glob);
@@ -683,8 +685,8 @@ ntarget_explore := 400;
 exwindow_glob := 40000;
 uniqex_flag := true;
 dim_glob := 8;
-batchsize_glob := 64;
-nepoch_glob := 100;
+batchsize_glob := 128;
+nepoch_glob := 50;
 nsim_glob := 1600;
 decay_glob := 0.99;
 level_glob := 1;
