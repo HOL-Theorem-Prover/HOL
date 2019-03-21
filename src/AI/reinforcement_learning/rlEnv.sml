@@ -36,6 +36,8 @@ fun log_eval file s =
   end
 fun summary s = (log_eval (!logfile_glob) s; print_endline s)
 
+fun bts b = if b then "true" else "false"
+
 (* -------------------------------------------------------------------------
    Hard-coded parameters
    ------------------------------------------------------------------------- *)
@@ -45,6 +47,7 @@ val ntarget_compete = ref 400
 val ntarget_explore = ref 400
 
 val exwindow_glob = ref 40000
+val uniqex_flag = ref true
 val dim_glob = ref 8
 val batchsize_glob = ref 64
 val nepoch_glob = ref 100
@@ -60,6 +63,7 @@ fun summary_param () =
     val gen1  = "gen max: " ^ its (!ngen_glob)
     val gen2  = "target_compete: " ^ its (!ntarget_compete)
     val gen3  = "target_explore: " ^ its (!ntarget_explore)
+    val nn0   = "uniqex_flag: " ^ bts (!uniqex_flag)
     val nn1   = "example_window: " ^ its (!exwindow_glob)
     val nn2   = "nn dim: " ^ its (!dim_glob)
     val nn3   = "nn batchsize: " ^ its (!batchsize_glob)
@@ -71,7 +75,7 @@ fun summary_param () =
   in
     summary "Global parameters";
     summary (String.concatWith "\n  " 
-     ([file] @ [gen1,gen2,gen3] @ [nn1,nn2,nn3,nn4,nn5] @ 
+     ([file] @ [gen1,gen2,gen3] @ [nn0,nn1,nn2,nn3,nn4,nn5] @ 
       [mcts2,mcts3,mcts4])
      ^ "\n")
   end
@@ -427,7 +431,7 @@ and boss_collect threadl (remainingl,runningl,completedl) =
       end
   end
 
-fun bts b = if b then "true" else "false"
+
 fun flags_to_string (b1,b2) = "(" ^ bts b1 ^ "," ^  bts b2 ^ ")"
 
 fun boss_start_worker flags wid =
@@ -521,8 +525,11 @@ fun compete dhtnn_old dhtnn_new gamespec targetl =
   end
 
 (* -------------------------------------------------------------------------
-   Exploration
+   Exploration. Maybe do only take one example for each position.
+      mk_sameorder_set (cpl_compare Term.compare (fn (a,b) = Equal))
    ------------------------------------------------------------------------- *)
+
+val uniqex_flag = ref false
 
 fun explore_f_aux startb gamespec allex dhtnn selectl =
   let
@@ -530,8 +537,11 @@ fun explore_f_aux startb gamespec allex dhtnn selectl =
       (boss_start (!ncore_mcts_glob) (true,startb) dhtnn) selectl 
     val _ = summary ("Exploration time: " ^ rts t)
     val _ = summary ("Exploration wins: " ^ its nwin)
+    fun cmp ((a,_,_),(b,_,_)) = Term.compare (a,b)
+    val exl1 = List.concat exll @ allex
+    val exl2 =  if !uniqex_flag then mk_sameorder_set cmp exl1 else exl1
   in
-    first_n (!exwindow_glob) (List.concat exll @ allex) 
+    first_n (!exwindow_glob) exl2
   end
 
 fun explore_f startb gamespec allex dhtnn targetl =
@@ -611,8 +621,8 @@ val operl = map fst (dkeys (#opdict dhtnn));
 val size = 20;
 val nex = 12800;
 val epex = List.tabulate (nex, fn _ => random_example operl size);
-batchsize_glob := 128;
-nepoch_glob := 1;
+batchsize_glob := 1280;
+nepoch_glob := 2;
 
 fun test_ncore n =
   (
@@ -623,12 +633,25 @@ fun test_ncore n =
   results ()
   );
 
+load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
+
+reset_timers ();
+parext_flag := true;
+val resultl1280_1 = map test_ncore [1];
+parext_flag := false;
+print_timers ();
+
+reset_timers ();
+parext_flag := true;
+val resultl1280_2 = map test_ncore [2];
+parext_flag := false;
+print_timers ();
+
+
+
+batchsize_glob := 16;
 mlTreeNeuralNetwork.ml_gencode_dir := "/home/thibault/gencode";
 
-mlTreeNeuralNetwork.parext_flag := true;
-val resultl2 = map test_ncore [1,2,4,8];
-mlTreeNeuralNetwork.parext_flag := false;
-val resultl1 = map test_ncore [1,2,4,8];
 *)
 
 (*
@@ -646,20 +669,25 @@ end (* struct *)
 load "rlEnv";
 open rlEnv;
 
-logfile_glob := "march20";
+logfile_glob := "march23";
+mlTreeNeuralNetwork.ml_gencode_dir := 
+  (!mlTreeNeuralNetwork.ml_gencode_dir) ^ (!logfile_glob);
+  rl_gencode_dir := (!rl_gencode_dir) ^ (!logfile_glob);
+
+
 ncore_mcts_glob := 16;
 ncore_train_glob := 8;
 ngen_glob := 50;
-ntarget_compete := 100;
-ntarget_explore := 100;
+ntarget_compete := 400;
+ntarget_explore := 400;
 exwindow_glob := 40000;
+uniqex_flag := true;
 dim_glob := 8;
-batchsize_glob := 128;
+batchsize_glob := 64;
 nepoch_glob := 100;
 nsim_glob := 1600;
 decay_glob := 0.99;
 level_glob := 1;
-mlTreeNeuralNetwork.parext_flag := true;
 
 val allex = start_rl_loop rlGameArithGround.gamespec;
 

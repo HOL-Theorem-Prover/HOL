@@ -39,6 +39,8 @@ include Abbrev
   val infer_tnn : tnn -> term -> real list
 
   (* training *)
+  val reset_timers : unit -> unit
+  val print_timers : unit -> unit
   val parext_flag : bool ref
   
   (* val distrib_exl : 

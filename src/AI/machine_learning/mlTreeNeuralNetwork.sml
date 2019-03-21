@@ -197,10 +197,11 @@ val (dhtnn2,t2) = add_time read_dhtnn file;
 *)
 
 fun reall_to_string rl = 
-  String.concatWith " " (map rts rl)
+  String.concatWith " " (map (IEEEReal.toString o Real.toDecimal) rl)
 
 fun string_to_reall rls = 
-  map (valOf o Real.fromString) (String.tokens Char.isSpace rls)
+  map (valOf o Real.fromDecimal o valOf o IEEEReal.fromString) 
+    (String.tokens Char.isSpace rls)
 
 fun write_dhex file epex =
   let
@@ -425,7 +426,8 @@ fun worker_train_dhtnn wid dhtnn batch =
 fun read_namedwl dhtnn wid = 
   let 
     val noperdict = dnew Int.compare (number_fst 0 (dkeys (#opdict dhtnn))) 
-    val (sleval,cont1) = split_sl "end_dwl" (readl (widdwl_file wid))
+    val (sleval,cont1) = split_sl "end_dwl" (Profile.profile "read_raw" 
+      readl (widdwl_file wid))
     val (slpoli,cont2) = split_sl "end_dwl" cont1
     val sll = rpt_split_sl "end_dwl" cont2 
     val dwleval = read_wl_sl (tl sleval)
@@ -560,7 +562,7 @@ fun boss_start_worker wid =
      "val _ = tnn_worker_start " ^ its wid ^ ";"
     ]  
   in
-    writel (widscript_file wid) codel;
+    writel (widscript_file wid) codel; 
     smlOpen.run_buildheap false (widscript_file wid);
     remove_file (widscript_file wid)
   end
@@ -575,12 +577,12 @@ fun boss_wait_upl widl =
     if all is_up widl then app rm_out widl else boss_wait_upl widl
   end
 
-fun update_head_dwl headnn dwl = (update_nn headnn) dwl
+fun update_head_dwl headnn dwl = update_nn headnn dwl
 
 fun update_opernn_dwl opdict (oper,dwl) =
   let
     val nn    = dfind oper opdict
-    val newnn = Profile.profile "update_nn" (update_nn nn) dwl
+    val newnn = update_nn nn dwl
   in
     (oper,newnn)
   end
@@ -601,27 +603,37 @@ fun update_dhtnn_dwl dhtnn (dwleval,dwlpoli,dwloperl) =
      dimin = dimin, dimout = dimout}
   end
 
-fun boss_collect_dwl widl dhtnn =
-  if all (exists_file o widout_file) widl then 
+fun boss_read_update widl dhtnn =
   let 
     val (dwlleval,dwllpoli,dwlloperl) = 
-      split_triple (map (read_namedwl dhtnn) widl) 
+      split_triple (Profile.profile "read" (map (read_namedwl dhtnn)) widl) 
     val operdwll_list = dlist (dregroup 
        (cpl_compare Term.compare Int.compare) (List.concat dwlloperl))
     val (dwleval,dwlpoli,dwloperl) =
-      (sum_dwll dwlleval, sum_dwll dwllpoli, map_snd sum_dwll operdwll_list)
-    val dhtnn_new = update_dhtnn_dwl dhtnn (dwleval,dwlpoli,dwloperl)
+      let fun f () =
+        (sum_dwll dwlleval, sum_dwll dwllpoli, map_snd sum_dwll operdwll_list)
+      in
+        Profile.profile "sum" f ()
+      end
+    val dhtnn_new = Profile.profile "update"
+      (update_dhtnn_dwl dhtnn) (dwleval,dwlpoli,dwloperl)
   in
     app (remove_file o widout_file) widl;
     dhtnn_new
   end
+
+
+fun boss_collect_dwl widl dhtnn =
+  if all (exists_file o widout_file) widl 
+  then Profile.profile "read_sum_update" (boss_read_update widl) dhtnn
   else boss_collect_dwl widl dhtnn
 
 fun boss_process_onebatch widl dhtnn =
-  let fun send_batch wid = writel_atomic (widin_file wid) ["batch"] in
-    write_dhtnn_nooper (dhtnn_file ()) dhtnn;
-    app send_batch widl;
-    boss_collect_dwl widl dhtnn
+  let fun send_batch wid = writel_atomic (widin_file wid) ["batch"] 
+  in
+    Profile.profile "write_dhtnn" (write_dhtnn_nooper (dhtnn_file ())) dhtnn;
+    Profile.profile "write_batch"  (app send_batch) widl;
+    Profile.profile "boss_collect" (boss_collect_dwl widl) dhtnn
   end
 
 fun boss_process_nbatch widl nbatch dhtnn =
@@ -735,7 +747,7 @@ fun train_tnn_schedule (ncore,bsize) tnn (ptrain,ptest) schedule =
 
 val parext_flag = ref false
 
-fun train_dhtnn_batch_loc ncore dhtnn batch =
+fun train_dhtnn_batch ncore dhtnn batch =
   let
     val {opdict, headeval, headpoli, dimin, dimout} = dhtnn
     val (bpdictl,bpdatall1,bpdatall2) = 
@@ -749,14 +761,6 @@ fun train_dhtnn_batch_loc ncore dhtnn batch =
     ({opdict = newopdict, headeval = newheadeval, headpoli = newheadpoli,
      dimin = dimin, dimout = dimout},(loss1,loss2))
   end
-
-fun train_dhtnn_batch_ext ncore dhtnn batch = (dhtnn,(0.0,0.0))
-
-fun train_dhtnn_batch ncore dhtnn batch =
-  if !parext_flag 
-  then train_dhtnn_batch_ext ncore dhtnn batch
-  else train_dhtnn_batch_loc ncore dhtnn batch
-
 
 fun train_dhtnn_epoch_aux ncore (lossl1,lossl2) dhtnn batchl =
   case batchl of
@@ -798,6 +802,13 @@ fun train_dhtnn_schedule_aux ncore dhtnn bsize eptrain schedule =
       train_dhtnn_schedule_aux ncore newdhtnn bsize eptrain m
     end
 
+val timer0 = ref 0.0
+val timer1 = ref 0.0
+fun reset_timers () = (timer0 := 0.0; timer1 := 0.0)
+fun timer i = if i = 0 then timer0 else timer1
+fun print_timers () = 
+  print_endline (String.concatWith " " (map (rts o !) [timer0,timer1])); 
+
 fun start_parext ncore (nepoch,bsize) dhtnn epex = 
   let
     val nex = length epex
@@ -818,8 +829,10 @@ fun start_parext ncore (nepoch,bsize) dhtnn epex =
       in
         write_batchl (widbatchl_file wid) widbatchl
       end
+    val _ = reset_timers
     val _ = app write_widbatchl widl
-    fun fork wid = Thread.fork (fn () => boss_start_worker wid, attrib)
+    fun fork wid = Thread.fork (fn () =>
+      total_time (timer wid) boss_start_worker wid, attrib)
     val threadl = map fork widl
   in
     boss_wait_upl widl;

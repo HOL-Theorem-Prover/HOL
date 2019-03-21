@@ -25,6 +25,7 @@ sig
   val ntarget_explore : int ref
   (* nn parameters *)
   val exwindow_glob : int ref
+  val uniqex_flag : bool ref
   val dim_glob : int ref
   val batchsize_glob : int ref 
   val nepoch_glob : int ref
