@@ -262,4 +262,6 @@ in
 end
 end (* local fun testb ... *)
 
+val _ = convtest
+
 val _ = Process.exit Process.success

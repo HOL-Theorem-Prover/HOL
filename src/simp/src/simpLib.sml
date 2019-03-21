@@ -50,7 +50,9 @@ fun appconv (c,UNBOUNDED) solver stk tm = c false solver stk tm
 
 fun mk_rewr_convdata (nmopt,(thm,tag)) : convdata option = let
   val th = SPEC_ALL thm
-  val nm = case nmopt of NONE => "rewrite: anonymous" | SOME s => "rewrite " ^ s
+  val nm = case nmopt of
+               NONE => "rewrite:<anonymous>"
+             | SOME s => "rewrite:" ^ s
 in
   SOME {name  = nm,
         key   = SOME (free_varsl (hyp th), lhs(#2 (strip_imp(concl th)))),
@@ -82,6 +84,8 @@ datatype ssfrag = SSFRAG_CON of {
     congs    : thm list,
     relsimps : relsimpdata list
 }
+
+fun frag_name (SSFRAG_CON {name,...}) = name
 
 fun SSFRAG {name,convs,rewrs,ac,filter,dprocs,congs} =
   SSFRAG_CON {name = name, convs = convs, rewrs = rewrs, ac = ac,
@@ -203,8 +207,8 @@ datatype simpset =
 fun name_match (nm : string (* key as stored in simpset *)) =
     List.exists (fn nm' : string (* user-provided *) =>
                     nm' = nm orelse
-                    "rewrite " ^ nm' = nm orelse
-                    String.isPrefix ("rewrite " ^ nm') nm
+                    "rewrite:" ^ nm' = nm orelse
+                    String.isPrefix ("rewrite:" ^ nm' ^ ".") nm
                 )
 fun (SS{mk_rewrs,ssfrags,initial_net,dprocs,travrules,limit}) -* nms =
     SS{initial_net =

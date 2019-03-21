@@ -71,6 +71,7 @@ sig
      congs: thm list} -> ssfrag
 
   val frag_rewrites : ssfrag -> thm list
+  val frag_name : ssfrag -> string option
 
   (*------------------------------------------------------------------------*)
   (* Easy building of common kinds of ssfrag objects                        *)
