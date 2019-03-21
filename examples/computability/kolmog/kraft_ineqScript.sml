@@ -1541,6 +1541,68 @@ Proof
   >- (fs[FUNPOW,steps_def] >> metis_tac[])
 QED
 
+Theorem log_ub:
+  1<a ∧ 0 < b ==> (LOG a b = m ==> b<a ** SUC m)
+Proof
+  rw[] >> fs[LOG]
+QED
+
+Theorem finite_logeq:
+  1<a ==> FINITE {b | LOG a b = m}
+Proof
+  rw[] >> `{b | LOG a b = m} SUBSET {b | b<a ** SUC m}` by 
+             (fs[SUBSET_DEF] >> rw[]>> Cases_on`x` >> fs[LOG]) >>
+  `FINITE {b | b < a ** SUC m}` by (`FINITE (count (a ** SUC m))` suffices_by metis_tac[count_def] >> fs[FINITE_COUNT] ) >> metis_tac[SUBSET_FINITE_I]
+QED
+
+Theorem finite_log2:
+  FINITE {x | LOG 2 x = LOG 2 (SUC m)}
+Proof
+  qabbrev_tac`n = LOG 2 (SUC m) ` >> `(1:num)<2` by fs[] >> fs[finite_logeq]
+QED
+
+Theorem FUNPOW_id:
+  f x = x ==> FUNPOW f n x = x
+Proof
+  rw[] >> Induct_on`n` >> fs[] >> rw[FUNPOW]
+QED
+
+Theorem terminated_imp:
+  ¬( terminated (steps (t-1) (mk_initial_state M x))) ∧ terminated (steps t (mk_initial_state M x)) ==> Phi M x = SOME (cs_to_num (steps t (mk_initial_state M x) ))
+Proof
+  rw[] >> fs[Phi_steps] >> `comp_count (mk_initial_state M x) = SOME t` suffices_by fs[] >>
+  fs[comp_count_def] >> fs[OLEAST_EQ_SOME] >> rw[] >> strip_tac >> 
+  `∃c.0<c ∧ n+c = t` by (qexists_tac`t-n` >> fs[]) >> rw[] >>
+  `steps (n + c) (mk_initial_state M x) = steps (n + c - 1) (mk_initial_state M x)` by 
+    (`step1 (steps n (mk_initial_state M x)) = (steps n (mk_initial_state M x))` by 
+       fs[terminated_step_in_place] >> fs[steps_def] >> 
+     `FUNPOW step1 (c + n) (mk_initial_state M x) =
+      FUNPOW step1 ((c-1) + n) (mk_initial_state M x)`suffices_by fs[] >>fs[FUNPOW_ADD] >>
+     fs[FUNPOW_id] ) >> metis_tac[]
+QED
+
+Theorem terminated_down:
+  (¬(terminated (steps 0 (mk_initial_state M x)) ) ∧ terminated (steps t (mk_initial_state M x)))
+    ==> ∃tl. tl<t ∧ ¬terminated (steps tl (mk_initial_state M x)) ∧  terminated (steps (tl+1) (mk_initial_state M x))
+Proof
+  rw[] >> Induct_on`t` >> fs[] >>
+  rw[] >> Cases_on` terminated (steps t (mk_initial_state M x))` >>  fs[]
+  >- (qexists_tac`tl` >> fs[])
+  >- (qexists_tac`t` >> fs[ADD1])
+QED
+
+Theorem terminated_impdown:
+  (¬(terminated (steps 0 (mk_initial_state M x)) ) ∧ terminated (steps t (mk_initial_state M x)))
+    ==> ∃tl. Phi M x = SOME (cs_to_num (steps tl (mk_initial_state M x) ))
+Proof
+  rw[] >> `∃tll. tll<t ∧ ¬terminated (steps tll (mk_initial_state M x)) ∧  
+                 terminated (steps (tll+1) (mk_initial_state M x))` by 
+            metis_tac[terminated_down] >> qabbrev_tac`tk = tll+1` >> 
+  `tk-1 = tll` by fs[Abbr`tk`] >> rw[] >> 
+  `Phi M x = SOME (cs_to_num (steps (tk) (mk_initial_state M x) ))` by 
+    metis_tac[terminated_imp]>> qexists_tac`tk` >> fs[]
+QED
+
 Theorem big_T_Tmax_imp:
   (big_T (LOG 2 (prime_tm M x) ) > tmax (LOG 2 (prime_tm M x) )) ==> 
    ( terminated (steps (big_T  (LOG 2 (prime_tm M x))) (mk_initial_state (prime_tm M x) 0 ))  <=> ((M,x)∈HALT ))
@@ -1560,11 +1622,18 @@ Proof
        SOME (cs_to_num (steps m (mk_initial_state (prime_tm M x) 0)))` by 
         (fs[correctness_on_termination] >> fs[comp_count_def,OLEAST_EQ_SOME]) >>
       fs[prime_tm_corr] >> 
-      `tmax (LOG 2 (prime_tm M x)) > m` by (fs[tmax_def])
+      `tmax (LOG 2 (prime_tm M x)) = m` by (fs[tmax_def] >> fs[comp_count_def])
 
        `terminated (steps (tmax (LOG (prime_tm M x) 2)) (mk_initial_state M x))` suffices_by 
          metis_tac[terminated_ge] >>  ) 
-  >- ()
+  >- (fs[HALT_def] >> `terminated (steps (tmax (LOG 2 (prime_tm M x)))
+                       (mk_initial_state (prime_tm M x) 0))` suffices_by 
+                       metis_tac[terminated_ge] >> 
+      fs[tmax_def] >> qmatch_abbrev_tac`terminated (steps (MAX_SET ts)
+                                        (mk_initial_state (prime_tm M x) 0))` >>
+      `FINITE ts` by (cheat) >>
+      `ts <> {}` by (cheat) >>
+      `MAX_SET ts ∈ ts ∧ ∀y. y ∈ ts ⇒ y ≤ MAX_SET ts` by fs[MAX_SET_DEF] >>  )
   fs[big_T_def] >> fs[tmax_def],yMt_set_def,IMAGE_DEF] >>  >>
   comp_count_def,correctness_on_termination
 QED
