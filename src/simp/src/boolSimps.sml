@@ -62,7 +62,7 @@ val literal_case_ss =
 
 val BOOL_ss = SSFRAG
   {name = SOME"BOOL",
-   convs=[{name="BETA_CONV (beta reduction)",
+   convs=[{name="BETA_CONV",
            trace=2,
            key=SOME ([],``(\x:'a. y:'b) z``),
            conv=K (K BETA_CONV)}],

@@ -504,7 +504,7 @@ fun (SS{mk_rewrs,ssfrags,initial_net,dprocs,travrules,limit}) -* nms =
      let
        val ths = mk_rewrs th
        fun reduce s th (i,A) =
-           (i + 1, (SOME (s ^ " " ^ Int.toString i), th) :: A)
+           (i + 1, (SOME (s ^ "." ^ Int.toString i), th) :: A)
      in
        case nmopt of
            NONE => map (fn th => (NONE, th)) ths
