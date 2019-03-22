@@ -32,7 +32,7 @@ val Fpow_def = Define`Fpow n = GENLIST (K F) n`
 val _ = set_mapped_fixity{fixity = Infix(NONASSOC,450),term_name = "prefix",tok="≺"}
 
 val prefix_refl = Q.store_thm("prefix_refl[simp]",
-`~(l ≺ l)`,
+`~(l ≺ l)`, 
 simp[prefix_def])
 
 val prefix_free_def = Define`prefix_free (s:'a list set) = !a b. a IN s /\ b IN s ==> ~(a≺ b) `
@@ -1507,6 +1507,7 @@ val clog2list_eqn = brackabs.brackabs_equiv [] clog2list_def
 
 
 (* still too prove is true *)
+(*
 Theorem clog2list_behaviour:
   clog2list @@ church n == cvlist (MAP church (log2list n))
 Proof
@@ -1515,7 +1516,210 @@ Proof
   HO_MATCH_MP_TAC cvlist_genlist_cong >>
   asm_simp_tac(bsrw_ss())[churchnumTheory.cplus_behaviour,ADD_COMM]
 QED
+*)
 
+
+val computable_def = Define`computable (f:num->num) <=> ∃i. ∀n. Phi i n = SOME (f n)`
+
+val narg_kolmog_def = Define`narg_kolmog x = bl2n (arg_kolmog x)`
+
+val plain_kolmog_def = Define`plain_kolmog x = THE (kolmog_complexity x (λy. Phi (bl2n y) 0))`
+
+Theorem plain_kolmog_exists:
+  ∀x. ∃y. kolmog_complexity x (λy. Phi (bl2n y) 0) = SOME y
+Proof
+  rw[kolmog_complexity_def,EXTENSION] >> simp[Phi_def] >>
+  qexists_tac`n2bl (dBnum (fromTerm (K @@ church x)))` >> simp[] >> qexists_tac`church x` >>
+  simp[the_lemma,normal_orderTheory.bnf_bnf_of]
+QED
+
+
+Theorem Phi_x_0:
+  ∀y. ∃x. Phi (x) 0 = SOME y
+Proof
+  rw[] >> simp[Phi_def] >>
+  qexists_tac` (dBnum (fromTerm (K @@ church y)))` >> simp[bool_num_inv] >> qexists_tac`church y` >>
+  simp[the_lemma,normal_orderTheory.bnf_bnf_of]
+QED
+
+Theorem Phi_bl2nx_0:
+  ∀y. ∃x. Phi (bl2n x) 0 = SOME y
+Proof
+  rw[] >> simp[Phi_def] >>
+  qexists_tac`n2bl (dBnum (fromTerm (K @@ church y)))` >> simp[bool_num_inv] >> qexists_tac`church y` >>
+  simp[the_lemma,normal_orderTheory.bnf_bnf_of]
+QED
+
+Theorem plain_kolmog_thm:
+  plain_kolmog x = (MIN_SET {LENGTH p |  Phi (bl2n p) 0 = SOME x})
+Proof
+  fs[plain_kolmog_def,kolmog_complexity_def] >> Cases_on`{y | Phi (bl2n y) 0 = SOME x} = ∅` >>
+  fs[] >> `∃y. Phi (bl2n y) 0 = SOME x` by fs[Phi_bl2nx_0] >> 
+  `y∈{y | Phi (bl2n y) 0 = SOME x}` by fs[] >> metis_tac[MEMBER_NOT_EMPTY]
+QED
+
+val arg_plain_kolmog_def = Define`arg_plain_kolmog x = @q. Phi ( q) 0 = SOME x ∧ LENGTH (n2bl q) = MIN_SET {LENGTH (n2bl p) | Phi ( p) 0 = SOME x}`
+
+val arg_plain_kolmog2_def = Define`arg_plain_kolmog2 x = MIN_SET {p | Phi (p) 0 = SOME x}`
+
+Theorem arg_plain_kolmog_thm:
+  arg_plain_kolmog x = @q. Phi ( q) 0 = SOME x ∧ LENGTH (n2bl q) = plain_kolmog x
+Proof
+  fs[arg_plain_kolmog_def,plain_kolmog_thm] >>
+  `{ℓ p | Phi p 0 = SOME x} = {LENGTH p | Phi (bl2n p) 0 = SOME x}` by (fs[EXTENSION] >> 
+    rw[] >> eq_tac >> rw[] >- (qexists_tac`n2bl p` >> fs[]) >- (qexists_tac`bl2n p` >> fs[]) )>>
+  fs[]
+QED
+
+Theorem arg_plain_kolmog_exists:
+  ∃q. Phi q 0 = SOME x ∧ LENGTH (n2bl q) = plain_kolmog x
+Proof
+  fs[plain_kolmog_thm] >> `{LENGTH p | Phi (bl2n p) 0 = SOME x} <> {}` by 
+    fs[EXTENSION,Phi_bl2nx_0] >>  
+  `MIN_SET {LENGTH p | Phi (bl2n p) 0 = SOME x} ∈ {LENGTH p | Phi (bl2n p) 0 = SOME x} ` by 
+    fs[MIN_SET_LEM] >> 
+  `IMAGE LENGTH {p | Phi (bl2n p) 0 = SOME x} = {LENGTH p | Phi (bl2n p) 0 = SOME x}` by 
+    fs[IMAGE_DEF] >> 
+  `MIN_SET {LENGTH p | Phi (bl2n p) 0 = SOME x} ∈ IMAGE LENGTH {p | Phi (bl2n p) 0 = SOME x}` by 
+    metis_tac[] >>
+  `∃q1. MIN_SET {LENGTH p | Phi (bl2n p) 0 = SOME x} =  LENGTH q1 ∧ q1 ∈ {p | Phi (bl2n p) 0 = SOME x}` by 
+    metis_tac[IN_IMAGE] >> qexists_tac`bl2n q1` >> fs[]
+QED
+
+Theorem Phi_arg_pl_kolmog:
+  Phi (arg_plain_kolmog2 y) 0 = SOME y
+Proof
+  fs[arg_plain_kolmog_thm] >> 
+  `∃q. Phi q 0 = SOME y ∧ LENGTH (n2bl q) = plain_kolmog y` by fs[arg_plain_kolmog_exists] >> 
+  metis_tac[GSYM SELECT_THM]
+QED
+
+Theorem Phi_arg_pl_kolmog2:
+  Phi (arg_plain_kolmog2 y) 0 = SOME y
+Proof
+  fs[arg_plain_kolmog2_def] >> `{p | Phi p 0 = SOME y} <> {}` by (fs[EXTENSION,Phi_x_0]) >>
+  `MIN_SET {p | Phi p 0 = SOME y} ∈ {p | Phi p 0 = SOME y}` by metis_tac[MIN_SET_LEM]>>
+  fs[]
+QED
+
+Theorem MIN_SET_L_PHI_NON_EMPTY:
+  {LENGTH p | Phi (bl2n p) 0 = SOME y} <> {}
+Proof
+  fs[EXTENSION,Phi_bl2nx_0]
+QED
+
+(* SELECT stuff
+SELECT_AX,SELECT_ELIM_THM,SELECT_REFL,SELECT_REFL_2,SELECT_THM,SELECT_UNIQUE
+*)
+
+(* up to here *)
+
+(* To prove maybe 
+Theorem LEGNTH_n2bl_LOG:
+  0<x ==> LENGTH (n2bl x) = LOG 2 (SUC x)
+Proof
+  rw[] >>
+  Induct_on`LOG 2 x` >> rw[] >- (`x=1` by  fs[LOG_EQ_0] >> rw[] >> EVAL_TAC >> fs[LOG_BASE] ) >>
+  
+QED
+
+Theorem LENGTH_n2bl_ineq:
+  ℓ q < ℓ k ==> q< k
+Proof
+  
+QED
+*)
+
+Theorem arg_pl_kolmog2_min:
+  Phi k 0 = SOME y ==>  arg_plain_kolmog2 y ≤ k
+Proof
+  rw[arg_plain_kolmog2_def] >> fs[EXTENSION,Phi_x_0,MIN_SET_LEM]
+QED
+
+(* unproven *)
+Theorem arg_pl_kolmog_min:
+  Phi k 0 = SOME y ==>  arg_plain_kolmog y ≤ k
+Proof
+  cheat
+  (*
+  rw[arg_plain_kolmog_thm] >>  
+  `(∃q. Phi q 0 = SOME y ∧ ℓ q = plain_kolmog y ∧ (q<=k))` by 
+  (Cases_on`ℓ k = plain_kolmog y` >- (qexists_tac`k` >> fs[]) >>  
+  `∃q. Phi q 0 = SOME y ∧ LENGTH (n2bl q) = plain_kolmog y` by fs[arg_plain_kolmog_exists]>>
+  `(∀x. (Phi x 0 = SOME y ∧ ℓ x = plain_kolmog y) ⇒ (ℓ x<= ℓ k))` by 
+    (rw[] >> fs[plain_kolmog_thm] >> 
+     `{LENGTH p | Phi (bl2n p) 0 = SOME y} <> {}` by fs[MIN_SET_L_PHI_NON_EMPTY] >> 
+     `∀x. x ∈ {LENGTH p | Phi (bl2n p) 0 = SOME y} ⇒ 
+          MIN_SET {LENGTH p | Phi (bl2n p) 0 = SOME y} ≤ x` by fs[MIN_SET_LEM] >> 
+     `LENGTH (n2bl k) ∈ IMAGE LENGTH { p | Phi (bl2n p) 0 = SOME y}` by fs[] >>
+     `ℓ k ∈ {LENGTH p | Phi (bl2n p) 0 = SOME y}` by 
+       (rfs[IMAGE_DEF] >> qexists_tac`n2bl k` >> fs[]) >> 
+     ` MIN_SET {LENGTH p | Phi (bl2n p) 0 = SOME y} ≤ ℓ k` by metis_tac[] >> fs[] ) >> 
+   `ℓ q <= ℓ k` by metis_tac[] >> `ℓ q < ℓ k` by fs[] >> qexists_tac`q` >> rw[] >> 
+   `q < k` by fs[LENGTH_n2bl_ineq] >> fs[]) >> 
+
+  metis_tac[SELECT_ELIM_THM] >>
+  fs[GSYM SELECT_THM] *)
+QED
+
+(* Part1 uses kolmog, Part11 uses arg_plain_kolmog, Part111 uses arg_plain_kolmog2  *)
+(* unproven *)
+Theorem part1:
+  computable kolmog ==> ∃j. ∀y. ∃i. Phi j y = SOME i ∧ Phi i 0 = SOME y ∧ ∀k. Phi k 0 = SOME y ==> i<= k
+Proof
+  cheat
+  (* 
+  rw[computable_def] >> qexists_tac`@q.∀y. Phi q y = SOME (MIN_SET {p | Phi p 0 = SOME y })` >> 
+  rw[] >> qexists_tac`MIN_SET {p | Phi p 0 = SOME y }` >> *)
+QED
+
+(* unproven *)
+Theorem part11:
+  computable arg_plain_kolmog ==> ∃j. ∀y. ∃i. Phi j y = SOME i ∧ Phi i 0 = SOME y ∧ ∀k. Phi k 0 = SOME y ==> i<= k
+Proof
+  cheat
+  (* rw[computable_def] >> qexists_tac`i` >> rw[]
+  >- (fs[narg_kolmog_def,arg_kolmog_thm,PUTM_def])
+  >- () *)
+QED
+
+(* proven *)
+Theorem part111:
+  computable arg_plain_kolmog2 ==> ∃j. ∀y. ∃i. Phi j y = SOME i ∧ Phi i 0 = SOME y ∧ ∀k. Phi k 0 = SOME y ==> i<= k
+Proof
+  rw[computable_def] >> qexists_tac`i` >> rw[arg_pl_kolmog2_min,Phi_arg_pl_kolmog2]
+QED
+
+val yMt_pred_def = Define`yMt_pred e n yi Mi ti <=> kolmog yi < 2*n ∧ 
+                                                LOG 2 yi = 2* n ∧ 
+                                                LOG 2 Mi = kolmog yi ∧
+                                                terminated (steps ti (mk_initial_state Mi 0)) ∧
+                                                cs_to_num (steps ti (mk_initial_state Mi 0)) = yi ∧
+                                              ∀t'. terminated (steps t' (mk_initial_state Mi 0)) ==>
+                                                ti<=t' ∧
+                                                e=npair Mi (npair ti yi)`
+(* unproven *)
+Theorem part2:
+  computable kolmog ==> ∃j. ∀n. ∃l. Phi j n = SOME (nlist_of l) ∧ 
+                       (∀e. MEM e l <=> ∃yi Mi ti. yMt_pred e n yi Mi ti)
+Proof
+  cheat
+QED
+
+(* unproven *)
+Theorem part222:
+  computable arg_plain_kolmog2 ==> ∃j. ∀n. ∃l. Phi j n = SOME (nlist_of l) ∧ 
+                       (∀e. MEM e l <=> ∃yi Mi ti. yMt_pred e n yi Mi ti)
+Proof
+  rw[computable_def] >> qexists_tac``
+QED
+
+(* unproven *)
+Theorem part3:
+  computable kolmog ==> (T > tmax (LOG 2 (prime_tm M) ))
+Proof
+  cheat
+QED
 
 val yMt_set_def = Define`yMt_set n = {(yi,Mi,t) | Mi = bl2n (arg_kolmog yi) ∧
                                               LENGTH (n2bl yi) = 2*n ∧
@@ -1603,6 +1807,7 @@ Proof
     metis_tac[terminated_imp]>> qexists_tac`tk` >> fs[]
 QED
 
+(* 
 Theorem big_T_Tmax_imp:
   (big_T (LOG 2 (prime_tm M x) ) > tmax (LOG 2 (prime_tm M x) )) ==> 
    ( terminated (steps (big_T  (LOG 2 (prime_tm M x))) (mk_initial_state (prime_tm M x) 0 ))  <=> ((M,x)∈HALT ))
@@ -1626,9 +1831,10 @@ Proof
 
        `terminated (steps (tmax (LOG (prime_tm M x) 2)) (mk_initial_state M x))` suffices_by 
          metis_tac[terminated_ge] >>  ) 
-  >- (fs[HALT_def] >> `terminated (steps (tmax (LOG 2 (prime_tm M x)))
-                       (mk_initial_state (prime_tm M x) 0))` suffices_by 
-                       metis_tac[terminated_ge] >> 
+  >- (fs[HALT_def] >> Cases_on`terminated (steps 0 (mk_initial_state M x))`
+      >- (fs[])
+      `terminated (steps (tmax (LOG 2 (prime_tm M x)))
+       (mk_initial_state (prime_tm M x) 0))` suffices_by metis_tac[terminated_ge] >> 
       fs[tmax_def] >> qmatch_abbrev_tac`terminated (steps (MAX_SET ts)
                                         (mk_initial_state (prime_tm M x) 0))` >>
       `FINITE ts` by (cheat) >>
@@ -1637,6 +1843,8 @@ Proof
   fs[big_T_def] >> fs[tmax_def],yMt_set_def,IMAGE_DEF] >>  >>
   comp_count_def,correctness_on_termination
 QED
+
+*)
 
 (*
 val find_m_of_size_n_gen_y_def = Define`find_m_of_size_n_gen_y = LAM "n" (LAM "y"
