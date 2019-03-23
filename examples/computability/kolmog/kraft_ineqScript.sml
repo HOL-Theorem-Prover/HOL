@@ -1587,7 +1587,7 @@ Proof
 QED
 
 Theorem Phi_arg_pl_kolmog:
-  Phi (arg_plain_kolmog2 y) 0 = SOME y
+  Phi (arg_plain_kolmog y) 0 = SOME y
 Proof
   fs[arg_plain_kolmog_thm] >> 
   `∃q. Phi q 0 = SOME y ∧ LENGTH (n2bl q) = plain_kolmog y` by fs[arg_plain_kolmog_exists] >> 
@@ -1690,7 +1690,7 @@ Proof
   rw[computable_def] >> qexists_tac`i` >> rw[arg_pl_kolmog2_min,Phi_arg_pl_kolmog2]
 QED
 
-val yMt_pred_def = Define`yMt_pred e n yi Mi ti <=> kolmog yi < 2*n ∧ 
+val yMt_pred_def = Define`yMt_pred e n yi Mi ti <=> plain_kolmog yi < 2*n ∧ 
                                                 LOG 2 yi = 2* n ∧ 
                                                 LOG 2 Mi = kolmog yi ∧
                                                 terminated (steps ti (mk_initial_state Mi 0)) ∧
@@ -1698,28 +1698,29 @@ val yMt_pred_def = Define`yMt_pred e n yi Mi ti <=> kolmog yi < 2*n ∧
                                               ∀t'. terminated (steps t' (mk_initial_state Mi 0)) ==>
                                                 ti<=t' ∧
                                                 e=npair Mi (npair ti yi)`
+
 (* unproven *)
+(*
 Theorem part2:
   computable kolmog ==> ∃j. ∀n. ∃l. Phi j n = SOME (nlist_of l) ∧ 
                        (∀e. MEM e l <=> ∃yi Mi ti. yMt_pred e n yi Mi ti)
 Proof
-  cheat
+     rw[computable_def] >> arg_plain_kolmog2_def]
 QED
+*)
 
 (* unproven *)
-Theorem part222:
-  computable arg_plain_kolmog2 ==> ∃j. ∀n. ∃l. Phi j n = SOME (nlist_of l) ∧ 
+
+Theorem part22:
+  computable plain_kolmog ==> ∃j. ∀n. ∃l. Phi j n = SOME (nlist_of l) ∧ 
                        (∀e. MEM e l <=> ∃yi Mi ti. yMt_pred e n yi Mi ti)
 Proof
-  rw[computable_def] >> qexists_tac``
-QED
-
-(* unproven *)
-Theorem part3:
-  computable kolmog ==> (T > tmax (LOG 2 (prime_tm M) ))
-Proof
   cheat
 QED
+
+
+
+
 
 val yMt_set_def = Define`yMt_set n = {(yi,Mi,t) | Mi = bl2n (arg_kolmog yi) ∧
                                               LENGTH (n2bl yi) = 2*n ∧
@@ -1730,6 +1731,14 @@ val yMt_set_def = Define`yMt_set n = {(yi,Mi,t) | Mi = bl2n (arg_kolmog yi) ∧
                                                 t<=t'}`
 
 val big_T_def = Define`big_T n = MAX_SET (IMAGE SND (IMAGE SND (yMt_set n)))`
+
+(* unproven *)
+
+Theorem part3:
+  computable kolmog ==> (big_T (prime_tm M x) > tmax (LOG 2 (prime_tm M x) ))
+Proof
+  cheat
+QED
 
 open whileTheory;
 
