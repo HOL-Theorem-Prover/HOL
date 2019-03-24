@@ -32,7 +32,7 @@ val Fpow_def = Define`Fpow n = GENLIST (K F) n`
 val _ = set_mapped_fixity{fixity = Infix(NONASSOC,450),term_name = "prefix",tok="≺"}
 
 val prefix_refl = Q.store_thm("prefix_refl[simp]",
-`~(l ≺ l)`, 
+`~(l ≺ l)`,
 simp[prefix_def])
 
 val prefix_free_def = Define`prefix_free (s:'a list set) = !a b. a IN s /\ b IN s ==> ~(a≺ b) `
@@ -992,12 +992,12 @@ val HUTM_def =  Define`HUTM p =
 
 val prefix_free_fn_def = Define`prefix_free_fn M <=> prefix_free {x | (∃y. Phi M (bl2n x) = SOME y)}`
 
-val HUTMpf_def =  Define`HUTMpf p = 
+val HUTMpf_def =  Define`HUTMpf p =
   if bar2ped p then
-    if prefix_free_fn (bl2n (FST (unbar2p 0 p) ) )  then 
-      (Phi (bl2n (FST (unbar2p 0 p) ) ) 
+    if prefix_free_fn (bl2n (FST (unbar2p 0 p) ) )  then
+      (Phi (bl2n (FST (unbar2p 0 p) ) )
            (bl2n (SND (unbar2p 0 p) ) ))
-    else NONE 
+    else NONE
   else NONE`
 
 Theorem HUTM_w_side_inf_corr:
@@ -1020,12 +1020,12 @@ QED
 Theorem Tpow_F_eq[simp]:
   Tpow a ++ [F] = Tpow b ++ [F] ==> a=b
 Proof
-  `TAKE a (Tpow a ++ [F]) = Tpow a` by 
-    (fs[Tpow_def,TAKE_GENLIST] >> `LENGTH (GENLIST (K T) a) = a` by fs[] >> 
-     metis_tac[rich_listTheory.TAKE_LENGTH_APPEND] ) >> 
-  `TAKE b (Tpow b ++ [F]) = Tpow b` by 
-    (fs[Tpow_def,TAKE_GENLIST] >> `LENGTH (GENLIST (K T) b) = b` by fs[] >> 
-     metis_tac[rich_listTheory.TAKE_LENGTH_APPEND] ) >> 
+  `TAKE a (Tpow a ++ [F]) = Tpow a` by
+    (fs[Tpow_def,TAKE_GENLIST] >> `LENGTH (GENLIST (K T) a) = a` by fs[] >>
+     metis_tac[rich_listTheory.TAKE_LENGTH_APPEND] ) >>
+  `TAKE b (Tpow b ++ [F]) = Tpow b` by
+    (fs[Tpow_def,TAKE_GENLIST] >> `LENGTH (GENLIST (K T) b) = b` by fs[] >>
+     metis_tac[rich_listTheory.TAKE_LENGTH_APPEND] ) >>
   fs[Tpow_def] >>
   `LENGTH (GENLIST (K T) a) = a` by fs[LENGTH_GENLIST] >>
   `LENGTH (GENLIST (K T) b) = b` by fs[LENGTH_GENLIST] >> metis_tac[]
@@ -1041,9 +1041,9 @@ Theorem Tpow_Fapp_eq[simp]:
   Tpow a ++ [F] ++ x = Tpow b ++ [F] ++ y <=> a=b ∧ x=y
 Proof
   wlog_tac `a<=b` []
-  >- (`b<=a` by fs[] >> metis_tac[]) >> eq_tac>>simp[] >> strip_tac >> 
-  Cases_on`a=b`>> fs[] >> `a<b` by fs[] >> 
-  `DROP a (Tpow a ++ [F] ++ x) = [F]++x` by 
+  >- (`b<=a` by fs[] >> metis_tac[]) >> eq_tac>>simp[] >> strip_tac >>
+  Cases_on`a=b`>> fs[] >> `a<b` by fs[] >>
+  `DROP a (Tpow a ++ [F] ++ x) = [F]++x` by
     metis_tac[GSYM APPEND_ASSOC,APPEND,rich_listTheory.DROP_LENGTH_APPEND,Tpow_LENGTH] >>
   `DROP a (Tpow b ++ [F] ++ y) = Tpow (b-a) ++ [F]++y` by
     simp[rich_listTheory.DROP_APPEND1,Tpow_LENGTH] >>
@@ -1058,21 +1058,21 @@ Theorem HUTMpf_corr:
 Proof
   rw[] >>  fs[unbar2p_def,bar2ped_def,HUTMpf_def,unbar2p_induct,bar_def] >>  rw[unbar2p_induct]
   >- (`Tpow (LENGTH i) ++ [F] ++ i ++ q = (Tpow (LENGTH i)) ++ F::(i ++ q)` by fs[] >>
-      rw[unbar2p_induct] >> 
-      REWRITE_TAC [GSYM APPEND_ASSOC,APPEND,rich_listTheory.TAKE_LENGTH_APPEND, 
+      rw[unbar2p_induct] >>
+      REWRITE_TAC [GSYM APPEND_ASSOC,APPEND,rich_listTheory.TAKE_LENGTH_APPEND,
                    rich_listTheory.DROP_LENGTH_APPEND,ADD_CLAUSES] >>
-      rw[unbar2p_induct] >> 
-      REWRITE_TAC [GSYM APPEND_ASSOC,APPEND,rich_listTheory.TAKE_LENGTH_APPEND, 
+      rw[unbar2p_induct] >>
+      REWRITE_TAC [GSYM APPEND_ASSOC,APPEND,rich_listTheory.TAKE_LENGTH_APPEND,
                    rich_listTheory.DROP_LENGTH_APPEND,ADD_CLAUSES] >>
-      `Tpow (ℓ M) ++ [F] ++ (n2bl M ++ q) = Tpow (LENGTH i) ++ [F] ++ (i ++ q')` by 
+      `Tpow (ℓ M) ++ [F] ++ (n2bl M ++ q) = Tpow (LENGTH i) ++ [F] ++ (i ++ q')` by
         metis_tac[APPEND_ASSOC] >>
       `ℓ M = LENGTH i` by fs[] >>
       `n2bl M ++ q = i++q'` by fs[] >>
       `q=q'` by (`DROP (LENGTH i) (i++q') = q'` by simp[rich_listTheory.DROP_LENGTH_APPEND] >>
                  `DROP (LENGTH i) (n2bl M ++ q) = q'` by fs[] >>
-                 `DROP (ℓ M) (n2bl M ++ q) = q'` by fs[] >> 
-                 `DROP (LENGTH (n2bl M)) (n2bl M ++ q) = q` by 
-                   rw[rich_listTheory.DROP_LENGTH_APPEND] >> fs[] ) >> 
+                 `DROP (ℓ M) (n2bl M ++ q) = q'` by fs[] >>
+                 `DROP (LENGTH (n2bl M)) (n2bl M ++ q) = q` by
+                   rw[rich_listTheory.DROP_LENGTH_APPEND] >> fs[] ) >>
       `bl2n i = M` suffices_by fs[] >> `n2bl M = i` by fs[] >>
       `bl2n (n2bl M) = bl2n i` by fs[] >> rw[bool_num_inv]
        )
@@ -1083,8 +1083,8 @@ Proof
            (bl2n (FST (unbar2p 0 ( Tpow (ℓ M) ++ F::(n2bl M ++ q)))))` by metis_tac[] >>
        `unbar2p 0 (Tpow (ℓ M)  ++ F::(n2bl M ++ q)) =
          (TAKE (0 + (ℓ M) ) (n2bl M ++ q),DROP (0+ (ℓ M) ) (n2bl M ++ q))` by fs[unbar2p_induct] >>
-       fs[] >> `(TAKE (LENGTH (n2bl M)) (n2bl M ++ q)) = n2bl M` by 
-                 metis_tac[rich_listTheory.TAKE_LENGTH_APPEND] >> fs[] )  >> 
+       fs[] >> `(TAKE (LENGTH (n2bl M)) (n2bl M ++ q)) = n2bl M` by
+                 metis_tac[rich_listTheory.TAKE_LENGTH_APPEND] >> fs[] )  >>
   metis_tac[]
 QED
 
@@ -1154,8 +1154,8 @@ QED
 Theorem unbar2p_bar[simp]:
   unbar2p 0 (bar x) = (x,[])
 Proof
-  fs[bar_def] >> `Tpow (LENGTH x) ++ [F] ++ x = Tpow (LENGTH x) ++ F::x` by fs[] >> 
-  rw[unbar2p_induct] >> `DROP (LENGTH x) x = DROP (LENGTH x) (x++[])` by fs[] >> 
+  fs[bar_def] >> `Tpow (LENGTH x) ++ [F] ++ x = Tpow (LENGTH x) ++ F::x` by fs[] >>
+  rw[unbar2p_induct] >> `DROP (LENGTH x) x = DROP (LENGTH x) (x++[])` by fs[] >>
   rw[rich_listTheory.DROP_LENGTH_APPEND]
 QED
 
@@ -1187,27 +1187,27 @@ QED
 Theorem TAKE_LENGTH_APPEND2[simp]:
   TAKE (LENGTH l1) (l1 ++ l2 ++ l3) = l1
 Proof
-  `l1++l2++l3 = l1 ++ (l2++l3)` by fs[] >> 
+  `l1++l2++l3 = l1 ++ (l2++l3)` by fs[] >>
   REWRITE_TAC [APPEND,GSYM APPEND_ASSOC,rich_listTheory.TAKE_LENGTH_APPEND]
 QED
 
 Theorem DROP_LENGTH_APPEND2[simp]:
   DROP (LENGTH l1) (l1 ++ l2 ++ l3) = l2++l3
 Proof
-  `l1++l2++l3 = l1 ++ (l2++l3)` by fs[] >> 
+  `l1++l2++l3 = l1 ++ (l2++l3)` by fs[] >>
   REWRITE_TAC [APPEND,GSYM APPEND_ASSOC,rich_listTheory.DROP_LENGTH_APPEND]
 QED
 
 Theorem HUTMpf_prefix_fee:
   prefix_free {x | (∃y. HUTMpf x = SOME y)}
 Proof
-  rw[] >> fs[prefix_free_def] >> rw[HUTMpf_def] >> 
+  rw[] >> fs[prefix_free_def] >> rw[HUTMpf_def] >>
   spose_not_then assume_tac >> fs[prefix_append,bar2ped_def,prefix_free_fn_def] >>
   fs[bar_def] >>
   `a++s = Tpow (LENGTH i) ++ [F] ++ (i ++ q++s)` by fs[] >> fs[] >>
   `Tpow (LENGTH i) ++ [F] ++ i ++ q  = Tpow (LENGTH i) ++ [F] ++ ( i ++ q)` by fs[] >>fs[]>>
   rw[] >> fs[rich_listTheory.TAKE_LENGTH_APPEND,rich_listTheory.DROP_LENGTH_APPEND] >>
-  fs[prefix_free_def] >> 
+  fs[prefix_free_def] >>
   ` (∃y. Phi (bl2n i) (bl2n q) = SOME y) ∧
              (∃y. Phi (bl2n i) (bl2n (q++s)) = SOME y) ⇒
              ¬(q ≺ q++s)` by fs[] >> `¬(q ≺ q++s)` by fs[] >> fs[prefix_def]
@@ -1216,20 +1216,20 @@ QED
 
 
 Theorem HUTM_prefix_free:
-  ∀M. prefix_free {x | (∃y. Phi M (bl2n x) = SOME y)} ==> 
+  ∀M. prefix_free {x | (∃y. Phi M (bl2n x) = SOME y)} ==>
       prefix_free {x | (∃p. x = bar (n2bl M) ++ p) ∧ (∃y. HUTM x = SOME y)}
 Proof
-  rw[] >> fs[prefix_free_def] >> rw[] >> 
-  `(∃y. Phi M (bl2n p) = SOME y) ∧ (∃y. Phi M (bl2n p') = SOME y) ⇒ ¬( p ≺  p')` 
-    by metis_tac[] >> 
+  rw[] >> fs[prefix_free_def] >> rw[] >>
+  `(∃y. Phi M (bl2n p) = SOME y) ∧ (∃y. Phi M (bl2n p') = SOME y) ⇒ ¬( p ≺  p')`
+    by metis_tac[] >>
   `Phi M (bl2n p) = SOME y` by fs[HUTM_corr] >>
   `Phi M (bl2n p') = SOME y'` by fs[HUTM_corr] >> fs[] >>
   spose_not_then assume_tac >> fs[prefix_append]
 QED
 
-val recfn_index_def = 
-new_specification("recfn_index_def", ["recfn_index"], 
-		  recfns_in_Phi 
+val recfn_index_def =
+new_specification("recfn_index_def", ["recfn_index"],
+		  recfns_in_Phi
 		      |> SIMP_RULE (srw_ss()) [LEFT_FORALL_IMP_THM]
 		      |> SIMP_RULE (srw_ss()) [GSYM RIGHT_EXISTS_IMP_THM, SKOLEM_THM])
 
@@ -1249,11 +1249,11 @@ open reductionEval;
 Theorem HUTMpf_print_pf:
   prefix_free_fn (bl2n (FST (unbar2p 0 (HUTMpf_print x))))
 Proof
-  fs[prefix_free_fn_def,HUTMpf_print_def,unbar2p_bar] >>  
+  fs[prefix_free_fn_def,HUTMpf_print_def,unbar2p_bar] >>
   simp[Phi_def,the_lemma,normal_orderTheory.bnf_bnf_of] >>
   qmatch_abbrev_tac`prefix_free s` >> `s = {[]}` suffices_by fs[] >>
   fs[Abbr`s`,EXTENSION] >> rw[] >> Cases_on`x'` >> fs[] >>
-  asm_simp_tac(bsrw_ss())[bool_list_to_num_def,normal_orderTheory.bnf_bnf_of,churchnumTheory.bnf_church] >> 
+  asm_simp_tac(bsrw_ss())[bool_list_to_num_def,normal_orderTheory.bnf_bnf_of,churchnumTheory.bnf_church] >>
   Cases_on`(if h then 2 else 1) + 2 * bl2n t` >> rw[] >- (fs[] >> Cases_on`h`>>fs[]) >>
   asm_simp_tac(bsrw_ss())[churchnumTheory.church_thm]
 QED
@@ -1261,7 +1261,7 @@ QED
 Theorem HUTMpf_print_corr:
   HUTMpf (HUTMpf_print x) = SOME x
 Proof
-  simp[HUTMpf_def,bar_def,bar2ped_HUTMpf_print,Phi_def,HUTMpf_print_pf,bar2ped_HUTMpf_print] >> 
+  simp[HUTMpf_def,bar_def,bar2ped_HUTMpf_print,Phi_def,HUTMpf_print_pf,bar2ped_HUTMpf_print] >>
   qexists_tac`church x` >>
   simp[the_lemma,normal_orderTheory.bnf_bnf_of,HUTMpf_print_def] >>
   asm_simp_tac(bsrw_ss())[bool_list_to_num_def,churchnumTheory.church_thm,normal_orderTheory.bnf_bnf_of,churchnumTheory.bnf_church]
@@ -1270,7 +1270,7 @@ QED
 Theorem HUTMpf_nonempty:
   {p | HUTMpf p = SOME x} <> {}
 Proof
-  fs[EXTENSION,HUTMpf_def] >> qexists_tac`(HUTMpf_print x)` >> 
+  fs[EXTENSION,HUTMpf_def] >> qexists_tac`(HUTMpf_print x)` >>
   rw[HUTMpf_print_pf,bar2ped_HUTMpf_print] >> fs[HUTMpf_print_def,Phi_def] >>
   qexists_tac`church x` >>
   simp[the_lemma,normal_orderTheory.bnf_bnf_of,bool_list_to_num_def] >>
@@ -1278,30 +1278,30 @@ Proof
 QED
 
 Theorem HUTMpf_invariance_theorem:
-  prefix_free_fn M ==> 
+  prefix_free_fn M ==>
   ∃C. ∀x. (kolmog_complexity x HUTMpf) <= (kolmog_complexity x (λy. recPhi [M;bl2n y])) + (C M)
 Proof
-  rw[kolmog_complexity_def] >> `∃g. ∀x. recPhi [M; x] = HUTMpf (g ++ n2bl x)` by 
+  rw[kolmog_complexity_def] >> `∃g. ∀x. recPhi [M; x] = HUTMpf (g ++ n2bl x)` by
     fs[HUTMpf_univpf] >> qexists_tac`λx. SOME (LENGTH g)` >> rw[]
   >- (fs[HUTMpf_nonempty])
-  >- (`MIN_SET (IMAGE LENGTH {p | HUTMpf p = SOME x}) ∈ 
+  >- (`MIN_SET (IMAGE LENGTH {p | HUTMpf p = SOME x}) ∈
         IMAGE LENGTH ({p | HUTMpf p = SOME x})` by fs[MIN_SET_LEM] >> fs[IMAGE_DEF] >>
       qabbrev_tac`HUTMpf_x = x'` >>
       `∀x'. Phi M (bl2n x') = HUTMpf (g ++ x')`  by fs[] >>
-      `MIN_SET (IMAGE LENGTH {y | HUTMpf (g ++ y) = SOME x}) ∈ 
+      `MIN_SET (IMAGE LENGTH {y | HUTMpf (g ++ y) = SOME x}) ∈
         IMAGE LENGTH ({y | HUTMpf (g ++ y) = SOME x})` by fs[MIN_SET_LEM] >> fs[IMAGE_DEF] >>
       qabbrev_tac`M_x = x''` >>
       `{LENGTH y | HUTMpf (g ++ y) = SOME x} <> {}` by (fs[EXTENSION] >> qexists_tac`M_x`>>fs[])>>
       qabbrev_tac`a=LENGTH g` >>
-      `a + MIN_SET {b | b ∈  {LENGTH y | HUTMpf (g ++ y) = SOME x}} = 
+      `a + MIN_SET {b | b ∈  {LENGTH y | HUTMpf (g ++ y) = SOME x}} =
         MIN_SET {a + b | b ∈  {LENGTH y | HUTMpf (g ++ y) = SOME x}}` by fs[MIN_SET_ladd] >>
-      fs[] >> 
-      `{LENGTH p | HUTMpf p = SOME x} <> {}` by (`IMAGE LENGTH { p | HUTMpf p = SOME x} ≠ ∅` by 
+      fs[] >>
+      `{LENGTH p | HUTMpf p = SOME x} <> {}` by (`IMAGE LENGTH { p | HUTMpf p = SOME x} ≠ ∅` by
         fs[IMAGE_EQ_EMPTY] >>
         `{LENGTH p | p ∈ {q | HUTMpf q= SOME x}} ≠ ∅` by metis_tac[IMAGE_DEF] >> fs[]) >>
-      `MIN_SET {LENGTH p | HUTMpf p = SOME x} ∈ {LENGTH p | HUTMpf p = SOME x} ∧ 
-        ∀q. q ∈ {LENGTH p | HUTMpf p = SOME x} ⇒ MIN_SET {LENGTH p | HUTMpf p = SOME x} ≤ q` by 
-        fs[MIN_SET_LEM] >> 
+      `MIN_SET {LENGTH p | HUTMpf p = SOME x} ∈ {LENGTH p | HUTMpf p = SOME x} ∧
+        ∀q. q ∈ {LENGTH p | HUTMpf p = SOME x} ⇒ MIN_SET {LENGTH p | HUTMpf p = SOME x} ≤ q` by
+        fs[MIN_SET_LEM] >>
       `MIN_SET {LENGTH x' | HUTMpf x' = SOME x} ≤
        MIN_SET {a + b | (∃y. b = LENGTH y ∧ HUTMpf (g ++ y) = SOME x)}` suffices_by fs[]>>
       irule SUBSET_MIN_SET >> rw[]
@@ -1322,16 +1322,16 @@ Theorem MIN_SET_ADD:
   s<> {} ∧ t <> {} ==> (MIN_SET {b | b∈s} + MIN_SET {a | a∈t} = MIN_SET {a+b | a∈t ∧ b∈s})
 Proof
   rw[] >> `MIN_SET s ∈ s ∧ ∀x. x ∈ s ⇒ MIN_SET s ≤ x` by fs[MIN_SET_LEM] >>
-  `MIN_SET t ∈ t ∧ ∀x. x ∈ t ⇒ MIN_SET t ≤ x` by fs[MIN_SET_LEM] >> 
-  
-  `((MIN_SET t) + (MIN_SET s)) ∈ {a + b | a ∈ t ∧ b ∈ s}` by 
+  `MIN_SET t ∈ t ∧ ∀x. x ∈ t ⇒ MIN_SET t ≤ x` by fs[MIN_SET_LEM] >>
+
+  `((MIN_SET t) + (MIN_SET s)) ∈ {a + b | a ∈ t ∧ b ∈ s}` by
     (fs[] >> qexists_tac`MIN_SET t` >> qexists_tac`MIN_SET s` >> fs[] ) >>
 
   `{a + b | a∈t ∧ b ∈ s} <> {}` by (fs[EXTENSION] >> qexists_tac`x'` >> qexists_tac`x` >>fs[]) >>
   `MIN_SET {a + b | a ∈ t ∧ b ∈ s} ∈ {a + b | a ∈ t ∧ b ∈ s} ∧
     ∀x. x ∈ {a + b |a∈t ∧ b ∈ s} ⇒ MIN_SET {a + b | a∈t ∧ b ∈ s} ≤ x` by fs[MIN_SET_LEM] >>
   `MIN_SET {a + b | a ∈ t ∧ b ∈ s} <= MIN_SET t + MIN_SET s` by metis_tac[] >>
-  `∀x y. x ∈ s ∧ y∈t ⇒ MIN_SET t + MIN_SET s ≤ y + x` by 
+  `∀x y. x ∈ s ∧ y∈t ⇒ MIN_SET t + MIN_SET s ≤ y + x` by
     (rw[] >> `MIN_SET s <= x ∧ MIN_SET t <=y` by fs[] >> fs[]) >>
   fs[] >> `MIN_SET s + MIN_SET t <= b'+a'` by fs[] >>
   `a'+b' <= MIN_SET s + MIN_SET t` by fs[] >> fs[]
@@ -1340,11 +1340,11 @@ QED
 Theorem MIN_SET_ADD2:
   s<> {} ∧ t <> {} ==> (MIN_SET s + MIN_SET t = MIN_SET {a+b | a∈t ∧ b∈s})
 Proof
-  `s<> {} ∧ t <> {} ==> (MIN_SET {b | b∈s} + MIN_SET {a | a∈t} = MIN_SET {a+b | a∈t ∧ b∈s})` 
+  `s<> {} ∧ t <> {} ==> (MIN_SET {b | b∈s} + MIN_SET {a | a∈t} = MIN_SET {a+b | a∈t ∧ b∈s})`
     by fs[MIN_SET_ADD] >> fs[]
 QED
 
-val kolmog_fn_def = Define`kolmog_fn f = if (∃n. recfn f n) 
+val kolmog_fn_def = Define`kolmog_fn f = if (∃n. recfn f n)
                                            then SOME (MIN_SET {p | p=recfn_index f})
                                          else NONE`
 
@@ -1360,19 +1360,19 @@ QED
 Theorem kolmog_concat:
   ∀x y. ∃C. kolmogpf (x ⊗ y) <= (kolmogpf x) + (kolmogpf y) + C
 Proof
-  rw[] >> qexists_tac`recfn_index (SOME o (pr2 npair))` >> 
+  rw[] >> qexists_tac`recfn_index (SOME o (pr2 npair))` >>
   fs[kolmogpf_def,kolmog_complexity_def,HUTMpf_nonempty] >>
-  `({LENGTH p | HUTMpf p = SOME x} <> {}) ∧ {LENGTH p | HUTMpf p = SOME y} <> {}` by 
-    (rw[EXTENSION] >-( qexists_tac`HUTMpf_print x` >> fs[HUTMpf_print_corr]) 
+  `({LENGTH p | HUTMpf p = SOME x} <> {}) ∧ {LENGTH p | HUTMpf p = SOME y} <> {}` by
+    (rw[EXTENSION] >-( qexists_tac`HUTMpf_print x` >> fs[HUTMpf_print_corr])
                    >-( qexists_tac`HUTMpf_print y` >> fs[HUTMpf_print_corr]))
   `MIN_SET {LENGTH p | HUTMpf p = SOME x} +
-   MIN_SET {LENGTH p | HUTMpf p = SOME y} = 
+   MIN_SET {LENGTH p | HUTMpf p = SOME y} =
    MIN_SET { l1 + l2 | (l1 ∈ ({LENGTH p | HUTMpf p = SOME y} )) ∧ (l2 ∈ ( {LENGTH p | HUTMpf p = SOME x}) ) }` by fs[MIN_SET_ADD2] >>
   ` MIN_SET {LENGTH p | HUTMpf p = SOME x} +
    (MIN_SET {LENGTH p | HUTMpf p = SOME y} + recfn_index (SOME ∘ pr2 $*,)) =  (MIN_SET {LENGTH p | HUTMpf p = SOME x} +
    MIN_SET {LENGTH p | HUTMpf p = SOME y}) + recfn_index (SOME ∘ pr2 $*,)` by fs[] >> rw[] >>
 
-  fs[HUTMpf_def] >> 
+  fs[HUTMpf_def] >>
   rw[recfn_index_def]
 QED
 
@@ -1554,7 +1554,7 @@ Theorem plain_kolmog_thm:
   plain_kolmog x = (MIN_SET {LENGTH p |  Phi (bl2n p) 0 = SOME x})
 Proof
   fs[plain_kolmog_def,kolmog_complexity_def] >> Cases_on`{y | Phi (bl2n y) 0 = SOME x} = ∅` >>
-  fs[] >> `∃y. Phi (bl2n y) 0 = SOME x` by fs[Phi_bl2nx_0] >> 
+  fs[] >> `∃y. Phi (bl2n y) 0 = SOME x` by fs[Phi_bl2nx_0] >>
   `y∈{y | Phi (bl2n y) 0 = SOME x}` by fs[] >> metis_tac[MEMBER_NOT_EMPTY]
 QED
 
@@ -1566,7 +1566,7 @@ Theorem arg_plain_kolmog_thm:
   arg_plain_kolmog x = @q. Phi ( q) 0 = SOME x ∧ LENGTH (n2bl q) = plain_kolmog x
 Proof
   fs[arg_plain_kolmog_def,plain_kolmog_thm] >>
-  `{ℓ p | Phi p 0 = SOME x} = {LENGTH p | Phi (bl2n p) 0 = SOME x}` by (fs[EXTENSION] >> 
+  `{ℓ p | Phi p 0 = SOME x} = {LENGTH p | Phi (bl2n p) 0 = SOME x}` by (fs[EXTENSION] >>
     rw[] >> eq_tac >> rw[] >- (qexists_tac`n2bl p` >> fs[]) >- (qexists_tac`bl2n p` >> fs[]) )>>
   fs[]
 QED
@@ -1574,23 +1574,23 @@ QED
 Theorem arg_plain_kolmog_exists:
   ∃q. Phi q 0 = SOME x ∧ LENGTH (n2bl q) = plain_kolmog x
 Proof
-  fs[plain_kolmog_thm] >> `{LENGTH p | Phi (bl2n p) 0 = SOME x} <> {}` by 
-    fs[EXTENSION,Phi_bl2nx_0] >>  
-  `MIN_SET {LENGTH p | Phi (bl2n p) 0 = SOME x} ∈ {LENGTH p | Phi (bl2n p) 0 = SOME x} ` by 
-    fs[MIN_SET_LEM] >> 
-  `IMAGE LENGTH {p | Phi (bl2n p) 0 = SOME x} = {LENGTH p | Phi (bl2n p) 0 = SOME x}` by 
-    fs[IMAGE_DEF] >> 
-  `MIN_SET {LENGTH p | Phi (bl2n p) 0 = SOME x} ∈ IMAGE LENGTH {p | Phi (bl2n p) 0 = SOME x}` by 
+  fs[plain_kolmog_thm] >> `{LENGTH p | Phi (bl2n p) 0 = SOME x} <> {}` by
+    fs[EXTENSION,Phi_bl2nx_0] >>
+  `MIN_SET {LENGTH p | Phi (bl2n p) 0 = SOME x} ∈ {LENGTH p | Phi (bl2n p) 0 = SOME x} ` by
+    fs[MIN_SET_LEM] >>
+  `IMAGE LENGTH {p | Phi (bl2n p) 0 = SOME x} = {LENGTH p | Phi (bl2n p) 0 = SOME x}` by
+    fs[IMAGE_DEF] >>
+  `MIN_SET {LENGTH p | Phi (bl2n p) 0 = SOME x} ∈ IMAGE LENGTH {p | Phi (bl2n p) 0 = SOME x}` by
     metis_tac[] >>
-  `∃q1. MIN_SET {LENGTH p | Phi (bl2n p) 0 = SOME x} =  LENGTH q1 ∧ q1 ∈ {p | Phi (bl2n p) 0 = SOME x}` by 
+  `∃q1. MIN_SET {LENGTH p | Phi (bl2n p) 0 = SOME x} =  LENGTH q1 ∧ q1 ∈ {p | Phi (bl2n p) 0 = SOME x}` by
     metis_tac[IN_IMAGE] >> qexists_tac`bl2n q1` >> fs[]
 QED
 
 Theorem Phi_arg_pl_kolmog:
   Phi (arg_plain_kolmog y) 0 = SOME y
 Proof
-  fs[arg_plain_kolmog_thm] >> 
-  `∃q. Phi q 0 = SOME y ∧ LENGTH (n2bl q) = plain_kolmog y` by fs[arg_plain_kolmog_exists] >> 
+  fs[arg_plain_kolmog_thm] >>
+  `∃q. Phi q 0 = SOME y ∧ LENGTH (n2bl q) = plain_kolmog y` by fs[arg_plain_kolmog_exists] >>
   metis_tac[GSYM SELECT_THM]
 QED
 
@@ -1614,19 +1614,19 @@ SELECT_AX,SELECT_ELIM_THM,SELECT_REFL,SELECT_REFL_2,SELECT_THM,SELECT_UNIQUE
 
 (* up to here *)
 
-(* To prove maybe 
+(* To prove maybe
 Theorem LEGNTH_n2bl_LOG:
   0<x ==> LENGTH (n2bl x) = LOG 2 (SUC x)
 Proof
   rw[] >>
   Induct_on`LOG 2 x` >> rw[] >- (`x=1` by  fs[LOG_EQ_0] >> rw[] >> EVAL_TAC >> fs[LOG_BASE] ) >>
-  
+
 QED
 
 Theorem LENGTH_n2bl_ineq:
   ℓ q < ℓ k ==> q< k
 Proof
-  
+
 QED
 *)
 
@@ -1642,21 +1642,21 @@ Theorem arg_pl_kolmog_min:
 Proof
   cheat
   (*
-  rw[arg_plain_kolmog_thm] >>  
-  `(∃q. Phi q 0 = SOME y ∧ ℓ q = plain_kolmog y ∧ (q<=k))` by 
-  (Cases_on`ℓ k = plain_kolmog y` >- (qexists_tac`k` >> fs[]) >>  
+  rw[arg_plain_kolmog_thm] >>
+  `(∃q. Phi q 0 = SOME y ∧ ℓ q = plain_kolmog y ∧ (q<=k))` by
+  (Cases_on`ℓ k = plain_kolmog y` >- (qexists_tac`k` >> fs[]) >>
   `∃q. Phi q 0 = SOME y ∧ LENGTH (n2bl q) = plain_kolmog y` by fs[arg_plain_kolmog_exists]>>
-  `(∀x. (Phi x 0 = SOME y ∧ ℓ x = plain_kolmog y) ⇒ (ℓ x<= ℓ k))` by 
-    (rw[] >> fs[plain_kolmog_thm] >> 
-     `{LENGTH p | Phi (bl2n p) 0 = SOME y} <> {}` by fs[MIN_SET_L_PHI_NON_EMPTY] >> 
-     `∀x. x ∈ {LENGTH p | Phi (bl2n p) 0 = SOME y} ⇒ 
-          MIN_SET {LENGTH p | Phi (bl2n p) 0 = SOME y} ≤ x` by fs[MIN_SET_LEM] >> 
+  `(∀x. (Phi x 0 = SOME y ∧ ℓ x = plain_kolmog y) ⇒ (ℓ x<= ℓ k))` by
+    (rw[] >> fs[plain_kolmog_thm] >>
+     `{LENGTH p | Phi (bl2n p) 0 = SOME y} <> {}` by fs[MIN_SET_L_PHI_NON_EMPTY] >>
+     `∀x. x ∈ {LENGTH p | Phi (bl2n p) 0 = SOME y} ⇒
+          MIN_SET {LENGTH p | Phi (bl2n p) 0 = SOME y} ≤ x` by fs[MIN_SET_LEM] >>
      `LENGTH (n2bl k) ∈ IMAGE LENGTH { p | Phi (bl2n p) 0 = SOME y}` by fs[] >>
-     `ℓ k ∈ {LENGTH p | Phi (bl2n p) 0 = SOME y}` by 
-       (rfs[IMAGE_DEF] >> qexists_tac`n2bl k` >> fs[]) >> 
-     ` MIN_SET {LENGTH p | Phi (bl2n p) 0 = SOME y} ≤ ℓ k` by metis_tac[] >> fs[] ) >> 
-   `ℓ q <= ℓ k` by metis_tac[] >> `ℓ q < ℓ k` by fs[] >> qexists_tac`q` >> rw[] >> 
-   `q < k` by fs[LENGTH_n2bl_ineq] >> fs[]) >> 
+     `ℓ k ∈ {LENGTH p | Phi (bl2n p) 0 = SOME y}` by
+       (rfs[IMAGE_DEF] >> qexists_tac`n2bl k` >> fs[]) >>
+     ` MIN_SET {LENGTH p | Phi (bl2n p) 0 = SOME y} ≤ ℓ k` by metis_tac[] >> fs[] ) >>
+   `ℓ q <= ℓ k` by metis_tac[] >> `ℓ q < ℓ k` by fs[] >> qexists_tac`q` >> rw[] >>
+   `q < k` by fs[LENGTH_n2bl_ineq] >> fs[]) >>
 
   metis_tac[SELECT_ELIM_THM] >>
   fs[GSYM SELECT_THM] *)
@@ -1668,8 +1668,8 @@ Theorem part1:
   computable kolmog ==> ∃j. ∀y. ∃i. Phi j y = SOME i ∧ Phi i 0 = SOME y ∧ ∀k. Phi k 0 = SOME y ==> i<= k
 Proof
   cheat
-  (* 
-  rw[computable_def] >> qexists_tac`@q.∀y. Phi q y = SOME (MIN_SET {p | Phi p 0 = SOME y })` >> 
+  (*
+  rw[computable_def] >> qexists_tac`@q.∀y. Phi q y = SOME (MIN_SET {p | Phi p 0 = SOME y })` >>
   rw[] >> qexists_tac`MIN_SET {p | Phi p 0 = SOME y }` >> *)
 QED
 
@@ -1690,8 +1690,8 @@ Proof
   rw[computable_def] >> qexists_tac`i` >> rw[arg_pl_kolmog2_min,Phi_arg_pl_kolmog2]
 QED
 
-val yMt_pred_def = Define`yMt_pred e n yi Mi ti <=> plain_kolmog yi < 2*n ∧ 
-                                                LOG 2 yi = 2* n ∧ 
+val yMt_pred_def = Define`yMt_pred e n yi Mi ti <=> plain_kolmog yi < 2*n ∧
+                                                LOG 2 yi = 2* n ∧
                                                 LOG 2 Mi = kolmog yi ∧
                                                 terminated (steps ti (mk_initial_state Mi 0)) ∧
                                                 cs_to_num (steps ti (mk_initial_state Mi 0)) = yi ∧
@@ -1702,7 +1702,7 @@ val yMt_pred_def = Define`yMt_pred e n yi Mi ti <=> plain_kolmog yi < 2*n ∧
 (* unproven *)
 (*
 Theorem part2:
-  computable kolmog ==> ∃j. ∀n. ∃l. Phi j n = SOME (nlist_of l) ∧ 
+  computable kolmog ==> ∃j. ∀n. ∃l. Phi j n = SOME (nlist_of l) ∧
                        (∀e. MEM e l <=> ∃yi Mi ti. yMt_pred e n yi Mi ti)
 Proof
      rw[computable_def] >> arg_plain_kolmog2_def]
@@ -1712,7 +1712,7 @@ QED
 (* unproven *)
 
 Theorem part22:
-  computable plain_kolmog ==> ∃j. ∀n. ∃l. Phi j n = SOME (nlist_of l) ∧ 
+  computable plain_kolmog ==> ∃j. ∀n. ∃l. Phi j n = SOME (nlist_of l) ∧
                        (∀e. MEM e l <=> ∃yi Mi ti. yMt_pred e n yi Mi ti)
 Proof
   cheat
@@ -1745,7 +1745,7 @@ open whileTheory;
 Theorem terminated_ge:
   (a > b) ==> (terminated (steps b cs) ==> terminated (steps a cs))
 Proof
-  rw[] >> `∃c. c>0 ∧  a = b+c` by (qexists_tac`a-b` >> fs[]) >> rw[] >> 
+  rw[] >> `∃c. c>0 ∧  a = b+c` by (qexists_tac`a-b` >> fs[]) >> rw[] >>
   `step1 (steps b cs) = steps b cs` by fs[terminated_step_in_place] >>
   `terminated (steps (c + b) cs)` suffices_by fs[] >>
   simp[steps_def,FUNPOW_ADD] >>
@@ -1763,7 +1763,7 @@ QED
 Theorem finite_logeq:
   1<a ==> FINITE {b | LOG a b = m}
 Proof
-  rw[] >> `{b | LOG a b = m} SUBSET {b | b<a ** SUC m}` by 
+  rw[] >> `{b | LOG a b = m} SUBSET {b | b<a ** SUC m}` by
              (fs[SUBSET_DEF] >> rw[]>> Cases_on`x` >> fs[LOG]) >>
   `FINITE {b | b < a ** SUC m}` by (`FINITE (count (a ** SUC m))` suffices_by metis_tac[count_def] >> fs[FINITE_COUNT] ) >> metis_tac[SUBSET_FINITE_I]
 QED
@@ -1784,11 +1784,11 @@ Theorem terminated_imp:
   ¬( terminated (steps (t-1) (mk_initial_state M x))) ∧ terminated (steps t (mk_initial_state M x)) ==> Phi M x = SOME (cs_to_num (steps t (mk_initial_state M x) ))
 Proof
   rw[] >> fs[Phi_steps] >> `comp_count (mk_initial_state M x) = SOME t` suffices_by fs[] >>
-  fs[comp_count_def] >> fs[OLEAST_EQ_SOME] >> rw[] >> strip_tac >> 
+  fs[comp_count_def] >> fs[OLEAST_EQ_SOME] >> rw[] >> strip_tac >>
   `∃c.0<c ∧ n+c = t` by (qexists_tac`t-n` >> fs[]) >> rw[] >>
-  `steps (n + c) (mk_initial_state M x) = steps (n + c - 1) (mk_initial_state M x)` by 
-    (`step1 (steps n (mk_initial_state M x)) = (steps n (mk_initial_state M x))` by 
-       fs[terminated_step_in_place] >> fs[steps_def] >> 
+  `steps (n + c) (mk_initial_state M x) = steps (n + c - 1) (mk_initial_state M x)` by
+    (`step1 (steps n (mk_initial_state M x)) = (steps n (mk_initial_state M x))` by
+       fs[terminated_step_in_place] >> fs[steps_def] >>
      `FUNPOW step1 (c + n) (mk_initial_state M x) =
       FUNPOW step1 ((c-1) + n) (mk_initial_state M x)`suffices_by fs[] >>fs[FUNPOW_ADD] >>
      fs[FUNPOW_id] ) >> metis_tac[]
@@ -1808,42 +1808,42 @@ Theorem terminated_impdown:
   (¬(terminated (steps 0 (mk_initial_state M x)) ) ∧ terminated (steps t (mk_initial_state M x)))
     ==> ∃tl. Phi M x = SOME (cs_to_num (steps tl (mk_initial_state M x) ))
 Proof
-  rw[] >> `∃tll. tll<t ∧ ¬terminated (steps tll (mk_initial_state M x)) ∧  
-                 terminated (steps (tll+1) (mk_initial_state M x))` by 
-            metis_tac[terminated_down] >> qabbrev_tac`tk = tll+1` >> 
-  `tk-1 = tll` by fs[Abbr`tk`] >> rw[] >> 
-  `Phi M x = SOME (cs_to_num (steps (tk) (mk_initial_state M x) ))` by 
+  rw[] >> `∃tll. tll<t ∧ ¬terminated (steps tll (mk_initial_state M x)) ∧
+                 terminated (steps (tll+1) (mk_initial_state M x))` by
+            metis_tac[terminated_down] >> qabbrev_tac`tk = tll+1` >>
+  `tk-1 = tll` by fs[Abbr`tk`] >> rw[] >>
+  `Phi M x = SOME (cs_to_num (steps (tk) (mk_initial_state M x) ))` by
     metis_tac[terminated_imp]>> qexists_tac`tk` >> fs[]
 QED
 
-(* 
+(*
 Theorem big_T_Tmax_imp:
-  (big_T (LOG 2 (prime_tm M x) ) > tmax (LOG 2 (prime_tm M x) )) ==> 
+  (big_T (LOG 2 (prime_tm M x) ) > tmax (LOG 2 (prime_tm M x) )) ==>
    ( terminated (steps (big_T  (LOG 2 (prime_tm M x))) (mk_initial_state (prime_tm M x) 0 ))  <=> ((M,x)∈HALT ))
 Proof
   rw[] >> eq_tac >> rw[]
-  >- (fs[HALT_def] >> qexists_tac`big_T (LOG 2 (prime_tm M x))` >> 
-      `∃m. comp_count  (mk_initial_state (prime_tm M x) 0) = SOME m` by 
-        (fs[comp_count_def]>> 
-         `¬((OLEAST n. terminated (steps n (mk_initial_state (prime_tm M x) 0))) = NONE)` by 
+  >- (fs[HALT_def] >> qexists_tac`big_T (LOG 2 (prime_tm M x))` >>
+      `∃m. comp_count  (mk_initial_state (prime_tm M x) 0) = SOME m` by
+        (fs[comp_count_def]>>
+         `¬((OLEAST n. terminated (steps n (mk_initial_state (prime_tm M x) 0))) = NONE)` by
            (fs[OLEAST_EQ_NONE] >> qexists_tac` (big_T (LOG 2 (prime_tm M x)))` >> fs[]) >>
-        qexists_tac`THE (OLEAST n. terminated (steps n (mk_initial_state (prime_tm M x) 0)))`>> 
-        `IS_SOME  (OLEAST n. terminated (steps n (mk_initial_state (prime_tm M x) 0)))` 
-          suffices_by fs[quantHeuristicsTheory.SOME_THE_EQ ]  >> 
+        qexists_tac`THE (OLEAST n. terminated (steps n (mk_initial_state (prime_tm M x) 0)))`>>
+        `IS_SOME  (OLEAST n. terminated (steps n (mk_initial_state (prime_tm M x) 0)))`
+          suffices_by fs[quantHeuristicsTheory.SOME_THE_EQ ]  >>
         fs[quantHeuristicsTheory.IS_SOME_EQ_NOT_NONE] >>
-        qexists_tac`n` >> fs[]) >> 
-      `terminated (steps m (mk_initial_state (prime_tm M x) 0)) ∧ Phi (prime_tm M x) 0 = 
-       SOME (cs_to_num (steps m (mk_initial_state (prime_tm M x) 0)))` by 
+        qexists_tac`n` >> fs[]) >>
+      `terminated (steps m (mk_initial_state (prime_tm M x) 0)) ∧ Phi (prime_tm M x) 0 =
+       SOME (cs_to_num (steps m (mk_initial_state (prime_tm M x) 0)))` by
         (fs[correctness_on_termination] >> fs[comp_count_def,OLEAST_EQ_SOME]) >>
-      fs[prime_tm_corr] >> 
+      fs[prime_tm_corr] >>
       `tmax (LOG 2 (prime_tm M x)) = m` by (fs[tmax_def] >> fs[comp_count_def])
 
-       `terminated (steps (tmax (LOG (prime_tm M x) 2)) (mk_initial_state M x))` suffices_by 
-         metis_tac[terminated_ge] >>  ) 
+       `terminated (steps (tmax (LOG (prime_tm M x) 2)) (mk_initial_state M x))` suffices_by
+         metis_tac[terminated_ge] >>  )
   >- (fs[HALT_def] >> Cases_on`terminated (steps 0 (mk_initial_state M x))`
       >- (fs[])
       `terminated (steps (tmax (LOG 2 (prime_tm M x)))
-       (mk_initial_state (prime_tm M x) 0))` suffices_by metis_tac[terminated_ge] >> 
+       (mk_initial_state (prime_tm M x) 0))` suffices_by metis_tac[terminated_ge] >>
       fs[tmax_def] >> qmatch_abbrev_tac`terminated (steps (MAX_SET ts)
                                         (mk_initial_state (prime_tm M x) 0))` >>
       `FINITE ts` by (cheat) >>
