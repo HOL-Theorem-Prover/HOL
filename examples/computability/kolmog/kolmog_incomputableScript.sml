@@ -1,7 +1,9 @@
 open HolKernel Parse boolLib bossLib
 
 open arithmeticTheory logrootTheory pred_setTheory
-open recfunsTheory numsAsCompStatesTheory kolmog_complexTheory kraft_ineqTheory
+open reductionEval;
+open churchoptionTheory churchlistTheory recfunsTheory numsAsCompStatesTheory
+     kolmog_complexTheory kraft_ineqTheory
 
 val _ = new_theory "kolmog_incomputable"
 
@@ -14,14 +16,19 @@ val tmax_def = Define`
                             (LOG 2 m = n) }
 `;
 
-val BB_def = Define`BB n = @m. terminated (steps (tmax n) (mk_initial_state m 0)) ∧
-                                                (LOG 2 m = n) `
+val BB_def = Define`
+  BB n = @m. terminated (steps (tmax n) (mk_initial_state m 0)) ∧ (LOG 2 m = n)
+`;
 
-val HALT_def = Define`HALT = {(M,x)| ∃t. terminated (steps t (mk_initial_state M x)) }`
+val HALT_def = Define`
+  HALT = {(M,x)| ∃t. terminated (steps t (mk_initial_state M x)) }
+`;
 
 val _ = overload_on ("N2T",``λt. toTerm (numdB t)``)
 
-val prime_tm_def = Define`prime_tm M x = dBnum (fromTerm (K @@ (N2T M @@ church x)))`
+val prime_tm_def = Define`
+  prime_tm M x = dBnum (fromTerm (K @@ (N2T M @@ church x)))
+`;
 
 Theorem prime_tm_corr:
   Phi (prime_tm M x) 0 = Phi M x
@@ -30,19 +37,27 @@ Proof
 QED
 
 (** up to here **)
-open churchoptionTheory;
 
-val OGENLIST_def = Define`OGENLIST f 0 = [] ∧ OGENLIST f (SUC n) = OGENLIST f n ++ (case f n of NONE => []| SOME r => [r])`
+val OGENLIST_def = Define`
+  OGENLIST f 0 = [] ∧
+  OGENLIST f (SUC n) = OGENLIST f n ++ (case f n of NONE => []| SOME r => [r])
+`;
 
-val Z_lam_def = Define`Z_lam M n = λx. case comp_count (mk_initial_state M 0) of
-                                           NONE => NONE
-                                         | SOME s =>
-                                       let results =
-                                           OGENLIST  (λmi.
-                                             if terminated (steps s (mk_initial_state mi 0))
-                                             then SOME (cs_to_num (steps s (mk_initial_state mi 0)))
-                                             else NONE) (4**n DIV 2) in
-                                            SOME (LEAST x.  ¬MEM x results ∧ LOG 2 x = 2*n)`
+val Z_lam_def = Define‘
+  Z_lam M n =
+   λx. case comp_count (mk_initial_state M 0) of
+           NONE => NONE
+         | SOME s =>
+           let results =
+                 OGENLIST  (λmi. if terminated (steps s (mk_initial_state mi 0))
+                                 then
+                                   SOME (cs_to_num (steps s
+                                                      (mk_initial_state mi 0)))
+                                 else NONE)
+                           (4**n DIV 2)
+           in
+             SOME (LEAST x.  ¬MEM x results ∧ LOG 2 x = 2*n)
+’;
 
 
 val cap3_def = Define`cap3 = LAM "f" (
@@ -51,7 +66,7 @@ val cap3_def = Define`cap3 = LAM "f" (
           @@ (cpair @@ (cfst @@ (csnd @@ VAR "p"))
                     @@ (VAR "f" @@ (csnd @@ (csnd @@ VAR "p"))))
   )
-)`
+)`;
 
 Theorem FV_cap3[simp]: FV cap3 = {}
 Proof simp[EXTENSION,cap3_def]
@@ -61,17 +76,20 @@ val dt0_def = Define`dt0 = LAM "p" (LAM "ms" (LAM "i"
  (cfilter
    @@ (B @@ VAR "p" @@ (B @@ csnd @@ csnd ) )
    @@ (cmap @@ (cap3 @@ cforce_num)
-            @@ (cfilter @@ (B @@ cbnf @@ (B @@ csnd @@ csnd) ))
-                        @@ (cmap @@ (LAM "pair" (
-                                       (LAM "m" (LAM "j" (
-                                          cpair @@ VAR "m"
-                                                @@ (cpair
-                                                      @@ VAR "j"
-                                                      @@ (csteps @@ VAR "i"
-                                                                 @@ (cdAPP @@ VAR "m" @@ VAR "j")))))) @@
- (cfst @@ VAR"pair") @@ (csnd @@ VAR "pair")))
+            @@ (cfilter
+                  @@ (B @@ cbnf @@ (B @@ csnd @@ csnd) ))
+                  @@ (cmap
+                      @@ (LAM "pair" (
+                             (LAM "m" (LAM "j" (
+                                cpair @@ VAR "m"
+                                      @@ (cpair
+                                           @@ VAR "j"
+                                           @@ (csteps
+                                                @@ VAR "i"
+                                                @@ (cdAPP @@ VAR "m"
+                                                          @@ VAR "j"))))))
+                               @@ (cfst @@ VAR"pair") @@ (csnd @@ VAR "pair")))
                                         @@ (VAR "ms") )  )
-
  ) ) )`
 
 (*val dt_def = Define`dt = LAM "p" (LAM "ms"
@@ -82,31 +100,6 @@ val size_dovetail_def = Define`size_dovetail0 P ms i = let results = map (λ(m,j
 
 (* Make fn which takes n and gives list of nats st log 2 nats = n *)
 *)
-open churchlistTheory;
-open reductionEval;
-
-val cexp_def = Define`cexp = LAM "m" (LAM "n" (VAR "n" @@ church 1 @@ (cmult @@ VAR "m")))`
-
-Theorem FV_cexp[simp]:
-  FV cexp = {}
-Proof
-  rw[cexp_def,EXTENSION]
-QED
-
-val cexp_eqn = brackabs.brackabs_equiv [] cexp_def
-
-Theorem cexp_behaviour:
-  cexp @@ m @@ church 0 == church 1 ∧
-  cexp @@ m @@ church (SUC n) == cmult @@ m @@ (cexp @@ m @@ church n)
-Proof
-  asm_simp_tac(bsrw_ss())[cexp_eqn]
-QED
-
-Theorem cexp_corr:
-  cexp @@ church m @@ church n == church (m**n)
-Proof
-  Induct_on`n` >>  asm_simp_tac(bsrw_ss())[cexp_behaviour,EXP]
-QED
 
 val log2list_def = Define`log2list n = GENLIST (λx. x+2**n) (2**n) `
 
@@ -339,13 +332,16 @@ QED
 
 
 
-val yMt_set_def = Define`yMt_set n = {(yi,Mi,t) | Mi = bl2n (arg_kolmog yi) ∧
-                                              LENGTH (n2bl yi) = 2*n ∧
-                                              kolmog yi < 2*n ∧
-                                              terminated (steps t (mk_initial_state Mi 0)) ∧
-                                              cs_to_num (steps t (mk_initial_state Mi 0)) = yi ∧
-                                              ∀t'. terminated (steps t' (mk_initial_state Mi 0)) ==>
-                                                t<=t'}`
+val yMt_set_def = Define`
+  yMt_set n = {(yi,Mi,t) | Mi = bl2n (arg_kolmog yi) ∧
+                           LENGTH (n2bl yi) = 2*n ∧
+                           kolmog yi < 2*n ∧
+                           terminated (steps t (mk_initial_state Mi 0)) ∧
+                           cs_to_num (steps t (mk_initial_state Mi 0)) = yi ∧
+                           ∀t'. terminated (steps t' (mk_initial_state Mi 0))
+                                  ==> t<=t'
+              }
+`;
 
 val big_T_def = Define`big_T n = MAX_SET (IMAGE SND (IMAGE SND (yMt_set n)))`
 
@@ -382,7 +378,9 @@ Theorem finite_logeq:
 Proof
   rw[] >> `{b | LOG a b = m} SUBSET {b | b<a ** SUC m}` by
              (fs[SUBSET_DEF] >> rw[]>> Cases_on`x` >> fs[LOG]) >>
-  `FINITE {b | b < a ** SUC m}` by (`FINITE (count (a ** SUC m))` suffices_by metis_tac[count_def] >> fs[FINITE_COUNT] ) >> metis_tac[SUBSET_FINITE_I]
+  `FINITE {b | b < a ** SUC m}` by (`FINITE (count (a ** SUC m))`
+     suffices_by metis_tac[count_def] >>
+  fs[FINITE_COUNT] ) >> metis_tac[SUBSET_FINITE_I]
 QED
 
 Theorem finite_log2:
@@ -398,17 +396,25 @@ Proof
 QED
 
 Theorem terminated_imp:
-  ¬( terminated (steps (t-1) (mk_initial_state M x))) ∧ terminated (steps t (mk_initial_state M x)) ==> Phi M x = SOME (cs_to_num (steps t (mk_initial_state M x) ))
+  ¬terminated (steps (t-1) (mk_initial_state M x)) ∧
+  terminated (steps t (mk_initial_state M x))
+    ==>
+  Phi M x = SOME (cs_to_num (steps t (mk_initial_state M x)))
 Proof
-  rw[] >> fs[Phi_steps] >> `comp_count (mk_initial_state M x) = SOME t` suffices_by fs[] >>
+  rw[] >> fs[Phi_steps] >> `comp_count (mk_initial_state M x) = SOME t`
+    suffices_by fs[] >>
   fs[comp_count_def] >> fs[OLEAST_EQ_SOME] >> rw[] >> strip_tac >>
   `∃c.0<c ∧ n+c = t` by (qexists_tac`t-n` >> fs[]) >> rw[] >>
-  `steps (n + c) (mk_initial_state M x) = steps (n + c - 1) (mk_initial_state M x)` by
-    (`step1 (steps n (mk_initial_state M x)) = (steps n (mk_initial_state M x))` by
-       fs[terminated_step_in_place] >> fs[steps_def] >>
-     `FUNPOW step1 (c + n) (mk_initial_state M x) =
-      FUNPOW step1 ((c-1) + n) (mk_initial_state M x)`suffices_by fs[] >>fs[FUNPOW_ADD] >>
-     fs[FUNPOW_id] ) >> metis_tac[]
+  ‘steps (n + c) (mk_initial_state M x) =
+   steps (n + c - 1) (mk_initial_state M x)’
+  by (
+   `step1 (steps n (mk_initial_state M x)) = (steps n (mk_initial_state M x))`
+     by fs[terminated_step_in_place] >> fs[steps_def] >>
+   `FUNPOW step1 (c + n) (mk_initial_state M x) =
+      FUNPOW step1 ((c-1) + n) (mk_initial_state M x)`
+   suffices_by fs[] >>fs[FUNPOW_ADD] >>
+   fs[FUNPOW_id]
+  ) >> metis_tac[]
 QED
 
 Theorem terminated_down:
