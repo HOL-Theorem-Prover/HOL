@@ -1020,7 +1020,7 @@ Proof
 QED
 
 Theorem Tpow_F_eq[simp]:
-  Tpow a ++ [F] = Tpow b ++ [F] ==> a=b
+  Tpow a ++ [F] = Tpow b ++ [F] <=> a=b
 Proof
   `TAKE a (Tpow a ++ [F]) = Tpow a` by
     (fs[Tpow_def,TAKE_GENLIST] >> `LENGTH (GENLIST (K T) a) = a` by fs[] >>

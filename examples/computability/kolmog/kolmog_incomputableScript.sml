@@ -347,14 +347,47 @@ Proof
    j is the machine that, given argument y, runs all machines of size
    equal to y's complexity (dovetailing) until it finds one that
    terminates on input 0. It can stop and output that machine's index.
+
+   fun jm y = let c = km y  ;
+                  machines = log2list c ;
+                  run i = map (λm. steps i (mk_state m 0)) machines ;
+              in
+                 cfindleast (λt. exists (λs. terminated s) (run t))
+                            (λi. 2 ** c + findindex is_terminated (run i))
 *)
+
+Theorem ELL_log2list:
+  ∀i n. MEM n (MAP PRE (log2list i)) ⇒ ℓ n = i
+Proof
+  simp[log2list_def, MEM_GENLIST, PULL_EXISTS, MEM_MAP, PRE_SUB1] >>
+  ‘∀j i. 2 ** i - 1 ≤ j ∧ j < 2 ** (i + 1) - 1 ⇒ ℓ j = i’
+     suffices_by (
+       rw[] >> first_x_assum irule >> simp[LT_SUB_RCANCEL, EXP_ADD] >>
+       ‘0 < 2**i’ suffices_by simp[] >>
+       simp[]
+     ) >>
+  completeInduct_on ‘j’ >>
+  simp[Once num_to_bool_list_def] >> rw[] >> fs[]
+  >- (Cases_on ‘i’ >> fs[EXP] >> fs[DECIDE “x ≤ 1n ⇔ x = 0 ∨ x = 1”]) >>
+  simp[DECIDE “SUC x = y ⇔ y ≠ 0 ∧ x = y - 1”] >> conj_asm1_tac >>
+  rpt strip_tac >> fs[] >> first_x_assum irule >>
+  simp[BIT1_smaller, BIT2_smaller, DIV_LT_X, ZERO_LESS_MULT] >> rw[] >>
+  Cases_on ‘i’ >> fs[EXP, LEFT_SUB_DISTRIB, EXP_ADD] >>
+  qmatch_abbrev_tac ‘x ≤ y + 1n’ >> ‘x ≠ 0n ∧ x - 1 ≤ y’ suffices_by simp[] >>
+  conj_asm1_tac >- (strip_tac >> fs[]) >>
+  Q.UNABBREV_TAC`y` >> simp_tac bool_ss [X_LE_DIV, DECIDE “0 < 2n”]  >>
+  simp[Abbr‘x’, LEFT_SUB_DISTRIB] >> fs[EVEN_EXISTS] >> rw[] >> fs[]
+QED
 
 Theorem part1:
   computable kolmog ==>
   ∃j. ∀y. ∃i. Phi j y = SOME i ∧ Phi i 0 = SOME y ∧
               ∀k. Phi k 0 = SOME y ==> i<= k
 Proof
-  cheat
+  simp[computable_def] >> disch_then (qx_choose_then `ki` strip_assume_tac) >>
+  (* N2T ki computes kolmogorov complexity *)
+  fs[Phi_def] >>
+
   (*
   rw[computable_def] >> qexists_tac`@q.∀y. Phi q y = SOME (MIN_SET {p | Phi p 0 = SOME y })` >>
   rw[] >> qexists_tac`MIN_SET {p | Phi p 0 = SOME y }` >> *)
