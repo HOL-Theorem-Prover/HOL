@@ -41,4 +41,6 @@ sig
   val term_intersect : Term.term list -> Term.term list -> Term.term list
   val term_all_distinct : Term.term list -> Term.term list
 
+  val has_failures : bool ref
+
 end

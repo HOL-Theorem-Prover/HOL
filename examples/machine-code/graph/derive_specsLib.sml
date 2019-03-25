@@ -731,7 +731,8 @@ fun clear_stack_intro_fails () = (stack_intro_fails := []);
 fun print_stack_intro_report () =
   (if length (!stack_intro_fails) = 0 then
     (write_line "No stack intro failures."; [])
-   else (map print_stack_intro_fail (!stack_intro_fails)))
+   else (has_failures := true;
+         map print_stack_intro_fail (!stack_intro_fails)))
 
 fun derive_specs_for sec_name = let
   val code = section_body sec_name
