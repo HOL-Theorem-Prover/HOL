@@ -242,7 +242,8 @@ fun record_proof name lflag tac1 tac2 g =
         let
           val _ = if eval_ignore then () else
             let val (thmdata,tacdata) = (create_thmdata (), !tacdata_glob) in
-              (valOf (!ttt_evalfun_glob)) (thmdata,tacdata) g
+              (valOf (!ttt_evalfun_glob)) (thmdata,tacdata)
+              (current_theory (), name) g
             end
           val (r,t) = add_time tac1 g
           val _ = debug ("Recording proof time: " ^ Real.toString t)

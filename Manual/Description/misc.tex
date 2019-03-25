@@ -1093,7 +1093,7 @@ extracts the conjunct $\vdash \texttt{F} \land t \iff \texttt{F}$.
 %
 Causes the theorem to be split into its constituent conjuncts, for each conjunct to have any outermost universal quantifiers removed, and for each to be printed on a line of its own.
 %
-The turnstiles usually printed in front of theorems are also omitted.
+The turnstiles usually printed in front of theorems are also omitted, and a special form of equality is printed for the top-level (``defining'') equality in each clause.
 %
 This works well with definitions (or characterising theorems) over multiple data type constructors, changing
 \begin{alltt}
@@ -1101,9 +1101,11 @@ This works well with definitions (or characterising theorems) over multiple data
 \end{alltt}
 into
 \begin{alltt}
-   FACT 0 = 1
-   FACT (SUC \ensuremath{n}) = SUC \ensuremath{n} * FACT \ensuremath{n}
+   FACT 0 \HOLTokenDefEquality{} 1
+   FACT (SUC \ensuremath{n}) \HOLTokenDefEquality{} SUC \ensuremath{n} * FACT \ensuremath{n}
 \end{alltt}
+If the special equality is not desired, the option \texttt{nodefsym} can be used to turn this off.
+The special equality symbol can also be redefined by changing the \LaTeX{} definition of the macro \ml{\bs{}HOLTokenDefEquality}.
 
 \item[\texttt{depth}=$n$]
 Causes printing to be done with a maximum print depth of $n$; see Section~\ref{sec:pretty-print-depth}.

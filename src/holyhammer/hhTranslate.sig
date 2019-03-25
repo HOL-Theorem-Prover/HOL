@@ -3,46 +3,35 @@ sig
 
 include Abbrev
 
-  val complete_flag : bool ref
-
+  val is_tptp_fv : term -> bool
+  val is_tptp_bv : term -> bool
+  val is_app : term -> bool
+  val atoms : term -> term list
   val must_pred : term -> bool
-  val no_lambda : term -> bool
-  val no_pred   : term -> bool
-  val collect_arity : term -> (term, int list) Redblackmap.dict
-  val has_fofarity_bv : term -> bool
 
-  val prepare_tm    : term -> term
-
-  (* conversions *)
+  (* new definitions using free variables *)
   val ATOM_CONV     : conv -> conv
   val LIFT_CONV     : (int * int) ref -> conv
   val RPT_LIFT_CONV : (int * int) ref -> term -> thm list
-  val LET_CONV_BVL  : conv
 
-  (* arity equations *)
-  val strip_type  : hol_type -> (hol_type list * hol_type)
-  val mk_arity_eq : term -> int -> thm
-  val all_arity_eq : term -> thm list
+  (* inserting apply operators *)
+  val APP_CONV_ONCE      : conv
+  val APP_CONV_STRIPCOMB : conv
+  val APP_CONV_BV        : conv
+  val APP_CONV_BV_REC    : conv
+  val APP_CONV_MAX       : conv
+  val APP_CONV_MAX_REC   : conv
 
   (* translation *)
-  val debug_translate_tm : int * term -> term list
-  val translate_tm : term -> term list (* uses a cache *)
+  val translate_nocache : (int * term) -> (term * term list)
+  val translate : term -> (term * term list)
+  val translate_thm : thm -> (term * term list)
 
-  (* problem *)
-  val translate_pb  : (string * thm) list -> term ->
-    term list * (string * term list) list * term list
-  val name_pb :
-    term list * (string * term list) list * term list ->
-    (string * term) list * term
 
-  (* monomorphization *)
-  val regroup_cid : term list -> (string * hol_type list) list
-  val inst_mono_one : hol_type -> hol_type list ->
-    (hol_type, hol_type) Lib.subst list
-  val inst_mono : hol_type list -> hol_type list ->
-    (hol_type, hol_type) Lib.subst list
-  val find_cid : string -> term -> term list
-  val mono_cid : (string * hol_type list) * term list -> term list
-  val monomorphize : term list -> term -> term list
+  (* arity equations *)
+  val strip_type : hol_type -> (hol_type list * hol_type)
+  val collect_arity_noapp : term -> (term * int) list
+  val mk_arity_eq : (term * int) -> term
+
 
 end
