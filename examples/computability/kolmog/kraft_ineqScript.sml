@@ -1200,7 +1200,7 @@ Proof
   REWRITE_TAC [APPEND,GSYM APPEND_ASSOC,rich_listTheory.DROP_LENGTH_APPEND]
 QED
 
-Theorem HUTMpf_prefix_fee:
+Theorem HUTMpf_prefix_free:
   prefix_free {x | (∃y. HUTMpf x = SOME y)}
 Proof
   rw[] >> fs[prefix_free_def] >> rw[HUTMpf_def] >>

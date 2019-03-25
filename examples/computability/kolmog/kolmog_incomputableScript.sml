@@ -183,22 +183,7 @@ Proof
   `y∈{y | Phi (bl2n y) 0 = SOME x}` by fs[] >> metis_tac[MEMBER_NOT_EMPTY]
 QED
 
-val arg_plain_kolmog_def = Define‘
-  arg_plain_kolmog x =
-   @q. Phi q 0 = SOME x ∧
-       LENGTH (n2bl q) = MIN_SET {LENGTH (n2bl p) | Phi p 0 = SOME x}
-’;
 
-Theorem arg_plain_kolmog_thm:
-  arg_plain_kolmog x = @q. Phi q 0 = SOME x ∧ LENGTH (n2bl q) = plain_kolmog x
-Proof
-  fs[arg_plain_kolmog_def,plain_kolmog_thm] >>
-  `{ℓ p | Phi p 0 = SOME x} = {LENGTH p | Phi (bl2n p) 0 = SOME x}`
-     by (fs[EXTENSION] >> rw[] >> eq_tac >> rw[]
-         >- (qexists_tac`n2bl p` >> fs[])
-         >- (qexists_tac`bl2n p` >> fs[])) >>
-  fs[]
-QED
 
 Theorem arg_plain_kolmog_exists:
   ∃q. Phi q 0 = SOME x ∧ LENGTH (n2bl q) = plain_kolmog x
@@ -220,22 +205,16 @@ Proof
   qexists_tac`bl2n q1` >> fs[]
 QED
 
+
+
+val arg_plain_kolmog_def = Define‘
+  arg_plain_kolmog x = MIN_SET {p | Phi p 0 = SOME x}
+’;
+
 Theorem Phi_arg_pl_kolmog:
   Phi (arg_plain_kolmog y) 0 = SOME y
 Proof
-  fs[arg_plain_kolmog_thm] >>
-  `∃q. Phi q 0 = SOME y ∧ LENGTH (n2bl q) = plain_kolmog y` by fs[arg_plain_kolmog_exists] >>
-  metis_tac[GSYM SELECT_THM]
-QED
-
-val arg_plain_kolmog2_def = Define‘
-  arg_plain_kolmog2 x = MIN_SET {p | Phi p 0 = SOME x}
-’;
-
-Theorem Phi_arg_pl_kolmog2:
-  Phi (arg_plain_kolmog2 y) 0 = SOME y
-Proof
-  fs[arg_plain_kolmog2_def] >>
+  fs[arg_plain_kolmog_def] >>
   `{p | Phi p 0 = SOME y} <> {}` by (fs[EXTENSION,Phi_x_0]) >>
   `MIN_SET {p | Phi p 0 = SOME y} ∈ {p | Phi p 0 = SOME y}`
     by metis_tac[MIN_SET_LEM]>>
@@ -270,10 +249,10 @@ Proof
 QED
 *)
 
-Theorem arg_pl_kolmog2_min:
-  Phi k 0 = SOME y ==>  arg_plain_kolmog2 y ≤ k
+Theorem arg_pl_kolmog_min:
+  Phi k 0 = SOME y ==>  arg_plain_kolmog y ≤ k
 Proof
-  rw[arg_plain_kolmog2_def] >> fs[EXTENSION,Phi_x_0,MIN_SET_LEM]
+  rw[arg_plain_kolmog_def] >> fs[EXTENSION,Phi_x_0,MIN_SET_LEM]
 QED
 
 Theorem plain_kolmog_smallest:
@@ -379,6 +358,17 @@ Proof
   simp[Abbr‘x’, LEFT_SUB_DISTRIB] >> fs[EVEN_EXISTS] >> rw[] >> fs[]
 QED
 
+Theorem ELL_LE:
+  ℓ k <= k
+Proof
+  completeInduct_on`k` >> qspec_then ‘k’ mp_tac num_to_bool_list_def >> rw[]
+  >- (`(k-2) DIV 2 < k` by fs[BIT2_smaller] >> `ℓ ((k-2) DIV 2) ≤ ((k-2) DIV 2)` by fs[] >>
+      `ℓ ((k − 2) DIV 2) < k` by fs[] >> fs[])
+  >- (`(k-1) DIV 2 < k` by fs[BIT1_smaller] >> `ℓ ((k-1) DIV 2) ≤ ((k-1) DIV 2)` by fs[] >>
+      `ℓ ((k − 1) DIV 2) < k` by fs[] >> fs[] )
+QED
+
+(*
 Theorem part1:
   computable kolmog ==>
   ∃j. ∀y. ∃i. Phi j y = SOME i ∧ Phi i 0 = SOME y ∧
@@ -386,28 +376,34 @@ Theorem part1:
 Proof
   simp[computable_def] >> disch_then (qx_choose_then `ki` strip_assume_tac) >>
   (* N2T ki computes kolmogorov complexity *)
-  fs[Phi_def] >>
+  fs[Phi_def] >> qexists_tac`ki` >> rw[] >> qexists_tac`kolmog y`
 
   (*
   rw[computable_def] >> qexists_tac`@q.∀y. Phi q y = SOME (MIN_SET {p | Phi p 0 = SOME y })` >>
   rw[] >> qexists_tac`MIN_SET {p | Phi p 0 = SOME y }` >> *)
 QED
 
-(* unproven *)
-Theorem part11:
-  computable arg_plain_kolmog ==> ∃j. ∀y. ∃i. Phi j y = SOME i ∧ Phi i 0 = SOME y ∧ ∀k. Phi k 0 = SOME y ==> i<= k
+Theorem part1_plain:
+  computable plain_kolmog ==>
+  ∃j. ∀y. ∃i. Phi j y = SOME i ∧ Phi i 0 = SOME y ∧
+              ∀k. Phi k 0 = SOME y ==> i<= k
 Proof
-  cheat
-  (* rw[computable_def] >> qexists_tac`i` >> rw[]
-  >- (fs[narg_kolmog_def,arg_kolmog_thm,PUTM_def])
-  >- () *)
+  simp[computable_def] >> disch_then (qx_choose_then `ki` strip_assume_tac) >>
+  (* N2T ki computes kolmogorov complexity *)
+  fs[Phi_def] >> qexists_tac`ki` >> rw[] >> qexists_tac`plain_kolmog y` >> rw[]
+  >- (`∃z. plain_kolmog y = ℓ z ∧ Phi z 0 = SOME y` by fs[plain_kolmog_props] >> 
+      qexists_tac`church y`)
+  >- (`Phi k 0 = SOME (force_num z)` by fs[Phi_def] >> 
+      `ℓ k <= k` suffices_by (`plain_kolmog (force_num z) <= ℓ k` by fs[plain_kolmog_smallest] >>
+                              fs[] ) >> fs[ELL_LE])
 QED
+*)
 
 (* proven *)
-Theorem part111:
-  computable arg_plain_kolmog2 ==> ∃j. ∀y. ∃i. Phi j y = SOME i ∧ Phi i 0 = SOME y ∧ ∀k. Phi k 0 = SOME y ==> i<= k
+Theorem part1_arg_kolmog:
+  computable arg_plain_kolmog ==> ∃j. ∀y. ∃i. Phi j y = SOME i ∧ Phi i 0 = SOME y ∧ ∀k. Phi k 0 = SOME y ==> i<= k
 Proof
-  rw[computable_def] >> qexists_tac`i` >> rw[arg_pl_kolmog2_min,Phi_arg_pl_kolmog2]
+  rw[computable_def] >> qexists_tac`i` >> rw[arg_pl_kolmog_min,Phi_arg_pl_kolmog]
 QED
 
 val yMt_pred_def = Define`yMt_pred e n yi Mi ti <=> plain_kolmog yi < 2*n ∧
