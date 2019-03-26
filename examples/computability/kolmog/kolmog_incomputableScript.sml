@@ -1,6 +1,6 @@
 open HolKernel Parse boolLib bossLib
 
-open arithmeticTheory logrootTheory pred_setTheory listTheory
+open arithmeticTheory whileTheory logrootTheory pred_setTheory listTheory
 open reductionEval;
 open churchoptionTheory churchlistTheory recfunsTheory numsAsCompStatesTheory
      kolmog_complexTheory kraft_ineqTheory
@@ -205,54 +205,105 @@ Proof
   qexists_tac`bl2n q1` >> fs[]
 QED
 
-
-
-val arg_plain_kolmog_def = Define‘
-  arg_plain_kolmog x = MIN_SET {p | Phi p 0 = SOME x}
+val tPhi_def = Define‘
+  tPhi mi x t ⇔
+    terminated (steps t (mk_initial_state mi x)) ∧
+    ∀t'. t' < t ⇒ ¬terminated (steps t' (mk_initial_state mi x))
 ’;
 
-Theorem Phi_arg_pl_kolmog:
+(* complicated(!) leastness characterisation across various dimensions.
+   Machine m is:
+     1. smallest (by size (ℓ)) machine returning x
+     2. then, quickest of those
+     3. then, smallest by raw index of those
+*)
+val arg_plain_pred_def = Define‘
+  arg_plain_pred x m <=>
+    Phi m 0 = SOME x /\
+     ℓ m = MIN_SET { ℓ ni | Phi ni 0 = SOME x} ∧
+    ∃t. tPhi m 0 t ∧
+        (∀n u. ℓ n = ℓ m ∧ tPhi n 0 u ∧ Phi n 0 = SOME x ⇒ t ≤ u) ∧
+        (∀n. ℓ n = ℓ m ∧ tPhi n 0 t ∧ Phi n 0 = SOME x ⇒ m ≤ n)
+’;
+
+Theorem arg_plain_pred_exists :
+  ∀x. ∃m. arg_plain_pred x m
+Proof
+  simp[arg_plain_pred_def] >> qx_gen_tac ‘y’ >> simp[PULL_EXISTS] >>
+  qabbrev_tac ‘mis = { i | Phi i 0 = SOME y}’ >>
+  qabbrev_tac ‘sizes = IMAGE ℓ mis’ >>
+  ‘sizes ≠ ∅’ by simp[Abbr‘sizes’, Abbr‘mis’, EXTENSION, Phi_x_0] >>
+  qabbrev_tac ‘lsz = MIN_SET sizes’ >>
+  qabbrev_tac ‘small_mis = { i | i ∈ mis ∧ ℓ i = lsz}’ >>
+  ‘small_mis ≠ ∅’
+     by (simp[Abbr‘small_mis’, EXTENSION, Abbr‘lsz’, Abbr‘sizes’] >>
+         DEEP_INTRO_TAC MIN_SET_ELIM >> simp[PULL_EXISTS] >> rw[] >>
+         metis_tac[]) >>
+  ‘∀m. m ∈ small_mis ⇔ ℓ m = lsz ∧ Phi m 0 = SOME y’
+     by (simp[Abbr‘small_mis’, Abbr‘mis’, Abbr‘lsz’] >> metis_tac[]) >>
+  qabbrev_tac ‘times = { t | ∃m. tPhi m 0 t ∧ m ∈ small_mis}’ >>
+  qabbrev_tac ‘fastest = MIN_SET times’ >>
+  qabbrev_tac ‘fastest_mis = { m | tPhi m 0 fastest ∧ m ∈ small_mis }’ >>
+  ‘fastest_mis ≠ ∅’
+    by (simp[Abbr‘fastest_mis’, Abbr‘fastest’, Abbr‘times’, EXTENSION] >>
+        DEEP_INTRO_TAC MIN_SET_ELIM >> simp[PULL_EXISTS] >>
+        simp[EXTENSION] >> metis_tac[MEMBER_NOT_EMPTY, PhiSOME_tPhi]) >>
+  ‘∃m. m ∈ fastest_mis’ by metis_tac [MEMBER_NOT_EMPTY] >>
+  map_every qexists_tac [‘MIN_SET fastest_mis’, ‘fastest’] >>
+  DEEP_INTRO_TAC MIN_SET_ELIM >> simp[] >> qx_gen_tac ‘M’ >> strip_tac >>
+  ‘M ∈ small_mis’ by fs[Abbr‘fastest_mis’] >> rpt conj_tac
+  >- metis_tac[]
+  >- (pop_assum mp_tac >> simp[] >>
+      simp[Abbr‘lsz’, Abbr‘sizes’, Abbr‘mis’] >> strip_tac >> AP_TERM_TAC >>
+      simp[EXTENSION])
+  >- fs[Abbr‘fastest_mis’]
+  >- (qx_genl_tac [‘N’,‘u’] >> strip_tac >>
+      ‘N ∈ small_mis’ by metis_tac[] >>
+      ‘u ∈ times’ by (simp[Abbr‘times’] >> metis_tac[]) >>
+      simp[Abbr‘fastest’] >> metis_tac[MIN_SET_LEM, MEMBER_NOT_EMPTY])
+  >- (qx_gen_tac ‘N’ >> strip_tac >> ‘N ∈ fastest_mis’ suffices_by metis_tac[]>>
+      simp[Abbr‘fastest_mis’] >> metis_tac[])
+QED
+
+val arg_plain_kolmog_def = new_specification("arg_plain_kolmog_def",
+  ["arg_plain_kolmog"], CONV_RULE SKOLEM_CONV arg_plain_pred_exists);
+
+Theorem PhiSOME_terminated :
+  (Phi m x = SOME y) ⇒
+  ∃t cs0. cs0 = mk_initial_state m x ∧ y = cs_to_num (steps t cs0) ∧
+          terminated (steps t cs0)
+Proof
+  simp[Phi_steps, CaseEq "option"] >> rw[] >>
+  metis_tac[correctness_on_termination]
+QED
+
+Theorem PhiSOME_tPhi:
+  Phi m x = SOME y ⇒ ∃t. tPhi m x t
+Proof
+  simp[tPhi_def, Phi_steps, CaseEq "option", comp_count_def, OLEAST_EQ_SOME] >>
+  metis_tac[]
+QED
+
+Theorem arg_plain_kolmog_raw_props =
+  SIMP_RULE (srw_ss()) [arg_plain_pred_def] arg_plain_kolmog_def
+
+Theorem Phi_arg_pl_kolmog[simp]:
   Phi (arg_plain_kolmog y) 0 = SOME y
 Proof
-  fs[arg_plain_kolmog_def] >>
-  `{p | Phi p 0 = SOME y} <> {}` by (fs[EXTENSION,Phi_x_0]) >>
-  `MIN_SET {p | Phi p 0 = SOME y} ∈ {p | Phi p 0 = SOME y}`
-    by metis_tac[MIN_SET_LEM]>>
-  fs[]
+  simp[arg_plain_kolmog_raw_props]
+QED
+
+Theorem arg_plain_kolmog_leastsize:
+  (Phi N 0 = SOME y) ⇒ ℓ (arg_plain_kolmog y) ≤ ℓ N
+Proof
+  strip_tac >> simp[arg_plain_kolmog_raw_props] >>
+  DEEP_INTRO_TAC MIN_SET_ELIM >> simp[EXTENSION, PULL_EXISTS] >> metis_tac[]
 QED
 
 Theorem MIN_SET_L_PHI_NON_EMPTY:
   {LENGTH p | Phi (bl2n p) 0 = SOME y} <> {}
 Proof
   fs[EXTENSION,Phi_bl2nx_0]
-QED
-
-(* SELECT stuff
-SELECT_AX,SELECT_ELIM_THM,SELECT_REFL,SELECT_REFL_2,SELECT_THM,SELECT_UNIQUE
-*)
-
-(* up to here *)
-
-(* To prove maybe
-Theorem LEGNTH_n2bl_LOG:
-  0<x ==> LENGTH (n2bl x) = LOG 2 (SUC x)
-Proof
-  rw[] >>
-  Induct_on`LOG 2 x` >> rw[] >- (`x=1` by  fs[LOG_EQ_0] >> rw[] >> EVAL_TAC >> fs[LOG_BASE] ) >>
-
-QED
-
-Theorem LENGTH_n2bl_ineq:
-  ℓ q < ℓ k ==> q< k
-Proof
-
-QED
-*)
-
-Theorem arg_pl_kolmog_min:
-  Phi k 0 = SOME y ==>  arg_plain_kolmog y ≤ k
-Proof
-  rw[arg_plain_kolmog_def] >> fs[EXTENSION,Phi_x_0,MIN_SET_LEM]
 QED
 
 Theorem plain_kolmog_smallest:
@@ -292,7 +343,6 @@ val BIT1_smaller = Q.prove(
   ‘x ≠ 0 ⇒ (x - 1) DIV 2 < x’,
   Cases_on ‘x’ >> simp[ADD1, DIV_LT_X]);
 
-
 Theorem ELL_MONOTONE[simp]:
   ∀x y. x ≤ y ⇒ ℓ x ≤ ℓ y
 Proof
@@ -304,36 +354,6 @@ Proof
   ‘∃x0. x = 2 * x0 + 1’ by metis_tac[ODD_EXISTS, ADD1, EVEN_ODD] >>
   Cases_on ‘x0’ >> fs[ADD1, LEFT_ADD_DISTRIB]
 QED
-
-(* unproven, because it's not true.  Another machine of the same size, but a
-   smaller index may exist.
-Theorem arg_pl_kolmog_min:
-  Phi k 0 = SOME y ==> arg_plain_kolmog y ≤ k
-Proof
-  rw[arg_plain_kolmog_thm] >> SELECT_ELIM_TAC >> rw[]
-  >- metis_tac[plain_kolmog_props] >>
-  rename[‘Phi m1 0 = SOME r’, ‘Phi m2 0 = SOME r’, ‘m1 ≤ m2’] >>
-  ‘ℓ m1 ≤ ℓ m2’ by metis_tac[plain_kolmog_smallest] >>
-*)
-
-(* Part1 uses kolmog, Part11 uses arg_plain_kolmog, Part111 uses arg_plain_kolmog2  *)
-
-(* part1: if kolmog was computable, there'd be a machine j which would, when
-   given a y, come back with the smallest index i of a machine that would
-   return y when given input 0. *)
-
-(*
-   j is the machine that, given argument y, runs all machines of size
-   equal to y's complexity (dovetailing) until it finds one that
-   terminates on input 0. It can stop and output that machine's index.
-
-   fun jm y = let c = km y  ;
-                  machines = log2list c ;
-                  run i = map (λm. steps i (mk_state m 0)) machines ;
-              in
-                 cfindleast (λt. exists (λs. terminated s) (run t))
-                            (λi. 2 ** c + findindex is_terminated (run i))
-*)
 
 Theorem ELL_log2list:
   ∀i n. MEM n (MAP PRE (log2list i)) ⇒ ℓ n = i
@@ -358,68 +378,105 @@ Proof
   simp[Abbr‘x’, LEFT_SUB_DISTRIB] >> fs[EVEN_EXISTS] >> rw[] >> fs[]
 QED
 
-Theorem ELL_LE:
+Theorem ELL_LE[simp]:
   ℓ k <= k
 Proof
   completeInduct_on`k` >> qspec_then ‘k’ mp_tac num_to_bool_list_def >> rw[]
-  >- (`(k-2) DIV 2 < k` by fs[BIT2_smaller] >> `ℓ ((k-2) DIV 2) ≤ ((k-2) DIV 2)` by fs[] >>
+  >- (`(k-2) DIV 2 < k` by fs[BIT2_smaller] >>
+      `ℓ ((k-2) DIV 2) ≤ ((k-2) DIV 2)` by fs[] >>
       `ℓ ((k − 2) DIV 2) < k` by fs[] >> fs[])
-  >- (`(k-1) DIV 2 < k` by fs[BIT1_smaller] >> `ℓ ((k-1) DIV 2) ≤ ((k-1) DIV 2)` by fs[] >>
+  >- (`(k-1) DIV 2 < k` by fs[BIT1_smaller] >>
+      `ℓ ((k-1) DIV 2) ≤ ((k-1) DIV 2)` by fs[] >>
       `ℓ ((k − 1) DIV 2) < k` by fs[] >> fs[] )
 QED
 
+Theorem ELL_LT[simp]:
+  ℓ k < k ⇔ 1 < k
+Proof
+  completeInduct_on ‘k’ >> simp[Once num_to_bool_list_def] >> rw[]
+  >- (‘(k - 2) DIV 2 < k’ by simp[BIT2_smaller]>>
+      Cases_on ‘1 < (k - 2) DIV 2’
+      >- (‘ℓ ((k - 2) DIV 2) < (k - 2) DIV 2’ by metis_tac[] >>
+          simp[]) >>
+      ‘¬(ℓ ((k - 2) DIV 2) < (k - 2) DIV 2)’ by metis_tac[] >>
+      ‘ℓ ((k - 2) DIV 2) = (k - 2) DIV 2’ by metis_tac[LESS_OR_EQ, ELL_LE] >>
+      fs[NOT_LESS_EQUAL, X_LT_DIV] >>
+      ‘k ≠ 0’ by (strip_tac >> fs[]) >> ‘k ≠ 1’ by (strip_tac >> fs[]) >>
+      ‘1 < k’ by simp[] >> simp[] >> fs[DIV_LT_X] >>
+      ‘k = 2 ∨ k = 3 ∨ k = 4 ∨ k = 5’ by simp[] >> simp[]) >>
+  ‘(k - 1) DIV 2 < k’ by simp[BIT1_smaller] >>
+  Cases_on ‘1 < (k - 1) DIV 2’
+  >- (‘ℓ ((k - 1) DIV 2) < (k - 1) DIV 2’ by metis_tac[] >> simp[]) >>
+  ‘¬(ℓ ((k - 1) DIV 2) < (k - 1) DIV 2)’ by metis_tac[] >>
+  ‘ℓ ((k - 1) DIV 2) = (k - 1) DIV 2’ by metis_tac[LESS_OR_EQ, ELL_LE] >>
+  fs[NOT_LESS_EQUAL, X_LT_DIV, DIV_LT_X] >>
+  ‘k = 1 ∨ k = 2 ∨ k = 3 ∨ k= 4’ by simp[] >> simp[]
+QED
+
+
+Theorem LENGTH_log2list[simp]:
+  LENGTH (log2list k) = 2 ** k
+Proof
+  simp[log2list_def]
+QED
+
+(* part1: if kolmog was computable, there'd be a machine j which would, when
+   given a y, come back with the smallest index i of a machine that would
+   return y when given input 0. *)
+
 (*
-Theorem part1:
-  computable kolmog ==>
-  ∃j. ∀y. ∃i. Phi j y = SOME i ∧ Phi i 0 = SOME y ∧
-              ∀k. Phi k 0 = SOME y ==> i<= k
-Proof
-  simp[computable_def] >> disch_then (qx_choose_then `ki` strip_assume_tac) >>
-  (* N2T ki computes kolmogorov complexity *)
-  fs[Phi_def] >> qexists_tac`ki` >> rw[] >> qexists_tac`kolmog y`
+   j is the machine that, given argument y, runs all machines of size
+   equal to y's complexity (dovetailing) until it finds one that
+   terminates on input 0. It can stop and output that machine's index.
 
-  (*
-  rw[computable_def] >> qexists_tac`@q.∀y. Phi q y = SOME (MIN_SET {p | Phi p 0 = SOME y })` >>
-  rw[] >> qexists_tac`MIN_SET {p | Phi p 0 = SOME y }` >> *)
-QED
-
-Theorem part1_plain:
-  computable plain_kolmog ==>
-  ∃j. ∀y. ∃i. Phi j y = SOME i ∧ Phi i 0 = SOME y ∧
-              ∀k. Phi k 0 = SOME y ==> i<= k
-Proof
-  simp[computable_def] >> disch_then (qx_choose_then `ki` strip_assume_tac) >>
-  (* N2T ki computes kolmogorov complexity *)
-  fs[Phi_def] >> qexists_tac`ki` >> rw[] >> qexists_tac`plain_kolmog y` >> rw[]
-  >- (`∃z. plain_kolmog y = ℓ z ∧ Phi z 0 = SOME y` by fs[plain_kolmog_props] >> 
-      qexists_tac`church y`)
-  >- (`Phi k 0 = SOME (force_num z)` by fs[Phi_def] >> 
-      `ℓ k <= k` suffices_by (`plain_kolmog (force_num z) <= ℓ k` by fs[plain_kolmog_smallest] >>
-                              fs[] ) >> fs[ELL_LE])
-QED
+   fun jm y = let c = km y  ;
+                  machines = log2list c ;
+                  run i = map (λm. steps i (mk_state m 0)) machines ;
+              in
+                 cfindleast (λt. exists (λs. terminated s) (run t))
+                            (λi. 2 ** c + findindex is_terminated (run i))
 *)
+Theorem kolmog_arg_computable:
+  computable plain_kolmog ⇒ computable arg_plain_kolmog
+Proof
+  simp[computable_def] >> disch_then (qx_choose_then ‘pki’ assume_tac) >>
+  arg_plain_kolmog_def
+QED
 
 (* proven *)
 Theorem part1_arg_kolmog:
-  computable arg_plain_kolmog ==> ∃j. ∀y. ∃i. Phi j y = SOME i ∧ Phi i 0 = SOME y ∧ ∀k. Phi k 0 = SOME y ==> i<= k
+  computable arg_plain_kolmog ==>
+  ∃j. ∀y. ∃i. Phi j y = SOME i ∧ Phi i 0 = SOME y
 Proof
-  rw[computable_def] >> qexists_tac`i` >> rw[arg_pl_kolmog_min,Phi_arg_pl_kolmog]
+  rw[computable_def] >> qexists_tac`i` >>
+  rw[arg_pl_kolmog_min,Phi_arg_pl_kolmog]
 QED
 
-val yMt_pred_def = Define`yMt_pred e n yi Mi ti <=> plain_kolmog yi < 2*n ∧
-                                                LOG 2 yi = 2* n ∧
-                                                LOG 2 Mi = kolmog yi ∧
-                                                terminated (steps ti (mk_initial_state Mi 0)) ∧
-                                                cs_to_num (steps ti (mk_initial_state Mi 0)) = yi ∧
-                                              ∀t'. terminated (steps t' (mk_initial_state Mi 0)) ==>
-                                                ti<=t' ∧
-                                                e=npair Mi (npair ti yi)`
+val yMt_pred_def = Define‘
+  yMt_pred e n yi Mi ti <=>
+    plain_kolmog yi < 2*n ∧
+    ℓ yi = 2* n ∧
+    ℓ Mi = plain_kolmog yi ∧
+    terminated (steps ti (mk_initial_state Mi 0)) ∧
+    cs_to_num (steps ti (mk_initial_state Mi 0)) = yi ∧
+    (∀t'. terminated (steps t' (mk_initial_state Mi 0)) ==> ti<=t') ∧
+    e=npair yi (npair Mi ti)
+’;
 
 (* unproven *)
+
+(* j-machine is passed an n.
+
+   Then, for every string y of length 2n with complexity < 2n, then generate
+   the list of triples (yi,Mi,ti), where yi is one of the ys, and
+   Mi (0) = SOME yi, and that computation takes ti steps
+*)
+
 (*
 Theorem part2:
-  computable kolmog ==> ∃j. ∀n. ∃l. Phi j n = SOME (nlist_of l) ∧
-                       (∀e. MEM e l <=> ∃yi Mi ti. yMt_pred e n yi Mi ti)
+  computable kolmog ==>
+  ∃j. ∀n. ∃l. Phi j n = SOME (nlist_of l) ∧
+              (∀e. MEM e l <=> ∃yi Mi ti. yMt_pred e n yi Mi ti)
 Proof
      rw[computable_def] >> arg_plain_kolmog2_def]
 QED
@@ -435,31 +492,30 @@ Proof
 QED
 
 
-
-
-
-val yMt_set_def = Define`
-  yMt_set n = {(yi,Mi,t) | Mi = bl2n (arg_kolmog yi) ∧
-                           LENGTH (n2bl yi) = 2*n ∧
-                           kolmog yi < 2*n ∧
-                           terminated (steps t (mk_initial_state Mi 0)) ∧
-                           cs_to_num (steps t (mk_initial_state Mi 0)) = yi ∧
-                           ∀t'. terminated (steps t' (mk_initial_state Mi 0))
-                                  ==> t<=t'
-              }
-`;
+val yMt_set_def = Define‘
+  yMt_set n = {(yi,Mi,t) | ∃e. yMt_pred n e yi Mi t }
+’;
 
 val big_T_def = Define`big_T n = MAX_SET (IMAGE SND (IMAGE SND (yMt_set n)))`
 
 (* unproven *)
 
 Theorem part3:
-  computable kolmog ==> (big_T (prime_tm M x) > tmax (LOG 2 (prime_tm M x) ))
+  computable plain_kolmog ==>
+  tmax (ℓ (prime_tm M x) ) < big_T (prime_tm M x)
 Proof
   cheat
 QED
 
-open whileTheory;
+Theorem part4:
+  tmax (ℓ (prime_tm M x) ) < big_T (prime_tm M x) ⇒
+  (terminated (steps (big_T  (ℓ (prime_tm M x)))
+                     (mk_initial_state (prime_tm M x) 0 ))
+      <=>
+   (M,x) ∈ HALT)
+Proof
+  cheat
+QED
 
 Theorem terminated_ge:
   (a > b) ==> (terminated (steps b cs) ==> terminated (steps a cs))
@@ -547,7 +603,7 @@ QED
 
 (*
 Theorem big_T_Tmax_imp:
-  (big_T (LOG 2 (prime_tm M x) ) > tmax (LOG 2 (prime_tm M x) )) ==>
+  (Big_T (LOG 2 (prime_tm M x) ) > tmax (LOG 2 (prime_tm M x) )) ==>
    ( terminated (steps (big_T  (LOG 2 (prime_tm M x))) (mk_initial_state (prime_tm M x) 0 ))  <=> ((M,x)∈HALT ))
 Proof
   rw[] >> eq_tac >> rw[]
