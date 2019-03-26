@@ -488,4 +488,87 @@ Proof
   simp[EXISTS_OR_THM] >> asm_simp_tac (bsrw_ss()) []
 QED
 
+(* ----------------------------------------------------------------------
+    find_index s.t. P
+   ---------------------------------------------------------------------- *)
+
+val cfind_index_def = Define‘
+  cfind_index =
+  LAM "P" (
+    LAM "l" (
+      VAR "l" @@ church 0
+        @@ LAM "h" (
+             LAM "t" (
+               VAR "P" @@ VAR "h" @@ church 0 @@ (csuc @@ VAR "t")
+             )
+           )
+    )
+  )
+’;
+
+val cfind_index_eqn = brackabs.brackabs_equiv [] cfind_index_def
+
+Theorem cfind_index_behaviour :
+  cfind_index @@ P @@ cnil == church 0 ∧
+  cfind_index @@ P @@ cvcons h t ==
+     P @@ h @@ church 0 @@ (csuc @@ (cfind_index @@ P @@ t))
+Proof
+  simp_tac (bsrw_ss()) [cfind_index_eqn, cnil_def, wh_cvcons]
+QED
+
+val INDEX_FIND_lemma = Q.prove(
+  ‘∀l e n m.
+     MEM e l ∧ P e ⇒
+      (FST (THE (INDEX_FIND n P l)) + m =
+       FST (THE (INDEX_FIND (n + m) P l)))’,
+  Induct >> simp[listTheory.INDEX_FIND_def] >> rw[] >>
+  rename [‘h1 ≠ h2’] >> ‘h1 ≠ h2’ by metis_tac[] >> fs[] >>
+  first_x_assum (drule_all_then assume_tac) >>
+  simp[arithmeticTheory.ADD_CLAUSES]);
+
+val findPi_def = Define‘
+  (findPi P [] = 0) ∧
+  (findPi P (h::t) = if P h then 0 else 1 + findPi P t)
+’;
+val _ = export_rewrites ["findPi_def"]
+
+Theorem findPi_thm :
+  findPi P l = if EXISTS P l then LEAST i. i < LENGTH l ∧ P (EL i l)
+               else LENGTH l
+Proof
+  Induct_on ‘l’ >> rw[] >> fs[]
+  >- (numLib.LEAST_ELIM_TAC >> rw[]
+      >- (simp[indexedListsTheory.LT_SUC] >>
+          REWRITE_TAC [GSYM DISJ_EQ_IMP, RIGHT_AND_OVER_OR] >>
+          simp[EXISTS_OR_THM]) >>
+      Cases_on ‘n’ >> fs[] >> first_x_assum (qspec_then ‘0’ mp_tac) >> simp[])>>
+  simp[indexedListsTheory.LT_SUC] >>
+  REWRITE_TAC [GSYM DISJ_EQ_IMP, RIGHT_AND_OVER_OR] >> csimp[] >>
+  csimp[PULL_EXISTS] >>
+  ntac 2 numLib.LEAST_ELIM_TAC >> rw[]
+  >- (fs[listTheory.EXISTS_MEM] >> metis_tac[listTheory.MEM_EL])
+  >- metis_tac[] >>
+  fs[PULL_FORALL, arithmeticTheory.ADD1] >>
+  metis_tac[DECIDE “x:num < y ∨ (x = y) ∨ y < x”]
+QED
+
+Theorem findPi_LE:
+  ∀l P. findPi P l ≤ LENGTH l
+Proof
+  Induct_on ‘l’ >> rw[arithmeticTheory.ADD1]
+QED
+
+Theorem cfind_index_thm :
+  (∀e. MEM e l ⇒ ∃b. P @@ e == cB b) ⇒
+  cfind_index @@ P @@ cvlist l ==
+  church (findPi (λe. P @@ e == cB T) l)
+Proof
+  Induct_on ‘l’ >> simp[cfind_index_behaviour, findPi_def] >> rpt strip_tac >>
+  asm_simp_tac (bsrw_ss()) [cfind_index_behaviour] >>
+  ‘∃hb. P @@ h == cB hb’ by metis_tac[] >>
+  ‘∀e. MEM e l ⇒ ∃b. P @@ e == cB b’ by metis_tac[] >> fs[] >>
+  Cases_on ‘hb’ >> asm_simp_tac(bsrw_ss()) [cB_behaviour, arithmeticTheory.ADD1]
+QED
+
+
 val _ = export_theory()
