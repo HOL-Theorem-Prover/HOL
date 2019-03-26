@@ -455,4 +455,37 @@ Proof
   SIMP_TAC (bsrw_ss()) [cogenlist_eqn, natrec_behaviour]
 QED
 
+val cexists_def = Define‘
+  cexists = LAM "P" (
+    LAM "l" (
+      VAR "l"
+          @@ cB F
+          @@ LAM "h" (
+               LAM "t" (VAR "P" @@ VAR "h" @@ cB T @@ VAR "t")
+             )
+    )
+  )
+’;
+
+val cexists_eqn = brackabs.brackabs_equiv [] cexists_def
+
+Theorem cexists_behaviour:
+  cexists @@ P @@ cnil == cB F ∧
+  cexists @@ P @@ cvcons h t == P @@ h @@ cB T @@ (cexists @@ P @@ t)
+Proof
+  simp_tac (bsrw_ss()) [cexists_eqn, cnil_def, wh_cvcons]
+QED
+
+Theorem cexists_thm :
+  (∀e. MEM e l ⇒ ∃b. P @@ e == cB b) ⇒
+  cexists @@ P @@ cvlist l == cB (∃e. MEM e l ∧ P @@ e == cB T)
+Proof
+  Induct_on ‘l’ >> simp[cexists_behaviour] >> rw[] >>
+  ‘∃hb. P @@ h == cB hb’ by metis_tac[] >>
+  asm_simp_tac (bsrw_ss()) [cexists_behaviour] >>
+  Cases_on ‘hb’ >> asm_simp_tac (bsrw_ss()) [cB_behaviour] >- metis_tac[] >>
+  REWRITE_TAC[GSYM DISJ_EQ_IMP, RIGHT_AND_OVER_OR] >>
+  simp[EXISTS_OR_THM] >> asm_simp_tac (bsrw_ss()) []
+QED
+
 val _ = export_theory()
