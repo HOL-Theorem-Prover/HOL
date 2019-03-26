@@ -211,6 +211,13 @@ val tPhi_def = Define‘
     ∀t'. t' < t ⇒ ¬terminated (steps t' (mk_initial_state mi x))
 ’;
 
+Theorem PhiSOME_tPhi:
+  Phi m x = SOME y ⇒ ∃t. tPhi m x t
+Proof
+  simp[tPhi_def, Phi_steps, CaseEq "option", comp_count_def, OLEAST_EQ_SOME] >>
+  metis_tac[]
+QED
+
 (* complicated(!) leastness characterisation across various dimensions.
    Machine m is:
      1. smallest (by size (ℓ)) machine returning x
@@ -275,13 +282,6 @@ Theorem PhiSOME_terminated :
 Proof
   simp[Phi_steps, CaseEq "option"] >> rw[] >>
   metis_tac[correctness_on_termination]
-QED
-
-Theorem PhiSOME_tPhi:
-  Phi m x = SOME y ⇒ ∃t. tPhi m x t
-Proof
-  simp[tPhi_def, Phi_steps, CaseEq "option", comp_count_def, OLEAST_EQ_SOME] >>
-  metis_tac[]
 QED
 
 Theorem arg_plain_kolmog_raw_props =
@@ -356,27 +356,30 @@ Proof
 QED
 
 Theorem ELL_log2list:
-  ∀i n. MEM n (MAP PRE (log2list i)) ⇒ ℓ n = i
+  ∀i n. ℓ n = i ⇔ MEM (n + 1) (log2list i)
 Proof
-  simp[log2list_def, MEM_GENLIST, PULL_EXISTS, MEM_MAP, PRE_SUB1] >>
-  ‘∀j i. 2 ** i - 1 ≤ j ∧ j < 2 ** (i + 1) - 1 ⇒ ℓ j = i’
+  simp[log2list_def, MEM_GENLIST, PULL_EXISTS] >>
+  ‘∀j i. ℓ j = i ⇔ 2 ** i ≤ j + 1 ∧ j + 1 < 2 ** (i + 1)’
      suffices_by (
-       rw[] >> first_x_assum irule >> simp[LT_SUB_RCANCEL, EXP_ADD] >>
-       ‘0 < 2**i’ suffices_by simp[] >>
-       simp[]
+       rw[] >> reverse eq_tac >> rw[]
+       >- simp[LT_SUB_RCANCEL, EXP_ADD] >>
+       qexists_tac ‘n - (2 ** i - 1)’ >>
+       simp[SUB_LEFT_LESS] >> fs[EXP_ADD]
      ) >>
   completeInduct_on ‘j’ >>
   simp[Once num_to_bool_list_def] >> rw[] >> fs[]
   >- (Cases_on ‘i’ >> fs[EXP] >> fs[DECIDE “x ≤ 1n ⇔ x = 0 ∨ x = 1”]) >>
-  simp[DECIDE “SUC x = y ⇔ y ≠ 0 ∧ x = y - 1”] >> conj_asm1_tac >>
-  rpt strip_tac >> fs[] >> first_x_assum irule >>
-  simp[BIT1_smaller, BIT2_smaller, DIV_LT_X, ZERO_LESS_MULT] >> rw[] >>
-  Cases_on ‘i’ >> fs[EXP, LEFT_SUB_DISTRIB, EXP_ADD] >>
-  qmatch_abbrev_tac ‘x ≤ y + 1n’ >> ‘x ≠ 0n ∧ x - 1 ≤ y’ suffices_by simp[] >>
-  conj_asm1_tac >- (strip_tac >> fs[]) >>
-  Q.UNABBREV_TAC`y` >> simp_tac bool_ss [X_LE_DIV, DECIDE “0 < 2n”]  >>
-  simp[Abbr‘x’, LEFT_SUB_DISTRIB] >> fs[EVEN_EXISTS] >> rw[] >> fs[]
+  simp[DECIDE “SUC x = y ⇔ y ≠ 0 ∧ x = y - 1”] >>
+  simp[BIT1_smaller, BIT2_smaller] >> csimp[] >>
+  Cases_on ‘i’ >> simp[]
+  >- (fs[EVEN_EXISTS] >> rw[] >> fs[] >> rename [‘j0 ≠ 0’] >> Cases_on ‘j0’ >>
+      simp[ADD1, LEFT_ADD_DISTRIB] >> rename [‘2 ** n ≤ m + 1 /\ m + 1 < _’] >>
+      simp[EXP_ADD]) >>
+  fs[GSYM ODD_EVEN, ODD_EXISTS, ADD1, EXP_ADD]
 QED
+
+Theorem MEM_log2list = ELL_log2list |> SPEC_ALL |> Q.INST [‘i’ |-> ‘ℓ n’]
+                                    |> SIMP_RULE (srw_ss()) []
 
 Theorem ELL_LE[simp]:
   ℓ k <= k
@@ -436,11 +439,99 @@ QED
                  cfindleast (λt. exists (λs. terminated s) (run t))
                             (λi. 2 ** c + findindex is_terminated (run i))
 *)
+val compute_arg_lt_def = Define‘
+  compute_arg_lt pki =
+  B @@ (
+    (* let c = ... in *)
+    LAM "c" (
+       LAM "machines" (
+         LAM "run" (
+           cfindleast
+             @@ (B @@ (cexists @@ cbnf) @@ VAR "run")
+             @@ (LAM "i" (cplus @@ (cpred @@ (cexp @@ church 2 @@ VAR "c"))
+                                @@ (cfind_index @@ cbnf
+                                                @@ (VAR "run" @@ VAR "i"))))
+         )
+         @@ (* run's value *)
+           LAM "i" (
+                cmap
+                  @@ LAM "m" (
+                        csteps @@ VAR "i"
+                               @@ (cdAPP @@ VAR "m" @@ (cchurch @@ church 0))
+                     )
+                  @@ VAR "machines"
+           )
+       )
+       @@ (* machine's value *) (cmap @@ (B @@ cnumdB @@ cpred)
+                                      @@ (clog2list @@ VAR "c"))
+    )
+  )
+    @@ (* c's value: *) (B @@ (cbnf_ofk @@ cforce_num)
+                           @@ (B @@ (cdAPP @@ (cnumdB @@ church pki))
+                                 @@ cchurch))
+’;
+
+Theorem FV_cexists[simp]:
+  FV cexists = ∅
+Proof
+  simp[cexists_def, EXTENSION]
+QED
+
+Theorem FV_cfind_index[simp]:
+  FV cfind_index = ∅
+Proof
+  simp[cfind_index_def, EXTENSION]
+QED
+
+val compute_arg_eqn = brackabs.brackabs_equiv [] (SPEC_ALL compute_arg_lt_def)
+
 Theorem kolmog_arg_computable:
   computable plain_kolmog ⇒ computable arg_plain_kolmog
 Proof
+  cheat (*
   simp[computable_def] >> disch_then (qx_choose_then ‘pki’ assume_tac) >>
-  arg_plain_kolmog_def
+  qexists_tac ‘dBnum (fromTerm (compute_arg_lt pki))’ >>
+  simp[Phi_def] >>
+  asm_simp_tac (bsrw_ss()) [compute_arg_eqn] >>
+  qx_gen_tac ‘y’ >>
+  qabbrev_tac ‘
+     cpty = cbnf_ofk @@ cforce_num
+                           @@ cDB (dAPP (numdB pki) (fromTerm (church y)))
+  ’ >>
+  ‘cpty == church (plain_kolmog y)’
+    by (simp[Abbr‘cpty’] >> pop_assum (qspec_then ‘y’ strip_assume_tac) >>
+        drule_then strip_assume_tac PhiSOME_cbnf_ofk >>
+        asm_simp_tac (bsrw_ss()) []) >>
+  asm_simp_tac (bsrw_ss()) [clog2list_behaviour, cmap_cvlist] >>
+  simp[listTheory.MAP_MAP_o] >>
+  qmatch_abbrev_tac ‘∃z. bnf_of (cfindleast @@ P @@ k) = SOME z ∧
+                         arg_plain_kolmog y = force_num z’ >>
+  ‘∀n. ∃b. P @@ church n == cB b’
+     by (simp_tac (bsrw_ss()) [Abbr‘P’, cmap_cvlist] >>
+         simp[listTheory.MAP_MAP_o] >> qx_gen_tac ‘n’ >>
+         qmatch_abbrev_tac ‘∃b. cexists @@ cbnf @@ cvlist l == cB b’ >>
+         ‘∀e. MEM e l ⇒ ∃b. cbnf @@ e == cB b’
+            (simp[Abbr‘l’, MEM_MAP, PULL_EXISTS] >>
+             simp_tac (bsrw_ss()) [churchDBTheory.csteps_behaviour,
+                                   churchDBTheory.cbnf_behaviour]) >>
+         asm_simp_tac (bsrw_ss()) [cexists_thm]) >>
+  drule (GEN_ALL churchnumTheory.cfindleast_termI) >>
+  ‘∃m. P @@ church m == cB T’
+    by (simp_tac (bsrw_ss()) [Abbr‘P’, cmap_cvlist] >>
+        qho_match_abbrev_tac ‘∃m. cexists @@ cbnf @@ cvlist (Tf m) == cB T’ >>
+        ‘∃t e. MEM e (Tf t) ∧ cbnf @@ e == cB T’
+           by (simp[Abbr‘Tf’, MEM_MAP, PULL_EXISTS] >>
+               simp_tac (bsrw_ss()) [churchDBTheory.csteps_behaviour,
+                                     churchDBTheory.cbnf_behaviour] >>
+               qspec_then ‘y’ strip_assume_tac plain_kolmog_props >>
+               rename [‘Phi M 0 = SOME y’, ‘log2list (plain_kolmog y)’] >>
+               simp[]
+
+
+) >>
+        ‘∀m' e. MEM e (Tf m') ⇒ ∃b. cbnf @@ e == cB b’
+           by (
+        asm_simp_tac(bsrw_ss()) [cexists_thm] *)
 QED
 
 (* proven *)
