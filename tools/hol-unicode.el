@@ -230,6 +230,7 @@
 (define-key hol-unicode-C-map (kbd "-") "≃")
 (define-key hol-unicode-C-map (kbd ".") "⪽")
 (define-key hol-unicode-C-map (kbd "c") "⊂")
+(define-key hol-unicode-C-map (kbd "l") "ℓ")
 (define-key hol-unicode-C-map (kbd "p") "⊂")  ; "p" for proper
 (define-key hol-unicode-C-map (kbd "q") "≼")  ; "q" for less-or-eQual
 (define-key hol-unicode-C-map (kbd "=") "≈")
