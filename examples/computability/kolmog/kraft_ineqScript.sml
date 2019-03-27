@@ -952,6 +952,8 @@ Proof
   fs[bls_size_def]
 QED
 
+
+
 (* Working on other Kolmog theorems  *)
 
 (* UTM from theorem 2.7 of UAI, with bar in place of dash *)
@@ -1217,6 +1219,7 @@ QED
 
 
 
+
 Theorem HUTM_prefix_free:
   ∀M. prefix_free {x | (∃y. Phi M (bl2n x) = SOME y)} ==>
       prefix_free {x | (∃p. x = bar (n2bl M) ++ p) ∧ (∃y. HUTM x = SOME y)}
@@ -1349,6 +1352,22 @@ QED
 val kolmog_fn_def = Define`kolmog_fn f = if (∃n. recfn f n)
                                            then SOME (MIN_SET {p | p=recfn_index f})
                                          else NONE`
+
+
+Theorem kolmogpf_prefix_free:
+  prefix_free { x| ∃y. (kolmogpf y = LENGTH x) ∧ ( (HUTMpf x) = SOME y) }
+Proof
+  fs[kolmogpf_def,kolmog_complexity_def,prefix_free_def] >> rw[] >>
+  `prefix_free {x | (∃y. HUTMpf x = SOME y)}` by fs[HUTMpf_prefix_free] >> fs[prefix_free_def]
+QED
+
+Theorem kolmog_HUTMpf_kraft:
+  REAL_SUM_IMAGE (\s. (2 rpow (real_neg &(LENGTH s)))) {q | q ∈ {x| ∃y. (kolmogpf y = LENGTH x) ∧ ((HUTMpf x) = SOME y) } ∧ LENGTH q <n} <=1
+Proof
+  `prefix_free {x| ∃y. (kolmogpf y = LENGTH x) ∧ ((HUTMpf x) = SOME y) }` by fs[kolmogpf_prefix_free]>>
+  `bls_size {x| ∃y. (kolmogpf y = LENGTH x) ∧ ((HUTMpf x) = SOME y) } n <= 1` by fs[kraft_ineq1]>>
+  fs[bls_size_def]
+QED
 
 (*  To do in the future)
 
