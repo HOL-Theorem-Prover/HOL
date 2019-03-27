@@ -9,7 +9,6 @@ fun munger eatfirstNL () = let
                        TextIO.flushOut TextIO.stdErr))
   val () = set_trace "Unicode" 1
   val () = set_trace "pp_dollar_escapes" 1
-  val () = set_trace "ambiguous grammar warning" 2
   open TextIO
   val _ = if eatfirstNL then TextIO.inputLine stdIn else NONE
   val _ = let
@@ -49,6 +48,9 @@ fun munger eatfirstNL () = let
         [] => ()
       | ["-index"] => mungeTools.usage()
       | ["-index", basename] => (holindex.holindex basename; run_lexer := false)
+      | "--fail_on_ambiguities" :: rest =>
+           (set_trace "ambiguous grammar warning" 2;
+            proc_args rest)
       | "--nomergeanalysis" :: rest => (set_trace "pp_avoids_symbol_merges" 0;
                                         proc_args rest)
       | s :: rest => let
