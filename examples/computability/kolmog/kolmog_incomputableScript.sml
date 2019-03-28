@@ -4,6 +4,7 @@ open arithmeticTheory whileTheory logrootTheory pred_setTheory listTheory
 open reductionEval;
 open churchoptionTheory churchlistTheory recfunsTheory numsAsCompStatesTheory
      kolmog_complexTheory kraft_ineqTheory
+open churchDBTheory
 
 val _ = new_theory "kolmog_incomputable"
 
@@ -272,8 +273,24 @@ Proof
       simp[Abbr‘fastest_mis’] >> metis_tac[])
 QED
 
+Theorem arg_plain_pred_unique :
+   ∀x m1 m2. arg_plain_pred x m1 ∧ arg_plain_pred x m2 ⇒ (m1 = m2)
+Proof
+  rw[arg_plain_pred_def] >> ‘ℓ m1 = ℓ m2’ by simp[] >>
+  rename [‘ℓ m1 = ℓ m2’, ‘tPhi m1 0 t1’, ‘tPhi m2 0 t2’] >>
+  ‘t1 ≤ t2 ∧ t2 ≤ t1’ by metis_tac[] >> ‘t1 = t2’ by simp[] >>
+  pop_assum SUBST_ALL_TAC >> ‘m1 ≤ m2 ∧ m2 ≤ m1’ by metis_tac[] >>
+  simp[]
+QED
+
 val arg_plain_kolmog_def = new_specification("arg_plain_kolmog_def",
   ["arg_plain_kolmog"], CONV_RULE SKOLEM_CONV arg_plain_pred_exists);
+
+Theorem arg_plain_kolmog_unique :
+  (arg_plain_kolmog x = y) ⇔ arg_plain_pred x y
+Proof
+  metis_tac[arg_plain_kolmog_def, arg_plain_pred_unique]
+QED
 
 Theorem PhiSOME_terminated :
   (Phi m x = SOME y) ⇒
@@ -378,8 +395,12 @@ Proof
   fs[GSYM ODD_EVEN, ODD_EXISTS, ADD1, EXP_ADD]
 QED
 
-Theorem MEM_log2list = ELL_log2list |> SPEC_ALL |> Q.INST [‘i’ |-> ‘ℓ n’]
-                                    |> SIMP_RULE (srw_ss()) []
+Theorem MEM_log2list:
+  MEM x (log2list i) ⇔ 0 < x ∧ ℓ (x - 1) = i
+Proof
+  csimp[ELL_log2list] >> Cases_on ‘x’ >> simp[] >>
+  simp[log2list_def, MEM_GENLIST]
+QED
 
 Theorem ELL_LE[simp]:
   ℓ k <= k
@@ -441,34 +462,39 @@ QED
 *)
 val compute_arg_lt_def = Define‘
   compute_arg_lt pki =
-  B @@ (
+  LAM "y" (
     (* let c = ... in *)
     LAM "c" (
        LAM "machines" (
-         LAM "run" (
-           cfindleast
-             @@ (B @@ (cexists @@ cbnf) @@ VAR "run")
-             @@ (LAM "i" (cplus @@ (cpred @@ (cexp @@ church 2 @@ VAR "c"))
-                                @@ (cfind_index @@ cbnf
-                                                @@ (VAR "run" @@ VAR "i"))))
-         )
-         @@ (* run's value *)
-           LAM "i" (
-                cmap
-                  @@ LAM "m" (
-                        csteps @@ VAR "i"
-                               @@ (cdAPP @@ VAR "m" @@ (cchurch @@ church 0))
-                     )
-                  @@ VAR "machines"
+         LAM "term_with_y" (
+           LAM "run" (
+             cfindleast
+               @@ (B @@ (cexists @@ VAR "term_with_y") @@ VAR "run")
+               @@ (LAM "i" (cplus @@ (cpred @@ (cexp @@ church 2 @@ VAR "c"))
+                                  @@ (cfind_index @@ VAR "term_with_y"
+                                                  @@ (VAR "run" @@ VAR "i"))))
            )
+           @@ (* run's value *)
+             LAM "i" (
+                  cmap
+                    @@ LAM "m" (
+                          csteps @@ VAR "i"
+                                 @@ (cdAPP @@ VAR "m" @@ (cchurch @@ church 0))
+                       )
+                    @@ VAR "machines"
+             )
+         )
+         @@ (* term_with_y = *)
+            LAM "s" (cand @@ (cbnf @@ VAR "s")
+                          @@ (ceqnat @@ VAR "y" @@ (cforce_num @@ VAR "s")))
        )
        @@ (* machine's value *) (cmap @@ (B @@ cnumdB @@ cpred)
                                       @@ (clog2list @@ VAR "c"))
     )
+    @@ (* c's value: *) (cbnf_ofk @@ cforce_num
+                                  @@ (cdAPP @@ (cnumdB @@ church pki)
+                                            @@ (cchurch @@ VAR "y")))
   )
-    @@ (* c's value: *) (B @@ (cbnf_ofk @@ cforce_num)
-                           @@ (B @@ (cdAPP @@ (cnumdB @@ church pki))
-                                 @@ cchurch))
 ’;
 
 Theorem FV_cexists[simp]:
@@ -485,10 +511,15 @@ QED
 
 val compute_arg_eqn = brackabs.brackabs_equiv [] (SPEC_ALL compute_arg_lt_def)
 
+Theorem EL_log2list :
+  n < 2 ** i ⇒ EL n (log2list i) = n + 2 ** i
+Proof
+  simp[log2list_def, EL_GENLIST]
+QED
+
 Theorem kolmog_arg_computable:
   computable plain_kolmog ⇒ computable arg_plain_kolmog
 Proof
-  cheat (*
   simp[computable_def] >> disch_then (qx_choose_then ‘pki’ assume_tac) >>
   qexists_tac ‘dBnum (fromTerm (compute_arg_lt pki))’ >>
   simp[Phi_def] >>
@@ -502,36 +533,135 @@ Proof
     by (simp[Abbr‘cpty’] >> pop_assum (qspec_then ‘y’ strip_assume_tac) >>
         drule_then strip_assume_tac PhiSOME_cbnf_ofk >>
         asm_simp_tac (bsrw_ss()) []) >>
+  Q.MATCH_GOALSUB_ABBREV_TAC ‘cfind_index @@ test’ >>
   asm_simp_tac (bsrw_ss()) [clog2list_behaviour, cmap_cvlist] >>
   simp[listTheory.MAP_MAP_o] >>
   qmatch_abbrev_tac ‘∃z. bnf_of (cfindleast @@ P @@ k) = SOME z ∧
                          arg_plain_kolmog y = force_num z’ >>
-  ‘∀n. ∃b. P @@ church n == cB b’
-     by (simp_tac (bsrw_ss()) [Abbr‘P’, cmap_cvlist] >>
-         simp[listTheory.MAP_MAP_o] >> qx_gen_tac ‘n’ >>
-         qmatch_abbrev_tac ‘∃b. cexists @@ cbnf @@ cvlist l == cB b’ >>
-         ‘∀e. MEM e l ⇒ ∃b. cbnf @@ e == cB b’
-            (simp[Abbr‘l’, MEM_MAP, PULL_EXISTS] >>
-             simp_tac (bsrw_ss()) [churchDBTheory.csteps_behaviour,
-                                   churchDBTheory.cbnf_behaviour]) >>
-         asm_simp_tac (bsrw_ss()) [cexists_thm]) >>
+  Q.MATCH_ASMSUB_ABBREV_TAC ‘cvlist l’ >>
+  ‘(∀n. ∃b. P @@ church n == cB b) ∧
+   ∀n. (P @@ church n == cB T) ⇔
+       ∃M r. ℓ M = plain_kolmog y ∧ steps n (N2T M @@ church 0) = r ∧
+             bnf r ∧ force_num r = y’
+    by (simp_tac (bsrw_ss())[Abbr‘P’, cmap_cvlist, GSYM FORALL_AND_THM] >>
+        qx_gen_tac ‘n’ >>
+        qmatch_abbrev_tac ‘
+           (∃b. cexists @@ test @@ cvlist ll == cB b) ∧
+           (cexists @@ test @@ cvlist ll == cB T ⇔ _)
+        ’ >>
+        ‘∀e. MEM e ll ⇒ ∃b. test @@ e == cB b’
+           by simp_tac (bsrw_ss()) [Abbr‘ll’, MEM_MAP, PULL_EXISTS, Abbr‘l’,
+                                    csteps_behaviour, Abbr‘test’,
+                                    cbnf_behaviour] >>
+        asm_simp_tac (bsrw_ss())
+          [cexists_thm, Abbr‘l’, MEM_MAP, PULL_EXISTS, cbnf_behaviour,
+           csteps_behaviour, MEM_log2list, Abbr‘test’, Abbr‘ll’] >>
+        CONV_TAC (LAND_CONV (HO_REWR_CONV EXISTS_NUM)) >> simp[PRE_SUB1] >>
+        metis_tac[]) >>
   drule (GEN_ALL churchnumTheory.cfindleast_termI) >>
   ‘∃m. P @@ church m == cB T’
-    by (simp_tac (bsrw_ss()) [Abbr‘P’, cmap_cvlist] >>
-        qho_match_abbrev_tac ‘∃m. cexists @@ cbnf @@ cvlist (Tf m) == cB T’ >>
-        ‘∃t e. MEM e (Tf t) ∧ cbnf @@ e == cB T’
-           by (simp[Abbr‘Tf’, MEM_MAP, PULL_EXISTS] >>
-               simp_tac (bsrw_ss()) [churchDBTheory.csteps_behaviour,
-                                     churchDBTheory.cbnf_behaviour] >>
-               qspec_then ‘y’ strip_assume_tac plain_kolmog_props >>
-               rename [‘Phi M 0 = SOME y’, ‘log2list (plain_kolmog y)’] >>
-               simp[]
-
-
-) >>
-        ‘∀m' e. MEM e (Tf m') ⇒ ∃b. cbnf @@ e == cB b’
-           by (
-        asm_simp_tac(bsrw_ss()) [cexists_thm] *)
+    by (simp[] >>
+        qspec_then ‘y’ mp_tac plain_kolmog_props >>
+        disch_then (qx_choose_then ‘M’ (CONJUNCTS_THEN2 assume_tac mp_tac)) >>
+        simp[Phi_def, stepsTheory.bnf_steps, PULL_EXISTS] >>metis_tac[]) >>
+  disch_then drule >> simp_tac (bsrw_ss()) [] >> disch_then kall_tac >>
+  qabbrev_tac ‘t = LEAST n. P @@ church n == cB T’ >>
+  ‘P @@ church t == cB T’
+     by (simp_tac(srw_ss())[Abbr‘t’] >> numLib.LEAST_ELIM_TAC >>
+         metis_tac[]) >>
+  ‘∃Mt. ℓ Mt = plain_kolmog y ∧ bnf (steps t (N2T Mt @@ church 0)) ∧
+       force_num (steps t (N2T Mt @@ church 0)) = y’ by metis_tac[] >>
+  simp_tac (bsrw_ss()) [Abbr‘k’, cmap_cvlist] >>
+  qmatch_abbrev_tac ‘
+    ∃z. bnf_of (cplus @@ _ @@ (cfind_index @@ _ @@ cvlist ll)) = SOME z ∧
+        arg_plain_kolmog y = force_num z
+  ’ >>
+  ‘∀e. MEM e ll ⇒ ∃b. test @@ e == cB b’
+     by simp_tac (bsrw_ss()) [Abbr‘ll’, Abbr‘l’, Abbr‘test’, MEM_MAP,
+                              PULL_EXISTS, csteps_behaviour, cbnf_behaviour] >>
+  asm_simp_tac (bsrw_ss()) [cfind_index_thm, normal_orderTheory.bnf_bnf_of] >>
+  simp[arg_plain_kolmog_unique] >>
+  ‘∃e. MEM e ll ∧ test @@ e == cB T’
+    by (simp_tac (bsrw_ss()) [Abbr‘test’, Abbr‘ll’, Abbr‘l’, MEM_MAP,
+                              PULL_EXISTS, cbnf_behaviour, csteps_behaviour,
+                              MEM_log2list] >>
+        Q.REFINE_EXISTS_TAC ‘SUC z’ >> simp[] >> metis_tac[]) >>
+  ‘EXISTS (λe. test @@ e == cB T) ll’ by (simp[EXISTS_MEM] >> metis_tac[]) >>
+  simp[findPi_thm] >>
+  qabbrev_tac ‘
+    TNY = λt n y. steps t (N2T (EL n (log2list (plain_kolmog y)) - 1) @@
+                           church 0)
+  ’ >>
+  ‘∀n. n < LENGTH ll ⇒
+       (test @@ EL n ll == cB T ⇔ bnf (TNY t n y) ∧ force_num (TNY t n y) = y)’
+    by (simp_tac (bsrw_ss()) [Abbr‘test’, Abbr‘ll’, Abbr‘l’, EL_MAP,
+                              csteps_behaviour, cbnf_behaviour, PRE_SUB1] >>
+        metis_tac[]) >>
+  numLib.LEAST_ELIM_TAC >> conj_tac >- metis_tac[MEM_EL] >>
+  qx_gen_tac ‘n’ >> strip_tac >>
+  simp[arg_plain_pred_def, PRE_SUB1] >>
+  simp[Phi_def, stepsTheory.bnf_steps, PULL_EXISTS] >>
+  ‘LENGTH ll = 2 ** plain_kolmog y’ by simp[Abbr‘ll’, Abbr‘l’] >> fs[] >>
+  map_every qexists_tac [‘t’, ‘t’] >>
+  ‘bnf (TNY t n y) ∧ force_num (TNY t n y) = y’ by metis_tac[] >>
+  qabbrev_tac ‘ββ = λt m. steps t (N2T m @@ church 0)’ >> fs[] >>
+  qabbrev_tac ‘arg = n + 2 ** plain_kolmog y - 1’ >>
+  ‘ℓ arg = plain_kolmog y’
+     by (simp[ELL_log2list, MEM_GENLIST, log2list_def] >>
+         qexists_tac ‘arg + 1 - 2 ** plain_kolmog y’ >>
+         simp[Abbr‘arg’]) >>
+  rpt strip_tac
+  >- (qpat_x_assum ‘bnf (TNY t n _)’ mp_tac >> simp[Abbr‘TNY’, EL_log2list])
+  >- (rw[] >> qpat_x_assum ‘force_num _ = force_num _’ mp_tac >>
+      simp[Abbr‘TNY’, EL_log2list])
+  >- (qmatch_abbrev_tac ‘ℓ _ = MIN_SET ss’ >> simp[] >>
+      DEEP_INTRO_TAC MIN_SET_ELIM >> conj_tac
+      >- (simp[Abbr‘ss’, EXTENSION] >> metis_tac[]) >>
+      simp[PULL_EXISTS, Abbr‘ss’] >> rpt strip_tac >>
+      rename [‘plain_kolmog _ = ℓ Ni’] >>
+      ‘ℓ Ni ≤ ℓ Mt’ by metis_tac[] >>
+      ‘ℓ Mt ≤ ℓ Ni’ suffices_by metis_tac[LESS_EQUAL_ANTISYM] >>
+      simp[] >> irule plain_kolmog_smallest >>
+      simp[Phi_def, stepsTheory.bnf_steps, PULL_EXISTS] >> metis_tac[])
+  >- (simp[tPhi_def, terminated_def, prtermTheory.pr_bnf_correct,
+           mk_initial_state_def, prtermTheory.pr_steps_correct] >>
+      ‘ββ t arg = TNY t n y’ by simp[Abbr‘TNY’, EL_log2list] >> simp[] >>
+      Q.SUBGOAL_THEN ‘∃t0. (λt0. P @@ church t0 == cB T) t0’
+         (mp_tac o CONJUNCT2 o MATCH_MP LEAST_EXISTS_IMP) >- metis_tac[] >>
+      simp[] >> rpt strip_tac >>
+      ‘ββ t' arg = ββ t arg’ suffices_by metis_tac[] >>
+      metis_tac[stepsTheory.bnf_steps_upwards_closed])
+  >- (qpat_x_assum ‘tPhi _ _ _’ mp_tac >>
+      simp[tPhi_def, terminated_def, prtermTheory.pr_steps_correct,
+           prtermTheory.pr_bnf_correct, mk_initial_state_def] >>
+      rename [‘bnf (ββ u N) ∧ _ ⇒ t ≤ u’] >> strip_tac >>
+      spose_not_then (assume_tac o REWRITE_RULE [NOT_LESS_EQUAL]) >>
+      ‘force_num (ββ u N) = y’
+         by metis_tac[stepsTheory.bnf_steps_upwards_closed,
+                      DECIDE “x:num < y ∨ x = y ∨ y < x”] >>
+      Q.SUBGOAL_THEN ‘∃t0. (λt0. P @@ church t0 == cB T) t0’
+         (mp_tac o CONJUNCT2 o MATCH_MP LEAST_EXISTS_IMP) >- metis_tac[] >>
+      simp[] >> metis_tac[])
+  >- (qpat_x_assum ‘y = force_num _’ (assume_tac o SYM) >> simp[] >>
+      rename [‘arg ≤ N’] >> qpat_x_assum ‘tPhi _ _ _ ’ mp_tac >>
+      simp[tPhi_def, terminated_def, prtermTheory.pr_steps_correct,
+           prtermTheory.pr_bnf_correct, mk_initial_state_def] >> strip_tac >>
+      ‘force_num (ββ t N) = y’
+         by metis_tac[stepsTheory.bnf_steps_upwards_closed,
+                      DECIDE “x:num < y ∨ x = y ∨ y < x”] >>
+      spose_not_then (assume_tac o REWRITE_RULE [NOT_LESS_EQUAL]) >>
+      Q.UNDISCH_THEN ‘ℓ N = ℓ arg’ mp_tac >>
+      simp[ELL_log2list, MEM_GENLIST, log2list_def] >> qx_gen_tac ‘N0’ >>
+      rpt strip_tac >>
+      ‘N = N0 + 2 ** plain_kolmog y - 1’ by simp[] >>
+      pop_assum SUBST_ALL_TAC >> fs[Abbr‘arg’] >>
+      ‘¬(test @@ EL N0 ll == cB T)’ by metis_tac[] >> pop_assum mp_tac >>
+      REWRITE_TAC[] >>
+      Q.UNDISCH_THEN ‘N0 < 2 ** plain_kolmog y’ (
+             (fn th => first_x_assum (SUBST1_TAC o C MATCH_MP th))) >>
+      simp[Abbr‘TNY’] >> simp[EL_GENLIST, log2list_def] >>
+      metis_tac[stepsTheory.bnf_steps_upwards_closed,
+                      DECIDE “x:num < y ∨ x = y ∨ y < x”])
 QED
 
 (* proven *)
