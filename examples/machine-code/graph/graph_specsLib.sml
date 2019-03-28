@@ -478,7 +478,8 @@ fun clear_graph_spec_fails () = (graph_spec_fails := []);
 fun print_graph_spec_report () =
   (if length (!graph_spec_fails) = 0 then
     (write_line "No graph spec failures."; [])
-   else (map print_graph_spec_fail (!graph_spec_fails)))
+   else (has_failures := true;
+         map print_graph_spec_fail (!graph_spec_fails)))
 
 fun get_pc_val th = let
   val pc_pat = get_pc_pat ()

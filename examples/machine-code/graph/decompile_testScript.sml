@@ -1,7 +1,17 @@
 open HolKernel Parse boolLib bossLib;
-open decompileLib;
+open decompileLib backgroundLib;
 
 val _ = new_theory "decompile_test";
+
+(* ARM kernel *)
+
+val base_name = "seL4-kernel/arm/kernel"
+val fast = false;
+val res = decomp_only base_name fast
+  ["memzero", "memcpy", "write_slot", "emptySlot", "lookupSlot",
+   "resolveAddressBits"];
+
+val _ = not (!has_failures) orelse failwith "There were failures.";
 
 (* RISC-V *)
 
@@ -11,12 +21,16 @@ val res = decomp_only base_name fast
   ["memzero", "memcpy", "write_slot", "emptySlot", "lookupSlot",
    "resolveAddressBits"];
 
+val _ = not (!has_failures) orelse failwith "There were failures.";
+
 (* ARMv7 *)
 
 val base_name = "loop/example";
 val fast = false;
 val ignore_names = "";
 val res = decomp base_name fast ignore_names;
+
+val _ = not (!has_failures) orelse failwith "There were failures.";
 
 (* ARM-M0 *)
 

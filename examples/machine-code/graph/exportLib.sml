@@ -360,6 +360,7 @@ fun export_func lemma = let
 fun print_export_report () = let
   val l = length (!failed_ty_translations) + length (!failed_tm_translations)
   in if l = 0 then write_line "No export failures." else let
+       val _ = has_failures := true
        val xs = map (fn ty => "Failed to translate type: " ^ type_to_string ty)
                        (all_distinct (!failed_ty_translations)) @
                 map (fn tm => "Failed to translate term: " ^ term_to_string tm)

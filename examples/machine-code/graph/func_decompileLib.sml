@@ -230,7 +230,8 @@ fun prove_funcs_ok names = let
   fun print_fs_locs_success () =
     write_line (if fs_locs_success
                 then "No call offset failures."
-                else "Failed to prove correctness of some call offsets.")
+                else (has_failures := true;
+                      "Failed to prove correctness of some call offsets."))
   val _ = if fs_locs_success then write_line "Offsets proved correct." else ()
   (* export top-level graph definition *)
   val funcs = th |> concl |> rand
@@ -256,6 +257,7 @@ fun prove_funcs_ok names = let
 
   val base_name = "kernel-riscv/kernel-riscv"
   val base_name = "loop-riscv/example"
+  val base_name = "seL4-kernel/arm/kernel"
   val _ = read_files base_name []
   val _ = open_current "test"
   val sec_name = "lookupSlot"
@@ -265,6 +267,7 @@ fun prove_funcs_ok names = let
   val sec_name = "get_num_avail_p_regs"
   val sec_name = "ndks_boot"
   val sec_name = "num_avail_p_regs"
+  val sec_name = "resolveAddressBits"
 
   val names = ["performInvocation_Reply","performInvocation_Endpoint"]
   val names = section_names()

@@ -2318,6 +2318,13 @@ val fixwidth_w2v = prove(
   ``fixwidth (dimindex (:'a)) (w2v (w:'a word)) = w2v w``,
   EVAL_TAC \\ fs []);
 
+val bit_field_insert_31_16 = store_thm("bit_field_insert_31_16",
+  ``(bit_field_insert 31 16 v (w:word32) =
+     (v << 16 || (w << 16) >>> 16):word32) /\
+    (bit_field_insert 31 16 (x:word16) (w:word32) =
+     (w2w x << 16 || (w << 16) >>> 16):word32)``,
+  blastLib.BBLAST_TAC);
+
 val v2w_field_insert_31_16 = prove(
   ``(v2w (field_insert 31 16
                       (field 15 0 (w2v (w:word32)))
@@ -2337,7 +2344,8 @@ val word_cancel_extra = store_thm("word_cancel_extra",
     (w + x − (w - y) = x + y:'a word)``,
   fs [WORD_LEFT_ADD_DISTRIB]);
 
-val export_init_rw = save_thm("export_init_rw",v2w_field_insert_31_16);
+val export_init_rw = save_thm("export_init_rw",
+  CONJ bit_field_insert_31_16 v2w_field_insert_31_16);
 
 val m0_preprocessing = save_thm("m0_preprocessing",
   CONJ (EVAL ``RName_LR = RName_PC``) (EVAL ``RName_PC = RName_LR``));

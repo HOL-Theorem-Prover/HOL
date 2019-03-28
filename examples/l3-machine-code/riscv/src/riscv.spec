@@ -4933,39 +4933,30 @@ word Encode(i::instruction) =
 
 instruction DecodeRVC(h::half) =
    match h
-   { -- case '000 00000000 000 00' => _ -- illegal
+   { case '000 00000000              rd 00' => UnknownInstruction
+     case '000 ilo`2 ihi`4 i2`1 i3`1 rd 00' => ArithI(ADDI('01' : rd, 2, '00' : ihi : ilo : i3 : i2 : '00'))
 
-     case '000 ilo`2 ihi`4 i2`1 i3`1 rd 00' => ArithI(ADDI('01' : rd, 2, '00' : ihi : ilo : i3 : i2 : '00')) -- imm /= 0
+     case '001 ilo`3 rs1 ihi`2     rd 00' => FPLoad(FLD('01' : rd, '01' : rs1, '0000'        : ihi : ilo : '000' ))
+     case '010 imi`3 rs1 i2`1 i6`1 rd 00' => Load(   LW('01' : rd, '01' : rs1, '00000' : i6  : imi : i2  : '00'  ))
+     case '011 ilo`3 rs1 ihi`2     rd 00' => Load(   LD('01' : rd, '01' : rs1, '0000'        : ihi : ilo : '000' ))
 
-     case '001 ilo`3      rs1 ihi`2     rd 00' => FPLoad(FLD('01' : rd, '01' : rs1, '0000'        : ihi : ilo : '000' )) -- 32/64
-     -- case '001 ilo`2 i8`1 rs1 ihi`2     rd 00' => Load(   LQ('01' : rd, '01' : rs1, '000'   : i8  : ihi : ilo : '0000')) -- 128
-     case '010 imi`3      rs1 i2`1 i6`1 rd 00' => Load(   LW('01' : rd, '01' : rs1, '00000' : i6  : imi : i2  : '00'  ))
-     -- case '011 imi`3      rs1 i2`1 i6`1 rd 00' => FPLoad(FLW('01' : rd, '01' : rs1, '00000' : i6  : imi : i2  : '00'  )) -- 32
-     case '011 ilo`3      rs1 ihi`2     rd 00' => Load(   LD('01' : rd, '01' : rs1, '0000'        : ihi : ilo : '000' )) -- 64/128
-
-     -- -- case '100 _ 00' => _ -- reserved
-
-     case '101 ilo`3      rs1 ihi`2     rs2 00' => FPStore(FSD('01' : rs2, '01' : rs1, '0000'        : ihi : ilo : '000' )) -- 32/64
-     -- case '101 ilo`2 i8`1 rs1 ihi`2     rs2 00' => Store(   SQ('01' : rs2, '01' : rs1, '000'   : i8  : ihi : ilo : '0000')) -- 128
-     case '110 imi`3      rs1 i2`1 i6`1 rs2 00' => Store(   SW('01' : rs2, '01' : rs1, '00000' : i6  : imi : i2  : '00'  ))
-     -- case '111 imi`3      rs1 i2`1 i6`1 rs2 00' => FPStore(FSW('01' : rs2, '01' : rs1, '00000' : i6  : imi : i2  : '00'  )) -- 32
-     case '111 ilo`3      rs1 ihi`2     rs2 00' => Store(   SD('01' : rs2, '01' : rs1, '0000'        : ihi : ilo : '000' )) -- 64/128
+     case '101 ilo`3 rs1 ihi`2     rs2 00' => FPStore(FSD('01' : rs1, '01' : rs2, '0000'        : ihi : ilo : '000' ))
+     case '110 imi`3 rs1 i2`1 i6`1 rs2 00' => Store(   SW('01' : rs1, '01' : rs2, '00000' : i6  : imi : i2  : '00'  ))
+     case '111 ilo`3 rs1 ihi`2     rs2 00' => Store(   SD('01' : rs1, '01' : rs2, '0000'        : ihi : ilo : '000' ))
 
      case '000 0 00000 00000 01' => ArithI(ADDI(0, 0, 0))
 
-     -- case '001 i11`1 i4`1 ihi`2 i10`1 i6`1 i7`1 ilo`3 i5`1 01' => Branch(JAL(1, i11 ^ 10 : i10 : ihi : i7 : i6 : i5 : i4 : ilo)) -- 32, (moved)
+     case '000 i5`1 r     imi`5                01' => ArithI( ADDI( r, r, i5 ^ 7 : imi))
+     case '001 i5`1 r     imi`5                01' => ArithI(ADDIW( r, r, i5 ^ 7 : imi))
+     case '010 i5`1 rd    imi`5                01' => ArithI( ADDI(rd, 0, i5 ^ 7 : imi))
+     case '011 0    00010 00000                01' => UnknownInstruction
+     case '011 i9`1 00010 i4`1 i6`1 imi`2 i5`1 01' => ArithI( ADDI( 2, 2, i9 ^ 3 : imi : i6 : i5 : i4 : '0000'))
 
-     case '000 i5`1 r     imi`5                01' => ArithI( ADDI( r, r, i5 ^ 7 : imi)) -- rd /= 0, imm /= 0
-     case '001 i5`1 r     imi`5                01' => ArithI(ADDIW( r, r, i5 ^ 7 : imi)) -- rd /= 0, 64/128
-     case '010 i5`1 rd    imi`5                01' => ArithI( ADDI(rd, 0, i5 ^ 7 : imi)) -- rd /= 0
-     case '011 i9`1 00010 i4`1 i6`1 imi`2 i5`1 01' => ArithI( ADDI( 2, 2, i9 ^ 3 : imi : i6 : i5 : i4 : '0000')) -- imm /= 0
+     case '011 0     rd 00000 01' => UnknownInstruction
+     case '011 i17`1 rd imi`5 01' => ArithI(LUI(rd, i17 ^ 3 : imi : '000000000000'))
 
-     case '011 i17`1 rd imi`5 01' => ArithI(LUI(rd, i17 ^ 4 : imi : '00000000000')) -- rd /= 0/2, imm /= 0
-
-     case '100 i5`1 00 r imi`5 01' => Shift(SRLI('01' : r, '01' : r, i5 : imi)) -- ? 32 [i5 /= 1]
-     -- case '100 0    00 r 00000 01' => Shift(SRLI('01' : r, '01' : r, 64)) -- 128
-     case '100 i5`1 01 r imi`5 01' => Shift(SRAI('01' : r, '01' : r, i5 : imi)) -- ? 32 [i5 /= 1]
-     -- case '100 0    01 r 00000 01' => Shift(SRAI('01' : r, '01' : r, 64)) -- 128
+     case '100 i5`1 00 r imi`5 01' => Shift(SRLI('01' : r, '01' : r, i5 : imi))
+     case '100 i5`1 01 r imi`5 01' => Shift(SRAI('01' : r, '01' : r, i5 : imi))
 
      case '100 i5`1 10 r imi`5 01' => ArithI(ANDI('01' : r, '01' : r, i5 ^ 7 : imi))
 
@@ -4973,40 +4964,33 @@ instruction DecodeRVC(h::half) =
      case '100 0 11 r 01 rs2 01' => ArithR( XOR('01' : r, '01' : r, '01' : rs2))
      case '100 0 11 r 10 rs2 01' => ArithR(  OR('01' : r, '01' : r, '01' : rs2))
      case '100 0 11 r 11 rs2 01' => ArithR( AND('01' : r, '01' : r, '01' : rs2))
-     case '100 1 11 r 00 rs2 01' => ArithR(SUBW('01' : r, '01' : r, '01' : rs2)) -- 64/128
-     case '100 1 11 r 01 rs2 01' => ArithR(ADDW('01' : r, '01' : r, '01' : rs2)) -- 64/128
+     case '100 1 11 r 00 rs2 01' => ArithR(SUBW('01' : r, '01' : r, '01' : rs2))
+     case '100 1 11 r 01 rs2 01' => ArithR(ADDW('01' : r, '01' : r, '01' : rs2))
 
-     -- case '100 1 11 _ 10 _ 01' => _ -- reserved
-     -- case '100 1 11 _ 11 _ 01' => _ -- reserved
+     case '101 i11`1 i4`1 ihi`2 i10`1 i6`1 i7`1 ilo`3 i5`1 01' => Branch(JAL(0, i11 ^ 9 : i10 : ihi : i7 : i6 : i5 : i4 : ilo : '0'))
 
-     case '101 i11`1 i4`1 ihi`2 i10`1 i6`1 i7`1 ilo`3 i5`1 01' => Branch(JAL(0, i11 ^ 10 : i10 : ihi : i7 : i6 : i5 : i4 : ilo))
+     case '110 i8`1 imi`2 rs1 ihi`2 ilo`2 i5`1 01' => Branch(BEQ('01' : rs1, 0, i8 ^ 4 : ihi : i5 : imi : ilo : '0'))
+     case '111 i8`1 imi`2 rs1 ihi`2 ilo`2 i5`1 01' => Branch(BNE('01' : rs1, 0, i8 ^ 4 : ihi : i5 : imi : ilo : '0'))
 
-     case '110 i8`1 imi`2 rs1 ihi`2 ilo`2 i5`1 01' => Branch(BEQ('01' : rs1, 0, i8 ^ 5 : ihi : i5 : imi : ilo))
-     case '111 i8`1 imi`2 rs1 ihi`2 ilo`2 i5`1 01' => Branch(BNE('01' : rs1, 0, i8 ^ 5 : ihi : i5 : imi : ilo))
+     case '000 i5`1 r imi`5 10' => Shift(SLLI(r, r, i5 : imi))
 
-     case '000 i5`1 r imi`5 10' => Shift(SLLI(r, r, i5 : imi)) -- rd /= 0, ? 32 [i5 /= 1]
-     -- case '000 0    r 00000 10' => Shift(SLLI(r, r, 64)) -- rd /= 0, 128
+     case '001 i5`1 rd    ilo`2 ihi`3 10' => FPLoad(FLD(rd, 2, '000'  : ihi : i5 : ilo : '000'))
+     case '010 i5`1 00000 ilo`3 ihi`2 10' => UnknownInstruction
+     case '010 i5`1 rd    ilo`3 ihi`2 10' => Load(   LW(rd, 2, '0000' : ihi : i5 : ilo : '00' ))
+     case '011 i5`1 00000 ilo`2 ihi`3 10' => UnknownInstruction
+     case '011 i5`1 rd    ilo`2 ihi`3 10' => Load(   LD(rd, 2, '000'  : ihi : i5 : ilo : '000'))
 
-     case '001 i5`1 rd ilo`2 ihi`3 10' => FPLoad(FLD(rd, 2, '000'  : ihi : i5 : ilo : '000' )) -- 32/64
-     -- case '001 i5`1 rd i4    imi`4 10' => Load(   LQ(rd, 2, '00'   : imi : i5 : i4  : '0000')) -- rd /= 0, 128
-     case '010 i5`1 rd ilo`3 ihi`2 10' => Load(   LW(rd, 2, '0000' : ihi : i5 : ilo : '00'  )) -- rd /= 0
-     -- case '011 i5`1 rd ilo`3 ihi`2 10' => FPLoad(FLW(rd, 2, '0000' : ihi : i5 : ilo : '00'  )) -- 32
-     case '011 i5`1 rd ilo`2 ihi`3 10' => Load(   LD(rd, 2, '000'  : ihi : i5 : ilo : '000' )) -- rd /= 0, 64/128
+     case '100 0 00000 00000 10' => UnknownInstruction
+     case '100 0 rs1   00000 10' => Branch(JALR( 0, rs1,   0))
+     case '100 0 rd    rs2   10' => ArithR( ADD(rd,   0, rs2))
+     case '100 1 00000 00000 10' => System(EBREAK)
+     case '100 1 rs1   00000 10' => Branch(JALR( 1, rs1,   0))
+     case '100 1 r     rs2   10' => ArithR( ADD( r,   r, rs2))
 
-     case '100 1 00000 00000 10' => System(EBREAK) -- (moved)
+     case '101 ilo`3 ihi`3 rs2 10' => FPStore(FSD(2, rs2, '000'  : ihi : ilo : '000'))
+     case '110 ilo`4 ihi`2 rs2 10' => Store(   SW(2, rs2, '0000' : ihi : ilo : '00' ))
+     case '111 ilo`3 ihi`3 rs2 10' => Store(   SD(2, rs2, '000'  : ihi : ilo : '000'))
 
-     case '100 0 rs1 00000 10' => Branch(JALR( 0, rs1,   0)) -- rs1 /= 0
-     case '100 0 rd  rs2   10' => ArithR( ADD(rd,   0, rs2)) -- rd /= 0, rs2 /= 0
-     case '100 1 rs1 00000 10' => Branch(JALR( 1, rs1,   0)) -- rs1 /= 0
-     case '100 1 r   rs2   10' => ArithR( ADD( r,   r, rs2)) -- rd /= 0
-
-     case '101 ilo`3 ihi`3 rs2 10' => FPStore(FSD(2, rs2, '000'  : ihi : ilo : '000' )) -- 32/64
-     -- case '101 ilo`2 ihi`4 rs2 10' => Store(   SQ(2, rs2, '00'   : ihi : ilo : '0000')) -- 128
-     case '110 ilo`4 ihi`2 rs2 10' => Store(   SW(2, rs2, '0000' : ihi : ilo : '00'  ))
-     -- case '111 ilo`4 ihi`2 rs2 10' => FPStore(FSW(2, rs2, '0000' : ihi : ilo : '00'  )) -- 32
-     case '111 ilo`3 ihi`3 rs2 10' => Store(   SD(2, rs2, '000'  : ihi : ilo : '000' )) -- 64/128
-
-     -- unsupported instructions
      case _ => UnknownInstruction
    }
 

@@ -136,6 +136,8 @@ fun report_error name e = let
   val _ = "\n\n" ^ name ^ " failed.\n\n"
   in raise (modify_message (fn s => s ^ " << " ^ name) e) end
 
+val has_failures = ref false;
+
 (* aconv *)
 
 fun term_mem x [] = false
