@@ -6,21 +6,25 @@ sig
   val real_ty        : hol_type
   val zero_tm        : term
   val one_tm         : term
-  val negate_tm      : term
+
+  (* unary operators *)
   val absval_tm      : term
-  val plus_tm        : term
+  val negate_tm      : term
+  val real_injection : term (* the injection from :num -> :real *)
+
+  (* binary operators *)
+  val div_tm         : term
+  val exp_tm         : term (* not the e of e^l, but rather real$pow *)
+  val geq_tm         : term
+  val great_tm       : term
+  val leq_tm         : term
+  val less_tm        : term
+  val max_tm         : term
+  val min_tm         : term
   val minus_tm       : term
   val mult_tm        : term
-  val div_tm         : term
-  val exp_tm         : term
+  val plus_tm        : term
   val real_eq_tm     : term
-  val less_tm        : term
-  val leq_tm         : term
-  val great_tm       : term
-  val geq_tm         : term
-  val min_tm         : term
-  val max_tm         : term
-  val real_injection  : term (* the injection from :num -> :real *)
 
   (* discriminators, constructors, etc *)
 
@@ -83,5 +87,9 @@ sig
   val is_max         : term -> bool
   val dest_max       : term -> (term * term)
   val mk_max         : (term * term) -> term
+
+  val is_pow         : term -> bool
+  val dest_pow       : term -> term * term
+  val mk_pow         : term * term -> term
 
 end
