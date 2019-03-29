@@ -598,4 +598,128 @@ val REAL_ARITH_ss =
      convs = [], rewrs = [], congs = [],
       filter = NONE, ac = [], dprocs = [ARITH_REDUCER]};
 
+open AC_Sort realTheory realSyntax
+
+val literalbase = mk_var(" ", real_ty) (* compares less than 'normal' vars *)
+
+fun oksort cmp [] = true
+  | oksort cmp [_] = true
+  | oksort cmp (t1::(rest as (t2::ts))) =
+      cmp(t1,t2) = LESS andalso oksort cmp rest
+
+val realreduce_cs = real_compset()
+
+local
+  fun termbase t =
+      if is_real_literal t then literalbase
+      else
+        case total dest_pow t of
+            SOME(b,_) => b
+          | NONE => t
+
+  val mulcompare = inv_img_cmp termbase Term.compare
+
+  val addPOW1 = REWR_CONV (GSYM POW_1)
+  val mulPOWs = TRY_CONV (REWR_CONV REAL_POW_POW THENC
+                          RAND_CONV (computeLib.CBV_CONV realreduce_cs))
+  val POW_E0 = CONJUNCT1 pow
+  val mulcombine0 =
+      LAND_CONV (addPOW1 THENC mulPOWs) THENC
+      RAND_CONV (addPOW1 THENC mulPOWs) THENC
+      REWR_CONV (GSYM REAL_POW_ADD) THENC
+      RAND_CONV  (computeLib.CBV_CONV realreduce_cs) THENC
+      TRY_CONV (FIRST_CONV (map REWR_CONV [POW_1, POW_E0]))
+  fun mulcombine t =
+      if is_real_literal (rand t) then
+        computeLib.CBV_CONV realreduce_cs t
+      else mulcombine0 t
+
+  val mulpre = ALL_CONV
+
+  val mulsort = {
+    assoc = REAL_MUL_ASSOC,
+    comm = REAL_MUL_COMM,
+    dest = realSyntax.dest_mult,
+    mk = realSyntax.mk_mult,
+    cmp = mulcompare,
+    combine = mulcombine,
+    preprocess = mulpre
+  }
+in
+  fun REALMULCANON t =
+      let
+        fun strip A t =
+            case total dest_mult t of
+                SOME(t1,t2) => strip (t2::A) t1
+              | NONE => t::A
+        val (l,r) = dest_mult t handle HOL_ERR _ => raise UNCHANGED
+        val ts = strip [] (if is_real_literal l then r else t)
+      in
+        if List.exists (fn t => is_mult t orelse is_real_literal t) ts orelse
+           not (oksort mulcompare ts)
+        then
+          AC_Sort.sort mulsort THENC
+          TRY_CONV (REWR_CONV REAL_MUL_LID) THENC
+          RAND_CONV (PURE_REWRITE_CONV [REAL_MUL_ASSOC])
+        else ALL_CONV
+      end t
+end (* local *)
+
+local
+  val x = mk_var("x", real_ty)
+  fun termbase t =
+      if is_real_literal t then mk_abs(x,x) (* sorts last *)
+      else
+        case total dest_mult t of
+            SOME(l,r) => if is_real_literal l then r else t
+          | NONE => dest_negated t handle HOL_ERR _ => t
+
+  val addcompare = inv_img_cmp termbase Term.compare
+
+  val ADD_MUL1 = GSYM REAL_MUL_LID
+  val ADD_RDISTRIB' = GSYM REAL_ADD_RDISTRIB
+  fun give_coeff t =
+      case total dest_mult t of
+          SOME (l,r) => if is_real_literal l then ALL_CONV t
+                        else REWR_CONV ADD_MUL1 t
+        | NONE => (REWR_CONV REAL_NEG_MINUS1 ORELSEC REWR_CONV ADD_MUL1) t
+
+  val NEG_MINUS1' = GSYM REAL_NEG_MINUS1
+  val addcombine0 =
+      BINOP_CONV give_coeff THENC REWR_CONV ADD_RDISTRIB' THENC
+      LAND_CONV (computeLib.CBV_CONV realreduce_cs) THENC
+      TRY_CONV (FIRST_CONV (map REWR_CONV [REAL_MUL_LID, REAL_MUL_LZERO]))
+  fun addcombine t =
+      if is_real_literal (rand t) then
+        computeLib.CBV_CONV realreduce_cs t
+      else addcombine0 t
+
+  val addsort = {
+    assoc = REAL_ADD_ASSOC,
+    comm = REAL_ADD_COMM,
+    dest = realSyntax.dest_plus,
+    mk = realSyntax.mk_plus,
+    cmp = addcompare,
+    combine = addcombine,
+    preprocess = REALMULCANON
+  }
+in
+  fun REALADDCANON t =
+      let
+        fun strip A t =
+            case total dest_plus t of
+                SOME(t1,t2) => strip (t2::A) t1
+              | NONE => t::A
+        val ts = strip [] t
+      in
+        if List.exists is_plus ts orelse not (oksort addcompare ts)
+        then
+          AC_Sort.sort addsort THENC
+          PURE_REWRITE_CONV [REAL_ADD_ASSOC, REAL_ADD_LID, REAL_ADD_RID]
+        else ALL_CONV
+      end t
+end (* local *)
+
+
+
 end
