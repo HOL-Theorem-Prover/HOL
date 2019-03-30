@@ -229,7 +229,8 @@ end; (* structure Graph *)
  * stored in a theory.                                                       *
  *---------------------------------------------------------------------------*)
 
-datatype thmkind = Thm of thm | Axiom of string Nonce.t * thm | Defn of thm
+open ThmKind_dtype
+type thmkind = ThmKind_dtype.t
 
 fun is_axiom (Axiom _) = true  | is_axiom _   = false;
 fun is_theorem (Thm _) = true  | is_theorem _ = false;
@@ -380,10 +381,10 @@ local fun pluck1 x L =
          NONE => p::l
        | SOME ((_,f'),l') => p::l'
 in
-fun add_fact (th as (s,_)) (seg : segment) =
+fun add_fact th (seg : segment) =
     update_seg seg (U #facts (overwrite th (#facts seg))) $$
       before
-    call_hooks (TheoryDelta.NewBinding s)
+    call_hooks (TheoryDelta.NewBinding th)
 end;
 
 fun new_addon a (s as {adjoin, ...} : segment) =
