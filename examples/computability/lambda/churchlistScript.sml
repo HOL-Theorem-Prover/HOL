@@ -130,6 +130,12 @@ val wh_cappend = store_thm(
   SRW_TAC [][cappend_def,cnil_def] THEN unvarify_tac whstar_substitutive THEN
   ASM_SIMP_TAC (whfy(srw_ss())) [wh_ccons, wh_cvcons, wh_K]);
 
+Theorem cappend_behaviour :
+  cappend @@ cvcons h t @@ l2 == cvcons h (cappend @@ t @@ l2)
+Proof
+  simp_tac (bsrw_ss()) [cappend_equiv, Cong cvcons_cong, wh_cvcons, wh_ccons]
+QED
+
 val celbody_def = Define`
   celbody =
   LAM "a" (LAM "r" (LAM "m"
@@ -407,6 +413,21 @@ val cmem_cvlist = store_thm(
   ASM_SIMP_TAC (bsrw_ss()) [cmem_behaviour, Cong cvcons_cong,
                             churchnumTheory.ceqnat_behaviour] THEN
   Cases_on `m = n` THEN SRW_TAC [][]);
+
+Theorem cappend_cvlist:
+  cappend @@ cvlist l1 @@ cvlist l2 == cvlist (l1 ++ l2)
+Proof
+  Induct_on ‘l1’ >>
+  asm_simp_tac (bsrw_ss()) [cappend_behaviour, Cong cvcons_cong] >>
+  simp_tac (bsrw_ss())[wh_cappend]
+QED
+
+Theorem cvlist_LIST_REL_cong :
+  LIST_REL (==) l1 l2 ⇒ cvlist l1 == cvlist l2
+Proof
+  qid_spec_tac ‘l2’ >> Induct_on ‘l1’ >> simp[PULL_EXISTS] >> rw[] >>
+  irule cvcons_cong >> simp[]
+QED
 
 val sing_def = Define‘sing = LAM "x" (ccons @@ VAR "x" @@ cnil)’;
 Theorem FV_sing[simp]: FV sing = ∅

@@ -937,4 +937,22 @@ val cfindleast_bnfE = store_thm(
     `(c0 = cn) ∨ c0 < cn` by DECIDE_TAC THEN SRW_TAC [][]
   ]);
 
+val ceven_def = Define‘
+  ceven = LAM "n" (ceqnat @@ church 0 @@ (cmod @@ VAR "n" @@ church 2))
+’;
+
+Theorem FV_ceven[simp] :
+  FV ceven = ∅
+Proof
+  simp[EXTENSION, ceven_def]
+QED
+
+val ceven_eqn = brackabs.brackabs_equiv [] ceven_def
+
+Theorem ceven_behaviour:
+  ceven @@ church n == cB (EVEN n)
+Proof
+  simp_tac (bsrw_ss()) [ceven_eqn, arithmeticTheory.EVEN_MOD2] >> metis_tac[]
+QED
+
 val _ = export_theory()
