@@ -410,11 +410,13 @@ local
     val (m,_,c,_) = dest_spec (concl th)
     val goal = ``IMPL_INST ^(mk_code_term c) locs ^i``
     val lemma = auto_prove "make_SWITCH" (goal,
-      REWRITE_TAC [IMPL_INST_IF_SPLIT]
+      REWRITE_TAC [IMPL_INST_IF_SPLIT,ARM_def,RISCV_def,M0_def]
       \\ CONV_TAC (DEPTH_CONV BETA_CONV)
       \\ REPEAT STRIP_TAC
       \\ CONV_TAC simp \\ REPEAT STRIP_TAC
       \\ TRY (EVAL_TAC \\ NO_TAC)
+      \\ REWRITE_TAC [LET_THM]
+      \\ CONV_TAC (DEPTH_CONV PairRules.PBETA_CONV)
       \\ MP_TAC (DISCH_ALL th)
       \\ ASM_REWRITE_TAC []
       \\ STRIP_TAC
@@ -541,13 +543,17 @@ fun derive_insts_for sec_name = let
 (*
 
   val base_name = "loop-riscv/example"
-  val base_name = "kernel-riscv/kernel-riscv"
+  val base_name = "seL4-kernel/riscv/kernel-riscv"
+  val base_name = "seL4-kernel/arm/kernel"
   val _ = read_files base_name []
   val _ = open_current "test"
   val sec_name = "lookupSlot"
   val sec_name = "memzero"
   val sec_name = "memcpy"
   val sec_name = "isIRQPending"
+  val sec_name = "setMRs_syscall_error"
+
+  val thms = derive_insts_for sec_name
 
   val base_name = "loop-riscv/example"
   val _ = read_files base_name []
