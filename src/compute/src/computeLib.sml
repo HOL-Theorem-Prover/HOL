@@ -258,9 +258,11 @@ val _ = TypeBase.register_update_fn
 
 open LoadableThyData
 val {export,...} =
-    ThmSetData.new_exporter "compute"
-                            (fn _ (* thy *) => fn namedthms =>
-                                add_funs (map #2 namedthms))
+    ThmSetData.new_exporter {
+      settype = "compute",
+      efns = {add = (fn {named_thms,...} => add_funs (map #2 named_thms)),
+              remove = fn _ => ()}
+    }
 val add_persistent_funs = app export
 
 (*---------------------------------------------------------------------------*)

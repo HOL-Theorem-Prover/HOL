@@ -62,6 +62,7 @@ sig
 
   val ++              : simpset * ssfrag -> simpset    (* infix *)
   val &&              : simpset * thm list -> simpset  (* infix *)
+  val -*              : simpset * string list -> simpset (* infix *)
   val pure_ss         : simpset
   val bool_ss         : simpset
   val std_ss          : simpset           (* bool + option + pair + sum *)

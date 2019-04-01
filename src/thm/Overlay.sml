@@ -15,7 +15,7 @@ infix 8 via by suffices_by
 (* infixes for THEN shorthands *)
 infix >> >- >| \\ >>> >>- ??
 
-infix ~~ !~ Un Isct -- IN
+infix ~~ !~ Un Isct -- IN -*
 
 signature KERNEL =
 sig

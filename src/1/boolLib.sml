@@ -137,15 +137,15 @@ end
 in
 fun save_thm_attrs fname (n, attrs, th) = let
   fun do_attr a = let
-    val storefn = valOf (ThmSetData.data_storefn a)
+    val storefn = valOf (ThmSetData.data_storefn {settype = a})
                         handle Option => raise mk_HOL_ERR "boolLib" fname
                                                ("No attribute with name "^a)
-    val exportfn = ThmSetData.data_exportfn a
   in
     storefn n;
-    case exportfn of
+    case ThmSetData.data_exportfns {settype = a} of
         NONE => ()
-      | SOME ef => ef (current_theory()) [(n,th)]
+      | SOME {add = ef,...} =>
+          ef { thy = current_theory(), named_thms = [(n,th)]}
   end
 in
   Theory.save_thm(n,th) before app do_attr attrs
