@@ -60,7 +60,13 @@ fun upd_processor G a =
       | APP(l,a1,a2) =>
         (case break_binop toplevel_updname a of
              NONE => APP(l, upd_processor G a1, upd_processor G a2)
-           | SOME (_, arg1, arg2) => process_updates arg1 arg2)
+           | SOME (_, arg10, arg20) =>
+             let
+               val arg1 = upd_processor G arg10
+               val arg2 = upd_processor G arg20
+             in
+               process_updates arg1 arg2
+             end)
       | _ => a;
 
 val _ = term_grammar.userSyntaxFns.register_absynPostProcessor
