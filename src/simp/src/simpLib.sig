@@ -79,6 +79,7 @@ sig
 
   val Cong        : thm -> thm
   val AC          : thm -> thm -> thm
+  val Excl        : string -> thm
 
   val rewrites       : thm list -> ssfrag
   val rewrites_with_names : (string * thm) list -> ssfrag

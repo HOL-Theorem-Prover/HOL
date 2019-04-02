@@ -592,19 +592,32 @@ fun remove_ssfrags ss names =
 
 val Cong = markerLib.Cong
 val AC   = markerLib.AC;
+val Excl = markerLib.Excl
 
 local open markerSyntax markerLib
   fun is_AC thm = same_const(fst(strip_comb(concl thm))) AC_tm
   fun is_Cong thm = same_const(fst(strip_comb(concl thm))) Cong_tm
 
+  fun extract_excls (excls, rest) l =
+      case l of
+          [] => (List.rev excls, List.rev rest)
+        | th::ths => case markerLib.destExcl th of
+                         NONE => extract_excls (excls, th::rest) ths
+                       | SOME nm => extract_excls (nm::excls, rest) ths
+
   fun process_tags ss thl =
     let val (Congs,rst) = Lib.partition is_Cong thl
-        val (ACs,rst') = Lib.partition is_AC rst
+        val (ACs,rst) = Lib.partition is_AC rst
+        val (excludes, rst) = extract_excls ([],[]) rst
     in
-     if null Congs andalso null ACs then (ss,thl)
-     else ((ss ++ SSFRAG_CON{name=SOME"Cong and/or AC", relsimps = [],
+     if null Congs andalso null ACs andalso null excludes then (ss,thl)
+     else (
+       ss ++ SSFRAG_CON{name=SOME"Cong and/or AC", relsimps = [],
                              ac=map unAC ACs, congs=map unCong Congs,
-                             convs=[],rewrs=[],filter=NONE,dprocs=[]}), rst')
+                             convs=[],rewrs=[],filter=NONE,dprocs=[]}
+          -* excludes,
+       rst
+     )
     end
 in
 fun SIMP_CONV ss l tm =
