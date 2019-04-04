@@ -2299,20 +2299,19 @@ local
   val simp = ASM_SIMP_TAC (srw_ss()++boolSimps.LET_ss++numSimps.ARITH_ss)
   val fs = FULL_SIMP_TAC(srw_ss())
 in
-val LUPDATE_APPEND2 = Q.store_thm("LUPDATE_APPEND2",
-   `!l1 l2 n x.
+Theorem LUPDATE_APPEND2:
+   !l1 l2 n x.
       LENGTH l1 <= n ==>
-      (LUPDATE x n (l1 ++ l2) = l1 ++ (LUPDATE x (n-LENGTH l1) l2))`,
-  rw[]
-  >> simp[LIST_EQ_REWRITE]
-  >> Q.X_GEN_TAC`z`
-  >> simp[EL_LUPDATE]
-  >> rw[]
-  >> simp[EL_APPEND2,EL_LUPDATE]
-  >> fs[]
-  >> Cases_on`z < LENGTH l1`
-  >> fs[]
-  >> simp[EL_APPEND1,EL_APPEND2,EL_LUPDATE]);
+      (LUPDATE x n (l1 ++ l2) = l1 ++ (LUPDATE x (n-LENGTH l1) l2))
+Proof
+  Induct_on ‘l1’ THENL [
+    SRW_TAC [] [],
+    Cases_on ‘n’ THENL [
+      SRW_TAC [] [],
+      FULL_SIMP_TAC (srw_ss ()) [] THEN METIS_TAC [listTheory.LUPDATE_def]
+    ]
+  ]
+QED
 
 val LUPDATE_APPEND1 = Q.store_thm("LUPDATE_APPEND1",
    `!l1 l2 n x.
