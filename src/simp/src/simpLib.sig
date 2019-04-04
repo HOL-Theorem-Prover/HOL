@@ -112,6 +112,7 @@ sig
     * ---------------------------------------------------------------------*)
 
   type simpset
+  type weakener_data = Travrules.preorder list * thm list * Traverse.reducer
 
   val empty_ss        : simpset
   val ssfrags_of      : simpset -> ssfrag list
@@ -124,8 +125,7 @@ sig
   val limit           : int -> simpset -> simpset
   val unlimit         : simpset -> simpset
 
-  val add_weakener : (Travrules.preorder list * thm list * Traverse.reducer) ->
-                     simpset -> simpset
+  val add_weakener : weakener_data -> simpset -> simpset
 
   val add_relsimp  : relsimpdata -> simpset -> simpset
 

@@ -285,6 +285,11 @@ val _ = let
        require_msg (check_result (aconv t2 o rhs o concl))
                    (term_to_string o concl)
                    mkexcltest (l, t1))
+  fun rmsfs (s, ss, rms, t1, t2) =
+      (tprint ("Fragment removal: "^s);
+       require_msg (check_result (aconv t2 o rhs o concl))
+                   (term_to_string o concl)
+                   (QCONV (SIMP_CONV (remove_ssfrags ss rms) [])) t1)
 in
   List.app (ignore o test) [
     (mktag "bool_ss -* COND_CLAUSES (1)", ["COND_CLAUSES"], T_t, T_t),
@@ -299,6 +304,11 @@ in
     (mkex_tag "bool_ss & \"COND_CLAUSES.1\"", ["COND_CLAUSES.1"],
      T_t, T_t),
     (mkex_tag "bool_ss & \"BETA_CONV\"", ["BETA_CONV"], beta_t, beta_t)
+  ];
+  List.app (ignore o rmsfs) [
+    ("UNWIND", bool_ss, ["UNWIND"], unwind_t, unwind_t),
+    ("UNWIND on (beta_ss -* [\"BETA_CONV\"])", bool_ss -* ["BETA_CONV"],
+     ["UNWIND"], beta_t, beta_t)
   ]
 end;
 
