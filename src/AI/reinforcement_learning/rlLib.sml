@@ -57,6 +57,15 @@ fun find_subtm (tm,pos) =
 fun narg_ge n (tm,pos) =
   let val (_,argl) = strip_comb (find_subtm (tm,pos)) in length argl >= n end
 
+fun all_pos tm = 
+  let 
+    val (oper,argl) = strip_comb tm 
+    fun f i arg = map (fn x => i :: x) (all_pos arg)
+  in
+    [] :: List.concat (mapi f argl) 
+  end
+
+
 (* -------------------------------------------------------------------------
    Arithmetic
    ------------------------------------------------------------------------- *)
@@ -77,11 +86,37 @@ fun dest_add tm =
     if not (term_eq oper ``$+``) then raise ERR "" "" else pair_of_list argl
   end
 
+fun is_suc_only tm = 
+  if term_eq tm zero then true else
+  (is_suc_only (dest_suc tm)  handle HOL_ERR _ => false)
+
+val ax1 = ``x + 0 = x``;
+val ax2 = ``x + SUC y = SUC (x + y)``
+val ax3 = ``x * 0 = 0``;
+val ax4 = ``x * SUC y = x * y + x``;
+
 (* -------------------------------------------------------------------------
    Equality
    ------------------------------------------------------------------------- *)
 
 fun sym x = mk_eq (swap (dest_eq x))
+
+fun unify a b = Unify.simp_unify_terms [] a b
+
+fun paramod_ground eq (tm,pos) =
+  let
+    val (eql,eqr) = dest_eq eq
+    val subtm = find_subtm (tm,pos)
+    val sigma = unify eql subtm
+    val eqrsig = subst sigma eqr
+    val tmsig = subst sigma tm
+    val result = subst_pos (tmsig,pos) eqrsig
+  in
+    if term_eq result tm orelse length (free_vars_lr result) > 0
+    then NONE
+    else SOME result
+  end
+  handle _ => NONE
 
 (* -------------------------------------------------------------------------
    Higher-order

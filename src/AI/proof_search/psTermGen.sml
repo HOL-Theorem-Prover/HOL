@@ -83,6 +83,21 @@ and random_term_oper operl (size,ty) oper =
     end
   end
 
+fun random_term_upto operl (size,ty) =
+  let  
+    val il = List.tabulate (size, fn n => n + 1) 
+    val freql1 = map_assoc (fn i => nterm operl (i,ty)) il
+    val freql2 = filter (fn x => snd x > 0) freql1
+    val freql3 = map_snd Real.fromInt freql2
+    val i = select_in_distrib freql3
+  in
+    random_term operl (i,ty)
+  end
+
+
+fun random_term_uni operl (l,ty) =
+  random_term operl (random_elem l,ty)
+
 (* 
 load "psTermGen"; open psTermGen;
 val operl = [``0``,``$+``,``SUC``];

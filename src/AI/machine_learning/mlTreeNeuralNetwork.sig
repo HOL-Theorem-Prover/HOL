@@ -23,7 +23,7 @@ include Abbrev
   val random_opdict : int -> (term * int) list -> opdict
   val random_tnn : (int * int) -> (term * int) list -> tnn
   val random_dhtnn  : (int * int) -> (term * int) list -> dhtnn
-
+  val random_tnn2 : (int * int) -> (term * int) list -> tnn
   (* I/O *)
   val string_of_tnn : tnn -> string
   val string_of_dhtnn : dhtnn -> string

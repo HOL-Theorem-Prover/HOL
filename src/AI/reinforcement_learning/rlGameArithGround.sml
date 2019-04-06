@@ -8,7 +8,7 @@
 structure rlGameArithGround :> rlGameArithGround =
 struct
 
-open HolKernel boolLib Abbrev aiLib rlLib rlTruth psMCTS psTermGen
+open HolKernel boolLib Abbrev aiLib rlLib rlData psMCTS psTermGen
 
 val ERR = mk_HOL_ERR "rlGameArithGround"
 val debugdir = HOLDIR ^ "/src/AI/reinforcement_learning/debug"
@@ -36,8 +36,7 @@ fun dest_startsit target = case target of
     (true, Board (tm,[])) => tm
   | _ => raise ERR "dest_startsit" ""
 
-fun is_proven (tm,pos) =
-  null pos andalso let val (t1,t2) = dest_eq tm in term_eq t1 t2 end
+fun is_proven (tm,_) = is_suc_only tm
 
 fun status_of sit = case snd sit of
     Board pb => if is_proven pb then Win else Undecided
@@ -62,11 +61,7 @@ fun tag_pos (tm,pos) =
    Axioms and theorems
    ------------------------------------------------------------------------- *)
 
-val ax1 = ``x + 0 = x``;
-val ax2 = ``x * 0 = 0``
-val ax3 = ``x + SUC y = SUC (x + y)``
-val ax4 = ``x * SUC y = x * y + x``
-val axl = map (rename_varl (fn x => "")) [ax1,ax3]
+val axl = [ax1,ax2,ax3,ax4]
 val ax_vect = Vector.fromList axl
 
 (* -------------------------------------------------------------------------
@@ -85,35 +80,17 @@ fun nntm_of_sit sit = case snd sit of
   | FailBoard => T
 
 (* -------------------------------------------------------------------------
-   Paramodulation (used as a rewrite tool here since targets are ground)
-   ------------------------------------------------------------------------- *)
-
-fun paramod eq (tm,pos) =
-  if null pos then NONE else
-  let
-    val (eql,eqr) = dest_eq eq
-    val subtm = find_subtm (tm,pos)
-    val sigma = unify eql subtm
-    val eqrsig = subst sigma eqr
-    val tmsig = subst sigma tm
-    val result = subst_pos (tmsig,pos) eqrsig
-  in
-    if term_eq result tm orelse length (free_vars_lr result) > 0
-    then NONE
-    else SOME result
-  end
-  handle HOL_ERR _ => NONE
-
-(* -------------------------------------------------------------------------
    Move
    ------------------------------------------------------------------------- *)
 
 datatype move = Arg of int | Paramod of (int * bool)
 
 val movel =
-  let fun f i = [Paramod (i,true),Paramod (i,false)] in 
-    map Arg [0,1] @ List.concat (List.tabulate (length axl, f))
-  end
+  map Arg [0,1] @ 
+  [Paramod (0,true),Paramod (0,false)] @
+  [Paramod (0,true),Paramod (0,false)] @
+  [Paramod (0,true)] @
+  [Paramod (0,true),Paramod (0,false)]
 
 fun bts b = if b then "t" else "f"
 
@@ -128,14 +105,14 @@ fun argn_pb n (tm,pos) = SOME (tm,pos @ [n])
 fun paramod_pb (i,b) (tm,pos) =
   let
     val ax = Vector.sub (ax_vect,i)
-    val tmo = paramod (if b then ax else sym ax) (tm,pos)
+    val tmo = paramod_ground (if b then ax else sym ax) (tm,pos)
   in
     SOME (valOf tmo,[]) handle Option => NONE
   end
 
 fun available subtm (move,r:real) = case move of
     Arg i => (narg subtm >= i + 1)
-  | Paramod (i,b) => if is_eq subtm then false else
+  | Paramod (i,b) =>
     let val ax = Vector.sub (ax_vect,i) in
       if b
       then can (unify (lhs ax)) subtm
@@ -163,25 +140,12 @@ fun apply_move move sit =
    ------------------------------------------------------------------------- *)
 
 fun total_cost_target target = case target of
-    (true, Board (tm,[])) => total_cost tm
+    (true, Board (tm,[])) => term_cost tm
   | _ => raise ERR "total_cost_target" ""
 
-fun mk_pretargetl level = 
-  let 
-    fun cmp (a,b) = Int.compare (snd a,snd b)
-    val tml1 = mk_term_set (mk_addsuceq 10) 
-    val tml2 = map (fn x => x :: (map fst (butlast (list_cost x)))) tml1
-    val tml3 = mk_term_set (List.concat tml2)
-    val tml4 = map_assoc total_cost tml3
-    val tml5 = dict_sort cmp tml4
-    val tml6 = map fst tml5
-  in
-    first_n (level * 400) tml6
-  end
+fun mk_pretargetl level = first_n (level * 400) (map fst proof_data_glob)
 
 fun mk_targetl level = map mk_startsit (mk_pretargetl level)
-
-
 
 (* -------------------------------------------------------------------------
    Interface
