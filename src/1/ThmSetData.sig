@@ -14,9 +14,6 @@ sig
       {settype : string, efns : exportfns} ->
       {export : string -> unit, delete : string -> unit}
 
-  val new_storage_attribute : string -> unit
-  val store_attribute : {attribute: string, thm_name : string} -> unit
-
   val current_data : {settype:string} -> setdelta list
   val theory_data : {settype : string, thy: string} -> setdelta list
   val all_data : {settype:string} -> (string * setdelta list) list

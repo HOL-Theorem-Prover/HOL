@@ -206,32 +206,17 @@ fun new_exporter {settype = name, efns = efns as {add, remove}} = let
     remove {thy = current_theory(), removes = [s]};
     write_data_update {thydataty = name, data = data}
   end
+
+  fun attrfun {attrname,name,thm} = (
+    store name;
+    add {thy = current_theory(), named_thms = [(name, thm)]}
+  )
 in
   data_map := Binarymap.insert(!data_map,name,(dest,store,SOME efns));
   register_hook ("ThmSetData.onload." ^ name, hook);
+  ThmAttribute.register_attribute (name, attrfun);
   List.app onload (ancestry "-");
   {export = export, delete = delete}
 end
-
-fun new_storage_attribute s = let
-in
-  new_exporter {settype = s,
-                efns =  { add = fn _ => (), remove = fn _ => () }};
-  Theory.adjoin_to_theory {
-    sig_ps = NONE,
-    struct_ps = SOME
-      (fn _ =>
-          PP.add_string
-                 ("val _ = ThmSetData.new_exporter {settype = " ^
-                  Lib.mlquote s ^ ", efns = " ^
-                  "{ add = fn _ => (), remove = fn _ => ()}}\n"))
-  }
-end
-
-fun store_attribute {attribute, thm_name} =
-    case data_storefn {settype=attribute} of
-        NONE => raise mk_HOL_ERR "ThmSetData" "store_attribute"
-                      ("Unknown attribute: "^attribute)
-      | SOME f => f thm_name
 
 end (* struct *)
