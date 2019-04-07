@@ -36,7 +36,7 @@ local open HolKernel Ho_Rewrite  (* signature control *)
       open Parse
 in
 (*---------------------------------------------------------------------------*)
-(* The first canjunct is useful when rewriting assumptions, but not when     *)
+(* The first conjunct is useful when rewriting assumptions, but not when     *)
 (* rewriting conclusion, since it prevents stripping. Better rewrite on      *)
 (* conclusions is IF_THEN_T_IMP.                                             *)
 (*---------------------------------------------------------------------------*)
