@@ -15,8 +15,7 @@ sig
   val full_trace : term -> ((term * int list) * int) list
   
   val term_cost : term -> int
-  val proof_data : term list -> int * int -> int * int * int -> 
-    (term * int) list
+  val proof_data : term list -> (term * int) list
   val proof_data_glob : (term * int) list
 
 end

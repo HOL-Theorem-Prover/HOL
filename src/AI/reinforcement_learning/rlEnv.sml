@@ -673,23 +673,23 @@ end (* struct *)
 load "rlEnv";
 open rlEnv;
 
-logfile_glob := "march29";
+logfile_glob := "april8";
 mlTreeNeuralNetwork.ml_gencode_dir := 
   (!mlTreeNeuralNetwork.ml_gencode_dir) ^ (!logfile_glob);
   rl_gencode_dir := (!rl_gencode_dir) ^ (!logfile_glob);
 
 
-ncore_mcts_glob := 16;
-ncore_train_glob := 8;
-ngen_glob := 50;
+ncore_mcts_glob := 2;
+ncore_train_glob := 2;
+ngen_glob := 100;
 ntarget_compete := 100;
 ntarget_explore := 100;
 exwindow_glob := 40000;
 uniqex_flag := true;
 dim_glob := 8;
-batchsize_glob := 16;
-nepoch_glob := 100;
-lr_glob := 0.1;
+batchsize_glob := 64;
+nepoch_glob := 50;
+lr_glob := 0.2;
 nsim_glob := 1600;
 decay_glob := 0.99;
 level_glob := 1;

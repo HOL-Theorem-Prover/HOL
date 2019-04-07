@@ -88,9 +88,9 @@ datatype move = Arg of int | Paramod of (int * bool)
 val movel =
   map Arg [0,1] @ 
   [Paramod (0,true),Paramod (0,false)] @
-  [Paramod (0,true),Paramod (0,false)] @
-  [Paramod (0,true)] @
-  [Paramod (0,true),Paramod (0,false)]
+  [Paramod (1,true),Paramod (1,false)] @
+  [Paramod (2,true)] @
+  [Paramod (3,true),Paramod (3,false)]
 
 fun bts b = if b then "t" else "f"
 

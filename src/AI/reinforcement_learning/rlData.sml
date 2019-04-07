@@ -23,6 +23,8 @@ fun eval_ground tm =
 
 val uni_flag = ref false
 
+
+
 fun random_num operl (nsuc,noper) = 
   let val cset = map mk_sucn (List.tabulate (nsuc,I)) @ operl in
     if !uni_flag 
@@ -153,21 +155,15 @@ fun full_trace tm = number_trace (expand_trace (lo_trace 200 tm))
 fun term_cost tm = length (full_trace tm)
 
 (* dataset *)
-fun proof_data_aux cdata =
-  let val tml = mk_fast_set Term.compare (map fst cdata) in
-    mk_fast_set 
-      (cpl_compare (cpl_compare Term.compare (list_compare Int.compare))
-       Int.compare)
-    (List.concat (map full_trace tml))
-  end
+fun proof_data_aux tml =
+  mk_fast_set 
+    (cpl_compare (cpl_compare Term.compare (list_compare Int.compare))
+     Int.compare)
+  (List.concat (map full_trace tml))
 
-fun proof_data operl (nsuc,noper) (nex,nclass,nbit) =
+fun proof_data tml =
   let 
-    val _ = uniq_flag := false;
-    val _ = uni_flag := true;
-    val cdata = computation_data operl (nsuc,noper) (nex,nclass,nbit);
-    val tml = mk_fast_set Term.compare (map fst cdata);
-    val pdata = proof_data_aux cdata;
+    val pdata = proof_data_aux tml;
     val pdata3 = filter (fn x => null (snd (fst x))) pdata;
     val pdata4 = dict_sort compare_imin pdata3;
     val pdata5 = map_fst fst pdata4;
@@ -175,10 +171,9 @@ fun proof_data operl (nsuc,noper) (nex,nclass,nbit) =
     pdata5
   end
 
-val operl = [``$+``,``$*``];
-val (nsuc,noper) = (4,3);
-val (nex,nclass,nbit) = (4000,2,1);
-val proof_data_glob = proof_data operl (nsuc,noper) (nex,nclass,nbit);
+val cset_glob = map mk_sucn (List.tabulate (4,I)) @ [``$+``,``$*``];
+val tml_glob = mk_fast_set Term.compare (gen_term_size 8 (``:num``,cset_glob));
+val proof_data_glob = proof_data tml_glob;
 
 (*
 app load ["rlData", "aiLib", "rlLib", "mlTreeNeuralNetwork", "psTermGen"];
