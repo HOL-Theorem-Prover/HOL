@@ -113,6 +113,8 @@ evaluations.")
                  (setq hol-term-end-delim (match-string 0))
                  (goto-char (match-beginning 0)))))
 (defvar hol-beg-pos nil) ; ugh, global, but easiest this way
+(defvar hol-quoted-theorem-proof-re-begin
+  "Theorem[[:space:]]+[A-Za-z0-9_]*\\(\\[[A-Za-z0-9_,]+\\]\\)?[[:space:]]*:")
 (put 'hol-term 'beginning-op
      (function
       (lambda ()
@@ -121,7 +123,7 @@ evaluations.")
                 ((equal hol-term-end-delim "`") "`")
                 ((equal hol-term-end-delim "’") "‘")
                 ((equal hol-term-end-delim "Proof")
-                 "Theorem[[:space:]]+[A-Za-z0-9_]*\\(\\[[A-Za-z0-9_,]+\\]\\)?[[:space:]]*:"))))
+                 hol-quoted-theorem-proof-re-begin))))
           (re-search-backward beg nil t)
           (goto-char (match-end 0))
           (setq hol-beg-pos (point))))))
@@ -660,16 +662,20 @@ starts >%s%s<"
 (defun remove-sml-junk (start end)
   "Removes all sml comments, HOL terms and strings in the given region."
   (interactive "r")
-  (let ((m (make-marker)))
+  (let ((m (make-marker))
+        (regexp
+         (concat "(\\*\\|`\\|\"\\|“\\|‘\\|" hol-quoted-theorem-proof-re-begin)))
     (set-marker m end)
     (save-excursion
       (goto-char start)
-      (while (re-search-forward "(\\*\\|`\\|\"\\|“\\|‘" m t)
+      (while (re-search-forward regexp m t)
         (let ((ms (match-string 0)))
           (cond ((string= ms "(*") (remove-sml-comments m))
                 ((string= ms "\"") (remove-hol-string m))
                 ((string= ms "“") (remove-quoted-hol-term "“" "”" m))
                 ((string= ms "‘") (remove-quoted-hol-term "‘" "’" m))
+                ((string-prefix-p "Theorem" ms)
+                 (remove-quoted-hol-term ms "^Proof" m))
                 (t ; must be a back-tick
                  (if (not (looking-at "`"))
                      (remove-quoted-hol-term "`" "`" m)
