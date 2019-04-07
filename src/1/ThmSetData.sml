@@ -3,15 +3,14 @@ struct
 
 open DB Lib HolKernel
 
-type data = LoadableThyData.t
-datatype delta = ADD of string   (* must be in qualified thy.name form *)
-               | REMOVE of string (* could be anything *)
-datatype setdelta = Addition of string * Thm.thm
-                  | RemovalInstruction of string
+val ERR = mk_HOL_ERR "ThmSetData"
 
-fun get_thm (Addition(_, th)) = SOME th
-  | get_thm _ = NONE
-val added_thms = List.mapPartial get_thm
+type data = LoadableThyData.t
+datatype setdelta =
+         ADD of string * thm   (* must be in qualified thy.name form *)
+       | REMOVE of string (* could be anything *)
+
+val added_thms = List.mapPartial (fn ADD (_, th) => SOME th | _ => NONE)
 
 fun splitnm nm = let
   val comps = String.fields (equal #".") nm
@@ -38,32 +37,35 @@ fun lookup ty nm =
                                   "\" for set-type \"" ^ ty ^ "\"");
             NONE)
 
-fun read ty s =
+fun read ty sexp =
     let
-      (* in case of ADD, checks that it refers to a theorem *)
-      val encoded_deltas = String.fields Char.isSpace s
-      fun check_s ds =
-          if ds = "" then NONE
-          else
-            case (String.sub(ds,0), String.extract(ds,1,NONE)) of
-                (#"0",ds') => SOME (REMOVE ds')
-              | (#"1",ds') => Option.map (fn th => ADD ds') (lookup ty ds')
-              | _ => (Feedback.HOL_WARNING "ThmSetData" "read"
-                                           ("Bad delta: " ^ ds);
-                      NONE)
+      open ThyDataSexp
+      val pp_sexp = pp_sexp Parse.pp_type Parse.pp_term Parse.pp_thm
+      val sexp2string = PP.pp_to_string (!Globals.linewidth) pp_sexp
+      fun decode1 sexp =
+          case sexp of
+              List [String nm, Thm thm] => ADD (nm,thm)
+            | String nm => REMOVE nm
+            | _ => raise ERR "read" ("Bad sexp for 1 update: "^sexp2string sexp)
     in
-      SOME (List.mapPartial check_s encoded_deltas)
+      case sexp of
+          List deltas => map decode1 deltas
+        | _ => raise ERR "read" ("Bad sexp for type "^ty^": "^sexp2string sexp)
     end
 
-fun writeset set = let
-  fun foldthis (d, acc) =
-      case d of
-          ADD nm => "1"^nm :: acc
-        | REMOVE s => "0"^s :: acc
-  val list = List.foldr foldthis [] set
-in
-  String.concatWith " " list
-end
+fun write_deltas ds =
+    let
+      open ThyDataSexp
+      fun mapthis (ADD(nm,th)) = List[String nm, Thm th]
+        | mapthis (REMOVE s) = String s
+      val sexps = map mapthis ds
+    in
+      List sexps
+    end
+
+fun write1 d = write_deltas [d]
+
+
 
 (* ----------------------------------------------------------------------
     destfn: takes polymorphic theory data and turns it into the
@@ -77,70 +79,26 @@ end
               theory with which these theorems are associated.
    ---------------------------------------------------------------------- *)
 
-type destfn = data -> delta list option
-type storefn = string -> unit
 type exportfns =
      { add : {thy : string, named_thms : (string * thm) list} -> unit,
        remove : {thy : string, removes : string list} -> unit}
-val data_map = let
-  open Binarymap
-in
-  ref
-    (mkDict String.compare : (string,destfn * storefn * exportfns option) dict)
-end
 
-fun data_storefn {settype = s} = Option.map #2 (Binarymap.peek(!data_map,s))
-fun data_exportfns {settype = s} =
-    Option.join (Option.map #3 (Binarymap.peek(!data_map,s)))
+type tabledata = ({thyname:string}->setdelta list) * exportfns
 
-fun all_set_types () = Binarymap.foldr (fn (k,_,acc) => k::acc) [] (!data_map)
+val data_map = ref (Symtab.empty : tabledata Symtab.table)
 
-fun new ty = let
-  val (mk,dest) = LoadableThyData.new {merge = op@,
-                                       read = Lib.K (read ty), terms = Lib.K [],
-                                       write = Lib.K writeset, thydataty = ty}
-  fun foldthis (nm,set) =
-      case lookup ty nm of
-        SOME r => (nm, r) :: set
-      | NONE => raise mk_HOL_ERR "ThmSetData" "new" ("Bad theorem name: "^nm)
-  fun store s =
-      LoadableThyData.write_data_update {
-        thydataty = ty,
-        data = mk [ADD (mk_store_name_safe s)]
-      }
+fun data_exportfns {settype = s} = Option.map #2 (Symtab.lookup (!data_map) s)
 
-  val _ = data_map := Binarymap.insert(!data_map,ty,(dest,store,NONE))
-in
-  (mk,dest)
-end
+fun all_set_types () = Symtab.keys (!data_map)
 
-fun theory_data0 {settype = key, thy} =
-    case Binarymap.peek(!data_map, key) of
+fun theory_data {settype = key, thy} =
+    case Symtab.lookup (!data_map) key of
       NONE => raise mk_HOL_ERR "ThmSetData" "theory_data"
                     ("No ThmSetData with name "^Lib.quote key)
-    | SOME (df,_,_) => let
-        open LoadableThyData
-      in
-        case segment_data {thy = thy, thydataty = key} of
-          NONE => []
-        | SOME d => valOf (df d)
-                    handle Option =>
-                    raise mk_HOL_ERR "ThmSetData" "theory_data"
-                          ("ThmSetData for name " ^ Lib.quote key ^
-                           " doesn't decode")
-      end
-
-fun theory_data r =
-    let
-      fun lift sty (ADD nm) = Addition(nm, lookup_exn sty nm)
-        | lift _ (REMOVE i) = RemovalInstruction i
-    in
-      theory_data0 r |> map (lift (#settype r))
-    end
+    | SOME (sdf,_) => sdf {thyname=thy}
 
 fun current_data {settype = s} =
     theory_data { settype = s, thy = current_theory() }
-
 
 fun all_data {settype = s} =
     map (fn thy => (thy, theory_data {settype = s, thy = thy}))
@@ -148,75 +106,80 @@ fun all_data {settype = s} =
 
 
 fun new_exporter {settype = name, efns = efns as {add, remove}} = let
-  val (mk,dest) = new name
-  open LoadableThyData TheoryDelta
-  fun onload thyname =
-      case segment_data {thy = thyname, thydataty = name} of
-        NONE => ()
-      | SOME d => let
-          val deltas = valOf (dest d)
-          fun appthis (ADD s) =
-                add {thy = thyname, named_thms = [(s, lookup_exn name s)]}
-            | appthis (REMOVE s) = remove {thy = thyname, removes =  [s]}
-        in
-          List.app appthis deltas
-        end
-  fun uptodate_thmdelta (ADD s) =
-        (uptodate_thm (valOf (lookup name s)) handle Option => false)
+  open TheoryDelta
+  fun apply_deltas thyname ds =
+      let
+        fun appthis (ADD (s,th)) = add {thy = thyname, named_thms = [(s, th)]}
+          | appthis (REMOVE s) = remove {thy = thyname, removes =  [s]}
+      in
+        List.app appthis ds
+      end
+  fun loadfn {data,thyname} = apply_deltas thyname (read name data)
+  fun uptodate_thmdelta (ADD (s,th)) = uptodate_thm th
     | uptodate_thmdelta _ = true
-  fun neqbinding s1 (ADD s2) =
+  fun neqbinding s1 (ADD (s2,_)) =
          s1 <> s2 andalso current_theory () ^ "." ^ s1 <> s2
     | neqbinding _ _ = true
-  fun toString (ADD s) = s | toString (REMOVE s) = s
-  fun revise_data P td =
-      case segment_data {thy = current_theory(), thydataty = name} of
-        NONE => ()
-      | SOME d => let
-          val delta_list = valOf (dest d)
-          val (ok,notok) = Lib.partition P delta_list
-        in
-          case notok of
-            [] => ()
+  fun toString (ADD (s,_)) = s | toString (REMOVE s) = s
+  fun revise_data P (deltas_sexp,td) =
+      let
+        val deltas = read name deltas_sexp
+        val (ok,notok) = Lib.partition P deltas
+      in
+        case notok of
+            [] => deltas_sexp
           | _ => (HOL_WARNING
                       "ThmSetData" "revise_data"
                       ("\n  Theorems in set " ^ Lib.quote name ^
                        ":\n    " ^ String.concatWith ", " (map toString notok) ^
                        "\n  invalidated by " ^ TheoryDelta.toString td);
-                  set_theory_data {thydataty = name, data = mk ok})
-        end
+                  write_deltas ok)
+      end
 
-  fun hook (TheoryLoaded s) = onload s
-    | hook (td as DelConstant _) = revise_data uptodate_thmdelta td
-    | hook (td as DelTypeOp _) = revise_data uptodate_thmdelta td
-    | hook (td as NewConstant _) = revise_data uptodate_thmdelta td
-    | hook (td as NewTypeOp _) = revise_data uptodate_thmdelta td
-    | hook (td as DelBinding s) = revise_data (neqbinding s) td
-    | hook _ = ()
-  val store = #2 (Binarymap.find(!data_map,name))
-  fun export s = let
-    val s = mk_store_name_safe s
-    val data = mk [ADD s]
-  in
-    add {thy = current_theory(), named_thms = [(s, lookup_exn name s)]};
-    write_data_update {thydataty = name, data = data}
-  end
+  fun hook (td as DelConstant _) = uptodate_thmdelta
+    | hook (td as DelTypeOp _) = uptodate_thmdelta
+    | hook (td as NewConstant _) = uptodate_thmdelta
+    | hook (td as NewTypeOp _) = uptodate_thmdelta
+    | hook (td as DelBinding s) = neqbinding s
+    | hook _ = fn _ => true
+  fun check_thydelta (arg as (sexp,td)) = revise_data (hook td) arg
+
+
+  val {export = export_deltasexp, segment_data} =
+      ThyDataSexp.new {merge = ThyDataSexp.append_merge, load = loadfn,
+                       other_tds = check_thydelta, thydataty = name}
+  fun opt2list (SOME x) = x | opt2list NONE = []
+  fun segdata {thyname} =
+      segment_data {thyname=thyname}
+                   |> Option.map (read name)
+                   |> opt2list
+  fun export p (* name * thm *) =
+      let
+      in
+        add {thy = current_theory(), named_thms = [p]};
+        export_deltasexp (write1 (ADD p))
+      end
+
+  fun onload thy = apply_deltas thy (segdata {thyname = thy})
+
+  fun export_nameonly s =
+      let val s = mk_store_name_safe s
+      in
+        export(s, lookup_exn name s)
+      end
   fun delete s = let
-    val data = mk [REMOVE s]
+    val data = write1 (REMOVE s)
   in
     remove {thy = current_theory(), removes = [s]};
-    write_data_update {thydataty = name, data = data}
+    export_deltasexp data
   end
 
-  fun attrfun {attrname,name,thm} = (
-    store name;
-    add {thy = current_theory(), named_thms = [(name, thm)]}
-  )
+  fun attrfun {attrname,name,thm} = export (name,thm)
 in
-  data_map := Binarymap.insert(!data_map,name,(dest,store,SOME efns));
-  register_hook ("ThmSetData.onload." ^ name, hook);
+  data_map := Symtab.update(name,(segdata, efns)) (!data_map);
   ThmAttribute.register_attribute (name, attrfun);
   List.app onload (ancestry "-");
-  {export = export, delete = delete}
+  {export = export_nameonly, delete = delete}
 end
 
 end (* struct *)
