@@ -328,6 +328,11 @@ fun fp_tnn tnn tml =
     (fpdict,fpdatal)
   end
 
+fun fp_tnn_nohead tnn tml =
+  let val fpdict = fp_opdict (#opdict tnn) (dempty Term.compare) tml in
+    #outnv (last (dfind (last tml) fpdict))
+  end
+
 fun fp_dhtnn dhtnn tml =
   let
     val fpdict = fp_opdict (#opdict dhtnn) (dempty Term.compare) tml
@@ -411,6 +416,9 @@ fun infer_tnn tnn tm =
   let val (_,fpdatal) = fp_tnn tnn (order_subtm tm) in
     vector_to_list (denorm_vect (#outnv (last fpdatal)))
   end
+
+fun infer_tnn_nohead tnn tm = 
+  vector_to_list (fp_tnn_nohead tnn (order_subtm tm)) 
 
 (* -------------------------------------------------------------------------
    Train tnn on one example

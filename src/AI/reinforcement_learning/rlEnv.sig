@@ -57,6 +57,8 @@ sig
     (term * real list * real list) list  ->
     mlTreeNeuralNetwork.dhtnn
   
+  val explore_eval : 
+    int -> mlTreeNeuralNetwork.dhtnn -> rlGameArithGround.board psMCTS.sit list -> real
 
   val logfile_glob : string ref
   val summary : string -> unit

@@ -548,6 +548,12 @@ fun explore_f_aux startb gamespec allex dhtnn selectl =
     first_n (!exwindow_glob) exl2
   end
 
+fun explore_eval ncore dhtnn targetl =
+  let val i = fst (boss_start ncore (false,false) dhtnn targetl) in
+    Real.fromInt i / Real.fromInt (length targetl)
+  end
+  
+
 fun explore_f startb gamespec allex dhtnn targetl =
   let val selectl = choose_uniform gamespec dhtnn (targetl,!ntarget_explore) in
     explore_f_aux startb gamespec allex dhtnn selectl
@@ -673,14 +679,14 @@ end (* struct *)
 load "rlEnv";
 open rlEnv;
 
-logfile_glob := "april8";
+logfile_glob := "april9";
 mlTreeNeuralNetwork.ml_gencode_dir := 
   (!mlTreeNeuralNetwork.ml_gencode_dir) ^ (!logfile_glob);
   rl_gencode_dir := (!rl_gencode_dir) ^ (!logfile_glob);
 
 
-ncore_mcts_glob := 2;
-ncore_train_glob := 2;
+ncore_mcts_glob := 16;
+ncore_train_glob := 8;
 ngen_glob := 100;
 ntarget_compete := 100;
 ntarget_explore := 100;
@@ -688,8 +694,8 @@ exwindow_glob := 40000;
 uniqex_flag := true;
 dim_glob := 8;
 batchsize_glob := 64;
-nepoch_glob := 50;
-lr_glob := 0.2;
+nepoch_glob := 100;
+lr_glob := 0.1;
 nsim_glob := 1600;
 decay_glob := 0.99;
 level_glob := 1;
@@ -698,5 +704,7 @@ val allex = start_rl_loop rlGameArithGround.gamespec;
 
 (* todo: flags for nbig_steps and n_epoch *)
 *)
+
+(* parmap error = batch of 100 *)
 
 

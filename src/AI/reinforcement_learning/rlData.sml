@@ -26,7 +26,7 @@ val uni_flag = ref false
 
 
 fun random_num operl (nsuc,noper) = 
-  let val cset = map mk_sucn (List.tabulate (nsuc,I)) @ operl in
+  let val cset = map mk_sucn (List.tabulate (nsuc + 1,I)) @ operl in
     if !uni_flag 
     then 
       random_term_uni cset 
@@ -41,10 +41,12 @@ fun inter_traintest (train,test) =
    Computation
    ------------------------------------------------------------------------- *)
 
-fun bin_rep nbit n = 
+fun bin_rep_aux nbit n = 
   if nbit > 0 
-  then n mod 2 :: bin_rep (nbit - 1) (n div 2)
+  then n mod 2 :: bin_rep_aux (nbit - 1) (n div 2)
   else []
+
+fun bin_rep nbit n = map Real.fromInt (bin_rep_aux nbit n)
 
 val uniq_flag = ref false
 
@@ -64,7 +66,7 @@ fun computation_data operl (nsuc,noper) (nex,nclass,nbit) =
         else 
         (
          d := count_dict (!d) [n];
-         dr := dadd tm (map Real.fromInt (bin_rep nbit n)) (!dr)
+         dr := dadd tm (bin_rep nbit n) (!dr)
         )
       end
     val _ = d := dempty Int.compare
@@ -73,30 +75,139 @@ fun computation_data operl (nsuc,noper) (nex,nclass,nbit) =
     dlist (!dr)
   end
 
+fun mk_finaltestset operl (nsuc,noper) nbit nex =
+  let 
+    fun f x = x + 1 
+    val l = cartesian_product (List.tabulate (nsuc,f)) 
+                              (List.tabulate (noper,f))
+    fun mk_ex (n,k) =
+      let val tm = random_num operl (n,k) in
+        (tm, bin_rep nbit (eval_ground tm))
+      end
+    fun g (n,k) = List.tabulate (nex, fn _ => mk_ex (n,k))
+  in
+    map_assoc g l
+  end
+
+fun is_accurate tnn (tm,rl) =
+  let 
+    val rl1 = mlTreeNeuralNetwork.infer_tnn tnn tm 
+    val rl2 = combine (rl,rl1)
+    fun test (x,y) = Real.abs (x - y) < 0.5  
+  in
+    if all test rl2 then true else false
+  end
+
+fun accuracy_dataset tnn set =
+  let val correct = filter (is_accurate tnn) set in
+    Real.fromInt (length correct) / Real.fromInt (length set)
+  end
+
 (*
 app load ["rlData", "aiLib", "rlLib", "mlTreeNeuralNetwork", "psTermGen"];
 open rlData aiLib rlLib mlTreeNeuralNetwork psTermGen;
 
-val operl = [``$+``,``$*``];
-val (nsuc,noper) = (16,2);
-val (nex,nclass,nbit) = (4000,16,4);
 
-val _ = uniq_flag := false;
-val _ = uni_flag := true;
-val train = computation_data operl (nsuc,noper) (nex,nclass,nbit);
+val cset_glob = map mk_sucn (List.tabulate (5,I)) @ [``$+``,``$*``];
+val tml_glob = mk_fast_set Term.compare (gen_term_size 9 (``:num``,cset_glob));
+val train = map_assoc (bin_rep 4 o eval_ground) tml_glob;
+
+val operl = [``$+``,``$*``];
+val (nsuc,noper) = (4,3);
+val (nex,nclass,nbit) = (2000,16,4);
 val _ = uni_flag := false;
 val test = computation_data operl (nsuc,noper) (nex,nclass,nbit);
 val ninter = inter_traintest (train,test);
 val nuniq = length (mk_fast_set Term.compare (map fst train));
 
-
 val nn_operl = mk_fast_set oper_compare (operl_of ``0 + SUC 0 * 0``);
-val randtnn = random_tnn (8,nbit) nn_operl;
-val bsize = 16;
-fun f x = (200, x / (Real.fromInt bsize));
+val randtnn = random_tnn (12,nbit) nn_operl;
+val bsize = 128;
+fun f x = (50, x / (Real.fromInt bsize));
 val schedule = map f [0.1];
 val ncore = 2;
 val tnn = prepare_train_tnn (ncore,bsize) randtnn (train,test) schedule;
+
+
+val operl = [``$+``,``$*``];
+val (nsuc,noper) = (8,8);
+val (nex,nbit) = (1000,4);
+val finaltestset = mk_finaltestset operl (nsuc,noper) nbit nex;
+
+val finalaccuracy = map_snd (accuracy_dataset tnn) finaltestset;
+
+
+
+
+
+val table = cut_n 8 finalaccuracy;
+fun print_table table = 
+  let 
+    fun f ((i,j),r) = 
+      if (i <= 4 andalso j <= 4) 
+      then "{\\color{blue} " ^ pad 4 "0" (rts (approx 2 r)) ^ "}"
+      else pad 4 "0" (rts (approx 2 r)) 
+    fun g l = (its o fst o fst o hd) l ^ " & " ^ 
+      String.concatWith " & " (map f l)
+  in
+    print (String.concatWith "\\\\\n" (map g table) ^ "\\\\\n")
+  end
+;
+print_table table;
+  
+ val s = mk_sucn;
+infer_tnn tnn ``^(s 5) + ^(s 3)``;
+*)
+
+(*
+app load ["rlData", "aiLib", "rlLib", "mlTreeNeuralNetwork", "psTermGen"];
+open rlData aiLib rlLib mlTreeNeuralNetwork psTermGen;
+load "rlEnv"; open rlEnv;
+
+logfile_glob := "april10";
+mlTreeNeuralNetwork.ml_gencode_dir := 
+  (!mlTreeNeuralNetwork.ml_gencode_dir) ^ (!logfile_glob);
+  rl_gencode_dir := (!rl_gencode_dir) ^ (!logfile_glob);
+
+val operl = [``$+``,``$*``];
+val (nsuc,noper) = (6,6);
+val (nex,nbit) = (100,1);
+val pretargetl =
+ map_snd (map fst) (mk_finaltestset operl (nsuc,noper) nbit nex);
+
+val l2 = map_snd (filter (fn x => term_cost x <> 0)) pretargetl;
+val l3 = map (length o snd) l2;
+
+val finaltargetl = map_snd (map rlGameArithGround.mk_startsit) pretargetl;
+
+val dhtnn = read_dhtnn "dhtnn_april8";
+
+(*rlEnv.random_dhtnn_gamespec rlGameArithGround.gamespec; *)
+
+val result = map_snd (rlEnv.explore_eval 16 dhtnn) finaltargetl;
+
+val table = cut_n 6 result;
+fun print_table table = 
+  let 
+    fun f ((i,j),r) = 
+      if (i <= 3 andalso j <= 3) 
+      then "{\\color{blue} " ^ pad 4 "0" (rts (approx 2 r)) ^ "}"
+      else pad 4 "0" (rts (approx 2 r)) 
+    fun g l = (its o fst o fst o hd) l ^ " & " ^ 
+      String.concatWith " & " (map f l)
+  in
+    print (String.concatWith "\\\\\n" (map g table) ^ "\\\\\n")
+  end
+;
+print_table table;
+
+
+*)
+
+(*
+val _ = uniq_flag := false;
+val _ = uni_flag := true;
+val train = computation_data operl (nsuc,noper) (nex,nclass,nbit);
 *)
 
 (* -------------------------------------------------------------------------
@@ -186,29 +297,12 @@ open rlData aiLib rlLib mlTreeNeuralNetwork psTermGen;
 val pdata2 = dict_sort Int.compare (map snd pdata1);
 *)
 
-(* -------------------------------------------------------------------------
-   Proof
-   ------------------------------------------------------------------------- *)
-
-(*
-fun list_cost tm =
-  let val newtm = (rhs o concl) (norm tm) in
-    if term_eq newtm tm then raise ERR "total_cost" "" else
-    if is_only_suc newtm then [(newtm,0)] else
-      let val cost = 1 + valOf (depth_diff (tm,newtm)) in
-        (newtm,cost) :: list_cost newtm
-      end
-  end
-
-fun total_cost tm = sum_int (map snd (list_cost tm))
-*)
-
 
 
 end (* struct *)
 
 (*
-todo: try to implement momentum.
+
 
 
 val (trainset,testset) = mk_ttset_ground2 7;
@@ -287,7 +381,8 @@ equations solving.
 !a. a+b=b+a.
 val s = mk_sucn;
 
-infer_tnn ``^(s 5) + ^(s 3)``;
+e
+
 
 
 modular equations.

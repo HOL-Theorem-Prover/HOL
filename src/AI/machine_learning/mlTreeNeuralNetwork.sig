@@ -37,6 +37,7 @@ include Abbrev
   
   (* inference *)
   val infer_tnn : tnn -> term -> real list
+  val infer_tnn_nohead : tnn -> term -> real list
 
   (* training *)
   val reset_timers : unit -> unit
