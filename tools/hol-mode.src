@@ -1017,15 +1017,28 @@ region instead. With prefix ARG prompt for a file-name to load."
   (if hol-bare-p (concat hol-executable ".bare")
                  hol-executable))
 
-(defun hol ()
+(defun hol (&optional display-actions display-alist)
   "Runs a HOL session in a comint window."
   (interactive)
-  (let* ((hol-was-ok (hol-buffer-ok hol-buffer-name))
-         (buf (make-comint "HOL" (hol-executable-with-bare))))
-    (setq hol-buffer-name (buffer-name buf))
-    (switch-to-buffer buf)
+  (let* ((original-buffer (current-buffer))
+         (my-dir (or (ignore-errors (file-name-directory buffer-file-name))
+                     default-directory)))
+    (if (get-buffer hol-buffer-name)
+        (progn
+          (set-buffer hol-buffer-name)
+          (if (hol-buffer-ok hol-buffer-name)
+              (progn
+                (message "Killing existing HOL process")
+                (comint-send-eof)
+                (sleep-for 0 500)))
+          (setq default-directory my-dir)
+          (make-comint-in-buffer "HOL" hol-buffer-name
+                                 (hol-executable-with-bare)))
+      (let* ((buf (make-comint "HOL" (hol-executable-with-bare))))
+        (setq hol-buffer-name (buffer-name buf))
+        (set-buffer hol-buffer-name)))
+
     (setq comint-prompt-regexp "^- ")
-    (setq hol-buffer-name (buffer-name buf))
     ;; must go to ridiculous lengths to ensure that font-lock-mode is
     ;; turned off and stays off
     (font-lock-mode 0)
@@ -1036,9 +1049,20 @@ region instead. With prefix ARG prompt for a file-name to load."
     (setq comint-preoutput-filter-functions '(holpp-output-filter))
     (setq comint-scroll-show-maximum-output t)
     (setq comint-scroll-to-bottom-on-output t)
-    (if hol-was-ok t (hol-mode-init-sml))
+    (hol-mode-init-sml)
     (send-raw-string-to-hol
-     "val _ = Parse.current_backend := PPBackEnd.emacs_terminal;" nil nil)))
+     "val _ = Parse.current_backend := PPBackEnd.emacs_terminal;" nil nil)
+
+    (if (eq (get-buffer hol-buffer-name) original-buffer)
+        nil
+      (display-buffer hol-buffer-name
+                      (cons
+                       (append display-actions
+                               '(display-buffer-use-some-frame
+                                 display-buffer-pop-up-frame))
+                       display-alist))
+      (select-frame-set-input-focus
+       (window-frame (get-buffer-window original-buffer t))))))
 
 (defun hol-toggle-bare ()
   "Toggles the elisp variable 'hol-bare-p."
@@ -1048,43 +1072,28 @@ region instead. With prefix ARG prompt for a file-name to load."
 
 (defun hol-display ()
    (interactive)
-   (display-buffer hol-buffer-name));
-
+   (display-buffer hol-buffer-name))
 
 (defun hol-vertical ()
   "Runs a HOL session after splitting the window"
   (interactive)
-  (split-window-vertically)
-  (other-window 1)
-  (hol)
-  (other-window -1))
+  (hol '(display-buffer-below-selected)))
 
 (defun hol-horizontal ()
   "Runs a HOL session after splitting the window"
   (interactive)
-  (split-window-horizontally)
-  (other-window 1)
-  (hol)
-  (other-window -1))
-
-(defun hol-new-frame ()
-  "Runs a HOL session in a new frame"
-  (interactive)
-  (let* ((curframe (selected-frame))
-         (oldtop (cdr (assoc 'top (frame-parameters))))
-         (oldleft (cdr (assoc 'left (frame-parameters))))
-         (newframe (make-frame)))
-    (set-frame-position newframe (+ oldleft 500) oldtop) ; disgusting
-    (select-frame newframe)
-    (hol)
-    (select-frame-set-input-focus curframe)))
+  (hol '((lambda (b al)
+           (let ((split-height-threshold nil)
+                 (split-width-threshold 110))
+             (display-buffer-pop-up-window b al))))
+       '((window-width . 0.40))))
 
 (defvar hol-new-buffer-style hol-new-buffer-style-default)
 
 (setq hol-new-buffer-style-alist
       '((horizontal . hol-horizontal)
         (vertical . hol-vertical)
-        (new-frame . hol-new-frame)))
+        (new-frame . hol)))
 
 (defun hol-with-region ()
   "Starts a HOL session and pastes selected region into it. If there is no active region, pastes whole buffer."
