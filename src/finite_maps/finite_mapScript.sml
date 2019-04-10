@@ -785,8 +785,7 @@ val FUNION_DEF = new_specification
 val _ = set_mapped_fixity {term_name = "FUNION", tok = UTF8.chr 0x228C,
                            fixity = Infixl 500}
 
-val FDOM_FUNION = save_thm("FDOM_FUNION", FUNION_DEF |> SPEC_ALL |> CONJUNCT1)
-val _ = export_rewrites ["FDOM_FUNION"]
+Theorem FDOM_FUNION[simp] = FUNION_DEF |> SPEC_ALL |> CONJUNCT1
 
 val FUNION_FEMPTY_1 = Q.store_thm
 ("FUNION_FEMPTY_1[simp]",
@@ -813,11 +812,6 @@ val FUNION_FUPDATE_2 = Q.store_thm
         else FUPDATE (FUNION f g) (x,y)`,
  SRW_TAC [][GSYM fmap_EQ_THM, FDOM_FUPDATE, FUNION_DEF, FAPPLY_FUPDATE_THM,
             EXTENSION] THEN PROVE_TAC []);
-
-val FDOM_FUNION = Q.store_thm
-("FDOM_FUNION",
- `!^fmap g x. FDOM (FUNION f g) = FDOM f UNION FDOM g`,
- REWRITE_TAC [FUNION_DEF]);
 
 val DRESTRICT_FUNION = Q.store_thm
 ("DRESTRICT_FUNION",

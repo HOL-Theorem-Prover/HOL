@@ -127,20 +127,21 @@ fun new_exporter {settype = name, efns = efns as {add, remove}} = let
         val (ok,notok) = Lib.partition P deltas
       in
         case notok of
-            [] => deltas_sexp
+            [] => NONE
           | _ => (HOL_WARNING
                       "ThmSetData" "revise_data"
                       ("\n  Theorems in set " ^ Lib.quote name ^
                        ":\n    " ^ String.concatWith ", " (map toString notok) ^
                        "\n  invalidated by " ^ TheoryDelta.toString td);
-                  write_deltas ok)
+                  SOME (write_deltas ok))
       end
 
-  fun hook (td as DelConstant _) = uptodate_thmdelta
-    | hook (td as DelTypeOp _) = uptodate_thmdelta
-    | hook (td as NewConstant _) = uptodate_thmdelta
-    | hook (td as NewTypeOp _) = uptodate_thmdelta
-    | hook (td as DelBinding s) = neqbinding s
+  fun hook (DelConstant _) = uptodate_thmdelta
+    | hook (DelTypeOp _) = uptodate_thmdelta
+    | hook (NewConstant _) = uptodate_thmdelta
+    | hook (NewTypeOp _) = uptodate_thmdelta
+    | hook (DelBinding s) = neqbinding s
+    | hook (NewBinding(s,_)) = neqbinding s
     | hook _ = fn _ => true
   fun check_thydelta (arg as (sexp,td)) = revise_data (hook td) arg
 

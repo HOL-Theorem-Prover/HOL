@@ -4,6 +4,8 @@
 *)
 open HolKernel bossLib boolLib boolSimps rich_listTheory
 
+local open alistTheory in end
+
 val _ = new_theory "alist_tree";
 
 (* key property: a partial function f can be represented by an assoc list
@@ -48,7 +50,7 @@ Theorem is_insert_l
   (fs [is_insert_def, count_append_def, sortingTheory.SORTED_APPEND_IFF,
     alistTheory.ALOOKUP_APPEND, FUN_EQ_THM, HD_APPEND, LAST_APPEND,
     listTheory.LAST_MAP]
-  \\ ((Cases_on `l'` \\ fs []) >- metis_tac [optionTheory.option_CLAUSES])
+  \\ (Cases_on `l'` \\ fs [] >- metis_tac [optionTheory.option_CLAUSES])
   \\ (Cases_on `l = []` \\ fs [])
   \\ fs [listTheory.LAST_MAP]
   \\ (rpt strip_tac \\ fs [] \\ CASE_TAC)

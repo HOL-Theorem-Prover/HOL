@@ -25,9 +25,15 @@ struct
   end
   val tyname = "TexTokenMap"
 
+  fun pr_delta {hol,TeX = (t,i)} =
+      "{hol = " ^ hol ^ ", TeX = (" ^ t ^ ", " ^ Int.toString i ^ "}"
+
   val (mk,dest) = Theory.LoadableThyData.new
                     {thydataty = tyname, merge = op@, terms = K [],
                      read = K (Coding.lift read_deltas),
+                     pp = fn dl => "[" ^
+                                   String.concatWith ", " (map pr_delta dl) ^
+                                   "]",
                      write = K write_deltas}
 
 
