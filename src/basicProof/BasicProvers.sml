@@ -942,7 +942,7 @@ fun diminish_srw_ss names =
         drop
       end;
 
-fun temp_remove_simp names =
+fun temp_delsimps names =
     if !srw_ss_initialised then
       srw_ss := ((!srw_ss) -* names)
     else
@@ -994,7 +994,7 @@ val {export,delete} =
       settype = "simp",
       efns = {
         add = fn {thy,named_thms} => add_rewrites thy named_thms,
-        remove = fn {removes, ...} => temp_remove_simp removes
+        remove = fn {removes, ...} => temp_delsimps removes
       }
     }
 
