@@ -71,10 +71,12 @@ fun check_tydelta (d: type_grammar.delta) =
     | _ => true
 
 
-
+val tyd_toString = type_grammar.delta_toString
 val (tyd_toData, tyd_fromData) = LoadableThyData.new {
       thydataty = tytag,
       merge = op@,
+      pp =
+        fn tydl => "[" ^ String.concatWith ", " (map tyd_toString tydl) ^ "]",
       terms = tydeltal_terms,
       read = (fn rtm => Coding.lift (Coding.many (tydelta_reader rtm))),
       write = (fn wtm => String.concat o map (tydelta_encode wtm))
@@ -114,6 +116,8 @@ val tmdeltal_terms = List.foldl (fn (d, acc) => tmdelta_terms d @ acc) []
 val (toData, fromData) = LoadableThyData.new {
       thydataty = tmtag,
       merge = op@,
+      pp =
+        fn tmds => "[" ^ Int.toString (length tmds) ^ " term-grammar-deltas]",
       terms = tmdeltal_terms,
       read = (fn rtm => Coding.lift (Coding.many (user_delta_reader rtm))),
       write = (fn wtm => String.concat o map (user_delta_encode wtm))

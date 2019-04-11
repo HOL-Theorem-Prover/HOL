@@ -260,6 +260,56 @@ in
         else die_r rs
     | SOME rs => die_r rs
 end
-end (* local fun testb ... *)
+end (* local fun testb ... *);
+
+val _ = let
+  open simpLib boolSimps
+  fun del s = bool_ss -* ("bool_case_thm" :: s)
+  val T_t = “if T then (p:'b) else q”
+  val F_t = “if F then (p:'b) else q”
+  val beta_t = “(\x:'b. f T x : bool) z”
+  val unwind_t = “?x:'a. p x /\ (x = y) /\ q x y”
+  fun mkC sl = QCONV (SIMP_CONV (del sl) [])
+  fun mktag s = "rewrite deletion: " ^ s
+  fun mkex_tag s = "deletion via Excl: " ^ s
+  fun mktest (t,dels) = mkC dels t
+  fun mkexcltest (dels, t) =
+      QCONV (SIMP_CONV bool_ss (map Excl ("bool_case_thm" :: dels))) t
+  fun test (s,l,t1,t2) =
+      (tprint s;
+       require_msg (check_result (aconv t2 o rhs o concl))
+                   (term_to_string o concl)
+                   mktest (t1,l))
+  fun excltest (s,l,t1,t2) =
+      (tprint s;
+       require_msg (check_result (aconv t2 o rhs o concl))
+                   (term_to_string o concl)
+                   mkexcltest (l, t1))
+  fun rmsfs (s, ss, rms, t1, t2) =
+      (tprint ("Fragment removal: "^s);
+       require_msg (check_result (aconv t2 o rhs o concl))
+                   (term_to_string o concl)
+                   (QCONV (SIMP_CONV (remove_ssfrags ss rms) [])) t1)
+in
+  List.app (ignore o test) [
+    (mktag "bool_ss -* COND_CLAUSES (1)", ["COND_CLAUSES"], T_t, T_t),
+    (mktag "bool_ss -* COND_CLAUSES (2)", ["COND_CLAUSES"], F_t, F_t),
+    (mktag "bool_ss -* COND_CLAUSES.1", ["COND_CLAUSES.1"], T_t, T_t),
+    (mktag "bool_ss -* COND_CLAUSES.2", ["COND_CLAUSES.2"], T_t, “p:'b”),
+    (mktag "bool_ss -* BETA_CONV", ["BETA_CONV"], beta_t, beta_t),
+    (mktag "bool_ss -* UNWIND_EXISTS_CONV", ["UNWIND_EXISTS_CONV"],
+     unwind_t, unwind_t)
+  ];
+  List.app (ignore o excltest) [
+    (mkex_tag "bool_ss & \"COND_CLAUSES.1\"", ["COND_CLAUSES.1"],
+     T_t, T_t),
+    (mkex_tag "bool_ss & \"BETA_CONV\"", ["BETA_CONV"], beta_t, beta_t)
+  ];
+  List.app (ignore o rmsfs) [
+    ("UNWIND", bool_ss, ["UNWIND"], unwind_t, unwind_t),
+    ("UNWIND on (beta_ss -* [\"BETA_CONV\"])", bool_ss -* ["BETA_CONV"],
+     ["UNWIND"], beta_t, beta_t)
+  ]
+end;
 
 val _ = Process.exit Process.success

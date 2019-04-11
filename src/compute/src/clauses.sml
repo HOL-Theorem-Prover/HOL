@@ -269,9 +269,9 @@ fun add_thms lthm rws =
 
 fun add_thmset setname rws = let
   open ThmSetData
-  val data = all_data setname
+  val data = all_data {settype = setname}
 in
-  app (fn (s, namedths) => add_thms (map #2 namedths) rws) data
+  app (fn (s, deltas) => add_thms (added_thms deltas) rws) data
 end
 
 fun add_extern (cst,arity,fconv) rws =

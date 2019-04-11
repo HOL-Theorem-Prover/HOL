@@ -47,4 +47,4 @@ Overlay.uo: Overlay.sml $(TYPE_UID) $(NET_UOD) $(TERM_UOD) $(FTAG_UID) Thm.uo Th
 
 
 
-EXTRA_CLEANS = Thm.sml Thm.sig
+EXTRA_CLEANS = Thm.sml Thm-sig.sml

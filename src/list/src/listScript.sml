@@ -1666,12 +1666,13 @@ val LAST_EL = store_thm(
 Induct THEN SRW_TAC[] [] THEN
 Cases_on `ls` THEN FULL_SIMP_TAC (srw_ss()) [])
 
-val LAST_MAP = store_thm(
-  "LAST_MAP[simp]",
-  ``!l f. l <> [] ==> (LAST (MAP f l) = f (LAST l))``,
+Theorem LAST_MAP[simp]:
+  !l f. l <> [] ==> (LAST (MAP f l) = f (LAST l))
+Proof
   rpt strip_tac >> `?h t. l = h::t` by METIS_TAC[list_CASES] >>
   srw_tac[][MAP] >> Q.ID_SPEC_TAC `h` >> Induct_on `t` >>
-  asm_simp_tac (srw_ss()) []);
+  asm_simp_tac (srw_ss()) []
+QED
 
 val FRONT_CONS = store_thm(
   "FRONT_CONS",
@@ -1887,10 +1888,6 @@ Theorem MAP_DROP
 
 Theorem MAP_FRONT
   `!ls. ls <> [] ==> (MAP f (FRONT ls) = FRONT (MAP f ls))`
-  (Induct \\ simp[] \\ Cases_on`ls`\\fs[])
-
-Theorem LAST_MAP
-  `!ls. ls <> [] ==> (LAST (MAP f ls) = f (LAST ls))`
   (Induct \\ simp[] \\ Cases_on`ls`\\fs[])
 
 (* More functions for operating on pairs of lists *)
@@ -2553,12 +2550,6 @@ val _ = export_rewrites ["LENGTH_GENLIST"]
 val GENLIST_AUX = bDefine`
   (GENLIST_AUX f 0 l = l) /\
   (GENLIST_AUX f (SUC n) l = GENLIST_AUX f n ((f n)::l))`;
-
-val SUC_RULE = CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV;
-
-val GENLIST_AUX_compute = save_thm(
-  "GENLIST_AUX_compute",
-  SUC_RULE GENLIST_AUX)
 val _ = export_rewrites ["GENLIST_AUX_compute"]
 
 (*---------------------------------------------------------------------------

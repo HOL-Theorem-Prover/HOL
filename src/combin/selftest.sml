@@ -1,5 +1,6 @@
-open testutils
+open HolKernel boolLib testutils
 
+open combinSyntax
 local open combinTheory in end
 
 val EVAL = computeLib.CBV_CONV computeLib.the_compset
@@ -15,3 +16,20 @@ val _ = app tpp [
       "f⦇a ↦ b; c ↦ d⦈",
       "f⦇a ↦ b; c ↦ d⦈ x"
     ]
+
+local
+val a = mk_var("a", alpha)
+val f1 = mk_var("f1", alpha --> bool)
+val b = mk_var("b", beta)
+val baboolf = mk_var("g", beta --> (alpha --> bool))
+
+val map1 = mk_comb(mk_update(a, T), f1)
+val map2 = mk_comb(mk_update(b, map1), baboolf)
+val s = "g⦇(b:'b) ↦ (f1:'a -> bool)⦇a ↦ T⦈ ⦈"
+in
+val _ = tprint ("Parsing nested updates: "^ s)
+val _ = require_msg (check_result (aconv map2))
+                    (trace ("types", 2) term_to_string)
+                    Parse.Term
+                    [QUOTE s]
+end

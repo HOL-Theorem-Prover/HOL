@@ -2,22 +2,21 @@ signature ThmSetData =
 sig
 
   type data = Theory.LoadableThyData.t
-  val new_exporter : string ->
-                     (string -> (string * Thm.thm) list -> unit) ->
-                     {dest : data -> (string * Thm.thm) list option,
-                      export : string -> unit,
-                      mk : string list -> data * (string * Thm.thm) list}
+  type thm = Thm.thm
+  datatype setdelta = ADD of string * thm | REMOVE of string
+  type exportfns =
+       { add : {thy : string, named_thms : (string * thm) list} -> unit,
+         remove : {thy : string, removes : string list} -> unit}
+  val added_thms : setdelta list -> thm list
 
-  val new_storage_attribute : string -> unit
-  val store_attribute : {attribute: string, thm_name : string} -> unit
+  val new_exporter :
+      {settype : string, efns : exportfns} ->
+      {export : string -> unit, delete : string -> unit}
 
-  val current_data : string -> (string * Thm.thm) list
-  val theory_data : {settype : string, thy: string} ->
-                    (string * Thm.thm) list
-  val all_data : string -> (string * (string * Thm.thm) list) list
-  val data_storefn : string -> (string -> unit) option
-  val data_exportfn :
-      string -> (string -> (string * Thm.thm) list -> unit) option
+  val current_data : {settype:string} -> setdelta list
+  val theory_data : {settype : string, thy: string} -> setdelta list
+  val all_data : {settype:string} -> (string * setdelta list) list
+  val data_exportfns : {settype:string} -> exportfns option
 
   val all_set_types : unit -> string list
 

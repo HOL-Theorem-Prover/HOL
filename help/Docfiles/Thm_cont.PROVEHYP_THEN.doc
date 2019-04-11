@@ -9,8 +9,13 @@ Makes antecedent of theorem as subgoal, continues with both parts as theorems.
 Theorem-tactical.
 
 \DESCRIBE
-
-An application of the tactic {PROVEHYP_THEN th2tac th} to a goal {g} requires that {th} be an implication (or a negation, in which case {‘~p’} is treated as {‘p ==> F’}). Given an implication {|- l ==> r}, the result is a new sub-goal requiring the user to prove {l}, and the application of {th2tac} to the theorems with conclusion {l} and {r}. (The former has just been proved by the user; the latter is the result of applying {MP} to {th} and {l}.)
+An application of the tactic {PROVEHYP_THEN th2tac th} to a goal {g}
+requires that {th} be an implication (or a negation, in which case
+{~p} is treated as {p ==> F}). Given an implication {|- l ==> r},
+the result is a new sub-goal requiring the user to prove {l}, and the
+application of {th2tac} to the theorems with conclusion {l} and {r}.
+(The former has just been proved by the user; the latter is the result
+of applying {MP} to {th} and {l}.)
 
 Diagrammatically, one might see this as
 {

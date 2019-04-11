@@ -137,7 +137,7 @@ fun ac_term_ord(tm1,tm2) =
        vperm(tm1,tm2) andalso
        HOLset.equal(FVL [tm1] empty_tmset, FVL [tm2] empty_tmset)
 
-   fun COND_REWR_CONV th bounded =
+   fun COND_REWR_CONV (nm,th) bounded =
       let val eqn = snd (strip_imp (concl th))
           val isperm = is_var_perm (dest_eq eqn)
           val instth = HO_PART_MATCH (lhs o snd o strip_imp) th
@@ -167,7 +167,7 @@ fun ac_term_ord(tm1,tm2) =
                        failwith "permutative rewr: not applied")
                     else ()
             val _ = if null conditions then ()
-                    else trace(if isperm then 2 else 1, REWRITING(tm,th))
+                    else trace(if isperm then 2 else 1, REWRITING(nm,tm,th))
             val new_stack = conditions@stack
             fun solver' condition =
                  let val _   = trace(2,SIDECOND_ATTEMPT condition)
@@ -182,12 +182,12 @@ fun ac_term_ord(tm1,tm2) =
             val final_thm = if aconv l tm then disch_eqn
                             else TRANS (ALPHA tm l) disch_eqn
             val _ = if null conditions then
-              trace(if isperm then 2 else 1, REWRITING(tm,th))
+              trace(if isperm then 2 else 1, REWRITING(nm,tm,th))
                     else ()
             val _ = if null stack andalso !track_rewrites
                       then used_rewrites := th :: !used_rewrites
                       else ()
-        in trace(if isperm then 3 else 2,PRODUCE(tm,"rewrite",final_thm));
+        in trace(if isperm then 3 else 2,PRODUCE(tm,nm,final_thm));
             final_thm
         end
         handle e => WRAP_ERR("COND_REWR_CONV (application)",e))

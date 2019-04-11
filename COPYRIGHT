@@ -43,6 +43,7 @@ notices.
 See
   examples/muddy/LICENSE
   examples/muddy/muddyC/buddy/README
+  examples/machine-code/graph/seL4-kernel/README
 
 - Files derived from SML/NJ are governed by the notice in
      doc/copyrights/smlnj.txt

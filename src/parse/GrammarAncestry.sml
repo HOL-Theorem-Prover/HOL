@@ -8,10 +8,13 @@ fun ERR f s = HOL_ERR {origin_structure = "GrammarAncestry",
 val tag = "GrammarAncestry"
 
 val (write, read) =
-    Theory.LoadableThyData.new {thydataty = tag, merge = op @,
-                                read = Lib.K Coding.StringData.decodel,
-                                terms = Lib.K [],
-                                write = Lib.K Coding.StringData.encodel}
+    Theory.LoadableThyData.new {
+      thydataty = tag, merge = op @,
+      read = Lib.K Coding.StringData.decodel,
+      terms = Lib.K [],
+      pp = fn sl => "[" ^ String.concatWith ", " sl ^ "]",
+      write = Lib.K Coding.StringData.encodel
+    }
 
 fun ancestry {thy} =
   case Theory.LoadableThyData.segment_data{thy=thy, thydataty=tag} of

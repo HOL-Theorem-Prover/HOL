@@ -161,8 +161,10 @@ val pp_proofs =
             else
               block Portable.CONSISTENT (2 + ind) (
                    add_string"Incomplete goalstack:" >> add_break(1,0) >>
-                   add_string"Initial goal:" >> add_break(1,0) >>
-                   pr_goal (project goalStack.initial_goal x) >>
+                   block Portable.CONSISTENT 0 (
+                     add_string"Initial goal:" >> add_break(1,0) >>
+                     pr_goal (project goalStack.initial_goal x)
+                   ) >>
                    (if (project goalStack.is_initial x) then nothing
                     else
                       add_newline >> add_string "Current goal:" >>
