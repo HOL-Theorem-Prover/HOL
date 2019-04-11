@@ -1017,6 +1017,36 @@ region instead. With prefix ARG prompt for a file-name to load."
   (if hol-bare-p (concat hol-executable ".bare")
                  hol-executable))
 
+(defun hol--looks-like-root-holdir (dir)
+  (-all-p (lambda (s) (file-exists-p (concat (file-name-as-directory dir) s)))
+          '("COPYRIGHT" "tools" "tools-poly" "std.prelude" "bin")))
+
+(defun hol--find-alternate-executable (dir0 original-name0)
+  (let ((dir (expand-file-name dir0))
+        (original-name (expand-file-name original-name0)))
+    (while (and (not (hol--looks-like-root-holdir dir))
+                (not (equal "/" dir)))
+      (setq dir (file-name-directory (directory-file-name dir))))
+    (if (equal "/" dir) nil
+      (let ((bindir
+             (file-name-as-directory
+              (concat (file-name-as-directory dir) "bin"))))
+      (cond
+       ((equal (file-name-directory original-name) bindir) nil)
+       ((file-exists-p (concat bindir "hol.state")) (concat bindir "hol"))
+       ((file-exists-p (concat bindir "hol.state0"))
+        (concat bindir "hol.bare")))))))
+
+(defun hol--get-executable ()
+  (let ((first-option (hol-executable-with-bare)))
+    (or (let ((alternate
+               (hol--find-alternate-executable default-directory first-option)))
+          (if alternate
+              (progn (message "Using %s as HOL executable" alternate)
+                     (sleep-for 1)))
+          alternate)
+        first-option)))
+
 (defun hol (&optional display-actions display-alist)
   "Runs a HOL session in a comint window."
   (interactive)
@@ -1033,8 +1063,8 @@ region instead. With prefix ARG prompt for a file-name to load."
                 (sleep-for 0 500)))
           (setq default-directory my-dir)
           (make-comint-in-buffer "HOL" hol-buffer-name
-                                 (hol-executable-with-bare)))
-      (let* ((buf (make-comint "HOL" (hol-executable-with-bare))))
+                                 (hol--get-executable)))
+      (let* ((buf (make-comint "HOL" (hol--get-executable))))
         (setq hol-buffer-name (buffer-name buf))
         (set-buffer hol-buffer-name)))
 
