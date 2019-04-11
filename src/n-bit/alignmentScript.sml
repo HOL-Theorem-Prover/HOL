@@ -100,8 +100,9 @@ val align_sub = Q.store_thm("align_sub",
    \\ srw_tac [wordsLib.WORD_EXTRACT_ss] [align_def]
    )
 
-val aligned_extract = Q.store_thm ("aligned_extract",
-   `!p w. aligned p (w: 'a word) = (p = 0) \/ ((p - 1 >< 0) w = 0w: 'a word)`,
+Theorem aligned_extract:
+   !p w. aligned p (w: 'a word) <=> (p = 0) \/ ((p - 1 >< 0) w = 0w: 'a word)
+Proof
    rewrite_tac [aligned_def]
    \\ Cases
    >- rewrite_tac [align_0]
@@ -113,7 +114,7 @@ val aligned_extract = Q.store_thm ("aligned_extract",
    \\ Cases_on `w ' i`
    \\ fs []
    \\ decide_tac
-   )
+QED
 
 val aligned_0 = Q.store_thm ("aligned_0",
    `(!p. aligned p 0w) /\ (!w. aligned 0 w)`,
