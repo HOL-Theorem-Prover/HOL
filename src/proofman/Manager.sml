@@ -162,13 +162,13 @@ val pp_proofs =
               block Portable.CONSISTENT (2 + ind) (
                    add_string"Incomplete goalstack:" >> add_break(1,0) >>
                    block Portable.CONSISTENT 0 (
-                     add_string"Initial goal:" >> add_break(1,0) >>
+                     add_string"Initial goal:" >> add_newline >>
                      pr_goal (project goalStack.initial_goal x)
                    ) >>
                    (if (project goalStack.is_initial x) then nothing
                     else
-                      add_newline >> add_string "Current goal:" >>
-                      add_break(1,0) >>
+                      add_newline >> add_newline >>
+                      add_string "Current goal:" >> add_break(1,0) >>
                       pr_goal (project goalStack.top_goal x))
               )
          | pr1 ind (GOALTREE t) =
@@ -181,7 +181,7 @@ val pp_proofs =
             else
               block Portable.CONSISTENT 2 (
                   add_string"Incomplete goaltree:" >> add_break(1,0) >>
-                  add_string"Initial goal:" >> add_break(1,0) >>
+                  add_string"Initial goal:" >> add_newline >>
                   pr_gtree (History.initialValue t) >>
                   add_newline >>
                   add_string "Current goaltree:" >>
@@ -200,16 +200,17 @@ val pp_proofs =
                  (case len of 1 => add_string "1 proof."
                             | n => add_string(int_to_string n^" proofs."))
                ) >> add_newline >>
-               List.foldl
-                 (fn ((i,x),m) =>
-                   m >> block Portable.CONSISTENT 0 (
+               pr_list
+                 (fn (i,x) =>
                      let val num_s = Int.toString i ^ ". "
                      in
-                       add_string num_s >> pr1 (size num_s) x
+                       block Portable.CONSISTENT 0 (
+                         add_string num_s >> pr1 (size num_s) x
+                       )
                      end
-                   ) >> add_newline)
-                 nothing
-                 (enum extants)
+                 ) (add_newline >> add_newline)
+                 (enum extants) >>
+               add_newline
           end
    in
      fn pl => (block Portable.CONSISTENT 0 (pr pl))
