@@ -53,10 +53,8 @@ val ptree_size_def = tDefine "ptree_size" `
    res_tac >> pop_assum (qspecl_then [`p_2`, `p_1`] mp_tac) >>
    simp_tac (srw_ss()) [] >> decide_tac)
 
-val ptree_size_def = save_thm(
-  "ptree_size_def",
-  CONV_RULE (DEPTH_CONV ETA_CONV) ptree_size_def)
-val _ = export_rewrites ["ptree_size_def"]
+Theorem ptree_size_def[simp,compute] =
+   CONV_RULE (DEPTH_CONV ETA_CONV) ptree_size_def;
 
 val ptree_head_def = Define`
   (ptree_head (Lf (tok,l)) = tok) ∧
@@ -84,10 +82,8 @@ val ptree_fringe_def = tDefine "ptree_fringe" `
    FULL_SIMP_TAC (srw_ss() ++ ETA_ss) [ptree_size_def] THEN
    RES_TAC THEN DECIDE_TAC)
 
-val ptree_fringe_def = save_thm(
-  "ptree_fringe_def",
-  CONV_RULE (DEPTH_CONV ETA_CONV) ptree_fringe_def)
-val _ = export_rewrites ["ptree_fringe_def"]
+Theorem ptree_fringe_def[simp,compute] =
+  CONV_RULE (DEPTH_CONV ETA_CONV) ptree_fringe_def
 
 val complete_ptree_def = Define`
   complete_ptree G pt ⇔
