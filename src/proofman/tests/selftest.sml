@@ -168,7 +168,7 @@ val _ = List.app testf [
  \ 0.  P a b ==>\n\
  \     !x y z.\n\
  \         Q a x /\\ R b y (f z) ==> R2 (ggg a b x y)\n\
- \ 1.  P (f a) (hhhh b)"),
+ \ 1.  P (f a) (hhhh b)\n"),
 ("Stack printing; more than 10 assumptions",
  ``p1 /\ p2 /\ p3 /\ p4 /\ p5 /\ p6 /\ p7 /\ p8 /\ p9 /\ p10 /\ p11 ==> q``,
  trace ("Goalstack.print_goal_at_top", 1) mkgstkstr,
@@ -185,14 +185,16 @@ val _ = List.app testf [
  \ 7.  p8\n\
  \ 8.  p9\n\
  \ 9.  p10\n\
- \10.  p11"),
+ \10.  p11\n"),
 ("Stack printing; initial goal", ``p /\ q ==> p``, mkg0,
  "Initial goal:\n\
  \\n\
  \p /\\ q ==> p"),
 ("Proofs printing; initial goal", ``p /\ q``, mkprfs,
  "Proof manager status: 1 proof.\n\
- \1. Incomplete goalstack: Initial goal: p /\\ q")
+ \1. Incomplete goalstack:\n\
+ \     Initial goal:\n\
+ \     p /\\ q")
 ]
 
 val _ = Parse.current_backend := PPBackEnd.raw_terminal
