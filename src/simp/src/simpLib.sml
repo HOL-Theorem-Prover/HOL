@@ -15,6 +15,8 @@ infix oo;
 
 open HolKernel boolLib liteLib Trace Cond_rewr Travrules Traverse Ho_Net
 
+structure Set = Binaryset
+
 local open markerTheory in end;
 
 fun ERR x      = STRUCT_ERR "simpLib" x ;
@@ -48,14 +50,17 @@ fun appconv (c,UNBOUNDED) solver stk tm = c false solver stk tm
                                           else c true solver stk tm before
                                             Portable.dec r
 
-fun mk_rewr_convdata (thm,tag) = let
+fun mk_rewr_convdata (nmopt,(thm,tag)) : convdata option = let
   val th = SPEC_ALL thm
+  val nm = case nmopt of
+               NONE => "rewrite:<anonymous>"
+             | SOME s => "rewrite:" ^ s
 in
-  SOME {name  = "<rewrite>",
+  SOME {name  = nm,
         key   = SOME (free_varsl (hyp th), lhs(#2 (strip_imp(concl th)))),
         trace = 100, (* no need to provide extra tracing here;
                       COND_REWR_CONV provides enough tracing itself *)
-        conv  = appconv (COND_REWR_CONV th, tag)} before
+        conv  = appconv (COND_REWR_CONV (nm,th), tag)} before
   trace(2, LZ_TEXT(fn () => "New rewrite: " ^ thm_to_string th))
   handle HOL_ERR _ =>
          (trace (2, LZ_TEXT(fn () =>
@@ -74,13 +79,15 @@ type relsimpdata = {refl: thm, trans:thm, weakenings:thm list,
 datatype ssfrag = SSFRAG_CON of {
     name     : string option,
     convs    : convdata list,
-    rewrs    : thm list,
+    rewrs    : (string option * thm) list,
     ac       : (thm * thm) list,
     filter   : (controlled_thm -> controlled_thm list) option,
     dprocs   : Traverse.reducer list,
     congs    : thm list,
     relsimps : relsimpdata list
 }
+
+fun frag_name (SSFRAG_CON {name,...}) = name
 
 fun SSFRAG {name,convs,rewrs,ac,filter,dprocs,congs} =
   SSFRAG_CON {name = name, convs = convs, rewrs = rewrs, ac = ac,
@@ -97,7 +104,13 @@ fun name_ss s (SSFRAG_CON {convs,rewrs,filter,ac,dprocs,congs,relsimps,...}) =
 
 fun rewrites rewrs =
    SSFRAG_CON {name=NONE, relsimps = [],
-           convs=[],rewrs=rewrs,filter=NONE,ac=[],dprocs=[],congs=[]};
+               convs=[],
+               rewrs=map (fn th => (NONE, th)) rewrs,
+               filter=NONE,ac=[],dprocs=[],congs=[]};
+
+fun rewrites_with_names rewrs =
+   SSFRAG_CON {name=NONE, relsimps=[], convs=[], rewrs = map (apfst SOME) rewrs,
+               filter=NONE,ac=[],dprocs=[],congs=[]};
 
 fun dproc_ss dproc =
    SSFRAG_CON {name=NONE, relsimps = [],
@@ -116,7 +129,7 @@ fun relsimp_ss rsdata =
                 convs=[],rewrs=[],filter=NONE,ac=[],dprocs=[],congs=[]};
 
 fun D (SSFRAG_CON s) = s;
-fun frag_rewrites ssf = #rewrs (D ssf)
+fun frag_rewrites ssf = map #2 (#rewrs (D ssf))
 
 
 fun merge_names list =
@@ -146,6 +159,7 @@ fun merge_ss (s:ssfrag list) =
     }
 
 fun named_rewrites name = (name_ss name) o rewrites;
+fun named_rewrites_with_names name = (name_ss name) o rewrites_with_names;
 fun named_merge_ss name = (name_ss name) o merge_ss;
 
 fun std_conv_ss {name,conv,pats} =
@@ -158,7 +172,7 @@ fun std_conv_ss {name,conv,pats} =
       merge_ss (map (fn p => cnv (SOME([],p))) pats)
   end
 
-fun ssfrag_name (SSFRAG_CON s) = Option.valOf (#name s);
+fun ssfrag_name (SSFRAG_CON s) = #name s
 
 fun partition_ssfrags names ssdata =
      List.partition
@@ -174,22 +188,53 @@ fun partition_ssfrags names ssdata =
 (* wasn't), but in practice it has to be.                                    *)
 (* --------------------------------------------------------------------------*)
 
-type net = ((term list -> term -> thm) -> term list -> conv) Ho_Net.net;
+type conv_info = {name : string,
+                  conval : (term list -> term -> thm) -> term list -> conv}
+type net = conv_info Ho_Net.net
+
+type weakener_data = Travrules.preorder list * thm list * Traverse.reducer
+
+
+datatype history_item = ADDFRAG of ssfrag
+                      | DELETE_EVENT of string list
+                      | ADDWEAKENER of weakener_data
 
 datatype simpset =
      SS of {mk_rewrs    : (controlled_thm -> controlled_thm list),
-            ssfrags     : ssfrag list,
+            history     : history_item list,
             initial_net : net,
             dprocs      : reducer list,
             travrules   : travrules,
             limit       : int option}
 
+fun ssupd_net f (SS{mk_rewrs,history,initial_net,dprocs,travrules,limit}) =
+    SS{mk_rewrs = mk_rewrs, history = history, initial_net = f initial_net,
+       dprocs = dprocs, travrules = travrules, limit = limit}
+
  val empty_ss = SS {mk_rewrs=fn x => [x],
-                    ssfrags = [], limit = NONE,
+                    history = [], limit = NONE,
                     initial_net=empty,
                     dprocs=[],travrules=EQ_tr};
 
- fun ssfrags_of (SS x) = #ssfrags x;
+ fun ssfrags_of (SS x) =
+     List.mapPartial (fn ADDFRAG sf => SOME sf | _ => NONE) (#history x)
+
+fun name_match (nm : string (* key as stored in simpset *)) =
+    List.exists (fn nm' : string (* user-provided *) =>
+                    nm' = nm orelse
+                    "rewrite:" ^ nm' = nm orelse
+                    String.isPrefix ("rewrite:" ^ nm' ^ ".") nm
+                )
+fun (SS{mk_rewrs,history,initial_net,dprocs,travrules,limit}) -* nms =
+    SS{initial_net =
+         Ho_Net.vfilter
+           (fn {name, ...} => not (name_match name nms)) initial_net,
+       history = DELETE_EVENT nms :: history, (* stored in reverse order *)
+       mk_rewrs = mk_rewrs,
+       dprocs = dprocs,
+       travrules = travrules,
+       limit = limit}
+
 
   (* ---------------------------------------------------------------------
    * USER_CONV wraps a bit of tracing around a user conversion.
@@ -222,7 +267,7 @@ datatype simpset =
  fun net_add_conv (data as {name,key,trace,conv}:convdata) =
      enter (option_cases #1 [] key,
             option_cases #2 any key,
-            USER_CONV data);
+            {name = name, conval = USER_CONV data});
 
 (* itlist is like foldr, so that theorems get added to the context starting
    from the end of the list *)
@@ -231,7 +276,13 @@ datatype simpset =
 
  fun mk_ac p A =
    let val (a,b,c) = Drule.MK_AC_LCOMM p
-   in (a, UNBOUNDED)::(b, UNBOUNDED)::(c,UNBOUNDED)::A
+       val opn = a |> concl |> strip_forall |> #2 |> lhs |> strip_comb |> #1
+       val nm = let val {Name,Thy,...} = dest_thy_const opn
+                in
+                  "AC " ^ Thy ^ "$" ^ Name
+                end handle HOL_ERR _ => "AC <some-term>"
+   in (SOME nm, (a, UNBOUNDED))::(SOME nm, (b, UNBOUNDED))::
+      (SOME nm, (c,UNBOUNDED))::A
    end handle HOL_ERR _ => A;
 
  fun ac_rewrites aclist = Lib.itlist mk_ac aclist [];
@@ -242,16 +293,18 @@ datatype simpset =
 
  fun ssfrag_names_of ss =
        ss |> ssfrags_of
-          |> Lib.mapfilter ssfrag_name
+          |> List.mapPartial ssfrag_name
           |> Lib.mk_set
 
- fun limit n (SS {mk_rewrs,ssfrags,travrules,initial_net,dprocs,limit}) =
-     SS {mk_rewrs = mk_rewrs, ssfrags = ssfrags, travrules = travrules,
-         initial_net = initial_net, dprocs = dprocs, limit = SOME n}
+ fun fupdlimit f (SS{mk_rewrs,history,travrules,initial_net,dprocs,limit}) =
+     SS{mk_rewrs = mk_rewrs, history = history, travrules = travrules,
+        initial_net = initial_net, dprocs = dprocs, limit = f limit}
 
- fun unlimit (SS {mk_rewrs,ssfrags,travrules,initial_net,dprocs,limit}) =
-     SS {mk_rewrs = mk_rewrs, ssfrags = ssfrags, travrules = travrules,
-         initial_net = initial_net, dprocs = dprocs, limit = NONE}
+ fun limit n = fupdlimit (fn _ => SOME n)
+
+val unlimit = fupdlimit (fn _ => NONE)
+
+fun getlimit (SS ss) = #limit ss
 
  fun wk_mk_travrules (rels, congs) = let
    fun cong2proc th = let
@@ -270,10 +323,10 @@ datatype simpset =
               weakenprocs = map cong2proc congs}
  end
 
- fun add_weakener (rels,congs,dp) simpset = let
-   val SS {mk_rewrs,ssfrags,travrules,initial_net,dprocs,limit} = simpset
+ fun add_weakener (wd as (rels,congs,dp)) simpset = let
+   val SS {mk_rewrs,history,travrules,initial_net,dprocs,limit} = simpset
  in
-   SS {mk_rewrs = mk_rewrs, ssfrags = ssfrags,
+   SS {mk_rewrs = mk_rewrs, history = ADDWEAKENER wd :: history,
        travrules = merge_travrules [travrules, wk_mk_travrules(rels,congs)],
        initial_net = initial_net, dprocs = dprocs @ [dp], limit = limit}
  end
@@ -405,7 +458,7 @@ datatype simpset =
          in
            do_sideconds (MP th scond)
          end
-       else (dec(); trace(2,REWRITING(t,th)); th)
+       else (dec(); trace(2,REWRITING("?",t,th)); th)
    in
      do_sideconds matched
    end
@@ -465,15 +518,28 @@ datatype simpset =
    add_weakener ([rel_po, equality_po], weakenings, reducer) ss
  end
 
+ fun mk_named_rewrs mk_rewrs (nmopt, th) =
+     let
+       val ths = mk_rewrs th
+       fun reduce s th (i,A) =
+           (i + 1, (SOME (s ^ "." ^ Int.toString i), th) :: A)
+     in
+       case nmopt of
+           NONE => map (fn th => (NONE, th)) ths
+         | SOME s => (1,[]) |> Portable.foldl' (reduce s) ths |> #2 |> List.rev
+     end
+
+
  fun op++(SS sset, f as SSFRAG_CON ssf) = let
-   val {mk_rewrs=mk_rewrs',ssfrags,travrules,initial_net,dprocs=dprocs',limit}=
+   val {mk_rewrs=mk_rewrs',history,travrules,initial_net,dprocs=dprocs',limit}=
        sset
    val {convs,rewrs,filter,ac,dprocs,congs,relsimps,...} = ssf
    val mk_rewrs = case filter of
                     SOME f => f oo mk_rewrs'
                   | _ => mk_rewrs'
-   val crewrs = map dest_tagged_rewrite rewrs
-   val rewrs' = flatten (map mk_rewrs (ac_rewrites ac@crewrs))
+   val crewrs = map (fn (nmopt,th) => (nmopt, dest_tagged_rewrite th)) rewrs
+   val rewrs' =
+       flatten (map (mk_named_rewrs mk_rewrs') (ac_rewrites ac @ crewrs))
    val newconvdata = convs @ List.mapPartial mk_rewr_convdata rewrs'
    val net = net_add_convs initial_net newconvdata
    fun travrel (TRAVRULES{relations,...}) = relations
@@ -482,7 +548,8 @@ datatype simpset =
       assume the provided dprocs in the frag have already been
       primed *)
    val relreducers = map rsd_reducer relsimps
-   val new_dprocs = map (Traverse.addctxt rewrs) dprocs' @ dprocs @ relreducers
+   val new_dprocs = map (Traverse.addctxt (map #2 rewrs)) dprocs' @ dprocs @
+                    relreducers
 
    val reltravs = map rsd_travrules relsimps
    val relrels = List.concat (map travrel reltravs)
@@ -490,7 +557,7 @@ datatype simpset =
  in
    SS {
        mk_rewrs    = mk_rewrs,
-       ssfrags     = f :: ssfrags,
+       history     = ADDFRAG f :: history,
        initial_net = net,
        limit       = limit,
        dprocs      = new_dprocs,
@@ -501,51 +568,29 @@ datatype simpset =
 
 val mk_simpset = foldl (fn (f,ss) => ss ++ f) empty_ss
 
-fun remove_ssfrags ss names =
-    ss |> ssfrags_of
-       |> partition_ssfrags names
-       |> snd |> List.rev
-       |> mk_simpset
-
-local
-  val lhs_of_thm = boolSyntax.lhs o snd o boolSyntax.strip_forall o Thm.concl
-  fun term_of_thm th =
-    case (Lib.total lhs_of_thm th, Thm.hyp th) of
-       (SOME tm, []) => tm
-     | _ => boolSyntax.T
-  fun match_eq tm1 tm2 =
-    Lib.can (Term.match_term tm1) tm2 andalso Lib.can (Term.match_term tm2) tm1
-  fun exists_match l thm = List.exists (match_eq (term_of_thm thm)) l
-  fun remove_theorems_from_frag f
-    (SSFRAG_CON { name, convs, rewrs, ac, filter, dprocs, congs, relsimps}) =
-      SSFRAG_CON
-        { name = name,
-          convs = convs,
-          rewrs = List.mapPartial (f false) rewrs,
-          ac = let val ok = Option.isSome o (f true) in
-                 List.filter (fn (th1, th2) => ok th1 andalso ok th2) ac
-               end,
-          filter = filter,
-          dprocs = dprocs,
-          congs = congs,
-          relsimps = relsimps
-        }
-in
-  fun remove_theorems avoids (SS {mk_rewrs, ssfrags, ...}) =
+fun build_from_history h0 =
     let
-      fun thm_to_thms thm =
-         List.map fst (mk_rewrs (thm, BoundedRewrites.BOUNDED (ref 1)))
-      val part = List.partition (exists_match avoids)
-      fun f ac thm =
-        let
-          val (l, r) = part (if ac then [thm] else thm_to_thms thm)
-        in
-          if List.null l then SOME thm else Lib.total Drule.LIST_CONJ r
-        end
+      fun foldthis (hi, ss) =
+          case hi of
+              ADDFRAG sf => ss ++ sf
+            | DELETE_EVENT sl => ss -* sl
+            | ADDWEAKENER wd => add_weakener wd ss
     in
-      mk_simpset (List.rev (List.map (remove_theorems_from_frag f) ssfrags))
+      List.foldl foldthis empty_ss (List.rev h0)
     end
-end
+
+fun remove_ssfrags (ss as SS{history,limit,...}) names =
+    let
+      val s = Set.addList (Binaryset.empty String.compare, names)
+      val nil_included = Set.member(s, "")
+      fun member (SSFRAG_CON{name = SOME n,...}) = Binaryset.member(s,n)
+        | member (SSFRAG_CON{name = NONE,...}) = nil_included
+      fun mapthis (hi as ADDFRAG f) = if member f then NONE else SOME hi
+        | mapthis hi = SOME hi
+      val history' = List.mapPartial mapthis history
+    in
+      build_from_history history' |> fupdlimit (fn _ => limit)
+    end
 
 (*---------------------------------------------------------------------------*)
 (* SIMP_QCONV : simpset -> thm list -> conv                                  *)
@@ -557,14 +602,16 @@ end
    fun addcontext (context,thms) = let
      val net = (raise context) handle CONVNET net => net
      val cthms = map dest_tagged_rewrite thms
-     val new_rwts = flatten (map mk_rewrs cthms)
+     val new_rwts0 = flatten (map mk_rewrs cthms)
+     val new_rwts = map (fn th => (SOME "rewrite: from context", th)) new_rwts0
    in
-     CONVNET (net_add_convs net (List.mapPartial mk_rewr_convdata new_rwts))
+     CONVNET
+       (net_add_convs net (List.mapPartial mk_rewr_convdata new_rwts))
    end
    fun apply {solver,conv,context,stack,relation} tm = let
      val net = (raise context) handle CONVNET net => net
    in
-     tryfind (fn conv' => conv' solver stack tm) (lookup tm net)
+     tryfind (fn {conval = conv',...} => conv' solver stack tm) (lookup tm net)
    end
    in REDUCER {name=SOME"rewriter_for_ss",
                addcontext=addcontext, apply=apply,
@@ -582,19 +629,32 @@ end
 
 val Cong = markerLib.Cong
 val AC   = markerLib.AC;
+val Excl = markerLib.Excl
 
 local open markerSyntax markerLib
   fun is_AC thm = same_const(fst(strip_comb(concl thm))) AC_tm
   fun is_Cong thm = same_const(fst(strip_comb(concl thm))) Cong_tm
 
+  fun extract_excls (excls, rest) l =
+      case l of
+          [] => (List.rev excls, List.rev rest)
+        | th::ths => case markerLib.destExcl th of
+                         NONE => extract_excls (excls, th::rest) ths
+                       | SOME nm => extract_excls (nm::excls, rest) ths
+
   fun process_tags ss thl =
     let val (Congs,rst) = Lib.partition is_Cong thl
-        val (ACs,rst') = Lib.partition is_AC rst
+        val (ACs,rst) = Lib.partition is_AC rst
+        val (excludes, rst) = extract_excls ([],[]) rst
     in
-     if null Congs andalso null ACs then (ss,thl)
-     else ((ss ++ SSFRAG_CON{name=SOME"Cong and/or AC", relsimps = [],
+     if null Congs andalso null ACs andalso null excludes then (ss,thl)
+     else (
+       ss ++ SSFRAG_CON{name=SOME"Cong and/or AC", relsimps = [],
                              ac=map unAC ACs, congs=map unCong Congs,
-                             convs=[],rewrs=[],filter=NONE,dprocs=[]}), rst')
+                             convs=[],rewrs=[],filter=NONE,dprocs=[]}
+          -* excludes,
+       rst
+     )
     end
 in
 fun SIMP_CONV ss l tm =
@@ -683,15 +743,24 @@ fun track f x =
     creating per-type ssdata values
    ---------------------------------------------------------------------- *)
 
-fun type_ssfrag ty = let
-  val {Thy,Tyop,...} = dest_thy_type ty
-  val tyname = Thy^"$"^Tyop
-  val {rewrs, convs} = TypeBase.simpls_of ty
-in
-  SSFRAG_CON {name=SOME ("Datatype "^tyname), relsimps = [],
-              convs = convs, rewrs = rewrs, filter = NONE,
-              dprocs = [], ac = [], congs = []}
-end
+fun tyi_to_ssdata tyinfo =
+    let
+      val (thy,tyop) = TypeBasePure.ty_name_of tyinfo
+      val tyname = thy ^ "$" ^ tyop
+      val {rewrs = rws0, convs} = TypeBasePure.simpls_of tyinfo;
+      fun reduce (th, (i,A)) =
+          (i + 1, (SOME (tyname ^ " simpl. " ^ Int.toString i), th) :: A)
+      val (_, rewrs) = foldl reduce (1,[]) rws0
+    in
+      SSFRAG_CON {name = SOME("Datatype "^tyname),
+                  convs = convs, rewrs = rewrs, filter = NONE,
+                  dprocs = [], ac = [], congs = [], relsimps = []}
+    end
+
+fun type_ssfrag ty =
+    case TypeBase.fetch ty of
+        NONE => raise ERR ("type_ssfrag", "No TypeBase info for type")
+      | SOME tyi => tyi_to_ssdata tyi
 
 
 (*---------------------------------------------------------------------------*)
@@ -724,6 +793,14 @@ fun pp_ssfrag (SSFRAG_CON {name,convs,rewrs,ac,dprocs,congs,...}) =
                  | SOME n => [n]
      val pp_term = lift (Parse.term_pp_with_delimiters Hol_pp.pp_term)
      val pp_thm = lift pp_thm
+     fun pp_named_thm (nmopt, th) =
+         let
+           val nmstr = case nmopt of NONE => "<anon>" | SOME s => s
+         in
+           block CONSISTENT 0 (
+             add_string ("[" ^ nmstr ^ "]") >> add_break(2,2) >> pp_thm th
+           )
+         end
      fun pp_thm_pair (th1,th2) =
         block CONSISTENT 0 (pp_thm th1 >> add_break(2,0) >> pp_thm th2)
      fun pp_conv_info (n,SOME tm) =
@@ -743,22 +820,62 @@ fun pp_ssfrag (SSFRAG_CON {name,convs,rewrs,ac,dprocs,congs,...}) =
          ) >> add_break(1,0)
  in
    block CONSISTENT 0 (
-     add_string ("Simplification set: "^name) >> add_newline >>
+     add_string ("Simplification set fragment: "^name) >> add_newline >>
      vblock("Conversions",pp_conv_info,convs) >>
      vblock("Decision procedures",add_string,dps) >>
      vblock("Congruence rules",pp_thm,congs) >>
      vblock("AC rewrites",pp_thm_pair,ac) >>
-     vblock("Rewrite rules",pp_thm,rewrs)
+     vblock("Rewrite rules",pp_named_thm,rewrs)
    )
  end
 
-fun pp_simpset ss =
+fun pp_simpset (ss as SS {initial_net,...}) =
   let
     open Portable smpp
+    val empty_strset = Set.empty String.compare
+    fun foldthis {name,...} nms = name::nms
+    val keysl = Ho_Net.fold' foldthis initial_net []
+    val keys = Listsort.sort String.compare keysl
+    val (rewrites0,others0) = Lib.partition (String.isPrefix "rewrite:") keys
+    val rewrites = map (fn s => String.extract(s, 8, NONE)) rewrites0
+    val (anons, real_rewrites) = Lib.partition (equal "<anonymous>") rewrites
+    val anon_string = case length anons of
+                          0 => ""
+                        | 1 => " (with 1 anonymous rewrite)"
+                        | n => " (with " ^ Int.toString n ^
+                               " anonymous rewrites)"
+    val (fragname_set,anonfrag_count) =
+        List.foldl (fn (ssf,(s,c)) =>
+                       case ssfrag_name ssf of
+                           NONE => (s,c+1)
+                         | SOME n => (Set.add(s,n), c))
+                   (empty_strset, 0)
+                   (ssfrags_of ss)
+    val rmstring = ""
+    fun count n s = case n of 1 => "1" ^ s | n => Int.toString n ^ s ^ "s"
+    val anon_fragstring = case anonfrag_count of
+                              0 => ":"
+                            | c => " (with " ^ count c " anonymous fragment" ^
+                                   " [remove using name \"\"]):"
+    fun titled_strlist (title, l) =
+      block CONSISTENT 0 (
+        add_string title >> add_break(1,3) >>
+        block INCONSISTENT 0 (
+          pr_list add_string (add_string "," >> add_break(1,0)) l
+        )
+      )
+    val others = Set.listItems (Set.addList (empty_strset, others0))
   in
-    Parse.mlower (pr_list pp_ssfrag add_newline (rev (ssfrags_of ss)))
+    block CONSISTENT 0 (
+      pr_list titled_strlist (add_break(1,0)) [
+        ("Included fragments"^anon_fragstring, Set.listItems fragname_set),
+        ("Rewrites"^anon_string, real_rewrites),
+        ("Other net names/keys:", others)
+      ]
+    )
   end;
 
 val pp_ssfrag = Parse.mlower o pp_ssfrag
+val pp_simpset = Parse.mlower o pp_simpset
 
 end (* struct *)

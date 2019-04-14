@@ -140,6 +140,22 @@ Incompatibilities:
     This also means that this is the only form of variation introduced by the `variant` function.
     However, there is also a new `numvariant` function, which makes the varying function behave as if the old `Globals.priming` was set to `SOME ""` (introduces and increments a numeric suffix).
 
+*   By default, goals are now printed with the trace variable `"Goalstack.print_goal_at_top"` set to false.
+    This means goals now print like
+
+            0.  p
+            1.  q
+           ------------------------------------
+                r
+
+    The motivation is that when goal-states are very large, the conclusion (which we assume is the most important part of the state) runs no risk of disappearing off the top of the screen.
+    We also believe that having the conclusion and most recent assumption at the bottom of the screen is easier for human eyes to track.
+    The trace variable can be changed back to the old behaviour with:
+
+           val _ = set_trace "Goalstack.print_goal_at_top" 1;
+
+    This instruction can be put into script files, or (better) put into your `~/.hol-config.sml` file so that all interactive sessions are automatically adjusted.
+
 * * * * *
 
 <div class="footer">

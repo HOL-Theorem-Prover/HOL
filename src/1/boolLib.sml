@@ -8,7 +8,7 @@ struct
 
 open boolTheory boolSyntax Hol_pp ParseExtras
      Drule Tactical Tactic Thm_cont Conv Rewrite Prim_rec Abbrev DB
-     BoundedRewrites TexTokenMap ThmSetData
+     BoundedRewrites TexTokenMap
 
 local open DefnBase TypeBase Ho_Rewrite Psyntax Rsyntax in end
 
@@ -36,7 +36,7 @@ local open HolKernel Ho_Rewrite  (* signature control *)
       open Parse
 in
 (*---------------------------------------------------------------------------*)
-(* The first canjunct is useful when rewriting assumptions, but not when     *)
+(* The first conjunct is useful when rewriting assumptions, but not when     *)
 (* rewriting conclusion, since it prevents stripping. Better rewrite on      *)
 (* conclusions is IF_THEN_T_IMP.                                             *)
 (*---------------------------------------------------------------------------*)
@@ -136,17 +136,8 @@ in
 end
 in
 fun save_thm_attrs fname (n, attrs, th) = let
-  fun do_attr a = let
-    val storefn = valOf (ThmSetData.data_storefn a)
-                        handle Option => raise mk_HOL_ERR "boolLib" fname
-                                               ("No attribute with name "^a)
-    val exportfn = ThmSetData.data_exportfn a
-  in
-    storefn n;
-    case exportfn of
-        NONE => ()
-      | SOME ef => ef (current_theory()) [(n,th)]
-  end
+  fun do_attr a =
+    ThmAttribute.store_at_attribute {thm = th, name = n, attrname = a}
 in
   Theory.save_thm(n,th) before app do_attr attrs
 end

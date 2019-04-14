@@ -25,43 +25,44 @@ val real_SS = simpLib.SSFRAG
    convs = [],
    dprocs = [],
    filter = NONE,
-   rewrs = [(* addition *)
-            REAL_ADD_LID, REAL_ADD_RID,
-            (* subtraction *)
-            REAL_SUB_REFL, REAL_SUB_RZERO,
-            (* multiplication *)
-            REAL_MUL_LID, REAL_MUL_RID, REAL_MUL_LZERO, REAL_MUL_RZERO,
-            (* division *)
-            REAL_OVER1, REAL_DIV_ADD,
-            (* less than or equal *)
-            REAL_LE_REFL, REAL_LE_01, REAL_LE_RADD,
-            (* less than *)
-            REAL_LT_01, REAL_LT_INV_EQ,
-            (* pushing out negations *)
-            REAL_NEGNEG, REAL_LE_NEG2, REAL_SUB_RNEG, REAL_NEG_SUB,
-            REAL_MUL_RNEG, REAL_MUL_LNEG,
-            (* cancellations *)
-            REAL_SUB_ADD2, REAL_MUL_SUB1_CANCEL, REAL_MUL_SUB2_CANCEL,
-            REAL_LE_SUB_CANCEL2, REAL_ADD_SUB, REAL_SUB_ADD, REAL_ADD_SUB_ALT,
-            REAL_SUB_SUB2,
-            (* halves *)
-            REAL_LT_HALF1, REAL_HALF_BETWEEN, REAL_NEG_HALF,
-            REAL_DIV_DENOM_CANCEL2, REAL_DIV_INNER_CANCEL2,
-            REAL_DIV_OUTER_CANCEL2, REAL_DIV_REFL2,
-            (* thirds *)
-            REAL_NEG_THIRD, REAL_DIV_DENOM_CANCEL3, REAL_THIRDS_BETWEEN,
-            REAL_DIV_INNER_CANCEL3, REAL_DIV_OUTER_CANCEL3, REAL_DIV_REFL3,
-            (* injections to the naturals *)
-            REAL_INJ, REAL_ADD, REAL_LE, REAL_LT, REAL_MUL,
-            (* pos *)
-            REAL_POS_EQ_ZERO, REAL_POS_POS, REAL_POS_INFLATE,
-            REAL_POS_LE_ZERO,
-            (* min *)
-            REAL_MIN_REFL, REAL_MIN_LE1, REAL_MIN_LE2, REAL_MIN_ADD,
-            REAL_MIN_SUB,
-            (* max *)
-            REAL_MAX_REFL, REAL_LE_MAX1, REAL_LE_MAX2, REAL_MAX_ADD,
-            REAL_MAX_SUB]};
+   rewrs = map (fn s => (SOME s, DB.fetch "real" s)) [
+     (* addition *)
+     "REAL_ADD_LID", "REAL_ADD_RID",
+     (* subtraction *)
+     "REAL_SUB_REFL", "REAL_SUB_RZERO",
+     (* multiplication *)
+     "REAL_MUL_LID", "REAL_MUL_RID", "REAL_MUL_LZERO", "REAL_MUL_RZERO",
+     (* division *)
+     "REAL_OVER1", "REAL_DIV_ADD",
+     (* less than or equal *)
+     "REAL_LE_REFL", "REAL_LE_01", "REAL_LE_RADD",
+     (* less than *)
+     "REAL_LT_01", "REAL_LT_INV_EQ",
+     (* pushing out negations *)
+     "REAL_NEGNEG", "REAL_LE_NEG2", "REAL_SUB_RNEG", "REAL_NEG_SUB",
+     "REAL_MUL_RNEG", "REAL_MUL_LNEG",
+     (* cancellations *)
+     "REAL_SUB_ADD2", "REAL_MUL_SUB1_CANCEL", "REAL_MUL_SUB2_CANCEL",
+     "REAL_LE_SUB_CANCEL2", "REAL_ADD_SUB", "REAL_SUB_ADD", "REAL_ADD_SUB_ALT",
+     "REAL_SUB_SUB2",
+     (* halves *)
+     "REAL_LT_HALF1", "REAL_HALF_BETWEEN", "REAL_NEG_HALF",
+     "REAL_DIV_DENOM_CANCEL2", "REAL_DIV_INNER_CANCEL2",
+     "REAL_DIV_OUTER_CANCEL2", "REAL_DIV_REFL2",
+     (* thirds *)
+     "REAL_NEG_THIRD", "REAL_DIV_DENOM_CANCEL3", "REAL_THIRDS_BETWEEN",
+     "REAL_DIV_INNER_CANCEL3", "REAL_DIV_OUTER_CANCEL3", "REAL_DIV_REFL3",
+     (* injections to the naturals *)
+     "REAL_INJ", "REAL_ADD", "REAL_LE", "REAL_LT", "REAL_MUL",
+     (* pos *)
+     "REAL_POS_EQ_ZERO", "REAL_POS_POS", "REAL_POS_INFLATE",
+     "REAL_POS_LE_ZERO",
+     (* min *)
+     "REAL_MIN_REFL", "REAL_MIN_LE1", "REAL_MIN_LE2", "REAL_MIN_ADD",
+     "REAL_MIN_SUB",
+     (* max *)
+     "REAL_MAX_REFL", "REAL_LE_MAX1", "REAL_LE_MAX2", "REAL_MAX_ADD",
+     "REAL_MAX_SUB"]};
 
 val real_ac_SS = simpLib.SSFRAG {
   name = SOME"real_ac",
@@ -355,7 +356,7 @@ val REAL_REDUCE_ss = SSFRAG
    ac = [], congs =[],
    convs = simpset_convs,
    dprocs = [], filter = NONE,
-   rewrs = rwts}
+   rewrs = map (fn th => (NONE, th)) rwts}
 
 val real_ss = arith_ss ++ real_SS ++ REAL_REDUCE_ss
 
@@ -597,5 +598,129 @@ val REAL_ARITH_ss =
     {name=SOME"REAL_ARITH",
      convs = [], rewrs = [], congs = [],
       filter = NONE, ac = [], dprocs = [ARITH_REDUCER]};
+
+open AC_Sort realTheory realSyntax
+
+val literalbase = mk_var(" ", real_ty) (* compares less than 'normal' vars *)
+
+fun oksort cmp [] = true
+  | oksort cmp [_] = true
+  | oksort cmp (t1::(rest as (t2::ts))) =
+      cmp(t1,t2) = LESS andalso oksort cmp rest
+
+val realreduce_cs = real_compset()
+
+local
+  fun termbase t =
+      if is_real_literal t then literalbase
+      else
+        case total dest_pow t of
+            SOME(b,_) => b
+          | NONE => t
+
+  val mulcompare = inv_img_cmp termbase Term.compare
+
+  val addPOW1 = REWR_CONV (GSYM POW_1)
+  val mulPOWs = TRY_CONV (REWR_CONV REAL_POW_POW THENC
+                          RAND_CONV (computeLib.CBV_CONV realreduce_cs))
+  val POW_E0 = CONJUNCT1 pow
+  val mulcombine0 =
+      LAND_CONV (addPOW1 THENC mulPOWs) THENC
+      RAND_CONV (addPOW1 THENC mulPOWs) THENC
+      REWR_CONV (GSYM REAL_POW_ADD) THENC
+      RAND_CONV  (computeLib.CBV_CONV realreduce_cs) THENC
+      TRY_CONV (FIRST_CONV (map REWR_CONV [POW_1, POW_E0]))
+  fun mulcombine t =
+      if is_real_literal (rand t) then
+        computeLib.CBV_CONV realreduce_cs t
+      else mulcombine0 t
+
+  val mulpre = ALL_CONV
+
+  val mulsort = {
+    assoc = REAL_MUL_ASSOC,
+    comm = REAL_MUL_COMM,
+    dest = realSyntax.dest_mult,
+    mk = realSyntax.mk_mult,
+    cmp = mulcompare,
+    combine = mulcombine,
+    preprocess = mulpre
+  }
+in
+  fun REALMULCANON t =
+      let
+        fun strip A t =
+            case total dest_mult t of
+                SOME(t1,t2) => strip (t2::A) t1
+              | NONE => t::A
+        val (l,r) = dest_mult t handle HOL_ERR _ => raise UNCHANGED
+        val ts = strip [] (if is_real_literal l then r else t)
+      in
+        if List.exists (fn t => is_mult t orelse is_real_literal t) ts orelse
+           not (oksort mulcompare ts)
+        then
+          AC_Sort.sort mulsort THENC
+          TRY_CONV (REWR_CONV REAL_MUL_LID) THENC
+          RAND_CONV (PURE_REWRITE_CONV [REAL_MUL_ASSOC])
+        else ALL_CONV
+      end t
+end (* local *)
+
+local
+  val x = mk_var("x", real_ty)
+  fun termbase t =
+      if is_real_literal t then mk_abs(x,x) (* sorts last *)
+      else
+        case total dest_mult t of
+            SOME(l,r) => if is_real_literal l then r else t
+          | NONE => dest_negated t handle HOL_ERR _ => t
+
+  val addcompare = inv_img_cmp termbase Term.compare
+
+  val ADD_MUL1 = GSYM REAL_MUL_LID
+  val ADD_RDISTRIB' = GSYM REAL_ADD_RDISTRIB
+  fun give_coeff t =
+      case total dest_mult t of
+          SOME (l,r) => if is_real_literal l then ALL_CONV t
+                        else REWR_CONV ADD_MUL1 t
+        | NONE => (REWR_CONV REAL_NEG_MINUS1 ORELSEC REWR_CONV ADD_MUL1) t
+
+  val NEG_MINUS1' = GSYM REAL_NEG_MINUS1
+  val addcombine0 =
+      BINOP_CONV give_coeff THENC REWR_CONV ADD_RDISTRIB' THENC
+      LAND_CONV (computeLib.CBV_CONV realreduce_cs) THENC
+      TRY_CONV (FIRST_CONV (map REWR_CONV [REAL_MUL_LID, REAL_MUL_LZERO]))
+  fun addcombine t =
+      if is_real_literal (rand t) then
+        computeLib.CBV_CONV realreduce_cs t
+      else addcombine0 t
+
+  val addsort = {
+    assoc = REAL_ADD_ASSOC,
+    comm = REAL_ADD_COMM,
+    dest = realSyntax.dest_plus,
+    mk = realSyntax.mk_plus,
+    cmp = addcompare,
+    combine = addcombine,
+    preprocess = REALMULCANON
+  }
+in
+  fun REALADDCANON t =
+      let
+        fun strip A t =
+            case total dest_plus t of
+                SOME(t1,t2) => strip (t2::A) t1
+              | NONE => t::A
+        val ts = strip [] t
+      in
+        if List.exists is_plus ts orelse not (oksort addcompare ts)
+        then
+          AC_Sort.sort addsort THENC
+          PURE_REWRITE_CONV [REAL_ADD_ASSOC, REAL_ADD_LID, REAL_ADD_RID]
+        else ALL_CONV
+      end t
+end (* local *)
+
+
 
 end

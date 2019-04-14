@@ -48,6 +48,13 @@ val _ = Feedback.register_trace ("pp_unambiguous_comprehensions", unamb_comp, 2)
 fun setcomprehension_printer (tyg,tmg) backend printer ppfns gravs depth tm =
     let
       val unamb_comp = get_tracefn "pp_unambiguous_comprehensions" ()
+      val _ =
+          case Overload.oi_strip_comb (term_grammar.overload_info tmg) tm of
+              SOME(f, _) =>
+                if term_grammar.grammar_name tmg f = SOME "GSPEC"
+                then ()
+                else raise UserPP_Failed
+            | NONE => raise UserPP_Failed
       val _ = term_pp_utils.pp_is_abs tmg (rand tm) orelse raise UserPP_Failed
       val {add_string, add_break, ...} = ppfns : term_pp_types.ppstream_funs
       fun hardspace n = add_string (CharVector.tabulate(n, fn _ => #" "))

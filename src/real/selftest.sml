@@ -45,4 +45,15 @@ val _ = List.app
                            {testf=standard_tpp_message, input=s1, output=s2})
           [("realinv 2", "2⁻¹"), ("inv (TC R)", "R⁺ ᵀ")]
 
+val _ = List.app testutils.convtest [
+      ("MULCANON1", REALMULCANON, “x:real * y * x”, “x pow 2 * y”),
+      ("MULCANON2", REALMULCANON, “x:real * y * x * 2”, “2 * (x pow 2 * y)”),
+      ("MULCANON3", REALMULCANON,
+       “10 * (x:real) * y * x pow 3 * y * x pow 4 * z * 6”,
+       “60 * (x pow 8 * y pow 2 * z)”),
+      ("MULCANON4", REALMULCANON, “x * 1r * z”, “x:real * z”),
+      ("ADDCANON1", REALADDCANON, “10 + x * 2 + x * y + 6 + x”,
+       “3 * x + x * y + 16”)
+    ]
+
 val _ = Process.exit Process.success
