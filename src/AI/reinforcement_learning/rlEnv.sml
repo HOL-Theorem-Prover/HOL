@@ -127,6 +127,7 @@ fun add_rootex gamespec tree allex =
 (* -------------------------------------------------------------------------
    MCTS big steps. Ending the search when there is no move available.
    ------------------------------------------------------------------------- *)
+val verbose_flag = ref false
 
 fun n_bigsteps_loop (n,nmax) gamespec mctsparam (allex,allroot) tree =
   if n >= nmax then (allex,allroot) else
@@ -136,6 +137,7 @@ fun n_bigsteps_loop (n,nmax) gamespec mctsparam (allex,allroot) tree =
     val newtree = mcts mctsparam tree
     val root = dfind [0] newtree
     val filter_sit = (#filter_sit gamespec) sit
+    val _ = if !verbose_flag then print_endline (tts (nntm_of_sit sit)) else ()
     val movel = #movel gamespec
   in
    if null (filter_sit (map_assoc (fn x => 0.0) movel))
@@ -160,6 +162,7 @@ fun n_bigsteps gamespec mctsparam target =
     val tree = starttree_of mctsparam target 
     val cost1 = rlGameArithGround.total_cost_target target
     val cost2 = 2 * cost1 + 5
+    val _ = if !verbose_flag then print_endline (its cost1) else ()
   in
     n_bigsteps_loop (0,cost2) gamespec mctsparam (emptyallex,[]) tree
   end
@@ -294,6 +297,23 @@ fun widscript_file wid = gencode_dir_wid wid ^ "/script" ^ its wid ^ ".sml"
 fun widexl_file wid = gencode_dir_wid wid ^ "/exl"
 
 (* Workers *)
+fun my_explore dhtnn target =
+  let
+    val (noise,bstart) = (false,false)
+    val gamespec = rlGameArithGround.gamespec
+    val status_of = #status_of gamespec
+    val mctsparam =
+      (!nsim_glob, !decay_glob, noise,
+       #status_of gamespec, #apply_move gamespec, 
+       mk_fep_dhtnn bstart gamespec dhtnn)
+    val (exl,rootl) = n_bigsteps gamespec mctsparam target
+    val endroot = hd rootl
+    val bstatus = status_of (#sit endroot) = Win
+  in
+    ()  
+  end
+
+
 fun explore_standalone flags wid dhtnn target =
   let
     val (noise,bstart) = flags
@@ -656,15 +676,8 @@ parext_flag := true;
 val resultl1280_2 = map test_ncore [2];
 parext_flag := false;
 print_timers ();
-
-
-
 batchsize_glob := 16;
 mlTreeNeuralNetwork.ml_gencode_dir := "/home/thibault/gencode";
-
-*)
-
-(*
 load "rlEnv"; open rlEnv aiLib;
 dim_glob := 8;
 val dhtnn = random_dhtnn_gamespec rlGameArithGround.gamespec;

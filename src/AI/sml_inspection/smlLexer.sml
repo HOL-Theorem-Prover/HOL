@@ -91,7 +91,7 @@ fun wait_endquote buf charl = case charl of
   | #"\\" :: #"\"" :: m => wait_endquote (#"\"" :: #"\\" :: buf) m
   | #"\"" :: m          => (implode (rev (#"\"" :: buf)), m)
   | a :: m              => wait_endquote (a :: buf) m
-  | _                   => raise ERR "wait_endquote" ""
+  | _                   => raise ERR "wait_endquote" (implode (rev buf))
 
 fun lex_helper acc charl = case charl of
     [] => rev acc

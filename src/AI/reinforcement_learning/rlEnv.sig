@@ -4,7 +4,7 @@ sig
   include Abbrev
 
   val rl_gencode_dir : string ref
-
+  val verbose_flag : bool ref
   (* 'a is the type of board
      ''b is the type for move
      'c is the type of targets *)
@@ -59,7 +59,8 @@ sig
   
   val explore_eval : 
     int -> mlTreeNeuralNetwork.dhtnn -> rlGameArithGround.board psMCTS.sit list -> real
-
+  val my_explore : mlTreeNeuralNetwork.dhtnn -> 
+    rlGameArithGround.board psMCTS.sit -> unit
   val logfile_glob : string ref
   val summary : string -> unit
 

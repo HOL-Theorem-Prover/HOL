@@ -108,8 +108,13 @@ app load ["rlData", "aiLib", "rlLib", "mlTreeNeuralNetwork", "psTermGen"];
 open rlData aiLib rlLib mlTreeNeuralNetwork psTermGen;
 
 
-val cset_glob = map mk_sucn (List.tabulate (5,I)) @ [``$+``,``$*``];
-val tml_glob = mk_fast_set Term.compare (gen_term_size 9 (``:num``,cset_glob));
+val cset_glob = map mk_sucn (List.tabulate (5,I)) @ [``SUC``,``$+``,``$*``];
+val tml_glob1 = mk_fast_set Term.compare (gen_term_size 9 (``:num``,cset_glob));
+val tml_glob2 = mk_fast_set Term.compare (gen_term_size 7 (``:num``,cset_glob));
+
+val tml_glob = mk_fast_set Term.compare (first_n 4000 (shuffle tml_glob1) @ tml_glob2);
+
+
 val train = map_assoc (bin_rep 4 o eval_ground) tml_glob;
 
 val operl = [``$+``,``$*``];
@@ -123,7 +128,7 @@ val nuniq = length (mk_fast_set Term.compare (map fst train));
 val nn_operl = mk_fast_set oper_compare (operl_of ``0 + SUC 0 * 0``);
 val randtnn = random_tnn (12,nbit) nn_operl;
 val bsize = 128;
-fun f x = (50, x / (Real.fromInt bsize));
+fun f x = (200, x / (Real.fromInt bsize));
 val schedule = map f [0.1];
 val ncore = 2;
 val tnn = prepare_train_tnn (ncore,bsize) randtnn (train,test) schedule;
@@ -133,13 +138,7 @@ val operl = [``$+``,``$*``];
 val (nsuc,noper) = (8,8);
 val (nex,nbit) = (1000,4);
 val finaltestset = mk_finaltestset operl (nsuc,noper) nbit nex;
-
 val finalaccuracy = map_snd (accuracy_dataset tnn) finaltestset;
-
-
-
-
-
 val table = cut_n 8 finalaccuracy;
 fun print_table table = 
   let 
@@ -155,7 +154,8 @@ fun print_table table =
 ;
 print_table table;
   
- val s = mk_sucn;
+
+val s = mk_sucn;
 infer_tnn tnn ``^(s 5) + ^(s 3)``;
 *)
 
@@ -170,23 +170,42 @@ mlTreeNeuralNetwork.ml_gencode_dir :=
   rl_gencode_dir := (!rl_gencode_dir) ^ (!logfile_glob);
 
 val operl = [``$+``,``$*``];
-val (nsuc,noper) = (6,6);
+val (nsuc,noper) = (1,1);
 val (nex,nbit) = (100,1);
 val pretargetl =
  map_snd (map fst) (mk_finaltestset operl (nsuc,noper) nbit nex);
 
-val l2 = map_snd (filter (fn x => term_cost x <> 0)) pretargetl;
+val l2 = map_snd (filter (fn x => term_cost x > 0 andalso term_cost x < 50)) pretargetl;
+val tml = 
+
 val l3 = map (length o snd) l2;
 
-val finaltargetl = map_snd (map rlGameArithGround.mk_startsit) pretargetl;
+val finaltargetl = map_snd (map rlGameArithGround.mk_startsit) l2;
 
 val dhtnn = read_dhtnn "dhtnn_april8";
+val targetl1 = 
+  mk_fast_set Term.compare 
+   (List.tabulate (100, fn _ => (random_num operl (nsuc,noper))));
 
-(*rlEnv.random_dhtnn_gamespec rlGameArithGround.gamespec; *)
+val targetl2 = map rlGameArithGround.mk_startsit targetl1;
+val dhtnn = 
+  rlEnv.random_dhtnn_gamespec rlGameArithGround.gamespec; 
 
-val result = map_snd (rlEnv.explore_eval 16 dhtnn) finaltargetl;
 
-val table = cut_n 6 result;
+
+
+fun myf targetl =
+  (
+  let val r = rlEnv.explore_eval 40 dhtnn targetl in
+    print_endline ("win " ^ rts r);
+    r
+  end
+  )
+;
+rlEnv.nsim_glob := 100000;
+val result = map (my_explore dhtnn) targetl2;
+
+val table = cut_n 4 result;
 fun print_table table = 
   let 
     fun f ((i,j),r) = 
@@ -290,7 +309,11 @@ val proof_data_glob = proof_data tml_glob;
 app load ["rlData", "aiLib", "rlLib", "mlTreeNeuralNetwork", "psTermGen"];
 open rlData aiLib rlLib mlTreeNeuralNetwork psTermGen;
 
-
+val l = map (term_cost o fst) proof_data_glob;
+val d = count_dict (dempty Int.compare) l;
+val l1 = dlist d;
+fun f (a,b) = its a ^ " " ^ its b;
+writel "/home/thibault/data" (map f l1);
 
 
 
@@ -302,13 +325,7 @@ val pdata2 = dict_sort Int.compare (map snd pdata1);
 end (* struct *)
 
 (*
-
-
-
 val (trainset,testset) = mk_ttset_ground2 7;
-
-
-
 (* inference *)
 fun binary_of_int x = Term [QUOTE (its x)];
 
@@ -379,12 +396,7 @@ with binary output.
 equations solving. 
 ?x. x * x = 3.
 !a. a+b=b+a.
-val s = mk_sucn;
-
-e
-
-
-
+val s = mk_sucn;X
 modular equations.
 linear equations.
 small non linear equation. 
