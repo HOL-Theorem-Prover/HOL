@@ -96,7 +96,10 @@ fun wait_endquote buf charl = case charl of
 fun lex_helper acc charl = case charl of
     [] => rev acc
   | #"\"" :: m =>
-    let val (token, cont) = wait_endquote [#"\""] m in
+    let val (token, cont) = wait_endquote [#"\""] m 
+      handle HOL_ERR _ => raise ERR "lex_helper" 
+        (String.concatWith " " (rev acc))
+    in
       lex_helper (token :: acc) cont
     end
   | a :: m     =>

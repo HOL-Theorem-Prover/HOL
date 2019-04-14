@@ -31,11 +31,17 @@ fun number_snd start l = case l of
 
 fun print_endline s = print (s ^ "\n")
 
+val hash_modulo =
+  if valOf (Int.maxInt) > 2147483647
+  then 79260655 * 10000000 + 5396977 (* assumes 64 bit *)
+  else 1002487 (* assumes 32 bit *)
+
+
 local open Char String in
   fun hash_string s =
     let
       fun hsh (i, A) s =
-         hsh (i + 1, (A * 263 + ord (sub (s, i))) mod 792606555396977) s
+         hsh (i + 1, (A * 263 + ord (sub (s, i))) mod hash_modulo) s
          handle Subscript => A
     in
       hsh (0,0) s

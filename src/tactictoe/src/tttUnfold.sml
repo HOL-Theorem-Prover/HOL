@@ -871,8 +871,10 @@ fun extract_thy file =
 fun os oc s = TextIO.output (oc, s)
 fun osn oc s = TextIO.output (oc, s ^ "\n")
 
-fun rm_endline s =
-  let fun f c = if c = #"\n" then #" " else c in implode (map f (explode s)) end
+fun rm_spaces s =
+  let fun f c = if mem c [#"\n",#"\t",#"\r"] then #" " else c in 
+    implode (map f (explode s)) 
+  end
 
 fun is_break s =
   mem s [
@@ -951,28 +953,24 @@ fun end_unfold_thy () =
     f "Replace id" replace_id_time
   end
 
-fun unquoteString thy s =
+fun unquoteString thy file =
   let
     val dir = tactictoe_dir ^ "/code"
     val _ = mkDir_err dir
-    val fin  = dir ^ "/quoteString1" ^ thy
-    val fout = dir ^ "/quoteString2" ^ thy
-    val cmd = HOLDIR ^ "/bin/unquote" ^ " " ^ fin ^ " " ^ fout
+    val fout = dir ^ "/unquote_" ^ thy
+    val cmd = HOLDIR ^ "/bin/unquote" ^ " " ^ file ^ " " ^ fout
   in
-    writel fin [s];
     ignore (OS.Process.system cmd);
     String.concatWith " " (readl fout)
   end
 
 fun sketch_wrap thy file =
   let
-    val sl = readl file
-    val s1 = String.concatWith " " sl
-    val s2 = unquoteString thy s1
-    val s3 = rm_endline (rm_comment s2)
-    val sl3 = partial_sml_lexer s3
+    val s1 = unquoteString thy file
+    val s2 = rm_comment (rm_spaces s1)
+    val sl = partial_sml_lexer s2
   in
-    sketch sl3
+    sketch sl
   end
 
 fun unfold_wrap p = unfold 0 [dnew String.compare (map protect basis)] p
