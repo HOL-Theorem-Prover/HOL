@@ -871,11 +871,6 @@ fun extract_thy file =
 fun os oc s = TextIO.output (oc, s)
 fun osn oc s = TextIO.output (oc, s ^ "\n")
 
-fun rm_spaces s =
-  let fun f c = if mem c [#"\n",#"\t",#"\r"] then #" " else c in 
-    implode (map f (explode s)) 
-  end
-
 fun is_break s =
   mem s [
    "end", "in", "val", "fun",
@@ -958,17 +953,23 @@ fun unquoteString thy file =
     val dir = tactictoe_dir ^ "/code"
     val _ = mkDir_err dir
     val fout = dir ^ "/unquote_" ^ thy
-    val cmd = HOLDIR ^ "/bin/unquote" ^ " " ^ file ^ " " ^ fout
+    val cmd = HOLDIR ^ "/bin/unquote" ^ " -i " ^ file ^ " " ^ fout
   in
     ignore (OS.Process.system cmd);
     String.concatWith " " (readl fout)
   end
 
+fun rm_spaces s =
+  let fun f c = if mem c [#"\n",#"\t",#"\r"] then #" " else c in 
+    implode (map f (explode s)) 
+  end
+
 fun sketch_wrap thy file =
   let
     val s1 = unquoteString thy file
-    val s2 = rm_comment (rm_spaces s1)
-    val sl = partial_sml_lexer s2
+    val s3 = rm_spaces (rm_comment s1)
+    val _ = writel (tactictoe_dir ^ "/code/test_" ^ thy) [s3]
+    val sl = partial_sml_lexer s3
   in
     sketch sl
   end
