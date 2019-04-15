@@ -1479,7 +1479,7 @@ val subspt_domain = Q.store_thm("subspt_domain",
      subspt t1 t2 <=> domain t1 SUBSET domain t2`,
   fs [subspt_lookup,domain_lookup,SUBSET_DEF]);
 
-val subspt_def = Q.store_thm("subspt_def",
+val subspt_def = Q.store_thm("subspt_def[compute]",
   `!sp1 sp2.
      subspt sp1 sp2 <=>
      !k. k IN domain sp1 ==> k IN domain sp2 /\
@@ -1607,10 +1607,6 @@ val mapi_Alist = Q.store_thm(
     fromAList (MAP (\kv. (FST kv,f (FST kv) (SND kv))) (toAList pt))`,
   simp[spt_eq_thm, wf_mapi, wf_fromAList, lookup_fromAList] >>
   srw_tac[boolSimps.ETA_ss][lookup_mapi, ALOOKUP_MAP_lemma, ALOOKUP_toAList]);
-
-val domain_mapi = Q.store_thm("domain_mapi",
-  `domain (mapi f pt) = domain pt`,
-  rw[EXTENSION,domain_lookup,lookup_mapi]);
 
 val size_domain = Q.store_thm("size_domain",
   `!t. size t = CARD (domain t)`,
