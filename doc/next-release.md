@@ -66,6 +66,15 @@ New features:
 
     These names can also be given attributes in the same way.
 
+-   Holmake now understands targets whose suffixes are the string `Theory` to be instructions to build all of the files associated with a theory.
+    Previously, to specifically get `fooTheory` built, it was necessary to write
+
+           Holmake fooTheory.uo
+
+    which is not particularly intuitive.
+
+    Thanks to Magnus Myreen for the feature suggestion.
+
 
 Bugs fixed:
 -----------
