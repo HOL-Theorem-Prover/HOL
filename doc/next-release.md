@@ -156,6 +156,20 @@ Incompatibilities:
 
     This instruction can be put into script files, or (better) put into your `~/.hol-config.sml` file so that all interactive sessions are automatically adjusted.
 
+*   This is arguably also a bug-fix: it is now impossible to rebind a theorem to a name that was associated with a definition, and have the new theorem silently be added to the `EVAL` compset for future theories’ benefit.
+    In other words, it was previously possible to do
+
+           val _ = Define`foo x = x + 1`;
+           EVAL “foo 6”;     (* returns ⊢ foo 6 = 7 *)
+
+           val _ = Q.save_thm (“foo_def”, thm);
+
+    and have the effect be that `thm` goes into `EVAL`’s compset in descendent theories.
+
+    Now, when this happens, the change to the persistent compset is dropped.
+    If the user wants the new `foo_def` to appear in the `EVAL`-compset in future theories, they must change the call to `save_thm` to use the name `"foo_def[compute]"`.
+    Now, as before, the old `foo_def` cannot be seen by future theories at all, and so certainly will not be in the `EVAL`-compset.
+
 * * * * *
 
 <div class="footer">
