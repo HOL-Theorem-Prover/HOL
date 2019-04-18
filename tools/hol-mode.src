@@ -114,7 +114,7 @@ evaluations.")
                  (goto-char (match-beginning 0)))))
 (defvar hol-beg-pos nil) ; ugh, global, but easiest this way
 (defvar hol-quoted-theorem-proof-re-begin
-  "Theorem[[:space:]]+[A-Za-z0-9_]*\\(\\[[A-Za-z0-9_,]+\\]\\)?[[:space:]]*:")
+  "Theorem[[:space:]]+[A-Za-z0-9'_]*\\(\\[[A-Za-z0-9_,]+\\]\\)?[[:space:]]*:")
 (put 'hol-term 'beginning-op
      (function
       (lambda ()
