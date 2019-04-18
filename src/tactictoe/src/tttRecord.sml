@@ -110,11 +110,7 @@ fun tactic_err msg stac g =
   (tactic_msg msg stac g; raise ERR "record_tactic" "")
 
 fun record_tactic_aux (tac,stac) g =
-  let
-    val ((gl,v),t) = add_time (timeout (!ttt_rectac_time) tac) g
-      handle FunctionTimeout => tactic_err "timed out" stac g
-            | x      => raise x
-  in
+  let val ((gl,v),t) = add_time tac g in
     tactic_time := (!tactic_time) + t;
     n_tactic_replay_glob := (!n_tactic_replay_glob) + 1;
     goalstep_glob := ((stac,t,g,gl),v) :: !goalstep_glob;
@@ -166,7 +162,7 @@ fun wrap_tactics_in name qtac goal =
         total_time replay_time
         (timeout (!ttt_recproof_time) final_tac) goal
     in
-      if gl = []
+      if null gl
         then (
              success_flag := SOME (gl,v);
              n_replay_glob := (!n_replay_glob + 1)
@@ -246,7 +242,8 @@ fun record_proof name lflag tac1 tac2 g =
         let
           val _ = if eval_ignore then () else
             let val (thmdata,tacdata) = (create_thmdata (), !tacdata_glob) in
-              (valOf (!ttt_evalfun_glob)) (thmdata,tacdata) g
+              (valOf (!ttt_evalfun_glob)) (thmdata,tacdata)
+              (current_theory (), name) g
             end
           val (r,t) = add_time tac1 g
           val _ = debug ("Recording proof time: " ^ Real.toString t)
@@ -255,8 +252,8 @@ fun record_proof name lflag tac1 tac2 g =
           if null (fst r) then r
           else (debug "record_proof: not null"; tac2 g)
         end
-        handle Interrupt => raise Interrupt
-          | _ => (debug "record_proof: exception"; tac2 g)
+        (* expected to catch interrupts *)
+        handle _ => (debug "record_proof: exception"; tac2 g)
   in
     result
   end

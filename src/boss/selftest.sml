@@ -85,8 +85,9 @@ val Q = mk_var("Q",bool)
 
 val (g1:goal) = ([boolSyntax.mk_conj(P,Q)], boolSyntax.mk_neg(P))
 
-val res1 = test_assert (equal [([Q,P],boolSyntax.mk_neg(P))] o #1)
-  (match1_tac test1 g1)
+val res1 =
+    test_assert (goals_eq [([Q,P],boolSyntax.mk_neg(P))] o #1)
+                (match1_tac test1 g1)
 
 val test2 =
   [
@@ -95,8 +96,7 @@ val test2 =
     ,([],(K ALL_TAC):mg_tactic)
   ]
 
-val res1' = test_assert (equal [g1] o #1)
-  (first_match_tac test2 g1)
+val res1' = test_assert (goals_eq [g1] o #1) (first_match_tac test2 g1)
 
 val g2 = ([``x:bool = if P then x' else x''``, ``x:bool``],``yi = if x then x'' else (ARB:bool)``)
 
@@ -136,7 +136,43 @@ val g4 = (
    ``f (y:num) = 4n``],
   ``(!(a:num) g (b:num) z1 z2. (f a = z1) ==> (g b = z2) ==> z1 + z2 < 10n) ==> 3 + 4 < 10n``)
 
-val res4 = test_assert (equal ``3 + 4 < 10n ==> 3 + 4 < 10n`` o #2 o hd o #1)
+val res4 = test_assert (aconv ``3 + 4 < 10n ==> 3 + 4 < 10n`` o #2 o hd o #1)
   (match_tac test4 g4)
 
 in end
+
+local
+val tyis = TypeBase.elts()
+fun check tyi =
+    let
+      open TypeBasePure Portable
+      val tynm = let val (thy,opn) = ty_name_of tyi in thy^"$"^opn end
+      val _ = tprint ("Checking simpls for "^tynm)
+      val simpls = map concl $ #rewrs $ simpls_of tyi
+      val simpls_set = HOLset.addList(empty_tmset, simpls)
+    in
+      if HOLset.numItems simpls_set = length simpls then OK()
+      else die "Duplicates exist"
+    end
+in
+val _ = app check tyis
+end (* local *)
+
+
+local
+val _ = Globals.interactive := true
+val _ = Feedback.emit_MESG := false
+val _ = Datatype`testrcd = <| fld1 : num ; fld2 : bool |>`;
+
+fun test (msg, c) =
+    let
+      val _ = tprint ("Record constructor injectivity ("^msg^")")
+    in
+      require_msg (check_result (aconv ``(x:num = y) /\ (a <=> b)``))
+                  term_to_string (rhs o concl o c)
+                  ``testrcd x a = testrcd y b``;
+      ()
+    end
+in
+val _ = List.app test [("simp", SIMP_CONV (srw_ss()) []), ("EVAL", EVAL)]
+end (* local *)

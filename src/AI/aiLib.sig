@@ -61,12 +61,18 @@ sig
     ('b, 'a) Redblackmap.dict -> ('a, 'b) Redblackmap.dict
   val dregroup : ('a * 'a -> order) -> ('a * 'b) list ->
     ('a, 'b list) Redblackmap.dict
+  val distrib : ('a * 'b list) list -> ('a * 'b) list
+  val dappend : 'a * 'b ->
+    ('a, 'b list) Redblackmap.dict -> ('a, 'b list) Redblackmap.dict
+  val dappendl : ('a * 'b) list ->
+    ('a, 'b list) Redblackmap.dict -> ('a, 'b list) Redblackmap.dict
+  val dconcat : ('a * 'a -> order) ->
+    ('a, 'b list) Redblackmap.dict list -> ('a, 'b list) Redblackmap.dict
+
   val dset : ('a * 'a -> order) -> 'a list ->
     ('a, unit) Redblackmap.dict
-  val daddset :
-    'a list -> 'b -> ('a, unit) Redblackmap.dict ->
-    ('a, unit) Redblackmap.dict
-  val distrib : ('a * 'b list) list -> ('a * 'b) list
+  val daddset : 'a list ->
+    ('a, unit) Redblackmap.dict -> ('a, unit) Redblackmap.dict
   val union_dict : ('a * 'a -> order) ->
      ('a, 'b) Redblackmap.dict list -> ('a, 'b) Redblackmap.dict
   val count_dict :
@@ -89,20 +95,25 @@ sig
   val mk_fast_set : ('a * 'a -> order) -> 'a list -> 'a list
   val mk_string_set : string list -> string list
   val mk_term_set : term list -> term list
+  val mk_type_set : hol_type list -> hol_type list
   val mk_sameorder_set : ('a * 'a -> order) -> 'a list -> 'a list
   val dict_sort : ('a * 'a -> order) -> 'a list -> 'a list
-  val topo_sort : (''a * ''a list) list -> ''a list
+  val topo_sort : ('a * 'a -> order) -> ('a * 'a list) list -> 'a list
   val sort_thyl : string list -> string list
   val fold_left : ('a -> 'b -> 'b) -> 'a list -> 'b -> 'b
   val mk_batch : int -> 'a list -> 'a list list
   val number_partition : int -> int -> int list list
   val duplicate : int -> 'a list -> 'a list
   val indent: int -> string
+  val list_combine : 'a list list -> 'a list list
 
   (* random *)
   val random_real : unit -> real
   val shuffle   : 'a list -> 'a list
+  val random_elem : 'a list -> 'a
+  val random_int : (int * int) -> int
   val select_in_distrib : ('a * real) list -> 'a
+  val random_percent : real -> 'a list -> 'a list * 'a list
 
   (* input/output *)
   val string_of_goal : goal -> string
@@ -118,6 +129,8 @@ sig
   val writel_path : string -> string -> string list -> unit
   val debug_flag  : bool ref
   val debug_in_dir : string -> string -> string -> unit
+  val stream_to_string :
+    string -> (TextIO.outstream -> unit) -> string list
 
   (* parse *)
   val unquote_string : string -> string
@@ -150,6 +163,7 @@ sig
   val pow : real -> int -> real
   val approx : int -> real -> real
   val percent : real -> real
+  val pad : int -> string -> string -> string
 
   (* term *)
   val rename_bvarl : (string -> string) -> term -> term
@@ -157,5 +171,15 @@ sig
   val strip_type : hol_type -> (hol_type list * hol_type)
   val has_boolty : term -> bool
   val only_concl : thm -> term
+
+  (* printing *)
+  val tts : term -> string
+  val its : int -> string
+  val rts : real -> string
+
+  (* parallelism *)
+  val interruptkill : Thread.thread -> unit
+  val parmap : int -> ('a -> 'b) -> 'a list -> 'b list
+  val parapp : int -> ('a -> 'b) -> 'a list -> unit
 
 end

@@ -91,16 +91,19 @@ in
 end
 
 (* making it exportable *)
-val {export = export_rule_induction, dest, ...} =
-    ThmSetData.new_exporter "rule_induction" (K (app (add_rule_induction o #2)))
+val {export = export_rule_induction, ...} =
+    ThmSetData.new_exporter {
+      settype = "rule_induction",
+      efns = {
+        add = fn {named_thms,...} => app (add_rule_induction o #2) named_thms,
+        remove = fn _ => ()
+      }
+    }
 
 fun thy_rule_inductions thyname = let
-  val segdata =
-    LoadableThyData.segment_data {thy = thyname, thydataty = "rule_induction"}
+  open ThmSetData
 in
-  case segdata of
-    NONE => []
-  | SOME d => map #2 (valOf (dest d))
+  theory_data {settype = "rule_induction", thy = thyname} |> added_thms
 end
 
 (* ----------------------------------------------------------------------
@@ -120,13 +123,21 @@ end
 fun add_mono_thm th = the_monoset := (mono_name th, th) :: (!the_monoset)
 
 (* making it exportable *)
-val {export = export_mono, dest, ...} =
-    ThmSetData.new_exporter "mono" (K (app (add_mono_thm o #2)))
+val {export = export_mono, ...} =
+    ThmSetData.new_exporter {
+      settype = "mono",
+      efns = {
+        add = fn {named_thms,...} => app (add_mono_thm o #2) named_thms,
+        remove = fn _ => ()
+      }
+    }
 
 fun thy_monos thyname =
-    case LoadableThyData.segment_data {thy = thyname, thydataty = "mono"} of
-      NONE => []
-    | SOME d => map #2 (valOf (dest d))
+    let
+      open ThmSetData
+    in
+      theory_data {settype = "mono", thy = thyname} |> added_thms
+    end
 
 (*---------------------------------------------------------------------------
   given a case theorem of the sort returned by new_inductive_definition

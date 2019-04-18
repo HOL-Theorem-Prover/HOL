@@ -1,34 +1,33 @@
 language: c
 before_script: developers/install-poly.sh
-script: eval `opam config env` && poly < tools/smart-configure.sml && bin/build $BUILDOPTS --nograph
+script: eval `opam config env` && $SML < tools/smart-configure.sml && bin/build $BUILDOPTS --nograph
 notifications:
   email:
     recipients:
       - hol-builds@lists.sourceforge.net
     on_success: always
     on_failure: always
-  irc:
-    channels:
-      - "irc.freenode.net#hol"
 
 env:
   global:
     - PATH=$PATH:$HOME/bin LD_LIBRARY_PATH=$HOME/lib
   matrix:
-    - BUILDOPTS=
-    - BUILDOPTS=--expk
-    - BUILDOPTS="--seq=developers/travis/selftestseq -t1"
-    - BUILDOPTS="--expk --seq=developers/travis/selftestseq -t1"
-    - BUILDOPTS="--seq=developers/travis/more_examples_seq -t1"
-    - BUILDOPTS="--expk --seq=developers/travis/more_examples_seq -t1"
-    - POLY_GIT=T BUILDOPTS="--seq=developers/travis/selftestseq"
+    - SML=mosml BUILDOPTS="--seq=developers/travis/smallseq"
+    - SML=poly BUILDOPTS=
+    - SML=poly BUILDOPTS=--expk
+    - SML=poly BUILDOPTS="--seq=developers/travis/selftestseq -t1"
+    - SML=poly BUILDOPTS="--expk --seq=developers/travis/selftestseq -t1"
+    - SML=poly BUILDOPTS="--seq=developers/travis/more_examples_seq -t1"
+    - SML=poly BUILDOPTS="--expk --seq=developers/travis/more_examples_seq -t1"
+    - SML=poly POLY_GIT=T BUILDOPTS="--seq=developers/travis/selftestseq"
 
 matrix:
   include:
     - os: osx
-      env: BUILDOPTS=
-    - env: POLY_ROOT=T BUILDOPTS="--seq developers/travis/selftestseq"
+      env: SML=poly BUILDOPTS=
+    - env: SML=poly POLY_ROOT=T BUILDOPTS="--seq developers/travis/selftestseq"
       sudo: true
+    - env: SML=poly OPENTHEORY=T BUILDOPTS="--otknl --seq developers/travis/vsmallseq"
   allow_failures:
     - os: osx
-    - env: POLY_GIT=T BUILDOPTS="--seq=developers/travis/selftestseq"
+    - env: SML=poly POLY_GIT=T BUILDOPTS="--seq=developers/travis/selftestseq"

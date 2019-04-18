@@ -180,27 +180,33 @@ val lconcl = fst o dest_eq o concl o SPEC_ALL;
 val rconcl = snd o dest_eq o concl o SPEC_ALL;
 
 (* Define args_thm as a function that, given a theorem |- f t1 t2, returns (t1, t2). *)
-fun args_thm thm = let
-    val (f, [t1, t2]) = strip_comb (concl thm)
-in
-    (t1, t2)
-end;
+fun args_thm thm =
+  let
+    val (f, args) = strip_comb (concl thm)
+  in
+    case args of
+        [t1,t2] => (t1, t2)
+      | _ => raise mk_HOL_ERR "CCSLib" "args_thm" "fn doesn't have two args"
+  end;
 
 fun lhs_tm thm = (fst o args_thm) thm;
 fun rhs_tm thm = (snd o args_thm) thm;
 
 (* Define args_equiv as a function that, given a tm "p t1 t2", returns (p, t1, t2) *)
-fun args_equiv tm = let
-    val (p, [t1, t2]) = strip_comb tm
-in
-    (p, t1, t2)
-end;
+fun args_equiv tm =
+  let
+    val (p, args) = strip_comb tm
+  in
+    case args of
+        [t1,t2] => (p, t1, t2)
+      | _ => raise mk_HOL_ERR "CCSLib" "args_equiv" "fn doesn't have two args"
+  end;
 
 (* Auxiliary functions (on lists and terms) to find repeated occurrences of a
    summand to be then deleted by applying the idempotence law for summation. *)
 local
     fun helper (h:term, nil) = nil
-      | helper (h, t::l) = if h = t then l else t :: (helper (h, l))
+      | helper (h, t::l) = if h ~~ t then l else t :: (helper (h, l))
 in
     fun elim h l = helper (h, l)
 end;

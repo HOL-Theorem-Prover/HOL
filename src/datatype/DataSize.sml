@@ -59,7 +59,7 @@ local fun drop [] ty = fst(dom_rng ty)
         | drop (_::t) ty = drop t (snd(dom_rng ty));
       fun OK f ty M =
          let val (Rator,Rand) = dest_comb M
-         in (Rator=f) andalso is_var Rand andalso (type_of Rand = ty)
+         in aconv Rator f andalso is_var Rand andalso (type_of Rand = ty)
          end
 in
 fun tysize (theta,omega,gamma) clause ty =
@@ -86,7 +86,7 @@ fun tysize (theta,omega,gamma) clause ty =
 end;
 
 fun dupls [] (C,D) = (rev C, rev D)
-  | dupls (h::t) (C,D) = dupls t (if mem h t then (C,h::D) else (h::C,D));
+  | dupls (h::t) (C,D) = dupls t (if tmem h t then (C,h::D) else (h::C,D));
 
 fun crunch [] = []
   | crunch ((x,y)::t) =
@@ -154,7 +154,7 @@ fun define_size ax db =
      fun clause cl =
          let val (fn_i, capp) = dest_comb (lhs cl)
          in
-         mk_eq(mk_comb(assoc fn_i fn_i_map, capp),
+         mk_eq(mk_comb(op_assoc aconv fn_i fn_i_map, capp),
                case snd(strip_comb capp)
                 of [] => Zero
                  | L  => end_itlist (curry numSyntax.mk_plus)
@@ -169,7 +169,7 @@ fun define_size ax db =
                  {name=def_name^"_size_def",
                   rec_axiom=ax, def=pre_defn1}
      val cty = (I##(type_of o last)) o strip_comb o lhs o snd o strip_forall
-     val ctyl = Lib.mk_set (map cty (strip_conj (concl defn)))
+     val ctyl = op_mk_set tmx_eq (map cty (strip_conj (concl defn)))
      val const_tyl = filter (fn (c,ty) => mem ty dtys) ctyl
      val const_tyopl = map (fn (c,ty) => (c,tyconst_names ty)) const_tyl
  in

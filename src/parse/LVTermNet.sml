@@ -44,9 +44,10 @@ fun ndest_term (fvs, tm) = let
   val args' = map (fn t => (fvs, t)) args
 in
   case dest_term f of
-    VAR(s, ty) => if mem f fvs then (LV (s, length args), args')
+    VAR(s, ty) => if op_mem aconv f fvs then (LV (s, length args), args')
                   else (V (length args), args')
-  | LAMB(bv, bod) => (Lam (length args), (subtract fvs [bv], bod) :: args')
+  | LAMB(bv, bod) =>
+      (Lam (length args), (op_set_diff aconv fvs [bv], bod) :: args')
   | CONST{Name,Thy,Ty} => (C ({Name=Name,Thy=Thy}, length args), args')
   | COMB _ => raise Fail "impossible"
 end

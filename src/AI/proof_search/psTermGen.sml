@@ -70,141 +70,76 @@ fun all_mk_comb d1 d2 (ty1,ty2) =
     map mk_comb l
   end
 
-fun synthetize filterf (maxgen,maxdepth) (targettype,cset) =
+fun gen_size cache n =
+  (if n <= 0 then dempty Type.compare else dfind n (!cache))
+  handle NotFound =>
   let
-    val tycset = map (fn x => (type_of x, x)) cset
-    val d1 = dregroup Type.compare tycset
-    val gen_size_cache = ref (dnew Int.compare [(1,d1)])
-    fun gen_size n =
-      (if n <= 0 then raise ERR "gen_size" "" else dfind n (!gen_size_cache))
-      handle NotFound =>
+    val l = map pair_of_list (number_partition 2 n)
+    fun all_comb (n1,n2) =
       let
-        val l = map pair_of_list (number_partition 2 n)
-        fun all_comb (n1,n2) =
-          let
-            val d1     = gen_size n1
-            val d2     = gen_size n2
-            val tytyl  = cartesian_product (dkeys d1) (dkeys d2)
-            val tytyl' = filter is_applicable tytyl
-          in
-            List.concat (map (all_mk_comb d1 d2) tytyl')
-          end
-        val combl = List.concat (map all_comb l)
-        val tml1  = filterf combl
-        val tml2  = map (fn x => (type_of x, x)) tml1
-        val r     = dregroup Type.compare tml2
+        val d1     = gen_size cache n1
+        val d2     = gen_size cache n2
+        val tytyl  = cartesian_product (dkeys d1) (dkeys d2)
+        val tytyl' = filter is_applicable tytyl
       in
-        gen_size_cache := dadd n r (!gen_size_cache);
-        r
+        List.concat (map (all_mk_comb d1 d2) tytyl')
       end
-    fun filter_with_targettype acc n depth =
-      if length acc >= maxgen orelse depth > maxdepth
-        then first_n maxgen acc else
-      let
-        val tml    = dfind targettype (gen_size depth) handle NotFound => []
-        val newacc = acc @ tml
-      in
-        filter_with_targettype newacc n (depth + 1)
-      end
+    val tml1 = List.concat (map all_comb l)
+    val tml2  = map (fn x => (type_of x, x)) tml1
+    val d3 = dregroup Type.compare tml2
   in
-    filter_with_targettype [] maxgen 1
+    cache := dadd n d3 (!cache); d3
   end
 
+fun gen_term_size size (ty,cset) =
+  let
+    val tycset = map (fn x => (type_of x, x)) cset
+    val d = dregroup Type.compare tycset
+    val cache = ref (dnew Int.compare [(1,d)])
+    fun g n = dfind ty (gen_size cache n) handle NotFound => []
+  in
+    List.concat (List.tabulate (size, g))
+  end
+
+fun gen_term_nmax nmax (ty,cset) =
+  let
+    val tycset = map (fn x => (type_of x, x)) cset
+    val d = dregroup Type.compare tycset
+    val cache = ref (dnew Int.compare [(1,d)])
+    fun f acc size =
+      if length acc >= nmax then first_n nmax acc else
+      let
+        val tml = dfind ty (gen_size cache size) handle NotFound => []
+        val newacc = acc @ tml
+      in
+        f newacc (size + 1)
+      end
+  in
+    f [] 1
+  end
 
 (* -------------------------------------------------------------------------
-   Function for building cuts for the Cutter theorem prover.
+   Mini-game 1 problem of Deciding if something is true or not.
+   Pick for itself what it thinks it would train it better.
+   Improve upon Mini-Game 2. Faster training by online training.
    ------------------------------------------------------------------------- *)
 
 (*
-fun is_metaground x =
- not (can (find_term (fn x => x = ``meta_var : num``)) x)
+val tml = gen_term_nmax 100000 (bool,
+[``0``,``SUC``,``$+``,``$*``,
+ ``$= :num -> num -> bool``]);
 
-fun build_fo_cut subl metatm =
+fun f tm =
   let
-    val n = length (find_terms (fn x => x = ``meta_var : num``) metatm)
-    fun f sub i = subst_occs [[i+1]] sub metatm
-    val absl = map (fn x => List.tabulate (n,f x)) subl
+    val d = count_dict (dempty Term.compare) (find_terms is_var tm)
+    fun test (_,b) = b >= 2
   in
-    mk_fast_set Term.compare (List.concat absl)
+    all test (dlist d) andalso dlength d > 1
   end
 
-val tml = find_terms (fn x => type_of x = ``:num``) tm
+val tml' = filter f tml;
 
-fun build_fo_cut subl metatm =
-  let
-    fun f sub i = subst active_var
-    val absl = map (fn x => List.tabulate (n,f x)) subl
-  in
-    mk_fast_set Term.compare (List.concat absl)
-  end
-
-
-fun build_term (subfl,n) (tm : term) = (List.nth (subfl,n) tm : term);
-
+val thml = mapfilter DECIDE tml';
 *)
-
-
-
-
-
 
 end (* struct *)
-
-(* test
-load "psTermGen"; open psTermGen tttTools;
-
-(* can derive the filter function from the nn scoring function *)
-
-val maxsize = 20;
-
-(* signature *)
-val active_var = ``active_var : num``;
-val pending_var = ``pending_var : num``;
-val starttm = mk_eq (active_var,pending_var);
-fun mk_suc x = mk_comb (``SUC``,x);
-fun mk_add (a,b) = list_mk_comb (``$+``,[a,b]);
-val zero = ``0``;
-
-val sub1 = [{redex = active_var, residue = mk_suc active_var}];
-val sub2 = [{redex = active_var, residue = mk_add (active_var,pending_var)}];
-val sub3 = [{redex = active_var, residue = zero},
-            {redex = pending_var, residue = active_var}];
-
-val subl = [sub1,sub2,sub3];
-val subfl = [subst_occs [[1]] sub1,
- subst_occs [[1]] sub2,
- subst_occs [[1],[1]] sub3];
-
-val curtm = starttm;
-
-val curtm' = ;
-val curtm = curtm';
-
-fun loop tm =
-  if can (find_term (fn x => x = active_var)) tm then
-    let
-      val tm' = (hd (shuffle subfl)) tm
-      val _ = print_endline (term_to_string tm')
-    in
-      loop tm'
-    end
-  else tm
-
-val subl = [sub1,sub2,sub3];
-
-val metatml1 = build_fo_cut subl metatm;
-val metatml2 =
-  mk_fast_set Term.compare (List.concat (map (build_fo_cut subl) metatml1));
-val metatml3 =
-  mk_fast_set Term.compare (List.concat (map (build_fo_cut subl) metatml2));
-val metatml4 =
-  mk_fast_set Term.compare (List.concat (map (build_fo_cut subl) metatml3));
-val metatml5 =
-  mk_fast_set Term.compare (List.concat (map (build_fo_cut subl) metatml4));
-val metatml6 =
-  mk_fast_set Term.compare (List.concat (map (build_fo_cut subl) metatml5));
-
-*)
-
-
-

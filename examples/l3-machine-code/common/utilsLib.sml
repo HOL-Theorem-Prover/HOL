@@ -255,7 +255,7 @@ fun vacuous thm =
    let
       val (h, c) = Thm.dest_thm thm
    in
-      c = boolSyntax.T orelse List.exists (Lib.equal boolSyntax.F) h
+      Teq c orelse List.exists Feq h
    end
 
 fun add_to_rw_net f (thm: thm, n) = LVTermNet.insert (n, ([], f thm), thm)
@@ -369,10 +369,8 @@ in
    fun ELIM_UNDISCH thm =
       case Lib.total boolSyntax.dest_imp (Thm.concl thm) of
          SOME (l, r) =>
-            if l = boolSyntax.T
-               then T_imp_rule thm
-            else if l = boolSyntax.F
-               then F_imp_rule thm
+            if Teq l then T_imp_rule thm
+            else if Feq l then F_imp_rule thm
             else if Term.is_var l andalso not (Term.var_occurs l r)
                then T_imp_rule (Thm.INST [l |-> boolSyntax.T] thm)
             else (case dest_neg_occ_var l r of
@@ -860,7 +858,7 @@ local
               SOME s => s
             | NONE => t)
    fun find_occurance r t =
-      Lib.can (HolKernel.find_term (Lib.equal (base t))) r
+      Lib.can (HolKernel.find_term (aconv (base t))) r
    val modified = ref 0
    fun specialize (conv, tms) thm =
       let
@@ -1215,7 +1213,7 @@ local
       end
    fun is_call x tm =
       case Lib.total Term.rand tm of
-        SOME y => x = y
+        SOME y => x ~~ y
       | NONE => false
    fun leaf tm =
       case Lib.total Term.rand tm of

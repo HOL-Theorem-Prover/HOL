@@ -28,7 +28,6 @@ fun graphbuild optinfo incinfo g =
         MB_Monitor.new {info = info,
                         warn = warn,
                         genLogFile = (fn {tag} => loggingdir ++ safetag tag),
-                        keep_going = keep_going,
                         time_limit = time_limit}
 
     val env =
@@ -38,23 +37,24 @@ fun graphbuild optinfo incinfo g =
     fun shell_command s =
       {executable = "/bin/sh", nm_args = ["/bin/sh", "-c", s], env = env}
 
-    fun genjob g =
-      case find_runnable g of
-          NONE => NoMoreJobs g
-        | SOME (n,nI) =>
+    fun genjob (g,ok) =
+      case (ok,find_runnable g) of
+          (false, _) => GiveUpAndDie (g, false)
+       |  (true, NONE) => NoMoreJobs (g, ok)
+       |  (true, SOME (n,nI)) =>
           let
             val _ = diag ("Found runnable node "^node_toString n)
             fun k b g =
               if b orelse keep_going then
-                genjob (updnode(n, if b then Succeeded else Failed) g)
-              else GiveUpAndDie g
+                genjob (updnode(n, if b then Succeeded else Failed) g, true)
+              else GiveUpAndDie (g, ok)
             val depfs = map (toFile o #2) (#dependencies nI)
             val _ = #status nI = Pending orelse
                     raise Fail "runnable not pending"
             val target_s = #target nI
             fun stdprocess() =
               case #command nI of
-                  NoCmd => genjob (updnode (n,Succeeded) g)
+                  NoCmd => genjob (updnode (n,Succeeded) g, true)
                 | cmd as SomeCmd c =>
                   let
                     val hypargs as {noecho,ignore_error,command=c} =
@@ -64,7 +64,7 @@ fun graphbuild optinfo incinfo g =
                     fun error b =
                       if b then Succeeded
                       else if ignore_error then
-                        (warn ("Ignoring error building " ^ target_s);
+                        (warn ("Ignoring error executing: " ^ c);
                          Succeeded)
                       else Failed
                   in
@@ -82,11 +82,18 @@ fun graphbuild optinfo incinfo g =
                             List.foldl (fn (n, g) => updnode (n, st) g)
                                        g
                                        (n::others)
-                          fun update (g, b) = updall (g, error b)
+                          fun update ((g,ok), b) =
+                              let
+                                val status = error b
+                                val g' = updall (g, status)
+                                val ok' = status = Succeeded orelse keep_going
+                              in
+                                (g',ok')
+                              end
                         in
                           NewJob ({tag = target_s, command = shell_command c,
                                    update = update},
-                                  updall(g, Running))
+                                  (updall(g, Running), true))
                         end
                   end
                 | BuiltInCmd bic =>
@@ -104,11 +111,11 @@ fun graphbuild optinfo incinfo g =
                             fun updall s g =
                               List.foldl (fn (n,g) => updnode(n,s) g) g
                                          (n::other_nodes)
-                            fun update (g, b) =
+                            fun update ((g,ok), b) =
                               if job_kont (fn s => ()) (b2res b) then
-                                updall Succeeded g
+                                (updall Succeeded g, true)
                               else
-                                updall Failed g
+                                (updall Failed g, keep_going)
                             fun cline_str (c,l) = "["^c^"] " ^
                                                   String.concatWith " " l
                           in
@@ -120,7 +127,7 @@ fun graphbuild optinfo incinfo g =
                             NewJob({tag = target_s,
                                     command = cline_to_command cline,
                                     update = update},
-                                   updall Running g)
+                                   (updall Running g, true))
                           end
                     val bc = build_command g incinfo
                     val _ = diag ("Handling builtin command " ^
@@ -159,7 +166,7 @@ fun graphbuild optinfo incinfo g =
                        (#dependencies nI)
                  of
                     NONE => (diag ("Can skip work on "^target_s);
-                             genjob (updnode (n, Succeeded) g))
+                             genjob (updnode (n, Succeeded) g, true))
                   | SOME (_,d) =>
                     (diag ("Dependency "^d^" forces rebuild of "^ target_s);
                      stdprocess())
@@ -169,7 +176,7 @@ fun graphbuild optinfo incinfo g =
           end
     val worklist =
         new_worklist {worklimit = jobs,
-                      provider = { initial = g, genjob = genjob }}
+                      provider = { initial = (g,true), genjob = genjob }}
   in
     do_work(worklist, monitor)
   end

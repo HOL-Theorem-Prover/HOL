@@ -13,6 +13,7 @@ open HolKernel boolLib markerLib;
 
 val op++ = simpLib.++;
 val op&& = simpLib.&&;
+val op-* = simpLib.-*;
 
 val ERR = mk_HOL_ERR "BasicProvers";
 
@@ -91,8 +92,9 @@ fun FREEUP [] M g = (ALL_TAC,M)
   | FREEUP tofree M (g as (asl,w)) =
      let val (V,_) = strip_forall w   (* ignore renaming here : idleness! *)
          val Vmap = away (free_varsl (w::asl)) V
-         val theta = filter (fn (v,_) => mem v tofree) Vmap
-         val rebind = map snd (filter (fn (v,_) => not (mem v tofree)) Vmap)
+         val theta = filter (fn (v,_) => op_mem aconv v tofree) Vmap
+         val rebind =
+             map snd (filter (fn (v,_) => not (op_mem aconv v tofree)) Vmap)
      in
        ((MAP_EVERY X_GEN_TAC (map snd Vmap)
           THEN MAP_EVERY ID_SPEC_TAC (rev rebind)),
@@ -133,7 +135,7 @@ fun prim_find_subterm FVs tm (asl,w) =
  else if List.exists (free_in tm) (w::asl) then Free tm
  else let val (V,body) = strip_forall w
       in if free_in tm body
-          then Bound(intersect (free_vars tm) V, tm)
+          then Bound(op_intersect aconv (free_vars tm) V, tm)
           else Alien tm
       end
 
@@ -182,7 +184,10 @@ fun primInduct st ind_tac (g as (asl,c)) =
  let fun ind_non_var V M =
        let val (tac,M') = FREEUP V M g
            val Mfrees = free_vars M'
-           fun has_vars tm = not(null_intersection (free_vars tm) Mfrees)
+           val Mfset = HOLset.addList(empty_tmset, Mfrees)
+           fun has_vars tm =
+             not(HOLset.isEmpty
+                   (HOLset.intersection(Mfset, FVL [tm] empty_tmset)))
            val tms = filter has_vars asl
            val newvar = variant (free_varsl (c::asl))
                                 (mk_var("v",type_of M'))
@@ -622,17 +627,8 @@ in
 val BOSS_STRIP_TAC = Tactical.FIRST [GEN_TAC,CONJ_TAC, DTHEN STRIP_ASSUME_TAC]
 end;
 
-fun tyi_to_ssdata tyinfo =
- let open simpLib
-  val (thy,tyop) = TypeBasePure.ty_name_of tyinfo
-  val {rewrs, convs} = TypeBasePure.simpls_of tyinfo;
-in
-  SSFRAG {name = SOME("Datatype "^thy^"$"^tyop),
-          convs = convs, rewrs = rewrs, filter = NONE,
-           dprocs = [], ac = [], congs = []}
-end
-
-fun add_simpls tyinfo ss = (ss ++ tyi_to_ssdata tyinfo) handle HOL_ERR _ => ss;
+fun add_simpls tyinfo ss =
+    (ss ++ simpLib.tyi_to_ssdata tyinfo) handle HOL_ERR _ => ss;
 
 fun is_dneg tm = 1 < snd(strip_neg tm);
 
@@ -640,13 +636,14 @@ val notT = mk_neg T
 val notF = mk_neg F;
 
 fun breakable tm =
-    is_exists tm orelse
-    is_conj tm   orelse
-    is_disj tm   orelse
-    is_dneg tm   orelse
-    notT = tm    orelse
-    notF = tm    orelse
-    T=tm orelse F=tm
+    is_exists tm  orelse
+    is_conj tm    orelse
+    is_disj tm    orelse
+    is_dneg tm    orelse
+    aconv notT tm orelse
+    aconv notF tm orelse
+    aconv T tm    orelse
+    aconv F tm
 
 (* ----------------------------------------------------------------------
     LET_ELIM_TAC
@@ -895,7 +892,11 @@ val (srw_ss : simpset ref) = ref (bool_ss ++ combinSimps.COMBIN_ss);
 
 val srw_ss_initialised = ref false;
 
-val pending_updates = ref ([]: simpLib.ssfrag list);
+datatype update = ADD_SSFRAG of simpLib.ssfrag | REMOVE_RWT of string
+val pending_updates = ref ([]: update list);
+
+fun apply_update (ADD_SSFRAG ssf, ss) = ss ++ ssf
+  | apply_update (REMOVE_RWT n, ss) = ss -* [n]
 
 fun initialise_srw_ss() =
   if !srw_ss_initialised then !srw_ss
@@ -903,8 +904,7 @@ fun initialise_srw_ss() =
      HOL_PROGRESS_MESG ("Initialising SRW simpset ... ", "done")
      (fn () =>
          (srw_ss := rev_itlist add_simpls (tyinfol()) (!srw_ss) ;
-          srw_ss := foldl (fn (ssd,ss) => ss ++ ssd) (!srw_ss)
-                          (!pending_updates) ;
+          srw_ss := foldl apply_update (!srw_ss) (!pending_updates) ;
           srw_ss_initialised := true)) () ;
      !srw_ss
   end;
@@ -913,7 +913,7 @@ fun augment_srw_ss ssdl =
     if !srw_ss_initialised then
       srw_ss := foldl (fn (ssd,ss) => ss ++ ssd) (!srw_ss) ssdl
     else
-      pending_updates := !pending_updates @ ssdl;
+      pending_updates := !pending_updates @ map ADD_SSFRAG ssdl;
 
 fun diminish_srw_ss names =
     if !srw_ss_initialised then
@@ -927,14 +927,29 @@ fun diminish_srw_ss names =
       end
     else
       let
-        val (frags, rest) = simpLib.partition_ssfrags names (!pending_updates)
-        val _ = pending_updates := rest
+        open simpLib
+        fun foldthis (upd, (keep,drop)) =
+            case upd of
+                ADD_SSFRAG ssf =>
+                (case frag_name ssf of
+                     NONE => (upd::keep,drop)
+                   | SOME n => if mem n names then (keep,ssf::drop)
+                               else (upd::keep,drop))
+              | _ => (upd::keep, drop)
+        val (keep, drop) = foldl foldthis ([], []) (!pending_updates)
+        val _ = pending_updates := keep
       in
-        frags
+        drop
       end;
 
+fun temp_delsimps names =
+    if !srw_ss_initialised then
+      srw_ss := ((!srw_ss) -* names)
+    else
+      pending_updates := !pending_updates @ map REMOVE_RWT names
+
 fun update_fn tyi =
-  augment_srw_ss ([tyi_to_ssdata tyi] handle HOL_ERR _ => [])
+  augment_srw_ss ([simpLib.tyi_to_ssdata tyi] handle HOL_ERR _ => [])
 
 val () =
   TypeBase.register_update_fn (fn tyinfos => (app update_fn tyinfos; tyinfos))
@@ -961,7 +976,7 @@ val thy_ssfrags = ref (Binarymap.mkDict String.compare)
 fun thy_ssfrag s = Binarymap.find(!thy_ssfrags, s)
 
 fun add_rewrites thyname (thms : (string * thm) list) = let
-  val ssfrag = simpLib.named_rewrites thyname (map #2 thms)
+  val ssfrag = simpLib.named_rewrites_with_names thyname thms
   open Binarymap
 in
   augment_srw_ss [ssfrag];
@@ -974,9 +989,17 @@ in
     end
 end
 
-val {mk,dest,export} =
-    ThmSetData.new_exporter "simp" add_rewrites
+val {export,delete} =
+    ThmSetData.new_exporter {
+      settype = "simp",
+      efns = {
+        add = fn {thy,named_thms} => add_rewrites thy named_thms,
+        remove = fn {removes, ...} => temp_delsimps removes
+      }
+    }
 
 fun export_rewrites slist = List.app export slist
+
+fun delsimps names = List.app delete names
 
 end

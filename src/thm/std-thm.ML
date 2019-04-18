@@ -12,7 +12,7 @@
 (*               : July 2000, Konrad Slind                               *)
 (* ===================================================================== *)
 
-structure Thm :> Thm =
+structure Thm =
 struct
 
 open Feedback Lib Term Tag Dep

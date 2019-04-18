@@ -40,9 +40,6 @@ in
 end
 fun del_segment s = KernelSig.del_segment(termsig, s)
 
-
-
-
 (*---------------------------------------------------------------------------*
  * Builtin constants. These are in every HOL signature, and it is            *
  * convenient to nail them down here.                                        *
@@ -388,7 +385,15 @@ fun mk_primed_var (Name,Ty) =
  * polymorphic.                                                              *
  *---------------------------------------------------------------------------*)
 
-val decls = map (Const o #2) o KernelSig.listName termsig
+fun decls nm =
+    let
+      fun f ({Name,...}, info as (_, ty), A) =
+          if nm = Name andalso Type.uptodate_type (to_hol_type ty) then
+            Const info :: A
+          else A
+    in
+      KernelSig.foldl f [] termsig
+    end
 
 fun prim_mk_const (knm as {Name,Thy}) =
  case KernelSig.peek(termsig, knm)
@@ -429,8 +434,22 @@ fun first_decl fname Name =
 val current_const = first_decl "current_const";
 fun mk_const(Name,Ty) = create_const"mk_const" (first_decl"mk_const" Name) Ty;
 
-fun all_consts() = map (Const o #2) (KernelSig.listItems termsig)
-fun thy_consts s = map (Const o #2) (KernelSig.listThy termsig s)
+fun all_consts() =
+    let
+      fun buildAll (_, cinfo as (_,v), A) =
+          if Type.uptodate_type (to_hol_type v) then Const cinfo :: A else A
+    in
+      KernelSig.foldl buildAll [] termsig
+    end
+fun thy_consts s =
+    let
+      fun buildthy ({Thy,...}, cinfo as (_, v), A) =
+          if Thy = s andalso Type.uptodate_type (to_hol_type v) then
+            Const cinfo :: A
+          else A
+    in
+      KernelSig.foldl buildthy [] termsig
+    end
 
 fun same_const (Const(id1,_)) (Const(id2,_)) = id1 = id2
   | same_const _ _ = false
@@ -717,8 +736,9 @@ fun strip_binder opt =
                                     end handle HOL_ERR _ => NONE)
  in fn tm =>
    let
+     open Uref
      val (prefixl,body) = peel f tm []
-     val AV = ref (Redblackmap.mkDict String.compare) : ((string,occtype)Redblackmap.dict) ref
+     val AV = Uref.new (Redblackmap.mkDict String.compare) : ((string,occtype)Redblackmap.dict) Uref.t
      fun peekInsert (key,data) =
         let open Redblackmap
         in case peek (!AV,key)

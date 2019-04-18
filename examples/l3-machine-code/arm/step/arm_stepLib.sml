@@ -1164,8 +1164,7 @@ local
    val le_tm = boolSyntax.mk_neg be_tm
    fun endian_rule thm =
       REWRITE_RULE
-         [ASSUME (if Lib.exists (Lib.equal le_tm) (Thm.hyp thm)
-                     then le_tm
+         [ASSUME (if Lib.exists (aconv le_tm) (Thm.hyp thm) then le_tm
                   else be_tm)] thm
    fun NO_FREE_VARS_CONV tm =
       if List.null (Term.free_vars tm)
@@ -1464,7 +1463,7 @@ in
    fun fetch tms =
       let
          val tms = List.map fix_datatype tms
-         val e = List.exists (equal big_tm) tms
+         val e = List.exists (aconv big_tm) tms
          val thms = fetch_thm tms
       in
          fn v =>
@@ -2466,7 +2465,7 @@ local
          then s ^ ";" ^
               snd (List.foldr
                      (fn (t, (i, s)) =>
-                         (i + 1, if t = boolSyntax.T then comma i s else s))
+                         (i + 1, if Teq t then comma i s else s))
                      (0, "") (List.drop (opc, 16)))
       else s
    val prefixes = List.rev (mlibUseful.sort_map String.size Int.compare
@@ -3971,7 +3970,7 @@ val thms =
 
 fun is_j tm =
    case Lib.total fcpSyntax.dest_fcp_index tm of
-      SOME (_, i) => i = numLib.term_of_int 24
+      SOME (_, i) => i ~~ numLib.term_of_int 24
     | NONE => false
 
 fun unset_j_conv tm =
@@ -4226,7 +4225,8 @@ in
    fun arm_eval config =
       let
          val tms =
-            Lib.mk_set (default_tms @ arm_configLib.mk_config_terms config)
+            Lib.op_mk_set aconv
+                          (default_tms @ arm_configLib.mk_config_terms config)
          val ftch = fetch tms
          val dec = arm_decode tms
          val run = eval enc tms

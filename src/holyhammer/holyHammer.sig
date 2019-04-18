@@ -38,6 +38,6 @@ sig
     taccov : (string, int) Redblackmap.dict,
     tacdep : (goal, lbl list) Redblackmap.dict
     }
-  val hh_eval : (thmdata * tacdata) -> goal -> unit
+  val hh_eval : (thmdata * tacdata) -> (string * string) -> goal -> unit
 
 end

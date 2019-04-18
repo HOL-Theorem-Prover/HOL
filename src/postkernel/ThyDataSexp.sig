@@ -31,7 +31,7 @@ val append_merge : {old : t, new : t} -> t
 val new : {thydataty : string,
            merge : {old : t, new : t} -> t,
            load : {thyname : string, data : t} -> unit,
-           other_tds : t * TheoryDelta.t -> t} ->
+           other_tds : t * TheoryDelta.t -> t option} ->
           {export : t -> unit, segment_data : {thyname : string} -> t option}
 
 val pp_sexp : Type.hol_type PP.pprinter -> Term.term PP.pprinter ->

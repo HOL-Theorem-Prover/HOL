@@ -19,28 +19,30 @@ open
  *--------------------------------------------------------------------------*)
 
 fun dest_frac (t1:term) =
-        if is_comb t1 then
-                let
-                        val (top_rator, top_rand) = dest_comb t1;
-                in
-                        if top_rator=``abs_frac`` then
-                                let
-                                        val (this_nmr, this_dnm) = dest_pair (top_rand);
-                                in
-                                        (``abs_frac``,[this_nmr,this_dnm])
-                                end
-                        else
-                                if top_rator=``frac_ainv`` orelse top_rator=``frac_minv`` orelse top_rator=``rep_rat`` then
-                                        (top_rator, [top_rand])
-                                else
-                                        let
-                                                val (this_op, this_first, this_second) = dest_binop_triple t1;
-                                        in
-                                                (this_op, [this_first, this_second])
-                                        end
-                end
-        else (* t1 must be a variable *)
-                (t1,[])
+  if is_comb t1 then
+    let
+      val (top_rator, top_rand) = dest_comb t1
+    in
+      if top_rator ~~ ``abs_frac`` then
+        let
+          val (this_nmr, this_dnm) = dest_pair (top_rand);
+        in
+          (``abs_frac``,[this_nmr,this_dnm])
+        end
+      else
+        if top_rator ~~ ``frac_ainv`` orelse top_rator ~~ ``frac_minv`` orelse
+           top_rator ~~ ``rep_rat``
+        then
+          (top_rator, [top_rand])
+        else
+          let
+            val (this_op, this_first, this_second) = dest_binop_triple t1
+          in
+            (this_op, [this_first, this_second])
+          end
+    end
+  else (* t1 must be a variable *)
+    (t1,[])
 
 (* ---------- test cases ---------- *
         dest_frac ``f1:frac``;
@@ -54,8 +56,7 @@ fun dest_frac (t1:term) =
  *  extract_frac : term -> term list
  *--------------------------------------------------------------------------*)
 
-fun extract_frac (t1:term) =
-        extract_terms_of_type ``:frac`` t1;
+fun extract_frac (t1:term) = extract_terms_of_type ``:frac`` t1;
 
 (* ---------- test cases ---------- *
         extract_frac ``4i + (frac_nmr(abs_frac(3i,4i))) = 3``;
@@ -69,17 +70,16 @@ fun extract_frac (t1:term) =
  *--------------------------------------------------------------------------*)
 
 fun extract_abs_frac (t1:term) =
-        if is_comb t1 then
-                let
-                        val (top_rator, top_rand) = dest_comb t1;
-                in
-                        if top_rator = ``abs_frac`` then
-                                [t1]
-                        else
-                                list_merge (extract_abs_frac top_rator) (extract_abs_frac top_rand)
-                end
-        else
-                [];
+  if is_comb t1 then
+    let
+      val (top_rator, top_rand) = dest_comb t1
+    in
+      if top_rator ~~ ``abs_frac`` then [t1]
+      else
+        op_union aconv (extract_abs_frac top_rator) (extract_abs_frac top_rand)
+    end
+  else
+    [];
 
 (* ---------- test cases ---------- *
         extract_abs_frac ``abs_rat( abs_frac(1,2) ) + abs_rat (abs_frac(1,3) ) = abs_rat(abs_frac (5,6))``;
@@ -91,19 +91,25 @@ fun extract_abs_frac (t1:term) =
  *  extract_frac_fun : term list -> term -> (term * term * term) list
  *--------------------------------------------------------------------------*)
 
+fun ttrip_eq (t1,t2,t3) (ta,tb,tc) =
+  pair_eq (pair_eq aconv aconv) aconv ((t1,t2),t3) ((ta,tb),tc)
+
 fun extract_frac_fun (l2:term list) (t1:term) =
   if is_comb t1 then
     let
       val (top_rator, top_rand) = dest_comb t1;
     in
-      if (in_list l2 top_rator) andalso is_comb top_rand then
+      if tmem top_rator l2 andalso is_comb top_rand then
         let
           val (second_rator, second_rand) = dest_comb top_rand;
         in
-          if second_rator = ``abs_frac`` then
+          if second_rator ~~ ``abs_frac`` then
             let
-              val (this_nmr, this_dnm) = dest_pair (second_rand);
-              val sub_fracs = list_merge (extract_frac_fun l2 this_nmr) (extract_frac_fun l2 this_dnm)
+              val (this_nmr, this_dnm) = dest_pair (second_rand)
+              val sub_fracs =
+                  op_union ttrip_eq
+                           (extract_frac_fun l2 this_nmr)
+                           (extract_frac_fun l2 this_dnm)
             in
                 [(top_rator,this_nmr,this_dnm)] @ sub_fracs
             end
@@ -111,7 +117,8 @@ fun extract_frac_fun (l2:term list) (t1:term) =
             extract_frac_fun l2 top_rand
         end
       else (* not (top_rator = l2 andalso is_comb top_rand) *)
-        list_merge (extract_frac_fun l2 top_rator) (extract_frac_fun l2 top_rand)
+        op_union ttrip_eq (extract_frac_fun l2 top_rator)
+                 (extract_frac_fun l2 top_rand)
     end
   else (* not is_comb t1 *)
     [];

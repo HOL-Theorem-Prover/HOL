@@ -1430,7 +1430,7 @@ fun install_consts _ [] k = k ([], [])
   | install_consts s (iDATATYPE ty::rst) k =
       let
         val constrs = constructors ty
-        val allterms = U (map #terms constrs)
+        val allterms = op_U aconv (map #terms constrs)
         val _ = List.app (add (true, s)) constrs
       in
         install_consts s rst
@@ -1439,7 +1439,7 @@ fun install_consts _ [] k = k ([], [])
   | install_consts s (iEQDATATYPE (tyvars,ty)::rst) k =
       let
         val constrs = constructors ty
-        val allterms = U (map #terms constrs)
+        val allterms = op_U aconv (map #terms constrs)
         val _ = List.app (add (true, s)) constrs
       in
         install_consts s rst

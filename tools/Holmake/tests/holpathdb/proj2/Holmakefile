@@ -1,15 +1,13 @@
 CLINE_OPTIONS = --qof
 INCLUDES = ../proj1
 
-THYFILES = $(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml))
-TARGETS = $(patsubst %.sml,%.uo,$(THYFILES))
-all: $(TARGETS) $(HOLHEAP)
+all: $(DEFAULT_TARGETS) $(HOLHEAP) test
 .PHONY: all
 
 
 ifdef POLY
 HOLHEAP = heap
-EXTRA_CLEANS = $(HOLHEAP)
+EXTRA_CLEANS = $(HOLHEAP) test
 all: $(HOLHEAP)
 
 BARE_THYS = ../proj1/proj1ATheory ../proj1/proj1BTheory
@@ -17,4 +15,12 @@ DEPS = $(patsubst %,%.uo,$(BARE_THYS))
 
 $(HOLHEAP): $(DEPS) $(dprot $(HOLDIR)/bin/hol.state0)
 	$(protect $(HOLDIR)/bin/buildheap) -b $(protect $(HOLDIR)/bin/hol.state0) -o $(HOLHEAP) $(BARE_THYS)
+else
+  EXTRA_CLEANS = test
 endif
+
+# this test checks to see if the proj1ATheory.sml file has used the proj1
+# holpath variable in the call to load the proj1ATheory.dat file.
+test: ../proj1/proj1ATheory.sml
+	grep 'subst_pathvars.*(proj1)' $<
+	touch $@

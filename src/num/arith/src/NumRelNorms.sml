@@ -137,7 +137,7 @@ struct
   fun mkf (i,t) = let
     val i_t = mk_numeral(Arbint.toNat i)
   in
-    if t = one_t then i_t else mk_mult(i_t, t)
+    if aconv t one_t then i_t else mk_mult(i_t, t)
   end
   val canon = ADDR_CANON_CONV
   val addid = REWR_CONV (GSYM arithmeticTheory.ADD_0)

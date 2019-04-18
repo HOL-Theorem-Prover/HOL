@@ -78,6 +78,21 @@ fun Cong th = EQ_MP (SYM(SPEC (concl th) markerTheory.Cong_def)) th;
 
 fun unCong th = PURE_REWRITE_RULE [Cong_def] th;
 
+fun Excl nm =
+    let val v = mk_var(nm, alpha)
+    in
+      EQT_ELIM (SPEC v markerTheory.Exclude_def)
+    end
+
+val Excl_t = prim_mk_const{Thy = "marker", Name = "Exclude"}
+fun destExcl th =
+    let val c = concl th
+        val f = rator c
+    in
+      if same_const Excl_t f then SOME (#1 (dest_var (rand c)))
+      else NONE
+    end handle HOL_ERR _ => NONE
+
 (*---------------------------------------------------------------------------*)
 (* Support for abbreviations.                                                *)
 (*---------------------------------------------------------------------------*)
@@ -138,7 +153,7 @@ in
 end
 
 fun fixed_tyvars ctxt pattern =
-  Lib.U (map type_vars_in_term (Lib.intersect ctxt (free_vars pattern)))
+  Lib.U (map type_vars_in_term (op_intersect aconv ctxt (free_vars pattern)))
 
 fun ABB' {redex=l,residue=r} = ABB l r
 

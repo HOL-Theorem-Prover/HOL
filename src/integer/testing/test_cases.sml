@@ -2,7 +2,7 @@ structure test_cases :> test_cases =
 struct
 
 open Abbrev
-open HolKernel Parse;
+open HolKernel Parse boolLib
 
 fun test_term c (n,t,b) = let
   val _ = print (StringCvt.padRight #" " 25 n)
@@ -19,11 +19,8 @@ fun test_term c (n,t,b) = let
       in
         case Lib.total boolSyntax.rhs (concl th) of
           SOME r =>
-          if b andalso r = boolSyntax.T orelse
-             not b andalso r = boolSyntax.F
-          then
-            ("OK", true)
-          else ("Bad EQN", false)
+            if b andalso Teq r orelse not b andalso Feq r then ("OK", true)
+            else ("Bad EQN", false)
         | NONE => ("Not an EQN", false)
       end
     | SOME NONE => ("Interrupted", false)

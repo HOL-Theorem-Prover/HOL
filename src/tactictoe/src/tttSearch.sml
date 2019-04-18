@@ -362,7 +362,8 @@ fun glob_productive pardict trydict g glo =
     NONE => NONE
   | SOME gl =>
     (
-    if mem g gl orelse exists (fn x => dmem x pardict) gl orelse dmem gl trydict
+    if op_mem goal_eq g gl orelse exists (fn x => dmem x pardict) gl orelse
+       dmem gl trydict
     then NONE
     else SOME gl
     )
@@ -629,7 +630,7 @@ fun search_step () =
     val (glo,tactime) = add_time apply_next_stac pid
     fun f0 () = (backup_fail pid; get_next_pred pid)
     fun f1 gl =
-      if gl = []
+      if null gl
       then
         (backup_success pid;
          close_proof_wrap NONE tactime pid)

@@ -24,8 +24,14 @@
 
 \HOLthm[width=50,m;]{bool.AND_CLAUSES}
 
-\HOLthm[def,>>]{list.MAP}
+\HOLthm[def,>>,nodefsym]{list.MAP}
 
-\HOLthm[spaceddef,>>]{list.MAP}
+\HOLthm[spaceddef,>>,nodefsym]{list.MAP}
 
 |- \HOLthm[>>~3,nostile,width=50]{list.MAP}
+
+\HOLthm[def,conj1]{arithmetic.FACT}
+\HOLthm[def,conj1,nodefsym]{arithmetic.FACT}
+
+\HOLthm[def,conj1]{arithmetic.EVEN}
+\HOLthm[def,conj1,nodefsym]{arithmetic.EVEN}

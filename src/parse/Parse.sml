@@ -1129,7 +1129,13 @@ fun merge_into (gname, (G, gset)) =
 fun merge_grammars slist =
   case slist of
       [] => raise ERROR "merge_grammars" "Empty grammar list"
-    | h::t => List.foldl merge_into (valOf (grammarDB h), gancestry h) t |> #1
+    | h::t =>
+      let
+        val g = valOf (grammarDB h)
+          handle Option => raise ERROR "merge_grammars" ("No such theory: "^h)
+      in
+        List.foldl merge_into (g, gancestry h) t |> #1
+      end
 
 fun set_grammar_ancestry slist =
   let

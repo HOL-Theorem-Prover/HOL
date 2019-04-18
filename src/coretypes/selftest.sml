@@ -134,13 +134,6 @@ val _ = tpp "bar T"
 val _ = trace ("types", 1) tpp "if (b :bool) then (x :'a) else (y :'a)"
 
 (* pairLib conversions etc *)
-fun convtest (nm,conv,t,expected) =
-  let
-    val _ = tprint nm
-    val res = conv t
-  in
-    if aconv (rhs (concl res)) expected then OK() else die()
-  end
 val _ = List.app convtest [
   ("PairRules.PBETA_CONV(1)", PairRules.PBETA_CONV,
    “(\ (a:'a,b:'b). f (a,b) (c:'c) : 'd) x”, “(f:'a # 'b -> 'c -> 'd) x c”),
@@ -190,6 +183,18 @@ val _ = case sgs of
                                 then OK()
                                 else die()
           | _ => die()
+
+val _ = Feedback.emit_MESG := false
+val _ = Feedback.emit_WARNING := false
+val _ = delete_const "v"
+
+val _ = tprint "simp (srw_ss()) on one_CASE"
+local open BasicProvers simpLib
+in
+val _ = require_msg (check_result (aconv ``v:'a``)) term_to_string
+                    (rhs o concl o SIMP_CONV (srw_ss()) [])
+                    ``one_CASE () (v:'a)``
+end
 
 
 val _ = Process.exit Process.success

@@ -99,7 +99,7 @@ local
   fun imp_conv tm = (if is_imp tm then ALL_CONV else REWR_CONV EQ_T_IMP) tm
 
   fun conj_conv tm =
-    (if tm = T then ALL_CONV else FORALLS_CONV imp_conv) tm
+    (if Teq tm then ALL_CONV else FORALLS_CONV imp_conv) tm
 
   val canon_conv =
     FORALLS_CONV
@@ -337,7 +337,7 @@ fun subtype_check ccache congs stricttypechecking depth =
         partial_map (total process_result) cond_results
       end
     and cond_prover facts cond =
-      if cond = T then k_prover TRUTH
+      if Teq cond then k_prover TRUTH
       else if not stricttypechecking andalso is_trivial cond then
         k_prover (prove_trivial cond)
       else
@@ -545,7 +545,7 @@ fun context_update_rewrs f
 fun rewr_vthm_to_rewr (vars : vars, th) : vterm * c_rewr =
   let
     val (cond, (pat, _)) = ((I ## dest_eq) o dest_imp o concl) th
-    val f = ho_subst_COND_REWR th o (if cond = T then K (K TRUTH) else I)
+    val f = ho_subst_COND_REWR th o (if Teq cond then K (K TRUTH) else I)
     fun rewr ho_sub _ prover (_ : term) = f prover ho_sub
   in
     ((vars, pat), rewr)
@@ -569,7 +569,7 @@ local
       val (asm, (l, r)) = ((I ## dest_eq) o dest_imp o concl) th
       val res =
         not (is_subterm l asm) andalso not (is_subterm l r) andalso
-        (subset (intersect vars (free_varsl [asm, r])) (free_vars l))
+        (HOLset.isSubset (listset vars Isct FVLset [asm, r], FVs l))
       val _ = trace 2
         ("vthm_to_rewr_vthms: " ^ (if res then "accepted" else "rejected"))
     in
@@ -695,7 +695,7 @@ local
       val tm' = fold (C (curry mk_comb)) tm_pretty_abs bvars
       val tm_th = QCONV (N n (fn c => RATOR_CONV c THENC BETA_CONV) ALL_CONV) tm'
       val (r_var, r_bvs) = list_dest_comb r
-      val _ = assert (bvars = rev r_bvs) (BUG "match_align" "bvar panic")
+      val _ = assert (tml_eq bvars (rev r_bvs)) (BUG "match_align" "bvar panic")
       val res = (([r_var |-> tm_pretty_abs], []), SYM tm_th)
     in
       res
@@ -707,7 +707,7 @@ local
       val (bvars, body) = genvar_dest_foralls cond
       val (asm, (l, r)) = ((I ## dest_eq) o dest_imp) body
       val ctext' =
-        if asm = T then ctext
+        if Teq asm  then ctext
         else context_add_fact (empty_vars, ASSUME asm) ctext
       val raw_eq = QCONV (N_BETA_CONV (length bvars) THENC rewr ctext') l
       val (sub, match_eq) = match_align bvars l r (RHS raw_eq)

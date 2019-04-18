@@ -15,7 +15,7 @@ val say = Lib.say
              LZ_TEXT of unit -> string
            | TEXT of string
            | REDUCE of (string * Term.term)
-           | REWRITING of (Term.term * Thm.thm)
+           | REWRITING of (string * Term.term * Thm.thm)
            | SIDECOND_ATTEMPT of Term.term
            | SIDECOND_SOLVED of Thm.thm
            | SIDECOND_NOT_SOLVED of Term.term
@@ -33,8 +33,9 @@ val _ = Feedback.register_trace("simplifier", trace_level, 7);
 fun tty_trace (LZ_TEXT fs) = (say "  "; say (fs ()); say "\n")
   | tty_trace (TEXT s) = (say "  "; say s; say "\n")
   | tty_trace (REDUCE (s,tm)) = (say "  "; say s; say " "; print_term tm; say "\n")
-  | tty_trace (REWRITING (tm,thm)) =
-    (say "  rewriting "; print_term tm; say " with "; print_thm thm; say "\n")
+  | tty_trace (REWRITING (nm,tm,thm)) =
+    (say "  rewriting "; print_term tm; say (" with [" ^ nm ^ "]");
+     print_thm thm; say "\n")
   | tty_trace (SIDECOND_ATTEMPT tm) =
     (say "  trying to solve: "; print_term tm; say "\n")
   | tty_trace (SIDECOND_SOLVED thm) =

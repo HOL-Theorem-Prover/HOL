@@ -1028,8 +1028,6 @@ fun find_script x =
     dir ^ "/" ^ x ^ "Script.sml"
   end
 
-fun clean_dir cthy dir = (mkDir_err dir; erase_file (dir ^ "/" ^ cthy))
-
 fun ttt_rewrite_thy thy =
   if mem thy ["bool","min"] then () else
   let
@@ -1054,7 +1052,7 @@ fun ttt_rewrite () =
 
 (* ------------------------------------------------------------------------
    Extra safety during recording
-   (in case of export_theory is not catched)
+   (if export_theory is not catched)
    ------------------------------------------------------------------------ *)
 
 fun save_file file =
@@ -1101,6 +1099,18 @@ fun ttt_record () =
   let val thyl = ttt_rewrite () in ttt_record_thyl thyl end
 
 (* ------------------------------------------------------------------------
+   Evaluation
+   ------------------------------------------------------------------------ *)
+
+fun ttt_parallel_eval ncores thyl =
+  let
+    val _ = ttt_ttteval_flag := true
+    fun f thy = (ttt_rewrite_thy thy; ttt_record_thy thy)
+  in
+    parapp ncores f thyl; ttt_ttteval_flag := false
+  end
+
+(* ------------------------------------------------------------------------
    Theories of the standard library
    ------------------------------------------------------------------------ *)
 
@@ -1127,3 +1137,14 @@ fun load_sigobj () =
   end
 
 end (* struct *)
+
+(* test
+  load "tttSetup"; load "tttUnfold";
+  open tttUnfold;
+  load_sigobj ();
+  val thyl = ancestry (current_theory ());
+  tttSetup.ttt_search_time := 60.0;
+  val ncores = 20;
+  ttt_parallel_eval ncores thyl
+*)
+

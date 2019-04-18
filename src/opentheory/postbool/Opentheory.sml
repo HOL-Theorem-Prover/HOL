@@ -90,27 +90,27 @@ val NUMERAL_conv = let (* wrap numeric literals in NUMERAL tag *)
   exception Nonlit
   fun lit_conv tm = let (* detect literals, and replace 0 by ZERO *)
     val (f,_) = dest_comb tm in
-      if f = bit1_tm orelse f = bit2_tm then
+      if f ~~ bit1_tm orelse f ~~ bit2_tm then
         RAND_CONV lit_conv tm
       else raise Nonlit
   end handle HOL_ERR _ =>
-    if tm = zero_tm then SYM ALT_ZERO else
-    if tm = alt_zero_tm then raise UNCHANGED else
+    if tm ~~ zero_tm then SYM ALT_ZERO else
+    if tm ~~ alt_zero_tm then raise UNCHANGED else
     raise Nonlit
   fun add_tag_conv tm = SYM (SPEC tm NUMERAL_DEF)
   fun conv tm = let
     val (f,_) = dest_comb tm in
-      if f = bit1_tm orelse f = bit2_tm then
+      if f ~~ bit1_tm orelse f ~~ bit2_tm then
         (RAND_CONV lit_conv THENC add_tag_conv) tm
       handle Nonlit => RAND_CONV conv tm
-      else if f = numeral_tm then
+      else if f ~~ numeral_tm then
         raise UNCHANGED (* nb: assuming incoming NUMERAL tags are good *)
         (* alternative: check if it's actually a literal with lit_conv, and
         strip the tag if Nonlit is raised *)
       else COMB_CONV conv tm
   end handle HOL_ERR _ => ABS_CONV conv tm
       handle HOL_ERR _ =>
-      if tm = alt_zero_tm then ALT_ZERO else raise UNCHANGED
+      if tm ~~ alt_zero_tm then ALT_ZERO else raise UNCHANGED
 in conv end
 
 local
@@ -126,7 +126,7 @@ handle HOL_ERR _ =>
 handle HOL_ERR _ =>
   from_net ths (h,c)
 handle HOL_ERR e => let
-  val _ = if h = [] then () else raise HOL_ERR e
+  val _ = case h of [] => () | _ => raise HOL_ERR e
   val l = !metisTools.limit
   val _ = metisTools.limit := {time=SOME 10.0,infs=NONE}
   val th = metisTools.METIS_PROVE [] c
@@ -269,7 +269,7 @@ fun read_article s r = raw_read_article (TextIO.openIn s) r
 
 fun delete_unused_consts thms =
 app (fn c => let
-    val find = find_term (equal c)
+    val find = find_term (fn t => c ~~ t)
   in
     if exists
        (fn th => (can find (concl th)) orelse

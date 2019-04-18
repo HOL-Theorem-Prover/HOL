@@ -1477,4 +1477,39 @@ val LEAST_THM = Q.store_thm("LEAST_THM",
 
 (* ------------------------------------------------------------------------- *)
 
+fun simp thl = simpLib.ASM_SIMP_TAC (srw_ss() ++ numSimps.ARITH_ss) thl
+
+Theorem BIT_TIMES2:
+  BIT z (2 * n) <=> 0 < z /\ BIT (z-1) n
+Proof
+  Cases_on`z` >> simp[] >- (
+    simp[BIT0_ODD] >>
+    simp[arithmeticTheory.ODD_EVEN] >>
+    simp[arithmeticTheory.EVEN_DOUBLE]) >>
+  Q.RENAME_TAC [‘BIT (SUC z) (2 * n) <=> BIT z n’] >>
+  Q.SPECL_THEN[‘z’,‘n’,‘1’]mp_tac BIT_SHIFT_THM >>
+  simp[arithmeticTheory.ADD1]
+QED
+
+Theorem BIT_TIMES2_1:
+  !n z. BIT z (2 * n + 1) <=> (z=0) \/ BIT z (2 * n)
+Proof
+  Induct >> simp_tac std_ss [] >- (
+    simp_tac std_ss [BIT_ZERO] >>
+    Cases_on`z`>>simp_tac std_ss [BIT0_ODD] >>
+    simp_tac arith_ss [GSYM BIT_DIV2,BIT_ZERO] ) >>
+  Cases >> simp_tac std_ss [BIT0_ODD] >- (
+    simp_tac std_ss [arithmeticTheory.ODD_EXISTS,arithmeticTheory.ADD1] >>
+    METIS_TAC[] ) >>
+  simp_tac std_ss [GSYM BIT_DIV2] >>
+  Q.SPEC_THEN ‘2’ mp_tac arithmeticTheory.ADD_DIV_RWT >>
+  simp[] >>
+  disch_then(Q.SPECL_THEN[‘2 * SUC n’,‘1’]mp_tac) >>
+  simp_tac std_ss [] >> impl_tac
+  >- METIS_TAC[MULT_COMM, DECIDE “0<2”, MOD_EQ_0] >>
+  simp[]
+QED
+
+
+
 val _ = export_theory()

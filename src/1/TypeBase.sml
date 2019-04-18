@@ -52,7 +52,6 @@ in
         dBase := insert (theTypeBase()) tyinfo
         handle HOL_ERR _ => ()
       val tyinfos = map resolve_ssfragconvs tyinfos
-      val tyinfos = map add_std_simpls tyinfos
       val tyinfos = list_compose (!update_fns) tyinfos
       val () = app write1 tyinfos
     in
@@ -64,6 +63,18 @@ fun read {Thy,Tyop} = prim_get (theTypeBase()) (Thy,Tyop);
 
 fun fetch ty = TypeBasePure.fetch (theTypeBase()) ty;
 
+fun maybe_add_simpls tyi =
+    let
+      open boolSyntax
+      val cc = case_const_of tyi
+      val rwts = #rewrs (simpls_of tyi) |> map Drule.CONJUNCTS |> List.concat
+                        |> map (#2 o strip_forall o concl)
+      fun iscasedef t =
+          same_const cc (t |> lhs |> strip_comb |> #1) handle HOL_ERR _ => false
+    in
+      if List.exists iscasedef rwts then tyi else add_std_simpls tyi
+    end handle HOL_ERR _ => tyi
+
 fun load_from_disk {thyname, data} =
   case data of
       ThyDataSexp.List tyi_sexps =>
@@ -71,7 +82,7 @@ fun load_from_disk {thyname, data} =
         val tyis = List.mapPartial fromSEXP tyi_sexps
       in
         if length tyis = length tyi_sexps then
-          ignore (write tyis)
+          ignore (write (map maybe_add_simpls tyis))
         else (HOL_WARNING "TypeBase" "load_from_disk"
                 ("{thyname=" ^ thyname ^ "}: " ^
                  Int.toString (length tyi_sexps - length tyis) ^
@@ -100,7 +111,7 @@ fun uptodate_check t =
         val (good, bad) = partition ThyDataSexp.uptodate tyis
       in
         case bad of
-            [] => t
+            [] => NONE
           | _ =>
             let
               val tyinames = List.mapPartial getTyname bad
@@ -108,7 +119,7 @@ fun uptodate_check t =
               HOL_WARNING "TypeBase" "uptodate_check"
                           ("Type information for: " ^
                            String.concatWith ", " tyinames ^ " discarded");
-              ThyDataSexp.List good
+              SOME (ThyDataSexp.List good)
             end
       end
     | _ => raise Fail "TypeBase.uptodate_check : shouldn't happen"
@@ -122,7 +133,7 @@ fun check_thydelta (t, tdelta) =
       | NewTypeOp _ => uptodate_check t
       | DelConstant _ => uptodate_check t
       | DelTypeOp _ => uptodate_check t
-      | _ => t
+      | _ => NONE
   end
 
 val {export = export_tyisexp, segment_data} = ThyDataSexp.new{

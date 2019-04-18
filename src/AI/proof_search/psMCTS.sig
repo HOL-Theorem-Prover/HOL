@@ -8,8 +8,8 @@ sig
   (* Debug *)
   val string_of_status : status -> string
 
-  (* 'a is the representation of the board *)
-  type 'a pos = bool * 'a
+  (* 'a is the representation of a board *)
+  type 'a sit = bool * 'a
 
   (* ''b is the representation of a move *)
   type 'b choice = (('b * real) * int list)
@@ -17,7 +17,7 @@ sig
   type ('a,'b) node =
   {
     pol   : 'b choice list,
-    pos   : 'a pos,
+    sit   : 'a sit,
     sum   : real,
     vis   : real,
     status : status
@@ -28,16 +28,15 @@ sig
   (* search function *)
   val starttree_of :
     real ->
-    ('a pos -> real * ('b * real) list) ->
-    ('a pos -> status) ->
-    'a pos ->
+    (('a sit -> status) * ('b -> 'a sit -> 'a sit)) *
+      ('a sit -> real * ('b * real) list) ->
+    'a sit ->
     ('a,'b) tree
 
   val mcts :
-    (int * real) ->
-    ('a pos -> real * ('b * real) list) ->
-    ('a pos -> status) ->
-    ('b -> 'a pos -> 'a pos) ->
+    (int * real * bool) ->
+    (('a sit -> status) * ('b -> 'a sit -> 'a sit)) *
+      ('a sit -> real * ('b * real) list) ->
     ('a,'b) tree ->
     ('a,'b) tree
 
@@ -52,8 +51,14 @@ sig
   val root_variation : ('a,'b) tree -> (int list) list
 
   (* constructing a training example *)
-  val policy_example : ('a,'b) tree -> int list -> (int list * real) list
+  val move_of_cid : ('a,'b) node -> int list -> 'b
+  val evalpoli_example : ('a,'b) tree -> (real * ('b * real) list) option
+
   (* choosing a big step *)
-  val select_bigstep : ('a,'b) tree -> int list -> int list option
+  val print_distrib : ('b -> string) ->
+    ((('b * real) * int list) * real) list -> unit
+  val select_bigstep : ('a,'b) tree -> int list ->
+    ('b choice * real) list * int list option
+
 
 end

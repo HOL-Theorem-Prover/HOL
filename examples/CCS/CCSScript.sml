@@ -697,8 +697,9 @@ val TRANS_P_RESTR = store_thm (
   in
       rpt STRIP_TAC \\
       IMP_RES_TAC TRANS_RESTR >| (* 2 sub-goals here *)
-      [ FILTER_ASM_REWRITE_TAC (fn t => not (t = ``(u :'b Action) = tau``)) [thm],
-        FILTER_ASM_REWRITE_TAC (fn t => not (t = ``(u :'b Action) = label l``)) [thm] ]
+      [ FILTER_ASM_REWRITE_TAC (fn t => t !~ ``(u :'b Action) = tau``) [thm],
+        FILTER_ASM_REWRITE_TAC (fn t => t !~ ``(u :'b Action) = label l``) [thm]
+      ]
   end);
 
 val RESTR_NIL_NO_TRANS = store_thm ("RESTR_NIL_NO_TRANS",
@@ -892,14 +893,7 @@ val LENGTH_DELETE_ELEMENT_LEQ = store_thm (
     rpt GEN_TAC
  >> REWRITE_TAC [DELETE_ELEMENT_FILTER]
  >> MP_TAC (Q.SPECL [`\y. e <> y`, `\y. T`] LENGTH_FILTER_LEQ_MONO)
- >> BETA_TAC >> simp []
- >> STRIP_TAC
- >> POP_ASSUM (ASSUME_TAC o (Q.SPEC `L`))
- >> Know `FILTER (\y. T) L = L`
- >- ( KILL_TAC \\
-      Induct_on `L` >- REWRITE_TAC [FILTER] \\
-      GEN_TAC >> REWRITE_TAC [FILTER] >> simp [] )
- >> DISCH_TAC >> fs []);
+ >> BETA_TAC >> simp []);
 
 val LENGTH_DELETE_ELEMENT_LE = store_thm (
    "LENGTH_DELETE_ELEMENT_LE",

@@ -322,33 +322,89 @@ fun find_includes dirname =
     else []
   end
 
-fun extend {quietp,lpref} envlist s f = let
-  open Holmake_types
-in
-  case envlist s of
-    [] => ()
-  | v => (if not quietp then
-            print ("[extending loadPath with Holmakefile "^s^" variable]\n")
-          else ();
-          lpref := f (!lpref, v))
-end
+infix ++
+val op ++ = OS.Path.concat
+fun canonicalise d1 d2 = OS.Path.mkAbsolute{path = d2, relativeTo = d1}
+fun fromList l = Binaryset.addList (Binaryset.empty String.compare, l)
 
-fun extend_path_with_includes cfg =
-  if OS.FileSys.access ("Holmakefile", [OS.FileSys.A_READ]) then
+(* returns updated accumulator and list of new places to visit *)
+fun extend_path_with_includes0 (A as (visited,prem,postm)) dir verbosity =
+    if Binaryset.member(visited, dir) then (A,[])
+    else
+      if OS.FileSys.access (dir ++ "Holmakefile", [OS.FileSys.A_READ]) then
+        let
+          open Holmake_types
+          val _ = if verbosity > 1 then
+                    print ("Visiting " ^ dir ^ " for first time\n")
+                  else ()
+          val extensions =
+              holpathdb.search_for_extensions find_includes [dir]
+          val _ = List.app holpathdb.extend_db extensions
+          val base_env = let
+            fun foldthis ({vname,path}, env) =
+                env_extend (vname, [LIT path]) env
+          in
+            List.foldl foldthis (base_environment()) extensions
+          end
+          val (env, _, _) = read (dir ++ "Holmakefile") base_env
+          fun envlist id =
+              map dequote (tokenize (perform_substitution env [VREF id]))
+          fun diag nm incs =
+              if null incs orelse verbosity < 2 then ()
+              else
+                print (nm ^ " = " ^ String.concatWith ", " incs ^ "\n")
+          val pre_incs = map (canonicalise dir) (envlist "PRE_INCLUDES")
+          val _ = diag "PRE_INCLUDES" pre_incs
+          val post_incs = map (canonicalise dir) (envlist "INCLUDES")
+          val _ = diag "INCLUDES" post_incs
+          fun maybeinsert(m,k,v) =
+              if null v then m else Binarymap.insert(m,k,v)
+        in
+          ((Binaryset.add(visited,dir),
+            maybeinsert(prem,dir,pre_incs),
+            maybeinsert(postm,dir,post_incs)),
+           Binaryset.listItems (fromList (pre_incs @ post_incs)))
+        end handle e => (if verbosity > 0 then
+                           (TextIO.output(TextIO.stdErr,
+                                          "[bogus Holmakefile in " ^ dir ^
+                                          " - ignoring it]\n");
+                            TextIO.flushOut TextIO.stdErr;
+                            (A, [])
+                           )
+                         else (A, []))
+      else (A, [])
+
+fun extend_paths A cfg worklist =
+    case worklist of
+        [] => A
+      | d::ds =>
+        let
+          val (A',new) = extend_path_with_includes0 A d cfg
+        in
+          extend_paths A' cfg (ds @ new)
+        end
+
+
+val empty_strset = Binaryset.empty String.compare
+val empty_strmap = Binarymap.mkDict String.compare
+fun extend_path_with_includes (cfg as {lpref,verbosity=v}) =
     let
-      open Holmake_types
-      val (env, _, _) = read "Holmakefile" (base_environment())
-      fun envlist id =
-        map dequote (tokenize (perform_substitution env [VREF id]))
+      val wlist = [OS.FileSys.getDir()]
+      val (_, prem, postm) =
+          extend_paths (empty_strset, empty_strmap, empty_strmap) v wlist
+      fun m s = holpathdb.reverse_lookup {path = s}
+      fun foldthis nm (dirname,incs,acc) = (
+        if v > 0 then
+          print (m dirname ^ "/Holmakefile:" ^ nm ^ " +=\n  " ^
+                 String.concatWith "\n  " (map m incs) ^ "\n")
+        else ();
+        Binaryset.addList(acc,incs)
+      )
+      fun acc_range nm = Binarymap.foldl (foldthis nm) empty_strset
+      val all_preincs = Binaryset.listItems (acc_range "PRE_INCLUDES" prem)
+      val all_incs = Binaryset.listItems (acc_range "INCLUDES" postm)
     in
-      extend cfg envlist "INCLUDES" (op@);
-      extend cfg envlist "PRE_INCLUDES" (fn (lp, mfv) => mfv @ lp)
-    end handle e => (if not (#quietp cfg) then
-                       (TextIO.output(TextIO.stdErr,
-                                   "[bogus Holmakefile in current directory \
-                                    \- ignoring it]\n");
-                        TextIO.flushOut TextIO.stdErr)
-                     else ())
-  else ();
+      lpref := all_preincs @ !lpref @ all_incs
+    end
 
 end (* struct *)

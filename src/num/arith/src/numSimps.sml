@@ -83,60 +83,72 @@ local open arithmeticTheory
       val one_suc = Rewrite.PURE_REWRITE_RULE [ONE]
       val add_sym = Rewrite.ONCE_REWRITE_RULE [ADD_SYM]
 in
-val arithmetic_rewrites = [
-   (* suc *)
-   ARITH(Term `!x. ((SUC x = 1) = (x=0)) /\ ((1 = SUC x) = (x = 0))`),
-   ARITH(Term`!x. ((SUC x = 2) = (x=1)) /\ ((2 = SUC x) = (x=1))`),
-   (* addition *)
-   ADD_0, add_sym ADD_0, ADD_EQ_0, sym_lhs ADD_EQ_0,
-   ADD_INV_0_EQ, add_sym ADD_INV_0_EQ,
-   (* multiplication *)
-   MULT_EQ_0, sym_lhs MULT_EQ_0,
-   MULT_EQ_1, sym_lhs MULT_EQ_1,
-   MULT_0, ONCE_REWRITE_RULE [MULT_COMM] MULT_0,
-   one_suc MULT_EQ_1, one_suc (sym_lhs MULT_EQ_1),
-   MULT_RIGHT_1, MULT_LEFT_1,
-   (* subtraction *)
-   SUB_EQUAL_0, SUC_SUB1, SUB_0, ADD_SUB, add_sym ADD_SUB, SUB_EQ_0,
-   sym_lhs SUB_EQ_0, SUB_LESS_EQ, SUB_MONO_EQ, SUB_RIGHT_GREATER,
-   SUB_RIGHT_LESS, SUB_RIGHT_GREATER_EQ, SUB_RIGHT_LESS_EQ, prim_recTheory.PRE,
-   (* exponentiation *)
-   EXP_EQ_0, EXP_1, EXP_EQ_1, ZERO_LT_EXP, EXP_EXP_INJECTIVE,
-   EXP_BASE_INJECTIVE,
-   EXP_BASE_LT_MONO, EXP_BASE_LE_MONO, EXP_EXP_LT_MONO, EXP_EXP_LE_MONO,
+val arithmetic_rewrites =
+    map (fn s => (SOME s, DB.fetch "arithmetic" s)) [
+      "ADD_0", "ADD_EQ_0", "ADD_INV_0_EQ", "MULT_EQ_0", "MULT_EQ_1", "MULT_0",
+      "MULT_RIGHT_1", "MULT_LEFT_1", "SUB_EQUAL_0", "SUC_SUB1", "SUB_0",
+      "ADD_SUB", "SUB_EQ_0", "SUB_LESS_EQ", "SUB_MONO_EQ", "SUB_RIGHT_GREATER",
+      "SUB_RIGHT_LESS", "SUB_RIGHT_GREATER_EQ", "SUB_RIGHT_LESS_EQ",
 
-   (* order relations and arith. ops *)
-   LESS_EQ_0, prim_recTheory.LESS_0, LESS_EQ_ADD,
-   ARITH ``0 <= x``, ARITH ``SUC x > 0``, ARITH ``x >= 0``,
-   ARITH ``x < SUC x``, ARITH ``x <= SUC x``,
-   ARITH ``x < x + c = 0 < c``, ARITH ``x < c + x = 0 < c``,
-   ARITH ``x <= x + c = 0 <= c``, ARITH ``x <= c + x = 0 <= c``,
-   LESS_EQ_REFL, ARITH ``x >= x``,
-   LESS_MONO_ADD_EQ, add_sym LESS_MONO_ADD_EQ,
-   ADD_MONO_LESS_EQ, add_sym ADD_MONO_LESS_EQ,
-   EQ_MONO_ADD_EQ, add_sym EQ_MONO_ADD_EQ,
-   ARITH ``x + y < w + x = y < w``, ARITH ``y + x < x + w = y < w``,
-   prim_recTheory.INV_SUC_EQ, LESS_MONO_EQ, LESS_EQ_MONO,
-   LESS_MULT_MONO, MULT_SUC_EQ, MULT_MONO_EQ,
-   NOT_SUC_LESS_EQ,
-   MULT_EXP_MONO,  LE_MULT_LCANCEL, LE_MULT_RCANCEL,
-   LT_MULT_LCANCEL, LT_MULT_RCANCEL,
-   LT_MULT_CANCEL_LBARE, LT_MULT_CANCEL_RBARE,
-   LE_MULT_CANCEL_LBARE, LE_MULT_CANCEL_RBARE,
+      (* exponentiation *)
+      "EXP_EQ_0", "EXP_1", "EXP_EQ_1", "ZERO_LT_EXP",
+      "EXP_EXP_INJECTIVE", "EXP_BASE_INJECTIVE", "EXP_BASE_LT_MONO",
+      "EXP_BASE_LE_MONO", "EXP_EXP_LT_MONO", "EXP_EXP_LE_MONO",
 
-  (* falsities *)
-   NOT_EXP_0, NOT_ODD_EQ_EVEN, NOT_SUC_ADD_LESS_EQ,
+      (* order relations and arith. ops *)
+      "LESS_EQ_0", "LESS_EQ_ADD", "LESS_EQ_REFL", "LESS_MONO_ADD_EQ",
+      "ADD_MONO_LESS_EQ", "EQ_MONO_ADD_EQ", "LESS_MONO_EQ",
+      "LESS_EQ_MONO", "LESS_MULT_MONO", "MULT_SUC_EQ", "MULT_MONO_EQ",
+      "NOT_SUC_LESS_EQ", "MULT_EXP_MONO", "LE_MULT_LCANCEL",
+      "LE_MULT_RCANCEL", "LT_MULT_LCANCEL", "LT_MULT_RCANCEL",
+      "LT_MULT_CANCEL_LBARE", "LT_MULT_CANCEL_RBARE",
+      "LE_MULT_CANCEL_LBARE", "LE_MULT_CANCEL_RBARE", "ZERO_LESS_EQ",
 
-   NOT_SUC_LESS_EQ_0, prim_recTheory.NOT_LESS_0, prim_recTheory.LESS_REFL,
-   ARITH ``~(x > x)``,
+      (* mins and maxs *)
+      "MIN_0", "MAX_0", "MIN_IDEM", "MAX_IDEM", "MIN_LE", "MAX_LE",
+      "MIN_LT", "MAX_LT", "MIN_MAX_EQ", "MIN_MAX_LT",
 
-   (* mins and maxs *)
-   MIN_0, MAX_0, MIN_IDEM, MAX_IDEM, MIN_LE, MAX_LE, MIN_LT, MAX_LT,
-   MIN_MAX_EQ, MIN_MAX_LT,
+      (* mods and divs *)
+      "X_MOD_Y_EQ_X", "DIVMOD_ID", "DIV_1", "MOD_1", "LESS_MOD",
+      "ZERO_MOD", "MOD_MOD", "NUMERAL_MULT_EQ_DIV", "MOD_LESS",
+      "DIV_LESS",
 
-   (* mods and divs *)
-   X_MOD_Y_EQ_X, DIVMOD_ID, DIV_1, MOD_1, LESS_MOD, ZERO_MOD, MOD_MOD,
-   NUMERAL_MULT_EQ_DIV, MOD_LESS, DIV_LESS
+      (* falsities *)
+      "NOT_EXP_0", "NOT_ODD_EQ_EVEN", "NOT_SUC_ADD_LESS_EQ",
+      "NOT_SUC_LESS_EQ_0"
+    ] @ [
+      (* suc *)
+      (SOME "SUC_EQ_1",
+       ARITH(Term `!x. ((SUC x = 1) = (x=0)) /\ ((1 = SUC x) = (x = 0))`)),
+      (SOME "SUC_EQ_2",
+       ARITH(Term`!x. ((SUC x = 2) = (x=1)) /\ ((2 = SUC x) = (x=1))`)),
+      (* addition *)
+      (SOME "ADD_0'", add_sym ADD_0),
+      (SOME "ADD_INV_0_EQ'", add_sym ADD_INV_0_EQ),
+      (* multiplication *)
+      (SOME "MULT_0'", ONCE_REWRITE_RULE [MULT_COMM] MULT_0),
+      (SOME "MULT_EQ_SUC0", one_suc MULT_EQ_1),
+      (* subtraction *)
+      (SOME "PRE", prim_recTheory.PRE), (SOME "ADD_SUB'", add_sym ADD_SUB),
+      (* order relations and arith. ops *)
+      (SOME "LESS_0", prim_recTheory.LESS_0),
+      (SOME "SUC_GT0", ARITH ``SUC x > 0``), (SOME "GEQ0", ARITH ``x >= 0``),
+      (SOME "X_LT_SUC", ARITH ``x < SUC x``),
+      (SOME "X_LE_SUC", ARITH ``x <= SUC x``),
+      (SOME "X_LT_X_PLUS", ARITH ``x < x + c = 0 < c``),
+      (SOME "X_LT_PLUS_X", ARITH ``x < c + x = 0 < c``),
+      (SOME "X_LE_X_PLUS", ARITH ``x <= x + c = 0 <= c``),
+      (SOME "X_LE_PLUS_X", ARITH ``x <= c + x = 0 <= c``),
+      (SOME "GEQ_REFL", ARITH ``x >= x``),
+      (SOME "LESS_MONO_ADD_EQ'", add_sym LESS_MONO_ADD_EQ),
+      (SOME "ADD_MONO_LESS_EQ", add_sym ADD_MONO_LESS_EQ),
+      (SOME "EQ_MONO_ADD_EQ", add_sym EQ_MONO_ADD_EQ),
+      (SOME "X_PLUS_LT_PLUS_X", ARITH ``x + y < w + x = y < w``),
+      (SOME "PLUS_X_LT_X_PLUS", ARITH ``y + x < x + w = y < w``),
+      (SOME "INV_SUC_EQ", prim_recTheory.INV_SUC_EQ),
+      (SOME "GT_REFL", ARITH ``~(x > x)``),
+      (SOME "LESS_REFL", prim_recTheory.LESS_REFL),
+      (SOME "NOT_LESS_0", prim_recTheory.NOT_LESS_0)
    ]
 end;
 
@@ -336,7 +348,7 @@ fun contains_minus t = List.exists numSyntax.is_minus (numSyntax.strip_plus t)
 fun CTXT_ARITH thms tm =
   if
     (type_of tm = Type.bool) andalso
-    (is_arith tm orelse (tm = F andalso not (null thms)))
+    (is_arith tm orelse (aconv tm F andalso not (null thms)))
   then let
       val context = map concl thms
       fun try gl = let
@@ -349,7 +361,7 @@ fun CTXT_ARITH thms tm =
       val thm = if not (is_conj tm) then
                   EQT_INTRO (try tm)
                   handle (e as HOL_ERR _) =>
-                         if tm <> F andalso not (is_disj tm) then
+                         if not (aconv tm F) andalso not (is_disj tm) then
                            EQF_INTRO (try(mk_neg tm))
                          else raise e
                 else EQF_INTRO (try (mk_neg tm))
@@ -449,7 +461,7 @@ val (CACHED_ARITH,arith_cache) = let
   in
     (ty = num_ty andalso not (is_boring tm))
          orelse
-    (ty=Type.bool andalso (is_arith tm orelse tm = F))
+    (ty=Type.bool andalso (is_arith tm orelse aconv tm F))
   end
 in
   RCACHE (dp_vars, check, CTXT_ARITH)
@@ -548,9 +560,9 @@ fun eliminate_single_SUC th = let
   val lsucs = find_terms (fn t => is_suc t andalso is_var (rand t)) l
   fun is_v_sucless v t =
       case dest_term t of
-        COMB(f, x) => if x = v then not (f = suc_tm)
+        COMB(f, x) => if aconv x v then not (aconv f suc_tm)
                       else is_v_sucless v f orelse is_v_sucless v x
-      | VAR _ => t = v
+      | VAR _ => aconv t v
       | LAMB(bv, body) => free_in v t andalso is_v_sucless v body
       | CONST _ => false
   val v = rand (valOf (List.find (not o C is_v_sucless l o rand) lsucs))
@@ -641,16 +653,18 @@ in
                    conv (``x <= y:num``,
                          BINOP_CONV ADDR_CANON_CONV THENC sum_leq_norm,
                          "LEQ_CANON_CONV")],
-          rewrs = [arithmeticTheory.GREATER_DEF,
-                   arithmeticTheory.GREATER_EQ,
-                   DECIDE ``x < y - z <=> x + z < y``,
-                   DECIDE ``x - y <= z <=> x <= y + z``,
-                   DECIDE ``x <= y - z <=> (x = 0) \/ x + z <= y``,
-                   DECIDE ``x - y < z <=> 0 < z /\ x < z + y``,
-                   DECIDE ``(x - y = z) <=> x < y /\ (z = 0) \/ (x = y + z)``,
-                   DECIDE ``(x <> 0) = 0 < x``,
-                   DECIDE ``(0 <> x) = 0 < x``,
-                   DECIDE ``~(0 < x) = (x = 0)``],
+          rewrs = [(SOME "GREATER_DEF", arithmeticTheory.GREATER_DEF),
+                   (SOME "GREATER_EQ", arithmeticTheory.GREATER_EQ),
+                   (SOME "LT_SUB", DECIDE ``x < y - z <=> x + z < y``),
+                   (SOME "SUB_LE", DECIDE ``x - y <= z <=> x <= y + z``),
+                   (SOME "LE_SUB",
+                    DECIDE ``x <= y - z <=> (x = 0) \/ x + z <= y``),
+                   (SOME "SUB_LT", DECIDE ``x - y < z <=> 0 < z /\ x < z + y``),
+                   (SOME "SUB_EQ",
+                    DECIDE ``(x - y = z) <=> x < y /\ (z = 0) \/ (x = y + z)``),
+                   (SOME "NEQ0_LT", DECIDE ``(x <> 0) = 0 < x``),
+                   (SOME "NEQ0_LT'", DECIDE ``(0 <> x) = 0 < x``),
+                   (SOME "N0LT", DECIDE ``~(0 < x) = (x = 0)``)],
           dprocs = [], filter = NONE}
 end
 

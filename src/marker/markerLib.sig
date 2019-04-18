@@ -21,6 +21,8 @@ sig
   val unAC   : thm -> thm * thm
   val Cong   : thm -> thm
   val unCong : thm -> thm
+  val Excl   : string -> thm
+  val destExcl : thm -> string option
 
   val ABB                 : term -> term -> tactic
   val ABB'                : {redex : term, residue : term} -> tactic

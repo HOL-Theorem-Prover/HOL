@@ -42,7 +42,7 @@ fun read_status atp_status =
 fun read_lemmas atp_out =
   let
     val l = filter not_reserved (map unescape (readl atp_out))
-    fun f s = String.concatWith "." (tl (butlast (String.fields is_dot s)))
+    fun f s = String.concatWith "." (tl (String.fields is_dot s))
   in
     mk_string_set (map f l)
   end
