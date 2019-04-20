@@ -85,6 +85,7 @@ sig
   val map_fst : ('a -> 'b) -> ('a * 'c) list -> ('b * 'c) list
   val map_assoc : ('a -> 'b) -> 'a list -> ('a * 'b) list
   val cartesian_product : 'a list -> 'b list -> ('a * 'b) list
+  val cartesian_productl : int
   val findSome  : ('a -> 'b option) -> 'a list -> 'b option
   val first_n   : int -> 'a list -> 'a list
   val first_test_n : ('a -> bool) -> int -> 'a list -> 'a list
@@ -110,12 +111,13 @@ sig
   val list_combine : 'a list list -> 'a list list
   val combine_triple : 'a list * 'b list * 'c list -> ('a * 'b * 'c) list
   val split_triple : ('a * 'b * 'c) list -> 'a list * 'b list * 'c list
+  val quintuple_of_list : int  
 
   (* random *)
   val random_real : unit -> real
   val shuffle   : 'a list -> 'a list
   val random_elem : 'a list -> 'a
-  val random_int : (int * int) -> int
+  val random_int : (int * int) -> int (* slow uses random_elem *)
   val select_in_distrib : ('a * real) list -> 'a
   val random_percent : real -> 'a list -> 'a list * 'a list
 

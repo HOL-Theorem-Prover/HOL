@@ -20,7 +20,8 @@ type ('a,''b,'c) gamespec =
   status_of : ('a psMCTS.sit -> psMCTS.status),
   apply_move : (''b -> 'a psMCTS.sit -> 'a psMCTS.sit),
   operl : (term * int) list,
-  nntm_of_sit: 'a psMCTS.sit -> term
+  nntm_of_sit: 'a psMCTS.sit -> term,
+  mk_targetl: int -> 'a psMCTS.sit list 
   }
 
 (* -------------------------------------------------------------------------
@@ -95,9 +96,10 @@ fun mk_fep_dhtnn startb gamespec dhtnn sit =
     val ptnn = {opdict=opdict,headnn=headpoli,dimin=dimin,dimout=dimout}
     val nntm = (#nntm_of_sit gamespec) sit
   in
-    if startb 
-    then (0.05, filter_sit (map (fn x => (x,1.0)) movel))
-    else (only_hd (infer_tnn etnn nntm),
+    (* if startb 
+    then (1.0, filter_sit (map (fn x => (x,1.0)) movel))
+    else *)
+     (only_hd (infer_tnn etnn nntm),
       filter_sit (combine (movel, infer_tnn ptnn nntm)))
   end
 
@@ -157,14 +159,14 @@ fun n_bigsteps_loop (n,nmax) gamespec mctsparam (allex,allroot) tree =
     end
   end
 
+(*
+val cost1 = rlGameArithGround.total_cost_target target
+val cost2 = 2 * cost1 + 5
+*)
+
 fun n_bigsteps gamespec mctsparam target =
-  let 
-    val tree = starttree_of mctsparam target 
-    val cost1 = rlGameArithGround.total_cost_target target
-    val cost2 = 2 * cost1 + 5
-    val _ = if !verbose_flag then print_endline (its cost1) else ()
-  in
-    n_bigsteps_loop (0,cost2) gamespec mctsparam (emptyallex,[]) tree
+  let val tree = starttree_of mctsparam target in
+    n_bigsteps_loop (0,64) gamespec mctsparam (emptyallex,[]) tree
   end
 
 (* -------------------------------------------------------------------------
@@ -182,8 +184,6 @@ fun epex_stats epex =
 
 fun random_dhtnn_gamespec gamespec =
   random_dhtnn (!dim_glob, length (#movel gamespec)) (#operl gamespec)
-
-
 
 fun train_dhtnn gamespec epex =
   let
@@ -233,6 +233,7 @@ fun summary_wins gamespec allrootl =
    Adaptive difficulty
    ------------------------------------------------------------------------- *)
 
+(*
 val level_glob = ref 1
 
 fun eval_targetl gamespec dhtnn targetl =
@@ -268,6 +269,7 @@ fun choose_uniform gamespec dhtnn (targetl,ntarget) =
   in
     chosenl @ first_n (ntarget - (length chosenl)) (shuffle otherl)
   end
+*)
 
 (* -------------------------------------------------------------------------
    External parallelization of competition/explorationn calls
@@ -300,7 +302,7 @@ fun widexl_file wid = gencode_dir_wid wid ^ "/exl"
 fun my_explore dhtnn target =
   let
     val (noise,bstart) = (false,false)
-    val gamespec = rlGameArithGround.gamespec
+    val gamespec = rlAimModel.gamespec
     val status_of = #status_of gamespec
     val mctsparam =
       (!nsim_glob, !decay_glob, noise,
@@ -317,7 +319,7 @@ fun my_explore dhtnn target =
 fun explore_standalone flags wid dhtnn target =
   let
     val (noise,bstart) = flags
-    val gamespec = rlGameArithGround.gamespec
+    val gamespec = rlAimModel.gamespec
     val status_of = #status_of gamespec
     val mctsparam =
       (!nsim_glob, !decay_glob, noise,
@@ -349,8 +351,8 @@ and worker_listen flags wid (dhtnn,targetl) =
 
 fun worker_start flags wid =
   let 
-    val targetl = map rlGameArithGround.mk_startsit 
-      (mlTacticData.import_terml (targetl_file ()))
+    val mk_targetl = #mk_targetl (rlAimModel.gamespec)
+    val targetl = mk_targetl (Int.max (!ntarget_explore, !ntarget_compete))
     val dhtnn = read_dhtnn (dhtnn_file ())
     val _ = writel_atomic (widout_file wid) ["up"] 
   in
@@ -496,8 +498,6 @@ fun boss_start ncore flags dhtnn targetl =
       (remove_file (widin_file wid); remove_file (widout_file wid))
     val _ = app rm (List.tabulate (ncore,I))
     val _ = write_dhtnn (dhtnn_file ()) dhtnn
-    val _ = mlTacticData.export_terml (targetl_file ())
-      (map rlGameArithGround.dest_startsit targetl)
     val _ = print_endline ("start " ^ its ncore ^ " workers")
     val widl = List.tabulate (ncore,I)
     fun fork wid = Thread.fork (fn () => boss_start_worker flags wid, attrib)
@@ -541,16 +541,15 @@ fun compete dhtnn_old dhtnn_new gamespec targetl =
     val selectl = first_n (!ntarget_compete) (shuffle targetl)
     val w_old = compete_one dhtnn_old selectl
     val w_new = compete_one dhtnn_new selectl
-    val levelup = int_div (Int.max (w_new,w_old)) (length selectl) > 0.75
+    (* val levelup = int_div (Int.max (w_new,w_old)) (length selectl) > 0.75 *)
   in
     summary_compete (w_old,w_new);
-    if levelup then incr level_glob else ();
+    (* if levelup then incr level_glob else (); *)
     if w_new > w_old then dhtnn_new else dhtnn_old
   end
 
 (* -------------------------------------------------------------------------
-   Exploration. Maybe do only take one example for each position.
-      mk_sameorder_set (cpl_compare Term.compare (fn (a,b) = Equal))
+   Exploration.
    ------------------------------------------------------------------------- *)
 
 val uniqex_flag = ref false
@@ -572,10 +571,9 @@ fun explore_eval ncore dhtnn targetl =
   let val i = fst (boss_start ncore (false,false) dhtnn targetl) in
     Real.fromInt i / Real.fromInt (length targetl)
   end
-  
 
 fun explore_f startb gamespec allex dhtnn targetl =
-  let val selectl = choose_uniform gamespec dhtnn (targetl,!ntarget_explore) in
+  let val selectl = first_n (!ntarget_explore) (shuffle targetl) in
     explore_f_aux startb gamespec allex dhtnn selectl
   end
 
@@ -583,6 +581,7 @@ fun explore_f startb gamespec allex dhtnn targetl =
    Reinforcement learning loop
    ------------------------------------------------------------------------- *)
 
+(*
 fun update_targetl () =  
   let
     val _ = summary ("Level: " ^ its (!level_glob))
@@ -593,6 +592,7 @@ fun update_targetl () =
   in
     shuffle targetl
   end
+*)
 
 fun rl_start gamespec =
   let
@@ -600,7 +600,8 @@ fun rl_start gamespec =
     val _ = summary_param ()
     val _ = summary "Generation 0"
     val dhtnn_random = random_dhtnn_gamespec gamespec
-    val targetl = update_targetl ()
+    val mk_targetl = #mk_targetl gamespec
+    val targetl = mk_targetl (Int.max (!ntarget_explore, !ntarget_compete))
     val allex = explore_f true gamespec emptyallex dhtnn_random targetl
     val dhtnn = train_f gamespec allex
   in
@@ -611,11 +612,13 @@ fun rl_one n gamespec (allex,dhtnn,targetl) =
   let
     val _ = summary ("\nGeneration " ^ its n)
     val dhtnn_new = train_f gamespec allex
-    val dhtnn_best = compete dhtnn dhtnn_new gamespec targetl
-    val targetl_new = update_targetl ()
-    val newallex = explore_f false gamespec allex dhtnn_best targetl_new
+    (* val dhtnn_best = compete dhtnn dhtnn_new gamespec targetl *)
+    val mk_targetl = #mk_targetl gamespec
+    val targetl_new = 
+      mk_targetl (Int.max (!ntarget_explore, !ntarget_compete))
+    val newallex = explore_f false gamespec allex dhtnn_new targetl_new
   in
-    (newallex, dhtnn_best, targetl_new)
+    (newallex, dhtnn_new, targetl_new)
   end
 
 fun rl_loop (n,nmax) gamespec rldata =
@@ -629,91 +632,32 @@ fun start_rl_loop gamespec =
     rl_loop (1,!ngen_glob) gamespec (allex,dhtnn,targetl)
   end
 
-(* -------------------------------------------------------------------------
-   Training speed test
-   ------------------------------------------------------------------------- *)
-
-fun random_example operl size =
-  let 
-    val polin = length (#movel rlGameArithGround.gamespec) 
-    val tm = psTermGen.random_term operl (size,bool)
-  in
-    (tm, [random_real ()], List.tabulate (polin,fn _ => random_real ()))
-  end
-
-(*
-load "rlEnv";
-load "Profile"; open aiLib Profile rlEnv;
-dim_glob := 8;
-val dhtnn = random_dhtnn_gamespec rlGameArithGround.gamespec;
-val operl = map fst (dkeys (#opdict dhtnn));
-
-val size = 20;
-val nex = 12800;
-val epex = List.tabulate (nex, fn _ => random_example operl size);
-batchsize_glob := 1280;
-nepoch_glob := 2;
-
-fun test_ncore n =
-  (
-  reset_all ();
-  PolyML.fullGC ();
-  ncore_train_glob := n;
-  ignore (train_dhtnn rlGameArithGround.gamespec epex);
-  results ()
-  );
-
-load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
-
-reset_timers ();
-parext_flag := true;
-val resultl1280_1 = map test_ncore [1];
-parext_flag := false;
-print_timers ();
-
-reset_timers ();
-parext_flag := true;
-val resultl1280_2 = map test_ncore [2];
-parext_flag := false;
-print_timers ();
-batchsize_glob := 16;
-mlTreeNeuralNetwork.ml_gencode_dir := "/home/thibault/gencode";
-load "rlEnv"; open rlEnv aiLib;
-dim_glob := 8;
-val dhtnn = random_dhtnn_gamespec rlGameArithGround.gamespec;
-open mlTreeNeuralNetwork;
-fun loop dhtnn = (write_dhtnn "hello" dhtnn; read_dhtnn "hello");
-val (dhtnn1,t) = add_time loop dhtnn;
-*)
-
 end (* struct *)
 
 (*
 load "rlEnv";
 open rlEnv;
 
-logfile_glob := "april9";
-mlTreeNeuralNetwork.ml_gencode_dir := 
-  (!mlTreeNeuralNetwork.ml_gencode_dir) ^ (!logfile_glob);
-  rl_gencode_dir := (!rl_gencode_dir) ^ (!logfile_glob);
+logfile_glob := "april16";
+rl_gencode_dir := (!rl_gencode_dir) ^ (!logfile_glob);
 
-
-ncore_mcts_glob := 16;
-ncore_train_glob := 8;
+ncore_mcts_glob := 2;
+ncore_train_glob := 2;
 ngen_glob := 100;
 ntarget_compete := 100;
 ntarget_explore := 100;
 exwindow_glob := 40000;
-uniqex_flag := true;
+uniqex_flag := false;
 dim_glob := 8;
-batchsize_glob := 64;
+batchsize_glob := 2;
 nepoch_glob := 100;
 lr_glob := 0.1;
 nsim_glob := 1600;
-decay_glob := 0.99;
-level_glob := 1;
+decay_glob := 1.0;
 
-val allex = start_rl_loop rlGameArithGround.gamespec;
+val (allex,dhtnn,targetl) = start_rl_loop rlAimModel.gamespec;
+
+write_dhtnn "save" dhtnn;
 
 (* todo: flags for nbig_steps and n_epoch *)
 *)

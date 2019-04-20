@@ -180,6 +180,23 @@ fun map_assoc f l = map (fn a => (a, f a)) l
 fun cartesian_product l1 l2 =
   List.concat (map (fn x => map (fn y => (x,y)) l2) l1)
 
+fun quintuple_of_list l = case l of
+    [a,b,c,d,e] => (a,b,c,d,e)
+  | _ => raise ERR "quintuple_of_list" ""
+
+fun cartesian_productl ll = case ll of 
+     [] => [[]]
+   | l :: m => 
+     let 
+       val l0 = cartesian_productl m
+       val l1 = cartesian_product l l0
+       fun f (a,b) = a :: b
+     in
+       map f l1
+     end
+
+
+
 fun findSome f l = case l of
     [] => NONE
   | a :: m =>
@@ -746,8 +763,13 @@ fun random_elem l = hd (shuffle l)
   handle Empty => raise ERR "random_elem" "empty"
 
 fun random_int (a,b) =
-  if a > b then raise ERR "random_int" ""
-  else a + random_elem (List.tabulate ((b - a + 1),I))
+  if a >= b then raise ERR "random_int" "" else
+  let 
+    val (ar,br) = (Real.fromInt a, Real.fromInt b)
+    val c = Real.floor (ar + random_real () * (br - ar + 1.0))
+  in
+    if c >= b then b else c
+  end
 
 fun cumul_proba (tot:real) l = case l of
     [] => []

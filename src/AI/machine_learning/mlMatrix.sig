@@ -5,7 +5,7 @@ sig
   type mat = real vector vector
 
   (* vector *)
-  val vector_to_list : vect -> real list
+  val vector_to_list : 'a vector -> 'a list
   val sum_rvect      : vect -> real
   val average_rvect  : vect -> real
   val diff_rvect     : vect -> vect -> vect
@@ -17,11 +17,15 @@ sig
   val mat_smult    : real -> mat -> mat
   val mat_map      : ('a -> 'b) -> 'a vector vector -> 'b vector vector
   val mat_tabulate : (int -> int -> 'a) -> int * int -> 'a vector vector
+  val mat3_tabulate : (int -> int -> int -> 'a) -> 
+    int * int * int -> 'a vector vector vector
   val mat_dim      : 'a vector vector -> int * int
   val mat_sub      : 'a vector vector -> int -> int -> 'a
+  val mat3_sub     : 'a vector vector vector -> int -> int -> int -> 'a
+  val mat_update   : 'a vector vector -> (int * int) * 'a -> 'a vector vector
   val mat_add      : mat -> mat -> mat
   val matl_add     : mat list -> mat
-  val mat_transpose : mat -> mat
+  val mat_transpose : 'a vector vector -> 'a vector vector
   val mat_random    : int * int -> mat
   (* input/output *)
   val string_of_vect : vect -> string
