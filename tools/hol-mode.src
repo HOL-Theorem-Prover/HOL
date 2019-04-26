@@ -1018,7 +1018,7 @@ region instead. With prefix ARG prompt for a file-name to load."
                  hol-executable))
 
 (defun hol--looks-like-root-holdir (dir)
-  (-all-p (lambda (s) (file-exists-p (concat (file-name-as-directory dir) s)))
+  (every (lambda (s) (file-exists-p (concat (file-name-as-directory dir) s)))
           '("COPYRIGHT" "tools" "tools-poly" "std.prelude" "bin")))
 
 (defun hol--find-alternate-executable (dir0 original-name0)
