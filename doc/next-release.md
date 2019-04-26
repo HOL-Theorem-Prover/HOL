@@ -75,6 +75,21 @@ New features:
 
     Thanks to Magnus Myreen for the feature suggestion.
 
+-   Users can now remove rewrites from simpsets, adjusting the behaviour of the simplifier.
+    This can be done with the `-*` operator
+
+           SIMP_TAC (bool_ss -* [“APPEND_ASSOC”]) [] >> ...
+
+    or with the `Excl` form in a theorem list:
+
+           simp[Excl “APPEND_ASSOC”] >> ...
+
+    The stateful simpset (which is behind `srw_ss()` and tactics such as `simp`, `rw` and `fs`) can also be affected more permanently by making calls to `delsimps`:
+
+           val _ = delsimps [“APPEND_ASSOC”]
+
+    Such a call will affect the stateful simpset for the rest of the containing script-file and in all scripts that inherit this theory.
+    As is typical, there is a `temp_delsimps` that removes the rewrite for the containing script-file only.
 
 Bugs fixed:
 -----------
