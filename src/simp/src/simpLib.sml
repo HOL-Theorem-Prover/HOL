@@ -203,7 +203,8 @@ fun partition_ssfrags names ssdata =
 
 type conv_info = {name : string,
                   conval : (term list -> term -> thm) -> term list -> conv}
-type net = {thypart : string option, ci : conv_info} Ho_Net.net
+type net_conv_info = {thypart : string option, ci : conv_info}
+type net = net_conv_info Ho_Net.net
 
 type weakener_data = Travrules.preorder list * thm list * Traverse.reducer
 
@@ -234,7 +235,7 @@ fun ssupd_net f (SS{mk_rewrs,history,initial_net,dprocs,travrules,limit}) =
 
 fun optprint NONE = "NONE"
   | optprint (SOME s) = "SOME "^s
-fun name_match {thypart,ci} (* thing in simpset's net *) pats =
+fun name_match ({thypart,ci}:net_conv_info) (* thing in simpset's net *) pats =
     let (* true will lead to removal *)
       val ssnm = #name ci
       fun check1 (patthyopt, patbase) =
@@ -826,9 +827,9 @@ fun merge_names list =
                 | SOME y => SOME y))
          list NONE;
 
-fun dest_convdata tcd =
+fun dest_convdata tcd  =
     let
-      val {thypart,cd={name,key,...}} = tcd
+      val {thypart,cd={name,key,...} : convdata} = tcd
     in
       (thypart,name,Option.map #2 key)
     end
