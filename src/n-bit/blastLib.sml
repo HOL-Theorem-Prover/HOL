@@ -5,9 +5,23 @@ open HolKernel boolLib bossLib;
 open bitTheory wordsTheory bitstringTheory blastTheory;
 open listLib wordsLib bitSyntax bitstringSyntax;
 
+val (blast_tygrammar, blast_tmgrammar0) = blastTheory.blast_grammars
+val blast_tmgrammar = let
+  open Parse term_grammar
+in
+  blast_tmgrammar0
+      |> add_deltas [
+           RMTMTOK {term_name = "=", tok = "="},
+           GRULE (standard_mapped_spacing {term_name = "=",
+                                           tok = "=",
+                                           fixity = Infix(NONASSOC,100)})
+         ]
+end
+
+
 structure Parse = struct
   open Parse
-  val (Type,Term) = parse_from_grammars blastTheory.blast_grammars
+  val (Type,Term) = parse_from_grammars (blast_tygrammar, blast_tmgrammar)
 end
 
 open Parse
