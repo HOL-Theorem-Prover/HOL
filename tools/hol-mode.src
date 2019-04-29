@@ -1114,7 +1114,7 @@ region instead. With prefix ARG prompt for a file-name to load."
   (interactive)
   (hol '((lambda (b al)
            (let ((split-height-threshold nil)
-                 (split-width-threshold 110))
+                 (split-width-threshold 1))
              (display-buffer-pop-up-window b al))))
        '((window-width . 0.40))))
 
