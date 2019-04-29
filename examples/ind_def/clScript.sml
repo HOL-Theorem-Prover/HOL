@@ -138,28 +138,28 @@ val S_predn = characterise ``S``;
 val Sx_predn0 = characterise ``S # x``;
 
 val Sx_predn = prove(
-  ``!x y. S # x -||-> y = ?z. (y = S # z) /\ (x -||-> z)``,
+  ``!x y. S # x -||-> y <=> ?z. (y = S # z) /\ (x -||-> z)``,
   rw[Sx_predn0, predn_rules, S_predn, EQ_IMP_THM]);
 
 val Kx_predn = prove(
-  ``!x y. K # x -||-> y = ?z. (y = K # z) /\ (x -||-> z)``,
+  ``!x y. K # x -||-> y <=> ?z. (y = K # z) /\ (x -||-> z)``,
   rw[characterise ``K # x``, predn_rules, K_predn, EQ_IMP_THM]);
 
 val Kxy_predn = prove(
-  ``!x y z. K # x # y -||-> z =
+  ``!x y z. K # x # y -||-> z <=>
             (?u v. (z = K # u # v) /\ (x -||-> u) /\ (y -||-> v)) \/
             (z = x)``,
   rw[characterise ``K # x # y``, predn_rules, Kx_predn, EQ_IMP_THM]);
 
 
 val Sxy_predn = prove(
-  ``!x y z. S # x # y -||-> z =
+  ``!x y z. S # x # y -||-> z <=>
             ?u v. (z = S # u # v) /\ (x -||-> u) /\ (y -||-> v)``,
   rw[characterise ``S # x # y``, predn_rules, EQ_IMP_THM,
      S_predn, Sx_predn]);
 
 val Sxyz_predn = prove(
-  ``!w x y z. S # w # x # y -||-> z =
+  ``!w x y z. S # w # x # y -||-> z <=>
               (?p q r. (z = S # p # q # r) /\
                        w -||-> p /\ x -||-> q /\ y -||-> r) \/
               (z = (w # y) # (x # y))``,
