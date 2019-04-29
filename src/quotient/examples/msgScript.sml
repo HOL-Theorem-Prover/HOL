@@ -1,7 +1,4 @@
 open HolKernel Parse boolLib;
-infix THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL ## |->;
-infixr -->;
-
 
 (* ------------------------------------------------------------------------ *)
 (* Representing cryptographic messages as a new datatype in the HOL logic.  *)
@@ -14,6 +11,7 @@ infixr -->;
 
 
 val _ = new_theory "msg";
+val _ = ParseExtras.temp_loose_equality()
 
 
 (* In interactive sessions, do:
