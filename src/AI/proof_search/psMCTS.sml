@@ -20,7 +20,7 @@ val ERR = mk_HOL_ERR "psMCTS"
    Global fixed parameters
    ------------------------------------------------------------------------- *)
 
-val exploration_coeff = 0.1 (* 2.4 from a comment in Leela chess blog *)
+val exploration_coeff = 0.05 (* 2.4 from a comment in Leela chess blog *)
 
 (* -------------------------------------------------------------------------
    Timers

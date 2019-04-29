@@ -16,6 +16,7 @@ val ERR = mk_HOL_ERR "aiLib"
    Misc
    ------------------------------------------------------------------------ *)
 
+(* to remove ? *)
 type fea = int list
 type lbl = (string * real * goal * goal list)
 
@@ -35,7 +36,6 @@ val hash_modulo =
   if valOf (Int.maxInt) > 2147483647
   then 79260655 * 10000000 + 5396977 (* assumes 64 bit *)
   else 1002487 (* assumes 32 bit *)
-
 
 local open Char String in
   fun hash_string s =
@@ -300,10 +300,29 @@ fun mk_batch_aux size acc res l =
   if length acc >= size
   then mk_batch_aux size [] (rev acc :: res) l
   else case l of
-     [] => rev res
+     [] => (res,acc)
    | a :: m => mk_batch_aux size (a :: acc) res m
 
-fun mk_batch size l = mk_batch_aux size [] [] l
+(* delete last elements *)
+fun mk_batch size l = 
+  let val (res,acc) = mk_batch_aux size [] [] l in
+    rev res
+  end
+
+fun mk_batch_full size l = 
+  let val (res,acc) = mk_batch_aux size [] [] l in
+    rev (if null acc then res else rev acc :: res)
+  end 
+
+fun cut_n n l = 
+  let 
+    val n1 = length l 
+    val bsize = if n1 mod n = 0 then n1 div n else (n1 div n) + 1 
+  in 
+    mk_batch_full bsize l
+  end
+
+
 
 fun number_partition m n =
   if m > n orelse m <= 0 then raise ERR "partition" "" else
@@ -795,20 +814,7 @@ fun random_percent percent l =
    Parallelism (currently slowing functions inside threads)
    ------------------------------------------------------------------------- *)
 
-datatype 'a result = Res of 'a | Exn of exn;
-
-fun capture f x = Res (f x) handle e => Exn e
-
-fun release (Res y) = y
-  | release (Exn x) = raise x
-
-fun is_res (Res y) = true
-  | is_res (Exn x) = false
-
-fun is_exn (Res y) = false
-  | is_exn (Exn x) = true
-
-(* Warning: small overhead due to waiting for closing thread *)
+(* small overhead due to waiting safely for the thread to close *)
 fun interruptkill worker =
    if not (Thread.isActive worker) then () else
      let
@@ -822,199 +828,8 @@ fun interruptkill worker =
        loop 10
      end
 
-fun compare_imin (a,b) = Int.compare (snd a, snd b)
-
-val attrib = [Thread.InterruptState Thread.InterruptAsynch, Thread.EnableBroadcastInterrupt true]
 
 
-
-
-
-fun parmap_exact ncores forg lorg =
-  if length lorg <> ncores then raise ERR "parmap_exact" "" else 
-  let
-    val ain = Vector.fromList (List.map ref lorg)
-    val aout = Vector.fromList (List.map (fn _ => ref NONE) lorg) 
-    fun process pi =
-      let 
-        val inref = Vector.sub (ain,pi) 
-        val outref = Vector.sub (aout,pi)
-      in
-        outref := SOME (capture forg (!inref))
-      end
-    fun fork_on pi = Thread.fork (fn () => process pi, attrib)
-    val threadl = map fork_on (List.tabulate (ncores,I))
-    fun loop () =
-      (if exists Thread.isActive threadl then loop () else ())
-  in
-    loop ();
-    map (release o valOf o !) (vector_to_list aout)
-  end
-
-fun mk_fbatch_aux size acc res l =
-  if length acc >= size
-  then mk_fbatch_aux size [] (rev acc :: res) l
-  else case l of
-     [] => rev (if null acc then res else rev acc :: res)
-   | a :: m => mk_fbatch_aux size (a :: acc) res m
-
-fun mk_fbatch size l = mk_fbatch_aux size [] [] l
-
-fun cut_n n l = 
-  let 
-    val n1 = length l 
-    val bsize = if n1 mod n = 0 then n1 div n else (n1 div n) + 1 
-  in 
-    mk_fbatch bsize l
-  end
-
-val use_thread_flag = ref false
-
-fun parmap_batch ncores f l = 
-  if ncores = 1 andalso not (!use_thread_flag)
-  then map f l
-  else List.concat (parmap_exact ncores (map f) (cut_n ncores l)) 
-
-fun parmap_err ncores forg lorg =
-  let
-    val end_flag = ref false
-    (* input *)
-    val sizeorg = length lorg
-    val lin = List.tabulate (ncores,(fn x => (x, ref NONE)))
-    val din = dnew Int.compare lin
-    fun fi xi x = (x,xi)
-    val queue = ref (mapi fi lorg)
-    (* update process inputs *)
-    fun update_from_queue lineref =
-      if null (!queue) then ()
-      else (lineref := SOME (hd (!queue)); queue := tl (!queue))
-    fun is_refnone x = (not o isSome o ! o snd) x
-    fun dispatcher () =
-      app (update_from_queue o snd) (filter is_refnone lin)
-    (* output *)
-    val lout = List.tabulate (ncores,(fn x => (x, ref [])))
-    val dout = dnew Int.compare lout
-    val lcount = List.tabulate (ncores,(fn x => (x, ref 0)))
-    val dcount = dnew Int.compare lcount
-    (* process *)
-    fun process pi =
-      if !end_flag then () else 
-      let val inref = dfind pi din in
-        case !inref of
-          NONE => process pi
-        | SOME (x,xi) =>
-          let
-            val oldl = dfind pi dout
-            val oldn = dfind pi dcount
-            val y = capture forg x
-          in
-            oldl := (y,xi) :: (!oldl);
-            incr oldn;
-            inref := NONE;
-            process pi
-          end
-      end
-    fun fork_on pi = Thread.fork (fn () => process pi, attrib)
-    val threadl = map fork_on (List.tabulate (ncores,I))
-    fun loop () =
-      (
-      dispatcher ();
-      if null (!queue) andalso sum_int (map (! o snd) lcount) >= sizeorg
-      then end_flag := true
-      else loop ()
-      )
-    fun wait_close () = 
-      if exists Thread.isActive threadl then wait_close () else ()
-  in
-    loop ();
-    wait_close ();
-    map fst (dict_sort compare_imin (List.concat (map (! o snd) lout)))
-  end
-
-(* make repeated calles to parmap on the same function faster
-   by not closing threads between calls *)
-
-fun parmap_threadl ncore f =
-  let 
-    val endflag = ref false
-    val inv = Vector.tabulate (ncore, fn _ => ref NONE)
-    val outv = Vector.tabulate (ncore, fn _ => ref NONE) 
-    val endv = Vector.tabulate (ncore, fn _ => ref false)     
-    val waitv = Vector.tabulate (ncore, fn _ => ref false)
-    val param_ref = ref NONE
-      fun reset_outv () = 
-       let fun init_one pi = 
-         let val outref = Vector.sub (outv,pi) in outref := NONE end
-       in
-         ignore (List.tabulate (ncore, init_one)) 
-       end
-    fun process pi =
-      if !endflag then 
-        let val endref = Vector.sub (endv,pi) in endref := true end
-      else
-      let val inref = Vector.sub (inv,pi) in
-        case !inref of
-          NONE => (OS.Process.sleep (Time.fromReal (0.001)); process pi)
-        | SOME x =>
-          let val outref = Vector.sub (outv,pi) in
-            inref := NONE; outref := SOME (map (f (valOf (!param_ref))) x); 
-            process pi
-          end
-      end
-    fun fork_on pi = Thread.fork (fn () => process pi, attrib)
-    val threadl = List.tabulate (ncore,fork_on)
-    fun wait_resultl () = 
-      if Vector.all (isSome o !) outv then () else wait_resultl ()
-    fun parmap_f param l =
-      let
-        val _ = param_ref := SOME param
-        val _ = reset_outv ()
-        val inv_loc = Vector.fromList (cut_n ncore l)
-        fun assign pi = 
-          let val inref = Vector.sub (inv,pi) in 
-            inref := SOME (Vector.sub (inv_loc,pi)) 
-          end
-        val _ = List.tabulate (ncore, assign) 
-        val _ = wait_resultl ()
-
-        val ll = vector_to_list (Vector.map (valOf o !) outv)
-      in
-        reset_outv (); List.concat ll
-      end
-    fun wait_close () = 
-      if exists Thread.isActive threadl then wait_close () else ()
-    fun close_threadl () = (endflag := true; wait_close ())
-  in
-    (parmap_f, close_threadl)
-  end
-
-fun parmap ncores f l =
-  if ncores = 1 andalso not (!use_thread_flag)
-  then map f l 
-  else map release (parmap_err ncores f l)
-
-fun parapp ncores f l = ignore (parmap ncores f l)
-
-(* 
-load "aiLib"; load "Profile"; open Profile; open aiLib;
-val add = curry (op +);
-fun test1 () =
-  let 
-    val (parmap_f, close_threadl) = parmap_threadl 2 add;
-    val _ = List.tabulate (1000, fn x => parmap_f x [0,1]);
-    val _ = close_threadl ()
-  in
-    ()
-  end
-fun test2 () = ignore (List.tabulate (1000, fn _ => parmap 2 I [1,2]));
-
-reset_all ();
-profile "test1" test1 ();
-profile "test2" test2 ();
-results ();
-
-
-*)
 
 
 end (* struct *)

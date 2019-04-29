@@ -170,6 +170,43 @@ fun n_bigsteps gamespec mctsparam target =
   end
 
 (* -------------------------------------------------------------------------
+   Exploration functions
+   ------------------------------------------------------------------------- *)
+
+fun explore_test dhtnn target =
+  let
+    val (noise,bstart) = (false,false)
+    val gamespec = rlAimModel.gamespec
+    val status_of = #status_of gamespec
+    val mctsparam =
+      (!nsim_glob, !decay_glob, noise,
+       #status_of gamespec, #apply_move gamespec, 
+       mk_fep_dhtnn bstart gamespec dhtnn)
+  in
+    verbose_flag := true;
+    ignore (n_bigsteps gamespec mctsparam target);
+    verbose_flag := false 
+  end
+
+fun explore_extern flags dhtnn wid target =
+  let
+    val (noise,bstart) = flags
+    val gamespec = rlAimModel.gamespec
+    val status_of = #status_of gamespec
+    val mctsparam =
+      (!nsim_glob, !decay_glob, noise,
+       #status_of gamespec, #apply_move gamespec, 
+       mk_fep_dhtnn bstart gamespec dhtnn)
+    val (exl,rootl) = n_bigsteps gamespec mctsparam target
+    val endroot = hd rootl
+    val bstatus = status_of (#sit endroot) = Win
+  in
+    write_dhex (widexl_file wid) exl;
+    writel_atomic (widwin_file wid) [bstatus_to_string bstatus];
+    writel_atomic (widout_file wid) ["done"] 
+  end
+
+(* -------------------------------------------------------------------------
    Training
    ------------------------------------------------------------------------- *)
 
@@ -272,6 +309,15 @@ fun choose_uniform gamespec dhtnn (targetl,ntarget) =
 *)
 
 (* -------------------------------------------------------------------------
+   Additional communication files.
+   ------------------------------------------------------------------------- *)
+
+fun dhtnn_file () = !parallel_dir ^ "/dhtnn"
+fun targetl_file () = !parallel_dir ^ "/targetl"
+fun widexl_file wid = wid_dir wid ^ "/exl"
+fun widwin_file wid = wid_dir wid ^ "/win"
+
+(* -------------------------------------------------------------------------
    External parallelization of competition/explorationn calls
    ------------------------------------------------------------------------- *)
 
@@ -280,58 +326,67 @@ fun string_to_bstatus s =
   assoc s [("win",true),("lose",false)]
   handle HOL_ERR _ => raise ERR "string_to_status" ""
 
-fun writel_atomic file sl =
-  (writel (file ^ "_temp") sl; 
-   OS.FileSys.rename {old = file ^ "_temp", new=file})
-fun readl_rm file =
-  let val sl = readl file in OS.FileSys.remove file; sl end
+fun codel_of flags wid = 
+    [
+     "open rlEnv;",
+     "val _ = parallel_dir := " ^ quote (!parallel_dir) ^ ";",
+     "val _ = nsim_glob := " ^ its (!nsim_glob) ^ ";",
+     "val _ = decay_glob := " ^ rts (!decay_glob) ^ ";",
+     "val _ = dim_glob := " ^ its (!dim_glob) ^ ";",
+     "val _ = ntarget_explore := " ^ its (!ntarget_explore) ^ ";",    
+     "val _ = ntarget_compete := " ^ its (!ntarget_compete) ^ ";",
+     "val dhtnn = read_dhtnn (dhtnn_file ())",
+     "val l = mk_targetl (Int.max (!ntarget_explore, !ntarget_compete));",
+     "val flags = " ^ flags_to_string flags ^ ";",  
+     "fun f (wid,job) target =",
+     "  explore_extern flags dhtnn wid target" 
 
-val rl_gencode_dir = 
-  ref (HOLDIR ^ "/src/AI/reinforcement_learning/gencode")
+     "val l = 
+     "val _ = worker_start " ^  ^ " " ^ its wid ^ ";"
+    ]  
 
-fun gencode_dir () = !rl_gencode_dir
-fun gencode_dir_wid wid = gencode_dir () ^ "/" ^ its wid
-fun dhtnn_file () = gencode_dir () ^ "/dhtnn"
-fun targetl_file () = gencode_dir () ^ "/targetl"
-fun widin_file wid = gencode_dir_wid wid ^ "/in"
-fun widout_file wid = gencode_dir_wid wid ^ "/out"
-fun widscript_file wid = gencode_dir_wid wid ^ "/script" ^ its wid ^ ".sml"
-fun widexl_file wid = gencode_dir_wid wid ^ "/exl"
+
+
+val gamespec = 5;
+val dhtnn = random_dhtnn gamespec;
+
+
+fun init () = write_dhtnn (dhtnn_file ()) dhtnn;
+
+fun rr (wid,job) = string_to_int (hd (readl_rm (result_file (wid,job))));
+
+fun codel_of wid = 
+  [
+   "open smlParallel;",
+   
+
+
+
+   "fun g x = x + 1;",
+   "fun f (wid,job) x =", 
+   "  (writel_atomic (result_file (wid,job)) [aiLib.its (g x)];",
+   "   writel_atomic (widout_file wid) [\"done\"]);",
+   "val l = generate_targets ();",
+   "worker_start " ^ (its wid) ^ " (f,l);"
+  ]
+;
+
+
 
 (* Workers *)
-fun my_explore dhtnn target =
+
+fun boss_start_worker flags wid =
   let
-    val (noise,bstart) = (false,false)
-    val gamespec = rlAimModel.gamespec
-    val status_of = #status_of gamespec
-    val mctsparam =
-      (!nsim_glob, !decay_glob, noise,
-       #status_of gamespec, #apply_move gamespec, 
-       mk_fep_dhtnn bstart gamespec dhtnn)
-    val (exl,rootl) = n_bigsteps gamespec mctsparam target
-    val endroot = hd rootl
-    val bstatus = status_of (#sit endroot) = Win
+    val codel =
+
   in
-    ()  
+    writel (widscript_file wid) codel;
+    smlOpen.run_buildheap false (widscript_file wid);
+    remove_file (widscript_file wid)
   end
 
 
-fun explore_standalone flags wid dhtnn target =
-  let
-    val (noise,bstart) = flags
-    val gamespec = rlAimModel.gamespec
-    val status_of = #status_of gamespec
-    val mctsparam =
-      (!nsim_glob, !decay_glob, noise,
-       #status_of gamespec, #apply_move gamespec, 
-       mk_fep_dhtnn bstart gamespec dhtnn)
-    val (exl,rootl) = n_bigsteps gamespec mctsparam target
-    val endroot = hd rootl
-    val bstatus = status_of (#sit endroot) = Win
-  in
-    write_dhex (widexl_file wid) exl;
-    writel_atomic (widout_file wid) [bstatus_to_string bstatus]     
-  end
+
 
 fun worker_process flags wid (dhtnn,targetl) i =
   (
@@ -366,7 +421,7 @@ fun boss_stop_workers threadl =
     fun send_stop wid = writel_atomic (widin_file wid) ["stop"] 
     fun loop threadl =
       (
-      OS.Process.sleep (Time.fromReal (0.001));
+      OS.Process.sleep (Time.fromReal 0.001);
       if exists Thread.isActive threadl then loop threadl else ()
       )
   in
@@ -507,6 +562,39 @@ fun boss_start ncore flags dhtnn targetl =
     print_endline ("  " ^ its ncore ^ " workers started");
     boss_send threadl (remainingl,[],[])
   end
+(*
+
+load "smlParallel"; open aiLib smlParallel;
+
+val gamespec = 5;
+val dhtnn = random_dhtnn gamespec;
+
+
+fun init () = write_dhtnn (dhtnn_file ()) dhtnn;
+
+fun rr (wid,job) = string_to_int (hd (readl_rm (result_file (wid,job))));
+
+fun codel_of wid = 
+  [
+   "open smlParallel;",
+   "val dhtnn = read
+
+
+
+   "fun g x = x + 1;",
+   "fun f (wid,job) x =", 
+   "  (writel_atomic (result_file (wid,job)) [aiLib.its (g x)];",
+   "   writel_atomic (widout_file wid) [\"done\"]);",
+   "val l = generate_targets ();",
+   "worker_start " ^ (its wid) ^ " (f,l);"
+  ]
+;
+
+val l = List.tabulate (100,I);
+
+val ncore = 2;
+val (l1,t) = add_time (parmap_queue_extern ncore codel_of (init,rr)) l;
+*)
 
 (*
 load "rlEnv"; open aiLib rlEnv;
