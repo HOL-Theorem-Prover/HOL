@@ -36,11 +36,11 @@ val wf_NIL_SOME = prove(
 val construct_11 = prove(
   ``(!k. k IN FDOM f ==> wf (f ' k)) /\
     (!k. k IN FDOM g ==> wf (g ' k)) ==>
-    ((construct a f = construct b g) = (a = b) /\ (f = g))``,
+    ((construct a f = construct b g) <=> (a = b) /\ (f = g))``,
   SRW_TAC [] [EQ_IMP_THM, FUN_EQ_THM, construct_def] THENL [
     FIRST_X_ASSUM (Q.SPEC_THEN `[]` MP_TAC) THEN SRW_TAC [][],
     SIMP_TAC (srw_ss()) [fmap_EXT, pred_setTheory.EXTENSION] THEN
-    `!x. x IN FDOM f = x IN FDOM g`
+    `!x. x IN FDOM f <=> x IN FDOM g`
         by (GEN_TAC THEN
             FIRST_X_ASSUM (Q.SPEC_THEN `[x]` MP_TAC) THEN SRW_TAC [][] THENL [
               `?a. f ' x [] = SOME a` by METIS_TAC [wf_NIL_SOME],
@@ -90,12 +90,12 @@ val toF_o_f_11 = prove(
       by METIS_TAC [o_f_FAPPLY] THEN
   FULL_SIMP_TAC (srw_ss()) [toF_11]);
 
-val FTNode_11 = store_thm(
-  "FTNode_11",
-  ``(FTNode i1 f1 = FTNode i2 f2) = (i1 = i2) /\ (f1 = f2)``,
+Theorem FTNode_11[simp]:
+  (FTNode i1 f1 = FTNode i2 f2) <=> (i1 = i2) /\ (f1 = f2)
+Proof
   SRW_TAC [][FTNode_def, fromF_11, wf_rules, toF_composed_wf,
-             construct_11, toF_o_f_11]);
-val _ = export_rewrites ["FTNode_11"]
+             construct_11, toF_o_f_11]
+QED
 
 val fmaptree_nchotomy = store_thm(
   "fmaptree_nchotomy",

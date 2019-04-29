@@ -14,6 +14,7 @@ val _ = new_theory "enumeral";
 
 val cpn_nchotomy = TypeBase.nchotomy_of ``:ordering``
 val _ = temp_type_abbrev ("cpn", ``:ordering``)
+val _ = ParseExtras.temp_loose_equality()
 
 (* "enumeral" for "enumerated finite set", wordplay on "NUMERAL" *)
 
