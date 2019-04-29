@@ -342,6 +342,8 @@ in
  fun set_goal_pp pp = !goal_printer before (goal_printer := pp)
 end;
 
+(* not clear that this function is used; certainly, default interactive system
+   uses Manager.sml's printer instead. *)
 fun pp_gstk gstk =
  let open smpp
      val pr_goal = mppgoal
@@ -382,7 +384,7 @@ fun pp_gstk gstk =
                  add_string ("\n\n" ^ Int.toString (length goals) ^
                              " subgoals")>>
                  add_newline
-               else nothing)
+               else add_newline >> add_newline)
              )
            end
        | pr (GSTK{prop = PROVED (th,_), ...}) =

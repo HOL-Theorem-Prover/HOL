@@ -10,7 +10,6 @@ val it =
    Proof manager status: 1 proof.
    1. Incomplete goalstack:
         Initial goal:
-        
         \(\forall\)x. 4 < x \(\land\) x < 10 \(\Rightarrow\) x < 20
 \end{verbatim}
 
@@ -34,13 +33,10 @@ val it =
    Proof manager status: 2 proofs.
    2. Incomplete goalstack:
         Initial goal:
-        
         \(\forall\)x. 4 < x \(\land\) x < 10 \(\Rightarrow\) x < 20
-        
-        
+   
    1. Incomplete goalstack:
         Initial goal:
-        
         MEM p l \(\Rightarrow\) \(\exists\)i. i < LENGTH l \(\land\) (p = EL i l)
 > \`{}\`{}3 <> 4\`{}\`{};
 val it = \mbox{\textrm{\textquotedblleft}}3 \(\ne\) 4\mbox{\textrm{\textquotedblright}}: term
@@ -90,10 +86,9 @@ OK..
 2 subgoals:
 val it =
    
-   0 < SUC n \(\Rightarrow\) 0 < SUC n * SUC n
+    0.  0 < n \(\Rightarrow\) 0 < n * n
    ------------------------------------
-    0 < n \(\Rightarrow\) 0 < n * n
-   
+        0 < SUC n \(\Rightarrow\) 0 < SUC n * SUC n
    
    0 < 0 \(\Rightarrow\) 0 < 0 * 0
 

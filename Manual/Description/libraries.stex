@@ -2197,6 +2197,65 @@ fragment that just includes a list of rewrites:
 \end{verbatim}
 \end{hol}
 
+\subsubsection{Removing rewrites and conversions from \simpset{}s}
+\index{simplification!removing rewrites|(}
+The \ml{-*} (infix) function can be used to remove elements from \simpset{}s.
+This can be done to temporarily affect the simplifier when it is applied to a particular goal.
+For example:
+\begin{session}
+\begin{alltt}
+>> SIMP_CONV (srw_ss()) [] “x ++ (y ++ z)”;
+
+>>+ SIMP_CONV (srw_ss() -* ["APPEND_ASSOC"]) [] “x ++ (y ++ z)”;
+\end{alltt}
+\end{session}
+The second argument to \ml{-*} is a list of strings, naming rewrite theorems or conversions.
+The names to use are visible if \simpset{} values are printed out in the interactive session.
+The example below demonstrates removing the beta-conversion:
+\begin{session}
+\begin{alltt}
+##assert Exn.capture (SIMP_CONV (bool_ss -* ["BETA_CONV"]) []) “(\x. x + 3) 10” |> Exn.get_exn |> isSome
+>>+ SIMP_CONV (bool_ss -* ["BETA_CONV"]) [] “(\x. x + 3) 10”;
+\end{alltt}
+\end{session}
+Further, because a theorem like \ml{AND\_CLAUSES}
+\begin{alltt}
+>>__ val oldlw = !linewidth; linewidth := 60;
+##thm AND_CLAUSES
+>>__ linewidth := oldlw;
+\end{alltt}
+has multiple conjuncts, one theorem can generate multiple different rewrites.
+Specific sub-rewrites can be removed from a \simpset{} without affecting  others derived from the same original theorem by appending numbers to the theorem name:
+\begin{session}
+\begin{alltt}
+>>+ SIMP_CONV (bool_ss -* ["AND_CLAUSES"]) [] “(T ∧ p) ∧ (q ∧ T)”;
+
+##assert SIMP_CONV (bool_ss -* ["AND_CLAUSES.1"]) [] “(T ∧ p) ∧ (q ∧ T)” |> concl |> rhs |> aconv “(T ∧ p) ∧ q”
+>> SIMP_CONV (bool_ss -* ["AND_CLAUSES.1"]) [] “(T ∧ p) ∧ (q ∧ T)”;
+\end{alltt}
+\end{session}
+
+If using a ``power tactic'' such as \ml{simp}, there is no \simpset{} value visible to modify with \ml{-*}.
+Instead, one must use a special theorem form (see Section~\ref{sec:simp-special-rewrite-forms} below), \ml{Excl} to exclude a rewrite.
+For example, sometimes the associativity of list-append can be annoying (here it masks the rewrite defining list-append):
+\begin{session}
+\begin{alltt}
+>>__ proofManagerLib.dropn (case proofManagerLib.status() of
+           Manager.PRFS l => List.length l)
+>> g `f (x ++ (h::t ++ y)) = f (x ++ h::(t ++ y))`;
+>> e (simp[]);
+\end{alltt}
+\end{session}
+
+We can prevent the application of this normalising rewrite with the \ml{Excl} form:
+\begin{session}
+\begin{alltt}
+>> b();
+>> e (simp[Excl "APPEND_ASSOC"]);
+\end{alltt}
+\end{session}
+\index{simplification!removing rewrites|)}
+
 \subsection{Rewriting with the simplifier}
 \label{sec:simplifier-rewriting}
 

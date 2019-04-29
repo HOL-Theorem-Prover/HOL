@@ -66,6 +66,30 @@ New features:
 
     These names can also be given attributes in the same way.
 
+-   Holmake now understands targets whose suffixes are the string `Theory` to be instructions to build all of the files associated with a theory.
+    Previously, to specifically get `fooTheory` built, it was necessary to write
+
+           Holmake fooTheory.uo
+
+    which is not particularly intuitive.
+
+    Thanks to Magnus Myreen for the feature suggestion.
+
+-   Users can now remove rewrites from simpsets, adjusting the behaviour of the simplifier.
+    This can be done with the `-*` operator
+
+           SIMP_TAC (bool_ss -* [“APPEND_ASSOC”]) [] >> ...
+
+    or with the `Excl` form in a theorem list:
+
+           simp[Excl “APPEND_ASSOC”] >> ...
+
+    The stateful simpset (which is behind `srw_ss()` and tactics such as `simp`, `rw` and `fs`) can also be affected more permanently by making calls to `delsimps`:
+
+           val _ = delsimps [“APPEND_ASSOC”]
+
+    Such a call will affect the stateful simpset for the rest of the containing script-file and in all scripts that inherit this theory.
+    As is typical, there is a `temp_delsimps` that removes the rewrite for the containing script-file only.
 
 Bugs fixed:
 -----------
@@ -146,6 +170,36 @@ Incompatibilities:
     To fix a whole script file at one stroke, one can revert to the old, loosely binding equality with
 
            val _ = ParseExtras.temp_loose_equality()
+
+*   By default, goals are now printed with the trace variable `"Goalstack.print_goal_at_top"` set to false.
+    This means goals now print like
+
+            0.  p
+            1.  q
+           ------------------------------------
+                r
+
+    The motivation is that when goal-states are very large, the conclusion (which we assume is the most important part of the state) runs no risk of disappearing off the top of the screen.
+    We also believe that having the conclusion and most recent assumption at the bottom of the screen is easier for human eyes to track.
+    The trace variable can be changed back to the old behaviour with:
+
+           val _ = set_trace "Goalstack.print_goal_at_top" 1;
+
+    This instruction can be put into script files, or (better) put into your `~/.hol-config.sml` file so that all interactive sessions are automatically adjusted.
+
+*   This is arguably also a bug-fix: it is now impossible to rebind a theorem to a name that was associated with a definition, and have the new theorem silently be added to the `EVAL` compset for future theories’ benefit.
+    In other words, it was previously possible to do
+
+           val _ = Define`foo x = x + 1`;
+           EVAL “foo 6”;     (* returns ⊢ foo 6 = 7 *)
+
+           val _ = Q.save_thm (“foo_def”, thm);
+
+    and have the effect be that `thm` goes into `EVAL`’s compset in descendent theories.
+
+    Now, when this happens, the change to the persistent compset is dropped.
+    If the user wants the new `foo_def` to appear in the `EVAL`-compset in future theories, they must change the call to `save_thm` to use the name `"foo_def[compute]"`.
+    Now, as before, the old `foo_def` cannot be seen by future theories at all, and so certainly will not be in the `EVAL`-compset.
 
 * * * * *
 

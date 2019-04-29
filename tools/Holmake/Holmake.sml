@@ -955,7 +955,10 @@ in
     | xs => let
         val cleanTarget_opt =
             List.find (fn x => member x ["clean", "cleanDeps", "cleanAll"]) xs
-        fun canon i = hmdir.extendp {base = dir, extension = i}
+        fun transform_thy_target s =
+            if String.isSuffix "Theory" s then s ^ ".dat"
+            else s
+        val xs = map transform_thy_target xs
       in
         if isSome cleanTarget_opt andalso not cline_recursive then
           (List.app (ignore o do_clean_target) xs;
