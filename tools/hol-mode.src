@@ -1142,7 +1142,7 @@ region instead. With prefix ARG prompt for a file-name to load."
          (style (intern style-str))
          (starter (cdr (assoc style hol-new-buffer-style-alist))))
     (setq hol-new-buffer-style style)
-    (funcall starter)
+    (save-mark-and-excursion (funcall starter))
     (if (region-active-p)
         (copy-region-as-hol-definition-quietly (region-beginning) (region-end))
       (copy-region-as-hol-definition-quietly (point-min) (point-max)))))
