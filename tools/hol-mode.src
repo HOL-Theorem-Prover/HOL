@@ -1332,7 +1332,7 @@ argument N, sets the trace to that value in particular."
   (interactive)
   (send-raw-string-to-hol
    (concat
-    "val _ = if #name (!Parse.current_backend) = \"emacs_terminal\" then"
+    "val _ = if #name (#extras (!Parse.current_backend)) = \"emacs_terminal\" then"
     "(Parse.current_backend := PPBackEnd.raw_terminal;"
     "print \"*** PP Backend now \\\"raw\\\" ***\\n\")"
     "else (Parse.current_backend := PPBackEnd.emacs_terminal;"
