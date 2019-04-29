@@ -1145,7 +1145,14 @@ region instead. With prefix ARG prompt for a file-name to load."
     (save-mark-and-excursion (funcall starter))
     (if (region-active-p)
         (copy-region-as-hol-definition-quietly (region-beginning) (region-end))
-      (copy-region-as-hol-definition-quietly (point-min) (point-max)))))
+      (let ((beg (point-min))
+            (end (progn
+                   (while (looking-at "[[:space:]]*\n") (next-line))
+                   (search-backward "\n\n")
+                   (while (looking-at "[[:space:]]*\n") (next-line)))))
+        (push-mark (point-min))
+        (activate-mark t)
+        (copy-region-as-hol-definition-quietly beg end)))))
 
 (defun run-program (filename niceness)
   "Runs a PROGRAM in a comint window, with a given (optional) NICENESS."
