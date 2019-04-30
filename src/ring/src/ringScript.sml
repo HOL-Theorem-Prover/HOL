@@ -36,7 +36,7 @@ val p_distr_left = Term`!n m p.  RM (RP n m) p = RP (RM n p) (RM m p)`;
 
 
 val is_ring_def = Define `
-  is_ring ^r =
+  is_ring ^r <=>
        ^p_plus_sym
     /\ ^p_plus_assoc
     /\ ^p_mult_sym
