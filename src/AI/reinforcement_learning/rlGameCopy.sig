@@ -3,14 +3,8 @@ sig
 
   include Abbrev
 
-  type pos = int list
-
-  datatype board = Board of (term * (term * pos)) | FailBoard
-
-  datatype move =
-    Down | Left | Right |
-    Sz | Sal | Sar | Sss |
-    Asa | Asl | Asr | Aac | Aasl | Aasr
+  type board = (term * term)
+  type move = (term * int)
 
   type gamespec =
     {
@@ -20,7 +14,7 @@ sig
     status_of : (board psMCTS.sit -> psMCTS.status),
     apply_move : (move -> board psMCTS.sit -> board psMCTS.sit),
     operl : (term * int) list,
-    dim : int
+    mk_targetl: int -> int -> term list
     }
 
   val gamespec : gamespec

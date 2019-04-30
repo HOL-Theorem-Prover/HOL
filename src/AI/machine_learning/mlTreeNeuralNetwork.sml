@@ -8,7 +8,7 @@
 structure mlTreeNeuralNetwork :> mlTreeNeuralNetwork =
 struct
 
-open HolKernel boolLib Abbrev aiLib mlMatrix mlNeuralNetwork
+open HolKernel boolLib Abbrev aiLib mlMatrix mlNeuralNetwork smlParallel
 
 val ERR = mk_HOL_ERR "mlTreeNeuralNetwork"
 val debugdir = HOLDIR ^ "/src/AI/machine_learning/debug"

@@ -374,7 +374,7 @@ fun clean_parallel_dirs widl=
     (mkDir_err (wid_dir wid); 
      app remove_file [widin_file wid, widout_file wid])
   in
-    mkDir_err parallel_dir; app f widl
+    mkDir_err (!parallel_dir); app f widl
   end
 
 fun parmap_queue_extern ncore codel_of (init,rr) l =

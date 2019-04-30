@@ -188,7 +188,7 @@ fun explore_test dhtnn target =
     verbose_flag := false 
   end
 
-fun explore_extern flags dhtnn wid target =
+fun explore_extern (wid,job) flags dhtnn target =
   let
     val (noise,bstart) = flags
     val gamespec = rlAimModel.gamespec
@@ -201,8 +201,8 @@ fun explore_extern flags dhtnn wid target =
     val endroot = hd rootl
     val bstatus = status_of (#sit endroot) = Win
   in
-    write_dhex (widexl_file wid) exl;
-    writel_atomic (widwin_file wid) [bstatus_to_string bstatus];
+    write_dhex (widexl_file (wid,job)) exl;
+    writel_atomic (widwin_file (wid,job)) [bstatus_to_string bstatus];
     writel_atomic (widout_file wid) ["done"] 
   end
 
@@ -309,22 +309,22 @@ fun choose_uniform gamespec dhtnn (targetl,ntarget) =
 *)
 
 (* -------------------------------------------------------------------------
-   Additional communication files.
+   Additional communication files
    ------------------------------------------------------------------------- *)
 
 fun dhtnn_file () = !parallel_dir ^ "/dhtnn"
 fun targetl_file () = !parallel_dir ^ "/targetl"
-fun widexl_file wid = wid_dir wid ^ "/exl"
-fun widwin_file wid = wid_dir wid ^ "/win"
+fun widexl_file (wid,job) = wid_dir wid ^ "/exl" ^ its job
+fun widwin_file (wid,job) = wid_dir wid ^ "/win" ^ its job
 
 (* -------------------------------------------------------------------------
    External parallelization of competition/explorationn calls
    ------------------------------------------------------------------------- *)
 
 fun bstatus_to_string b = if b then "win" else "lose"
-fun string_to_bstatus s = 
-  assoc s [("win",true),("lose",false)]
-  handle HOL_ERR _ => raise ERR "string_to_status" ""
+fun string_to_bstatus s = assoc s [("win",true),("lose",false)]
+  handle HOL_ERR _ => raise ERR "string_to_bstatus" ""
+fun flags_to_string (b1,b2) = "(" ^ bts b1 ^ "," ^  bts b2 ^ ")"
 
 fun codel_of flags wid = 
     [
@@ -339,229 +339,27 @@ fun codel_of flags wid =
      "val l = mk_targetl (Int.max (!ntarget_explore, !ntarget_compete));",
      "val flags = " ^ flags_to_string flags ^ ";",  
      "fun f (wid,job) target =",
-     "  explore_extern flags dhtnn wid target" 
+     "  explore_extern (wid,job) flags dhtnn target" 
 
-     "val l = 
+     "val l = "
      "val _ = worker_start " ^  ^ " " ^ its wid ^ ";"
-    ]  
+    ]
 
-
-
-val gamespec = 5;
-val dhtnn = random_dhtnn gamespec;
-
-
-fun init () = write_dhtnn (dhtnn_file ()) dhtnn;
-
-fun rr (wid,job) = string_to_int (hd (readl_rm (result_file (wid,job))));
-
-fun codel_of wid = 
-  [
-   "open smlParallel;",
-   
-
-
-
-   "fun g x = x + 1;",
-   "fun f (wid,job) x =", 
-   "  (writel_atomic (result_file (wid,job)) [aiLib.its (g x)];",
-   "   writel_atomic (widout_file wid) [\"done\"]);",
-   "val l = generate_targets ();",
-   "worker_start " ^ (its wid) ^ " (f,l);"
-  ]
-;
-
-
-
-(* Workers *)
-
-fun boss_start_worker flags wid =
-  let
-    val codel =
-
-  in
-    writel (widscript_file wid) codel;
-    smlOpen.run_buildheap false (widscript_file wid);
-    remove_file (widscript_file wid)
-  end
-
-
-
-
-fun worker_process flags wid (dhtnn,targetl) i =
-  (
-  explore_standalone flags wid dhtnn (List.nth (targetl,i));
-  worker_listen flags wid (dhtnn,targetl)
-  )
-
-and worker_listen flags wid (dhtnn,targetl) = 
-  if exists_file (widin_file wid) 
-  then 
-    let val s = hd (readl_rm (widin_file wid)) in
-      if s = "stop" then () else 
-      worker_process flags wid (dhtnn,targetl) (string_to_int s)
-    end 
-  else (OS.Process.sleep (Time.fromReal 0.001); 
-        worker_listen flags wid (dhtnn,targetl))
-
-fun worker_start flags wid =
+fun read_result_extern (wid,job) =
   let 
-    val mk_targetl = #mk_targetl (rlAimModel.gamespec)
-    val targetl = mk_targetl (Int.max (!ntarget_explore, !ntarget_compete))
-    val dhtnn = read_dhtnn (dhtnn_file ())
-    val _ = writel_atomic (widout_file wid) ["up"] 
+    val win = string_to_bstatus (hd (readl (widwin_file (wid,job))))
+    val dhex = read_dhex (widexl_file (wid,job))
   in
-    worker_listen flags wid (dhtnn,targetl)
+    app remove_file [widwin_file (wid,job),widexl_file (wid,job)];
+    (win,dhex)
   end
 
-(* Boss *)
-fun boss_stop_workers threadl =
-  let 
-    val ncore = length threadl 
-    fun send_stop wid = writel_atomic (widin_file wid) ["stop"] 
-    fun loop threadl =
-      (
-      OS.Process.sleep (Time.fromReal 0.001);
-      if exists Thread.isActive threadl then loop threadl else ()
-      )
-  in
-    app send_stop (List.tabulate (ncore,I));
-    loop threadl
-  end
-
-fun boss_end threadl completedl = 
-  let 
-    val ncore = length threadl
-    val _ = print_endline ("stop " ^ its ncore ^ " workers")
-    val _ = boss_stop_workers threadl
-    val _ = print_endline ("  " ^ its ncore ^ " workers stopped")
-    val l0 = dict_sort Int.compare (map fst completedl)
-    val _ = print_endline 
-      ("  completed jobs: " ^ String.concatWith " " (map its l0))
-    val l1 = map snd completedl
-    val nwin = length (filter (I o fst) l1)
-    val exll = map snd l1
-  in
-    (nwin,exll)
-  end
-
-fun boss_readresult ((wid,job),x) =
-  let val dhex = read_dhex (widexl_file wid) in
-    (job, (string_to_bstatus (valOf x), dhex))
-  end
-
-fun stat_jobs (remainingl,freewidl,runningl,completedl) = 
-  print_endline
-    ("target: " ^ its (length remainingl) ^ " "  ^ 
-       its (length runningl) ^ " " ^ its (length completedl) ^ 
-     " free core: " ^ String.concatWith " " (map its freewidl))
-
-fun send_job (wid,job) = 
-  if exists_file (widin_file wid) 
-  then raise ERR "send_job" ""
-  else 
-    (
-    print_endline ("  send job " ^ its job ^ " to worker " ^ its wid); 
-    writel_atomic (widin_file wid) [its job]
-    )
-
-fun boss_send threadl (remainingl,runningl,completedl) =
-  let
-    fun is_running x = mem x (map fst runningl)
-    val ncore = length threadl
-    val freewidl = filter (not o is_running) (List.tabulate (ncore,I))
-    val _ = stat_jobs (remainingl,freewidl,runningl,completedl)
-    val njob = Int.min (length freewidl, length remainingl)
-    val (jobl,remainingl_new) = part_n njob remainingl
-    val runningl_new = combine (first_n njob freewidl, jobl)    
-  in
-    app send_job runningl_new;
-    boss_collect threadl
-      (remainingl_new, runningl_new @ runningl, completedl)
-  end
-
-and boss_collect threadl (remainingl,runningl,completedl) =
-  if null remainingl andalso null runningl 
-    then boss_end threadl completedl
-  else
-  let
-    val _ = OS.Process.sleep (Time.fromReal 0.001)
-    fun f (wid,job) =
-      let val file = widout_file wid in
-        if exists_file file 
-        then 
-          (print_endline 
-           ("  completed job " ^ its job ^ " by worker " ^ its wid);  
-           SOME (hd (readl_rm file))) 
-        else NONE
-      end
-    val (al,bl) = partition (isSome o snd) (map_assoc f runningl)
-  in
-    if null al 
-    then boss_collect threadl (remainingl,runningl,completedl)
-    else 
-      let
-        val runningl_new = map fst bl
-        val completedl_new = map boss_readresult al
-      in
-        if null remainingl 
-        then boss_collect threadl
-          (remainingl,runningl_new,completedl_new @ completedl)
-        else boss_send threadl
-          (remainingl,runningl_new,completedl_new @ completedl)
-      end
-  end
-
-
-fun flags_to_string (b1,b2) = "(" ^ bts b1 ^ "," ^  bts b2 ^ ")"
-
-fun boss_start_worker flags wid =
-  let
-    val codel =
-    [
-     "open rlEnv;",
-     "val _ = rl_gencode_dir := " ^ quote (!rl_gencode_dir) ^ ";",
-     "val _ = nsim_glob := " ^ its (!nsim_glob) ^ ";",
-     "val _ = decay_glob := " ^ rts (!decay_glob) ^ ";",
-     "val _ = dim_glob := " ^ its (!dim_glob) ^ ";",
-     "val _ = worker_start " ^ flags_to_string flags ^ " " ^ its wid ^ ";"
-    ]  
-  in
-    writel (widscript_file wid) codel;
-    smlOpen.run_buildheap false (widscript_file wid);
-    remove_file (widscript_file wid)
-  end
+fun init_extern () = write_dhtnn (dhtnn_file ()) dhtnn
 
 val attrib = [Thread.InterruptState Thread.InterruptAsynch, Thread.EnableBroadcastInterrupt true]
 
-fun rm_out wid = remove_file (widout_file wid) 
+parmap_queue_extern ncore codel_of (init,rr)
 
-fun boss_wait_upl widl =
-  let 
-    fun is_up wid = hd (readl (widout_file wid)) = "up" handle Io _ => false 
-  in
-    if all is_up widl then app rm_out widl else boss_wait_upl widl
-  end
-
-fun boss_start ncore flags dhtnn targetl =
-  let
-    val remainingl = List.tabulate (length targetl,I)
-    val _ = mkDir_err (gencode_dir ())
-    fun mk_local_dir wid = mkDir_err ((gencode_dir ()) ^ "/" ^ its wid) 
-    val _ = app mk_local_dir (List.tabulate (ncore,I))
-    fun rm wid = 
-      (remove_file (widin_file wid); remove_file (widout_file wid))
-    val _ = app rm (List.tabulate (ncore,I))
-    val _ = write_dhtnn (dhtnn_file ()) dhtnn
-    val _ = print_endline ("start " ^ its ncore ^ " workers")
-    val widl = List.tabulate (ncore,I)
-    fun fork wid = Thread.fork (fn () => boss_start_worker flags wid, attrib)
-    val threadl = map fork widl
-  in
-    boss_wait_upl widl;
-    print_endline ("  " ^ its ncore ^ " workers started");
-    boss_send threadl (remainingl,[],[])
-  end
 (*
 
 load "smlParallel"; open aiLib smlParallel;
@@ -570,7 +368,7 @@ val gamespec = 5;
 val dhtnn = random_dhtnn gamespec;
 
 
-fun init () = write_dhtnn (dhtnn_file ()) dhtnn;
+
 
 fun rr (wid,job) = string_to_int (hd (readl_rm (result_file (wid,job))));
 
