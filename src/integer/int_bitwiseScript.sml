@@ -5,6 +5,7 @@ infix \\
 val op \\ = op THEN;
 
 val _ = new_theory "int_bitwise";
+val _ = ParseExtras.temp_loose_equality()
 
 val int_not_def = Define `
   int_not i = 0 - i - 1`;

@@ -17,10 +17,10 @@ open Parse
 
 val simple_disj_congruence =
   tautLib.TAUT_PROVE (Term`!p q r. (~p ==> (q = r)) ==>
-                                   (p \/ q = p \/ r)`)
+                                   (p \/ q <=> p \/ r)`)
 val simple_conj_congruence =
   tautLib.TAUT_PROVE (Term`!p q r. (p ==> (q = r)) ==>
-                                   (p /\ q = p /\ r)`)
+                                   (p /\ q <=> p /\ r)`)
 
 fun congruential_simplification tm = let
   val (d1, d2) = dest_disj tm
@@ -82,7 +82,7 @@ end tm handle HOL_ERR _ =>
 val unwind_constraint = UNCONSTRAIN THENC resquan_remove
 
 val p6_step = prove(
-  ``(?x:int. K (lo < x /\ x <= hi) x /\ P x) =
+  ``(?x:int. K (lo < x /\ x <= hi) x /\ P x) <=>
     lo < hi /\ (P hi \/ (?x:int. K (lo < x /\ x <= hi - 1) x /\ P x))``,
   REWRITE_TAC [combinTheory.K_THM, LEFT_AND_OVER_OR] THEN
   EQ_TAC THENL [
