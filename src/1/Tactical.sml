@@ -790,6 +790,20 @@ fun CHANGED_TAC tac g =
      else (gl, p)
   end
 
+fun check_delta exn P tac g =
+    let
+      val result as (gl,p) = tac g
+    in
+      if P (g, gl) then result else raise exn
+    end
+
+fun count0 m (g, gl) = List.all (fn (_, w) => m w = 0) gl
+fun count_decreases m ((_,w), gl) =
+    let val c0 = m w
+    in
+      List.all (fn (_,w') => m w' < c0) gl
+    end
+
 (*---------------------------------------------------------------------------
  * A tactical that parses in the context of a goal, a la the Q library.
  *---------------------------------------------------------------------------*)
