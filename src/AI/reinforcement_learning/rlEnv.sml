@@ -161,14 +161,17 @@ fun n_bigsteps_loop (n,nmax) gamespec mctsparam (allex,allroot) tree =
     val _ = if !verbose_flag then print_endline (tts (nntm_of_sit sit)) else ()
     val movel = #movel gamespec
   in
-   if null (filter_sit (map_assoc (fn x => 0.0) movel))
-   then (allex, root :: allroot) (* stop because no valid move *)
-   else
-     let val (dis,cido) = select_bigstep newtree [0] in
+   (* if null (filter_sit (map_assoc (fn x => 0.0) movel))
+      then (allex, root :: allroot) (* stop because no valid move *)
+      else *)
+   let val (dis,cido) = select_bigstep newtree [0] in
      case cido of
        NONE => (allex, root :: allroot)
      | SOME cid =>
         let
+          val _ = if !verbose_flag 
+                  then print_distrib (#string_of_move gamespec) dis
+                  else ()
           val cuttree = cut_tree newtree cid
           val newallex = add_rootex gamespec newtree allex
         in
@@ -322,15 +325,17 @@ fun summary_compete (w_old,w_new) =
     summary (s ^ ": " ^ its w_old ^ " " ^ its w_new)
   end
 
-fun compete gamespec dhtnn_old dhtnn_new targetl =
+fun compete gamespec dhtnn_old dhtnn_new =
   let
-    val mk_targetl = #mk_targetl gamespec (!level_glob) (!ntarget_compete)
+    val targetl = #mk_targetl gamespec (!level_glob) (!ntarget_compete)
     val w_old = compete_one gamespec dhtnn_old targetl
     val w_new = compete_one gamespec dhtnn_new targetl
     val levelup = int_div (Int.max (w_new,w_old)) (length targetl) > 0.75
   in
     summary_compete (w_old,w_new);
-    if levelup then incr level_glob else ();
+    if levelup 
+    then (incr level_glob; summary ("Level up: " ^ its (!level_glob))) 
+    else ();
     if w_new > w_old then dhtnn_new else dhtnn_old
   end
 
@@ -398,26 +403,33 @@ end (* struct *)
 load "rlEnv"; load "rlGameCopy";
 open smlParallel rlEnv;
 
-logfile_glob := "april31";
+logfile_glob := "april32";
 parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^ (!logfile_glob);
 
 ncore_mcts_glob := 2;
 ncore_train_glob := 2;
-ngen_glob := 5;
+ngen_glob := 20;
 ntarget_compete := 100;
 ntarget_explore := 100;
 exwindow_glob := 40000;
 uniqex_flag := false;
 dim_glob := 8;
 batchsize_glob := 16;
-nepoch_glob := 10;
+nepoch_glob := 20;
 lr_glob := 0.1;
 nsim_glob := 1600;
 decay_glob := 1.0;
-level_glob := 8;
+level_glob := 10;
 psMCTS.exploration_coeff := 2.0;
 
 
 val (allex,dhtnn) = start_rl_loop rlGameCopy.gamespec;
-write_dhtnn "save" dhtnn;
-*)
+mlTreeNeuralNetwork.write_dhtnn "save" dhtnn;
+
+(* test *)
+val dhtnn = random_dhtnn_gamespec rlGameCopy.gamespec;
+val target = (true,(``0 + (0 + SUC 0 + 0 + SUC 0)``,``active_var:num``));
+explore_test rlGameCopy.gamespec dhtnn target;
+
+(* evaluate missmatch between PriorPoliicy and DerivedPolicy to see
+   if there is still something to learn. *)

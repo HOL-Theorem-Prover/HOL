@@ -433,8 +433,12 @@ fun evalpoli_example tree =
    ------------------------------------------------------------------------- *)
 
 fun print_distrib g l =
-  let fun f (((move,_),_),r) = g move ^ " " ^ (rts (approx 4 r)) in
-    print_endline ("  " ^ String.concatWith ", " (map f l))
+  let 
+    fun f1 (((move,r),_),_) = g move ^ " " ^ (rts (approx 4 r)) 
+    fun f2 (((move,_),_),r) = g move ^ " " ^ (rts (approx 4 r)) 
+  in
+    print_endline ("  " ^ String.concatWith ", " (map f1 l));
+    print_endline ("  " ^ String.concatWith ", " (map f2 l))
   end
 
 fun best_in_distrib distrib =

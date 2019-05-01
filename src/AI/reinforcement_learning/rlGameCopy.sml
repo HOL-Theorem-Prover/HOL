@@ -20,12 +20,11 @@ val ERR = mk_HOL_ERR "rlGameCopy"
 type board = (term * term)
 
 val active_var = ``active_var:num``;
-val pending_var = ``pending_var:num``;
 
 fun mk_startsit target = (true,(target,active_var))
 fun is_ground tm = not (tmem active_var (free_vars_lr tm))
 
-val operl = [(active_var,0),(pending_var,0)] @ operl_of ``SUC 0 + 0 = 0``
+val operl = [(active_var,0)] @ operl_of ``SUC 0 + 0 = 0``
 fun nntm_of_sit (_,(ctm,tm)) = mk_eq (ctm,tm)
 
 fun status_of (_,(ctm,tm)) = 
@@ -43,7 +42,6 @@ fun read_targetl () =
     map mk_startsit tml
   end  
 
-
 (* -------------------------------------------------------------------------
    Move
    ------------------------------------------------------------------------- *)
@@ -53,12 +51,10 @@ val movel = operl_of ``SUC 0 + 0``
 
 fun action_oper (oper,n) tm =
   let
-    val res = if n = 0 then tm else 
-      list_mk_comb (oper, active_var :: 
-        List.tabulate (n - 1,fn _ => pending_var)) 
+    val res = list_mk_comb (oper, List.tabulate (n, fn _ => active_var)) 
     val sub = [{redex = active_var, residue = res}]
   in
-    subst sub tm
+    subst_occs [[1]] sub tm
   end
 
 fun apply_move move (_,(ctm,tm)) = (true, (ctm, action_oper move tm))
