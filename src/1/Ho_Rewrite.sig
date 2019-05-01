@@ -48,4 +48,8 @@ sig
   val FILTER_ONCE_ASM_REWRITE_TAC       : pred -> thm list -> tactic
 
   val SUBST_MATCH : thm -> thm -> thm
+
+  val REQUIRE0_TAC         : thm -> tactic -> tactic
+  val REQUIRE_DECREASE_TAC : thm -> tactic -> tactic
+
 end

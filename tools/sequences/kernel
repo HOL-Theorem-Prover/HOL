@@ -51,5 +51,6 @@ src/proofman
 !tools/Holmake/tests/deps_of_depthys
 !tools/Holmake/tests/gh604
 !tools/Holmake/tests/ignore_errors/j1
+!tools/Holmake/tests/qfreadTheoremsyntax
 [poly]!tools/Holmake/tests/ignore_errors/j4
 !src/1/theory_tests

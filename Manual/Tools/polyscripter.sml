@@ -133,7 +133,7 @@ fun cruftSuffix sfxs s =
     | SOME (sfx,rep) => SOME (String.substring(s, 0, size s - size sfx) ^ rep)
 
 val cruftySuffixes = ref [
-      ("\n   : proofs\n", ""),
+      ("\n   : proofs\n", "\n"),
       ("\n   : proof\n", "\n"),
       (":\n   proof\n", "\n")
     ]

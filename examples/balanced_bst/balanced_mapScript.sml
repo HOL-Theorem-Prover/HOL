@@ -2443,6 +2443,13 @@ val union_thm = Q.store_thm ("union_thm",
  rfs [key_ordered_to_fmap] >>
  metis_tac [cmp_thms, to_fmap_key_set]);
 
+val lookup_union = Q.store_thm("lookup_union",
+  `good_cmp cmp ∧ invariant cmp t1 ∧ invariant cmp t2 ⇒
+   lookup cmp k (union cmp t1 t2) = case lookup cmp k t1 of
+                                      NONE => lookup cmp k t2
+                                    | SOME v => SOME v`,
+  rw[lookup_thm,union_thm,FLOOKUP_FUNION]);
+
 val EXT2 = Q.prove (
 `!s1 s2. s1 = s2 ⇔ (!k v. (k,v) ∈ s1 ⇔ (k,v) ∈ s2)`,
  rw [EXTENSION] >>

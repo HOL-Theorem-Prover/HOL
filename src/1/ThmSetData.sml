@@ -37,15 +37,23 @@ fun lookup ty nm =
                                   "\" for set-type \"" ^ ty ^ "\"");
             NONE)
 
+local
+  open ThyDataSexp
+in
+val pp_sexp = pp_sexp Parse.pp_type Parse.pp_term Parse.pp_thm
+fun sexp2string sexp = PP.pp_to_string (!Globals.linewidth) pp_sexp sexp
+end;
+
+datatype read_result = OK of setdelta | BAD_ADD of string
+
 fun read ty sexp =
     let
       open ThyDataSexp
-      val pp_sexp = pp_sexp Parse.pp_type Parse.pp_term Parse.pp_thm
-      val sexp2string = PP.pp_to_string (!Globals.linewidth) pp_sexp
       fun decode1 sexp =
           case sexp of
-              List [String nm, Thm thm] => ADD (nm,thm)
-            | String nm => REMOVE nm
+              String nm =>
+                (OK (ADD (nm,lookup_exn ty nm)) handle HOL_ERR _ => BAD_ADD nm)
+            | List [String nm] => OK (REMOVE nm)
             | _ => raise ERR "read" ("Bad sexp for 1 update: "^sexp2string sexp)
     in
       case sexp of
@@ -56,8 +64,8 @@ fun read ty sexp =
 fun write_deltas ds =
     let
       open ThyDataSexp
-      fun mapthis (ADD(nm,th)) = List[String nm, Thm th]
-        | mapthis (REMOVE s) = String s
+      fun mapthis (ADD(nm,th)) = String nm
+        | mapthis (REMOVE s) = List[String s]
       val sexps = map mapthis ds
     in
       List sexps
@@ -107,33 +115,45 @@ fun all_data {settype = s} =
 
 fun new_exporter {settype = name, efns = efns as {add, remove}} = let
   open TheoryDelta
+  val dropBads =
+      List.mapPartial
+        (fn OK sd => SOME sd
+        | BAD_ADD s => (HOL_WARNING "ThmSetData" "apply_delta"
+                                    ("Bad add command, with name: "^s); NONE))
   fun apply_deltas thyname ds =
       let
-        fun appthis (ADD (s,th)) = add {thy = thyname, named_thms = [(s, th)]}
+        fun appthis (ADD (s,th)) =
+               add {thy = thyname, named_thms = [(s, th)]}
           | appthis (REMOVE s) = remove {thy = thyname, removes =  [s]}
       in
         List.app appthis ds
       end
-  fun loadfn {data,thyname} = apply_deltas thyname (read name data)
+  fun loadfn {data,thyname} = apply_deltas thyname (dropBads (read name data))
   fun uptodate_thmdelta (ADD (s,th)) = uptodate_thm th
     | uptodate_thmdelta _ = true
   fun neqbinding s1 (ADD (s2,_)) =
          s1 <> s2 andalso current_theory () ^ "." ^ s1 <> s2
     | neqbinding _ _ = true
-  fun toString (ADD (s,_)) = s | toString (REMOVE s) = s
+  fun toString (ADD (s,_)) = "ADD<" ^ s ^ ">"
+    | toString (REMOVE s) = "REMOVE<" ^ s ^ ">"
+  fun read_result_toString (OK sd) = toString sd
+    | read_result_toString (BAD_ADD s) = "ADD<" ^ s ^ ">"
+  fun check_result P (OK d) = P d
+    | check_result _ (BAD_ADD s) = false
   fun revise_data P (deltas_sexp,td) =
       let
         val deltas = read name deltas_sexp
-        val (ok,notok) = Lib.partition P deltas
+        val (ok,notok) = Lib.partition (check_result P) deltas
       in
         case notok of
             [] => NONE
           | _ => (HOL_WARNING
                       "ThmSetData" "revise_data"
                       ("\n  Theorems in set " ^ Lib.quote name ^
-                       ":\n    " ^ String.concatWith ", " (map toString notok) ^
+                       ":\n    " ^
+                       String.concatWith ", " (map read_result_toString notok) ^
                        "\n  invalidated by " ^ TheoryDelta.toString td);
-                  SOME (write_deltas ok))
+                  SOME (write_deltas (dropBads ok)))
       end
 
   fun hook (DelConstant _) = uptodate_thmdelta
@@ -152,7 +172,7 @@ fun new_exporter {settype = name, efns = efns as {add, remove}} = let
   fun opt2list (SOME x) = x | opt2list NONE = []
   fun segdata {thyname} =
       segment_data {thyname=thyname}
-                   |> Option.map (read name)
+                   |> Option.map (dropBads o read name)
                    |> opt2list
   fun export p (* name * thm *) =
       let
@@ -175,7 +195,7 @@ fun new_exporter {settype = name, efns = efns as {add, remove}} = let
     export_deltasexp data
   end
 
-  fun attrfun {attrname,name,thm} = export (name,thm)
+  fun attrfun {attrname,name,thm} = export (mk_store_name_safe name,thm)
 in
   data_map := Symtab.update(name,(segdata, efns)) (!data_map);
   ThmAttribute.register_attribute (name, attrfun);

@@ -1018,7 +1018,7 @@ region instead. With prefix ARG prompt for a file-name to load."
                  hol-executable))
 
 (defun hol--looks-like-root-holdir (dir)
-  (-all-p (lambda (s) (file-exists-p (concat (file-name-as-directory dir) s)))
+  (every (lambda (s) (file-exists-p (concat (file-name-as-directory dir) s)))
           '("COPYRIGHT" "tools" "tools-poly" "std.prelude" "bin")))
 
 (defun hol--find-alternate-executable (dir0 original-name0)
@@ -1114,9 +1114,9 @@ region instead. With prefix ARG prompt for a file-name to load."
   (interactive)
   (hol '((lambda (b al)
            (let ((split-height-threshold nil)
-                 (split-width-threshold 110))
+                 (split-width-threshold 1))
              (display-buffer-pop-up-window b al))))
-       '((window-width . 0.40))))
+       '((window-width . 80))))
 
 (defvar hol-new-buffer-style hol-new-buffer-style-default)
 
@@ -1142,10 +1142,18 @@ region instead. With prefix ARG prompt for a file-name to load."
          (style (intern style-str))
          (starter (cdr (assoc style hol-new-buffer-style-alist))))
     (setq hol-new-buffer-style style)
-    (funcall starter)
+    (save-mark-and-excursion (funcall starter))
     (if (region-active-p)
         (copy-region-as-hol-definition-quietly (region-beginning) (region-end))
-      (copy-region-as-hol-definition-quietly (point-min) (point-max)))))
+      (let ((beg (point-min))
+            (end (progn
+                   (while (looking-at "[[:space:]]*\n") (next-line))
+                   (search-backward "\n\n")
+                   (while (looking-at "[[:space:]]*\n") (next-line))
+                   (point))))
+        (push-mark (point-min))
+        (activate-mark t)
+        (copy-region-as-hol-definition-quietly beg end)))))
 
 (defun run-program (filename niceness)
   "Runs a PROGRAM in a comint window, with a given (optional) NICENESS."
@@ -1332,7 +1340,7 @@ argument N, sets the trace to that value in particular."
   (interactive)
   (send-raw-string-to-hol
    (concat
-    "val _ = if #name (!Parse.current_backend) = \"emacs_terminal\" then"
+    "val _ = if #name (#extras (!Parse.current_backend)) = \"emacs_terminal\" then"
     "(Parse.current_backend := PPBackEnd.raw_terminal;"
     "print \"*** PP Backend now \\\"raw\\\" ***\\n\")"
     "else (Parse.current_backend := PPBackEnd.emacs_terminal;"

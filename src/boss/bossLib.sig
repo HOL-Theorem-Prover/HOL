@@ -91,6 +91,8 @@ sig
   val Cong           : thm -> thm
   val AC             : thm -> thm -> thm
   val Excl           : string -> thm
+  val Req0           : thm -> thm
+  val ReqD           : thm -> thm
 
   val SIMP_CONV         : simpset -> thm list -> conv
   val SIMP_RULE         : simpset -> thm list -> thm -> thm
