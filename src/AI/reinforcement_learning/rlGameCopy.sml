@@ -8,7 +8,8 @@
 structure rlGameCopy :> rlGameCopy =
 struct
 
-open HolKernel Abbrev boolLib aiLib rlLib psMCTS psTermGen mlTreeNeuralNetwork
+open HolKernel Abbrev boolLib aiLib rlLib psMCTS psTermGen 
+  mlTreeNeuralNetwork mlTacticData smlParallel
 
 val ERR = mk_HOL_ERR "rlGameCopy"
 
@@ -32,6 +33,17 @@ fun status_of (_,(ctm,tm)) =
   else if term_size tm > term_size ctm orelse is_ground tm then Lose
   else Undecided
  
+fun write_targetl targetl = 
+  let val tml = map (fst o snd) targetl in 
+    export_terml (!parallel_dir ^ "/targetl") tml
+  end
+
+fun read_targetl () =
+  let val tml = import_terml (!parallel_dir ^ "/targetl") in
+    map mk_startsit tml
+  end  
+
+
 (* -------------------------------------------------------------------------
    Move
    ------------------------------------------------------------------------- *)
@@ -64,9 +76,12 @@ fun mk_targetl level ntarget =
         loop (n + 1)
       end
   in
-    loop 0; dkeys (!d)
+    loop 0; map mk_startsit (dkeys (!d))
   end
 
+fun filter_sit sit = (fn l => l) (* filter moves *)
+
+fun string_of_move (tm,_) = tts tm
 
 (* -------------------------------------------------------------------------
    Interface
@@ -74,24 +89,30 @@ fun mk_targetl level ntarget =
 
 type gamespec =
   {
-  mk_startsit: term -> board sit,
   movel: move list,
   status_of : (board psMCTS.sit -> psMCTS.status),
+  filter_sit : board psMCTS.sit -> ((move * real) list -> (move * real) list),
   apply_move : (move -> board psMCTS.sit -> board psMCTS.sit),
   operl : (term * int) list,
-  nntm_of_sit: board sit -> term,
-  mk_targetl: int -> int -> term list
+  nntm_of_sit: board psMCTS.sit -> term,
+  mk_targetl: int -> int -> board psMCTS.sit list,
+  write_targetl: board psMCTS.sit list -> unit,
+  read_targetl: unit -> board psMCTS.sit list,
+  string_of_move : move -> string
   }
 
 val gamespec =
   {
-  mk_startsit = mk_startsit,
   movel = movel,
   status_of = status_of,
+  filter_sit = filter_sit,
   apply_move = apply_move,
   operl = operl,
   nntm_of_sit = nntm_of_sit,
-  mk_targetl = mk_targetl
+  mk_targetl = mk_targetl,
+  write_targetl = write_targetl,
+  read_targetl = read_targetl,
+  string_of_move = string_of_move
   }
 
 end (* struct *)

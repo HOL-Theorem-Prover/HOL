@@ -3,27 +3,28 @@ sig
 
   include Abbrev
 
-  val rl_gencode_dir : string ref
-  val verbose_flag : bool ref
-  (* 'a is the type of board
-     ''b is the type for move
-     'c is the type of targets *)
-  type ('a,''b,'c) gamespec =
+  val dhtnn_file : unit -> string  
+
+  (* 'a is the type of board, 'b is the type for move *)
+  type ('a,'b) gamespec =
     {
-    movel : ''b list,
-    string_of_move : ''b -> string,
-    filter_sit : 'a psMCTS.sit -> ((''b * real) list -> (''b * real) list),
+    movel : 'b list,
+    string_of_move : 'b -> string,
+    filter_sit : 'a psMCTS.sit -> (('b * real) list -> ('b * real) list),
     status_of : ('a psMCTS.sit -> psMCTS.status),
-    apply_move : (''b -> 'a psMCTS.sit -> 'a psMCTS.sit),
+    apply_move : ('b -> 'a psMCTS.sit -> 'a psMCTS.sit),
     operl : (term * int) list,
     nntm_of_sit: 'a psMCTS.sit -> term,
-    mk_targetl: int -> 'a psMCTS.sit list
+    mk_targetl: int -> int -> 'a psMCTS.sit list,
+    write_targetl: 'a psMCTS.sit list -> unit,
+    read_targetl: unit -> 'a psMCTS.sit list 
     }
 
   (* rl parameters *)
   val ngen_glob : int ref
   val ntarget_compete : int ref    
   val ntarget_explore : int ref
+  val level_glob : int ref
   (* nn parameters *)
   val exwindow_glob : int ref
   val uniqex_flag : bool ref
@@ -37,36 +38,26 @@ sig
   val decay_glob : real ref
   val ncore_mcts_glob : int ref
 
-  (* adaptative difficulty *)
-  (* val level_glob : int ref *)
-
-  (* external calls *)
-  val worker_start : bool * bool -> int -> unit
-  val boss_start : int -> bool * bool ->
-    mlTreeNeuralNetwork.dhtnn ->
-    rlAimModel.board psMCTS.sit list ->
-    int * (term * real list * real list) list list
-
   (* training *)
   val random_dhtnn_gamespec : 
-    (rlAimModel.board, ''a, 'b) gamespec -> mlTreeNeuralNetwork.dhtnn
+    ('a,'b) gamespec -> mlTreeNeuralNetwork.dhtnn
   val train_dhtnn : 
-    (rlAimModel.board, ''a, 'b) gamespec ->
+    ('a,'b) gamespec ->
     (term * real list * real list) list  ->
     mlTreeNeuralNetwork.dhtnn
   
-  val explore_eval : 
-    int -> mlTreeNeuralNetwork.dhtnn -> rlAimModel.board psMCTS.sit list -> real
-  val explore_test : mlTreeNeuralNetwork.dhtnn -> 
-    rlAimModel.board psMCTS.sit -> unit
+  (* exploration (search) *)
+  val explore_test : ('a,'b) gamespec -> mlTreeNeuralNetwork.dhtnn -> 
+    'a psMCTS.sit -> unit
+  val explore_extern : ('a,'b) gamespec -> int * int ->
+     bool * bool -> mlTreeNeuralNetwork.dhtnn -> 'a psMCTS.sit -> unit
+
+  (* reinforcement learning loop *)
   val logfile_glob : string ref
   val summary : string -> unit
-
   val start_rl_loop : 
-    (rlAimModel.board, ''a, 'b) gamespec ->
-    (term * real list * real list) list  *
-    mlTreeNeuralNetwork.dhtnn *
-    rlAimModel.board psMCTS.sit list
+    ('a,'b) gamespec ->
+    (term * real list * real list) list * mlTreeNeuralNetwork.dhtnn
 
 
 end

@@ -5,7 +5,10 @@ sig
 
   datatype status = Undecided | Win | Lose
 
-  (* Debug *)
+  (* globals *)
+  val exploration_coeff : real ref
+
+  (* debug *)
   val string_of_status : status -> string
 
   (* 'a is the representation of a board *)

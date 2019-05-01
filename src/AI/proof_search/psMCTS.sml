@@ -20,7 +20,7 @@ val ERR = mk_HOL_ERR "psMCTS"
    Global fixed parameters
    ------------------------------------------------------------------------- *)
 
-val exploration_coeff = 0.05 (* 2.4 from a comment in Leela chess blog *)
+val exploration_coeff = ref 2.0 (* 2.4 from a comment in Leela chess blog *)
 
 (* -------------------------------------------------------------------------
    Timers
@@ -223,7 +223,7 @@ fun value_choice player tree vtot ((move,polv),cid) =
     val exploitation = (if player then sum else vis - sum) / (vis + 1.0)
     val exploration  = (polv * Math.sqrt vtot) / (vis + 1.0)
   in
-    exploitation + exploration_coeff * exploration
+    exploitation + (!exploration_coeff) * exploration
   end
 
 (* -------------------------------------------------------------------------
