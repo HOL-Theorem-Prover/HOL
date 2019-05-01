@@ -675,6 +675,8 @@ fun remove_ssfrags (ss as SS{history,limit,...}) names =
 val Cong = markerLib.Cong
 val AC   = markerLib.AC;
 val Excl = markerLib.Excl
+val Req0 = markerLib.mk_Req0
+val ReqD = markerLib.mk_ReqD
 
 local open markerSyntax markerLib
   fun is_AC thm = same_const(fst(strip_comb(concl thm))) AC_tm
@@ -736,13 +738,15 @@ fun SIMP_RULE ss l = CONV_RULE (SIMP_CONV ss l)
 
 fun ASM_SIMP_RULE ss l th = SIMP_RULE ss (l@map ASSUME (hyp th)) th;
 
-fun SIMP_TAC ss l = markerLib.ABBRS_THEN (CONV_TAC o SIMP_CONV ss) l;
+fun SIMP_TAC0 ss l = markerLib.ABBRS_THEN (CONV_TAC o SIMP_CONV ss) l;
+fun SIMP_TAC ss = markerLib.mk_require_tac (SIMP_TAC0 ss)
 val simp_tac = SIMP_TAC
 
-fun ASM_SIMP_TAC ss =
+fun ASM_SIMP_TAC0 ss =
    markerLib.ABBRS_THEN
     (fn thl => fn gl as (asl,_) =>
          SIMP_TAC ss (markerLib.LLABEL_RESOLVE thl asl) gl);
+fun ASM_SIMP_TAC ss = markerLib.mk_require_tac (ASM_SIMP_TAC0 ss)
 val asm_simp_tac = ASM_SIMP_TAC
 
 local
@@ -769,12 +773,14 @@ local
    val full_tac = GEN_FULL_SIMP_TAC (drop List.rev, Lib.I)
    val rev_full_tac = GEN_FULL_SIMP_TAC (drop Lib.I, List.rev)
 in
-   val FULL_SIMP_TAC = full_tac STRIP_ASSUME_TAC'
+   val FULL_SIMP_TAC = markerLib.mk_require_tac o full_tac STRIP_ASSUME_TAC'
    val full_simp_tac = FULL_SIMP_TAC
-   val REV_FULL_SIMP_TAC = rev_full_tac STRIP_ASSUME_TAC'
+   val REV_FULL_SIMP_TAC =
+       markerLib.mk_require_tac o rev_full_tac STRIP_ASSUME_TAC'
    val rev_full_simp_tac = REV_FULL_SIMP_TAC
-   val NO_STRIP_FULL_SIMP_TAC = full_tac caa_tac
-   val NO_STRIP_REV_FULL_SIMP_TAC = rev_full_tac caa_tac
+   val NO_STRIP_FULL_SIMP_TAC = markerLib.mk_require_tac o full_tac caa_tac
+   val NO_STRIP_REV_FULL_SIMP_TAC =
+       markerLib.mk_require_tac o rev_full_tac caa_tac
 end
 
 fun track f x =

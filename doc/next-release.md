@@ -91,6 +91,16 @@ New features:
     Such a call will affect the stateful simpset for the rest of the containing script-file and in all scripts that inherit this theory.
     As is typical, there is a `temp_delsimps` that removes the rewrite for the containing script-file only.
 
+-   Users can now require that a simplification tactic use particular rewrites.
+    This is done with the `Req0` and `ReqD` special forms.
+    The `Req0` form requires that the goalstate(s) pertaining after the application of the tactic have no sub-terms that match the pattern of the theorems’ left-hand sides.
+    The `ReqD` form requires that the number of matching sub-terms should have decreased.
+    (This latter is implicitly a requirement that the original goal *did* have some matching sub-terms.)
+    We hope that both forms will be useful in creating maintainable tactics.
+    See the DESCRIPTION manual for more details.
+
+    Thanks to Magnus Myreen for this feature suggestion ([Github issue](https://github.com/HOL-Theorem-Prover/HOL/issues/680)).
+
 Bugs fixed:
 -----------
 
