@@ -60,7 +60,8 @@ end;
    |- !x. ~(x = 0) = (0 < x) \/ (x < 0)
  *--------------------------------------------------------------------------*)
 
-val INT_NE_IMP_LTGT = store_thm("INT_NE_IMP_LTGT", ``!x. ~(x=0i) = (0i<x) \/ (x<0i)``,
+Theorem INT_NE_IMP_LTGT: !x. x <> 0i <=> 0i<x \/ x<0i
+Proof
         GEN_TAC THEN
         EQ_TAC THENL
         [
@@ -68,14 +69,16 @@ val INT_NE_IMP_LTGT = store_thm("INT_NE_IMP_LTGT", ``!x. ~(x=0i) = (0i<x) \/ (x<
                 PROVE_TAC[INT_LT_TOTAL]
         ,
                 PROVE_TAC[INT_LT_IMP_NE]
-        ] );
+        ]
+QED
 
 (*--------------------------------------------------------------------------
    INT_NOTGT_IMP_EQLT : thm
    |- !n. ~(n < 0) = (0 = n) \/ 0 < n
  *--------------------------------------------------------------------------*)
 
-val  INT_NOTGT_IMP_EQLT = store_thm("INT_NOTGT_IMP_EQLT",``!n. ~(n < 0i) = (0i = n) \/ 0i < n``,
+Theorem INT_NOTGT_IMP_EQLT: !n. ~(n < 0i) <=> (0i = n) \/ 0i < n
+Proof
         GEN_TAC THEN
         EQ_TAC THEN
         STRIP_TAC THENL
@@ -86,21 +89,24 @@ val  INT_NOTGT_IMP_EQLT = store_thm("INT_NOTGT_IMP_EQLT",``!n. ~(n < 0i) = (0i =
                 PROVE_TAC[INT_LT_IMP_NE]
         ,
                 PROVE_TAC[INT_LT_GT]
-        ] );
+        ]
+QED
 
 (*--------------------------------------------------------------------------
    INT_NO_ZERODIV : thm
    |- !x y. (x = 0) \/ (y = 0) = (x * y = 0)
  *--------------------------------------------------------------------------*)
 
-val INT_NO_ZERODIV = store_thm("INT_NO_ZERODIV", ``!x y. (x = 0i) \/ (y = 0i) = (x * y = 0i)``,
+Theorem INT_NO_ZERODIV: !x y. (x = 0i) \/ (y = 0i) = (x * y = 0i)
+Proof
         REPEAT GEN_TAC THEN
         ASM_CASES_TAC ``x=0i`` THEN
         ASM_CASES_TAC ``y=0i`` THEN
         RW_TAC int_ss[INT_MUL_LZERO, INT_MUL_RZERO] THEN
         REWRITE_TAC[INT_NE_IMP_LTGT] THEN
         REWRITE_TAC[INT_MUL_SIGN_CASES] THEN
-        PROVE_TAC[INT_LT_TOTAL] );
+        PROVE_TAC[INT_LT_TOTAL]
+QED
 
 (*--------------------------------------------------------------------------
    INT_NOTPOS0_NEG : thm
