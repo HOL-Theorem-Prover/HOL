@@ -2242,7 +2242,7 @@ For example, sometimes the associativity of list-append can be annoying (here it
 \begin{alltt}
 >>__ proofManagerLib.dropn (case proofManagerLib.status() of
            Manager.PRFS l => List.length l)
->> g `f (x ++ (h::t ++ y)) = f (x ++ h::(t ++ y))`;
+>>_ g `f (x ++ (h::t ++ y)) = f (x ++ h::(t ++ y))`;
 >> e (simp[]);
 \end{alltt}
 \end{session}
@@ -2250,7 +2250,7 @@ For example, sometimes the associativity of list-append can be annoying (here it
 We can prevent the application of this normalising rewrite with the \ml{Excl} form:
 \begin{session}
 \begin{alltt}
->> b();
+>>_ b();
 >> e (simp[Excl "APPEND_ASSOC"]);
 \end{alltt}
 \end{session}
