@@ -78,6 +78,7 @@ val augment_srw_ss  = BasicProvers.augment_srw_ss
 val diminish_srw_ss = BasicProvers.diminish_srw_ss
 val export_rewrites = BasicProvers.export_rewrites
 val delsimps        = BasicProvers.delsimps
+val temp_delsimps   = BasicProvers.temp_delsimps
 
 val EVAL           = computeLib.EVAL_CONV;
 val EVAL_RULE      = computeLib.EVAL_RULE
