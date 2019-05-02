@@ -2051,7 +2051,7 @@ val explemma = prove(
   `eval_poly a t2 < a ** e2` by metis_tac [is_polyform_head_dominates_tail] >>
   imp_res_tac is_polyform_CONS_E >>
   `a ** e2 * c2 + eval_poly a t2 < a ** e1` by simp[expbounds] >>
-  `a ** e1 <= a ** e1 * c1` by simp[IFF_ZERO_lt] >>
+  `a ** e1 <= a ** e1 * c1` by (simp[IFF_ZERO_lt] >> rw[] >> fs[]) >>
   `a ** e1 * c1 <= a ** e1 * c1 + eval_poly a t1` by simp[] >>
   metis_tac[ordlte_TRANS, ordle_TRANS, ordlt_REFL]);
 
@@ -2068,11 +2068,11 @@ val coefflemma = prove(
   `a ** e * c1 <= a ** e * c1 + eval_poly a t1` by simp[] >>
   metis_tac [ordlte_TRANS, ordle_TRANS, ordlt_REFL]);
 
-val polyform_UNIQUE = store_thm(
-  "polyform_UNIQUE",
-  ``!a b ces.
+Theorem polyform_UNIQUE:
+    !a b ces.
       1 < a /\ is_polyform a ces /\ b = eval_poly a ces ==>
-      polyform a b = ces``,
+      polyform a b = ces
+Proof
   gen_tac >> ho_match_mp_tac ord_induction >> qx_gen_tac `b` >>
   strip_tac >> qx_gen_tac `ces1` >> strip_tac >>
   `0 < a` by (`0 < 1o` by simp[] >> metis_tac [ordlt_TRANS]) >>
@@ -2096,10 +2096,11 @@ val polyform_UNIQUE = store_thm(
   `eval_poly a t < b`
     by (`eval_poly a t < a ** e`
           by metis_tac [is_polyform_head_dominates_tail] >>
-        `a ** e <= a ** e * c` by simp[IFF_ZERO_lt] >>
+        `a ** e <= a ** e * c` by simp[IFF_ZERO_lt, Excl "lift_disj_eq"] >>
         `a ** e * c <= a ** e * c + eval_poly a t` by simp[] >>
         metis_tac [ordlte_TRANS, ordle_TRANS]) >>
-  metis_tac [is_polyform_CONS_E]);
+  metis_tac [is_polyform_CONS_E]
+QED
 
 val polyform_eval_poly = store_thm(
   "polyform_eval_poly",

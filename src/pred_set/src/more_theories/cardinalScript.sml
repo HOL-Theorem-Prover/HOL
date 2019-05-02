@@ -380,12 +380,13 @@ val SET_SQUARED_CARDEQ_SET = store_thm(
   ``!s. INFINITE s ==> (s CROSS s =~ s)``,
   PRINT_TAC "beginning s CROSS s =~ s proof" >>
   rpt strip_tac >>
-  qabbrev_tac `A = { (As,f) | INFINITE As /\ As SUBSET s /\ BIJ f As (As CROSS As) /\
-                              !x. x NOTIN As ==> (f x = ARB) }` >>
   qabbrev_tac `
-    rr = {((s1:'a set,f1),(s2,f2)) | (s1,f1) IN A /\ (s2,f2) IN A /\ s1 SUBSET s2 /\
-              !x. x IN s1 ==> (f1 x = f2 x)}
-  ` >>
+    A = { (As,f) | INFINITE As /\ As SUBSET s /\ BIJ f As (As CROSS As) /\
+                   !x. x NOTIN As ==> (f x = ARB) }` >>
+  qabbrev_tac `
+    rr = {((s1:'a set,f1),(s2,f2)) | (s1,f1) IN A /\ (s2,f2) IN A /\
+                                     s1 SUBSET s2 /\
+                                     !x. x IN s1 ==> (f1 x = f2 x)} ` >>
   `partial_order rr A`
      by (simp[partial_order_def] >> rpt conj_tac
          >- (simp[domain_def, Abbr`rr`, SUBSET_DEF] >> rw[] >> rw[])
@@ -637,11 +638,11 @@ val SET_SQUARED_CARDEQ_SET = store_thm(
         simp[Abbr`FF`]) >>
   `(M,mf) <> (M UNION E, FF)`
     by (`M <> {}` by metis_tac[FINITE_EMPTY] >>
-        simp[] >> DISJ1_TAC >> simp[EXTENSION] >>
-        fs[DISJOINT_DEF, EXTENSION] >> metis_tac[INJ_DEF]) >>
+        simp[] >> simp[EXTENSION] >>
+        fs[DISJOINT_DEF, EXTENSION] >> metis_tac[]) >>
   qsuff_tac `((M,mf), (M UNION E, FF)) IN rr` >- metis_tac[] >>
   simp[Abbr`rr`] >> conj_tac >- simp[Abbr`A`] >>
-  simp[Abbr`FF`])
+  simp[Abbr`FF`]);
 
 val SET_SUM_CARDEQ_SET = store_thm(
   "SET_SUM_CARDEQ_SET",
@@ -1326,9 +1327,9 @@ val count_cardle = Q.store_thm(
   >- fs[INJ_DEF] >>
   rw[])
 
-val CANTOR = Q.store_thm(
-  "CANTOR[simp]",
-  ‘A <</= POW A’,
+Theorem CANTOR[simp]:
+  A <</= POW A
+Proof
   strip_tac >> fs[cardleq_def, INJ_IFF, IN_POW] >>
   qabbrev_tac ‘CS = {f s | s | s SUBSET A /\ f s NOTIN s}’ >>
   ‘!s. s IN CS <=> ?t. t SUBSET A /\ f t NOTIN t /\ (f t = s)’
@@ -1338,7 +1339,7 @@ val CANTOR = Q.store_thm(
   irule (DECIDE “(p ==> ~p) /\ (~p ==> p) ==> Q”) >>
   qexists_tac ‘f CS IN CS’ >> conj_tac >> strip_tac >>
   qpat_x_assum ‘!s. s IN CS <=> P’ (fn th => REWRITE_TAC [th]) >>
-  csimp[] >> simp[GSYM IMP_DISJ_THM]);
+  csimp[] >> simp[] >> metis_tac[]);
 
 val cardlt_cardle = Q.store_thm(
   "cardlt_cardle",
@@ -2274,16 +2275,14 @@ val EQ_C = store_thm ("EQ_C",
 
 val CARD_LE_REFL = store_thm ("CARD_LE_REFL",
  ``!s:'a->bool. s <=_c s``,
-  GEN_TAC THEN REWRITE_TAC[le_c] THEN EXISTS_TAC ``\x:'a. x`` THEN SIMP_TAC std_ss []);
+  simp[cardleq_REFL]);
 
-val CARD_LE_TRANS = store_thm ("CARD_LE_TRANS",
- ``!s:'a->bool t:'b->bool u:'c->bool.
-       s <=_c t /\ t <=_c u ==> s <=_c u``,
-  REPEAT GEN_TAC THEN REWRITE_TAC[le_c] THEN
-  DISCH_THEN(CONJUNCTS_THEN2
-   (X_CHOOSE_TAC ``f:'a->'b``) (X_CHOOSE_TAC ``g:'b->'c``)) THEN
-  EXISTS_TAC ``(g:'b->'c) o (f:'a->'b)`` THEN REWRITE_TAC[combinTheory.o_THM] THEN
-  ASM_MESON_TAC[]);
+Theorem CARD_LE_TRANS:
+   !s:'a->bool t:'b->bool u:'c->bool.
+       s <=_c t /\ t <=_c u ==> s <=_c u
+Proof
+  metis_tac[cardleq_TRANS]
+QED
 
 val CARD_LT_REFL = store_thm ("CARD_LT_REFL",
  ``!s:'a->bool. ~(s <_c s)``,
@@ -3014,26 +3013,18 @@ val CARD_MUL_LT_INFINITE = store_thm ("CARD_MUL_LT_INFINITE",
 (* Cantor's theorem.                                                         *)
 (* ------------------------------------------------------------------------- *)
 
-val CANTOR_THM = store_thm ("CANTOR_THM",
- ``!s:'a->bool. s <_c {t | t SUBSET s}``,
-  GEN_TAC THEN ONCE_REWRITE_TAC [lt_c] THEN CONJ_TAC THENL
-   [REWRITE_TAC[le_c] THEN EXISTS_TAC ``(=):'a->'a->bool`` THEN
-    SIMP_TAC std_ss [FUN_EQ_THM] THEN
-    SIMP_TAC std_ss [GSPECIFICATION,  SUBSET_DEF, IN_DEF],
-    SIMP_TAC std_ss [LE_C, GSPECIFICATION, SURJECTIVE_RIGHT_INVERSE] THEN
-    X_GEN_TAC ``g:'a->('a->bool)`` THEN
-    EXISTS_TAC ``\x:'a. s(x) /\ ~((g:'a->('a->bool)) x x)`` THEN
-    SIMP_TAC std_ss [SUBSET_DEF, IN_DEF, FUN_EQ_THM] THEN MESON_TAC[]]);
+Theorem CANTOR_THM:
+   !s:'a->bool. s <_c {t | t SUBSET s}
+Proof
+  simp[GSYM POW_DEF]
+QED
 
-val CANTOR_THM_UNIV = store_thm ("CANTOR_THM_UNIV",
- ``(UNIV:'a->bool) <_c (UNIV:('a->bool)->bool)``,
-  MP_TAC(ISPEC ``UNIV:'a->bool`` CANTOR_THM) THEN
-  MATCH_MP_TAC EQ_IMPLIES THEN AP_TERM_TAC THEN
-  SIMP_TAC std_ss [EXTENSION, SUBSET_DEF, IN_UNIV, GSPECIFICATION] THEN
-  SUFF_TAC ``{t | T} = (UNIV:('a->bool)->bool)``
-  THEN1 ( DISCH_TAC THEN ASM_REWRITE_TAC [] ) THEN
-  ONCE_REWRITE_TAC [GSYM EQ_UNIV] THEN
-  RW_TAC std_ss [GSPECIFICATION]);
+Theorem CANTOR_THM_UNIV:
+   (UNIV:'a->bool) <_c (UNIV:('a->bool)->bool)
+Proof
+  ‘univ(:'a -> bool) = POW univ(:'a)’ suffices_by simp[] >>
+  simp[EXTENSION, POW_DEF]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Lemmas about countability.                                                *)
