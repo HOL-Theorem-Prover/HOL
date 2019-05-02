@@ -97,6 +97,21 @@ val isAlphaNum_def = Define `isAlphaNum c = isAlpha c \/ isDigit c`;
 val isPrint_def = Define`
   isPrint c = ^(ordn #" ") <= ORD c /\ ORD c < 127`;
 
+Theorem isAlphaNum_isPrint:
+  !x. isAlphaNum x ==> isPrint x
+Proof EVAL_TAC \\ rw[]
+QED
+
+Theorem isHexDigit_isAlphaNum:
+  !x. isHexDigit x ==> isAlphaNum x
+Proof EVAL_TAC \\ rw[]
+QED
+
+Theorem isHexDigit_isPrint:
+  !x. isHexDigit x ==> isPrint x
+Proof metis_tac[isAlphaNum_isPrint, isHexDigit_isAlphaNum]
+QED
+
 val isSpace_def = Define`
   isSpace c = (ORD c = ^(ordn #" ")) \/ 9 <= ORD c /\ ORD c <= 13`;
 
