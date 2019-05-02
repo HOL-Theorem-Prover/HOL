@@ -21,6 +21,7 @@ open HolKernel Parse boolLib bossLib arithmeticTheory realTheory prim_recTheory
      real_sigmaTheory util_probTheory extrealTheory measureTheory lebesgueTheory;
 
 val _ = new_theory "probability";
+val _ = ParseExtras.temp_loose_equality()
 
 val REVERSE = Tactical.REVERSE;
 
