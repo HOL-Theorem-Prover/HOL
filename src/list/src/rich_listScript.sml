@@ -157,6 +157,11 @@ Proof
   rw[] >> Induct_on `ls` >> rw[SPLITP]
 QED
 
+Theorem SPLITP_NIL_FST_IMP:
+  !ls r. (SPLITP P ls = ([],r)) ==> (r = ls)
+Proof Induct \\ rw[SPLITP]
+QED
+
 val SPLITL_def = TotalDefn.Define `SPLITL P = SPLITP ((~) o P)`;
 
 val SPLITR_def = TotalDefn.Define`

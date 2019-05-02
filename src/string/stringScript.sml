@@ -284,6 +284,40 @@ Proof
   \\ BasicProvers.EVERY_CASE_TAC \\ fs[] \\ rw[]
 QED
 
+Theorem TOKENS_FRONT:
+  ~NULL ls /\ P (LAST ls) ==>
+    (TOKENS P (FRONT ls) = TOKENS P ls)
+Proof
+  Induct_on`ls` \\ rw[]
+  \\ Cases_on`ls` \\ fs[]
+  >- rw[TOKENS_def,SPLITP]
+  \\ rw[TOKENS_def]
+  \\ pairarg_tac
+  \\ simp[Once SPLITP]
+  \\ CASE_TAC \\ fs[NULL_EQ]
+  >- (
+    imp_res_tac SPLITP_NIL_FST_IMP
+    \\ imp_res_tac SPLITP_IMP
+    \\ rfs[] )
+  \\ imp_res_tac SPLITP_JOIN
+  \\ Cases_on`l` \\ fs[] \\ rpt BasicProvers.VAR_EQ_TAC
+  \\ imp_res_tac SPLITP_IMP
+  \\ CASE_TAC \\ fs[]
+  \\ qmatch_goalsub_rename_tac`SPLITP P (x::xs)`
+  \\ `∃y ys. x::xs = SNOC y ys` by metis_tac[SNOC_CASES,list_distinct]
+  \\ full_simp_tac std_ss [FRONT_SNOC,LAST_SNOC] \\ rpt BasicProvers.VAR_EQ_TAC
+  \\ qmatch_goalsub_rename_tac`SPLITP P (SNOC y (w ++ z))`
+  \\ Cases_on`NULL z` \\ fs[NULL_EQ]
+  >- (
+    simp[SPLITP_APPEND]
+    \\ full_simp_tac std_ss [GSYM NOT_EXISTS]
+    \\ simp[SPLITP,TOKENS_def] )
+  \\ Cases_on`z` \\ fs[]
+  \\ simp[SPLITP_APPEND]
+  \\ full_simp_tac std_ss [GSYM NOT_EXISTS]
+  \\ simp[SPLITP,TOKENS_def]
+  \\ simp[TOKENS_APPEND,TOKENS_NIL]
+QED
 
 (*---------------------------------------------------------------------------
     Definability of prim. rec. functions over strings.
