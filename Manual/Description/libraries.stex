@@ -2242,7 +2242,7 @@ For example, sometimes the associativity of list-append can be annoying (here it
 \begin{alltt}
 >>__ proofManagerLib.dropn (case proofManagerLib.status() of
            Manager.PRFS l => List.length l)
->> g `f (x ++ (h::t ++ y)) = f (x ++ h::(t ++ y))`;
+>>_ g `f (x ++ (h::t ++ y)) = f (x ++ h::(t ++ y))`;
 >> e (simp[]);
 \end{alltt}
 \end{session}
@@ -2250,7 +2250,7 @@ For example, sometimes the associativity of list-append can be annoying (here it
 We can prevent the application of this normalising rewrite with the \ml{Excl} form:
 \begin{session}
 \begin{alltt}
->> b();
+>>_ b();
 >> e (simp[Excl "APPEND_ASSOC"]);
 \end{alltt}
 \end{session}
@@ -2878,6 +2878,31 @@ A theorem ``wrapped'' in the \ml{Once} function will only be applied
 once when the simplifier is applied to a given term.  A theorem
 wrapped in \ml{Ntimes} will be applied as many times as given in the
 integer parameter.
+
+\index{simplification!requiring rewrite application}
+Another pair of special forms allow the user to \emph{require} that certain rewrites are applied.
+Both forms check the count of instances of rewrite-redexes appearing in the goal that results after simplification has happened.
+If the requirement is not satisfied, the relevant tactic fails.
+In this context, a rewrite redex is the LHS of a theorem being used as a rewrite, so that, for example, the redex of the theorem $\vdash x + 0 = x$ is $x + 0$.
+\index{Req0 (simplification theorem modifier)@\ml{Req0} (simplification theorem modifier)}
+The \ml{Req0} form checks that the number of redexes of the corresponding rewrite is zero in the resulting goal.
+For unconditional rewrites, such a requirement is usually redundant, but this form can be useful when rewrites are conditional and the simplifier may have failed to discharge side-conditions.
+For example:
+\begin{session}
+\begin{alltt}
+>> val th = arithmeticTheory.ZERO_MOD;
+>>+ simp[Req0 th] ([], ``0 MOD z``);
+
+>> simp[Req0 th] ([], ``0 MOD (z + 1)``)
+    (* succeeds because arithmetic d.p. knows z + 1 is nonzero *);
+\end{alltt}
+\end{session}
+
+\index{ReqD (simplification theorem modifier)@\ml{ReqD} (simplification theorem modifier)}
+The \ml{ReqD} modifier requires that the redex count should have decreased.
+This is implicitly a check on the original goal as well: it must have a non-zero count of redexes itself.
+
+Both \ml{Req0} and \ml{ReqD} can be combined with \ml{Once} and \ml{Ntimes}.
 
 \paragraph{Simplifying at particular sub-terms}
 \index{simplification!at particular sub-terms}

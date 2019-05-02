@@ -23,6 +23,11 @@ sig
   val unCong : thm -> thm
   val Excl   : string -> thm
   val destExcl : thm -> string option
+  val mk_Req0 : thm -> thm
+  val mk_ReqD : thm -> thm
+  val dest_Req0 : thm -> thm option
+  val dest_ReqD : thm -> thm option
+  val mk_require_tac : (thm list -> tactic) -> (thm list -> tactic)
 
   val ABB                 : term -> term -> tactic
   val ABB'                : {redex : term, residue : term} -> tactic

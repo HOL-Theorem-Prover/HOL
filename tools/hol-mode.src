@@ -1116,7 +1116,7 @@ region instead. With prefix ARG prompt for a file-name to load."
            (let ((split-height-threshold nil)
                  (split-width-threshold 1))
              (display-buffer-pop-up-window b al))))
-       '((window-width . 0.40))))
+       '((window-width . 80))))
 
 (defvar hol-new-buffer-style hol-new-buffer-style-default)
 
@@ -1149,7 +1149,8 @@ region instead. With prefix ARG prompt for a file-name to load."
             (end (progn
                    (while (looking-at "[[:space:]]*\n") (next-line))
                    (search-backward "\n\n")
-                   (while (looking-at "[[:space:]]*\n") (next-line)))))
+                   (while (looking-at "[[:space:]]*\n") (next-line))
+                   (point))))
         (push-mark (point-min))
         (activate-mark t)
         (copy-region-as-hol-definition-quietly beg end)))))

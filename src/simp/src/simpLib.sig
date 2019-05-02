@@ -80,6 +80,8 @@ sig
   val Cong        : thm -> thm
   val AC          : thm -> thm -> thm
   val Excl        : string -> thm
+  val Req0        : thm -> thm
+  val ReqD        : thm -> thm
 
   val rewrites       : thm list -> ssfrag
   val rewrites_with_names : (string * thm) list -> ssfrag
