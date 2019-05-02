@@ -109,7 +109,7 @@ evaluations.")
 (defvar-local hol-term-end-delim nil)
 (put 'hol-term 'end-op
      (function (lambda ()
-                 (re-search-forward "[`’]\\|^Proof" nil t)
+                 (re-search-forward "[`’”]\\|^Proof" nil t)
                  (setq hol-term-end-delim (match-string 0))
                  (goto-char (match-beginning 0)))))
 (defvar hol-beg-pos nil) ; ugh, global, but easiest this way
@@ -122,6 +122,7 @@ evaluations.")
                (cond
                 ((equal hol-term-end-delim "`") "`")
                 ((equal hol-term-end-delim "’") "‘")
+                ((equal hol-term-end-delim "”") "“")
                 ((equal hol-term-end-delim "Proof")
                  hol-quoted-theorem-proof-re-begin))))
           (re-search-backward beg nil t)
