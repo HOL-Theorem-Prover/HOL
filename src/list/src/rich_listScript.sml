@@ -132,6 +132,23 @@ Proof
   Cases_on`SPLITP P ls` >> fs[]
 QED
 
+Theorem SPLITP_LENGTH:
+  !l. LENGTH (FST (SPLITP P l)) + LENGTH (SND (SPLITP P l))
+      = LENGTH l
+Proof Induct \\ rw[SPLITP, LENGTH]
+QED
+
+Theorem SPLITP_APPEND:
+  !l1 l2.
+    SPLITP P (l1 ++ l2) =
+     if EXISTS P l1 then
+       (FST (SPLITP P l1), SND (SPLITP P l1) ++ l2)
+     else
+       (l1 ++ FST(SPLITP P l2), SND (SPLITP P l2))
+Proof
+  Induct \\ rw[SPLITP] \\ fs[]
+QED
+
 Theorem SPLITP_NIL_SND_EVERY:
   !ls r. (SPLITP P ls = (r, [])) <=> (r = ls) /\ (EVERY ($~ o P) ls)
 Proof

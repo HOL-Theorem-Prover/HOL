@@ -258,23 +258,6 @@ val IMPLODE_11 = stac("IMPLODE_11", ``(IMPLODE cs1 = IMPLODE cs2) = (cs1 = cs2)`
 val _ = export_rewrites ["EXPLODE_11", "IMPLODE_11", "IMPLODE_EXPLODE",
                          "EXPLODE_IMPLODE"]
 
-Theorem SPLITP_APPEND:
-  !l1 l2.
-    SPLITP P (l1 ++ l2) =
-     if EXISTS P l1 then
-       (FST (SPLITP P l1), SND (SPLITP P l1) ++ l2)
-     else
-       (l1 ++ FST(SPLITP P l2), SND (SPLITP P l2))
-Proof
-  Induct \\ rw[SPLITP] \\ fs[]
-QED
-
-Theorem SPLITP_LENGTH:
-  !l. LENGTH (FST (SPLITP P l)) + LENGTH (SND (SPLITP P l))
-      = LENGTH l
-Proof Induct \\ rw[SPLITP, LENGTH]
-QED
-
 Theorem TOKENS_APPEND:
   !P l1 x l2.
     P x ==>
