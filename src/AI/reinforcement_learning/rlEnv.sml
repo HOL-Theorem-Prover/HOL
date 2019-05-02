@@ -403,7 +403,7 @@ end (* struct *)
 load "rlEnv"; load "rlGameCopy";
 open smlParallel rlEnv;
 
-logfile_glob := "april32";
+logfile_glob := "may1_dim6";
 parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^ (!logfile_glob);
 
 ncore_mcts_glob := 2;
@@ -413,7 +413,7 @@ ntarget_compete := 100;
 ntarget_explore := 100;
 exwindow_glob := 40000;
 uniqex_flag := false;
-dim_glob := 8;
+dim_glob := 6;
 batchsize_glob := 16;
 nepoch_glob := 20;
 lr_glob := 0.1;
@@ -433,3 +433,5 @@ explore_test rlGameCopy.gamespec dhtnn target;
 
 (* evaluate missmatch between PriorPoliicy and DerivedPolicy to see
    if there is still something to learn. *)
+
+*)

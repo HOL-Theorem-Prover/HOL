@@ -14,29 +14,6 @@ val ERR = mk_HOL_ERR "mlTreeNeuralNetwork"
 val debugdir = HOLDIR ^ "/src/AI/machine_learning/debug"
 fun debug s = debug_in_dir debugdir "mlTreeNeuralNetwork" s
 
-
-(* -------------------------------------------------------------------------
-   External parallelism
-   ------------------------------------------------------------------------- *)
-
-val ml_gencode_dir = ref (HOLDIR ^ "/src/AI/machine_learning/gencode")
-fun gencode_dir () = !ml_gencode_dir
-
-fun dhtnn_file () = gencode_dir () ^ "/dhtnn"
-fun exl_file () = gencode_dir () ^ "/exl"
-fun widin_file wid = gencode_dir () ^ "/" ^ its wid ^ "/in"
-fun widout_file wid = gencode_dir () ^ "/" ^ its wid ^ "/out"
-fun widscript_file wid = 
-  gencode_dir () ^ "/" ^ its wid ^ "/script" ^ its wid ^ ".sml"
-fun widbatchl_file wid = gencode_dir () ^ "/" ^ its wid ^ "/batchl"
-fun widdwl_file wid = gencode_dir () ^ "/" ^ its wid ^ "/dwl"
-
-fun writel_atomic file sl =
-  (writel (file ^ "_temp") sl; 
-   OS.FileSys.rename {old = file ^ "_temp", new=file})
-fun readl_rm file =
-  let val sl = readl file in OS.FileSys.remove file; sl end
-
 (* -------------------------------------------------------------------------
    Type
    ------------------------------------------------------------------------- *)
@@ -152,7 +129,7 @@ fun write_dhtnn file dhtnn =
     mlTacticData.export_terml file_operl operl
   end
 
-fun write_operl file dhtnn =
+fun write_operl file (dhtnn: dhtnn) =
   let
     val file_operl = file ^ "_operl"
     val operl = mk_sameorder_set Term.compare (map fst (dkeys (#opdict dhtnn)))
@@ -436,268 +413,6 @@ fun train_dhtnn_one dhtnn (tml,expecteval,expectpoli) =
   end
 
 (* -------------------------------------------------------------------------
-   Train tnn on a part of the mini-batch
-   ------------------------------------------------------------------------- *)
-
-fun string_of_namedwl (name,dwl) = 
-  name ^ "\n" ^ string_of_wl dwl ^ "\nend_dwl"
-
-fun worker_train_dhtnn wid dhtnn batch =
-  let
-    val (bpdictl,bpdatall1,bpdatall2) = 
-      split_triple (map (train_dhtnn_one dhtnn) batch)
-    val dwleval = ("eval", sum_dwll (map (map #dw) bpdatall1))
-    val dwlpoli = ("poli", sum_dwll (map (map #dw) bpdatall2))
-    val operndict = dnew (cpl_compare Term.compare Int.compare) 
-      (number_snd 0 (dkeys (#opdict dhtnn)))
-    val bpdict = dconcat oper_compare bpdictl 
-    fun f (oper,dwll) = 
-      (its (dfind oper operndict), sum_dwll dwll)
-    val l = map f (dlist bpdict)
-  in
-    writel (widdwl_file wid) 
-      (map string_of_namedwl (dwleval :: dwlpoli :: l));
-    writel_atomic (widout_file wid) ["done"]
-  end
-
-fun read_namedwl dhtnn wid = 
-  let 
-    val noperdict = dnew Int.compare (number_fst 0 (dkeys (#opdict dhtnn))) 
-    val (sleval,cont1) = split_sl "end_dwl" (Profile.profile "read_raw" 
-      readl (widdwl_file wid))
-    val (slpoli,cont2) = split_sl "end_dwl" cont1
-    val sll = rpt_split_sl "end_dwl" cont2 
-    val dwleval = read_wl_sl (tl sleval)
-    val dwlpoli = read_wl_sl (tl slpoli)
-    fun f opersl = 
-      let 
-        val oper = dfind (string_to_int (hd opersl)) noperdict  
-        val dwl  = read_wl_sl (tl opersl)
-      in
-        (oper,dwl)
-      end
-  in
-    (dwleval, dwlpoli, map f sll) 
-  end
-  
-
-(* -------------------------------------------------------------------------
-   Estimation of the computational cost of a training example
-   ------------------------------------------------------------------------- *)
-
-(*
-(* todo precompute the cost *)
-fun nntm_cost tm = 
-  let val (oper,argl) = strip_comb tm in
-    if null argl then 0 else 1 + length argl + sum_int (map nntm_cost argl) 
-  end
-
-fun cmp_snd cmp (a,b) = cmp (snd a, snd b)
-
-fun push_ex ncore (ex as (tml,_,_),batchl) =
-  let 
-    val batchl1 = dict_sort (cmp_snd Int.compare) batchl
-    val (exl,oldcost) = hd batchl1
-    val newcost = 4 + nntm_cost (last tml) + oldcost
-  in
-    (ex :: exl, newcost) :: (tl batchl1)    
-  end
-
-fun distrib_exl ncore exl =
-  let val batchl = List.tabulate (ncore,fn _ => ([],0)) in  
-    shuffle (map fst (foldl (push_ex ncore) batchl exl))
-  end
-
-   load "aiLib"; load "rlEnv"; open aiLib; open rlEnv;
-   open mlTreeNeuralNetwork;
-   val dhtnn = random_dhtnn_gamespec rlGameArithGround.gamespec;
-   val operl = map fst (dkeys (#opdict dhtnn));
-
-   val size = 15;
-   val nex = 128;
-   val epex = List.tabulate (nex, fn _ => random_example operl 15);
-   val eptrain = prepare_dhtrainset epex;
-
-   val (batchl,t) = add_time (distrib_exl 16) eptrain;
-   map (mapran batchl;
-*)
-
-(* -------------------------------------------------------------------------
-   Train tnn on one batch with external parallelism
-   ------------------------------------------------------------------------- *)
-
-val operl_test = [(``$+``,2),(``SUC``,1),(``0``,0)]
-
-fun worker_listen wid operl (traind,batchl) = 
-  if exists_file (widin_file wid) 
-  then case hd (readl_rm (widin_file wid)) of
-      "stop" => ()
-    | "batch" => 
-      let 
-        val dhtnn = read_dhtnn_nooper operl (dhtnn_file ())
-        val batch = map (fn x => dfind x traind) (hd batchl) 
-      in
-        worker_train_dhtnn wid dhtnn batch;
-        worker_listen wid operl (traind, tl batchl) 
-      end
-    | _ => raise ERR "worker_listen" ""
-  else worker_listen wid operl (traind,batchl)
-
-fun read_batchl file = 
-  let fun f s = map string_to_int (String.tokens Char.isSpace s) in
-    map f (readl file)
-  end
-
-fun write_batchl file batchl =
-  let fun f batch = String.concatWith " " (map its batch) in
-    writel file (map f batchl)
-  end
-
-fun mk_batchl (nepoch,bsize) nex = 
-  let val l = List.tabulate (nex,I) in
-    List.concat (List.tabulate (nepoch, fn _ => mk_batch bsize (shuffle l)))
-  end
-
-fun tnn_worker_start wid =
-  let 
-    val operl = read_operl (dhtnn_file ())
-    val exl = read_dhex (exl_file ())
-    val extrain = prepare_dhtrainset exl
-    val traind = dnew Int.compare (number_fst 0 extrain)
-    val batchl = read_batchl (widbatchl_file wid)
-  in
-    writel_atomic (widout_file wid) ["up"];
-    worker_listen wid operl (traind,batchl)
-  end
-
-(* Boss *)
-fun boss_stop_workers threadl =
-  let 
-    val ncore = length threadl 
-    fun send_stop wid = writel_atomic (widin_file wid) ["stop"] 
-    fun loop threadl =
-      (
-      OS.Process.sleep (Time.fromReal (0.001));
-      if exists Thread.isActive threadl then loop threadl else ()
-      )
-  in
-    app send_stop (List.tabulate (ncore,I));
-    print_endline ("stop " ^ its ncore ^ " workers");
-    loop threadl;
-    print_endline ("  " ^ its ncore ^ " workers stopped")
-  end
-
-fun bts b = if b then "true" else "false"
-fun flags_to_string (b1,b2) = "(" ^ bts b1 ^ "," ^  bts b2 ^ ")"
-
-fun boss_start_worker wid =
-  let
-    val codel =
-    [
-     "open mlTreeNeuralNetwork;",
-     "val _ = ml_gencode_dir := " ^ quote (!ml_gencode_dir) ^ ";",
-     "val _ = tnn_worker_start " ^ its wid ^ ";"
-    ]  
-  in
-    writel (widscript_file wid) codel; 
-    smlOpen.run_buildheap false (widscript_file wid);
-    remove_file (widscript_file wid)
-  end
-
-val attrib = [Thread.InterruptState Thread.InterruptAsynch, Thread.EnableBroadcastInterrupt true]
-
-fun boss_wait_upl widl =
-  let 
-    fun rm_out wid = remove_file (widout_file wid) 
-    fun is_up wid = hd (readl (widout_file wid)) = "up" handle Io _ => false 
-  in
-    if all is_up widl then app rm_out widl else boss_wait_upl widl
-  end
-
-fun update_head_dwl headnn dwl = update_nn headnn dwl
-
-fun update_opernn_dwl opdict (oper,dwl) =
-  let
-    val nn    = dfind oper opdict
-    val newnn = update_nn nn dwl
-  in
-    (oper,newnn)
-  end
-
-fun update_opdict_dwl opdict dwloperl =
-  let val opernnl = map (update_opernn_dwl opdict) dwloperl in
-    daddl opernnl opdict
-  end
-
-fun update_dhtnn_dwl dhtnn (dwleval,dwlpoli,dwloperl) =
-  let 
-    val {opdict, headeval, headpoli, dimin, dimout} = dhtnn 
-    val newopdict = update_opdict_dwl opdict dwloperl
-    val newheadeval = update_nn headeval dwleval
-    val newheadpoli = update_nn headpoli dwlpoli
-  in
-    {opdict = newopdict, headeval = newheadeval, headpoli = newheadpoli,
-     dimin = dimin, dimout = dimout}
-  end
-
-fun boss_read_update widl dhtnn =
-  let 
-    val (dwlleval,dwllpoli,dwlloperl) = 
-      split_triple (Profile.profile "read" (map (read_namedwl dhtnn)) widl) 
-    val operdwll_list = dlist (dregroup 
-       (cpl_compare Term.compare Int.compare) (List.concat dwlloperl))
-    val (dwleval,dwlpoli,dwloperl) =
-      let fun f () =
-        (sum_dwll dwlleval, sum_dwll dwllpoli, map_snd sum_dwll operdwll_list)
-      in
-        Profile.profile "sum" f ()
-      end
-    val dhtnn_new = Profile.profile "update"
-      (update_dhtnn_dwl dhtnn) (dwleval,dwlpoli,dwloperl)
-  in
-    app (remove_file o widout_file) widl;
-    dhtnn_new
-  end
-
-
-fun boss_collect_dwl widl dhtnn =
-  if all (exists_file o widout_file) widl 
-  then Profile.profile "read_sum_update" (boss_read_update widl) dhtnn
-  else boss_collect_dwl widl dhtnn
-
-fun boss_process_onebatch widl dhtnn =
-  let fun send_batch wid = writel_atomic (widin_file wid) ["batch"] 
-  in
-    Profile.profile "write_dhtnn" (write_dhtnn_nooper (dhtnn_file ())) dhtnn;
-    Profile.profile "write_batch"  (app send_batch) widl;
-    Profile.profile "boss_collect" (boss_collect_dwl widl) dhtnn
-  end
-
-fun boss_process_nbatch widl nbatch dhtnn =
-  if nbatch <= 0 then dhtnn else 
-  let val dhtnn_new = boss_process_onebatch widl dhtnn in
-    if nbatch mod 10 = 0 then print_endline (its nbatch) else ();
-    boss_process_nbatch widl (nbatch - 1) dhtnn_new
-  end
-
-(*
-load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
-load "psTermGen"; open psTermGen;
-
-val operl_test = [(``$+``,2),(``SUC``,1),(``0``,0)];
-val exl1 = 
-  [(random_term (map fst operl_test) (15,``:num``),[0.0],[0.0])] @
-  [(random_term (map fst operl_test) (15,``:num``),[0.0],[0.0])];
-
-val exl2 = 
-  [(random_term (map fst operl_test) (15,``:num``),[0.0],[0.0])] @
-  [(random_term (map fst operl_test) (15,``:num``),[0.0],[0.0])];
-
-
-val dhtnnl = tnn_boss_start 2 [exl1,exl2];
-*)
-
-(* -------------------------------------------------------------------------
    Train tnn on one batch
    ------------------------------------------------------------------------- *)
 
@@ -782,8 +497,6 @@ fun train_tnn_schedule (ncore,bsize) tnn (ptrain,ptest) schedule =
    Training a double-headed tnn
    ------------------------------------------------------------------------- *)
 
-val parext_flag = ref false
-
 fun train_dhtnn_batch ncore dhtnn batch =
   let
     val {opdict, headeval, headpoli, dimin, dimout} = dhtnn
@@ -839,60 +552,12 @@ fun train_dhtnn_schedule_aux ncore dhtnn bsize eptrain schedule =
       train_dhtnn_schedule_aux ncore newdhtnn bsize eptrain m
     end
 
-val timer0 = ref 0.0
-val timer1 = ref 0.0
-fun reset_timers () = (timer0 := 0.0; timer1 := 0.0)
-fun timer i = if i = 0 then timer0 else timer1
-fun print_timers () = 
-  print_endline (String.concatWith " " (map (rts o !) [timer0,timer1])); 
-
-fun start_parext ncore (nepoch,bsize) dhtnn epex = 
-  let
-    val nex = length epex
-    val _ = mkDir_err (gencode_dir ())
-    fun mk_local_dir wid = mkDir_err ((gencode_dir ()) ^ "/" ^ its wid) 
-    val _ = app mk_local_dir (List.tabulate (ncore,I))
-    fun rm wid = (remove_file (widin_file wid); remove_file (widout_file wid))
-    val _ = app rm (List.tabulate (ncore,I))
-    val _ = print_endline ("start " ^ its ncore ^ " workers")
-    val widl = List.tabulate (ncore,I)
-    val _ = write_dhex (exl_file ()) epex
-    val _ = write_operl (dhtnn_file ()) dhtnn
-    val batchl = mk_batchl (nepoch,bsize) nex
-    fun write_widbatchl wid = 
-      let 
-        fun g batch = List.nth (cut_n ncore batch, wid)
-        val widbatchl = map g batchl
-      in
-        write_batchl (widbatchl_file wid) widbatchl
-      end
-    val _ = reset_timers
-    val _ = app write_widbatchl widl
-    fun fork wid = Thread.fork (fn () =>
-      total_time (timer wid) boss_start_worker wid, attrib)
-    val threadl = map fork widl
-  in
-    boss_wait_upl widl;
-    print_endline ("  " ^ its ncore ^ " workers started");
-    (fn () => boss_stop_workers threadl, length batchl)
-  end
-
 fun train_dhtnn_schedule ncore dhtnn bsize epex schedule =
   let
     val eptrain = prepare_dhtrainset epex
-    val nepoch = sum_int (map fst schedule)   
-    val widl = List.tabulate (ncore,I)
-    val (stop_workers,nbatch) = 
-      if !parext_flag 
-      then start_parext ncore (nepoch,bsize) dhtnn epex
-      else (fn () => (), 0)
-    val dhtnn_new = 
-      if !parext_flag 
-      then Profile.profile "train" (boss_process_nbatch widl nbatch) dhtnn
-      else Profile.profile "train"
-        (train_dhtnn_schedule_aux ncore dhtnn bsize eptrain) schedule
+    val dhtnn_new = train_dhtnn_schedule_aux ncore dhtnn bsize eptrain schedule
   in
-    stop_workers (); dhtnn_new
+    dhtnn_new
   end
 
 (* -------------------------------------------------------------------------
