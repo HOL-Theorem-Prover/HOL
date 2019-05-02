@@ -8,6 +8,7 @@ open pairTheory pred_setTheory prim_recTheory numTheory arithmeticTheory
 open numLib realLib Ho_Rewrite
 
 val () = new_theory "float"
+val _ = ParseExtras.temp_loose_equality()
 
 (* Compute some constant values *)
 
