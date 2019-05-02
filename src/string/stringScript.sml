@@ -207,6 +207,8 @@ val TOKENS_def = tDefine "TOKENS"
     THEN SRW_TAC [] [NULL_EQ_NIL, SPLITP]
     THEN METIS_TAC [SPLITP_MONO, DECIDE ``a <= b ==> a < SUC b``]);
 
+val TOKENS_ind = theorem"TOKENS_ind";
+
 val FIELDS_def = tDefine "FIELDS"
   `(FIELDS P ([]:string) = [[]]) /\
    (FIELDS P (h::t) =
@@ -255,6 +257,50 @@ val IMPLODE_11 = stac("IMPLODE_11", ``(IMPLODE cs1 = IMPLODE cs2) = (cs1 = cs2)`
 
 val _ = export_rewrites ["EXPLODE_11", "IMPLODE_11", "IMPLODE_EXPLODE",
                          "EXPLODE_IMPLODE"]
+
+Theorem SPLITP_APPEND:
+  !l1 l2.
+    SPLITP P (l1 ++ l2) =
+     if EXISTS P l1 then
+       (FST (SPLITP P l1), SND (SPLITP P l1) ++ l2)
+     else
+       (l1 ++ FST(SPLITP P l2), SND (SPLITP P l2))
+Proof
+  Induct \\ rw[SPLITP] \\ fs[]
+QED
+
+Theorem SPLITP_LENGTH:
+  !l. LENGTH (FST (SPLITP P l)) + LENGTH (SND (SPLITP P l))
+      = LENGTH l
+Proof Induct \\ rw[SPLITP, LENGTH]
+QED
+
+Theorem TOKENS_APPEND:
+  !P l1 x l2.
+    P x ==>
+      (TOKENS P (l1 ++ x::l2) = TOKENS P l1 ++ TOKENS P l2)
+Proof
+  ho_match_mp_tac TOKENS_ind
+  \\ rw[TOKENS_def] >- (fs[SPLITP])
+  \\ pairarg_tac  \\ fs[]
+  \\ pairarg_tac  \\ fs[]
+  \\ fs[NULL_EQ, SPLITP]
+  \\ Cases_on `P h` \\ full_simp_tac bool_ss []
+  \\ rw[]
+  \\ fs[TL]
+  \\ Cases_on `EXISTS P t` \\ rw[SPLITP_APPEND, SPLITP]
+  \\ fs[NOT_EXISTS] \\ imp_res_tac (GSYM SPLITP_NIL_SND_EVERY) \\ rw[]
+  \\ fs[NOT_EXISTS] \\ imp_res_tac (GSYM SPLITP_NIL_SND_EVERY) \\ rw[]
+QED
+
+Theorem TOKENS_NIL:
+  !ls. (TOKENS f ls = []) <=> EVERY f ls
+Proof
+  Induct \\ rw[TOKENS_def]  \\ pairarg_tac
+  \\ fs[NULL_EQ, SPLITP]
+  \\ BasicProvers.EVERY_CASE_TAC \\ fs[] \\ rw[]
+QED
+
 
 (*---------------------------------------------------------------------------
     Definability of prim. rec. functions over strings.
