@@ -245,4 +245,34 @@ val num_hex_string = Q.store_thm("num_hex_string",
 
 (* ------------------------------------------------------------------------- *)
 
+fun nil_tac n =
+  rw[num_to_bin_string_def,
+     num_to_oct_string_def,
+     num_to_dec_string_def,
+     num_to_hex_string_def]
+  \\ rw[n2s_def]
+  \\ qspecl_then[n,`n`]mp_tac LENGTH_n2l
+  \\ rw[] \\ CCONTR_TAC \\ fs[];
+
+Theorem num_to_bin_string_nil[simp]:
+  ¬(num_to_bin_string n = [])
+Proof nil_tac `2`
+QED
+
+Theorem num_to_oct_string_nil[simp]:
+  ¬(num_to_oct_string n = [])
+Proof nil_tac `8`
+QED
+
+Theorem num_to_dec_string_nil[simp]:
+  ¬(num_to_dec_string n = [])
+Proof nil_tac `10`
+QED
+
+Theorem num_to_hex_string_nil[simp]:
+  ¬(num_to_hex_string n = [])
+Proof nil_tac `16`
+QED
+
+
 val _ = export_theory ();
