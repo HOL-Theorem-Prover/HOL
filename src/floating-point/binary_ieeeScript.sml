@@ -7,6 +7,8 @@ open intrealTheory realLib wordsLib
 
 val () = new_theory "binary_ieee"
 
+val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
+
 local
    open String
    val mesg_to_string = !Feedback.MESG_to_string
