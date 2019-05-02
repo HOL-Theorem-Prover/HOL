@@ -17,6 +17,8 @@ val () = new_theory "Decode";
 
 val Suff = Q_TAC SUFF_TAC;
 val Know = Q_TAC KNOW_TAC;
+val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
+val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
 
 val REVERSE = Tactical.REVERSE;
 
