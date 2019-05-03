@@ -1,4 +1,4 @@
-open HolKernel boolLib bossLib Parse finite_mapTheory listTheory pred_setTheory sortingTheory
+open HolKernel boolLib bossLib Parse finite_mapTheory listTheory rich_listTheory pred_setTheory sortingTheory
 open pairTheory boolSimps relationTheory
 
 val _ = new_theory "alist";
@@ -701,6 +701,54 @@ Proof
   Cases_on`h`>> fs[ALIST_FUPDKEY_def] >>
   CASE_TAC >> fs[ALIST_FUPDKEY_def] >>
   CASE_TAC >> fs[ALIST_FUPDKEY_def]
+QED
+
+val ALIST_DELKEY_def = Define`
+  ALIST_DELKEY k alist = FILTER (\p. FST p <> k) alist
+`;
+
+Theorem MEM_ALIST_DELKEY[simp]:
+  !al. MEM (k1,v) (ALIST_DELKEY k2 al) <=> k1 <> k2 /\ MEM (k1,v) al
+Proof
+  Induct >> simp[ALIST_DELKEY_def, FORALL_PROD] >>
+  rw[MEM_FILTER] >> metis_tac[]
+QED
+
+Theorem ALOOKUP_ALIST_DELKEY:
+  !al. ALOOKUP (ALIST_DELKEY k1 al) k2
+       = if k1 = k2 then NONE else ALOOKUP al k2
+Proof
+  simp[ALIST_DELKEY_def] >> Induct >>
+  simp[FORALL_PROD] >> rw[] >> simp[]
+QED
+
+Theorem ALIST_DELKEY_ALIST_FUPDKEY_same[simp]:
+  !fd f ls. ALIST_DELKEY fd (ALIST_FUPDKEY fd f ls) = ALIST_DELKEY fd ls
+Proof
+  ho_match_mp_tac ALIST_FUPDKEY_ind
+  \\ rw[ALIST_FUPDKEY_def,ALIST_DELKEY_def]
+QED
+
+Theorem ALIST_DELKEY_unchanged:
+  !x ls. ((ALIST_DELKEY x ls = ls) <=> ~MEM x (MAP FST ls))
+Proof
+  Induct_on`ls`
+  \\ rw[ALIST_DELKEY_def,FILTER_EQ_ID,MEM_MAP,EVERY_MEM]
+  >- metis_tac[]
+  \\ rw[EQ_IMP_THM]
+  >- (
+    `LENGTH (h::ls) <= LENGTH ls` by metis_tac[LENGTH_FILTER_LEQ]
+    \\ fs[] )
+  \\ first_x_assum(qspec_then`h`mp_tac)
+  \\ simp[]
+QED
+
+Theorem ALIST_DELKEY_ALIST_FUPDKEY:
+  !ls f x y. x <> y ==>
+    (ALIST_DELKEY x (ALIST_FUPDKEY y f ls) = (ALIST_FUPDKEY y f (ALIST_DELKEY x ls)))
+Proof
+  Induct >>  rw[ALIST_DELKEY_def,ALIST_FUPDKEY_def] >>
+  Cases_on`h` >> fs[ALIST_FUPDKEY_def] >> TRY CASE_TAC >> fs[ALIST_DELKEY_def]
 QED
 
 val _ = export_theory ();
