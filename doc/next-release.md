@@ -181,6 +181,12 @@ Incompatibilities:
 
            val _ = ParseExtras.temp_loose_equality()
 
+    To fix a whole family of theories that inherit from a few ancestors, add
+
+           val _ = ParseExtras.loose_equality()
+
+    to the ancestral script files, and then the reversion to the old style of grammar will be inherited by all subsequent theories as well.
+
 *   By default, goals are now printed with the trace variable `"Goalstack.print_goal_at_top"` set to false.
     This means goals now print like
 
