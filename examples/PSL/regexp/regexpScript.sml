@@ -14,6 +14,8 @@ open bossLib metisLib pairTheory combinTheory listTheory rich_listTheory
 
 val () = new_theory "regexp";
 
+
+val list_ss = list_ss -* ["lift_disj_eq", "lift_imp_disj"]
 (*---------------------------------------------------------------------------*)
 (* Symbolic tacticals.                                                       *)
 (*---------------------------------------------------------------------------*)
