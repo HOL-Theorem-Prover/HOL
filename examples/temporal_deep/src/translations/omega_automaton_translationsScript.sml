@@ -37,6 +37,7 @@ quietdec := false;
 
 
 val _ = new_theory "omega_automaton_translations";
+val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
 
 
 

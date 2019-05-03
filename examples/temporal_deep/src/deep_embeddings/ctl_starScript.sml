@@ -33,6 +33,7 @@ quietdec := false;
 *)
 
 val _ = new_theory "ctl_star";
+val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
 
 
 val ctl_star_def =

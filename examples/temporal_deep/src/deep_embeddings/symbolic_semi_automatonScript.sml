@@ -31,6 +31,7 @@ quietdec := false;
 
 
 val _ = new_theory "symbolic_semi_automaton";
+val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
 
 
 (*****************************************************************************)

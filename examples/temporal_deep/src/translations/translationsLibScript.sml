@@ -54,6 +54,8 @@ quietdec := false;
   the proofs would be redone every time, the library is used.*)
 
 val _ = new_theory "translationsLib";
+val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
+val list_ss = list_ss -* ["lift_disj_eq", "lift_imp_disj"]
 
 
 

@@ -34,6 +34,7 @@ quietdec := false;
 
 
 val _ = new_theory "ltl_to_automaton_formula";
+val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
 
 (****************************************************************
  * A datastructure for the translation. For the idea behind this
