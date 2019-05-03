@@ -71,6 +71,8 @@ val resq_SS =
 * Start a new theory called Properties
 ******************************************************************************)
 val _ = new_theory "Properties";
+val _ = ParseExtras.temp_loose_equality()
+
 
 (******************************************************************************
 * Set default path theory to FinitePSLPathTheory
@@ -1564,10 +1566,3 @@ val S_REPEAT_IDEMPOTENT =
 
 
 val _ = export_theory();
-
-
-
-
-
-
-

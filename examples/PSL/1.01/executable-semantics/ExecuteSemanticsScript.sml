@@ -83,6 +83,7 @@ val pureDefine = with_flag (computeLib.auto_import_definitions, false) Define;
 * Start a new theory called "ExecuteSemantics"
 ******************************************************************************)
 val _ = new_theory "ExecuteSemantics";
+val _ = ParseExtras.temp_loose_equality()
 
 (*
 (******************************************************************************

@@ -65,6 +65,7 @@ val _ = intLib.deprecate_int();
 * Start a new theory called Project
 ******************************************************************************)
 val _ = new_theory "Projection";
+val _ = ParseExtras.temp_loose_equality()
 
 (******************************************************************************
 * A simpset fragment to rewrite away quantifiers restricted with :: (a to b)
@@ -3521,4 +3522,3 @@ val F_PROJ_FINITE =
 *)
 
 val _ = export_theory();
-
