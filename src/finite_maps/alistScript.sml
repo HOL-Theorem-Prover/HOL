@@ -628,7 +628,7 @@ Proof
 QED
 
 val AFUPDKEY_def = Define`
-  (AFUPDKEY k f [] = []) ∧
+  (AFUPDKEY k f [] = []) /\
   (AFUPDKEY k f ((k',v)::rest) =
      if k = k' then (k,f v)::rest
      else (k',v) :: AFUPDKEY k f rest)
