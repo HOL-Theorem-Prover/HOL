@@ -46,6 +46,7 @@ val op by = BasicProvers.byA
 (*****************************************************************************)
 
 val _ = new_theory "compose";
+val _ = ParseExtras.temp_loose_equality()
 
 (*****************************************************************************)
 (* Definitions                                                               *)
