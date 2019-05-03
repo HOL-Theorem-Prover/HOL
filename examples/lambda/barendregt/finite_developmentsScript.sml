@@ -1009,7 +1009,7 @@ val LAMI_partly_11 = prove(
   ``!x y z w a b. (LAMi x y z w = LAMi x y a b) <=> (z = a) /\ (w = b)``,
   SRW_TAC [][lLAMi_eq_thm])
 
-
+val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
 val stripped_equal = store_thm(
   "stripped_equal",
   ``!M' N'. (strip_label M' = strip_label N') /\ ~(M' = N') ==>

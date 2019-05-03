@@ -25,6 +25,8 @@ open head_reductionTheory
 local open containerTheory in end
 
 val _ = new_theory "standardisation"
+val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
+
 
 structure NewQ = Q
 structure Q = struct open Q open OldAbbrevTactics end
