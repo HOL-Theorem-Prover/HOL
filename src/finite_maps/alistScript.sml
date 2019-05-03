@@ -627,4 +627,80 @@ Proof
   \\ metis_tac[ALOOKUP_MEM]
 QED
 
+val ALIST_FUPDKEY_def = Define`
+  (ALIST_FUPDKEY k f [] = []) ∧
+  (ALIST_FUPDKEY k f ((k',v)::rest) =
+     if k = k' then (k,f v)::rest
+     else (k',v) :: ALIST_FUPDKEY k f rest)
+`;
+
+val ALIST_FUPDKEY_ind = theorem"ALIST_FUPDKEY_ind";
+
+Theorem ALIST_FUPDKEY_ALOOKUP:
+  ALOOKUP (ALIST_FUPDKEY k2 f al) k1 =
+    case ALOOKUP al k1 of
+        NONE => NONE
+      | SOME v => if k1 = k2 then SOME (f v) else SOME v
+Proof
+  Induct_on `al` >> simp[ALIST_FUPDKEY_def, FORALL_PROD] >> rw[]
+  >- (Cases_on `ALOOKUP al k1` >> simp[]) >>
+  simp[]
+QED
+
+Theorem MAP_FST_ALIST_FUPDKEY[simp]:
+  MAP FST (ALIST_FUPDKEY f k alist) = MAP FST alist
+Proof
+  Induct_on `alist` >> simp[ALIST_FUPDKEY_def, FORALL_PROD] >> rw[]
+QED
+
+Theorem ALIST_FUPDKEY_unchanged:
+  !k f alist.
+   (!v. (ALOOKUP alist k = SOME v) ==> (f v = v))
+   ==> (ALIST_FUPDKEY k f alist = alist)
+Proof
+  ho_match_mp_tac ALIST_FUPDKEY_ind
+  \\ rw[ALIST_FUPDKEY_def]
+QED
+
+Theorem ALIST_FUPDKEY_o:
+  ALIST_FUPDKEY k f1 (ALIST_FUPDKEY k f2 al) = ALIST_FUPDKEY k (f1 o f2) al
+Proof
+  Induct_on `al` >> simp[ALIST_FUPDKEY_def, FORALL_PROD] >>
+  rw[ALIST_FUPDKEY_def]
+QED
+
+Theorem ALIST_FUPDKEY_eq:
+  !k f1 l f2.
+   (!v. (ALOOKUP l k = SOME v) ==> (f1 v = f2 v))
+   ==> (ALIST_FUPDKEY k f1 l = ALIST_FUPDKEY k f2 l)
+Proof
+  ho_match_mp_tac ALIST_FUPDKEY_ind \\ rw[ALIST_FUPDKEY_def]
+QED
+
+Theorem ALIST_FUPDKEY_I:
+  ALIST_FUPDKEY n I = I
+Proof
+  simp[FUN_EQ_THM]
+  \\ Induct
+  \\ simp[ALIST_FUPDKEY_def,FORALL_PROD]
+QED
+
+Theorem LENGTH_ALIST_FUPDKEY[simp]:
+  !ls. LENGTH (ALIST_FUPDKEY k f ls) = LENGTH ls
+Proof
+  Induct \\ simp[ALIST_FUPDKEY_def]
+  \\ Cases \\ rw[ALIST_FUPDKEY_def]
+QED
+
+Theorem ALIST_FUPDKEY_comm:
+ !k1 k2 f1 f2 l. k1 <> k2 ==>
+  (ALIST_FUPDKEY k2 f2 (ALIST_FUPDKEY k1 f1 l) =
+   ALIST_FUPDKEY k1 f1 (ALIST_FUPDKEY k2 f2 l))
+Proof
+  Induct_on`l` >> rw[] >> fs[ALIST_FUPDKEY_def] >>
+  Cases_on`h`>> fs[ALIST_FUPDKEY_def] >>
+  CASE_TAC >> fs[ALIST_FUPDKEY_def] >>
+  CASE_TAC >> fs[ALIST_FUPDKEY_def]
+QED
+
 val _ = export_theory ();
