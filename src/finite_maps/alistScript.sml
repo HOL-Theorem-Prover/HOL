@@ -627,113 +627,113 @@ Proof
   \\ metis_tac[ALOOKUP_MEM]
 QED
 
-val ALIST_FUPDKEY_def = Define`
-  (ALIST_FUPDKEY k f [] = []) ∧
-  (ALIST_FUPDKEY k f ((k',v)::rest) =
+val AFUPDKEY_def = Define`
+  (AFUPDKEY k f [] = []) ∧
+  (AFUPDKEY k f ((k',v)::rest) =
      if k = k' then (k,f v)::rest
-     else (k',v) :: ALIST_FUPDKEY k f rest)
+     else (k',v) :: AFUPDKEY k f rest)
 `;
 
-val ALIST_FUPDKEY_ind = theorem"ALIST_FUPDKEY_ind";
+val AFUPDKEY_ind = theorem"AFUPDKEY_ind";
 
-Theorem ALIST_FUPDKEY_ALOOKUP:
-  ALOOKUP (ALIST_FUPDKEY k2 f al) k1 =
+Theorem AFUPDKEY_ALOOKUP:
+  ALOOKUP (AFUPDKEY k2 f al) k1 =
     case ALOOKUP al k1 of
         NONE => NONE
       | SOME v => if k1 = k2 then SOME (f v) else SOME v
 Proof
-  Induct_on `al` >> simp[ALIST_FUPDKEY_def, FORALL_PROD] >> rw[]
+  Induct_on `al` >> simp[AFUPDKEY_def, FORALL_PROD] >> rw[]
   >- (Cases_on `ALOOKUP al k1` >> simp[]) >>
   simp[]
 QED
 
-Theorem MAP_FST_ALIST_FUPDKEY[simp]:
-  MAP FST (ALIST_FUPDKEY f k alist) = MAP FST alist
+Theorem MAP_FST_AFUPDKEY[simp]:
+  MAP FST (AFUPDKEY f k alist) = MAP FST alist
 Proof
-  Induct_on `alist` >> simp[ALIST_FUPDKEY_def, FORALL_PROD] >> rw[]
+  Induct_on `alist` >> simp[AFUPDKEY_def, FORALL_PROD] >> rw[]
 QED
 
-Theorem ALIST_FUPDKEY_unchanged:
+Theorem AFUPDKEY_unchanged:
   !k f alist.
    (!v. (ALOOKUP alist k = SOME v) ==> (f v = v))
-   ==> (ALIST_FUPDKEY k f alist = alist)
+   ==> (AFUPDKEY k f alist = alist)
 Proof
-  ho_match_mp_tac ALIST_FUPDKEY_ind
-  \\ rw[ALIST_FUPDKEY_def]
+  ho_match_mp_tac AFUPDKEY_ind
+  \\ rw[AFUPDKEY_def]
 QED
 
-Theorem ALIST_FUPDKEY_o:
-  ALIST_FUPDKEY k f1 (ALIST_FUPDKEY k f2 al) = ALIST_FUPDKEY k (f1 o f2) al
+Theorem AFUPDKEY_o:
+  AFUPDKEY k f1 (AFUPDKEY k f2 al) = AFUPDKEY k (f1 o f2) al
 Proof
-  Induct_on `al` >> simp[ALIST_FUPDKEY_def, FORALL_PROD] >>
-  rw[ALIST_FUPDKEY_def]
+  Induct_on `al` >> simp[AFUPDKEY_def, FORALL_PROD] >>
+  rw[AFUPDKEY_def]
 QED
 
-Theorem ALIST_FUPDKEY_eq:
+Theorem AFUPDKEY_eq:
   !k f1 l f2.
    (!v. (ALOOKUP l k = SOME v) ==> (f1 v = f2 v))
-   ==> (ALIST_FUPDKEY k f1 l = ALIST_FUPDKEY k f2 l)
+   ==> (AFUPDKEY k f1 l = AFUPDKEY k f2 l)
 Proof
-  ho_match_mp_tac ALIST_FUPDKEY_ind \\ rw[ALIST_FUPDKEY_def]
+  ho_match_mp_tac AFUPDKEY_ind \\ rw[AFUPDKEY_def]
 QED
 
-Theorem ALIST_FUPDKEY_I:
-  ALIST_FUPDKEY n I = I
+Theorem AFUPDKEY_I:
+  AFUPDKEY n I = I
 Proof
   simp[FUN_EQ_THM]
   \\ Induct
-  \\ simp[ALIST_FUPDKEY_def,FORALL_PROD]
+  \\ simp[AFUPDKEY_def,FORALL_PROD]
 QED
 
-Theorem LENGTH_ALIST_FUPDKEY[simp]:
-  !ls. LENGTH (ALIST_FUPDKEY k f ls) = LENGTH ls
+Theorem LENGTH_AFUPDKEY[simp]:
+  !ls. LENGTH (AFUPDKEY k f ls) = LENGTH ls
 Proof
-  Induct \\ simp[ALIST_FUPDKEY_def]
-  \\ Cases \\ rw[ALIST_FUPDKEY_def]
+  Induct \\ simp[AFUPDKEY_def]
+  \\ Cases \\ rw[AFUPDKEY_def]
 QED
 
-Theorem ALIST_FUPDKEY_comm:
+Theorem AFUPDKEY_comm:
  !k1 k2 f1 f2 l. k1 <> k2 ==>
-  (ALIST_FUPDKEY k2 f2 (ALIST_FUPDKEY k1 f1 l) =
-   ALIST_FUPDKEY k1 f1 (ALIST_FUPDKEY k2 f2 l))
+  (AFUPDKEY k2 f2 (AFUPDKEY k1 f1 l) =
+   AFUPDKEY k1 f1 (AFUPDKEY k2 f2 l))
 Proof
-  Induct_on`l` >> rw[] >> fs[ALIST_FUPDKEY_def] >>
-  Cases_on`h`>> fs[ALIST_FUPDKEY_def] >>
-  CASE_TAC >> fs[ALIST_FUPDKEY_def] >>
-  CASE_TAC >> fs[ALIST_FUPDKEY_def]
+  Induct_on`l` >> rw[] >> fs[AFUPDKEY_def] >>
+  Cases_on`h`>> fs[AFUPDKEY_def] >>
+  CASE_TAC >> fs[AFUPDKEY_def] >>
+  CASE_TAC >> fs[AFUPDKEY_def]
 QED
 
-val ALIST_DELKEY_def = Define`
-  ALIST_DELKEY k alist = FILTER (\p. FST p <> k) alist
+val ADELKEY_def = Define`
+  ADELKEY alist k = FILTER (\p. FST p <> k) alist
 `;
 
-Theorem MEM_ALIST_DELKEY[simp]:
-  !al. MEM (k1,v) (ALIST_DELKEY k2 al) <=> k1 <> k2 /\ MEM (k1,v) al
+Theorem MEM_ADELKEY[simp]:
+  !al. MEM (k1,v) (ADELKEY al k2) <=> k1 <> k2 /\ MEM (k1,v) al
 Proof
-  Induct >> simp[ALIST_DELKEY_def, FORALL_PROD] >>
+  Induct >> simp[ADELKEY_def, FORALL_PROD] >>
   rw[MEM_FILTER] >> metis_tac[]
 QED
 
-Theorem ALOOKUP_ALIST_DELKEY:
-  !al. ALOOKUP (ALIST_DELKEY k1 al) k2
+Theorem ALOOKUP_ADELKEY:
+  !al. ALOOKUP (ADELKEY al k1) k2
        = if k1 = k2 then NONE else ALOOKUP al k2
 Proof
-  simp[ALIST_DELKEY_def] >> Induct >>
+  simp[ADELKEY_def] >> Induct >>
   simp[FORALL_PROD] >> rw[] >> simp[]
 QED
 
-Theorem ALIST_DELKEY_ALIST_FUPDKEY_same[simp]:
-  !fd f ls. ALIST_DELKEY fd (ALIST_FUPDKEY fd f ls) = ALIST_DELKEY fd ls
+Theorem ADELKEY_AFUPDKEY_same[simp]:
+  !fd f ls. ADELKEY (AFUPDKEY fd f ls) fd = ADELKEY ls fd
 Proof
-  ho_match_mp_tac ALIST_FUPDKEY_ind
-  \\ rw[ALIST_FUPDKEY_def,ALIST_DELKEY_def]
+  ho_match_mp_tac AFUPDKEY_ind
+  \\ rw[AFUPDKEY_def,ADELKEY_def]
 QED
 
-Theorem ALIST_DELKEY_unchanged:
-  !x ls. ((ALIST_DELKEY x ls = ls) <=> ~MEM x (MAP FST ls))
+Theorem ADELKEY_unchanged:
+  !x ls. ((ADELKEY ls x = ls) <=> ~MEM x (MAP FST ls))
 Proof
   Induct_on`ls`
-  \\ rw[ALIST_DELKEY_def,FILTER_EQ_ID,MEM_MAP,EVERY_MEM]
+  \\ rw[ADELKEY_def,FILTER_EQ_ID,MEM_MAP,EVERY_MEM]
   >- metis_tac[]
   \\ rw[EQ_IMP_THM]
   >- (
@@ -743,12 +743,12 @@ Proof
   \\ simp[]
 QED
 
-Theorem ALIST_DELKEY_ALIST_FUPDKEY:
+Theorem ADELKEY_AFUPDKEY:
   !ls f x y. x <> y ==>
-    (ALIST_DELKEY x (ALIST_FUPDKEY y f ls) = (ALIST_FUPDKEY y f (ALIST_DELKEY x ls)))
+    (ADELKEY (AFUPDKEY y f ls) x = (AFUPDKEY y f (ADELKEY ls x)))
 Proof
-  Induct >>  rw[ALIST_DELKEY_def,ALIST_FUPDKEY_def] >>
-  Cases_on`h` >> fs[ALIST_FUPDKEY_def] >> TRY CASE_TAC >> fs[ALIST_DELKEY_def]
+  Induct >>  rw[ADELKEY_def,AFUPDKEY_def] >>
+  Cases_on`h` >> fs[AFUPDKEY_def] >> TRY CASE_TAC >> fs[ADELKEY_def]
 QED
 
 val _ = export_theory ();
