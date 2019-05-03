@@ -222,19 +222,12 @@ val is_variant_SOME_mk_variant = store_thm
       ]
    );
 
-val is_variant_NOT_EQ = store_thm
-   ("is_variant_NOT_EQ",
-    “!x y. (y is_variant x) /\ ~(x = y) ==>
-              (y is_variant mk_variant x 1)”,
-    RW_TAC arith_ss [is_variant,Base_mk_variant,Index_mk_variant,VAR_EQ]
-    THENL
-      [  UNDISCH_LAST_TAC
-         THEN ASM_REWRITE_TAC[],
-
-         RW_TAC arith_ss []
-      ]
-   );
-
+Theorem is_variant_NOT_EQ:
+   !x y. (y is_variant x) /\ ~(x = y) ==> (y is_variant mk_variant x 1)
+Proof
+    RW_TAC arith_ss [is_variant,Base_mk_variant,Index_mk_variant,VAR_EQ] THEN
+    REV_FULL_SIMP_TAC arith_ss []
+QED
 
 (* =============================================================== *)
 (* Once we can make variants of a variable, we can make a whole    *)
