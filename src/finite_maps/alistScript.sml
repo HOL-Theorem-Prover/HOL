@@ -607,6 +607,24 @@ val ALOOKUP_ALL_DISTINCT_PERM_same = store_thm("ALOOKUP_ALL_DISTINCT_PERM_same",
   imp_res_tac ALOOKUP_ALL_DISTINCT_MEM >>
   metis_tac[])
 
+Theorem FEVERY_alist_to_fmap:
+  EVERY P ls ==> FEVERY P (alist_to_fmap ls)
+Proof
+  Induct_on`ls` \\ simp[FORALL_PROD]
+  \\ rw[FEVERY_ALL_FLOOKUP,FLOOKUP_UPDATE]
+  \\ pop_assum mp_tac \\ rw[] \\ fs[]
+  \\ imp_res_tac ALOOKUP_MEM \\ fs[EVERY_MEM]
+QED
 
+Theorem ALL_DISTINCT_FEVERY_alist_to_fmap:
+  ALL_DISTINCT (MAP FST ls) ==>
+   (FEVERY P (alist_to_fmap ls) <=> EVERY P ls)
+Proof
+  Induct_on`ls` \\ simp[FORALL_PROD]
+  \\ rw[FEVERY_ALL_FLOOKUP,FLOOKUP_UPDATE] \\ fs[FEVERY_ALL_FLOOKUP]
+  \\ rw[EQ_IMP_THM]
+  \\ pop_assum mp_tac \\ rw[] \\ fs[MEM_MAP,EXISTS_PROD]
+  \\ metis_tac[ALOOKUP_MEM]
+QED
 
 val _ = export_theory ();
