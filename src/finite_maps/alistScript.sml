@@ -704,18 +704,18 @@ Proof
 QED
 
 val ADELKEY_def = Define`
-  ADELKEY alist k = FILTER (\p. FST p <> k) alist
+  ADELKEY k alist = FILTER (\p. FST p <> k) alist
 `;
 
 Theorem MEM_ADELKEY[simp]:
-  !al. MEM (k1,v) (ADELKEY al k2) <=> k1 <> k2 /\ MEM (k1,v) al
+  !al. MEM (k1,v) (ADELKEY k2 al) <=> k1 <> k2 /\ MEM (k1,v) al
 Proof
   Induct >> simp[ADELKEY_def, FORALL_PROD] >>
   rw[MEM_FILTER] >> metis_tac[]
 QED
 
 Theorem ALOOKUP_ADELKEY:
-  !al. ALOOKUP (ADELKEY al k1) k2
+  !al. ALOOKUP (ADELKEY k1 al) k2
        = if k1 = k2 then NONE else ALOOKUP al k2
 Proof
   simp[ADELKEY_def] >> Induct >>
@@ -723,14 +723,14 @@ Proof
 QED
 
 Theorem ADELKEY_AFUPDKEY_same[simp]:
-  !fd f ls. ADELKEY (AFUPDKEY fd f ls) fd = ADELKEY ls fd
+  !fd f ls. ADELKEY fd (AFUPDKEY fd f ls) = ADELKEY fd ls
 Proof
   ho_match_mp_tac AFUPDKEY_ind
   \\ rw[AFUPDKEY_def,ADELKEY_def]
 QED
 
 Theorem ADELKEY_unchanged:
-  !x ls. ((ADELKEY ls x = ls) <=> ~MEM x (MAP FST ls))
+  !x ls. ((ADELKEY x ls = ls) <=> ~MEM x (MAP FST ls))
 Proof
   Induct_on`ls`
   \\ rw[ADELKEY_def,FILTER_EQ_ID,MEM_MAP,EVERY_MEM]
@@ -745,7 +745,7 @@ QED
 
 Theorem ADELKEY_AFUPDKEY:
   !ls f x y. x <> y ==>
-    (ADELKEY (AFUPDKEY y f ls) x = (AFUPDKEY y f (ADELKEY ls x)))
+    (ADELKEY x (AFUPDKEY y f ls) = (AFUPDKEY y f (ADELKEY x ls)))
 Proof
   Induct >>  rw[ADELKEY_def,AFUPDKEY_def] >>
   Cases_on`h` >> fs[AFUPDKEY_def] >> TRY CASE_TAC >> fs[ADELKEY_def]
