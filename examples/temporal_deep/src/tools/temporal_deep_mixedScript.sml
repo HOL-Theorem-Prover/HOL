@@ -28,6 +28,7 @@ quietdec := false;
 
 
 val _ = new_theory "temporal_deep_mixed";
+val _ = ParseExtras.temp_loose_equality()
 
 
 (******************************************************************************)

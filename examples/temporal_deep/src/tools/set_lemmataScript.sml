@@ -21,6 +21,8 @@ quietdec := false;
 
 
 val _ = new_theory "set_lemmata";
+val _ = ParseExtras.temp_loose_equality()
+
 
 val DIFF_OVER_INTER =
  store_thm
