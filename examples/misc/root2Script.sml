@@ -49,8 +49,8 @@ local open realTheory transcTheory
 in
 val SQRT_2_IRRATIONAL = Q.prove
 (`~Rational (sqrt 2r)`,
- RW_TAC std_ss [Rational_def,abs,SQRT_POS_LE,REAL_POS]
-  THEN Cases_on `q = 0` THEN ASM_REWRITE_TAC []
+ RW_TAC std_ss [Rational_def,abs,SQRT_POS_LE,REAL_POS,Excl "lift_disj_eq"]
+  THEN Cases_on ‘q = 0’ THEN ASM_REWRITE_TAC []
   THEN SPOSE_NOT_THEN (MP_TAC o Q.AP_TERM `\x. x pow 2`)
   THEN RW_TAC arith_ss [SQRT_POW_2, REAL_POS, REAL_POW_DIV,
                         REAL_EQ_RDIV_EQ,REAL_LT, REAL_POW_LT]
