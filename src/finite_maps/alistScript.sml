@@ -1,4 +1,4 @@
-open HolKernel boolLib bossLib Parse finite_mapTheory listTheory pred_setTheory sortingTheory
+open HolKernel boolLib bossLib Parse finite_mapTheory listTheory rich_listTheory pred_setTheory sortingTheory
 open pairTheory boolSimps relationTheory
 
 val _ = new_theory "alist";
@@ -607,6 +607,148 @@ val ALOOKUP_ALL_DISTINCT_PERM_same = store_thm("ALOOKUP_ALL_DISTINCT_PERM_same",
   imp_res_tac ALOOKUP_ALL_DISTINCT_MEM >>
   metis_tac[])
 
+Theorem FEVERY_alist_to_fmap:
+  EVERY P ls ==> FEVERY P (alist_to_fmap ls)
+Proof
+  Induct_on`ls` \\ simp[FORALL_PROD]
+  \\ rw[FEVERY_ALL_FLOOKUP,FLOOKUP_UPDATE]
+  \\ pop_assum mp_tac \\ rw[] \\ fs[]
+  \\ imp_res_tac ALOOKUP_MEM \\ fs[EVERY_MEM]
+QED
 
+Theorem ALL_DISTINCT_FEVERY_alist_to_fmap:
+  ALL_DISTINCT (MAP FST ls) ==>
+   (FEVERY P (alist_to_fmap ls) <=> EVERY P ls)
+Proof
+  Induct_on`ls` \\ simp[FORALL_PROD]
+  \\ rw[FEVERY_ALL_FLOOKUP,FLOOKUP_UPDATE] \\ fs[FEVERY_ALL_FLOOKUP]
+  \\ rw[EQ_IMP_THM]
+  \\ pop_assum mp_tac \\ rw[] \\ fs[MEM_MAP,EXISTS_PROD]
+  \\ metis_tac[ALOOKUP_MEM]
+QED
+
+val AFUPDKEY_def = Define`
+  (AFUPDKEY k f [] = []) /\
+  (AFUPDKEY k f ((k',v)::rest) =
+     if k = k' then (k,f v)::rest
+     else (k',v) :: AFUPDKEY k f rest)
+`;
+
+val AFUPDKEY_ind = theorem"AFUPDKEY_ind";
+
+Theorem AFUPDKEY_ALOOKUP:
+  ALOOKUP (AFUPDKEY k2 f al) k1 =
+    case ALOOKUP al k1 of
+        NONE => NONE
+      | SOME v => if k1 = k2 then SOME (f v) else SOME v
+Proof
+  Induct_on `al` >> simp[AFUPDKEY_def, FORALL_PROD] >> rw[]
+  >- (Cases_on `ALOOKUP al k1` >> simp[]) >>
+  simp[]
+QED
+
+Theorem MAP_FST_AFUPDKEY[simp]:
+  MAP FST (AFUPDKEY f k alist) = MAP FST alist
+Proof
+  Induct_on `alist` >> simp[AFUPDKEY_def, FORALL_PROD] >> rw[]
+QED
+
+Theorem AFUPDKEY_unchanged:
+  !k f alist.
+   (!v. (ALOOKUP alist k = SOME v) ==> (f v = v))
+   ==> (AFUPDKEY k f alist = alist)
+Proof
+  ho_match_mp_tac AFUPDKEY_ind
+  \\ rw[AFUPDKEY_def]
+QED
+
+Theorem AFUPDKEY_o:
+  AFUPDKEY k f1 (AFUPDKEY k f2 al) = AFUPDKEY k (f1 o f2) al
+Proof
+  Induct_on `al` >> simp[AFUPDKEY_def, FORALL_PROD] >>
+  rw[AFUPDKEY_def]
+QED
+
+Theorem AFUPDKEY_eq:
+  !k f1 l f2.
+   (!v. (ALOOKUP l k = SOME v) ==> (f1 v = f2 v))
+   ==> (AFUPDKEY k f1 l = AFUPDKEY k f2 l)
+Proof
+  ho_match_mp_tac AFUPDKEY_ind \\ rw[AFUPDKEY_def]
+QED
+
+Theorem AFUPDKEY_I:
+  AFUPDKEY n I = I
+Proof
+  simp[FUN_EQ_THM]
+  \\ Induct
+  \\ simp[AFUPDKEY_def,FORALL_PROD]
+QED
+
+Theorem LENGTH_AFUPDKEY[simp]:
+  !ls. LENGTH (AFUPDKEY k f ls) = LENGTH ls
+Proof
+  Induct \\ simp[AFUPDKEY_def]
+  \\ Cases \\ rw[AFUPDKEY_def]
+QED
+
+Theorem AFUPDKEY_comm:
+ !k1 k2 f1 f2 l. k1 <> k2 ==>
+  (AFUPDKEY k2 f2 (AFUPDKEY k1 f1 l) =
+   AFUPDKEY k1 f1 (AFUPDKEY k2 f2 l))
+Proof
+  Induct_on`l` >> rw[] >> fs[AFUPDKEY_def] >>
+  Cases_on`h`>> fs[AFUPDKEY_def] >>
+  CASE_TAC >> fs[AFUPDKEY_def] >>
+  CASE_TAC >> fs[AFUPDKEY_def]
+QED
+
+val ADELKEY_def = Define`
+  ADELKEY k alist = FILTER (\p. FST p <> k) alist
+`;
+
+Theorem MEM_ADELKEY[simp]:
+  !al. MEM (k1,v) (ADELKEY k2 al) <=> k1 <> k2 /\ MEM (k1,v) al
+Proof
+  Induct >> simp[ADELKEY_def, FORALL_PROD] >>
+  rw[MEM_FILTER] >> metis_tac[]
+QED
+
+Theorem ALOOKUP_ADELKEY:
+  !al. ALOOKUP (ADELKEY k1 al) k2
+       = if k1 = k2 then NONE else ALOOKUP al k2
+Proof
+  simp[ADELKEY_def] >> Induct >>
+  simp[FORALL_PROD] >> rw[] >> simp[]
+QED
+
+Theorem ADELKEY_AFUPDKEY_same[simp]:
+  !fd f ls. ADELKEY fd (AFUPDKEY fd f ls) = ADELKEY fd ls
+Proof
+  ho_match_mp_tac AFUPDKEY_ind
+  \\ rw[AFUPDKEY_def,ADELKEY_def]
+QED
+
+Theorem ADELKEY_unchanged:
+  !x ls. ((ADELKEY x ls = ls) <=> ~MEM x (MAP FST ls))
+Proof
+  Induct_on`ls`
+  \\ rw[ADELKEY_def,FILTER_EQ_ID,MEM_MAP,EVERY_MEM]
+  >- metis_tac[]
+  \\ rw[EQ_IMP_THM]
+  >- (
+    `LENGTH (h::ls) <= LENGTH ls` by metis_tac[LENGTH_FILTER_LEQ]
+    \\ fs[] )
+  \\ first_x_assum(qspec_then`h`mp_tac)
+  \\ simp[]
+QED
+
+Theorem ADELKEY_AFUPDKEY:
+  !ls f x y. x <> y ==>
+    (ADELKEY x (AFUPDKEY y f ls) = (AFUPDKEY y f (ADELKEY x ls)))
+Proof
+  Induct >>  rw[ADELKEY_def,AFUPDKEY_def] >>
+  Cases_on`h` >> fs[AFUPDKEY_def] >> TRY CASE_TAC >> fs[ADELKEY_def]
+QED
 
 val _ = export_theory ();

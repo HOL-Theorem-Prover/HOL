@@ -101,6 +101,14 @@ New features:
 
     Thanks to Magnus Myreen for this feature suggestion ([Github issue](https://github.com/HOL-Theorem-Prover/HOL/issues/680)).
 
+-   The `emacs` editor mode now automatically switches new HOL sessions to the directory of the (presumably script) file where the command is invoked.
+    Relatedly there is a backwards incompatibility: the commands for creating new sessions now also *always* create fresh sessions (previously, they would try to make an existing session visible if there was one running).
+
+-   The `emacs` mode’s `M-h H` command used to try to send the whole buffer to the new HOL session when there was no region high-lighted.
+    Now the behaviour is to send everything up to the cursor.
+    This seems preferable: it helps when debugging to be able to have everything up to a problem-point immediately fed into a fresh session.
+    (The loading of the material (whole prefix or selected region) is done “quietly”, with the interactive flag false.)
+
 Bugs fixed:
 -----------
 

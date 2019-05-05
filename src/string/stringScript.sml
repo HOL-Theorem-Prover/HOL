@@ -97,6 +97,21 @@ val isAlphaNum_def = Define `isAlphaNum c <=> isAlpha c \/ isDigit c`;
 val isPrint_def = Define`
   isPrint c <=> ^(ordn #" ") <= ORD c /\ ORD c < 127`;
 
+Theorem isAlphaNum_isPrint:
+  !x. isAlphaNum x ==> isPrint x
+Proof EVAL_TAC \\ rw[]
+QED
+
+Theorem isHexDigit_isAlphaNum:
+  !x. isHexDigit x ==> isAlphaNum x
+Proof EVAL_TAC \\ rw[]
+QED
+
+Theorem isHexDigit_isPrint:
+  !x. isHexDigit x ==> isPrint x
+Proof metis_tac[isAlphaNum_isPrint, isHexDigit_isAlphaNum]
+QED
+
 val isSpace_def = Define`
   isSpace c <=> (ORD c = ^(ordn #" ")) \/ 9 <= ORD c /\ ORD c <= 13`;
 
@@ -192,6 +207,8 @@ val TOKENS_def = tDefine "TOKENS"
     THEN SRW_TAC [] [NULL_EQ_NIL, SPLITP]
     THEN METIS_TAC [SPLITP_MONO, DECIDE ``a <= b ==> a < SUC b``]);
 
+val TOKENS_ind = theorem"TOKENS_ind";
+
 val FIELDS_def = tDefine "FIELDS"
   `(FIELDS P ([]:string) = [[]]) /\
    (FIELDS P (h::t) =
@@ -240,6 +257,67 @@ val IMPLODE_11 = stac("IMPLODE_11", ``(IMPLODE cs1 = IMPLODE cs2) = (cs1 = cs2)`
 
 val _ = export_rewrites ["EXPLODE_11", "IMPLODE_11", "IMPLODE_EXPLODE",
                          "EXPLODE_IMPLODE"]
+
+Theorem TOKENS_APPEND:
+  !P l1 x l2.
+    P x ==>
+      (TOKENS P (l1 ++ x::l2) = TOKENS P l1 ++ TOKENS P l2)
+Proof
+  ho_match_mp_tac TOKENS_ind
+  \\ rw[TOKENS_def] >- (fs[SPLITP])
+  \\ pairarg_tac  \\ fs[]
+  \\ pairarg_tac  \\ fs[]
+  \\ fs[NULL_EQ, SPLITP]
+  \\ Cases_on `P h` \\ full_simp_tac bool_ss []
+  \\ rw[]
+  \\ fs[TL]
+  \\ Cases_on `EXISTS P t` \\ rw[SPLITP_APPEND, SPLITP]
+  \\ fs[NOT_EXISTS] \\ imp_res_tac (GSYM SPLITP_NIL_SND_EVERY) \\ rw[]
+  \\ fs[NOT_EXISTS] \\ imp_res_tac (GSYM SPLITP_NIL_SND_EVERY) \\ rw[]
+QED
+
+Theorem TOKENS_NIL:
+  !ls. (TOKENS f ls = []) <=> EVERY f ls
+Proof
+  Induct \\ rw[TOKENS_def]  \\ pairarg_tac
+  \\ fs[NULL_EQ, SPLITP]
+  \\ BasicProvers.EVERY_CASE_TAC \\ fs[] \\ rw[]
+QED
+
+Theorem TOKENS_FRONT:
+  ~NULL ls /\ P (LAST ls) ==>
+    (TOKENS P (FRONT ls) = TOKENS P ls)
+Proof
+  Induct_on`ls` \\ rw[]
+  \\ Cases_on`ls` \\ fs[]
+  >- rw[TOKENS_def,SPLITP]
+  \\ rw[TOKENS_def]
+  \\ pairarg_tac
+  \\ simp[Once SPLITP]
+  \\ CASE_TAC \\ fs[NULL_EQ]
+  >- (
+    imp_res_tac SPLITP_NIL_FST_IMP
+    \\ imp_res_tac SPLITP_IMP
+    \\ rfs[] )
+  \\ imp_res_tac SPLITP_JOIN
+  \\ Cases_on`l` \\ fs[] \\ rpt BasicProvers.VAR_EQ_TAC
+  \\ imp_res_tac SPLITP_IMP
+  \\ CASE_TAC \\ fs[]
+  \\ qmatch_goalsub_rename_tac`SPLITP P (x::xs)`
+  \\ `?y ys. x::xs = SNOC y ys` by metis_tac[SNOC_CASES,list_distinct]
+  \\ full_simp_tac std_ss [FRONT_SNOC,LAST_SNOC] \\ rpt BasicProvers.VAR_EQ_TAC
+  \\ qmatch_goalsub_rename_tac`SPLITP P (SNOC y (w ++ z))`
+  \\ Cases_on`NULL z` \\ fs[NULL_EQ]
+  >- (
+    simp[SPLITP_APPEND]
+    \\ full_simp_tac std_ss [GSYM NOT_EXISTS]
+    \\ simp[SPLITP,TOKENS_def] )
+  \\ Cases_on`z` \\ fs[]
+  \\ simp[SPLITP_APPEND]
+  \\ full_simp_tac std_ss [GSYM NOT_EXISTS]
+  \\ simp[SPLITP,TOKENS_def]
+  \\ simp[TOKENS_APPEND,TOKENS_NIL]
+QED
 
 (*---------------------------------------------------------------------------
     Definability of prim. rec. functions over strings.

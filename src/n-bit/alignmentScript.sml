@@ -243,6 +243,82 @@ val align_add_aligned = Q.store_thm("align_add_aligned",
   \\ fs [DECIDE ``(a < 1n) = (a = 0n)``, wordsTheory.w2n_eq_0]
   )
 
+Theorem lt_align_eq_0:
+  w2n a < 2 ** p ==> (align p a = 0w)
+Proof
+  Cases_on`a` \\ fs[]
+  \\ rw[align_w2n]
+  \\ Cases_on`p = 0` \\ fs[]
+  \\ `1 < 2 ** p` by fs[arithmeticTheory.ONE_LT_EXP]
+  \\ `n DIV 2 ** p = 0` by fs[arithmeticTheory.DIV_EQ_0]
+  \\ fs[]
+QED
+
+Theorem aligned_or:
+  aligned n (w || v) <=> aligned n w /\ aligned n v
+Proof
+  Cases_on `n = 0`
+  \\ srw_tac [WORD_BIT_EQ_ss] [aligned_extract]
+  \\ metis_tac []
+QED
+
+Theorem aligned_w2n:
+  aligned k w <=> (w2n (w:'a word) MOD 2 ** k = 0)
+Proof
+  Cases_on `w`
+  \\ fs [aligned_def,align_w2n]
+  \\ `0n < 2 ** k` by simp []
+  \\ drule arithmeticTheory.DIVISION
+  \\ disch_then (qspec_then `n` assume_tac)
+  \\ `(n DIV 2 ** k * 2 ** k) < dimword (:'a)` by decide_tac
+  \\ asm_simp_tac std_ss [] \\ decide_tac
+QED
+
+Theorem MOD_0_aligned:
+  !n p. (n MOD 2 ** p = 0) ==> aligned p (n2w n)
+Proof
+  fs [aligned_bitwise_and]
+  \\ once_rewrite_tac [wordsTheory.WORD_AND_COMM]
+  \\ fs [wordsTheory.WORD_AND_EXP_SUB1]
+QED
+
+Theorem aligned_lsl_leq:
+  k <= l ==> aligned k (w << l)
+Proof
+  fs [aligned_def,align_def]
+  \\ fs [fcpTheory.CART_EQ,wordsTheory.word_lsl_def,
+         wordsTheory.word_slice_def,fcpTheory.FCP_BETA]
+  \\ rw [] \\ eq_tac \\ fs []
+QED
+
+Theorem aligned_lsl[simp]:
+  aligned k (w << k)
+Proof match_mp_tac aligned_lsl_leq \\ fs[]
+QED
+
+Theorem align_align_MAX:
+  !k l w. align k (align l w) = align (MAX k l) w
+Proof
+  fs[align_def,fcpTheory.CART_EQ,wordsTheory.word_slice_def,fcpTheory.FCP_BETA]
+  \\ rw [] \\ eq_tac \\ fs []
+QED
+
+Theorem pow2_eq_0:
+  dimindex (:'a) <= k ==> (n2w (2 ** k) = 0w:'a word)
+Proof
+  fs [wordsTheory.dimword_def] \\ fs [arithmeticTheory.LESS_EQ_EXISTS]
+  \\ rw [] \\ fs [arithmeticTheory.EXP_ADD,arithmeticTheory.MOD_EQ_0]
+QED
+
+Theorem aligned_pow2:
+  aligned k (n2w (2 ** k))
+Proof
+  Cases_on `k < dimindex (:'a)`
+  \\ fs [arithmeticTheory.NOT_LESS,pow2_eq_0,aligned_0]
+  \\ `2 ** k < dimword (:'a)` by fs [wordsTheory.dimword_def]
+  \\ fs [aligned_def,align_w2n]
+QED
+
 (* -------------------------------------------------------------------------
    Theorems for standard alignment lengths of 1, 2 and 3 bits
    ------------------------------------------------------------------------- *)
