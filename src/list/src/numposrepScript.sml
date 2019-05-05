@@ -97,16 +97,6 @@ val l2n_DIGIT = Q.store_thm("l2n_DIGIT",
         [EXP, GSYM DIV_DIV_DIV_MULT, ZERO_LT_EXP, LESS_DIV_EQ_ZERO,
          SIMP_RULE arith_ss [] (CONJ MOD_TIMES ADD_DIV_ADD_DIV)]);
 
-val DIV_0_IMP_LT = Q.store_thm("DIV_0_IMP_LT",
-  `!b n. 1 < b /\ (n DIV b = 0) ==> n < b`,
-  REPEAT STRIP_TAC \\ SPOSE_NOT_THEN ASSUME_TAC
-    \\ FULL_SIMP_TAC std_ss [NOT_LESS]
-    \\ IMP_RES_TAC LESS_EQUAL_ADD
-    \\ `0 < b` by DECIDE_TAC
-    \\ IMP_RES_TAC ADD_DIV_ADD_DIV
-    \\ POP_ASSUM (Q.SPECL_THEN [`1`,`p`] (ASSUME_TAC o SIMP_RULE std_ss []))
-    \\ FULL_SIMP_TAC arith_ss []);
-
 val lem = Q.prove(
   `!b n. 1 < b ==> PRE (LENGTH (n2l b n)) <= LENGTH (n2l b (n DIV b))`,
   SRW_TAC [ARITH_ss] [LENGTH_n2l]

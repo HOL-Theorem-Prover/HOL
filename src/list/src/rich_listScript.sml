@@ -132,12 +132,34 @@ Proof
   Cases_on`SPLITP P ls` >> fs[]
 QED
 
+Theorem SPLITP_LENGTH:
+  !l. LENGTH (FST (SPLITP P l)) + LENGTH (SND (SPLITP P l))
+      = LENGTH l
+Proof Induct \\ rw[SPLITP, LENGTH]
+QED
+
+Theorem SPLITP_APPEND:
+  !l1 l2.
+    SPLITP P (l1 ++ l2) =
+     if EXISTS P l1 then
+       (FST (SPLITP P l1), SND (SPLITP P l1) ++ l2)
+     else
+       (l1 ++ FST(SPLITP P l2), SND (SPLITP P l2))
+Proof
+  Induct \\ rw[SPLITP] \\ fs[]
+QED
+
 Theorem SPLITP_NIL_SND_EVERY:
   !ls r. (SPLITP P ls = (r, [])) <=> (r = ls) /\ (EVERY ($~ o P) ls)
 Proof
   rw[] >> EQ_TAC
   >- (rw[] >> imp_res_tac SPLITP_IMP >> imp_res_tac SPLITP_JOIN >> fs[]) >>
   rw[] >> Induct_on `ls` >> rw[SPLITP]
+QED
+
+Theorem SPLITP_NIL_FST_IMP:
+  !ls r. (SPLITP P ls = ([],r)) ==> (r = ls)
+Proof Induct \\ rw[SPLITP]
 QED
 
 val SPLITL_def = TotalDefn.Define `SPLITL P = SPLITP ((~) o P)`;
