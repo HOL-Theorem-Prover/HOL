@@ -224,7 +224,7 @@ val st0_def =
 
 val is_initial_def =
  Define
-     `is_initial st =
+     `is_initial st <=>
          (st.att_cws = engaged)  /\
          (st.cas_eng = off)      /\
          (st.fpa_sel = off)      /\
@@ -236,7 +236,7 @@ val is_initial_def =
 
 val valid_state_def =
  Define
-     `valid_state st =
+     `valid_state st <=>
          ((st.att_cws = engaged) \/ (st.fpa_sel = engaged) \/
           (st.alt_eng = Mode engaged))
      /\  (~(st.alt_eng = Mode engaged) \/ ~(st.fpa_sel = engaged))
