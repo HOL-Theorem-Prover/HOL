@@ -17,20 +17,20 @@ val constfree_swap_I = prove(
   ``!M. constfree M ==> !x y. constfree (swap x y M)``,
   HO_MATCH_MP_TAC constfree_ind THEN SRW_TAC [][constfree_rules]);
 
-val constfree_thm = store_thm(
-  "constfree_thm",
-  ``(constfree (nc$VAR s) = T) /\
-    (constfree (M @@ N) = constfree M /\ constfree N) /\
+Theorem constfree_thm[simp]:
+    (constfree (nc$VAR s) = T) /\
+    (constfree (M @@ N) ⇔ constfree M /\ constfree N) /\
     (constfree (LAM v M) = constfree M) /\
-    (constfree (CON k) = F)``,
+    (constfree (CON k) = F)
+Proof
   REPEAT CONJ_TAC THEN
   CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [constfree_cases])) THEN
   SRW_TAC [][] THEN EQ_TAC THENL [
     SRW_TAC [][LAM_INJ_swap] THEN
     METIS_TAC [lswap_def, constfree_swap_I],
     METIS_TAC []
-  ]);
-val _ = export_rewrites ["constfree_thm"]
+  ]
+QED
 
 val lswap_constfree = prove(
   ``!t. constfree (lswap pi t) = constfree t``,
@@ -78,16 +78,16 @@ val from_term_11 = prove(
   ``(from_term t = from_term u) = (t = u)``,
   METIS_TAC [term_bij]);
 
-val term_11 = store_thm(
-  "term_11",
-  ``((VAR s = VAR t) = (s = t)) /\
-    ((M1 @@ N1 = M2 @@ N2) = (M1 = M2) /\ (N1 = N2)) /\
-    ((LAM v M1 = LAM v M2) = (M1 = M2))``,
+Theorem term_11[simp]:
+    ((VAR s = VAR t) = (s = t)) /\
+    ((M1 @@ N1 = M2 @@ N2) ⇔ (M1 = M2) /\ (N1 = N2)) /\
+    ((LAM v M1 = LAM v M2) ⇔ (M1 = M2))
+Proof
   SRW_TAC [][VAR_def, APP_def, LAM_def, EQ_IMP_THM] THEN
   POP_ASSUM (MP_TAC o AP_TERM ``from_term``) THEN
   SRW_TAC [][fromto_inverse] THEN
-  FULL_SIMP_TAC (srw_ss()) [from_term_11]);
-val _ = export_rewrites ["term_11"]
+  FULL_SIMP_TAC (srw_ss()) [from_term_11]
+QED
 
 val term_distinct = store_thm(
   "term_distinct",
@@ -177,10 +177,10 @@ val tpm_NIL = store_thm(
   SRW_TAC [][]);
 val _ = export_rewrites ["tpm_NIL"]
 
-val LAM_eq_thm = store_thm(
-  "LAM_eq_thm",
-  ``(LAM u M = LAM v N) = ((u = v) /\ (M = N)) \/
-                          (~(u = v) /\ ~(u IN FV N) /\ (M = tpm [(u,v)] N))``,
+Theorem LAM_eq_thm:
+    (LAM u M = LAM v N) ⇔ ((u = v) /\ (M = N)) \/
+                          (~(u = v) /\ ~(u IN FV N) /\ (M = tpm [(u,v)] N))
+Proof
   SRW_TAC [][LAM_def, FV_def, tpm_def, EQ_IMP_THM] THENL [
     POP_ASSUM (MP_TAC o AP_TERM ``from_term``) THEN
     SRW_TAC [][fromto_inverse, LAM_INJ_swap] THENL [
@@ -190,14 +190,15 @@ val LAM_eq_thm = store_thm(
     ],
     AP_TERM_TAC THEN SRW_TAC [][fromto_inverse, LAM_INJ_swap,
                                 lswap_def]
-  ]);
+  ]
+QED
 
-val FV_tpm = store_thm(
-  "FV_tpm",
-  ``!t pi v. v IN FV (tpm pi t) = raw_lswapstr (REVERSE pi) v IN FV t``,
+Theorem FV_tpm[simp]:
+    !t pi v. v ∈ FV (tpm pi t) ⇔ raw_lswapstr (REVERSE pi) v IN FV t
+Proof
   HO_MATCH_MP_TAC simple_induction THEN
-  SRW_TAC [][basic_swapTheory.raw_lswapstr_eql]);
-val _ = export_rewrites ["FV_tpm"]
+  SRW_TAC [][basic_swapTheory.raw_lswapstr_eql]
+QED
 
 val tpm_inverse = store_thm(
   "tpm_inverse",
