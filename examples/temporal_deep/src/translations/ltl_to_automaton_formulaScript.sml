@@ -34,6 +34,7 @@ quietdec := false;
 
 
 val _ = new_theory "ltl_to_automaton_formula";
+val _ = ParseExtras.temp_loose_equality()
 
 (****************************************************************
  * A datastructure for the translation. For the idea behind this

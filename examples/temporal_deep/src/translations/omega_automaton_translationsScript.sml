@@ -37,6 +37,7 @@ quietdec := false;
 
 
 val _ = new_theory "omega_automaton_translations";
+val _ = ParseExtras.temp_loose_equality()
 
 
 
