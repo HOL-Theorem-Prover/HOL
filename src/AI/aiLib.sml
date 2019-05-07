@@ -468,6 +468,16 @@ fun rename_bvarl f tm =
     rename_aux tm
   end
 
+fun rename_allvar tm =
+  let
+    val tm0 = list_mk_forall (free_vars_lr tm, tm)
+    val tm1 = rename_bvarl (fn x => "") tm0;
+    val tm2 = snd (strip_forall tm1)  
+  in
+    tm2
+  end
+
+
 fun all_bvar tm =
   mk_fast_set Term.compare (map (fst o dest_abs) (find_terms is_abs tm))
 

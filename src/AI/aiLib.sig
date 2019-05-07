@@ -173,6 +173,7 @@ sig
 
   (* term *)
   val rename_bvarl : (string -> string) -> term -> term
+  val rename_allvar : term -> term
   val all_bvar : term -> term list
   val strip_type : hol_type -> (hol_type list * hol_type)
   val has_boolty : term -> bool

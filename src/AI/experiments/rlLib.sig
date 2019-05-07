@@ -33,8 +33,6 @@ sig
   val sym : term -> term
   val paramod_ground : term -> (term * pos) -> term option
 
-  (* higher-order *)
-  val let_rw : term -> term
 
 
 

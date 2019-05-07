@@ -6,7 +6,7 @@
 (* DATE          : 2018                                                      *)
 (* ========================================================================= *)
 
-structure rlData :> rlData =
+structure mlData :> mlData =
 struct
 
 (*
@@ -107,15 +107,42 @@ fun accuracy_dataset tnn set =
 app load ["rlData", "aiLib", "rlLib", "mlTreeNeuralNetwork", "psTermGen"];
 open rlData aiLib rlLib mlTreeNeuralNetwork psTermGen;
 
+val ERR = mk_HOL_ERR "test";
 
-val cset_glob = map mk_sucn (List.tabulate (5,I)) @ [``SUC``,``$+``,``$*``];
-val tml_glob1 = mk_fast_set Term.compare (gen_term_size 9 (``:num``,cset_glob));
-val tml_glob2 = mk_fast_set Term.compare (gen_term_size 7 (``:num``,cset_glob));
+val cset_glob = map mk_sucn (List.tabulate (8,I)) @ [``SUC``,``$+``,``$*``];
 
-val tml_glob = mk_fast_set Term.compare (first_n 4000 (shuffle tml_glob1) @ tml_glob2);
+fun mk_tml level ntarget = 
+  let 
+    val range = List.tabulate (level, fn x => x + 1)
+    fun gen () = random_term_uni cset_glob (range,``:num``)
+    val d = ref (dempty Term.compare)
+    fun loop n = 
+      if n > 10 * ntarget then raise ERR "not enough different terms" "" else
+      if dlength (!d) >= ntarget then () else
+      let val tm = gen () in
+        if dmem tm (!d) then () else d := dadd tm () (!d);
+        loop (n + 1)
+      end
+  in
+    loop 0; dkeys (!d)
+  end
 
-
+val tml_glob = mk_tml 10 8000;
 val train = map_assoc (bin_rep 4 o eval_ground) tml_glob;
+val test = first_n 1000 train;
+
+
+val nn_operl = mk_fast_set oper_compare (operl_of ``0 + SUC 0 * 0``);
+val nbit = 4;
+val randtnn = random_tnn (24,nbit) nn_operl;
+val bsize = 64;
+fun f x = (200, x / (Real.fromInt bsize));
+val schedule = map f [0.1];
+val ncore = 2;
+val tnn = prepare_train_tnn (ncore,bsize) randtnn (train,test) schedule;
+
+
+
 
 val operl = [``$+``,``$*``];
 val (nsuc,noper) = (4,3);
@@ -125,13 +152,7 @@ val test = computation_data operl (nsuc,noper) (nex,nclass,nbit);
 val ninter = inter_traintest (train,test);
 val nuniq = length (mk_fast_set Term.compare (map fst train));
 
-val nn_operl = mk_fast_set oper_compare (operl_of ``0 + SUC 0 * 0``);
-val randtnn = random_tnn (12,nbit) nn_operl;
-val bsize = 128;
-fun f x = (200, x / (Real.fromInt bsize));
-val schedule = map f [0.1];
-val ncore = 2;
-val tnn = prepare_train_tnn (ncore,bsize) randtnn (train,test) schedule;
+
 
 
 val operl = [``$+``,``$*``];

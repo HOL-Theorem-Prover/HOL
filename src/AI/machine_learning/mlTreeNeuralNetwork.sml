@@ -65,35 +65,6 @@ fun random_dhtnn (dimin,dimout) operl =
   dimout = dimout
   }
 
-
-(* -------------------------------------------------------------------------
-   Random tree neural network
-   ------------------------------------------------------------------------- *)
-
-fun id (x:real) = x:real
-fun did (x:real) = 1.0
-
-fun const_nn2 dim activ arity =
-  if arity = 0
-  then random_nn (id,did) (id,did) [1,dim]
-  else random_nn activ activ [arity * dim + 1, arity * dim, dim, dim]
-
-fun random_opdict2 dimin cal =
-  let val l = map_assoc (fn (_,a) => const_nn2 dimin (tanh,dtanh) a) cal in
-    dnew oper_compare l
-  end
-
-fun random_headnn2 (dimin,dimout) =
-  random_nn (tanh,dtanh) (tanh,dtanh) [dimin+1,dimin,dimout]
-
-fun random_tnn2 (dimin,dimout) operl =
-  {
-  opdict = random_opdict2 dimin operl,
-  headnn = random_headnn2 (dimin,dimout),
-  dimin = dimin,
-  dimout = dimout
-  }
-
 (* -------------------------------------------------------------------------
    Output
    ------------------------------------------------------------------------- *)
@@ -594,5 +565,25 @@ fun prepare_train_tnn (ncore,bsize) randtnn (trainset,testset) schedule =
     print_endline ("  NN Time: " ^ rts nn_tim);
     tnn
   end
+
+(* -------------------------------------------------------------------------
+   Accuracy test
+   ------------------------------------------------------------------------- *)
+
+fun is_accurate tnn (tm,rl) =
+  let 
+    val rl1 = infer_tnn tnn tm 
+    val rl2 = combine (rl,rl1)
+    fun test (x,y) = Real.abs (x - y) < 0.5  
+  in
+    if all test rl2 then true else false
+  end
+
+fun accuracy_set tnn set =
+  let val correct = filter (is_accurate tnn) set in
+    Real.fromInt (length correct) / Real.fromInt (length set)
+  end
+
+
 
 end (* struct *)

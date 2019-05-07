@@ -61,4 +61,7 @@ include Abbrev
     (int * real) list ->
     tnn
 
+  (* statistics *)
+  val accuracy_set : tnn -> (term * real list) list -> real
+
 end

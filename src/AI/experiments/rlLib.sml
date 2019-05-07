@@ -90,10 +90,9 @@ fun is_suc_only tm =
   if term_eq tm zero then true else
   (is_suc_only (dest_suc tm)  handle HOL_ERR _ => false)
 
-val ax1 = ``x + 0 = x``;
-val ax2 = ``x + SUC y = SUC (x + y)``
-val ax3 = ``x * 0 = 0``;
-val ax4 = ``x * SUC y = x * y + x``;
+val robinson_eq = 
+  [``x + 0 = x``,``x + SUC y = SUC (x + y)``,``x * 0 = 0``,
+   ``x * SUC y = x * y + x``]
 
 (* -------------------------------------------------------------------------
    Equality
@@ -117,31 +116,6 @@ fun paramod_ground eq (tm,pos) =
     else SOME result
   end
   handle _ => NONE
-
-(* -------------------------------------------------------------------------
-   Higher-order
-   ------------------------------------------------------------------------- *)
-
-fun LET_CONV_MIN tm =
-  let val (rator,rand) = dest_comb tm in SYM (ISPECL [rator,rand] LET_THM) end
-
-fun LET_CONV_AUX tm =
- (TRY_CONV (RATOR_CONV LET_CONV_AUX) THENC LET_CONV_MIN) tm
-
-fun is_let f =
-  let val {Name,Thy,Ty} = dest_thy_const f in
-    Name = "LET" andalso Thy = "bool"
-  end
-
-fun LET_CONV tm =
-  if not (is_comb tm) then NO_CONV tm else
-    let val f = fst (strip_comb tm) in
-      if is_let f then NO_CONV tm else LET_CONV_AUX tm
-    end
-
-fun LET_CONV_ALL tm = TOP_SWEEP_CONV LET_CONV tm
-
-fun let_rw tm = rhs (concl (LET_CONV_ALL tm))
 
 
 end (* struct *)

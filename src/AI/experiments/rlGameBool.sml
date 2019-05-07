@@ -55,8 +55,6 @@ val operl =
   mk_fast_set (cpl_compare Term.compare Int.compare)
     (map (fn x => (x,0)) varl @ operl_of_term ``(~x0 \/ x0 /\ x0)``);
 
-val dim = 10;
-
 fun mk_lit (v,b) = if b then v else mk_neg v
 fun nntm_of_cl cl = list_mk_disj (map mk_lit cl)
 
@@ -125,7 +123,7 @@ fun random_clause () =
 fun random_problem () =
   map random_clause (List.tabulate (random_int (2,5), fn _ => ()))
 
-fun mk_targetl n =
+fun mk_targetl level n =
   let
     val l = ref []
     fun f () =
@@ -158,7 +156,6 @@ type gamespec =
   status_of : (board psMCTS.sit -> psMCTS.status),
   apply_move : (move -> board psMCTS.sit -> board psMCTS.sit),
   operl : (term * int) list,
-  dim : int,
   nntm_of_sit: board sit -> term
   }
 
@@ -169,7 +166,6 @@ val gamespec : gamespec =
   status_of = status_of,
   apply_move = apply_move,
   operl = operl,
-  dim = dim,
   nntm_of_sit = nntm_of_sit
   }
 
