@@ -291,91 +291,80 @@ val updn_three_lem_1 = Q.store_thm("updn_three_lem_1",
   rename [‘SUC (LENGTH l)’] >> Cases_on ‘l’ >> fs[] >>
   metis_tac[list_CASES]);
 
-val prim_pr_rec_updn = Q.store_thm ("prim_pr_rec_updn",
-`updn  = Cn
-             (pr_cond (Cn pr_eq [proj 1;zerof] ) (pr_pr_up_case1) (
-                   pr_cond (Cn pr_eq [proj 1; onef] ) (pr_pr_up_case2) (
-                       pr_cond (Cn pr_eq [proj 1; twof] ) (
-                           pr_cond (Cn pr_eq [Cn (pr_mod) [proj 2;twof];onef]) (pr_pr_up_case3) (pr_pr_up_case4) ) (
-                           pr_cond (Cn pr_eq [proj 1;threef]) (
-                               pr_cond (Cn pr_eq [Cn (pr_mod) [proj 4;twof];onef]) (pr_pr_up_case5) (pr_pr_up_case6) )
-                                   (pr_cond (Cn pr_eq [proj 1;fourf]) (pr_pr_up_case7) (pr_pr_up_case7)  )  ) )  )  )
-             [proj 0;proj 1; Cn (pr1 nfst) [Cn (pr1 nsnd) [proj 2]] ;
-              Cn (pr_mod) [Cn (pr1 nsnd) [ Cn (pr1 nsnd) [proj 2]];twof];
-              Cn (pr1 DIV2) [Cn (pr1 nsnd) [ Cn (pr1 nsnd) [proj 2]]]; proj 2 ]  `,
-rw[Cn_def,FUN_EQ_THM]
-  >>  fs[pr_pr_up_case1_def,pr_pr_up_case2_def,pr_pr_up_case3_def,pr_pr_up_case4_def,pr_pr_up_case5_def,pr_pr_up_case6_def] >> rw[]
-  >- ( rw[proj_def,updn_def,updn_zero_thm,updn_three_lem_1]
-    >- EVAL_TAC
-    >- rfs[]
-    >-( EVAL_TAC >> `(∃h. x = [h]) ∨ (∃h t. x = [h;t])` by simp[updn_two_lem_1]
-      >- (rw[updn_def])
-      >- (rfs[updn_def,updn_zero_thm] >> `proj 1 x = t` by fs[] >> fs[] )
-           )
-    >- (`(∃ a b c. x = [a;b;c]) ∨ (∃ a b c d e. x = (a::b::c::d::e))` by simp[updn_three_lem_1]
-      >- (`proj 1 x = b` by fs[] >> fs[] >> fs[updn_def,MULT2_def,DIV2_def] )
-      >-  fs[updn_def,MULT2_def,DIV2_def] )
-     )
-  >- ( fs[proj_def,updn_def,updn_zero_thm,pr_pr_up_case2_def] >> rw[]
-    >- (rfs[])
-    >- (rfs[])
-    >- (EVAL_TAC >> `(∃h. x = [h]) ∨ (∃h t. x = [h;t])` by simp[updn_two_lem_1]
-      >-(fs[])
-      >-(rfs[updn_def,updn_zero_thm] >> fs[])
+Theorem prim_pr_rec_updn:
+  updn =
+  Cn
+    (pr_cond (Cn pr_eq [proj 1;zerof]) (pr_pr_up_case1) (
+        pr_cond (Cn pr_eq [proj 1; onef]) (pr_pr_up_case2) (
+          pr_cond (Cn pr_eq [proj 1; twof]) (
+            pr_cond (Cn pr_eq [Cn (pr_mod) [proj 2;twof];onef])
+                    (pr_pr_up_case3)
+                    (pr_pr_up_case4)
+          ) (
+            pr_cond (Cn pr_eq [proj 1;threef]) (
+              pr_cond (Cn pr_eq [Cn (pr_mod) [proj 4;twof];onef])
+                      (pr_pr_up_case5)
+                      (pr_pr_up_case6)
+            ) (
+              pr_cond (Cn pr_eq [proj 1;fourf])
+                      (pr_pr_up_case7)
+                      (pr_pr_up_case7)
             )
-    >- (`(∃ a b c. x = [a;b;c]) ∨ (∃ a b c d e. x = (a::b::c::d::e))` by simp[updn_three_lem_1]
-      >-(fs[updn_def,MULT2_def,DIV2_def])
-      >-(fs[updn_def,MULT2_def,DIV2_def])
-            )
-     )
-  >- ( fs[proj_def,updn_def,updn_zero_thm,pr_pr_up_case3_def] >> rw[]
-    >-(rfs[])
-    >-(rfs[])
-    >-(EVAL_TAC >> `(∃h. x = [h]) ∨ (∃h t. x = [h;t])` by simp[updn_two_lem_1]
-      >-(fs[])
-      >-(rfs[updn_def,updn_zero_thm] >> fs[] >> `nfst (nsnd 0) = 0 ` by EVAL_TAC >> fs[])
+          )
+        )
       )
-    >-(`(∃ a b c. x = [a;b;c]) ∨ (∃ a b c d e. x = (a::b::c::d::e))` by simp[updn_three_lem_1]
-      >-(fs[updn_def,MULT2_def,DIV2_def])
-      >-(fs[updn_def,MULT2_def,DIV2_def]))
+    )
+    [proj 0;proj 1; Cn (pr1 nfst) [Cn (pr1 nsnd) [proj 2]] ;
+     Cn (pr_mod) [Cn (pr1 nsnd) [ Cn (pr1 nsnd) [proj 2]];twof];
+     Cn (pr1 DIV2) [Cn (pr1 nsnd) [ Cn (pr1 nsnd) [proj 2]]]; proj 2 ]
+Proof
+  rw[Cn_def,FUN_EQ_THM]
+  >> fs[pr_pr_up_case1_def,pr_pr_up_case2_def,pr_pr_up_case3_def,
+         pr_pr_up_case4_def,pr_pr_up_case5_def,pr_pr_up_case6_def] >> rw[]
+  >- (rw[proj_def,updn_def,updn_zero_thm,updn_three_lem_1] >> fs[]
+      >- EVAL_TAC
+      >- (`(∃h. x = [h]) ∨ (∃h t. x = [h;t])` by simp[updn_two_lem_1]
+          >- (rw[updn_def] >> simp[MULT2_def] >> simp[npair_def])
+          >- (fs[updn_def,updn_zero_thm] >> simp[MULT2_def] >>
+              simp[npair_def]))
+      >- (`(∃ a b c. x = [a;b;c]) ∨ (∃ a b c d e. x = (a::b::c::d::e))`
+            by simp[updn_three_lem_1] >>
+          fs[updn_def,MULT2_def,DIV2_def])
      )
-  >- (fs[proj_def,updn_def,updn_zero_thm,pr_pr_up_case4_def] >> rw[]
-    >- (rfs[])
-    >- (rfs[])
-    >- (EVAL_TAC >> `(∃h. x = [h]) ∨ (∃h t. x = [h;t])` by simp[updn_two_lem_1]
-      >-(fs[])
-      >- (rfs[updn_def,updn_zero_thm] >> fs[] ) )
-    >- (`(∃ a b c. x = [a;b;c]) ∨ (∃ a b c d e. x = (a::b::c::d::e))` by simp[updn_three_lem_1]
-      >-(fs[updn_def,MULT2_def,DIV2_def])
-      >-(fs[updn_def,MULT2_def,DIV2_def])))
-  >- (fs[proj_def,updn_def,updn_zero_thm,pr_pr_up_case5_def] >> rw[]
-    >- (rfs[])
-    >- (rfs[])
-    >- (EVAL_TAC >> `(∃h. x = [h]) ∨ (∃h t. x = [h;t])` by simp[updn_two_lem_1]
-      >- (fs[updn_def])
-      >- (fs[] >> `nsnd (nsnd 0) = 0` by EVAL_TAC >> fs[]))
-    >- (`(∃ a b c. x = [a;b;c]) ∨ (∃ a b c d e. x = (a::b::c::d::e))` by simp[updn_three_lem_1]
-      >-(fs[updn_def,MULT2_def,DIV2_def])
-      >-(fs[updn_def,MULT2_def,DIV2_def])))
-  >- (fs[proj_def,updn_def,updn_zero_thm,pr_pr_up_case6_def] >> rw[]
-    >- (rfs[])
-    >- (rfs[])
-    >- (EVAL_TAC >> `(∃h. x = [h]) ∨ (∃h t. x = [h;t])` by simp[updn_two_lem_1]
-      >- (fs[updn_def])
-      >- (rfs[updn_def,updn_zero_thm] >> fs[]) )
-    >- (`(∃ a b c. x = [a;b;c]) ∨ (∃ a b c d e. x = (a::b::c::d::e))` by simp[updn_three_lem_1]
-      >-(fs[updn_def,MULT2_def,DIV2_def])
-      >-(fs[updn_def,MULT2_def,DIV2_def])) )
-  >- (fs[proj_def,updn_def,updn_zero_thm,pr_pr_up_case7_def] >> rw[]
+  >- (fs[proj_def,updn_def,updn_zero_thm,pr_pr_up_case2_def] >> rw[] >> fs[]
+      >- (`(∃h. x = [h]) ∨ (∃h t. x = [h;t])` by simp[updn_two_lem_1] >>
+          fs[updn_def,updn_zero_thm] >> simp[MULT2_def, npair_def] >>
+          EVAL_TAC >> simp[])
+      >- (`(∃ a b c. x = [a;b;c]) ∨ (∃ a b c d e. x = (a::b::c::d::e))`
+            by simp[updn_three_lem_1] >> fs[updn_def,MULT2_def,DIV2_def])
+     )
+  >- (fs[proj_def,updn_def,updn_zero_thm,pr_pr_up_case3_def] >> rw[] >> fs[] >>
+      `(∃ a b c. x = [a;b;c]) ∨ (∃ a b c d e. x = (a::b::c::d::e))`
+         by simp[updn_three_lem_1] >> fs[updn_def,MULT2_def,DIV2_def])
+  >- (fs[proj_def,updn_def,updn_zero_thm,pr_pr_up_case4_def] >> rw[] >> fs[]
+      >- (`(∃h. x = [h]) ∨ (∃h t. x = [h;t])` by simp[updn_two_lem_1] >>
+          fs[updn_def,updn_zero_thm] >> simp[MULT2_def] >> simp[npair_def])
+      >- (`(∃ a b c. x = [a;b;c]) ∨ (∃ a b c d e. x = (a::b::c::d::e))`
+            by simp[updn_three_lem_1] >> fs[updn_def,MULT2_def,DIV2_def])
+     )
+  >- (fs[proj_def,updn_def,updn_zero_thm,pr_pr_up_case5_def] >> rw[] >> fs[] >>
+      `(∃ a b c. x = [a;b;c]) ∨ (∃ a b c d e. x = (a::b::c::d::e))`
+         by simp[updn_three_lem_1] >> fs[updn_def,MULT2_def,DIV2_def])
+  >- (fs[proj_def,updn_def,updn_zero_thm,pr_pr_up_case6_def] >> rw[] >> fs[]
+      >- (`(∃h. x = [h]) ∨ (∃h t. x = [h;t])` by simp[updn_two_lem_1] >>
+          fs[updn_def] >> simp[MULT2_def] >> simp[npair_def])
+      >- (`(∃ a b c. x = [a;b;c]) ∨ (∃ a b c d e. x = (a::b::c::d::e))`
+           by simp[updn_three_lem_1] >> fs[updn_def,MULT2_def,DIV2_def])
+     )
+  >- (fs[proj_def,updn_def,updn_zero_thm,pr_pr_up_case7_def] >> rw[] >> fs[]
 
-    >- (EVAL_TAC >> `(x=[]) ∨ (x<>[])` by fs[] >- (rw[] >> EVAL_TAC)  >>
-       `(∃h. x = [h]) ∨ (∃h t. x = [h;t])` by simp[updn_two_lem_1]
-       >- (rfs[updn_def] >> `LENGTH x <= 1` by fs[] >> fs[] )
-       >- (rfs[updn_def] >> `LENGTH x = 2` by fs[] >> fs[]  ) )
-    >- (`(∃ a b c. x = [a;b;c])∨ (∃ a b c d e. x = (a::b::c::d::e))` by simp[updn_three_lem_1]
-       >- (fs[updn_def]  )
-       >- (fs[updn_def]) )
-     ) );
+      >- (Cases_on ‘x = []’ >> fs[] >>
+          `(∃h. x = [h]) ∨ (∃h t. x = [h;t])` by simp[updn_two_lem_1] >>
+          fs[updn_def])
+      >- (`(∃ a b c. x = [a;b;c]) ∨ (∃ a b c d e. x = (a::b::c::d::e))`
+            by simp[updn_three_lem_1] >> fs[updn_def])
+     )
+QED
 
 val primrec_cn = List.nth(CONJUNCTS primrec_rules, 3);
 
