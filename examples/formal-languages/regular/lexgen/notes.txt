@@ -1,9 +1,16 @@
 Theories:
 
-  dfaScript.sml           -- abstract DFAs, and executions
-  lexer_specScript.sml    -- lexer given by a list of regexp/fn pairs, maximal munch
-  lexer_runtimeScript.sml -- lexer driver
-  lexer_spec_to_dfaScript.sml -- mapping a lexer spec to a DFA, via smart derivs
+ dfaScript.sml 
+   -- abstract DFAs, and executions
+ 
+ lexer_specScript.sml 
+   -- lexer given by a list of regexp/fn pairs, maximal munch
+
+ lexer_runtimeScript.sml
+   -- lexer driver
+
+ lexer_spec_to_dfaScript.sml
+   -- mapping a lexer spec to a DFA, via smart derivs
 
 Important Definitions and Theorems
 -----------------------------------

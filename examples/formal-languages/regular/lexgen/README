@@ -1,0 +1,9 @@
+Lexer Generator. 
+
+The lexer generator takes a list of (regexp * action-function) pairs
+and generates a "maximal-munch" style lexer. The lexer is
+Brzozowski-derivative based, and hence execution proceeds in a
+interpreted style. See the examples file.
+
+Original theories are from Scott Owens. 
+Konrad Slind ported the proofs and added examples.

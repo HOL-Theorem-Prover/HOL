@@ -1,0 +1,204 @@
+app load ["regexpLib", "lexer_spec_to_dfaTheory", "intLib"];
+
+open lexer_runtimeTheory lexer_spec_to_dfaTheory;
+open Regexp_Type regexpSyntax;
+local open intLib in end;
+
+val lexer_compset = regexpLib.regexp_compset();
+
+val _ = 
+ Lib.C computeLib.add_thms lexer_compset 
+   [is_error_state_def, 
+    lex_spec_transition_def, 
+    lex_spec_finals_def,
+    lexer_def, 
+    lexer_get_token_def];
+
+val lexerEval = computeLib.CBV_CONV lexer_compset;
+
+fun genlex lex_spec =
+ let val thm1 = 
+       INST_TYPE [alpha |-> ``:char``]
+         (ISPEC lex_spec lexer_spec_to_dfaTheory.lex_spec_to_dfa_correct)
+     val thm2 = MATCH_MP lexer_runtimeTheory.lexer_correct thm1
+     val driver = rator(rator(lhs(rhs(snd(strip_forall(concl thm2))))))
+ in (thm2, driver)
+ end;
+
+(*---------------------------------------------------------------------------*)
+(* Example 1: strings over {a,b} mapped to list of iteration counts          *)
+(*---------------------------------------------------------------------------*)
+
+val aplus = fromQuote `a+`;
+val bplus = fromQuote `b+`;
+
+val aplus_tm = mk_regexp aplus;
+val bplus_tm = mk_regexp bplus;
+
+Hol_datatype `lexeme = A of num | B of num`;
+
+val lex_spec =
+ ``[(^aplus_tm, \s. A (LENGTH s));
+    (^bplus_tm, \s. B (LENGTH s))]``;
+    
+val (thm,driver) = genlex lex_spec;
+
+lexerEval ``^driver "aaaaaabbbbbabababaaaabbaa" []``;
+
+(*---------------------------------------------------------------------------*)
+(* Example 2. Basic PL constructs                                            *)
+(*---------------------------------------------------------------------------*)
+
+val [ident,kwd_if,kwd_then,kwd_else,spaces,digits] =
+ List.map (mk_regexp o fromQuote)
+    [`\w+`, `if`, `then`, `else`, `\s+`, `\d+` ];
+
+Hol_datatype
+ `lexeme = IDENT of string 
+         | KEY_IF
+         | KEY_THEN
+         | KEY_ELSE
+         | SPACES of num
+         | NUMBER of string`;
+
+val lex_spec =
+ ``[(^digits, \s. NUMBER s);
+    (^kwd_if, \s. KEY_IF);
+    (^kwd_then, \s. KEY_THEN);
+    (^kwd_else, \s. KEY_ELSE);
+    (^ident, \s. IDENT s);
+    (^spaces, \s. SPACES (LENGTH s))]``;
+    
+val (thm,driver) = genlex lex_spec;
+
+lexerEval ``^driver "ifabc" []``;
+lexerEval ``^driver "abcthen" []``;
+lexerEval ``^driver "abc then else ifburger 365" []``;
+lexerEval ``^driver "abc then else ifburger 365 ted2" []``;
+lexerEval ``^driver "abc then else ifburger 365w ted2" []``;
+lexerEval ``^driver "if abc then if burger 365w then ted2 else ted3" []``;
+
+(*---------------------------------------------------------------------------*)
+(* Example 3: JSON                                                           *)
+(*                                                                           *)
+(* The following isn't strictly accurate wrt string literals, which are      *)
+(* supposed to be unicode (with a few alterations). Following comments       *)
+(* provide more detail.                                                      *)
+(*---------------------------------------------------------------------------*)
+(* Syntax of numbers: <prefix> <frac>? <exp>?                                *)
+(*                                                                           *)
+(* prefix = -?(0|[1-9]\d* )  ; pardon the ML-comment-avoiding space!         *)
+(*   frac = \.\d+                                                            *)
+(*    exp = (e|E)(+|-)?\d+                                                   *)
+(*---------------------------------------------------------------------------*)
+(* Syntax of strings : "<char>*"                                             *)
+(* where <char> = (U - (CTL union {",\})) union C2 union C6                  *)
+(* and                                                                       *)
+(*   1. U = unicode characters, in utf-8 encoding (so from 1-4 bytes)        *)
+(*   2. CTL = ASCII "control" chars (0-31 (decimal) or 0-1F (hex)). These    *)
+(*            are not specified by single utf8 encoded chars                 *)
+(*   3. (") double quote (34 dec;22 hex) and (\) backslash (92 dec; 5C hex)  *)
+(*          are also not specified by single utf8 chars.                     *)
+(*   4. C2 are the 2-element backslashed chars:                              *)
+(*       - \"     ; embedded quote                                           *)
+(*       - \\     ; backslash                                                *)
+(*       - \/     ; slash                                                    *)
+(*       - \b,\f,\t,\n,\r   ; formatting chars                               *)
+(*   5. C6 are the 6-element backslashed chars, written \uXXXX, where        *)
+(*      X = [0-9a-fA-F]. CTL chars not in C2 have to be written in C6        *)
+(*      notation.                                                            *)
+(*                                                                           *)
+(* So one has choice when writing out a string: utf-8 encoding can be used   *)
+(* when convenient, or a character's code point can be spelled out with a    *)
+(* \uXXXX form. Note that there are far more characters in U than in C6, so  *)
+(* if one wanted to only use C6 format chars, then doubling-up via           *)
+(* \uXXXX\uXXXX to get the full range of utf-8 expressible chars would be    *)
+(* needed.                                                                   *)
+(*---------------------------------------------------------------------------*)
+(* UTF-8                                                                     *)
+(*   Binary    Hex          Comments                                         *)
+(*   0xxxxxxx  0x00..0x7F   Only byte of a 1-byte character encoding         *)
+(*   110xxxxx  0xC0..0xDF   First byte of a 2-byte character encoding        *)
+(*   1110xxxx  0xE0..0xEF   First byte of a 3-byte character encoding        *)
+(*   11110xxx  0xF0..0xF4   First byte of a 4-byte character encoding        *)
+(*   10xxxxxx  0x80..0xBF   Continuation bytes (1-3 continuation bytes)      *)
+(*                                                                           *)
+(* Since a 4-byte character has 5 header bits and 3 "payload" bits in the    *)
+(* first byte,  it seems as though the Hex range should be 0xF0..0xF7,       *)
+(* but there is a requirement to be compatible with UTF-16, which has        *)
+(* U+10FFFF as its highest codepoint, so the Hex range of the first byte is  *)
+(* actually restricted to 0xF0..0xF4.                                        *)
+(*                                                                           *)
+(* There are further requirements, e.g., characters need to be "minimally"   *)
+(* (or canonically) encoded. This is also known as the "overlong" encoding   *)
+(* issue. I am not yet sure whether this can be handled nicely with a regex. *)
+(*---------------------------------------------------------------------------*)
+
+Hol_datatype
+ `lexeme = lbrack | rbrack
+         | lbrace | rbrace
+         | ws
+         | colon
+         | comma
+         | nullLit
+         | boolLit of bool
+         | intLit of int
+         | numLit of string
+         | strLit of string`;
+
+val pat = mk_regexp o fromQuote;
+
+val trim_quotes_def =
+ Define
+  `trim_quotes s =
+    if 1 < LENGTH s
+      then SUBSTRING (s,1,LENGTH s - 2)
+      else s`;
+
+val mkInt_def =
+ Define
+  `mkInt s = 
+    if HD s = #"-"
+      then 0i - integer$int_of_num (ASCIInumbers$num_from_dec_string (TL s))
+      else integer$int_of_num (ASCIInumbers$num_from_dec_string s)`;
+      
+val _ = intReduce.add_int_compset lexer_compset;
+val _ = Lib.C computeLib.add_thms lexer_compset [trim_quotes_def,mkInt_def];
+
+val json_lex_spec =
+ ``[(^(pat `\[`),    \s. lbrack);
+    (^(pat `\]`),    \s. rbrack);
+    (^(pat `\{`),    \s. lbrace);
+    (^(pat `\}`),    \s. rbrace);
+    (^(pat `\,`),    \s. comma);
+    (^(pat `\:`),    \s. colon);
+    (^(pat `null`),  \s. nullLit);
+    (^(pat `true`),  \s. boolLit T);
+    (^(pat `false`), \s. boolLit F);
+    (^(pat `-?\d+`), \s. intLit (mkInt s));
+    (^(pat `-?(0|[1-9]\d*)(\.\d+)?((e|E)(\+|-)?\d+)?`), \s. numLit s);
+    (^(pat `\s+`),   \s. ws);
+    (^(pat `"\w*"`), \s. strLit (trim_quotes s))
+  ]``;
+    
+val (thm,driver) = genlex json_lex_spec;
+
+lexerEval ``^driver "[true,false]" []``;
+lexerEval ``^driver "{\"ted\" : [true,false], \"carol\" : [432, -432]}" []``;
+lexerEval ``^driver "{\"ted\" : [4.32,-0.4E12], \"carol\" : [432, -432]}" []``;
+lexerEval ``^driver "{\"ted\" : [4.32,-0.4E12], \"carol\" : [432, -432]}" []``;
+
+lexerEval ``^driver "{\"data\":{},\"name\":\"NONCE\",\"type\":\"T\"}" []``;
+
+lexerEval ``^driver 
+  "{\"data\":{\"args\":[\"arg1\"]},\"name\":\"USM\",\"type\":\"T\"}" []``;
+
+lexerEval ``^driver 
+  "{\"data\":{},\"name\":\"NONCE\",\"type\":\"T\"}" []``;
+
+lexerEval ``^driver 
+  "{\"data\":{\"sub1\":{\"data\":{\"sub\":{\"data\":{\"sub1\":{\"data\":{},\"name\":\"NONCE\",\"type\":\"T\"},\"sub2\":{\"data\":{\"args\":[\"arg1\",\"arg2\",\"arg3\"],\"place\":2},\"name\":\"KIM\",\"type\":\"T\"},\"sp2\":0,\"sp1\":0},\"name\":\"BRP\",\"type\":\"T\"},\"place\":6},\"name\":\"AT\",\"type\":\"T\"},\"sub2\":{\"data\":{\"sub1\":{\"data\":{},\"name\":\"SIG\",\"type\":\"T\"},\"sub2\":{\"data\":{\"args\":[\"arg1\"],\"place\":9},\"name\":\"KIM\",\"type\":\"T\"}},\"name\":\"LN\",\"type\":\"T\"},\"sp2\":1,\"sp1\":0},\"name\":\"BRP\",\"type\":\"T\"}" []``;
+
+lexerEval ``^driver 
+  "{\"data\":{\"sub1\":{\"data\":{\"sub1\":{\"data\":{\"args\":[\"arg1\",\"arg2\",\"arg3\"],\"place\":5},\"name\":\"KIM\",\"type\":\"T\"},\"sub2\":{\"data\":{\"sub\":{\"data\":{\"sub1\":{\"data\":{\"sub1\":{\"data\":{\"sub1\":{\"data\":{\"sub\":{\"data\":{},\"name\":\"HSH\",\"type\":\"T\"},\"place\":3},\"name\":\"AT\",\"type\":\"T\"},\"sub2\":{\"data\":{\"sub1\":{\"data\":{},\"name\":\"HSH\",\"type\":\"T\"},\"sub2\":{\"data\":{},\"name\":\"NONCE\",\"type\":\"T\"}},\"name\":\"LN\",\"type\":\"T\"},\"sp2\":0,\"sp1\":1},\"name\":\"BRS\",\"type\":\"T\"},\"sub2\":{\"data\":{\"sub1\":{\"data\":{\"sub1\":{\"data\":{\"sub\":{\"data\":{},\"name\":\"HSH\",\"type\":\"T\"},\"place\":4},\"name\":\"AT\",\"type\":\"T\"},\"sub2\":{\"data\":{},\"name\":\"NONCE\",\"type\":\"T\"},\"sp2\":1,\"sp1\":0},\"name\":\"BRS\",\"type\":\"T\"},\"sub2\":{\"data\":{},\"name\":\"HSH\",\"type\":\"T\"}},\"name\":\"LN\",\"type\":\"T\"},\"sp2\":1,\"sp1\":0},\"name\":\"BRS\",\"type\":\"T\"},\"sub2\":{\"data\":{\"sub\":{\"data\":{},\"name\":\"HSH\",\"type\":\"T\"},\"place\":6},\"name\":\"AT\",\"type\":\"T\"},\"sp2\":0,\"sp1\":1},\"name\":\"BRP\",\"type\":\"T\"},\"place\":0},\"name\":\"AT\",\"type\":\"T\"},\"sp2\":0,\"sp1\":0},\"name\":\"BRS\",\"type\":\"T\"},\"sub2\":{\"data\":{},\"name\":\"NONCE\",\"type\":\"T\"},\"sp2\":1,\"sp1\":0},\"name\":\"BRS\",\"type\":\"T\"}" []``;
+

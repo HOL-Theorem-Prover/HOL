@@ -885,7 +885,8 @@ fun byte_width n = if n = 0 then 1 else 1 + log256 n;
 (*---------------------------------------------------------------------------*)
 
 fun num_interval lo hi width dir =
- let val _ = if width < byte_width hi orelse hi < lo 
+ let val _ = if width < byte_width hi 
+                orelse lo < 0 orelse hi < lo 
               then raise ERR "num_interval" "malformed input" else ()
      val lorep = rev(padR (n2l lo) 0 width)
      val hirep = rev(padR (n2l hi) 0 width)
@@ -964,8 +965,8 @@ Ninterval 0 4611686018427387903;  (* Int63.maxInt *)
 fun twoE i = IntInf.pow (IntInf.fromInt 2,i);
 
 fun interval_regexp lo hi dir =
- if lo > hi
-     then raise ERR "interval_regexp" "trivial interval"
+ if not (lo <= hi) then
+     raise ERR "interval_regexp" "lo greater than hi"
  else
  if 0 <= lo andalso 0 <= hi then
     num_interval lo hi (byte_width hi) dir
