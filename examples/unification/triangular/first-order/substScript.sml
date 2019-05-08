@@ -4,6 +4,8 @@ prim_recTheory arithmeticTheory bagTheory listTheory;
 
 val _ = new_theory "subst";
 
+val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
+
 val FUNPOW_extends_mono = Q.store_thm(
 "FUNPOW_extends_mono",
 `∀P f. (∀x. P x ⇒ P (f x)) ∧ P x ⇒ P (FUNPOW f n x)`,

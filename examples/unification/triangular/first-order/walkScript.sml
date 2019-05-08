@@ -3,6 +3,9 @@ open HolKernel boolLib bossLib Parse finite_mapTheory relationTheory termTheory 
 val _ = new_theory "walk"
 val _ = metisTools.limit :=  { time = NONE, infs = SOME 1 }
 
+val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
+
+
 fun vwalk_wfs_hyp th =
 let val th =
   Q.INST [`R` |-> `vR s`] th
