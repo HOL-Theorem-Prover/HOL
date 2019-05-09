@@ -257,9 +257,9 @@ fun mkc s = prim_mk_const {Thy = "charset", Name = s};
 val charset_empty_tm = mkc "charset_empty";
 val charset_full_tm = mkc "charset_full";
 val empty_tm = mk_chset charset_empty_tm;
-val sigma_tm = mk_chset charset_full_tm;
+val dot_tm = mk_chset charset_full_tm;
 
 val epsilon_tm = mk_star empty_tm;
-val sigmastar_tm = mk_star sigma_tm;
+val dot_star_tm = mk_star dot_tm;
 
 end
