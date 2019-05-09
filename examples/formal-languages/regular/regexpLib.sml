@@ -230,18 +230,18 @@ fun dfa_by_proof (name,r) =
 (* where c1 ... cn are the elements of cs.                                   *)
 (*---------------------------------------------------------------------------*)
 
-fun charset_term_elts (cs:term) = 
+fun charset_term_elts (cs:term) =
   Regexp_Type.charset_elts (regexpSyntax.term_to_charset cs);
 
 val csvar = mk_var("cs",regexpSyntax.charset_ty);
 val regexp_chset_pat = ``regexp$regexp_lang ^(regexpSyntax.mk_chset csvar)``;
 
-fun char_tac (asl,c) = 
+fun char_tac (asl,c) =
     let val ctm = fst(dest_eq (last (strip_conj (snd (dest_exists c)))))
     in Q.EXISTS_TAC `ORD ^ctm` >> EVAL_TAC
     end
 
-val tactic = 
+val tactic =
    RW_TAC (list_ss ++ pred_setLib.PRED_SET_ss)
           [pred_setTheory.EXTENSION,
            regexpTheory.regexp_lang_def,
@@ -254,11 +254,11 @@ val tactic =
             >> NO_TAC)
     >> W char_tac;
 
-fun charset_conv tm = 
+fun charset_conv tm =
  case total (match_term regexp_chset_pat) tm
-  of NONE => raise ERR "charset_conv" 
+  of NONE => raise ERR "charset_conv"
                     "expected ``regexp_lang (Chset cs)`` term"
-  | SOME (theta, _) => 
+  | SOME (theta, _) =>
      let open pred_setSyntax
          val chars = charset_term_elts (subst theta csvar)
          val char_tms = map fromMLchar chars
@@ -268,10 +268,10 @@ fun charset_conv tm =
      prove(the_goal,tactic)
   end
 
-val charset_conv_ss = 
+val charset_conv_ss =
   simpLib.std_conv_ss
     {name="charset_conv",
-     conv = charset_conv, 
+     conv = charset_conv,
      pats = [regexp_chset_pat]}
 
 end (* regexpLib *)

@@ -119,7 +119,7 @@ datatype regexp
    | Star of regexp
    | Or of regexp list
    | Neg of regexp;
-    
+
 fun And (r1,r2) = Neg(Or[Neg r1,Neg r2]);
 fun Diff (r1,r2) = And(r1,Neg r2);
 
@@ -868,7 +868,7 @@ fun quote_to_tree input =
 (* Support for numeric intervals                                             *)
 (*===========================================================================*)
 
-fun n2l (n:IntInf.int) = 
+fun n2l (n:IntInf.int) =
   if n <= 0 then [] else IntInf.toInt(n mod 256)::n2l (n div 256)
 
 fun l2n [] = 0
@@ -885,20 +885,20 @@ fun byte_width n = if n = 0 then 1 else 1 + log256 n;
 (*---------------------------------------------------------------------------*)
 
 fun num_interval lo hi width dir =
- let val _ = if width < byte_width hi 
-                orelse lo < 0 orelse hi < lo 
+ let val _ = if width < byte_width hi
+                orelse lo < 0 orelse hi < lo
               then raise ERR "num_interval" "malformed input" else ()
      val lorep = rev(padR (n2l lo) 0 width)
      val hirep = rev(padR (n2l hi) 0 width)
-     fun finalize LoL = 
+     fun finalize LoL =
          case dir
-	  of LSB => rev (map catlist LoL)
-	   | MSB => rev (map (catlist o rev) LoL)
+          of LSB => rev (map catlist LoL)
+           | MSB => rev (map (catlist o rev) LoL)
      fun mk_ivls [] acc = mk_or (finalize acc)
        | mk_ivls ((prefix,[],[])::t) acc = raise ERR "num_interval" "empty lists"
        | mk_ivls ((prefix,[r1],[r2])::t) acc =
-	        mk_ivls t ((interval_charset r1 r2::prefix)::acc)
-       | mk_ivls ((prefix,q1::r1,q2::r2)::t) acc = 
+                mk_ivls t ((interval_charset r1 r2::prefix)::acc)
+       | mk_ivls ((prefix,q1::r1,q2::r2)::t) acc =
           if q1=q2 then
              mk_ivls ((num2regexp q1::prefix,r1,r2)::t) acc
           else (* have q1 < q2 *)
@@ -906,7 +906,7 @@ fun num_interval lo hi width dir =
              let val thing = dots (length r1) @ (interval_charset q1 q2 :: prefix)
              in mk_ivls t (thing::acc)
              end
-          else 
+          else
           if q1=0 then  (* fill up to e2 slot *)
              let val w = 1 + length r1
                  val ceil = padR [1] 0 w
@@ -917,14 +917,14 @@ fun num_interval lo hi width dir =
          val thing1 = (prefix,q1::r1,padR [q2-1] 255 w)
          val thing2 = (prefix,padR [q2] 0 w,q2::r2)
 *)
-	     in
+             in
                 mk_ivls (thing1::thing2::t) acc
              end
-          else 
+          else
           let val w = 1 + length r1
           in case (Lib.all (equal 0) r1,Lib.all (equal 255) r2)
               of (true,true)  => raise ERR "mk_ivls" "inaccessible"
-               | (true,false) => 
+               | (true,false) =>
                    let val thing1 = (prefix,q1::r1,padR [q2-1] 255 w)
                        val thing2 = (prefix,padR [q2] 0 w,q2::r2)
                    in mk_ivls (thing1::thing2::t) acc
@@ -936,25 +936,25 @@ fun num_interval lo hi width dir =
                    end
                | (false,false) =>
                    let val thing1 = (prefix,q1::r1,padR [q1] 255 w)
-                       val thing2 = 
+                       val thing2 =
                           if (q1 + 1 < q2)
                            then [(prefix,padR [q1+1] 0 w,padR [q2-1] 255 w)]
                            else []
                        val thing3 = (prefix,padR [q2] 0 w,q2::r2)
-                   in 
+                   in
                      mk_ivls ([thing1] @ thing2 @ [thing3] @ t) acc
                    end
-	  end
+          end
        | mk_ivls other wise = raise ERR "num_interval" "lists of different length"
- in 
+ in
    mk_ivls [([]:regexp list,lorep,hirep)] []
  end
 
 
 (*
-fun Ninterval lo hi = 
-  num_interval (IntInf.fromInt lo) 
-               (IntInf.fromInt hi) 
+fun Ninterval lo hi =
+  num_interval (IntInf.fromInt lo)
+               (IntInf.fromInt hi)
                (byte_width (IntInf.fromInt hi))
                MSB;
 Ninterval 38 23567900;
@@ -976,8 +976,8 @@ fun interval_regexp lo hi dir =
          val top = twoE (width * 8)
      in if hi + 1 = top + lo  (* contiguous *)
         then catlist (dots width)
-        else 
-         Or [num_interval (top + lo) (top-1) width dir, 
+        else
+         Or [num_interval (top + lo) (top-1) width dir,
              num_interval 0 hi width dir]
      end
   else

@@ -52,7 +52,7 @@ sig
  val ranged : regexp -> int -> int -> regexp
  val num_interval : IntInf.int -> IntInf.int -> int -> direction -> regexp
  val interval_regexp : IntInf.int -> IntInf.int -> direction -> regexp
-  
+
  (* parsing *)
 
  datatype packelt
