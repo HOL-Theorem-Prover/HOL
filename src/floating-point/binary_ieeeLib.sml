@@ -398,9 +398,9 @@ local
                  (ties_to_even (boolSyntax.mk_conj (c, boolSyntax.mk_neg rx))))
       end
    val lt_thm =
-      Drule.MATCH_MP (realLib.REAL_ARITH ``(a <= b = F) ==> b < a: real``)
+      Drule.MATCH_MP (realLib.REAL_ARITH ``(a <= b <=> F) ==> b < a: real``)
    val le_thm =
-      Drule.MATCH_MP (realLib.REAL_ARITH ``(a < b = F) ==> b <= a: real``)
+      Drule.MATCH_MP (realLib.REAL_ARITH ``(a < b <=> F) ==> b <= a: real``)
    fun mk_w (n, ty) = wordsSyntax.mk_n2w (numLib.mk_numeral n, ty)
    fun float_of_triple ((t, w), (s, e, f)) =
      binary_ieeeSyntax.mk_floating_point
