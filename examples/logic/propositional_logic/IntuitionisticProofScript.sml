@@ -14,7 +14,7 @@ val _ = new_theory "IntuitionisticProof";
 
 
 val _ = set_fixity "Imp" (Infixr 460);
-val _ = set_fixity "BiImp" (Infix (NONASSOC, 450) );
+val _ = set_fixity "BiImp" (Infix (NONASSOC, 455) );
 val _ = set_fixity "And" (Infixr 490);
 val _ = set_fixity "Or" (Infixr 490);
 val _ = set_fixity "Not" (Prefix 510);
