@@ -3,7 +3,7 @@
 (* DESCRIPTION   : Theory for address alignment.                             *)
 (* ========================================================================= *)
 
-open HolKernel Parse boolLib bossLib Q
+open HolKernel Parse boolLib bossLib Q dep_rewrite
 open wordsLib
 
 val () = new_theory "alignment";
@@ -316,6 +316,59 @@ Proof
   \\ fs [arithmeticTheory.NOT_LESS,pow2_eq_0,aligned_0]
   \\ `2 ** k < dimword (:'a)` by fs [wordsTheory.dimword_def]
   \\ fs [aligned_def,align_w2n]
+QED
+
+Theorem word_msb_align:
+  p < dimindex(:'a) ==> (word_msb (align p w) = word_msb (w:'a word))
+Proof
+  rw[align_bitwise_and,wordsTheory.word_msb]
+  \\ rw[wordsTheory.word_bit_and]
+  \\ rw[wordsTheory.word_bit_lsl]
+  \\ rw[wordsTheory.word_bit_test,
+        arithmeticTheory.MOD_EQ_0_DIVISOR,
+        wordsTheory.dimword_def]
+QED
+
+Theorem align_ls:
+  align p n <=+ n
+Proof
+  simp[wordsTheory.WORD_LS]
+  \\ Cases_on`n`
+  \\ fs[align_w2n]
+  \\ qmatch_asmsub_rename_tac`n < _`
+  \\ DEP_REWRITE_TAC[arithmeticTheory.LESS_MOD]
+  \\ conj_asm2_tac >- fs[]
+  \\ DEP_REWRITE_TAC[GSYM arithmeticTheory.X_LE_DIV]
+  \\ simp[]
+QED
+
+Theorem align_lo:
+  ~aligned p n ==> align p n <+ n
+Proof
+  simp[wordsTheory.WORD_LO]
+  \\ Cases_on`n`
+  \\ fs[align_w2n, aligned_def]
+  \\ strip_tac
+  \\ qmatch_goalsub_abbrev_tac`a < b`
+  \\ `a <= b` suffices_by fs[]
+  \\ qmatch_asmsub_rename_tac`n < _`
+  \\ simp[Abbr`a`]
+  \\ DEP_REWRITE_TAC[arithmeticTheory.LESS_MOD]
+  \\ conj_asm2_tac >- fs[]
+  \\ DEP_REWRITE_TAC[GSYM arithmeticTheory.X_LE_DIV]
+  \\ simp[]
+QED
+
+Theorem byte_align_aligned:
+  byte_aligned x <=> (byte_align x = x)
+Proof EVAL_TAC
+QED
+
+Theorem byte_aligned_add:
+  byte_aligned x /\ byte_aligned y ==> byte_aligned (x+y)
+Proof
+  rw[byte_aligned_def]
+  \\ metis_tac[aligned_add_sub_cor]
 QED
 
 (* -------------------------------------------------------------------------
