@@ -311,11 +311,6 @@ In addition, there are three special targets that can be used:
 \noindent Finally, users can directly affect the workings of \holmake{}
 with the following command-line options:
 \begin{description}
-\item[\tt -d <file>] Ignore the given file and don't try to build it.
-  The file may be rebuilt anyway if other files you have specified
-  depend on it.  This is useful to stop Holmake from attempting to
-  compile files that are interactive scripts (include use of {\tt
-  load} or {\tt use}, for example).
 \item[\texttt{-f <theory>}] Toggles whether or not a theory should be
   built in ``fast'' mode.  Fast building causes tactic proofs
   (invocations of \texttt{prove} and \texttt{store\_thm}) to

@@ -1500,14 +1500,21 @@ second is to show the new term.
 
 (defun hol-template-store-thm (name)
    (interactive "sTheorem name: ")
-   (insert "val ")
+   (insert "\nTheorem ")
    (insert name)
-   (insert " = store_thm(")
-   (cond ((> (length name) 30) (insert "\n  "))
-          (t t))
-   (insert "\"")
-   (insert name)
-   (insert "\",\n  ``  ``,\n"))
+   (insert ":\n\nProof\nQED\n"))
+
+(defun hol-template-hol-relnish (style name)
+  (insert (format "\nval (%s_rules,%s_ind,%s_cases) = %s‘\n  ...\n’;\n"
+                  name name name style)))
+
+(defun hol-template-hol-reln (name)
+  (interactive "sConstant name: ")
+  (hol-template-hol-relnish "Hol_reln" name))
+
+(defun hol-template-hol-coreln (name)
+  (interactive "sConstant name: ")
+  (hol-template-hol-relnish "Hol_coreln" name))
 
 (defun hol-template-new-datatype ()
    (interactive)
@@ -2021,7 +2028,9 @@ second is to show the new term.
 (define-key hol-map "*"    'hol-template-comment-star)
 (define-key hol-map "-"    'hol-template-comment-minus)
 (define-key hol-map "="    'hol-template-comment-equal)
+(define-key hol-map "\M-c" 'hol-template-hol-coreln)
 (define-key hol-map "\M-d" 'hol-template-define)
+(define-key hol-map "\M-i" 'hol-template-hol-reln)
 (define-key hol-map "\M-x" 'hol-template-store-thm)
 
 
@@ -2147,6 +2156,12 @@ second is to show the new term.
 
 (define-key global-map [menu-bar hol-menu hol-template new-datatype]
    '("New datatype" . hol-template-new-datatype))
+
+(define-key global-map [menu-bar hol-menu hol-template hol-coreln]
+   '("Coinductive definition" . hol-template-hol-coreln))
+
+(define-key global-map [menu-bar hol-menu hol-template hol-reln]
+   '("Inductive definition" . hol-template-hol-reln))
 
 (define-key global-map [menu-bar hol-menu hol-template define]
    '("New definition" . hol-template-define))

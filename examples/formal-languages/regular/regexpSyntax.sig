@@ -50,8 +50,8 @@ sig
   val charset_empty_tm : term
   val charset_full_tm  : term
   val empty_tm         : term
-  val sigma_tm         : term
+  val dot_tm         : term
   val epsilon_tm       : term
-  val sigmastar_tm     : term
+  val dot_star_tm     : term
 
 end

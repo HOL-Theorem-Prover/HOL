@@ -326,7 +326,6 @@ fun Holmake nobuild dir dirinfo cline_additional_includes targets : res = let
   val always_rebuild_deps = #rebuild_deps coption_value
   val cline_recursive = #recursive coption_value
   val debug = #debug coption_value
-  val dontmakes = #dontmakes coption_value
   val user_hmakefile = #hmakefile coption_value
   val cmdl_HOLDIR = #holdir coption_value
   val cline_additional_includes =
