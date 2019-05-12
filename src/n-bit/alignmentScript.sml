@@ -359,6 +359,83 @@ Proof
   \\ simp[]
 QED
 
+Theorem aligned_between:
+  ~aligned p n /\ aligned p m /\ align p n <+ m ==> n <+ m
+Proof
+  rw[wordsTheory.WORD_LO]
+  \\ fs[align_w2n, aligned_def]
+  \\ Cases_on`n` \\ Cases_on`m` \\ fs[]
+  \\ CCONTR_TAC \\ fs[arithmeticTheory.NOT_LESS]
+  \\ qmatch_asmsub_abbrev_tac`n DIV d * d`
+  \\ `n DIV d * d <= n` by (
+    DEP_REWRITE_TAC[GSYM arithmeticTheory.X_LE_DIV] \\ fs[Abbr`d`] )
+  \\ fs[]
+  \\ qmatch_asmsub_rename_tac`(d * (m DIV d)) MOD _`
+  \\ `m DIV d * d <= m` by (
+    DEP_REWRITE_TAC[GSYM arithmeticTheory.X_LE_DIV] \\ fs[Abbr`d`] )
+  \\ fs[]
+  \\ `d * (n DIV d) <= m` by metis_tac[]
+  \\ pop_assum mp_tac
+  \\ simp_tac pure_ss [Once arithmeticTheory.MULT_COMM]
+  \\ DEP_REWRITE_TAC[GSYM arithmeticTheory.X_LE_DIV]
+  \\ conj_tac >- simp[Abbr`d`]
+  \\ simp[arithmeticTheory.NOT_LESS_EQUAL]
+  \\ `d * (m DIV d) < d * (n DIV d)` suffices_by fs[]
+  \\ metis_tac[]
+QED
+
+local
+  val aligned_add_mult_lemma = Q.prove(
+    `aligned k (w + n2w (2 ** k)) = aligned k w`,
+    fs [aligned_add_sub,aligned_pow2]) |> GEN_ALL
+  val aligned_add_mult_any = Q.prove(
+    `!n w. aligned k (w + n2w (n * 2 ** k)) = aligned k w`,
+    Induct \\ fs [arithmeticTheory.MULT_CLAUSES,
+                  GSYM wordsTheory.word_add_n2w]
+    \\ rw []
+    \\ pop_assum (qspec_then `w + n2w (2 ** k)` mp_tac)
+    \\ fs [aligned_add_mult_lemma]) |> GEN_ALL
+in
+  val aligned_add_pow = save_thm("aligned_add_pow[simp]",
+    CONJ aligned_add_mult_lemma aligned_add_mult_any)
+end
+
+Theorem align_add_aligned_gen:
+  !a. aligned p a ==> (align p (a + b) = a + align p b)
+Proof
+  completeInduct_on`w2n b`
+  \\ rw[]
+  \\ Cases_on`w2n b < 2 ** p`
+  >- (
+    simp[align_add_aligned]
+    \\ `align p b = 0w` by simp[lt_align_eq_0]
+    \\ simp[] )
+  \\ fs[arithmeticTheory.NOT_LESS]
+  \\ Cases_on`w2n b = 2 ** p`
+  >- (
+    `aligned p b` by(
+      simp[aligned_def,align_w2n]
+      \\ metis_tac[wordsTheory.n2w_w2n] )
+    \\ `aligned p (a + b)` by metis_tac[aligned_add_sub_cor]
+    \\ fs[aligned_def])
+  \\ fs[arithmeticTheory.LESS_EQ_EXISTS]
+  \\ qmatch_asmsub_rename_tac`w2n b = z + _`
+  \\ first_x_assum(qspec_then`z`mp_tac)
+  \\ impl_keep_tac >- fs[]
+  \\ `z < dimword(:'a)` by metis_tac[wordsTheory.w2n_lt, arithmeticTheory.LESS_TRANS]
+  \\ disch_then(qspec_then`n2w z`mp_tac)
+  \\ impl_tac >- simp[]
+  \\ strip_tac
+  \\ first_assum(qspec_then`a + n2w (2 ** p)`mp_tac)
+  \\ impl_tac >- fs[]
+  \\ rewrite_tac[wordsTheory.word_add_n2w, GSYM wordsTheory.WORD_ADD_ASSOC]
+  \\ Cases_on`b` \\ fs[GSYM wordsTheory.word_add_n2w]
+  \\ strip_tac
+  \\ first_x_assum(qspec_then`n2w (2**p)`mp_tac)
+  \\ impl_tac >- fs[aligned_w2n]
+  \\ simp[]
+QED
+
 Theorem byte_align_aligned:
   byte_aligned x <=> (byte_align x = x)
 Proof EVAL_TAC
