@@ -38,19 +38,19 @@ val UNMARK_REG_def = Define `
 
 
 val empty_def = Define `
-         (empty (MEps)     = T                     ) /\
-         (empty (MSym _ _) = F                     ) /\
-         (empty (MAlt p q) = (empty p) \/ (empty q)) /\
-         (empty (MSeq p q) = (empty p) /\ (empty q)) /\
-         (empty (MRep r)   = T                     )
+         (empty (MEps)     <=> T                     ) /\
+         (empty (MSym _ _) <=> F                     ) /\
+         (empty (MAlt p q) <=> (empty p) \/ (empty q)) /\
+         (empty (MSeq p q) <=> (empty p) /\ (empty q)) /\
+         (empty (MRep r)   <=> T                     )
 `;
 
 val final_def = Define `
-         (final (MEps)     = F                                    ) /\
-         (final (MSym b _) = b                                    ) /\
-         (final (MAlt p q) =  (final p) \/ (final q)              ) /\
-         (final (MSeq p q) = ((final p) /\ (empty q)) \/ (final q)) /\
-         (final (MRep r)   = final r                              )
+         (final (MEps)     <=> F                                    ) /\
+         (final (MSym b _) <=> b                                    ) /\
+         (final (MAlt p q) <=>  (final p) \/ (final q)              ) /\
+         (final (MSeq p q) <=> ((final p) /\ (empty q)) \/ (final q)) /\
+         (final (MRep r)   <=> final r                              )
 `;
 
 val shift_def = Define `
@@ -105,11 +105,11 @@ val UNMARK_REG_DEFs = store_thm ("UNMARK_REG_DEFs", ``
 
 (* rewrites for empty *)
 val empty_DEFs = store_thm ("empty_DEFs", ``
-         (      empty (MEps)     = T                     ) /\
-         (!b c. empty (MSym b c) = F                     ) /\
-         (!p q. empty (MAlt p q) = (empty p) \/ (empty q)) /\
-         (!p q. empty (MSeq p q) = (empty p) /\ (empty q)) /\
-         (!r.   empty (MRep r)   = T                     )
+         (      empty (MEps)     <=> T                     ) /\
+         (!b c. empty (MSym b c) <=> F                     ) /\
+         (!p q. empty (MAlt p q) <=> (empty p) \/ (empty q)) /\
+         (!p q. empty (MSeq p q) <=> (empty p) /\ (empty q)) /\
+         (!r.   empty (MRep r)   <=> T                     )
 ``,
 
   REWRITE_TAC [empty_def]
@@ -117,11 +117,11 @@ val empty_DEFs = store_thm ("empty_DEFs", ``
 
 (* rewrites for final *)
 val final_DEFs = store_thm ("final_DEFs", ``
-         (      final (MEps)     = F                                    ) /\
-         (!b c. final (MSym b c) = b                                    ) /\
-         (!p q. final (MAlt p q) =  (final p) \/ (final q)              ) /\
-         (!p q. final (MSeq p q) = ((final p) /\ (empty q)) \/ (final q)) /\
-         (!r.   final (MRep r)   = final r                              )
+         (      final (MEps)     <=> F                                    ) /\
+         (!b c. final (MSym b c) <=> b                                    ) /\
+         (!p q. final (MAlt p q) <=>  (final p) \/ (final q)              ) /\
+         (!p q. final (MSeq p q) <=> ((final p) /\ (empty q)) \/ (final q)) /\
+         (!r.   final (MRep r)   <=> final r                              )
 ``,
 
   REWRITE_TAC [final_def]
@@ -173,11 +173,11 @@ val HAS_MARKS_def = Define `
 `;
 
 val HAS_MARKS_ALT_DEF = store_thm ("HAS_MARKS_ALT_DEF", ``
-         (       HAS_MARKS (MEps)     = F                              ) /\
-         (!b x. (HAS_MARKS (MSym b x) = b)                             ) /\
-         (!p q. (HAS_MARKS (MAlt p q) = (HAS_MARKS p) \/ (HAS_MARKS q))) /\
-         (!p q. (HAS_MARKS (MSeq p q) = (HAS_MARKS p) \/ (HAS_MARKS q))) /\
-         (!r.   (HAS_MARKS (MRep r)   = (HAS_MARKS r))                 )
+         (       HAS_MARKS (MEps)     <=> F                              ) /\
+         (!b x. (HAS_MARKS (MSym b x) <=> b)                             ) /\
+         (!p q. (HAS_MARKS (MAlt p q) <=> (HAS_MARKS p) \/ (HAS_MARKS q))) /\
+         (!p q. (HAS_MARKS (MSeq p q) <=> (HAS_MARKS p) \/ (HAS_MARKS q))) /\
+         (!r.   (HAS_MARKS (MRep r)   <=> (HAS_MARKS r))                 )
 ``,
 
   SIMP_TAC (list_ss++MReg_ss) [HAS_MARKS_def, EXP_NODELIST_def, EXISTS_OR_THM]
