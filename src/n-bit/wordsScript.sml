@@ -4817,6 +4817,55 @@ val WORD_SUB_LE = Q.store_thm("WORD_SUB_LE",
   SIMP_TAC bool_ss [WORD_LE_SUB_UPPER,WORD_ZERO_LE_SUB])
 
 (* -------------------------------------------------------------------------
+    More theorems
+   ------------------------------------------------------------------------- *)
+
+Theorem word_bit_thm:
+  !n w:'a word. word_bit n w <=> n < dimindex (:'a) /\ w ' n
+Proof
+  fs [word_bit_def,LESS_EQ] \\ rw []
+  \\ assume_tac DIMINDEX_GT_0
+  \\ Cases_on `dimindex (:'a)` \\ fs [LESS_EQ]
+QED
+
+Theorem word_bit_and:
+  word_bit n (w1 && w2) <=> word_bit n w1 /\ word_bit n w2
+Proof
+  fs [word_bit_def,word_and_def] \\ eq_tac \\ rw []
+  \\ assume_tac DIMINDEX_GT_0
+  \\ `n < dimindex (:'a)` by decide_tac
+  \\ fs [fcpTheory.FCP_BETA]
+QED
+
+Theorem word_bit_or:
+  word_bit n (w1 || w2) <=> word_bit n w1 \/ word_bit n w2
+Proof
+  fs [word_bit_def,word_or_def] \\ eq_tac \\ rw []
+  \\ assume_tac DIMINDEX_GT_0
+  \\ `n < dimindex (:'a)` by decide_tac
+  \\ fs [fcpTheory.FCP_BETA]
+QED
+
+Theorem word_bit_lsl:
+  word_bit n (w << i) <=>
+    word_bit (n - i) (w:'a word) /\ n < dimindex (:'a) /\ i <= n
+Proof
+  fs [word_bit_thm,word_lsl_def] \\ eq_tac \\ fs []
+  \\ rw [] \\ rfs [fcpTheory.FCP_BETA]
+QED
+
+Theorem word_bit_test:
+  word_bit n w <=> ((w && n2w (2 ** n)) <> 0w:'a word)
+Proof
+  rewrite_tac[word_bit_thm]
+  \\ srw_tac[fcpLib.FCP_ss, boolSimps.CONJ_ss][word_0, word_and_def]
+  \\ EQ_TAC \\ rw[]
+  \\ rfs[word_index]
+  \\ qexists_tac`n`
+  \\ rw[word_index]
+QED
+
+(* -------------------------------------------------------------------------
     Create a few word sizes
    ------------------------------------------------------------------------- *)
 
