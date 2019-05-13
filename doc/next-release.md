@@ -212,6 +212,9 @@ Incompatibilities:
     If the user wants the new `foo_def` to appear in the `EVAL`-compset in future theories, they must change the call to `save_thm` to use the name `"foo_def[compute]"`.
     Now, as before, the old `foo_def` cannot be seen by future theories at all, and so certainly will not be in the `EVAL`-compset.
 
+*   The global toggle `allow_schema_definition` has turned into a feedback trace variable.
+    Users typically use the `DefineSchema` entrypoint and should continue to do so; programmers should change uses of `with_flag` to `Feedback.trace`.
+
 * * * * *
 
 <div class="footer">

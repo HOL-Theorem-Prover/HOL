@@ -14,6 +14,10 @@ structure Parse = struct
 end
 open Parse
 
+val allow_schema_definition = ref false
+val _ = Feedback.register_btrace ("Define.allow_schema_definition",
+                                  allow_schema_definition)
+
 val ERR    = mk_HOL_ERR "TotalDefn";
 val ERRloc = mk_HOL_ERRloc "TotalDefn";
 val WARN   = HOL_WARNING "TotalDefn";
