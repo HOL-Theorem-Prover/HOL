@@ -37,6 +37,7 @@ ARTS =bool_defs.ot.art\
   ../coretypes/sum.ot.art\
   ../coretypes/option.ot.art\
   ../HolSat/sat.ot.art\
+  ../metis/normalForms.ot.art\
   ../num/theories/num.ot.art\
   ../num/theories/prim_rec.ot.art\
   ../num/theories/arithmetic.ot.art\

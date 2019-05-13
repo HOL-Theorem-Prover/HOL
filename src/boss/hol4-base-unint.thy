@@ -178,6 +178,9 @@ numeral-bit {
   import: bit
   article: "../num/extra_theories/numeral_bit.ot.art"
 }
+normal-forms {
+  article: "../metis/normalForms.ot.art"
+}
 pred-set {
   import: bool
   import: combin
@@ -187,6 +190,7 @@ pred-set {
   import: arithmetic
   import: while
   import: prim-rec
+  import: normal-forms
   import: numeral
   import: numpair
   import: marker
