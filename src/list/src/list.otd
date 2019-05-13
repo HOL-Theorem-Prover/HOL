@@ -22,7 +22,6 @@ delconst APPEND
 delconst MAP
 delconst REVERSE
 delconst HD
-delconst TL
 delconst FLAT
 delconst FILTER
 delconst NULL
