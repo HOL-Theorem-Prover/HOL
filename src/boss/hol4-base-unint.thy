@@ -57,26 +57,29 @@ relation {
 }
 one {
   import: bool
-  article: "../one/one.ot.art"
+  article: "../coretypes/one.ot.art"
 }
 pair {
   import: bool
+  import: combin
   import: relation
-  article: "../pair/src/pair.ot.art"
+  article: "../coretypes/pair.ot.art"
 }
 poset {
   import: bool
   import: pair
-  article: "../pair/src/poset.ot.art"
+  article: "../coretypes/poset.ot.art"
 }
 sum {
   import: bool
   import: combin
-  article: "../sum/sum.ot.art"
+  article: "../coretypes/sum.ot.art"
 }
 option {
   import: bool
-  article: "../option/option.ot.art"
+  import: combin
+  import: relation
+  article: "../coretypes/option.ot.art"
 }
 num {
   import: bool
@@ -109,8 +112,9 @@ basic-size {
   article: "../num/theories/basicSize.ot.art"
 }
 while {
-  import: bool
   import: arithmetic
+  import: bool
+  import: combin
   article: "../num/theories/while.ot.art"
 }
 numpair {
@@ -176,6 +180,7 @@ numeral-bit {
 }
 pred-set {
   import: bool
+  import: combin
   import: pair
   import: relation
   import: option
@@ -206,10 +211,11 @@ list {
   article: "../list/src/list.ot.art"
 }
 rich-list {
-  import: bool
-  import: list
   import: arithmetic
+  import: bool
   import: combin
+  import: list
+  import: pred-set
   article: "../list/src/rich_list.ot.art"
 }
 indexed-lists {
