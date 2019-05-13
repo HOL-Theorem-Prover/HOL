@@ -4,7 +4,7 @@ val Thy = "prove_base_assums";
 
 val _ = new_theory Thy;
 
-val _ = new_constant("base-1.203",alpha);
+val _ = new_constant("base-1.218",alpha);
 
 fun fix_tyop {abs={Name="_",Thy=athy},rep={Name="_",Thy=rthy},args,ax,name={Thy=tthy,Tyop=tyop}} =
   {abs={Name=(tyop^"_abs"),Thy=athy},
@@ -390,7 +390,7 @@ val th27 = store_thm("th27", el 27 goals |> concl,
   \\ PURE_REWRITE_TAC[T_iff,or_T,F_iff,or_F,imp_T,imp_F]
   \\ REFL_TAC);
 
-val cons_neq_nil = hd(amatch``_ <> Data_List_nil``)
+val cons_neq_nil = hd(amatch``Data_List_cons _ _ <> Data_List_nil``)
 val th28 = store_thm("th28", el 28 goals |> concl, MATCH_ACCEPT_TAC (GSYM cons_neq_nil))
 
 val some_neq_none = hd(amatch``_ <> Data_Option_none``)
@@ -529,7 +529,7 @@ fun EQT_ELIM th = EQ_MP (SYM th) truth
 fun EQF_ELIM th =
    let
       val (lhs, rhs) = dest_eq (concl th)
-      val _ = assert (equal boolSyntax.F) rhs
+      val _ = assert Feq rhs
    in
       NOT_INTRO (DISCH lhs (EQ_MP th (ASSUME lhs)))
    end
@@ -1071,7 +1071,7 @@ val itself_tydef = prim_type_definition({Thy="prove_base_assums",Tyop="itself"},
   SPEC boolSyntax.arb exists_refl |> CONV_RULE(QUANT_CONV SYM_CONV))
 
 val _ = Parse.hide"the_value"
-val the_value_def = new_definition("the_value_def",``the_value = (ARB:'a itself)``)
+val the_value_def = new_definition("the_value_def",``the_value = (ARB:'a prove_base_assums$itself)``)
 
 val itself_unique = Q.store_thm("itself_unique",
   `!i. i = the_value`,
