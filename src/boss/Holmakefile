@@ -29,11 +29,11 @@ ARTS =bool_defs.ot.art\
   ../marker/marker.ot.art\
   ../combin/combin.ot.art\
   ../relation/relation.ot.art\
-  ../one/one.ot.art\
-  ../pair/src/pair.ot.art\
-  ../pair/src/poset.ot.art\
-  ../sum/sum.ot.art\
-  ../option/option.ot.art\
+  ../coretypes/one.ot.art\
+  ../coretypes/pair.ot.art\
+  ../coretypes/poset.ot.art\
+  ../coretypes/sum.ot.art\
+  ../coretypes/option.ot.art\
   ../HolSat/sat.ot.art\
   ../num/theories/num.ot.art\
   ../num/theories/prim_rec.ot.art\
