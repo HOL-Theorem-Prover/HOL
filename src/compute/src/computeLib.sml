@@ -4,6 +4,8 @@ struct
 open HolKernel boolSyntax boolTheory Abbrev clauses compute_rules equations;
 
 val auto_import_definitions = ref true;
+val _ = Feedback.register_btrace
+          ("computeLib.auto_import_definitions", auto_import_definitions)
 
 (* re-exporting types from clauses *)
 
