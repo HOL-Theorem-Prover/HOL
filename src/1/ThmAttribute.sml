@@ -30,4 +30,21 @@ struct
                         ("No such attribute: " ^ attrname)
         | SOME f => f arg
 
+  fun extract_attributes s = let
+    open Substring
+    val (bracketl,rest) = position "[" (full s)
+  in
+    if isEmpty rest then (s,[])
+    else let
+      val (names,bracketr) = position "]" (slice(rest,1,NONE))
+    in
+      if size bracketr <> 1 then
+        raise Feedback.mk_HOL_ERR "boolLib" "resolve_storename"
+              ("Malformed theorem-binding specifier: "^s)
+      else
+        (string bracketl, String.fields (fn c => c = #",") (string names))
+    end
+  end
+
+
 end

@@ -5,6 +5,7 @@ sig
   val register_attribute : string * attrfun -> unit
 
   val store_at_attribute : attrfun
+  val extract_attributes : string -> string * string list
 
 
 end
