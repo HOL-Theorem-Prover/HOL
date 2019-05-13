@@ -98,10 +98,10 @@ val allvars_sym = Q.store_thm(
 SRW_TAC [][allvars_def,UNION_COMM]);
 
 val uR_def = Define`
-uR (sx,c1,c2) (s,t1,t2) =
-wfs sx ∧ s SUBMAP sx
-∧ allvars sx c1 c2 SUBSET allvars s t1 t2
-∧ measure (pair_count o (walkstar sx)) c1 t1`
+uR (sx,c1,c2) (s,t1,t2) <=>
+  wfs sx ∧ s SUBMAP sx
+  ∧ allvars sx c1 c2 SUBSET allvars s t1 t2
+  ∧ measure (pair_count o (walkstar sx)) c1 t1`;
 
 val FDOM_allvars = prove(
   ``FDOM s ⊆ allvars s t1 t2``,
@@ -393,7 +393,7 @@ val uR_ind = save_thm("uR_ind",WF_INDUCTION_THM |> Q.ISPEC `uR` |> SIMP_RULE (sr
 |> Q.SPEC `\(a,b,c).P a b c` |> SIMP_RULE std_ss [FORALL_PROD] |> Q.GEN`P`);
 
 val uP_def = Define`
-uP sx s t1 t2 = wfs sx /\ s SUBMAP sx /\ substvars sx SUBSET allvars s t1 t2`;
+  uP sx s t1 t2 <=> wfs sx ∧ s SUBMAP sx ∧ substvars sx ⊆ allvars s t1 t2`;
 
 val uP_sym = Q.store_thm(
 "uP_sym",
