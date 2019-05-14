@@ -646,6 +646,41 @@ fun tDefine stem q tac =
   handle e => Raise (wrap_exn "TotalDefn" "tDefine" e)
  end;
 
+(* ----------------------------------------------------------------------
+    version of Define that allows control of options with "attributes"
+    attached to the name, and provides an optional termination tactic
+   ---------------------------------------------------------------------- *)
+fun test_remove n sl =
+    if mem n sl then (true, set_diff sl [n]) else (false, sl)
+
+fun find_indoption sl =
+    case List.find (String.isPrefix "induction=") sl of
+        NONE => (NONE, sl)
+      | SOME s => (
+          SOME (String.extract(s,size "induction=",NONE)),
+          set_diff sl [s]
+      )
+
+fun qDefine stem q tacopt =
+    let
+      val (corename, attrs) = ThmAttribute.extract_attributes stem
+      val (nocomp, attrs) = test_remove "nocompute" attrs
+      val (svarsok, attrs) = test_remove "schematic" attrs
+      val (indopt,attrs) = find_indoption attrs
+      fun fmod f =
+          f |> (if nocomp then trace ("computeLib.auto_import_definitions", 0)
+                else (fn f => f))
+            |> (if svarsok then trace ("Define.allow_schema_definition", 1)
+                else (fn f => f))
+            |> with_flag(Defn.def_suffix, "")
+            |> (case indopt of NONE => with_flag(Defn.ind_suffix, "")
+                             | SOME s => with_flag(Defn.ind_suffix, " " ^ s))
+    in
+      case tacopt of
+          NONE => fmod (xDefine corename) q
+        | SOME tac => fmod (tDefine corename q) tac
+    end
+
 (*---------------------------------------------------------------------------*)
 (* Version of Define that supports multiple definitions, failing if any do.  *)
 (*---------------------------------------------------------------------------*)

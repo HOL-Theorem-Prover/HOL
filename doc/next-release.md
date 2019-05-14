@@ -66,6 +66,33 @@ New features:
 
     These names can also be given attributes in the same way.
 
+-   Relatedly, there is a similar syntax for making definitions.
+    The idiom is to write
+
+           Definition name[attrs]:
+             def
+           End
+
+    Or
+
+           Definition name[attrs]:
+             def
+           Termination
+             tactic
+           End
+
+    The latter form maps to a call to `tDefine`; the former to `xDefine`.
+    In both cases, the `name` is taken to be the name of the theorem stored to disk (it does *not* have a suffix such as `_def` appended to it), and is also the name of the local SML binding.
+    The attributes given by `attrs` can be any standard attribute (such as `simp`), and/or drawn from `Definition`-specific options:
+
+    -   the attribute `schematic` alllows the definition to be schematic;
+    -   the attribute `nocompute` stops the definition from being added to the global compset used by `EVAL`
+    -   the attribute `induction=iname` makes the induction theorem that is automatically derived for definitions with interesting termination be called `iname`.
+        If this is omitted, the name chosen will be derived from the `name` of the definition: if `name` ends with `_def` or `_DEF`, the induction name will replace this suffix with `_ind` or `_IND` respectively; otherwise the induction name will simply be `name` with `_ind` appended.
+
+    Whether or not the `induction=` attribute is used, the induction theorem is also made available as an SML binding under the appropriate name.
+    This means that one does not need to follow one’s definition with a call to something like `DB.fetch` or `theorem` just to make the induction theorem available at the SML level.
+
 -   Holmake now understands targets whose suffixes are the string `Theory` to be instructions to build all of the files associated with a theory.
     Previously, to specifically get `fooTheory` built, it was necessary to write
 
@@ -213,7 +240,9 @@ Incompatibilities:
     Now, as before, the old `foo_def` cannot be seen by future theories at all, and so certainly will not be in the `EVAL`-compset.
 
 *   The global toggle `allow_schema_definition` has turned into a feedback trace variable.
-    Users typically use the `DefineSchema` entrypoint and should continue to do so; programmers should change uses of `with_flag` to `Feedback.trace`.
+    Users typically use the `DefineSchema` entrypoint and can continue to do so.
+    Users can also pass the `schematic` attribute with the new `Definition` syntax (see above).
+    Programmers should change uses of `with_flag` to `Feedback.trace`.
 
 * * * * *
 
