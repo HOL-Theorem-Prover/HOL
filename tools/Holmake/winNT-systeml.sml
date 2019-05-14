@@ -153,5 +153,7 @@ fun emit_hol_unquote_script target qend _ =
  end
 end (* local *)
 
+fun quietbind s = ()
+fun bindstr s = s
 
 end; (* struct *)

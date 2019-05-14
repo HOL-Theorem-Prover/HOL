@@ -9,3 +9,5 @@ val _ = use "poly/Listsort.sig";
 val _ = use "poly/Listsort.sml";
 val _ = use "../tools/Holmake/holpathdb.sig";
 val _ = use "../tools/Holmake/holpathdb.sml";
+val _ = use "../tools/Holmake/Systeml.sig";
+val _ = use "../tools-poly/Holmake/Systeml.sml";

@@ -2,6 +2,8 @@ val _ = PolyML.Compiler.prompt1:="";
 val _ = PolyML.Compiler.prompt2:="";
 val _ = PolyML.print_depth 0;
 
+use "../Holmake/Systeml.sig";
+use "../../tools-poly/Holmake/Systeml.sml";
 use "../Holmake/QuoteFilter.sml";
 open OS.Process
 

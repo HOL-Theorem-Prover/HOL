@@ -37,6 +37,11 @@ sig
 
   val isUnix : bool
   val pointer_eq : 'a * 'a -> bool
+  val quietbind : string -> unit (* might be called by bindstr *)
+  val bindstr : string -> string
+   (* emits code that tries to quietly emulate the action of the argument
+      when fed to the compiler.  For MoscowML, this is the identity function
+      (and it won't be quiet). *)
 
   (* other system-wide constants, shared between build tools and the
      running hol *)
