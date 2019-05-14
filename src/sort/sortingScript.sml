@@ -638,15 +638,6 @@ val QSORT_SORTS = Q.store_thm
   PROVE_TAC [SORTS_DEF, QSORT_PERM, QSORT_SORTED]);
 
 
-(*---------------------------------------------------------------------------*)
-(* Add the computable definitions to the database used by EVAL               *)
-(*---------------------------------------------------------------------------*)
-
-val _ =
- computeLib.add_persistent_funs ["QSORT_DEF"];
-
-
-
 (*---------------------------------------------------------------------------
  * Theorems about Permutations. Added by Thomas Tuerk. 19 March 2009
  *---------------------------------------------------------------------------*)
