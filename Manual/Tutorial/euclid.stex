@@ -31,8 +31,8 @@ prime number, we first need to define the \emph{divisibility} relation:
 
 \begin{session}
 \begin{alltt}
->>Definition divides_def: divides a b = ?x. b = a * x
- End
+>> Definition divides_def: divides a b = ?x. b = a * x
+   End
 \end{alltt}
 \end{session}
 Note how we are using ASCII notation to input our terms (\holtxt{?} is the ASCII way to write the existential quantifier), but the system responds with pleasant Unicode.
@@ -40,14 +40,9 @@ Unicode characters can also be used in the input.
 Also note how equality on booleans gets printed as the if-and-only-if arrow, while equality on natural numbers stays as an equality.
 The underlying constant is the same (equality) (as is implied by the fact that one can use \holtxt{=} in both places in the input), but the system tries to be helpful when printing.
 
-The definition is added to the current theory with the name
-\ml{divides\_def}, and also returned from the invocation of
-\ml{Define}. We take advantage of this and make an \ML{} binding of
-the name \ml{divides\_def} to the definition. In the usual way of
-interacting with \HOL, such an \ML{} binding is made for each
-definition and (useful) proved theorem: the \ML{} environment is thus
-being used as a convenient place to hold definitions and theorems for
-later reference in the session.
+The definition is added to the current theory with the name \ml{divides\_def}, and also available as an \ML{} binding with the name \ml{divides\_def}.
+In the usual way of interacting with \HOL, such an \ML{} binding is made for each definition and (useful) proved theorem: the \ML{} environment is thus being used as a convenient place to hold definitions and theorems for later reference in the session.
+Note that the \ml{Definition} syntax requires its keywords to be in column zero.
 
 We want to treat \ml{divides} as a (non-associating) infix:
 \begin{session}
@@ -61,9 +56,9 @@ than $1$ and itself:
 
 \begin{session}
 \begin{alltt}
->>Definition prime_def:
-    prime p = p <> 1 /\ !x. x divides p ==> (x=1) \/ (x=p)
- End
+>> Definition prime_def:
+     prime p = p <> 1 /\ !x. x divides p ==> (x=1) \/ (x=p)
+   End
 \end{alltt}
 \end{session}
 There is more ASCII syntax to observe here: \holtxt{\lt\gt} for not-equals, and \holtxt{!} for the universal quantifier.
@@ -347,9 +342,9 @@ It then stores the theorem in the current theory under the given name.
 \begin{session}
 \begin{alltt}
 >> Theorem DIVIDES_LE:
-   !m n. m divides n ==> m <= n \/ (n = 0)
- Proof rw[divides_def] >> rw[]
- QED
+     !m n. m divides n ==> m <= n \/ (n = 0)
+   Proof rw[divides_def] >> rw[]
+   QED
 \end{alltt}
 \end{session}
 (Note how the statement of the goal is not given with enclosing quotation symbols (the \ml{Theorem} and \ml{Proof} lines take on that role).
