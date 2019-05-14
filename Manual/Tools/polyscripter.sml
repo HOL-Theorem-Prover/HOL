@@ -232,7 +232,7 @@ fun strip_for_thm s =
     remove_colonthm s0
   end
 
-fun process_line umap obuf origline lbuf = let
+fun process_line debugp umap obuf origline lbuf = let
   val {reset = obRST, ...} = obuf
   val (ws,line) = getIndent origline
   val indent = String.size ws
@@ -268,7 +268,12 @@ fun process_line umap obuf origline lbuf = let
     end
   val assertcmd = "##assert "
   val assertcmdsz = size assertcmd
-  val stringCReader = #read o QFRead.stringToReader
+  val stringCReader = #read o QFRead.stringToReader true
+  fun compile exnhandle input = 
+      (if debugp then 
+         TextIO.output(TextIO.stdErr, input)
+       else ();
+       compiler obuf exnhandle (stringCReader input))
 in
   if String.isPrefix ">>>" line then
     (advance lbuf; (ws ^ String.extract(line, 1, NONE), NONE))
@@ -278,10 +283,10 @@ in
     let
       val e = String.substring(line, assertcmdsz, size line - assertcmdsz - 1)
                               (* for \n at end *)
-      val _ = compiler obuf (lnumdie (linenum lbuf))
-                (stringCReader ("val _ = if (" ^ e ^ ") then () " ^
-                                "else die \"Assertion failed: line " ^
-                                Int.toString (linenum lbuf) ^ "\";"))
+      val _ = compile (lnumdie (linenum lbuf))
+                      ("val _ = if (" ^ e ^ ") then () " ^
+                       "else die \"Assertion failed: line " ^
+                       Int.toString (linenum lbuf) ^ "\";\n")
       val _ = advance lbuf
     in
       ("", NONE)
@@ -289,8 +294,7 @@ in
   else if String.isPrefix "##thm" line then
     let
       val thm_name = String.extract(line, 5, NONE) |> dropLWS
-      val raw_output = compiler obuf (lnumdie (linenum lbuf))
-                                (stringCReader (thm_name ^ " :Thm.thm"))
+      val raw_output = compile (lnumdie (linenum lbuf)) (thm_name ^ " :Thm.thm")
       val output = transformOutput umap ws (strip_for_thm raw_output)
                         |> deleteTrailingWhiteSpace
                         |> (fn s => "  " ^ s)
@@ -319,9 +323,7 @@ in
               handle Subcript =>
                      lnumdie (linenum lbuf) "Mal-formed ##eval directive" e
       val input = getRest (indent + 1) [firstline]
-      val _ = compiler obuf
-                       (lnumdie (linenum lbuf))
-                       (stringCReader (inputpfx ^ input))
+      val _ = compile (lnumdie (linenum lbuf)) (inputpfx ^ input)
     in
       (ws ^ umunge umap input, NONE)
     end
@@ -334,8 +336,7 @@ in
           else lnumdie (linenum lbuf) "Mal-formed ##parse directive" (Fail "")
       val (firstline, indent) = (String.extract(line, 3, NONE), 10)
       val input = getRest (indent + 1) [firstline]
-      val _ = compiler obuf (lnumdie (linenum lbuf))
-                       (stringCReader ("``" ^ pfx ^ input ^ "``"))
+      val _ = compile (lnumdie (linenum lbuf)) ("``" ^ pfx ^ input ^ "``")
     in
       (ws ^ umunge umap input, NONE)
     end
@@ -351,8 +352,7 @@ in
     let
       val firstline = String.extract(line, 3, NONE)
       val input = getRest 3 [firstline]
-      val raw_output = compiler obuf (lnumdie (linenum lbuf))
-                                (stringCReader input)
+      val raw_output = compile (lnumdie (linenum lbuf)) input
     in
       ("", SOME (transformOutput umap ws raw_output))
     end
@@ -360,8 +360,7 @@ in
     let
       val firstline = String.extract(line, 4, NONE)
       val input = getRest 4 [firstline]
-      val _ = compiler obuf (lnumdie (linenum lbuf))
-                       (stringCReader input)
+      val _ = compile (lnumdie (linenum lbuf)) input
     in
       ("", NONE)
     end
@@ -369,8 +368,7 @@ in
     let
       val firstline = String.extract(line, 3, NONE)
       val input = getRest 3 [firstline]
-      val _ = compiler obuf (lnumdie (linenum lbuf))
-                       (stringCReader input)
+      val _ = compile (lnumdie (linenum lbuf)) input
       fun removeNL s = String.substring(s, 0, size s - 1)
     in
       (ws ^ ">" ^ removeNL (umunge umap input), SOME (!elision_string1))
@@ -380,7 +378,7 @@ in
       val firstline = String.extract(line, 3, NONE)
       val input = getRest 3 [firstline]
       fun handle_exn extra exn = raise Fail (extra ^ exnMessage exn)
-      val raw_output = compiler obuf handle_exn (stringCReader input)
+      val raw_output = compile handle_exn input
                        handle Fail s => "Exception- " ^ s ^ " raised\n"
     in
       (ws ^ ">" ^ umunge umap input, SOME (transformOutput umap ws raw_output))
@@ -390,8 +388,7 @@ in
       val _ = obRST()
       val firstline = String.extract(line, 2, NONE)
       val input = getRest 2 [firstline]
-      val raw_output = compiler obuf (lnumdie (linenum lbuf))
-                                (stringCReader input)
+      val raw_output = compile (lnumdie (linenum lbuf)) input
     in
       (ws ^ ">" ^ umunge umap input, SOME (transformOutput umap ws raw_output))
     end
@@ -426,16 +423,18 @@ fun read_umap fname =
 
 
 fun usage() =
-  "Usage:\n  "^ CommandLine.name() ^ " [umapfile]"
+  "Usage:\n  "^ CommandLine.name() ^ " [-d] [umapfile]"
 
 fun main () =
   let
     val _ = PolyML.print_depth 100;
     val _ = Parse.current_backend := PPBackEnd.raw_terminal
-    val umap =
+    val (debugp,umap) =
         case CommandLine.arguments() of
-            [] => Binarymap.mkDict String.compare
-          | [name] => read_umap name
+            [] => (false, Binarymap.mkDict String.compare)
+          | ["-d"] => (true, Binarymap.mkDict String.compare)
+          | [name] => (false, read_umap name)
+          | ["-d", name] => (true, read_umap name)
           | _ => die (usage())
     val (obuf as {push = obPush, ...}) = HM_SimpleBuffer.mkBuffer()
     val _ = ReadHMF.extend_path_with_includes {verbosity = 0, lpref = loadPath}
@@ -452,7 +451,7 @@ fun main () =
           NONE => ()
         | SOME line =>
           let
-            val (i, coutopt) = process_line umap obuf line lb
+            val (i, coutopt) = process_line debugp umap obuf line lb
                handle e => die ("Untrapped exception: line "^
                                 Int.toString (linenum lb) ^ ": " ^
                                 exnMessage e)
