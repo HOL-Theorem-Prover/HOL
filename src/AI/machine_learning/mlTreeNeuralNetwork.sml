@@ -66,7 +66,7 @@ fun random_dhtnn (dimin,dimout) operl =
   }
 
 (* -------------------------------------------------------------------------
-   Output
+   Input/output
    ------------------------------------------------------------------------- *)
 
 fun string_of_oper (f,n) = (tts f ^ "," ^ its n)
@@ -99,23 +99,6 @@ fun write_dhtnn file dhtnn =
     writel file_dhtnn [string_of_dhtnn dhtnn];
     mlTacticData.export_terml file_operl operl
   end
-
-fun write_operl file (dhtnn: dhtnn) =
-  let
-    val file_operl = file ^ "_operl"
-    val operl = mk_sameorder_set Term.compare (map fst (dkeys (#opdict dhtnn)))
-  in
-    mlTacticData.export_terml file_operl operl
-  end
-
-fun write_dhtnn_nooper file dhtnn =
-  let val file_dhtnn = file ^ "_dhtnn" in
-    writel file_dhtnn [string_of_dhtnn dhtnn]
-  end
-
-(* -------------------------------------------------------------------------
-   Input
-   ------------------------------------------------------------------------- *)
 
 fun read_opdict_one tos sl =
   let 
@@ -159,10 +142,25 @@ fun read_dhtnn file =
     read_dhtnn_sl operl sl
   end
 
-fun read_operl file = mlTacticData.import_terml (file ^ "_operl")
 
-fun read_dhtnn_nooper operl file =
-  read_dhtnn_sl operl (readl (file ^ "_dhtnn"))
+fun write_operl file operl =
+  let
+    val file1 = file ^ "_operl_term"
+    val file2 = file ^ "_operl_arity"
+    val (l1,l2) = split operl 
+  in
+    mlTacticData.export_terml file1 l1;
+    writel file2 (map its l2) 
+  end
+
+fun read_operl file = 
+  let 
+    val l1 = mlTacticData.import_terml (file ^ "_operl_term")
+    val l2 = map string_to_int (readl (file ^ "_operl_arity"))
+  in
+    combine (l1,l2)
+  end
+
 
 (* 
 load "mlTreeNeuralNetwork"; 
@@ -204,6 +202,28 @@ fun read_dhex file =
     combine_triple (terml,rll1,rll2)
   end
  
+fun write_tnnex file ex =
+  let
+    val file_term = file ^ "_term"
+    val file_eval = file ^ "_eval"
+    val (terml,rll) = split ex
+  in
+    mlTacticData.export_terml file_term terml;
+    writel file_eval (map reall_to_string rll)
+  end
+
+fun read_tnnex file = 
+  let
+    val file_term = file ^ "_term"
+    val file_eval = file ^ "_eval"
+    val terml = mlTacticData.import_terml file_term 
+    val rll = map string_to_reall (readl file_eval)
+  in
+    combine (terml,rll)
+  end
+
+
+
 (* 
 load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
 val epex = [(``0``,[1.0],[2.0,3.0])];
@@ -387,11 +407,24 @@ fun train_dhtnn_one dhtnn (tml,expecteval,expectpoli) =
    Train tnn on one batch
    ------------------------------------------------------------------------- *)
 
+val momentum = ref 0.0
+val dwlhead_glob = ref NONE
+val dwloper_glob = ref (dempty oper_compare)
+
+fun init_dwlglob () =
+  (dwlhead_glob := NONE; dwloper_glob := dempty oper_compare)
+
 fun update_head headnn bpdatall =
   let
-    val dwll      = map (map #dw) bpdatall
-    val dwl       = Profile.profile "sum_dwll" sum_dwll dwll
-    val newheadnn = Profile.profile "udpate_nn" (update_nn headnn) dwl
+    val dwll = map (map #dw) bpdatall
+    val dwl = sum_dwll dwll
+    val dwlmom = 
+      if isSome (!dwlhead_glob)
+      then sum_dwll [smult_dwl (1.0 - (!momentum)) dwl, 
+                     smult_dwl (!momentum) (valOf (!dwlhead_glob))]
+      else dwl
+    val newheadnn = update_nn headnn dwlmom
+    val _ = dwlhead_glob := SOME dwlmom
     val loss      = average_loss bpdatall
   in
     (newheadnn, loss)
@@ -400,8 +433,14 @@ fun update_head headnn bpdatall =
 fun update_opernn opdict (oper,dwll) =
   let
     val nn    = dfind oper opdict
-    val dwl   = Profile.profile "sum_dwll" sum_dwll dwll
-    val newnn = Profile.profile "udpate_nn" (update_nn nn) dwl
+    val dwl   = sum_dwll dwll
+    val dwlmom = 
+      if dmem oper (!dwloper_glob)
+      then sum_dwll [smult_dwl (1.0 - (!momentum))  dwl, 
+                     smult_dwl (!momentum) (dfind oper (!dwloper_glob))]
+      else dwl
+    val newnn = update_nn nn dwlmom
+    val _ = dwloper_glob := dadd oper dwlmom (!dwloper_glob)
   in
     (oper,newnn)
   end
@@ -431,7 +470,10 @@ fun train_tnn_epoch_aux ncore lossl tnn batchl = case batchl of
     end
 
 fun train_tnn_epoch ncore tnn batchl = 
+  (
+  init_dwlglob ();
   train_tnn_epoch_aux ncore [] tnn batchl
+  )
 
 fun out_tnn tnn tml =
   let val (_,fpdatal) = fp_tnn tnn tml in (#outnv (last fpdatal)) end

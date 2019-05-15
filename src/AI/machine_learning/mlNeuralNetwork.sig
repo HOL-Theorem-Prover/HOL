@@ -13,6 +13,8 @@ sig
   val dleakyrelu : real -> real
 
   (* NN *)
+  type mat = real vector vector
+
   type layer = {a : real -> real, da : real -> real, w : real vector vector}
 
   type nn = layer list
@@ -41,8 +43,9 @@ sig
   val bp_nn_wocost : fpdata list -> real vector -> bpdata list
 
   (* weight updates *)
-  val update_nn         : nn -> real vector vector list -> nn
-  val sum_dwll          : real vector vector list list -> real vector vector list
+  val update_nn         : nn -> mat list -> nn
+  val smult_dwl         : real -> mat list -> mat list
+  val sum_dwll          : mat list list -> mat list
   val mean_square_error : real vector -> real
   val average_loss      : bpdata list list -> real
 

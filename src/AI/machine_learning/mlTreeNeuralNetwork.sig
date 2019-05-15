@@ -3,6 +3,8 @@ sig
 
 include Abbrev
 
+  val momentum : real ref
+
   type vect = real vector
   type mat = real vector vector
   type layer = {a  : real -> real, da : real -> real, w : mat}
@@ -31,7 +33,11 @@ include Abbrev
     (term * real list * real list) list -> unit
   val read_dhex : string ->
     (term * real list * real list) list
-  
+  val write_tnnex : string -> (term * real list) list -> unit  
+  val read_tnnex  : string -> (term * real list) list
+  val write_operl : string -> (term * int) list -> unit
+  val read_operl  : string -> (term * int) list  
+
   (* inference *)
   val infer_tnn : tnn -> term -> real list
   val infer_tnn_nohead : tnn -> term -> real list (* for debugging *)

@@ -147,6 +147,9 @@ fun sum_dwll dwll = case dwll of
      [dwl] => dwl
    | _ => map matl_add (transpose_ll dwll)
 
+fun smult_dwl k dwl = map (mat_smult k) dwl
+
+
 (* -------------------------------------------------------------------------
    Loss
    ------------------------------------------------------------------------- *)
