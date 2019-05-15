@@ -158,22 +158,7 @@ fun emit_hol_script target exe script =
       end;
 end (* local *)
 
-fun reader s =
-    let
-      val i = ref 0
-      val sz = String.size s
-      fun r () = if !i < sz then SOME (String.sub(s,!i)) before i := !i + 1
-                 else NONE
-    in
-      r
-    end
-fun quietbind s =
-    let open PolyML.Compiler
-    in
-      PolyML.compiler (reader s, [CPOutStream (fn _ => ())]) ()
-    end
-
 fun bindstr mlcode =
-    "val _ = Systeml.quietbind \"" ^ String.toString mlcode ^ "\""
+    "val _ = CompilerSpecific.quietbind \"" ^ String.toString mlcode ^ "\""
 
 end; (* struct *)

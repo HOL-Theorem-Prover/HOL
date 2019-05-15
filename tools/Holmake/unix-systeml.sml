@@ -159,7 +159,6 @@ in
 end
 end (* local *)
 
-fun quietbind s = ()
 fun bindstr s = s
 
 end; (* struct *)
