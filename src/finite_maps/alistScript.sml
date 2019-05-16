@@ -127,11 +127,13 @@ val ALOOKUP_MAP = store_thm(
 ``!f al. ALOOKUP (MAP (\(x,y). (x,f y)) al) = OPTION_MAP f o (ALOOKUP al)``,
 gen_tac >> Induct >- rw[FUN_EQ_THM] >> Cases >> rw[FUN_EQ_THM] >> rw[])
 
-Theorem ALOOKUP_MAP_2
-  `!f al x.
+Theorem ALOOKUP_MAP_2:
+  !f al x.
     ALOOKUP (MAP (\ (x,y). (x,f x y)) al) x =
-    OPTION_MAP (f x) (ALOOKUP al x)`
-  (gen_tac >> Induct >> simp[] >> Cases >> simp[] >> srw_tac[][]);
+    OPTION_MAP (f x) (ALOOKUP al x)
+Proof
+  gen_tac >> Induct >> simp[] >> Cases >> simp[] >> srw_tac[][]
+QED
 
 val FDOM_alist_to_fmap = Q.store_thm(
 "FDOM_alist_to_fmap",

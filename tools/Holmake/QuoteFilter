@@ -230,20 +230,6 @@ declforms = "val"|"fun"|"structure"|"signature"|"functor"|"abstype"|"datatype"|"
    )
   )
 );
-<INITIAL,thmval>{Theorempfx} => ((yypos,
-(
-  ifscript yyarg
-    (let
-      val pfx = case !mltype_stack of inTHMVAL :: _ => ");" | _ => ""
-      val (thmname,with_attrs_string,_) = dest_ml_thm_binding "Theorem" yytext
-    in
-      mltype_stack := [];
-      ECHO yyarg (pfx ^
-                  "val " ^ thmname ^ " = " ^
-                  "(fn q => fn tac => Q.store_thm(\"" ^ with_attrs_string ^
-                  "\",q,tac))")
-    end) yytext
-)));
 <INITIAL,thmval>{Theorempfx}({ws}|{newline})+"="
  => ((yypos,
 (

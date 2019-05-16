@@ -2282,14 +2282,15 @@ EQ_TAC THEN STRIP_TAC THEN1 (
 SRW_TAC [][BIJ_DEF,INJ_DEF,SURJ_DEF] THEN
 METIS_TAC []);
 
-Theorem BIJ_support
-  `!f s' s.
+Theorem BIJ_support:
+  !f s' s.
       BIJ f s' s' /\ s' SUBSET s /\ (!x. x NOTIN s' ==> (f x = x)) ==>
-      BIJ f s s`
-  (rw[BIJ_IFF_INV,SUBSET_DEF]
-  >- METIS_TAC[]
-  \\ Q.EXISTS_TAC`\x. if x IN s' then g x else x`
-  \\ rw[] \\ METIS_TAC[]);
+      BIJ f s s
+Proof
+  rw[BIJ_IFF_INV,SUBSET_DEF] >- METIS_TAC[]
+  \\ Q.EXISTS_TAC ‘\x. if x IN s' then g x else x’
+  \\ rw[] \\ METIS_TAC[]
+QED
 
 val BIJ_INSERT = store_thm(
   "BIJ_INSERT",

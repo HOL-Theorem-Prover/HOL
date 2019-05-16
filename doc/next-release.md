@@ -24,17 +24,7 @@ New features:
 
            val name1 = store_thm("name2", tm, tac);
 
-    Now we can remove the “code smell” by writing either
-
-           Theorem name tm-quotation tac
-
-    which will typically look like
-
-           Theorem name
-             ‘∀x. P x ⇒ Q x’
-             (rpt strip_tac >> ...);
-
-    or by writing with the general pattern
+    Now we can remove the “code smell” by writing
 
            Theorem name: term-syntax
            Proof tac
