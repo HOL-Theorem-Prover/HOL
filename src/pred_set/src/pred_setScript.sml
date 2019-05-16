@@ -10,6 +10,11 @@
 (* DATE:    January 1992                                                *)
 (* =====================================================================*)
 
+structure pred_setScript =
+struct
+(* structure declaration is necessary so that Moscow ML does not get
+   confused by the rebinding of structure Q below *)
+
 (* interactive use
 app load ["pairLib", "numLib", "PGspec", "PSet_ind", "Q",
           "Defn", "TotalDefn", "metisLib", "OpenTheoryMap",
@@ -6239,3 +6244,5 @@ end
 `
 
 val _ = export_theory();
+
+end (* struct *)
