@@ -15,17 +15,18 @@ val spacify = String.concat o spacify0 []
 fun dropWhile P [] = []
   | dropWhile P (l as (h::t)) = if P h then dropWhile P t else l
 
-fun find_unescaped cset = let
+fun find_unescaped cset ss = let
   open Substring
-  fun recurse i ss =
-      case getc ss of
-        NONE => NONE
-      | SOME(c', ss') => if member c' cset then SOME i
-                         else if c' = #"\\" then
-                           case getc ss' of
-                             NONE => NONE
-                           | SOME (_, ss'') => recurse (i + 2) ss''
-                         else recurse (i + 1) ss'
+  val sz = size ss
+  fun recurse i =
+    if i >= sz then NONE
+    else
+      let val c = Substring.sub(ss,i)
+      in
+        if member c cset then SOME i
+        else if c = #"\\" then recurse (i + 2)
+        else recurse (i + 1)
+      end
 in
   recurse 0
 end
