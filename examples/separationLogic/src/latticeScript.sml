@@ -17,6 +17,7 @@ quietdec := false;
 *)
 
 val _ = new_theory "lattice";
+val _ = ParseExtras.temp_loose_equality()
 
 val OPTION_SELECT_def = Define
    `OPTION_SELECT P = if ~(?x. P x) then NONE else SOME @x. P x`
