@@ -245,6 +245,11 @@ fun poss_space_extract n s =
 
 fun strcat s1 s2 = s1 ^ s2
 
+fun dropWhile0 P a [] = (List.rev a,[])
+  | dropWhile0 P a (l as h::t) = if P h then dropWhile0 P (h::a) t
+                                 else (List.rev a, l)
+fun dropWhile P l = dropWhile0 P [] l
+
 fun process_line debugp umap obuf origline lbuf = let
   val {reset = obRST, ...} = obuf
   val (ws,line) = getIndent origline
@@ -265,17 +270,25 @@ fun process_line debugp umap obuf origline lbuf = let
           in
             String.extract(line, tostrip, NONE)
           end
+      fun extract_trailing_blanklines l =
+          let
+            val (blanks, rest) = dropWhile (CharVector.all Char.isSpace) l
+          in
+            (List.rev rest, blanks |> List.rev |> String.concat)
+          end
     in
       case current lbuf of
-          NONE => List.rev acc
+          NONE => extract_trailing_blanklines acc
         | SOME s =>
           let
             val (ws',_) = getIndent s
             val wssz = String.size ws'
           in
-            if indent < wssz
-            then getRest userPromptSize (handlePromptSize wssz s::acc)
-            else List.rev acc
+            if indent < wssz then
+              getRest userPromptSize (handlePromptSize wssz s::acc)
+            else if CharVector.all Char.isSpace s then
+              getRest userPromptSize ("\n" :: acc)
+            else extract_trailing_blanklines acc
           end
     end
   val assertcmd = "##assert "
@@ -288,9 +301,9 @@ fun process_line debugp umap obuf origline lbuf = let
        compiler obuf exnhandle (stringCReader input))
 in
   if String.isPrefix ">>>" line then
-    (advance lbuf; (ws ^ String.extract(line, 1, NONE), NONE))
+    (advance lbuf; (ws ^ String.extract(line, 1, NONE), ""))
   else if String.isPrefix "###" line then
-    (advance lbuf; (ws ^ String.extract(line, 1, NONE), NONE))
+    (advance lbuf; (ws ^ String.extract(line, 1, NONE), ""))
   else if String.isPrefix assertcmd line then
     let
       val e = String.substring(line, assertcmdsz, size line - assertcmdsz - 1)
@@ -301,7 +314,7 @@ in
                        Int.toString (linenum lbuf) ^ "\";\n")
       val _ = advance lbuf
     in
-      ("", NONE)
+      ("", "")
     end
   else if String.isPrefix "##thm" line then
     let
@@ -312,7 +325,7 @@ in
                         |> (fn s => "  " ^ s)
       val _ = advance lbuf
     in
-      (ws ^ umunge umap thm_name, SOME output)
+      (ws ^ umunge umap thm_name, output)
     end
   else if String.isPrefix "##eval" line then
     let
@@ -334,12 +347,11 @@ in
             ("", String.extract(line, 1, NONE), 7)
               handle Subscript =>
                      lnumdie (linenum lbuf) "Mal-formed ##eval directive" e
-      val input = getRest indent [firstline]
-                          |> map (fn s => ws ^ s)
-                          |> String.concat
+      val (input, blankstr) = getRest indent [firstline]
+      val input = input |> map (fn s => ws ^ s) |> String.concat
       val _ = compile (lnumdie (linenum lbuf)) (inputpfx ^ input)
     in
-      (umunge umap input, NONE)
+      (umunge umap input, blankstr)
     end
   else if String.isPrefix "##parse" line then
     let
@@ -349,12 +361,11 @@ in
           else if String.isPrefix "ty " line then ":"
           else lnumdie (linenum lbuf) "Mal-formed ##parse directive" (Fail "")
       val (firstline, indent) = (String.extract(line, 3, NONE), 10)
-      val input = getRest indent [firstline]
-                          |> map (fn s => ws ^ s)
-                          |> String.concat
+      val (input, blankstr) = getRest indent [firstline]
+      val input = input |> map (fn s => ws ^ s) |> String.concat
       val _ = compile (lnumdie (linenum lbuf)) ("``" ^ pfx ^ input ^ "``")
     in
-      (umunge umap input, NONE)
+      (umunge umap input, blankstr)
     end
   else if String.isPrefix "##use " line then
     let
@@ -362,60 +373,60 @@ in
       val _ = silentUse (linenum lbuf) fname
       val _ = advance lbuf
     in
-      ("", NONE)
+      ("", "")
     end
   else if String.isPrefix ">>-" line then
     let
       val firstline = String.extract(line, 3, NONE)
-      val input = getRest 3 [firstline] |> String.concat
-      val raw_output = compile (lnumdie (linenum lbuf)) input
+      val (input, blankstr) = getRest 3 [firstline]
+      val raw_output = compile (lnumdie (linenum lbuf)) (String.concat input)
     in
-      ("", SOME (transformOutput umap ws raw_output))
+      ("", transformOutput umap ws raw_output ^ blankstr)
     end
   else if String.isPrefix ">>__" line then
     let
       val firstline = String.extract(line, 4, NONE)
-      val input = getRest 4 [firstline] |> String.concat
-      val _ = compile (lnumdie (linenum lbuf)) input
+      val (input, blankstr) = getRest 4 [firstline]
+      val _ = compile (lnumdie (linenum lbuf)) (String.concat input)
     in
-      ("", NONE)
+      ("", blankstr)
     end
   else if String.isPrefix ">>_" line then
     let
       val (firstline,d) = poss_space_extract 3 line
-      val input = getRest d [firstline]
+      val (input, blankstr) = getRest d [firstline]
       val inp_to_print = input |> tailmap (strcat (oPws ^ ws)) |> String.concat
       val _ = compile (lnumdie (linenum lbuf)) (String.concat input)
       fun removeNL s = String.substring(s, 0, size s - 1)
     in
       (ws ^ !outputPrompt ^ removeNL (umunge umap inp_to_print),
-       SOME (!elision_string1))
+       !elision_string1 ^ blankstr)
     end
   else if String.isPrefix ">>+" line then
     let
       val (firstline,d) = poss_space_extract 3 line
-      val input = getRest d [firstline]
+      val (input,blankstr) = getRest d [firstline]
       val inp_to_print = input |> tailmap (strcat (oPws ^ ws)) |> String.concat
       fun handle_exn extra exn = raise Fail (extra ^ exnMessage exn)
       val raw_output = compile handle_exn (String.concat input)
                        handle Fail s => "Exception- " ^ s ^ " raised\n"
     in
       (ws ^ !outputPrompt ^ umunge umap inp_to_print,
-       SOME (transformOutput umap ws raw_output))
+       transformOutput umap ws raw_output ^ blankstr)
     end
   else if String.isPrefix ">>" line then
     let
       val _ = obRST()
       val (firstline, d) = poss_space_extract 2 line
-      val input = getRest d [firstline]
+      val (input,blankstr) = getRest d [firstline]
       val inp_to_print = input |> tailmap (strcat (oPws ^ ws)) |> String.concat
       val raw_output = compile (lnumdie (linenum lbuf)) (String.concat input)
     in
       (ws ^ !outputPrompt ^ umunge umap inp_to_print,
-       SOME (transformOutput umap ws raw_output))
+       transformOutput umap ws raw_output ^ blankstr)
     end
   else
-    (advance lbuf; (origline, NONE))
+    (advance lbuf; (origline, ""))
 end
 
 fun read_umap fname =
@@ -473,14 +484,12 @@ fun main () =
           NONE => ()
         | SOME line =>
           let
-            val (i, coutopt) = process_line debugp umap obuf line lb
+            val (i, output) = process_line debugp umap obuf line lb
                handle e => die ("Untrapped exception: line "^
                                 Int.toString (linenum lb) ^ ": " ^
                                 exnMessage e)
           in
-            (case coutopt of
-                NONE => print i
-              | SOME out => print (i ^ out));
+            print (i ^ output);
             recurse lb
           end
   in

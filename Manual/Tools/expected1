@@ -79,7 +79,7 @@ val it = \mbox{\textrm{\textquotedblleft}}p \(\land\) q \(\Rightarrow\) r\mbox{\
 Term\`{}p /\bs{} q ==>
      r\`{};
 
-   3 + 4;
+3 + 4;
 
 > e Induct;
 OK..
