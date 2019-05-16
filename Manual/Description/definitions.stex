@@ -1373,6 +1373,7 @@ prover. Instead, we make an application of {\small\verb+Hol_defn+}:
 \setcounter{sessioncount}{0}
 \begin{session}
 \begin{alltt}
+>>__ Feedback.emit_WARNING := false;
 >> val qsort_defn =
      Hol_defn "qsort"
        `(qsort ord [] = []) /\
@@ -1380,6 +1381,7 @@ prover. Instead, we make an application of {\small\verb+Hol_defn+}:
             qsort ord (FILTER (\x. ord x h) t)
             ++ [h] ++
             qsort ord (FILTER (\x. ~(ord x h)) t))`;
+>>__ Feedback.emit_WARNING := true;
 \end{alltt}
 \end{session}
 which returns a value of type \ml{defn}, but does not try
@@ -1423,6 +1425,7 @@ in the current theory segment before the recursion equations are returned:
 
 \begin{session}
 \begin{alltt}
+>>__ delete_const "qsort"; Feedback.emit_WARNING := false;
 >> Definition qsort_def:
      (qsort ord [] = []) /\
      (qsort ord (h::t) =
@@ -1431,6 +1434,7 @@ in the current theory segment before the recursion equations are returned:
    Termination
      WF_REL_TAC `measure (LENGTH o SND)` THEN cheat
    End
+>>__ Feedback.emit_WARNING := true;
 \end{alltt}
 \end{session}
 
@@ -1468,6 +1472,7 @@ numbers:
 \setcounter{sessioncount}{0}
 \begin{session}
 \begin{alltt}
+>>__ proofManagerLib.drop_all()
 >> val gcd_defn =
       Hol_defn "gcd"
          `(gcd (0,n) = n) /\
@@ -1512,14 +1517,18 @@ branch. At the end of execution the tree has been linearized.
 \setcounter{sessioncount}{0}
 \begin{session}
 \begin{alltt}
->> Datatype `btree = Leaf | Brh btree btree`;
+>>_ Datatype `btree = Leaf | Brh btree btree`;
 
 >> val Unbal_defn =
       Hol_defn "Unbal"
         `(Unbal Leaf = Leaf)
      /\  (Unbal (Brh Leaf bt) = Brh Leaf (Unbal bt))
      /\  (Unbal (Brh (Brh bt1 bt2) bt) = Unbal (Brh bt1 (Brh bt2 bt)))`;
-
+\end{alltt}
+\end{session}
+The termination conditions above can be turned into an interactive goal with \ml{Defn.tgoal}:
+\begin{session}
+\begin{alltt}
 >> Defn.tgoal Unbal_defn;
 \end{alltt}
 \end{session}
@@ -1875,19 +1884,12 @@ the definition of a schema):
 %
 \setcounter{sessioncount}{0}
 \begin{session}
-\begin{verbatim}
-  - TotalDefn.DefineSchema
-      `linRec (x:'a) = if d(x) then e(x) else f(linRec(g x))`;
-
-  <<HOL message: Definition is schematic in the following variables:
-      "d", "e", "f", "g">>
-
-  Equations stored under "linRec_def".
-  Induction stored under "linRec_ind".
-  > val it =
-     [..]
-    |- linRec d e f g x = if d x then e x else f (linRec d e f g (g x))
-\end{verbatim}
+\begin{alltt}
+>>__ delete_const "f";
+>> Definition linRec_def[schematic]:
+     linRec (x:'a) = if d(x) then e(x) else f(linRec(g x))
+   End
+\end{alltt}
 \end{session}
 %
 The hypotheses of the returned theorem hold the abstract termination
@@ -1895,10 +1897,9 @@ constraints. A similarly constrained induction theorem is also
 stored in the current theory segment.
 %
 \begin{session}
-\begin{verbatim}
-  hyp it;
-  > val it = [``!x. ~d x ==> R (g x) x``, ``WF R``] : term list
-\end{verbatim}
+\begin{alltt}
+>> hyp linRec_def;
+\end{alltt}
 \end{session}
 %
 These constraints are abstract, since they place termination requirements
