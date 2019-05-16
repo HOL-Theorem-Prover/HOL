@@ -1398,9 +1398,7 @@ printed out.  (That's assuming that quietdec is false to start with.)"
 (defun hol-drop-all-goals ()
   "Drops all HOL goals from the current proofs object."
   (interactive)
-  (send-raw-string-to-hol
-   (concat "proofManagerLib.dropn (case proofManagerLib.status() of "
-           "Manager.PRFS l => List.length l)") nil t))
+  (send-raw-string-to-hol "proofManagerLib.drop_all()" hol-echo-commands-p t))
 
 (defun hol-subgoal-tactic (p)
   "Without a prefix argument, sends term at point (delimited by backquote
