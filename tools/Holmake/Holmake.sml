@@ -77,6 +77,10 @@ end
 
 val (master_cline_options, targets) = getcline (CommandLine.arguments())
 
+val master_cline_nohmf =
+    HM_Cline.default_options |> apply_updates master_cline_options
+
+
 val (cline_hmakefile, cline_nohmf) =
     List.foldl (fn (f,(hmf,nohmf)) =>
                    ((case #hmakefile f of NONE => hmf | SOME s => SOME s),
@@ -84,20 +88,9 @@ val (cline_hmakefile, cline_nohmf) =
                (NONE,false)
                master_cline_options
 
-fun get_hmf_cline_updates () =
+fun get_hmf_cline_updates hmenv =
   let
-    val hmakefile =
-        case cline_hmakefile of
-            NONE => "Holmakefile"
-          | SOME s =>
-            if exists_readable s then s
-            else die ("Can't read holmakefile: "^s)
-    val hmenv0 =
-        if exists_readable hmakefile andalso not cline_nohmf then
-          #1 (ReadHMF.read hmakefile (base_environment()))
-        else
-          base_environment()
-    val hmf_cline = envlist hmenv0 "CLINE_OPTIONS"
+    val hmf_cline = envlist hmenv "CLINE_OPTIONS"
     val (hmf_options, hmf_rest) = getcline hmf_cline
     val _ = if null hmf_rest then ()
             else
@@ -107,6 +100,35 @@ fun get_hmf_cline_updates () =
     hmf_options
   end
 
+fun read_holpathdb() =
+    let
+      val holpathdb_extensions =
+          holpathdb.search_for_extensions (fn s => []) [OS.FileSys.getDir()]
+      open Holmake_types
+      fun foldthis ({vname,path}, env) = env_extend (vname, [LIT path]) env
+    in
+      List.foldl foldthis
+                 (HM_BaseEnv.make_base_env master_cline_nohmf)
+                 holpathdb_extensions
+    end
+
+val starting_holmakefile =
+    if cline_nohmf then NONE
+    else
+      case cline_hmakefile of
+          NONE => if exists_readable "Holmakefile" then SOME "Holmakefile"
+                  else NONE
+        | x => x
+
+val starting_dir_hmenv =
+    let
+      val env0 = read_holpathdb()
+    in
+      case starting_holmakefile of
+          NONE => (env0, Holmake_types.empty_ruledb, NONE)
+        | SOME hmf => ReadHMF.read hmf env0
+    end
+
 fun chattiness_level switches =
   case (#debug switches, #verbose switches, #quiet switches) of
       (true, _, _) => 3
@@ -115,8 +137,9 @@ fun chattiness_level switches =
     | _ => 1
 
 val option_value =
-    HM_Cline.default_options |> apply_updates (get_hmf_cline_updates())
-                             |> apply_updates master_cline_options
+    HM_Cline.default_options
+      |> apply_updates (get_hmf_cline_updates (#1 starting_dir_hmenv))
+      |> apply_updates master_cline_options
 val coption_value = #core option_value
 val usepfx =
   #jobs (#core
@@ -311,15 +334,32 @@ end
 
 (* directory specific stuff here *)
 type res = holmake_result
-fun Holmake nobuild dir dirinfo cline_additional_includes targets : res = let
+fun Holmake hmenvopt nobuild dir dirinfo cline_additional_includes targets: res=
+let
   val abs_dir = hmdir.toAbsPath dir
   val _ = OS.FileSys.chDir abs_dir
-  val holpathdb_extensions =
-      holpathdb.search_for_extensions (fn s => []) [abs_dir]
-  val _ = List.app holpathdb.extend_db holpathdb_extensions
+
+  val (hmakefile_env, extra_rules, first_target) =
+      case hmenvopt of
+        SOME x => x
+      | _ =>
+        (* as hmenvopt is NONE, this is a recursive call, so user hasn't
+           had option to specify different Holmakefile for this directory*)
+        let
+          val env0 = read_holpathdb()
+        in
+          if exists_readable "Holmakefile" andalso not cline_nohmf
+          then
+              (diag
+                 (fn _ => "Reading additional information fromHolmakefile");
+               ReadHMF.read "Holmakefile" env0)
+          else (env0, Holmake_types.empty_ruledb, NONE)
+        end
+
+  val envlist = envlist hmakefile_env
 
   val option_value =
-      pass_option_value |> apply_updates (get_hmf_cline_updates())
+      pass_option_value |> apply_updates (get_hmf_cline_updates hmakefile_env)
   val coption_value = #core option_value
 
   val allfast = #fast coption_value
@@ -332,7 +372,6 @@ fun Holmake nobuild dir dirinfo cline_additional_includes targets : res = let
       cline_additional_includes @ #includes coption_value
   val keep_going_flag = #keep_going coption_value
   val no_action = #no_action coption_value
-  val no_hmakefile = #no_hmakefile coption_value
   val no_overlay = #no_overlay coption_value
   val no_prereqs = #no_prereqs coption_value
   val opentheory = #opentheory coption_value
@@ -360,31 +399,6 @@ val () = if do_logging_flag then
 
 
 
-val hmakefile =
-  case user_hmakefile of
-    NONE => "Holmakefile"
-  | SOME s =>
-      if exists_readable s then s
-      else die_with ("Couldn't read/find makefile: "^s)
-
-val base_env = HM_BaseEnv.make_base_env option_value
-val base_env = let
-  open Holmake_types
-  fun foldthis ({vname,path}, env) = env_extend (vname, [LIT path]) env
-in
-  List.foldl foldthis base_env holpathdb_extensions
-end
-
-val (hmakefile_env, extra_rules, first_target) =
-  if exists_readable hmakefile andalso not no_hmakefile
-  then let
-      val () = diag (fn _ => "Reading additional information from "^hmakefile)
-    in
-      ReadHMF.read hmakefile base_env
-    end
-  else (base_env, Holmake_types.empty_ruledb, NONE)
-
-val envlist = envlist hmakefile_env
 
 val hmake_includes = envlist "INCLUDES"
 val hmake_options = envlist "OPTIONS"
@@ -846,7 +860,7 @@ val recurse_into_dirs = allincludes @ hmake_preincludes
 fun hm_recur ctgt k : holmake_result = let
   val nobuild = toplevel_no_prereqs orelse no_prereqs
   fun hm dir dirinfo targets =
-      Holmake nobuild dir dirinfo [] targets
+      Holmake NONE nobuild dir dirinfo [] targets
   val warn = if nobuild then (fn _ => ()) else warn
 in
   maybe_recurse
@@ -980,7 +994,8 @@ in
   else let
       open Process
       val result =
-          Holmake false (* yes, build something *)
+          Holmake (SOME starting_dir_hmenv)
+                  false (* yes, build something *)
                   (hmdir.curdir())
                   {visited = Binaryset.empty hmdir.compare,
                    incdirmap = empty_incdirmap}

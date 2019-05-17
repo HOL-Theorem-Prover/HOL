@@ -182,6 +182,8 @@ end
 fun safeIsDir s =
     OS.FileSys.isDir s handle OS.SysErr _ => false
 
+fun diag s = TextIO.output(TextIO.stdErr, s)
+
 fun wildcard s =
     if s = "" then [""]
     else let
@@ -236,7 +238,7 @@ fun wildcard s =
     in
       case rest of
           [] => (* happens if input was a series of forward slashes *) [s]
-        | _ => (case recurse pfx starting_dir rest of [] => [] | x => x)
+        | _ => case recurse pfx starting_dir rest of [] => [] | x => x
     end
 
 fun get_first f [] = NONE
