@@ -1,45 +1,41 @@
 (* ========================================================================= *)
-(* FILE          : rlData.sml                                                *)
-(* DESCRIPTION   : Creating machine learning data for supervised and         *)
-(* reinforcement learning                                                    *)
-(* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck            *)
-(* DATE          : 2018                                                      *)
+(* FILE          : mleCompute.sml                                            *)
+(* DESCRIPTION   : Direct computation on terms using tree neural network     *)
+(* AUTHOR        : (c) Thibault Gauthier, Czech Technical University         *)
+(* DATE          : 2019                                                      *)
 (* ========================================================================= *)
 
-structure mlData :> mlData =
+structure mleCompute :> mleCompute =
 struct
 
-(*
-  load "mlTreeNeuralNetwork"; load "rlLib"; load "psTermGen";
-  load "mlNearestNeighbor"; load "psTermGen";
-*)
+open HolKernel Abbrev boolLib aiLib psTermGen mlTreeNeuralNetwork
 
-open HolKernel Abbrev boolLib aiLib rlLib psTermGen
+val ERR = mk_HOL_ERR "mleCompute"
 
-val ERR = mk_HOL_ERR "rlData"
+(* -------------------------------------------------------------------------
+   Generation of random arithmetical term (to move to psTermGen)
+   ------------------------------------------------------------------------- *)
+
+fun random_num_uni operl (nsuc,ntoken) = 
+  let val cset = map mk_sucn (List.tabulate (nsuc,I)) @ operl in
+    random_term_uni cset (List.tabulate (ntoken, fn x => x + 1), ``:num``)
+  end
+
+fun random_num_upto operl (nsuc,ntoken) =
+  let val cset = map mk_sucn (List.tabulate (nsuc,I)) @ operl in
+    random_term_upto cset (ntoken,``:num``)
+  end
+
+(* -------------------------------------------------------------------------
+   Creation of test set and training set
+   ------------------------------------------------------------------------- *)
+
+fun int_pow a b = 
+  if b < 0 then raise ERR "int_pow" "" else 
+  if b = 0 then 1 else a * int_pow a (b - 1) 
 
 fun eval_ground tm = 
   (string_to_int o term_to_string o rhs o concl o bossLib.EVAL) tm
-
-val uni_flag = ref false
-
-
-
-fun random_num operl (nsuc,noper) = 
-  let val cset = map mk_sucn (List.tabulate (nsuc + 1,I)) @ operl in
-    if !uni_flag 
-    then 
-      random_term_uni cset 
-      (List.tabulate (noper + 1, fn x => 2 * x + 1), ``:num``)
-    else random_term_upto cset (2 * noper + 1,``:num``)
-  end
-
-fun inter_traintest (train,test) = 
-  length (filter (fn x => tmem (fst x) (map fst train)) test)
-
-(* -------------------------------------------------------------------------
-   Computation
-   ------------------------------------------------------------------------- *)
 
 fun bin_rep_aux nbit n = 
   if nbit > 0 
@@ -48,20 +44,18 @@ fun bin_rep_aux nbit n =
 
 fun bin_rep nbit n = map Real.fromInt (bin_rep_aux nbit n)
 
-val uniq_flag = ref false
-
-fun computation_data operl (nsuc,noper) (nex,nclass,nbit) =
+fun create_trainset operl (nsuc,noper) (nclass,nbit) =
   let
+    val nex = nclass * (int_pow 2 nbit)
     val d = ref (dempty Int.compare)
     val dr = ref (dempty Term.compare)
     fun random_ex () =
       let
-        val tm = random_num operl (nsuc,noper)
-        val n = (eval_ground tm) mod nclass
+        val tm = random_num_uni operl (nsuc,noper)
+        val n = eval_ground tm mod nclass
         val nocc = dfind n (!d) handle NotFound => 0
       in
-        if nocc >= nex div nclass orelse 
-           (!uniq_flag andalso dmem tm (!dr))
+        if nocc >= nex div nclass orelse dmem tm (!dr)
         then random_ex () 
         else 
         (
@@ -75,19 +69,34 @@ fun computation_data operl (nsuc,noper) (nex,nclass,nbit) =
     dlist (!dr)
   end
 
-fun mk_finaltestset operl (nsuc,noper) nbit nex =
+fun create_all_testset operl (nsuc,noper) nbit nex =
   let 
     fun f x = x + 1 
     val l = cartesian_product (List.tabulate (nsuc,f)) 
                               (List.tabulate (noper,f))
     fun mk_ex (n,k) =
-      let val tm = random_num operl (n,k) in
+      let val tm = random_num_upto operl (n,k) in
         (tm, bin_rep nbit (eval_ground tm))
       end
     fun g (n,k) = List.tabulate (nex, fn _ => mk_ex (n,k))
   in
     map_assoc g l
   end
+
+(* -------------------------------------------------------------------------
+   Experiments
+   ------------------------------------------------------------------------- *)
+
+
+
+
+end (* struct *)
+
+(* has been moved to train 
+
+
+fun inter_traintest (train,test) = 
+  length (filter (fn x => tmem (fst x) (map fst train)) test)
 
 fun is_accurate tnn (tm,rl) =
   let 
@@ -102,7 +111,7 @@ fun accuracy_dataset tnn set =
   let val correct = filter (is_accurate tnn) set in
     Real.fromInt (length correct) / Real.fromInt (length set)
   end
-
+*)
 (*
 app load ["rlData", "aiLib", "rlLib", "mlTreeNeuralNetwork", "psTermGen"];
 open rlData aiLib rlLib mlTreeNeuralNetwork psTermGen;
@@ -253,7 +262,7 @@ val train = computation_data operl (nsuc,noper) (nex,nclass,nbit);
 (* -------------------------------------------------------------------------
    Proof
    ------------------------------------------------------------------------- *)
-
+(*
 val axl = [ax1,ax2,ax3,ax4];
 
 fun rw tm = 
@@ -341,9 +350,9 @@ writel "/home/thibault/data" (map f l1);
 val pdata2 = dict_sort Int.compare (map snd pdata1);
 *)
 
+*)
 
 
-end (* struct *)
 
 (*
 val (trainset,testset) = mk_ttset_ground2 7;

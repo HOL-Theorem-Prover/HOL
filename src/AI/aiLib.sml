@@ -512,6 +512,11 @@ fun string_of_goal (asm,w) =
     s1
   end
 
+fun trace_tacl tacl g = case tacl of
+    tac :: m => 
+    (print_endline (string_of_goal g); trace_tacl m (hd (fst (tac g))))
+  | [] => print_endline (string_of_goal g)
+
 fun string_of_bool b = if b then "T" else "F"
 
 fun only_concl x =
@@ -838,8 +843,109 @@ fun interruptkill worker =
        loop 10
      end
 
+(* -------------------------------------------------------------------------
+   Neural network units
+   ------------------------------------------------------------------------- *)
+
+val oper_compare = cpl_compare Term.compare Int.compare
+
+fun all_fosubtm tm =
+  let val (oper,argl) = strip_comb tm in
+    tm :: List.concat (map all_fosubtm argl)
+  end
+
+fun operl_of tm =
+  let
+    val tml = mk_fast_set Term.compare (all_fosubtm tm)
+    fun f x = let val (oper,argl) = strip_comb x in (oper, length argl) end
+  in
+    mk_fast_set oper_compare (map f tml)
+  end
+
+(* -------------------------------------------------------------------------
+   Position
+   ------------------------------------------------------------------------- *)
+
+type pos = int list
+
+fun subst_pos (tm,pos) res =
+  if null pos then res else
+  let
+    val (oper,argl) = strip_comb tm
+    fun f i x = if i = hd pos then subst_pos (x,tl pos) res else x
+    val newargl = mapi f argl
+  in
+    list_mk_comb (oper,newargl)
+  end
+
+fun find_subtm (tm,pos) =
+  if null pos then tm else
+  let val (oper,argl) = strip_comb tm in
+    find_subtm (List.nth (argl,hd pos), tl pos)
+  end
+
+fun narg_ge n (tm,pos) =
+  let val (_,argl) = strip_comb (find_subtm (tm,pos)) in length argl >= n end
+
+fun all_pos tm = 
+  let 
+    val (oper,argl) = strip_comb tm 
+    fun f i arg = map (fn x => i :: x) (all_pos arg)
+  in
+    [] :: List.concat (mapi f argl) 
+  end
 
 
+(* -------------------------------------------------------------------------
+   Arithmetic
+   ------------------------------------------------------------------------- *)
+
+fun mk_suc x = mk_comb (``SUC``,x);
+fun mk_add (a,b) = list_mk_comb (``$+``,[a,b]);
+val zero = ``0:num``;
+fun mk_sucn n = funpow n mk_suc zero;
+fun mk_mult (a,b) = list_mk_comb (``$*``,[a,b]);
+
+fun dest_suc x =
+  let val (a,b) = dest_comb x in
+    if not (term_eq  a ``SUC``) then raise ERR "" "" else b
+  end
+
+fun dest_add tm =
+  let val (oper,argl) = strip_comb tm in
+    if not (term_eq oper ``$+``) then raise ERR "" "" else pair_of_list argl
+  end
+
+fun is_suc_only tm = 
+  if term_eq tm zero then true else
+  (is_suc_only (dest_suc tm)  handle HOL_ERR _ => false)
+
+val robinson_eq = 
+  [``x + 0 = x``,``x + SUC y = SUC (x + y)``,``x * 0 = 0``,
+   ``x * SUC y = x * y + x``]
+
+(* -------------------------------------------------------------------------
+   Equality
+   ------------------------------------------------------------------------- *)
+
+fun sym x = mk_eq (swap (dest_eq x))
+
+fun unify a b = Unify.simp_unify_terms [] a b
+
+fun paramod_ground eq (tm,pos) =
+  let
+    val (eql,eqr) = dest_eq eq
+    val subtm = find_subtm (tm,pos)
+    val sigma = unify eql subtm
+    val eqrsig = subst sigma eqr
+    val tmsig = subst sigma tm
+    val result = subst_pos (tmsig,pos) eqrsig
+  in
+    if term_eq result tm orelse length (free_vars_lr result) > 0
+    then NONE
+    else SOME result
+  end
+  handle Interrupt => raise Interrupt | _ => NONE
 
 
 end (* struct *)

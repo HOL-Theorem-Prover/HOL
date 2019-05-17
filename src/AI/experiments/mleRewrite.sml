@@ -1,18 +1,18 @@
 (* ========================================================================= *)
-(* FILE          : rlGameArithGround.sml                                     *)
+(* FILE          : mleRewrite.sml                                     *)
 (* DESCRIPTION   :                                                           *)
 (* AUTHOR        : (c) Thibault Gauthier, Czech Technical University         *)
 (* DATE          : 2018                                                      *)
 (* ========================================================================= *)
 
-structure rlGameArithGround :> rlGameArithGround =
+structure mleRewrite :> mleRewrite =
 struct
 
-open HolKernel boolLib Abbrev aiLib rlLib rlData psMCTS psTermGen
+open HolKernel boolLib Abbrev aiLib psMCTS psTermGen
 
-val ERR = mk_HOL_ERR "rlGameArithGround"
-val debugdir = HOLDIR ^ "/src/AI/reinforcement_learning/debug"
-fun debug s = debug_in_dir debugdir "rlGameArithGround" s
+val ERR = mk_HOL_ERR "mleRewrite"
+fun debug s = 
+  debug_in_dir (HOLDIR ^ "/src/AI/experiments/debug") "mleRewrite" s
 
 (* -------------------------------------------------------------------------
    Tools

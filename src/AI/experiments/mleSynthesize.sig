@@ -1,4 +1,4 @@
-signature rlGameCopy =
+signature mleSynthesize =
 sig
 
   include Abbrev

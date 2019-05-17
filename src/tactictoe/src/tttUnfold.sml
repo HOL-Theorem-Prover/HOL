@@ -10,7 +10,7 @@ structure tttUnfold :> tttUnfold =
 struct
 
 open HolKernel Abbrev boolLib aiLib
-  smlLexer smlInfix smlOpen
+  smlLexer smlInfix smlOpen smlParallel
   mlTacticData
   tttSetup
 
@@ -1106,7 +1106,7 @@ fun ttt_parallel_eval ncores thyl =
     val _ = ttt_ttteval_flag := true
     fun f thy = (ttt_rewrite_thy thy; ttt_record_thy thy)
   in
-    parapp ncores f thyl; ttt_ttteval_flag := false
+    parapp_queue ncores f thyl; ttt_ttteval_flag := false
   end
 
 (* ------------------------------------------------------------------------

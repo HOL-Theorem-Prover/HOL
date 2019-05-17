@@ -1,5 +1,5 @@
 (* ========================================================================= *)
-(* FILE          : rlGameCopy.sml                                            *)
+(* FILE          : mleSynthesize.sml                                         *)
 (* DESCRIPTION   : Specification of a term copying game                      *)
 (* AUTHOR        : (c) Thibault Gauthier, Czech Technical University         *)
 (* DATE          : 2019                                                      *)
