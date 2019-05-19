@@ -30,6 +30,18 @@ fun grid_param (dl,nl,bl,ll,ml) =
     map f l2
   end
 
+fun write_param_results file prl =
+  let fun f ({batchsize,dim,learningrate,momentum,nepoch},r) =
+    rts r ^
+    ", batchsize " ^ its batchsize ^
+    ", dim " ^ its dim ^
+    ", learningrate " ^ rts learningrate ^
+    ", momentum " ^ rts momentum  ^ 
+    ", nepoch " ^ its nepoch 
+  in
+    writel file (map f prl)
+  end
+
 (* -------------------------------------------------------------------------
    I/O
    ------------------------------------------------------------------------- *)
@@ -67,7 +79,7 @@ fun read_accuracy file = valOf (Real.fromString (hd (readl file)))
 fun train_tnn_param (wid,job) ncore operl (train,test) 
   (param as {dim,nepoch,batchsize,learningrate,momentum})=
   let 
-    val randtnn = random_tnn (dim,1) operl
+    val randtnn = random_tnn (dim,4) operl
     val schedule = [(nepoch, learningrate /  (Real.fromInt batchsize))]
     val tnn = prepare_train_tnn (ncore,batchsize) randtnn (train,test) schedule
     val r = accuracy_set tnn test
@@ -96,7 +108,7 @@ fun tune_codel_of ncore_loc wid =
    "  train_tnn_param (wid,job) ncore operl (train,test) param;",
    "(* generating jobs *)",
    "val dl = [16,8];",
-   "val nl = [100];",
+   "val nl = [100,200];",
    "val bl = [16,128];",
    "val ll = [10,100];",
    "val ml = [0,9];",
@@ -108,34 +120,29 @@ fun tune_codel_of ncore_loc wid =
 fun tune_collect_result (wid,job) = 
   (read_param (param_file (wid,job)), read_accuracy (accuracy_file (wid,job)))
 
-
 (*
-load "smlParallel"; load "mlTune"; load "mleEntail"; 
-open mlTreeNeuralNetwork mlTune aiLib smlParallel mleEntail;
-
-val level = 10;
-val tml = gen_tml (operl_gen 3) level 4000;
-val train = List.concat (parmap_queue 4 (gen_ex tml) 
-  (List.tabulate (4,fn _ => 50)));
-val test = List.concat (parmap_queue 4 (gen_ex tml)
-  (List.tabulate (4,fn _ => 50)));
+load "smlParallel"; load "mlTune"; load "mleCompute"; 
+open mlTreeNeuralNetwork mlTune aiLib smlParallel mleCompute;
 
 val trainfile = (!parallel_dir) ^ "/train";
 val testfile = (!parallel_dir) ^ "/test";
 val operlfile = (!parallel_dir) ^ "/operl";
+val operl = mk_fast_set oper_compare (operl_of ``I 0 + SUC 0 * 0``);
+
+val (trainex,validex) = create_allex 200;
 
 fun init () =
   (
-  write_tnnex trainfile train;
-  write_tnnex testfile test;
-  write_operl operlfile (operl_nn 3)
+  write_tnnex trainfile trainex;
+  write_tnnex testfile validex;
+  write_operl operlfile operl
   )
 ;
 
 fun codel_of wid = tune_codel_of 1 wid;
 
 val dl = [16,8];
-val nl = [100];
+val nl = [100,200];
 val bl = [16,128];
 val ll = [10,100];
 val ml = [0,9];
@@ -146,6 +153,8 @@ val (final1,t) = add_time
   (parmap_queue_extern ncore codel_of (init,tune_collect_result)) paraml;
 
 val final2 = dict_sort compare_rmax final1;
+write_param_results 
+  (HOLDIR ^ "/src/AI/experiments/mleCompute_param_results") final2;
 *)
 
 

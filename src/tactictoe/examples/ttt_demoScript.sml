@@ -33,7 +33,9 @@ val ex1 = store_thm("ex1",
 (* ttt ([],``(!n. f n = c) ==> (MAP f ls = REPLICATE (LENGTH ls) c)``); *)
 val ex2 = store_thm("ex2",
   ``(!n. f n = c) ==> (MAP f ls = REPLICATE (LENGTH ls) c)``,
-  (ASM_SIMP_TAC (srw_ss () ++ boolSimps.LET_ss ++ ARITH_ss)) [listTheory.LIST_EQ_REWRITE, rich_listTheory.EL_REPLICATE] THEN METIS_TAC [listTheory.EL_MAP]
+  (ASM_SIMP_TAC (srw_ss () ++ boolSimps.LET_ss ++ ARITH_ss)) 
+  [listTheory.LIST_EQ_REWRITE, rich_listTheory.EL_REPLICATE] THEN 
+  METIS_TAC [listTheory.EL_MAP]
   );
 
 (* -------------------------------------------------------------------------
@@ -43,7 +45,9 @@ val ex2 = store_thm("ex2",
 (* ttt ([],``!n. EVEN n ==> ~(?m. n = 2 * m + 1)``); *)
 val ex3 = store_thm("ex3",
   ``!n. EVEN n ==> ~(?m. n = 2 * m + 1)``,
-  SIMP_TAC bool_ss [GSYM arithmeticTheory.ADD1] THEN REWRITE_TAC [arithmeticTheory.EVEN_EXISTS, arithmeticTheory.TIMES2] THEN METIS_TAC [arithmeticTheory.NOT_ODD_EQ_EVEN]
+  SIMP_TAC bool_ss [GSYM arithmeticTheory.ADD1] THEN 
+  REWRITE_TAC [arithmeticTheory.EVEN_EXISTS, arithmeticTheory.TIMES2] THEN 
+  METIS_TAC [arithmeticTheory.NOT_ODD_EQ_EVEN]
   );
 
 (* --------------------------------------------------------------------------
@@ -53,11 +57,12 @@ val ex3 = store_thm("ex3",
 (* ttt ([],``count (n+m) DIFF count n = IMAGE ($+n) (count m)``); *)
 val ex4 = store_thm("ex4",
   ``count (n+m) DIFF count n = IMAGE ($+n) (count m)``,
-  SRW_TAC [ARITH_ss] [pred_setTheory.EXTENSION, EQ_IMP_THM] THEN Q.EXISTS_TAC `x - n` THEN SRW_TAC [ARITH_ss] []
+  SRW_TAC [ARITH_ss] [pred_setTheory.EXTENSION, EQ_IMP_THM] THEN 
+  Q.EXISTS_TAC `x - n` THEN SRW_TAC [ARITH_ss] []
   );
 
 (* --------------------------------------------------------------------------
-   Example 4: closed form sums
+   Example 5: closed form sums. tactictoe was not able to minimize the proof.
    -------------------------------------------------------------------------- *)
 
 open sum_numTheory;

@@ -489,7 +489,7 @@ fun train_tnn_nepoch (ncore,bsize) n tnn (ptrain,ptest) =
     val testloss = average_real (map (infer_mse tnn) ptest)
     fun nice r = pad 8 "0" (rts (approx 6 (r / 2.0)))
     val _ = print_endline
-      ("train: " ^ nice trainloss ^ " test: " ^ nice testloss)
+      (its n ^ " train: " ^ nice trainloss ^ " test: " ^ nice testloss)
   in
     train_tnn_nepoch (ncore,bsize) (n - 1) newtnn (ptrain,ptest)
   end

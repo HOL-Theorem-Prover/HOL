@@ -430,8 +430,23 @@ fun standard_deviation l =
 fun int_div n1 n2 =
    (if n2 = 0 then 0.0 else Real.fromInt n1 / Real.fromInt n2)
 
+fun int_pow a b = 
+  if b < 0 then raise ERR "int_pow" "" else 
+  if b = 0 then 1 else a * int_pow a (b - 1) 
+
+fun bin_rep nbit n = 
+  let 
+    fun bin_rep_aux nbit n = 
+      if nbit > 0 
+      then n mod 2 :: bin_rep_aux (nbit - 1) (n div 2)
+      else []
+  in
+    map Real.fromInt (bin_rep_aux nbit n)
+  end
+
 fun pow (x:real) (n:int) =
   if n <= 0 then 1.0 else x * (pow x (n-1))
+
 
 fun approx n r =
   let val mult = pow 10.0 n in

@@ -22,6 +22,7 @@ sig
 
   val tune_codel_of : int -> int -> string list
   val tune_collect_result : int * int -> ml_param * real
-             
+     
+  val write_param_results : string -> (ml_param * real) list -> unit       
 
 end

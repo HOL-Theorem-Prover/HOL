@@ -167,6 +167,8 @@ sig
   val standard_deviation : real list -> real
   val sum_int : int list -> int
   val int_div : int -> int -> real
+  val int_pow : int -> int -> int
+  val bin_rep : int -> int -> real list
   val pow : real -> int -> real
   val approx : int -> real -> real
   val percent : real -> real

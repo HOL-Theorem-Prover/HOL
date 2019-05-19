@@ -3,9 +3,9 @@ sig
 
   include Abbrev
 
-  val create_trainset :  
-    term list -> int * int -> int * int -> (term * real list) list 
-  val create_all_testset : 
-    term list -> int * int -> int -> int -> ((int * int) * (term * real list) list) list
+  val create_allex :  
+    int -> (term * real list) list * (term * real list) list
+  val stats_ex : (term * 'a) list -> (int * int) list
+  val random_tnn_compute : int -> mlTreeNeuralNetwork.tnn 
 
 end
