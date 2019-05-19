@@ -8,7 +8,7 @@
 structure mlTune :> mlTune =
 struct
 
-open HolKernel Abbrev boolLib aiLib psTermGen mlTreeNeuralNetwork smlParallel
+open HolKernel Abbrev boolLib aiLib mlTreeNeuralNetwork smlParallel
 
 val ERR = mk_HOL_ERR "mlTune"
 
@@ -148,7 +148,7 @@ val ll = [10,100];
 val ml = [0,9];
 val paraml = grid_param (dl,nl,bl,ll,ml);
 
-val ncore = 4;
+val ncore = 32;
 val (final1,t) = add_time 
   (parmap_queue_extern ncore codel_of (init,tune_collect_result)) paraml;
 
