@@ -1,6 +1,6 @@
 (* ========================================================================= *)
-(* FILE          : mleRewrite.sml                                     *)
-(* DESCRIPTION   :                                                           *)
+(* FILE          : mleRewrite.sml                                            *)
+(* DESCRIPTION   : Term rewriting as a reinforcement learning game           *)
 (* AUTHOR        : (c) Thibault Gauthier, Czech Technical University         *)
 (* DATE          : 2018                                                      *)
 (* ========================================================================= *)
@@ -8,20 +8,67 @@
 structure mleRewrite :> mleRewrite =
 struct
 
-open HolKernel boolLib Abbrev aiLib psMCTS psTermGen
+open HolKernel boolLib Abbrev aiLib psMCTS psTermGen smlParallel
 
 val ERR = mk_HOL_ERR "mleRewrite"
 fun debug s = 
   debug_in_dir (HOLDIR ^ "/src/AI/experiments/debug") "mleRewrite" s
 
 (* -------------------------------------------------------------------------
-   Tools
+   Axioms and theorems
    ------------------------------------------------------------------------- *)
 
-fun rename_varl f tm =
-  snd (strip_abs (rename_bvarl f (list_mk_abs (free_vars_lr tm,tm))))
-fun sym tm = mk_eq (swap (dest_eq tm))
-fun unify a b = Unify.simp_unify_terms [] a b
+val robinson_eq_list = 
+ [``x + 0 = x``,``x + SUC y = SUC (x + y)``,``x * 0 = 0``,
+   ``x * SUC y = x * y + x``]
+
+val robinson_eq_vect = Vector.fromList robinson_eq_list
+ 
+(* -------------------------------------------------------------------------
+   Length of a proof using the left outermost (lo) strategy
+   ------------------------------------------------------------------------- *)
+
+fun trySome f l = case l of
+    [] => NONE
+  | a :: m => (case f a of NONE => trySome f m | SOME b => SOME b)
+
+fun lo_rwpos tm = 
+  let 
+    fun f pos = 
+      let fun test x = isSome (paramod_ground x (tm,pos)) in
+        exists test robinson_eq_list
+      end
+  in
+    List.find f (all_pos tm)
+  end
+
+fun lo_trace nmax toptm =
+  let
+    val l = ref []
+    val acc = ref 0
+    fun loop tm =
+      if is_suc_only tm then (SOME (rev (!l),!acc))
+      else if !acc > nmax then NONE else
+    let 
+      val pos = valOf (lo_rwpos tm)
+      val tm' = valOf (trySome (C paramod_ground (tm,pos)) robinson_eq_list)
+    in
+      (l := (tm,pos) :: !l; acc := length pos + 1 + !acc; loop tm')
+    end
+  in
+    loop toptm
+  end
+
+fun lo_prooflength tm = snd (valOf (lo_trace 200 tm))
+
+
+(*
+load "mleRewrite";
+open aiLib mleRewrite;
+val tm = ``(SUC 0 + 0) * (SUC 0)``;
+val trace = lo_trace 200 tm;
+val length = lo_prooflength tm;
+*)
 
 (* -------------------------------------------------------------------------
    Board
@@ -58,19 +105,10 @@ fun tag_pos (tm,pos) =
   end
 
 (* -------------------------------------------------------------------------
-   Axioms and theorems
-   ------------------------------------------------------------------------- *)
-
-val axl = [ax1,ax2,ax3,ax4]
-val ax_vect = Vector.fromList axl
-
-(* -------------------------------------------------------------------------
    Neural network units and inputs
    ------------------------------------------------------------------------- *)
 
-val dimin = 8;
-
-val operl =
+val rewrite_operl =
   let val operl' = (numtag,1) :: operl_of (``0 * SUC 0 + 0 = 0``) in
     mk_fast_set oper_compare operl'
   end
@@ -92,6 +130,13 @@ val movel =
   [Paramod (2,true)] @
   [Paramod (3,true),Paramod (3,false)]
 
+fun move_compare (m1,m2) = case (m1,m2) of
+    (Arg i1, Arg i2) => Int.compare (i1,i2)
+  | (Arg _, _) => LESS
+  | (_,Arg _) => GREATER
+  | (Paramod (i1,b1), Paramod (i2,b2)) => 
+    (cpl_compare Int.compare bool_compare) ((i1,b1),(i2,b2))
+
 fun bts b = if b then "t" else "f"
 
 fun string_of_move move = case move of
@@ -104,24 +149,23 @@ fun argn_pb n (tm,pos) = SOME (tm,pos @ [n])
 
 fun paramod_pb (i,b) (tm,pos) =
   let
-    val ax = Vector.sub (ax_vect,i)
+    val ax = Vector.sub (robinson_eq_vect,i)
     val tmo = paramod_ground (if b then ax else sym ax) (tm,pos)
   in
     SOME (valOf tmo,[]) handle Option => NONE
   end
 
-fun available subtm (move,r:real) = case move of
-    Arg i => (narg subtm >= i + 1)
+fun available (tm,pos) (move,r:real) = case move of
+    Arg i => (narg (find_subtm (tm,pos)) >= i + 1)
   | Paramod (i,b) =>
-    let val ax = Vector.sub (ax_vect,i) in
+    let val ax = Vector.sub (robinson_eq_vect,i) in
       if b
-      then can (unify (lhs ax)) subtm
-      else can (unify (rhs ax)) subtm
+      then can (paramod_ground ax) (tm,pos)
+      else can (paramod_ground (sym ax)) (tm,pos)
     end
 
 fun filter_sit sit = case snd sit of
-    Board (tm,pos) =>
-      let val subtm = find_subtm (tm,pos) in List.filter (available subtm) end
+    Board (tm,pos) => List.filter (available (tm,pos))
   | FailBoard => (fn l => [])
 
 fun apply_move move sit =
@@ -139,40 +183,115 @@ fun apply_move move sit =
    Targets
    ------------------------------------------------------------------------- *)
 
-fun total_cost_target target = case target of
-    (true, Board (tm,[])) => term_cost tm
-  | _ => raise ERR "total_cost_target" ""
+fun lo_prooflength_target target = case target of
+    (true, Board (tm,[])) => lo_prooflength tm
+  | _ => raise ERR "lo_prooflength_target" ""
 
-fun mk_pretargetl level = first_n (level * 400) (map fst proof_data_glob)
+fun mk_targetl level ntarget = 
+  let 
+    val tml = mlTacticData.import_terml 
+      (HOLDIR ^ "/src/AI/experiments/data200_train_plsorted")
+  in  
+    map mk_startsit (first_n (level * 400) tml) 
+  end
 
-fun mk_targetl level = map mk_startsit (mk_pretargetl level)
+fun write_targetl targetl = 
+  let val tml = map dest_startsit targetl in 
+    mlTacticData.export_terml (!parallel_dir ^ "/targetl") tml
+  end
+
+fun read_targetl () =
+  let val tml = mlTacticData.import_terml (!parallel_dir ^ "/targetl") in
+    map mk_startsit tml
+  end
 
 (* -------------------------------------------------------------------------
    Interface
    ------------------------------------------------------------------------- *)
 
-type gamespec =
+val gamespec : (board,move) mlReinforce.gamespec =
   {
-  filter_sit : board sit -> ((move * real) list -> (move * real) list),
-  movel : move list,
-  string_of_move : move -> string,
-  status_of : (board psMCTS.sit -> psMCTS.status),
-  apply_move : (move -> board psMCTS.sit -> board psMCTS.sit),
-  operl : (term * int) list,
-  nntm_of_sit: board sit -> term
-  }
-
-val gamespec : gamespec =
-  {
-  filter_sit = filter_sit,
-  string_of_move = string_of_move,
   movel = movel,
+  move_compare = move_compare,
+  string_of_move = string_of_move,
+  filter_sit = filter_sit,
   status_of = status_of,
   apply_move = apply_move,
-  operl = operl,
-  nntm_of_sit = nntm_of_sit
+  operl = rewrite_operl,
+  nntm_of_sit = nntm_of_sit,
+  mk_targetl = mk_targetl,
+  write_targetl = write_targetl,
+  read_targetl = read_targetl,
+  opens = "mleRewrite"
   }
 
+(* test
+load "mlReinforce"; open mlReinforce;
+load "mleRewrite"; open mleRewrite;
+val dhtnn = random_dhtnn_gamespec gamespec;
+psMCTS.exploration_coeff := 2.0;
+nsim_glob := 100000;
+explore_test gamespec dhtnn (mk_startsit ``SUC 0 * SUC 0``);
+*)
+
+(* starting examples
+load "mlReinforce"; open mlReinforce;
+load "mleRewrite"; open mleRewrite;
+load "mlTacticData"; open mlTacticData;
+open aiLib;
+
+val traintml = import_terml (HOLDIR ^ "/src/AI/experiments/data200_train");
+val trainpl1 = mapfilter (fn x => (x, lo_prooflength x)) traintml;
+val trainpl2 = dict_sort compare_imin trainpl1;
+export_terml (HOLDIR ^ "/src/AI/experiments/data200_train_plsorted") 
+  (map fst trainpl2);
+
+val validtml = import_terml (HOLDIR ^ "/src/AI/experiments/data200_valid");
+val validpl1 = mapfilter (fn x => (x, lo_prooflength x)) validtml;
+val validpl2 = dict_sort compare_imin validpl1;
+export_terml (HOLDIR ^ "/src/AI/experiments/data200_valid_plsorted") 
+  (map fst validpl2);
+*)
+
+
+(*
+app load ["mlReinforce","mleRewrite"]; 
+open mlReinforce mleRewrite smlParallel;
+
+logfile_glob := "may20_test";
+parallel_dir := 
+  HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^ (!logfile_glob);
+ncore_mcts_glob := 4;
+ncore_train_glob := 2;
+ngen_glob := 20;
+ntarget_compete := 100;
+ntarget_explore := 100;
+exwindow_glob := 40000;
+uniqex_flag := false;
+dim_glob := 6;
+batchsize_glob := 16;
+nepoch_glob := 20;
+lr_glob := 0.1;
+nsim_glob := 1600;
+decay_glob := 0.99;
+level_glob := 1;
+psMCTS.exploration_coeff := 2.0; (* need to reflect to workers *)
+
+val allex = rl_startex gamespec;
+mlTreeNeuralNetwork.write_dhex 
+  (HOLDIR ^ "/src/AI/experiments/mleRewrite_startex") allex;
+*)
+
+(*
+mlTreeNeuralNetwork.write_dhtnn "save" dhtnn;
+val dhtnn = random_dhtnn_gamespec rlGameCopy.gamespec;
+val target = (true,(``0 + (0 + SUC 0 + 0 + SUC 0)``,``active_var:num``));
+explore_test rlGameCopy.gamespec dhtnn target;
+*)
+
+
+(* todo: do rl_compete_standalone to evaluate the accuracy of the training
+   in reinforcement learning paradigm *)
 
 
 end (* struct *)

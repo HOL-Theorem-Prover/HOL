@@ -3,7 +3,8 @@ sig
 
 include Abbrev
 
-  val momentum : real ref
+  val momentum_glob : real ref
+  val nlayers_glob : int ref  
 
   type vect = real vector
   type mat = real vector vector

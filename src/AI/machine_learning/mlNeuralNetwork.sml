@@ -18,7 +18,7 @@ fun debug s = debug_in_dir debugdir "mlNeuralNetwork" s
    Parameters
    ------------------------------------------------------------------------- *)
 
-val learning_rate = ref 0.01
+val learningrate_glob = ref 0.01
 
 (* -------------------------------------------------------------------------
    Activation and derivatives (with a smart trick)
@@ -174,7 +174,7 @@ fun clip (a,b) m =
 
 fun update_layer (layer, layerwu) =
   let
-    val w0 = mat_smult (!learning_rate) layerwu
+    val w0 = mat_smult (!learningrate_glob) layerwu
     val w1 = mat_add (#w layer) w0
     val w2 = clip (~4.0,4.0) w1
   in
@@ -297,7 +297,7 @@ val training_set =
   end
 ;
 
-learning_rate := 0.001;
+learningrate_glob := 0.001;
 momentum := 0.0;
 decay := 1.0;
 

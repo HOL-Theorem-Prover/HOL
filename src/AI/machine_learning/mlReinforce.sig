@@ -1,4 +1,4 @@
-signature rlEnv =
+signature mlReinforce =
 sig
 
   include Abbrev
@@ -9,6 +9,7 @@ sig
   type ('a,'b) gamespec =
     {
     movel : 'b list,
+    move_compare : 'b * 'b -> order,
     string_of_move : 'b -> string,
     filter_sit : 'a psMCTS.sit -> (('b * real) list -> ('b * real) list),
     status_of : ('a psMCTS.sit -> psMCTS.status),
@@ -17,7 +18,8 @@ sig
     nntm_of_sit: 'a psMCTS.sit -> term,
     mk_targetl: int -> int -> 'a psMCTS.sit list,
     write_targetl: 'a psMCTS.sit list -> unit,
-    read_targetl: unit -> 'a psMCTS.sit list 
+    read_targetl: unit -> 'a psMCTS.sit list,
+    opens: string
     }
 
   (* rl parameters *)
@@ -45,6 +47,9 @@ sig
     ('a,'b) gamespec ->
     (term * real list * real list) list  ->
     mlTreeNeuralNetwork.dhtnn
+  
+  (* generating examples *)
+  val rl_startex : ('a,'b) gamespec -> (term * real list * real list) list
   
   (* exploration (search) *)
   val explore_test : ('a,'b) gamespec -> mlTreeNeuralNetwork.dhtnn -> 

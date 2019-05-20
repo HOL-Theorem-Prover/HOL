@@ -12,87 +12,19 @@ open HolKernel Abbrev boolLib aiLib psTermGen mlTreeNeuralNetwork
 
 val ERR = mk_HOL_ERR "mleCompute"
 
-
 (* -------------------------------------------------------------------------
-   Generation of random arithmetical term
+   Add output to examples
    ------------------------------------------------------------------------- *)
 
-fun add_I x = mk_comb (``I:num -> num``,x);
-
-fun operl_compute n = 
-  [``SUC``,``$+``,``$*``] @ 
-  map (add_I o mk_sucn) (List.tabulate (n+1,I));
-
-fun random_numtm (nsuc,nsize) = 
-  random_term (operl_compute nsuc) (nsize,``:num``);
+fun compute_exout ex = map_snd (bin_rep 4) ex
 
 (* -------------------------------------------------------------------------
-   Evaluation of a term to int
-   ------------------------------------------------------------------------- *)
-
-fun eval_numtm tm = 
-  (string_to_int o term_to_string o rhs o concl o bossLib.EVAL) tm
-
-
-(* -------------------------------------------------------------------------
-   Creation of set of examples
-   ------------------------------------------------------------------------- *)
-
-fun create_exset notset nex (nsuc,nsize) =
-  let
-    val d = ref (dempty Term.compare)
-    fun random_exl n =   
-      if n <= 0 orelse dlength (!d) >= nex then () else
-      let val tm = random_numtm (nsuc,nsize) in
-        if dmem tm (!notset) orelse dmem tm (!d) then () 
-        else (d := dadd tm () (!d); notset := dadd tm () (!notset)); 
-        random_exl (n - 1)
-      end
-  in
-    random_exl (nex * 10); dkeys (!d)
-  end
-
-fun create_exset_table notset nex (nsuc,nsize) =
-  let 
-    fun f x = x + 1 
-    val l = cartesian_product (List.tabulate (nsuc,f)) 
-                              (List.tabulate (nsize,f))
-  in
-    map_assoc (create_exset notset nex) l
-  end
-
-(* -------------------------------------------------------------------------
-   Creation of training set, validation set and training set
-   ------------------------------------------------------------------------- *)
-
-fun create_allex nex =
-  let 
-    val notset = ref (dempty Term.compare)
-    val l0 = create_exset_table notset nex (10,10)
-    val l1 = List.concat (map snd l0)
-    val trainex = map_assoc (bin_rep 4 o eval_numtm) l1
-    val l2 = create_exset_table notset nex (10,10)
-    val l3 = List.concat (map snd l2)
-    val validex = map_assoc (bin_rep 4 o eval_numtm) l3
-  in
-    (trainex,validex)
-  end
-
-fun stats_ex ex =
-  let 
-    val l0 = map_assoc (fn x => eval_numtm x mod 16) (map fst ex)
-    val l1 = dregroup Int.compare (map swap l0) 
-  in
-    map_snd length (dlist l1)
-  end
-
-(* -------------------------------------------------------------------------
-   Tnn for compute
+   Tree Neural Network
    ------------------------------------------------------------------------- *)
 
 fun random_tnn_compute dim =
   let 
-    val operl = mk_fast_set oper_compare (operl_of ``I 0 + SUC 0 * 0``)
+    val operl = mk_fast_set oper_compare (operl_of ``0 + SUC 0 * 0``)
     val nbit = 4
   in
     random_tnn (dim,nbit) operl
@@ -100,6 +32,7 @@ fun random_tnn_compute dim =
 
 (*
 load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
+load "mleArithData"; open mleArithData;
 load "mleCompute"; open mleCompute;
 
 val (trainex,validex) = create_allex 200;
@@ -114,5 +47,50 @@ trainex) schedule;
 val r1 = accuracy_set tnn trainex;
 val r2 = accuracy_set tnn validex;
 *)
+
+(* Compute external experiments 
+load "smlParallel"; load "mlTune"; load "mleCompute"; 
+open mlTreeNeuralNetwork mlTune aiLib smlParallel mleCompute;
+load "mlTacticData"; open mlTacticData;
+
+val trainfile = (!parallel_dir) ^ "/train";
+val testfile = (!parallel_dir) ^ "/test";
+val operlfile = (!parallel_dir) ^ "/operl";
+val operl = mk_fast_set oper_compare (operl_of ``0 + SUC 0 * 0``);
+
+val (trainex,validex) = create_allex 200;
+export_terml (HOLDIR ^ "/src/AI/experiments/trainex200") (map fst trainex);
+export_terml (HOLDIR ^ "/src/AI/experiments/trainex200") (map fst validex);
+
+fun init () =
+  (
+  write_tnnex trainfile trainex;
+  write_tnnex testfile validex;
+  write_operl operlfile operl
+  )
+;
+val dl = [16,8];
+val nl = [100,200];
+val bl = [16,128];
+val ll = [10,100];
+val yl = [2,3];
+fun codel_of wid = tune_codel_of (dl,nl,bl,ll,ml) 1 wid;
+val paraml = grid_param (dl,nl,bl,ll,ml);
+
+val ncore = 32;
+val (final1,t) = add_time 
+  (parmap_queue_extern ncore codel_of (init,tune_collect_result)) paraml;
+
+val final2 = dict_sort compare_rmax final1;
+write_param_results 
+  (HOLDIR ^ "/src/AI/experiments/mleCompute_param_results_200") final2;
+*)
+
+
+
+
+
+
+
 
 end (* struct *)

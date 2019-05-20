@@ -1,21 +1,22 @@
 (* ========================================================================= *)
-(* FILE          : rlEnv.sml                                                 *)
+(* FILE          : mlReinforce.sml                                           *)
 (* DESCRIPTION   : Environnement for reinforcement learning                  *)
-(* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck            *)
-(* DATE          : 2018                                                      *)
+(* AUTHOR        : (c) Thibault Gauthier, Czech Technical University         *)
+(* DATE          : 2019                                                      *)
 (* ========================================================================= *)
 
-structure rlEnv :> rlEnv =
+structure mlReinforce :> mlReinforce =
 struct
 
-open HolKernel Abbrev boolLib aiLib rlLib psMCTS mlTreeNeuralNetwork 
+open HolKernel Abbrev boolLib aiLib psMCTS mlTreeNeuralNetwork 
 smlParallel
 
-val ERR = mk_HOL_ERR "rlEnv"
+val ERR = mk_HOL_ERR "mlReinforce"
 
 type ('a,'b) gamespec =
   {
   movel : 'b list,
+  move_compare : 'b * 'b -> order,
   string_of_move : 'b -> string,
   filter_sit : 'a psMCTS.sit -> (('b * real) list -> ('b * real) list),
   status_of : ('a psMCTS.sit -> psMCTS.status),
@@ -24,15 +25,16 @@ type ('a,'b) gamespec =
   nntm_of_sit: 'a psMCTS.sit -> term,
   mk_targetl: int -> int -> 'a psMCTS.sit list,
   write_targetl: 'a psMCTS.sit list -> unit,
-  read_targetl: unit -> 'a psMCTS.sit list 
+  read_targetl: unit -> 'a psMCTS.sit list,
+  opens: string
   }
 
 (* -------------------------------------------------------------------------
    Log
    ------------------------------------------------------------------------- *)
 
-val logfile_glob = ref "rlEnv"
-val eval_dir = HOLDIR ^ "/src/AI/reinforcement_learning/eval"
+val logfile_glob = ref "mlReinforce"
+val eval_dir = HOLDIR ^ "/src/AI/machine_learning/eval"
 fun log_eval file s =
   let val path = eval_dir ^ "/" ^ file in
     mkDir_err eval_dir;
@@ -112,13 +114,11 @@ fun mk_fep_dhtnn startb gamespec dhtnn sit =
     val ptnn = {opdict=opdict,headnn=headpoli,dimin=dimin,dimout=dimout}
     val nntm = (#nntm_of_sit gamespec) sit
   in
-    (*
     if startb 
-    then (0.0, filter_sit (map (fn x => (x,1.0)) movel))
+    then (0.01, filter_sit (map (fn x => (x,1.0)) movel))
     else
-    *)
-    (only_hd (infer_tnn etnn nntm),
-      filter_sit (combine (movel, infer_tnn ptnn nntm)))
+      (only_hd (infer_tnn etnn nntm),
+       filter_sit (combine (movel, infer_tnn ptnn nntm)))
   end
 
 (* -------------------------------------------------------------------------
@@ -127,21 +127,23 @@ fun mk_fep_dhtnn startb gamespec dhtnn sit =
 
 val emptyallex = []
 
-(* fun complete_pol movel mrl =
-  let fun f move = assoc move mrl handle HOL_ERR _ => 0.0 in
-    map f movel
+fun complete_pol gamespec mrl =
+  let
+    val d = dnew (#move_compare gamespec) mrl
+    fun f move = dfind move d handle NotFound => 0.0 
+  in
+    map f (#movel gamespec)
   end
-*)
+
 fun add_rootex gamespec tree allex =
   let  
     val root = dfind [0] tree
     val sit  = #sit root
     val nntm = (#nntm_of_sit gamespec) sit
-    val movel = #movel gamespec
   in
     case evalpoli_example tree of
-      NONE    => allex
-    | SOME (e,p) => (nntm,[e],(* complete_pol movel *) map snd p) :: allex
+      NONE  => allex
+    | SOME (e,p) => (nntm,[e], complete_pol gamespec p) :: allex
   end
 
 (* -------------------------------------------------------------------------
@@ -161,9 +163,9 @@ fun n_bigsteps_loop (n,nmax) gamespec mctsparam (allex,allroot) tree =
     val _ = if !verbose_flag then print_endline (tts (nntm_of_sit sit)) else ()
     val movel = #movel gamespec
   in
-   (* if null (filter_sit (map_assoc (fn x => 0.0) movel))
-      then (allex, root :: allroot) (* stop because no valid move *)
-      else *)
+   if null (filter_sit (map_assoc (fn x => 0.0) movel))
+   then (allex, root :: allroot) (* stop because no valid move *)
+   else
    let val (dis,cido) = select_bigstep newtree [0] in
      case cido of
        NONE => (allex, root :: allroot)
@@ -265,9 +267,10 @@ fun train_f gamespec allex =
 (* todo : print out targets *)
 fun flags_to_string (b1,b2) = "(" ^ bts b1 ^ "," ^  bts b2 ^ ")"
 
-fun codel_of_flags flags wid = 
+fun codel_of_flags opens flags wid = 
     [
-     "open rlGameCopy mlTreeNeuralNetwork smlParallel rlEnv;",
+     "open mlTreeNeuralNetwork smlParallel mlReinforce;",
+     "open " ^ opens ^ ";",
      "val _ = parallel_dir := " ^ quote (!parallel_dir) ^ ";",
      "val _ = nsim_glob := " ^ its (!nsim_glob) ^ ";",
      "val _ = decay_glob := " ^ rts (!decay_glob) ^ ";",
@@ -301,7 +304,7 @@ fun explore_parallel gamespec ncore flags dhtnn targetl =
   let
     val write_targetl = #write_targetl gamespec 
     fun boss_write () = init_extern write_targetl targetl dhtnn
-    fun codel_of wid = codel_of_flags flags wid
+    fun codel_of wid = codel_of_flags (#opens gamespec) flags wid
     val boss_read = read_result_extern
   in
     parmap_queue_extern ncore codel_of (boss_write,boss_read) targetl
@@ -340,7 +343,7 @@ fun compete gamespec dhtnn_old dhtnn_new =
   end
 
 (* -------------------------------------------------------------------------
-   Exploration.
+   Exploration
    ------------------------------------------------------------------------- *)
 
 fun explore_f startb gamespec allex dhtnn =
@@ -363,6 +366,17 @@ fun explore_f startb gamespec allex dhtnn =
 (* -------------------------------------------------------------------------
    Reinforcement learning loop
    ------------------------------------------------------------------------- *)
+
+fun rl_startex gamespec = 
+  let
+    val _ = remove_file (eval_dir ^ "/" ^ (!logfile_glob))
+    val _ = summary_param ()
+    val _ = summary "Generation 0"
+    val dhtnn_random = random_dhtnn_gamespec gamespec
+    val allex = explore_f true gamespec emptyallex dhtnn_random
+  in
+    allex
+  end
 
 fun rl_start gamespec =
   let
@@ -397,41 +411,5 @@ fun start_rl_loop gamespec =
     rl_loop (1,!ngen_glob) gamespec (allex,dhtnn)
   end
 
+
 end (* struct *)
-
-(*
-load "rlEnv"; load "rlGameCopy";
-open smlParallel rlEnv;
-
-logfile_glob := "may1_dim6";
-parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^ (!logfile_glob);
-
-ncore_mcts_glob := 2;
-ncore_train_glob := 2;
-ngen_glob := 20;
-ntarget_compete := 100;
-ntarget_explore := 100;
-exwindow_glob := 40000;
-uniqex_flag := false;
-dim_glob := 6;
-batchsize_glob := 16;
-nepoch_glob := 20;
-lr_glob := 0.1;
-nsim_glob := 1600;
-decay_glob := 1.0;
-level_glob := 10;
-psMCTS.exploration_coeff := 2.0;
-
-
-val (allex,dhtnn) = start_rl_loop rlGameCopy.gamespec;
-mlTreeNeuralNetwork.write_dhtnn "save" dhtnn;
-
-(* test *)
-val dhtnn = random_dhtnn_gamespec rlGameCopy.gamespec;
-val target = (true,(``0 + (0 + SUC 0 + 0 + SUC 0)``,``active_var:num``));
-explore_test rlGameCopy.gamespec dhtnn target;
-
-(* evaluate missmatch between PriorPoliicy and DerivedPolicy to see
-   if there is still something to learn. *)
-
-*)

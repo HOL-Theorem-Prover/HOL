@@ -2,7 +2,7 @@ signature mlNeuralNetwork =
 sig
 
   (* hyperparameters *)
-  val learning_rate : real ref
+  val learningrate_glob : real ref
 
   (* activation *)
   val tanh : real -> real

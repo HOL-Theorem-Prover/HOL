@@ -30,23 +30,30 @@ type dhtnn =
    Random tree neural network
    ------------------------------------------------------------------------- *)
 
+val nlayers_glob = ref 2
+
 fun id (x:real) = x:real
 fun did (x:real) = 1.0
 
-fun const_nn dim activ arity =
+fun const_nn dim arity =
   if arity = 0
   then random_nn (id,did) (id,did) [1,dim]
-  else random_nn activ activ [arity * dim + 1, dim, dim]
+  else random_nn (tanh,dtanh) (tanh,dtanh)
+    (* (List.tabulate (!nlayers_glob, fn _ => arity * dim + 1) @ [dim]) *)
+    [arity * dim + 1, dim, dim]
 
 val oper_compare = cpl_compare Term.compare Int.compare
 
 fun random_opdict dimin cal =
-  let val l = map_assoc (fn (_,a) => const_nn dimin (tanh,dtanh) a) cal in
+  let val l = map_assoc (fn (_,a) => const_nn dimin a) cal in
     dnew oper_compare l
   end
 
 fun random_headnn (dimin,dimout) =
-  random_nn (tanh,dtanh) (tanh,dtanh) [dimin+1,dimin,dimout]
+  random_nn (tanh,dtanh) (tanh,dtanh) 
+    (* (List.tabulate (!nlayers_glob, fn _ => dimin + 1) @ [dimout]) *)
+    [dimin + 1, dimin, dimout]
+
 
 fun random_tnn (dimin,dimout) operl =
   {
@@ -407,7 +414,7 @@ fun train_dhtnn_one dhtnn (tml,expecteval,expectpoli) =
    Train tnn on one batch
    ------------------------------------------------------------------------- *)
 
-val momentum = ref 0.0
+val momentum_glob = ref 0.0
 val dwlhead_glob = ref NONE
 val dwloper_glob = ref (dempty oper_compare)
 
@@ -420,8 +427,8 @@ fun update_head headnn bpdatall =
     val dwl = sum_dwll dwll
     val dwlmom = 
       if isSome (!dwlhead_glob)
-      then sum_dwll [smult_dwl (1.0 - (!momentum)) dwl, 
-                     smult_dwl (!momentum) (valOf (!dwlhead_glob))]
+      then sum_dwll [smult_dwl (1.0 - (!momentum_glob)) dwl, 
+                     smult_dwl (!momentum_glob) (valOf (!dwlhead_glob))]
       else dwl
     val newheadnn = update_nn headnn dwlmom
     val _ = dwlhead_glob := SOME dwlmom
@@ -436,8 +443,8 @@ fun update_opernn opdict (oper,dwll) =
     val dwl   = sum_dwll dwll
     val dwlmom = 
       if dmem oper (!dwloper_glob)
-      then sum_dwll [smult_dwl (1.0 - (!momentum))  dwl, 
-                     smult_dwl (!momentum) (dfind oper (!dwloper_glob))]
+      then sum_dwll [smult_dwl (1.0 - (!momentum_glob))  dwl, 
+                     smult_dwl (!momentum_glob) (dfind oper (!dwloper_glob))]
       else dwl
     val newnn = update_nn nn dwlmom
     val _ = dwloper_glob := dadd oper dwlmom (!dwloper_glob)
@@ -499,7 +506,7 @@ fun train_tnn_schedule (ncore,bsize) tnn (ptrain,ptest) schedule =
     [] => tnn
   | (nepoch, lrate) :: m =>
     let
-      val _ = learning_rate := lrate
+      val _ = learningrate_glob := lrate
       val _ = print_endline ("learning_rate: " ^ rts lrate)
       val newtnn = train_tnn_nepoch (ncore,bsize) nepoch tnn (ptrain,ptest)
     in
@@ -515,15 +522,21 @@ fun train_dhtnn_batch ncore dhtnn batch =
     val {opdict, headeval, headpoli, dimin, dimout} = dhtnn
     val (bpdictl,bpdatall1,bpdatall2) = 
       split_triple (parmap_batch ncore (train_dhtnn_one dhtnn) batch)
+      handle Subscript => raise ERR "train_dhtnn_batch" "1"
     val (newheadeval,loss1) = update_head headeval bpdatall1
+      handle Subscript => raise ERR "train_dhtnn_batch" "2"
     val (newheadpoli,loss2) = update_head headpoli bpdatall2
-    val bpdict = dconcat oper_compare bpdictl 
+      handle Subscript => raise ERR "train_dhtnn_batch" "3"
+    val bpdict = dconcat oper_compare bpdictl
+      handle Subscript => raise ERR "train_dhtnn_batch" "4"
     val newopdict =
       daddl (map (update_opernn opdict) (dlist bpdict)) opdict
+      handle Subscript => raise ERR "train_dhtnn_batch" "5"
   in
     ({opdict = newopdict, headeval = newheadeval, headpoli = newheadpoli,
      dimin = dimin, dimout = dimout},(loss1,loss2))
   end
+  
 
 fun train_dhtnn_epoch_aux ncore (lossl1,lossl2) dhtnn batchl =
   case batchl of
@@ -558,7 +571,7 @@ fun train_dhtnn_schedule_aux ncore dhtnn bsize eptrain schedule =
     [] => dhtnn
   | (nepoch, lrate) :: m =>
     let
-      val _ = learning_rate := lrate
+      val _ = learningrate_glob := lrate
       val _ = print_endline ("learning_rate: " ^ rts lrate)
       val newdhtnn = train_dhtnn_nepoch ncore nepoch dhtnn bsize eptrain
     in

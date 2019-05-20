@@ -210,7 +210,6 @@ sig
   val dest_suc : term -> term
   val dest_add : term -> (term * term)
   val is_suc_only : term -> bool
-  val robinson_eq: term list
 
   (* equality *)
   val sym : term -> term

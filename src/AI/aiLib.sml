@@ -910,7 +910,6 @@ fun all_pos tm =
     [] :: List.concat (mapi f argl) 
   end
 
-
 (* -------------------------------------------------------------------------
    Arithmetic
    ------------------------------------------------------------------------- *)
@@ -934,10 +933,6 @@ fun dest_add tm =
 fun is_suc_only tm = 
   if term_eq tm zero then true else
   (is_suc_only (dest_suc tm)  handle HOL_ERR _ => false)
-
-val robinson_eq = 
-  [``x + 0 = x``,``x + SUC y = SUC (x + y)``,``x * 0 = 0``,
-   ``x * SUC y = x * y + x``]
 
 (* -------------------------------------------------------------------------
    Equality
