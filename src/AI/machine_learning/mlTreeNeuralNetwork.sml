@@ -414,25 +414,29 @@ fun train_dhtnn_one dhtnn (tml,expecteval,expectpoli) =
    Train tnn on one batch
    ------------------------------------------------------------------------- *)
 
+(* 
 val momentum_glob = ref 0.0
 val dwlhead_glob = ref NONE
 val dwloper_glob = ref (dempty oper_compare)
+*)
 
-fun init_dwlglob () =
-  (dwlhead_glob := NONE; dwloper_glob := dempty oper_compare)
+(* fun init_dwlglob () =
+  (dwlhead_glob := NONE; dwloper_glob := dempty oper_compare) *)
 
 fun update_head headnn bpdatall =
   let
     val dwll = map (map #dw) bpdatall
     val dwl = sum_dwll dwll
+    (* 
     val dwlmom = 
       if isSome (!dwlhead_glob)
       then sum_dwll [smult_dwl (1.0 - (!momentum_glob)) dwl, 
                      smult_dwl (!momentum_glob) (valOf (!dwlhead_glob))]
       else dwl
-    val newheadnn = update_nn headnn dwlmom
-    val _ = dwlhead_glob := SOME dwlmom
-    val loss      = average_loss bpdatall
+    *)
+    val newheadnn = update_nn headnn dwl (* dwlmom *)
+    (* val _ = dwlhead_glob := SOME dwlmom *)
+    val loss = average_loss bpdatall
   in
     (newheadnn, loss)
   end
@@ -441,13 +445,14 @@ fun update_opernn opdict (oper,dwll) =
   let
     val nn    = dfind oper opdict
     val dwl   = sum_dwll dwll
-    val dwlmom = 
+    (* val dwlmom = 
       if dmem oper (!dwloper_glob)
       then sum_dwll [smult_dwl (1.0 - (!momentum_glob))  dwl, 
                      smult_dwl (!momentum_glob) (dfind oper (!dwloper_glob))]
       else dwl
-    val newnn = update_nn nn dwlmom
-    val _ = dwloper_glob := dadd oper dwlmom (!dwloper_glob)
+    *)
+    val newnn = update_nn nn dwl (* dwlmom *)
+    (* val _ = dwloper_glob := dadd oper dwlmom (!dwloper_glob) *)
   in
     (oper,newnn)
   end
@@ -478,7 +483,7 @@ fun train_tnn_epoch_aux ncore lossl tnn batchl = case batchl of
 
 fun train_tnn_epoch ncore tnn batchl = 
   (
-  init_dwlglob ();
+  (* init_dwlglob (); *)
   train_tnn_epoch_aux ncore [] tnn batchl
   )
 
@@ -522,9 +527,7 @@ fun train_dhtnn_batch ncore dhtnn batch =
     val {opdict, headeval, headpoli, dimin, dimout} = dhtnn
     val (bpdictl,bpdatall1,bpdatall2) = 
       split_triple (parmap_batch ncore (train_dhtnn_one dhtnn) batch)
-      handle Subscript => raise ERR "train_dhtnn_batch" "1"
     val (newheadeval,loss1) = update_head headeval bpdatall1
-      handle Subscript => raise ERR "train_dhtnn_batch" "2"
     val (newheadpoli,loss2) = update_head headpoli bpdatall2
       handle Subscript => raise ERR "train_dhtnn_batch" "3"
     val bpdict = dconcat oper_compare bpdictl
