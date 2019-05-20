@@ -104,6 +104,7 @@ fun read_holpathdb() =
     let
       val holpathdb_extensions =
           holpathdb.search_for_extensions (fn s => []) [OS.FileSys.getDir()]
+      val _ = List.app holpathdb.extend_db holpathdb_extensions
       open Holmake_types
       fun foldthis ({vname,path}, env) = env_extend (vname, [LIT path]) env
     in

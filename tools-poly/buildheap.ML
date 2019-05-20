@@ -174,10 +174,13 @@ fun findUo [] _ = NONE
           findUo rest modPath
       end;
 
+fun absPath s =
+    OS.Path.mkAbsolute{path = s, relativeTo = OS.FileSys.getDir()}
+
 fun check_objpath die incs (p, b) =
   if b then ()
   else
-    if member (OS.Path.dir p) (SIGOBJ::incs) then ()
+    if member (absPath (OS.Path.dir p)) (SIGOBJ::incs) then ()
     else die ("Object file "^p^" has suspicious path; use -f to override")
 
 fun time_max (t1, t2) = if Time.<(t1,t2) then t2 else t1
@@ -335,7 +338,7 @@ in
   case (output, exe) of
       (SOME s, NONE) =>
       let
-        val _ = List.app (check_objpath die ("" :: "." :: allincs)) objs
+        val _ = List.app (check_objpath die (absPath "." :: allincs)) objs
         val search_these =
             "." :: OS.Path.concat(Systeml.HOLDIR, "sigobj") :: allincs
         fun findmod s =
