@@ -31,8 +31,9 @@ fun grid_param (dl,nl,bl,ll,yl) =
   end
 
 fun write_param_results file prl =
-  let fun f ({batchsize,dim,learningrate,nepoch,nlayers},r) =
-    rts r ^
+  let fun f ({batchsize,dim,learningrate,nepoch,nlayers},(r1,r2)) =
+    "test " ^ rts r2 ^
+    ", train" ^ rts r1 ^
     ", batchsize " ^ its batchsize ^
     ", dim " ^ its dim ^
     ", learningrate " ^ rts learningrate ^
@@ -63,6 +64,7 @@ fun write_param file {dim,nepoch,batchsize,learningrate,nlayers} =
   in
     writel file sl
   end
+
 fun read_param file =
   let val (d,n,b,l,y) = quintuple_of_list (readl file) in
     {dim = string_to_int d, 
@@ -72,8 +74,13 @@ fun read_param file =
      nlayers = string_to_int y}
   end
 
-fun write_accuracy file r = writel file [rts r]
-fun read_accuracy file = valOf (Real.fromString (hd (readl file)))
+fun write_accuracy file (r1,r2) = writel file [rts r1,rts r2]
+fun read_accuracy file = 
+  let val l = readl file in 
+    case l of
+      [a,b] => (valOf (Real.fromString a), valOf (Real.fromString b))
+    | _ => raise ERR "read_accuracy" ""
+  end
 
 (* -------------------------------------------------------------------------
    Train with parameters
@@ -86,12 +93,13 @@ fun train_tnn_param (wid,job) ncore operl (train,test)
     val randtnn = random_tnn (dim,4) operl
     val schedule = [(nepoch, learningrate /  (Real.fromInt batchsize))]
     val tnn = prepare_train_tnn (ncore,batchsize) randtnn (train,test) schedule
-    val r = accuracy_set tnn test
+    val r1 = accuracy_set tnn train
+    val r2 = accuracy_set tnn test
     val fileparam = param_file (wid,job)
     val fileaccuracy = accuracy_file (wid,job)
   in
     write_param fileparam param;
-    write_accuracy fileaccuracy r;
+    write_accuracy fileaccuracy (r1,r2);
     writel_atomic (widout_file wid) ["done"]
   end
 
@@ -120,7 +128,8 @@ fun tune_codel_of (dl,nl,bl,ll,yl) ncore_loc wid =
 ;  
 
 fun tune_collect_result (wid,job) = 
-  (read_param (param_file (wid,job)), read_accuracy (accuracy_file (wid,job)))
+  (read_param (param_file (wid,job)), 
+   read_accuracy (accuracy_file (wid,job)))
 
 (* -------------------------------------------------------------------------
    Train externally dhtnn with parameters
@@ -130,6 +139,7 @@ fun train_dhtnn_param (wid,job) ncore gamespec epex
   (param as {dim,nepoch,batchsize,learningrate,nlayers})=
   let 
     val _ = mlTreeNeuralNetwork.nlayers_glob := nlayers
+    val _ = dim_glob := dim
     val dhtnn_org = random_dhtnn_gamespec gamespec
     val schedule = [(nepoch, learningrate /  (Real.fromInt batchsize))]
     val _ = print_endline "before train_dhtnn_schedule"

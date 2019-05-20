@@ -140,19 +140,20 @@ parallel_dir :=
   HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^ (!logfile_glob);
 ncore_mcts_glob := 4;
 ncore_train_glob := 2;
-ngen_glob := 20;
-ntarget_compete := 100;
-ntarget_explore := 100;
+ngen_glob := 50;
+ntarget_compete := 400;
+ntarget_explore := 400;
 exwindow_glob := 40000;
 uniqex_flag := false;
-dim_glob := 6;
+dim_glob := 16;
 batchsize_glob := 16;
-nepoch_glob := 20;
+nepoch_glob := 200;
 lr_glob := 0.1;
 nsim_glob := 1600;
 decay_glob := 0.99;
 level_glob := 1;
-psMCTS.exploration_coeff := 2.0; (* need to reflect to workers *)
+psMCTS.exploration_coeff := 2.0; 
+(* need to reflect to workers if changed *)
 
 val epex = rl_startex gamespec;
 mlTreeNeuralNetwork.write_dhex 
@@ -160,15 +161,13 @@ mlTreeNeuralNetwork.write_dhex
 *)
 
 (* Synthesize experiment
-app load ["mlTune","mleSynthesize"];
-open aiLib smlParallel mlTreeNeuralNetwork mlTune mleSynthesize;
+app load ["mlReinforce","mlTune","mleSynthesize"];
+open aiLib smlParallel mlTreeNeuralNetwork mlReinforce mlTune mleSynthesize;
 
 val epex = read_dhex 
   (HOLDIR ^ "/src/AI/experiments/mleSynthesize_startex");
 fun init () = write_dhex ((!parallel_dir) ^ "/epex") epex;
 
-load "mlReinforce"; open mlReinforce;
-dim_glob := 16;
 val dl = [16];
 val nl = [10];
 val bl = [16];
@@ -182,6 +181,33 @@ val ncore = 1;
 val (final1,t) = add_time 
   (parmap_queue_extern ncore codel_of (init,dhtune_collect_result)) paraml;
 
+val dhtnn = (snd o hd) final1;
+write_dhtnn (HOLDIR ^ "/src/AI/experiments/mleSynthesize_dhtnntest") dhtnn;
+*)
+
+(* Evaluate on the first level of the validation set
+app load ["mlReinforce","mlTune","mleSynthesize"];
+open aiLib smlParallel mlTreeNeuralNetwork mlReinforce mlTune mleSynthesize;
+
+val level = 1;
+val targetl =
+let 
+  val tml = mlTacticData.import_terml 
+    (HOLDIR ^ "/src/AI/experiments/data200_valid_evalsorted")
+in  
+  map mk_startsit (first_n (level * 400) tml) 
+end;
+
+val dhtnn = 
+  read_dhtnn (HOLDIR ^ "/src/AI/experiments/mleSynthesize_dhtnntest");
+ncore_mcts_glob := 4;
+nsim_glob := 1;
+val n = compete_one gamespec dhtnn targetl;
+val accuracy = int_div n (length targetl);
+*)
+
+(* todo: 
+   decide to have enough examples with different
 *)
 
 

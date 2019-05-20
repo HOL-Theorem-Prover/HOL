@@ -241,6 +241,7 @@ fun epex_stats epex =
     summary ("average duplicates: " ^ rts r)
   end
 
+(* get rid of dim_glob here or set it in the codel *)
 fun random_dhtnn_gamespec gamespec =
   random_dhtnn (!dim_glob, length (#movel gamespec)) (#operl gamespec)
 

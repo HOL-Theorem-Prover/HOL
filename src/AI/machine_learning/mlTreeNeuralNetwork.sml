@@ -39,8 +39,7 @@ fun const_nn dim arity =
   if arity = 0
   then random_nn (id,did) (id,did) [1,dim]
   else random_nn (tanh,dtanh) (tanh,dtanh)
-    (* (List.tabulate (!nlayers_glob, fn _ => arity * dim + 1) @ [dim]) *)
-    [arity * dim + 1, dim, dim]
+    (List.tabulate (!nlayers_glob, fn _ => arity * dim + 1) @ [dim])
 
 val oper_compare = cpl_compare Term.compare Int.compare
 
@@ -51,8 +50,7 @@ fun random_opdict dimin cal =
 
 fun random_headnn (dimin,dimout) =
   random_nn (tanh,dtanh) (tanh,dtanh) 
-    (* (List.tabulate (!nlayers_glob, fn _ => dimin + 1) @ [dimout]) *)
-    [dimin + 1, dimin, dimout]
+    (List.tabulate (!nlayers_glob, fn _ => dimin + 1) @ [dimout])
 
 
 fun random_tnn (dimin,dimout) operl =
@@ -529,12 +527,9 @@ fun train_dhtnn_batch ncore dhtnn batch =
       split_triple (parmap_batch ncore (train_dhtnn_one dhtnn) batch)
     val (newheadeval,loss1) = update_head headeval bpdatall1
     val (newheadpoli,loss2) = update_head headpoli bpdatall2
-      handle Subscript => raise ERR "train_dhtnn_batch" "3"
     val bpdict = dconcat oper_compare bpdictl
-      handle Subscript => raise ERR "train_dhtnn_batch" "4"
     val newopdict =
       daddl (map (update_opernn opdict) (dlist bpdict)) opdict
-      handle Subscript => raise ERR "train_dhtnn_batch" "5"
   in
     ({opdict = newopdict, headeval = newheadeval, headpoli = newheadpoli,
      dimin = dimin, dimout = dimout},(loss1,loss2))

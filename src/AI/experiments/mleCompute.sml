@@ -8,19 +8,15 @@
 structure mleCompute :> mleCompute =
 struct
 
-open HolKernel Abbrev boolLib aiLib psTermGen mlTreeNeuralNetwork
+open HolKernel Abbrev boolLib aiLib psTermGen mlTreeNeuralNetwork mleArithData
 
 val ERR = mk_HOL_ERR "mleCompute"
 
 (* -------------------------------------------------------------------------
-   Add output to examples
+   Todo : move comments into structure.
    ------------------------------------------------------------------------- *)
 
-fun compute_exout ex = map_snd (bin_rep 4) ex
-
-(* -------------------------------------------------------------------------
-   Tree Neural Network
-   ------------------------------------------------------------------------- *)
+fun compute_exout tml = map_assoc (bin_rep 4 o eval_numtm) tml
 
 fun random_tnn_compute dim =
   let 
@@ -30,33 +26,47 @@ fun random_tnn_compute dim =
     random_tnn (dim,nbit) operl
   end
 
-(*
+(* single parameter experiment
 load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
 load "mleArithData"; open mleArithData;
 load "mleCompute"; open mleCompute;
+open aiLib;
 
-val (trainex,validex) = create_allex 200;
+val traintml = mlTacticData.import_terml 
+    (HOLDIR ^ "/src/AI/experiments/data200_train");
+val trainex = compute_exout traintml;
 
+val dim = 16;
 val randtnn = random_tnn_compute dim;
 val bsize = 64;
-val schedule = [200, 0.1 / (Real.fromInt bsize)];
+val schedule = [(10, 0.1 / (Real.fromInt bsize))];
 val ncore = 2;
 val tnn = prepare_train_tnn (ncore,bsize) randtnn (trainex,first_n 100 
 trainex) schedule;
 
 val r1 = accuracy_set tnn trainex;
-val r2 = accuracy_set tnn validex;
 *)
 
 (* Compute external experiments 
-load "smlParallel"; load "mlTune"; load "mleCompute"; 
-open mlTreeNeuralNetwork mlTune aiLib smlParallel mleCompute;
+load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
+load "mleArithData"; open mleArithData;
+load "mleCompute"; open mleCompute;
+load "mlTune"; open mlTune;
+load "smlParallel"; open smlParallel;
 load "mlTacticData"; open mlTacticData;
+open aiLib;
 
 val trainfile = (!parallel_dir) ^ "/train";
 val testfile = (!parallel_dir) ^ "/test";
 val operlfile = (!parallel_dir) ^ "/operl";
 val operl = mk_fast_set oper_compare (operl_of ``0 + SUC 0 * 0``);
+
+val traintml = mlTacticData.import_terml 
+    (HOLDIR ^ "/src/AI/experiments/data200_train");
+val trainex = compute_exout tml traintml;
+val validtml = mlTacticData.import_terml
+    (HOLDIR ^ "/src/AI/experiments/data200_valid");
+val validex = compute_exout tml validtml;
 
 val (trainex,validex) = create_allex 200;
 export_terml (HOLDIR ^ "/src/AI/experiments/trainex200") (map fst trainex);
@@ -76,12 +86,17 @@ val ll = [10,100];
 val yl = [2,3];
 fun codel_of wid = tune_codel_of (dl,nl,bl,ll,ml) 1 wid;
 val paraml = grid_param (dl,nl,bl,ll,ml);
+val paraml = [hd paraml];
 
 val ncore = 32;
+val ncore = 1;
+
 val (final1,t) = add_time 
   (parmap_queue_extern ncore codel_of (init,tune_collect_result)) paraml;
 
-val final2 = dict_sort compare_rmax final1;
+fun compare_loc ((_,(_,r2),(_,(_,r2')) = Real.compare (r2',r2) 
+
+val final2 = dict_sort compare_loc final1;
 write_param_results 
   (HOLDIR ^ "/src/AI/experiments/mleCompute_param_results_200") final2;
 *)

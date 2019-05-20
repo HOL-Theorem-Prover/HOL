@@ -48,6 +48,10 @@ sig
     (term * real list * real list) list  ->
     mlTreeNeuralNetwork.dhtnn
   
+  (* competition *)
+  val compete_one : ('a,'b) gamespec -> 
+    mlTreeNeuralNetwork.dhtnn -> 'a psMCTS.sit list -> int
+
   (* generating examples *)
   val rl_startex : ('a,'b) gamespec -> (term * real list * real list) list
   
