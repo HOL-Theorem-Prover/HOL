@@ -56,22 +56,15 @@ load "smlParallel"; open smlParallel;
 load "mlTacticData"; open mlTacticData;
 open aiLib;
 
+val traintml = import_terml (HOLDIR ^ "/src/AI/experiments/data200_train");
+val trainex = compute_exout traintml;
+val validtml = import_terml(HOLDIR ^ "/src/AI/experiments/data200_valid");
+val validex = compute_exout validtml;
+
 val trainfile = (!parallel_dir) ^ "/train";
 val testfile = (!parallel_dir) ^ "/test";
 val operlfile = (!parallel_dir) ^ "/operl";
 val operl = mk_fast_set oper_compare (operl_of ``0 + SUC 0 * 0``);
-
-val traintml = mlTacticData.import_terml 
-    (HOLDIR ^ "/src/AI/experiments/data200_train");
-val trainex = compute_exout tml traintml;
-val validtml = mlTacticData.import_terml
-    (HOLDIR ^ "/src/AI/experiments/data200_valid");
-val validex = compute_exout tml validtml;
-
-val (trainex,validex) = create_allex 200;
-export_terml (HOLDIR ^ "/src/AI/experiments/trainex200") (map fst trainex);
-export_terml (HOLDIR ^ "/src/AI/experiments/trainex200") (map fst validex);
-
 fun init () =
   (
   write_tnnex trainfile trainex;
@@ -79,26 +72,24 @@ fun init () =
   write_operl operlfile operl
   )
 ;
-val dl = [16,8];
-val nl = [100,200];
-val bl = [16,128];
-val ll = [10,100];
-val yl = [2,3];
-fun codel_of wid = tune_codel_of (dl,nl,bl,ll,ml) 1 wid;
-val paraml = grid_param (dl,nl,bl,ll,ml);
-val paraml = [hd paraml];
 
+val dl = [16,32];
+val nl = [100,200];
+val bl = [64,128];
+val ll = [50,100];
+val yl = [2,3];
+
+fun codel_of wid = tune_codel_of (dl,nl,bl,ll,yl) 1 wid;
+val paraml = grid_param (dl,nl,bl,ll,yl);
 val ncore = 32;
-val ncore = 1;
 
 val (final1,t) = add_time 
   (parmap_queue_extern ncore codel_of (init,tune_collect_result)) paraml;
 
 fun compare_loc ((_,(_,r2),(_,(_,r2')) = Real.compare (r2',r2) 
-
 val final2 = dict_sort compare_loc final1;
 write_param_results 
-  (HOLDIR ^ "/src/AI/experiments/mleCompute_param_results_200") final2;
+  (HOLDIR ^ "/src/AI/experiments/mleCompute_param_results2") final2;
 *)
 
 
