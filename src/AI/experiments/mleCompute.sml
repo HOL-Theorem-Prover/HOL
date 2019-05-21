@@ -81,15 +81,13 @@ val yl = [2,4];
 
 fun codel_of wid = tune_codel_of (dl,nl,bl,ll,yl) 4 wid;
 val paraml = grid_param (dl,nl,bl,ll,yl);
-val paraml = hd [paraml];
 val ncore = 24;
-val ncore = 1
 
-val final1 = 
+val final = 
   parmap_queue_extern ncore codel_of (init,tune_collect_result) paraml;
 
 write_param_results 
-  (HOLDIR ^ "/src/AI/experiments/mleCompute_param_results3") final1;
+  (HOLDIR ^ "/src/AI/experiments/mleCompute_param_results3") final;
 *)
 
 

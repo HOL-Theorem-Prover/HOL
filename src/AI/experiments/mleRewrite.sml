@@ -191,8 +191,10 @@ fun mk_targetl level ntarget =
   let 
     val tml = mlTacticData.import_terml 
       (HOLDIR ^ "/src/AI/experiments/data200_train_plsorted")
+    val tmll = map shuffle (first_n level (mk_batch 400 tml))
+    val tml2 = List.concat (list_combine tmll)
   in  
-    map mk_startsit (first_n (level * 1000) tml) 
+    map mk_startsit (first_n ntarget tml2)
   end
 
 fun write_targetl targetl = 
@@ -204,6 +206,8 @@ fun read_targetl () =
   let val tml = mlTacticData.import_terml (!parallel_dir ^ "/targetl") in
     map mk_startsit tml
   end
+
+fun max_bigsteps target = 2 * lo_prooflength_target target + 1
 
 (* -------------------------------------------------------------------------
    Interface
@@ -222,16 +226,17 @@ val gamespec : (board,move) mlReinforce.gamespec =
   mk_targetl = mk_targetl,
   write_targetl = write_targetl,
   read_targetl = read_targetl,
-  opens = "mleRewrite"
+  opens = "mleRewrite",
+  max_bigsteps = max_bigsteps
   }
 
 (* test
 load "mlReinforce"; open mlReinforce;
 load "mleRewrite"; open mleRewrite;
-val dhtnn = random_dhtnn_gamespec gamespec;
-psMCTS.exploration_coeff := 2.0;
-nsim_glob := 100000;
-explore_test gamespec dhtnn (mk_startsit ``SUC 0 * SUC 0``);
+val file = HOLDIR ^ "/src/AI/machine_learning/eval/may21_rewrite_gen1_dhtnn";
+val dhtnn = mlTreeNeuralNetwork.read_dhtnn file;
+nsim_glob := 160;
+explore_test gamespec dhtnn (mk_startsit ``SUC 0 + SUC 0``);
 *)
 
 (* starting examples
@@ -254,39 +259,32 @@ export_terml (HOLDIR ^ "/src/AI/experiments/data200_valid_plsorted")
 *)
 
 
-(*
-app load ["mlReinforce","mleRewrite"]; 
-open mlReinforce mleRewrite smlParallel;
+(* reinforcement learning loop
+load "mlReinforce"; open mlReinforce;
+load "mleRewrite"; open mleRewrite;
+open smlParallel;
 
-logfile_glob := "may20_test";
-parallel_dir := 
-  HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^ (!logfile_glob);
+logfile_glob := "may21_rewrite";
+parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^ (!logfile_glob);
 ncore_mcts_glob := 4;
 ncore_train_glob := 4;
-ngen_glob := 20;
+
 ntarget_compete := 400;
 ntarget_explore := 400;
 exwindow_glob := 40000;
 uniqex_flag := false;
-dim_glob := 16;
+dim_glob := 12;
+lr_glob := 0.02;
 batchsize_glob := 16;
-nepoch_glob := 100;
-lr_glob := 0.1;
-nsim_glob := 1600;
 decay_glob := 0.99;
 level_glob := 1;
-psMCTS.exploration_coeff := 2.0; (* need to reflect to workers *)
 
-val allex = rl_start_loop gamespec;
-mlTreeNeuralNetwork.write_dhex 
-  (HOLDIR ^ "/src/AI/experiments/mleRewrite_startex") allex;
+ngen_glob := 4;
+nepoch_glob := 10;
+nsim_glob := 160;
+
+val (final_epex,final_dhtnn) = start_rl_loop gamespec;
 *)
 
-(*
-mlTreeNeuralNetwork.write_dhtnn "save" dhtnn;
-val dhtnn = random_dhtnn_gamespec rlGameCopy.gamespec;
-val target = (true,(``0 + (0 + SUC 0 + 0 + SUC 0)``,``active_var:num``));
-explore_test rlGameCopy.gamespec dhtnn target;
-*)
 
 end (* struct *)

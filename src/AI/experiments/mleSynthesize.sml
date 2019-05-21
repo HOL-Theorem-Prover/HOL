@@ -33,7 +33,7 @@ fun nntm_of_sit (_,((ctm,_),tm)) = mk_eq (ctm,tm)
 fun status_of (_,((ctm,n),tm)) = 
   let val ntm = mk_sucn n in
     if term_eq ntm tm then Win
-    else if term_size tm > 2 * term_size ntm orelse is_ground tm then Lose
+    else if is_ground tm then Lose
     else Undecided
   end
  
@@ -59,9 +59,11 @@ fun apply_move move (_,(ctmn,tm)) = (true, (ctmn, action_oper move tm))
 fun mk_targetl level ntarget = 
   let 
     val tml = mlTacticData.import_terml 
-      (HOLDIR ^ "/src/AI/experiments/data200_train_evalsorted")
+      (HOLDIR ^ "/src/AI/experiments/data200_train_sizesorted")
+    val tmll = map shuffle (first_n level (mk_batch 400 tml))
+    val tml2 = List.concat (list_combine tmll)
   in  
-    map mk_startsit (first_n (level * 400) tml) 
+    map mk_startsit (first_n ntarget tml2)
   end
 
 fun filter_sit sit = (fn l => l) (* filter moves *)
@@ -78,6 +80,7 @@ fun read_targetl () =
     map mk_startsit tml
   end  
 
+fun max_bigsteps target = 2 * term_size (dest_startsit target) + 1
 
 (* -------------------------------------------------------------------------
    Interface
@@ -96,17 +99,19 @@ val gamespec : (board,move) mlReinforce.gamespec =
   write_targetl = write_targetl,
   read_targetl = read_targetl,
   string_of_move = string_of_move,
-  opens = "mleSynthesize"
+  opens = "mleSynthesize",
+  max_bigsteps = max_bigsteps
   }
 
-(* 
+(* basic test
 load "mlReinforce"; open mlReinforce;
 load "mleSynthesize"; open mleSynthesize;
 
-val dhtnn = random_dhtnn_gamespec gamespec;
-psMCTS.exploration_coeff := 2.0;
-nsim_glob := 100000;
-explore_test gamespec dhtnn (mk_startsit ``SUC 0 * SUC 0``);
+val file = 
+HOLDIR ^ "/src/AI/machine_learning/eval/may21_synthesize_gen3_dhtnn";
+val dhtnn = mlTreeNeuralNetwork.read_dhtnn file;
+nsim_glob := 1600;
+explore_test gamespec final_dhtnn (mk_startsit ``SUC 0 * SUC 0``);
 *)
 
 (* starting examples
@@ -117,97 +122,44 @@ load "mlTacticData"; open mlTacticData;
 open aiLib;
 
 val traintml = import_terml (HOLDIR ^ "/src/AI/experiments/data200_train");
-val trainpl1 = mapfilter (fn x => (x, eval_numtm x)) traintml;
+val trainpl1 = mapfilter (fn x => (x, term_size x)) traintml;
 val trainpl2 = dict_sort compare_imin trainpl1;
-export_terml (HOLDIR ^ "/src/AI/experiments/data200_train_evalsorted") 
+export_terml (HOLDIR ^ "/src/AI/experiments/data200_train_sizesorted") 
   (map fst trainpl2);
 
 val validtml = import_terml (HOLDIR ^ "/src/AI/experiments/data200_valid");
-val validpl1 = mapfilter (fn x => (x, eval_numtm x)) validtml;
+val validpl1 = mapfilter (fn x => (x, term_size x)) validtml;
 val validpl2 = dict_sort compare_imin validpl1;
-export_terml (HOLDIR ^ "/src/AI/experiments/data200_valid_evalsorted") 
+export_terml (HOLDIR ^ "/src/AI/experiments/data200_valid_sizesorted") 
   (map fst validpl2);
 *)
 
 
-(*
+(* reinforcement learning loop
 load "mlReinforce"; open mlReinforce;
 load "mleSynthesize"; open mleSynthesize;
 open smlParallel;
 
-logfile_glob := "may20_synthesize_test";
-parallel_dir := 
-  HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^ (!logfile_glob);
+logfile_glob := "may21_synthesize";
+parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^ (!logfile_glob);
 ncore_mcts_glob := 4;
-ncore_train_glob := 2;
-ngen_glob := 50;
+ncore_train_glob := 4;
+
 ntarget_compete := 400;
 ntarget_explore := 400;
 exwindow_glob := 40000;
 uniqex_flag := false;
-dim_glob := 16;
+dim_glob := 12;
+lr_glob := 0.02;
 batchsize_glob := 16;
-nepoch_glob := 200;
-lr_glob := 0.1;
-nsim_glob := 1600;
 decay_glob := 0.99;
 level_glob := 1;
-psMCTS.exploration_coeff := 2.0; 
-(* need to reflect to workers if changed *)
 
-val epex = rl_startex gamespec;
-mlTreeNeuralNetwork.write_dhex 
-  (HOLDIR ^ "/src/AI/experiments/mleSynthesize_startex") epex;
-*)
+nsim_glob := 160;
+nepoch_glob := 10;
+ngen_glob := 2;
 
-(* Synthesize experiment
-app load ["mlReinforce","mlTune","mleSynthesize"];
-open aiLib smlParallel mlTreeNeuralNetwork mlReinforce mlTune mleSynthesize;
-
-val epex = read_dhex 
-  (HOLDIR ^ "/src/AI/experiments/mleSynthesize_startex");
-fun init () = write_dhex ((!parallel_dir) ^ "/epex") epex;
-
-val dl = [16];
-val nl = [10];
-val bl = [16];
-val ll = [10];
-val yl = [2];
-fun codel_of wid = 
-  dhtune_codel_of mleSynthesize.gamespec (dl,nl,bl,ll,yl) 1 wid;
-val paraml = grid_param (dl,nl,bl,ll,yl);
-
-val ncore = 1;
-val (final1,t) = add_time 
-  (parmap_queue_extern ncore codel_of (init,dhtune_collect_result)) paraml;
-
-val dhtnn = (snd o hd) final1;
-write_dhtnn (HOLDIR ^ "/src/AI/experiments/mleSynthesize_dhtnntest") dhtnn;
-*)
-
-(* Evaluate on the first level of the validation set
-app load ["mlReinforce","mlTune","mleSynthesize"];
-open aiLib smlParallel mlTreeNeuralNetwork mlReinforce mlTune mleSynthesize;
-
-val level = 1;
-val targetl =
-let 
-  val tml = mlTacticData.import_terml 
-    (HOLDIR ^ "/src/AI/experiments/data200_valid_evalsorted")
-in  
-  map mk_startsit (first_n (level * 400) tml) 
-end;
-
-val dhtnn = 
-  read_dhtnn (HOLDIR ^ "/src/AI/experiments/mleSynthesize_dhtnntest");
-ncore_mcts_glob := 4;
-nsim_glob := 1;
-val n = compete_one gamespec dhtnn targetl;
-val accuracy = int_div n (length targetl);
-*)
-
-(* todo: 
-   decide to have enough examples with different
+val (final_epex,final_dhtnn) = start_rl_loop gamespec;
 *)
 
 

@@ -26,7 +26,8 @@ type ('a,'b) gamespec =
   mk_targetl: int -> int -> 'a psMCTS.sit list,
   write_targetl: 'a psMCTS.sit list -> unit,
   read_targetl: unit -> 'a psMCTS.sit list,
-  opens: string
+  opens: string,
+  max_bigsteps : 'a psMCTS.sit -> int
   }
 
 (* -------------------------------------------------------------------------
@@ -183,11 +184,12 @@ fun n_bigsteps_loop (n,nmax) gamespec mctsparam (allex,allroot) tree =
     end
   end
 
-val max_bigsteps = 100
+
 
 fun n_bigsteps gamespec mctsparam target =
   let val tree = starttree_of mctsparam target in
-    n_bigsteps_loop (0,max_bigsteps) gamespec mctsparam (emptyallex,[]) tree
+    n_bigsteps_loop (0, #max_bigsteps gamespec target) 
+      gamespec mctsparam (emptyallex,[]) tree
   end
 
 (* -------------------------------------------------------------------------
@@ -368,36 +370,31 @@ fun explore_f startb gamespec allex dhtnn =
    Reinforcement learning loop
    ------------------------------------------------------------------------- *)
 
-fun rl_startex gamespec = 
-  let
-    val _ = remove_file (eval_dir ^ "/" ^ (!logfile_glob))
-    val _ = summary_param ()
-    val _ = summary "Generation 0"
-    val dhtnn_random = random_dhtnn_gamespec gamespec
-    val allex = explore_f true gamespec emptyallex dhtnn_random
-  in
-    allex
-  end
-
 fun rl_start gamespec =
   let
     val _ = remove_file (eval_dir ^ "/" ^ (!logfile_glob))
     val _ = summary_param ()
     val _ = summary "Generation 0"
+    val prefile = eval_dir ^ "/" ^ (!logfile_glob) ^ "_gen" ^ its 0
     val dhtnn_random = random_dhtnn_gamespec gamespec
     val allex = explore_f true gamespec emptyallex dhtnn_random
     val dhtnn = train_f gamespec allex
   in
+    write_dhtnn (prefile ^ "_dhtnn") dhtnn;
+    write_dhex (prefile ^ "_allex") allex;
     (allex, dhtnn)
   end
 
 fun rl_one n gamespec (allex,dhtnn) =
   let
+    val prefile = eval_dir ^ "/" ^ (!logfile_glob) ^ "_gen" ^ its n
     val _ = summary ("\nGeneration " ^ its n)
     val dhtnn_new = train_f gamespec allex
     val dhtnn_best = compete gamespec dhtnn dhtnn_new 
     val newallex = explore_f false gamespec allex dhtnn_new
   in
+    write_dhtnn (prefile ^ "_dhtnn") dhtnn_new;
+    write_dhex (prefile ^ "_allex") newallex;
     (newallex,dhtnn_new)
   end
 

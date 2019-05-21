@@ -19,7 +19,8 @@ sig
     mk_targetl: int -> int -> 'a psMCTS.sit list,
     write_targetl: 'a psMCTS.sit list -> unit,
     read_targetl: unit -> 'a psMCTS.sit list,
-    opens: string
+    opens: string,
+    max_bigsteps : 'a psMCTS.sit -> int
     }
 
   (* rl parameters *)
@@ -51,9 +52,6 @@ sig
   (* competition *)
   val compete_one : ('a,'b) gamespec -> 
     mlTreeNeuralNetwork.dhtnn -> 'a psMCTS.sit list -> int
-
-  (* generating examples *)
-  val rl_startex : ('a,'b) gamespec -> (term * real list * real list) list
   
   (* exploration (search) *)
   val explore_test : ('a,'b) gamespec -> mlTreeNeuralNetwork.dhtnn -> 
