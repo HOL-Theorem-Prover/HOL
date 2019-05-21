@@ -334,7 +334,7 @@ fun compete gamespec dhtnn_old dhtnn_new =
     val targetl = #mk_targetl gamespec (!level_glob) (!ntarget_compete)
     val w_old = compete_one gamespec dhtnn_old targetl
     val w_new = compete_one gamespec dhtnn_new targetl
-    val levelup = int_div (Int.max (w_new,w_old)) (length targetl) > 0.75
+    val levelup = int_div (Int.max (w_new,w_old)) (length targetl) > 0.95
   in
     summary_compete (w_old,w_new);
     if levelup 

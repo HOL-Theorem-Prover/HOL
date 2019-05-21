@@ -17,9 +17,9 @@ sig
   val tune_codel_of : 
     int list * int list * int list * int list * int list -> 
     int -> int -> string list
-  val tune_collect_result : int * int -> ml_param * (real * real) 
+  val tune_collect_result : int * int -> ml_param * (real * real * real) 
   val write_param_results : 
-    string -> (ml_param * (real * real)) list -> unit       
+    string -> (ml_param * (real * real * real )) list -> unit       
 
   (* dhtnn *)
   val train_dhtnn_param : int * int ->

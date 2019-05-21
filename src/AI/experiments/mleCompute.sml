@@ -73,23 +73,23 @@ fun init () =
   )
 ;
 
-val dl = [16,32];
-val nl = [100,200];
-val bl = [64,128];
-val ll = [50,100];
-val yl = [2,3];
+val dl = [16];
+val nl = [100];
+val bl = [16,32];
+val ll = [10,20,50,100];
+val yl = [2,4];
 
-fun codel_of wid = tune_codel_of (dl,nl,bl,ll,yl) 1 wid;
+fun codel_of wid = tune_codel_of (dl,nl,bl,ll,yl) 2 wid;
 val paraml = grid_param (dl,nl,bl,ll,yl);
-val ncore = 32;
+val paraml = hd [paraml];
+val ncore = 16;
+val ncore = 1
 
 val (final1,t) = add_time 
   (parmap_queue_extern ncore codel_of (init,tune_collect_result)) paraml;
 
-fun compare_loc ((_,(_,r2),(_,(_,r2')) = Real.compare (r2',r2) 
-val final2 = dict_sort compare_loc final1;
 write_param_results 
-  (HOLDIR ^ "/src/AI/experiments/mleCompute_param_results2") final2;
+  (HOLDIR ^ "/src/AI/experiments/mleCompute_param_results3") final1;
 *)
 
 

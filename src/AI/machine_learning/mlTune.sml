@@ -31,9 +31,10 @@ fun grid_param (dl,nl,bl,ll,yl) =
   end
 
 fun write_param_results file prl =
-  let fun f ({batchsize,dim,learningrate,nepoch,nlayers},(r1,r2)) =
+  let fun f ({batchsize,dim,learningrate,nepoch,nlayers},(r1,r2,t)) =
     "test " ^ rts r2 ^
-    ", train" ^ rts r1 ^
+    ", train " ^ rts r1 ^
+    ", time " ^ rts t ^
     ", batchsize " ^ its batchsize ^
     ", dim " ^ its dim ^
     ", learningrate " ^ rts learningrate ^
@@ -74,11 +75,12 @@ fun read_param file =
      nlayers = string_to_int y}
   end
 
-fun write_accuracy file (r1,r2) = writel file [rts r1,rts r2]
+fun write_accuracy file (r1,r2,t) = writel file [rts r1,rts r2,rts t]
 fun read_accuracy file = 
   let val l = readl file in 
     case l of
-      [a,b] => (valOf (Real.fromString a), valOf (Real.fromString b))
+      [a,b,c] => (valOf (Real.fromString a), valOf (Real.fromString b), 
+                  valOf (Real.fromString c))
     | _ => raise ERR "read_accuracy" ""
   end
 
@@ -92,14 +94,15 @@ fun train_tnn_param (wid,job) ncore operl (train,test)
     val _ = mlTreeNeuralNetwork.nlayers_glob := nlayers
     val randtnn = random_tnn (dim,4) operl
     val schedule = [(nepoch, learningrate /  (Real.fromInt batchsize))]
-    val tnn = prepare_train_tnn (ncore,batchsize) randtnn (train,test) schedule
+    val (tnn,t) = 
+      add_time (prepare_train_tnn (ncore,batchsize) randtnn (train,test)) schedule
     val r1 = accuracy_set tnn train
     val r2 = accuracy_set tnn test
     val fileparam = param_file (wid,job)
     val fileaccuracy = accuracy_file (wid,job)
   in
     write_param fileparam param;
-    write_accuracy fileaccuracy (r1,r2);
+    write_accuracy fileaccuracy (r1,r2,t);
     writel_atomic (widout_file wid) ["done"]
   end
 

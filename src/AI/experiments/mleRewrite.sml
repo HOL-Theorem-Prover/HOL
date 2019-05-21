@@ -192,7 +192,7 @@ fun mk_targetl level ntarget =
     val tml = mlTacticData.import_terml 
       (HOLDIR ^ "/src/AI/experiments/data200_train_plsorted")
   in  
-    map mk_startsit (first_n (level * 400) tml) 
+    map mk_startsit (first_n (level * 1000) tml) 
   end
 
 fun write_targetl targetl = 
@@ -262,22 +262,22 @@ logfile_glob := "may20_test";
 parallel_dir := 
   HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^ (!logfile_glob);
 ncore_mcts_glob := 4;
-ncore_train_glob := 2;
+ncore_train_glob := 4;
 ngen_glob := 20;
-ntarget_compete := 100;
-ntarget_explore := 100;
+ntarget_compete := 400;
+ntarget_explore := 400;
 exwindow_glob := 40000;
 uniqex_flag := false;
-dim_glob := 6;
+dim_glob := 16;
 batchsize_glob := 16;
-nepoch_glob := 20;
+nepoch_glob := 100;
 lr_glob := 0.1;
 nsim_glob := 1600;
 decay_glob := 0.99;
 level_glob := 1;
 psMCTS.exploration_coeff := 2.0; (* need to reflect to workers *)
 
-val allex = rl_startex gamespec;
+val allex = rl_start_loop gamespec;
 mlTreeNeuralNetwork.write_dhex 
   (HOLDIR ^ "/src/AI/experiments/mleRewrite_startex") allex;
 *)
@@ -288,10 +288,5 @@ val dhtnn = random_dhtnn_gamespec rlGameCopy.gamespec;
 val target = (true,(``0 + (0 + SUC 0 + 0 + SUC 0)``,``active_var:num``));
 explore_test rlGameCopy.gamespec dhtnn target;
 *)
-
-
-(* todo: do rl_compete_standalone to evaluate the accuracy of the training
-   in reinforcement learning paradigm *)
-
 
 end (* struct *)
