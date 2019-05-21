@@ -675,10 +675,16 @@ fun qDefine stem q tacopt =
             |> with_flag(Defn.def_suffix, "")
             |> (case indopt of NONE => with_flag(Defn.ind_suffix, "")
                              | SOME s => with_flag(Defn.ind_suffix, " " ^ s))
+      val thm =
+          case tacopt of
+              NONE => fmod (xDefine corename) q
+            | SOME tac => fmod (tDefine corename q) tac
+      fun proc_attr a =
+          ThmAttribute.store_at_attribute{name = corename, attrname = a,
+                                          thm = thm}
     in
-      case tacopt of
-          NONE => fmod (xDefine corename) q
-        | SOME tac => fmod (tDefine corename q) tac
+      List.app proc_attr attrs;
+      thm
     end
 
 (*---------------------------------------------------------------------------*)
