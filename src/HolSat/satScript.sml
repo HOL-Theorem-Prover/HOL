@@ -13,7 +13,7 @@ fun TT_TAUT_PROVE tm =
     in GENL qv (prove(tm,(MAP_EVERY BOOL_CASES_TAC fv) THEN REWRITE_TAC [])) end
 
 val AND_IMP = save_thm("AND_IMP",
-  TT_TAUT_PROVE ``!A B C. A /\ B ==> C = A ==> B ==> C``)
+  TT_TAUT_PROVE ``!A B C. A /\ B ==> C <=> A ==> B ==> C``)
 val NOT_NOT = save_thm("NOT_NOT",
   GEN_ALL (hd (CONJUNCTS (SPEC_ALL NOT_CLAUSES))))
 val AND_INV = save_thm("AND_INV",TT_TAUT_PROVE ``!A. ~A /\ A <=> F``)
