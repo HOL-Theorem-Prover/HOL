@@ -266,7 +266,7 @@ open smlParallel;
 
 logfile_glob := "may21_rewrite";
 parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^ (!logfile_glob);
-ncore_mcts_glob := 4;
+ncore_mcts_glob := 8;
 ncore_train_glob := 4;
 
 ntarget_compete := 400;
@@ -279,9 +279,9 @@ batchsize_glob := 16;
 decay_glob := 0.99;
 level_glob := 1;
 
-ngen_glob := 4;
-nepoch_glob := 10;
-nsim_glob := 160;
+ngen_glob := 100;
+nepoch_glob := 100;
+nsim_glob := 1600;
 
 val (final_epex,final_dhtnn) = start_rl_loop gamespec;
 *)

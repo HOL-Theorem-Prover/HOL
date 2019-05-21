@@ -155,9 +155,9 @@ batchsize_glob := 16;
 decay_glob := 0.99;
 level_glob := 1;
 
-nsim_glob := 160;
-nepoch_glob := 10;
-ngen_glob := 2;
+nsim_glob := 1600;
+nepoch_glob := 100;
+ngen_glob := 100;
 
 val (final_epex,final_dhtnn) = start_rl_loop gamespec;
 *)
