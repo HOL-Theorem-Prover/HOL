@@ -1395,6 +1395,12 @@ printed out.  (That's assuming that quietdec is false to start with.)"
   (send-raw-string-to-hol "Sanity.sanity_check()"
                           hol-echo-commands-p t))
 
+(defun hol-db-find-consts ()
+  "Does bossLib.find_consts on a given type and prints the result."
+  (interactive "sType of constant: ")
+  (send-raw-string-to-hol (format "bossLib.find_consts %s" ty)
+                          hol-echo-commands-p t))
+
 (defun hol-drop-all-goals ()
   "Drops all HOL goals from the current proofs object."
   (interactive)
@@ -2013,6 +2019,7 @@ second is to show the new term.
 (define-key hol-map "l"    'hol-load-file)
 (define-key hol-map "m"    'hol-db-match)
 (define-key hol-map "f"    'hol-db-find)
+(define-key hol-map "\C-c" 'hol-db-find-consts)
 (define-key hol-map "n"    'hol-name-top-theorem)
 (define-key hol-map "o"    'hol-open-string)
 (define-key hol-map "p"    'hol-print-goal)
