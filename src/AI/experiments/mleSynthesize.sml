@@ -33,7 +33,7 @@ fun nntm_of_sit (_,((ctm,_),tm)) = mk_eq (ctm,tm)
 fun status_of (_,((ctm,n),tm)) = 
   let val ntm = mk_sucn n in
     if term_eq ntm tm then Win
-    else if is_ground tm then Lose
+    else if is_ground tm orelse term_size tm > 2 * n then Lose
     else Undecided
   end
  
@@ -42,9 +42,8 @@ fun status_of (_,((ctm,n),tm)) =
    ------------------------------------------------------------------------- *)
 
 type move = (term * int)
-val movel = operl_of ``SUC 0 + 0 * 0``
+val movel = operl_of ``SUC 0``
 val move_compare = cpl_compare Term.compare Int.compare
-
 
 fun action_oper (oper,n) tm =
   let

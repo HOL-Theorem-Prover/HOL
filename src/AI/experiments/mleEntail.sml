@@ -84,13 +84,13 @@ mkDir_err entail_dir;
 
 val randtnn = random_tnn (12,1) operl;
 val bsize = 16;
-val schedule = [(400, 0.02 / (Real.fromInt bsize))];
+val schedule = [(100, 0.02 / (Real.fromInt bsize))];
 val ncore = 4;
+val _ = nlayers_glob := 2;
 val tnn = prepare_train_tnn (ncore,bsize) randtnn (trainex_primed,first_n 100 trainex_primed) schedule;
 
+write_tnn tnn "tnn_run2_sure";
 val r1 = accuracy_set tnn trainex_primed;
-write_tnn tnn "entail_run1";
-
 *)
 
 end (* struct *)
