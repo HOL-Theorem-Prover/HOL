@@ -356,7 +356,7 @@ val base_environment0 = let
   fun p1 ++ p2 = OS.Path.concat(p1,p2)
   val alist =
       [("CC", [LIT CC]),
-       ("CP", if OS = "winNT" then [LIT "copy /b"] else [LIT "/bin/cp"]),
+       ("CP", if OS = "winNT" then [LIT "copy /b"] else [LIT "cp"]),
        ("DEFAULT_TARGETS",
         [VREF ("patsubst %.sml,%.uo,$(patsubst %Theory.sml,,"^
                "$(patsubst %Script.sml,%Theory.uo,$(wildcard *.sml)))")]),
@@ -364,7 +364,7 @@ val base_environment0 = let
        ("MLLEX", [VREF "protect $(HOLDIR)/tools/mllex/mllex.exe"]),
        ("MLYACC", [VREF "protect $(HOLDIR)/tools/mlyacc/src/mlyacc.exe"]),
        ("ML_SYSNAME", [LIT ML_SYSNAME]),
-       ("MV", if OS = "winNT" then [LIT "move", LIT "/y"] else [LIT "/bin/mv"]),
+       ("MV", if OS = "winNT" then [LIT "move", LIT "/y"] else [LIT "mv"]),
        ("OS", [LIT OS]),
        ("SIGOBJ", [VREF "HOLDIR", LIT "/sigobj"]),
        ("UNQUOTE", [VREF ("protect $(HOLDIR)/" ^ xable_string "/bin/unquote")])] @
