@@ -1395,10 +1395,10 @@ printed out.  (That's assuming that quietdec is false to start with.)"
   (send-raw-string-to-hol "Sanity.sanity_check()"
                           hol-echo-commands-p t))
 
-(defun hol-db-find-consts ()
+(defun hol-db-find-consts (ty)
   "Does bossLib.find_consts on a given type and prints the result."
   (interactive "sType of constant: ")
-  (send-raw-string-to-hol (format "bossLib.find_consts %s" ty)
+  (send-raw-string-to-hol (format "bossLib.find_consts ``%s``" ty)
                           hol-echo-commands-p t))
 
 (defun hol-drop-all-goals ()
