@@ -6,11 +6,8 @@ sig
   val eval_numtm : term -> int
 
   val create_train_valid :  
-    int -> (term * int) list * (term * int) list
-  val create_test : 
-     ((term * int) list * (term * int) list) ->
-           int -> ((int * int) * term list) list
-
-  val stats_ex : (term * int) list -> (int * int) list
+    int -> term list * term list
+  val create_test : term list -> int -> term list
+  val create_big : term list -> int -> term list
 
 end

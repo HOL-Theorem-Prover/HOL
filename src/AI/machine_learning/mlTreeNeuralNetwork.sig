@@ -27,6 +27,8 @@ include Abbrev
 
   (* input/output *)
   val string_of_tnn : tnn -> string
+  val write_tnn : string -> tnn -> unit
+  val read_tnn : string -> tnn
   val string_of_dhtnn : dhtnn -> string
   val write_dhtnn : string -> dhtnn -> unit
   val read_dhtnn : string -> dhtnn

@@ -59,7 +59,7 @@ fun apply_move move (_,(ctmn,tm)) = (true, (ctmn, action_oper move tm))
 fun mk_targetl level ntarget = 
   let 
     val tml = mlTacticData.import_terml 
-      (HOLDIR ^ "/src/AI/experiments/data200_train_sizesorted")
+      (HOLDIR ^ "/src/AI/experiments/data200_train_evalsorted")
     val tmll = map shuffle (first_n level (mk_batch 400 tml))
     val tml2 = List.concat (list_combine tmll)
   in  
@@ -103,6 +103,51 @@ val gamespec : (board,move) mlReinforce.gamespec =
   max_bigsteps = max_bigsteps
   }
 
+(* 
+load "mlReinforce"; open mlReinforce;
+load "mleSynthesize"; open mleSynthesize;
+load "mleArithData"; open mleArithData;
+
+val tml = mlTacticData.import_terml 
+  (HOLDIR ^ "/src/AI/experiments/data200_train_evalsorted");
+val tmll = map (list_imax o map eval_numtm) (mk_batch 400 tml);
+*)
+
+
+(* statistics
+load "mleArithData"; open mleArithData;
+load "mlTacticData"; open mlTacticData;
+load "aiLib"; open aiLib;
+
+fun write_graph file (s1,s2) l =
+  writel file ((s1 ^ " " ^ s2) :: map (fn (a,b) => its a ^ " " ^ its b) l);
+fun synt_stats file =
+  let
+    val l0 = import_terml file
+    val l1 = map (fn x => (x,eval_numtm x)) l0;
+    val l1' = filter (fn x => snd x <= 100) l1; 
+    val _  = print_endline (its (length l1'));
+    val l2 = dlist (dregroup Int.compare (map swap l1'));
+  in
+    map_snd length l2 
+  end;
+
+val data_in = HOLDIR ^ "/src/AI/experiments";
+val data_out = "/home/thibault/prague-server/papers/2019-05-NIPS/data";
+
+val stats1 = synt_stats (data_in ^ "/data200_train");
+write_graph (data_out ^ "/synt_train") ("csize","total") stats1;
+val stats2 = synt_stats (data_in ^ "/data200_valid");
+write_graph (data_out ^ "/synt_valid") ("csize","total") stats2;
+val stats3 = synt_stats (data_in ^ "/data200_test");
+write_graph (data_out ^ "/synt_test") ("csize","total") stats3;
+val stats4 = synt_stats (data_in ^ "/data200_big");
+write_graph (data_out ^ "/synt_big") ("csize","total") stats4;
+
+10933, 9669, 9030, 22048
+*)
+
+
 (* basic test
 load "mlReinforce"; open mlReinforce;
 load "mleSynthesize"; open mleSynthesize;
@@ -122,15 +167,17 @@ load "mlTacticData"; open mlTacticData;
 open aiLib;
 
 val traintml = import_terml (HOLDIR ^ "/src/AI/experiments/data200_train");
-val trainpl1 = mapfilter (fn x => (x, term_size x)) traintml;
-val trainpl2 = dict_sort compare_imin trainpl1;
-export_terml (HOLDIR ^ "/src/AI/experiments/data200_train_sizesorted") 
+val trainpl1 = map (fn x => (x, eval_numtm x)) traintml;
+val trainpl1' = filter (fn x => snd x <= 100) trainpl1;
+val trainpl2 = dict_sort compare_imin trainpl1';
+export_terml (HOLDIR ^ "/src/AI/experiments/data200_train_evalsorted") 
   (map fst trainpl2);
 
 val validtml = import_terml (HOLDIR ^ "/src/AI/experiments/data200_valid");
-val validpl1 = mapfilter (fn x => (x, term_size x)) validtml;
-val validpl2 = dict_sort compare_imin validpl1;
-export_terml (HOLDIR ^ "/src/AI/experiments/data200_valid_sizesorted") 
+val validpl1 = map (fn x => (x, eval_numtm x)) validtml;
+val validpl1' = filter (fn x => snd x <= 100) validpl1;
+val validpl2 = dict_sort compare_imin validpl1';
+export_terml (HOLDIR ^ "/src/AI/experiments/data200_valid_evalsorted") 
   (map fst validpl2);
 *)
 
@@ -140,9 +187,9 @@ load "mlReinforce"; open mlReinforce;
 load "mleSynthesize"; open mleSynthesize;
 open smlParallel;
 
-logfile_glob := "may21_synthesize";
+logfile_glob := "synthesize_run2";
 parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^ (!logfile_glob);
-ncore_mcts_glob := 4;
+ncore_mcts_glob := 8;
 ncore_train_glob := 4;
 
 ntarget_compete := 400;

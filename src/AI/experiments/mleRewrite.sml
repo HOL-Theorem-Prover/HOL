@@ -59,7 +59,7 @@ fun lo_trace nmax toptm =
     loop toptm
   end
 
-fun lo_prooflength tm = snd (valOf (lo_trace 200 tm))
+fun lo_prooflength tm = snd (valOf (lo_trace 100 tm))
 
 
 (*
@@ -230,13 +230,56 @@ val gamespec : (board,move) mlReinforce.gamespec =
   max_bigsteps = max_bigsteps
   }
 
+
+(* 
+load "mlReinforce"; open mlReinforce;
+load "mleRewrite"; open mleRewrite;
+load "mlTacticData"; open mlTacticData;
+
+
+*)
+
+
+(*
+load "mleArithData"; open mleArithData;
+load "mlTacticData"; open mlTacticData;
+load "mleRewrite"; open mleRewrite;
+load "aiLib"; open aiLib;
+
+fun write_graph file (s1,s2) l =
+  writel file ((s1 ^ " " ^ s2) :: map (fn (a,b) => its a ^ " " ^ its b) l);
+fun rw_stats file =
+  let
+    val l0 = import_terml file
+    val l1 = mapfilter (fn x => (x,lo_prooflength x)) l0;
+    val _  = print_endline (its (length l1));
+    val l2 = dlist (dregroup Int.compare (map swap l1));
+  in
+    map_snd length l2 
+  end;
+
+val data_in = HOLDIR ^ "/src/AI/experiments";
+val data_out = "/home/thibault/prague-server/papers/2019-05-NIPS/data";
+
+val stats1 = rw_stats (data_in ^ "/data200_train");
+write_graph (data_out ^ "/rw_train") ("csize","total") stats1;
+val stats2 = rw_stats (data_in ^ "/data200_valid");
+write_graph (data_out ^ "/rw_valid") ("csize","total") stats2;
+val stats3 = rw_stats (data_in ^ "/data200_test");
+write_graph (data_out ^ "/rw_test") ("csize","total") stats3;
+val stats4 = rw_stats (data_in ^ "/data200_big");
+write_graph (data_out ^ "/rw_big") ("csize","total") stats4;
+
+5636,4500,4169,7450
+*)
+
 (* test
 load "mlReinforce"; open mlReinforce;
 load "mleRewrite"; open mleRewrite;
 val file = HOLDIR ^ "/src/AI/machine_learning/eval/may21_rewrite_gen1_dhtnn";
 val dhtnn = mlTreeNeuralNetwork.read_dhtnn file;
-nsim_glob := 160;
-explore_test gamespec dhtnn (mk_startsit ``SUC 0 + SUC 0``);
+nsim_glob := 16000;
+explore_test gamespec dhtnn (mk_startsit ``SUC 0 * SUC 0``);
 *)
 
 (* starting examples
@@ -247,15 +290,15 @@ open aiLib;
 
 val traintml = import_terml (HOLDIR ^ "/src/AI/experiments/data200_train");
 val trainpl1 = mapfilter (fn x => (x, lo_prooflength x)) traintml;
-val trainpl2 = dict_sort compare_imin trainpl1;
+val trainpl1' = filter (fn x => snd x <= 100) trainpl1;
+val trainpl2 = dict_sort compare_imin trainpl1';
 export_terml (HOLDIR ^ "/src/AI/experiments/data200_train_plsorted") 
   (map fst trainpl2);
 
-val validtml = import_terml (HOLDIR ^ "/src/AI/experiments/data200_valid");
-val validpl1 = mapfilter (fn x => (x, lo_prooflength x)) validtml;
-val validpl2 = dict_sort compare_imin validpl1;
-export_terml (HOLDIR ^ "/src/AI/experiments/data200_valid_plsorted") 
-  (map fst validpl2);
+
+val tml = mlTacticData.import_terml 
+  (HOLDIR ^ "/src/AI/experiments/data200_train_plsorted");
+val tmll = map (list_imax o map lo_prooflength) (mk_batch 400 tml);
 *)
 
 
@@ -264,7 +307,7 @@ load "mlReinforce"; open mlReinforce;
 load "mleRewrite"; open mleRewrite;
 open smlParallel;
 
-logfile_glob := "may21_rewrite";
+logfile_glob := "rewrite_run2";
 parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^ (!logfile_glob);
 ncore_mcts_glob := 8;
 ncore_train_glob := 4;

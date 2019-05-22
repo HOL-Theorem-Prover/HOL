@@ -88,12 +88,23 @@ fun string_of_opdict opdict =
   end
 
 fun string_of_tnn {opdict,headnn,dimin,dimout} =
-  string_of_nn headnn ^ "\nheadstop\n\n" ^ string_of_opdict opdict
+  string_of_nn headnn ^ "\nheadstop\n\n" ^ 
+  string_of_opdict opdict ^ "\nopdictstop"
 
 fun string_of_dhtnn {opdict,headeval,headpoli,dimin,dimout} =
   string_of_nn headeval ^ "\nheadevalstop\n\n" ^ 
   string_of_nn headpoli ^ "\nheadpolistop\n\n" ^ 
   string_of_opdict opdict ^ "\nopdictstop"
+
+fun write_tnn file tnn =
+  let
+    val file_operl = file ^ "_operl"
+    val file_dhtnn = file ^ "_tnn"
+    val operl = mk_sameorder_set Term.compare (map fst (dkeys (#opdict tnn)))
+  in
+    writel file_dhtnn [string_of_tnn tnn];
+    mlTacticData.export_terml file_operl operl
+  end
 
 fun write_dhtnn file dhtnn =
   let
@@ -122,6 +133,37 @@ fun read_opdict operl sl =
     dnew oper_compare (map (read_opdict_one tos) sll)
   end
 
+fun read_tnn_sl operl sl =
+  let
+    val (l1,contl1) = split_sl "headstop" sl
+    val headnn = read_nn_sl l1
+    val (l2,_) = split_sl "opdictstop" contl1
+    val opdict = read_opdict operl l2
+    val dimin = ((snd o mat_dim o #w o hd) headnn) - 1
+    val dimout = (fst o mat_dim o #w o last) headnn
+  in
+    {opdict=opdict,headnn=headnn,dimin=dimin,dimout=dimout}
+  end 
+
+fun read_tnn file =
+  let 
+    val file_operl = file ^ "_operl"
+    val file_tnn = file ^ "_tnn"
+    val operl = mlTacticData.import_terml file_operl
+    val sl = readl file_tnn
+  in
+    read_tnn_sl operl sl
+  end
+
+(* 
+load "mlTreeNeuralNetwork"; 
+open aiLib mlNeuralNetwork mlTreeNeuralNetwork;
+val file = HOLDIR ^ "/src/AI/test";
+val tnn1 = random_tnn (4,2) [(``$+``,2),(``SUC``,1),(``0``,0)];
+add_time (write_tnn file) tnn1;
+val (tnn2,t2) = add_time read_dhtnn file;
+*)
+
 fun read_dhtnn_sl operl sl =
   let
     val (l1,contl1) = split_sl "headevalstop" sl
@@ -147,7 +189,6 @@ fun read_dhtnn file =
     read_dhtnn_sl operl sl
   end
 
-
 fun write_operl file operl =
   let
     val file1 = file ^ "_operl_term"
@@ -165,16 +206,6 @@ fun read_operl file =
   in
     combine (l1,l2)
   end
-
-
-(* 
-load "mlTreeNeuralNetwork"; 
-open aiLib mlNeuralNetwork mlTreeNeuralNetwork;
-val file = HOLDIR ^ "/src/AI/test";
-val dhtnn1 = random_dhtnn (4,2) [(``$+``,2),(``SUC``,1),(``0``,0)];
-val (_,t1) = add_time (write_dhtnn file) dhtnn1;
-val (dhtnn2,t2) = add_time read_dhtnn file;
-*)
 
 fun reall_to_string rl = 
   String.concatWith " " (map (IEEEReal.toString o Real.toDecimal) rl)

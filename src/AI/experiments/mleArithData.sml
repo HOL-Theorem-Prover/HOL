@@ -67,28 +67,79 @@ fun create_train_valid nex =
     val l1 = create_exset_table notset nex (10,10)
     val validtml = List.concat (map snd l1)
   in
-    (map_assoc eval_numtm traintml, map_assoc eval_numtm validtml)
+    (traintml, validtml)
   end
 
-fun create_test (trainex,validex) nex =
-  let val notset = ref  (dset Term.compare (map fst (trainex @ validex))) in
-    create_exset_table notset nex (20,20)
+fun create_test tml nex =
+  let val notset = ref (dset Term.compare tml) in
+    List.concat (map snd (create_exset_table notset nex (10,10)))
   end
 
-(* -------------------------------------------------------------------------
-   Statistics about repartitions of examples.
-   ------------------------------------------------------------------------- *)
-
-fun stats_ex ex = map_snd length (dlist (dregroup Int.compare (map swap ex)))
+fun create_big tml nex =
+  let val notset = ref (dset Term.compare tml) in
+    List.concat (map snd (create_exset_table notset nex (10,20)))
+  end
 
 (*
 load "mleArithData"; open mleArithData;
 load "mlTacticData"; open mlTacticData;
-val (trainex,validex) = create_train_valid 200;
-export_terml (HOLDIR ^ "/src/AI/experiments/data200_train") (map fst trainex);
-export_terml (HOLDIR ^ "/src/AI/experiments/data200_valid") (map fst validex);
+val data_in = HOLDIR ^ "/src/AI/experiments";
 
-val testex = create_test (trainex,validex) 20;
+val (traintml,validtml) = create_train_valid 200;
+export_terml (data_in ^ "/data200_train") traintml;
+export_terml (data_in ^ "/data200_valid") validtml;
+*)
+
+(*
+load "mleArithData"; open mleArithData;
+load "mlTacticData"; open mlTacticData;
+val traintml = import_terml (data_in ^ "/data200_train");
+val validtml = import_terml (data_in ^ "/data200_valid");
+
+val testtml = create_test (traintml @ validtml) 200;
+export_terml (data_in ^ "/data200_test") testtml;
+val bigtml = create_big (traintml @ validtml @ testtml) 200;
+export_terml (data_in ^ "/data200_big") bigtml;
+*)
+
+
+(*
+load "mleArithData"; open mleArithData;
+load "mlTacticData"; open mlTacticData;
+load "aiLib"; open aiLib;
+
+fun compressed_size tm = 
+  let val (oper,argl) = strip_comb tm in
+    if is_suc_only tm then 1
+    else 1 + sum_int (map compressed_size argl)
+  end
+fun write_graph file (s1,s2) l =
+  writel file ((s1 ^ " " ^ s2) :: map (fn (a,b) => its a ^ " " ^ its b) l);
+fun comp_stats file =
+  let
+    val l0 = import_terml file
+    val l1 = map_assoc compressed_size l0;
+    val l2 = dlist (dregroup Int.compare (map swap l1));
+  in
+    map_snd length l2 
+  end;
+
+val data_out = "/home/thibault/prague-server/papers/2019-05-NIPS/data";
+
+val stats1 = comp_stats (data_in ^ "/data200_train");
+write_graph (data_out ^ "/comp_train") ("csize","total") stats1;
+
+val stats2 = comp_stats (data_in ^ "/data200_valid");
+write_graph (data_out ^ "/comp_valid") ("csize","total") stats2;
+
+val stats3 = comp_stats (data_in ^ "/data200_test");
+write_graph (data_out ^ "/comp_test") ("csize","total") stats3;
+
+val stats4 = comp_stats (data_in ^ "/data200_big");
+write_graph (data_out ^ "/comp_big") ("csize","total") stats4;
+
+
+val tml2 = dict_sort compare_imin tml1;
 *)
 
 end (* struct *)
