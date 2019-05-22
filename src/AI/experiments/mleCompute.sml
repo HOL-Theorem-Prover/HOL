@@ -29,7 +29,6 @@ fun random_tnn_compute dim =
 (* single parameter experiment
 
 load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
-load "mleArithData"; open mleArithData;
 load "mleCompute"; open mleCompute;
 open aiLib;
 val exp_dir = HOLDIR ^ "/src/AI/experiments";
@@ -44,13 +43,13 @@ val bigtml = mlTacticData.import_terml (exp_dir ^ "/data200_big");
 val bigex = compute_exout bigtml;
 
 
-val compute_dir = HOLDIR ^ "/src/AI/experiments/mlCompute_results";
+val compute_dir = HOLDIR ^ "/src/AI/experiments/compute_results";
 mkDir_err compute_dir;
 
 val dim = 12;
 val randtnn = random_tnn_compute dim;
 val bsize = 16;
-val schedule = [(400, 0.02 / (Real.fromInt bsize))];
+val schedule = [(800, 0.02 / (Real.fromInt bsize))];
 val ncore = 4;
 val _ = nlayers_glob := 2;
 val tnn = prepare_train_tnn (ncore,bsize) randtnn (trainex,first_n 100 
@@ -60,7 +59,7 @@ val r1 = accuracy_set tnn trainex;
 val r2 = accuracy_set tnn validex;
 val r3 = accuracy_set tnn testex;
 val r4 = accuracy_set tnn bigex;
-write_tnn (compute_dir ^ "/tnn_run1");
+write_tnn (compute_dir ^ "/tnn_run2");
 
 
 
