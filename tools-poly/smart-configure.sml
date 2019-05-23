@@ -105,10 +105,9 @@ end;
 val _ = let
 in
   OS.FileSys.chDir (OS.Path.concat (holdir, "tools-poly"));
-  use "poly/poly-init.ML";
+  use "poly/Mosml.sml";
   OS.FileSys.chDir currentdir
 end;
-
 
 val OS = let
   val _ = determining "OS"

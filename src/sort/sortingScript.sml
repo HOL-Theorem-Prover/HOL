@@ -19,15 +19,12 @@ val _ = Defn.ind_suffix := "_IND";
  * as an inductive definition, or as a particular kind of function.          *
  *---------------------------------------------------------------------------*)
 
-val PERM_DEF = Define `PERM L1 L2 = !x. FILTER ($= x) L1 = FILTER ($= x) L2`;
+Definition PERM_DEF:  PERM L1 L2 = !x. FILTER ($= x) L1 = FILTER ($= x) L2
+End
 
-
-val PERM_REFL = Q.store_thm
-("PERM_REFL",
-    `!L. PERM L L`,
-    PROVE_TAC[PERM_DEF]);
-val _ = export_rewrites ["PERM_REFL"]
-
+Theorem PERM_REFL[simp]:  !L. PERM L L
+Proof PROVE_TAC[PERM_DEF]
+QED
 
 val PERM_INTRO = Q.store_thm
 ("PERM_INTRO",
@@ -421,18 +418,15 @@ QED
  * all adjacent elements of the list.                                        *
  *---------------------------------------------------------------------------*)
 
-val SORTED_DEF =
- Define
-  `(SORTED R [] = T) /\
+Definition SORTED_DEF:
+   (SORTED R [] = T) /\
    (SORTED R [x] = T) /\
-   (SORTED R (x::y::rst) <=> R x y /\ SORTED R (y::rst))`;
+   (SORTED R (x::y::rst) <=> R x y /\ SORTED R (y::rst))
+End
 
-
-val SORTED_IND = theorem"SORTED_IND";
-
-val SORTS_DEF =
- Define
-    `SORTS f R <=> !l. PERM l (f R l) /\ SORTED R (f R l)`;
+Definition SORTS_DEF:
+  SORTS f R <=> !l. PERM l (f R l) /\ SORTED R (f R l)
+End
 
 
 (*---------------------------------------------------------------------------*
@@ -469,13 +463,12 @@ Induct_on `L1`
                  Partition a list by a predicate.
  ---------------------------------------------------------------------------*)
 
-val PART_DEF =
- Define
-     `(PART P [] l1 l2 = (l1,l2))
+Definition PART_DEF:
+      (PART P [] l1 l2 = (l1,l2))
   /\  (PART P (h::rst) l1 l2 =
           if P h then PART P rst (h::l1) l2
-                 else PART P rst  l1  (h::l2))`;
-
+                 else PART P rst  l1  (h::l2))
+End
 
 (*---------------------------------------------------------------------------
               Theorems about "PART"
@@ -561,27 +554,25 @@ val PART_MEM = Q.store_thm
      will be instances of theorems about PART.
  ---------------------------------------------------------------------------*)
 
-val PARTITION_DEF = Define`PARTITION P l = PART P l [] []`;
-
+Definition PARTITION_DEF: PARTITION P l = PART P l [] []
+End
 
 (*---------------------------------------------------------------------------*
  *      Quicksort                                                            *
  *---------------------------------------------------------------------------*)
 
-val QSORT_DEF =
- tDefine
-  "QSORT"
-  `(QSORT ord [] = []) /\
-   (QSORT ord (h::t) =
+Definition QSORT_DEF:
+  (QSORT ord [] = []) /\
+  (QSORT ord (h::t) =
        let (l1,l2) = PARTITION (\y. ord y h) t
        in
-         QSORT ord l1 ++ [h] ++ QSORT ord l2)`
- (WF_REL_TAC `measure (LENGTH o SND)`
+         QSORT ord l1 ++ [h] ++ QSORT ord l2)
+Termination
+  WF_REL_TAC `measure (LENGTH o SND)`
      THEN RW_TAC list_ss [o_DEF,PARTITION_DEF]
      THEN IMP_RES_THEN MP_TAC PART_LENGTH_LEM
-     THEN RW_TAC list_ss []);
-
-val QSORT_IND = fetch "-" "QSORT_IND";
+     THEN RW_TAC list_ss []
+End
 
 (*---------------------------------------------------------------------------*
  *           Properties of QSORT                                            *
@@ -646,15 +637,6 @@ val QSORT_SORTS = Q.store_thm
 ("QSORT_SORTS",
  `!R. transitive R /\ total R ==> SORTS QSORT R`,
   PROVE_TAC [SORTS_DEF, QSORT_PERM, QSORT_SORTED]);
-
-
-(*---------------------------------------------------------------------------*)
-(* Add the computable definitions to the database used by EVAL               *)
-(*---------------------------------------------------------------------------*)
-
-val _ =
- computeLib.add_persistent_funs ["QSORT_DEF"];
-
 
 
 (*---------------------------------------------------------------------------
@@ -1260,13 +1242,15 @@ val PART3_FILTER =
 (* QSORT3 - Partition three ways but only recurse on < and >                 *)
 (*---------------------------------------------------------------------------*)
 
-val QSORT3_DEF = tDefine "QSORT3" `
+Definition QSORT3_DEF:
     (QSORT3 R [] = []) /\
     (QSORT3 R (hd::tl) =
         let (lo,eq,hi) = PART3 R hd tl
-        in QSORT3 R lo ++ (hd::eq) ++ QSORT3 R hi)`
-  (WF_REL_TAC `measure (LENGTH o SND)` THEN
-   RW_TAC arith_ss [PART3_FILTER, length_lem]);
+        in QSORT3 R lo ++ (hd::eq) ++ QSORT3 R hi)
+Termination
+  WF_REL_TAC `measure (LENGTH o SND)` THEN
+  RW_TAC arith_ss [PART3_FILTER, length_lem]
+End
 
 val PERM3 =
   store_thm(
@@ -1410,9 +1394,10 @@ val QSORT3_STABLE =
 
 local open rich_listTheory in
 
-val QSORT3_MEM = Q.store_thm ("QSORT3_MEM",
-`!R L x. MEM x (QSORT3 R L) <=> MEM x L`,
- ho_match_mp_tac (fetch "-" "QSORT3_IND") >>
+Theorem QSORT3_MEM:
+  !R L x. MEM x (QSORT3 R L) <=> MEM x L
+Proof
+ ho_match_mp_tac QSORT3_IND >>
  rw [QSORT3_DEF] >>
  fs [] >>
  eq_tac >>
@@ -1420,7 +1405,8 @@ val QSORT3_MEM = Q.store_thm ("QSORT3_MEM",
  fs [PART3_FILTER] >>
  rw [] >>
  fs [MEM_FILTER] >>
- metis_tac []);
+ metis_tac []
+QED
 
 val QSORT3_SORTED = Q.store_thm ("QSORT3_SORTED",
 `!R L. transitive R /\ total R ==> SORTED R (QSORT3 R L)`,

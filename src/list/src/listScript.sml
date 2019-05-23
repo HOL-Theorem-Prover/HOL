@@ -622,9 +622,10 @@ val FLAT_compute = Q.store_thm(
    (FLAT ((h::t1)::t2) = h::FLAT (t1::t2))`,
   SIMP_TAC (srw_ss()) []);
 
-Theorem EVERY_FLAT
-  `EVERY P (FLAT ls) <=> EVERY (EVERY P) ls`
-  (rw[EVERY_MEM,MEM_FLAT,PULL_EXISTS] >> metis_tac[]);
+Theorem EVERY_FLAT:
+  EVERY P (FLAT ls) <=> EVERY (EVERY P) ls
+Proof  rw[EVERY_MEM,MEM_FLAT,PULL_EXISTS] >> metis_tac[]
+QED
 
 Theorem EVERY_APPEND:
   !P (l1:'a list) l2.
@@ -758,9 +759,10 @@ Proof
    THEN GEN_TAC THEN MATCH_ACCEPT_TAC EQ_SYM_EQ
 QED
 
-Theorem NULL_APPEND[simp]
-  `NULL (l1 ++ l2) <=> NULL l1 /\ NULL l2`
-  (simp[NULL_LENGTH]);
+Theorem NULL_APPEND[simp]:
+  NULL (l1 ++ l2) <=> NULL l1 /\ NULL l2
+Proof simp[NULL_LENGTH]
+QED
 
 val MAP_EQ_APPEND = store_thm(
   "MAP_EQ_APPEND",
@@ -1871,9 +1873,10 @@ val LT_SUC = Q.prove(
   ‘x < SUC y <=> (x = 0) \/ ?x0. (x = SUC x0) /\ x0 < y’,
   Cases_on ‘x’ >> simp[]);
 
-Theorem HD_DROP
-  `!n l. n < LENGTH l ==> (HD (DROP n l) = EL n l)`
-  (Induct_on `l` >> asm_simp_tac (srw_ss() ++ DNF_ss) [LT_SUC]);
+Theorem HD_DROP:
+  !n l. n < LENGTH l ==> (HD (DROP n l) = EL n l)
+Proof   Induct_on `l` >> asm_simp_tac (srw_ss() ++ DNF_ss) [LT_SUC]
+QED
 
 Theorem EL_DROP:
   !m n l. m + n < LENGTH l ==> (EL m (DROP n l) = EL (m + n) l)
@@ -1882,13 +1885,15 @@ Proof
   FULL_SIMP_TAC (srw_ss()) [DROP_def, ADD_CLAUSES]
 QED
 
-Theorem MAP_DROP
-  `!l i. MAP f (DROP i l) = DROP i (MAP f l)`
-  (Induct \\ simp[DROP_def] \\ rw[]);
+Theorem MAP_DROP:
+  !l i. MAP f (DROP i l) = DROP i (MAP f l)
+Proof   Induct \\ simp[DROP_def] \\ rw[]
+QED
 
-Theorem MAP_FRONT
-  `!ls. ls <> [] ==> (MAP f (FRONT ls) = FRONT (MAP f ls))`
-  (Induct \\ simp[] \\ Cases_on`ls`\\fs[])
+Theorem MAP_FRONT:
+  !ls. ls <> [] ==> (MAP f (FRONT ls) = FRONT (MAP f ls))
+Proof  Induct \\ simp[] \\ Cases_on`ls`\\fs[]
+QED
 
 (* More functions for operating on pairs of lists *)
 
@@ -2638,9 +2643,11 @@ val GENLIST_CONS = store_thm(
   ``GENLIST f (SUC n) = f 0 :: (GENLIST (f o SUC) n)``,
   Induct_on `n` THEN SRW_TAC [] [GENLIST, SNOC]);
 
-Theorem GENLIST_ID
-  `!x. GENLIST (\i. EL i x) (LENGTH x) = x`
-  (Induct >> simp[GENLIST_CONS, GENLIST, combinTheory.o_ABS_L]);
+Theorem GENLIST_ID:
+  !x. GENLIST (\i. EL i x) (LENGTH x) = x
+Proof
+  Induct >> simp[GENLIST_CONS, GENLIST, combinTheory.o_ABS_L]
+QED
 
 val NULL_GENLIST = Q.store_thm("NULL_GENLIST",
   `!n f. NULL (GENLIST f n) = (n = 0)`,
@@ -3671,50 +3678,63 @@ val LIST_REL_trans = Q.store_thm("LIST_REL_trans",
    >> FIRST_X_ASSUM (Q.SPEC_THEN `SUC n` MP_TAC)
    >> simp []);
 
-Theorem LIST_REL_eq[simp]
-  `LIST_REL (=) = (=)`
-  (simp[FUN_EQ_THM] >> Induct >> rpt gen_tac >>
-   Q.RENAME_TAC [`LIST_REL _ _ ys`] >> Cases_on `ys` >> fs []);
+Theorem LIST_REL_eq[simp]:
+  LIST_REL (=) = (=)
+Proof
+  simp[FUN_EQ_THM] >> Induct >> rpt gen_tac >>
+  Q.RENAME_TAC [`LIST_REL _ _ ys`] >> Cases_on `ys` >> fs []
+QED
 
-Theorem LIST_REL_MEM_IMP
-  `!xs ys P x. LIST_REL P xs ys /\ MEM x xs ==> ?y. MEM y ys /\ P x y`
-  (simp[LIST_REL_EL_EQN] >> metis_tac[MEM_EL]);
+Theorem LIST_REL_MEM_IMP:
+  !xs ys P x. LIST_REL P xs ys /\ MEM x xs ==> ?y. MEM y ys /\ P x y
+Proof  simp[LIST_REL_EL_EQN] >> metis_tac[MEM_EL]
+QED
 
-Theorem LIST_REL_SNOC
-  `(LIST_REL R (SNOC x xs) yys <=>
+Theorem LIST_REL_SNOC:
+  (LIST_REL R (SNOC x xs) yys <=>
       ?y ys. (yys = SNOC y ys) /\ LIST_REL R xs ys /\ R x y) /\
-   (LIST_REL R xxs (SNOC y ys) <=>
-      ?x xs. (xxs = SNOC x xs) /\ LIST_REL R xs ys /\ R x y)`
-  (simp[EQ_IMP_THM, PULL_EXISTS, SNOC_APPEND] >> rpt strip_tac >>
-   fs[LIST_REL_SPLIT1, LIST_REL_SPLIT2] >> metis_tac[]);
+  (LIST_REL R xxs (SNOC y ys) <=>
+      ?x xs. (xxs = SNOC x xs) /\ LIST_REL R xs ys /\ R x y)
+Proof
+   simp[EQ_IMP_THM, PULL_EXISTS, SNOC_APPEND] >> rpt strip_tac >>
+   fs[LIST_REL_SPLIT1, LIST_REL_SPLIT2] >> metis_tac[]
+QED
 
-Theorem LIST_REL_APPEND_IMP
-  `!xs ys xs1 ys1.
+Theorem LIST_REL_APPEND_IMP:
+  !xs ys xs1 ys1.
       LIST_REL P (xs ++ xs1) (ys ++ ys1) /\ (LENGTH xs = LENGTH ys) ==>
-      LIST_REL P xs ys /\ LIST_REL P xs1 ys1`
-  (Induct >> Cases_on `ys` >> FULL_SIMP_TAC (srw_ss()) [] >> METIS_TAC []);
+      LIST_REL P xs ys /\ LIST_REL P xs1 ys1
+Proof  Induct >> Cases_on `ys` >> FULL_SIMP_TAC (srw_ss()) [] >> METIS_TAC []
+QED
 
-Theorem LIST_REL_APPEND
-   `EVERY2 R l1 l2 /\ EVERY2 R l3 l4 <=>
-    EVERY2 R (l1 ++ l3) (l2 ++ l4) /\
-    (LENGTH l1 = LENGTH l2) /\ (LENGTH l3 = LENGTH l4)`
-   (rw[LIST_REL_EL_EQN, EL_APPEND_EQN, EQ_IMP_THM] >> rw[]
-    >- (first_x_assum irule >> simp[])
-    >- (first_x_assum (Q.SPEC_THEN `n` mp_tac) >> simp[])
-    >- (first_x_assum (Q.SPEC_THEN `LENGTH l2 + n` mp_tac) >> simp[]));
+Theorem LIST_REL_APPEND:
+   EVERY2 R l1 l2 /\ EVERY2 R l3 l4 <=>
+     EVERY2 R (l1 ++ l3) (l2 ++ l4) /\
+     (LENGTH l1 = LENGTH l2) /\ (LENGTH l3 = LENGTH l4)
+Proof
+  rw[LIST_REL_EL_EQN, EL_APPEND_EQN, EQ_IMP_THM] >> rw[]
+  >- (first_x_assum irule >> simp[])
+  >- (first_x_assum (Q.SPEC_THEN `n` mp_tac) >> simp[])
+  >- (first_x_assum (Q.SPEC_THEN `LENGTH l2 + n` mp_tac) >> simp[])
+QED
 
-Theorem LIST_REL_APPEND_suff
-   `EVERY2 R l1 l2 /\ EVERY2 R l3 l4 ==> EVERY2 R (l1 ++ l3) (l2 ++ l4)`
-   (metis_tac[LIST_REL_APPEND]);
+Theorem LIST_REL_APPEND_suff:
+  EVERY2 R l1 l2 /\ EVERY2 R l3 l4 ==> EVERY2 R (l1 ++ l3) (l2 ++ l4)
+Proof metis_tac[LIST_REL_APPEND]
+QED
 
-Theorem LIST_REL_APPEND_EQ
-  `(LENGTH x1 = LENGTH x2) ==>
-   (LIST_REL R (x1 ++ y1) (x2 ++ y2) <=> LIST_REL R x1 x2 /\ LIST_REL R y1 y2)`
-  (metis_tac[LIST_REL_APPEND_IMP, EVERY2_LENGTH, LIST_REL_APPEND_suff]);
+Theorem LIST_REL_APPEND_EQ:
+  (LENGTH x1 = LENGTH x2) ==>
+  (LIST_REL R (x1 ++ y1) (x2 ++ y2) <=> LIST_REL R x1 x2 /\ LIST_REL R y1 y2)
+Proof
+  metis_tac[LIST_REL_APPEND_IMP, EVERY2_LENGTH, LIST_REL_APPEND_suff]
+QED
 
-Theorem LIST_REL_MAP_inv_image
-  `LIST_REL R (MAP f l1) (MAP f l2) = LIST_REL (inv_image R f) l1 l2`
-  (rw[LIST_REL_EL_EQN, EQ_IMP_THM, EL_MAP, LENGTH_MAP] >> metis_tac[EL_MAP]);
+Theorem LIST_REL_MAP_inv_image:
+  LIST_REL R (MAP f l1) (MAP f l2) = LIST_REL (inv_image R f) l1 l2
+Proof
+  rw[LIST_REL_EL_EQN, EQ_IMP_THM, EL_MAP, LENGTH_MAP] >> metis_tac[EL_MAP]
+QED
 
 val SWAP_REVERSE = Q.store_thm("SWAP_REVERSE",
    `!l1 l2. (l1 = REVERSE l2) = (l2 = REVERSE l1)`,

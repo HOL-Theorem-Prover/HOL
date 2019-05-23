@@ -108,13 +108,17 @@ evaluations.")
 
 (defvar-local hol-term-end-delim nil)
 (put 'hol-term 'end-op
-     (function (lambda ()
-                 (re-search-forward "[`’”]\\|^Proof" nil t)
-                 (setq hol-term-end-delim (match-string 0))
-                 (goto-char (match-beginning 0)))))
+     (function
+      (lambda ()
+        (re-search-forward "[`’”]\\|^Proof\\|^End\\|^Termination" nil t)
+        (setq hol-term-end-delim (match-string 0))
+        (goto-char (match-beginning 0)))))
 (defvar hol-beg-pos nil) ; ugh, global, but easiest this way
 (defvar hol-quoted-theorem-proof-re-begin
   "Theorem[[:space:]]+[A-Za-z0-9'_]*\\(\\[[A-Za-z0-9_,]+\\]\\)?[[:space:]]*:")
+(defvar hol-quoted-definition-re-begin
+  (concat "Definition[[:space:]]+[A-Za-z0-9'_]+"
+          "\\(\\[[A-Za-z0-9_,=]+\\]\\)?[[:space:]]*:"))
 (put 'hol-term 'beginning-op
      (function
       (lambda ()
@@ -124,7 +128,10 @@ evaluations.")
                 ((equal hol-term-end-delim "’") "‘")
                 ((equal hol-term-end-delim "”") "“")
                 ((equal hol-term-end-delim "Proof")
-                 hol-quoted-theorem-proof-re-begin))))
+                 hol-quoted-theorem-proof-re-begin)
+                ((or (equal hol-term-end-delim "End")
+                     (equal hol-term-end-delim "Termination"))
+                 hol-quoted-definition-re-begin))))
           (re-search-backward beg nil t)
           (goto-char (match-end 0))
           (setq hol-beg-pos (point))))))
@@ -431,7 +438,7 @@ process in it."
                       (if (= rowstart pos) 1 0)))
            (col      (+ (current-column) 1)))
       (goto-char initial-point)
-      (format " (*#loc %d %d *)" row col))))
+      (format " (*#loc %d %d *)\n" (- row 1) col))))
 
 (defun send-timed-string-to-hol (string echo-p)
   "Send STRING to HOL (with send-string-to-hol), and emit information about
@@ -531,19 +538,36 @@ With a prefix ARG, uses `expandf' rather than `e'."
     (send-raw-string-to-hol goal-string hol-echo-commands-p t)
     (send-raw-string-to-hol "proofManagerLib.set_backup 100;" nil nil)))
 
+(defun count-text-match (regex string)
+  (let ((case-fold-search nil)
+        (i 0)
+        (c 0))
+    (while (string-match regex string i)
+      (progn (setq i (match-end 0))
+             (setq c (+ c 1))))
+    c))
+
+(defun hol-string-contains-term-delimiters-p (s)
+  (< 0 (count-text-match
+        (concat "^Theorem\\|^Definition\\|^Proof\\|"
+                "^Termination\\|^End\\|[“”‘’`]")
+        s)))
+
+
 (defun hol-do-goal (arg)
   "Send term around point to HOL process as goal.
 If prefix ARG is true, or if in transient mark mode, region is active and
-the region contains no backquotes, then send region instead."
+the region contains no term-delimiters, then send region instead."
   (interactive "P")
   (let ((txt (condition-case nil
                  (with-hol-locpragma (region-beginning)
                     (buffer-substring (region-beginning) (region-end)))
                (error nil))))
-    (if (or (and (is-region-active) (= (count ?\` txt) 0))
+    (if (or (and (is-region-active)
+                 (not (hol-string-contains-term-delimiters-p txt)))
             arg)
       (send-string-as-hol-goal txt)
-    (send-string-as-hol-goal (hol-term-at-point)))))
+    (send-string-as-hol-goal (hol-term-at-point))))
 
 
 (defun send-string-as-hol-goaltree (s)
@@ -612,13 +636,14 @@ With prefix argument, drop the goal afterwards."
 (defun hol-start-termination-proof (arg)
   "Send definition around point to HOL process as Defn.tgoal.
 If prefix ARG is true, or if in transient mark mode, region is active and
-the region contains no backquotes, then send region instead."
+the region contains no term delimiters, then send region instead."
   (interactive "P")
   (let ((txt (condition-case nil
                  (with-hol-locpragma (region-beginning)
                     (buffer-substring (region-beginning) (region-end)))
                (error nil))))
-    (if (or (and (is-region-active) (= (count ?\` txt) 0))
+    (if (or (and (is-region-active)
+                 (not (hol-string-contains-term-delimiters-p txt)))
             arg)
       (hol-send-string-as-termination-proof txt)
     (hol-send-string-as-termination-proof (hol-term-at-point)))))
@@ -1398,9 +1423,7 @@ printed out.  (That's assuming that quietdec is false to start with.)"
 (defun hol-drop-all-goals ()
   "Drops all HOL goals from the current proofs object."
   (interactive)
-  (send-raw-string-to-hol
-   (concat "proofManagerLib.dropn (case proofManagerLib.status() of "
-           "Manager.PRFS l => List.length l)") nil t))
+  (send-raw-string-to-hol "proofManagerLib.drop_all()" hol-echo-commands-p t))
 
 (defun hol-subgoal-tactic (p)
   "Without a prefix argument, sends term at point (delimited by backquote
@@ -1919,7 +1942,10 @@ second is to show the new term.
                 (buffer-substring (point-min) (point-max))
               (delete-region (point-min) (point-max))))))))
 
-(font-lock-add-keywords 'sml-mode '("\\<Theorem\\>" "^Proof\\>" "^QED\\>"))
+(font-lock-add-keywords
+ 'sml-mode
+ '("^Theorem\\>" "^Proof\\>" "^QED\\>" "^Definition\\>"
+   "^Termination\\>" "^End\\>"))
 
 (defgroup hol-faces nil "Faces used in pretty-printing HOL values"
   :group 'faces

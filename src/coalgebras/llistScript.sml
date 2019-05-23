@@ -2401,9 +2401,11 @@ Proof `LDROP (SUC 0) (h:::t) = SOME t` by fs[LDROP] >>
       metis_tac[arithmeticTheory.ONE]
 QED
 
-Theorem LDROP_NONE_LFINITE
-  `(LDROP k l = NONE) ==> LFINITE l`
-  (metis_tac[NOT_LFINITE_DROP,NOT_SOME_NONE]);
+Theorem LDROP_NONE_LFINITE:
+  (LDROP k l = NONE) ==> LFINITE l
+Proof
+  metis_tac[NOT_LFINITE_DROP,NOT_SOME_NONE]
+QED
 
 Theorem LDROP_LDROP:
   !ll k1 k2. ~ LFINITE ll ==>

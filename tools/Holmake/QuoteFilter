@@ -1,6 +1,8 @@
 (* this is an -*- sml -*- file, or near enough *)
 fun inc r = (r := !r + 1)
 fun dec r = (r := !r - 1)
+infix |>
+fun x |> f = f x
 
 fun bslash_escape s = "\\" ^ StringCvt.padLeft #"0" 3 (Int.toString (Char.ord(String.sub(s,0))))
 
@@ -11,6 +13,7 @@ datatype qfs = QFS of {comdepth : int ref,
                        pardepth : int ref,
                        antiquote_stack : quotetype list ref,
                        mltype_stack : mltype list ref,
+                       induction_thm : string ref,
                        row      : int ref,
                        rowstart : int ref,
                        inscript : bool}
@@ -28,12 +31,13 @@ fun newstate inscriptp =
        row = ref 0,
        rowstart = ref 0,
        inscript = inscriptp,
+       induction_thm = ref "",
        mltype_stack = ref []}
 
 fun linenum (QFS{row,...}) = !row + 1
 
 fun resetstate (QFS{comdepth, pardepth, antiquote_stack, mltype_stack,...}) =
-    (comdepth := 0; pardepth := 0; antiquote_stack := []; mltype_stack := [])
+    (comdepth := 0; pardepth := 0; antiquote_stack := []; mltype_stack := []);
 
 
 fun ECHO (QFS _) s = s
@@ -45,10 +49,23 @@ fun dest_ml_thm_binding bindname s =
     let
       val bsz = size bindname
       val ss = Substring.dropl Char.isSpace (Substring.extract(s, bsz, NONE))
-      val (nmss, _) = Substring.position "[" ss
+      val (nmss, attrs) = Substring.position "[" ss
     in
-      (Substring.string nmss, Substring.string ss)
+      (Substring.string nmss, Substring.string ss,
+       if Substring.isEmpty attrs then []
+       else
+         Substring.slice(attrs, 1, SOME (Substring.size attrs - 2))
+                        |> Substring.string
+                        |> String.fields (fn c => c = #",")
+      )
     end
+
+fun indthm_munge s =
+    if String.isSuffix "_def" s then
+      String.extract(s,0,SOME(size s - 4)) ^ "_ind"
+    else if String.isSuffix "_DEF" s then
+      String.extract(s,0,SOME(size s - 4)) ^ "_IND"
+    else s ^ "_ind"
 
 fun makesafe c =
     if not (Char.isPrint c) then "\\" ^ StringCvt.padLeft #"0" 3 (Int.toString (Char.ord c))
@@ -98,13 +115,19 @@ fun dolocpragma (arg as QFS {row, rowstart, ...}) (s,pos)
       ECHO arg s
     end
 
+fun magic_bind (arg as QFS{induction_thm,...}) =
+    Systeml.bindstr ("val " ^ !induction_thm ^
+                     " = DB.fetch \"-\" \"" ^
+                     !induction_thm ^
+                     "\" handle HOL_ERR _ => TRUTH;") ^ ";"
+
 type lexresult = int*string
 
 fun eof arg = (~1, "")
 %%
 %structure QuoteFilter
 %s string comment qcomment tmcomment tycomment defncomment tyquote tmquote quote defnquote ANTIQ thmval TERMINATION_VAL;
-%arg (UserDeclarations.QFS {comdepth, pardepth, antiquote_stack, row, rowstart, inscript, mltype_stack});
+%arg (UserDeclarations.QFS {comdepth, pardepth, antiquote_stack, row, rowstart, inscript, mltype_stack, induction_thm});
 %full
 
 letter = [A-Za-z];
@@ -112,6 +135,8 @@ digit = [0-9];
 symbol = [-!%&$+/:<=>?@~|#*\\^];
 alphaMLid = {letter} ({letter} | {digit} | _ | "'")*;
 alphaMLid_list = {alphaMLid} (","{alphaMLid})*;
+defn_attribute = {alphaMLid} ("=" {alphaMLid})?;
+defn_attribute_list = {defn_attribute} (","{defn_attribute})*;
 MLid =  {alphaMLid} | {symbol}+;
 ws = [\ \t];
 newline = "\n" | "\015\n";
@@ -122,7 +147,8 @@ fullquoteend = "``" | "\226\128\157";
 quotebegin = "`" | "\226\128\152";
 quoteend = "`" | "\226\128\153";
 Theorempfx = "Theorem"{ws}+{alphaMLid}("["{alphaMLid_list}"]")?;
-Definitionpfx = "Definition"{ws}+{alphaMLid}("["{alphaMLid_list}"]")?{ws}*":";
+Definitionpfx =
+  "Definition"{ws}+{alphaMLid}("["{defn_attribute_list}"]")?{ws}*":";
 declforms = "val"|"fun"|"structure"|"signature"|"functor"|"abstype"|"datatype"|"exception"|"open"|";"|"infix"[lr]?|"local";
 
 %%
@@ -163,7 +189,7 @@ declforms = "val"|"fun"|"structure"|"signature"|"functor"|"abstype"|"datatype"|"
       val s0 = String.extract(yytext,0,SOME (size yytext - 1)) (* drop colon *)
       val s = s0 |> Substring.full |> Substring.dropr Char.isSpace
                  |> Substring.string (* drop wspace between name and lparen *)
-      val (thname,with_attrs_string) = dest_ml_thm_binding "Theorem" s
+      val (thname,with_attrs_string,_) = dest_ml_thm_binding "Theorem" s
     in
       mltype_stack := [];
       YYBEGIN quote;
@@ -175,7 +201,7 @@ declforms = "val"|"fun"|"structure"|"signature"|"functor"|"abstype"|"datatype"|"
 )));
 <INITIAL>^"QED" => ((yypos,
                    (ifscript yyarg (ECHO yyarg ");") yytext)));
-<INITIAL,thmval>{Definitionpfx} => (
+<INITIAL,thmval>^{Definitionpfx} => (
   (yypos,
    (
      ifscript yyarg (
@@ -185,9 +211,15 @@ declforms = "val"|"fun"|"structure"|"signature"|"functor"|"abstype"|"datatype"|"
          val s0 = String.extract(yytext,0,SOME(size yytext - 1)) (* drop : *)
          val s = s0 |> Substring.full |> Substring.dropr Char.isSpace
                     |> Substring.string (* drop w/space between name and : *)
-         val (thname, with_attrs_string) = dest_ml_thm_binding "Definition" s
+         val (thname, with_attrs_string, attrs) =
+             dest_ml_thm_binding "Definition" s
+         val ind_thm =
+             case List.find (String.isPrefix "induction=") attrs of
+                 NONE => indthm_munge thname
+               | SOME s => String.extract(s, size "induction=", NONE)
        in
          mltype_stack := [];
+         induction_thm := ind_thm;
          YYBEGIN defnquote;
          ECHO yyarg (pfx ^
                      "val " ^ thname ^ " = TotalDefn.qDefine \"" ^
@@ -198,20 +230,6 @@ declforms = "val"|"fun"|"structure"|"signature"|"functor"|"abstype"|"datatype"|"
    )
   )
 );
-<INITIAL,thmval>{Theorempfx} => ((yypos,
-(
-  ifscript yyarg
-    (let
-      val pfx = case !mltype_stack of inTHMVAL :: _ => ");" | _ => ""
-      val (thmname,with_attrs_string) = dest_ml_thm_binding "Theorem" yytext
-    in
-      mltype_stack := [];
-      ECHO yyarg (pfx ^
-                  "val " ^ thmname ^ " = " ^
-                  "(fn q => fn tac => Q.store_thm(\"" ^ with_attrs_string ^
-                  "\",q,tac))")
-    end) yytext
-)));
 <INITIAL,thmval>{Theorempfx}({ws}|{newline})+"="
  => ((yypos,
 (
@@ -222,7 +240,7 @@ declforms = "val"|"fun"|"structure"|"signature"|"functor"|"abstype"|"datatype"|"
       val s0 = String.extract(yytext,0,SOME (size yytext - 1)) (* drop lparen *)
       val s = s0 |> Substring.full |> Substring.dropr Char.isSpace
                  |> Substring.string (* drop wspace between name and = *)
-      val (thmname,with_attrs_string) = dest_ml_thm_binding "Theorem" s
+      val (thmname,with_attrs_string,_) = dest_ml_thm_binding "Theorem" s
     in
       YYBEGIN thmval;
       mltype_stack := [inTHMVAL];
@@ -285,7 +303,7 @@ declforms = "val"|"fun"|"structure"|"signature"|"functor"|"abstype"|"datatype"|"
 <TERMINATION_VAL>{newline}"End" => (
   YYBEGIN INITIAL;
   mltype_stack := List.tl (!mltype_stack);
-  (yypos, ECHO yyarg "\n));")
+  (yypos, ECHO yyarg ("\n));" ^ magic_bind yyarg))
 );
 <INITIAL,thmval,TERMINATION_VAL>. => ((yypos, (ECHO yyarg yytext)));
 
@@ -378,8 +396,9 @@ declforms = "val"|"fun"|"structure"|"signature"|"functor"|"abstype"|"datatype"|"
   (yypos, (
      YYBEGIN INITIAL;
      nextline yyarg (yypos + size yytext);
-     ECHO yyarg "\"] NONE;"
-   ))
+     ECHO yyarg ("\"] NONE; " ^ magic_bind yyarg)
+     )
+  )
 );
 <defnquote>{newline}"Termination" => (
   (yypos, (

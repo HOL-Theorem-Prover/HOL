@@ -48,7 +48,7 @@ bar
 ##eval Term`p /\ q ==>
             r`;
 
-   ##eval 3 + 4;
+##eval 3 + 4;
 
 >>__ g `!n. 0 < n ==> 0 < n * n`;
 >> e Induct;
