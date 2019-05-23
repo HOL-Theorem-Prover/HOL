@@ -242,5 +242,40 @@ val wlog_then = wlog_then
   fun qx_choosel_then [] ttac = ttac
     | qx_choosel_then (q::qs) ttac = qx_choose_then q (qx_choosel_then qs ttac)
 
+(* Derived search functions *)
+local
+  fun stripAll t =
+    if (is_forall t)
+    then stripAll (#2 (dest_forall t))
+    else if (is_exists t)
+    then stripAll (#2 (dest_exists t))
+    else if (is_conj t)
+    then stripAll (#1 (dest_conj t))
+    else if (is_disj t)
+    then stripAll (#1 (dest_disj t))
+    else if (is_eq t)
+    then stripAll (#1 (dest_eq t))
+    else strip_comb t;
+in
+  fun find_consts_thy thl t =
+    let
+      val theConsts = List.map (fn th => #1 (stripAll th)) (List.concat (List.map constants thl))
+      val matchedConsts =
+        if (is_type t)
+        then
+          List.filter
+            (fn tm => (case match_type t (type_of tm) of
+              subst => true)
+              handle e => false) theConsts
+        else raise ERR "not a valid type" ""
+    in
+      List.foldl
+        (fn (arg:term, (acc:term list)) => arg :: (List.filter (fn x => not (term_eq x arg)) acc))
+        ([]:term list)
+        matchedConsts
+  end
+end;
+
+val find_consts = fn t => find_consts_thy ("-" :: ancestry "-") t;
 
 end

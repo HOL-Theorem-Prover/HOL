@@ -1,0 +1,42 @@
+\DOC find_consts_thy
+
+\TYPE {find_consts_thy : search function}
+
+\SYNOPSIS
+Searches in the theories in list {thl} for a constant of a given type {ty}.
+
+\DESCRIBE
+Given a type {ty} and a list of theorie names {thl} searches the theories with
+names from {thl} for constants of type {ty}.
+
+\FAILURE
+Fails if {ty} is not a valid HOL type.
+
+\EXAMPLE
+If we run
+{
+  find_consts_thy ["bool"] ``:'a -> 'a set -> bool``;
+}
+
+we get
+
+{
+   > val it = [“$IN”]: term list
+}
+
+and for
+
+{
+
+   find_consts_thy ["arithmetic"] ``:num -> num -> num``;
+}
+
+we get
+
+{
+   > val it = [“$*”, “$+”, “$-”, “ABS_DIFF”, “$DIV”, “$**”, “MAX”, “MIN”, “$MOD”]:
+}
+
+\SEEALSO
+bossLib.find_consts, DB.apropos, DB.find
+\ENDDOC

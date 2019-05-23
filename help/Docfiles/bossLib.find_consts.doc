@@ -1,0 +1,45 @@
+\DOC find_consts
+
+\TYPE {find_consts : search function}
+
+\SYNOPSIS
+Searches the current theory and its ancestors for a constant of a given type.
+
+\DESCRIBE
+Given a type {ty} searches the current theory and its ancestors for constants of
+that type.
+
+\FAILURE
+Fails if {ty} is not a valid HOL type.
+
+\EXAMPLE
+If we run
+{
+  find_consts ``:'a -> 'a set -> bool``;
+}
+
+we get
+
+{
+   > val it = [“$IN”]: term list
+}
+
+and for
+
+{
+
+   find_consts ``:num -> num -> num``;
+}
+
+we get
+
+{
+   > val it =
+      [“napp”, “ncons”, “$*,”, “internal_mult”, “numeral$onecount”,
+       “numeral$texp_help”, “$*”, “$+”, “$-”, “ABS_DIFF”, “$DIV”, “$**”, “MAX”,
+       “MIN”, “$MOD”, “ind_type$NUMPAIR”]: term list
+}
+
+\SEEALSO
+bossLib.find_consts_thy, DB.apropos, DB.find
+\ENDDOC
