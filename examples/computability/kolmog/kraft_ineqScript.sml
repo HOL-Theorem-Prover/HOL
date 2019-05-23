@@ -35,7 +35,7 @@ val prefix_refl = Q.store_thm("prefix_refl[simp]",
 `~(l ≺ l)`,
 simp[prefix_def])
 
-val prefix_free_def = Define`prefix_free (s:'a list set) = !a b. a IN s /\ b IN s ==> ~(a≺ b) `
+val prefix_free_def = Define`prefix_free (s:'a list set) = ∀a b. a ∈ s /\ b ∈ s ==> ¬(a ≺ b) `
 
 val prefix_free_empty = Q.store_thm("prefix_free_empty[simp]",
 `prefix_free EMPTY `,
@@ -668,7 +668,7 @@ rw[] >> `?CLIST. CLIST = SET_TO_LIST L` by fs[SET_TO_LIST_THM] >> qexists_tac`` 
 
 *)
 
-(* Have done initial Kolmog stuff *)
+
 
 val prefix_machine_def = Define`prefix_machine (U:bool list -> extnat) =
                                 ?P. prefix_free P/\(!x. x IN P <=> ?y. U x = SOME y)`
@@ -790,7 +790,6 @@ val bar2_one_to_one = Q.store_thm("bar2_one_to_one[simp]",
 `bar2 (x,y) = bar2 (a,b) <=> x = a ∧ y = b`,
 eq_tac  >> fs[bar2_def] >> rw[APPEND_EQ_APPEND] >> fs[] )
 
-(* Not sure if needed *)
 
 val prefix_rec_fun_def = Define`prefix_rec_fun i = prefix_free (IMAGE n2bl {x|Phi i x <> NONE})`
 
@@ -898,7 +897,7 @@ Proof
   rw[] >> `MIN_SET s <= b` by fs[] >> `b <= MIN_SET s` by fs[] >> fs[]
 QED
 
-(* Theorems to prove *)
+
 
 (* Invariance theorem *)
 
@@ -1369,45 +1368,5 @@ Proof
   fs[bls_size_def]
 QED
 
-(*  To do in the future)
-
-
-Theorem kolmog_recfun:
-  ∀f x y. ∃C. recfn f 1 ∧ f[x] = SOME y ==> kolmog (THE (f [x])) <= (kolmog x) + (THE (kolmog_fn f)) + C
-Proof
-  rw[]
-QED
-
-Theorem kolmog_concat:
-  ∀x y. ∃C. kolmogpf (x ⊗ y) <= (kolmogpf x) + (kolmogpf y) + C
-Proof
-  rw[] >> qexists_tac`recfn_index (SOME o (pr2 npair))` >>
-  fs[kolmogpf_def,kolmog_complexity_def,HUTMpf_nonempty] >>
-  `({LENGTH p | HUTMpf p = SOME x} <> {}) ∧ {LENGTH p | HUTMpf p = SOME y} <> {}` by
-    (rw[EXTENSION] >-( qexists_tac`HUTMpf_print x` >> fs[HUTMpf_print_corr])
-                   >-( qexists_tac`HUTMpf_print y` >> fs[HUTMpf_print_corr]))
-  `MIN_SET {LENGTH p | HUTMpf p = SOME x} +
-   MIN_SET {LENGTH p | HUTMpf p = SOME y} =
-   MIN_SET { l1 + l2 | (l1 ∈ ({LENGTH p | HUTMpf p = SOME y} )) ∧ (l2 ∈ ( {LENGTH p | HUTMpf p = SOME x}) ) }` by fs[MIN_SET_ADD2] >>
-  ` MIN_SET {LENGTH p | HUTMpf p = SOME x} +
-   (MIN_SET {LENGTH p | HUTMpf p = SOME y} + recfn_index (SOME ∘ pr2 $*,)) =  (MIN_SET {LENGTH p | HUTMpf p = SOME x} +
-   MIN_SET {LENGTH p | HUTMpf p = SOME y}) + recfn_index (SOME ∘ pr2 $*,)` by fs[] >> rw[] >>
-
-  fs[HUTMpf_def] >>
-  rw[recfn_index_def]
-QED
-
-
-
-
-Theorem kolmog_recfun:
-  ∀f x. ∃C. primrec f 1 ==> kolmog (f [x]) <= (kolmog x) + (kolmog f) + C
-Proof
-
-QED
-
-
-
-*)
 
 val _ = export_theory();

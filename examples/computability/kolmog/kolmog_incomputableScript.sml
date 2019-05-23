@@ -1165,10 +1165,8 @@ Proof
   `∃m. ¬(m<= 2*(ℓ m) + c)` by fs[exists_log_lb] >> metis_tac[]
 QED
 
-
+(* up to here *)
 (*
-(*  TODO next, show any kolmogorov complexity for a universal function is incomputable *)
-
 Theorem comp_univ_comp_npkolmog:
   univ_rf U ∧ (computable (λx. THE (kolmog_complexity x U) ) ) ==> computable np_kolmog 
 Proof
@@ -1176,10 +1174,26 @@ Proof
 
   `∃g. ∀x. Phi i x = U (g ++ n2bl x)` by fs[] >>
   `∀x. SOME (THE (kolmog_complexity x U)) = U (g ++ n2bl x)` by fs[] >>
-  fs[kolmog_complexity_def] >> Cases_on`∀x. {p | U p = SOME x} <> ∅` >> fs[] 
-  >- (`SOME (MIN_SET {LENGTH p | U p = SOME x}) = U (g ++ n2bl x)` by fs[]
-  ) >>
+  fs[kolmog_complexity_def] >> `univ_rf U` by fs[univ_rf_def] >> 
+  Cases_on`∀x. {p | U p = SOME x} <> ∅` 
+  >- (`SOME (MIN_SET {LENGTH p | U p = SOME x}) = U (g ++ n2bl x)` by fs[] >> 
+      `∀n. {y | Phi (nfst (bl2n y)) (nsnd (bl2n y)) = SOME n} <> ∅` by 
+        fs[EXTENSION,Phi_bl2nx_npair] >> qexists_tac`i` >> rw[]) 
+  >- metis_tac[univ_rf_nonempty] 
 QED
+
+Theorem univ_comp_kol_incomp:
+  univ_rf U ==> ¬(computable (λx. THE (kolmog_complexity x U) ) )
+Proof
+
+QED
+
+*)
+
+(*
+(*  TODO next, show any kolmogorov complexity for a universal function is incomputable *)
+
+
 
 Theorem incomp_all_kolmog:
   univ_rf U ==> ¬(computable (λx. THE (kolmog_complexity x U) ) )
@@ -1188,6 +1202,7 @@ Proof
 QED
 
 *)
+
 
 (* not sure if needed anymore 
 Theorem dBnum_fromTerm_church:
