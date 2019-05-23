@@ -44,7 +44,6 @@ val bool      = Type.bool
 val alpha     = Type.alpha
 fun dom ty    = fst (Type.dom_rng ty)
 fun rng ty    = snd (Type.dom_rng ty);
-val EQ        = Term.fast_term_eq
 val empty_tag = Tag.empty_tag
 
 
@@ -980,36 +979,42 @@ fun Beta th =
    handle HOL_ERR _ => ERR "Beta" "";
 
 
-(*---------------------------------------------------------------------------*
- * This rule behaves like a tactic: given a goal (reducing the rhs of thm),  *
- * it returns two subgoals (reducing the rhs of th1 and th2), together       *
- * with a validation (mkthm), that builds the normal form of t from the      *
- * normal forms of u and v.                                                  *
- * NB: we do not have to typecheck the rator u, and we replaced the alpha    *
- * conversion test with pointer equality.                                    *
- *                                                                           *
- *                     |- u = u    (th1)        |- v = v    (th2)            *
- *       (thm)             ...                     ...                       *
- *    A |- t = u v    A' |- u = u' (th1')     A'' |- v = v' (th2')           *
- *  ----------------------------------------------------------------         *
- *                A u A' u A'' |- t = u' v'                                  *
- *                                                                           *
- * Could be implemented outside Thm as:                                      *
- *   fun Mk_comb th =                                                        *
- *     let val {Rator,Rand} = dest_comb(rhs (concl th))                      *
- *         fun mka th1 th2 = TRANS th (MK_COMB(th1,th2)) in                  *
- *     (REFL Rator, REFL Rand, mka)                                          *
- *     end                                                                   *
- *---------------------------------------------------------------------------*)
+(* --------------------------------------------------------------------------
+    This rule behaves like a tactic: given a goal (reducing the rhs of thm),
+    it returns two subgoals (reducing the rhs of th1 and th2), together
+    with a validation (mkthm), that builds the normal form of t from the
+    normal forms of u and v.
+    NB:
+     1. we do not have to typecheck the rator u,
+     2. there used to just be a pointer equality check in the Assert lines,
+        but this may cause unintended failures as gc-movement of values may
+        make things that are "morally" pointer-equal not compare equal.
+
+        The aconv test uses a pointer equality test as a fast-path option, so
+        this should still be quick most of the time.
+
+                        |- u = u    (th1)        |- v = v    (th2)
+          (thm)             ...                     ...
+       A |- t = u v    A' |- u = u' (th1')     A'' |- v = v' (th2')
+     ----------------------------------------------------------------
+                   A u A' u A'' |- t = u' v'
+
+    Could be implemented outside Thm as:
+      fun Mk_comb th =
+        let val {Rator,Rand} = dest_comb(rhs (concl th))
+            fun mka th1 th2 = TRANS th (MK_COMB(th1,th2)) in
+        (REFL Rator, REFL Rand, mka)
+        end
+  --------------------------------------------------------------------------- *)
 
 fun Mk_comb thm =
    let val (lhs, rhs, ty) = Term.dest_eq_ty (concl thm)
        val (Rator,Rand) = dest_comb rhs
        fun mkthm th1' th2' =
          let val (lhs1, rhs1, _) = Term.dest_eq_ty (concl th1')
-             val _ = Assert (lhs1 = Rator) "" ""
+             val _ = Assert (aconv lhs1 Rator) "" ""
              val (lhs2, rhs2, _) = Term.dest_eq_ty (concl th2')
-             val _ = Assert (lhs2 = Rand) "" ""
+             val _ = Assert (aconv lhs2 Rand) "" ""
              val (ocls,hyps) = tag_hyp_union [thm, th1', th2']
          in make_thm Count.MkComb
            (ocls, hyps,mk_eq_nocheck ty lhs (mk_comb(rhs1,rhs2)))
@@ -1022,26 +1027,29 @@ fun Mk_comb thm =
    end
    handle HOL_ERR _ => ERR "Mk_comb" "";
 
-(*---------------------------------------------------------------------------*
- *                      |- u = u    (th1)                                    *
- *       (thm)              ...                                              *
- *    A |- t = \x.u    A' |- u = u' (th1')                                   *
- *  ---------------------------------------- x not in FV(A')                 *
- *            A u A' |- t = \x.u'                                            *
- *                                                                           *
- * Could be implemented outside Thm as:                                      *
- *   fun Mk_abs th =                                                         *
- *     let val {Bvar,Body} = dest_abs(rhs (concl th)) in                     *
- *     (Bvar, REFL Body, (fn th1 => TRANS th (ABS Bvar th1)))                *
- *     end                                                                   *
- *---------------------------------------------------------------------------*)
+(* --------------------------------------------------------------------------
+                         |- u = u    (th1)
+          (thm)              ...
+       A |- t = \x.u    A' |- u = u' (th1')
+     ---------------------------------------- x not in FV(A')
+               A u A' |- t = \x.u'
+
+    Could be implemented outside Thm as:
+      fun Mk_abs th =
+        let val {Bvar,Body} = dest_abs(rhs (concl th)) in
+        (Bvar, REFL Body, (fn th1 => TRANS th (ABS Bvar th1)))
+        end
+
+    See comment accompanying Mk_comb for discussion of use of aconv in first
+    Assert.
+   -------------------------------------------------------------------------- *)
 
 fun Mk_abs thm =
    let val (lhs, rhs, ty) = Term.dest_eq_ty (concl thm)
        val (Bvar,Body) = dest_abs rhs
        fun mkthm th1' =
          let val (lhs1, rhs1, _) = Term.dest_eq_ty (concl th1')
-             val _ = Assert (EQ lhs1 Body) "" ""
+             val _ = Assert (aconv lhs1 Body) "" ""
              val _ = Assert (not (var_occursl Bvar (hypset th1'))) "" ""
              val (ocls,hyps) = tag_hyp_union [thm, th1']
          in make_thm Count.Abs

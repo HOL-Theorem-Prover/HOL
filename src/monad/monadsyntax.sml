@@ -88,7 +88,7 @@ fun uptodate_check t =
         val (good, bad) = partition ThyDataSexp.uptodate tyis
       in
         case bad of
-            [] => t
+            [] => NONE
           | _ =>
             let
               val tyinames = map getMITname bad
@@ -96,7 +96,7 @@ fun uptodate_check t =
               HOL_WARNING "monadsyntax" "uptodate_check"
                           ("Monad information for: " ^
                            String.concatWith ", " tyinames ^ " discarded");
-              ThyDataSexp.List good
+              SOME (ThyDataSexp.List good)
             end
       end
     | _ => raise Fail "TypeBase.uptodate_check : shouldn't happen"
@@ -111,7 +111,7 @@ fun check_thydelta (t, tdelta) =
       | NewTypeOp _ => uptodate_check t
       | DelConstant _ => uptodate_check t
       | DelTypeOp _ => uptodate_check t
-      | _ => t
+      | _ => NONE
   end
 
 val {export = export_minfo, ...} = ThyDataSexp.new{

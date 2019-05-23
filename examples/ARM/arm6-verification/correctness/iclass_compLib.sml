@@ -48,15 +48,17 @@ val BARM_CONV = CBV_CONV (barm_rws ());
 val BARM_ss = simpLib.SSFRAG
   {convs = [conv_rec "BARM_CONV" BARM_CONV ``EXEC_INST a b c``],
    name = SOME "BARM",
-   rewrs = [iseq_distinct,iclass_EQ_iclass,iclass2num_thm,
-            PROJ_IF_FLAGS_def,DECODE_PSR_def,
-            ABS_ARM6_def,NEXT_ARM_def,
-            DECODE_IFMODE_SET_IFMODE,CPSR_WRITE_READ,
-            REWRITE_RULE [DECODE_IFMODE_SET_IFMODE] DECODE_MODE_THM
-            (* SIMP_interrupt2exception,
-            SIMP_interrupt2exception2, SIMP_interrupt2exception3,
-            SIMP_IS_Dabort,SIMP_PROJ_Dabort,
-            GEQF_INTRO NOT_RESET,NOT_RESET2*)],
+   rewrs = map (fn th => (NONE, th)) [
+     iseq_distinct,iclass_EQ_iclass,iclass2num_thm,
+     PROJ_IF_FLAGS_def,DECODE_PSR_def,
+     ABS_ARM6_def,NEXT_ARM_def,
+     DECODE_IFMODE_SET_IFMODE,CPSR_WRITE_READ,
+     REWRITE_RULE [DECODE_IFMODE_SET_IFMODE] DECODE_MODE_THM
+     (* SIMP_interrupt2exception,
+        SIMP_interrupt2exception2, SIMP_interrupt2exception3,
+        SIMP_IS_Dabort,SIMP_PROJ_Dabort,
+        GEQF_INTRO NOT_RESET,NOT_RESET2*)
+   ],
    congs = [], filter = NONE, ac = [], dprocs = []};
 
 fun Cases_on_arm6inp tm = FULL_STRUCT_CASES_TAC (SPEC tm arm6inp_nchotomy);
@@ -115,7 +117,7 @@ fun inst_simpset ((cnst,pat),cnv) = simpLib.SSFRAG
    convs = [conv_rec "CORE_CONV" CORE_CONV
               ``NEXT_ARM6 (ARM6 d c) (nr,ab,nfiq,nirq,da,cpa,cpb)``] @
            (map (conv_rec2 "INST_CONV" cnv cnst) pat),
-   rewrs = [REG_WRITE_WRITE,TEST_OR_COMP_THM],
+   rewrs = [(NONE, REG_WRITE_WRITE),(NONE,TEST_OR_COMP_THM)],
    congs = [], filter = NONE, ac = [], dprocs = []};
 
 val inst_simpsets

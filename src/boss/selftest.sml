@@ -176,3 +176,32 @@ fun test (msg, c) =
 in
 val _ = List.app test [("simp", SIMP_CONV (srw_ss()) []), ("EVAL", EVAL)]
 end (* local *)
+
+local
+  open listSyntax
+  fun mkl nm = mk_var(nm, mk_list_type alpha)
+  val appl_t = list_mk_append (map mkl ["x", "y", "z"])
+  val appr_t = mk_append(mkl "x", mk_append(mkl "y", mkl"z"))
+in
+val _ = tprint "Std simp left-normalises list"
+val _ = require_msg (check_result (aconv appl_t o rhs o concl)) thm_to_string
+                    (QCONV (SIMP_CONV (srw_ss()) [])) appr_t
+val _ = tprint "Simp -* APPEND_ASSOC leaves list unchanged"
+val _ = require_msg (check_result (aconv appr_t o rhs o concl)) thm_to_string
+                    (QCONV (SIMP_CONV (srw_ss() -* ["APPEND_ASSOC"]) [])) appr_t
+val _ = tprint "Simp -* list.APPEND_ASSOC leaves list unchanged"
+val _ = require_msg (check_result (aconv appr_t o rhs o concl)) thm_to_string
+                    (QCONV (SIMP_CONV (srw_ss() -* ["list.APPEND_ASSOC"]) []))
+                    appr_t
+val _ = tprint "Simp -* list.APPEND_ASSOC.1 leaves list unchanged"
+val _ = require_msg (check_result (aconv appr_t o rhs o concl)) thm_to_string
+                    (QCONV (SIMP_CONV (srw_ss() -* ["list.APPEND_ASSOC.1"]) []))
+                    appr_t
+val _ = tprint "Simp Excl APPEND_ASSOC leaves list unchanged"
+val _ = require_msg (check_result (aconv appr_t o rhs o concl)) thm_to_string
+                    (QCONV (SIMP_CONV (srw_ss()) [Excl "APPEND_ASSOC"])) appr_t
+val _ = tprint "Simp Excl list.APPEND_ASSOC leaves list unchanged"
+val _ = require_msg (check_result (aconv appr_t o rhs o concl)) thm_to_string
+                    (QCONV (SIMP_CONV (srw_ss()) [Excl "list.APPEND_ASSOC"]))
+                    appr_t
+end

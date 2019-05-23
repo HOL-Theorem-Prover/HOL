@@ -9,9 +9,26 @@ fun munger eatfirstNL () = let
                        TextIO.flushOut TextIO.stdErr))
   val () = set_trace "Unicode" 1
   val () = set_trace "pp_dollar_escapes" 1
-  val () = set_trace "ambiguous grammar warning" 2
   open TextIO
   val _ = if eatfirstNL then TextIO.inputLine stdIn else NONE
+  val _ = let
+    val eqty = alpha --> alpha --> bool
+    val stm =
+        mk_thy_const {Name = "stmarker", Thy = "marker", Ty = eqty --> eqty}
+  in
+    temp_overload_on ("defeq", mk_comb(stm, boolSyntax.equality));
+    case fixity "(HOLDefEquality)" of
+        NONE => add_rule {block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
+                          paren_style = OnlyIfNecessary,
+                          fixity = Infix(NONASSOC, 100),
+                          term_name = "defeq",
+                          pp_elements = [HardSpace 1, TOK "(HOLDefEquality)",
+                                         BreakSpace(1,2)]}
+      | SOME _ => ();
+    TexTokenMap.temp_TeX_notation{
+      TeX = ("\\HOLTokenDefEquality{}", 1), hol = "(HOLDefEquality)"
+    }
+  end
   val lexer = mungeLex.makeLexer (fn n => TextIO.input stdIn)
   fun parseWidth s =
       if String.isPrefix "-w" s then let
@@ -31,6 +48,9 @@ fun munger eatfirstNL () = let
         [] => ()
       | ["-index"] => mungeTools.usage()
       | ["-index", basename] => (holindex.holindex basename; run_lexer := false)
+      | "--fail_on_ambiguities" :: rest =>
+           (set_trace "ambiguous grammar warning" 2;
+            proc_args rest)
       | "--nomergeanalysis" :: rest => (set_trace "pp_avoids_symbol_merges" 0;
                                         proc_args rest)
       | s :: rest => let

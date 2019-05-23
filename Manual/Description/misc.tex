@@ -289,6 +289,8 @@ In this way, one can get a staged application of \holmake{} across multiple dire
 \subsection{\holmake{}'s command-line arguments}
 \index{Holmake@\holmake!command-line arguments}
 Like {\tt make}, \holmake{} takes command-line arguments corresponding to the targets that the user desires to build.
+As a special case of this, targets ending with the suffix \ml{Theory} are treated as an instruction to build the theory files that lie behind a \HOL{} theory.
+(If successful such a build will enable other script-files to refer to that theory, and for interactive sessions to issue \ml{load~"xTheory";} commands.)
 If there are no command-line targets, then \holmake{} will look for a \texttt{Holmakefile} in the current directory.
 If there is none, or if that file specifies no targets, then \holmake{} will attempt to build all \ML{} modules and \HOL{} theories it can detect in the current directory.
 If there is a target in the \texttt{Holmakefile}, then \holmake{} will try to build the first such target (only).
@@ -309,11 +311,6 @@ In addition, there are three special targets that can be used:
 \noindent Finally, users can directly affect the workings of \holmake{}
 with the following command-line options:
 \begin{description}
-\item[\tt -d <file>] Ignore the given file and don't try to build it.
-  The file may be rebuilt anyway if other files you have specified
-  depend on it.  This is useful to stop Holmake from attempting to
-  compile files that are interactive scripts (include use of {\tt
-  load} or {\tt use}, for example).
 \item[\texttt{-f <theory>}] Toggles whether or not a theory should be
   built in ``fast'' mode.  Fast building causes tactic proofs
   (invocations of \texttt{prove} and \texttt{store\_thm}) to
@@ -1093,7 +1090,7 @@ extracts the conjunct $\vdash \texttt{F} \land t \iff \texttt{F}$.
 %
 Causes the theorem to be split into its constituent conjuncts, for each conjunct to have any outermost universal quantifiers removed, and for each to be printed on a line of its own.
 %
-The turnstiles usually printed in front of theorems are also omitted.
+The turnstiles usually printed in front of theorems are also omitted, and a special form of equality is printed for the top-level (``defining'') equality in each clause.
 %
 This works well with definitions (or characterising theorems) over multiple data type constructors, changing
 \begin{alltt}
@@ -1101,9 +1098,11 @@ This works well with definitions (or characterising theorems) over multiple data
 \end{alltt}
 into
 \begin{alltt}
-   FACT 0 = 1
-   FACT (SUC \ensuremath{n}) = SUC \ensuremath{n} * FACT \ensuremath{n}
+   FACT 0 \HOLTokenDefEquality{} 1
+   FACT (SUC \ensuremath{n}) \HOLTokenDefEquality{} SUC \ensuremath{n} * FACT \ensuremath{n}
 \end{alltt}
+If the special equality is not desired, the option \texttt{nodefsym} can be used to turn this off.
+The special equality symbol can also be redefined by changing the \LaTeX{} definition of the macro \ml{\bs{}HOLTokenDefEquality}.
 
 \item[\texttt{depth}=$n$]
 Causes printing to be done with a maximum print depth of $n$; see Section~\ref{sec:pretty-print-depth}.

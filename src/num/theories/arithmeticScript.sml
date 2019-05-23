@@ -13,6 +13,7 @@
 
 open HolKernel boolLib Parse
      Prim_rec simpLib boolSimps metisLib BasicProvers;
+local open OpenTheoryMap numTheory prim_recTheory SatisfySimps in end
 
 local
   open OpenTheoryMap
@@ -2549,6 +2550,27 @@ val MOD_LIFT_PLUS = Q.store_thm ("MOD_LIFT_PLUS",
 val MOD_LIFT_PLUS_IFF = Q.store_thm ("MOD_LIFT_PLUS_IFF",
    `0 < n ==> (((x + k) MOD n = x MOD n + k) = (k < n - x MOD n))`,
    PROVE_TAC [SUB_LEFT_LESS,ADD_SYM,MOD_LESS,MOD_LIFT_PLUS])
+
+Theorem DIV_0_IMP_LT:
+  !b n. 1 < b /\ (n DIV b = 0) ==> n < b
+Proof
+  REPEAT STRIP_TAC \\ SPOSE_NOT_THEN ASSUME_TAC
+  \\ FULL_SIMP_TAC bool_ss [NOT_LESS]
+  \\ IMP_RES_TAC LESS_EQUAL_ADD
+  \\ `0 < b` by (
+       MATCH_MP_TAC LESS_TRANS THEN
+       EXISTS_TAC “1” THEN
+       SRW_TAC [][LESS_SUC_REFL,ONE] )
+  \\ IMP_RES_TAC ADD_DIV_ADD_DIV
+  \\ POP_ASSUM (Q.SPECL_THEN [`1`,`p`] (ASSUME_TAC o SIMP_RULE bool_ss []))
+  \\ FULL_SIMP_TAC bool_ss [MULT_CLAUSES, ADD_EQ_0, ONE, SUC_NOT]
+QED
+
+Theorem DIV_EQ_0:
+  1 < b ==> ((n DIV b = 0) = (n < b))
+Proof
+  PROVE_TAC[DIV_0_IMP_LT, LESS_DIV_EQ_ZERO]
+QED
 
 (* ----------------------------------------------------------------------
     Some additional theorems (nothing to do with DIV and MOD)

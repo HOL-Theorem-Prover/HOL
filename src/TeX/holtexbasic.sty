@@ -6,7 +6,7 @@
 % -------------------------------------------------------
 
 \NeedsTeXFormat{LaTeX2e}
-\usepackage{amssymb, makeidx, underscore, fancyvrb}
+\usepackage{amssymb, makeidx, underscore, fancyvrb, amsmath}
 
 \fvset{commandchars=\\\{\},xleftmargin=1mm,framesep=1.2mm,fontsize=\small}
 
@@ -117,3 +117,4 @@
 \newcommand{\HOLTokenBagRight}{\ensuremath{|\!\}}}
 \newcommand{\HOLTokenLeftDenote}{\ensuremath{[\hspace{-1pt}|}}
 \newcommand{\HOLTokenRightDenote}{\ensuremath{|\hspace{-1pt}]}}
+\newcommand{\HOLTokenDefEquality}{\ensuremath{\mathrel{\overset{\makebox[0pt]{\mbox{\normalfont\tiny\sffamily def}}}{=}}}}

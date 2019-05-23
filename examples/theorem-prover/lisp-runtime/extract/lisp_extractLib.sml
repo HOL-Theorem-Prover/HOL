@@ -440,7 +440,7 @@ fun pure_extract name term_tac = let
         in result end
   (* install for future use *)
   val _ = atbl_install name result
-  val _ = save_thm(good_name ^ "_def",def)
+  val _ = save_thm(good_name ^ "_def[compute]",def)
   val _ = save_thm("R_ev_" ^ good_name,result)
   in def end;
 

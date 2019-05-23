@@ -87,6 +87,10 @@ val _ = Hol_reln
 `(foo p x x) /\
  ((if p y then foo p y x else foo p y y) ==> foo p x y)`
 
+val _ = tprint "Can still look at rule_induction data"
+val _ = if can ThmSetData.current_data{settype = "rule_induction"} then OK()
+        else die ""
+
 
 val _ = tprint "With Unicode should fail"
 val _ = if (xHol_reln "tr" `

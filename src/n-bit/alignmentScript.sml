@@ -3,7 +3,7 @@
 (* DESCRIPTION   : Theory for address alignment.                             *)
 (* ========================================================================= *)
 
-open HolKernel Parse boolLib bossLib Q
+open HolKernel Parse boolLib bossLib Q dep_rewrite
 open wordsLib
 
 val () = new_theory "alignment";
@@ -241,6 +241,212 @@ val align_add_aligned = Q.store_thm("align_add_aligned",
         ]
   \\ fs [DECIDE ``(a < 1n) = (a = 0n)``, wordsTheory.w2n_eq_0]
   )
+
+Theorem lt_align_eq_0:
+  w2n a < 2 ** p ==> (align p a = 0w)
+Proof
+  Cases_on`a` \\ fs[]
+  \\ rw[align_w2n]
+  \\ Cases_on`p = 0` \\ fs[]
+  \\ `1 < 2 ** p` by fs[arithmeticTheory.ONE_LT_EXP]
+  \\ `n DIV 2 ** p = 0` by fs[arithmeticTheory.DIV_EQ_0]
+  \\ fs[]
+QED
+
+Theorem aligned_or:
+  aligned n (w || v) <=> aligned n w /\ aligned n v
+Proof
+  Cases_on `n = 0`
+  \\ srw_tac [WORD_BIT_EQ_ss] [aligned_extract]
+  \\ metis_tac []
+QED
+
+Theorem aligned_w2n:
+  aligned k w <=> (w2n (w:'a word) MOD 2 ** k = 0)
+Proof
+  Cases_on `w`
+  \\ fs [aligned_def,align_w2n]
+  \\ `0n < 2 ** k` by simp []
+  \\ drule arithmeticTheory.DIVISION
+  \\ disch_then (qspec_then `n` assume_tac)
+  \\ `(n DIV 2 ** k * 2 ** k) < dimword (:'a)` by decide_tac
+  \\ asm_simp_tac std_ss [] \\ decide_tac
+QED
+
+Theorem MOD_0_aligned:
+  !n p. (n MOD 2 ** p = 0) ==> aligned p (n2w n)
+Proof
+  fs [aligned_bitwise_and]
+  \\ once_rewrite_tac [wordsTheory.WORD_AND_COMM]
+  \\ fs [wordsTheory.WORD_AND_EXP_SUB1]
+QED
+
+Theorem aligned_lsl_leq:
+  k <= l ==> aligned k (w << l)
+Proof
+  fs [aligned_def,align_def]
+  \\ fs [fcpTheory.CART_EQ,wordsTheory.word_lsl_def,
+         wordsTheory.word_slice_def,fcpTheory.FCP_BETA]
+  \\ rw [] \\ eq_tac \\ fs []
+QED
+
+Theorem aligned_lsl[simp]:
+  aligned k (w << k)
+Proof match_mp_tac aligned_lsl_leq \\ fs[]
+QED
+
+Theorem align_align_MAX:
+  !k l w. align k (align l w) = align (MAX k l) w
+Proof
+  fs[align_def,fcpTheory.CART_EQ,wordsTheory.word_slice_def,fcpTheory.FCP_BETA]
+  \\ rw [] \\ eq_tac \\ fs []
+QED
+
+Theorem pow2_eq_0:
+  dimindex (:'a) <= k ==> (n2w (2 ** k) = 0w:'a word)
+Proof
+  fs [wordsTheory.dimword_def] \\ fs [arithmeticTheory.LESS_EQ_EXISTS]
+  \\ rw [] \\ fs [arithmeticTheory.EXP_ADD,arithmeticTheory.MOD_EQ_0]
+QED
+
+Theorem aligned_pow2:
+  aligned k (n2w (2 ** k))
+Proof
+  Cases_on `k < dimindex (:'a)`
+  \\ fs [arithmeticTheory.NOT_LESS,pow2_eq_0,aligned_0]
+  \\ `2 ** k < dimword (:'a)` by fs [wordsTheory.dimword_def]
+  \\ fs [aligned_def,align_w2n]
+QED
+
+Theorem word_msb_align:
+  p < dimindex(:'a) ==> (word_msb (align p w) = word_msb (w:'a word))
+Proof
+  rw[align_bitwise_and,wordsTheory.word_msb]
+  \\ rw[wordsTheory.word_bit_and]
+  \\ rw[wordsTheory.word_bit_lsl]
+  \\ rw[wordsTheory.word_bit_test,
+        arithmeticTheory.MOD_EQ_0_DIVISOR,
+        wordsTheory.dimword_def]
+QED
+
+Theorem align_ls:
+  align p n <=+ n
+Proof
+  simp[wordsTheory.WORD_LS]
+  \\ Cases_on`n`
+  \\ fs[align_w2n]
+  \\ qmatch_asmsub_rename_tac`n < _`
+  \\ DEP_REWRITE_TAC[arithmeticTheory.LESS_MOD]
+  \\ conj_asm2_tac >- fs[]
+  \\ DEP_REWRITE_TAC[GSYM arithmeticTheory.X_LE_DIV]
+  \\ simp[]
+QED
+
+Theorem align_lo:
+  ~aligned p n ==> align p n <+ n
+Proof
+  simp[wordsTheory.WORD_LO]
+  \\ Cases_on`n`
+  \\ fs[align_w2n, aligned_def]
+  \\ strip_tac
+  \\ qmatch_goalsub_abbrev_tac`a < b`
+  \\ `a <= b` suffices_by fs[]
+  \\ qmatch_asmsub_rename_tac`n < _`
+  \\ simp[Abbr`a`]
+  \\ DEP_REWRITE_TAC[arithmeticTheory.LESS_MOD]
+  \\ conj_asm2_tac >- fs[]
+  \\ DEP_REWRITE_TAC[GSYM arithmeticTheory.X_LE_DIV]
+  \\ simp[]
+QED
+
+Theorem aligned_between:
+  ~aligned p n /\ aligned p m /\ align p n <+ m ==> n <+ m
+Proof
+  rw[wordsTheory.WORD_LO]
+  \\ fs[align_w2n, aligned_def]
+  \\ Cases_on`n` \\ Cases_on`m` \\ fs[]
+  \\ CCONTR_TAC \\ fs[arithmeticTheory.NOT_LESS]
+  \\ qmatch_asmsub_abbrev_tac`n DIV d * d`
+  \\ `n DIV d * d <= n` by (
+    DEP_REWRITE_TAC[GSYM arithmeticTheory.X_LE_DIV] \\ fs[Abbr`d`] )
+  \\ fs[]
+  \\ qmatch_asmsub_rename_tac`(d * (m DIV d)) MOD _`
+  \\ `m DIV d * d <= m` by (
+    DEP_REWRITE_TAC[GSYM arithmeticTheory.X_LE_DIV] \\ fs[Abbr`d`] )
+  \\ fs[]
+  \\ `d * (n DIV d) <= m` by metis_tac[]
+  \\ pop_assum mp_tac
+  \\ simp_tac pure_ss [Once arithmeticTheory.MULT_COMM]
+  \\ DEP_REWRITE_TAC[GSYM arithmeticTheory.X_LE_DIV]
+  \\ conj_tac >- simp[Abbr`d`]
+  \\ simp[arithmeticTheory.NOT_LESS_EQUAL]
+  \\ `d * (m DIV d) < d * (n DIV d)` suffices_by fs[]
+  \\ metis_tac[]
+QED
+
+local
+  val aligned_add_mult_lemma = Q.prove(
+    `aligned k (w + n2w (2 ** k)) = aligned k w`,
+    fs [aligned_add_sub,aligned_pow2]) |> GEN_ALL
+  val aligned_add_mult_any = Q.prove(
+    `!n w. aligned k (w + n2w (n * 2 ** k)) = aligned k w`,
+    Induct \\ fs [arithmeticTheory.MULT_CLAUSES,
+                  GSYM wordsTheory.word_add_n2w]
+    \\ rw []
+    \\ pop_assum (qspec_then `w + n2w (2 ** k)` mp_tac)
+    \\ fs [aligned_add_mult_lemma]) |> GEN_ALL
+in
+  val aligned_add_pow = save_thm("aligned_add_pow[simp]",
+    CONJ aligned_add_mult_lemma aligned_add_mult_any)
+end
+
+Theorem align_add_aligned_gen:
+  !a. aligned p a ==> (align p (a + b) = a + align p b)
+Proof
+  completeInduct_on`w2n b`
+  \\ rw[]
+  \\ Cases_on`w2n b < 2 ** p`
+  >- (
+    simp[align_add_aligned]
+    \\ `align p b = 0w` by simp[lt_align_eq_0]
+    \\ simp[] )
+  \\ fs[arithmeticTheory.NOT_LESS]
+  \\ Cases_on`w2n b = 2 ** p`
+  >- (
+    `aligned p b` by(
+      simp[aligned_def,align_w2n]
+      \\ metis_tac[wordsTheory.n2w_w2n] )
+    \\ `aligned p (a + b)` by metis_tac[aligned_add_sub_cor]
+    \\ fs[aligned_def])
+  \\ fs[arithmeticTheory.LESS_EQ_EXISTS]
+  \\ qmatch_asmsub_rename_tac`w2n b = z + _`
+  \\ first_x_assum(qspec_then`z`mp_tac)
+  \\ impl_keep_tac >- fs[]
+  \\ `z < dimword(:'a)` by metis_tac[wordsTheory.w2n_lt, arithmeticTheory.LESS_TRANS]
+  \\ disch_then(qspec_then`n2w z`mp_tac)
+  \\ impl_tac >- simp[]
+  \\ strip_tac
+  \\ first_assum(qspec_then`a + n2w (2 ** p)`mp_tac)
+  \\ impl_tac >- fs[]
+  \\ rewrite_tac[wordsTheory.word_add_n2w, GSYM wordsTheory.WORD_ADD_ASSOC]
+  \\ Cases_on`b` \\ fs[GSYM wordsTheory.word_add_n2w]
+  \\ strip_tac
+  \\ first_x_assum(qspec_then`n2w (2**p)`mp_tac)
+  \\ impl_tac >- fs[aligned_w2n]
+  \\ simp[]
+QED
+
+Theorem byte_align_aligned:
+  byte_aligned x <=> (byte_align x = x)
+Proof EVAL_TAC
+QED
+
+Theorem byte_aligned_add:
+  byte_aligned x /\ byte_aligned y ==> byte_aligned (x+y)
+Proof
+  rw[byte_aligned_def]
+  \\ metis_tac[aligned_add_sub_cor]
+QED
 
 (* -------------------------------------------------------------------------
    Theorems for standard alignment lengths of 1, 2 and 3 bits

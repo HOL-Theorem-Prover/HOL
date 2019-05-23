@@ -1,0 +1,9 @@
+The sigs and elf.txt files in this directory and in subdirectories are
+covered by the same copyright as the seL4 source code from which they
+are derived. The source can be found at
+
+    https://github.com/seL4/seL4
+
+and the license under which it is offered at
+
+    https://github.com/seL4/seL4/blob/master/LICENSE_GPLv2.txt

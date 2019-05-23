@@ -616,11 +616,9 @@ val preds_omax_SOME_SUC = store_thm(
       metis_tac [ordlt_SUC_DISCRETE, ordlt_TRANS, ordlt_REFL]) >>
   simp[ordlt_SUC_DISCRETE, ordle_lteq]);
 
-val omax_preds_SUC = store_thm(
-  "omax_preds_SUC",
-  ``omax (preds a^+) = SOME a``,
-  metis_tac [preds_omax_SOME_SUC]);
-val _ = export_rewrites ["omax_preds_SUC"]
+Theorem omax_preds_SUC[simp]: omax (preds a^+) = SOME a
+Proof metis_tac [preds_omax_SOME_SUC]
+QED
 
 val simple_ord_induction = store_thm(
   "simple_ord_induction",
@@ -841,11 +839,6 @@ val ordADD_fromNat_omega = store_thm(
 val lt_suppreds = save_thm(
   "lt_suppreds",
   predimage_sup_thm |> Q.INST [`f` |-> `\x. x`] |> SIMP_RULE (srw_ss()) [])
-
-val omax_preds_SUC = store_thm(
-  "omax_preds_SUC",
-  ``omax (preds x^+) = SOME x``,
-  simp[preds_omax_SOME_SUC]);
 
 val ORD_ONE = store_thm(
   "ORD_ONE",

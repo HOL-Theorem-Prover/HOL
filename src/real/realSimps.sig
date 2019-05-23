@@ -1,6 +1,7 @@
 signature realSimps =
 sig
 
+  include Abbrev
   (* eliminates common factors in divisions *)
   val elim_common_factor : Term.term -> Thm.thm
 
@@ -22,6 +23,12 @@ sig
 
   (* Incorporates the real simpset *)
   val real_ac_ss : simpLib.simpset
+
+  (* canonicalise additive and multiplicative terms; with addcanon calling
+     mulcanon on each summand *)
+  val REALADDCANON : conv
+  val REALMULCANON : conv
+
 
   val real_compset : unit -> computeLib.compset
 

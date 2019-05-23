@@ -584,11 +584,11 @@ desired form.
 We do exactly the same thing for the reflexive and transitive closure
 of our parallel reduction.
 \begin{session}
-\begin{verbatim}
+\begin{alltt}
 >> set_fixity "-||->*" (Infix(NONASSOC, 450));
 
 >> overload_on ("-||->*", ``RTC predn``);
-\end{verbatim}
+\end{alltt}
 \end{session}
 Incidentally, in conjunction with \texttt{PROVE} we can now
 automatically demonstrate relatively long chains of reductions:

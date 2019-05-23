@@ -24,17 +24,7 @@ New features:
 
            val name1 = store_thm("name2", tm, tac);
 
-    Now we can remove the “code smell” by writing either
-
-           Theorem name tm-quotation tac
-
-    which will typically look like
-
-           Theorem name
-             ‘∀x. P x ⇒ Q x’
-             (rpt strip_tac >> ...);
-
-    or by writing with the general pattern
+    Now we can remove the “code smell” by writing
 
            Theorem name: term-syntax
            Proof tac
@@ -66,6 +56,75 @@ New features:
 
     These names can also be given attributes in the same way.
 
+-   Relatedly, there is a similar syntax for making definitions.
+    The idiom is to write
+
+           Definition name[attrs]:
+             def
+           End
+
+    Or
+
+           Definition name[attrs]:
+             def
+           Termination
+             tactic
+           End
+
+    The latter form maps to a call to `tDefine`; the former to `xDefine`.
+    In both cases, the `name` is taken to be the name of the theorem stored to disk (it does *not* have a suffix such as `_def` appended to it), and is also the name of the local SML binding.
+    The attributes given by `attrs` can be any standard attribute (such as `simp`), and/or drawn from `Definition`-specific options:
+
+    -   the attribute `schematic` alllows the definition to be schematic;
+    -   the attribute `nocompute` stops the definition from being added to the global compset used by `EVAL`
+    -   the attribute `induction=iname` makes the induction theorem that is automatically derived for definitions with interesting termination be called `iname`.
+        If this is omitted, the name chosen will be derived from the `name` of the definition: if `name` ends with `_def` or `_DEF`, the induction name will replace this suffix with `_ind` or `_IND` respectively; otherwise the induction name will simply be `name` with `_ind` appended.
+
+    Whether or not the `induction=` attribute is used, the induction theorem is also made available as an SML binding under the appropriate name.
+    This means that one does not need to follow one’s definition with a call to something like `DB.fetch` or `theorem` just to make the induction theorem available at the SML level.
+
+-   Holmake now understands targets whose suffixes are the string `Theory` to be instructions to build all of the files associated with a theory.
+    Previously, to specifically get `fooTheory` built, it was necessary to write
+
+           Holmake fooTheory.uo
+
+    which is not particularly intuitive.
+
+    Thanks to Magnus Myreen for the feature suggestion.
+
+-   Users can now remove rewrites from simpsets, adjusting the behaviour of the simplifier.
+    This can be done with the `-*` operator
+
+           SIMP_TAC (bool_ss -* [“APPEND_ASSOC”]) [] >> ...
+
+    or with the `Excl` form in a theorem list:
+
+           simp[Excl “APPEND_ASSOC”] >> ...
+
+    The stateful simpset (which is behind `srw_ss()` and tactics such as `simp`, `rw` and `fs`) can also be affected more permanently by making calls to `delsimps`:
+
+           val _ = delsimps [“APPEND_ASSOC”]
+
+    Such a call will affect the stateful simpset for the rest of the containing script-file and in all scripts that inherit this theory.
+    As is typical, there is a `temp_delsimps` that removes the rewrite for the containing script-file only.
+
+-   Users can now require that a simplification tactic use particular rewrites.
+    This is done with the `Req0` and `ReqD` special forms.
+    The `Req0` form requires that the goalstate(s) pertaining after the application of the tactic have no sub-terms that match the pattern of the theorems’ left-hand sides.
+    The `ReqD` form requires that the number of matching sub-terms should have decreased.
+    (This latter is implicitly a requirement that the original goal *did* have some matching sub-terms.)
+    We hope that both forms will be useful in creating maintainable tactics.
+    See the DESCRIPTION manual for more details.
+
+    Thanks to Magnus Myreen for this feature suggestion ([Github issue](https://github.com/HOL-Theorem-Prover/HOL/issues/680)).
+
+-   The `emacs` editor mode now automatically switches new HOL sessions to the directory of the (presumably script) file where the command is invoked.
+    Relatedly there is a backwards incompatibility: the commands for creating new sessions now also *always* create fresh sessions (previously, they would try to make an existing session visible if there was one running).
+
+-   The `emacs` mode’s `M-h H` command used to try to send the whole buffer to the new HOL session when there was no region high-lighted.
+    Now the behaviour is to send everything up to the cursor.
+    This seems preferable: it helps when debugging to be able to have everything up to a problem-point immediately fed into a fresh session.
+    (The loading of the material (whole prefix or selected region) is done “quietly”, with the interactive flag false.)
 
 Bugs fixed:
 -----------
@@ -139,6 +198,41 @@ Incompatibilities:
     All priming done by the kernel is now by appending extra prime (apostrophe) characters to the names of variables.
     This also means that this is the only form of variation introduced by the `variant` function.
     However, there is also a new `numvariant` function, which makes the varying function behave as if the old `Globals.priming` was set to `SOME ""` (introduces and increments a numeric suffix).
+
+*   By default, goals are now printed with the trace variable `"Goalstack.print_goal_at_top"` set to false.
+    This means goals now print like
+
+            0.  p
+            1.  q
+           ------------------------------------
+                r
+
+    The motivation is that when goal-states are very large, the conclusion (which we assume is the most important part of the state) runs no risk of disappearing off the top of the screen.
+    We also believe that having the conclusion and most recent assumption at the bottom of the screen is easier for human eyes to track.
+    The trace variable can be changed back to the old behaviour with:
+
+           val _ = set_trace "Goalstack.print_goal_at_top" 1;
+
+    This instruction can be put into script files, or (better) put into your `~/.hol-config.sml` file so that all interactive sessions are automatically adjusted.
+
+*   This is arguably also a bug-fix: it is now impossible to rebind a theorem to a name that was associated with a definition, and have the new theorem silently be added to the `EVAL` compset for future theories’ benefit.
+    In other words, it was previously possible to do
+
+           val _ = Define`foo x = x + 1`;
+           EVAL “foo 6”;     (* returns ⊢ foo 6 = 7 *)
+
+           val _ = Q.save_thm (“foo_def”, thm);
+
+    and have the effect be that `thm` goes into `EVAL`’s compset in descendent theories.
+
+    Now, when this happens, the change to the persistent compset is dropped.
+    If the user wants the new `foo_def` to appear in the `EVAL`-compset in future theories, they must change the call to `save_thm` to use the name `"foo_def[compute]"`.
+    Now, as before, the old `foo_def` cannot be seen by future theories at all, and so certainly will not be in the `EVAL`-compset.
+
+*   The global toggle `allow_schema_definition` has turned into a feedback trace variable.
+    Users typically use the `DefineSchema` entrypoint and can continue to do so.
+    Users can also pass the `schematic` attribute with the new `Definition` syntax (see above).
+    Programmers should change uses of `with_flag` to `Feedback.trace`.
 
 * * * * *
 

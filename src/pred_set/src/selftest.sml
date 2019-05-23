@@ -72,6 +72,11 @@ val imgtests = [(``IMAGE (\x. x + 1) {3;4}``, ``{4;5}``),
                 (``IMAGE (K 0) {3;4}``, ``{0}``),
                 (``IMAGE (\x. x MOD 8) {11;22}``, ``{3;6}``)]
 
+val _ = temp_overload_on ("lbound", ``\n. { i | n <= i }``)
+val _ = print
+          "Test p/printing of GSPEC forms without user-printer escape (#688)\n"
+val _ = app testutils.tpp ["lbound 6", "{i | n < i}"]
+
 val gspec_simp_tests =
     [(``{x:num | T}``, ``univ(:num)``),
      (``{x:num | F}``, ``{}:num set``),

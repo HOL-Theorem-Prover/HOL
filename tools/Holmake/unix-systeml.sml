@@ -159,4 +159,6 @@ in
 end
 end (* local *)
 
+fun bindstr s = s
+
 end; (* struct *)

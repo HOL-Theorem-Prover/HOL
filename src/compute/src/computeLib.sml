@@ -4,6 +4,8 @@ struct
 open HolKernel boolSyntax boolTheory Abbrev clauses compute_rules equations;
 
 val auto_import_definitions = ref true;
+val _ = Feedback.register_btrace
+          ("computeLib.auto_import_definitions", auto_import_definitions)
 
 (* re-exporting types from clauses *)
 
@@ -258,9 +260,11 @@ val _ = TypeBase.register_update_fn
 
 open LoadableThyData
 val {export,...} =
-    ThmSetData.new_exporter "compute"
-                            (fn _ (* thy *) => fn namedthms =>
-                                add_funs (map #2 namedthms))
+    ThmSetData.new_exporter {
+      settype = "compute",
+      efns = {add = (fn {named_thms,...} => add_funs (map #2 named_thms)),
+              remove = fn _ => ()}
+    }
 val add_persistent_funs = app export
 
 (*---------------------------------------------------------------------------*)

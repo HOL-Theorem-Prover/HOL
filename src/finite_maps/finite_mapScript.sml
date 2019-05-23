@@ -623,9 +623,10 @@ val SUBMAP_FUPDATE_EQN = Q.store_thm(
   METIS_TAC []);
 val _ = export_rewrites ["SUBMAP_FUPDATE_EQN"]
 
-Theorem SUBMAP_FDOM_SUBSET
-  `f1 SUBMAP f2 ==> FDOM f1 SUBSET FDOM f2`
-  (srw_tac[][SUBMAP_DEF,SUBSET_DEF]);
+Theorem SUBMAP_FDOM_SUBSET:
+  f1 SUBMAP f2 ==> FDOM f1 SUBSET FDOM f2
+Proof  srw_tac[][SUBMAP_DEF,SUBSET_DEF]
+QED
 
 (*---------------------------------------------------------------------------
     Restriction
@@ -785,8 +786,7 @@ val FUNION_DEF = new_specification
 val _ = set_mapped_fixity {term_name = "FUNION", tok = UTF8.chr 0x228C,
                            fixity = Infixl 500}
 
-val FDOM_FUNION = save_thm("FDOM_FUNION", FUNION_DEF |> SPEC_ALL |> CONJUNCT1)
-val _ = export_rewrites ["FDOM_FUNION"]
+Theorem FDOM_FUNION[simp] = FUNION_DEF |> SPEC_ALL |> CONJUNCT1
 
 val FUNION_FEMPTY_1 = Q.store_thm
 ("FUNION_FEMPTY_1[simp]",
@@ -813,11 +813,6 @@ val FUNION_FUPDATE_2 = Q.store_thm
         else FUPDATE (FUNION f g) (x,y)`,
  SRW_TAC [][GSYM fmap_EQ_THM, FDOM_FUPDATE, FUNION_DEF, FAPPLY_FUPDATE_THM,
             EXTENSION] THEN PROVE_TAC []);
-
-val FDOM_FUNION = Q.store_thm
-("FDOM_FUNION",
- `!^fmap g x. FDOM (FUNION f g) = FDOM f UNION FDOM g`,
- REWRITE_TAC [FUNION_DEF]);
 
 val DRESTRICT_FUNION = Q.store_thm
 ("DRESTRICT_FUNION",
@@ -1006,9 +1001,10 @@ val FLOOKUP_SUBMAP = store_thm(
   ``f SUBMAP g /\ (FLOOKUP f k = SOME v) ==> (FLOOKUP g k = SOME v)``,
   SRW_TAC [][FLOOKUP_DEF, SUBMAP_DEF] THEN METIS_TAC []);
 
-Theorem SUBMAP_FLOOKUP_EQN
-  `f SUBMAP g <=> !x y. (FLOOKUP f x = SOME y) ==> (FLOOKUP g x = SOME y)`
-  (rw[SUBMAP_DEF,FLOOKUP_DEF] \\ METIS_TAC[]);
+Theorem SUBMAP_FLOOKUP_EQN:
+  f SUBMAP g <=> !x y. (FLOOKUP f x = SOME y) ==> (FLOOKUP g x = SOME y)
+Proof    rw[SUBMAP_DEF,FLOOKUP_DEF] \\ METIS_TAC[]
+QED
 
 val SUBMAP_FUPDATE_FLOOKUP = store_thm(
   "SUBMAP_FUPDATE_FLOOKUP",
@@ -1664,13 +1660,15 @@ val FAPPLY_FUPD_EQ = prove(
 
 
 (* (pseudo) injectivity results about fupdate *)
-Theorem FEMPTY_FUPDATE_EQ
-  `!x y. (FEMPTY |+ x = FEMPTY |+ y) <=> (x = y)`
-  (Cases >> Cases >> srw_tac[][fmap_eq_flookup,FDOM_FUPDATE,FLOOKUP_UPDATE] >>
+Theorem FEMPTY_FUPDATE_EQ:
+  !x y. (FEMPTY |+ x = FEMPTY |+ y) <=> (x = y)
+Proof
+  Cases >> Cases >> srw_tac[][fmap_eq_flookup,FDOM_FUPDATE,FLOOKUP_UPDATE] >>
   Cases_on`q=q'`>>srw_tac[][] >- (
     srw_tac[][EQ_IMP_THM] >>
     pop_assum(qspec_then`q`mp_tac) >> srw_tac[][] ) >>
-  qexists_tac`q`>>srw_tac[][])
+  qexists_tac`q`>>srw_tac[][]
+QED
 
 val FUPD11_SAME_KEY_AND_BASE = store_thm(
   "FUPD11_SAME_KEY_AND_BASE",
@@ -1729,10 +1727,12 @@ val FDOM_FUPDATE_LIST = store_thm(
                            FDOM_FUPDATE, pairTheory.FORALL_PROD,
                            EXTENSION] THEN PROVE_TAC []);
 
-Theorem FUPDATE_LIST_EQ_FEMPTY
-  `!fm ls. (fm |++ ls = FEMPTY) <=> (fm = FEMPTY) /\ (ls = [])`
-  (srw_tac[][EQ_IMP_THM,FUPDATE_LIST_THM] >>
-  full_simp_tac(srw_ss())[GSYM fmap_EQ_THM,FDOM_FUPDATE_LIST])
+Theorem FUPDATE_LIST_EQ_FEMPTY:
+  !fm ls. (fm |++ ls = FEMPTY) <=> (fm = FEMPTY) /\ (ls = [])
+Proof
+  srw_tac[][EQ_IMP_THM,FUPDATE_LIST_THM] >>
+  full_simp_tac(srw_ss())[GSYM fmap_EQ_THM,FDOM_FUPDATE_LIST]
+QED
 
 val FUPDATE_LIST_SAME_UPDATE = store_thm(
   "FUPDATE_LIST_SAME_UPDATE",
@@ -2814,9 +2814,10 @@ end
 
 val FDIFF_def = Define `FDIFF f1 s = DRESTRICT f1 (COMPL s)`;
 
-Theorem FDOM_FDIFF[simp]
-  `x IN FDOM (FDIFF refs f2) <=> x IN FDOM refs /\ x NOTIN f2`
-  (full_simp_tac(srw_ss())[FDIFF_def,DRESTRICT_DEF]);
+Theorem FDOM_FDIFF[simp]:
+  x IN FDOM (FDIFF refs f2) <=> x IN FDOM refs /\ x NOTIN f2
+Proof   full_simp_tac(srw_ss())[FDIFF_def,DRESTRICT_DEF]
+QED
 
 val NUM_NOT_IN_FDOM =
   MATCH_MP IN_INFINITE_NOT_FINITE (CONJ INFINITE_NUM_UNIV
@@ -2828,14 +2829,13 @@ val EXISTS_NOT_IN_FDOM_LEMMA = Q.prove(
   `?x. ~(x IN FDOM (refs:num|->'a))`,
   METIS_TAC [NUM_NOT_IN_FDOM]);
 
-Theorem LEAST_NOTIN_FDOM
-  `(LEAST ptr. ptr NOTIN FDOM (refs:num|->'a)) NOTIN FDOM refs`
-  (ASSUME_TAC
-     (EXISTS_NOT_IN_FDOM_LEMMA |> SIMP_RULE std_ss [whileTheory.LEAST_EXISTS])>>
-   fs[]);
-
-
-
+Theorem LEAST_NOTIN_FDOM:
+  (LEAST ptr. ptr NOTIN FDOM (refs:num|->'a)) NOTIN FDOM refs
+Proof
+  ASSUME_TAC
+    (EXISTS_NOT_IN_FDOM_LEMMA |> SIMP_RULE std_ss [whileTheory.LEAST_EXISTS])>>
+   fs[]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Add fmap type to the TypeBase. Notice that we treat keys as being of size *)

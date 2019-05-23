@@ -5,6 +5,13 @@ open Feedback Term Thm Theory
 
 val ERR = mk_HOL_ERR "ThyDataSexp"
 
+val theory_debug_trace = get_tracefn "Theory.debug"
+
+fun DPRINT f =
+    if theory_debug_trace() <> 0 then
+      print ("ThyDataSexp/DEBUG: " ^ f () ^ "\n")
+    else ()
+
 datatype t =
          Int of int
        | String of string
@@ -46,6 +53,11 @@ fun pp_sexp typ tmp thp s =
             add_break(1,0), pp s, add_string ")"
           ]
   end
+
+val bare_toString =
+    PP.pp_to_string 70 (pp_sexp (fn _ => PP.add_string "<type>")
+                                (fn _ => PP.add_string "<term>")
+                                (fn _ => PP.add_string "<thm>"))
 
 fun uptodate s =
   case s of
@@ -231,7 +243,7 @@ structure LTD = LoadableThyData
 fun new {thydataty, load, other_tds, merge} =
   let
     val (todata, fromdata) =
-        LTD.new{thydataty = thydataty,
+        LTD.new{thydataty = thydataty, pp = bare_toString,
                 merge = (fn (t1,t2) => merge {old = t1, new = t2}),
                 terms = sterms, read = lift o reader, write = write}
     fun segment_data {thyname} =
@@ -247,13 +259,26 @@ fun new {thydataty, load, other_tds, merge} =
 
     fun hook0 td =
       case segment_data {thyname = current_theory()} of
-          NONE => ()
+          NONE => DPRINT (fn _ => "No seg-data to update for " ^ thydataty ^
+                                  "; return ()")
         | SOME d0 =>
-            LTD.set_theory_data {thydataty = thydataty,
-                                 data = todata (other_tds(d0,td))}
+          let
+          in
+            case other_tds(d0,td) of
+                NONE => DPRINT (fn _ => "Seg-data for " ^ thydataty ^ " is " ^
+                                        bare_toString d0 ^
+                                        " but leaving it alone")
+              | SOME newdata => (
+                  DPRINT (fn _ => thydataty ^ " hook causes write of " ^
+                                  bare_toString newdata);
+                  LTD.set_theory_data {thydataty = thydataty,
+                                       data = todata newdata}
+              )
+          end
 
     fun hook (TheoryDelta.TheoryLoaded s) = onload s
-      | hook td = hook0 td
+      | hook td = (DPRINT (fn _ => "Calling "^thydataty^"'s delta-hook");
+                   hook0 td)
 
     fun export s =
       (load {thyname = current_theory(), data = s};
