@@ -3,6 +3,10 @@ open testutils
 
 val _ = print "\n"
 
+fun listprint pr xs =
+    "[" ^ String.concatWith "," (map pr xs) ^ "]"
+
+
 fun test_CONV (c,nm) (t, expected) = let
   val _ = tprint (nm^" on `"^term_to_string t^"`")
   val th = Conv.QCONV c t
@@ -205,3 +209,42 @@ val _ = require_msg (check_result (aconv appr_t o rhs o concl)) thm_to_string
                     (QCONV (SIMP_CONV (srw_ss()) [Excl "list.APPEND_ASSOC"]))
                     appr_t
 end
+
+val _ = tprint "find num->num includes SUC"
+val _ = require_msg (check_result (tmem numSyntax.suc_tm))
+                    (listprint term_to_string)
+                    find_consts “:num->num”
+val _ = tprint "find 'a includes SUC"
+val _ = require_msg (check_result (tmem numSyntax.suc_tm))
+                    (listprint term_to_string)
+                    find_consts “:'a”
+val _ = tprint "find 'a->'a includes SUC"
+val _ = require_msg (check_result (tmem numSyntax.suc_tm))
+                    (listprint term_to_string)
+                    find_consts “:'a->'a”
+val _ = tprint "find 'b->'b includes SUC"
+val _ = require_msg (check_result (tmem numSyntax.suc_tm))
+                    (listprint term_to_string)
+                    find_consts “:'b->'b”
+val _ = tprint "find 'a -> 'b -> 'c doesn't include SUC"
+val _ = require_msg (check_result (not o tmem numSyntax.suc_tm))
+                    (listprint term_to_string)
+                    find_consts “:'a->'b->'c”
+val _ = tprint "find_thy [bool,relation] 'a -> 'a doesn't include SUC"
+val _ = require_msg (check_result (not o tmem numSyntax.suc_tm))
+                    (listprint term_to_string)
+                    (find_consts_thy ["bool", "relation"]) “:'a->'a”
+val _ = tprint "find_thy [bool,relation] 'a -> 'a includes RTC"
+val _ = require_msg (check_result (tmem “relation$RTC”))
+                    (listprint term_to_string)
+                    (find_consts_thy ["bool", "relation"]) “:'a->'a”
+val _ = tprint "find_thy [bool,relation] num -> num doesn't include RTC"
+val _ = require_msg (check_result (not o tmem “relation$RTC”))
+                    (listprint term_to_string)
+                    (find_consts_thy ["bool", "relation"]) “:num->num”
+
+val _ = new_constant("foo", “:'a -> num”)
+
+val _ = tprint "find 'a finds new constant"
+val _ = require_msg (check_result (tmem “foo”)) (listprint term_to_string)
+                    find_consts “:'a”
