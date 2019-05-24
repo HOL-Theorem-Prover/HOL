@@ -138,6 +138,8 @@ sig
   val debug_in_dir : string -> string -> string -> unit
   val stream_to_string :
     string -> (TextIO.outstream -> unit) -> string list
+  val write_texgraph : 
+    string -> string * string -> (int * int) list -> unit
 
   (* parse *)
   val unquote_string : string -> string

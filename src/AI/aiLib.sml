@@ -652,6 +652,9 @@ fun debug_in_dir dir file s =
         append_endline (dir ^ "/" ^ current_theory () ^ "___" ^ file) s)
   else ()
 
+fun write_texgraph file (s1,s2) l =
+  writel file ((s1 ^ " " ^ s2) :: map (fn (a,b) => its a ^ " " ^ its b) l);
+
 (* --------------------------------------------------------------------------
    Profiling
    -------------------------------------------------------------------------- *)

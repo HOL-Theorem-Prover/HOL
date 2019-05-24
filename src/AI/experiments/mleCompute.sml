@@ -8,17 +8,24 @@
 structure mleCompute :> mleCompute =
 struct
 
-open HolKernel Abbrev boolLib aiLib psTermGen mlTreeNeuralNetwork mleArithData
+open HolKernel Abbrev boolLib aiLib psTermGen smlParallel mlTreeNeuralNetwork 
+mlTacticData mlTune mleArithData 
 
 val ERR = mk_HOL_ERR "mleCompute"
 
+val compute_dir = HOLDIR ^ "/src/AI/experiments/data_compute"
+
 (* -------------------------------------------------------------------------
-   Todo : move comments into structure.
+   Constructing examples
    ------------------------------------------------------------------------- *)
 
 fun compute_exout tml = map_assoc (bin_rep 4 o eval_numtm) tml
 
-fun random_tnn_compute dim =
+(* -------------------------------------------------------------------------
+   Associated tree neural network
+   ------------------------------------------------------------------------- *)
+
+fun compute_random_tnn dim =
   let 
     val operl = mk_fast_set oper_compare (operl_of ``0 + SUC 0 * 0``)
     val nbit = 4
@@ -26,96 +33,72 @@ fun random_tnn_compute dim =
     random_tnn (dim,nbit) operl
   end
 
-(* single parameter experiment
+(* -------------------------------------------------------------------------
+   Training with a fixed set of parameters
+   ------------------------------------------------------------------------- *)
 
-load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
-load "mleCompute"; open mleCompute;
-open aiLib;
-val exp_dir = HOLDIR ^ "/src/AI/experiments";
+fun train_fixed basename trainex =
+  let
+    val dim = 12
+    val randtnn = compute_random_tnn dim
+    val bsize = 16
+    val schedule = [(400, 0.02 / (Real.fromInt bsize))]
+    val ncore = 4
+    val tnn = prepare_train_tnn 
+      (ncore,bsize) randtnn (trainex,first_n 100 trainex) schedule
+    val _ = mkDir_err compute_dir
+  in
+    write_tnn (compute_dir ^ "/" ^ basename) tnn;
+    tnn
+  end
 
-val traintml = mlTacticData.import_terml (exp_dir ^ "/data200_train");
-val trainex = compute_exout traintml;
+(* ------------------------------------------------------------------------
+   Accuracy of the tree neural network on arithmetical datasets
+   ------------------------------------------------------------------------ *) 
 
+fun accuracy_fixed tnn =
+  let 
+    val filel = map (fn x => dataarith_dir ^ "/" ^ x)       
+      ["train","valid","test","big"]
+    val tmll = map mlTacticData.import_terml filel
+    val exl = map compute_exout tmll
+  in
+    quadruple_of_list (map (accuracy_set tnn) exl)
+  end
 
-val compute_dir = HOLDIR ^ "/src/AI/experiments/compute_results";
-mkDir_err compute_dir;
+(* ------------------------------------------------------------------------
+   Tuning parameters by training with external parallelization.
+   Does not print the tree neural network yet.
+   ------------------------------------------------------------------------ *)
 
-val dim = 12;
-val randtnn = random_tnn_compute dim;
-val bsize = 16;
-val schedule = [(400, 0.02 / (Real.fromInt bsize))];
-val ncore = 4;
-val _ = nlayers_glob := 2;
-val tnn = prepare_train_tnn (ncore,bsize) randtnn (trainex,first_n 100 
-trainex) schedule;
-
-val r1 = accuracy_set tnn trainex;
-write_tnn (compute_dir ^ "/tnn_run3");
-
-val validtml = mlTacticData.import_terml (exp_dir ^ "/data200_valid");
-val validex = compute_exout validtml;
-val testtml = mlTacticData.import_terml (exp_dir ^ "/data200_test");
-val testex = compute_exout testtml;
-val bigtml = mlTacticData.import_terml (exp_dir ^ "/data200_big");
-val bigex = compute_exout bigtml;
-
-val r2 = accuracy_set tnn validex;
-val r3 = accuracy_set tnn testex;
-val r4 = accuracy_set tnn bigex;
-
-
-
-
-*)
-
-(* Compute external experiments 
-load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
-load "mleArithData"; open mleArithData;
-load "mleCompute"; open mleCompute;
-load "mlTune"; open mlTune;
-load "smlParallel"; open smlParallel;
-load "mlTacticData"; open mlTacticData;
-open aiLib;
-
-val traintml = import_terml (HOLDIR ^ "/src/AI/experiments/data200_train");
-val trainex = compute_exout traintml;
-val validtml = import_terml(HOLDIR ^ "/src/AI/experiments/data200_valid");
-val validex = compute_exout validtml;
-
-val trainfile = (!parallel_dir) ^ "/train";
-val testfile = (!parallel_dir) ^ "/test";
-val operlfile = (!parallel_dir) ^ "/operl";
-val operl = mk_fast_set oper_compare (operl_of ``0 + SUC 0 * 0``);
-fun init () =
-  (
-  write_tnnex trainfile trainex;
-  write_tnnex testfile validex;
-  write_operl operlfile operl
-  )
-;
-
-val dl = [12,16];
-val nl = [400];
-val bl = [16,64];
-val ll = [10,20,50];
-val yl = [2,4];
-
-fun codel_of wid = tune_codel_of (dl,nl,bl,ll,yl) 4 wid;
-val paraml = grid_param (dl,nl,bl,ll,yl);
-val ncore = 24;
-
-val final = 
-  parmap_queue_extern ncore codel_of (init,tune_collect_result) paraml;
-
-write_param_results 
-  (HOLDIR ^ "/src/AI/experiments/mleCompute_param_results3") final;
-*)
-
-
-
-
-
-
+fun parameter_tuning basename ncore ncore_loc =
+  let
+    val _ = mkDir_err compute_dir
+    val traintml = import_terml (dataarith_dir ^ "/train");
+    val trainex = compute_exout traintml;
+    val fake_testex = first_n 100 trainex
+    val trainfile = (!parallel_dir) ^ "/train";
+    val testfile = (!parallel_dir) ^ "/test";
+    val operlfile = (!parallel_dir) ^ "/operl";
+    val operl = mk_fast_set oper_compare (operl_of ``0 + SUC 0 * 0``);
+    fun init () =
+      (
+      write_tnnex trainfile trainex;
+      write_tnnex testfile fake_testex;
+      write_operl operlfile operl
+      )
+    val dl = [12,16]
+    val nl = [400]
+    val bl = [16,64]
+    val ll = [10,20,50]
+    val yl = [2,4]
+    fun codel_of wid = tune_codel_of (dl,nl,bl,ll,yl) ncore_loc wid
+    val paraml = grid_param (dl,nl,bl,ll,yl)
+    val final = 
+      parmap_queue_extern ncore codel_of (init,tune_collect_result) paraml
+  in
+    write_param_results (compute_dir ^ "/" ^ basename) final
+  end
 
 
 end (* struct *)

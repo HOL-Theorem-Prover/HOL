@@ -160,8 +160,8 @@ load "mlTreeNeuralNetwork";
 open aiLib mlNeuralNetwork mlTreeNeuralNetwork;
 val file = HOLDIR ^ "/src/AI/test";
 val tnn1 = random_tnn (4,2) [(``$+``,2),(``SUC``,1),(``0``,0)];
-add_time (write_tnn file) tnn1;
-val (tnn2,t2) = add_time read_dhtnn file;
+write_tnn file tnn1;
+val tnn2 = read_tnn file;
 *)
 
 fun read_dhtnn_sl operl sl =

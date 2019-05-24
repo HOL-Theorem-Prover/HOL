@@ -8,31 +8,33 @@
 structure mleArithData :> mleArithData =
 struct
 
-open HolKernel Abbrev boolLib aiLib psTermGen mlTreeNeuralNetwork
+open HolKernel Abbrev boolLib aiLib psTermGen mlTacticData mlTreeNeuralNetwork
 
 val ERR = mk_HOL_ERR "mleArithData"
 
 (* -------------------------------------------------------------------------
-   Evaluation of an arithmetical term
+   Arithmetical term generation and evaluation
    ------------------------------------------------------------------------- *)
+
+fun num_operl n = 
+  [``SUC``,``$+``,``$*``] @ map mk_sucn (List.tabulate (n+1,I))
+
+fun random_numtm (nsuc,nsize) = random_term (num_operl nsuc) (nsize,``:num``)
 
 fun eval_numtm tm = 
   (string_to_int o term_to_string o rhs o concl o bossLib.EVAL) tm
 
-(* -------------------------------------------------------------------------
-   Generation of random arithmetical term
-   ------------------------------------------------------------------------- *)
-
-fun num_operl n = 
-  [``SUC``,``$+``,``$*``] @ map mk_sucn (List.tabulate (n+1,I));
-
-fun random_numtm (nsuc,nsize) = random_term (num_operl nsuc) (nsize,``:num``);
+fun compressed_size tm = 
+  let val (oper,argl) = strip_comb tm in
+    if is_suc_only tm then 1
+    else 1 + sum_int (map compressed_size argl)
+  end
 
 (* -------------------------------------------------------------------------
-   Creation of set of examples
+   Set of arithmetical examples
    ------------------------------------------------------------------------- *)
 
-fun create_exset notset nex (nsuc,nsize) =
+fun create_exset_class notset nex (nsuc,nsize) =
   let
     val d = ref (dempty Term.compare)
     fun random_exl n =   
@@ -52,70 +54,30 @@ fun create_exset_table notset nex (nsuc,nsize) =
     val l = cartesian_product (List.tabulate (nsuc,f)) 
                               (List.tabulate (nsize,f))
   in
-    map_assoc (create_exset notset nex) l
+    map_assoc (create_exset_class notset nex) l
   end
 
-(* -------------------------------------------------------------------------
-   Creation of training set, validation set and training set
-   ------------------------------------------------------------------------- *)
-
-fun create_train_valid nex =
-  let 
-    val notset = ref (dempty Term.compare)
-    val l0 = create_exset_table notset nex (10,10)
-    val traintml = List.concat (map snd l0)
-    val l1 = create_exset_table notset nex (10,10)
-    val validtml = List.concat (map snd l1)
-  in
-    (traintml, validtml)
-  end
-
-fun create_test tml nex =
-  let val notset = ref (dset Term.compare tml) in
+fun create_exset tml nex (nsuc,nsize) =
+  let val notset = ref (dset Term.compare tml) in 
     List.concat (map snd (create_exset_table notset nex (10,10)))
   end
 
-fun create_big tml nex =
-  let val notset = ref (dset Term.compare tml) in
-    List.concat (map snd (create_exset_table notset nex (10,20)))
-  end
+(* -------------------------------------------------------------------------
+   Creation of training set, validation set and test set and export.
+   ------------------------------------------------------------------------- *)
 
-(*
-load "mleArithData"; open mleArithData;
-load "mlTacticData"; open mlTacticData;
-val data_in = HOLDIR ^ "/src/AI/experiments";
+fun create_train nex = create_exset [] nex (10,10)
+fun create_valid tml nex = create_exset [] nex (10,10) 
+fun create_test tml nex = create_exset [] nex (10,10)
+fun create_big tml nex = create_exset [] nex (10,20)
 
-val (traintml,validtml) = create_train_valid 200;
-export_terml (data_in ^ "/data200_train") traintml;
-export_terml (data_in ^ "/data200_valid") validtml;
-*)
+val dataarith_dir = HOLDIR ^ "/src/AI/experiments/data_arith"
 
-(*
-load "mleArithData"; open mleArithData;
-load "mlTacticData"; open mlTacticData;
-val traintml = import_terml (data_in ^ "/data200_train");
-val validtml = import_terml (data_in ^ "/data200_valid");
+(* -------------------------------------------------------------------------
+   Statistics
+   ------------------------------------------------------------------------- *)
 
-val testtml = create_test (traintml @ validtml) 200;
-export_terml (data_in ^ "/data200_test") testtml;
-val bigtml = create_big (traintml @ validtml @ testtml) 200;
-export_terml (data_in ^ "/data200_big") bigtml;
-*)
-
-
-(*
-load "mleArithData"; open mleArithData;
-load "mlTacticData"; open mlTacticData;
-load "aiLib"; open aiLib;
-
-fun compressed_size tm = 
-  let val (oper,argl) = strip_comb tm in
-    if is_suc_only tm then 1
-    else 1 + sum_int (map compressed_size argl)
-  end
-fun write_graph file (s1,s2) l =
-  writel file ((s1 ^ " " ^ s2) :: map (fn (a,b) => its a ^ " " ^ its b) l);
-fun comp_stats file =
+fun compressed_stats file =
   let
     val l0 = import_terml file
     val l1 = map_assoc compressed_size l0;
@@ -124,22 +86,5 @@ fun comp_stats file =
     map_snd length l2 
   end;
 
-val data_out = "/home/thibault/prague-server/papers/2019-05-NIPS/data";
-
-val stats1 = comp_stats (data_in ^ "/data200_train");
-write_graph (data_out ^ "/comp_train") ("csize","total") stats1;
-
-val stats2 = comp_stats (data_in ^ "/data200_valid");
-write_graph (data_out ^ "/comp_valid") ("csize","total") stats2;
-
-val stats3 = comp_stats (data_in ^ "/data200_test");
-write_graph (data_out ^ "/comp_test") ("csize","total") stats3;
-
-val stats4 = comp_stats (data_in ^ "/data200_big");
-write_graph (data_out ^ "/comp_big") ("csize","total") stats4;
-
-
-val tml2 = dict_sort compare_imin tml1;
-*)
 
 end (* struct *)

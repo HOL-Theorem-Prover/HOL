@@ -8,7 +8,8 @@
 structure mleRewrite :> mleRewrite =
 struct
 
-open HolKernel boolLib Abbrev aiLib psMCTS psTermGen smlParallel
+open HolKernel boolLib Abbrev aiLib smlParallel psMCTS psTermGen
+  mlTreeNeuralNetwork mlTacticData mlReinforce mleArithData
 
 val ERR = mk_HOL_ERR "mleRewrite"
 fun debug s = 
@@ -59,16 +60,7 @@ fun lo_trace nmax toptm =
     loop toptm
   end
 
-fun lo_prooflength tm = snd (valOf (lo_trace 100 tm))
-
-
-(*
-load "mleRewrite";
-open aiLib mleRewrite;
-val tm = ``(SUC 0 + 0) * (SUC 0)``;
-val trace = lo_trace 200 tm;
-val length = lo_prooflength tm;
-*)
+fun lo_prooflength n tm = snd (valOf (lo_trace n tm))
 
 (* -------------------------------------------------------------------------
    Board
@@ -90,7 +82,7 @@ fun status_of sit = case snd sit of
   | FailBoard => Lose
 
 (* -------------------------------------------------------------------------
-   Constants and variables
+   Neural network units and inputs
    ------------------------------------------------------------------------- *)
 
 val numtag = mk_var ("numtag", ``:num -> num``)
@@ -103,10 +95,6 @@ fun tag_pos (tm,pos) =
   in
     list_mk_comb (oper, mapi f argl)
   end
-
-(* -------------------------------------------------------------------------
-   Neural network units and inputs
-   ------------------------------------------------------------------------- *)
 
 val rewrite_operl =
   let val operl' = (numtag,1) :: operl_of (``0 * SUC 0 + 0 = 0``) in
@@ -180,22 +168,12 @@ fun apply_move move sit =
   handle Option => (true, FailBoard)
 
 (* -------------------------------------------------------------------------
-   Targets
+   Target
    ------------------------------------------------------------------------- *)
 
 fun lo_prooflength_target target = case target of
-    (true, Board (tm,[])) => lo_prooflength tm
+    (true, Board (tm,[])) => lo_prooflength 200 tm
   | _ => raise ERR "lo_prooflength_target" ""
-
-fun mk_targetl level ntarget = 
-  let 
-    val tml = mlTacticData.import_terml 
-      (HOLDIR ^ "/src/AI/experiments/data200_train_plsorted")
-    val tmll = map shuffle (first_n level (mk_batch 400 tml))
-    val tml2 = List.concat (list_combine tmll)
-  in  
-    map mk_startsit (first_n ntarget tml2)
-  end
 
 fun write_targetl targetl = 
   let val tml = map dest_startsit targetl in 
@@ -208,6 +186,31 @@ fun read_targetl () =
   end
 
 fun max_bigsteps target = 2 * lo_prooflength_target target + 1
+
+(* -------------------------------------------------------------------------
+   Level
+   ------------------------------------------------------------------------- *)
+
+fun create_train_evalsorted () =
+  let 
+    val filein = dataarith_dir ^ "/train"
+    val fileout = dataarith_dir ^ "/train_plsorted"
+    val l1 = import_terml filein ;
+    val l2 = mapfilter (fn x => (x, lo_prooflength 200 x)) l1
+    val l3 = filter (fn x => snd x <= 100) l2
+    val l4 = dict_sort compare_imin l3
+  in
+    export_terml fileout (map fst l4)
+  end
+
+fun mk_targetl level ntarget = 
+  let 
+    val tml = mlTacticData.import_terml (dataarith_dir ^ "/train_plsorted")
+    val tmll = map shuffle (first_n level (mk_batch 400 tml))
+    val tml2 = List.concat (list_combine tmll)
+  in  
+    map mk_startsit (first_n ntarget tml2)
+  end
 
 (* -------------------------------------------------------------------------
    Interface
@@ -230,104 +233,75 @@ val gamespec : (board,move) mlReinforce.gamespec =
   max_bigsteps = max_bigsteps
   }
 
+(* -------------------------------------------------------------------------
+   Statistics
+   ------------------------------------------------------------------------- *)
 
-(* 
-load "mlReinforce"; open mlReinforce;
-load "mleRewrite"; open mleRewrite;
-load "mlTacticData"; open mlTacticData;
+fun maxprooflength_atgen () = 
+  let val tml = import_terml (dataarith_dir ^ "/train_plsorted") in
+    map (list_imax o map (lo_prooflength 200)) (mk_batch 400 tml)
+  end
 
-
-*)
-
-
-(*
-load "mleArithData"; open mleArithData;
-load "mlTacticData"; open mlTacticData;
-load "mleRewrite"; open mleRewrite;
-load "aiLib"; open aiLib;
-
-fun write_graph file (s1,s2) l =
-  writel file ((s1 ^ " " ^ s2) :: map (fn (a,b) => its a ^ " " ^ its b) l);
-fun rw_stats file =
+fun stats_prooflength file =
   let
     val l0 = import_terml file
-    val l1 = mapfilter (fn x => (x,lo_prooflength x)) l0;
-    val _  = print_endline (its (length l1));
-    val l2 = dlist (dregroup Int.compare (map swap l1));
+    val l1 = mapfilter (fn x => (x,(lo_prooflength 200) x)) l0
+    val _  = print_endline (its (length l1))
+    val l2 = dlist (dregroup Int.compare (map swap l1))
   in
     map_snd length l2 
-  end;
+  end
 
-val data_in = HOLDIR ^ "/src/AI/experiments";
-val data_out = "/home/thibault/prague-server/papers/2019-05-NIPS/data";
+(* -------------------------------------------------------------------------
+   Basic exploration
+   ------------------------------------------------------------------------- *)
 
-val stats1 = rw_stats (data_in ^ "/data200_train");
-write_graph (data_out ^ "/rw_train") ("csize","total") stats1;
-val stats2 = rw_stats (data_in ^ "/data200_valid");
-write_graph (data_out ^ "/rw_valid") ("csize","total") stats2;
-val stats3 = rw_stats (data_in ^ "/data200_test");
-write_graph (data_out ^ "/rw_test") ("csize","total") stats3;
-val stats4 = rw_stats (data_in ^ "/data200_big");
-write_graph (data_out ^ "/rw_big") ("csize","total") stats4;
+fun explore_gamespec tm =
+  let val dhtnn = random_dhtnn_gamespec gamespec in
+    explore_test gamespec dhtnn (mk_startsit tm)
+  end
 
-5636,4500,4169,7450
-*)
+(* -------------------------------------------------------------------------
+   Reinforcement learning loop with fixed parameters
+   ------------------------------------------------------------------------- *)
 
-(* test
-load "mlReinforce"; open mlReinforce;
-load "mleRewrite"; open mleRewrite;
-val file = HOLDIR ^ "/src/AI/machine_learning/eval/may21_rewrite_gen1_dhtnn";
-val dhtnn = mlTreeNeuralNetwork.read_dhtnn file;
-nsim_glob := 16000;
-explore_test gamespec dhtnn (mk_startsit ``SUC 0 * SUC 0``);
-*)
+fun reinforce_fixed runname ngen =
+  (
+  logfile_glob := runname;
+  parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^ 
+  (!logfile_glob);
+  ncore_mcts_glob := 8;
+  ncore_train_glob := 4;
+  ntarget_compete := 400;
+  ntarget_explore := 400;
+  exwindow_glob := 40000;
+  uniqex_flag := false;
+  dim_glob := 12;
+  lr_glob := 0.02;
+  batchsize_glob := 16;
+  decay_glob := 0.99;
+  level_glob := 1;
+  nsim_glob := 1600;
+  nepoch_glob := 100;
+  ngen_glob := ngen;
+  start_rl_loop gamespec
+  )
 
-(* starting examples
-load "mlReinforce"; open mlReinforce;
-load "mleRewrite"; open mleRewrite;
-load "mlTacticData"; open mlTacticData;
-open aiLib;
+(* -------------------------------------------------------------------------
+   Final evaluation
+   ------------------------------------------------------------------------- *)
 
-val traintml = import_terml (HOLDIR ^ "/src/AI/experiments/data200_train");
-val trainpl1 = mapfilter (fn x => (x, lo_prooflength x)) traintml;
-val trainpl1' = filter (fn x => snd x <= 100) trainpl1;
-val trainpl2 = dict_sort compare_imin trainpl1';
-export_terml (HOLDIR ^ "/src/AI/experiments/data200_train_plsorted") 
-  (map fst trainpl2);
-
-
-val tml = mlTacticData.import_terml 
-  (HOLDIR ^ "/src/AI/experiments/data200_train_plsorted");
-val tmll = map (list_imax o map lo_prooflength) (mk_batch 400 tml);
-*)
-
-
-(* reinforcement learning loop
-load "mlReinforce"; open mlReinforce;
-load "mleRewrite"; open mleRewrite;
-open smlParallel;
-
-logfile_glob := "rewrite_run2";
-parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^ (!logfile_glob);
-ncore_mcts_glob := 8;
-ncore_train_glob := 4;
-
-ntarget_compete := 400;
-ntarget_explore := 400;
-exwindow_glob := 40000;
-uniqex_flag := false;
-dim_glob := 12;
-lr_glob := 0.02;
-batchsize_glob := 16;
-decay_glob := 0.99;
-level_glob := 1;
-
-ngen_glob := 100;
-nepoch_glob := 100;
-nsim_glob := 1600;
-
-val (final_epex,final_dhtnn) = start_rl_loop gamespec;
-*)
+fun final_eval dhtnn_name (a,b) testbase =
+  let 
+    val eval_dir = HOLDIR ^ "/src/AI/machine_learning/eval"
+    val file = eval_dir ^ "/" ^ dhtnn_name
+    val dhtnn = mlTreeNeuralNetwork.read_dhtnn file
+    val l1 = import_terml (dataarith_dir ^ "/" ^ testbase)
+    val l2 = mapfilter (fn tm => (tm,snd (valOf (lo_trace 200 tm)))) l1
+    val l3 = filter (fn x => snd x >= a andalso snd x <= b) l2
+  in
+    compete_one gamespec dhtnn (map mk_startsit (map fst l3))
+  end
 
 
 end (* struct *)
