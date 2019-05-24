@@ -1,40 +1,27 @@
 \DOC find_consts_thy
 
-\TYPE {find_consts_thy : search function}
+\TYPE {find_consts_thy : string list -> hol_type -> term list}
 
 \SYNOPSIS
-Searches in the theories in list {thl} for a constant of a given type {ty}.
+Searches in the theories in list {thl} for a constant matching given type {ty}.
 
 \DESCRIBE
-Given a type {ty} and a list of theorie names {thl} searches the theories with
-names from {thl} for constants of type {ty}.
+A call to {find_consts_thy thl ty} searches the theories with names from {thl} for constants whose types match type {ty}, and returns that list.
 
 \FAILURE
-Fails if {ty} is not a valid HOL type.
+Never fails.
 
 \EXAMPLE
 If we run
 {
-  find_consts_thy ["bool"] ``:'a -> 'a set -> bool``;
+   > find_consts_thy ["bool"] ``:'a -> 'a set -> bool``;
+   val it = [“$IN”]: term list
 }
-
-we get
-
+and
 {
-   > val it = [“$IN”]: term list
-}
-
-and for
-
-{
-
-   find_consts_thy ["arithmetic"] ``:num -> num -> num``;
-}
-
-we get
-
-{
-   > val it = [“$*”, “$+”, “$-”, “ABS_DIFF”, “$DIV”, “$**”, “MAX”, “MIN”, “$MOD”]:
+   > find_consts_thy ["arithmetic"] ``:num -> num -> num``;
+   val it = [“$*”, “$+”, “$-”, “ABS_DIFF”, “$DIV”, “$**”, “MAX”, “MIN”,
+             “$MOD”]: term list
 }
 
 \SEEALSO
