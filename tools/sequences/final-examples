@@ -28,5 +28,6 @@
 !!examples/Crypto/TEA
 !!examples/Crypto/TWOFISH
 
+!!!examples/l3-machine-code/cheri/step
 [poly]!!!examples/theorem-prover
 [poly]!!!examples/machine-code
