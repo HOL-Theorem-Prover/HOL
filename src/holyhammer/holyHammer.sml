@@ -256,7 +256,8 @@ fun eprover_pb_eval_parallel ncore timeout thyl =
     fun write_state () = ()
     fun write_argl _ = ()
     fun read_result (wid,job) = ()
-    val thyls = map (fn x => quote (x ^ "Theory")) thyl
+    val thyls = 
+      map (fn x => quote (x ^ "Theory")) (filter (fn x => x <> "min") thyl)
     val state_s = 
       "(holyHammer.set_timeout " ^ its timeout ^ ";" ^
       " app load [" ^ String.concatWith "," thyls ^ "])"
@@ -271,9 +272,10 @@ fun eprover_pb_eval_parallel ncore timeout thyl =
 (* -------------------------------------------------------------------------
    Usage:
      load "holyHammer"; open holyHammer;
-     val ncore = 2;
+     val ncore = 40;
      val timeout = 5;
-     val thyl = ["sum_num","ConseqConv"];
+     load "tttUnfold"; tttUnfold.load_sigobj ();
+     val thyl = ancestry (current_theory ());
      eprover_pb_eval_parallel ncore timeout thyl;
    Results can be found in HOLDIR/src/holyhammer/eval.
   ------------------------------------------------------------------------- *)
