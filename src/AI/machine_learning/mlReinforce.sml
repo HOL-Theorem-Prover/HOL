@@ -305,7 +305,6 @@ fun explore_parallel gamespec ncore flags dhtnn targetl =
     val argl_s = mk_argl_s (#opens gamespec)
     val f_s = "mlReinforce.explore_extern"
     fun code_of wid = standard_code_of (state_s,argl_s,f_s) wid
-    val _ = app print_endline (code_of 0)
   in
     parmap_queue_extern ncore code_of (write_state, write_argl) 
     read_result_extern targetl

@@ -248,6 +248,36 @@ fun hh_pb_eval_thy atpl thy =
    Results can be found in HOLDIR/src/holyhammer/eval.
   ------------------------------------------------------------------------- *)
 
+fun eprover_pb_eval_extern (state: unit) (wid,job) thy =
+  hh_pb_eval_thy [Eprover] thy
+
+fun eprover_pb_eval_parallel ncore timeout thyl =
+  let
+    fun write_state () = ()
+    fun write_argl _ = ()
+    fun read_result (wid,job) = ()
+    val thyls = map (fn x => quote (x ^ "Theory")) thyl
+    val state_s = 
+      "(holyHammer.set_timeout " ^ its timeout ^ ";" ^
+      " app load [" ^ String.concatWith "," thyls ^ "])"
+    val argl_s = "[" ^ String.concatWith "," (map quote thyl) ^ "]"
+    val f_s = "holyHammer.eprover_pb_eval_extern"
+    fun code_of wid = standard_code_of (state_s,argl_s,f_s) wid
+  in
+    parmap_queue_extern ncore code_of (write_state, write_argl) 
+    read_result thyl
+  end
+
+(* -------------------------------------------------------------------------
+   Usage:
+     load "holyHammer"; open holyHammer;
+     val ncore = 2;
+     val timeout = 5;
+     val thyl = ["sum_num","ConseqConv"];
+     eprover_pb_eval_parallel ncore timeout thyl;
+   Results can be found in HOLDIR/src/holyhammer/eval.
+  ------------------------------------------------------------------------- *)
+
 (* -------------------------------------------------------------------------
    Function called by the tactictoe evaluation framework
    ------------------------------------------------------------------------- *)
