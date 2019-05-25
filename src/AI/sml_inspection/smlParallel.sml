@@ -240,6 +240,7 @@ fun widout_file wid = wid_dir wid ^ "/out"
 fun widscript_file wid = wid_dir wid ^ "/script" ^ its wid ^ ".sml"
 
 fun result_file (wid,job) = wid_dir wid ^ "/result" ^ its job
+fun argl_file () = !parallel_dir ^ "/argl"
 
 (* -------------------------------------------------------------------------
    Each worker has a copy of the list.
@@ -350,9 +351,9 @@ and boss_collect threadl rr (pendingl,runningl,completedl) =
    Starting threads and external calls
    ------------------------------------------------------------------------- *)
 
-fun boss_start_worker codel_of wid =
+fun boss_start_worker code_of wid =
   (
-  writel (widscript_file wid) (codel_of wid);
+  writel (widscript_file wid) (code_of wid);
   smlOpen.run_buildheap false (widscript_file wid);
   remove_file (widscript_file wid)
   )
@@ -377,56 +378,53 @@ fun clean_parallel_dirs widl=
     mkDir_err (!parallel_dir); app f widl
   end
 
-fun parmap_queue_extern ncore codel_of (init,rr) l =
+fun parmap_queue_extern ncore code_of (write_state,write_argl) rr argl =
   let
     val widl = List.tabulate (ncore,I) (* workers *)
     val _ = clean_parallel_dirs widl
-    val _ = init () (* info for workers to build f and l *)
+    val _ = (write_state (); write_argl argl)
     val _ = print_endline ("start " ^ its ncore ^ " workers")
     fun fork wid = Thread.fork (fn () =>
-      boss_start_worker codel_of wid, attrib)
+      boss_start_worker code_of wid, attrib)
     val threadl = map fork widl
-    val pendingl = List.tabulate (length l,I) (* jobs *)
+    val pendingl = List.tabulate (length argl,I) (* jobs *)
   in
     boss_wait_upl widl;
     print_endline ("  " ^ its ncore ^ " workers started");
     boss_send threadl rr (pendingl,[],[])
   end
 
-(*
-load "smlParallel"; open aiLib smlParallel;
-
-fun init () = ();
-
-fun rr (wid,job) = string_to_int (hd (readl_rm (result_file (wid,job))));
-
-fun codel_of wid =
+fun standard_code_of (s_state,s_argl,s_f) wid =
   [
-   "open smlParallel;",
-   "fun g x = x + 1;",
-   "fun f (wid,job) x =",
-   "  (writel_atomic (result_file (wid,job)) [aiLib.its (g x)];",
-   "   writel_atomic (widout_file wid) [\"done\"]);",
-   "val l = List.tabulate (100,fn x => x);",
-   "worker_start " ^ (its wid) ^ " (f,l);"
+  "open smlParallel;",
+  "val _ = parallel_dir := " ^ quote (!parallel_dir) ^ ";",
+  "val state = " ^ s_state ^ ";",
+  "val argl = " ^ s_argl ^ ";",
+  "fun f (wid,job) arg =",
+  "  (" ^ s_f ^ " state (wid,job) arg;",
+  "   writel_atomic (widout_file wid) [\"done\"]);",
+  "worker_start " ^ (its wid) ^ " (f,argl);"
   ]
-;
 
-val l = List.tabulate (100,I);
+(* -------------------------------------------------------------------------
+   Example
+   ------------------------------------------------------------------------- *)
 
-val ncore = 2;
-val (l1,t) = add_time (parmap_queue_extern ncore codel_of (init,rr)) l;
-
-(* todo: re-use this code in rlEnv *)
-
-*)
-
-
-
-
-
-
-
+fun id_parallel ncore argl =
+  let
+    fun write_state () = ()
+    fun write_argl l = writel (argl_file ()) (map its argl)
+    fun read_result (wid,job) = 
+      string_to_int (hd (readl_rm (result_file (wid,job))))
+    val s_state = "()";
+    val s_argl = "List.map Lib.string_to_int (aiLib.readl (argl_file ()))";
+    val s_f = ("let fun f _ widjob arg = " ^ 
+      "aiLib.writel (result_file widjob) [aiLib.its arg] in f end");
+    fun code_of wid = standard_code_of (s_state,s_argl,s_f) wid;
+  in
+    parmap_queue_extern ncore code_of (write_state,write_argl) 
+      read_result argl
+  end
 
 
 end

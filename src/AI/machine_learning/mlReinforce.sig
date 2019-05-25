@@ -56,8 +56,9 @@ sig
   (* exploration (search) *)
   val explore_test : ('a,'b) gamespec -> mlTreeNeuralNetwork.dhtnn ->
     'a psMCTS.sit -> unit
-  val explore_extern : ('a,'b) gamespec -> int * int ->
-     bool * bool -> mlTreeNeuralNetwork.dhtnn -> 'a psMCTS.sit -> unit
+  val explore_extern : 
+    ('a,'b) gamespec * mlTreeNeuralNetwork.dhtnn * (bool * bool) -> 
+    (int * int) -> 'a psMCTS.sit -> unit
 
   (* reinforcement learning loop *)
   val logfile_glob : string ref

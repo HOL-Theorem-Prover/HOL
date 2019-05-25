@@ -3,35 +3,35 @@ sig
 
   include Abbrev
 
+  (* parameters *)
   type ml_param =
-    {dim: int, nepoch: int, batchsize: int, learningrate: real, nlayers: int}
+    {dim: int, nepoch: int, batchsize: int, learningrate: real, nlayer: int}
 
   val grid_param : int list * int list * int list * int list * int list ->
     ml_param list
 
-  (* tnn *)
-  val train_tnn_param : (int * int) -> int ->
-    (term * int) list ->
-    (term * real list) list * (term * real list) list ->
-    ml_param -> unit
-  val tune_codel_of :
-    int list * int list * int list * int list * int list ->
-    int -> int -> string list
-  val tune_collect_result : int * int -> ml_param * (real * real * real)
+  (* I/O *)
+  val read_paraml : unit -> ml_param list
+  val read_state : unit ->
+    (term * real list) list * (term * real list) list *
+    (term * int) list
+  val train_tnn_extern : 
+    (int * int) *
+      ((term * real list) list * (term * real list) list *
+      (term * int) list) ->
+    int * int -> ml_param -> unit
+
+
+  (* training function *)
+  val train_tnn_parallel :  
+    int ->
+     (int * int) *
+     ((term * real list) list * (term * real list) list *
+     (term * int) list) ->
+    ml_param list -> (real * real * real) list 
+  
+  (* statistics *)
   val write_param_results :
     string -> (ml_param * (real * real * real )) list -> unit
-
-  (* dhtnn *)
-  val train_dhtnn_param : int * int ->
-    int -> ('a, 'b) mlReinforce.gamespec ->
-    (term * real list * real list) list ->
-    ml_param -> unit
-  val dhtune_codel_of :
-    ('a,'b) mlReinforce.gamespec ->
-    int list * int list * int list * int list * int list ->
-    int -> int -> string list
-  val dhtune_collect_result :
-    int * int -> (ml_param * mlTreeNeuralNetwork.dhtnn)
-
 
 end

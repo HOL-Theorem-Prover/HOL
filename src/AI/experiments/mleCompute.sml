@@ -22,16 +22,10 @@ val compute_dir = HOLDIR ^ "/src/AI/experiments/data_compute"
 fun compute_exout tml = map_assoc (bin_rep 4 o eval_numtm) tml
 
 (* -------------------------------------------------------------------------
-   Associated tree neural network
+   Associated tnn
    ------------------------------------------------------------------------- *)
 
-fun compute_random_tnn dim =
-  let
-    val operl = mk_fast_set oper_compare (operl_of ``0 + SUC 0 * 0``)
-    val nbit = 4
-  in
-    random_tnn (dim,nbit) operl
-  end
+val operl = mk_fast_set oper_compare (operl_of ``0 + SUC 0 * 0``)
 
 (* -------------------------------------------------------------------------
    Training with a fixed set of parameters
@@ -40,7 +34,7 @@ fun compute_random_tnn dim =
 fun train_fixed basename trainex =
   let
     val dim = 12
-    val randtnn = compute_random_tnn dim
+    val randtnn = random_tnn (dim,4) operl
     val bsize = 16
     val schedule = [(400, 0.02 / (Real.fromInt bsize))]
     val ncore = 4
@@ -71,34 +65,18 @@ fun accuracy_fixed tnn =
    Does not print the tree neural network yet.
    ------------------------------------------------------------------------ *)
 
-fun parameter_tuning basename ncore ncore_loc =
+fun parameter_tuning basename ncore =
   let
-    val _ = mkDir_err compute_dir
+    val _ = 
+      parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^ basename 
     val traintml = import_terml (dataarith_dir ^ "/train");
     val trainex = compute_exout traintml;
-    val fake_testex = first_n 100 trainex
-    val trainfile = (!parallel_dir) ^ "/train";
-    val testfile = (!parallel_dir) ^ "/test";
-    val operlfile = (!parallel_dir) ^ "/operl";
-    val operl = mk_fast_set oper_compare (operl_of ``0 + SUC 0 * 0``);
-    fun init () =
-      (
-      write_tnnex trainfile trainex;
-      write_tnnex testfile fake_testex;
-      write_operl operlfile operl
-      )
-    val dl = [12,16]
-    val nl = [400]
-    val bl = [16,64]
-    val ll = [10,20,50]
-    val yl = [2,4]
-    fun codel_of wid = tune_codel_of (dl,nl,bl,ll,yl) ncore_loc wid
-    val paraml = grid_param (dl,nl,bl,ll,yl)
-    val final =
-      parmap_queue_extern ncore codel_of (init,tune_collect_result) paraml
+    val testex = first_n 100 trainex;
+    val paraml = grid_param ([12],[100],[16],[20,50,100,200],[2])
+    val final = train_tnn_parallel ncore ((1,4),(trainex,testex,operl)) paraml 
   in
-    write_param_results (compute_dir ^ "/" ^ basename) final
+    mkDir_err compute_dir;
+    write_param_results (compute_dir ^ "/" ^ basename) (combine (paraml,final))
   end
-
 
 end (* struct *)

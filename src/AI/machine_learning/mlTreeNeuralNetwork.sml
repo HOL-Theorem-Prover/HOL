@@ -30,7 +30,7 @@ type dhtnn =
    Random tree neural network
    ------------------------------------------------------------------------- *)
 
-val nlayers_glob = ref 2
+val nlayer_glob = ref 2
 
 fun id (x:real) = x:real
 fun did (x:real) = 1.0
@@ -39,7 +39,7 @@ fun const_nn dim arity =
   if arity = 0
   then random_nn (id,did) (id,did) [1,dim]
   else random_nn (tanh,dtanh) (tanh,dtanh)
-    (List.tabulate (!nlayers_glob, fn _ => arity * dim + 1) @ [dim])
+    (List.tabulate (!nlayer_glob, fn _ => arity * dim + 1) @ [dim])
 
 val oper_compare = cpl_compare Term.compare Int.compare
 
@@ -50,7 +50,7 @@ fun random_opdict dimin cal =
 
 fun random_headnn (dimin,dimout) =
   random_nn (tanh,dtanh) (tanh,dtanh)
-    (List.tabulate (!nlayers_glob, fn _ => dimin + 1) @ [dimout])
+    (List.tabulate (!nlayer_glob, fn _ => dimin + 1) @ [dimout])
 
 
 fun random_tnn (dimin,dimout) operl =

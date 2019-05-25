@@ -214,7 +214,7 @@ fun bstatus_to_string b = if b then "win" else "lose"
 fun string_to_bstatus s = assoc s [("win",true),("lose",false)]
   handle HOL_ERR _ => raise ERR "string_to_bstatus" ""
 
-fun explore_extern gamespec (wid,job) flags dhtnn target =
+fun explore_extern (gamespec,dhtnn,flags) (wid,job) target =
   let
     val (noise,bstart) = flags
     val mctsparam =
@@ -226,8 +226,7 @@ fun explore_extern gamespec (wid,job) flags dhtnn target =
     val bstatus = #status_of gamespec (#sit endroot) = Win
   in
     write_dhex (widexl_file (wid,job)) exl;
-    writel_atomic (widwin_file (wid,job)) [bstatus_to_string bstatus];
-    writel_atomic (widout_file wid) ["done"]
+    writel_atomic (widwin_file (wid,job)) [bstatus_to_string bstatus]
   end
 
 (* -------------------------------------------------------------------------
@@ -264,27 +263,26 @@ fun train_f gamespec allex =
   end
 
 (* -------------------------------------------------------------------------
-   External parallelization of competition/exploration calls
+   External parallelization: helper functions
    ------------------------------------------------------------------------- *)
 
-(* todo : print out targets *)
 fun flags_to_string (b1,b2) = "(" ^ bts b1 ^ "," ^  bts b2 ^ ")"
 
-fun codel_of_flags opens flags wid =
-    [
-     "open mlTreeNeuralNetwork smlParallel mlReinforce;",
-     "open " ^ opens ^ ";",
-     "val _ = parallel_dir := " ^ quote (!parallel_dir) ^ ";",
-     "val _ = nsim_glob := " ^ its (!nsim_glob) ^ ";",
-     "val _ = decay_glob := " ^ rts (!decay_glob) ^ ";",
-     "val _ = dim_glob := " ^ its (!dim_glob) ^ ";",
-     "val dhtnn = read_dhtnn (dhtnn_file ())",
-     "val l = #read_targetl gamespec ();",
-     "val flags = " ^ flags_to_string flags ^ ";",
-     "fun f widjob target =",
-     "  explore_extern gamespec widjob flags dhtnn target",
-     "val _ = worker_start " ^ (its wid) ^ " (f,l);"
-    ]
+fun mk_state_s opens flags =
+  String.concatWith "\n" 
+  [
+  "let",
+  "  val _ = mlReinforce.nsim_glob := " ^ its (!nsim_glob),
+  "  val _ = mlReinforce.decay_glob := " ^ rts (!decay_glob),
+  "  val _ = mlReinforce.dim_glob := " ^ its (!dim_glob),
+  "  val dhtnn = mlTreeNeuralNetwork.read_dhtnn (mlReinforce.dhtnn_file ())",
+  "  val flags = " ^ flags_to_string flags,
+  "in",
+  "  (" ^ opens ^ ".gamespec, dhtnn,flags)",
+  "end"
+  ]
+
+fun mk_argl_s opens = "#read_targetl " ^ opens ^ ".gamespec ()"
 
 fun read_result_extern (wid,job) =
   let
@@ -295,22 +293,22 @@ fun read_result_extern (wid,job) =
     (win,dhex)
   end
 
-fun init_extern write_targetl targetl dhtnn =
-  (
-  write_dhtnn (dhtnn_file ()) dhtnn;
-  write_targetl targetl
-  )
-
-val attrib = [Thread.InterruptState Thread.InterruptAsynch, Thread.EnableBroadcastInterrupt true]
+(* -------------------------------------------------------------------------
+   External parallelization: main call
+   ------------------------------------------------------------------------- *)
 
 fun explore_parallel gamespec ncore flags dhtnn targetl =
   let
-    val write_targetl = #write_targetl gamespec
-    fun boss_write () = init_extern write_targetl targetl dhtnn
-    fun codel_of wid = codel_of_flags (#opens gamespec) flags wid
-    val boss_read = read_result_extern
+    fun write_state () =  write_dhtnn (dhtnn_file ()) dhtnn
+    val write_argl = #write_targetl gamespec
+    val state_s = mk_state_s (#opens gamespec) flags 
+    val argl_s = mk_argl_s (#opens gamespec)
+    val f_s = "mlReinforce.explore_extern"
+    fun code_of wid = standard_code_of (state_s,argl_s,f_s) wid
+    val _ = app print_endline (code_of 0)
   in
-    parmap_queue_extern ncore codel_of (boss_write,boss_read) targetl
+    parmap_queue_extern ncore code_of (write_state, write_argl) 
+    read_result_extern targetl
   end
 
 (* -------------------------------------------------------------------------
