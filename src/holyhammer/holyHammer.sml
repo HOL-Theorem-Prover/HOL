@@ -191,9 +191,9 @@ fun main_hh thmdata goal =
     hh_pb atpl premises goal
   end
 
-fun has_boolty x = type_of x = bool 
-fun has_boolty_goal goal = all has_boolty (snd goal :: fst goal) 
-  
+fun has_boolty x = type_of x = bool
+fun has_boolty_goal goal = all has_boolty (snd goal :: fst goal)
+
 
 fun hh_goal goal =
   if not (has_boolty_goal goal)

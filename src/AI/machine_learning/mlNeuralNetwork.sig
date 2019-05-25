@@ -55,7 +55,7 @@ sig
     int -> nn -> int -> (real vector * real vector) list -> nn
 
   (* printing *)
-  val string_of_wl : real vector vector list -> string 
+  val string_of_wl : real vector vector list -> string
   val string_of_nn : nn -> string
   val read_wl_sl : string list -> real vector vector list
   val read_nn_sl : string list -> nn

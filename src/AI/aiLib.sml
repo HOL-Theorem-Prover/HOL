@@ -184,10 +184,10 @@ fun quintuple_of_list l = case l of
     [a,b,c,d,e] => (a,b,c,d,e)
   | _ => raise ERR "quintuple_of_list" ""
 
-fun cartesian_productl ll = case ll of 
+fun cartesian_productl ll = case ll of
      [] => [[]]
-   | l :: m => 
-     let 
+   | l :: m =>
+     let
        val l0 = cartesian_productl m
        val l1 = cartesian_product l l0
        fun f (a,b) = a :: b
@@ -304,21 +304,21 @@ fun mk_batch_aux size acc res l =
    | a :: m => mk_batch_aux size (a :: acc) res m
 
 (* delete last elements *)
-fun mk_batch size l = 
+fun mk_batch size l =
   let val (res,acc) = mk_batch_aux size [] [] l in
     rev res
   end
 
-fun mk_batch_full size l = 
+fun mk_batch_full size l =
   let val (res,acc) = mk_batch_aux size [] [] l in
     rev (if null acc then res else rev acc :: res)
-  end 
+  end
 
-fun cut_n n l = 
-  let 
-    val n1 = length l 
-    val bsize = if n1 mod n = 0 then n1 div n else (n1 div n) + 1 
-  in 
+fun cut_n n l =
+  let
+    val n1 = length l
+    val bsize = if n1 mod n = 0 then n1 div n else (n1 div n) + 1
+  in
     mk_batch_full bsize l
   end
 
@@ -347,9 +347,9 @@ fun list_combine ll = case ll of
                 map (fn (a,b) => a :: b) (combine (l,m'))
               end
 
-fun split_triple l = case l of 
+fun split_triple l = case l of
     [] => ([], [], [])
-  | (a1,a2,a3) :: m => 
+  | (a1,a2,a3) :: m =>
     let val (acc1, acc2, acc3) = split_triple m in
       (a1 :: acc1, a2 :: acc2, a3 :: acc3)
     end
@@ -430,14 +430,14 @@ fun standard_deviation l =
 fun int_div n1 n2 =
    (if n2 = 0 then 0.0 else Real.fromInt n1 / Real.fromInt n2)
 
-fun int_pow a b = 
-  if b < 0 then raise ERR "int_pow" "" else 
-  if b = 0 then 1 else a * int_pow a (b - 1) 
+fun int_pow a b =
+  if b < 0 then raise ERR "int_pow" "" else
+  if b = 0 then 1 else a * int_pow a (b - 1)
 
-fun bin_rep nbit n = 
-  let 
-    fun bin_rep_aux nbit n = 
-      if nbit > 0 
+fun bin_rep nbit n =
+  let
+    fun bin_rep_aux nbit n =
+      if nbit > 0
       then n mod 2 :: bin_rep_aux (nbit - 1) (n div 2)
       else []
   in
@@ -487,7 +487,7 @@ fun rename_allvar tm =
   let
     val tm0 = list_mk_forall (free_vars_lr tm, tm)
     val tm1 = rename_bvarl (fn x => "") tm0;
-    val tm2 = snd (strip_forall tm1)  
+    val tm2 = snd (strip_forall tm1)
   in
     tm2
   end
@@ -528,7 +528,7 @@ fun string_of_goal (asm,w) =
   end
 
 fun trace_tacl tacl g = case tacl of
-    tac :: m => 
+    tac :: m =>
     (print_endline (string_of_goal g); trace_tacl m (hd (fst (tac g))))
   | [] => print_endline (string_of_goal g)
 
@@ -816,7 +816,7 @@ fun random_elem l = hd (shuffle l)
 
 fun random_int (a,b) =
   if a >= b then raise ERR "random_int" "" else
-  let 
+  let
     val (ar,br) = (Real.fromInt a, Real.fromInt b)
     val c = Real.floor (ar + random_real () * (br - ar + 1.0))
   in
@@ -905,12 +905,12 @@ fun find_subtm (tm,pos) =
 fun narg_ge n (tm,pos) =
   let val (_,argl) = strip_comb (find_subtm (tm,pos)) in length argl >= n end
 
-fun all_pos tm = 
-  let 
-    val (oper,argl) = strip_comb tm 
+fun all_pos tm =
+  let
+    val (oper,argl) = strip_comb tm
     fun f i arg = map (fn x => i :: x) (all_pos arg)
   in
-    [] :: List.concat (mapi f argl) 
+    [] :: List.concat (mapi f argl)
   end
 
 (* -------------------------------------------------------------------------
@@ -933,7 +933,7 @@ fun dest_add tm =
     if not (term_eq oper ``$+``) then raise ERR "" "" else pair_of_list argl
   end
 
-fun is_suc_only tm = 
+fun is_suc_only tm =
   if term_eq tm zero then true else
   (is_suc_only (dest_suc tm)  handle HOL_ERR _ => false)
 

@@ -1,6 +1,6 @@
 (* ========================================================================= *)
 (* FILE          : psTermGen.sml                                             *)
-(* DESCRIPTION   : Synthesis of terms for conjecturing lemmas                *)
+(* DESCRIPTION   : Term generation algorithms                                *)
 (* AUTHOR        : (c) Thibault Gauthier, Czech Technical University         *)
 (* DATE          : 2018                                                      *)
 (* ========================================================================= *)
@@ -12,9 +12,9 @@ open HolKernel Abbrev boolLib aiLib
 
 val ERR = mk_HOL_ERR "psTermGen"
 
-fun product_int nl = case nl of
+fun int_product nl = case nl of
     [] => 1
-  | a :: m => a * product_int m
+  | a :: m => a * int_product m
 
 fun im_ty oper = snd (strip_type (type_of oper))
 
@@ -22,26 +22,21 @@ fun im_ty oper = snd (strip_type (type_of oper))
    Number of terms of each type and size.
    ------------------------------------------------------------------------- *)
 
-(* consumes little memory but should be made local at some point *)
-val nterm_cache = ref (dempty (cpl_compare Int.compare Type.compare));
-
-(* easily overflow *)
-fun nterm operl (size,ty) =
+fun ntermc cache operl (size,ty) =
   if size <= 0 then 0 else
-  dfind (size,ty) (!nterm_cache) handle NotFound => 
-  let val n = sum_int (map (nterm_oper operl (size,ty)) operl) in
-    nterm_cache := dadd (size,ty) n (!nterm_cache); n
+  dfind (size,ty) (!cache) handle NotFound =>
+  let val n = sum_int (map (ntermc_oper cache operl (size,ty)) operl) in
+    cache := dadd (size,ty) n (!cache); n
   end
-
-and nterm_oper operl (size,ty) oper =
+and ntermc_oper cache operl (size,ty) oper =
   let val (tyargl,im) = strip_type (type_of oper) in
-    if ty <> im orelse size <= 0 then 0 else 
-    if null tyargl andalso size <> 1 then 0 else
+    if ty <> im orelse size <= 0 then 0 else
+    if null tyargl andalso size <> 1 then 0 else (* first-order *)
     if null tyargl andalso size = 1 then 1 else
-    let 
+    let
       val nll = number_partition (length tyargl) (size - 1)
                 handle HOL_ERR _ => []
-      fun f nl = product_int (map (nterm operl) (combine (nl,tyargl)))
+      fun f nl = int_product (map (ntermc cache operl) (combine (nl,tyargl)))
     in
       sum_int (map f nll)
     end
@@ -52,66 +47,60 @@ and nterm_oper operl (size,ty) oper =
    all possible terms of certain size and type.
    ------------------------------------------------------------------------- *)
 
-fun random_term operl (size,ty) =
-  if nterm operl (size,ty) <= 0 then raise ERR "random_term" "" else
-  let 
-    val freql1 = map_assoc (nterm_oper operl (size,ty)) operl 
+fun random_termc cache operl (size,ty) =
+  if ntermc cache operl (size,ty) <= 0 then raise ERR "random_term" "" else
+  let
+    val freql1 = map_assoc (ntermc_oper cache operl (size,ty)) operl
     val freql2 = filter (fn x => snd x > 0) freql1
     val freql3 = map_snd Real.fromInt freql2
   in
-    if null freql3 then raise ERR "random_term" "" else
-    random_term_oper operl (size,ty) (select_in_distrib freql3)
+    random_termc_oper cache operl (size,ty) (select_in_distrib freql3)
   end
-
-and random_term_oper operl (size,ty) oper =
+and random_termc_oper cache operl (size,ty) oper =
   let val (tyargl,im) = strip_type (type_of oper) in
-    if nterm_oper operl (size,ty) oper <= 0 
+    if ntermc_oper cache operl (size,ty) oper <= 0
       then raise ERR "random_term_oper" "" else
     if null tyargl then oper else
-    let 
+    let
       val nll = number_partition (length tyargl) (size - 1)
                 handle HOL_ERR _ => raise ERR "random_term_oper" ""
-      fun f nl = 
-        (product_int (map (nterm operl) (combine (nl,tyargl))))
+      fun f nl =
+        (int_product (map (ntermc cache operl) (combine (nl,tyargl))))
       val freql1 = map_assoc f nll
       val freql2 = filter (fn x => snd x > 0) freql1
       val freql3 = map_snd Real.fromInt freql2
       val nl_chosen = select_in_distrib freql3
-      val argl = map (random_term operl) (combine (nl_chosen,tyargl))
+      val argl = map (random_termc cache operl) (combine (nl_chosen,tyargl))
     in
       list_mk_comb (oper,argl)
     end
   end
 
-fun random_term_upto operl (size,ty) =
-  let  
-    val il = List.tabulate (size, fn n => n + 1) 
-    val freql1 = map_assoc (fn i => nterm operl (i,ty)) il
-    val freql2 = filter (fn x => snd x > 0) freql1
-    val freql3 = map_snd Real.fromInt freql2
-    val i = select_in_distrib freql3
-  in
-    random_term operl (i,ty)
+(* -------------------------------------------------------------------------
+   Functions with no cache
+   ------------------------------------------------------------------------- *)
+
+fun nterm operl (size,ty) = 
+  let val cache = ref (dempty (cpl_compare Int.compare Type.compare)) in
+    ntermc cache operl (size,ty)
   end
 
+fun random_term operl (size,ty) =
+  let val cache = ref (dempty (cpl_compare Int.compare Type.compare)) in
+    random_termc cache operl (size,ty)
+  end
 
-fun random_term_uni operl (l,ty) =
-  random_term operl (random_elem l,ty)
-
-(* 
-load "psTermGen"; open psTermGen;
-val operl = [``0``,``$+``,``SUC``];
-val ty = ``:num``;
-val size = 6;
-val tm = random_term operl (size,ty);
-*)
+fun random_terml operl (size,ty) n =
+  let val cache = ref (dempty (cpl_compare Int.compare Type.compare)) in
+    List.tabulate (n, fn _ => random_termc cache operl (size,ty))
+  end
 
 (* -------------------------------------------------------------------------
-   All terms up to a fixed size
+   All terms up to a fixed size with a certain type
    ------------------------------------------------------------------------- *)
 
 fun is_applicable (ty1,ty2) =
-  let fun apply ty1 ty2 = mk_comb (mk_var ("x",ty1), mk_var ("y",ty2)) in 
+  let fun apply ty1 ty2 = mk_comb (mk_var ("x",ty1), mk_var ("y",ty2)) in
     can (apply ty1) ty2
   end
 
@@ -139,9 +128,9 @@ fun gen_size cache n =
     cache := dadd n d3 (!cache); d3
   end
 
-fun gen_term_size size (ty,cset) =
+fun gen_term operl (size,ty) =
   let
-    val tycset = map (fn x => (type_of x, x)) cset
+    val tycset = map (fn x => (type_of x, x)) operl
     val d = dregroup Type.compare tycset
     val cache = ref (dnew Int.compare [(1,d)])
     fun g n = dfind ty (gen_size cache n) handle NotFound => []

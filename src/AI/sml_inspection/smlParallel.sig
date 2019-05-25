@@ -8,7 +8,7 @@ sig
   val parmap_queue : int -> ('a -> 'b) -> 'a list -> 'b list
   val parapp_queue : int -> ('a -> 'b) -> 'a list -> unit
   val parmap_gen : int -> (('b -> 'c) -> 'b list -> 'c list) * (unit -> unit)
- 
+
   (* external *)
   val parallel_dir : string ref
   val wid_dir : int -> string
@@ -17,8 +17,8 @@ sig
   val writel_atomic : string -> string list -> unit
   val result_file : (int * int) -> string
   val worker_start : int -> (int * int -> 'a -> 'b) * 'a list -> unit
-  val parmap_queue_extern : 
-    int -> (int -> string list) -> (unit -> unit) * ((int * int) -> 'b) -> 
+  val parmap_queue_extern :
+    int -> (int -> string list) -> (unit -> unit) * ((int * int) -> 'b) ->
     'a list -> 'b list
 
 

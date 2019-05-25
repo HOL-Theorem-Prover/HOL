@@ -8,7 +8,7 @@
 structure mleSynthesize :> mleSynthesize =
 struct
 
-open HolKernel Abbrev boolLib aiLib smlParallel psMCTS psTermGen 
+open HolKernel Abbrev boolLib aiLib smlParallel psMCTS psTermGen
   mlTreeNeuralNetwork mlTacticData mlReinforce mleArithData
 
 val ERR = mk_HOL_ERR "mleSynthesize"
@@ -21,7 +21,7 @@ type board = ((term * int) * term)
 
 val active_var = ``active_var:num``;
 
-fun mk_startsit tm = 
+fun mk_startsit tm =
   (true,((tm,mleArithData.eval_numtm tm),active_var))
 fun dest_startsit (_,((tm,_),_)) = tm
 
@@ -30,13 +30,13 @@ fun is_ground tm = not (tmem active_var (free_vars_lr tm))
 val synt_operl = [(active_var,0)] @ operl_of ``SUC 0 + 0 = 0 * 0``
 fun nntm_of_sit (_,((ctm,_),tm)) = mk_eq (ctm,tm)
 
-fun status_of (_,((ctm,n),tm)) = 
+fun status_of (_,((ctm,n),tm)) =
   let val ntm = mk_sucn n in
     if term_eq ntm tm then Win
     else if is_ground tm orelse term_size tm > 2 * n + 1 then Lose
     else Undecided
   end
- 
+
 (* -------------------------------------------------------------------------
    Move
    ------------------------------------------------------------------------- *)
@@ -47,7 +47,7 @@ val move_compare = cpl_compare Term.compare Int.compare
 
 fun action_oper (oper,n) tm =
   let
-    val res = list_mk_comb (oper, List.tabulate (n, fn _ => active_var)) 
+    val res = list_mk_comb (oper, List.tabulate (n, fn _ => active_var))
     val sub = [{redex = active_var, residue = res}]
   in
     subst_occs [[1]] sub tm
@@ -60,15 +60,15 @@ fun filter_sit sit = (fn l => l) (* filter moves *)
 
 fun string_of_move (tm,_) = tts tm
 
-fun write_targetl targetl = 
-  let val tml = map dest_startsit targetl in 
+fun write_targetl targetl =
+  let val tml = map dest_startsit targetl in
     export_terml (!parallel_dir ^ "/targetl") tml
   end
 
 fun read_targetl () =
   let val tml = import_terml (!parallel_dir ^ "/targetl") in
     map mk_startsit tml
-  end  
+  end
 
 fun max_bigsteps target = 2 * term_size (dest_startsit target) + 1
 
@@ -77,7 +77,7 @@ fun max_bigsteps target = 2 * term_size (dest_startsit target) + 1
    ------------------------------------------------------------------------- *)
 
 fun create_train_evalsorted () =
-  let 
+  let
     val filein = dataarith_dir ^ "/train"
     val fileout = dataarith_dir ^ "/train_evalsorted"
     val l1 = import_terml filein ;
@@ -88,12 +88,12 @@ fun create_train_evalsorted () =
     export_terml fileout (map fst l4)
   end
 
-fun mk_targetl level ntarget = 
-  let 
+fun mk_targetl level ntarget =
+  let
     val tml = mlTacticData.import_terml (dataarith_dir ^ "/train_evalsorted")
     val tmll = map shuffle (first_n level (mk_batch 400 tml))
     val tml2 = List.concat (list_combine tmll)
-  in  
+  in
     map mk_startsit (first_n ntarget tml2)
   end
 
@@ -122,8 +122,8 @@ val gamespec : (board,move) mlReinforce.gamespec =
    Statistics
    ------------------------------------------------------------------------- *)
 
-fun maxeval_atgen () = 
-  let 
+fun maxeval_atgen () =
+  let
     val tml = mlTacticData.import_terml (dataarith_dir ^ "/train_evalsorted")
   in
     map (list_imax o map eval_numtm) (mk_batch 400 tml)
@@ -133,11 +133,11 @@ fun stats_eval file =
   let
     val l0 = import_terml file
     val l1 = map (fn x => (x,eval_numtm x)) l0;
-    val l1' = filter (fn x => snd x <= 100) l1; 
+    val l1' = filter (fn x => snd x <= 100) l1;
     val _  = print_endline (its (length l1'));
     val l2 = dlist (dregroup Int.compare (map swap l1'));
   in
-    map_snd length l2 
+    map_snd length l2
   end
 
 (* -------------------------------------------------------------------------
@@ -156,7 +156,7 @@ fun explore_gamespec tm =
 fun reinforce_fixed runname ngen =
   (
   logfile_glob := runname;
-  parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^ 
+  parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^
   (!logfile_glob);
   ncore_mcts_glob := 8;
   ncore_train_glob := 4;

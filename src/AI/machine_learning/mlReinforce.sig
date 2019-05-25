@@ -3,7 +3,7 @@ sig
 
   include Abbrev
 
-  val dhtnn_file : unit -> string  
+  val dhtnn_file : unit -> string
 
   (* 'a is the type of board, 'b is the type for move *)
   type ('a,'b) gamespec =
@@ -25,7 +25,7 @@ sig
 
   (* rl parameters *)
   val ngen_glob : int ref
-  val ntarget_compete : int ref    
+  val ntarget_compete : int ref
   val ntarget_explore : int ref
   val level_glob : int ref
   (* nn parameters *)
@@ -33,28 +33,28 @@ sig
   val uniqex_flag : bool ref
   val lr_glob : real ref
   val dim_glob : int ref
-  val batchsize_glob : int ref 
+  val batchsize_glob : int ref
   val nepoch_glob : int ref
-  val ncore_train_glob : int ref  
+  val ncore_train_glob : int ref
   (* mcts parameters *)
   val nsim_glob : int ref
   val decay_glob : real ref
   val ncore_mcts_glob : int ref
 
   (* training *)
-  val random_dhtnn_gamespec : 
+  val random_dhtnn_gamespec :
     ('a,'b) gamespec -> mlTreeNeuralNetwork.dhtnn
-  val train_dhtnn : 
+  val train_dhtnn :
     ('a,'b) gamespec ->
     (term * real list * real list) list  ->
     mlTreeNeuralNetwork.dhtnn
-  
+
   (* competition *)
-  val compete_one : ('a,'b) gamespec -> 
+  val compete_one : ('a,'b) gamespec ->
     mlTreeNeuralNetwork.dhtnn -> 'a psMCTS.sit list -> int
-  
+
   (* exploration (search) *)
-  val explore_test : ('a,'b) gamespec -> mlTreeNeuralNetwork.dhtnn -> 
+  val explore_test : ('a,'b) gamespec -> mlTreeNeuralNetwork.dhtnn ->
     'a psMCTS.sit -> unit
   val explore_extern : ('a,'b) gamespec -> int * int ->
      bool * bool -> mlTreeNeuralNetwork.dhtnn -> 'a psMCTS.sit -> unit
@@ -62,7 +62,7 @@ sig
   (* reinforcement learning loop *)
   val logfile_glob : string ref
   val summary : string -> unit
-  val start_rl_loop : 
+  val start_rl_loop :
     ('a,'b) gamespec ->
     (term * real list * real list) list * mlTreeNeuralNetwork.dhtnn
 

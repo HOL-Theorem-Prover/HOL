@@ -960,8 +960,8 @@ fun unquoteString thy file =
   end
 
 fun rm_spaces s =
-  let fun f c = if mem c [#"\n",#"\t",#"\r"] then #" " else c in 
-    implode (map f (explode s)) 
+  let fun f c = if mem c [#"\n",#"\t",#"\r"] then #" " else c in
+    implode (map f (explode s))
   end
 
 fun sketch_wrap thy file =

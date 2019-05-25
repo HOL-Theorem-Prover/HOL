@@ -8,7 +8,7 @@
 structure mlTune :> mlTune =
 struct
 
-open HolKernel Abbrev boolLib aiLib mlTreeNeuralNetwork 
+open HolKernel Abbrev boolLib aiLib mlTreeNeuralNetwork
   mlReinforce smlParallel
 
 val ERR = mk_HOL_ERR "mlTune"
@@ -17,14 +17,14 @@ val ERR = mk_HOL_ERR "mlTune"
    Tuning parameters
    ------------------------------------------------------------------------- *)
 
-type ml_param = 
+type ml_param =
   {dim: int, nepoch: int, batchsize: int, learningrate: real, nlayers: int}
 
-fun grid_param (dl,nl,bl,ll,yl) = 
-  let 
+fun grid_param (dl,nl,bl,ll,yl) =
+  let
     val l1 = cartesian_productl [dl,nl,bl,ll,yl]
     val l2 = map quintuple_of_list l1
-    fun f (d,n,b,l,y) = 
+    fun f (d,n,b,l,y) =
       {dim=d,nepoch=n,batchsize=b,learningrate=int_div 1 l,nlayers=y}
   in
     map f l2
@@ -59,8 +59,8 @@ fun dhtnnout_file (wid,job) =
 
 
 fun write_param file {dim,nepoch,batchsize,learningrate,nlayers} =
-  let 
-    val sl = 
+  let
+    val sl =
     [its dim, its nepoch, its batchsize, rts learningrate, its nlayers]
   in
     writel file sl
@@ -68,18 +68,18 @@ fun write_param file {dim,nepoch,batchsize,learningrate,nlayers} =
 
 fun read_param file =
   let val (d,n,b,l,y) = quintuple_of_list (readl file) in
-    {dim = string_to_int d, 
-     nepoch = string_to_int n, 
-     batchsize = string_to_int b, 
-     learningrate= valOf (Real.fromString l), 
+    {dim = string_to_int d,
+     nepoch = string_to_int n,
+     batchsize = string_to_int b,
+     learningrate= valOf (Real.fromString l),
      nlayers = string_to_int y}
   end
 
 fun write_accuracy file (r1,r2,t) = writel file [rts r1,rts r2,rts t]
-fun read_accuracy file = 
-  let val l = readl file in 
+fun read_accuracy file =
+  let val l = readl file in
     case l of
-      [a,b,c] => (valOf (Real.fromString a), valOf (Real.fromString b), 
+      [a,b,c] => (valOf (Real.fromString a), valOf (Real.fromString b),
                   valOf (Real.fromString c))
     | _ => raise ERR "read_accuracy" ""
   end
@@ -88,13 +88,13 @@ fun read_accuracy file =
    Train with parameters
    ------------------------------------------------------------------------- *)
 
-fun train_tnn_param (wid,job) ncore operl (train,test) 
+fun train_tnn_param (wid,job) ncore operl (train,test)
   (param as {dim,nepoch,batchsize,learningrate,nlayers})=
-  let 
+  let
     val _ = mlTreeNeuralNetwork.nlayers_glob := nlayers
     val randtnn = random_tnn (dim,4) operl
     val schedule = [(nepoch, learningrate /  (Real.fromInt batchsize))]
-    val (tnn,t) = 
+    val (tnn,t) =
       add_time (prepare_train_tnn (ncore,batchsize) randtnn (train,test)) schedule
     val r1 = accuracy_set tnn train
     val r2 = accuracy_set tnn test
@@ -108,7 +108,7 @@ fun train_tnn_param (wid,job) ncore operl (train,test)
 
 fun intlist_to_string l = "[" ^ String.concatWith "," (map its l) ^ "]"
 
-fun tune_codel_of (dl,nl,bl,ll,yl) ncore_loc wid = 
+fun tune_codel_of (dl,nl,bl,ll,yl) ncore_loc wid =
   [
    "open mlTreeNeuralNetwork mlTune smlParallel;",
    "(* generating f *)",
@@ -117,7 +117,7 @@ fun tune_codel_of (dl,nl,bl,ll,yl) ncore_loc wid =
    "val operl = read_operl (dir ^ \"/operl\");",
    "val (train,test) = ",
    "  (read_tnnex (dir ^ \"/train\"), read_tnnex (dir ^ \"/test\"));",
-   "fun f (wid,job) param =", 
+   "fun f (wid,job) param =",
    "  train_tnn_param (wid,job) ncore operl (train,test) param;",
    "(* generating jobs *)",
    "val dl = " ^ intlist_to_string dl ^ ";",
@@ -128,19 +128,19 @@ fun tune_codel_of (dl,nl,bl,ll,yl) ncore_loc wid =
    "val l = grid_param (dl,nl,bl,ll,yl);",
    "worker_start " ^ (its wid) ^ " (f,l);"
   ]
-;  
+;
 
-fun tune_collect_result (wid,job) = 
-  (read_param (param_file (wid,job)), 
+fun tune_collect_result (wid,job) =
+  (read_param (param_file (wid,job)),
    read_accuracy (accuracy_file (wid,job)))
 
 (* -------------------------------------------------------------------------
    Train externally dhtnn with parameters
    ------------------------------------------------------------------------- *)
 
-fun train_dhtnn_param (wid,job) ncore gamespec epex 
+fun train_dhtnn_param (wid,job) ncore gamespec epex
   (param as {dim,nepoch,batchsize,learningrate,nlayers})=
-  let 
+  let
     val _ = mlTreeNeuralNetwork.nlayers_glob := nlayers
     val _ = dim_glob := dim
     val dhtnn_org = random_dhtnn_gamespec gamespec
@@ -155,7 +155,7 @@ fun train_dhtnn_param (wid,job) ncore gamespec epex
     writel_atomic (widout_file wid) ["done"]
   end
 
-fun dhtune_codel_of gamespec (dl,nl,bl,ll,yl) ncore_loc wid = 
+fun dhtune_codel_of gamespec (dl,nl,bl,ll,yl) ncore_loc wid =
   [
    "open mlTreeNeuralNetwork mlTune smlParallel;",
    "open " ^ #opens gamespec ^ ";",
@@ -163,7 +163,7 @@ fun dhtune_codel_of gamespec (dl,nl,bl,ll,yl) ncore_loc wid =
    "val dir = " ^ quote (!parallel_dir) ^ ";",
    "val ncore = " ^ its ncore_loc ^ ";",
    "val epex = read_dhex (dir ^ \"/epex\")",
-   "fun f (wid,job) param =", 
+   "fun f (wid,job) param =",
    "  train_dhtnn_param (wid,job) ncore gamespec epex param;",
    "(* generating jobs *)",
    "val dl = " ^ intlist_to_string dl ^ ";",
@@ -174,10 +174,10 @@ fun dhtune_codel_of gamespec (dl,nl,bl,ll,yl) ncore_loc wid =
    "val l = grid_param (dl,nl,bl,ll,yl);",
    "worker_start " ^ (its wid) ^ " (f,l);"
   ]
-;  
+;
 
-fun dhtune_collect_result (wid,job) = 
-  (read_param (param_file (wid,job)), 
+fun dhtune_collect_result (wid,job) =
+  (read_param (param_file (wid,job)),
    read_dhtnn (dhtnnout_file (wid,job)))
 
 

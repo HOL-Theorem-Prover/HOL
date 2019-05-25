@@ -138,7 +138,7 @@ sig
   val debug_in_dir : string -> string -> string -> unit
   val stream_to_string :
     string -> (TextIO.outstream -> unit) -> string list
-  val write_texgraph : 
+  val write_texgraph :
     string -> string * string -> (int * int) list -> unit
 
   (* parse *)
@@ -202,7 +202,7 @@ sig
   val find_subtm : term * pos -> term
   val narg_ge : int -> term * pos -> bool
   val all_pos : term -> pos list
- 
+
   (* arithmetic *)
   val mk_suc : term -> term
   val mk_sucn : int -> term

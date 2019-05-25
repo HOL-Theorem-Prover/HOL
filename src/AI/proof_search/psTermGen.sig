@@ -4,12 +4,9 @@ sig
   include Abbrev
 
   val nterm : term list -> int * hol_type -> int
-  val nterm_oper : term list -> int * hol_type -> term -> int
   val random_term : term list -> int * hol_type -> term
-  val random_term_upto : term list -> int * hol_type -> term
-  val random_term_uni : term list -> int list * hol_type -> term
-  val random_term_oper : term list -> int * hol_type -> term -> term
+  val random_terml : term list -> int * hol_type -> int -> term list
 
-  val gen_term_size : int -> (hol_type * term list) -> term list
+  val gen_term : term list -> int * hol_type -> term list
 
 end

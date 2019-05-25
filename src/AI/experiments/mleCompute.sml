@@ -8,8 +8,8 @@
 structure mleCompute :> mleCompute =
 struct
 
-open HolKernel Abbrev boolLib aiLib psTermGen smlParallel mlTreeNeuralNetwork 
-mlTacticData mlTune mleArithData 
+open HolKernel Abbrev boolLib aiLib psTermGen smlParallel mlTreeNeuralNetwork
+mlTacticData mlTune mleArithData
 
 val ERR = mk_HOL_ERR "mleCompute"
 
@@ -26,7 +26,7 @@ fun compute_exout tml = map_assoc (bin_rep 4 o eval_numtm) tml
    ------------------------------------------------------------------------- *)
 
 fun compute_random_tnn dim =
-  let 
+  let
     val operl = mk_fast_set oper_compare (operl_of ``0 + SUC 0 * 0``)
     val nbit = 4
   in
@@ -44,7 +44,7 @@ fun train_fixed basename trainex =
     val bsize = 16
     val schedule = [(400, 0.02 / (Real.fromInt bsize))]
     val ncore = 4
-    val tnn = prepare_train_tnn 
+    val tnn = prepare_train_tnn
       (ncore,bsize) randtnn (trainex,first_n 100 trainex) schedule
     val _ = mkDir_err compute_dir
   in
@@ -54,11 +54,11 @@ fun train_fixed basename trainex =
 
 (* ------------------------------------------------------------------------
    Accuracy of the tree neural network on arithmetical datasets
-   ------------------------------------------------------------------------ *) 
+   ------------------------------------------------------------------------ *)
 
 fun accuracy_fixed tnn =
-  let 
-    val filel = map (fn x => dataarith_dir ^ "/" ^ x)       
+  let
+    val filel = map (fn x => dataarith_dir ^ "/" ^ x)
       ["train","valid","test","big"]
     val tmll = map mlTacticData.import_terml filel
     val exl = map compute_exout tmll
@@ -94,7 +94,7 @@ fun parameter_tuning basename ncore ncore_loc =
     val yl = [2,4]
     fun codel_of wid = tune_codel_of (dl,nl,bl,ll,yl) ncore_loc wid
     val paraml = grid_param (dl,nl,bl,ll,yl)
-    val final = 
+    val final =
       parmap_queue_extern ncore codel_of (init,tune_collect_result) paraml
   in
     write_param_results (compute_dir ^ "/" ^ basename) final

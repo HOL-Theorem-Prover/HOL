@@ -49,7 +49,7 @@ fun random_opdict dimin cal =
   end
 
 fun random_headnn (dimin,dimout) =
-  random_nn (tanh,dtanh) (tanh,dtanh) 
+  random_nn (tanh,dtanh) (tanh,dtanh)
     (List.tabulate (!nlayers_glob, fn _ => dimin + 1) @ [dimout])
 
 
@@ -80,7 +80,7 @@ fun string_of_opdict_one d ((oper,a),nn) =
   its (dfind oper d) ^ " " ^ its a ^ "\n" ^ string_of_nn nn ^ "\nnnstop\n"
 
 fun string_of_opdict opdict =
-  let 
+  let
     val tml = mk_sameorder_set Term.compare (map fst (dkeys opdict))
     val d = dnew Term.compare (number_snd 0 tml)
   in
@@ -88,12 +88,12 @@ fun string_of_opdict opdict =
   end
 
 fun string_of_tnn {opdict,headnn,dimin,dimout} =
-  string_of_nn headnn ^ "\nheadstop\n\n" ^ 
+  string_of_nn headnn ^ "\nheadstop\n\n" ^
   string_of_opdict opdict ^ "\nopdictstop"
 
 fun string_of_dhtnn {opdict,headeval,headpoli,dimin,dimout} =
-  string_of_nn headeval ^ "\nheadevalstop\n\n" ^ 
-  string_of_nn headpoli ^ "\nheadpolistop\n\n" ^ 
+  string_of_nn headeval ^ "\nheadevalstop\n\n" ^
+  string_of_nn headpoli ^ "\nheadpolistop\n\n" ^
   string_of_opdict opdict ^ "\nopdictstop"
 
 fun write_tnn file tnn =
@@ -117,7 +117,7 @@ fun write_dhtnn file dhtnn =
   end
 
 fun read_opdict_one tos sl =
-  let 
+  let
     val (opers,ns) = pair_of_list (String.tokens Char.isSpace (hd sl))
     val (oper,n) = (tos (string_to_int opers), string_to_int ns)
   in
@@ -143,10 +143,10 @@ fun read_tnn_sl operl sl =
     val dimout = (fst o mat_dim o #w o last) headnn
   in
     {opdict=opdict,headnn=headnn,dimin=dimin,dimout=dimout}
-  end 
+  end
 
 fun read_tnn file =
-  let 
+  let
     val file_operl = file ^ "_operl"
     val file_tnn = file ^ "_tnn"
     val operl = mlTacticData.import_terml file_operl
@@ -155,8 +155,8 @@ fun read_tnn file =
     read_tnn_sl operl sl
   end
 
-(* 
-load "mlTreeNeuralNetwork"; 
+(*
+load "mlTreeNeuralNetwork";
 open aiLib mlNeuralNetwork mlTreeNeuralNetwork;
 val file = HOLDIR ^ "/src/AI/test";
 val tnn1 = random_tnn (4,2) [(``$+``,2),(``SUC``,1),(``0``,0)];
@@ -180,7 +180,7 @@ fun read_dhtnn_sl operl sl =
   end
 
 fun read_dhtnn file =
-  let 
+  let
     val file_operl = file ^ "_operl"
     val file_dhtnn = file ^ "_dhtnn"
     val operl = mlTacticData.import_terml file_operl
@@ -193,25 +193,25 @@ fun write_operl file operl =
   let
     val file1 = file ^ "_operl_term"
     val file2 = file ^ "_operl_arity"
-    val (l1,l2) = split operl 
+    val (l1,l2) = split operl
   in
     mlTacticData.export_terml file1 l1;
-    writel file2 (map its l2) 
+    writel file2 (map its l2)
   end
 
-fun read_operl file = 
-  let 
+fun read_operl file =
+  let
     val l1 = mlTacticData.import_terml (file ^ "_operl_term")
     val l2 = map string_to_int (readl (file ^ "_operl_arity"))
   in
     combine (l1,l2)
   end
 
-fun reall_to_string rl = 
+fun reall_to_string rl =
   String.concatWith " " (map (IEEEReal.toString o Real.toDecimal) rl)
 
-fun string_to_reall rls = 
-  map (valOf o Real.fromDecimal o valOf o IEEEReal.fromString) 
+fun string_to_reall rls =
+  map (valOf o Real.fromDecimal o valOf o IEEEReal.fromString)
     (String.tokens Char.isSpace rls)
 
 fun write_dhex file epex =
@@ -223,21 +223,21 @@ fun write_dhex file epex =
   in
     mlTacticData.export_terml file_term terml;
     writel file_eval (map reall_to_string rll1);
-    writel file_poli (map reall_to_string rll2) 
+    writel file_poli (map reall_to_string rll2)
   end
 
-fun read_dhex file = 
+fun read_dhex file =
   let
     val file_term = file ^ "_term"
     val file_eval = file ^ "_eval"
     val file_poli = file ^ "_poli"
-    val terml = mlTacticData.import_terml file_term 
+    val terml = mlTacticData.import_terml file_term
     val rll1 = map string_to_reall (readl file_eval)
     val rll2 = map string_to_reall (readl file_poli)
   in
     combine_triple (terml,rll1,rll2)
   end
- 
+
 fun write_tnnex file ex =
   let
     val file_term = file ^ "_term"
@@ -248,11 +248,11 @@ fun write_tnnex file ex =
     writel file_eval (map reall_to_string rll)
   end
 
-fun read_tnnex file = 
+fun read_tnnex file =
   let
     val file_term = file ^ "_term"
     val file_eval = file ^ "_eval"
-    val terml = mlTacticData.import_terml file_term 
+    val terml = mlTacticData.import_terml file_term
     val rll = map string_to_reall (readl file_eval)
   in
     combine (terml,rll)
@@ -260,7 +260,7 @@ fun read_tnnex file =
 
 
 
-(* 
+(*
 load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
 val epex = [(``0``,[1.0],[2.0,3.0])];
 val file = HOLDIR ^ "/src/AI/trainset";
@@ -290,8 +290,8 @@ fun denorm_vect v = Vector.map (fn x => 0.5 * x + 0.5) v
 fun add_bias v = Vector.concat [Vector.fromList [1.0], v]
 
 fun prepare_dhtrainset dhtrainset =
-  let fun f (tm,rl1,rl2) = 
-    (order_subtm tm, norm_vect (Vector.fromList rl1), 
+  let fun f (tm,rl1,rl2) =
+    (order_subtm tm, norm_vect (Vector.fromList rl1),
      norm_vect (Vector.fromList rl2))
   in
     map f dhtrainset
@@ -421,8 +421,8 @@ fun infer_tnn tnn tm =
     vector_to_list (denorm_vect (#outnv (last fpdatal)))
   end
 
-fun infer_tnn_nohead tnn tm = 
-  vector_to_list (fp_tnn_nohead tnn (order_subtm tm)) 
+fun infer_tnn_nohead tnn tm =
+  vector_to_list (fp_tnn_nohead tnn (order_subtm tm))
 
 (* -------------------------------------------------------------------------
    Train tnn on one example
@@ -435,7 +435,7 @@ fun train_tnn_one tnn (tml,expectv) =
 
 fun train_dhtnn_one dhtnn (tml,expecteval,expectpoli) =
   let val (fpdict,fpdataleval,fpdatalpoli) = fp_dhtnn dhtnn tml in
-    bp_dhtnn (#dimin dhtnn) (fpdict,fpdataleval,fpdatalpoli) 
+    bp_dhtnn (#dimin dhtnn) (fpdict,fpdataleval,fpdatalpoli)
     (tml,expecteval,expectpoli)
   end
 
@@ -443,7 +443,7 @@ fun train_dhtnn_one dhtnn (tml,expecteval,expectpoli) =
    Train tnn on one batch
    ------------------------------------------------------------------------- *)
 
-(* 
+(*
 val momentum_glob = ref 0.0
 val dwlhead_glob = ref NONE
 val dwloper_glob = ref (dempty oper_compare)
@@ -456,10 +456,10 @@ fun update_head headnn bpdatall =
   let
     val dwll = map (map #dw) bpdatall
     val dwl = sum_dwll dwll
-    (* 
-    val dwlmom = 
+    (*
+    val dwlmom =
       if isSome (!dwlhead_glob)
-      then sum_dwll [smult_dwl (1.0 - (!momentum_glob)) dwl, 
+      then sum_dwll [smult_dwl (1.0 - (!momentum_glob)) dwl,
                      smult_dwl (!momentum_glob) (valOf (!dwlhead_glob))]
       else dwl
     *)
@@ -474,9 +474,9 @@ fun update_opernn opdict (oper,dwll) =
   let
     val nn    = dfind oper opdict
     val dwl   = sum_dwll dwll
-    (* val dwlmom = 
+    (* val dwlmom =
       if dmem oper (!dwloper_glob)
-      then sum_dwll [smult_dwl (1.0 - (!momentum_glob))  dwl, 
+      then sum_dwll [smult_dwl (1.0 - (!momentum_glob))  dwl,
                      smult_dwl (!momentum_glob) (dfind oper (!dwloper_glob))]
       else dwl
     *)
@@ -488,7 +488,7 @@ fun update_opernn opdict (oper,dwll) =
 
 fun train_tnn_batch ncore (tnn as {opdict,headnn,dimin,dimout}) batch =
   let
-    val (bpdictl,bpdatall) = 
+    val (bpdictl,bpdatall) =
       split (parmap_batch ncore (train_tnn_one tnn) batch)
     val (newheadnn,loss) = update_head headnn bpdatall
     val bpdict = dconcat oper_compare bpdictl
@@ -510,7 +510,7 @@ fun train_tnn_epoch_aux ncore lossl tnn batchl = case batchl of
       train_tnn_epoch_aux ncore (loss :: lossl) newtnn m
     end
 
-fun train_tnn_epoch ncore tnn batchl = 
+fun train_tnn_epoch ncore tnn batchl =
   (
   (* init_dwlglob (); *)
   train_tnn_epoch_aux ncore [] tnn batchl
@@ -554,7 +554,7 @@ fun train_tnn_schedule (ncore,bsize) tnn (ptrain,ptest) schedule =
 fun train_dhtnn_batch ncore dhtnn batch =
   let
     val {opdict, headeval, headpoli, dimin, dimout} = dhtnn
-    val (bpdictl,bpdatall1,bpdatall2) = 
+    val (bpdictl,bpdatall1,bpdatall2) =
       split_triple (parmap_batch ncore (train_dhtnn_one dhtnn) batch)
     val (newheadeval,loss1) = update_head headeval bpdatall1
     val (newheadpoli,loss2) = update_head headpoli bpdatall2
@@ -565,7 +565,7 @@ fun train_dhtnn_batch ncore dhtnn batch =
     ({opdict = newopdict, headeval = newheadeval, headpoli = newheadpoli,
      dimin = dimin, dimout = dimout},(loss1,loss2))
   end
-  
+
 
 fun train_dhtnn_epoch_aux ncore (lossl1,lossl2) dhtnn batchl =
   case batchl of
@@ -655,10 +655,10 @@ fun prepare_train_tnn (ncore,bsize) randtnn (trainset,testset) schedule =
    ------------------------------------------------------------------------- *)
 
 fun is_accurate tnn (tm,rl) =
-  let 
-    val rl1 = infer_tnn tnn tm 
+  let
+    val rl1 = infer_tnn tnn tm
     val rl2 = combine (rl,rl1)
-    fun test (x,y) = Real.abs (x - y) < 0.5  
+    fun test (x,y) = Real.abs (x - y) < 0.5
   in
     if all test rl2 then true else false
   end

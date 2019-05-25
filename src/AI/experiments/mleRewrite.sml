@@ -12,19 +12,19 @@ open HolKernel boolLib Abbrev aiLib smlParallel psMCTS psTermGen
   mlTreeNeuralNetwork mlTacticData mlReinforce mleArithData
 
 val ERR = mk_HOL_ERR "mleRewrite"
-fun debug s = 
+fun debug s =
   debug_in_dir (HOLDIR ^ "/src/AI/experiments/debug") "mleRewrite" s
 
 (* -------------------------------------------------------------------------
    Axioms and theorems
    ------------------------------------------------------------------------- *)
 
-val robinson_eq_list = 
+val robinson_eq_list =
  [``x + 0 = x``,``x + SUC y = SUC (x + y)``,``x * 0 = 0``,
    ``x * SUC y = x * y + x``]
 
 val robinson_eq_vect = Vector.fromList robinson_eq_list
- 
+
 (* -------------------------------------------------------------------------
    Length of a proof using the left outermost (lo) strategy
    ------------------------------------------------------------------------- *)
@@ -33,9 +33,9 @@ fun trySome f l = case l of
     [] => NONE
   | a :: m => (case f a of NONE => trySome f m | SOME b => SOME b)
 
-fun lo_rwpos tm = 
-  let 
-    fun f pos = 
+fun lo_rwpos tm =
+  let
+    fun f pos =
       let fun test x = isSome (paramod_ground x (tm,pos)) in
         exists test robinson_eq_list
       end
@@ -50,7 +50,7 @@ fun lo_trace nmax toptm =
     fun loop tm =
       if is_suc_only tm then (SOME (rev (!l),!acc))
       else if !acc > nmax then NONE else
-    let 
+    let
       val pos = valOf (lo_rwpos tm)
       val tm' = valOf (trySome (C paramod_ground (tm,pos)) robinson_eq_list)
     in
@@ -112,7 +112,7 @@ fun nntm_of_sit sit = case snd sit of
 datatype move = Arg of int | Paramod of (int * bool)
 
 val movel =
-  map Arg [0,1] @ 
+  map Arg [0,1] @
   [Paramod (0,true),Paramod (0,false)] @
   [Paramod (1,true),Paramod (1,false)] @
   [Paramod (2,true)] @
@@ -122,7 +122,7 @@ fun move_compare (m1,m2) = case (m1,m2) of
     (Arg i1, Arg i2) => Int.compare (i1,i2)
   | (Arg _, _) => LESS
   | (_,Arg _) => GREATER
-  | (Paramod (i1,b1), Paramod (i2,b2)) => 
+  | (Paramod (i1,b1), Paramod (i2,b2)) =>
     (cpl_compare Int.compare bool_compare) ((i1,b1),(i2,b2))
 
 fun bts b = if b then "t" else "f"
@@ -175,8 +175,8 @@ fun lo_prooflength_target target = case target of
     (true, Board (tm,[])) => lo_prooflength 200 tm
   | _ => raise ERR "lo_prooflength_target" ""
 
-fun write_targetl targetl = 
-  let val tml = map dest_startsit targetl in 
+fun write_targetl targetl =
+  let val tml = map dest_startsit targetl in
     mlTacticData.export_terml (!parallel_dir ^ "/targetl") tml
   end
 
@@ -192,7 +192,7 @@ fun max_bigsteps target = 2 * lo_prooflength_target target + 1
    ------------------------------------------------------------------------- *)
 
 fun create_train_evalsorted () =
-  let 
+  let
     val filein = dataarith_dir ^ "/train"
     val fileout = dataarith_dir ^ "/train_plsorted"
     val l1 = import_terml filein ;
@@ -203,12 +203,12 @@ fun create_train_evalsorted () =
     export_terml fileout (map fst l4)
   end
 
-fun mk_targetl level ntarget = 
-  let 
+fun mk_targetl level ntarget =
+  let
     val tml = mlTacticData.import_terml (dataarith_dir ^ "/train_plsorted")
     val tmll = map shuffle (first_n level (mk_batch 400 tml))
     val tml2 = List.concat (list_combine tmll)
-  in  
+  in
     map mk_startsit (first_n ntarget tml2)
   end
 
@@ -237,7 +237,7 @@ val gamespec : (board,move) mlReinforce.gamespec =
    Statistics
    ------------------------------------------------------------------------- *)
 
-fun maxprooflength_atgen () = 
+fun maxprooflength_atgen () =
   let val tml = import_terml (dataarith_dir ^ "/train_plsorted") in
     map (list_imax o map (lo_prooflength 200)) (mk_batch 400 tml)
   end
@@ -249,7 +249,7 @@ fun stats_prooflength file =
     val _  = print_endline (its (length l1))
     val l2 = dlist (dregroup Int.compare (map swap l1))
   in
-    map_snd length l2 
+    map_snd length l2
   end
 
 (* -------------------------------------------------------------------------
@@ -268,7 +268,7 @@ fun explore_gamespec tm =
 fun reinforce_fixed runname ngen =
   (
   logfile_glob := runname;
-  parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^ 
+  parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^
   (!logfile_glob);
   ncore_mcts_glob := 8;
   ncore_train_glob := 4;
@@ -292,7 +292,7 @@ fun reinforce_fixed runname ngen =
    ------------------------------------------------------------------------- *)
 
 fun final_eval dhtnn_name (a,b) testbase =
-  let 
+  let
     val eval_dir = HOLDIR ^ "/src/AI/machine_learning/eval"
     val file = eval_dir ^ "/" ^ dhtnn_name
     val dhtnn = mlTreeNeuralNetwork.read_dhtnn file

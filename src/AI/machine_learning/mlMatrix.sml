@@ -81,7 +81,7 @@ fun mat3_sub m i j k = Vector.sub (Vector.sub (Vector.sub (m,i), j), k)
 
 fun mat_update m ((i,j),k) =
   let val newv = Vector.update (Vector.sub(m,i),j,k) in
-    Vector.update (m,i,newv)  
+    Vector.update (m,i,newv)
   end
 
 fun mat_add m1 m2 =
@@ -91,7 +91,7 @@ fun mat_add m1 m2 =
 
 fun matl_add ml = case ml of
     [] => raise ERR "mat_addl" ""
-  | [m] => m 
+  | [m] => m
   | m :: contl => mat_add m (matl_add contl)
 
 fun inv_dim (a,b) = (b,a)
@@ -102,9 +102,9 @@ fun mat_transpose m1 =
   end
 
 fun mat_random (dim as (a,b)) =
-  let 
-    val r = Math.sqrt (6.0 / (Real.fromInt (a + b)))  
-    fun f i j = r * (2.0 * random_real () - 1.0) 
+  let
+    val r = Math.sqrt (6.0 / (Real.fromInt (a + b)))
+    fun f i j = r * (2.0 * random_real () - 1.0)
   in
     mat_tabulate f dim
   end
@@ -118,7 +118,7 @@ fun string_of_mat m =
   String.concatWith "\n" (map string_of_vect (vector_to_list m))
 
 fun read_mat_sl sl =
-  let 
+  let
     val l2 = map (String.tokens Char.isSpace) sl
     val l3 = map (map (valOf o Real.fromString)) l2
   in
@@ -131,7 +131,7 @@ fun read_mat file = read_mat_sl (readl file)
 fun is_comma c = c = #","
 
 fun read_diml s =
-  let 
+  let
     val l1 = String.tokens Char.isSpace s
     val l2 = map (map string_to_int o String.tokens is_comma) l1
   in
@@ -139,15 +139,15 @@ fun read_diml s =
   end
 
 
-(* 
-load "mlMatrix"; load "aiLib"; open mlMatrix aiLib; 
+(*
+load "mlMatrix"; load "aiLib"; open mlMatrix aiLib;
 val dir = HOLDIR ^ "/src/AI";
 val m1 = mat_random (9,2);
 val file = dir ^ "/test";
 writel file [string_of_mat m1];
 val m2 = read_mat file;
 
-load "mlMatrix"; load "aiLib"; open mlMatrix aiLib; 
+load "mlMatrix"; load "aiLib"; open mlMatrix aiLib;
 
 val l1 = List.tabulate (10000,fn _ => random_real ());
 val l2 = List.tabulate (10000,fn _ => random_real ());
@@ -156,8 +156,8 @@ val v2 = Vector.fromList l2;
 
 fun f0 l1 (l2 : real list) =  map (op +) (combine (l1,l2));
 val (_,t1) = add_time (f0 l1) l2;
-fun f1 v1 (v2 : real vector) = 
-  Vector.tabulate 
+fun f1 v1 (v2 : real vector) =
+  Vector.tabulate
     (Vector.length v1, fn i => Vector.sub (v1,i) + Vector.sub (v2,i))
 ;
 val (_,t2) = add_time (f1 v1) v2;
@@ -171,8 +171,8 @@ val (m,t3) = add_time (mat_add m1) m2;
 val a1 = Array.fromList l1;
 val a2 = Array.fromList l2;
 
-fun f2 a1 (a2 : real array) = 
-  Array.tabulate 
+fun f2 a1 (a2 : real array) =
+  Array.tabulate
     (Array.length a1, fn i => Array.sub (a1,i) + Array.sub (a2,i))
 
 val (_,t4) = add_time (f2 a1) a2;

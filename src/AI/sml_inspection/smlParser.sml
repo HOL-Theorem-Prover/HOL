@@ -124,7 +124,7 @@ datatype smlexpr =
 fun reprint s =
   let val propll = sml_propl_all_of s in
     if List.length propll = 1 then
-      case List.find is_print_prop 
+      case List.find is_print_prop
         (dest_first_prop (valOf (List.find is_first_prop (hd propll)))) of
       SOME p => SOME (string_of_pretty ((dest_print_prop p) 80))
     | NONE   => NONE

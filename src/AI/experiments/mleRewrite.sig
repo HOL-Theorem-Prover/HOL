@@ -7,10 +7,10 @@ sig
   type pb = (term * pos)
   datatype board = Board of pb | FailBoard
   datatype move = Arg of int | Paramod of (int * bool)
-  
+
   val mk_startsit : term -> board psMCTS.sit
   val gamespec : (board,move) mlReinforce.gamespec
-  
+
   (* proof length *)
   val lo_trace : int -> term -> ((term * pos) list * int) option
   val lo_prooflength : int -> term -> int

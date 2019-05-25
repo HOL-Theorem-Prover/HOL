@@ -4,7 +4,7 @@ sig
 include Abbrev
 
   (* val momentum_glob : real ref *)
-  val nlayers_glob : int ref  
+  val nlayers_glob : int ref
 
   type vect = real vector
   type mat = real vector vector
@@ -32,14 +32,14 @@ include Abbrev
   val string_of_dhtnn : dhtnn -> string
   val write_dhtnn : string -> dhtnn -> unit
   val read_dhtnn : string -> dhtnn
-  val write_dhex : string -> 
+  val write_dhex : string ->
     (term * real list * real list) list -> unit
   val read_dhex : string ->
     (term * real list * real list) list
-  val write_tnnex : string -> (term * real list) list -> unit  
+  val write_tnnex : string -> (term * real list) list -> unit
   val read_tnnex  : string -> (term * real list) list
   val write_operl : string -> (term * int) list -> unit
-  val read_operl  : string -> (term * int) list  
+  val read_operl  : string -> (term * int) list
 
   (* inference *)
   val infer_tnn : tnn -> term -> real list
@@ -60,7 +60,7 @@ include Abbrev
   (* prepare dataset before training *)
   val trainset_info : (term * real list) list -> string
   val prepare_trainset : (term * real list) list -> (term list * vect) list
-  val prepare_dhtrainset : 
+  val prepare_dhtrainset :
     (term * real list * real list) list -> (term list * vect * vect) list
 
   (* all in one *)

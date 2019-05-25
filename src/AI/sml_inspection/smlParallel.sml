@@ -37,13 +37,13 @@ val attrib = [Thread.InterruptState Thread.InterruptAsynch, Thread.EnableBroadca
    ------------------------------------------------------------------------- *)
 
 fun parmap_exact ncores forg lorg =
-  if length lorg <> ncores then raise ERR "parmap_exact" "" else 
+  if length lorg <> ncores then raise ERR "parmap_exact" "" else
   let
     val ain = Vector.fromList (List.map ref lorg)
-    val aout = Vector.fromList (List.map (fn _ => ref NONE) lorg) 
+    val aout = Vector.fromList (List.map (fn _ => ref NONE) lorg)
     fun process pi =
-      let 
-        val inref = Vector.sub (ain,pi) 
+      let
+        val inref = Vector.sub (ain,pi)
         val outref = Vector.sub (aout,pi)
       in
         outref := SOME (capture forg (!inref))
@@ -63,10 +63,10 @@ fun parmap_exact ncores forg lorg =
 
 val use_thread_flag = ref false
 
-fun parmap_batch ncores f l = 
+fun parmap_batch ncores f l =
   if ncores = 1 andalso not (!use_thread_flag)
   then map f l
-  else List.concat (parmap_exact ncores (map f) (cut_n ncores l)) 
+  else List.concat (parmap_exact ncores (map f) (cut_n ncores l))
 
 (* -------------------------------------------------------------------------
    Smart allocation of inputs to waiting threads
@@ -95,7 +95,7 @@ fun parmap_queue_err ncores forg lorg =
     val dcount = dnew Int.compare lcount
     (* process *)
     fun process pi =
-      if !end_flag then () else 
+      if !end_flag then () else
       let val inref = dfind pi din in
         case !inref of
           NONE => process pi
@@ -120,7 +120,7 @@ fun parmap_queue_err ncores forg lorg =
       then end_flag := true
       else loop ()
       )
-    fun wait_close () = 
+    fun wait_close () =
       if exists Thread.isActive threadl then wait_close () else ()
     fun compare_imin (a,b) = Int.compare (snd a, snd b)
   in
@@ -131,34 +131,34 @@ fun parmap_queue_err ncores forg lorg =
 
 fun parmap_queue ncores f l =
   if ncores = 1 andalso not (!use_thread_flag)
-  then map f l 
+  then map f l
   else map release (parmap_queue_err ncores f l)
 
 fun parapp_queue ncores f l = ignore (parmap_queue ncores f l)
 
 (* -------------------------------------------------------------------------
-   The function parmap_gen start n threads, and generate a parmap function 
+   The function parmap_gen start n threads, and generate a parmap function
    relying on this threads and a function to close this threads.
    This makes repeated calls of parmap f on different lists faster.
    Otherwise it behaves like parmap_batch.
    ------------------------------------------------------------------------- *)
 
 fun parmap_gen ncore =
-  let 
+  let
     val endflag = ref false
     val inv = Vector.tabulate (ncore, fn _ => ref NONE)
-    val outv = Vector.tabulate (ncore, fn _ => ref NONE) 
-    val endv = Vector.tabulate (ncore, fn _ => ref false)     
+    val outv = Vector.tabulate (ncore, fn _ => ref NONE)
+    val endv = Vector.tabulate (ncore, fn _ => ref false)
     val waitv = Vector.tabulate (ncore, fn _ => ref false)
     val f_ref = ref NONE
-      fun reset_outv () = 
-       let fun init_one pi = 
+      fun reset_outv () =
+       let fun init_one pi =
          let val outref = Vector.sub (outv,pi) in outref := NONE end
        in
-         ignore (List.tabulate (ncore, init_one)) 
+         ignore (List.tabulate (ncore, init_one))
        end
     fun process pi =
-      if !endflag then 
+      if !endflag then
         let val endref = Vector.sub (endv,pi) in endref := true end
       else
       let val inref = Vector.sub (inv,pi) in
@@ -166,43 +166,43 @@ fun parmap_gen ncore =
           NONE => process pi
         | SOME x =>
           let val outref = Vector.sub (outv,pi) in
-            inref := NONE; outref := SOME (map (valOf (!f_ref)) x); 
+            inref := NONE; outref := SOME (map (valOf (!f_ref)) x);
             process pi
           end
       end
     fun fork_on pi = Thread.fork (fn () => process pi, attrib)
     val threadl = List.tabulate (ncore,fork_on)
-    fun wait_resultl () = 
+    fun wait_resultl () =
       if Vector.all (isSome o !) outv then () else wait_resultl ()
     fun parmap_loc f l =
       let
         val _ = f_ref := SOME f
         val _ = reset_outv ()
         val inv_loc = Vector.fromList (cut_n ncore l)
-        fun assign pi = 
-          let val inref = Vector.sub (inv,pi) in 
-            inref := SOME (Vector.sub (inv_loc,pi)) 
+        fun assign pi =
+          let val inref = Vector.sub (inv,pi) in
+            inref := SOME (Vector.sub (inv_loc,pi))
           end
-        val _ = List.tabulate (ncore, assign) 
+        val _ = List.tabulate (ncore, assign)
         val _ = wait_resultl ()
         val ll = vector_to_list (Vector.map (valOf o !) outv)
       in
         reset_outv (); List.concat ll
       end
-    fun wait_close () = 
+    fun wait_close () =
       if exists Thread.isActive threadl then wait_close () else ()
     fun close_threadl () = (endflag := true; wait_close ())
   in
     (parmap_loc, close_threadl)
   end
 
-(* 
-load "smlParallel"; open smlParallel; 
-load "Profile"; open Profile; 
+(*
+load "smlParallel"; open smlParallel;
+load "Profile"; open Profile;
 
 fun add1 x  = 1 + x;
 fun test1 () =
-  let 
+  let
     val (parmap_loc, close_threadl) = parmap_gen 2;
     val _ = List.tabulate (1000, fn x => parmap_loc add1 [0,1]);
     val _ = close_threadl ()
@@ -217,7 +217,7 @@ profile "test2" test2 ();
 results ();
 *)
 (* -------------------------------------------------------------------------
-   To avoid spinning too much. 
+   To avoid spinning too much.
    Smaller value do not decrease the waiting time.
    ------------------------------------------------------------------------- *)
 
@@ -229,7 +229,7 @@ fun mini_sleep () = OS.Process.sleep (Time.fromReal 0.01)
 
 val parallel_dir = ref (HOLDIR ^ "/src/AI/sml_inspection/parallel")
 fun writel_atomic file sl =
-  (writel (file ^ "_temp") sl; 
+  (writel (file ^ "_temp") sl;
    OS.FileSys.rename {old = file ^ "_temp", new=file})
 fun readl_rm file =
   let val sl = readl file in OS.FileSys.remove file; sl end
@@ -246,14 +246,14 @@ fun result_file (wid,job) = wid_dir wid ^ "/result" ^ its job
    Workers are given the index of element to process in the list.
    ------------------------------------------------------------------------- *)
 
-fun worker_process wid (f,l) job = 
+fun worker_process wid (f,l) job =
   (f (wid,job) (List.nth (l,job)); worker_listen wid (f,l))
-and worker_listen wid fl = 
-  if exists_file (widin_file wid) 
-  then 
+and worker_listen wid fl =
+  if exists_file (widin_file wid)
+  then
     let val s = hd (readl_rm (widin_file wid)) in
       if s = "stop" then () else worker_process wid fl (string_to_int s)
-    end 
+    end
   else (mini_sleep (); worker_listen wid fl)
 
 fun worker_start wid fl =
@@ -264,20 +264,20 @@ fun worker_start wid fl =
    ------------------------------------------------------------------------- *)
 
 fun boss_stop_workers threadl =
-  let 
-    val ncore = length threadl 
-    fun send_stop wid = writel_atomic (widin_file wid) ["stop"] 
+  let
+    val ncore = length threadl
+    fun send_stop wid = writel_atomic (widin_file wid) ["stop"]
     fun loop threadl =
-      (if exists Thread.isActive threadl 
-       then (mini_sleep (); loop threadl) 
+      (if exists Thread.isActive threadl
+       then (mini_sleep (); loop threadl)
        else ())
   in
     app send_stop (List.tabulate (ncore,I));
     loop threadl
   end
 
-fun boss_end threadl completedl = 
-  let 
+fun boss_end threadl completedl =
+  let
     val ncore = length threadl
     val _ = print_endline ("stop " ^ its ncore ^ " workers")
     val _ = boss_stop_workers threadl
@@ -293,18 +293,18 @@ fun boss_end threadl completedl =
    Boss sends workers jobs and collects the results
    ------------------------------------------------------------------------- *)
 
-fun stat_jobs (pendingl,freewidl,runningl,completedl) = 
+fun stat_jobs (pendingl,freewidl,runningl,completedl) =
   print_endline
-    ("target: " ^ its (length pendingl) ^ " "  ^ 
-       its (length runningl) ^ " " ^ its (length completedl) ^ 
+    ("target: " ^ its (length pendingl) ^ " "  ^
+       its (length runningl) ^ " " ^ its (length completedl) ^
      " free core: " ^ String.concatWith " " (map its freewidl))
 
-fun send_job (wid,job) = 
-  if exists_file (widin_file wid) 
+fun send_job (wid,job) =
+  if exists_file (widin_file wid)
   then raise ERR "send_job" ""
-  else 
+  else
     (
-    print_endline ("  send job " ^ its job ^ " to worker " ^ its wid); 
+    print_endline ("  send job " ^ its job ^ " to worker " ^ its wid);
     writel_atomic (widin_file wid) [its job]
     )
 
@@ -316,7 +316,7 @@ fun boss_send threadl rr (pendingl,runningl,completedl) =
     val _ = stat_jobs (pendingl,freewidl,runningl,completedl)
     val njob = Int.min (length freewidl, length pendingl)
     val (jobl,pendingl_new) = part_n njob pendingl
-    val runningl_new = combine (first_n njob freewidl, jobl)    
+    val runningl_new = combine (first_n njob freewidl, jobl)
   in
     app send_job runningl_new;
     boss_collect threadl rr
@@ -324,24 +324,24 @@ fun boss_send threadl rr (pendingl,runningl,completedl) =
   end
 
 and boss_collect threadl rr (pendingl,runningl,completedl) =
-  if null pendingl andalso null runningl 
+  if null pendingl andalso null runningl
     then boss_end threadl completedl
   else
   let
     fun f (wid,job) =
       if not (exists_file (widout_file wid)) then NONE else
       (
-      print_endline ("  completed job " ^ its job ^ " by worker " ^ its wid);  
+      print_endline ("  completed job " ^ its job ^ " by worker " ^ its wid);
       remove_file (widout_file wid);
       SOME (rr (wid,job))
       )
-    fun forget_wid ((wid,job),ro) = (job, valOf ro) 
+    fun forget_wid ((wid,job),ro) = (job, valOf ro)
     val (al,bl) = partition (isSome o snd) (map_assoc f runningl)
     val runningl_new = map fst bl
     val completedl_new = map forget_wid al
     val rrc_new = (pendingl,runningl_new,completedl_new @ completedl)
   in
-    if null completedl_new orelse null pendingl then 
+    if null completedl_new orelse null pendingl then
       (mini_sleep (); boss_collect threadl rr rrc_new)
     else boss_send threadl rr rrc_new
   end
@@ -361,17 +361,17 @@ val attrib = [Thread.InterruptState Thread.InterruptAsynch, Thread.EnableBroadca
 
 
 fun boss_wait_upl widl =
-  let fun is_up wid = hd (readl (widout_file wid)) = "up" 
-                      handle Io _ => false 
+  let fun is_up wid = hd (readl (widout_file wid)) = "up"
+                      handle Io _ => false
   in
-    if all is_up widl 
-    then app (remove_file o widout_file) widl 
+    if all is_up widl
+    then app (remove_file o widout_file) widl
     else (mini_sleep (); boss_wait_upl widl)
   end
 
 fun clean_parallel_dirs widl=
-  let fun f wid = 
-    (mkDir_err (wid_dir wid); 
+  let fun f wid =
+    (mkDir_err (wid_dir wid);
      app remove_file [widin_file wid, widout_file wid])
   in
     mkDir_err (!parallel_dir); app f widl
@@ -383,7 +383,7 @@ fun parmap_queue_extern ncore codel_of (init,rr) l =
     val _ = clean_parallel_dirs widl
     val _ = init () (* info for workers to build f and l *)
     val _ = print_endline ("start " ^ its ncore ^ " workers")
-    fun fork wid = Thread.fork (fn () => 
+    fun fork wid = Thread.fork (fn () =>
       boss_start_worker codel_of wid, attrib)
     val threadl = map fork widl
     val pendingl = List.tabulate (length l,I) (* jobs *)
@@ -393,18 +393,18 @@ fun parmap_queue_extern ncore codel_of (init,rr) l =
     boss_send threadl rr (pendingl,[],[])
   end
 
-(* 
+(*
 load "smlParallel"; open aiLib smlParallel;
 
 fun init () = ();
 
 fun rr (wid,job) = string_to_int (hd (readl_rm (result_file (wid,job))));
 
-fun codel_of wid = 
+fun codel_of wid =
   [
    "open smlParallel;",
    "fun g x = x + 1;",
-   "fun f (wid,job) x =", 
+   "fun f (wid,job) x =",
    "  (writel_atomic (result_file (wid,job)) [aiLib.its (g x)];",
    "   writel_atomic (widout_file wid) [\"done\"]);",
    "val l = List.tabulate (100,fn x => x);",
@@ -420,7 +420,7 @@ val (l1,t) = add_time (parmap_queue_extern ncore codel_of (init,rr)) l;
 (* todo: re-use this code in rlEnv *)
 
 *)
-  
+
 
 
 
