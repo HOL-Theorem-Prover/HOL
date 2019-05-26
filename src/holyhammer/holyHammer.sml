@@ -276,7 +276,7 @@ fun eprover_pb_eval_parallel ncore timeout thyl =
    Usage:
      load "holyHammer"; open holyHammer;
      val ncore = 20;
-     val timeout = 15;
+     val timeout = 5;
      load "tttUnfold"; tttUnfold.load_sigobj ();
      val thyl = ancestry (current_theory ());
      eprover_pb_eval_parallel ncore timeout thyl;

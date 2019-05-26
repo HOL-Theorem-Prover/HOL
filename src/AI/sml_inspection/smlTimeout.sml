@@ -10,7 +10,6 @@ struct
 
 open HolKernel Abbrev boolLib aiLib Thread
 
-exception FunctionTimeout
 datatype 'a result = Res of 'a | Exn of exn
 
 fun capture f x = Res (f x) handle e => Exn e
@@ -30,7 +29,7 @@ fun timeLimit t f x =
       (
       if Thread.isActive worker then self_wait () else
     case !resultref of
-      NONE => Exn FunctionTimeout
+      NONE => Exn Interrupt
     | SOME s => s
       )
     val result = self_wait ()

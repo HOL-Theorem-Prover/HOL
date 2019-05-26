@@ -66,6 +66,7 @@ fun hh_reconstruct lemmas g =
       val t1 = !minimization_timeout
       val t2 = !reconstruction_timeout
       val newstac = hide_out (psMinimize.minimize_stac t1 stac g) []
+         handle _ => raise ERR "hh_reconstruct" "minimization failed"
       val tac = hide_out tactic_of_sml newstac
     in
       case hide_out (timeout_tactic t2 tac) g of
