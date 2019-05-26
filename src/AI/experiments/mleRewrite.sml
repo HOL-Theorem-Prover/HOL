@@ -9,7 +9,7 @@ structure mleRewrite :> mleRewrite =
 struct
 
 open HolKernel boolLib Abbrev aiLib smlParallel psMCTS psTermGen
-  mlTreeNeuralNetwork mlTacticData mlReinforce mleArithData
+  mlTreeNeuralNetwork mlTacticData mlReinforce mleLib mleArithData
 
 val ERR = mk_HOL_ERR "mleRewrite"
 fun debug s =

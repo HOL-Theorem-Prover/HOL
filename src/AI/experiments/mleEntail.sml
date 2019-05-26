@@ -8,7 +8,7 @@
 structure mleEntail :> mleEntail =
 struct
 
-open HolKernel Abbrev boolLib aiLib psTermGen mlTreeNeuralNetwork
+open HolKernel Abbrev boolLib aiLib psTermGen mlTreeNeuralNetwork mleLib
 
 val ERR = mk_HOL_ERR "mleEntail"
 

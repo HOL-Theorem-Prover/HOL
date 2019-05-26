@@ -9,7 +9,7 @@ structure mleSynthesize :> mleSynthesize =
 struct
 
 open HolKernel Abbrev boolLib aiLib smlParallel psMCTS psTermGen
-  mlTreeNeuralNetwork mlTacticData mlReinforce mleArithData
+  mlTreeNeuralNetwork mlTacticData mlReinforce mleLib mleArithData
 
 val ERR = mk_HOL_ERR "mleSynthesize"
 

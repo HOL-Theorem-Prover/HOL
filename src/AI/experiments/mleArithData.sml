@@ -9,6 +9,7 @@ structure mleArithData :> mleArithData =
 struct
 
 open HolKernel Abbrev boolLib aiLib psTermGen mlTacticData mlTreeNeuralNetwork
+  mleLib
 
 val ERR = mk_HOL_ERR "mleArithData"
 

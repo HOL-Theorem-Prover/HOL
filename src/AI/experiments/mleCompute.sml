@@ -9,7 +9,7 @@ structure mleCompute :> mleCompute =
 struct
 
 open HolKernel Abbrev boolLib aiLib psTermGen smlParallel mlTreeNeuralNetwork
-mlTacticData mlTune mleArithData
+mlTacticData mlTune mleLib mleArithData
 
 val ERR = mk_HOL_ERR "mleCompute"
 

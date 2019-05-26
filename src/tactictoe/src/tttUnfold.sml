@@ -1098,16 +1098,29 @@ fun ttt_record () =
   let val thyl = ttt_rewrite () in ttt_record_thyl thyl end
 
 (* ------------------------------------------------------------------------
-   Evaluation
+   Evaluation (warning: only call this function after recording the theories)
    ------------------------------------------------------------------------ *)
 
-fun ttt_parallel_eval ncores thyl =
+fun ttt_parallel_eval ncore thyl =
   let
     val _ = ttt_ttteval_flag := true
     fun f thy = (ttt_rewrite_thy thy; ttt_record_thy thy)
   in
-    parapp_queue ncores f thyl; ttt_ttteval_flag := false
+    parapp_queue ncore f thyl; ttt_ttteval_flag := false
   end
+
+(* -------------------------------------------------------------------------
+   Usage:
+      load "tttSetup"; open tttSetup;
+      load "tttUnfold"; open tttUnfold;
+      load_sigobj (); 
+      (* ttt_record (); *)
+      val thyl = ancestry (current_theory ());
+      ttt_search_time := 15.0;
+      val ncore = 20;
+      ttt_parallel_eval ncore thyl;
+   Results can be found in HOLDIR/src/tactictoe/eval.
+  ------------------------------------------------------------------------- *)
 
 (* ------------------------------------------------------------------------
    Theories of the standard library
@@ -1135,15 +1148,5 @@ fun load_sigobj () =
     app load l1
   end
 
+
 end (* struct *)
-
-(* test
-  load "tttSetup"; load "tttUnfold";
-  open tttUnfold;
-  load_sigobj ();
-  val thyl = ancestry (current_theory ());
-  tttSetup.ttt_search_time := 60.0;
-  val ncores = 20;
-  ttt_parallel_eval ncores thyl
-*)
-

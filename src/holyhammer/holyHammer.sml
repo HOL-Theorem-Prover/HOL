@@ -269,17 +269,23 @@ fun eprover_pb_eval_parallel ncore timeout thyl =
     fun code_of wid = standard_code_of (state_s,argl_s,f_s) wid
   in
     parmap_queue_extern ncore code_of (write_state, write_argl) 
-    read_result thyl
+    read_result thyl     load "holyHammer"; open holyHammer;
+     val ncore = 30;
+     val timeout = 5;
+     load "tttUnfold"; tttUnfold.load_sigobj ();
+     val thyl = ancestry (current_theory ()); length thyl;
+     eprover_pb_eval_parallel ncore timeout thyl; 
   end
 
 (* -------------------------------------------------------------------------
    Usage:
      load "holyHammer"; open holyHammer;
-     val ncore = 20;
+     val ncore = 30;
      val timeout = 5;
-     load "tttUnfold"; tttUnfold.load_sigobj ();
+     load "tttUnfold"; 
+     tttUnfold.load_sigobj ();
      val thyl = ancestry (current_theory ());
-     eprover_pb_eval_parallel ncore timeout thyl;
+     eprover_pb_eval_parallel ncore timeout thyl; 
    Results can be found in HOLDIR/src/holyhammer/eval.
   ------------------------------------------------------------------------- *)
 
