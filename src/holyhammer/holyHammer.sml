@@ -45,6 +45,8 @@ val all_atps = ref [Eprover,Z3,Vampire]
    Directories
    ------------------------------------------------------------------------- *)
 
+val parallel_tag = ref ""
+
 fun pathl sl = case sl of
     []  => raise ERR "pathl" "empty"
   | [a] => a
@@ -53,13 +55,10 @@ fun pathl sl = case sl of
 val hh_dir         = pathl [HOLDIR,"src","holyhammer"];
 
 val provbin_dir    = pathl [hh_dir,"provers"];
-fun provdir_of atp = pathl [provbin_dir, name_of atp ^ "_files"]
-val parallel_dir   = pathl [provbin_dir,"eprover_parallel"];
-
+fun provdir_of atp = pathl [provbin_dir, 
+  name_of atp ^ "_files" ^ (!parallel_tag)]
 fun out_of atp     = pathl [provdir_of atp,"out"]
 fun status_of atp  = pathl [provdir_of atp,"status"]
-fun out_dir dir    = pathl [dir,"out"]
-fun status_dir dir = pathl [dir,"status"]
 
 (* -------------------------------------------------------------------------
    Evaluation log
@@ -159,6 +158,7 @@ fun exists_atp_err atp =
 
 fun hh_pb wanted_atpl premises goal =
   let
+    val _ = app (mkDir_err o provdir_of) wanted_atpl
     val atpl = filter exists_atp_err wanted_atpl
     val cj = list_mk_imp goal
     val _  = app (export_to_atp premises cj) atpl
@@ -249,7 +249,10 @@ fun hh_pb_eval_thy atpl thy =
   ------------------------------------------------------------------------- *)
 
 fun eprover_pb_eval_extern (state: unit) (wid,job) thy =
+  (
+  parallel_tag := its wid;
   hh_pb_eval_thy [Eprover] thy
+  )
 
 fun eprover_pb_eval_parallel ncore timeout thyl =
   let
@@ -272,8 +275,8 @@ fun eprover_pb_eval_parallel ncore timeout thyl =
 (* -------------------------------------------------------------------------
    Usage:
      load "holyHammer"; open holyHammer;
-     val ncore = 40;
-     val timeout = 5;
+     val ncore = 20;
+     val timeout = 15;
      load "tttUnfold"; tttUnfold.load_sigobj ();
      val thyl = ancestry (current_theory ());
      eprover_pb_eval_parallel ncore timeout thyl;
