@@ -57,7 +57,7 @@ than $1$ and itself:
 \begin{session}
 \begin{alltt}
 >> Definition prime_def:
-     prime p = p <> 1 /\ !x. x divides p ==> (x=1) \/ (x=p)
+     prime p <=> p <> 1 /\ !x. x divides p ==> (x=1) \/ (x=p)
    End
 \end{alltt}
 \end{session}

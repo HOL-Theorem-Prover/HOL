@@ -188,4 +188,7 @@ sig
   val qx_genl_tac : term quotation list -> tactic
   val qx_choosel_then : term quotation list -> thm_tactic -> thm_tactic
 
+  (* Derived search functions *)
+  val find_consts_thy : string list -> hol_type -> term list
+  val find_consts : hol_type -> term list
 end
