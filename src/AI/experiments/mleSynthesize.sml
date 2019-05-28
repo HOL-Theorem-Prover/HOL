@@ -196,7 +196,7 @@ fun final_eval dhtnn_name (a,b) testbase =
 (*
 load "mleSynthesize"; open mleSynthesize;
 load "mlReinforce"; open mlReinforce;
-ncore_mcts_glob := 40;
+
 val dhtnn_name = "synthesize_run3_gen42_dhtnn";
 fun eval nsim =
   (
@@ -208,7 +208,10 @@ fun eval nsim =
     final_eval dhtnn_name (16,32) "big"
     )
   );
-val rltest = eval 1;
+
+ncore_mcts_glob := 4;
+nsim_glob := 1;
+final_eval dhtnn_name (0,16) "test";
 val rl = map eval [1,16,160,1600];
 *)
 
