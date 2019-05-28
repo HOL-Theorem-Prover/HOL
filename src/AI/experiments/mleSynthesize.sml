@@ -201,11 +201,14 @@ val dhtnn_name = "synthesize_run3_gen42_dhtnn";
 fun eval nsim =
   (
   nsim_glob := nsim;
-  final_eval dhtnn_name (0,16) "test",
-  final_eval dhtnn_name (16,32) "test";
-  final_eval dhtnn_name (0,16) "big";
-  final_eval dhtnn_name (16,32) "big";
+    (
+    final_eval dhtnn_name (0,16) "test",
+    final_eval dhtnn_name (16,32) "test",
+    final_eval dhtnn_name (0,16) "big",
+    final_eval dhtnn_name (16,32) "big"
+    )
   );
+val rltest = eval 1;
 val rl = map eval [1,16,160,1600];
 *)
 

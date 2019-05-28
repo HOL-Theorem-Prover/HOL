@@ -120,6 +120,7 @@ fun mk_fep_dhtnn startb gamespec dhtnn sit =
     else
       (only_hd (infer_tnn etnn nntm),
        filter_sit (combine (movel, infer_tnn ptnn nntm)))
+      handle HOL_ERR _ => raise HOL_ERR "mk_gep_dhtnn" ""
   end
 
 (* -------------------------------------------------------------------------
@@ -183,8 +184,6 @@ fun n_bigsteps_loop (n,nmax) gamespec mctsparam (allex,allroot) tree =
         end
     end
   end
-
-
 
 fun n_bigsteps gamespec mctsparam target =
   let val tree = starttree_of mctsparam target in

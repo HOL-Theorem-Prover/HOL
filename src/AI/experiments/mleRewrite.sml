@@ -311,13 +311,14 @@ load "mlReinforce"; open mlReinforce;
 ncore_mcts_glob := 40;
 val dhtnn_name = "rewrite_run3_gen20_dhtnn";
 fun eval nsim =
-  (
-  nsim_glob := nsim;
-  final_eval dhtnn_name (0,100) "test",
-  final_eval dhtnn_name (101,200) "test";
-  final_eval dhtnn_name (0,100) "big";
-  final_eval dhtnn_name (101,200) "big";
-  )
+  (nsim_glob := nsim;
+    (
+    final_eval dhtnn_name (0,16) "test",
+    final_eval dhtnn_name (16,32) "test",
+    final_eval dhtnn_name (0,16) "big",
+    final_eval dhtnn_name (16,32) "big"
+    )
+  );
 val rl = map eval [1,16,160,1600];
 *)
 
