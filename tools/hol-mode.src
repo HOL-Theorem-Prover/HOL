@@ -713,33 +713,6 @@ starts >%s%s<"
                    (remove-quoted-hol-term "``" "``" m))))))
       (set-marker m nil))))
 
-(defun remove-sml-lets-locals
-  (start end &optional looking-for-end &optional recursing)
-  "Removes all local-in-ends and let-in-ends from a region.  We assume
-that the buffer has already had HOL terms, comments and strings removed."
-  (interactive "r")
-  (let ((m (if (not recursing) (set-marker (make-marker) end) end))
-        retval)
-    (if (not recursing) (goto-char start))
-    (if (re-search-forward "\\blet\\b\\|\\blocal\\b\\|\\bend\\b" m t)
-        (let ((declstring (match-string 0)))
-          (if (or (string= declstring "let") (string= declstring "local"))
-              (and
-               (remove-sml-lets-locals (- (point) (length declstring)) m t t)
-               (remove-sml-lets-locals start m looking-for-end t)
-               (setq retval t))
-            ;; found an "end"
-            (if (not looking-for-end)
-                (message "End without corresponding let/local")
-              (delete-region start (point))
-              (setq retval t))))
-      ;; didn't find anything
-      (if looking-for-end
-          (message "Let/local without corresponding end")
-        (setq retval t)))
-    (if (not recursing) (set-marker m nil))
-    retval))
-
 (defun word-list-to-regexp (words)
   (mapconcat (lambda (s) (concat "\\b" s "\\b")) words "\\|"))
 
