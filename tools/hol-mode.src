@@ -690,7 +690,9 @@ starts >%s%s<"
   (interactive "r")
   (let ((m (make-marker))
         (regexp
-         (concat "(\\*\\|`\\|\"\\|“\\|‘\\|" hol-quoted-theorem-proof-re-begin)))
+         (concat "(\\*\\|`\\|\"\\|“\\|‘\\|"
+                 hol-quoted-theorem-proof-re-begin "\\|"
+                 hol-quoted-definition-re-begin)))
     (set-marker m end)
     (save-excursion
       (goto-char start)
@@ -702,6 +704,8 @@ starts >%s%s<"
                 ((string= ms "‘") (remove-quoted-hol-term "‘" "’" m))
                 ((string-prefix-p "Theorem" ms)
                  (remove-quoted-hol-term ms "^Proof" m))
+                ((string-prefix-p "Definition" ms)
+                 (remove-quoted-hol-term ms "^\\(Termination\\|End\\)" m))
                 (t ; must be a back-tick
                  (if (not (looking-at "`"))
                      (remove-quoted-hol-term "`" "`" m)
