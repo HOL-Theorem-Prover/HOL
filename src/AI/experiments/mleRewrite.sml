@@ -299,9 +299,26 @@ fun final_eval dhtnn_name (a,b) testbase =
     val l1 = import_terml (dataarith_dir ^ "/" ^ testbase)
     val l2 = mapfilter (fn tm => (tm,snd (valOf (lo_trace 200 tm)))) l1
     val l3 = filter (fn x => snd x >= a andalso snd x <= b) l2
+    val nwin = compete_one gamespec dhtnn (map mk_startsit (map fst l3))
+    val ntot = length l3
   in
-    compete_one gamespec dhtnn (map mk_startsit (map fst l3))
+    ((nwin,ntot), int_div nwin ntot)
   end
 
+(*
+load "mleRewrite"; open mleRewrite;
+load "mlReinforce"; open mlReinforce;
+ncore_mcts_glob := 40;
+val dhtnn_name = "rewrite_run3_gen20_dhtnn";
+fun eval nsim =
+  (
+  nsim_glob := nsim;
+  final_eval dhtnn_name (0,100) "test",
+  final_eval dhtnn_name (101,200) "test";
+  final_eval dhtnn_name (0,100) "big";
+  final_eval dhtnn_name (101,200) "big";
+  )
+val rl = map eval [1,16,160,1600];
+*)
 
 end (* struct *)

@@ -10,10 +10,16 @@ RECORDING:
 USAGE: (after RECORDING) 
   load "tacticToe"; open tacticToe;
   tactictoe ``1+1=2``;
-  
-EXAMPLE: see more examples in examples/ttt_demoScript.sml.
-  To create the ttt_demoTheory do:
-  cd examples; Holmake
+
+CLEANING: 
+  - TacticToe calls depends on the data stored in 
+    src/tactictoe/ttt_tacdata 
+  - TacticToe recording/evaluation depends on data stored in 
+    src/AI/sml_inspection/open
+  Please remove these directories and start afresh after updating HOL 
+  (usually necessary).
+
+EXAMPLE: see examples in examples/ttt_demoScript.sml.
 
 NOTES FOR DEVELOPERS:
   Keep up-to-date: infix tokens in tttInfix.sml, polyml values in tttUnfold.sml.

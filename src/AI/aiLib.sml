@@ -194,8 +194,6 @@ fun cartesian_productl ll = case ll of
        map f l1
      end
 
-
-
 fun findSome f l = case l of
     [] => NONE
   | a :: m =>
@@ -294,22 +292,27 @@ fun topo_sort cmp graph =
 fun sort_thyl thyl =
     topo_sort String.compare (map (fn x => (x, ancestry x)) thyl)
 
+(* -------------------------------------------------------------------------
+   The functions from this section affects other in subtle ways. 
+   Please becareful to keep their "weird" semantics.
+   ------------------------------------------------------------------------- *)
+
 (* keeps the order *)
-fun mk_batch_aux size acc res l =
-  if length acc >= size
-  then mk_batch_aux size [] (rev acc :: res) l
+fun mk_batch_aux size (acc,accsize) res l =
+  if accsize >= size
+  then mk_batch_aux size ([],0) (rev acc :: res) l
   else case l of
      [] => (res,acc)
-   | a :: m => mk_batch_aux size (a :: acc) res m
+   | a :: m => mk_batch_aux size ((a :: acc),accsize + 1) res m
 
 (* delete last elements *)
 fun mk_batch size l =
-  let val (res,acc) = mk_batch_aux size [] [] l in
+  let val (res,acc) = mk_batch_aux size ([],0) [] l in
     rev res
   end
 
 fun mk_batch_full size l =
-  let val (res,acc) = mk_batch_aux size [] [] l in
+  let val (res,acc) = mk_batch_aux size ([],0) [] l in
     rev (if null acc then res else rev acc :: res)
   end
 
@@ -321,7 +324,9 @@ fun cut_n n l =
     mk_batch_full bsize l
   end
 
-
+(* -------------------------------------------------------------------------
+   List (continued)
+   ------------------------------------------------------------------------- *)
 
 fun number_partition m n =
   if m > n orelse m <= 0 then raise ERR "partition" "" else

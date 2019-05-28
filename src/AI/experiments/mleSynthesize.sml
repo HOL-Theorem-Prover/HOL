@@ -175,4 +175,38 @@ fun reinforce_fixed runname ngen =
   start_rl_loop gamespec
   )
 
+(* -------------------------------------------------------------------------
+   Final evaluation
+   ------------------------------------------------------------------------- *)
+
+fun final_eval dhtnn_name (a,b) testbase =
+  let
+    val eval_dir = HOLDIR ^ "/src/AI/machine_learning/eval"
+    val file = eval_dir ^ "/" ^ dhtnn_name
+    val dhtnn = mlTreeNeuralNetwork.read_dhtnn file
+    val l1 = import_terml (dataarith_dir ^ "/" ^ testbase)
+    val l2 = map (fn tm => (tm,eval_numtm tm)) l1
+    val l3 = filter (fn x => snd x >= a andalso snd x <= b) l2
+    val nwin = compete_one gamespec dhtnn (map mk_startsit (map fst l3))
+    val ntot = length l3
+  in
+    ((nwin,ntot), int_div nwin ntot)
+  end
+
+(*
+load "mleSynthesize"; open mleSynthesize;
+load "mlReinforce"; open mlReinforce;
+ncore_mcts_glob := 40;
+val dhtnn_name = "synthesize_run3_gen42_dhtnn";
+fun eval nsim =
+  (
+  nsim_glob := nsim;
+  final_eval dhtnn_name (0,16) "test",
+  final_eval dhtnn_name (16,32) "test";
+  final_eval dhtnn_name (0,16) "big";
+  final_eval dhtnn_name (16,32) "big";
+  );
+val rl = map eval [1,16,160,1600];
+*)
+
 end (* struct *)
