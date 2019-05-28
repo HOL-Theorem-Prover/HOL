@@ -456,8 +456,8 @@ val odd_imposs = Q.prove(
 
 fun writeL th = CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [th]))
 
-Theorem IN_domain
-  `!n x t1 t2.
+Theorem IN_domain:
+  !n x t1 t2.
       (n IN domain LN <=> F) /\
       (n IN domain (LS x) <=> (n = 0)) /\
       (n IN domain (BN t1 t2) <=>
@@ -465,13 +465,15 @@ Theorem IN_domain
                     else ((n-1) DIV 2) IN domain t2)) /\
       (n IN domain (BS t1 x t2) <=>
          (n = 0) \/ (if EVEN n then ((n-1) DIV 2) IN domain t1
-                     else ((n-1) DIV 2) IN domain t2))`
- (simp[domain_def] >> rpt strip_tac >> Cases_on ‘n = 0’ >> simp[] >>
+                     else ((n-1) DIV 2) IN domain t2))
+Proof
+  simp[domain_def] >> rpt strip_tac >> Cases_on ‘n = 0’ >> simp[] >>
   Cases_on ‘EVEN n’ >> simp[] >>
   (drule_then assume_tac even_imposs ORELSE drule_then assume_tac odd_imposs) >>
   simp[] >>
   (drule_all_then writeL even_lem' ORELSE drule_all_then writeL odd_lem') >>
-  simp[]);
+  simp[]
+QED
 
 val size_insert = Q.store_thm(
   "size_insert",
@@ -1293,23 +1295,27 @@ val fromAList_toAList = store_thm("fromAList_toAList",
   ``!t. wf t ==> (fromAList (toAList t) = t)``,
   metis_tac[wf_fromAList,lookup_fromAList_toAList,spt_eq_thm])
 
-Theorem union_insert_LN
-  `!x y t2. union (insert x y LN) t2 = insert x y t2`
-  (recInduct insert_ind
+Theorem union_insert_LN:
+  !x y t2. union (insert x y LN) t2 = insert x y t2
+Proof
+  recInduct insert_ind
    \\ rw[]
    \\ rw[Once insert_def]
    \\ rw[Once insert_def,SimpRHS]
-   \\ rw[union_def]);
+   \\ rw[union_def]
+QED
 
-Theorem fromAList_append
-  `!l1 l2. fromAList (l1 ++ l2) = union (fromAList l1) (fromAList l2)`
-  (recInduct fromAList_ind
+Theorem fromAList_append:
+  !l1 l2. fromAList (l1 ++ l2) = union (fromAList l1) (fromAList l2)
+Proof
+  recInduct fromAList_ind
   \\ rw[fromAList_def]
   \\ rw[Once insert_union]
   \\ rw[union_assoc]
   \\ AP_THM_TAC
   \\ AP_TERM_TAC
-  \\ rw[union_insert_LN]);
+  \\ rw[union_insert_LN]
+QED
 
 val map_def = Define`
   (map f LN = LN) /\
@@ -1360,11 +1366,13 @@ val map_insert = store_thm("map_insert",
     DECIDE_TAC)>>
   fs[map_def]);
 
-Theorem map_fromAList
-  `map f (fromAList ls) = fromAList (MAP (\ (k,v). (k, f v)) ls)`
-  (Induct_on`ls` >> simp[fromAList_def] >>
+Theorem map_fromAList:
+  map f (fromAList ls) = fromAList (MAP (\ (k,v). (k, f v)) ls)
+Proof
+  Induct_on`ls` >> simp[fromAList_def] >>
    Cases >> simp[fromAList_def] >>
-   simp[wf_fromAList,map_insert]);
+   simp[wf_fromAList,map_insert]
+QED
 
 val insert_insert = store_thm("insert_insert",
   ``!x1 x2 v1 v2 t.
@@ -1479,7 +1487,7 @@ val subspt_domain = Q.store_thm("subspt_domain",
      subspt t1 t2 <=> domain t1 SUBSET domain t2`,
   fs [subspt_lookup,domain_lookup,SUBSET_DEF]);
 
-val subspt_def = Q.store_thm("subspt_def",
+val subspt_def = Q.store_thm("subspt_def[compute]",
   `!sp1 sp2.
      subspt sp1 sp2 <=>
      !k. k IN domain sp1 ==> k IN domain sp2 /\
@@ -1607,10 +1615,6 @@ val mapi_Alist = Q.store_thm(
     fromAList (MAP (\kv. (FST kv,f (FST kv) (SND kv))) (toAList pt))`,
   simp[spt_eq_thm, wf_mapi, wf_fromAList, lookup_fromAList] >>
   srw_tac[boolSimps.ETA_ss][lookup_mapi, ALOOKUP_MAP_lemma, ALOOKUP_toAList]);
-
-val domain_mapi = Q.store_thm("domain_mapi",
-  `domain (mapi f pt) = domain pt`,
-  rw[EXTENSION,domain_lookup,lookup_mapi]);
 
 val size_domain = Q.store_thm("size_domain",
   `!t. size t = CARD (domain t)`,
@@ -1775,41 +1779,54 @@ val list_insert_def = Define `
   (list_insert [] t = t) /\
   (list_insert (n::ns) t = list_insert ns (insert n () t))`;
 
-Theorem domain_list_to_num_set
-  `!xs. x IN domain (list_to_num_set xs) <=> MEM x xs`
- (Induct \\ full_simp_tac(srw_ss())[list_to_num_set_def]);
+Theorem domain_list_to_num_set:
+  !xs. x IN domain (list_to_num_set xs) <=> MEM x xs
+Proof
+   Induct \\ full_simp_tac(srw_ss())[list_to_num_set_def]
+QED
 
-Theorem domain_list_insert
-  `!xs x t.
-      x IN domain (list_insert xs t) <=> MEM x xs \/ x IN domain t`
- (Induct \\ full_simp_tac(srw_ss())[list_insert_def] \\ METIS_TAC []);
+Theorem domain_list_insert:
+  !xs x t.
+      x IN domain (list_insert xs t) <=> MEM x xs \/ x IN domain t
+Proof
+   Induct \\ full_simp_tac(srw_ss())[list_insert_def] \\ METIS_TAC []
+QED
 
-Theorem domain_FOLDR_delete
-  `!ls live. domain (FOLDR delete live ls) = (domain live) DIFF (set ls)`
- (Induct>>
-  full_simp_tac(srw_ss())[DIFF_INSERT,EXTENSION]>>
-  metis_tac[]);
+Theorem domain_FOLDR_delete:
+  !ls live. domain (FOLDR delete live ls) = (domain live) DIFF (set ls)
+Proof
+  Induct>> full_simp_tac(srw_ss())[DIFF_INSERT,EXTENSION]>> metis_tac[]
+QED
 
-Theorem lookup_list_to_num_set
-  `!xs. lookup x (list_to_num_set xs) = if MEM x xs then SOME () else NONE`
- (Induct \\ srw_tac [] [list_to_num_set_def,lookup_def,lookup_insert] \\ full_simp_tac(srw_ss())[]);
+Theorem lookup_list_to_num_set:
+  !xs. lookup x (list_to_num_set xs) = if MEM x xs then SOME () else NONE
+Proof
+  Induct \\ srw_tac [] [list_to_num_set_def,lookup_def,lookup_insert] \\
+  full_simp_tac(srw_ss())[]
+QED
 
-Theorem list_to_num_set_append
-  `!l1 l2. list_to_num_set (l1 ++ l2) = union (list_to_num_set l1) (list_to_num_set l2)`
- (Induct \\ rw[list_to_num_set_def]
+Theorem list_to_num_set_append:
+  !l1 l2. list_to_num_set (l1 ++ l2) =
+          union (list_to_num_set l1) (list_to_num_set l2)
+Proof
+  Induct \\ rw[list_to_num_set_def]
   \\ rw[Once insert_union]
   \\ rw[Once insert_union,SimpRHS]
-  \\ rw[union_assoc]);
+  \\ rw[union_assoc]
+QED
 
-Theorem map_map_K[simp]
-  `!t. map (K a) (map f t) = map (K a) t`
-  (Induct \\ fs[map_def]);
+Theorem map_map_K[simp]:
+  !t. map (K a) (map f t) = map (K a) t
+Proof    Induct \\ fs[map_def]
+QED
 
-Theorem lookup_map_K
-  `!t n. lookup n (map (K x) t) = if n IN domain t then SOME x else NONE`
-  (Induct >> fs[IN_domain,map_def,lookup_def] >>
+Theorem lookup_map_K:
+  !t n. lookup n (map (K x) t) = if n IN domain t then SOME x else NONE
+Proof
+   Induct >> fs[IN_domain,map_def,lookup_def] >>
    rpt strip_tac >> Cases_on `n = 0` >> fs[] >>
-   Cases_on `EVEN n` >> fs[]);
+   Cases_on `EVEN n` >> fs[]
+QED
 
 val alist_insert_def = Define `
   (alist_insert [] xs t = t) /\
@@ -1818,31 +1835,39 @@ val alist_insert_def = Define `
 
 val alist_insert_ind = theorem "alist_insert_ind";
 
-Theorem lookup_alist_insert
-  `!x y t z.
+Theorem lookup_alist_insert:
+  !x y t z.
     (LENGTH x = LENGTH y) ==>
     (lookup z (alist_insert x y t) =
-     case ALOOKUP (ZIP(x,y)) z of SOME a => SOME a | NONE => lookup z t)`
-  (ho_match_mp_tac alist_insert_ind >>
+     case ALOOKUP (ZIP(x,y)) z of SOME a => SOME a | NONE => lookup z t)
+Proof
+   ho_match_mp_tac alist_insert_ind >>
    srw_tac[][] >- fs[LENGTH,alist_insert_def] >>
    Cases_on`z=x`>> srw_tac[][lookup_def,alist_insert_def]>>
-   full_simp_tac(srw_ss())[lookup_insert]);
+   full_simp_tac(srw_ss())[lookup_insert]
+QED
 
-Theorem domain_alist_insert
-  `!a b locs. (LENGTH a = LENGTH b) ==>
-              (domain (alist_insert a b locs) = domain locs UNION set a)`
-  (Induct_on`a`>>Cases_on`b`>>full_simp_tac(srw_ss())[alist_insert_def]>>
-   srw_tac[][]>> metis_tac[INSERT_UNION_EQ,UNION_COMM]);
+Theorem domain_alist_insert:
+  !a b locs. (LENGTH a = LENGTH b) ==>
+              (domain (alist_insert a b locs) = domain locs UNION set a)
+Proof
+   Induct_on`a`>>Cases_on`b`>>full_simp_tac(srw_ss())[alist_insert_def]>>
+   srw_tac[][]>> metis_tac[INSERT_UNION_EQ,UNION_COMM]
+QED
 
-Theorem alist_insert_append
-  `!a1 a2 s b1 b2.
+Theorem alist_insert_append:
+  !a1 a2 s b1 b2.
      (LENGTH a1 = LENGTH a2) ==>
      (alist_insert (a1++b1) (a2++b2) s =
-      alist_insert a1 a2 (alist_insert b1 b2 s))`
-  (ho_match_mp_tac alist_insert_ind
-  \\ simp[alist_insert_def,LENGTH_NIL_SYM]);
+      alist_insert a1 a2 (alist_insert b1 b2 s))
+Proof
+  ho_match_mp_tac alist_insert_ind
+  \\ simp[alist_insert_def,LENGTH_NIL_SYM]
+QED
 
-Theorem wf_LN[simp] `wf LN` (rw[wf_def]);
+Theorem wf_LN[simp]: wf LN
+Proof rw[wf_def]
+QED
 
 val splem1 = Q.prove(`
   a <> 0 ==> (a-1) DIV 2 < a`,
@@ -1862,10 +1887,11 @@ val splem3 = Q.prove(
   fs[EVEN_ADD, EVEN_MULT, ODD_ADD, ODD_MULT] >>
   rpt (rename [‘x < 2’] >> ‘(x = 0) \/ (x = 1)’ by simp[] >> fs[]));
 
-Theorem insert_swap `
+Theorem insert_swap:
   !t a b c d.
-    a <> c ==> (insert a b (insert c d t) = insert c d (insert a b t))`
-  (completeInduct_on`a`>>
+    a <> c ==> (insert a b (insert c d t) = insert c d (insert a b t))
+Proof
+  completeInduct_on`a`>>
   completeInduct_on`c`>>
   Induct>>
   rw[]>>
@@ -1878,55 +1904,60 @@ Theorem insert_swap `
   simp[Once insert_def]>>
   imp_res_tac splem1>>
   imp_res_tac splem3>>
-  metis_tac[EVEN_ODD])
+  metis_tac[EVEN_ODD]
+QED
 
-Theorem alist_insert_pull_insert
-  `!xs ys z. ~MEM x xs ==>
+Theorem alist_insert_pull_insert:
+  !xs ys z. ~MEM x xs ==>
              (alist_insert xs ys (insert x y z) =
-              insert x y (alist_insert xs ys z))`
-  (ho_match_mp_tac alist_insert_ind
+              insert x y (alist_insert xs ys z))
+Proof
+  ho_match_mp_tac alist_insert_ind
   \\ simp[alist_insert_def] \\ rw[] \\ fs[]
-  \\ metis_tac[insert_swap]);
+  \\ metis_tac[insert_swap]
+QED
 
-Theorem alist_insert_REVERSE
-  `!xs ys s.
-   ALL_DISTINCT xs /\ (LENGTH xs = LENGTH ys) ==>
-   (alist_insert (REVERSE xs) (REVERSE ys) s = alist_insert xs ys s)`
-  (Induct \\ simp[alist_insert_def]
+Theorem alist_insert_REVERSE:
+  !xs ys s.
+    ALL_DISTINCT xs /\ (LENGTH xs = LENGTH ys) ==>
+    (alist_insert (REVERSE xs) (REVERSE ys) s = alist_insert xs ys s)
+Proof
+  Induct \\ simp[alist_insert_def]
   \\ gen_tac \\ Cases \\ simp[alist_insert_def]
   \\ simp[alist_insert_append,alist_insert_def]
-  \\ rw[] \\ simp[alist_insert_pull_insert]);
+  \\ rw[] \\ simp[alist_insert_pull_insert]
+QED
 
-Theorem insert_unchanged `
+Theorem insert_unchanged:
   !t x.
-    (lookup x t = SOME y) ==> (insert x y t = t)`
-  (completeInduct_on`x`>>
-  Induct>>
-  fs[lookup_def]>>rw[]>>
-  simp[Once insert_def,SimpRHS]>>
-  simp[Once insert_def]>>
-  imp_res_tac splem1>>
-  metis_tac[])
+    (lookup x t = SOME y) ==> (insert x y t = t)
+Proof
+  completeInduct_on`x`>> Induct>> fs[lookup_def]>>rw[]>>
+  simp[Once insert_def,SimpRHS]>> simp[Once insert_def]>> imp_res_tac splem1>>
+  metis_tac[]
+QED
 
 val spt_centers_def = Define `
   (spt_centers i [] = []) /\
   (spt_centers i (x :: xs) = ((case spt_center x of
     NONE => [] | SOME y => [(i, y)]) ++ spt_centers (SUC i) xs))`;
 
-Theorem spt_centers_eq_map
-  `!xs i. spt_centers i xs = MAP THE (FILTER (\x. ~ (x = NONE))
+Theorem spt_centers_eq_map:
+  !xs i. spt_centers i xs = MAP THE (FILTER (\x. ~ (x = NONE))
     (MAPi (\j t. case spt_center t of NONE => NONE
-        | SOME x => SOME (i + j, x)) xs))`
-  (
+        | SOME x => SOME (i + j, x)) xs))
+Proof
   Induct \\ fs [spt_centers_def]
   \\ rpt strip_tac
   \\ BasicProvers.EVERY_CASE_TAC
   \\ fs [combinTheory.o_DEF, ADD_CLAUSES]
-  );
+QED
 
-Theorem list_size_APPEND
-  `list_size f (xs ++ ys) = list_size f xs + list_size f ys`
-  (Induct_on `xs` \\ fs [list_size_def])
+Theorem list_size_APPEND:
+  list_size f (xs ++ ys) = list_size f xs + list_size f ys
+Proof
+  Induct_on `xs` \\ fs [list_size_def]
+QED
 
 val spt_size_alt_def = Define `
   (spt_size_alt LN = 0)
@@ -1935,19 +1966,20 @@ val spt_size_alt_def = Define `
   /\ (spt_size_alt (BS t1 a t2)
     = (spt_size_alt t1 + spt_size_alt t2 + 1))`;
 
-Theorem sum_spt_size_alt_lemma
-  `let mksum = (\f. SUM (MAP (spt_size_alt o f) xs)) in
-    let tsum = mksum spt_left + mksum spt_right in
-    tsum <= mksum I
-      /\ (EXISTS ($~ o (\x. isEmpty x)) xs ==> tsum < mksum I)`
-  (
+Theorem sum_spt_size_alt_lemma:
+  let mksum = (\f. SUM (MAP (spt_size_alt o f) xs)) ;
+      tsum = mksum spt_left + mksum spt_right
+  in
+    tsum <= mksum I /\
+    (EXISTS ($~ o (\x. isEmpty x)) xs ==> tsum < mksum I)
+Proof
   Induct_on `xs` \\ fs []
   \\ GEN_TAC
   \\ Cases_on `h` \\ fs [list_size_def, spt_left_def,
         spt_right_def, spt_size_alt_def]
   \\ rw []
   \\ fs []
-  );
+QED
 
 Theorem sum_spt_size_less
   = (sum_spt_size_alt_lemma
@@ -1969,62 +2001,66 @@ val toSortedAList_def = Define `toSortedAList spt = aux_alist 0 [spt]`;
 
 fun test () = EVAL ``toSortedAList (delete 12 (fromList (COUNT_LIST 25)))``;
 
-Theorem spt_centers_add_lemma
-  `!xs i j. MAP (\(j, v). (i + j,v)) (spt_centers j xs)
-    = spt_centers (i + j) xs`
-  (
+Theorem spt_centers_add_lemma:
+  !xs i j. MAP (\(j, v). (i + j,v)) (spt_centers j xs)
+    = spt_centers (i + j) xs
+Proof
   Induct \\ fs [spt_centers_def]
   \\ rpt strip_tac
   \\ FIRST_X_ASSUM (ASSUME_TAC o Q.SPEC `SUC j`)
   \\ BasicProvers.EVERY_CASE_TAC
   \\ fs [ADD_CLAUSES]
-  );
+QED
 
-Theorem EL_CONS_IF
-  `EL n (x :: xs) = (if n = 0 then x else EL (PRE n) xs)`
-  ( Cases_on `n` \\ fs [] );
+Theorem EL_CONS_IF:
+  EL n (x :: xs) = (if n = 0 then x else EL (PRE n) xs)
+Proof    Cases_on `n` \\ fs []
+QED
 
-Theorem ADD_1_SUC
-  `(N + 1 = SUC N) /\ (1 + N = SUC N)`
-  ( fs [] );
+Theorem ADD_1_SUC:
+  (N + 1 = SUC N) /\ (1 + N = SUC N)
+Proof   fs []
+QED
 
-Theorem ALOOKUP_spt_centers
-  `!i j. (ALOOKUP (spt_centers j xs) i
-    = if j <= i /\ i - j < LENGTH xs then spt_center (EL (i - j) xs) else NONE)`
-  (
+Theorem ALOOKUP_spt_centers:
+  !i j.
+    ALOOKUP (spt_centers j xs) i =
+    if j <= i /\ i - j < LENGTH xs then spt_center (EL (i - j) xs) else NONE
+Proof
   Induct_on `xs` \\ fs [spt_centers_def]
   \\ rpt strip_tac
   \\ fs [ALOOKUP_APPEND]
   \\ BasicProvers.EVERY_CASE_TAC \\ fs [] \\ rfs []
   \\ fs [EL_CONS_IF, PRE_SUB1, ADD_1_SUC]
-  );
+QED
 
-Theorem lookup_0_spt_center
-  `!spt. lookup 0 spt = spt_center spt`
-  ( Cases \\ EVAL_TAC );
+Theorem lookup_0_spt_center:
+  !spt. lookup 0 spt = spt_center spt
+Proof   Cases \\ EVAL_TAC
+QED
 
-Theorem lookup_spt_right
-  `lookup i (spt_right spt) = lookup ((i * 2) + 1) spt`
-  (
+Theorem lookup_spt_right:
+  lookup i (spt_right spt) = lookup ((i * 2) + 1) spt
+Proof
   ASSUME_TAC (Q.SPEC `2` MULT_DIV)
   \\ Cases_on `spt` \\ fs [spt_right_def, lookup_def]
   \\ fs [EVEN_MULT, EVEN_ADD]
-  );
+QED
 
-Theorem lookup_spt_left
-  `lookup i (spt_left spt) = lookup ((i * 2) + 2) spt`
-  (
+Theorem lookup_spt_left:
+  lookup i (spt_left spt) = lookup ((i * 2) + 2) spt
+Proof
   ASSUME_TAC (Q.SPEC `2` MULT_DIV)
   \\ Cases_on `spt` \\ fs [spt_left_def, lookup_def]
   \\ fs [EVEN_MULT, EVEN_ADD, ADD_DIV_RWT]
-  );
+QED
 
-Theorem DIV_MOD_TIMES_2
-  `!n i. 0 < n ==> (((i DIV n) = 2 * (i DIV (2 * n))
-            + (if i MOD (2 * n) < n then 0 else 1))
-        /\ ((i MOD n) = i MOD (2 * n)
-            - (if i MOD (2 * n) < n then 0 else n)))`
-  (
+Theorem DIV_MOD_TIMES_2:
+  !n i.
+    0 < n ==>
+    (i DIV n = 2 * (i DIV (2 * n)) + if i MOD (2 * n) < n then 0 else 1) /\
+    (i MOD n = i MOD (2 * n) - if i MOD (2 * n) < n then 0 else n)
+Proof
   rpt (GEN_TAC ORELSE DISCH_TAC)
   \\ qabbrev_tac `tn = 2 * n`
   \\ subgoal `0 < tn` >- (unabbrev_all_tac \\ fs [])
@@ -2039,13 +2075,15 @@ Theorem DIV_MOD_TIMES_2
   \\ drule LESS_EQUAL_ADD
   \\ rw []
   \\ fs [ADD_DIV_RWT, LESS_DIV_EQ_ZERO]
-  );
+QED
 
-Theorem ALOOKUP_aux_alist
-  `!i j. (LENGTH xs > 0) ==> (ALOOKUP (aux_alist j xs) i
-    = if i < j then NONE else lookup ((i - j) DIV (LENGTH xs))
-        (EL ((i - j) MOD (LENGTH xs)) xs))`
-  (
+Theorem ALOOKUP_aux_alist:
+  !i j. LENGTH xs > 0 ==>
+        (ALOOKUP (aux_alist j xs) i =
+           if i < j then NONE
+           else lookup ((i - j) DIV (LENGTH xs))
+                       (EL ((i - j) MOD (LENGTH xs)) xs))
+Proof
   measureInduct_on `(SUM o MAP spt_size_alt) xs`
   \\ rpt strip_tac
   \\ simp [Once aux_alist_def]
@@ -2072,15 +2110,17 @@ Theorem ALOOKUP_aux_alist
   \\ fs []
   \\ CASE_TAC
   \\ fs [EL_APPEND_EQN, EL_MAP, lookup_spt_right, lookup_spt_left]
-  );
+QED
 
-Theorem ALOOKUP_toSortedAList
-  `ALOOKUP (toSortedAList t) k = lookup k t`
-  ( fs [toSortedAList_def, ALOOKUP_aux_alist] );
+Theorem ALOOKUP_toSortedAList:
+  ALOOKUP (toSortedAList t) k = lookup k t
+Proof
+  fs [toSortedAList_def, ALOOKUP_aux_alist]
+QED
 
-Theorem SORTED_spt_centers
-  `!xs i. SORTED $< (MAP FST (spt_centers i xs))`
-  (
+Theorem SORTED_spt_centers:
+  !xs i. SORTED $< (MAP FST (spt_centers i xs))
+Proof
   Induct \\ fs [spt_centers_def]
   \\ rpt (strip_tac ORELSE CASE_TAC) \\ fs []
   \\ fs [sortingTheory.SORTED_EQ]
@@ -2088,27 +2128,27 @@ Theorem SORTED_spt_centers
         MEM_FILTER, indexedListsTheory.MEM_MAPi]
   \\ rpt strip_tac
   \\ BasicProvers.EVERY_CASE_TAC \\ fs []
-  );
+QED
 
-Theorem LESS_spt_centers
-  `!xs i. MEM p (spt_centers i xs) ==> FST p < i + LENGTH xs`
-  (
+Theorem LESS_spt_centers:
+  !xs i. MEM p (spt_centers i xs) ==> FST p < i + LENGTH xs
+Proof
   Induct \\ fs [spt_centers_def]
   \\ rpt (GEN_TAC ORELSE CASE_TAC ORELSE DISCH_TAC) \\ fs []
   \\ FIRST_X_ASSUM drule \\ fs []
-  );
+QED
 
-Theorem MEM_FST_ALOOKUP_SOME
-  `MEM x xs ==> ?y. ALOOKUP xs (FST x) = SOME y`
-  (
+Theorem MEM_FST_ALOOKUP_SOME:
+  MEM x xs ==> ?y. ALOOKUP xs (FST x) = SOME y
+Proof
   Cases_on `ALOOKUP xs (FST x)`
   \\ fs [ALOOKUP_NONE, MEM_MAP]
   \\ metis_tac []
-  );
+QED
 
-Theorem GREATER_EQ_alist_aux
-  `MEM x (aux_alist i xs) ==> i <= FST x`
-  (
+Theorem GREATER_EQ_alist_aux:
+  MEM x (aux_alist i xs) ==> i <= FST x
+Proof
   Cases_on `ALOOKUP (aux_alist i xs) (FST x)`
   >- (
     fs [ALOOKUP_NONE, MEM_MAP]
@@ -2116,11 +2156,11 @@ Theorem GREATER_EQ_alist_aux
     )
   \\ Cases_on `0 < LENGTH xs` \\ fs [Once (Q.SPEC `[]` aux_alist_def)]
   \\ fs [ALOOKUP_aux_alist]
-  );
+QED
 
-Theorem SORTED_MAP_FST_alist_aux
-  `!i. SORTED (<) (MAP FST (aux_alist i xs))`
-  (
+Theorem SORTED_MAP_FST_alist_aux:
+  !i. SORTED (<) (MAP FST (aux_alist i xs))
+Proof
   measureInduct_on `(SUM o MAP spt_size_alt) xs`
   \\ simp [Once aux_alist_def]
   \\ strip_tac \\ CASE_TAC \\ fs []
@@ -2137,21 +2177,23 @@ Theorem SORTED_MAP_FST_alist_aux
   \\ drule LESS_spt_centers
   \\ drule GREATER_EQ_alist_aux
   \\ fs []
-  );
+QED
 
-Theorem SORTED_MAP_FST_toSortedAList
-  `SORTED (<) (MAP FST (toSortedAList t))`
-  ( fs [toSortedAList_def, SORTED_MAP_FST_alist_aux] );
+Theorem SORTED_MAP_FST_toSortedAList:
+  SORTED (<) (MAP FST (toSortedAList t))
+Proof
+  fs [toSortedAList_def, SORTED_MAP_FST_alist_aux]
+QED
 
-Theorem MEM_toSortedAList
-  `!t k v. MEM (k,v) (toSortedAList t) <=> (lookup k t = SOME v)`
-  (
+Theorem MEM_toSortedAList:
+  !t k v. MEM (k,v) (toSortedAList t) <=> (lookup k t = SOME v)
+Proof
   rw [GSYM ALOOKUP_toSortedAList] \\ EQ_TAC \\ rw [ALOOKUP_MEM]
   \\ irule ALOOKUP_ALL_DISTINCT_MEM
   \\ fs []
   \\ irule sortingTheory.SORTED_ALL_DISTINCT
   \\ qexists_tac `$<`
   \\ fs [relationTheory.irreflexive_def, SORTED_MAP_FST_toSortedAList]
-  );
+QED
 
 val _ = export_theory();

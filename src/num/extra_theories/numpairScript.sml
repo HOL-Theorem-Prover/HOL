@@ -210,6 +210,30 @@ val nfst_le = store_thm(
   DECIDE_TAC);
 val nsnd_le = store_thm("nsnd_le", ``nsnd n <= n``, SRW_TAC [][nsnd_def]);
 
+Theorem npair00[simp]:
+  npair 0 0 = 0
+Proof
+  SIMP_TAC (srw_ss()) [npair_def]
+QED
+
+Theorem npair_EQ_0[simp]:
+  (npair x y = 0) <=> (x = 0) /\ (y = 0)
+Proof
+  METIS_TAC[npair00,npair_11]
+QED
+
+Theorem nfst0[simp]:
+  nfst 0 = 0
+Proof
+  METIS_TAC[nfst_npair, npair00, npair_11]
+QED
+
+Theorem nsnd0[simp]:
+  nsnd 0 = 0
+Proof
+  METIS_TAC[nsnd_npair, npair00, npair_11]
+QED
+
 (* ----------------------------------------------------------------------
     lists of naturals encoded as naturals
    ---------------------------------------------------------------------- *)

@@ -373,7 +373,7 @@ local
     in
       if is_SignalException t orelse is_SignalException e
         then b
-      else raise ERR "" ""
+      else raise mk_HOL_ERR "cheri_stepScript" "" ""
     end
 in
   fun split_exception th =

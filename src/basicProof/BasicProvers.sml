@@ -870,7 +870,9 @@ fun STP_TAC ss finisher
   = PRIM_STP_TAC (rev_itlist add_simpls (tyinfol()) ss) finisher
 
 fun RW_TAC ss thl g = markerLib.ABBRS_THEN
-                          (fn thl => STP_TAC (ss && thl) NO_TAC) thl
+                          (markerLib.mk_require_tac
+                             (fn thl => STP_TAC (ss && thl) NO_TAC))
+                          thl
                           g
 val rw_tac = RW_TAC
 
@@ -959,7 +961,8 @@ fun srw_ss () = initialise_srw_ss();
 fun SRW_TAC ssdl thl g = let
   val ss = foldl (fn (ssd, ss) => ss ++ ssd) (srw_ss()) ssdl
 in
-  markerLib.ABBRS_THEN (fn thl => PRIM_STP_TAC (ss && thl) NO_TAC) thl
+  markerLib.ABBRS_THEN
+    (markerLib.mk_require_tac (fn thl => PRIM_STP_TAC (ss && thl) NO_TAC)) thl
 end g;
 val srw_tac = SRW_TAC
 

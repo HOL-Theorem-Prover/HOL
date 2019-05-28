@@ -3,6 +3,9 @@ sig
 
  type regexp = Regexp_Type.regexp;
 
+ val normalize : regexp -> regexp
+ val nullable : regexp -> bool
+
  val matcher :
      regexp -> {matchfn : string -> bool,
                 start   : int,

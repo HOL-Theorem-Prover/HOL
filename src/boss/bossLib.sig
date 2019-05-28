@@ -91,6 +91,8 @@ sig
   val Cong           : thm -> thm
   val AC             : thm -> thm -> thm
   val Excl           : string -> thm
+  val Req0           : thm -> thm
+  val ReqD           : thm -> thm
 
   val SIMP_CONV         : simpset -> thm list -> conv
   val SIMP_RULE         : simpset -> thm list -> thm -> thm
@@ -186,4 +188,7 @@ sig
   val qx_genl_tac : term quotation list -> tactic
   val qx_choosel_then : term quotation list -> thm_tactic -> thm_tactic
 
+  (* Derived search functions *)
+  val find_consts_thy : string list -> hol_type -> term list
+  val find_consts : hol_type -> term list
 end

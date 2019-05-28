@@ -146,6 +146,11 @@ test.{hol,ml}
    * Examples of the application of the compiler/DFA evaluator, with,
      and without, proofs.
 
+even.predicate
+
+   * Example showing showing how arithmetic predicates can be realized
+     by regexps.
+
 regexp2dfa
 
    * Command-line tool for generating programs (Ada,C,Java,ML) from

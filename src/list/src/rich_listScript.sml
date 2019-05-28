@@ -132,12 +132,34 @@ Proof
   Cases_on`SPLITP P ls` >> fs[]
 QED
 
+Theorem SPLITP_LENGTH:
+  !l. LENGTH (FST (SPLITP P l)) + LENGTH (SND (SPLITP P l))
+      = LENGTH l
+Proof Induct \\ rw[SPLITP, LENGTH]
+QED
+
+Theorem SPLITP_APPEND:
+  !l1 l2.
+    SPLITP P (l1 ++ l2) =
+     if EXISTS P l1 then
+       (FST (SPLITP P l1), SND (SPLITP P l1) ++ l2)
+     else
+       (l1 ++ FST(SPLITP P l2), SND (SPLITP P l2))
+Proof
+  Induct \\ rw[SPLITP] \\ fs[]
+QED
+
 Theorem SPLITP_NIL_SND_EVERY:
   !ls r. (SPLITP P ls = (r, [])) <=> (r = ls) /\ (EVERY ($~ o P) ls)
 Proof
   rw[] >> EQ_TAC
   >- (rw[] >> imp_res_tac SPLITP_IMP >> imp_res_tac SPLITP_JOIN >> fs[]) >>
   rw[] >> Induct_on `ls` >> rw[SPLITP]
+QED
+
+Theorem SPLITP_NIL_FST_IMP:
+  !ls r. (SPLITP P ls = ([],r)) ==> (r = ls)
+Proof Induct \\ rw[SPLITP]
 QED
 
 val SPLITL_def = TotalDefn.Define `SPLITL P = SPLITP ((~) o P)`;
@@ -692,13 +714,17 @@ val IS_SUFFIX_IS_SUBLIST = Q.store_thm ("IS_SUFFIX_IS_SUBLIST",
    THEN MAP_EVERY EXISTS_TAC [``l:'a list``, ``[]:'a list``]
    THEN REWRITE_TAC [APPEND_NIL]);
 
-Theorem IS_SUFFIX_CONS
-  `!l1 l2 a. IS_SUFFIX l1 l2 ==> IS_SUFFIX (a::l1) l2`
-  (srw_tac[][IS_SUFFIX_APPEND] >> Q.EXISTS_TAC ‘a::l’ >> srw_tac[][])
+Theorem IS_SUFFIX_CONS:
+  !l1 l2 a. IS_SUFFIX l1 l2 ==> IS_SUFFIX (a::l1) l2
+Proof
+  srw_tac[][IS_SUFFIX_APPEND] >> Q.EXISTS_TAC ‘a::l’ >> srw_tac[][]
+QED
 
-Theorem IS_SUFFIX_TRANS
-  `!l1 l2 l3. IS_SUFFIX l1 l2 /\ IS_SUFFIX l2 l3 ==> IS_SUFFIX l1 l3`
-  (rw[IS_SUFFIX_APPEND] \\ metis_tac[APPEND_ASSOC]);
+Theorem IS_SUFFIX_TRANS:
+  !l1 l2 l3. IS_SUFFIX l1 l2 /\ IS_SUFFIX l2 l3 ==> IS_SUFFIX l1 l3
+Proof
+  rw[IS_SUFFIX_APPEND] \\ metis_tac[APPEND_ASSOC]
+QED
 
 val NOT_NIL_APPEND_SNOC2 = Q.prove(
    `!l1 l2 x. ~([] = (APPEND l1 (SNOC x l2)))`,
@@ -2950,9 +2976,10 @@ val COUNT_LIST_ADD = Q.store_thm ("COUNT_LIST_ADD",
            listTheory.SNOC_APPEND, GSYM APPEND_ASSOC, APPEND]
    THEN SIMP_TAC std_ss [arithmeticTheory.ADD_CLAUSES]);
 
-Theorem MAP_COUNT_LIST
-  `MAP f (COUNT_LIST n) = GENLIST f n`
-  (rw[COUNT_LIST_GENLIST,listTheory.MAP_GENLIST]);
+Theorem MAP_COUNT_LIST:
+  MAP f (COUNT_LIST n) = GENLIST f n
+Proof  rw[COUNT_LIST_GENLIST,listTheory.MAP_GENLIST]
+QED
 
 (*---------------------------------------------------------------------------
    General theorems about lists. From Anthony Fox's and Thomas Tuerk's theories.
@@ -3336,22 +3363,28 @@ val LIST_REL_REPLICATE_same = store_thm("LIST_REL_REPLICATE_same",
   FIRST_X_ASSUM MATCH_MP_TAC >>
   Q.EXISTS_TAC`0`>>simp[]);
 
-Theorem SNOC_REPLICATE
-  `!n x. SNOC x (REPLICATE n x) = REPLICATE (SUC n) x`
-  (Induct \\ fs [REPLICATE]);
+Theorem SNOC_REPLICATE:
+  !n x. SNOC x (REPLICATE n x) = REPLICATE (SUC n) x
+Proof  Induct \\ fs [REPLICATE]
+QED
 
-Theorem REVERSE_REPLICATE[simp]
-  `!n x. REVERSE (REPLICATE n x) = REPLICATE n x`
-  (Induct \\ fs [REPLICATE] \\ fs [GSYM REPLICATE,GSYM SNOC_REPLICATE]);
+Theorem REVERSE_REPLICATE[simp]:
+  !n x. REVERSE (REPLICATE n x) = REPLICATE n x
+Proof
+  Induct \\ fs [REPLICATE] \\ fs [GSYM REPLICATE,GSYM SNOC_REPLICATE]
+QED
 
-Theorem SUM_REPLICATE[simp]
-  `!n k. SUM (REPLICATE n k) = n * k`
-  (Induct >>
-   full_simp_tac(srw_ss())[REPLICATE,MULT_CLAUSES,AC ADD_COMM ADD_ASSOC]);
+Theorem SUM_REPLICATE[simp]:
+  !n k. SUM (REPLICATE n k) = n * k
+Proof
+  Induct >>
+  full_simp_tac(srw_ss())[REPLICATE,MULT_CLAUSES,AC ADD_COMM ADD_ASSOC]
+QED
 
-Theorem LENGTH_FLAT_REPLICATE[simp]
-  `!n. LENGTH (FLAT (REPLICATE n ls)) = n * LENGTH ls`
-  (Induct >> simp[REPLICATE,MULT]);
+Theorem LENGTH_FLAT_REPLICATE[simp]:
+  !n. LENGTH (FLAT (REPLICATE n ls)) = n * LENGTH ls
+Proof  Induct >> simp[REPLICATE,MULT]
+QED
 
 val take_drop_partition = Q.store_thm ("take_drop_partition",
    `!n m l. m <= n ==> (TAKE m l ++ TAKE (n - m) (DROP m l) = TAKE n l)`,

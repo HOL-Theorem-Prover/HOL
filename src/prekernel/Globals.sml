@@ -147,12 +147,6 @@ val old =
               c := !c + 1
    end
 
-(*---------------------------------------------------------------------------*
- *    Flag allowing schematic definitions. Used by code in TotalDefn.        *
- *---------------------------------------------------------------------------*)
-
-val allow_schema_definition = ref false
-
 val print_thy_loads = ref false
 
 (* ----------------------------------------------------------------------

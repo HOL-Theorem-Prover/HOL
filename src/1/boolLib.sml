@@ -119,21 +119,6 @@ val def_suffix = ref "_def"
 
 local
 open Feedback Theory
-fun resolve_storename s = let
-  open Substring
-  val (bracketl,rest) = position "[" (full s)
-in
-  if isEmpty rest then (s,[])
-  else let
-    val (names,bracketr) = position "]" (slice(rest,1,NONE))
-  in
-    if size bracketr <> 1 then
-      raise mk_HOL_ERR "boolLib" "resolve_storename"
-            ("Malformed theorem-binding specifier: "^s)
-    else
-      (string bracketl, String.fields (fn c => c = #",") (string names))
-  end
-end
 in
 fun save_thm_attrs fname (n, attrs, th) = let
   fun do_attr a =
@@ -142,7 +127,7 @@ in
   Theory.save_thm(n,th) before app do_attr attrs
 end
 fun store_thm(n0,t,tac) = let
-  val (n, attrs) = resolve_storename n0
+  val (n, attrs) = ThmAttribute.extract_attributes n0
   val th = Tactical.prove(t,tac)
               handle e => (print ("Failed to prove theorem " ^ n ^ ".\n");
                            Raise e)
@@ -150,7 +135,7 @@ in
   save_thm_attrs "store_thm" (n,attrs,th)
 end
 fun save_thm(n0,th) = let
-  val (n,attrs) = resolve_storename n0
+  val (n,attrs) = ThmAttribute.extract_attributes n0
 in
   save_thm_attrs "save_thm" (n,attrs,th)
 end

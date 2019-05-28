@@ -2197,6 +2197,65 @@ fragment that just includes a list of rewrites:
 \end{verbatim}
 \end{hol}
 
+\subsubsection{Removing rewrites and conversions from \simpset{}s}
+\index{simplification!removing rewrites|(}
+The \ml{-*} (infix) function can be used to remove elements from \simpset{}s.
+This can be done to temporarily affect the simplifier when it is applied to a particular goal.
+For example:
+\begin{session}
+\begin{alltt}
+>> SIMP_CONV (srw_ss()) [] “x ++ (y ++ z)”;
+
+>>+ SIMP_CONV (srw_ss() -* ["APPEND_ASSOC"]) [] “x ++ (y ++ z)”;
+\end{alltt}
+\end{session}
+The second argument to \ml{-*} is a list of strings, naming rewrite theorems or conversions.
+The names to use are visible if \simpset{} values are printed out in the interactive session.
+The example below demonstrates removing the beta-conversion:
+\begin{session}
+\begin{alltt}
+##assert Exn.capture (SIMP_CONV (bool_ss -* ["BETA_CONV"]) []) “(\x. x + 3) 10” |> Exn.get_exn |> isSome
+>>+ SIMP_CONV (bool_ss -* ["BETA_CONV"]) [] “(\x. x + 3) 10”;
+\end{alltt}
+\end{session}
+Further, because a theorem like \ml{AND\_CLAUSES}
+\begin{alltt}
+>>__ val oldlw = !linewidth; linewidth := 60;
+##thm AND_CLAUSES
+>>__ linewidth := oldlw;
+\end{alltt}
+has multiple conjuncts, one theorem can generate multiple different rewrites.
+Specific sub-rewrites can be removed from a \simpset{} without affecting  others derived from the same original theorem by appending numbers to the theorem name:
+\begin{session}
+\begin{alltt}
+>>+ SIMP_CONV (bool_ss -* ["AND_CLAUSES"]) [] “(T ∧ p) ∧ (q ∧ T)”;
+
+##assert SIMP_CONV (bool_ss -* ["AND_CLAUSES.1"]) [] “(T ∧ p) ∧ (q ∧ T)” |> concl |> rhs |> aconv “(T ∧ p) ∧ q”
+>> SIMP_CONV (bool_ss -* ["AND_CLAUSES.1"]) [] “(T ∧ p) ∧ (q ∧ T)”;
+\end{alltt}
+\end{session}
+
+If using a ``power tactic'' such as \ml{simp}, there is no \simpset{} value visible to modify with \ml{-*}.
+Instead, one must use a special theorem form (see Section~\ref{sec:simp-special-rewrite-forms} below), \ml{Excl} to exclude a rewrite.
+For example, sometimes the associativity of list-append can be annoying (here it masks the rewrite defining list-append):
+\begin{session}
+\begin{alltt}
+>>__ proofManagerLib.dropn (case proofManagerLib.status() of
+           Manager.PRFS l => List.length l)
+>>_ g `f (x ++ (h::t ++ y)) = f (x ++ h::(t ++ y))`;
+>> e (simp[]);
+\end{alltt}
+\end{session}
+
+We can prevent the application of this normalising rewrite with the \ml{Excl} form:
+\begin{session}
+\begin{alltt}
+>>_ b();
+>> e (simp[Excl "APPEND_ASSOC"]);
+\end{alltt}
+\end{session}
+\index{simplification!removing rewrites|)}
+
 \subsection{Rewriting with the simplifier}
 \label{sec:simplifier-rewriting}
 
@@ -2819,6 +2878,31 @@ A theorem ``wrapped'' in the \ml{Once} function will only be applied
 once when the simplifier is applied to a given term.  A theorem
 wrapped in \ml{Ntimes} will be applied as many times as given in the
 integer parameter.
+
+\index{simplification!requiring rewrite application}
+Another pair of special forms allow the user to \emph{require} that certain rewrites are applied.
+Both forms check the count of instances of rewrite-redexes appearing in the goal that results after simplification has happened.
+If the requirement is not satisfied, the relevant tactic fails.
+In this context, a rewrite redex is the LHS of a theorem being used as a rewrite, so that, for example, the redex of the theorem $\vdash x + 0 = x$ is $x + 0$.
+\index{Req0 (simplification theorem modifier)@\ml{Req0} (simplification theorem modifier)}
+The \ml{Req0} form checks that the number of redexes of the corresponding rewrite is zero in the resulting goal.
+For unconditional rewrites, such a requirement is usually redundant, but this form can be useful when rewrites are conditional and the simplifier may have failed to discharge side-conditions.
+For example:
+\begin{session}
+\begin{alltt}
+>> val th = arithmeticTheory.ZERO_MOD;
+>>+ simp[Req0 th] ([], ``0 MOD z``);
+
+>> simp[Req0 th] ([], ``0 MOD (z + 1)``)
+    (* succeeds because arithmetic d.p. knows z + 1 is nonzero *);
+\end{alltt}
+\end{session}
+
+\index{ReqD (simplification theorem modifier)@\ml{ReqD} (simplification theorem modifier)}
+The \ml{ReqD} modifier requires that the redex count should have decreased.
+This is implicitly a check on the original goal as well: it must have a non-zero count of redexes itself.
+
+Both \ml{Req0} and \ml{ReqD} can be combined with \ml{Once} and \ml{Ntimes}.
 
 \paragraph{Simplifying at particular sub-terms}
 \index{simplification!at particular sub-terms}

@@ -12,6 +12,8 @@
 (global-set-key (kbd "C-S-c") "⊆")
 (global-set-key (kbd "C-S-q") "≤")
 (global-set-key (kbd "C-M-~") "∼")
+(global-set-key (kbd "C-M-S-b") "□")
+(global-set-key (kbd "C-M-S-m") "◇") ; diaMond
 
 (global-set-key (kbd "C-{") "⟦")
 (global-set-key (kbd "C-}") "⟧")

@@ -3,6 +3,10 @@ open testutils
 
 val _ = print "\n"
 
+fun listprint pr xs =
+    "[" ^ String.concatWith "," (map pr xs) ^ "]"
+
+
 fun test_CONV (c,nm) (t, expected) = let
   val _ = tprint (nm^" on `"^term_to_string t^"`")
   val th = Conv.QCONV c t
@@ -176,3 +180,71 @@ fun test (msg, c) =
 in
 val _ = List.app test [("simp", SIMP_CONV (srw_ss()) []), ("EVAL", EVAL)]
 end (* local *)
+
+local
+  open listSyntax
+  fun mkl nm = mk_var(nm, mk_list_type alpha)
+  val appl_t = list_mk_append (map mkl ["x", "y", "z"])
+  val appr_t = mk_append(mkl "x", mk_append(mkl "y", mkl"z"))
+in
+val _ = tprint "Std simp left-normalises list"
+val _ = require_msg (check_result (aconv appl_t o rhs o concl)) thm_to_string
+                    (QCONV (SIMP_CONV (srw_ss()) [])) appr_t
+val _ = tprint "Simp -* APPEND_ASSOC leaves list unchanged"
+val _ = require_msg (check_result (aconv appr_t o rhs o concl)) thm_to_string
+                    (QCONV (SIMP_CONV (srw_ss() -* ["APPEND_ASSOC"]) [])) appr_t
+val _ = tprint "Simp -* list.APPEND_ASSOC leaves list unchanged"
+val _ = require_msg (check_result (aconv appr_t o rhs o concl)) thm_to_string
+                    (QCONV (SIMP_CONV (srw_ss() -* ["list.APPEND_ASSOC"]) []))
+                    appr_t
+val _ = tprint "Simp -* list.APPEND_ASSOC.1 leaves list unchanged"
+val _ = require_msg (check_result (aconv appr_t o rhs o concl)) thm_to_string
+                    (QCONV (SIMP_CONV (srw_ss() -* ["list.APPEND_ASSOC.1"]) []))
+                    appr_t
+val _ = tprint "Simp Excl APPEND_ASSOC leaves list unchanged"
+val _ = require_msg (check_result (aconv appr_t o rhs o concl)) thm_to_string
+                    (QCONV (SIMP_CONV (srw_ss()) [Excl "APPEND_ASSOC"])) appr_t
+val _ = tprint "Simp Excl list.APPEND_ASSOC leaves list unchanged"
+val _ = require_msg (check_result (aconv appr_t o rhs o concl)) thm_to_string
+                    (QCONV (SIMP_CONV (srw_ss()) [Excl "list.APPEND_ASSOC"]))
+                    appr_t
+end
+
+val _ = tprint "find num->num includes SUC"
+val _ = require_msg (check_result (tmem numSyntax.suc_tm))
+                    (listprint term_to_string)
+                    find_consts “:num->num”
+val _ = tprint "find 'a includes SUC"
+val _ = require_msg (check_result (tmem numSyntax.suc_tm))
+                    (listprint term_to_string)
+                    find_consts “:'a”
+val _ = tprint "find 'a->'a includes SUC"
+val _ = require_msg (check_result (tmem numSyntax.suc_tm))
+                    (listprint term_to_string)
+                    find_consts “:'a->'a”
+val _ = tprint "find 'b->'b includes SUC"
+val _ = require_msg (check_result (tmem numSyntax.suc_tm))
+                    (listprint term_to_string)
+                    find_consts “:'b->'b”
+val _ = tprint "find 'a -> 'b -> 'c doesn't include SUC"
+val _ = require_msg (check_result (not o tmem numSyntax.suc_tm))
+                    (listprint term_to_string)
+                    find_consts “:'a->'b->'c”
+val _ = tprint "find_thy [bool,relation] 'a -> 'a doesn't include SUC"
+val _ = require_msg (check_result (not o tmem numSyntax.suc_tm))
+                    (listprint term_to_string)
+                    (find_consts_thy ["bool", "relation"]) “:'a->'a”
+val _ = tprint "find_thy [bool,relation] 'a -> 'a includes RTC"
+val _ = require_msg (check_result (tmem “relation$RTC”))
+                    (listprint term_to_string)
+                    (find_consts_thy ["bool", "relation"]) “:'a->'a”
+val _ = tprint "find_thy [bool,relation] num -> num doesn't include RTC"
+val _ = require_msg (check_result (not o tmem “relation$RTC”))
+                    (listprint term_to_string)
+                    (find_consts_thy ["bool", "relation"]) “:num->num”
+
+val _ = new_constant("foo", “:'a -> num”)
+
+val _ = tprint "find 'a finds new constant"
+val _ = require_msg (check_result (tmem “foo”)) (listprint term_to_string)
+                    find_consts “:'a”

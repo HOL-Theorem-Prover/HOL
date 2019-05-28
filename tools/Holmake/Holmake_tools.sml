@@ -226,6 +226,7 @@ fun do_lastmade_checks (ofns : output_functions) {no_lastmakercheck} = let
                 else
                   (warn ("*** Switching to execute "^path);
                    warn ("*** (Honouring last Holmake call in this directory)");
+                   warn ("*** (Use --nolmbc flag to stop this.)");
                    Systeml.exec(path,
                                 path::"--nolmbc"::CommandLine.arguments()))
               else (warn "Garbage in Last Maker file";

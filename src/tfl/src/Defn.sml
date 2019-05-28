@@ -80,7 +80,6 @@ fun extract_info constset db =
 val ind_suffix = ref "_ind";
 val def_suffix = boolLib.def_suffix
 
-fun indSuffix s     = (s ^ !ind_suffix);
 fun defSuffix s     = (s ^ !def_suffix);
 fun defPrim s       = defSuffix(s^"_primitive");
 fun defExtract(s,n) = defSuffix(s^"_extract"^Lib.int_to_string n);
@@ -447,6 +446,29 @@ fun been_stored (s,thm) =
               "Saved definition __ ") ^Lib.quote s^"\n")
    else ()
    )
+
+
+(* can fiddle with indSuffix to get "neat" effects; if it is a string
+   starting with a space, then that the string without the space is the name
+   of the induction theorem exactly. If the string is "", then the
+   process looks for a trailing _def in the name of the definition and replaces
+   it with _ind (preserving case)
+ *)
+fun indSuffix stem =
+    let
+      fun munge s =
+        if String.isSuffix "_def" s then
+          String.extract(s,0,SOME(size s - 4)) ^ "_ind"
+        else if String.isSuffix "_DEF" s then
+          String.extract(s,0,SOME(size s - 4)) ^ "_IND"
+        else s ^ "_ind"
+    in
+      case !ind_suffix of
+          "" => munge stem
+        | s => if String.sub(s,0) = #" " then String.extract(s,1,NONE)
+               else stem ^ s
+    end
+
 
 fun store(stem,eqs,ind) =
   let val eqs_bind = defSuffix stem

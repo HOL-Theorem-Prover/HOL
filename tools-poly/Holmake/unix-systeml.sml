@@ -158,4 +158,7 @@ fun emit_hol_script target exe script =
       end;
 end (* local *)
 
+fun bindstr mlcode =
+    "val _ = CompilerSpecific.quietbind \"" ^ String.toString mlcode ^ "\""
+
 end; (* struct *)

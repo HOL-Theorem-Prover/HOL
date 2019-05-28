@@ -3,8 +3,6 @@ before_script: developers/install-poly.sh
 script: eval `opam config env` && $SML < tools/smart-configure.sml && bin/build $BUILDOPTS --nograph
 notifications:
   email:
-    recipients:
-      - hol-builds@lists.sourceforge.net
     on_success: always
     on_failure: always
 

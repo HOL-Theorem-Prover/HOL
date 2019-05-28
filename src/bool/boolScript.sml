@@ -2680,7 +2680,7 @@ val SWAP_EXISTS_THM = save_thm("SWAP_EXISTS_THM",
 (*---------------------------------------------------------------------------
    EXISTS_UNIQUE_THM
 
-     !P. (?!x. P x) = (?x. P x) /\ (!x y. P x /\ P y ==> (x = y))
+     (?!x. P x) = (?x. P x) /\ (!x y. P x /\ P y ==> (x = y))
  ---------------------------------------------------------------------------*)
 
 val EXISTS_UNIQUE_THM = save_thm("EXISTS_UNIQUE_THM",
@@ -2692,6 +2692,45 @@ val EXISTS_UNIQUE_THM = save_thm("EXISTS_UNIQUE_THM",
    CONV_RULE (RAND_CONV (RAND_CONV (QUANT_CONV (QUANT_CONV (RATOR_CONV
                (RAND_CONV (RATOR_CONV (RAND_CONV BETA_CONV)))))))) th2
  end);
+
+(* ----------------------------------------------------------------------
+    EXISTS_UNIQUE_ALT'
+
+    |- !P. (?!x. P x) <=> ?x. !y. P y <=> (y = x)
+   ---------------------------------------------------------------------- *)
+
+val EXISTS_UNIQUE_ALT' = save_thm(
+  "EXISTS_UNIQUE_ALT'",
+  let
+    val eu_r = ASSUME (rhs (concl EXISTS_UNIQUE_THM))
+    val (eu1, eu2) = CONJ_PAIR eu_r
+    val P = mk_var("P", alpha --> bool)
+    val x = mk_var("x", alpha)
+    val y = mk_var("y", alpha)
+    val c = mk_var("c", alpha)
+    val yeqx = mk_eq(y,x)
+    val Px = mk_comb(P, x)
+    val Py = mk_comb(P, y)
+    val th1a = MP (SPECL [y,x] eu2) (CONJ (ASSUME Py) (ASSUME Px)) |> DISCH Py
+    val th1b = EQ_MP (SYM (AP_TERM P (ASSUME yeqx))) (ASSUME Px) |> DISCH yeqx
+    val th1_noex = IMP_ANTISYM_RULE th1a th1b |> GEN y
+    val th1_noch = EXISTS(mk_exists(x,concl th1_noex), x) th1_noex
+    val th1 = CHOOSE(x,eu1) th1_noch
+    val pyyeq = concl th1
+    val pyyeqc = subst [x |-> c] (#2 (dest_exists pyyeq))
+    val pyyeqc_th = ASSUME pyyeqc
+    val th2a = pyyeqc_th |> SPEC c |> C EQ_MP (REFL c) o SYM
+                         |> EXISTS(mk_exists(x,Px), c)
+    val (pxy_x,pxy_y) = ASSUME (mk_conj(Px,Py)) |> CONJ_PAIR
+    val th2b1 = pyyeqc_th |> SPEC x |> C EQ_MP (ASSUME Px) |> PROVE_HYP pxy_x
+    val th2b2 = pyyeqc_th |> SPEC y |> C EQ_MP (ASSUME Py) |> PROVE_HYP pxy_y
+    val th2b = TRANS th2b1 (SYM th2b2) |> DISCH (mk_conj(Px,Py)) |> GENL [x,y]
+    val th2 = CHOOSE (c, ASSUME pyyeq) (CONJ th2a th2b)
+    val eqn = IMP_ANTISYM_RULE (DISCH_ALL th1) (DISCH_ALL th2)
+  in
+    TRANS EXISTS_UNIQUE_THM eqn
+  end);
+
 
 (*---------------------------------------------------------------------------
   LET_CONG =

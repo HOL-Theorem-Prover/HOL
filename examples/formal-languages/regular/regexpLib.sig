@@ -18,4 +18,6 @@ sig
 
   val dfa_by_proof : string * regexp -> thm
 
+  val charset_conv_ss : simpLib.ssfrag
+
 end

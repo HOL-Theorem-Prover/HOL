@@ -989,7 +989,7 @@ val SET_OF_EMPTY = store_thm (
   SIMP_TAC (srw_ss()) [BAG_OF_SET, EMPTY_BAG, FUN_EQ_THM])
 val _ = export_rewrites ["SET_OF_EMPTY"];
 
-Theorem SET_OF_EL_BAG[simp]:
+Theorem SET_OF_SINGLETON_BAG[simp]:
   !e. SET_OF_BAG {|e|} = {e}
 Proof rw[SET_OF_BAG,FUN_EQ_THM]
 QED
@@ -1043,10 +1043,10 @@ val SET_OF_BAG_INSERT = Q.store_thm(
   SIMP_TAC std_ss [SPECIFICATION] THEN REPEAT GEN_TAC THEN
   COND_CASES_TAC THEN SIMP_TAC std_ss []);
 
-val SET_OF_EL_BAG = Q.store_thm(
-  "SET_OF_EL_BAG",
-  `!e. SET_OF_BAG (EL_BAG e) = {e}`,
-  SIMP_TAC std_ss [EL_BAG, SET_OF_BAG_INSERT, BAG_OF_EMPTY]);
+Theorem SET_OF_EL_BAG[simp]:
+  !e. SET_OF_BAG (EL_BAG e) = {e}
+Proof SIMP_TAC std_ss [EL_BAG, SET_OF_BAG_INSERT, BAG_OF_EMPTY]
+QED
 
 val SET_OF_BAG_DIFF_SUBSET_down = Q.store_thm(
   "SET_OF_BAG_DIFF_SUBSET_down",

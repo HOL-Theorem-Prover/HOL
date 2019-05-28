@@ -289,6 +289,8 @@ In this way, one can get a staged application of \holmake{} across multiple dire
 \subsection{\holmake{}'s command-line arguments}
 \index{Holmake@\holmake!command-line arguments}
 Like {\tt make}, \holmake{} takes command-line arguments corresponding to the targets that the user desires to build.
+As a special case of this, targets ending with the suffix \ml{Theory} are treated as an instruction to build the theory files that lie behind a \HOL{} theory.
+(If successful such a build will enable other script-files to refer to that theory, and for interactive sessions to issue \ml{load~"xTheory";} commands.)
 If there are no command-line targets, then \holmake{} will look for a \texttt{Holmakefile} in the current directory.
 If there is none, or if that file specifies no targets, then \holmake{} will attempt to build all \ML{} modules and \HOL{} theories it can detect in the current directory.
 If there is a target in the \texttt{Holmakefile}, then \holmake{} will try to build the first such target (only).
@@ -309,11 +311,6 @@ In addition, there are three special targets that can be used:
 \noindent Finally, users can directly affect the workings of \holmake{}
 with the following command-line options:
 \begin{description}
-\item[\tt -d <file>] Ignore the given file and don't try to build it.
-  The file may be rebuilt anyway if other files you have specified
-  depend on it.  This is useful to stop Holmake from attempting to
-  compile files that are interactive scripts (include use of {\tt
-  load} or {\tt use}, for example).
 \item[\texttt{-f <theory>}] Toggles whether or not a theory should be
   built in ``fast'' mode.  Fast building causes tactic proofs
   (invocations of \texttt{prove} and \texttt{store\_thm}) to
