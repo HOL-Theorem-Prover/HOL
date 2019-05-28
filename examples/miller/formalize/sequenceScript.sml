@@ -1,5 +1,6 @@
 open HolKernel Parse boolLib;
 val _ = new_theory "sequence";
+val _ = ParseExtras.temp_loose_equality()
 
 open bossLib arithmeticTheory extra_numTheory combinTheory HurdUseful;
 

@@ -15,6 +15,7 @@ quietdec := false;
 *)
 
 val _ = new_theory "prob_canon";
+val _ = ParseExtras.temp_loose_equality()
 
 (* ------------------------------------------------------------------------- *)
 (* Definition of the canonicalisation of algebra elements.                   *)

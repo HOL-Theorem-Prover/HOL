@@ -15,6 +15,15 @@ val op++ = op THEN;
 val op<< = op THENL;
 val op|| = op ORELSE;
 
+structure Parse = struct
+  open Parse
+  val (Type,Term) =
+      pred_setTheory.pred_set_grammars
+        |> apsnd ParseExtras.grammar_loose_equality
+        |> parse_from_grammars
+end
+open Parse
+
 (* ------------------------------------------------------------------------- *)
 (* Basic ML datatypes/functions.                                             *)
 (* ------------------------------------------------------------------------- *)

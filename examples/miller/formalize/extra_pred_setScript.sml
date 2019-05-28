@@ -17,6 +17,7 @@ quietdec := false;
 *)
 
 val _ = new_theory "extra_pred_set";
+val _ = ParseExtras.temp_loose_equality()
 
 (* ------------------------------------------------------------------------- *)
 (* Tools.                                                                    *)
