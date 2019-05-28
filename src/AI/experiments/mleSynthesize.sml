@@ -42,7 +42,7 @@ fun status_of (_,((ctm,n),tm)) =
    ------------------------------------------------------------------------- *)
 
 type move = (term * int)
-val movel = operl_of ``SUC 0``;
+val movel = operl_of ``SUC 0 + 0 * 0``;
 val move_compare = cpl_compare Term.compare Int.compare
 
 fun action_oper (oper,n) tm =
@@ -198,6 +198,10 @@ load "mleSynthesize"; open mleSynthesize;
 load "mlReinforce"; open mlReinforce;
 
 val dhtnn_name = "synthesize_run3_gen42_dhtnn";
+    val eval_dir = HOLDIR ^ "/src/AI/machine_learning/eval";
+    val file = eval_dir ^ "/" ^ dhtnn_name;
+    val dhtnn = mlTreeNeuralNetwork.read_dhtnn file;
+
 fun eval nsim =
   (
   nsim_glob := nsim;
@@ -209,7 +213,7 @@ fun eval nsim =
     )
   );
 
-ncore_mcts_glob := 4;
+ncore_mcts_glob := 1;
 nsim_glob := 1;
 final_eval dhtnn_name (0,16) "test";
 val rl = map eval [1,16,160,1600];

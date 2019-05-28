@@ -120,7 +120,8 @@ fun mk_fep_dhtnn startb gamespec dhtnn sit =
     else
       (only_hd (infer_tnn etnn nntm),
        filter_sit (combine (movel, infer_tnn ptnn nntm)))
-      handle HOL_ERR _ => raise ERR "mk_fep_dhtnn" ""
+      handle HOL_ERR _ => raise ERR "mk_fep_dhtnn" 
+        (its (length movel) ^ " " ^ its (length (infer_tnn ptnn nntm)))
   end
 
 (* -------------------------------------------------------------------------
