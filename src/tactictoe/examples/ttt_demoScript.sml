@@ -1,8 +1,8 @@
 (* ========================================================================== *)
 (* FILE          : ttt_demoScript.sml                                         *)
 (* DESCRIPTION   : TacticToe demo                                             *)
-(* AUTHOR        : (c) Thibault Gauthier, University of Innsbruck             *)
-(* DATE          : 2018                                                       *)
+(* AUTHOR        : (c) Thibault Gauthier, Czech Technical University          *)
+(* DATE          : 2019                                                       *)
 (* ========================================================================== *)
 
 open HolKernel boolLib bossLib tacticToe;
