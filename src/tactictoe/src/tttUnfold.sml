@@ -1113,7 +1113,7 @@ fun ttt_parallel_eval ncore thyl =
    Usage:
       load "tttSetup"; open tttSetup;
       load "tttUnfold"; open tttUnfold;
-      load_sigobj (); 
+      load_sigobj ();
       ttt_record (); (* only if not already called previously *)
       val thyl = ancestry (current_theory ());
       ttt_search_time := 15.0;

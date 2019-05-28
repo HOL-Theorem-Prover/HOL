@@ -293,7 +293,7 @@ fun sort_thyl thyl =
     topo_sort String.compare (map (fn x => (x, ancestry x)) thyl)
 
 (* -------------------------------------------------------------------------
-   The functions from this section affects other in subtle ways. 
+   The functions from this section affects other in subtle ways.
    Please becareful to keep their "weird" semantics.
    ------------------------------------------------------------------------- *)
 

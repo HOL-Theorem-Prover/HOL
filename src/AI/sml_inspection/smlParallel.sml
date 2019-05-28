@@ -414,15 +414,15 @@ fun id_parallel ncore argl =
   let
     fun write_state () = ()
     fun write_argl l = writel (argl_file ()) (map its argl)
-    fun read_result (wid,job) = 
+    fun read_result (wid,job) =
       string_to_int (hd (readl_rm (result_file (wid,job))))
     val s_state = "()";
     val s_argl = "List.map Lib.string_to_int (aiLib.readl (argl_file ()))";
-    val s_f = ("let fun f _ widjob arg = " ^ 
+    val s_f = ("let fun f _ widjob arg = " ^
       "aiLib.writel (result_file widjob) [aiLib.its arg] in f end");
     fun code_of wid = standard_code_of (s_state,s_argl,s_f) wid;
   in
-    parmap_queue_extern ncore code_of (write_state,write_argl) 
+    parmap_queue_extern ncore code_of (write_state,write_argl)
       read_result argl
   end
 

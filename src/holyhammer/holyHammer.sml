@@ -55,7 +55,7 @@ fun pathl sl = case sl of
 val hh_dir         = pathl [HOLDIR,"src","holyhammer"];
 
 val provbin_dir    = pathl [hh_dir,"provers"];
-fun provdir_of atp = pathl [provbin_dir, 
+fun provdir_of atp = pathl [provbin_dir,
   name_of atp ^ "_files" ^ (!parallel_tag)]
 fun out_of atp     = pathl [provdir_of atp,"out"]
 fun status_of atp  = pathl [provdir_of atp,"status"]
@@ -259,16 +259,16 @@ fun eprover_pb_eval_parallel ncore timeout thyl =
     fun write_state () = ()
     fun write_argl _ = ()
     fun read_result (wid,job) = ()
-    val thyls = 
+    val thyls =
       map (fn x => quote (x ^ "Theory")) (filter (fn x => x <> "min") thyl)
-    val state_s = 
+    val state_s =
       "(holyHammer.set_timeout " ^ its timeout ^ ";" ^
       " app load [" ^ String.concatWith "," thyls ^ "])"
     val argl_s = "[" ^ String.concatWith "," (map quote thyl) ^ "]"
     val f_s = "holyHammer.eprover_pb_eval_extern"
     fun code_of wid = standard_code_of (state_s,argl_s,f_s) wid
   in
-    parmap_queue_extern ncore code_of (write_state, write_argl) 
+    parmap_queue_extern ncore code_of (write_state, write_argl)
     read_result thyl
   end
 
@@ -277,10 +277,10 @@ fun eprover_pb_eval_parallel ncore timeout thyl =
      load "holyHammer"; open holyHammer;
      val ncore = 30;
      val timeout = 5;
-     load "tttUnfold"; 
+     load "tttUnfold";
      tttUnfold.load_sigobj ();
      val thyl = ancestry (current_theory ());
-     eprover_pb_eval_parallel ncore timeout thyl; 
+     eprover_pb_eval_parallel ncore timeout thyl;
    Results can be found in HOLDIR/src/holyhammer/eval.
   ------------------------------------------------------------------------- *)
 

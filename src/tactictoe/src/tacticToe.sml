@@ -150,7 +150,7 @@ fun tactictoe term =
   let val goal = ([],term) in TAC_PROOF (goal, tactictoe_aux goal) end
 
 (* -------------------------------------------------------------------------
-   Evaluation 
+   Evaluation
    Warning : ttt_record should be run on all theories before evaluation
    ------------------------------------------------------------------------- *)
 

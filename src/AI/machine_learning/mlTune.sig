@@ -15,7 +15,7 @@ sig
   val read_state : unit ->
     (term * real list) list * (term * real list) list *
     (term * int) list
-  val train_tnn_extern : 
+  val train_tnn_extern :
     (int * int) *
       ((term * real list) list * (term * real list) list *
       (term * int) list) ->
@@ -23,13 +23,13 @@ sig
 
 
   (* training function *)
-  val train_tnn_parallel :  
+  val train_tnn_parallel :
     int ->
      (int * int) *
      ((term * real list) list * (term * real list) list *
      (term * int) list) ->
-    ml_param list -> (real * real * real) list 
-  
+    ml_param list -> (real * real * real) list
+
   (* statistics *)
   val write_param_results :
     string -> (ml_param * (real * real * real )) list -> unit

@@ -120,7 +120,7 @@ fun mk_fep_dhtnn startb gamespec dhtnn sit =
     else
       (only_hd (infer_tnn etnn nntm),
        filter_sit (combine (movel, infer_tnn ptnn nntm)))
-      handle HOL_ERR _ => raise ERR "mk_fep_dhtnn" 
+      handle HOL_ERR _ => raise ERR "mk_fep_dhtnn"
         (its (length movel) ^ " " ^ its (length (infer_tnn ptnn nntm)))
   end
 
@@ -269,7 +269,7 @@ fun train_f gamespec allex =
 fun flags_to_string (b1,b2) = "(" ^ bts b1 ^ "," ^  bts b2 ^ ")"
 
 fun mk_state_s opens flags =
-  String.concatWith "\n" 
+  String.concatWith "\n"
   [
   "let",
   "  val _ = mlReinforce.nsim_glob := " ^ its (!nsim_glob),
@@ -301,12 +301,12 @@ fun explore_parallel gamespec ncore flags dhtnn targetl =
   let
     fun write_state () =  write_dhtnn (dhtnn_file ()) dhtnn
     val write_argl = #write_targetl gamespec
-    val state_s = mk_state_s (#opens gamespec) flags 
+    val state_s = mk_state_s (#opens gamespec) flags
     val argl_s = mk_argl_s (#opens gamespec)
     val f_s = "mlReinforce.explore_extern"
     fun code_of wid = standard_code_of (state_s,argl_s,f_s) wid
   in
-    parmap_queue_extern ncore code_of (write_state, write_argl) 
+    parmap_queue_extern ncore code_of (write_state, write_argl)
     read_result_extern targetl
   end
 

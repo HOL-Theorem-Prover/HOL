@@ -80,7 +80,7 @@ and random_termc_oper cache operl (size,ty) oper =
    Functions with no cache
    ------------------------------------------------------------------------- *)
 
-fun nterm operl (size,ty) = 
+fun nterm operl (size,ty) =
   let val cache = ref (dempty (cpl_compare Int.compare Type.compare)) in
     ntermc cache operl (size,ty)
   end

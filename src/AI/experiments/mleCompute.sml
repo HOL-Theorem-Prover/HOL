@@ -67,13 +67,13 @@ fun accuracy_fixed tnn =
 
 fun parameter_tuning basename ncore =
   let
-    val _ = 
-      parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^ basename 
+    val _ =
+      parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^ basename
     val traintml = import_terml (dataarith_dir ^ "/train");
     val trainex = compute_exout traintml;
     val testex = first_n 100 trainex;
     val paraml = grid_param ([12],[100],[16],[20,50,100,200],[2])
-    val final = train_tnn_parallel ncore ((1,4),(trainex,testex,operl)) paraml 
+    val final = train_tnn_parallel ncore ((1,4),(trainex,testex,operl)) paraml
   in
     mkDir_err compute_dir;
     write_param_results (compute_dir ^ "/" ^ basename) (combine (paraml,final))

@@ -1,5 +1,5 @@
 load "holyHammer"; open holyHammer;
-load "transcTheory"; 
+load "transcTheory";
 
 val thm1 = holyhammer ``cos (2 * x) = cos (x + x)``;
 val thm2 = holyhammer ``cos (x + x) = cos x * cos x - sin x * sin x``;
