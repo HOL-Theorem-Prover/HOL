@@ -194,29 +194,35 @@ fun final_eval dhtnn_name (a,b) testbase =
   end
 
 (*
-load "mleSynthesize"; open mleSynthesize;
+load "mleRewrite"; load "mleSynthesize";
 load "mlReinforce"; open mlReinforce;
 
-val dhtnn_name = "synthesize_run3_gen42_dhtnn";
-    val eval_dir = HOLDIR ^ "/src/AI/machine_learning/eval";
-    val file = eval_dir ^ "/" ^ dhtnn_name;
-    val dhtnn = mlTreeNeuralNetwork.read_dhtnn file;
-
-fun eval nsim =
+val synt_name = "synthesize_run3_gen38_dhtnn";
+fun synt_eval nsim =
   (
   nsim_glob := nsim;
     (
-    final_eval dhtnn_name (0,16) "test",
-    final_eval dhtnn_name (16,32) "test",
-    final_eval dhtnn_name (0,16) "big",
-    final_eval dhtnn_name (16,32) "big"
+    mleSynthesize.final_eval synt_name (0,10) "test",
+    mleSynthesize.final_eval synt_name (11,20) "test",
+    mleSynthesize.final_eval synt_name (0,10) "big",
+    mleSynthesize.final_eval synt_name (11,20) "big"
     )
   );
 
-ncore_mcts_glob := 1;
-nsim_glob := 1;
-final_eval dhtnn_name (0,16) "test";
-val rl = map eval [1,16,160,1600];
+val rw_name = "rewrite_run3_gen20_dhtnn";
+fun rw_eval nsim =
+  (nsim_glob := nsim;
+    (
+    mleRewrite.final_eval rw_name (0,100) "test",
+    mleRewrite.final_eval rw_name (101,200) "test",
+    mleRewrite.final_eval rw_name (0,100) "big",
+    mleRewrite.final_eval rw_name (101,200) "big"
+    )
+  );
+
+ncore_mcts_glob := 40;
+val rl1 = map synt_eval [1,16,160,1600];
+val rl2 = map rw_eval [1,16,160,1600];
 *)
 
 end (* struct *)

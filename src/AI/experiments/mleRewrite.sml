@@ -305,21 +305,4 @@ fun final_eval dhtnn_name (a,b) testbase =
     ((nwin,ntot), int_div nwin ntot)
   end
 
-(*
-load "mleRewrite"; open mleRewrite;
-load "mlReinforce"; open mlReinforce;
-ncore_mcts_glob := 40;
-val dhtnn_name = "rewrite_run3_gen20_dhtnn";
-fun eval nsim =
-  (nsim_glob := nsim;
-    (
-    final_eval dhtnn_name (0,16) "test",
-    final_eval dhtnn_name (16,32) "test",
-    final_eval dhtnn_name (0,16) "big",
-    final_eval dhtnn_name (16,32) "big"
-    )
-  );
-val rl = map eval [1,16,160,1600];
-*)
-
 end (* struct *)
