@@ -8,7 +8,7 @@
 structure mleLib :> mleLib =
 struct
 
-open HolKernel Abbrev boolLib aiLib
+open HolKernel Abbrev boolLib aiLib numTheory arithmeticTheory
 
 val ERR = mk_HOL_ERR "mleLib"
 
