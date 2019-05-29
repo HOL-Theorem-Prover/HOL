@@ -32,6 +32,7 @@ fun timeLimit t f x =
       if Thread.isActive worker then self_wait () else
     case !resultref of
       NONE => Exn FunctionTimeout
+    | SOME (Exn Interrupt) => Exn FunctionTimeout
     | SOME s => s
       )
     val result = self_wait ()
