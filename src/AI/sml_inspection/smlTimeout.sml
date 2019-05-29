@@ -46,14 +46,13 @@ val (TC_OFF : tactic -> tactic) = trace ("show_typecheck_errors", 0)
 
 fun timeout_tactic t tac g =
   SOME (fst (timeout t (TC_OFF tac) g))
-  handle _ => NONE
-  (* expected to catch Interrupt exception *)
+  handle Interrupt => raise Interrupt | _ => NONE
 
 end (* struct *)
 
 (* test
   load "smlTimeout"; open smlTimeout;
   fun loop () = loop ();
-  timeout 1.0 loop ();
+  timeout 5.0 loop ();
 *)
 
