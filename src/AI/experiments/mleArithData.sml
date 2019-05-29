@@ -23,7 +23,7 @@ fun num_operl n =
 fun random_numtm (nsuc,nsize) = random_term (num_operl nsuc) (nsize,``:num``)
 
 fun eval_numtm tm =
-  (string_to_int o term_to_string o rhs o concl o bossLib.EVAL) tm
+  (string_to_int o term_to_string o rhs o concl o computeLib.EVAL_CONV) tm
 
 fun compressed_size tm =
   let val (oper,argl) = strip_comb tm in
