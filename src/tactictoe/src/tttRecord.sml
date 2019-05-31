@@ -136,11 +136,11 @@ fun wrap_tactics_in name qtac goal =
         val l2 = total_time extract_time extract_tacticl s2
         val _  = debug ("org tac number: " ^ int_to_string (length l2))
         val _  = n_tactic_parse_glob := (!n_tactic_parse_glob) + length l2;
-        val l3 = map (fn x => (x, drop_numbering x)) l2
-        fun mk_reps (x,y) =
+        val l3 = map_assoc drop_numbering l2
+        fun mk_reps y =
           ["( tttRecord.record_tactic","("] @ y @
           [",", mlquote (String.concatWith " " y),")",")"]
-        val l5 = map (fn (x,y) => (x, mk_reps (x,y))) l3
+        val l5 = map_snd mk_reps l3
         val ostac0 = fold_left replace_at l5 ostac
         val ostac1 = drop_numbering ostac0
         val final_stac = String.concatWith " " ostac1
@@ -150,7 +150,7 @@ fun wrap_tactics_in name qtac goal =
         (final_stac, final_tac)
       end
       handle Interrupt => raise Interrupt
-        | _ => parse_err name qtac (!final_stac_ref)
+           | _ => parse_err name qtac (!final_stac_ref)
     val (final_stac, final_tac)  =
       total_time hide_time (hide_out (total_time mkfinal_time mk_alttac)) qtac
   in

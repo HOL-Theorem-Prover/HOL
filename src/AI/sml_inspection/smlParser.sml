@@ -12,7 +12,6 @@ open HolKernel boolLib aiLib smlLexer smlExecute
 
 val ERR = mk_HOL_ERR "smlExtract"
 
-
 (* -------------------------------------------------------------------------
    Calling the compiler
    ------------------------------------------------------------------------- *)
@@ -142,15 +141,11 @@ fun extract_subexpr_aux propl =
     case (l1,l2) of
       ([],[]) => [SmlUnit s]
     | ([fprop],[]) =>
-      let
-        val ftreel = extract_subexpr_aux (dest_first_prop fprop)
-      in
+      let val ftreel = extract_subexpr_aux (dest_first_prop fprop) in
         [SmlExpr (s,ftreel)]
       end
     | ([],[nprop]) =>
-      let
-        val ntreel = extract_subexpr_aux (dest_next_prop nprop)
-      in
+      let val ntreel = extract_subexpr_aux (dest_next_prop nprop) in
         SmlUnit s :: ntreel
       end
     | ([fprop],[nprop]) =>
@@ -168,6 +163,42 @@ fun extract_subexpr s =
     if List.length propll = 1
     then extract_subexpr_aux (hd propll)
     else raise ERR "extract_subexpr" s
+  end
+
+datatype proptree =
+    PropNode of PolyML.ptProperties list * (proptree list)
+  | PropLeaf of PolyML.ptProperties list
+
+fun extract_proptree_aux propl =
+  let
+    val l1 = List.filter is_first_prop propl
+    val l2 = List.filter is_next_prop propl
+  in
+    case (l1,l2) of
+      ([],[]) => [PropLeaf propl]
+    | ([fprop],[]) =>
+      let val ftreel = extract_proptree_aux (dest_first_prop fprop) in
+        [PropNode (propl,ftreel)]
+      end
+    | ([],[nprop]) =>
+      let val ntreel = extract_proptree_aux (dest_next_prop nprop) in
+        PropLeaf propl :: ntreel
+      end
+    | ([fprop],[nprop]) =>
+      let
+        val ftreel = extract_proptree_aux (dest_first_prop fprop)
+        val ntreel = extract_proptree_aux (dest_next_prop nprop)
+      in
+        PropNode (propl,ftreel) :: ntreel
+      end
+    | _ => raise ERR "extract_proptree_aux" ""
+  end
+
+fun extract_proptree s =
+  let val propll = sml_propl_all_of s in
+    if List.length propll = 1
+    then extract_proptree_aux (hd propll)
+    else raise ERR "extract_proptree" s
   end
 
 (* -------------------------------------------------------------------------
