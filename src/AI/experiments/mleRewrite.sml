@@ -16,53 +16,6 @@ fun debug s =
   debug_in_dir (HOLDIR ^ "/src/AI/experiments/debug") "mleRewrite" s
 
 (* -------------------------------------------------------------------------
-   Axioms and theorems
-   ------------------------------------------------------------------------- *)
-
-val robinson_eq_list =
- [``x + 0 = x``,``x + SUC y = SUC (x + y)``,``x * 0 = 0``,
-   ``x * SUC y = x * y + x``]
-
-val robinson_eq_vect = Vector.fromList robinson_eq_list
-
-(* -------------------------------------------------------------------------
-   Length of a proof using the left outermost (lo) strategy
-   ------------------------------------------------------------------------- *)
-
-fun trySome f l = case l of
-    [] => NONE
-  | a :: m => (case f a of NONE => trySome f m | SOME b => SOME b)
-
-fun lo_rwpos tm =
-  let
-    fun f pos =
-      let fun test x = isSome (paramod_ground x (tm,pos)) in
-        exists test robinson_eq_list
-      end
-  in
-    List.find f (all_pos tm)
-  end
-
-fun lo_trace nmax toptm =
-  let
-    val l = ref []
-    val acc = ref 0
-    fun loop tm =
-      if is_suc_only tm then (SOME (rev (!l),!acc))
-      else if !acc > nmax then NONE else
-    let
-      val pos = valOf (lo_rwpos tm)
-      val tm' = valOf (trySome (C paramod_ground (tm,pos)) robinson_eq_list)
-    in
-      (l := (tm,pos) :: !l; acc := length pos + 1 + !acc; loop tm')
-    end
-  in
-    loop toptm
-  end
-
-fun lo_prooflength n tm = snd (valOf (lo_trace n tm))
-
-(* -------------------------------------------------------------------------
    Board
    ------------------------------------------------------------------------- *)
 

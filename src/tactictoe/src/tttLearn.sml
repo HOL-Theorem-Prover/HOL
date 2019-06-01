@@ -15,7 +15,7 @@ open HolKernel Abbrev boolLib aiLib
   tttSetup
 
 val ERR = mk_HOL_ERR "tttLearn"
-fun debug s = debug_in_dir ttt_debugdir "tactictoe" s
+fun debug s = debug_in_dir ttt_debugdir "tttLearn" s
 
 (* -------------------------------------------------------------------------
    Abstracting theorem list in tactics

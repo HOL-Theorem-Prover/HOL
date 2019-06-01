@@ -12,6 +12,7 @@ sig
   val dest_suc : term -> term
   val dest_add : term -> (term * term)
   val is_suc_only : term -> bool
+  val eval_numtm : term -> int
 
   (* position *)
   type pos = int list
@@ -23,5 +24,11 @@ sig
   (* equality *)
   val sym : term -> term
   val paramod_ground : term -> (term * pos) -> term option
+
+  (* arithmetical proof *)
+  val robinson_eq_list : term list
+  val robinson_eq_vect : term vector
+  val lo_trace : int -> term -> ((term * pos) list * int) option
+  val lo_prooflength : int -> term -> int
 
 end

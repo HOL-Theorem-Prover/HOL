@@ -548,9 +548,7 @@ fun tts tm = case dest_term tm of
   | CONST{Name,Thy,Ty} => Name
   | COMB _ =>
     let val (oper,argl) = strip_comb tm in
-      case argl of
-        [a,b] => "(" ^ String.concatWith " " (map tts [a,oper,b]) ^ ")"
-      | _ => "(" ^ String.concatWith " " (map tts (oper :: argl)) ^ ")"
+      "(" ^ String.concatWith " " (map tts (oper :: argl)) ^ ")"
     end
   | LAMB(Var,Bod)      => "(LAMB " ^ tts Var ^ "." ^ tts Bod ^ ")"
 
