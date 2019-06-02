@@ -196,9 +196,9 @@ fun charset_string cset =
       if mem ch [#"[", #"]"] then
          "\\" ^ String.str ch
       else
-      if Char.isGraph ch then 
+      if Char.isGraph ch then
          String.str ch
-      else 
+      else
       let val i = Char.ord ch
       in String.concat
                ["\\", (if i <= 9 then "00" else
@@ -874,8 +874,8 @@ fun quote_to_tree input =
 (*===========================================================================*)
 
 fun n2l (n:IntInf.int) =
-  if IntInf.<=(n,0) then 
-    [] 
+  if IntInf.<=(n,0) then
+    []
   else IntInf.toInt(IntInf.mod(n,256))::n2l (IntInf.div(n,256))
 
 fun l2n [] = 0
@@ -892,8 +892,8 @@ fun byte_width n = if n = 0 then 1 else 1 + log256 n;
 (*---------------------------------------------------------------------------*)
 
 fun num_interval lo hi width dir =
- let val _ = if width < byte_width hi 
-                orelse lo < 0 
+ let val _ = if width < byte_width hi
+                orelse lo < 0
                 orelse hi < lo
               then raise ERR "num_interval" "malformed input" else ()
      val lorep = rev(padR (n2l lo) 0 width)
@@ -1011,9 +1011,9 @@ fun interval_bin_width lo hi =
  else
  if lo < 0 andalso hi < 0 then
     signed_width_256 lo
- else raise ERR "interval_bin_width" 
+ else raise ERR "interval_bin_width"
             "unexpected values for lo and hi";
-    
+
 fun int_interval lo hi dir =
   gen_int_interval lo hi (interval_bin_width lo hi) dir
 
@@ -1045,7 +1045,7 @@ fun gen_sign_magn_interval lo hi width dir =
 
 fun magn_bin_width lo hi =
 if not (lo <= hi) then
-     raise ERR "sign_magn_interval_bin_width" 
+     raise ERR "sign_magn_interval_bin_width"
                "lo greater than hi"
  else
   Int.max(byte_width (IntInf.abs lo),
@@ -1057,7 +1057,7 @@ fun sign_magn_interval lo hi dir =
 
 fun sign_magn_sing_interval i dir = sign_magn_interval i i dir;
 
-    
+
 (* Interval approach
 fun packed_intervals lists width order =
  let val intervals = map (fn list => (hd list, last list)) lists

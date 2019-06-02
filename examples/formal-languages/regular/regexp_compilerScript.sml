@@ -35,7 +35,7 @@ val eq_cmp_regexp_compare = Q.prove
 
 val _ = Hol_datatype `vector = Vector of 'a list`;
 
-Definition fromList_def : fromList l = Vector l 
+Definition fromList_def : fromList l = Vector l
 End
 
 Definition sub_def : sub (Vector l) n = EL n l
@@ -55,12 +55,12 @@ val fromList_Vector = save_thm
 val _ = Parse.type_abbrev("regexp_set", ``:(regexp,unit)balanced_map``);
 
 Definition insert_regexp_def :
-  insert_regexp r seen = 
+  insert_regexp r seen =
       balanced_map$insert regexp_compare r () seen
 End
 
 Definition mem_regexp_def :
-  mem_regexp r seen = 
+  mem_regexp r seen =
     balanced_map$member regexp_compare r seen
 End
 
@@ -71,7 +71,7 @@ End
 Definition transitions_def :
   transitions r = MAP (\c. (c,smart_deriv c r)) ALPHABET
 End
-		     
+
 Definition extend_states_def :
  (extend_states next_state state_map trans [] = (next_state,state_map,trans)) /\
  (extend_states next_state state_map trans ((c,r')::t) =
@@ -101,14 +101,14 @@ End
 
 Definition Brz_def :
   Brz seen worklist acc n =
-     if n <= 0n then 
-       NONE 
+     if n <= 0n then
+       NONE
      else
      case worklist of
       | [] => SOME (seen,acc)
       | r::t =>
-         if mem_regexp r seen then 
-             Brz seen t acc (n-1) 
+         if mem_regexp r seen then
+             Brz seen t acc (n-1)
          else
          let arcs = transitions r
          in Brz (insert_regexp r seen)
@@ -117,10 +117,10 @@ Definition Brz_def :
                 (n-1)
 End
 
-Definition MAXNUM_32_def : 
+Definition MAXNUM_32_def :
   MAXNUM_32 = 2147483647n
 End
-		  
+
 (*---------------------------------------------------------------------------*)
 (* Build Greve-style Brz function                                            *)
 (*---------------------------------------------------------------------------*)
@@ -137,8 +137,8 @@ val IS_SOME_EXISTS = Q.prove
 (* Domain of the function.                                                   *)
 (*---------------------------------------------------------------------------*)
 
-Definition dom_Brz_def : 
- dom_Brz seen worklist acc = 
+Definition dom_Brz_def :
+ dom_Brz seen worklist acc =
   ?d. IS_SOME(Brz seen worklist acc d)
 End
 
@@ -698,7 +698,7 @@ Definition regexp_matcher_def :
  regexp_matcher r =
     let (state_numbering,delta,accepts) = compile_regexp r ;
         start_state = THE (balanced_map$lookup regexp_compare
-			       (normalize r) state_numbering) ;
+                               (normalize r) state_numbering) ;
         acceptsV = fromList accepts;
         deltaV = fromList (MAP fromList delta)
     in
@@ -710,7 +710,7 @@ val regexp_matcher_def =
  Define
   `regexp_matcher r =
     let (state_numbering,delta,accepts) = compile_regexp r in
-    let start_state_opt = 
+    let start_state_opt =
              balanced_map$lookup regexp_compare (normalize r) state_numbering
     in
       exec_dfa accepts delta (THE start_state_opt)`;
@@ -884,8 +884,8 @@ val extend_states_inv = Q.prove (
 
 Definition submap_def :
   submap cmp t1 t2 =
-     !x. x IN fdom cmp t1 
-          ==> x IN fdom cmp t2 /\ 
+     !x. x IN fdom cmp t1
+          ==> x IN fdom cmp t2 /\
              (lookup cmp x t1 = lookup cmp x t2)
 End
 
@@ -936,7 +936,7 @@ val set_lem = Q.prove
 Definition fapply_def :
   fapply cmp bmap x = THE (lookup cmp x bmap)
 End
-			  
+
 val extend_states_thm = Q.prove
 (`!next_state state_map table states next_state' state_map' table'.
   (extend_states next_state state_map table states = (next_state',state_map',table'))
@@ -1016,10 +1016,10 @@ End
 Definition image_def : image = oimage regexp_compare
 End
 
-Definition apply_def : apply = fapply regexp_compare 
+Definition apply_def : apply = fapply regexp_compare
 End
 
-Definition Brz_invariant_def : 
+Definition Brz_invariant_def :
  Brz_invariant seen todo (next_state,state_map,table) <=>
     invar state_map /\ invar seen /\
     EVERY is_normalized todo /\
@@ -1957,7 +1957,7 @@ Definition Brz_lang_def :
   Brz_lang r =
     let (state_map,table_vec,finals_vec) = compile_regexp r ;
         tableV = fromList (MAP fromList table_vec) ;
-	finalsV = fromList finals_vec;
+        finalsV = fromList finals_vec;
     in
        exec_dfa finalsV tableV (apply state_map (normalize r))
 End
@@ -2169,4 +2169,3 @@ val Brzozowski_partial_eval_256 = save_thm
 (* val _ = EmitTeX.tex_theory"-"; *)
 
 val _ = export_theory();
-

@@ -41,10 +41,10 @@ val dest_cat   = dest_binop cat_tm   (ERR "dest_cat" "expected a Cat");
 val dest_star  = dest_monop star_tm  (ERR "dest_star" "expected a Star");
 val dest_neg   = dest_monop neg_tm   (ERR "dest_neg" "expected a Neg");
 val dest_and   = dest_binop and_tm   (ERR "dest_and" "expected an And");
-val dest_regexp_lang = 
-    dest_monop regexp_lang_tm   
+val dest_regexp_lang =
+    dest_monop regexp_lang_tm
         (ERR "dest_regexp_lang" "expected regexp_lang application");
-val dest_regexp_matcher = 
+val dest_regexp_matcher =
     dest_binop regexp_matcher_tm
         (ERR "dest_regexp_matcher" "expected an instance of regexp_matcher");
 
