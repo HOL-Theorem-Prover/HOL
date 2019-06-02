@@ -66,34 +66,11 @@ val ex4 = store_thm("ex4",
    -------------------------------------------------------------------------- *)
 
 open sum_numTheory;
+set_timeout 60.0;
 (* ttt  ([],``!n. 2 * SUM (n+1) I = n * (n+1) ``); *)
 val ex5 = store_thm("ex5",
   ``!n. 2 * SUM (n+1) I = n * (n+1)``,
-  bossLib.Induct_on [HolKernel.QUOTE " (*#loc 26 15*)n"] THENL [BasicProvers.SRW_TAC [numSimps.ARITH_ss] [(DB.fetch "numpair" "tri_def"),
- arithmeticTheory.MULT_CLAUSES, arithmeticTheory.LEFT_ADD_DISTRIB] THEN
- metisTools.METIS_TAC [sum_numTheory.SUM_1, sum_numTheory.SUM_def_compute,
- sum_numTheory.SUM, sum_numTheory.SUM_EQUAL, sum_numTheory.SUM_FOLDL,
- sum_numTheory.SUM_LESS, sum_numTheory.SUM_MONO, sum_numTheory.SUM_ZERO,
- sum_numTheory.SUM_def, sum_numTheory.SUM_FUN_EQUAL,
- rich_listTheory.COUNT_LIST_GENLIST, pred_setTheory.PROD_SET_DEF,
- pred_setTheory.SUM_SET_DEF, listTheory.DROP_splitAtPki, combinTheory.I_DEF,
- combinTheory.I_THM], bossLib.Induct_on [HolKernel.QUOTE " (*#loc 26 15*)n"]
-THENL [BasicProvers.SRW_TAC [numSimps.ARITH_ss] [(DB.fetch "numpair" "tri_def"),
- arithmeticTheory.MULT_CLAUSES, arithmeticTheory.LEFT_ADD_DISTRIB] THEN
- bossLib.ASM_SIMP_TAC bossLib.arith_ss [sum_numTheory.SUM_def_compute,
- sum_numTheory.SUM_1, sum_numTheory.SUM, sum_numTheory.SUM_EQUAL,
- sum_numTheory.SUM_FOLDL, sum_numTheory.SUM_FUN_EQUAL, sum_numTheory.SUM_LESS,
- sum_numTheory.SUM_MONO, sum_numTheory.SUM_ZERO, sum_numTheory.SUM_def,
- arithmeticTheory.DOUBLE_LT, arithmeticTheory.MOD_2, arithmeticTheory.TWO,
- arithmeticTheory.X_LT_X_SQUARED, ind_typeTheory.NUMPAIR,
- numeralTheory.TWO_EXP_THM], bossLib.ASM_SIMP_TAC bossLib.arith_ss
- [numeralTheory.iiSUC, sum_numTheory.SUM_def_compute, sum_numTheory.SUM_1,
- sum_numTheory.SUM_def, sum_numTheory.SUM_MONO, arithmeticTheory.ADD,
- arithmeticTheory.ADD_CLAUSES, numpairTheory.tri_def, sum_numTheory.SUM_FOLDL,
- sum_numTheory.SUM_EQUAL, sum_numTheory.SUM_FUN_EQUAL, sum_numTheory.SUM_ZERO,
- sum_numTheory.SUM_LESS, sum_numTheory.SUM, arithmeticTheory.MULT_CLAUSES,
- arithmeticTheory.FACT] THEN bossLib.SRW_TAC [bossLib.ARITH_ss] [(DB.fetch
- "sum_num" "SUM_def"),rich_listTheory.COUNT_LIST_SNOC, listTheory.FOLDL_SNOC]]]
+Induct_on `n` THENL [SRW_TAC [] [] THEN METIS_TAC [SUM_1, combinTheory.I_THM], Induct_on `n` THENL [ASM_SIMP_TAC arith_ss [SUM_def_compute], ASM_SIMP_TAC arith_ss [arithmeticTheory.ADD_CLAUSES, SUM_FOLDL, arithmeticTheory.MULT_CLAUSES] THEN SRW_TAC [ARITH_ss] [rich_listTheory.COUNT_LIST_SNOC, listTheory.FOLDL_SNOC]]]
 );
 
 val _ = export_theory();

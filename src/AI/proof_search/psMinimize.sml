@@ -15,8 +15,8 @@ val ERR = mk_HOL_ERR "psMinimize"
 val debugdir = HOLDIR ^ "/src/AI/proof_search/debug"
 fun debug s = debug_in_dir debugdir "psMinimize" s
 
-val search_time = 15.0
-val tactic_time = 0.1
+val search_time = 60.0
+val tactic_time = 1.0
 
 (* -------------------------------------------------------------------------
    Tests
