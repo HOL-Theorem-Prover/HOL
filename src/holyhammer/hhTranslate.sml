@@ -137,7 +137,9 @@ fun FUN_EQ_CONVL vl eq = case vl of
 fun LIFT_CONV iref tm =
   let
     fun test x = must_pred x orelse is_abs x
-    val subtm = find_term test tm handle _ => raise ERR "LIFT_CONV" ""
+    val subtm = find_term test tm
+      handle Interrupt => raise Interrupt
+           | _ => raise ERR "LIFT_CONV" ""
     val fvl = filter is_tptp_bv (free_vars_lr subtm)
     val v = genvar_lifting iref (type_of (list_mk_abs (fvl,subtm)))
     val rep = list_mk_comb (v,fvl)

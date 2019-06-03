@@ -444,7 +444,6 @@ fun brzozo seen worklist acc n =
                   (build_table translist r acc)
                   (n-1)
              end;
-
 val bigIndex = 2147483647;
 
 fun get_accepts fmap =

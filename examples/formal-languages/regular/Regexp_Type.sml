@@ -141,6 +141,11 @@ fun catlist [] = EPSILON
   | catlist [x] = x
   | catlist (h::t) = Cat (h,catlist t);
 
+fun strip_cat r =
+ case r
+  of Cat(a,b) => a::strip_cat b
+   | otherwise => [r]
+
 val dots = copy DOT;
 
 fun replicate x (n:int) = catlist (copy x n);
@@ -188,13 +193,18 @@ fun charset_string cset =
   then "\\s"
  else
  let fun prchar ch =
-      if Char.isGraph ch then String.str ch
-      else let val i = Char.ord ch
-           in String.concat
+      if mem ch [#"[", #"]"] then
+         "\\" ^ String.str ch
+      else
+      if Char.isGraph ch then
+         String.str ch
+      else
+      let val i = Char.ord ch
+      in String.concat
                ["\\", (if i <= 9 then "00" else
                       if i <= 100 then "0" else ""),
                 Int.toString i]
-           end
+      end
      fun printerval [] = raise ERR "charset_string" "empty interval"
        | printerval [i] = prchar (Char.chr i)
        | printerval (i::t) = String.concat
@@ -215,11 +225,6 @@ fun charset_string cset =
 (*           Star = 4                                                        *)
 (*        charset = 5                                                        *)
 (*---------------------------------------------------------------------------*)
-
-fun strip_cat r =
- case r
-  of Cat(a,b) => a::strip_cat b
-   | otherwise => [r]
 
 val pp_regexp =
  let open Portable PP
@@ -869,7 +874,9 @@ fun quote_to_tree input =
 (*===========================================================================*)
 
 fun n2l (n:IntInf.int) =
-  if n <= 0 then [] else IntInf.toInt(n mod 256)::n2l (n div 256)
+  if IntInf.<=(n,0) then
+    []
+  else IntInf.toInt(IntInf.mod(n,256))::n2l (IntInf.div(n,256))
 
 fun l2n [] = 0
   | l2n (h::t) = h + 256 * l2n t;
@@ -886,7 +893,8 @@ fun byte_width n = if n = 0 then 1 else 1 + log256 n;
 
 fun num_interval lo hi width dir =
  let val _ = if width < byte_width hi
-                orelse lo < 0 orelse hi < lo
+                orelse lo < 0
+                orelse hi < lo
               then raise ERR "num_interval" "malformed input" else ()
      val lorep = rev(padR (n2l lo) 0 width)
      val hirep = rev(padR (n2l hi) 0 width)
@@ -964,16 +972,20 @@ Ninterval 0 4611686018427387903;  (* Int63.maxInt *)
 
 fun twoE i = IntInf.pow (IntInf.fromInt 2,i);
 
-fun interval_regexp lo hi dir =
+(*---------------------------------------------------------------------------*)
+(* Regexp for binary twos complement representations of integers in the      *)
+(* interval lo .. hi.                                                        *)
+(*---------------------------------------------------------------------------*)
+
+fun gen_int_interval lo hi width dir =
  if not (lo <= hi) then
-     raise ERR "interval_regexp" "lo greater than hi"
+     raise ERR "int_interval" "lo greater than hi"
  else
  if 0 <= lo andalso 0 <= hi then
-    num_interval lo hi (byte_width hi) dir
+    num_interval lo hi width dir
  else
  if lo < 0 andalso hi >= 0 then
-     let val width = Int.max(signed_width_256 lo, signed_width_256 hi)
-         val top = twoE (width * 8)
+     let val top = twoE (width * 8)
      in if hi + 1 = top + lo  (* contiguous *)
         then catlist (dots width)
         else
@@ -982,14 +994,68 @@ fun interval_regexp lo hi dir =
      end
   else
   if lo < 0 andalso hi < 0 then
-  let val width = signed_width_256 lo
-      val top = twoE (width * 8)
-
+  let val top = twoE (width * 8)
   in num_interval (top+lo) (top+hi) width dir
   end
-  else raise ERR "interval_regexp" "unexpected values for lo and hi"
+  else raise ERR "int_interval" "unexpected values for lo and hi"
 
-fun sing_interval i dir = interval_regexp i i dir
+fun interval_bin_width lo hi =
+ if not (lo <= hi) then
+     raise ERR "interval_bin_width" "lo greater than hi"
+ else
+ if 0 <= lo andalso 0 <= hi then
+    byte_width hi
+ else
+ if lo < 0 andalso hi >= 0 then
+    Int.max(signed_width_256 lo, signed_width_256 hi)
+ else
+ if lo < 0 andalso hi < 0 then
+    signed_width_256 lo
+ else raise ERR "interval_bin_width"
+            "unexpected values for lo and hi";
+
+fun int_interval lo hi dir =
+  gen_int_interval lo hi (interval_bin_width lo hi) dir
+
+fun sing_interval i dir = int_interval i i dir;
+
+(*---------------------------------------------------------------------------*)
+(* Regexp for sign + magnitude representations of integers in the interval   *)
+(* lo .. hi. Characters #"-" and #"+" are prepended to the unsigned binary   *)
+(* representations. Zero is Cat(#"+",<encoded-zero>). There is no negative   *)
+(* zero.                                                                     *)
+(*---------------------------------------------------------------------------*)
+
+fun gen_sign_magn_interval lo hi width dir =
+ let val plus = Chset(charset_sing #"+")
+     val minus = Chset(charset_sing #"-")
+ in
+  if not (lo <= hi) then
+     raise ERR "sign_magn_interval" "lo greater than hi"
+ else
+  if 0 <= lo andalso 0 <= hi then
+    Cat(plus,num_interval lo hi width dir)
+ else
+  if lo < 0 andalso hi < 0 then
+    Cat(minus,num_interval (IntInf.abs hi) (IntInf.abs lo) width dir)
+ else
+  Or [Cat(minus,num_interval 1 (IntInf.abs lo) width dir),
+      Cat(plus,num_interval 0 hi width dir)]
+ end
+
+fun magn_bin_width lo hi =
+if not (lo <= hi) then
+     raise ERR "sign_magn_interval_bin_width"
+               "lo greater than hi"
+ else
+  Int.max(byte_width (IntInf.abs lo),
+          byte_width (IntInf.abs hi))
+;
+
+fun sign_magn_interval lo hi dir =
+    gen_sign_magn_interval lo hi (magn_bin_width lo hi) dir;
+
+fun sign_magn_sing_interval i dir = sign_magn_interval i i dir;
 
 
 (* Interval approach
@@ -1229,8 +1295,8 @@ fun tree_to_regexp tree =
      in Cat(replicate r i, Star r)
      end
    | Range (t,NONE,NONE) => Star (tree_to_regexp t)
-   | Interval(i,j,dir) => interval_regexp i j dir
-   | Const (k,dir) => sing_interval k dir
+   | Interval(i,j,dir) => sign_magn_interval i j dir
+   | Const (k,dir) => sign_magn_sing_interval k dir
    | Pack list => pack_intervals list
    | Ap("dot",[]) => DOT
    | Ap("digit",[]) => DIGIT

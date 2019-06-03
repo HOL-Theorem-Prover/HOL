@@ -374,7 +374,7 @@ declforms = "val"|"fun"|"structure"|"signature"|"functor"|"abstype"|"datatype"|"
    ECHO yyarg "\"]")));
 <tmcomment,tycomment,qcomment>[\128-\255] => ((yypos,
   (ECHO yyarg (bslash_escape yytext))));
-<comment,tmcomment,tycomment,qcomment>. => ((yypos, (ECHO yyarg yytext)));
+<comment,tmcomment,tycomment,qcomment,defncomment>. => ((yypos, (ECHO yyarg yytext)));
 
 <quote,tmquote,tyquote,defnquote>"^"+{ws} => ((yypos, (ECHO yyarg yytext)));
 <quote,tmquote,tyquote,defnquote>"^"+{newline} => ((yypos,

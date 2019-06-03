@@ -10,7 +10,7 @@ structure tttUnfold :> tttUnfold =
 struct
 
 open HolKernel Abbrev boolLib aiLib
-  smlLexer smlInfix smlOpen
+  smlLexer smlInfix smlOpen smlParallel
   mlTacticData
   tttSetup
 
@@ -871,9 +871,6 @@ fun extract_thy file =
 fun os oc s = TextIO.output (oc, s)
 fun osn oc s = TextIO.output (oc, s ^ "\n")
 
-fun rm_endline s =
-  let fun f c = if c = #"\n" then #" " else c in implode (map f (explode s)) end
-
 fun is_break s =
   mem s [
    "end", "in", "val", "fun",
@@ -951,28 +948,30 @@ fun end_unfold_thy () =
     f "Replace id" replace_id_time
   end
 
-fun unquoteString thy s =
+fun unquoteString thy file =
   let
     val dir = tactictoe_dir ^ "/code"
     val _ = mkDir_err dir
-    val fin  = dir ^ "/quoteString1" ^ thy
-    val fout = dir ^ "/quoteString2" ^ thy
-    val cmd = HOLDIR ^ "/bin/unquote" ^ " " ^ fin ^ " " ^ fout
+    val fout = dir ^ "/unquote_" ^ thy
+    val cmd = HOLDIR ^ "/bin/unquote" ^ " -i " ^ file ^ " " ^ fout
   in
-    writel fin [s];
     ignore (OS.Process.system cmd);
     String.concatWith " " (readl fout)
   end
 
+fun rm_spaces s =
+  let fun f c = if mem c [#"\n",#"\t",#"\r"] then #" " else c in
+    implode (map f (explode s))
+  end
+
 fun sketch_wrap thy file =
   let
-    val sl = readl file
-    val s1 = String.concatWith " " sl
-    val s2 = unquoteString thy s1
-    val s3 = rm_endline (rm_comment s2)
-    val sl3 = partial_sml_lexer s3
+    val s1 = unquoteString thy file
+    val s3 = rm_spaces (rm_comment s1)
+    val _ = writel (tactictoe_dir ^ "/code/test_" ^ thy) [s3]
+    val sl = partial_sml_lexer s3
   in
-    sketch sl3
+    sketch sl
   end
 
 fun unfold_wrap p = unfold 0 [dnew String.compare (map protect basis)] p
@@ -1099,16 +1098,29 @@ fun ttt_record () =
   let val thyl = ttt_rewrite () in ttt_record_thyl thyl end
 
 (* ------------------------------------------------------------------------
-   Evaluation
+   Evaluation (warning: only call this function after recording the theories)
    ------------------------------------------------------------------------ *)
 
-fun ttt_parallel_eval ncores thyl =
+fun ttt_parallel_eval ncore thyl =
   let
     val _ = ttt_ttteval_flag := true
     fun f thy = (ttt_rewrite_thy thy; ttt_record_thy thy)
   in
-    parapp ncores f thyl; ttt_ttteval_flag := false
+    parapp_queue ncore f thyl; ttt_ttteval_flag := false
   end
+
+(* -------------------------------------------------------------------------
+   Usage:
+      load "tttSetup"; open tttSetup;
+      load "tttUnfold"; open tttUnfold;
+      load_sigobj ();
+      ttt_record (); (* only if not already called previously *)
+      val thyl = ancestry (current_theory ());
+      ttt_search_time := 15.0;
+      val ncore = 20;
+      ttt_parallel_eval ncore thyl;
+   Results can be found in HOLDIR/src/tactictoe/eval.
+  ------------------------------------------------------------------------- *)
 
 (* ------------------------------------------------------------------------
    Theories of the standard library
@@ -1136,15 +1148,5 @@ fun load_sigobj () =
     app load l1
   end
 
+
 end (* struct *)
-
-(* test
-  load "tttSetup"; load "tttUnfold";
-  open tttUnfold;
-  load_sigobj ();
-  val thyl = ancestry (current_theory ());
-  tttSetup.ttt_search_time := 60.0;
-  val ncores = 20;
-  ttt_parallel_eval ncores thyl
-*)
-

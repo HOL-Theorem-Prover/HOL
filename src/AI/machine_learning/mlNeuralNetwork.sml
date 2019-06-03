@@ -18,7 +18,7 @@ fun debug s = debug_in_dir debugdir "mlNeuralNetwork" s
    Parameters
    ------------------------------------------------------------------------- *)
 
-val learning_rate = ref 0.01
+val learningrate_glob = ref 0.01
 
 (* -------------------------------------------------------------------------
    Activation and derivatives (with a smart trick)
@@ -47,9 +47,9 @@ type bpdata =
   {doutnv: real vector, doutv: real vector, dinv: real vector,
    dw: real vector vector}
 
-(*----------------------------------------------------------------------------
+(*---------------------------------------------------------------------------
   Initialization
-  ----------------------------------------------------------------------------*)
+  ---------------------------------------------------------------------------*)
 
 fun diml_aux insize sizel = case sizel of
     [] => []
@@ -68,9 +68,9 @@ fun random_nn (a1,da1) (a2,da2) sizel =
     map f (butlast l) @ [g (last l)]
   end
 
-(*----------------------------------------------------------------------------
-  Forward propagration (fp) with memory of the steps
-  ----------------------------------------------------------------------------*)
+(*---------------------------------------------------------------------------
+  Forward propagation (fp) with memory of the steps
+  ---------------------------------------------------------------------------*)
 
 fun fp_layer (layer : layer) inv =
   let
@@ -87,11 +87,11 @@ fun fp_nn nn v = case nn of
       fpdata :: fp_nn m (#outnv fpdata)
     end
 
-(*---------------------------------------------------------------------------
+(*--------------------------------------------------------------------------
   Backward propagation (bp)
   Takes the data from the forward pass, computes the loss and weight updates
   by gradient descent. Input is j. Output is i. Matrix is Mij.
-  --------------------------------------------------------------------------- *)
+  -------------------------------------------------------------------------- *)
 
 fun bp_layer (fpdata:fpdata) doutnv =
   let
@@ -125,49 +125,30 @@ fun bp_nn fpdatal expectv =
   let
     val rev_fpdatal = rev fpdatal
     val outnv = #outnv (hd rev_fpdatal)
-    (* cost is mean square error *)
     val doutnv = diff_rvect expectv outnv
   in
     rev (bp_nn_aux rev_fpdatal doutnv)
   end
 
-(*---------------------------------------------------------------------------
-  Average the updates over a batch.
-  --------------------------------------------------------------------------- *)
+(* -------------------------------------------------------------------------
+   Average the updates over a batch.
+   ------------------------------------------------------------------------- *)
 
 fun train_nn_one nn (inputv,expectv) =
   let val fpdatal = fp_nn nn inputv in
     bp_nn fpdatal expectv
   end
 
-fun regroup_by_layers nndwl = case nndwl of
-    [] => raise ERR "regroup_by_layers" ""
-  | [] :: cont => []
-  | (a :: m) :: cont => map hd nndwl :: regroup_by_layers (map tl nndwl)
+fun transpose_ll ll = case ll of
+    [] :: _ => []
+  | _ => map hd ll :: transpose_ll (map tl ll)
 
-fun average_dwl dwl =
-  let fun f i j = average_real (map (fn w => mat_sub w i j) dwl) in
-    mat_tabulate f (mat_dim (hd dwl))
-  end
+fun sum_dwll dwll = case dwll of
+     [dwl] => dwl
+   | _ => map matl_add (transpose_ll dwll)
 
-fun average_dwll dwll = map average_dwl (regroup_by_layers dwll)
+fun smult_dwl k dwl = map (mat_smult k) dwl
 
-fun sum_dwl dwl =
-  let fun f i j = sum_real (map (fn w => mat_sub w i j) dwl) in
-    mat_tabulate f (mat_dim (hd dwl))
-  end
-
-fun sum_dwll dwll = map sum_dwl (regroup_by_layers dwll)
-
-fun average_bpdatall size bpdatall =
-  let
-    val invsize  = 1.0 / (Real.fromInt size)
-    val dwll     = map (map #dw) bpdatall
-    val dwl1     = sum_dwll dwll
-    val dwl2     = map (mat_smult invsize) dwl1
-  in
-    dwl2
-  end
 
 (* -------------------------------------------------------------------------
    Loss
@@ -182,9 +163,9 @@ fun bp_loss bpdatal = mean_square_error (#doutnv (last bpdatal))
 
 fun average_loss bpdatall = average_real (map bp_loss bpdatall)
 
-(*---------------------------------------------------------------------------
+(*--------------------------------------------------------------------------
   Weight udpate
-  --------------------------------------------------------------------------- *)
+  -------------------------------------------------------------------------- *)
 
 fun clip (a,b) m =
   let fun f x = if x < a then a else (if x > b then b else x) in
@@ -193,7 +174,7 @@ fun clip (a,b) m =
 
 fun update_layer (layer, layerwu) =
   let
-    val w0 = mat_smult (!learning_rate) layerwu
+    val w0 = mat_smult (!learningrate_glob) layerwu
     val w1 = mat_add (#w layer) w0
     val w2 = clip (~4.0,4.0) w1
   in
@@ -202,23 +183,23 @@ fun update_layer (layer, layerwu) =
 
 fun update_nn nn wu = map update_layer (combine (nn,wu))
 
-(*---------------------------------------------------------------------------
+(*--------------------------------------------------------------------------
   Training schedule
-  --------------------------------------------------------------------------- *)
+  -------------------------------------------------------------------------- *)
 
 fun train_nn_batch batch nn =
   let
     val bpdatall = map (train_nn_one nn) batch
-    val dwl      = average_bpdatall (length batch) bpdatall
+    val dwll     = map (map #dw) bpdatall
+    val dwl      = sum_dwll dwll
     val newnn    = update_nn nn dwl
   in
     (newnn, average_loss bpdatall)
   end
 
 fun train_nn_epoch_aux lossl nn batchl  = case batchl of
-    [] =>
-    (print_endline ("loss: " ^ Real.toString (average_real lossl));
-     nn)
+    [] => (print_endline ("loss: " ^ Real.toString (average_real lossl));
+           nn)
   | batch :: m =>
     let val (newnn,loss) = train_nn_batch batch nn in
       train_nn_epoch_aux (loss :: lossl) newnn m
@@ -235,18 +216,71 @@ fun train_nn_nepoch n nn size trainset =
     train_nn_nepoch (n - 1) new_nn size trainset
   end
 
-(*---------------------------------------------------------------------------
+(*--------------------------------------------------------------------------
   Printing
-  --------------------------------------------------------------------------- *)
+  -------------------------------------------------------------------------- *)
 
-fun string_of_nn nn = String.concatWith "\n\n" (map (string_of_mat o #w) nn)
+fun string_of_wl wl =
+  let
+    val diml = map (mat_dim) wl
+    fun f (a,b) = its a ^ "," ^ its b
+  in
+    String.concatWith " " (map f diml) ^ "\n" ^
+    String.concatWith "\n\n" (map string_of_mat wl)
+  end
+
+fun string_of_nn nn =
+  let
+    val diml = map (mat_dim o #w) nn
+    fun f (a,b) = its a ^ "," ^ its b
+  in
+    String.concatWith " " (map f diml) ^ "\n" ^
+    String.concatWith "\n\n" (map (string_of_mat o #w) nn)
+  end
+
+fun split_nl nl l = case nl of
+    [] => raise ERR "split_nl" ""
+  | [a] => if length l = a then [l] else raise ERR "split_nl" ""
+  | a :: m =>
+    let val (l1,l2) = part_n a l in
+      l1 :: split_nl m l2
+    end
+
+fun read_wl_sl sl =
+  let
+    val nl = map fst (read_diml (hd sl))
+    val matsl = split_nl nl (tl sl)
+  in
+    map read_mat_sl matsl
+  end
+
+fun read_nn_sl sl =
+  let
+    val nl = map fst (read_diml (hd sl))
+    val matsl = split_nl nl (tl sl)
+    val matl =  map read_mat_sl matsl
+    fun f m = {a = tanh, da = dtanh, w = m}
+  in
+    map f matl
+  end
+  handle Empty => raise ERR "read_nn_sl" ""
+
+(*
+load "mlNeuralNetwork"; load "aiLib"; open mlMatrix mlNeuralNetwork aiLib;
+val dir = HOLDIR ^ "/src/AI";
+val nn1 = random_nn (tanh,dtanh) (tanh,dtanh) [4,3,2,1];
+val file = dir ^ "/test";
+writel file [string_of_nn nn1];
+val sl = readl file;
+val nn2 = read_nn_sl sl;
+*)
 
 end (* struct *)
 
 (*---------------------------------------------------------------------------
 load "mlNeuralNetwork";
 open mlTools mlMatrix mlNeuralNetwork;
-val starting_nn = random_nn (leakyrelu,dleakyrelu) (tanh,dtanh) [2,5,2];
+val starting_nn = random_nn (tanh,dtanh) (tanh,dtanh) [2,5,2];
 
 fun rev_vector v =
   let val vn = Vector.length v in
@@ -263,7 +297,7 @@ val training_set =
   end
 ;
 
-learning_rate := 0.001;
+learningrate_glob := 0.001;
 momentum := 0.0;
 decay := 1.0;
 

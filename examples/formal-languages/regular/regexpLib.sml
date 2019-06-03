@@ -126,9 +126,9 @@ val regexpEval = computeLib.CBV_CONV compset;
 max_print_depth := 25;
 
 fun compile q =
-  regexpEval ``compile_regexp ^(mk_regexp(Regexp_Type.fromQuote q))``;
+  regexpEval ``compile_regexp ^(regexp_to_term(Regexp_Type.fromQuote q))``;
 
-val regexp_tm = mk_regexp(Regexp_Type.fromQuote `a`);
+val regexp_tm = regexp_to_term(Regexp_Type.fromQuote `a`);
 *)
 
 val Brzozowski_partial_eval_alt =
@@ -137,7 +137,7 @@ val Brzozowski_partial_eval_alt =
 fun hol_matcher r =
  let open listSyntax regexpSyntax
      val _ = stdErr_print "Compiling regexp to DFA by deduction (can be slow) :\n"
-     val regexp_tm = regexpSyntax.mk_regexp r
+     val regexp_tm = regexp_to_term r
      val compile_thm = Count.apply regexpEval ``regexp_compiler$compile_regexp ^regexp_tm``
      val triple = rhs (concl compile_thm)
      val [t1,t2,t3] = strip_pair triple

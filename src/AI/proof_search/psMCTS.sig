@@ -5,7 +5,10 @@ sig
 
   datatype status = Undecided | Win | Lose
 
-  (* Debug *)
+  (* globals *)
+  val exploration_coeff : real ref
+
+  (* debug *)
   val string_of_status : status -> string
 
   (* 'a is the representation of a board *)
@@ -27,18 +30,19 @@ sig
 
   (* search function *)
   val starttree_of :
-    real ->
-    (('a sit -> status) * ('b -> 'a sit -> 'a sit)) *
-      ('a sit -> real * ('b * real) list) ->
+    (int * real * bool *
+      ('a sit -> status) * ('b -> 'a sit -> 'a sit) *
+      ('a sit -> real * ('b * real) list)
+    ) ->
     'a sit ->
     ('a,'b) tree
 
   val mcts :
-    (int * real * bool) ->
-    (('a sit -> status) * ('b -> 'a sit -> 'a sit)) *
-      ('a sit -> real * ('b * real) list) ->
-    ('a,'b) tree ->
-    ('a,'b) tree
+    (int * real * bool *
+      ('a sit -> status) * ('b -> 'a sit -> 'a sit) *
+      ('a sit -> real * ('b * real) list)
+    ) ->
+    ('a,'b) tree -> ('a,'b) tree
 
   (* restart *)
   val cut_tree : ('a,'b) tree -> int list -> ('a,'b) tree
