@@ -63,16 +63,19 @@ val learn_time = ref 0.0
 
 fun info_thy thy =
   [
-   its (!n_proof) ^ " proofs:",
-   "  " ^ its (!n_proof_ignored) ^ " proofs ignored (contains let)",
-   "  " ^ its (!n_proof_parsed) ^ " proofs parsed   " ^ 
-   its (!n_tactic_parsed) ^ " tactics parsed",
-   "  " ^ its (!n_proof_replayed) ^ " proofs replayed " ^ 
-   its (!n_tactic_replayed) ^ " tactics replayed",
-   "Record time: " ^ rts (!record_time),
-   "  parse time: " ^ rts (!parse_time), 
-   "  replay time: " ^ rts (!replay_time),
-   "Learn time: " ^ rts (!learn_time)
+   "  " ^ its (!n_proof) ^ " proofs recognized " ^ 
+   "(" ^ its (!n_proof_ignored) ^ " ignored (contains let))",
+   "    parsed: " ^ its (!n_proof_parsed) ^ " proofs " ^ 
+   its (!n_tactic_parsed) ^ " tactics," ^
+   " replayed: " ^ its (!n_proof_replayed) ^ " proofs " ^ 
+   its (!n_tactic_replayed) ^ " tactics",
+   "  Record time: " ^ rts_round 6 (!record_time) ^
+   " (parse: " ^ rts_round 6 (!parse_time) ^ 
+   ", replay: " ^ rts_round 6 (!replay_time) ^ ")",
+   "  Learn time: " ^ rts_round 6 (!learn_time) ^ 
+   " (tactic pred: " ^ rts_round 6 (!ortho_predstac_time) ^ "," ^
+   " thm pred: " ^ rts_round 6 (!ortho_predthm_time) ^ "," ^
+   " tactic test: " ^ rts_round 6 (!ortho_teststac_time) ^ ")"
   ]
 
 fun write_info thy = 

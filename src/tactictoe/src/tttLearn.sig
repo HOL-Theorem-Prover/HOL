@@ -24,6 +24,9 @@ sig
   val is_thmlarg_stac : string -> bool
 
   (* competition between different tactics over a goal *)
+  val ortho_predstac_time : real ref
+  val ortho_predthm_time : real ref
+  val ortho_teststac_time : real ref
   val orthogonalize : (thmdata * tacdata) -> lbl -> lbl
 
 end

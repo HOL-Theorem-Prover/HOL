@@ -11,8 +11,7 @@ struct
 open HolKernel Abbrev boolLib aiLib
   smlTimeout smlLexer smlExecute
   mlFeature mlThmData mlTacticData mlNearestNeighbor
-  psMinimize
-  tttSetup
+  psMinimize tttSetup
 
 val ERR = mk_HOL_ERR "tttLearn"
 fun debug s = debug_in_dir ttt_debugdir "tttLearn" s
@@ -85,7 +84,9 @@ fun abstract_stac stac =
 fun prefix_absstac stac = [abstract_stac stac, SOME stac]
 
 fun concat_absstacl ostac stacl =
-  let val l = List.concat (map prefix_absstac stacl) @ [abstract_stac ostac] in
+  let
+    val l = List.concat (map prefix_absstac stacl) @ [abstract_stac ostac] 
+  in
     mk_sameorder_set String.compare (List.mapPartial I l)
   end
 
@@ -99,6 +100,25 @@ fun inst_stacl thmidl stacl = map_assoc (inst_stac thmidl) stacl
 (* -------------------------------------------------------------------------
    Orthogonalization
    ------------------------------------------------------------------------- *)
+
+fun pred_stac tacdata ostac gfea =
+  let
+    val tacfea = dlist (#tacfea tacdata)
+    val symweight = learn_tfidf tacfea
+    val stacl = stacknn_uniq (symweight,tacfea) (!ttt_ortho_radius) gfea
+  in
+    filter (fn x => not (x = ostac)) stacl
+  end
+
+fun order_stac tacdata ostac stacl =
+   let
+     fun covscore x = dfind x (#taccov tacdata) handle NotFound => 0
+     val oscore  = covscore ostac
+     val stacl'  = filter (fn x => covscore x > oscore) stacl
+     fun covcmp (x,y) = Int.compare (covscore y, covscore x)
+   in
+     dict_sort covcmp stacl'
+   end
 
 fun op_subset eqf l1 l2 = null (op_set_diff eqf l1 l2)
 fun test_stac g gl (stac, istac) =
@@ -119,35 +139,28 @@ fun test_stac g gl (stac, istac) =
        else NONE)
   end
 
+val ortho_predstac_time = ref 0.0
+val ortho_predthm_time = ref 0.0
+val ortho_teststac_time = ref 0.0
+
 fun orthogonalize (thmdata,tacdata) (lbl as (ostac,t,g,gl)) =
   let
-    (* goal features *)
     val gfea = feahash_of_goal g
-    (* predict tactics *)
     val _ = debug "predict tactics"
-    val tacfea = dlist (#tacfea tacdata)
-    val symweight = learn_tfidf tacfea
-    val stacl1 = stacknn_uniq (symweight,tacfea) (!ttt_ortho_radius) gfea
-    val stacl2 = filter (fn x => not (x = ostac)) stacl1
-    (* order tactics by frequency *)
+    val stacl1 = total_time ortho_predstac_time 
+      (pred_stac tacdata ostac) gfea
     val _ = debug "order tactics"
-    fun covscore x = dfind x (#taccov tacdata) handle NotFound => 0
-    val oscore  = covscore ostac
-    val stacl3  = filter (fn x => covscore x > oscore) stacl2
-    fun covcmp (x,y) = Int.compare (covscore y, covscore x)
-    val stacl4 = dict_sort covcmp stacl3
-    (* abstract tactics *)
+    val stacl2 = order_stac tacdata ostac stacl1
     val _ = debug "concat abstract tactics"
-    val stacl5 = concat_absstacl ostac stacl4
-    (* predict theorems *)
+    val stacl3 = concat_absstacl ostac stacl2
     val _ = debug "predict theorems"
-    val thml = thmknn thmdata (!ttt_thmlarg_radius) gfea
-    (* instantiate arguments *)
-    val _ = debug "instantiate argument"
-    val stacl6 = inst_stacl thml stacl5
-    (* test produced tactics *)
+    val thml = total_time ortho_predthm_time
+      (thmknn thmdata (!ttt_thmlarg_radius)) gfea
+    val _ = debug "instantiate arguments"
+    val stacl4 = inst_stacl thml stacl3
     val _ = debug "test tactics"
-    val testo = findSome (test_stac g gl) stacl6
+    val testo = total_time ortho_teststac_time
+      (findSome (test_stac g gl)) stacl4
   in
     case testo of NONE => lbl | SOME newlbl => newlbl
   end
