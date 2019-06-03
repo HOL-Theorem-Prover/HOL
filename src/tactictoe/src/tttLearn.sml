@@ -85,7 +85,7 @@ fun prefix_absstac stac = [abstract_stac stac, SOME stac]
 
 fun concat_absstacl ostac stacl =
   let
-    val l = List.concat (map prefix_absstac stacl) @ [abstract_stac ostac] 
+    val l = List.concat (map prefix_absstac stacl) @ [abstract_stac ostac]
   in
     mk_sameorder_set String.compare (List.mapPartial I l)
   end
@@ -147,7 +147,7 @@ fun orthogonalize (thmdata,tacdata) (lbl as (ostac,t,g,gl)) =
   let
     val gfea = feahash_of_goal g
     val _ = debug "predict tactics"
-    val stacl1 = total_time ortho_predstac_time 
+    val stacl1 = total_time ortho_predstac_time
       (pred_stac tacdata ostac) gfea
     val _ = debug "order tactics"
     val stacl2 = order_stac tacdata ostac stacl1

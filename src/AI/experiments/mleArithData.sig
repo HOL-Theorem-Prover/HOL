@@ -3,7 +3,7 @@ sig
 
   include Abbrev
 
-  val dataarith_dir : string 
+  val dataarith_dir : string
 
   val eval_numtm      : term -> int
   val random_numtm    : (int * int) -> term
@@ -14,5 +14,5 @@ sig
   val create_big   : term list -> int -> term list
 
   val export_arithdata : string -> unit
-  
+
 end

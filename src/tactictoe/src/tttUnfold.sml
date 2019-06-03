@@ -1022,7 +1022,7 @@ fun rewrite_script thy fileorg =
 fun find_script x =
   let val dir =
     Binarymap.find(fileDirMap(),x ^ "Theory.sml")
-    handle NotFound => raise ERR "find_script" x
+    handle NotFound => raise ERR "find_script" ("please load " ^ x ^ "Theory")
   in
     dir ^ "/" ^ x ^ "Script.sml"
   end
@@ -1050,8 +1050,7 @@ fun ttt_rewrite () =
   end
 
 (* ------------------------------------------------------------------------
-   Extra safety during recording
-   (if export_theory is not catched)
+   Extra safety during recording (if export_theory is not catched)
    ------------------------------------------------------------------------ *)
 
 fun save_file file =
@@ -1091,7 +1090,6 @@ fun ttt_record_thy thy =
       restore_scripts scriptorg;
       print_endline (String.concatWith "\n" (readl infofile))
     end
-    handle e => (restore_scripts scriptorg; raise e)
   end
 
 fun ttt_record_thyl thyl = app ttt_record_thy thyl

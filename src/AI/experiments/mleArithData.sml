@@ -69,7 +69,7 @@ val dataarith_dir = HOLDIR ^ "/src/AI/experiments/data_arith"
    Export term as an s-expression with statistics about value and proof length
    ------------------------------------------------------------------------- *)
 
-fun export_arithdata databare = 
+fun export_arithdata databare =
   let
     val dir = HOLDIR ^ "/src/AI/experiments/data_arithexport"
     val _ = mkDir_err dir

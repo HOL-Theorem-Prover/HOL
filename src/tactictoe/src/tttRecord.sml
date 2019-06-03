@@ -63,22 +63,22 @@ val learn_time = ref 0.0
 
 fun info_thy thy =
   [
-   "  " ^ its (!n_proof) ^ " proofs recognized " ^ 
+   "  " ^ its (!n_proof) ^ " proofs recognized " ^
    "(" ^ its (!n_proof_ignored) ^ " ignored (contains let))",
-   "    parsed: " ^ its (!n_proof_parsed) ^ " proofs " ^ 
+   "    parsed: " ^ its (!n_proof_parsed) ^ " proofs " ^
    its (!n_tactic_parsed) ^ " tactics," ^
-   " replayed: " ^ its (!n_proof_replayed) ^ " proofs " ^ 
+   " replayed: " ^ its (!n_proof_replayed) ^ " proofs " ^
    its (!n_tactic_replayed) ^ " tactics",
    "  Record time: " ^ rts_round 6 (!record_time) ^
-   " (parse: " ^ rts_round 6 (!parse_time) ^ 
+   " (parse: " ^ rts_round 6 (!parse_time) ^
    ", replay: " ^ rts_round 6 (!replay_time) ^ ")",
-   "  Learn time: " ^ rts_round 6 (!learn_time) ^ 
+   "  Learn time: " ^ rts_round 6 (!learn_time) ^
    " (tactic pred: " ^ rts_round 6 (!ortho_predstac_time) ^ "," ^
    " thm pred: " ^ rts_round 6 (!ortho_predthm_time) ^ "," ^
    " tactic test: " ^ rts_round 6 (!ortho_teststac_time) ^ ")"
   ]
 
-fun write_info thy = 
+fun write_info thy =
   let val infodir = HOLDIR ^ "/src/tactictoe/info" in
     mkDir_err infodir;
     writel (infodir ^ "/" ^ thy) (info_thy thy)
@@ -99,7 +99,7 @@ fun record_tactic (tac,stac) g =
   end
 
 (* -------------------------------------------------------------------------
-   Replaying a proof     
+   Replaying a proof
    ------------------------------------------------------------------------- *)
 
 fun wrap_tactics_in name qtac goal =
@@ -215,7 +215,7 @@ fun record_proof name lflag tac1 tac2 g =
           if null (fst r) then r
           else (debug "record_proof: not null"; tac2 g)
         end
-        handle _ => 
+        handle _ =>
           (debug "record_proof: exception"; tac2 g)
   in
     result
@@ -229,7 +229,7 @@ fun start_record_thy thy = ()
 
 fun end_record_thy thy =
   (
-  ttt_export_tacdata thy (!tacdata_glob); 
+  ttt_export_tacdata thy (!tacdata_glob);
   write_info thy;
   debug "\nrecord successful"
   )
