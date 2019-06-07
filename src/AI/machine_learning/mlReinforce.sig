@@ -53,9 +53,9 @@ sig
   val compete_one : ('a,'b) gamespec ->
     mlTreeNeuralNetwork.dhtnn -> 'a psMCTS.sit list -> int
 
-  (* exploration (search) *)
+  (* exploration *)
   val explore_test : ('a,'b) gamespec -> mlTreeNeuralNetwork.dhtnn ->
-    'a psMCTS.sit -> unit
+    'a psMCTS.sit -> ('a,'b) psMCTS.node list
   val explore_extern :
     ('a,'b) gamespec * mlTreeNeuralNetwork.dhtnn * (bool * bool) ->
     (int * int) -> 'a psMCTS.sit -> unit

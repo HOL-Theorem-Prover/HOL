@@ -99,7 +99,7 @@ fun genealogy id =
   if null id then [] else id :: genealogy (tl id)
 
 (* -------------------------------------------------------------------------
-   Backup: not efficient but conceptually simple
+   Backup
    ------------------------------------------------------------------------- *)
 
 fun quant_status quant status tree pol =
@@ -145,20 +145,30 @@ fun backup decay tree (id,eval) =
   end
 
 (* --------------------------------------------------------------------------
-   Adding dirichlet noise (alpha = 0.5)
+   Adding dirichlet noise
    ------------------------------------------------------------------------- *)
 
-val alpha = 0.5
-val gamma_of_alpha = Math.sqrt Math.pi
+val alpha_glob = ref 0.2
 
-fun gamma_density x =
-  (Math.pow (x, alpha - 1.0) * Math.exp (~ x)) / gamma_of_alpha
-(* Gamma (alpha) *)
+val gammatable =
+ [(1, 99.43258512),(2, 49.44221016),(3, 32.78499835),(4, 24.46095502),
+  (5, 19.47008531),(6, 16.14572749),(7, 13.77360061),(8, 11.99656638),
+  (9, 10.61621654),(10, 9.513507699),(20, 4.590843712),(30, 2.991568988),
+  (40, 2.218159544),(50, 1.772453851),(60, 1.489192249),(70, 1.298055333),
+  (80, 1.164229714),(90, 1.068628702)]
+
+fun gamma_of alpha =
+  assoc (Real.round (alpha * 100.0)) gammatable
+  handle HOL_ERR _ => raise ERR "gamma_of" (rts alpha)
+
+fun gamma_density alpha x =
+  (Math.pow (x, alpha - 1.0) * Math.exp (~ x)) / gamma_of alpha
 
 fun interval (step:real) (a,b) =
   if a + (step / 2.0) > b then [b] else a :: interval step (a + step,b)
 
-val gamma_distrib = map_assoc gamma_density (interval 0.01 (0.01,10.0));
+fun gamma_distrib alpha =
+  map_assoc (gamma_density alpha) (interval 0.01 (0.01,10.0));
 
 fun proba_norm l =
   let val sum = sum_real l in
@@ -166,16 +176,17 @@ fun proba_norm l =
     map (fn x => x / sum) l
   end
 
-fun dirichlet_noise n =
+fun dirichlet_noise alpha n =
   if n = 0 then [] else
-  let val l = List.tabulate (n, fn _ => select_in_distrib gamma_distrib) in
+  let val l =
+    List.tabulate (n, fn _ => select_in_distrib (gamma_distrib alpha)) in
     proba_norm l
   end
 
 fun add_root_noise tree =
   let
     val {pol,sit,sum,vis,status} = dfind [0] tree
-    val noisel = dirichlet_noise (length pol)
+    val noisel = dirichlet_noise (!alpha_glob) (length pol)
     fun f (((move,polv),cid),noise) = ((move, 0.75 * polv + 0.25 * noise), cid)
     val newpol = map f (combine (pol,noisel))
   in

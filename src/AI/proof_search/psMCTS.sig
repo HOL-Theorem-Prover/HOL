@@ -7,6 +7,7 @@ sig
 
   (* globals *)
   val exploration_coeff : real ref
+  val alpha_glob : real ref
 
   (* debug *)
   val string_of_status : status -> string

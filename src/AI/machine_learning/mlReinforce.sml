@@ -85,12 +85,13 @@ fun summary_param () =
     val mcts2 = "mcts simulation: " ^ its (!nsim_glob)
     val mcts3 = "mcts decay: " ^ rts (!decay_glob)
     val mcts4 = "mcts ncore: " ^ its (!ncore_mcts_glob)
-    val mcts5 = "mcts exploration coeff: " ^ rts (!psMCTS.exploration_coeff)
+    val mcts5 = "mcts exploration coeff: " ^ rts (!exploration_coeff)
+    val mcts6 = "mcts noise alpha: " ^ rts (!alpha_glob)
   in
     summary "Global parameters";
     summary (String.concatWith "\n  "
      ([file,para] @ [gen1,gen2,gen3,gen4] @ [nn0,nn1,nn2,nn3,nn4,nn6,nn5] @
-      [mcts2,mcts3,mcts4,mcts5])
+      [mcts2,mcts3,mcts4,mcts5,mcts6])
      ^ "\n")
   end
 
@@ -205,10 +206,11 @@ fun explore_test gamespec dhtnn target =
       (!nsim_glob, !decay_glob, noise,
        #status_of gamespec, #apply_move gamespec,
        mk_fep_dhtnn bstart gamespec dhtnn)
+    val _ = verbose_flag := true
+    val (_,rootl) = n_bigsteps gamespec mctsparam target
+    val _ = verbose_flag := false
   in
-    verbose_flag := true;
-    ignore (n_bigsteps gamespec mctsparam target);
-    verbose_flag := false
+    rootl
   end
 
 fun bstatus_to_string b = if b then "win" else "lose"
@@ -276,6 +278,8 @@ fun mk_state_s opens flags =
   "  val _ = mlReinforce.nsim_glob := " ^ its (!nsim_glob),
   "  val _ = mlReinforce.decay_glob := " ^ rts (!decay_glob),
   "  val _ = mlReinforce.dim_glob := " ^ its (!dim_glob),
+  "  val _ = psMCTS.alpha_glob := " ^ rts (!alpha_glob),
+  "  val _ = psMCTS.exploration_coeff := " ^ rts (!exploration_coeff),
   "  val dhtnn = mlTreeNeuralNetwork.read_dhtnn (mlReinforce.dhtnn_file ())",
   "  val flags = " ^ flags_to_string flags,
   "in",
