@@ -488,7 +488,9 @@ val size = 10;
 explore_gamespec (iol,size);
 
 load "mleProgram"; open mleProgram;
- reinforce_fixed "test" 1;
+ reinforce_fixed "program_run1" 20;
+
+val l = mk_targetl 9 400;
 
 *)
 

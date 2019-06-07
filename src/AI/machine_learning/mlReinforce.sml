@@ -177,7 +177,8 @@ fun n_bigsteps_loop (n,nmax) gamespec mctsparam (allex,allroot) tree =
           val _ = if !verbose_flag
                   then print_distrib (#string_of_move gamespec) dis
                   else ()
-          val cuttree = cut_tree newtree cid
+          val cuttree = starttree_of mctsparam (#sit (dfind cid newtree))
+            (* cut_tree newtree cid: does not mix well with noise *)
           val newallex = add_rootex gamespec newtree allex
         in
           n_bigsteps_loop (n+1,nmax) gamespec mctsparam
@@ -320,7 +321,8 @@ fun compete_one gamespec dhtnn targetl =
       (explore_parallel gamespec (!ncore_mcts_glob) (false,false) dhtnn) targetl
     val nwin = length (filter (I o fst) l)
   in
-    summary ("Competition time : " ^ rts t); nwin
+    summary ("Competition time : " ^ rts t);
+    nwin
   end
 
 fun summary_compete (w_old,w_new) =
@@ -331,13 +333,16 @@ fun summary_compete (w_old,w_new) =
 fun compete gamespec dhtnn_old dhtnn_new =
   let
     val targetl = #mk_targetl gamespec (!level_glob) (!ntarget_compete)
+    val _ = summary ("Competition targets: " ^ its (length targetl))
     val w_old = compete_one gamespec dhtnn_old targetl
     val w_new = compete_one gamespec dhtnn_new targetl
-    val levelup = int_div (Int.max (w_new,w_old)) (length targetl) > 0.95
+    val freq = int_div (Int.max (w_new,w_old)) (length targetl)
   in
     summary_compete (w_old,w_new);
-    if levelup
-    then (incr level_glob; summary ("Level up: " ^ its (!level_glob)))
+    summary ("Max percentage: " ^ rts freq);
+    if freq > 0.95
+    then (incr level_glob;
+          summary ("Level up: " ^ its (!level_glob)))
     else ();
     if w_new > w_old then dhtnn_new else dhtnn_old
   end
@@ -349,6 +354,7 @@ fun compete gamespec dhtnn_old dhtnn_new =
 fun explore_f startb gamespec allex dhtnn =
   let
     val targetl = #mk_targetl gamespec (!level_glob) (!ntarget_explore)
+    val _ = summary ("Exploration targets: " ^ its (length targetl))
     val (l,t) = add_time
       (explore_parallel gamespec
        (!ncore_mcts_glob) (true,startb) dhtnn) targetl
