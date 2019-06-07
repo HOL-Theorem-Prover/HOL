@@ -14,7 +14,7 @@ sig
   val stats_eval : string -> (int * int) list
 
   (* search *)
-  val explore_gamespec : term -> unit
+  val explore_gamespec : term -> (board, move) psMCTS.node list
   val reinforce_fixed : string -> int ->
     (term * real list * real list) list * mlTreeNeuralNetwork.dhtnn
   val final_eval : string -> int * int -> string -> ((int * int) * real)

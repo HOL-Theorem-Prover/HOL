@@ -29,7 +29,8 @@ sig
   val mk_targetl : int -> int -> (bool * board) list
 
   (* exploration *)
-  val explore_gamespec : ((int list * int) list * int) -> unit
+  val explore_gamespec : ((int list * int) list * int) -> 
+    (board, move) psMCTS.node list
   val reinforce_fixed : string ->  int ->
     (term * real list * real list) list * mlTreeNeuralNetwork.dhtnn
 
