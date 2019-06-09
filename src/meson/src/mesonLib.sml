@@ -468,6 +468,7 @@ fun meson_single_expand infs rule ((g,ancestors),(insts,offset,size)) =
          in (h', checkan insts h' ancestors)
          end
      val newhyps =  map mk_ihyp hyps
+     open Uref
   in
     infs := !infs + 1;
     (newhyps, (globin, offset+offinc, size - length hyps))
@@ -597,10 +598,10 @@ fun say_solved infs n =
 fun solve_goal infs rules incdepth min max incsize =
  let fun solve n g =
       if n > max then failwith "solve_goal: Too deep"
-      else let val _ = chat (!infs) n
+      else let val _ = chat (Uref.!infs) n
                val gi = if incdepth then expand_goal infs rules g n 100000 I
                                     else expand_goal infs rules g 100000 n I
-               val _ = say_solved (!infs) (!chatting)
+               val _ = say_solved (Uref.!infs) (!chatting)
            in
              gi
            end
@@ -963,11 +964,11 @@ fun PURE_MESON_TAC infs min max inc gl =
 
 fun inform tac g =
   let val _ = if (!chatting = 1) then say "Meson search level: " else ()
-      val infs = ref 0
+      val infs = Uref.new 0
       val res = tac infs g
       val _ = if (!chatting = 0) then ()
          else if (!chatting = 1) then say"\n"
-              else say  ("  solved with " ^ Int.toString (!infs) ^
+              else say  ("  solved with " ^ Int.toString (Uref.!infs) ^
                          " MESON inferences.\n")
   in  res  end;
 
