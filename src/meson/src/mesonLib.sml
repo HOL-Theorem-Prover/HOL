@@ -175,10 +175,11 @@ in
   val hol_of_var = hol_of_bumped_var
 end;
 
-type cdb = ((term * int) list ref * int ref)
-fun new_cdb () : cdb = (ref [(the_false, 1)], ref 2)
+type cdb = ((term * int) list Uref.t * int Uref.t)
+fun new_cdb () : cdb = (Uref.new [(the_false, 1)], Uref.new 2)
 fun fol_of_const ((cstore,ccounter) : cdb) c =
   let
+    open Uref
     val currentconsts = !cstore
   in
     case assoc1_eq Term.compare c currentconsts of
@@ -192,7 +193,7 @@ fun fol_of_const ((cstore,ccounter) : cdb) c =
       end
   end
 fun hol_of_const ((cstore,_):cdb) c =
-   case assoc2 c (!cstore)
+   case assoc2 c (Uref.!cstore)
     of SOME x => x
      | NONE => failwith "hol_of_const"
 
