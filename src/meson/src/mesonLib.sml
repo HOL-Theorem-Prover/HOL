@@ -131,6 +131,7 @@ datatype fol_form = Atom   of fol_atom
 local
   fun inc_vcounter vcounter =
     let
+      open Uref
       val n = !vcounter
       val m = n + 1
     in
@@ -140,27 +141,30 @@ local
         (vcounter := m; n)
     end
   fun hol_of_var (vstore,gstore,_) v =
-     case assoc2 v (!vstore)
-      of NONE => assoc2 v (!gstore)
+     case assoc2 v (Uref.!vstore)
+      of NONE => assoc2 v (Uref.!gstore)
        | x => x
   fun hol_of_bumped_var (vdb as (_, gstore, _)) v =
-    case hol_of_var vdb v of
-        SOME x => x
-      | NONE =>
-         let val v' = v mod offinc
-             val hv' = case hol_of_var vdb v' of
-                           SOME y => y
-                         | NONE => failwith "hol_of_bumped_var"
-             val gv = genvar (type_of hv')
-         in
-            gstore := (gv, v)::(!gstore);
-            gv
-         end
+    let open Uref in
+      case hol_of_var vdb v of
+          SOME x => x
+        | NONE =>
+           let val v' = v mod offinc
+               val hv' = case hol_of_var vdb v' of
+                             SOME y => y
+                           | NONE => failwith "hol_of_bumped_var"
+               val gv = genvar (type_of hv')
+           in
+              gstore := (gv, v)::(!gstore);
+              gv
+           end
+    end
 in
-  type vardb = (term * int) list ref * (term * int) list ref * int ref
-  fun new_vardb () : vardb = (ref [], ref [], ref 0)
+  type vardb = (term * int) list Uref.t * (term * int) list Uref.t * int Uref.t
+  fun new_vardb () : vardb = (Uref.new [], Uref.new [], Uref.new 0)
   fun fol_of_var ((vstore,_,vcounter):vardb) (v:term) =
-    let val currentvars = !vstore
+    let open Uref
+        val currentvars = !vstore
     in case op_assoc1 aconv v currentvars
         of SOME x => x
          | NONE =>
