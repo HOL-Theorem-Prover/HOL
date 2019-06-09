@@ -18,6 +18,7 @@ sig
   val iol_of_prog : program -> iol
   val gen_prog : int -> program list
   val random_prog : int -> program
+  val gen_iolsizel : int -> (iol * int) list
 
   datatype board =
     Board of (iol * int * program) | FailBoard

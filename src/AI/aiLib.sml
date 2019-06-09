@@ -419,6 +419,11 @@ fun list_imax l = case l of
   | [a] => a
   | a :: m => Int.max (a,list_imax m)
 
+fun list_imin l = case l of
+    [] => raise ERR "list_imin" ""
+  | [a] => a
+  | a :: m => Int.min (a,list_imin m)
+
 fun sum_int l = case l of [] => 0 | a :: m => a + sum_int m
 
 fun average_real l = sum_real l / Real.fromInt (length l)
@@ -430,6 +435,10 @@ fun standard_deviation l =
   in
     Math.sqrt variance
   end
+
+fun int_product nl = case nl of
+    [] => 1
+  | a :: m => a * int_product m
 
 fun int_div n1 n2 =
    (if n2 = 0 then 0.0 else Real.fromInt n1 / Real.fromInt n2)

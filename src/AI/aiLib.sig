@@ -25,6 +25,7 @@ sig
   val compare_imax : (('a * int) * ('a * int)) -> order
   val list_rmax : real list -> real
   val list_imax : int list -> int
+  val list_imin : int list -> int
 
   (* time *)
   val add_time : ('a -> 'b) -> 'a -> 'b * real
@@ -170,6 +171,7 @@ sig
   val sum_int : int list -> int
   val int_div : int -> int -> real
   val int_pow : int -> int -> int
+  val int_product : int list -> int
   val bin_rep : int -> int -> real list
   val pow : real -> int -> real
   val approx : int -> real -> real

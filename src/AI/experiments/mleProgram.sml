@@ -59,11 +59,12 @@ fun exec_prog_onlist p l =
   in
     dfind 0 (fst (exec_prog 1000 p d1))
   end
-   handle ProgTimeout => 0 | NotFound => 0
 
 fun satisifies p (il,i) = (i = exec_prog_onlist p il)
-fun satisfies_iol p l = all (satisifies p) l
+  handle ProgTimeout => false | NotFound => false
 
+fun satisfies_iol p l = all (satisifies p) l
+ 
 fun contains_cont p = case p of
     Read (i,p1)  => contains_cont p1
   | Write (i,p1) => contains_cont p1
@@ -75,11 +76,11 @@ fun contains_cont p = case p of
 
 
 fun prog_size p = case p of
-    Read (i,p1)  => 1 + i + prog_size p1
-  | Write (i,p1) => 1 + i + prog_size p1
-  | Incr (i,p1)  => 1 + i + prog_size p1
-  | Reset (i,p1) => 1 + i + prog_size p1
-  | Loop ((i,p1),p2) => 1 + i + prog_size p1 + prog_size p2
+    Read (i,p1)  => i + prog_size p1
+  | Write (i,p1) => i + prog_size p1
+  | Incr (i,p1)  => i + prog_size p1
+  | Reset (i,p1) => i + prog_size p1
+  | Loop ((i,p1),p2) => i + prog_size p1 + prog_size p2
   | End => 1
   | Cont => 1
 
@@ -209,9 +210,9 @@ fun apply_othermove move p = case p of
       AddrMove  => raise ERR "addrmove" ""
     | ReadMove  => Read (1,Cont)
     | WriteMove => Write (1,Cont)
-    | IncrMove  => Incr (1,Cont)
-    | ResetMove => Reset (1,Cont)
-    | LoopMove  => Loop ((1,Cont),Cont)
+    | IncrMove  => Incr (0,Cont)
+    | ResetMove => Reset (0,Cont)
+    | LoopMove  => Loop ((0,Cont),Cont)
     | EndMove   => End
     )
 
@@ -251,12 +252,14 @@ fun filter_sit sit = case snd sit of
     Board _ => (fn l => l)
   | FailBoard => (fn l => [])
 
+
+fun apply_move_to_prog move p =
+  if move = AddrMove then apply_addrmove p else apply_othermove move p
+
 fun apply_move move sit =
   (true,
     case snd sit of
-      Board (iol,size,p) =>
-        Board (iol,size,
-        if move = AddrMove then apply_addrmove p else apply_othermove move p)
+      Board (iol,size,p) => Board (iol, size, apply_move_to_prog move p) 
     | FailBoard => raise ERR "apply_move" ""
   )
   handle AddrException => (true, FailBoard)
@@ -292,121 +295,53 @@ fun max_bigsteps target = case snd target of
   | FailBoard => raise ERR "max_bigsteps" ""
 
 (* -------------------------------------------------------------------------
-   Level: uses program generation (semantic uniqueness)
+   Level: uses program generation
    ------------------------------------------------------------------------- *)
 
-fun int_product nl = case nl of
-    [] => 1
-  | a :: m => a * int_product m
-
-fun number_partition_err a b =
-  number_partition a b handle HOL_ERR _ => []
-
-val instrl =
-  [Read (0,End), Write (0,End), Incr (0,End), Reset (0,End),
-   Loop ((0,End),End), End]
-
-val gen_cache = ref (dempty Int.compare)
+(* syntatic generation *)
+fun gen_prog_movel ml p = case ml of
+    [] => p
+  | move :: m => gen_prog_movel m (apply_move_to_prog move p)
+  
+fun random_prog size = 
+  gen_prog_movel (List.tabulate (size, fn _ => random_elem movel)) Cont
 
 fun gen_prog size =
-  (dfind size (!gen_cache) handle NotFound =>
-  let val value = List.concat (map (gen_prog_instr size) instrl) in
-    gen_cache := dadd size value (!gen_cache);
-    value
-  end)
-and gen_prog_instr size instr = case instr of
-    Read (_,_)  => gen_prog_pair Read size
-  | Write (_,_) => gen_prog_pair Write size
-  | Incr (_,_)  => gen_prog_pair Incr size
-  | Reset (_,_) => gen_prog_pair Reset size
-  | Loop ((_,_),_) =>
-    let
-      val l = map triple_of_list (number_partition_err 3 size)
-      fun f (a,b,c) =
-        let val l' = cartesian_product (gen_prog b) (gen_prog c) in
-          map (fn (b',c') => Loop ((a,b'),c')) l'
-        end
-    in
-      List.concat (map f l)
-    end
-  | End => if size = 1 then [End] else []
-  | Cont => raise ERR "exec_prog" "cont"
-and gen_prog_pair constructor size =
-  let
-    val l = map pair_of_list (number_partition_err 2 size)
-    fun f (a,b) = map (fn x => constructor (a,x)) (gen_prog b)
-  in
-    List.concat (map f l)
+  let val ll = cartesian_productl (List.tabulate (size, fn _ => movel)) in
+    mapfilter (C gen_prog_movel Cont) ll
   end
 
-val n_cache = ref (dempty Int.compare)
+fun compare_prog (p1,p2) = case (p1,p2) of 
+    (Read (i,p),Read (i',p')) => 
+    cpl_compare Int.compare compare_prog ((i,p),(i',p'))
+  | (Read _, _) => LESS
+  | (_, Read _) => GREATER
+  | (Write (i,p),Write (i',p')) => 
+    cpl_compare Int.compare compare_prog ((i,p),(i',p'))
+  | (Write _, _) => LESS
+  | (_, Write _) => GREATER
+  | (Incr (i,p),Incr (i',p')) => 
+    cpl_compare Int.compare compare_prog ((i,p),(i',p'))
+  | (Incr _, _) => LESS
+  | (_, Incr _) => GREATER
+  | (Reset (i,p),Reset (i',p')) => 
+    cpl_compare Int.compare compare_prog ((i,p),(i',p'))
+  | (Reset _, _) => LESS
+  | (_, Reset _) => GREATER
+  | (Loop ((i,p),q),Loop ((i',p'),q')) => 
+    cpl_compare (cpl_compare Int.compare compare_prog) compare_prog
+    (((i,p),q),((i',p'),q'))
+  | (Loop _, _) => LESS
+  | (_, Loop _) => GREATER
+  | (End,End) => EQUAL 
+  | (End, _) => LESS
+  | (_, End) => GREATER
+  | (Cont,Cont) => EQUAL 
 
-fun n_prog size =
-  (dfind size (!n_cache) handle NotFound =>
-  let val value = sum_int (map (n_prog_instr size) instrl) in
-    n_cache := dadd size value (!n_cache);
-    value
-  end)
-and n_prog_instr size instr = case instr of
-    Read (_,_)  => n_prog_pair Read size
-  | Write (_,_) => n_prog_pair Write size
-  | Incr (_,_)  => n_prog_pair Incr size
-  | Reset (_,_) => n_prog_pair Reset size
-  | Loop ((_,_),_) =>
-    let
-      val l = map triple_of_list (number_partition_err 3 size)
-      fun f (a,b,c) = n_prog b * n_prog c
-    in
-      sum_int (map f l)
-    end
-  | End => if size = 1 then 1 else 0
-  | Cont => raise ERR "n_prog" "cont"
-and n_prog_pair constructor size =
-  let
-    val l = map pair_of_list (number_partition_err 2 size)
-    fun f (a,b) = n_prog b
-  in
-    sum_int (map f l)
-  end
+(* semantic characterization *)
+val ill_glob = cartesian_productl [List.tabulate (3,I), List.tabulate (3,I)];
 
-fun random_prog size =
-  if n_prog size <= 0 then raise ERR "random_prog" "" else
-  let
-    val freql1 = map_assoc (n_prog_instr size) instrl
-    val freql2 = filter (fn x => snd x > 0) freql1
-    val freql3 = map_snd Real.fromInt freql2
-  in
-    random_prog_instr size (select_in_distrib freql3)
-  end
-and random_prog_instr size instr = case instr of
-    Read (_,_)  => random_prog_pair Read size
-  | Write (_,_) => random_prog_pair Write size
-  | Incr (_,_)  => random_prog_pair Incr size
-  | Reset (_,_) => random_prog_pair Reset size
-  | Loop ((_,_),_) =>
-    let
-      val l = map triple_of_list (number_partition_err 3 size)
-      fun f (a,b,c) = n_prog b * n_prog c
-      val freql1 = map_assoc f l
-      val freql2 = filter (fn x => snd x > 0) freql1
-      val freql3 = map_snd Real.fromInt freql2
-      val (achosen,bchosen,cchosen) = select_in_distrib freql3
-    in
-      Loop ((achosen,random_prog bchosen),random_prog cchosen)
-    end
-  | End => if size = 1 then End else raise ERR "random_prog" "end"
-  | Cont => raise ERR "random_prog" "cont"
-and random_prog_pair constructor size =
-  let
-    val l = map pair_of_list (number_partition_err 2 size)
-    fun f (a,b) = n_prog b
-    val freql1 = map_assoc f l
-    val freql2 = filter (fn x => snd x > 0) freql1
-    val freql3 = map_snd Real.fromInt freql2
-    val (achosen,bchosen) = select_in_distrib freql3
-  in
-    constructor (achosen,random_prog bchosen)
-  end
+fun iol_of_prog p = map_assoc (exec_prog_onlist p) ill_glob
 
 fun compare_iol (iol1,iol2) =
   let
@@ -416,33 +351,26 @@ fun compare_iol (iol1,iol2) =
     list_compare (list_compare Int.compare) (iol1',iol2')
   end
 
-val ill_glob =
-  map list_of_pair
-  (cartesian_product (List.tabulate (4,I)) (List.tabulate (4,I)));
-
-fun iol_of_prog p = map_assoc (exec_prog_onlist p) ill_glob
-
 val targetlevel_cache = ref (dempty Int.compare)
 
-fun list_imin l = case l of
-    [] => raise ERR "list_imin" ""
-  | [a] => a
-  | a :: m => Int.min (a,list_imin m)
-
-fun mk_targetl level ntarget =
+fun gen_iolsizel level =
+  dfind level (!targetlevel_cache) handle NotFound =>
   let
-    val iolset =
-      dfind level (!targetlevel_cache) handle NotFound =>
-      let
-        val pl = List.concat (List.tabulate (level,gen_prog))
-        val iolsizel = map_snd prog_size (map swap (map_assoc iol_of_prog pl))
-        fun f (k,vl) = list_imin vl
-      in
-        dlist (dmap f (dregroup compare_iol iolsizel))
-      end
+    val pl = mk_fast_set compare_prog 
+      (filter (not o contains_cont) (gen_prog level))
+    val _ = print_endline ("pl: " ^ its (length pl))
+    val iolsizel = map_assoc (fn _ => level) 
+      (mk_fast_set compare_iol (mapfilter iol_of_prog pl))
+    val _ = print_endline ("iol: " ^ its (length iolsizel))
   in
-    targetlevel_cache := dadd level iolset (!targetlevel_cache);
-    map mk_startsit (first_n ntarget (shuffle iolset))
+    targetlevel_cache := dadd level iolsizel (!targetlevel_cache);
+    iolsizel
+  end
+
+(* targets *)
+fun mk_targetl level ntarget =
+  let val iolsizel = gen_iolsizel level in
+    map mk_startsit (first_n ntarget (shuffle iolsizel))
   end
 
 (* -------------------------------------------------------------------------
@@ -488,7 +416,7 @@ val size = 10;
 explore_gamespec (iol,size);
 
 load "mleProgram"; open mleProgram;
-psMCTS.alpha_glob := 0.2;
+psMCTS.alpha_glob := 0.3;
 reinforce_fixed "program_run3" 20;
 *)
 
