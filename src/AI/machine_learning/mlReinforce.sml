@@ -402,9 +402,9 @@ fun rl_one n gamespec (allex,dhtnn) =
     val dhtnn_best = compete gamespec dhtnn dhtnn_new
     val newallex = explore_f false gamespec allex dhtnn_new
   in
-    write_dhtnn (prefile ^ "_dhtnn") dhtnn_new;
+    write_dhtnn (prefile ^ "_dhtnn") dhtnn_best;
     write_dhex (prefile ^ "_allex") newallex;
-    (newallex,dhtnn_new)
+    (newallex,dhtnn_best)
   end
 
 fun rl_loop (n,nmax) gamespec rldata =
