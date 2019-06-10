@@ -416,8 +416,28 @@ val size = 10;
 explore_gamespec (iol,size);
 
 load "mleProgram"; open mleProgram;
+load "mlReinforce"; open mlReinforce;
+
 psMCTS.alpha_glob := 0.1;
-reinforce_fixed "program_run8" 20;
+logfile_glob := "program_run8";
+parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^
+(!logfile_glob);
+ncore_mcts_glob := 16;
+ncore_train_glob := 16;
+ntarget_compete := 400;
+ntarget_explore := 400;
+exwindow_glob := 40000;
+uniqex_flag := false;
+dim_glob := 12;
+lr_glob := 0.02;
+batchsize_glob := 16;
+decay_glob := 0.99;
+level_glob := 8;
+nsim_glob := 1600;
+nepoch_glob := 40;
+ngen_glob := 20;
+start_rl_loop gamespec
+
 *)
 
 (* -------------------------------------------------------------------------
