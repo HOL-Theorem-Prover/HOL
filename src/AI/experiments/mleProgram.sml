@@ -416,8 +416,8 @@ val size = 10;
 explore_gamespec (iol,size);
 
 load "mleProgram"; open mleProgram;
-psMCTS.alpha_glob := 0.2;
-reinforce_fixed "program_run6" 20;
+psMCTS.alpha_glob := 0.1;
+reinforce_fixed "program_run8" 20;
 *)
 
 (* -------------------------------------------------------------------------
@@ -429,7 +429,7 @@ fun reinforce_fixed runname ngen =
   logfile_glob := runname;
   parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^
   (!logfile_glob);
-  ncore_mcts_glob := 16;
+  ncore_mcts_glob := 8;
   ncore_train_glob := 8;
   ntarget_compete := 400;
   ntarget_explore := 400;
@@ -441,7 +441,7 @@ fun reinforce_fixed runname ngen =
   decay_glob := 0.99;
   level_glob := 9;
   nsim_glob := 1600;
-  nepoch_glob := 10;
+  nepoch_glob := 40;
   ngen_glob := ngen;
   start_rl_loop gamespec
   )
