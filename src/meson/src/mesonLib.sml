@@ -693,9 +693,10 @@ local
   and pull_CONV = GEN_REWRITE_CONV DEPTH_CONV [DEMORG_AND]
   and imf_CONV  = REWR_CONV NOT_IMP
 in
-  fun new_contrapos_cache() = ref ([] : ((int * term) * thm) list)
+  fun new_contrapos_cache() = Uref.new ([] : ((int * term) * thm) list)
   fun make_hol_contrapos memory (n,th) =
-    let val tm = concl th
+    let open Uref
+        val tm = concl th
         val key = (n,tm)
         fun key_eq (i1,tm1) (i2,tm2) = aconv tm1 tm2 andalso i1 = i2
     in
