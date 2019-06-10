@@ -212,7 +212,7 @@ fun node_create_backup decay fevalpoli status_of tree (id,sit) =
       case status_of sit of
         Win       => ((1.0,[]),Win)
       | Lose      => ((0.0,[]),Lose)
-      | Undecided => (fevalpoli sit,Undecided)
+      | Undecided => (fevalpoli sit, Undecided)
     val node =
       {pol=rescale_pol (wrap_poli poli),
        sit=sit, sum=0.0, vis=0.0, status=status}
@@ -369,11 +369,6 @@ fun wtree_of tree id =
     then Wleaf id
       else Wnode (id, map (wtree_of tree) cidl1)
   end
-
-fun list_imax l = case l of
-    [] => raise ERR "list_imax" ""
-  | [a] => a
-  | a :: m => Int.max (a, list_imax m)
 
 fun depth_of_wtree wtree = case wtree of
     Wleaf _ => 1
