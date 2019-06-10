@@ -74,16 +74,6 @@ fun contains_cont p = case p of
   | End => false
   | Cont => true
 
-
-fun prog_size p = case p of
-    Read (i,p1)  => i + prog_size p1
-  | Write (i,p1) => i + prog_size p1
-  | Incr (i,p1)  => i + prog_size p1
-  | Reset (i,p1) => i + prog_size p1
-  | Loop ((i,p1),p2) => i + prog_size p1 + prog_size p2
-  | End => 1
-  | Cont => 1
-
 (*
 val p = Read(1,Loop((2,Incr(0,End)),End));
 val addin = let val l = List.tabulate (10,I) in cartesian_product l l end;
@@ -104,9 +94,8 @@ fun dest_startsit target = case target of
 
 fun status_of sit = case snd sit of
     Board (iol,size,p) =>
-      if prog_size p > 2 * size then Lose
-      else if contains_cont p then Undecided
-      else if satisfies_iol p iol then Win else Lose (* maybe cache this *)
+      if contains_cont p then Undecided
+      else if satisfies_iol p iol then Win else Lose
   | FailBoard => Lose
 
 (* -------------------------------------------------------------------------
@@ -291,7 +280,7 @@ fun read_targetl () =
   end
 
 fun max_bigsteps target = case snd target of
-    Board (_,size,_) => 2 * size + 1
+    Board (_,size,_) => 2 * size + 5
   | FailBoard => raise ERR "max_bigsteps" ""
 
 (* -------------------------------------------------------------------------
@@ -419,22 +408,22 @@ load "mleProgram"; open mleProgram;
 load "mlReinforce"; open mlReinforce;
 load "smlParallel"; open smlParallel;
 psMCTS.alpha_glob := 0.5;
-logfile_glob := "program_run10";
+logfile_glob := "program_run12";
 parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^
 (!logfile_glob);
-ncore_mcts_glob := 16;
+ncore_mcts_glob := 32;
 ncore_train_glob := 16;
 ntarget_compete := 400;
 ntarget_explore := 400;
 exwindow_glob := 40000;
 uniqex_flag := false;
-dim_glob := 8;
+dim_glob := 12;
 lr_glob := 0.02;
 batchsize_glob := 16;
 decay_glob := 0.99;
 level_glob := 7;
 nsim_glob := 3200;
-nepoch_glob := 40;
+nepoch_glob := 100;
 ngen_glob := 20;
 start_rl_loop gamespec;
 
