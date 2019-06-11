@@ -10,7 +10,6 @@ val decompile_x86 = decompile prog_x86Lib.x86_tools;
 
 val _ = new_theory "decompiler_demo";
 
-
 (* ARM code for length of linked-list *)
 
 val (arm_th,arm_defs) = decompile_arm "arm_length" `
@@ -23,8 +22,9 @@ val (arm_th,arm_defs) = decompile_arm "arm_length" `
 (* formalising notion of linked-list *)
 
 val llist_def = Define `
-  (llist [] (a:word32,dm,m:word32->word32) = (a = 0w)) /\
-  (llist (x::xs) (a,dm,m) = ~(a = 0w) /\ (a && 3w = 0w) /\ {a;a+4w} SUBSET dm /\
+  (llist [] (a:word32,dm,m:word32->word32) <=> (a = 0w)) /\
+  (llist (x::xs) (a,dm,m) <=>
+     ~(a = 0w) /\ (a && 3w = 0w) /\ {a;a+4w} SUBSET dm /\
      ?a'. (m a = a') /\ (m (a+4w) = x) /\ llist xs (a',dm,m))`;
 
 (* verification proof *)
@@ -101,4 +101,3 @@ val (arm_th,arm_defs) = decompile_arm "arm_loop" `
   1AFFFFFB    (*      bne M            *)`;
 
 val _ = export_theory();
-
