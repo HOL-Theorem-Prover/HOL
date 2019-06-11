@@ -1,4 +1,5 @@
 open HolKernel boolLib bossLib Parse; val _ = new_theory "milawa_init";
+val _ = ParseExtras.temp_loose_equality()
 
 open lisp_extractLib lisp_extractTheory;
 
