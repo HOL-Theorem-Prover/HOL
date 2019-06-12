@@ -45,7 +45,7 @@ sig
     ) ->
     ('a,'b) tree -> ('a,'b) tree
 
-  (* restart *)
+  (* reuse previous search *)
   val cut_tree : ('a,'b) tree -> int list -> ('a,'b) tree
 
   (* statistics *)

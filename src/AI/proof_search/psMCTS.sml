@@ -299,6 +299,7 @@ fun starttree_of (nsim,decay,noiseb,status_of,apply_move,fep) startsit =
     node_create_backup decay fep status_of empty_tree ([0],startsit)
   end
 
+(* two players *)
 fun mcts (nsim,decay,noiseb,status_of,apply_move,fep) starttree =
   let
     val starttree_noise =

@@ -45,8 +45,6 @@ include Abbrev
   val infer_tnn : tnn -> term -> real list
   val infer_tnn_nohead : tnn -> term -> real list (* for debugging *)
   val infer_dhtnn : dhtnn -> term -> real * real list
-  val infer_dhtnn_cache : dhtnn -> term -> real * real list
-  val clean_dhtnn_cache : unit -> unit
 
   (* training *)
   val train_tnn_schedule :

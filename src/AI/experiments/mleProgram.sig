@@ -3,36 +3,28 @@ sig
 
   include Abbrev
 
-  type iol = (int list * int) list
+  datatype instruction = 
+      Read of int
+    | Write of int
+    | Incr of int
+    | Decr of int
+  type program = instruction list
+  
+  type state = (int,int) Redblackmap.dict
 
-  datatype program =
-    Read of (int * program) |
-    Write of (int * program) |
-    Incr of (int * program) |
-    Reset of (int * program) |
-    Loop of ((int * program) * program) |
-    End |
-    Cont
+  type board = 
+    (int list * int) * 
+    ((state list, unit) Redblackmap.dict * state list * program)
+  
+  datatype move = 
+    ReadMove of int | WriteMove of int | 
+    IncrMove of int | DecrMove of int
 
-  val compare_iol : iol * iol -> order
-  val iol_of_prog : program -> iol
-  val gen_prog : int -> program list
-  val random_prog : int -> program
-  val gen_iolsizel : int -> (iol * int) list
 
-  datatype board =
-    Board of (iol * int * program) | FailBoard
-  datatype move =
-    AddrMove | ReadMove | WriteMove | IncrMove | ResetMove | LoopMove | EndMove
-
-  val mk_startsit : ((int list * int) list * int) -> board psMCTS.sit
   val gamespec : (board,move) mlReinforce.gamespec
-  val mk_targetl : int -> int -> (bool * board) list
 
-  (* exploration *)
-  val explore_gamespec : ((int list * int) list * int) -> 
-    (board, move) psMCTS.node list
-  val reinforce_fixed : string ->  int ->
-    (term * real list * real list) list * mlTreeNeuralNetwork.dhtnn
+  val gen_olsizel : int -> (int list * int) list
+
+  val explore_gamespec : (int list * int) -> (board, move) psMCTS.node list
 
 end

@@ -393,15 +393,6 @@ fun infer_dhtnn_opcache opcache dhtnn tm =
     )
   end
 *)
-val headcache_glob = ref (dempty Term.compare)
-
-fun infer_dhtnn_cache dhtnn tm =
-  dfind tm (!headcache_glob) handle NotFound =>
-  let val r  = infer_dhtnn dhtnn tm in
-    headcache_glob := dadd tm r (!headcache_glob); r
-  end
-   
-fun clean_dhtnn_cache () = headcache_glob := dempty Term.compare
 
 (* -------------------------------------------------------------------------
    Backward propagation: bpdict is only used to store the result

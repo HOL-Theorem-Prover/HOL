@@ -15,351 +15,265 @@ val ERR = mk_HOL_ERR "mleProgram"
 fun debug s =
   debug_in_dir (HOLDIR ^ "/src/AI/experiments/debug") "mleProgram" s
 
-type iol = (int list * int) list
-
 (* -------------------------------------------------------------------------
-   Program
+   Program: Address of buffer is 0.
+     Addresses of inputs are 1 and 2.
+     Additional addresses are 3 and 4.
    ------------------------------------------------------------------------- *)
 
-datatype program =
-  Read of (int * program) |
-  Write of (int * program) |
-  Incr of (int * program) |
-  Reset of (int * program) |
-  Loop of ((int * program) * program) |
-  End |
-  Cont
+datatype instruction = 
+    Read of int | Write of int
+  | Incr of int | Decr of int
 
-exception ProgTimeout
+type program = instruction list
 
-fun exec_prog t p d =
-  if t <= 0 then raise ProgTimeout else
-  case p of
-    Read (i,p1)  => exec_prog (t-1) p1 (dadd i (dfind 0 d) d)
-  | Write (i,p1) => exec_prog (t-1) p1 (dadd 0 (dfind i d) d)
-  | Incr (i,p1)  => exec_prog (t-1) p1 (dadd i (dfind i d + 1) d)
-  | Reset (i,p1) => exec_prog (t-1) p1 (dadd i 0 d)
-  | Loop ((i,p1),p2) =>
-    (
-    if dfind i d <= 0 then exec_prog (t-1) p2 d else
-      let
-        val (d1,tp1) = exec_prog t p1 d
-        val d2 = dadd i (dfind i d - 1) d1
-      in
-        exec_prog (tp1-1) p d2
-      end
-    )
-  | End => (d:(int, int) Redblackmap.dict,t)
-  | Cont => raise ERR "exec_prog" "cont"
+fun exec_instr instr d = 
+  case instr of
+    Read i  => dadd i (dfind 0 d) d
+  | Write i => dadd 0 (dfind i d) d
+  | Incr i  => dadd i (dfind i d + 1) d
+  | Decr i  => 
+    let val n = (dfind i d - 1) in
+      if n <= 0 then d else dadd i (n-1) d
+    end
 
-fun exec_prog_onlist p l =
-  let
-    val d0 = dnew Int.compare (List.tabulate (8,fn x => (x,0)))
-    val d1 = daddl (number_fst 1 l) d0
-  in
-    dfind 0 (fst (exec_prog 1000 p d1))
-  end
+(* -------------------------------------------------------------------------
+   State
+   ------------------------------------------------------------------------- *)
 
-fun satisifies p (il,i) = (i = exec_prog_onlist p il)
-  handle ProgTimeout => false | NotFound => false
+type state = (int,int) Redblackmap.dict
 
-fun satisfies_iol p l = all (satisifies p) l
- 
-fun contains_cont p = case p of
-    Read (i,p1)  => contains_cont p1
-  | Write (i,p1) => contains_cont p1
-  | Incr (i,p1)  => contains_cont p1
-  | Reset (i,p1) => contains_cont p1
-  | Loop ((i,p1),p2) => contains_cont p1 orelse contains_cont p2
-  | End => false
-  | Cont => true
+fun compare_statel (dl1,dl2) =
+  list_compare (list_compare Int.compare)
+    (map (map snd o dlist) dl1, map (map snd o dlist) dl2)
 
-(*
-val p = Read(1,Loop((2,Incr(0,End)),End));
-val addin = let val l = List.tabulate (10,I) in cartesian_product l l end;
-val addinout = map_assoc (op +) addin;
-*)
+(* input *)
+fun state_of_inputl il = 
+  daddl (number_fst 1 il) (dnew Int.compare (List.tabulate (5,fn x => (x,0))))
 
+val inputl_org =
+  cartesian_productl [List.tabulate (3,I), List.tabulate (3,I)]
+
+val statel_org = map state_of_inputl inputl_org
+
+(* output *)
+fun compare_ol (ol1,ol2) = list_compare Int.compare (ol1,ol2)
+fun ol_of_statel statel = map (dfind 0) statel
+fun satisfies ol statel = (compare_ol (ol_of_statel statel, ol) = EQUAL)
+  
 (* -------------------------------------------------------------------------
    Board
    ------------------------------------------------------------------------- *)
 
-datatype board =
-  Board of ((int list * int) list * int * program) | FailBoard
+type board = 
+  (int list * int) * 
+  ((state list, unit) Redblackmap.dict * state list * program)
 
-fun mk_startsit (iol,size) = (true, Board (iol,size,Cont))
-fun dest_startsit target = case target of
-    (true, Board (iol,size,Cont)) => (iol,size)
-  | _ => raise ERR "dest_startsit" ""
+fun mk_startsit (ol,limit) = 
+  (true, ((ol,limit), 
+     (dadd statel_org () (dempty compare_statel), statel_org,[])))
 
-fun status_of sit = case snd sit of
-    Board (iol,size,p) =>
-      if contains_cont p then Undecided
-      else if satisfies_iol p iol then Win else Lose
-  | FailBoard => Lose
+fun dest_startsit (_,(x,_)) = x
+
+fun status_of (_,((ol,limit),(_,statel,p))) =
+  if satisfies ol statel then Win 
+  else if length p <= 2 * limit then Undecided
+  else Lose
 
 (* -------------------------------------------------------------------------
-   Neural network units and inputs
+   Representation of the program as a tree neural network
    ------------------------------------------------------------------------- *)
 
-val boolsuc = ``boolsuc : bool -> bool``;
-val boolzero = ``boolzero : bool``;
-fun mk_boolsucn n =
-  if n <= 0 then boolzero else mk_comb (boolsuc, mk_boolsucn (n-1))
+fun mk_varn n = mk_var ("x" ^ its n, bool)
+val readop = ``readop : bool -> bool -> bool``
+fun mk_read (i,tm) = list_mk_comb (readop,[mk_varn i,tm])
+val writeop = ``writeop : bool -> bool -> bool``
+fun mk_write (i,tm) = list_mk_comb (writeop,[mk_varn i,tm])
+val incrop = ``incrop : bool -> bool -> bool``
+fun mk_incr (i,tm) = list_mk_comb (incrop,[mk_varn i,tm])
+val decrop = ``decrop : bool -> bool -> bool``
+fun mk_decr (i,tm) = list_mk_comb (decrop,[mk_varn i,tm])
+val emptyop = ``emptyop : bool``
 
-val readop = ``readop : bool -> bool -> bool``;
-fun mk_readop (t1,t2) = list_mk_comb (readop,[t1,t2]);
+fun nntm_of_instr ins tm = case ins of
+    Read i  => mk_read (i, tm)
+  | Write i => mk_write (i, tm)
+  | Incr i  => mk_incr (i, tm)
+  | Decr i  => mk_decr (i, tm)
 
-val writeop = ``writeop : bool -> bool -> bool``;
-fun mk_writeop (t1,t2) = list_mk_comb (writeop,[t1,t2]);
+fun nntm_of_prog acc p = case p of
+    [] => acc 
+  | ins :: m => nntm_of_prog (nntm_of_instr ins acc) m
 
-val incrop = ``incrop : bool -> bool -> bool``;
-fun mk_incrop (t1,t2) = list_mk_comb (incrop,[t1,t2]);
-
-val resetop = ``resetop : bool -> bool -> bool``;
-fun mk_resetop (t1,t2) = list_mk_comb (resetop,[t1,t2]);
-
-val loopop = ``loopop : bool -> bool -> bool -> bool``;
-fun mk_loopop (t1,t2,t3) = list_mk_comb (loopop,[t1,t2,t3]);
-
-val endop = ``endop : bool``;
-val contop = ``contop : bool``;
-
-fun nntm_of_prog p = case p of
-    Read (i,p1)  => mk_readop (mk_boolsucn i, nntm_of_prog p1)
-  | Write (i,p1) => mk_writeop (mk_boolsucn i, nntm_of_prog p1)
-  | Incr (i,p1)  => mk_incrop (mk_boolsucn i, nntm_of_prog p1)
-  | Reset (i,p1) => mk_resetop (mk_boolsucn i, nntm_of_prog p1)
-  | Loop ((i,p1),p2) =>
-    mk_loopop (mk_boolsucn i, nntm_of_prog p1, nntm_of_prog p2)
-  | End => endop
-  | Cont => contop
+(* -------------------------------------------------------------------------
+   Representation of the state as a tree neural network
+   ------------------------------------------------------------------------- *)
 
 val isuc = ``isuc : bool -> bool``;
 val izero = ``izero : bool``;
 fun mk_isucn n =
   if n <= 0 then izero else mk_comb (isuc, mk_isucn (n-1))
+
 val iconcat = ``iconcat : bool -> bool -> bool``
-fun mk_iconcat (a,b) = list_mk_comb (iconcat,[a,b])
-fun list_mk_iconcat al = case al of
-    [] => raise ERR "list_mk_iconcat" "empty list"
-  | [a] => a
-  | a :: m => mk_iconcat (a,list_mk_iconcat m)
-val iojoin = ``iojoin : bool -> bool -> bool``
-fun mk_iojoin (a,b) = list_mk_comb (iojoin,[a,b])
-val ioconcat = ``ioconcat : bool -> bool -> bool``
-fun mk_ioconcat (a,b) = list_mk_comb (ioconcat,[a,b])
-fun list_mk_ioconcat al = case al of
-    [] => raise ERR "list_mk_ioconcat" "empty list"
-  | [a] => a
-  | a :: m => mk_ioconcat (a,list_mk_ioconcat m)
-fun nntm_of_il il = list_mk_iconcat (map mk_isucn il)
-fun nntm_of_io (il,i) = mk_iojoin (nntm_of_il il,mk_isucn i)
-fun nntm_of_iol iol = list_mk_ioconcat (map nntm_of_io iol)
+val sconcat = ``sconcat : bool -> bool -> bool``
 
-val iopjoin = ``iopjoin : bool -> bool -> bool``
-fun mk_iopjoin (a,b) = list_mk_comb (iopjoin,[a,b])
-fun nntm_of_sit sit = case snd sit of
-    Board (iol,size,p) => mk_iopjoin (nntm_of_iol iol, nntm_of_prog p)
-  | FailBoard => T
+fun list_mk_binop oper l = case l of
+    [] => raise ERR "list_mk_binop" "empty list"
+  | [a] => a
+  | a :: m => mk_binop oper (a,list_mk_binop oper m)
 
+fun nntm_of_state d = list_mk_binop iconcat (map (mk_isucn o snd) (dlist d))
+fun nntm_of_statel dl = list_mk_binop sconcat (map nntm_of_state dl)   
+
+(* -------------------------------------------------------------------------
+   Representation of the desired outputs as a tree neural network
+   ------------------------------------------------------------------------- *)
+
+val oconcat = ``oconcat : bool -> bool -> bool``
+fun nntm_of_ol ol = list_mk_binop oconcat (map mk_isucn ol)
+
+(* -------------------------------------------------------------------------
+   Representation of the board as a tree neural network
+   ------------------------------------------------------------------------- *)
+
+val joinop1 = ``joinop1 : bool -> bool -> bool``
+val joinop2 = ``joinop2 : bool -> bool -> bool``
 
 fun narg_oper oper = (length o fst o strip_type o type_of) oper
 
 val program_operl =
   map_assoc narg_oper
   (
-  [boolsuc,boolzero,readop,writeop,incrop,resetop,loopop,endop,contop] @
-  [isuc,izero,iconcat,iojoin,ioconcat,iopjoin]
+  List.tabulate (5,mk_varn) @ [readop,writeop,incrop,decrop,emptyop] @
+  [isuc,izero,iconcat,sconcat,oconcat,joinop1,joinop2]
   )
 
+fun nntm_of_sit (_,((ol,limit),(_,statel,prog))) =
+  mk_binop joinop2
+    (mk_binop joinop1 (nntm_of_ol ol, nntm_of_statel statel),
+     nntm_of_prog emptyop prog)
 (* -------------------------------------------------------------------------
    Move
    ------------------------------------------------------------------------- *)
 
-datatype move =
-  AddrMove | ReadMove | WriteMove | IncrMove | ResetMove | LoopMove | EndMove
+val varl_glob = List.tabulate (5,I)
 
-val movel = [AddrMove,ReadMove,WriteMove,IncrMove,ResetMove,LoopMove,EndMove];
+datatype move = 
+  ReadMove of int | WriteMove of int | 
+  IncrMove of int | DecrMove of int
+
+val movel = List.concat
+  [map ReadMove (tl varl_glob), map WriteMove (tl varl_glob),
+   map IncrMove varl_glob, map DecrMove varl_glob];
+
 val moveil = number_snd 0 movel
 
-fun apply_othermove move p = case p of
-    Read (i,p1)  => Read (i,apply_othermove move p1)
-  | Write (i,p1) => Write (i,apply_othermove move p1)
-  | Incr (i,p1)  => Incr (i,apply_othermove move p1)
-  | Reset (i,p1) => Reset (i,apply_othermove move p1)
-  | Loop ((i,p1),p2) =>
-    let val p1' = apply_othermove move p1 in
-      if p1 <> p1'
-      then Loop ((i,p1'),p2)
-      else Loop ((i,p1),apply_othermove move p2)
-    end
-  | End => End
-  | Cont => (case move of
-      AddrMove  => raise ERR "addrmove" ""
-    | ReadMove  => Read (1,Cont)
-    | WriteMove => Write (1,Cont)
-    | IncrMove  => Incr (0,Cont)
-    | ResetMove => Reset (0,Cont)
-    | LoopMove  => Loop ((0,Cont),Cont)
-    | EndMove   => End
-    )
+fun apply_move_p move p =
+  case move of
+    ReadMove i  => p @ [Read i] 
+  | WriteMove i => p @ [Write i]
+  | IncrMove i  => p @ [Incr i]
+  | DecrMove i  => p @ [Decr i]
 
-exception AddrException
+fun apply_move_statel move dl =
+  case move of
+    ReadMove i  => map (exec_instr (Read i)) dl 
+  | WriteMove i => map (exec_instr (Write i)) dl 
+  | IncrMove i  => map (exec_instr (Incr i)) dl 
+  | DecrMove i  => map (exec_instr (Decr i)) dl 
 
-fun apply_addrmove p = case p of
-    Read (i,Cont)  => Read (i+1,Cont)
-  | Write (i,Cont) => Write (i+1,Cont)
-  | Incr (i,Cont)  => Incr (i+1,Cont)
-  | Reset (i,Cont) => Reset (i+1,Cont)
-  | Loop ((i,Cont),p2) => Loop ((i+1,Cont),p2)
-  | Read (i,p1)  => Read (i,apply_addrmove p1)
-  | Write (i,p1) => Write (i,apply_addrmove p1)
-  | Incr (i,p1)  => Incr (i,apply_addrmove p1)
-  | Reset (i,p1) => Reset (i,apply_addrmove p1)
-  | Loop ((i,p1),p2) =>
-    let val p1' = apply_addrmove p1 in
-      if p1 <> p1'
-      then Loop ((i,p1'),p2)
-      else Loop ((i,p1),apply_addrmove p2)
-    end
-  | End => End
-  | Cont => raise AddrException
-
-fun move_compare (m1,m2) = Int.compare (assoc m1 moveil, assoc m2 moveil)
+fun move_compare (m1,m2) = 
+  Int.compare (assoc m1 moveil, assoc m2 moveil)
 
 fun string_of_move move = case move of
-    AddrMove => "A"
-  | ReadMove => "R"
-  | WriteMove => "W"
-  | IncrMove => "I"
-  | ResetMove => "S"
-  | LoopMove => "L"
-  | EndMove => "E"
+    ReadMove i  => "R" ^ its i
+  | WriteMove i => "W" ^ its i
+  | IncrMove i  => "I" ^ its i
+  | DecrMove i  => "D" ^ its i
 
-fun filter_sit sit = case snd sit of
-    Board _ => (fn l => l)
-  | FailBoard => (fn l => [])
+fun filter_sit (_,(_,(hist,statel,_))) =
+  let fun test (move,_) = not (dmem (apply_move_statel move statel) hist) in
+    fn l => filter test l
+  end
 
-
-fun apply_move_to_prog move p =
-  if move = AddrMove then apply_addrmove p else apply_othermove move p
-
-fun apply_move move sit =
+fun apply_move move (_,((ol,limit),(hist,statel,p))) = 
+  let val newstatel = apply_move_statel move statel in
   (true,
-    case snd sit of
-      Board (iol,size,p) => Board (iol, size, apply_move_to_prog move p) 
-    | FailBoard => raise ERR "apply_move" ""
+    ((ol,limit),
+    (dadd newstatel () hist, newstatel, apply_move_p move p))
   )
-  handle AddrException => (true, FailBoard)
+  end
 
 (* -------------------------------------------------------------------------
    Target
    ------------------------------------------------------------------------- *)
 
-fun string_of_io (il,i) = String.concatWith " " (its i :: map its il)
-fun string_of_iolsize (iol,size) =
-  its size ^ "," ^ String.concatWith "," (map string_of_io iol)
+fun string_of_olsize (ol,limit) =
+  its limit ^ "," ^ String.concatWith "," (map its ol)
 fun write_targetl targetl =
-  let val iolsizel = map dest_startsit targetl in
-    writel (!parallel_dir ^ "/targetl") (map string_of_iolsize iolsizel)
+  let val olsizel = map dest_startsit targetl in
+    writel (!parallel_dir ^ "/targetl") (map string_of_olsize olsizel)
   end
 
-fun io_from_string s = case String.tokens Char.isSpace s of
-    [] => raise ERR "io_from_string" ""
+fun olsize_from_string s = case String.tokens (fn c => c = #",") s of
+    [] => raise ERR "olsize_from_string" ""
   | a :: m => (map string_to_int m, string_to_int a)
-fun iolsize_from_string s = case String.tokens (fn c => c = #",") s of
-    [] => raise ERR "iolsize_from_string" ""
-  | a :: m => (map io_from_string m, string_to_int a)
 fun read_targetl () =
-  let
-    val sl = readl (!parallel_dir ^ "/targetl")
-    val iolsizel = map iolsize_from_string sl
-  in
-    map mk_startsit iolsizel
+  let val sl = readl (!parallel_dir ^ "/targetl") in
+    map (mk_startsit o olsize_from_string) sl
   end
 
-fun max_bigsteps target = case snd target of
-    Board (_,size,_) => 2 * size + 5
-  | FailBoard => raise ERR "max_bigsteps" ""
+fun max_bigsteps (_,((_,limit),_)) = 2 * limit + 5
 
 (* -------------------------------------------------------------------------
-   Level: uses program generation
+   Program generation
    ------------------------------------------------------------------------- *)
 
-(* syntatic generation *)
 fun gen_prog_movel ml p = case ml of
     [] => p
-  | move :: m => gen_prog_movel m (apply_move_to_prog move p)
+  | move :: m => gen_prog_movel m (apply_move_p move p)
   
 fun random_prog size = 
-  gen_prog_movel (List.tabulate (size, fn _ => random_elem movel)) Cont
+  gen_prog_movel (List.tabulate (size, fn _ => random_elem movel)) []
 
-fun gen_prog size =
-  let val ll = cartesian_productl (List.tabulate (size, fn _ => movel)) in
-    mapfilter (C gen_prog_movel Cont) ll
-  end
+(* -------------------------------------------------------------------------
+   State generation
+   ------------------------------------------------------------------------- *)
 
-fun compare_prog (p1,p2) = case (p1,p2) of 
-    (Read (i,p),Read (i',p')) => 
-    cpl_compare Int.compare compare_prog ((i,p),(i',p'))
-  | (Read _, _) => LESS
-  | (_, Read _) => GREATER
-  | (Write (i,p),Write (i',p')) => 
-    cpl_compare Int.compare compare_prog ((i,p),(i',p'))
-  | (Write _, _) => LESS
-  | (_, Write _) => GREATER
-  | (Incr (i,p),Incr (i',p')) => 
-    cpl_compare Int.compare compare_prog ((i,p),(i',p'))
-  | (Incr _, _) => LESS
-  | (_, Incr _) => GREATER
-  | (Reset (i,p),Reset (i',p')) => 
-    cpl_compare Int.compare compare_prog ((i,p),(i',p'))
-  | (Reset _, _) => LESS
-  | (_, Reset _) => GREATER
-  | (Loop ((i,p),q),Loop ((i',p'),q')) => 
-    cpl_compare (cpl_compare Int.compare compare_prog) compare_prog
-    (((i,p),q),((i',p'),q'))
-  | (Loop _, _) => LESS
-  | (_, Loop _) => GREATER
-  | (End,End) => EQUAL 
-  | (End, _) => LESS
-  | (_, End) => GREATER
-  | (Cont,Cont) => EQUAL 
-
-(* semantic characterization *)
-val ill_glob = cartesian_productl [List.tabulate (3,I), List.tabulate (3,I)];
-
-fun iol_of_prog p = map_assoc (exec_prog_onlist p) ill_glob
-
-fun compare_iol (iol1,iol2) =
-  let
-    val iol1' = map (fn (il,i) => i :: il) iol1
-    val iol2' = map (fn (il,i) => i :: il) iol2
+fun next_level (hist,statell) =
+  let 
+    val statell1 = 
+      map (uncurry apply_move_statel) (cartesian_product movel statell)
+    val statell2 = mk_fast_set compare_statel statell1
+    val statell3 = filter (fn x => not (dmem x hist)) statell2  
   in
-    list_compare (list_compare Int.compare) (iol1',iol2')
+    (daddl (map_assoc (fn x => ()) statell3) hist,
+     statell3)
   end
 
-val targetlevel_cache = ref (dempty Int.compare)
+fun all_level (i,level) x =
+  if i >= level then [(i,snd x)] else 
+    (i,snd x) :: all_level (i+1,level) (next_level x)
 
-fun gen_iolsizel level =
-  dfind level (!targetlevel_cache) handle NotFound =>
+fun gen_olsizel level =
   let
-    val pl = mk_fast_set compare_prog 
-      (filter (not o contains_cont) (gen_prog level))
-    val _ = print_endline ("pl: " ^ its (length pl))
-    val iolsizel = map_assoc (fn _ => level) 
-      (mk_fast_set compare_iol (mapfilter iol_of_prog pl))
-    val _ = print_endline ("iol: " ^ its (length iolsizel))
+    val hist = dadd statel_org () (dempty compare_statel)
+    val l1 = tl (all_level (0,level) (hist,[statel_org]))
+    val l2 = distrib l1
+    val l3 = map_snd ol_of_statel l2
+    val l4 = map swap l3
+    val d4 = dregroup compare_ol l4
   in
-    targetlevel_cache := dadd level iolsizel (!targetlevel_cache);
-    iolsizel
+    map_snd list_imin (dlist d4)
   end
 
-(* targets *)
+(* -------------------------------------------------------------------------
+   Targets
+   ------------------------------------------------------------------------- *)
+
 fun mk_targetl level ntarget =
-  let val iolsizel = gen_iolsizel level in
-    map mk_startsit (first_n ntarget (shuffle iolsizel))
+  let val olsizel = gen_olsizel level in
+    map mk_startsit (first_n ntarget (shuffle olsizel))
   end
 
 (* -------------------------------------------------------------------------
@@ -387,9 +301,9 @@ val gamespec : (board,move) mlReinforce.gamespec =
    Basic exploration
    ------------------------------------------------------------------------- *)
 
-fun explore_gamespec (iol,size) =
+fun explore_gamespec (ol,limit) =
   let val dhtnn = random_dhtnn_gamespec gamespec in
-    explore_test gamespec dhtnn (mk_startsit (iol,size))
+    explore_test gamespec dhtnn (mk_startsit (ol,limit))
   end
 
 (*
@@ -400,18 +314,18 @@ mlReinforce.nsim_glob := 1600;
 val ill_glob =
   map list_of_pair
   (cartesian_product (List.tabulate (3,I)) (List.tabulate (3,I)));
-val iol = map_assoc (fn [a,b] => a+b) ill_glob;
-val size = 10;
-explore_gamespec (iol,size);
+val ol = map (fn [a,b] => a+4) ill_glob;
+val limit = 10;
+explore_gamespec (ol,limit);
 
 load "mleProgram"; open mleProgram;
 load "mlReinforce"; open mlReinforce;
 load "smlParallel"; open smlParallel;
 psMCTS.alpha_glob := 0.5;
-logfile_glob := "program_run12";
+logfile_glob := "program_run20";
 parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^
 (!logfile_glob);
-ncore_mcts_glob := 32;
+ncore_mcts_glob := 16;
 ncore_train_glob := 16;
 ntarget_compete := 400;
 ntarget_explore := 400;
@@ -422,37 +336,10 @@ lr_glob := 0.02;
 batchsize_glob := 16;
 decay_glob := 0.99;
 level_glob := 7;
-nsim_glob := 3200;
+nsim_glob := 100000;
 nepoch_glob := 100;
-ngen_glob := 20;
+ngen_glob := 1;
 start_rl_loop gamespec;
-
 *)
-
-(* -------------------------------------------------------------------------
-   Reinforcement learning loop with fixed parameters
-   ------------------------------------------------------------------------- *)
-
-fun reinforce_fixed runname ngen =
-  (
-  logfile_glob := runname;
-  parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^
-  (!logfile_glob);
-  ncore_mcts_glob := 8;
-  ncore_train_glob := 8;
-  ntarget_compete := 400;
-  ntarget_explore := 400;
-  exwindow_glob := 40000;
-  uniqex_flag := false;
-  dim_glob := 12;
-  lr_glob := 0.02;
-  batchsize_glob := 16;
-  decay_glob := 0.99;
-  level_glob := 9;
-  nsim_glob := 1600;
-  nepoch_glob := 40;
-  ngen_glob := ngen;
-  start_rl_loop gamespec
-  )
 
 end (* struct *)
