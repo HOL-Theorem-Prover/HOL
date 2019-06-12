@@ -2,6 +2,7 @@
 open HolKernel Parse boolLib bossLib;
 
 val _ = new_theory "GraphLang";
+val _ = ParseExtras.temp_loose_equality()
 
 open wordsTheory wordsLib pairTheory listTheory relationTheory;
 open pred_setTheory arithmeticTheory combinTheory;
