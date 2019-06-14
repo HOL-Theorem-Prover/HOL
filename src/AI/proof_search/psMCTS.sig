@@ -45,6 +45,9 @@ sig
     ) ->
     ('a,'b) tree -> ('a,'b) tree
 
+  (* dirichlet noise *)
+  val dirichlet_noise : real -> int -> real list
+
   (* reuse previous search *)
   val cut_tree : ('a,'b) tree -> int list -> ('a,'b) tree
 

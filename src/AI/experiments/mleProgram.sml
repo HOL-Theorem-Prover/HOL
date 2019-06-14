@@ -192,7 +192,9 @@ fun string_of_move move = case move of
   | DecrMove i  => "D" ^ its i
 
 fun filter_sit (_,(_,(hist,statel,_))) =
-  let fun test (move,_) = not (dmem (apply_move_statel move statel) hist) in
+  let fun test (move,_) = 
+    compare_statel (apply_move_statel move statel,statel) <> EQUAL 
+  in
     fn l => filter test l
   end
 
@@ -255,6 +257,7 @@ fun all_level (i,level) x =
   if i >= level then [(i,snd x)] else 
     (i,snd x) :: all_level (i+1,level) (next_level x)
 
+(*
 fun gen_olsizel level =
   let
     val hist = dadd statel_org () (dempty compare_statel)
@@ -266,13 +269,31 @@ fun gen_olsizel level =
   in
     map_snd list_imin (dlist d4)
   end
+*)
+
+fun rand_olsize level = 
+  let 
+    val size = random_int (1,level)
+    val ml = List.tabulate (size,fn _ => random_elem movel) 
+    fun loop l statel = case l of 
+      [] => statel
+    | a :: m => loop m (apply_move_statel a statel) 
+    val ol = ol_of_statel (loop ml statel_org)
+  in
+    (ol,size)
+  end
+
+fun gen_olsizel level =
+  let val olsizel = List.tabulate (100000, fn _ => rand_olsize level) in
+    map_snd list_imin (dlist (dregroup compare_ol olsizel))
+  end
 
 (* -------------------------------------------------------------------------
    Targets
    ------------------------------------------------------------------------- *)
 
 fun mk_targetl level ntarget =
-  let val olsizel = gen_olsizel level in
+  let val olsizel = gen_olsizel (level * 10) in
     map mk_startsit (first_n ntarget (shuffle olsizel))
   end
 
@@ -317,12 +338,14 @@ val ill_glob =
 val ol = map (fn [a,b] => a+4) ill_glob;
 val limit = 10;
 explore_gamespec (ol,limit);
+*)
 
+(*
 load "mleProgram"; open mleProgram;
 load "mlReinforce"; open mlReinforce;
 load "smlParallel"; open smlParallel;
 psMCTS.alpha_glob := 0.5;
-logfile_glob := "program_run20";
+logfile_glob := "program_run22";
 parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^
 (!logfile_glob);
 ncore_mcts_glob := 16;
@@ -331,14 +354,14 @@ ntarget_compete := 400;
 ntarget_explore := 400;
 exwindow_glob := 40000;
 uniqex_flag := false;
-dim_glob := 12;
+dim_glob := 16;
 lr_glob := 0.02;
 batchsize_glob := 16;
 decay_glob := 0.99;
-level_glob := 7;
-nsim_glob := 100000;
+level_glob := 2;
+nsim_glob := 1600;
 nepoch_glob := 100;
-ngen_glob := 1;
+ngen_glob := 50;
 start_rl_loop gamespec;
 *)
 

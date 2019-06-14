@@ -319,19 +319,6 @@ fun fp_opdict opdict fpdict tml = case tml of
       fp_opdict opdict (dadd tm fpdatal fpdict) m
     end
 
-(*
-fun fp_opdict_opcache opcache opdict fpdict tml = case tml of
-    []      => fpdict
-  | tm :: m =>
-    let val fpdatal =
-      dfind tm (!opcache) handle NotFound => 
-      let val r = fp_op opdict fpdict tm in
-        opcache := dadd tm r (!opcache); r
-      end
-    in
-      fp_opdict opdict (dadd tm fpdatal fpdict) m
-    end
-*)
 fun fp_head headnn fpdict tml =
   let
     val invl = [#outnv (last (dfind (last tml) fpdict))]
@@ -362,18 +349,6 @@ fun fp_dhtnn dhtnn tml =
     (fpdict,fpdataleval,fpdatalpoli)
   end
 
-(* 
-fun fp_dhtnn_opcache opcache dhtnn tml =
-  let
-    val fpdict = fp_opdict_opcache opcache 
-      (#opdict dhtnn) (dempty Term.compare) tml
-    val fpdataleval = fp_head (#headeval dhtnn) fpdict tml
-    val fpdatalpoli = fp_head (#headpoli dhtnn) fpdict tml
-  in
-    (fpdict,fpdataleval,fpdatalpoli)
-  end
-*)
-
 fun infer_dhtnn dhtnn tm = 
   let val (_,fpdataleval,fpdatalpoli) = fp_dhtnn dhtnn (order_subtm tm) in
     (
@@ -381,18 +356,6 @@ fun infer_dhtnn dhtnn tm =
     vector_to_list (denorm_vect (#outnv (last fpdatalpoli)))
     )
   end
-
-(*
-fun infer_dhtnn_opcache opcache dhtnn tm = 
-  let val (_,fpdataleval,fpdatalpoli) = 
-    fp_dhtnn_opcache opcache dhtnn (order_subtm tm) 
-  in
-    (
-    only_hd (vector_to_list (denorm_vect (#outnv (last fpdataleval)))),
-    vector_to_list (denorm_vect (#outnv (last fpdatalpoli)))
-    )
-  end
-*)
 
 (* -------------------------------------------------------------------------
    Backward propagation: bpdict is only used to store the result

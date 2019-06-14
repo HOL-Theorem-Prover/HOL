@@ -24,6 +24,7 @@ sig
   val gamespec : (board,move) mlReinforce.gamespec
 
   val gen_olsizel : int -> (int list * int) list
+  val rand_olsize : int -> (int list * int)
 
   val explore_gamespec : (int list * int) -> (board, move) psMCTS.node list
 
