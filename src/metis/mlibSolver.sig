@@ -35,8 +35,8 @@ val refute : solver -> thm option
 (* mlibSolver nodes must construct themselves from the following form. *)
 
 type form =
-  {slice : meter ref,                   (* A meter to stop after each slice *)
-   units : units ref,                   (* mlibSolvers share a unit cache *)
+  {slice : meter Uref.t,                   (* A meter to stop after each slice *)
+   units : units Uref.t,                   (* mlibSolvers share a unit cache *)
    thms  : thm list,                    (* Context, assumed consistent *)
    hyps  : thm list}                    (* Hypothesis, or set of support *)
 
