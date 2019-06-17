@@ -20,12 +20,6 @@ fun debug s =
      Address of buffer is 0.
      Addresses of inputs are 1 and 2.
      Additional addresses are 3 and 4.
-  
-   Only allowed to start grouping if used already many times.
-   Not allowed to start grouping instruction before that.
-   Grouping is good at it eliminates decay, reduce depth but enlarge 
-   width. Only allowed to apply Cond or Loop on most frequent instruction.
-   At each level add one new instruction to the language?
    ------------------------------------------------------------------------- *)
 
 datatype move =
@@ -37,7 +31,6 @@ datatype move =
   | Loop
   | EndLoop
   | EndCond
-
 
 type program = move list
 
@@ -270,7 +263,7 @@ fun is_possible (parl,n) m = case m of
     EndCond => ((hd parl = Cond) handle Empty => false)
   | EndLoop => ((hd parl = Loop) handle Empty => false)
   | Cond => null parl
-  | Loop => null parl
+  | Loop => false
   | _ => null parl orelse (n <= 1)
 
 fun filter_sit (_,(_,(statel,_),(_,parl,n))) =
@@ -358,7 +351,7 @@ fun is_possible_size size (parl,n) m =
       EndCond => ((hd parl = Cond) handle Empty => false)
     | EndLoop => ((hd parl = Loop) handle Empty => false)
     | Cond => size' >= 2 andalso null parl
-    | Loop => size' >= 2 andalso null parl
+    | Loop => size' >= 2 andalso false
     | _ => size' > 0 andalso (null parl orelse (n <= 0))
   end
 
@@ -435,11 +428,12 @@ fun explore_gamespec (ol,limit) =
 load "mleProgram"; open mleProgram;
 load "aiLib"; open aiLib;
 
-mlReinforce.nsim_glob := 1600;
+mlReinforce.nsim_glob := 100000;
+mlReinforce.dim_glob := 4;
 val ill_glob =
   map list_of_pair
   (cartesian_product (List.tabulate (3,I)) (List.tabulate (3,I)));
-val ol = map (fn [a,b] => 3) ill_glob;
+val ol = map (fn [a,b] => if a > 0 then 1 else 0) ill_glob;
 val limit = 10;
 fun extract_prog nodel = case #sit (hd nodel) of
   (_,(_,(_,p),_)) => p
@@ -454,19 +448,19 @@ psMCTS.alpha_glob := 0.5;
 logfile_glob := "program_run23";
 parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^
 (!logfile_glob);
-ncore_mcts_glob := 4;
-ncore_train_glob := 4;
-ntarget_compete := 400;
-ntarget_explore := 400;
+ncore_mcts_glob := 16;
+ncore_train_glob := 16;
+ntarget_compete := 100;
+ntarget_explore := 100;
 exwindow_glob := 40000;
 uniqex_flag := false;
 dim_glob := 16;
 lr_glob := 0.02;
 batchsize_glob := 16;
 decay_glob := 0.99;
-level_glob := 10;
+level_glob := 8;
 nsim_glob := 1600;
-nepoch_glob := 100;
+nepoch_glob := 25;
 ngen_glob := 50;
 start_rl_loop gamespec;
 *)
