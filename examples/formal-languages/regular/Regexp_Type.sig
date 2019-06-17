@@ -4,13 +4,6 @@ sig
  type w64 = Word64.word
  type charset =  w64 * w64 * w64 * w64
 
- datatype regexp
-    = Chset of charset
-    | Cat of regexp * regexp
-    | Star of regexp
-    | Or of regexp list
-    | Neg of regexp
-
  val alphabet_size : int
  val alphabet : char list
 
@@ -23,9 +16,17 @@ sig
 
  val charset_insert  : char -> charset -> charset
  val charset_sing    : char -> charset
+ val charset_span    : int -> int -> charset
  val charset_union   : charset -> charset -> charset
  val charset_diff    : charset -> charset -> charset
  val charset_compare : charset * charset -> order
+
+ datatype regexp
+    = Chset of charset
+    | Cat of regexp * regexp
+    | Star of regexp
+    | Or of regexp list
+    | Neg of regexp
 
  val regexp_compare : regexp * regexp -> order
 
@@ -44,22 +45,13 @@ sig
  val EPSILON    : regexp
  val SIGMASTAR  : regexp
 
- datatype direction = MSB | LSB
-
  val replicate : regexp -> int -> regexp
- val catlist : regexp list -> regexp
- val dots : int -> regexp list
  val ranged : regexp -> int -> int -> regexp
+ val catlist : regexp list -> regexp
+ val strip_cat : regexp -> regexp list
+ val dots : int -> regexp list
+ val mk_or : regexp list -> regexp
 
- val num_interval : IntInf.int -> IntInf.int -> int -> direction -> regexp
- val int_interval : IntInf.int -> IntInf.int -> direction -> regexp
- val sign_magn_interval : IntInf.int -> IntInf.int -> direction -> regexp
-
- (* parsing *)
-
- datatype packelt
-   = Span of IntInf.int * IntInf.int
-   | Pad of Int.int;
 
  datatype tree
    = Ap of string * tree list
@@ -67,16 +59,18 @@ sig
    | Ident of char
    | Power of tree * int
    | Range of tree * int option * int option
-   | Interval of IntInf.int * IntInf.int * direction
-   | Const of IntInf.int * direction
-   | Pack of packelt list
+   | Interval of IntInf.int * IntInf.int
+   | Const of IntInf.int
 
  val tree_parse        : substring -> tree list * substring
  val substring_to_tree : substring -> tree
  val quote_to_tree     : 'a frag list -> tree
 
- val tree_to_regexp : tree -> regexp
+ val tree_to_regexp : (IntInf.int * IntInf.int -> regexp) -> tree -> regexp
 
+ val get_intervalFn : unit -> (IntInf.int * IntInf.int -> regexp)
+ val set_intervalFn : (IntInf.int * IntInf.int -> regexp) -> unit
+						  
  val fromSubstring : substring -> regexp
  val fromString    : string -> regexp
  val fromQuote     : 'a frag list -> regexp

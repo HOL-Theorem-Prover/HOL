@@ -274,4 +274,17 @@ val charset_conv_ss =
      conv = charset_conv,
      pats = [regexp_chset_pat]}
 
+
+(*---------------------------------------------------------------------------*)
+(* Set up default generator for interval regexps                             *)
+(*---------------------------------------------------------------------------*)
+
+val _ = 
+ let open Regexp_Numerics
+     fun iFn (i,j) = 
+        twos_comp_interval LSB (twos_comp_interval_width(i,j)) i j
+ in 
+    set_intervalFn iFn
+ end
+
 end (* regexpLib *)
