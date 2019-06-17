@@ -16,26 +16,100 @@ fun debug s =
   debug_in_dir (HOLDIR ^ "/src/AI/experiments/debug") "mleProgram" s
 
 (* -------------------------------------------------------------------------
-   Program: Address of buffer is 0.
+   Program: 
+     Address of buffer is 0.
      Addresses of inputs are 1 and 2.
      Additional addresses are 3 and 4.
+  
+   Only allowed to start grouping if used already many times.
+   Not allowed to start grouping instruction before that.
+   Grouping is good at it eliminates decay, reduce depth but enlarge 
+   width. Only allowed to apply Cond or Loop on most frequent instruction.
+   At each level add one new instruction to the language?
    ------------------------------------------------------------------------- *)
 
-datatype instruction = 
-    Read of int | Write of int
-  | Incr of int | Decr of int
+datatype move =
+    Read of int 
+  | Write of int
+  | Incr of int 
+  | Decr of int
+  | Cond
+  | Loop
+  | EndLoop
+  | EndCond
 
-type program = instruction list
 
-fun exec_instr instr d = 
-  case instr of
-    Read i  => dadd i (dfind 0 d) d
-  | Write i => dadd 0 (dfind i d) d
-  | Incr i  => dadd i (dfind i d + 1) d
-  | Decr i  => 
-    let val n = (dfind i d - 1) in
-      if n <= 0 then d else dadd i (n-1) d
+type program = move list
+
+fun cond_block level acc prog = case prog of
+    [] => raise ERR "cond_block" "open"
+  | Cond :: m => cond_block (level + 1) (Cond :: acc) m
+  | EndCond :: m => 
+    if level <= 0 then (rev acc, m) else
+      cond_block (level - 1) (EndCond :: acc) m
+  | a :: m => cond_block level (a :: acc) m
+
+fun loop_block level acc prog = case prog of
+    [] => raise ERR "loop_block" "open"
+  | Loop :: m => loop_block (level + 1) (Loop :: acc) m
+  | EndLoop :: m => 
+    if level <= 0 then (rev acc, m) else
+      loop_block (level - 1) (EndLoop :: acc) m
+  | a :: m => loop_block level (a :: acc) m
+
+fun cond_blk p = cond_block 0 [] p
+fun loop_blk p = loop_block 0 [] p
+
+fun mk_blockl blockl prog = 
+  let fun f instr m = mk_blockl ([instr] :: blockl) m in
+    case prog of
+    [] => rev blockl
+  | Read i :: m  => f (Read i) m
+  | Write i :: m => f (Write i) m
+  | Incr i :: m  => f (Incr i) m
+  | Decr i :: m  => f (Decr i) m
+  | Cond :: m => 
+    let 
+      val (block,cont) = cond_blk m 
+      val block' = (Cond :: block) @ [EndCond]
+    in
+      mk_blockl (block' :: blockl) cont
     end
+  | Loop :: m =>
+    let 
+      val (block,cont) = loop_blk m 
+      val block' = (Loop :: block) @ [EndLoop]
+    in
+      mk_blockl (block' :: blockl) cont
+    end
+  | _ => raise ERR "mk_blockl" ""
+  end
+
+fun exec_prog prog d = 
+  case prog of
+    [] => d
+  | Read i :: m  => exec_prog m (dadd i (dfind 0 d) d)
+  | Write i :: m => exec_prog m (dadd 0 (dfind i d) d)
+  | Incr i :: m  => exec_prog m (dadd i ((dfind i d + 1) mod 8) d)
+  | Decr i :: m  =>
+    let val n = dfind i d in 
+      if n > 0 then exec_prog m (dadd i (n-1) d) else exec_prog m d
+    end
+  | Cond :: m =>
+    let
+      val (block,cont) = cond_blk m
+      val d' = if dfind 0 d <> 0 then exec_prog block d else d
+    in
+      exec_prog cont d'
+    end
+  | Loop :: m =>
+    let 
+      val (block,cont) = loop_blk m
+      val d' = funpow (dfind 0 d) (exec_prog block) d
+    in
+      exec_prog cont d'
+    end
+  | _ => raise ERR "exec_prog" ""
 
 (* -------------------------------------------------------------------------
    State
@@ -65,19 +139,17 @@ fun satisfies ol statel = (compare_ol (ol_of_statel statel, ol) = EQUAL)
    Board
    ------------------------------------------------------------------------- *)
 
-type board = 
-  (int list * int) * 
-  ((state list, unit) Redblackmap.dict * state list * program)
+type board = (int list * int) * (state list * program) * 
+  (program * program * int)
 
 fun mk_startsit (ol,limit) = 
-  (true, ((ol,limit), 
-     (dadd statel_org () (dempty compare_statel), statel_org,[])))
+  (true, ((ol,limit),(statel_org,[]),([],[],0)))
 
-fun dest_startsit (_,(x,_)) = x
+fun dest_startsit (_,(x,_,_)) = x
 
-fun status_of (_,((ol,limit),(_,statel,p))) =
+fun status_of (_,((ol,limit),(statel,p),_)) =
   if satisfies ol statel then Win 
-  else if length p <= 2 * limit then Undecided
+  else if length p <= limit + 5 then Undecided
   else Lose
 
 (* -------------------------------------------------------------------------
@@ -95,11 +167,24 @@ val decrop = ``decrop : bool -> bool -> bool``
 fun mk_decr (i,tm) = list_mk_comb (decrop,[mk_varn i,tm])
 val emptyop = ``emptyop : bool``
 
+val condop = ``condop : bool -> bool``
+fun mk_cond tm = mk_comb (condop,tm)
+val loopop = ``loopop : bool -> bool``
+fun mk_loop tm = mk_comb (loopop,tm)
+val endcondop = ``endcondop : bool -> bool``
+fun mk_endcond tm = mk_comb (endcondop,tm)
+val endloopop = ``endloopop : bool -> bool``
+fun mk_endloop tm = mk_comb (endloopop,tm)
+
 fun nntm_of_instr ins tm = case ins of
     Read i  => mk_read (i, tm)
   | Write i => mk_write (i, tm)
   | Incr i  => mk_incr (i, tm)
   | Decr i  => mk_decr (i, tm)
+  | Cond => mk_cond tm
+  | Loop => mk_loop tm
+  | EndCond => mk_endcond tm
+  | EndLoop => mk_endloop tm
 
 fun nntm_of_prog acc p = case p of
     [] => acc 
@@ -145,66 +230,95 @@ val program_operl =
   map_assoc narg_oper
   (
   List.tabulate (5,mk_varn) @ [readop,writeop,incrop,decrop,emptyop] @
+  [condop,loopop,endcondop,endloopop] @
   [isuc,izero,iconcat,sconcat,oconcat,joinop1,joinop2]
   )
 
-fun nntm_of_sit (_,((ol,limit),(_,statel,prog))) =
+fun nntm_of_sit (_,((ol,limit),(statel,p),_)) =
   mk_binop joinop2
     (mk_binop joinop1 (nntm_of_ol ol, nntm_of_statel statel),
-     nntm_of_prog emptyop prog)
+     nntm_of_prog emptyop p)
+
 (* -------------------------------------------------------------------------
    Move
    ------------------------------------------------------------------------- *)
 
 val varl_glob = List.tabulate (5,I)
 
-datatype move = 
-  ReadMove of int | WriteMove of int | 
-  IncrMove of int | DecrMove of int
-
 val movel = List.concat
-  [map ReadMove (tl varl_glob), map WriteMove (tl varl_glob),
-   map IncrMove varl_glob, map DecrMove varl_glob];
+  [map Read (tl varl_glob), map Write (tl varl_glob),
+   map Incr varl_glob, map Decr varl_glob,
+   [Cond, Loop, EndCond, EndLoop]];
 
 val moveil = number_snd 0 movel
-
-fun apply_move_p move p =
-  case move of
-    ReadMove i  => p @ [Read i] 
-  | WriteMove i => p @ [Write i]
-  | IncrMove i  => p @ [Incr i]
-  | DecrMove i  => p @ [Decr i]
-
-fun apply_move_statel move dl =
-  case move of
-    ReadMove i  => map (exec_instr (Read i)) dl 
-  | WriteMove i => map (exec_instr (Write i)) dl 
-  | IncrMove i  => map (exec_instr (Incr i)) dl 
-  | DecrMove i  => map (exec_instr (Decr i)) dl 
 
 fun move_compare (m1,m2) = 
   Int.compare (assoc m1 moveil, assoc m2 moveil)
 
 fun string_of_move move = case move of
-    ReadMove i  => "R" ^ its i
-  | WriteMove i => "W" ^ its i
-  | IncrMove i  => "I" ^ its i
-  | DecrMove i  => "D" ^ its i
+    Read i  => "R" ^ its i
+  | Write i => "W" ^ its i
+  | Incr i  => "I" ^ its i
+  | Decr i  => "D" ^ its i
+  | Cond => "C"
+  | Loop => "L"
+  | EndCond => "EC"
+  | EndLoop => "EL"
 
-fun filter_sit (_,(_,(hist,statel,_))) =
-  let fun test (move,_) = 
-    compare_statel (apply_move_statel move statel,statel) <> EQUAL 
-  in
-    fn l => filter test l
-  end
 
-fun apply_move move (_,((ol,limit),(hist,statel,p))) = 
-  let val newstatel = apply_move_statel move statel in
-  (true,
-    ((ol,limit),
-    (dadd newstatel () hist, newstatel, apply_move_p move p))
-  )
-  end
+fun is_possible (parl,n) m = case m of
+    EndCond => ((hd parl = Cond) handle Empty => false)
+  | EndLoop => ((hd parl = Loop) handle Empty => false)
+  | Cond => null parl
+  | Loop => null parl
+  | _ => null parl orelse (n <= 1)
+
+fun filter_sit (_,(_,(statel,_),(_,parl,n))) =
+  let fun test (m,_) = is_possible (parl,n) m in fn l => filter test l end
+
+fun apply_move move (_,((ol,limit),(statel,p),(b,parl,n))) = 
+  if null parl then
+    let 
+      val _ = if not (null b) then raise ERR "apply_move" "" else ()
+      val newp = p @ [move]
+      fun f m = (map (exec_prog [m]) statel, ([],parl,n+1))
+      fun g m = (statel, (b @ [m], m :: parl, n+1))
+      val (newstatel,(newb,newparl,newn)) =  
+      case move of
+        Read i  => f move
+      | Write i => f move
+      | Incr i  => f move
+      | Decr i  => f move
+      | Cond => g move
+      | Loop => g move
+      | EndCond => raise ERR "apply_move" ""
+      | EndLoop => raise ERR "apply_move" ""
+    in
+      (true,((ol,limit),(newstatel,newp),(newb,newparl,newn)))
+    end 
+  else  
+    let
+      val newp = p @ [move]
+      fun f m = (statel, (b @ [m],parl,n+1))
+      val (newstatel,(newb,newparl,newn)) =  
+      case move of
+        Read i  => f move
+      | Write i => f move
+      | Incr i  => f move
+      | Decr i  => f move
+      | Cond => (statel, (b @ [move], move :: parl, 0))
+      | Loop => (statel, (b @ [move], move :: parl, 0))
+      | EndCond =>
+        if parl = [Cond]
+        then (map (exec_prog (b @ [move])) statel, ([],[],0))
+        else (statel, (b @ [move], tl parl,0))
+      | EndLoop => 
+        if parl = [Loop]
+        then (map (exec_prog (b @ [move])) statel, ([],[],0))
+        else (statel, (b @ [move], tl parl,0))
+    in
+      (true,((ol,limit),(newstatel,newp),(newb,newparl,newn)))
+    end
 
 (* -------------------------------------------------------------------------
    Target
@@ -225,60 +339,50 @@ fun read_targetl () =
     map (mk_startsit o olsize_from_string) sl
   end
 
-fun max_bigsteps (_,((_,limit),_)) = 2 * limit + 5
+fun max_bigsteps (_,((_,limit),_,_)) = 2 * limit + 5
 
 (* -------------------------------------------------------------------------
    Program generation
    ------------------------------------------------------------------------- *)
 
-fun gen_prog_movel ml p = case ml of
-    [] => p
-  | move :: m => gen_prog_movel m (apply_move_p move p)
-  
-fun random_prog size = 
-  gen_prog_movel (List.tabulate (size, fn _ => random_elem movel)) []
+fun update_annot (parl,n) m = case m of
+    EndCond => (tl parl, 0)
+  | EndLoop => (tl parl, 0)
+  | Cond => (m :: parl, 0)
+  | Loop => (m :: parl, 0)
+  | _ => (parl, n+1) 
+
+fun is_possible_size size (parl,n) m = 
+  let val size' = size - (length parl) in
+    case m of
+      EndCond => ((hd parl = Cond) handle Empty => false)
+    | EndLoop => ((hd parl = Loop) handle Empty => false)
+    | Cond => size' >= 2 andalso null parl
+    | Loop => size' >= 2 andalso null parl
+    | _ => size' > 0 andalso (null parl orelse (n <= 0))
+  end
+
+fun random_prog_aux size revp (parl,n) =
+  if size <= 0 then rev (revp) else
+  let 
+    val movel' = filter (is_possible_size size (parl,n)) movel
+    val move = random_elem movel'
+    val newannot = update_annot (parl,n) move
+  in
+    random_prog_aux (size-1) (move :: revp) newannot
+  end
+
+fun random_prog size = random_prog_aux size [] ([],0)
 
 (* -------------------------------------------------------------------------
    State generation
    ------------------------------------------------------------------------- *)
 
-fun next_level (hist,statell) =
-  let 
-    val statell1 = 
-      map (uncurry apply_move_statel) (cartesian_product movel statell)
-    val statell2 = mk_fast_set compare_statel statell1
-    val statell3 = filter (fn x => not (dmem x hist)) statell2  
-  in
-    (daddl (map_assoc (fn x => ()) statell3) hist,
-     statell3)
-  end
-
-fun all_level (i,level) x =
-  if i >= level then [(i,snd x)] else 
-    (i,snd x) :: all_level (i+1,level) (next_level x)
-
-(*
-fun gen_olsizel level =
-  let
-    val hist = dadd statel_org () (dempty compare_statel)
-    val l1 = tl (all_level (0,level) (hist,[statel_org]))
-    val l2 = distrib l1
-    val l3 = map_snd ol_of_statel l2
-    val l4 = map swap l3
-    val d4 = dregroup compare_ol l4
-  in
-    map_snd list_imin (dlist d4)
-  end
-*)
-
 fun rand_olsize level = 
   let 
     val size = random_int (1,level)
-    val ml = List.tabulate (size,fn _ => random_elem movel) 
-    fun loop l statel = case l of 
-      [] => statel
-    | a :: m => loop m (apply_move_statel a statel) 
-    val ol = ol_of_statel (loop ml statel_org)
+    val p = random_prog size
+    val ol = ol_of_statel (map (exec_prog p) statel_org)
   in
     (ol,size)
   end
@@ -293,7 +397,7 @@ fun gen_olsizel level =
    ------------------------------------------------------------------------- *)
 
 fun mk_targetl level ntarget =
-  let val olsizel = gen_olsizel (level * 10) in
+  let val olsizel = gen_olsizel level in
     map mk_startsit (first_n ntarget (shuffle olsizel))
   end
 
@@ -335,9 +439,11 @@ mlReinforce.nsim_glob := 1600;
 val ill_glob =
   map list_of_pair
   (cartesian_product (List.tabulate (3,I)) (List.tabulate (3,I)));
-val ol = map (fn [a,b] => a+4) ill_glob;
+val ol = map (fn [a,b] => 3) ill_glob;
 val limit = 10;
-explore_gamespec (ol,limit);
+fun extract_prog nodel = case #sit (hd nodel) of
+  (_,(_,(_,p),_)) => p
+val p = extract_prog (explore_gamespec (ol,limit));
 *)
 
 (*
@@ -345,11 +451,11 @@ load "mleProgram"; open mleProgram;
 load "mlReinforce"; open mlReinforce;
 load "smlParallel"; open smlParallel;
 psMCTS.alpha_glob := 0.5;
-logfile_glob := "program_run22";
+logfile_glob := "program_run23";
 parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^
 (!logfile_glob);
-ncore_mcts_glob := 16;
-ncore_train_glob := 16;
+ncore_mcts_glob := 4;
+ncore_train_glob := 4;
 ntarget_compete := 400;
 ntarget_explore := 400;
 exwindow_glob := 40000;
@@ -358,7 +464,7 @@ dim_glob := 16;
 lr_glob := 0.02;
 batchsize_glob := 16;
 decay_glob := 0.99;
-level_glob := 2;
+level_glob := 10;
 nsim_glob := 1600;
 nepoch_glob := 100;
 ngen_glob := 50;

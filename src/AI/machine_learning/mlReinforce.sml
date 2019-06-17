@@ -368,8 +368,11 @@ fun explore_f startb gamespec allex dhtnn =
     fun cmp ((a,_,_),(b,_,_)) = Term.compare (a,b)
     val exl1 = List.concat exll @ allex
     val exl2 = if !uniqex_flag then mk_sameorder_set cmp exl1 else exl1
+    val b = int_div nwin (length targetl) > 0.95
   in
-    first_n (!exwindow_glob) exl2
+    if b then (incr level_glob; summary ("Level up: " ^ its (!level_glob)))
+    else ();
+    (b, first_n (!exwindow_glob) exl2)
   end
 
 (* -------------------------------------------------------------------------
@@ -383,7 +386,7 @@ fun rl_start gamespec =
     val _ = summary "Generation 0"
     val prefile = eval_dir ^ "/" ^ (!logfile_glob) ^ "_gen" ^ its 0
     val dhtnn_random = random_dhtnn_gamespec gamespec
-    val allex = explore_f true gamespec emptyallex dhtnn_random
+    val (_,allex) = explore_f true gamespec emptyallex dhtnn_random
     val dhtnn = train_f gamespec allex
   in
     write_dhtnn (prefile ^ "_dhtnn") dhtnn;
@@ -397,9 +400,13 @@ fun rl_one n gamespec (allex,dhtnn) =
     val _ = summary ("\nGeneration " ^ its n)
     val dhtnn_new = train_f gamespec allex
     val dhtnn_best = compete gamespec dhtnn dhtnn_new
-    val newallex = explore_f false gamespec allex dhtnn_new
+    val _ = write_dhtnn (prefile ^ "_dhtnn") dhtnn_best
+    fun loop exl =
+      let val (b,newexl) = explore_f false gamespec exl dhtnn_new in
+        if b then loop newexl else newexl
+      end
+    val newallex = loop allex
   in
-    write_dhtnn (prefile ^ "_dhtnn") dhtnn_best;
     write_dhex (prefile ^ "_allex") newallex;
     (newallex,dhtnn_best)
   end
