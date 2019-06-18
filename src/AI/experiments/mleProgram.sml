@@ -356,31 +356,24 @@ fun update_annot (parl,n) m = case m of
 
 val level_parameters = 
   let 
-    val l0 = cartesian_product  
-      (List.tabulate (5,I)) (List.tabulate (9, fn x => x + 8))
-    val l1 = cartesian_product  
-      (List.tabulate (3,fn x => x+2)) (List.tabulate (9, fn x => x + 8))
+    val l = cartesian_product  
+      (List.tabulate (5,fn i => i + 1)) (List.tabulate (9, fn x => x + 8))
   in
-    map_assoc (fn _ => 0) l0 @
-    map_assoc (fn _ => 1) l1
+    map_assoc (fn _ => 0) l @ map_assoc (fn _ => 1) l
   end
 
-fun is_possible_param ((ctrln,size),nestn) (parl,n) m = 
-  let val size' = size - (length parl) in
+fun is_possible_param ((ctrln,psize),nestn) (parl,n) m = 
+  let val psize' = psize - (length parl) in
     case m of
       EndCond => ((hd parl = Cond) handle Empty => false)
     | EndLoop => ((hd parl = Loop) handle Empty => false)
-    | Cond => size' >= 2 andalso length parl <= nestn andalso ctrln > 0
-    | Loop => size' >= 2 andalso length parl <= nestn andalso ctrln > 0
-    | _ => size' > 0
+    | Cond => psize' >= 2 andalso length parl <= nestn
+    | Loop => psize' >= 2 andalso length parl <= nestn
+    | _ => psize' > 0 andalso n < ctrln
   end
 
-fun update_param ((ctrln,size),nestn) m = case m of
-    Cond => ((ctrln-1,size-1),nestn)
-  | Loop => ((ctrln-1,size-1),nestn)
-  | _ => ((ctrln,size-1),nestn)
+fun update_param ((ctrln,size),nestn) m = ((ctrln,size-1),nestn)
 
- 
 fun random_prog_aux (param as ((ctrln,size),nestn)) revp (parl,n) =
   if size <= 0 then rev (revp) else
   let
@@ -401,7 +394,7 @@ fun random_prog param = random_prog_aux param [] ([],0)
 fun rand_olsize level = 
   let 
     val ((a,b),c) = List.nth (level_parameters,level)
-    val random_param = ((random_int (0,a),random_int (0,b)),random_int (0,c))
+    val random_param = ((random_int (1,a),random_int (0,b)),random_int (0,c))
     val p = random_prog random_param
     val ol = ol_of_statel (map (exec_prog p) statel_org)
   in
@@ -466,8 +459,8 @@ mlReinforce.nsim_glob := 1600;
 val il = cartesian_productl [List.tabulate (3,I), List.tabulate (3,I)];
 val ol = map (fn [a,b] => a+2) il;
 val limit = 10;
-val p = extract_prog (explore_random (ol,limit));
 
+val p = extract_prog (explore_random (ol,limit));
 val dhtnn = read_dhtnn "program_run25_gen12_dhtnn";
 val p = extract_prog (explore_dhtnn dhtnn (ol,limit));
 *)
@@ -476,8 +469,9 @@ val p = extract_prog (explore_dhtnn dhtnn (ol,limit));
 load "mleProgram"; open mleProgram;
 load "mlReinforce"; open mlReinforce;
 load "smlParallel"; open smlParallel;
+
 psMCTS.alpha_glob := 0.5;
-logfile_glob := "program_run25";
+logfile_glob := "program_run27";
 parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^
 (!logfile_glob);
 ncore_mcts_glob := 16;
@@ -493,19 +487,9 @@ decay_glob := 0.99;
 level_glob := 0;
 nsim_glob := 6400;
 nepoch_glob := 25;
-ngen_glob := 50;
+ngen_glob := 100;
+
 start_rl_loop gamespec;
 *)
-
-(* design increasing difficulty dataset 
-
-
-
-(* idea design an operation for an incremental change of loop behavior? *)
-
-*)
-
-
-
 
 end (* struct *)

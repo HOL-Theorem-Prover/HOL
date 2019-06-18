@@ -342,7 +342,7 @@ fun compete gamespec dhtnn_old dhtnn_new =
     val freq = int_div (Int.max (w_new,w_old)) (length targetl)
   in
     summary_compete (w_old,w_new);
-    summary ("Max percentage: " ^ rts freq);
+    summary ("Max percentage: " ^ rts (approx 3 freq));
     if freq > 0.95
     then (incr level_glob;
           summary ("Level up: " ^ its (!level_glob)))
