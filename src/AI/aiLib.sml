@@ -829,7 +829,8 @@ fun random_elem l = hd (shuffle l)
   handle Empty => raise ERR "random_elem" "empty"
 
 fun random_int (a,b) =
-  if a >= b then raise ERR "random_int" "" else
+  if a > b then raise ERR "random_int" "" else
+  if a = b then a else
   let
     val (ar,br) = (Real.fromInt a, Real.fromInt b)
     val c = Real.floor (ar + random_real () * (br - ar + 1.0))

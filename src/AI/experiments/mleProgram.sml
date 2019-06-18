@@ -23,14 +23,10 @@ fun debug s =
    ------------------------------------------------------------------------- *)
 
 datatype move =
-    Read of int 
-  | Write of int
-  | Incr of int 
-  | Decr of int
-  | Cond
-  | Loop
-  | EndLoop
-  | EndCond
+    Read of int | Write of int
+  | Incr of int | Decr of int
+  | Cond | Loop
+  | EndLoop | EndCond
 
 type program = move list
 
@@ -132,11 +128,9 @@ fun satisfies ol statel = (compare_ol (ol_of_statel statel, ol) = EQUAL)
    Board
    ------------------------------------------------------------------------- *)
 
-type board = (int list * int) * (state list * program) * 
-  (program * program * int)
+type board = (int list * int) * (state list * program) * (program * program)
 
-fun mk_startsit (ol,limit) = 
-  (true, ((ol,limit),(statel_org,[]),([],[],0)))
+fun mk_startsit (ol,limit) = (true, ((ol,limit),(statel_org,[]),([],[])))
 
 fun dest_startsit (_,(x,_,_)) = x
 
@@ -258,25 +252,40 @@ fun string_of_move move = case move of
   | EndCond => "EC"
   | EndLoop => "EL"
 
-
-fun is_possible (parl,n) m = case m of
+fun is_possible parl m = case m of
     EndCond => ((hd parl = Cond) handle Empty => false)
   | EndLoop => ((hd parl = Loop) handle Empty => false)
-  | Cond => null parl
-  | Loop => false
-  | _ => null parl orelse (n <= 1)
+  | _ => true
 
-fun filter_sit (_,(_,(statel,_),(_,parl,n))) =
-  let fun test (m,_) = is_possible (parl,n) m in fn l => filter test l end
+fun is_simple_move m = case m of
+    Read i  => true | Write i => true  
+  | Incr i  => true | Decr i  => true
+  | _ => false
 
-fun apply_move move (_,((ol,limit),(statel,p),(b,parl,n))) = 
+fun filter_sit (_,(_,(statel,_),(b,parl))) =
+  let fun test (m,_) = 
+    is_possible parl m andalso
+    if null parl andalso is_simple_move m 
+      then compare_statel (map (exec_prog [m]) statel,statel) <> EQUAL
+    else 
+      if (parl = [Cond] andalso m = EndCond) orelse
+         (parl = [Loop] andalso m = EndLoop)
+      then
+        compare_statel (map (exec_prog (b @ [m])) statel, statel)
+        <> EQUAL
+    else true
+  in 
+    fn l => filter test l 
+  end
+
+fun apply_move move (_,((ol,limit),(statel,p),(b,parl))) = 
   if null parl then
     let 
       val _ = if not (null b) then raise ERR "apply_move" "" else ()
       val newp = p @ [move]
-      fun f m = (map (exec_prog [m]) statel, ([],parl,n+1))
-      fun g m = (statel, (b @ [m], m :: parl, n+1))
-      val (newstatel,(newb,newparl,newn)) =  
+      fun f m = (map (exec_prog [m]) statel, ([],parl))
+      fun g m = (statel, (b @ [m], m :: parl))
+      val (newstatel,(newb,newparl)) =  
       case move of
         Read i  => f move
       | Write i => f move
@@ -287,30 +296,30 @@ fun apply_move move (_,((ol,limit),(statel,p),(b,parl,n))) =
       | EndCond => raise ERR "apply_move" ""
       | EndLoop => raise ERR "apply_move" ""
     in
-      (true,((ol,limit),(newstatel,newp),(newb,newparl,newn)))
+      (true,((ol,limit),(newstatel,newp),(newb,newparl)))
     end 
   else  
     let
       val newp = p @ [move]
-      fun f m = (statel, (b @ [m],parl,n+1))
-      val (newstatel,(newb,newparl,newn)) =  
+      fun f m = (statel, (b @ [m],parl))
+      val (newstatel,(newb,newparl)) =  
       case move of
         Read i  => f move
       | Write i => f move
       | Incr i  => f move
       | Decr i  => f move
-      | Cond => (statel, (b @ [move], move :: parl, 0))
-      | Loop => (statel, (b @ [move], move :: parl, 0))
+      | Cond => (statel, (b @ [move], move :: parl))
+      | Loop => (statel, (b @ [move], move :: parl))
       | EndCond =>
         if parl = [Cond]
-        then (map (exec_prog (b @ [move])) statel, ([],[],0))
-        else (statel, (b @ [move], tl parl,0))
+        then (map (exec_prog (b @ [move])) statel, ([],[]))
+        else (statel, (b @ [move], tl parl))
       | EndLoop => 
         if parl = [Loop]
-        then (map (exec_prog (b @ [move])) statel, ([],[],0))
-        else (statel, (b @ [move], tl parl,0))
+        then (map (exec_prog (b @ [move])) statel, ([],[]))
+        else (statel, (b @ [move], tl parl))
     in
-      (true,((ol,limit),(newstatel,newp),(newb,newparl,newn)))
+      (true,((ol,limit),(newstatel,newp),(newb,newparl)))
     end
 
 (* -------------------------------------------------------------------------
@@ -345,27 +354,45 @@ fun update_annot (parl,n) m = case m of
   | Loop => (m :: parl, 0)
   | _ => (parl, n+1) 
 
-fun is_possible_size size (parl,n) m = 
+val level_parameters = 
+  let 
+    val l0 = cartesian_product  
+      (List.tabulate (5,I)) (List.tabulate (9, fn x => x + 8))
+    val l1 = cartesian_product  
+      (List.tabulate (3,fn x => x+2)) (List.tabulate (9, fn x => x + 8))
+  in
+    map_assoc (fn _ => 0) l0 @
+    map_assoc (fn _ => 1) l1
+  end
+
+fun is_possible_param ((ctrln,size),nestn) (parl,n) m = 
   let val size' = size - (length parl) in
     case m of
       EndCond => ((hd parl = Cond) handle Empty => false)
     | EndLoop => ((hd parl = Loop) handle Empty => false)
-    | Cond => size' >= 2 andalso null parl
-    | Loop => size' >= 2 andalso false
-    | _ => size' > 0 andalso (null parl orelse (n <= 0))
+    | Cond => size' >= 2 andalso length parl <= nestn andalso ctrln > 0
+    | Loop => size' >= 2 andalso length parl <= nestn andalso ctrln > 0
+    | _ => size' > 0
   end
 
-fun random_prog_aux size revp (parl,n) =
+fun update_param ((ctrln,size),nestn) m = case m of
+    Cond => ((ctrln-1,size-1),nestn)
+  | Loop => ((ctrln-1,size-1),nestn)
+  | _ => ((ctrln,size-1),nestn)
+
+ 
+fun random_prog_aux (param as ((ctrln,size),nestn)) revp (parl,n) =
   if size <= 0 then rev (revp) else
-  let 
-    val movel' = filter (is_possible_size size (parl,n)) movel
+  let
+    val movel' = filter (is_possible_param param (parl,n)) movel
     val move = random_elem movel'
     val newannot = update_annot (parl,n) move
+    val newparam = update_param param move
   in
-    random_prog_aux (size-1) (move :: revp) newannot
+    random_prog_aux newparam (move :: revp) newannot
   end
 
-fun random_prog size = random_prog_aux size [] ([],0)
+fun random_prog param = random_prog_aux param [] ([],0)
 
 (* -------------------------------------------------------------------------
    State generation
@@ -373,11 +400,12 @@ fun random_prog size = random_prog_aux size [] ([],0)
 
 fun rand_olsize level = 
   let 
-    val size = random_int (1,level)
-    val p = random_prog size
+    val ((a,b),c) = List.nth (level_parameters,level)
+    val random_param = ((random_int (0,a),random_int (0,b)),random_int (0,c))
+    val p = random_prog random_param
     val ol = ol_of_statel (map (exec_prog p) statel_org)
   in
-    (ol,size)
+    (ol,length p)
   end
 
 fun gen_olsizel level =
@@ -419,25 +447,29 @@ val gamespec : (board,move) mlReinforce.gamespec =
    Basic exploration
    ------------------------------------------------------------------------- *)
 
-fun explore_gamespec (ol,limit) =
-  let val dhtnn = random_dhtnn_gamespec gamespec in
-    explore_test gamespec dhtnn (mk_startsit (ol,limit))
-  end
+fun explore_dhtnn dhtnn (ol,limit) =
+  explore_test gamespec dhtnn (mk_startsit (ol,limit))
+
+fun explore_random (ol,limit) =
+  explore_dhtnn (random_dhtnn_gamespec gamespec) (ol,limit)
+
+fun extract_prog nodel = case #sit (hd nodel) of (_,(_,(_,p),_)) => p
+
+
 
 (*
 load "mleProgram"; open mleProgram;
+load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
 load "aiLib"; open aiLib;
 
-mlReinforce.nsim_glob := 100000;
-mlReinforce.dim_glob := 4;
-val ill_glob =
-  map list_of_pair
-  (cartesian_product (List.tabulate (3,I)) (List.tabulate (3,I)));
-val ol = map (fn [a,b] => if a > 0 then 1 else 0) ill_glob;
+mlReinforce.nsim_glob := 1600;
+val il = cartesian_productl [List.tabulate (3,I), List.tabulate (3,I)];
+val ol = map (fn [a,b] => a+2) il;
 val limit = 10;
-fun extract_prog nodel = case #sit (hd nodel) of
-  (_,(_,(_,p),_)) => p
-val p = extract_prog (explore_gamespec (ol,limit));
+val p = extract_prog (explore_random (ol,limit));
+
+val dhtnn = read_dhtnn "program_run25_gen12_dhtnn";
+val p = extract_prog (explore_dhtnn dhtnn (ol,limit));
 *)
 
 (*
@@ -445,24 +477,35 @@ load "mleProgram"; open mleProgram;
 load "mlReinforce"; open mlReinforce;
 load "smlParallel"; open smlParallel;
 psMCTS.alpha_glob := 0.5;
-logfile_glob := "program_run23";
+logfile_glob := "program_run25";
 parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^
 (!logfile_glob);
 ncore_mcts_glob := 16;
 ncore_train_glob := 16;
-ntarget_compete := 100;
-ntarget_explore := 100;
+ntarget_compete := 200;
+ntarget_explore := 200;
 exwindow_glob := 40000;
 uniqex_flag := false;
 dim_glob := 16;
 lr_glob := 0.02;
 batchsize_glob := 16;
 decay_glob := 0.99;
-level_glob := 8;
-nsim_glob := 1600;
+level_glob := 0;
+nsim_glob := 6400;
 nepoch_glob := 25;
 ngen_glob := 50;
 start_rl_loop gamespec;
 *)
+
+(* design increasing difficulty dataset 
+
+
+
+(* idea design an operation for an incremental change of loop behavior? *)
+
+*)
+
+
+
 
 end (* struct *)

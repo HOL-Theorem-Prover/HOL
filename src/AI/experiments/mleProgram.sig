@@ -13,18 +13,22 @@ sig
     | EndLoop
     | EndCond
   type program = move list
-  
-  type state = (int,int) Redblackmap.dict
 
-  type board = (int list * int) * (state list * program) * 
-    (program * program * int)
+  type state = (int,int) Redblackmap.dict
+  type board = (int list * int) * (state list * program) * (program * program)
   
   val gamespec : (board,move) mlReinforce.gamespec
 
-  val random_prog : int -> program
+  val level_parameters : ((int * int) * int) list
+  val random_prog : ((int * int) * int) -> program
   val gen_olsizel : int -> (int list * int) list
   val rand_olsize : int -> (int list * int)
 
-  val explore_gamespec : (int list * int) -> (board, move) psMCTS.node list
+  val explore_dhtnn : mlTreeNeuralNetwork.dhtnn -> 
+    (int list * int) -> (board, move) psMCTS.node list
+  val explore_random :
+    (int list * int) -> (board, move) psMCTS.node list
+  val extract_prog :
+    (board, move) psMCTS.node list -> program
 
 end
