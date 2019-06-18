@@ -369,7 +369,7 @@ fun is_possible_param ((ctrln,psize),nestn) (parl,n) m =
     | EndLoop => ((hd parl = Loop) handle Empty => false)
     | Cond => psize' >= 2 andalso length parl <= nestn
     | Loop => psize' >= 2 andalso length parl <= nestn
-    | _ => psize' > 0 andalso n < ctrln
+    | _ => psize' > 0 andalso (null parl orelse n < ctrln)
   end
 
 fun update_param ((ctrln,size),nestn) m = ((ctrln,size-1),nestn)
