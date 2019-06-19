@@ -19,8 +19,8 @@ sig
   
   val gamespec : (board,move) mlReinforce.gamespec
 
-  val level_parameters : ((int * int) * int) list
-  val random_prog : ((int * int) * int) -> program
+  val level_parameters : (int * int * int * int) list
+  val random_prog : (int * int * int * int) -> program
   val gen_olsizel : int -> (int list * int) list
   val rand_olsize : int -> (int list * int)
 

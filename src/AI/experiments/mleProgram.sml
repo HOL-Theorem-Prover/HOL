@@ -58,7 +58,7 @@ fun mk_blockl blockl prog =
   | Incr i :: m  => f (Incr i) m
   | Decr i :: m  => f (Decr i) m
   | Cond :: m => 
-    let 
+    let
       val (block,cont) = cond_blk m 
       val block' = (Cond :: block) @ [EndCond]
     in
@@ -354,28 +354,31 @@ fun update_annot (parl,n) m = case m of
   | Loop => (m :: parl, 0)
   | _ => (parl, n+1) 
 
+
 val level_parameters = 
-  let 
-    val l = cartesian_product  
-      (List.tabulate (5,fn i => i + 1)) (List.tabulate (9, fn x => x + 8))
-  in
-    map_assoc (fn _ => 0) l @ map_assoc (fn _ => 1) l
+  let fun f (n1,n2) = List.tabulate (n2 - n1 + 1, fn x => x + n1) in
+    map (quadruple_of_list o rev) (cartesian_productl 
+      (map f (rev [(8,16),(0,4),(1,8),(0,1)])))
   end
 
-fun is_possible_param ((ctrln,psize),nestn) (parl,n) m = 
+fun is_possible_param (psize,ctrln,ctrlsize,nestn) (parl,n) m = 
   let val psize' = psize - (length parl) in
     case m of
       EndCond => ((hd parl = Cond) handle Empty => false)
     | EndLoop => ((hd parl = Loop) handle Empty => false)
-    | Cond => psize' >= 2 andalso length parl <= nestn
-    | Loop => psize' >= 2 andalso length parl <= nestn
-    | _ => psize' > 0 andalso (null parl orelse n < ctrln)
+    | Cond => psize' >= 2 andalso length parl <= nestn andalso ctrln > 0
+    | Loop => psize' >= 2 andalso length parl <= nestn andalso ctrln > 0
+    | _ => psize' > 0 andalso (null parl orelse n < ctrlsize)
   end
 
-fun update_param ((ctrln,size),nestn) m = ((ctrln,size-1),nestn)
+fun update_param (psize,ctrln,ctrlsize,nestn) m = 
+  (psize-1, 
+   if mem m [Cond,Loop] then ctrln-1 else ctrln, 
+   ctrlsize,
+   nestn)
 
-fun random_prog_aux (param as ((ctrln,size),nestn)) revp (parl,n) =
-  if size <= 0 then rev (revp) else
+fun random_prog_aux (param as (psize,ctrln,ctrlsize,nestn)) revp (parl,n) =
+  if psize <= 0 then rev (revp) else
   let
     val movel' = filter (is_possible_param param (parl,n)) movel
     val move = random_elem movel'
@@ -393,9 +396,8 @@ fun random_prog param = random_prog_aux param [] ([],0)
 
 fun rand_olsize level = 
   let 
-    val ((a,b),c) = List.nth (level_parameters,level)
-    val random_param = ((random_int (1,a),random_int (0,b)),random_int (0,c))
-    val p = random_prog random_param
+    val param = List.nth (level_parameters,level)
+    val p = random_prog param
     val ol = ol_of_statel (map (exec_prog p) statel_org)
   in
     (ol,length p)
@@ -471,7 +473,7 @@ load "mlReinforce"; open mlReinforce;
 load "smlParallel"; open smlParallel;
 
 psMCTS.alpha_glob := 0.5;
-logfile_glob := "program_run27";
+logfile_glob := "program_run28";
 parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^
 (!logfile_glob);
 ncore_mcts_glob := 16;
@@ -485,8 +487,8 @@ lr_glob := 0.02;
 batchsize_glob := 16;
 decay_glob := 0.99;
 level_glob := 0;
-nsim_glob := 6400;
-nepoch_glob := 25;
+nsim_glob := 1600;
+nepoch_glob := 40;
 ngen_glob := 100;
 
 start_rl_loop gamespec;
