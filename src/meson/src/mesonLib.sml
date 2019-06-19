@@ -131,6 +131,7 @@ datatype fol_form = Atom   of fol_atom
 local
   fun inc_vcounter vcounter =
     let
+      open Uref
       val n = !vcounter
       val m = n + 1
     in
@@ -140,27 +141,30 @@ local
         (vcounter := m; n)
     end
   fun hol_of_var (vstore,gstore,_) v =
-     case assoc2 v (!vstore)
-      of NONE => assoc2 v (!gstore)
+     case assoc2 v (Uref.!vstore)
+      of NONE => assoc2 v (Uref.!gstore)
        | x => x
   fun hol_of_bumped_var (vdb as (_, gstore, _)) v =
-    case hol_of_var vdb v of
-        SOME x => x
-      | NONE =>
-         let val v' = v mod offinc
-             val hv' = case hol_of_var vdb v' of
-                           SOME y => y
-                         | NONE => failwith "hol_of_bumped_var"
-             val gv = genvar (type_of hv')
-         in
-            gstore := (gv, v)::(!gstore);
-            gv
-         end
+    let open Uref in
+      case hol_of_var vdb v of
+          SOME x => x
+        | NONE =>
+           let val v' = v mod offinc
+               val hv' = case hol_of_var vdb v' of
+                             SOME y => y
+                           | NONE => failwith "hol_of_bumped_var"
+               val gv = genvar (type_of hv')
+           in
+              gstore := (gv, v)::(!gstore);
+              gv
+           end
+    end
 in
-  type vardb = (term * int) list ref * (term * int) list ref * int ref
-  fun new_vardb () : vardb = (ref [], ref [], ref 0)
+  type vardb = (term * int) list Uref.t * (term * int) list Uref.t * int Uref.t
+  fun new_vardb () : vardb = (Uref.new [], Uref.new [], Uref.new 0)
   fun fol_of_var ((vstore,_,vcounter):vardb) (v:term) =
-    let val currentvars = !vstore
+    let open Uref
+        val currentvars = !vstore
     in case op_assoc1 aconv v currentvars
         of SOME x => x
          | NONE =>
@@ -171,10 +175,11 @@ in
   val hol_of_var = hol_of_bumped_var
 end;
 
-type cdb = ((term * int) list ref * int ref)
-fun new_cdb () : cdb = (ref [(the_false, 1)], ref 2)
+type cdb = ((term * int) list Uref.t * int Uref.t)
+fun new_cdb () : cdb = (Uref.new [(the_false, 1)], Uref.new 2)
 fun fol_of_const ((cstore,ccounter) : cdb) c =
   let
+    open Uref
     val currentconsts = !cstore
   in
     case assoc1_eq Term.compare c currentconsts of
@@ -188,7 +193,7 @@ fun fol_of_const ((cstore,ccounter) : cdb) c =
       end
   end
 fun hol_of_const ((cstore,_):cdb) c =
-   case assoc2 c (!cstore)
+   case assoc2 c (Uref.!cstore)
     of SOME x => x
      | NONE => failwith "hol_of_const"
 
@@ -468,6 +473,7 @@ fun meson_single_expand infs rule ((g,ancestors),(insts,offset,size)) =
          in (h', checkan insts h' ancestors)
          end
      val newhyps =  map mk_ihyp hyps
+     open Uref
   in
     infs := !infs + 1;
     (newhyps, (globin, offset+offinc, size - length hyps))
@@ -597,10 +603,10 @@ fun say_solved infs n =
 fun solve_goal infs rules incdepth min max incsize =
  let fun solve n g =
       if n > max then failwith "solve_goal: Too deep"
-      else let val _ = chat (!infs) n
+      else let val _ = chat (Uref.!infs) n
                val gi = if incdepth then expand_goal infs rules g n 100000 I
                                     else expand_goal infs rules g 100000 n I
-               val _ = say_solved (!infs) (!chatting)
+               val _ = say_solved (Uref.!infs) (!chatting)
            in
              gi
            end
@@ -687,9 +693,10 @@ local
   and pull_CONV = GEN_REWRITE_CONV DEPTH_CONV [DEMORG_AND]
   and imf_CONV  = REWR_CONV NOT_IMP
 in
-  fun new_contrapos_cache() = ref ([] : ((int * term) * thm) list)
+  fun new_contrapos_cache() = Uref.new ([] : ((int * term) * thm) list)
   fun make_hol_contrapos memory (n,th) =
-    let val tm = concl th
+    let open Uref
+        val tm = concl th
         val key = (n,tm)
         fun key_eq (i1,tm1) (i2,tm2) = aconv tm1 tm2 andalso i1 = i2
     in
@@ -963,11 +970,11 @@ fun PURE_MESON_TAC infs min max inc gl =
 
 fun inform tac g =
   let val _ = if (!chatting = 1) then say "Meson search level: " else ()
-      val infs = ref 0
+      val infs = Uref.new 0
       val res = tac infs g
       val _ = if (!chatting = 0) then ()
          else if (!chatting = 1) then say"\n"
-              else say  ("  solved with " ^ Int.toString (!infs) ^
+              else say  ("  solved with " ^ Int.toString (Uref.!infs) ^
                          " MESON inferences.\n")
   in  res  end;
 

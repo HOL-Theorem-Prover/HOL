@@ -14,22 +14,13 @@ open HolKernel Abbrev boolLib aiLib psTermGen mlTacticData mlTreeNeuralNetwork
 val ERR = mk_HOL_ERR "mleArithData"
 
 (* -------------------------------------------------------------------------
-   Arithmetical term generation and evaluation
+   Arithmetical term generation
    ------------------------------------------------------------------------- *)
 
 fun num_operl n =
   [``SUC``,``$+``,``$*``] @ map mk_sucn (List.tabulate (n+1,I))
 
 fun random_numtm (nsuc,nsize) = random_term (num_operl nsuc) (nsize,``:num``)
-
-fun eval_numtm tm =
-  (string_to_int o term_to_string o rhs o concl o computeLib.EVAL_CONV) tm
-
-fun compressed_size tm =
-  let val (oper,argl) = strip_comb tm in
-    if is_suc_only tm then 1
-    else 1 + sum_int (map compressed_size argl)
-  end
 
 (* -------------------------------------------------------------------------
    Set of arithmetical examples
@@ -64,28 +55,38 @@ fun create_exset tml nex (nsuc,nsize) =
   end
 
 (* -------------------------------------------------------------------------
-   Creation of training set, validation set and test set and export.
+   Creation of training set, validation set and test set and export
    ------------------------------------------------------------------------- *)
 
 fun create_train nex = create_exset [] nex (10,10)
-fun create_valid tml nex = create_exset [] nex (10,10)
-fun create_test tml nex = create_exset [] nex (10,10)
-fun create_big tml nex = create_exset [] nex (10,20)
+fun create_valid tml nex = create_exset tml nex (10,10)
+fun create_test tml nex = create_exset tml nex (10,10)
+fun create_big tml nex = create_exset tml nex (10,20)
 
 val dataarith_dir = HOLDIR ^ "/src/AI/experiments/data_arith"
 
 (* -------------------------------------------------------------------------
-   Statistics
+   Export term as an s-expression with statistics about value and proof length
    ------------------------------------------------------------------------- *)
 
-fun compressed_stats file =
+fun export_arithdata databare =
   let
-    val l0 = import_terml file
-    val l1 = map_assoc compressed_size l0;
-    val l2 = dlist (dregroup Int.compare (map swap l1));
+    val dir = HOLDIR ^ "/src/AI/experiments/data_arithexport"
+    val _ = mkDir_err dir
+    val tml = import_terml (dataarith_dir ^ "/" ^ databare)
+    fun f tm =
+      let val ps = its (lo_prooflength 500 tm) handle Option => "?" in
+        tts tm ^ ","  ^ its (eval_numtm tm) ^ "," ^  ps
+      end
   in
-    map_snd length l2
-  end;
+    writel (dir ^ "/" ^ databare) (map f tml)
+  end
+
+(*
+load "mleArithData"; open mleArithData;
+app export_arithdata ["train","valid","test","big"];
+*)
+
 
 
 end (* struct *)

@@ -188,6 +188,7 @@ sig
   val tts : term -> string
   val its : int -> string
   val rts : real -> string
+  val rts_round : int -> real -> string
 
   (* thread *)
   val interruptkill : Thread.thread -> unit

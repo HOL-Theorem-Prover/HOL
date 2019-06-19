@@ -220,9 +220,9 @@ fun rw_eval nsim =
     )
   );
 
-ncore_mcts_glob := 40;
-val rl1 = map synt_eval [1,16,160,1600];
-val rl2 = map rw_eval [1,16,160,1600];
+ncore_mcts_glob := 20;
+val rl1 = map synt_eval [1,16];
+val rl2 = map rw_eval [1,16];
 *)
 
 end (* struct *)

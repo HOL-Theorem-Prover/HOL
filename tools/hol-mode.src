@@ -1452,6 +1452,11 @@ second is to show the new term.
 
 ;; (define-key comint-mode-map "\r" 'hol-return-key)
 
+(defun hol-overload-info-for (term-name)
+  "Get HOL to print overload information for term-name"
+  (interactive "sOverloaded name: ")
+  (send-string-to-hol (format "overload_info_for \"%s\"" term-name)))
+
 
 
 ;;templates
@@ -2024,6 +2029,7 @@ second is to show the new term.
 (define-key hol-map "c" 'hol-db-find-consts)
 (define-key hol-map "n"    'hol-name-top-theorem)
 (define-key hol-map "o"    'hol-open-string)
+(define-key hol-map "O"    'hol-overload-info-for)
 (define-key hol-map "p"    'hol-print-goal)
 (define-key hol-map "P"    'hol-print-all-goals)
 (define-key hol-map "r"    'hol-rotate)

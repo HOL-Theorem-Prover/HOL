@@ -463,6 +463,9 @@ fun pad n pads s =
 
 fun percent x = approx 2 (100.0 * x)
 
+fun rts r = Real.toString r
+fun rts_round n r = rts (approx n r)
+
 (* -------------------------------------------------------------------------
    Terms
    ------------------------------------------------------------------------- *)
@@ -548,14 +551,12 @@ fun tts tm = case dest_term tm of
   | CONST{Name,Thy,Ty} => Name
   | COMB _ =>
     let val (oper,argl) = strip_comb tm in
-      case argl of
-        [a,b] => "(" ^ String.concatWith " " (map tts [a,oper,b]) ^ ")"
-      | _ => "(" ^ String.concatWith " " (map tts (oper :: argl)) ^ ")"
+      "(" ^ String.concatWith " " (map tts (oper :: argl)) ^ ")"
     end
   | LAMB(Var,Bod)      => "(LAMB " ^ tts Var ^ "." ^ tts Bod ^ ")"
 
 fun its i = int_to_string i
-fun rts r = Real.toString r
+
 
 (* -------------------------------------------------------------------------
    I/O

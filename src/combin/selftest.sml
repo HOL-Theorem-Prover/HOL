@@ -11,11 +11,26 @@ val _ = app convtest [
     ]
 
 val _ = app tpp [
-      "f⦇a ↦ b⦈",
-      "f⦇a ↦ b⦈ x",
-      "f⦇a ↦ b; c ↦ d⦈",
-      "f⦇a ↦ b; c ↦ d⦈ x"
-    ]
+  "f⦇a ↦ b⦈",
+  "f⦇a ↦ b⦈ x",
+  "f⦇a ↦ b; c ↦ d⦈",
+  "f⦇a ↦ b; c ↦ d⦈ x",
+  "g ∘ f⦇a ↦ c⦈",
+  "(g ∘ f)⦇a ↦ c⦈",
+  "f⦇\n\
+  \  kkkk1 ↦ vvvvv1; kkkkk2 ↦ vvvvvv2; kkkkk3 ↦ vvvvv3; kkkkkk4 ↦ vvvvv4;\n\
+  \  kkkkkk5 ↦ v5\n\
+  \⦈",
+  "g ∘\n\
+  \f⦇\n\
+  \  kkkk1 ↦ vvvvv1; kkkkk2 ↦ vvvvvv2; kkkkk3 ↦ vvvvv3; kkkkkk4 ↦ vvvvv4;\n\
+  \  kkkkkk5 ↦ v5\n\
+  \⦈",
+  "(g ∘ f)⦇\n\
+  \  kkkk1 ↦ vvvvv1; kkkkk2 ↦ vvvvvv2; kkkkk3 ↦ vvvvv3; kkkkkk4 ↦ vvvvv4;\n\
+  \  kkkkkk5 ↦ v5\n\
+  \⦈"
+];
 
 local
 val a = mk_var("a", alpha)

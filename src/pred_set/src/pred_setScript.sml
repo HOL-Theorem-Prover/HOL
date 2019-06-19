@@ -391,9 +391,9 @@ local open pred_setpp in end
 val _ = add_ML_dependency "pred_setpp"
 val _ = add_user_printer ("pred_set.UNIV", ``UNIV:'a set``)
 
-val _ = TeX_notation {hol = "univ", TeX = ("\\ensuremath{\\cal{U}}", 1)}
+val _ = TeX_notation {hol = "univ", TeX = ("\\ensuremath{{\\cal{U}}}", 1)}
 val _ = TeX_notation {hol = UnicodeChars.universal_set,
-                      TeX = ("\\ensuremath{\\cal{U}}", 1)}
+                      TeX = ("\\ensuremath{{\\cal{U}}}", 1)}
 
 
 (* ===================================================================== *)

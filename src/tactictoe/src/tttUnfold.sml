@@ -940,8 +940,8 @@ fun end_unfold_thy () =
     val n = !n_store_thm
     fun f s r = debug (s ^ ": " ^ Real.toString (!r))
   in
-    print_endline (int_to_string n ^ " proofs unfolded");
-    debug (int_to_string n ^ " proofs unfolded");
+    print_endline (int_to_string n ^ " proofs recognized");
+    debug (int_to_string n ^ " proofs recognized");
     f "Push" push_time;
     f "Open" open_time;
     f "Replace special" replace_special_time;
@@ -1022,7 +1022,7 @@ fun rewrite_script thy fileorg =
 fun find_script x =
   let val dir =
     Binarymap.find(fileDirMap(),x ^ "Theory.sml")
-    handle NotFound => raise ERR "find_script" x
+    handle NotFound => raise ERR "find_script" ("please load " ^ x ^ "Theory")
   in
     dir ^ "/" ^ x ^ "Script.sml"
   end
@@ -1050,8 +1050,7 @@ fun ttt_rewrite () =
   end
 
 (* ------------------------------------------------------------------------
-   Extra safety during recording
-   (if export_theory is not catched)
+   Extra safety during recording (if export_theory is not catched)
    ------------------------------------------------------------------------ *)
 
 fun save_file file =
@@ -1082,14 +1081,15 @@ fun ttt_record_thy thy =
   if mem thy ["bool","min"] then () else
   let val scriptorg = find_script thy in
     let
+      val infofile = HOLDIR ^ "/src/tactictoe/info/" ^ thy
       val _ = save_scripts scriptorg
       val _ = print_endline ("TacticToe: ttt_record_thy: " ^ thy ^
         "\n  " ^ scriptorg)
     in
       run_rm_script (mem thy core_theories) (tttsml_of scriptorg);
-      restore_scripts scriptorg
+      restore_scripts scriptorg;
+      print_endline (String.concatWith "\n" (readl infofile))
     end
-    handle e => (restore_scripts scriptorg; raise e)
   end
 
 fun ttt_record_thyl thyl = app ttt_record_thy thyl
