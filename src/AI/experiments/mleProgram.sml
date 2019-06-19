@@ -358,7 +358,7 @@ fun update_annot (parl,n) m = case m of
 val level_parameters = 
   let fun f (n1,n2) = List.tabulate (n2 - n1 + 1, fn x => x + n1) in
     map (quadruple_of_list o rev) (cartesian_productl 
-      (map f (rev [(8,16),(0,4),(1,8),(0,1)])))
+      (map f (rev [(4,8),(1,4),(1,8),(0,1)])))
   end
 
 fun is_possible_param (psize,ctrln,ctrlsize,nestn) (parl,n) m = 
@@ -473,10 +473,10 @@ load "mlReinforce"; open mlReinforce;
 load "smlParallel"; open smlParallel;
 
 psMCTS.alpha_glob := 0.5;
-logfile_glob := "program_run28";
+logfile_glob := "program_run30";
 parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^
 (!logfile_glob);
-ncore_mcts_glob := 16;
+ncore_mcts_glob := 32;
 ncore_train_glob := 16;
 ntarget_compete := 200;
 ntarget_explore := 200;
@@ -487,8 +487,8 @@ lr_glob := 0.02;
 batchsize_glob := 16;
 decay_glob := 0.99;
 level_glob := 0;
-nsim_glob := 1600;
-nepoch_glob := 40;
+nsim_glob := 6400;
+nepoch_glob := 100;
 ngen_glob := 100;
 
 start_rl_loop gamespec;

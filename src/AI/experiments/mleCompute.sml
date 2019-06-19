@@ -36,7 +36,7 @@ fun train_fixed basename trainex =
     val dim = 12
     val randtnn = random_tnn (dim,4) operl
     val bsize = 16
-    val schedule = [(400, 0.02 / (Real.fromInt bsize))]
+    val schedule = [(100, 0.02 / (Real.fromInt bsize))]
     val ncore = 4
     val tnn = prepare_train_tnn
       (ncore,bsize) randtnn (trainex,first_n 100 trainex) schedule
