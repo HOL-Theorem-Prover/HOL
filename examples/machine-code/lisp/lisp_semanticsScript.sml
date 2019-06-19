@@ -50,7 +50,7 @@ val False_def =
 
 val isTrue_def =
  Define
-  `isTrue s = ~(s = False) /\ ~(s = A (String "nil"))`;
+  `isTrue s <=> ~(s = False) /\ ~(s = A (String "nil"))`;
 
 val True_def =
  Define
@@ -263,4 +263,3 @@ val (R_ap_rules,R_ap_ind,R_ap_cases) =
     ==> R_evl (e::el,a) (s::sl))`;
 
 val _ = export_theory();
-
