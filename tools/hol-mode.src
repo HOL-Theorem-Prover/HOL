@@ -2147,6 +2147,9 @@ second is to show the new term.
 (define-key global-map [menu-bar hol-menu hol-misc sep1]
    '(menu-item "--"))
 
+(define-key global-map [menu-bar hol-menu hol-misc hol-overload-info-for]
+  '("Overload info for string" . hol-overload-info-for))
+
 (define-key global-map [menu-bar hol-menu hol-misc hol-type-info]
    '("Type info of marked term" . hol-type-info))
 
