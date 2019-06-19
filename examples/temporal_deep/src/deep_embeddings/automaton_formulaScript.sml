@@ -31,6 +31,7 @@ quietdec := false;
 
 
 val _ = new_theory "automaton_formula";
+val _ = ParseExtras.temp_loose_equality()
 
 
 (*****************************************************************************

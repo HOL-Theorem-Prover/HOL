@@ -47,6 +47,7 @@ val simp_arith_ss = simpLib.++ (arith_ss, numSimps.SUC_FILTER_ss);
 * Start a new theory called PSLPath
 ******************************************************************************)
 val _ = new_theory "PSLPath";
+val _ = ParseExtras.temp_loose_equality()
 
 (******************************************************************************
 * A path is finite or infinite

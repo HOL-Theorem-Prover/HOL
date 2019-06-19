@@ -10,6 +10,7 @@ infix THEN THENL THENC o;
 infix 8 by;
 
 val _ = new_theory "integerRing";
+val _ = ParseExtras.temp_loose_equality()
 
 val ARW_TAC = RW_TAC arith_ss;
 

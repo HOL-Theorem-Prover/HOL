@@ -21,6 +21,7 @@ open combinTheory pred_setTheory res_quanTools realSimps RealArith;
 infix THEN THENL ORELSE ORELSEC ##;
 
 val _ = new_theory "seq";
+val _ = ParseExtras.temp_loose_equality()
 
 val num_EQ_CONV = Arithconv.NEQ_CONV;
 

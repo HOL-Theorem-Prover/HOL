@@ -16,6 +16,7 @@ open HolKernel Parse boolLib bossLib Q
 val _ = new_theory "patricia";
 
 val _ = wordsLib.deprecate_word();
+val _ = ParseExtras.temp_loose_equality()
 
 (* ------------------------------------------------------------------------- *)
 

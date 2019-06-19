@@ -7,7 +7,9 @@ open listLib wordsLib bitSyntax bitstringSyntax;
 
 structure Parse = struct
   open Parse
-  val (Type,Term) = parse_from_grammars blastTheory.blast_grammars
+  val (Type,Term) =
+      parse_from_grammars
+        (apsnd ParseExtras.grammar_loose_equality blast_grammars)
 end
 
 open Parse

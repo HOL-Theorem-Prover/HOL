@@ -25,6 +25,7 @@ open Ho_Rewrite;
 open Num_conv;
 
 val _ = new_theory "MachineTransition";
+val _ = ParseExtras.temp_loose_equality()
 
 (* These two don't seem to be used ...
 

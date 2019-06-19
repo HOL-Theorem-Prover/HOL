@@ -80,7 +80,7 @@ val minimise_thm = Q.store_thm(
             optionTheory.SOME_11]);
 
 val totalrec_def = Define`
-  totalrec f n = recfn f n ∧ ∀l. (LENGTH l = n) ⇒ ∃m. f l = SOME m
+  totalrec f n ⇔ recfn f n ∧ ∀l. (LENGTH l = n) ⇒ ∃m. f l = SOME m
 `;
 
 val rec1_def = Define`

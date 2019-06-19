@@ -19,7 +19,7 @@ open armLib iclass_compLib io_onestepTheory my_listTheory;
 open armTheory coreTheory lemmasTheory interruptsTheory;
 
 val _ = new_theory "block";
-
+val _ = ParseExtras.temp_loose_equality()
 (* ------------------------------------------------------------------------- *)
 
 infix \\ << >>

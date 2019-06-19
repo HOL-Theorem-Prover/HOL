@@ -84,7 +84,7 @@ val words4_bit_def =
 
 val charset_mem_def =
  Define
-  `charset_mem c (cs:charset) = c < alphabet_size /\ words4_bit c cs`;
+  `charset_mem c (cs:charset) <=> c < alphabet_size /\ words4_bit c cs`;
 
 val charset_union_def =
  Define

@@ -115,7 +115,7 @@ val WIN_trichotomy = store_thm(
 
 val WIN_REFL = store_thm(
   "WIN_REFL",
-  ``(x,x) WIN w = F``,
+  ``(x,x) WIN w <=> F``,
   `wellorder (wellorder_REP w)` by metis_tac [termP_term_REP] >>
   fs[wellorder_def, strict_def]);
 val _ = export_rewrites ["WIN_REFL"]

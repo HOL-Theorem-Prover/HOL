@@ -23,6 +23,7 @@ open HolKernel Parse boolLib bossLib metisLib
 (* ------------------------------------------------------------------------- *)
 
 val _ = new_theory "extreal";
+val _ = ParseExtras.temp_loose_equality()
 
 (* ------------------------------------------------------------------------- *)
 (* Helpful proof tools                                                       *)

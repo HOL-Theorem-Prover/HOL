@@ -53,7 +53,8 @@ fun REWR_CONV0 (part_matcher, fn_name) th =
                    handle e =>
                      raise (wrap_exn "Conv"
                               (fn_name ^ ": bad theorem argument: " ^
-                               term_to_string (concl th)) e)
+                               trace ("PP.avoid_unicode", 1)
+                                     term_to_string (concl th)) e)
    in
       fn tm =>
          let

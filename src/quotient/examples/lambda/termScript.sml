@@ -191,15 +191,15 @@ val vsubst1_def =
                           CONS (x, (Var1 (HD ys) :'a term1))
                                ($// xs (TL ys))))`;
 
-val _ = add_infix("//", 150, NONASSOC);
+val _ = set_fixity "//" (Infixl 470);
 
 
-val vsubst1 = store_thm
-   ("vsubst1",
-    “(!ys. [] // ys = []:^subs) /\
-        (!xs. xs // [] = []:^subs) /\
-        (!xs ys x y. (CONS x xs) // (CONS y ys) =
-                      CONS (x, Var1 y :'a term1) (xs // ys))”,
+Theorem vsubst1:
+   (!ys. [] // ys = []:^subs) /\
+   (!xs. xs // [] = []:^subs) /\
+   (!xs ys x y.
+       (CONS x xs) // (CONS y ys) = CONS (x, Var1 y :'a term1) (xs // ys))
+Proof
     REWRITE_TAC[vsubst1_def]
     THEN CONJ_TAC
     THENL
@@ -208,7 +208,7 @@ val vsubst1 = store_thm
 
         REWRITE_TAC[NOT_CONS_NIL,HD,TL]
       ]
-   );
+QED
 
 
 val SUB_vsubst_Var1 = store_thm
@@ -582,7 +582,7 @@ val SUB_term1_def = xDefine "SUB_term1"
 (* Define the infix substitution operator, <[, with higher precedence *)
 (* than the substitution-creation operator //, but lower than CONS:   *)
 
-val _ = add_infix("<[",250,LEFT);
+val _ = set_fixity "<[" (Infixl 480)
 
 (*
 term_grammar();

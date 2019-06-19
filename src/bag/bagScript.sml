@@ -25,7 +25,7 @@ val EMPTY_BAG_alt = store_thm (
 
 val BAG_INN = new_definition(
   "BAG_INN",
-  ``BAG_INN (e:'a) n b = b e >= n``);
+  ``BAG_INN (e:'a) n b <=> b e >= n``);
 
 val SUB_BAG = Q.new_definition (
   "SUB_BAG",
@@ -33,12 +33,12 @@ val SUB_BAG = Q.new_definition (
 
 val PSUB_BAG = Q.new_definition (
   "PSUB_BAG",
-  `PSUB_BAG b1 b2 = SUB_BAG b1 b2 /\ ~(b1 = b2)`);
+  `PSUB_BAG b1 b2 <=> SUB_BAG b1 b2 /\ ~(b1 = b2)`);
 
 
 val BAG_IN = new_definition (
   "BAG_IN",
-  ``BAG_IN (e:'a) b = BAG_INN e 1 b``);
+  ``BAG_IN (e:'a) b <=> BAG_INN e 1 b``);
 
 val _ = set_fixity "<:" (Infix(NONASSOC, 425))
 val _ = overload_on ("<:", ``BAG_IN``)
@@ -116,7 +116,7 @@ Proof
 QED
 
 Theorem BAG_MERGE_EQ_EMPTY[simp]:
-  !a b. (BAG_MERGE a b = {||}) = (a = {||}) /\ (b = {||})
+  !a b. (BAG_MERGE a b = {||}) <=> (a = {||}) /\ (b = {||})
 Proof
   rw[BAG_MERGE,EMPTY_BAG,FUN_EQ_THM] >>
   EQ_TAC >>
@@ -175,34 +175,34 @@ val BAG_INN_LESS = Q.store_thm(
   `!b e n m. BAG_INN e n b /\ m < n ==> BAG_INN e m b`,
   SIMP_TAC arith_ss [BAG_INN]);
 
-val BAG_IN_BAG_INSERT = store_thm(
-  "BAG_IN_BAG_INSERT",
-  ``!b e1 e2:'a.
-        BAG_IN e1 (BAG_INSERT e2 b) = (e1 = e2) \/ BAG_IN e1 b``,
+Theorem BAG_IN_BAG_INSERT[simp]:
+  !b e1 e2:'a.
+        BAG_IN e1 (BAG_INSERT e2 b) <=> (e1 = e2) \/ BAG_IN e1 b
+Proof
   SIMP_TAC arith_ss [BAG_IN, BAG_INN, BAG_INSERT] THEN
-  REPEAT GEN_TAC THEN COND_CASES_TAC THEN SIMP_TAC arith_ss [])
- before
- export_rewrites ["BAG_IN_BAG_INSERT"];
+  REPEAT GEN_TAC THEN COND_CASES_TAC THEN SIMP_TAC arith_ss []
+QED
 
-val BAG_INN_BAG_INSERT = store_thm(
-  "BAG_INN_BAG_INSERT",
-  ``!b e1 e2:'a. BAG_INN e1 n (BAG_INSERT e2 b) =
+Theorem BAG_INN_BAG_INSERT:
+  !b e1 e2:'a. BAG_INN e1 n (BAG_INSERT e2 b) <=>
                    BAG_INN e1 (n - 1) b /\ (e1 = e2) \/
-                   BAG_INN e1 n b``,
-  SRW_TAC [ARITH_ss][BAG_INSERT, BAG_INN]);
+                   BAG_INN e1 n b
+Proof SRW_TAC [ARITH_ss][BAG_INSERT, BAG_INN]
+QED
 
-val BAG_INN_BAG_INSERT_STRONG = store_thm (
-  "BAG_INN_BAG_INSERT_STRONG",
-   ``!b n e1 e2.
-        BAG_INN e1 n (BAG_INSERT e2 b) =
+Theorem BAG_INN_BAG_INSERT_STRONG:
+   !b n e1 e2.
+        BAG_INN e1 n (BAG_INSERT e2 b) <=>
           BAG_INN e1 (n - 1) b /\ (e1 = e2) \/
-          BAG_INN e1 n b /\ e1 <> e2``,
+          BAG_INN e1 n b /\ e1 <> e2
+Proof
   REWRITE_TAC [BAG_INN_BAG_INSERT] THEN
   SRW_TAC [][EQ_IMP_THM] THEN SRW_TAC [][] THEN
   `(n = 0) \/ ?m. n = SUC m` by (Cases_on `n` THEN METIS_TAC []) THEN
   SRW_TAC [][] THEN
   `m < SUC m` by DECIDE_TAC THEN
-  PROVE_TAC[BAG_INN_LESS]);
+  PROVE_TAC[BAG_INN_LESS]
+QED
 
 val BAG_UNION_EQ_LCANCEL1 = store_thm(
   "BAG_UNION_EQ_LCANCEL1[simp]",
@@ -214,11 +214,10 @@ val BAG_UNION_EQ_RCANCEL1 = store_thm(
   ``(b = BAG_UNION c b) <=> (c = {||})``,
   rw[BAG_UNION, EMPTY_BAG, FUN_EQ_THM, DECIDE ``(x:num = x + y) <=> (y = 0)``])
 
-val BAG_IN_BAG_UNION = Q.store_thm(
-  "BAG_IN_BAG_UNION",
-  `!b1 b2 e. BAG_IN e (BAG_UNION b1 b2) = BAG_IN e b1 \/ BAG_IN e b2`,
-  SRW_TAC [ARITH_ss][BAG_IN, BAG_UNION, BAG_INN]);
-val _ = export_rewrites ["BAG_IN_BAG_UNION"]
+Theorem BAG_IN_BAG_UNION[simp]:
+  !b1 b2 e. BAG_IN e (BAG_UNION b1 b2) <=> BAG_IN e b1 \/ BAG_IN e b2
+Proof SRW_TAC [ARITH_ss][BAG_IN, BAG_UNION, BAG_INN]
+QED
 
 val BAG_INN_BAG_UNION = Q.store_thm(
   "BAG_INN_BAG_UNION",
@@ -241,12 +240,10 @@ val BAG_INN_BAG_MERGE = Q.store_thm (
   SIMP_TAC arith_ss [BAG_INN, BAG_MERGE]);
 
 
-val BAG_IN_BAG_MERGE = Q.store_thm (
-  "BAG_IN_BAG_MERGE",
-  `!e b1 b2. (BAG_IN e (BAG_MERGE b1 b2)) =
-             (BAG_IN e b1 \/ BAG_IN e b2)`,
-  SIMP_TAC std_ss [BAG_IN, BAG_INN_BAG_MERGE]);
-val _ = export_rewrites ["BAG_IN_BAG_MERGE"]
+Theorem BAG_IN_BAG_MERGE[simp]:
+  !e b1 b2. BAG_IN e (BAG_MERGE b1 b2) <=> BAG_IN e b1 \/ BAG_IN e b2
+Proof SIMP_TAC std_ss [BAG_IN, BAG_INN_BAG_MERGE]
+QED
 
 val geq_refl = ARITH_PROVE ``m >= m``
 
@@ -256,7 +253,7 @@ val BAG_EXTENSION = store_thm(
   SRW_TAC [][BAG_INN, FUN_EQ_THM, GREATER_EQ] THEN
   EQ_TAC THEN1 SRW_TAC [][] THEN
   METIS_TAC [
-    ARITH_PROVE ``(x = y) = (x <= y) /\ (y <= x)``,
+    ARITH_PROVE ``(x = y) <=> (x <= y) /\ (y <= x)``,
     LESS_EQ_REFL
   ]);
 
@@ -344,14 +341,12 @@ val ASSOC_BAG_UNION = store_thm(
                  BAG_UNION (BAG_UNION b1 b2) b3``,
   SRW_TAC [ARITH_ss][BAG_UNION, FUN_EQ_THM]);
 
-val BAG_UNION_EMPTY = store_thm(
-  "BAG_UNION_EMPTY",
-  ``(!b. b + {||} = b) /\
+Theorem BAG_UNION_EMPTY[simp]:
+    (!b. b + {||} = b) /\
     (!b. {||} + b = b) /\
-    (!b1 b2. (b1 + b2 = {||}) = (b1 = {||}) /\ (b2 = {||}))``,
-  SRW_TAC [][BAG_UNION, EMPTY_BAG, FUN_EQ_THM] THEN METIS_TAC []);
-val _ =  export_rewrites ["BAG_UNION_EMPTY"]
-
+    (!b1 b2. (b1 + b2 = {||}) <=> (b1 = {||}) /\ (b2 = {||}))
+Proof SRW_TAC [][BAG_UNION, EMPTY_BAG, FUN_EQ_THM] THEN METIS_TAC []
+QED
 
 val _ = print "Definition and properties of BAG_DELETE\n"
 val BAG_DELETE = new_definition (
@@ -434,15 +429,16 @@ val BAG_DELETE_BAG_IN = store_thm(
   ``!b0 b e:'a. BAG_DELETE b0 e b ==> BAG_IN e b0``,
   SIMP_TAC std_ss [BAG_IN_BAG_INSERT, BAG_DELETE]);
 
-val BAG_DELETE_concrete = store_thm(
-  "BAG_DELETE_concrete",
-  ``!b0 b e. BAG_DELETE b0 e b =
-               b0 e > 0 /\ (b = \x. if (x = e) then b0 e - 1 else b0 x)``,
+Theorem BAG_DELETE_concrete:
+  !b0 b e. BAG_DELETE b0 e b <=>
+               b0 e > 0 /\ (b = \x. if (x = e) then b0 e - 1 else b0 x)
+Proof
   SRW_TAC [ARITH_ss][FUN_EQ_THM, BAG_DELETE, BAG_INSERT, EQ_IMP_THM] THEN
-  SRW_TAC [][]);
+  SRW_TAC [][]
+QED
 
 val add_eq_conv_diff = prove(
-  ``(M + {|a|} = N + {|b|}) =
+  ``(M + {|a|} = N + {|b|}) <=>
     (M = N) /\ (a = b) \/
     (M = N - {|a|} + {|b|}) /\ (N = M - {|b|} + {|a|})``,
   SRW_TAC [][BAG_UNION, BAG_DIFF, FUN_EQ_THM, BAG_INSERT, EMPTY_BAG] THEN
@@ -472,9 +468,9 @@ val BAG_UNION_DIFF_eliminate = store_thm(
 val _ = export_rewrites ["BAG_UNION_DIFF_eliminate"]
 
 val add_eq_conv_ex = prove(
-  ``(M + {|a|} = N + {|b|}) =
-    (M = N) /\ (a = b) \/
-    ?k. (M = k + {|b|}) /\ (N = k + {|a|})``,
+  “(M + {|a|} = N + {|b|}) <=>
+     (M = N) /\ (a = b) \/
+     ?k. (M = k + {|b|}) /\ (N = k + {|a|})”,
   SRW_TAC [][add_eq_conv_diff] THEN Cases_on `a = b` THENL [
     SRW_TAC [][EQ_IMP_THM] THEN
     FULL_SIMP_TAC (srw_ss()) [insert_diffM2] THEN
@@ -994,12 +990,10 @@ Theorem SET_OF_SINGLETON_BAG[simp]:
 Proof rw[SET_OF_BAG,FUN_EQ_THM]
 QED
 
-val BAG_IN_BAG_OF_SET = store_thm (
-  "BAG_IN_BAG_OF_SET",
-  ``!P p. BAG_IN p (BAG_OF_SET P) = p IN P``,
-  SIMP_TAC std_ss [BAG_OF_SET, BAG_IN, BAG_INN,
-                   COND_RAND, COND_RATOR]);
-val _ = export_rewrites ["BAG_IN_BAG_OF_SET"]
+Theorem BAG_IN_BAG_OF_SET[simp]:
+  !P p. BAG_IN p (BAG_OF_SET P) <=> p IN P
+Proof SIMP_TAC std_ss [BAG_OF_SET, BAG_IN, BAG_INN, COND_RAND, COND_RATOR]
+QED
 
 val BAG_OF_EMPTY = store_thm (
   "BAG_OF_EMPTY",
@@ -1062,12 +1056,10 @@ val SET_OF_BAG_DIFF_SUBSET_up = Q.store_thm(
   SIMP_TAC std_ss [SUBSET_DEF, BAG_DIFF, SET_OF_BAG, BAG_IN, BAG_INN]
   THEN SIMP_TAC std_ss [SPECIFICATION]);
 
-val IN_SET_OF_BAG = Q.store_thm(
-  "IN_SET_OF_BAG",
-  `!x b. x IN SET_OF_BAG b = BAG_IN x b`,
-  SIMP_TAC std_ss [SET_OF_BAG, SPECIFICATION])
- before
- export_rewrites ["IN_SET_OF_BAG"];
+Theorem IN_SET_OF_BAG[simp]:
+  !x b. x IN SET_OF_BAG b <=> BAG_IN x b
+Proof SIMP_TAC std_ss [SET_OF_BAG, SPECIFICATION]
+QED
 
 val SET_OF_BAG_EQ_EMPTY = store_thm(
   "SET_OF_BAG_EQ_EMPTY",
@@ -1246,12 +1238,11 @@ val FINITE_BAG_UNION_2 = prove(
   FULL_SIMP_TAC std_ss [BAG_UNION_INSERT, BAG_INSERT_ONE_ONE,
                         FINITE_BAG_THM] THEN METIS_TAC []);
 
-val FINITE_BAG_UNION = Q.store_thm(
-  "FINITE_BAG_UNION",
-  `!b1 b2. FINITE_BAG (BAG_UNION b1 b2) =
-           FINITE_BAG b1 /\ FINITE_BAG b2`,
-  MESON_TAC [FINITE_BAG_UNION_1, FINITE_BAG_UNION_2]);
-val _ = export_rewrites ["FINITE_BAG_UNION"]
+Theorem FINITE_BAG_UNION[simp]:
+  !b1 b2. FINITE_BAG (BAG_UNION b1 b2) <=>
+            FINITE_BAG b1 /\ FINITE_BAG b2
+Proof MESON_TAC [FINITE_BAG_UNION_1, FINITE_BAG_UNION_2]
+QED
 
 val FINITE_SUB_BAG = Q.store_thm(
   "FINITE_SUB_BAG",
@@ -1320,7 +1311,7 @@ val BCARD_R_cases = prove(
   REPEAT STRIP_TAC THEN ELIM_TAC THEN ASM_MESON_TAC [BCARD_imps]);
 
 val BCARD_rwts = prove(
-  Term`!b n. BAG_CARD_RELn b n =
+  Term`!b n. BAG_CARD_RELn b n <=>
              (b = EMPTY_BAG) /\ (n = 0) \/
              (?b0 e m. (b = BAG_INSERT e b0) /\ (n = m + 1) /\
                        BAG_CARD_RELn b0 m)`,

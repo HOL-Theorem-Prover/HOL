@@ -22,7 +22,7 @@ quietdec := false;
 *)
 
 val _ = new_theory "decidable_separationLogic";
-
+val _ = ParseExtras.temp_loose_equality()
 
 
 (*general stuff*)

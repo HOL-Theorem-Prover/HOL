@@ -7,10 +7,6 @@ open wellorderTheory
 
 val _ = new_theory "ordinal"
 
-val _ = ParseExtras.tight_equality()
-
-fun dsimp thl = asm_simp_tac (srw_ss() ++ DNF_ss) thl
-
 (* perform quotient, creating a type of "ordinals". *)
 fun mk_def(s,t) =
     {def_name = s ^ "_def", fixity = NONE, fname = s, func = t};

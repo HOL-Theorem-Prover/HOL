@@ -57,6 +57,7 @@ val _ = intLib.deprecate_int();
 * Start a new theory called Lemmas
 ******************************************************************************)
 val _ = new_theory "Lemmas";
+val _ = ParseExtras.temp_loose_equality()
 
 (******************************************************************************
 * A simpset fragment to rewrite away quantifiers restricted with :: (a to b)
@@ -858,10 +859,3 @@ val Lemma7 =
 val Lemmas1_7 =  [Lemma1,Lemma2,Lemma3,Lemma4,Lemma5,Lemma6,Lemma7];
 
 val _ = export_theory();
-
-
-
-
-
-
-

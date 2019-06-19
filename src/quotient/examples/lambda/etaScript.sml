@@ -265,12 +265,11 @@ val SUBST_IS_SAME = store_thm
 (* for many choices of x', u'.                                          *)
 (* -------------------------------------------------------------------- *)
 
-val ETA_R_equals = store_thm
-   ("ETA_R_equals",
-    “(!x t:^term. ETA_R (Var x) t = F) /\
-        (!t u t':^term. ETA_R (App t u) t' = F) /\
-        (!x u t:^term. ETA_R (Lam x u) t =
-                       ~(x IN FV t) /\ (u = App t (Var x)))”,
+Theorem ETA_R_equals :
+   (!x t:^term. ETA_R (Var x) t = F) /\
+   (!t u t':^term. ETA_R (App t u) t' = F) /\
+   (!x u t:^term. ETA_R (Lam x u) t <=> ~(x IN FV t) /\ (u = App t (Var x)))
+Proof
     REWRITE_TAC ETA_R_inv_thms
     THEN REWRITE_TAC[term_distinct,term_one_one]
     THEN REPEAT STRIP_TAC
@@ -291,7 +290,7 @@ val ETA_R_equals = store_thm
         EXISTS_TAC “x:var”
         THEN ASM_REWRITE_TAC[]
       ]
-   );
+QED
 
 
 (* --------------------------------------------------------------------- *)
@@ -364,7 +363,7 @@ handle e => (Raise e);
 
 val DIAMOND_COMMUTES_SELF = store_thm
    ("DIAMOND_COMMUTES_SELF",
-    “!R:'a->'a->bool. DIAMOND R = R <=> R”,
+    “!R:'a->'a->bool. DIAMOND R = (R <=> R)”,
     REWRITE_TAC[DIAMOND,COMMUTE]
    );
 
@@ -382,7 +381,7 @@ val UNION_R =
 
 val IN_UNION_R = store_thm
    ("IN_UNION_R",
-    “!(R1:'a->'b->bool) R2 x y. (R1 UNION_R R2) x y = R1 x y \/ R2 x y”,
+    “!(R1:'a->'b->bool) R2 x y. (R1 UNION_R R2) x y <=> R1 x y \/ R2 x y”,
     REWRITE_TAC[UNION_R]
     THEN BETA_TAC
     THEN REWRITE_TAC[]

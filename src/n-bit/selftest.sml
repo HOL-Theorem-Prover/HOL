@@ -146,6 +146,7 @@ val _ = blast_fail ``?x: word8. 3w > 4w : word4``
 val _ = blast_fail ``x + x = x :'a word``
 
 (* Fail, can't solve *)
+val _ = ParseExtras.temp_loose_equality()
 val _ = blast_fail ``?x. !y. x <=+ y : word8``
 val _ = blast_fail ``!y. ?x. x <=+ y : word8``
 val _ = blast_fail ``?x. x <=+ y : word8``

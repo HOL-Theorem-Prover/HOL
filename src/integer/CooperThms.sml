@@ -39,25 +39,25 @@ val NOT_AND_IMP =
   tautLib.TAUT_PROVE (Term`!p q. ~(p /\ q) = (p ==> ~q)`)
 
 val DISJ_NEQ_ELIM = prove(
-  ``!P x v:'a. ~(x = v) \/ P x = ~(x = v) \/ P v``,
+  ``!P x v:'a. ~(x = v) \/ P x <=> ~(x = v) \/ P v``,
   REWRITE_TAC [GSYM IMP_DISJ_THM] THEN REPEAT GEN_TAC THEN EQ_TAC THEN
   REPEAT STRIP_TAC THEN POP_ASSUM SUBST_ALL_TAC THEN
   POP_ASSUM MP_TAC THEN REWRITE_TAC []);
 
 
 val cpEU_THM = prove(
-  ``!P. (?!x:int. P x) =
+  ``!P. (?!x:int. P x) <=>
         (?x. P x) /\ (!y y'. (~P y \/ ~P y') \/ (1*y = 1*y'))``,
   REWRITE_TAC [INT_MUL_LID, EXISTS_UNIQUE_THM, GSYM DE_MORGAN_THM,
                GSYM IMP_DISJ_THM]);
 
 val simple_disj_congruence = prove(
-  ``!p q r. (~p ==> (q = r)) ==> (p \/ q = p \/ r)``,
+  ``!p q r. (~p ==> (q = r)) ==> (p \/ q <=> p \/ r)``,
   REPEAT GEN_TAC THEN MAP_EVERY Q.ASM_CASES_TAC [`p`,`q`,`r`] THEN
   ASM_REWRITE_TAC []);
 
 val simple_conj_congruence = prove(
-  ``!p q r. (p ==> (q = r)) ==> (p /\ q = p /\ r)``,
+  ``!p q r. (p ==> (q = r)) ==> (p /\ q <=> p /\ r)``,
   REPEAT GEN_TAC THEN MAP_EVERY Q.ASM_CASES_TAC [`p`,`q`,`r`] THEN
   ASM_REWRITE_TAC []);
 

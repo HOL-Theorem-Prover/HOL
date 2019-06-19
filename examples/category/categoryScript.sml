@@ -2,8 +2,9 @@ open HolKernel Parse boolLib bossLib lcsymtacs pairTheory pred_setTheory Satisfy
 
 val _ = new_theory "category";
 
-val extensional_def = Define`
-  extensional f x = ∀e. e ∉ x ⇒ (f e = ARB)`;
+Definition extensional_def:
+  extensional f x <=> ∀e. e ∉ x ⇒ (f e = ARB)
+End
 
 val restrict_def = Define`
   restrict f x = λe. if e ∈ x then f e else ARB`;
@@ -43,7 +44,8 @@ val _ = add_rule {
   block_style = (AroundEachPhrase, (PP.INCONSISTENT, 0))
 };
 
-val composable_def = Define`f ≈> g = (f.cod = g.dom)`;
+Definition composable_def: f ≈> g <=> (f.cod = g.dom)
+End
 
 val compose_def = Define`
   compose (c:(α,β,γ) morphism -> (β,δ,ε) morphism -> ζ) =
@@ -59,7 +61,8 @@ val _ = add_rule {
   block_style = (AroundEachPhrase, (PP.INCONSISTENT, 0))
 };
 
-val maps_to_def = Define`f :- x → y = (f.dom = x) ∧ (f.cod = y)`;
+Definition maps_to_def:   f :- x → y <=> (f.dom = x) ∧ (f.cod = y)
+End
 
 val _ = type_abbrev("mor",``:(α,α,β) morphism``);
 
@@ -79,8 +82,8 @@ val _ = add_rule {
   block_style = (AroundEachPhrase, (PP.INCONSISTENT, 0))
 };
 
-val maps_to_in_def = Define`
-  maps_to_in c f x y = f ∈ c.mor ∧ f :- x → y`;
+Definition maps_to_in_def:   maps_to_in c f x y <=> f ∈ c.mor ∧ f :- x → y
+End
 
 val _ = overload_on("maps_to_in_syntax",``λf x y c. maps_to_in c f x y``);
 
@@ -123,8 +126,9 @@ val hom_def = Define`
 
 val _ = overload_on("hom_syntax",``hom``);
 
-val composable_in_def = Define`
-  composable_in c f g = f ∈ c.mor ∧ g ∈ c.mor ∧ f ≈> g`;
+Definition composable_in_def:
+  composable_in c f g <=> f ∈ c.mor ∧ g ∈ c.mor ∧ f ≈> g
+End
 
 val _ = overload_on("composable_in_syntax",``λf g c. composable_in c f g``);
 
@@ -146,13 +150,14 @@ val compose_in_thm = Q.store_thm(
 `∀c f g. f ≈> g -:c ⇒ (g o f -: c = compose c.comp f g)`,
 srw_tac [][compose_in_def,restrict_def]);
 
-val extensional_category_def = Define`
-  extensional_category c =
+Definition extensional_category_def:
+  extensional_category c <=>
     extensional c.id_map c.obj ∧
-    extensional (UNCURRY c.comp) {(f,g) | f ≈> g -: c}`;
+    extensional (UNCURRY c.comp) {(f,g) | f ≈> g -: c}
+End
 
-val category_axioms_def = Define`
-  category_axioms c =
+Definition category_axioms_def:
+  category_axioms c <=>
     (∀f. f ∈ c.mor ⇒ f.dom ∈ c.obj) ∧
     (∀f. f ∈ c.mor ⇒ f.cod ∈ c.obj) ∧
     (∀a. a ∈ c.obj ⇒ (id a -:c) :- a → a -: c) ∧
@@ -161,10 +166,12 @@ val category_axioms_def = Define`
     (∀f g h. f ≈> g -: c ∧ g ≈> h -: c ⇒
                (((h o g -: c) o f -: c) = h o g o f -: c -: c)) ∧
     (∀f g x y z. f :- x → y -: c ∧ g :- y → z -: c ⇒
-                   g o f -: c :- x → z -: c)`;
+                   g o f -: c :- x → z -: c)
+End
 
-val is_category_def = Define`
-  is_category c = extensional_category c ∧ category_axioms c`;
+Definition is_category_def:
+  is_category c ⇔ extensional_category c ∧ category_axioms c
+End
 
 val compose_thm = Q.store_thm(
 "compose_thm",
@@ -180,15 +187,15 @@ val mk_cat_def = Define`
     id_map := restrict c.id_map c.obj;
     comp := CURRY (restrict (UNCURRY c.comp) {(f,g) | f ≈> g -: c}) |>`;
 
-val mk_cat_maps_to_in = Q.store_thm(
-"mk_cat_maps_to_in",
-`∀c f x y. f :- x → y -: (mk_cat c) = f :- x → y -: c`,
-srw_tac [][maps_to_in_def,mk_cat_def,restrict_def]);
+Theorem mk_cat_maps_to_in:
+  ∀c f x y. f :- x → y -: (mk_cat c) <=> f :- x → y -: c
+Proof srw_tac [][maps_to_in_def,mk_cat_def,restrict_def]
+QED
 
-val mk_cat_composable_in = Q.store_thm(
-"mk_cat_composable_in",
-`∀c f g. (f ≈> g -: (mk_cat c)) = f ≈> g -: c`,
-srw_tac [][composable_in_def,mk_cat_def,restrict_def]);
+Theorem mk_cat_composable_in:
+  ∀c f g. (f ≈> g -: (mk_cat c)) <=> f ≈> g -: c
+Proof srw_tac [][composable_in_def,mk_cat_def,restrict_def]
+QED
 
 val mk_cat_id = Q.store_thm(
 "mk_cat_id",
@@ -429,24 +436,25 @@ val _ = add_rule {
   block_style = (AroundEachPhrase, (PP.INCONSISTENT, 0))
 };
 
-val iso_pair_def = Define`
-  iso_pair c f g = f ≈> g -:c ∧
-    (f o g -:c = id g.dom -:c) ∧
-    (g o f -:c = id f.dom -:c)`;
+Definition iso_pair_def:
+  iso_pair c f g <=> f ≈> g -:c ∧ (f o g -:c = id g.dom -:c) ∧
+                     (g o f -:c = id f.dom -:c)
+End
 
 val _ = overload_on("iso_pair_syntax",``λf g c. iso_pair c f g``);
 
 val iso_def = Define`
   iso c f = ∃g. f <≃> g -:c`;
 
-val iso_pair_sym = Q.store_thm(
-"iso_pair_sym",
-`∀c f g. is_category c ⇒ (f <≃> g -:c = g <≃> f -:c)`,
+Theorem iso_pair_sym:
+  ∀c f g. is_category c ⇒ (f <≃> g -:c <=> g <≃> f -:c)
+Proof
 srw_tac [][] >>
 imp_res_tac is_category_def >>
 imp_res_tac category_axioms_def >>
 fsrw_tac [][iso_pair_def,composable_in_def,maps_to_in_def] >>
-metis_tac []);
+metis_tac []
+QED
 
 val inv_unique = Q.store_thm(
 "inv_unique",
@@ -633,8 +641,9 @@ val _ = add_rule {
   block_style = (AroundEachPhrase, (PP.INCONSISTENT, 0))
 };
 
-val iso_pair_between_objs_def = Define`
-  iso_pair_between_objs c a f g b = (f :- a → b) ∧ f <≃> g -:c`;
+Definition iso_pair_between_objs_def:
+  iso_pair_between_objs c a f g b <=> (f :- a → b) ∧ f <≃> g -:c
+End
 
 val _ = overload_on("iso_pair_between_objs_syntax",
   ``λf a b g c. iso_pair_between_objs c a f g b``);
@@ -780,12 +789,11 @@ srw_tac [][compose_in_def,restrict_def,maps_to_in_def,composable_in_def] >>
 fsrw_tac [][morphism_component_equality]);
 val _ = export_rewrites["is_category_discrete_cat"];
 
-val discrete_cat_obj_mor = Q.store_thm(
-"discrete_cat_obj_mor",
-`∀s. (∀x. x ∈ (discrete_cat s).obj = x ∈ s) ∧
-     (∀f. f ∈ (discrete_cat s).mor = (∃x. (f = discrete_mor x) ∧ x ∈ s))`,
-srw_tac [][discrete_cat_def]);
-val _ = export_rewrites["discrete_cat_obj_mor"];
+Theorem discrete_cat_obj_mor[simp]:
+  ∀s. (∀x. x ∈ (discrete_cat s).obj ⇔ x ∈ s) ∧
+      (∀f. f ∈ (discrete_cat s).mor ⇔ (∃x. (f = discrete_mor x) ∧ x ∈ s))
+Proof  srw_tac [][discrete_cat_def]
+QED
 
 val discrete_cat_id = Q.store_thm(
 "discrete_cat_id",
@@ -794,20 +802,18 @@ srw_tac [][id_in_def,restrict_def,morphism_component_equality] >>
 srw_tac [][discrete_cat_def,mk_cat_def,restrict_def]);
 val _ = export_rewrites["discrete_cat_id"];
 
-val discrete_cat_maps_to = Q.store_thm(
-"discrete_cat_maps_to",
-`∀f x y s. f :- x → y -:(discrete_cat s) =
-      x ∈ s ∧ (y = x) ∧ (f = id x -:(discrete_cat s))`,
-srw_tac [][maps_to_in_def,EQ_IMP_THM] >> srw_tac [][] >>
-metis_tac []);
-val _ = export_rewrites["discrete_cat_maps_to"];
+Theorem discrete_cat_maps_to[simp]:
+  ∀f x y s. f :- x → y -:(discrete_cat s) ⇔
+            x ∈ s ∧ (y = x) ∧ (f = id x -:(discrete_cat s))
+Proof   srw_tac [][maps_to_in_def,EQ_IMP_THM] >> srw_tac [][] >>
+        metis_tac []
+QED
 
-val discrete_cat_composable = Q.store_thm(
-"discrete_cat_composable",
-`∀s f g. f ≈> g -:discrete_cat s = ∃x. x ∈ s ∧ (g = f) ∧ (f = discrete_mor x)`,
-srw_tac [][composable_in_def,morphism_component_equality] >>
-metis_tac []);
-val _ = export_rewrites["discrete_cat_composable"];
+Theorem discrete_cat_composable[simp]:
+  ∀s f g. f ≈> g -:discrete_cat s ⇔ ∃x. x ∈ s ∧ (g = f) ∧ (f = discrete_mor x)
+Proof
+  srw_tac [][composable_in_def,morphism_component_equality] >> metis_tac []
+QED
 
 val discrete_cat_compose_in = Q.store_thm(
 "discrete_cat_compose_in",
@@ -854,17 +860,17 @@ val indiscrete_cat_id = Q.store_thm(
 srw_tac [][id_in_def,restrict_def,morphism_component_equality,oneTheory.one]);
 val _ = export_rewrites["indiscrete_cat_id"];
 
-val indiscrete_cat_maps_to = Q.store_thm(
-"indiscrete_cat_maps_to",
-`∀f x y s. f :- x → y -:(indiscrete_cat s) = (f :- x → y) ∧ x ∈ s ∧ y ∈ s`,
-srw_tac [][maps_to_in_def,EQ_IMP_THM] >> srw_tac [][]);
-val _ = export_rewrites["indiscrete_cat_maps_to"];
+Theorem indiscrete_cat_maps_to[simp]:
+  ∀f x y s. f :- x → y -:(indiscrete_cat s) ⇔ (f :- x → y) ∧ x ∈ s ∧ y ∈ s
+Proof srw_tac [][maps_to_in_def,EQ_IMP_THM] >> srw_tac [][]
+QED
 
-val indiscrete_cat_composable = Q.store_thm(
-"indiscrete_cat_composable",
-`∀s f g. f ≈> g -:indiscrete_cat s = (f ≈> g) ∧ f ∈ (indiscrete_cat s).mor ∧ g ∈ (indiscrete_cat s).mor`,
-srw_tac [][composable_in_def,morphism_component_equality,EQ_IMP_THM]);
-val _ = export_rewrites["indiscrete_cat_composable"];
+Theorem indiscrete_cat_composable[simp]:
+  ∀s f g. f ≈> g -:indiscrete_cat s ⇔
+          (f ≈> g) ∧ f ∈ (indiscrete_cat s).mor ∧ g ∈ (indiscrete_cat s).mor
+Proof
+  srw_tac [][composable_in_def,morphism_component_equality,EQ_IMP_THM]
+QED
 
 val indiscrete_cat_compose_in = Q.store_thm(
 "indiscrete_cat_compose_in",
@@ -1170,13 +1176,13 @@ fsrw_tac [][FORALL_PROD,product_mor_def,unproduct_mor_def,
             morphism_component_equality]);
 val _ = export_rewrites["product_mor_unproduct_mor"];
 
-val product_mor_eq = Q.store_thm(
-"product_mor_eq",
-`∀f g f' g'. (product_mor (f,g) = product_mor (f',g')) =
-             (f = f') ∧ (g = g')`,
-srw_tac [][EQ_IMP_THM] >>
-fsrw_tac [][product_mor_def,morphism_component_equality]);
-val _ = export_rewrites["product_mor_eq"];
+Theorem product_mor_eq[simp]:
+  ∀f g f' g'. (product_mor (f,g) = product_mor (f',g')) ⇔
+              (f = f') ∧ (g = g')
+Proof
+  srw_tac [][EQ_IMP_THM] >>
+  fsrw_tac [][product_mor_def,morphism_component_equality]
+QED
 
 val pre_product_cat_def = Define`
   pre_product_cat c1 c2 = <|
@@ -1195,12 +1201,12 @@ val pre_product_cat_obj_mor = Q.store_thm(
 srw_tac [][pre_product_cat_def]);
 val _ = export_rewrites["pre_product_cat_obj_mor"];
 
-val pre_product_cat_maps_to_in = Q.store_thm(
-"pre_product_cat_maps_to_in",
-`∀c1 c2 f x y.
-  f :- x → y -:(pre_product_cat c1 c2) =
-    (FST (unproduct_mor f)) :- (FST x) → (FST y) -: c1 ∧
-    (SND (unproduct_mor f)) :- (SND x) → (SND y) -: c2`,
+Theorem pre_product_cat_maps_to_in:
+  ∀c1 c2 f x y.
+    f :- x → y -:(pre_product_cat c1 c2) ⇔
+      (FST (unproduct_mor f)) :- (FST x) → (FST y) -: c1 ∧
+      (SND (unproduct_mor f)) :- (SND x) → (SND y) -: c2
+Proof
 srw_tac [DNF_ss][maps_to_in_def,unproduct_mor_def,
                  morphism_component_equality,EXISTS_PROD] >>
 Cases_on `f.dom` >> Cases_on `f.cod` >> Cases_on `f.map` >>
@@ -1215,7 +1221,8 @@ srw_tac [DNF_ss][EQ_IMP_THM] >|[
   qmatch_assum_abbrev_tac `p1 ∈ c1.mor` >>
   qmatch_assum_abbrev_tac `p2 ∈ c2.mor` >>
   map_every qexists_tac [`p1`,`p2`] >>
-  srw_tac [][Abbr`p1`,Abbr`p2`]]);
+  srw_tac [][Abbr`p1`,Abbr`p2`]]
+QED
 
 val pre_product_cat_id = Q.store_thm(
 "pre_product_cat_id",
@@ -1224,18 +1231,18 @@ val pre_product_cat_id = Q.store_thm(
    product_mor (id x -:c1, id y -:c2))`,
 srw_tac [][id_in_def,restrict_def,product_mor_def,pre_product_cat_def]);
 
-val pre_product_cat_composable_in = Q.store_thm(
-"pre_product_cat_composable_in",
-`∀c1 c2 f g. f ≈> g -:(pre_product_cat c1 c2) =
-  (FST (unproduct_mor f) ≈> FST (unproduct_mor g) -:c1) ∧
-  (SND (unproduct_mor f) ≈> SND (unproduct_mor g) -:c2)`,
-srw_tac [DNF_ss][composable_in_def,EXISTS_PROD,EQ_IMP_THM] >>
-fsrw_tac [][] >>
-map_every qexists_tac [`FST (unproduct_mor f)`,`SND (unproduct_mor f)`,
-                       `FST (unproduct_mor g)`,`SND (unproduct_mor g)`] >>
-fsrw_tac [][] >>
-Cases_on `f.cod` >> Cases_on `g.dom` >> fsrw_tac [][unproduct_mor_def]);
-val _ = export_rewrites["pre_product_cat_composable_in"];
+Theorem pre_product_cat_composable_in[simp]:
+  ∀c1 c2 f g. f ≈> g -:(pre_product_cat c1 c2) ⇔
+                (FST (unproduct_mor f) ≈> FST (unproduct_mor g) -:c1) ∧
+                (SND (unproduct_mor f) ≈> SND (unproduct_mor g) -:c2)
+Proof
+  srw_tac [DNF_ss][composable_in_def,EXISTS_PROD,EQ_IMP_THM] >>
+  fsrw_tac [][] >>
+  map_every qexists_tac [`FST (unproduct_mor f)`,`SND (unproduct_mor f)`,
+                         `FST (unproduct_mor g)`,`SND (unproduct_mor g)`] >>
+  fsrw_tac [][] >>
+  Cases_on `f.cod` >> Cases_on `g.dom` >> fsrw_tac [][unproduct_mor_def]
+QED
 
 val pre_product_cat_compose_in = Q.store_thm(
 "pre_product_cat_compose_in",

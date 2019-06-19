@@ -198,7 +198,7 @@ val (iR_ev_rules,iR_ev_ind,iR_ev_cases) =
     ==> iR_evl (e::el,a) (s::sl))`;
 
 val IF_LEMMA = prove(
-  ``!b x y. (if b then x else y) = (b /\ x) \/ (~b /\ y)``,
+  ``!b x y. (if b then x else y) <=> (b /\ x) \/ (~b /\ y)``,
   Cases THEN SIMP_TAC std_ss []);
 
 val iR_ap_LEMMA = prove(
@@ -774,7 +774,7 @@ val list2fmap_def = Define `
   (list2fmap ((a,x)::xs) = (list2fmap xs) |+ (a,x))`;
 
 val FDOM_list2sexp = prove(
-  ``!xs x. x IN (FDOM (list2fmap xs)) = MEM x (MAP FST xs)``,
+  ``!xs x. x IN (FDOM (list2fmap xs)) <=> MEM x (MAP FST xs)``,
   Induct THEN (Cases_on `h` ORELSE ALL_TAC)
   THEN REWRITE_TAC [list2fmap_def,FDOM_FEMPTY,NOT_IN_EMPTY,MAP,MEM]
   THEN ASM_SIMP_TAC std_ss [FDOM_FUPDATE,IN_INSERT]);

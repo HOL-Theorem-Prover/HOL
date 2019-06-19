@@ -3,6 +3,8 @@ open set_sepTheory progTheory pred_setTheory stateLib x64_stepTheory
 
 val () = new_theory "x64_prog"
 
+val _ = ParseExtras.temp_loose_equality()
+
 (* ------------------------------------------------------------------------ *)
 
 val _ = stateLib.sep_definitions "x64" [] [] x64_stepTheory.NextStateX64_def

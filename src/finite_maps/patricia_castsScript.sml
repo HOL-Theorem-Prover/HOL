@@ -11,6 +11,7 @@ open Q arithmeticTheory listTheory rich_listTheory pred_setTheory
 val _ = new_theory "patricia_casts";
 
 val _ = wordsLib.deprecate_word();
+val _ = ParseExtras.temp_loose_equality()
 
 (* ------------------------------------------------------------------------- *)
 

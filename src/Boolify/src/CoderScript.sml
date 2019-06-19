@@ -42,7 +42,7 @@ val decode_def =
 
 val wf_coder_def =
   Define
-  `wf_coder (p, e, d) = wf_pred p /\ wf_encoder p e /\ (d = enc2dec p e)`;
+  `wf_coder (p, e, d) <=> wf_pred p /\ wf_encoder p e /\ (d = enc2dec p e)`;
 
 val domain_def =
   Define

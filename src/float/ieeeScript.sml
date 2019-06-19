@@ -24,6 +24,7 @@ open realTheory bossLib pred_setTheory transcTheory arithmeticTheory Num_conv;
  *---------------------------------------------------------------------------*)
 
 val _ = new_theory "ieee";
+val _ = ParseExtras.temp_loose_equality()
 
 (* ------------------------------------------------------------------------- *)
 (* Derived parameters for floating point formats.                            *)

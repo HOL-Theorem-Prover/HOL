@@ -77,25 +77,25 @@ val ranged_char_nchotomy = Q.store_thm("ranged_char_nchotomy",
 val ordn = term_of_int o Char.ord;
 
 val isLower_def = Define`
-  isLower c = ^(ordn #"a") <= ORD c /\ ORD c <= ^(ordn #"z")`;
+  isLower c <=> ^(ordn #"a") <= ORD c /\ ORD c <= ^(ordn #"z")`;
 
 val isUpper_def = Define`
-  isUpper c = ^(ordn #"A") <= ORD c /\ ORD c <= ^(ordn #"Z")`;
+  isUpper c <=> ^(ordn #"A") <= ORD c /\ ORD c <= ^(ordn #"Z")`;
 
 val isDigit_def = Define`
-  isDigit c = ^(ordn #"0") <= ORD c /\ ORD c <= ^(ordn #"9")`;
+  isDigit c <=> ^(ordn #"0") <= ORD c /\ ORD c <= ^(ordn #"9")`;
 
-val isAlpha_def = Define `isAlpha c = isLower c \/ isUpper c`;
+val isAlpha_def = Define `isAlpha c <=> isLower c \/ isUpper c`;
 
 val isHexDigit_def = Define`
-  isHexDigit c = ^(ordn #"0") <= ORD c /\ ORD c <= ^(ordn #"9") \/
-                 ^(ordn #"a") <= ORD c /\ ORD c <= ^(ordn #"f") \/
-                 ^(ordn #"A") <= ORD c /\ ORD c <= ^(ordn #"F")`;
+  isHexDigit c <=> ^(ordn #"0") <= ORD c /\ ORD c <= ^(ordn #"9") \/
+                   ^(ordn #"a") <= ORD c /\ ORD c <= ^(ordn #"f") \/
+                   ^(ordn #"A") <= ORD c /\ ORD c <= ^(ordn #"F")`;
 
-val isAlphaNum_def = Define `isAlphaNum c = isAlpha c \/ isDigit c`;
+val isAlphaNum_def = Define `isAlphaNum c <=> isAlpha c \/ isDigit c`;
 
 val isPrint_def = Define`
-  isPrint c = ^(ordn #" ") <= ORD c /\ ORD c < 127`;
+  isPrint c <=> ^(ordn #" ") <= ORD c /\ ORD c < 127`;
 
 Theorem isAlphaNum_isPrint:
   !x. isAlphaNum x ==> isPrint x
@@ -113,16 +113,16 @@ Proof metis_tac[isAlphaNum_isPrint, isHexDigit_isAlphaNum]
 QED
 
 val isSpace_def = Define`
-  isSpace c = (ORD c = ^(ordn #" ")) \/ 9 <= ORD c /\ ORD c <= 13`;
+  isSpace c <=> (ORD c = ^(ordn #" ")) \/ 9 <= ORD c /\ ORD c <= 13`;
 
-val isGraph_def = Define `isGraph c = isPrint c /\ ~isSpace c`;
+val isGraph_def = Define `isGraph c <=> isPrint c /\ ~isSpace c`;
 
-val isPunct_def = Define `isPunct c = isGraph c /\ ~isAlphaNum c`;
+val isPunct_def = Define `isPunct c <=> isGraph c /\ ~isAlphaNum c`;
 
-val isAscii_def = Define `isAscii c = ORD c <= 127`;
+val isAscii_def = Define `isAscii c <=> ORD c <= 127`;
 
 val isCntrl_def = Define`
-  isCntrl c = ORD c < ^(ordn #" ") \/ 127 <= ORD c`;
+  isCntrl c <=> ORD c < ^(ordn #" ") \/ 127 <= ORD c`;
 
 val toLower_def = Define`
   toLower c = if isUpper c then CHR (ORD c + 32) else c`;
@@ -130,10 +130,10 @@ val toLower_def = Define`
 val toUpper_def = Define`
   toUpper c = if isLower c then CHR (ORD c - 32) else c`;
 
-val char_lt_def = Define `char_lt a b = ORD a < ORD b`;
-val char_le_def = Define `char_le a b = ORD a <= ORD b`;
-val char_gt_def = Define `char_gt a b = ORD a > ORD b`;
-val char_ge_def = Define `char_ge a b = ORD a >= ORD b`;
+val char_lt_def = Define `char_lt a b <=> ORD a < ORD b`;
+val char_le_def = Define `char_le a b <=> ORD a <= ORD b`;
+val char_gt_def = Define `char_gt a b <=> ORD a > ORD b`;
+val char_ge_def = Define `char_ge a b <=> ORD a >= ORD b`;
 
 val _ = overload_on ("<", Term`char_lt`);
 val _ = overload_on (">", Term`char_gt`);
@@ -515,14 +515,14 @@ val isPREFIX_STRCAT = Q.store_thm
  ---------------------------------------------------------------------------*)
 
 val string_lt_def = Define`
-  (string_lt s EMPTYSTRING = F) /\
-  (string_lt EMPTYSTRING (STRING c s) = T) /\
-  (string_lt (STRING c1 s1) (STRING c2 s2) =
+  (string_lt s EMPTYSTRING <=> F) /\
+  (string_lt EMPTYSTRING (STRING c s) <=> T) /\
+  (string_lt (STRING c1 s1) (STRING c2 s2) <=>
      c1 < c2 \/ (c1 = c2) /\ string_lt s1 s2)`;
 
-val string_le_def = Define `string_le s1 s2 = (s1 = s2) \/ string_lt s1 s2`;
-val string_gt_def = Define `string_gt s1 s2 = string_lt s2 s1`;
-val string_ge_def = Define `string_ge s1 s2 = string_le s2 s1`;
+val string_le_def = Define `string_le s1 s2 <=> (s1 = s2) \/ string_lt s1 s2`;
+val string_gt_def = Define `string_gt s1 s2 <=> string_lt s2 s1`;
+val string_ge_def = Define `string_ge s1 s2 <=> string_le s2 s1`;
 
 val _ = overload_on ("<", Term`string_lt`);
 val _ = overload_on (">", Term`string_gt`);

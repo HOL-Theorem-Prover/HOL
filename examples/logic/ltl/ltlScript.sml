@@ -3,6 +3,7 @@ open HolKernel Parse boolLib bossLib pred_setTheory relationTheory set_relationT
 open generalHelpersTheory wordTheory
 
 val _ = new_theory "ltl"
+val _ = ParseExtras.temp_loose_equality()
 
 val _ = Datatype`
   ltl_frml

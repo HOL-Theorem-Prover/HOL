@@ -17,7 +17,7 @@ open iclass_compLib io_onestepTheory;
 open armTheory coreTheory lemmasTheory interruptsTheory;
 
 val _ = new_theory "mult";
-
+val _ = ParseExtras.temp_loose_equality()
 (* ------------------------------------------------------------------------- *)
 
 infix \\ << >>

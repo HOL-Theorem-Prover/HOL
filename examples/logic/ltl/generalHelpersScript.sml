@@ -3,6 +3,7 @@ open HolKernel Parse bossLib boolLib pred_setTheory relationTheory set_relationT
 (* open relationTheoryHelperTheory *)
 
 val _ = new_theory "generalHelpers"
+val _ = ParseExtras.temp_loose_equality()
 
 val NONEMPTY_LEMM = store_thm
   ("NONEMPTY_LEMM",

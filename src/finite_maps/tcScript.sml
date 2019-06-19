@@ -20,6 +20,7 @@ open Defn TotalDefn combinTheory PairRules;
 open PairRules pairLib listTheory finite_mapTheory totoTheory;
 
 val _ = new_theory "tc";
+val _ = ParseExtras.temp_loose_equality()
 
 (* My habitual abbreviations: *)
 

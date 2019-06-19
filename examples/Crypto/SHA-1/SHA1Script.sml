@@ -106,7 +106,7 @@ val ndiv64 = Q.SPEC `n` div64;
 val n1div64 = Q.SPEC `n+1` div64;
 
 val swap_lem =
-  DECIDE (Term `!a b c d : num. a < b /\ c < d ==> (b-a < d-c = b+c < d+a)`);
+  DECIDE (Term `!a b c d : num. a < b /\ c < d ==> (b-a < d-c <=> b+c < d+a)`);
 
 (*---------------------------------------------------------------------------*)
 (* Gross termination proof. Would be better in the integers.                 *)

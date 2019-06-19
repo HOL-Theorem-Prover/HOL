@@ -152,26 +152,26 @@ val _ = set_fixity "when"  (Infixl 350);
 (* --------------------------------------------------------------------- *)
 
 (* Prove that Inf could be alternatively defined as follows:            *)
-val Inf_thm1 =
-    store_thm("Inf_thm1",
-              ``!sig. Inf(sig) =
-                     (?t.sig(t)) /\ (!t. sig t ==> ?t'. t < t' /\ sig t')``,
-              REWRITE_TAC [Inf] THEN GEN_TAC THEN EQ_TAC THENL
-              [REPEAT STRIP_TAC THENL
-               [POP_ASSUM (STRIP_ASSUME_TAC o SPEC_ALL) THEN
-                EXISTS_TAC ``t':num`` THEN FIRST_ASSUM ACCEPT_TAC,
-                FIRST_ASSUM MATCH_ACCEPT_TAC],
-               STRIP_TAC THEN
-               INDUCT_TAC THENL
-               [REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC
-                           (SPEC ``t:num`` num_CASES) THENL
-                [RES_TAC,
-                 EXISTS_TAC ``SUC n`` THEN ASM_REWRITE_TAC [LESS_0]]
-                 THEN PROVE_TAC[],
-                POP_ASSUM STRIP_ASSUME_TAC
-                 THEN RES_TAC
-                 THEN IMP_RES_TAC(DECIDE``t' < t'' ==> t'' < t''' ==> SUC t' < t'''``)
-                 THEN PROVE_TAC[]]]);
+Theorem Inf_thm1:
+   !sig. Inf(sig) <=> (?t.sig(t)) /\ (!t. sig t ==> ?t'. t < t' /\ sig t')
+Proof
+       REWRITE_TAC [Inf] THEN GEN_TAC THEN EQ_TAC THENL
+       [REPEAT STRIP_TAC THENL
+        [POP_ASSUM (STRIP_ASSUME_TAC o SPEC_ALL) THEN
+         EXISTS_TAC ``t':num`` THEN FIRST_ASSUM ACCEPT_TAC,
+         FIRST_ASSUM MATCH_ACCEPT_TAC],
+        STRIP_TAC THEN
+        INDUCT_TAC THENL
+        [REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC
+                    (SPEC ``t:num`` num_CASES) THENL
+         [RES_TAC,
+          EXISTS_TAC ``SUC n`` THEN ASM_REWRITE_TAC [LESS_0]]
+          THEN PROVE_TAC[],
+         POP_ASSUM STRIP_ASSUME_TAC
+          THEN RES_TAC
+          THEN IMP_RES_TAC(DECIDE``t' < t'' ==> t'' < t''' ==> SUC t' < t'''``)
+          THEN PROVE_TAC[]]]
+QED
 
 (* Prove that Inf could be alternatively defined as follows:            *)
 val Inf_thm2 =
@@ -189,16 +189,17 @@ val Inf_thm2 =
                 ASM_REWRITE_TAC [LESS_EQ,LESS_EQ_REFL]]]);
 
 (* Conditions for ~Inf(sig)                                             *)
-val Not_Inf =
-    store_thm("Not_Inf",
-              ``!sig. (~Inf(sig)) =
-                      (!t.~sig(t)) \/ (?t. sig t /\ !t'. t < t' ==> ~sig t')``,
-              REWRITE_TAC [Inf_thm1,IMP_DISJ_THM,DE_MORGAN_THM] THEN
-              CONV_TAC
-               (REDEPTH_CONV (NOT_EXISTS_CONV ORELSEC NOT_FORALL_CONV)) THEN
-              REWRITE_TAC [DE_MORGAN_THM] THEN
-              CONV_TAC (DEPTH_CONV NOT_EXISTS_CONV) THEN
-              REWRITE_TAC [DE_MORGAN_THM]);
+Theorem Not_Inf:
+   !sig. (~Inf(sig)) <=>
+           (!t.~sig(t)) \/ (?t. sig t /\ !t'. t < t' ==> ~sig t')
+Proof
+   REWRITE_TAC [Inf_thm1,IMP_DISJ_THM,DE_MORGAN_THM] THEN
+   CONV_TAC
+    (REDEPTH_CONV (NOT_EXISTS_CONV ORELSEC NOT_FORALL_CONV)) THEN
+   REWRITE_TAC [DE_MORGAN_THM] THEN
+   CONV_TAC (DEPTH_CONV NOT_EXISTS_CONV) THEN
+   REWRITE_TAC [DE_MORGAN_THM]
+QED
 
 (* --------------------------------------------------------------------- *)
 (* THEOREMS about Istimeof                                              *)

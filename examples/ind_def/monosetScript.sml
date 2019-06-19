@@ -61,8 +61,8 @@ val strong_alleven_ind = save_thm(
     different order just to be perverse.
    ---------------------------------------------------------------------- *)
 
-val every_def = Define`(every [] P = T) /\
-                       (every (h :: t) P = P h /\ every t P)`
+val every_def = Define`(every [] P <=> T) /\
+                       (every (h :: t) P <=> P h /\ every t P)`
 (* note how we could have defined this relation inductively too *)
 
 (* now we have to prove that this operator is monotone *)

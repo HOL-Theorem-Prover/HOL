@@ -50,7 +50,7 @@ val _ = set_fixity "dot" (Infixr 675);
 
 val IN_dot = Q.store_thm
 ("IN_dot",
-`!w A B. w IN (A dot B) = ?u v. (w = u ++ v) /\ u IN A /\ v IN B`,
+`!w A B. w IN (A dot B) <=> ?u v. (w = u ++ v) /\ u IN A /\ v IN B`,
  RW_TAC basic_ss [dot_def]);
 
 val DOT_EMPTYSET = Q.store_thm
@@ -70,7 +70,7 @@ val STRCAT_IN_dot = Q.store_thm
 
 val EMPTY_IN_DOT = Q.store_thm
 ("EMPTY_IN_DOT",
-`!A B. [] IN (A dot B) = [] IN A /\ [] IN B`,
+`!A B. [] IN (A dot B) <=> [] IN A /\ [] IN B`,
  METIS_TAC [IN_dot,APPEND_EQNS]);
 
 val DOT_ASSOC = Q.store_thm
@@ -116,7 +116,7 @@ val SUBSET_DOTn = Q.store_thm
 
 val EMPTY_IN_DOTn_ZERO = Q.store_thm
 ("EMPTY_IN_DOTn_ZERO",
-`!x A. x IN DOTn A 0 = (x = [])`,
+`!x A. x IN DOTn A 0 <=> (x = [])`,
  RW_TAC basic_ss [DOTn_def]);
 
 val STRCAT_IN_DOTn_SUC = Q.store_thm
@@ -185,12 +185,13 @@ val KSTAR_def =
  Define
    `KSTAR(L:'a lang) = BIGUNION {DOTn L n | n IN UNIV}`;
 
-val IN_KSTAR = Q.store_thm
-("IN_KSTAR",
- `x IN KSTAR(L) = ?n. x IN DOTn L n`,
+Theorem IN_KSTAR:
+   x IN KSTAR(L) <=> ?n. x IN DOTn L n
+Proof
   RW_TAC basic_ss [KSTAR_def,BIGUNION] THEN
   RW_TAC basic_ss [SPECIFICATION] THEN
-  METIS_TAC[]);
+  METIS_TAC[]
+QED
 
 val KSTAR_EMPTYSET = Q.store_thm
 ("KSTAR_EMPTYSET",
@@ -278,9 +279,11 @@ val KSTAR_EQ_EPSILON_UNION_DOT = Q.store_thm
    METIS_TAC [EMPTY_IN_DOTn_ZERO],
    METIS_TAC [STRCAT_IN_DOTn_SUC]]);
 
-val IN_KSTAR_THM = Q.store_thm("IN_KSTAR_THM",
-`!w L. w IN KSTAR L = (w = []) \/ ?w1 w2. (w = w1++w2) /\ w1 IN L /\ w2 IN KSTAR L`,
- RW_TAC list_ss [Once KSTAR_EQ_EPSILON_UNION_DOT,IN_UNION, IN_SING,IN_dot]);
+Theorem IN_KSTAR_THM:
+  !w L. w IN KSTAR L <=> (w = []) \/
+                         ?w1 w2. (w = w1++w2) /\ w1 IN L /\ w2 IN KSTAR L
+Proof RW_TAC list_ss [Once KSTAR_EQ_EPSILON_UNION_DOT,IN_UNION, IN_SING,IN_dot]
+QED
 
 val KSTAR_EQ_KSTAR_UNION = Q.store_thm
 ("KSTAR_EQ_KSTAR_UNION",

@@ -131,7 +131,7 @@ val w2w_extract = store_thm("w2w_extract",
     WORD_BITS_COMP_THM]);
 
 val CONCAT_MSR = store_thm("CONCAT_MSR",
-  `!b i. 8 <= i /\ i <= 27 /\ b \/ i <= 7 /\ b = i < 28 /\ b`,
+  `!b i. 8 <= i /\ i <= 27 /\ b \/ i <= 7 /\ b <=> i < 28 /\ b`,
   Cases \\ SIMP_TAC arith_ss []);
 
 (* ------------------------------------------------------------------------- *)
@@ -140,7 +140,7 @@ val LESS_THM =
   CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV prim_recTheory.LESS_THM;
 
 val TEST_OR_COMP_LEM = prove(
-  `!n. (BITS 24 23 n = 2) = BIT 24 n /\ ~BIT 23 n`,
+  `!n. (BITS 24 23 n = 2) <=> BIT 24 n /\ ~BIT 23 n`,
   STRIP_TAC \\ SPECL_THEN [`24`,`23`,`n`]
        (ASSUME_TAC o SIMP_RULE arith_ss []) BITSLT_THM
     \\ FULL_SIMP_TAC arith_ss [LESS_THM,
@@ -155,17 +155,17 @@ val start_tac =
     \\ ASM_SIMP_TAC bool_ss [w2n_n2w,n2w_11,MOD_DIMINDEX];
 
 val TEST_OR_COMP_THM = store_thm("TEST_OR_COMP_THM",
-  `!i:word32. TEST_OR_COMP ((24 >< 21) i) = i %% 24 /\ ~(i %% 23)`,
+  `!i:word32. TEST_OR_COMP ((24 >< 21) i) <=> i %% 24 /\ ~(i %% 23)`,
   start_tac \\ SIMP_TAC (fcp_ss++SIZES_ss) [n2w_def,EVAL ``BITS 3 0 2``,
     BITS_COMP_THM2,TEST_OR_COMP_LEM]);
 
 val ARITHMETIC_THM = store_thm("ARITHMETIC_THM",
-  `!i:word32. ARITHMETIC ((24 >< 21) i) =
+  `!i:word32. ARITHMETIC ((24 >< 21) i) <=>
            (i %% 23 \/ i %% 22) /\ (~(i %% 24) \/ ~(i %% 23))`,
   start_tac \\ SIMP_TAC (fcp_ss++SIZES_ss) [n2w_def,BIT_def,BITS_COMP_THM2]);
 
 val ARITHMETIC_THM2 = store_thm("ARITHMETIC_THM2",
-  `!i:word32. ~(i %% 23) /\ ~(i %% 22) \/ i %% 24 /\ i %% 23 =
+  `!i:word32. ~(i %% 23) /\ ~(i %% 22) \/ i %% 24 /\ i %% 23 <=>
          ~ARITHMETIC ((24 >< 21) i)`, RW_TAC bool_ss [ARITHMETIC_THM]);
 
 (* ------------------------------------------------------------------------- *)

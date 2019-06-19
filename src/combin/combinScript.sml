@@ -221,11 +221,12 @@ val APPLY_UPDATE_ID = Q.store_thm("APPLY_UPDATE_ID",
   `!f a. (a =+ f a) f = f`,
   REWRITE_TAC [GSYM UPDATE_APPLY_ID]);
 
-val UPD11_SAME_BASE = Q.store_thm("UPD11_SAME_BASE",
-  `!f a b c d.
-      ((a =+ c) f = (b =+ d) f) =
-      (a = b) /\ (c = d) \/
-      ~(a = b) /\ ((a =+ c) f = f) /\ ((b =+ d) f = f)`,
+Theorem UPD11_SAME_BASE:
+  !f a b c d.
+      ((a =+ c) f = (b =+ d) f) <=>
+        a = b /\ c = d \/
+        a <> b /\ (a =+ c) f = f /\ (b =+ d) f = f
+Proof
   REPEAT GEN_TAC
   THEN PURE_REWRITE_TAC [UPDATE_def,FUN_EQ_THM]
   THEN BETA_TAC THEN EQ_TAC THEN STRIP_TAC THEN ASM_REWRITE_TAC []
@@ -239,7 +240,9 @@ val UPD11_SAME_BASE = Q.store_thm("UPD11_SAME_BASE",
     THEN POP_ASSUM (fn th => RULE_ASSUM_TAC (PURE_REWRITE_RULE [th]))
     THEN FIRST_ASSUM (Q.SPEC_THEN `x` ASSUME_TAC)
     THEN Q.PAT_ASSUM `~(a = x)` (fn th => RULE_ASSUM_TAC (REWRITE_RULE [th]))
-    THEN ASM_REWRITE_TAC []]);
+    THEN ASM_REWRITE_TAC []
+  ]
+QED
 
 val SAME_KEY_UPDATE_DIFFER = Q.store_thm("SAME_KEY_UPDATE_DIFFER",
   `!f1 f2 a b c. ~(b = c) ==> ~((a =+ b) f = (a =+ c) f)`,

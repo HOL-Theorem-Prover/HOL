@@ -139,7 +139,7 @@ val AES_LEMMA = Q.store_thm
      order that the state also has.
  ---------------------------------------------------------------------------*)
 
-val _ = set_fixity "XOR8x4"  (Infixr 350);
+val _ = set_fixity "XOR8x4"  (Infixl 500);
 
 val XOR8x4_def =
  Define

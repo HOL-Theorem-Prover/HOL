@@ -24,24 +24,14 @@ val parts_def = Define `
 `;
 
 val accept_def = Define `
-         (accept (Eps) u     = (u = [])                                                            ) /\
-         (accept (Sym c) u   = (u = [c])                                                           ) /\
-         (accept (Alt p q) u = accept p u \/ accept q u                                            ) /\
-         (accept (Seq p q) u = EXISTS (\u_12. accept p (FST u_12) /\ accept q (SND u_12)) (split u)) /\
-         (accept (Rep r) u   = EXISTS (\ps. EVERY (\u_i. accept r u_i) ps) (parts u)               )
+  (accept (Eps) u     <=> (u = [])                                               ) /\
+  (accept (Sym c) u   <=> (u = [c])                                      ) /\
+  (accept (Alt p q) u <=> accept p u \/ accept q u                       ) /\
+  (accept (Seq p q) u <=>
+     EXISTS (\u_12. accept p (FST u_12) /\ accept q (SND u_12)) (split u)) /\
+  (accept (Rep r) u   <=>
+     EXISTS (\ps. EVERY (\u_i. accept r u_i) ps) (parts u)               )
 `;
-
-
-
-
-
-
-
-
-
-
-
-
 
 (* rewrite theorems *)
 (* ----------------------------------------------------------------------------- *)
@@ -65,7 +55,7 @@ val parts_DEFs = store_thm ("parts_DEFs", ``
 val accept_DEFs = store_thm ("accept_DEFs", ``
          (!u.     accept (Eps) u     = (u = [])                                                            ) /\
          (!c u.   accept (Sym c) u   = (u = [c])                                                           ) /\
-         (!p q u. accept (Alt p q) u = accept p u \/ accept q u                                            ) /\
+         (!p q u. accept (Alt p q) u <=> accept p u \/ accept q u                                            ) /\
          (!p q u. accept (Seq p q) u = EXISTS (\u_12. accept p (FST u_12) /\ accept q (SND u_12)) (split u)) /\
          (!r u.   accept (Rep r) u   = EXISTS (\ps. EVERY (\u_i. accept r u_i) ps) (parts u)               )
 ``,

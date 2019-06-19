@@ -108,7 +108,7 @@ val DIVIDES_MULT = store_thm
 
 val DIVIDES_MULT_LEFT = store_thm(
   "DIVIDES_MULT_LEFT",
-  ``!n m. divides (n * m) m = (m = 0) \/ (n = 1)``,
+  ``!n m. divides (n * m) m <=> (m = 0) \/ (n = 1)``,
   SIMP_TAC arith_ss [FORALL_AND_THM, EQ_IMP_THM, DISJ_IMP_THM,
                      ALL_DIVIDES_0, DIVIDES_REFL] THEN
   SIMP_TAC bool_ss [divides_def] THEN REPEAT STRIP_TAC THEN
@@ -144,7 +144,7 @@ val LEQ_DIVIDES_FACT = store_thm
 
 val prime_def = Q.new_definition
 ("prime_def",
- `prime a = ~(a=1) /\ !b. divides b a ==> (b=a) \/ (b=1)`);
+ `prime a <=> a <> 1 /\ !b. divides b a ==> (b=a) \/ (b=1)`);
 
 
 val NOT_PRIME_0 = Q.store_thm
@@ -314,7 +314,7 @@ val PRIMES_ONTO = Q.store_thm
  SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN
  STRIP_ASSUME_TAC (Q.SPEC `p` NEXT_LARGER_PRIME) THEN
  Cases_on `i` THENL
- [METIS_TAC [DECIDE``p < 2 = (p=0) \/ (p=1)``,
+ [METIS_TAC [DECIDE``p < 2 <=> (p=0) \/ (p=1)``,
              NOT_PRIME_0,NOT_PRIME_1,PRIME_2,PRIMES_def],
   `PRIMES n < p` by METIS_TAC [DECIDE ``n < SUC n``,LESS_OR_EQ] THEN
   METIS_TAC [PRIMES_NO_GAP]]);

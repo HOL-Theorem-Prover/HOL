@@ -611,12 +611,12 @@ val phase1_CONV = Profile.profile "phase1" phase1_CONV
 
 val INT_DIVIDES_NEG = CONV_RULE (DEPTH_CONV FORALL_AND_CONV) INT_DIVIDES_NEG
 val INT_NEG_FLIP_LTL = prove(
-  ``!x y. ~x < y = ~y < x``,
+  ``!x y. ~x < y <=> ~y < x``,
   REPEAT GEN_TAC THEN
   CONV_TAC (RAND_CONV (RAND_CONV (REWR_CONV (GSYM INT_NEGNEG)))) THEN
   REWRITE_TAC [INT_LT_NEG]);
 val INT_NEG_FLIP_LTR = prove(
-  ``!x y. x < ~y = y < ~x``,
+  ``!x y. x < ~y <=> y < ~x``,
   REPEAT GEN_TAC THEN
   CONV_TAC (RAND_CONV (LAND_CONV (REWR_CONV (GSYM INT_NEGNEG)))) THEN
   REWRITE_TAC [INT_LT_NEG]);

@@ -40,6 +40,7 @@ open SyntaxTheory PSLPathTheory ModelTheory;
 * Start a new theory called UnclockedSemantics
 ******************************************************************************)
 val _ = new_theory "UnclockedSemantics";
+val _ = ParseExtras.temp_loose_equality()
 
 (******************************************************************************
 * pureDefine doesn't export definitions to theCompset (for EVAL).
@@ -375,4 +376,3 @@ val O_VALID_def =
   `O_VALID M f = !s::(M.S0). O_SEM M f s`;
 
 val _ = export_theory();
-

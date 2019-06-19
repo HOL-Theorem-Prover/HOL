@@ -22,6 +22,7 @@ val re_subset = REWRITE_RULE [pred_setTheory.SPECIFICATION]
                              pred_setTheory.SUBSET_DEF
 
 val _ = new_theory "nets";
+val _ = ParseExtras.temp_loose_equality()
 
 val _ = Parse.reveal "B";
 

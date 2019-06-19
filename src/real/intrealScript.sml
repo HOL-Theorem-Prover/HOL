@@ -110,8 +110,8 @@ val INT_FLOOR_BOUNDS = Q.store_thm("INT_FLOOR_BOUNDS",
   \\ imp_res_tac (RealArith.REAL_ARITH ``~(0r <= r) ==> 0 <= -r /\ r <> 0``)
   \\ imp_res_tac real_arch_least1
   \\ rev_full_simp_tac(srw_ss())[arithmeticTheory.ADD1, integerTheory.INT_NEG_ADD,
-          RealArith.REAL_ARITH ``r <= 0r ==> (&(n: num) <= -r = r <= -&n)``,
-          RealArith.REAL_ARITH ``r <= 0r ==> (-r < &n = -&n < r)``]
+          RealArith.REAL_ARITH ``r <= 0r ==> (&(n: num) <= -r <=> r <= -&n)``,
+          RealArith.REAL_ARITH ``r <= 0r ==> (-r < &n <=> -&n < r)``]
   \\ Cases_on `r = -&n`
   >| [qexists_tac `~&n`, qexists_tac `~&(SUC n)`]
   \\ rev_full_simp_tac(srw_ss())[real_of_int, integerTheory.INT_NEG_ADD]
@@ -121,7 +121,7 @@ val INT_FLOOR_BOUNDS = Q.store_thm("INT_FLOOR_BOUNDS",
           \\ full_simp_tac(srw_ss())[arithmeticTheory.ADD1,
                  RealArith.REAL_ARITH ``r <= 0r /\ r <> 0 ==> r < 0``,
                  RealArith.REAL_ARITH ``a <= b - 1 ==> a < b: real``,
-                 intLib.ARITH_PROVE ``-&(n + 1) + 1 < 0i = (n <> 0)``,
+                 intLib.ARITH_PROVE ``-&(n + 1) + 1 < 0i <=> n <> 0``,
                  RealArith.REAL_ARITH ``r <= -1r ==> r < 0``,
                  RealArith.REAL_ARITH ``a <= b /\ a <> b ==> a < b: real``])
       \\ srw_tac[][realTheory.REAL_NOT_LT]
@@ -135,8 +135,9 @@ val INT_FLOOR_BOUNDS = Q.store_thm("INT_FLOOR_BOUNDS",
   )
   )
 
-val INT_FLOOR = Q.store_thm ("INT_FLOOR",
-  `!r i. (INT_FLOOR r = i) = real_of_int i <= r /\ r < real_of_int (i + 1)`,
+Theorem INT_FLOOR:
+  !r i. (INT_FLOOR r = i) <=> real_of_int i <= r /\ r < real_of_int (i + 1)
+Proof
   REPEAT strip_tac
   \\ eq_tac
   >- metis_tac [INT_FLOOR_BOUNDS]
@@ -184,7 +185,7 @@ val INT_FLOOR = Q.store_thm ("INT_FLOOR",
   \\ imp_res_tac realTheory.REAL_LET_TRANS
   \\ full_simp_tac(srw_ss())[integerTheory.INT_NOT_LT]
   \\ intLib.ARITH_TAC
-  )
+QED
 
 val int_floor_1 = Q.prove(
   `(INT_FLOOR &n = &n) /\ (INT_FLOOR (-&n) = -&n)`,
@@ -234,7 +235,7 @@ val lem4 = Q.prove(
   NTAC 3 strip_tac
   \\ `&m <> 0i` by intLib.ARITH_TAC
   \\ simp [integerTheory.int_div]
-  \\ srw_tac[][intLib.ARITH_PROVE ``a + -1 < -1 = a < 0i``]
+  \\ srw_tac[][intLib.ARITH_PROVE ``a + -1 < -1 <=> a < 0i``]
   \\ tac
   >- (SPOSE_NOT_THEN strip_assume_tac
       \\ `(n DIV m = 0) \/ (n DIV m = 1)` by decide_tac
@@ -346,9 +347,11 @@ val INT_CEILING_BOUNDS = Q.store_thm("INT_CEILING_BOUNDS",
   \\ intLib.ARITH_TAC
   )
 
-val INT_CEILING = Q.store_thm ("INT_CEILING",
-  `!r i. (INT_CEILING r = i) = real_of_int (i - 1) < r /\ r <= real_of_int i`,
-  metis_tac [INT_CEILING_BOUNDS, INT_CEILING_IMP])
+Theorem INT_CEILING:
+  !r i. (INT_CEILING r = i) <=> real_of_int (i - 1) < r /\ r <= real_of_int i
+Proof
+  metis_tac [INT_CEILING_BOUNDS, INT_CEILING_IMP]
+QED
 
 local
   val rule =

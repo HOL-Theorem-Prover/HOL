@@ -23,6 +23,7 @@ quietdec := false;
 *)
 
 val _ = new_theory "extra_arith";
+val _ = ParseExtras.temp_loose_equality()
 
 infixr 0 ++ << || THENC ORELSEC ORELSER ##;
 infix 1 >>;

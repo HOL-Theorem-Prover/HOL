@@ -11,6 +11,7 @@ open bossLib PairRules arithmeticTheory numeralTheory Defn;
 open totoTheory intLib;
 
 val _ = new_theory "intto";
+val _ = ParseExtras.temp_loose_equality()
 
 (* My habitual abbreviations: *)
 

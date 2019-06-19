@@ -105,26 +105,26 @@ end
 
 local
   val NOT_EXISTS_UNIQUE_THM = Tactical.prove(
-    ``~(?!x:'a. P x) = (!x. ~P x) \/ ?x x'. P x /\ P x' /\ ~(x = x')``,
+    ``~(?!x:'a. P x) <=> (!x. ~P x) \/ ?x x'. P x /\ P x' /\ ~(x = x')``,
     REWRITE_TAC [EXISTS_UNIQUE_THM, DE_MORGAN_THM,NOT_EXISTS_THM]
      THEN CONV_TAC (REDEPTH_CONV NOT_FORALL_CONV)
      THEN REWRITE_TAC [NOT_IMP, CONJ_ASSOC])
   val common_tauts =
     [TAUT `~~p:bool = p`,
-     TAUT `~(p /\ q) = ~p \/ ~q`,
-     TAUT `~(p \/ q) = ~p /\ ~q`,
-     TAUT `~(p ==> q) = p /\ ~q`,
-     TAUT `p ==> q = ~p \/ q`,
+     TAUT `~(p /\ q) <=> ~p \/ ~q`,
+     TAUT `~(p \/ q) <=> ~p /\ ~q`,
+     TAUT `~(p ==> q) <=> p /\ ~q`,
+     TAUT `p ==> q <=> ~p \/ q`,
      NOT_FORALL_THM,
      NOT_EXISTS_THM,
      EXISTS_UNIQUE_THM,
      NOT_EXISTS_UNIQUE_THM]
   and dnf_tauts =
-    map TAUT [`~(p = q) = (p /\ ~q) \/ (~p /\ q)`,
-              `(p = q) = (p /\ q) \/ (~p /\ ~q)`]
+    map TAUT [`~(p = q) <=> (p /\ ~q) \/ (~p /\ q)`,
+              `(p = q) <=> (p /\ q) \/ (~p /\ ~q)`]
   and cnf_tauts =
-    map TAUT [`~(p = q) = (p \/ q) /\ (~p \/ ~q)`,
-              `(p = q) = (p \/ ~q) /\ (~p \/ q)`]
+    map TAUT [`~(p = q) <=> (p \/ q) /\ (~p \/ ~q)`,
+              `(p = q) <=> (p \/ ~q) /\ (~p \/ q)`]
   val NNFC_CONV0 =
     GEN_REWRITE_CONV TOP_SWEEP_CONV (common_tauts @ cnf_tauts)
 in
@@ -201,8 +201,8 @@ val DELAMB_CONV =
 
 val PROP_CNF_CONV =
   GEN_REWRITE_CONV REDEPTH_CONV
-   [TAUT `a \/ (b /\ c) = (a \/ b) /\ (a \/ c)`,
-    TAUT `(a /\ b) \/ c = (a \/ c) /\ (b \/ c)`,
+   [TAUT `a \/ (b /\ c) <=> (a \/ b) /\ (a \/ c)`,
+    TAUT `(a /\ b) \/ c <=> (a \/ c) /\ (b \/ c)`,
     GSYM CONJ_ASSOC, GSYM DISJ_ASSOC];;
 
 
@@ -215,7 +215,7 @@ val PRESIMP_CONV =
 
 
 val REFUTE_THEN =
-  let val conv = REWR_CONV(TAUT `p = ~p ==> F`)
+  let val conv = REWR_CONV(TAUT `p <=> ~p ==> F`)
   in fn ttac => CONV_TAC conv THEN DISCH_THEN ttac
   end;;
 

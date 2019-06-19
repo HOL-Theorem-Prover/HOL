@@ -31,6 +31,7 @@ quietdec := false;
 
 
 val _ = new_theory "infinite_path";
+val _ = ParseExtras.temp_loose_equality()
 
 
 (******************************************************************************

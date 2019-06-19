@@ -17,6 +17,7 @@ val _ = set_trace "Unicode" 0;
 open pred_setLib pred_setTheory relationTheory;
 
 val _ = new_theory "wot";
+val _ = ParseExtras.temp_loose_equality()
 
 val AR = ASM_REWRITE_TAC [];
 fun ulist x = [x];

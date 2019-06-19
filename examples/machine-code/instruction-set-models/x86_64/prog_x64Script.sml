@@ -8,6 +8,7 @@ open x64_astTheory x64_coretypesTheory x64_Lib x64_encodeLib;
 open temporalTheory;
 
 val _ = new_theory "prog_x64";
+val _ = ParseExtras.temp_loose_equality()
 
 infix \\
 val op \\ = op THEN;

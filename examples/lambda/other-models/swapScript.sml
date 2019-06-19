@@ -64,20 +64,20 @@ val swapset_FINITE = store_thm(
 val _ = export_rewrites ["swapset_FINITE"]
 
 val IN_swapset_lemma = prove(
-  ``x IN swapset y z s = if x = y then z IN s
-                         else if x = z then y IN s
-                         else x IN s``,
+  ``x ∈ swapset y z s ⇔ if x = y then z IN s
+                        else if x = z then y IN s
+                        else x IN s``,
   SRW_TAC [][swapset_def, swapstr_def] THEN METIS_TAC []);
 
 val swapstr_IN_swapset0 = prove(
-  ``swapstr x y s IN swapset x y Set = s IN Set``,
+  ``swapstr x y s IN swapset x y Set ⇔ s IN Set``,
   SIMP_TAC (srw_ss()) [IN_swapset_lemma] THEN
   MAP_EVERY Cases_on [`s = x`, `s = y`] THEN SRW_TAC [][] THEN
   SRW_TAC [][swapstr_def]);
 
 val IN_swapset = store_thm(
   "IN_swapset",
-  ``s IN swapset x y t = swapstr x y s IN t``,
+  ``s IN swapset x y t ⇔ swapstr x y s IN t``,
   METIS_TAC [swapstr_inverse, swapstr_IN_swapset0]);
 val _ = export_rewrites ["IN_swapset"]
 
@@ -279,10 +279,9 @@ val swap_ALPHA = store_thm(
   ``~(v IN FV M) ==> (LAM v (swap v u M) = LAM u M)``,
   SRW_TAC [][GSYM fresh_var_swap, GSYM SIMPLE_ALPHA]);
 
-val LAM_INJ_swap = store_thm(
-  "LAM_INJ_swap",
-  ``(LAM v1 t1 = LAM v2 t2) = ~(v1 IN FV (LAM v2 t2)) /\
-                              (t1 = swap v1 v2 t2)``,
+Theorem LAM_INJ_swap:
+    (LAM v1 t1 = LAM v2 t2) ⇔ v1 ∉ FV (LAM v2 t2) ∧ (t1 = swap v1 v2 t2)
+Proof
   SRW_TAC [][EQ_IMP_THM] THENL [
     Cases_on `v1 IN FV t2` THEN ASM_SIMP_TAC (srw_ss()) [] THEN
     FIRST_X_ASSUM (MP_TAC o Q.AP_TERM `FV`) THEN
@@ -295,7 +294,8 @@ val LAM_INJ_swap = store_thm(
     METIS_TAC [fresh_var_swap],
     METIS_TAC [swap_ALPHA],
     SRW_TAC [][]
-  ]);
+  ]
+QED
 
 val swap_subst = store_thm(
   "swap_subst",
@@ -352,11 +352,11 @@ val _ = export_rewrites ["swap_eq_var", "swap_eq_con", "swap_eq_app",
    ---------------------------------------------------------------------- *)
 
 val swapping_def = Define`
-  swapping f fv =
+  swapping f fv ⇔
     (!x z. f x x z = z) /\
     (!x y z. f x y (f x y z) = z) /\
     (!x y z. ~(x IN fv z) /\ ~(y IN fv z) ==> (f x y z = z)) /\
-    (!x y z s. s IN fv (f x y z) = swapstr x y s IN fv z)
+    (!x y z s. s IN fv (f x y z) ⇔ swapstr x y s IN fv z)
 `
 
 val LET_NEW_congruence = store_thm(
