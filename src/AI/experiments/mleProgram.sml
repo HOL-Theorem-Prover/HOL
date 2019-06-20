@@ -49,31 +49,6 @@ fun loop_block level acc prog = case prog of
 fun cond_blk p = cond_block 0 [] p
 fun loop_blk p = loop_block 0 [] p
 
-fun mk_blockl blockl prog = 
-  let fun f instr m = mk_blockl ([instr] :: blockl) m in
-    case prog of
-    [] => rev blockl
-  | Read i :: m  => f (Read i) m
-  | Write i :: m => f (Write i) m
-  | Incr i :: m  => f (Incr i) m
-  | Decr i :: m  => f (Decr i) m
-  | Cond :: m => 
-    let
-      val (block,cont) = cond_blk m 
-      val block' = (Cond :: block) @ [EndCond]
-    in
-      mk_blockl (block' :: blockl) cont
-    end
-  | Loop :: m =>
-    let 
-      val (block,cont) = loop_blk m 
-      val block' = (Loop :: block) @ [EndLoop]
-    in
-      mk_blockl (block' :: blockl) cont
-    end
-  | _ => raise ERR "mk_blockl" ""
-  end
-
 fun exec_prog prog d = 
   case prog of
     [] => d
@@ -136,7 +111,7 @@ fun dest_startsit (_,(x,_,_)) = x
 
 fun status_of (_,((ol,limit),(statel,p),_)) =
   if satisfies ol statel then Win 
-  else if length p <= limit + 5 then Undecided
+  else if length p <= limit then Undecided
   else Lose
 
 (* -------------------------------------------------------------------------
@@ -222,9 +197,7 @@ val program_operl =
   )
 
 fun nntm_of_sit (_,((ol,limit),(statel,p),_)) =
-  mk_binop joinop2
-    (mk_binop joinop1 (nntm_of_ol ol, nntm_of_statel statel),
-     nntm_of_prog emptyop p)
+  mk_binop joinop2 (nntm_of_ol ol, nntm_of_prog emptyop p)
 
 (* -------------------------------------------------------------------------
    Move
@@ -269,7 +242,7 @@ fun filter_sit (_,(_,(statel,_),(b,parl))) =
       then compare_statel (map (exec_prog [m]) statel,statel) <> EQUAL
     else 
       if (parl = [Cond] andalso m = EndCond) orelse
-         (parl = [Loop] andalso m = EndLoop)
+         (parl = [Loop] andalso m = EndLoop)  
       then
         compare_statel (map (exec_prog (b @ [m])) statel, statel)
         <> EQUAL
@@ -341,7 +314,7 @@ fun read_targetl () =
     map (mk_startsit o olsize_from_string) sl
   end
 
-fun max_bigsteps (_,((_,limit),_,_)) = 2 * limit + 5
+fun max_bigsteps (_,((_,limit),_,_)) = limit + 1
 
 (* -------------------------------------------------------------------------
    Program generation
@@ -457,10 +430,10 @@ load "mleProgram"; open mleProgram;
 load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
 load "aiLib"; open aiLib;
 
-mlReinforce.nsim_glob := 1600;
+mlReinforce.nsim_glob := 100000;
 val il = cartesian_productl [List.tabulate (3,I), List.tabulate (3,I)];
-val ol = map (fn [a,b] => a+2) il;
-val limit = 10;
+val ol = map (fn [a,b] => 2*a) il;
+val limit = 5;
 
 val p = extract_prog (explore_random (ol,limit));
 val dhtnn = read_dhtnn "program_run25_gen12_dhtnn";
@@ -472,22 +445,24 @@ load "mleProgram"; open mleProgram;
 load "mlReinforce"; open mlReinforce;
 load "smlParallel"; open smlParallel;
 
-psMCTS.alpha_glob := 0.5;
-logfile_glob := "program_run30";
+
+psMCTS.alpha_glob := 0.3;
+psMCTS.exploration_coeff := 0.5;
+logfile_glob := "program_run32";
 parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^
 (!logfile_glob);
-ncore_mcts_glob := 32;
+ncore_mcts_glob := 16;
 ncore_train_glob := 16;
 ntarget_compete := 200;
 ntarget_explore := 200;
-exwindow_glob := 40000;
+exwindow_glob := 10000;
 uniqex_flag := false;
-dim_glob := 16;
+dim_glob := 8;
 lr_glob := 0.02;
 batchsize_glob := 16;
 decay_glob := 0.99;
 level_glob := 0;
-nsim_glob := 6400;
+nsim_glob := 1600;
 nepoch_glob := 100;
 ngen_glob := 100;
 

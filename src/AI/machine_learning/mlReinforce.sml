@@ -329,7 +329,7 @@ fun compete_one gamespec dhtnn targetl =
   end
 
 fun summary_compete (w_old,w_new) =
-  let val s = if w_new > w_old then "Passed" else "Failed" in
+  let val s = if w_new >= w_old then "Passed" else "Failed" in
     summary (s ^ ": " ^ its w_old ^ " " ^ its w_new)
   end
 
@@ -347,7 +347,7 @@ fun compete gamespec dhtnn_old dhtnn_new =
     then (incr level_glob;
           summary ("Level up: " ^ its (!level_glob)))
     else ();
-    if w_new > w_old then dhtnn_new else dhtnn_old
+    if w_new >= w_old then dhtnn_new else dhtnn_old
   end
 
 (* -------------------------------------------------------------------------
