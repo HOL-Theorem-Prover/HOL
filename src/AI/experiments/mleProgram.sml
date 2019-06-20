@@ -28,6 +28,16 @@ datatype move =
   | Cond | Loop
   | EndLoop | EndCond
 
+fun string_of_move move = case move of
+    Read i  => "R" ^ its i
+  | Write i => "W" ^ its i
+  | Incr i  => "I" ^ its i
+  | Decr i  => "D" ^ its i
+  | Cond => "C"
+  | Loop => "L"
+  | EndCond => "EC"
+  | EndLoop => "EL"
+
 type program = move list
 
 fun cond_block level acc prog = case prog of
@@ -75,6 +85,39 @@ fun exec_prog prog d =
     end
   | _ => raise ERR "exec_prog" ""
 
+fun parl_of_prog p parl = 
+  case p of
+    [] => parl
+  | Cond :: m => parl_of_prog m (Cond :: parl)
+  | Loop :: m => parl_of_prog m (Loop :: parl)
+  | EndCond :: m => parl_of_prog m (tl parl)
+  | EndLoop :: m => parl_of_prog m (tl parl)
+  | a :: m => parl_of_prog m parl
+
+fun lastblock_of_prog p (acc1,acc2) parl =
+   case p of
+    [] => (acc1,acc2)
+  | Cond :: m => 
+    if null parl 
+    then lastblock_of_prog m (acc1, [Cond]) (Cond :: parl) 
+    else lastblock_of_prog m (acc1, acc2 @ [Cond]) (Cond :: parl)
+  | Loop :: m => 
+    if null parl 
+    then lastblock_of_prog m (acc1, [Loop]) (Loop :: parl) 
+    else lastblock_of_prog m (acc1, acc2 @ [Loop]) (Loop :: parl)
+  | EndCond :: m => 
+    if parl = [Cond] 
+    then lastblock_of_prog m (acc1 @ acc2 @ [EndCond], []) (tl parl) 
+    else lastblock_of_prog m (acc1, acc2 @ [EndCond]) (tl parl)
+  | EndLoop :: m => 
+    if parl = [Loop] 
+    then lastblock_of_prog m (acc1 @ acc2 @ [EndLoop], []) (tl parl) 
+    else lastblock_of_prog m (acc1, acc2 @ [EndLoop]) (tl parl)
+  | a :: m =>
+    if null parl 
+    then lastblock_of_prog m (acc1 @ [a], []) parl 
+    else lastblock_of_prog m (acc1, acc2 @ [a]) parl
+
 (* -------------------------------------------------------------------------
    State
    ------------------------------------------------------------------------- *)
@@ -105,9 +148,17 @@ fun satisfies ol statel = (compare_ol (ol_of_statel statel, ol) = EQUAL)
 
 type board = (int list * int) * (state list * program) * (program * program)
 
-fun mk_startsit (ol,limit) = (true, ((ol,limit),(statel_org,[]),([],[])))
+fun mk_startsit (ol,(p,limit)) = 
+  let
+    val (p',b) = lastblock_of_prog p ([],[]) []
+    val _ = print_endline (String.concatWith " " (map string_of_move p'))
+    val statel = map (exec_prog p') statel_org
+    val parl = parl_of_prog p []
+  in
+    (true, ((ol,limit),(statel,p),(b,parl)))
+  end
 
-fun dest_startsit (_,(x,_,_)) = x
+fun dest_startsit (_,((ol,limit),(statel,p),_)) = (ol,(p,limit))
 
 fun status_of (_,((ol,limit),(statel,p),_)) =
   if satisfies ol statel then Win 
@@ -215,15 +266,7 @@ val moveil = number_snd 0 movel
 fun move_compare (m1,m2) = 
   Int.compare (assoc m1 moveil, assoc m2 moveil)
 
-fun string_of_move move = case move of
-    Read i  => "R" ^ its i
-  | Write i => "W" ^ its i
-  | Incr i  => "I" ^ its i
-  | Decr i  => "D" ^ its i
-  | Cond => "C"
-  | Loop => "L"
-  | EndCond => "EC"
-  | EndLoop => "EL"
+
 
 fun is_possible parl m = case m of
     EndCond => ((hd parl = Cond) handle Empty => false)
@@ -237,7 +280,8 @@ fun is_simple_move m = case m of
 
 fun filter_sit (_,(_,(statel,_),(b,parl))) =
   let fun test (m,_) = 
-    is_possible parl m andalso
+    is_possible parl m 
+  (* andalso
     if null parl andalso is_simple_move m 
       then compare_statel (map (exec_prog [m]) statel,statel) <> EQUAL
     else 
@@ -247,6 +291,7 @@ fun filter_sit (_,(_,(statel,_),(b,parl))) =
         compare_statel (map (exec_prog (b @ [m])) statel, statel)
         <> EQUAL
     else true
+  *)
   in 
     fn l => filter test l 
   end
@@ -299,19 +344,59 @@ fun apply_move move (_,((ol,limit),(statel,p),(b,parl))) =
    Target
    ------------------------------------------------------------------------- *)
 
-fun string_of_olsize (ol,limit) =
-  its limit ^ "," ^ String.concatWith "," (map its ol)
+fun string_of_olsize (ol,(p,limit)) =
+  its limit ^ "," ^ String.concatWith "," (map its ol) ^ "#" ^
+  String.concatWith "," (map string_of_move p)
+
 fun write_targetl targetl =
   let val olsizel = map dest_startsit targetl in
     writel (!parallel_dir ^ "/targetl") (map string_of_olsize olsizel)
   end
 
-fun olsize_from_string s = case String.tokens (fn c => c = #",") s of
+fun olsize_from_string s = 
+  case String.tokens (fn c => c = #",") s of
     [] => raise ERR "olsize_from_string" ""
   | a :: m => (map string_to_int m, string_to_int a)
+
+fun move_from_string s = case s of
+    "R1" => Read 1
+  | "R2" => Read 2
+  | "R3" => Read 3  
+  | "R4" => Read 4
+  | "W1" => Write 1
+  | "W2" => Write 2
+  | "W3" => Write 3  
+  | "W4" => Write 4
+  | "I0" => Incr 0
+  | "I1" => Incr 1
+  | "I2" => Incr 2
+  | "I3" => Incr 3  
+  | "I4" => Incr 4
+  | "D0" => Decr 0
+  | "D1" => Decr 1
+  | "D2" => Decr 2
+  | "D3" => Decr 3  
+  | "D4" => Decr 4
+  | "C" => Cond
+  | "L" => Loop
+  | "EC" => EndCond
+  | "EL" => EndLoop
+
+fun prog_from_string s =
+  map move_from_string (String.tokens (fn c => c = #",") s)
+
+fun olpsize_from_string s = 
+  let 
+    val (sa,sb) = pair_of_list (String.fields (fn c => c = #"#") s) 
+    val (ol,psize) = olsize_from_string sa
+    val p = prog_from_string sb
+  in
+    (ol,(p,psize))
+  end
+
 fun read_targetl () =
   let val sl = readl (!parallel_dir ^ "/targetl") in
-    map (mk_startsit o olsize_from_string) sl
+    map (mk_startsit o olpsize_from_string) sl
   end
 
 fun max_bigsteps (_,((_,limit),_,_)) = limit + 1
@@ -373,12 +458,25 @@ fun rand_olsize level =
     val p = random_prog param
     val ol = ol_of_statel (map (exec_prog p) statel_org)
   in
-    (ol,length p)
+    (ol,(p,length p))
   end
 
+fun list_snd_imin l = case l of 
+    [] => raise ERR "list_snd_imin" ""
+  | [(p,n)] => (p,n)
+  | (p,n) :: m => 
+    let val (p',n') = list_snd_imin m in 
+      if n < n' then (p,n) else (p',n')
+    end
+
+fun random_prefix p = first_n (random_int (0,length p - 1)) p
+
 fun gen_olsizel level =
-  let val olsizel = List.tabulate (100000, fn _ => rand_olsize level) in
-    map_snd list_imin (dlist (dregroup compare_ol olsizel))
+  let 
+    val olsizel1 = List.tabulate (100000, fn _ => rand_olsize level) 
+    val olsizel2 = map_snd list_snd_imin (dlist (dregroup compare_ol olsizel1))
+  in
+    map_snd (fn (p,n) => (random_prefix p,n)) olsizel2
   end
 
 (* -------------------------------------------------------------------------
@@ -428,14 +526,16 @@ fun extract_prog nodel = case #sit (hd nodel) of (_,(_,(_,p),_)) => p
 (*
 load "mleProgram"; open mleProgram;
 load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
+load "mlReinforce"; open mlReinforce;
 load "aiLib"; open aiLib;
 
-mlReinforce.nsim_glob := 100000;
+dim_glob := 8;
+nsim_glob := 16000;
 val il = cartesian_productl [List.tabulate (3,I), List.tabulate (3,I)];
 val ol = map (fn [a,b] => 2*a) il;
 val limit = 5;
 
-val p = extract_prog (explore_random (ol,limit));
+val p = extract_prog (explore_random (ol,([],limit)));
 val dhtnn = read_dhtnn "program_run25_gen12_dhtnn";
 val p = extract_prog (explore_dhtnn dhtnn (ol,limit));
 *)
@@ -447,8 +547,8 @@ load "smlParallel"; open smlParallel;
 
 
 psMCTS.alpha_glob := 0.3;
-psMCTS.exploration_coeff := 0.5;
-logfile_glob := "program_run32";
+psMCTS.exploration_coeff := 2.0;
+logfile_glob := "program_run33";
 parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^
 (!logfile_glob);
 ncore_mcts_glob := 16;

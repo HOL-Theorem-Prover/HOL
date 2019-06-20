@@ -21,13 +21,13 @@ sig
 
   val level_parameters : (int * int * int * int) list
   val random_prog : (int * int * int * int) -> program
-  val gen_olsizel : int -> (int list * int) list
-  val rand_olsize : int -> (int list * int)
+  val gen_olsizel : int -> (int list * (program * int)) list
+  val rand_olsize : int -> (int list * (program * int))
 
   val explore_dhtnn : mlTreeNeuralNetwork.dhtnn -> 
-    (int list * int) -> (board, move) psMCTS.node list
+    (int list * (move list * int)) -> (board, move) psMCTS.node list
   val explore_random :
-    (int list * int) -> (board, move) psMCTS.node list
+    (int list * (move list * int)) -> (board, move) psMCTS.node list
   val extract_prog :
     (board, move) psMCTS.node list -> program
 
