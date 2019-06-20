@@ -381,6 +381,7 @@ fun move_from_string s = case s of
   | "L" => Loop
   | "EC" => EndCond
   | "EL" => EndLoop
+  | _ => raise ERR "move_from_string" ""
 
 fun prog_from_string s =
   map move_from_string (String.tokens (fn c => c = #",") s)
@@ -548,23 +549,25 @@ load "smlParallel"; open smlParallel;
 
 psMCTS.alpha_glob := 0.3;
 psMCTS.exploration_coeff := 2.0;
-logfile_glob := "program_run33";
+logfile_glob := "program_run35";
 parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^
 (!logfile_glob);
-ncore_mcts_glob := 16;
-ncore_train_glob := 16;
-ntarget_compete := 200;
-ntarget_explore := 200;
+ncore_mcts_glob := 2;
+ncore_train_glob := 2;
+ntarget_compete := 100;
+ntarget_explore := 100;
 exwindow_glob := 10000;
 uniqex_flag := false;
 dim_glob := 8;
 lr_glob := 0.02;
 batchsize_glob := 16;
-decay_glob := 0.99;
+decay_glob := 0.95;
 level_glob := 0;
 nsim_glob := 1600;
 nepoch_glob := 100;
 ngen_glob := 100;
+temp_flag := true;
+level_threshold := 0.6;
 
 start_rl_loop gamespec;
 *)

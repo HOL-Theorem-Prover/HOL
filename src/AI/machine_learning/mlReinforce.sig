@@ -28,6 +28,7 @@ sig
   val ntarget_compete : int ref
   val ntarget_explore : int ref
   val level_glob : int ref
+  val level_threshold : real ref
   (* nn parameters *)
   val exwindow_glob : int ref
   val uniqex_flag : bool ref
@@ -39,6 +40,7 @@ sig
   (* mcts parameters *)
   val nsim_glob : int ref
   val decay_glob : real ref
+  val temp_flag : bool ref
   val ncore_mcts_glob : int ref
 
   (* training *)
@@ -57,7 +59,7 @@ sig
   val explore_test : ('a,'b) gamespec -> mlTreeNeuralNetwork.dhtnn ->
     'a psMCTS.sit -> ('a,'b) psMCTS.node list
   val explore_extern :
-    ('a,'b) gamespec * mlTreeNeuralNetwork.dhtnn * (bool * bool) ->
+    ('a,'b) gamespec * mlTreeNeuralNetwork.dhtnn * (bool * bool * bool) ->
     (int * int) -> 'a psMCTS.sit -> unit
 
   (* reinforcement learning loop *)

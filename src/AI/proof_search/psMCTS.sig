@@ -7,6 +7,7 @@ sig
 
   (* globals *)
   val exploration_coeff : real ref
+  val temperature_flag : bool ref
   val alpha_glob : real ref
 
   (* debug *)

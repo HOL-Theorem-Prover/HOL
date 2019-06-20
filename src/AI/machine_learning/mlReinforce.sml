@@ -63,9 +63,11 @@ val ncore_train_glob = ref 4
 
 val nsim_glob = ref 1600
 val decay_glob = ref 0.99
+val temp_flag = ref false
 val ncore_mcts_glob = ref 8
 
 val level_glob = ref 1
+val level_threshold = ref 0.95
 
 fun summary_param () =
   let
@@ -75,6 +77,7 @@ fun summary_param () =
     val gen2  = "target_compete: " ^ its (!ntarget_compete)
     val gen3  = "target_explore: " ^ its (!ntarget_explore)
     val gen4  = "starting level: " ^ its (!level_glob)
+    val gen5  = "level threshold: " ^ rts (!level_threshold)
     val nn0   = "uniqex_flag: " ^ bts (!uniqex_flag)
     val nn1   = "example_window: " ^ its (!exwindow_glob)
     val nn2   = "nn dim: " ^ its (!dim_glob)
@@ -87,11 +90,14 @@ fun summary_param () =
     val mcts4 = "mcts ncore: " ^ its (!ncore_mcts_glob)
     val mcts5 = "mcts exploration coeff: " ^ rts (!exploration_coeff)
     val mcts6 = "mcts noise alpha: " ^ rts (!alpha_glob)
+    val mcts7 = "mcts temp: " ^ bts (!temp_flag)
   in
     summary "Global parameters";
     summary (String.concatWith "\n  "
-     ([file,para] @ [gen1,gen2,gen3,gen4] @ [nn0,nn1,nn2,nn3,nn4,nn6,nn5] @
-      [mcts2,mcts3,mcts4,mcts5,mcts6])
+     ([file,para] @ 
+      [gen1,gen2,gen3,gen4,gen5] @ 
+      [nn0,nn1,nn2,nn3,nn4,nn6,nn5] @
+      [mcts2,mcts3,mcts4,mcts5,mcts6,mcts7])
      ^ "\n")
   end
 
@@ -218,7 +224,8 @@ fun string_to_bstatus s = assoc s [("win",true),("lose",false)]
 
 fun explore_extern (gamespec,dhtnn,flags) (wid,job) target =
   let
-    val (noise,bstart) = flags
+    val (noise,bstart,btemp) = flags
+    val _ = temperature_flag := btemp
     val mctsparam =
       (!nsim_glob, !decay_glob, noise,
        #status_of gamespec, #apply_move gamespec,
@@ -268,7 +275,8 @@ fun train_f gamespec allex =
    External parallelization: helper functions
    ------------------------------------------------------------------------- *)
 
-fun flags_to_string (b1,b2) = "(" ^ bts b1 ^ "," ^  bts b2 ^ ")"
+fun flags_to_string (b1,b2,b3) = 
+  "(" ^ bts b1 ^ "," ^  bts b2 ^ "," ^ bts b3  ^ ")"
 
 fun mk_state_s opens flags =
   String.concatWith "\n"
@@ -321,7 +329,7 @@ fun explore_parallel gamespec ncore flags dhtnn targetl =
 fun compete_one gamespec dhtnn targetl =
   let
     val (l,t) = add_time
-      (explore_parallel gamespec (!ncore_mcts_glob) (false,false) dhtnn) targetl
+      (explore_parallel gamespec (!ncore_mcts_glob) (false,false,false) dhtnn) targetl
     val nwin = length (filter (I o fst) l)
   in
     summary ("Competition time : " ^ rts t);
@@ -333,6 +341,11 @@ fun summary_compete (w_old,w_new) =
     summary (s ^ ": " ^ its w_old ^ " " ^ its w_new)
   end
 
+fun level_up b =
+  if b
+  then (incr level_glob; summary ("Level up: " ^ its (!level_glob)))
+  else ()
+
 fun compete gamespec dhtnn_old dhtnn_new =
   let
     val targetl = #mk_targetl gamespec (!level_glob) (!ntarget_compete)
@@ -343,10 +356,7 @@ fun compete gamespec dhtnn_old dhtnn_new =
   in
     summary_compete (w_old,w_new);
     summary ("Max percentage: " ^ rts (approx 3 freq));
-    if freq > 0.95
-    then (incr level_glob;
-          summary ("Level up: " ^ its (!level_glob)))
-    else ();
+    level_up (freq > !level_threshold);
     if w_new >= w_old then dhtnn_new else dhtnn_old
   end
 
@@ -360,7 +370,7 @@ fun explore_f startb gamespec allex dhtnn =
     val _ = summary ("Exploration targets: " ^ its (length targetl))
     val (l,t) = add_time
       (explore_parallel gamespec
-       (!ncore_mcts_glob) (true,startb) dhtnn) targetl
+       (!ncore_mcts_glob) (true,startb,!temp_flag) dhtnn) targetl
     val nwin = length (filter (I o fst) l)
     val exll = map snd l
     val _ = summary ("Exploration time: " ^ rts t)
@@ -368,11 +378,9 @@ fun explore_f startb gamespec allex dhtnn =
     fun cmp ((a,_,_),(b,_,_)) = Term.compare (a,b)
     val exl1 = List.concat exll @ allex
     val exl2 = if !uniqex_flag then mk_sameorder_set cmp exl1 else exl1
-    val b = int_div nwin (length targetl) > 0.95
+    val b = int_div nwin (length targetl) > !level_threshold
   in
-    if b then (incr level_glob; summary ("Level up: " ^ its (!level_glob)))
-    else ();
-    (b, first_n (!exwindow_glob) exl2)
+    level_up b; (b, first_n (!exwindow_glob) exl2)
   end
 
 (* -------------------------------------------------------------------------

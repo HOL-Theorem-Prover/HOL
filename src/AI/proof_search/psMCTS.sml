@@ -453,6 +453,8 @@ fun best_in_distrib distrib =
     fst (hd (dict_sort cmp distrib))
   end
 
+val temperature_flag = ref false
+
 fun select_bigstep tree id =
   let
     val node = dfind id tree
@@ -463,7 +465,9 @@ fun select_bigstep tree id =
   in
     if tot < 0.5 (* ends when no moves are available *)
     then ([], NONE)
-    else (dis1, SOME (best_in_distrib dis2))
+    else (dis1, SOME (if !temperature_flag 
+                      then select_in_distrib dis2 
+                      else best_in_distrib dis2))
   end
 
 
