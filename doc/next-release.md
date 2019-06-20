@@ -126,6 +126,11 @@ New features:
     This seems preferable: it helps when debugging to be able to have everything up to a problem-point immediately fed into a fresh session.
     (The loading of the material (whole prefix or selected region) is done “quietly”, with the interactive flag false.)
 
+-   Holmakefiles can now refer to the new variable `DEFAULT_TARGETS` in order to generate a list of the targets in the current directory that Holmake would attempt to build by default.
+    This provides an easier way to adjust makefiles than that suggested in the [release notes for Kananaskis-10](http://hol-theorem-prover.org/kananaskis-10.release.html).
+
+
+
 Bugs fixed:
 -----------
 
@@ -142,9 +147,6 @@ New theories:
     There is a minor backwards-incompatibility: old proof scripts using
     the metric-related results in previous `topologyTheory` should now
     open `metricTheory` instead. (Thanks to Chun Tian for this work.)
-
-*   Holmakefiles can now refer to the new variable `DEFAULT_TARGETS` in order to generate a list of the targets in the current directory that Holmake would attempt to build by default.
-    This provides an easier way to adjust makefiles than that suggested in the [release notes for Kananaskis-10](http://hol-theorem-prover.org/kananaskis-10.release.html).
 
 New tools:
 ----------
