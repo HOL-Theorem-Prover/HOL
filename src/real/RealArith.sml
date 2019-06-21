@@ -1287,7 +1287,8 @@ val TRANSLATE_PROOF =
     fn refutation =>
       let
         val _ = trace "TRANSLATE_PROOF"
-        val cache = ref []
+        val cache = Uref.new []
+        open Uref
         fun translate refut =
           snd (op_assoc (curry injust_eq) refut (!cache))
           handle HOL_ERR _
