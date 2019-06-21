@@ -59,31 +59,38 @@ fun loop_block level acc prog = case prog of
 fun cond_blk p = cond_block 0 [] p
 fun loop_blk p = loop_block 0 [] p
 
-fun exec_prog prog d = 
+exception ProgTimeout
+
+fun exec_prog_aux prog (d,t) = 
+  if t <= 0 then raise ProgTimeout else
   case prog of
-    [] => d
-  | Read i :: m  => exec_prog m (dadd i (dfind 0 d) d)
-  | Write i :: m => exec_prog m (dadd 0 (dfind i d) d)
-  | Incr i :: m  => exec_prog m (dadd i ((dfind i d + 1) mod 8) d)
+    [] => (d,t)
+  | Read i :: m  => exec_prog_aux m (dadd i (dfind 0 d) d, t-1)
+  | Write i :: m => exec_prog_aux m (dadd 0 (dfind i d) d, t-1)
+  | Incr i :: m  => exec_prog_aux m (dadd i ((dfind i d + 1) mod 8) d, t-1)
   | Decr i :: m  =>
     let val n = dfind i d in 
-      if n > 0 then exec_prog m (dadd i (n-1) d) else exec_prog m d
+      if n > 0 
+      then exec_prog_aux m (dadd i (n-1) d, t-1) 
+      else exec_prog_aux m (d,t-1)
     end
   | Cond :: m =>
     let
       val (block,cont) = cond_blk m
-      val d' = if dfind 0 d <> 0 then exec_prog block d else d
+      val (d',t') = if dfind 0 d <> 0 then exec_prog_aux block (d,t) else (d,t)
     in
-      exec_prog cont d'
+      exec_prog_aux cont (d',t'-1)
     end
   | Loop :: m =>
     let 
       val (block,cont) = loop_blk m
-      val d' = funpow (dfind 0 d) (exec_prog block) d
+      val (d',t') = funpow (dfind 0 d) (exec_prog_aux block) (d,t)
     in
-      exec_prog cont d'
+      exec_prog_aux cont (d',t'-1)
     end
-  | _ => raise ERR "exec_prog" ""
+  | _ => raise ERR "exec_prog_aux" ""
+
+fun exec_prog p d = (fst (exec_prog_aux p (d,1000)) handle ProgTimeout => d)
 
 fun parl_of_prog p parl = 
   case p of
@@ -547,10 +554,9 @@ load "mleProgram"; open mleProgram;
 load "mlReinforce"; open mlReinforce;
 load "smlParallel"; open smlParallel;
 
-
 psMCTS.alpha_glob := 0.3;
 psMCTS.exploration_coeff := 2.0;
-logfile_glob := "program_run40";
+logfile_glob := "program_run41";
 parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^
 (!logfile_glob);
 ncore_mcts_glob := 8;
