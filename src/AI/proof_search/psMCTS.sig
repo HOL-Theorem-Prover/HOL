@@ -47,6 +47,7 @@ sig
     ('a,'b) tree -> ('a,'b) tree
 
   (* dirichlet noise *)
+  val gamma_distrib : real -> (real * real) list
   val dirichlet_noise : real -> int -> real list
 
   (* reuse previous search *)

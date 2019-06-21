@@ -417,7 +417,7 @@ fun update_annot (parl,n) m = case m of
 val level_parameters = 
   let fun f (n1,n2) = List.tabulate (n2 - n1 + 1, fn x => x + n1) in
     map (quadruple_of_list o rev) (cartesian_productl 
-      (map f (rev [(4,8),(1,4),(1,8),(0,1)])))
+      (map f (rev [(4,16),(4,4),(4,4),(1,1)])))
   end
 
 fun is_possible_param (psize,ctrln,ctrlsize,nestn) (parl,n) m = 
@@ -530,15 +530,16 @@ load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
 load "mlReinforce"; open mlReinforce;
 load "aiLib"; open aiLib;
 
-dim_glob := 8;
-nsim_glob := 16000;
+nsim_glob := 1600;
 val il = cartesian_productl [List.tabulate (3,I), List.tabulate (3,I)];
-val ol = map (fn [a,b] => 2*a) il;
+val ol = map (fn [a,b] => a+b) il;
 val limit = 5;
 
+dim_glob := 8;
 val p = extract_prog (explore_random (ol,([],limit)));
-val dhtnn = read_dhtnn "program_run25_gen12_dhtnn";
-val p = extract_prog (explore_dhtnn dhtnn (ol,limit));
+val dhtnn = read_dhtnn 
+  "src/AI/machine_learning/eval/program_run37_gen14_dhtnn";
+val p = extract_prog (explore_dhtnn dhtnn (ol,([],limit)));
 *)
 
 (*
@@ -549,11 +550,11 @@ load "smlParallel"; open smlParallel;
 
 psMCTS.alpha_glob := 0.3;
 psMCTS.exploration_coeff := 2.0;
-logfile_glob := "program_run35";
+logfile_glob := "program_run40";
 parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^
 (!logfile_glob);
-ncore_mcts_glob := 2;
-ncore_train_glob := 2;
+ncore_mcts_glob := 8;
+ncore_train_glob := 8;
 ntarget_compete := 100;
 ntarget_explore := 100;
 exwindow_glob := 10000;
@@ -567,7 +568,7 @@ nsim_glob := 1600;
 nepoch_glob := 100;
 ngen_glob := 100;
 temp_flag := true;
-level_threshold := 0.6;
+level_threshold := 0.8;
 
 start_rl_loop gamespec;
 *)
