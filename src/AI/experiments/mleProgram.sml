@@ -462,7 +462,8 @@ fun random_prog param = random_prog_aux param [] ([],0)
 
 fun rand_olsize level = 
   let 
-    val param = List.nth (level_parameters,level)
+    val (a,b,c,d) = List.nth (level_parameters,level)
+    val param = (random_int (1,a),b,c,d)
     val p = random_prog param
     val ol = ol_of_statel (map (exec_prog p) statel_org)
   in
@@ -556,13 +557,13 @@ load "smlParallel"; open smlParallel;
 
 psMCTS.alpha_glob := 0.3;
 psMCTS.exploration_coeff := 2.0;
-logfile_glob := "program_run41";
+logfile_glob := "program_run43";
 parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^
 (!logfile_glob);
 ncore_mcts_glob := 8;
 ncore_train_glob := 8;
-ntarget_compete := 100;
-ntarget_explore := 100;
+ntarget_compete := 400;
+ntarget_explore := 400;
 exwindow_glob := 10000;
 uniqex_flag := false;
 dim_glob := 8;
