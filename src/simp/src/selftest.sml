@@ -3,44 +3,36 @@ open testutils boolSimps BackchainingLib
 
 val _ = Portable.catch_SIGINT()
 
-fun infloop_protect (startstr : string) (endfn : 'a -> bool)
-    (f : 'b -> 'a) (x : 'b) =
-    let
-      val _ =  tprint startstr
-      val r = f x
-    in
-      if endfn r then
-        (OK(); (true, SOME r))
-      else
-        die "FAILED\n"
-    end handle Interrupt => die "FAILED"
-             | e => die ("EXN: "^General.exnMessage e)
-
 (* earlier versions of the simplifier would go into an infinite loop on
    terms of this form. *)
 val const_term = ``(ARB : bool -> bool) ((ARB : bool -> bool) ARB)``
 val test_term = ``^const_term /\ x /\ y``
 
-val (test1_flag, result1) =
-    infloop_protect
-      "AC looping (if test appears to hang, it has failed)"
-      (K true)
-      (QCONV (SIMP_CONV bool_ss
-                        [AC CONJ_ASSOC CONJ_COMM]))
-      test_term
+val _ = tprint "AC looping (if test appears to hang, it has failed)"
+val _ = let
+  fun kont result1 =
+      let
+        fun test2P th2 =
+            aconv (rhs (concl (Exn.release result1))) (rhs (concl th2))
+      in
+        (tprint "Permuted AC arguments";
+         require (check_result test2P)
+                 (QCONV (SIMP_CONV bool_ss [AC CONJ_COMM CONJ_ASSOC]))
+                 test_term)
+      end
+in
+  require_msgk (check_result (K true)) (fn _ => "")
+               (QCONV (SIMP_CONV bool_ss [AC CONJ_ASSOC CONJ_COMM]))
+               kont
+               test_term
+end
 
-(* test that AC works with the arguments messed up *)
-fun test2P th2 = aconv (rhs (concl (valOf result1))) (rhs (concl th2))
-val (test2_flag, _) =
-    infloop_protect "Permuted AC arguments"
-                    test2P
-                    (QCONV (SIMP_CONV bool_ss
-                                      [AC CONJ_COMM CONJ_ASSOC]))
-                    test_term
+fun infloop_protect msg check f x =
+    (tprint msg; require (check_result check) f x)
 
 (* test bounded simplification *)
 fun test3P th = aconv (rhs (concl th)) ``P(f (g (x:'a):'a) : 'a):bool``
-val (test3_flag, _) =
+val _ =
     infloop_protect
       "Bounded rewrites (if test appears to hang, it has failed)"
       test3P
@@ -59,7 +51,7 @@ fun test4P (sgs, vfn) =
        aconv (hd asms) ``P (f (x:'a) : 'b) : bool``
      end)
 
-val (test4_flag, _) =
+val _ =
     infloop_protect
       "Abbreviations + ASM_SIMP_TAC"
       test4P
@@ -84,11 +76,9 @@ val test5P =
                   POP_ASSUM ACCEPT_TAC) g)
         ([], goal5)
 
-val test5_flag = #1 test5P
-
 (* test that being a bounded rewrite overrides detection of loops in
    mk_rewrites code *)
-val (test6_flag, _) = let
+val _ = let
   open boolSimps
   val rwt_th = ASSUME ``!x:'a. (f:'a -> 'b) x = if P x then z
                                      else let x = g x in f x``
@@ -107,7 +97,7 @@ in
 end
 
 (* test that a bounded rewrite on a variable gets a chance to fire at all *)
-val (test7_flag, _) = let
+val _ = let
   open pureSimps
   val rwt_th = ASSUME ``!x:'a. x:'a = f x``
   val t = ``x:'a = z``
@@ -122,7 +112,7 @@ in
 end
 
 (* test that a bound on a rewrite applies to all derived rewrite theorems *)
-val (test8_flag, _) = let
+val _ = let
   open boolSimps
   val rwt_th = ASSUME ``(p:bool = x) /\ (q:bool = x)``
   val t = ``p /\ q``
@@ -137,7 +127,7 @@ in
 end
 
 (* test that congruence rule for conditional expressions is working OK *)
-val (test9_flag,_) = let
+val _ = let
   open boolSimps
   val t = ``if a then f a:'a else g a``
   val result = ``if a then f T:'a else g F``
@@ -147,7 +137,7 @@ in
   infloop_protect "Congruence for conditional expressions" check doit t
 end
 
-val (test10_flag,_) = let
+val _ = let
   open boolSimps
   val t = ``I (f:'b -> 'c) o I (g:'a -> 'b)``
   val result = ``(f:'b -> 'c) o I (g:'a -> 'b)``
@@ -159,7 +149,7 @@ in
 end
 
 
-val (test11_flag,_) = let
+val _ = let
   open boolSimps
   val t = ``(!n:'a. P n n) ==> ?m. P c m``
   val result = ``T``
