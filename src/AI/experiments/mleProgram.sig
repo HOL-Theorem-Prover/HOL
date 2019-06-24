@@ -19,6 +19,8 @@ sig
   
   val gamespec : (board,move) mlReinforce.gamespec
 
+  val mk_startsit : int list * (program * int) -> (bool * board)
+
   val level_parameters : (int * int * int * int) list
   val random_prog : (int * int * int * int) -> program
   val gen_olsizel : int -> (int list * (program * int)) list

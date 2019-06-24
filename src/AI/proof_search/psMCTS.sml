@@ -47,15 +47,15 @@ fun init_timers () =
   applymovetime := 0.0
   )
 
-fun string_of_timers tim =
-  String.concatWith "\n"
+fun print_timers tim =
+  print_endline (String.concatWith "\n"
     [
     "  backup time     : " ^ Real.toString (!backuptime),
     "  select time     : " ^ Real.toString (!selecttime),
     "  fevalpoli time  : " ^ Real.toString (!fevalpolitime),
     "  status_of time  : " ^ Real.toString (!statusoftime),
     "  apply_move time : " ^ Real.toString (!applymovetime)
-    ]
+    ])
 
 (* -------------------------------------------------------------------------
    Debug
@@ -94,9 +94,6 @@ type ('a,'b) node =
 }
 
 type ('a,'b) tree = (int list, ('a,'b) node) Redblackmap.dict
-
-fun genealogy id =
-  if null id then [] else id :: genealogy (tl id)
 
 (* -------------------------------------------------------------------------
    Backup
@@ -294,12 +291,21 @@ fun expand decay fevalpoli status_of apply_move tree (id,cid) =
    MCTS
    ------------------------------------------------------------------------- *)
 
+type ('a,'b) mcts_param = 
+  ( 
+    int * real * bool *
+    ('a sit -> status) * ('b -> 'a sit -> 'a sit) *
+    ('a sit -> real * ('b * real) list)
+  )
+
 fun starttree_of (nsim,decay,noiseb,status_of,apply_move,fep) startsit =
   let val empty_tree = dempty (list_compare Int.compare) in
     node_create_backup decay fep status_of empty_tree ([0],startsit)
   end
 
 (* two players *)
+val stopatwin_flag = ref false
+
 fun mcts (nsim,decay,noiseb,status_of,apply_move,fep) starttree =
   let
     val starttree_noise =
@@ -308,7 +314,10 @@ fun mcts (nsim,decay,noiseb,status_of,apply_move,fep) starttree =
     val status_of_timed = status_of_timer status_of
     val apply_move_timed = apply_move_timer apply_move
     fun loop tree =
-      if #vis (dfind [0] tree) > Real.fromInt nsim + 0.5 then tree else
+      if #vis (dfind [0] tree) > Real.fromInt nsim + 0.5 
+         orelse (!stopatwin_flag andalso #status (dfind [0] tree) = Win)      
+      then tree 
+      else
       let
         val selecto = select_timer (select_child decay tree) [0]
         val newtree  = case selecto of
@@ -320,6 +329,23 @@ fun mcts (nsim,decay,noiseb,status_of,apply_move,fep) starttree =
       end
   in
     loop starttree_noise
+  end
+
+fun mk_uniform_fep apply_move movel = 
+  let fun fep sit =
+    let val movel' = filter (fn x => can (apply_move x) sit) movel in   
+      if null movel' 
+      then raise ERR "mk_uniform_fep" "no move available"
+      else (0.0, map (fn x => (x,1.0)) movel')
+    end
+  in fep end
+
+fun mcts_uniform nsim (status_of, apply_move, movel) startsit =
+  let 
+    val fep = mk_uniform_fep apply_move movel
+    val param = (nsim,1.0,false,status_of,apply_move,fep)
+  in
+    mcts param (starttree_of param startsit)
   end
 
 (* -------------------------------------------------------------------------
@@ -356,25 +382,6 @@ fun cut_tree tree suffix =
    Statistics
    ------------------------------------------------------------------------- *)
 
-datatype wintree = Wleaf of int list | Wnode of (int list * wintree list)
-
-fun wtree_of tree id =
-  let
-    val node  = dfind id tree
-    val cidl0 = map snd (#pol node)
-    fun is_win cid =
-      (#status (dfind cid tree) = Win handle NotFound => false)
-    val cidl1 = filter is_win cidl0
-  in
-    if null cidl1
-    then Wleaf id
-      else Wnode (id, map (wtree_of tree) cidl1)
-  end
-
-fun depth_of_wtree wtree = case wtree of
-    Wleaf _ => 1
-  | Wnode (_,treel) => list_imax (map depth_of_wtree treel) + 1
-
 fun best_child tree id =
   let
     val node  = dfind id tree
@@ -398,6 +405,31 @@ fun node_variation tree id =
   )
 
 fun root_variation tree = node_variation tree [0]
+
+fun max_depth tree id = 
+  if not (dmem id tree) then 0 else
+  let 
+    val node = dfind id tree
+    val cidl = map snd (#pol node)
+    val l = map (max_depth tree) cidl
+  in
+    1 + (if null l then 0 else list_imax l)
+  end
+
+fun is_win tree id = 
+  #status (dfind id tree) = Win handle NotFound => false
+
+fun trace_one_win status_of tree id = 
+  if not (dmem id tree) then raise ERR "trace_one_win" "" else
+  let 
+    val node = dfind id tree
+    val cidl = map snd (#pol node)
+    val l = filter (is_win tree) cidl
+  in
+    if status_of (#sit node) = Win then [node] else
+    if null l then raise ERR "trace_one_win" "" else
+    node :: trace_one_win status_of tree (hd l)
+  end
 
 (* -------------------------------------------------------------------------
    Policy distribution

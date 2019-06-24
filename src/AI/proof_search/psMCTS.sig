@@ -9,6 +9,7 @@ sig
   val exploration_coeff : real ref
   val temperature_flag : bool ref
   val alpha_glob : real ref
+  val stopatwin_flag : bool ref
 
   (* debug *)
   val string_of_status : status -> string
@@ -31,20 +32,17 @@ sig
   type ('a,'b) tree = (int list, ('a,'b) node) Redblackmap.dict
 
   (* search function *)
-  val starttree_of :
-    (int * real * bool *
+  type ('a,'b) mcts_param = 
+    ( 
+      int * real * bool *
       ('a sit -> status) * ('b -> 'a sit -> 'a sit) *
       ('a sit -> real * ('b * real) list)
-    ) ->
-    'a sit ->
-    ('a,'b) tree
-
-  val mcts :
-    (int * real * bool *
-      ('a sit -> status) * ('b -> 'a sit -> 'a sit) *
-      ('a sit -> real * ('b * real) list)
-    ) ->
-    ('a,'b) tree -> ('a,'b) tree
+    )
+  val starttree_of : ('a,'b) mcts_param -> 'a sit -> ('a,'b) tree
+  val mcts : ('a,'b) mcts_param -> ('a,'b) tree -> ('a,'b) tree
+  val mcts_uniform : 
+    int -> ('a sit -> status) * ('b -> 'a sit -> 'a sit) * 'b list -> 
+    'a sit -> ('a,'b) tree
 
   (* dirichlet noise *)
   val gamma_distrib : real -> (real * real) list
@@ -54,11 +52,12 @@ sig
   val cut_tree : ('a,'b) tree -> int list -> ('a,'b) tree
 
   (* statistics *)
-  val backuptime : real ref
-  val selecttime : real ref
-  datatype wintree = Wleaf of int list | Wnode of (int list * wintree list)
-  val wtree_of : ('a,'b) tree -> int list -> wintree
+  val init_timers : unit -> unit 
+  val print_timers : unit -> unit
   val root_variation : ('a,'b) tree -> (int list) list
+  val max_depth : ('a,'b) tree -> int list -> int  
+  val trace_one_win : 
+    ('a sit -> status) -> ('a,'b) tree -> int list -> ('a,'b) node list
 
   (* constructing a training example *)
   val move_of_cid : ('a,'b) node -> int list -> 'b

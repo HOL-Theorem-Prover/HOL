@@ -122,7 +122,7 @@ fun mk_fep_dhtnn startb gamespec dhtnn sit =
     val ptnn = {opdict=opdict,headnn=headpoli,dimin=dimin,dimout=dimout}
     val nntm = (#nntm_of_sit gamespec) sit
   in
-    if startb then (0.01, filter_sit (map (fn x => (x,1.0)) movel)) else
+    if startb then (0.0, filter_sit (map (fn x => (x,1.0)) movel)) else
       let val (e,p) = infer_dhtnn dhtnn nntm in
         (e, filter_sit (combine (movel,p)))
         handle HOL_ERR _ => raise ERR "mk_fep_dhtnn"
@@ -183,8 +183,8 @@ fun n_bigsteps_loop (n,nmax) gamespec mctsparam (allex,allroot) tree =
           val _ = if !verbose_flag
                   then print_distrib (#string_of_move gamespec) dis
                   else ()
-          val cuttree = starttree_of mctsparam (#sit (dfind cid newtree))
-            (* cut_tree newtree cid: does not mix well with noise *)
+          val cuttree = (* starttree_of mctsparam (#sit (dfind cid newtree)) *)
+            cut_tree newtree cid (* does not mix well with noise *)
           val newallex = add_rootex gamespec newtree allex
         in
           n_bigsteps_loop (n+1,nmax) gamespec mctsparam
