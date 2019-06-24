@@ -336,10 +336,12 @@ fun apply_move move (_,((ol,limit),(statel,p),(b,parl))) =
       | Cond => (statel, (b @ [move], move :: parl))
       | Loop => (statel, (b @ [move], move :: parl))
       | EndCond =>
+        if hd parl <> Cond then raise ERR "apply_move" "" else
         if parl = [Cond]
         then (map (exec_prog (b @ [move])) statel, ([],[]))
         else (statel, (b @ [move], tl parl))
       | EndLoop => 
+        if hd parl <> Loop then raise ERR "apply_move" "" else
         if parl = [Loop]
         then (map (exec_prog (b @ [move])) statel, ([],[]))
         else (statel, (b @ [move], tl parl))
@@ -485,7 +487,7 @@ fun gen_olsizel level =
     val olsizel1 = List.tabulate (100000, fn _ => rand_olsize level) 
     val olsizel2 = map_snd list_snd_imin (dlist (dregroup compare_ol olsizel1))
   in
-    map_snd (fn (p,n) => (random_prefix p,n)) olsizel2
+    olsizel2
   end
 
 (* -------------------------------------------------------------------------
@@ -493,8 +495,12 @@ fun gen_olsizel level =
    ------------------------------------------------------------------------- *)
 
 fun mk_targetl level ntarget =
-  let val olsizel = gen_olsizel level in
-    map mk_startsit (first_n ntarget (shuffle olsizel))
+  let 
+    val l1 = gen_olsizel level 
+    val l2 = first_n ntarget (shuffle l1)
+    val l3 = map_snd (fn (p,n) => (random_prefix p,n)) l2
+  in
+    map mk_startsit l3
   end
 
 (* -------------------------------------------------------------------------
@@ -530,9 +536,27 @@ fun explore_random (ol,limit) =
 
 fun extract_prog nodel = case #sit (hd nodel) of (_,(_,(_,p),_)) => p
 
+(* MCTS 
+load "mleProgram"; open mleProgram;
+load "psMCTS"; open psMCTS;
+load "aiLib"; open aiLib;
 
+val il = cartesian_productl [List.tabulate (3,I), List.tabulate (3,I)];
+val ol = map (fn [a,b] => 4) il;
+val startsit = mk_startsit (ol,([],7));
 
-(*
+val status_of = #status_of gamespec;
+val apply_move = #apply_move gamespec;
+val movel = #movel gamespec;
+
+stopatwin_flag := true;
+val tree = mcts_uniform 100000 (status_of, apply_move, movel) startsit;
+val nodel = trace_one_win tree [0];
+val p = extract_prog [last nodel];
+*)
+
+(* Big steps 
+
 load "mleProgram"; open mleProgram;
 load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
 load "mlReinforce"; open mlReinforce;
@@ -540,24 +564,24 @@ load "aiLib"; open aiLib;
 
 nsim_glob := 1600;
 val il = cartesian_productl [List.tabulate (3,I), List.tabulate (3,I)];
-val ol = map (fn [a,b] => a+b) il;
-val limit = 5;
+val ol = map (fn [a,b] => a+2) il;
+val limit = 10;
 
 dim_glob := 8;
 val p = extract_prog (explore_random (ol,([],limit)));
-val dhtnn = read_dhtnn 
-  "src/AI/machine_learning/eval/program_run37_gen14_dhtnn";
+val dhtnn = read_dhtnn "program_run44_gen22_dhtnn";
 val p = extract_prog (explore_dhtnn dhtnn (ol,([],limit)));
 *)
 
-(*
+(* Reinforcement learning loop
+
 load "mleProgram"; open mleProgram;
 load "mlReinforce"; open mlReinforce;
 load "smlParallel"; open smlParallel;
 
 psMCTS.alpha_glob := 0.3;
 psMCTS.exploration_coeff := 2.0;
-logfile_glob := "program_run43";
+logfile_glob := "program_run44";
 parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^
 (!logfile_glob);
 ncore_mcts_glob := 8;
