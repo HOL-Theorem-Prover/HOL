@@ -534,6 +534,7 @@ val _ = init_timers ();
 val tree = mcts_uniform 100000 (status_of, apply_move, movel) startsit;
 val _ = print_timers ();
 val nodel = trace_one_win status_of tree [0];
+
 val p = extract_prog [last nodel];
 *)
 
