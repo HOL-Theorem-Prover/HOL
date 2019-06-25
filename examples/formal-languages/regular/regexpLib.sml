@@ -281,8 +281,8 @@ val charset_conv_ss =
 
 val _ = 
  let open Regexp_Numerics
-     fun iFn (i,j) = 
-        twos_comp_interval LSB (twos_comp_interval_width(i,j)) i j
+     fun iFn p = 
+        twos_comp_interval LSB (interval_width Twos_comp p) p
  in 
     set_intervalFn iFn
  end

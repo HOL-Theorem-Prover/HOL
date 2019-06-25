@@ -2,35 +2,74 @@ signature Regexp_Numerics =
 sig
 
   type regexp = Regexp_Type.regexp
+  type word8 = Word8.word;
+  type bigint = IntInf.int
 		      
-  datatype direction = LSB | MSB
+  datatype endian = LSB | MSB
 
-  val dir2string : direction -> string
-  val string2dir : string -> direction option
+  val compare_endian : endian * endian -> order
+  val endian2string : endian -> string
+  val string2endian : string -> endian option
 
-  val unsigned_width  : IntInf.int -> int
-  val twos_comp_width  : IntInf.int -> int
-  val twos_comp_interval_width  : IntInf.int * IntInf.int -> int
+  datatype encoding = Unsigned | Twos_comp | Zigzag | Sign_mag
 
-  val bytes_of : int -> IntInf.int -> Word8.word list
-  val int2string : int -> int -> string
+  (*---------------------------------------------------------------------------*)
+  (* Width in certain encodings                                                *)
+  (*---------------------------------------------------------------------------*)
+				       
+  val width_of : encoding -> bigint -> int
+  val interval_width : encoding -> bigint * bigint -> int
 
-  val num_interval : direction -> int -> IntInf.int -> IntInf.int -> regexp
-  val twos_comp_interval : direction -> int -> IntInf.int -> IntInf.int -> regexp
+  (*---------------------------------------------------------------------------*)
+  (* Encoding fns for signed numbers. And their decoders.                      *)
+  (*---------------------------------------------------------------------------*)
+
+  val zigzag        : bigint -> bigint
+  val sign_mag      : bigint -> bigint
+  val undo_zigzag   : bigint -> bigint
+  val undo_sign_mag : bigint -> bigint
+
+  (*---------------------------------------------------------------------------*)
+  (* numbers to strings                                                        *)
+  (*---------------------------------------------------------------------------*)
+
+  val n2l : bigint -> int list
+  val bytes_of : int -> bigint -> word8 list
+
+  val iint2string : encoding -> endian -> int -> bigint -> string
+  val int2string : int -> string
+
+
+  (*---------------------------------------------------------------------------*)
+  (* strings to numbers                                                        *)
+  (*---------------------------------------------------------------------------*)
+
+  val string2iint : encoding -> endian -> string -> bigint
+  val string2int : string -> int
+
+
+  (*---------------------------------------------------------------------------*)
+  (* Intervals in various representations                                      *)
+  (*---------------------------------------------------------------------------*)
+
+  val num_interval       : endian -> int -> bigint * bigint -> regexp
+  val twos_comp_interval : endian -> int -> bigint * bigint -> regexp
+  val zigzag_interval    : endian -> int -> bigint * bigint -> regexp
+  val sign_mag_interval  : endian -> int -> bigint * bigint -> regexp
+
+  val interval_regexp : encoding -> endian -> int -> bigint * bigint -> regexp
+  val test_interval   : encoding -> endian -> int -> bigint * bigint 
+                         -> regexp * int * (bigint->bool)
+
 (*
-  val zigzag_interval : direction -> int -> IntInf.int -> IntInf.int -> regexp
-  val signmag_interval : direction -> int -> IntInf.int -> IntInf.int -> regexp
+  val EVEN : endian -> regexp
+  val ODD  : endian -> regexp
 
-  val even_lsb : regexp
-  val even_msb : regexp
-  val odd_lsb : regexp
-  val odd_msb : regexp
-
-  val unsigned_leq : direction -> int -> IntInf.int -> regexp
-  val unsigned_gtr : direction -> int -> IntInf.int -> regexp
-  val twos_comp_leq : direction -> int -> IntInf.int -> regexp
-  val twos_comp_gtr : direction -> int -> IntInf.int -> regexp
+  val unsigned_leq : endian -> int -> bigint -> regexp
+  val unsigned_gtr : endian -> int -> bigint -> regexp
+  val twos_comp_leq : endian -> int -> bigint -> regexp
+  val twos_comp_gtr : endian -> int -> bigint  -> regexp
 *)
 
 end
-    
+

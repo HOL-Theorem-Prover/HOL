@@ -1,13 +1,16 @@
 (*===========================================================================*)
-(* Regexps for numeric intervals                                             *)
+(* Regexps for numbers and numeric intervals                                 *)
 (*===========================================================================*)
 
 structure Regexp_Numerics :> Regexp_Numerics =
 struct
 
-open Lib Feedback regexpMisc Regexp_Type;
+open Lib Feedback regexpMisc Regexp_Type Regexp_Match;
 
 val ERR = mk_HOL_ERR "Regexp_Numerics";
+
+type word8 = Word8.word;
+type bigint = IntInf.int
 
 fun copy x n = List.tabulate (n,K x) handle _ => [];
 fun padL list x width = copy x (width - length list) @ list;
@@ -18,14 +21,95 @@ fun padR list x width = list @ copy x (width - length list);
 (* Least- and Most- significant byte                                         *)
 (*---------------------------------------------------------------------------*)
 
-datatype direction = LSB | MSB
+datatype endian = LSB | MSB
 
-fun dir2string MSB = "MSB"
-  | dir2string LSB = "LSB";
+fun compare_endian(LSB,MSB) = LESS
+  | compare_endian(MSB,LSB) = GREATER
+  | compare_endian other    = EQUAL
 
-fun string2dir "MSB" = SOME MSB
-  | string2dir "LSB" = SOME LSB
-  | string2dir other = NONE;
+fun endian2string MSB = "MSB"
+  | endian2string LSB = "LSB";
+
+fun string2endian "MSB" = SOME MSB
+  | string2endian "LSB" = SOME LSB
+  | string2endian other = NONE;
+
+datatype encoding = Unsigned | Twos_comp | Zigzag | Sign_mag ;
+
+(*---------------------------------------------------------------------------*)
+(* ZigZag encoding as an int -> posint map                                   *)
+(*---------------------------------------------------------------------------*)
+
+fun zigzag i = if i >= 0 then 2*i else (2 * IntInf.abs i) - 1;
+
+fun undo_zigzag n = 
+  case IntInf.divMod(n,IntInf.fromInt 2)
+   of (k,0) => k
+    | (k,_) => ~(k+1);
+
+(*---------------------------------------------------------------------------*)
+(* Sign-magnitude encoding as an int -> posint map                           *)
+(*---------------------------------------------------------------------------*)
+
+fun sign_mag i = if i >= 0 then 2*i else (2 * IntInf.abs i) + 1;
+
+fun undo_sign_mag n = 
+ if n = 1 then 0 
+ else
+  case IntInf.divMod(n,IntInf.fromInt 2)
+   of (k,0) => k
+    | (k,_) => ~k;
+
+(*---------------------------------------------------------------------------*)
+(* Minimum bytes needed to express unsigned and signed quantities            *)
+(*---------------------------------------------------------------------------*)
+
+fun log256 n = IntInf.log2 n div 8;
+
+(* width in bytes *)
+fun unsigned_width i = 
+   if i = 0 then 1 else
+   if 0 < i then 1 + log256 i
+   else raise ERR "unsigned_width" "negative input";
+
+fun twos_comp_width i = 
+ let val k = unsigned_width (IntInf.abs i)
+     val bound = twoE (k*8 - 1)
+ in 
+    if ~bound <= i andalso i < bound then k else k+1
+ end;
+
+fun width_of Unsigned  = unsigned_width
+  | width_of Twos_comp = twos_comp_width
+  | width_of Zigzag    = unsigned_width o zigzag
+  | width_of Sign_mag  = unsigned_width o sign_mag;
+
+fun pair_max f = Int.max o (f##f)
+
+fun interval_width Unsigned  = pair_max unsigned_width
+  | interval_width Twos_comp = pair_max twos_comp_width
+  | interval_width Zigzag    = pair_max (width_of Zigzag) 
+  | interval_width Sign_mag  = pair_max (width_of Sign_mag);
+
+(*---------------------------------------------------------------------------*)
+(* Twos complement encoding as an int -> posint map.                         *)
+(*---------------------------------------------------------------------------*)
+
+fun twos_comp w i = 
+ let val top = twoE (8*w)
+     val bound = IntInf.div(top, IntInf.fromInt 2)
+ in if ~bound <= i andalso i < bound then 
+       (if i >= 0 then i else top + i)
+    else raise ERR "twos_comp" "width too small"
+ end;
+
+fun undo_twos_comp w n = 
+ let val top = twoE (8*w)
+     val bound = IntInf.div(top, IntInf.fromInt 2)
+ in if 0 <= n andalso n < top then 
+      (if n < bound then n else ~(top - n))
+    else raise ERR "undo_twos_comp" "width too small"
+ end;
 
 (*---------------------------------------------------------------------------*)
 (* Basic maps between bytes, chars, and ints                                 *)
@@ -43,42 +127,26 @@ val eight = Word.fromInt 8
 (* Maps to and from byte lists                                               *)
 (*---------------------------------------------------------------------------*)
 
-fun n2l (n:IntInf.int) =
-  if IntInf.<=(n,0) then
-    []
-  else IntInf.toInt(IntInf.mod(n,256))::n2l (IntInf.div(n,256))
-
-fun l2n [] = 0
-  | l2n (h::t) = h + 256 * l2n t;
-
-val n256 = IntInf.fromInt 256;
-fun log256 n = IntInf.log2 n div 8;
-fun exp256 n = IntInf.pow(n256,n);
-
-
-(*---------------------------------------------------------------------------*)
-(* Minimum bytes needed to express unsigned and signed quantities            *)
-(*---------------------------------------------------------------------------*)
-
-fun unsigned_width 0 = 1  (* width in bytes *)
-  | unsigned_width i = 
-     if 0 < i then 1 + log256 i
-     else raise ERR "unsigned_width" "negative input";
-
-fun twos_comp_width i = 
- let val k = unsigned_width (IntInf.abs i)
-     val bound = twoE (k*8 - 1)
+val n2l = 
+ let open IntInf
+     fun chunks n = 
+       if n=0 then []
+       else toInt(op mod(n,256)) :: chunks (op div(n,256))
  in 
-    if ~bound <= i andalso i < bound then k else k+1
+   fn i:IntInf.int => 
+        if i < 0 then
+           raise ERR "n2l" "negative input"
+         else
+           chunks i
  end;
 
-fun twos_comp_interval_width (i,j) = 
-    Int.max(twos_comp_width i, twos_comp_width j);
+fun l2n [] = IntInf.fromInt 0
+  | l2n (h::t) = IntInf.fromInt h + 256 * l2n t;
 
 (*---------------------------------------------------------------------------*)
-(* Map numbers to strings                                                    *)
+(* bytes_of w i lays out i into w bytes in LSB                               *)
 (*                                                                           *)
-(* bytes_of w i lays out i into w bytes                                      *)
+(* w should be large enough to capture i                                     *)
 (*---------------------------------------------------------------------------*)
 
 fun bytes_of w i =
@@ -89,51 +157,54 @@ fun bytes_of w i =
       ii2byte (andb(i,0xFF)) :: bytes_of (Int.-(w,1)) (~>>(i,eight))
  end
 
-fun int2string w i =
- String.implode 
-    (List.map byte2char (bytes_of w (IntInf.fromInt i)))
+(*---------------------------------------------------------------------------*)
+(* Maps from numbers to strings                                              *)
+(*---------------------------------------------------------------------------*)
 
-fun int2string_msb w i =
- String.implode 
-     (rev (List.map byte2char (bytes_of w (IntInf.fromInt i))));
+fun ii2s LSB w i = String.implode (map byte2char (bytes_of w i))
+  | ii2s MSB w i = String.implode (rev (map byte2char (bytes_of w i)))
 
+(*---------------------------------------------------------------------------*)
+(* It can be that the specified width is not enough to properly represent i, *)
+(* so we take the max                                                        *)
+(*---------------------------------------------------------------------------*)
 
-fun value (list :  IntInf.int list) = 
+fun iint2string enc d w i =
+    ii2s d (Int.max(w,width_of enc i))
+      (case enc
+        of Unsigned  => i
+         | Twos_comp => twos_comp w i
+         | Zigzag    => zigzag i
+         | Sign_mag  => sign_mag i)
+
+val int2string = iint2string Twos_comp LSB 1 o IntInf.fromInt;
+
+(*---------------------------------------------------------------------------*)
+(* Maps from strings to numbers                                              *)
+(*---------------------------------------------------------------------------*)
+
+val unsigned_value_of = l2n o map Word8.toInt;
+
+fun twos_comp_value_of (list : word8 list) = 
  let open IntInf
  in case list 
-     of [] => 0
-      | h::t => h + 256 * value t
+     of [] => IntInf.fromInt 0
+      | [e] => Word8.toLargeIntX e
+      | h::t => byte2ii h + 256 * twos_comp_value_of t
  end;
 
-val num_of = value o List.map byte2ii;
-
-fun int_of wlist =
- let val (A,a) = Lib.front_last wlist
-     val wlist' = List.map byte2ii A @ [IntInf.fromInt(Word8.toIntX a)]
- in value wlist'
+fun string2iint enc dir = 
+ let fun vfn Unsigned  = unsigned_value_of
+       | vfn Twos_comp = twos_comp_value_of
+       | vfn Zigzag    = zigzag o unsigned_value_of 
+       | vfn Sign_mag  = sign_mag o unsigned_value_of
+ in
+  case dir 
+   of LSB => vfn enc o List.map char2byte o String.explode
+    | MSB => vfn enc o rev o List.map char2byte o String.explode
  end;
 
-val string2num = num_of o List.map char2byte o String.explode;
-val string2int = int_of o List.map char2byte o String.explode;
-
-(*---------------------------------------------------------------------------*)
-(* MSB versions                                                              *)
-(*---------------------------------------------------------------------------*)
-
-fun num_of_msb wlist = num_of (rev wlist);
-fun int_of_msb wlist = int_of (rev wlist);
-
-val string2num_msb = num_of_msb o List.map char2byte o String.explode;
-val string2int_msb = int_of_msb o List.map char2byte o String.explode;
-
-(*
-fun test r = 
- let val r' = Regexp_Match.normalize
-     val tester = #matchfn(regexpLib.matcher SML r')
- in      
-     fn i => test (int2string i)
- end;
-*)
+val string2int = IntInf.toInt o string2iint Twos_comp LSB;
 
 (*===========================================================================*)
 (* Intervals                                                                 *)
@@ -150,11 +221,11 @@ val zero_regexp = num2regexp 0;
 (* the number is expected to fill.                                           *)
 (*---------------------------------------------------------------------------*)
 
-fun num_interval dir width lo hi =
+fun num_interval dir width (lo,hi) =
  let val _ = if lo < 0 orelse hi < lo then 
                raise ERR "num_interval" "malformed interval" 
              else ()
-     val _ = if width < unsigned_width hi then 
+     val _ = if width < interval_width Unsigned (lo,hi) then 
                raise ERR "num_interval" "given width not large enough" 
              else ()
      val lorep = rev(padR (n2l lo) 0 width)
@@ -235,15 +306,15 @@ Ninterval 0 4611686018427387903;  (* Int63.maxInt *)
 (* interval lo .. hi.                                                        *)
 (*---------------------------------------------------------------------------*)
 
-fun twos_comp_interval dir width lo hi =
+fun twos_comp_interval dir width (lo,hi) =
  if hi < lo then
      raise ERR "twos_comp_interval" "hi less than lo"
  else
- if width < twos_comp_interval_width (lo,hi) then
+ if width < interval_width Twos_comp (lo,hi) then
    raise ERR "twos_comp_interval" "width is too small"
  else
  if 0 <= lo andalso 0 <= hi then
-    num_interval dir width lo hi
+    num_interval dir width (lo,hi)
  else
  let val top = twoE (width * 8)
  in
@@ -251,117 +322,157 @@ fun twos_comp_interval dir width lo hi =
        (if hi + 1 = top + lo  (* contiguous *) then 
            catlist (dots width)
         else
-           Or [num_interval dir width (top + lo) (top-1),
-               num_interval dir width 0 hi])
+           Or [num_interval dir width (top + lo,top-1),
+               num_interval dir width (0,hi)])
    else
    if lo < 0 andalso hi < 0 then
-      num_interval dir width (top+lo) (top+hi)
+      num_interval dir width (top+lo,top+hi)
    else raise ERR "twos_comp_interval" "unexpected values for lo and hi"
  end
 
 (*---------------------------------------------------------------------------*)
-(* Regexp for "zigzag" encoded integer in the interval lo .. hi.             *)
+(* Even and odd numbers                                                      *)
+(*---------------------------------------------------------------------------*)
+     
+val small_evens = filter (fn x => x mod 2 = 0) (upto 0 255);
+val small_odds = filter (fn x => x mod 2 = 1) (upto 0 255);
+val sme_charset = Regexp_Type.charset_of (map Char.chr small_evens);
+val smo_charset = Regexp_Type.charset_of (map Char.chr small_odds);
+
+fun EVEN LSB = Cat(Chset sme_charset,Star DOT)
+  | EVEN MSB = Cat(Star DOT,Chset sme_charset);
+
+fun ODD LSB = Cat(Chset smo_charset,Star DOT)
+  | ODD MSB = Cat(Star DOT, Chset smo_charset);
+
+(*---------------------------------------------------------------------------*)
+(* Regexp for "zigzag" encoded integer in the interval [lo,hi]               *)
 (*---------------------------------------------------------------------------*)
 
-fun int_to_zz i = if i >= 0 then 2*i else (2 * IntInf.abs i) - 1;
+fun pos_zigzag dir (lo,hi) = 
+ let val w = interval_width Zigzag (lo,hi)
+ in And(EVEN dir, num_interval dir w (2*lo, 2*hi)) 
+ end
 
-fun zz_width i = unsigned_width (int_to_zz i);
+fun neg_zigzag dir (lo,hi) = 
+ let val w = interval_width Zigzag (lo,hi)
+ in And(ODD dir, num_interval dir w (2*(abs hi)-1, 2*(abs lo)-1))
+ end
 
-(*---------------------------------------------------------------------------*)
-(* Regexp for numbers >= n                                                   *)
-(*---------------------------------------------------------------------------*)
-
-(*
-fun num_leq dir width n = num_interval dir width 0 n;
-
-fun num_gtr dir width n = 
-  And (Neg (num_interval dir width 0 n),
-       catlist(dots (unsigned_width n)));
-
-
-val r = Regexp_Match.normalize (num_gtr LSB 2 1456);
-
-val basic_evens = filter (fn x => x mod 2 = 0) (upto 0 255);
-val be_charset = Regexp_Type.charset_of (map Char.chr basic_evens);
-val even_regexp = Cat(Chset be_charset,Star DOT);
-val even_regexp_term = regexpSyntax.regexp_to_term even_regexp;
-
-val basic_odds = filter (fn x => x mod 2 = 1) (upto 0 255);
-val bo_charset = Regexp_Type.charset_of (map Char.chr basic_odds);
-val odd_regexp = Cat(Chset bo_charset,Star DOT);
-val odd_regexp_term = regexpSyntax.regexp_to_term odd_regexp;
-
-*)
-
-(*
-fun zigzag_interval dir width lo hi =
+fun zigzag_interval dir width (lo,hi) =
  if hi < lo then
      raise ERR "zigzag_interval" "hi less than lo"
  else
- if width < Int.max(zz_width lo, zz_width hi) then
+ if width < interval_width Zigzag (lo,hi) then
    raise ERR "zigzag_interval" "width is too small"
  else
  if 0 <= lo (* all positive *) then
-    EVEN && (>= (2*lo)) && (<= (2*hi)) else 
+    pos_zigzag dir (lo, hi) else 
  if hi < 0 (* all negative *) then
-    ODD && (>= (2*(abs hi)-1) && (<= (2*(abs lo)-1) 
+    neg_zigzag dir (lo,hi)
  else (* lo < 0 and 0 <= hi *)
-  let fun singleton n = num_interval dir width n n
-      val lomag = IntInf.abs lo
+  let val lomag = IntInf.abs lo
   in if lomag < hi then 
-        let val span = num_interval dir width 0 (int_to_zz lomag)
-            val points = map int_to_zz (bigUpto (lomag+1) hi)
-            val pt_regexps = map singleton points
-        in mk_or (span :: pt_regexps)
+        let val span = num_interval dir width (0, zigzag lomag) (* [lo,lomag] *)
+            val upper = pos_zigzag dir (lomag+1,hi)
+        in mk_or [span, upper]
         end
      else
       if hi < lomag then 
-        let val span = num_interval dir width 0 (int_to_zz hi)
-            val points = map int_to_zz (bigUpto (hi+1) lomag)
-            val pt_regexps = map singleton points
-        in mk_or (span :: pt_regexps)
+        let val span = num_interval dir width (0, zigzag hi) (* [-hi,hi] *)
+            val lower = neg_zigzag dir (lo,~(hi+1))
+        in mk_or [span,lower]
 	end
      else (* hi = lomag *)
-      num_interval dir width 0 (int_to_zz hi)
+      num_interval dir width (0, zigzag hi)
   end;
 
 (*---------------------------------------------------------------------------*)
-(* Regexp for sign + magnitude representations of integers in the interval   *)
-(* lo .. hi. Characters #"-" and #"+" are prepended to the unsigned binary   *)
-(* representations. Zero is Cat(#"+",<encoded-zero>). There is no negative   *)
-(* zero.                                                                     *)
+(* Regexp for sign-magnitude encoded integer in the interval [lo,hi]         *)
 (*---------------------------------------------------------------------------*)
 
-fun gen_sign_magn_interval lo hi width dir =
- let val plus = Chset(charset_sing #"+")
-     val minus = Chset(charset_sing #"-")
- in
-  if hi < lo then
-     raise ERR "sign_magn_interval" "hi less than lo"
- else
-  if 0 <= lo andalso 0 <= hi then
-    Cat(plus,num_interval dir width lo hi)
- else
-  if lo < 0 andalso hi < 0 then
-    Cat(minus,num_interval dir width (IntInf.abs hi) (IntInf.abs lo))
- else
-  Or [Cat(minus,num_interval dir width 1 (IntInf.abs lo)),
-      Cat(plus,num_interval dir width 0 hi)]
+fun pos_sign_mag dir (lo,hi) = 
+ let val w = interval_width Sign_mag (lo,hi)
+     val base = And(EVEN dir, num_interval dir w (2*lo, 2*hi))
+ in if lo = 0 then
+       mk_or[num_interval dir w (1,1), base]
+    else base
  end
 
-fun magn_bin_width lo hi =
-if hi < lo then
-     raise ERR "sign_magn_interval_bin_width"
-               "hi less than lo"
+fun neg_sign_mag dir (lo,hi) = 
+ let val w = interval_width Sign_mag (lo,hi)
+ in And(ODD dir, num_interval dir w (2*(abs hi)+1, 2*(abs lo)+1))
+ end
+
+fun sign_mag_interval dir width (lo,hi) =
+ if hi < lo then
+     raise ERR "sign_mag_interval" "hi less than lo"
  else
-  Int.max(unsigned_width (IntInf.abs lo),
-          unsigned_width (IntInf.abs hi))
-;
+ if width < interval_width Sign_mag (lo,hi) then
+   raise ERR "sign_mag_interval" "width is too small"
+ else
+ if 0 <= lo (* all positive *) then
+    pos_sign_mag dir (lo, hi) else 
+ if hi < 0 (* all negative *) then
+    neg_sign_mag dir (lo,hi)
+ else (* lo < 0 and 0 <= hi *)
+  let val lomag = IntInf.abs lo
+  in if lomag < hi then 
+        let val span = num_interval dir width (0, sign_mag lo) (* [lo,lomag] *)
+            val upper = pos_sign_mag dir (lomag+1,hi)
+        in mk_or [span, upper]
+        end
+     else
+      if hi < lomag then 
+        let val span = num_interval dir width (0, sign_mag (~hi)) (* [-hi,hi] *)
+            val lower = neg_sign_mag dir (lo,~(hi+1))
+        in mk_or [span,lower]
+	end
+     else (* hi = lomag *)
+      num_interval dir width (0, sign_mag (~hi))
+  end;
 
-fun sign_magn_interval lo hi dir =
-    gen_sign_magn_interval lo hi (magn_bin_width lo hi) dir;
+fun interval_regexp Unsigned  = num_interval 
+  | interval_regexp Twos_comp = twos_comp_interval
+  | interval_regexp Zigzag    = zigzag_interval
+  | interval_regexp Sign_mag  = sign_mag_interval;
+ 
+fun test_interval enc dir w (lo,hi) =
+ let val regexp = Regexp_Match.normalize(interval_regexp enc dir w (lo,hi))
+     val dfa = Regexp_Match.matcher regexp
+     val matcher = #matchfn dfa
+     val states = length (#final dfa)
+     val _ = print (Int.toString states^" states\n")
+     fun testFn i = matcher (iint2string enc dir w i)
+     val ivl = bigUpto lo hi
+     val _ = if Lib.all I (map testFn ivl) then () else
+             raise ERR "test_interval" ""
+ in 
+   (regexp,states,testFn)
+ end;
 
-fun sign_magn_sing_interval i dir = sign_magn_interval i i dir;
+(*
+val (r,n,testFn) = test_interval Unsigned LSB 2 (12, 1234);
+val (r,n,testFn) = test_interval Twos_comp LSB 2 (12, 1234);
+val (r,n,testFn) = test_interval Zigzag LSB 2 (12, 1234);
+val (r,n,testFn) = test_interval Sign_mag LSB 2 (12, 1234);
+
+val (r,n,testFn) = test_interval Twos_comp LSB 2 (~12, 1234);
+val (r,n,testFn) = test_interval Zigzag LSB 2 (~12, 1234);
+val (r,n,testFn) = test_interval Sign_mag LSB 2 (~12, 1234);
+
 *)
+
+(*---------------------------------------------------------------------------*)
+(* Regexp for numbers >= n of arbitrary size                                 *)
+(*---------------------------------------------------------------------------*)
+
+fun LEQ enc dir width n = 
+ if n < 0 then 
+    raise ERR "LEQ" "negative input"
+ else 
+    interval_regexp enc dir width (0,n);
+
+fun GTR enc dir width n = And(EVEN dir, Neg (LEQ enc dir width n));
 
 end;
