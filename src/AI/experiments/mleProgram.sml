@@ -403,11 +403,7 @@ fun update_annot (parl,n) m = case m of
   | _ => (parl, n+1) 
 
 
-val level_parameters = 
-  let fun f (n1,n2) = List.tabulate (n2 - n1 + 1, fn x => x + n1) in
-    map (quadruple_of_list o rev) (cartesian_productl 
-      (map f (rev [(4,16),(4,4),(4,4),(1,1)])))
-  end
+val level_parameters = ref []
 
 fun is_possible_param (psize,ctrln,ctrlsize,nestn) (parl,n) m = 
   let val psize' = psize - (length parl) in
@@ -444,7 +440,7 @@ fun random_prog param = random_prog_aux param [] ([],0)
 
 fun rand_olsize level = 
   let 
-    val (a,b,c,d) = List.nth (level_parameters,level)
+    val (a,b,c,d) = List.nth (!level_parameters,level)
     val param = (random_int (1,a),b,c,d)
     val p = random_prog param
     val ol = ol_of_statel (map (exec_prog p) statel_org)
@@ -561,10 +557,17 @@ val p = extract_prog (explore_dhtnn dhtnn (ol,([],limit)));
 load "mleProgram"; open mleProgram;
 load "mlReinforce"; open mlReinforce;
 load "smlParallel"; open smlParallel;
+load "aiLib"; open aiLib;
+
+level_parameters := 
+  let fun f (n1,n2) = List.tabulate (n2 - n1 + 1, fn x => x + n1) in
+    map (quadruple_of_list o rev) (cartesian_productl 
+      (map f (rev [(4,32),(4,4),(4,4),(1,1)])))
+  end;
 
 psMCTS.alpha_glob := 0.3;
 psMCTS.exploration_coeff := 2.0;
-logfile_glob := "program_run45";
+logfile_glob := "program_run46";
 parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^
 (!logfile_glob);
 ncore_mcts_glob := 8;
