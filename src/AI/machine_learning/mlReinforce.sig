@@ -43,6 +43,13 @@ sig
   val temp_flag : bool ref
   val ncore_mcts_glob : int ref
 
+  val eval_dir : string
+
+  (* mcts *)
+  val mcts_gamespec_dhtnn : 
+    int -> ('a,'b) gamespec -> mlTreeNeuralNetwork.dhtnn -> 'a psMCTS.sit -> 
+    ('a,'b) psMCTS.tree
+
   (* training *)
   val random_dhtnn_gamespec :
     ('a,'b) gamespec -> mlTreeNeuralNetwork.dhtnn

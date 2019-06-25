@@ -139,9 +139,7 @@ fun compare_statel (dl1,dl2) =
 fun state_of_inputl il = 
   daddl (number_fst 1 il) (dnew Int.compare (List.tabulate (5,fn x => (x,0))))
 
-val inputl_org =
-  cartesian_productl [List.tabulate (3,I), List.tabulate (3,I)]
-
+val inputl_org = cartesian_productl [List.tabulate (3,I), List.tabulate (3,I)]
 val statel_org = map state_of_inputl inputl_org
 
 (* output *)
@@ -205,6 +203,7 @@ fun nntm_of_instr ins tm = case ins of
   | Loop => mk_loop tm
   | EndCond => mk_endcond tm
   | EndLoop => mk_endloop tm
+  
 
 fun nntm_of_prog acc p = case p of
     [] => acc 
@@ -510,28 +509,38 @@ fun explore_dhtnn dhtnn (ol,limit) =
 fun explore_random (ol,limit) =
   explore_dhtnn (random_dhtnn_gamespec gamespec) (ol,limit)
 
-fun extract_prog nodel = case #sit (hd nodel) of (_,(_,(_,p),_)) => p
+fun extract_prog node = case #sit node of (_,(_,(_,p),_)) => p
+
+fun mk_ol binop = 
+  let fun f x = binop (dfind 1 x, dfind 2 x) in
+    map f statel_org
+  end
 
 (* MCTS 
 load "mleProgram"; open mleProgram;
 load "psMCTS"; open psMCTS;
+load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
+load "mlReinforce"; open mlReinforce;
 load "aiLib"; open aiLib;
 
-val il = cartesian_productl [List.tabulate (3,I), List.tabulate (3,I)];
-val ol = map (fn [a,b] => if a < b then 0 else 1) il;
-val startsit = mk_startsit (ol,([],7));
-
-val status_of = #status_of gamespec;
-val apply_move = #apply_move gamespec;
-val movel = #movel gamespec;
-
+val ol = mk_ol (fn (x,y) => if x-y > 0 then x-y else 0);
+val startsit = mk_startsit (ol,([],12));
 stopatwin_flag := true;
-val _ = init_timers ();
-val tree = mcts_uniform 100000 (status_of, apply_move, movel) startsit;
-val _ = print_timers ();
-val nodel = trace_one_win status_of tree [0];
 
-val p = extract_prog [last nodel];
+val _ = init_timers ();
+val tree = mcts_uniform 10000 
+  (#status_of gamespec, #apply_move gamespec, #movel gamespec) startsit;
+val _ = print_timers ();
+val nodel = trace_one_win (#status_of gamespec) tree [0];
+
+val dhtnn = read_dhtnn (eval_dir ^ "/program_run47_gen18_dhtnn");
+val tree = mcts_gamespec_dhtnn 10000 gamespec dhtnn startsit;
+val nodel = trace_one_win (#status_of gamespec) tree [0];
+val p = extract_prog (last nodel);
+val ol' = map (dfind 0 o exec_prog p) statel_org;
+
+val multp = [Write 1, Loop, Write 2, Loop, Incr 3, EndLoop, EndLoop, Write 3];
+val multol = map (dfind 0 o exec_prog multp) statel_org;
 *)
 
 (* Big steps 
@@ -541,14 +550,14 @@ load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
 load "mlReinforce"; open mlReinforce;
 load "aiLib"; open aiLib;
 
-nsim_glob := 1600;
-val il = cartesian_productl [List.tabulate (3,I), List.tabulate (3,I)];
-val ol = map (fn [a,b] => a+2) il;
-val limit = 10;
 
-dim_glob := 8;
-val p = extract_prog (explore_random (ol,([],limit)));
-val dhtnn = read_dhtnn "program_run44_gen22_dhtnn";
+val il = cartesian_productl [List.tabulate (3,I), List.tabulate (3,I)];
+val ol = map (fn [a,b] => a*b) il;
+
+
+nsim_glob := 100000;
+val dhtnn = read_dhtnn "program_run47_gen15_dhtnn";
+val limit = 15;
 val p = extract_prog (explore_dhtnn dhtnn (ol,([],limit)));
 *)
 
@@ -564,10 +573,9 @@ level_parameters :=
     map (quadruple_of_list o rev) (cartesian_productl 
       (map f (rev [(4,32),(4,4),(4,4),(1,1)])))
   end;
-
 psMCTS.alpha_glob := 0.3;
 psMCTS.exploration_coeff := 2.0;
-logfile_glob := "program_run46";
+logfile_glob := "program_run47";
 parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^
 (!logfile_glob);
 ncore_mcts_glob := 8;

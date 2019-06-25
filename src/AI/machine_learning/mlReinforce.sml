@@ -117,9 +117,6 @@ fun mk_fep_dhtnn startb gamespec dhtnn sit =
   let
     val movel = #movel gamespec
     val filter_sit = (#filter_sit gamespec) sit
-    val {opdict,headeval,headpoli,dimin,dimout} = dhtnn
-    val etnn = {opdict=opdict,headnn=headeval,dimin=dimin,dimout=1}
-    val ptnn = {opdict=opdict,headnn=headpoli,dimin=dimin,dimout=dimout}
     val nntm = (#nntm_of_sit gamespec) sit
   in
     if startb then (0.0, filter_sit (map (fn x => (x,1.0)) movel)) else
@@ -128,6 +125,14 @@ fun mk_fep_dhtnn startb gamespec dhtnn sit =
         handle HOL_ERR _ => raise ERR "mk_fep_dhtnn"
           (its (length movel) ^ " " ^ its (length p))
       end
+  end
+
+fun mcts_gamespec_dhtnn nsim gamespec dhtnn startsit =
+  let 
+    val fep = mk_fep_dhtnn false gamespec dhtnn
+    val param = (nsim,1.0,false,#status_of gamespec,#apply_move gamespec,fep)
+  in
+    mcts param (starttree_of param startsit)
   end
 
 (* -------------------------------------------------------------------------
@@ -183,8 +188,8 @@ fun n_bigsteps_loop (n,nmax) gamespec mctsparam (allex,allroot) tree =
           val _ = if !verbose_flag
                   then print_distrib (#string_of_move gamespec) dis
                   else ()
-          val cuttree = (* starttree_of mctsparam (#sit (dfind cid newtree)) *)
-            cut_tree newtree cid (* does not mix well with noise *)
+          val cuttree = starttree_of mctsparam (#sit (dfind cid newtree))
+            (* cut_tree newtree cid *)
           val newallex = add_rootex gamespec newtree allex
         in
           n_bigsteps_loop (n+1,nmax) gamespec mctsparam
@@ -251,7 +256,6 @@ fun epex_stats epex =
     summary ("average duplicates: " ^ rts r)
   end
 
-(* get rid of dim_glob here or set it in the codel *)
 fun random_dhtnn_gamespec gamespec =
   random_dhtnn (!dim_glob, length (#movel gamespec)) (#operl gamespec)
 
