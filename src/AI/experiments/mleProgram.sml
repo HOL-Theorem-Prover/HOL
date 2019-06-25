@@ -273,33 +273,13 @@ val moveil = number_snd 0 movel
 fun move_compare (m1,m2) = 
   Int.compare (assoc m1 moveil, assoc m2 moveil)
 
-
-
 fun is_possible parl m = case m of
     EndCond => ((hd parl = Cond) handle Empty => false)
   | EndLoop => ((hd parl = Loop) handle Empty => false)
   | _ => true
 
-fun is_simple_move m = case m of
-    Read i  => true | Write i => true  
-  | Incr i  => true | Decr i  => true
-  | _ => false
-
 fun filter_sit (_,(_,(statel,_),(b,parl))) =
-  let fun test (m,_) = 
-    is_possible parl m 
-  (* andalso
-    if null parl andalso is_simple_move m 
-      then compare_statel (map (exec_prog [m]) statel,statel) <> EQUAL
-    else 
-      if (parl = [Cond] andalso m = EndCond) orelse
-         (parl = [Loop] andalso m = EndLoop)  
-      then
-        compare_statel (map (exec_prog (b @ [m])) statel, statel)
-        <> EQUAL
-    else true
-  *)
-  in 
+  let fun test (m,_) = is_possible parl m in 
     fn l => filter test l 
   end
 
@@ -542,7 +522,7 @@ load "psMCTS"; open psMCTS;
 load "aiLib"; open aiLib;
 
 val il = cartesian_productl [List.tabulate (3,I), List.tabulate (3,I)];
-val ol = map (fn [a,b] => 4) il;
+val ol = map (fn [a,b] => if a < b then 0 else 1) il;
 val startsit = mk_startsit (ol,([],7));
 
 val status_of = #status_of gamespec;
@@ -550,8 +530,10 @@ val apply_move = #apply_move gamespec;
 val movel = #movel gamespec;
 
 stopatwin_flag := true;
+val _ = init_timers ();
 val tree = mcts_uniform 100000 (status_of, apply_move, movel) startsit;
-val nodel = trace_one_win tree [0];
+val _ = print_timers ();
+val nodel = trace_one_win status_of tree [0];
 val p = extract_prog [last nodel];
 *)
 
@@ -581,7 +563,7 @@ load "smlParallel"; open smlParallel;
 
 psMCTS.alpha_glob := 0.3;
 psMCTS.exploration_coeff := 2.0;
-logfile_glob := "program_run44";
+logfile_glob := "program_run45";
 parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^
 (!logfile_glob);
 ncore_mcts_glob := 8;
