@@ -95,18 +95,18 @@ val _ = unicode_off (raw_backend (trace ("types", 1) testutils.tpp))
 val _ = tprint "Testing monadsyntax parse of OPTION_BIND"
 val t = ``do x <- opt ; SOME (x + 1) od``
 val (f, args) = strip_comb t
-val _ = same_const f ``option$OPTION_BIND`` andalso
-        hd args ~~ mk_var("opt", ``:num option``) andalso
-        hd (tl args) ~~ ``\x:num. SOME (x + 1)`` andalso
-        (OK(); true) orelse udie ()
+val _ = if same_const f ``option$OPTION_BIND`` andalso
+           hd args ~~ mk_var("opt", ``:num option``) andalso
+           hd (tl args) ~~ ``\x:num. SOME (x + 1)``
+        then OK() else udie ()
 
 val _ = tprint "Testing monadsyntax parse of OPTION_IGNORE_BIND"
 val t = ``do SOME 3 ; SOME 4 od``
 val (f, args) = strip_comb t
-val _ = same_const f ``option$OPTION_IGNORE_BIND`` andalso
-        hd args ~~ ``SOME 3`` andalso
-        hd (tl args) ~~ ``SOME 4`` andalso
-        (OK(); true) orelse udie()
+val _ = if same_const f ``option$OPTION_IGNORE_BIND`` andalso
+           hd args ~~ ``SOME 3`` andalso
+           hd (tl args) ~~ ``SOME 4``
+        then OK() else udie()
 
 val _ = disable_monad "option"
 val _ = declare_monad ("option",
@@ -119,10 +119,10 @@ val _ = enable_monad "option"
 val _ = tprint "Testing monadsyntax parse of OPTION_BIND (ignoring)"
 val t = ``do SOME 3 ; SOME 4 od``
 val (f, args) = strip_comb t
-val _ = same_const f ``option$OPTION_BIND`` andalso
-        hd args ~~ ``SOME 3`` andalso
-        hd (tl args) ~~ ``K (SOME 4) : num -> num option`` andalso
-        (OK(); true) orelse udie()
+val _ = if same_const f ``option$OPTION_BIND`` andalso
+           hd args ~~ ``SOME 3`` andalso
+           hd (tl args) ~~ ``K (SOME 4) : num -> num option`` then
+          OK() else udie()
 
 val _ = app tpp' [monadtpp_test1, monadtpp_test2, monadtpp_test3,
                   monadtpp_test4]
