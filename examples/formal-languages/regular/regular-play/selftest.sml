@@ -22,7 +22,7 @@ open stringTheory;
 open testutils;
 
 val hard_fail = true;
-val _ = really_die := true;
+val _ = diemode := ProcessExit
 val quiet = false;
 
 
