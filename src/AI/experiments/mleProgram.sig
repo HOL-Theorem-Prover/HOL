@@ -12,7 +12,11 @@ sig
     | Loop
     | EndLoop
     | EndCond
+    | Macro of int
+
   type program = move list
+
+  val macro_array : move list option vector ref
 
   type state = (int,int) Redblackmap.dict
   type board = (int list * int) * (state list * program) * (program * program)
@@ -23,6 +27,9 @@ sig
   val inputl_org : int list list
   val statel_org : state list
   val state_of_inputl : int list -> state
+  val compare_statel : state list * state list -> order
+  val ol_of_statel : state list -> int list
+  val compare_ol : int list * int list -> order  
 
   val level_parameters : (int * int * int * int) list ref
   val exec_prog : program -> state -> state
