@@ -49,10 +49,12 @@ fun string_of_card (n,c) =
 
 val full_deck = 
   List.concat (map (fn x => [(1,x),(1,x),(1,x)]) colorl) @
-  List.concat (map (fn x => [(2,x),(2,x)]) colorl) @
+  List.concat (map (fn x => [(2,x),(2,x)]) colorl)
+(* @
   List.concat (map (fn x => [(3,x),(3,x)]) colorl) @
   List.concat (map (fn x => [(4,x),(4,x)]) colorl) @
   List.concat (map (fn x => [(5,x)]) colorl)
+*)
 
 (* -------------------------------------------------------------------------
    Board
@@ -475,14 +477,14 @@ load "mleHanabi"; open mleHanabi;
 load "aiLib"; open aiLib;
 load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
 
-summary_file := "hanabi_run1";
-ncore_explore := 16;
+summary_file := "hanabi_run3";
+ncore_explore := 8;
 dim_glob := 8;
-ncore_train := 16;
-bsize_glob := 64;
-lr_glob := 0.05;
+ncore_train := 8;
+bsize_glob := 16;
+lr_glob := 0.02;
 nepoch_glob := 20;
-ngame_glob := 4000;
+ngame_glob := 1000;
 
 val tnn = rl_loop 20;
 *)
