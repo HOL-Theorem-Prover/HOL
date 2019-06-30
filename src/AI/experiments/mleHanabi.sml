@@ -14,6 +14,12 @@ open HolKernel boolLib Abbrev aiLib smlParallel psMCTS
 val ERR = mk_HOL_ERR "mleHanabi"
 fun debug s = 
   debug_in_dir (HOLDIR ^ "/src/AI/experiments/debug") "mleHanabi" s
+val eval_dir = HOLDIR ^ "/src/AI/experiments/eval"
+val summary_file = ref "default"
+fun summary s = 
+  (mkDir_err eval_dir; 
+   print_endline s;
+   append_endline (eval_dir ^ "/" ^ !summary_file) s)
 
 (* -------------------------------------------------------------------------
    Deck
@@ -403,48 +409,82 @@ fun extract_ex (bml,sc) =
     map f bml
   end
 
+
+val ncore_explore = ref 8
+val dim_glob = ref 8
+val ncore_train = ref 8
+val bsize_glob = ref 32
+val lr_glob = ref 0.02
+val nepoch_glob = ref 20
+val ngame_glob = ref 4000
+
 fun train_tnn exl =
   let
-    val tt = (exl,first_n 100 exl);
-    val tnn = random_tnn (4,1) operl;
-    val ncore = 4;
-    val bsize = 16;
-    val schedule = [(10,0.02)]
-    val tnn' = prepare_train_tnn (ncore,bsize) tnn tt schedule; 
+    val tt = (exl,first_n 100 exl)
+    val tnn = random_tnn (!dim_glob,1) operl
+    val schedule = [(!nepoch_glob,!lr_glob)]
   in
-    tnn'
+    prepare_train_tnn (!ncore_train,!bsize_glob) tnn tt schedule
   end
 
 fun gen_ex_temp ngame tnn =
   let 
-    val gamel = smlParallel.parmap_queue 4 
-      tnn_game_temp (List.tabulate (ngame, fn _ => tnn))
+    fun f () = tnn_game_temp tnn
+    val gamel = smlParallel.parmap_queue (!ncore_explore) 
+      f (List.tabulate (ngame, fn _ => ()))
     val r = average_real (map (Real.fromInt o snd) gamel)   
-    val _ = (debug (rts r); print_endline (rts r))
+    val _ = summary (rts r)
   in
     List.concat (map extract_ex gamel)
   end
 
-fun rl_loop (n,nmax) tnn =
+fun summary_parameters () =
+  (
+  erase_file (eval_dir ^ "/" ^ !summary_file);
+  summary (String.concatWith "\n  " 
+  ["summary_file: " ^ !summary_file,
+   "ncore_explore: " ^ its (!ncore_explore),
+   "dim_glob: " ^ its (!dim_glob),
+   "ncore_train: " ^ its (!ncore_train),
+   "bsize_glob: " ^ its (!bsize_glob),
+   "lr_glob: " ^ rts (!lr_glob),
+   "nepoch_glob: " ^ its (!nepoch_glob),
+   "ngame_glob: " ^ its (!ngame_glob)])
+  ) 
+
+fun rl_loop_aux (n,nmax) tnn =
   if n >= nmax then tnn else
   let 
-    val _ = print_endline ("Generation " ^ its n)
-    val exl = gen_ex_temp 2000 tnn
-    val _ = print_endline ("Training " ^ its n)
-    val tnn' = train_tnn exl   
+    val _ = summary ("Generation " ^ its n)
+    val exl = gen_ex_temp (!ngame_glob) tnn
+    val _ = summary ("Training " ^ its n)
+    val tnn' = train_tnn exl
+    val _ = write_tnn 
+      (eval_dir ^ "/" ^ !summary_file ^ "_gen" ^ its (n+1)) tnn'
   in
-    rl_loop (n+1,nmax) tnn'  
+    rl_loop_aux (n+1,nmax) tnn'  
   end
 
+fun rl_loop nmax = 
+  (
+  summary_parameters ();
+  rl_loop_aux (0,nmax) (random_tnn (!dim_glob,1) operl)
+  )
 (* 
 load "mleHanabi"; open mleHanabi;
 load "aiLib"; open aiLib;
 load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
 
-val tnn = random_tnn (8,1) operl;
-val tnn' = rl_loop (0,10) tnn;
+summary_file := "hanabi_run1";
+ncore_explore := 16;
+dim_glob := 8;
+ncore_train := 16;
+bsize_glob := 64;
+lr_glob := 0.05;
+nepoch_glob := 20;
+ngame_glob := 4000;
 
-
+val tnn = rl_loop 20;
 *)
 
 end (* struct *)

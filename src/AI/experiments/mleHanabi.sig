@@ -4,6 +4,15 @@ sig
   datatype color = Red | Yellow | Green | Blue | White | NoColor
   type card = int * color
 
+  val summary_file : string ref
+  val ncore_explore : int ref
+  val dim_glob : int ref 
+  val ncore_train : int ref
+  val bsize_glob : int ref
+  val lr_glob : real ref
+  val nepoch_glob : int ref
+  val ngame_glob : int ref 
+
   datatype move =
     Play of int
   | Discard of int
@@ -27,6 +36,6 @@ sig
   val random_game : unit -> ((board * move) list * int)
   val tnn_game : mlTreeNeuralNetwork.tnn -> ((board * move) list * int)
   val extract_ex : ((board * move) list * int) -> (term * real list) list
-  val rl_loop : (int * int) -> mlTreeNeuralNetwork.tnn -> mlTreeNeuralNetwork.tnn
+  val rl_loop : int -> mlTreeNeuralNetwork.tnn
 
 end
