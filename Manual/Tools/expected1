@@ -17,13 +17,13 @@ val it =
 > open arithmeticTheory;\quad\textit{\small\dots{}output elided\dots{}}
 > ADD_CLAUSES;
 val it =
-   \(\!\!\!{\turn}\!\!\!\!\) (0 + m = m) \(\land\) (m + 0 = m) \(\land\) (SUC m + n = SUC (m + n)) \(\land\)
-     (m + SUC n = SUC (m + n)): thm
+   \(\!\!\!{\turn}\!\!\!\!\) 0 + m = m \(\land\) m + 0 = m \(\land\) SUC m + n = SUC (m + n) \(\land\)
+     m + SUC n = SUC (m + n): thm
 
 > load "bagTheory";
 val it = (): unit
 > bagTheory.BAG_IN_BAG_INSERT;
-val it = \(\!\!\!{\turn}\!\!\!\!\) \(\forall\)b e1 e2. e1 <: BAG_INSERT e2 b \({\iff}\) (e1 = e2) \(\lor\) e1 <: b: thm
+val it = \(\!\!\!{\turn}\!\!\!\!\) \(\forall\)b e1 e2. e1 <: BAG_INSERT e2 b \({\iff}\) e1 = e2 \(\lor\) e1 <: b: thm
 
 This case illustrates an interesting issue: the HOL system itself writes a message to standard out; we'd like to capture this so that it is properly sequenced with the other output.
 
@@ -37,7 +37,7 @@ val it =
    
    1. Incomplete goalstack:
         Initial goal:
-        MEM p l \(\Rightarrow\) \(\exists\)i. i < LENGTH l \(\land\) (p = EL i l)
+        MEM p l \(\Rightarrow\) \(\exists\)i. i < LENGTH l \(\land\) p = EL i l
 > \`{}\`{}3 <> 4\`{}\`{};
 val it = \mbox{\textrm{\textquotedblleft}}3 \(\ne\) 4\mbox{\textrm{\textquotedblright}}: term
 > type_of \`{}\`{}[]\`{}\`{};
