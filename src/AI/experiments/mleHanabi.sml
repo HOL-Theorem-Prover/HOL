@@ -356,7 +356,7 @@ fun choose_move_temp tnn board =
     val mtml = map_assoc (fn x => nntm_of_boardmove (board,x)) ml
     val mscl = map_snd (hd o infer_tnn tnn) mtml
   in
-    select_in_distrib (map_snd (fn x => Math.exp (x * 26.0)) mscl)
+    select_in_distrib mscl
   end
 
 fun tnn_game_temp tnn =
@@ -405,7 +405,7 @@ fun tnn_game tnn =
 
 fun extract_ex (bml,sc) = 
   let 
-    val sc' = Real.fromInt sc / 26.0
+    val sc' = Real.fromInt sc / 11.0
     fun f bm = (nntm_of_boardmove bm, [sc'])
   in
     map f bml
@@ -472,19 +472,20 @@ fun rl_loop nmax =
   summary_parameters ();
   rl_loop_aux (0,nmax) (random_tnn (!dim_glob,1) operl)
   )
+
 (* 
 load "mleHanabi"; open mleHanabi;
 load "aiLib"; open aiLib;
 load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
 
-summary_file := "hanabi_run3";
+summary_file := "hanabi_run4";
 ncore_explore := 8;
 dim_glob := 8;
 ncore_train := 8;
 bsize_glob := 16;
 lr_glob := 0.02;
 nepoch_glob := 20;
-ngame_glob := 1000;
+ngame_glob := 2000;
 
 val tnn = rl_loop 20;
 *)
