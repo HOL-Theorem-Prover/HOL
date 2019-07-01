@@ -1854,15 +1854,19 @@ Theorem DROP_LENGTH_TOO_LONG:
 Proof Induct THEN SRW_TAC [numSimps.ARITH_ss] []
 QED
 
-val MEM_DROP = store_thm(
-"MEM_DROP",
-``!x ls n. MEM x (DROP n ls) = (n < LENGTH ls /\ (x = (EL n ls))) \/ MEM x (DROP (SUC n) ls)``,
-GEN_TAC THEN
-Induct THEN1 SRW_TAC[] [] THEN
-NTAC 2 GEN_TAC THEN
-SIMP_TAC (srw_ss()) [] THEN
-Cases_on `n` THEN SIMP_TAC (srw_ss()) [] THEN
-PROVE_TAC[])
+val LT_SUC = Q.prove(‘x < SUC y <=> x = 0 \/ ?x0. x = SUC x0 /\ x0 < y’,
+                     Cases_on ‘x’ >> simp[])
+
+Theorem MEM_DROP:
+  !x ls n. MEM x (DROP n ls) <=>
+           ?m. m + n < LENGTH ls /\ x = EL (m + n) ls
+Proof
+  Induct_on ‘ls’ >> rw[DROP_def, LT_SUC] >> asm_simp_tac(srw_ss() ++ DNF_ss)[]
+  >- simp[MEM_EL] >>
+  Q.RENAME_TAC [‘n <> 0’] >> Cases_on ‘n’ >> fs[] >>
+  asm_simp_tac (srw_ss() ++ numSimps.ARITH_ss ++ CONJ_ss)
+    [GSYM arithmeticTheory.ADD1, ADD_CLAUSES]
+QED
 
 val DROP_NIL = store_thm(
 "DROP_NIL",

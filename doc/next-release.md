@@ -249,6 +249,14 @@ Incompatibilities:
     Users can also pass the `schematic` attribute with the new `Definition` syntax (see above).
     Programmers should change uses of `with_flag` to `Feedback.trace`.
 
+*   The theorem `MEM_DROP` in `listTheory` has been restated as
+
+           MEM x (DROP n ls) ⇔ ∃m. m + n < LENGTH ls ∧ x = EL (m + n) ls
+
+    The identically named `MEM_DROP` in `rich_listTheory` has been deleted because it is subsumed by `MEM_DROP_IMP` in `rich_listTheory`, which states
+
+           MEM x (DROP n ls) ⇒ MEM x ls
+
 * * * * *
 
 <div class="footer">

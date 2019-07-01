@@ -36,6 +36,8 @@ in
    val MAP_APPEND = MAP_APPEND
    val MAP_SNOC = MAP_SNOC
    val MEM = MEM
+   val MEM_DROP = MEM_DROP
+   val MEM_EL = MEM_EL
    val NULL = NULL
    val NULL_DEF = NULL_DEF
    val REVERSE = REVERSE_SNOC_DEF
@@ -2242,23 +2244,17 @@ val MEM_TAKE_IMP = Q.store_thm ("MEM_TAKE_IMP",
      REPEAT GEN_TAC, COND_CASES_TAC,
      ASM_SIMP_TAC list_ss [], PROVE_TAC [] ]) ;
 
-val MEM_DROP_IMP = Q.store_thm ("MEM_DROP_IMP",
-   `!l m x.  MEM x (DROP m l) ==> MEM x l`,
-   EVERY [Induct, ASM_SIMP_TAC list_ss [listTheory.DROP_def],
-     REPEAT GEN_TAC, COND_CASES_TAC,
-     ASM_SIMP_TAC list_ss [], PROVE_TAC [] ]) ;
+Theorem MEM_DROP_IMP:
+  !l m x.  MEM x (DROP m l) ==> MEM x l
+Proof
+  metis_tac[MEM_DROP, MEM_EL]
+QED
 
 val MEM_TAKE = Q.store_thm ("MEM_TAKE",
    `!m l. m <= LENGTH l ==> !x.  MEM x (TAKE m l) ==> MEM x l`,
    PURE_ONCE_REWRITE_TAC [MEM_EXISTS]
    THEN REPEAT STRIP_TAC
    THEN IMP_RES_TAC EXISTS_TAKE);
-
-val MEM_DROP = Q.store_thm ("MEM_DROP",
-   `!m l. m <= LENGTH l ==> !x.  MEM x (DROP m l) ==> MEM x l`,
-   PURE_ONCE_REWRITE_TAC [MEM_EXISTS]
-   THEN REPEAT STRIP_TAC
-   THEN IMP_RES_TAC EXISTS_DROP);
 
 val MEM_BUTLASTN = Q.store_thm ("MEM_BUTLASTN",
    `!m l. m <= LENGTH l ==> !x. MEM x (BUTLASTN m l) ==> MEM x l`,
@@ -3592,7 +3588,7 @@ local
        ("FIRSTN_REVERSE", "TAKE_REVERSE"),
        ("FIRSTN_SEG", "TAKE_SEG"),
        ("FIRSTN_SNOC", "TAKE_SNOC"),
-       ("IS_EL_BUTFIRSTN", "MEM_DROP"),
+       ("IS_EL_BUTFIRSTN", "MEM_DROP_IMP"),
        ("IS_EL_BUTLASTN", "MEM_BUTLASTN"),
        ("IS_EL_DEF", "MEM_EXISTS"),
        ("IS_EL_FIRSTN", "MEM_TAKE"),
