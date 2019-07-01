@@ -163,9 +163,9 @@ fun bp_loss bpdatal = mean_square_error (#doutnv (last bpdatal))
 
 fun average_loss bpdatall = average_real (map bp_loss bpdatall)
 
-(*--------------------------------------------------------------------------
-  Weight udpate
-  -------------------------------------------------------------------------- *)
+(* -------------------------------------------------------------------------
+   Weight udpate
+   ------------------------------------------------------------------------- *)
 
 fun clip (a,b) m =
   let fun f x = if x < a then a else (if x > b then b else x) in
@@ -183,9 +183,19 @@ fun update_layer (layer, layerwu) =
 
 fun update_nn nn wu = map update_layer (combine (nn,wu))
 
-(*--------------------------------------------------------------------------
-  Training schedule
-  -------------------------------------------------------------------------- *)
+fun random_wu nn = 
+  let 
+    val wl = map #w nn
+    fun f w = mat_map (fn _ => random_real () - 0.5) w
+  in
+    map f wl
+  end
+
+fun random_update_nn nn = update_nn nn (random_wu nn)
+
+(* -------------------------------------------------------------------------
+   Training schedule
+   ------------------------------------------------------------------------- *)
 
 fun train_nn_batch batch nn =
   let
@@ -216,9 +226,9 @@ fun train_nn_nepoch n nn size trainset =
     train_nn_nepoch (n - 1) new_nn size trainset
   end
 
-(*--------------------------------------------------------------------------
-  Printing
-  -------------------------------------------------------------------------- *)
+(* -------------------------------------------------------------------------
+   Printing
+   ------------------------------------------------------------------------- *)
 
 fun string_of_wl wl =
   let

@@ -12,6 +12,7 @@ sig
   val lr_glob : real ref
   val nepoch_glob : int ref
   val ngame_glob : int ref 
+  val npop_glob : int ref
 
   datatype move =
     Play of int
@@ -35,7 +36,7 @@ sig
   val nntm_of_boardmove : (board * move) -> term
   val random_game : unit -> ((board * move) list * int)
   val tnn_game : mlTreeNeuralNetwork.tnn -> ((board * move) list * int)
-  val extract_ex : ((board * move) list * int) -> (term * real list) list
+  val evaluate : int -> mlTreeNeuralNetwork.tnn -> real
   val rl_loop : int -> mlTreeNeuralNetwork.tnn
 
 end

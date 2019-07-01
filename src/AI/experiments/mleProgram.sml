@@ -607,13 +607,16 @@ level_parameters :=
     map (quadruple_of_list o rev) (cartesian_productl 
       (map f (rev [(4,32),(4,4),(4,4),(1,1)])))
   end;
+
 psMCTS.alpha_glob := 0.3;
+
 psMCTS.exploration_coeff := 2.0;
 logfile_glob := "program_run49";
 parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^
 (!logfile_glob);
 ncore_mcts_glob := 8;
 ncore_train_glob := 8;
+
 ntarget_compete := 400;
 ntarget_explore := 400;
 exwindow_glob := 10000;
@@ -621,8 +624,9 @@ uniqex_flag := false;
 dim_glob := 8;
 lr_glob := 0.02;
 batchsize_glob := 16;
-decay_glob := 0.95;
+decay_glob := 0.99;
 level_glob := 0;
+
 nsim_glob := 1600;
 nepoch_glob := 100;
 ngen_glob := 100;
@@ -663,6 +667,8 @@ val freq2 = count_dict (dempty (list_compare (#move_compare gamespec)))
 val freq2l = dict_sort compare_imax (dlist freq2); 
 
 macro_array := Vector.fromList (map SOME (first_n 20 (map fst freq2l)));
+
+fun mutate_network:
 
 *)
 

@@ -52,12 +52,13 @@ include Abbrev
     (term list * vect) list * (term list * vect) list ->
     (int * real) list ->
     tnn
+  val random_update_tnn : tnn -> tnn
   val train_dhtnn_schedule :
     int -> dhtnn ->
     int -> (term * real list * real list) list ->
     (int * real) list ->
     dhtnn
-
+ 
   (* prepare dataset before training *)
   val trainset_info : (term * real list) list -> string
   val prepare_trainset : (term * real list) list -> (term list * vect) list

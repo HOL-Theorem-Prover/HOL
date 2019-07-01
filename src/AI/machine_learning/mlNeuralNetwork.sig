@@ -48,6 +48,8 @@ sig
   val sum_dwll          : mat list list -> mat list
   val mean_square_error : real vector -> real
   val average_loss      : bpdata list list -> real
+  val random_wu         : nn -> mat list
+  val random_update_nn  : nn -> nn
 
   (* training schedule *)
   val train_nn_epoch  : nn -> (real vector * real vector) list list -> nn

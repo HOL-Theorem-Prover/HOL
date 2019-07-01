@@ -497,6 +497,13 @@ fun update_opernn opdict (oper,dwll) =
     (oper,newnn)
   end
 
+fun random_update_tnn (tnn as {opdict,headnn,dimin,dimout}) =
+  {
+  opdict = dmap (fn (k,v) => random_update_nn v) opdict,
+  headnn = random_update_nn headnn, 
+  dimin = dimin, dimout = dimout
+  }
+
 fun train_tnn_batch ncore (tnn as {opdict,headnn,dimin,dimout}) batch =
   let
     val (bpdictl,bpdatall) =

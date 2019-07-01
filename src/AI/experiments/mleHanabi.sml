@@ -350,42 +350,13 @@ fun random_game () =
     loop [] (random_startboard ())
   end
 
-fun choose_move_temp tnn board =
-  let 
-    val ml = filter (is_applicable board) movel_glob 
-    val mtml = map_assoc (fn x => nntm_of_boardmove (board,x)) ml
-    val mscl = map_snd (hd o infer_tnn tnn) mtml
-  in
-    select_in_distrib mscl
-  end
-
-fun tnn_game_temp tnn =
-  let
-    fun loop acc board =
-      (
-      if null (#deck board) orelse #bombs board > 3
-      then (rev acc, #score board) 
-      else 
-        let val move = choose_move_temp tnn board in
-          loop ((board,move) :: acc) (apply_move move board)
-        end 
-      )
-  in
-    loop [] (random_startboard ())
-  end
-
-fun best_in_distrib distrib =
-  let fun cmp (a,b) = Real.compare (snd b,snd a) in
-    fst (hd (dict_sort cmp distrib))
-  end
-
 fun choose_move tnn board =
-  let 
-    val ml = filter (is_applicable board) movel_glob 
-    val mtml = map_assoc (fn x => nntm_of_boardmove (board,x)) ml
-    val mscl = map_snd (hd o infer_tnn tnn) mtml
+  let
+    val scl = infer_tnn tnn (nntm_of_board board)
+    val mscl1 = combine (movel_glob,scl)
+    val mscl2 = filter (is_applicable board o fst) mscl1
   in
-    best_in_distrib mscl
+    select_in_distrib mscl2
   end
 
 fun tnn_game tnn =
@@ -402,15 +373,6 @@ fun tnn_game tnn =
   in
     loop [] (random_startboard ())
   end
-
-fun extract_ex (bml,sc) = 
-  let 
-    val sc' = Real.fromInt sc / 11.0
-    fun f bm = (nntm_of_boardmove bm, [sc'])
-  in
-    map f bml
-  end
-
 
 val ncore_explore = ref 8
 val dim_glob = ref 8
@@ -429,15 +391,13 @@ fun train_tnn exl =
     prepare_train_tnn (!ncore_train,!bsize_glob) tnn tt schedule
   end
 
-fun gen_ex_temp ngame tnn =
+fun evaluate ngame tnn =
   let 
-    fun f () = tnn_game_temp tnn
-    val gamel = smlParallel.parmap_queue (!ncore_explore) 
+    fun f () = snd (tnn_game tnn)
+    val scl = smlParallel.parmap_batch (!ncore_explore) 
       f (List.tabulate (ngame, fn _ => ()))
-    val r = average_real (map (Real.fromInt o snd) gamel)   
-    val _ = summary (rts r)
   in
-    List.concat (map extract_ex gamel)
+    average_real (map Real.fromInt scl)   
   end
 
 fun summary_parameters () =
@@ -454,38 +414,41 @@ fun summary_parameters () =
    "ngame_glob: " ^ its (!ngame_glob)])
   ) 
 
+val npop_glob = ref 2
+
 fun rl_loop_aux (n,nmax) tnn =
   if n >= nmax then tnn else
-  let 
-    val _ = summary ("Generation " ^ its n)
-    val exl = gen_ex_temp (!ngame_glob) tnn
-    val _ = summary ("Training " ^ its n)
-    val tnn' = train_tnn exl
-    val _ = write_tnn 
-      (eval_dir ^ "/" ^ !summary_file ^ "_gen" ^ its (n+1)) tnn'
+  let
+    val tnnl = List.tabulate (!npop_glob, fn x => random_update_tnn tnn);
+    val (tnnscl,t) = add_time (map_assoc (evaluate (!ngame_glob))) tnnl;
+    val _ = summary ("Evaluation time: " ^ rts t)
+    val (besttnn,sc) = hd (dict_sort compare_rmax tnnscl)
+    val _ = summary ("All scores: " ^ String.concatWith " " 
+       (map (rts o snd) tnnscl))
+    val _ = write_tnn
+      (eval_dir ^ "/" ^ !summary_file ^ "_gen" ^ its (n+1)) besttnn
   in
-    rl_loop_aux (n+1,nmax) tnn'  
+    rl_loop_aux (n+1,nmax) besttnn
   end
 
 fun rl_loop nmax = 
   (
   summary_parameters ();
-  rl_loop_aux (0,nmax) (random_tnn (!dim_glob,1) operl)
+  rl_loop_aux (0,nmax) (random_tnn (!dim_glob,(length movel_glob)) operl)
   )
+
 
 (* 
 load "mleHanabi"; open mleHanabi;
 load "aiLib"; open aiLib;
 load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
 
-summary_file := "hanabi_run4";
-ncore_explore := 8;
+summary_file := "hanabi_run7";
+ncore_explore := 4;
+npop_glob := 10;
 dim_glob := 8;
-ncore_train := 8;
-bsize_glob := 16;
-lr_glob := 0.02;
-nepoch_glob := 20;
-ngame_glob := 2000;
+ngame_glob := 1000;
+mlNeuralNetwork.learningrate_glob := 0.1;
 
 val tnn = rl_loop 20;
 *)
