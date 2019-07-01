@@ -682,6 +682,7 @@ and \ml{C},
 
 ##thm UPDATE_EQ
 ##thm UPDATE_COMMUTES
+##thm APPLY_UPDATE_THM
 
 ##thm K_THM
 ##thm S_THM
