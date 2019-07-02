@@ -326,7 +326,7 @@ val oc_pair_I = Q.prove(
   METIS_TAC [vars_def, IN_UNION, oc_rules]);
 
 val oc_pair = Q.prove(
-  `oc s (Pair t1 t2) v = oc s t1 v \/ oc s t2 v`,
+  `oc s (Pair t1 t2) v <=> oc s t1 v \/ oc s t2 v`,
   METIS_TAC [oc_pair_E, oc_pair_I]);
 
 val oc_const = Q.prove(

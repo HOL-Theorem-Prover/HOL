@@ -62,6 +62,7 @@ val resq_SS =
 * Start a new theory called ClockedSemantics
 ******************************************************************************)
 val _ = new_theory "ClockedSemantics";
+val _ = ParseExtras.temp_loose_equality()
 
 (******************************************************************************
 * Clocked semantics of SEREs

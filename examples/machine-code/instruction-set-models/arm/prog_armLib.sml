@@ -7,6 +7,16 @@ open set_sepTheory prog_armTheory helperLib wordsTheory progTheory finite_mapThe
 
 open armLib;
 
+structure Parse = struct
+  open Parse
+  val (Type,Term) =
+      prog_armTheory.prog_arm_grammars
+        |> apsnd ParseExtras.grammar_loose_equality
+        |> parse_from_grammars
+end
+open Parse
+
+
 infix \\
 val op \\ = op THEN;
 

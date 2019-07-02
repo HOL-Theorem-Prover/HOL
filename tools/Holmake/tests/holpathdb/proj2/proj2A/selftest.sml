@@ -15,13 +15,19 @@ val _ = TextIO.closeOut ostrm
 
 val _ = Systeml.system_ps (Globals.HOLDIR ++ "bin" ++ "hol.bare" ^ " < input > /dev/null 2>&1")
 
-val istrmr = Exn.capture TextIO.openIn "output"
-val istrm = case istrmr of
-                Res i => i
-              | Exn e => die ("Exception: "^General.exnMessage e)
-val _ = case TextIO.inputLine istrm of
-            SOME s =>
-            if String.isSubstring "tools/Holmake/tests/holpathdb/proj2" s then
-              OK()
-            else die ("Saw:\n  "^ s)
-          | NONE => die "Nothing in \"output\""
+exception InternalDie of string
+
+val _ = let
+  val istrmr = Exn.capture TextIO.openIn "output"
+  val istrm = case istrmr of
+                  Res i => i
+                | Exn e => raise InternalDie
+                                 ("Exception: "^General.exnMessage e)
+in
+  case TextIO.inputLine istrm of
+      SOME s =>
+      if String.isSubstring "tools/Holmake/tests/holpathdb/proj2" s then
+        OK()
+      else die ("Saw:\n  "^ s)
+    | NONE => die "Nothing in \"output\""
+end handle InternalDie s => die s;

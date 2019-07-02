@@ -36,6 +36,8 @@ in
    val MAP_APPEND = MAP_APPEND
    val MAP_SNOC = MAP_SNOC
    val MEM = MEM
+   val MEM_DROP = MEM_DROP
+   val MEM_EL = MEM_EL
    val NULL = NULL
    val NULL_DEF = NULL_DEF
    val REVERSE = REVERSE_SNOC_DEF
@@ -252,10 +254,10 @@ local
    val tac = ASM_REWRITE_TAC [listTheory.HD, listTheory.TL, listTheory.NULL_DEF]
    val is_sublist_exists = Q.prove(
       `?is_sublist.
-          (!l:'a list. is_sublist l [] = T) /\
-          (!x: 'a l. is_sublist [] (CONS x l) = F) /\
+          (!l:'a list. is_sublist l [] <=> T) /\
+          (!x: 'a l. is_sublist [] (CONS x l) <=> F) /\
           (!x1 l1 x2 l2.
-             is_sublist (CONS x1 l1) (CONS x2 l2) =
+             is_sublist (CONS x1 l1) (CONS x2 l2) <=>
              (x1 = x2) /\ isPREFIX l2 l1 \/ is_sublist l1 (CONS x2 l2))`,
       STRIP_ASSUME_TAC is_sublist_thm
       THEN Q.EXISTS_TAC `is_sublist`
@@ -286,10 +288,10 @@ local
            if NULL l then F else (LAST l = x) /\ is_suffix (FRONT l) t)``
    val is_suffix_exists = Q.prove(
       `?is_suffix.
-           (!l. is_suffix l [] = T) /\
-           (!(x:'a) l. is_suffix [] (SNOC x l) = F) /\
+           (!l. is_suffix l [] <=> T) /\
+           (!(x:'a) l. is_suffix [] (SNOC x l) <=> F) /\
            (!(x1:'a) l1 (x2:'a) l2.
-               is_suffix (SNOC x1 l1) (SNOC x2 l2) =
+               is_suffix (SNOC x1 l1) (SNOC x2 l2) <=>
                (x1 = x2) /\ is_suffix l1 l2)`,
       METIS_TAC [is_suffix_thm, listTheory.FRONT_SNOC, listTheory.LAST_SNOC,
                  listTheory.NULL_DEF, NOT_NULL_SNOC])
@@ -305,9 +307,11 @@ val _ = overload_on ("<<=", ``\x y. isPREFIX x y``)
 
 (* ======================================================================== *)
 
-val LENGTH_NOT_NULL = Q.store_thm ("LENGTH_NOT_NULL",
-   `!l. 0 < LENGTH l = ~NULL l`,
-   BasicProvers.Induct THEN REWRITE_TAC [LENGTH, NULL, NOT_LESS_0, LESS_0]);
+Theorem LENGTH_NOT_NULL:
+   !l. 0 < LENGTH l <=> ~NULL l
+Proof
+   BasicProvers.Induct THEN REWRITE_TAC [LENGTH, NULL, NOT_LESS_0, LESS_0]
+QED
 
 (* |- !(x:'a) l. ~([] = SNOC x l) *)
 val NOT_NIL_SNOC = Theory.save_thm ("NOT_NIL_SNOC",
@@ -2240,23 +2244,17 @@ val MEM_TAKE_IMP = Q.store_thm ("MEM_TAKE_IMP",
      REPEAT GEN_TAC, COND_CASES_TAC,
      ASM_SIMP_TAC list_ss [], PROVE_TAC [] ]) ;
 
-val MEM_DROP_IMP = Q.store_thm ("MEM_DROP_IMP",
-   `!l m x.  MEM x (DROP m l) ==> MEM x l`,
-   EVERY [Induct, ASM_SIMP_TAC list_ss [listTheory.DROP_def],
-     REPEAT GEN_TAC, COND_CASES_TAC,
-     ASM_SIMP_TAC list_ss [], PROVE_TAC [] ]) ;
+Theorem MEM_DROP_IMP:
+  !l m x.  MEM x (DROP m l) ==> MEM x l
+Proof
+  metis_tac[MEM_DROP, MEM_EL]
+QED
 
 val MEM_TAKE = Q.store_thm ("MEM_TAKE",
    `!m l. m <= LENGTH l ==> !x.  MEM x (TAKE m l) ==> MEM x l`,
    PURE_ONCE_REWRITE_TAC [MEM_EXISTS]
    THEN REPEAT STRIP_TAC
    THEN IMP_RES_TAC EXISTS_TAKE);
-
-val MEM_DROP = Q.store_thm ("MEM_DROP",
-   `!m l. m <= LENGTH l ==> !x.  MEM x (DROP m l) ==> MEM x l`,
-   PURE_ONCE_REWRITE_TAC [MEM_EXISTS]
-   THEN REPEAT STRIP_TAC
-   THEN IMP_RES_TAC EXISTS_DROP);
 
 val MEM_BUTLASTN = Q.store_thm ("MEM_BUTLASTN",
    `!m l. m <= LENGTH l ==> !x. MEM x (BUTLASTN m l) ==> MEM x l`,
@@ -2718,8 +2716,9 @@ val IS_PREFIX_LENGTH = Q.store_thm ("IS_PREFIX_LENGTH",
    THEN STRIP_TAC
    THEN ASM_SIMP_TAC boolSimps.bool_ss [IS_PREFIX, LENGTH, LESS_EQ_MONO]);
 
-val IS_PREFIX_LENGTH_ANTI = Q.store_thm ("IS_PREFIX_LENGTH_ANTI",
-   `!x y. IS_PREFIX y x /\ (LENGTH x = LENGTH y) = (x = y)`,
+Theorem IS_PREFIX_LENGTH_ANTI:
+   !x y. IS_PREFIX y x /\ (LENGTH x = LENGTH y) <=> (x = y)
+Proof
    INDUCT_THEN list_INDUCT ASSUME_TAC
    THEN1 PROVE_TAC [LENGTH_NIL, IS_PREFIX_REFL]
    THEN REPEAT GEN_TAC
@@ -2728,10 +2727,12 @@ val IS_PREFIX_LENGTH_ANTI = Q.store_thm ("IS_PREFIX_LENGTH_ANTI",
    THENL [ASM_SIMP_TAC boolSimps.bool_ss [IS_PREFIX, LENGTH, LESS_EQ_MONO]
           THEN PROVE_TAC [listTheory.NOT_CONS_NIL],
           ASM_SIMP_TAC boolSimps.bool_ss [IS_PREFIX, LENGTH, CONS_11]
-          THEN PROVE_TAC [numTheory.INV_SUC, IS_PREFIX_REFL]]);
+          THEN PROVE_TAC [numTheory.INV_SUC, IS_PREFIX_REFL]]
+QED
 
-val IS_PREFIX_SNOC = Q.store_thm ("IS_PREFIX_SNOC",
-   `!x y z. IS_PREFIX (SNOC x y) z = IS_PREFIX y z \/ (z = SNOC x y)`,
+Theorem IS_PREFIX_SNOC:
+   !x y z. IS_PREFIX (SNOC x y) z <=> IS_PREFIX y z \/ (z = SNOC x y)
+Proof
    GEN_TAC
    THEN GEN_TAC
    THEN Q.SPEC_TAC (`x`, `x`)
@@ -2750,7 +2751,8 @@ val IS_PREFIX_SNOC = Q.store_thm ("IS_PREFIX_SNOC",
           THEN ASM_SIMP_TAC boolSimps.bool_ss
                  [SNOC, IS_PREFIX_NIL, IS_PREFIX, CONS_11,
                   listTheory.NOT_CONS_NIL]
-          THEN PROVE_TAC []]);
+          THEN PROVE_TAC []]
+QED
 
 val IS_PREFIX_APPEND1 = Q.store_thm ("IS_PREFIX_APPEND1",
    `!a b c. IS_PREFIX c (APPEND a b) ==> IS_PREFIX c a`,
@@ -2772,11 +2774,12 @@ val IS_PREFIX_APPEND2 = Q.store_thm ("IS_PREFIX_APPEND2",
    THEN ASM_SIMP_TAC boolSimps.bool_ss [IS_PREFIX, APPEND]
    THEN PROVE_TAC []);
 
-val IS_PREFIX_APPENDS = Q.store_thm ("IS_PREFIX_APPENDS",
-   `!a b c. IS_PREFIX (APPEND a c) (APPEND a b) = IS_PREFIX c b`,
+Theorem IS_PREFIX_APPENDS[simp]:
+   !a b c. IS_PREFIX (APPEND a c) (APPEND a b) <=> IS_PREFIX c b
+Proof
    INDUCT_THEN list_INDUCT ASSUME_TAC
-   THEN ASM_SIMP_TAC boolSimps.bool_ss [APPEND, IS_PREFIX]);
-val _ = export_rewrites ["IS_PREFIX_APPENDS"]
+   THEN ASM_SIMP_TAC boolSimps.bool_ss [APPEND, IS_PREFIX]
+QED
 
 (* |- !a c. a <<= a ++ c *)
 val IS_PREFIX_APPEND3 = save_thm("IS_PREFIX_APPEND3",
@@ -2938,10 +2941,12 @@ val EL_COUNT_LIST = Q.store_thm ("EL_COUNT_LIST",
    `!m n. m < n ==> (EL m (COUNT_LIST n) = m)`,
    SIMP_TAC std_ss [COUNT_LIST_GENLIST, listTheory.EL_GENLIST]);
 
-val MEM_COUNT_LIST = Q.store_thm ("MEM_COUNT_LIST",
-   `!m n. MEM m (COUNT_LIST n) = m < n`,
+Theorem MEM_COUNT_LIST:
+   !m n. MEM m (COUNT_LIST n) <=> m < n
+Proof
    SIMP_TAC (std_ss++boolSimps.CONJ_ss)
-     [listTheory.MEM_EL, EL_COUNT_LIST, LENGTH_COUNT_LIST, EL_COUNT_LIST]);
+     [listTheory.MEM_EL, EL_COUNT_LIST, LENGTH_COUNT_LIST, EL_COUNT_LIST]
+QED
 
 val COUNT_LIST_SNOC = Q.store_thm ("COUNT_LIST_SNOC",
    `(COUNT_LIST 0 = []) /\
@@ -3583,7 +3588,7 @@ local
        ("FIRSTN_REVERSE", "TAKE_REVERSE"),
        ("FIRSTN_SEG", "TAKE_SEG"),
        ("FIRSTN_SNOC", "TAKE_SNOC"),
-       ("IS_EL_BUTFIRSTN", "MEM_DROP"),
+       ("IS_EL_BUTFIRSTN", "MEM_DROP_IMP"),
        ("IS_EL_BUTLASTN", "MEM_BUTLASTN"),
        ("IS_EL_DEF", "MEM_EXISTS"),
        ("IS_EL_FIRSTN", "MEM_TAKE"),

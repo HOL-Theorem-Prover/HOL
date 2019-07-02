@@ -9,6 +9,7 @@ open HolKernel Parse boolLib bossLib metisLib combinTheory pred_setTheory seqThe
      real_sigmaTheory;
 
 val _ = new_theory "util_prob";
+val _ = ParseExtras.temp_loose_equality()
 
 val S_TAC = rpt (POP_ASSUM MP_TAC) >> rpt RESQ_STRIP_TAC;
 val Strip = S_TAC;

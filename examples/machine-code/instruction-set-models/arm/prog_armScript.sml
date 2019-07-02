@@ -37,15 +37,16 @@ val _ = Parse.type_abbrev("arm_set",``:arm_el set``);
 (* Converting from ARM-state record to arm_set                                   *)
 (* ----------------------------------------------------------------------------- *)
 
-val ARM_OK_def = Define `
-  ARM_OK state =
+Definition ARM_OK_def:
+  ARM_OK state <=>
     (ARM_ARCH state = ARMv6) /\ (ARM_EXTENSIONS state = {}) /\
     (ARM_UNALIGNED_SUPPORT state) /\ (ARM_READ_EVENT_REGISTER state) /\
     ~(ARM_READ_INTERRUPT_WAIT state) /\ ~(ARM_READ_SCTLR sctlrV state) /\
     (ARM_READ_SCTLR sctlrA state) /\ ~(ARM_READ_SCTLR sctlrU state) /\
     (ARM_READ_IT state = 0w) /\ ~(ARM_READ_STATUS psrJ state) /\
     ~(ARM_READ_STATUS psrT state) /\ ~(ARM_READ_STATUS psrE state) /\
-    (ARM_MODE state = 16w)`;
+    (ARM_MODE state = 16w)
+End
 
 val ARM_READ_UNDEF_def = Define `ARM_READ_UNDEF s = ~(ARM_OK s)`;
 
@@ -80,10 +81,10 @@ val SPLIT_arm2set = prove(
   \\ METIS_TAC [SUBSET_DEF]);
 
 val PUSH_IN_INTO_IF = METIS_PROVE []
-  ``!g x y z. x IN (if g then y else z) = if g then x IN y else x IN z``;
+  ``!g x y z. x IN (if g then y else z) <=> if g then x IN y else x IN z``;
 
 val SUBSET_arm2set = prove(
-  ``!u s. u SUBSET arm2set s = ?y. u = arm2set' y s``,
+  ``!u s. u SUBSET arm2set s <=> ?y. u = arm2set' y s``,
   REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC
   \\ ASM_REWRITE_TAC [arm2set'_SUBSET_arm2set]
   \\ Q.EXISTS_TAC `({ a | a| ?x. aReg a x IN u },
@@ -105,21 +106,21 @@ val SPLIT_arm2set_EXISTS = prove(
   \\ METIS_TAC []);
 
 val IN_arm2set = prove(``
-  (!r x s. aReg r x IN (arm2set s) = (x = ARM_READ_REG r s)) /\
-  (!r x s. aReg r x IN (arm2set' (rs,ms,st,cp,ud) s) = (x = ARM_READ_REG r s) /\ r IN rs) /\
-  (!r x s. aReg r x IN (arm2set'' (rs,ms,st,cp,ud) s) = (x = ARM_READ_REG r s) /\ ~(r IN rs)) /\
-  (!p x s. aMem p x IN (arm2set s) = (x = ARM_READ_MEM p s)) /\
-  (!p x s. aMem p x IN (arm2set' (rs,ms,st,cp,ud) s) = (x = ARM_READ_MEM p s) /\ p IN ms) /\
-  (!p x s. aMem p x IN (arm2set'' (rs,ms,st,cp,ud) s) = (x = ARM_READ_MEM p s) /\ ~(p IN ms)) /\
-  (!a x s. aStatus a x IN (arm2set s) = (x = ARM_READ_STATUS a s)) /\
-  (!a x s. aStatus a x IN (arm2set' (rs,ms,st,cp,ud) s) = (x = ARM_READ_STATUS a s) /\ a IN st) /\
-  (!a x s. aStatus a x IN (arm2set'' (rs,ms,st,cp,ud) s) = (x = ARM_READ_STATUS a s) /\ ~(a IN st)) /\
-  (!x s. aCPSR_Reg x IN (arm2set s) = (x = ARM_READ_MASKED_CPSR s)) /\
-  (!x s. aCPSR_Reg x IN (arm2set' (rs,ms,st,cp,ud) s) = (x = ARM_READ_MASKED_CPSR s) /\ cp) /\
-  (!x s. aCPSR_Reg x IN (arm2set'' (rs,ms,st,cp,ud) s) = (x = ARM_READ_MASKED_CPSR s) /\ ~cp) /\
-  (!x s. aUndef x IN (arm2set s) = (x = ARM_READ_UNDEF s)) /\
-  (!x s. aUndef x IN (arm2set' (rs,ms,st,cp,ud) s) = (x = ARM_READ_UNDEF s) /\ ud) /\
-  (!x s. aUndef x IN (arm2set'' (rs,ms,st,cp,ud) s) = (x = ARM_READ_UNDEF s) /\ ~ud)``,
+  (!r x s. aReg r x IN (arm2set s) ⇔ (x = ARM_READ_REG r s)) /\
+  (!r x s. aReg r x IN (arm2set' (rs,ms,st,cp,ud) s) ⇔ (x = ARM_READ_REG r s) /\ r IN rs) /\
+  (!r x s. aReg r x IN (arm2set'' (rs,ms,st,cp,ud) s) ⇔ (x = ARM_READ_REG r s) /\ ~(r IN rs)) /\
+  (!p x s. aMem p x IN (arm2set s) ⇔ (x = ARM_READ_MEM p s)) /\
+  (!p x s. aMem p x IN (arm2set' (rs,ms,st,cp,ud) s) ⇔ (x = ARM_READ_MEM p s) /\ p IN ms) /\
+  (!p x s. aMem p x IN (arm2set'' (rs,ms,st,cp,ud) s) ⇔ (x = ARM_READ_MEM p s) /\ ~(p IN ms)) /\
+  (!a x s. aStatus a x IN (arm2set s) ⇔ (x = ARM_READ_STATUS a s)) /\
+  (!a x s. aStatus a x IN (arm2set' (rs,ms,st,cp,ud) s) ⇔ (x = ARM_READ_STATUS a s) /\ a IN st) /\
+  (!a x s. aStatus a x IN (arm2set'' (rs,ms,st,cp,ud) s) ⇔ (x = ARM_READ_STATUS a s) /\ ~(a IN st)) /\
+  (!x s. aCPSR_Reg x IN (arm2set s) ⇔ (x = ARM_READ_MASKED_CPSR s)) /\
+  (!x s. aCPSR_Reg x IN (arm2set' (rs,ms,st,cp,ud) s) ⇔ (x = ARM_READ_MASKED_CPSR s) /\ cp) /\
+  (!x s. aCPSR_Reg x IN (arm2set'' (rs,ms,st,cp,ud) s) ⇔ (x = ARM_READ_MASKED_CPSR s) /\ ~cp) /\
+  (!x s. aUndef x IN (arm2set s) ⇔ (x = ARM_READ_UNDEF s)) /\
+  (!x s. aUndef x IN (arm2set' (rs,ms,st,cp,ud) s) ⇔ (x = ARM_READ_UNDEF s) /\ ud) /\
+  (!x s. aUndef x IN (arm2set'' (rs,ms,st,cp,ud) s) ⇔ (x = ARM_READ_UNDEF s) /\ ~ud)``,
   SRW_TAC [] [arm2set'_def,arm2set''_def,arm2set_def,IN_UNION,
      IN_INSERT,NOT_IN_EMPTY,IN_DIFF,PUSH_IN_INTO_IF] \\ METIS_TAC []);
 
@@ -129,11 +130,11 @@ val arm2set''_11 = prove(
   \\ `?r m st cp ud. y = (r,m,st,cp,ud)` by METIS_TAC [PAIR]
   \\ `?r' m' st' cp' ud'. y' = (r',m',st',cp',ud')` by METIS_TAC [PAIR]
   \\ FULL_SIMP_TAC bool_ss [PAIR_EQ] THENL [
-    `?a. ~(a IN r = a IN r')` by METIS_TAC [EXTENSION]
+    `?a. ~(a IN r ⇔ a IN r')` by METIS_TAC [EXTENSION]
     \\ sg `~((?x. aReg a x IN arm2set'' y s) = (?x. aReg a x IN arm2set'' y' s'))`,
-    `?a. ~(a IN m = a IN m')` by METIS_TAC [EXTENSION]
+    `?a. ~(a IN m ⇔ a IN m')` by METIS_TAC [EXTENSION]
     \\ sg `~((?x. aMem a x IN arm2set'' y s) = (?x. aMem a x IN arm2set'' y' s'))`,
-    `?a. ~(a IN st = a IN st')` by METIS_TAC [EXTENSION]
+    `?a. ~(a IN st ⇔ a IN st')` by METIS_TAC [EXTENSION]
     \\ sg `~((?x. aStatus a x IN arm2set'' y s) = (?x. aStatus a x IN arm2set'' y' s'))`,
     sg `~((?x. aCPSR_Reg x IN arm2set'' y s) = (?x. aCPSR_Reg x IN arm2set'' y' s'))`,
     sg `~((?x. aUndef x IN arm2set'' y s) = (?x. aUndef x IN arm2set'' y' s'))`]
@@ -157,7 +158,7 @@ val DELETE_arm2set = prove(``
   \\ Cases_on `x` \\ SRW_TAC [] [] \\ METIS_TAC []);
 
 val EMPTY_arm2set = prove(``
-  (arm2set' (rs,ms,st,cp,ud) s = {}) = (rs = {}) /\ (ms = {}) /\ (st = {}) /\ ~cp /\ ~ud``,
+  (arm2set' (rs,ms,st,cp,ud) s = {}) ⇔ (rs = {}) /\ (ms = {}) /\ (st = {}) /\ ~cp /\ ~ud``,
   Cases_on `ud`
   \\ SRW_TAC [] [arm2set'_def,EXTENSION,IN_UNION,GSPECIFICATION,LEFT_AND_OVER_OR,
     EXISTS_OR_THM,IN_DELETE,IN_INSERT,NOT_IN_EMPTY,PUSH_IN_INTO_IF]
@@ -165,10 +166,11 @@ val EMPTY_arm2set = prove(``
 
 val ARM_READ_MASKED_CPSR_THM =
  (SIMP_CONV std_ss [ARM_READ_MASKED_CPSR_def,encode_psr_def,word_slice_def] THENC
-  ONCE_REWRITE_CONV [METIS_PROVE [] ``p /\ q = p /\ (p ==> q)``] THENC
-  SIMP_CONV (std_ss++SIZES_ss) [fcpTheory.FCP_BETA,DECIDE ``(i<=31=i<32:num)/\(i<=26=i<27)``] THENC
-  ONCE_REWRITE_CONV [GSYM (METIS_PROVE [] ``p /\ q = p /\ (p ==> q)``)] THENC
-  SIMP_CONV std_ss [DECIDE ``i<27 /\ i<32 = i<27``])
+  ONCE_REWRITE_CONV [METIS_PROVE [] ``p /\ q ⇔ p /\ (p ==> q)``] THENC
+  SIMP_CONV (std_ss++SIZES_ss) [
+    fcpTheory.FCP_BETA,DECIDE “(i<=31⇔i<32:num)/\(i<=26⇔i<27)”] THENC
+  ONCE_REWRITE_CONV [GSYM (METIS_PROVE [] ``p /\ q ⇔ p /\ (p ==> q)``)] THENC
+  SIMP_CONV std_ss [DECIDE ``i<27 /\ i<32 ⇔ i<27``])
     ``ARM_READ_MASKED_CPSR s``
 
 
@@ -236,19 +238,20 @@ val ARM_SPEC_SEMANTICS = store_thm("ARM_SPEC_SEMANTICS",
 (* Theorems for construction of |- SPEC ARM_MODEL ...                            *)
 (* ----------------------------------------------------------------------------- *)
 
-val STAR_arm2set = store_thm("STAR_arm2set",
-  ``((aR a x * p) (arm2set' (rs,ms,st,cp,ud) s) =
+Theorem STAR_arm2set:
+    ((aR a x * p) (arm2set' (rs,ms,st,cp,ud) s) ⇔
       (x = ARM_READ_REG a s) /\ a IN rs /\ p (arm2set' (rs DELETE a,ms,st,cp,ud) s)) /\
-    ((aM1 b y * p) (arm2set' (rs,ms,st,cp,ud) s) =
+    ((aM1 b y * p) (arm2set' (rs,ms,st,cp,ud) s) ⇔
       (y = ARM_READ_MEM b s) /\ b IN ms /\ p (arm2set' (rs,ms DELETE b,st,cp,ud) s)) /\
-    ((aS1 c z * p) (arm2set' (rs,ms,st,cp,ud) s) =
+    ((aS1 c z * p) (arm2set' (rs,ms,st,cp,ud) s) ⇔
       (z = ARM_READ_STATUS c s) /\ c IN st /\ p (arm2set' (rs,ms,st DELETE c,cp,ud) s)) /\
-    ((aCPSR t * p) (arm2set' (rs,ms,st,cp,ud) s) =
+    ((aCPSR t * p) (arm2set' (rs,ms,st,cp,ud) s) ⇔
       (t = ARM_READ_MASKED_CPSR s) /\ cp /\ p (arm2set' (rs,ms,st,F,ud) s)) /\
-    ((aU1 q * p) (arm2set' (rs,ms,st,cp,ud) s) =
+    ((aU1 q * p) (arm2set' (rs,ms,st,cp,ud) s) ⇔
       (q = ARM_READ_UNDEF s) /\ ud /\ p (arm2set' (rs,ms,st,cp,F) s)) /\
-    ((cond g * p) (arm2set' (rs,ms,st,cp,ud) s) =
-      g /\ p (arm2set' (rs,ms,st,cp,ud) s))``,
+    ((cond g * p) (arm2set' (rs,ms,st,cp,ud) s) ⇔
+      g /\ p (arm2set' (rs,ms,st,cp,ud) s))
+Proof
   SIMP_TAC std_ss [aR_def,aS1_def,aM1_def,EQ_STAR,INSERT_SUBSET,cond_STAR,aU1_def,
     aCPSR_def,EMPTY_SUBSET,IN_arm2set,GSYM DELETE_DEF]
   \\ Cases_on `x = ARM_READ_REG a s` \\ ASM_SIMP_TAC bool_ss [DELETE_arm2set]
@@ -256,14 +259,15 @@ val STAR_arm2set = store_thm("STAR_arm2set",
   \\ Cases_on `z = ARM_READ_STATUS c s` \\ ASM_SIMP_TAC bool_ss [DELETE_arm2set]
   \\ Cases_on `t = ARM_READ_MASKED_CPSR s` \\ ASM_SIMP_TAC bool_ss [DELETE_arm2set]
   \\ Cases_on `q = ARM_READ_UNDEF s` \\ ASM_SIMP_TAC bool_ss [DELETE_arm2set]
-  \\ ASM_SIMP_TAC std_ss [AC CONJ_COMM CONJ_ASSOC]);
+  \\ ASM_SIMP_TAC std_ss [AC CONJ_COMM CONJ_ASSOC]
+QED
 
 val CODE_POOL_arm2set_LEMMA = prove(
-  ``!x y z. (x = z INSERT y) = (z INSERT y) SUBSET x /\ (x DIFF (z INSERT y) = {})``,
+  ``!x y z. (x = z INSERT y) ⇔ (z INSERT y) SUBSET x /\ (x DIFF (z INSERT y) = {})``,
   SIMP_TAC std_ss [EXTENSION,SUBSET_DEF,IN_INSERT,NOT_IN_EMPTY,IN_DIFF] \\ METIS_TAC []);
 
 val CODE_POOL_arm2set_2 = prove(
-  ``CODE_POOL ARM_INSTR {(p,c);(q,d)} (arm2set' (rs,ms,st,cp,ud) s) =
+  ``CODE_POOL ARM_INSTR {(p,c);(q,d)} (arm2set' (rs,ms,st,cp,ud) s) ⇔
       ({p+3w;p+2w;p+1w;p;q+3w;q+2w;q+1w;q} = ms) /\ (rs = {}) /\ (st = {}) /\ ~cp /\ ~ud /\
       (ARM_READ_MEM (p + 0w) s = ( 7 ><  0) c) /\
       (ARM_READ_MEM (p + 1w) s = (15 ><  8) c) /\
@@ -288,7 +292,7 @@ val CODE_POOL_arm2set_2 = prove(
   \\ ASM_SIMP_TAC std_ss [AC CONJ_COMM CONJ_ASSOC,DIFF_EMPTY,EMPTY_arm2set]);
 
 val CODE_POOL_arm2set_1 = prove(
-  ``CODE_POOL ARM_INSTR {(p,c)} (arm2set' (rs,ms,st,cp,ud) s) =
+  ``CODE_POOL ARM_INSTR {(p,c)} (arm2set' (rs,ms,st,cp,ud) s) ⇔
       ({p+3w;p+2w;p+1w;p} = ms) /\ (rs = {}) /\ (st = {}) /\ ~cp /\ ~ud /\
       (ARM_READ_MEM (p + 0w) s = ( 7 ><  0) c) /\
       (ARM_READ_MEM (p + 1w) s = (15 ><  8) c) /\

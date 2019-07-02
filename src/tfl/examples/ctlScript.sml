@@ -6,6 +6,7 @@ open HolKernel Parse boolLib bossLib
 open pred_setTheory stringTheory
 
 val _ = new_theory "ctl"
+val _ = ParseExtras.temp_loose_equality()
 
 fun mkMySuffix s prec = add_rule
     {term_name = s, fixity = Suffix prec,

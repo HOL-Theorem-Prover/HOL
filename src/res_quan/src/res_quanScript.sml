@@ -45,17 +45,21 @@ val RES_ABSTRACT = save_thm ("RES_ABSTRACT", RES_ABSTRACT_DEF);
 (* RES_FORALL                                                            *)
 (* --------------------------------------------------------------------- *)
 
-val RES_FORALL_CONJ_DIST = store_thm("RES_FORALL_CONJ_DIST",
-    (``!P Q R.
-     (!(i:'a)::P. (Q i /\ R i)) = (!i::P. Q i) /\ (!i::P. R i)``),
+Theorem RES_FORALL_CONJ_DIST:
+  !P Q R.
+     (!(i:'a)::P. (Q i /\ R i)) <=> (!i::P. Q i) /\ (!i::P. R i)
+Proof
     REPEAT STRIP_TAC >> REWRITE_TAC [RES_FORALL]
-    >> BETA_TAC >> EQ_TAC >> REPEAT STRIP_TAC >> RES_TAC);
+    >> BETA_TAC >> EQ_TAC >> REPEAT STRIP_TAC >> RES_TAC
+QED
 
-val RES_FORALL_DISJ_DIST = store_thm("RES_FORALL_DISJ_DIST",
-    (``!P Q R.
-     (!(i:'a)::(\j. P j \/ Q j). R i) = (!i::P. R i) /\ (!i::Q. R i)``),
+Theorem RES_FORALL_DISJ_DIST:
+  !P Q R.
+     (!(i:'a)::(\j. P j \/ Q j). R i) <=> (!i::P. R i) /\ (!i::Q. R i)
+Proof
     REPEAT STRIP_TAC >> REWRITE_TAC [RES_FORALL, SPECIFICATION] >>
-    BETA_TAC >> EQ_TAC >> REPEAT STRIP_TAC >> RES_TAC);
+    BETA_TAC >> EQ_TAC >> REPEAT STRIP_TAC >> RES_TAC
+QED
 
 val RES_FORALL_UNIQUE = store_thm("RES_FORALL_UNIQUE",
     (``!P j. (!(i:'a)::($= j). P i) = P j``),
@@ -150,20 +154,24 @@ val RES_FORALL_BIGINTER = store_thm(
 (* RES_EXISTS                                                            *)
 (* --------------------------------------------------------------------- *)
 
-val RES_EXISTS_DISJ_DIST = store_thm("RES_EXISTS_DISJ_DIST",
-    (``!P Q R.
-     (?(i:'a)::P. (Q i \/ R i)) = (?i::P. Q i) \/ (?i::P. R i)``),
+Theorem RES_EXISTS_DISJ_DIST:
+  !P Q R.
+     (?(i:'a)::P. (Q i \/ R i)) <=> (?i::P. Q i) \/ (?i::P. R i)
+Proof
     REPEAT STRIP_TAC >> REWRITE_TAC [RES_EXISTS, SPECIFICATION]
     >> BETA_TAC >> PURE_ONCE_REWRITE_TAC[CONJ_SYM]
     >> PURE_ONCE_REWRITE_TAC[RIGHT_AND_OVER_OR]
-    >> CONV_TAC (ONCE_DEPTH_CONV EXISTS_OR_CONV) >> REFL_TAC);
+    >> CONV_TAC (ONCE_DEPTH_CONV EXISTS_OR_CONV) >> REFL_TAC
+QED
 
-val RES_DISJ_EXISTS_DIST = store_thm("RES_DISJ_EXISTS_DIST",
-    (``!P Q R.
-     (?(i:'a)::(\i. P i \/ Q i). R i) = (?i::P. R i) \/ (?i::Q. R i)``),
+Theorem RES_DISJ_EXISTS_DIST:
+  !P Q R.
+     (?(i:'a)::(\i. P i \/ Q i). R i) <=> (?i::P. R i) \/ (?i::Q. R i)
+Proof
     REPEAT STRIP_TAC >> REWRITE_TAC [RES_EXISTS, SPECIFICATION]
     >> BETA_TAC >> PURE_ONCE_REWRITE_TAC[RIGHT_AND_OVER_OR]
-    >> CONV_TAC (ONCE_DEPTH_CONV EXISTS_OR_CONV) >> REFL_TAC);
+    >> CONV_TAC (ONCE_DEPTH_CONV EXISTS_OR_CONV) >> REFL_TAC
+QED
 
 val RES_EXISTS_EQUAL = store_thm("RES_EXISTS_EQUAL",
     (``!P j. (?(i:'a)::($= j). P i) = P j``),
@@ -210,11 +218,12 @@ val RES_EXISTS_NULL = store_thm
    >> Cases_on `m`
    >> PROVE_TAC []);
 
-val RES_EXISTS_ALT = store_thm
-  ("RES_EXISTS_ALT",
-   ``!(p : 'a -> bool) m.
-      RES_EXISTS p m = (RES_SELECT p m) IN p /\ m (RES_SELECT p m)``,
-   RW_TAC bool_ss [RES_EXISTS, EXISTS_DEF, RES_SELECT, SPECIFICATION]);
+Theorem RES_EXISTS_ALT:
+  !(p : 'a -> bool) m.
+      RES_EXISTS p m <=> (RES_SELECT p m) IN p /\ m (RES_SELECT p m)
+Proof
+   RW_TAC bool_ss [RES_EXISTS, EXISTS_DEF, RES_SELECT, SPECIFICATION]
+QED
 
 val NOT_RES_EXISTS = store_thm(
   "NOT_RES_EXISTS",

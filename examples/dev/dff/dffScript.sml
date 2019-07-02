@@ -42,7 +42,7 @@ val _ = new_theory "dff";
 (* Rise s t : signal s rises ``at`` time t.                             *)
 val Rise =
     new_definition
-     ("Rise", ``!s t.Rise s t = ~s(t) /\ s(t+1)``);
+     ("Rise", ``!s t.Rise s t <=> ~s(t) /\ s(t+1)``);
 
 (* D-TYPE flip flop - rising-edge triggered - SIMPLE MODEL.             *)
 val Dtype =

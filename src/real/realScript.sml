@@ -22,6 +22,7 @@ open HolKernel Parse boolLib hol88Lib numLib reduceLib pairLib
      BasicProvers TotalDefn metisLib bossLib;
 
 val _ = new_theory "real";
+val _ = ParseExtras.temp_loose_equality()
 
 val AC = AC.AC;
 

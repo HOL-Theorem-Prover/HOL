@@ -7,6 +7,10 @@ app load ["numposrepTheory","regexpLib", "wordsLib"];
 open Regexp_Type regexpSyntax regexpTheory FormalLangTheory
      numposrepTheory  stringTheory arithmeticTheory;
 
+(*---------------------------------------------------------------------------*)
+(* Boilerplate                                                               *)
+(*---------------------------------------------------------------------------*)
+
 fun qspec q th = th |> Q.SPEC q 
 fun qspec_arith q th = qspec q th |> SIMP_RULE arith_ss [];
 

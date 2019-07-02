@@ -56,7 +56,7 @@ val def = (* Define function and prove termination *)
                              (f visit_now acc)
       else ARB`
  (WF_REL_TAC `inv_image ($< LEX $<) Rel`
-   THEN RW_TAC set_ss [Rel_def, DECIDE ``(0 < p - q) = q < p ``]
+   THEN RW_TAC set_ss [Rel_def, DECIDE ``(0 < p - q) <=> q < p ``]
    THEN Cases_on `visit_now IN Parents G` THENL
    [DISJ1_TAC, DISJ2_TAC] THEN RW_TAC set_ss [] THENL
    [MATCH_MP_TAC (DECIDE ``y <= x /\ y < z ==> x < z + (x - y)``) THEN
@@ -219,15 +219,16 @@ val DFT_REACH_2 = Q.store_thm
 (* x is reachable iff DFT finds it.                                          *)
 (*---------------------------------------------------------------------------*)
 
-val DFT_REACH_THM = Q.store_thm
-("DFT_REACH_THM",
- `!G to_visit.
+Theorem DFT_REACH_THM:
+  !G to_visit.
     FINITE (Parents G)
       ==>
-    !x. x IN REACH_LIST G to_visit = MEM x (DFT G CONS [] to_visit [])`,
+    !x. x IN REACH_LIST G to_visit <=> MEM x (DFT G CONS [] to_visit [])
+Proof
  RW_TAC bool_ss [EQ_IMP_THM] THENL
  [MATCH_MP_TAC DFT_REACH_2,IMP_RES_TAC DFT_REACH_1] THEN
  FULL_SIMP_TAC set_ss [REACH_def,REACH_EXCLUDE,SPECIFICATION,REACH_LIST_def] THEN
- METIS_TAC[LIST_TO_SET_DEF]);
+ METIS_TAC[LIST_TO_SET_DEF]
+QED
 
 val _ = export_theory();

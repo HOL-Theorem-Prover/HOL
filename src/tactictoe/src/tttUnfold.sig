@@ -14,7 +14,7 @@ sig
   val ttt_rewrite : unit -> string list
   val ttt_record : unit -> unit (* includes ttt_rewrite *)
 
-  (* evaluation *)
+  (* evaluation (warning: only evaluate a theory after recording) *)
   val ttt_parallel_eval : int -> string list -> unit
 
 end

@@ -28,6 +28,7 @@ open wellorderTheory cardinalTheory;
 open util_probTheory iterateTheory productTheory;
 
 val _ = new_theory "real_topology";
+val _ = ParseExtras.temp_loose_equality()
 
 (* ------------------------------------------------------------------------- *)
 (* MESON, METIS, SET_TAC, SET_RULE, ASSERT_TAC, ASM_ARITH_TAC                *)

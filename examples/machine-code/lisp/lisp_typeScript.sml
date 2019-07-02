@@ -59,8 +59,8 @@ val TASK_EVAL_def = Define `TASK_EVAL = Sym "nil"`;
 val TASK_FUNC_def = Define `TASK_FUNC = Sym "quote"`;
 
 val isQuote_def = Define `
-  isQuote x = isDot x /\ (CAR x = Sym "quote") /\
-              isDot (CDR x) /\ (CDR (CDR x) = Sym "nil")`;
+  isQuote x <=> isDot x /\ (CAR x = Sym "quote") /\
+                isDot (CDR x) /\ (CDR (CDR x) = Sym "nil")`;
 
 val LSIZE_def = Define `
   (LSIZE (Dot x y) = SUC (LSIZE x + LSIZE y)) /\

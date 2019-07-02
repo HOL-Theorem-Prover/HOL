@@ -3,6 +3,9 @@ sig
 
 include Abbrev
 
+  (* val momentum_glob : real ref *)
+  val nlayer_glob : int ref
+
   type vect = real vector
   type mat = real vector vector
   type layer = {a  : real -> real, da : real -> real, w : mat}
@@ -22,38 +25,52 @@ include Abbrev
   val random_tnn : (int * int) -> (term * int) list -> tnn
   val random_dhtnn  : (int * int) -> (term * int) list -> dhtnn
 
-  (* printing *)
+  (* input/output *)
   val string_of_tnn : tnn -> string
-  val string_of_trainset : (term * real list) list -> string
+  val write_tnn : string -> tnn -> unit
+  val read_tnn : string -> tnn
+  val string_of_dhtnn : dhtnn -> string
+  val write_dhtnn : string -> dhtnn -> unit
+  val read_dhtnn : string -> dhtnn
+  val write_dhex : string ->
+    (term * real list * real list) list -> unit
+  val read_dhex : string ->
+    (term * real list * real list) list
+  val write_tnnex : string -> (term * real list) list -> unit
+  val read_tnnex  : string -> (term * real list) list
+  val write_operl : string -> (term * int) list -> unit
+  val read_operl  : string -> (term * int) list
 
   (* inference *)
   val infer_tnn : tnn -> term -> real list
+  val infer_tnn_nohead : tnn -> term -> real list (* for debugging *)
 
   (* training *)
-  val adaptive_flag : bool ref
-
   val train_tnn_schedule :
-    tnn ->
-    int -> (term list * vect) list * (term list * vect) list ->
+    (int * int) -> tnn ->
+    (term list * vect) list * (term list * vect) list ->
     (int * real) list ->
     tnn
-
   val train_dhtnn_schedule :
-    dhtnn ->
-    int -> (term list * vect) list * (term list * vect) list ->
+    int -> dhtnn ->
+    int -> (term * real list * real list) list ->
     (int * real) list ->
     dhtnn
 
-  (* prepare the dataset before training *)
+  (* prepare dataset before training *)
   val trainset_info : (term * real list) list -> string
-
   val prepare_trainset : (term * real list) list -> (term list * vect) list
+  val prepare_dhtrainset :
+    (term * real list * real list) list -> (term list * vect * vect) list
 
+  (* all in one *)
   val prepare_train_tnn :
-    tnn ->
-    int -> (term * real list) list * (term * real list) list ->
+    (int * int) -> tnn ->
+    (term * real list) list * (term * real list) list ->
     (int * real) list ->
     tnn
 
+  (* statistics *)
+  val accuracy_set : tnn -> (term * real list) list -> real
 
 end

@@ -549,7 +549,7 @@ but it could look like
 *)
 
         val equiv_ty_ABS = TAC_PROOF(([],
-            (“!r r'. ^REL r r' =
+            (“!r r'. ^REL r r' <=>
                        ^REL r r /\ ^REL r' r' /\ (^ty_ABS r = ^ty_ABS r')”)),
             GEN_TAC THEN GEN_TAC
             THEN CONV_TAC (LAND_CONV (REWR_CONV pequiv))

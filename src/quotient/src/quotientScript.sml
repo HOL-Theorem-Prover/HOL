@@ -58,8 +58,8 @@ val EQUIV_def =
 
 val PARTIAL_EQUIV_def =
     Define
-      `PARTIAL_EQUIV R = (?x:'a. R x x) /\
-                         (!x y.  R x y = R x x /\ R y y /\ (R x = R y))`;
+      `PARTIAL_EQUIV R <=> (?x:'a. R x x) /\
+                           (!x y.  R x y <=> R x x /\ R y y /\ (R x = R y))`;
 
 val EQUIV_IMP_PARTIAL_EQUIV = store_thm
   ("EQUIV_IMP_PARTIAL_EQUIV",
@@ -74,10 +74,10 @@ val EQUIV_IMP_PARTIAL_EQUIV = store_thm
 
 val QUOTIENT_def =
     Define
-      `QUOTIENT R abs rep =
+      `QUOTIENT R abs rep <=>
         (!a:'b. abs (rep a) = a) /\
         (!a. R (rep a) (rep a)) /\
-        (!(r:'a) (s:'a). R r s = R r r /\ R s s /\ (abs r = abs s))`;
+        (!(r:'a) (s:'a). R r s <=> R r r /\ R s s /\ (abs r = abs s))`;
 
 val QUOTIENT_ABS_REP = store_thm
    ("QUOTIENT_ABS_REP",
@@ -94,13 +94,13 @@ val QUOTIENT_REP_REFL = store_thm
     THEN REPEAT STRIP_TAC
    );
 
-val QUOTIENT_REL = store_thm
-   ("QUOTIENT_REL",
-    (“!R (abs:'a->'b) rep. QUOTIENT R abs rep ==>
-            (!r s. R r s = R r r /\ R s s /\ (abs r = abs s))”),
+Theorem QUOTIENT_REL:
+  !R (abs:'a->'b) rep. QUOTIENT R abs rep ==>
+                       (!r s. R r s <=> R r r /\ R s s /\ (abs r = abs s))
+Proof
     REWRITE_TAC[QUOTIENT_def]
     THEN REPEAT STRIP_TAC
-   );
+QED
 
 val QUOTIENT_REL_ABS = store_thm
    ("QUOTIENT_REL_ABS",
@@ -166,14 +166,14 @@ val IDENTITY_QUOTIENT = store_thm
 
 
 
-val EQUIV_REFL_SYM_TRANS = store_thm
-   ("EQUIV_REFL_SYM_TRANS",
-    (“!R.
+Theorem EQUIV_REFL_SYM_TRANS:
+    !R.
          (!x y:'a. R x y = (R x = R y))
-         =
+           <=>
          (!x. R x x) /\
          (!x y. R x y ==> R y x) /\
-         (!x y z. R x y /\ R y z ==> R x z)”),
+         (!x y z. R x y /\ R y z ==> R x z)
+Proof
     GEN_TAC
     THEN EQ_TAC
     THEN STRIP_TAC
@@ -203,7 +203,7 @@ val EQUIV_REFL_SYM_TRANS = store_thm
             PURE_ASM_REWRITE_TAC[]
           ]
       ]
-   );
+QED
 
 
 val QUOTIENT_SYM = store_thm
@@ -262,15 +262,15 @@ val FUN_MAP_I = store_thm
     THEN REWRITE_TAC[I_THM,ETA_AX]
    );
 
-val IN_FUN = store_thm
-   ("IN_FUN",
-    (“!(f:'a -> 'b) (g:bool -> bool) s x.
-        x IN ((f --> g) s) = g ((f x) IN s)”),
+Theorem IN_FUN:
+    !(f:'a -> 'b) (g:bool -> bool) s x.
+        x IN ((f --> g) s) <=> g ((f x) IN s)
+Proof
     REPEAT GEN_TAC
     THEN PURE_ONCE_REWRITE_TAC[IN_DEF]
     THEN BETA_TAC
     THEN REWRITE_TAC[FUN_MAP_THM]
-   );
+QED
 
 (*
 val SET_MAP_def =
@@ -397,12 +397,10 @@ val RESPECTS = store_thm
     THEN REWRITE_TAC[respects_def,W_THM]
    );
 
-val IN_RESPECTS = store_thm
-   ("IN_RESPECTS",
-    (“!(R:'a->'a->bool) x.
-         x IN respects R = R x x”),
-    REWRITE_TAC[SPECIFICATION,RESPECTS]
-   );
+Theorem IN_RESPECTS:
+   !(R:'a->'a->bool) x. x IN respects R <=> R x x
+Proof REWRITE_TAC[SPECIFICATION,RESPECTS]
+QED
 
 val RESPECTS_THM = store_thm
    ("RESPECTS_THM",
@@ -502,17 +500,17 @@ val _ = associate_restriction ("?!!",  "RES_EXISTS_EQUIV");
 ``?!!x :: R. x = 5``;
 *)
 
-val RES_EXISTS_EQUIV = store_thm
-   ("RES_EXISTS_EQUIV",
-    (“!R m.
-         RES_EXISTS_EQUIV R m =
-         (?(x : 'a) :: respects R. m x) /\
-         (!x y :: respects R. m x /\ m y ==> (R x y))”),
+Theorem RES_EXISTS_EQUIV:
+  !R m.
+         RES_EXISTS_EQUIV R m <=>
+           (?(x : 'a) :: respects R. m x) /\
+           (!x y :: respects R. m x /\ m y ==> (R x y))
+Proof
     REPEAT GEN_TAC
     THEN REWRITE_TAC[RES_EXISTS_EQUIV_DEF]
     THEN BETA_TAC
     THEN REFL_TAC
-   );
+QED
 
 (*
 val RES_EXISTS_UNIQUE_EQUIV_REL = store_thm

@@ -109,5 +109,32 @@ val _ = if (with_flag (Feedback.emit_ERR, false)
         then OK()
         else die "FAILED"
 
+(* isolate_to_front test cases *)
+val failcount = ref 0
+val _ = diemode := Remember failcount
+local
+  fun itf_test (nm,t1,t2,result) =
+      convtest ("isolate_to_front/" ^ nm,isolate_to_front t1,t2,result)
+  val _ = new_constant("csize", “:comm -> num”)
+in
+val _ = List.app itf_test [(*
+  ("simple/univgoal/vars-in-order", “EVAL c s0 s1”,
+   “∀d t0 t. EVAL d t0 t ==> EVAL d t t0”,
+   “∀d t0 t. EVAL d t0 t ==> EVAL d t t0”),
+  ("simple/univgoal/vars-wrong-order", “EVAL c s0 s1”,
+   “∀t0 t d. EVAL d t0 t ==> EVAL d t t0”,
+   “∀d t0 t. EVAL d t0 t ==> EVAL d t t0”),
+  ("simple/specgoal", “EVAL c s0 s1”,
+   “EVAL d t0 t ==> EVAL d t t0”,
+   “∀d t0 t. EVAL d t0 t ==> EVAL d t t0”),
+  ("moving/univgoal/nice-vars", “EVAL c s0 s1”,
+   “∀d t0 t1. csize d = ONE ∧ EVAL d t0 t1 ⇒ EVAL d t1 t0”,
+   “∀d t0 t1. EVAL d t0 t1 ⇒ (csize d = ONE ⇒ EVAL d t1 t0)”),
+  ("moving/univgoal/extra-vars", “EVAL c s0 s1”,
+   “∀d n t0 t1 . csize d = n ∧ EVAL d t0 t1 ⇒ EVAL d t1 t0”,
+   “∀d t0 t1 . EVAL d t0 t1 ⇒ ∀n. csize d = n ⇒ EVAL d t1 t0”) *)
+]
+end
 
-val _ = OS.Process.exit OS.Process.success
+
+val _ = exit_count0 failcount

@@ -1984,7 +1984,7 @@ local
   val word_div_le2_lem = Q.prove(
     `!n. 0 < (SUC (2 * n)) MOD dimword (:'a)`,
     SRW_TAC [] [arithmeticTheory.ADD1, bitTheory.MOD_PLUS_1, ZERO_LT_dimword,
-                DECIDE ``0n < n = (n <> 0)``]
+                DECIDE ``0n < n <=> (n <> 0)``]
     THEN STRIP_ASSUME_TAC EXISTS_HB
     THEN ASM_SIMP_TAC arith_ss
          [arithmeticTheory.EXP, GSYM arithmeticTheory.MOD_COMMON_FACTOR,

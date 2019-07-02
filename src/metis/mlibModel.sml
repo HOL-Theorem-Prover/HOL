@@ -39,10 +39,11 @@ val pp_fp = pp_map
   (fn (f,a) => Fn (f, map (fn n => Fn (int_to_string n, [])) a)) pp_term;
 
 fun cached c f k =
-  case Binarymap.peek (!c,k) of
+  case Binarymap.peek (Uref.!c,k) of
       SOME v => v
     | NONE =>
       let
+        open Uref
         val v = f k
         val () = c := Binarymap.insert (!c,k,v)  (* OK *)
                                        (* - caches are private per model *)
@@ -293,8 +294,8 @@ fun cached_random_pred cache id p_args = cached cache (random_pred id) p_args;
 datatype model = MODEL of
   {parm : parameters,
    id : int,
-   cachef : (fp,int) Binarymap.dict ref,
-   cachep : (fp,bool) Binarymap.dict ref,
+   cachef : (fp,int) Binarymap.dict Uref.t,
+   cachep : (fp,bool) Binarymap.dict Uref.t,
    overf : (fp,int) Binarymap.dict,
    overp : (fp,bool) Binarymap.dict,
    fixf : (string * int list) -> int option,
@@ -309,8 +310,8 @@ in
       val {func = fixf, pred = fixp} = r n
       val () = assert (1 <= n) (Bug "mlibModel.new: nonpositive size")
       val id = new_id ()
-      val cachef = ref (Binarymap.mkDict fp_compare)
-      val cachep = ref (Binarymap.mkDict fp_compare)
+      val cachef = Uref.new (Binarymap.mkDict fp_compare)
+      val cachep = Uref.new (Binarymap.mkDict fp_compare)
       val overf = Binarymap.mkDict fp_compare
       val overp = Binarymap.mkDict fp_compare
     in

@@ -89,10 +89,11 @@ val _ = export_rewrites ["Delete1_def"]
 
 val _ = add_infix ("Delete1", 500, HOLgrammars.LEFT);
 
-val MEM_Delete1 = store_thm (
-  "MEM_Delete1",
-  ``!A (a:'a) x. MEM x (A Delete1 a) = MEM x A /\ ~(x = a)``,
-  Induct THEN SRW_TAC[][] THEN PROVE_TAC []);
+Theorem MEM_Delete1:
+  !A (a:'a) x. MEM x (A Delete1 a) <=> MEM x A /\ ~(x = a)
+Proof
+  Induct THEN SRW_TAC[][] THEN PROVE_TAC []
+QED
 
 val MEM_Delete1_IDENT = Store_Thm(
   "MEM_Delete1_IDENT",
@@ -250,14 +251,13 @@ val Inter1_def = Define
 
 val _ = add_infix ("Inter1", 600, HOLgrammars.LEFT);
 
-val MEM_Inter1 = store_thm
-   ("MEM_Inter1",
-    ``!A B (x:'a).
-           MEM x (A Inter1 B) = MEM x A /\ MEM x B``,
+Theorem MEM_Inter1:
+   !A B (x:'a). MEM x (A Inter1 B) <=> MEM x A /\ MEM x B
+Proof
     Induct
     THEN SRW_TAC [][Inter1_def]
     THEN PROVE_TAC []
-   );
+QED
 
 val Inter1_RSP = store_thm
    ("Inter1_RSP",

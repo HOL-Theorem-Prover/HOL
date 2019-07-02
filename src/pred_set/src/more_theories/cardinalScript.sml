@@ -1657,8 +1657,8 @@ val SURJECTIVE_IMAGE = store_thm ("SURJECTIVE_IMAGE",
   SIMP_TAC std_ss [IN_UNIV, SUBSET_UNIV]);
 
 (* TODO: they're in seqTheory; prove them manually and move to numTheory *)
-val LT_SUC = prove (``!a b. a < SUC b = a < b \/ (a = b)``, DECIDE_TAC);
-val LE_SUC = prove (``!a b. a <= SUC b = a <= b \/ (a = SUC b)``, DECIDE_TAC);
+val LT_SUC = prove (``!a b. a < SUC b <=> a < b \/ (a = b)``, DECIDE_TAC);
+val LE_SUC = prove (``!a b. a <= SUC b <=> a <= b \/ (a = SUC b)``, DECIDE_TAC);
 
 val CARD_LE_INJ = store_thm ("CARD_LE_INJ",
  ``!s t. FINITE s /\ FINITE t /\ CARD s <= CARD t
@@ -1700,33 +1700,35 @@ val CARD_LE_INJ = store_thm ("CARD_LE_INJ",
   SIMP_TAC std_ss [IN_INSERT, SUBSET_DEF, IN_IMAGE] THEN
   METIS_TAC[SUBSET_DEF, IN_IMAGE]);
 
-val CARD_IMAGE_INJ = store_thm ("CARD_IMAGE_INJ",
- ``!(f:'a->'b) s. (!x y. x IN s /\ y IN s /\ (f(x) = f(y)) ==> (x = y)) /\
-                FINITE s ==> (CARD (IMAGE f s) = CARD s)``,
+Theorem CARD_IMAGE_INJ:
+   !(f:'a->'b) s. (!x y. x IN s /\ y IN s /\ (f(x) = f(y)) ==> (x = y)) /\
+                  FINITE s ==> (CARD (IMAGE f s) = CARD s)
+Proof
   GEN_TAC THEN ONCE_REWRITE_TAC [CONJ_SYM] THEN
   REWRITE_TAC[GSYM AND_IMP_INTRO] THEN GEN_TAC THEN
-  KNOW_TAC ``(!(x :'a) (y :'a).
+  KNOW_TAC “
+    (!(x :'a) (y :'a).
        x IN s ==> y IN s ==> ((f :'a -> 'b) x = f y) ==> (x = y)) ==>
-    (CARD (IMAGE f s) = CARD s) = (\s. (!(x :'a) (y :'a).
+       (CARD (IMAGE f s) = CARD s) <=>
+    (\s. (!(x :'a) (y :'a).
        x IN s ==> y IN s ==> ((f :'a -> 'b) x = f y) ==> (x = y)) ==>
-    (CARD (IMAGE f s) = CARD s)) (s:'a->bool)`` THENL
+      (CARD (IMAGE f s) = CARD s)) (s:'a->bool)” THENL
   [FULL_SIMP_TAC std_ss[], DISCH_TAC THEN ONCE_ASM_REWRITE_TAC []
   THEN MATCH_MP_TAC FINITE_INDUCT THEN BETA_TAC THEN
   REWRITE_TAC[NOT_IN_EMPTY, IMAGE_EMPTY, IMAGE_INSERT] THEN
   REPEAT STRIP_TAC THENL
   [ASM_SIMP_TAC std_ss [CARD_DEF, IMAGE_FINITE, IN_IMAGE],
   ASM_SIMP_TAC std_ss [CARD_DEF, IMAGE_FINITE, IN_IMAGE] THEN
-  COND_CASES_TAC THENL [ASM_MESON_TAC[IN_INSERT], ASM_MESON_TAC[IN_INSERT]]]]);
+  COND_CASES_TAC THENL [ASM_MESON_TAC[IN_INSERT], ASM_MESON_TAC[IN_INSERT]]]]
+QED
 
-val CARD_IMAGE_LE = store_thm ("CARD_IMAGE_LE",
- ``!(f:'a->'b) s. FINITE s ==> CARD(IMAGE f s) <= CARD s``,
-  REPEAT GEN_TAC THEN KNOW_TAC``(CARD (IMAGE f s) <= CARD (s:'a->bool)) =
-  ((\s.  CARD (IMAGE f s) <= CARD s) s)`` THENL [FULL_SIMP_TAC std_ss[],
-  DISCH_TAC THEN ONCE_ASM_REWRITE_TAC [] THEN MATCH_MP_TAC FINITE_INDUCT
-  THEN BETA_TAC THEN SIMP_TAC std_ss [IMAGE_EMPTY, IMAGE_INSERT, CARD_DEF,
-  IMAGE_FINITE, LESS_EQ_REFL] THEN REPEAT STRIP_TAC THEN COND_CASES_TAC THENL
-  [MATCH_MP_TAC LESS_EQ_TRANS THEN EXISTS_TAC ``CARD (s' :'a -> bool)``
-  THEN FULL_SIMP_TAC std_ss [], FULL_SIMP_TAC std_ss [LESS_EQ_MONO]]]);
+Theorem CARD_IMAGE_LE:
+   !(f:'a->'b) s. FINITE s ==> CARD(IMAGE f s) <= CARD s
+Proof
+  REPEAT GEN_TAC THEN
+  ‘!s. FINITE s ==> CARD (IMAGE f s) <= CARD s’ suffices_by metis_tac[] >>
+  Induct_on ‘FINITE’ >> simp[] >> rw[] >> rw[]
+QED
 
 val SURJECTIVE_IFF_INJECTIVE_GEN = store_thm ("SURJECTIVE_IFF_INJECTIVE_GEN",
  ``!s t f:'a->'b.
@@ -1851,24 +1853,13 @@ val HAS_SIZE_CARD = store_thm ("HAS_SIZE_CARD",
 ``!s n. s HAS_SIZE n ==> (CARD s = n)``,
   SIMP_TAC std_ss [HAS_SIZE]);
 
-val HAS_SIZE_0 = store_thm ("HAS_SIZE_0",
- ``!(s:'a->bool). s HAS_SIZE 0:num <=> (s = {})``,
-  REPEAT GEN_TAC THEN REWRITE_TAC[HAS_SIZE] THEN
-  EQ_TAC THEN DISCH_TAC THEN
-  ASM_REWRITE_TAC[FINITE_EMPTY, FINITE_INSERT, CARD_DEF] THEN
-  FIRST_ASSUM(MP_TAC o CONJUNCT2) THEN
-  FIRST_ASSUM(MP_TAC o CONJUNCT1) THEN
-  SPEC_TAC(``s:'a->bool``,``s:'a->bool``) THEN GEN_TAC THEN
-
-  KNOW_TAC ``(CARD s' = 0:num) ==> (s' = {}) =
-       (\s'. (CARD s' = 0:num) ==> (s' = {})) s'`` THENL
-  [FULL_SIMP_TAC std_ss [], ALL_TAC] THEN DISCH_TAC THEN
-  ONCE_ASM_REWRITE_TAC [] THEN
-  MATCH_MP_TAC FINITE_INDUCT THEN BETA_TAC THEN
-  REWRITE_TAC[NOT_INSERT_EMPTY] THEN
-  REPEAT GEN_TAC THEN STRIP_TAC THEN
-  FIRST_ASSUM(fn th => REWRITE_TAC[MATCH_MP (CONJUNCT2 CARD_DEF) th]) THEN
-  FULL_SIMP_TAC std_ss [GSYM SUC_NOT]);
+Theorem HAS_SIZE_0:
+   !(s:'a->bool). s HAS_SIZE 0:num <=> (s = {})
+Proof
+  simp[HAS_SIZE, EQ_IMP_THM] THEN
+  ‘!s. FINITE s ==> (CARD s = 0 ==> s = {})’ suffices_by metis_tac[] >>
+  Induct_on ‘FINITE’ >> simp[]
+QED
 
 val HAS_SIZE_SUC = store_thm ("HAS_SIZE_SUC",
  ``!(s:'a->bool) n. s HAS_SIZE (SUC n) <=>

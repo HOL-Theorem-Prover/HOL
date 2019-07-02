@@ -210,12 +210,12 @@ val sum_Axiom0 = prove(
 val sum_INDUCT = save_thm("sum_INDUCT",
                           Prim_rec.prove_induction_thm sum_Axiom0);
 
-val FORALL_SUM = Q.store_thm
- ("FORALL_SUM",
-  `(!s. P s) = (!x. P (INL x)) /\ (!y. P (INR y))`,
-  EQ_TAC THENL
-   [DISCH_TAC THEN ASM_REWRITE_TAC [],
-    MATCH_ACCEPT_TAC sum_INDUCT]);
+Theorem FORALL_SUM:
+  (!s. P s) <=> (!x. P (INL x)) /\ (!y. P (INR y))
+Proof
+  EQ_TAC THENL [DISCH_TAC THEN ASM_REWRITE_TAC [],
+                MATCH_ACCEPT_TAC sum_INDUCT]
+QED
 
 open simpLib
 

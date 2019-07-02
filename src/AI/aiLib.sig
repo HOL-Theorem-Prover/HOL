@@ -85,6 +85,7 @@ sig
   val map_fst : ('a -> 'b) -> ('a * 'c) list -> ('b * 'c) list
   val map_assoc : ('a -> 'b) -> 'a list -> ('a * 'b) list
   val cartesian_product : 'a list -> 'b list -> ('a * 'b) list
+  val cartesian_productl : 'a list list -> 'a list list
   val findSome  : ('a -> 'b option) -> 'a list -> 'b option
   val first_n   : int -> 'a list -> 'a list
   val first_test_n : ('a -> bool) -> int -> 'a list -> 'a list
@@ -102,21 +103,27 @@ sig
   val sort_thyl : string list -> string list
   val fold_left : ('a -> 'b -> 'b) -> 'a list -> 'b -> 'b
   val mk_batch : int -> 'a list -> 'a list list
+  val cut_n : int -> 'a list -> 'a list list
   val number_partition : int -> int -> int list list
   val duplicate : int -> 'a list -> 'a list
   val indent: int -> string
+  (* todo check if list_combine and transpose_ll do the same thing *)
   val list_combine : 'a list list -> 'a list list
+  val combine_triple : 'a list * 'b list * 'c list -> ('a * 'b * 'c) list
+  val split_triple : ('a * 'b * 'c) list -> 'a list * 'b list * 'c list
+  val quintuple_of_list : 'a list -> 'a * 'a * 'a * 'a * 'a
 
   (* random *)
   val random_real : unit -> real
   val shuffle   : 'a list -> 'a list
   val random_elem : 'a list -> 'a
-  val random_int : (int * int) -> int
+  val random_int : (int * int) -> int (* slow uses random_elem *)
   val select_in_distrib : ('a * real) list -> 'a
   val random_percent : real -> 'a list -> 'a list * 'a list
 
   (* input/output *)
   val string_of_goal : goal -> string
+  val trace_tacl : tactic list -> goal -> unit
   val string_of_bool : bool -> string
   val readl : string -> string list
   val bare_readl : string -> string list
@@ -131,6 +138,8 @@ sig
   val debug_in_dir : string -> string -> string -> unit
   val stream_to_string :
     string -> (TextIO.outstream -> unit) -> string list
+  val write_texgraph :
+    string -> string * string -> (int * int) list -> unit
 
   (* parse *)
   val unquote_string : string -> string
@@ -160,6 +169,8 @@ sig
   val standard_deviation : real list -> real
   val sum_int : int list -> int
   val int_div : int -> int -> real
+  val int_pow : int -> int -> int
+  val bin_rep : int -> int -> real list
   val pow : real -> int -> real
   val approx : int -> real -> real
   val percent : real -> real
@@ -167,6 +178,7 @@ sig
 
   (* term *)
   val rename_bvarl : (string -> string) -> term -> term
+  val rename_allvar : term -> term
   val all_bvar : term -> term list
   val strip_type : hol_type -> (hol_type list * hol_type)
   val has_boolty : term -> bool
@@ -176,10 +188,14 @@ sig
   val tts : term -> string
   val its : int -> string
   val rts : real -> string
+  val rts_round : int -> real -> string
 
-  (* parallelism *)
+  (* thread *)
   val interruptkill : Thread.thread -> unit
-  val parmap : int -> ('a -> 'b) -> 'a list -> 'b list
-  val parapp : int -> ('a -> 'b) -> 'a list -> unit
+
+  (* neural network units *)
+  val oper_compare : (term * int) * (term * int) -> order
+  val operl_of : term -> (term * int) list
+
 
 end

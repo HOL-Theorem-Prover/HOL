@@ -1,5 +1,6 @@
 open HolKernel Parse boolLib;
 val _ = new_theory "group";
+val _ = ParseExtras.temp_loose_equality()
 
 open bossLib listTheory HurdUseful subtypeTools res_quanTools
      res_quanTheory pred_setTheory extra_pred_setTheory arithContext

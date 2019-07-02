@@ -54,6 +54,7 @@ quietdec := false;
   the proofs would be redone every time, the library is used.*)
 
 val _ = new_theory "translationsLib";
+val _ = ParseExtras.temp_loose_equality()
 
 
 

@@ -20,7 +20,7 @@ val ERR = mk_HOL_ERR "psMCTS"
    Global fixed parameters
    ------------------------------------------------------------------------- *)
 
-val exploration_coeff = 2.4 (* from a comment in Leela chess blog *)
+val exploration_coeff = ref 2.0 (* 2.4 from a comment in Leela chess blog *)
 
 (* -------------------------------------------------------------------------
    Timers
@@ -223,7 +223,7 @@ fun value_choice player tree vtot ((move,polv),cid) =
     val exploitation = (if player then sum else vis - sum) / (vis + 1.0)
     val exploration  = (polv * Math.sqrt vtot) / (vis + 1.0)
   in
-    exploitation + exploration_coeff * exploration
+    exploitation + (!exploration_coeff) * exploration
   end
 
 (* -------------------------------------------------------------------------
@@ -283,12 +283,12 @@ fun expand decay fevalpoli status_of apply_move tree (id,cid) =
    MCTS
    ------------------------------------------------------------------------- *)
 
-fun starttree_of decay ((status_of,apply_move),fep) startsit =
+fun starttree_of (nsim,decay,noiseb,status_of,apply_move,fep) startsit =
   let val empty_tree = dempty (list_compare Int.compare) in
     node_create_backup decay fep status_of empty_tree ([0],startsit)
   end
 
-fun mcts (nsim,decay,noiseb) ((status_of,apply_move),fep) starttree =
+fun mcts (nsim,decay,noiseb,status_of,apply_move,fep) starttree =
   let
     val starttree_noise =
       if noiseb then add_root_noise starttree else starttree
@@ -433,8 +433,12 @@ fun evalpoli_example tree =
    ------------------------------------------------------------------------- *)
 
 fun print_distrib g l =
-  let fun f (((move,_),_),r) = g move ^ " " ^ (rts (approx 4 r)) in
-    print_endline ("  " ^ String.concatWith ", " (map f l))
+  let
+    fun f1 (((move,r),_),_) = g move ^ " " ^ (rts (approx 4 r))
+    fun f2 (((move,_),_),r) = g move ^ " " ^ (rts (approx 4 r))
+  in
+    print_endline ("  " ^ String.concatWith ", " (map f1 l));
+    print_endline ("  " ^ String.concatWith ", " (map f2 l))
   end
 
 fun best_in_distrib distrib =
@@ -451,7 +455,7 @@ fun select_bigstep tree id =
     val tot  = sum_real (map snd dis1)
   in
     if tot < 0.5 (* ends when no moves are available *)
-    then (print_endline "MCTS: no move available\n"; ([], NONE))
+    then ([], NONE)
     else (dis1, SOME (best_in_distrib dis2))
   end
 

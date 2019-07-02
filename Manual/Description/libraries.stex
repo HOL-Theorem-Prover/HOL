@@ -3538,7 +3538,7 @@ The following examples show \ml{BBLAST\_PROVE} in use:
 \begin{session}
 \begin{alltt}
 >>_ load "blastLib";
->> blastLib.BBLAST_PROVE ``a + 2w <+ 4w = a <+ 2w \/ 13w <+ a :word4``;
+>> blastLib.BBLAST_PROVE ``a + 2w <+ 4w <=> a <+ 2w \/ 13w <+ a :word4``;
 
 >> blastLib.BBLAST_PROVE ``w2w (a:word8) <+ 256w : word16``;
 \end{alltt}

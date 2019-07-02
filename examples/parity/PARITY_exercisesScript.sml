@@ -3,6 +3,7 @@ open HolKernel Parse boolLib bossLib
 open PARITYTheory
 
 val _ = new_theory "PARITY_exercises"
+val _ = ParseExtras.temp_loose_equality()
 
 (* Exercise 1 *)
 val RESET_REG_def = Define`

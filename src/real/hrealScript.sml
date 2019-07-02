@@ -20,6 +20,7 @@ open HolKernel Parse boolLib
 infix THEN THENL ORELSE ORELSEC;
 
 val _ = new_theory "hreal";
+val _ = ParseExtras.temp_loose_equality()
 
 (*---------------------------------------------------------------------------*)
 (* Lemmas about the half-rationals, including definition of ordering         *)

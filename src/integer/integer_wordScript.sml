@@ -7,6 +7,7 @@ open wordsLib stringLib intLib arithmeticTheory
 open bitTheory wordsTheory integerTheory
 
 val _ = new_theory "integer_word"
+val _ = ParseExtras.temp_loose_equality()
 
 (* ------------------------------------------------------------------------- *)
 

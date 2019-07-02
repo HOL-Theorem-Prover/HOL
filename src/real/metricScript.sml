@@ -7,6 +7,7 @@ open HolKernel Parse bossLib boolLib BasicProvers boolSimps simpLib mesonLib
      realTheory topologyTheory;
 
 val _ = new_theory "metric";
+val _ = ParseExtras.temp_loose_equality()
 
 
 (*---------------------------------------------------------------------------*)

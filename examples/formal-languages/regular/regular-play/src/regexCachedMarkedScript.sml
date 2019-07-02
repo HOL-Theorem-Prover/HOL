@@ -3,7 +3,7 @@ open listTheory rich_listTheory combinTheory;
 open pred_setTheory;
 
 val _ = new_theory "regexCachedMarked";
-
+val _ = ParseExtras.temp_loose_equality()
 
 open regexSemanticsTheory;
 open regexExecutableTheory;

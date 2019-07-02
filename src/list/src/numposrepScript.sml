@@ -252,15 +252,17 @@ val l2n_pow2_compute = Q.store_thm("l2n_pow2_compute",
 val lem = (GEN_ALL o REWRITE_RULE [EXP] o Q.SPECL [`n`,`0`] o
            REWRITE_RULE [DECIDE ``1 < 2``] o Q.SPEC `2`) EXP_BASE_LT_MONO
 
-val n2l_pow2_compute = Q.store_thm("n2l_pow2_compute",
-   `!p n. 0 < p ==>
+Theorem n2l_pow2_compute:
+   !p n. 0 < p ==>
          (n2l (2 ** p) n =
           let (q,r) = DIVMOD_2EXP p n in
-            if q = 0 then [r] else r::n2l (2 ** p) q)`,
+            if q = 0 then [r] else r::n2l (2 ** p) q)
+Proof
    SRW_TAC [] [Once n2l_def, DIVMOD_2EXP_def,
-               DECIDE ``x < 2 = (x = 0) \/ (x = 1)``]
+               DECIDE ``x < 2 <=> (x = 0) \/ (x = 1)``]
    \\ SRW_TAC [ARITH_ss] [LESS_DIV_EQ_ZERO]
-   \\ FULL_SIMP_TAC arith_ss [lem, DIV_0_IMP_LT])
+   \\ FULL_SIMP_TAC arith_ss [lem, DIV_0_IMP_LT]
+QED
 
 val l2n2_def = new_definition ("l2n2", ``l2n2 = l2n 2``)
 

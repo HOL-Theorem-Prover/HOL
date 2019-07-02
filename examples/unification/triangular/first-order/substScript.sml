@@ -215,7 +215,7 @@ FULL_SIMP_TAC (srw_ss()) [] THEN SRW_TAC [][] THEN
 SRW_TAC [][] THEN METIS_TAC []);
 
 val vR1_def = Define`
-  vR1 s y x = vR s y x ∧ y NOTIN FDOM s`;
+  vR1 s y x <=> vR s y x ∧ y NOTIN FDOM s`;
 
 val vR_selfapp = Q.store_thm(
 "vR_selfapp",

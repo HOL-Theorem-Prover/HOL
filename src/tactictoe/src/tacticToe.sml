@@ -114,7 +114,13 @@ fun clean_ttt_tacdata_cache () =
 val ttt_goaltac_cache = ref (dempty goal_compare)
 fun clean_ttt_goaltac_cache () = ttt_goaltac_cache := dempty goal_compare
 
+fun has_boolty x = type_of x = bool
+fun has_boolty_goal goal = all has_boolty (snd goal :: fst goal)
+
 fun tactictoe_aux goal =
+  if not (has_boolty_goal goal)
+  then raise ERR "tactictoe" "a term is not of type bool"
+  else
   let val (stac,tac) = dfind goal (!ttt_goaltac_cache) in
     print_endline ("goal already solved by:\n  " ^ stac); tac
   end
@@ -145,6 +151,7 @@ fun tactictoe term =
 
 (* -------------------------------------------------------------------------
    Evaluation
+   Warning : ttt_record should be run on all theories before evaluation
    ------------------------------------------------------------------------- *)
 
 val ttt_eval_dir = tactictoe_dir ^ "/eval"

@@ -23,6 +23,7 @@ quietdec := false;
 *)
 
 val _ = new_theory "prob_dice";
+val _ = ParseExtras.temp_loose_equality()
 
 val EXISTS_DEF = boolTheory.EXISTS_DEF;
 val Rewr = DISCH_THEN (REWRITE_TAC o wrap);

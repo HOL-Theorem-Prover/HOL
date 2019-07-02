@@ -5,6 +5,7 @@ open addressTheory pairTheory set_sepTheory rich_listTheory integerTheory;
 local open tailrecLib blastLib intLib in end
 
 val _ = new_theory "mc_multiword";
+val _ = ParseExtras.temp_loose_equality()
 
 val REV = Tactical.REVERSE;
 

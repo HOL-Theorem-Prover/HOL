@@ -72,7 +72,7 @@ val _ = export_rewrites ["ALOOKUP_EQ_FLOOKUP"]
 
 val MEM_fmap_to_alist = store_thm(
   "MEM_fmap_to_alist",
-  ``MEM (x,y) (fmap_to_alist fm) = x IN FDOM fm /\ (fm ' x = y)``,
+  ``MEM (x,y) (fmap_to_alist fm) <=> x IN FDOM fm /\ (fm ' x = y)``,
   SRW_TAC [][fmap_to_alist_def, MEM_MAP] THEN METIS_TAC []);
 
 val MEM_fmap_to_alist_FLOOKUP = store_thm(

@@ -3,9 +3,7 @@ open HolKernel boolLib bossLib Parse;
 open pred_setTheory arithmeticTheory set_sepTheory tailrecTheory;
 
 val _ = new_theory "prog";
-
-infix \\
-val op \\ = op THEN;
+val _ = ParseExtras.temp_loose_equality()
 
 
 (* ---- definitions ----- *)

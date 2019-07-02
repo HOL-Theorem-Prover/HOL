@@ -35,9 +35,14 @@ val eq_cmp_regexp_compare = Q.prove
 
 val _ = Hol_datatype `vector = Vector of 'a list`;
 
-val fromList_def = Define `fromList l = Vector l`;
-val sub_def      = Define `sub (Vector l) n = EL n l`;
-val length_def   = Define `length (Vector l) = LENGTH l`;
+Definition fromList_def : fromList l = Vector l
+End
+
+Definition sub_def : sub (Vector l) n = EL n l
+End
+
+Definition length_def : length (Vector l) = LENGTH l
+End
 
 val fromList_Vector = save_thm
 ("fromList_Vector",
@@ -49,44 +54,44 @@ val fromList_Vector = save_thm
 
 val _ = Parse.type_abbrev("regexp_set", ``:(regexp,unit)balanced_map``);
 
-val insert_regexp_def =
- Define
-   `insert_regexp r seen = balanced_map$insert regexp_compare r () seen`;
+Definition insert_regexp_def :
+  insert_regexp r seen =
+      balanced_map$insert regexp_compare r () seen
+End
 
-val mem_regexp_def =
- Define
-   `mem_regexp r seen = balanced_map$member regexp_compare r seen`;
+Definition mem_regexp_def :
+  mem_regexp r seen =
+    balanced_map$member regexp_compare r seen
+End
 
 (*---------------------------------------------------------------------------*)
 (* Transitions out of a state (regexp).                                      *)
 (*---------------------------------------------------------------------------*)
 
-val transitions_def =
- Define
-   `transitions r = MAP (\c. (c,smart_deriv c r)) ALPHABET`;
+Definition transitions_def :
+  transitions r = MAP (\c. (c,smart_deriv c r)) ALPHABET
+End
 
-val extend_states_def =
- Define
-   `(extend_states next_state state_map trans [] = (next_state,state_map,trans)) /\
-    (extend_states next_state state_map trans ((c,r')::t) =
-       case balanced_map$lookup regexp_compare r' state_map
-        of SOME n => extend_states next_state state_map ((c,n)::trans) t
-         | NONE   => extend_states (next_state + 1n)
-                        (balanced_map$insert regexp_compare r' next_state state_map)
-                        ((c,next_state)::trans)
-                        t)`;
+Definition extend_states_def :
+ (extend_states next_state state_map trans [] = (next_state,state_map,trans)) /\
+ (extend_states next_state state_map trans ((c,r')::t) =
+    case balanced_map$lookup regexp_compare r' state_map
+     of SOME n => extend_states next_state state_map ((c,n)::trans) t
+      | NONE   => extend_states (next_state + 1n)
+                     (balanced_map$insert regexp_compare r' next_state state_map)
+                     ((c,next_state)::trans)
+                     t)
+End
 
-val extend_states_ind = fetch "-" "extend_states_ind";
-
-val build_table_def =
- Define
-   `build_table arcs r (next_state,state_map,table) =
-     let (next_state,state_map,trans) = extend_states next_state state_map [] arcs
-     in case balanced_map$lookup regexp_compare r state_map
-         of SOME n => (next_state, state_map, (n,trans)::table)
-          | NONE   => (next_state + 1n,
-                       balanced_map$insert regexp_compare r next_state state_map,
-                       (next_state,trans)::table)`;
+Definition build_table_def :
+  build_table arcs r (next_state,state_map,table) =
+    let (next_state,state_map,trans) = extend_states next_state state_map [] arcs
+    in case balanced_map$lookup regexp_compare r state_map
+        of SOME n => (next_state, state_map, (n,trans)::table)
+         | NONE   => (next_state + 1n,
+                      balanced_map$insert regexp_compare r next_state state_map,
+                      (next_state,trans)::table)
+End
 
 (*---------------------------------------------------------------------------*)
 (* The core regexp compiler. The seen argument holds the already-seen        *)
@@ -94,21 +99,27 @@ val build_table_def =
 (* step-index used to ensure that the function terminates.                   *)
 (*---------------------------------------------------------------------------*)
 
-val Brz_def =
- Define
-  `Brz seen worklist acc n =
-     if n <= 0n then NONE else
+Definition Brz_def :
+  Brz seen worklist acc n =
+     if n <= 0n then
+       NONE
+     else
      case worklist of
-        [] => SOME (seen,acc)
-     | r::t =>
-         if mem_regexp r seen then Brz seen t acc (n-1) else
+      | [] => SOME (seen,acc)
+      | r::t =>
+         if mem_regexp r seen then
+             Brz seen t acc (n-1)
+         else
          let arcs = transitions r
          in Brz (insert_regexp r seen)
                 (remove_dups (MAP SND arcs) ++ t)
                 (build_table arcs r acc)
-                (n-1)`;
+                (n-1)
+End
 
-val MAXNUM_32_def = Define `MAXNUM_32:num = 2147483647`;
+Definition MAXNUM_32_def :
+  MAXNUM_32 = 2147483647n
+End
 
 (*---------------------------------------------------------------------------*)
 (* Build Greve-style Brz function                                            *)
@@ -126,9 +137,10 @@ val IS_SOME_EXISTS = Q.prove
 (* Domain of the function.                                                   *)
 (*---------------------------------------------------------------------------*)
 
-val dom_Brz_def =
-  Define
-   `dom_Brz seen worklist acc = ?d. IS_SOME(Brz seen worklist acc d)`;
+Definition dom_Brz_def :
+ dom_Brz seen worklist acc =
+  ?d. IS_SOME(Brz seen worklist acc d)
+End
 
 (*---------------------------------------------------------------------------*)
 (* Create measure function rdepth. Uses following code copied from           *)
@@ -178,10 +190,10 @@ val rdepth_thm =
 (* Define Brzozo                                                             *)
 (*---------------------------------------------------------------------------*)
 
-val Brzozo_def =
- Define
-   `Brzozo seen worklist acc =
-      THE (Brz seen worklist acc (rdepth seen worklist acc))`;
+Definition Brzozo_def :
+  Brzozo seen worklist acc =
+      THE (Brz seen worklist acc (rdepth seen worklist acc))
+End
 
 
 (*---------------------------------------------------------------------------*)
@@ -321,9 +333,9 @@ val dom_Brz_eqns = Q.store_thm
 (* replaced by a version that doesn't have it.                               *)
 (*---------------------------------------------------------------------------*)
 
-val dom_Brz_alt_def =
- Define
-  `dom_Brz_alt seen worklist = dom_Brz seen worklist ARB`;
+Definition dom_Brz_alt_def :
+  dom_Brz_alt seen worklist = dom_Brz seen worklist ARB
+End
 
 val acc_irrelevant = Q.prove
 (`!n seen worklist acc acc1.
@@ -535,9 +547,8 @@ val Brzozowski_ind = Q.store_thm
 (* Efficient executable version of Brzozo                                    *)
 (*---------------------------------------------------------------------------*)
 
-val exec_Brz_def =
- Define
- `exec_Brz seen worklist acc d =
+Definition exec_Brz_def :
+  exec_Brz seen worklist acc d =
     if d=0n then
        (if dom_Brz seen worklist acc then Brzozo seen worklist acc else ARB)
     else
@@ -545,12 +556,13 @@ val exec_Brz_def =
        of [] => (seen,acc)
        | r::t =>
          if mem_regexp r seen then
-             exec_Brz seen t acc (d − 1)
+             exec_Brz seen t acc (d - 1)
            else
              let arcs = transitions r
              in exec_Brz (insert_regexp r seen)
                          (remove_dups (MAP SND arcs) ++ t)
-                         (build_table arcs r acc) (d − 1)`;
+                         (build_table arcs r acc) (d - 1)
+End
 
 val exec_Brz_equals_Brzozo = Q.prove
 (`!d seen worklist acc.
@@ -564,13 +576,13 @@ val exec_Brz_equals_Brzozo = Q.prove
     >- rw [Brzozo_eqns,dom_Brz_eqns]
     >- rw [Brzozo_eqns,dom_Brz_eqns,LET_THM]);
 
-val Brzozowski_def =
- Define
-   `Brzozowski seen worklist acc =
+Definition Brzozowski_def :
+  Brzozowski seen worklist acc =
       if dom_Brz seen worklist acc then
          Brzozo seen worklist acc
       else
-         exec_Brz seen worklist acc MAXNUM_32`;
+         exec_Brz seen worklist acc MAXNUM_32
+End
 
 (*---------------------------------------------------------------------------*)
 (* Theorem showing that Brzozowski can be executed w.o. termination proof.   *)
@@ -611,61 +623,61 @@ val Brzozowski_eqns = Q.store_thm
 (* Return to definition of compiler                                          *)
 (*---------------------------------------------------------------------------*)
 
-val get_accepts_def =
- Define
-  `get_accepts fmap =
-     mergesort (\a b:num. a <= b)
+Definition get_accepts_def :
+  get_accepts fmap =
+    mergesort (\a b:num. a <= b)
        (balanced_map$foldrWithKey
          (\r (n:num) nlist. if nullable r then n::nlist else nlist)
-         [] fmap)`;
+         [] fmap)
+End
 
-val accepts_to_vector_def =
- Define
-  `accepts_to_vector accept_states max_state =
-     alist_to_vec (MAP (\x. (x,T)) accept_states) F max_state max_state`;
+Definition accepts_to_vector_def:
+  accepts_to_vector accept_states max_state =
+     alist_to_vec (MAP (\x. (x,T)) accept_states) F max_state max_state
+End
 
-val table_to_vectors_def =
- Define
-  `table_to_vectors table =
+Definition table_to_vectors_def:
+  table_to_vectors table =
      MAP (\(k:num,table2).
              alist_to_vec (mergesort (inv_image (\a b:num. a <= b) FST)
-                                 (MAP (\(c,n). (c, SOME n)) table2))
+                                (MAP (\(c,n). (c, SOME n)) table2))
                           NONE alphabet_size alphabet_size)
-         (mergesort (inv_image (\a b:num. a <= b) FST) table)`;
+         (mergesort (inv_image (\a b:num. a <= b) FST) table)
+End
 
-val compile_regexp_def =
- Define
-   `compile_regexp r =
-      let r' = normalize r in
-      let (states,last_state,state_numbering,table)
-         = Brzozowski balanced_map$empty [r']
-                      (1n, balanced_map$singleton r' 0n, []) in
-      let delta_vecs = table_to_vectors table in
-      let accepts_vec = accepts_to_vector (get_accepts state_numbering) last_state
-      in
-         (state_numbering,
-          delta_vecs,
-          accepts_vec)`;
+Definition compile_regexp_def :
+  compile_regexp r =
+    let r' = normalize r ;
+        (states,last_state,state_numbering,table)
+          = Brzozowski balanced_map$empty [r']
+                       (1n, balanced_map$singleton r' 0n, []) ;
+        delta_vecs = table_to_vectors table ;
+        accepts_vec = accepts_to_vector (get_accepts state_numbering) last_state
+    in
+      (state_numbering, delta_vecs, accepts_vec)
+End
 
-val exec_dfa_def =
- Define
-  `exec_dfa finals table n s =
+Definition exec_dfa_def :
+ exec_dfa finals table n s =
    case s of
     | "" => sub finals n
     | c::t =>
       case sub (sub table n) (ORD c) of
        | NONE => F
-       | SOME k => exec_dfa finals table k t`;
+       | SOME k => exec_dfa finals table k t
+End
 
-val exec_dfa_thm = Q.prove
-(`(exec_dfa finals table n [] = sub finals n) /\
+Theorem exec_dfa_thm :
+  (exec_dfa finals table n [] = sub finals n) /\
   (exec_dfa finals table n (c::t) =
     case sub (sub table n) (ORD c) of
      | NONE => F
-     | SOME k => exec_dfa finals table k t)`,
-CONJ_TAC
- >- rw_tac list_ss [exec_dfa_def]
- >- rw_tac list_ss [SimpLHS, Once exec_dfa_def])
+     | SOME k => exec_dfa finals table k t)
+Proof
+  CONJ_TAC
+   >- rw_tac list_ss [exec_dfa_def]
+   >- rw_tac list_ss [SimpLHS, Once exec_dfa_def]
+QED
 
 (*
 val exec_dfa_def =
@@ -682,23 +694,24 @@ val exec_dfa_def =
 (* Returns a function of type :string -> bool                                *)
 (*---------------------------------------------------------------------------*)
 
-val regexp_matcher_def =
- Define
-  `regexp_matcher r =
-    let (state_numbering,delta,accepts) = compile_regexp r in
-    let start_state = THE (balanced_map$lookup regexp_compare
-                               (normalize r) state_numbering) in
-    let acceptsV = fromList accepts in
-    let deltaV = fromList (MAP fromList delta)
+Definition regexp_matcher_def :
+ regexp_matcher r =
+    let (state_numbering,delta,accepts) = compile_regexp r ;
+        start_state = THE (balanced_map$lookup regexp_compare
+                               (normalize r) state_numbering) ;
+        acceptsV = fromList accepts;
+        deltaV = fromList (MAP fromList delta)
     in
-      exec_dfa acceptsV deltaV start_state`;
+      exec_dfa acceptsV deltaV start_state
+End
 
 (*
 val regexp_matcher_def =
  Define
   `regexp_matcher r =
     let (state_numbering,delta,accepts) = compile_regexp r in
-    let start_state_opt = balanced_map$lookup regexp_compare (normalize r) state_numbering
+    let start_state_opt =
+             balanced_map$lookup regexp_compare (normalize r) state_numbering
     in
       exec_dfa accepts delta (THE start_state_opt)`;
 *)
@@ -769,7 +782,7 @@ val lemma = Q.prove
 (`!fmap x acc.
     balanced_map$invariant regexp_compare fmap /\
     MEM x (foldrWithKey
-               (λr n nlist. if nullable r then n::nlist else nlist)
+               (\r n nlist. if nullable r then n::nlist else nlist)
                acc fmap)
      ==>
     MEM x acc \/ ?r. nullable r /\ (lookup regexp_compare r fmap = SOME x)`,
@@ -797,7 +810,7 @@ val mem_acc = Q.prove
     MEM x acc
      ==>
      MEM x (foldrWithKey
-               (λr n nlist. if P r then n::nlist else nlist)
+               (\r n nlist. if P r then n::nlist else nlist)
                acc fmap)`,
  gen_tac >> Induct >> RW_TAC std_ss [foldrWithKey_def] >> metis_tac [MEM]);
 
@@ -805,7 +818,7 @@ val lemma1 = Q.prove
 (`!P fmap r x acc.
     P r /\ (lookup regexp_compare r fmap = SOME x)
      ==>
-     MEM x (foldrWithKey (λr n nlist. if P r then n::nlist else nlist) acc fmap)`,
+     MEM x (foldrWithKey (\r n nlist. if P r then n::nlist else nlist) acc fmap)`,
  gen_tac >> Induct
  >- rw_tac list_ss [lookup_def,foldrWithKey_def]
  >- (rw_tac list_ss [lookup_bin,regexp_compare_eq,foldrWithKey_def]
@@ -825,25 +838,25 @@ val mem_get_accepts = Q.store_thm
 (* Correctness of regexp compiler                                            *)
 (*---------------------------------------------------------------------------*)
 
-val fmap_inj_def =
- Define
-  `fmap_inj cmp bmap =
+Definition fmap_inj_def :
+  fmap_inj cmp bmap =
      !x y. x IN fdom cmp bmap /\ (lookup cmp x bmap = lookup cmp y bmap)
-            ==> (cmp x y = Equal)`;
+            ==> (cmp x y = Equal)
+End
 
-val extend_states_inv_def =
- Define
-  `extend_states_inv next_state state_map table =
+Definition extend_states_inv_def :
+  extend_states_inv next_state state_map table =
      (invariant regexp_compare state_map /\
       fmap_inj regexp_compare state_map /\
       (frange regexp_compare state_map = count next_state) /\
-      (!n. MEM n (MAP SND table) ⇒ n < next_state))`;
+      (!n. MEM n (MAP SND table) ==> n < next_state))
+End
 
 val extend_states_inv = Q.prove (
 `!next_state state_map table states next_state' state_map' table'.
-  (extend_states next_state state_map table states = (next_state',state_map',table')) ∧
+  (extend_states next_state state_map table states = (next_state',state_map',table')) /\
   extend_states_inv next_state state_map table
-  ⇒
+  ==>
   extend_states_inv next_state' state_map' table'`,
  ho_match_mp_tac extend_states_ind
   >> rw [extend_states_def]
@@ -869,10 +882,12 @@ val extend_states_inv = Q.prove (
   >- (rw_tac set_ss [] >> metis_tac[])
   >- metis_tac [LESS_TRANS,DECIDE ``x < x+1n``,IN_DEF])
 
-val submap_def =
- Define
-   `submap cmp t1 t2 =
-         !x. x IN fdom cmp t1 ==> x IN fdom cmp t2 /\ (lookup cmp x t1 = lookup cmp x t2)`;
+Definition submap_def :
+  submap cmp t1 t2 =
+     !x. x IN fdom cmp t1
+          ==> x IN fdom cmp t2 /\
+             (lookup cmp x t1 = lookup cmp x t2)
+End
 
 val submap_id = Q.prove
 (`!t cmp. submap cmp t t`,
@@ -918,18 +933,18 @@ val set_lem = Q.prove
 (`!x s t. x IN s ==> (s UNION t = s UNION (x INSERT t))`,
  rw_tac set_ss [SET_EQ_THM] >> metis_tac []);
 
-val fapply_def =
- Define
-  `fapply cmp bmap x = THE (lookup cmp x bmap)`;
+Definition fapply_def :
+  fapply cmp bmap x = THE (lookup cmp x bmap)
+End
 
 val extend_states_thm = Q.prove
 (`!next_state state_map table states next_state' state_map' table'.
   (extend_states next_state state_map table states = (next_state',state_map',table'))
   /\ invariant regexp_compare state_map
-   ⇒
-  (fdom regexp_compare state_map' = (fdom regexp_compare state_map UNION set (MAP SND states))) ∧
-  submap regexp_compare state_map state_map' ∧
-  next_state ≤ next_state' ∧
+   ==>
+  (fdom regexp_compare state_map' = (fdom regexp_compare state_map UNION set (MAP SND states))) /\
+  submap regexp_compare state_map state_map' /\
+  next_state <= next_state' /\
   (table' = REVERSE (MAP (\(c,r). (c, fapply regexp_compare state_map' r)) states) ++ table) /\
   invariant regexp_compare state_map'`
  ,
@@ -965,47 +980,60 @@ val extend_states_thm = Q.prove
       >> metis_tac [THE_DEF])
 );
 
-val good_table_def =
- Define
-  `good_table state_map table =
-    (ALL_DISTINCT (MAP FST table) ∧
-    (!n table2.
-       (ALOOKUP table n = SOME table2)
-       ⇒
-       (set (MAP FST table2) = set ALPHABET)) ∧
-    (!n c n' table2.
-       (ALOOKUP table n = SOME table2) ∧
-       (ALOOKUP table2 c = SOME n')
-       ⇒
-       MEM c ALPHABET ∧
+Definition good_table_def :
+  good_table state_map table =
+     (ALL_DISTINCT (MAP FST table) /\
+     (!n table2.
+        (ALOOKUP table n = SOME table2)
+        ==>
+        (set (MAP FST table2) = set ALPHABET)) /\
+     (!n c n' table2.
+        (ALOOKUP table n = SOME table2) /\
+        (ALOOKUP table2 c = SOME n')
+       ==>
+       MEM c ALPHABET /\
        ?r r'.
-         (lookup regexp_compare r state_map = SOME n) ∧
-         (lookup regexp_compare r' state_map = SOME n') ∧
-         (r' = smart_deriv c r)))`;
+         (lookup regexp_compare r state_map = SOME n) /\
+         (lookup regexp_compare r' state_map = SOME n') /\
+         (r' = smart_deriv c r)))
+End
 
-val invar_def = Define `invar = invariant regexp_compare`;
-val dom_def   = Define `dom = fdom regexp_compare`;
-val range_def = Define `range = frange regexp_compare`;
-val union_def = Define `union = ounion regexp_compare`;
-val set_def   = Define `set = oset regexp_compare`;
-val image_def = Define `image = oimage regexp_compare`;
-val apply_def = Define `apply = fapply regexp_compare`;
+Definition invar_def : invar = invariant regexp_compare
+End
 
-val Brz_invariant_def =
- Define
-  `Brz_invariant seen todo (next_state,state_map,table) ⇔
+Definition dom_def   : dom = fdom regexp_compare
+End
+
+Definition range_def : range = frange regexp_compare
+End
+
+Definition union_def : union = ounion regexp_compare
+End
+
+Definition set_def   : set = oset regexp_compare
+End
+
+Definition image_def : image = oimage regexp_compare
+End
+
+Definition apply_def : apply = fapply regexp_compare
+End
+
+Definition Brz_invariant_def :
+ Brz_invariant seen todo (next_state,state_map,table) <=>
     invar state_map /\ invar seen /\
-    EVERY is_normalized todo ∧
-    (!r. mem_regexp r seen ⇒ is_normalized r) ∧
-    (!r. r ∈ dom state_map ⇒ is_normalized r) ∧
-    (dom (union seen (set todo)) = dom state_map) ∧
-    (range state_map = count next_state) ∧
-    (set (MAP FST table) = fdom num_cmp (oimage num_cmp (apply state_map) seen)) ∧
-    fmap_inj regexp_compare state_map ∧
-    good_table state_map table`;
+    EVERY is_normalized todo /\
+    (!r. mem_regexp r seen ==> is_normalized r) /\
+    (!r. r IN dom state_map ==> is_normalized r) /\
+    (dom (union seen (set todo)) = dom state_map) /\
+    (range state_map = count next_state) /\
+    (set (MAP FST table) = fdom num_cmp (oimage num_cmp (apply state_map) seen)) /\
+    fmap_inj regexp_compare state_map /\
+    good_table state_map table
+End
 
 val lem = Q.prove (
-`!b c d e f. Brz_invariant b c (d,e,f) ⇒ EVERY is_normalized c`,
+`!b c d e f. Brz_invariant b c (d,e,f) ==> EVERY is_normalized c`,
  rw [Brz_invariant_def]);
 
 val fdom_ounion = Q.prove
@@ -1084,7 +1112,7 @@ val mem_foldrWithKey_lem =
 val left_to_right = Q.prove
 (`eq_cmp cmp ==>
    !list bmap k v. invariant cmp bmap /\
-        (lookup cmp k (FOLDR (λ(k,v) t. insert cmp k v t) bmap list) = SOME v)
+        (lookup cmp k (FOLDR (\(k,v) t. insert cmp k v t) bmap list) = SOME v)
             ==>
            (MEM (k,v) list \/ (lookup cmp k bmap = SOME v))`,
  strip_tac
@@ -1093,7 +1121,7 @@ val left_to_right = Q.prove
      >- rw []
      >- (Cases_on `h` >> rw []
           >> pop_assum mp_tac
-          >> `invariant cmp (FOLDR (λ(k,v) t. insert cmp k v t) bmap list)`
+          >> `invariant cmp (FOLDR (\(k,v) t. insert cmp k v t) bmap list)`
                by (Q.SPEC_TAC (`list`,`L`)
                      >> Induct >> rw [invariant_def]
                      >> Cases_on `h` >> rw [] >> metis_tac [insert_thm])
@@ -1104,7 +1132,7 @@ val invariant_ffoldr = Q.prove
 (`!list aset f.
    good_cmp cmp /\ invariant cmp aset
    ==>
-   invariant cmp (FOLDR (λ(k,v) t. insert cmp (f k) v t) aset list)`,
+   invariant cmp (FOLDR (\(k,v) t. insert cmp (f k) v t) aset list)`,
   Induct >> rw [invariant_def]
          >> Cases_on `h` >> rw [] >> metis_tac [insert_thm]);
 
@@ -1117,7 +1145,7 @@ val left_to_right_alt = Q.prove
    ==>
    !(list :('a # unit) list) (bset :'b oset) x f.
       invariant cmp bset /\
-      (lookup cmp x (FOLDR (λ(k,v:unit) t. insert cmp (f k) () t) bset list) = SOME ())
+      (lookup cmp x (FOLDR (\(k,v:unit) t. insert cmp (f k) () t) bset list) = SOME ())
             ==>
            (?a. MEM (a,()) list /\ (x = f a))
            \/
@@ -1128,7 +1156,7 @@ val left_to_right_alt = Q.prove
      >- rw []
      >- (Cases_on `h` >> rw [] >> fs []
           >> pop_assum mp_tac
-          >> `invariant cmp (FOLDR (λ(k,v:unit) t. insert cmp (f k) () t) bset list)`
+          >> `invariant cmp (FOLDR (\(k,v:unit) t. insert cmp (f k) () t) bset list)`
                by (Q.SPEC_TAC (`list`,`L`)
                      >> Induct >> rw [invariant_def]
                      >> Cases_on `h` >> rw [] >> metis_tac [insert_thm])
@@ -1140,7 +1168,7 @@ val left_to_right_lem =
       |> Q.GEN `cmp`
       |> Q.SPEC `cmp2`
       |> UNDISCH
-      |> Q.SPEC `foldrWithKey (λ(k:'a) (x:unit) xs. (k,())::xs) [] aset`
+      |> Q.SPEC `foldrWithKey (\(k:'a) (x:unit) xs. (k,())::xs) [] aset`
       |> Q.SPEC `Tip`
       |> Q.SPEC `x`
       |> Q.SPEC `f`
@@ -1188,7 +1216,7 @@ simp_tac set_ss
              >> pop_assum mp_tac
              >> rw[oin_def,member_iff_lookup,fdom_def])
         >- fs [lookup_def])
-    >- (`MEM (x',()) (foldrWithKey (λk x xs. (k,())::xs) [] aset)`
+    >- (`MEM (x',()) (foldrWithKey (\k x xs. (k,())::xs) [] aset)`
           by metis_tac [oin_fdom,IN_DEF, mem_foldrWithKey_lem]
          >> mp_tac mem_oin_inst >> rw [invariant_def]
          >> res_tac
@@ -1224,9 +1252,9 @@ val fdom_oimage_inst =
 
 val Brz_inv_pres = Q.prove (
 `!todo1 todos seen next_state state_map table.
-  Brz_invariant seen (todo1::todos) (next_state,state_map,table) ∧
+  Brz_invariant seen (todo1::todos) (next_state,state_map,table) /\
   ~mem_regexp todo1 seen
- ⇒
+ ==>
   Brz_invariant (insert_regexp todo1 seen)
                 (MAP SND (transitions todo1) ++ todos)
                 (build_table (transitions todo1)
@@ -1252,7 +1280,7 @@ val Brz_inv_pres = Q.prove (
        >> Induct >> rw [smart_deriv_normalized])
   >- metis_tac [member_insert,mem_regexp_def,eq_cmp_regexp_compare,insert_thm,eq_cmp_def]
   >- (`r IN fdom regexp_compare state_map \/
-       r IN set (MAP SND (MAP (λc. (c,smart_deriv c todo1)) ALPHABET))`
+       r IN set (MAP SND (MAP (\c. (c,smart_deriv c todo1)) ALPHABET))`
        by metis_tac [EXTENSION,dom_def,IN_UNION]
        >- metis_tac [dom_def]
        >- (fs [MAP_MAP_o,MEM_MAP] >> metis_tac [smart_deriv_normalized, dom_def]))
@@ -1261,7 +1289,7 @@ val Brz_inv_pres = Q.prove (
        >> `invariant regexp_compare (insert regexp_compare todo1 () seen)`
             by metis_tac [insert_thm,regexp_compare_good]
        >> `invariant regexp_compare
-             (set (MAP SND (MAP (λc. (c,smart_deriv c todo1)) ALPHABET) ++ todos))`
+             (set (MAP SND (MAP (\c. (c,smart_deriv c todo1)) ALPHABET) ++ todos))`
            by metis_tac [invariant_oset, set_def,regexp_compare_good]
        >> `invariant regexp_compare (set (todo1::todos))`
           by metis_tac [invariant_oset, set_def, regexp_compare_good]
@@ -1370,16 +1398,16 @@ rpt strip_tac >> PairCases_on `acc`
          >> `invariant regexp_compare (set worklist') /\
              invariant regexp_compare (set worklist)`
               by metis_tac [invariant_oset,set_def, regexp_compare_good]
-          >> rw [dom_union,EXTENSION]
-          >> `eq_cmp regexp_compare` by metis_tac [eq_cmp_regexp_compare]
-          >> rw [in_dom_oset,dom_def,set_def])));
+         >> rw [dom_union,EXTENSION]
+         >> `eq_cmp regexp_compare` by metis_tac [eq_cmp_regexp_compare]
+         >> rw [in_dom_oset,dom_def,set_def])));
 
 val Brz_inv_thm = Q.prove
 (`!seen worklist acc.
    dom_Brz seen worklist acc
    ==>
     !seen' acc'.
-      Brz_invariant seen worklist acc ∧
+      Brz_invariant seen worklist acc /\
       (Brzozowski seen worklist acc = (seen',acc'))
       ==>
        Brz_invariant seen' [] acc'`,
@@ -1420,8 +1448,8 @@ val Brz_inv_thm = Q.prove
 val Brz_mono = Q.prove
 (`!seen worklist acc.
   dom_Brz seen worklist acc
- ==>
- !seen' acc'.
+  ==>
+  !seen' acc'.
     Brz_invariant seen worklist acc /\
     (Brzozowski seen worklist acc = (seen',acc'))
   ==>
@@ -1485,29 +1513,29 @@ val Brz_mono = Q.prove
 (* table_lang                                                                *)
 (*---------------------------------------------------------------------------*)
 
-val table_lang_def =
- Define
-  `(table_lang final_states table n [] = MEM n final_states) /\
-   (table_lang final_states table n (c::t) =
+Definition table_lang_def :
+  (table_lang final_states table n [] = MEM n final_states) /\
+  (table_lang final_states table n (c::t) =
      case ALOOKUP table n of
        | NONE => F
        | SOME table2 =>
            case ALOOKUP table2 c of
              | NONE => F
-             | SOME n' => table_lang final_states table n' t)`;
+             | SOME n' => table_lang final_states table n' t)
+End
 
 val table_lang_correct = Q.prove
 (`!finals table state_map.
-  fmap_inj regexp_compare state_map ∧
-  good_table state_map table ∧
-  (set (MAP FST table) = frange regexp_compare state_map) ∧
-  (!n r. (lookup regexp_compare r state_map = SOME n) ⇒ (MEM n finals ⇔ nullable r))
-  ⇒
+  fmap_inj regexp_compare state_map /\
+  good_table state_map table /\
+  (set (MAP FST table) = frange regexp_compare state_map) /\
+  (!n r. (lookup regexp_compare r state_map = SOME n) ==> (MEM n finals <=> nullable r))
+  ==>
   !n r s.
-    (!c. MEM c s ⇒ MEM c ALPHABET) ∧
+    (!c. MEM c s ==> MEM c ALPHABET) /\
     (lookup regexp_compare r state_map = SOME n)
-    ⇒
-    (table_lang finals table n s ⇔ smart_deriv_matches r (MAP CHR s))`,
+    ==>
+    (table_lang finals table n s <=> smart_deriv_matches r (MAP CHR s))`,
  rpt gen_tac >>
  strip_tac >>
  Induct_on `s` >>
@@ -1520,7 +1548,7 @@ val table_lang_correct = Q.prove
      >> `n NOTIN frange regexp_compare state_map` by metis_tac[]
      >> fs [frange_def])
  >- metis_tac [alistTheory.ALOOKUP_NONE]
- >- (`∃r'.(lookup regexp_compare r' state_map = SOME n) /\
+ >- (`?r'.(lookup regexp_compare r' state_map = SOME n) /\
           (lookup regexp_compare (smart_deriv h r') state_map =
            SOME x')` by metis_tac []
      >> `table_lang finals table x' s <=>
@@ -1534,11 +1562,11 @@ val table_lang_correct = Q.prove
      >> metis_tac [ORD_CHR_lem,mem_alphabet]))
 
 val vec_lang_lem1 = Q.prove
-(`∀(n:num). MEM n finals_list ⇔
-           (ALOOKUP (MAP (λx. (x,T)) finals_list) n = SOME T)`,
+(`!(n:num). MEM n finals_list <=>
+           (ALOOKUP (MAP (\x. (x,T)) finals_list) n = SOME T)`,
  rw [EQ_IMP_THM]
   >- rw [alistTheory.ALOOKUP_TABULATE]
-  >- (`MEM (n,T) (MAP (λx. (x,T)) finals_list)` by METIS_TAC [alistTheory.ALOOKUP_MEM]
+  >- (`MEM (n,T) (MAP (\x. (x,T)) finals_list)` by METIS_TAC [alistTheory.ALOOKUP_MEM]
       >> fs[MEM_MAP]));
 
 val vec_lang_lem2 =
@@ -1551,12 +1579,12 @@ val vec_lang_lem2 =
 val vec_lang_lem3 =
   alistTheory.alookup_stable_sorted
      |> Q.INST_TYPE [`:'a` |-> `:num`, `:'b` |-> `:'a option`]
-     |> Q.SPECL [`$<=`, `mergesort`, `n`, `MAP (λ(c,n). (c,SOME n)) table2`]
+     |> Q.SPECL [`$<=`, `mergesort`, `n`, `MAP (\(c,n). (c,SOME n)) table2`]
      |> SIMP_RULE (srw_ss()++ARITH_ss)
            [transitive_def, total_def, mergesort_STABLE_SORT, stringTheory.char_le_def];
 
 val vec_lang_lem4 = Q.prove (
-`!l x. ALOOKUP (MAP (λ(c,n). (c,SOME n)) l) x =
+`!l x. ALOOKUP (MAP (\(c,n). (c,SOME n)) l) x =
        OPTION_MAP SOME (ALOOKUP l x)`,
  Induct_on `l` >>
  rw [] >>
@@ -1566,7 +1594,7 @@ val vec_lang_lem4 = Q.prove (
 
 val leq_thm =
  let val leq = numSyntax.leq_tm
- in Q.prove (`transitive ^leq ∧ total ^leq ∧ antisymmetric ^leq`,
+ in Q.prove (`transitive ^leq /\ total ^leq /\ antisymmetric ^leq`,
     srw_tac [ARITH_ss] [transitive_def, total_def, antisymmetric_def])
  end;
 
@@ -1578,20 +1606,20 @@ val table_to_vec_thm = Q.prove (
 `!table final_states max_char max_state table' final_states'.
   (max_char = alphabet_size) /\
   SORTED $<= final_states /\
-  (!x. MEM x final_states ⇒ x < max_state) ∧
-  (!n l c. (ALOOKUP table n = SOME l) ∧ (?x. ALOOKUP l c = SOME x) ⇒ c < max_char) ∧
-  PERM (MAP FST table) (COUNT_LIST (LENGTH table)) ∧
+  (!x. MEM x final_states ==> x < max_state) /\
+  (!n l c. (ALOOKUP table n = SOME l) /\ (?x. ALOOKUP l c = SOME x) ==> c < max_char) /\
+  PERM (MAP FST table) (COUNT_LIST (LENGTH table)) /\
   (table_to_vectors table = table') /\
   (accepts_to_vector final_states max_state = final_states')
-  ⇒
-  (LENGTH table' = LENGTH table) ∧
-  (LENGTH final_states' = max_state) ∧
-  (!n. MEM n final_states ⇔ n < LENGTH final_states' ∧ EL n final_states') ∧
-  (!n. (?l. ALOOKUP table n = SOME l) ⇔ n < LENGTH table') ∧
-  (!n l. n < LENGTH table' ⇒ (LENGTH (EL n table') = max_char)) ∧
+  ==>
+  (LENGTH table' = LENGTH table) /\
+  (LENGTH final_states' = max_state) /\
+  (!n. MEM n final_states <=> n < LENGTH final_states' /\ EL n final_states') /\
+  (!n. (?l. ALOOKUP table n = SOME l) <=> n < LENGTH table') /\
+  (!n l. n < LENGTH table' ==> (LENGTH (EL n table') = max_char)) /\
   (!n c x.
-    (?l. (ALOOKUP table n = SOME l) ∧ (ALOOKUP l c = SOME x)) ⇔
-    n < LENGTH table' ∧ c < LENGTH (EL n table') ∧ (EL c (EL n table') = SOME x))`
+    (?l. (ALOOKUP table n = SOME l) /\ (ALOOKUP l c = SOME x)) <=>
+    n < LENGTH table' /\ c < LENGTH (EL n table') /\ (EL c (EL n table') = SOME x))`
  ,
  simp [good_table_def, table_to_vectors_def,accepts_to_vector_def] >>
  rpt gen_tac >>
@@ -1617,16 +1645,16 @@ val table_to_vec_thm = Q.prove (
  conj_tac
  >- (`SORTED $<= (MAP FST (MAP (\x.(x,T)) final_states))`
             by rw [MAP_MAP_o, combinTheory.o_DEF]
-     >> `LENGTH (alist_to_vec (MAP (λx. (x,T)) final_states)
+     >> `LENGTH (alist_to_vec (MAP (\x. (x,T)) final_states)
                               F max_state max_state) = max_state`
            by METIS_TAC [alist_to_vec_thm]
     >> POP_ASSUM SUBST_ALL_TAC
     >> RW_TAC std_ss [EQ_IMP_THM]
        >- (`n < max_state` by METIS_TAC [] >>
-           `ALOOKUP (MAP (λx. (x,T)) final_states) n = SOME T`
+           `ALOOKUP (MAP (\x. (x,T)) final_states) n = SOME T`
                by METIS_TAC [vec_lang_lem1] >> METIS_TAC [alist_to_vec_thm])
        >- (CCONTR_TAC >> fs []
-           >> Cases_on `ALOOKUP (MAP (λx. (x,T)) final_states) n`
+           >> Cases_on `ALOOKUP (MAP (\x. (x,T)) final_states) n`
               >- (metis_tac [alist_to_vec_thm, vec_lang_lem1])
               >- (NTAC 2 (POP_ASSUM MP_TAC) >> rw [vec_lang_lem1]
                   >> DISCH_TAC >> fs[] >> rw[] >> metis_tac [alist_to_vec_thm])))
@@ -1645,14 +1673,14 @@ val table_to_vec_thm = Q.prove (
  `SORTS mergesort (inv_image $<= (FST : num # 'a option -> num))`
           by metis_tac [mergesort_STABLE_SORT, STABLE_DEF, leq_thm,
                         total_inv_image, transitive_inv_image] >>
- `(λa b:num. a ≤ b) = $<=` by metis_tac [] >> pop_assum SUBST_ALL_TAC >>
+ `(\a b:num. a <= b) = $<=` by metis_tac [] >> pop_assum SUBST_ALL_TAC >>
  simp [EL_MAP,length_mergesort] >>
  conj_tac
  >- (rw [] >>
      `?n' table2'. EL n sorted_table = (n',table2')` by metis_tac [pair_CASES] >>
      rw [] >>
      qabbrev_tac `sorted_table2 =
-                  mergesort (inv_image $<= FST) (MAP (λ(c,n). (c,SOME n)) table2')` >>
+                  mergesort (inv_image $<= FST) (MAP (\(c,n). (c,SOME n)) table2')` >>
      qabbrev_tac `table2 = EL n (MAP SND sorted_table)` >>
      `SORTED $<= (MAP FST sorted_table2)`
              by (fs [SORTS_DEF, sorted_map, leq_thm] >>
@@ -1666,7 +1694,7 @@ val table_to_vec_thm = Q.prove (
  `?n' table2'. EL n sorted_table = (n',table2')` by metis_tac [pair_CASES] >>
  rw [] >>
  qabbrev_tac `sorted_table2 =
-              mergesort (inv_image $<= FST) (MAP (λ(c,n). (c,SOME n)) table2')` >>
+              mergesort (inv_image $<= FST) (MAP (\(c,n). (c,SOME n)) table2')` >>
  qabbrev_tac `table2 = EL n (MAP SND sorted_table)` >>
  `SORTED $<= (MAP FST sorted_table2)`
          by (fs [SORTS_DEF, sorted_map, leq_thm] >>
@@ -1686,7 +1714,7 @@ val table_to_vec_thm = Q.prove (
                 by metis_tac [vec_lang_lem2] >>
      rw [] >>
      fs [] >>
-     `ALOOKUP (MAP (λ(c,n). (c,SOME n)) table2) c = SOME (SOME x)`
+     `ALOOKUP (MAP (\(c,n). (c,SOME n)) table2) c = SOME (SOME x)`
               by metis_tac [vec_lang_lem4, OPTION_MAP_DEF] >>
      fs [Once (GSYM vec_lang_lem3)] >>
      metis_tac [NOT_SOME_NONE, alist_to_vec_thm])
@@ -1698,7 +1726,7 @@ val table_to_vec_thm = Q.prove (
      res_tac >>
      simp [] >>
      Cases_on `ALOOKUP sorted_table2 c`
-     >- (`ALOOKUP (MAP (λ(c,n). (c,SOME n)) table2) c = NONE`
+     >- (`ALOOKUP (MAP (\(c,n). (c,SOME n)) table2) c = NONE`
                  by metis_tac [vec_lang_lem4, OPTION_MAP_DEF, vec_lang_lem3] >>
          metis_tac [NOT_SOME_NONE, alist_to_vec_thm])
     >- (`ALOOKUP sorted_table n = SOME (EL n (MAP SND sorted_table))`
@@ -1718,16 +1746,16 @@ val table_to_vec_thm = Q.prove (
 val Brz_invariant_final = Q.prove (
 `!seen next_state state_map table.
   Brz_invariant seen [] (next_state,state_map,table)
-  ⇒
-  (next_state = LENGTH table) ∧
-  PERM (MAP FST table) (COUNT_LIST (LENGTH table)) ∧
-  (∀x. MEM x (get_accepts state_map) ==> x < LENGTH table) ∧
-  (∀n l c. (ALOOKUP table n = SOME l) ∧ (∃x. ALOOKUP l c = SOME x) ⇒ MEM c ALPHABET)`
+  ==>
+  (next_state = LENGTH table) /\
+  PERM (MAP FST table) (COUNT_LIST (LENGTH table)) /\
+  (!x. MEM x (get_accepts state_map) ==> x < LENGTH table) /\
+  (!n l c. (ALOOKUP table n = SOME l) /\ (?x. ALOOKUP l c = SOME x) ==> MEM c ALPHABET)`
  ,
  simp [Brz_invariant_def,invar_def,set_def,ounion_oempty,union_def] >>
  rpt gen_tac >> strip_tac >>
  conj_asm1_tac
- >- (`!x. x ∈ set (MAP FST table) ⇒ x < next_state`
+ >- (`!x. x IN set (MAP FST table) ==> x < next_state`
            by (fs [count_def, EXTENSION, range_def, frange_def,dom_def]
                 >> rw [fdom_oimage_inst,apply_def,oin_fdom]
                 >> fs [fdom_def,fapply_def]
@@ -1758,25 +1786,25 @@ val Brz_invariant_final = Q.prove (
    >- (rw [] >> fs [good_table_def] >> metis_tac [])
 );
 
-val good_vec_def =
- Define
-  `good_vec vec final_states
+Definition good_vec_def :
+ good_vec vec final_states
       <=>
-    (!l c. MEM c ALPHABET ∧ MEM l vec ⇒ c < LENGTH l) /\
-    (!n1 c n2 l. n1 < LENGTH vec ∧ (EL n1 vec = l) ∧
-                 c < LENGTH (EL n1 vec) ∧
+    (!l c. MEM c ALPHABET /\ MEM l vec ==> c < LENGTH l) /\
+    (!n1 c n2 l. n1 < LENGTH vec /\ (EL n1 vec = l) /\
+                 c < LENGTH (EL n1 vec) /\
                  (EL c (EL n1 vec) = SOME n2) ==> n2 < LENGTH vec) /\
-    (LENGTH final_states = LENGTH vec)`;
+    (LENGTH final_states = LENGTH vec)
+End
 
 val Brz_inv_to_good_vec = Q.prove
 (`!seen next_state state_map table.
- Brz_invariant seen [] (next_state,state_map,table) ∧
+ Brz_invariant seen [] (next_state,state_map,table) /\
   (table_to_vectors table = vec) /\
   (accepts_to_vector (get_accepts state_map) next_state = final_states)
   ==>
-  (next_state = LENGTH table) ∧
-  good_vec vec final_states ∧
-  (∀r n. (lookup regexp_compare r state_map = SOME n) ⇒ n < LENGTH vec)`
+  (next_state = LENGTH table) /\
+  good_vec vec final_states /\
+  (!r n. (lookup regexp_compare r state_map = SOME n) ==> n < LENGTH vec)`
  ,
  simp [good_vec_def]
   >> rpt gen_tac >> strip_tac
@@ -1784,15 +1812,15 @@ val Brz_inv_to_good_vec = Q.prove
   >> fs [Brz_invariant_def,invar_def,
         ounion_oempty,union_def, set_def, oset_def]
   >>
-  `(LENGTH vec = LENGTH table) ∧
-   (LENGTH final_states = LENGTH table) ∧
-   (∀n. MEM n (get_accepts state_map) ⇔ n < LENGTH final_states ∧ EL n final_states) ∧
-   (∀n. (∃l. ALOOKUP table n = SOME l) ⇔ n < LENGTH vec) ∧
-   (!n l. n < LENGTH vec ⇒ (LENGTH (EL n vec) = alphabet_size)) ∧
-   (∀n c x.
-     (∃l. (ALOOKUP table n = SOME l) ∧ (ALOOKUP l c = SOME x))
+  `(LENGTH vec = LENGTH table) /\
+   (LENGTH final_states = LENGTH table) /\
+   (!n. MEM n (get_accepts state_map) <=> n < LENGTH final_states /\ EL n final_states) /\
+   (!n. (?l. ALOOKUP table n = SOME l) <=> n < LENGTH vec) /\
+   (!n l. n < LENGTH vec ==> (LENGTH (EL n vec) = alphabet_size)) /\
+   (!n c x.
+     (?l. (ALOOKUP table n = SOME l) /\ (ALOOKUP l c = SOME x))
      <=>
-       n < LENGTH vec ∧ c < LENGTH (EL n vec) ∧
+       n < LENGTH vec /\ c < LENGTH (EL n vec) /\
        (EL c (EL n vec) = SOME x))`
      by
       (match_mp_tac table_to_vec_thm
@@ -1818,9 +1846,9 @@ val compile_regexp_good_vec = Q.store_thm
   dom_Brz empty [normalize r] (1,singleton (normalize r) 0,[]) /\
   (compile_regexp r = (state_map, table, final_states))
   ==>
-  good_vec table final_states ∧
-  (!r n. (lookup regexp_compare r state_map = SOME n) ⇒ n < LENGTH table) ∧
-  normalize r ∈ fdom regexp_compare state_map`
+  good_vec table final_states /\
+  (!r n. (lookup regexp_compare r state_map = SOME n) ==> n < LENGTH table) /\
+  normalize r IN fdom regexp_compare state_map`
  ,
  simp [compile_regexp_def]
   >> rpt gen_tac >> strip_tac
@@ -1858,7 +1886,7 @@ val compile_regexp_good_vec = Q.store_thm
  >> fs []
  >> rw []
     >- metis_tac []
-    >- (`normalize r ∈ fdom regexp_compare (singleton (normalize r) 0)`
+    >- (`normalize r IN fdom regexp_compare (singleton (normalize r) 0)`
          by rw [submap_def,fdom_def,singleton_def,lookup_def,regexp_compare_id]
          >> metis_tac [submap_def])
 );
@@ -1868,14 +1896,14 @@ val vec_lang_correct = Q.prove
 (`!table final_states max_char vec final_states'.
   (max_char = alphabet_size) /\
   SORTED $<= final_states /\
-  (∀x. MEM x final_states ⇒ x < LENGTH table) ∧
-  (∀n l c. (ALOOKUP table n = SOME l) ∧ (∃x. ALOOKUP l c = SOME x) ⇒ c < max_char) ∧
-  (PERM (MAP FST table) (COUNT_LIST (LENGTH table))) ∧
-  (!n'. n' ∈ BIGUNION (IMAGE alist_range (alist_range table)) ⇒ n' < LENGTH table) ∧
+  (!x. MEM x final_states ==> x < LENGTH table) /\
+  (!n l c. (ALOOKUP table n = SOME l) /\ (?x. ALOOKUP l c = SOME x) ==> c < max_char) /\
+  (PERM (MAP FST table) (COUNT_LIST (LENGTH table))) /\
+  (!n'. n' IN BIGUNION (IMAGE alist_range (alist_range table)) ==> n' < LENGTH table) /\
   (table_to_vectors table = vec) /\
   (accepts_to_vector final_states (LENGTH table) = final_states')
-  ⇒
-  !n s. (!c. MEM c s ⇒ c < max_char) ∧ n < LENGTH table
+  ==>
+  !n s. (!c. MEM c s ==> c < max_char) /\ n < LENGTH table
        ==>
         (table_lang final_states table n s
            <=>
@@ -1886,15 +1914,15 @@ val vec_lang_correct = Q.prove
  ,
  rpt gen_tac
   >> strip_tac
-  >> `(LENGTH vec = LENGTH table) ∧
-      (LENGTH final_states' = LENGTH table) ∧
-      (∀n. MEM n final_states ⇔ n < LENGTH final_states' ∧ EL n final_states') ∧
-      (∀n. (∃l. ALOOKUP table n = SOME l) ⇔ n < LENGTH vec) ∧
-      (!n l. n < LENGTH vec ⇒ (LENGTH (EL n vec) = max_char)) ∧
-      (∀n c x.
-        (∃l. (ALOOKUP table n = SOME l) ∧ (ALOOKUP l c = SOME x))
-        ⇔
-        n < LENGTH vec ∧ c < LENGTH (EL n vec) ∧
+  >> `(LENGTH vec = LENGTH table) /\
+      (LENGTH final_states' = LENGTH table) /\
+      (!n. MEM n final_states <=> n < LENGTH final_states' /\ EL n final_states') /\
+      (!n. (?l. ALOOKUP table n = SOME l) <=> n < LENGTH vec) /\
+      (!n l. n < LENGTH vec ==> (LENGTH (EL n vec) = max_char)) /\
+      (!n c x.
+        (?l. (ALOOKUP table n = SOME l) /\ (ALOOKUP l c = SOME x))
+        <=>
+        n < LENGTH vec /\ c < LENGTH (EL n vec) /\
         (EL c (EL n vec) = SOME x))`
         by (match_mp_tac table_to_vec_thm
              >> rw []
@@ -1925,19 +1953,20 @@ val vec_lang_correct = Q.prove
 );
 
 
-val Brz_lang_def = Define `
+Definition Brz_lang_def :
   Brz_lang r =
-    let (state_map,table_vec,finals_vec) = compile_regexp r in
-    let tableV = fromList (MAP fromList table_vec) in
-    let finalsV = fromList finals_vec
+    let (state_map,table_vec,finals_vec) = compile_regexp r ;
+        tableV = fromList (MAP fromList table_vec) ;
+        finalsV = fromList finals_vec;
     in
-      exec_dfa finalsV tableV (apply state_map (normalize r))`;
+       exec_dfa finalsV tableV (apply state_map (normalize r))
+End
 
 val string_to_numlist = Q.prove
 (`!s. (!c. c IN set s ==> ORD c IN set ALPHABET) ==>
       ?nl. (s = MAP CHR nl) /\ (!n. n IN set nl ==> n IN set ALPHABET)`,
  Induct >> rw []
-  >> `∃nl. (s = MAP CHR nl) ∧ ∀n. MEM n nl ⇒ MEM n ALPHABET` by metis_tac[]
+  >> `?nl. (s = MAP CHR nl) /\ !n. MEM n nl ==> MEM n ALPHABET` by metis_tac[]
   >> `?n. (h = CHR n) /\ n < 256` by metis_tac [CHR_ONTO]
   >> Q.EXISTS_TAC `n::nl`
   >> rw []
@@ -1948,7 +1977,7 @@ val Brzozowski_correct = Q.store_thm
 ("Brzozowski_correct",
 `!r s.
   dom_Brz empty [normalize r] (1,singleton (normalize r) 0,[]) /\
-  (!c. MEM c s ⇒ MEM (ORD c) ALPHABET)
+  (!c. MEM c s ==> MEM (ORD c) ALPHABET)
   ==>
   (Brz_lang r s = regexp_lang (normalize r) s)`
  ,
@@ -2005,8 +2034,8 @@ val Brzozowski_correct = Q.store_thm
                    |> Q.SPEC `table:(num,(num,num)alist)alist`
                    |> Q.SPEC `state_map:(regexp,num)balanced_map`)
           >> fs[]
-          >> `(∀n r. (lookup regexp_compare r state_map = SOME n) ⇒
-                     (MEM n (get_accepts state_map) ⇔ nullable r))`
+          >> `(!n r. (lookup regexp_compare r state_map = SOME n) ==>
+                     (MEM n (get_accepts state_map) <=> nullable r))`
                by (rw [mem_get_accepts,EQ_IMP_THM]
                     >- (`r' IN fdom regexp_compare state_map` by rw [fdom_def]
                          >> metis_tac [fmap_inj_def, eq_cmp_regexp_compare, eq_cmp_def])
@@ -2026,19 +2055,19 @@ val Brzozowski_correct = Q.store_thm
                lookup regexp_compare (normalize r) state_map)`
               by metis_tac [submap_def]
           >> fs [singleton_def,lookup_def,regexp_compare_id]
-          >> qpat_x_assum `table_lang (get_accepts state_map) table 0 nl ⇔
+          >> qpat_x_assum `table_lang (get_accepts state_map) table 0 nl <=>
                          smart_deriv_matches (normalize r) (MAP CHR nl)`
              (SUBST_ALL_TAC o SYM)
           >> rw [MAP_MAP_o,combinTheory.o_DEF,apply_def, fapply_def]
           >> pop_assum (SUBST_ALL_TAC o SYM)
           >> rw []
-          >> `MAP (λx. ORD (CHR x)) nl = MAP (\x.x) nl`
+          >> `MAP (\x. ORD (CHR x)) nl = MAP (\x.x) nl`
               by (irule MAP_CONG >> rw [] >> metis_tac [mem_alphabet,ORD_CHR_lem])
          >> rw[])
  >> rw []
  >> imp_res_tac string_to_numlist
  >> rw [MAP_MAP_o,combinTheory.o_DEF,apply_def, fapply_def]
- >> `MAP (λx. ORD (CHR x)) nl = MAP (\x.x) nl`
+ >> `MAP (\x. ORD (CHR x)) nl = MAP (\x.x) nl`
               by (irule MAP_CONG >> rw [] >> metis_tac [mem_alphabet,ORD_CHR_lem])
  >> rw []
  >> match_mp_tac (GSYM (SIMP_RULE (srw_ss()) [PULL_FORALL, AND_IMP_INTRO] vec_lang_correct))
@@ -2075,7 +2104,7 @@ val Brzozowski_correct_again = Q.store_thm
 ("Brzozowski_correct",
 `!r s.
   dom_Brz empty [normalize r] (1,singleton (normalize r) 0,[]) /\
-  (!c. MEM c s ⇒ MEM (ORD c) ALPHABET)
+  (!c. MEM c s ==> MEM (ORD c) ALPHABET)
   ==>
   (regexp_matcher r s = regexp_lang r s)`
  ,
@@ -2118,7 +2147,7 @@ val Brzozowski_partial_eval_conseq = Q.store_thm
   (lookup regexp_compare (normalize r) state_numbering = SOME start_state) /\
   dom_Brz_alt empty [normalize r]
   ==>
-  !s. EVERY (λc. ORD c < alphabet_size) s
+  !s. EVERY (\c. ORD c < alphabet_size) s
       ==>
       (exec_dfa acceptsV deltaV start_state s = regexp_lang r s)`
  ,
@@ -2140,4 +2169,3 @@ val Brzozowski_partial_eval_256 = save_thm
 (* val _ = EmitTeX.tex_theory"-"; *)
 
 val _ = export_theory();
-

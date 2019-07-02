@@ -9,6 +9,7 @@ open wordsLib blastLib alignmentTheory
 open riscvTheory
 
 val () = Theory.new_theory "riscv_step"
+val _ = ParseExtras.temp_loose_equality()
 
 val ERR = mk_HOL_ERR "riscv_stepTheory";
 

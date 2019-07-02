@@ -5,7 +5,9 @@ open HolKernel Parse boolLib hol88Lib jrhUtils limTheory;
 
 structure Parse = struct
   open Parse
-  val (Type, Term) = parse_from_grammars limTheory.lim_grammars
+  val (Type, Term) =
+      parse_from_grammars
+        (apsnd ParseExtras.grammar_loose_equality limTheory.lim_grammars)
 end
 open Parse
 

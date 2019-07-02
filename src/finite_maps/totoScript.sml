@@ -24,6 +24,7 @@ local open ternaryComparisonsTheory in end
 
 val _ = new_theory "toto";
 
+val _ = ParseExtras.temp_loose_equality()
 (* My habitual abbreviations: *)
 
 val AR = ASM_REWRITE_TAC [];

@@ -2,7 +2,7 @@ open HolKernel boolLib bossLib
 open stateLib set_sepTheory progTheory riscv_stepTheory
 
 val () = new_theory "riscv_prog"
-
+val _ = ParseExtras.temp_loose_equality()
 (* ------------------------------------------------------------------------ *)
 
 val _ = stateLib.sep_definitions "riscv" []

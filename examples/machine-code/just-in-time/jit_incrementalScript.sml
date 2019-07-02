@@ -17,7 +17,7 @@ val op \\ = op THEN;
 
 
 val _ = new_theory "jit_incremental";
-
+val _ = ParseExtras.temp_loose_equality()
 (* compiler setup begins *)
 
 (* make function "f" have exec permissions *)

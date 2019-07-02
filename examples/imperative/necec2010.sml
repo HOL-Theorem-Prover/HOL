@@ -253,8 +253,8 @@ fun testRefinement rhsProgLhsSpec = let val
 val rhsProgRefinesLhsSpec = ``(\ (s:'a->num) (s':'a->num). (((s' (x:'a)) = 1 ) /\ ((s' (y:'a)) = 1))) [=. (sc (assign y (\ (s:'a->num).1)) (assign x (\ (s:'a->num).(s y))))``;
 
 val _ = tprint ("some implementation refines given specification: " );
-val _ = testRefinement(rhsProgRefinesLhsSpec) handle HOL_ERR _ => die "rhsProgRefinesLhsSpec FAILED";
-val _ = OK();
+val _ = testutils.require (testutils.check_result (K true))
+                          testRefinement rhsProgRefinesLhsSpec
 
 
 (* \end{lstlisting} %
@@ -309,8 +309,8 @@ The first variable is then assigned the value of the other variable, and then th
 \begin{lstlisting} % *)
 
 val _ = tprint ("swap is possible with introduction of temporary variable: " );
-val GeneralSwap = let val
-        conversion =
+val GeneralSwap =
+    let val conversion =
                         PURE_ONCE_REWRITE_RULE [PREDICATIVE_SPEC_EQ_THM]
                         (
                                 SPECL
@@ -336,8 +336,9 @@ val GeneralSwap = let val
                                                 )
                                         )
                         )
+        open testutils
         in
-                prove
+          require (check_result (K true)) prove
                 (
                         ``      (
                                         (
@@ -381,8 +382,6 @@ val GeneralSwap = let val
                         REP_EVAL_TAC
                 )
         end
-handle HOL_ERR _ => die "general swap FAILED";
-val _ = OK();
 
 (* \end{lstlisting}
 
@@ -396,8 +395,9 @@ In the special case where both variables are numbers, an algebraic method can be
 *)
 
 val _ = tprint ("swap is possible for num type without need for temporary variable: " );
-val NumericSwap = let val
-                conversion =
+val NumericSwap = let
+  open testutils
+  val conversion =
                         PURE_ONCE_REWRITE_RULE [PREDICATIVE_SPEC_EQ_THM]
                         (
                                 SPECL
@@ -425,9 +425,10 @@ val NumericSwap = let val
                                         )
                         )
         and
-                lemma = prove (``!(a:num) (b:num). (a + b -(a + b -b)) = (b + a - a)``,(PROVE_TAC [LESS_EQ_REFL, LESS_EQ_ADD_SUB, SUB_EQ_0,ADD_0,ADD_SYM]))
+                lemma = prove
+                                (``!(a:num) (b:num). (a + b -(a + b -b)) = (b + a - a)``,(PROVE_TAC [LESS_EQ_REFL, LESS_EQ_ADD_SUB, SUB_EQ_0,ADD_0,ADD_SYM]))
         in
-                prove
+          require (check_result (K true)) prove
                 (
                         ``
                                 (
@@ -468,8 +469,6 @@ val NumericSwap = let val
                         (PROVE_TAC [LESS_EQ_REFL, LESS_EQ_ADD_SUB, SUB_EQ_0,ADD_0,lemma])
                 )
         end
-handle HOL_ERR _ => die "numeric swap FAILED";
-val _ = OK();
 
 (* \end{lstlisting}
 

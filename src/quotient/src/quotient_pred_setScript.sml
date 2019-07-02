@@ -62,29 +62,28 @@ val POP_TAC = POP_ASSUM (fn th => ALL_TAC);
 
 
 
-val IN_SET_MAP = store_thm
-   ("IN_SET_MAP",
-    (“!(f:'a->'b) s x.
-         x IN (f --> I) s = f x IN s”),
+Theorem IN_SET_MAP:
+    !(f:'a->'b) s x. x IN (f --> I) s <=> f x IN s
+Proof
     REPEAT GEN_TAC
     THEN REWRITE_TAC[FUN_MAP_THM,SPECIFICATION,I_THM]
-   );
+QED
 
-val SET_REL = store_thm
-   ("SET_REL",
-    (“!R s t.
-         (R ===> $=) s t = !x y:'a. R x y ==> (x IN s = y IN t)”),
+Theorem SET_REL:
+    !R s t.
+         (R ===> $=) s t <=> !x y:'a. R x y ==> (x IN s <=> y IN t)
+Proof
     REPEAT GEN_TAC
     THEN REWRITE_TAC[FUN_REL,SPECIFICATION]
-   );
+QED
 
 val BOOL_QUOTIENT = INST_TYPE [alpha |-> bool] IDENTITY_QUOTIENT;
 
-val SET_REL_MP = store_thm
-   ("SET_REL_MP",
-    (“!R (abs:'a -> 'b) rep.
+Theorem SET_REL_MP:
+    !R (abs:'a -> 'b) rep.
          QUOTIENT R abs rep ==>
-           !s t x y. (R ===> $=) s t /\ R x y ==> (x IN s = y IN t)”),
+           !s t x y. (R ===> $=) s t /\ R x y ==> (x IN s <=> y IN t)
+Proof
     REPEAT GEN_TAC
     THEN DISCH_THEN (ASSUME_TAC o C MATCH_MP BOOL_QUOTIENT o MATCH_MP
               (INST_TYPE[beta |-> bool, delta |-> bool] FUN_REL_MP))
@@ -92,7 +91,7 @@ val SET_REL_MP = store_thm
     THEN REWRITE_TAC[SPECIFICATION]
     THEN FIRST_ASSUM MATCH_MP_TAC
     THEN ASM_REWRITE_TAC[]
-   );
+QED
 
 
 (* Here are some definitional and well-formedness theorems
@@ -104,25 +103,24 @@ val SET_REL_MP = store_thm
 (* pred_set theory: IN, GSPEC, EMPTY, UNIV, INTER, UNION, SUBSET, PSUBSET,
                     INSERT, DELETE, DIFF, IMAGE *)
 
-val IN_PRS = store_thm
-   ("IN_PRS",
-    (“!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
-         !x s. x IN s =
-               rep x IN (abs --> I) s”),
+Theorem IN_PRS:
+    !R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
+         !x s. x IN s <=> rep x IN (abs --> I) s
+Proof
     REPEAT STRIP_TAC
     THEN IMP_RES_TAC QUOTIENT_ABS_REP
     THEN ASM_REWRITE_TAC[IN_SET_MAP]
-   );
+QED
 
-val IN_RSP = store_thm
-   ("IN_RSP",
-    (“!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
+Theorem IN_RSP:
+  !R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
          !x1 x2 s1 s2.
           R x1 x2 /\ (R ===> $=) s1 s2 ==>
-          (x1 IN s1 = x2 IN s2)”),
+          (x1 IN s1 <=> x2 IN s2)
+Proof
     REPEAT STRIP_TAC
     THEN IMP_RES_TAC SET_REL_MP
-   );
+QED
 
 
 (* GSPEC does not lift directly; because its definition
@@ -139,13 +137,12 @@ val GSPECR_def = Define
    `GSPECR R1 (R2:'b -> 'b -> bool) f v =
              ?x:'a :: respects R1. (R2 ### $=) (v,T) (f x) `;
 
-val IN_GSPECR = store_thm
-   ("IN_GSPECR",
-    (“!R1 R2 f (v:'a).
-         v IN GSPECR R1 R2 f =
-         ?x:'b :: respects R1. (R2 ### $=) (v,T) (f x : 'a # bool)”),
-    REWRITE_TAC[GSPECR_def,SPECIFICATION]
-   );
+Theorem IN_GSPECR:
+   !R1 R2 f (v:'a).
+         v IN GSPECR R1 R2 f <=>
+         ?x:'b :: respects R1. (R2 ### $=) (v,T) (f x : 'a # bool)
+Proof REWRITE_TAC[GSPECR_def,SPECIFICATION]
+QED
 
 val GSPEC_PRS = store_thm
    ("GSPEC_PRS",
@@ -302,11 +299,11 @@ val SUBSETR_def =
     Define
       `SUBSETR R s t = !x:'a::respects R. x IN s ==> x IN t`;
 
-val SUBSET_PRS = store_thm
-   ("SUBSET_PRS",
-    (“!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
-         !s t. s SUBSET t =
-               SUBSETR R ((abs --> I) s) ((abs --> I) t)”),
+Theorem SUBSET_PRS:
+    !R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
+         !s t. s SUBSET t <=>
+               SUBSETR R ((abs --> I) s) ((abs --> I) t)
+Proof
     REPEAT STRIP_TAC
     THEN PURE_REWRITE_TAC[SUBSET_DEF,SUBSETR_def]
     THEN PURE_REWRITE_TAC[IN_SET_MAP]
@@ -324,7 +321,7 @@ val SUBSET_PRS = store_thm
         THEN IMP_RES_TAC QUOTIENT_REP_REFL
         THEN ASM_REWRITE_TAC[]
       ]
-   );
+QED
 
 val SUBSETR_RSP = store_thm
    ("SUBSETR_RSP",
@@ -351,13 +348,13 @@ val SUBSETR_RSP = store_thm
 
 val PSUBSETR_def =
     Define
-      `PSUBSETR R (s:'a->bool) t =
+      `PSUBSETR R (s:'a->bool) t <=>
        SUBSETR R s t /\ ~((R ===> $=) s t)`;
 
-val PSUBSET_PRS = store_thm
-   ("PSUBSET_PRS",
-    (“!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
-         !s t. s PSUBSET t = PSUBSETR R ((abs --> I) s) ((abs --> I) t)”),
+Theorem PSUBSET_PRS:
+    !R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
+         !s t. s PSUBSET t <=> PSUBSETR R ((abs --> I) s) ((abs --> I) t)
+Proof
     REPEAT STRIP_TAC
     THEN PURE_REWRITE_TAC[PSUBSET_DEF,PSUBSETR_def]
     THEN PURE_ONCE_REWRITE_TAC[EXTENSION]
@@ -376,14 +373,14 @@ val PSUBSET_PRS = store_thm
         THEN RES_THEN MP_TAC
         THEN IMP_RES_THEN REWRITE_THM QUOTIENT_ABS_REP
       ]
-   );
+QED
 
-val PSUBSETR_RSP = store_thm
-   ("PSUBSETR_RSP",
-    (“!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
+Theorem PSUBSETR_RSP:
+    !R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
          !s1 s2 t1 t2.
           (R ===> $=) s1 s2 /\ (R ===> $=) t1 t2 ==>
-          (PSUBSETR R s1 t1 = PSUBSETR R s2 t2)”),
+          (PSUBSETR R s1 t1 = PSUBSETR R s2 t2)
+Proof
     REPEAT STRIP_TAC
     THEN PURE_REWRITE_TAC[PSUBSETR_def]
     THEN MP_TAC (SPEC_ALL SUBSETR_RSP)
@@ -397,7 +394,7 @@ val PSUBSETR_RSP = store_thm
                                     o C MATCH_MP BOOL_QUOTIENT)
             (INST_TYPE[beta |-> bool, delta |-> bool] FUN_QUOTIENT)
     THEN ASM_REWRITE_TAC[]
-   );
+QED
 
 
 
@@ -405,15 +402,14 @@ val INSERTR_def =
     Define
       `INSERTR R (x:'a) s = {y:'a | R y x \/ y IN s}`;
 
-val IN_INSERTR = store_thm
-   ("IN_INSERTR",
-    (“!R (x:'a) s y.
-          y IN INSERTR R x s = R y x \/ y IN s”),
+Theorem IN_INSERTR:
+   !R (x:'a) s y. y IN INSERTR R x s <=> R y x \/ y IN s
+Proof
     REPEAT GEN_TAC
     THEN PURE_ONCE_REWRITE_TAC[INSERTR_def]
     THEN CONV_TAC (DEPTH_CONV pred_setLib.SET_SPEC_CONV)
     THEN REWRITE_TAC[]
-   );
+QED
 
 val INSERT_PRS = store_thm
    ("INSERT_PRS",
@@ -450,15 +446,15 @@ val DELETER_def =
     Define
       `DELETER R s (x:'a) = {y:'a | y IN s /\ ~R x y}`;
 
-val IN_DELETER = store_thm
-   ("IN_DELETER",
-    (“!R s (x:'a) y.
-          y IN DELETER R s x = y IN s /\ ~R x y”),
+Theorem IN_DELETER:
+    !R s (x:'a) y.
+          y IN DELETER R s x <=> y IN s /\ ~R x y
+Proof
     REPEAT GEN_TAC
     THEN PURE_ONCE_REWRITE_TAC[DELETER_def]
     THEN CONV_TAC (DEPTH_CONV pred_setLib.SET_SPEC_CONV)
     THEN REWRITE_TAC[]
-   );
+QED
 
 val DELETE_PRS = store_thm
    ("DELETE_PRS",
@@ -870,16 +866,16 @@ val IMAGER_def =
       `IMAGER R1 R2 (f:'a->'b) s =
        {y:'b | ?x :: respects R1. R2 y (f x) /\ x IN s}`;
 
-val IN_IMAGER = store_thm
-   ("IN_IMAGER",
-    (“!R1 R2 y (f:'a -> 'b) s.
-          y IN IMAGER R1 R2 f s =
-                 ?x :: respects R1. R2 y (f x) /\ x IN s”),
+Theorem IN_IMAGER:
+    !R1 R2 y (f:'a -> 'b) s.
+          y IN IMAGER R1 R2 f s <=>
+                 ?x :: respects R1. R2 y (f x) /\ x IN s
+Proof
     REPEAT GEN_TAC
     THEN PURE_ONCE_REWRITE_TAC[IMAGER_def]
     THEN CONV_TAC (DEPTH_CONV pred_setLib.SET_SPEC_CONV)
     THEN REWRITE_TAC[]
-   );
+QED
 
 val IMAGE_PRS = store_thm
    ("IMAGE_PRS",

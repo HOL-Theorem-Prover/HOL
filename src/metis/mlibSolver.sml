@@ -133,8 +133,8 @@ fun refute s = Option.map hd (find s [False]);
 (* ------------------------------------------------------------------------- *)
 
 type form =
-  {slice : meter ref,                   (* A meter to stop after each slice *)
-   units : units ref,                   (* mlibSolvers share a unit cache *)
+  {slice : meter Uref.t,                   (* A meter to stop after each slice *)
+   units : units Uref.t,                   (* mlibSolvers share a unit cache *)
    thms  : thm list,                    (* Context, assumed consistent *)
    hyps  : thm list};                   (* Hypothesis, no assumptions *)
 
@@ -254,17 +254,17 @@ fun combine_solvers n csolvers {slice, units, thms, hyps} =
     val _ = chatting 3 andalso chat
       (n ^ "--initializing--#thms=" ^ int_to_string (length thms)
        ^ "--#hyps=" ^ int_to_string (length hyps) ^ ".\n")
-    val meter = ref (new_meter expired)
+    val meter = Uref.new (new_meter expired)
     fun f (mlibSolver_node {name, solver_con}) =
       (name, solver_con {slice=meter, units=units, thms=thms, hyps=hyps})
     val cnodes = map (I ## f) csolvers
-    fun check () = check_meter (!slice)
+    fun check () = check_meter (Uref.!slice)
     fun slce cost =
-      meter := sub_meter (!slice) (* OK *)
+      Uref.:=(meter, sub_meter (Uref.!slice) (* OK *)
       (case cost of Time x => {time = SOME (!SLICE * x), infs = NONE}
-       | Infs x => {time = NONE, infs = SOME (Real.round (!SLICE * x))})
-    fun read () = read_meter (!meter)
-    fun stat v s = status_info v s (!units)
+       | Infs x => {time = NONE, infs = SOME (Real.round (!SLICE * x))}))
+    fun read () = read_meter (Uref.!meter)
+    fun stat v s = status_info v s (Uref.!units)
   in
     fn goal => schedule check slce read stat (map (C init_subnode goal) cnodes)
   end;
@@ -328,13 +328,14 @@ fun initialize (mlibSolver_node {solver_con, ...}) {limit, thms, hyps} =
     => contradiction_solver th
   | NONE =>
     let
-      val meter = ref (new_meter expired)
-      val units = ref U.empty
+      val meter = Uref.new (new_meter expired)
+      val units = Uref.new U.empty
       val solver =
         solver_con {slice = meter, units = units, thms = thms, hyps = hyps}
     in
       fn g =>
-      let val () = meter := new_meter limit (* OK *)
+      let open Uref
+        val () = meter := new_meter limit (* OK *)
       in drop_after (fn _ => not (check_meter (!meter))) (solver g)
       end
     end;

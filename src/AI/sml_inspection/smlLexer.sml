@@ -12,6 +12,27 @@ open HolKernel boolLib aiLib
 
 val ERR = mk_HOL_ERR "smlLexer"
 
+val spaces = [#" ",#"\t",#"\n",#"\r"]
+
+(*---------------------------------------------------------------------------
+   Escape sequences
+ ----------------------------------------------------------------------------*)
+
+fun wait_esc_space acc charl =
+  case charl of
+    [] => raise ERR "wait_escape" ""
+  | #"\\" :: m => (#"\\" :: acc, m)
+  | a :: m =>
+    if mem a spaces
+    then wait_esc_space (a :: acc) m
+    else raise ERR "wait_escape" "::space:: expected"
+
+fun wait_esc acc charl =
+  case charl of
+    [] => raise ERR "wait_esc" ""
+  | a :: m =>
+    if mem a spaces then wait_esc_space (a :: acc) m else (a :: acc,m)
+
 (*---------------------------------------------------------------------------
    Comments
  ----------------------------------------------------------------------------*)
@@ -19,11 +40,13 @@ val ERR = mk_HOL_ERR "smlLexer"
 fun rm_comment_aux isq par acc charl =
   if isq then
     case charl of
-      []                  => rev acc
-    | #"\\" :: #"\\" :: m => rm_comment_aux true 0 (#"\\" :: #"\\" :: acc) m
-    | #"\\" :: #"\"" :: m => rm_comment_aux true 0 (#"\"" :: #"\\" :: acc) m
-    | #"\"" :: m          => rm_comment_aux false 0 (#"\"" :: acc) m
-    | a :: m              => rm_comment_aux true 0 (a :: acc) m
+      []         => rev acc
+    | #"\\" :: m =>
+      let val (loc_acc,loc_m) = wait_esc [#"\\"] m in
+        rm_comment_aux true 0 (loc_acc @ acc) loc_m
+      end
+    | #"\"" :: m => rm_comment_aux false 0 (#"\"" :: acc) m
+    | a :: m     => rm_comment_aux true 0 (a :: acc) m
   else if par > 0 then
     (
     case charl of
@@ -49,8 +72,7 @@ fun rm_comment s = implode (rm_comment_aux false 0 [] (explode s))
    Tokens
    ------------------------------------------------------------------------- *)
 
-fun is_blank c =
-  c = #" " orelse c = #"\n" orelse c = #"\t"
+fun is_blank c = mem c spaces
 
 fun is_sep c =
   c = #"(" orelse c = #")" orelse c = #"[" orelse c = #"]" orelse
@@ -64,14 +86,7 @@ fun is_sml_id #"_" = true
   | is_sml_id #"'" = true
   | is_sml_id ch = Char.isAlphaNum ch
 
-fun in_string str =
-  let
-    val strlist = String.explode str
-    val memb = Lib.C Lib.mem strlist
-  in
-    memb
-  end
-
+fun in_string str = Lib.C Lib.mem (String.explode str)
 val sml_symbolics = "!%&$+/:<=>?@~|#*\\-~^";
 val is_sml_symbol = in_string sml_symbolics;
 
@@ -87,16 +102,21 @@ fun wait_char f_char buf charl = case charl of
      else wait_char f_char (a :: buf) m)
 
 fun wait_endquote buf charl = case charl of
-    #"\\" :: #"\\" :: m => wait_endquote (#"\\" :: #"\\" :: buf) m
-  | #"\\" :: #"\"" :: m => wait_endquote (#"\"" :: #"\\" :: buf) m
+    #"\\" :: m =>
+      let val (loc_buf,loc_m) = wait_esc [#"\\"] m in
+        wait_endquote (loc_buf @ buf) loc_m
+      end
   | #"\"" :: m          => (implode (rev (#"\"" :: buf)), m)
   | a :: m              => wait_endquote (a :: buf) m
-  | _                   => raise ERR "wait_endquote" ""
+  | _                   => raise ERR "wait_endquote" (implode (rev buf))
 
 fun lex_helper acc charl = case charl of
     [] => rev acc
   | #"\"" :: m =>
-    let val (token, cont) = wait_endquote [#"\""] m in
+    let val (token, cont) = wait_endquote [#"\""] m
+      handle HOL_ERR _ => raise ERR "lex_helper"
+        (String.concatWith " $" (rev acc))
+    in
       lex_helper (token :: acc) cont
     end
   | a :: m     =>

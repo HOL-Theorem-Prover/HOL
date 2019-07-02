@@ -124,11 +124,12 @@ val LIST_EQUIV = store_thm
       ]
    );
 
-val LIST_REL_REL = store_thm
-   ("LIST_REL_REL",
-    (“!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
-         !r s. LIST_REL R r s = LIST_REL R r r /\ LIST_REL R s s /\
-                                (MAP abs r = MAP abs s)”),
+Theorem LIST_REL_REL:
+  !R (abs:'a -> 'b) rep.
+         QUOTIENT R abs rep ==>
+         !r s. LIST_REL R r s <=> LIST_REL R r r /\ LIST_REL R s s /\
+                                  (MAP abs r = MAP abs s)
+Proof
     REPEAT GEN_TAC
     THEN STRIP_TAC
     THEN Induct
@@ -143,7 +144,7 @@ val LIST_REL_REL = store_thm
     THEN POP_ASSUM
                (fn th => CONV_TAC (LAND_CONV (RAND_CONV (REWR_CONV th))))
     THEN PROVE_TAC[]
-   );
+QED
 
 val LIST_QUOTIENT = store_thm
    ("LIST_QUOTIENT",

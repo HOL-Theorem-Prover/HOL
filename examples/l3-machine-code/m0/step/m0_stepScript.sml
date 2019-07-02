@@ -9,7 +9,7 @@ open wordsLib blastLib updateTheory
 open state_transformerTheory alignmentTheory m0Theory
 
 val _ = new_theory "m0_step"
-
+val _ = ParseExtras.temp_loose_equality()
 (* ------------------------------------------------------------------------ *)
 
 val _ = List.app (fn f => f ())

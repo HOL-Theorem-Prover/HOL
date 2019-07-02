@@ -379,7 +379,7 @@ in olc end;
    should, to use bt_to_list_CONV in place of bt_to_ol_lb/ub_CONV. *)
 
 val [aTT, aTF, aFT, aFF] = CONJUNCTS (prove (
-``(T/\T=T) /\ (T/\F=F) /\ (F/\T=F) /\ (F/\F=F)``,
+``(T/\T <=> T) /\ (T/\F <=> F) /\ (F/\T <=> F) /\ (F/\F <=> F)``,
 REWRITE_TAC [AND_CLAUSES]));
 
 val AND_CONV = REWR_CONV aTT ORELSEC REWR_CONV aTF ORELSEC

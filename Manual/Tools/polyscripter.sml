@@ -385,8 +385,8 @@ in
     end
   else if String.isPrefix ">>__" line then
     let
-      val firstline = String.extract(line, 4, NONE)
-      val (input, blankstr) = getRest 4 [firstline]
+      val (firstline,d) = poss_space_extract 4 line
+      val (input, blankstr) = getRest d [firstline]
       val _ = compile (lnumdie (linenum lbuf)) (String.concat input)
     in
       ("", blankstr)

@@ -25,6 +25,7 @@ ind_typeTheory;
 open wellorderTheory cardinalTheory;
 
 val _ = new_theory "iterate";
+val _ = ParseExtras.temp_loose_equality()
 
 (* ------------------------------------------------------------------------- *)
 (* MESON, METIS, SET_TAC, SET_RULE, ASSERT_TAC, ASM_ARITH_TAC                *)

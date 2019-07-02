@@ -110,23 +110,23 @@ val (args,ONEWAY_SKOLEM_CONV) =
 val (NNF_CONV,NNF_SKOLEM_CONV) =
     let val p = ``p:bool`` and q = ``q:bool`` and q' = ``q':bool``
         val P = ``P:'a->bool`` and aty = ``:'a``
-        val pth_pimp = TAUT`(p ==> q) = q \/ ~p`
-        val pth_peq1 = TAUT`(p = q) = (p \/ ~q) /\ (~p \/ q)`
-        val pth_peq2 = TAUT`(p = q) = (p /\ q) \/ (~p /\ ~q)`
+        val pth_pimp = TAUT`(p ==> q) <=> q \/ ~p`
+        val pth_peq1 = TAUT`(p = q) <=> (p \/ ~q) /\ (~p \/ q)`
+        val pth_peq2 = TAUT`(p = q) <=> (p /\ q) \/ (~p /\ ~q)`
         val pth_pcond1 =
-          TAUT`(if p then q else q') = (p \/ q') /\ (~p \/ q)`
+          TAUT`(if p then q else q') <=> (p \/ q') /\ (~p \/ q)`
         val pth_pcond2 =
-          TAUT`(if p then q else q') = (p /\ q) \/ (~p /\ q')`
-        val pth_nnot = TAUT`~~p:bool = p`
-        val pth_nand = TAUT`~(p /\ q) = ~p \/ ~q`
-        val pth_nor = TAUT`~(p \/ q) = ~p /\ ~q`
-        val pth_nimp = TAUT`~(p ==> q) = ~q /\ p`
-        val pth_neq1 = TAUT`~(p = q) = (p \/ q) /\ (~p \/ ~q)`
-        val pth_neq2 = TAUT`~(p = q) = (p /\ ~q) \/ (~p /\ q)`
+          TAUT`(if p then q else q') <=> (p /\ q) \/ (~p /\ q')`
+        val pth_nnot = TAUT`~~p:bool <=> p`
+        val pth_nand = TAUT`~(p /\ q) <=> ~p \/ ~q`
+        val pth_nor = TAUT`~(p \/ q) <=> ~p /\ ~q`
+        val pth_nimp = TAUT`~(p ==> q) <=> ~q /\ p`
+        val pth_neq1 = TAUT`~(p = q) <=> (p \/ q) /\ (~p \/ ~q)`
+        val pth_neq2 = TAUT`~(p = q) <=> (p /\ ~q) \/ (~p /\ q)`
         val pth_ncond1 =
-          TAUT`~(if p then q else q') = (p \/ ~q') /\ (~p \/ ~q)`
+          TAUT`~(if p then q else q') <=> (p \/ ~q') /\ (~p \/ ~q)`
         val pth_ncond2 =
-          TAUT`~(if p then q else q') = (p /\ ~q) \/ (~p /\ ~q')`
+          TAUT`~(if p then q else q') <=> (p /\ ~q) \/ (~p /\ ~q')`
         val EXISTS_UNIQUE_THM2 = prove
             (``!P. (?!x:'a. P x) = (?x. P x /\ !y. P y ==> (y = x))``,
                 GEN_TAC THEN REWRITE_TAC [EXISTS_UNIQUE_DEF,
@@ -165,13 +165,13 @@ val (NNF_CONV,NNF_SKOLEM_CONV) =
             end
         val LOCAL_COND_ELIM_THM1 = prove
             (``!P:'a->bool.
-                   P(if a then b else c) = (~a \/ P(b)) /\ (a \/ P(c))``,
+                   P(if a then b else c) <=> (~a \/ P(b)) /\ (a \/ P(c))``,
                 GEN_TAC THEN COND_CASES_TAC THEN ASM_REWRITE_TAC[])
         val LOCAL_COND_ELIM_CONV1 =
             HIGHER_REWRITE_CONV[LOCAL_COND_ELIM_THM1]
         val LOCAL_COND_ELIM_THM2 = prove
             (``!P:'a->bool.
-                   P(if a then b else c) = a /\ P(b) \/ ~a /\ P(c)``,
+                   P(if a then b else c) <=> a /\ P(b) \/ ~a /\ P(c)``,
                 GEN_TAC THEN COND_CASES_TAC THEN ASM_REWRITE_TAC[])
         val LOCAL_COND_ELIM_CONV2 = HIGHER_REWRITE_CONV[LOCAL_COND_ELIM_THM2]
         fun NNF_CONV_OPT baseconv skolemize cnflag =
@@ -369,8 +369,8 @@ val PRENEX_CONV = let
  * ------------------------------------------------------------------------- *)
 
 val PROP_CNF_CONV =
-  let val th1 = TAUT`a \/ (b /\ c) = (a \/ b) /\ (a \/ c)`
-      and th2 = TAUT`(a /\ b) \/ c = (a \/ c) /\ (b \/ c)`
+  let val th1 = TAUT`a \/ (b /\ c) <=> (a \/ b) /\ (a \/ c)`
+      and th2 = TAUT`(a /\ b) \/ c <=> (a \/ c) /\ (b \/ c)`
       val f =  DISTRIB_CONV(th1,th2) THENC
           DEPTH_BINOP_CONV conj_tm (ASSOC_CONV DISJ_ASSOC) THENC
           ASSOC_CONV CONJ_ASSOC
@@ -384,8 +384,8 @@ val PROP_CNF_CONV =
  * ------------------------------------------------------------------------- *)
 
 val PROP_DNF_CONV =
-    let val th1 = TAUT`a /\ (b \/ c) = (a /\ b) \/ (a /\ c)`
-        and th2 = TAUT`(a \/ b) /\ c = (a /\ c) \/ (b /\ c)`
+    let val th1 = TAUT`a /\ (b \/ c) <=> (a /\ b) \/ (a /\ c)`
+        and th2 = TAUT`(a \/ b) /\ c <=> (a /\ c) \/ (b /\ c)`
         val f =  DISTRIB_CONV(th1,th2) THENC
             DEPTH_BINOP_CONV disj_tm (ASSOC_CONV CONJ_ASSOC) THENC
             ASSOC_CONV DISJ_ASSOC
@@ -562,7 +562,7 @@ val REFUTE =
   let val pth = TAUT`(~p ==> F) ==> p`
       val p = Term`p:bool`
       val CONJ_AC = EQT_ELIM o AC_CONV(CONJ_ASSOC,CONJ_SYM)
-      val pth_d = TAUT`(a \/ b) /\ c = (a /\ c) \/ (b /\ c)`
+      val pth_d = TAUT`(a \/ b) /\ c <=> (a /\ c) \/ (b /\ c)`
       fun refute refuter tm =
           let (* val _ = trace (1,"refute -- ",tm)  *)
               val (l,r) = dest_disj tm

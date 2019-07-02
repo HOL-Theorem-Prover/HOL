@@ -20,7 +20,7 @@ quietdec := false;
 *)
 
 val _ = new_theory "decidable_separationLogicLib";
-
+val _ = ParseExtras.temp_loose_equality()
 
 val nchotomy_thm = prove (``!x.
       (x = sf_emp) \/ (?d l. x = sf_points_to d l) \/

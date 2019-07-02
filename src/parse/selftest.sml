@@ -143,8 +143,11 @@ val _ = test_terminal false (PPBackEnd.vt100_terminal);
 val _ = print "** Testing basic lexing functionality\n\n"
 open base_tokens
 
+exception InternalDie of string
+fun idie s = raise InternalDie s
+
 fun quoteToString [QUOTE s] = "`"^s^"`"
-  | quoteToString _ = die "Bad test quotation"
+  | quoteToString _ = idie "Bad test quotation"
 
 fun test (q, slist) = let
   val _ = tprint ("Testing " ^ quoteToString q)
@@ -152,9 +155,8 @@ fun test (q, slist) = let
   fun prsl sl = "[" ^ String.concatWith ", " (map prs sl) ^ "]"
 in
   require_msg (check_result (equal slist)) prsl
-              (map (base_tokens.toString o #1) o qbuf.lex_to_toklist) q;
-  ()
-end
+              (map (base_tokens.toString o #1) o qbuf.lex_to_toklist) q
+end handle InternalDie s => die s
 
 val _ = app test [(`abc`, ["abc"]),
                   (`12`, ["12"]),
@@ -492,69 +494,48 @@ fun prlist p l = "[" ^ String.concatWith ", " (map p l) ^ "]"
 fun prlrs lrs = prlist prlr lrs
 fun prrel (TOK s) = "TOK \""^s^"\""
   | prrel TM = "TM"
+  | prrel _ = "<Unexpected rule-element>"
 fun prlspi (lsp,i1,i2) =
     "(" ^ prmsp lsp ^ "," ^ Int.toString i1 ^ "," ^ Int.toString i2 ^ ")"
 fun prrm_result (rels,lspis) =
     "(" ^ prlist prrel rels ^ ", " ^ prlist prlspi lspis ^ ")"
-fun require_msg_eq v pr f x = require_msg (check_result (equal v)) pr f x
+fun require_msg_eqk v pr f k x = require_msgk (check_result (equal v)) pr f k x
+fun require_msg_eq v pr f x = require_msg_eqk v pr f (fn _ => ()) x
 fun require_eq v f x = require (check_result (equal v)) f x
 fun rmlistrels r i = PrecAnalysis.remove_listrels (Exn.release r) i
 
-val _ = tprint "check_for_listreductions (1 element prefix)"
-val input = [TOK "let", TM, TOK "in", TM]
-val result = require_msg_eq [("let", "in", lsp1)] prlrs f input
-val _ = tprint "remove_listrels (1 element prefix)"
-val _ = require_msg_eq ([TOK "let", TM, TOK "in", TM], [(lsp1, 0, 1)])
-                       prrm_result (rmlistrels result) input
+fun listredn_test (nm, input, input', expected1, testseq) =
+    let
+      val _ = tprint ("check_for_listreductions (" ^ nm ^ ")")
+      fun kont result =
+          (tprint ("remove_listrels (" ^ nm ^ ")");
+           require_msg_eq (input', testseq) prrm_result
+                          (rmlistrels result) input)
+    in
+      require_msg_eqk expected1 prlrs f kont input
+    end
+val bare_let = [TOK "let", TM, TOK "in", TM]
+val suffix_let = [TM, TOK "let", TM, TOK "in"]
 
-val _ = tprint "check_for_listreductions (0 element prefix)"
-val input = [TOK "let", TOK "in", TM]
-val result = require_msg_eq [("let", "in", lsp1)] prlrs f input
-val _ = tprint "remove_listrels (0 element prefix)"
-val _ = require_msg_eq ([TOK "let", TM, TOK "in", TM], [(lsp1, 0, 0)])
-                       prrm_result (rmlistrels result) input
-
-val _ = tprint "check_for_listreductions (1 element + ; prefix)"
-val input = [TOK "let", TM, TOK ";", TOK "in", TM]
-val result = require_msg_eq [("let", "in", lsp1)] prlrs f input
-val _ = tprint "remove_listrels (1 element + ; prefix)"
-val _ = require_msg_eq ([TOK "let", TM, TOK "in", TM], [(lsp1, 0, 1)])
-                       prrm_result (rmlistrels result) input
-
-val _ = tprint "check_for_listreductions (2 element prefix)"
-val input = [TOK "let", TM, TOK ";", TM, TOK "in", TM]
-val result = require_msg_eq [("let", "in", lsp1)] prlrs f input
-val _ = tprint "remove_listrels (2 element prefix)"
-val _ = require_msg_eq ([TOK "let", TM, TOK "in", TM], [(lsp1, 0, 2)])
-                       prrm_result (rmlistrels result) input
-
-val _ = tprint "check_for_listreductions (1 element suffix)"
-val input = [TM, TOK "let", TM, TOK "in"]
-val result = require_msg_eq [("let", "in", lsp1)] prlrs f input
-val _ = tprint "remove_listrels (1 element suffix)"
-val _ = require_msg_eq ([TM, TOK "let", TM, TOK "in"], [(lsp1, 1, 1)])
-                       prrm_result (rmlistrels result) input
-
-val _ = tprint "check_for_listreductions (2 element suffix)"
-val input = [TM, TOK "let", TM, TOK ";", TM, TOK "in"]
-val result = require_msg_eq [("let", "in", lsp1)] prlrs f input
-val _ = tprint "remove_listrels (2 element suffix)"
-val _ = require_msg_eq ([TM, TOK "let", TM, TOK "in"], [(lsp1,1,2)])
-                       prrm_result (rmlistrels result) input
-
-val _ = tprint "check_for_listreductions (2 element + ; suffix)"
-val input = [TM, TOK "let", TM, TOK ";", TM, TOK ";", TOK "in"]
-val result = require_msg_eq [("let", "in", lsp1)] prlrs f input
-val _ = tprint "remove_listrels (2 element + ; suffix)"
-val _ = require_msg_eq ([TM, TOK "let", TM, TOK "in"], [(lsp1,1,2)])
-                       prrm_result (rmlistrels result) input
-
-val _ = tprint "check_for_listreductions (0 element suffix)"
-val input = [TM, TOK "let", TOK "in"]
-val result = require_msg_eq [("let", "in", lsp1)] prlrs f input
-val _ = tprint "remove_listrels (0 element suffix)"
-val _ = require_msg_eq ([TM, TOK "let", TM, TOK "in"], [(lsp1, 1, 0)])
-                       prrm_result (rmlistrels result) input
+val _ = List.app listredn_test [
+      ("1 element prefix", [TOK "let", TM, TOK "in", TM], bare_let,
+       [("let", "in", lsp1)], [(lsp1, 0, 1)]),
+      ("0 element prefix", [TOK "let", TOK "in", TM], bare_let,
+       [("let", "in", lsp1)], [(lsp1, 0, 0)]),
+      ("1 element + ; prefix", [TOK "let", TM, TOK ";", TOK "in", TM], bare_let,
+       [("let", "in", lsp1)], [(lsp1, 0, 1)]),
+      ("2 element prefix", [TOK "let", TM, TOK ";", TM, TOK "in", TM], bare_let,
+       [("let", "in", lsp1)], [(lsp1, 0, 2)]),
+      ("1 element suffix", [TM, TOK "let", TM, TOK "in"], suffix_let,
+       [("let", "in", lsp1)], [(lsp1, 1, 1)]),
+      ("2 element suffix", [TM, TOK "let", TM, TOK ";", TM, TOK "in"],
+       suffix_let, [("let", "in", lsp1)], [(lsp1,1,2)]),
+      ("2 element + ; suffix",
+       [TM, TOK "let", TM, TOK ";", TM, TOK ";", TOK "in"],
+       suffix_let, [("let", "in", lsp1)], [(lsp1,1,2)]),
+      ("0 element suffix", [TM, TOK "let", TOK "in"], suffix_let,
+       [("let", "in", lsp1)], [(lsp1, 1, 0)])
+    ]
 
 val mk_var = Term.mk_var
 val mk_comb = Term.mk_comb

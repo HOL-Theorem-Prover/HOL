@@ -1,4 +1,5 @@
 open HolKernel Parse boolLib bossLib; val _ = new_theory "lisp_init";
+val _ = ParseExtras.temp_loose_equality()
 open lisp_sexpTheory lisp_consTheory lisp_invTheory lisp_codegenTheory;
 
 (* --- *)

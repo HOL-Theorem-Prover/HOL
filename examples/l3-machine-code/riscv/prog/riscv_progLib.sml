@@ -7,7 +7,10 @@ open stateLib riscv_progTheory
 structure Parse =
 struct
    open Parse
-   val (Type, Term) = parse_from_grammars riscv_progTheory.riscv_prog_grammars
+   val (Type, Term) =
+       riscv_progTheory.riscv_prog_grammars
+         |> apsnd ParseExtras.grammar_loose_equality
+         |> parse_from_grammars
 end
 
 open Parse

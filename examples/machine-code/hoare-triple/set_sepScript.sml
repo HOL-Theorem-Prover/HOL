@@ -1,11 +1,7 @@
-
 open HolKernel boolLib bossLib Parse pred_setTheory pairTheory wordsTheory;
+
 val _ = new_theory "set_sep";
-
-
-infix \\
-val op \\ = op THEN;
-
+val _ = ParseExtras.temp_loose_equality()
 
 (* ---- definitions ---- *)
 
@@ -14,7 +10,7 @@ val emp_def    = Define `emp = \s. (s = {})`;
 val cond_def   = Define `cond c = \s. (s = {}) /\ c`;
 val SEP_F_def  = Define `SEP_F s = F`;
 val SEP_T_def  = Define `SEP_T s = T`;
-val SPLIT_def  = Define `SPLIT (s:'a set) (u,v) = (u UNION v = s) /\ DISJOINT u v`;
+val SPLIT_def  = Define `SPLIT (s:'a set) (u,v) ⇔ (u ∪ v = s) ∧ DISJOINT u v`;
 val STAR_def   = Define `STAR p q = (\s. ?u v. SPLIT s (u,v) /\ p u /\ q v)`;
 val SEP_EQ_def = Define `SEP_EQ x = \s. s = x`;
 
@@ -291,4 +287,3 @@ val IMP_IMP = store_thm("IMP_IMP",
   METIS_TAC []);
 
 val _ = export_theory();
-

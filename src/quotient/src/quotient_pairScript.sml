@@ -67,15 +67,15 @@ val PAIR_REL =
      (“$### R1 R2 = \(a:'a,b:'b) (c:'c,d:'d). R1 a c /\ R2 b d”),
      490);
 
-val PAIR_REL_THM = store_thm
-   ("PAIR_REL_THM",
-    (“!R1 R2 (a:'a) (b:'b) (c:'c) (d:'d).
-         (R1 ### R2) (a,b) (c,d) = R1 a c /\ R2 b d”),
+Theorem PAIR_REL_THM:
+   !R1 R2 (a:'a) (b:'b) (c:'c) (d:'d).
+         (R1 ### R2) (a,b) (c,d) <=> R1 a c /\ R2 b d
+Proof
     REPEAT GEN_TAC
     THEN PURE_ONCE_REWRITE_TAC[PAIR_REL]
     THEN GEN_BETA_TAC
     THEN REFL_TAC
-   );
+QED
 
 val PAIR_REL_EQ = store_thm
    ("PAIR_REL_EQ",

@@ -1400,7 +1400,7 @@ in
                       paren_style = OnlyIfNecessary}
          |> add_rule {term_name   = "=",
                       block_style = (AroundSamePrec, (CONSISTENT, 0)),
-                      fixity = Infix(NONASSOC, 100),
+                      fixity = Infix(NONASSOC, 450),
                       pp_elements = [HardSpace 1, RE (TOK "="),
                                      BreakSpace(1,0)],
                       paren_style = OnlyIfNecessary}

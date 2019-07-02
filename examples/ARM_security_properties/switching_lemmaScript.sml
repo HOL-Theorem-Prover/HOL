@@ -12,6 +12,8 @@ open ARM_proverLib;
 (****************************************************************)
 
 val _ =  new_theory("switching_lemma");
+val _ = ParseExtras.temp_loose_equality()
+
 
 val let_ss = simpLib.mk_simpset [boolSimps.LET_ss];
 

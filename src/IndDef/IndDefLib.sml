@@ -186,6 +186,12 @@ in
 end
 handle e => raise (wrap_exn "IndDefLib" "Hol_mono_reln" e);
 
+(* ----------------------------------------------------------------------
+    utility to isolate term being inducted on
+   ---------------------------------------------------------------------- *)
+
+fun isolate_to_front Rt gt = raise Fail "isolate_to_front: not implemented"
+
 
 (* ----------------------------------------------------------------------
     the standard entry-points

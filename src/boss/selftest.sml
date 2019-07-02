@@ -3,6 +3,10 @@ open testutils
 
 val _ = print "\n"
 
+fun listprint pr xs =
+    "[" ^ String.concatWith "," (map pr xs) ^ "]"
+
+
 fun test_CONV (c,nm) (t, expected) = let
   val _ = tprint (nm^" on `"^term_to_string t^"`")
   val th = Conv.QCONV c t
@@ -28,15 +32,15 @@ val tydef_th = prove(
   EXISTS_TAC ``(T,T)`` THEN REWRITE_TAC []);
 
 val _ = tprint "new_type_definition error message"
-val failing_tydef =
-    new_type_definition("mytydef", tydef_th)
+val _ =
+    ignore (new_type_definition("mytydef", tydef_th))
     handle HOL_ERR {origin_function, message, origin_structure} =>
            if origin_function <> "new_type_definition" orelse
               origin_structure <> "Theory.Definition" orelse
               message <> "at Thm.prim_type_definition:\nexpected a theorem of the form \"?x. P x\""
            then
              die "FAILED"
-           else (OK(); TRUTH)
+           else OK()
 
 val _ = tprint "Q.MATCH_ABBREV_TAC with underscores"
 val goal = ([] : term list, ``(n + 10) * y <= 42315 /\ !x y:'a. x < f y``)
@@ -205,3 +209,42 @@ val _ = require_msg (check_result (aconv appr_t o rhs o concl)) thm_to_string
                     (QCONV (SIMP_CONV (srw_ss()) [Excl "list.APPEND_ASSOC"]))
                     appr_t
 end
+
+val _ = tprint "find num->num includes SUC"
+val _ = require_msg (check_result (tmem numSyntax.suc_tm))
+                    (listprint term_to_string)
+                    find_consts “:num->num”
+val _ = tprint "find 'a includes SUC"
+val _ = require_msg (check_result (tmem numSyntax.suc_tm))
+                    (listprint term_to_string)
+                    find_consts “:'a”
+val _ = tprint "find 'a->'a includes SUC"
+val _ = require_msg (check_result (tmem numSyntax.suc_tm))
+                    (listprint term_to_string)
+                    find_consts “:'a->'a”
+val _ = tprint "find 'b->'b includes SUC"
+val _ = require_msg (check_result (tmem numSyntax.suc_tm))
+                    (listprint term_to_string)
+                    find_consts “:'b->'b”
+val _ = tprint "find 'a -> 'b -> 'c doesn't include SUC"
+val _ = require_msg (check_result (not o tmem numSyntax.suc_tm))
+                    (listprint term_to_string)
+                    find_consts “:'a->'b->'c”
+val _ = tprint "find_thy [bool,relation] 'a -> 'a doesn't include SUC"
+val _ = require_msg (check_result (not o tmem numSyntax.suc_tm))
+                    (listprint term_to_string)
+                    (find_consts_thy ["bool", "relation"]) “:'a->'a”
+val _ = tprint "find_thy [bool,relation] 'a -> 'a includes RTC"
+val _ = require_msg (check_result (tmem “relation$RTC”))
+                    (listprint term_to_string)
+                    (find_consts_thy ["bool", "relation"]) “:'a->'a”
+val _ = tprint "find_thy [bool,relation] num -> num doesn't include RTC"
+val _ = require_msg (check_result (not o tmem “relation$RTC”))
+                    (listprint term_to_string)
+                    (find_consts_thy ["bool", "relation"]) “:num->num”
+
+val _ = new_constant("foo", “:'a -> num”)
+
+val _ = tprint "find 'a finds new constant"
+val _ = require_msg (check_result (tmem “foo”)) (listprint term_to_string)
+                    find_consts “:'a”

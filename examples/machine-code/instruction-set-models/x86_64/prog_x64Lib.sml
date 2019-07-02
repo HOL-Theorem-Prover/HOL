@@ -7,6 +7,16 @@ open set_sepTheory x64_Theory x64_Lib helperLib;
 open x64_seq_monadTheory x64_coretypesTheory x64_astTheory x64_icacheTheory;
 open prog_x64Theory wordsTheory x64_encodeLib;
 
+structure Parse = struct
+  open Parse
+  val (Type,Term) =
+      prog_x64Theory.prog_x64_grammars
+        |> apsnd ParseExtras.grammar_loose_equality
+        |> parse_from_grammars
+end
+open Parse
+
+
 infix \\
 val op \\ = op THEN;
 

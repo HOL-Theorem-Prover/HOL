@@ -35,7 +35,7 @@ val mem_singP = prove(
   ``!P y. (?x:'a. MEM x [y] /\ P x) = P y``,
   simpLib.SIMP_TAC boolSimps.bool_ss [listTheory.MEM]);
 val mem_consP = prove(
-  ``!P h t. (?x:'a. MEM x (h :: t) /\ P x) = P h \/ (?x. MEM x t /\ P x)``,
+  ``!P h t. (?x:'a. MEM x (h :: t) /\ P x) <=> P h \/ (?x. MEM x t /\ P x)``,
   simpLib.SIMP_TAC boolSimps.bool_ss [listTheory.MEM, RIGHT_AND_OVER_OR,
                                       EXISTS_OR_THM]);
 end

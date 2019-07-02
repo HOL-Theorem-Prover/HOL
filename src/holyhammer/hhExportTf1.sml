@@ -38,8 +38,8 @@ fun tf1_type oc (ty,a) = case strip_funty_n a ty of
     (os oc "("; tf1_utype oc uty; os oc " > "; tf1_utype oc imty;
      os oc ")")
   | l =>
-    (os oc "("; oiter oc " * " tf1_utype (butlast l); os oc ") > ";
-     tf1_utype oc (last l))
+    (os oc "(("; oiter oc " * " tf1_utype (butlast l); os oc ") > ";
+     tf1_utype oc (last l); os oc ")")
 
 (* -------------------------------------------------------------------------
    TF1 quantifier
@@ -352,7 +352,7 @@ tf1_write_pb dir (thmid,depl);
 load "hhExportTf1"; open hhExportTf1;
 load "tttUnfold"; tttUnfold.load_sigobj ();
 val thyl = ancestry (current_theory ());
-val bushydir = "/local1/thibault/tf1_bushy";
+val bushydir =  HOLDIR ^ "/src/holyhammer/tf1_bushy";
 tf1_export_bushy bushydir thyl;
 val chainydir = "/local1/thibault/tf1_chainy";
 tf1_export_chainy chainydir thyl;

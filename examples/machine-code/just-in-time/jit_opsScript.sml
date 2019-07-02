@@ -66,8 +66,8 @@ val xJIT_INV_def = Define `
     xSTACK (xs,l,p,ns) * xPC (ADDR ns a p) * ~xS`;
 
 val BYTES_IN_MEM_def = Define `
-  (BYTES_IN_MEM a df f [] = T) /\
-  (BYTES_IN_MEM a df f (b::bs) =
+  (BYTES_IN_MEM a df f [] <=> T) /\
+  (BYTES_IN_MEM a df f (b::bs) <=>
      a IN df /\ (f a = b) /\ BYTES_IN_MEM (a+1w) df f bs)`;
 
 val CODE_IN_MEM_def = Define `

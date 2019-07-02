@@ -478,13 +478,13 @@ local
                          INT_LE_RADD, int_ge, GSYM INT_LE_ANTISYM,
                          DE_MORGAN_THM]
   val not_le = prove(``~(x <= y) = (y + 1i <= x)``, tac)
-  val not_lt = prove(``~(x:int < y) = y <= x``, tac)
-  val not_gt = prove(``~(x:int > y) = x <= y``, tac)
-  val not_ge = prove(``~(x >= y) = x + 1i <= y``, tac)
-  val not_eq = prove(``~(x = y:int) = y + 1 <= x \/ x + 1 <= y``, tac)
-  val ge_elim = prove(``x:int >= y = y <= x``, tac)
-  val gt_elim = prove(``x > y = y + 1i <= x``, tac)
-  val eq_elim = prove(``(x:int = y) = (x <= y /\ y <= x)``, tac)
+  val not_lt = prove(``~(x:int < y) <=> y <= x``, tac)
+  val not_gt = prove(``~(x:int > y) <=> x <= y``, tac)
+  val not_ge = prove(``~(x >= y) <=> x + 1i <= y``, tac)
+  val not_eq = prove(``~(x = y:int) <=> y + 1 <= x \/ x + 1 <= y``, tac)
+  val ge_elim = prove(``x:int >= y <=> y <= x``, tac)
+  val gt_elim = prove(``x > y <=> y + 1i <= x``, tac)
+  val eq_elim = prove(``(x:int = y) <=> (x <= y /\ y <= x)``, tac)
   val mult1 = GSYM INT_MUL_LID
 in
 
@@ -660,10 +660,10 @@ fun UNBETA_LIST tlist =
    ---------------------------------------------------------------------- *)
 
 val not_beq = prove(
-  ``~(b1 = b2) = b1 /\ ~b2 \/ ~b1 /\ b2``,
+  ``~(b1 = b2) <=> b1 /\ ~b2 \/ ~b1 /\ b2``,
   BOOL_CASES_TAC ``b1:bool`` THEN REWRITE_TAC []);
 val beq = prove(
-  ``(b1 = b2) = b1 /\ b2 \/ ~b1 /\ ~b2``,
+  ``(b1 = b2) <=> b1 /\ b2 \/ ~b1 /\ ~b2``,
   BOOL_CASES_TAC ``b1:bool`` THEN REWRITE_TAC []);
 
 fun reveal_a_disj tm =
@@ -772,7 +772,7 @@ val refl_case = prove(
   STRIP_TAC THEN ASM_REWRITE_TAC [] THEN Q.EXISTS_TAC `u` THEN
   ASM_REWRITE_TAC []);
 val nonrefl_case = prove(
-  ``!lo hi P. (?i:int. (lo <= i /\ i <= hi) /\ P i) =
+  ``!lo hi P. (?i:int. (lo <= i /\ i <= hi) /\ P i) <=>
               lo <= hi /\ (P lo \/ ?i. (lo + 1 <= i /\ i <= hi) /\ P i)``,
   REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
     Q.ASM_CASES_TAC `i = lo` THENL [
