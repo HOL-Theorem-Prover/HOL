@@ -648,7 +648,7 @@ Once inputs get even a little beyond the clearly trivial, the function
 we have written (at the top-level, \ml{DPLL\_UNIV}) performs considerably
 better than the truth table implementation.  For example, the
 generalisation of the following term, with 29 variables, takes
-our function multiple seconds to demonstrate as a tautology:
+our function less than a second to demonstrate as a tautology:
 \begin{hol}
 \begin{alltt}
 ##eval val t0 = ``
