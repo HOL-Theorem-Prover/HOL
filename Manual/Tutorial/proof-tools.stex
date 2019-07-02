@@ -41,7 +41,7 @@ the motivating theorem:
 \begin{hol}
 \begin{alltt}
 ##eval val FORALL_BOOL = prove(
-         ``(!v. P v) = P T /\ P F``,
+         ``(!v. P v) <=> P T /\ P F``,
          rw[EQ_IMP_THM] >> Cases_on `v` >> rw[]);
 \end{alltt}
 \end{hol}
