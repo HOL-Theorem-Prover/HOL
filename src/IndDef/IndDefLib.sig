@@ -27,6 +27,6 @@ sig
   val add_rule_induction : thm -> unit
   val export_rule_induction : string -> unit
 
-  val isolate_to_front : term -> conv
+  val isolate_to_front : int -> term -> tactic
 
 end

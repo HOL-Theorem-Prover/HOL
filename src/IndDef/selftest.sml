@@ -113,26 +113,71 @@ val _ = if (with_flag (Feedback.emit_ERR, false)
 val failcount = ref 0
 val _ = diemode := Remember failcount
 local
-  fun itf_test (nm,t1,t2,result) =
-      convtest ("isolate_to_front/" ^ nm,isolate_to_front t1,t2,result)
+  fun itf n pat t =
+      let
+        val (sgs, _) = isolate_to_front n pat ([], t)
+      in
+        case sgs of
+            [([], t')] => t'
+          | _ => raise Fail "Bad subgoal results"
+      end
+  fun itf_test (nm,ns,t1,t2,result) =
+      (tprint ("isolate_to_front/"^nm);
+       require_msg (check_result (aconv result)) term_to_string (itf ns t1) t2)
   val _ = new_constant("csize", “:comm -> num”)
 in
-val _ = List.app itf_test [(*
-  ("simple/univgoal/vars-in-order", “EVAL c s0 s1”,
+val _ = List.app itf_test [
+  ("simple/univgoal/vars-in-order", 0, “EVAL c s0 s1”,
    “∀d t0 t. EVAL d t0 t ==> EVAL d t t0”,
    “∀d t0 t. EVAL d t0 t ==> EVAL d t t0”),
-  ("simple/univgoal/vars-wrong-order", “EVAL c s0 s1”,
+  ("simple/univgoal/vars-wrong-order", 0, “EVAL c s0 s1”,
    “∀t0 t d. EVAL d t0 t ==> EVAL d t t0”,
    “∀d t0 t. EVAL d t0 t ==> EVAL d t t0”),
-  ("simple/specgoal", “EVAL c s0 s1”,
+  ("simple/univgoal/negation", 0, “EVAL c s0 s1”,
+   “∀d t0 t. ~EVAL d t0 t”,
+   “∀d t0 t. EVAL d t0 t ⇒ F”),
+  ("simple/specgoal", 0, “EVAL c s0 s1”,
    “EVAL d t0 t ==> EVAL d t t0”,
    “∀d t0 t. EVAL d t0 t ==> EVAL d t t0”),
-  ("moving/univgoal/nice-vars", “EVAL c s0 s1”,
+  ("simple/schematic1", 1, “EVAL c s0 s1”,
+   “EVAL d t0 t ==> EVAL d t t0”,
+   “∀t0 t. EVAL d t0 t ==> EVAL d t t0”),
+  ("moving/univgoal/nice-vars", 0, “EVAL c s0 s1”,
    “∀d t0 t1. csize d = ONE ∧ EVAL d t0 t1 ⇒ EVAL d t1 t0”,
    “∀d t0 t1. EVAL d t0 t1 ⇒ (csize d = ONE ⇒ EVAL d t1 t0)”),
-  ("moving/univgoal/extra-vars", “EVAL c s0 s1”,
+  ("moving/univgoal/extra-vars", 0, “EVAL c s0 s1”,
    “∀d n t0 t1 . csize d = n ∧ EVAL d t0 t1 ⇒ EVAL d t1 t0”,
-   “∀d t0 t1 . EVAL d t0 t1 ⇒ ∀n. csize d = n ⇒ EVAL d t1 t0”) *)
+   “∀d t0 t1 . EVAL d t0 t1 ⇒ ∀n. csize d = n ⇒ EVAL d t1 t0”),
+  ("moving/univgoal/prefer-left/imp", 0, “EVAL c s0 s1”,
+   “∀d1 d2 t0 t1 t2. EVAL d1 t0 t1 ⇒ EVAL d2 t1 t2 ⇒ P t2”,
+   “∀d1 t0 t1. EVAL d1 t0 t1 ⇒ ∀d2 t2. EVAL d2 t1 t2 ⇒ P t2”),
+  ("moving/univgoal/prefer-left/conj", 0, “EVAL c s0 s1”,
+   “∀d1 d2 t0 t1 t2. EVAL d1 t0 t1 ∧ EVAL d2 t1 t2 ⇒ P t2”,
+   “∀d1 t0 t1. EVAL d1 t0 t1 ⇒ ∀d2 t2. EVAL d2 t1 t2 ⇒ P t2”),
+  ("rmequality1/spec", 0, “EVAL c s0 s1”,
+   “EVAL (WHILE B Comm) s0 s1 ==> csize Comm = ZERO”,
+   “∀Comm' s0 s1.
+      EVAL Comm' s0 s1 ⇒ WHILE B Comm = Comm' ⇒ csize Comm = ZERO”),
+  ("rmequality1/univ", 0, “EVAL c s0 s1”,
+   “∀Comm B. EVAL (WHILE B Comm) s0 s1 ==> csize Comm = ZERO”,
+   “∀Comm' s0 s1.
+      EVAL Comm' s0 s1 ⇒ ∀Comm B. WHILE B Comm = Comm' ⇒ csize Comm = ZERO”),
+  ("rmeq1+move/some-univ", 0, “EVAL c s0 s1”,
+   “∀b comm. csize comm = n ∧ EVAL (WHILE b comm) t0 t1 ⇒ P t1”,
+   “∀comm' t0 t1. EVAL comm' t0 t1 ⇒
+                  ∀b comm. WHILE b comm = comm' ⇒ csize comm = n ⇒ P t1”),
+  ("rmeq1+move/all-univ", 0, “EVAL c s0 s1”,
+   “∀b n comm. csize comm = n ∧ EVAL (WHILE b comm) t0 t1 ⇒ P t1”,
+   “∀comm' t0 t1. EVAL comm' t0 t1 ⇒
+                  ∀b comm. WHILE b comm = comm' ⇒ ∀n. csize comm = n ⇒ P t1”),
+  ("rmeq2+move/all-univ", 0, “EVAL c s0 s1”,
+   “∀t0 b n comm. csize comm = n ∧ EVAL (WHILE b comm) (f t0) t1 ⇒ P t1”,
+   “∀comm' t0' t1. EVAL comm' t0' t1 ⇒
+                   ∀t0 b comm. WHILE b comm = comm' ∧ f t0 = t0' ⇒
+                               ∀n. csize comm = n ⇒ P t1”),
+  ("conc-schematic", 1, “EVAL c s0 s1”,
+   “∀t0 t1. EVAL (WHILE b comm) t0 t1 ⇒ P t0 t1”,
+   “∀t0 t1. EVAL (WHILE b comm) t0 t1 ⇒ P t0 t1”)
 ]
 end
 
