@@ -1656,14 +1656,13 @@ val IMAGE_INSERT =
      ASM_REWRITE_TAC[]);
 val _ = export_rewrites ["IMAGE_INSERT"]
 
-val IMAGE_EQ_EMPTY =
-    store_thm
-    ("IMAGE_EQ_EMPTY",
-     (“!s. !f:'a->'b. ((IMAGE f s) = EMPTY) = (s = EMPTY)”),
-     GEN_TAC THEN
-     STRIP_ASSUME_TAC (SPEC (“s:'a set”) SET_CASES) THEN
-     ASM_REWRITE_TAC [IMAGE_EMPTY,IMAGE_INSERT,NOT_INSERT_EMPTY]);
-val _ = export_rewrites ["IMAGE_EQ_EMPTY"]
+Theorem IMAGE_EQ_EMPTY[simp]:
+  !s (f:'a->'b). (IMAGE f s = {} <=> s = {}) /\ ({} = IMAGE f s <=> s = {})
+Proof
+  GEN_TAC THEN
+  STRIP_ASSUME_TAC (SPEC (“s:'a set”) SET_CASES) THEN
+  ASM_REWRITE_TAC [IMAGE_EMPTY,IMAGE_INSERT,NOT_INSERT_EMPTY, NOT_EMPTY_INSERT]
+QED
 
 val IMAGE_DELETE = store_thm("IMAGE_DELETE",
 (“!(f:'a->'b) x s. ~(x IN s) ==> (IMAGE f (s DELETE x) = (IMAGE f s))”),
@@ -2587,13 +2586,13 @@ val FINITE_DIFF =
        THEN IMP_RES_THEN MATCH_ACCEPT_TAC FINITE_INSERT]]);
 val _ = export_rewrites ["FINITE_DIFF"]
 
-val FINITE_DIFF_down = Q.store_thm
-("FINITE_DIFF_down",
-  `!P Q. FINITE (P DIFF Q) /\ FINITE Q ==> FINITE P`,
-  Q_TAC SUFF_TAC `!Q. FINITE Q ==> !P. FINITE (P DIFF Q) ==> FINITE P` THEN1
-    PROVE_TAC [] THEN
-  HO_MATCH_MP_TAC FINITE_INDUCT THEN SRW_TAC [][DIFF_EMPTY] THEN
-  PROVE_TAC [DIFF_INSERT, FINITE_DELETE]);
+Theorem FINITE_DIFF_down:
+  !P Q. FINITE (P DIFF Q) /\ FINITE Q ==> FINITE P
+Proof
+  Induct_on ‘FINITE Q’ >>
+  SRW_TAC [][DIFF_EMPTY] >>
+  PROVE_TAC [DIFF_INSERT, FINITE_DELETE]
+QED
 
 val FINITE_SING =
     store_thm
@@ -2620,21 +2619,21 @@ val IMAGE_FINITE =
      [REWRITE_TAC [IMAGE_EMPTY,FINITE_EMPTY],
       ASM_REWRITE_TAC [IMAGE_INSERT,FINITE_INSERT]]);
 
-val FINITELY_INJECTIVE_IMAGE_FINITE = Q.store_thm
-("FINITELY_INJECTIVE_IMAGE_FINITE",
-  `!f. (!x. FINITE { y | x = f y }) ==> !s. FINITE (IMAGE f s) = FINITE s`,
+Theorem FINITELY_INJECTIVE_IMAGE_FINITE:
+  !f. (!x. FINITE { y | x = f y }) ==> !s. FINITE (IMAGE f s) = FINITE s
+Proof
   GEN_TAC THEN STRIP_TAC THEN
   SIMP_TAC (srw_ss()) [EQ_IMP_THM, FORALL_AND_THM, IMAGE_FINITE] THEN
-  Q_TAC SUFF_TAC `!Q. FINITE Q ==> !P. (IMAGE f P = Q) ==> FINITE P` THEN1
-     SIMP_TAC (srw_ss() ++ DNF_ss) [] THEN
-  HO_MATCH_MP_TAC FINITE_INDUCT THEN
-  SRW_TAC [][IMAGE_EQ_EMPTY] THEN
+  Induct_on ‘FINITE’ THEN
+  SRW_TAC [][] THEN
+  Q.RENAME_TAC [‘IMAGE f P = e INSERT Q’] THEN
   `Q = IMAGE f (P DIFF { y | e = f y})`
      by (POP_ASSUM MP_TAC THEN
          SRW_TAC [][EXTENSION, IN_IMAGE, GSPECIFICATION] THEN
          PROVE_TAC []) THEN
   `FINITE (P DIFF { y | e = f y})` by PROVE_TAC [] THEN
-  METIS_TAC [FINITE_DIFF_down]);
+  METIS_TAC [FINITE_DIFF_down]
+QED
 
 val INJECTIVE_IMAGE_FINITE = Q.store_thm
 ("INJECTIVE_IMAGE_FINITE",
@@ -3082,24 +3081,19 @@ val LESS_CARD_DIFF =
      IMP_RES_TAC (PURE_ONCE_REWRITE_RULE [GSYM NOT_LESS] th4)
      end);
 
-val BIJ_FINITE = store_thm(
-  "BIJ_FINITE",
-  ``!f s t. BIJ f s t /\ FINITE s ==> FINITE t``,
-  Q_TAC SUFF_TAC
-    `!s. FINITE s ==> !f t. BIJ f s t ==> FINITE t` THEN1 METIS_TAC [] THEN
+Theorem BIJ_FINITE:
+  !f s t. BIJ f s t /\ FINITE s ==> FINITE t
+Proof
   Induct_on `FINITE s` THEN SRW_TAC[][BIJ_EMPTY, BIJ_INSERT] THEN
-  METIS_TAC [FINITE_DELETE]);
+  METIS_TAC [FINITE_DELETE]
+QED
 
-val BIJ_FINITE_SUBSET = store_thm (* from util_prob *)
-  ("BIJ_FINITE_SUBSET",
-   ``!(f : num -> 'a) s t.
+Theorem BIJ_FINITE_SUBSET:
+   !(f : num -> 'a) s t.
        BIJ f UNIV s /\ FINITE t /\ t SUBSET s ==>
-       ?N. !n. N <= n ==> ~(f n IN t)``,
-   RW_TAC std_ss []
-   >> POP_ASSUM MP_TAC
-   >> POP_ASSUM MP_TAC
-   >> Q.SPEC_TAC (`t`, `t`)
-   >> HO_MATCH_MP_TAC FINITE_INDUCT
+       ?N. !n. N <= n ==> ~(f n IN t)
+Proof
+  Induct_on ‘FINITE’
    >> RW_TAC std_ss [EMPTY_SUBSET, NOT_IN_EMPTY, INSERT_SUBSET, IN_INSERT]
    >> Know `?!k. f k = e`
    >- ( Q.PAT_X_ASSUM `BIJ a b c` MP_TAC \\
@@ -3114,14 +3108,13 @@ val BIJ_FINITE_SUBSET = store_thm (* from util_prob *)
    >> RW_TAC std_ss []
    >> STRIP_TAC
    >> Know `n = k` >- PROVE_TAC []
-   >> DECIDE_TAC);
+   >> DECIDE_TAC
+QED
 
-val FINITE_BIJ = store_thm (* from util_prob *)
-  ("FINITE_BIJ",
-  ``!f s t. FINITE s /\ BIJ f s t ==> FINITE t /\ (CARD s = CARD t)``,
-    Suff `!s. FINITE s ==> !f t. BIJ f s t ==> FINITE t /\ (CARD s = CARD t)`
- >- PROVE_TAC []
- >> HO_MATCH_MP_TAC FINITE_INDUCT
+Theorem FINITE_BIJ:
+  !f s t. FINITE s /\ BIJ f s t ==> FINITE t /\ (CARD s = CARD t)
+Proof
+ Induct_on ‘FINITE’
  >> CONJ_TAC
  >- ( RW_TAC std_ss [BIJ_ALT, FINITE_EMPTY, CARD_EMPTY, IN_FUNSET, NOT_IN_EMPTY,
                      EXISTS_UNIQUE_ALT] \\ (* 2 sub-goals here, same tacticals *)
@@ -3137,7 +3130,8 @@ val FINITE_BIJ = store_thm (* from util_prob *)
  >> CONJ_TAC >- PROVE_TAC [FINITE_INSERT]
  >> Q.PAT_X_ASSUM `f e INSERT u = t` (fn th => RW_TAC std_ss [SYM th])
  >> RW_TAC std_ss [CARD_INSERT]
- >> PROVE_TAC []);
+ >> PROVE_TAC []
+QED
 
 val FINITE_BIJ_CARD = store_thm
   ("FINITE_BIJ_CARD",
@@ -3159,13 +3153,12 @@ RW_TAC arith_ss [CARD_DELETE] THEN
 `~(CARD t = 0)` by METIS_TAC [EMPTY_DEF, IN_DEF, CARD_EQ_0] THEN
 RW_TAC arith_ss []);
 
-val CARD_INJ_IMAGE = store_thm(
-  "CARD_INJ_IMAGE",
-  ``!f s. (!x y. (f x = f y) <=> (x = y)) /\ FINITE s ==>
-          (CARD (IMAGE f s) = CARD s)``,
-  REWRITE_TAC [GSYM AND_IMP_INTRO] THEN NTAC 3 STRIP_TAC THEN
-  Q.ID_SPEC_TAC `s` THEN HO_MATCH_MP_TAC FINITE_INDUCT THEN
-  SRW_TAC [][]);
+Theorem CARD_INJ_IMAGE:
+  !f s. (!x y. (f x = f y) <=> (x = y)) /\ FINITE s ==>
+        (CARD (IMAGE f s) = CARD s)
+Proof
+  Induct_on ‘FINITE’ >> SRW_TAC[][]
+QED
 
 val CARD_IMAGE = store_thm("CARD_IMAGE",
   ``!s. FINITE s ==> (CARD (IMAGE f s) <= CARD s)``,
@@ -3581,13 +3574,12 @@ val FINITE_INDUCT' =
 val NOT_IN_COUNT = Q.prove (`~ (m IN count m)`,
   REWRITE_TAC [IN_COUNT, LESS_REFL]) ;
 
-val FINITE_BIJ_COUNT_EQ = store_thm
-  ("FINITE_BIJ_COUNT_EQ",
-   ``!s. FINITE s = ?c n. BIJ c (count n) s``,
+Theorem FINITE_BIJ_COUNT_EQ:
+   !s. FINITE s = ?c n. BIJ c (count n) s
+Proof
    RW_TAC std_ss []
    >> REVERSE EQ_TAC >- PROVE_TAC [FINITE_COUNT, FINITE_BIJ]
-   >> Q.SPEC_TAC (`s`, `s`)
-   >> HO_MATCH_MP_TAC FINITE_INDUCT
+   >> Induct_on ‘FINITE’
    >> RW_TAC std_ss [BIJ_DEF, INJ_DEF, SURJ_DEF, NOT_IN_EMPTY]
    >- (Q.EXISTS_TAC `c`
        >> Q.EXISTS_TAC `0`
@@ -3597,7 +3589,8 @@ val FINITE_BIJ_COUNT_EQ = store_thm
    >> Know `!x. x IN count n ==> ~(x = n)`
    >- RW_TAC arith_ss [IN_COUNT]
    >> RW_TAC std_ss [COUNT_SUC, IN_INSERT]
-   >> PROVE_TAC []);
+   >> PROVE_TAC []
+QED
 
 val FINITE_BIJ_COUNT = Q.store_thm ("FINITE_BIJ_COUNT",
   `!s. FINITE s ==> ?f b. BIJ f (count b) s`,
@@ -3801,36 +3794,33 @@ val BIGUNION_IMAGE_UNIV = store_thm (* from util_prob *)
    >> RW_TAC std_ss []
    >> PROVE_TAC [NOT_LESS]);
 
-val FINITE_BIGUNION = Q.store_thm
-("FINITE_BIGUNION",
- `!P. FINITE P /\ (!s. s IN P ==> FINITE s) ==> FINITE (BIGUNION P)`,
-  SIMP_TAC bool_ss [GSYM AND_IMP_INTRO] THEN
-  HO_MATCH_MP_TAC FINITE_INDUCT THEN
+Theorem FINITE_BIGUNION:
+  !P. FINITE P /\ (!s. s IN P ==> FINITE s) ==> FINITE (BIGUNION P)
+Proof
+  Induct_on ‘FINITE’ THEN
   SIMP_TAC bool_ss [NOT_IN_EMPTY, FINITE_EMPTY, BIGUNION_EMPTY,
                     IN_INSERT, DISJ_IMP_THM, FORALL_AND_THM,
-                    BIGUNION_INSERT, FINITE_UNION]);
+                    BIGUNION_INSERT, FINITE_UNION]
+QED
 
 Theorem FINITE_BIGUNION_EQ[simp]:
   !P. FINITE (BIGUNION P) <=> FINITE P /\ (!s. s IN P ==> FINITE s)
 Proof
   SIMP_TAC (srw_ss()) [EQ_IMP_THM, FORALL_AND_THM, FINITE_BIGUNION] THEN
-  Q_TAC SUFF_TAC
-        `!P. FINITE P ==>
-             !Q. (BIGUNION Q = P) ==> FINITE Q /\ !s. s IN Q ==> FINITE s`
-         THEN1 PROVE_TAC [] THEN
-  HO_MATCH_MP_TAC FINITE_INDUCT THEN
+  Induct_on ‘FINITE’ >>
   SIMP_TAC (srw_ss()) [DISJ_IMP_THM] THEN
   REPEAT (GEN_TAC ORELSE DISCH_THEN STRIP_ASSUME_TAC) THEN
+  Q.RENAME_TAC [‘BIGUNION Q = e INSERT P’] THEN
   `BIGUNION (IMAGE (\s. s DELETE e) Q) = P`
      by (REWRITE_TAC [EXTENSION] THEN
          ASM_SIMP_TAC (srw_ss() ++ DNF_ss)
                       [IN_BIGUNION, IN_IMAGE, IN_DELETE] THEN
          Q.X_GEN_TAC `x` THEN EQ_TAC THEN STRIP_TAC THENL [
            `x IN BIGUNION Q` by (SRW_TAC [][] THEN METIS_TAC []) THEN
-           POP_ASSUM MP_TAC THEN ASM_SIMP_TAC bool_ss [IN_INSERT],
+           POP_ASSUM MP_TAC THEN METIS_TAC[IN_INSERT],
            `x IN (e INSERT P)` by SRW_TAC [][] THEN
            `~(x = e)` by PROVE_TAC [] THEN
-           `x IN BIGUNION Q` by ASM_SIMP_TAC bool_ss [IN_INSERT] THEN
+           `x IN BIGUNION Q` by METIS_TAC[] THEN
            POP_ASSUM MP_TAC THEN SRW_TAC [][]
          ]) THEN
   `FINITE (IMAGE (\s. s DELETE e) Q) /\
