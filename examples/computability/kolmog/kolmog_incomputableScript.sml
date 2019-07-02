@@ -1301,6 +1301,18 @@ QED
 
 (* up to here *)
 
+
+Theorem univ_rf_no_pf:
+  univ_rf U ==> ¬prefix_free {x | ∃y. U x = SOME y}
+Proof
+  rw[prefix_free_def] >> fs[univ_rf_def,kolmog_complexity_def] >>
+  `∀y. {p | U p = SOME y} ≠ ∅` by 
+    (`univ_rf U` by fs[univ_rf_def] >> fs[univ_rf_nonempty]) >>
+  fs[] >> qexists_tac`[T]` >> qexists_tac`[T;T]` >>rw[]
+QED
+
+
+
 (*
 Theorem comp_univ_comp_npkolmog:
   univ_rf U ∧ (computable (λx. THE (kolmog_complexity x U) ) ) ==> computable np_kolmog 
