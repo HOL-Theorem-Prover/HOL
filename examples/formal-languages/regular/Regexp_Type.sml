@@ -78,9 +78,9 @@ fun charset_of clist = itlist charset_insert clist charset_empty;
 
 fun charset_sing c = charset_of [c];
 
-fun charset_span b t = 
+fun charset_span b t =
  if 0 <= b andalso b <= 255 andalso
-    0 <= t andalso t <= 255 
+    0 <= t andalso t <= 255
  then
    charset_of (map Char.chr (upto b t))
  else raise ERR "charset_span" "";
@@ -196,7 +196,7 @@ fun charset_string cset =
                       if i <= 100 then "0" else ""),
                 Int.toString i]
       end
-     fun printerval (i,j) = 
+     fun printerval (i,j) =
       if i=j then prchar (Char.chr i)
       else String.concat [prchar (Char.chr i),"-", prchar(Char.chr j)]
      val ords = List.map Char.ord (charset_elts cset)
@@ -598,7 +598,7 @@ fun PARSE_ERR s ss =
 (* We parse into tree, from which it is easy to generate regexp               *)
 (*---------------------------------------------------------------------------*)
 
-datatype tree 
+datatype tree
    = Ident of Char.char
    | Cset of charset
    | Ap of string * tree list
@@ -781,12 +781,12 @@ fun tree_to_regexp intervalFn =
     | Ap("Not",[t]) => Neg(t2r t)
     | Ap("interval",[]) => raise ERR "tree_to_regexp" "missing interval parameters"
     | Ap(other,_) => raise ERR "tree_to_regexp" ("unknown operator: "^other)
- in 
+ in
    t2r
  end
 ;
 
-val the_intervalFn : (IntInf.int * IntInf.int -> regexp) ref = 
+val the_intervalFn : (IntInf.int * IntInf.int -> regexp) ref =
   ref (fn _ => raise ERR "tree_to_regexp" "interval regexp generator not installed")
 
 fun get_intervalFn() = !the_intervalFn

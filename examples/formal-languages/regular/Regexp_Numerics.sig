@@ -4,7 +4,7 @@ sig
   type regexp = Regexp_Type.regexp
   type word8 = Word8.word;
   type bigint = IntInf.int
-		      
+
   datatype endian = LSB | MSB
 
   val compare_endian : endian * endian -> order
@@ -16,7 +16,7 @@ sig
   (*---------------------------------------------------------------------------*)
   (* Width in certain encodings                                                *)
   (*---------------------------------------------------------------------------*)
-				       
+
   val width_of : encoding -> bigint -> int
   val interval_width : encoding -> bigint * bigint -> int
 
@@ -58,7 +58,7 @@ sig
   val sign_mag_interval  : endian -> int -> bigint * bigint -> regexp
 
   val interval_regexp : encoding -> endian -> int -> bigint * bigint -> regexp
-  val test_interval   : encoding -> endian -> int -> bigint * bigint 
+  val test_interval   : encoding -> endian -> int -> bigint * bigint
                          -> regexp * int * (bigint->bool)
 
 (*

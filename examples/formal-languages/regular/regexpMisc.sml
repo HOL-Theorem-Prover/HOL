@@ -2,7 +2,7 @@ structure regexpMisc :> regexpMisc =
 struct
 
 open HolKernel;
-    
+
 fun succeed() = OS.Process.terminate OS.Process.success
 fun fail() = OS.Process.terminate OS.Process.failure;
 
@@ -40,7 +40,7 @@ fun bigIntervals ilist =
      val slist = Listsort.sort IntInf.compare ilist
      fun follows j i = (j = i) orelse (j = i + one)
      fun chop (left,last,[]) A = (left,last)::A
-       | chop (left,last,h::t) A = 
+       | chop (left,last,h::t) A =
           if follows h last
            then chop (left,h,t) A
            else chop (h,h,t) ((left,last)::A)
@@ -50,7 +50,7 @@ fun bigIntervals ilist =
        | (i::t) => rev (chop (i,i,t) [])
  end;
 
-val intervals = 
+val intervals =
     map (IntInf.toInt##IntInf.toInt) o bigIntervals o map IntInf.fromInt
 
 fun twoE i = IntInf.pow (IntInf.fromInt 2,i);

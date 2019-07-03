@@ -70,7 +70,7 @@ sig
 
  val get_intervalFn : unit -> (IntInf.int * IntInf.int -> regexp)
  val set_intervalFn : (IntInf.int * IntInf.int -> regexp) -> unit
-						  
+
  val fromSubstring : substring -> regexp
  val fromString    : string -> regexp
  val fromQuote     : 'a frag list -> regexp

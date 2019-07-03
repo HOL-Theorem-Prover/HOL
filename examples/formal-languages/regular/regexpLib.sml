@@ -123,6 +123,18 @@ val check_these_consts = computeLib.unmapped compset;
 val regexpEval = computeLib.CBV_CONV compset;
 
 (*
+fun check_compset() =
+ let fun join (s1,s2) = s2^"."^s1
+ in case computeLib.unmapped compset
+     of [] => ()
+      | check_these =>
+         (stdErr_print "Unmapped consts in regexp_compset: \n  ";
+          stdErr_print (String.concat
+             (spreadlnWith {sep=", ", ln = "\n  ", width = 5}
+                           join check_these));
+          stdErr_print "\n\n")
+ end
+
 max_print_depth := 25;
 
 fun compile q =
@@ -279,12 +291,12 @@ val charset_conv_ss =
 (* Set up default generator for interval regexps                             *)
 (*---------------------------------------------------------------------------*)
 
-val _ = 
+val _ =
  let open Regexp_Numerics
-     fun iFn p = 
+     fun iFn p =
         twos_comp_interval LSB (interval_width Twos_comp p) p
- in 
-    set_intervalFn iFn
+ in
+    Regexp_Type.set_intervalFn iFn
  end
 
 end (* regexpLib *)
