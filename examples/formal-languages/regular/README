@@ -207,9 +207,9 @@ July 1, 2017
 
 July 1, 2019
 
-* Expansion of support for numeric encodings in regexps.
+* Expansion of support for numeric encodings in regexps in Regexp_Numerics.
 
-* Removal of existing existing numeric regexp stuff in Regexp_Type. It was incomplete
-  and overly specialized.
+* Removal of existing existing numeric regexp stuff in Regexp_Type. It
+  was incomplete and overly specialized. Padding has been removed.
 
-* Codegen now available from DFA_Codegen structure.
+* Codegen now available from DFA_Codegen structure, as well as regexp2dfa.
