@@ -476,4 +476,6 @@ fun LEQ enc dir width n =
 
 fun GTR enc dir width n = And(EVEN dir, Neg (LEQ enc dir width n));
 
-end;
+*)
+
+end
