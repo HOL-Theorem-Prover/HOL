@@ -176,7 +176,7 @@ val _ = app test [(`abc`, ["abc"]),
                   (`+(**)y`, ["+", "y"]),
                   (`((*x*)`, ["("]),
                   (`+(%*%((*"*)-*foo`,["+(%*%(", "-*foo"]),
-                  (`"(*"`, ["\"(*\""]),
+                  (`"(*"`, ["BTStrL(\",\"(*\")"]),
                   (`foo$bar`, ["foo$bar"]),
                   (`+foo$bar`, ["+", "foo$bar"]),
                   (`+foo$bar+`, ["+", "foo$bar", "+"])
@@ -209,18 +209,21 @@ fun failtest (s, substring) =
 
 val ai = Arbnum.fromInt
 fun snum i = Numeral(ai i, NONE)
-
+fun stdstr s = StrLit{ldelim = "\"", contents = s}
+fun charstr s = StrLit{ldelim = "#\"", contents = s}
+fun guillstr s = StrLit{ldelim = "«", contents = s}
 in
 val _ = app (ignore o test) [
       ("abc", [Ident "abc"]),
-      ("\"\\172\"", [Ident "\"\172\""]),
-      ("#\"c\"", [Ident "#\"c\""]),
-      ("f#\"c\"", [Ident "f", Ident "#\"c\""]),
+      ("\"\\172\"", [stdstr "\172"]),
+      ("#\"c\"", [charstr "c"]),
+      ("f#\"c\"", [Ident "f", charstr "c"]),
+      ("f(#\"c\"", [Ident "f", Ident "(", charstr "c"]),
       ("(\"ab\\172\"++z)",
-       [Ident "(", Ident "\"ab\172\"", Ident "++", Ident "z", Ident ")"]),
-      ("f\"ab\\172x\"++", [Ident "f", Ident "\"ab\172x\"", Ident "++"]),
-      ("+\"ab\\172\"++", [Ident "+", Ident "\"ab\172\"", Ident "++"]),
-      ("$+\"ab\\172\"++", [Ident "$+", Ident "\"ab\172\"", Ident "++"]),
+       [Ident "(", stdstr "ab\172", Ident "++", Ident "z", Ident ")"]),
+      ("f\"ab\\172x\"++", [Ident "f", stdstr "ab\172x", Ident "++"]),
+      ("+\"ab\\172\"++", [Ident "+", stdstr "ab\172", Ident "++"]),
+      ("$+\"ab\\172\"++", [Ident "$+", stdstr "ab\172", Ident "++"]),
       ("12", [snum 12]),
       ("-12", [Ident "-", snum 12]),
       ("((-12", [Ident "(", Ident "(", Ident "-", snum 12]),
@@ -255,15 +258,18 @@ val _ = app (ignore o test) [
       ("(thy$id+", [Ident "(", QIdent("thy", "id"), Ident "+"]),
       ("+thy$id", [Ident "+", QIdent("thy", "id")]),
       ("thy$0", [QIdent("thy", "0")]),
-      ("(thy$id\"foo\"", [Ident "(", QIdent ("thy", "id"), Ident "\"foo\""]),
+      ("(thy$id\"foo\"", [Ident "(", QIdent ("thy", "id"), stdstr "foo"]),
+      ("(thy$id#\"f\"", [Ident "(", QIdent ("thy", "id"), charstr "f"]),
+      ("(thy$id«foo b»", [Ident "(", QIdent ("thy", "id"), guillstr "foo b"]),
+      ("x+« f»", [Ident "x", Ident "+", guillstr " f"]),
       ("foo$bar<foo$baz", [QIdent ("foo", "bar"), Ident "<",
                            QIdent ("foo", "baz")]),
       ("(bool$/\\", [Ident "(", QIdent ("bool", "/\\")]),
       ("*foo$bar<foo$baz", [Ident "*", QIdent ("foo", "bar"), Ident "<",
                             QIdent ("foo", "baz")]),
       ("nm_sub$id", [QIdent ("nm_sub", "id")]),
-      ("+nm$id\"bar\"", [Ident "+", QIdent ("nm", "id"), Ident "\"bar\""]),
-      ("+nm$id\"\"", [Ident "+", QIdent ("nm", "id"), Ident "\"\""]),
+      ("+nm$id\"bar\"", [Ident "+", QIdent ("nm", "id"), stdstr "bar"]),
+      ("+nm$id\"\"", [Ident "+", QIdent ("nm", "id"), stdstr ""]),
       ("nm$**", [QIdent("nm", "**")]),
       ("$+a", [Ident "$+", Ident "a"]),
       ("$==>", [Ident "$==>"]),
@@ -278,7 +284,7 @@ val _ = app (ignore o test) [
       ("((<a+b>)", [Ident "(", Ident "(<", Ident "a", Ident "+", Ident "b",
                     Ident ">)"]),
       ("::_", [Ident "::", Ident "_"]),             (* case pattern with CONS *)
-      ("=\"\"", [Ident "=", Ident "\"\""]),             (* e.g., stringScript *)
+      ("=\"\"", [Ident "=", stdstr ""]),                (* e.g., stringScript *)
       ("$-->", [Ident "$-->"]),                       (* e.g., quotientScript *)
       ("$var$(ab)", [Ident "ab"]),
       ("$var$(ab\\nc)", [Ident "ab\nc"]),

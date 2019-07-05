@@ -120,6 +120,19 @@ fun gen_mk_numeral {mk_comb, ZERO, ALT_ZERO, NUMERAL, BIT1, BIT2} n =
    if n=zero then ZERO else mk_comb(NUMERAL,positive n)
  end;
 
+fun mk_numerallit_term n =
+    let
+      val num_ty = mk_thy_type{Thy = "num", Tyop = "num", Args = []}
+      val ALT_ZERO =
+          mk_thy_const{Thy = "arithmetic", Name = "ZERO", Ty = num_ty}
+      val ZERO = mk_thy_const{Thy = "num", Name = "0", Ty = num_ty}
+      fun mkf s =
+          mk_thy_const{Thy = "arithmetic", Name = s, Ty = num_ty --> num_ty}
+    in
+      gen_mk_numeral{mk_comb=mk_comb,ZERO = ZERO, ALT_ZERO= ALT_ZERO,
+                     NUMERAL = mkf "NUMERAL", BIT1 = mkf "BIT1",
+                     BIT2 = mkf "BIT2"} n
+    end
 
 (*---------------------------------------------------------------------------
                   STRINGS
@@ -224,6 +237,36 @@ fun mk_string_lit {mk_string,fromMLchar,emptystring} s = let
 in
   recurse (emptystring, String.size s - 1)
 end
+
+fun mk_charlit_term c =
+    let
+      val char_ty = mk_thy_type{Args = [], Thy = "string", Tyop = "char"}
+      val num_ty = mk_thy_type{Args = [], Thy = "num", Tyop = "num"}
+      val CHR_t =
+          mk_thy_const{Name = "CHR", Thy = "string", Ty = num_ty --> char_ty}
+    in
+      c |> Char.ord |> Arbnum.fromInt |> mk_numerallit_term
+        |> curry mk_comb CHR_t
+    end handle HOL_ERR _ =>
+               raise ERR "mk_charlit_term"
+                     "Can't build character values in this theory context"
+
+fun mk_stringlit_term s =
+    let
+      val char_ty = mk_thy_type{Args = [], Thy = "string", Tyop = "char"}
+      val string_ty = mk_thy_type{Args = [char_ty], Thy = "list", Tyop = "list"}
+      val cons_t = mk_thy_const{Name = "CONS", Thy = "list",
+                                Ty = char_ty --> (string_ty --> string_ty)}
+      fun mks (t1, t2) = list_mk_comb(cons_t, [t1,t2])
+    in
+      mk_string_lit {mk_string = mks, fromMLchar = mk_charlit_term,
+                     emptystring = mk_thy_const{Name = "NIL", Thy = "list",
+                                                Ty = string_ty}}
+                    s
+    end handle HOL_ERR _ =>
+               raise ERR "mk_stringlit_term"
+                     "Can't build string values in this theory context"
+
 
 (*---------------------------------------------------------------------------*)
 (* There are other possible literals, e.g. for word[n]. This ref cell is     *)
