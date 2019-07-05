@@ -444,7 +444,7 @@ fun test_interval enc dir w (lo,hi) =
      val _ = print (Int.toString states^" states\n")
      fun testFn i = matcher (iint2string enc dir w i)
      val ivl = bigUpto lo hi
-     val _ = if Lib.all I (map testFn ivl) then 
+     val _ = if Lib.all I (map testFn ivl) then
               print "all elements of interval matched" else
              raise ERR "test_interval" "number in interval fails match"
  in

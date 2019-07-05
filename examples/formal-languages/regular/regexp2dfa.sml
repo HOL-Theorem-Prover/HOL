@@ -93,7 +93,7 @@ fun main () =
      | SOME (justify,lang,name,rstring) =>
       let val regexp = parse_regexp rstring
           val _ = stdErr_print "Parsed regexp, now constructing DFA ... "
-          val (result as (_,_,finals,table)) = 
+          val (result as (_,_,finals,table)) =
                  deconstruct (compile_regexp justify regexp)
           val dfa = {name=name,src_regexp=rstring, finals=finals,table=table}
           val ostrm = TextIO.stdOut
@@ -104,7 +104,7 @@ fun main () =
             | Sml  => DFA_Codegen.SML dfa ostrm
             | Java => DFA_Codegen.Java dfa ostrm
             | Thm  => TextIO.output(ostrm, HOLfile name rstring result))
-       ; 
+       ;
          regexpMisc.succeed()
       end
 end;
