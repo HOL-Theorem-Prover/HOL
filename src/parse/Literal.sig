@@ -22,7 +22,8 @@ sig
                         fromMLchar  : char -> 'a} -> String.string -> 'a
  val mk_stringlit_term : String.string -> term
  val mk_charlit_term   : char -> term
- val string_literalpp: string -> string
+ val string_literalpp: {ldelim:string,rdelim:string} -> string -> string
+ val delim_pair : {ldelim:string} -> {ldelim:string,rdelim:string}
 
  val is_char_lit     : term -> bool
  val dest_char_lit   : term -> Char.char

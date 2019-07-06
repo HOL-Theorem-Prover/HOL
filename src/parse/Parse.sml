@@ -745,6 +745,18 @@ fun add_bare_numeral_form0 x = [ADD_NUMFORM x]
 val temp_add_bare_numeral_form = mk_temp add_bare_numeral_form0
 val add_bare_numeral_form = mk_perm add_bare_numeral_form0
 
+fun add_strliteral_form0 {ldelim,inj} =
+    let
+      val (nm, _) = dest_const inj
+      val _ = Literal.delim_pair{ldelim=ldelim} (* checks it's legit *)
+      val injname = GrammarSpecials.mk_stringinjn_name ldelim
+    in
+      [IOVERLOAD_ON(injname,inj),
+       ADD_STRLIT{ldelim=ldelim,tmnm=nm}]
+    end
+val temp_add_strliteral_form = mk_temp add_strliteral_form0
+val add_strliteral_form = mk_perm add_strliteral_form0
+
 fun temp_give_num_priority c = let open term_grammar in
     the_term_grammar := give_num_priority (term_grammar()) c;
     term_grammar_changed := true

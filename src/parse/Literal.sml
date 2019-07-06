@@ -177,8 +177,9 @@ val is_string_lit = can dest_string_lit
 val paranoid_stringlitpp = ref false
 val _ = Feedback.register_btrace
             ("paranoid string literal printing", paranoid_stringlitpp)
-fun string_literalpp s =
-    if not (!paranoid_stringlitpp) then Lib.mlquote s
+fun string_literalpp {ldelim,rdelim} s =
+    if not (!paranoid_stringlitpp) then
+      ldelim ^ String.toString s ^ rdelim
     else let
         val limit = size s
         fun sub i = String.sub(s,i)
@@ -186,25 +187,32 @@ fun string_literalpp s =
         val concat = String.concat
         val toString = String.toString
         fun recurse A lastc start i =
-            if i >= limit then concat (List.rev("\"" :: extract(start,NONE)::A))
+            if i >= limit then
+              concat (List.rev(rdelim :: extract(start,NONE)::A))
             else
               case (lastc, sub i) of
                 (#"(", #"*") => let
-                  val p = toString (extract(start,SOME (i - start - 1))) ^ "(\\042"
+                  val p =
+                      toString (extract(start,SOME (i - start - 1))) ^ "(\\042"
                 in
                   recurse (p::A) #" " (i + 1) (i + 1)
                 end
               | (#"*", #")") => let
-                  val p = toString (extract(start,SOME(i - start - 1))) ^ "\\042)"
+                  val p =
+                      toString (extract(start,SOME(i - start - 1))) ^ "\\042)"
                 in
                   recurse (p::A) #" " (i + 1) (i + 1)
                 end
               | (_, c) => recurse A c start (i + 1)
       in
-        recurse ["\""] #" " 0 0
+        recurse [ldelim] #" " 0 0
       end
 
-
+fun delim_pair {ldelim} =
+    case ldelim of
+        "\"" => {ldelim = "\"", rdelim = "\""}
+      | "\194\171" => {ldelim = ldelim, rdelim = "\194\187"}
+      | _ => raise Fail ("delim_pair: bad left delim: "^ldelim)
 
 (*---------------------------------------------------------------------------*)
 (* Redefine dest_string_lit to handle cases where c in CHR (c) is either a   *)
