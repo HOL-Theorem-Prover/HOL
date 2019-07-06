@@ -708,7 +708,7 @@ There are no theorems about \ml{:>}; its use is as a convenient syntax for funct
 For example, chains of updates can lose some parentheses if written
 \begin{hol}
 \begin{verbatim}
-   f :> (k1 += v1) :> (k2 += v2) :> (k3 += v3)
+   f :> (k1 =+ v1) :> (k2 =+ v2) :> (k3 =+ v3)
 \end{verbatim}
 \end{hol}
 This presentation also makes the order in which functions are applied read from left-to-right.
