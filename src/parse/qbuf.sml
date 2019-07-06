@@ -116,28 +116,31 @@ struct
   fun replace_current t r =
       case !r of (lb, (_, rest), nf_q, q) => r := (lb, (t,rest), nf_q, q)
 
-  fun toString r = case !r of (lbopt, ((c,_),rest), nf_q, q) => let
-    fun lb_toStringList acc lexfn = let
-      val (t,locn) = lexfn ()
-    in
-      case t of
-        BT_EOI => (acc, true)
-      | _ =>  lb_toStringList (base_tokens.toString t::" "::acc) lexfn
-    end handle base_tokens.LEX_ERR (s,errlocn) => (acc, false)
-    val bt2str = base_tokens.toString
-    val acc0 = List.rev (bt2str c :: map (bt2str o #1) rest)
-    val (buffered, ok) =
-        case lbopt of
-          SOME lexfn => lb_toStringList acc0 lexfn
-        | NONE => (acc0, true)
-    fun q_toString acc [] = acc
-      | q_toString acc (QUOTE s :: t) = q_toString (s::acc) t
-      | q_toString acc (ANTIQUOTE _ :: t) = q_toString (" <AQ> "::acc) t
-  in
-    if ok then
-      String.concat (List.rev (q_toString buffered q))
-    else
-      String.concat (List.rev buffered)
-  end
+  fun toString (r:'a qbuf) =
+      case !r of
+          (lbopt, ((c,_),rest), nf_q, q) =>
+          let
+            fun lb_toStringList acc lexfn = let
+              val (t,locn) = lexfn ()
+            in
+              case t of
+                  BT_EOI => (acc, true)
+                | _ =>  lb_toStringList (base_tokens.toString t::" "::acc) lexfn
+            end handle base_tokens.LEX_ERR (s,errlocn) => (acc, false)
+            val bt2str = base_tokens.toString
+            val acc0 = List.rev (bt2str c :: map (bt2str o #1) rest)
+            val (buffered, ok) =
+                case lbopt of
+                    SOME lexfn => lb_toStringList acc0 lexfn
+                  | NONE => (acc0, true)
+            fun q_toString acc [] = acc
+              | q_toString acc (QUOTE s :: t) = q_toString (s::acc) t
+              | q_toString acc (ANTIQUOTE _ :: t) = q_toString (" <AQ> "::acc) t
+          in
+            if ok then
+              String.concat (List.rev (q_toString buffered q))
+            else
+              String.concat (List.rev buffered)
+          end
 
 end;
