@@ -284,8 +284,6 @@ fun boss_end threadl completedl =
     val _ = boss_stop_workers threadl
     val _ = print_endline ("  " ^ its ncore ^ " workers stopped")
     val l = dict_sort compare_imin (map swap completedl)
-    val jobs = String.concatWith " " (map (its o snd) l)
-    val _ = print_endline ("  completed jobs: " ^ jobs)
   in
     map fst l
   end

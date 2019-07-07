@@ -32,8 +32,8 @@ sig
     }
 
   val random_startboard : unit -> board
-  val write_boardl : board list -> unit
-  val read_boardl : unit -> board list
+  val write_boardll : board list list -> unit
+  val read_boardll : unit -> board list list
   val movel_glob : move list
   val nocard : card
   val nohand : card vector
@@ -53,11 +53,11 @@ sig
   val tnnl_file : unit -> string list
 
   val explore_parallel : 
-    mlTreeNeuralNetwork.dhtnn * mlTreeNeuralNetwork.tnn list -> board list ->
-    (term * real list * real list) list list
-  val lookahead :  
+    mlTreeNeuralNetwork.dhtnn * mlTreeNeuralNetwork.tnn list -> 
+    board list list -> (term * real list * real list) list list
+  val lookahead_boardl :  
     int * mlTreeNeuralNetwork.dhtnn * mlTreeNeuralNetwork.tnn list ->
-    int * int -> board -> unit
+    int * int -> board list -> unit
 
 
 end

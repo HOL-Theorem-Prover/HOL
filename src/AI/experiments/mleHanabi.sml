@@ -378,7 +378,7 @@ fun choose_move tnn board =
     val mscl1 = combine (movel_glob,scl)
     val mscl2 = filter (is_applicable board o fst) mscl1
   in
-    select_in_distrib mscl2
+    best_in_distrib mscl2
   end
 
 fun tnn_game tnn =
@@ -579,7 +579,7 @@ fun lookahead_loop nsim (dhtnn,tnnl) board distrib =
 
 fun widexl_file (wid,job) = wid_dir wid ^ "/exl" ^ its job
 
-fun lookahead (nsim,dhtnn,tnnl) (wid,job) board =
+fun lookahead (nsim,dhtnn,tnnl) board =
   let
     val distrib_init = init_distrib dhtnn board
     val ((sumtot,vistot), distrib) = 
@@ -587,7 +587,12 @@ fun lookahead (nsim,dhtnn,tnnl) (wid,job) board =
     val newe = sumtot / vistot
     val newp = map (fn x => (snd (snd x) / (vistot - 1.0))) distrib
   in
-    write_dhex (widexl_file (wid,job)) [(nntm_of_board board,[newe],newp)]
+    (nntm_of_board board,[newe],newp)
+  end
+
+fun lookahead_boardl (nsim,dhtnn,tnnl) (wid,job) boardl =
+  let val exl = map (lookahead (nsim,dhtnn,tnnl)) boardl in
+    write_dhex (widexl_file (wid,job)) exl
   end
 
 (* -------------------------------------------------------------------------
@@ -615,8 +620,8 @@ fun string_of_board {p1turn,hand1,hand2,clues1,clues2,clues,
     string_of_hand pile
     ]
   
-fun write_boardl boardl =
-  writel (boardl_file ()) (map string_of_board boardl)   
+fun write_boardll boardll =
+  writel (boardl_file ()) (map string_of_board (List.concat boardll))   
   
 fun board_of_string s = 
   case String.fields (fn x => x = #",") s of
@@ -636,7 +641,8 @@ fun board_of_string s =
     }
   | _ => raise ERR "board_of_string" ""
 
-fun read_boardl () = map board_of_string (readl (boardl_file ()))
+fun read_boardll () = 
+  mk_batch_full 100 (map board_of_string (readl (boardl_file ())))
 
 (* load "mleHanabi"; open mleHanabi;
 val boardl1 = [random_startboard (),random_startboard ()];
@@ -675,21 +681,21 @@ fun read_result_extern (wid,job) =
 
 val ncore_explore = ref 8
 
-fun explore_parallel (dhtnn,tnnl) boardl =
+fun explore_parallel (dhtnn,tnnl) boardll =
   let
     fun write_state () = 
       (
       write_dhtnn (dhtnn_file ()) dhtnn;
       app (uncurry write_tnn) (combine (tnnl_file (),tnnl))
       )
-    val write_argl = write_boardl
+    val write_argl = write_boardll
     val state_s = read_state_s ()
-    val argl_s = "mleHanabi.read_boardl ()"
-    val f_s = "mleHanabi.lookahead"
+    val argl_s = "mleHanabi.read_boardll ()"
+    val f_s = "mleHanabi.lookahead_boardl"
     fun code_of wid = standard_code_of (state_s,argl_s,f_s) wid
   in
     parmap_queue_extern (!ncore_explore) code_of (write_state, write_argl)
-    read_result_extern boardl
+    read_result_extern boardll
   end
 
 (* -------------------------------------------------------------------------
@@ -741,12 +747,13 @@ fun rl_loop_aux (n,nmax) dhtnn =
     val _ = summary ("Eval score: " ^ rts (average_real scl))
     val _ = summary "Guess"
     val boardl = List.concat (map (map fst o fst) gamel)
+    val boardll = mk_batch_full 100 boardl
     val exll = list_combine (map extract_guess boardl)
     val _ = summary "Guess examples"
     val (tnnl,t) = add_time (smlParallel.parmap_batch 5 (train_tnn 1)) exll
     val _ = summary ("Guess network: " ^ rts t)
     val _ = summary "Lookahead"
-    val (exl,t) = add_time (explore_parallel (dhtnn,tnnl)) boardl
+    val (exl,t) = add_time (explore_parallel (dhtnn,tnnl)) boardll
     val _ = summary ("Lookahead examples: " ^ rts t)
     val _ = summary "Lookahead network"
     val randdhtnn = random_dhtnn (!dim_glob,length movel_glob) operl
@@ -768,16 +775,16 @@ load "mleHanabi"; open mleHanabi;
 load "aiLib"; open aiLib;
 load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
 
-summary_file := "hanabi_run13";
+summary_file := "hanabi_run14";
 dim_glob := 4;
-nepoch_glob := 25;
+nepoch_glob := 100;
 bsize_glob := 16;
 lr_glob := 0.02;
-ngame_glob := 1000;
-ncore_explore := 60;
-nsim_glob := 1600;
+ngame_glob := 500;
+ncore_explore := 50;
+nsim_glob := 800;
 
-val dhtnn = rl_loop 10;
+val dhtnn = rl_loop 100;
 *)
 
 end (* struct *)
