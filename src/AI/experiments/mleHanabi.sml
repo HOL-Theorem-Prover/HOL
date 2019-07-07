@@ -378,7 +378,7 @@ fun choose_move tnn board =
     val mscl1 = combine (movel_glob,scl)
     val mscl2 = filter (is_applicable board o fst) mscl1
   in
-    best_in_distrib mscl2
+    select_in_distrib mscl2
   end
 
 fun tnn_game tnn =
@@ -749,16 +749,19 @@ fun rl_loop_aux (n,nmax) dhtnn =
     val boardl = List.concat (map (map fst o fst) gamel)
     val boardll = mk_batch_full 100 boardl
     val exll = list_combine (map extract_guess boardl)
-    val _ = summary "Guess examples"
+    val _ = summary 
+      ("Guess examples:" ^ String.concatWith " " (map (its o length) exll))
     val (tnnl,t) = add_time (smlParallel.parmap_batch 5 (train_tnn 1)) exll
     val _ = summary ("Guess network: " ^ rts t)
     val _ = summary "Lookahead"
     val (exl,t) = add_time (explore_parallel (dhtnn,tnnl)) boardll
-    val _ = summary ("Lookahead examples: " ^ rts t)
-    val _ = summary "Lookahead network"
+    val _ = summary ("Lookahead examples: " ^ its (length exl))
+    val _ = summary ("Lookahead time: " ^ rts t)
     val randdhtnn = random_dhtnn (!dim_glob,length movel_glob) operl
-    val newdhtnn = train_dhtnn_schedule 4 randdhtnn (!bsize_glob) 
-      (List.concat exl) [(!nepoch_glob,!lr_glob)]
+    val (newdhtnn,t) = add_time 
+      (train_dhtnn_schedule 4 randdhtnn (!bsize_glob) 
+      (List.concat exl)) [(!nepoch_glob,!lr_glob)]
+    val _ = summary ("Lookahead network: " ^ rts t)
   in
     rl_loop_aux (n+1,nmax) newdhtnn
   end
@@ -775,16 +778,16 @@ load "mleHanabi"; open mleHanabi;
 load "aiLib"; open aiLib;
 load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
 
-summary_file := "hanabi_run14";
-dim_glob := 4;
+summary_file := "hanabi_run15";
+dim_glob := 8;
 nepoch_glob := 100;
 bsize_glob := 16;
 lr_glob := 0.02;
-ngame_glob := 500;
-ncore_explore := 50;
-nsim_glob := 800;
+ngame_glob := 1000;
+ncore_explore := 5;
+nsim_glob := 1600;
 
-val dhtnn = rl_loop 100;
+val dhtnn = rl_loop 20;
 *)
 
 end (* struct *)
