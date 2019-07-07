@@ -118,8 +118,9 @@ sig
   val random_real : unit -> real
   val shuffle   : 'a list -> 'a list
   val random_elem : 'a list -> 'a
-  val random_int : (int * int) -> int (* slow uses random_elem *)
+  val random_int : (int * int) -> int (* uses random_elem *)
   val select_in_distrib : ('a * real) list -> 'a
+  val best_in_distrib : ('a * real) list -> 'a
   val random_percent : real -> 'a list -> 'a list * 'a list
 
   (* input/output *)

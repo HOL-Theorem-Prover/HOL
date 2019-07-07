@@ -855,6 +855,11 @@ fun select_in_distrib l =
     find_cumul (random_real () * tot) l'
   end
 
+fun best_in_distrib distrib =
+  let fun cmp (a,b) = Real.compare (snd b,snd a) in
+    fst (hd (dict_sort cmp distrib))
+  end
+
 fun random_percent percent l =
   part_n (Real.floor (percent * Real.fromInt (length l))) (shuffle l)
 

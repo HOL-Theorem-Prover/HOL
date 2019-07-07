@@ -20,55 +20,10 @@ val ERR = mk_HOL_ERR "psMCTS"
    Global fixed parameters
    ------------------------------------------------------------------------- *)
 
-val exploration_coeff = ref 2.0 (* 2.4 from a comment in Leela chess blog *)
-
-(* -------------------------------------------------------------------------
-   Timers
-   ------------------------------------------------------------------------- *)
-
-val backuptime = ref 0.0
-val selecttime = ref 0.0
-val fevalpolitime = ref 0.0
-val statusoftime  = ref 0.0
-val applymovetime = ref 0.0
-
-fun backup_timer f x = total_time backuptime f x
-fun select_timer f x = total_time selecttime f x
-fun fevalpoli_timer f x  = total_time fevalpolitime f x
-fun status_of_timer f x  = total_time statusoftime f x
-fun apply_move_timer f x = total_time applymovetime f x
-
-fun init_timers () =
-  (
-  backuptime    := 0.0;
-  selecttime    := 0.0;
-  fevalpolitime := 0.0;
-  statusoftime  := 0.0;
-  applymovetime := 0.0
-  )
-
-fun print_timers tim =
-  print_endline (String.concatWith "\n"
-    [
-    "  backup time     : " ^ Real.toString (!backuptime),
-    "  select time     : " ^ Real.toString (!selecttime),
-    "  fevalpoli time  : " ^ Real.toString (!fevalpolitime),
-    "  status_of time  : " ^ Real.toString (!statusoftime),
-    "  apply_move time : " ^ Real.toString (!applymovetime)
-    ])
-
-(* -------------------------------------------------------------------------
-   Debug
-   ------------------------------------------------------------------------- *)
-
-fun string_of_id id = String.concatWith " " (map int_to_string id)
-
-fun string_of_poli poli =
-  let fun f ((s,r),i) =
-    s ^ " " ^ Real.toString (approx 2 r) ^ " " ^ int_to_string i
-  in
-    String.concatWith "\n  " (map f poli)
-  end
+val exploration_coeff = ref 2.0
+val temperature_flag = ref false
+val alpha_glob = ref 0.2
+val stopatwin_flag = ref false
 
 (* -------------------------------------------------------------------------
    Node
@@ -145,8 +100,6 @@ fun backup decay tree (id,eval) =
    Adding dirichlet noise
    ------------------------------------------------------------------------- *)
 
-val alpha_glob = ref 0.2
-
 val gammatable =
  [(1, 99.43258512),(2, 49.44221016),(3, 32.78499835),(4, 24.46095502),
   (5, 19.47008531),(6, 16.14572749),(7, 13.77360061),(8, 11.99656638),
@@ -169,7 +122,7 @@ fun gamma_distrib alpha =
 
 fun proba_norm l =
   let val sum = sum_real l in
-    if sum <= 0.0 then raise ERR "proba_norm" "" else
+    if sum <= 0.0001 then raise ERR "proba_norm" "" else
     map (fn x => x / sum) l
   end
 
@@ -214,7 +167,7 @@ fun node_create_backup decay fevalpoli status_of tree (id,sit) =
       {pol=rescale_pol (wrap_poli poli),
        sit=sit, sum=0.0, vis=0.0, status=status}
     val tree1 = dadd id node tree
-    val tree2 = backup_timer (backup decay tree1) (id,eval)
+    val tree2 = backup decay tree1 (id,eval)
   in
     tree2
   end
@@ -303,27 +256,21 @@ fun starttree_of (nsim,decay,noiseb,status_of,apply_move,fep) startsit =
     node_create_backup decay fep status_of empty_tree ([0],startsit)
   end
 
-(* two players *)
-val stopatwin_flag = ref false
-
 fun mcts (nsim,decay,noiseb,status_of,apply_move,fep) starttree =
   let
     val starttree_noise =
       if noiseb then add_root_noise starttree else starttree
-    val fep_timed = fevalpoli_timer fep
-    val status_of_timed = status_of_timer status_of
-    val apply_move_timed = apply_move_timer apply_move
     fun loop tree =
       if #vis (dfind [0] tree) > Real.fromInt nsim + 0.5 
          orelse (!stopatwin_flag andalso #status (dfind [0] tree) = Win)      
       then tree 
       else
       let
-        val selecto = select_timer (select_child decay tree) [0]
-        val newtree  = case selecto of
+        val selecto = select_child decay tree [0]
+        val newtree = case selecto of
             TreeUpdate tree_upd => tree_upd
           | NodeSelect (id,cid) => expand decay
-          fep_timed status_of_timed apply_move_timed tree (id,cid)
+              fep status_of apply_move tree (id,cid)
       in
         loop newtree
       end
@@ -479,13 +426,6 @@ fun print_distrib g l =
     print_endline ("  " ^ String.concatWith ", " (map f1 l));
     print_endline ("  " ^ String.concatWith ", " (map f2 l))
   end
-
-fun best_in_distrib distrib =
-  let fun cmp (a,b) = Real.compare (snd b,snd a) in
-    fst (hd (dict_sort cmp distrib))
-  end
-
-val temperature_flag = ref false
 
 fun select_bigstep tree id =
   let

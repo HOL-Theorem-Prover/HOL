@@ -52,8 +52,6 @@ sig
   val cut_tree : ('a,'b) tree -> int list -> ('a,'b) tree
 
   (* statistics *)
-  val init_timers : unit -> unit 
-  val print_timers : unit -> unit
   val root_variation : ('a,'b) tree -> (int list) list
   val max_depth : ('a,'b) tree -> int list -> int  
   val trace_one_win : 

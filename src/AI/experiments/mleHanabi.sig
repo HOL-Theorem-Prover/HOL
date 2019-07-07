@@ -1,6 +1,8 @@
 signature mleHanabi =
 sig
   
+  include Abbrev
+
   datatype color = Red | Yellow | Green | Blue | White | NoColor
   type card = int * color
 
@@ -11,8 +13,8 @@ sig
   val bsize_glob : int ref
   val lr_glob : real ref
   val nepoch_glob : int ref
-  val ngame_glob : int ref 
-  val npop_glob : int ref
+  val ngame_glob : int ref
+  val nsim_glob : int ref
 
   datatype move =
     Play of int
@@ -30,13 +32,32 @@ sig
     }
 
   val random_startboard : unit -> board
+  val write_boardl : board list -> unit
+  val read_boardl : unit -> board list
+  val movel_glob : move list
+  val nocard : card
+  val nohand : card vector
+  val has_noclues : board -> bool
+  val cardl_ext : card list
   val operl : (term * int) list
   val nntm_of_board : board -> term
   val nntm_of_move : move -> term
   val nntm_of_boardmove : (board * move) -> term
-  val random_game : unit -> ((board * move) list * int)
-  val tnn_game : mlTreeNeuralNetwork.tnn -> ((board * move) list * int)
-  val evaluate : int -> mlTreeNeuralNetwork.tnn -> real
-  val rl_loop : int -> mlTreeNeuralNetwork.tnn
+  val tnn_game : mlTreeNeuralNetwork.dhtnn -> ((board * move) list * int)
+  val select_hand : ((card * real) list -> card) -> 
+    mlTreeNeuralNetwork.tnn list -> board -> card vector
+  val accuracy : mlTreeNeuralNetwork.tnn list -> board list -> real
+  val rl_loop : int -> mlTreeNeuralNetwork.dhtnn
+ 
+  val dhtnn_file : unit -> string
+  val tnnl_file : unit -> string list
+
+  val explore_parallel : 
+    mlTreeNeuralNetwork.dhtnn * mlTreeNeuralNetwork.tnn list -> board list ->
+    (term * real list * real list) list list
+  val lookahead :  
+    int * mlTreeNeuralNetwork.dhtnn * mlTreeNeuralNetwork.tnn list ->
+    int * int -> board -> unit
+
 
 end
