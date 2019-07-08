@@ -223,9 +223,9 @@ We can now prove the following:
 \begin{session}
 \begin{alltt}
 >> g `!R. confluent R ==>
-         !x y z.
-           RTC R x y /\ normform R y /\
-           RTC R x z /\ normform R z ==> (y = z)`;
+          !x y z.
+            RTC R x y /\ normform R y /\
+            RTC R x z /\ normform R z ==> (y = z)`;
 \end{alltt}
 \end{session}
 We rewrite with the definition of confluence:
@@ -321,21 +321,17 @@ direction (to $z$) and many steps in another (to $p$), then the
 diamond property for $R$ will guarantee us the existence of $r$,
 to which will we be able to take many steps from both $p$ and $z$.
 
-We take some care to state the goal so that after stripping away the
-outermost assumption (that $R$ has the diamond property), it will match the
-induction principle for \con{RTC}.\footnote{In this and subsequent
-  proofs using the sub-goal package, we will present the proof manager
-  as if the goal to be proved is the first ever on this stack.  In
-  other words, we have done a \texttt{dropn 1;} after every successful
-  proof to remove the evidence of the old goal.  In practice, there is
-  no harm in leaving these goals on the proof manager's stack.}
+We state the goal so we can easily strip away the outermost assumption (that $R$ has the diamond property) before beginning the rule induction.%
+\footnote{%
+  In this and subsequent proofs using the sub-goal package, we will present the proof manager as if the goal to be proved is the first ever on this stack.
+  In other words, we have done a \texttt{dropn 1;} after every successful proof to remove the evidence of the old goal.
+  In practice, there is no harm in leaving these goals on the proof manager's stack.}
 \begin{session}
 \begin{alltt}
 >>__ dropn 1;
 >> g `!R. diamond R ==>
-          !x p. RTC R x p ==>
-                !z. R x z ==>
-                    ?u. RTC R p u /\ RTC R z u`;
+          !x p z. RTC R x p /\ R x z ==>
+                  ?u. RTC R p u /\ RTC R z u`;
 \end{alltt}
 \end{session}
 First, we strip away the diamond property assumption (two things need to be stripped: the outermost universal quantifier and the antecedent of the implication).
@@ -401,10 +397,9 @@ All we need to provide \texttt{metis\_tac} is the rules for \con{RTC}:
 \begin{session}
 \begin{alltt}
 ##eval Theorem R_RTC_diamond:
-         !R. diamond R ==>
-             !x p. RTC R x p ==>
-                   !z. R x z ==>
-                       ?u. RTC R p u /\ RTC R z u
+         !R. diamond R ⇒
+             !x p z. RTC R x p ∧ R x z ⇒
+                     ∃u. RTC R p u ∧ RTC R z u
        Proof
          strip_tac >> strip_tac >> Induct_on `RTC` >> rw[] >| [
            metis_tac [RTC_rules],
@@ -418,25 +413,28 @@ All we need to provide \texttt{metis\_tac} is the rules for \con{RTC}:
 
 Now we can move on to proving that if $R$ has the diamond property, so too does $R^*$.
 We want to prove this by induction again.
-It's very tempting to state the goal as the obvious \[
+We state the goal as the obvious \[
 \con{diamond}\;R\;\Rightarrow\;\con{diamond}\,(R^*)
 \]
-but doing so will actually make it harder to apply the induction principle when the time is right.
-Better to start out with a statement of the goal that is very near in form to the induction principle.
-So, we manually expand the meaning of \con{diamond} and state our next goal thus:
+expecting to strip away the LHS of the goal as an assumption (which will feed into the lemma we just proved), and to perform another ``RTC-induction'' on what the second \holtxt{diamond} expands into:
 \begin{session}
 \begin{alltt}
 >>__ dropn 1;
->> g `!R. diamond R ==> !x y. RTC R x y ==>
-                              !z. RTC R x z ==>
-                                  ?u. RTC R y u /\ RTC R z u`;
+>> g `!R. diamond R ==> diamond (RTC R)`;
 \end{alltt}
 \end{session}
-    Again we strip the diamond property assumption, apply the
-    induction principle, and strip repeatedly:
+So, we begin by stripping away the diamond property assumption.
+Then, we expand with the definition of \holtxt{diamond} in the goal.
 \begin{session}
 \begin{alltt}
->> e (strip_tac >> strip_tac >> Induct_on `RTC` >> rw[]);
+>> e (strip_tac >> strip_tac >> simp[diamond_def]);
+\end{alltt}
+\end{session}
+We see that the simplifier has kept the diamond-assumption untouched, but has exposed two \holtxt{RTC} terms in the goal.
+In order to make it clear that we wish to induct on the first, we can write a more elaborate pattern when we induct:
+\begin{session}
+\begin{alltt}
+>> e (Induct_on `RTC R x y` >> rw[]);
 \end{alltt}
 \end{session}
 The first goal is again an easy one, corresponding to the case where
@@ -471,28 +469,23 @@ the existence of a common destination for $x'$ and $z$:
 >>__ Theorem RTC_RTC:
        !R x y z. RTC R x y /\ RTC R y z ==> RTC R x z
      Proof
-       simp[GSYM AND_IMP_INTRO, RIGHT_FORALL_IMP_THM] >>
-       gen_tac >> Induct_on `RTC` >> metis_tac [RTC_rules]
+       gen_tac >> Induct_on `RTC R x y` >> metis_tac [RTC_rules]
      QED
 >> e (metis_tac [RTC_rules, RTC_RTC]);
 \end{alltt}
 \end{session}
-We can package this result up as a lemma and then prove the prettier
-version directly:
+We can now package up our desired result:
 \begin{session}
 \begin{alltt}
-##eval val diamond_RTC_lemma = prove(
-         ``!R.
-              diamond R ==>
-              !x y. RTC R x y ==> !z. RTC R x z ==> ?u. RTC R y u /\ RTC R z u``,
-         strip_tac >> strip_tac >> Induct_on `RTC` >> rw[] >| [
-           metis_tac [RTC_rules],
-           `?v. RTC R x' v /\ RTC R z v` by metis_tac [R_RTC_diamond] >>
-           metis_tac [RTC_RTC, RTC_rules]
-         ]);
 ##eval Theorem diamond_RTC:
          !R. diamond R ==> diamond (RTC R)
-       Proof metis_tac [diamond_def,diamond_RTC_lemma]
+       Proof
+         strip_tac >> strip_tac >> simp[diamond_def] >>
+         Induct_on `RTC R x y` >> rw[] >| [
+           metis_tac[RTC_rules],
+           `?v. RTC R x' v /\ RTC R z v` by metis_tac[R_RTC_diamond] >>
+           metis_tac [RTC_RTC, RTC_rules]
+         ]
        QED
 \end{alltt}
 \end{session}
