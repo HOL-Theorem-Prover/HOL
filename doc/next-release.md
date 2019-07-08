@@ -129,7 +129,10 @@ New features:
 -   Holmakefiles can now refer to the new variable `DEFAULT_TARGETS` in order to generate a list of the targets in the current directory that Holmake would attempt to build by default.
     This provides an easier way to adjust makefiles than that suggested in the [release notes for Kananaskis-10](http://hol-theorem-prover.org/kananaskis-10.release.html).
 
-
+-   String literals can now be injected into other types (in much the same way as numeric literals are injected into types such as `real` and `rat`).
+    Either the standard double-quotes can be used, or two flavours of guillemet, allowing *e.g.*, `“‹foo bar›”`, and `“«injected-HOL-string\n»”`.
+    Ambiguous situations are resolved with the standard overloading resolution machinery.
+    See the REFERENCE manual’s description of the `add_strliteral_form` function for details.
 
 Bugs fixed:
 -----------
