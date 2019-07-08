@@ -382,11 +382,20 @@ fun choose_move tnn board =
   end
 
 fun is_end board = null (#deck board) orelse #bombs board >= 3
-fun norm_score board = Real.fromInt (#score board) / 10.0
+
+fun norm_score board = 
+  if #bombs board >= 3 
+  then 0.0
+  else Real.fromInt (#score board) / 10.0
+
+fun final_score board = 
+  if #bombs board >= 3 
+  then 0
+  else #score board
 
 fun tnn_game tnn =
   let fun loop acc board =
-    if is_end board then (rev acc, #score board) else 
+    if is_end board then (rev acc, final_score board) else 
     let val move = choose_move tnn board in
       loop ((board,move) :: acc) (apply_move move board)
     end   
@@ -645,20 +654,9 @@ fun board_of_string s =
 fun read_boardll () = 
   mk_batch_full 100 (map board_of_string (readl (boardl_file ())))
 
-(* load "mleHanabi"; open mleHanabi;
-val boardl1 = [random_startboard (),random_startboard ()];
-write_boardl boardl1;
-val boardl2 = read_boardl ();
-boardl1 = boardl2;
-
-*)
-
-
 fun dhtnn_file () = !parallel_dir ^ "/dhtnn"
 fun tnnl_file () = 
   map (fn x => !parallel_dir ^ "/tnn" ^ x) (List.tabulate (5,its))
-
-
 
 fun read_state_s () =
   String.concatWith "\n"
@@ -721,7 +719,6 @@ fun train_tnn ncore exl =
     prepare_train_tnn (ncore,!bsize_glob) tnn tt schedule
   end
 
-
 fun summary_parameters () =
   (
   erase_file (eval_dir ^ "/" ^ !summary_file);
@@ -740,29 +737,28 @@ fun summary_parameters () =
 fun rl_loop_aux (n,nmax) dhtnn =
   if n >= nmax then dhtnn else
   let
+    val _ = summary ("Generation " ^ its n)
     val _ = summary "Eval"
     val (gamel,t) = 
       add_time List.tabulate (!ngame_glob, fn _ => tnn_game dhtnn)
     val scl = map (Real.fromInt o snd) gamel
-    val _ = summary ("Eval time: " ^ rts t)
-    val _ = summary ("Eval score: " ^ rts (average_real scl))
-    val _ = summary "Guess"
+    val _ = summary (" time: " ^ rts t)
+    val _ = summary (" score: " ^ rts (average_real scl))
     val boardl = List.concat (map (map fst o fst) gamel)
+    val _ = summary ("Examples : " ^ its (length boardl))
+    val _ = summary "Guess"
     val boardll = mk_batch_full 100 boardl
     val exll = list_combine (map extract_guess boardl)
-    val _ = summary 
-      ("Guess examples:" ^ String.concatWith " " (map (its o length) exll))
     val (tnnl,t) = add_time (smlParallel.parmap_batch 5 (train_tnn 1)) exll
-    val _ = summary ("Guess network: " ^ rts t)
+    val _ = summary ("  network: " ^ rts t)
     val _ = summary "Lookahead"
     val (exl,t) = add_time (explore_parallel (dhtnn,tnnl)) boardll
-    val _ = summary ("Lookahead examples: " ^ its (length exl))
-    val _ = summary ("Lookahead time: " ^ rts t)
+    val _ = summary ("  time: " ^ rts t)
     val randdhtnn = random_dhtnn (!dim_glob,length movel_glob) operl
     val (newdhtnn,t) = add_time 
       (train_dhtnn_schedule 4 randdhtnn (!bsize_glob) 
       (List.concat exl)) [(!nepoch_glob,!lr_glob)]
-    val _ = summary ("Lookahead network: " ^ rts t)
+    val _ = summary ("  network: " ^ rts t)
   in
     rl_loop_aux (n+1,nmax) newdhtnn
   end
@@ -779,16 +775,26 @@ load "mleHanabi"; open mleHanabi;
 load "aiLib"; open aiLib;
 load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
 
-summary_file := "hanabi_run15";
-dim_glob := 8;
+summary_file := "hanabi_run18";
+dim_glob := 4;
 nepoch_glob := 100;
 bsize_glob := 16;
 lr_glob := 0.02;
-ngame_glob := 1000;
+ngame_glob := 500;
 ncore_explore := 50;
-nsim_glob := 1600;
+nsim_glob := 800;
 
-val dhtnn = rl_loop 20;
+val dhtnn = rl_loop 100;
+*)
+
+(*
+
+val tnnl = List.tabulate (5, fn _ => random_tnn (4,11) operl);
+val dhtnn = random_dhtnn (4,20) operl;
+val board = random_startboard ();
+val nsim = 16000;
+val ex = lookahead (nsim,dhtnn,tnnl) board;
+val pol = combine (movel_glob, #3 ex);
 *)
 
 end (* struct *)

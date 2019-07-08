@@ -55,6 +55,9 @@ sig
   val explore_parallel : 
     mlTreeNeuralNetwork.dhtnn * mlTreeNeuralNetwork.tnn list -> 
     board list list -> (term * real list * real list) list list
+  val lookahead : 
+    int * mlTreeNeuralNetwork.dhtnn * mlTreeNeuralNetwork.tnn list ->
+    board -> term * real list * real list
   val lookahead_boardl :  
     int * mlTreeNeuralNetwork.dhtnn * mlTreeNeuralNetwork.tnn list ->
     int * int -> board list -> unit

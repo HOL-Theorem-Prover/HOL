@@ -601,14 +601,15 @@ fun train_dhtnn_epoch ncore dhtnn batchl =
 
 fun random_batchl size x = mk_batch size (shuffle x)
 
+fun pretty_real r = pad 8 "0" (rts (approx 6 r))
+
 fun train_dhtnn_nepoch ncore n dhtnn size eptrain =
   if n <= 0 then dhtnn else
   let
     val batchl = Profile.profile "random_batchl" (random_batchl size) eptrain
     val (newdhtnn,(loss1,loss2)) = train_dhtnn_epoch ncore dhtnn batchl
     val _ = print_endline
-      ("eval_loss: " ^ pad 8 "0" (rts (approx 6 loss1)) ^ " " ^
-       "poli_loss: " ^ pad 8 "0" (rts (approx 6 loss2)))
+      (its n ^ ": eval " ^ pretty_real loss1 ^ " poli " ^ pretty_real loss2)
   in
     train_dhtnn_nepoch ncore (n - 1) newdhtnn size eptrain
   end
