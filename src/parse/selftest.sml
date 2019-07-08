@@ -212,6 +212,7 @@ fun snum i = Numeral(ai i, NONE)
 fun stdstr s = StrLit{ldelim = "\"", contents = s}
 fun charstr s = StrLit{ldelim = "#\"", contents = s}
 fun guillstr s = StrLit{ldelim = "«", contents = s}
+fun sguillstr s = StrLit{ldelim = "‹", contents = s}
 in
 val _ = app (ignore o test) [
       ("abc", [Ident "abc"]),
@@ -262,6 +263,8 @@ val _ = app (ignore o test) [
       ("(thy$id#\"f\"", [Ident "(", QIdent ("thy", "id"), charstr "f"]),
       ("(thy$id«foo b»", [Ident "(", QIdent ("thy", "id"), guillstr "foo b"]),
       ("x+« f»", [Ident "x", Ident "+", guillstr " f"]),
+      ("(thy$id‹foo b›", [Ident "(", QIdent ("thy", "id"), sguillstr "foo b"]),
+      ("x+‹ f›", [Ident "x", Ident "+", sguillstr " f"]),
       ("foo$bar<foo$baz", [QIdent ("foo", "bar"), Ident "<",
                            QIdent ("foo", "baz")]),
       ("(bool$/\\", [Ident "(", QIdent ("bool", "/\\")]),

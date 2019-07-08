@@ -212,6 +212,7 @@ fun delim_pair {ldelim} =
     case ldelim of
         "\"" => {ldelim = "\"", rdelim = "\""}
       | "\194\171" => {ldelim = ldelim, rdelim = "\194\187"}
+      | "\226\128\185" => {ldelim = ldelim, rdelim = "\226\128\186"}
       | _ => raise Fail ("delim_pair: bad left delim: "^ldelim)
 
 (*---------------------------------------------------------------------------*)

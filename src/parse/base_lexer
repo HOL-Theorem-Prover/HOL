@@ -101,7 +101,8 @@ fun cut_qid s =
 fun matching_strdelim s =
     case s of
         "\"" => "\""
-      | "\194\171" => "\194\187" (* guillemets *)
+      | "\194\171" => "\194\187" (* double guillemets *)
+      | "\226\128\185" => "\226\128\186" (* single guillemets *)
       | "#\"" => "\""
       | _ => raise Fail "Bad string delimiter situation"
 
@@ -116,7 +117,13 @@ numeric = [0-9];
 digitseq = ({numeric} | _)* {numeric} ({numeric} | _)*;
 hexdigit = [A-Fa-f] | {numeric};
 hexdigitseq = ({hexdigit} | _)* {hexdigit} ({hexdigit} | _)*;
-coresymbol = [-`|!#%&=+[{};:@~,.<>?/^\128-\193\195-\255] | ] | \194[\128-\170\172-\255];
+coresymbol = [-`|!#%&=+[{};:@~,.<>?/^] | ]
+           | [\192\193\195-\223][\128-\191]
+           | \194[\128-\170\172-\186\188-\191]
+           | [\224\225\227-\239][\128-\191][\128-\191]
+           | \226[\129-\191][\128-\191]
+           | \226\129[\128-\184\187-\191]
+           | [\240-\247][\128-\191][\128-\191][\128-\191];
 symbol = {coresymbol} | [)\\];
 nonparen = {symbol} | \* | {alpha} | {numeric};
 nonstar_nonparen = {symbol} | {alpha} | {numeric};
@@ -133,6 +140,8 @@ locpragma = "(*#loc" {space}+ {numeric}* {space}+ {numeric}* {space}* "*)";
 qvarinterior = {coresymbol} | {alpha} | {numeric} | {space} | "(" | "\\n" |
                "\\t" | "\\)" | "\\\\" | "\\z" | "*" | "\\" {numeric} | "\"";
 constname = {ident} | "0" | ({coresymbol}|\\|\*)+;
+strldelim = \" | "\194\171" | "\226\128\185";
+strrdelim = \" | "\194\187" | "\226\128\186";
 %%
 <INITIAL>"$" ? "$var$(" {qvarinterior}* ")" => (
   (BT_Ident yytext, getLoc yyarg yypos yytext)
@@ -174,7 +183,7 @@ constname = {ident} | "0" | ({coresymbol}|\\|\*)+;
      in
        (BT_Numeral(parse_numeric_literal(yytext,loc)), loc)
      end);
-<INITIAL>\" | "\194\171" => (let
+<INITIAL>{strldelim} => (let
                   val s = LocP(nf,!r,yypos - !(#i yyarg))
                 in
                   stracc := ("", [], s,
@@ -215,7 +224,7 @@ constname = {ident} | "0" | ({coresymbol}|\\|\*)+;
                              getLoc yyarg yypos yytext));
 
 
-<string>\" | "\194\187" => (
+<string>{strrdelim} => (
   let val e = LocP(nf,!r,yypos - !(#i yyarg))
       val (pfx, clist, start, (ldelim,rdelim)) = !stracc
       val str0 = String.concat (List.rev clist)
@@ -232,7 +241,7 @@ constname = {ident} | "0" | ({coresymbol}|\\|\*)+;
     else
       raise LEX_ERR ("Character \""^yytext^"\" can't occur inside this sort of string literal unescaped", Loc(start,e))
   end );
-<string>"\\\"" => (let val (pfx, clist, start, delim) = !stracc
+<string>"\\" {strrdelim} => (let val (pfx, clist, start, delim) = !stracc
                    in
                      stracc := (pfx, "\\\"" :: clist, start, delim);
                      continue()

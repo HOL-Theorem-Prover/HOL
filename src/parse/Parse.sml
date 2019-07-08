@@ -749,6 +749,7 @@ fun add_strliteral_form0 {ldelim,inj} =
     let
       val (nm, _) = dest_const inj
       val _ = Literal.delim_pair{ldelim=ldelim} (* checks it's legit *)
+              handle Fail s => raise ERROR "add_strliteral_form" s
       val injname = GrammarSpecials.mk_stringinjn_name ldelim
     in
       [IOVERLOAD_ON(injname,inj),
