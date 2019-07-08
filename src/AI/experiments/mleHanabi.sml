@@ -381,17 +381,15 @@ fun choose_move tnn board =
     select_in_distrib mscl2
   end
 
+fun is_end board = null (#deck board) orelse #bombs board >= 3
+fun norm_score board = Real.fromInt (#score board) / 10.0
+
 fun tnn_game tnn =
-  let
-    fun loop acc board =
-      (
-      if null (#deck board) orelse #bombs board >= 3
-      then (rev acc, #score board) 
-      else 
-        let val move = choose_move tnn board in
-          loop ((board,move) :: acc) (apply_move move board)
-        end 
-      )
+  let fun loop acc board =
+    if is_end board then (rev acc, #score board) else 
+    let val move = choose_move tnn board in
+      loop ((board,move) :: acc) (apply_move move board)
+    end   
   in
     loop [] (random_startboard ())
   end
@@ -562,7 +560,10 @@ fun lookahead_once (dhtnn,tnnl) board ((sumtot,vistot),distrib) =
     val move = best_in_distrib distrib2
     val board1 = guess_hand tnnl board
     val board2 = apply_move move board1
-    val (reward,_) = infer_dhtnn dhtnn (nntm_of_board board2)
+    val reward = 
+      if is_end board2 
+      then norm_score board2
+      else fst (infer_dhtnn dhtnn (nntm_of_board board2))
     fun f ((m,polv),(sum,vis)) =
       if m = move 
       then ((m,polv), (sum + reward, vis + 1.0))
@@ -784,7 +785,7 @@ nepoch_glob := 100;
 bsize_glob := 16;
 lr_glob := 0.02;
 ngame_glob := 1000;
-ncore_explore := 5;
+ncore_explore := 50;
 nsim_glob := 1600;
 
 val dhtnn = rl_loop 20;
