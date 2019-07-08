@@ -3356,6 +3356,7 @@ co-induction principle:
 
 \subsection{Character strings (\theoryimp{string})}
 \index{strings, the HOL theory of@strings, the \HOL{} theory of|(}
+\label{sec:strings}
 
 The theory \theoryimp{string} defines a type of characters and a type
 of finite strings built from those characters, along with a useful suite of
@@ -3385,7 +3386,7 @@ Thus:
 >> load "stringTheory";
 >> val t = ``f #"c" #"\n"``;
 
->> dest_term ``#"\t"``;
+>> dest_comb ``#"\t"``;
 \end{alltt}
 \end{session}
 
@@ -3441,6 +3442,10 @@ Note that if one wants to use the control-character syntax with the
 caret that the pretty-printer has chosen to use in printing the given
 string, and this occurs inside a quotation, then the caret will need
 to be doubled.  (See Section~\ref{sec:quotation-antiquotation}.)
+
+As with numerals, string literals can be injected into other types, where it might make sense to have string literals appear to inhabit types in addition to the core system's \holtxt{string} type.
+Such literals can be written with different delimiters to make it clear that such an injection has occurred.
+For more on this facility, see \REFERENCE's description of the \ml{add_strliteral_form} function.
 
 There is also a destructor function {\small\verb+DEST_STRING+} for
 strings which returns an option type.

@@ -510,6 +510,12 @@ has special tokens (the ``if'', ``then'' and ``else'') that are not names for va
 In order to make sure that the operations of printing and parsing tokens are suitably inverse to each other, users should not create tokens that include whitespace, or the comment strings (\ml{(*} and \ml{*)}).
 \index{tokens|)}
 
+\subsubsection{Literals}
+
+There are two classes of literal in HOL's term syntax: numbers and strings (which latter also includes a treatment of character literals).
+String literals are a convenient way to write large terms of type \holtxt{char~list}; numerals are a convenient way to write values of type \holtxt{num}.
+In addition, both string and numeric literals can be injected into other types, so that, for example, it is possible to write \holtxt{23} and have the system see it as a rational number.
+For more on these syntaxes, see Section~\ref{sec:numerals} for numerals, and Section~\ref{sec:strings} for strings.
 
 
 \subsection{Unicode \emph{vs} ASCII}
