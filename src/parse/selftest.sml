@@ -216,6 +216,7 @@ fun sguillstr s = StrLit{ldelim = "‹", contents = s}
 in
 val _ = app (ignore o test) [
       ("abc", [Ident "abc"]),
+      ("’", [Ident "\226\128\153"]),
       ("\"\\172\"", [stdstr "\172"]),
       ("#\"c\"", [charstr "c"]),
       ("f#\"c\"", [Ident "f", charstr "c"]),
