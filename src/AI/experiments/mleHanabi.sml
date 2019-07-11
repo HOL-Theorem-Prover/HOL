@@ -378,20 +378,22 @@ fun choose_move tnn board =
     val mscl1 = combine (movel_glob,scl)
     val mscl2 = filter (is_applicable board o fst) mscl1
   in
-    select_in_distrib mscl2
+    best_in_distrib mscl2
   end
 
 fun is_end board = null (#deck board) orelse #bombs board >= 3
 
+val level_glob = ref 2
+
 fun norm_score board = 
   if #bombs board >= 3 
   then 0.0
-  else Real.fromInt (#score board) / 10.0
+  else if #score board >= (!level_glob) 
+       then 0.9 + Real.fromInt (#score board) / 100.0
+       else Math.pow (0.5, Real.fromInt (!level_glob - #score board)) 
 
 fun final_score board = 
-  if #bombs board >= 3 
-  then 0
-  else #score board
+  if #bombs board >= 3 then 0 else #score board
 
 fun tnn_game tnn =
   let fun loop acc board =
@@ -738,27 +740,32 @@ fun rl_loop_aux (n,nmax) dhtnn =
   if n >= nmax then dhtnn else
   let
     val _ = summary ("Generation " ^ its n)
+    val _ = summary ("Level" ^ its (!level_glob))
     val _ = summary "Eval"
     val (gamel,t) = 
       add_time List.tabulate (!ngame_glob, fn _ => tnn_game dhtnn)
     val scl = map (Real.fromInt o snd) gamel
-    val _ = summary (" time: " ^ rts t)
-    val _ = summary (" score: " ^ rts (average_real scl))
+    val _ = summary (" competition: " ^ rts t ^ 
+      " score: " ^ rts (average_real scl))
+    val percl = filter (fn x => x > Real.fromInt (!level_glob) - 0.5) scl
+    val perc = int_div (length percl) (length scl)  
+    val _ = summary (" percentage: " ^ rts perc)
+    val _ = if perc > 0.5 then incr level_glob else ()
     val boardl = List.concat (map (map fst o fst) gamel)
     val _ = summary ("Examples : " ^ its (length boardl))
     val _ = summary "Guess"
     val boardll = mk_batch_full 100 boardl
     val exll = list_combine (map extract_guess boardl)
     val (tnnl,t) = add_time (smlParallel.parmap_batch 5 (train_tnn 1)) exll
-    val _ = summary ("  network: " ^ rts t)
+    val _ = summary ("  training network: " ^ rts t)
     val _ = summary "Lookahead"
     val (exl,t) = add_time (explore_parallel (dhtnn,tnnl)) boardll
-    val _ = summary ("  time: " ^ rts t)
+    val _ = summary ("  exploration: " ^ rts t)
     val randdhtnn = random_dhtnn (!dim_glob,length movel_glob) operl
     val (newdhtnn,t) = add_time 
       (train_dhtnn_schedule 4 randdhtnn (!bsize_glob) 
       (List.concat exl)) [(!nepoch_glob,!lr_glob)]
-    val _ = summary ("  network: " ^ rts t)
+    val _ = summary ("  training network: " ^ rts t)
   in
     rl_loop_aux (n+1,nmax) newdhtnn
   end
@@ -775,7 +782,7 @@ load "mleHanabi"; open mleHanabi;
 load "aiLib"; open aiLib;
 load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
 
-summary_file := "hanabi_run18";
+summary_file := "hanabi_run19";
 dim_glob := 4;
 nepoch_glob := 100;
 bsize_glob := 16;

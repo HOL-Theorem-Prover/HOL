@@ -403,10 +403,25 @@ fun standard_code_of (s_state,s_argl,s_f) wid =
   "   writel_atomic (widout_file wid) [\"done\"]);",
   "worker_start " ^ (its wid) ^ " (f,argl);"
   ]
+(*
+type externalization = 
+  {
+  function : string,
+  directory : string,
+  read_param : string,
+  update_globals : string
+  read_argl : string
+     
+  }
+*)
 
 (* -------------------------------------------------------------------------
    Example
    ------------------------------------------------------------------------- *)
+
+
+
+
 
 fun id_parallel ncore argl =
   let

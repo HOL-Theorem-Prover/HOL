@@ -687,6 +687,4 @@ fun accuracy_set tnn set =
     Real.fromInt (length correct) / Real.fromInt (length set)
   end
 
-
-
 end (* struct *)
