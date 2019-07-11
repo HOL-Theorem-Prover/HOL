@@ -733,7 +733,9 @@ fun summary_parameters () =
    "lr_glob: " ^ rts (!lr_glob),
    "nepoch_glob: " ^ its (!nepoch_glob),
    "nsim_glob: " ^ its (!nsim_glob),
-   "ngame_glob: " ^ its (!ngame_glob)])
+   "ngame_glob: " ^ its (!ngame_glob),
+   "starting level: " ^ its (!level_glob)]
+  )
   ) 
 
 fun rl_loop_aux (n,nmax) dhtnn =

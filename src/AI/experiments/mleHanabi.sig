@@ -15,6 +15,7 @@ sig
   val nepoch_glob : int ref
   val ngame_glob : int ref
   val nsim_glob : int ref
+  val level_glob : int ref
 
   datatype move =
     Play of int
