@@ -10,6 +10,9 @@ open listTheory stringTheory arithmeticTheory pred_setTheory
 
 open Regexp_Type regexpSyntax regexpMisc;
 
+local open Regexp_Numerics DFA_Codegen in end;
+
+
 val ERR = mk_HOL_ERR "regexpLib";
 
 fun sml_matcher r =
