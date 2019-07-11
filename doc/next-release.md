@@ -137,6 +137,9 @@ New features:
 Bugs fixed:
 -----------
 
+*   `smlTimeout.timeout`: The thread attributes are now given which eliminates concurrency issues during TacticToe recording.
+    This function now raises the exception `FunctionTimeout` instead of `Interrupt` if the argument function exceeds the time limit.
+
 New theories:
 -------------
 
@@ -154,8 +157,20 @@ New theories:
 New tools:
 ----------
 
+*   HolyHammer is now able to exports HOL4 formulas to the TPTP formats: TFF0, TFF1, THF0 and THF1.
+    Type encodings have been adapted from the existing FOF translation to make use of the increase in type
+    expressivity provided by these different formats.
+
+*   It is now possible to train feedforward neural networks with `mlNeuralNetwork` and tree neural networks with `mlTreeNeuralNetwork`.
+    The shape of a tree neural network is described by a term, making it handy to train
+    functions from terms to real numbers.
+
+*   An implementation of Monte Carlo tree search relying on an existing policy and value is now provided in `psMCTS`.
+    The policy is a function that given a particular situation returns a prior probability for each possible choice.
+    The value is a function that evaluates how promising a situation is by a real number between 0 and 1.
+
 New examples:
----------
+-------------
 
 Incompatibilities:
 ------------------
