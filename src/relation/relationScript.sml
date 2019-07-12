@@ -2306,10 +2306,10 @@ val Newmans_lemma = store_thm(
 
 val BISIM_def = new_definition(
   "BISIM_def",
-  ``BISIM ts R = !p q α.
+  ``BISIM ts R = !p q l.
                     R p q ==>
-                    (!p'. ts p α p' ==> (?q'. ts q α q' /\ R p' q')) /\
-                    (!q'. ts q α q' ==> (?p'. ts p α p' /\ R p' q'))``)
+                    (!p'. ts p l p' ==> (?q'. ts q l q' /\ R p' q')) /\
+                    (!q'. ts q l q' ==> (?p'. ts p l p' /\ R p' q'))``)
 
 val BISIM_REL_def = new_definition(
   "BISIM_REL_def",
