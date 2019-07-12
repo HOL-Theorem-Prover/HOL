@@ -592,7 +592,8 @@ val CONJ_DISCHL = itlist CONJ_DISCH
  *---------------------------------------------------------------------------*)
 
 fun NEG_DISCH t th =
-   (if concl th = boolSyntax.F then NOT_INTRO (DISCH t th) else DISCH t th)
+   (if aconv (concl th) boolSyntax.F then NOT_INTRO (DISCH t th)
+    else DISCH t th)
    handle HOL_ERR _ => raise ERR "NEG_DISCH" ""
 
 (*---------------------------------------------------------------------------*
@@ -640,7 +641,7 @@ end
 fun EQF_ELIM th =
    let
       val (lhs, rhs) = dest_eq (concl th)
-      val _ = assert (equal boolSyntax.F) rhs
+      val _ = assert (aconv boolSyntax.F) rhs
    in
       NOT_INTRO (DISCH lhs (EQ_MP th (ASSUME lhs)))
    end
@@ -1317,7 +1318,7 @@ fun EXISTS_LEFT' strict fvs_c hfvs [] th = th
         else raise mk_HOL_ERR "Drule" "EXISTS_LEFT'" "not free variable" ;
       (* following raises Bind if fv in conclusion *)
       val _ = List.all (not o aconv fv) fvs_c orelse raise Bind
-      fun hyp_ctns_fv {hyp, fvs} = List.exists (Lib.equal fv) fvs ;
+      fun hyp_ctns_fv {hyp, fvs} = List.exists (aconv fv) fvs ;
       val (hyps_ctg_fv, hyps_nc) = List.partition hyp_ctns_fv hfvs ;
       (* following raises Bind if fv not in any hypothesis *)
       val _ = not (null hyps_ctg_fv) orelse raise Bind
@@ -1384,8 +1385,8 @@ local
    fun variants (_, []) = []
      | variants (av, h::rst) =
          let val vh = variant av h in vh :: variants (vh :: av, rst) end
-   fun rassoc_total x theta = Option.getOpt (subst_assoc (equal x) theta, x)
-   fun req {redex, residue} = (redex = residue)
+   fun rassoc_total x theta = Option.getOpt (subst_assoc (aconv x) theta, x)
+   fun req {redex, residue} = aconv redex residue
 in
    fun MATCH_MP ith =
       let
@@ -1405,17 +1406,17 @@ in
                val (avs, (ant, conseq)) =
                   (I ## dest_imp) (strip_forall (concl tth))
                val (rvs, fvs) = partition (C free_in ant) (free_vars conseq)
-               val afvs = Lib.set_diff fvs (Lib.set_diff hy1 avs)
+               val afvs = op_set_diff aconv fvs (op_set_diff aconv hy1 avs)
                val cvs = free_varsl (map (C rassoc_total tmin) rvs)
                val vfvs =
                   map (op |->) (zip afvs (variants (cvs @ hy1 @ hy2, afvs)))
                val atmin = (filter (op not o op req) vfvs) @ tmin
-               val (spl, ill) = partition (C mem avs o #redex) atmin
+               val (spl, ill) = partition (C (op_mem aconv) avs o #redex) atmin
                val fspl = map (C rassoc_total spl) avs
                val mth = MP (SPECL fspl (INST ill tth)) th
                fun loop [] = []
                  | loop (tm :: rst) =
-                      case subst_assoc (equal tm) vfvs of
+                      case subst_assoc (aconv tm) vfvs of
                          NONE => loop rst
                        | SOME x => x :: loop rst
             in
@@ -1441,10 +1442,9 @@ fun tryalpha v tm =
    let
       val (Bvar, Body) = dest_abs tm
    in
-      if v = Bvar
-         then tm
-      else if var_occurs v Body
-         then tryalpha (variant (free_vars tm) v) tm
+      if aconv v Bvar then tm
+      else if var_occurs v Body then
+        tryalpha (variant (free_vars tm) v) tm
       else mk_abs (v, subst [Bvar |-> v] Body)
    end
 
@@ -1652,14 +1652,12 @@ in
          then let
                  val (Bvar, Body) = dest_abs tm
               in
-                 if v = Bvar
-                    then failwith "BETA_VAR: UNCHANGED"
+                 if aconv v Bvar then failwith "BETA_VAR: UNCHANGED"
                  else ABS_CONV (BETA_VAR v Body) end
       else case strip_comb tm of
               (_, []) => failwith "BETA_VAR: UNCHANGED"
             | (oper, args) =>
-                 if oper = v
-                    then BETA_CONVS (length args)
+                 if aconv oper v then BETA_CONVS (length args)
                  else let
                          val (Rator, Rand) = dest_comb tm
                       in
@@ -1774,11 +1772,11 @@ in
                      then possbetas
                   else map (inst tyin ## I) possbetas
             in
-               if null npossbetas
-                  then Lib.I
-               else CONV_RULE
-                      (EVERY_CONV
-                         (mapfilter (TRY_CONV o C assoc npossbetas) ivs))
+               if null npossbetas then Lib.I
+               else
+                 CONV_RULE
+                   (EVERY_CONV
+                      (mapfilter (TRY_CONV o C(op_assoc aconv) npossbetas) ivs))
             end
           val lconsts =
              HOLset.intersection (FVL [pbod] empty_tmset, hyp_frees th)

@@ -53,7 +53,7 @@ val COMPL_MEM = prove (
 
 (* localized notion of open sets (one set being open in another) *)
 val istopology = new_definition("istopology",
-  ``!L. istopology L =
+  ``!L. istopology L <=>
              {} IN L /\
              (!s t. s IN L /\ t IN L ==> (s INTER t) IN L) /\
              (!k. k SUBSET L ==> (BIGUNION k) IN L)``);
@@ -152,7 +152,8 @@ val OPEN_IN_BIGINTER = store_thm ("OPEN_IN_BIGINTER",
                                open_in top (BIGINTER s)) s`` THENL
   [FULL_SIMP_TAC std_ss [], ALL_TAC] THEN DISC_RW_KILL THEN
   MATCH_MP_TAC FINITE_INDUCT THEN BETA_TAC THEN
-  REWRITE_TAC[BIGINTER_INSERT, AND_IMP_INTRO, NOT_INSERT_EMPTY, FORALL_IN_INSERT] THEN
+  REWRITE_TAC[BIGINTER_INSERT, AND_IMP_INTRO, NOT_INSERT_EMPTY,
+              FORALL_IN_INSERT] THEN
   SIMP_TAC std_ss [GSYM RIGHT_FORALL_IMP_THM] THEN
   MAP_EVERY X_GEN_TAC [``f:('a->bool)->bool``, ``s:'a->bool``] THEN
   ASM_CASES_TAC ``f:('a->bool)->bool = {}`` THEN
@@ -169,7 +170,8 @@ val OPEN_IN_SUBOPEN = store_thm ("OPEN_IN_SUBOPEN",
   SIMP_TAC std_ss [FORALL_AND_THM, GSYM LEFT_EXISTS_IMP_THM] THEN
   ONCE_REWRITE_TAC[GSYM FORALL_IN_IMAGE] THEN REPEAT STRIP_TAC THEN
   FIRST_X_ASSUM(MP_TAC o MATCH_MP OPEN_IN_BIGUNION) THEN
-  MATCH_MP_TAC EQ_IMPLIES THEN AP_TERM_TAC THEN REPEAT (POP_ASSUM MP_TAC) THEN SET_TAC[]);
+  MATCH_MP_TAC EQ_IMPLIES THEN AP_TERM_TAC THEN REPEAT (POP_ASSUM MP_TAC) THEN
+  SET_TAC[]);
 
 (*---------------------------------------------------------------------------*)
 (* Characterize a neighbourhood of a point relative to a topology            *)
@@ -194,8 +196,8 @@ val OPEN_UNOPEN = store_thm(
        (BIGUNION { P | open_in(top) P /\ P SUBSET S' } = S')``,
   REPEAT GEN_TAC THEN EQ_TAC THENL
    [DISCH_TAC THEN ONCE_REWRITE_TAC[GSYM SUBSET_SUBSET_EQ] THEN
-    ASM_SIMP_TAC (srw_ss()) [BIGUNION_applied, SUBSET_applied] THEN CONJ_TAC THEN
-    GEN_TAC THENL [
+    ASM_SIMP_TAC (srw_ss()) [BIGUNION_applied, SUBSET_applied] THEN
+    CONJ_TAC THEN GEN_TAC THENL [
       DISCH_THEN(Q.X_CHOOSE_THEN `s` STRIP_ASSUME_TAC) THEN
       FIRST_ASSUM MATCH_MP_TAC THEN
       FULL_SIMP_TAC (srw_ss()) [IN_DEF],
@@ -225,7 +227,8 @@ val OPEN_SUBOPEN = store_thm("OPEN_SUBOPEN",
       SIMP_TAC (srw_ss()) []]]);
 
 val OPEN_NEIGH = store_thm("OPEN_NEIGH",
-  “!S' top. open_in(top) S' = !x:'a. S' x ==> ?N. neigh(top)(N,x) /\ N SUBSET S'”,
+  “!S' top.
+     open_in(top) S' = !x:'a. S' x ==> ?N. neigh(top)(N,x) /\ N SUBSET S'”,
   REPEAT GEN_TAC THEN EQ_TAC THENL
    [DISCH_TAC THEN GEN_TAC THEN DISCH_TAC THEN EXISTS_TAC “S':'a->bool” THEN
     REWRITE_TAC[SUBSET_REFL, neigh] THEN
@@ -290,14 +293,19 @@ val CLOSED_IN_BIGINTER = store_thm ("CLOSED_IN_BIGINTER",
    [REPEAT (POP_ASSUM MP_TAC) THEN SET_TAC[], ALL_TAC] THEN
   SUBGOAL_THEN ``topspace top DIFF BIGINTER k :'a->bool =
                 BIGUNION {topspace top DIFF s | s IN k}`` SUBST1_TAC
-  THENL [ALL_TAC, MATCH_MP_TAC OPEN_IN_BIGUNION THEN REPEAT (POP_ASSUM MP_TAC) THEN SET_TAC[]] THEN
-  GEN_REWR_TAC I [EXTENSION] THEN
-  KNOW_TAC ``{topspace top DIFF s | s IN k} = IMAGE (\s. topspace top DIFF s) k`` THENL
+  THENL [ALL_TAC,
+         MATCH_MP_TAC OPEN_IN_BIGUNION THEN REPEAT (POP_ASSUM MP_TAC) THEN
+         SET_TAC[]
+  ] THEN GEN_REWR_TAC I [EXTENSION] THEN
+  KNOW_TAC
+    ``{topspace top DIFF s | s IN k} = IMAGE (\s. topspace top DIFF s) k`` THENL
   [FULL_SIMP_TAC std_ss [GSYM IMAGE_DEF], ALL_TAC] THEN DISC_RW_KILL THEN
   REWRITE_TAC [IN_BIGUNION, IN_BIGINTER] THEN
-  GEN_REWR_TAC (QUANT_CONV o RAND_CONV o QUANT_CONV o LAND_CONV) [SPECIFICATION] THEN
+  GEN_REWR_TAC(QUANT_CONV o RAND_CONV o QUANT_CONV o LAND_CONV)[SPECIFICATION]>>
   ONCE_REWRITE_TAC [CONJ_SYM] THEN SIMP_TAC std_ss [EXISTS_IN_IMAGE] THEN
-  REWRITE_TAC [METIS [SPECIFICATION]``(topspace top DIFF s) x = x IN (topspace top DIFF s)``] THEN
+  REWRITE_TAC [
+    METIS [SPECIFICATION]
+          “(topspace top DIFF s) x <=> x IN (topspace top DIFF s)”] THEN
   REWRITE_TAC [IN_DIFF, IN_BIGINTER] THEN PROVE_TAC[]);
 
 val BIGINTER_2 = store_thm ("BIGINTER_2",
@@ -307,7 +315,8 @@ val BIGINTER_2 = store_thm ("BIGINTER_2",
 val CLOSED_IN_INTER = store_thm ("CLOSED_IN_INTER",
  ``!top s t. closed_in top s /\ closed_in top t ==> closed_in top (s INTER t)``,
   REPEAT STRIP_TAC THEN REWRITE_TAC[GSYM BIGINTER_2] THEN
-  MATCH_MP_TAC CLOSED_IN_BIGINTER THEN REPEAT (POP_ASSUM MP_TAC) THEN SET_TAC[]);
+  MATCH_MP_TAC CLOSED_IN_BIGINTER THEN REPEAT (POP_ASSUM MP_TAC) THEN
+  SET_TAC[]);
 
 val OPEN_IN_CLOSED_IN_EQ = store_thm ("OPEN_IN_CLOSED_IN_EQ",
  ``!top s. open_in top s <=>
@@ -366,7 +375,8 @@ val limpt = new_definition("limpt",
 
 val CLOSED_LIMPT = store_thm
   ("CLOSED_LIMPT",
-  “!top. closed top ==> !S'. closed_in(top) S' = (!x:'a. limpt(top) x S' ==> S' x)”,
+  “!top. closed top ==>
+         !S'. closed_in(top) S' = (!x:'a. limpt(top) x S' ==> S' x)”,
     GEN_TAC >> DISCH_TAC
  >> IMP_RES_TAC closed_topspace
  >> GEN_TAC >> CONV_TAC (ONCE_DEPTH_CONV CONTRAPOS_CONV)
@@ -382,9 +392,9 @@ val CLOSED_LIMPT = store_thm
  >> REWRITE_TAC [OPEN_NEIGH, SUBSET_applied]
  >> AP_TERM_TAC >> ABS_TAC
  >> ASM_CASES_TAC “(S':'a->bool) x” >> ASM_REWRITE_TAC []
- >> REWRITE_TAC [TAUT_CONV “a \/ b \/ ~c = c ==> a \/ b”]
+ >> REWRITE_TAC [TAUT_CONV “a \/ b \/ ~c <=> c ==> a \/ b”]
  >> EQUAL_TAC
- >> REWRITE_TAC [TAUT_CONV “(a = b \/ a) = b ==> a”]
+ >> REWRITE_TAC [TAUT_CONV “(a <=> b \/ a) <=> b ==> a”]
  >> DISCH_THEN (SUBST1_TAC o SYM)
  >> POP_ASSUM ACCEPT_TAC);
 
@@ -392,7 +402,7 @@ val CLOSED_LIMPT = store_thm
 (* A generic notion of "hull" (convex, affine, conic hull and closure).      *)
 (* ------------------------------------------------------------------------- *)
 
-val _ = set_fixity "hull" (Infix(NONASSOC, 450));
+val _ = set_fixity "hull" (Infix(NONASSOC, 499));
 
 val hull = new_definition ("hull",
   ``P hull s = BIGINTER {t | P t /\ s SUBSET t}``);
@@ -413,12 +423,12 @@ val HULL_EQ = store_thm ("HULL_EQ",
 
 val HULL_HULL = store_thm ("HULL_HULL",
  ``!P s. P hull (P hull s) = P hull s``,
-  SIMP_TAC std_ss [hull, EXTENSION, IN_BIGINTER, GSPECIFICATION, SUBSET_DEF] THEN
+  SIMP_TAC std_ss [hull, EXTENSION, IN_BIGINTER, GSPECIFICATION, SUBSET_DEF] >>
   METIS_TAC[]);
 
 val HULL_SUBSET = store_thm ("HULL_SUBSET",
  ``!P s. s SUBSET (P hull s)``,
-  SIMP_TAC std_ss [hull, SUBSET_DEF, IN_BIGINTER, GSPECIFICATION] THEN MESON_TAC[]);
+  SIMP_TAC std_ss [hull,SUBSET_DEF,IN_BIGINTER,GSPECIFICATION] >> MESON_TAC[]);
 
 val HULL_MONO = store_thm ("HULL_MONO",
  ``!P s t. s SUBSET t ==> (P hull s) SUBSET (P hull t)``,
@@ -432,11 +442,11 @@ val HULL_ANTIMONO = store_thm ("HULL_ANTIMONO",
 
 val HULL_MINIMAL = store_thm ("HULL_MINIMAL",
  ``!P s t. s SUBSET t /\ P t ==> (P hull s) SUBSET t``,
-  SIMP_TAC std_ss [hull, SUBSET_DEF, IN_BIGINTER, GSPECIFICATION] THEN METIS_TAC[]);
+  SIMP_TAC std_ss [hull,SUBSET_DEF,IN_BIGINTER,GSPECIFICATION] >> METIS_TAC[]);
 
 val SUBSET_HULL = store_thm ("SUBSET_HULL",
  ``!P s t. P t ==> ((P hull s) SUBSET t <=> s SUBSET t)``,
-  SIMP_TAC std_ss [hull, SUBSET_DEF, IN_BIGINTER, GSPECIFICATION] THEN METIS_TAC[]);
+  SIMP_TAC std_ss [hull,SUBSET_DEF,IN_BIGINTER,GSPECIFICATION] >> METIS_TAC[]);
 
 val HULL_UNIQUE = store_thm ("HULL_UNIQUE",
  ``!P s t. s SUBSET t /\ P t /\ (!t'. s SUBSET t' /\ P t' ==> t SUBSET t')
@@ -451,22 +461,22 @@ val HULL_UNION_SUBSET = store_thm ("HULL_UNION_SUBSET",
 
 val HULL_UNION = store_thm ("HULL_UNION",
  ``!P s t. P hull (s UNION t) = P hull ((P hull s) UNION (P hull t))``,
-  REPEAT STRIP_TAC THEN ONCE_REWRITE_TAC[hull] THEN
-  AP_TERM_TAC THEN SIMP_TAC std_ss [EXTENSION, GSPECIFICATION, UNION_SUBSET] THEN
+  REPEAT STRIP_TAC >> ONCE_REWRITE_TAC[hull] >>
+  AP_TERM_TAC >> SIMP_TAC std_ss [EXTENSION, GSPECIFICATION, UNION_SUBSET] >>
   METIS_TAC[SUBSET_HULL]);
 
 val HULL_UNION_LEFT = store_thm ("HULL_UNION_LEFT",
  ``!P s t:'a->bool.
         P hull (s UNION t) = P hull ((P hull s) UNION t)``,
   REPEAT STRIP_TAC THEN ONCE_REWRITE_TAC[hull] THEN
-  AP_TERM_TAC THEN SIMP_TAC std_ss [EXTENSION, GSPECIFICATION, UNION_SUBSET] THEN
+  AP_TERM_TAC THEN SIMP_TAC std_ss [EXTENSION, GSPECIFICATION, UNION_SUBSET] >>
   METIS_TAC[SUBSET_HULL]);
 
 val HULL_UNION_RIGHT = store_thm ("HULL_UNION_RIGHT",
  ``!P s t:'a->bool.
         P hull (s UNION t) = P hull (s UNION (P hull t))``,
   REPEAT STRIP_TAC THEN ONCE_REWRITE_TAC[hull] THEN
-  AP_TERM_TAC THEN SIMP_TAC std_ss [EXTENSION, GSPECIFICATION, UNION_SUBSET] THEN
+  AP_TERM_TAC THEN SIMP_TAC std_ss [EXTENSION, GSPECIFICATION, UNION_SUBSET] >>
   MESON_TAC[SUBSET_HULL]);
 
 val HULL_REDUNDANT_EQ = store_thm ("HULL_REDUNDANT_EQ",
@@ -517,10 +527,12 @@ val HULL_IMAGE = store_thm ("HULL_IMAGE",
    (!y. ?x. f x = y) <=> ?g. (!y. f (g y) = y) /\ !x. g (f x) = x``] THEN
   DISCH_THEN(X_CHOOSE_THEN ``g:'a->'a`` STRIP_ASSUME_TAC) THEN
   MATCH_MP_TAC HULL_IMAGE_GALOIS THEN EXISTS_TAC ``g:'a->'a`` THEN
-  ASM_REWRITE_TAC[] THEN CONJ_TAC THENL [ALL_TAC, REPEAT (POP_ASSUM MP_TAC) THEN
-  SET_TAC[]] THEN X_GEN_TAC ``s:'a->bool`` THEN
+  ASM_REWRITE_TAC[] >> CONJ_TAC >| [ALL_TAC,
+    REPEAT (POP_ASSUM MP_TAC) >> SET_TAC[]
+  ] THEN X_GEN_TAC ``s:'a->bool`` THEN
   FIRST_X_ASSUM(fn th => GEN_REWR_TAC RAND_CONV [GSYM th]) THEN
-  MATCH_MP_TAC EQ_IMPLIES THEN AP_TERM_TAC THEN REPEAT (POP_ASSUM MP_TAC) THEN SET_TAC[]);
+  MATCH_MP_TAC EQ_IMPLIES THEN AP_TERM_TAC THEN REPEAT (POP_ASSUM MP_TAC) THEN
+  SET_TAC[]);
 
 val IS_HULL = store_thm ("IS_HULL",
  ``!P s. (!f. (!s. s IN f ==> P s) ==> P(BIGINTER f))

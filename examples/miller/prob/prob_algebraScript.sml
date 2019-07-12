@@ -25,6 +25,7 @@ quietdec := false;
 *)
 
 val _ = new_theory "prob_algebra";
+val _ = ParseExtras.temp_loose_equality()
 
 val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
 val std_ss' = std_ss ++ boolSimps.ETA_ss;

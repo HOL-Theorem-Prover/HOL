@@ -1,0 +1,30 @@
+# 2017
+
+In src/res_quan/src, commits
+
+   4bca97ee3c
+   1170d39907
+   d46cad2f12
+   c840602322
+   ab1240413c
+   a16d6b6656
+
+were put into public domain (timestamps between 2017-10-20 and
+2017-10-23) by Mario Castelán Castro.
+
+# 2018
+
+New files:
+
+   src/1/wlogLib.sig
+   src/1/wlogLib.sml
+
+   - put into public domain by Mario Castelán Castro on 2018-07-04.
+
+Changes to
+
+  src/1/Conv.sml
+
+  in commits b8ac494d2f and 1fda0759cca42 (2018-05-23 and 2018-06-14)
+
+  - put into public domain by Mario Castelán Castro

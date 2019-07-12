@@ -10,6 +10,7 @@ open listTheory HurdUseful subtypeTools res_quanTools
 open util_probTheory; (* needs only the minimal_def *)
 
 val _ = new_theory "finite_group";
+val _ = ParseExtras.temp_loose_equality()
 
 val EXISTS_DEF = boolTheory.EXISTS_DEF;
 

@@ -27,6 +27,7 @@ val _ = hide "I";
 
 
 val _ = new_theory "rltl";
+val _ = ParseExtras.temp_loose_equality()
 
 
 (******************************************************************************

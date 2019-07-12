@@ -90,7 +90,7 @@ val ALPHA_EQUIV = save_thm("ALPHA_EQUIV",
 val ALPHA_PEQUIV = store_thm
    ("ALPHA_PEQUIV",
     “(?t:^term. ALPHA t t) /\
-        (!t u:^term. ALPHA t u =
+        (!t u:^term. ALPHA t u <=>
                      ALPHA t t /\ ALPHA u u /\ (ALPHA t = ALPHA u))”,
     REWRITE_TAC[REWRITE_RULE[EQUIV_def]ALPHA_EQUIV]
    );
@@ -487,7 +487,7 @@ val term1_one_one' = store_thm
     “(!a:'a a'. ALPHA (Con1 a) (Con1 a') = (a = a')) /\
         (!x t t':^term. ALPHA (Lam1 x t) (Lam1 x t') = ALPHA t t') /\
         (!x x'. ALPHA (Var1 x :^term) (Var1 x') = (x = x')) /\
-        (!t u t' u':^term. ALPHA (App1 t u) (App1 t' u') =
+        (!t u t' u':^term. ALPHA (App1 t u) (App1 t' u') <=>
                               ALPHA t t' /\ ALPHA u u')”,
     REWRITE_TAC[ALPHA_term_pos,ALPHA_Lam_one_one,subst_SAME_ONE1]
    );

@@ -210,12 +210,12 @@ val sum_Axiom0 = prove(
 val sum_INDUCT = save_thm("sum_INDUCT",
                           Prim_rec.prove_induction_thm sum_Axiom0);
 
-val FORALL_SUM = Q.store_thm
- ("FORALL_SUM",
-  `(!s. P s) = (!x. P (INL x)) /\ (!y. P (INR y))`,
-  EQ_TAC THENL
-   [DISCH_TAC THEN ASM_REWRITE_TAC [],
-    MATCH_ACCEPT_TAC sum_INDUCT]);
+Theorem FORALL_SUM:
+  (!s. P s) <=> (!x. P (INL x)) /\ (!y. P (INR y))
+Proof
+  EQ_TAC THENL [DISCH_TAC THEN ASM_REWRITE_TAC [],
+                MATCH_ACCEPT_TAC sum_INDUCT]
+QED
 
 open simpLib
 
@@ -389,11 +389,12 @@ val sum_case_cong = save_thm("sum_case_cong",
 
 val SUM_MAP_def = Prim_rec.new_recursive_definition{
   name = "SUM_MAP_def",
-  def = ``(($++ f g) (INL (a:'a)) = INL ((f a):'c)) /\
-          (($++ f g) (INR (b:'b)) = INR ((g b):'d))``,
+  def = ``(SUM_MAP f g (INL (a:'a)) = INL (f a:'c)) /\
+          (SUM_MAP f g (INR (b:'b)) = INR (g b:'d))``,
   rec_axiom = sum_Axiom};
-val _ = set_fixity "++" (Infixl 480)
 val _ = export_rewrites ["SUM_MAP_def"]
+val _ = temp_set_mapped_fixity{tok = "++", term_name = "SUM_MAP",
+                               fixity = Infixl 480}
 
 val SUM_MAP = store_thm (
   "SUM_MAP",
@@ -412,6 +413,12 @@ val SUM_MAP_I = store_thm (
   "SUM_MAP_I",
   ``(I ++ I) = (I : 'a + 'b -> 'a + 'b)``,
   SIMP_TAC (srw_ss()) [FORALL_SUM, FUN_EQ_THM]);
+
+Theorem SUM_MAP_o:
+  (f ++ g) o (h ++ k) = (f o h) ++ (g o k)
+Proof
+  SIMP_TAC (srw_ss()) [FORALL_SUM, FUN_EQ_THM]
+QED
 
 val cond_sum_expand = store_thm("cond_sum_expand",
 ``(!x y z. ((if P then INR x else INL y) = INR z) = (P /\ (z = x))) /\
@@ -497,5 +504,7 @@ val datatype_sum = store_thm(
   "datatype_sum",
   ``DATATYPE (sum (INL:'a -> 'a + 'b) (INR:'b -> 'a + 'b))``,
   REWRITE_TAC[DATATYPE_TAG_THM]);
+
+val _ = temp_remove_termtok {term_name = "SUM_MAP", tok = "++"}
 
 val _ = export_theory();

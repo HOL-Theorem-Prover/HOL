@@ -79,11 +79,13 @@ fun list_mk_icomb (thy,cname) =
   end;
 
 val variables =
-  let fun vars(acc,tm) =
-        if is_var tm then insert tm acc
+  let
+    fun ins t l = op_insert aconv t l
+    fun vars(acc,tm) =
+        if is_var tm then ins tm acc
         else if is_const tm then acc
         else if is_abs tm
-             then let val (v, bod) = dest_abs tm in vars(insert v acc,bod) end
+             then let val (v, bod) = dest_abs tm in vars(ins v acc,bod) end
              else let val (l,r)    = dest_comb tm in vars(vars(acc,l),r)   end
   in
     fn tm => vars([],tm)
@@ -123,7 +125,7 @@ fun SUBS_CONV [] tm = REFL tm
                            (RATOR_CONV o RAND_CONV) BETA_CONV)(MK_COMB(x,y)))
                    ths (REFL abs)
      in
-       if rand(concl th) = tm then REFL tm else th
+       if aconv (rand(concl th)) tm then REFL tm else th
      end
 
 val GEN_REWRITE_RULE = fn c => fn thl => GEN_REWRITE_RULE c empty_rewrites thl
@@ -238,7 +240,7 @@ in
            mk_comb(mk_var(dest_vartype argty,predty),arg)::sofar
          else sofar) args a []
       val conc = mk_comb(mk_var(dest_vartype r,predty),lapp)
-      val rule = if conds = [] then conc
+      val rule = if null conds then conc
                  else mk_imp(list_mk_conj conds,conc)
     in
       list_mk_forall(args,rule)
@@ -258,15 +260,18 @@ end
 (* (This could be done much more efficiently/cleverly, but it's OK.)         *)
 (* ------------------------------------------------------------------------- *)
 
+val tmem = op_mem aconv
+val tmk_set = op_mk_set aconv
+val tunion = op_union aconv
 fun prove_model_inhabitation rth = let
   val srules = map SPEC_ALL (CONJUNCTS rth)
   val (imps,bases) = partition (is_imp o concl) srules
   val concs = map concl bases @ map (rand o concl) imps
-  val preds = mk_set (map (repeat rator) concs)
+  val preds = op_mk_set aconv (map (repeat rator) concs)
   fun exhaust_inhabitations ths sofar = let
-    val dunnit = mk_set(map (fst o strip_comb o concl) sofar)
+    val dunnit = tmk_set (map (fst o strip_comb o concl) sofar)
     val useful = filter
-      (fn th => not (mem (fst(strip_comb(rand(concl th)))) dunnit)) ths
+      (fn th => not (tmem (fst(strip_comb(rand(concl th)))) dunnit)) ths
   in
     if null useful then sofar
     else let
@@ -274,8 +279,9 @@ fun prove_model_inhabitation rth = let
         val preds = map (fst o strip_comb) (strip_conj(lhand(concl thm)))
         val asms =
           map (fn p =>
-               valOf (List.find (fn th =>
-                                 fst(strip_comb(concl th)) = p) sofar))
+               valOf (List.find
+                        (fn th => aconv (fst(strip_comb(concl th))) p)
+                        sofar))
           preds
       in
         MATCH_MP thm (end_itlist CONJ asms)
@@ -287,7 +293,10 @@ fun prove_model_inhabitation rth = let
   end
   val ithms = exhaust_inhabitations imps bases
   val exths = map
-    (fn p => valOf (List.find (fn th => fst(strip_comb(concl th)) = p) ithms))
+    (fn p => valOf
+               (List.find
+                  (fn th => aconv (fst(strip_comb(concl th))) p)
+                  ithms))
     preds
 in
   exths
@@ -319,7 +328,8 @@ fun define_inductive_type cdefs exth = let
   val extm = concl exth
   val epred = fst(strip_comb extm)
   val ename = String.extract(fst(dest_var epred), 1, NONE)
-  val th1 = ASSUME (valOf (List.find (fn eq => lhand eq = epred) (hyp exth)))
+  val th1 = ASSUME
+              (valOf (List.find (fn eq => aconv (lhand eq) epred) (hyp exth)))
   val th2 = TRANS th1 (SUBS_CONV cdefs (rand(concl th1)))
   val th3 = EQ_MP (AP_THM th2 (rand extm)) exth
   fun scrubber th = case HOLset.find (fn _ => true) (hypset th) of
@@ -337,7 +347,7 @@ end;
 (* ------------------------------------------------------------------------- *)
 (* Defines a type constructor corresponding to current pseudo-constructor.   *)
 (* ------------------------------------------------------------------------- *)
-
+fun tmassoc t l = op_assoc aconv t l
 fun define_inductive_type_constructor defs consindex th = let
   val (avs,bod) = strip_forall(concl th)
   val (asms,conc) =
@@ -346,17 +356,17 @@ fun define_inductive_type_constructor defs consindex th = let
   val (cpred,cterm) = dest_comb conc
   val (oldcon,oldargs) = strip_comb cterm
   fun modify_arg v = let
-    val dest = snd(assoc (rev_assoc v asmlist) consindex)
+    val dest = snd(tmassoc (op_rev_assoc aconv v asmlist) consindex)
     val ty' = hd(snd(dest_type(type_of dest)))
     val v' = mk_var(fst(dest_var v),ty')
   in
     (mk_comb(dest,v'),v')
   end handle HOL_ERR _ => (v,v)
   val (newrights,newargs) = unzip(map modify_arg oldargs)
-  val retmk = fst(assoc cpred consindex)
+  val retmk = fst(tmassoc cpred consindex)
   val defbod = mk_comb(retmk,list_mk_comb(oldcon,newrights))
   val defrt = list_mk_abs(newargs,defbod)
-  val expth = valOf (List.find (fn th => lhand(concl th) = oldcon) defs)
+  val expth = valOf (List.find (fn th => aconv (lhand(concl th)) oldcon) defs)
   val rexpth = SUBS_CONV [expth] defrt
   val deflf = mk_var(fst(dest_var oldcon),type_of defrt)
   val defth = new_definition(temp_binding (fst (dest_var oldcon) ^ "_def"),
@@ -376,7 +386,8 @@ fun instantiate_induction_theorem consindex ith = let
     map((repeat rator ## repeat rator) o dest_imp o body o rand)
     (strip_conj(rand bod))
   val consindex' =
-    map (fn v => let val w = rev_assoc v corlist in (w,assoc w consindex) end)
+    map (fn v => let val w = op_rev_assoc aconv v corlist
+                 in (w,tmassoc w consindex) end)
     avs
   val recty = (hd o snd o dest_type o type_of o fst o snd o hd) consindex
   val newtys = map (hd o snd o dest_type o type_of o snd o snd) consindex'
@@ -458,7 +469,7 @@ in
     val (av,bimp) = dest_forall(concl th)
     val pv = lhand(body(rator(rand bimp)))
     val (p,v) = dest_comb pv
-    val (mk,dest) = assoc p consindex
+    val (mk,dest) = tmassoc p consindex
     val ty = hd(snd(dest_type(type_of dest)))
     val v' = mk_var(fst(dest_var v),ty)
     val dv = mk_comb(dest,v')
@@ -488,7 +499,7 @@ fun derive_induction_theorem consindex tybijpairs conthms iith rth = let
   val th3 = DISCH asm th2
   val preds = map (rator o body o rand) (conjuncts(rand(concl th3)))
   val th4 = GENL preds th3
-  val pasms = filter (C mem (map fst consindex) o lhand) (hyp th4)
+  val pasms = filter (C tmem (map fst consindex) o lhand) (hyp th4)
   val th5 = itlist DISCH pasms th4
   val th6 = itlist SCRUB_EQUATION (hyp th5) th5
   val th7 = UNDISCH_ALL th6
@@ -548,13 +559,13 @@ fun create_recursive_functions tybijpairs consindex conthms rth = let
     TRANS fxth (AP_TERM fnn kth)
   end
   val fxth5 = end_itlist CONJ (map2 cleanup_fxthm conthms fxths4)
-  val pasms = filter (C mem (map fst consindex) o lhand) (hyp fxth5)
+  val pasms = filter (C tmem (map fst consindex) o lhand) (hyp fxth5)
   val fxth6 = itlist DISCH pasms fxth5
   val fxth7 =
-    itlist SCRUB_EQUATION (itlist (union o hyp) conthms []) fxth6
+    itlist SCRUB_EQUATION (itlist (tunion o hyp) conthms []) fxth6
   val fxth8 = UNDISCH_ALL fxth7
 in
-  itlist SCRUB_EQUATION (subtract (hyp fxth8) eqs) fxth8
+  itlist SCRUB_EQUATION (op_set_diff aconv (hyp fxth8) eqs) fxth8
 end;
 
 (* ------------------------------------------------------------------------- *)
@@ -574,14 +585,14 @@ local
   val numty = numSyntax.num
   val s = mk_var("s",numty --> zty)
   fun extract_arg tup v =
-    if v = tup then REFL tup
+    if aconv v tup then REFL tup
     else let
       val (t1,t2) = pairSyntax.dest_pair tup
       val PAIR_th = ISPECL [t1,t2] (if free_in v t1 then pairTheory.FST
                                     else pairTheory.SND)
       val tup' = rand(concl PAIR_th)
     in
-      if tup' = v then PAIR_th
+      if aconv tup' v then PAIR_th
       else let
         val th = extract_arg (rand(concl PAIR_th)) v
       in
@@ -858,13 +869,13 @@ in
           in
             if is_var a then (g,g)
             else let
-              val outl = assoc (rator a) outlalist
+              val outl = tmassoc (rator a) outlalist
             in
               (mk_comb(outl,g),g)
             end
           end) args
         val (args',args'') = unzip pargs
-        val inl = assoc (rator l) inlalist
+        val inl = tmassoc (rator l) inlalist
         val rty = hd(snd(dest_type(type_of inl)))
         val nty = itlist (curry op --> o type_of) args' rty
         val fn' = mk_var(fst(dest_var fnn),nty)
@@ -877,7 +888,7 @@ in
       val bth = ASSUME (snd(strip_exists(concl jth)))
       fun finish_clause th = let
         val (avs,bod) = strip_forall (concl th)
-        val outl = assoc (rator (lhand bod)) outlalist
+        val outl = tmassoc (rator (lhand bod)) outlalist
       in
         GENL avs (BETA_RULE (AP_TERM outl (SPECL avs th)))
       end
@@ -1092,16 +1103,17 @@ fun prove_inductive_types_isomorphic n k (ith0,rth0) (ith1,rth1) = let
     val (con0,vargs0) = strip_comb(rand l0)
     val gargs0 = map (genvar o type_of) wargs0
     val nestf0 =
-      map (fn a => can (find (fn t => is_comb t andalso rand t = a))
-           wargs0) vargs0
+      map (fn a => can (find (fn t => is_comb t andalso aconv (rand t) a))
+                       wargs0)
+          vargs0
     val targs0 =
       map2 (fn a => fn f =>
             if f then
-              find (fn t => is_comb t andalso rand t = a) wargs0
+              find (fn t => is_comb t andalso aconv (rand t) a) wargs0
             else a)
       vargs0 nestf0
     val gvlist0 = zip wargs0 gargs0
-    val xargs = map (fn v => assoc v gvlist0) targs0
+    val xargs = map (fn v => tmassoc v gvlist0) targs0
     val inst0 =
       (vc0 |->
        list_mk_abs(gargs0,list_mk_comb(fst(strip_comb(rand l1)),xargs)))
@@ -1110,11 +1122,11 @@ fun prove_inductive_types_isomorphic n k (ith0,rth0) (ith1,rth1) = let
     val gargs1 = map (genvar o type_of) wargs1
     val targs1 =
       map2 (fn a => fn f =>
-            if f then find (fn t => is_comb t andalso rand t = a) wargs1
+            if f then find (fn t => is_comb t andalso aconv (rand t) a) wargs1
             else a)
       vargs1 nestf0
     val gvlist1 = zip wargs1 gargs1
-    val xargs = map (fn v => assoc v gvlist1) targs1
+    val xargs = map (fn v => tmassoc v gvlist1) targs1
     val inst1 =
       (vc1 |->
        list_mk_abs(gargs1,list_mk_comb(fst(strip_comb(rand l0)),xargs)))
@@ -1153,8 +1165,9 @@ fun prove_inductive_types_isomorphic n k (ith0,rth0) (ith1,rth1) = let
       map (fn tm =>
               tryfind (fn vtm => ho_match_term [] empty_tmset vtm tm) icjs)
           (conjuncts (rand ctm2))
-    val tvs = subtract (fst(strip_forall(concl ith0)))
-                (itlist (fn (x,_) => union (map #redex x)) cinsts [])
+    val tvs = op_set_diff aconv
+                          (fst(strip_forall(concl ith0)))
+                          (itlist (fn (x,_) => tunion (map #redex x)) cinsts [])
     val ctvs =
       map (fn p => let val x = mk_var("x",hd(snd(dest_type(type_of p))))
       in (p |-> mk_abs(x,T_tm)) end) tvs
@@ -1167,8 +1180,9 @@ fun prove_inductive_types_isomorphic n k (ith0,rth0) (ith1,rth1) = let
     val cinsts = map (fn tm => tryfind
                       (fn vtm => ho_match_term [] empty_tmset vtm tm) icjs)
                      (conjuncts (lhand ctm2))
-    val tvs = subtract (fst(strip_forall(concl ith1)))
-      (itlist (fn (x,_) => union (map #redex x)) cinsts [])
+    val tvs =
+        op_set_diff aconv (fst(strip_forall(concl ith1)))
+                    (itlist (fn (x,_) => tunion (map #redex x)) cinsts [])
     val ctvs =
       map (fn p => let val x = mk_var("x",hd(snd(dest_type(type_of p)))) in
            (p |-> mk_abs(x,T_tm)) end) tvs
@@ -1288,7 +1302,7 @@ in
         if is_imp body then let
           val (ant,con) = Psyntax.dest_imp body
         in
-          if mem (hd vs) (free_vars ant) then
+          if tmem (hd vs) (free_vars ant) then
             BINDER_CONV each_conj tm
           else
             (SWAP_TILL_BOTTOM_THEN FORALL_IMP_CONV THENC each_conj) tm

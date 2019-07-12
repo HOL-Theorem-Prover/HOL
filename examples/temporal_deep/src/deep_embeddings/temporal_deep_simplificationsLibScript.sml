@@ -30,6 +30,7 @@ quietdec := false;
 *)
 
 val _ = new_theory "temporal_deep_simplificationsLib";
+val _ = ParseExtras.temp_loose_equality()
 
 val PROP_LOGIC_EQUIVALENT_LIST_AS_SET_def =
   Define `PROP_LOGIC_EQUIVALENT_LIST_AS_SET =

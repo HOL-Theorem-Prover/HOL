@@ -10,7 +10,7 @@ struct
 
 open HolKernel Abbrev boolLib aiLib
 
-val ERR = mk_HOL_ERR "tttFeature"
+val ERR = mk_HOL_ERR "mlFeature"
 
 (* -------------------------------------------------------------------------
    Constants, variables and types

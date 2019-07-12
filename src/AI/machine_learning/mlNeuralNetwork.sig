@@ -2,7 +2,7 @@ signature mlNeuralNetwork =
 sig
 
   (* hyperparameters *)
-  val learning_rate : real ref
+  val learningrate_glob : real ref
 
   (* activation *)
   val tanh : real -> real
@@ -13,6 +13,8 @@ sig
   val dleakyrelu : real -> real
 
   (* NN *)
+  type mat = real vector vector
+
   type layer = {a : real -> real, da : real -> real, w : real vector vector}
 
   type nn = layer list
@@ -41,12 +43,11 @@ sig
   val bp_nn_wocost : fpdata list -> real vector -> bpdata list
 
   (* weight updates *)
-  val update_nn        : nn -> real vector vector list -> nn
-  val average_bpdatall : int -> bpdata list list -> real vector vector list
-  val average_dwll     : real vector vector list list -> real vector vector list
-  val sum_dwll         : real vector vector list list -> real vector vector list
-  val calc_loss        : real vector -> real
-  val average_loss     : bpdata list list -> real
+  val update_nn         : nn -> mat list -> nn
+  val smult_dwl         : real -> mat list -> mat list
+  val sum_dwll          : mat list list -> mat list
+  val mean_square_error : real vector -> real
+  val average_loss      : bpdata list list -> real
 
   (* training schedule *)
   val train_nn_epoch  : nn -> (real vector * real vector) list list -> nn
@@ -54,6 +55,10 @@ sig
     int -> nn -> int -> (real vector * real vector) list -> nn
 
   (* printing *)
+  val string_of_wl : real vector vector list -> string
   val string_of_nn : nn -> string
+  val read_wl_sl : string list -> real vector vector list
+  val read_nn_sl : string list -> nn
+
 
 end

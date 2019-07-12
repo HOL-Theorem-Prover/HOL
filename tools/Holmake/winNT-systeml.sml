@@ -82,7 +82,6 @@ fun fullPath slist =
 
 val HOLDIR = ""
 val MOSMLDIR = ""
-val HAVE_BASIS2002 = ""
 val OS = ""
 val POLY = ""
 val POLYC = ""
@@ -154,5 +153,7 @@ fun emit_hol_unquote_script target qend _ =
  end
 end (* local *)
 
+fun quietbind s = ()
+fun bindstr s = s
 
 end; (* struct *)

@@ -28,6 +28,7 @@ open HolKernel Parse boolLib hol88Lib reduceLib pairLib numLib
 infix THEN THENL ORELSE ORELSEC ## THENC ORELSE_TCL;
 
 val _ = new_theory "poly";
+val _ = ParseExtras.temp_loose_equality()
 
 
 (* ------------------------------------------------------------------------- *)

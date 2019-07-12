@@ -1,6 +1,7 @@
 open HolKernel Parse boolLib boolSimps bossLib SatisfySimps categoryTheory functorTheory pred_setTheory limitTheory lcsymtacs;
 
 val _ = new_theory "ens_cat";
+val _ = ParseExtras.temp_loose_equality()
 
 val HasFunType_def = Define`
   HasFunType f X Y = extensional f X ∧ ∀x. x ∈ X ⇒ f x ∈ Y`;

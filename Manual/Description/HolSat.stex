@@ -62,12 +62,12 @@ The following example illustrates the use of {\tt{HolSatLib}} for proving propos
 
 >> show_tags := true;
 
->> SAT_PROVE ``(a ==> b) /\ (b ==> a) = (a=b)``;
+>> SAT_PROVE ``(a ==> b) /\ (b ==> a) <=> (a=b)``;
 
 >> SAT_PROVE ``(a ==> b) ==> (a=b)``
    handle HolSatLib.SAT_cex th => th;
 
->> SAT_ORACLE ``(a ==> b) /\ (b ==> a) = (a=b)``;
+>> SAT_ORACLE ``(a ==> b) /\ (b ==> a) <=> (a=b)``;
 \end{alltt}
 \end{session}
 

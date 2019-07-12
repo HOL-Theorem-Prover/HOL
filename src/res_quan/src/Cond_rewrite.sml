@@ -30,10 +30,10 @@ fun match_ok vs (l:((term,term) subst * (hol_type,hol_type) subst) list) =
    val tm_subst = fst subst
    val ty_subst = snd subst
    in
-     (null ty_subst) andalso
-     (let val vlist = (map #redex tm_subst)
+     null ty_subst andalso
+     (let val vset = listset (map #redex tm_subst)
       in
-      ((set_eq vs vlist) orelse (null vlist))
+        HOLset.equal(listset vs, vset) orelse HOLset.isEmpty vset
       end)
    end ;
 
@@ -41,28 +41,30 @@ fun match_aal fvars ante [] = []
  |  match_aal fvars ante (asm::asml) =
       let val ml = match_aa ante asm
       in
-       if (match_ok (intersect fvars (frees ante)) ml)
+       if (match_ok (op_intersect aconv fvars (frees ante)) ml)
        then [(fst(hd ml), asm)]
        else (match_aal fvars ante asml)
       end ;
 
-fun subset s1 s2 = (* s1 is a subset of s2 *)
-    set_eq s2 (union s1 s2);
+
+fun rr_compare ({redex=red1,residue=res1}, {redex=red2,residue=res2}) =
+  pair_compare(Term.compare,Term.compare) ((red1,res1),(red2,res2))
+fun substset s = HOLset.addList(HOLset.empty rr_compare, s)
 
 fun match_asm fvars asm (ml,pl) [] = (ml,pl)
  | match_asm fvars asm (ml,pl) (ante :: antes) =
      let val mlist = match_aal fvars ante asm
+         val mls = substset ml
      in
       if null mlist then (* no match *)
         (match_asm fvars asm (ml,pl) antes)
       else
        (let val ml' = fst (hd mlist)
+            val mls' = substset ml'
         in
-        if (subset ml ml')
-        then (* found consistant match *)
+        if HOLset.isSubset(mls, mls') then (* found consistant match *)
           (match_asm fvars asm (ml', (ante::pl)) antes)
-        else if (subset ml' ml)
-        then (* found consistant match *)
+        else if HOLset.isSubset(mls', mls) then (* found consistant match *)
           (match_asm fvars asm (ml, (ante::pl)) antes)
         else (*  inconsistant match *)
           (match_asm fvars asm (ml, pl) antes)
@@ -95,8 +97,8 @@ fun var_cap th fv sv newvs =
    (let val {Bvar=v, Body=b} = dest_forall (concl th)
      val (nv,th') = (I ## (GEN v)) (var_cap (SPEC v th) fv sv newvs)
      in
-     if  (mem v fv) then
-      if (mem v sv) then
+     if tmem v fv then
+      if tmem v sv then
        (let val v' =  (variant (fv @ sv) v)
             in
              ((v':: nv), (CONV_RULE (GEN_ALPHA_CONV v') th'))

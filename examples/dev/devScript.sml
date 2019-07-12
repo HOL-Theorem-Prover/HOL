@@ -42,6 +42,7 @@ val op by = BasicProvers.byA
 val kill = (fn theorem => K ALL_TAC theorem);
 
 val _ = new_theory "dev";
+val _ = ParseExtras.temp_loose_equality()
 
 (*****************************************************************************)
 (* LIV (livenes) - a busy device finishes its computation eventually         *)

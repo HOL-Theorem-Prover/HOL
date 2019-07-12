@@ -206,8 +206,8 @@ val _ = set_fixity "-->" (Infixr 700)
 val _ = overload_on ("-->", ``tyFun``);
 
 val valid_ctxt_def = Define`
-  (valid_ctxt [] = T) /\
-  (valid_ctxt ((x,A) :: G) = (!A'. ~MEM (x, A') G) /\ valid_ctxt G)
+  (valid_ctxt [] ⇔ T) /\
+  (valid_ctxt ((x,A) :: G) ⇔ (!A'. ~MEM (x, A') G) /\ valid_ctxt G)
 `;
 val _ = export_rewrites ["valid_ctxt_def"]
 
@@ -288,13 +288,13 @@ val _ = export_rewrites ["ctxtFV_ctxtswap"]
 (* more direct characterisation of ctxtFV *)
 val ctxtFV_MEM = store_thm(
   "ctxtFV_MEM",
-  ``x IN ctxtFV G = (?A. MEM (x,A) G)``,
+  ``x ∈ ctxtFV G ⇔ (∃A. MEM (x,A) G)``,
   Induct_on `G` THEN
   ASM_SIMP_TAC (srw_ss() ++ boolSimps.DNF_ss) [pairTheory.FORALL_PROD]);
 
 
 val valid_ctxt_CONS = prove(
-  ``!z ty. valid_ctxt ((z,ty) :: G) = ~(z IN ctxtFV G) /\ valid_ctxt G``,
+  “!z ty. valid_ctxt ((z,ty) :: G) ⇔ z ∉ ctxtFV G ∧ valid_ctxt G”,
   Induct_on `G` THEN1 SRW_TAC [][] THEN
   ASM_SIMP_TAC bool_ss [pairTheory.FORALL_PROD, Once valid_ctxt_def] THEN
   SRW_TAC [][ctxtFV_MEM]);

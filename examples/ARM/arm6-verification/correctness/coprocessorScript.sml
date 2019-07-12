@@ -18,7 +18,7 @@ open my_listTheory io_onestepTheory iclass_compLib armLib;
 open armTheory coreTheory lemmasTheory;
 
 val _ = new_theory "coprocessor";
-
+val _ = ParseExtras.temp_loose_equality()
 (* ------------------------------------------------------------------------- *)
 
 infix \\ << >>

@@ -21,7 +21,7 @@ val _ = new_theory "blast"
    -------------------------------------------------------- *)
 
 val bcarry_def = new_definition ("bcarry_def",
-  ``bcarry x y c = x /\ y \/ (x \/ y) /\ c``)
+  ``bcarry x y c <=> x /\ y \/ (x \/ y) /\ c``)
 
 val BCARRY_def = Define`
   (BCARRY 0 x y c = c) /\
@@ -280,8 +280,9 @@ val BITWISE_SUB = Q.store_thm("BITWISE_SUB",
 
 val SUB1_SUC = DECIDE (Term `!n. 0 < n ==> (SUC (n - 1) = n)`)
 
-val BITWISE_LO = Q.store_thm("BITWISE_LO",
-  `!x y:'a word. x <+ y = ~BCARRY (dimindex (:'a)) ($' x) ((~) o ($' y)) T`,
+Theorem BITWISE_LO:
+  !x y:'a word. x <+ y <=> ~BCARRY (dimindex (:'a)) ($' x) ((~) o ($' y)) T
+Proof
   Cases \\ Cases
   \\ SRW_TAC [fcpLib.FCP_ss, boolSimps.LET_ss]
        [DIMINDEX_GT_0, word_lo_def, nzcv_def, BCARRY_BIT_EQ, BCARRY_LEM]
@@ -291,7 +292,8 @@ val BITWISE_LO = Q.store_thm("BITWISE_LO",
   \\ ASM_SIMP_TAC std_ss [BIT_def,
        BITS_SUM |> SPEC_ALL |> Q.INST [`a` |-> `1n`]
                 |> SIMP_RULE std_ss [Once ADD_COMM]]
-   \\ SIMP_TAC std_ss [GSYM BIT_def, BIT_B])
+   \\ SIMP_TAC std_ss [GSYM BIT_def, BIT_B]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
@@ -403,7 +405,7 @@ val word_bv_lem = Q.prove(
 val lem = Q.prove(
   `!h w P a:'a word.
      (((dimindex(:'a) - 1) -- h + 1) w = 0w) ==>
-     (((h -- 0) a = w) /\ (((dimindex(:'a) - 1) -- h + 1) a = 0w) = (a = w))`,
+     (((h -- 0) a = w) /\ (((dimindex(:'a) - 1) -- h + 1) a = 0w) <=> (a = w))`,
   STRIP_TAC
   \\ Cases_on `dimindex(:'a) - 1 < h + 1`
   \\ SRW_TAC [wordsLib.WORD_EXTRACT_ss, ARITH_ss] []
@@ -422,19 +424,19 @@ val lem = Q.prove(
   \\ FULL_SIMP_TAC (srw_ss()++wordsLib.WORD_BIT_EQ_ss) []
   \\ Q.EXISTS_TAC `h + (i + 1)`
   \\ SRW_TAC [ARITH_ss] []
-  \\ METIS_TAC [])
+  \\ METIS_TAC []);
 
 val lem2 = Q.prove(
   `!l i p b.
-      (FOLDL (\a j. a \/ p j) i l /\ b =
+      (FOLDL (\a j. a \/ p j) i l /\ b <=>
        FOLDL (\a j. a \/ b /\ p j) (i /\ b) l)`,
   Induct \\ SRW_TAC [] [listTheory.FOLDL,
-    DECIDE ``((i \/ p h) /\ b = i /\ b \/ b /\ p h)``])
+    DECIDE ``((i \/ p h) /\ b <=> i /\ b \/ b /\ p h)``])
 
 val FOLDL_LOG2_INTRO = Q.prove(
   `!P n m:'a word.
      1 < n /\ n <= dimindex (:'a) ==>
-       (FOLDL (\a j. a \/ (m = n2w j) /\ P j) F (COUNT_LIST n) =
+       (FOLDL (\a j. a \/ (m = n2w j) /\ P j) F (COUNT_LIST n) <=>
         FOLDL (\a j. a \/ ((LOG2 (n - 1) -- 0) m = n2w j) /\ P j) F
               (COUNT_LIST n) /\
         ((dimindex(:'a) - 1 -- LOG2 (n - 1) + 1) m = 0w))`,

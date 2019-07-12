@@ -19,7 +19,7 @@ in
 (* Creating a new theory that will be called STE *)
 
 val _ = new_theory "STE";
-
+val _ = ParseExtras.temp_loose_equality()
 infix THEN THENL;
 
 (* Creating abbreviations for FULL_SIMP_TAC and RW_TAC *)
@@ -1655,5 +1655,3 @@ val BRIDGETHEOREM2 = store_thm ("BRIDGETHEOREM2",
 
 val _ = export_theory();
 end;
-
-

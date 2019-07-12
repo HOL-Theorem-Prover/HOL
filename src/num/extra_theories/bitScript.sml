@@ -110,14 +110,13 @@ val ZERO_LT_TWOEXP = save_thm("ZERO_LT_TWOEXP",
    GEN_ALL (numLib.REDUCE_RULE (Q.SPECL [`n`, `1`] ZERO_LESS_EXP)))
 val _ = export_rewrites ["ZERO_LT_TWOEXP"]
 
-val ONE_LE_TWOEXP = Q.store_thm("ONE_LE_TWOEXP",
-   `!n. 1n <= 2 ** n`,
-   SRW_TAC [] [DECIDE ``1n <= x = 0 < x``])
-val _ = export_rewrites ["ONE_LE_TWOEXP"]
+Theorem ONE_LE_TWOEXP[simp]:
+   !n. 1n <= 2 ** n
+Proof SRW_TAC [] [DECIDE ``1n <= x <=> 0 < x``]
+QED
 
 (* |- !n. 2 ** n <> 0 *)
-val TWOEXP_NOT_ZERO = save_thm("TWOEXP_NOT_ZERO",
-   REWRITE_RULE [GSYM NOT_ZERO_LT_ZERO] ZERO_LT_TWOEXP)
+Theorem TWOEXP_NOT_ZERO = REWRITE_RULE [GSYM NOT_ZERO_LT_ZERO] ZERO_LT_TWOEXP
 
 local
    val th =
@@ -624,8 +623,9 @@ val BIT_SLICE_THM3 = Q.store_thm("BIT_SLICE_THM3",
    `!b n. ~BIT b n = (SLICE b b n = 0)`,
    RW_TAC bool_ss [SBIT_def, GSYM BIT_SLICE_THM, TWOEXP_NOT_ZERO])
 
-val BIT_SLICE_THM4 = Q.store_thm("BIT_SLICE_THM4",
-   `!b h l n. BIT b (SLICE h l n) = l <= b /\ b <= h /\ BIT b n`,
+Theorem BIT_SLICE_THM4:
+   !b h l n. BIT b (SLICE h l n) <=> l <= b /\ b <= h /\ BIT b n
+Proof
    REPEAT STRIP_TAC
    \\ Cases_on `l <= b /\ b <= h`
    \\ RW_TAC arith_ss [BIT_SLICE_THM2, SLICE_COMP_THM2]
@@ -644,7 +644,8 @@ val BIT_SLICE_THM4 = Q.store_thm("BIT_SLICE_THM4",
       by METIS_TAC [TWOEXP_MONO2, GSYM SLICE_THM, SLICELT_THM,
                     LESS_LESS_EQ_TRANS, MULT_COMM]
       \\ ASM_SIMP_TAC std_ss [LESS_DIV_EQ_ZERO]
-   ])
+   ]
+QED
 
 val SUB_BITS = Q.prove(
    `!h l a b.
@@ -1064,8 +1065,9 @@ val DIV_SUB0 = Q.prove(
    by METIS_TAC [DECIDE ``n <> 0n ==> (n - 1 < n)``, MOD_2EXP_LT, LESS_TRANS]
    \\ ASM_SIMP_TAC arith_ss [arithmeticTheory.LESS_DIV_EQ_ZERO, ZERO_LT_TWOEXP])
 
-val BIT_EXP_SUB1 = Q.store_thm("BIT_EXP_SUB1",
-   `!b n. BIT b (2 ** n - 1) = b < n`,
+Theorem BIT_EXP_SUB1:
+   !b n. BIT b (2 ** n - 1) <=> b < n
+Proof
    REPEAT STRIP_TAC
    \\ Cases_on `n` >- SIMP_TAC std_ss [BIT_ZERO]
    \\ REWRITE_TAC [(GSYM o SIMP_RULE std_ss [BITS_ZERO2] o
@@ -1075,7 +1077,8 @@ val BIT_EXP_SUB1 = Q.store_thm("BIT_EXP_SUB1",
    \\ FULL_SIMP_TAC std_ss [NOT_LESS, BIT_def]
    \\ `BITWISE (SUC n') (\x y. ~x) 0 ARB < 2 ** b`
    by METIS_TAC [BITWISE_LT_2EXP, LESS_LESS_EQ_TRANS, TWOEXP_MONO2]
-   \\ SRW_TAC [] [BITS_LT_LOW])
+   \\ SRW_TAC [] [BITS_LT_LOW]
+QED
 
 val BIT_SHIFT_THM5 = Q.store_thm("BIT_SHIFT_THM5",
    `!n m i a.
@@ -1314,8 +1317,9 @@ val NOT_BIT_GT_BITWISE = Q.store_thm("NOT_BIT_GT_BITWISE",
                  LESS_LESS_EQ_TRANS]
    \\ ASM_SIMP_TAC std_ss [NOT_BIT_GT_TWOEXP])
 
-val LT_TWOEXP = Q.store_thm("LT_TWOEXP",
-   `!x n. x < 2 ** n = (x = 0) \/ LOG2 x < n`,
+Theorem LT_TWOEXP:
+   !x n. x < 2 ** n <=> (x = 0) \/ LOG2 x < n
+Proof
    Cases
    \\ SRW_TAC [] [ZERO_LT_TWOEXP, LOG2_def]
    \\ EQ_TAC
@@ -1329,7 +1333,8 @@ val LT_TWOEXP = Q.store_thm("LT_TWOEXP",
       \\ IMP_RES_TAC TWOEXP_MONO2
       \\ `SUC n < 2 ** SUC (LOG 2 (SUC n))` by SRW_TAC [] [logrootTheory.LOG]
       \\ METIS_TAC [LESS_LESS_EQ_TRANS]
-    ])
+    ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
@@ -1476,5 +1481,40 @@ val LEAST_THM = Q.store_thm("LEAST_THM",
    \\ PROVE_TAC [])
 
 (* ------------------------------------------------------------------------- *)
+
+fun simp thl = simpLib.ASM_SIMP_TAC (srw_ss() ++ numSimps.ARITH_ss) thl
+
+Theorem BIT_TIMES2:
+  BIT z (2 * n) <=> 0 < z /\ BIT (z-1) n
+Proof
+  Cases_on`z` >> simp[] >- (
+    simp[BIT0_ODD] >>
+    simp[arithmeticTheory.ODD_EVEN] >>
+    simp[arithmeticTheory.EVEN_DOUBLE]) >>
+  Q.RENAME_TAC [‘BIT (SUC z) (2 * n) <=> BIT z n’] >>
+  Q.SPECL_THEN[‘z’,‘n’,‘1’]mp_tac BIT_SHIFT_THM >>
+  simp[arithmeticTheory.ADD1]
+QED
+
+Theorem BIT_TIMES2_1:
+  !n z. BIT z (2 * n + 1) <=> (z=0) \/ BIT z (2 * n)
+Proof
+  Induct >> simp_tac std_ss [] >- (
+    simp_tac std_ss [BIT_ZERO] >>
+    Cases_on`z`>>simp_tac std_ss [BIT0_ODD] >>
+    simp_tac arith_ss [GSYM BIT_DIV2,BIT_ZERO] ) >>
+  Cases >> simp_tac std_ss [BIT0_ODD] >- (
+    simp_tac std_ss [arithmeticTheory.ODD_EXISTS,arithmeticTheory.ADD1] >>
+    METIS_TAC[] ) >>
+  simp_tac std_ss [GSYM BIT_DIV2] >>
+  Q.SPEC_THEN ‘2’ mp_tac arithmeticTheory.ADD_DIV_RWT >>
+  simp[] >>
+  disch_then(Q.SPECL_THEN[‘2 * SUC n’,‘1’]mp_tac) >>
+  simp_tac std_ss [] >> impl_tac
+  >- METIS_TAC[MULT_COMM, DECIDE “0<2”, MOD_EQ_0] >>
+  simp[]
+QED
+
+
 
 val _ = export_theory()

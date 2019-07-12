@@ -1,11 +1,9 @@
-
 open HolKernel boolLib bossLib Parse;
-open wordsTheory wordsLib bitTheory arithmeticTheory fcpTheory pred_setTheory progTheory;
+open wordsTheory wordsLib alignmentTheory bitTheory arithmeticTheory fcpTheory pred_setTheory progTheory;
 
 val _ = new_theory "address";
+val _ = ParseExtras.temp_loose_equality()
 
-infix \\
-val op \\ = op THEN;
 
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
@@ -26,6 +24,11 @@ val SING_SET_def = Define `SING_SET x = {x}`;
 
 
 (* theorems *)
+
+Theorem ALIGNED_eq_aligned:
+  ALIGNED = aligned 2
+Proof rw[ALIGNED_def,FUN_EQ_THM,aligned_bitwise_and]
+QED
 
 val WORD_EQ_XOR_ZERO = store_thm("WORD_EQ_XOR_ZERO",
   ``!v w. (v ?? w = 0w) = (v = w:'a word)``,

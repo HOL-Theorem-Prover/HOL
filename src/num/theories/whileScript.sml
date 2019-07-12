@@ -228,6 +228,15 @@ val LEAST_T = store_thm(
   Q.X_GEN_TAC `n` THEN STRIP_TAC THEN SPOSE_NOT_THEN ASSUME_TAC THEN
   FULL_SIMP_TAC (srw_ss()) [NOT_ZERO_LT_ZERO] THEN METIS_TAC[]);
 
+Theorem LEAST_LESS_EQ[simp]:
+  (LEAST x. y <= x) = y
+Proof
+  DEEP_INTRO_TAC LEAST_ELIM >> SRW_TAC [][]
+  >- (Q.EXISTS_TAC ‘y’ >> SIMP_TAC (srw_ss()) [LESS_EQ_REFL]) >>
+  FULL_SIMP_TAC (srw_ss()) [LESS_OR_EQ] >> RES_TAC >>
+  FULL_SIMP_TAC (srw_ss()) []
+QED
+
 (* ----------------------------------------------------------------------
     OLEAST ("option LEAST") returns NONE if the argument is a predicate
     that is everywhere false.  Otherwise it returns SOME n, where n is the
@@ -385,7 +394,7 @@ val OWHILE_INV_IND = store_thm(
   ]);
 
 val IF_SOME_EQ_SOME_LEMMA = prove(
-  ``!b (x:'a) y. ((if b then SOME x else NONE) = SOME y) = b /\ (x = y)``,
+  ``!b (x:'a) y. ((if b then SOME x else NONE) = SOME y) <=> b /\ (x = y)``,
   Cases THEN
   FULL_SIMP_TAC bool_ss [optionTheory.NOT_NONE_SOME,optionTheory.SOME_11]);
 

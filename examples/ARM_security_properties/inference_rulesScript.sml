@@ -3,6 +3,7 @@ open MMU_SetupTheory MMUTheory arm_opsemTheory arm_seq_monadTheory arm_coretypes
 open tacticsLib;
 
 val _ =  new_theory("inference_rules");
+val _ = ParseExtras.temp_loose_equality()
 
 
 val let_ss = simpLib.mk_simpset [boolSimps.LET_ss] ;

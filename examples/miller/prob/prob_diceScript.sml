@@ -23,6 +23,7 @@ quietdec := false;
 *)
 
 val _ = new_theory "prob_dice";
+val _ = ParseExtras.temp_loose_equality()
 
 val EXISTS_DEF = boolTheory.EXISTS_DEF;
 val Rewr = DISCH_THEN (REWRITE_TAC o wrap);
@@ -57,7 +58,8 @@ val ddg_ss = std_ss ++ simpLib.SSFRAG {
             name = "DDG_INDEP_FN_CONV", trace = 10}],
   dprocs = [],
   filter = NONE,
-  rewrs = [IS_SOME_MMAP, IS_SOME_INTER_MMAP, FST_o_UNIT],
+  rewrs = map (fn th => (NONE, th))
+              [IS_SOME_MMAP, IS_SOME_INTER_MMAP, FST_o_UNIT],
   congs = []};
 
 (* ------------------------------------------------------------------------- *)

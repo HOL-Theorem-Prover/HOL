@@ -1,4 +1,6 @@
 open HolKernel Parse boolLib bossLib; val _ = new_theory "lisp_inv";
+val _ = ParseExtras.temp_loose_equality()
+
 
 open wordsTheory arithmeticTheory wordsLib listTheory pred_setTheory pairTheory;
 open combinTheory finite_mapTheory addressTheory helperLib;

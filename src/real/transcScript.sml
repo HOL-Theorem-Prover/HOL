@@ -37,6 +37,7 @@ open hol88Lib
      RealArith;
 
 val _ = new_theory "transc";
+val _ = ParseExtras.temp_loose_equality()
 
 
 val _ = Parse.reveal "B";

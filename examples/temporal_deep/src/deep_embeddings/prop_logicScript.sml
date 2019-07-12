@@ -28,6 +28,7 @@ quietdec := false;
 *)
 
 val _ = new_theory "prop_logic";
+val _ = ParseExtras.temp_loose_equality()
 
 
 val prop_logic =

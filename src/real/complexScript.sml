@@ -23,6 +23,7 @@ open tautLib AC
 open boolSimps
 
 val _ = new_theory "complex";
+val _ = ParseExtras.temp_loose_equality()
 
 (* ------------------------------------------------------------------ *)
 (* Definition of complex number type.                                 *)

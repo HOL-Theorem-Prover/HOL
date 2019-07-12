@@ -432,9 +432,12 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
   val jobs = #jobs (#core optv)
   open HM_DepGraph
   fun pr s = s
-  fun interpret_graph g =
+  fun interpret_graph (g,ok) =
     case List.filter (fn (_,nI) => #status nI <> Succeeded) (listNodes g) of
-        [] => OS.Process.success
+        [] => (if not ok then
+                 warn ("*** ProcessMultiplexor thinks state is not ok")
+               else ();
+               OS.Process.success)
       | ns =>
         let
           fun str (n,nI) = node_toString n ^ ": " ^ nodeInfo_toString pr nI

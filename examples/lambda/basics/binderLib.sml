@@ -183,7 +183,7 @@ end
 fun FRESH_TAC (g as (asl, w)) = let
   val (strs, sets) = List.foldl find_avoids (empty_tmset, empty_tmset) (w::asl)
   val finite_sets = List.mapPartial (total pred_setSyntax.dest_finite) asl
-  fun filterthis t = not (is_var t) orelse mem t finite_sets
+  fun filterthis t = not (is_var t) orelse tmem t finite_sets
   val sets' = List.filter filterthis (HOLset.listItems sets)
   fun get_binder already_done t =
       case tylookup (type_of t) of
@@ -284,7 +284,7 @@ fun check_for_errors tm = let
           ERR "prove_recursive_term_function_exists"
               "All conjuncts must be equations"
   val f = rator (lhs (hd conjs))
-  val _ = List.all (fn t => rator (lhs t) = f) conjs orelse
+  val _ = List.all (fn t => rator (lhs t) ~~ f) conjs orelse
           ERR "prove_recursive_term_function_exists"
               "Must define same constant in all equations"
   val _ = List.all (fn t => length (#2 (strip_comb (lhs t))) = 1) conjs orelse

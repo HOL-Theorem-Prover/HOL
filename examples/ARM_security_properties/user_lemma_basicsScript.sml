@@ -8,6 +8,7 @@ open tacticsLib;
 open wordsTheory wordsLib;
 
 val _ =  new_theory("user_lemma_basics");
+val _ = ParseExtras.temp_loose_equality()
 
 val _ = temp_overload_on ("return", ``constT``);
 val _ = overload_on("priv_mode_constraints", ``priv_mode_constraints_v1``);

@@ -3,9 +3,7 @@ open arithmeticTheory whileTheory pairTheory pred_setTheory progTheory;
 
 val _ = new_theory "triple";
 
-infix \\
-val op \\ = op THEN;
-
+val _ = ParseExtras.temp_loose_equality()
 (* we define a total-correctness machine-code Hoare triple *)
 
 val TRIPLE_def = Define`

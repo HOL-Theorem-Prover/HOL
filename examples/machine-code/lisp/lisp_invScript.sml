@@ -17,16 +17,17 @@ val RW1 = ONCE_REWRITE_RULE;
 (* s-expression assertion *)
 
 val lisp_x_def = Define `
-  (lisp_x (Val k) (a,dm,m) sym = (a = n2w (k * 4 + 2)) /\ k < 2 ** 30) /\
-  (lisp_x (Sym s) (a,dm,m) sym = ((a - 3w) && 3w = 0w) /\ (a - 3w,s) IN sym) /\
-  (lisp_x (Dot x y) (a,dm,m) sym = a IN dm /\ ALIGNED a /\
+  (lisp_x (Val k) (a,dm,m) sym <=> (a = n2w (k * 4 + 2)) /\ k < 2 ** 30) /\
+  (lisp_x (Sym s) (a,dm,m) sym <=>
+    ((a - 3w) && 3w = 0w) /\ (a - 3w,s) IN sym) /\
+  (lisp_x (Dot x y) (a,dm,m) sym <=> a IN dm /\ ALIGNED a /\
     lisp_x x (m a,dm,m) sym /\ lisp_x y (m (a+4w),dm,m) sym)`;
 
 (* symbol table inv *)
 
 val string_mem_def = Define `
   (string_mem "" (a,m:word32->word8,df) = T) /\
-  (string_mem (STRING c s) (a,m,df) = a IN df /\
+  (string_mem (STRING c s) (a,m,df) <=> a IN df /\
       (m a = n2w (ORD c)) /\ string_mem s (a+1w,m,df))`;
 
 val string_mem_dom_def = Define `
@@ -34,16 +35,17 @@ val string_mem_dom_def = Define `
   (string_mem_dom (STRING c s) a = a INSERT string_mem_dom s (a+1w))`;
 
 val symbol_table_def = Define `
-  (symbol_table [] x (a,dm,m,dg,g) = (m a = 0w) /\ a IN dm /\ (x = {})) /\
-  (symbol_table (s::xs) x (a,dm,m,dg,g) = ~(s = "") /\ string_mem s (a+8w,g,dg) /\
+  (symbol_table [] x (a,dm,m,dg,g) <=> (m a = 0w) /\ a IN dm /\ (x = {})) /\
+  (symbol_table (s::xs) x (a,dm,m,dg,g) <=>
+    s <> "" /\ string_mem s (a+8w,g,dg) /\
     (m a = n2w (LENGTH s)) /\ {a; a+4w} SUBSET dm /\ ((a,s) IN x) /\
       let a' = a + n2w (8 + (LENGTH s + 3) DIV 4 * 4) in
         a <+ a' /\ (m (a+4w) = a') /\
         symbol_table xs (x DELETE (a,s)) (a',dm,m,dg,g))`;
 
 val symbol_table_dom_def = Define `
-  (symbol_table_dom [] (a,dm,dg) = ALIGNED a /\ a IN dm) /\
-  (symbol_table_dom (s::xs) (a,dm,dg) = ~(s = "") /\
+  (symbol_table_dom [] (a,dm,dg) <=> ALIGNED a /\ a IN dm) /\
+  (symbol_table_dom (s::xs) (a,dm,dg) <=> ~(s = "") /\
     string_mem_dom s (a+8w) SUBSET dg /\ {a; a+4w} SUBSET dm /\
     w2n a + 8 + LENGTH s + 3 < 2**32 /\
     a <+ a + n2w (8 + (LENGTH s + 3) DIV 4 * 4) /\
@@ -63,7 +65,9 @@ val builtin_symbols_set_def = Define `
       (w + 176w,"atomp"); (w + 192w,"consp"); (w + 208w,"numberp");
       (w + 224w,"symbolp"); (w + 240w,"lambda")}`;
 
-val set_add_def = Define `set_add a x (b,s) = (b - (a:'a word), s) IN x`;
+Definition set_add_def:
+  set_add a x (b,s) <=> (b - (a:'a word), s) IN x
+End
 
 val lisp_symbol_table_def = Define `
   lisp_symbol_table x (a,dm,m,dg,g) =
@@ -823,7 +827,7 @@ val lisp_inv_MOD = store_thm("lisp_inv_MOD",
 val lisp_inv_LESS = store_thm("lisp_inv_LESS",
   ``isVal x1 /\ isVal x2 ==>
     lisp_inv (x1,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,x,xs,s,rest) ==>
-    (getVal x1 < getVal x2 = w1 <+ w2)``,
+    (getVal x1 < getVal x2 <=> w1 <+ w2)``,
   isVal_TAC \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [WORD_LO,w2n_n2w]
   \\ `(4 * a'' + 2) < 4294967296 /\ (4 * a' + 2) < 4294967296` by DECIDE_TAC
   \\ ASM_SIMP_TAC std_ss [] \\ DECIDE_TAC);

@@ -50,36 +50,31 @@ val confluent_diamond_RTC = store_thm(
   ``!R. confluent R = diamond (RTC R)``,
   rw[confluent_def, diamond_def]);
 
-val R_RTC_diamond = store_thm(
-  "R_RTC_diamond",
-  ``!R. diamond R ==>
-         !x p. RTC R x p ==>
-               !z. R x z ==>
-                   ?u. RTC R p u /\ RTC R z u``,
+Theorem R_RTC_diamond:
+  ∀R. diamond R ==>
+      ∀x p z. RTC R x p ∧ R x z ⇒
+              ∃u. RTC R p u /\ RTC R z u
+Proof
   GEN_TAC >> STRIP_TAC >> Induct_on `RTC` >>
-  metis_tac [diamond_def,RTC_rules]);
+  metis_tac [diamond_def,RTC_rules]
+QED
 
-val RTC_RTC = store_thm(
-  "RTC_RTC",
-  ``!R x y z. RTC R x y /\ RTC R y z ==> RTC R x z``,
-  SIMP_TAC std_ss [GSYM AND_IMP_INTRO, RIGHT_FORALL_IMP_THM] >>
-  GEN_TAC >> Induct_on `RTC` >> metis_tac [RTC_rules]);
+Theorem RTC_RTC:
+  ∀R x y z. RTC R x y ∧ RTC R y z ⇒ RTC R x z
+Proof
+  gen_tac >> Induct_on `RTC R x y` >> metis_tac [RTC_rules]
+QED
 
-val diamond_RTC_lemma = prove(
-  ``!R.
-       diamond R ==>
-       !x y. RTC R x y ==> !z. RTC R x z ==>
-                               ?u. RTC R y u /\ RTC R z u``,
-  GEN_TAC >> STRIP_TAC >> Induct_on `RTC` >> rw[] >| [
+Theorem diamond_RTC:
+  !R. diamond R ==> diamond (RTC R)
+Proof
+  strip_tac >> strip_tac >> simp[diamond_def] >>
+  Induct_on `RTC R x y` >> rw[] >| [
     metis_tac[RTC_rules],
     `?v. RTC R x' v /\ RTC R z v` by metis_tac[R_RTC_diamond] >>
     metis_tac [RTC_RTC, RTC_rules]
-  ]);
-
-val diamond_RTC = store_thm(
-  "diamond_RTC",
-  ``!R. diamond R ==> diamond (RTC R)``,
-  metis_tac [diamond_def,diamond_RTC_lemma]);
+  ]
+QED
 
 val _ = set_mapped_fixity {tok = "-||->", fixity = Infix(NONASSOC, 450),
                            term_name = "predn"}
@@ -138,28 +133,28 @@ val S_predn = characterise ``S``;
 val Sx_predn0 = characterise ``S # x``;
 
 val Sx_predn = prove(
-  ``!x y. S # x -||-> y = ?z. (y = S # z) /\ (x -||-> z)``,
+  ``!x y. S # x -||-> y <=> ?z. (y = S # z) /\ (x -||-> z)``,
   rw[Sx_predn0, predn_rules, S_predn, EQ_IMP_THM]);
 
 val Kx_predn = prove(
-  ``!x y. K # x -||-> y = ?z. (y = K # z) /\ (x -||-> z)``,
+  ``!x y. K # x -||-> y <=> ?z. (y = K # z) /\ (x -||-> z)``,
   rw[characterise ``K # x``, predn_rules, K_predn, EQ_IMP_THM]);
 
 val Kxy_predn = prove(
-  ``!x y z. K # x # y -||-> z =
+  ``!x y z. K # x # y -||-> z <=>
             (?u v. (z = K # u # v) /\ (x -||-> u) /\ (y -||-> v)) \/
             (z = x)``,
   rw[characterise ``K # x # y``, predn_rules, Kx_predn, EQ_IMP_THM]);
 
 
 val Sxy_predn = prove(
-  ``!x y z. S # x # y -||-> z =
+  ``!x y z. S # x # y -||-> z <=>
             ?u v. (z = S # u # v) /\ (x -||-> u) /\ (y -||-> v)``,
   rw[characterise ``S # x # y``, predn_rules, EQ_IMP_THM,
      S_predn, Sx_predn]);
 
 val Sxyz_predn = prove(
-  ``!w x y z. S # w # x # y -||-> z =
+  ``!w x y z. S # w # x # y -||-> z <=>
               (?p q r. (z = S # p # q # r) /\
                        w -||-> p /\ x -||-> q /\ y -||-> r) \/
               (z = (w # y) # (x # y))``,

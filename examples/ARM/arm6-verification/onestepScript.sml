@@ -39,7 +39,7 @@ val FUNPOW_COMP = store_thm("FUNPOW_COMP",
   ---------------------------------------------------------------------------*)
 
 val IMAP_def = Define `
-  IMAP f init next =
+  IMAP f init next <=>
     (!a. (f 0 a = init a)) /\
     (!t a. (f (SUC t) a = next (f t a)))`;
 
@@ -103,12 +103,12 @@ val ADJUNCT_def = Define`
   ---------------------------------------------------------------------------*)
 
 val CORRECT_def = Define `
-  CORRECT spec impl imm abs =
+  CORRECT spec impl imm abs <=>
     IMMERSION imm /\ DATA_ABSTRACTION abs (impl 0) (spec 0) /\
     (!t a. spec t (abs a) = abs (impl (imm a t) a))`;
 
 val CORRECT_SUP_def = Define `
-  CORRECT_SUP spec impl imm1 imm2 abs =
+  CORRECT_SUP spec impl imm1 imm2 abs <=>
     IMMERSION imm1 /\ IMMERSION imm2 /\
     DATA_ABSTRACTION abs (impl 0) (spec 0) /\
     (!r a. spec (imm1 a r) (abs a) = abs (impl (imm2 a r) a))`;
@@ -251,7 +251,7 @@ val TC_IMP_IMAP = store_thm("TC_IMP_IMAP",
     \\ ASM_REWRITE_TAC [ADD1,SYM ONE]);
 
 val TC_THM = store_thm("TC_THM",
-  `!f. TCON f = IS_IMAP f /\ (!t a. f 0 (f t a) = f t a)`,
+  `!f. TCON f <=> IS_IMAP f /\ (!t a. f 0 (f t a) = f t a)`,
   STRIP_TAC \\ EQ_TAC
     \\ REPEAT STRIP_TAC
     << [
@@ -368,7 +368,7 @@ val SPLIT_ITER_LEMMA = prove(
 
 val TC_IMMERSION_ONE_STEP_THM = store_thm("TC_IMMERSION_ONE_STEP_THM",
   `!f imm . IS_IMAP f /\ UNIFORM imm f ==>
-    (TCON_IMMERSION f imm =
+    (TCON_IMMERSION f imm <=>
        (!a. f 0 (f (imm a 0) a) = f (imm a 0) a) /\
        (!a. f 0 (f (imm a 1) a) = f (imm a 1) a))`,
   REPEAT STRIP_TAC
@@ -393,13 +393,14 @@ val UNIFORM_ID = prove(
   RW_TAC bool_ss [UNIFORM_def] \\ EXISTS_TAC `\a. 1`
     \\ REWRITE_TAC [UIMMERSION_def] \\ SIMP_TAC arith_ss []);
 
-val TC_ONE_STEP_THM = store_thm("TC_ONE_STEP_THM",
-  `!f. TCON f = IS_IMAP f /\
-         (!a. f 0 (f 0 a) = f 0 a) /\
-         (!a. f 0 (f 1 a) = f 1 a)`,
+Theorem TC_ONE_STEP_THM:
+  !f. TCON f <=>
+        IS_IMAP f /\ (!a. f 0 (f 0 a) = f 0 a) /\ (!a. f 0 (f 1 a) = f 1 a)
+Proof
   PROVE_TAC [TC_IMP_IMAP,
     (SIMP_RULE std_ss [UNIFORM_ID,TC_IMMERSION_TC] o
-     SPECL [`f`,`\a t. t`]) TC_IMMERSION_ONE_STEP_THM]);
+     SPECL [`f`,`\a t. t`]) TC_IMMERSION_ONE_STEP_THM]
+QED
 
 val TCON_IMMERSION_COR = store_thm("TCON_IMMERSION_COR",
   `!f imm.
@@ -422,15 +423,16 @@ val ONE_STEP_LEMMA = prove(
    \\ IMP_RES_TAC TC_IMMERSION_LEMMA
    \\ FULL_SIMP_TAC bool_ss [UNIFORM_def,UIMMERSION_def,ONE,ADD_CLAUSES]);
 
-val ONE_STEP_THM = store_thm("ONE_STEP_THM",
-  `!spec impl imm abs.
+Theorem ONE_STEP_THM:
+  !spec impl imm abs.
        UNIFORM imm impl /\
        TCON spec /\
        TCON_IMMERSION impl imm /\
        DATA_ABSTRACTION abs (impl 0) (spec 0) ==>
-      (CORRECT spec impl imm abs =
+      (CORRECT spec impl imm abs <=>
         (!a. spec 0 (abs a) = abs (impl (imm a 0) a)) /\
-         !a. spec 1 (abs a) = abs (impl (imm a 1) a))`,
+         !a. spec 1 (abs a) = abs (impl (imm a 1) a))
+Proof
   REPEAT STRIP_TAC
     \\ IMP_RES_TAC ONE_STEP_LEMMA
     \\ EQ_TAC
@@ -447,7 +449,8 @@ val ONE_STEP_THM = store_thm("ONE_STEP_THM",
     \\ RULE_ASSUM_TAC (REWRITE_RULE [TCON_def])
     \\ PAT_ASSUM `!t1 t2 a. spec (t1 + t2) a = spec t1 (spec t2 a)`
          (fn th => REWRITE_TAC [SYM ONE,GSYM (SPECL [`SUC 0`,`t`] th)])
-    \\ SIMP_TAC arith_ss [ADD1]);
+    \\ SIMP_TAC arith_ss [ADD1]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
@@ -460,15 +463,16 @@ val ONE_STEP_SUP_LEMMA = prove(
    \\ FULL_SIMP_TAC bool_ss
         [ADJUNCT_def,UIMMERSION_def,AUIMMERSION_def,ONE,ADD_CLAUSES]);
 
-val ONE_STEP_SUP_THM = store_thm("ONE_STEP_SUP_THM",
-  `!spec impl imm1 imm2 abs.
+Theorem ONE_STEP_SUP_THM:
+  !spec impl imm1 imm2 abs.
       (ADJUNCT imm1 imm2 impl /\
        TCON spec /\
        TCON_IMMERSION impl imm2) ==>
-      (CORRECT_SUP spec impl imm1 imm2 abs =
+      (CORRECT_SUP spec impl imm1 imm2 abs <=>
         DATA_ABSTRACTION abs (impl 0) (spec 0) /\
         (!a. spec (imm1 a 0) (abs a) = abs (impl (imm2 a 0) a)) /\
-         !a. spec (imm1 a 1) (abs a) = abs (impl (imm2 a 1) a))`,
+         !a. spec (imm1 a 1) (abs a) = abs (impl (imm2 a 1) a))
+Proof
   REPEAT STRIP_TAC
     \\ IMP_RES_TAC ADJUNCT_IMP_UNIFORM
     \\ EQ_TAC
@@ -487,7 +491,8 @@ val ONE_STEP_SUP_THM = store_thm("ONE_STEP_SUP_THM",
          \\ PAT_ASSUM `!a. spec (imm1 a 1) (abs a) = abs (impl (imm2 a 1) a)`
               (fn th => REWRITE_TAC [ONE,GSYM th])
          \\ RULE_ASSUM_TAC (REWRITE_RULE [TCON_def])
-         \\ POP_ASSUM (fn th => ASM_REWRITE_TAC [GSYM th])]);
+         \\ POP_ASSUM (fn th => ASM_REWRITE_TAC [GSYM th])]
+QED
 
 (* ------------------------------------------------------------------------- *)
 

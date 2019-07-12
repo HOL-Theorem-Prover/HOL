@@ -758,7 +758,7 @@ local
    val le_tm = hd (endian false)
    fun endian_rule thm =
       REWRITE_RULE
-         [ASSUME (if Lib.exists (Lib.equal le_tm) (Thm.hyp thm)
+         [ASSUME (if Lib.exists (aconv le_tm) (Thm.hyp thm)
                      then le_tm
                   else be_tm)] thm
    fun NO_FREE_VARS_CONV tm =
@@ -1359,7 +1359,7 @@ local
       snd o
       List.foldr
         (fn (t, (i, s)) =>
-           (i + 1, if t = boolSyntax.T then comma i s else s)) (0, "")
+           (i + 1, if Teq t then comma i s else s)) (0, "")
    fun insertRegList i =
       fn "PUSH" => let
                       val l = List.drop (i, 7)

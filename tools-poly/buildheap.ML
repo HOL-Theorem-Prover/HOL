@@ -174,10 +174,13 @@ fun findUo [] _ = NONE
           findUo rest modPath
       end;
 
+fun absPath s =
+    OS.Path.mkAbsolute{path = s, relativeTo = OS.FileSys.getDir()}
+
 fun check_objpath die incs (p, b) =
   if b then ()
   else
-    if member (OS.Path.dir p) (SIGOBJ::incs) then ()
+    if member (absPath (OS.Path.dir p)) (SIGOBJ::incs) then ()
     else die ("Object file "^p^" has suspicious path; use -f to override")
 
 fun time_max (t1, t2) = if Time.<(t1,t2) then t2 else t1
@@ -304,18 +307,7 @@ fun main() = let
   val warn = if qp then (fn s => ()) else warn
   val original_die = die
   fun die s = if qp then OS.Process.exit OS.Process.failure else original_die s
-  val allincs =
-      if OS.FileSys.access ("Holmakefile", [OS.FileSys.A_READ]) then let
-        open Holmake_types
-        val (env, _, _) = ReadHMF.read "Holmakefile" (base_environment())
-        fun envlist id =
-          map dequote (tokenize (perform_substitution env [VREF id]))
-      in
-        envlist "INCLUDES" @ envlist "PRE_INCLUDES"
-      end handle e =>
-                 (warn "[bogus Holmakefile in current directory - ignoring it]";
-                  [])
-      else []
+  val allincs = ReadHMF.find_includes (OS.FileSys.getDir())
   val _ = diag ("allincs = ["^String.concatWith ", " allincs ^"]")
   val base_state = Option.map mkAbs base_state
   val output = Option.map mkAbs output
@@ -346,7 +338,7 @@ in
   case (output, exe) of
       (SOME s, NONE) =>
       let
-        val _ = List.app (check_objpath die ("" :: "." :: allincs)) objs
+        val _ = List.app (check_objpath die (absPath "." :: allincs)) objs
         val search_these =
             "." :: OS.Path.concat(Systeml.HOLDIR, "sigobj") :: allincs
         fun findmod s =

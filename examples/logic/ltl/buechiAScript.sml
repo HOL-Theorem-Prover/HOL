@@ -3,6 +3,7 @@ open HolKernel Parse bossLib boolLib pairTheory pred_setTheory arithmeticTheory 
 open wordTheory generalHelpersTheory
 
 val _ = new_theory "buechiA"
+val _ = ParseExtras.temp_loose_equality()
 
 val _ = Datatype
   `GBA = <| states      : 's set;

@@ -64,6 +64,7 @@ val _ = intLib.deprecate_int();
 * Start a new theory called FinitePath
 ******************************************************************************)
 val _ = new_theory "FinitePSLPath";
+val _ = ParseExtras.temp_loose_equality()
 
 (******************************************************************************
 * Infix list concatenation

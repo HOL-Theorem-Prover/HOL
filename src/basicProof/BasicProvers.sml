@@ -13,6 +13,7 @@ open HolKernel boolLib markerLib;
 
 val op++ = simpLib.++;
 val op&& = simpLib.&&;
+val op-* = simpLib.-*;
 
 val ERR = mk_HOL_ERR "BasicProvers";
 
@@ -91,8 +92,9 @@ fun FREEUP [] M g = (ALL_TAC,M)
   | FREEUP tofree M (g as (asl,w)) =
      let val (V,_) = strip_forall w   (* ignore renaming here : idleness! *)
          val Vmap = away (free_varsl (w::asl)) V
-         val theta = filter (fn (v,_) => mem v tofree) Vmap
-         val rebind = map snd (filter (fn (v,_) => not (mem v tofree)) Vmap)
+         val theta = filter (fn (v,_) => op_mem aconv v tofree) Vmap
+         val rebind =
+             map snd (filter (fn (v,_) => not (op_mem aconv v tofree)) Vmap)
      in
        ((MAP_EVERY X_GEN_TAC (map snd Vmap)
           THEN MAP_EVERY ID_SPEC_TAC (rev rebind)),
@@ -133,7 +135,7 @@ fun prim_find_subterm FVs tm (asl,w) =
  else if List.exists (free_in tm) (w::asl) then Free tm
  else let val (V,body) = strip_forall w
       in if free_in tm body
-          then Bound(intersect (free_vars tm) V, tm)
+          then Bound(op_intersect aconv (free_vars tm) V, tm)
           else Alien tm
       end
 
@@ -182,7 +184,10 @@ fun primInduct st ind_tac (g as (asl,c)) =
  let fun ind_non_var V M =
        let val (tac,M') = FREEUP V M g
            val Mfrees = free_vars M'
-           fun has_vars tm = not(null_intersection (free_vars tm) Mfrees)
+           val Mfset = HOLset.addList(empty_tmset, Mfrees)
+           fun has_vars tm =
+             not(HOLset.isEmpty
+                   (HOLset.intersection(Mfset, FVL [tm] empty_tmset)))
            val tms = filter has_vars asl
            val newvar = variant (free_varsl (c::asl))
                                 (mk_var("v",type_of M'))
@@ -245,6 +250,20 @@ fun induct_on_type st ty g =
             (String.concat ["Type: ",Hol_pp.type_to_string ty,
              " is not registered in the types database"]);
 
+fun checkind th =
+    (* if the purported theorem fails to pass muster according to this
+       check, we can still let it pass through to the HO_MATCH_MP_TAC, but
+       we won't attempt to be clever with it and call isolate_to_front. *)
+    let
+      val (_, bod) = strip_forall (concl th)
+      val (_, what_matches_a_goal) = dest_imp bod
+      val (gvs, gimp) = strip_forall what_matches_a_goal
+      val (indR, con) = dest_imp gimp
+    in
+      if List.all is_var (#2 (strip_comb indR)) then ALL_TAC
+      else NO_TAC
+    end
+
 fun Induct_on qtm g =
  let val st = find_subterm qtm g
      val tm = dest_tmkind st
@@ -252,17 +271,38 @@ fun Induct_on qtm g =
      val (_, rngty) = strip_fun ty
  in
   if rngty = Type.bool then (* inductive relation *)
-   let val (c, _) = strip_comb tm
-   in case Lib.total dest_thy_const c
-       of SOME {Thy,Name,...} =>
-           let val indth = Binarymap.find
-                            (IndDefLib.rule_induction_map(),
-                             {Thy=Thy,Name=Name}) handle NotFound => []
-           in
-             MAP_FIRST HO_MATCH_MP_TAC indth ORELSE
-             induct_on_type st ty
-           end g
-       | NONE => induct_on_type st ty g
+    let
+      val (c, _) = strip_comb tm
+      fun mkpat t =
+          let val (d,_) = dom_rng (type_of t)
+          in
+            mkpat (mk_comb(t, genvar d))
+          end handle HOL_ERR _ => t
+      val pat = mkpat tm
+      open IndDefLib
+    in
+      case Lib.total dest_thy_const c of
+          SOME {Thy,Name,...} =>
+          let
+            val indths =
+                Binarymap.find (rule_induction_map(), {Thy=Thy,Name=Name})
+                handle NotFound => []
+            fun numSchematics th =
+                let
+                  val (_,base) = th |> concl |> strip_forall |> #2 |> dest_imp
+                  val (vs, c) = strip_forall base
+                  val (l, _) = dest_imp c
+                  val numargs = l |> strip_comb |> #2 |> length
+                in
+                  numargs - length vs
+                end
+            fun tryind th =
+                TRY (checkind th >> isolate_to_front (numSchematics th) pat) >>
+                HO_MATCH_MP_TAC th
+          in
+            MAP_FIRST tryind indths ORELSE induct_on_type st ty
+          end g
+        | NONE => induct_on_type st ty g
    end
   else
     induct_on_type st ty g
@@ -622,17 +662,8 @@ in
 val BOSS_STRIP_TAC = Tactical.FIRST [GEN_TAC,CONJ_TAC, DTHEN STRIP_ASSUME_TAC]
 end;
 
-fun tyi_to_ssdata tyinfo =
- let open simpLib
-  val (thy,tyop) = TypeBasePure.ty_name_of tyinfo
-  val {rewrs, convs} = TypeBasePure.simpls_of tyinfo;
-in
-  SSFRAG {name = SOME("Datatype "^thy^"$"^tyop),
-          convs = convs, rewrs = rewrs, filter = NONE,
-           dprocs = [], ac = [], congs = []}
-end
-
-fun add_simpls tyinfo ss = (ss ++ tyi_to_ssdata tyinfo) handle HOL_ERR _ => ss;
+fun add_simpls tyinfo ss =
+    (ss ++ simpLib.tyi_to_ssdata tyinfo) handle HOL_ERR _ => ss;
 
 fun is_dneg tm = 1 < snd(strip_neg tm);
 
@@ -640,13 +671,14 @@ val notT = mk_neg T
 val notF = mk_neg F;
 
 fun breakable tm =
-    is_exists tm orelse
-    is_conj tm   orelse
-    is_disj tm   orelse
-    is_dneg tm   orelse
-    notT = tm    orelse
-    notF = tm    orelse
-    T=tm orelse F=tm
+    is_exists tm  orelse
+    is_conj tm    orelse
+    is_disj tm    orelse
+    is_dneg tm    orelse
+    aconv notT tm orelse
+    aconv notF tm orelse
+    aconv T tm    orelse
+    aconv F tm
 
 (* ----------------------------------------------------------------------
     LET_ELIM_TAC
@@ -873,7 +905,9 @@ fun STP_TAC ss finisher
   = PRIM_STP_TAC (rev_itlist add_simpls (tyinfol()) ss) finisher
 
 fun RW_TAC ss thl g = markerLib.ABBRS_THEN
-                          (fn thl => STP_TAC (ss && thl) NO_TAC) thl
+                          (markerLib.mk_require_tac
+                             (fn thl => STP_TAC (ss && thl) NO_TAC))
+                          thl
                           g
 val rw_tac = RW_TAC
 
@@ -895,7 +929,11 @@ val (srw_ss : simpset ref) = ref (bool_ss ++ combinSimps.COMBIN_ss);
 
 val srw_ss_initialised = ref false;
 
-val pending_updates = ref ([]: simpLib.ssfrag list);
+datatype update = ADD_SSFRAG of simpLib.ssfrag | REMOVE_RWT of string
+val pending_updates = ref ([]: update list);
+
+fun apply_update (ADD_SSFRAG ssf, ss) = ss ++ ssf
+  | apply_update (REMOVE_RWT n, ss) = ss -* [n]
 
 fun initialise_srw_ss() =
   if !srw_ss_initialised then !srw_ss
@@ -903,8 +941,7 @@ fun initialise_srw_ss() =
      HOL_PROGRESS_MESG ("Initialising SRW simpset ... ", "done")
      (fn () =>
          (srw_ss := rev_itlist add_simpls (tyinfol()) (!srw_ss) ;
-          srw_ss := foldl (fn (ssd,ss) => ss ++ ssd) (!srw_ss)
-                          (!pending_updates) ;
+          srw_ss := foldl apply_update (!srw_ss) (!pending_updates) ;
           srw_ss_initialised := true)) () ;
      !srw_ss
   end;
@@ -913,7 +950,7 @@ fun augment_srw_ss ssdl =
     if !srw_ss_initialised then
       srw_ss := foldl (fn (ssd,ss) => ss ++ ssd) (!srw_ss) ssdl
     else
-      pending_updates := !pending_updates @ ssdl;
+      pending_updates := !pending_updates @ map ADD_SSFRAG ssdl;
 
 fun diminish_srw_ss names =
     if !srw_ss_initialised then
@@ -927,14 +964,29 @@ fun diminish_srw_ss names =
       end
     else
       let
-        val (frags, rest) = simpLib.partition_ssfrags names (!pending_updates)
-        val _ = pending_updates := rest
+        open simpLib
+        fun foldthis (upd, (keep,drop)) =
+            case upd of
+                ADD_SSFRAG ssf =>
+                (case frag_name ssf of
+                     NONE => (upd::keep,drop)
+                   | SOME n => if mem n names then (keep,ssf::drop)
+                               else (upd::keep,drop))
+              | _ => (upd::keep, drop)
+        val (keep, drop) = foldl foldthis ([], []) (!pending_updates)
+        val _ = pending_updates := keep
       in
-        frags
+        drop
       end;
 
+fun temp_delsimps names =
+    if !srw_ss_initialised then
+      srw_ss := ((!srw_ss) -* names)
+    else
+      pending_updates := !pending_updates @ map REMOVE_RWT names
+
 fun update_fn tyi =
-  augment_srw_ss ([tyi_to_ssdata tyi] handle HOL_ERR _ => [])
+  augment_srw_ss ([simpLib.tyi_to_ssdata tyi] handle HOL_ERR _ => [])
 
 val () =
   TypeBase.register_update_fn (fn tyinfos => (app update_fn tyinfos; tyinfos))
@@ -944,7 +996,8 @@ fun srw_ss () = initialise_srw_ss();
 fun SRW_TAC ssdl thl g = let
   val ss = foldl (fn (ssd, ss) => ss ++ ssd) (srw_ss()) ssdl
 in
-  markerLib.ABBRS_THEN (fn thl => PRIM_STP_TAC (ss && thl) NO_TAC) thl
+  markerLib.ABBRS_THEN
+    (markerLib.mk_require_tac (fn thl => PRIM_STP_TAC (ss && thl) NO_TAC)) thl
 end g;
 val srw_tac = SRW_TAC
 
@@ -961,7 +1014,7 @@ val thy_ssfrags = ref (Binarymap.mkDict String.compare)
 fun thy_ssfrag s = Binarymap.find(!thy_ssfrags, s)
 
 fun add_rewrites thyname (thms : (string * thm) list) = let
-  val ssfrag = simpLib.named_rewrites thyname (map #2 thms)
+  val ssfrag = simpLib.named_rewrites_with_names thyname thms
   open Binarymap
 in
   augment_srw_ss [ssfrag];
@@ -974,9 +1027,17 @@ in
     end
 end
 
-val {mk,dest,export} =
-    ThmSetData.new_exporter "simp" add_rewrites
+val {export,delete} =
+    ThmSetData.new_exporter {
+      settype = "simp",
+      efns = {
+        add = fn {thy,named_thms} => add_rewrites thy named_thms,
+        remove = fn {removes, ...} => temp_delsimps removes
+      }
+    }
 
 fun export_rewrites slist = List.app export slist
+
+fun delsimps names = List.app delete names
 
 end

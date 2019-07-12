@@ -14,7 +14,7 @@ val fg_def = tDefine "fg" `
 
 val _ = Hol_datatype`foo = C1 of num | C2 of bool`
 
-val h_def = Define`(h (C1 x) = x < 2) /\ (h (C2 x) = ~x)`;
+val h_def = Define`(h (C1 x) = (x < 2)) /\ (h (C2 x) = ~x)`;
 
 val test_def = Define`
   (test n 0 = n) /\

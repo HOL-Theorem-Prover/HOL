@@ -5,18 +5,7 @@ val greek_tyvars = ref true
 
 val _ = Feedback.register_btrace ("Greek tyvars", greek_tyvars)
 
-datatype 'a type_token
-     = TypeIdent of string
-     | QTypeIdent of string * string
-     | TypeSymbol of string
-     | TypeVar of string
-     | Comma
-     | LParen
-     | RParen
-     | LBracket
-     | RBracket
-     | AQ of 'a
-     | Error of 'a base_tokens.base_token
+datatype type_token = datatype type_tokens_dtype.type_token
 
 fun toksize tt =
     case tt of
@@ -143,12 +132,36 @@ in
   | BT_EOI => ((fn () => ()), (Error bt,locn))
   | BT_Ident s => split_and_check fb s locn
   | BT_DecimalFraction r => ((fn () => ()), (Error bt, locn))
+  | BT_StrLit _ => ((fn () => ()), (Error bt, locn))
 end
 
-fun token_string (TypeIdent s) = s
-  | token_string (TypeVar s) = s
-  | token_string (TypeSymbol s) = s
-  | token_string _ = raise Fail "token_string of something with no string"
+fun lextest s =
+    let
+      val qb = qbuf.new_buffer [QUOTE s]
+      fun recurse acc =
+          let
+            val (adv, (ttok, _ (* locn *))) = typetok_of qb
+          in
+            case ttok of
+                Error BT_EOI => List.rev acc
+              | _ => (adv(); recurse (ttok::acc))
+          end
+    in
+      recurse []
+    end
+
+fun token_string _ (TypeIdent s) = "ID(" ^ s ^ ")"
+  | token_string _ (TypeVar s) = "VAR(" ^ s ^ ")"
+  | token_string _ (TypeSymbol s) = "SYM(" ^ s ^ ")"
+  | token_string _ (QTypeIdent(thy,tyop)) = "QID(" ^ thy ^ "," ^ tyop ^ ")"
+  | token_string _ Comma = "Comma"
+  | token_string _ LParen = "LParen"
+  | token_string _ RParen = "RParen"
+  | token_string _ LBracket = "LBracket"
+  | token_string _ RBracket = "RBracket"
+  | token_string pf (AQ a) = "AQ(" ^ pf a ^ ")"
+  | token_string _ (Error bt) = "Error(" ^ base_tokens.toString bt ^ ")"
+
 fun dest_aq (AQ x) = x
   | dest_aq _ = raise Fail "dest_aq of non antiquote token"
 

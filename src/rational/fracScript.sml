@@ -21,6 +21,8 @@ open
         intExtensionTheory intExtensionLib fracUtils;
 
 val _ = new_theory "frac";
+val _ = ParseExtras.temp_loose_equality()
+
 
 val ERR = mk_HOL_ERR "fracScript"
 
@@ -177,64 +179,56 @@ val FRAC_DNMPOS = store_thm("FRAC_DNMPOS",``!f. 0 < frac_dnm f``,
  *--------------------------------------------------------------------------*)
 
 fun frac_pos_conv (asm_list:term list) (t1:term) =
-        if (in_list asm_list ``0i < ^t1``) then
-                ASSUME ``0i < ^t1``
-        else
-                if (is_comb t1) then
-                        let
-                                val (rator, rand) = dest_comb t1;
-                        in
-                                if (is_mult t1) then
-                                        let
-                                                val (fac1, fac2) = intSyntax.dest_mult t1;
-                                                val fac1_thm = frac_pos_conv asm_list fac1;
-                                                val fac2_thm = frac_pos_conv asm_list fac2;
-                                        in
-                                                LIST_MP [fac1_thm,fac2_thm] (SPECL[fac1,fac2] INT_MUL_POS_SIGN)
-                                        end
-                                else if (rator=``frac_dnm``) then
-                                        SPEC rand FRAC_DNMPOS
-                                else if (rator=``ABS``) andalso (in_list asm_list ``~(^rand = 0)``) then
-                                        UNDISCH (SPEC rand INT_ABS_NOT0POS)
-                                else if (is_int_literal t1) then
-                                        EQT_ELIM (ARITH_CONV ``0 < ^t1``)
-                                else
-                                        ASSUME ``0i < ^t1``
-                        end
-                else
-                        ASSUME ``0i < ^t1``;
+  if tmem ``0i < ^t1`` asm_list then ASSUME ``0i < ^t1``
+  else
+    if is_comb t1 then
+      let
+        val (rator, rand) = dest_comb t1
+      in
+        if is_mult t1 then
+          let
+            val (fac1, fac2) = intSyntax.dest_mult t1
+            val fac1_thm = frac_pos_conv asm_list fac1
+            val fac2_thm = frac_pos_conv asm_list fac2
+          in
+            LIST_MP [fac1_thm,fac2_thm] (SPECL[fac1,fac2] INT_MUL_POS_SIGN)
+          end
+        else if rator ~~ ``frac_dnm`` then SPEC rand FRAC_DNMPOS
+        else if rator ~~ ``ABS`` andalso tmem ``~(^rand = 0)`` asm_list then
+          UNDISCH (SPEC rand INT_ABS_NOT0POS)
+        else if is_int_literal t1 then EQT_ELIM (ARITH_CONV ``0 < ^t1``)
+        else ASSUME ``0i < ^t1``
+      end
+    else
+      ASSUME ``0i < ^t1``;
 
 (*--------------------------------------------------------------------------
  *  frac_not0_conv : term list -> conv
  *--------------------------------------------------------------------------*)
 
 fun frac_not0_conv (asm_list:term list) (t1:term) =
-        if (in_list asm_list ``~(^t1 = 0i)``) then
-                ASSUME ``~(^t1 = 0i)``
-        else
-                if (is_comb t1) then
-                        let
-                                val (rator, rand) = dest_comb t1;
-                        in
-                                if (is_mult t1) then
-                                        let
-                                                val (fac1, fac2) = intSyntax.dest_mult t1;
-                                                val fac1_thm = frac_not0_conv asm_list fac1;
-                                                val fac2_thm = frac_not0_conv asm_list fac2;
-                                        in
-                                                LIST_MP [fac1_thm,fac2_thm] (SPECL[fac1,fac2] INT_NOT0_MUL)
-                                        end
-                                else if (rator=``frac_dnm``) then
-                                        MP (SPEC t1 INT_GT0_IMP_NOT0) (SPEC rand FRAC_DNMPOS)
-                                else if (rator=``SGN``) andalso (in_list asm_list ``~(^rand = 0)``) then
-                                        UNDISCH (SPEC rand INT_NOT0_SGNNOT0)
-                                else if (is_int_literal t1) then
-                                        EQT_ELIM (ARITH_CONV ``~(^t1 = 0i)``)
-                                else
-                                        ASSUME ``~(^t1 = 0i)``
-                        end
-                else
-                        ASSUME ``~(^t1 = 0i)``;
+  if tmem ``~(^t1 = 0i)`` asm_list then ASSUME ``~(^t1 = 0i)``
+  else if is_comb t1 then
+    let
+      val (rator, rand) = dest_comb t1
+    in
+      if is_mult t1 then
+        let
+          val (fac1, fac2) = intSyntax.dest_mult t1
+          val fac1_thm = frac_not0_conv asm_list fac1
+          val fac2_thm = frac_not0_conv asm_list fac2
+        in
+          LIST_MP [fac1_thm,fac2_thm] (SPECL[fac1,fac2] INT_NOT0_MUL)
+        end
+      else if rator ~~ ``frac_dnm`` then
+        MP (SPEC t1 INT_GT0_IMP_NOT0) (SPEC rand FRAC_DNMPOS)
+      else if rator ~~ “SGN” andalso tmem “~(^rand = 0)” asm_list then
+        UNDISCH (SPEC rand INT_NOT0_SGNNOT0)
+      else if is_int_literal t1 then EQT_ELIM (ARITH_CONV ``~(^t1 = 0i)``)
+      else ASSUME ``~(^t1 = 0i)``
+    end
+  else
+    ASSUME ``~(^t1 = 0i)``;
 
 (*--------------------------------------------------------------------------
  *  FRAC_POS_TAC : term -> tactic
@@ -357,9 +351,9 @@ fun FRAC_NMRDNM_TAC (asm_list, goal) =
 let
   val term_list = extract_frac_fun [``frac_nmr``,``frac_dnm``] goal
   val nmr_term_list  = map (fn (rator,nmr,dnm) => (nmr,dnm))
-                           (filter (fn (a1,_,_) => a1=``frac_nmr``) term_list)
+                           (filter (fn (a1,_,_) => a1~~“frac_nmr”) term_list)
   val dnm_term_list  = map (fn (rator,nmr,dnm) => (nmr,dnm))
-                           (filter (fn (a1,_,_) => a1=``frac_dnm``) term_list)
+                           (filter (fn (a1,_,_) => a1~~“frac_dnm”) term_list)
 in
         (
                 MAP_EVERY (frac_nmr_tac asm_list) nmr_term_list THEN

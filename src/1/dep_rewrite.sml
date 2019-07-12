@@ -144,8 +144,6 @@ structure dep_rewrite :> dep_rewrite =
 struct
 
 open HolKernel Parse boolLib Abbrev;
-infix THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL ## |->;
-infixr -->;
 
 
 
@@ -320,7 +318,7 @@ fun UNDISCH_ALL_NON_NEG th =
    else th;
 
 fun print_goals gl =
-   if gl = [] then print_string "proved\n"
+   if null gl then print_string "proved\n"
    else (map print_goal gl; ());
 
 fun repeat_apply (f:'a->'b) step stop x =
@@ -342,7 +340,7 @@ fun APPLY_IMP_THEN ttac th (asl,gl) =
                repeat_apply
                   (fn th => ONCE_DEPTH_matches (DEP_FIND_matches th) gl)
                   assemble_ants
-                  (fn th1 => fn th2 => concl th1 = concl th2)
+                  (fn th1 => fn th2 => concl th1 ~~ concl th2)
                   th;
 (*
 ONCE_DEPTH_matches (DEP_FIND_matches th) gl
@@ -416,10 +414,10 @@ fun DEP_TAC dep :tactic = fn g0 =>
          map (fn g2 => (print_newline(); print_goal g2; print_string ",")) gl2;
          print_string "]\n")
     else (); *)
-    if gls = [] then (gl2,p2)
+    if null gls then (gl2,p2)
     else
     let
-        val rgls = mk_set (flatten (map strip_conj gls));
+        val rgls = op_mk_set aconv (flatten (map strip_conj gls));
         val gl1 = [(asl1,list_mk_conj rgls)];
         val p1 = (fn [th] =>
                   map2 (fn gl => fn p =>
@@ -446,9 +444,10 @@ fun DEP_TAC dep :tactic = fn g0 =>
          of [] =>
            (gl1,(fn thl => itlist Drule.PROVE_HYP (p1 thl) (p2 [])))
           | ((asl2,g2)::gl3) =>
-              case gl1
-                of [(asl1,g1)] =>
-                  ((intersect asl1 asl2,Rsyntax.mk_conj{conj1=g1,conj2=g2})::gl3,
+              case gl1 of
+                  [(asl1,g1)] =>
+                  ((op_intersect aconv asl1 asl2,
+                    Rsyntax.mk_conj{conj1=g1,conj2=g2})::gl3,
                    (fn (tha::thl) =>
                           itlist Drule.PROVE_HYP (p1 [CONJUNCT1 tha])
                                                  (p2 ((CONJUNCT2 tha)::thl))
@@ -481,7 +480,7 @@ fun ctac1 THEN1_DEP ctac2 = fn g =>
      | (g1::gl1') =>
          let val (asl2,gs2,ps2,gl2,p2) = ctac2 g1
          in
-         (intersect asl1 asl2, gs1@gs2, ps1@ps2, gl2@gl1',
+         (op_intersect aconv asl1 asl2, gs1@gs2, ps1@ps2, gl2@gl1',
           (fn ths => let val (ths1,ths2) = choplist gl2 ths in
                           p1 ((p2 ths1) :: ths2)
                      end))
@@ -509,11 +508,9 @@ fun FIRST_DEP cl =
 
 
 fun EVERY_DEP cl =
-    case cl
-    of [] =>
-         ALL_DEP
-     | (c::cl') =>
-         c THEN1_DEP EVERY_DEP cl'
+    case cl of
+        [] => ALL_DEP
+      | (c::cl') => c THEN1_DEP EVERY_DEP cl'
     handle _ => failwith "EVERY_DEP";
 
 
@@ -523,7 +520,7 @@ fun REPEAT_DEP ctac g =
 
 fun CHANGED_DEP ctac g =
     let val (asl,gls,pls,gl,p) = ctac g in
-    if gl = [g] then failwith "CHANGED_DEP"
+    if goals_eq gl [g] then failwith "CHANGED_DEP"
     else (asl,gls,pls,gl,p)
     end;
 

@@ -1,0 +1,122 @@
+(*---------------------------------------------------------------------------*)
+(* even(n) predicate realized by regexp                                      *)
+(*---------------------------------------------------------------------------*)
+
+app load ["numposrepTheory","regexpLib", "wordsLib"];
+
+open Regexp_Type regexpSyntax regexpTheory FormalLangTheory
+     numposrepTheory stringTheory arithmeticTheory;
+
+(*---------------------------------------------------------------------------*)
+(* Boilerplate                                                               *)
+(*---------------------------------------------------------------------------*)
+
+fun qspec q th = th |> Q.SPEC q 
+fun qspec_arith q th = qspec q th |> SIMP_RULE arith_ss [];
+
+val [regexp_lang_chset,regexp_lang_cat, regexp_lang_star, 
+     regexp_lang_neg, regexp_lang_or] = CONJUNCTS regexp_lang_def;
+
+val dot_star_lem = regexp_lang_dot_star 
+  |> SIMP_RULE std_ss [DOT_def,charsetTheory.charset_full_thm]
+;
+
+(*---------------------------------------------------------------------------*)
+(* Build regexp (LSB)                                                        *)
+(*---------------------------------------------------------------------------*)
+
+val small_evens = filter (fn x => x mod 2 = 0) (upto 0 255);
+val sme_charset = Regexp_Type.charset_of (map Char.chr small_evens);
+val even_regexp = Cat(Chset sme_charset,Star DOT);
+val even_regexp_term = regexpSyntax.regexp_to_term even_regexp;
+
+(*---------------------------------------------------------------------------*)
+(* Support lemmas                                                            *)
+(*---------------------------------------------------------------------------*)
+
+val lemA = Q.prove
+(`!n. EVEN(n) <=> EVEN (n MOD 256)`,
+ metis_tac
+    [DIVISION |> qspec_arith `256` 
+              |> qspec `n` 
+              |> Q.AP_TERM `EVEN` 
+              |> SIMP_RULE arith_ss [EVEN_ADD,EVEN_MULT,EVAL ``EVEN 256``]]
+);
+
+val lemB = Q.prove
+(`!n. EVEN(n) <=> HD (n2l 256 n) IN {n | n < 256 /\ EVEN n}`,
+ qsuff_tac 
+  `!B n. (B=256) ==> (EVEN(n) <=> HD (n2l B n) IN {n | n < B /\ EVEN(n)})`
+  >- metis_tac []
+  >- (recInduct n2l_ind
+       >> rw_tac list_ss []
+       >> rw_tac list_ss [Once n2l_def]
+           >- rw_tac (list_ss ++ pred_setLib.PRED_SET_ss) [EVEN_MOD2]
+           >- (fs[] >> metis_tac [lemA]))
+);
+
+(*---------------------------------------------------------------------------*)
+(* Characterize sme_charset                                                  *)
+(*---------------------------------------------------------------------------*)
+
+val lemC = Q.prove
+(`!s. s IN regexp_lang(^(regexp_to_term (Chset sme_charset))) 
+        <=> 
+      ?c. (s = [c]) /\ EVEN(ORD c)`,
+ rw_tac (list_ss ++ pred_setLib.PRED_SET_ss ++ regexpLib.charset_conv_ss) 
+        [EQ_IMP_THM,EVEN_MOD2]
+ >> EVAL_TAC
+ >> pop_assum mp_tac
+ >> Q.ID_SPEC_TAC `c`
+ >> HO_MATCH_MP_TAC CHAR_INDUCT_THM
+ >> simp_tac std_ss [ORD_CHR_RWT]
+ >> CONV_TAC (REPEATC(numLib.BOUNDED_FORALL_CONV EVAL))
+ >> metis_tac []);
+
+(*---------------------------------------------------------------------------*)
+(* The main theorem                                                          *)
+(*---------------------------------------------------------------------------*)
+
+val EVEN_REGEXP_THM = Q.prove
+(`!n. EVEN(n) <=> MAP CHR (n2l 256 n) IN regexp_lang ^even_regexp_term`,
+ rw_tac (list_ss ++ pred_setLib.PRED_SET_ss) 
+        [regexp_lang_cat,IN_dot,dot_star_lem,lemC,PULL_EXISTS,Once lemB]
+  >> ONCE_REWRITE_TAC [n2l_def]
+  >> rw_tac list_ss [EQ_IMP_THM,ORD_CHR_RWT]);
+
+(*---------------------------------------------------------------------------*)
+(* compile regexp to DFA                                                     *)
+(*---------------------------------------------------------------------------*)
+
+val [dfa_lang_thm,table_def, finals_def, start_def] =
+ CONJUNCTS
+   (regexpLib.dfa_by_proof ("even_regexp", even_regexp));
+
+(*---------------------------------------------------------------------------*)
+(* |- !n. EVEN n <=>                                                         *)
+(*        exec_dfa even_regexp_finals even_regexp_table even_regexp_start    *)
+(*                (MAP CHR (n2l 256 n))                                      *)
+(*---------------------------------------------------------------------------*)
+
+val EVEN_IFF_DFA =
+   SIMP_RULE std_ss [GSYM dfa_lang_thm,IN_DEF] EVEN_REGEXP_THM;
+
+fun EVEN_BY_DFA_CONV tm =
+ let val thm = SPEC tm EVEN_IFF_DFA
+     val tm = rhs(concl thm)
+  in 
+    TRANS thm (EVAL tm)
+  end;
+
+val even_by_dfa = EVEN_BY_DFA_CONV o numSyntax.mk_numeral o Arbnum.fromLargeInt
+
+(*---------------------------------------------------------------------------
+  map even_by_dfa [0,1,2,4,8,16,32,64,128,256,512,1024,1025, 2048, 65536, 65537,
+                   24524542352452435245452345000929592934535252];
+
+  Note that REDUCE_CONV is faster, since it just looks at the last "digit" of 
+  the number, while the DFA has to process the entire string. The DFA could 
+  be optimized so that when it enters a state that is guaranteed to lead to 
+  acceptance (or to rejection), the rest of the string doesn't need
+  processing.
+ ---------------------------------------------------------------------------*)

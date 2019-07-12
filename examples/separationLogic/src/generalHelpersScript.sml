@@ -21,7 +21,7 @@ quietdec := false;
 *)
 
 val _ = new_theory "generalHelpers";
-
+val _ = ParseExtras.temp_loose_equality()
 
 
 (******************************************************************

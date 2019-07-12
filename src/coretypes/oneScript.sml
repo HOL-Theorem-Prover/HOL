@@ -23,6 +23,8 @@
 
 open Lib HolKernel Parse boolLib BasicProvers
 
+local open satTheory in end
+
 val _ = new_theory "one";
 
 local open OpenTheoryMap in

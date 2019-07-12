@@ -50,6 +50,7 @@ open HolKernel Parse boolLib bossLib pred_setTheory PSLPathTheory;
 (*****************************************************************************)
 
 val _ = new_theory "Model";
+val _ = ParseExtras.temp_loose_equality()
 
 (*****************************************************************************)
 (* Stop ``S`` parsing to the S-combinator                                    *)
@@ -105,5 +106,3 @@ val COMPUTATION_def =
   `COMPUTATION M w = ?s. s IN M.S0 /\ PATH M s w`;
 
 val _ = export_theory();
-
-

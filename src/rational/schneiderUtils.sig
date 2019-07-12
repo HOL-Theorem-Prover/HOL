@@ -13,10 +13,6 @@ signature schneiderUtils =
     val ASM_TAC : int -> (thm -> term list * 'a -> 'b) -> term list * 'a -> 'b
     val BOOL_VAR_ELIM_CONV : term -> term -> thm
     val BOOL_VAR_ELIM_TAC : term -> tactic
-    val COND_ELIM_CONV : term -> thm
-    val COND_ELIM_TAC : tactic
-    val COND_EQ_CONV : term -> thm
-    val COND_EQ_TAC : tactic
     val COND_FUN_EXT_CONV : term -> thm
     val COND_FUN_EXT_TAC : tactic
     val COPY_ASM_NO : int -> tactic
@@ -40,7 +36,6 @@ signature schneiderUtils =
     val RIGHT_LEMMA_DISJ_CASES_TAC : thm -> tactic
     val REWRITE1_TAC : thm -> tactic
     val SELECT_EXISTS_TAC : term -> tactic
-    val SELECT_TAC : term -> tactic
     val SELECT_UNIQUE_RULE : term -> thm -> thm -> thm
     val SELECT_UNIQUE_TAC : tactic
     val SELECT_UNIQUE_THM : thm

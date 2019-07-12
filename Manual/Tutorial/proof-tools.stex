@@ -41,7 +41,7 @@ the motivating theorem:
 \begin{hol}
 \begin{alltt}
 ##eval val FORALL_BOOL = prove(
-         ``(!v. P v) = P T /\ P F``,
+         ``(!v. P v) <=> P T /\ P F``,
          rw[EQ_IMP_THM] >> Cases_on `v` >> rw[]);
 \end{alltt}
 \end{hol}
@@ -532,9 +532,9 @@ We can put these fragments together and write the top-level
          fun recurse th = let
            val c = concl th
          in
-           if c = boolSyntax.T then
+           if c ~~ boolSyntax.T then
              mk_satmap th
-           else if c = boolSyntax.F then
+           else if c ~~ boolSyntax.F then
              Unsat th
            else let
                val v = find_splitting_var c
@@ -648,7 +648,7 @@ Once inputs get even a little beyond the clearly trivial, the function
 we have written (at the top-level, \ml{DPLL\_UNIV}) performs considerably
 better than the truth table implementation.  For example, the
 generalisation of the following term, with 29 variables, takes
-our function multiple seconds to demonstrate as a tautology:
+our function less than a second to demonstrate as a tautology:
 \begin{hol}
 \begin{alltt}
 ##eval val t0 = ``
@@ -708,7 +708,7 @@ Code implementing this is shown below:
      val gen_t = list_mk_forall(fvs, t)
      val gen_t_eq = DPLL_UNIV gen_t
    in
-     if rhs (concl gen_t_eq) = boolSyntax.T then let
+     if rhs (concl gen_t_eq) ~~ boolSyntax.T then let
          val gen_th = EQT_ELIM gen_t_eq
        in
          EQT_INTRO (SPECL fvs gen_th)
@@ -738,8 +738,8 @@ false.
    end handle HOL_ERR _ =>
      if type_of t <> bool then
        raise mk_HOL_ERR "dpll" "var_leaves" "Term not boolean"
-     else if t = boolSyntax.T then acc
-     else if t = boolSyntax.F then acc
+     else if t ~~ boolSyntax.T then acc
+     else if t ~~ boolSyntax.F then acc
      else HOLset.add(acc, t)
 \end{verbatim}
 \end{hol}

@@ -45,7 +45,8 @@ val antisymmetric_def = new_definition(
 
 val equivalence_def = new_definition(
   "equivalence_def",
-  ``equivalence (R:'a->'a->bool) = reflexive R /\ symmetric R /\ transitive R``);
+  “equivalence (R:'a->'a->bool) <=> reflexive R /\ symmetric R /\ transitive R”
+);
 
 val total_def = new_definition(
   "total_def",
@@ -93,15 +94,17 @@ val _ = add_rule { fixity = Suffix 2100,
                    paren_style = OnlyIfNecessary,
                    pp_elements = [TOK "^*"],
                    term_name = "RTC" }
+val _ = Unicode.unicode_version {u = UTF8.chr 0x20F0, tmnm = "RTC"}
+val _ = TeX_notation {hol = UTF8.chr 0x20F0, TeX = ("\\HOLTokenSupStar{}", 1)}
 val _ = TeX_notation {hol = "^*", TeX = ("\\HOLTokenSupStar{}", 1)}
 
 val RC_DEF = new_definition(
   "RC_DEF",
-  ``RC (R:'a->'a->bool) x y = (x = y) \/ R x y``);
+  ``RC (R:'a->'a->bool) x y <=> (x = y) \/ R x y``);
 
 val SC_DEF = new_definition(
   "SC_DEF",
-  ``SC (R:'a->'a->bool) x y = R x y \/ R y x``);
+  ``SC (R:'a->'a->bool) x y <=> R x y \/ R y x``);
 
 val EQC_DEF = new_definition(
   "EQC_DEF",
@@ -118,18 +121,20 @@ val SC_SYMMETRIC = store_thm(
   ``!R. symmetric (SC R)``,
   REWRITE_TAC [symmetric_def, SC_DEF] THEN MESON_TAC []);
 
-val TC_TRANSITIVE = Q.store_thm("TC_TRANSITIVE",
- `!R:'a->'a->bool. transitive(TC R)`,
-REWRITE_TAC[transitive_def,TC_DEF]
+Theorem TC_TRANSITIVE[simp]:
+  !R:'a->'a->bool. transitive(TC R)
+Proof
+ REWRITE_TAC[transitive_def,TC_DEF]
  THEN REPEAT STRIP_TAC
- THEN RES_TAC THEN ASM_MESON_TAC[]);
-val _ = export_rewrites ["TC_TRANSITIVE"]
+ THEN RES_TAC THEN ASM_MESON_TAC[]
+QED
 
-val RTC_INDUCT = store_thm(
-  "RTC_INDUCT",
-  ``!R P. (!x. P x x) /\ (!x y z. R x y /\ P y z ==> P x z) ==>
-          (!x (y:'a). RTC R x y ==> P x y)``,
-  REWRITE_TAC [RTC_DEF] THEN MESON_TAC []);
+Theorem RTC_INDUCT:
+  !R P. (!x. P x x) /\ (!x y z. R x y /\ P y z ==> P x z) ==>
+        (!x (y:'a). RTC R x y ==> P x y)
+Proof
+  REWRITE_TAC [RTC_DEF] THEN MESON_TAC []
+QED
 
 val TC_RULES = store_thm(
   "TC_RULES",
@@ -653,7 +658,7 @@ val _ = export_rewrites ["RTC_IDEM"]
 
 val RTC_CASES1 = store_thm(
   "RTC_CASES1",
-  ``!R (x:'a) y.  RTC R x y = (x = y) \/ ?u. R x u /\ RTC R u y``,
+  ``!R (x:'a) y.  RTC R x y <=> (x = y) \/ ?u. R x u /\ RTC R u y``,
   SIMP_TAC bool_ss [EQ_IMP_THM, FORALL_AND_THM] THEN CONJ_TAC THENL [
     GEN_TAC THEN HO_MATCH_MP_TAC RTC_INDUCT THEN MESON_TAC [RTC_RULES],
     MESON_TAC [RTC_RULES]
@@ -661,12 +666,12 @@ val RTC_CASES1 = store_thm(
 
 val RTC_CASES_TC = store_thm(
   "RTC_CASES_TC",
-  ``!R x y. R^* x y = (x = y) \/ R^+ x y``,
+  ``!R x y. R^* x y <=> (x = y) \/ R^+ x y``,
   METIS_TAC [EXTEND_RTC_TC_EQN, RTC_CASES1]);
 
 val RTC_CASES2 = store_thm(
   "RTC_CASES2",
-  ``!R (x:'a) y.  RTC R x y = (x = y) \/ ?u. RTC R x u /\ R u y``,
+  ``!R (x:'a) y. RTC R x y <=> (x = y) \/ ?u. RTC R x u /\ R u y``,
   SIMP_TAC bool_ss [EQ_IMP_THM, FORALL_AND_THM] THEN CONJ_TAC THENL [
     GEN_TAC THEN HO_MATCH_MP_TAC RTC_INDUCT THEN MESON_TAC [RTC_RULES],
     MESON_TAC [RTC_RULES, RTC_SUBSET, RTC_RTC]
@@ -674,7 +679,7 @@ val RTC_CASES2 = store_thm(
 
 val RTC_CASES_RTC_TWICE = store_thm(
   "RTC_CASES_RTC_TWICE",
-  ``!R (x:'a) y. RTC R x y = ?u. RTC R x u /\ RTC R u y``,
+  ``!R (x:'a) y. RTC R x y <=> ?u. RTC R x u /\ RTC R u y``,
   SIMP_TAC bool_ss [EQ_IMP_THM, FORALL_AND_THM] THEN CONJ_TAC THENL [
     GEN_TAC THEN HO_MATCH_MP_TAC RTC_INDUCT THEN MESON_TAC [RTC_RULES],
     MESON_TAC [RTC_RULES, RTC_SUBSET, RTC_RTC]
@@ -880,7 +885,7 @@ val USE_TAC = IMP_RES_THEN(fn th => ONCE_REWRITE_TAC[th]);
 val NNF_CONV =
    let val DE_MORGAN = REWRITE_CONV
                         [TAUT `~(x==>y) = (x /\ ~y)`,
-                         TAUT `~x \/ y = (x ==> y)`,DE_MORGAN_THM]
+                         TAUT `~x \/ y <=> (x ==> y)`,DE_MORGAN_THM]
        val QUANT_CONV = NOT_EXISTS_CONV ORELSEC NOT_FORALL_CONV
    in REDEPTH_CONV (QUANT_CONV ORELSEC CHANGED_CONV DE_MORGAN)
    end;
@@ -939,7 +944,7 @@ val _ = Parse.hide "C";
 
 val WF_INDUCT_TAC =
  let val wf_thm0 = CONV_RULE (ONCE_DEPTH_CONV ETA_CONV)
-                   (REWRITE_RULE [TAUT`A==>B==>C = A/\B==>C`]
+                   (REWRITE_RULE [TAUT`A==>B==>C <=> A/\B==>C`]
                       (CONV_RULE (ONCE_DEPTH_CONV RIGHT_IMP_FORALL_CONV)
                           WF_INDUCTION_THM))
       val [R,P] = fst(strip_forall(concl wf_thm0))
@@ -1283,13 +1288,13 @@ REWRITE_TAC[approx_ext] THEN REPEAT GEN_TAC THEN STRIP_TAC
   THEN REPEAT COND_CASES_TAC THEN RES_TAC
   THEN EXPOSE_CUTS_TAC
   THEN ASM_REWRITE_TAC[]
-  THEN RULE_ASSUM_TAC (REWRITE_RULE[TAUT`A==>B==>C==>D = A/\B/\C==>D`,
+  THEN RULE_ASSUM_TAC (REWRITE_RULE[TAUT`A==>B==>C==>D <=> A/\B/\C==>D`,
                                     transitive_def])
   THEN FIRST_ASSUM MATCH_MP_TAC
   THEN RES_TAC THEN ASM_REWRITE_TAC[]);
 
 val AGREE_BELOW =
-   REWRITE_RULE[TAUT`A==>B==>C==>D = B/\C/\A==>D`]
+   REWRITE_RULE[TAUT`A==>B==>C==>D <=> B/\C/\A==>D`]
     (CONV_RULE (DEPTH_CONV RIGHT_IMP_FORALL_CONV) APPROX_EQUAL_BELOW);
 
 
@@ -1474,7 +1479,7 @@ val WFP_STRONG_INDUCT = Q.store_thm
           ==>
         !x. WFP R x ==> P x`,
  REPEAT GEN_TAC THEN STRIP_TAC
-   THEN ONCE_REWRITE_TAC[TAUT `a ==> b = a ==> a /\ b`]
+   THEN ONCE_REWRITE_TAC[TAUT `a ==> b <=> a ==> a /\ b`]
    THEN HO_MATCH_MP_TAC WFP_INDUCT THEN ASM_MESON_TAC[WFP_RULES]);
 
 
@@ -1790,7 +1795,7 @@ val irreflexive_RSUBSET = store_thm(
 
 val RUNION = new_definition(
   "RUNION",
-  ``(RUNION) R1 R2 x y = R1 x y \/ R2 x y``);
+  ``(RUNION) R1 R2 x y <=> R1 x y \/ R2 x y``);
 val _ = set_fixity "RUNION" (Infixl 500)
 val _ = OpenTheoryMap.OpenTheory_const_name {const={Thy="relation",Name="RUNION"},name=(["Relation"],"union")}
 
@@ -1815,7 +1820,7 @@ val _ = TeX_notation { hol = UnicodeChars.union ^ UnicodeChars.sub_r,
 
 val RINTER = new_definition(
   "RINTER",
-  ``(RINTER) R1 R2 x y = R1 x y /\ R2 x y``);
+  ``(RINTER) R1 R2 x y <=> R1 x y /\ R2 x y``);
 val _ = set_fixity "RINTER" (Infixl 600)
 val _ = OpenTheoryMap.OpenTheory_const_name {const={Thy="relation",Name="RINTER"},name=(["Relation"],"intersect")}
 val _ = Unicode.unicode_version {u = UnicodeChars.inter ^ UnicodeChars.sub_r,
@@ -1845,6 +1850,15 @@ val transitive_RINTER = Q.store_thm(
   `transitive R1 /\ transitive R2 ==> transitive (R1 RINTER R2)`,
   SRW_TAC [SatisfySimps.SATISFY_ss][transitive_def,RINTER]);
 val _ = export_rewrites ["transitive_RINTER"]
+
+Theorem RTC_RINTER:
+  !R1 R2 x y. RTC (R1 RINTER R2) x y ==> ((RTC R1) RINTER (RTC R2)) x y
+Proof
+  ntac 2 gen_tac >>
+  match_mp_tac RTC_INDUCT >>
+  asm_simp_tac(srw_ss())[RINTER] >>
+  METIS_TAC[RTC_CASES1]
+QED
 
 (* ----------------------------------------------------------------------
     relational complement
@@ -1880,7 +1894,7 @@ val transitive_O_RSUBSET = store_thm(
 
 val PreOrder = new_definition(
   "PreOrder",
-  ``PreOrder R = reflexive R /\ transitive R``);
+  ``PreOrder R <=> reflexive R /\ transitive R``);
 
 (* The following definition follows Rob Arthan's idea of staying mum,
    for the most general notion of (partial) order, about whether the
@@ -1889,16 +1903,16 @@ val PreOrder = new_definition(
 
 val Order = new_definition(
   "Order",
-  ``Order (Z:'g->'g->bool) = antisymmetric Z /\ transitive Z``);
+  ``Order (Z:'g->'g->bool) <=> antisymmetric Z /\ transitive Z``);
 
 val WeakOrder = new_definition(
   "WeakOrder",
-  ``WeakOrder (Z:'g->'g->bool) =
+  ``WeakOrder (Z:'g->'g->bool) <=>
                        reflexive Z /\ antisymmetric Z /\ transitive Z``);
 
 val StrongOrder = new_definition(
   "StrongOrder",
-  ``StrongOrder (Z:'g->'g->bool) = irreflexive Z /\ transitive Z``);
+  ``StrongOrder (Z:'g->'g->bool) <=> irreflexive Z /\ transitive Z``);
 
 val irrefl_trans_implies_antisym = store_thm(
   "irrefl_trans_implies_antisym",
@@ -1918,7 +1932,7 @@ val WeakOrd_Ord = store_thm(
 
 val WeakOrder_EQ = store_thm(
   "WeakOrder_EQ",
-  ``!R. WeakOrder R ==> !y z. (y = z) = R y z /\ R z y``,
+  ``!R. WeakOrder R ==> !y z. (y = z) <=> R y z /\ R z y``,
   SRW_TAC [][WeakOrder, reflexive_def, antisymmetric_def] THEN PROVE_TAC []);
 
 val RSUBSET_ANTISYM = store_thm(
@@ -1949,7 +1963,7 @@ val EqIsBothRSUBSET = save_thm(
 
 val STRORD = new_definition(
   "STRORD",
-  ``STRORD R a b = R a b /\ ~(a = b)``);
+  ``STRORD R a b <=> R a b /\ ~(a = b)``);
 
 val STRORD_AND_NOT_Id = store_thm(
   "STRORD_AND_NOT_Id",
@@ -2032,19 +2046,19 @@ val _ = export_rewrites ["trichotomous_RC"]
 
 val LinearOrder = new_definition(
   "LinearOrder",
-  ``LinearOrder (R:'a->'a->bool) = Order R /\ trichotomous R``);
+  ``LinearOrder (R:'a->'a->bool) <=> Order R /\ trichotomous R``);
 
 val StrongLinearOrder = new_definition(
   "StrongLinearOrder",
-  ``StrongLinearOrder (R:'a->'a->bool) = StrongOrder R /\ trichotomous R``);
+  ``StrongLinearOrder (R:'a->'a->bool) <=> StrongOrder R /\ trichotomous R``);
 
 val WeakLinearOrder = new_definition(
   "WeakLinearOrder",
-  ``WeakLinearOrder (R:'a->'a->bool) = WeakOrder R /\ trichotomous R``);
+  ``WeakLinearOrder (R:'a->'a->bool) <=> WeakOrder R /\ trichotomous R``);
 
 val WeakLinearOrder_dichotomy = store_thm(
   "WeakLinearOrder_dichotomy",
-   ``!R:'a->'a->bool. WeakLinearOrder R =
+   ``!R:'a->'a->bool. WeakLinearOrder R <=>
                       WeakOrder R /\ (!a b. R a b \/ R b a)``,
    SRW_TAC [][WeakLinearOrder, trichotomous] THEN
    PROVE_TAC [WeakOrder_EQ]);
@@ -2055,7 +2069,7 @@ val WeakLinearOrder_dichotomy = store_thm(
 
 val diag_def = new_definition(
   "diag_def",
-  ``diag A x y = (x = y) /\ x IN A``);
+  ``diag A x y <=> (x = y) /\ x IN A``);
 
 (* properties of O *)
 
@@ -2103,7 +2117,7 @@ val RDOM_DEF = new_definition(
 
 val IN_RDOM = store_thm(
   "IN_RDOM",
-  ``x IN RDOM R = ?y. R x y``,
+  ``x IN RDOM R <=> ?y. R x y``,
   SRW_TAC [][RDOM_DEF, IN_DEF]);
 
 (* range of a relation *)
@@ -2113,7 +2127,7 @@ val RRANGE_DEF = new_definition(
 
 val IN_RRANGE = store_thm(
   "IN_RRANGE",
-  ``y IN RRANGE R = ?x. R x y``,
+  ``y IN RRANGE R <=> ?x. R x y``,
   SRW_TAC [][RRANGE_DEF, IN_DEF]);
 
 val IN_RDOM_RUNION = store_thm(
@@ -2134,7 +2148,7 @@ val _ = Unicode.unicode_version {
 
 val RUNIV_SUBSET = store_thm(
   "RUNIV_SUBSET",
-  ``(RUNIV RSUBSET R = (R = RUNIV)) /\
+  ``(RUNIV RSUBSET R <=> (R = RUNIV)) /\
     (R RSUBSET RUNIV)``,
   SRW_TAC [][RSUBSET, FUN_EQ_THM]);
 val _ = export_rewrites ["RUNIV_SUBSET"]
@@ -2142,7 +2156,7 @@ val _ = export_rewrites ["RUNIV_SUBSET"]
 val REMPTY_SUBSET = store_thm(
   "REMPTY_SUBSET",
   ``REMPTY RSUBSET R /\
-    (R RSUBSET REMPTY = (R = REMPTY))``,
+    (R RSUBSET REMPTY <=> (R = REMPTY))``,
   SRW_TAC [][RSUBSET, FUN_EQ_THM]);
 val _ = export_rewrites ["REMPTY_SUBSET"]
 

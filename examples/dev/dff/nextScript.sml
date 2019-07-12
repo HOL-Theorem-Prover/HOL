@@ -40,7 +40,7 @@ val Next =
     new_definition
     ("Next",
      ``!sig t1 t2.
-      Next t1 t2 sig = (t1<t2)/\(sig t2)/\(!t. (t1<t)/\(t<t2) ==> ~sig t)``);
+      Next t1 t2 sig <=> (t1<t2)/\(sig t2)/\(!t. (t1<t)/\(t<t2) ==> ~sig t)``);
 
 (* The following lemma will be needed in the proofs below:              *)
 val cases = DECIDE ``!m n. m < n ==> (SUC m) < n \/ (SUC m = n)``;

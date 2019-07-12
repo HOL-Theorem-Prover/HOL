@@ -357,6 +357,8 @@ val is_list = fn G => fn (r as {nilstr,cons}) => fn tm =>
 
 fun str_unicode_ok s = CharVector.all Char.isPrint s
 
+fun overloads_to_string_form G = term_grammar.strlit_map G
+
 fun oi_strip_comb' oinfo t =
     if current_trace "PP.avoid_unicode" = 0 then Overload.oi_strip_comb oinfo t
     else Overload.oi_strip_combP oinfo str_unicode_ok t
@@ -439,30 +441,41 @@ fun badpc_encode s =
       recurse false (sz - 2)
     end
 
-fun is_safe_varname s =
-    s <> "" andalso
+fun is_identish_var s =
     (let val v0 = #1 (valOf (UTF8.firstChar s))
      in
        UnicodeChars.isAlpha v0 orelse v0 = "_"
      end) andalso
     UTF8.all UnicodeChars.isMLIdent s andalso
     not (badpc_encode s)
+
+fun is_symbolish_var s =
+    UTF8.all UnicodeChars.isSymbolic s andalso
+    not (String.isSubstring "(*" s) andalso
+    not (String.isSubstring "*)" s)
+
+fun is_safe_varname s =
+    s <> "" andalso (is_identish_var s orelse is_symbolish_var s)
+    handle UTF8.BadUTF8 _ => false
 fun unsafe_style s =
     let
-      fun trans s =
-          if s = "\n" then "\\n"
-          else if s = "\009" then "\\t"
-          else if s = ")" then "\\)"
-          else if UnicodeChars.isSpace s andalso s <> " " then
+      open UTF8
+      fun trans (CP c) =
+          if c = 10(* NL *) then "\\n"
+          else if c = 9 (* TAB *) then "\\t"
+          else if c = 41 (* ")" *) then "\\)"
+          else if UnicodeChars.isSpace_i c andalso c <> 32 (* SPC *) then
             String.translate
               (fn c => "\\" ^
                        StringCvt.padLeft #"0" 3 (Int.toString (Char.ord c)))
-              s
-          else s
-      val s' = UTF8.translate trans s
-      val s'' = case UTF8.lastChar s' of
-                    NONE => s'
-                  | SOME (cs, _) => if cs = "*" then s' ^ "\\z" else s'
+              (UTF8.chr c)
+          else UTF8.chr c
+        | trans (RB b) = "\\" ^ Int.toString b
+      val scpts = safe_explode s
+      val s' = String.concat (map trans scpts)
+      val s'' = if not (null scpts) andalso last scpts = CP 42 (* * *) then
+                  s' ^ "\\z"
+                else s'
     in
       "$var$(" ^ s'' ^ ")"
     end
@@ -1826,8 +1839,23 @@ fun pp_term (G : grammar) TyG backend = let
           (case total Literal.dest_string_lit tm of
              NONE => fail
            | SOME s =>
-             add_ann_string (Literal.string_literalpp s,
-                             PPBackEnd.Literal PPBackEnd.StringLit)) |||
+             add_ann_string
+               (Literal.string_literalpp {ldelim="\"", rdelim = "\""} s,
+                PPBackEnd.Literal PPBackEnd.StringLit)) |||
+
+          (* overloaded strings - with special designated rator to a rand
+             which is in turn a string literal *)
+          (fn _ => case total Literal.dest_string_lit (rand tm) of
+                       SOME s =>
+                       (case overloads_to_string_form G {tmnm=atom_name f} of
+                            NONE => fail
+                          | SOME ldelim =>
+                            add_ann_string
+                              (Literal.string_literalpp
+                                 (Literal.delim_pair {ldelim=ldelim})
+                                 s,
+                               PPBackEnd.Literal PPBackEnd.StringLit))
+                     | NONE => fail) |||
 
           (* characters *)
           (fn _ => case total Literal.dest_char_lit tm of

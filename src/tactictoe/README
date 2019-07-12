@@ -2,8 +2,7 @@ TacticToe is a tactic-based prover.
 
 It searches for a proof by repeatedly applying suitable tactics for each goal state that it produces. 
 
-RECORDING: 
-  
+RECORDING:
   load "tttUnfold"; open tttUnfold;
   load "fooTheory";
   ttt_record (); (* takes a long time (2-12h) *)
@@ -11,17 +10,16 @@ RECORDING:
 USAGE: (after RECORDING) 
   load "tacticToe"; open tacticToe;
   tactictoe ``1+1=2``;
-  
-  See more examples in examples/ttt_demoScript.sml.
 
-EVALUATION of a theory (after RECORDING): To appear.
+CLEANING: 
+  - TacticToe calls depends on the data stored in 
+    src/tactictoe/ttt_tacdata 
+  - TacticToe recording and evaluation depends on data stored in 
+    src/AI/sml_inspection/open
+  After updating HOL, it is usually necessary to 
+  remove these directories and start afresh 
+
+EXAMPLE: see examples in src/tactictoe/examples.
 
 NOTES FOR DEVELOPERS:
-  Keep up-to-date: 
-    infix tokens in hhsInfix.sml, polyml values in tttUnfold.sml.
-  Issue: 
-   1) Arith.clean cache: not sure if fixed yet or not.
-   2) (Metis/or some other mechanism) seems to remembers when it is terminated, 
-      so the subsequent call with the same input may not work:
-      fixed by raising the tactic timeout from 2.0 to 20.0 seconds.
-         
+  Keep up-to-date: infix tokens in tttInfix.sml, polyml values in tttUnfold.sml.

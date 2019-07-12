@@ -3,6 +3,32 @@ struct
 
 open Parse HolKernel boolSyntax
 
+val grammar_loose_equality =
+    let
+      open term_grammar
+    in
+      add_deltas [
+             RMTMTOK {term_name = "=", tok = "="},
+             GRULE (standard_mapped_spacing {term_name = "=",
+                                             tok = "=",
+                                             fixity = Infix(NONASSOC,100)})
+      ]
+    end
+
+val grammar_tight_equality =
+    let
+      open term_grammar
+    in
+      add_deltas [
+             RMTMTOK {term_name = "=", tok = "="},
+             GRULE (standard_mapped_spacing {term_name = "=",
+                                             tok = "=",
+                                             fixity = Infix(NONASSOC,450)})
+      ]
+    end
+
+
+
 fun tight_equality() = set_fixity "=" (Infix(NONASSOC, 450))
 fun temp_tight_equality() = temp_set_fixity "=" (Infix(NONASSOC, 450))
 

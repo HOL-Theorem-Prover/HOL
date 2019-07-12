@@ -38,6 +38,18 @@ fun knn_sort (symweight,feav) feao =
   end
 
 (* ------------------------------------------------------------------------
+   Term predictions
+   ------------------------------------------------------------------------ *)
+
+fun termknn (symweight,feavdict) n fea =
+  let
+    val l1 = map (fst o fst) (knn_sort (symweight, dlist feavdict) fea)
+    val l2 = mk_sameorder_set Term.compare l1
+  in
+    first_n n l2
+  end
+
+(* ------------------------------------------------------------------------
    Theorem predictions
    ------------------------------------------------------------------------ *)
 
@@ -64,7 +76,6 @@ fun add_thmdep n predl =
 
 fun thmknn_wdep (symweight,feavdict) n fea =
   add_thmdep n (thmknn (symweight,feavdict) n fea)
-
 
 (* ------------------------------------------------------------------------
    Tactic predictions
@@ -112,5 +123,28 @@ fun add_stacdep ddict n l =
   in
     first_n n l2
   end
+
+(* ----------------------------------------------------------------------
+   Training from a dataset of pair (term,value)
+   --------------------------------------------------------------------- *)
+
+type knninfo =
+  (int, real) Redblackmap.dict * (term, int list) Redblackmap.dict
+
+fun train_knn trainset =
+  let
+    val trainfea = map_assoc feahash_of_term (map fst trainset);
+    val trainfead = dnew Term.compare trainfea;
+    val symweight = learn_tfidf trainfea;
+  in
+    (* rev for newest first since it might not be a set *)
+    ((symweight,trainfead), dnew Term.compare (rev trainset))
+  end
+
+fun infer_knn (knninfo,trainsetd) tm =
+  let val neartm = hd (termknn knninfo 1 (feahash_of_term tm)) in
+    dfind neartm trainsetd (* predicting from the trainset *)
+  end
+
 
 end (* struct *)

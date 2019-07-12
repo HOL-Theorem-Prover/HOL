@@ -28,6 +28,13 @@ val _ = TeX_notation {hol = UChar.lambda, TeX = ("\\HOLTokenLambda{}", 1)}
 
 val _ = TeX_notation {hol = "@", TeX = ("\\HOLTokenHilbert{}", 1)}
 
+(* iff *)
+val _ = overload_on ("<=>", “(=) : bool -> bool -> bool”)
+val _ = set_fixity "<=>" (Infix(NONASSOC, 100))
+val _ = unicode_version {u = UChar.iff, tmnm = "<=>"}
+val _ = TeX_notation {hol = "<=>", TeX = ("\\HOLTokenEquiv{}",3)}
+val _ = TeX_notation {hol = UChar.iff, TeX = ("\\HOLTokenEquiv{}",3)}
+
 (* records *)
 val _ = TeX_notation {hol = "<|", TeX = ("\\HOLTokenLeftrec{}", 2)}
 val _ = TeX_notation {hol = "|>", TeX = ("\\HOLTokenRightrec{}", 2)}
@@ -97,6 +104,17 @@ val F_DEF =
 val NOT_DEF =
  Definition.new_definition
    ("NOT_DEF",        “~ = \t. t ==> F”);
+
+(* now allows parsing of not equal *)
+val _ = overload_on ("<>", “\x:'a y:'a. ~(x = y)”)
+val _ = set_fixity "<>" (Infix(NONASSOC, 450))
+val _ = TeX_notation {hol="<>", TeX = ("\\HOLTokenNotEqual{}",1)}
+
+val _ = set_fixity UChar.neq (Infix(NONASSOC, 450))
+val _ = overload_on (UChar.neq, “\x:'a y:'a. ~(x = y)”)
+val _ = TeX_notation {hol=UChar.neq, TeX = ("\\HOLTokenNotEqual{}",1)}
+
+
 
 val EXISTS_UNIQUE_DEF =
 Definition.new_definition
@@ -2247,7 +2265,7 @@ let val t1 = “t1:bool”
     and thFr = TRANS (AP_THM (AP_TERM imp (SPEC t2 AND3)) t3)(SPEC t3 IMP3)
     val thT1 = TRANS thTl (SYM thTr)
     and thF1 = TRANS thFl (SYM thFr)
-    val tm   = “t1 ==> t2 ==> t3 = t1 /\ t2 ==> t3”
+    val tm   = “t1 ==> t2 ==> t3 <=> t1 /\ t2 ==> t3”
     val thT2 = SUBST_CONV [t1 |-> ASSUME “t1 = T”] tm tm
     and thF2 = SUBST_CONV [t1 |-> ASSUME “t1 = F”] tm tm
     val thT3 = EQ_MP (SYM thT2) thT1
@@ -2279,7 +2297,7 @@ let val t1 = “t1:bool”
                      (SPEC (mk_neg t2) AND1)
     val thT1 = TRANS thTl (SYM thTr)
     and thF1 = TRANS thFl (SYM thFr)
-    val tm = “(t1 = t2) = (t1 ==> t2) /\ (t2 ==> t1)”
+    val tm = “(t1 = t2) <=> (t1 ==> t2) /\ (t2 ==> t1)”
     val thT2 = SUBST_CONV [t1 |-> ASSUME “t1 = T”] tm tm
     and thF2 = SUBST_CONV [t1 |-> ASSUME “t1 = F”] tm tm
     val thT3 = EQ_MP (SYM thT2) thT1
@@ -2312,7 +2330,7 @@ let val t1 = “t1:bool” and t2 = “t2:bool”
                      (SPEC (mk_neg t2) OR3)
     val thT1 = TRANS thTl (SYM thTr)
     and thF1 = TRANS thFl (SYM thFr)
-    val tm = “(t1 = t2) = ((t1 /\ t2) \/ (~t1 /\ ~t2))”
+    val tm = “(t1 = t2) <=> (t1 /\ t2) \/ (~t1 /\ ~t2)”
     val thT2 = SUBST_CONV [t1 |-> ASSUME “t1 = T”] tm tm
     and thF2 = SUBST_CONV [t1 |-> ASSUME “t1 = F”] tm tm
     val thT3 = EQ_MP (SYM thT2) thT1
@@ -2680,7 +2698,7 @@ val SWAP_EXISTS_THM = save_thm("SWAP_EXISTS_THM",
 (*---------------------------------------------------------------------------
    EXISTS_UNIQUE_THM
 
-     !P. (?!x. P x) = (?x. P x) /\ (!x y. P x /\ P y ==> (x = y))
+     (?!x. P x) = (?x. P x) /\ (!x y. P x /\ P y ==> (x = y))
  ---------------------------------------------------------------------------*)
 
 val EXISTS_UNIQUE_THM = save_thm("EXISTS_UNIQUE_THM",
@@ -2692,6 +2710,45 @@ val EXISTS_UNIQUE_THM = save_thm("EXISTS_UNIQUE_THM",
    CONV_RULE (RAND_CONV (RAND_CONV (QUANT_CONV (QUANT_CONV (RATOR_CONV
                (RAND_CONV (RATOR_CONV (RAND_CONV BETA_CONV)))))))) th2
  end);
+
+(* ----------------------------------------------------------------------
+    EXISTS_UNIQUE_ALT'
+
+    |- !P. (?!x. P x) <=> ?x. !y. P y <=> (y = x)
+   ---------------------------------------------------------------------- *)
+
+val EXISTS_UNIQUE_ALT' = save_thm(
+  "EXISTS_UNIQUE_ALT'",
+  let
+    val eu_r = ASSUME (rhs (concl EXISTS_UNIQUE_THM))
+    val (eu1, eu2) = CONJ_PAIR eu_r
+    val P = mk_var("P", alpha --> bool)
+    val x = mk_var("x", alpha)
+    val y = mk_var("y", alpha)
+    val c = mk_var("c", alpha)
+    val yeqx = mk_eq(y,x)
+    val Px = mk_comb(P, x)
+    val Py = mk_comb(P, y)
+    val th1a = MP (SPECL [y,x] eu2) (CONJ (ASSUME Py) (ASSUME Px)) |> DISCH Py
+    val th1b = EQ_MP (SYM (AP_TERM P (ASSUME yeqx))) (ASSUME Px) |> DISCH yeqx
+    val th1_noex = IMP_ANTISYM_RULE th1a th1b |> GEN y
+    val th1_noch = EXISTS(mk_exists(x,concl th1_noex), x) th1_noex
+    val th1 = CHOOSE(x,eu1) th1_noch
+    val pyyeq = concl th1
+    val pyyeqc = subst [x |-> c] (#2 (dest_exists pyyeq))
+    val pyyeqc_th = ASSUME pyyeqc
+    val th2a = pyyeqc_th |> SPEC c |> C EQ_MP (REFL c) o SYM
+                         |> EXISTS(mk_exists(x,Px), c)
+    val (pxy_x,pxy_y) = ASSUME (mk_conj(Px,Py)) |> CONJ_PAIR
+    val th2b1 = pyyeqc_th |> SPEC x |> C EQ_MP (ASSUME Px) |> PROVE_HYP pxy_x
+    val th2b2 = pyyeqc_th |> SPEC y |> C EQ_MP (ASSUME Py) |> PROVE_HYP pxy_y
+    val th2b = TRANS th2b1 (SYM th2b2) |> DISCH (mk_conj(Px,Py)) |> GENL [x,y]
+    val th2 = CHOOSE (c, ASSUME pyyeq) (CONJ th2a th2b)
+    val eqn = IMP_ANTISYM_RULE (DISCH_ALL th1) (DISCH_ALL th2)
+  in
+    TRANS EXISTS_UNIQUE_THM eqn
+  end);
+
 
 (*---------------------------------------------------------------------------
   LET_CONG =
@@ -4237,22 +4294,6 @@ in
 end
 
 (* Parsing additions *)
-(* iff *)
-val _ = overload_on ("<=>", “(=) : bool -> bool -> bool”)
-val _ = set_fixity "<=>" (Infix(NONASSOC, 100))
-val _ = unicode_version {u = UChar.iff, tmnm = "<=>"}
-val _ = TeX_notation {hol = "<=>", TeX = ("\\HOLTokenEquiv{}",3)}
-val _ = TeX_notation {hol = UChar.iff, TeX = ("\\HOLTokenEquiv{}",3)}
-
-(* not equal *)
-val _ = overload_on ("<>", “\x:'a y:'a. ~(x = y)”)
-val _ = set_fixity "<>" (Infix(NONASSOC, 450))
-val _ = TeX_notation {hol="<>", TeX = ("\\HOLTokenNotEqual{}",1)}
-
-val _ = set_fixity UChar.neq (Infix(NONASSOC, 450))
-val _ = overload_on (UChar.neq, “\x:'a y:'a. ~(x = y)”)
-val _ = TeX_notation {hol=UChar.neq, TeX = ("\\HOLTokenNotEqual{}",1)}
-
 (* not an element of *)
 val _ = overload_on ("NOTIN", “\x:'a y:('a -> bool). ~(x IN y)”)
 val _ = set_fixity "NOTIN" (Infix(NONASSOC, 425))

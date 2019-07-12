@@ -106,7 +106,7 @@ end;
 
 fun lpartition (lits,rows) =
 let fun lfail s = raise ERR"lpartition.part" s
-    fun lit_eq l1 l2 = if Literal.is_literal l1 then l1=l2 else
+    fun lit_eq l1 l2 = if Literal.is_literal l1 then aconv l1 l2 else
                        (is_var l1 andalso is_var l2)
     fun pfun lit (row as (p::rst, rhs)) (in_group,not_in_group) =
         if lit_eq lit p then ((rst,rhs)::in_group, not_in_group)
@@ -123,7 +123,7 @@ let fun lfail s = raise ERR"lpartition.part" s
      part lits rows []
  end;
 
-fun rm x [] = [] | rm x (h::t) = if x=h then rm x t else h::rm x t;
+fun rm x [] = [] | rm x (h::t) = if aconv x h then rm x t else h::rm x t;
 
 fun distinct [] = []
   | distinct (h::t) = h::distinct(rm h t);
@@ -160,7 +160,8 @@ mk in_2
 v
 val {path=u::rstp, rows as (p::_, _)::_} = in_3
 
-val {path=u::rstp, rows as (p::_, _)::_} = {path=rstp, rows=zip pat_rectangle' rights'}
+val {path=u::rstp, rows as (p::_, _)::_} =
+   {path=rstp, rows=zip pat_rectangle' rights'}
 val mk = mk_case ty_info FV thy
 mk in_1
 val in
@@ -196,7 +197,8 @@ fun mk_case ty_info FV thy =
    | mk{path=[], rows = [([], (thm, bindings))]} = IT_EXISTS bindings thm
    | mk{path=rstp0, rows= rows0 as ((_::_, _)::_)} =
      let val col_index = mk_case_choose_column 0 rows0
-         val rows = map (fn (pL, rhs) => (bring_to_front_list col_index pL, rhs)) rows0
+         val rows = map (fn (pL, rhs) => (bring_to_front_list col_index pL,rhs))
+                        rows0
          val (pat_rectangle,rights) = unzip rows
          val u_rstp = bring_to_front_list col_index rstp0
          val (u, rstp) = (hd u_rstp, tl u_rstp)
@@ -374,20 +376,21 @@ fun prove_case f thy (tm,TCs_locals,thm) =
                       else MP th2 TC)
  in
  DISCH antc
-   (if is_imp(concl thm') (* recursive calls in this clause *)
-    then let val th1     = ASSUME antc
-             val TCs     = map #1 TCs_locals
-             val ylist   = map (#2 o dest_relation o #2 o
-                                wfrecUtils.strip_imp o #2 o strip_forall) TCs
-             val TClist  = map (fn(TC,lvs) => (SPECL (fst (strip_forall TC)) (ASSUME TC),lvs))
-                                TCs_locals
-             val th2list = map (C SPEC th1) ylist
-             val nlist   = map nested TCs
-             val triples = zip3 TClist th2list nlist
-             val Pylist  = map mk_ih triples
-         in
-            MP thm' (LIST_CONJ Pylist)
-         end
+   (if is_imp(concl thm') (* recursive calls in this clause *) then
+      let val th1     = ASSUME antc
+          val TCs     = map #1 TCs_locals
+          val ylist   = map (#2 o dest_relation o #2 o
+                             wfrecUtils.strip_imp o #2 o strip_forall) TCs
+          val TClist  = map (fn(TC,lvs) =>
+                                (SPECL (fst (strip_forall TC)) (ASSUME TC),lvs))
+                            TCs_locals
+          val th2list = map (C SPEC th1) ylist
+          val nlist   = map nested TCs
+          val triples = zip3 TClist th2list nlist
+          val Pylist  = map mk_ih triples
+      in
+        MP thm' (LIST_CONJ Pylist)
+      end
     else thm')
  end;
 
@@ -512,7 +515,8 @@ fun match_clauses pats case_thm =
 (*---------------------------------------------------------------------------*)
 
 (*
-val {fconst, R, SV, pat_TCs_list} = {fconst=f, R=R, SV=SV, pat_TCs_list=full_pats_TCs}
+val {fconst, R, SV, pat_TCs_list} =
+  {fconst=f, R=R, SV=SV, pat_TCs_list=full_pats_TCs}
 val thy = facts
  *)
 
@@ -533,7 +537,8 @@ let val Sinduction = UNDISCH (ISPEC R relationTheory.WF_INDUCTION_THM)
     val proved_cases = map (prove_case fconst thy) tasks
     val v = variant (free_varsl (map concl proved_cases)) (mk_var("v",domn))
     val case_thm' = ISPEC v case_thm
-    val case_thm'' = match_clauses pats case_thm' (* align case_thm' with pats *)
+    val case_thm'' = match_clauses pats case_thm'
+                     (* align case_thm' with pats *)
     fun mk_subst tm =
         if is_eq tm then SYM (ASSUME tm)
         else SYM (hd (CONJUNCTS (ASSUME (snd(strip_exists tm)))))

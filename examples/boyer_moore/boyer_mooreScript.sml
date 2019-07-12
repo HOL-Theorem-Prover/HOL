@@ -194,7 +194,7 @@ val CMVAL_BND = store_thm(
 val checkDeltaS_def =
     Define
     `
-    checkDeltaS pat j d =
+    checkDeltaS pat j d <=>
         ((d >= SUC j) \/ ~(EL (j-d) pat = EL j pat)) /\
         (extract (MAX (SUC j) d,LENGTH pat) pat
             = extract ((MAX (SUC j) d) - d,LENGTH pat - d) pat)

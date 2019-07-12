@@ -16,6 +16,7 @@ open wordsTheory wordsLib integer_wordTheory;
 open arm_coretypesTheory arm_seq_monadTheory;
 
 val _ = new_theory "arm_opsem";
+val _ = ParseExtras.temp_loose_equality()
 
 (* ------------------------------------------------------------------------ *)
 

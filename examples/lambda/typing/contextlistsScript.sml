@@ -18,8 +18,8 @@ val _ = overload_on
 (* A context is valid if the strings
    are all disjoint.  Here's the primitive recursive defn. *)
 val valid_ctxt_def = Define`
-  (valid_ctxt [] = T) ∧
-  (valid_ctxt ((x,A) :: G) = ¬(x ∈ ctxtFV G) ∧ valid_ctxt G)
+  (valid_ctxt [] ⇔ T) ∧
+  (valid_ctxt ((x,A) :: G) ⇔ x ∉ ctxtFV G ∧ valid_ctxt G)
 `;
 val _ = export_rewrites ["valid_ctxt_def"]
 
@@ -144,16 +144,16 @@ val valid_ctxt_domfilter = store_thm(
 
 val IN_ctxtFV_domfilter = store_thm(
   "IN_ctxtFV_domfilter",
-  ``x ∈ ctxtFV (G ∩ P) = x ∈ ctxtFV G ∧ x ∈ P``,
+  ``x ∈ ctxtFV (G ∩ P) ⇔ x ∈ ctxtFV G ∧ x ∈ P``,
   Induct_on `G` THEN ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD] THEN
   SRW_TAC [][] THEN METIS_TAC []);
 val _ = export_rewrites ["IN_ctxtFV_domfilter"]
 
-val MEM_domfilter = store_thm(
-  "MEM_domfilter",
-  ``MEM (x,ty) (G ∩ P) = x ∈ P ∧ MEM (x,ty) G``,
-  SRW_TAC [][domfilter_def, listTheory.MEM_FILTER]);
-val _ = export_rewrites ["MEM_domfilter"]
+Theorem MEM_domfilter[simp]:
+  MEM (x,ty) (G ∩ P) ⇔ x ∈ P ∧ MEM (x,ty) G
+Proof
+  SRW_TAC [][domfilter_def, listTheory.MEM_FILTER]
+QED
 
 val subctxt_domfilter = store_thm(
   "subctxt_domfilter",

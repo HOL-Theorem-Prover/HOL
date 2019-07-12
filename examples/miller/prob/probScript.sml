@@ -25,6 +25,7 @@ quietdec := false;
 *)
 
 val _ = new_theory "prob";
+val _ = ParseExtras.temp_loose_equality()
 
 val EXISTS_DEF = boolTheory.EXISTS_DEF;
 val std_ss' = simpLib.++ (std_ss, boolSimps.ETA_ss);

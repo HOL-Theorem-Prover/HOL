@@ -69,7 +69,8 @@ val bytes2word_lem = SIMP_RULE (std_ss++wordsLib.SIZES_ss) []
 val bytes2word_lemma = prove(
   ``!w:word32. bytes2word [(7 >< 0) w; (15 >< 8) w; (23 >< 16) w; (31 >< 24) w] = w``,
   SIMP_TAC (std_ss++wordsLib.WORD_ss) [bytes2word_def,word_extract_def]
-  THEN SIMP_TAC (std_ss++wordsLib.SIZES_ss) [bytes2word_def,DECIDE ``n <= m = ~(m < n:num)``,
+  THEN SIMP_TAC (std_ss++wordsLib.SIZES_ss)
+     [bytes2word_def,DECIDE ``n <= m <=> ~(m < n:num)``,
      word_lsl_def,FCP_ETA,word_or_def,w2w,FCP_BETA,word_extract_def,CART_EQ]
   THEN REPEAT STRIP_TAC
   THEN `i - 8 < 32 /\ i - 16 < 32 /\ i - 24 < 32 /\ i < 40 /\ i < 48 /\ i < 56` by DECIDE_TAC

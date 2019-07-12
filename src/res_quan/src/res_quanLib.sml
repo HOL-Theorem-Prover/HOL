@@ -3,17 +3,6 @@
 FILE: res_rules.ml       DATE: 1 Aug 92      BY: Wai Wong
 TRANSLATED               DATE: 28 May 93     BY: Paul Curzon
 UPDATED                  DATE: 30 Oct 01     BY: Joe Hurd
-UPDATED                  DATE: 20 Oct 17     BY: Mario Castelán Castro     UOK
-
-This file as a whole is assumed to be under the license in the file
-"COPYRIGHT" in the HOL4 distribution (note added by Mario Castelán         UOK
-Castro).
-
-For the avoidance of legal uncertainty, I (Mario Castelán Castro) hereby   UOK
-place my modifications to this file in the public domain per the Creative
-Commons CC0 public domain dedication <https://creativecommons.org/publicdo
-main/zero/1.0/legalcode>. This should not be interpreted as a personal
-endorsement of permissive (non-Copyleft) licenses.
 
 ============================================================================*)
 
@@ -21,7 +10,7 @@ structure res_quanLib :> res_quanLib =
 struct
 
 open HolKernel Parse Drule Conv Tactic Tactical Thm_cont
-     Rewrite boolSyntax res_quanTheory boolTheory simpLib Cond_rewrite;
+     Rewrite boolSyntax boolLib res_quanTheory boolTheory simpLib Cond_rewrite;
 
 infix THENR ORELSER ++ ||;
 
@@ -113,8 +102,8 @@ val IMP_RES_FORALL_CONV  = (fn tm =>
     val (ante,t) = dest_imp a
     val (pred,v) = dest_comb ante
     in
-     if not(var = v)
-     then raise ERR "IMP_RES_FORALL_CONV" "term not in the correct form"
+     if var !~ v then
+       raise ERR "IMP_RES_FORALL_CONV" "term not in the correct form"
      else
        SYM (RIGHT_CONV_RULE ((GEN_ALPHA_CONV var) THENC
                              (ONCE_DEPTH_CONV BETA_CONV))
@@ -186,7 +175,7 @@ val RES_FORALL_SWAP_CONV = (fn tm =>
         RAND_CONV(RF_CONV(RF_BODY_CONV(ALPHA_CONV i)) THENC
             RF_BODY_CONV(ALPHA_CONV j))
     in
-     if i=j orelse free_in i Q orelse free_in j P
+     if i ~~ j orelse free_in i Q orelse free_in j P
      then raise ERR "RES_FORALL_SWAP" ""
      else CONV_RULE c2 thm2
     end
@@ -483,8 +472,7 @@ val RESQ_PRED_SET_ss = named_rewrites "RESQ_PRED_SET_ss" [
 *)
 
 fun check_varstruct tm =
-  if is_var tm
-  then [tm]
+  if is_var tm then [tm]
   else
    let val (t1,t2) = pairSyntax.dest_pair tm
                handle _ => raise ERR "check_varstruct" "bad varstruct"
@@ -492,8 +480,7 @@ fun check_varstruct tm =
    val l1 = check_varstruct t1
    val l2 = check_varstruct t2
    in
-    if intersect l1 l2 = []
-    then l1@l2
+    if null (op_intersect aconv l1 l2) then l1@l2
     else raise ERR "check_varstruct" "repeated variable in varstruct"
    end;
 
@@ -516,7 +503,7 @@ fun check_lhs tm =
       val l1 = check_lhs t1
       val l2 = check_varstruct t2
   in
-     if intersect l1 l2 = []
+     if null (op_intersect aconv l1 l2)
      then l1@l2
      else raise ERR "check_lhs" "var used twice"
   end;
@@ -542,24 +529,26 @@ fun RESQ_DEF_EXISTS_RULE tm =
     let val (gvars,tm') = strip_forall tm
     val (ress,(lh,rh)) = ((I ## dest_eq) o strip_res_forall) tm'
         handle _ => raise ERR "RESQ_DEF_EXISTS_RULE" "definition not an equation"
-    val leftvars = check_lhs lh
+    val leftvars = check_lhs lh val leftvars_s = listset leftvars
     val cty = get_type lh (type_of rh)
-    val rightvars = free_vars rh
+    val rightvars = free_vars rh val rightvars_s = listset rightvars
     val resvars = map fst ress
-    val finpred = mk_set (flatten (map (free_vars o snd) ress))
+    val finpred = op_mk_set aconv (flatten (map (free_vars o snd) ress))
+    val finpred_s = listset finpred
     val pConst = hd leftvars
     val cname = fst(dest_var pConst)
     in
     if not(Lexis.allowed_term_constant cname) then
         raise ERR "RESQ_DEF_EXISTS_RULE" (cname^" is not allowed as a constant name")
-    else if (mem pConst resvars) then
+    else if tmem pConst resvars then
         raise ERR "RESQ_DEF_EXISTS_RULE" (cname^" is restrict bound")
-    else if not(all (fn x => mem x leftvars) resvars) then
+    else if not(all (fn x => tmem x leftvars) resvars) then
         raise ERR "RESQ_DEF_EXISTS_RULE" "restrict bound var not in lhs"
-    else if not(set_eq(intersect
-        (union finpred leftvars) rightvars)rightvars) then
+    else if
+      not(HOLset.equal((finpred_s Un leftvars_s) Isct rightvars_s, rightvars_s))
+    then
         raise ERR "RESQ_DEF_EXISTS_RULE" "unbound var in rhs"
-    else if mem(hd leftvars)rightvars then
+    else if tmem(hd leftvars)rightvars then
         raise ERR "RESQ_DEF_EXISTS_RULE" "recursive definitions not allowed"
     else if not(null(subtract (type_vars_in_term rh)
                               (type_vars_in_term pConst))) then
@@ -571,7 +560,8 @@ fun RESQ_DEF_EXISTS_RULE tm =
       let val gl = list_mk_forall (finpred,
                     mk_exists(pConst, list_mk_res_forall
                       (ress, list_mk_forall
-                              (subtract(tl leftvars) resvars, mk_eq(lh,rh)))))
+                              (op_set_diff aconv (tl leftvars) resvars,
+                               mk_eq(lh,rh)))))
       val ex = list_mk_abs((tl leftvars), rh)
       val defthm = prove(gl,
         REPEAT GEN_TAC THEN EXISTS_TAC ex THEN BETA_TAC

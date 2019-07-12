@@ -187,13 +187,13 @@ fun print_monads (tyg, tmg) backend sysprinter ppfns (p,l,r) depth t = let
       val prec = Prec(ass_prec, monadassign_special)
       val bvars = free_vars (valOf vopt)
     in
-      addbvs bvars >>
       pbegin bracketp >>
       ublock PP.INCONSISTENT 0
-         (syspr true (prec, l, prec) (valOf vopt) >>
+         (record_bvars bvars (syspr true (prec, l, prec) (valOf vopt)) >>
           strn " " >> strn "<-" >> brk(1,2) >>
           syspr false (prec,prec,r) action) >>
-      pend bracketp
+      pend bracketp >>
+      addbvs bvars
     end
   in
     case vopt of

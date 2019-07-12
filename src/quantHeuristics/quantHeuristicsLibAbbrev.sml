@@ -87,7 +87,7 @@ let
       val sfs = flatten (map sf tL)
       val fsfs = filter (fn (tt, _) => no_var_const_filter tt) sfs
 
-      fun my_insert ((tt, n), l) = if (exists (fn (tt', _) => tt' = tt) l) then l else (tt,n)::l
+      fun my_insert ((tt, n), l) = if (exists (fn (tt', _) => tt' ~~ tt) l) then l else (tt,n)::l
       val fsfs_unique = rev (foldl my_insert [] fsfs)
    in fsfs_unique end
    val fvL = ref (all_vars t);
@@ -102,8 +102,8 @@ let
       val s = [st |-> new_v];
       val _ = fvL := new_v :: (!fvL);
 
-      fun v_inst_filter v t i fvL = not (i = st)
-      fun v_filter v t = v = new_v
+      fun v_inst_filter v t i fvL = not (i ~~ st)
+      fun v_filter v t = v ~~ new_v
       val v_qps = [inst_filter_qp [v_inst_filter], filter_qp [v_filter]]
 
 (*
@@ -118,7 +118,7 @@ val t0 = snd (strip_forall t)
          val t' = subst s t0
          val is_top' = (is_top andalso is_forall t0)
       in
-         if (t0 = t') then (if (only_top andalso (not is_top')) then fail() else
+         if (t0 ~~ t') then (if (only_top andalso (not is_top')) then fail() else
                                (if is_top' then QUANT_CONV (try_subst true) t0 else
                                                 (SUB_CONV (try_subst false) t0))) else
          let

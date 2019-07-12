@@ -18,6 +18,7 @@ quietdec := false;
 *)
 
 val _ = new_theory "tree";
+val _ = ParseExtras.temp_loose_equality()
 
 val tree = Hol_datatype `tree =
     leaf

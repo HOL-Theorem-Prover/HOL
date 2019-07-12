@@ -5,7 +5,9 @@ open HolKernel Parse boolLib hol88Lib jrhUtils limTheory;
 
 structure Parse = struct
   open Parse
-  val (Type, Term) = parse_from_grammars limTheory.lim_grammars
+  val (Type, Term) =
+      parse_from_grammars
+        (apsnd ParseExtras.grammar_loose_equality limTheory.lim_grammars)
 end
 open Parse
 
@@ -45,7 +47,7 @@ val CC = TAUT_CONV (``a ==> b ==> c = a /\ b ==> c``);
 fun DIFF_CONV tm =
   let val xv = variant (frees tm) xreal
       fun is_diffl tm =
-        (funpow 3 rator tm = diffl_tm handle HOL_ERR _ => false)
+        (funpow 3 rator tm ~~ diffl_tm handle HOL_ERR _ => false)
       fun make_assoc th =
         let val tm1 = (snd o strip_imp o snd o strip_forall o concl) th
             val tm2 = (rand o rator o rator) tm1 in
@@ -73,11 +75,11 @@ fun DIFF_CONV tm =
         let val (v,bod) = dest_abs tm in
             if not (free_in v bod) then
               GEN xv (SPECL [bod, xv] DIFF_CONST)
-            else if bod = v then
+            else if bod ~~ v then
               GEN xv (SPEC xv DIFF_X)
             else
               let val (opp,args) = strip_comb bod in
-              (let val th1 = snd(assoc opp cths)
+              (let val th1 = tassoc opp cths
                    val nargs = map (curry mk_abs v) args
                    val dargs = map diff nargs
                    val th2 = end_itlist ICONJ dargs
@@ -91,9 +93,9 @@ fun DIFF_CONV tm =
                GEN xv th7 end handle HOL_ERR _ =>
                let val arg = Lib.trye hd args
                    val narg = mk_abs(v,arg)
-                   val th1 = if opp = pow_tm
+                   val th1 = if opp ~~ pow_tm
                              then SPEC (last args) DIFF_POW
-                             else snd(assoc opp bths)
+                             else tassoc opp bths
                    val th2 = GEN xv (SPEC (mk_comb(narg,xv)) th1)
                    val th3 = diff narg
                    val th4 = SPEC xv (ICONJ th2 th3)

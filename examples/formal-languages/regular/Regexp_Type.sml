@@ -5,9 +5,11 @@
 structure Regexp_Type :> Regexp_Type =
 struct
 
-open Lib Feedback regexpMisc WordOps Interval;
+open Lib Feedback regexpMisc;
 
 val ERR = mk_HOL_ERR "Regexp_Type";
+
+fun copy x n = List.tabulate (n,K x) handle _ => [];
 
 (*---------------------------------------------------------------------------*)
 (* Alphabet                                                                  *)
@@ -58,12 +60,13 @@ val sing_charsets =
 fun charset_mem c ((w1,w2,w3,w4):charset) =
  let val i = Char.ord c
      val (s1,s2,s3,s4) = Vector.sub(sing_charsets,i)
-     val (word,sing) =
-        if i < 64 then (w1,s1) else
-        if i < 128 then (w2,s2) else
-        if i < 192 then (w3,s3) else (w4,s4)
+     val result =
+        Word64.andb
+          (if i < 64  then (w1,s1) else
+           if i < 128 then (w2,s2) else
+           if i < 192 then (w3,s3) else (w4,s4))
  in
-   Word64.andb(word,sing) <> 0wx0
+   result <> 0wx0
  end
 
 fun charset_insert c cset =
@@ -74,6 +77,13 @@ fun charset_elts cs = filter (C charset_mem cs) alphabet;
 fun charset_of clist = itlist charset_insert clist charset_empty;
 
 fun charset_sing c = charset_of [c];
+
+fun charset_span b t =
+ if 0 <= b andalso b <= 255 andalso
+    0 <= t andalso t <= 255
+ then
+   charset_of (map Char.chr (upto b t))
+ else raise ERR "charset_span" "";
 
 fun charset_compare ((u1,u2,u3,u4),(v1,v2,v3,v4)) =
  let open Word64
@@ -91,6 +101,18 @@ fun charset_compare ((u1,u2,u3,u4),(v1,v2,v3,v4)) =
       | EQUAL => compare (u4,v4)
  end;
 
+val charset_digit = charset_of (String.explode"0123456789");
+
+val charset_alpha = charset_of
+  (String.explode "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");
+
+val charset_alphanum =
+  charset_insert #"_"
+      (charset_union charset_digit charset_alpha);
+
+val charset_whitespace = charset_of (String.explode" \n\r\t\f");
+
+
 (*---------------------------------------------------------------------------*)
 (* regexp datatype                                                           *)
 (*---------------------------------------------------------------------------*)
@@ -105,57 +127,49 @@ datatype regexp
 fun And (r1,r2) = Neg(Or[Neg r1,Neg r2]);
 fun Diff (r1,r2) = And(r1,Neg r2);
 
-(*---------------------------------------------------------------------------*)
-(* Character sets represented as (256-bit) bigints.                          *)
-(*---------------------------------------------------------------------------*)
-(*
-type charset = IntInf.int;
+val WHITESPACE = Chset charset_whitespace
+val DIGIT      = Chset charset_digit
+val ALPHA      = Chset charset_alpha
+val ALPHANUM   = Chset charset_alphanum
+val EMPTY      = Chset charset_empty
+val SIGMA      = Chset charset_full
+val DOT        = SIGMA;
+val EPSILON    = Star EMPTY;
+val SIGMASTAR  = Star SIGMA;
 
-val charset_empty = WordOps.allzero;
+fun mk_or [] = EMPTY
+  | mk_or [x] = x
+  | mk_or list = Or list;
 
-val powers =
-  Vector.fromList (map (curry IntInf.pow 2) (upto 0 (alphabet_size-1)));
+fun catlist [] = EPSILON
+  | catlist [x] = x
+  | catlist (h::t) = Cat (h,catlist t);
 
-fun setbit n w = IntInf.orb(Vector.sub(powers,n),w);
+fun strip_cat r =
+ case r
+  of Cat(a,b) => a::strip_cat b
+   | otherwise => [r]
 
-fun charset_insert ch cset = setbit (Char.ord ch) cset;
+val dots = copy DOT;
 
-fun charset_of clist = itlist charset_insert clist charset_empty;
+fun replicate x (n:int) = catlist (copy x n);
 
-fun charset_sing c = charset_of [c]
-
-val charset_full = charset_of (map Char.chr (upto 0 (alphabet_size-1)))
-
-val charset_mem =
- let open IntInf
- in fn c => fn (cs:charset) =>
-    not (andb(cs,Vector.sub(powers, Char.ord c)) = 0)
- end;
-
-fun charset_elts cs = filter (C charset_mem cs) alphabet;
-
-fun charset_union cs1 cs2 = IntInf.orb(cs1,cs2);
-
-fun charset_diff cs1 cs2 = IntInf.andb(cs1,IntInf.notb cs2)
+fun ranged r i j =
+ if j < i then EMPTY
+ else Or (map (replicate r) (upto i j));
 
 (*---------------------------------------------------------------------------*)
-(* charset_compare assumes argument vectors are of equal length              *)
+(* compressed version of ranged. Not used since it is hard for derivative    *)
+(* taker to do well with the nesting.                                        *)
 (*---------------------------------------------------------------------------*)
 
-val charset_compare = IntInf.compare;
-*)
+fun ranged_alt r i j =
+ if j < i then EMPTY
+ else Cat (replicate r i,replicate (Or [EPSILON,r]) (j-i))
 
 (*---------------------------------------------------------------------------*)
-(* Common charsets                                                           *)
+(* Prettyprinting                                                            *)
 (*---------------------------------------------------------------------------*)
-
-val charset_digit = charset_of (String.explode"0123456789");
-val charset_alpha = charset_of
-  (String.explode "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");
-val charset_alphanum =
-  charset_insert #"_"
-      (charset_union charset_digit charset_alpha);
-val charset_whitespace = charset_of (String.explode" \n\r\t\f");
 
 fun charset_string cset =
  if cset = charset_full
@@ -170,21 +184,23 @@ fun charset_string cset =
   then "\\s"
  else
  let fun prchar ch =
-      if Char.isGraph ch then String.str ch
-      else let val i = Char.ord ch
-           in String.concat
+      if mem ch [#"[", #"]"] then
+         "\\" ^ String.str ch
+      else
+      if Char.isGraph ch then
+         String.str ch
+      else
+      let val i = Char.ord ch
+      in String.concat
                ["\\", (if i <= 9 then "00" else
                       if i <= 100 then "0" else ""),
                 Int.toString i]
-           end
-     fun printerval [] = raise ERR "charset_string" "empty interval"
-       | printerval [i] = prchar (Char.chr i)
-       | printerval (i::t) = String.concat
-                               [prchar (Char.chr i),"-",
-                                prchar(Char.chr(List.last t))]
-     val ords = List.map (IntInf.fromInt o Char.ord) (charset_elts cset)
-     val interval_strings =
-       String.concat (map (printerval o map IntInf.toInt) (intervals ords))
+      end
+     fun printerval (i,j) =
+      if i=j then prchar (Char.chr i)
+      else String.concat [prchar (Char.chr i),"-", prchar(Char.chr j)]
+     val ords = List.map Char.ord (charset_elts cset)
+     val interval_strings = String.concat (map printerval (intervals ords))
  in
    String.concat ["[", interval_strings, "]"]
  end;
@@ -197,11 +213,6 @@ fun charset_string cset =
 (*           Star = 4                                                        *)
 (*        charset = 5                                                        *)
 (*---------------------------------------------------------------------------*)
-
-fun strip_cat r =
- case r
-  of Cat(a,b) => a::strip_cat b
-   | otherwise => [r]
 
 val pp_regexp =
  let open Portable PP
@@ -236,7 +247,6 @@ val pp_regexp =
    pp 0
  end;
 
-
 val _ = PolyML.addPrettyPrinter (fn d => fn _ => fn r => pp_regexp r);
 
 (*---------------------------------------------------------------------------*)
@@ -245,6 +255,10 @@ val _ = PolyML.addPrettyPrinter (fn d => fn _ => fn r => pp_regexp r);
 
 val print_regexp = Portable.pprint pp_regexp;
 fun println_regexp r = (print_regexp r; print "\n");
+
+(*---------------------------------------------------------------------------*)
+(* regexp comparison                                                         *)
+(*---------------------------------------------------------------------------*)
 
 fun list_cmp cmp pair =
  case pair
@@ -298,12 +312,6 @@ fun regexp_compare pair =
 (* Lexer and parser for Python-style regexp syntax.                          *)
 (*---------------------------------------------------------------------------*)
 
-datatype direction = LSB | MSB;
-
-datatype packelt
-  = Span of IntInf.int * IntInf.int
-  | Pad of int;
-
 datatype lexeme
    = lparen
    | rparen
@@ -318,9 +326,8 @@ datatype lexeme
    | inFix of Char.char   (* &| *)
    | postFix of Char.char (* *+? *)
    | power of IntInf.int
-   | range of IntInf.int option * IntInf.int option * direction option  (* range + direction *)
-   | const of IntInf.int * direction
-   | pack of packelt list
+   | range of IntInf.int option * IntInf.int option  (* range + direction *)
+   | const of IntInf.int
 ;
 
 fun lexeme_equal lparen lparen = true
@@ -331,7 +338,6 @@ fun lexeme_equal lparen lparen = true
   | lexeme_equal whitespace whitespace = true
   | lexeme_equal interval interval = true
   | lexeme_equal (const cd1) (const cd2) = (cd1=cd2)
-  | lexeme_equal (pack p1) (pack p2) = (p1=p2)
   | lexeme_equal (char c1) (char c2) = (c1=c2)
   | lexeme_equal (chars c1) (chars c2) = (charset_compare(c1,c2) = EQUAL)
   | lexeme_equal (preFix c1) (preFix c2) = (c1=c2)
@@ -349,40 +355,21 @@ fun lexeme_equal lparen lparen = true
 (*                                                                           *)
 (*---------------------------------------------------------------------------*)
 
-fun dir2string MSB = "MSB"
-  | dir2string LSB = "LSB";
-
-fun string2dir "MSB" = SOME MSB
-  | string2dir "LSB" = SOME LSB
-  | string2dir other = NONE;
-
-fun opt3string (lowOpt,hiOpt,ordOpt) = String.concat
+fun opt2string (lowOpt,hiOpt) = String.concat
  ["{",
-     case (lowOpt,hiOpt,ordOpt)
-      of (SOME i,SOME j,SOME d) => (IntInf.toString i^","^ IntInf.toString j^","^dir2string d)
-       | (SOME i,SOME j,NONE) => (IntInf.toString i^","^ IntInf.toString j)
-       | (SOME i, NONE,NONE)  => (IntInf.toString i^",")
-       | (NONE, SOME j,NONE)  => (","^IntInf.toString j)
+     case (lowOpt,hiOpt)
+      of (SOME i,SOME j) => (IntInf.toString i^","^ IntInf.toString j)
+       | (SOME i, NONE)  => (IntInf.toString i^",")
+       | (NONE, SOME j)  => (","^IntInf.toString j)
        | otherwise => raise ERR "lexeme2string"
-                                "opt3string: unexpected format",
+                                "opt2string: unexpected format",
   "}"]
 
-fun const2string (i,d) =
+fun const2string i =
  String.concat
-      ["\\k{", IntInf.toString i, ",", dir2string d, "}"]
+      ["\\k{", IntInf.toString i, "}"]
 
 fun bstring b = if b then "1" else "0";
-
-fun pack2string flds =
- let fun field_to_strings pelt =
-      case pelt
-       of Span(lo,hi) =>
-            String.concat["(", IntInf.toString lo, ",", IntInf.toString hi, ")"]
-        | Pad i =>
-            String.concat["{", Int.toString i, "}"]
- in String.concat
-      ("\\p{" :: (Lib.commafy (List.map field_to_strings flds) @ ["}"]))
- end
 
 fun lexeme2string lparen    = "("
   | lexeme2string rparen    = ")"
@@ -397,9 +384,8 @@ fun lexeme2string lparen    = "("
   | lexeme2string (inFix c)  = Char.toString c
   | lexeme2string (postFix c) = Char.toString c
   | lexeme2string (power n)   = "{"^IntInf.toString n^"}"
-  | lexeme2string (range t)   = opt3string t
+  | lexeme2string (range t)   = opt2string t
   | lexeme2string (const c)   = const2string c
-  | lexeme2string (pack list) = pack2string list;
 
 
 (*---------------------------------------------------------------------------*)
@@ -444,18 +430,11 @@ fun getNum ss =
       | SOME i => SOME(i,ss'))
   (takeWhile (fn c => Char.isDigit c orelse is_tilde c) ss);
 
-fun getDirection ss =
- compose (fn s => fn ss' =>
-    case string2dir s
-     of NONE => NONE
-      | SOME dir => SOME(dir,ss'))
-  (takeWhile Char.isAlpha ss);
-
 fun mk_right_range x = compose
- (fn i => fn strm => SOME(range(NONE,SOME i,NONE),strm)) x;
+ (fn i => fn strm => SOME(range(NONE,SOME i),strm)) x;
 
 fun mk_left_range i x = compose
- (fn _ => fn strm => SOME(range(SOME i,NONE,NONE),strm)) x;
+ (fn _ => fn strm => SOME(range(SOME i,NONE),strm)) x;
 
 (*---------------------------------------------------------------------------*)
 (* Lexing powers and ranges: we've seen a "{": now get the rest : one of     *)
@@ -464,9 +443,6 @@ fun mk_left_range i x = compose
 (*    "<d>,}"                                                                *)
 (*    ",<d>}"                                                                *)
 (*    "<d>,<d>}"                                                             *)
-(*    "<d>,<d>,<dir>}"                                                       *)
-(*                                                                           *)
-(* where <dir> = LSB | MSB                                                   *)
 (*                                                                           *)
 (*---------------------------------------------------------------------------*)
 
@@ -487,85 +463,25 @@ fun get_range strm =
       | SOME(c,strm'') => if c <> comma then NONE else
     case getc strm''
      of NONE => NONE
-      | SOME(#"}",strm''') => SOME(range(SOME i,NONE,NONE),strm''')
+      | SOME(#"}",strm''') => SOME(range(SOME i,NONE),strm''')
       | otherwise =>
     case getNum strm''
      of NONE => NONE
       | SOME(j,strm''') =>
     case getc strm'''
      of NONE => NONE
-      | SOME(#"}",strm1) => SOME(range(SOME i,SOME j,NONE),strm1)
-      | SOME(c,strm1) => if c <> comma then NONE else
-    case getDirection strm1
-     of NONE => NONE
-      | SOME(dir,strm2) =>
-    case getc strm2
-     of SOME(#"}",strm3) => SOME(range(SOME i,SOME j,SOME dir),strm3)
+      | SOME(#"}",strm1) => SOME(range(SOME i,SOME j),strm1)
       | otherwise => NONE
  end
 
-(*---------------------------------------------------------------------------*)
-(* Lexing a pack spec of the form                                            *)
-(*                                                                           *)
-(*   \p{elt_1 ... elt_n}                                                     *)
-(*                                                                           *)
-(* where the \p has already been consumed by the lexer. Each elt_i is either *)
-(* of the form                                                               *)
-(*                                                                           *)
-(*   (lo,hi) (an interval)                                                   *)
-(*                                                                           *)
-(*   or                                                                      *)
-(*                                                                           *)
-(*   .{n}  (padding by n bits)                                               *)
-(*---------------------------------------------------------------------------*)
-
-fun get_pack strm =
- let open Substring
-  fun getPad strm =
-    case getc strm
-     of NONE => NONE
-      | SOME(#".",strm') =>
-         (case eat_then #"{" getNum strm'
-           of NONE => NONE
-            | SOME (n,strm'') =>
-           eat_then #"}" (fn s => SOME (Pad (IntInf.toInt n), s)) strm''
-         )
-      | SOME(_,strm') => NONE
-  fun getSpan strm =
-      case eat_then #"(" getNum strm
-       of NONE =>  NONE
-        | SOME(i,strm) =>
-      case eat_then #"," getNum strm
-       of NONE =>  NONE
-        | SOME(j,strm) =>
-      eat_then #")" (fn strm => SOME(Span(i,j),strm)) strm
-  fun get_block strm = try_alt getPad getSpan strm
-  fun get_blocks list strm =
-       case get_block strm
-        of NONE => eat_then #"}" (fn strm => SOME (pack(rev list), strm)) strm
-         | SOME (el,strm) =>
-             try_alt
-(*              (eat_then #"," (get_blocks (el::list))) *)
-              (get_blocks (el::list))
-              (eat_then #"}" (fn strm => SOME (pack(rev (el::list)), strm)))
-             strm
- in
-  eat_then #"{" (get_blocks []) strm
- end
 
 fun get_const strm =
- let fun getDir i strm =
-       case getDirection strm
-        of NONE => NONE
-         | SOME(d,strm) => eat_then #"}" (fn strm => SOME (const(i,d), strm)) strm
-     fun get strm =
+ let fun get strm =
       case getNum strm
        of NONE =>  NONE
         | SOME(i,strm) =>
-           try_alt
-              (eat_then #"," (getDir i))
-              (eat_then #"}" (fn strm => SOME (const(i,LSB), strm)))
-           strm
+             (eat_then #"}" (fn strm => SOME (const(i), strm)))
+             strm
  in
   eat_then #"{" get strm
  end
@@ -649,7 +565,6 @@ fun lex strm =
            | SOME(#"w",strm'') => SOME(alphanum,strm'')
            | SOME(#"s",strm'') => SOME(whitespace,strm'')
            | SOME(#"i",strm'') => SOME(interval,strm'')
-           | SOME(#"p",strm'') => get_pack strm''
            | SOME(#"k",strm'') => get_const strm''
            | SOME(ch,strm'')   => SOME(char ch,strm'')
         )
@@ -663,7 +578,6 @@ val ss = Substring.full "[abc\234d]";
 val ss = Substring.full "[abc\\234d]";
 val ss = Substring.full "[\117-\234\010]";
 val [chars cset] = lexemes ss;
-val _ = Vector.appi(fn (i,b) => if b then print (Int.toString i^" ") else ()) cset;
 *)
 
 
@@ -684,14 +598,14 @@ fun PARSE_ERR s ss =
 (* We parse into tree, from which it is easy to generate regexp               *)
 (*---------------------------------------------------------------------------*)
 
-datatype tree = Ident of Char.char
-              | Cset of charset
-              | Ap of string * tree list
-              | Power of tree * int
-              | Range of tree * int option * int option
-              | Interval of IntInf.int * IntInf.int * direction
-              | Const of IntInf.int * direction
-              | Pack of packelt list;
+datatype tree
+   = Ident of Char.char
+   | Cset of charset
+   | Ap of string * tree list
+   | Power of tree * int
+   | Range of tree * int option * int option
+   | Interval of IntInf.int * IntInf.int
+   | Const of IntInf.int;
 
 
 fun expect lexeme (stk,ss) =
@@ -783,19 +697,16 @@ and
              (case stk
                of h::t => Postfixen(Power(h,IntInf.toInt i)::t,ss')
                 | [] => PARSE_ERR "missing regexp for {-} operator" ss)
-          | SOME(range(o1,o2,od),ss') =>
+          | SOME(range(o1,o2),ss') =>
              (case stk
                of Ap("interval",[])::t
-                   => (case (o1,o2,od)
-                        of (SOME i, SOME j, SOME d) => Postfixen(Interval(i,j,d)::t,ss')
-                         | (SOME i, SOME j, NONE) => Postfixen(Interval(i,j,LSB)::t,ss')
+                   => (case (o1,o2)
+                        of (SOME i, SOME j) => Postfixen(Interval(i,j)::t,ss')
                          | otherwise => PARSE_ERR "incomplete interval" ss)
-                | h::t => if od=NONE
-                          then let val o1' = Option.map IntInf.toInt o1
-                                   val o2' = Option.map IntInf.toInt o2
-                               in Postfixen(Range(h,o1',o2')::t,ss')
-                               end
-                          else PARSE_ERR "did not want LSB/MSB" ss
+                | h::t => let val o1' = Option.map IntInf.toInt o1
+                              val o2' = Option.map IntInf.toInt o2
+                          in Postfixen(Range(h,o1',o2')::t,ss')
+                          end
                 | [] => PARSE_ERR "missing regexp for {-,-} operator" ss)
           | otherwise => (stk,ss)
   in Postfixen (Atom (stk,ss))
@@ -811,7 +722,6 @@ and
     | SOME(whitespace,ss') => (Ap("whitespace",[])::stk,ss')
     | SOME(interval,ss')   => (Ap("interval",[])::stk,ss')
     | SOME(const copt,ss') => (Const copt::stk,ss')
-    | SOME(pack list,ss')  => (Pack list::stk,ss')
     | SOME(lparen,ss')     =>
        let in
          case expect rparen (parse ss')
@@ -843,529 +753,53 @@ fun quote_to_tree input =
  | otherwise => raise ERR "quote_to_tree"
                "expected a simple quotation of the form ` .... `";
 
-
-(*---------------------------------------------------------------------------*)
-(* Map a parse tree into a regexp                                            *)
-(*---------------------------------------------------------------------------*)
-
-val WHITESPACE = Chset charset_whitespace
-val DIGIT      = Chset charset_digit
-val ALPHA      = Chset charset_alpha
-val ALPHANUM   = Chset charset_alphanum
-val EMPTY      = Chset charset_empty
-val SIGMA      = Chset charset_full
-val DOT        = SIGMA;
-val EPSILON    = Star EMPTY;
-val SIGMASTAR  = Star SIGMA;
-
-fun replicate x (n:int) =
- if n <= 0 then EPSILON else
- if n = 1 then x
-  else Cat(x,replicate x (n-1));
-
-fun catlist [] = EPSILON
-  | catlist [x] = x
-  | catlist (h::t) = Cat (h,catlist t);
-
-fun range r i j =
- if j < i then EMPTY
- else Or (map (replicate r) (upto i j));
-
-(*---------------------------------------------------------------------------*)
-(* compressed version ... hard for derivative taker to do well with the      *)
-(* nesting.                                                                  *)
-(*---------------------------------------------------------------------------*)
-(*
-fun range r i j =
- if j < i then EMPTY
- else Cat (replicate r i,replicate (Or [EPSILON,r]) (j-i))
-*)
-
-fun dots n = if n <= 0 then [] else SIGMA::dots (n-1);
-
-val num2byte = Word8.fromInt;
-val byte2num = Word8.toInt;
-val byte2char = Char.chr o Word8.toInt;
-val char2byte = num2byte o Char.ord;
-
-fun num2chset n =
- if 0 <= n andalso n <= 255
-   then Chset(charset_of[Char.chr n])
- else raise ERR "num2chset" "";
-
-val zero_chset = num2chset 0;
-
-val byte2charset = num2chset o byte2num;
-
-(*===========================================================================*)
-(* Support for numeric intervals                                             *)
-(*===========================================================================*)
-
-(*---------------------------------------------------------------------------*)
-(* Contiguous char lists.                                                    *)
-(*---------------------------------------------------------------------------*)
-
-fun interval_charset b t = Chset(charset_of (map Char.chr (upto b t)))
-
-fun nat_span n = if 0 <= n andalso n <= 255 then interval_charset 0 n else EMPTY;
-fun neg_span i = if 0 <= i andalso i <= 255 then interval_charset i 255 else EMPTY;
-
-(*---------------------------------------------------------------------------*)
-(* Treats list as being in LSB order, and partitions it into a suffix block  *)
-(* of zeros and a prefix block of non-zero numbers. We make a redundant      *)
-(* check that the list is non-empty. If it happens that the prefix is empty  *)
-(* that means that the input list was all zeroes, so we set the nums to [0]. *)
-(*---------------------------------------------------------------------------*)
-
-val lsb_split =
- let fun R [] = ([],[])
-       | R (h::t) =
-         case R t
-          of ([],Z) => if h=0 then ([],0::Z) else ([h],Z)
-           | (N,Z) => (h::N,Z)
- in fn list =>
-    if null list then raise ERR "lsb_split" ""
-    else case R list
-          of ([],z::t) => ([z],t)
-           | other => other
- end;
-
-fun msb_split list =
- if null list then raise ERR "msb_split" "empty list"
- else
-   let fun split [] = ([],[])
-         | split (0::t) = (cons 0 ## I) (split t)
-         | split list = ([],list)
-  in case split list
-      of (z::t,[]) => (t,[z])
-       | other => other
-  end;
-
-(*---------------------------------------------------------------------------*)
-(* To match the numbers from 0 to j, represented in n bytes, we first        *)
-(* convert j into base 256, least-significant-byte first, so                 *)
-(*                                                                           *)
-(*   j = [k_1, ..., k_j, 0,...,0]                                            *)
-(*                                                                           *)
-(* where the trailing zeros are positions needed to bridge between the given *)
-(* width n and the number of bytes needed to express the numbers from 0 to j *)
-(*                                                                           *)
-(* Then the regexp we are after is r1 + r2 where                             *)
-(*                                                                           *)
-(*   r1 = [0-k_1]...[0-k_(n-1)][k_n]zeros                                    *)
-(*                                                                           *)
-(* and                                                                       *)
-(*                                                                           *)
-(*   r2 = ...[0 - (k_n - 1)]zeros      ; n-1 dots (dot means any char)       *)
-(*                                                                           *)
-(*---------------------------------------------------------------------------*)
-
-val lsb_match_upto =
- let val _ = if alphabet_size <> 256
-        then raise ERR "lsb_match_upto" "alphabet_size != 256"
-        else ()
-     fun list2regexp [] = raise ERR "list2regexp" "null list"
-       | list2regexp [x] = nat_span x
-       | list2regexp (h::t) =
-         let val hpreds = catlist (dots (length t) @ [nat_span (h-1)])
-             val hfixed = Cat(list2regexp t,num2chset h)
-         in Or[hpreds, hfixed]
-         end
- in fn j => fn width =>
-    let val rep_256 = map byte2num (bytes_of j width)
-    in case lsb_split rep_256
-        of ([],_) => raise ERR "lsb_match_upto" "unreachable"
-         | (numbers,zeros) =>
-            catlist (list2regexp (rev numbers)
-            :: List.map (K zero_chset) zeros)
-    end
- end;
-
-val lsb_match_downto =
- let val _ = if alphabet_size <> 256
-             then raise ERR "lsb_match_downto" "alphabet_size != 256"
-             else ()
-     fun ilist2regexp [] = raise ERR "ilist2regexp" "null list"
-       | ilist2regexp [x] = neg_span x
-       | ilist2regexp (h::t) =
-         let val hdesc = catlist (dots (length t) @ [neg_span (h+1)])
-             val hfixed = Cat(ilist2regexp t,num2chset h)
-         in
-           Or[hdesc, hfixed]
-         end
- in fn i => fn width =>
-    let val rep_256 = map byte2num (bytes_of i width)
-    in case lsb_split rep_256
-        of ([],_) => raise ERR "lsb_match_downto" "unreachable"
-         | (numbers,zeros) =>
-             catlist (ilist2regexp (rev numbers)
-             :: List.map (K zero_chset) zeros)
-    end
- end;
-
-val msb_match_upto =
- let val _ = if alphabet_size <> 256
-        then raise ERR "msb_match_upto" "alphabet_size != 256"
-        else ()
-     fun list2regexp [] = raise ERR "msb_match_upto" "list2regexp: null list"
-       | list2regexp [x] = nat_span x
-       | list2regexp (h::t) =
-         let val hpreds = catlist (nat_span (h-1) :: dots (length t))
-             val hfixed = Cat(num2chset h,list2regexp t)
-         in Or[hpreds, hfixed]
-         end
- in fn j => fn width =>
-    let val rep_256 = map byte2num (bytes_of j width)
-    in case msb_split rep_256
-        of ([],_) => raise ERR "msb_match_upto" "unreachable"
-         | (zeros,numbers) =>
-            catlist (List.map (K zero_chset) zeros @ [list2regexp numbers])
-    end
- end;
-
-val msb_match_downto =
- let val _ = if alphabet_size <> 256
-             then raise ERR "msb_match_downto" "alphabet_size != 256"
-             else ()
-     fun ilist2regexp [] = raise ERR "msb_match_downto" "ilist2regexp: null list"
-       | ilist2regexp [x] = neg_span x
-       | ilist2regexp (h::t) =
-         let val hdesc = catlist (neg_span (h+1) :: dots (length t))
-             val hfixed = Cat(num2chset h, ilist2regexp t)
-         in
-           Or[hdesc, hfixed]
-         end
- in fn i => fn width =>
-    let val rep_256 = map byte2num (bytes_of i width)
-    in case msb_split rep_256
-        of ([],_) => raise ERR "msb_match_downto" "unreachable"
-         | (zeros,numbers) =>
-             catlist (List.map (K zero_chset) zeros @ [ilist2regexp numbers])
-    end
- end;
-
-val lsb_sing =
- let val _ = if alphabet_size <> 256
-             then raise ERR "lsb_sing" "alphabet_size != 256"
-             else ()
- in fn i => fn width =>
-    let val rep_256 = bytes_of i width
-    in catlist (List.map (num2chset o byte2num) rep_256)
-    end
- end;
-
-val msb_sing =
- let val _ = if alphabet_size <> 256
-             then raise ERR "msb_sing" "alphabet_size != 256"
-             else ()
- in fn i => fn width =>
-    let val rep_256 = map (num2chset o byte2num) (bytes_of i width)
-    in catlist (rev rep_256)
-    end
- end;
-
-fun match_downto LSB = lsb_match_downto
-  | match_downto MSB = msb_match_downto
-
-fun match_upto LSB = lsb_match_upto
-  | match_upto MSB = msb_match_upto;
-
-(*---------------------------------------------------------------------------*)
-(* Lang (regexp_interval i j) = {x | i <= to_num x <= j}                     *)
-(*---------------------------------------------------------------------------*)
-
-fun regexp_interval lo hi order =
- if lo > hi
-     then raise ERR "regexp_interval" "trivial interval"
- else
- if lo < 0 andalso hi < 0 then
-  let val width = signed_width_256 lo
-  in if hi = ~1 then
-         match_downto order lo width
-     else
-         Diff (match_downto order lo width, match_downto order (hi+1) width)
-  end
- else
- if lo < 0 andalso hi >= 0 then
-  let val width = Int.max(signed_width_256 lo, signed_width_256 hi)
-  in if hi = 0 then
-       Or[match_downto order lo width, match_upto order 0 width]
-     else
-       Or [match_downto order lo width, match_upto order hi width]
-  end
- else  (* lo and hi both non-negative *)
-  let val width = unsigned_width_256 hi
-  in if lo = 0 then
-         match_upto order hi width
-      else
-         Diff (match_upto order hi width, match_upto order (lo-1) width)
-  end;
-
-fun sing_interval i order =
- let val width = if i < 0 then signed_width_256 i else unsigned_width_256 i
- in
-   case order
-    of LSB => lsb_sing i width
-     | MSB => msb_sing i width
- end;
-
-
-(* Interval approach
-fun packed_intervals lists width order =
- let val intervals = map (fn list => (hd list, last list)) lists
-     fun interval2regexp (lo,hi) =
-      if lo > hi
-        then raise ERR "interval2regexp" "trivial interval"
-      else
-      if lo < 0 andalso hi < 0 then
-        (if hi = ~1 then
-           match_downto order lo width
-         else
-           Diff (match_downto order lo width,
-                 match_downto order (hi+1) width))
-      else
-      if lo < 0 andalso hi = 0 then
-           Or[match_downto order lo width, match_upto order 0 width]
-      else
-      if lo < 0 andalso hi > 0 then
-           Or [match_downto order lo width, match_upto order hi width]
-      else  (* lo and hi both non-negative *)
-       (if lo = 0 then
-          match_upto order hi width
-        else
-          Diff (match_upto order hi width,
-                match_upto order (lo-1) width))
- in
-   Or (map interval2regexp intervals)
- end
-*)
-
-fun dest_chset (Chset cs) = cs
-  | dest_chset other = raise ERR "dest_chset" "";
-
-fun csets_union L =
- let val (L,z) = front_last L
-     fun cs_union r cs = charset_union (dest_chset r) cs
- in
-   Chset (itlist cs_union L (dest_chset z))
- end
-
-fun bytes2charset bytes =
- let val (L,z) = front_last bytes
-     fun add b cs = charset_insert (byte2char b) cs
- in
-   Chset (itlist add L (charset_of [byte2char z]))
- end
-
-(*---------------------------------------------------------------------------*)
-(* Given a list of lists, all of same length, the hd element of each list is *)
-(* the same.                                                                 *)
-(*---------------------------------------------------------------------------*)
-
-fun hd_card_eq_one [] = false
-  | hd_card_eq_one ([]::t) = false (* Lib.all null t *)
-  | hd_card_eq_one ((h::_)::rst) =
-     let fun check [] = true
-           | check ((g::_)::t) = h=g andalso check t
-           | check other = false
-     in check rst
-     end
-
-(*---------------------------------------------------------------------------*)
-(* Given a list of lists, the last element of each list is the same.         *)
-(*---------------------------------------------------------------------------*)
-
-fun last_card_eq_one [] = false
-  | last_card_eq_one ([]::rst) = false (* Lib.all null rst *)
-  | last_card_eq_one (list::rst) =
-     let val item = last list
-         fun check [] = true
-           | check (L::t) = item=last L andalso check t
-     in check rst
-     end
-
-fun pull_front L =
- if hd_card_eq_one L
-   then SOME (hd (hd L), map tl L)
-   else NONE
-
-fun pull_last L =
-  if last_card_eq_one L
-    then SOME (map butlast L, last (hd L))
-    else NONE
-
-fun pull_fronts L =
- case pull_front L
-  of NONE => ([],L)
-   | SOME (a,L') =>
-      let val (A,L'') = pull_fronts L'
-      in (a::A,L'')
+fun tree_to_regexp intervalFn =
+ let fun t2r tree =
+  case tree
+   of Ident ch => Chset (charset_of [ch])
+    | Cset cset => Chset cset
+    | Power(t,i) => replicate (t2r t) i
+    | Range(t,SOME i,SOME j) => ranged (t2r t) i j
+    | Range(t,NONE,SOME j) => ranged (t2r t) 0 j
+    | Range(t,SOME i,NONE) =>
+      let val r = t2r t
+      in Cat(replicate r i, Star r)
       end
-fun pull_lasts L =
- case pull_last L
-  of NONE => (L,[])
-   | SOME (L',z) =>
-      let val (L'',Z) = pull_lasts L'
-      in (L'',Z@[z])
-      end
-
-fun grabRun f a list acc =
- case list
-  of [] => (acc,list)
-   | h::t => if f h = a then grabRun f a t (h::acc) else (acc,list);
-
-fun chunk f [] = []
-  | chunk f (h::t) =
-     let val (run,rst) = grabRun f (f h) (h::t) []
-     in run :: chunk f rst
-     end;
-
-fun inv_image R f (a,b) = R (f a,f b);
-
-fun sort3 X Y Z = Listsort.sort (inv_image Int.compare fst) [X,Y,Z];
-
-(*---------------------------------------------------------------------------*)
-(* Pick smallest regexp resulting from various strategies for building the   *)
-(* regexp representing the interval union.                                   *)
-(*---------------------------------------------------------------------------*)
-
-fun crunch_interval ibytes =
- let val (L',Z) = pull_lasts ibytes
-     val (A,L'') = pull_fronts L'
-     fun singleton [_] = true | singleton _ = false
-     val core =
-       if null L'' then []
-       else
-       if Lib.all singleton L''
-          then [bytes2charset (map hd L'')]
-          else [Or (map (fn bytes => catlist(map byte2charset bytes)) L'')]
-  in
-   catlist (map byte2charset A @ core @ map byte2charset Z)
-  end;
-
-fun create_regexps intlist nbytes =
- let val intervalL = intervals intlist
-     val _ = stdErr_print("Number of sub-intervals: "
-                          ^Int.toString (length intervalL)^"\n")
-     fun int_bytes i = bytes_of i nbytes
-     val intervalL_bytes = map (map int_bytes) intervalL
-     val intervalL_regexp = Or (map crunch_interval intervalL_bytes)
-
-     val bytesL = map int_bytes intlist
-     val last_sorted = Listsort.sort (inv_image Word8.compare last) bytesL
-     val hd_sorted = Listsort.sort (inv_image Word8.compare hd) bytesL
-     val last_chunks = chunk last last_sorted
-     val hd_chunks = chunk hd hd_sorted
-     val hd_regexp = Or (map crunch_interval hd_chunks)
-     val last_regexp = Or (map crunch_interval last_chunks)
+    | Range (t,NONE,NONE) => Star (t2r t)
+    | Interval(i,j) => intervalFn (i,j)
+    | Const k => intervalFn (k,k)
+    | Ap("dot",[]) => DOT
+    | Ap("digit",[]) => DIGIT
+    | Ap("alphanum",[]) => ALPHANUM
+    | Ap("whitespace",[]) => WHITESPACE
+    | Ap("Star",[t]) => Star(t2r t)
+    | Ap("Plus",[t]) => let val r = t2r t in Cat(r,Star r) end
+    | Ap("Opt",[t]) => Or[EPSILON,t2r t]
+    | Ap("Sum",[t1,t2]) => Or[t2r t1,t2r t2]
+    | Ap("And",[t1,t2]) => Neg(Or[Neg(t2r t1),Neg(t2r t2)])
+    | Ap("Juxt",[t1,t2]) => Cat(t2r t1,t2r t2)
+    | Ap("Not",[t]) => Neg(t2r t)
+    | Ap("interval",[]) => raise ERR "tree_to_regexp" "missing interval parameters"
+    | Ap(other,_) => raise ERR "tree_to_regexp" ("unknown operator: "^other)
  in
-  (intervalL_regexp, hd_regexp, last_regexp)
- end;
-
-fun sub_intervals intlist nbytes order =
- let val (r1,r2,r3) = create_regexps intlist nbytes
-     val sorted = sort3 (PolyML.objSize r1, r1)
-                        (PolyML.objSize r2, r2)
-                        (PolyML.objSize r3, r3)
-     val nregexp = hd sorted
- in
-    stdErr_print ("Size of regexp: "^Int.toString (fst nregexp)^"\n")
-  ; snd nregexp
+   t2r
  end
-
-fun bits_width pelt : int =
-  case pelt
-   of Pad i => i
-    | Span (lo,hi) => interval_bit_width (lo,hi)
-
-fun add_padding iwlist =
- let fun add ((Pad _,i)::(Pad _,j)::t)   = add ((Pad (i+j),i+j)::t)
-       | add ((Pad _,i)::(Span jk,w)::t) = add ((Span jk,w+i)::t)
-       | add ((Span jk,w)::(Pad _,i)::t) = add ((Span jk,w+i)::t)
-       | add ((Span jk,w)::t) = (jk,w)::add t
-       | add [(Pad _,_)] = raise ERR "add_padding" "padding but no interval?"
-       | add [] = []
- in
-   add iwlist
- end;
-
-fun interval_width_string (p,w) =
- let open String IntInf
-     fun ivl_str (Pad n)     = concat  ["padding: "]
-       | ivl_str (Span(i,j)) = concat  ["interval: (",toString i,",",toString j,") ; "]
-  in
-   String.concat [ivl_str p, "width in bits: ", Int.toString w]
-  end;
-
-fun sum [] = 0
-  | sum (h::t) = h + sum t;
-
-fun pack_intervals list =
- let val _ = if null list then
-             raise ERR "pack_intervals" "empty list input"
-             else ()
-     val iwlist = map (fn x => (x,bits_width x)) list
-     val _ = stdErr_print ("Packed interval.\n  "^
-               String.concat (spread "\n  " (map interval_width_string iwlist))
-                ^ "\n")
-     val nbits = sum (map snd iwlist)
-     val nbytes = let val bnd = nbits div 8
-                  in if nbits mod 8 = 0 then bnd
-                     else raise ERR "pack_intervals"
-                         "subcomponent widths do not sum to a multiple of 8"
-                  end
-     val _ = stdErr_print ("Number of bytes needed: "^Int.toString nbytes^"\n")
-     val piwlist = add_padding iwlist
-     val intlist = interval_list_cat [] piwlist
-     val _ = stdErr_print ("Cardinality of specified interval: "
-                           ^Int.toString (length intlist)^"\n")
- in
-   if Lib.all (fn i => zero <= i andalso i <= two_five_five) intlist
-      (* fits in a byte *)
-   then Chset (charset_of (map (Char.chr o IntInf.toInt) intlist))
-   else
-     sub_intervals intlist nbytes LSB
- end
-
-
-fun tree_to_regexp tree =
- case tree
-  of Ident ch => Chset (charset_of [ch])
-   | Cset cset => Chset cset
-   | Power(t,i) => replicate (tree_to_regexp t) i
-   | Range(t,SOME i,SOME j) => range (tree_to_regexp t) i j
-   | Range(t,NONE,SOME j) => range (tree_to_regexp t) 0 j
-   | Range(t,SOME i,NONE) =>
-     let val r = tree_to_regexp t
-     in Cat(replicate r i, Star r)
-     end
-   | Range (t,NONE,NONE) => Star (tree_to_regexp t)
-   | Interval(i,j,dir) => regexp_interval i j dir
-   | Const (k,dir) => sing_interval k dir
-   | Pack list => pack_intervals list
-   | Ap("dot",[]) => DOT
-   | Ap("digit",[]) => DIGIT
-   | Ap("alphanum",[]) => ALPHANUM
-   | Ap("whitespace",[]) => WHITESPACE
-   | Ap("Star",[t]) => Star(tree_to_regexp t)
-   | Ap("Plus",[t]) => let val r = tree_to_regexp t in Cat(r,Star r) end
-   | Ap("Opt",[t]) => Or[EPSILON,tree_to_regexp t]
-   | Ap("Sum",[t1,t2]) => Or[tree_to_regexp t1,tree_to_regexp t2]
-   | Ap("And",[t1,t2]) => Neg(Or[Neg(tree_to_regexp t1),Neg(tree_to_regexp t2)])
-   | Ap("Juxt",[t1,t2]) => Cat(tree_to_regexp t1,tree_to_regexp t2)
-   | Ap("Not",[t]) => Neg(tree_to_regexp t)
-   | Ap("interval",[]) => raise ERR "tree_to_regexp" "missing interval parameters"
-   | Ap(other,_) => raise ERR "tree_to_regexp" ("unknown operator: "^other)
 ;
 
+val the_intervalFn : (IntInf.int * IntInf.int -> regexp) ref =
+  ref (fn _ => raise ERR "tree_to_regexp" "interval regexp generator not installed")
+
+fun get_intervalFn() = !the_intervalFn
+fun set_intervalFn f = (the_intervalFn := f);
+
 fun fromSubstring sstring =
- tree_to_regexp (substring_to_tree sstring)
+ tree_to_regexp (get_intervalFn()) (substring_to_tree sstring)
  handle e => raise wrap_exn "Regexp_Type" "fromSubstring" e;
 
-fun fromString s = tree_to_regexp (string_to_tree s)
+fun fromString s = tree_to_regexp (get_intervalFn()) (string_to_tree s)
  handle e => raise wrap_exn "Regexp_Type" "fromString" e;
 
-fun fromQuote q = tree_to_regexp (quote_to_tree q)
+fun fromQuote q = tree_to_regexp (get_intervalFn()) (quote_to_tree q)
  handle e => raise wrap_exn "Regexp_Type" "fromQuote" e;
 
 end
