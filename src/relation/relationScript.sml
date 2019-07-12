@@ -2294,4 +2294,33 @@ val Newmans_lemma = store_thm(
   `TC R x x0` by PROVE_TAC [EXTEND_RTC_TC] THEN
   PROVE_TAC [RTC_RTC]);
 
+val BISIM_def = new_definition(
+  "BISIM_def",
+  ``BISIM ts R = ∀p q α.
+                    R p q ⇒
+                    (∀p'. ts p α p' ⇒ (∃q'. ts q α q' ∧ R p' q')) ∧
+                    (∀q'. ts q α q' ⇒ (∃p'. ts p α p' ∧ R p' q'))``)
+
+val BISIM_REL_def = new_definition(
+  "BISIM_REL_def",
+  ``BISIM_REL ts p q = ∃R. BISIM ts R ∧ R p q``)
+
+val BISIM_REL_IS_EQUIV_REL = store_thm(
+  "BISIM_REL_IS_EQUIV_REL",
+  ``∀ts. equivalence (BISIM_REL ts)``,
+  SRW_TAC[][equivalence_def]
+  >- (SRW_TAC[][reflexive_def, BISIM_REL_def] >>
+      Q.EXISTS_TAC ‘$=’ >>
+      SRW_TAC[][BISIM_def])
+  >- (SRW_TAC[][symmetric_def, BISIM_REL_def] >>
+      SRW_TAC[][EQ_IMP_THM] >>
+      Q.EXISTS_TAC ‘SC R’ >>
+      FULL_SIMP_TAC (srw_ss ()) [BISIM_def,SC_DEF] >>
+      METIS_TAC[])
+  >- (SRW_TAC[][transitive_def,BISIM_REL_def] >>
+      Q.EXISTS_TAC ‘λa c. ∃b. R a b ∧ R' b c’ >>
+      FULL_SIMP_TAC (srw_ss ()) [BISIM_def] >>
+      METIS_TAC[]));
+
+
 val _ = export_theory();
