@@ -784,7 +784,7 @@ load "mleHanabi"; open mleHanabi;
 load "aiLib"; open aiLib;
 load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
 
-summary_file := "hanabi_run19";
+summary_file := "hanabi_run20";
 dim_glob := 4;
 nepoch_glob := 100;
 bsize_glob := 16;
@@ -792,6 +792,7 @@ lr_glob := 0.02;
 ngame_glob := 500;
 ncore_explore := 50;
 nsim_glob := 800;
+level_glob := 1;
 
 val dhtnn = rl_loop 100;
 *)

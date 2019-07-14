@@ -3,7 +3,7 @@
 (* DESCRIPTION   : Internal (shared memory) and external                     *)
 (* (starting new buildheap process) parallel calls                           *)
 (* AUTHOR        : (c) Thibault Gauthier, Czech Technical University         *)
-(* DATE          : 2018                                                      *)
+(* DATE          : 2019                                                      *)
 (* ========================================================================= *)
 
 structure smlParallel :> smlParallel =
@@ -196,26 +196,6 @@ fun parmap_gen ncore =
     (parmap_loc, close_threadl)
   end
 
-(*
-load "smlParallel"; open smlParallel;
-load "Profile"; open Profile;
-
-fun add1 x  = 1 + x;
-fun test1 () =
-  let
-    val (parmap_loc, close_threadl) = parmap_gen 2;
-    val _ = List.tabulate (1000, fn x => parmap_loc add1 [0,1]);
-    val _ = close_threadl ()
-  in
-    ()
-  end
-fun test2 () = ignore (List.tabulate (1000, fn _ => parmap_queue 2 I [1,2]));
-
-reset_all ();
-profile "test1" test1 ();
-profile "test2" test2 ();
-results ();
-*)
 (* -------------------------------------------------------------------------
    To avoid spinning too much.
    Smaller value do not decrease the waiting time.
@@ -228,19 +208,14 @@ fun mini_sleep () = OS.Process.sleep (Time.fromReal 0.01)
    ------------------------------------------------------------------------- *)
 
 val parallel_dir = ref (HOLDIR ^ "/src/AI/sml_inspection/parallel")
-fun writel_atomic file sl =
-  (writel (file ^ "_temp") sl;
-   OS.FileSys.rename {old = file ^ "_temp", new=file})
-fun readl_rm file =
-  let val sl = readl file in OS.FileSys.remove file; sl end
-
 fun wid_dir wid = (!parallel_dir) ^ "/" ^ its wid
 fun widin_file wid = wid_dir wid ^ "/in"
 fun widout_file wid = wid_dir wid ^ "/out"
 fun widscript_file wid = wid_dir wid ^ "/script" ^ its wid ^ ".sml"
 
-fun result_file (wid,job) = wid_dir wid ^ "/result" ^ its job
+fun param_file () = !parallel_dir ^ "/param"
 fun argl_file () = !parallel_dir ^ "/argl"
+fun result_file (wid,job) = wid_dir wid ^ "/result" ^ its job
 
 (* -------------------------------------------------------------------------
    Each worker has a copy of the list.
@@ -256,9 +231,6 @@ and worker_listen wid fl =
       if s = "stop" then () else worker_process wid fl (string_to_int s)
     end
   else (mini_sleep (); worker_listen wid fl)
-
-fun worker_start wid fl =
-  (writel_atomic (widout_file wid) ["up"]; worker_listen wid fl)
 
 (* -------------------------------------------------------------------------
    Closing workers and gathering results
@@ -346,6 +318,23 @@ and boss_collect threadl rr (pendingl,runningl,completedl) =
   end
 
 (* -------------------------------------------------------------------------
+   Specification of the external parallel run
+   ------------------------------------------------------------------------- *)
+
+type ('a,'b,'c) extspec = 
+  {
+  self: string,
+  reflect_globals : unit -> string,
+  function : 'a -> 'b -> 'c,
+  write_param : string -> 'a -> unit,
+  read_param : string -> 'a,
+  write_argl : string -> 'b list -> unit,
+  read_argl : string -> 'b list,
+  write_result : string ->'c -> unit,
+  read_result : string -> 'c
+  }
+
+(* -------------------------------------------------------------------------
    Starting threads and external calls
    ------------------------------------------------------------------------- *)
 
@@ -356,8 +345,8 @@ fun boss_start_worker code_of wid =
   remove_file (widscript_file wid)
   )
 
-val attrib = [Thread.InterruptState Thread.InterruptAsynch, Thread.EnableBroadcastInterrupt true]
-
+val attrib = [Thread.InterruptState Thread.InterruptAsynch, 
+  Thread.EnableBroadcastInterrupt true]
 
 fun boss_wait_upl widl =
   let fun is_up wid = hd (readl (widout_file wid)) = "up"
@@ -376,68 +365,72 @@ fun clean_parallel_dirs widl=
     mkDir_err (!parallel_dir); app f widl
   end
 
-fun parmap_queue_extern ncore code_of (write_state,write_argl) rr argl =
+fun worker_start wid (extspec: ('a,'b,'c) extspec) =
+  let
+    val param = #read_param extspec (param_file ())
+    val argl = #read_argl extspec (argl_file ())
+    fun f (wid,job) arg = 
+      let val r = #function extspec param arg in
+        #write_result extspec (result_file (wid,job)) r;
+        writel_atomic (widout_file wid) ["done"]
+      end
+  in
+    writel_atomic (widout_file wid) ["up"];
+    worker_listen wid (f,argl)
+  end
+
+fun code_of_extspec extspec wid =
+  let val s = #self extspec in
+    [
+    "open smlParallel;",
+    "val _ = parallel_dir := " ^ quote (!parallel_dir) ^ ";",
+    "val _ = #reflect_globals " ^ s ^ ";",
+    "worker_start " ^ its wid ^ s ^ ";"
+    ]
+  end
+
+val attrib = [Thread.InterruptState Thread.InterruptAsynch, 
+  Thread.EnableBroadcastInterrupt true]
+
+fun parmap_queue_extern ncore extspec param argl =
   let
     val widl = List.tabulate (ncore,I) (* workers *)
     val _ = clean_parallel_dirs widl
-    val _ = (write_state (); write_argl argl)
+    val _ = #write_param extspec (param_file ()) param
+    val _ = #write_argl extspec (argl_file ()) argl
     val _ = print_endline ("start " ^ its ncore ^ " workers")
     fun fork wid = Thread.fork (fn () =>
-      boss_start_worker code_of wid, attrib)
+      boss_start_worker (code_of_extspec extspec) wid, attrib)
     val threadl = map fork widl
     val pendingl = List.tabulate (length argl,I) (* jobs *)
+    fun rr (wid,job) = #read_result extspec (result_file (wid,job))
   in
     boss_wait_upl widl;
     print_endline ("  " ^ its ncore ^ " workers started");
     boss_send threadl rr (pendingl,[],[])
   end
 
-fun standard_code_of (s_state,s_argl,s_f) wid =
-  [
-  "open smlParallel;",
-  "val _ = parallel_dir := " ^ quote (!parallel_dir) ^ ";",
-  "val state = " ^ s_state ^ ";",
-  "val argl = " ^ s_argl ^ ";",
-  "fun f (wid,job) arg =",
-  "  (" ^ s_f ^ " state (wid,job) arg;",
-  "   writel_atomic (widout_file wid) [\"done\"]);",
-  "worker_start " ^ (its wid) ^ " (f,argl);"
-  ]
-(*
-type externalization = 
-  {
-  function : string,
-  directory : string,
-  read_param : string,
-  update_globals : string
-  read_argl : string
-     
-  }
-*)
-
 (* -------------------------------------------------------------------------
    Example
    ------------------------------------------------------------------------- *)
 
+val idspec : (unit,int,int) extspec =
+  {
+  self = "smlParallel.idspec",
+  reflect_globals = fn () => "()",
+  function = let fun f _ (x:int) = x in f end,
+  write_param = let fun f _ () = () in f end,
+  read_param = let fun f _ = () in f end,
+  write_argl = let fun f file argl = writel file (map its argl) in f end,
+  read_argl = let fun f file = map string_to_int (readl file) in f end,
+  write_result = let fun f file r = writel file [its r] in f end,
+  read_result = let fun f file = string_to_int (hd (readl_rm file)) in f end
+  }
 
-
-
-
-fun id_parallel ncore argl =
-  let
-    fun write_state () = ()
-    fun write_argl l = writel (argl_file ()) (map its argl)
-    fun read_result (wid,job) =
-      string_to_int (hd (readl_rm (result_file (wid,job))))
-    val s_state = "()";
-    val s_argl = "List.map Lib.string_to_int (aiLib.readl (argl_file ()))";
-    val s_f = ("let fun f _ widjob arg = " ^
-      "aiLib.writel (result_file widjob) [aiLib.its arg] in f end");
-    fun code_of wid = standard_code_of (s_state,s_argl,s_f) wid;
-  in
-    parmap_queue_extern ncore code_of (write_state,write_argl)
-      read_result argl
-  end
-
+(* 
+load "smlParallel"; open smlParallel;
+val l1 = List.tabulate (100,I);
+val l2 = parmap_queue_extern 2 idspec () l1;
+*)
 
 end

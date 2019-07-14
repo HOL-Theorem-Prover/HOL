@@ -621,8 +621,6 @@ fun stream_to_string path f =
     f oc; TextIO.closeOut oc; readl path
   end
 
-
-
 fun erase_file file = write_file file "" handle _ => ()
 
 fun writel file sl =
@@ -668,6 +666,13 @@ fun debug_in_dir dir file s =
 
 fun write_texgraph file (s1,s2) l =
   writel file ((s1 ^ " " ^ s2) :: map (fn (a,b) => its a ^ " " ^ its b) l);
+
+fun writel_atomic file sl =
+  (writel (file ^ "_temp") sl;
+   OS.FileSys.rename {old = file ^ "_temp", new=file})
+
+fun readl_rm file =
+  let val sl = readl file in OS.FileSys.remove file; sl end
 
 (* --------------------------------------------------------------------------
    Profiling

@@ -143,6 +143,9 @@ sig
     string -> (TextIO.outstream -> unit) -> string list
   val write_texgraph :
     string -> string * string -> (int * int) list -> unit
+  val readl_rm : string -> string list
+  val writel_atomic : string -> string list -> unit
+
 
   (* parse *)
   val unquote_string : string -> string
