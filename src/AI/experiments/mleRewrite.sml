@@ -128,13 +128,13 @@ fun lo_prooflength_target target = case target of
     (true, Board (tm,[])) => lo_prooflength 200 tm
   | _ => raise ERR "lo_prooflength_target" ""
 
-fun write_targetl targetl =
+fun write_targetl file targetl =
   let val tml = map dest_startsit targetl in
-    mlTacticData.export_terml (!parallel_dir ^ "/targetl") tml
+    mlTacticData.export_terml (file ^ "_targetl") tml
   end
 
-fun read_targetl () =
-  let val tml = mlTacticData.import_terml (!parallel_dir ^ "/targetl") in
+fun read_targetl file =
+  let val tml = mlTacticData.import_terml (file ^ "_targetl") in
     map mk_startsit tml
   end
 
@@ -182,9 +182,10 @@ val gamespec : (board,move) mlReinforce.gamespec =
   mk_targetl = mk_targetl,
   write_targetl = write_targetl,
   read_targetl = read_targetl,
-  opens = "mleRewrite",
   max_bigsteps = max_bigsteps
   }
+
+val extspec = mk_extspec "mleRewrite.extspec" gamespec
 
 (* -------------------------------------------------------------------------
    Statistics
@@ -214,10 +215,7 @@ fun explore_gamespec tm =
     explore_test gamespec dhtnn (mk_startsit tm)
   end
 
-(* -------------------------------------------------------------------------
-   Reinforcement learning loop with fixed parameters
-   ------------------------------------------------------------------------- *)
-
+(*
 fun reinforce_fixed runname ngen =
   (
   logfile_glob := runname;
@@ -240,6 +238,7 @@ fun reinforce_fixed runname ngen =
   start_rl_loop gamespec
   )
 
+
 (* -------------------------------------------------------------------------
    Final evaluation
    ------------------------------------------------------------------------- *)
@@ -257,5 +256,7 @@ fun final_eval dhtnn_name (a,b) testbase =
   in
     ((nwin,ntot), int_div nwin ntot)
   end
+
+*)
 
 end (* struct *)

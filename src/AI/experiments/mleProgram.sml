@@ -529,18 +529,10 @@ val gamespec : (board,move) mlReinforce.gamespec =
   mk_targetl = mk_targetl,
   write_targetl = write_targetl,
   read_targetl = read_targetl,
-  opens = "mleProgram",
   max_bigsteps = max_bigsteps
   }
 
-type dhex = (term * real list * real list) list
-type dhtnn = mlTreeNeuralNetwork.dhtnn
-type flags = bool * bool * bool
-
-val extspec : (flags * dhtnn, board psMCTS.sit, bool * dhex) 
-  smlParallel.extspec =
-  mk_extspec "mleProgram.extspec" gamespec
-
+val extspec = mk_extspec "mleProgram.extspec" gamespec
 
 (* -------------------------------------------------------------------------
    Basic exploration

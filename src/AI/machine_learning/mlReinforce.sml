@@ -26,13 +26,14 @@ type ('a,'b) gamespec =
   mk_targetl: int -> int -> 'a psMCTS.sit list,
   write_targetl: string -> 'a psMCTS.sit list -> unit,
   read_targetl: string -> 'a psMCTS.sit list,
-  opens: string,
   max_bigsteps : 'a psMCTS.sit -> int
   }
 
 type dhex = (term * real list * real list) list
 type dhtnn = mlTreeNeuralNetwork.dhtnn
 type flags = bool * bool * bool
+type 'a extgamespec =
+  (flags * dhtnn, 'a psMCTS.sit, bool * dhex) smlParallel.extspec
 
 (* -------------------------------------------------------------------------
    Log
@@ -271,7 +272,7 @@ fun train_f gamespec allex =
   end
 
 (* -------------------------------------------------------------------------
-   External parallelization: helper functions
+   External parallelization specification
    ------------------------------------------------------------------------- *)
 
 fun string_to_bool s = 
@@ -283,27 +284,17 @@ fun flags_to_string (b1,b2,b3) = bts b1 ^ " " ^  bts b2 ^ " " ^ bts b3
 fun string_to_flags s = 
   triple_of_list (map string_to_bool (String.tokens Char.isSpace s))
 
-(* -------------------------------------------------------------------------
-   External parallelization
-   ------------------------------------------------------------------------- *)
-
 fun write_param file (flags,dhtnn) =
-  (
-  writel (file ^ "_flags") [flags_to_string flags];
-  write_dhtnn (file ^ "_dhtnn") dhtnn
-  )
+  (writel (file ^ "_flags") [flags_to_string flags];
+   write_dhtnn (file ^ "_dhtnn") dhtnn)
 
 fun read_param file =
-  (
-  (string_to_flags o hd o readl) (file ^ "_flags"),
-  read_dhtnn (file ^ "_dhtnn")
-  )
+  ((string_to_flags o hd o readl) (file ^ "_flags"),
+   read_dhtnn (file ^ "_dhtnn"))
 
 fun write_result file (bstatus,exl) =
-  (
-  writel_atomic (file ^ "_bstatus") [bstatus_to_string bstatus];
-  write_dhex (file ^ "_exl") exl
-  )
+  (writel_atomic (file ^ "_bstatus") [bstatus_to_string bstatus];
+   write_dhex (file ^ "_exl") exl)
 
 fun read_result file =
   let

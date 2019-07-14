@@ -60,13 +60,13 @@ fun filter_sit sit = (fn l => l) (* filter moves *)
 
 fun string_of_move (tm,_) = tts tm
 
-fun write_targetl targetl =
+fun write_targetl file targetl =
   let val tml = map dest_startsit targetl in
-    export_terml (!parallel_dir ^ "/targetl") tml
+    export_terml (file ^ "_targetl") tml
   end
 
-fun read_targetl () =
-  let val tml = import_terml (!parallel_dir ^ "/targetl") in
+fun read_targetl file =
+  let val tml = import_terml (file ^ "_targetl") in
     map mk_startsit tml
   end
 
@@ -114,9 +114,15 @@ val gamespec : (board,move) mlReinforce.gamespec =
   write_targetl = write_targetl,
   read_targetl = read_targetl,
   string_of_move = string_of_move,
-  opens = "mleSynthesize",
   max_bigsteps = max_bigsteps
   }
+
+type dhex = (term * real list * real list) list
+type dhtnn = mlTreeNeuralNetwork.dhtnn
+type flags = bool * bool * bool
+
+val extspec : (flags * dhtnn, board psMCTS.sit, bool * dhex) 
+  smlParallel.extspec = mk_extspec "mleSynthesize.extspec" gamespec
 
 (* -------------------------------------------------------------------------
    Statistics
@@ -149,6 +155,7 @@ fun explore_gamespec tm =
     explore_test gamespec dhtnn (mk_startsit tm)
   end
 
+(*
 (* -------------------------------------------------------------------------
    Reinforcement learning loop with fixed parameters
    ------------------------------------------------------------------------- *)
@@ -192,6 +199,7 @@ fun final_eval dhtnn_name (a,b) testbase =
   in
     ((nwin,ntot), int_div nwin ntot)
   end
+*)
 
 (*
 load "mleRewrite"; load "mleSynthesize";

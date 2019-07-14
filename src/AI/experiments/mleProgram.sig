@@ -22,12 +22,7 @@ sig
   type board = (int list * int) * (state list * program) * (program * program)
   
   val gamespec : (board,move) mlReinforce.gamespec
-  
-  type dhex = (term * real list * real list) list
-  type dhtnn = mlTreeNeuralNetwork.dhtnn
-  type flags = bool * bool * bool
-  val extspec : 
-    (flags * dhtnn, board psMCTS.sit, bool * dhex) smlParallel.extspec
+  val extspec : board mlReinforce.extgamespec
 
   val mk_startsit : int list * (program * int) -> (bool * board)
   val inputl_org : int list list
