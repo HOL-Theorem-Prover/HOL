@@ -24,11 +24,15 @@ type ('a,'b) gamespec =
   operl : (term * int) list,
   nntm_of_sit: 'a psMCTS.sit -> term,
   mk_targetl: int -> int -> 'a psMCTS.sit list,
-  write_targetl: 'a psMCTS.sit list -> unit,
-  read_targetl: unit -> 'a psMCTS.sit list,
+  write_targetl: string -> 'a psMCTS.sit list -> unit,
+  read_targetl: string -> 'a psMCTS.sit list,
   opens: string,
   max_bigsteps : 'a psMCTS.sit -> int
   }
+
+type dhex = (term * real list * real list) list
+type dhtnn = mlTreeNeuralNetwork.dhtnn
+type flags = bool * bool * bool
 
 (* -------------------------------------------------------------------------
    Log
@@ -100,14 +104,6 @@ fun summary_param () =
       [mcts2,mcts3,mcts4,mcts5,mcts6,mcts7])
      ^ "\n")
   end
-
-(* -------------------------------------------------------------------------
-   Additional communication files
-   ------------------------------------------------------------------------- *)
-
-fun dhtnn_file () = !parallel_dir ^ "/dhtnn"
-fun widexl_file (wid,job) = wid_dir wid ^ "/exl" ^ its job
-fun widwin_file (wid,job) = wid_dir wid ^ "/win" ^ its job
 
 (* -------------------------------------------------------------------------
    Evaluation and policy
@@ -227,7 +223,7 @@ fun bstatus_to_string b = if b then "win" else "lose"
 fun string_to_bstatus s = assoc s [("win",true),("lose",false)]
   handle HOL_ERR _ => raise ERR "string_to_bstatus" ""
 
-fun explore_extern (gamespec,dhtnn,flags) (wid,job) target =
+fun explore_extern gamespec (flags,dhtnn) target =
   let
     val (noise,bstart,btemp) = flags
     val _ = temperature_flag := btemp
@@ -239,8 +235,7 @@ fun explore_extern (gamespec,dhtnn,flags) (wid,job) target =
     val endroot = hd rootl
     val bstatus = #status_of gamespec (#sit endroot) = Win
   in
-    write_dhex (widexl_file (wid,job)) exl;
-    writel_atomic (widwin_file (wid,job)) [bstatus_to_string bstatus]
+    (bstatus,exl)
   end
 
 (* -------------------------------------------------------------------------
@@ -279,65 +274,83 @@ fun train_f gamespec allex =
    External parallelization: helper functions
    ------------------------------------------------------------------------- *)
 
-fun flags_to_string (b1,b2,b3) = 
-  "(" ^ bts b1 ^ "," ^  bts b2 ^ "," ^ bts b3  ^ ")"
+fun string_to_bool s = 
+   if s = "true" then true 
+   else if s = "false" then false 
+   else raise ERR "string_to_bool" ""
 
-fun mk_state_s opens flags =
-  String.concatWith "\n"
-  [
-  "let",
-  "  val _ = mlReinforce.nsim_glob := " ^ its (!nsim_glob),
-  "  val _ = mlReinforce.decay_glob := " ^ rts (!decay_glob),
-  "  val _ = mlReinforce.dim_glob := " ^ its (!dim_glob),
-  "  val _ = psMCTS.alpha_glob := " ^ rts (!alpha_glob),
-  "  val _ = psMCTS.exploration_coeff := " ^ rts (!exploration_coeff),
-  "  val dhtnn = mlTreeNeuralNetwork.read_dhtnn (mlReinforce.dhtnn_file ())",
-  "  val flags = " ^ flags_to_string flags,
-  "in",
-  "  (" ^ opens ^ ".gamespec, dhtnn,flags)",
-  "end"
-  ]
-
-fun mk_argl_s opens = "#read_targetl " ^ opens ^ ".gamespec ()"
-
-fun read_result_extern (wid,job) =
-  let
-    val win = string_to_bstatus (hd (readl (widwin_file (wid,job))))
-    val dhex = read_dhex (widexl_file (wid,job))
-  in
-    app remove_file [widwin_file (wid,job),widexl_file (wid,job)];
-    (win,dhex)
-  end
+fun flags_to_string (b1,b2,b3) = bts b1 ^ " " ^  bts b2 ^ " " ^ bts b3
+fun string_to_flags s = 
+  triple_of_list (map string_to_bool (String.tokens Char.isSpace s))
 
 (* -------------------------------------------------------------------------
-   External parallelization: main call
+   External parallelization
    ------------------------------------------------------------------------- *)
 
-fun explore_parallel gamespec ncore flags dhtnn targetl =
+fun write_param file (flags,dhtnn) =
+  (
+  writel (file ^ "_flags") [flags_to_string flags];
+  write_dhtnn (file ^ "_dhtnn") dhtnn
+  )
+
+fun read_param file =
+  (
+  (string_to_flags o hd o readl) (file ^ "_flags"),
+  read_dhtnn (file ^ "_dhtnn")
+  )
+
+fun write_result file (bstatus,exl) =
+  (
+  writel_atomic (file ^ "_bstatus") [bstatus_to_string bstatus];
+  write_dhex (file ^ "_exl") exl
+  )
+
+fun read_result file =
   let
-    fun write_state () =  write_dhtnn (dhtnn_file ()) dhtnn
-    val write_argl = #write_targetl gamespec
-    val state_s = mk_state_s (#opens gamespec) flags
-    val argl_s = mk_argl_s (#opens gamespec)
-    val f_s = "mlReinforce.explore_extern"
-    fun code_of wid = standard_code_of (state_s,argl_s,f_s) wid
+    val bstatus = (string_to_bstatus o hd o readl) (file ^ "_bstatus")
+    val dhex = read_dhex (file ^ "_exl")
   in
-    parmap_queue_extern ncore code_of (write_state, write_argl)
-    read_result_extern targetl
+    app remove_file [file ^ "_bstatus",file ^ "_exl"];
+    (bstatus,dhex)
   end
+
+fun reflect_globals () =
+  "(" ^ String.concatWith "; "
+  [
+  "mlReinforce.nsim_glob := " ^ its (!nsim_glob),
+  "mlReinforce.decay_glob := " ^ rts (!decay_glob),
+  "mlReinforce.dim_glob := " ^ its (!dim_glob),
+  "psMCTS.alpha_glob := " ^ rts (!alpha_glob),
+  "psMCTS.exploration_coeff := " ^ rts (!exploration_coeff)
+  ]
+  ^ ")"
+
+fun mk_extspec (name: string) (gamespec : ('a,'b) gamespec) =
+  {
+  self = name,
+  reflect_globals = reflect_globals, 
+  function = explore_extern gamespec,
+  write_param = write_param,
+  read_param = read_param,
+  write_argl = #write_targetl gamespec,
+  read_argl = #read_targetl gamespec,
+  write_result = write_result,
+  read_result = read_result
+  }
 
 (* -------------------------------------------------------------------------
    Competition: comparing n dhtnn
    ------------------------------------------------------------------------- *)
 
-fun compete_one gamespec dhtnn targetl =
+fun compete_one extspec dhtnn targetl =
   let
-    val (l,t) = add_time
-      (explore_parallel gamespec (!ncore_mcts_glob) (false,false,false) dhtnn) targetl
-    val nwin = length (filter (I o fst) l)
+    val flags = (false,false,false)
+    val param = (flags,dhtnn)
+    val ncore = !ncore_mcts_glob
+    val (l,t) = add_time (parmap_queue_extern ncore extspec param) targetl
+    val nwin = length (filter fst l)
   in
-    summary ("Competition time : " ^ rts t);
-    nwin
+    summary ("Competition time : " ^ rts t); nwin
   end
 
 fun summary_compete (w_old,w_new) =
@@ -346,16 +359,15 @@ fun summary_compete (w_old,w_new) =
   end
 
 fun level_up b =
-  if b
-  then (incr level_glob; summary ("Level up: " ^ its (!level_glob)))
+  if b then (incr level_glob; summary ("Level up: " ^ its (!level_glob)))
   else ()
 
-fun compete gamespec dhtnn_old dhtnn_new =
+fun compete (gamespec,extspec) dhtnn_old dhtnn_new =
   let
     val targetl = #mk_targetl gamespec (!level_glob) (!ntarget_compete)
     val _ = summary ("Competition targets: " ^ its (length targetl))
-    val w_old = compete_one gamespec dhtnn_old targetl
-    val w_new = compete_one gamespec dhtnn_new targetl
+    val w_old = compete_one extspec dhtnn_old targetl
+    val w_new = compete_one extspec dhtnn_new targetl
     val freq = int_div (Int.max (w_new,w_old)) (length targetl)
   in
     summary_compete (w_old,w_new);
@@ -368,14 +380,15 @@ fun compete gamespec dhtnn_old dhtnn_new =
    Exploration
    ------------------------------------------------------------------------- *)
 
-fun explore_f startb gamespec allex dhtnn =
+fun explore_f startb (gamespec,extspec) allex dhtnn =
   let
     val targetl = #mk_targetl gamespec (!level_glob) (!ntarget_explore)
     val _ = summary ("Exploration targets: " ^ its (length targetl))
-    val (l,t) = add_time
-      (explore_parallel gamespec
-       (!ncore_mcts_glob) (true,startb,!temp_flag) dhtnn) targetl
-    val nwin = length (filter (I o fst) l)
+    val flags = (true,startb,!temp_flag)
+    val param = (flags,dhtnn)
+    val (l,t) = 
+      add_time (parmap_queue_extern (!ncore_mcts_glob) extspec param) targetl
+    val nwin = length (filter fst l)
     val exll = map snd l
     val _ = summary ("Exploration time: " ^ rts t)
     val _ = summary ("Exploration wins: " ^ its nwin)
@@ -391,14 +404,14 @@ fun explore_f startb gamespec allex dhtnn =
    Reinforcement learning loop
    ------------------------------------------------------------------------- *)
 
-fun rl_start gamespec =
+fun rl_start (gamespec,extspec) =
   let
     val _ = remove_file (eval_dir ^ "/" ^ (!logfile_glob))
     val _ = summary_param ()
     val _ = summary "Generation 0"
     val prefile = eval_dir ^ "/" ^ (!logfile_glob) ^ "_gen" ^ its 0
     val dhtnn_random = random_dhtnn_gamespec gamespec
-    val (_,allex) = explore_f true gamespec emptyallex dhtnn_random
+    val (_,allex) = explore_f true (gamespec,extspec) emptyallex dhtnn_random
     val dhtnn = train_f gamespec allex
   in
     write_dhtnn (prefile ^ "_dhtnn") dhtnn;
@@ -406,15 +419,15 @@ fun rl_start gamespec =
     (allex, dhtnn)
   end
 
-fun rl_one n gamespec (allex,dhtnn) =
+fun rl_one n (gamespec,extspec) (allex,dhtnn) =
   let
     val prefile = eval_dir ^ "/" ^ (!logfile_glob) ^ "_gen" ^ its n
     val _ = summary ("\nGeneration " ^ its n)
     val dhtnn_new = train_f gamespec allex
-    val dhtnn_best = compete gamespec dhtnn dhtnn_new
+    val dhtnn_best = compete (gamespec,extspec) dhtnn dhtnn_new
     val _ = write_dhtnn (prefile ^ "_dhtnn") dhtnn_best
     fun loop exl =
-      let val (b,newexl) = explore_f false gamespec exl dhtnn_new in
+      let val (b,newexl) = explore_f false (gamespec,extspec) exl dhtnn_new in
         if b then loop newexl else newexl
       end
     val newallex = loop allex
@@ -423,15 +436,15 @@ fun rl_one n gamespec (allex,dhtnn) =
     (newallex,dhtnn_best)
   end
 
-fun rl_loop (n,nmax) gamespec rldata =
+fun rl_loop (n,nmax) (gamespec,extspec) rldata =
   if n >= nmax then rldata else
-    let val rldata_new = rl_one n gamespec rldata in
-      rl_loop (n+1, nmax) gamespec rldata_new
-    end
+  let val rldata_new = rl_one n (gamespec,extspec) rldata in
+    rl_loop (n+1, nmax) (gamespec,extspec) rldata_new
+  end
 
-fun start_rl_loop gamespec =
-  let val (allex,dhtnn) = rl_start gamespec in
-    rl_loop (1,!ngen_glob) gamespec (allex,dhtnn)
+fun start_rl_loop (gamespec,extspec) =
+  let val (allex,dhtnn) = rl_start (gamespec,extspec) in
+    rl_loop (1,!ngen_glob) (gamespec,extspec) (allex,dhtnn)
   end
 
 

@@ -363,13 +363,13 @@ fun string_of_olsize (ol,(p,limit)) =
   its limit ^ "," ^ String.concatWith "," (map its ol) ^ "#" ^
   String.concatWith "," (map string_of_move p)
 
-fun write_targetl targetl =
+fun write_targetl file targetl =
   let 
     val macrol = vector_to_list (!macro_array)
     val olsizel = map dest_startsit targetl 
   in
-    writel (!parallel_dir ^ "/macrol") (map string_of_macro macrol);
-    writel (!parallel_dir ^ "/targetl") (map string_of_olsize olsizel)
+    writel (file ^ "_macrol") (map string_of_macro macrol);
+    writel (file ^ "_targetl") (map string_of_olsize olsizel)
   end
 
 fun olsize_from_string s = 
@@ -413,10 +413,10 @@ fun olpsize_from_string s =
     (ol,(p,psize))
   end
 
-fun read_targetl () =
+fun read_targetl file =
   let 
-    val macrol = map macro_from_string (readl (!parallel_dir ^ "/macrol"))
-    val sl = readl (!parallel_dir ^ "/targetl")
+    val macrol = map macro_from_string (readl (file ^ "_macrol"))
+    val sl = readl (file ^ "_targetl")
   in
     macro_array := Vector.fromList macrol;
     map (mk_startsit o olpsize_from_string) sl
@@ -533,6 +533,15 @@ val gamespec : (board,move) mlReinforce.gamespec =
   max_bigsteps = max_bigsteps
   }
 
+type dhex = (term * real list * real list) list
+type dhtnn = mlTreeNeuralNetwork.dhtnn
+type flags = bool * bool * bool
+
+val extspec : (flags * dhtnn, board psMCTS.sit, bool * dhex) 
+  smlParallel.extspec =
+  mk_extspec "mleProgram.extspec" gamespec
+
+
 (* -------------------------------------------------------------------------
    Basic exploration
    ------------------------------------------------------------------------- *)
@@ -611,7 +620,7 @@ level_parameters :=
 psMCTS.alpha_glob := 0.3;
 
 psMCTS.exploration_coeff := 2.0;
-logfile_glob := "program_run49";
+logfile_glob := "program_run50";
 parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^
 (!logfile_glob);
 ncore_mcts_glob := 8;
@@ -627,13 +636,13 @@ batchsize_glob := 16;
 decay_glob := 0.99;
 level_glob := 0;
 
-nsim_glob := 1600;
-nepoch_glob := 100;
+nsim_glob := 200;
+nepoch_glob := 20;
 ngen_glob := 100;
 temp_flag := true;
 level_threshold := 0.8;
 
-start_rl_loop gamespec;
+start_rl_loop (gamespec,extspec);
 *)
 
 (* Generating randomprograms with different semantics 

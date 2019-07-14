@@ -3,8 +3,6 @@ sig
 
   include Abbrev
 
-  val dhtnn_file : unit -> string
-
   (* 'a is the type of board, 'b is the type for move *)
   type ('a,'b) gamespec =
     {
@@ -17,11 +15,14 @@ sig
     operl : (term * int) list,
     nntm_of_sit: 'a psMCTS.sit -> term,
     mk_targetl: int -> int -> 'a psMCTS.sit list,
-    write_targetl: 'a psMCTS.sit list -> unit,
-    read_targetl: unit -> 'a psMCTS.sit list,
+    write_targetl: string -> 'a psMCTS.sit list -> unit,
+    read_targetl: string -> 'a psMCTS.sit list,
     opens: string,
     max_bigsteps : 'a psMCTS.sit -> int
     }
+  type dhex = (term * real list * real list) list
+  type dhtnn = mlTreeNeuralNetwork.dhtnn
+  type flags = bool * bool * bool
 
   (* rl parameters *)
   val ngen_glob : int ref
@@ -47,34 +48,31 @@ sig
 
   (* mcts *)
   val mcts_gamespec_dhtnn : 
-    int -> ('a,'b) gamespec -> mlTreeNeuralNetwork.dhtnn -> 'a psMCTS.sit -> 
-    ('a,'b) psMCTS.tree
+    int -> ('a,'b) gamespec -> dhtnn -> 'a psMCTS.sit -> ('a,'b) psMCTS.tree
 
   (* training *)
   val random_dhtnn_gamespec :
-    ('a,'b) gamespec -> mlTreeNeuralNetwork.dhtnn
+    ('a,'b) gamespec -> dhtnn
   val train_dhtnn :
     ('a,'b) gamespec ->
     (term * real list * real list) list  ->
     mlTreeNeuralNetwork.dhtnn
 
-  (* competition *)
-  val compete_one : ('a,'b) gamespec ->
-    mlTreeNeuralNetwork.dhtnn -> 'a psMCTS.sit list -> int
-
   (* exploration *)
   val explore_test : ('a,'b) gamespec -> mlTreeNeuralNetwork.dhtnn ->
     'a psMCTS.sit -> ('a,'b) psMCTS.node list
-  val explore_extern :
-    ('a,'b) gamespec * mlTreeNeuralNetwork.dhtnn * (bool * bool * bool) ->
-    (int * int) -> 'a psMCTS.sit -> unit
+  
+  (* external parallel exploration specification *)
+  val mk_extspec : string -> ('a,'b) gamespec ->
+    (flags * dhtnn, 'a psMCTS.sit, bool * dhex) smlParallel.extspec
 
   (* reinforcement learning loop *)
   val logfile_glob : string ref
   val summary : string -> unit
   val start_rl_loop :
-    ('a,'b) gamespec ->
-    (term * real list * real list) list * mlTreeNeuralNetwork.dhtnn
+    ('a,'b) gamespec * 
+    (flags * dhtnn, 'a psMCTS.sit, bool * dhex) smlParallel.extspec ->
+    dhex * dhtnn
 
 
 end
