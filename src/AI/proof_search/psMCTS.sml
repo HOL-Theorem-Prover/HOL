@@ -180,10 +180,10 @@ fun score_status status = case status of
   | Win => 1.0
   | Lose => 0.0
 
-fun select_child tree id =
+fun select_child param tree id =
   let 
     val node = dfind id tree 
-    val status =  #status (dfind id tree)
+    val status = #status_of param (#sit (dfind id tree))
   in
     if status <> Undecided then Backup (id,score_status status) else
       let
@@ -194,7 +194,7 @@ fun select_child tree id =
       in
         if not (dmem cid tree)
         then NodeExtension (id,cid)
-        else select_child tree cid
+        else select_child param tree cid
       end
   end
 
@@ -241,7 +241,7 @@ fun mcts param starttree =
       if #vis (dfind [] tree) > Real.fromInt (#nsim param) + 0.5 orelse 
          (!stopatwin_flag andalso #status (dfind [] tree) = Win)      
       then tree else
-        let val newtree = case select_child tree [] of
+        let val newtree = case select_child param tree [] of
             Backup (id,sc) => backup (#decay param) tree (id,sc)
           | NodeExtension (id,cid) => expand param tree (id,cid)
         in
@@ -310,16 +310,14 @@ fun trace_win status_of tree id =
 fun make_distrib tree =
   let
     val pol = #pol (dfind [] tree)
+    val _ = if null pol then raise ERR "make_distrib" "pol" else ()
     fun f (_,cid) = #vis (dfind cid tree) handle NotFound => 0.0
     val dis = map_assoc f pol 
     val tot = sum_real (map snd dis)
-    val _ = if tot < 0.5 then raise ERR "make_distrib" "" else ()
+    val _ = if tot < 0.5 then raise ERR "make_distrib" "tot" else ()
   in
     (dis,tot)
   end
-
-fun move_of_cid node cid =
-  let val pol = #pol node in fst (assoc cid (map swap pol)) end
 
 fun evalpoli_example tree =
   let

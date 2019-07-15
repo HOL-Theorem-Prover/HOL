@@ -44,7 +44,6 @@ sig
   val trace_win : ('a -> status) -> ('a,'b) tree -> id -> ('a,'b) node list
 
   (* training example *)
-  val move_of_cid : ('a,'b) node -> id -> 'b
   val evalpoli_example : ('a,'b) tree -> (real * ('b * real) list)
 
   (* big step *)

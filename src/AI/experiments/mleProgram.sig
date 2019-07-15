@@ -4,14 +4,9 @@ sig
   include Abbrev
 
   datatype move =
-      Read of int 
-    | Write of int
-    | Incr of int 
-    | Decr of int
-    | Cond
-    | Loop
-    | EndLoop
-    | EndCond
+      Read of int | Write of int
+    | Incr of int | Decr of int
+    | Cond | Loop | EndLoop | EndCond
     | Macro of int
 
   type program = move list
@@ -21,10 +16,10 @@ sig
   type state = (int,int) Redblackmap.dict
   type board = (int list * int) * (state list * program) * (program * program)
   
+  val mk_startsit : int list * (program * int) -> board
   val gamespec : (board,move) mlReinforce.gamespec
   val extspec : board mlReinforce.extgamespec
 
-  val mk_startsit : int list * (program * int) -> (bool * board)
   val inputl_org : int list list
   val statel_org : state list
   val state_of_inputl : int list -> state
@@ -37,13 +32,5 @@ sig
   val random_prog : (int * int * int * int) -> program
   val gen_olsizel : int -> (int list * (program * int)) list
   val rand_olsize : int -> (int list * (program * int))
-
-  val explore_dhtnn : mlTreeNeuralNetwork.dhtnn -> 
-    (int list * (move list * int)) -> (board, move) psMCTS.node list
-  val explore_random :
-    (int list * (move list * int)) -> (board, move) psMCTS.node list
-  val extract_prog :
-    (board, move) psMCTS.node -> program
-  val mk_ol : (int * int -> int) -> int list
 
 end

@@ -4,11 +4,10 @@ sig
   include Abbrev
 
   type pos = int list
-  type pb = (term * pos)
-  datatype board = Board of pb | FailBoard
+  type board = (term * pos)
   datatype move = Arg of int | Paramod of (int * bool)
 
-  val mk_startsit : term -> board psMCTS.sit
+  val mk_startsit : term -> board
   
   (* interface *)
   val gamespec : (board,move) mlReinforce.gamespec
@@ -17,8 +16,5 @@ sig
   (* statistics *)
   val maxprooflength_atgen : unit -> int list
   val stats_prooflength : string -> (int * int) list
-
-  (* exploration *)
-  val explore_gamespec : term -> (board, move) psMCTS.node list
 
 end

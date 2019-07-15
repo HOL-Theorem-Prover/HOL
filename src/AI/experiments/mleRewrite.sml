@@ -20,19 +20,14 @@ fun debug s =
    ------------------------------------------------------------------------- *)
 
 type pos = int list
-type pb = (term * pos)
-datatype board = Board of pb | FailBoard
+type board = (term * pos)
 
-fun mk_startsit tm = (true, Board (tm,[]))
+fun mk_startsit tm = (tm,[])
 fun dest_startsit target = case target of
-    (true, Board (tm,[])) => tm
+   (tm,[]) => tm
   | _ => raise ERR "dest_startsit" ""
 
-fun is_proven (tm,_) = is_suc_only tm
-
-fun status_of sit = case snd sit of
-    Board pb => if is_proven pb then Win else Undecided
-  | FailBoard => Lose
+fun status_of (tm,_) = if is_suc_only tm then Win else Undecided
 
 (* -------------------------------------------------------------------------
    Neural network units and inputs
@@ -54,9 +49,7 @@ val rewrite_operl =
     mk_fast_set oper_compare operl'
   end
 
-fun nntm_of_sit sit = case snd sit of
-    Board (tm,pos) => tag_pos (tm,pos)
-  | FailBoard => T
+fun nntm_of_sit (tm,pos) = tag_pos (tm,pos)
 
 (* -------------------------------------------------------------------------
    Move
@@ -86,47 +79,32 @@ fun string_of_move move = case move of
 
 fun narg tm = length (snd (strip_comb tm))
 
-fun argn_pb n (tm,pos) = SOME (tm,pos @ [n])
+fun argn_pb n (tm,pos) = (tm,pos @ [n])
 
 fun paramod_pb (i,b) (tm,pos) =
   let
     val ax = Vector.sub (robinson_eq_vect,i)
     val tmo = paramod_ground (if b then ax else sym ax) (tm,pos)
   in
-    SOME (valOf tmo,[]) handle Option => NONE
+    (valOf tmo,[])
   end
 
 fun available (tm,pos) (move,r:real) = case move of
     Arg i => (narg (find_subtm (tm,pos)) >= i + 1)
-  | Paramod (i,b) =>
-    let val ax = Vector.sub (robinson_eq_vect,i) in
-      if b
-      then can (paramod_ground ax) (tm,pos)
-      else can (paramod_ground (sym ax)) (tm,pos)
-    end
+  | Paramod (i,b) => can (paramod_pb (i,b)) (tm,pos)
 
-fun filter_sit sit = case snd sit of
-    Board (tm,pos) => List.filter (available (tm,pos))
-  | FailBoard => (fn l => [])
+fun apply_move move (tm,pos) = case move of
+    Arg n => argn_pb n (tm,pos)
+  | Paramod (i,b) => paramod_pb (i,b) (tm,pos)
 
-fun apply_move move sit =
-  (true, case snd sit of Board pb =>
-    Board (valOf (
-      case move of
-        Arg n => argn_pb n pb
-      | Paramod (i,b) => paramod_pb (i,b) pb
-    ))
-  | FailBoard => raise ERR "move_sub" ""
-  )
-  handle Option => (true, FailBoard)
+fun filter_sit (tm,pos) = List.filter (available (tm,pos))
+
 
 (* -------------------------------------------------------------------------
    Target
    ------------------------------------------------------------------------- *)
 
-fun lo_prooflength_target target = case target of
-    (true, Board (tm,[])) => lo_prooflength 200 tm
-  | _ => raise ERR "lo_prooflength_target" ""
+fun lo_prooflength_target (tm,_) = lo_prooflength 200 tm
 
 fun write_targetl file targetl =
   let val tml = map dest_startsit targetl in
@@ -207,56 +185,46 @@ fun stats_prooflength file =
   end
 
 (* -------------------------------------------------------------------------
-   Basic exploration
+   Reinforcement learning
    ------------------------------------------------------------------------- *)
-
-fun explore_gamespec tm =
-  let val dhtnn = random_dhtnn_gamespec gamespec in
-    explore_test gamespec dhtnn (mk_startsit tm)
-  end
 
 (*
-fun reinforce_fixed runname ngen =
-  (
-  logfile_glob := runname;
-  parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^
-  (!logfile_glob);
-  ncore_mcts_glob := 8;
-  ncore_train_glob := 4;
-  ntarget_compete := 400;
-  ntarget_explore := 400;
-  exwindow_glob := 40000;
-  uniqex_flag := false;
-  dim_glob := 12;
-  lr_glob := 0.02;
-  batchsize_glob := 16;
-  decay_glob := 0.99;
-  level_glob := 1;
-  nsim_glob := 1600;
-  nepoch_glob := 100;
-  ngen_glob := ngen;
-  start_rl_loop gamespec
-  )
+load "mleRewrite"; open mleRewrite;
+load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
+load "mlReinforce"; open mlReinforce;
+load "aiLib"; open aiLib;
 
+logfile_glob := "mleRewrite_run40";
+parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^
+(!logfile_glob);
+ncore_mcts_glob := 8;
+ncore_train_glob := 4;
+ntarget_compete := 400;
+ntarget_explore := 400;
+exwindow_glob := 40000;
+uniqex_flag := false;
+dim_glob := 12;
+lr_glob := 0.02;
+batchsize_glob := 16;
+decay_glob := 0.99;
+level_glob := 1;
+nsim_glob := 1600;
+nepoch_glob := 100;
+ngen_glob := 20
+start_rl_loop (gamespec,extspec);
+*)
 
 (* -------------------------------------------------------------------------
-   Final evaluation
+   Small test
    ------------------------------------------------------------------------- *)
 
-fun final_eval dhtnn_name (a,b) testbase =
-  let
-    val eval_dir = HOLDIR ^ "/src/AI/machine_learning/eval"
-    val file = eval_dir ^ "/" ^ dhtnn_name
-    val dhtnn = mlTreeNeuralNetwork.read_dhtnn file
-    val l1 = import_terml (dataarith_dir ^ "/" ^ testbase)
-    val l2 = mapfilter (fn tm => (tm,snd (valOf (lo_trace 200 tm)))) l1
-    val l3 = filter (fn x => snd x >= a andalso snd x <= b) l2
-    val nwin = compete_one gamespec dhtnn (map mk_startsit (map fst l3))
-    val ntot = length l3
-  in
-    ((nwin,ntot), int_div nwin ntot)
-  end
-
+(* 
+load "mleRewrite"; open mleRewrite;
+load "mlReinforce"; open mlReinforce;
+nsim_glob := 10000;
+decay_glob := 0.9;
+val _ = n_bigsteps_test gamespec (random_dhtnn_gamespec gamespec) 
+(mk_startsit ``SUC 0 * SUC 0``);
 *)
 
 end (* struct *)

@@ -155,27 +155,30 @@ fun add_rootex gamespec tree exl =
 val verbose_flag = ref false
 
 fun n_bigsteps_loop (n,nmax) gamespec mctsparam (exl,rootl) tree =
-  if n >= nmax orelse #status_of gamespec (#sit (dfind [] tree)) <> Undecided
-  then (exl,rootl) else
-  let
+  let 
     val sit = #sit (dfind [] tree)
-    val newtree = mcts mctsparam tree
-    val root = dfind [] newtree
-    val filter_sit = (#filter_sit gamespec) sit
+    val status = #status_of gamespec sit
     val _ = if !verbose_flag 
-            then print_endline (tts (#nntm_of_sit gamespec sit)) 
+            then print_endline (term_to_string (#nntm_of_sit gamespec sit)) 
             else ()
-    val movel = #movel gamespec
-    val (cid,dis) = select_bigstep newtree
-    val _ = if !verbose_flag
-            then print_distrib (#string_of_move gamespec) dis
-            else ()
-    val cuttree = starttree_of mctsparam (#sit (dfind cid newtree))
-                  (* cut_tree newtree cid *)
-    val newexl = add_rootex gamespec newtree exl
-    val newrootl = root :: rootl
   in
-    n_bigsteps_loop (n+1,nmax) gamespec mctsparam (newexl,newrootl) cuttree
+    if status <> Undecided orelse n >= nmax then (status = Win,exl,rootl) else 
+    let
+      val newtree = mcts mctsparam tree
+      val root = dfind [] newtree
+      val filter_sit = (#filter_sit gamespec) sit
+      val movel = #movel gamespec
+      val (cid,dis) = select_bigstep newtree
+      val _ = if !verbose_flag
+              then print_distrib (#string_of_move gamespec) dis
+              else ()
+      val cuttree = starttree_of mctsparam (#sit (dfind cid newtree))
+                    (* cut_tree newtree cid *)
+      val newexl = add_rootex gamespec newtree exl
+      val newrootl = root :: rootl
+    in
+      n_bigsteps_loop (n+1,nmax) gamespec mctsparam (newexl,newrootl) cuttree
+    end
   end
 
 fun n_bigsteps gamespec mctsparam target =
@@ -276,9 +279,7 @@ fun n_bigsteps_extern (gamespec: ('a,'b) gamespec) (flags,dhtnn) target =
        status_of = #status_of gamespec,
        apply_move = #apply_move gamespec,
        fevalpoli = mk_fep_dhtnn bstart gamespec dhtnn}
-    val (exl,rootl) = n_bigsteps gamespec mctsparam target
-    val endroot = hd rootl
-    val bstatus = #status_of gamespec (#sit endroot) = Win
+    val (bstatus,exl,rootl) = n_bigsteps gamespec mctsparam target
   in
     (bstatus,exl)
   end
@@ -382,7 +383,7 @@ fun n_bigsteps_test gamespec dhtnn target =
        apply_move = #apply_move gamespec,
        fevalpoli = mk_fep_dhtnn false gamespec dhtnn}
     val _ = verbose_flag := true
-    val (_,rootl) = n_bigsteps gamespec mctsparam target
+    val (_,_,rootl) = n_bigsteps gamespec mctsparam target
     val _ = verbose_flag := false
   in
     rootl

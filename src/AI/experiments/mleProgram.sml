@@ -12,14 +12,13 @@ open HolKernel boolLib Abbrev aiLib smlParallel psMCTS
   mlTreeNeuralNetwork mlReinforce
 
 val ERR = mk_HOL_ERR "mleProgram"
-fun debug s =
+fun debug s = 
   debug_in_dir (HOLDIR ^ "/src/AI/experiments/debug") "mleProgram" s
 
 (* -------------------------------------------------------------------------
-   Program: 
-     Address of buffer is 0.
-     Addresses of inputs are 1 and 2.
-     Additional addresses are 3 and 4.
+   Program: Address of buffer is 0.
+   Addresses of inputs are 1 and 2.
+   Additional addresses are 3 and 4.
    ------------------------------------------------------------------------- *)
 
 datatype move =
@@ -168,12 +167,12 @@ fun mk_startsit (ol,(p,limit)) =
     val statel = map (exec_prog p') statel_org
     val parl = parl_of_prog p []
   in
-    (true, ((ol,limit),(statel,p),(b,parl)))
+    ((ol,limit),(statel,p),(b,parl))
   end
 
-fun dest_startsit (_,((ol,limit),(statel,p),_)) = (ol,(p,limit))
+fun dest_startsit ((ol,limit),(statel,p),_) = (ol,(p,limit))
 
-fun status_of (_,((ol,limit),(statel,p),_)) =
+fun status_of ((ol,limit),(statel,p),_) =
   if satisfies ol statel then Win 
   else if length p <= limit then Undecided
   else Lose
@@ -266,7 +265,7 @@ val program_operl =
   List.tabulate (max_macro,mk_macron)
   )
 
-fun nntm_of_sit (_,((ol,limit),(statel,p),_)) =
+fun nntm_of_sit ((ol,limit),(statel,p),_) =
   mk_binop joinop2 (nntm_of_ol ol, nntm_of_prog emptyop p)
 
 (* -------------------------------------------------------------------------
@@ -286,7 +285,7 @@ val movel_ext = movel @ map Macro (List.tabulate (max_macro,I))
 fun move_compare (m1,m2) = 
   String.compare (string_of_move m1, string_of_move m2) 
 
-fun apply_move move (_,((ol,limit),(statel,p),(b,parl))) = 
+fun apply_move move ((ol,limit),(statel,p),(b,parl)) = 
   if null parl then
     let 
       val _ = if not (null b) then raise ERR "apply_move" "" else ()
@@ -305,7 +304,7 @@ fun apply_move move (_,((ol,limit),(statel,p),(b,parl))) =
       | EndLoop => raise ERR "apply_move" ""
       | _ => raise ERR "apply_move" "macro"
     in
-      (true,((ol,limit),(newstatel,newp),(newb,newparl)))
+      ((ol,limit),(newstatel,newp),(newb,newparl))
     end 
   else  
     let
@@ -331,25 +330,23 @@ fun apply_move move (_,((ol,limit),(statel,p),(b,parl))) =
         else (statel, (b @ [move], tl parl)) 
       | _ => raise ERR "apply_move" "macro"
     in
-      (true,((ol,limit),(newstatel,newp),(newb,newparl)))
+      ((ol,limit),(newstatel,newp),(newb,newparl))
     end
 
 fun apply_move_ext move sit = case move of
     Macro i => 
     let 
-      val (player,((ol,limit),(statel,p),(newb,newparl))) = sit
+      val ((ol,limit),(statel,p),(newb,newparl)) = sit
       val ml = valOf (Vector.sub (!macro_array,i)) 
-      val (_,(_,(newstatel,_),(newb,newparl))) =
+      val (_,(newstatel,_),(newb,newparl)) =
         foldl (uncurry apply_move) sit ml
     in
-      (player,((ol,limit),(newstatel,p @ [move]),(newb,newparl)))
+      ((ol,limit),(newstatel,p @ [move]),(newb,newparl))
     end
   | _ => apply_move move sit 
 
 fun filter_sit sit =
-  let fun test (m,_) = can (apply_move m) sit in 
-    fn l => filter test l 
-  end
+  let fun test (m,_) = can (apply_move m) sit in fn l => filter test l end
 
 (* -------------------------------------------------------------------------
    Target
@@ -422,7 +419,7 @@ fun read_targetl file =
     map (mk_startsit o olpsize_from_string) sl
   end
 
-fun max_bigsteps (_,((_,limit),_,_)) = limit + 1
+fun max_bigsteps ((_,limit),_,_) = limit + 1
 
 (* -------------------------------------------------------------------------
    Program generation
@@ -510,8 +507,6 @@ fun mk_targetl level ntarget =
     map mk_startsit l3
   end
 
-fun extract_prog node = case #sit node of (_,(_,(_,p),_)) => p
-
 (* -------------------------------------------------------------------------
    Interface
    ------------------------------------------------------------------------- *)
@@ -535,69 +530,10 @@ val gamespec : (board,move) mlReinforce.gamespec =
 val extspec = mk_extspec "mleProgram.extspec" gamespec
 
 (* -------------------------------------------------------------------------
-   Basic exploration
+   Reinforcement learning
    ------------------------------------------------------------------------- *)
 
-fun explore_dhtnn dhtnn (ol,limit) =
-  explore_test gamespec dhtnn (mk_startsit (ol,limit))
-
-fun explore_random (ol,limit) =
-  explore_dhtnn (random_dhtnn_gamespec gamespec) (ol,limit)
-
-fun mk_ol binop = 
-  let fun f x = binop (dfind 1 x, dfind 2 x) in
-    map f statel_org
-  end
-
-(* MCTS 
-load "mleProgram"; open mleProgram;
-load "psMCTS"; open psMCTS;
-load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
-load "mlReinforce"; open mlReinforce;
-load "aiLib"; open aiLib;
-
-Array.update (macro_array, 1, SOME [Incr 0, Incr 0, Incr 0, Incr 0]);
-val ol = mk_ol (fn (x,y) => x+4);
-val startsit = mk_startsit (ol,([],12));
-stopatwin_flag := true;
-
-val _ = init_timers ();
-val tree = mcts_uniform 10000 
-  (#status_of gamespec, #apply_move gamespec, #movel gamespec) startsit;
-val _ = print_timers ();
-val nodel = trace_one_win (#status_of gamespec) tree [0];
-val p = extract_prog (last nodel);
-
-val dhtnn1 = random_dhtnn_gamespec gamespec;
-val dhtnn2 = read_dhtnn (eval_dir ^ "/program_run47_gen18_dhtnn");
-val tree = mcts_gamespec_dhtnn 10000 gamespec dhtnn startsit;
-val nodel = trace_one_win (#status_of gamespec) tree [0];
-val p = extract_prog (last nodel);
-val ol' = map (dfind 0 o exec_prog p) statel_org;
-
-val multp = [Write 1, Loop, Write 2, Loop, Incr 3, EndLoop, EndLoop, Write 3];
-val multol = map (dfind 0 o exec_prog multp) statel_org;
-*)
-
-(* Big steps 
-load "mleProgram"; open mleProgram;
-load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
-load "mlReinforce"; open mlReinforce;
-load "aiLib"; open aiLib;
-
-val il = cartesian_productl [List.tabulate (3,I), List.tabulate (3,I)];
-val ol = map (fn [a,b] => a+4) il;
-
-nsim_glob := 10000;
-
-val dhtnn2 = read_dhtnn (eval_dir ^ "/program_run47_gen18_dhtnn");
-val limit = 15;
-Array.update (macro_array, 0, SOME [Incr 0, Incr 0]);
-val dhtnn1 = random_dhtnn_gamespec gamespec;
-val p = extract_prog (hd (explore_dhtnn dhtnn1 (ol,([],limit))));
-*)
-
-(* Reinforcement learning loop
+(*
 load "mleProgram"; open mleProgram;
 load "mlReinforce"; open mlReinforce;
 load "smlParallel"; open smlParallel;
@@ -610,14 +546,12 @@ level_parameters :=
   end;
 
 psMCTS.alpha_glob := 0.3;
-
 psMCTS.exploration_coeff := 2.0;
-logfile_glob := "program_run50";
+logfile_glob := "program_run52";
 parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^
 (!logfile_glob);
 ncore_mcts_glob := 8;
 ncore_train_glob := 8;
-
 ntarget_compete := 400;
 ntarget_explore := 400;
 exwindow_glob := 10000;
@@ -627,8 +561,7 @@ lr_glob := 0.02;
 batchsize_glob := 16;
 decay_glob := 0.99;
 level_glob := 0;
-
-nsim_glob := 200;
+nsim_glob := 3200;
 nepoch_glob := 20;
 ngen_glob := 100;
 temp_flag := true;
@@ -637,41 +570,13 @@ level_threshold := 0.8;
 start_rl_loop (gamespec,extspec);
 *)
 
-(* Generating randomprograms with different semantics 
+(* -------------------------------------------------------------------------
+   Small tests
+   ------------------------------------------------------------------------- *)
 
-load "mleProgram"; open mleProgram;
-load "aiLib"; open aiLib;
-val pl = List.tabulate (100000, 
-  fn _ => random_prog (random_int (1,16),4,4,1));
-val pl_ol = 
-  map_snd ol_of_statel
-  (map_assoc (fn x => map (exec_prog x) statel_org) pl); 
-val ol_pl = map swap pl_ol;
-val d = dregroup compare_ol ol_pl;
-
-val stats1 = dict_sort Int.compare (map (length o snd) (dlist d));
-fun best_of l = hd (dict_sort compare_imin (map_assoc length l))
-val bestl = map (fst o best_of o snd) (dlist d);
-
-val freq1 = count_dict (dempty (#move_compare gamespec)) (List.concat bestl);
-val freq1l = dict_sort compare_imax (dlist freq1); 
-
-fun all_subprog n p = case p of
-    [] => []
-  | a :: m => 
-    let val acc = first_n n p in
-      if length acc = n then acc :: all_subprog n m else []
-    end;
-
-val freq2 = count_dict (dempty (list_compare (#move_compare gamespec)))   
- (List.concat (map (all_subprog 2) bestl));
-val freq2l = dict_sort compare_imax (dlist freq2); 
-
-macro_array := Vector.fromList (map SOME (first_n 20 (map fst freq2l)));
-
-fun mutate_network:
-
+(*
+fun mk_ol binop = 
+  let fun f x = binop (dfind 1 x, dfind 2 x) in map f statel_org end
 *)
-
 
 end (* struct *)
