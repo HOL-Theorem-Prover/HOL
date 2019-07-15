@@ -14,7 +14,7 @@ open HolKernel Abbrev boolLib aiLib mlTreeNeuralNetwork
 val ERR = mk_HOL_ERR "mlTune"
 
 (* -------------------------------------------------------------------------
-   Tuning parameters
+   Grid parameters
    ------------------------------------------------------------------------- *)
 
 type ml_param =
@@ -30,46 +30,57 @@ fun grid_param (dl,nl,bl,ll,yl) =
     map f l2
   end
 
-(* -------------------------------------------------------------------------
-   I/O
-   ------------------------------------------------------------------------- *)
-
-fun paraml_file () = (!parallel_dir ^ "/paraml")
-
-fun accuracy_file (wid,job) =
-  (!parallel_dir ^ "/" ^ its wid ^ "/accuracy" ^ its job)
+type set_param =
+  (int * int) *  
+  ((term * real list) list * (term * real list) list * (term * int) list)
 
 (* -------------------------------------------------------------------------
-   Distributing state to workers
+   Training function
    ------------------------------------------------------------------------- *)
 
-fun write_state (trainex,testex,operl) =
+fun train_tnn_param ((ncore,dimout),(train,test,operl))
+  (param as {dim,nepoch,batchsize,learningrate,nlayer})=
+  let
+    val _ = mlTreeNeuralNetwork.nlayer_glob := nlayer
+    val randtnn = random_tnn (dim,dimout) operl
+    val schedule = [(nepoch, learningrate /  (Real.fromInt batchsize))]
+    val (tnn,t) = add_time
+      (prepare_train_tnn (ncore,batchsize) randtnn (train,test)) schedule
+    val r1 = accuracy_set tnn train
+    val r2 = accuracy_set tnn test
+  in
+    (r1,r2,t)
+  end
+
+(* -------------------------------------------------------------------------
+   External parallelization
+   ------------------------------------------------------------------------- *)
+
+fun write_param file ((ncore,dimout),(train,test,operl)) =
   (
-  write_tnnex (!parallel_dir ^ "/train") trainex;
-  write_tnnex (!parallel_dir ^ "/test") testex;
-  write_operl (!parallel_dir ^ "/operl") operl
+  writel (file ^ "_ncoredimout") (map its [ncore,dimout]);
+  write_tnnex (file ^ "_train") train;
+  write_tnnex (file ^ "_test") test;
+  write_operl (file ^ "_operl") operl
   )
 
-fun read_state () =
+fun read_param file =
   (
-  read_tnnex (!parallel_dir ^ "/train"),
-  read_tnnex (!parallel_dir ^ "/test"),
-  read_operl (!parallel_dir ^ "/operl")
+  pair_of_list (map string_to_int (readl (file ^ "_ncoredimout"))),
+  (read_tnnex (file ^ "_train"), 
+  read_tnnex (file ^ "_test"),
+  read_operl (file ^ "_operl"))
   )
 
-(* -------------------------------------------------------------------------
-   Distributing argument list to workers
-   ------------------------------------------------------------------------- *)
-
-fun write_paraml prl =
+fun write_argl file prl =
   let fun f {batchsize,dim,learningrate,nepoch,nlayer} =
     String.concatWith " "
     [its batchsize, its dim, rts learningrate, its nepoch, its nlayer]
   in
-    writel (paraml_file ()) (map f prl)
+    writel file (map f prl)
   end
 
-fun read_paraml () =
+fun read_argl file =
   let
     fun f s =
       let val (a,b,c,d,e) = quintuple_of_list (String.tokens Char.isSpace s) in
@@ -82,27 +93,31 @@ fun read_paraml () =
         }
       end
   in
-    map f (readl (paraml_file ()))
+    map f (readl file)
   end
 
-(* -------------------------------------------------------------------------
-   Report of the result by workers
-   ------------------------------------------------------------------------- *)
+fun write_result file (r1,r2,t) = writel file (map rts [r1,r2,t])
+fun read_result file = 
+  triple_of_list (map (valOf o Real.fromString) (readl file))
 
-fun write_accuracy file (r1,r2,t) = writel file [rts r1,rts r2,rts t]
-fun read_accuracy file =
-  let val l = readl file in
-    case l of
-      [a,b,c] => (valOf (Real.fromString a), valOf (Real.fromString b),
-                  valOf (Real.fromString c))
-    | _ => raise ERR "read_accuracy" ""
-  end
+val extspec : (set_param, ml_param, real * real * real) smlParallel.extspec  =
+  {
+  self = "mlTune.extspec",
+  reflect_globals = fn () => "()", 
+  function = train_tnn_param,
+  write_param = write_param,
+  read_param = read_param,
+  write_argl = write_argl,
+  read_argl = read_argl,
+  write_result = write_result,
+  read_result = read_result
+  }
 
 (* -------------------------------------------------------------------------
    Save results of all experiments
    ------------------------------------------------------------------------- *)
 
-fun write_param_results file prl =
+fun write_summary file prl =
   let fun f ({batchsize,dim,learningrate,nepoch,nlayer},(r1,r2,t)) =
     "train " ^ rts r1 ^
     ", test " ^ rts r2 ^
@@ -116,46 +131,9 @@ fun write_param_results file prl =
     writel file (map f prl)
   end
 
-(* -------------------------------------------------------------------------
-   Train with parameters
-   ------------------------------------------------------------------------- *)
-
-fun train_tnn_extern ((ncore,dimout),(train,test,operl)) (wid,job)
-  (param as {dim,nepoch,batchsize,learningrate,nlayer})=
-  let
-    val _ = mlTreeNeuralNetwork.nlayer_glob := nlayer
-    val randtnn = random_tnn (dim,dimout) operl
-    val schedule = [(nepoch, learningrate /  (Real.fromInt batchsize))]
-    val (tnn,t) = add_time
-      (prepare_train_tnn (ncore,batchsize) randtnn (train,test)) schedule
-    val r1 = accuracy_set tnn train
-    val r2 = accuracy_set tnn test
-  in
-    write_accuracy (accuracy_file (wid,job)) (r1,r2,t)
-  end
-
-fun mk_state_s (ncore,dimout) =
-  "((" ^ its ncore ^ "," ^ its dimout ^ "), mlTune.read_state ())"
-
-
-fun train_tnn_parallel ncore ((ncore_loc,dimout),(train,test,operl)) paraml =
-  let
-    fun write_state_loc () = write_state (train,test,operl)
-    val state_s = mk_state_s (ncore_loc,dimout)
-    val argl_s = "mlTune.read_paraml ()"
-    val f_s = "mlTune.train_tnn_extern"
-    fun code_of wid = standard_code_of (state_s,argl_s,f_s) wid
-    fun read_result widjob = read_accuracy (accuracy_file widjob)
-    val _ = app print_endline (code_of 0)
-
-  in
-    parmap_queue_extern ncore code_of (write_state_loc, write_paraml)
-    read_result paraml
-  end
-
-
-
-
-
+(*
+load "mlTune"; open mlTune;
+load "smlParallel"; open smlParallel;
+*)
 
 end (* struct *)
