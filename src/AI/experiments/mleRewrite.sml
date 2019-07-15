@@ -12,8 +12,6 @@ open HolKernel boolLib Abbrev aiLib smlParallel psMCTS psTermGen
   mlTreeNeuralNetwork mlTacticData mlReinforce mleLib mleArithData
 
 val ERR = mk_HOL_ERR "mleRewrite"
-fun debug s =
-  debug_in_dir (HOLDIR ^ "/src/AI/experiments/debug") "mleRewrite" s
 
 (* -------------------------------------------------------------------------
    Board
@@ -23,9 +21,7 @@ type pos = int list
 type board = (term * pos)
 
 fun mk_startsit tm = (tm,[])
-fun dest_startsit target = case target of
-   (tm,[]) => tm
-  | _ => raise ERR "dest_startsit" ""
+fun dest_startsit (tm,_) = tm
 
 fun status_of (tm,_) = if is_suc_only tm then Win else Undecided
 
@@ -98,7 +94,6 @@ fun apply_move move (tm,pos) = case move of
   | Paramod (i,b) => paramod_pb (i,b) (tm,pos)
 
 fun filter_sit (tm,pos) = List.filter (available (tm,pos))
-
 
 (* -------------------------------------------------------------------------
    Target
@@ -221,10 +216,17 @@ start_rl_loop (gamespec,extspec);
 (* 
 load "mleRewrite"; open mleRewrite;
 load "mlReinforce"; open mlReinforce;
+load "psMCTS"; open psMCTS;
 nsim_glob := 10000;
 decay_glob := 0.9;
 val _ = n_bigsteps_test gamespec (random_dhtnn_gamespec gamespec) 
 (mk_startsit ``SUC 0 * SUC 0``);
+
+dim_glob := 4;
+val tree = mcts_test 10000 gamespec (random_dhtnn_gamespec gamespec) 
+(mk_startsit ``SUC (SUC 0) + SUC 0``);
+val nodel = trace_win (#status_of gamespec) tree [];
+
 *)
 
 end (* struct *)

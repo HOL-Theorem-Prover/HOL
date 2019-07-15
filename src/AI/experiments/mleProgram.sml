@@ -12,8 +12,6 @@ open HolKernel boolLib Abbrev aiLib smlParallel psMCTS
   mlTreeNeuralNetwork mlReinforce
 
 val ERR = mk_HOL_ERR "mleProgram"
-fun debug s = 
-  debug_in_dir (HOLDIR ^ "/src/AI/experiments/debug") "mleProgram" s
 
 (* -------------------------------------------------------------------------
    Program: Address of buffer is 0.
@@ -547,7 +545,7 @@ level_parameters :=
 
 psMCTS.alpha_glob := 0.3;
 psMCTS.exploration_coeff := 2.0;
-logfile_glob := "program_run52";
+logfile_glob := "program_run53";
 parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^
 (!logfile_glob);
 ncore_mcts_glob := 8;
@@ -561,7 +559,7 @@ lr_glob := 0.02;
 batchsize_glob := 16;
 decay_glob := 0.99;
 level_glob := 0;
-nsim_glob := 3200;
+nsim_glob := 1600;
 nepoch_glob := 20;
 ngen_glob := 100;
 temp_flag := true;
