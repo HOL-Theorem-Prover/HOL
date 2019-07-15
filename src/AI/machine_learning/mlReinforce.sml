@@ -18,22 +18,22 @@ type ('a,'b) gamespec =
   movel : 'b list,
   move_compare : 'b * 'b -> order,
   string_of_move : 'b -> string,
-  filter_sit : 'a psMCTS.sit -> (('b * real) list -> ('b * real) list),
-  status_of : ('a psMCTS.sit -> psMCTS.status),
-  apply_move : ('b -> 'a psMCTS.sit -> 'a psMCTS.sit),
+  filter_sit : 'a -> (('b * real) list -> ('b * real) list),
+  status_of : ('a -> psMCTS.status),
+  apply_move : ('b -> 'a -> 'a),
   operl : (term * int) list,
-  nntm_of_sit: 'a psMCTS.sit -> term,
-  mk_targetl: int -> int -> 'a psMCTS.sit list,
-  write_targetl: string -> 'a psMCTS.sit list -> unit,
-  read_targetl: string -> 'a psMCTS.sit list,
-  max_bigsteps : 'a psMCTS.sit -> int
+  nntm_of_sit: 'a -> term,
+  mk_targetl: int -> int -> 'a list,
+  write_targetl: string -> 'a list -> unit,
+  read_targetl: string -> 'a list,
+  max_bigsteps : 'a -> int
   }
 
 type dhex = (term * real list * real list) list
 type dhtnn = mlTreeNeuralNetwork.dhtnn
 type flags = bool * bool * bool
 type 'a extgamespec =
-  (flags * dhtnn, 'a psMCTS.sit, bool * dhex) smlParallel.extspec
+  (flags * dhtnn, 'a, bool * dhex) smlParallel.extspec
 
 (* -------------------------------------------------------------------------
    Log
@@ -124,14 +124,6 @@ fun mk_fep_dhtnn startb gamespec dhtnn sit =
       end
   end
 
-fun mcts_gamespec_dhtnn nsim gamespec dhtnn startsit =
-  let 
-    val fep = mk_fep_dhtnn false gamespec dhtnn
-    val param = (nsim,1.0,false,#status_of gamespec,#apply_move gamespec,fep)
-  in
-    mcts param (starttree_of param startsit)
-  end
-
 (* -------------------------------------------------------------------------
    Examples
    ------------------------------------------------------------------------- *)
@@ -146,97 +138,52 @@ fun complete_pol gamespec mrl =
     map f (#movel gamespec)
   end
 
-fun add_rootex gamespec tree allex =
+fun add_rootex gamespec tree exl =
   let
-    val root = dfind [0] tree
+    val root = dfind [] tree
     val sit  = #sit root
     val nntm = (#nntm_of_sit gamespec) sit
+    val (e,p) = evalpoli_example tree
   in
-    case evalpoli_example tree of
-      NONE  => allex
-    | SOME (e,p) => (nntm,[e], complete_pol gamespec p) :: allex
+    (nntm,[e], complete_pol gamespec p) :: exl
   end
 
 (* -------------------------------------------------------------------------
    MCTS big steps. Ending the search when there is no move available.
    ------------------------------------------------------------------------- *)
 
-val verbose_flag = ref false (* for demo/debugging *)
+val verbose_flag = ref false
 
-fun n_bigsteps_loop (n,nmax) gamespec mctsparam (allex,allroot) tree =
-  if n >= nmax then (allex,allroot) else
+fun n_bigsteps_loop (n,nmax) gamespec mctsparam (exl,rootl) tree =
+  if n >= nmax orelse #status_of gamespec (#sit (dfind [] tree)) <> Undecided
+  then (exl,rootl) else
   let
-    val nntm_of_sit = #nntm_of_sit gamespec
-    val sit = #sit (dfind [0] tree)
+    val sit = #sit (dfind [] tree)
     val newtree = mcts mctsparam tree
-    val root = dfind [0] newtree
+    val root = dfind [] newtree
     val filter_sit = (#filter_sit gamespec) sit
-    val _ = if !verbose_flag then print_endline (tts (nntm_of_sit sit)) else ()
+    val _ = if !verbose_flag 
+            then print_endline (tts (#nntm_of_sit gamespec sit)) 
+            else ()
     val movel = #movel gamespec
+    val (cid,dis) = select_bigstep newtree
+    val _ = if !verbose_flag
+            then print_distrib (#string_of_move gamespec) dis
+            else ()
+    val cuttree = starttree_of mctsparam (#sit (dfind cid newtree))
+                  (* cut_tree newtree cid *)
+    val newexl = add_rootex gamespec newtree exl
+    val newrootl = root :: rootl
   in
-   if null (filter_sit (map_assoc (fn x => 0.0) movel))
-   then (allex, root :: allroot) (* stop because no valid move *)
-   else
-   let val (dis,cido) = select_bigstep newtree [0] in
-     case cido of
-       NONE => (allex, root :: allroot)
-     | SOME cid =>
-        let
-          val _ = if !verbose_flag
-                  then print_distrib (#string_of_move gamespec) dis
-                  else ()
-          val cuttree = starttree_of mctsparam (#sit (dfind cid newtree))
-            (* cut_tree newtree cid *)
-          val newallex = add_rootex gamespec newtree allex
-        in
-          n_bigsteps_loop (n+1,nmax) gamespec mctsparam
-          (newallex, root :: allroot) cuttree
-        end
-    end
+    n_bigsteps_loop (n+1,nmax) gamespec mctsparam (newexl,newrootl) cuttree
   end
 
 fun n_bigsteps gamespec mctsparam target =
-  let val tree = starttree_of mctsparam target in
-    n_bigsteps_loop (0, #max_bigsteps gamespec target)
-      gamespec mctsparam (emptyallex,[]) tree
-  end
-
-(* -------------------------------------------------------------------------
-   Exploration functions
-   ------------------------------------------------------------------------- *)
-
-fun explore_test gamespec dhtnn target =
-  let
-    val (noise,bstart) = (false,false)
-    val status_of = #status_of gamespec
-    val mctsparam =
-      (!nsim_glob, !decay_glob, noise,
-       #status_of gamespec, #apply_move gamespec,
-       mk_fep_dhtnn bstart gamespec dhtnn)
-    val _ = verbose_flag := true
-    val (_,rootl) = n_bigsteps gamespec mctsparam target
-    val _ = verbose_flag := false
+  let 
+    val tree = starttree_of mctsparam target 
+    val n = #max_bigsteps gamespec target
   in
-    rootl
-  end
-
-fun bstatus_to_string b = if b then "win" else "lose"
-fun string_to_bstatus s = assoc s [("win",true),("lose",false)]
-  handle HOL_ERR _ => raise ERR "string_to_bstatus" ""
-
-fun explore_extern gamespec (flags,dhtnn) target =
-  let
-    val (noise,bstart,btemp) = flags
-    val _ = temperature_flag := btemp
-    val mctsparam =
-      (!nsim_glob, !decay_glob, noise,
-       #status_of gamespec, #apply_move gamespec,
-       mk_fep_dhtnn bstart gamespec dhtnn)
-    val (exl,rootl) = n_bigsteps gamespec mctsparam target
-    val endroot = hd rootl
-    val bstatus = #status_of gamespec (#sit endroot) = Win
-  in
-    (bstatus,exl)
+    n_bigsteps_loop (0,n) gamespec mctsparam ([],[]) tree
   end
 
 (* -------------------------------------------------------------------------
@@ -274,6 +221,10 @@ fun train_f gamespec allex =
 (* -------------------------------------------------------------------------
    External parallelization specification
    ------------------------------------------------------------------------- *)
+
+fun bstatus_to_string b = if b then "win" else "lose"
+fun string_to_bstatus s = assoc s [("win",true),("lose",false)]
+  handle HOL_ERR _ => raise ERR "string_to_bstatus" ""
 
 fun string_to_bool s = 
    if s = "true" then true 
@@ -316,11 +267,27 @@ fun reflect_globals () =
   ]
   ^ ")"
 
+fun n_bigsteps_extern (gamespec: ('a,'b) gamespec) (flags,dhtnn) target =
+  let
+    val (noise,bstart,btemp) = flags
+    val _ = temperature_flag := btemp
+    val (mctsparam : ('a,'b) mctsparam) = 
+      {nsim = !nsim_glob, decay = !decay_glob, noise = noise,
+       status_of = #status_of gamespec,
+       apply_move = #apply_move gamespec,
+       fevalpoli = mk_fep_dhtnn bstart gamespec dhtnn}
+    val (exl,rootl) = n_bigsteps gamespec mctsparam target
+    val endroot = hd rootl
+    val bstatus = #status_of gamespec (#sit endroot) = Win
+  in
+    (bstatus,exl)
+  end
+
 fun mk_extspec (name: string) (gamespec : ('a,'b) gamespec) =
   {
   self = name,
   reflect_globals = reflect_globals, 
-  function = explore_extern gamespec,
+  function = n_bigsteps_extern gamespec,
   write_param = write_param,
   read_param = read_param,
   write_argl = #write_targetl gamespec,
@@ -330,7 +297,7 @@ fun mk_extspec (name: string) (gamespec : ('a,'b) gamespec) =
   }
 
 (* -------------------------------------------------------------------------
-   Competition: comparing n dhtnn
+   Competition
    ------------------------------------------------------------------------- *)
 
 fun compete_one extspec dhtnn targetl =
@@ -371,7 +338,7 @@ fun compete (gamespec,extspec) dhtnn_old dhtnn_new =
    Exploration
    ------------------------------------------------------------------------- *)
 
-fun explore_f startb (gamespec,extspec) allex dhtnn =
+fun explore startb (gamespec,extspec) allex dhtnn =
   let
     val targetl = #mk_targetl gamespec (!level_glob) (!ntarget_explore)
     val _ = summary ("Exploration targets: " ^ its (length targetl))
@@ -392,6 +359,36 @@ fun explore_f startb (gamespec,extspec) allex dhtnn =
   end
 
 (* -------------------------------------------------------------------------
+   Standalone functions for testing
+   ------------------------------------------------------------------------- *)
+
+fun mcts_test nsim gamespec dhtnn startsit =
+  let
+    val param = 
+      {nsim = nsim, decay = 1.0, noise = false,
+       status_of = #status_of gamespec,
+       apply_move = #apply_move gamespec,
+       fevalpoli = mk_fep_dhtnn false gamespec dhtnn}
+  in
+    mcts param (starttree_of param startsit)
+  end
+
+fun n_bigsteps_test gamespec dhtnn target =
+  let
+    val status_of = #status_of gamespec
+    val mctsparam = 
+      {nsim = !nsim_glob, decay = !decay_glob, noise = false,
+       status_of = #status_of gamespec,
+       apply_move = #apply_move gamespec,
+       fevalpoli = mk_fep_dhtnn false gamespec dhtnn}
+    val _ = verbose_flag := true
+    val (_,rootl) = n_bigsteps gamespec mctsparam target
+    val _ = verbose_flag := false
+  in
+    rootl
+  end
+
+(* -------------------------------------------------------------------------
    Reinforcement learning loop
    ------------------------------------------------------------------------- *)
 
@@ -402,7 +399,7 @@ fun rl_start (gamespec,extspec) =
     val _ = summary "Generation 0"
     val prefile = eval_dir ^ "/" ^ (!logfile_glob) ^ "_gen" ^ its 0
     val dhtnn_random = random_dhtnn_gamespec gamespec
-    val (_,allex) = explore_f true (gamespec,extspec) emptyallex dhtnn_random
+    val (_,allex) = explore true (gamespec,extspec) emptyallex dhtnn_random
     val dhtnn = train_f gamespec allex
   in
     write_dhtnn (prefile ^ "_dhtnn") dhtnn;
@@ -418,7 +415,7 @@ fun rl_one n (gamespec,extspec) (allex,dhtnn) =
     val dhtnn_best = compete (gamespec,extspec) dhtnn dhtnn_new
     val _ = write_dhtnn (prefile ^ "_dhtnn") dhtnn_best
     fun loop exl =
-      let val (b,newexl) = explore_f false (gamespec,extspec) exl dhtnn_new in
+      let val (b,newexl) = explore false (gamespec,extspec) exl dhtnn_new in
         if b then loop newexl else newexl
       end
     val newallex = loop allex

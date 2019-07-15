@@ -9,21 +9,21 @@ sig
     movel : 'b list,
     move_compare : 'b * 'b -> order,
     string_of_move : 'b -> string,
-    filter_sit : 'a psMCTS.sit -> (('b * real) list -> ('b * real) list),
-    status_of : ('a psMCTS.sit -> psMCTS.status),
-    apply_move : ('b -> 'a psMCTS.sit -> 'a psMCTS.sit),
+    filter_sit : 'a -> (('b * real) list -> ('b * real) list),
+    status_of : ('a -> psMCTS.status),
+    apply_move : ('b -> 'a -> 'a),
     operl : (term * int) list,
-    nntm_of_sit: 'a psMCTS.sit -> term,
-    mk_targetl: int -> int -> 'a psMCTS.sit list,
-    write_targetl: string -> 'a psMCTS.sit list -> unit,
-    read_targetl: string -> 'a psMCTS.sit list,
-    max_bigsteps : 'a psMCTS.sit -> int
+    nntm_of_sit: 'a -> term,
+    mk_targetl: int -> int -> 'a list,
+    write_targetl: string -> 'a list -> unit,
+    read_targetl: string -> 'a list,
+    max_bigsteps : 'a -> int
     }
   type dhex = (term * real list * real list) list
   type dhtnn = mlTreeNeuralNetwork.dhtnn
   type flags = bool * bool * bool
   type 'a extgamespec =
-     (flags * dhtnn, 'a psMCTS.sit, bool * dhex) smlParallel.extspec
+     (flags * dhtnn, 'a, bool * dhex) smlParallel.extspec
 
 
   (* rl parameters *)
@@ -48,22 +48,17 @@ sig
 
   val eval_dir : string
 
-  (* mcts *)
-  val mcts_gamespec_dhtnn : 
-    int -> ('a,'b) gamespec -> dhtnn -> 'a psMCTS.sit -> ('a,'b) psMCTS.tree
+  (* debugging *)
+  val mcts_test : 
+    int -> ('a,'b) gamespec -> dhtnn -> 'a -> ('a,'b) psMCTS.tree
+  val n_bigsteps_test : ('a,'b) gamespec -> mlTreeNeuralNetwork.dhtnn ->
+    'a -> ('a,'b) psMCTS.node list
 
   (* training *)
   val random_dhtnn_gamespec :
     ('a,'b) gamespec -> dhtnn
-  val train_dhtnn :
-    ('a,'b) gamespec ->
-    (term * real list * real list) list  ->
-    mlTreeNeuralNetwork.dhtnn
+  val train_dhtnn : ('a,'b) gamespec -> dhex -> dhtnn
 
-  (* exploration *)
-  val explore_test : ('a,'b) gamespec -> mlTreeNeuralNetwork.dhtnn ->
-    'a psMCTS.sit -> ('a,'b) psMCTS.node list
-  
   (* external parallel exploration specification *)
   val mk_extspec : string -> ('a,'b) gamespec -> 'a extgamespec
 
