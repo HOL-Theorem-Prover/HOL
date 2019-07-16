@@ -12,16 +12,6 @@ open HolKernel boolLib Abbrev aiLib smlParallel
   mlTreeNeuralNetwork mlReinforce
 
 val ERR = mk_HOL_ERR "mleHanabi"
-fun debug s = 
-  debug_in_dir (HOLDIR ^ "/src/AI/experiments/debug") "mleHanabi" s
-val eval_dir = HOLDIR ^ "/src/AI/experiments/eval"
-val summary_file = ref "default"
-fun summary s = 
-  (mkDir_err eval_dir; 
-   print_endline s;
-   append_endline (eval_dir ^ "/" ^ !summary_file) s)
-
-val nsim_glob = ref 1600
 
 (* -------------------------------------------------------------------------
    Deck
@@ -30,10 +20,6 @@ val nsim_glob = ref 1600
 datatype color = Red | Yellow | Green | Blue | White | NoColor
 val colorl = [Red,Yellow,Green,Blue,White]
 val colorl_ext = NoColor :: colorl
-val colorl_exti = number_snd 0 colorl_ext
-fun number_of_color c = assoc c colorl_exti
-
-
 val numberl = [1,2,3,4,5]
 val numberl_ext = [0,1,2,3,4,5]
 
@@ -67,11 +53,8 @@ fun card_of_string s =
 val full_deck = 
   List.concat (map (fn x => [(1,x),(1,x),(1,x)]) colorl) @
   List.concat (map (fn x => [(2,x),(2,x)]) colorl)
-(* @
-  List.concat (map (fn x => [(3,x),(3,x)]) colorl) @
-  List.concat (map (fn x => [(4,x),(4,x)]) colorl) @
-  List.concat (map (fn x => [(5,x)]) colorl)
-*)
+
+
 
 (* -------------------------------------------------------------------------
    Board
@@ -129,21 +112,10 @@ fun random_startboard () =
     }
   end
 
-fun update_hand1 {p1turn,hand1,hand2,clues1,clues2,clues,
-  score,bombs,deck,disc,pile} hand =
-  {
-  p1turn=p1turn, hand1=hand, hand2=hand2,
-  clues1=clues1,clues2=clues2,clues=clues,
-  score=score,bombs=bombs,deck=deck,disc=disc,pile=pile
-  }
-
-fun update_hand2 {p1turn,hand1,hand2,clues1,clues2,clues,
-  score,bombs,deck,disc,pile} hand =
-  {
-  p1turn=p1turn, hand1=hand1, hand2=hand,
-  clues1=clues1,clues2=clues2,clues=clues,
-  score=score,bombs=bombs,deck=deck,disc=disc,pile=pile
-  }
+fun status_of board = 
+  if #score board >= !level_glob then Win 
+  else if null (#deck board) then Lose
+  else Undecided
 
 (* -------------------------------------------------------------------------
    Representation of board as a tree neural network
@@ -185,7 +157,6 @@ val boardopl =
   [cardop,isuc,izero,hand1op,hand2op,clues1op,clues2op,pileop,
    discardop,concatop,emptyop,infoop,boardmoveop]
 
-
 fun nntm_of_board {p1turn,hand1,hand2,clues1,clues2,clues,
   score,bombs,deck,disc,pile} =
   list_mk_comb (concatop, 
@@ -199,37 +170,7 @@ fun nntm_of_board {p1turn,hand1,hand2,clues1,clues2,clues,
   ]
   )
 
-(* -------------------------------------------------------------------------
-   Representation of the board as a list of real numbers
-   ------------------------------------------------------------------------- *)
-
-fun all_one_hot n = 
-  let 
-    val emptyv = Vector.fromList (List.tabulate (n,fn _ => 0.0))
-    fun f k = vector_to_list (Vector.update (emptyv,k,1.0)) 
-  in
-    List.tabulate (n,f)
-  end
-
-fun one_hot (k,n) = 
-  let val emptyv = Vector.fromList (List.tabulate (n,fn _ => 0.0)) in
-    vector_to_list (Vector.update (emptyv,k,1.0)) 
-  end
-
-fun number_embed n = one_hot (n,3)
-fun color_embed c = one_hot (number_of_color c,6)
-fun card_embed (n,c) = number_embed n @ color_embed c
-fun hand_embed hand = List.concat (map card_embed (vector_to_list hand))
-
-fun board_embed board = 
-  (if #p1turn true then hand_embed hand1 else hand_embed hand2) @
-  (if #p1turn true then hand_embed hand2 else hand_embed hand1) @
-  one_hot (clues,9) @
-  one_hot (score,11) @ 
-  hand_embed pile 
-
-
-
+val operl = map_assoc narg_oper boardopl
 
 (* -------------------------------------------------------------------------
    Move
@@ -241,17 +182,6 @@ datatype move =
   | ColorClue of color
   | NumberClue of int
 
-fun mk_play i = mk_var ("play_" ^ its i, bool) 
-fun mk_discard i = mk_var ("discard_" ^ its i, bool) 
-fun mk_cluec c = mk_var ("cluec_" ^ string_of_color c, bool)
-fun mk_cluen n = mk_var ("cluen_" ^ its n, bool)
-
-fun nntm_of_move move = case move of
-    Play i => mk_play i
-  | Discard i => mk_discard i
-  | ColorClue c => mk_cluec c
-  | NumberClue n => mk_cluen n
-
 fun string_of_move move = case move of
     Play i => "P" ^ its i
   | Discard i => "D" ^ its i
@@ -260,22 +190,14 @@ fun string_of_move move = case move of
 
 val positionl = [0,1,2,3,4]
 
-val movel_glob = 
+val movel = 
   map Play positionl @ map Discard positionl @
   map ColorClue colorl @ map NumberClue numberl
-
-val moveopl = map nntm_of_move movel_glob
-
-val operl = map_assoc narg_oper (moveopl @ boardopl)
-
-fun nntm_of_boardmove (board,move) =
-  mk_binop boardmoveop (nntm_of_board board, nntm_of_move move)
-
 
 fun move_compare (m1,m2) = 
   String.compare (string_of_move m1, string_of_move m2) 
 
-fun update_hand i card hand = 
+fun draw_card i card hand = 
   let 
     val dummy = (~1,NoColor)
     val l1 = vector_to_list (Vector.update (hand,i,dummy))
@@ -308,10 +230,10 @@ fun apply_move_play i {p1turn,hand1,hand2,clues1,clues2,
   in
     {
     p1turn = not p1turn,
-    hand1 =  if p1turn then update_hand i newcard hand1  else hand1, 
-    hand2 =  if not p1turn then update_hand i newcard hand2 else hand2,
-    clues1 = if p1turn then update_hand i nocard clues1 else clues1,
-    clues2 = if not p1turn then update_hand i nocard clues2 else clues2,
+    hand1 =  if p1turn then draw_card i newcard hand1  else hand1, 
+    hand2 =  if not p1turn then draw_card i newcard hand2 else hand2,
+    clues1 = if p1turn then draw_card i nocard clues1 else clues1,
+    clues2 = if not p1turn then draw_card i nocard clues2 else clues2,
     clues = clues,
     score = if playb then score + 1 else score, 
     bombs = if not playb then bombs + 1 else bombs,
@@ -394,398 +316,46 @@ fun is_applicable board move = case move of
   | NumberClue _ => #clues board > 0 
   | _ => true
 
+fun filter_sit sit l =
+  let fun test (m,_) = is_applicable sit move in filter test l end
+
 (* -------------------------------------------------------------------------
-   Play a game
+   Targets
    ------------------------------------------------------------------------- *)
 
-fun choose_move tnn board =
-  let
-    val (_,scl) = infer_dhtnn tnn (nntm_of_board board)
-    val mscl1 = combine (movel_glob,scl)
-    val mscl2 = filter (is_applicable board o fst) mscl1
+fun mk_targetl level ntarget = 
+  List.tabulate (ntarget, fn _ => random_startboard ())
+
+fun write_targetl file targetl =
+  let 
+    val macrol = vector_to_list (!macro_array)
+    val olsizel = map dest_startsit targetl 
   in
-    best_in_distrib mscl2
-  end
-
-fun is_end board = null (#deck board)
-
-val level_glob = ref 2
-
-fun norm_score board = 
-  if #score board >= (!level_glob) 
-  then 0.9 + Real.fromInt (#score board) / 100.0
-  else Real.fromInt (#score board) / 100.0
-
-fun final_score board = #score board
-
-fun tnn_game tnn =
-  let fun loop acc board =
-    if is_end board then (rev acc, final_score board) else 
-    let val move = choose_move tnn board in
-      loop ((board,move) :: acc) (apply_move move board)
-    end   
-  in
-    loop [] (random_startboard ())
+    writel (file ^ "_macrol") (map string_of_macro macrol);
+    writel (file ^ "_targetl") (map string_of_olsize olsizel)
   end
 
 (* -------------------------------------------------------------------------
-   Examples of guesses
+   Interface
    ------------------------------------------------------------------------- *)
 
-val cardl_ext = nocard :: List.concat (map (fn x => [(1,x),(2,x)]) colorl)
-
-val cardoutput_list = combine (cardl_ext,all_one_hot (length cardl_ext))
-
-fun hide_from n hand = 
-  let fun f (i,card) = if i < n then card else nocard in
-    Vector.mapi f hand
-  end
-
-fun p1_guess_ex {p1turn,hand1,hand2,clues1,clues2,clues,
-  score,bombs,deck,disc,pile} n =
-  let 
-    val nntm = mk_hand clues1op clues1
-      (* list_mk_comb (concatop, 
-      [
-       mk_hand hand2op hand2,
-       mk_hand clues2op clues2,
-       mk_hand hand1op (hide_from n hand1),
-       mk_hand clues1op clues1,
-       list_mk_binop infoop (map mk_isucn [clues,score,bombs]),
-       mk_hand pileop pile
-      ]) *)
-    val card = Vector.sub (hand1,n)
-    val output = assoc card cardoutput_list
-  in
-    (nntm,output)
-  end
-
-fun p2_guess_ex {p1turn,hand1,hand2,clues1,clues2,clues,
-  score,bombs,deck,disc,pile} n =
-  let 
-    val nntm = mk_hand clues1op clues2
-    (* list_mk_comb (concatop, 
-      [
-       mk_hand hand1op hand1,
-       mk_hand clues1op clues1,
-       mk_hand hand2op (hide_from n hand2),
-       mk_hand clues2op clues2,
-       list_mk_binop infoop (map mk_isucn [clues,score,bombs]),
-       mk_hand pileop pile
-      ]) *)
-    val card = Vector.sub (hand2,n)
-    val output = assoc card cardoutput_list
-  in
-    (nntm,output)
-  end
-
-fun extract_guess board =
-  if #p1turn board 
-  then List.tabulate (5,p1_guess_ex board) 
-  else List.tabulate (5,p2_guess_ex board)
-
-(* -------------------------------------------------------------------------
-   Guess a random hand
-   ------------------------------------------------------------------------- *)
-
-fun card_match clue card =
-  (fst clue = 0 orelse fst clue = fst card) andalso
-  (snd clue = NoColor orelse snd clue = snd card)
-
-fun hand_match clues hand =
-  Vector.all I (
-    Vector.mapi (fn (i,x) => card_match (Vector.sub (clues,i)) x) hand)
-
-fun select_card f board ((tnn,n),hand) =
-  let
-    val nntm = 
-      if #p1turn board
-      then fst (p1_guess_ex (update_hand1 board hand) n)
-      else fst (p2_guess_ex (update_hand2 board hand) n)
-    val distrib = combine (cardl_ext,infer_tnn tnn nntm)
-    val card = f distrib
-    val newhand = Vector.update (hand,n,card)
-  in
-    newhand 
-  end
-
-fun select_hand f tnnl board =
-  foldl (select_card f board) nohand (number_snd 0 tnnl)
-
-fun guess_hand tnnl board = 
-  let 
-    val cluev = if #p1turn board then #clues1 board else #clues2 board
-    fun loop n =
-      let val h = select_hand select_in_distrib tnnl board in
-        if n <= 0 orelse hand_match cluev h
-        then h
-        else loop (n-1)
-      end
-    val hand = loop 5
-  in
-    if #p1turn board
-    then update_hand1 board hand
-    else update_hand2 board hand
-  end
-
-fun heur_guess_hand board =
-  let 
-    val cluev = if #p1turn board then #clues1 board else #clues2 board
-    val unknown = 
-      vector_to_list 
-      (if #p1turn board then #hand1 board else #hand2 board) @ #deck board
-    fun f clue = hd (shuffle (filter (card_match clue) unknown))
-    val hand = Vector.map f cluev
-  in  
-    if #p1turn board
-    then update_hand1 board hand
-    else update_hand2 board hand
-  end
-
-(* -------------------------------------------------------------------------
-   Perfect information hanabi.
-   Testing accuracy with respect to ground truth
-   ------------------------------------------------------------------------- *)
-
-fun has_noclues (board:board) = 
-  if #p1turn board 
-  then #clues1 board = nohand 
-  else #clues2 board = nohand
-
-fun is_accurate tnnl (board:board) = 
-  let 
-    val cluev = if #p1turn board then #clues1 board else #clues2 board
-    val besthand = select_hand best_in_distrib tnnl board
-  in
-    hand_match cluev besthand
-  end
-
-fun accuracy tnnl boardl =
-  int_div  (length (filter (is_accurate tnnl) boardl)) (length boardl)
-
-
-(* -------------------------------------------------------------------------
-   One step look-ahead
-   ------------------------------------------------------------------------- *)
-
-val exploration_coeff = ref 2.0
-
-fun value_choice vistot ((move,polv),(sum,vis)) =
-  let
-    val exploitation = sum / (vis + 1.0)
-    val exploration  = (polv * Math.sqrt vistot) / (vis + 1.0)
-  in
-    (move, exploitation + (!exploration_coeff) * exploration)
-  end
-
-fun proba_norm l =
-  let val sum = sum_real l in
-    if sum <= 0.0001 then raise ERR "proba_norm" "" else
-    map (fn x => x / sum) l
-  end
-
-fun init_distrib dhtnn board =
-  let
-    val (reward,p) = infer_dhtnn dhtnn (nntm_of_board board)
-    val distrib = combine (movel_glob, proba_norm p)
-    fun f x = (x,(0.0,0.0))
-  in
-    ((reward,1.0), map f distrib)
-  end
- 
-fun lookahead_once (dhtnn,tnnl) board ((sumtot,vistot),distrib) =
-  let 
-    val distrib1 = map (value_choice vistot) distrib
-    val distrib2 = filter (is_applicable board o fst) distrib1
-    val move = best_in_distrib distrib2
-    val board1 = heur_guess_hand board
-    val board2 = apply_move move board1
-    val reward = 
-      if is_end board2 
-      then norm_score board2
-      else fst (infer_dhtnn dhtnn (nntm_of_board board2))
-    fun f ((m,polv),(sum,vis)) =
-      if m = move 
-      then ((m,polv), (sum + reward, vis + 1.0))
-      else ((m,polv), (sum, vis))
-  in
-    ((sumtot + reward, vistot + 1.0), map f distrib)
-  end
-
-fun lookahead_loop nsim (dhtnn,tnnl) board distrib =
-  if nsim <= 0 then distrib else
-  let val newdistrib = lookahead_once (dhtnn,tnnl) board distrib in
-    lookahead_loop (nsim -1) (dhtnn,tnnl) board newdistrib
-  end
-
-fun lookahead (dhtnn,tnnl) board =
-  let
-    val distrib_init = init_distrib dhtnn board
-    val ((sumtot,vistot), distrib) = 
-      lookahead_loop (!nsim_glob) (dhtnn,tnnl) board distrib_init
-    val newe = sumtot / vistot
-    val newp = map (fn x => (snd (snd x) / (vistot - 1.0))) distrib
-  in
-    (nntm_of_board board,[newe],newp)
-  end
-
-fun lookahead_boardl (dhtnn,tnnl) boardl =
-  map (lookahead (dhtnn,tnnl)) boardl 
-
-(* -------------------------------------------------------------------------
-   External parallelization
-   ------------------------------------------------------------------------- *)
-
-fun bts b = if b then "true" else "false"
-fun stb s = if s = "true" then true else
-            if s = "false" then false else
-            raise ERR "stb" ""
-
-fun string_of_board {p1turn,hand1,hand2,clues1,clues2,clues,
-  score,bombs,deck,disc,pile} =
-  String.concatWith "," [
-    bts p1turn,
-    string_of_hand hand1,
-    string_of_hand hand2,
-    string_of_hand clues1,
-    string_of_hand clues2,
-    its clues, its score, its bombs,
-    String.concatWith " " (map string_of_card deck),
-    String.concatWith " " (map string_of_card disc),
-    string_of_hand pile
-    ]
-
-fun board_of_string s = 
-  case String.fields (fn x => x = #",") s of
-    [a,b,c,d,e,f,g,h,i,j,k] =>
-    {
-    p1turn = stb a,
-    hand1 = hand_of_string b,
-    hand2 = hand_of_string c,
-    clues1 = hand_of_string d,
-    clues2 = hand_of_string e,
-    clues = string_to_int f,
-    score = string_to_int g,
-    bombs = string_to_int h,
-    deck = map card_of_string (String.tokens Char.isSpace i),
-    disc = map card_of_string (String.tokens Char.isSpace j),
-    pile = hand_of_string k
-    }
-  | _ => raise ERR "board_of_string" ""
-
-fun tnnl_file file = 
-  map (fn x => file ^ "_tnn" ^ x) (List.tabulate (5,its))
-
-fun write_param file (dhtnn,tnnl) = 
-  (
-  write_dhtnn (file ^ "_dhtnn") dhtnn;
-  app (uncurry write_tnn) (combine (tnnl_file file,tnnl))
-  )
-
-fun read_param file =
-  (read_dhtnn (file ^ "_dhtnn"),map read_tnn (tnnl_file file))
- 
-fun write_argl file boardll =
-  writel file (map string_of_board (List.concat boardll))   
-
-fun read_argl file = 
-  mk_batch_full 100 (map board_of_string (readl file))
-
-fun reflect_globals () = 
-  "(mleHanabi.nsim_glob := " ^ its (!nsim_glob) ^ ")"
-
-val extspec =   
+val gamespec : (board,move) mlReinforce.gamespec =
   {
-  self = "mleHanabi.extspec",
-  reflect_globals = reflect_globals, 
-  function = lookahead_boardl,
-  write_param = write_param,
-  read_param = read_param,
-  write_argl = write_argl,
-  read_argl = read_argl,
-  write_result = write_dhex,
-  read_result = read_dhex
+  movel = movel,
+  move_compare = move_compare,
+  string_of_move = string_of_move,
+  filter_sit = filter_sit,
+  status_of = status_of,
+  apply_move = apply_move,
+  operl = operl,
+  nntm_of_sit = nntm_of_board,
+  mk_targetl = mk_targetl,
+  write_targetl = write_targetl,
+  read_targetl = read_targetl,
+  max_bigsteps = max_bigsteps
   }
 
-(* -------------------------------------------------------------------------
-   Reinforcement learning loop
-   ------------------------------------------------------------------------- *)
 
-val ncore_explore = ref 8
-val dim_glob = ref 8
-val ncore_train = ref 8
-val bsize_glob = ref 32
-val lr_glob = ref 0.02
-val nepoch_glob = ref 20
-val ngame_glob = ref 4000
-
-fun train_tnn ncore exl =
-  let
-    val tt = (exl,first_n 100 exl)
-    val outn = length (snd (hd exl))
-    val tnn = random_tnn (!dim_glob,outn) operl
-    val schedule = [(!nepoch_glob,!lr_glob)]
-  in
-    (* prepare_train_tnn (ncore,!bsize_glob) tnn tt schedule *)
-    tnn
-  end
-
-fun summary_parameters () =
-  (
-  erase_file (eval_dir ^ "/" ^ !summary_file);
-  summary (String.concatWith "\n  " 
-  ["summary_file: " ^ !summary_file,
-   "ncore_explore: " ^ its (!ncore_explore),
-   "dim_glob: " ^ its (!dim_glob),
-   "ncore_train: " ^ its (!ncore_train),
-   "bsize_glob: " ^ its (!bsize_glob),
-   "lr_glob: " ^ rts (!lr_glob),
-   "nepoch_glob: " ^ its (!nepoch_glob),
-   "nsim_glob: " ^ its (!nsim_glob),
-   "ngame_glob: " ^ its (!ngame_glob),
-   "starting level: " ^ its (!level_glob)]
-  )
-  ) 
-
-fun rl_loop_aux (n,nmax) dhtnn =
-  if n >= nmax then dhtnn else
-  let
-    val _ = summary ("Generation " ^ its n)
-    val _ = summary ("Level" ^ its (!level_glob))
-    val _ = summary "Eval"
-    val (gamel,t) = 
-      add_time List.tabulate (!ngame_glob, fn _ => tnn_game dhtnn)
-    val scl = map (Real.fromInt o snd) gamel
-    val _ = summary (" competition: " ^ rts t ^ 
-      " score: " ^ rts (average_real scl))
-    val percl = filter (fn x => x > Real.fromInt (!level_glob) - 0.5) scl
-    val perc = int_div (length percl) (length scl)  
-    val _ = summary (" percentage: " ^ rts perc)
-    val _ = if perc > 0.5 then incr level_glob else ()
-    val boardl = List.concat (map (map fst o fst) gamel)
-    val _ = summary ("Examples : " ^ its (length boardl))
-    val _ = summary "Guess"
-    val boardll = mk_batch_full 100 boardl
-    val exll = list_combine (map extract_guess boardl)
-    val (tnnl,t) = add_time (smlParallel.parmap_batch 5 (train_tnn 1)) exll
-    val _ = summary ("  training network: " ^ rts t)
-    val _ = summary "Lookahead"
-    val (exl,t) = add_time 
-      (parmap_queue_extern (!ncore_explore) extspec (dhtnn,tnnl)) boardll
-    val _ = summary ("  exploration: " ^ rts t)
-    val randdhtnn = random_dhtnn (!dim_glob,length movel_glob) operl
-    val (newdhtnn,t) = add_time 
-      (train_dhtnn_schedule 4 randdhtnn (!bsize_glob) 
-      (List.concat exl)) [(!nepoch_glob,!lr_glob)]
-    val _ = summary ("  training network: " ^ rts t)
-  in
-    rl_loop_aux (n+1,nmax) newdhtnn
-  end
-
-fun rl_loop nmax = 
-  let val dhtnn = random_dhtnn (!dim_glob,length movel_glob) operl in
-    summary_parameters (); rl_loop_aux (0,nmax) dhtnn
-  end
 
 
 (* 
