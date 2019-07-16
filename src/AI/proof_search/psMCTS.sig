@@ -12,7 +12,6 @@ sig
   val alpha_glob : real ref
   val stopatwin_flag : bool ref
 
-
   (* 'a is the representation of a board *)
   (* 'b is the representation of a move *)
   type id = int list
@@ -21,7 +20,6 @@ sig
   type ('a,'b) node =
     {pol : 'b pol, sit : 'a, sum : real, vis : real, status : status}
   type ('a,'b) tree = (id, ('a,'b) node) Redblackmap.dict
-
 
   (* search function *)
   type ('a,'b) mctsparam = 

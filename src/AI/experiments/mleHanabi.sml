@@ -798,7 +798,6 @@ val dhtnn = rl_loop 100;
 *)
 
 (*
-
 val tnnl = List.tabulate (5, fn _ => random_tnn (4,11) operl);
 val dhtnn = random_dhtnn (4,20) operl;
 val board = random_startboard ();

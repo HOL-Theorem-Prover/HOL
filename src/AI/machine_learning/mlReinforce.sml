@@ -365,11 +365,22 @@ fun explore startb (gamespec,extspec) allex dhtnn =
 
 fun mcts_test nsim gamespec dhtnn startsit =
   let
-    val param = 
+    val param =
       {nsim = nsim, decay = 1.0, noise = false,
        status_of = #status_of gamespec,
        apply_move = #apply_move gamespec,
        fevalpoli = mk_fep_dhtnn false gamespec dhtnn}
+  in
+    mcts param (starttree_of param startsit)
+  end
+
+fun mcts_uniform nsim gamespec startsit =
+  let
+    val param =
+      {nsim = nsim, decay = 1.0, noise = false,
+       status_of = #status_of gamespec,
+       apply_move = #apply_move gamespec,
+       fevalpoli = mk_fep_dhtnn true gamespec (random_dhtnn_gamespec gamespec)}
   in
     mcts param (starttree_of param startsit)
   end

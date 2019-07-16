@@ -51,6 +51,8 @@ sig
   (* debugging *)
   val mcts_test : 
     int -> ('a,'b) gamespec -> dhtnn -> 'a -> ('a,'b) psMCTS.tree
+  val mcts_uniform :
+    int -> ('a,'b) gamespec -> 'a -> ('a,'b) psMCTS.tree
   val n_bigsteps_test : ('a,'b) gamespec -> mlTreeNeuralNetwork.dhtnn ->
     'a -> ('a,'b) psMCTS.node list
 
