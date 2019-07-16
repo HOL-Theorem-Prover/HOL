@@ -9,7 +9,7 @@ structure mleHanabi :> mleHanabi =
 struct
 
 open HolKernel boolLib Abbrev aiLib smlParallel 
-  mlTreeNeuralNetwork mlReinforce
+  mlTreeNeuralNetwork psMCTS mlReinforce
 
 val ERR = mk_HOL_ERR "mleHanabi"
 
@@ -62,6 +62,7 @@ val full_deck =
 
 type board =
   {
+  objective : int,
   p1turn : bool,
   hand1 : card vector, hand2 : card vector,
   clues1 : card vector, clues2 : card vector,
@@ -91,13 +92,14 @@ fun nice_of_board {p1turn,hand1,hand2,clues1,clues2,
 
 val nohand = Vector.fromList (List.tabulate (5, fn _ => nocard))
 
-fun random_startboard () = 
+fun random_startboard level = 
   let 
     val d1 = shuffle full_deck
     val (v1,d2) = part_n 5 d1
     val (v2,d3) = part_n 5 d2
   in
     {
+    objective = level,
     p1turn = true,
     hand1 = Vector.fromList v1, 
     hand2 = Vector.fromList v2,
@@ -113,7 +115,7 @@ fun random_startboard () =
   end
 
 fun status_of board = 
-  if #score board >= !level_glob then Win 
+  if #score board >= #objective board then Win 
   else if null (#deck board) then Lose
   else Undecided
 
@@ -157,7 +159,7 @@ val boardopl =
   [cardop,isuc,izero,hand1op,hand2op,clues1op,clues2op,pileop,
    discardop,concatop,emptyop,infoop,boardmoveop]
 
-fun nntm_of_board {p1turn,hand1,hand2,clues1,clues2,clues,
+fun nntm_of_board {objective,p1turn,hand1,hand2,clues1,clues2,clues,
   score,bombs,deck,disc,pile} =
   list_mk_comb (concatop, 
   [
@@ -220,7 +222,7 @@ fun update_pile card pile =
     Vector.map f pile
   end
 
-fun apply_move_play i {p1turn,hand1,hand2,clues1,clues2,
+fun apply_move_play i {objective,p1turn,hand1,hand2,clues1,clues2,
   clues,score,bombs,deck,disc,pile} =
   let 
     val newcard = hd deck
@@ -229,6 +231,7 @@ fun apply_move_play i {p1turn,hand1,hand2,clues1,clues2,
     val playb = is_playable played pile
   in
     {
+    objective = objective,
     p1turn = not p1turn,
     hand1 =  if p1turn then draw_card i newcard hand1  else hand1, 
     hand2 =  if not p1turn then draw_card i newcard hand2 else hand2,
@@ -247,7 +250,7 @@ fun apply_move_play i {p1turn,hand1,hand2,clues1,clues2,
    Discard
    ------------------------------------------------------------------------- *)
 
-fun apply_move_discard i {p1turn,hand1,hand2,clues1,clues2,
+fun apply_move_discard i {objective,p1turn,hand1,hand2,clues1,clues2,
   clues,score,bombs,deck,disc,pile} =
   let 
     val newcard = hd deck handle Empty => nocard
@@ -255,11 +258,12 @@ fun apply_move_discard i {p1turn,hand1,hand2,clues1,clues2,
     val discarded = Vector.sub (hand,i)
   in
     {
+    objective = objective,
     p1turn = not p1turn,
-    hand1 =  if p1turn then update_hand i newcard hand1 else hand1, 
-    hand2 =  if not p1turn then update_hand i newcard hand2 else hand2,
-    clues1 = if p1turn then update_hand i nocard clues1 else clues1,
-    clues2 = if not p1turn then update_hand i nocard clues2 else clues2,
+    hand1 =  if p1turn then draw_card i newcard hand1 else hand1, 
+    hand2 =  if not p1turn then draw_card i newcard hand2 else hand2,
+    clues1 = if p1turn then draw_card i nocard clues1 else clues1,
+    clues2 = if not p1turn then draw_card i nocard clues2 else clues2,
     clues = if clues < 8 then clues + 1 else clues,
     score = score,
     bombs = bombs,
@@ -289,9 +293,10 @@ fun update_number number (handv,cluev) =
     Vector.fromList (map f l)
   end
 
-fun apply_move_clue f {p1turn,hand1,hand2,clues1,clues2,clues,
+fun apply_move_clue f {objective,p1turn,hand1,hand2,clues1,clues2,clues,
   score,bombs,deck,disc,pile} =
   {
+  objective = objective,
   p1turn = not p1turn,
   hand1 = hand1, hand2 = hand2,
   clues1 = if not p1turn then f (hand1,clues1) else clues1,
@@ -317,23 +322,59 @@ fun is_applicable board move = case move of
   | _ => true
 
 fun filter_sit sit l =
-  let fun test (m,_) = is_applicable sit move in filter test l end
+  let fun test (m,_) = is_applicable sit m in filter test l end
 
 (* -------------------------------------------------------------------------
    Targets
    ------------------------------------------------------------------------- *)
 
-fun mk_targetl level ntarget = 
-  List.tabulate (ntarget, fn _ => random_startboard ())
+fun bts b = if b then "true" else "false"
+fun stb s = if s = "true" then true else
+            if s = "false" then false else
+            raise ERR "stb" ""
 
-fun write_targetl file targetl =
-  let 
-    val macrol = vector_to_list (!macro_array)
-    val olsizel = map dest_startsit targetl 
-  in
-    writel (file ^ "_macrol") (map string_of_macro macrol);
-    writel (file ^ "_targetl") (map string_of_olsize olsizel)
-  end
+fun mk_targetl level ntarget = 
+  List.tabulate (ntarget, fn _ => random_startboard level)
+
+fun string_of_board {objective,p1turn,hand1,hand2,clues1,clues2,clues,
+  score,bombs,deck,disc,pile} =
+  String.concatWith "," [
+    its objective,
+    bts p1turn,
+    string_of_hand hand1,
+    string_of_hand hand2,
+    string_of_hand clues1,
+    string_of_hand clues2,
+    its clues, its score, its bombs,
+    String.concatWith " " (map string_of_card deck),
+    String.concatWith " " (map string_of_card disc),
+    string_of_hand pile
+    ]
+
+fun write_targetl file targetl = writel file (map string_of_board targetl)
+ 
+fun board_of_string s = 
+  case String.fields (fn x => x = #",") s of
+    [a',a,b,c,d,e,f,g,h,i,j,k] =>
+    {
+    objective = string_to_int a',
+    p1turn = stb a,
+    hand1 = hand_of_string b,
+    hand2 = hand_of_string c,
+    clues1 = hand_of_string d,
+    clues2 = hand_of_string e,
+    clues = string_to_int f,
+    score = string_to_int g,
+    bombs = string_to_int h,
+    deck = map card_of_string (String.tokens Char.isSpace i),
+    disc = map card_of_string (String.tokens Char.isSpace j),
+    pile = hand_of_string k
+    }
+  | _ => raise ERR "board_of_string" ""
+
+fun read_targetl file = map board_of_string (readl file)
+
+fun max_bigsteps target = 100
 
 (* -------------------------------------------------------------------------
    Interface
@@ -355,35 +396,63 @@ val gamespec : (board,move) mlReinforce.gamespec =
   max_bigsteps = max_bigsteps
   }
 
+val extspec = mk_extspec "mleHanabi.extspec" gamespec
 
+(* -------------------------------------------------------------------------
+   Reinforcement learning
+   ------------------------------------------------------------------------- *)
 
+(*
+load "mleHanabi"; open mleHanabi;
+load "mlReinforce"; open mlReinforce;
+load "smlParallel"; open smlParallel;
+load "aiLib"; open aiLib;
+
+psMCTS.alpha_glob := 0.3;
+psMCTS.exploration_coeff := 2.0;
+logfile_glob := "hanabi_run54";
+parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^
+(!logfile_glob);
+ncore_mcts_glob := 8;
+ncore_train_glob := 8;
+ntarget_compete := 100;
+ntarget_explore := 100;
+exwindow_glob := 20000;
+uniqex_flag := false;
+dim_glob := 8;
+lr_glob := 0.02;
+batchsize_glob := 16;
+decay_glob := 0.99;
+
+nsim_glob := 100;
+nepoch_glob := 20;
+ngen_glob := 20;
+temp_flag := true;
+level_threshold := 0.8;
+level_glob := 6;
+
+start_rl_loop (gamespec,extspec);
+*)
+
+(* -------------------------------------------------------------------------
+   Small tests
+   ------------------------------------------------------------------------- *)
 
 (* 
 load "mleHanabi"; open mleHanabi;
-load "aiLib"; open aiLib;
-load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
+load "mlReinforce"; open mlReinforce;
+load "psMCTS"; open psMCTS;
+nsim_glob := 1600;
+dim_glob := 8;
+level_glob := 11;
+decay_glob := 0.9;
+val _ = n_bigsteps_test gamespec (random_dhtnn_gamespec gamespec) 
+(random_startboard ());
 
-summary_file := "hanabi_run21";
-dim_glob := 4;
-nepoch_glob := 100;
-bsize_glob := 16;
-lr_glob := 0.02;
-ngame_glob := 500;
-ncore_explore := 8;
-ncore_train := 8;
-nsim_glob := 1;
-level_glob := 1;
-
-val dhtnn = rl_loop 100;
+level_glob := 3;
+val tree = mcts_uniform 10000 gamespec (random_startboard ());
+val nodel = trace_win (#status_of gamespec) tree [];
 *)
 
-(*
-val tnnl = List.tabulate (5, fn _ => random_tnn (4,11) operl);
-val dhtnn = random_dhtnn (4,20) operl;
-val board = random_startboard ();
-val nsim = 16000;
-val ex = lookahead (nsim,dhtnn,tnnl) board;
-val pol = combine (movel_glob, #3 ex);
-*)
 
 end (* struct *)
