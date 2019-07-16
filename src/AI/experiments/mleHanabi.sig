@@ -33,35 +33,36 @@ sig
     }
 
   val random_startboard : unit -> board
-  val write_boardll : board list list -> unit
-  val read_boardll : unit -> board list list
   val movel_glob : move list
   val nocard : card
   val nohand : card vector
   val has_noclues : board -> bool
   val cardl_ext : card list
+  
+  (* nn *)
   val operl : (term * int) list
   val nntm_of_board : board -> term
   val nntm_of_move : move -> term
   val nntm_of_boardmove : (board * move) -> term
+  
+  (* player *)
   val tnn_game : mlTreeNeuralNetwork.dhtnn -> ((board * move) list * int)
+  
+  (* guesser *)
   val select_hand : ((card * real) list -> card) -> 
     mlTreeNeuralNetwork.tnn list -> board -> card vector
   val accuracy : mlTreeNeuralNetwork.tnn list -> board list -> real
-  val rl_loop : int -> mlTreeNeuralNetwork.dhtnn
- 
-  val dhtnn_file : unit -> string
-  val tnnl_file : unit -> string list
-
-  val explore_parallel : 
-    mlTreeNeuralNetwork.dhtnn * mlTreeNeuralNetwork.tnn list -> 
-    board list list -> (term * real list * real list) list list
-  val lookahead : 
-    int * mlTreeNeuralNetwork.dhtnn * mlTreeNeuralNetwork.tnn list ->
-    board -> term * real list * real list
+  
+  (* better player *)
   val lookahead_boardl :  
-    int * mlTreeNeuralNetwork.dhtnn * mlTreeNeuralNetwork.tnn list ->
-    int * int -> board list -> unit
-
+    mlTreeNeuralNetwork.dhtnn * mlTreeNeuralNetwork.tnn list -> 
+    board list ->  mlReinforce.dhex
+    
+  val extspec : 
+    (mlTreeNeuralNetwork.dhtnn * mlTreeNeuralNetwork.tnn list,
+     board list, mlReinforce.dhex) smlParallel.extspec
+  
+  (* reinforcement learning *)
+  val rl_loop : int -> mlTreeNeuralNetwork.dhtnn
 
 end
