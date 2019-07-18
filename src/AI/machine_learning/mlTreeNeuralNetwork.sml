@@ -207,13 +207,6 @@ fun read_operl file =
     combine (l1,l2)
   end
 
-fun reall_to_string rl =
-  String.concatWith " " (map (IEEEReal.toString o Real.toDecimal) rl)
-
-fun string_to_reall rls =
-  map (valOf o Real.fromDecimal o valOf o IEEEReal.fromString)
-    (String.tokens Char.isSpace rls)
-
 fun write_dhex file epex =
   let
     val file_term = file ^ "_term"

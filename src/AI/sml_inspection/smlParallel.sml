@@ -215,7 +215,8 @@ fun widscript_file wid = wid_dir wid ^ "/script" ^ its wid ^ ".sml"
 
 fun param_file () = !parallel_dir ^ "/param"
 fun argl_file () = !parallel_dir ^ "/argl"
-fun result_file (wid,job) = wid_dir wid ^ "/result" ^ its job
+fun result_file wid = wid_dir wid ^ "/result"
+fun arg_file wid = wid_dir wid ^ "/arg"
 
 (* -------------------------------------------------------------------------
    Each worker has a copy of the list.
@@ -223,10 +224,9 @@ fun result_file (wid,job) = wid_dir wid ^ "/result" ^ its job
    ------------------------------------------------------------------------- *)
 
 fun worker_process wid (f,l) job =
-  (f (wid,job) (List.nth (l,job)); worker_listen wid (f,l))
+  (f wid (List.nth (l,job)); worker_listen wid (f,l))
 and worker_listen wid fl =
-  if exists_file (widin_file wid)
-  then
+  if exists_file (widin_file wid) then
     let val s = hd (readl_rm (widin_file wid)) in
       if s = "stop" then () else worker_process wid fl (string_to_int s)
     end
@@ -239,6 +239,7 @@ and worker_listen wid fl =
 fun boss_stop_workers threadl =
   let
     val ncore = length threadl
+    val _ = print_endline ("stop " ^ its ncore ^ " workers")
     fun send_stop wid = writel_atomic (widin_file wid) ["stop"]
     fun loop threadl =
       (if exists Thread.isActive threadl
@@ -246,15 +247,14 @@ fun boss_stop_workers threadl =
        else ())
   in
     app send_stop (List.tabulate (ncore,I));
-    loop threadl
+    loop threadl;
+    print_endline ("  " ^ its ncore ^ " workers stopped")
   end
 
 fun boss_end threadl completedl =
   let
     val ncore = length threadl
-    val _ = print_endline ("stop " ^ its ncore ^ " workers")
     val _ = boss_stop_workers threadl
-    val _ = print_endline ("  " ^ its ncore ^ " workers stopped")
     val l = dict_sort compare_imin (map swap completedl)
   in
     map fst l
@@ -271,13 +271,10 @@ fun stat_jobs (pendingl,freewidl,runningl,completedl) =
      " free core: " ^ String.concatWith " " (map its freewidl))
 
 fun send_job (wid,job) =
-  if exists_file (widin_file wid)
-  then raise ERR "send_job" ""
-  else
-    (
-    print_endline ("  send job " ^ its job ^ " to worker " ^ its wid);
-    writel_atomic (widin_file wid) [its job]
-    )
+  (
+  print_endline ("  send job " ^ its job ^ " to worker " ^ its wid);
+  writel_atomic (widin_file wid) [its job]
+  )
 
 fun boss_send threadl rr (pendingl,runningl,completedl) =
   let
@@ -304,7 +301,7 @@ and boss_collect threadl rr (pendingl,runningl,completedl) =
       (
       print_endline ("  completed job " ^ its job ^ " by worker " ^ its wid);
       remove_file (widout_file wid);
-      SOME (rr (wid,job))
+      SOME (rr wid)
       )
     fun forget_wid ((wid,job),ro) = (job, valOf ro)
     val (al,bl) = partition (isSome o snd) (map_assoc f runningl)
@@ -357,7 +354,7 @@ fun boss_wait_upl widl =
     else (mini_sleep (); boss_wait_upl widl)
   end
 
-fun clean_parallel_dirs widl=
+fun clean_parallel_dirs widl =
   let fun f wid =
     (mkDir_err (wid_dir wid);
      app remove_file [widin_file wid, widout_file wid])
@@ -369,9 +366,9 @@ fun worker_start wid (extspec: ('a,'b,'c) extspec) =
   let
     val param = #read_param extspec (param_file ())
     val argl = #read_argl extspec (argl_file ())
-    fun f (wid,job) arg = 
+    fun f wid arg = 
       let val r = #function extspec param arg in
-        #write_result extspec (result_file (wid,job)) r;
+        #write_result extspec (result_file wid) r;
         writel_atomic (widout_file wid) ["done"]
       end
   in
@@ -394,7 +391,7 @@ val attrib = [Thread.InterruptState Thread.InterruptAsynch,
 
 fun parmap_queue_extern ncore extspec param argl =
   let
-    val widl = List.tabulate (ncore,I) (* workers *)
+    val widl = List.tabulate (ncore,I)
     val _ = clean_parallel_dirs widl
     val _ = #write_param extspec (param_file ()) param
     val _ = #write_argl extspec (argl_file ()) argl
@@ -402,13 +399,92 @@ fun parmap_queue_extern ncore extspec param argl =
     fun fork wid = Thread.fork (fn () =>
       boss_start_worker (code_of_extspec extspec) wid, attrib)
     val threadl = map fork widl
-    val pendingl = List.tabulate (length argl,I) (* jobs *)
-    fun rr (wid,job) = #read_result extspec (result_file (wid,job))
+    val pendingl = List.tabulate (length argl,I)
+    fun rr wid = #read_result extspec (result_file wid)
   in
     boss_wait_upl widl;
     print_endline ("  " ^ its ncore ^ " workers started");
     boss_send threadl rr (pendingl,[],[])
   end
+
+
+(* -------------------------------------------------------------------------
+   Running multiple calls to external parmap without restarting workers.
+   Similar to parmap_exact.
+   ------------------------------------------------------------------------- *)
+
+fun codewait_of_extspec extspec wid =
+  [
+  "open smlParallel;",
+  "val _ = parallel_dir := " ^ quote (!parallel_dir) ^ ";",
+  "val _ = " ^ #reflect_globals extspec () ^ ";",
+  "worker_wait_exact " ^ its wid ^ #self extspec ^ ";"
+  ]
+
+fun worker_exec_exact wid extspec = 
+  let    
+    val param = #read_param extspec (param_file ())
+    val arg = hd (#read_argl extspec (arg_file wid)) 
+    val r = #function extspec param arg 
+  in
+    #write_result extspec (result_file wid) r;
+    writel_atomic (widout_file wid) ["done"];
+    worker_wait_exact wid extspec 
+  end
+and worker_wait_exact wid extspec =
+  if exists_file (widin_file wid) then 
+    let val s = hd (readl_rm (widin_file wid)) in
+      if s = "stop" then () else worker_exec_exact wid extspec
+    end
+  else worker_wait_exact wid extspec
+
+fun send_job_exact extspec (wid,arg) =
+  (
+  #write_argl extspec (arg_file wid) [arg];
+  writel_atomic (widin_file wid) ["work"]
+  ) 
+
+fun boss_send_exact extspec widl param argl =
+  (
+  #write_param extspec (param_file ()) param;
+  app (send_job_exact extspec) (combine (widl,argl))
+  )
+
+fun boss_collect_exact extspec widl =
+  let 
+    fun wait widl = 
+      if null widl then () else
+      let val newwidl = filter (not o exists_file o widout_file) widl in
+        wait newwidl
+      end
+    val _ = wait widl
+    val l = map (#read_result extspec o result_file) widl
+  in
+    app (remove_file o widout_file) widl; 
+    app (remove_file o result_file) widl;
+    l
+  end
+
+fun boss_start_exact ncore extspec =
+  let
+    val widl = List.tabulate (ncore,I)
+    val _ = clean_parallel_dirs widl
+    fun fork wid = Thread.fork (fn () =>
+      boss_start_worker (codewait_of_extspec extspec) wid, attrib)
+     val threadl = map fork widl
+  in
+    print_endline ("  " ^ its ncore ^ " workers started");
+    threadl
+  end
+
+fun parmap_exact_extern ncore extspec param argl =
+  let val widl = List.tabulate (length argl, I) in
+    if length argl <> ncore then raise ERR "parmap_exact_extern" "" else "";
+    boss_send_exact extspec widl param argl;
+    boss_collect_exact extspec widl
+  end
+
+val boss_stop_exact = boss_stop_workers
 
 (* -------------------------------------------------------------------------
    Example
@@ -431,6 +507,15 @@ val idspec : (unit,int,int) extspec =
 load "smlParallel"; open smlParallel;
 val l1 = List.tabulate (100,I);
 val l2 = parmap_queue_extern 2 idspec () l1;
+
+val l1 = List.tabulate (2,I);
+val threadl = boss_start_exact 2 idspec;
+val l2 = parmap_exact_extern 2 idspec () l1;
+val l3 = parmap_exact_extern 2 idspec () l1;
+val _ = boss_stop_exact threadl;
 *)
+
+
+
 
 end

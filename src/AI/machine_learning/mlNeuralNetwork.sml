@@ -8,7 +8,7 @@
 structure mlNeuralNetwork :> mlNeuralNetwork =
 struct
 
-open HolKernel Abbrev boolLib aiLib mlMatrix
+open HolKernel Abbrev boolLib aiLib mlMatrix smlParallel
 
 val ERR = mk_HOL_ERR "mlNeuralNetwork"
 val debugdir = HOLDIR ^ "/src/AI/machine_learning/debug"
@@ -68,6 +68,80 @@ fun random_nn (a1,da1) (a2,da2) sizel =
     map f (butlast l) @ [g (last l)]
   end
 
+(* -------------------------------------------------------------------------
+   I/O
+   ------------------------------------------------------------------------- *)
+
+fun reall_to_string rl =
+  String.concatWith " " (map (IEEEReal.toString o Real.toDecimal) rl)
+
+fun string_to_reall rls =
+  map (valOf o Real.fromDecimal o valOf o IEEEReal.fromString)
+    (String.tokens Char.isSpace rls)
+
+fun string_of_wl wl =
+  let
+    val diml = map (mat_dim) wl
+    fun f (a,b) = its a ^ "," ^ its b
+  in
+    String.concatWith " " (map f diml) ^ "\n" ^
+    String.concatWith "\n\n" (map string_of_mat wl)
+  end
+
+fun string_of_nn nn =
+  let
+    val diml = map (mat_dim o #w) nn
+    fun f (a,b) = its a ^ "," ^ its b
+  in
+    String.concatWith " " (map f diml) ^ "\n" ^
+    String.concatWith "\n\n" (map (string_of_mat o #w) nn)
+  end
+
+fun write_nn file nn = writel file [string_of_nn nn]
+
+fun split_nl nl l = case nl of
+    [] => raise ERR "split_nl" ""
+  | [a] => if length l = a then [l] else raise ERR "split_nl" ""
+  | a :: m =>
+    let val (l1,l2) = part_n a l in
+      l1 :: split_nl m l2
+    end
+
+fun read_wl_sl sl =
+  let
+    val nl = map fst (read_diml (hd sl))
+    val matsl = split_nl nl (tl sl)
+  in
+    map read_mat_sl matsl
+  end
+
+fun read_nn_sl sl =
+  let
+    val nl = map fst (read_diml (hd sl))
+    val matsl = split_nl nl (tl sl)
+    val matl =  map read_mat_sl matsl
+    fun f m = {a = tanh, da = dtanh, w = m}
+  in
+    map f matl
+  end
+  handle Empty => raise ERR "read_nn_sl" ""
+
+fun read_nn file = read_nn_sl (readl file)
+
+fun string_of_v v = reall_to_string (vector_to_list v)
+fun string_of_vv (v1,v2) = string_of_v v1 ^ "," ^ string_of_v v2
+
+fun write_ex file argl = 
+  writel file (map string_of_vv (only_hd argl))
+
+fun vv_of_string s = 
+  let val (a,b) = pair_of_list (String.tokens (fn x => x = #",") s) in
+    (Vector.fromList (string_to_reall a), 
+     Vector.fromList (string_to_reall b))
+  end
+
+fun read_ex file = [map vv_of_string (readl file)]
+
 (*---------------------------------------------------------------------------
   Forward propagation (fp) with memory of the steps
   ---------------------------------------------------------------------------*)
@@ -96,7 +170,7 @@ fun fp_nn nn v = case nn of
 fun bp_layer (fpdata:fpdata) doutnv =
   let
     val doutv =
-      (* should use (#outv fpdata) if you want to use the derivative *)
+      (* should use (#outv fpdata) to use the derivative *)
       let val dav = Vector.map (#da (#layer fpdata)) (#outnv fpdata) in
         mult_rvect dav doutnv
       end
@@ -134,10 +208,7 @@ fun bp_nn fpdatal expectv =
    Average the updates over a batch.
    ------------------------------------------------------------------------- *)
 
-fun train_nn_one nn (inputv,expectv) =
-  let val fpdatal = fp_nn nn inputv in
-    bp_nn fpdatal expectv
-  end
+fun train_nn_one nn (inputv,expectv) = bp_nn (fp_nn nn inputv) expectv
 
 fun transpose_ll ll = case ll of
     [] :: _ => []
@@ -148,7 +219,6 @@ fun sum_dwll dwll = case dwll of
    | _ => map matl_add (transpose_ll dwll)
 
 fun smult_dwl k dwl = map (mat_smult k) dwl
-
 
 (* -------------------------------------------------------------------------
    Loss
@@ -197,120 +267,114 @@ fun random_update_nn nn = update_nn nn (random_wu nn)
    Training schedule
    ------------------------------------------------------------------------- *)
 
-fun train_nn_batch batch nn =
+fun train_nn_subbatch nn subbatch =
   let
-    val bpdatall = map (train_nn_one nn) batch
-    val dwll     = map (map #dw) bpdatall
-    val dwl      = sum_dwll dwll
-    val newnn    = update_nn nn dwl
+    val bpdatall = map (train_nn_one nn) subbatch
+    val dwll = map (map #dw) bpdatall
+    val dwl = sum_dwll dwll
   in
-    (newnn, average_loss bpdatall)
+    (dwl, average_loss bpdatall)
   end
 
-fun train_nn_epoch_aux lossl nn batchl  = case batchl of
+fun write_result file (dwl,loss) =
+  (
+  writel (file ^ "_dwl") [string_of_wl dwl];
+  writel (file ^ "_loss") [rts loss]
+  ) 
+
+fun read_result file =
+  (
+  read_wl_sl (readl (file ^ "_dwl")),
+  (valOf o Real.fromString o hd) (readl (file ^ "_loss"))
+  )
+
+val ext_flag = ref false
+
+val extspec : (nn, (vect * vect) list, (mat list * real)) extspec =
+  {
+  self = "mlNeuralNetwork.extspec",
+  reflect_globals = fn () => "()",
+  function = train_nn_subbatch,
+  write_param = write_nn,
+  read_param = read_nn,
+  write_argl = write_ex,
+  read_argl = read_ex,
+  write_result = write_result,
+  read_result = read_result
+  }
+
+fun train_nn_batch ncore nn batch =
+  let
+    val subbatchl = cut_n ncore batch
+    val (dwll,lossl) = split (
+      if !ext_flag 
+      then parmap_exact_extern ncore extspec nn subbatchl
+      else parmap_exact ncore (train_nn_subbatch nn) subbatchl
+      )
+    val dwl = sum_dwll dwll
+    val newnn = update_nn nn dwl
+  in
+    (newnn, average_real lossl)
+  end
+
+fun train_nn_epoch_aux ncore lossl nn batchl  = case batchl of
     [] => (print_endline ("loss: " ^ Real.toString (average_real lossl));
            nn)
   | batch :: m =>
-    let val (newnn,loss) = train_nn_batch batch nn in
-      train_nn_epoch_aux (loss :: lossl) newnn m
+    let val (newnn,loss) = train_nn_batch ncore nn batch in
+      train_nn_epoch_aux ncore (loss :: lossl) newnn m
     end
 
-fun train_nn_epoch nn batchl = train_nn_epoch_aux [] nn batchl
+fun train_nn_epoch ncore nn batchl = 
+  train_nn_epoch_aux ncore [] nn batchl
 
-fun train_nn_nepoch n nn size trainset =
+fun train_nn ncore n nn size trainset =
   if n <= 0 then nn else
   let
+    val _ = print (" " ^ its n ^ " ")
     val batchl = mk_batch size (shuffle trainset)
-    val new_nn = train_nn_epoch nn batchl
+    val new_nn = train_nn_epoch ncore nn batchl
   in
-    train_nn_nepoch (n - 1) new_nn size trainset
+    train_nn ncore (n - 1) new_nn size trainset
   end
-
-(* -------------------------------------------------------------------------
-   Printing
-   ------------------------------------------------------------------------- *)
-
-fun string_of_wl wl =
-  let
-    val diml = map (mat_dim) wl
-    fun f (a,b) = its a ^ "," ^ its b
-  in
-    String.concatWith " " (map f diml) ^ "\n" ^
-    String.concatWith "\n\n" (map string_of_mat wl)
-  end
-
-fun string_of_nn nn =
-  let
-    val diml = map (mat_dim o #w) nn
-    fun f (a,b) = its a ^ "," ^ its b
-  in
-    String.concatWith " " (map f diml) ^ "\n" ^
-    String.concatWith "\n\n" (map (string_of_mat o #w) nn)
-  end
-
-fun split_nl nl l = case nl of
-    [] => raise ERR "split_nl" ""
-  | [a] => if length l = a then [l] else raise ERR "split_nl" ""
-  | a :: m =>
-    let val (l1,l2) = part_n a l in
-      l1 :: split_nl m l2
-    end
-
-fun read_wl_sl sl =
-  let
-    val nl = map fst (read_diml (hd sl))
-    val matsl = split_nl nl (tl sl)
-  in
-    map read_mat_sl matsl
-  end
-
-fun read_nn_sl sl =
-  let
-    val nl = map fst (read_diml (hd sl))
-    val matsl = split_nl nl (tl sl)
-    val matl =  map read_mat_sl matsl
-    fun f m = {a = tanh, da = dtanh, w = m}
-  in
-    map f matl
-  end
-  handle Empty => raise ERR "read_nn_sl" ""
-
-(*
-load "mlNeuralNetwork"; load "aiLib"; open mlMatrix mlNeuralNetwork aiLib;
-val dir = HOLDIR ^ "/src/AI";
-val nn1 = random_nn (tanh,dtanh) (tanh,dtanh) [4,3,2,1];
-val file = dir ^ "/test";
-writel file [string_of_nn nn1];
-val sl = readl file;
-val nn2 = read_nn_sl sl;
-*)
 
 end (* struct *)
 
-(*---------------------------------------------------------------------------
+(*
 load "mlNeuralNetwork";
-open mlTools mlMatrix mlNeuralNetwork;
-val starting_nn = random_nn (tanh,dtanh) (tanh,dtanh) [2,5,2];
+open aiLib mlMatrix mlNeuralNetwork;
+
+val dim = 20;
+val nex = 12800;
+val nepoch = 1;
+val bsize = 12800;
+val starting_nn = random_nn (tanh,dtanh) (tanh,dtanh) [dim,dim,dim];
+learningrate_glob := 0.02;
 
 fun rev_vector v =
   let val vn = Vector.length v in
     Vector.tabulate (vn, fn i => Vector.sub (v,vn - i - 1))
   end
-
-
-val training_set =
+;
+val set =
   let
-    fun f _ = Vector.tabulate (2, fn _ => random_real () - 0.5)
-    val l = List.tabulate (100000, f)
+    fun f _ = Vector.tabulate (dim, fn _ => random_real () - 0.5)
+    val l = List.tabulate (nex, f)
   in
     map (fn x => (x, rev_vector x)) l
   end
 ;
 
-learningrate_glob := 0.001;
-momentum := 0.0;
-decay := 1.0;
+val ncore = 4;
+val (_,t) = add_time (train_nn ncore nepoch starting_nn bsize) set;
 
-val nn = train_nn_nepoch 1000 starting_nn 100 training_set;
+load "smlParallel"; open smlParallel;
+ext_flag := true;
+parallel_dir := "/dev/shm/thibault";
+val threadl = boss_start_exact ncore extspec;
+val (_,t) = add_time (train_nn ncore nepoch starting_nn bsize) set;
+boss_stop_exact threadl;
+ext_flag := false;
 
-  --------------------------------------------------------------------------- *)
+
+ *)

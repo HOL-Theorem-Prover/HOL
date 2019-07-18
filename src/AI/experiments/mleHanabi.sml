@@ -212,9 +212,10 @@ fun draw_card i card hand =
    Play
    ------------------------------------------------------------------------- *)
 
+(* todo: make it impossible to play a nocard *)
 fun is_playable card pile = 
   let fun test c = if snd card = snd c then fst card = fst c + 1 else true in
-    Vector.all test pile
+    card <> nocard andalso Vector.all test pile
   end
 
 fun update_pile card pile =
@@ -413,7 +414,7 @@ psMCTS.exploration_coeff := 2.0;
 logfile_glob := "hanabi_run54";
 parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^
 (!logfile_glob);
-ncore_mcts_glob := 8;
+ncore_mcts_glob := 16;
 ncore_train_glob := 8;
 ntarget_compete := 100;
 ntarget_explore := 100;

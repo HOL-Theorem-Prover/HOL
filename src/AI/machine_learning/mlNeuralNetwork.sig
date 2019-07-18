@@ -13,6 +13,7 @@ sig
   val dleakyrelu : real -> real
 
   (* NN *)
+  type vect = real vector
   type mat = real vector vector
 
   type layer = {a : real -> real, da : real -> real, w : real vector vector}
@@ -51,15 +52,19 @@ sig
   val random_wu         : nn -> mat list
   val random_update_nn  : nn -> nn
 
-  (* training schedule *)
-  val train_nn_epoch  : nn -> (real vector * real vector) list list -> nn
-  val train_nn_nepoch :
-    int -> nn -> int -> (real vector * real vector) list -> nn
+  (* training *)
+  val ext_flag : bool ref
+  val extspec : (nn, (vect * vect) list, mat list * real) smlParallel.extspec
 
-  (* printing *)
-  val string_of_wl : real vector vector list -> string
+  val train_nn :
+    int -> int -> nn -> int -> (vect * vect) list -> nn
+
+  (* I/O *)
+  val reall_to_string : real list -> string
+  val string_to_reall : string -> real list
+  val string_of_wl : mat list -> string
   val string_of_nn : nn -> string
-  val read_wl_sl : string list -> real vector vector list
+  val read_wl_sl : string list -> mat list
   val read_nn_sl : string list -> nn
 
 
