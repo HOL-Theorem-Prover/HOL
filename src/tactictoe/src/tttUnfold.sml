@@ -344,11 +344,12 @@ fun split_codelevel_aux i s pl program = case program of
       then split_codelevel_aux (i - 1) s (Code (a,tag) :: pl) m
     else split_codelevel_aux i s (Code (a,tag) :: pl) m
   | x :: m => (let_flag := true; split_codelevel_aux i s (x :: pl) m)
-    (* raise an error on this line not to simulate buggy version 2
-       that has better results than v3 *)
 
 fun split_codelevel s sl =
   (let_flag := false; split_codelevel_aux 0 s [] sl)
+  handle HOL_ERR _ =>
+   raise ERR "split_codelevel"
+      (s ^ " : " ^ (String.concatWith " " (original_program sl)))
 
 fun rpt_split_codelevel s sl =
   let val (a,b) = split_codelevel s sl handle _ => (sl,[])
@@ -372,6 +373,12 @@ fun extract_store_thm sl =
     then SOME (rm_bbra_str (rm_squote name), namel, term, qtac, lflag, cont)
     else NONE
   end
+  handle HOL_ERR err =>
+    (
+    print_endline ("Warning: extract_store_thm: " ^
+      String.concatWith " " (first_n 10 sl));
+    NONE
+    )
 
 fun extract_prove sl =
   let
@@ -454,12 +461,13 @@ fun sketch sl = case sl of
   | "handle" :: m => (bfun := false; sketch_pattern "handle" "=>" m)
   | "local" :: m  => Start "local" :: sketch m
   | "let" :: m    => Start "let" :: sketch m
-  | "structure" :: m => (* removing structures *)
-    let
-      val (l,cont) = split_level "end" m
-      val (head,body) = split_level "=" l
-    in
-      sketch body @ [Code(";",Protect)] @ sketch cont
+  | "structure" :: a :: "=" :: "struct" :: m =>
+    let val (body,cont) = split_level "end" m in
+      if String.isSuffix "Theory" a
+      then sketch body @ [Code (";",Protect)] @ sketch cont
+      else map (fn x => Code (x,Protect))
+             (["structure",a,"=","struct"] @ body @ ["end"]) @
+           sketch cont
     end
   | "in" :: m     => In  :: sketch m
   | "end" :: m    => End :: sketch m
@@ -883,6 +891,12 @@ fun print_sl oc sl = case sl of
   | a :: m => (if is_break a then os oc ("\n" ^ a) else os oc (" " ^ a);
                print_sl oc m)
 
+fun write_sl file sl =
+  let val oc = TextIO.openOut file in
+    print_sl oc sl;
+    TextIO.closeOut oc
+  end
+
 fun string_of_bool flag = if flag then "true" else "false"
 
 fun output_flag oc s x =
@@ -968,17 +982,17 @@ fun sketch_wrap thy file =
   let
     val s1 = unquoteString thy file
     val s3 = rm_spaces (rm_comment s1)
-    val _ = writel (tactictoe_dir ^ "/code/test_" ^ thy) [s3]
     val sl = partial_sml_lexer s3
+    val _ = write_sl (tactictoe_dir ^ "/code/before_sketch_" ^ thy) sl
   in
     sketch sl
   end
 
 fun unfold_wrap p = unfold 0 [dnew String.compare (map protect basis)] p
 
-(* --------------------------------------------------------------------------
+(* ------------------------------------------------------------------------
    Rewriting script
-   -------------------------------------------------------------------------- *)
+   ------------------------------------------------------------------------ *)
 
 fun tttsml_of file = OS.Path.base file ^ "_ttt.sml"
 

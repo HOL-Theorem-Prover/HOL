@@ -717,18 +717,18 @@ fun rpt_split_sl s sl =
     if null b then [a] else a :: rpt_split_sl s b
   end
 
-
-fun split_level_aux i s pl sl = case sl of
-    []     => raise ERR "split_level_aux" s
-  | a :: m => if a = s andalso i <= 0
+fun split_level_aux parl s pl sl = case sl of
+    []     => raise ERR "split_level_aux"
+      ("delim: " ^ s ^ ", parl: " ^ String.concatWith " " parl)
+  | a :: m => if a = s andalso null parl
                 then (rev pl, m)
               else if mem a ["let","local","struct","(","[","{"]
-                then split_level_aux (i + 1) s (a :: pl) m
+                then split_level_aux (a :: parl) s (a :: pl) m
               else if mem a ["end",")","]","}"]
-                then split_level_aux (i - 1) s (a :: pl) m
-              else split_level_aux i s (a :: pl) m
+                then split_level_aux (tl parl) s (a :: pl) m
+              else split_level_aux parl s (a :: pl) m
 
-fun split_level s sl = split_level_aux 0 s [] sl
+fun split_level s sl = split_level_aux [] s [] sl
 
 fun rpt_split_level s sl =
   let val (a,b) = split_level s sl handle _ => (sl,[])
