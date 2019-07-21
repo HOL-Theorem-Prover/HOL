@@ -352,8 +352,7 @@ fun split_codelevel s sl =
       (s ^ " : " ^ (String.concatWith " " (original_program sl)))
 
 fun rpt_split_codelevel s sl =
-  let val (a,b) = split_codelevel s sl handle _ => (sl,[])
-  in
+  let val (a,b) = split_codelevel s sl handle _ => (sl,[]) in
     if null b then [a] else a :: rpt_split_codelevel s b
   end
 
@@ -373,10 +372,10 @@ fun extract_store_thm sl =
     then SOME (rm_bbra_str (rm_squote name), namel, term, qtac, lflag, cont)
     else NONE
   end
-  handle HOL_ERR err =>
+  handle HOL_ERR _ =>
     (
     print_endline ("Warning: extract_store_thm: " ^
-      String.concatWith " " (first_n 10 sl));
+      (String.concatWith " "(map original_code (first_n 10 sl))));
     NONE
     )
 
@@ -463,7 +462,7 @@ fun sketch sl = case sl of
   | "let" :: m    => Start "let" :: sketch m
   | "structure" :: a :: "=" :: "struct" :: m =>
     let val (body,cont) = split_level "end" m in
-      if String.isSuffix "Theory" a
+      if String.isSuffix "Theory" a orelse String.isSuffix "Script" a
       then sketch body @ [Code (";",Protect)] @ sketch cont
       else map (fn x => Code (x,Protect))
              (["structure",a,"=","struct"] @ body @ ["end"]) @
