@@ -151,6 +151,9 @@ New features:
     Ambiguous situations are resolved with the standard overloading resolution machinery.
     See the REFERENCE manual’s description of the `add_strliteral_form` function for details.
 
+-   The `Q.SPEC_THEN` function (also available as `qspec_then` in `bossLib`) now type-instantiates provided theorems à la `ISPEC`, and tries all possible parses of the provided quotation in order to make this work.
+    The `Q.ISPEC_THEN` function is deprecated.
+
 Bugs fixed:
 -----------
 
