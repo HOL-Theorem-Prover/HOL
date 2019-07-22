@@ -119,7 +119,7 @@ evaluations.")
 (defvar hol-quoted-definition-re-begin
   (concat "Definition[[:space:]]+[A-Za-z0-9'_]+"
           "\\(\\[[A-Za-z0-9_,=]+\\]\\)?[[:space:]]*:"
-          "\\|Inductive[[:space:]]+[A-Za-z0-9'_]+[[:space]]*:"))
+          "\\|\\(Co\\)?Inductive[[:space:]]+[A-Za-z0-9'_]+[[:space]]*:"))
 (put 'hol-term 'beginning-op
      (function
       (lambda ()
@@ -550,7 +550,7 @@ With a prefix ARG, uses `expandf' rather than `e'."
 
 (defun hol-string-contains-term-delimiters-p (s)
   (< 0 (count-text-match
-        (concat "^Theorem\\|^Definition\\|^Proof\\|^Inductive\\|"
+        (concat "^Theorem\\|^Definition\\|^Proof\\|^\\(Co\\)?Inductive\\|"
                 "^Termination\\|^End\\|[“”‘’`]")
         s)))
 
@@ -707,7 +707,8 @@ starts >%s%s<"
                  (remove-quoted-hol-term ms "^Proof" m))
                 ((string-prefix-p "Definition" ms)
                  (remove-quoted-hol-term ms "^\\(Termination\\|End\\)" m))
-                ((string-prefix-p "Inductive" ms)
+                ((or (string-prefix-p "Inductive" ms)
+                     (string-prefix-p "CoInductive" ms))
                  (remove-quoted-hol-term ms "^End" m))
                 (t ; must be a back-tick
                  (if (not (looking-at "`"))
@@ -724,7 +725,7 @@ starts >%s%s<"
               (word-list-to-regexp
                '("val" "fun" "in" "infix[lr]?" "open" "local" "type"
                  "datatype" "nonfix" "exception" "end" "structure"
-                 "Theorem" "Definition" "Inductive"))))
+                 "Theorem" "Definition" "Inductive" "CoInductive"))))
 
 (setq sml-struct-id-regexp "[A-Za-z][A-Za-z0-9_]*")
 
@@ -1519,16 +1520,15 @@ second is to show the new term.
    (insert ":\n\nProof\nQED\n"))
 
 (defun hol-template-hol-relnish (style name)
-  (insert (format "\nval (%s_rules,%s_ind,%s_cases) = %s‘\n  ...\n’;\n"
-                  name name name style)))
+  (insert (format "\n%s %s:\n  ...\nEnd\n") style name))
 
 (defun hol-template-hol-reln (name)
   (interactive "sConstant name: ")
-  (hol-template-hol-relnish "Hol_reln" name))
+  (hol-template-hol-relnish "Inductive" name))
 
 (defun hol-template-hol-coreln (name)
   (interactive "sConstant name: ")
-  (hol-template-hol-relnish "Hol_coreln" name))
+  (hol-template-hol-relnish "CoInductive" name))
 
 (defun hol-template-new-datatype ()
    (interactive)
@@ -1935,7 +1935,7 @@ second is to show the new term.
 
 (font-lock-add-keywords
  'sml-mode
- '("^Theorem\\>" "^Proof\\>" "^QED\\>" "^Definition\\>" "^Inductive\\>"
+ '("^Theorem\\>" "^Proof\\>" "^QED\\>" "^Definition\\>" "^\\(Co\\)?Inductive\\>"
    "^Termination\\>" "^End\\>"))
 
 (defgroup hol-faces nil "Faces used in pretty-printing HOL values"
