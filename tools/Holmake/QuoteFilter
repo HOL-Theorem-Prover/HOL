@@ -42,8 +42,6 @@ fun resetstate (QFS{comdepth, pardepth, antiquote_stack, mltype_stack,...}) =
 
 fun ECHO (QFS _) s = s
 fun print (QFS _) s = s
-fun ifscript (QFS {inscript,...}) s1 s2 =
-  if inscript then s1 else s2
 
 fun dest_ml_thm_binding bindname s =
     let
@@ -182,8 +180,8 @@ declforms = "val"|"fun"|"structure"|"signature"|"functor"|"abstype"|"datatype"|"
                  else ECHO yyarg yytext)));
 <INITIAL,thmval>{Theorempfx}{ws}*":" => ((yypos,
 (
-  ifscript yyarg
-    (let
+  if inscript then
+    let
       infix |> fun x |> f = f x
       val pfx = mlswitch (!mltype_stack) "" "" ");"
       val s0 = String.extract(yytext,0,SOME (size yytext - 1)) (* drop colon *)
@@ -197,59 +195,60 @@ declforms = "val"|"fun"|"structure"|"signature"|"functor"|"abstype"|"datatype"|"
                   "val " ^ thname ^ " = Q.store_thm(\"" ^ with_attrs_string ^
                   "\"," ^
                   "[QUOTE \""^locpragma yyarg (yytext,yypos) 0)
-    end) yytext
+    end
+  else
+    yytext
 )));
-<INITIAL>^"QED" => ((yypos,
-                   (ifscript yyarg (ECHO yyarg ");") yytext)));
+<INITIAL>^"QED" => (
+  (yypos, if inscript then ECHO yyarg ");" else yytext)
+);
 <INITIAL,thmval>^{Definitionpfx} => (
   (yypos,
-   (
-     ifscript yyarg (
-       let
-         infix |> fun x |> f = f x
-         val pfx = case !mltype_stack of inTHMVAL :: _ => ");" | _ => ""
-         val s0 = String.extract(yytext,0,SOME(size yytext - 1)) (* drop : *)
-         val s = s0 |> Substring.full |> Substring.dropr Char.isSpace
-                    |> Substring.string (* drop w/space between name and : *)
-         val (thname, with_attrs_string, attrs) =
-             dest_ml_thm_binding "Definition" s
-         val ind_thm =
-             case List.find (String.isPrefix "induction=") attrs of
-                 NONE => indthm_munge thname
-               | SOME s => String.extract(s, size "induction=", NONE)
-       in
-         mltype_stack := [];
-         induction_thm := ind_thm;
-         YYBEGIN defnquote;
-         ECHO yyarg (pfx ^
-                     "val " ^ thname ^ " = TotalDefn.qDefine \"" ^
-                     with_attrs_string ^ "\" [QUOTE \"" ^
-                     locpragma yyarg (yytext, yypos) 0)
-       end
-     ) yytext
-   )
+   if inscript then
+     let
+       infix |> fun x |> f = f x
+       val pfx = case !mltype_stack of inTHMVAL :: _ => ");" | _ => ""
+       val s0 = String.extract(yytext,0,SOME(size yytext - 1)) (* drop : *)
+       val s = s0 |> Substring.full |> Substring.dropr Char.isSpace
+                  |> Substring.string (* drop w/space between name and : *)
+       val (thname, with_attrs_string, attrs) =
+           dest_ml_thm_binding "Definition" s
+       val ind_thm =
+           case List.find (String.isPrefix "induction=") attrs of
+               NONE => indthm_munge thname
+             | SOME s => String.extract(s, size "induction=", NONE)
+     in
+       mltype_stack := [];
+       induction_thm := ind_thm;
+       YYBEGIN defnquote;
+       ECHO yyarg (pfx ^
+                   "val " ^ thname ^ " = TotalDefn.qDefine \"" ^
+                   with_attrs_string ^ "\" [QUOTE \"" ^
+                   locpragma yyarg (yytext, yypos) 0)
+     end
+   else yytext
   )
 );
-<INITIAL,thmval>{Theorempfx}({ws}|{newline})+"="
- => ((yypos,
-(
-  ifscript yyarg
-    (let
-      infix |> fun x |> f = f x
-      val pfx = case !mltype_stack of inTHMVAL :: _ => ");" | _ => ""
-      val s0 = String.extract(yytext,0,SOME (size yytext - 1)) (* drop lparen *)
-      val s = s0 |> Substring.full |> Substring.dropr Char.isSpace
-                 |> Substring.string (* drop wspace between name and = *)
-      val (thmname,with_attrs_string,_) = dest_ml_thm_binding "Theorem" s
-    in
-      YYBEGIN thmval;
-      mltype_stack := [inTHMVAL];
-      ECHO yyarg (
-        pfx ^ "val " ^ thmname ^ " = " ^ "(fn rule => boolLib.save_thm(\"" ^
-        with_attrs_string ^ "\",rule)) ("
-      )
-    end) yytext
-)));
+<INITIAL,thmval>{Theorempfx}({ws}|{newline})+"=" => (
+  (yypos,
+   if inscript then
+     let
+       infix |> fun x |> f = f x
+       val pfx = case !mltype_stack of inTHMVAL :: _ => ");" | _ => ""
+       val s0 = String.extract(yytext,0,SOME (size yytext - 1)) (* drop lpar *)
+       val s = s0 |> Substring.full |> Substring.dropr Char.isSpace
+                  |> Substring.string (* drop wspace between name and = *)
+       val (thmname,with_attrs_string,_) = dest_ml_thm_binding "Theorem" s
+     in
+       YYBEGIN thmval;
+       mltype_stack := [inTHMVAL];
+       ECHO yyarg (
+         pfx ^ "val " ^ thmname ^ " = " ^ "(fn rule => boolLib.save_thm(\"" ^
+         with_attrs_string ^ "\",rule)) ("
+       )
+     end else yytext
+  )
+);
 <INITIAL,thmval,TERMINATION_VAL>{fullquotebegin} {ws}* ":" ({letter} | {ws} | [('] | {digit} | {lowergreek}) =>
              ((yypos,
                (
@@ -284,14 +283,15 @@ declforms = "val"|"fun"|"structure"|"signature"|"functor"|"abstype"|"datatype"|"
 <INITIAL>"infix"[lr]?{ws}+({digit}+{ws}*)?">-" => ((yypos, (yytext)));
 <INITIAL,thmval,TERMINATION_VAL>"THEN1" => (
   (yypos,
-   (ifscript yyarg (">>- " ^ Int.toString (linenum yyarg) ^ " ??")
-             yytext))
+   if inscript then ">>- " ^ Int.toString (linenum yyarg) ^ " ??"
+   else yytext)
 );
 <INITIAL,thmval,TERMINATION_VAL>">-" => (
   (yypos,
-   (ifscript yyarg
-             (">>- " ^ Int.toString (linenum yyarg) ^ " ??")
-             yytext))
+   if inscript then
+     ">>- " ^ Int.toString (linenum yyarg) ^ " ??"
+   else
+     yytext)
 );
 <thmval>{declforms} => ((yypos,
 (
