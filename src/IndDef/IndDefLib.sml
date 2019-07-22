@@ -453,7 +453,14 @@ fun isolate_to_front numSchematics Rt (G as (_, gt)) =
     the standard entry-points
    ---------------------------------------------------------------------- *)
 
-fun xHol_reln name q = Hol_mono_reln name (!the_monoset) (term_of q)
+(* turn off verbiage because Raise will redisplay any exceptions *)
+val parse =
+    term_of |> trace ("syntax_error", 0)
+            |> trace ("show_typecheck_errors", 0)
+
+fun xHol_reln name q =
+    Hol_mono_reln name (!the_monoset) (parse q)
+    handle e => Raise (wrap_exn "IndDefLib" "Hol_reln" e)
 
 fun name_from_def t = let
   open boolSyntax
@@ -464,10 +471,6 @@ in
 end
 
 fun Hol_reln q = let
-  val parse = term_of |> trace ("syntax_error", 0)
-                      |> trace ("show_typecheck_errors", 0)
-              (* turn off verbiage because the Raise below will redisplay any
-                 exceptions *)
   val def as (def_t,_) = parse q
   val name = name_from_def def_t
 in
