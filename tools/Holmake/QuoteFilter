@@ -419,7 +419,7 @@ Inductivepfx = "Inductive"{ws}+{alphaMLid}{ws}*":";
   (yypos, (
      YYBEGIN INITIAL;
      nextline yyarg (yypos + size yytext);
-     ECHO yyarg ("\"] NONE; " ^ magic_bind yyarg)
+     ECHO yyarg ("\"\n] NONE; " ^ magic_bind yyarg)
      )
   )
 );
