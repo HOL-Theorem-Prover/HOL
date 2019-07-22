@@ -1520,7 +1520,7 @@ second is to show the new term.
    (insert ":\n\nProof\nQED\n"))
 
 (defun hol-template-hol-relnish (style name)
-  (insert (format "\n%s %s:\n  ...\nEnd\n") style name))
+  (insert (format "\n%s %s:\n  ...\nEnd\n" style name)))
 
 (defun hol-template-hol-reln (name)
   (interactive "sConstant name: ")
