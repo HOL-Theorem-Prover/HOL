@@ -16,10 +16,10 @@ val VAR_EQ_TAC = BasicProvers.VAR_EQ_TAC ;
     The representing type is :num -> 'a option
    ---------------------------------------------------------------------- *)
 
-val (lrep_ok_rules, lrep_ok_coind, lrep_ok_cases) = Hol_coreln`
+CoInductive lrep_ok:
    (lrep_ok (\n. NONE))
 /\ (lrep_ok t ==> lrep_ok (\n. if n = 0 then SOME h else t(n - 1)))
-`;
+End
 
 val lrep_ok_alt' = Q.prove (
   `!n f. lrep_ok f ==> IS_SOME (f (SUC n)) ==> IS_SOME (f n)`,

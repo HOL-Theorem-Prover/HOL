@@ -148,7 +148,7 @@ Theorempfx = "Theorem"{ws}+{alphaMLid}("["{alphaMLid_list}"]")?;
 Definitionpfx =
   "Definition"{ws}+{alphaMLid}("["{defn_attribute_list}"]")?{ws}*":";
 declforms = "val"|"fun"|"structure"|"signature"|"functor"|"abstype"|"datatype"|"exception"|"open"|";"|"infix"[lr]?|"local";
-Inductivepfx = "Inductive"{ws}+{alphaMLid}{ws}*":";
+Inductivepfx = ("Co")?"Inductive"{ws}+{alphaMLid}{ws}*":";
 %%
 
 {locpragma} => ((yypos,
@@ -255,18 +255,23 @@ Inductivepfx = "Inductive"{ws}+{alphaMLid}{ws}*":";
      let
        infix |> fun x |> f = f x
        val pfx = case !mltype_stack of inTHMVAL :: _ => ");" | _ => ""
-       val s0 = String.extract(yytext,10,SOME (size yytext-11))
-       (* drop colon and Inductive keyword  *)
-       val s = s0 |> Substring.full
-                  |> Substring.dropr Char.isSpace(* space between name and : *)
-                  |> Substring.string
+       val s0 = String.substring(yytext,0,size yytext - 1) (* drop : *)
+       val s =
+           s0 |> Substring.full
+              |> Substring.dropl (not o Char.isSpace) (* drop keyword *)
+              |> Substring.dropl Char.isSpace (* space before name *)
+              |> Substring.dropr Char.isSpace (* space after name *)
+              |> Substring.string
+       val (entrypoint,indsfx) =
+           if String.isPrefix "Ind" yytext then ("IndDefLib.xHol_reln", "_ind")
+           else ("CoIndDefLib.xHol_coreln", "_coind")
      in
        mltype_stack := [];
        YYBEGIN defnquote;
        induction_thm := s ^ "_strongind";
        ECHO yyarg
-            (pfx ^ "val (" ^ s ^ "_rules," ^ s ^ "_ind," ^ s ^ "_cases) = \
-             \(fn q =>     fn _ => IndDefLib.xHol_reln \"" ^
+            (pfx ^ "val (" ^ s ^ "_rules," ^ s ^ indsfx ^ "," ^
+             s ^ "_cases) = (fn q => fn _ => " ^ entrypoint ^ " \"" ^
              String.toString s ^ "\" q) [QUOTE \"" ^
              locpragma yyarg (yytext, yypos) 0)
      end

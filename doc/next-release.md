@@ -83,15 +83,21 @@ New features:
     Whether or not the `induction=` attribute is used, the induction theorem is also made available as an SML binding under the appropriate name.
     This means that one does not need to follow one’s definition with a call to something like `DB.fetch` or `theorem` just to make the induction theorem available at the SML level.
 
--   Finally, there is an analogous `Inductive` syntax for defining inductive relations with `Hol_reln`.
+-   Finally, there are analogous `Inductive` and `CoInductive` syntaxes for defining inductive and coinductive relations (using `Hol_reln` and `Hol_coreln` underneath).
     The syntax is
 
            Inductive stem:
               quoted term material
            End
 
-    where, as above, the `Inductive` and `End` keywords must be in the leftmost column of the script file.
-    The `stem` part of the syntax drives the selection of the various theorem names (`stem_rules`, `stem_ind`, `stem_cases` and `stem_strongind`) for both the SML environment and the exported theory.
+    or
+
+           CoInductive stem:
+              quoted term material
+           End
+
+    where, as above, the `Inductive`, `CoInductive` and `End` keywords must be in the leftmost column of the script file.
+    The `stem` part of the syntax drives the selection of the various theorem names (*e.g.*, `stem_rules`, `stem_ind`, `stem_cases` and `stem_strongind` for inductive definitions) for both the SML environment and the exported theory.
     The actual names of new constants in the quoted term material do not affect these bindings.
 
 -   Holmake now understands targets whose suffixes are the string `Theory` to be instructions to build all of the files associated with a theory.
