@@ -84,11 +84,11 @@ val _ = TeX_notation {hol = "^+", TeX = ("\\HOLTokenSupPlus{}", 1)}
 val _ = OpenTheoryMap.OpenTheory_const_name {const={Thy="relation",Name="TC"},name=(["Relation"],"transitiveClosure")}
 
 
-val RTC_DEF = new_definition(
-  "RTC_DEF",
-  ``RTC (R : 'a -> 'a -> bool) a b =
-      !P.  (!x. P x x) /\
-           (!x y z. R x y /\ P y z ==> P x z) ==> P a b``);
+Inductive RTC:
+  (!x. RTC R x x)
+    /\
+  (!x y z. R x y /\ RTC R y z ==> RTC R x z)
+End
 val _ = add_rule { fixity = Suffix 2100,
                    block_style = (AroundEachPhrase, (Portable.CONSISTENT,0)),
                    paren_style = OnlyIfNecessary,
@@ -133,7 +133,7 @@ Theorem RTC_INDUCT:
   !R P. (!x. P x x) /\ (!x y z. R x y /\ P y z ==> P x z) ==>
         (!x (y:'a). RTC R x y ==> P x y)
 Proof
-  REWRITE_TAC [RTC_DEF] THEN MESON_TAC []
+  MESON_TAC [RTC_ind] (* differs only in choice of induction variable "P" *)
 QED
 
 val TC_RULES = store_thm(
@@ -145,31 +145,24 @@ val TC_RULES = store_thm(
     FIRST_ASSUM MATCH_MP_TAC THEN RES_TAC THEN ASM_MESON_TAC []
   ]);
 
-val RTC_RULES = store_thm(
-  "RTC_RULES",
-  ``!R. (!x. RTC R (x:'a) x) /\ (!x y z. R x y /\ RTC R y z ==> RTC R x z)``,
-  REWRITE_TAC [RTC_DEF] THEN MESON_TAC []);
+Theorem RTC_RULES = RTC_rules;
+Theorem RTC_REFL[simp]:
+  RTC R x x
+Proof REWRITE_TAC [RTC_RULES]
+QED
 
-val RTC_REFL = store_thm(
-  "RTC_REFL",
-  ``RTC R x x``,
-  REWRITE_TAC [RTC_RULES]);
-val _ = export_rewrites ["RTC_REFL"]
+Theorem RTC_SINGLE[simp]:
+  !R x y. R x y ==> RTC R x y
+Proof
+  PROVE_TAC [RTC_RULES]
+QED
 
-val RTC_SINGLE = store_thm(
-  "RTC_SINGLE",
-  ``!R x y. R x y ==> RTC R x y``,
-  PROVE_TAC [RTC_RULES]);
-val _ = export_rewrites ["RTC_SINGLE"]
-
-val RTC_STRONG_INDUCT = store_thm(
-  "RTC_STRONG_INDUCT",
-  ``!R P. (!x. P x x) /\ (!x y z. R x y /\ RTC R y z /\ P y z ==> P x z) ==>
-          (!x (y:'a). RTC R x y ==> P x y)``,
-  REPEAT GEN_TAC THEN STRIP_TAC THEN
-  MATCH_MP_TAC ((CONV_RULE (SIMP_CONV bool_ss [RTC_RULES]) o
-                 Q.SPECL [`R`, `\u v. RTC R u v /\ P u v`]) RTC_INDUCT) THEN
-  REPEAT STRIP_TAC THEN ASM_MESON_TAC [RTC_RULES]);
+Theorem RTC_STRONG_INDUCT:
+  !R P. (!x. P x x) /\ (!x y z. R x y /\ RTC R y z /\ P y z ==> P x z) ==>
+        (!x (y:'a). RTC R x y ==> P x y)
+Proof
+  ASM_MESON_TAC [RTC_strongind]
+QED
 
 val RTC_RTC = store_thm(
   "RTC_RTC",
@@ -504,18 +497,15 @@ val TC_RC_EQNS = store_thm(
 (* can get inductive principles for properties which do not hold generally
   but only for particular cases of x or y in RTC R x y *)
 
-val RTC_ALT_DEF = Q.store_thm ("RTC_ALT_DEF",
-  `!R a b. RTC R a b = !Q. Q b /\ (!x y. R x y /\ Q y ==> Q x) ==> Q a`,
-  REWRITE_TAC [RTC_DEF] THEN REPEAT (STRIP_TAC ORELSE EQ_TAC)
-  THENL [ FIRST_X_ASSUM (ASSUME_TAC o Ho_Rewrite.REWRITE_RULE [BETA_THM] o
-      Q.SPEC `\x y. if y = b then Q x else RTC R x y`),
-    FIRST_X_ASSUM (ASSUME_TAC o Ho_Rewrite.REWRITE_RULE [BETA_THM] o
-      Q.SPEC `\x. P x (b : 'a)`) ] THEN
-  VALIDATE (POP_ASSUM (ACCEPT_TAC o UNDISCH)) THEN
-  POP_ASSUM (K ALL_TAC) THEN REPEAT STRIP_TAC THEN
-  TRY COND_CASES_TAC THEN
-  FULL_SIMP_TAC bool_ss [RTC_REFL] THEN
-  RES_TAC THEN IMP_RES_TAC RTC_RULES) ;
+Theorem RTC_ALT_DEF:
+  !R a b. RTC R a b <=> !Q. Q b /\ (!x y. R x y /\ Q y ==> Q x) ==> Q a
+Proof
+  REWRITE_TAC [EQ_IMP_THM] THEN CONV_TAC (REDEPTH_CONV FORALL_AND_CONV) THEN
+  CONJ_TAC THEN1 (GEN_TAC THEN Induct_on `RTC` THEN METIS_TAC[]) THEN
+  REPEAT GEN_TAC THEN
+  DISCH_THEN (Q.SPEC_THEN `\z. RTC R z b` (MATCH_MP_TAC o BETA_RULE)) THEN
+  METIS_TAC[RTC_RULES]
+QED
 
 val RTC_ALT_INDUCT = Q.store_thm ("RTC_ALT_INDUCT",
   `!R Q b. Q b /\ (!x y. R x y /\ Q y ==> Q x) ==> !x. RTC R x b ==> Q x`,
