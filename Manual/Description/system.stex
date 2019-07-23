@@ -1737,7 +1737,7 @@ Thus, to indicate the \ml{simp} attribute (for which, see discussion of the stat
 \end{alltt}
 Multiple attributes can be listed between the square brackets, separated by commas.
 
-\index{Theorem keyword@\ml{Theorem} keyword|(}
+\index{Theorem syntax@\ml{Theorem} syntax|(}
 \smallskip\noindent
 Equivalently, a special \ml{Theorem} syntax is available for use in script files.
 One can write
@@ -1791,6 +1791,7 @@ But recall: if writing library code to prove and store theorems, the underlying 
 \index{theorems, in HOL logic@theorems, in \HOL{} logic!saving of|)}%
 \index{saving theorems|)}%
 \index{theorem attributes|)}
+\index{Theorem syntax@\ml{Theorem} syntax|)}
 %
 } % end local definition of mname, mth macros etc
 
