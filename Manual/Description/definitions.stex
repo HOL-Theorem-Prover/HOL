@@ -1849,15 +1849,10 @@ $g(x) = x$, then the resulting instantiation of
   \konst{linRec} (x) = \konst{linRec}(x) + 1
 \]
 %
-This is not, however, derivable in \HOL{}, because recursion schemas
-are defined by instantiating the wellfounded recursion theorem, and
-therefore certain abstract termination constraints arise that
-must be satisfied before recursion equations can be used in an
-unfettered manner. The entrypoint for defining a schema is
-\ml{TotalDefn.DefineSchema}. On the \konst{linRec} example it
-behaves as follows (note that the schematic variables should
-only occur on the right-hand side of the definition when making
-the definition of a schema):
+This is not, however, derivable in \HOL{}, because recursion schemas are defined by instantiating the wellfounded recursion theorem, and therefore certain abstract termination constraints arise that must be satisfied before recursion equations can be used in an unfettered manner.
+The entrypoint for defining a schema is \ml{TotalDefn.DefineSchema}, which can also be targeted by using the \ml{schematic} attribute with the \ml{Definition} syntax.
+\index{theorem attributes!schematic@\ml{schematic}}
+On the \konst{linRec} example it behaves as follows (note that the schematic variables should only occur on the right-hand side of the definition when making the definition of a schema):
 %
 \setcounter{sessioncount}{0}
 \begin{session}
