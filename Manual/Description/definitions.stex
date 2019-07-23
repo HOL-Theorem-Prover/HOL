@@ -1884,7 +1884,7 @@ proving the other constraints.
 \index{inductive relations|(}
 
 \index{Hol_reln, defining inductive relations@\ml{Hol\_reln}, defining inductive relations}
-\index{Inductive syntax@\ml{Inductive} syntax}
+\index{inductive relations!Inductive syntax@\ml{Inductive} syntax}
 \index{inductive relations!Hol_reln (ML function)@\ml{Hol\_reln} (ML function)}
 Inductive definitions are made with the special \ml{Inductive} syntax form, which wraps the underlying function \ml{Hol\_reln}, which is in turn found
 in the \ml{bossLib} structure.
@@ -1946,7 +1946,7 @@ possible ways of obtaining it by the rules.
 If the ``stem'' of the first constant defined in a set of clauses is such that resulting \ML{} bindings in an exported theory file will result in illegal \ML{}, then the \ml{xHol\_reln} function should be used.
 The \ml{xHol\_reln} function is analogous to the \ml{xDefine} function for defining recursive functions (see Section~\ref{TFL}).
 
-\index{Inductive syntax@\ml{Inductive} syntax}
+\index{inductive relations!Inductive syntax@\ml{Inductive} syntax}
 Alternatively, the \ml{Inductive} syntax can be used, requiring the user to specify the stem, but saving on verbosity: instead of writing
 \begin{verbatim}
    val (foo_rules,foo_ind,foo_cases) = Hol_reln`
@@ -1955,7 +1955,7 @@ Alternatively, the \ml{Inductive} syntax can be used, requiring the user to spec
 \end{verbatim}
 one writes
 \begin{verbatim}
-   Induction foo:
+   Inductive foo:
      ...
    End
 \end{verbatim}
