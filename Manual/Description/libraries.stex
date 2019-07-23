@@ -3269,16 +3269,23 @@ over Peano numbers to one over numerals, which is the format that
 
 \paragraph{Storing definitions}
 
-\ml{Define} automatically adds its definition to the global compset
-used by \ml{EVAL} and \ml{EVAL\_TAC}. However, when \ml{Hol\_defn} is
-used to define a function, its defining equations are not added to the
-global compset until \ml{tprove} is used to prove the termination
-constraints.  Moreover, \ml{tprove} does not add the definition
-persistently into the global compset. Therefore, one must use
-\ml{add\_persistent\_funs} in a theory to be sure that definitions
-made by \ml{Hol\_defn} are available to \ml{EVAL} in descendant
-theories.  Another point: one must call \ml{add\_persistent\_funs}
-before \ml{export\_theory} is called.
+\HOL{}'s top-level definition facilities (\ie, the \ml{Define} function and the \ml{Definition} syntax) automatically add definitions to the global compset
+used by \ml{EVAL} and \ml{EVAL\_TAC}.
+However, when \ml{Hol\_defn} is used to define a function, its defining equations are not added to the global compset until \ml{tprove} is used to prove the termination constraints.
+Moreover, \ml{tprove} does not add the definition persistently into the global compset.
+Therefore, one must use \ml{add\_persistent\_funs} in a theory to be sure that definitions made by \ml{Hol\_defn} are available to \ml{EVAL} in descendant theories.
+Another point: one must call \ml{add\_persistent\_funs} before \ml{export\_theory} is called.
+
+Occasionally, one does \emph{not} want a definition automatically added to the global compset.
+\index{theorem attributes!nocompute@\ml{nocompute}}
+The easiest way to achieve this is to use the \ml{nocompute} ``pseudo-attribute'':
+\begin{session}
+\begin{alltt}
+>> Definition f_def[nocompute]: f x = x + 10
+   End
+>> EVAL ``f 6``;
+\end{alltt}
+\end{session}
 
 
 \section{Arithmetic Libraries---\texttt{numLib}, \texttt{intLib} and \texttt{realLib}}
