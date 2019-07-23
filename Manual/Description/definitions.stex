@@ -1161,16 +1161,10 @@ value of \holtxt{f 0 0} is \holtxt{1}. In the implementation,
 ambiguities arising from such overlapping patterns are systematically
 translated away in a pre-processing step.
 
- Another case of ambiguity in patterns is shown above: the specification
-is incomplete since it does not tell how \holtxt{f} should behave when
-applied to two non-zero arguments: e.g., \holtxt{f (SUC m) (SUC n)}. In the
-implementation, such missing clauses are filled in, and have the value
-\holtxt{ARB}. This `pattern-completion` step is a way of turning descriptions
-of partial functions into total functions suitable for \HOL. However,
-since the user has not completely specified the function, the system
-takes that as a hint that the user is not interested in using the
-function at the missing-but-filled-in clauses, and so such clauses are
-dropped from the final theorem.
+Another case of ambiguity in patterns is shown above: the specification is incomplete since it does not tell how \holtxt{f} should behave when applied to two non-zero arguments: e.g., \holtxt{f (SUC m) (SUC n)}.
+In the implementation, such missing clauses are filled in, and have the value \holtxt{ARB}.
+This `pattern-completion' step is a way of turning descriptions of partial functions into total functions suitable for \HOL.
+However, since the user has not completely specified the function, the system takes that as a hint that the user is not interested in using the function at the missing-but-filled-in clauses, and so such clauses are dropped from the final theorem.
 
 In summary, \ml{Definition} will derive the unambiguous and complete
 equations
@@ -1558,11 +1552,9 @@ Now we can invoke \ml{WF\_REL\_TAC}:
 %
 Both conjuncts of this goal are quite easy to prove.
 %
-The technique of `weighting` nodes in a datatype in order to prove
-termination also goes by the name of \emph{polynomial interpretation}. It
-must be admitted that finding the correct weighting for a termination
-proof is more an art than a science. Typically, one makes a guess and
-then tries the termination proof to see if it works.
+The technique of `weighting' nodes in a datatype in order to prove termination also goes by the name of \emph{polynomial interpretation}.
+It must be admitted that finding the correct weighting for a termination proof is more an art than a science.
+Typically, one makes a guess and then tries the termination proof to see if it works.
 
 \paragraph{Lexicographic combinations}
 
@@ -1605,9 +1597,9 @@ failed to match, so the algorithm advances one character ahead in
 $\mathit{s}$ and starts matching from the beginning of $p_0$. If
 $\mathit{s}$ is empty, however, then we return \holtxt{F}. Note that
 $\mathit{rst}$ and $s$ both represent the string being
-searched: $\mathit{rst}$ is a `local` version of $s$: we recurse into
+searched: $\mathit{rst}$ is a `local' version of $s$: we recurse into
 $\mathit{rst}$  as long as there are matches with the pattern $p$. However,
-if the search eventually fails, then $s$, which `remembers` where the search
+if the search eventually fails, then $s$, which `remembers' where the search
 started from, is used to restart the search.
 
 So much for the behaviour of the function. Why does it terminate? There
@@ -1749,7 +1741,7 @@ The `add' and `drop' functions only affect the current state of the congruence d
 
 \paragraph{Higher-order recursion and congruence rules}
 
-A `higher-order` recursion is one in which a higher-order function is
+A `higher-order' recursion is one in which a higher-order function is
 used to apply the recursive function to arguments. In order for the
 correct termination conditions to be proved for such a recursion,
 congruence rules for the higher order function must be known to the
