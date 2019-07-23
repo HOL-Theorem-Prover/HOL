@@ -2099,8 +2099,8 @@ added in future sessions when the current theory is reloaded.
 \end{alltt}
 \end{session}
 
-\index{theorem attributes}
-Alternatively, the user may also flag theorems directly when using \ml{store\_thm} or \ml{save\_thm} by appending the \ml{simp} attribute to the name of the theorem.
+\index{theorem attributes!simp@\ml{simp}}
+Alternatively, the user may also flag theorems directly when using \ml{store\_thm}, \ml{save\_thm}, or the \ml{Theorem} and \ml{Definition} syntaxes by appending the \ml{simp} attribute to the name of the theorem.
 Thus:
 \begin{session}
 \begin{verbatim}
@@ -2111,6 +2111,15 @@ QED
 \end{verbatim}
 \end{session}
 is a way of avoiding having to write a call to \ml{export\_rewrites}.
+Equally, the example above could be written:
+\begin{session}
+\begin{alltt}
+>>_ Definition tsize_def[simp]:
+      (tsize Leaf = 0) /\
+      (tsize (Node n t1 t2) = n + tsize t1 + tsize t2)
+    End
+\end{alltt}
+\end{session}
 
 As a general rule, \ml{(srw\_ss())} includes all of its context's
 ``obvious rewrites'', as well as code to do standard calculations
