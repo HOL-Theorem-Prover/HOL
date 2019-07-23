@@ -1716,6 +1716,7 @@ Once a theorem has been proved, it can be saved with the function
 \index{theorems, in HOL logic@theorems, in \HOL{} logic!saving of|(}%
 \index{saving theorems|(}%
 \index{save_thm@\ml{save\_thm}|pin}
+\index{save_thm@\ml{save\_thm}|seealso{\ml{Theorem} syntax}}
 \begin{verbatim}
    save_thm : (string * thm) -> thm
 \end{verbatim}
@@ -1757,6 +1758,7 @@ Attributes can also be added; for example:
 If one wishes to prove a goal with a tactic (see Chapter~\ref{tactics-and-tacticals}), and store the resulting theorem, the combination of these actions can be achieved with the \ml{store\_thm} function:
 \begin{holboxed}
 \index{store_thm@\ml{store\_thm}|pin}
+\index{store_thm@\ml{store\_thm}|seealso{\ml{Theorem} syntax}}
 \begin{verbatim}
    store_thm : (string * term * tactic) -> thm
 \end{verbatim}
@@ -1765,7 +1767,7 @@ A call to \ml{store\_thm(\mname,$t$,\mtac)} results in the application of \mtac{
 If the tactic is successful, the resulting theorem is saved under the name \mname, as before.
 Also as before, theorem attributes can be added to the name.
 
-Finally, there is a \ml{Theorem} syntax for use in script files to reduce the need to write the same name twice.
+Finally, for use in script files only, there is a \ml{Theorem} syntax to replace \ml{store\_thm}, reducing the need to write the same name twice, and giving a cleaner appearance.
 One can write\index{Proof keyword@\ml{Proof} keyword}\index{QED keyword@\ml{QED} keyword}
 \begin{alltt}
    Theorem \mname[attr1,attr2,...]:
@@ -1783,7 +1785,7 @@ For example:
      rpt strip_tac
    QED
 \end{alltt}
-Note further that the \ml{Proof} and \ml{QED} keywords must occur in column 1 of the script file so that the parser can know when the term and tactic arguments terminate.
+Note further that the \ml{Proof} and \ml{QED} keywords must occur in the leftmost column of the script file so that the parser can know when the term and tactic arguments terminate.
 
 The choice to use \ml{Theorem} syntax, or to use \ml{store\_thm} directly is a matter of users' aesthetic preference.
 But recall: if writing library code to prove and store theorems, the underlying \ml{store\_thm} must be used, as the special treatment of the \ml{Theorem} keyword is only available in script files.
