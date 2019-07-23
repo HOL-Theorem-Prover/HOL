@@ -18,6 +18,7 @@ fun lnumdie linenum extra exn =
 val outputPrompt = ref "> "
 
 val quote = QFRead.fromString
+val default_linewidth = 77
 
 fun quoteFile lnum fname =
   QFRead.inputFile fname handle e => lnumdie lnum "" e
@@ -55,17 +56,24 @@ end
 
 fun compiler {push = obufPush, read = obufRD, reset = obufRST} handler infn =
   let
+    fun pushback c infn =
+        let val used = ref false
+        in
+          fn () => if !used then infn() else (used := true; SOME c)
+        end
     fun record_error {message,...} = PolyML.prettyPrint(obufPush,70) message
-    fun rpt acc =
+    fun rpt infn acc =
       (obufRST();
        PolyML.compiler(infn,
                        [PolyML.Compiler.CPErrorMessageProc record_error,
                         PolyML.Compiler.CPOutStream obufPush]) ()
        handle e => handler (obufRD()) e;
-       if obufRD() = "" then String.concat (List.rev acc)
-       else rpt (obufRD() :: acc))
+       case infn() of
+           NONE => String.concat (List.rev (obufRD() :: acc))
+         | SOME c => rpt (pushback c infn) (obufRD() :: acc)
+      )
   in
-    rpt []
+    rpt infn []
   end
 
 fun silentUse lnum s =
@@ -318,8 +326,29 @@ in
     end
   else if String.isPrefix "##thm" line then
     let
-      val thm_name = String.extract(line, 5, NONE) |> dropLWS
-      val raw_output = compile (lnumdie (linenum lbuf)) (thm_name ^ " :Thm.thm")
+      val suffix = String.extract(line, 5, NONE)
+      val ((guffp,guffs), thm_name) =
+          if Char.isDigit (String.sub(suffix,0)) then
+            let
+              val (w,nm) =
+                  case String.tokens Char.isSpace suffix of
+                      [ds,nm] => ((valOf (Int.fromString ds), nm)
+                                  handle Option =>
+                                         lnumdie (linenum lbuf)
+                                                 "Bad integer for linewidth"
+                                                 Option)
+                    | _ => lnumdie (linenum lbuf)
+                                   "Malformed ##thm line"
+                                   (Fail "")
+            in
+              (("val _ = linewidth := " ^ Int.toString w ^"; ",
+                "val _ = linewidth := " ^ Int.toString default_linewidth ^ ";"),
+               nm ^ "\n")
+            end
+          else (("",""), dropLWS suffix)
+      val raw_output =
+          compile (lnumdie (linenum lbuf))
+                  (guffp ^ thm_name ^ " :Thm.thm;" ^ guffs)
       val output = transformOutput umap ws (strip_for_thm raw_output)
                         |> deleteTrailingWhiteSpace
                         |> (fn s => "  " ^ s)
