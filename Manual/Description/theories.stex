@@ -3505,6 +3505,7 @@ Several different notions of a collection of elements are available in
 \subsection{Sets (\theoryimp{pred\_set})}
 \label{sec:theory-of-sets}
 \index{sets, the HOL theory of@sets, the \HOL{} theory of|(}
+>>__ open pred_setTheory
 
 An extensive development of set theory is available in the theory
 \theoryimp{pred\_set}. Sets are represented by functions of the type
@@ -3522,34 +3523,36 @@ is based on. In \HOL, membership is represented by a the infix
 constant \holtxt{IN}, defined in theory \theoryimp{bool} for
 convenience.
 \begin{hol}
-\begin{verbatim}
-   IN_DEF   |- IN = \x f. f x
-\end{verbatim}
+\begin{alltt}
+  ##thm IN_DEF
+\end{alltt}
 \end{hol}
 The \holtxt{IN} operator is merely a way of applying the
 characteristic function to an item, as the following trivial
 consequence of the definition shows:
 \begin{hol}
-\begin{verbatim}
-   SPECIFICATION   |- !P x. x IN P = P x
-\end{verbatim}
+\begin{alltt}
+  ##thm SPECIFICATION
+\end{alltt}
 \end{hol}
 Two sets are equal if they have the same elements.
 \begin{hol}
-\begin{verbatim}
-   EXTENSION   |- !s t. (s = t) = (!x. (x IN s) = (x IN t))
-\end{verbatim}
+\begin{alltt}
+  ##thm EXTENSION
+\end{alltt}
 \end{hol}
+The negation of set-membership is not a separate constant, but is available as a convenient overload (in both ASCII and Unicode forms).
+Thus, instead of writing \holtxt{\td(e IN s)}, one can instead write \holtxt{e NOTIN s} or \holtxt{e \(\notin\) s}.
 
 \paragraph{Empty and universal sets}
 \index{universal set}
 The empty set is the characteristic function that is constantly false. The constant \holtxt{EMPTY} denotes the empty set; it may be written as \holtxt{\{\}} and \holtxt{$\emptyset$} (U+2205).
 The universal set, \holtxt{UNIV}, on a type is the characteristic function that is always true for elements of that type.
 \begin{hol}
-\begin{verbatim}
-   EMPTY_DEF   |- {} = (\x. F)
-   UNIV_DEF    |- UNIV = (\x. T)
-\end{verbatim}
+\begin{alltt}
+  ##thm EMPTY_DEF
+  ##thm UNIV_DEF
+\end{alltt}
 \end{hol}
 In addition to \holtxt{UNIV} (perhaps with a type annotation \holtxt{:'a~set}), one may also write \holtxt{univ(:'a)} to represent the universal set over type \holtxt{:'a}.
 The Unicode syntax \holtxt{$\mathbb{U}$(:'a)} means the same.
@@ -3576,21 +3579,21 @@ discussed in the next subsection. Set union ({\small\verb+UNION+},
 written infix) and intersection ({\small\verb+INTER+}, also infix)
 are given their usual definitions by set comprehension.
 \begin{hol}
-\begin{verbatim}
-   INSERT_DEF  |- !x s. x INSERT s = {y | (y = x) \/ y IN s}
-   UNION_DEF   |- !s t. s UNION t = {x | x IN s \/ x IN t}
-   INTER_DEF   |- !s t. s INTER t = {x | x IN s /\ x IN t}
-\end{verbatim}
+\begin{alltt}
+  ##thm INSERT_DEF
+  ##thm UNION_DEF
+  ##thm INTER_DEF
+\end{alltt}
 \end{hol}
 \holtxt{UNION} and \holtxt{INTER} are binary
 operations. Indexed union and intersection operations, \ie,
 $\bigcup_{i \in P}$ and $\bigcap_{i \in P}$ are provided by the
 definitions of  \holtxt{BIGUNION} and \holtxt{BIGINTER}.
 \begin{hol}
-\begin{verbatim}
-   BIGUNION    |- !P. BIGUNION P = {x | ?s. s IN P /\ x IN s}
-   BIGINTER    |- !P. BIGINTER P = {x | !s. s IN P ==> x IN s}
-\end{verbatim}
+\begin{alltt}
+  ##thm BIGUNION
+  ##thm BIGINTER
+\end{alltt}
 \end{hol}
 Both \holtxt{BIGUNION} and \holtxt{BIGINTER} reduce a set of sets to a
 set and thus have the type
@@ -3603,11 +3606,11 @@ Set inclusion (\holtxt{SUBSET}, infix), proper set inclusion
 follows:
 %
 \begin{hol}
-\begin{verbatim}
-   SUBSET_DEF  |- !s t. s SUBSET t = !x. x IN s ==> x IN t
-   PSUBSET_DEF |- !s t. s PSUBSET t = s SUBSET t /\ ~(s = t)
-   POW_DEF     |- !set. POW set = {s | s SUBSET set}
-\end{verbatim}
+\begin{alltt}
+  ##thm SUBSET_DEF
+  ##thm PSUBSET_DEF
+  ##thm POW_DEF
+\end{alltt}
 \end{hol}
 
 \paragraph{Set difference and complement}
@@ -3618,40 +3621,30 @@ set comprehension. Based on that, the deletion of a single element
 universe of a type is always available via \holtxt{UNIV}, the
 complement (\holtxt{COMPL}) of a set may be taken.
 \begin{hol}
-\begin{verbatim}
-   DIFF_DEF    |- !s t. s DIFF t = {x | x IN s /\ ~(x IN t)}
-   DELETE_DEF  |- !s x. s DELETE x = s DIFF {x}
-   COMPL_DEF   |- !P. COMPL P = UNIV DIFF P
-\end{verbatim}
+\begin{alltt}
+  ##thm DIFF_DEF
+  ##thm DELETE_DEF
+  ##thm COMPL_DEF
+\end{alltt}
 \end{hol}
 
 \paragraph{Functions on sets}
 The image of a function $f :\alpha \to \beta$ on
 a set (\holtxt{IMAGE}) is defined with a set comprehension.
 \begin{hol}
-\begin{verbatim}
-   IMAGE_DEF   |- !f s. IMAGE f s = {f x | x IN s}
-\end{verbatim}
+\begin{alltt}
+  ##thm IMAGE_DEF
+\end{alltt}
 \end{hol}
 %
-Injections, surjections, and bijections between sets are defined
-as follows:
+Injections, surjections, and bijections between sets are defined as follows:
 %
 \begin{hol}
-\begin{verbatim}
-   INJ_DEF
-        |- !f s t.
-             INJ f s t =
-             (!x. x IN s ==> f x IN t) /\
-             !x y. x IN s /\ y IN s ==> (f x = f y) ==> (x = y)
-   SURJ_DEF
-        |- !f s t.
-             SURJ f s t =
-             (!x. x IN s ==> f x IN t) /\
-             !x. x IN t ==> ?y. y IN s /\ (f y = x)
-
-   BIJ_DEF |- !f s t. BIJ f s t = INJ f s t /\ SURJ f s t
-\end{verbatim}
+\begin{alltt}
+  ##thm INJ_DEF
+  ##thm68 SURJ_DEF
+  ##thm BIJ_DEF
+\end{alltt}
 \end{hol}
 
 \paragraph{Finite sets}
@@ -3660,10 +3653,9 @@ The finite sets (\holtxt{FINITE}) are defined inductively as those
 built from the empty set by a finite number of insertions.
 %
 \begin{hol}
-\begin{verbatim}
-   FINITE_DEF
-     |- !s. FINITE s = !P. P {} /\ (!s. P s ==> !e. P (e INSERT s)) ==> P s
-\end{verbatim}
+\begin{alltt}
+  ##thm FINITE_DEF
+\end{alltt}
 \end{hol}
 %
 \noindent
@@ -3676,12 +3668,9 @@ The finite sets have an induction theorem:
 \index{induction theorems, in HOL logic@induction theorems, in \HOL{} logic!for finite sets}
 %
 \begin{hol}
-\begin{verbatim}
-   FINITE_INDUCT
-     |- !P. P {} /\
-           (!s. FINITE s /\ P s ==> !e. ~(e IN s) ==> P (e INSERT s))
-           ==>  !s. FINITE s ==> P s
-\end{verbatim}
+\begin{alltt}
+##thm FINITE_INDUCT
+\end{alltt}
 \end{hol}
 %
 As mentioned, set operations apply to both finite and infinite
@@ -3691,12 +3680,9 @@ cardinality of an infinite set is not specified.
 \index{cardinality of (finite) sets}
 %
 \begin{hol}
-\begin{verbatim}
-   CARD_DEF
-     |- (CARD {} = 0) /\
-        !s. FINITE s ==>
-            !x. CARD (x INSERT s) = if x IN s then CARD s else SUC (CARD s)
-\end{verbatim}
+\begin{alltt}
+  ##thm CARD_DEF
+\end{alltt}
 \end{hol}
 %
 Since the finite and infinite sets are dealt with uniformly in
@@ -3706,10 +3692,9 @@ following theorem relating cardinality and subsets is only true for
 finite sets.
 %
 \begin{hol}
-\begin{verbatim}
-   CARD_PSUBSET
-     |- !s. FINITE s ==> !t. t PSUBSET s ==> CARD t < CARD s
-\end{verbatim}
+\begin{alltt}
+  ##thm CARD_PSUBSET
+\end{alltt}
 \end{hol}
 %
 An extensive suite of theorems dealing with finiteness and cardinality
@@ -3720,17 +3705,16 @@ The product of two sets ({\small\verb+CROSS+}, infix) is defined
 with a set comprehension.
 %
 \begin{hol}
-\begin{verbatim}
-   CROSS_DEF   |- !P Q. P CROSS Q = {p | FST p IN P /\ SND p IN Q}
-\end{verbatim}
+\begin{alltt}
+  ##thm CROSS_DEF
+\end{alltt}
 \end{hol}
 %
 \noindent Cardinality and cross product are related by the following theorem:
 \begin{hol}
-\begin{verbatim}
-   CARD_CROSS
-     |- !P Q. FINITE P /\ FINITE Q ==> (CARD (P CROSS Q) = CARD P * CARD Q)
-\end{verbatim}
+\begin{alltt}
+  ##thm CARD_CROSS
+\end{alltt}
 \end{hol}
 
 \paragraph{Recursive functions on sets}
@@ -3744,22 +3728,16 @@ known as \emph{left-commutativity}, namely, $f\;x\;(f\;y\;z) =
 f\;y\;(f\;x\;z)$, then $f$ can be applied by folding it on the set
 in a tail-recursive fashion.
 \begin{hol}
-\begin{verbatim}
-   ITSET_EMPTY
-     |- !f b. ITSET f {} b = b
-   COMMUTING_ITSET_INSERT
-     |- !f s. (!x y z. f x (f y z) = f y (f x z)) /\ FINITE s ==>
-              !x b. ITSET f (x INSERT s) b = ITSET f (s DELETE x) (f x b)
-\end{verbatim}
+\begin{alltt}
+  ##thm ITSET_EMPTY
+  ##thm COMMUTING_ITSET_INSERT
+\end{alltt}
 \end{hol}
 A recursive version is also available:
 \begin{hol}
-\begin{verbatim}
-   COMMUTING_ITSET_RECURSES
-     |- !f e s b.
-          (!x y z. f x (f y z) = f y (f x z)) /\ FINITE s ==>
-          (ITSET f (e INSERT s) b = f e (ITSET f (s DELETE e) b))
-\end{verbatim}
+\begin{alltt}
+  ##thm COMMUTING_ITSET_RECURSES
+\end{alltt}
 \end{hol}
 For the full derivation, see the sources of {\small\verb+pred_set+}.
 The definition of {\small\verb+ITSET+} allows, for example, the
@@ -3768,14 +3746,10 @@ elements, from which a recursive characterization and other useful
 theorems are derived.
 %
 \begin{hol}
-\begin{verbatim}
-   SUM_IMAGE_DEF
-     |- !f s. SIGMA f s = ITSET (\e acc. f e + acc) s 0
-   SUM_IMAGE_THM
-     |- !f. (SIGMA f {} = 0) /\
-            !e s. FINITE s ==>
-                  (SIGMA f (e INSERT s) = f e + SIGMA f (s DELETE e))
-\end{verbatim}
+\begin{alltt}
+  ##thm SUM_IMAGE_DEF
+  ##thm SUM_IMAGE_THM
+\end{alltt}
 \end{hol}
 
 \paragraph{Other definitions and theorems}
@@ -3788,25 +3762,14 @@ each other, but do not express any deep theorems of set theory.
 However, one notable theorem is Koenig's Lemma, which states that
 every finitely branching infinite tree has an infinite path. There are
 many ways to formulate this theorem, depending on how the notion of
-tree is formalized. In \theoryimp{pred\_set}, finite branching is
-defined as a predicate on a relation.
-%
-\begin{hol}
-\begin{verbatim}
-   finite_branching_def
-     |- !R. finitely_branching R = !x. FINITE {y | R x y}
-\end{verbatim}
-\end{hol}
-%
-From this, the following version of Koenig's Lemma is stated and
+tree is formalized.
+In \HOL's formulation, the tree is characterised by making various assumptions about the finite-ness or otherwise of elements reachable using a relation \holtxt{R}.
+Then the following version of Koenig's Lemma is stated and
 proved:
 \begin{hol}
-\begin{verbatim}
-   KoenigsLemma
-     |- finitely_branching R ==>
-          !x. ~FINITE {y | RTC R x y} ==>
-              ?f. (f 0 = x) /\ !n. R (f n) (f (SUC n))
-\end{verbatim}
+\begin{alltt}
+  ##thm KoenigsLemma
+\end{alltt}
 \end{hol}
 
 
@@ -3864,9 +3827,9 @@ parses to:
 where \ml{GSPEC} is characterized by:
 %
 \begin{hol}
-\begin{verbatim}
-   GSPECIFICATION  |- !f v. (v IN GSPEC f) = (?x. (v,T) = f x)
-\end{verbatim}
+\begin{alltt}
+  ##thm GSPECIFICATION
+\end{alltt}
 \end{hol}
 
 This somewhat cryptic specification can be understood by exercising an
@@ -3880,9 +3843,9 @@ example. The syntax
 %
 is mapped by the \HOL{} parser to
 \begin{hol}
-\begin{verbatim}
-   a IN GSPEC(\(p,q). ((p+q), (p < q /\ q < r)))
-\end{verbatim}
+\begin{alltt}
+   ##parsetm a IN GSPEC(\(p,q). ((p+q), (p < q /\ q < r)))
+\end{alltt}
 \end{hol}
 %
 which, by \ml{GSPECIFICATION}, is equal to
