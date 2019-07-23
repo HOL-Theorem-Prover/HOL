@@ -1756,10 +1756,12 @@ summing the results of a function in a list.
 %
 \setcounter{sessioncount}{0}
 \begin{session}
-\begin{verbatim}
-  Define `(SIGMA f [] = 0) /\
-          (SIGMA f (h::t) = f h + SIGMA f t)`;
-\end{verbatim}
+\begin{alltt}
+>>_ Definition SIGMA_def:
+     (SIGMA f [] = 0) /\
+     (SIGMA f (h::t) = f h + SIGMA f t)
+    End
+\end{alltt}
 \end{session}
 %
 We then use \holtxt{SIGMA} in the definition of a function for
@@ -1767,13 +1769,13 @@ summing the results of a function in a arbitrarily
 (finitely) branching tree.
 %
 \begin{session}
-\begin{verbatim}
-  Datatype `ltree = Node 'a (ltree list)`;
+\begin{alltt}
+  >>_ Datatype `ltree = Node 'a (ltree list)`;
 
   Defn.Hol_defn
     "ltree_sigma"
     `ltree_sigma f (Node v tl) = f v + SIGMA (ltree_sigma f) tl`;
-\end{verbatim}
+\end{alltt}
 \end{session}
 %
 In this definition, \holtxt{SIGMA} is applied to a partial application
@@ -1784,20 +1786,11 @@ to be made to extract the correct termination conditions. Otherwise,
 the following unhappy situation results:
 %
 \begin{session}
-\begin{verbatim}
-  HOL function definition (recursive)
-
-  Equation(s) :
-    [..] |- ltree_sigma f (Node v tl)
-              = f v + SIGMA (\a. ltree_sigma f a) tl
-
-  Induction :
-    [..] |- !P. (!f v tl. (!a. P f a) ==> P f (Node v tl)) ==> !v v1. P v v1
-
-  Termination conditions :
-    0. WF R
-    1. !tl v f a. R (f,a) (f,Node v tl) : defn
-\end{verbatim}
+\begin{alltt}
+  >>- with_flag(Feedback.emit_WARNING, false) (Defn.Hol_defn
+    "ltree_sigma")
+    `ltree_sigma f (Node v tl) = f v + SIGMA (ltree_sigma f) tl`;
+\end{alltt}
 \end{session}
 %
 \index{congruence rules!in termination analysis}
@@ -1816,29 +1809,21 @@ for \holtxt{SIGMA}. Such a congruence theorem is the following:
    |- !l1 l2 f g.
        (l1=l2) /\ (!x. MEM x l2 ==> (f x = g x)) ==>
        (SIGMA f l1 = SIGMA g l2)
+>>__ val SIGMA_CONG = mk_thm([], ``!l1 l2 f g.
+       (l1=l2) /\ (!x. MEM x l2 ==> (f x = g x)) ==>
+       (SIGMA f l1 = SIGMA g l2)``);
 \end{verbatim}
 \end{hol}
 %
 Once \ml{Hol\_defn} has been told about this theorem, via \ml{DefnBase}'s \ml{add\_cong} or \ml{export\_cong} functions, the termination conditions extracted for the definition are now provable, since \holtxt{a} is a proper subterm of \holtxt{Node v tl}.
 %
+>>__ structure Defn = struct open Defn val Hol_defn = fn s => with_flag(Feedback.emit_WARNING, false) (Hol_defn s) end;
 \begin{session}
-\begin{verbatim}
-  val _ = DefnBase.add_cong SIGMA_CONG;
-
-  Defn.Hol_defn
-    "ltree_sigma"
+\begin{alltt}
+>> val _ = DefnBase.add_cong SIGMA_CONG;
+>> Defn.Hol_defn "ltree_sigma"
     `ltree_sigma f (Node v tl) = f v + SIGMA (ltree_sigma f) tl`;
-
-  > val it =
-      HOL function definition (recursive)
-
-      Equation(s) :  ...  (* as before *)
-      Induction :    ...  (* as before *)
-
-      Termination conditions :
-        0. WF R
-        1. !v f tl a. MEM a tl ==> R (f,a) (f,Node v tl)
-\end{verbatim}
+\end{alltt}
 \end{session}
 
 \subsection{Recursion schemas}
