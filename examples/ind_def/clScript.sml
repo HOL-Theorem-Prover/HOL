@@ -12,17 +12,19 @@ val _ = set_fixity "#"  (Infixl 1100);
 val _ = set_mapped_fixity {tok = "-->", fixity = Infix(NONASSOC, 450),
                            term_name = "redn"}
 
-val (redn_rules, _, _) = Hol_reln `
+Inductive redn:
     (!x y f. x --> y   ==>    f # x --> f # y) /\
     (!f g x. f --> g   ==>    f # x --> g # x) /\
     (!x y.   K # x # y --> x) /\
-    (!f g x. S # f # g # x --> (f # x) # (g # x))`;
+    (!f g x. S # f # g # x --> (f # x) # (g # x))
+End
 
 val _ = hide "RTC";
 
-val (RTC_rules, _, RTC_cases) = Hol_reln `
+Inductive RTC:
     (!x.     RTC R x x) /\
-    (!x y z. R x y /\ RTC R y z ==> RTC R x z)`;
+    (!x y z. R x y /\ RTC R y z ==> RTC R x z)
+End
 
 val confluent_def = Define`
   confluent R =
@@ -78,12 +80,12 @@ QED
 
 val _ = set_mapped_fixity {tok = "-||->", fixity = Infix(NONASSOC, 450),
                            term_name = "predn"}
-val (predn_rules, predn_ind, predn_cases) = Hol_reln `
+Inductive predn:
   (!x. x -||-> x) /\
   (!x y u v. x -||-> y /\ u -||-> v ==> x # u -||-> y # v) /\
   (!x y. K # x # y -||-> x) /\
   (!f g x. S # f # g # x -||-> (f # x) # (g # x))
-`;
+End
 
 val RTC_monotone = store_thm(
   "RTC_monotone",

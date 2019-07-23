@@ -1912,14 +1912,13 @@ proving the other constraints.
 \index{inductive relations|(}
 
 \index{Hol_reln, defining inductive relations@\ml{Hol\_reln}, defining inductive relations}
+\index{Inductive syntax@\ml{Inductive} syntax}
 \index{inductive relations!Hol_reln (ML function)@\ml{Hol\_reln} (ML function)}
-Inductive definitions are made with the function \ml{Hol\_reln}, found
-in the \ml{bossLib} structure, and the resulting definitions and
-theorems are handled with functions defined in the library
-\ml{IndDefLib}. The \ml{Hol\_reln} function takes a
-term quotation as input and attempts to define the relations there
-specified.  The input term quotation must parse to a term that
-conforms to the following grammar:
+Inductive definitions are made with the special \ml{Inductive} syntax form, which wraps the underlying function \ml{Hol\_reln}, which is in turn found
+in the \ml{bossLib} structure.
+The resulting definitions and theorems are handled with functions defined in the library \ml{IndDefLib}.
+The \ml{Inductive} syntax and \ml{Hol\_reln} function take a term quotation as input and attempt to define the relations there specified.
+The input term quotation must parse to a term that conforms to the following grammar:
 \newcommand{\nonterm}[1]{\ensuremath{\langle\mathit{#1}\rangle}}
 \begin{eqnarray*}
    \nonterm{inputFormat} &::=& \nonterm{clause} \;\holtxt{/\bk}\; \nonterm{inputFormat} \;\;|\;\; \nonterm{clause}\\
@@ -1943,14 +1942,13 @@ free variables, but it is also permissible to use existential
 quantification in the hypotheses.  If a clause has no free variables,
 it is permissible to have no universal quantification.)
 
-A successful invocation of \ml{Hol\_reln} returns three theorems
-$(\mathit{rules},\mathit{ind},\mathit{cases})$. Each is also stored in
-the current theory segment.
+A successful invocation of this definitional principle returns three important theorems $\mathit{rules}$, $\mathit{ind}$ and $\mathit{cases})$.
+Each is also stored in the current theory segment.
 \begin{itemize}
 \item $\mathit{rules}$ is a conjunction of implications
 that will be the same as the input term quotation; the theorem is
 saved under the name \ml{<stem>\_rules}, where \ml{<stem>} is the name of the
-first relation defined by the function.
+first relation defined by the function (if using \ml{Hol\_reln}), or as provided by the user, when using the \ml{Inductive} syntax.
 \item $\mathit{ind}$ is the induction principle for the relations,
 saved under the name \ml{<stem>\_ind}.
 \item $\mathit{cases}$ is the so-called `cases' or `inversion' theorem
@@ -1976,8 +1974,25 @@ possible ways of obtaining it by the rules.
 If the ``stem'' of the first constant defined in a set of clauses is such that resulting \ML{} bindings in an exported theory file will result in illegal \ML{}, then the \ml{xHol\_reln} function should be used.
 The \ml{xHol\_reln} function is analogous to the \ml{xDefine} function for defining recursive functions (see Section~\ref{TFL}).
 
+\index{Inductive syntax@\ml{Inductive} syntax}
+Alternatively, the \ml{Inductive} syntax can be used, requiring the user to specify the stem, but saving on verbosity: instead of writing
+\begin{verbatim}
+   val (foo_rules,foo_ind,foo_cases) = Hol_reln`
+     ...
+   `;
+\end{verbatim}
+one writes
+\begin{verbatim}
+   Induction foo:
+     ...
+   End
+\end{verbatim}
+where, as with other special syntaxes, the keywords (\ml{Inductive} and \ml{End}) have to be in the leftmost column of the source file.
+
 \paragraph{Strong induction principles}
-So called ``strong'' versions of induction principles (in which instances of the relation being defined appear as extra hypotheses), are automatically proved when a definition is made with \ml{Hol\_reln}. The strong induction principle for a relation is used when the \ml{Induct\_on} tactic is used.
+So called ``strong'' versions of induction principles (in which instances of the relation being defined appear as extra hypotheses), are automatically proved when an inductive definition is made.
+\index{Induct_on (ML induction tactic)@\ml{Induct\_on} (\ML{} induction tactic)}
+The strong induction principle for a relation is used when the \ml{Induct\_on} tactic is used.
 
 \paragraph{Adding monotone operators}
 \index{inductive relations!monotone operators for}
@@ -2032,68 +2047,31 @@ the following:
 %
 \setcounter{sessioncount}{0}
 \begin{session}
-\begin{verbatim}
-  Hol_reln
-    `EVEN 0 /\
+\begin{alltt}
+>> Inductive EVEN_ODD:
+     EVEN 0 /\
      (!n. ODD n ==> EVEN (n + 1)) /\
-     (!n. EVEN n ==> ODD (n + 1))`;
-\end{verbatim}
+     (!n. EVEN n ==> ODD (n + 1))
+   End
+\end{alltt}
 \end{session}
 %
-The result is three theorems
+The next example shows how to inductively define the reflexive and transitive closure of relation $R$, which we write as \holtxt{rtc}.
+Note that \holtxt{R}, as a schematic variable, is not quantified in the rules. This is appropriate because it is \holtxt{rtc R} that has the inductive characterisation, not \holtxt{rtc} itself.
 %
 \begin{session}
-\begin{verbatim}
-  > val it =
-    (|- EVEN 0 /\
-        (!n. ODD n ==> EVEN (n + 1)) /\
-        (!n. EVEN n ==> ODD (n + 1)),
-
-     |- !EVEN' ODD'.
-           EVEN' 0 /\
-           (!n. ODD' n ==> EVEN' (n + 1)) /\
-           (!n. EVEN' n ==> ODD' (n + 1))
-           ==>
-           (!a0. EVEN a0 ==> EVEN' a0) /\
-           (!a1. ODD a1 ==> ODD' a1),
-
-     |- (!a0. EVEN a0 = (a0 = 0) \/
-                        ?n. (a0 = n + 1) /\ ODD n) /\
-        (!a1. ODD a1 = ?n. (a1 = n + 1) /\ EVEN n)
-    ) : thm * thm * thm
-\end{verbatim}
+\begin{alltt}
+  >> Inductive rtc:
+       (!x. rtc R x x) /\
+       (!x z. (?y. R x y /\ rtc R y z) ==> rtc R x z)
+     End
+\end{alltt}
 \end{session}
 %
-The next example shows how to inductively define the reflexive and
-transitive closure of relation $R$. Note that \holtxt{R}, as a
-schematic variable, is not quantified in the rules. This is
-appropriate because it is \holtxt{RTC R} that has the inductive
-characterisation, not \holtxt{RTC} itself.
-%
-\begin{session}
-\begin{verbatim}
-  - Hol_reln `(!x. RTC R x x) /\
-             (!x z. (?y. R x y /\ RTC R y z) ==> RTC R x z)`;
-
-  > val it =
-     (|- !R. (!x. RTC R x x) /\
-             !x z. (?y. R x y /\ RTC R y z) ==> RTC R x z,
-
-      |- !R RTC'.
-           (!x. RTC' x x) /\
-           (!x z. (?y. R x y /\ RTC' y z) ==> RTC' x z)
-           ==>
-           (!a0 a1. RTC R a0 a1 ==> RTC' a0 a1),
-
-      |- !R a0 a1. RTC R a0 a1 = (a1 = a0) \/ ?y. R a0 y /\ RTC R y a1
-     ) : thm * thm * thm
-\end{verbatim}
-\end{session}
-%
-The \ml{Hol\_reln} function may be used to define multiple relations,
-as in the definition of \holtxt{EVEN} and \holtxt{ODD}.  The relations
-may or may not be mutually recursive.  The clauses for each relation
-need not be contiguous.
+Inductive definitions may be used to define multiple relations,
+as in the definition of \holtxt{EVEN} and \holtxt{ODD}.
+The relations may or may not be mutually recursive.
+The clauses for each relation need not be contiguous.
 
 \subsection{Proofs with inductive relations}
 \label{sec:proofs-with-inductive-relations}
@@ -2123,19 +2101,14 @@ The low-level approach to goals of this form is to apply
 \end{verbatim}
 \index{Induct_on (ML induction tactic)@\ml{Induct\_on} (\ML{} induction tactic)}
 A slightly more high-level approach is use the \ml{Induct\_on} tactic, which will actually use the automatically generated ``strong'' induction principle.%
-\footnote{Thus, to get the equivalent of the \ml{Induct_on} call, one might write something like \ml{HO_MATCH_MP_TAC~(theorem "R_strongind")}.}
+\footnote{To get an approximation of the \ml{Induct_on} call, one might write something like \ml{HO_MATCH_MP_TAC~R_strongind}.}
 (This tactic is also used to perform structural inductions over algebraic data types; see Section~\ref{sec:bossLib}.)
-When performing a rule induction, the quotation passed to \ml{Induct\_on} should be of the constant being used.
-For the sake of aesthetics, the constant may also be applied to arguments.
-Thus, one can write
+When performing a rule induction, the quotation passed to \ml{Induct\_on} should be of the constant, perhaps also applied to arguments.
+Indeed, if there are multiple instances of an \holtxt{R}-term in the goal, then quoting arguments allows selection of the correct term to induct on.
+Thus, one can write invocations such as
 \begin{verbatim}
-   Induct_on `R`
+   Induct_on `R (f x) y`
 \end{verbatim}
-or
-\begin{verbatim}
-   Induct_on `R x y`
-\end{verbatim}
-and the effect will be the same.
 \index{inductive relations|)}
 
 

@@ -89,22 +89,21 @@ We make our arrow symbol non-associative, thereby making it a
 parse error to write \verb!x --> y --> z!.
 It would be nice to be able to write this and have it mean \verb!x --> y /\ y --> z!, but this is not presently possible with the HOL parser.
 
-Our next step is to actually define the relation with the \ml{Hol\_reln} function.
-This function returns three separate theorems, but we will only need to refer to the first:
+Our next step is to actually define the relation, using the \ml{Inductive} syntax.
+Using the provided stem \ml{redn} as a base, the underlying facility proves a number of theorems for us, and shows us three: \ml{redn\_rules}, \ml{redn\_ind}, \ml{redn\_cases}.
+These theorems are available in the \ML{} session under those names, and are also saved under those names when the theory is exported.
 \begin{session}
 \begin{alltt}
->> val (redn_rules, _, redn_cases) = Hol_reln
-     `(!x y f. x --> y   ==>    f # x --> f # y) /\
-      (!f g x. f --> g   ==>    f # x --> g # x) /\
-      (!x y.   K # x # y --> x) /\
-      (!f g x. S # f # g # x --> (f # x) # (g # x))`;
+>> Inductive redn:
+     (!x y f. x --> y   ==>    f # x --> f # y) /\
+     (!f g x. f --> g   ==>    f # x --> g # x) /\
+     (!x y.   K # x # y --> x) /\
+     (!f g x. S # f # g # x --> (f # x) # (g # x))
+   End
 \end{alltt}
 \end{session}
 
-In addition to proving these three theorems for us, the inductive definitions package will also save them to disk when the theory is exported.
-
-Now, using our theorem \texttt{redn\_rules} we can demonstrate single
-steps of our reduction relation:
+Using the \ml{redn\_rules} theorem we can demonstrate single steps of our reduction relation:
 \begin{session}
 \begin{alltt}
 >> PROVE [redn_rules] ``S # (K # x # x) --> S # x``;
@@ -161,9 +160,10 @@ We inherit the nice syntax for the old constant with our new one.)
 \begin{alltt}
 >> val _ = hide "RTC";
 
->> val (RTC_rules, _, RTC_cases) = Hol_reln `
+>> Inductive RTC:
     (!x.     RTC R x x) /\
-    (!x y z. R x y /\ RTC R y z ==> RTC R x z)`;
+    (!x y z. R x y /\ RTC R y z ==> RTC R x z)
+   End
 \end{alltt}
 \end{session}
 Now let us go back to the notion of confluence.  We want this to mean
@@ -256,14 +256,15 @@ Packaged up so as to remove the sub-goal package commands, we can
 prove and save the theorem for future use by:
 \begin{session}
 \begin{alltt}
->> val confluent_normforms_unique = store_thm(
-     "confluent_normforms_unique",
-     ``!R. confluent R ==>
-           !x y z. RTC R x y /\ normform R y /\
-                   RTC R x z /\ normform R z ==> (y = z)``,
+>> Theorem confluent_normforms_unique:
+     !R. confluent R ==>
+         !x y z. RTC R x y /\ normform R y /\
+                 RTC R x z /\ normform R z ==> y = z
+   Proof
      rw[confluent_def] >>
      `?u. RTC R y u /\ RTC R z u` by metis_tac [] >>
-     metis_tac [normform_def, RTC_cases]);
+     metis_tac [normform_def, RTC_cases]
+   QED
 \end{alltt}
 \end{session}
 \eos{}
@@ -550,13 +551,14 @@ We use the \texttt{-||->} symbol to indicate parallel reduction because of its o
     application ($\KC\;x\;y$) can reduce, its RHS (\KC) can't.
 \begin{session}
 \begin{alltt}
->>_ val (predn_rules, _, predn_cases) = Hol_reln
-      `(!x. x -||-> x) /\
-       (!x y u v. x -||-> y /\ u -||-> v
-                         ==>
-                  x # u -||-> y # v) /\
-       (!x y. K # x # y -||-> x) /\
-       (!f g x. S # f # g # x -||-> (f # x) # (g # x))`;
+>>_ Inductive predn:
+      (!x. x -||-> x) /\
+      (!x y u v. x -||-> y /\ u -||-> v
+                        ==>
+                 x # u -||-> y # v) /\
+      (!x y. K # x # y -||-> x) /\
+      (!f g x. S # f # g # x -||-> (f # x) # (g # x))
+    End
 \end{alltt}
 \end{session}
 
