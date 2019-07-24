@@ -1220,6 +1220,7 @@ If there is an associated induction theorem, its name is derived as follows:
 \item
 If the principal name ends with \ml{\_def} or with \ml{\_DEF}, then the induction theorem is the same as the principal name with the suffix replaced by \ml{\_ind} or \ml{\_IND} respectively.
 \item Otherwise, the induction theorem is the principal name with \ml{\_ind} added as a suffix.
+\index{theorem attributes!induction_thm@\ml{induction\_thm}}
 \item Finally, the user may override these choices by adding an \ml{induction\_thm=\textit{name}} ``attribute'' to the principal name.
 \end{itemize}
 
@@ -1316,7 +1317,7 @@ are defined:
 \end{alltt}
 \end{hol}
 
-\ml{Definition} may also be used to define non-recursive functions:
+\noindent \ml{Definition} may also be used to define non-recursive functions:
 %
 \begin{hol}
 \begin{alltt}
@@ -1325,8 +1326,7 @@ are defined:
 \end{alltt}
 \end{hol}
 
-\ml{Definition} may also be used to define non-recursive functions
-with complex pattern-matching.
+Finally, \ml{Definition} may also be used to define non-recursive functions with complex pattern-matching.
 The pattern-matching pre-processing of {Define} can be convenient for this purpose, but can also generate a large number of equations.
 It may also return theorems that do not look quite like what was originally input.
 For more on this, see the discussion of case expressions (into which the clauses in a \ml{Definition} are converted internally) in Section~\ref{CaseExp}.
@@ -1815,7 +1815,9 @@ for \holtxt{SIGMA}. Such a congruence theorem is the following:
 \end{verbatim}
 \end{hol}
 %
-Once \ml{Hol\_defn} has been told about this theorem, via \ml{DefnBase}'s \ml{add\_cong} or \ml{export\_cong} functions, the termination conditions extracted for the definition are now provable, since \holtxt{a} is a proper subterm of \holtxt{Node v tl}.
+Once \ml{Hol\_defn} has been told about this theorem, via \ml{DefnBase}'s \ml{add\_cong} or \ml{export\_cong} functions, or by using a `defncong` attribute on a theorem when it is saved,%
+\index{theorem attributes!defncong@\ml{defncong}}%
+the termination conditions extracted for the definition are now provable, since \holtxt{a} is a proper subterm of \holtxt{Node v tl}.
 %
 >>__ structure Defn = struct open Defn val Hol_defn = fn s => with_flag(Feedback.emit_WARNING, false) (Hol_defn s) end;
 \begin{session}
