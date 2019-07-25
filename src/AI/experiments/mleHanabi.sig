@@ -27,4 +27,12 @@ sig
   val gamespec : (board,move) mlReinforce.gamespec
   val extspec : board mlReinforce.extgamespec
 
+  val play_game : mlTreeNeuralNetwork.tnn -> board -> int
+  val explore : mlTreeNeuralNetwork.tnn -> board -> (term * real list) list
+  val explore_extspec : 
+    (mlTreeNeuralNetwork.tnn, board, (term * real list) list) smlParallel.extspec
+  val collect : 
+    int -> mlTreeNeuralNetwork.tnn -> int -> (term * real list) list
+  val play_ngame : mlTreeNeuralNetwork.tnn -> int -> real
+
 end

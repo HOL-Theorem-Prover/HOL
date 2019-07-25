@@ -538,7 +538,8 @@ fun train_tnn_nepoch (ncore,bsize) n tnn (ptrain,ptest) =
   let
     val batchl = (mk_batch bsize o shuffle) ptrain
     val (newtnn,trainloss) = train_tnn_epoch ncore tnn batchl
-    val testloss = average_real (map (infer_mse tnn) ptest)
+    val testloss = if null ptest then 0.0 else 
+      average_real (map (infer_mse tnn) ptest)
     fun nice r = pad 8 "0" (rts (approx 6 (r / 2.0)))
     val _ = print_endline
       (its n ^ " train: " ^ nice trainloss ^ " test: " ^ nice testloss)

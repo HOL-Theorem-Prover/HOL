@@ -218,9 +218,15 @@ fun argl_file () = !parallel_dir ^ "/argl"
 fun result_file wid = wid_dir wid ^ "/result"
 fun arg_file wid = wid_dir wid ^ "/arg"
 
+fun profile_file wid = wid_dir wid ^ "/profile"
+
+fun write_profile wid =
+  (
+  writel (profile_file wid) [PolyML.makestring (Profile.results ())] 
+  )
+
 (* -------------------------------------------------------------------------
-   Each worker has a copy of the list.
-   Workers are given the index of element to process in the list.
+   Worker
    ------------------------------------------------------------------------- *)
 
 fun worker_process wid (f,l) job =
@@ -228,7 +234,9 @@ fun worker_process wid (f,l) job =
 and worker_listen wid fl =
   if exists_file (widin_file wid) then
     let val s = hd (readl_rm (widin_file wid)) in
-      if s = "stop" then () else worker_process wid fl (string_to_int s)
+      if s = "stop" 
+      then ()
+      else worker_process wid fl (string_to_int s)
     end
   else (mini_sleep (); worker_listen wid fl)
 
@@ -413,12 +421,12 @@ fun parmap_queue_extern ncore extspec param argl =
    Similar to parmap_exact.
    ------------------------------------------------------------------------- *)
 
-fun codewait_of_extspec extspec wid =
+fun code_exact extspec wid =
   [
   "open smlParallel;",
   "val _ = parallel_dir := " ^ quote (!parallel_dir) ^ ";",
   "val _ = " ^ #reflect_globals extspec () ^ ";",
-  "worker_wait_exact " ^ its wid ^ #self extspec ^ ";"
+  "worker_start_exact " ^ its wid ^ #self extspec ^ ";"
   ]
 
 fun worker_exec_exact wid extspec = 
@@ -432,11 +440,17 @@ fun worker_exec_exact wid extspec =
     worker_wait_exact wid extspec 
   end
 and worker_wait_exact wid extspec =
-  if exists_file (widin_file wid) then 
+  if Profile.profile "worker_wait" exists_file (widin_file wid) then 
     let val s = hd (readl_rm (widin_file wid)) in
-      if s = "stop" then () else worker_exec_exact wid extspec
+      if s = "stop" then write_profile wid else worker_exec_exact wid extspec
     end
-  else worker_wait_exact wid extspec
+  else (mini_sleep (); worker_wait_exact wid extspec)
+
+fun worker_start_exact wid (extspec: ('a,'b,'c) extspec) =
+  (
+  writel_atomic (widout_file wid) ["up"];
+  worker_wait_exact wid extspec
+  )
 
 fun send_job_exact extspec (wid,arg) =
   (
@@ -455,9 +469,9 @@ fun boss_collect_exact extspec widl =
     fun wait widl = 
       if null widl then () else
       let val newwidl = filter (not o exists_file o widout_file) widl in
-        wait newwidl
+        (mini_sleep (); wait newwidl)
       end
-    val _ = wait widl
+    val _ = Profile.profile "boss_wait" wait widl
     val l = map (#read_result extspec o result_file) widl
   in
     app (remove_file o widout_file) widl; 
@@ -470,9 +484,10 @@ fun boss_start_exact ncore extspec =
     val widl = List.tabulate (ncore,I)
     val _ = clean_parallel_dirs widl
     fun fork wid = Thread.fork (fn () =>
-      boss_start_worker (codewait_of_extspec extspec) wid, attrib)
-     val threadl = map fork widl
+      boss_start_worker (code_exact extspec) wid, attrib)
+    val threadl = map fork widl
   in
+    boss_wait_upl widl;
     print_endline ("  " ^ its ncore ^ " workers started");
     threadl
   end
@@ -483,7 +498,7 @@ fun parmap_exact_extern ncore extspec param argl =
     boss_send_exact extspec widl param argl;
     boss_collect_exact extspec widl
   end
-
+  
 val boss_stop_exact = boss_stop_workers
 
 (* -------------------------------------------------------------------------

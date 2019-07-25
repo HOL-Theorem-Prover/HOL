@@ -9,7 +9,7 @@ structure mleHanabi :> mleHanabi =
 struct
 
 open HolKernel boolLib Abbrev aiLib smlParallel 
-  mlTreeNeuralNetwork psMCTS mlReinforce
+  mlNeuralNetwork mlTreeNeuralNetwork psMCTS mlReinforce
 
 val ERR = mk_HOL_ERR "mleHanabi"
 
@@ -116,7 +116,7 @@ fun random_startboard level =
 
 fun status_of board = 
   if #score board >= #objective board then Win 
-  else if null (#deck board) then Lose
+  else if null (#deck board) orelse (#bombs board >= 3) then Lose
   else Undecided
 
 (* -------------------------------------------------------------------------
@@ -212,7 +212,6 @@ fun draw_card i card hand =
    Play
    ------------------------------------------------------------------------- *)
 
-(* todo: make it impossible to play a nocard *)
 fun is_playable card pile = 
   let fun test c = if snd card = snd c then fst card = fst c + 1 else true in
     card <> nocard andalso Vector.all test pile
@@ -228,6 +227,7 @@ fun apply_move_play i {objective,p1turn,hand1,hand2,clues1,clues2,
   let 
     val newcard = hd deck
     val hand = if p1turn then hand1 else hand2
+    val cluev = if p1turn then clues1 else clues2
     val played = Vector.sub (hand,i)
     val playb = is_playable played pile
   in
@@ -454,6 +454,114 @@ level_glob := 3;
 val tree = mcts_uniform 10000 gamespec (random_startboard ());
 val nodel = trace_win (#status_of gamespec) tree [];
 *)
+
+(* -------------------------------------------------------------------------
+   Play game (filter examples that are all zero ar all ones.
+   ------------------------------------------------------------------------- *)
+
+fun best_move tnn board =
+  let
+    val dis1 = combine (movel, infer_tnn tnn (nntm_of_board board))
+    val dis2 = filter (fn x => is_applicable board (fst x)) dis1
+  in
+    best_in_distrib dis2  
+  end
+
+fun play_game tnn board =
+  if null (#deck board) orelse (#bombs board >= 3)
+  then #score board 
+  else play_game tnn (apply_move (best_move tnn board) board)
+
+(* 
+load "mleHanabi"; open mleHanabi;
+load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
+val tnn = random_tnn (8,20) (#operl gamespec);
+val board = random_startboard 5;
+val (r,t) = aiLib.add_time (play_game tnn) board;
+*)
+
+fun norm_dis l = 
+  let val e = list_imax l in 
+    if e = 0 
+    then map Real.fromInt l 
+    else map (fn x => Real.fromInt x / Real.fromInt e) l 
+  end
+
+fun explore_aux acc tnn board =
+  if null (#deck board) then acc else
+  let 
+    fun f m =
+      if not (is_applicable board m) 
+      then 0 
+      else play_game tnn (apply_move m board)
+    val dis = (nntm_of_board board, norm_dis (map f movel))
+  in
+    explore_aux (dis :: acc) tnn (apply_move (best_move tnn board) board)
+  end
+
+fun explore tnn board = explore_aux [] tnn board
+
+val explore_extspec = 
+ {
+ self = "mleHanabi.explore_extspec",
+ reflect_globals = fn () => "()",
+ function = explore,
+ write_param = write_tnn,
+ read_param = read_tnn,
+ write_argl = write_targetl,
+ read_argl = read_targetl,
+ write_result = write_tnnex,
+ read_result = read_tnnex
+ }
+
+fun collect ncore tnn nboard =
+  let 
+    val boardl = List.tabulate (nboard, fn _ => random_startboard 0)
+    val (exll,t) = add_time 
+     (parmap_queue_extern ncore explore_extspec tnn) boardl
+    val exl = List.concat exll
+    val _ = print_endline ("Collect time: " ^ rts t)
+    val _ = print_endline ("Collect stats: " ^ its (length exl))
+  in
+    exl
+  end
+
+fun play_ngame tnn ngame =
+  let 
+    val boardl = List.tabulate (ngame, fn _ => random_startboard 0)
+    val l = map (play_game tnn) boardl
+  in
+    average_real (map Real.fromInt l)
+  end
+
+(* 
+load "mleHanabi"; open mleHanabi;
+load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
+val tnn1 = random_tnn (4,20) (#operl gamespec);
+val n1 = play_ngame tnn1 1000;
+
+val exl1 = collect 8 tnn1 100;
+val randtnn = random_tnn (4,20) (#operl gamespec);
+val tnn2 = prepare_train_tnn (4,16) randtnn (exl1,[]) [(20,0.02)];
+val n2 = play_ngame tnn2 1000;
+
+val exl2 = collect 8 tnn2 100;
+val randtnn = random_tnn (4,20) (#operl gamespec);
+val tnn3 = prepare_train_tnn (4,16) randtnn (exl2,[]) [(20,0.02)];
+val n3 = play_ngame tnn3 1000;
+
+val exl3 = collect 8 tnn3 200;
+val randtnn = random_tnn (12,20) (#operl gamespec);
+val tnn4 = prepare_train_tnn (4,16) randtnn (exl3,[]) [(20,0.02)];
+val n4 = play_ngame tnn4 2000;
+
+val tnn4' = prepare_train_tnn (4,16) randtnn (exl1 @ exl2 @ exl3,[]) [(20,0.02)];
+val n4' = play_ngame tnn4' 10000;
+
+*)
+
+
+
 
 
 end (* struct *)

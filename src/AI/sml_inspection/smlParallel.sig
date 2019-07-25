@@ -29,7 +29,7 @@ sig
     int -> ('a,'b,'c) extspec -> 'a -> 'b list -> 'c list
   (* for multiple calls to external parmap *)
   val boss_start_exact : int -> ('a,'b,'c) extspec -> Thread.thread list
-  val worker_wait_exact : int -> ('a,'b,'c) extspec -> unit
+  val worker_start_exact : int -> ('a,'b,'c) extspec -> unit
   val parmap_exact_extern : 
     int -> ('a,'b,'c) extspec -> 'a -> 'b list -> 'c list 
   val boss_stop_exact : Thread.thread list -> unit

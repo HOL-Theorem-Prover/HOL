@@ -1,6 +1,15 @@
 signature mlNeuralNetwork =
 sig
 
+  type vect = real vector
+  type mat = real vector vector
+
+  (* cheating experiment *)
+  val cheat_flag : bool ref
+  val cheat_nex : int ref
+  val cheat_dim : int ref
+  val random_set : int -> (vect * vect) list 
+
   (* hyperparameters *)
   val learningrate_glob : real ref
 
@@ -13,11 +22,7 @@ sig
   val dleakyrelu : real -> real
 
   (* NN *)
-  type vect = real vector
-  type mat = real vector vector
-
   type layer = {a : real -> real, da : real -> real, w : real vector vector}
-
   type nn = layer list
 
   type fpdata =
@@ -40,6 +45,7 @@ sig
 
   (* forward and backward pass *)
   val fp_nn        : nn -> real vector -> fpdata list
+  val infer_nn     : nn -> real vector -> real vector
   val bp_nn        : fpdata list -> real vector -> bpdata list
   val bp_nn_wocost : fpdata list -> real vector -> bpdata list
 
