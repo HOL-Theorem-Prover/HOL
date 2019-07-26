@@ -230,25 +230,33 @@ fun primInduct st ind_tac (g as (asl,c)) =
 (*---------------------------------------------------------------------------*)
 
 fun induct_on_type st ty g =
- case TypeBase.fetch ty
-  of SOME facts =>
-     let val is_mutind_thm = is_conj o snd o strip_imp o snd o strip_forall o concl
-     in
-      case total TypeBasePure.induction_of facts
-       of NONE => raise ERR "induct_on_type"
-                   (String.concat ["Type :",Hol_pp.type_to_string ty,
-                    " is registed in the types database, ",
-                    "but there is no associated induction theorem"])
-        | SOME thm => (* now select induction tactic *)
-           if null (TypeBasePure.constructors_of facts) (* not a datatype *)
-             then primInduct st (HO_MATCH_MP_TAC thm) else
-           if is_mutind_thm thm
-               then Mutual.MUTUAL_INDUCT_TAC thm
-           else primInduct st (Prim_rec.INDUCT_THEN thm ASSUME_TAC)
-     end g
-  | NONE => raise ERR "induct_on_type"
-            (String.concat ["Type: ",Hol_pp.type_to_string ty,
-             " is not registered in the types database"]);
+    case TypeBase.fetch ty of
+        SOME facts =>
+        let
+          val is_mutind_thm = is_conj o snd o strip_imp o snd o strip_forall o
+                              concl
+        in
+          case total TypeBasePure.induction_of facts of
+              NONE =>
+                raise ERR "induct_on_type"
+                      (String.concat ["Type :",Hol_pp.type_to_string ty,
+                                      " is registered in the types database, ",
+                                      "but there is no associated induction \
+                                      \theorem"])
+            | SOME thm => (* now select induction tactic *)
+              if null (TypeBasePure.constructors_of facts) then
+                (* not a datatype*)
+                primInduct st (HO_MATCH_MP_TAC thm)
+              else if is_mutind_thm thm then
+                Mutual.MUTUAL_INDUCT_TAC thm
+              else
+                primInduct st (Prim_rec.INDUCT_THEN thm ASSUME_TAC) ORELSE
+                (primInduct st (HO_MATCH_MP_TAC thm) THEN REPEAT CONJ_TAC)
+        end g
+      | NONE =>
+        raise ERR "induct_on_type"
+              (String.concat ["Type: ",Hol_pp.type_to_string ty,
+                              " is not registered in the types database"]);
 
 fun checkind th =
     (* if the purported theorem fails to pass muster according to this
