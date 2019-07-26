@@ -24,7 +24,7 @@ sig
 
   (* Evaluation of holyhammer (with premise selection).
      This function is used inside the tactictoe evaluation framework. *)
-  val hh_eval : (mlThmData.thmdata * mlTacticData.tacdata) -> 
+  val hh_eval : (mlThmData.thmdata * mlTacticData.tacdata) ->
      (string * string) -> goal -> unit
 
 end
