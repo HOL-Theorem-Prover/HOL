@@ -474,6 +474,7 @@ fun percent x = approx 2 (100.0 * x)
 
 fun rts r = Real.toString r
 fun rts_round n r = rts (approx n r)
+fun pretty_real r = pad 8 "0" (rts_round 6 r)
 
 (* -------------------------------------------------------------------------
    Terms

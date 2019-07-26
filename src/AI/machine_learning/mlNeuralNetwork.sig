@@ -4,12 +4,6 @@ sig
   type vect = real vector
   type mat = real vector vector
 
-  (* cheating experiment *)
-  val cheat_flag : bool ref
-  val cheat_nex : int ref
-  val cheat_dim : int ref
-  val random_set : int -> (vect * vect) list 
-
   (* hyperparameters *)
   val learningrate_glob : real ref
 
@@ -21,7 +15,7 @@ sig
   val leakyrelu : real -> real
   val dleakyrelu : real -> real
 
-  (* NN *)
+  (* neural network *)
   type layer = {a : real -> real, da : real -> real, w : real vector vector}
   type nn = layer list
 
@@ -37,11 +31,8 @@ sig
      dinv   : real vector,
      dw     : real vector vector}
 
-  (* initialization of the nn *)
-  val random_nn :
-    (real -> real) * (real -> real) ->
-    (real -> real) * (real -> real) ->
-    int list -> nn
+  (* weights randomly initialized *)
+  val random_nn : (real -> real) * (real -> real) -> int list -> nn
 
   (* forward and backward pass *)
   val fp_nn        : nn -> real vector -> fpdata list
@@ -55,23 +46,21 @@ sig
   val sum_dwll          : mat list list -> mat list
   val mean_square_error : real vector -> real
   val average_loss      : bpdata list list -> real
-  val random_wu         : nn -> mat list
-  val random_update_nn  : nn -> nn
 
   (* training *)
-  val ext_flag : bool ref
-  val extspec : (nn, (vect * vect) list, mat list * real) smlParallel.extspec
+  val train_nn : int -> int -> nn -> int -> (vect * vect) list -> nn
 
-  val train_nn :
-    int -> int -> nn -> int -> (vect * vect) list -> nn
-
-  (* I/O *)
+  (* input/output *)
   val reall_to_string : real list -> string
   val string_to_reall : string -> real list
   val string_of_wl : mat list -> string
   val string_of_nn : nn -> string
   val read_wl_sl : string list -> mat list
   val read_nn_sl : string list -> nn
+  val write_nn : string -> nn -> unit
+  val read_nn : string -> nn
+  val write_exl : string -> (vect * vect) list -> unit
+  val read_exl : string -> (vect * vect) list
 
 
 end

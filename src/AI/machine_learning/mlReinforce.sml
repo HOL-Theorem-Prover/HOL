@@ -209,11 +209,9 @@ fun train_dhtnn gamespec epex =
   let
     val _ = epex_stats epex
     val schedule = [(!nepoch_glob, !lr_glob / Real.fromInt (!batchsize_glob))]
-    val bsize =
-      if length epex < !batchsize_glob then 1 else !batchsize_glob
     val dhtnn = random_dhtnn_gamespec gamespec
   in
-    train_dhtnn_schedule (!ncore_train_glob) dhtnn bsize epex schedule
+    train_dhtnn (!ncore_train_glob) dhtnn (!batchsize_glob) epex schedule
   end
 
 fun train_f gamespec allex =

@@ -182,7 +182,12 @@ sig
   val approx : int -> real -> real
   val percent : real -> real
   val pad : int -> string -> string -> string
-
+  val tts : term -> string
+  val its : int -> string
+  val rts : real -> string
+  val rts_round : int -> real -> string
+  val pretty_real : real -> string
+  
   (* term *)
   val rename_bvarl : (string -> string) -> term -> term
   val rename_allvar : term -> term
@@ -190,12 +195,6 @@ sig
   val strip_type : hol_type -> (hol_type list * hol_type)
   val has_boolty : term -> bool
   val only_concl : thm -> term
-
-  (* printing *)
-  val tts : term -> string
-  val its : int -> string
-  val rts : real -> string
-  val rts_round : int -> real -> string
 
   (* thread *)
   val interruptkill : Thread.thread -> unit

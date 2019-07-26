@@ -11,36 +11,12 @@ struct
 open HolKernel Abbrev boolLib aiLib mlMatrix smlParallel
 
 val ERR = mk_HOL_ERR "mlNeuralNetwork"
-val debugdir = HOLDIR ^ "/src/AI/machine_learning/debug"
-fun debug s = debug_in_dir debugdir "mlNeuralNetwork" s
 
 (* -------------------------------------------------------------------------
    Parameters
    ------------------------------------------------------------------------- *)
 
 val learningrate_glob = ref 0.01
-
-(* -------------------------------------------------------------------------
-   Cheating experiments
-   ------------------------------------------------------------------------- *)
-
-val cheat_flag = ref false
-val cheat_nex = ref 64
-val cheat_dim = ref 20
-
-fun rev_vector v =
-  let val vn = Vector.length v in
-    Vector.tabulate (vn, fn i => Vector.sub (v,vn - i - 1))
-  end
-
-fun random_set nex =
-  let
-    fun f _ = Vector.tabulate (!cheat_dim, fn _ => random_real () - 0.5)
-    val l = List.tabulate (nex, f)
-  in
-    map (fn x => (x, rev_vector x)) l
-  end
-
 
 (* -------------------------------------------------------------------------
    Activation and derivatives (with a smart trick)
@@ -82,17 +58,17 @@ fun diml_of sizel = case sizel of
     [] => []
   | a :: m => diml_aux a m
 
-fun random_nn (a1,da1) (a2,da2) sizel =
+fun random_nn (a,da) sizel =
   let
     val l = diml_of sizel
-    fun f x = {a = a1, da = da1, w = mat_random x}
-    fun g x = {a = a2, da = da2, w = mat_random x}
+    fun biais_dim (i,j) = (i,j+1) 
+    fun f x = {a = a, da = da, w = mat_random (biais_dim x)}
   in
-    map f (butlast l) @ [g (last l)]
+    map f l
   end
 
 (* -------------------------------------------------------------------------
-   I/O
+   input/output
    ------------------------------------------------------------------------- *)
 
 fun reall_to_string rl = String.concatWith " " (map rts rl)
@@ -118,8 +94,7 @@ fun string_of_nn nn =
     String.concatWith "\n\n" (map (string_of_mat o #w) nn)
   end
 
-fun write_nn file nn = 
-  if !cheat_flag then () else (writel file o map string_of_nn) [nn]
+fun write_nn file nn = writel file [string_of_nn nn]
 
 fun split_nl nl l = case nl of
     [] => raise ERR "split_nl" ""
@@ -148,31 +123,23 @@ fun read_nn_sl sl =
   end
   handle Empty => raise ERR "read_nn_sl" ""
 
-val nn_cheat = random_nn (tanh,dtanh) (tanh,dtanh) 
-    (List.tabulate (20,fn _ => !cheat_dim))
+fun read_nn file = read_nn_sl (readl file)
 
-fun read_nn file = 
-  if !cheat_flag 
-  then nn_cheat
-  else read_nn_sl (readl file)
 
-fun string_of_v v = reall_to_string (vector_to_list v)
-fun string_of_vv (v1,v2) = string_of_v v1 ^ "," ^ string_of_v v2
+fun string_of_ex (v1,v2) = 
+  let fun f v = reall_to_string (vector_to_list v) in
+    f v1 ^ "," ^ f v2
+  end
 
-fun write_ex file argl = 
-  if !cheat_flag then () else 
-    (writel file o map string_of_vv) (only_hd argl)
+fun write_exl file exl = writel file (map string_of_ex exl)
 
-fun vv_of_string s = 
+fun ex_of_string s = 
   let val (a,b) = pair_of_list (String.tokens (fn x => x = #",") s) in
     (Vector.fromList (string_to_reall a), 
      Vector.fromList (string_to_reall b))
   end
 
-fun read_ex file = 
-  if !cheat_flag 
-  then [random_set (!cheat_nex)]
-  else [map vv_of_string (readl file)]
+fun read_exl file = map ex_of_string (readl file)
 
 (*---------------------------------------------------------------------------
   Biais
@@ -246,7 +213,7 @@ fun bp_nn fpdatal expectv =
   end
 
 (* -------------------------------------------------------------------------
-   Average the updates over a batch.
+   Update weights and calculate loss
    ------------------------------------------------------------------------- *)
 
 fun train_nn_one nn (inputv,expectv) = bp_nn (fp_nn nn inputv) expectv
@@ -261,10 +228,6 @@ fun sum_dwll dwll = case dwll of
 
 fun smult_dwl k dwl = map (mat_smult k) dwl
 
-(* -------------------------------------------------------------------------
-   Loss
-   ------------------------------------------------------------------------- *)
-
 fun mean_square_error v =
   let fun square x = (x:real) * x in
     Math.sqrt (average_rvect (Vector.map square v))
@@ -273,10 +236,6 @@ fun mean_square_error v =
 fun bp_loss bpdatal = mean_square_error (#doutnv (last bpdatal))
 
 fun average_loss bpdatall = average_real (map bp_loss bpdatall)
-
-(* -------------------------------------------------------------------------
-   Weight udpate
-   ------------------------------------------------------------------------- *)
 
 fun clip (a,b) m =
   let fun f x = if x < a then a else (if x > b then b else x) in
@@ -294,23 +253,11 @@ fun update_layer (layer, layerwu) =
 
 fun update_nn nn wu = map update_layer (combine (nn,wu))
 
-fun random_wu nn = 
-  let 
-    val wl = map #w nn
-    fun f w = mat_map (fn _ => random_real () - 0.5) w
-  in
-    map f wl
-  end
-
-fun random_update_nn nn = update_nn nn (random_wu nn)
-
 (* -------------------------------------------------------------------------
-   Training schedule
+   Training
    ------------------------------------------------------------------------- *)
 
-fun profile_w s f a b = Profile.profile s (f a) b
-
-fun train_nn_subbatch nn subbatch =
+fun train_nn_subbatch nn (subbatch : (vect * vect) list) =
   let
     val bpdatall = map (train_nn_one nn) subbatch
     val dwll = map (map #dw) bpdatall
@@ -319,80 +266,59 @@ fun train_nn_subbatch nn subbatch =
     (dwl, average_loss bpdatall)
   end
 
-fun write_result file (dwl,loss) =
-  if !cheat_flag then () else
-    (writel (file ^ "_dwl") [string_of_wl dwl];
-     writel (file ^ "_loss") [rts loss]) 
-
-val dwl_cheat = map #w (random_nn (tanh,dtanh) (tanh,dtanh)
-    (List.tabulate (20,fn _ => !cheat_dim)))
-
-fun read_result file =
-  if !cheat_flag
-  then (dwl_cheat, 0.0)
-  else 
-    ((read_wl_sl o readl) (file ^ "_dwl"),
-    (valOf o Real.fromString o hd o readl) (file ^ "_loss"))
-
-val ext_flag = ref false
-
-fun bts b = if b then "true" else "false"
-
-val extspec : (nn, (vect * vect) list, (mat list * real)) extspec =
-  {
-  self = "mlNeuralNetwork.extspec",
-  reflect_globals = 
-    fn () => "(mlNeuralNetwork.cheat_nex := " ^ its (!cheat_nex) ^ ";" ^
-              "mlNeuralNetwork.cheat_dim := " ^ its (!cheat_dim) ^ ";" ^
-              "mlNeuralNetwork.cheat_flag := " ^ bts (!cheat_flag) ^ ")",
-  function = profile_w "train_nn_subbatch" train_nn_subbatch,
-  write_param = profile_w "write_nn" write_nn,
-  read_param = Profile.profile "read_nn" read_nn,
-  write_argl = profile_w "write_ex" write_ex,
-  read_argl = Profile.profile "read_ex" read_ex,
-  write_result = profile_w "write_result" write_result,
-  read_result = Profile.profile "read_result" read_result
-  }
-
 fun train_nn_batch ncore nn batch =
   let
-    val subbatchl = cut_n ncore batch
-    val (dwll,lossl) = split (
-      Profile.profile "par"
-      (if !ext_flag 
-      then parmap_exact_extern ncore extspec nn
-      else if ncore = 1
-           then map (train_nn_subbatch nn) 
-           else parmap_exact ncore (train_nn_subbatch nn)
-      ) subbatchl)
-    val dwl = Profile.profile "sum" sum_dwll dwll
-    val newnn = Profile.profile "upd" (update_nn nn) dwl
+    val (dwll,lossl) = 
+      split (parmap_exact ncore (train_nn_subbatch nn) (cut_n ncore batch))
+    val dwl = sum_dwll dwll
+    val newnn = update_nn nn dwl
   in
     (newnn, average_real lossl)
   end
 
-fun train_nn_epoch_aux ncore lossl nn batchl  = case batchl of
-    [] => (print_endline ("loss: " ^ Real.toString (average_real lossl));
-           nn)
+fun train_nn_epoch ncore lossl nn batchl  = case batchl of
+    [] => (nn, average_real lossl)
   | batch :: m =>
     let val (newnn,loss) = train_nn_batch ncore nn batch in
-      train_nn_epoch_aux ncore (loss :: lossl) newnn m
+      train_nn_epoch ncore (loss :: lossl) newnn m
     end
 
-fun train_nn_epoch ncore nn batchl = 
-  train_nn_epoch_aux ncore [] nn batchl
-
-fun train_nn ncore n nn size trainset =
+fun train_nn ncore n nn bsize exl =
   if n <= 0 then nn else
   let
-    val _ = print (" " ^ its n ^ " ")
-    val batchl = mk_batch size (shuffle trainset)
-    val new_nn = train_nn_epoch ncore nn batchl
+    val batchl = mk_batch bsize (shuffle exl)
+    val (new_nn,loss) = train_nn_epoch ncore [] nn batchl
+    val _ = print_endline (its n ^ " " ^ Real.toString loss)
   in
-    train_nn ncore (n - 1) new_nn size trainset
+    train_nn ncore (n - 1) new_nn bsize exl
   end
 
 end (* struct *)
+
+(* -------------------------------------------------------------------------
+   Training identity
+   ------------------------------------------------------------------------- *)
+
+(*
+load "mlNeuralNetwork"; open mlNeuralNetwork;
+load "aiLib"; open aiLib;
+load "smlParallel"; open smlParallel;
+fun f dim = List.tabulate (dim, fn _ => random_real () - 0.5);
+fun g dim = let val x = Vector.fromList (f dim) in (x,x) end;
+val dim = 10;
+val bsize = 16;
+val nepoch = 100;
+val ncore = 1;
+val exl = List.tabulate (1000, fn _ => g dim);
+val nn = random_nn (tanh,dtanh) [10,20,10];
+val (newnn,t) = add_time (train_nn ncore nepoch nn bsize) exl;
+val inv = Vector.fromList (f 10);
+infer_nn newnn inv;
+*)
+
+(* -------------------------------------------------------------------------
+   Training two neural networks with one discrete communication layer
+   ------------------------------------------------------------------------- *)
 
 (*
 load "mlNeuralNetwork"; open mlNeuralNetwork;
@@ -401,7 +327,6 @@ open aiLib;
 
 val v1 = Vector.fromList [1.0,~1.0];
 val v2 = Vector.fromList [~1.0,1.0];
-
 val exl = [(v1,v1),(v2,v2)];
 
 fun maxv (v:real vector) = 
@@ -416,7 +341,6 @@ fun is_accurate (v: real vector) (v' : real vector) =
   orelse
   (Vector.sub (v,0) < Vector.sub (v,1) andalso
     Vector.sub (v',0) < Vector.sub (v',1))
-
 
 fun train_nn2nn_one (nn1,nn2) (inputv,expectv) =
   let 
@@ -464,55 +388,4 @@ map (infer_nn (fst nnc)) (map (add_biais o fst) exl);
 
 map (infer_nnc nnc) (map fst exl);
 map (infer_nnc (nn1,nn2)) (map fst exl);
-
-
-
-
-learningrate_glob := 0.02;
-val dim = 20;
-val nex = 1024;
-val nepoch = 5;
-val bsize = 16;
-val nn = random_nn (tanh,dtanh) (tanh,dtanh) 
-  (List.tabulate (20,fn _ => dim));
-val set = random_set nex;
-
-val ncore = 1; reset_all (); ext_flag := false; cheat_flag := false;
-val (_,t) = add_time (train_nn ncore nepoch nn bsize) set;
-results ();
-
-val ncore = 1; reset_all (); ext_flag := false; cheat_flag := false;
-val (_,t) = add_time (parmap_exact 4 (train_nn ncore nepoch nn bsize)) [set,set,set,set];
-results ();
-
-
-
-val ncore = 2;
-reset_all ();
-ext_flag := true;
-cheat_flag := true;
-cheat_dim := dim;
-cheat_nex := bsize div ncore;
-print_endline (its (!cheat_nex));
-print_endline (its (!cheat_dim));
-parallel_dir := "/dev/shm/thibault";
-val threadl = boss_start_exact ncore extspec;
-val (_,t1) = add_time (train_nn ncore nepoch nn bsize) set;
-boss_stop_exact threadl;
-ext_flag := false;
-results ();
-*)
-
-(* I/O test 
-val (_,t1) = add_time (#write_argl extspec "test") [set];
-val (_,t2) = add_time (#read_argl extspec) "test";
-val (_,t3) = add_time (#write_param extspec "test") nn;
-val (_,t4) = add_time (#read_param extspec) "test";
-val l1 = List.tabulate (20000, fn _ => random_real ());
-val (l2,t) = add_time (map rts) l1;
-val (_,t) = add_time (writel "test") l2
-val (l3,t) = add_time (map (valOf o Real.fromString)) l2;
-val (l4,t) = add_time (map (fn x => Real.round (x * 10000000.0))) l1;
-val (l5,t) = add_time (map its) l4;
-val (l6,t) = add_time (map string_to_int) l5;
 *)

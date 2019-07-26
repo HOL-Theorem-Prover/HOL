@@ -31,20 +31,29 @@ val operl = mk_fast_set oper_compare (operl_of ``0 + SUC 0 * 0``)
    Training with a fixed set of parameters
    ------------------------------------------------------------------------- *)
 
-fun train_fixed basename trainex =
+fun train_fixed basename exl =
   let
     val dim = 12
     val randtnn = random_tnn (dim,4) operl
     val bsize = 16
     val schedule = [(100, 0.02 / (Real.fromInt bsize))]
     val ncore = 4
-    val tnn = prepare_train_tnn
-      (ncore,bsize) randtnn (trainex,first_n 100 trainex) schedule
+    val tnn = prepare_train_tnn (ncore,bsize) randtnn (exl,[]) schedule
     val _ = mkDir_err compute_dir
   in
     write_tnn (compute_dir ^ "/" ^ basename) tnn;
     tnn
   end
+
+(*
+load "mleCompute"; open mleCompute;
+load "mleArithData"; open mleArithData;
+val tml = mlTacticData.import_terml (dataarith_dir ^ "/train");
+val exl = compute_exout tml;
+val tnn = train_fixed "test" exl;
+val tm = random_elem tml;
+infer_tnn tnn tm;
+*)
 
 (* ------------------------------------------------------------------------
    Accuracy of the tree neural network on arithmetical datasets
@@ -60,23 +69,5 @@ fun accuracy_fixed tnn =
     quadruple_of_list (map (accuracy_set tnn) exl)
   end
 
-(* ------------------------------------------------------------------------
-   Tuning parameters by training with external parallelization.
-   Does not print the tree neural network yet.
-   ------------------------------------------------------------------------ *)
-
-fun parameter_tuning basename ncore =
-  let
-    val _ =
-      parallel_dir := HOLDIR ^ "/src/AI/sml_inspection/parallel_" ^ basename
-    val traintml = import_terml (dataarith_dir ^ "/train");
-    val trainex = compute_exout traintml;
-    val testex = first_n 100 trainex;
-    val paraml = grid_param ([12],[100],[16],[20,50,100,200],[2])
-    val final = train_tnn_parallel ncore ((1,4),(trainex,testex,operl)) paraml
-  in
-    mkDir_err compute_dir;
-    write_param_results (compute_dir ^ "/" ^ basename) (combine (paraml,final))
-  end
 
 end (* struct *)

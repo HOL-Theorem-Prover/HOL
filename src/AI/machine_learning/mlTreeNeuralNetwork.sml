@@ -11,8 +11,6 @@ struct
 open HolKernel boolLib Abbrev aiLib mlMatrix mlNeuralNetwork smlParallel
 
 val ERR = mk_HOL_ERR "mlTreeNeuralNetwork"
-val debugdir = HOLDIR ^ "/src/AI/machine_learning/debug"
-fun debug s = debug_in_dir debugdir "mlTreeNeuralNetwork" s
 
 (* -------------------------------------------------------------------------
    Type
@@ -21,8 +19,10 @@ fun debug s = debug_in_dir debugdir "mlTreeNeuralNetwork" s
 type vect = real vector
 type mat = real vector vector
 type opdict = ((term * int),nn) Redblackmap.dict
+type tnnex = (term * real list) list
 type tnn =
   {opdict: opdict, headnn: nn, dimin: int, dimout: int}
+type dhex = (term * real list * real list) list  
 type dhtnn =
   {opdict: opdict, headeval: nn, headpoli: nn, dimin: int, dimout: int}
 
@@ -37,11 +37,9 @@ fun did (x:real) = 1.0
 
 fun const_nn dim arity =
   if arity = 0
-  then random_nn (id,did) (id,did) [1,dim]
-  else random_nn (tanh,dtanh) (tanh,dtanh)
-    (List.tabulate (!nlayer_glob, fn _ => arity * dim + 1) @ [dim])
-
-val oper_compare = cpl_compare Term.compare Int.compare
+  then random_nn (id,did) [0,dim]
+  else random_nn (tanh,dtanh)
+    (List.tabulate (!nlayer_glob, fn _ => arity * dim) @ [dim])
 
 fun random_opdict dimin cal =
   let val l = map_assoc (fn (_,a) => const_nn dimin a) cal in
@@ -49,9 +47,8 @@ fun random_opdict dimin cal =
   end
 
 fun random_headnn (dimin,dimout) =
-  random_nn (tanh,dtanh) (tanh,dtanh)
-    (List.tabulate (!nlayer_glob, fn _ => dimin + 1) @ [dimout])
-
+  random_nn (tanh,dtanh)
+    (List.tabulate (!nlayer_glob, fn _ => dimin) @ [dimout])
 
 fun random_tnn (dimin,dimout) operl =
   {
@@ -155,15 +152,6 @@ fun read_tnn file =
     read_tnn_sl operl sl
   end
 
-(*
-load "mlTreeNeuralNetwork";
-open aiLib mlNeuralNetwork mlTreeNeuralNetwork;
-val file = HOLDIR ^ "/src/AI/test";
-val tnn1 = random_tnn (4,2) [(``$+``,2),(``SUC``,1),(``0``,0)];
-write_tnn file tnn1;
-val tnn2 = read_tnn file;
-*)
-
 fun read_dhtnn_sl operl sl =
   let
     val (l1,contl1) = split_sl "headevalstop" sl
@@ -251,18 +239,8 @@ fun read_tnnex file =
     combine (terml,rll)
   end
 
-
-
-(*
-load "mlTreeNeuralNetwork"; open mlTreeNeuralNetwork;
-val epex = [(``0``,[1.0],[2.0,3.0])];
-val file = HOLDIR ^ "/src/AI/trainset";
-write_dhexl file trainset;
-val trainset1 = read_trainset file;
-*)
-
 (* -------------------------------------------------------------------------
-   Normalization/Denormalization
+   Normalization/denormalization
    ------------------------------------------------------------------------- *)
 
 fun order_subtm tm =
@@ -280,14 +258,17 @@ fun order_subtm tm =
 fun norm_vect v = Vector.map (fn x => 2.0 * (x - 0.5)) v
 fun denorm_vect v = Vector.map (fn x => 0.5 * x + 0.5) v
 
-fun add_bias v = Vector.concat [Vector.fromList [1.0], v]
+fun prepare_tnnex tnnex =
+  let fun f (tm,rl) = (order_subtm tm, norm_vect (Vector.fromList rl)) in
+    map f tnnex
+  end
 
-fun prepare_dhtrainset dhtrainset =
+fun prepare_dhex dhex =
   let fun f (tm,rl1,rl2) =
     (order_subtm tm, norm_vect (Vector.fromList rl1),
      norm_vect (Vector.fromList rl2))
   in
-    map f dhtrainset
+    map f dhex
   end
 
 (* -------------------------------------------------------------------------
@@ -300,7 +281,7 @@ fun fp_op opdict fpdict tm =
     val nn = dfind (f,length argl) opdict
       handle NotFound => raise ERR "fp_op" (string_of_oper (f,length argl))
     val invl = map (fn x => #outnv (last (dfind x fpdict))) argl
-    val inv = Vector.concat (Vector.fromList [1.0] :: invl) 
+    val inv = Vector.concat invl
   in
     fp_nn nn inv
   end
@@ -313,10 +294,7 @@ fun fp_opdict opdict fpdict tml = case tml of
     end
 
 fun fp_head headnn fpdict tml =
-  let
-    val invl = [#outnv (last (dfind (last tml) fpdict))]
-    val inv = Vector.concat (Vector.fromList [1.0] :: invl)
-  in
+  let val inv = #outnv (last (dfind (last tml) fpdict)) in
     fp_nn headnn inv
   end
 
@@ -351,7 +329,7 @@ fun infer_dhtnn dhtnn tm =
   end
 
 (* -------------------------------------------------------------------------
-   Backward propagation: bpdict is only used to store the result
+   Backward propagation
    ------------------------------------------------------------------------- *)
 
 fun sum_operdwll (oper,dwll) = [sum_dwll dwll]
@@ -368,7 +346,7 @@ fun bp_tnn_opdict_aux dim doutnvdict fpdict bpdict revtml = case revtml of
           val fpdatal = dfind tm fpdict
           val bpdatal = bp_nn_wocost fpdatal doutnv
           val dinv    = vector_to_list (#dinv (hd bpdatal))
-          val dinvl   = map Vector.fromList (mk_batch dim (tl dinv))
+          val dinvl   = map Vector.fromList (mk_batch dim dinv)
         in
           (map #dw bpdatal, combine (argl,dinvl))
         end
@@ -390,8 +368,7 @@ fun bp_tnn_head fpdatal (tml,expectv) =
     val outnv      = #outnv (last fpdatal)
     val doutnv     = diff_rvect expectv outnv
     val bpdatal    = bp_nn_wocost fpdatal doutnv
-    val newdoutnv  =
-      (Vector.fromList o tl o vector_to_list o #dinv o hd) bpdatal
+    val newdoutnv  = #dinv (hd bpdatal)
   in
     ((last tml,newdoutnv), bpdatal)
   end
@@ -428,8 +405,14 @@ fun infer_tnn tnn tm =
 fun infer_tnn_nohead tnn tm =
   vector_to_list (fp_tnn_nohead tnn (order_subtm tm))
 
+fun out_tnn tnn tml =
+  let val (_,fpdatal) = fp_tnn tnn tml in (#outnv (last fpdatal)) end
+
+fun infer_mse tnn (tml,ev) =
+  mean_square_error (diff_rvect ev (out_tnn tnn tml))
+
 (* -------------------------------------------------------------------------
-   Train tnn on one example
+   Training a tree neural network
    ------------------------------------------------------------------------- *)
 
 fun train_tnn_one tnn (tml,expectv) =
@@ -437,38 +420,11 @@ fun train_tnn_one tnn (tml,expectv) =
     bp_tnn (#dimin tnn) (fpdict,fpdatal) (tml,expectv)
   end
 
-fun train_dhtnn_one dhtnn (tml,expecteval,expectpoli) =
-  let val (fpdict,fpdataleval,fpdatalpoli) = fp_dhtnn dhtnn tml in
-    bp_dhtnn (#dimin dhtnn) (fpdict,fpdataleval,fpdatalpoli)
-    (tml,expecteval,expectpoli)
-  end
-
-(* -------------------------------------------------------------------------
-   Train tnn on one batch
-   ------------------------------------------------------------------------- *)
-
-(*
-val momentum_glob = ref 0.0
-val dwlhead_glob = ref NONE
-val dwloper_glob = ref (dempty oper_compare)
-*)
-
-(* fun init_dwlglob () =
-  (dwlhead_glob := NONE; dwloper_glob := dempty oper_compare) *)
-
 fun update_head headnn bpdatall =
   let
     val dwll = map (map #dw) bpdatall
     val dwl = sum_dwll dwll
-    (*
-    val dwlmom =
-      if isSome (!dwlhead_glob)
-      then sum_dwll [smult_dwl (1.0 - (!momentum_glob)) dwl,
-                     smult_dwl (!momentum_glob) (valOf (!dwlhead_glob))]
-      else dwl
-    *)
-    val newheadnn = update_nn headnn dwl (* dwlmom *)
-    (* val _ = dwlhead_glob := SOME dwlmom *)
+    val newheadnn = update_nn headnn dwl
     val loss = average_loss bpdatall
   in
     (newheadnn, loss)
@@ -478,24 +434,10 @@ fun update_opernn opdict (oper,dwll) =
   let
     val nn    = dfind oper opdict
     val dwl   = sum_dwll dwll
-    (* val dwlmom =
-      if dmem oper (!dwloper_glob)
-      then sum_dwll [smult_dwl (1.0 - (!momentum_glob))  dwl,
-                     smult_dwl (!momentum_glob) (dfind oper (!dwloper_glob))]
-      else dwl
-    *)
-    val newnn = update_nn nn dwl (* dwlmom *)
-    (* val _ = dwloper_glob := dadd oper dwlmom (!dwloper_glob) *)
+    val newnn = update_nn nn dwl
   in
     (oper,newnn)
   end
-
-fun random_update_tnn (tnn as {opdict,headnn,dimin,dimout}) =
-  {
-  opdict = dmap (fn (k,v) => random_update_nn v) opdict,
-  headnn = random_update_nn headnn, 
-  dimin = dimin, dimout = dimout
-  }
 
 fun train_tnn_batch ncore (tnn as {opdict,headnn,dimin,dimout}) batch =
   let
@@ -510,39 +452,23 @@ fun train_tnn_batch ncore (tnn as {opdict,headnn,dimin,dimout}) batch =
       loss)
   end
 
-(* -------------------------------------------------------------------------
-   Train tnn on one epoch
-   ------------------------------------------------------------------------- *)
-
-fun train_tnn_epoch_aux ncore lossl tnn batchl = case batchl of
+fun train_tnn_epoch ncore lossl tnn batchl = case batchl of
     [] => (tnn, average_real lossl)
   | batch :: m =>
     let val (newtnn,loss) = train_tnn_batch ncore tnn batch in
-      train_tnn_epoch_aux ncore (loss :: lossl) newtnn m
+      train_tnn_epoch ncore (loss :: lossl) newtnn m
     end
-
-fun train_tnn_epoch ncore tnn batchl =
-  (
-  (* init_dwlglob (); *)
-  train_tnn_epoch_aux ncore [] tnn batchl
-  )
-
-fun out_tnn tnn tml =
-  let val (_,fpdatal) = fp_tnn tnn tml in (#outnv (last fpdatal)) end
-
-fun infer_mse tnn (tml,ev) =
-  mean_square_error (diff_rvect ev (out_tnn tnn tml))
 
 fun train_tnn_nepoch (ncore,bsize) n tnn (ptrain,ptest) =
   if n <= 0 then tnn else
   let
     val batchl = (mk_batch bsize o shuffle) ptrain
-    val (newtnn,trainloss) = train_tnn_epoch ncore tnn batchl
+    val (newtnn,trainloss) = train_tnn_epoch ncore [] tnn batchl
     val testloss = if null ptest then 0.0 else 
       average_real (map (infer_mse tnn) ptest)
-    fun nice r = pad 8 "0" (rts (approx 6 (r / 2.0)))
     val _ = print_endline
-      (its n ^ " train: " ^ nice trainloss ^ " test: " ^ nice testloss)
+      (its n ^ " train: " ^ pretty_real trainloss ^ 
+               " test: " ^ pretty_real testloss)
   in
     train_tnn_nepoch (ncore,bsize) (n - 1) newtnn (ptrain,ptest)
   end
@@ -559,9 +485,41 @@ fun train_tnn_schedule (ncore,bsize) tnn (ptrain,ptest) schedule =
       train_tnn_schedule (ncore,bsize) newtnn (ptrain,ptest) m
     end
 
+fun output_info exl =
+  if null exl then "empty" else
+  let
+    val l = list_combine exl
+    val meanl = map (rts o approx 6 o average_real) l
+    val devl = map (rts o approx 6 o standard_deviation) l
+  in
+    "  length: " ^ int_to_string (length exl) ^ "\n" ^
+    "  mean: " ^ String.concatWith " " meanl ^ "\n" ^
+    "  deviation: " ^ String.concatWith " " devl
+  end
+
+fun train_tnn (ncore,bsize) randtnn (trainex,testex) schedule =
+  let
+    val _ = print_endline ("trainset " ^ output_info (map snd trainex))
+    val _ = print_endline ("testset  " ^ output_info (map snd testex))
+    val _ = if length trainex < bsize 
+            then raise ERR "prepare_train_tnn" "too few examples" 
+            else ()
+    val pset = (prepare_tnnex trainex, prepare_tnnex testex)
+    val (tnn,t) = 
+      add_time (train_tnn_schedule (ncore,bsize) randtnn pset) schedule
+  in
+    print_endline ("Tree neural network training time: " ^ rts t); tnn
+  end
+
 (* -------------------------------------------------------------------------
-   Training a double-headed tnn
+   Training a double-headed tree neural network
    ------------------------------------------------------------------------- *)
+
+fun train_dhtnn_one dhtnn (tml,expecteval,expectpoli) =
+  let val (fpdict,fpdataleval,fpdatalpoli) = fp_dhtnn dhtnn tml in
+    bp_dhtnn (#dimin dhtnn) (fpdict,fpdataleval,fpdatalpoli)
+    (tml,expecteval,expectpoli)
+  end
 
 fun train_dhtnn_batch ncore dhtnn batch =
   let
@@ -578,96 +536,58 @@ fun train_dhtnn_batch ncore dhtnn batch =
      dimin = dimin, dimout = dimout},(loss1,loss2))
   end
 
-
-fun train_dhtnn_epoch_aux ncore (lossl1,lossl2) dhtnn batchl =
+fun train_dhtnn_epoch ncore (lossl1,lossl2) dhtnn batchl =
   case batchl of
     [] => (dhtnn, (average_real lossl1, average_real lossl2))
   | batch :: m =>
     let val (newdhtnn,(loss1,loss2)) =
       train_dhtnn_batch ncore dhtnn batch
     in
-      train_dhtnn_epoch_aux ncore (loss1 :: lossl1, loss2 :: lossl2)
+      train_dhtnn_epoch ncore (loss1 :: lossl1, loss2 :: lossl2)
       newdhtnn m
     end
 
-fun train_dhtnn_epoch ncore dhtnn batchl =
-  train_dhtnn_epoch_aux ncore ([],[]) dhtnn batchl
-
-fun random_batchl size x = mk_batch size (shuffle x)
-
-fun pretty_real r = pad 8 "0" (rts (approx 6 r))
-
-fun train_dhtnn_nepoch ncore n dhtnn size eptrain =
+fun train_dhtnn_nepoch ncore n dhtnn bsize dhex =
   if n <= 0 then dhtnn else
   let
-    val batchl = Profile.profile "random_batchl" (random_batchl size) eptrain
-    val (newdhtnn,(loss1,loss2)) = train_dhtnn_epoch ncore dhtnn batchl
+    val batchl = mk_batch bsize (shuffle dhex)
+    val (dhtnn',(r1,r2)) = train_dhtnn_epoch ncore ([],[]) dhtnn batchl
     val _ = print_endline
-      (its n ^ ": eval " ^ pretty_real loss1 ^ " poli " ^ pretty_real loss2)
+      (its n ^ ": eval " ^ pretty_real r1 ^ " poli " ^ pretty_real r2)
   in
-    train_dhtnn_nepoch ncore (n - 1) newdhtnn size eptrain
+    train_dhtnn_nepoch ncore (n - 1) dhtnn' bsize dhex
   end
 
-fun train_dhtnn_schedule_aux ncore dhtnn bsize eptrain schedule =
+fun train_dhtnn_schedule ncore dhtnn bsize dhex schedule =
   case schedule of
     [] => dhtnn
   | (nepoch, lrate) :: m =>
     let
       val _ = learningrate_glob := lrate
       val _ = print_endline ("learning_rate: " ^ rts lrate)
-      val newdhtnn = train_dhtnn_nepoch ncore nepoch dhtnn bsize eptrain
+      val newdhtnn = train_dhtnn_nepoch ncore nepoch dhtnn bsize dhex
     in
-      train_dhtnn_schedule_aux ncore newdhtnn bsize eptrain m
+      train_dhtnn_schedule ncore newdhtnn bsize dhex m
     end
 
-fun train_dhtnn_schedule ncore dhtnn bsize epex schedule =
+fun train_dhtnn (ncore,bsize) dhtnn dhex schedule =
   let
-    val eptrain = prepare_dhtrainset epex
-    val dhtnn_new = train_dhtnn_schedule_aux ncore dhtnn bsize eptrain schedule
+    val _ = print_endline ("eval " ^ output_info (map #2 dhex))
+    val _ = print_endline ("poli " ^ output_info (map #3 dhex))
+    val dhex' = prepare_dhex dhex
+    val (dhtnn',t) = 
+      add_time (train_dhtnn_schedule ncore dhtnn bsize dhex') schedule
   in
-    dhtnn_new
+    print_endline 
+      ("Double-headed tree neural network training time: " ^ rts t);
+    dhtnn'
   end
 
 (* -------------------------------------------------------------------------
-   Preparation of the training set for a tnn
+   Measuring the accuracy of a tree neural network
    ------------------------------------------------------------------------- *)
 
-fun prepare_trainset trainset =
-  let fun f (tm,rl) = (order_subtm tm, norm_vect (Vector.fromList rl)) in
-    map f trainset
-  end
-
-fun trainset_info trainset =
-  if null trainset then "empty testset" else
-  let
-    val l = list_combine (map snd trainset)
-    val meanl = map (rts o approx 6 o average_real) l
-    val devl = map (rts o approx 6 o standard_deviation) l
-  in
-    "  length: " ^ int_to_string (length trainset) ^ "\n" ^
-    "  mean: " ^ String.concatWith " " meanl ^ "\n" ^
-    "  deviation: " ^ String.concatWith " " devl
-  end
-
-fun prepare_train_tnn (ncore,bsize) randtnn (trainset,testset) schedule =
-  if null trainset then (print_endline "empty trainset"; randtnn) else
-  let
-    val _ = print_endline ("trainset " ^ trainset_info trainset)
-    val _ = print_endline ("testset  " ^ trainset_info testset)
-    val bsize    = if length trainset < bsize then 1 else bsize
-    val pset = (prepare_trainset trainset, prepare_trainset testset)
-    val (tnn, nn_tim) =
-      add_time (train_tnn_schedule (ncore,bsize) randtnn pset) schedule
-  in
-    print_endline ("  NN Time: " ^ rts nn_tim);
-    tnn
-  end
-
-(* -------------------------------------------------------------------------
-   Accuracy test
-   ------------------------------------------------------------------------- *)
-
-fun is_accurate tnn (tm,rl) =
+fun is_accurate_tnn tnn (tm,rl) =
   let
     val rl1 = infer_tnn tnn tm
     val rl2 = combine (rl,rl1)
@@ -676,8 +596,8 @@ fun is_accurate tnn (tm,rl) =
     if all test rl2 then true else false
   end
 
-fun accuracy_set tnn set =
-  let val correct = filter (is_accurate tnn) set in
+fun tnn_accuracy tnn set =
+  let val correct = filter (is_accurate_tnn tnn) set in
     Real.fromInt (length correct) / Real.fromInt (length set)
   end
 

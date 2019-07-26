@@ -14,6 +14,12 @@ open HolKernel Abbrev boolLib aiLib
 val ERR = mk_HOL_ERR "smlParallel"
 
 (* -------------------------------------------------------------------------
+   Force usage of a thread even when using one core
+   ------------------------------------------------------------------------- *)
+
+val use_thread_flag = ref false
+
+(* -------------------------------------------------------------------------
    Capturing and releasing exceptions
    ------------------------------------------------------------------------- *)
 
@@ -38,6 +44,7 @@ val attrib = [Thread.InterruptState Thread.InterruptAsynch, Thread.EnableBroadca
 
 fun parmap_exact ncores forg lorg =
   if length lorg <> ncores then raise ERR "parmap_exact" "" else
+  if ncores = 1 andalso not (!use_thread_flag) then map forg lorg else
   let
     val ain = Vector.fromList (List.map ref lorg)
     val aout = Vector.fromList (List.map (fn _ => ref NONE) lorg)
@@ -60,8 +67,6 @@ fun parmap_exact ncores forg lorg =
 (* -------------------------------------------------------------------------
    Regrouping input in batches before giving it to parmap_exact.
    ------------------------------------------------------------------------- *)
-
-val use_thread_flag = ref false
 
 fun parmap_batch ncores f l =
   if ncores = 1 andalso not (!use_thread_flag)
