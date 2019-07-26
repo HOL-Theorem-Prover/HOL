@@ -48,7 +48,7 @@ sig
   val ncore_mcts_glob : int ref
 
   (* Debugging *)
-  val mcts_test : 
+  val mcts_test :
     int -> ('a,'b) gamespec -> dhtnn -> 'a -> ('a,'b) psMCTS.tree
   val mcts_uniform :
     int -> ('a,'b) gamespec -> 'a -> ('a,'b) psMCTS.tree

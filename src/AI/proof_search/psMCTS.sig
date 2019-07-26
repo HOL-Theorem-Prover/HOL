@@ -2,7 +2,7 @@ signature psMCTS =
 sig
 
   include Abbrev
-  
+
   (* outcome *)
   datatype status = Undecided | Win | Lose
 
@@ -22,8 +22,8 @@ sig
   type ('a,'b) tree = (id, ('a,'b) node) Redblackmap.dict
 
   (* search function *)
-  type ('a,'b) mctsparam = 
-    { 
+  type ('a,'b) mctsparam =
+    {
     nsim : int, decay : real, noise : bool,
     status_of : 'a -> status,
     apply_move : 'b -> 'a -> 'a,
@@ -38,7 +38,7 @@ sig
 
   (* statistics *)
   val root_variation : ('a,'b) tree -> id list
-  val max_depth : ('a,'b) tree -> id -> int  
+  val max_depth : ('a,'b) tree -> id -> int
   val trace_win : ('a -> status) -> ('a,'b) tree -> id -> ('a,'b) node list
 
   (* training example *)

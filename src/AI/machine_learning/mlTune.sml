@@ -31,7 +31,7 @@ fun grid_param (dl,nl,bl,ll,yl) =
   end
 
 type set_param =
-  (int * int) *  
+  (int * int) *
   ((term * real list) list * (term * real list) list * (term * int) list)
 
 (* -------------------------------------------------------------------------
@@ -67,7 +67,7 @@ fun write_param file ((ncore,dimout),(train,test,operl)) =
 fun read_param file =
   (
   pair_of_list (map string_to_int (readl (file ^ "_ncoredimout"))),
-  (read_tnnex (file ^ "_train"), 
+  (read_tnnex (file ^ "_train"),
   read_tnnex (file ^ "_test"),
   read_operl (file ^ "_operl"))
   )
@@ -97,13 +97,13 @@ fun read_argl file =
   end
 
 fun write_result file (r1,r2,t) = writel file (map rts [r1,r2,t])
-fun read_result file = 
+fun read_result file =
   triple_of_list (map (valOf o Real.fromString) (readl file))
 
 val extspec : (set_param, ml_param, real * real * real) smlParallel.extspec  =
   {
   self = "mlTune.extspec",
-  reflect_globals = fn () => "()", 
+  reflect_globals = fn () => "()",
   function = train_tnn_param,
   write_param = write_param,
   read_param = read_param,

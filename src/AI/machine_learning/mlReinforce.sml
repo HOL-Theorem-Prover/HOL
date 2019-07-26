@@ -99,8 +99,8 @@ fun summary_param () =
   in
     summary "Global parameters";
     summary (String.concatWith "\n  "
-     ([file,para] @ 
-      [gen1,gen2,gen3,gen4,gen5] @ 
+     ([file,para] @
+      [gen1,gen2,gen3,gen4,gen5] @
       [nn0,nn1,nn2,nn3,nn4,nn6,nn5] @
       [mcts2,mcts3,mcts4,mcts5,mcts6,mcts7])
      ^ "\n")
@@ -155,14 +155,14 @@ fun add_rootex gamespec tree exl =
 val verbose_flag = ref false
 
 fun n_bigsteps_loop (n,nmax) gamespec mctsparam (exl,rootl) tree =
-  let 
+  let
     val sit = #sit (dfind [] tree)
     val status = #status_of gamespec sit
-    val _ = if !verbose_flag 
-            then print_endline (term_to_string (#nntm_of_sit gamespec sit)) 
+    val _ = if !verbose_flag
+            then print_endline (term_to_string (#nntm_of_sit gamespec sit))
             else ()
   in
-    if status <> Undecided orelse n >= nmax then (status = Win,exl,rootl) else 
+    if status <> Undecided orelse n >= nmax then (status = Win,exl,rootl) else
     let
       val newtree = mcts mctsparam tree
       val root = dfind [] newtree
@@ -182,8 +182,8 @@ fun n_bigsteps_loop (n,nmax) gamespec mctsparam (exl,rootl) tree =
   end
 
 fun n_bigsteps gamespec mctsparam target =
-  let 
-    val tree = starttree_of mctsparam target 
+  let
+    val tree = starttree_of mctsparam target
     val n = #max_bigsteps gamespec target
   in
     n_bigsteps_loop (0,n) gamespec mctsparam ([],[]) tree
@@ -227,13 +227,13 @@ fun bstatus_to_string b = if b then "win" else "lose"
 fun string_to_bstatus s = assoc s [("win",true),("lose",false)]
   handle HOL_ERR _ => raise ERR "string_to_bstatus" ""
 
-fun string_to_bool s = 
-   if s = "true" then true 
-   else if s = "false" then false 
+fun string_to_bool s =
+   if s = "true" then true
+   else if s = "false" then false
    else raise ERR "string_to_bool" ""
 
 fun flags_to_string (b1,b2,b3) = bts b1 ^ " " ^  bts b2 ^ " " ^ bts b3
-fun string_to_flags s = 
+fun string_to_flags s =
   triple_of_list (map string_to_bool (String.tokens Char.isSpace s))
 
 fun write_param file (flags,dhtnn) =
@@ -272,7 +272,7 @@ fun n_bigsteps_extern (gamespec: ('a,'b) gamespec) (flags,dhtnn) target =
   let
     val (noise,bstart,btemp) = flags
     val _ = temperature_flag := btemp
-    val (mctsparam : ('a,'b) mctsparam) = 
+    val (mctsparam : ('a,'b) mctsparam) =
       {nsim = !nsim_glob, decay = !decay_glob, noise = noise,
        status_of = #status_of gamespec,
        apply_move = #apply_move gamespec,
@@ -285,7 +285,7 @@ fun n_bigsteps_extern (gamespec: ('a,'b) gamespec) (flags,dhtnn) target =
 fun mk_extspec (name: string) (gamespec : ('a,'b) gamespec) =
   {
   self = name,
-  reflect_globals = reflect_globals, 
+  reflect_globals = reflect_globals,
   function = n_bigsteps_extern gamespec,
   write_param = write_param,
   read_param = read_param,
@@ -343,7 +343,7 @@ fun explore startb (gamespec,extspec) allex dhtnn =
     val _ = summary ("Exploration targets: " ^ its (length targetl))
     val flags = (true,startb,!temp_flag)
     val param = (flags,dhtnn)
-    val (l,t) = 
+    val (l,t) =
       add_time (parmap_queue_extern (!ncore_mcts_glob) extspec param) targetl
     val nwin = length (filter fst l)
     val exll = map snd l
@@ -386,7 +386,7 @@ fun mcts_uniform nsim gamespec startsit =
 fun n_bigsteps_test gamespec dhtnn target =
   let
     val status_of = #status_of gamespec
-    val mctsparam = 
+    val mctsparam =
       {nsim = !nsim_glob, decay = !decay_glob, noise = false,
        status_of = #status_of gamespec,
        apply_move = #apply_move gamespec,

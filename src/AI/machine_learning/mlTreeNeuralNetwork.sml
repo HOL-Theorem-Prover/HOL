@@ -22,7 +22,7 @@ type opdict = ((term * int),nn) Redblackmap.dict
 type tnnex = (term * real list) list
 type tnn =
   {opdict: opdict, headnn: nn, dimin: int, dimout: int}
-type dhex = (term * real list * real list) list  
+type dhex = (term * real list * real list) list
 type dhtnn =
   {opdict: opdict, headeval: nn, headpoli: nn, dimin: int, dimout: int}
 
@@ -320,7 +320,7 @@ fun fp_dhtnn dhtnn tml =
     (fpdict,fpdataleval,fpdatalpoli)
   end
 
-fun infer_dhtnn dhtnn tm = 
+fun infer_dhtnn dhtnn tm =
   let val (_,fpdataleval,fpdatalpoli) = fp_dhtnn dhtnn (order_subtm tm) in
     (
     only_hd (vector_to_list (denorm_vect (#outnv (last fpdataleval)))),
@@ -464,7 +464,7 @@ fun train_tnn_nepoch (ncore,bsize) nepoch tnn (ptrain,ptest) =
   let
     val batchl = (mk_batch bsize o shuffle) ptrain
     val (newtnn,r1) = train_tnn_epoch ncore [] tnn batchl
-    val r2 = if null ptest then 0.0 else 
+    val r2 = if null ptest then 0.0 else
       average_real (map (infer_mse tnn) ptest)
     val _ = print_endline
       (its nepoch ^ " train: " ^ pretty_real r1 ^ " test: " ^ pretty_real r2)
@@ -500,11 +500,11 @@ fun train_tnn (ncore,bsize) randtnn (trainex,testex) schedule =
   let
     val _ = print_endline ("trainset " ^ output_info (map snd trainex))
     val _ = print_endline ("testset  " ^ output_info (map snd testex))
-    val _ = if length trainex < bsize 
-            then raise ERR "prepare_train_tnn" "too few examples" 
+    val _ = if length trainex < bsize
+            then raise ERR "prepare_train_tnn" "too few examples"
             else ()
     val pset = (prepare_tnnex trainex, prepare_tnnex testex)
-    val (tnn,t) = 
+    val (tnn,t) =
       add_time (train_tnn_schedule (ncore,bsize) randtnn pset) schedule
   in
     print_endline ("Tree neural network training time: " ^ rts t); tnn
@@ -574,10 +574,10 @@ fun train_dhtnn (ncore,bsize) dhtnn dhex schedule =
     val _ = print_endline ("eval " ^ output_info (map #2 dhex))
     val _ = print_endline ("poli " ^ output_info (map #3 dhex))
     val newdhex = prepare_dhex dhex
-    val (newdhtnn,t) = 
+    val (newdhtnn,t) =
       add_time (train_dhtnn_schedule (ncore,bsize) dhtnn newdhex) schedule
   in
-    print_endline 
+    print_endline
       ("Double-headed tree neural network training time: " ^ rts t);
     newdhtnn
   end

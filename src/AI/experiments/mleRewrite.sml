@@ -213,17 +213,17 @@ start_rl_loop (gamespec,extspec);
    Small test
    ------------------------------------------------------------------------- *)
 
-(* 
+(*
 load "mleRewrite"; open mleRewrite;
 load "mlReinforce"; open mlReinforce;
 load "psMCTS"; open psMCTS;
 nsim_glob := 10000;
 decay_glob := 0.9;
-val _ = n_bigsteps_test gamespec (random_dhtnn_gamespec gamespec) 
+val _ = n_bigsteps_test gamespec (random_dhtnn_gamespec gamespec)
 (mk_startsit ``SUC 0 * SUC 0``);
 
 dim_glob := 4;
-val tree = mcts_test 10000 gamespec (random_dhtnn_gamespec gamespec) 
+val tree = mcts_test 10000 gamespec (random_dhtnn_gamespec gamespec)
 (mk_startsit ``SUC (SUC 0) + SUC 0``);
 val nodel = trace_win (#status_of gamespec) tree [];
 

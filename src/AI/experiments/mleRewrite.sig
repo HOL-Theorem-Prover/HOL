@@ -8,7 +8,7 @@ sig
   datatype move = Arg of int | Paramod of (int * bool)
 
   val mk_startsit : term -> board
-  
+
   (* interface *)
   val gamespec : (board,move) mlReinforce.gamespec
   val extspec : board mlReinforce.extgamespec

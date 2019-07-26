@@ -63,7 +63,7 @@ fun update_node decay tree eval {pol,sit,sum,vis,status} =
   let val newstatus =
     if status <> Undecided then status
     else if exists_win tree pol then Win
-    else if all_lose tree pol then Lose 
+    else if all_lose tree pol then Lose
     else Undecided
   in
     {pol=pol, sit=sit, sum=sum+eval, vis=vis+1.0, status=newstatus}
@@ -140,7 +140,7 @@ fun rescale_pol pol =
 fun node_create_backup param tree (id,sit) =
   let
     fun wrap_poli poli = let fun f i x = (x, i :: id) in mapi f poli end
-    val status = #status_of param sit 
+    val status = #status_of param sit
     val (eval,poli) = case status of
         Win       => (1.0,[])
       | Lose      => (0.0,[])
@@ -175,14 +175,14 @@ fun value_choice tree vtot ((move,polv),cid) =
 
 datatype ('a,'b) select = Backup of (id * real) | NodeExtension of (id * id)
 
-fun score_status status = case status of 
-    Undecided => raise ERR "score_status" "" 
+fun score_status status = case status of
+    Undecided => raise ERR "score_status" ""
   | Win => 1.0
   | Lose => 0.0
 
 fun select_child param tree id =
-  let 
-    val node = dfind id tree 
+  let
+    val node = dfind id tree
     val status = #status_of param (#sit (dfind id tree))
   in
     if status <> Undecided then Backup (id,score_status status) else
@@ -222,7 +222,7 @@ fun expand param tree (id,cid) =
    MCTS
    ------------------------------------------------------------------------- *)
 
-type ('a,'b) mctsparam = 
+type ('a,'b) mctsparam =
   {
   nsim : int, decay : real, noise : bool,
   status_of : 'a -> status,
@@ -233,13 +233,13 @@ type ('a,'b) mctsparam =
 fun starttree_of param startsit =
   node_create_backup param (dempty id_compare) ([],startsit)
 
-fun mcts param starttree =  
+fun mcts param starttree =
   let
     val starttree_noise =
       if #noise param then add_root_noise starttree else starttree
     fun loop tree =
-      if #vis (dfind [] tree) > Real.fromInt (#nsim param) + 0.5 orelse 
-         (!stopatwin_flag andalso #status (dfind [] tree) = Win)      
+      if #vis (dfind [] tree) > Real.fromInt (#nsim param) + 0.5 orelse
+         (!stopatwin_flag andalso #status (dfind [] tree) = Win)
       then tree else
         let val newtree = case select_child param tree [] of
             Backup (id,sc) => backup (#decay param) tree (id,sc)
@@ -279,9 +279,9 @@ fun node_variation tree id =
 
 fun root_variation tree = node_variation tree []
 
-fun max_depth tree id = 
+fun max_depth tree id =
   if not (dmem id tree) then 0 else
-  let 
+  let
     val node = dfind id tree
     val cidl = map snd (#pol node)
     val l = map (max_depth tree) cidl
@@ -291,9 +291,9 @@ fun max_depth tree id =
 
 fun is_win tree id = #status (dfind id tree) = Win handle NotFound => false
 
-fun trace_win status_of tree id = 
+fun trace_win status_of tree id =
   if not (dmem id tree) then raise ERR "trace_win" "" else
-  let 
+  let
     val node = dfind id tree
     val cidl = map snd (#pol node)
     val l = filter (is_win tree) cidl
@@ -312,7 +312,7 @@ fun make_distrib tree =
     val pol = #pol (dfind [] tree)
     val _ = if null pol then raise ERR "make_distrib" "pol" else ()
     fun f (_,cid) = #vis (dfind cid tree) handle NotFound => 0.0
-    val dis = map_assoc f pol 
+    val dis = map_assoc f pol
     val tot = sum_real (map snd dis)
     val _ = if tot < 0.5 then raise ERR "make_distrib" "tot" else ()
   in
@@ -339,9 +339,9 @@ fun print_distrib g l =
   end
 
 fun select_bigstep tree =
-  let 
-    val (d,_) = make_distrib tree 
-    val choice = 
+  let
+    val (d,_) = make_distrib tree
+    val choice =
       if !temperature_flag then select_in_distrib d else best_in_distrib d
   in
     (snd choice, d)

@@ -40,13 +40,13 @@ fun parse_ex s =
 
 
 fun read_true_exl file =
-  let 
-    val exl1 = map parse_ex (readl file) 
+  let
+    val exl1 = map parse_ex (readl file)
     val exl2 = map fst (filter (fn (_,x) => hd x > 0.5) exl1)
   in
     map rename_allvar exl2
   end
-    
+
 
 (* -------------------------------------------------------------------------
    Normalize examples

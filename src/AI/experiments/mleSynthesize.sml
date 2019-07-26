@@ -119,7 +119,7 @@ type dhex = (term * real list * real list) list
 type dhtnn = mlTreeNeuralNetwork.dhtnn
 type flags = bool * bool * bool
 
-val extspec : (flags * dhtnn, board, bool * dhex) 
+val extspec : (flags * dhtnn, board, bool * dhex)
   smlParallel.extspec = mk_extspec "mleSynthesize.extspec" gamespec
 
 (* -------------------------------------------------------------------------

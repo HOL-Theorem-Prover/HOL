@@ -227,7 +227,7 @@ fun profile_file wid = wid_dir wid ^ "/profile"
 
 fun write_profile wid =
   (
-  writel (profile_file wid) [PolyML.makestring (Profile.results ())] 
+  writel (profile_file wid) [PolyML.makestring (Profile.results ())]
   )
 
 (* -------------------------------------------------------------------------
@@ -239,7 +239,7 @@ fun worker_process wid (f,l) job =
 and worker_listen wid fl =
   if exists_file (widin_file wid) then
     let val s = hd (readl_rm (widin_file wid)) in
-      if s = "stop" 
+      if s = "stop"
       then ()
       else worker_process wid fl (string_to_int s)
     end
@@ -331,7 +331,7 @@ and boss_collect threadl rr (pendingl,runningl,completedl) =
    Specification of the external parallel run
    ------------------------------------------------------------------------- *)
 
-type ('a,'b,'c) extspec = 
+type ('a,'b,'c) extspec =
   {
   self: string,
   reflect_globals : unit -> string,
@@ -355,7 +355,7 @@ fun boss_start_worker code_of wid =
   remove_file (widscript_file wid)
   )
 
-val attrib = [Thread.InterruptState Thread.InterruptAsynch, 
+val attrib = [Thread.InterruptState Thread.InterruptAsynch,
   Thread.EnableBroadcastInterrupt true]
 
 fun boss_wait_upl widl =
@@ -379,7 +379,7 @@ fun worker_start wid (extspec: ('a,'b,'c) extspec) =
   let
     val param = #read_param extspec (param_file ())
     val argl = #read_argl extspec (argl_file ())
-    fun f wid arg = 
+    fun f wid arg =
       let val r = #function extspec param arg in
         #write_result extspec (result_file wid) r;
         writel_atomic (widout_file wid) ["done"]
@@ -399,7 +399,7 @@ fun code_of_extspec extspec wid =
     ]
   end
 
-val attrib = [Thread.InterruptState Thread.InterruptAsynch, 
+val attrib = [Thread.InterruptState Thread.InterruptAsynch,
   Thread.EnableBroadcastInterrupt true]
 
 fun parmap_queue_extern ncore extspec param argl =
@@ -434,18 +434,18 @@ fun code_exact extspec wid =
   "worker_start_exact " ^ its wid ^ #self extspec ^ ";"
   ]
 
-fun worker_exec_exact wid extspec = 
-  let    
+fun worker_exec_exact wid extspec =
+  let
     val param = #read_param extspec (param_file ())
-    val arg = hd (#read_argl extspec (arg_file wid)) 
-    val r = #function extspec param arg 
+    val arg = hd (#read_argl extspec (arg_file wid))
+    val r = #function extspec param arg
   in
     #write_result extspec (result_file wid) r;
     writel_atomic (widout_file wid) ["done"];
-    worker_wait_exact wid extspec 
+    worker_wait_exact wid extspec
   end
 and worker_wait_exact wid extspec =
-  if Profile.profile "worker_wait" exists_file (widin_file wid) then 
+  if Profile.profile "worker_wait" exists_file (widin_file wid) then
     let val s = hd (readl_rm (widin_file wid)) in
       if s = "stop" then write_profile wid else worker_exec_exact wid extspec
     end
@@ -461,7 +461,7 @@ fun send_job_exact extspec (wid,arg) =
   (
   #write_argl extspec (arg_file wid) [arg];
   writel_atomic (widin_file wid) ["work"]
-  ) 
+  )
 
 fun boss_send_exact extspec widl param argl =
   (
@@ -470,8 +470,8 @@ fun boss_send_exact extspec widl param argl =
   )
 
 fun boss_collect_exact extspec widl =
-  let 
-    fun wait widl = 
+  let
+    fun wait widl =
       if null widl then () else
       let val newwidl = filter (not o exists_file o widout_file) widl in
         (mini_sleep (); wait newwidl)
@@ -479,7 +479,7 @@ fun boss_collect_exact extspec widl =
     val _ = Profile.profile "boss_wait" wait widl
     val l = map (#read_result extspec o result_file) widl
   in
-    app (remove_file o widout_file) widl; 
+    app (remove_file o widout_file) widl;
     app (remove_file o result_file) widl;
     l
   end
@@ -503,7 +503,7 @@ fun parmap_exact_extern ncore extspec param argl =
     boss_send_exact extspec widl param argl;
     boss_collect_exact extspec widl
   end
-  
+
 val boss_stop_exact = boss_stop_workers
 
 (* -------------------------------------------------------------------------
@@ -523,7 +523,7 @@ val idspec : (unit,int,int) extspec =
   read_result = let fun f file = string_to_int (hd (readl_rm file)) in f end
   }
 
-(* 
+(*
 load "smlParallel"; open smlParallel;
 val l1 = List.tabulate (100,I);
 val l2 = parmap_queue_extern 2 idspec () l1;

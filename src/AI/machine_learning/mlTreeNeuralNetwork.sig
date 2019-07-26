@@ -16,10 +16,10 @@ include Abbrev
   type opdict = ((term * int),nn) Redblackmap.dict
   type tnnex = (term * real list) list
   type tnn = {opdict: opdict, headnn: nn, dimin: int, dimout: int}
-  type dhex = (term * real list * real list) list  
+  type dhex = (term * real list * real list) list
   type dhtnn =
     {opdict: opdict, headeval: nn, headpoli: nn, dimin: int, dimout: int}
-  
+
   (* random generation *)
   val random_headnn : (int * int) -> nn
   val random_opdict : int -> (term * int) list -> opdict
@@ -50,7 +50,7 @@ include Abbrev
     (int * int) -> tnn -> tnnex * tnnex -> (int * real) list -> tnn
   val train_dhtnn :
     (int * int) -> dhtnn -> dhex -> (int * real) list -> dhtnn
- 
+
   (* statistics *)
   val tnn_accuracy : tnn -> (term * real list) list -> real
 

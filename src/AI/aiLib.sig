@@ -187,7 +187,7 @@ sig
   val rts : real -> string
   val rts_round : int -> real -> string
   val pretty_real : real -> string
-  
+
   (* term *)
   val rename_bvarl : (string -> string) -> term -> term
   val rename_allvar : term -> term

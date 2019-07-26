@@ -15,7 +15,7 @@ sig
 
   type state = (int,int) Redblackmap.dict
   type board = (int list * int) * (state list * program) * (program * program)
-  
+
   val mk_startsit : int list * (program * int) -> board
   val gamespec : (board,move) mlReinforce.gamespec
   val extspec : board mlReinforce.extgamespec
@@ -25,7 +25,7 @@ sig
   val state_of_inputl : int list -> state
   val compare_statel : state list * state list -> order
   val ol_of_statel : state list -> int list
-  val compare_ol : int list * int list -> order  
+  val compare_ol : int list * int list -> order
 
   val level_parameters : (int * int * int * int) list ref
   val exec_prog : program -> state -> state

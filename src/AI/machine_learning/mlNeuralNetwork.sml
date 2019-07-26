@@ -61,7 +61,7 @@ fun diml_of sizel = case sizel of
 fun random_nn (a,da) sizel =
   let
     val l = diml_of sizel
-    fun biais_dim (i,j) = (i,j+1) 
+    fun biais_dim (i,j) = (i,j+1)
     fun f x = {a = a, da = da, w = mat_random (biais_dim x)}
   in
     map f l
@@ -126,16 +126,16 @@ fun read_nn_sl sl =
 fun read_nn file = read_nn_sl (readl file)
 
 
-fun string_of_ex (v1,v2) = 
+fun string_of_ex (v1,v2) =
   let fun f v = reall_to_string (vector_to_list v) in
     f v1 ^ "," ^ f v2
   end
 
 fun write_exl file exl = writel file (map string_of_ex exl)
 
-fun ex_of_string s = 
+fun ex_of_string s =
   let val (a,b) = pair_of_list (String.tokens (fn x => x = #",") s) in
-    (Vector.fromList (string_to_reall a), 
+    (Vector.fromList (string_to_reall a),
      Vector.fromList (string_to_reall b))
   end
 
@@ -268,7 +268,7 @@ fun train_nn_subbatch nn (subbatch : (vect * vect) list) =
 
 fun train_nn_batch ncore nn batch =
   let
-    val (dwll,lossl) = 
+    val (dwll,lossl) =
       split (parmap_exact ncore (train_nn_subbatch nn) (cut_n ncore batch))
     val dwl = sum_dwll dwll
     val newnn = update_nn nn dwl
@@ -329,10 +329,10 @@ val v1 = Vector.fromList [1.0,~1.0];
 val v2 = Vector.fromList [~1.0,1.0];
 val exl = [(v1,v1),(v2,v2)];
 
-fun maxv (v:real vector) = 
+fun maxv (v:real vector) =
   if Vector.sub (v,0) > Vector.sub (v,1) then v1 else v2;
 
-fun negv (v:real vector) = 
+fun negv (v:real vector) =
   if Vector.sub (v,0) > Vector.sub (v,1) then v2 else v1;
 
 fun is_accurate (v: real vector) (v' : real vector) =
@@ -343,7 +343,7 @@ fun is_accurate (v: real vector) (v' : real vector) =
     Vector.sub (v',0) < Vector.sub (v',1))
 
 fun train_nn2nn_one (nn1,nn2) (inputv,expectv) =
-  let 
+  let
     val fpdatal1 = fp_nn nn1 (add_biais inputv)
     val interv = maxv (#outnv (last fpdatal1))
     val fpdatal2 = fp_nn nn2 (add_biais interv)
@@ -378,7 +378,7 @@ fun train_nn2nn n nnc =
     train_nn2nn (n - 1) new_nnc
   end
 
-fun infer_nnc (nn1,nn2) v = 
+fun infer_nnc (nn1,nn2) v =
   (infer_nn nn2 o add_biais o maxv o infer_nn nn1 o add_biais) v;
 
 val nn1 = random_nn (tanh,dtanh) (tanh,dtanh) [3,10,2];
