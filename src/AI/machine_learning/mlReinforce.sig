@@ -19,13 +19,14 @@ sig
     read_targetl: string -> 'a list,
     max_bigsteps : 'a -> int
     }
-  type dhex = (term * real list * real list) list
+  type dhex = mlTreeNeuralNetwork.dhex
   type dhtnn = mlTreeNeuralNetwork.dhtnn
   type flags = bool * bool * bool
   type 'a extgamespec =
      (flags * dhtnn, 'a, bool * dhex) smlParallel.extspec
 
-
+  (* Statistics *)
+  val eval_dir : string
   (* rl parameters *)
   val ngen_glob : int ref
   val ntarget_compete : int ref
@@ -46,9 +47,7 @@ sig
   val temp_flag : bool ref
   val ncore_mcts_glob : int ref
 
-  val eval_dir : string
-
-  (* debugging *)
+  (* Debugging *)
   val mcts_test : 
     int -> ('a,'b) gamespec -> dhtnn -> 'a -> ('a,'b) psMCTS.tree
   val mcts_uniform :
@@ -56,15 +55,14 @@ sig
   val n_bigsteps_test : ('a,'b) gamespec -> mlTreeNeuralNetwork.dhtnn ->
     'a -> ('a,'b) psMCTS.node list
 
-  (* training *)
-  val random_dhtnn_gamespec :
-    ('a,'b) gamespec -> dhtnn
-  val train_dhtnn : ('a,'b) gamespec -> dhex -> dhtnn
+  (* Training *)
+  val random_dhtnn_gamespec : ('a,'b) gamespec -> dhtnn
+  val train_dhtnn_gamespec : ('a,'b) gamespec -> dhex -> dhtnn
 
-  (* external parallel exploration specification *)
+  (* External parallel exploration specification *)
   val mk_extspec : string -> ('a,'b) gamespec -> 'a extgamespec
 
-  (* reinforcement learning loop *)
+  (* Reinforcement learning loop *)
   val logfile_glob : string ref
   val summary : string -> unit
   val start_rl_loop : ('a,'b) gamespec * 'a extgamespec -> dhex * dhtnn

@@ -459,18 +459,17 @@ fun train_tnn_epoch ncore lossl tnn batchl = case batchl of
       train_tnn_epoch ncore (loss :: lossl) newtnn m
     end
 
-fun train_tnn_nepoch (ncore,bsize) n tnn (ptrain,ptest) =
-  if n <= 0 then tnn else
+fun train_tnn_nepoch (ncore,bsize) nepoch tnn (ptrain,ptest) =
+  if nepoch <= 0 then tnn else
   let
     val batchl = (mk_batch bsize o shuffle) ptrain
-    val (newtnn,trainloss) = train_tnn_epoch ncore [] tnn batchl
-    val testloss = if null ptest then 0.0 else 
+    val (newtnn,r1) = train_tnn_epoch ncore [] tnn batchl
+    val r2 = if null ptest then 0.0 else 
       average_real (map (infer_mse tnn) ptest)
     val _ = print_endline
-      (its n ^ " train: " ^ pretty_real trainloss ^ 
-               " test: " ^ pretty_real testloss)
+      (its nepoch ^ " train: " ^ pretty_real r1 ^ " test: " ^ pretty_real r2)
   in
-    train_tnn_nepoch (ncore,bsize) (n - 1) newtnn (ptrain,ptest)
+    train_tnn_nepoch (ncore,bsize) (nepoch - 1) newtnn (ptrain,ptest)
   end
 
 fun train_tnn_schedule (ncore,bsize) tnn (ptrain,ptest) schedule =
@@ -547,40 +546,40 @@ fun train_dhtnn_epoch ncore (lossl1,lossl2) dhtnn batchl =
       newdhtnn m
     end
 
-fun train_dhtnn_nepoch ncore n dhtnn bsize dhex =
-  if n <= 0 then dhtnn else
+fun train_dhtnn_nepoch (ncore,bsize) nepoch dhtnn dhex =
+  if nepoch <= 0 then dhtnn else
   let
     val batchl = mk_batch bsize (shuffle dhex)
-    val (dhtnn',(r1,r2)) = train_dhtnn_epoch ncore ([],[]) dhtnn batchl
+    val (newdhtnn,(r1,r2)) = train_dhtnn_epoch ncore ([],[]) dhtnn batchl
     val _ = print_endline
-      (its n ^ ": eval " ^ pretty_real r1 ^ " poli " ^ pretty_real r2)
+      (its nepoch ^ ": eval " ^ pretty_real r1 ^ " poli " ^ pretty_real r2)
   in
-    train_dhtnn_nepoch ncore (n - 1) dhtnn' bsize dhex
+    train_dhtnn_nepoch (ncore,bsize) (nepoch - 1) newdhtnn dhex
   end
 
-fun train_dhtnn_schedule ncore dhtnn bsize dhex schedule =
+fun train_dhtnn_schedule (ncore,bsize) dhtnn dhex schedule =
   case schedule of
     [] => dhtnn
   | (nepoch, lrate) :: m =>
     let
       val _ = learningrate_glob := lrate
       val _ = print_endline ("learning_rate: " ^ rts lrate)
-      val newdhtnn = train_dhtnn_nepoch ncore nepoch dhtnn bsize dhex
+      val newdhtnn = train_dhtnn_nepoch (ncore,bsize) nepoch dhtnn dhex
     in
-      train_dhtnn_schedule ncore newdhtnn bsize dhex m
+      train_dhtnn_schedule (ncore,bsize) newdhtnn dhex m
     end
 
 fun train_dhtnn (ncore,bsize) dhtnn dhex schedule =
   let
     val _ = print_endline ("eval " ^ output_info (map #2 dhex))
     val _ = print_endline ("poli " ^ output_info (map #3 dhex))
-    val dhex' = prepare_dhex dhex
-    val (dhtnn',t) = 
-      add_time (train_dhtnn_schedule ncore dhtnn bsize dhex') schedule
+    val newdhex = prepare_dhex dhex
+    val (newdhtnn,t) = 
+      add_time (train_dhtnn_schedule (ncore,bsize) dhtnn newdhex) schedule
   in
     print_endline 
       ("Double-headed tree neural network training time: " ^ rts t);
-    dhtnn'
+    newdhtnn
   end
 
 (* -------------------------------------------------------------------------

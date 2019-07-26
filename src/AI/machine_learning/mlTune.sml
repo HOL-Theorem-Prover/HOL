@@ -45,9 +45,9 @@ fun train_tnn_param ((ncore,dimout),(train,test,operl))
     val randtnn = random_tnn (dim,dimout) operl
     val schedule = [(nepoch, learningrate /  (Real.fromInt batchsize))]
     val (tnn,t) = add_time
-      (prepare_train_tnn (ncore,batchsize) randtnn (train,test)) schedule
-    val r1 = accuracy_set tnn train
-    val r2 = accuracy_set tnn test
+      (train_tnn (ncore,batchsize) randtnn (train,test)) schedule
+    val r1 = tnn_accuracy tnn train
+    val r2 = tnn_accuracy tnn test
   in
     (r1,r2,t)
   end

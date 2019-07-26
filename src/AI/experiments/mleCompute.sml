@@ -38,7 +38,7 @@ fun train_fixed basename exl =
     val bsize = 16
     val schedule = [(100, 0.02 / (Real.fromInt bsize))]
     val ncore = 4
-    val tnn = prepare_train_tnn (ncore,bsize) randtnn (exl,[]) schedule
+    val tnn = train_tnn (ncore,bsize) randtnn (exl,[]) schedule
     val _ = mkDir_err compute_dir
   in
     write_tnn (compute_dir ^ "/" ^ basename) tnn;
@@ -51,8 +51,8 @@ load "mleArithData"; open mleArithData;
 val tml = mlTacticData.import_terml (dataarith_dir ^ "/train");
 val exl = compute_exout tml;
 val tnn = train_fixed "test" exl;
-val tm = random_elem tml;
-infer_tnn tnn tm;
+val tm = aiLib.random_elem tml;
+mlTreeNeuralNetwork.infer_tnn tnn tm;
 *)
 
 (* ------------------------------------------------------------------------
@@ -66,7 +66,7 @@ fun accuracy_fixed tnn =
     val tmll = map mlTacticData.import_terml filel
     val exl = map compute_exout tmll
   in
-    quadruple_of_list (map (accuracy_set tnn) exl)
+    quadruple_of_list (map (tnn_accuracy tnn) exl)
   end
 
 

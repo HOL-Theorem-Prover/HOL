@@ -205,17 +205,17 @@ fun epex_stats epex =
 fun random_dhtnn_gamespec gamespec =
   random_dhtnn (!dim_glob, length (#movel gamespec)) (#operl gamespec)
 
-fun train_dhtnn gamespec epex =
+fun train_dhtnn_gamespec gamespec epex =
   let
     val _ = epex_stats epex
     val schedule = [(!nepoch_glob, !lr_glob / Real.fromInt (!batchsize_glob))]
     val dhtnn = random_dhtnn_gamespec gamespec
   in
-    train_dhtnn (!ncore_train_glob) dhtnn (!batchsize_glob) epex schedule
+    train_dhtnn (!ncore_train_glob,!batchsize_glob) dhtnn epex schedule
   end
 
 fun train_f gamespec allex =
-  let val (dhtnn,t) = add_time (train_dhtnn gamespec) allex in
+  let val (dhtnn,t) = add_time (train_dhtnn_gamespec gamespec) allex in
     summary ("Training time : " ^ rts t); dhtnn
   end
 
