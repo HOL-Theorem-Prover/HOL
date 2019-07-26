@@ -22,12 +22,8 @@ sig
   val hh_pb_eval_thm : prover list -> string * thm -> unit
   val hh_pb_eval_thy : prover list -> string -> unit
 
-  (* Evaluation of eprover in parallel *)
-  val eprover_pb_eval_extern : unit -> int * int -> string -> unit
-  val eprover_pb_eval_parallel : int -> int -> string list -> unit list
-
   (* Evaluation of holyhammer (with premise selection)
-     This function can be used inside the tactictoe evaluation framework.
+     This function is used inside the tactictoe evaluation framework.
      It ignores the tactic data. *)
 
   type lbl = (string * real * goal * goal list)

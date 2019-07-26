@@ -142,75 +142,10 @@ fun parmap_queue ncores f l =
 fun parapp_queue ncores f l = ignore (parmap_queue ncores f l)
 
 (* -------------------------------------------------------------------------
-   The function parmap_gen start n threads, and generate a parmap function
-   relying on this threads and a function to close this threads.
-   This makes repeated calls of parmap f on different lists faster.
-   Otherwise it behaves like parmap_batch.
-   ------------------------------------------------------------------------- *)
-
-fun parmap_gen ncore =
-  let
-    val endflag = ref false
-    val inv = Vector.tabulate (ncore, fn _ => ref NONE)
-    val outv = Vector.tabulate (ncore, fn _ => ref NONE)
-    val endv = Vector.tabulate (ncore, fn _ => ref false)
-    val waitv = Vector.tabulate (ncore, fn _ => ref false)
-    val f_ref = ref NONE
-      fun reset_outv () =
-       let fun init_one pi =
-         let val outref = Vector.sub (outv,pi) in outref := NONE end
-       in
-         ignore (List.tabulate (ncore, init_one))
-       end
-    fun process pi =
-      if !endflag then
-        let val endref = Vector.sub (endv,pi) in endref := true end
-      else
-      let val inref = Vector.sub (inv,pi) in
-        case !inref of
-          NONE => process pi
-        | SOME x =>
-          let val outref = Vector.sub (outv,pi) in
-            inref := NONE; outref := SOME (map (valOf (!f_ref)) x);
-            process pi
-          end
-      end
-    fun fork_on pi = Thread.fork (fn () => process pi, attrib)
-    val threadl = List.tabulate (ncore,fork_on)
-    fun wait_resultl () =
-      if Vector.all (isSome o !) outv then () else wait_resultl ()
-    fun parmap_loc f l =
-      let
-        val _ = f_ref := SOME f
-        val _ = reset_outv ()
-        val inv_loc = Vector.fromList (cut_n ncore l)
-        fun assign pi =
-          let val inref = Vector.sub (inv,pi) in
-            inref := SOME (Vector.sub (inv_loc,pi))
-          end
-        val _ = List.tabulate (ncore, assign)
-        val _ = wait_resultl ()
-        val ll = vector_to_list (Vector.map (valOf o !) outv)
-      in
-        reset_outv (); List.concat ll
-      end
-    fun wait_close () =
-      if exists Thread.isActive threadl then wait_close () else ()
-    fun close_threadl () = (endflag := true; wait_close ())
-  in
-    (parmap_loc, close_threadl)
-  end
-
-(* -------------------------------------------------------------------------
-   To avoid spinning too much.
-   Smaller value do not decrease the waiting time.
+   External parmap
    ------------------------------------------------------------------------- *)
 
 fun mini_sleep () = OS.Process.sleep (Time.fromReal 0.01)
-
-(* -------------------------------------------------------------------------
-   External messages passing through files
-   ------------------------------------------------------------------------- *)
 
 val parallel_dir = ref (HOLDIR ^ "/src/AI/sml_inspection/parallel")
 fun wid_dir wid = (!parallel_dir) ^ "/" ^ its wid
@@ -221,7 +156,6 @@ fun widscript_file wid = wid_dir wid ^ "/script" ^ its wid ^ ".sml"
 fun param_file () = !parallel_dir ^ "/param"
 fun argl_file () = !parallel_dir ^ "/argl"
 fun result_file wid = wid_dir wid ^ "/result"
-fun arg_file wid = wid_dir wid ^ "/arg"
 
 fun profile_file wid = wid_dir wid ^ "/profile"
 
@@ -239,9 +173,8 @@ fun worker_process wid (f,l) job =
 and worker_listen wid fl =
   if exists_file (widin_file wid) then
     let val s = hd (readl_rm (widin_file wid)) in
-      if s = "stop"
-      then ()
-      else worker_process wid fl (string_to_int s)
+      if s = "stop" then () else
+        worker_process wid fl (string_to_int s)
     end
   else (mini_sleep (); worker_listen wid fl)
 
@@ -420,92 +353,6 @@ fun parmap_queue_extern ncore extspec param argl =
     boss_send threadl rr (pendingl,[],[])
   end
 
-
-(* -------------------------------------------------------------------------
-   Running multiple calls to external parmap without restarting workers.
-   Similar to parmap_exact.
-   ------------------------------------------------------------------------- *)
-
-fun code_exact extspec wid =
-  [
-  "open smlParallel;",
-  "val _ = parallel_dir := " ^ quote (!parallel_dir) ^ ";",
-  "val _ = " ^ #reflect_globals extspec () ^ ";",
-  "worker_start_exact " ^ its wid ^ #self extspec ^ ";"
-  ]
-
-fun worker_exec_exact wid extspec =
-  let
-    val param = #read_param extspec (param_file ())
-    val arg = hd (#read_argl extspec (arg_file wid))
-    val r = #function extspec param arg
-  in
-    #write_result extspec (result_file wid) r;
-    writel_atomic (widout_file wid) ["done"];
-    worker_wait_exact wid extspec
-  end
-and worker_wait_exact wid extspec =
-  if Profile.profile "worker_wait" exists_file (widin_file wid) then
-    let val s = hd (readl_rm (widin_file wid)) in
-      if s = "stop" then write_profile wid else worker_exec_exact wid extspec
-    end
-  else (mini_sleep (); worker_wait_exact wid extspec)
-
-fun worker_start_exact wid (extspec: ('a,'b,'c) extspec) =
-  (
-  writel_atomic (widout_file wid) ["up"];
-  worker_wait_exact wid extspec
-  )
-
-fun send_job_exact extspec (wid,arg) =
-  (
-  #write_argl extspec (arg_file wid) [arg];
-  writel_atomic (widin_file wid) ["work"]
-  )
-
-fun boss_send_exact extspec widl param argl =
-  (
-  #write_param extspec (param_file ()) param;
-  app (send_job_exact extspec) (combine (widl,argl))
-  )
-
-fun boss_collect_exact extspec widl =
-  let
-    fun wait widl =
-      if null widl then () else
-      let val newwidl = filter (not o exists_file o widout_file) widl in
-        (mini_sleep (); wait newwidl)
-      end
-    val _ = Profile.profile "boss_wait" wait widl
-    val l = map (#read_result extspec o result_file) widl
-  in
-    app (remove_file o widout_file) widl;
-    app (remove_file o result_file) widl;
-    l
-  end
-
-fun boss_start_exact ncore extspec =
-  let
-    val widl = List.tabulate (ncore,I)
-    val _ = clean_parallel_dirs widl
-    fun fork wid = Thread.fork (fn () =>
-      boss_start_worker (code_exact extspec) wid, attrib)
-    val threadl = map fork widl
-  in
-    boss_wait_upl widl;
-    print_endline ("  " ^ its ncore ^ " workers started");
-    threadl
-  end
-
-fun parmap_exact_extern ncore extspec param argl =
-  let val widl = List.tabulate (length argl, I) in
-    if length argl <> ncore then raise ERR "parmap_exact_extern" "" else "";
-    boss_send_exact extspec widl param argl;
-    boss_collect_exact extspec widl
-  end
-
-val boss_stop_exact = boss_stop_workers
-
 (* -------------------------------------------------------------------------
    Example
    ------------------------------------------------------------------------- *)
@@ -527,15 +374,6 @@ val idspec : (unit,int,int) extspec =
 load "smlParallel"; open smlParallel;
 val l1 = List.tabulate (100,I);
 val l2 = parmap_queue_extern 2 idspec () l1;
-
-val l1 = List.tabulate (2,I);
-val threadl = boss_start_exact 2 idspec;
-val l2 = parmap_exact_extern 2 idspec () l1;
-val l3 = parmap_exact_extern 2 idspec () l1;
-val _ = boss_stop_exact threadl;
 *)
-
-
-
 
 end
