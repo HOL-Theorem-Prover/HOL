@@ -293,4 +293,33 @@ fun train_nn ncore n nn bsize exl =
     train_nn ncore (n - 1) new_nn bsize exl
   end
 
+
 end (* struct *)
+
+(* -------------------------------------------------------------------------
+   Identity example
+   ------------------------------------------------------------------------- *)
+
+(*
+load "mlNeuralNetwork"; open mlNeuralNetwork;
+load "aiLib"; open aiLib;
+load "smlParallel"; open smlParallel;
+
+fun gen_idex dim =
+  let
+    fun f dim = List.tabulate (dim, fn _ => random_real () - 0.5)
+    val x = Vector.fromList (f dim) in (x,x)
+  end
+
+val dim = 10;
+val bsize = 16;
+val nepoch = 100;
+val ncore = 1;
+val exl = List.tabulate (1000, fn _ => gen_idex dim);
+val nn = random_nn (tanh,dtanh) [10,20,10];
+val (newnn,t) = add_time (train_nn ncore nepoch nn bsize) exl;
+val inv = fst (gen_idex dim);
+val outv = infer_nn newnn inv;
+*)
+
+
