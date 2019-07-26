@@ -3,6 +3,7 @@ open HolKernel Parse bossLib boolLib pairTheory pred_setTheory relationTheory se
 open buechiATheory
 
 val _ = new_theory "gbaSimpl"
+val _ = ParseExtras.temp_loose_equality()
 
 (*
   Reducing the amount of transitions

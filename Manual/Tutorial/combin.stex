@@ -89,22 +89,21 @@ We make our arrow symbol non-associative, thereby making it a
 parse error to write \verb!x --> y --> z!.
 It would be nice to be able to write this and have it mean \verb!x --> y /\ y --> z!, but this is not presently possible with the HOL parser.
 
-Our next step is to actually define the relation with the \ml{Hol\_reln} function.
-This function returns three separate theorems, but we will only need to refer to the first:
+Our next step is to actually define the relation, using the \ml{Inductive} syntax.
+Using the provided stem \ml{redn} as a base, the underlying facility proves a number of theorems for us, and shows us three: \ml{redn\_rules}, \ml{redn\_ind}, \ml{redn\_cases}.
+These theorems are available in the \ML{} session under those names, and are also saved under those names when the theory is exported.
 \begin{session}
 \begin{alltt}
->> val (redn_rules, _, redn_cases) = Hol_reln
-     `(!x y f. x --> y   ==>    f # x --> f # y) /\
-      (!f g x. f --> g   ==>    f # x --> g # x) /\
-      (!x y.   K # x # y --> x) /\
-      (!f g x. S # f # g # x --> (f # x) # (g # x))`;
+>> Inductive redn:
+     (!x y f. x --> y   ==>    f # x --> f # y) /\
+     (!f g x. f --> g   ==>    f # x --> g # x) /\
+     (!x y.   K # x # y --> x) /\
+     (!f g x. S # f # g # x --> (f # x) # (g # x))
+   End
 \end{alltt}
 \end{session}
 
-In addition to proving these three theorems for us, the inductive definitions package will also save them to disk when the theory is exported.
-
-Now, using our theorem \texttt{redn\_rules} we can demonstrate single
-steps of our reduction relation:
+Using the \ml{redn\_rules} theorem we can demonstrate single steps of our reduction relation:
 \begin{session}
 \begin{alltt}
 >> PROVE [redn_rules] ``S # (K # x # x) --> S # x``;
@@ -161,9 +160,10 @@ We inherit the nice syntax for the old constant with our new one.)
 \begin{alltt}
 >> val _ = hide "RTC";
 
->> val (RTC_rules, _, RTC_cases) = Hol_reln `
+>> Inductive RTC:
     (!x.     RTC R x x) /\
-    (!x y z. R x y /\ RTC R y z ==> RTC R x z)`;
+    (!x y z. R x y /\ RTC R y z ==> RTC R x z)
+   End
 \end{alltt}
 \end{session}
 Now let us go back to the notion of confluence.  We want this to mean
@@ -223,9 +223,9 @@ We can now prove the following:
 \begin{session}
 \begin{alltt}
 >> g `!R. confluent R ==>
-         !x y z.
-           RTC R x y /\ normform R y /\
-           RTC R x z /\ normform R z ==> (y = z)`;
+          !x y z.
+            RTC R x y /\ normform R y /\
+            RTC R x z /\ normform R z ==> (y = z)`;
 \end{alltt}
 \end{session}
 We rewrite with the definition of confluence:
@@ -256,14 +256,15 @@ Packaged up so as to remove the sub-goal package commands, we can
 prove and save the theorem for future use by:
 \begin{session}
 \begin{alltt}
->> val confluent_normforms_unique = store_thm(
-     "confluent_normforms_unique",
-     ``!R. confluent R ==>
-           !x y z. RTC R x y /\ normform R y /\
-                   RTC R x z /\ normform R z ==> (y = z)``,
+>> Theorem confluent_normforms_unique:
+     !R. confluent R ==>
+         !x y z. RTC R x y /\ normform R y /\
+                 RTC R x z /\ normform R z ==> y = z
+   Proof
      rw[confluent_def] >>
      `?u. RTC R y u /\ RTC R z u` by metis_tac [] >>
-     metis_tac [normform_def, RTC_cases]);
+     metis_tac [normform_def, RTC_cases]
+   QED
 \end{alltt}
 \end{session}
 \eos{}
@@ -321,21 +322,17 @@ direction (to $z$) and many steps in another (to $p$), then the
 diamond property for $R$ will guarantee us the existence of $r$,
 to which will we be able to take many steps from both $p$ and $z$.
 
-We take some care to state the goal so that after stripping away the
-outermost assumption (that $R$ has the diamond property), it will match the
-induction principle for \con{RTC}.\footnote{In this and subsequent
-  proofs using the sub-goal package, we will present the proof manager
-  as if the goal to be proved is the first ever on this stack.  In
-  other words, we have done a \texttt{dropn 1;} after every successful
-  proof to remove the evidence of the old goal.  In practice, there is
-  no harm in leaving these goals on the proof manager's stack.}
+We state the goal so we can easily strip away the outermost assumption (that $R$ has the diamond property) before beginning the rule induction.%
+\footnote{%
+  In this and subsequent proofs using the sub-goal package, we will present the proof manager as if the goal to be proved is the first ever on this stack.
+  In other words, we have done a \texttt{dropn 1;} after every successful proof to remove the evidence of the old goal.
+  In practice, there is no harm in leaving these goals on the proof manager's stack.}
 \begin{session}
 \begin{alltt}
 >>__ dropn 1;
 >> g `!R. diamond R ==>
-          !x p. RTC R x p ==>
-                !z. R x z ==>
-                    ?u. RTC R p u /\ RTC R z u`;
+          !x p z. RTC R x p /\ R x z ==>
+                  ?u. RTC R p u /\ RTC R z u`;
 \end{alltt}
 \end{session}
 First, we strip away the diamond property assumption (two things need to be stripped: the outermost universal quantifier and the antecedent of the implication).
@@ -401,10 +398,9 @@ All we need to provide \texttt{metis\_tac} is the rules for \con{RTC}:
 \begin{session}
 \begin{alltt}
 ##eval Theorem R_RTC_diamond:
-         !R. diamond R ==>
-             !x p. RTC R x p ==>
-                   !z. R x z ==>
-                       ?u. RTC R p u /\ RTC R z u
+         !R. diamond R ⇒
+             !x p z. RTC R x p ∧ R x z ⇒
+                     ∃u. RTC R p u ∧ RTC R z u
        Proof
          strip_tac >> strip_tac >> Induct_on `RTC` >> rw[] >| [
            metis_tac [RTC_rules],
@@ -418,25 +414,28 @@ All we need to provide \texttt{metis\_tac} is the rules for \con{RTC}:
 
 Now we can move on to proving that if $R$ has the diamond property, so too does $R^*$.
 We want to prove this by induction again.
-It's very tempting to state the goal as the obvious \[
+We state the goal as the obvious \[
 \con{diamond}\;R\;\Rightarrow\;\con{diamond}\,(R^*)
 \]
-but doing so will actually make it harder to apply the induction principle when the time is right.
-Better to start out with a statement of the goal that is very near in form to the induction principle.
-So, we manually expand the meaning of \con{diamond} and state our next goal thus:
+expecting to strip away the LHS of the goal as an assumption (which will feed into the lemma we just proved), and to perform another ``RTC-induction'' on what the second \holtxt{diamond} expands into:
 \begin{session}
 \begin{alltt}
 >>__ dropn 1;
->> g `!R. diamond R ==> !x y. RTC R x y ==>
-                              !z. RTC R x z ==>
-                                  ?u. RTC R y u /\ RTC R z u`;
+>> g `!R. diamond R ==> diamond (RTC R)`;
 \end{alltt}
 \end{session}
-    Again we strip the diamond property assumption, apply the
-    induction principle, and strip repeatedly:
+So, we begin by stripping away the diamond property assumption.
+Then, we expand with the definition of \holtxt{diamond} in the goal.
 \begin{session}
 \begin{alltt}
->> e (strip_tac >> strip_tac >> Induct_on `RTC` >> rw[]);
+>> e (strip_tac >> strip_tac >> simp[diamond_def]);
+\end{alltt}
+\end{session}
+We see that the simplifier has kept the diamond-assumption untouched, but has exposed two \holtxt{RTC} terms in the goal.
+In order to make it clear that we wish to induct on the first, we can write a more elaborate pattern when we induct:
+\begin{session}
+\begin{alltt}
+>> e (Induct_on `RTC R x y` >> rw[]);
 \end{alltt}
 \end{session}
 The first goal is again an easy one, corresponding to the case where
@@ -471,28 +470,23 @@ the existence of a common destination for $x'$ and $z$:
 >>__ Theorem RTC_RTC:
        !R x y z. RTC R x y /\ RTC R y z ==> RTC R x z
      Proof
-       simp[GSYM AND_IMP_INTRO, RIGHT_FORALL_IMP_THM] >>
-       gen_tac >> Induct_on `RTC` >> metis_tac [RTC_rules]
+       gen_tac >> Induct_on `RTC R x y` >> metis_tac [RTC_rules]
      QED
 >> e (metis_tac [RTC_rules, RTC_RTC]);
 \end{alltt}
 \end{session}
-We can package this result up as a lemma and then prove the prettier
-version directly:
+We can now package up our desired result:
 \begin{session}
 \begin{alltt}
-##eval val diamond_RTC_lemma = prove(
-         ``!R.
-              diamond R ==>
-              !x y. RTC R x y ==> !z. RTC R x z ==> ?u. RTC R y u /\ RTC R z u``,
-         strip_tac >> strip_tac >> Induct_on `RTC` >> rw[] >| [
-           metis_tac [RTC_rules],
-           `?v. RTC R x' v /\ RTC R z v` by metis_tac [R_RTC_diamond] >>
-           metis_tac [RTC_RTC, RTC_rules]
-         ]);
 ##eval Theorem diamond_RTC:
          !R. diamond R ==> diamond (RTC R)
-       Proof metis_tac [diamond_def,diamond_RTC_lemma]
+       Proof
+         strip_tac >> strip_tac >> simp[diamond_def] >>
+         Induct_on `RTC R x y` >> rw[] >| [
+           metis_tac[RTC_rules],
+           `?v. RTC R x' v /\ RTC R z v` by metis_tac[R_RTC_diamond] >>
+           metis_tac [RTC_RTC, RTC_rules]
+         ]
        QED
 \end{alltt}
 \end{session}
@@ -557,13 +551,14 @@ We use the \texttt{-||->} symbol to indicate parallel reduction because of its o
     application ($\KC\;x\;y$) can reduce, its RHS (\KC) can't.
 \begin{session}
 \begin{alltt}
->>_ val (predn_rules, _, predn_cases) = Hol_reln
-      `(!x. x -||-> x) /\
-       (!x y u v. x -||-> y /\ u -||-> v
-                         ==>
-                  x # u -||-> y # v) /\
-       (!x y. K # x # y -||-> x) /\
-       (!f g x. S # f # g # x -||-> (f # x) # (g # x))`;
+>>_ Inductive predn:
+      (!x. x -||-> x) /\
+      (!x y u v. x -||-> y /\ u -||-> v
+                        ==>
+                 x # u -||-> y # v) /\
+      (!x y. K # x # y -||-> x) /\
+      (!f g x. S # f # g # x -||-> (f # x) # (g # x))
+    End
 \end{alltt}
 \end{session}
 
@@ -862,7 +857,7 @@ That first disjunct is redundant, as the following demonstrates:
 \begin{session}
 \begin{alltt}
 ##eval val Sx_predn = prove(
-         ``!x y. S # x -||-> y = ?z. (y = S # z) /\ (x -||-> z)``,
+         ``!x y. S # x -||-> y <=> ?z. y = S # z /\ x -||-> z``,
          rw[EQ_IMP_THM, Sx_predn0, predn_rules, S_predn]);
 \end{alltt}
 \end{session}
@@ -871,7 +866,7 @@ proofs that follow.
 \begin{session}
 \begin{alltt}
 ##eval val Kx_predn = prove(
-         ``!x y. K # x -||-> y = ?z. (y = K # z) /\ (x -||-> z)``,
+         “!x y. K # x -||-> y <=> ?z. y = K # z /\ x -||-> z”,
          rw[characterise ``K # x``, predn_rules, K_predn, EQ_IMP_THM]);
 \end{alltt}
 \end{session}
@@ -880,10 +875,10 @@ must be two cases this time.
 \begin{session}
 \begin{alltt}
 ##eval val Kxy_predn = prove(
-         ``!x y z.
-              K # x # y -||-> z =
-              (?u v. (z = K # u # v) /\ (x -||-> u) /\ (y -||-> v)) \/
-              (z = x)``,
+         “!x y z.
+              K # x # y -||-> z <=>
+              (?u v. z = K # u # v /\ x -||-> u /\ y -||-> v) \/
+              z = x”,
          rw[EQ_IMP_THM, characterise ``K # x # y``, predn_rules, Kx_predn]);
 \end{alltt}
 \end{session}
@@ -892,8 +887,8 @@ is not yet a ``redex'' at the top-level.
 \begin{session}
 \begin{alltt}
 ##eval val Sxy_predn = prove(
-         ``!x y z. S # x # y -||-> z =
-                   ?u v. (z = S # u # v) /\ (x -||-> u) /\ (y -||-> v)``,
+         ``!x y z. S # x # y -||-> z <=>
+                   ?u v. z = S # u # v /\ x -||-> u /\ y -||-> v``,
          rw[characterise ``S # x # y``, predn_rules, EQ_IMP_THM, Sx_predn]);
 \end{alltt}
 \end{session}
@@ -901,10 +896,10 @@ Next, the characterisation for $\SC\;x\;y\;z$:
 \begin{session}
 \begin{alltt}
 ##eval val Sxyz_predn = prove(
-         ``!w x y z. S # w # x # y -||-> z =
-                     (?p q r. (z = S # p # q # r) /\
+         ``!w x y z. S # w # x # y -||-> z <=>
+                     (?p q r. z = S # p # q # r /\
                               w -||-> p /\ x -||-> q /\ y -||-> r) \/
-                     (z = (w # y) # (x # y))``,
+                     z = (w # y) # (x # y)``,
          rw[characterise ``S # w # x # y``, predn_rules, EQ_IMP_THM, Sxy_predn]);
 \end{alltt}
 \end{session}

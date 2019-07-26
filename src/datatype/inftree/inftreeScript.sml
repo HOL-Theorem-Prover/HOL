@@ -60,10 +60,10 @@ val iNd_is_tree = store_thm(
   MATCH_MP_TAC (#2 (CONJ_PAIR is_tree_rules)) THEN
   SRW_TAC [][])
 
-val inftree_11 = store_thm(
-  "inftree_11",
-  ``((iLf a1 = iLf a2 : ('a,'b,'c) inftree) = (a1 = a2)) /\
-    ((iNd b1 f1 = iNd b2 f2 : ('a,'b,'c)inftree) = (b1 = b2) /\ (f1 = f2))``,
+Theorem inftree_11[simp]:
+    ((iLf a1 = iLf a2 : ('a,'b,'c) inftree) <=> (a1 = a2)) /\
+    ((iNd b1 f1 = iNd b2 f2 : ('a,'b,'c)inftree) <=> (b1 = b2) /\ (f1 = f2))
+Proof
   SRW_TAC [][iLf_def, iNd_def] THENL [
     SRW_TAC [][EQ_IMP_THM] THEN
     POP_ASSUM (MP_TAC o AP_TERM ``from_inftree``) THEN
@@ -79,8 +79,8 @@ val inftree_11 = store_thm(
             THEN1 SRW_TAC [][from_inftree_11] THEN
       ASM_SIMP_TAC bool_ss [FUN_EQ_THM]
     ]
-  ]);
-val _ = export_rewrites ["inftree_11"]
+  ]
+QED
 
 val inftree_distinct = store_thm(
   "inftree_distinct",

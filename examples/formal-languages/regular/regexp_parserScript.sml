@@ -37,54 +37,54 @@ val _ =
 val _ = overload_on("mkNT", ``INL : reNT -> reNT inf``)
 
 val sumID_def = Define`
-  sumID (INL x) = x ∧
+  sumID (INL x) = x /\
   sumID (INR y) = y
 `;
 
 val choicel_def = Define`
-  choicel [] = not (empty NONE) NONE ∧
+  choicel [] = not (empty NONE) NONE /\
   choicel (h::t) = choice h (choicel t) sumID
 `;
 
-val pegf_def = Define‘
-  pegf sym f = seq sym (empty NONE) (λl1 l2. OPTION_MAP f l1)
-’
+val pegf_def = Define`
+  pegf sym f = seq sym (empty NONE) (\l1 l2. OPTION_MAP f l1)
+`
 
 val try_def = Define`
   try sym = choicel [sym; empty NONE]
 `;
 
-val pnt_def = Define‘pnt sym = nt (mkNT sym) I’;
+val pnt_def = Define`pnt sym = nt (mkNT sym) I`;
 
-val igLeft_def = Define‘
-  igLeft s1 s2 = seq s1 s2 (λl1 l2. l2)
-’;
+val igLeft_def = Define`
+  igLeft s1 s2 = seq s1 s2 (\l1 l2. l2)
+`;
 val _ = set_mapped_fixity { tok = "*>", term_name = "igLeft", fixity = Infixl 500 }
 
-val igRight_def = Define‘
-  igRight s1 s2 = seq s1 s2 (λl1 l2. l1)
-’;
+val igRight_def = Define`
+  igRight s1 s2 = seq s1 s2 (\l1 l2. l1)
+`;
 
 val _ = set_mapped_fixity { tok = "<*", term_name = "igRight", fixity = Infixl 500 }
 
-val igtok_def = Define‘igtok P = tok P (K NONE)’
+val igtok_def = Define`igtok P = tok P (K NONE)`
 
-val DigitSet_def = Define‘
+val DigitSet_def = Define`
   DigitSet = charset_string "0123456789"
-’
+`
 
-val EscapableChar_def = Define‘
-  EscapableChar c <=> MEM c "\\.^$*+?|~{}[]()" ∨ ORD c = 96’
+val EscapableChar_def = Define`
+  EscapableChar c <=> MEM c "\\.^$*+?|~{}[]()" \/ ORD c = 96`
 
-val OrM_def = Define‘
+val OrM_def = Define`
   OrM roptlist = OPTION_MAP Or (OPT_MMAP I roptlist)
-’
+`
 
 (* breaks abstraction, see TODO on mkNT Charset below *)
 val charset_char_def = Define`
   charset_char c = Chset (Charset (n2w (ORD c)) 0w 0w 0w)`;
 val uncharset_char_def = Define`
-  (uncharset_char (Chset (Charset w _ _ _)) = CHR (w2n (w && 255w))) ∧
+  (uncharset_char (Chset (Charset w _ _ _)) = CHR (w2n (w && 255w))) /\
   (uncharset_char _ = CHR 0)`;
 val uncharset_char_charset_char = Q.store_thm("uncharset_char_charset_char[simp]",
   `uncharset_char (charset_char c) = c`,
@@ -95,7 +95,7 @@ val uncharset_char_charset_char = Q.store_thm("uncharset_char_charset_char[simp]
   \\ qspec_then`c`strip_assume_tac stringTheory.ORD_BOUND
   \\ rw[stringTheory.CHR_ORD]);
 
-val rePEG_def = Define‘
+val rePEG_def = Define`
   rePEG = <|
     start := pnt Top ;
     rules := FEMPTY |++ [
@@ -110,40 +110,40 @@ val rePEG_def = Define‘
          igtok ((=) #"\\") *> pnt BslashSpecial ;
 
          not (tok EscapableChar (K NONE)) NONE *>
-         any (λcl. SOME (Chset (charset_sing (FST cl))))
+         any (\cl. SOME (Chset (charset_sing (FST cl))))
        ]);
 
       (mkNT BslashSpecial,
        choicel [
          tok ((=) #"d") (K (SOME (Chset DigitSet)));
-         tok EscapableChar (λcl. SOME (Chset (charset_sing (FST cl))))
+         tok EscapableChar (\cl. SOME (Chset (charset_sing (FST cl))))
        ]);
 
       (mkNT CharSet,
        (* TODO: add complement, ranges, escaped chars, etc. *)
        (* TODO: this might be better if we weren't forced into the regexp type
        (so could accumulate the list of characters easier), maybe use a sum? *)
-       rpt (tok ((<>) #"]") (λcl. SOME (charset_char (FST cl))))
-         (λls. OPTION_MAP (Chset o charset_string)
+       rpt (tok ((<>) #"]") (\cl. SOME (charset_char (FST cl))))
+         (\ls. OPTION_MAP (Chset o charset_string)
                  (OPT_MMAP (OPTION_MAP uncharset_char) ls)));
 
       (mkNT Star,
        seq (pnt Atom) (try (tok ((=) #"*") (K (SOME (Chset charset_empty)))))
-           (λa_m s_m. do
+           (\a_m s_m. do
               a <- a_m ;
               (do s <- s_m ; return (Star a) od ++ return a)
             od));
 
       (mkNT Concat,
        seq (pnt Star) (try (pnt Concat))
-           (λs_m c_m. do
+           (\s_m c_m. do
               s <- s_m ;
               (do c <- c_m ; return (Cat s c) od ++ return s)
             od));
 
       (mkNT Alt,
        seq (pnt Concat) (rpt (igtok ((=) #"|") *> pnt Concat) OrM)
-           (λc_m rep_m. do
+           (\c_m rep_m. do
               c <- c_m ;
               rep <- rep_m ;
               case rep of
@@ -154,7 +154,7 @@ val rePEG_def = Define‘
       (mkNT Top, pnt Alt)
      ]
   |>
-’;
+`;
 
 val FDOM_rePEG = save_thm("FDOM_rePEG",
   EVAL``FDOM rePEG.rules``);

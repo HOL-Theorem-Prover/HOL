@@ -753,8 +753,8 @@ primes are positive. These are all quite simple to prove.
 \end{tabular}
 >>__ val PRIME_2 = prove(``prime 2``,
    rw[prime_def] >>
-   metis_tac[DIVIDES_LE, DIVIDES_ZERO, DECIDE ``~(2=0)``,
-             DECIDE ``x <= 2 = (x=0) \/ (x=1) \/ (x=2)``])
+   metis_tac[DIVIDES_LE, DIVIDES_ZERO, DECIDE ``2<>0``,
+             DECIDE ``x <= 2 <=> x=0 \/ x=1 \/ x=2``])
 
 \item [\small{({\it PRIME\_POS\/})}]
 \begin{tabular}[t]{l}
@@ -950,7 +950,7 @@ Now we simplify:
     solve the top goal by simplification:
 \begin{session}
 \begin{alltt}
->> e (rw[FACT_LESS, DECIDE ``!x. ~(x=0) = 0 < x``]);
+>> e (rw[FACT_LESS, DECIDE ``!x. x<>0 <=> 0 < x``]);
 \end{alltt}
 \end{session}
 Notice the `on-the-fly' use of \verb+DECIDE+ to provide an \textit{ad hoc}

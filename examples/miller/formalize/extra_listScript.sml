@@ -2,6 +2,7 @@
 *)
 open HolKernel Parse boolLib;
 val _ = new_theory "extra_list";
+val _ = ParseExtras.temp_loose_equality()
 
 (* interactive mode
 val () = loadPath := union ["..", "../finished"] (!loadPath);

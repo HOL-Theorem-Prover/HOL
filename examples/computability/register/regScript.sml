@@ -79,7 +79,7 @@ val fmapOf_def =
 
 val isExecution_def =
  Define
-  `isExecution prog pc args f =
+  `isExecution prog pc args f <=>
      (f 0 = <| regs := fmapOf args; pc := pc|>) /\
      (!n. f (n+1) = Step prog (f n))`;
 
@@ -138,7 +138,7 @@ val _ = computeLib.add_funs [execOf_recn,FLOOKUP_DEF];
 (*---------------------------------------------------------------------------*)
 
 val haltedConfig_def = Define `
-   haltedConfig (prog : num |-> instr) cnfg = cnfg.pc ∉ FDOM prog
+   haltedConfig (prog : num |-> instr) cnfg ⇔ cnfg.pc ∉ FDOM prog
 `
 
 val haltsAt_def =
@@ -191,13 +191,13 @@ val funOf_def = Define `
 
 val Accepts_def =
  Define
-  `Accepts prog pc args =
+  `Accepts prog pc args ⇔
      ?m. (haltsAt prog (execOf prog pc args) = SOME m) /\
          (reg0(execOf prog pc args m) = 1)`;
 
 val Rejects_def =
  Define
-  `Rejects prog pc args =
+  `Rejects prog pc args ⇔
      ?m. (haltsAt prog (execOf prog pc args) = SOME m) /\
          (reg0(execOf prog pc args m) = 0)`;
 
@@ -215,7 +215,7 @@ val Computable_def =
   `Computable = BIGUNION {nComputable n | n IN UNIV}`;
 
 val IN_Computable = Q.prove
-(`f IN Computable =
+(`f IN Computable ⇔
    ?n prog. !args. (LENGTH args = n) ==> (f args = funOf prog args)`,
  SRW_TAC [] [IN_BIGUNION, Computable_def,EQ_IMP_THM,nComputable_def] THEN
  METIS_TAC [nComputable_def, SPECIFICATION]);
@@ -461,7 +461,7 @@ val PCsub_def = Define`
 
 val PCsub_AND = store_thm(
   "PCsub_AND",
-  ``PCsub (P && Q) v = PCsub P v && PCsub Q v``,
+  ``PCsub (P && Q) v = (PCsub P v && PCsub Q v)``,
   srw_tac [][FUN_EQ_THM, PCsub_def, predOf_AND_def]);
 val _ = augment_srw_ss [rewrites [PCsub_AND]]
 
@@ -512,7 +512,7 @@ val REGfRsub_ABS = store_thm(
 
 val REGfRsub_AND = store_thm(
   "REGfRsub_AND",
-  ``REGfRsub (P && Q) r f = REGfRsub P r f && REGfRsub Q r f``,
+  ``REGfRsub (P && Q) r f = (REGfRsub P r f && REGfRsub Q r f)``,
   srw_tac [][predOf_AND_def, REGfRsub_def, FUN_EQ_THM]);
 val _ = augment_srw_ss [rewrites [REGfRsub_AND]]
 
@@ -693,7 +693,7 @@ val REGfRsub_KK = store_thm(
   srw_tac [][REGfRsub_def, FUN_EQ_THM]);
 val pAND_rwt = store_thm(
   "pAND_rwt",
-  ``(TT && P = P) ∧ (P && TT = P)``,
+  ``((TT && P) = P) ∧ ((P && TT) = P)``,
   srw_tac [][FUN_EQ_THM, predOf_AND_def]);
 val _ = augment_srw_ss [rewrites [RPimp_rwt, predOf_KK, REGfRsub_KK, pAND_rwt]]
 
@@ -971,7 +971,7 @@ val _ = augment_srw_ss [rewrites [PCsub_zeroset]]
 val zeroset_concrete = store_thm(
   "zeroset_concrete",
   ``(zeroset {} = K (K T)) ∧
-    (zeroset (x INSERT s) = rP x ((=) 0) && zeroset s)``,
+    (zeroset (x INSERT s) = (rP x ((=) 0) && zeroset s))``,
   srw_tac [DNF_ss][zeroset_def, FUN_EQ_THM, rP_def, predOf_AND_def] >>
   metis_tac []);
 val _ = augment_srw_ss [rewrites [zeroset_concrete]]
@@ -984,7 +984,7 @@ val EL_LENGTH_LAST = store_thm(
 val listpresent_concrete = store_thm(
   "listpresent_concrete",
   ``(listpresent b [] = K (K T))∧
-    (listpresent b (h::t) = rP b ((=) h) && listpresent (b + 1) t)``,
+    (listpresent b (h::t) = (rP b ((=) h) && listpresent (b + 1) t))``,
   srw_tac [][listpresent_def, FUN_EQ_THM, predOf_AND_def, rP_def,
              EQ_IMP_THM] >|
   [

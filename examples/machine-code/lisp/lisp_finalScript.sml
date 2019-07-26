@@ -196,7 +196,7 @@ val xSTRING_SPACE_def = Define `
       cond (one_space a (n + 1) c (fun2set (f,df)))`;
 
 val one_space_EXPAND = prove(
-  ``!n a b s. one_space a n b s =
+  ``!n a b s. one_space a n b s <=>
               one_space a n (a + n2w n) s /\ (b = a + n2w n)``,
   Induct
   THEN SIMP_TAC std_ss [one_space_def,WORD_ADD_0,cond_def,SEP_EXISTS]

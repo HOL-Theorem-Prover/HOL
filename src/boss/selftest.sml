@@ -32,15 +32,15 @@ val tydef_th = prove(
   EXISTS_TAC ``(T,T)`` THEN REWRITE_TAC []);
 
 val _ = tprint "new_type_definition error message"
-val failing_tydef =
-    new_type_definition("mytydef", tydef_th)
+val _ =
+    ignore (new_type_definition("mytydef", tydef_th))
     handle HOL_ERR {origin_function, message, origin_structure} =>
            if origin_function <> "new_type_definition" orelse
               origin_structure <> "Theory.Definition" orelse
               message <> "at Thm.prim_type_definition:\nexpected a theorem of the form \"?x. P x\""
            then
              die "FAILED"
-           else (OK(); TRUTH)
+           else OK()
 
 val _ = tprint "Q.MATCH_ABBREV_TAC with underscores"
 val goal = ([] : term list, ``(n + 10) * y <= 42315 /\ !x y:'a. x < f y``)

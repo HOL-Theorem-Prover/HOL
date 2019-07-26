@@ -34,12 +34,9 @@ echo "Some of these take a very long time and might run your machine out of memo
 ../regexp2dfa -dfagen HOL thm thm29 '\i{~17999,~123}' > thm.29
 ../regexp2dfa -dfagen HOL thm thm30 '\i{~116535,~23}' > thm.30
 ../regexp2dfa -dfagen HOL thm thm31 '\k{23}' > thm.31
-../regexp2dfa -dfagen HOL thm thm1800 '\i{1,31}\i{1,12}\i{0,99}\i{0,23}\i{0,59}\i{0,59}\i{0,17999,LSB}' > thm.1800
+../regexp2dfa -dfagen HOL thm thm1800 '\i{1,31}\i{1,12}\i{0,99}\i{0,23}\i{0,59}\i{0,59}\i{0,17999}' > thm.1800
 ../regexp2dfa -dfagen HOL thm thm1801 '\i{~90,90}\i{0,59}\i{0,5999}\i{~180,180}\i{0,59}\i{0,5999}' > thm.1801
-../regexp2dfa -dfagen HOL thm thm1801_packed '\i{~90,90}\i{0,59}\i{0,5999}\p{(~180,180)(0,59).{1}}\i{0,5999}' > thm.1801_packed
-../regexp2dfa -dfagen HOL thm thm1802 '\i{0,9999,LSB}\i{0,3599,LSB}.{4}' > thm.1802
-../regexp2dfa -dfagen HOL thm thm1803 '\i{0,12}\i{0,16}\i{0,999,LSB}\i{0,999,LSB}\i{0,999,LSB}' > thm.1803
-../regexp2dfa -dfagen HOL thm thm18xx_disj '\i{1,31}\i{1,12}\i{0,99}\i{0,23}\i{0,59}\i{0,59}\i{0,17999,LSB}|\i{~90,90}\i{0,59}\i{0,5999}\p{(~180,180)(0,59).{1}}\i{0,5999}|\i{0,9999,LSB}\i{0,3599,LSB}|\i{0,12}\i{0,16}\i{0,999,LSB}\i{0,999,LSB}\i{0,999,LSB}' > thm.18xx_disj
-../regexp2dfa -dfagen HOL thm thm18xx_concat '\i{1,31}\i{1,12}\i{0,99}\i{0,23}\i{0,59}\i{0,59}\i{0,17999,LSB}\i{~90,90}\i{0,59}\i{0,5999}\p{(~180,180)(0,59).{1}}\i{0,5999}\i{0,9999,LSB}\i{0,3599,LSB}\i{0,12}\i{0,16}\i{0,999,LSB}\i{0,999,LSB}\i{0,999,LSB}' > thm.18xx_concat
+../regexp2dfa -dfagen HOL thm thm1802 '\i{0,9999}\i{0,3599}.{4}' > thm.1802
+../regexp2dfa -dfagen HOL thm thm1803 '\i{0,12}\i{0,16}\i{0,999}\i{0,999}\i{0,999}' > thm.1803
 ../regexp2dfa -dfagen HOL thm date '(201\d|202[0-5])-([1-9]|1[0-2])-([1-9]|[1-2]\d|3[0-1]) (1?\d|2[0-3]):(\d|[1-5]\d):(\d|[1-5]\d)' > date
 ../regexp2dfa -dfagen HOL thm time '\{"time":"\d{13}:\d{3}","\w{1,20}":\{("\w{1,25}":"\w{1,30}",?)+\}\}' > thm.time

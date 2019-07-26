@@ -4,7 +4,7 @@ val _ = new_theory "SGAUnicodeMergeA2";
 
 val INTER_def = new_definition(
   "INTER_def",
-  ``INTER P Q x = P x /\ Q x``);
+  ``INTER P Q x <=> P x /\ Q x``);
 
 val _ = Unicode.unicode_version { u = "∩", tmnm = "INTER"};  (* UOK *)
 

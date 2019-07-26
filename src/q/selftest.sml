@@ -1,30 +1,32 @@
 open Parse boolLib HolKernel testutils
 
 val _ = tprint "Testing Q.EXISTS ... "
+val _ = require (check_result (fn _ => true))
+                (Q.EXISTS (`?f. f T T = T`, `$/\`))
+                (REWRITE_CONV [] “T /\ T”)
 
-val th = Q.EXISTS (`?f. f T T = T`, `$/\`) (REWRITE_CONV [] ``T /\ T``)
-         handle HOL_ERR _ => die "FAILED!"
-
-val _ = OK()
-
+exception InternalDie of string
 val _ = tprint "Testing Q.REFINE_EXISTS_TAC"
-
-val asm = ``!x1:'a x2:'a y1:'b y2:'b. (f x1 y1:'c = f x2 y2) <=> (x1 = x2) /\ (y1 = y2)``
-val goal = ``?a:'c b:'d. Q a b``
-val (sgs, vfn) = Q.REFINE_EXISTS_TAC `f x y` ([asm], goal)
-                 handle _ => die "FAILED!"
-val expected_sg = ``?x:'a y:'b b:'d. Q (f x y:'c) b``
-val result =
-    case sgs of
-      [g as ([a],g')] => if aconv a asm andalso aconv g' expected_sg
-                         then vfn [mk_thm g]
-                         else die "FAILED!"
-     | _ => die "FAILED!"
-val _ = if aconv (concl result) goal then
-          case hyp result of
-            [a] => if aconv a asm then OK() else die "FAILED!"
-           | _ => die "FAILED!"
-        else die "FAILED!"
+val _ = let
+  val asm = “!x1:'a x2:'a y1:'b y2:'b.
+                (f x1 y1:'c = f x2 y2) <=> (x1 = x2) /\ (y1 = y2)”
+  val goal = ``?a:'c b:'d. Q a b``
+  val (sgs, vfn) = Q.REFINE_EXISTS_TAC `f x y` ([asm], goal)
+                   handle _ => raise InternalDie "FAILED!"
+  val expected_sg = ``?x:'a y:'b b:'d. Q (f x y:'c) b``
+  val result =
+      case sgs of
+          [g as ([a],g')] => if aconv a asm andalso aconv g' expected_sg
+                             then vfn [mk_thm g]
+                             else raise InternalDie "FAILED!"
+        | _ => raise InternalDie "FAILED!"
+in
+  if aconv (concl result) goal then
+    case hyp result of
+        [a] => if aconv a asm then OK() else die "FAILED!"
+      | _ => die "FAILED!"
+  else die "FAILED!"
+end handle InternalDie s => die s
 
 (* combinator *)
 val _ = new_definition("I_DEF", ``I = \x:'a. x``);
@@ -40,34 +42,36 @@ val _ = set_fixity "+" (Infixl 500)
 val _ = set_fixity "*" (Infixl 600)
 val _ = set_fixity "<" (Infix(NONASSOC, 450))
 
-fun aconvdie m t1 t2 = aconv t1 t2 orelse die ("FAILED! (" ^ m ^ " wrong)")
+fun aconvdie m t1 t2 =
+    aconv t1 t2 orelse raise InternalDie ("FAILED! (" ^ m ^ " wrong)")
 
 val _ = tprint "Q.MATCH_RENAME_TAC 1"
 val gl0 = ([``x < y``], ``x = z:num``)
 val expected_a0 = ``a < y``
 val expected_c0 = ``a = b:num``
 val (sgs, _) = Q.MATCH_RENAME_TAC `a = b` gl0
-val _ = case sgs of
+val _ = (case sgs of
             [([a], c)] => (aconvdie "assumption" a expected_a0;
                            aconvdie "goal" c expected_c0;
                            OK())
-          | _ => die "FAILED!"
+          | _ => die "FAILED!")
+        handle InternalDie s => die s
 
 val _ = tprint "Q.MATCH_RENAME_TAC 2"
 val glmrt2 = ([] : term list, ``f ((h : 'a -> 'b) s) = s``)
 val expected_mrt2 = ``(f : 'b -> 'a) z = v``
 val (sgs, _) = Q.MATCH_RENAME_TAC `f z = v` glmrt2
-val _ = case sgs of
-            [([], c)] => (aconvdie "conclusion" c expected_mrt2; OK())
-          | _ => die "FAILED!"
+val _ = (case sgs of
+             [([], c)] => (aconvdie "conclusion" c expected_mrt2; OK())
+           | _ => die "FAILED!") handle InternalDie s => die s
 
 val _ = tprint "Q.MATCH_RENAME_TAC 3"
 val glmrt3 = ([] : term list, ``f zero zero = (z:'a)``)
 val expected_mrt3 = ``f (a:num) a = (u:'a)``
 val (sgs, _) = Q.MATCH_RENAME_TAC `f b a = u` glmrt3
-val _ = case sgs of
+val _ = (case sgs of
             [([], c)] => (aconvdie "conclusion" c expected_mrt3; OK())
-          | _ => die "FAILED!"
+          | _ => die "FAILED!") handle InternalDie s => die s
 
 val _ = tprint "Q.MATCH_ABBREV_TAC 1"
 val expected_mat1c = ``f (a:num) a = (u:'a)``
@@ -77,14 +81,14 @@ val expected_mat1a3 = ``Abbrev (u:'a = z)``
 val (sgs, _) = Q.MATCH_ABBREV_TAC `f b a = u` glmrt3
 val _ = case sgs of
             [([a1,a2,a3], c)] =>
-            let
-              val _ = aconvdie "assumption #1" a1 expected_mat1a1
-              val _ = aconvdie "assumption #2" a2 expected_mat1a2
-              val _ = aconvdie "assumption #3" a3 expected_mat1a3
-              val _ = aconvdie "goal conclusion" c expected_mat1c
-            in
-              OK()
-            end
+            (let
+               val _ = aconvdie "assumption #1" a1 expected_mat1a1
+               val _ = aconvdie "assumption #2" a2 expected_mat1a2
+               val _ = aconvdie "assumption #3" a3 expected_mat1a3
+               val _ = aconvdie "goal conclusion" c expected_mat1c
+             in
+               OK()
+             end handle InternalDie s => die s)
           | _ => die "FAILED! (new goal of wrong shape)"
 
 val _ = tprint "Q.MATCH_ABBREV_TAC 2"
@@ -95,13 +99,13 @@ val expected_mat2a2 = ``Abbrev(z :'b = h (v:'a))``
 val (sgs, _) = Q.MATCH_ABBREV_TAC `f z = v` glmrt2
 val _ = case sgs of
             [([a1, a2], c)] =>
-            let
-              val _ = aconvdie "goal conclusion" c expected_mat2c
-              val _ = aconvdie "assumption #1" a1 expected_mat2a1
-              val _ = aconvdie "assumption #2" a2 expected_mat2a2
-            in
-              OK()
-            end
+            (let
+               val _ = aconvdie "goal conclusion" c expected_mat2c
+               val _ = aconvdie "assumption #1" a1 expected_mat2a1
+               val _ = aconvdie "assumption #2" a2 expected_mat2a2
+             in
+               OK()
+             end handle InternalDie s => die s)
           | _ => die "FAILED! (new goal of wrong shape)"
 
 val _ = tprint "Q.MATCH_GOALSUB_RENAME_TAC 1"
@@ -109,10 +113,11 @@ val gl1 = ([] : term list,
           ``!x. x * SUC (SUC zero) < y * (z + SUC zero) * (y + a)``)
 val expected_result1 =
     ``!x. x * SUC (SUC zero) < y * (z + SUC zero) * (y + c)``
-val (sgs, _) = Q.MATCH_GOALSUB_RENAME_TAC `y + c` gl1
-val _ = case sgs of
-            [([], t)] => (aconvdie "goal" t expected_result1; OK())
-          | _ => die "FAILED!"
+fun check (sgs, _) =
+    case sgs of
+        [([], t)] => aconv t expected_result1
+      | _ => false
+val _ = require (check_result check) (Q.MATCH_GOALSUB_RENAME_TAC `y + c`) gl1
 
 val _ = tprint "Q.MATCH_GOALSUB_ABBREV_TAC 1"
 val gl1 = ([] : term list,
@@ -191,7 +196,7 @@ val (sgs, _) =
     Q.PAT_ABBREV_TAC `v = (x < SUC w)` ([], ``y < SUC zero ==> y < z``)
 val _ = case sgs of
             [([abb], sg)] =>
-            if Term.aconv abb ``Abbrev(v = y < SUC zero)`` andalso
+            if Term.aconv abb ``Abbrev(v <=> y < SUC zero)`` andalso
                Term.aconv sg ``v ==> y < z``
             then OK()
             else die "FAILED!"
@@ -214,7 +219,7 @@ val (sgs,_) = Q.PAT_ABBREV_TAC `v = (x < SUC z)`
                   ([], ``(!y. y < SUC zero) /\ u < SUC (SUC zero)``)
 val _ = case sgs of
             [([abb], sg)] =>
-            if Term.aconv abb ``Abbrev (v = u < SUC (SUC zero))`` andalso
+            if Term.aconv abb ``Abbrev (v <=> u < SUC (SUC zero))`` andalso
                Term.aconv sg ``(!y. y < SUC zero) /\ v``
             then OK()
             else die "FAILED!"
@@ -225,7 +230,7 @@ val (sgs,_) = Q.PAT_ABBREV_TAC `v = (x < SUC z)`
                   ([], ``(!x. x < SUC zero) /\ u < SUC (SUC zero)``)
 val _ = case sgs of
             [([abb], sg)] =>
-            if Term.aconv abb ``Abbrev (v = u < SUC (SUC zero))`` andalso
+            if Term.aconv abb ``Abbrev (v <=> u < SUC (SUC zero))`` andalso
                Term.aconv sg ``(!y. y < SUC zero) /\ v``
             then OK()
             else die "FAILED!"
@@ -296,41 +301,46 @@ val foo2_def = new_definition("foo2_def", ``foo2 x y z = (x ==> y \/ z)``);
 val _ = overload_on("foo", ``foo1``);
 val _ = overload_on("foo", ``foo2``);
 
-val th = TAC_PROOF(([], ``foo1 F x y``),
-               Q.MATCH_RENAME_TAC `foo F a b` >>
-               REWRITE_TAC [foo1_def]) handle HOL_ERR _ => die "FAILED!"
-val _ = OK()
+val _ = require (check_result (fn _ => true))
+                 (fn tac => TAC_PROOF(([], ``foo1 F x y``), tac))
+                 (Q.MATCH_RENAME_TAC `foo F a b` >>
+                  REWRITE_TAC [foo1_def]);
 
 val _ = tprint "Q.RENAME1 on overloads"
-val th = TAC_PROOF(([], ``?v. foo1 v x y``),
-                   Q.RENAME1_TAC `foo _ a b` >>
-                   Q.EXISTS_TAC `F` >>
-                   REWRITE_TAC [foo1_def]) handle HOL_ERR _ => die "FAILED!"
-val _ = OK()
+val _ = require (check_result (fn _ => true))
+                (fn tac => TAC_PROOF(([], ``?v. foo1 v x y``),tac))
+                (Q.RENAME1_TAC `foo _ a b` >>
+                 Q.EXISTS_TAC `F` >>
+                 REWRITE_TAC [foo1_def]) ;
 
 val _ = tprint "Q.kRENAME_TAC(1)"
-val th = TAC_PROOF (([``foo1 a b c``, ``foo2 d e f``], ``?x y z. foo1 x y z``),
-                    Q.kRENAME_TAC [`foo u v w`]
-                                  (MAP_EVERY Q.EXISTS_TAC [`u`, `v`, `w`] THEN
-                                   FIRST_ASSUM ACCEPT_TAC))
-                   handle HOL_ERR _ => die "FAILED!"
-val _ = OK()
+val _ = require (check_result (fn _ => true))
+                (fn tac =>
+                    TAC_PROOF (
+                      ([“foo1 a b c”, “foo2 d e f”], “?x y z. foo1 x y z”),
+                      tac
+                    )
+                )
+                (Q.kRENAME_TAC [`foo u v w`]
+                               (MAP_EVERY Q.EXISTS_TAC [`u`, `v`, `w`] THEN
+                                FIRST_ASSUM ACCEPT_TAC))
 
 val _ = tprint "Q.kRENAME_TAC(2)"
-val th = TAC_PROOF (([``foo2 a b c``, ``foo1 d e f``], ``?x y z. foo1 x y z``),
-                    Q.kRENAME_TAC [`foo u v w`]
-                                  (MAP_EVERY Q.EXISTS_TAC [`u`, `v`, `w`] THEN
-                                   FIRST_ASSUM ACCEPT_TAC))
-                   handle HOL_ERR _ => die "FAILED!"
-val _ = OK()
+val _ = require (check_result (fn _ => true))
+                (fn tac =>
+                    TAC_PROOF (
+                      ([“foo2 a b c”, “foo1 d e f”], “?x y z. foo1 x y z”),tac))
+                (Q.kRENAME_TAC [`foo u v w`]
+                               (MAP_EVERY Q.EXISTS_TAC [`u`, `v`, `w`] THEN
+                                FIRST_ASSUM ACCEPT_TAC))
 
 val _ = tprint "PAT_ABBREV_TAC respects Parse.hide"
 val _ = new_definition ("gh431_def", ``gh431 x = ~x``);
 val _ = hide "gh431"
-val th = (Q.PAT_ABBREV_TAC `gh431 = T` THEN Q.UNABBREV_TAC `gh431` THEN
-          REWRITE_TAC [])
-         ([], ``p /\ T = p``) handle HOL_ERR _ => die "FAILED\n"
-val _ = OK()
+val _ = require (check_result (fn _ => true))
+                (Q.PAT_ABBREV_TAC `gh431 = T` THEN Q.UNABBREV_TAC `gh431` THEN
+                 REWRITE_TAC [])
+                ([], ``p /\ T = p``)
 
 val _ = new_definition ("gh425a_def", ``gh425a a = a``);
 val _ = new_definition ("gh425b_def", ``gh425b p = (p ==> T)``);
@@ -347,20 +357,24 @@ fun testquiet f x =
             Lib.with_flag (Globals.interactive, true)) (Lib.total f) x
        val _ =
            null (!buf) orelse
-           die ("\n  FAILED : buf contains " ^ String.concatWith "\n" (!buf))
+           raise InternalDie
+                 ("\n  FAILED : buf contains " ^ String.concatWith "\n" (!buf))
    in
      result
    end);
 
 val _ = tprint "(Interactive) PAT_ASSUM quiet about tyvar guesses(1)"
-val result = testquiet
+val _ = let
+  val result = testquiet
                  (Q.PAT_X_ASSUM `gh425a (g x)` mp_tac)
                  ([``gh425a (f T) : bool``], ``p /\ q``)
-val _ = case result of
-            SOME ([([], t)],_) =>
+in
+  case result of
+      SOME ([([], t)],_) =>
               if aconv t ``gh425a (f T) ==> p /\ q`` then OK()
               else die "\nFAILED - Incorrect result"
-          | _ => die "\nFAILED - Incorrect result"
+    | _ => die "\nFAILED - Incorrect result"
+end handle InternalDie s => die s
 
 val _ = tprint "(Interactive) PAT_ASSUM quiet about tyvar guesses(2)"
 val _ = testquiet
@@ -369,27 +383,26 @@ val _ = testquiet
 val _ = OK()
 
 val _ = tprint "(Interactive) PAT_ASSUM quiet about tyvar guesses(3)"
-val _ = testquiet
-                 (Q.PAT_X_ASSUM `gh245 x` mp_tac)
-                 ([``gh425b (f T) : bool``], ``p /\ q``)
-val _ = OK()
+val _ = (testquiet
+          (Q.PAT_X_ASSUM `gh245 x` mp_tac)
+          ([``gh425b (f T) : bool``], ``p /\ q``); OK())
+        handle InternalDie s => die s
 
 val _ = tprint "(Interactive) RENAME_TAC quiet about tyvar guesses(1)"
-val _ = testquiet (Q.RENAME_TAC [‘f x /\ _’])
-                  ([], “(gg : num -> bool) n /\ p”)
-val _ = OK()
+val _ = (testquiet (Q.RENAME_TAC [‘f x /\ _’])
+                   ([], “(gg : num -> bool) n /\ p”); OK())
+        handle InternalDie s => die s
 
 val _ = tprint "(Interactive) RENAME_TAC quiet about tyvar guesses(2)"
-val _ = testquiet (Q.RENAME_TAC [‘SUC n’]) ([], “p /\ q”)
-val _ = OK()
+val _ = (testquiet (Q.RENAME_TAC [‘SUC n’]) ([], “p /\ q”); OK())
+        handle InternalDie s => die s
 
 val _ = tprint "(Interactive) RENAME_TAC quiet about tyvar guesses(3)"
-val _ = testquiet (Q.RENAME_TAC [‘SUC n’]) ([“P (SUC x) ==> Q”], “p /\ q”)
-val _ = OK()
+val _ = (testquiet (Q.RENAME_TAC [‘SUC n’]) ([“P (SUC x) ==> Q”], “p /\ q”);
+         OK()) handle InternalDie s => die s
 
 val _ = tprint "(Interactive) RENAME_TAC quiet about tyvar guesses(4)"
-val _ = testquiet (Q.RENAME_TAC [‘SUC n’]) ([“Pr ==> Q”], “P (SUC x) /\ q”)
-val _ = OK()
-
+val _ = (testquiet (Q.RENAME_TAC [‘SUC n’]) ([“Pr ==> Q”], “P (SUC x) /\ q”);
+         OK()) handle InternalDie s => die s
 
 val _ = Process.exit Process.success;

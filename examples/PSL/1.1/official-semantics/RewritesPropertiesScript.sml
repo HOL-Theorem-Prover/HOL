@@ -59,6 +59,7 @@ val _ = intLib.deprecate_int();
 * Start a new theory called RewritesProperties
 ******************************************************************************)
 val _ = new_theory "RewritesProperties";
+val _ = ParseExtras.temp_loose_equality()
 
 local
   val th = prove (``!a b. a /\ (a ==> b) ==> a /\ b``, PROVE_TAC [])
@@ -1319,6 +1320,3 @@ Saving theorem F_UNTIL_CLOCK_COMP_IMP2
 Saving theorem F_UNTIL_CLOCK_COMP
 Saving theorem F_CLOCK_COMP_CORRECT
 *)
-
-
-

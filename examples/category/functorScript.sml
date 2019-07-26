@@ -1,6 +1,7 @@
 open HolKernel Parse boolLib bossLib pred_setTheory categoryTheory lcsymtacs;
 
 val _ = new_theory "functor";
+val _ = ParseExtras.temp_loose_equality()
 
 val _ = remove_termtok { term_name = combinpp.toplevel_updname, tok = "(|" }
 

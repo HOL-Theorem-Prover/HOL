@@ -28,6 +28,7 @@ open
 val arith_ss = old_arith_ss
 
 val _ = new_theory "rat";
+val _ = ParseExtras.temp_loose_equality()
 
 val ERR = mk_HOL_ERR "ratScript"
 

@@ -118,7 +118,8 @@ evaluations.")
   "Theorem[[:space:]]+[A-Za-z0-9'_]*\\(\\[[A-Za-z0-9_,]+\\]\\)?[[:space:]]*:")
 (defvar hol-quoted-definition-re-begin
   (concat "Definition[[:space:]]+[A-Za-z0-9'_]+"
-          "\\(\\[[A-Za-z0-9_,=]+\\]\\)?[[:space:]]*:"))
+          "\\(\\[[A-Za-z0-9_,=]+\\]\\)?[[:space:]]*:"
+          "\\|\\(Co\\)?Inductive[[:space:]]+[A-Za-z0-9'_]+[[:space]]*:"))
 (put 'hol-term 'beginning-op
      (function
       (lambda ()
@@ -549,7 +550,7 @@ With a prefix ARG, uses `expandf' rather than `e'."
 
 (defun hol-string-contains-term-delimiters-p (s)
   (< 0 (count-text-match
-        (concat "^Theorem\\|^Definition\\|^Proof\\|"
+        (concat "^Theorem\\|^Definition\\|^Proof\\|^\\(Co\\)?Inductive\\|"
                 "^Termination\\|^End\\|[“”‘’`]")
         s)))
 
@@ -706,6 +707,9 @@ starts >%s%s<"
                  (remove-quoted-hol-term ms "^Proof" m))
                 ((string-prefix-p "Definition" ms)
                  (remove-quoted-hol-term ms "^\\(Termination\\|End\\)" m))
+                ((or (string-prefix-p "Inductive" ms)
+                     (string-prefix-p "CoInductive" ms))
+                 (remove-quoted-hol-term ms "^End" m))
                 (t ; must be a back-tick
                  (if (not (looking-at "`"))
                      (remove-quoted-hol-term "`" "`" m)
@@ -721,7 +725,7 @@ starts >%s%s<"
               (word-list-to-regexp
                '("val" "fun" "in" "infix[lr]?" "open" "local" "type"
                  "datatype" "nonfix" "exception" "end" "structure"
-                 "Theorem"))))
+                 "Theorem" "Definition" "Inductive" "CoInductive"))))
 
 (setq sml-struct-id-regexp "[A-Za-z][A-Za-z0-9_]*")
 
@@ -1452,6 +1456,11 @@ second is to show the new term.
 
 ;; (define-key comint-mode-map "\r" 'hol-return-key)
 
+(defun hol-overload-info-for (term-name)
+  "Get HOL to print overload information for term-name"
+  (interactive "sOverloaded name: ")
+  (send-string-to-hol (format "overload_info_for \"%s\"" term-name)))
+
 
 
 ;;templates
@@ -1511,16 +1520,15 @@ second is to show the new term.
    (insert ":\n\nProof\nQED\n"))
 
 (defun hol-template-hol-relnish (style name)
-  (insert (format "\nval (%s_rules,%s_ind,%s_cases) = %s‘\n  ...\n’;\n"
-                  name name name style)))
+  (insert (format "\n%s %s:\n  ...\nEnd\n" style name)))
 
 (defun hol-template-hol-reln (name)
   (interactive "sConstant name: ")
-  (hol-template-hol-relnish "Hol_reln" name))
+  (hol-template-hol-relnish "Inductive" name))
 
 (defun hol-template-hol-coreln (name)
   (interactive "sConstant name: ")
-  (hol-template-hol-relnish "Hol_coreln" name))
+  (hol-template-hol-relnish "CoInductive" name))
 
 (defun hol-template-new-datatype ()
    (interactive)
@@ -1927,7 +1935,7 @@ second is to show the new term.
 
 (font-lock-add-keywords
  'sml-mode
- '("^Theorem\\>" "^Proof\\>" "^QED\\>" "^Definition\\>"
+ '("^Theorem\\>" "^Proof\\>" "^QED\\>" "^Definition\\>" "^\\(Co\\)?Inductive\\>"
    "^Termination\\>" "^End\\>"))
 
 (defgroup hol-faces nil "Faces used in pretty-printing HOL values"
@@ -2024,6 +2032,7 @@ second is to show the new term.
 (define-key hol-map "c" 'hol-db-find-consts)
 (define-key hol-map "n"    'hol-name-top-theorem)
 (define-key hol-map "o"    'hol-open-string)
+(define-key hol-map "O"    'hol-overload-info-for)
 (define-key hol-map "p"    'hol-print-goal)
 (define-key hol-map "P"    'hol-print-all-goals)
 (define-key hol-map "r"    'hol-rotate)
@@ -2140,6 +2149,9 @@ second is to show the new term.
 
 (define-key global-map [menu-bar hol-menu hol-misc sep1]
    '(menu-item "--"))
+
+(define-key global-map [menu-bar hol-menu hol-misc hol-overload-info-for]
+  '("Overload info for string" . hol-overload-info-for))
 
 (define-key global-map [menu-bar hol-menu hol-misc hol-type-info]
    '("Type info of marked term" . hol-type-info))

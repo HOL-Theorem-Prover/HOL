@@ -2,9 +2,8 @@ open HolKernel boolLib bossLib Parse;
 open wordsTheory wordsLib alignmentTheory bitTheory arithmeticTheory fcpTheory pred_setTheory progTheory;
 
 val _ = new_theory "address";
+val _ = ParseExtras.temp_loose_equality()
 
-infix \\
-val op \\ = op THEN;
 
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;

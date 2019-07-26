@@ -284,8 +284,8 @@ of theorems is adjusted as above.
 \begin{alltt}
 >>__ Globals.linewidth := 60;
 >> Count.apply (REWRITE_RULE [arithmeticTheory.GREATER_DEF])
-     (ASSUME ``SUC 4 > 0 = (SUC 3 > 0 = (SUC 2 > 0 =
-                 (SUC 1 > 0 = SUC 0 > 0)))``);
+     (ASSUME ``SUC 4 > 0 <=> (SUC 3 > 0 <=> (SUC 2 > 0 <=>
+                 (SUC 1 > 0 <=> SUC 0 > 0)))``);
 >>__ Globals.linewidth := 72;
 \end{alltt}
 \end{session}

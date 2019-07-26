@@ -4,13 +4,23 @@
   type extrastate = {nf : int, r : int ref, i: int ref,
                      stash : string ref,
                      rcopt : (int * int) option ref,
-                     stracc : (string * char list * locn_point) ref,
+                     stracc : (string * string list * locn_point *
+                               (string*string)) ref,
                      incommentp : int ref}
   (* mutable state argument to each rule is st=(nf,r,i,rcopt), where:
        - nf  is the number of the fragment being parsed
        - r   is the current row number
        - i   is the index of the first char on the current row
        - rcopt is the absolute line and character of the start of this fragment, if known
+       - stracc has information for handling string literals
+           (pfx,contents,loc,(ldelim,rdelim))
+         * pfx is material that preceded the literal but abutted it (e.g.,
+           input was f"foo"
+         * contents is stuff that appeared between the delimiters, built up
+           by consing (and is thus in reverse order)
+         * loc is location of literal
+         * (ldelim,rdelim) is observed left-delimiter and expected right-
+           delimiter
   *)
 
   fun mkLoc (st as {rcopt, ...} : extrastate) s e
@@ -27,7 +37,7 @@
 
   fun newstate nf =
       {nf = nf, r = ref 0, i = ref 0, rcopt = ref NONE, stash = ref "",
-       stracc = ref ("", [], LocP(0,0,0) (* meaningless locn *)),
+       stracc = ref ("", [], LocP(0,0,0) (* meaningless locn *), ("","")),
        incommentp = ref 0}
 
   (* processes location pragmas of the form (*#loc row col*), using
@@ -53,7 +63,11 @@
                               _ => LocPEnd (#nf st))
    in
      if ok then (BT_EOI, loc)
-     else if !stash <> "" then (BT_Ident (!stash), loc) before stash := ""
+     else if !stash <> "" then
+       if String.sub(!stash,0) = #"\"" then
+         (BT_StrLit{ldelim = "\"", contents = ""}, loc) before stash := ""
+       else
+         (BT_Ident (!stash), loc) before stash := ""
      else raise LEX_ERR
             ("eof/antiquote inside " ^
              (if comment then "comment" else "quote-delimited string"), loc)
@@ -61,9 +75,10 @@
 
    fun check_char (tl as (tok, loc)) =
        case tok of
-         BT_Ident s => if size s = 3 then (BT_Ident ("#"^s), loc)
-                        else raise LEX_ERR ("bad character constant", loc)
-       | _ => raise LEX_ERR ("Very bad character constant", loc)
+         BT_StrLit{contents = s,ldelim = "#\""} =>
+           if size s = 1 then (tok, loc)
+           else raise LEX_ERR ("bad character constant", loc)
+        | _ => raise LEX_ERR ("Very bad character constant", loc)
 
 fun cut_qid s =
     let
@@ -83,6 +98,14 @@ fun cut_qid s =
       else ("", s)
     end
 
+fun matching_strdelim s =
+    case s of
+        "\"" => "\""
+      | "\194\171" => "\194\187" (* double guillemets *)
+      | "\226\128\185" => "\226\128\186" (* single guillemets *)
+      | "#\"" => "\""
+      | _ => raise Fail "Bad string delimiter situation"
+
 %%
 %structure base_lexer
 %arg ({rcopt,nf,r,i,incommentp,stracc,stash} : UserDeclarations.extrastate);
@@ -94,7 +117,13 @@ numeric = [0-9];
 digitseq = ({numeric} | _)* {numeric} ({numeric} | _)*;
 hexdigit = [A-Fa-f] | {numeric};
 hexdigitseq = ({hexdigit} | _)* {hexdigit} ({hexdigit} | _)*;
-coresymbol = [-`|!#%&=+[{};:@~,.<>?/^\128-\255] | ];
+coresymbol = [-`|!#%&=+[{};:@~,.<>?/^] | ]
+           | [\192\193\195-\223][\128-\191]
+           | \194[\128-\170\172-\186\188-\191]
+           | [\224\225\227-\239][\128-\191][\128-\191]
+           | \226[\129-\191][\128-\191]
+           | \226\128[\128-\184\187-\191]
+           | [\240-\247][\128-\191][\128-\191][\128-\191];
 symbol = {coresymbol} | [)\\];
 nonparen = {symbol} | \* | {alpha} | {numeric};
 nonstar_nonparen = {symbol} | {alpha} | {numeric};
@@ -111,6 +140,8 @@ locpragma = "(*#loc" {space}+ {numeric}* {space}+ {numeric}* {space}* "*)";
 qvarinterior = {coresymbol} | {alpha} | {numeric} | {space} | "(" | "\\n" |
                "\\t" | "\\)" | "\\\\" | "\\z" | "*" | "\\" {numeric} | "\"";
 constname = {ident} | "0" | ({coresymbol}|\\|\*)+;
+strldelim = \" | "\194\171" | "\226\128\185";
+strrdelim = \" | "\194\187" | "\226\128\186";
 %%
 <INITIAL>"$" ? "$var$(" {qvarinterior}* ")" => (
   (BT_Ident yytext, getLoc yyarg yypos yytext)
@@ -152,16 +183,17 @@ constname = {ident} | "0" | ({coresymbol}|\\|\*)+;
      in
        (BT_Numeral(parse_numeric_literal(yytext,loc)), loc)
      end);
-<INITIAL>\" => (let
+<INITIAL>{strldelim} => (let
                   val s = LocP(nf,!r,yypos - !(#i yyarg))
                 in
-                  stracc := ("", [#"\""], s);
+                  stracc := ("", [], s,
+                             (yytext, matching_strdelim yytext));
                   YYBEGIN string;
                   continue()
                 end);
 <INITIAL>#\" => (let val s = LocP(nf,!r,yypos - !(#i yyarg))
                  in
-                     stracc := ("", [#"\""], s);
+                     stracc := ("", [], s, ("#\"", "\""));
                      YYBEGIN string;
                      check_char (continue())
                  end);
@@ -177,7 +209,7 @@ constname = {ident} | "0" | ({coresymbol}|\\|\*)+;
   let
     val s = LocP(nf,!r,yypos - !(#i yyarg))
   in
-    stracc := (String.substring(yytext,0,size yytext - 1), [#"\""], s);
+    stracc := (String.substring(yytext,0,size yytext - 1), [], s, ("\"", "\""));
     YYBEGIN string;
     continue()
   end
@@ -192,43 +224,44 @@ constname = {ident} | "0" | ({coresymbol}|\\|\*)+;
                              getLoc yyarg yypos yytext));
 
 
-<string>\" => (let val e = LocP(nf,!r,yypos - !(#i yyarg))
-                   val (pfx, clist, start) = !stracc
-                   val str0 = String.implode (List.rev(#"\"" :: clist))
-                   val str1 =
-                       MLstring.scanMLstring
-                         (String.substring(str0, 1, size str0 - 2))
-                         handle MLstring.stringerror(i,s) =>
-                                raise LEX_ERR (s ^ " at string character "^
-                                               Int.toString i,
-                                               Loc(start,e))
-                   val str = String.concat ["\"", str1, "\""]
-               in
-                 stracc := ("", [], LocP(0,0,0));
-                 YYBEGIN INITIAL;
-                 (BT_Ident (pfx^str), Loc(start,e))
-               end );
-<string>"\\\"" => (let val (pfx, clist, start) = !stracc
+<string>{strrdelim} => (
+  let val e = LocP(nf,!r,yypos - !(#i yyarg))
+      val (pfx, clist, start, (ldelim,rdelim)) = !stracc
+      val str0 = String.concat (List.rev clist)
+      val str = MLstring.scanMLstring str0
+                 handle MLstring.stringerror(i,s) =>
+                        raise LEX_ERR (s ^ " at string character "^
+                                       Int.toString i,
+                                       Loc(start,e))
+  in
+    if rdelim = yytext then
+      (stracc := ("", [], LocP(0,0,0), ("",""));
+       YYBEGIN INITIAL;
+       (BT_StrLit{ldelim = pfx^ldelim, contents = str}, Loc(start,e)))
+    else
+      raise LEX_ERR ("Character \""^yytext^"\" can't occur inside this sort of string literal unescaped", Loc(start,e))
+  end );
+<string>"\\" {strrdelim} => (let val (pfx, clist, start, delim) = !stracc
                    in
-                     stracc := (pfx, #"\"" :: #"\\" :: clist, start);
+                     stracc := (pfx, "\\\"" :: clist, start, delim);
                      continue()
                    end);
-<string>"\\\\" => (let val (pfx, clist, start) = !stracc
+<string>"\\\\" => (let val (pfx, clist, start, delim) = !stracc
                    in
-                     stracc := (pfx, #"\\" :: #"\\" :: clist, start);
+                     stracc := (pfx, "\\\\" :: clist, start, delim);
                      continue()
                    end);
-<string>. =>  (let val (pfx, clist, start) = !stracc
+<string>. =>  (let val (pfx, clist, start, delim) = !stracc
                in
-                 stracc := (pfx, String.sub(yytext,0) :: clist, start);
+                 stracc := (pfx, yytext :: clist, start, delim);
                  continue()
                end);
 <string>{newline} => (let val i = #i yyarg
-                          val (pfx, clist,start) = !stracc
+                          val (pfx, clist,start,delim) = !stracc
                       in
                         r := !r + 1;
                         i := yypos + size yytext;
-                        stracc := (pfx, #"\n" :: clist, start);
+                        stracc := (pfx, "\n" :: clist, start, delim);
                         continue()
                       end);
 
@@ -255,9 +288,9 @@ constname = {ident} | "0" | ({coresymbol}|\\|\*)+;
       case String.sub(!stash, 0) of
           #"\"" => (if size (!stash) > 1 then
                       (stash := String.extract (!stash, 2, NONE);
-                       (BT_Ident (String.extract(!stash, 0, SOME 2)),
+                       (BT_StrLit{ldelim="\"", contents = ""},
                         getLoc yyarg yypos yytext))
-                    else (YYBEGIN string; stracc := ("", [#"\""], s);
+                    else (YYBEGIN string; stracc := ("", [], s, ("#\"","\""));
                           continue()))
         | _ =>
           (case size yytext of
@@ -265,7 +298,7 @@ constname = {ident} | "0" | ({coresymbol}|\\|\*)+;
                      (BT_Ident (!stash), getLoc yyarg yypos yytext) before
                      stash := "")
              | 1 => (YYBEGIN string;
-                     stracc := ("", [#"\""], s);
+                     stracc := ("", [], s, ("\"","\""));
                      (BT_Ident (!stash), getLoc yyarg yypos yytext) before
                      stash := "")
              | n => ((BT_Ident (!stash), getLoc yyarg yypos yytext) before

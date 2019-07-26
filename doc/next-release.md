@@ -83,6 +83,23 @@ New features:
     Whether or not the `induction=` attribute is used, the induction theorem is also made available as an SML binding under the appropriate name.
     This means that one does not need to follow one’s definition with a call to something like `DB.fetch` or `theorem` just to make the induction theorem available at the SML level.
 
+-   Finally, there are analogous `Inductive` and `CoInductive` syntaxes for defining inductive and coinductive relations (using `Hol_reln` and `Hol_coreln` underneath).
+    The syntax is
+
+           Inductive stem:
+              quoted term material
+           End
+
+    or
+
+           CoInductive stem:
+              quoted term material
+           End
+
+    where, as above, the `Inductive`, `CoInductive` and `End` keywords must be in the leftmost column of the script file.
+    The `stem` part of the syntax drives the selection of the various theorem names (*e.g.*, `stem_rules`, `stem_ind`, `stem_cases` and `stem_strongind` for inductive definitions) for both the SML environment and the exported theory.
+    The actual names of new constants in the quoted term material do not affect these bindings.
+
 -   Holmake now understands targets whose suffixes are the string `Theory` to be instructions to build all of the files associated with a theory.
     Previously, to specifically get `fooTheory` built, it was necessary to write
 
@@ -126,8 +143,22 @@ New features:
     This seems preferable: it helps when debugging to be able to have everything up to a problem-point immediately fed into a fresh session.
     (The loading of the material (whole prefix or selected region) is done “quietly”, with the interactive flag false.)
 
+-   Holmakefiles can now refer to the new variable `DEFAULT_TARGETS` in order to generate a list of the targets in the current directory that Holmake would attempt to build by default.
+    This provides an easier way to adjust makefiles than that suggested in the [release notes for Kananaskis-10](http://hol-theorem-prover.org/kananaskis-10.release.html).
+
+-   String literals can now be injected into other types (in much the same way as numeric literals are injected into types such as `real` and `rat`).
+    Either the standard double-quotes can be used, or two flavours of guillemet, allowing *e.g.*, `“‹foo bar›”`, and `“«injected-HOL-string\n»”`.
+    Ambiguous situations are resolved with the standard overloading resolution machinery.
+    See the REFERENCE manual’s description of the `add_strliteral_form` function for details.
+
+-   The `Q.SPEC_THEN` function (also available as `qspec_then` in `bossLib`) now type-instantiates provided theorems à la `ISPEC`, and tries all possible parses of the provided quotation in order to make this work.
+    The `Q.ISPEC_THEN` function is deprecated.
+
 Bugs fixed:
 -----------
+
+*   `smlTimeout.timeout`: The thread attributes are now given which eliminates concurrency issues during TacticToe recording.
+    This function now raises the exception `FunctionTimeout` instead of `Interrupt` if the argument function exceeds the time limit.
 
 New theories:
 -------------
@@ -143,14 +174,23 @@ New theories:
     the metric-related results in previous `topologyTheory` should now
     open `metricTheory` instead. (Thanks to Chun Tian for this work.)
 
-*   Holmakefiles can now refer to the new variable `DEFAULT_TARGETS` in order to generate a list of the targets in the current directory that Holmake would attempt to build by default.
-    This provides an easier way to adjust makefiles than that suggested in the [release notes for Kananaskis-10](http://hol-theorem-prover.org/kananaskis-10.release.html).
-
 New tools:
 ----------
 
+*   HolyHammer is now able to exports HOL4 formulas to the TPTP formats: TFF0, TFF1, THF0 and THF1.
+    Type encodings have been adapted from the existing FOF translation to make use of the increase in type
+    expressivity provided by these different formats.
+
+*   It is now possible to train feedforward neural networks with `mlNeuralNetwork` and tree neural networks with `mlTreeNeuralNetwork`.
+    The shape of a tree neural network is described by a term, making it handy to train
+    functions from terms to real numbers.
+
+*   An implementation of Monte Carlo tree search relying on an existing policy and value is now provided in `psMCTS`.
+    The policy is a function that given a particular situation returns a prior probability for each possible choice.
+    The value is a function that evaluates how promising a situation is by a real number between 0 and 1.
+
 New examples:
----------
+-------------
 
 Incompatibilities:
 ------------------
@@ -199,6 +239,19 @@ Incompatibilities:
     This also means that this is the only form of variation introduced by the `variant` function.
     However, there is also a new `numvariant` function, which makes the varying function behave as if the old `Globals.priming` was set to `SOME ""` (introduces and increments a numeric suffix).
 
+*   We have made equality a tightly binding infix rather than a loose one.
+    This means that a term like `“p = q ∧ r”` now parses differently, and means `“(p = q) ∧ r”`, rather than `“p = (q ∧ r)”`.
+    For the weak binding, the “iff” alternative is probably better; thus: `“p <=> q ∧ r”` (or use the Unicode `⇔`).
+    To fix a whole script file at one stroke, one can revert to the old, loosely binding equality with
+
+           val _ = ParseExtras.temp_loose_equality()
+
+    To fix a whole family of theories that inherit from a few ancestors, add
+
+           val _ = ParseExtras.loose_equality()
+
+    to the ancestral script files, and then the reversion to the old style of grammar will be inherited by all subsequent theories as well.
+
 *   By default, goals are now printed with the trace variable `"Goalstack.print_goal_at_top"` set to false.
     This means goals now print like
 
@@ -233,6 +286,14 @@ Incompatibilities:
     Users typically use the `DefineSchema` entrypoint and can continue to do so.
     Users can also pass the `schematic` attribute with the new `Definition` syntax (see above).
     Programmers should change uses of `with_flag` to `Feedback.trace`.
+
+*   The theorem `MEM_DROP` in `listTheory` has been restated as
+
+           MEM x (DROP n ls) ⇔ ∃m. m + n < LENGTH ls ∧ x = EL (m + n) ls
+
+    The identically named `MEM_DROP` in `rich_listTheory` has been deleted because it is subsumed by `MEM_DROP_IMP` in `rich_listTheory`, which states
+
+           MEM x (DROP n ls) ⇒ MEM x ls
 
 * * * * *
 

@@ -3,6 +3,7 @@ open HolKernel Parse bossLib boolLib pairTheory relationTheory set_relationTheor
 open alterATheory ltlTheory ltl2waaTheory
 
 val _ = new_theory "waaSimpl"
+val _ = ParseExtras.temp_loose_equality()
 
 (*
   Reducing the amount of transitions

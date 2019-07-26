@@ -14,8 +14,10 @@ structure Parse =
 struct
    open Parse
    val (tyg, (tmg, _)) =
-      (I ## term_grammar.mfupdate_overload_info
-               (Overload.remove_overloaded_form "add"))
+      apsnd (term_grammar.mfupdate_overload_info
+               (Overload.remove_overloaded_form "add") o
+             ParseExtras.grammar_loose_equality
+            )
       arm_stepTheory.arm_step_grammars
    val (Type, Term) = parse_from_grammars (tyg, tmg)
 end
@@ -3538,10 +3540,10 @@ val SignedSatQ_32_rwt =
 val ev =
   EV [FPToFixed32_def, FPToFixed64_def, RoundingMode,
       UnsignedSatQ_32_rwt, SignedSatQ_32_rwt, SatQ_def,
-      intLib.ARITH_PROVE ``i > 4294967295i = ~(i <= 4294967295i)``,
-      intLib.ARITH_PROVE ``i > 2147483647i = ~(i <= 2147483647i)``,
-      intLib.ARITH_PROVE ``i < -2147483648i = ~(-2147483648i <= i)``,
-      intLib.ARITH_PROVE ``i < 0i = ~(0i <= i)``
+      intLib.ARITH_PROVE ``i > 4294967295i <=> ~(i <= 4294967295i)``,
+      intLib.ARITH_PROVE ``i > 2147483647i <=> ~(i <= 2147483647i)``,
+      intLib.ARITH_PROVE ``i < -2147483648i <=> ~(-2147483648i <= i)``,
+      intLib.ARITH_PROVE ``i < 0i <=> ~(0i <= i)``
      ]
      [[``fp32_to_int
            (if round_towards_zero then roundTowardZero

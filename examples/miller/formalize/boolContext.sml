@@ -4,6 +4,15 @@ structure boolContext :> boolContext =
 struct
 open HolKernel Parse boolLib;
 
+structure Parse = struct
+  open Parse
+  val (Type,Term) =
+      pred_setTheory.pred_set_grammars
+        |> apsnd ParseExtras.grammar_loose_equality
+        |> parse_from_grammars
+end
+open Parse
+
 (* interactive mode
 if !show_assums then () else
  (loadPath := ".."::"../../prob"::(!loadPath);

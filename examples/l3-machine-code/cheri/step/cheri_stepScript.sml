@@ -9,7 +9,7 @@ open wordsLib blastLib alignmentTheory
 open updateTheory cheriTheory
 
 val _ = new_theory "cheri_step"
-
+val _ = ParseExtras.temp_loose_equality()
 val _ = List.app (fn f => f ())
    [numLib.prefer_num, wordsLib.prefer_word, wordsLib.guess_lengths]
 

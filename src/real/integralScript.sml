@@ -30,6 +30,7 @@ open boolTheory powserTheory PairedLambda Diff mesonLib RealArith
      jrhUtils realTheory metricTheory netsTheory seqTheory pred_setTheory;
 
 val _ = new_theory "integral";
+val _ = ParseExtras.temp_loose_equality()
 
 val _ = Parse.reveal "B";
 

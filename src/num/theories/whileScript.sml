@@ -394,7 +394,7 @@ val OWHILE_INV_IND = store_thm(
   ]);
 
 val IF_SOME_EQ_SOME_LEMMA = prove(
-  ``!b (x:'a) y. ((if b then SOME x else NONE) = SOME y) = b /\ (x = y)``,
+  ``!b (x:'a) y. ((if b then SOME x else NONE) = SOME y) <=> b /\ (x = y)``,
   Cases THEN
   FULL_SIMP_TAC bool_ss [optionTheory.NOT_NONE_SOME,optionTheory.SOME_11]);
 

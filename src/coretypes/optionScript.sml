@@ -113,18 +113,18 @@ val [option_case_def] = Prim_rec.define_case_constant option_Axiom
 val _ = ot0 "option_case" "case"
 val _ = overload_on("case", ``option_CASE``)
 
-val FORALL_OPTION = Q.store_thm
- ("FORALL_OPTION",
-  `(!opt. P opt) = P NONE /\ !x. P (SOME x)`,
-  METIS_TAC [option_induction]);
+Theorem FORALL_OPTION:
+  (!opt. P opt) <=> P NONE /\ !x. P (SOME x)
+Proof METIS_TAC [option_induction]
+QED
 
-val EXISTS_OPTION = store_thm(
-  "EXISTS_OPTION",
-  ``(?opt. P opt) = P NONE \/ ?x. P (SOME x)``,
-  METIS_TAC [option_nchotomy]);
+Theorem EXISTS_OPTION:
+  (?opt. P opt) = P NONE \/ ?x. P (SOME x)
+Proof METIS_TAC [option_nchotomy]
+QED
 
 val SOME_11 = store_thm("SOME_11",
-  Term`!x y :'a. (SOME x = SOME y) = (x=y)`,
+  Term`!x y :'a. (SOME x = SOME y) <=> (x=y)`,
   REWRITE_TAC [SOME_DEF,option_ABS_ONE_ONE,sumTheory.INR_INL_11]);
 val _ = export_rewrites ["SOME_11"]
 
@@ -623,8 +623,9 @@ val OPTION_APPLY_o = store_thm(
    ---------------------------------------------------------------------- *)
 
 val OPTREL_def = new_definition("OPTREL_def",
-  ``OPTREL R x y = (x = NONE) /\ (y = NONE) \/
-                 ?x0 y0. (x = SOME x0) /\ (y = SOME y0) /\ R x0 y0``);
+  ``OPTREL R x y <=>
+      (x = NONE) /\ (y = NONE) \/
+      ?x0 y0. (x = SOME x0) /\ (y = SOME y0) /\ R x0 y0``);
 
 val OPTREL_MONO = store_thm(
   "OPTREL_MONO",

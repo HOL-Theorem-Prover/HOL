@@ -94,20 +94,19 @@ val LENGTH_FILTER = store_thm
 (* number of elements of value more than n.                        *)
 (* =============================================================== *)
 
-val LENGTH_FILTER_LESS_EQ = store_thm
-   ("LENGTH_FILTER_LESS_EQ",
-    “!l n.  LENGTH (FILTER (\y. n = y) l) +
-               LENGTH (FILTER (\y. n < y) l) =
-               LENGTH (FILTER (\y. n <= y) l)”,
+Theorem LENGTH_FILTER_LESS_EQ:
+  !l n.  LENGTH (FILTER (\y. n = y) l) + LENGTH (FILTER (\y. n < y) l) =
+         LENGTH (FILTER (\y. n <= y) l)
+Proof
     REWRITE_TAC
     [(GENL [“l:num list”,“n:num”]
-      o REWRITE_RULE[ARITH_PROVE “ (n=y) /\ (n <= y) = (n = y)”,
-                     ARITH_PROVE “~(n=y) /\ (n <= y) = (n < y)”]
+      o REWRITE_RULE[ARITH_PROVE “ (n=y) /\ (n <= y) <=> (n = y)”,
+                     ARITH_PROVE “~(n=y) /\ (n <= y) <=> (n < y)”]
       o CONV_RULE (DEPTH_CONV BETA_CONV)
       o REWRITE_RULE[FILTER_FILTER,o_THM]
       o ISPECL[“FILTER (\y. n <= y) l”,“\y:num. n = y”])
      LENGTH_FILTER]
-   );
+QED
 
 
 (*

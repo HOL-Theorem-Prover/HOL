@@ -9,6 +9,7 @@ open user_lemma_basicsTheory user_lemma_primitive_operationsTheory;
 open wordsTheory wordsLib;
 
 val _ =  new_theory("user_lemma_instructions");
+val _ = ParseExtras.temp_loose_equality()
 
 val _ = temp_overload_on ("return", ``constT``);
 val _ = diminish_srw_ss ["one"]

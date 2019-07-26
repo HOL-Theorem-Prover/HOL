@@ -6,11 +6,11 @@ val _ = metisTools.limit :=  { time = NONE, infs = SOME 5000 }
 val _ = export_permweakening "dis_set.dis_set_eq_perms"
 
 val fresh_q = `
-  (fresh fe a (Nom b) = a ≠ b) ∧
-  (fresh fe a (Sus pi v) = (lswapstr (REVERSE pi) a, v) ∈ fe) ∧
-  (fresh fe a (Tie b t) = (a = b) ∨ a ≠ b ∧ fresh fe a t) ∧
-  (fresh fe a (nPair t1 t2) = fresh fe a t1 ∧ fresh fe a t2) ∧
-  (fresh fe a (nConst c) = T)`;
+  (fresh fe a (Nom b) <=> a ≠ b) ∧
+  (fresh fe a (Sus pi v) <=> (lswapstr (REVERSE pi) a, v) ∈ fe) ∧
+  (fresh fe a (Tie b t) <=> (a = b) ∨ a ≠ b ∧ fresh fe a t) ∧
+  (fresh fe a (nPair t1 t2) <=> fresh fe a t1 ∧ fresh fe a t2) ∧
+  (fresh fe a (nConst c) <=> T)`;
 val def_suffix = !Defn.def_suffix;
 val _ = Defn.def_suffix := "_def_with_choice";
 val fresh_def_with_choice = Define fresh_q;
@@ -1636,11 +1636,13 @@ THEN1 (
 val _ = set_fixity "COMPAT" (Infix(NONASSOC,450))
 
 val COMPAT_def = Define`
-(sx,fex) COMPAT (s,fe) =
-nwfs s ∧ nwfs sx ∧ FINITE fe ∧ FINITE fex ∧
-∃ve vex. (verify_fcs fe s = SOME ve) ∧
-         (verify_fcs fex sx = SOME vex) ∧
-!t1 t2. equiv ve (nwalk* s t1) (nwalk* s t2) ⇒ equiv vex (nwalk* sx t1) (nwalk* sx t2)`
+  (sx,fex) COMPAT (s,fe) <=>
+     nwfs s ∧ nwfs sx ∧ FINITE fe ∧ FINITE fex ∧
+     ∃ve vex. (verify_fcs fe s = SOME ve) ∧
+              (verify_fcs fex sx = SOME vex) ∧
+     ∀t1 t2. equiv ve (nwalk* s t1) (nwalk* s t2) ⇒
+             equiv vex (nwalk* sx t1) (nwalk* sx t2)
+`;
 
 val COMPAT_REFL = Q.store_thm(
 "COMPAT_REFL",

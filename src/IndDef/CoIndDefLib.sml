@@ -188,13 +188,14 @@ in
 end
 handle e => raise (wrap_exn "CoIndDefLib" "Hol_mono_coreln" e);
 
+val parse =
+  IndDefLib.term_of |> trace ("syntax_error", 0)
+                    |> trace ("show_typecheck_errors", 0)
+
 fun xHol_coreln name q =
-    Hol_mono_coreln name (!IndDefLib.the_monoset) (IndDefLib.term_of q)
+    Hol_mono_coreln name (!IndDefLib.the_monoset) (parse q)
 
 fun Hol_coreln q = let
-  val parse = IndDefLib.term_of
-                      |> trace ("syntax_error", 0)
-                      |> trace ("show_typecheck_errors", 0)
   val def as (def_t, _) = parse q
   val name = IndDefLib.name_from_def def_t
 in

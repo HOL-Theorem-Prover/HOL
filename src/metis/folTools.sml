@@ -343,7 +343,7 @@ in
 end;
 
 local
-  val imp_elim_CONV = REWR_CONV (tautLib.TAUT `(a ==> b) = ~a \/ b`);
+  val imp_elim_CONV = REWR_CONV (tautLib.TAUT `(a ==> b) <=> ~a \/ b`);
   val eq_elim_RULE = MATCH_MP (tautLib.TAUT `(a = b) ==> b \/ ~a`);
   fun paired_C f (x, y) = f (y, x);
 

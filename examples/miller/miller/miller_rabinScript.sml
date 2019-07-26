@@ -36,6 +36,7 @@ quietdec := false;
 *)
 
 val _ = new_theory "miller_rabin";
+val _ = ParseExtras.temp_loose_equality()
 
 val EXISTS_DEF = boolTheory.EXISTS_DEF;
 val REVERSE = Tactical.REVERSE;

@@ -1,5 +1,6 @@
 
 open HolKernel boolLib bossLib Parse; val _ = new_theory "multiword";
+val _ = ParseExtras.temp_loose_equality()
 
 val _ = set_trace "Unicode" 0;
 

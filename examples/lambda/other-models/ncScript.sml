@@ -381,7 +381,7 @@ val COPY_BUILD = Q.prove(
               lam(\y. (FST p([VAR y/x]u),SND p([VAR y/x]u)))))`,
 RW_TAC std_ss [DECIDE (Term
                   `(a /\ b /\ c /\ d) /\ (e /\ f /\ g /\ h)
-                        =
+                        ⇔
                    (a /\ e) /\ (b /\ f) /\ (c /\ g) /\ (d /\ h)`),
                REWRITE_RULE pairTheory.pair_rws COPY_BUILD_lemma]);
 
@@ -407,7 +407,7 @@ val COPY_ID = Q.prove(
     (!x. hom(VAR x) = VAR x) /\
     (!t u. hom(t @@ u) = (hom t) @@ (hom u)) /\
     (!x u. hom(LAM x u) = ABS(\y. hom([VAR y/x]u)))
-         =
+         ⇔
     (hom = \x.x)`,
 GEN_TAC THEN EQ_TAC THEN STRIP_TAC
   THENL [MATCH_MP_TAC lemma, ALL_TAC]
@@ -593,7 +593,7 @@ val nc_INDUCTION =
      val th5 = GEN_ALL (REWRITE_RULE [] (BETA_RULE th4))
  in
     GEN_ALL
-      (REWRITE_RULE [ABS_DEF,DECIDE (Term`(A = B \/ A) = (B ==> A)`)]
+      (REWRITE_RULE [ABS_DEF,DECIDE (Term`(A ⇔ B \/ A) ⇔ (B ==> A)`)]
                     (DISCH_ALL th5))
  end;
 
@@ -995,13 +995,13 @@ val RENAMING_THM = store_thm(
   "RENAMING_THM",
   ``RENAMING ([]:'a renaming) /\
     (!(R:'a renaming) h.
-       RENAMING (h::R) = RENAMING R /\ ?y x. h = (VAR y,x)) /\
+       RENAMING (h::R) ⇔ RENAMING R /\ ?y x. h = (VAR y,x)) /\
     (!R1 R2:'a renaming.
-       RENAMING (APPEND R1 R2) = RENAMING R1 /\ RENAMING R2)``,
+       RENAMING (APPEND R1 R2) ⇔ RENAMING R1 /\ RENAMING R2)``,
   Q.SUBGOAL_THEN
     `RENAMING ([]:'a renaming) /\
     (!R:'a renaming h.
-       RENAMING (h::R) = RENAMING R /\ ?y x. h = (VAR y,x))`
+       RENAMING (h::R) ⇔ RENAMING R /\ ?y x. h = (VAR y,x))`
     (fn th => STRIP_ASSUME_TAC th THEN ASM_REWRITE_TAC [])
   THENL [
     SIMP_TAC (srw_ss()) [RENAMING_DEF] THEN REPEAT GEN_TAC THEN

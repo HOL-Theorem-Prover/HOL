@@ -15,7 +15,7 @@
 
 \title{\bf\Large Guide to HOL4 interaction and basic proofs\vspace{-0.3em}}
 
-\author{\normalsize Magnus O. Myreen}
+\author{\normalsize Magnus O. Myreen and Minchao Wu}
 \date{~\vspace{-2em}}
 
 \maketitle
@@ -71,6 +71,15 @@ to your initialisation file:
 \begin{code}
 (transient-mark-mode 1)
 \end{code}
+
+To enable the HOL4 input method that supports inputting Unicode characters, add the following to the same file:
+\begin{code}
+(load "<path>/HOL/tools/hol-input.el")
+
+(add-hook 'sml-mode-hook
+	  (lambda () (set-input-method "Hol")))
+\end{code}
+
 Restart emacs to make these changes take effect.
 
 \mysubsec{Starting a HOL4 session}
@@ -119,7 +128,8 @@ Most HOL4 proofs are constructed using an interactive \emph{goal
   stack} and then put together using the ML function {\tt prove}
 (Section~\ref{prove1}, \ref{prove2}). To start the goal stack:
 \begin{enum}
-\item Write a goal, \eg{} {\tt \sq !n{.}~n~<~n~+~1\sq}, (we can write $\forall$ as {\tt !} in HOL4).
+\item Write a goal, \eg{} {\tt \sq !n{.}~n~<~n~+~1\sq}.
+  We can write $\forall$ as {\tt !} in HOL4. Alternatively, type {\tt \textbackslash forall} to input $\forall$. Most of the Unicode characters can be input in a similar way. For example, {\tt \textbackslash exists} gives us $\exists$, {\tt \textbackslash wedge} gives us $\wedge$ \dots
 \item Move the cursor inside the back-quotes ({\tt \sq}).
 \item Press {\tt M-h~g} to push the goal onto the goal stack.
 \end{enum}

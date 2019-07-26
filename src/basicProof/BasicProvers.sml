@@ -250,6 +250,20 @@ fun induct_on_type st ty g =
             (String.concat ["Type: ",Hol_pp.type_to_string ty,
              " is not registered in the types database"]);
 
+fun checkind th =
+    (* if the purported theorem fails to pass muster according to this
+       check, we can still let it pass through to the HO_MATCH_MP_TAC, but
+       we won't attempt to be clever with it and call isolate_to_front. *)
+    let
+      val (_, bod) = strip_forall (concl th)
+      val (_, what_matches_a_goal) = dest_imp bod
+      val (gvs, gimp) = strip_forall what_matches_a_goal
+      val (indR, con) = dest_imp gimp
+    in
+      if List.all is_var (#2 (strip_comb indR)) then ALL_TAC
+      else NO_TAC
+    end
+
 fun Induct_on qtm g =
  let val st = find_subterm qtm g
      val tm = dest_tmkind st
@@ -257,17 +271,38 @@ fun Induct_on qtm g =
      val (_, rngty) = strip_fun ty
  in
   if rngty = Type.bool then (* inductive relation *)
-   let val (c, _) = strip_comb tm
-   in case Lib.total dest_thy_const c
-       of SOME {Thy,Name,...} =>
-           let val indth = Binarymap.find
-                            (IndDefLib.rule_induction_map(),
-                             {Thy=Thy,Name=Name}) handle NotFound => []
-           in
-             MAP_FIRST HO_MATCH_MP_TAC indth ORELSE
-             induct_on_type st ty
-           end g
-       | NONE => induct_on_type st ty g
+    let
+      val (c, _) = strip_comb tm
+      fun mkpat t =
+          let val (d,_) = dom_rng (type_of t)
+          in
+            mkpat (mk_comb(t, genvar d))
+          end handle HOL_ERR _ => t
+      val pat = mkpat tm
+      open IndDefLib
+    in
+      case Lib.total dest_thy_const c of
+          SOME {Thy,Name,...} =>
+          let
+            val indths =
+                Binarymap.find (rule_induction_map(), {Thy=Thy,Name=Name})
+                handle NotFound => []
+            fun numSchematics th =
+                let
+                  val (_,base) = th |> concl |> strip_forall |> #2 |> dest_imp
+                  val (vs, c) = strip_forall base
+                  val (l, _) = dest_imp c
+                  val numargs = l |> strip_comb |> #2 |> length
+                in
+                  numargs - length vs
+                end
+            fun tryind th =
+                TRY (checkind th >> isolate_to_front (numSchematics th) pat) >>
+                HO_MATCH_MP_TAC th
+          in
+            MAP_FIRST tryind indths ORELSE induct_on_type st ty
+          end g
+        | NONE => induct_on_type st ty g
    end
   else
     induct_on_type st ty g

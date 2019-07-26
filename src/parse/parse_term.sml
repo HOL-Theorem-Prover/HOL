@@ -807,6 +807,7 @@ fun parse_term (G : grammar) (typeparser : term qbuf -> Pretype.pretype) = let
         | Antiquote _ => (Id, locn, SOME tt)
         | Numeral _ => (Id, locn, SOME tt)
         | Fraction _ => (Id, locn, SOME tt)
+        | StrLit _ => (Id, locn, SOME tt)
         | QIdent _ => (Id, locn, SOME tt)
       end
     | SOME (tt as PreType ty,locn) => (TypeTok, locn, SOME tt)
@@ -1087,6 +1088,8 @@ fun parse_term (G : grammar) (typeparser : term qbuf -> Pretype.pretype) = let
                    NUMERAL  = (QIDENT ("arithmetic", "NUMERAL"),locn),
                    BIT1     = (QIDENT ("arithmetic", "BIT1")  ,locn),
                    BIT2     = (QIDENT ("arithmetic", "BIT2")  ,locn)}
+          val mk_string = Literal.mk_stringlit_term
+          val mk_char = Literal.mk_charlit_term
           fun inject_np NONE t = t
             | inject_np (SOME s) t = (COMB((VAR s,locn), t),locn)
         in
@@ -1163,6 +1166,15 @@ fun parse_term (G : grammar) (typeparser : term qbuf -> Pretype.pretype) = let
                     | (VSRES_VS, _) =>
                         (NonTermVS [(SIMPLE (token_string tt),locn)],locn)
                     | (_, QIdent x) => (NonTerminal (QIDENT x),locn)
+                    | (_, StrLit{ldelim,contents}) =>
+                      if ldelim = "#\"" then
+                        (NonTerminal (AQ (mk_char (String.sub(contents,0)))),
+                         locn)
+                      else
+                        liftlocn NonTerminal
+                                 (inject_np
+                                    (SOME (mk_stringinjn_name ldelim))
+                                    (AQ (mk_string contents), locn))
                     | _ => (NonTerminal (VAR (token_string tt)),locn)
               (* tt is not an antiquote because of the wider context;
                  antiquotes are dealt with in the wider case statement

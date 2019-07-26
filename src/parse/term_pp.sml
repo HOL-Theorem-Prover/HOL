@@ -357,6 +357,8 @@ val is_list = fn G => fn (r as {nilstr,cons}) => fn tm =>
 
 fun str_unicode_ok s = CharVector.all Char.isPrint s
 
+fun overloads_to_string_form G = term_grammar.strlit_map G
+
 fun oi_strip_comb' oinfo t =
     if current_trace "PP.avoid_unicode" = 0 then Overload.oi_strip_comb oinfo t
     else Overload.oi_strip_combP oinfo str_unicode_ok t
@@ -1837,8 +1839,23 @@ fun pp_term (G : grammar) TyG backend = let
           (case total Literal.dest_string_lit tm of
              NONE => fail
            | SOME s =>
-             add_ann_string (Literal.string_literalpp s,
-                             PPBackEnd.Literal PPBackEnd.StringLit)) |||
+             add_ann_string
+               (Literal.string_literalpp {ldelim="\"", rdelim = "\""} s,
+                PPBackEnd.Literal PPBackEnd.StringLit)) |||
+
+          (* overloaded strings - with special designated rator to a rand
+             which is in turn a string literal *)
+          (fn _ => case total Literal.dest_string_lit (rand tm) of
+                       SOME s =>
+                       (case overloads_to_string_form G {tmnm=atom_name f} of
+                            NONE => fail
+                          | SOME ldelim =>
+                            add_ann_string
+                              (Literal.string_literalpp
+                                 (Literal.delim_pair {ldelim=ldelim})
+                                 s,
+                               PPBackEnd.Literal PPBackEnd.StringLit))
+                     | NONE => fail) |||
 
           (* characters *)
           (fn _ => case total Literal.dest_char_lit tm of

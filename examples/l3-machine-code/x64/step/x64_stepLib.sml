@@ -11,7 +11,9 @@ open updateLib utilsLib x64Lib x64Theory x64_stepTheory
 structure Parse =
 struct
    open Parse
-   val (Type, Term) = parse_from_grammars x64Theory.x64_grammars
+   val (Type, Term) =
+       x64Theory.x64_grammars |> apsnd ParseExtras.grammar_loose_equality
+                              |> parse_from_grammars
 end
 
 open Parse
@@ -803,17 +805,17 @@ val process_float_flags1 = process_float_flags `[f : bool # flags]`
 val process_float_flags2 = process_float_flags `[f1 : bool # flags; f2]`
 val process_float_flags4 = process_float_flags `[f1 : bool # flags; f2; f3; f4]`
 
-val lem1 = Q.prove(
-  `(!x y.
+val lem1 = prove(
+  “(!x y.
     (if IS_SOME x then i2w (THE x) else y) =
      case x of SOME a => i2w a | _ => y) /\
    (!x y.
     (if IS_SOME x then w2w (i2w (THE x) : 'c word) else y) =
-     case x of SOME a => w2w (i2w a : 'c word) | _ => y)`,
+     case x of SOME a => w2w (i2w a : 'c word) | _ => y)”,
   strip_tac \\ Cases \\ rw [])
 
-val lem2 = Q.prove(
-  `(case x of
+val lem2 = prove(
+  “(case x of
        LT => s with EFLAGS := a
      | EQ => s with EFLAGS := b
      | GT => s with EFLAGS := c
@@ -838,7 +840,7 @@ val lem2 = Q.prove(
         ((Z_OF =+ SOME F)
           ((Z_CF =+ SOME (x IN {LT; UN}))
             ((Z_PF =+ SOME (x = UN))
-              ((Z_ZF =+ SOME (x IN {EQ; UN})) s.EFLAGS)))))`,
+              ((Z_ZF =+ SOME (x IN {EQ; UN})) s.EFLAGS)))))”,
   Cases_on `x` \\ simp [])
 
 val rule = List.map (REWRITE_RULE [lem1])

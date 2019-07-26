@@ -67,3 +67,7 @@ bar
 ##parsetm :'a list
 >>__ load "root2Theory"
 >> root2Theory.SQRT_2_IRRATIONAL
+
+##thm AND_CLAUSES
+
+##thm50 AND_CLAUSES

@@ -52,6 +52,16 @@ struct
   val fromNum_str = "_ inject_number"
   val num_injection = "&"
 
+  val stringinjn_base = "_ inject_string"
+  fun mk_stringinjn_name s =
+      let val ((_, i), _) = valOf (UTF8.getChar s)
+            handle Option => raise Fail "GrammarSpecials.mk_stringinjn_name: \
+                                        \empty string"
+      in
+        stringinjn_base ^ StringCvt.padLeft #"0" 4 (Int.fmt StringCvt.HEX i)
+      end
+  val std_stringinjn_name = mk_stringinjn_name "\""
+  val string_elim_term = "string_elim__magic"
 
   val std_binder_precedence = 0
 

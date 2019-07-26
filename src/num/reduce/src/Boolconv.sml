@@ -27,6 +27,7 @@ fun failwith function = raise (ERR function "");
 
 val ambient_grammars = Parse.current_grammars();
 val _ = Parse.temp_set_grammars boolTheory.bool_grammars
+val _ = ParseExtras.temp_loose_equality()
 
 val zv    = mk_var("z",bool)
 and beqop = inst [alpha |->bool] equality;

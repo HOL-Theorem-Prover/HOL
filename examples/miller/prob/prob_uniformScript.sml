@@ -23,6 +23,7 @@ quietdec := false;
 *)
 
 val _ = new_theory "prob_uniform";
+val _ = ParseExtras.temp_loose_equality()
 
 val std_ss' = std_ss ++ boolSimps.ETA_ss;
 val Rewr = DISCH_THEN (REWRITE_TAC o wrap);

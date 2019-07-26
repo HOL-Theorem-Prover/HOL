@@ -21,6 +21,8 @@ open
         intExtensionTheory intExtensionLib fracUtils;
 
 val _ = new_theory "frac";
+val _ = ParseExtras.temp_loose_equality()
+
 
 val ERR = mk_HOL_ERR "fracScript"
 
