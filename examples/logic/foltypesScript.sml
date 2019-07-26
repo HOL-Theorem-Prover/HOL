@@ -17,6 +17,8 @@ Proof
     (TypeBase.induction_of “:foterm”) >> fs[DISJ_IMP_THM, FORALL_AND_THM]
 QED
 
+val _ = TypeBase.update_induction foterm_induct
+
 val foterm_size_def = DB.fetch "-" "foterm_size_def"
 val _ = export_rewrites ["foterm_size_def"]
 
@@ -41,13 +43,11 @@ val MAP_CONG' = REWRITE_RULE [GSYM AND_IMP_INTRO] listTheory.MAP_CONG
 
 val tpm_raw = Q.prove(
   ‘(raw_tpm = tpm)’,
-  simp[GSYM pmact_bijections] >>
-  simp[is_pmact_def] >> rpt conj_tac
-  >- (ho_match_mp_tac foterm_induct >> simp[raw_tpm_def, Cong MAP_CONG'])
-  >- (ntac 2 gen_tac >> ho_match_mp_tac foterm_induct >>
+  simp[GSYM pmact_bijections] >> simp[is_pmact_def] >> rpt conj_tac
+  >- (Induct >> simp[raw_tpm_def, Cong MAP_CONG'])
+  >- (map_every qx_gen_tac [‘p1’, ‘p2’, ‘x’] >> Induct_on ‘x’ >>
       simp[raw_tpm_def, MAP_MAP_o, Cong MAP_CONG', pmact_decompose])
-  >- (rpt strip_tac >> simp[FUN_EQ_THM] >>
-      ho_match_mp_tac foterm_induct >>
+  >- (rpt strip_tac >> simp[FUN_EQ_THM] >> Induct >>
       simp[raw_tpm_def, Cong MAP_CONG', GSYM permeq_thm]));
 
 Theorem tpm_thm[simp] =
@@ -87,14 +87,13 @@ End
 Theorem FINITE_tfv[simp]:
   ∀t. FINITE (tfv t)
 Proof
-  ho_match_mp_tac foterm_induct >> simp[] >> Induct >>
-  simp[MEM_MAP, PULL_EXISTS, DISJ_IMP_THM]
+  Induct >> simp[MEM_MAP, PULL_EXISTS, DISJ_IMP_THM]
 QED
 
 Theorem tfv_tpm:
   ∀t. tfv (tpm pi t) = ssetpm pi (tfv t)
 Proof
-  ho_match_mp_tac foterm_induct >>
+  Induct >>
   simp[pmact_INSERT, pmact_LIST_UNION, listpm_MAP, MAP_MAP_o,
        Cong MAP_CONG']
 QED
@@ -106,7 +105,7 @@ val OR_LEFT_FORALL_THM = Q.prove(
 Theorem tfv_support:
   support (mk_pmact raw_tpm) t (tfv t)
 Proof
-  simp[support_def] >> qid_spec_tac ‘t’ >> ho_match_mp_tac foterm_induct >>
+  simp[support_def] >> Induct_on ‘t’ >>
   simp[MEM_MAP, OR_LEFT_FORALL_THM] >> rw[] >> REWRITE_TAC [listpm_MAP] >>
   simp[LIST_EQ_REWRITE, EL_MAP] >> metis_tac[MEM_EL]
 QED
@@ -114,7 +113,7 @@ QED
 Theorem tfv_apart:
   ∀t x y. x ∈ tfv t ∧ y ∉ tfv t ⇒ tpm [(x,y)] t ≠ t
 Proof
-  ho_match_mp_tac foterm_induct >>
+  Induct >>
   simp[MEM_MAP, PULL_EXISTS, OR_LEFT_FORALL_THM, listpm_MAP] >> rw[] >>
   simp[LIST_EQ_REWRITE, EL_MAP] >> metis_tac[MEM_EL]
 QED
@@ -130,11 +129,18 @@ Proof
          simp[] THEN METIS_TAC []) >>
   METIS_TAC [tfv_apart]);
 
+Theorem ssetpm_LIST_UNION[simp]:
+  ssetpm π (LIST_UNION l) = LIST_UNION (MAP (ssetpm π) l)
+Proof
+  Induct_on ‘l’ >> simp[pmact_UNION]
+QED
+
 Theorem tfv_tpm:
   ∀t. ssetpm π (tfv t) = tfv (tpm π t)
 Proof
-  ho_match_mp_tac foterm_induct >> simp[pmact_INSERT] >>
-  Induct >> dsimp[pmact_UNION]
+  Induct >>
+  simp[pmact_INSERT, MAP_MAP_o, combinTheory.o_ABS_R, Cong MAP_CONG',
+       listpm_MAP]
 QED
 
 val _ = Datatype‘
@@ -282,9 +288,9 @@ Proof
 QED
 
 Theorem faeq_trans:
-  ∀rf1 rf2. faeq rf1 rf2 ⇒ ∀rf3. faeq rf2 rf3 ⇒ faeq rf1 rf3
+  ∀rf1 rf2 rf3. faeq rf1 rf2 ∧ faeq rf2 rf3 ⇒ faeq rf1 rf3
 Proof
-  Induct_on ‘faeq’ >> simp[faeq_rules] >> rw[]
+  Induct_on ‘faeq rf1 rf2’ >> simp[faeq_rules] >> rw[]
   >- fs[faeq_imp0L_invert] >>
   pop_assum (strip_assume_tac o SIMP_RULE (srw_ss()) [faeq_rawALLL_invert]) >>
   rename [‘faeq (rawfpm [(bx,z1)] rf1) (rawfpm [(by,z1)] rf2)’,
