@@ -29,7 +29,15 @@ val _ = app tpp [
   "(g ∘ f)⦇\n\
   \  kkkk1 ↦ vvvvv1; kkkkk2 ↦ vvvvvv2; kkkkk3 ↦ vvvvv3; kkkkkk4 ↦ vvvvv4;\n\
   \  kkkkkk5 ↦ v5\n\
-  \⦈"
+  \⦈",
+  "(fffff xxxxx yyyyy zzzzz aaaaaa bbbbbbb cccccccc dddddddd eeeeeeee ggggg)⦇\n\
+  \  kkkkkkkkk ↦ vvvvvv\n\
+  \⦈",
+  "P\n\
+  \  (fffff xxxxx yyyy zzzzz aaaaaa bbbbbbb cccccccc ddddddd eeeeeeee ggggg)⦇\n\
+  \    kkkkkkkkk ↦ vvvvvv\n\
+  \  ⦈"
+
 ];
 
 local
