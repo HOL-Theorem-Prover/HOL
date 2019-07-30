@@ -192,6 +192,12 @@ Proof
   simp[Exists_def, Not_def]
 QED
 
+Theorem form_predicates_Exists[simp]:
+  form_predicates (Exists x p) = form_predicates p
+Proof
+  simp[Exists_def, Not_def]
+QED
+
 Definition functions_def:
   functions fms = BIGUNION{form_functions f | f ∈ fms}
 End
@@ -235,6 +241,17 @@ Proof
   simp[EXTENSION] >> metis_tac[]
 QED
 
+Theorem language_FALL[simp]:
+  language {FALL x p} = language {p}
+Proof
+  simp[language_def, predicates_def, EXTENSION]
+QED
+
+Theorem language_Exists[simp]:
+  language {Exists x p} = language {p}
+Proof
+  simp[language_def, predicates_def, EXTENSION, Exists_def, Not_def]
+QED
 
 Definition BV_def[simp]:
   (BV False = ∅) ∧

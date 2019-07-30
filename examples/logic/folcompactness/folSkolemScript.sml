@@ -30,7 +30,7 @@ Proof
 QED
 
 Theorem size_Skolem1[simp]:
-  size (Skolem1 f x p) < size (Exists x p)
+  size (Skolem1 f x p) = size p
 Proof
   simp[Skolem1_def]
 QED
@@ -54,7 +54,7 @@ Proof
   Induct_on ‘l’ >> simp[]
 QED
 
-Theorem form_functions_Skolem1[simp]:
+Theorem form_functions_Skolem1:
   form_functions (Skolem1 f x p) ⊆
     (f, CARD (FV (Exists x p))) INSERT form_functions p ∧
   form_functions p ⊆ form_functions (Skolem1 f x p)
@@ -72,7 +72,7 @@ Proof
   simp[Skolem1_def]
 QED
 
-Theorem holds_exists_holds_skolem1:
+Theorem holds_Skolem1_I:
   (f,CARD (FV (Exists x p))) ∉ form_functions (Exists x p)
  ⇒
   ∀M. interpretation (language {p}) M ∧ M.Dom ≠ ∅ ∧
@@ -155,7 +155,7 @@ Proof
   Induct >> simp[] >> rw[combinTheory.APPLY_UPDATE_THM]
 QED
 
-Theorem Skolem1_holds_Exists_holds:
+Theorem holds_Skolem1_E:
   (f,CARD (FV (Exists x p))) ∉ form_functions (Exists x p) ⇒
   ∀N. interpretation (language {Skolem1 f x p}) N ∧ N.Dom ≠ ∅
      ⇒
@@ -254,12 +254,188 @@ Proof
   simp[Once Skolems_def]
 QED
 
+Theorem holds_Skolems_I:
+  ∀J p k M.
+     interpretation (language{p}) M ∧ M.Dom ≠ ∅ ∧
+     (∀v. valuation M v ⇒ holds M v p) ∧
+     (∀l m. (J ⊗ l,m) ∈ form_functions p ⇒ l < k)
+    ⇒
+     ∃M'. M'.Dom = M.Dom ∧ M'.Pred = M.Pred ∧
+          (∀g zs. M'.Fun g zs ≠ M.Fun g zs ⇒ ∃l. k ≤ l ∧ g = J ⊗ l) ∧
+          interpretation (language {Skolems J p k}) M' ∧
+          ∀v. valuation M' v ⇒ holds M' v (Skolems J p k)
+Proof
+  ho_match_mp_tac Skolems_ind >> rw[] >>
+  Cases_on ‘∃x p0. p = FALL x p0’ >> fs[] >> fs[]
+  >- (ONCE_REWRITE_TAC [Skolems_def] >> simp[] >>
+      first_x_assum
+        (first_assum o mp_then.mp_then (mp_then.Pos (el 2)) mp_tac) >>
+      impl_tac
+      >- (simp[] >>
+          reverse conj_tac
+          >- (first_x_assum ACCEPT_TAC (* freshness assumption *)) >>
+          qx_gen_tac ‘valn’ >> strip_tac >>
+          first_x_assum (drule_then (qspec_then ‘valn x’ mp_tac)) >>
+          simp[combinTheory.APPLY_UPDATE_ID] >> disch_then irule >>
+          fs[valuation_def]) >>
+      disch_then (qx_choose_then ‘N’ strip_assume_tac) >> qexists_tac ‘N’ >>
+      simp[] >> first_assum ACCEPT_TAC) >>
+  reverse (Cases_on ‘∃x p0. p = Exists x p0’) >> fs[]
+  >- (ONCE_REWRITE_TAC [Skolems_def] >> simp[] >> metis_tac[]) >>
+  rw[] >> fs[] >> rw[] >> ONCE_REWRITE_TAC [Skolems_def] >> simp[] >>
+  (* apply Skolem1 result: holds_Skolem1_I *)
+  rename [‘Skolem1 (J ⊗ k) xv ϕ’] >>
+  first_assum
+    (mp_then.mp_then (mp_then.Pos (el 2)) mp_tac (GEN_ALL holds_Skolem1_I)) >>
+  simp[Excl "FV_extras"] >>
+  disch_then (first_assum o mp_then.mp_then (mp_then.Pos (el 2)) mp_tac) >>
+  disch_then (qspec_then ‘J ⊗ k’ mp_tac) >>
+  qabbrev_tac ‘FF = FV (Exists xv ϕ)’ >> ‘FINITE FF’ by simp[Abbr‘FF’] >>
+  disch_then (PROVEHYP_THEN (K (qx_choose_then ‘M1’ strip_assume_tac)))
+  >- (strip_tac >> first_x_assum drule >> simp[]) >>
+  qpat_x_assum
+    ‘∀p n. size p < size _ + _ ⇒
+           ∀M. interpretation (language {Skolem1 _ _ _ }) M ∧ _ ⇒ _’
+    (first_assum o mp_then.mp_then (mp_then.Pos (el 2)) mp_tac) >>
+  simp[] >>
+  qpat_x_assum ‘∀p. size p < size _ + _ ⇒ _’ (K ALL_TAC) >>
+  impl_tac
+  >- (rw[] >> rename [‘(J ⊗ n,m) ∈ form_functions (Skolem1 (J ⊗ k) _ _)’] >>
+      mp_tac (form_functions_Skolem1 |> CONJUNCT1 |> GEN_ALL) >>
+      simp[SUBSET_DEF, Excl "FV_extras", Excl "form_functions_Skolem1"] >>
+      disch_then drule >> simp[] >> rw[] >> simp[] >>
+      metis_tac[DECIDE “x < k ⇒ x < k + 1”]) >>
+  disch_then (qx_choose_then ‘N’ strip_assume_tac) >> qexists_tac ‘N’ >>
+  simp[] >>
+  rw[] >> rename [‘N.Fun g args = M.Fun g args’] >>
+  Cases_on ‘N.Fun g args = M1.Fun g args’ >> fs[]
+  >- metis_tac [DECIDE “x ≤ x”] >>
+  first_x_assum (pop_assum o mp_then.mp_then (mp_then.Pos hd) mp_tac) >>
+  simp[PULL_EXISTS]
+QED
 
+Theorem interpretation_Skolem1_E:
+  ∀N f x p. interpretation (language {Skolem1 f x p}) N ⇒
+            interpretation (language {p}) N
+Proof
+  rpt gen_tac >> reverse (Cases_on ‘x ∈ FV p’) >> simp[Skolem1_ID] >>
+  simp[Skolem1_def, language_def, form_functions_formsubst1,
+       predicates_def, interpretation_def]
+QED
 
+Theorem interpretation_Skolems_E:
+  ∀J p k N. interpretation (language {Skolems J p k}) N ⇒
+            interpretation (language {p}) N
+Proof
+  ho_match_mp_tac Skolems_ind >> rpt gen_tac >> strip_tac >>
+  Cases_on ‘∃x p0. p = FALL x p0’ >> fs[]
+  >- (ONCE_REWRITE_TAC[Skolems_def] >> simp[]) >>
+  reverse (Cases_on ‘∃x p0. p = Exists x p0’) >> fs[]
+  >- (ONCE_REWRITE_TAC[Skolems_def] >> simp[]) >>
+  ONCE_REWRITE_TAC[Skolems_def] >> simp[] >> rw[] >> fs[] >>
+  qpat_x_assum ‘∀f:form n. _’
+    (first_assum o mp_then.mp_then mp_then.Any mp_tac) >> simp[] >>
+  metis_tac[interpretation_Skolem1_E]
+QED
 
+Theorem holds_Skolems_E:
+  ∀J p k.
+    (∀l m. (J ⊗ l, m) ∈ form_functions p ⇒ l < k) ⇒
+    ∀N. interpretation (language {Skolems J p k}) N ∧ N.Dom ≠ ∅ ⇒
+        ∀v. valuation N v ∧ holds N v (Skolems J p k) ⇒
+            holds N v p
+Proof
+  ho_match_mp_tac Skolems_ind >> rpt gen_tac >> ntac 2 strip_tac >>
+  Cases_on ‘∃x p0. p = FALL x p0’ >> fs[]
+  >- (ONCE_REWRITE_TAC [Skolems_def] >> simp[] >> rw[] >> fs[] >>
+      first_x_assum
+        (first_assum o mp_then.mp_then (mp_then.Pos (el 2)) mp_tac) >>
+      simp[]) >>
+  reverse (Cases_on ‘∃x p0. p = Exists x p0’) >> fs[]
+  >- (ONCE_REWRITE_TAC [Skolems_def] >> simp[]) >>
+  ONCE_REWRITE_TAC [Skolems_def] >> simp[] >> rw[] >> fs[] >>
+  qpat_x_assum ‘∀q:form n:num. _’
+     (first_assum o mp_then.mp_then (mp_then.Pos (el 3)) mp_tac) >> simp[] >>
+  disch_then (first_assum o mp_then.mp_then mp_then.Any mp_tac) >> simp[] >>
+  impl_tac
+  >- (rw[] >> rename [‘(J ⊗ n,m) ∈ form_functions _’] >>
+      mp_tac (form_functions_Skolem1 |> CONJUNCT1 |> GEN_ALL) >>
+      simp[SUBSET_DEF, Excl "form_functions_Skolem1", Excl "FV_extras"] >>
+      disch_then drule >> rw[Excl "FV_extras"] >> simp[] >>
+      first_x_assum drule >> simp[]) >>
+  strip_tac >>
+  first_assum (mp_then.mp_then (mp_then.Pos last) mp_tac holds_Skolem1_E) >>
+  reverse impl_tac >> simp[] >> conj_tac
+  >- (strip_tac >> first_x_assum drule >> simp[]) >>
+  metis_tac[interpretation_Skolems_E]
+QED
 
+Definition Skopre_def:
+  Skopre J p = Skolems J (Prenex p) 0
+End
 
+Theorem FV_Skopre[simp]:
+  FV (Skopre i p) = FV p
+Proof
+  simp[Skopre_def]
+QED
 
+Theorem universal_Skopre[simp]:
+  universal (Skopre i p)
+Proof
+  simp[Skopre_def]
+QED
 
+Theorem form_predicates_Skopre[simp]:
+  form_predicates (Skopre j p) = form_predicates p
+Proof
+  simp[Skopre_def]
+QED
+
+Theorem form_functions_Skopre_I:
+  form_functions p ⊆ form_functions (Skopre j p)
+Proof
+  simp[Skopre_def] >>
+  metis_tac[SUBSET_TRANS,form_functions_Prenex, form_functions_Skolems_down]
+QED
+
+Theorem form_functions_Skopre_E:
+  form_functions (Skopre j p) ⊆ {(j ⊗ l, m) | l,m | T } ∪ form_functions p
+Proof
+  simp[Skopre_def] >>
+  qspecl_then [‘j’, ‘Prenex p’, ‘0’] mp_tac form_functions_Skolems_up >>
+  simp[]
+QED
+
+Theorem holds_Skopre_I:
+  ∀p j M.
+     (∀l m. (j ⊗ l, m) ∉ form_functions p) ∧
+     interpretation (language {p}) M ∧ M.Dom ≠ ∅ ∧
+     (∀v. valuation M v ⇒ holds M v p)
+   ⇒
+     ∃M'. M'.Dom = M.Dom ∧ M'.Pred = M.Pred ∧
+          (∀g zs. M'.Fun g zs ≠ M.Fun g zs ⇒ ∃l. g = j ⊗ l) ∧
+          interpretation (language {Skopre j p}) M' ∧
+          ∀v. valuation M' v ⇒ holds M' v (Skopre j p)
+Proof
+  rw[Skopre_def] >>
+  qspecl_then [‘j’, ‘Prenex p’, ‘0’] mp_tac holds_Skolems_I >> simp[]
+QED
+
+Theorem holds_Skopre_E:
+  ∀p j N. (∀l m. (j ⊗ l, m) ∉ form_functions p) ∧
+          interpretation (language{Skopre j p}) N ∧ N.Dom ≠ ∅ ⇒
+          ∀v. valuation N v ∧ holds N v (Skopre j p) ⇒ holds N v p
+Proof
+  rw[Skopre_def] >>
+  qspecl_then [‘j’, ‘Prenex p’, ‘0’] mp_tac holds_Skolems_E >> simp[]
+QED
+
+Theorem interpretation_Skopre_E:
+  ∀p j N. interpretation (language {Skopre j p}) N ⇒
+          interpretation (language {p}) N
+Proof
+  rw[Skopre_def] >> drule interpretation_Skolems_E >> simp[]
+QED
 
 val _ = export_theory();

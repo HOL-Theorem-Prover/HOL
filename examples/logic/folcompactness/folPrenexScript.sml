@@ -506,4 +506,62 @@ Proof
   Induct_on ‘f’ >> simp[] >> fs[language_SING]
 QED
 
+Theorem form_functions_prenexR[simp]:
+  ∀f1 f2. form_functions (prenexR f1 f2) = form_functions f1 ∪ form_functions f2
+Proof
+  ho_match_mp_tac prenexR_ind >> rpt strip_tac >> simp[Once prenexR_def] >>
+  Cases_on‘∃x f2'. f2 = Exists x f2'’ >>
+  full_simp_tac (srw_ss() ++ COND_elim_ss)
+    [form_functions_formsubst, combinTheory.APPLY_UPDATE_THM] >>
+  Cases_on ‘∃x f2'. f2 = FALL x f2'’ >>
+  full_simp_tac (srw_ss() ++ COND_elim_ss)
+    [form_functions_formsubst, combinTheory.APPLY_UPDATE_THM]
+QED
+
+Theorem form_functions_prenexL[simp]:
+  ∀f1 f2. form_functions (prenexL f1 f2) = form_functions f1 ∪ form_functions f2
+Proof
+  ho_match_mp_tac prenexL_ind >> rpt strip_tac >>
+  simp[Once prenexL_def] >>
+  Cases_on‘∃x f1'. f1 = Exists x f1'’ >>
+  full_simp_tac (srw_ss() ++ COND_elim_ss)
+    [form_functions_formsubst, combinTheory.APPLY_UPDATE_THM] >>
+  Cases_on ‘∃x f1'. f1 = FALL x f1'’ >>
+  full_simp_tac (srw_ss() ++ COND_elim_ss)
+    [form_functions_formsubst, combinTheory.APPLY_UPDATE_THM]
+QED
+
+Theorem form_functions_Prenex[simp]:
+  form_functions (Prenex f) = form_functions f
+Proof
+  Induct_on ‘f’ >> simp[]
+QED
+
+Theorem form_predicates_prenexR[simp]:
+  ∀f1 f2.
+    form_predicates (prenexR f1 f2) = form_predicates f1 ∪ form_predicates f2
+Proof
+  ho_match_mp_tac prenexR_ind >> rpt strip_tac >>
+  simp[Once prenexR_def] >>
+  Cases_on‘∃x f2'. f2 = Exists x f2'’ >> fs [] >>
+  Cases_on ‘∃x f2'. f2 = FALL x f2'’ >> fs []
+QED
+
+Theorem form_predicates_prenexL[simp]:
+  ∀f1 f2.
+    form_predicates (prenexL f1 f2) = form_predicates f1 ∪ form_predicates f2
+Proof
+  ho_match_mp_tac prenexL_ind >> rpt strip_tac >>
+  simp[Once prenexL_def] >>
+  Cases_on‘∃x f1'. f1 = Exists x f1'’ >> fs [] >>
+  Cases_on ‘∃x f1'. f1 = FALL x f1'’ >> fs []
+QED
+
+Theorem form_predicates_Prenex[simp]:
+  form_predicates (Prenex p) = form_predicates p
+Proof
+  Induct_on ‘p’ >> simp[]
+QED
+
+
 val _ = export_theory();
