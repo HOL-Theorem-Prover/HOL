@@ -316,7 +316,7 @@ val bsize = 16;
 val nepoch = 100;
 val ncore = 1;
 val exl = List.tabulate (1000, fn _ => gen_idex dim);
-val nn = random_nn (tanh,dtanh) [10,20,10];
+val nn = random_nn (tanh,dtanh) [dim,2* dim,dim];
 val (newnn,t) = add_time (train_nn ncore nepoch nn bsize) exl;
 val inv = fst (gen_idex dim);
 val outv = infer_nn newnn inv;

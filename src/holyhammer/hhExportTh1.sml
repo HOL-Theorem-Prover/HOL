@@ -82,7 +82,9 @@ fun th1_term oc tm =
     end
   else if is_abs tm then
     let val (vl,bod) = strip_abs tm in
-      os oc "^["; oiter oc ", " th1_vty vl; os oc "]: "; th1_term oc bod
+      os oc "(";
+      os oc "^["; oiter oc ", " th1_vty vl; os oc "]: "; th1_term oc bod;
+      os oc ")"
     end
   else raise ERR "th1_term" ""
 
@@ -109,7 +111,7 @@ fun th1_pred oc tm =
 and th1_binop oc s (l,r) =
   (os oc "("; th1_pred oc l; os oc (" " ^ s ^ " "); th1_pred oc r; os oc ")")
 and th1_quant oc s (vl,bod) =
-  (th1_quant_vl oc s vl; th1_pred oc bod)
+  (os oc "("; th1_quant_vl oc s vl; th1_pred oc bod; os oc ")")
 
 fun th1_formula oc tm = (th1_forall_tyvarl_tm oc tm; th1_pred oc tm)
 
@@ -254,12 +256,6 @@ load "tttUnfold"; tttUnfold.load_sigobj ();
 val thyl = ancestry (current_theory ());
 val bushydir =  HOLDIR ^ "/src/holyhammer/th1_bushy";
 th1_export_bushy bushydir thyl;
-val chainydir = "/local1/thibault/th1_chainy";
-th1_export_chainy chainydir thyl;
 *)
-
-(* load "hhExportTh1"; load "hhExportTf1"; load "hhExportFof";
-  load "hhExportTf0"; load "hhExportTh0"; *)
-
 
 end (* struct *)
