@@ -370,6 +370,10 @@ Proof
   metis_tac[interpretation_Skolems_E]
 QED
 
+(* ------------------------------------------------------------------------- *)
+(* Now Skolemize an arbitrary (non-prenex) formula.                          *)
+(* ------------------------------------------------------------------------- *)
+
 Definition Skopre_def:
   Skopre J p = Skolems J (Prenex p) 0
 End
@@ -436,6 +440,118 @@ Theorem interpretation_Skopre_E:
           interpretation (language {p}) N
 Proof
   rw[Skopre_def] >> drule interpretation_Skolems_E >> simp[]
+QED
+
+(* ------------------------------------------------------------------------- *)
+(* Bumping up function indices to leave room for Skolem functions.           *)
+(* ------------------------------------------------------------------------- *)
+
+Definition bumpmod_def:
+  bumpmod M = M with Fun := λk zs. M.Fun (nsnd k) zs
+End
+
+Theorem bumpmod_rwts[simp]:
+  (bumpmod M).Pred = M.Pred ∧ (bumpmod M).Dom = M.Dom ∧
+  (bumpmod M).Fun (m ⊗ n) = M.Fun n
+Proof
+  simp[bumpmod_def, FUN_EQ_THM]
+QED
+
+Definition bumpterm_def[simp]:
+  bumpterm (V x) = V x ∧
+  bumpterm (Fn k l) = Fn (0 ⊗ k) (MAP bumpterm l)
+Termination
+  WF_REL_TAC ‘measure term_size’ >> simp[]
+End
+
+Definition bumpform_def[simp]:
+  bumpform False = False ∧
+  bumpform (Pred p l) = Pred p (MAP bumpterm l) ∧
+  bumpform (IMP p q) = IMP (bumpform p) (bumpform q) ∧
+  bumpform (FALL x p) = FALL x (bumpform p)
+End
+
+Theorem termval_bump[simp]:
+  ∀M v t. termval (bumpmod M) v (bumpterm t) = termval M v t
+Proof
+  Induct_on ‘t’ >> simp[MAP_MAP_o, combinTheory.o_ABS_R, Cong MAP_CONG']
+QED
+
+Theorem holds_bump[simp]:
+  ∀M v p. holds (bumpmod M) v (bumpform p) ⇔ holds M v p
+Proof
+  Induct_on ‘p’ >> simp[MAP_MAP_o, combinTheory.o_DEF, Cong MAP_CONG']
+QED
+
+Theorem term_functions_bumpterm[simp]:
+  term_functions (bumpterm t) = { (0 ⊗ k, m) | (k,m) ∈ term_functions t }
+Proof
+  Induct_on ‘t’ >> simp[MAP_MAP_o, Cong MAP_CONG', MEM_MAP, PULL_EXISTS] >>
+  simp[Once EXTENSION, MEM_MAP, PULL_EXISTS] >> metis_tac[]
+QED
+
+Theorem form_functions_bumpform[simp]:
+  form_functions (bumpform p) = { (0 ⊗ k, m) | (k,m) ∈ form_functions p }
+Proof
+  Induct_on ‘p’ >> simp[MEM_MAP, MAP_MAP_o, PULL_EXISTS]
+  >- (simp[Once EXTENSION, MEM_MAP, PULL_EXISTS] >> metis_tac[]) >>
+  simp[Once EXTENSION] >> metis_tac[]
+QED
+
+Theorem form_predicates_bumpform[simp]:
+  form_predicates (bumpform p) = form_predicates p
+Proof
+  Induct_on ‘p’ >> simp[]
+QED
+
+Theorem interpretation_bumpform[simp]:
+  interpretation (language {bumpform p}) (bumpmod M) ⇔
+  interpretation (language {p}) M
+Proof
+  simp[interpretation_def, language_def, PULL_EXISTS] >> metis_tac[]
+QED
+
+Definition unbumpterm_def[simp]:
+  unbumpterm (V x) = V x ∧
+  unbumpterm (Fn k l) = Fn (nsnd k) (MAP unbumpterm l)
+Termination
+  WF_REL_TAC ‘measure term_size’ >> simp[]
+End
+
+Definition unbumpform_def[simp]:
+  unbumpform False = False ∧
+  unbumpform (Pred p l) = Pred p (MAP unbumpterm l) ∧
+  unbumpform (IMP f1 f2) = IMP (unbumpform f1) (unbumpform f2) ∧
+  unbumpform (FALL x f) = FALL x (unbumpform f)
+End
+
+Theorem bumpterm_inv[simp]:
+  unbumpterm (bumpterm t) = t
+Proof
+  Induct_on ‘t’ >> simp[MAP_MAP_o, Cong MAP_CONG']
+QED
+
+Theorem bumpform_inv[simp]:
+  unbumpform (bumpform p) = p
+Proof
+  Induct_on ‘p’ >> simp[MAP_MAP_o, Cong MAP_CONG']
+QED
+
+Definition unbumpmod_def:
+  unbumpmod M = M with Fun := λk zs. M.Fun (0 ⊗ k) zs
+End
+
+Theorem termval_unbumpmod:
+  termval (unbumpmod M) v t = termval M v (bumpterm t)
+Proof
+  Induct_on ‘t’ >> simp[Cong MAP_CONG', MAP_MAP_o] >> simp[unbumpmod_def]
+QED
+
+Theorem holds_unbumpmod:
+  ∀M v p. holds (unbumpmod M) v p ⇔ holds M v (bumpform p)
+Proof
+  Induct_on ‘p’ >> simp[MAP_MAP_o, Cong MAP_CONG', termval_unbumpmod] >>
+  simp[unbumpmod_def]
 QED
 
 val _ = export_theory();

@@ -4,7 +4,7 @@ open pred_setTheory listTheory
 
 val _ = new_theory "folLang";
 
-val MAP_CONG' = REWRITE_RULE [GSYM AND_IMP_INTRO] MAP_CONG
+Theorem MAP_CONG' = REWRITE_RULE [GSYM AND_IMP_INTRO] MAP_CONG
 
 
 Definition LIST_UNION_def[simp]:
@@ -48,6 +48,8 @@ Proof
     (TypeBase.induction_of “:term”) >> rfs[] >>
   fs[DISJ_IMP_THM, FORALL_AND_THM]
 QED
+
+val _ = TypeBase.update_induction term_induct
 
 Definition tswap_def[simp]:
   (tswap x y (V v) = if v = x then V y else if v = y then V x else V v) ∧
