@@ -174,6 +174,19 @@ New theories:
     the metric-related results in previous `topologyTheory` should now
     open `metricTheory` instead. (Thanks to Chun Tian for this work.)
 
+*   `nlistTheory`: a development of the bijection between lists of natural numbers and natural numbers.
+    Many operations on lists transfer across to the numbers in obvious ways.
+    The functions demonstrating the bijection are
+
+           listOfN : num -> num list
+
+    and
+
+           nlist_of : num list -> num
+
+    This material is an extension of a basic treatment that was already part of the computability example.
+    Thanks to Elliot Catt and Yiming Xu for help with this theory’s development.
+
 New tools:
 ----------
 
