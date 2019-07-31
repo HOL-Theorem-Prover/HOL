@@ -85,7 +85,7 @@ QED
 
 (* nlist_of ------------------------------------------------------- *)
 Definition nlist_of_def[simp]:
-  (nlist_of [] = 0) ∧
+  (nlist_of [] = 0) /\
   (nlist_of (h::t) = ncons h (nlist_of t))
 End
 
@@ -325,7 +325,7 @@ Proof
 QED
 
 Theorem ntl_DROP:
-  ∀l m. ntl (nlist_of (DROP m l)) = ndrop m (ntl (nlist_of l))
+  !l m. ntl (nlist_of (DROP m l)) = ndrop m (ntl (nlist_of l))
 Proof
   Induct >> rw[] >> Cases_on ‘m’ >> simp[] >> Cases_on ‘l’ >> simp[]
 QED
@@ -364,7 +364,7 @@ Proof
 QED
 
 Theorem nfront_napp_sing[simp]:
-  ∀pfx. nfront (napp pfx (ncons e 0)) = pfx
+  !pfx. nfront (napp pfx (ncons e 0)) = pfx
 Proof
   ho_match_mp_tac nlist_ind >> simp[nfront_def]
 QED
@@ -392,7 +392,7 @@ Proof
   >> `n + n2 <= n + n1` by simp[]
   >> `tri (n + n2) <= tri (n + n1)` by metis_tac[tri_LE]
   >> `n2 <= n1` by simp[]
-  >> `n2 + tri (n + n2) ≤ n1 + tri (n + n1)` by simp[]
+  >> `n2 + tri (n + n2) <= n1 + tri (n + n1)` by simp[]
   >> fs[]
 QED
 
