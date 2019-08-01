@@ -383,33 +383,6 @@ Proof
   Cases_on ‘n’ >> simp[]
 QED
 
-Theorem npair2_lt_E:
-  npair n n1 < npair n n2 ==> n1 < n2
-Proof
-  simp[npair_def] >> strip_tac >> SPOSE_NOT_THEN ASSUME_TAC
-  >> `n1 >= n2` by simp[]
-  >> `n + n1 >= n + n2` by simp[]
-  >> `n + n2 <= n + n1` by simp[]
-  >> `tri (n + n2) <= tri (n + n1)` by metis_tac[tri_LE]
-  >> `n2 <= n1` by simp[]
-  >> `n2 + tri (n + n2) <= n1 + tri (n + n1)` by simp[]
-  >> fs[]
-QED
-
-
-Theorem npair2_lt_I:
-  n1 < n2 ==> npair n n1 < npair n n2
-Proof
-  rpt strip_tac >> simp[npair_def] >>
-  `n + n1 < n + n2` by simp[] >>
-  `tri (n + n1) < tri (n + n2)` by simp[tri_LT] >> simp[]
-QED
-
-Theorem npair2_lt[simp]:
-  npair n n1 < npair n n2 <=> n1 < n2
-Proof
-  metis_tac[npair2_lt_E, npair2_lt_I]
-QED
 
 Theorem napp_nsnoc_lt:
   !l. l < napp l (ncons x 0)
