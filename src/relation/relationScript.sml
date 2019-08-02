@@ -2305,22 +2305,51 @@ val BISIM_REL_def = new_definition(
   "BISIM_REL_def",
   ``BISIM_REL ts p q = ?R. BISIM ts R /\ R p q``)
 
-val BISIM_REL_IS_EQUIV_REL = store_thm(
-  "BISIM_REL_IS_EQUIV_REL",
-  ``!ts. equivalence (BISIM_REL ts)``,
-  SRW_TAC[][equivalence_def]
-  >- (SRW_TAC[][reflexive_def, BISIM_REL_def] >>
-      Q.EXISTS_TAC ‘$=’ >>
-      SRW_TAC[][BISIM_def])
-  >- (SRW_TAC[][symmetric_def, BISIM_REL_def] >>
-      SRW_TAC[][EQ_IMP_THM] >>
-      Q.EXISTS_TAC ‘SC R’ >>
-      FULL_SIMP_TAC (srw_ss ()) [BISIM_def,SC_DEF] >>
-      METIS_TAC[])
-  >- (SRW_TAC[][transitive_def,BISIM_REL_def] >>
-      Q.EXISTS_TAC ‘\a c. ?b. R a b /\ R' b c’ >>
-      FULL_SIMP_TAC (srw_ss ()) [BISIM_def] >>
-      METIS_TAC[]));
+Theorem BISIM_ID :
+    !ts. BISIM ts Id
+Proof
+    SRW_TAC[][BISIM_def]
+QED
 
+Theorem BISIM_INV :
+    !ts R. BISIM ts R ==> BISIM ts (inv R)
+Proof
+    SRW_TAC[][BISIM_def, inv_DEF] >> METIS_TAC []
+QED
+
+Theorem BISIM_O :
+    !ts R R'. BISIM ts R /\ BISIM ts R' ==> BISIM ts (R' O R)
+Proof
+    rpt STRIP_TAC
+ >> PURE_ONCE_REWRITE_TAC [BISIM_def]
+ >> SRW_TAC[][O_DEF]
+ >> METIS_TAC[BISIM_def]
+QED
+
+Theorem BISIM_RUNION :
+    !ts R R'. BISIM ts R /\ BISIM ts R' ==> BISIM ts (R RUNION R')
+Proof
+    rpt GEN_TAC
+ >> PURE_ONCE_REWRITE_TAC [BISIM_def]
+ >> SRW_TAC[][RUNION]
+ >> METIS_TAC[]
+QED
+
+Theorem BISIM_REL_IS_EQUIV_REL :
+    !ts. equivalence (BISIM_REL ts)
+Proof
+    SRW_TAC[][equivalence_def]
+ >- (SRW_TAC[][reflexive_def, BISIM_REL_def] \\
+     Q.EXISTS_TAC `Id` \\
+     REWRITE_TAC [BISIM_ID])
+ >- (SRW_TAC[][symmetric_def, BISIM_REL_def] \\
+     SRW_TAC[][EQ_IMP_THM] \\
+     Q.EXISTS_TAC `SC R` \\
+     FULL_SIMP_TAC (srw_ss ()) [BISIM_def, SC_DEF] \\
+     METIS_TAC[])
+ >- (SRW_TAC[][transitive_def, BISIM_REL_def] \\
+     Q.EXISTS_TAC `R' O R` \\
+     METIS_TAC [O_DEF, BISIM_O])
+QED
 
 val _ = export_theory();
