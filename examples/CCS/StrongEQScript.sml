@@ -137,7 +137,7 @@ QED
 
 Theorem STRONG_EQUIV_REFL :
     !E. STRONG_EQUIV E E
-Proof    
+Proof
     PROVE_TAC [REWRITE_RULE [equivalence_def, reflexive_def]
                             STRONG_EQUIV_equivalence]
 QED
