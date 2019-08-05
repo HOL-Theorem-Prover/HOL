@@ -62,6 +62,12 @@ Proof
   ntac 2 strip_tac >> Induct_on ‘prenex’ >> simp[Exists_def]
 QED
 
+Theorem universal_prenex:
+  ∀p. universal p ⇒ prenex p
+Proof
+  Induct_on ‘universal’ >> simp[prenex_rules]
+QED
+
 Theorem Exists_eqns[simp]:
   Exists x p ≠ Or q r ∧
   Exists x p ≠ Iff q r ∧
