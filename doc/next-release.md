@@ -295,6 +295,11 @@ Incompatibilities:
     If the user wants the new `foo_def` to appear in the `EVAL`-compset in future theories, they must change the call to `save_thm` to use the name `"foo_def[compute]"`.
     Now, as before, the old `foo_def` cannot be seen by future theories at all, and so certainly will not be in the `EVAL`-compset.
 
+*   In some circumstances, the function definition machinery would create a theorem called `foo_def_compute`.
+    (Such theorems would be rewrites for functions that were defined using the `SUC` constructor, and would be useful for rewriting with numeral arguments.)
+    Now, such theorems are called `foo_compute`.
+    As before, such theorems are automatically added to `EVAL`’s built-in compset.
+
 *   The global toggle `allow_schema_definition` has turned into a feedback trace variable.
     Users typically use the `DefineSchema` entrypoint and can continue to do so.
     Users can also pass the `schematic` attribute with the new `Definition` syntax (see above).
