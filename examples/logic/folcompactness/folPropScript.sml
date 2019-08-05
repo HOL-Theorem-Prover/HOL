@@ -222,5 +222,52 @@ Proof
   metis_tac[COMPACT_PROP]
 QED
 
+(* ------------------------------------------------------------------------- *)
+(* Important variant used in proving Uniformity for FOL.                     *)
+(* ------------------------------------------------------------------------- *)
 
-val _ = export_theory();
+Theorem COMPACT_PROP_ALT:
+  ∀a. (∀v. ∃p. p ∈ a ∧ pholds v p) ⇒
+      ∃b. FINITE b ∧ b ⊆ a ∧ ∀v. ∃p. p ∈ b ∧ pholds v p
+Proof
+  rpt strip_tac >>
+  Q.SUBGOAL_THEN ‘¬(∃v. ∀r. r ∈ { Not q | q ∈ a } ⇒ pholds v r)’ MP_TAC
+    >- simp[PULL_EXISTS] >>
+  disch_then (mp_tac o
+              MATCH_MP (GEN_ALL (CONV_RULE CONTRAPOS_CONV COMPACT_PROP))) >>
+  simp[] >>
+  disch_then (qx_choose_then ‘b’ strip_assume_tac) >>
+  qexists_tac ‘{ p | Not p ∈ b}’ >> simp[] >> rpt conj_tac
+  >- (‘IMAGE Not {p | Not p ∈ b} ⊆ b’ by simp[SUBSET_DEF, PULL_EXISTS] >>
+      ‘FINITE (IMAGE Not {p | Not p ∈ b})’ by metis_tac[SUBSET_FINITE] >>
+      fs[INJECTIVE_IMAGE_FINITE])
+  >- (fs[SUBSET_DEF] >> rw[] >> res_tac >> fs[]) >>
+  fs[SUBSET_DEF] >> qx_gen_tac ‘v’ >>
+  pop_assum (qspec_then ‘v’ (qx_choose_then ‘ϕ’ strip_assume_tac)) >>
+  first_x_assum drule >> simp[PULL_EXISTS] >> rw[] >> fs[] >> metis_tac[]
+QED
+
+Theorem FINITE_DISJ_lemma:
+  ∀a. FINITE a ⇒
+      ∃ps. EVERY (λp. p ∈ a) ps ∧
+           ∀v. pholds v (FOLDR Or False ps) ⇔
+               ∃p. p ∈ a ∧ pholds v p
+Proof
+  Induct_on ‘FINITE’ >> simp[] >> rw[] >>
+  rename [‘p ∉ a’, ‘EVERY _ ps’]  >> qexists_tac ‘p::ps’ >>
+  dsimp[] >> irule listTheory.MONO_EVERY >> qexists_tac ‘λp. p ∈ a’ >>
+  simp[]
+QED
+
+Theorem COMPACT_DISJ:
+  ∀a. (∀v. ∃p. p ∈ a ∧ pholds v p) ⇒
+      ∃ps. EVERY (λp. p ∈ a) ps ∧ ∀v. pholds v (FOLDR Or False ps)
+Proof
+  rw[] >>
+  drule_then (qx_choose_then ‘b’ strip_assume_tac) COMPACT_PROP_ALT >>
+  drule_then (qx_choose_then ‘ps’ strip_assume_tac) FINITE_DISJ_lemma >>
+  qexists_tac ‘ps’ >> simp[] >> irule listTheory.MONO_EVERY >>
+  qexists_tac ‘λp. p ∈ b’ >> fs[SUBSET_DEF]
+QED
+
+val _ = export_theory()
