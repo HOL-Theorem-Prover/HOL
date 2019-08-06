@@ -48,6 +48,7 @@ sig
   val average_loss      : bpdata list list -> real
 
   (* training *)
+  val train_nn_batch : int -> nn -> (vect * vect) list -> (nn * real)
   val train_nn : int -> int -> nn -> int -> (vect * vect) list -> nn
 
   (* input/output *)

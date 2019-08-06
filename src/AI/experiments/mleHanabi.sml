@@ -142,11 +142,11 @@ fun random_startboard () =
 
 type obsc = (move option * card * int)
 type obs = card * int
-type obsc_dict = (obsc, (card * real) list) Redblackmap.dict
-type obs_dict = (obs, (card * real) list) Redblackmap.dict
+type obsc_dict = (obsc, (card,int) Redblackmap.dict) Redblackmap.dict
+type obs_dict = (obs, (card,int) Redblackmap.dict) Redblackmap.dict
 type nn = mlNeuralNetwork.nn
 
-fun observe_card {p1turn,lastmove1,lastmove2,hand1,hand2,clues1,clues2,
+fun obsc_card {p1turn,lastmove1,lastmove2,hand1,hand2,clues1,clues2,
   clues,score,bombs,deck,disc,pile} pos = 
   let 
     val moveo = if p1turn then lastmove2 else lastmove1
@@ -156,7 +156,12 @@ fun observe_card {p1turn,lastmove1,lastmove2,hand1,hand2,clues1,clues2,
     ((moveo,clue,pos),card)
   end
 
-fun observe_hand (board:board) = List.tabulate (5, observe_card board);
+fun drop_moveo ((moveo,clue,pos),card) = ((clue,pos),card)
+
+fun observe_hand (board:board) = 
+  let val l = map (obsc_card board) positionl in
+    (l, map drop_moveo l)
+  end
 
 fun partial_compare cmp (a,b) = case (a,b) of
     (NONE,NONE) => EQUAL
@@ -166,26 +171,42 @@ fun partial_compare cmp (a,b) = case (a,b) of
 
 fun triple_compare (cmp1,cmp2,cmp3) ((a1,a2,a3),(b1,b2,b3)) =
   cpl_compare (cpl_compare cmp1 cmp2) cmp3 (((a1,a2),a3),((b1,b2),b3))
-  
-
-fun mk_proba l = 
-  let val tot = sum_int (map snd l) in
-    map_snd (fn x => int_div x tot) l
-  end
-
-fun mk_carddis cardl = 
-  let 
-    val d = count_dict (dempty compare_card) cardl 
-    fun f x = if dmem x d then dfind x d else 0 
-  in
-    mk_proba (map_assoc f cardl_ext)
-  end
 
 val compare_obsc =
    triple_compare
    (partial_compare compare_move, compare_card, Int.compare)
 
 val compare_obs = cpl_compare compare_card Int.compare
+
+val empty_guess = dempty compare_card
+
+fun update_d ((k,card),d) =
+  let 
+    val oldguess = dfind k d handle NotFound => empty_guess
+    val freq = dfind card oldguess handle NotFound => 0
+    val newguess = dadd card (freq + 1) oldguess
+  in
+    dadd k newguess d
+  end
+
+fun dis_from_guess d = 
+  let fun f card = Real.fromInt (dfind card d) handle NotFound => 0.0 in
+    map_assoc f cardl_ext
+  end
+
+fun proba_from_dis dis =
+  let val tot = sum_real (map snd dis) in
+    if tot > 0.000001 
+    then map_snd (fn x => x / tot) dis
+    else raise ERR "proba_from_dis" ""
+  end
+ 
+fun proba_from_guess d = proba_from_dis (dis_from_guess d)
+
+fun update_observable (board,(d1,d2)) =
+  let val (l1,l2) = observe_hand board in
+    (foldl update_d d1 l1, foldl update_d d2 l2)  
+  end
 
 (* -------------------------------------------------------------------------
    Representation of board as onehot encoding
@@ -213,31 +234,23 @@ fun obs_of_board {p1turn,lastmove1,lastmove2,hand1,hand2,clues1,clues2,
 fun norm l = map (fn x => x * 2.0 - 1.0) l
 fun denorm v = map (fn x => (x + 1.0) * 0.5) (vector_to_list v)
 
-fun s23 (a,b,c) = (b,c)
-
-fun mk_proba l = 
-  let 
-    val tot = sum_int (map snd l) 
-    fun f x = int_div x tot
-  in
-    map_snd f l
-  end
-
 fun card_match clue card =
   (fst clue = fst card orelse fst clue = 0) andalso
   (snd clue = snd card orelse snd clue = NoColor)
 
 fun uniform_guess clue = 
-  mk_proba (map_assoc (fn x => if card_match clue x then 1 else 0) cardl_ext)
+  dnew compare_card (map_assoc (fn x => if card_match clue x then 1 else 0) cardl_ext)
 
 fun stats_pos (d1,d2) board pos =
   let
     val (moveo,clue,pos) = obs_of_board board pos
-    val dis1 = dfind (moveo,clue,pos) d1 
+    val guess1 = dfind (moveo,clue,pos) d1 
       handle NotFound => uniform_guess clue
-    val dis2 = dfind (clue,pos) d2
+    val dis1 = proba_from_guess guess1
+    val guess2 = dfind (clue,pos) d2
       handle NotFound => uniform_guess clue
-  in  
+    val dis2 = proba_from_guess guess2
+  in
     norm (map snd dis1) @ norm (map snd dis2)
   end
 
@@ -406,7 +419,7 @@ fun is_applicable board move = case move of
 fun best_move (d1,d2) nn board =
   let
     val dis1 = combine (movel, denorm (infer_nn nn (oh_board (d1,d2) board)))
-    val dis2 = filter (fn x => is_applicable board (fst x)) dis1
+    val dis2 = filter (fn (x,_) => is_applicable board x) dis1
   in
     select_in_distrib dis2
   end
@@ -434,25 +447,29 @@ fun play_ngame (d1,d2) nn ngame =
 fun helper (k,n) =
   let fun f i = if i = k then 1.0 else 0.0 in List.tabulate (n,f) end
 
+fun proba_from_reall l = 
+  let val tot = sum_real l in map (fn x => x / tot) l end
+
 fun eval_board (d1,d2) nn board =
   if is_endboard board 
   then helper (#score board,10)
-  else (denorm o infer_nn nn o oh_board (d1,d2)) board
+  else proba_from_reall ((denorm o infer_nn nn o oh_board (d1,d2)) board)
 
-fun expectancy l = 
+fun expectancy l =
   let fun f i x = Real.fromInt i * x in sum_real (mapi f l) end
 
 (* -------------------------------------------------------------------------
-   Guesses on current player hand
-   todo: refine to include more visible information
+   Guesses on current player hand dependent on observables
    ------------------------------------------------------------------------- *)
 
 fun guess_card d1 board pos =
   let
     val (moveo,clue,pos) = obs_of_board board pos
-    val dis1 = dfind (moveo,clue,pos) d1 handle NotFound => uniform_guess clue
+    val guess = dfind (moveo,clue,pos) d1 
+      handle NotFound => uniform_guess clue
+    val dis = dis_from_guess guess
   in
-    select_in_distrib dis1    
+    select_in_distrib dis  
   end
 
 fun guess_board d1 (board as 
@@ -473,7 +490,8 @@ fun guess_board d1 (board as
   end
 
 (* -------------------------------------------------------------------------
-   Depth-limited lookahead for improved policy and eval
+   Depth-limited lookahead for improved policy and eval.
+   Value of a choice in a policy according to PCUT formula.
    ------------------------------------------------------------------------- *)
 
 fun value_choice vtot (move,(polv,sum,vis)) =
@@ -484,9 +502,12 @@ fun value_choice vtot (move,(polv,sum,vis)) =
     exploitation + (!exploration_coeff) * exploration
   end
 
-fun select_in_polext vtot polext =
-  let val l0 = map_assoc (value_choice vtot) (dlist polext) in
-    fst (select_in_distrib l0)
+fun select_in_polext board vtot polext =
+  let 
+    val dis1 = map (fn x => (fst x, value_choice vtot x)) (dlist polext) 
+    val dis2 = filter (fn (x,_) => is_applicable board x) dis1
+  in
+    select_in_distrib dis2
   end
 
 fun lookahead_once move (d1,d2) nneval board =
@@ -494,101 +515,126 @@ fun lookahead_once move (d1,d2) nneval board =
     val board1 = guess_board d1 board  
     val board2 = apply_move move board1 
   in
-    expectancy (eval_board (d1,d2) nneval board2)
+    eval_board (d1,d2) nneval board2
   end
 
-fun lookahead_loop nsim (d1,d2) (nneval,nnpoli) board (sumtot,vtot) polext =
-  if nsim <= 0 then ((sumtot,vtot),polext) else
+fun lookahead_loop nsim (d1,d2) (nneval,nnpoli) board 
+  (sumtot,vtot) polext rewarddisl =
+  if nsim <= 0 then ((sumtot,vtot),polext,rewarddisl) else
   let 
-    val move = select_in_polext vtot polext
-    val reward = lookahead_once move (d1,d2) nneval board 
+    val move = select_in_polext board vtot polext
+    val rewarddis = lookahead_once move (d1,d2) nneval board 
+    val reward = expectancy rewarddis
     val (polv,sum,vis) = dfind move polext
     val newpolext = dadd move (polv, sum + reward, vis + 1.0) polext
   in
     lookahead_loop (nsim - 1) (d1,d2) (nneval,nnpoli) board 
-    (sumtot + reward, vtot + 1.0) newpolext
+    (sumtot + reward, vtot + 1.0) newpolext (rewarddis :: rewarddisl)
+  end
+
+fun lookahead_aux nsim (d1,d2) (nneval,nnpoli) board =
+  let 
+    val (sumtot,vtot) = (expectancy (eval_board (d1,d2) nneval board), 1.0)
+    val pol = combine (movel,
+      denorm (infer_nn nnpoli (oh_board (d1,d2) board)))
+    val polext = dnew compare_move (map (fn (a,b) => (a,(b,0.0,0.0))) pol)
+  in
+    lookahead_loop nsim (d1,d2) (nneval,nnpoli) board (sumtot,vtot) polext []
+  end
+
+(* -------------------------------------------------------------------------
+   Extract eval example
+   ------------------------------------------------------------------------- *)
+
+fun merge_rewarddisl rewarddisl = map sum_real (list_combine rewarddisl)
+
+fun extract_evalex (d1,d2) board rewarddisl =
+  let
+    val input = oh_board (d1,d2) board
+    val rewarddis = merge_rewarddisl rewarddisl
+    val evalout = Vector.fromList (norm rewarddis)
+  in
+    (input,evalout)
+  end
+
+(* -------------------------------------------------------------------------
+   Extract poli example
+   ------------------------------------------------------------------------- *)
+
+fun proba_from_reall l = 
+  let val tot = sum_real l in map (fn x => x / tot) l end
+
+fun extract_poliex (d1,d2) board polext =
+  let
+    val input = oh_board (d1,d2) board
+    fun f (_,(_,_,x)) = x
+  in
+    (input, Vector.fromList (norm (proba_from_reall (map f (dlist polext)))))
   end
 
 fun lookahead nsim (d1,d2) (nneval,nnpoli) board =
   let 
-    val (sumtot,vtot) = (expectancy (eval_board (d1,d2) nneval board), 1.0)
-    val pol = combine (movel,denorm (infer_nn nnpoli (oh_board (d1,d2) board)))
-    val polext = dnew compare_move (map (fn (a,b) => (a,(b,0.0,0.0))) pol)
+    val (_,polext,rewarddisl) =
+      lookahead_aux nsim (d1,d2) (nneval,nnpoli) board
   in
-    lookahead_loop nsim (d1,d2) (nneval,nnpoli) board (sumtot,vtot) polext
+    (extract_evalex (d1,d2) board rewarddisl,
+     extract_poliex (d1,d2) board polext)
   end
 
 (* -------------------------------------------------------------------------
-   Value of a choice in a policy according to PCUT formula.
+   Reinforcement learning loop
    ------------------------------------------------------------------------- *)
 
-
-(*
-load "mleHanabi"; open mleHanabi;
-load "mlNeuralNetwork"; open mlNeuralNetwork;
-load "aiLib"; open aiLib;
-val d1 = dempty compare_obsc
-val board1 = random_startboard ()
-val board2 = guess_board d1 board1;
-#hand1 board1;
-*)
-
-(*
-load "mleHanabi"; open mleHanabi;
-load "mlNeuralNetwork"; open mlNeuralNetwork;
-load "aiLib"; open aiLib;
-
-val nsim = 1000
-val (d1,d2) = (dempty compare_obsc, dempty compare_obs)
-val nneval = random_nn (tanh,dtanh) [350,350,10]
-val nnpoli = random_nn (tanh,dtanh) [350,350,20]
-val board = random_startboard ()
-val ((sumtot,vtot),polext) = lookahead nsim (d1,d2) (nneval,nnpoli) board;
-dlist polext;
-*)
-
-(*
-fun lookahead (d1,d2) (nnpoli,nneval) board =
-*)
-
-
-
-(*
-fun collect_boardl_aux acc nn board =
-  if null (#deck board) orelse (#bombs board >= 3)
-  then rev (board :: acc)
-  else collect_boardl_aux (board :: acc) 
-    nn (apply_move (best_move nn board) board)
-
-fun collect_boardl nn board = collect_boardl_aux [] nn board
-fun compute_dis nn ngame = 
-  let 
-    val boardl1 = List.tabulate (ngame, fn _ => random_startboard ())
-    val boardl2 = List.concat (map (collect_boardl nn) boardl1)
-    val obsl1 = List.concat (map observe_hand boardl2)
-    fun drop_fst (a,b,c) = (b,c)
-    val obsl2 = map_fst drop_fst obsl1
-    val dis1 = dmap (fn (_,l) => mk_carddis l) (dregroup compare_obsc obsl1)
-    val dis2 = dmap (fn (_,l) => mk_carddis l) (dregroup compare_obs obsl2)
+fun rl_start () =
+  let
+    val obs = (dempty compare_obsc, dempty compare_obs)
+    val nneval = random_nn (tanh,dtanh) [350,350,10]
+    val nnpoli = random_nn (tanh,dtanh) [350,350,20]
   in
-    (dis1, dis2)
+    print_endline "rl_start";
+    ((nneval,nnpoli), obs, random_startboard (), [])
   end
-*)
 
+val summaryfile = HOLDIR ^ "/src/AI/experiments/hanabi"
+
+fun summary s = (print_endline s; append_endline summaryfile s)
+
+fun rl_loop_once ((nne,nnp),obs,board,scl) =
+  let
+    val newobs = update_observable (board,obs)
+    val nsim = 1600
+    val (evalex,poliex) = lookahead nsim obs (nne,nnp) board
+    val (newnne,_) = train_nn_batch 1 nne [evalex]
+    val (newnnp,_) = train_nn_batch 1 nnp [poliex]
+    val move = best_move obs nnp board
+    val board1 = apply_move move board 
+    val _ = print_endline 
+      (string_of_move move ^ "-" ^ its (#score board1) ^ " ")
+    val board2 = if is_endboard board1 then random_startboard () else board1
+    val newscl = if is_endboard board1 
+                 then first_n 100 (#score board1 :: scl) 
+                 else scl
+    val _ = 
+      if is_endboard board1 
+      then summary ("Moving average: " ^ 
+           (rts (average_real (map Real.fromInt newscl))))
+      else ()
+  in
+    ((newnne,newnnp),newobs,board2,newscl)
+  end
+
+fun rl_loop n = 
+  let val _ = erase_file summaryfile in
+    funpow n rl_loop_once (rl_start ())
+  end
+  
 (*
 load "mleHanabi"; open mleHanabi;
 load "mlNeuralNetwork"; open mlNeuralNetwork;
 load "aiLib"; open aiLib;
-val nn = random_nn (tanh,dtanh) [350,350,20];
-val ngame = 100;
-val (r,t) = 
-  add_time (play_ngame (dempty compare_obsc, dempty compare_obs) nn) ngame;
-
+val r = rl_loop (1000 * 1000);
 *)
 
-(*
-make play depend on distribs (dis1 and dis2)
-*)
 
 
 end (* struct *)

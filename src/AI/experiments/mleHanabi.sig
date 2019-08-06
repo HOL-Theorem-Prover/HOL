@@ -16,8 +16,8 @@ sig
  
   type obsc = move option * card * int
   type obs = card * int
-  type obsc_dict = (obsc, (card * real) list) Redblackmap.dict
-  type obs_dict = (obs, (card * real) list) Redblackmap.dict
+  type obsc_dict = (obsc, (card,int) Redblackmap.dict) Redblackmap.dict
+  type obs_dict = (obs, (card,int) Redblackmap.dict) Redblackmap.dict
   type nn = mlNeuralNetwork.nn
    
   type board =
@@ -38,16 +38,24 @@ sig
   (* observables *)
   val compare_obsc : (obsc * obsc) -> order
   val compare_obs : (obs * obs) -> order  
+  val observe_hand : board -> (obsc * card) list * (obs * card) list
+  val update_observable : 
+    (board  * (obsc_dict * obs_dict)) -> (obsc_dict * obs_dict)
 
   (* guesses *)
   val guess_board : obsc_dict -> board -> board
   
   (* lookahead *)
   val lookahead : int -> (obsc_dict * obs_dict) -> (nn * nn) -> board ->
-    ((real * real) * (move,(real * real * real)) Redblackmap.dict)
+    (real vector * real vector) * (real vector * real vector)
 
   (* playing a game *)    
   val best_move : (obsc_dict * obs_dict) -> nn -> board -> move
   val play_game : (obsc_dict * obs_dict) -> nn -> board -> int
   val play_ngame : (obsc_dict * obs_dict) -> nn -> int -> real
+  
+  (* reinforcement learning *)
+  val rl_loop : int -> 
+    ((nn * nn) * (obsc_dict * obs_dict) * board * int list)
+
 end
