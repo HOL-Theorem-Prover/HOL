@@ -32,18 +32,21 @@ sig
    
   val hanabi_dir : string
   val summary_file : string ref
-  
+  val player_mem : ((obsc_dict * obs_dict) * (nn * nn)) ref
+
   (* encoding *)
   val compare_card : (card * card) -> order
   val random_startboard : unit -> board
   val oh_board : (obsc_dict * obs_dict) -> board -> real vector
-
+  
   (* observables *)
   val compare_obsc : (obsc * obsc) -> order
   val compare_obs : (obs * obs) -> order  
   val observe_hand : board -> (obsc * card) list * (obs * card) list
   val update_observable : 
     (board  * (obsc_dict * obs_dict)) -> (obsc_dict * obs_dict)
+  val empty_obs : (obsc_dict * obs_dict)
+  val print_obs : (obsc_dict * obs_dict) -> board -> int -> unit
 
   (* guesses *)
   val guess_board : obsc_dict -> board -> board
@@ -58,10 +61,10 @@ sig
   val play_ngame : (obsc_dict * obs_dict) -> nn -> int -> real
 
   (* statistics *)
-  val stats_player : int -> (obsc_dict * obs_dict) -> nn * nn -> unit
-  val diff_player : int ->
-    ((obsc_dict * obs_dict) * (nn * nn)) -> 
-    ((obsc_dict * obs_dict) * (nn * nn)) -> unit
+  val stats_player : int -> (obsc_dict * obs_dict) * (nn * nn) -> unit
+  val symdiff_player : int -> 
+    (obsc_dict * obs_dict) * (nn * nn) -> 
+    (obsc_dict * obs_dict) * (nn * nn) -> unit
   (* reinforcement learning *)
   val rl_loop : int -> 
     ((nn * nn) * (obsc_dict * obs_dict) * board * int list)

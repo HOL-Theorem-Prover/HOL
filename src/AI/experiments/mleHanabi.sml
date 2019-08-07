@@ -24,6 +24,13 @@ fun proba_from_reall l =
     else map (fn x => x / tot) l 
   end
 
+fun sr r = pad 5 "0" (rts_round 3 r)
+
+fun absolute_deviation l = 
+  let val m = average_real l in 
+    average_real (map (fn x => Real.abs (x - m)) l)
+  end
+
 (* -------------------------------------------------------------------------
    Deck
    ------------------------------------------------------------------------- *)
@@ -273,6 +280,27 @@ fun stats_pos (d1,d2) board pos =
     norm (map snd dis1) @ norm (map snd dis2)
   end
 
+fun string_of_carddis dis =
+  let fun f (c,sc) = string_of_card c ^ "-" ^ sr sc in
+    String.concatWith " " (map f dis)
+  end
+
+fun print_obs (d1,d2) board pos =
+  let
+    val (moveo,clue,pos) = obs_of_board board pos
+    val guess1 = dfind (moveo,clue,pos) d1 
+      handle NotFound => uniform_guess clue
+    val dis1 = proba_from_guess guess1
+    val guess2 = dfind (clue,pos) d2
+      handle NotFound => uniform_guess clue
+    val dis2 = proba_from_guess guess2
+  in
+    print_endline (string_of_carddis dis1);
+    print_endline (string_of_carddis dis2)
+  end
+
+val empty_obs = (dempty compare_obsc, dempty compare_obs)
+
 fun all_stats (d1,d2) board = 
   List.concat (map (stats_pos (d1,d2) board) positionl)
 
@@ -298,7 +326,8 @@ fun oh_board (d1,d2)
 load "mleHanabi"; open mleHanabi;
 load "aiLib"; open aiLib;
 val board = random_startboard ();
-val oh = oh_board (dempty compare_obsc, dempty compare_obs) board;
+val oh = oh_board empty_obs board;
+print_obs empty_obs board 0;
 *)
 
 (* -------------------------------------------------------------------------
@@ -468,7 +497,7 @@ fun play_ngame (d1,d2) nn ngame =
    Evaluation
    ------------------------------------------------------------------------- *)
 
-fun helper (k,n) =
+fun onehot_human (k,n) =
   let fun f i = if i = k then 1.0 else 0.0 in List.tabulate (n,f) end
 
 fun proba_from_reall l = 
@@ -476,8 +505,9 @@ fun proba_from_reall l =
 
 fun infer_eval (d1,d2) nn board =
   if is_endboard board 
-  then helper (#score board,10)
-  else proba_from_reall ((denorm o infer_nn nn o oh_board (d1,d2)) board)
+  then onehot_human (#score board,11)
+  else
+  (proba_from_reall o denorm o infer_nn nn o oh_board (d1,d2)) board
 
 fun expectancy l =
   let fun f i x = Real.fromInt i * x in sum_real (mapi f l) end
@@ -579,7 +609,7 @@ fun extract_evalex (d1,d2) board rewarddisl =
   let
     val input = oh_board (d1,d2) board
     val rewarddis = merge_rewarddisl rewarddisl
-    val evalout = Vector.fromList (norm rewarddis)
+    val evalout = (Vector.fromList o norm o proba_from_reall) rewarddis
   in
     (input,evalout)
   end
@@ -593,7 +623,7 @@ fun extract_poliex (d1,d2) board pol =
     val input = oh_board (d1,d2) board
     fun f m = #3 (dfind m pol)
   in
-    (input, Vector.fromList (norm (proba_from_reall (map f movel))))
+    (input, (Vector.fromList o norm o proba_from_reall) (map f movel))
   end
 
 fun lookahead nsim (d1,d2) (nne,nnp) board =
@@ -624,15 +654,17 @@ fun collect_boardl obs nnp board =
 
 fun print_stats_ll ll = 
   let 
+    val el = map expectancy ll
     val newll = list_combine ll
-    fun f l = 
-      print_endline ("  mean:" ^ pretty_real (average_real l) ^ 
-      " deviation:" ^ pretty_real (standard_deviation l))
+    fun f l = summary (sr (average_real l) ^ " " ^
+      sr (standard_deviation l))
   in
-    app f newll
+    app f newll;
+    summary ("expectancy: " ^ sr (average_real el) ^ " " ^ 
+             sr (absolute_deviation el))
   end
 
-fun stats_player ngame obs (nne,nnp) =
+fun stats_player ngame (obs,(nne,nnp)) =
   let 
     val _ = print_endline "Generating list of boards... "
     fun f _ = collect_boardl obs nnp (random_startboard ())
@@ -641,13 +673,12 @@ fun stats_player ngame obs (nne,nnp) =
     val lle = map (infer_eval obs nne) boardl
     val llp = map (infer_poli obs nnp) boardl
   in
-    print_endline "nne";
-    print_stats_ll lle;
-    print_endline "nnp";
-    print_stats_ll llp
+    summary "obs";
+    summary "eval"; print_stats_ll lle;
+    summary "poli"; print_stats_ll llp
   end
 
-fun diff_player ngame (obs1,(nne1,nnp1)) (obs2,(nne2,nnp2)) =
+fun symdiff_player ngame (obs1,(nne1,nnp1)) (obs2,(nne2,nnp2)) =
   let 
     val _ = print_endline "Generating list of boards... "
     fun f1 _ = collect_boardl obs1 nnp1 (random_startboard ())
@@ -665,9 +696,10 @@ fun diff_player ngame (obs1,(nne1,nnp1)) (obs2,(nne2,nnp2)) =
     val diffe = average_real (map diff (combine (lle1,lle2)))
     val diffp = average_real (map diff (combine (llp1,llp2)))
   in
-    print_endline ("eval (mean absolute diff): " ^ pretty_real diffe);
-    print_endline ("poli (mean absolute diff): " ^ pretty_real diffp)
+    summary ("eval (mean absolute diff): " ^ sr diffe);
+    summary ("poli (mean absolute diff): " ^ sr diffp)
   end
+
 
 (*
 load "mleHanabi"; open mleHanabi;
@@ -686,6 +718,19 @@ val _ = diff_player ngame (obs1,(nne1,nnp1)) (obs2,(nne2,nnp2));
 *)
 
 
+(* to measure progress *)
+val player_mem = 
+  ref ((dempty compare_obsc, dempty compare_obs),
+       (random_nn (tanh,dtanh) [371,10],
+       random_nn (tanh,dtanh) [371,20]))
+
+fun complete_summary k (obs,(nne,nnp)) =
+  (
+  summary ("Generation " ^ its k);
+  stats_player 1000 (obs,(nne,nnp));
+  symdiff_player 1000 (obs,(nne,nnp)) (!player_mem)
+  )
+
 (* -------------------------------------------------------------------------
    Reinforcement learning loop
    ------------------------------------------------------------------------- *)
@@ -693,14 +738,20 @@ val _ = diff_player ngame (obs1,(nne1,nnp1)) (obs2,(nne2,nnp2));
 fun rl_start () =
   let
     val obs = (dempty compare_obsc, dempty compare_obs)
-    val nne = random_nn (tanh,dtanh) [371,10]
+    val nne = random_nn (tanh,dtanh) [371,11]
     val nnp = random_nn (tanh,dtanh) [371,20]
   in
     print_endline "rl_start";
+    player_mem := (obs,(nne,nnp));
     ((nne,nnp), obs, random_startboard (), [])
   end
 
-fun rl_loop_once ((nne,nnp),obs,board,scl) =
+fun ex_to_string (v1,v2) =
+  let fun f v = String.concatWith " " (map sr (vector_to_list v)) in
+    f v1 ^ " ==> " ^ f v2
+  end
+
+fun rl_loop_once k ((nne,nnp),obs,board,scl) =
   let
     val newobs = update_observable (board,obs)
     val nsim = 1600
@@ -716,24 +767,33 @@ fun rl_loop_once ((nne,nnp),obs,board,scl) =
                  else scl
     val _ = 
       if is_endboard board1 
-      then summary ("Moving average: " ^ 
-           (rts (average_real (map Real.fromInt newscl))))
+      then summary (rts (average_real (map Real.fromInt newscl)))
+      else ()
+    val _ = (* snapshots *)
+      if k mod 100 = 0 andalso k <> 0
+      then 
+        (complete_summary k (obs,(nne,nnp)); player_mem := (obs,(nne,nnp)))
       else ()
   in
     ((newnne,newnnp),newobs,board2,newscl)
   end
 
+fun rl_loop_aux (k,n) x = 
+  if k >= n then x else rl_loop_aux (k+1,n) (rl_loop_once k x)
+
 fun rl_loop n = 
   let val _ = (mkDir_err hanabi_dir; erase_file (!summary_file)) in
-    funpow n rl_loop_once (rl_start ())
+    rl_loop_aux (0,n) (rl_start ())
   end
-  
+
 (*
 load "mleHanabi"; open mleHanabi;
 load "mlNeuralNetwork"; open mlNeuralNetwork;
 load "aiLib"; open aiLib;
-summary_file := hanabi_dir ^ "/run3";
-val r = rl_loop (1000 * 1000);
+summary_file := hanabi_dir ^ "/run1";
+val ((nne,nnp),obs,board1,scl) = rl_loop 1000;
+val board2 = random_startboard ();
+write_nn (hanabi_dir ^ "/nne") nne;
 *)
 
 (* 
