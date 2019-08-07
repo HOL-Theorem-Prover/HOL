@@ -29,6 +29,9 @@ sig
     clues : int, score : int, bombs : int,
     deck : card list, disc : card list, pile : card vector
     }
+   
+  val hanabi_dir : string
+  val summary_file : string ref
   
   (* encoding *)
   val compare_card : (card * card) -> order
@@ -47,15 +50,22 @@ sig
   
   (* lookahead *)
   val lookahead : int -> (obsc_dict * obs_dict) -> (nn * nn) -> board ->
-    (real vector * real vector) * (real vector * real vector)
+    move * (real vector * real vector) * (real vector * real vector)
 
   (* playing a game *)    
   val best_move : (obsc_dict * obs_dict) -> nn -> board -> move
   val play_game : (obsc_dict * obs_dict) -> nn -> board -> int
   val play_ngame : (obsc_dict * obs_dict) -> nn -> int -> real
-  
+
+  (* statistics *)
+  val stats_player : int -> (obsc_dict * obs_dict) -> nn * nn -> unit
+  val diff_player : int ->
+    ((obsc_dict * obs_dict) * (nn * nn)) -> 
+    ((obsc_dict * obs_dict) * (nn * nn)) -> unit
   (* reinforcement learning *)
   val rl_loop : int -> 
     ((nn * nn) * (obsc_dict * obs_dict) * board * int list)
+
+
 
 end
