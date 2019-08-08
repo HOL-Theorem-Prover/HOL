@@ -51,7 +51,7 @@ datatype match_position =
 
 fun mp_then pos (ttac : thm_tactic) ith0 rth (g as (asl,w)) =
   let
-    val ith = MP_CANON ith0
+    val ith = MP_CANON (GEN_ALL ith0)
     val rth_eqT = EQT_INTRO rth
     val rth_eq = EQF_INTRO rth handle HOL_ERR _ => rth_eqT
     fun m f k t =
