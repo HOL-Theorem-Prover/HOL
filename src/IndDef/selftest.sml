@@ -4,6 +4,15 @@ open testutils
 
 fun checkhyps th = if null (hyp th) then ()
                    else die "FAILED - Hyps in theorem!"
+fun f $ x = f x
+fun make_quiet f =
+    let open Feedback
+    in
+      with_flag (emit_MESG, false) $
+        with_flag (emit_WARNING, false) $ with_flag (emit_ERR, false) f
+    end
+
+val Hol_reln = make_quiet Hol_reln
 
 (* set up a fake arithmetic theory *)
 val _ = new_type ("num", 0)
@@ -21,44 +30,35 @@ val _ = new_constant ("*", ``:num -> num -> num``)
 val _ = set_fixity "*" (Infixl 600)
 val _ = new_constant ("SUC", ``:num -> num``)
 
+fun testhyps nm q =
+    (tprint ("Inductive definitions - "^nm);
+     checkhyps (#2 (Hol_reln q));
+     OK())
 
-val _ = print "*** Testing inductive definitions - mutual recursion\n"
-
-
-val (oe_rules, oe_ind, oe_cases) = Hol_reln`
+val _ = testhyps "mutual recursion" `
   even Z /\
   (!m. odd m /\ ONE <= m ==> even (m + ONE)) /\
   (!m. even m ==> odd (m + ONE))
 `;
-val _ = checkhyps oe_rules
 
-val _ = print "*** Testing inductive definitions - scheme variables\n"
-
-val (rtc_rules, rtc_ind, rtc_cases) = Hol_reln`
+val _ = testhyps "scheme variables" `
   (!x. rtc r x x) /\
   (!x y z. rtc r x y /\ r y z ==> rtc r x z)
 `;
-val _ = checkhyps rtc_rules
 
-val _ = print "*** Testing schematic variables for multiple relations\n"
-val (mscheme_rules, mscheme_ind, mscheme_cases) = Hol_reln`
+val _ = testhyps "schematic variables for multiple relations" `
   (!n m. n < m ==> foo P n m) /\
   (!n m. P n ==> foo P n m) /\
   (!n m. bar P n ==> foo P n m) /\
   (!n. FOUR < n ==> bar P (TWO * n))
 `
-val _ = checkhyps mscheme_rules
 
-val _ = print "*** Testing inductive definitions - existential vars\n"
-
-val (rtc'_rules, rtc'_ind, rtc'_cases) = Hol_reln`
+val _ = testhyps "existential vars" `
   (!x. rtc' r x x) /\
   (!x y. r x y /\ (?z. rtc' r z y) ==> rtc' r x y)
 `;
-val _ = checkhyps rtc'_rules
 
 (* emulate the example in examples/opsemScript.sml *)
-val _ = print "*** Testing opsem example\n"
 val _ = new_type ("comm", 0)
 val _ = new_constant("Skip", ``:comm``)
 val _ = new_constant("::=", ``:num -> ((num -> num) -> num) -> comm``)
@@ -68,7 +68,7 @@ val _ = new_constant("While", ``:((num -> num) -> bool) -> comm -> comm``)
 val _ = set_fixity "::=" (Infixr 400);
 val _ = set_fixity ";;"  (Infixr 350);
 
-val (rules,induction,ecases) = Hol_reln
+val _ = testhyps "opsem example"
      `(!s. EVAL Skip s s)
  /\   (!s V E. EVAL (V ::= E) s (\v. if v=V then E s else s v))
  /\   (!C1 C2 s1 s3.
@@ -79,8 +79,6 @@ val (rules,induction,ecases) = Hol_reln
  /\   (!C s1 s3 B.
         (?s2. EVAL C s1 s2 /\
               EVAL (While B C) s2 s3 /\ B s1) ==> EVAL (While B C) s1 s3)`;
-
-val _ = checkhyps rules
 
 (* check MONO_COND *)
 val _ = Hol_reln
@@ -93,15 +91,14 @@ val _ = if can ThmSetData.current_data{settype = "rule_induction"} then OK()
 
 
 val _ = tprint "With Unicode should fail"
-val _ = if (xHol_reln "tr" `
+val _ = if (make_quiet (xHol_reln "tr") `
                       (!x. ▷ x Z) /\
                       (!x y. ▷ (SUC x) (SUC y) ==> ▷ x y)
            ` ; false) handle HOL_ERR _ => true then OK()
         else die "FAILED"
 
 val _ = tprint "Vacuous clause failure"
-val _ = if (with_flag (Feedback.emit_ERR, false)
-              Hol_reln `(!x. rel x Z) /\ (!x y. rel x y)` ; false)
+val _ = if (Hol_reln `(!x. rel x Z) /\ (!x y. rel x y)` ; false)
                handle HOL_ERR {message,...} =>
                       String.isSuffix
                           "Vacuous clause trivialises whole definition"
