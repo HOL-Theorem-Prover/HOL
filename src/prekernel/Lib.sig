@@ -137,6 +137,7 @@ sig
    val separate : 'a -> 'a list -> 'a list
    val set_diff : ''a list -> ''a list -> ''a list
    val set_eq : ''a list -> ''a list -> bool
+   val single : 'a -> 'a list
    val singleton_of_list : 'a list -> 'a
    val snd : 'a * 'b -> 'b
    val sort : ('a -> 'a -> bool) -> 'a list -> 'a list
