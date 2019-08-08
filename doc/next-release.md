@@ -205,6 +205,20 @@ New tools:
 New examples:
 -------------
 
+*   [`examples/logic/folcompactness`] A port of some material from HOL Light ([this commit](https://github.com/jrh13/hol-light/commit/013324af7ff715346383fb963d323138)), about compactness and canonical models for First Order Logic.
+    This is work described in John Harrison’s [*Formalizing Basic First Order Model Theory*](https://doi.org/10.1007/BFb0055135).
+
+    Results include
+
+           ⊢ INFINITE 𝕌(:α) ∧ ffinsat (:α) s ⇒ satisfiable (:α) s
+
+    and
+
+           ⊢ INFINITE 𝕌(:α) ⇒
+               (entails (:α) Γ ϕ ⇔ ∃Γ₀. FINITE Γ₀ ∧ Γ₀ ⊆ Γ ∧ entails (:α) Γ₀ ϕ)
+
+
+
 Incompatibilities:
 ------------------
 
