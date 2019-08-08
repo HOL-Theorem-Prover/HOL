@@ -726,16 +726,6 @@ Proof
   simp[functions_def, SUBSET_DEF, PULL_EXISTS] >> metis_tac[]
 QED
 
-Theorem FINITE_PREIMAGE:
-  (∀x y. f x = f y ⇔ x = y) ∧ FINITE s ⇒ FINITE (PREIMAGE f s)
-Proof
-  Induct_on ‘FINITE’ >> simp[PREIMAGE_EMPTY] >> rw[] >> fs[] >>
-  simp[Once INSERT_SING_UNION, PREIMAGE_UNION, Excl "SING_FINITE"] >>
-  simp[PREIMAGE_def] >>
-  Cases_on ‘∃x. f x = e’ >> fs[] >>
-  ‘∀y. f y = e ⇔ y = x’ by metis_tac[] >> simp[]
-QED
-
 Theorem tm_constify_11[simp]:
   ∀t1 t2. tm_constify ks t1 = tm_constify ks t2 ⇔ t1 = t2
 Proof
@@ -774,10 +764,10 @@ Proof
         t0 ⊆ Γ’ suffices_by metis_tac[] >>
   qexists_tac ‘PREIMAGE FMC t DELETE Not ϕ’ >>
   dsimp[EXTENSION] >> rw[]
-  >- (rw[EQ_IMP_THM] >> fs[SUBSET_DEF, IN_PREIMAGE] >> first_x_assum drule >>
+  >- (rw[EQ_IMP_THM] >> fs[SUBSET_DEF] >> first_x_assum drule >>
       rw[] >> metis_tac[])
   >- (irule FINITE_PREIMAGE >> simp[]) >>
-  fs[SUBSET_DEF, IN_PREIMAGE] >> rw[] >> first_x_assum drule >> simp[]
+  fs[SUBSET_DEF] >> rw[] >> first_x_assum drule >> simp[]
 QED
 
 val _ = export_theory()

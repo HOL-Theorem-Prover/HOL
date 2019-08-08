@@ -2609,7 +2609,6 @@ val SING_FINITE =
      PURE_ONCE_REWRITE_TAC [SING_DEF] THEN
      GEN_TAC THEN DISCH_THEN (STRIP_THM_THEN SUBST1_TAC) THEN
      MATCH_ACCEPT_TAC FINITE_SING);
-val _ = export_rewrites ["SING_FINITE"]
 
 val IMAGE_FINITE =
     store_thm
@@ -6030,21 +6029,21 @@ Proof
  >> RW_TAC std_ss [PREIMAGE_def, EXTENSION, GSPECIFICATION]
 QED
 
-Theorem IN_PREIMAGE:
+Theorem IN_PREIMAGE[simp]:
   !f s x. x IN PREIMAGE f s <=> f x IN s
 Proof
    RW_TAC std_ss [PREIMAGE_def, GSPECIFICATION]
 QED
 
-val PREIMAGE_EMPTY = store_thm
-  ("PREIMAGE_EMPTY",
-   ``!f. PREIMAGE f {} = {}``,
-   RW_TAC std_ss [EXTENSION, IN_PREIMAGE, NOT_IN_EMPTY]);
+Theorem PREIMAGE_EMPTY[simp]:
+   !f. PREIMAGE f {} = {}
+Proof RW_TAC std_ss [EXTENSION, IN_PREIMAGE, NOT_IN_EMPTY]
+QED
 
-val PREIMAGE_UNIV = store_thm
-  ("PREIMAGE_UNIV",
-   ``!f. PREIMAGE f UNIV = UNIV``,
-   RW_TAC std_ss [EXTENSION, IN_PREIMAGE, IN_UNIV]);
+Theorem PREIMAGE_UNIV[simp]:
+  !f. PREIMAGE f UNIV = UNIV
+Proof RW_TAC std_ss [EXTENSION, IN_PREIMAGE, IN_UNIV]
+QED
 
 val PREIMAGE_COMPL = store_thm
   ("PREIMAGE_COMPL",
@@ -6124,6 +6123,16 @@ val IMAGE_PREIMAGE = store_thm (* from miller *)
    ``!f s. IMAGE f (PREIMAGE f s) SUBSET s``,
    RW_TAC std_ss [SUBSET_DEF, IN_PREIMAGE, IN_IMAGE]
    >> PROVE_TAC []);
+
+Theorem FINITE_PREIMAGE:
+  (!x y. f x = f y <=> x = y) /\ FINITE s ==> FINITE (PREIMAGE f s)
+Proof
+  Induct_on ‘FINITE’ >> simp[PREIMAGE_EMPTY] >> rw[] >> fs[] >>
+  simp[Once INSERT_SING_UNION, PREIMAGE_UNION] >>
+  simp[PREIMAGE_def] >>
+  Cases_on ‘?x. f x = e’ >> fs[] >>
+  ‘!y. f y = e <=> y = x’ by METIS_TAC[] >> simp[]
+QED
 
 (* end PREIMAGE lemmas *)
 
