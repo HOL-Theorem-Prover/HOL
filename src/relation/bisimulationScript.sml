@@ -1,11 +1,107 @@
 (* ------------------------------------------------------------------------ *)
-(*  (Weak) bisimulation on general labeled transition ('a->'b->'a->bool)    *)
+(*  Bisimulations defined on general labeled transition ('a->'b->'a->bool)  *)
 (* ------------------------------------------------------------------------ *)
 
 open HolKernel Parse boolLib simpLib metisLib BasicProvers;
 open relationTheory;
 
 val _ = new_theory "bisimulation";
+
+(*---------------------------------------------------------------------------*)
+(*  (Strong) bisimulation                                                    *)
+(*---------------------------------------------------------------------------*)
+
+val BISIM_def = new_definition("BISIM_def",
+  ``BISIM ts R = !p q l.
+                    R p q ==>
+                    (!p'. ts p l p' ==> ?q'. ts q l q' /\ R p' q') /\
+                    (!q'. ts q l q' ==> ?p'. ts p l p' /\ R p' q')``);
+
+(* (Strong) bisimilarity, see BISIM_REL_def for an alternative definition *)
+CoInductive BISIM_REL :
+    !p q. (!l.
+            (!p'. ts p l p' ==> ?q'. ts q l q' /\ (BISIM_REL ts) p' q') /\
+            (!q'. ts q l q' ==> ?p'. ts p l p' /\ (BISIM_REL ts) p' q'))
+      ==> (BISIM_REL ts) p q
+End
+
+Theorem BISIM_ID :
+    !ts. BISIM ts Id
+Proof
+    SRW_TAC[][BISIM_def]
+QED
+
+Theorem BISIM_INV :
+    !ts R. BISIM ts R ==> BISIM ts (inv R)
+Proof
+    SRW_TAC[][BISIM_def, inv_DEF] >> METIS_TAC []
+QED
+
+Theorem BISIM_O :
+    !ts R R'. BISIM ts R /\ BISIM ts R' ==> BISIM ts (R' O R)
+Proof
+    rpt STRIP_TAC
+ >> PURE_ONCE_REWRITE_TAC [BISIM_def]
+ >> SRW_TAC[][O_DEF]
+ >> METIS_TAC[BISIM_def]
+QED
+
+Theorem BISIM_RUNION :
+    !ts R R'. BISIM ts R /\ BISIM ts R' ==> BISIM ts (R RUNION R')
+Proof
+    rpt GEN_TAC
+ >> PURE_ONCE_REWRITE_TAC [BISIM_def]
+ >> SRW_TAC[][RUNION]
+ >> METIS_TAC[]
+QED
+
+Theorem BISIM_REL_IS_BISIM :
+    !ts. BISIM ts (BISIM_REL ts)
+Proof
+    PURE_ONCE_REWRITE_TAC [BISIM_def]
+ >> rpt GEN_TAC >> DISCH_TAC
+ >> Q.SPEC_TAC (`l`, `l`)
+ >> PURE_ONCE_REWRITE_TAC [GSYM BISIM_REL_cases]
+ >> ASM_REWRITE_TAC []
+QED
+
+(* (Strong) bisimilarity, the original definition *)
+Theorem BISIM_REL_def :
+    !ts. BISIM_REL ts = \p q. ?R. BISIM ts R /\ R p q
+Proof
+    SRW_TAC[][FUN_EQ_THM]
+ >> EQ_TAC
+ >| [ (* goal 1 (of 2) *)
+      DISCH_TAC >> Q.EXISTS_TAC `BISIM_REL ts` \\
+      ASM_REWRITE_TAC [BISIM_REL_IS_BISIM],
+      (* goal 2 (of 2) *)
+      Q.SPEC_TAC (`q`, `q`) \\
+      Q.SPEC_TAC (`p`, `p`) \\
+      HO_MATCH_MP_TAC BISIM_REL_coind \\ (* co-induction used here! *)
+      PROVE_TAC [BISIM_def] ]
+QED
+
+Theorem BISIM_REL_IS_EQUIV_REL :
+    !ts. equivalence (BISIM_REL ts)
+Proof
+    SRW_TAC[][equivalence_def]
+ >- (SRW_TAC[][reflexive_def, BISIM_REL_def] \\
+     Q.EXISTS_TAC `Id` \\
+     REWRITE_TAC [BISIM_ID])
+ >- (SRW_TAC[][symmetric_def, BISIM_REL_def] \\
+     SRW_TAC[][EQ_IMP_THM] \\
+     Q.EXISTS_TAC `SC R` \\
+     FULL_SIMP_TAC (srw_ss ()) [BISIM_def, SC_DEF] \\
+     METIS_TAC[])
+ >- (SRW_TAC[][transitive_def, BISIM_REL_def] \\
+     Q.EXISTS_TAC `R' O R` \\
+     METIS_TAC [O_DEF, BISIM_O])
+QED
+
+
+(*---------------------------------------------------------------------------*)
+(*  Weak bisimulation                                                        *)
+(*---------------------------------------------------------------------------*)
 
 (* Empty transition: zero or more invisible actions *)
 val ETS_def = new_definition ("ETS_def", (* was: EPS *)
@@ -28,7 +124,7 @@ val WBISIM_def = new_definition ("WBISIM_def",
 
 (* Weak bisimilarity, see WBISIM_REL_def for an alternative definition *)
 CoInductive WBISIM_REL :
-    !ts tau p q.
+    !p q.
           (!l. l <> tau ==>
             (!p'. ts p l p' ==> ?q'. (WTS ts tau) q l q' /\ (WBISIM_REL ts tau) p' q') /\
             (!q'. ts q l q' ==> ?p'. (WTS ts tau) p l p' /\ (WBISIM_REL ts tau) p' q')) /\
@@ -210,7 +306,7 @@ Proof
  >> ASM_REWRITE_TAC []
 QED
 
-(* Weak bisimilarity, alternative definition *)
+(* Weak bisimilarity, the original definition *)
 Theorem WBISIM_REL_def :
     !ts tau. WBISIM_REL ts tau = \p q. ?R. WBISIM ts tau R /\ R p q
 Proof
@@ -222,8 +318,6 @@ Proof
       (* goal 2 (of 2) *)
       Q.SPEC_TAC (`q`, `q`) \\
       Q.SPEC_TAC (`p`, `p`) \\
-      Q.SPEC_TAC (`tau`, `tau`) \\
-      Q.SPEC_TAC (`ts`, `ts`) \\
       HO_MATCH_MP_TAC WBISIM_REL_coind \\ (* co-induction used here! *)
       PROVE_TAC [WBISIM_def] ]
 QED
@@ -243,6 +337,46 @@ Proof
   >- (SRW_TAC[][transitive_def, WBISIM_REL_def] >>
       Q.EXISTS_TAC `R' O R` \\
       METIS_TAC [WBISIM_O, O_DEF])
+QED
+
+
+(*---------------------------------------------------------------------------*)
+(*  Relations between strong and weak bisimulations                          *)
+(*---------------------------------------------------------------------------*)
+
+Theorem BISIM_IMP_WBISIM :
+    !ts tau R. BISIM ts R ==> WBISIM ts tau R
+Proof
+    SRW_TAC[][WBISIM_def] (* 4 goals *)
+ >> IMP_RES_TAC BISIM_def
+ >| [ (* goal 1 (of 4) *)
+      Q.EXISTS_TAC `q'` >> ASM_REWRITE_TAC [] \\
+      MATCH_MP_TAC TS_IMP_WTS,
+      (* goal 2 (of 4) *)
+      Q.EXISTS_TAC `p'` >> ASM_REWRITE_TAC [] \\
+      MATCH_MP_TAC TS_IMP_WTS,
+      (* goal 3 (of 4) *)
+      Q.EXISTS_TAC `q'` >> ASM_REWRITE_TAC [] \\
+      MATCH_MP_TAC TS_IMP_ETS,
+      (* goal 4 (of 4) *)
+      Q.EXISTS_TAC `p'` >> ASM_REWRITE_TAC [] \\
+      MATCH_MP_TAC TS_IMP_ETS ]
+ >> ASM_REWRITE_TAC []
+QED
+
+Theorem BISIM_REL_RSUBSET_WBISIM_REL :
+    !ts tau. (BISIM_REL ts) RSUBSET (WBISIM_REL ts tau)
+Proof
+    SRW_TAC[][RSUBSET, BISIM_REL_def, WBISIM_REL_def]
+ >> Q.EXISTS_TAC `R` >> ASM_REWRITE_TAC []
+ >> MATCH_MP_TAC BISIM_IMP_WBISIM
+ >> ASM_REWRITE_TAC []
+QED
+
+Theorem BISIM_REL_IMP_WBISIM_REL :
+    !ts tau p q. (BISIM_REL ts) p q ==> (WBISIM_REL ts tau) p q
+Proof
+    REWRITE_TAC [GSYM RSUBSET, BISIM_REL_RSUBSET_WBISIM_REL]
 QED
 
 val _ = export_theory ();

@@ -6,7 +6,7 @@
 
 open HolKernel Parse boolLib bossLib;
 
-open pred_setTheory pairTheory relationTheory listTheory;
+open pred_setTheory pairTheory relationTheory bisimulationTheory listTheory;
 open CCSLib CCSTheory;
 
 val _ = new_theory "StrongEQ";
@@ -19,7 +19,7 @@ val _ = temp_loose_equality ();
 (******************************************************************************)
 
 (* Type abbreviations *)
-val _ = type_abbrev_pp ("simulation", “:('a, 'b) CCS -> ('a, 'b) CCS -> bool”);
+val _ = type_abbrev_pp ("simulation", ``:('a, 'b) CCS -> ('a, 'b) CCS -> bool``);
 
 (* new definition based on relationTheory.BISIM *)
 val STRONG_BISIM_def = Define
@@ -69,24 +69,8 @@ Proof
     REWRITE_TAC [STRONG_BISIM_def, BISIM_RUNION]
 QED
 
-(* Define the strong equivalence relation for CCS processes.
-
-  Two states E and E' are bisimilar (or bisimulation equivalent, denoted E ~ E',
-  if there exists a bisimulation R such that (E, E') IN R.
-
-   1. STRONG_EQUIV_cases ==> STRONG_EQUIV_rules (by EQ_IMP_LR)
-   2. STRONG_EQUIV_cases is the same as PROPERTY_STAR
-   3. STRONG_EQUIV_coind is new (the co-inductive principle)
- *)
-CoInductive STRONG_EQUIV :
-    !(E :('a, 'b) CCS) (E' :('a, 'b) CCS).
-       (!u.
-         (!E1. TRANS E u E1 ==>
-               ?E2. TRANS E' u E2 /\ STRONG_EQUIV E1 E2) /\
-         (!E2. TRANS E' u E2 ==>
-               ?E1. TRANS E u E1 /\ STRONG_EQUIV E1 E2))
-       ==> STRONG_EQUIV E E'
-End
+(* The (strong) bisimilarity, now based on BISIM_REL *)
+val STRONG_EQUIV_def = Define `STRONG_EQUIV = BISIM_REL TRANS`;
 
 val _ = add_rule { block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
                    fixity = Infix (NONASSOC, 450),
@@ -97,42 +81,55 @@ val _ = add_rule { block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
 val _ = TeX_notation { hol = UTF8.chr 0x223C,
                        TeX = ("\\HOLTokenStrongEQ", 1) };
 
-val STRONG_EQUIV_IS_STRONG_BISIM = store_thm (
-   "STRONG_EQUIV_IS_STRONG_BISIM",
-  ``STRONG_BISIM STRONG_EQUIV``,
-    PURE_ONCE_REWRITE_TAC [STRONG_BISIM]
- >> PURE_ONCE_REWRITE_TAC [GSYM STRONG_EQUIV_cases]
- >> RW_TAC bool_ss []);
+(* |- !p q.
+         (!l.
+              (!p'. p --l-> p' ==> ?q'. q --l-> q' /\ STRONG_EQUIV p' q') /\
+              !q'. q --l-> q' ==> ?p'. p --l-> p' /\ STRONG_EQUIV p' q') ==>
+         STRONG_EQUIV p q
+ *)
+val STRONG_EQUIV_rules = save_thm
+  ("STRONG_EQUIV_rules",
+    REWRITE_RULE [SYM STRONG_EQUIV_def] (Q.ISPEC `TRANS` BISIM_REL_rules));
+
+(* |- !BISIM_REL'.
+         (!a0 a1.
+              BISIM_REL' a0 a1 ==>
+              !l.
+                  (!p'. a0 --l-> p' ==> ?q'. a1 --l-> q' /\ BISIM_REL' p' q') /\
+                  !q'. a1 --l-> q' ==> ?p'. a0 --l-> p' /\ BISIM_REL' p' q') ==>
+         !a0 a1. BISIM_REL' a0 a1 ==> STRONG_EQUIV a0 a1
+ *)
+val STRONG_EQUIV_coind = save_thm
+  ("STRONG_EQUIV_coind",
+    REWRITE_RULE [SYM STRONG_EQUIV_def] (Q.ISPEC `TRANS` BISIM_REL_coind));
+
+(* |- !a0 a1.
+         STRONG_EQUIV a0 a1 <=>
+         !l.
+             (!p'. a0 --l-> p' ==> ?q'. a1 --l-> q' /\ STRONG_EQUIV p' q') /\
+             !q'. a1 --l-> q' ==> ?p'. a0 --l-> p' /\ STRONG_EQUIV p' q'
+ *)
+val STRONG_EQUIV_cases = save_thm
+  ("STRONG_EQUIV_cases",
+    REWRITE_RULE [SYM STRONG_EQUIV_def] (Q.ISPEC `TRANS` BISIM_REL_cases));
+
+Theorem STRONG_EQUIV_IS_STRONG_BISIM :
+    STRONG_BISIM STRONG_EQUIV
+Proof
+    REWRITE_TAC [STRONG_BISIM_def, STRONG_EQUIV_def, BISIM_REL_IS_BISIM]
+QED
 
 (* Alternative definition of STRONG_EQUIV *)
-val STRONG_EQUIV = store_thm ((* NEW *)
-   "STRONG_EQUIV",
-  ``!E E'. STRONG_EQUIV E E' = ?Bsm. Bsm E E' /\ STRONG_BISIM Bsm``,
-    REPEAT GEN_TAC
- >> EQ_TAC (* 2 sub-goals here *)
- >| [ (* goal 1 (of 2) *)
-      DISCH_TAC \\
-      EXISTS_TAC ``STRONG_EQUIV`` \\
-      ASM_REWRITE_TAC [STRONG_EQUIV_IS_STRONG_BISIM],
-      (* goal 2 (of 2) *)
-      Q.SPEC_TAC (`E'`, `E'`) \\
-      Q.SPEC_TAC (`E`, `E`) \\
-      HO_MATCH_MP_TAC STRONG_EQUIV_coind \\ (* co-induction used here! *)
-      METIS_TAC [STRONG_BISIM] ]);
-
-Theorem STRONG_EQUIV_IS_BISIM_REL :
-    STRONG_EQUIV = BISIM_REL TRANS
+Theorem STRONG_EQUIV :
+    !E E'. STRONG_EQUIV E E' = ?Bsm. Bsm E E' /\ STRONG_BISIM Bsm
 Proof
-    RW_TAC std_ss [FUN_EQ_THM, BISIM_REL_def, STRONG_EQUIV, STRONG_BISIM_def]
- >> EQ_TAC >> RW_TAC std_ss []
- >| [ Q.EXISTS_TAC `Bsm` >> art [],
-      Q.EXISTS_TAC `R` >> art [] ]
+    METIS_TAC [STRONG_EQUIV_def, STRONG_BISIM_def, BISIM_REL_def]
 QED
 
 Theorem STRONG_EQUIV_equivalence :
     equivalence STRONG_EQUIV
 Proof
-    REWRITE_TAC [STRONG_EQUIV_IS_BISIM_REL, BISIM_REL_IS_EQUIV_REL]
+    REWRITE_TAC [STRONG_EQUIV_def, BISIM_REL_IS_EQUIV_REL]
 QED
 
 Theorem STRONG_EQUIV_REFL :
@@ -168,8 +165,13 @@ val EQUAL_IMP_STRONG_EQUIV = store_thm (
  >> PURE_ASM_REWRITE_TAC [STRONG_EQUIV_REFL]);
 
 (* Prop. 4, page 91: strong equivalence satisfies property [*] *)
-val PROPERTY_STAR = save_thm ((* NEW *)
-   "PROPERTY_STAR", STRONG_EQUIV_cases);
+Theorem PROPERTY_STAR :
+    !E E'. STRONG_EQUIV E E' <=>
+           !u. (!E1. TRANS E  u E1 ==> ?E2. TRANS E' u E2 /\ STRONG_EQUIV E1 E2) /\
+               (!E2. TRANS E' u E2 ==> ?E1. TRANS E  u E1 /\ STRONG_EQUIV E1 E2)
+Proof
+   METIS_TAC [STRONG_EQUIV_cases]
+QED
 
 (* Half versions of PROPERTY_STAR *)
 val PROPERTY_STAR_LEFT = store_thm (

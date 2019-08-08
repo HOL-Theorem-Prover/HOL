@@ -187,6 +187,11 @@ New theories:
     This material is an extension of a basic treatment that was already part of the computability example.
     Thanks to Elliot Catt and Yiming Xu for help with this theory’s development.
 
+*   `bisimulationTheory`: a basic theory of bisimulation (strong and weak)
+    defined on general labeled transitions (of type `:'a->'b->'a->bool`),
+    mostly abstracted from `examples/CCS`.
+    (Thanks to James Shekar and Chun Tian for this work.)
+
 New tools:
 ----------
 

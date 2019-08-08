@@ -33,16 +33,18 @@ Proof
     REWRITE_TAC [ETS_def, EPS_def]
 QED
 
-val ONE_TAU = store_thm ((* NEW *)
-   "ONE_TAU", ``!E E'. TRANS E tau E' ==> EPS E E'``,
-    REWRITE_TAC [EPS_def]
- >> REPEAT STRIP_TAC
- >> MATCH_MP_TAC RTC_SINGLE
- >> BETA_TAC >> ASM_REWRITE_TAC []);
+Theorem ONE_TAU :
+    !E E'. TRANS E tau E' ==> EPS E E'
+Proof
+    RW_TAC std_ss [EPS_ETS]
+ >> MATCH_MP_TAC TS_IMP_ETS >> art []
+QED
 
-val EPS_REFL = store_thm ((* NEW *)
-   "EPS_REFL", ``!E. EPS E E``,
-    REWRITE_TAC [EPS_def, RTC_REFL]);
+Theorem EPS_REFL :
+    !E. EPS E E
+Proof
+    REWRITE_TAC [EPS_ETS, ETS_REFL]
+QED
 
 local
     val trans = (REWRITE_RULE [GSYM EPS_def]) o BETA_RULE o (ISPEC EPS_defn);
@@ -157,13 +159,12 @@ Proof
 QED
 
 (* A transition is a particular weak transition. *)
-val TRANS_IMP_WEAK_TRANS = store_thm (
-   "TRANS_IMP_WEAK_TRANS", ``!E u E'. TRANS E u E' ==> WEAK_TRANS E u E'``,
-    REPEAT STRIP_TAC
- >> PURE_ONCE_REWRITE_TAC [WEAK_TRANS]
- >> Q.EXISTS_TAC `E`
- >> Q.EXISTS_TAC `E'`
- >> ASM_REWRITE_TAC [EPS_REFL]);
+Theorem TRANS_IMP_WEAK_TRANS :
+    !E u E'. TRANS E u E' ==> WEAK_TRANS E u E'
+Proof
+    RW_TAC std_ss [WEAK_TRANS_WTS]
+ >> MATCH_MP_TAC TS_IMP_WTS >> art []
+QED
 
 (* A weak transition on tau implies the epsilon relation. *)
 val WEAK_TRANS_IMP_EPS = store_thm (
@@ -555,11 +556,6 @@ Theorem UNION_WEAK_BISIM :
 Proof
     REWRITE_TAC [WEAK_BISIM_def, WBISIM_RUNION]
 QED
-
-(*
-val WEAK_EQUIV_def = Define
-   `WEAK_EQUIV = WBISIM_REL TRANS tau`;
- *)
 
 (* Define the weak equivalence relation for CCS processes.
 
@@ -1622,40 +1618,20 @@ val WEAK_EQUIV_SUBST_RELAB = store_thm (
 (*                                                                            *)
 (******************************************************************************)
 
-(* Prove that a strong bisimulation is a particular weak bisimulation. *)
-val STRONG_IMP_WEAK_BISIM = store_thm (
-   "STRONG_IMP_WEAK_BISIM",
-  ``!Bsm. STRONG_BISIM Bsm ==> WEAK_BISIM Bsm``,
-    GEN_TAC
- >> PURE_ONCE_REWRITE_TAC [WEAK_BISIM]
- >> REPEAT STRIP_TAC (* 4 sub-goals here, sharing initial tactical *)
- >> IMP_RES_TAC
-       (MATCH_MP (REWRITE_RULE [STRONG_BISIM] (ASSUME ``STRONG_BISIM Bsm``))
-                 (ASSUME ``(Bsm: ('a, 'b) simulation) E E'``))
- >| [ (* goal 1 (of 4) *)
-      IMP_RES_TAC TRANS_IMP_WEAK_TRANS \\
-      Q.EXISTS_TAC `E2`,
-      (* goal 2 (of 4) *)
-      IMP_RES_TAC TRANS_IMP_WEAK_TRANS \\
-      Q.EXISTS_TAC `E1`,
-      (* goal 3 (of 4) *)
-      IMP_RES_TAC ONE_TAU \\
-      Q.EXISTS_TAC `E2`,
-      (* goal 4 (of 4) *)
-      IMP_RES_TAC ONE_TAU \\
-      Q.EXISTS_TAC `E1` ]
- >> ASM_REWRITE_TAC []);
+(* A strong bisimulation is a particular weak bisimulation. *)
+Theorem STRONG_IMP_WEAK_BISIM :
+    !Bsm. STRONG_BISIM Bsm ==> WEAK_BISIM Bsm
+Proof
+    REWRITE_TAC [STRONG_BISIM_def, WEAK_BISIM_def, BISIM_IMP_WBISIM]
+QED
 
-(* Prove that strong equivalence implies weak/observation equivalence. *)
-val STRONG_IMP_WEAK_EQUIV = store_thm (
-   "STRONG_IMP_WEAK_EQUIV",
-  ``!E E'. STRONG_EQUIV E E' ==> WEAK_EQUIV E E'``,
-    REPEAT GEN_TAC
- >> PURE_ONCE_REWRITE_TAC [STRONG_EQUIV, WEAK_EQUIV]
- >> STRIP_TAC
- >> IMP_RES_TAC STRONG_IMP_WEAK_BISIM
- >> Q.EXISTS_TAC `Bsm`
- >> ASM_REWRITE_TAC []);
+(* Strong equivalence implies weak/observation equivalence. *)
+Theorem STRONG_IMP_WEAK_EQUIV :
+    !E E'. STRONG_EQUIV E E' ==> WEAK_EQUIV E E'
+Proof
+    REWRITE_TAC [STRONG_EQUIV_def, WEAK_EQUIV_IS_WBISIM_REL,
+                 BISIM_REL_IMP_WBISIM_REL]
+QED
 
 (******************************************************************************)
 (*                                                                            *)
