@@ -1,7 +1,7 @@
 open HolKernel Parse boolLib bossLib;
 
 open pred_setTheory set_relationTheory
-open folSkolemTheory folPrenexTheory folModelsTheory folLangTheory
+open folPrenexTheory folModelsTheory folLangTheory
 
 val _ = new_theory "folProp";
 

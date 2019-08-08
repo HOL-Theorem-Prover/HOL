@@ -7,7 +7,7 @@ open mp_then
 val _ = new_theory "folSkolem";
 
 Theorem holds_exists_lemma:
-  ∀p t x M v preds.
+  ∀p t x M v (preds : (num # num) set).
      interpretation (term_functions t, preds) M ∧
      valuation M v ∧
      holds M v (formsubst V⦇x ↦ t⦈ p)
@@ -583,43 +583,6 @@ Proof
   simp[unbumpmod_def]
 QED
 
-Definition num_of_term_def[simp]:
-  num_of_term (V x) = 0 ⊗ x ∧
-  num_of_term (Fn f l) = 1 ⊗ (f ⊗ nlist_of (MAP num_of_term l))
-Termination
-  WF_REL_TAC ‘measure term_size’ >> simp[]
-End
-
-Theorem num_of_term_11[simp]:
-  ∀t1 t2. num_of_term t1 = num_of_term t2 ⇔ t1 = t2
-Proof
-  Induct >> simp[] >> Cases_on ‘t2’ >>
-  csimp[LIST_EQ_REWRITE, rich_listTheory.EL_MEM, EL_MAP]
-QED
-
-Definition num_of_form_def[simp]:
-  num_of_form False = 0 ⊗ 0 ∧
-  num_of_form (Pred p l) = 1 ⊗ (p ⊗ nlist_of (MAP num_of_term l)) ∧
-  num_of_form (IMP p1 p2) = 2 ⊗ (num_of_form p1 ⊗ num_of_form p2) ∧
-  num_of_form (FALL x p) = 3 ⊗ (x ⊗ num_of_form p)
-End
-
-Theorem num_of_form_11[simp]:
-  ∀p1 p2. num_of_form p1 = num_of_form p2 ⇔ p1 = p2
-Proof
-  Induct >> simp[] >> Cases_on ‘p2’ >> simp[INJ_MAP_EQ_IFF, INJ_DEF]
-QED
-
-Definition form_of_num_def:
-  form_of_num n = @f. num_of_form f = n
-End
-
-Theorem FORM_OF_NUM[simp]:
-  form_of_num (num_of_form p) = p
-Proof
-  simp[form_of_num_def]
-QED
-
 (* ------------------------------------------------------------------------- *)
 (* Skolemization function.                                                   *)
 (* ------------------------------------------------------------------------- *)
@@ -931,5 +894,12 @@ Proof
   rfs[specialize_satisfies_IMAGE] >> csimp[specialize_satisfies_IMAGE] >>
   metis_tac[]
 QED
+
+Theorem satisfiable_SKOLEM:
+  satisfiable (:α) { SKOLEM p | p ∈ s } ⇔ satisfiable (:α) s
+Proof
+  simp[satisfiable_def, GSYM SKOLEM_SATISFIABLE]
+QED
+
 
 val _ = export_theory();

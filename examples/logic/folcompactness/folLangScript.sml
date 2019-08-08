@@ -1,6 +1,6 @@
 open HolKernel Parse boolLib bossLib;
 
-open pred_setTheory listTheory
+open pred_setTheory listTheory nlistTheory
 
 val _ = new_theory "folLang";
 
@@ -423,6 +423,80 @@ Proof
   simp[language_SING] >> Cases_on ‘x ∈ FV p’ >> simp[]
 QED
 
-(* TODO: show formulas are countable set *)
+(* show countability via Gödelization *)
+Definition num_of_term_def[simp]:
+  num_of_term (V x) = 0 ⊗ x ∧
+  num_of_term (Fn f l) = 1 ⊗ (f ⊗ nlist_of (MAP num_of_term l))
+Termination
+  WF_REL_TAC ‘measure term_size’ >> simp[]
+End
+
+Theorem num_of_term_11[simp]:
+  ∀t1 t2. num_of_term t1 = num_of_term t2 ⇔ t1 = t2
+Proof
+  Induct >> simp[] >> Cases_on ‘t2’ >>
+  csimp[LIST_EQ_REWRITE, rich_listTheory.EL_MEM, EL_MAP]
+QED
+
+Definition term_of_num_def:
+  term_of_num n = @t. n = num_of_term t
+End
+
+Theorem TERM_OF_NUM[simp]:
+  term_of_num(num_of_term t) = t
+Proof
+  simp[term_of_num_def]
+QED
+
+Theorem countable_terms[simp]:
+  countable 𝕌(:term)
+Proof
+  simp[countable_def, INJ_DEF] >> qexists_tac‘num_of_term’ >> simp[]
+QED
+
+Theorem INFINITE_terms[simp]:
+  INFINITE 𝕌(:term)
+Proof
+  simp[INFINITE_INJ_NOT_SURJ] >> qexists_tac ‘λt. Fn 0 [t]’ >>
+  simp[INJ_DEF, SURJ_DEF] >> qexists_tac ‘V 0’ >> simp[]
+QED
+
+Definition num_of_form_def[simp]:
+  num_of_form False = 0 ⊗ 0 ∧
+  num_of_form (Pred p l) = 1 ⊗ (p ⊗ nlist_of (MAP num_of_term l)) ∧
+  num_of_form (IMP p1 p2) = 2 ⊗ (num_of_form p1 ⊗ num_of_form p2) ∧
+  num_of_form (FALL x p) = 3 ⊗ (x ⊗ num_of_form p)
+End
+
+Theorem num_of_form_11[simp]:
+  ∀p1 p2. num_of_form p1 = num_of_form p2 ⇔ p1 = p2
+Proof
+  Induct >> simp[] >> Cases_on ‘p2’ >> simp[INJ_MAP_EQ_IFF, INJ_DEF]
+QED
+
+Theorem countable_forms[simp]:
+  countable 𝕌(:form)
+Proof
+  simp[countable_def, INJ_DEF] >> qexists_tac‘num_of_form’ >> simp[]
+QED
+
+Theorem INFINITE_forms[simp]:
+  INFINITE 𝕌(:form)
+Proof
+  simp[INFINITE_INJ_NOT_SURJ] >> qexists_tac ‘λp. IMP p False’ >>
+  simp[INJ_DEF, SURJ_DEF] >> qexists_tac ‘False’ >> simp[]
+QED
+
+Definition form_of_num_def:
+  form_of_num n = @f. num_of_form f = n
+End
+
+Theorem FORM_OF_NUM[simp]:
+  form_of_num (num_of_form p) = p
+Proof
+  simp[form_of_num_def]
+QED
+
+
 
 val _ = export_theory();

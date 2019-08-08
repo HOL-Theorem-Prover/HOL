@@ -94,17 +94,32 @@ Proof
       Cases_on ‘var = u’ >> simp[combinTheory.UPDATE_APPLY])
 QED
 
+Definition interpretation_def:
+  interpretation (fns,preds : (num # num) set) M ⇔
+    ∀f l. (f, LENGTH l) ∈ fns ∧ (∀x. MEM x l ⇒ x ∈ M.Dom) ⇒
+          M.Fun f l ∈ M.Dom
+End
+
 Definition satisfiable_def:
-  satisfiable (:α) fms ⇔ ∃M:α model. M.Dom ≠ ∅ ∧ M satisfies fms
+  satisfiable (:α) fms ⇔
+    ∃M:α model. M.Dom ≠ ∅ ∧ interpretation (language fms) M ∧ M satisfies fms
+End
+
+Definition ffinsat_def:
+  ffinsat (:α) s ⇔ ∀t. FINITE t ∧ t ⊆ s ⇒ satisfiable (:α) t
 End
 
 Definition valid_def:
-  valid (:α) fms ⇔ ∀M:α model. M satisfies fms
+  valid (:α) fms ⇔
+     ∀M:α model. interpretation (language fms) M ∧ M.Dom ≠ ∅ ⇒ M satisfies fms
 End
 
 Definition entails_def:
   entails (:α) Γ p ⇔
-    ∀M:α model v. hold M v Γ ⇒ holds M v p
+    ∀M:α model v.
+       valuation M v ∧
+       interpretation (language (p INSERT Γ)) M ∧ M.Dom ≠ ∅ ∧ hold M v Γ ⇒
+       holds M v p
 End
 
 Definition equivalent_def:
@@ -112,15 +127,10 @@ Definition equivalent_def:
     ∀M:α model v. holds M v p ⇔ holds M v q
 End
 
-Definition interpretation_def:
-  interpretation (fns,preds) M ⇔
-    ∀f l. (f, LENGTH l) ∈ fns ∧ (∀x. MEM x l ⇒ x ∈ M.Dom) ⇒
-          M.Fun f l ∈ M.Dom
-End
-
 Theorem interpretation_termval:
-  ∀t M v. interpretation (term_functions t,preds) M ∧ valuation M v ⇒
-          termval M v t ∈ M.Dom
+  ∀t M v (preds:(num # num)set).
+     interpretation (term_functions t,preds) M ∧ valuation M v ⇒
+     termval M v t ∈ M.Dom
 Proof
   simp[interpretation_def] >> ho_match_mp_tac term_induct >> rpt strip_tac
   >- fs[valuation_def] >>
@@ -131,7 +141,7 @@ Proof
 QED
 
 Theorem interpretation_sublang:
-  fns2 ⊆ fns1 ∧ interpretation (fns1,preds) M ⇒ interpretation (fns2,preds) M
+  fns2 ⊆ fns1 ∧ interpretation (fns1,preds1) M ⇒ interpretation (fns2,preds2) M
 Proof
   simp[SUBSET_DEF, interpretation_def]
 QED
@@ -255,15 +265,43 @@ Proof
   metis_tac[combinTheory.APPLY_UPDATE_ID, upd_valuation, valuation_def]
 QED
 
-(* ultimate objective:
-Theorem compactness:
-  (∀t. FINITE t ∧ t ⊆ s ⇒
-       ∃M. interpretation (language s) M ∧ M.Dom ≠ ∅ ∧ M satisfies t)
-⇒
-  ∃C. interpretation (language s) C ∧ C.Dom ≠ ∅ ∧ C satisfies s
+Theorem copy_models:
+  INJ f 𝕌(:α) 𝕌(:β) ⇒
+  (∃Ms : α model.
+     Ms.Dom ≠ ∅ ∧ interpretation (language s) Ms ∧ Ms satisfies s) ⇒
+  (∃Mt : β model.
+     Mt.Dom ≠ ∅ ∧ interpretation (language s) Mt ∧ Mt satisfies s)
 Proof
-  cheat
+  rw[INJ_IFF] >>
+  qabbrev_tac ‘f' = λb. @a. f a = b’ >>
+  ‘∀a. f' (f a) = a’ by simp[Abbr‘f'’] >>
+  qexists_tac ‘<| Dom := { f d | d ∈ Ms.Dom };
+                  Fun := λg zs. f (Ms.Fun g (MAP f' zs));
+                  Pred := λp zs. Ms.Pred p (MAP f' zs) |>’ >>
+  rw[]
+  >- (fs[EXTENSION] >> metis_tac[])
+  >- (fs[interpretation_def, language_def] >> rw[] >> first_x_assum irule >>
+      simp[MEM_MAP, PULL_EXISTS] >> metis_tac[]) >>
+  simp[satisfies_def] >> rpt gen_tac >>
+  qmatch_abbrev_tac ‘valuation Mt v ∧ _ ⇒ _’ >>
+  ‘∀t v. valuation Mt v ⇒ (termval Mt v t = f (termval Ms (f' o v) t))’
+    by (Induct >> simp[Cong MAP_CONG']
+        >- (simp[valuation_def] >>
+            ‘Mt.Dom = {f d | d ∈ Ms.Dom}’ by simp[Abbr‘Mt’] >> simp[] >>
+            metis_tac[]) >>
+        simp[Abbr‘Mt’, MAP_MAP_o, combinTheory.o_ABS_R]) >>
+  ‘∀k v m:num->β. f' o m⦇ k ↦ f v ⦈ = (f' o m)⦇ k ↦ v ⦈’
+    by (simp[combinTheory.APPLY_UPDATE_THM, FUN_EQ_THM] >> rw[]) >>
+  ‘∀p v. valuation Mt v ⇒ (holds Mt v p ⇔ holds Ms (f' o v) p)’
+     by (Induct >> simp[Cong MAP_CONG']
+         >- simp[Abbr‘Mt’, MAP_MAP_o, combinTheory.o_ABS_R] >>
+         rw[Abbr‘Mt’, PULL_EXISTS]) >>
+  simp[] >> fs[satisfies_def] >> rw[] >> first_x_assum irule >>
+  fs[valuation_def] >> fs[Abbr‘Mt’] >> metis_tac[]
 QED
-*)
+
+
+
+
 
 val _ = export_theory();
