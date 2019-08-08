@@ -190,7 +190,7 @@ New theories:
 *   `bisimulationTheory`: a basic theory of bisimulation (strong and weak)
     defined on general labeled transitions (of type `:'a->'b->'a->bool`),
     mostly abstracted from `examples/CCS`.
-    (Thanks to James Shekar and Chun Tian for this work.)
+    (Thanks to James Shaker and Chun Tian for this work.)
 
 New tools:
 ----------
