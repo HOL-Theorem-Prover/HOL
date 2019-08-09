@@ -14,10 +14,10 @@ val _ = new_theory "numpair"
     Triangular numbers
    ---------------------------------------------------------------------- *)
 
-val tri_def = Define`
+Definition tri_def[nocompute,simp]:
   (tri 0 = 0) /\
   (tri (SUC n) = SUC n + tri n)
-`;
+End
 
 val twotri_formula = store_thm(
   "twotri_formula",
@@ -25,11 +25,12 @@ val twotri_formula = store_thm(
   Induct_on `n` THEN
   SRW_TAC [ARITH_ss][tri_def, MULT_CLAUSES, LEFT_ADD_DISTRIB]);
 
-val tri_formula = store_thm(
-  "tri_formula",
-  ``tri n = (n * (n + 1)) DIV 2``,
+Theorem tri_formula[compute]:
+  tri n = (n * (n + 1)) DIV 2
+Proof
   ONCE_REWRITE_TAC [EQ_SYM_EQ] THEN MATCH_MP_TAC DIV_UNIQUE THEN
-  Q.EXISTS_TAC `0` THEN SRW_TAC [ARITH_ss][twotri_formula]);
+  Q.EXISTS_TAC `0` THEN SRW_TAC [ARITH_ss][twotri_formula]
+QED
 
 val tri_eq_0 = Store_thm(
   "tri_eq_0",
