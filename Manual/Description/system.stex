@@ -1739,6 +1739,7 @@ Thus, to indicate the \ml{simp} attribute (for which, see discussion of the stat
 Multiple attributes can be listed between the square brackets, separated by commas.
 
 \index{Theorem syntax@\ml{Theorem} syntax|(}
+\index{special syntactic forms for scripts!Theorem@\ml{Theorem}}
 \smallskip\noindent
 Equivalently, a special \ml{Theorem} syntax is available for use in script files.
 One can write
@@ -1767,8 +1768,13 @@ A call to \ml{store\_thm(\mname,$t$,\mtac)} results in the application of \mtac{
 If the tactic is successful, the resulting theorem is saved under the name \mname, as before.
 Also as before, theorem attributes can be added to the name.
 
+\index{special syntactic forms for scripts!Theorem@\ml{Theorem}}
+\index{Theorem syntax@\ml{Theorem} syntax}
 Finally, for use in script files only, there is a \ml{Theorem} syntax to replace \ml{store\_thm}, reducing the need to write the same name twice, and giving a cleaner appearance.
-One can write\index{Proof keyword@\ml{Proof} keyword}\index{QED keyword@\ml{QED} keyword}
+One can write %
+\index{Proof keyword@\ml{Proof} keyword}\index{QED keyword@\ml{QED} keyword}%
+\index{special syntactic forms for scripts!Proof@\ml{Proof}}
+\index{special syntactic forms for scripts!QED@\ml{QED}}
 \begin{alltt}
    Theorem \mname[attr1,attr2,...]:
      ...goal statement...

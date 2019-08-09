@@ -83,7 +83,7 @@ New features:
     Whether or not the `induction=` attribute is used, the induction theorem is also made available as an SML binding under the appropriate name.
     This means that one does not need to follow one’s definition with a call to something like `DB.fetch` or `theorem` just to make the induction theorem available at the SML level.
 
--   Finally, there are analogous `Inductive` and `CoInductive` syntaxes for defining inductive and coinductive relations (using `Hol_reln` and `Hol_coreln` underneath).
+-   Similarly, there are analogous `Inductive` and `CoInductive` syntaxes for defining inductive and coinductive relations (using `Hol_reln` and `Hol_coreln` underneath).
     The syntax is
 
            Inductive stem:
@@ -99,6 +99,25 @@ New features:
     where, as above, the `Inductive`, `CoInductive` and `End` keywords must be in the leftmost column of the script file.
     The `stem` part of the syntax drives the selection of the various theorem names (*e.g.*, `stem_rules`, `stem_ind`, `stem_cases` and `stem_strongind` for inductive definitions) for both the SML environment and the exported theory.
     The actual names of new constants in the quoted term material do not affect these bindings.
+
+-   Finally, there are new syntaxes for `Datatype` and type-abbreviation.
+    Users can replace ``val _ = Datatype`...` `` with
+
+           Datatype: ...
+           End
+
+    and `val _ = type_abbrev("name", ty)` with
+
+           Type name = ty
+
+    if the abbreviation should introduce pretty-printing (which would be done with `type_abbrev_pp`), the syntax is
+
+           Type name[pp] = ty
+
+    Note that in both `Type` forms the `ty` is a correct ML value, and may thus require quoting.
+    For example, the `set` abbreviation is established with
+
+           Type set = “:α -> bool”
 
 -   Holmake now understands targets whose suffixes are the string `Theory` to be instructions to build all of the files associated with a theory.
     Previously, to specifically get `fooTheory` built, it was necessary to write

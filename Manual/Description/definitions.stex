@@ -91,13 +91,29 @@ The following ML declaration of a data type of binary trees
                          | Node of ('a,'b) btree * 'b * ('a,'b) btree
 \end{verbatim}
 \end{hol}
-\noindent would be declared in \HOL{} as
+\noindent could be declared in \HOL{} with a call to the \ml{Datatype} function:
 \begin{hol}
 \begin{verbatim}
    Datatype `btree = Leaf 'a | Node btree 'b btree`
 \end{verbatim}
 \end{hol}
-\noindent Note that any type parameters for the new type are not
+Also: good practice in script files is to make sure that everything is an \ML{} declaration, so the above should really appear as
+\begin{hol}
+\begin{verbatim}
+   val _ = Datatype `btree = Leaf 'a | Node btree 'b btree`
+\end{verbatim}
+\end{hol}
+\index{special syntactic forms for scripts!Datatype@\ml{Datatype}}
+To reduce the verbiage of the above, there is a special syntax (akin to \ml{Theorem} and \ml{Definition}), allowing one to instead write
+\begin{hol}
+\begin{verbatim}
+   Datatype: btree = Leaf 'a | Node btree 'b btree
+   End
+\end{verbatim}
+\end{hol}
+As with the other forms, the keywords here must be in column $1$.
+
+Note that in all forms, any type parameters for the new type are not
 mentioned: the type variables are always ordered alphabetically.
 
 This subtle point bears repeating: the format of datatype definitions
@@ -1079,7 +1095,8 @@ This induction theorem follows the recursion structure of the function, and may 
 The definition technology is not always successful in attempting
 to make the specified definition, usually because an automatic
 termination proof fails; in that case, another entrypoint, \ml{Hol\_defn},
-which defers the termination proof to the user, can be used.
+which defers the termination proof to the user, can be used. %
+\index{special syntactic forms for scripts!Definition@\ml{Definition}}%
 Once a termination argument is found, it can be provided as part of the final \ml{Definition} syntax.
 The technology underlying \ml{Definition} and \ml{Hol\_defn} is explained
 in detail in Slind~\cite{slind-thesis}.
@@ -1094,7 +1111,7 @@ The basic form of a \ml{Definition} (without a termination argument) is
 \end{alltt}
 Note that this is \emph{not} valid \ML{} syntax.
 Instead, \HOL{} is using lexical pre-processing to transform the above into something more complicated underneath.
-To make this reasonable, there are constraints introduced on the syntax above: both keywords (\ml{Definition} and \ml{End}) must appear in column $0$ of the input (hard against the left margin in one's input source file).
+To make this reasonable, there are constraints introduced on the syntax above: both keywords (\ml{Definition} and \ml{End}) must appear in column $1$ of the input (hard against the left margin in one's input source file).
 For example
 \begin{session}
 \begin{alltt}
@@ -1411,7 +1428,8 @@ Execution of \ml{WF\_REL\_TAC} has automatically proved the
 wellfoundedness of the termination relation
 \holtxt{measure (LENGTH o SND)}
 and the remainder of the goal has been simplified into a
-pair of easy goals.
+pair of easy goals. %
+\index{special syntactic forms for scripts!Termination@\ml{Termination}}%
 Once both goals are proved, we can encapsulate
 the termination proof/tactic into the \ml{Termination} section of a \ml{Definition}.
 As long as the tactic does indeed prove the termination conditions, the recursion equations and induction theorem are stored

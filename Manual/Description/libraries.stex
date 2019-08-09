@@ -157,6 +157,28 @@ When types come to be printed, the expansion of abbreviations done by the parser
 For more information, see \ml{type\_abbrev}'s entry in \REFERENCE.
 \index{types, in HOL logic@types, in \HOL{} logic!parsing of|)}
 
+\index{special syntactic forms for scripts!Type@\ml{Type}}
+There are special syntactic forms available for both type abbreviation entry-points.
+Instead of
+\begin{hol}
+\begin{verbatim}
+   val _ = type_abbrev("set", ``:'a -> bool``)
+\end{verbatim}
+\end{hol}
+one can write
+\begin{hol}
+\begin{verbatim}
+   Type set = ``:'a -> bool``
+\end{verbatim}
+\end{hol}
+and if an underlying call to \ml{type\_abbrev\_pp} is desired, the \ml{[pp]} ``attribute'' should be added to the name, thus:
+\begin{hol}
+\begin{verbatim}
+   Type set[pp] = ``:'a -> bool``
+\end{verbatim}
+\end{hol}
+
+
 \subsection{Parsing terms}
 
 The term parser provides a grammar-based infrastructure for supporting

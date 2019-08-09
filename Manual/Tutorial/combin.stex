@@ -37,7 +37,8 @@ Finally, we will start by ``hiding'' the names \holtxt{S} and \holtxt{K} so that
 \begin{session}
 \begin{alltt}
 >>_ hide "K"; hide "S";
->> Datatype `cl = K | S | # cl cl`;
+>> Datatype: cl = K | S | # cl cl
+   End
 \end{alltt}
 \end{session}
 We also want the \# to be an infix, so we set its fixity to be a tight

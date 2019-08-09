@@ -134,11 +134,14 @@ In \ML{}:
 In \HOL:
 \begin{session}
 \begin{alltt}
->> Datatype ‘tree = Lf | Nd tree α tree’;
+>> Datatype: tree = Lf | Nd tree α tree
+   End
 
 >> type_of “Nd”;
 
->> Define ‘(size Lf = 0) ∧ (size (Nd l _ r) = 1 + size l + size r)’;
+>> Definition size_def:
+     (size Lf = 0) ∧ (size (Nd l _ r) = 1 + size l + size r)
+   End
 \end{alltt}
 \end{session}
 
