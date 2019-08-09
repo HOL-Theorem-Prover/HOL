@@ -1936,7 +1936,7 @@ second is to show the new term.
 (font-lock-add-keywords
  'sml-mode
  '("^Theorem\\>" "^Proof\\>" "^QED\\>" "^Definition\\>" "^\\(Co\\)?Inductive\\>"
-   "^Termination\\>" "^End\\>" "^Datatype\\>"))
+   "^Termination\\>" "^End\\>" "^Datatype\\>" "^Type\\>"))
 
 (defgroup hol-faces nil "Faces used in pretty-printing HOL values"
   :group 'faces

@@ -190,6 +190,27 @@ Inductivepfx = ("Co")?"Inductive"{ws}+{alphaMLid}{ws}*":";
    else yytext
   )
 );
+<INITIAL,thmval>^"Type"{ws}+{alphaMLid}("["{alphaMLid_list}"]")?{ws}*"=" => (
+  (yypos,
+   if inscript then
+     let
+       infix |> fun x |> f = f x
+       val pfx = mlswitch (!mltype_stack) "" "" ");"
+       val s0 = String.substring(yytext,0,size yytext - 1) (* drop = *)
+       val s = s0 |> Substring.full |> Substring.dropr Char.isSpace
+                  |> Substring.string (* drop wspace after name *)
+       val (tyname, _, attrs) = dest_ml_thm_binding "Type" s
+       val fnm = "type_abbrev" ^ String.concat (map (fn s => "_" ^ s) attrs)
+     in
+       mltype_stack := [];
+       YYBEGIN INITIAL;
+       ECHO yyarg (
+         pfx ^ "val _ = (fn ty => Parse." ^fnm ^ "(\"" ^ tyname ^ "\", ty ))"
+       )
+     end
+   else yytext
+  )
+);
 <INITIAL,thmval>{Theorempfx}{ws}*":" => ((yypos,
 (
   if inscript then

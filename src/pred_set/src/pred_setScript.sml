@@ -85,7 +85,7 @@ val Cond =
 
 val _ = new_theory "pred_set";
 
-val _ = type_abbrev ("set", ``:'a -> bool``);
+Type set = “:'a -> bool”;
 
 local open OpenTheoryMap
   val ns = ["Set"]
