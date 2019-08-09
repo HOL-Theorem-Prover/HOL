@@ -57,6 +57,7 @@ sig
 
   (* playing a game *)    
   val best_move : (obsc_dict * obs_dict) -> nn -> board -> move
+  val apply_move : move -> board -> board
   val play_game : (obsc_dict * obs_dict) -> nn -> board -> int
   val play_ngame : (obsc_dict * obs_dict) -> nn -> int -> real
 
