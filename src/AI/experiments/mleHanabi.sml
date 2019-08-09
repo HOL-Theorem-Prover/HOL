@@ -137,6 +137,7 @@ val nohand = Vector.fromList (List.tabulate (5, fn _ => nocard))
 
 val maxclues = 8
 val maxscore = 10
+val maxbombs = 2
 
 fun random_startboard () =
   let
@@ -321,7 +322,8 @@ fun oh_board (d1,d2)
   in
     Vector.fromList 
     (List.concat 
-     [onehot (clues,maxclues + 1),
+     [onehot (bombs,maxbombs + 1),
+      onehot (clues,maxclues + 1),
       oh_moveo lastmove, 
       oh_hand t1, 
       oh_hand t2, 
@@ -488,7 +490,7 @@ fun best_move (d1,d2) nn board =
 
 fun is_endboard board =
   length (#deck board) <= 0 orelse 
-  #bombs board >= 3 orelse
+  #bombs board > maxbombs orelse
   #score board >= maxscore
 
 fun play_game (d1,d2) nn board =
@@ -792,8 +794,10 @@ load "mlNeuralNetwork"; open mlNeuralNetwork;
 load "aiLib"; open aiLib;
 summary_file := hanabi_dir ^ "/run1";
 val ((nne,nnp),obs,board1,scl) = rl_loop 100000;
+write_nn (hanabi_dir ^ "/run1_nne") nne;
+write_nn (hanabi_dir ^ "/run1_nnp") nnp;
 val board2 = random_startboard ();
-write_nn (hanabi_dir ^ "/nne") nne;
+
 *)
 
 (* 
