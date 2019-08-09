@@ -136,6 +136,7 @@ fun nice_of_board {p1turn,lastmove1,lastmove2,hand1,hand2,clues1,clues2,
 val nohand = Vector.fromList (List.tabulate (5, fn _ => nocard))
 
 val maxclues = 8
+val maxscore = 10
 
 fun random_startboard () =
   let
@@ -485,8 +486,10 @@ fun best_move (d1,d2) nn board =
     else best_in_distrib dis2
   end
 
-fun is_endboard board = 
-  length (#deck board) <= 0 orelse (#bombs board >= 3)
+fun is_endboard board =
+  length (#deck board) <= 0 orelse 
+  #bombs board >= 3 orelse
+  #score board >= maxscore
 
 fun play_game (d1,d2) nn board =
   if is_endboard board
@@ -513,7 +516,7 @@ fun proba_from_reall l =
 
 fun infer_eval (d1,d2) nn board =
   if is_endboard board 
-  then onehot_human (#score board,11)
+  then onehot_human (#score board,maxscore + 1)
   else
   (proba_from_reall o denorm o infer_nn nn o oh_board (d1,d2)) board
 
@@ -684,8 +687,10 @@ fun stats_player ngame (obs,(nne,nnp)) =
     val lle = map (infer_eval obs nne) boardl
     val llp = map (infer_poli obs nnp) boardl
   in
-    summary "eval"; print_stats_ll true [0,1] its lle;
-    summary "poli"; print_stats_ll false movel string_of_move llp
+    summary "eval"; 
+    print_stats_ll true (List.tabulate (maxscore + 1,I)) its lle;
+    summary "poli"; 
+    print_stats_ll false movel string_of_move llp
   end
 
 fun symdiff_player ngame (obs1,(nne1,nnp1)) (obs2,(nne2,nnp2)) =
