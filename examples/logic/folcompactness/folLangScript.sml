@@ -24,9 +24,8 @@ Proof
   Induct_on ‘sets’ >> simp[] >> metis_tac[]
 QED
 
-val _ = Datatype‘
-  term = V num | Fn num (term list)
-’;
+Datatype:   term = V num | Fn num (term list)
+End
 
 val term_size_def = DB.fetch "-" "term_size_def"
 val _ = export_rewrites ["term_size_def"]
@@ -135,12 +134,12 @@ Proof
   irule MAP_CONG' >> simp[] >> metis_tac[]
 QED
 
-val _ = Datatype‘
+Datatype:
   form = False
        | Pred num (term list)
        | IMP form form
        | FALL num form
-’;
+End
 
 Definition Not_def:
   Not f = IMP f False

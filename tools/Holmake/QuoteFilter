@@ -6,7 +6,7 @@ fun x |> f = f x
 
 fun bslash_escape s = "\\" ^ StringCvt.padLeft #"0" 3 (Int.toString (Char.ord(String.sub(s,0))))
 
-datatype quotetype = inQUOTE | inTMQUOTE | inTYQUOTE | inDFQUOTE;
+datatype quotetype = inQUOTE | inTMQUOTE | inTYQUOTE | inDFQUOTE | inDTYQUOTE;
 datatype mltype = inTHMVAL | inTERMINATION_VAL | inINITIAL;
 
 datatype qfs = QFS of {comdepth : int ref,
@@ -124,7 +124,7 @@ type lexresult = int*string
 fun eof arg = (~1, "")
 %%
 %structure QuoteFilter
-%s string comment qcomment tmcomment tycomment defncomment tyquote tmquote quote defnquote ANTIQ thmval TERMINATION_VAL;
+%s string comment qcomment tmcomment tycomment defncomment datatypecomment tyquote tmquote quote defnquote datatypequote ANTIQ thmval TERMINATION_VAL;
 %arg (UserDeclarations.QFS {comdepth, pardepth, antiquote_stack, row, rowstart, inscript, mltype_stack, induction_thm});
 %full
 
@@ -172,12 +172,24 @@ Inductivepfx = ("Co")?"Inductive"{ws}+{alphaMLid}{ws}*":";
                                          inQUOTE => quote
                                        | inDFQUOTE => defnquote
                                        | inTYQUOTE => tyquote
-                                       | inTMQUOTE => tmquote);
+                                       | inTMQUOTE => tmquote
+                                       | inDTYQUOTE => datatypequote);
                               ECHO yyarg
                                 (")),QUOTE \""^
                                  locpragma yyarg (yytext, yypos) 0)
                              )
                  else ECHO yyarg yytext)));
+<INITIAL,thmval>^"Datatype"{ws}*":" => (
+  (yypos,
+   if inscript then
+     (YYBEGIN datatypequote;
+      mltype_stack := [];
+      ECHO yyarg (mlswitch (!mltype_stack) "" "" ");" ^
+                  "val _ = bossLib.Datatype [QUOTE \"" ^
+                  locpragma yyarg (yytext, yypos) 0))
+   else yytext
+  )
+);
 <INITIAL,thmval>{Theorempfx}{ws}*":" => ((yypos,
 (
   if inscript then
@@ -404,14 +416,14 @@ Inductivepfx = ("Co")?"Inductive"{ws}+{alphaMLid}{ws}*":";
   (ECHO yyarg (bslash_escape yytext))));
 <comment,tmcomment,tycomment,qcomment,defncomment>. => ((yypos, (ECHO yyarg yytext)));
 
-<quote,tmquote,tyquote,defnquote>"^"+{ws} => ((yypos, (ECHO yyarg yytext)));
-<quote,tmquote,tyquote,defnquote>"^"+{newline} => ((yypos,
+<quote,tmquote,tyquote,defnquote,datatypequote>"^"+{ws} => ((yypos, (ECHO yyarg yytext)));
+<quote,tmquote,tyquote,defnquote,datatypequote>"^"+{newline} => ((yypos,
    (ECHO yyarg (String.substring(yytext,0,size yytext - 1) ^
                 qnewline yyarg (yypos,yytext)))));
-<quote,tmquote,tyquote,defnquote>"^^" => ((yypos, (ECHO yyarg "^")));
-<quote,tmquote,tyquote,defnquote>"^`" => ((yypos, (ECHO yyarg "`")));
-<quote,tmquote,tyquote,defnquote>"^"{symbol} => ((yypos, (ECHO yyarg yytext)));
-<quote,tmquote,tyquote,defnquote>{newline} => (
+<quote,tmquote,tyquote,defnquote,datatypequote>"^^" => ((yypos, (ECHO yyarg "^")));
+<quote,tmquote,tyquote,defnquote,datatypequote>"^`" => ((yypos, (ECHO yyarg "`")));
+<quote,tmquote,tyquote,defnquote,datatypequote>"^"{symbol} => ((yypos, (ECHO yyarg yytext)));
+<quote,tmquote,tyquote,defnquote,datatypequote>{newline} => (
   (yypos, (qnewline yyarg (yypos,yytext)))
 );
 
@@ -419,6 +431,15 @@ Inductivepfx = ("Co")?"Inductive"{ws}+{alphaMLid}{ws}*":";
    (yypos, (
       YYBEGIN (mlswitch (!mltype_stack) INITIAL TERMINATION_VAL thmval);
       ECHO yyarg "\"]"))
+);
+<datatypequote>{newline}"End" => (
+  (
+    yypos, (
+      YYBEGIN INITIAL;
+      nextline yyarg (yypos + size yytext);
+      ECHO yyarg "\"\n];"
+    )
+  )
 );
 <defnquote>{newline}"End" => (
   (yypos, (
@@ -448,6 +469,9 @@ Inductivepfx = ("Co")?"Inductive"{ws}+{alphaMLid}{ws}*":";
 <quote>"(*" => ((yypos, (inc comdepth; YYBEGIN qcomment; ECHO yyarg yytext)));
 <tmquote>"(*" => ((yypos, (inc comdepth; YYBEGIN tmcomment; ECHO yyarg yytext)));
 <tyquote>"(*" => ((yypos, (inc comdepth; YYBEGIN tycomment; ECHO yyarg yytext)));
+<datatypequote>"(*" => (
+  (yypos, (inc comdepth; YYBEGIN datatypecomment; ECHO yyarg yytext))
+);
 <defnquote>"(*" => (
   (yypos, (inc comdepth; YYBEGIN defncomment; ECHO yyarg yytext))
 );
@@ -463,12 +487,18 @@ Inductivepfx = ("Co")?"Inductive"{ws}+{alphaMLid}{ws}*":";
 <defnquote>"^" => ((yypos, (YYBEGIN ANTIQ;
                    antiquote_stack := inDFQUOTE :: !antiquote_stack;
                    ECHO yyarg "\", ANTIQUOTE (")));
-
-
-<quote,tmquote,tyquote,defnquote>[\128-\255] => ((yypos, (ECHO yyarg (bslash_escape yytext))));
-<quote,tmquote,tyquote,defnquote>[^`\n\015^ \t(*\128-\255]+ => ((yypos,
+<datatypequote>"^" => (
+  (yypos, (
+    YYBEGIN ANTIQ;
+    antiquote_stack := inDTYQUOTE :: !antiquote_stack;
+    ECHO yyarg "\", ANTIQUOTE("
+   )
+  )
+);
+<quote,tmquote,tyquote,defnquote,datatypequote>[\128-\255] => ((yypos, (ECHO yyarg (bslash_escape yytext))));
+<quote,tmquote,tyquote,defnquote,datatypequote>[^`\n\015^ \t(*\128-\255]+ => ((yypos,
   (ECHO yyarg (String.toString yytext))));
-<quote,tmquote,tyquote,defnquote>. => (
+<quote,tmquote,tyquote,defnquote,datatypequote>. => (
   (yypos, (ECHO yyarg (String.toString yytext)))
 );
 
@@ -479,7 +509,8 @@ Inductivepfx = ("Co")?"Inductive"{ws}+{alphaMLid}{ws}*":";
                                           inQUOTE => quote
                                         | inTMQUOTE => tmquote
                                         | inTYQUOTE => tyquote
-                                        | inDFQUOTE => defnquote));
+                                        | inDFQUOTE => defnquote
+                                        | inDTYQUOTE => datatypequote));
                   ECHO yyarg (yytext ^
                               "),QUOTE \""^locpragma yyarg (yytext,yypos) 0))));
 <ANTIQ>"(" => ((yypos, (pardepth := 1; YYBEGIN INITIAL; ECHO yyarg yytext)));
