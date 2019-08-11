@@ -492,7 +492,7 @@ fun best_move (d1,d2) nn board =
   end
 
 fun is_endboard board =
-  length (#deck board) <= 0 orelse 
+  null (#deck board) orelse 
   #bombs board > maxbombs orelse
   #score board >= maxscore
 
@@ -725,7 +725,7 @@ val player_mem =
 
 fun complete_summary k (obs,(nne,nnp)) =
   (
-  summary ("Generation " ^ its k);
+  summary ("Statistics " ^ its k);
   stats_player 1000 (obs,(nne,nnp));
   symdiff_player 1000 (obs,(nne,nnp)) (!player_mem)
   )
@@ -813,16 +813,18 @@ write_nn (hanabi_dir ^ "/run1_nnp") nnp;
 (*    val (newnne,_) = train_nn_batch 1 nne [evalex]
     val (newnnp,_) = train_nn_batch 1 nnp [poliex] *)
 
-fun worker_play_game (obs,(nne,nnp)) (x:unit) =
+fun worker_play_game (obs,(nne,nnp)) _ =
   let
+    val _ = print_endline "new_game"
     val nsim = 400
     fun loop acc board =
       if is_endboard board then (split acc, #score board) else
       let
         val (move,evalex,poliex) = lookahead nsim (obs,(nne,nnp)) board
+        val _ = print_endline (string_of_move move)
         val newboard = apply_move move board 
       in
-        loop ((evalex,poliex) :: acc) board
+        loop ((evalex,poliex) :: acc) newboard
       end
   in
     loop [] (random_startboard ())
@@ -864,16 +866,70 @@ val extspec : (player, unit, (ex list * ex list) * int) smlParallel.extspec =
   read_result = read_result
   }
 
+fun process_result r =
+  let 
+    val (l,scl) = split r
+    val (eexll,pexll) = split l 
+  in
+    (List.concat eexll, List.concat pexll, scl)
+  end
+
+fun train_player (obs,(nne,nnp)) (eex,pex) =
+  let
+    val ncore = 1
+    val nepoch = 1
+    val bsize = 1
+    val newnne = train_nn ncore nepoch nne bsize eex
+    val newnnp = train_nn ncore nepoch nnp bsize pex
+  in  
+    (obs,(newnne,newnnp)) 
+  end
+
+fun rl_para_once ncore k (player,scl) =
+  let
+    val _ = print_endline ("Generation " ^ its k)
+    val argl = (List.tabulate (100, fn _ => ()))
+    val (eex,pex,scl_loc) = process_result 
+      (smlParallel.parmap_queue_extern ncore extspec player argl)
+    val newplayer = train_player player (eex,pex)
+    val newscl = first_n 1000 (scl_loc @ scl)
+    val _ = summary (sr (average_real (map Real.fromInt newscl)))
+    fun f (a,b) = summary (its a ^ ": " ^ its b)
+    val _ =
+      if k mod 10 = 0 andalso k <> 0
+      then 
+        (
+        complete_summary k newplayer; 
+        summary "Score repartition";
+        app f (dlist (count_dict (dempty Int.compare) scl));         
+        player_mem := player
+        )
+      else ()
+  in
+    (newplayer,newscl)
+  end
+
+fun rl_para ncore n = 
+  let 
+    val _ = (mkDir_err hanabi_dir; erase_file (!summary_file)) 
+    val player = random_player ()
+    val _ = player_mem := player
+    fun loop (k,n) x = 
+      if k >= n then x else loop (k+1,n) (rl_para_once ncore k x)
+  in
+    loop (0,n) (player,[])
+  end
+
+
 
 (*
 load "mleHanabi"; open mleHanabi;
 load "mlNeuralNetwork"; open mlNeuralNetwork;
 load "aiLib"; open aiLib;
-val ncore = 4;
-val player = random_player ();
-val argl = (List.tabulate (4, fn _ => ()));
-val r = smlParallel.parmap_queue_extern ncore extspec player argl;
-
+summary_file := hanabi_dir ^ "/rl_para1";
+val ncore = 32;
+val ngen = 1000;
+val (player,scl) = rl_para ncore ngen;
 *)
 
 

@@ -73,5 +73,6 @@ sig
 
   (* parallelization *)
   val extspec : (player, unit, (ex list * ex list) * int) smlParallel.extspec
+  val rl_para : int -> int -> player * int list
 
 end
