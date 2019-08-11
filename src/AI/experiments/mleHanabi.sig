@@ -19,7 +19,9 @@ sig
   type obsc_dict = (obsc, (card,int) Redblackmap.dict) Redblackmap.dict
   type obs_dict = (obs, (card,int) Redblackmap.dict) Redblackmap.dict
   type nn = mlNeuralNetwork.nn
-   
+  type ex = real vector * real vector
+  type player = (obsc_dict * obs_dict) * (nn * nn)
+
   type board =
     {
     p1turn : bool,
@@ -47,13 +49,15 @@ sig
     (board  * (obsc_dict * obs_dict)) -> (obsc_dict * obs_dict)
   val empty_obs : (obsc_dict * obs_dict)
   val print_obs : (obsc_dict * obs_dict) -> board -> int -> unit
-
+  
+  (* player *)
+  val random_player : unit -> player
+  
   (* guesses *)
   val guess_board : obsc_dict -> board -> board
   
   (* lookahead *)
-  val lookahead : int -> (obsc_dict * obs_dict) -> (nn * nn) -> board ->
-    move * (real vector * real vector) * (real vector * real vector)
+  val lookahead : int -> player -> board -> move * ex * ex
 
   (* playing a game *)    
   val best_move : (obsc_dict * obs_dict) -> nn -> board -> move
@@ -62,14 +66,12 @@ sig
   val play_ngame : (obsc_dict * obs_dict) -> nn -> int -> real
 
   (* statistics *)
-  val stats_player : int -> (obsc_dict * obs_dict) * (nn * nn) -> unit
-  val symdiff_player : int -> 
-    (obsc_dict * obs_dict) * (nn * nn) -> 
-    (obsc_dict * obs_dict) * (nn * nn) -> unit
+  val stats_player : int -> player -> unit
+  val symdiff_player : int -> player ->  player -> unit
   (* reinforcement learning *)
-  val rl_loop : int -> 
-    ((nn * nn) * (obsc_dict * obs_dict) * board * int list)
+  val rl_loop : int -> player * board * int list
 
-
+  (* parallelization *)
+  val extspec : (player, unit, (ex list * ex list) * int) smlParallel.extspec
 
 end

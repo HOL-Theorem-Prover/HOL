@@ -31,6 +31,8 @@ fun absolute_deviation l =
     average_real (map (fn x => Real.abs (x - m)) l)
   end
 
+type ex = real vector * real vector
+
 (* -------------------------------------------------------------------------
    Deck
    ------------------------------------------------------------------------- *)
@@ -167,6 +169,7 @@ type obs = card * int
 type obsc_dict = (obsc, (card,int) Redblackmap.dict) Redblackmap.dict
 type obs_dict = (obs, (card,int) Redblackmap.dict) Redblackmap.dict
 type nn = mlNeuralNetwork.nn
+type player = (obsc_dict * obs_dict) * (nn * nn)
 
 fun obsc_card {p1turn,lastmove1,lastmove2,hand1,hand2,clues1,clues2,
   clues,score,bombs,deck,disc,pile} pos = 
@@ -605,7 +608,7 @@ fun lookahead_loop nsim (d1,d2) (nne,nnp) board
     (sumtot + reward, vtot + 1.0) newpol (rewarddis :: rewarddisl)
   end
 
-fun lookahead_aux nsim (d1,d2) (nne,nnp) board =
+fun lookahead_aux nsim ((d1,d2),(nne,nnp)) board =
   let
     val (sumtot,vtot) = (expectancy (infer_eval (d1,d2) nne board), 1.0)
     val pol' = combine (movel, infer_poli (d1,d2) nnp board)
@@ -641,10 +644,10 @@ fun extract_poliex (d1,d2) board pol =
     (input, (Vector.fromList o norm o proba_from_reall) (map f movel))
   end
 
-fun lookahead nsim (d1,d2) (nne,nnp) board =
+fun lookahead nsim ((d1,d2),(nne,nnp)) board =
   let 
     val (_,pol,rewarddisl) =
-      lookahead_aux nsim (d1,d2) (nne,nnp) board
+      lookahead_aux nsim ((d1,d2),(nne,nnp)) board
     fun f m = #3 (dfind m pol)
     val dis1 = combine (movel, proba_from_reall (map f movel))
     val dis2 = filter (fn (x,_) => is_applicable board x) dis1
@@ -655,7 +658,7 @@ fun lookahead nsim (d1,d2) (nne,nnp) board =
   end
 
 (* -------------------------------------------------------------------------
-   Quantifying changes in the policy and the evaluation
+   Statistics
    ------------------------------------------------------------------------- *)
 
 fun collect_boardl obs nnp board =
@@ -731,15 +734,20 @@ fun complete_summary k (obs,(nne,nnp)) =
    Reinforcement learning loop
    ------------------------------------------------------------------------- *)
 
-fun rl_start () =
+fun random_player () =
   let
     val n = Vector.length (oh_board empty_obs (random_startboard ()))
     val nne = random_nn (tanh,dtanh) [n,200,11]
     val nnp = random_nn (tanh,dtanh) [n,200,20]
   in
+    (empty_obs,(nne,nnp))
+  end
+
+fun rl_start () =
+  let val player = random_player () in
     print_endline "rl_start";
-    player_mem := (empty_obs,(nne,nnp));
-    ((nne,nnp), empty_obs, random_startboard (), [])
+    player_mem := player;
+    (player, random_startboard (), [])
   end
 
 fun ex_to_string (v1,v2) =
@@ -747,12 +755,12 @@ fun ex_to_string (v1,v2) =
     f v1 ^ " ==> " ^ f v2
   end
 
-fun rl_loop_once k ((nne,nnp),obs,board,scl) =
+fun rl_loop_once k ((obs,(nne,nnp)),board,scl) =
   let
     val newobs = obs (* update_observable (board,obs) *)
     val nsim = 400
     val _ = print ","
-    val (move,evalex,poliex) = lookahead nsim obs (nne,nnp) board
+    val (move,evalex,poliex) = lookahead nsim (obs,(nne,nnp)) board
     val (newnne,_) = train_nn_batch 1 nne [evalex]
     val (newnnp,_) = train_nn_batch 1 nnp [poliex]
     val board1 = apply_move move board 
@@ -777,7 +785,7 @@ fun rl_loop_once k ((nne,nnp),obs,board,scl) =
         )
       else ()
   in
-    ((newnne,newnnp),newobs,board2,newscl)
+    ((newobs,(newnne,newnnp)),board2,newscl)
   end
 
 fun rl_loop_aux (k,n) x = 
@@ -796,9 +804,78 @@ summary_file := hanabi_dir ^ "/run1";
 val ((nne,nnp),obs,board1,scl) = rl_loop 100000;
 write_nn (hanabi_dir ^ "/run1_nne") nne;
 write_nn (hanabi_dir ^ "/run1_nnp") nnp;
-val board2 = random_startboard ();
+*)
+
+(* -------------------------------------------------------------------------
+   Parallelization
+   ------------------------------------------------------------------------- *)
+
+(*    val (newnne,_) = train_nn_batch 1 nne [evalex]
+    val (newnnp,_) = train_nn_batch 1 nnp [poliex] *)
+
+fun worker_play_game (obs,(nne,nnp)) (x:unit) =
+  let
+    val nsim = 400
+    fun loop acc board =
+      if is_endboard board then (split acc, #score board) else
+      let
+        val (move,evalex,poliex) = lookahead nsim (obs,(nne,nnp)) board
+        val newboard = apply_move move board 
+      in
+        loop ((evalex,poliex) :: acc) board
+      end
+  in
+    loop [] (random_startboard ())
+  end
+
+fun write_player file (obs,(nne,nnp)) =
+  (write_nn (file ^ "_nne") nne; write_nn (file ^ "_nnp") nnp)
+
+fun read_player file =
+  (empty_obs, (read_nn (file ^ "_nne"), read_nn (file ^ "_nnp")))
+
+fun write_result file ((eex,pex),sc) =
+  (
+  write_exl (file ^ "_eex") eex;
+  write_exl (file ^ "_pex") pex;
+  writel (file ^ "_score") [its sc]
+  )
+
+fun read_result file =
+  (
+  (read_exl (file ^ "_eex"), read_exl (file ^ "_pex")),
+  (string_to_int o only_hd o readl) (file ^ "_score")
+  )
+
+fun write_argl file argl = writel file [its (length argl)]
+fun read_argl file =  
+  List.tabulate ((string_to_int o only_hd o readl) file, fn _ => ())
+
+val extspec : (player, unit, (ex list * ex list) * int) smlParallel.extspec =
+  {
+  self = "mleHanabi.extspec",
+  reflect_globals = fn () => "()",
+  function = worker_play_game,
+  write_param = write_player,
+  read_param = read_player,
+  write_argl = write_argl,
+  read_argl = read_argl,
+  write_result = write_result,
+  read_result = read_result
+  }
+
+
+(*
+load "mleHanabi"; open mleHanabi;
+load "mlNeuralNetwork"; open mlNeuralNetwork;
+load "aiLib"; open aiLib;
+val ncore = 4;
+val player = random_player ();
+val argl = (List.tabulate (4, fn _ => ()));
+val r = smlParallel.parmap_queue_extern ncore extspec player argl;
 
 *)
+
 
 (* 
 compare observables
