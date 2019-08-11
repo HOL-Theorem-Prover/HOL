@@ -460,18 +460,20 @@ val MTAB_BND = store_thm(
     );
 
 (* Important solution skipping capacity of mTab *)
-val MTAB_THM = store_thm(
-    "MTAB_THM",
-    ``!search j k a. ((pat <> [])
+Theorem MTAB_THM:
+  !search j k a.
+     pat <> []
       /\ (k <= LENGTH search - LENGTH pat)
       /\ (j < LENGTH pat)
       /\ (!i. (j<i /\ i < LENGTH pat)
               ==> (EL i pat = EL (k+i) search))
       /\ (EL j pat <> EL (k+j) search)
       /\ (a < LENGTH all_chars)
-      /\ (EL (k+j) search = EL a all_chars))
-      ==>(!d. d < (EL a (EL j (mTab pat all_chars)))
-              ==> ~((k+d) IN solutions pat search))``,
+      /\ (EL (k+j) search = EL a all_chars)
+    ==>
+      !d. d < EL a (EL j (mTab pat all_chars))
+              ==> (k+d) NOTIN solutions pat search
+Proof
     strip_tac
     >> strip_tac
     >> strip_tac
@@ -484,17 +486,15 @@ val MTAB_THM = store_thm(
         >> fs[SMVAL_THM]
         >> `EL j pat <> EL (k+j) search`
                 by rw[EQ_SYM_EQ]
-        >> drule SUF_SKIP_NOT_SOL
+        >> FREEZE_THEN drule SUF_SKIP_NOT_SOL
         >> fs[])
     >- (fs[]
         >> fs[CMVAL_THM]
         >> `EL j pat <> EL (k+j) search`
                 by rw[EQ_SYM_EQ]
-        >> drule CHA_SKIP_NOT_SOL
+        >> FREEZE_THEN drule CHA_SKIP_NOT_SOL
         >> fs[])
-    );
-
-
+QED
 
 (* -- BOYER-MOORE SEARCH IMPLEMENTATION -- *)
 (* Checks to see if pat is prefix of search and skips verified bad alignments
