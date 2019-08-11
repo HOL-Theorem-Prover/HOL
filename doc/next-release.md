@@ -351,6 +351,9 @@ Incompatibilities:
 
            MEM x (DROP n ls) ⇒ MEM x ls
 
+*   The `drule` family of tactics (and the underlying `mp_then`) now generalise the implicational theorem argument (with `GEN_ALL`) before looking for instantiations.
+    If the old behaviour is desired, where free variables are fixed, replace `drule` with `FREEZE_THEN drule`.
+
 * * * * *
 
 <div class="footer">
