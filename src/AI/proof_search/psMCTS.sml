@@ -102,6 +102,8 @@ fun interval (step:real) (a,b) =
 fun gamma_distrib alpha =
   map_assoc (gamma_density alpha) (interval 0.01 (0.01,10.0));
 
+(* should return a uniform distrib if the sum is very close to zero 
+   instead of raising a error *)
 fun proba_norm l =
   let val sum = sum_real l in
     if sum <= 0.0001 then raise ERR "proba_norm" "" else

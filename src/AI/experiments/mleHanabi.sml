@@ -600,7 +600,7 @@ fun lookahead_loop nsim (d1,d2) (nne,nnp) board
   let 
     val move = select_in_pol board vtot pol
     val rewarddis = lookahead_once move (d1,d2) nne board 
-    val reward = expectancy rewarddis
+    val reward = expectancy rewarddis / (Real.fromInt maxscore)
     val (polv,sum,vis) = dfind move pol
     val newpol = dadd move (polv, sum + reward, vis + 1.0) pol
   in
@@ -936,7 +936,7 @@ fun rl_para ncore n =
 load "mleHanabi"; open mleHanabi;
 load "mlNeuralNetwork"; open mlNeuralNetwork;
 load "aiLib"; open aiLib;
-summary_file := hanabi_dir ^ "/rl_para1";
+summary_file := hanabi_dir ^ "/noise1";
 val ncore = 32;
 val ngen = 1000;
 val (player,scl) = rl_para ncore ngen;
