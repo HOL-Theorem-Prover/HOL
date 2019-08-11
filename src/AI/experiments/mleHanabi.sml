@@ -608,13 +608,23 @@ fun lookahead_loop nsim (d1,d2) (nne,nnp) board
     (sumtot + reward, vtot + 1.0) newpol (rewarddis :: rewarddisl)
   end
 
+fun add_noise pol =
+  let 
+    val alpha = 0.3
+    val noisel = dirichlet_noise alpha (length pol)
+    fun f ((m,r1),r2) = (m, 0.75 * r1 + 0.25 * r2) 
+  in
+    map f (combine (pol,noisel))
+  end
+
 fun lookahead_aux nsim ((d1,d2),(nne,nnp)) board =
   let
     val (sumtot,vtot) = (expectancy (infer_eval (d1,d2) nne board), 1.0)
-    val pol' = combine (movel, infer_poli (d1,d2) nnp board)
-    val pol = dnew compare_move (map (fn (a,b) => (a,(b,0.0,0.0))) pol')
+    val pol1 = combine (movel, infer_poli (d1,d2) nnp board)
+    val pol2 = add_noise pol1
+    val pol3 = dnew compare_move (map (fn (a,b) => (a,(b,0.0,0.0))) pol2)
   in
-    lookahead_loop nsim (d1,d2) (nne,nnp) board (sumtot,vtot) pol []
+    lookahead_loop nsim (d1,d2) (nne,nnp) board (sumtot,vtot) pol3 []
   end
 
 (* -------------------------------------------------------------------------
