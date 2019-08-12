@@ -352,7 +352,13 @@ Incompatibilities:
            MEM x (DROP n ls) ⇒ MEM x ls
 
 *   The `drule` family of tactics (and the underlying `mp_then`) now generalise the implicational theorem argument (with `GEN_ALL`) before looking for instantiations.
-    If the old behaviour is desired, where free variables are fixed, replace `drule` with `FREEZE_THEN drule`.
+    If the old behaviour is desired, where free variables are fixed, replacing `drule` with `FREEZE_THEN drule` will stop generalisation of all the implicational theorem’s variables.
+    Unfortunately, this may then prevent the matching from occurring at all.
+    In this situation (where some free variables need to be instantiated to make the match go through and the remainder have to be appear as new “local constants” serendipitously linking up with existing free variables in the goal), `drule` may need to be replaced with
+
+           drule_then (qspecl_then [‘a’, ‘b’,...] mp_tac)
+
+    where `‘a’`, `‘b’` *etc.* respecialise the original theorem.
 
 * * * * *
 
