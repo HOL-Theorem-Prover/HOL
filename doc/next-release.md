@@ -150,7 +150,7 @@ New features:
     The `ReqD` form requires that the number of matching sub-terms should have decreased.
     (This latter is implicitly a requirement that the original goal *did* have some matching sub-terms.)
     We hope that both forms will be useful in creating maintainable tactics.
-    See the DESCRIPTION manual for more details.
+    See the *DESCRIPTION* manual for more details.
 
     Thanks to Magnus Myreen for this feature suggestion ([Github issue](https://github.com/HOL-Theorem-Prover/HOL/issues/680)).
 
@@ -168,7 +168,7 @@ New features:
 -   String literals can now be injected into other types (in much the same way as numeric literals are injected into types such as `real` and `rat`).
     Either the standard double-quotes can be used, or two flavours of guillemet, allowing *e.g.*, `“‹foo bar›”`, and `“«injected-HOL-string\n»”`.
     Ambiguous situations are resolved with the standard overloading resolution machinery.
-    See the REFERENCE manual’s description of the `add_strliteral_form` function for details.
+    See the *REFERENCE* manual’s description of the `add_strliteral_form` function for details.
 
 -   The `Q.SPEC_THEN` function (also available as `qspec_then` in `bossLib`) now type-instantiates provided theorems à la `ISPEC`, and tries all possible parses of the provided quotation in order to make this work.
     The `Q.ISPEC_THEN` function is deprecated.
