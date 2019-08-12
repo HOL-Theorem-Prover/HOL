@@ -115,7 +115,7 @@ sig
   val split_triple : ('a * 'b * 'c) list -> 'a list * 'b list * 'c list
   val quintuple_of_list : 'a list -> 'a * 'a * 'a * 'a * 'a
 
-  (* random *)
+  (* randomness, probability and distributions *)
   val random_real : unit -> real
   val shuffle   : 'a list -> 'a list
   val random_elem : 'a list -> 'a
@@ -123,6 +123,10 @@ sig
   val select_in_distrib : ('a * real) list -> 'a
   val best_in_distrib : ('a * real) list -> 'a
   val random_percent : real -> 'a list -> 'a list * 'a list
+  val uniform_proba : int -> real list
+  val normalize_proba : real list -> real list
+  val uniform_distrib : 'a  list -> ('a * real) list
+  val normalize_distrib : ('a * real) list -> ('a * real) list
 
   (* input/output *)
   val string_of_goal : goal -> string
@@ -173,6 +177,7 @@ sig
   val sum_real : real list -> real
   val average_real : real list -> real
   val standard_deviation : real list -> real
+  val absolute_deviation : real list -> real
   val sum_int : int list -> int
   val int_div : int -> int -> real
   val int_pow : int -> int -> int

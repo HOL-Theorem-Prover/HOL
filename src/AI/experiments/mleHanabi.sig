@@ -19,7 +19,7 @@ sig
   type obsc_dict = (obsc, (card,int) Redblackmap.dict) Redblackmap.dict
   type obs_dict = (obs, (card,int) Redblackmap.dict) Redblackmap.dict
   type nn = mlNeuralNetwork.nn
-  type ex = real vector * real vector
+  type ex = real list * real list
   type player = (obsc_dict * obs_dict) * (nn * nn)
 
   type board =
@@ -39,7 +39,7 @@ sig
   (* encoding *)
   val compare_card : (card * card) -> order
   val random_startboard : unit -> board
-  val oh_board : (obsc_dict * obs_dict) -> board -> real vector
+  val oh_board : (obsc_dict * obs_dict) -> board -> real list
   
   (* observables *)
   val compare_obsc : (obsc * obsc) -> order

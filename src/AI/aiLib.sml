@@ -436,6 +436,11 @@ fun standard_deviation l =
     Math.sqrt variance
   end
 
+fun absolute_deviation l = 
+  let val m = average_real l in 
+    average_real (map (fn x => Real.abs (x - m)) l)
+  end
+
 fun int_product nl = case nl of
     [] => 1
   | a :: m => a * int_product m
@@ -818,7 +823,7 @@ fun unescape_aux l = case l of
 fun unescape s = implode (unescape_aux (explode s))
 
 (* ------------------------------------------------------------------------
-   Random
+   Probability
    ------------------------------------------------------------------------ *)
 
 val new_real = Random.newgen ()
@@ -868,6 +873,29 @@ fun best_in_distrib distrib =
 
 fun random_percent percent l =
   part_n (Real.floor (percent * Real.fromInt (length l))) (shuffle l)
+
+val epsilon = 0.00000001
+
+fun uniform_proba n = List.tabulate (n, fn _ => 1.0 / Real.fromInt n)
+
+fun normalize_proba l =
+  let val sum = sum_real l in
+    if sum <= epsilon 
+    then uniform_proba (length l) 
+    else map (fn x => x / sum) l
+  end
+
+fun uniform_distrib l = 
+  let val sum = Real.fromInt (length l) in
+    map_assoc (fn _ => 1.0 / sum) l
+  end
+
+fun normalize_distrib dis =
+  let val sum = sum_real (map snd dis) in
+    if sum <= epsilon 
+    then uniform_distrib (map fst dis) 
+    else map_snd (fn x => x / sum) dis
+  end
 
 (* -------------------------------------------------------------------------
    Parallelism (currently slowing functions inside threads)
