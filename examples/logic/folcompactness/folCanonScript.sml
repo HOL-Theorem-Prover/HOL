@@ -223,7 +223,7 @@ Proof
         goal_assum (first_assum o mp_then Any mp_tac) >>
         first_x_assum (drule_all_then strip_assume_tac) >>
         drule_then (qx_choose_then ‘v’ strip_assume_tac) valuation_exists >>
-        drule_then strip_assume_tac (GEN_ALL satisfies_instances) >>
+        drule_then strip_assume_tac satisfies_instances >>
         ‘∀p. p ∈ t ⇒ qfree p’ by metis_tac[SUBSET_DEF] >>
         rewrite_tac[psatisfiable_def, psatisfies_def] >>
         qexists_tac ‘prop_of_model M v’ >> simp[GSYM psatisfies_def] >>
@@ -292,8 +292,7 @@ Proof
             irule interpretation_restrictlanguage >> metis_tac[]) >>
         metis_tac[interpretation_extendlanguage]) >>
   ‘∀q. q ∈ {SKOLEM p | p ∈ s} ⇒ qfree q’ by simp[PULL_EXISTS] >>
-  drule_all_then (qx_choose_then ‘CM’ strip_assume_tac)
-    (GEN_ALL COMPACT_CANON_QFREE) >>
+  drule_all_then (qx_choose_then ‘CM’ strip_assume_tac) COMPACT_CANON_QFREE >>
   simp[Once SKOLEM_SATISFIABLE] >> qexists_tac ‘CM’ >> simp[] >>
   fs[canonical_def] >> simp[EXTENSION] >> simp[IN_DEF] >>
   metis_tac[terms_rules]
