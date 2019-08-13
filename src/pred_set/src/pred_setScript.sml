@@ -3828,11 +3828,6 @@ Proof
   PROVE_TAC []
 QED
 
-val SUBSET_BIGUNION = Q.store_thm
-  ("SUBSET_BIGUNION", `!s P. s IN P ==> s SUBSET (BIGUNION P)`,
-    RW_TAC std_ss [SUBSET_DEF, IN_BIGUNION]
- >> Q.EXISTS_TAC `s` >> ASM_REWRITE_TAC []);
-
 val BIGUNION_IMAGE_UNIV = store_thm (* from util_prob *)
   ("BIGUNION_IMAGE_UNIV",
    ``!f N.
@@ -3896,8 +3891,8 @@ Proof
 QED
 
 val SUBSET_BIGUNION_I = store_thm(
-  "SUBSET_BIGUNION_I",
-  ``x IN P ==> x SUBSET BIGUNION P``,
+   "SUBSET_BIGUNION_I",
+  ``!x P. x IN P ==> x SUBSET BIGUNION P``,
   SRW_TAC [][BIGUNION, SUBSET_DEF] THEN METIS_TAC []);
 
 val CARD_BIGUNION_SAME_SIZED_SETS = store_thm(
@@ -5956,11 +5951,6 @@ val SUBSET_DIFF = store_thm ("SUBSET_DIFF",
     SIMP_TAC bool_ss [SUBSET_DEF, IN_DIFF, DISJOINT_DEF, EXTENSION, IN_INTER,
                       NOT_IN_EMPTY]
  >> METIS_TAC []);
-
-val SUBSET_DIFF_DISJOINT = store_thm (* from measureTheory *)
-  ("SUBSET_DIFF_DISJOINT",
-  ``!s1 s2 s3. (s1 SUBSET (s2 DIFF s3)) ==> DISJOINT s1 s3``,
-    PROVE_TAC [SUBSET_DIFF]);
 
 val INTER_SUBSET_EQN = store_thm ("INTER_SUBSET_EQN",
   ``((A INTER B = A) = (A SUBSET B)) /\
