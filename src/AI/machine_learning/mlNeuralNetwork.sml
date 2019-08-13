@@ -244,16 +244,15 @@ fun update_nn nn wu = map update_layer (combine (nn,wu))
    Statistics
    ------------------------------------------------------------------------- *)
 
+fun sr r = pad 5 "0" (rts_round 3 r)
+
 fun stats_exl exl = 
   let 
     val ll = list_combine (map snd exl) 
     fun f l = 
-      print_endline (
-      "average: " ^ pretty_real (average_real l ) ^ "," ^
-      "absolute_deviation: " ^ pretty_real (absolute_deviation l) ^ "," ^ 
-      "standard_deviation: " ^ pretty_real (standard_deviation l)
-      ) 
+      print_endline (sr (average_real l ) ^ " " ^ sr (absolute_deviation l)) 
   in
+    print_endline "mean deviation";
     app f ll
   end
 

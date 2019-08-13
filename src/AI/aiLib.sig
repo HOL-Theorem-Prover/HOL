@@ -176,6 +176,7 @@ sig
   val decr   : int ref -> unit
   val sum_real : real list -> real
   val average_real : real list -> real
+  val average_int: int list -> real
   val standard_deviation : real list -> real
   val absolute_deviation : real list -> real
   val sum_int : int list -> int

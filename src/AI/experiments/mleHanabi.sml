@@ -17,9 +17,11 @@ val ERR = mk_HOL_ERR "mleHanabi"
    Misc
    ------------------------------------------------------------------------- *)
 
-val hanabi_dir = HOLDIR ^ "/src/AI/experiments/result_hanabi"
-val summary_file = ref (hanabi_dir ^ "/default")
-fun summary s = (print_endline s; append_endline (!summary_file) s)
+val hanabi_dir = HOLDIR ^ "/src/AI/experiments/hanabi_result"
+val summary_dir = ref (hanabi_dir ^ "/default")
+fun summary file s = 
+  (print_endline s; 
+   append_endline (!summary_dir ^ "/" ^ file) s)
 fun sr r = pad 5 "0" (rts_round 3 r)
 type ex = real list * real list
 
@@ -114,10 +116,11 @@ fun string_of_hand hand =
 fun hand_of_string s =
   Vector.fromList (map card_of_string (String.tokens Char.isSpace s))
 
-fun nice_of_board {p1turn,lastmove1,lastmove2,hand1,hand2,clues1,clues2,
+fun pretty_board {p1turn,lastmove1,lastmove2,hand1,hand2,clues1,clues2,
   clues,score,bombs,deck,disc,pile} =
   String.concatWith "\n  "
-  [string_of_p1turn p1turn,
+  [
+   string_of_p1turn p1turn,
    String.concatWith " " (map its [score,clues,bombs,length deck]),
    "", string_of_hand hand1, string_of_hand clues1,
    "", string_of_hand hand2, string_of_hand clues2,
@@ -225,7 +228,9 @@ fun nohot n = let fun f i = 0.0 in List.tabulate (n,f) end
 fun oh_color c =  onehot (assoc c (number_snd 0 colorl_ext), length colorl_ext)
 fun oh_number i = onehot (i,length numberl_ext)
 fun oh_card (i,c) = oh_number i @ oh_color c
+
 fun oh_hand v = List.concat (map oh_card (vector_to_list v))
+fun oh_pile v = List.concat (map (oh_number o fst) (vector_to_list v))
 
 fun oh_move m = onehot (assoc m (number_snd 0 movel), length movel)
 
@@ -309,7 +314,7 @@ fun oh_board (d1,d2)
       oh_hand t1, 
       oh_hand t2, 
       oh_hand hand, 
-      oh_hand pile]
+      oh_pile pile]
     )
   end
 
@@ -464,9 +469,7 @@ fun best_move (d1,d2) nn board =
     val dis2 = filter (fn (x,_) => is_applicable board x) dis1
     val dis3 = normalize_distrib dis2
   in
-    if random_int (0,9) = 0 
-    then select_in_distrib dis3
-    else best_in_distrib dis3
+    best_in_distrib dis3
   end
 
 fun is_endboard board =
@@ -552,9 +555,7 @@ fun select_in_pol board vtot pol =
     val dis1 = map_assoc (value_choice vtot pol) movel
     val dis2 = filter (fn (x,_) => is_applicable board x) dis1
   in
-    if random_int (0,9) <> 0 
-    then best_in_distrib dis2 
-    else select_in_distrib dis2
+    best_in_distrib dis2
   end
 
 fun lookahead_once move (d1,d2) nne board =
@@ -634,9 +635,36 @@ fun lookahead nsim ((d1,d2),(nne,nnp)) board =
     val dis1 = combine (movel, normalize_proba (map f movel))
     val dis2 = filter (fn (x,_) => is_applicable board x) dis1
   in
-    (select_in_distrib dis2,
+    (if random_int (0,9) = 0 
+     then select_in_distrib dis2
+     else best_in_distrib dis2,
      extract_evalex (d1,d2) board rewarddisl,
      extract_poliex (d1,d2) board pol)
+  end
+
+
+(* -------------------------------------------------------------------------
+   Play game with lookahead and output the result to a file
+   ------------------------------------------------------------------------- *)
+
+fun example_game k player = 
+  let 
+    val _ = (mkDir_err hanabi_dir; mkDir_err (!summary_dir))
+    val file = "game" ^ its k  
+    fun f s = summary file s
+    val _ = erase_file (!summary_dir ^ "/" ^ file)
+    fun loop board =
+      if is_endboard board then f (pretty_board board) else 
+      let
+        val (move,_,_) = lookahead 400 player board
+        val newboard = apply_move move board 
+      in
+        f ("Move " ^ string_of_move move ^ " by");
+        f (pretty_board board);
+        loop newboard
+      end
+  in
+    loop (random_startboard ())
   end
 
 (* -------------------------------------------------------------------------
@@ -655,13 +683,13 @@ fun collect_boardl obs nnp board =
 fun print_stats_ll b ol fi ll = 
   let
     val newll = combine (ol,list_combine ll)
-    fun f (i,l) = summary (fi i ^ ": " ^ 
+    fun f (i,l) = summary "stats" (fi i ^ ": " ^ 
       sr (average_real l) ^ " " ^ sr (standard_deviation l))
   in
     app f newll;
     if b then 
       let val el =  map eval_expectancy ll in
-        summary ("eval_expectancy: " ^ sr (average_real el) ^ " " ^ 
+        summary "stats" ("eval_expectancy: " ^ sr (average_real el) ^ " " ^ 
                sr (absolute_deviation el))
       end
     else ()
@@ -674,9 +702,9 @@ fun stats_player ngame (obs,(nne,nnp)) =
     val lle = map (infer_eval obs nne) boardl
     val llp = map (infer_poli obs nnp) boardl
   in
-    summary "eval"; 
+    summary "stats" "eval"; 
     print_stats_ll true (List.tabulate (maxscore + 1,I)) its lle;
-    summary "poli"; 
+    summary "stats" "poli"; 
     print_stats_ll false movel string_of_move llp
   end
 
@@ -696,8 +724,8 @@ fun symdiff_player ngame (obs1,(nne1,nnp1)) (obs2,(nne2,nnp2)) =
     val diffe = average_real (map diff (combine (lle1,lle2)))
     val diffp = average_real (map diff (combine (llp1,llp2)))
   in
-    summary ("eval (mean absolute diff): " ^ sr diffe);
-    summary ("poli (mean absolute diff): " ^ sr diffp)
+    summary "stats" ("eval (mean absolute diff): " ^ sr diffe);
+    summary "stats" ("poli (mean absolute diff): " ^ sr diffp)
   end
 
 val player_mem = 
@@ -705,12 +733,14 @@ val player_mem =
        (random_nn (tanh,dtanh) [371,10],
        random_nn (tanh,dtanh) [371,20]))
 
-fun complete_summary k (obs,(nne,nnp)) =
-  (
-  summary ("Statistics " ^ its k);
-  stats_player 1000 (obs,(nne,nnp));
-  symdiff_player 1000 (obs,(nne,nnp)) (!player_mem)
-  )
+fun write_stats k scl player =
+  let fun f (a,b) = summary "stats" (its a ^ ": " ^ its b) in
+    summary "stats" ("Statistics " ^ its k);
+    stats_player 1000 player;
+    symdiff_player 1000 player (!player_mem);
+    app f (dlist (count_dict (dempty Int.compare) scl));
+    example_game k player
+  end  
 
 (* -------------------------------------------------------------------------
    Reinforcement learning loop
@@ -719,8 +749,8 @@ fun complete_summary k (obs,(nne,nnp)) =
 fun random_player () =
   let
     val n = length (oh_board empty_obs (random_startboard ()))
-    val nne = random_nn (tanh,dtanh) [n,200,11]
-    val nnp = random_nn (tanh,dtanh) [n,200,20]
+    val nne = random_nn (tanh,dtanh) [n, maxscore + 1, maxscore + 1]
+    val nnp = random_nn (tanh,dtanh) [n, length movel, length movel]
   in
     (empty_obs,(nne,nnp))
   end
@@ -737,44 +767,49 @@ fun ex_to_string (v1,v2) =
     f v1 ^ " ==> " ^ f v2
   end
 
-fun rl_loop_once k ((obs,(nne,nnp)),board,scl) =
+fun update_player (obs,(nne,nnp)) (evalex,poliex) =
   let
     val newobs = obs (* update_observable (board,obs) *)
-    val nsim = 400
-    val _ = print ","
-    val (move,evalex,poliex) = lookahead nsim (obs,(nne,nnp)) board
     val (newnne,_) = train_nn_batch 1 nne [scale_ex evalex]
     val (newnnp,_) = train_nn_batch 1 nnp [scale_ex poliex]
+  in
+    (newobs,(newnne,newnnp))
+  end
+
+fun rl_loop_once k (player,board,scl) =
+  let
+    val nsim = 400
+    val (move,evalex,poliex) = lookahead nsim player board
+    val newplayer = update_player player (evalex,poliex)
     val board1 = apply_move move board 
-    val _ = print (string_of_move move ^ "-" ^ its (#score board1))
+    val _ = print (string_of_move move ^ "-" ^ its (#score board1) ^ " ")
     val board2 = if is_endboard board1 then random_startboard () else board1
     val newscl = if is_endboard board1 
                  then first_n 1000 (#score board1 :: scl) 
                  else scl
-    val _ = 
-      if is_endboard board1 
-      then (print_endline "";
-            summary (sr (average_real (map Real.fromInt newscl))))
+    val _ = if is_endboard board1 then (print "\n";
+      summary "score" (its k ^ "," ^ sr (average_int newscl)))
       else ()
-    fun f (a,b) = summary (its a ^ ": " ^ its b)
-    val _ =
-      if k mod 1000 = 0 andalso k <> 0
-      then 
-        (
-        complete_summary k (obs,(nne,nnp)); 
-        app f (dlist (count_dict (dempty Int.compare) scl));         
-        player_mem := (obs,(nne,nnp)) 
-        )
+    val _ = if k mod 1000 = 0 andalso k <> 0
+      then (write_stats k scl player; player_mem := player)
       else ()
   in
-    ((newobs,(newnne,newnnp)),board2,newscl)
+    (newplayer,board2,newscl)
   end
 
 fun rl_loop_aux (k,n) x = 
   if k >= n then x else rl_loop_aux (k+1,n) (rl_loop_once k x)
 
+fun clean_expdir () =
+  (
+  mkDir_err hanabi_dir; 
+  mkDir_err (!summary_dir);
+  erase_file (!summary_dir ^ "/score");
+  erase_file (!summary_dir ^ "/stats")
+  )
+
 fun rl_loop n = 
-  let val _ = (mkDir_err hanabi_dir; erase_file (!summary_file)) in
+  let val _ = clean_expdir () in
     rl_loop_aux (0,n) (rl_start ())
   end
 
@@ -791,9 +826,6 @@ write_nn (hanabi_dir ^ "/run1_nnp") nnp;
 (* -------------------------------------------------------------------------
    Parallelization
    ------------------------------------------------------------------------- *)
-
-(*    val (newnne,_) = train_nn_batch 1 nne [evalex]
-    val (newnnp,_) = train_nn_batch 1 nnp [poliex] *)
 
 fun worker_play_game (obs,(nne,nnp)) _ =
   let
@@ -875,17 +907,10 @@ fun rl_para_once ncore k (player,scl) =
       (smlParallel.parmap_queue_extern ncore extspec player argl)
     val newplayer = train_player player (eex,pex)
     val newscl = first_n 1000 (scl_loc @ scl)
-    val _ = summary (sr (average_real (map Real.fromInt newscl)))
-    fun f (a,b) = summary (its a ^ ": " ^ its b)
+    val _ = summary "score" (its k ^ "," ^ (sr (average_int newscl)))
     val _ =
       if k mod 10 = 0 andalso k <> 0
-      then 
-        (
-        complete_summary k newplayer; 
-        summary "Score repartition";
-        app f (dlist (count_dict (dempty Int.compare) scl));         
-        player_mem := player
-        )
+      then (write_stats k scl newplayer; player_mem := player)
       else ()
   in
     (newplayer,newscl)
@@ -893,7 +918,7 @@ fun rl_para_once ncore k (player,scl) =
 
 fun rl_para ncore n = 
   let 
-    val _ = (mkDir_err hanabi_dir; erase_file (!summary_file)) 
+    val _ = clean_expdir ()
     val player = random_player ()
     val _ = player_mem := player
     fun loop (k,n) x = 
@@ -908,19 +933,23 @@ fun rl_para ncore n =
 load "mleHanabi"; open mleHanabi;
 load "mlNeuralNetwork"; open mlNeuralNetwork;
 load "aiLib"; open aiLib;
-summary_file := hanabi_dir ^ "/explo2";
-val ncore = 32;
+summary_dir := hanabi_dir ^ "/test";
+val nstep = 100000
+val (player,_,scl) = rl_loop nstep;
+
+val ncore = 20;
 val ngen = 1000;
 val (player,scl) = rl_para ncore ngen;
 *)
 
 
 (* 
-compare observables
-todo : parallelization (regroup exploration and training)
-evaluate the effect of the number of simulations.
-window for observables.
-output statistics after each game
+evaluate:
+-- remove all source of noise (noise + temperature)
+-- effect of nsim
+-- effect of observables with window
+-- effect of training with window
+-- effect of lookahead to depth 2
 *)
 
 

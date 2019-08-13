@@ -33,7 +33,7 @@ sig
     }
    
   val hanabi_dir : string
-  val summary_file : string ref
+  val summary_dir : string ref
   val player_mem : ((obsc_dict * obs_dict) * (nn * nn)) ref
 
   (* encoding *)
@@ -64,6 +64,7 @@ sig
   val apply_move : move -> board -> board
   val play_game : (obsc_dict * obs_dict) -> nn -> board -> int
   val play_ngame : (obsc_dict * obs_dict) -> nn -> int -> real
+  val example_game : int -> player -> unit
 
   (* statistics *)
   val stats_player : int -> player -> unit

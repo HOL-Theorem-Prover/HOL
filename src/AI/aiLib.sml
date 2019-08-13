@@ -426,7 +426,9 @@ fun list_imin l = case l of
 
 fun sum_int l = case l of [] => 0 | a :: m => a + sum_int m
 
+
 fun average_real l = sum_real l / Real.fromInt (length l)
+fun average_int l = average_real (map Real.fromInt l)
 
 fun standard_deviation l =
   let
