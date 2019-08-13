@@ -2099,39 +2099,6 @@ val SUMINF_2D = store_thm
    >> RW_TAC std_ss [BIJ_DEF, INJ_DEF, IN_UNIV, IN_CROSS]
    >> PROVE_TAC []);
 
-(* SUMINF_2D = SUMINF_2D_suminf + SUMINF_2D_summable
-   (as sums = suminf + summable) *)
-val SUMINF_2D_suminf = store_thm
-  ("SUMINF_2D_suminf",
-  ``!(f :num -> num -> real) (g :num -> real) (h :num -> num # num).
-       (!m n. 0 <= f m n) /\ (!n. summable (f n) /\ (suminf (f n) = g n)) /\ summable g /\
-       BIJ h UNIV (UNIV CROSS UNIV) ==>
-       (suminf (UNCURRY f o h) = suminf g)``,
-    rpt STRIP_TAC
- >> MATCH_MP_TAC EQ_SYM
- >> MATCH_MP_TAC SUM_UNIQ
- >> MATCH_MP_TAC SUMINF_2D
- >> ASM_REWRITE_TAC []
- >> GEN_TAC
- >> `summable (f n)` by METIS_TAC []
- >> METIS_TAC [SUMMABLE_SUM]);
-
-val SUMINF_2D_summable = store_thm
-  ("SUMINF_2D_summable",
-  ``!(f :num -> num -> real) (g :num -> real) (h :num -> num # num).
-       (!m n. 0 <= f m n) /\ (!n. summable (f n) /\ (suminf (f n) = g n)) /\ summable g /\
-       BIJ h UNIV (UNIV CROSS UNIV) ==>
-       summable (UNCURRY f o h)``,
-    rpt STRIP_TAC
- >> REWRITE_TAC [summable]
- >> Q.EXISTS_TAC `suminf g`
- >> MATCH_MP_TAC SUMINF_2D
- >> ASM_REWRITE_TAC []
- >> GEN_TAC
- >> Suff `f n sums suminf (f n)` >- METIS_TAC []
- >> MATCH_MP_TAC SUMMABLE_SUM
- >> ASM_REWRITE_TAC []);
-
 val POW_HALF_SER = store_thm
   ("POW_HALF_SER",
    ``(\n. (1 / 2) pow (n + 1)) sums 1``,
