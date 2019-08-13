@@ -19,5 +19,5 @@ sig
 
   val SET_TAC        : thm list -> tactic
   val ASM_SET_TAC    : thm list -> tactic
-  val SET_RULE       : term -> thm
+  val SET_CONV       : conv
 end

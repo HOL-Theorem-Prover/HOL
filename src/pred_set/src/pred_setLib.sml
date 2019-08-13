@@ -110,7 +110,7 @@ fun SET_TAC L =
 
 fun ASM_SET_TAC L = rpt (POP_ASSUM MP_TAC) >> SET_TAC L;
 
-fun SET_RULE tm = prove(tm, SET_TAC []);
+fun SET_CONV tm = prove (tm, SET_TAC []);
 end
 
 end

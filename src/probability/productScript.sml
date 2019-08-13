@@ -30,7 +30,7 @@ open cardinalTheory iterateTheory;
 val _ = new_theory "product";
 
 (* ------------------------------------------------------------------------- *)
-(* MESON, METIS, SET_TAC, SET_RULE, ASSERT_TAC, ASM_ARITH_TAC                *)
+(* MESON, METIS, ASSERT_TAC, ASM_ARITH_TAC                                   *)
 (* ------------------------------------------------------------------------- *)
 
 fun K_TAC _ = ALL_TAC;
