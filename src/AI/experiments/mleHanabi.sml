@@ -752,8 +752,8 @@ fun write_stats k scl player =
 fun random_player () =
   let
     val n = length (oh_board empty_obs (random_startboard ()))
-    val nne = random_nn (tanh,dtanh) [n, maxscore + 1, maxscore + 1]
-    val nnp = random_nn (tanh,dtanh) [n, length movel, length movel]
+    val nne = random_nn (tanh,dtanh) [n, 4 * (maxscore + 1), maxscore + 1]
+    val nnp = random_nn (tanh,dtanh) [n, 4 * (length movel), length movel]
   in
     (empty_obs,(nne,nnp))
   end
@@ -889,7 +889,7 @@ fun process_result r =
 fun train_player (obs,(nne,nnp)) (eex,pex) =
   let
     val ncore = 1
-    val nepoch = 100
+    val nepoch = 50
     val bsize = 16
     val newnne = train_nn ncore nepoch nne bsize eex
     val newnnp = train_nn ncore nepoch nnp bsize pex
@@ -931,7 +931,7 @@ fun rl_para ncore n =
 load "mleHanabi"; open mleHanabi;
 load "mlNeuralNetwork"; open mlNeuralNetwork;
 load "aiLib"; open aiLib;
-summary_dir := hanabi_dir ^ "/longtraining";
+summary_dir := hanabi_dir ^ "/restart";
 val ncore = 50;
 val ngen = 100;
 val (player,scl) = rl_para ncore ngen;
@@ -940,14 +940,16 @@ val (player,scl) = rl_para ncore ngen;
 
 (* 
 evaluate:
--- remove all source of noise (noise + temperature)
+-- source of noise (noise + temperature)
 -- effect of nsim
 -- effect of observables with window
 -- effect of training with window
 -- effect of lookahead to depth 2
 idea:
 -- standard (training,exploration,competition)
--- one nn (per maximal number of available moves): (clues + length deck)
+-- one nn and per player (per maximal number of available moves): 
+   games end when no clues are available and no moves are available.
+   force games to end on the last turn.
 *)
 
 
