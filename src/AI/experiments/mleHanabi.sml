@@ -937,7 +937,7 @@ val (player,_,scl) = rl_loop nstep;
 
 summary_dir := hanabi_dir ^ "/smallnn";
 val ncore = 40;
-val ngen = 1000;
+val ngen = 100;
 val (player,scl) = rl_para ncore ngen;
 *)
 
