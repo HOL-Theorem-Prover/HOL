@@ -764,4 +764,49 @@ val disjoint_sing = store_thm
   ("disjoint_sing", ``!a. disjoint {a}``,
     SET_TAC [disjoint_def]);
 
+(* ------------------------------------------------------------------------- *)
+(* Segment of natural numbers starting at a specific number                  *)
+(* ------------------------------------------------------------------------- *)
+
+val from_def = Define
+   `from n = {m:num | n <= m}`;
+
+val FROM_0 = store_thm ("FROM_0",
+  ``from 0 = univ(:num)``,
+    REWRITE_TAC [from_def, ZERO_LESS_EQ, GSPEC_T]);
+
+val IN_FROM = store_thm ("IN_FROM",
+  ``!m n. m IN from n <=> n <= m``,
+    SIMP_TAC std_ss [from_def, GSPECIFICATION]);
+
+val tail_not_empty = store_thm
+  ("tail_not_empty", ``!A m:num. {A n | m <= n} <> {}``,
+    RW_TAC std_ss [Once EXTENSION, NOT_IN_EMPTY, GSPECIFICATION]
+ >> Q.EXISTS_TAC `(SUC m)` >> RW_TAC arith_ss []);
+
+val tail_countable = store_thm
+  ("tail_countable", ``!A m:num. countable {A n | m <= n}``,
+    rpt GEN_TAC
+ >> Suff `{A n | m <= n} = IMAGE A {n | m <= n}`
+ >- PROVE_TAC [COUNTABLE_IMAGE_NUM]
+ >> RW_TAC std_ss [EXTENSION, IN_IMAGE, GSPECIFICATION]);
+
+val DISJOINT_COUNT_FROM = store_thm
+  ("DISJOINT_COUNT_FROM", ``!n. DISJOINT (count n) (from n)``,
+    RW_TAC arith_ss [from_def, count_def, DISJOINT_DEF, Once EXTENSION, NOT_IN_EMPTY,
+                     GSPECIFICATION, IN_INTER]);
+
+val DISJOINT_FROM_COUNT = store_thm
+  ("DISJOINT_FROM_COUNT", ``!n. DISJOINT (from n) (count n)``,
+    RW_TAC std_ss [Once DISJOINT_SYM, DISJOINT_COUNT_FROM]);
+
+val UNION_COUNT_FROM = store_thm
+  ("UNION_COUNT_FROM", ``!n. (count n) UNION (from n) = UNIV``,
+    RW_TAC arith_ss [from_def, count_def, Once EXTENSION, NOT_IN_EMPTY,
+                     GSPECIFICATION, IN_UNION, IN_UNIV]);
+
+val UNION_FROM_COUNT = store_thm
+  ("UNION_FROM_COUNT", ``!n. (from n) UNION (count n) = UNIV``,
+    RW_TAC std_ss [Once UNION_COMM, UNION_COUNT_FROM]);
+
 val _ = export_theory ();
