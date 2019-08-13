@@ -91,5 +91,26 @@ end
 
 val _ = add_pred_set_compset computeLib.the_compset
 
+(*---------------------------------------------------------------------------*)
+(* Tactic to automate some routine set theory by reduction to FOL            *)
+(* (Ported from HOL Light)                                                   *)
+(*---------------------------------------------------------------------------*)
+
+local open Tactic Tactical Rewrite numLib simpLib boolTheory
+           pairTheory pred_setTheory metisLib in
+fun SET_TAC L =
+    POP_ASSUM_LIST (K ALL_TAC) \\
+    rpt COND_CASES_TAC \\
+    REWRITE_TAC (append [EXTENSION, SUBSET_DEF, PSUBSET_DEF, DISJOINT_DEF,
+                         SING_DEF] L) \\
+    SIMP_TAC std_ss [NOT_IN_EMPTY, IN_UNIV, IN_UNION, IN_INTER, IN_DIFF,
+      IN_INSERT, IN_DELETE, IN_REST, IN_BIGINTER, IN_BIGUNION, IN_IMAGE,
+      GSPECIFICATION, IN_DEF, EXISTS_PROD] \\
+    METIS_TAC [];
+
+fun ASM_SET_TAC L = rpt (POP_ASSUM MP_TAC) >> SET_TAC L;
+
+fun SET_RULE tm = prove(tm, SET_TAC []);
+end
 
 end

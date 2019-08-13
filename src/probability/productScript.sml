@@ -1,6 +1,6 @@
 (* ========================================================================= *)
 (*                                                                           *)
-(*                              Product Theory                               *)
+(*               Products of natural numbers and real numbers                *)
 (*                                                                           *)
 (*        (c) Copyright 2015,                                                *)
 (*                       Muhammad Qasim,                                     *)
@@ -11,15 +11,19 @@
 (*            Contact:  <m_qasi@ece.concordia.ca>                            *)
 (*                                                                           *)
 (*                                                                           *)
-(* Note: This theory has been ported from hol light                          *)
+(*    Note: This theory was ported from HOL Light                            *)
 (*                                                                           *)
+(*                (c) University of Cambridge 1998                           *)
+(*                (c) Copyright, John Harrison and others 1998-2012          *)
 (* ========================================================================= *)
 
-open HolKernel Parse boolLib bossLib numLib unwindLib tautLib Arith prim_recTheory
-combinTheory quotientTheory arithmeticTheory hrealTheory realaxTheory realTheory
-realLib jrhUtils pairTheory seqTheory limTheory transcTheory listTheory mesonLib
-boolTheory pred_setTheory util_probTheory optionTheory numTheory
-sumTheory InductiveDefinition ind_typeTheory;
+open HolKernel Parse boolLib bossLib;
+
+open numLib unwindLib tautLib Arith prim_recTheory combinTheory quotientTheory
+     arithmeticTheory hrealTheory realaxTheory realTheory realLib jrhUtils
+     pairTheory seqTheory limTheory transcTheory listTheory mesonLib
+     boolTheory pred_setTheory pred_setLib optionTheory numTheory
+     sumTheory InductiveDefinition ind_typeTheory;
 
 open cardinalTheory iterateTheory;
 
@@ -36,17 +40,7 @@ fun METIS ths tm = prove(tm,METIS_TAC ths);
 val DISC_RW_KILL = DISCH_TAC THEN ONCE_ASM_REWRITE_TAC [] THEN
                    POP_ASSUM K_TAC;
 
-fun SET_TAC L =
-    POP_ASSUM_LIST(K ALL_TAC) THEN REPEAT COND_CASES_TAC THEN
-    REWRITE_TAC (append [EXTENSION, SUBSET_DEF, PSUBSET_DEF, DISJOINT_DEF,
-    SING_DEF] L) THEN
-    SIMP_TAC std_ss [NOT_IN_EMPTY, IN_UNIV, IN_UNION, IN_INTER, IN_DIFF,
-      IN_INSERT, IN_DELETE, IN_REST, IN_BIGINTER, IN_BIGUNION, IN_IMAGE,
-      GSPECIFICATION, IN_DEF, EXISTS_PROD] THEN METIS_TAC [];
-
 fun ASSERT_TAC tm = SUBGOAL_THEN tm STRIP_ASSUME_TAC;
-fun SET_RULE tm = prove(tm,SET_TAC []);
-fun ASM_SET_TAC L = REPEAT (POP_ASSUM MP_TAC) THEN SET_TAC L;
 
 val ASM_ARITH_TAC = REPEAT (POP_ASSUM MP_TAC) THEN ARITH_TAC;
 val ASM_REAL_ARITH_TAC = REPEAT (POP_ASSUM MP_TAC) THEN REAL_ARITH_TAC;
@@ -585,14 +579,16 @@ val PRODUCT_DELTA = store_thm ("PRODUCT_DELTA",
 (* Extend congruences.                                                       *)
 (* ------------------------------------------------------------------------- *)
 
-val th = store_thm ("th",
-   ``(!f g s.   (!x. x IN s ==> (f(x) = g(x)))
-                ==> (product s (\i. f(i)) = product s g)) /\
-     (!f g a b. (!i. a <= i /\ i <= b ==> (f(i) = g(i)))
-                ==> (product(a..b) (\i. f(i)) = product(a..b) g)) /\
-     (!f g p.   (!x. p x ==> (f x = g x))
-                ==> (product {y | p y} (\i. f(i)) = product {y | p y} g))``,
-    REPEAT STRIP_TAC THEN MATCH_MP_TAC PRODUCT_EQ THEN
-    ASM_SIMP_TAC std_ss [GSPECIFICATION, IN_NUMSEG]);
+val PRODUCT_CONG = store_thm
+  ("PRODUCT_CONG",
+  ``(!f g s.   (!x. x IN s ==> (f(x) = g(x)))
+           ==> (product s (\i. f(i)) = product s g)) /\
+    (!f g a b. (!i. a <= i /\ i <= b ==> (f(i) = g(i)))
+           ==> (product(a..b) (\i. f(i)) = product(a..b) g)) /\
+    (!f g p.   (!x. p x ==> (f x = g x))
+           ==> (product {y | p y} (\i. f(i)) = product {y | p y} g))``,
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC PRODUCT_EQ
+ >> ASM_SIMP_TAC std_ss [GSPECIFICATION, IN_NUMSEG]);
 
 val _ = export_theory();

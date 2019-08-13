@@ -11,21 +11,26 @@
 (*            Contact:  <m_qasi@ece.concordia.ca>                            *)
 (*                                                                           *)
 (*                                                                           *)
-(* Note: This theory has been ported from hol light                          *)
+(*    Note: This theory was ported from HOL Light                            *)
 (*                                                                           *)
 (*              (c) Copyright, John Harrison 1998-2015                       *)
-(*                (c) Copyright, Valentina Bruno 2010                        *)
-(*               (c) Copyright, Marco Maggesi 2014-2015                      *)
+(*              (c) Copyright, Valentina Bruno 2010                          *)
+(*              (c) Copyright, Marco Maggesi 2014-2015                       *)
 (* ========================================================================= *)
 
-open HolKernel Parse boolLib bossLib numLib unwindLib tautLib Arith prim_recTheory
-combinTheory quotientTheory arithmeticTheory hrealTheory realaxTheory realTheory
-jrhUtils pairTheory boolTheory pred_setTheory optionTheory numTheory
-sumTheory InductiveDefinition ind_typeTheory listTheory mesonLib
-seqTheory limTheory transcTheory realLib topologyTheory;
+open HolKernel Parse boolLib bossLib;
+
+open numTheory numLib unwindLib tautLib Arith prim_recTheory
+     combinTheory quotientTheory arithmeticTheory realaxTheory realTheory
+     jrhUtils pairTheory boolTheory pred_setTheory pred_setLib optionTheory
+     sumTheory InductiveDefinition ind_typeTheory listTheory mesonLib
+     seqTheory limTheory transcTheory realLib topologyTheory;
 
 open wellorderTheory cardinalTheory;
-open util_probTheory iterateTheory productTheory;
+
+(* these two theories must be loaded at last, because they may have redefined
+   something in real theories, e.g. "inf" *)
+open iterateTheory productTheory;
 
 val _ = new_theory "real_topology";
 val _ = ParseExtras.temp_loose_equality()
@@ -42,17 +47,7 @@ fun METIS ths tm = prove(tm,METIS_TAC ths);
 val DISC_RW_KILL = DISCH_TAC THEN ONCE_ASM_REWRITE_TAC [] THEN
                    POP_ASSUM K_TAC;
 
-fun SET_TAC L =
-    POP_ASSUM_LIST(K ALL_TAC) THEN REPEAT COND_CASES_TAC THEN
-    REWRITE_TAC (append [EXTENSION, SUBSET_DEF, PSUBSET_DEF, DISJOINT_DEF,
-    SING_DEF] L) THEN
-    SIMP_TAC std_ss [NOT_IN_EMPTY, IN_UNIV, IN_UNION, IN_INTER, IN_DIFF,
-      IN_INSERT, IN_DELETE, IN_REST, IN_BIGINTER, IN_BIGUNION, IN_IMAGE,
-      GSPECIFICATION, IN_DEF, EXISTS_PROD] THEN METIS_TAC [];
-
 fun ASSERT_TAC tm = SUBGOAL_THEN tm STRIP_ASSUME_TAC;
-fun SET_RULE tm = prove(tm,SET_TAC []);
-fun ASM_SET_TAC L = REPEAT (POP_ASSUM MP_TAC) THEN SET_TAC L;
 
 val ASM_ARITH_TAC = REPEAT (POP_ASSUM MP_TAC) THEN ARITH_TAC;
 val ASM_REAL_ARITH_TAC = REPEAT (POP_ASSUM MP_TAC) THEN REAL_ARITH_TAC;
@@ -149,10 +144,6 @@ val EMPTY_BIGUNION = store_thm ("EMPTY_BIGUNION",
 val EMPTY_BIGUNION = store_thm ("EMPTY_BIGUNION",
  ``!s. (BIGUNION s = {}) <=> !t. t IN s ==> (t = {})``,
   SET_TAC[]);
-
-val REAL_LT_RNEG = store_thm ("REAL_LT_RNEG",
- ``!x y. x < -y <=> x + y < &0:real``,
-  SIMP_TAC std_ss [real_lt, REAL_LE_LNEG, REAL_ADD_AC]);
 
 val UPPER_BOUND_FINITE_SET = store_thm ("UPPER_BOUND_FINITE_SET",
  ``!f:('a->num) s. FINITE(s) ==> ?a. !x. x IN s ==> f(x) <= a``,
@@ -3244,7 +3235,7 @@ val CLOSED_IN_CLOSED_EQ = store_thm ("CLOSED_IN_CLOSED_EQ",
 (* ------------------------------------------------------------------------- *)
 
 val closed_segment = new_definition ("closed_segment",
- ``closed_segment (l:(real#real)list) =
+  ``closed_segment (l:(real#real)list) =
    {((&1:real) - u) * FST(HD l) + u * SND(HD l) | &0 <= u /\ u <= &1}``);
 
 val open_segment = new_definition ("open_segment",
@@ -3266,8 +3257,8 @@ val OPEN_SEGMENT_ALT = store_thm ("OPEN_SEGMENT_ALT",
         POP_ASSUM (MP_TAC o ONCE_REWRITE_RULE [EQ_SYM_EQ]) THEN DISCH_TAC THEN
         ASM_REWRITE_TAC [] THEN REAL_ARITH_TAC);
 
-val _ = overload_on ("segment",``open_segment``);
-val _ = overload_on ("segment",``closed_segment``);
+val _ = overload_on ("segment", ``open_segment``);
+val _ = overload_on ("segment", ``closed_segment``);
 
 val segment = store_thm ("segment",
  ``(segment[a,b] = {(&1 - u) * a + u * b | &0 <= u /\ u <= &1:real}) /\
@@ -5955,21 +5946,12 @@ val LIM_WITHIN_OPEN = store_thm ("LIM_WITHIN_OPEN",
 (* Segment of natural numbers starting at a specific number.                 *)
 (* ------------------------------------------------------------------------- *)
 
-val from = new_definition ("from",
-  ``from n = {m:num | n <= m}``);
-
-val FROM_0 = store_thm ("FROM_0",
- ``from 0 = univ(:num)``,
-  REWRITE_TAC[from, ZERO_LESS_EQ] THEN SET_TAC[]);
-
-val IN_FROM = store_thm ("IN_FROM",
- ``!m n. m IN from n <=> n <= m``,
-  SIMP_TAC std_ss [from, GSPECIFICATION]);
+(* "from" is moved to util_probTheory *)
 
 val FROM_INTER_NUMSEG_GEN = store_thm ("FROM_INTER_NUMSEG_GEN",
  ``!k m n. (from k) INTER (m..n) = (if m < k then k..n else m..n)``,
   REPEAT GEN_TAC THEN COND_CASES_TAC THEN POP_ASSUM MP_TAC THEN
-  SIMP_TAC std_ss [from, GSPECIFICATION, IN_INTER, IN_NUMSEG, EXTENSION] THEN
+  SIMP_TAC std_ss [from_def, GSPECIFICATION, IN_INTER, IN_NUMSEG, EXTENSION] THEN
   ARITH_TAC);
 
 val FROM_INTER_NUMSEG_MAX = store_thm ("FROM_INTER_NUMSEG_MAX",
@@ -5978,13 +5960,13 @@ val FROM_INTER_NUMSEG_MAX = store_thm ("FROM_INTER_NUMSEG_MAX",
 
 val FROM_INTER_NUMSEG = store_thm ("FROM_INTER_NUMSEG",
  ``!k n. (from k) INTER (0:num..n) = k..n``,
-  SIMP_TAC std_ss [from, GSPECIFICATION, IN_INTER, IN_NUMSEG, EXTENSION] THEN
+  SIMP_TAC std_ss [from_def, GSPECIFICATION, IN_INTER, IN_NUMSEG, EXTENSION] THEN
   ARITH_TAC);
 
 val INFINITE_FROM = store_thm ("INFINITE_FROM",
- ``!n. INFINITE(from n)``,
-  GEN_TAC THEN KNOW_TAC ``from n = univ(:num) DIFF {i | i < n}`` THENL
-  [SIMP_TAC std_ss [EXTENSION, from, IN_DIFF, IN_UNIV, GSPECIFICATION] THEN
+  ``!n. INFINITE(from n)``,
+   GEN_TAC THEN KNOW_TAC ``from n = univ(:num) DIFF {i | i < n}`` THENL
+  [SIMP_TAC std_ss [EXTENSION, from_def, IN_DIFF, IN_UNIV, GSPECIFICATION] THEN
    ARITH_TAC, DISCH_TAC THEN ASM_REWRITE_TAC [] THEN
    MATCH_MP_TAC INFINITE_DIFF_FINITE THEN
    REWRITE_TAC [FINITE_NUMSEG_LT, num_INFINITE]]);
@@ -14365,14 +14347,16 @@ val OPEN_UNION_COMPACT_SUBSETS = store_thm ("OPEN_UNION_COMPACT_SUBSETS",
 (* ------------------------------------------------------------------------- *)
 
 val OPEN_interval = new_definition ("OPEN_interval",
-  ``OPEN_interval((a:real),(b:real)) = {x:real | a < x /\ x < b}``);
+  ``OPEN_interval ((a:real),(b:real)) = {x:real | a < x /\ x < b}``);
 
-val CLOSED_interval = new_definition ("CLOSED_interval",
-  ``CLOSED_interval (l:(real#real)list) =
-                      {x:real | FST(HD l) <= x /\ x <= SND(HD l)}``);
+(* TODO: `interval [a;b]` prints better than `interval [(a,b)]` *)
+val CLOSED_interval = new_definition
+  ("CLOSED_interval",
+  ``CLOSED_interval (l :(real # real) list) =
+      {x:real | FST (HD l) <= x /\ x <= SND (HD l)}``);
 
-val _ = overload_on ("interval",``OPEN_interval``);
-val _ = overload_on ("interval",``CLOSED_interval``);
+val _ = overload_on ("interval", ``OPEN_interval``);
+val _ = overload_on ("interval", ``CLOSED_interval``);
 
 val interval = store_thm ("interval",
  ``(interval (a,b) = {x:real | a < x /\ x < b}) /\
@@ -18095,7 +18079,7 @@ val SERIES_FROM = store_thm ("SERIES_FROM",
   REPEAT GEN_TAC THEN REWRITE_TAC[sums] THEN
   AP_THM_TAC THEN AP_THM_TAC THEN AP_TERM_TAC THEN ABS_TAC THEN
   AP_THM_TAC THEN AP_TERM_TAC THEN
-  SIMP_TAC std_ss [EXTENSION, numseg, from, GSPECIFICATION, IN_INTER] THEN ARITH_TAC);
+  SIMP_TAC std_ss [EXTENSION, numseg, from_def, GSPECIFICATION, IN_INTER] THEN ARITH_TAC);
 
 val SERIES_UNIQUE = store_thm ("SERIES_UNIQUE",
  ``!f:num->real l l' s. (f sums l) s /\ (f sums l') s ==> (l = l')``,

@@ -4,9 +4,9 @@
 (* HVG Group, Concordia University, Montreal                                 *)
 (* ------------------------------------------------------------------------- *)
 
-open HolKernel Parse boolLib bossLib metisLib combinTheory pred_setTheory seqTheory
+open HolKernel Parse boolLib bossLib metisLib combinTheory seqTheory
      res_quanTools pairTheory arithmeticTheory realTheory realLib transcTheory
-     real_sigmaTheory;
+     real_sigmaTheory pred_setTheory pred_setLib;
 
 val _ = new_theory "util_prob";
 val _ = ParseExtras.temp_loose_equality()
@@ -735,15 +735,6 @@ val MINIMAL_SUC_IMP = store_thm
 (* ------------------------------------------------------------------------- *)
 (*   Disjoint subsets (from lebesgue_measureTheory)                          *)
 (* ------------------------------------------------------------------------- *)
-
-fun SET_TAC L =
-    POP_ASSUM_LIST (K ALL_TAC) THEN REPEAT COND_CASES_TAC \\
-    REWRITE_TAC (append [EXTENSION, SUBSET_DEF, PSUBSET_DEF, DISJOINT_DEF,
-                         SING_DEF] L) \\
-    SIMP_TAC std_ss [NOT_IN_EMPTY, IN_UNIV, IN_UNION, IN_INTER, IN_DIFF,
-                     IN_INSERT, IN_DELETE, IN_REST, IN_BIGINTER, IN_BIGUNION,
-                     IN_IMAGE, GSPECIFICATION, IN_DEF, EXISTS_PROD, IN_FUNSET] \\
-    METIS_TAC [];
 
 (* moved here from lebesgue_measureTheory *)
 val disjoint_def = Define

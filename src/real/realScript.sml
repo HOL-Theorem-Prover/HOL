@@ -2,19 +2,6 @@
 (* Develop the theory of reals                                               *)
 (*---------------------------------------------------------------------------*)
 
-(*
-app load ["numLib",
-          "pairLib",
-          "mesonLib",
-          "tautLib",
-          "simpLib",
-          "Ho_Rewrite",
-          "AC",
-          "hol88Lib",
-          "jrhUtils",
-          "realaxTheory"];
-*)
-
 open HolKernel Parse boolLib hol88Lib numLib reduceLib pairLib
      arithmeticTheory numTheory prim_recTheory whileTheory
      mesonLib tautLib simpLib Ho_Rewrite Arithconv
@@ -2101,6 +2088,21 @@ val REAL_ARCH_LEAST = store_thm("REAL_ARCH_LEAST",
     ASM_REWRITE_TAC[] THEN FIRST_ASSUM MATCH_MP_TAC THEN
     FIRST_ASSUM(SUBST1_TAC o SYM) THEN REWRITE_TAC[PRE, LESS_SUC_REFL]]);
 
+val SIMP_REAL_ARCH = store_thm (* from extrealTheory *)
+  ("SIMP_REAL_ARCH",
+  ``!x:real. ?n. x <= &n``,
+    REWRITE_TAC [REAL_LE_LT]
+ >> FULL_SIMP_TAC std_ss [EXISTS_OR_THM]
+ >> RW_TAC std_ss []
+ >> DISJ1_TAC
+ >> MP_TAC (Q.SPEC `1` REAL_ARCH)
+ >> REWRITE_TAC [REAL_LT_01, REAL_MUL_RID]
+ >> RW_TAC std_ss []);
+
+val REAL_ARCH_POW = store_thm (* from extrealTheory *)
+  ("REAL_ARCH_POW", ``!x:real. ?n. x < 2 pow n``,
+    METIS_TAC [POW_2_LT, SIMP_REAL_ARCH, REAL_LET_TRANS]);
+
 (*---------------------------------------------------------------------------*)
 (* Now define finite sums; NB: sum(m,n) f = f(m) + f(m+1) + ... + f(m+n-1)   *)
 (*---------------------------------------------------------------------------*)
@@ -2459,6 +2461,14 @@ val REAL_LE_NEG2 = save_thm ("REAL_LE_NEG2", REAL_LE_NEG);
 
 val REAL_NEG_NEG = save_thm ("REAL_NEG_NEG", REAL_NEGNEG);
 
+val SIMP_REAL_ARCH_NEG = store_thm (* from extrealTheory *)
+  ("SIMP_REAL_ARCH_NEG",
+  ``!x:real. ?n. - &n <= x``,
+    RW_TAC std_ss []
+ >> `?n. -x <= &n` by PROVE_TAC [SIMP_REAL_ARCH]
+ >> Q.EXISTS_TAC `n`
+ >> PROVE_TAC [REAL_LE_NEG, REAL_NEG_NEG]);
+
 val REAL_LE_RNEG = store_thm ("REAL_LE_RNEG",
   ``!x y. x <= ~y = x + y <= 0``,
   REPEAT GEN_TAC THEN
@@ -2469,6 +2479,11 @@ val REAL_LE_RNEG = store_thm ("REAL_LE_RNEG",
   REWRITE_TAC[GSYM REAL_ADD_LINV] THEN
   REWRITE_TAC[REAL_NEG_ADD, REAL_NEG_NEG] THEN
   MATCH_ACCEPT_TAC REAL_ADD_SYM);
+
+val REAL_LT_RNEG = store_thm (* from real_topologyTheory *)
+  ("REAL_LT_RNEG",
+  ``!x y. x < -y <=> x + y < &0:real``,
+    SIMP_TAC std_ss [real_lt, REAL_LE_LNEG, REAL_ADD_ASSOC, REAL_ADD_SYM]);
 
 val REAL_POW_INV = Q.store_thm
  ("REAL_POW_INV",
