@@ -3319,23 +3319,23 @@ val CARD_COUNT = store_thm
 val _ = export_rewrites ["CARD_COUNT"]
 
 val COUNT_11 = store_thm
-  ("COUNT_11", ``(count n1 = count n2) <=> (n1 = n2)``,
+  ("COUNT_11", ``!n1 n2. (count n1 = count n2) <=> (n1 = n2)``,
     SRW_TAC [] [EQ_IMP_THM, EXTENSION]
  >> METIS_TAC [numLib.ARITH_PROVE ``x:num < y <=> ~(y <= x)``,
                LESS_EQ_REFL, LESS_EQUAL_ANTISYM]);
 val _ = export_rewrites ["COUNT_11"];
 
-val COUNT_DELETE = store_thm (* added by measureTheory *)
+val COUNT_DELETE = store_thm (* from measureTheory *)
   ("COUNT_DELETE", ``!n. count n DELETE n = count n``,
     SRW_TAC [] [EQ_IMP_THM, EXTENSION]);
 val _ = export_rewrites ["COUNT_DELETE"];
 
-val COUNT_MONO = store_thm (* added by extrealTheory *)
+val COUNT_MONO = store_thm (* from extrealTheory *)
   ("COUNT_MONO", ``!m n. m <= n ==> (count m) SUBSET (count n)``,
     SRW_TAC [] [count_def, SUBSET_DEF, GSPECIFICATION]
  >> RW_TAC arith_ss []);
 
-val COUNT_NOT_EMPTY = store_thm (* added by probabilityTheory *)
+val COUNT_NOT_EMPTY = store_thm (* from probabilityTheory *)
   ("COUNT_NOT_EMPTY", ``!n. 0 < n <=> count n <> {}``,
     RW_TAC arith_ss [Once EXTENSION, IN_COUNT, NOT_IN_EMPTY]
  >> EQ_TAC >> STRIP_TAC
@@ -5957,7 +5957,7 @@ val SUBSET_DIFF = store_thm ("SUBSET_DIFF",
                       NOT_IN_EMPTY]
  >> METIS_TAC []);
 
-val SUBSET_DIFF_DISJOINT = store_thm (* added by measureTheory *)
+val SUBSET_DIFF_DISJOINT = store_thm (* from measureTheory *)
   ("SUBSET_DIFF_DISJOINT",
   ``!s1 s2 s3. (s1 SUBSET (s2 DIFF s3)) ==> DISJOINT s1 s3``,
     PROVE_TAC [SUBSET_DIFF]);
