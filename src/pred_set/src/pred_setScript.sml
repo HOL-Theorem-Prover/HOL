@@ -1620,15 +1620,12 @@ val IMAGE_EMPTY =
       REWRITE_TAC[EXTENSION,IN_IMAGE,NOT_IN_EMPTY]);
 val _ = export_rewrites ["IMAGE_EMPTY"]
 
-val IMAGE_EMPTY_FUN = store_thm
-  ("IMAGE_EMPTY_FUN",
-  ``!s. s <> EMPTY ==> (IMAGE (\i. EMPTY) s = {EMPTY})``,
-    rpt STRIP_TAC
- >> RW_TAC std_ss [EXTENSION, IN_IMAGE, IN_SING, NOT_IN_EMPTY]
+val IMAGE_CONST = store_thm
+  ("IMAGE_CONST",
+  ``!y s. s <> EMPTY ==> (IMAGE (\i. y) s = {y})``,
+    RW_TAC std_ss [EXTENSION, IN_IMAGE, IN_SING, NOT_IN_EMPTY]
  >> EQ_TAC >> rpt STRIP_TAC
- >> Q.EXISTS_TAC `CHOICE s`
- >> ASM_REWRITE_TAC []
- >> MATCH_MP_TAC CHOICE_DEF
+ >> Q.EXISTS_TAC `x`
  >> ASM_REWRITE_TAC []);
 
 val IMAGE_ID =
