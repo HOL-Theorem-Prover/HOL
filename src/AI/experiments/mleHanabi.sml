@@ -900,7 +900,7 @@ fun train_player (obs,(nne,nnp)) (eex,pex) =
 fun rl_para_once ncore k (player,scl) =
   let
     val _ = print_endline ("Generation " ^ its k)
-    val argl = (List.tabulate (10000, fn _ => ()))
+    val argl = (List.tabulate (100, fn _ => ()))
     val (eex,pex,scl_loc) = process_result 
       (smlParallel.parmap_queue_extern ncore extspec player argl)
     val newplayer = train_player (random_player ()) (eex,pex)
@@ -931,12 +931,8 @@ fun rl_para ncore n =
 load "mleHanabi"; open mleHanabi;
 load "mlNeuralNetwork"; open mlNeuralNetwork;
 load "aiLib"; open aiLib;
-summary_dir := hanabi_dir ^ "/test";
-val nstep = 100000
-val (player,_,scl) = rl_loop nstep;
-
-summary_dir := hanabi_dir ^ "/smallnn";
-val ncore = 40;
+summary_dir := hanabi_dir ^ "/longtraining";
+val ncore = 50;
 val ngen = 100;
 val (player,scl) = rl_para ncore ngen;
 *)
