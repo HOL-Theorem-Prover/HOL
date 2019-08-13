@@ -310,6 +310,7 @@ fun oh_board (d1,d2)
     (List.concat 
      [onehot (bombs,maxbombs + 1),
       onehot (clues,maxclues + 1),
+      onehot (score,maxscore + 1),
       oh_moveo lastmove, 
       oh_hand t1, 
       oh_hand t2, 
@@ -370,7 +371,9 @@ fun apply_move_play move i
     hand2 =  if not p1turn then draw_card i newcard hand2 else hand2,
     clues1 = if p1turn then draw_card i nocard clues1 else clues1,
     clues2 = if not p1turn then draw_card i nocard clues2 else clues2,
-    clues = clues,
+    clues = if playb andalso fst played = 5 andalso clues < maxclues 
+            then clues + 1
+            else clues,
     score = if playb then score + 1 else score,
     bombs = if not playb then bombs + 1 else bombs,
     deck = tl deck,
@@ -762,11 +765,6 @@ fun rl_start () =
     (player, random_startboard (), [])
   end
 
-fun ex_to_string (v1,v2) =
-  let fun f v = String.concatWith " " (map sr (vector_to_list v)) in
-    f v1 ^ " ==> " ^ f v2
-  end
-
 fun update_player (obs,(nne,nnp)) (evalex,poliex) =
   let
     val newobs = obs (* update_observable (board,obs) *)
@@ -891,8 +889,8 @@ fun process_result r =
 fun train_player (obs,(nne,nnp)) (eex,pex) =
   let
     val ncore = 1
-    val nepoch = 1
-    val bsize = 1
+    val nepoch = 100
+    val bsize = 16
     val newnne = train_nn ncore nepoch nne bsize eex
     val newnnp = train_nn ncore nepoch nnp bsize pex
   in  
@@ -902,10 +900,10 @@ fun train_player (obs,(nne,nnp)) (eex,pex) =
 fun rl_para_once ncore k (player,scl) =
   let
     val _ = print_endline ("Generation " ^ its k)
-    val argl = (List.tabulate (100, fn _ => ()))
+    val argl = (List.tabulate (10000, fn _ => ()))
     val (eex,pex,scl_loc) = process_result 
       (smlParallel.parmap_queue_extern ncore extspec player argl)
-    val newplayer = train_player player (eex,pex)
+    val newplayer = train_player (random_player ()) (eex,pex)
     val newscl = first_n 1000 (scl_loc @ scl)
     val _ = summary "score" (its k ^ "," ^ (sr (average_int newscl)))
     val _ =
@@ -937,7 +935,8 @@ summary_dir := hanabi_dir ^ "/test";
 val nstep = 100000
 val (player,_,scl) = rl_loop nstep;
 
-val ncore = 20;
+summary_dir := hanabi_dir ^ "/smallnn";
+val ncore = 40;
 val ngen = 1000;
 val (player,scl) = rl_para ncore ngen;
 *)
@@ -950,6 +949,9 @@ evaluate:
 -- effect of observables with window
 -- effect of training with window
 -- effect of lookahead to depth 2
+idea:
+-- standard (training,exploration,competition)
+-- one nn (per maximal number of available moves): (clues + length deck)
 *)
 
 
