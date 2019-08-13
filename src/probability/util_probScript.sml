@@ -779,18 +779,6 @@ val IN_FROM = store_thm ("IN_FROM",
   ``!m n. m IN from n <=> n <= m``,
     SIMP_TAC std_ss [from_def, GSPECIFICATION]);
 
-val tail_not_empty = store_thm
-  ("tail_not_empty", ``!A m:num. {A n | m <= n} <> {}``,
-    RW_TAC std_ss [Once EXTENSION, NOT_IN_EMPTY, GSPECIFICATION]
- >> Q.EXISTS_TAC `(SUC m)` >> RW_TAC arith_ss []);
-
-val tail_countable = store_thm
-  ("tail_countable", ``!A m:num. countable {A n | m <= n}``,
-    rpt GEN_TAC
- >> Suff `{A n | m <= n} = IMAGE A {n | m <= n}`
- >- PROVE_TAC [COUNTABLE_IMAGE_NUM]
- >> RW_TAC std_ss [EXTENSION, IN_IMAGE, GSPECIFICATION]);
-
 val DISJOINT_COUNT_FROM = store_thm
   ("DISJOINT_COUNT_FROM", ``!n. DISJOINT (count n) (from n)``,
     RW_TAC arith_ss [from_def, count_def, DISJOINT_DEF, Once EXTENSION, NOT_IN_EMPTY,
