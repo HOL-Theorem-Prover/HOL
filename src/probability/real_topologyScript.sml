@@ -26,7 +26,7 @@ open numTheory numLib unwindLib tautLib Arith prim_recTheory
      sumTheory InductiveDefinition ind_typeTheory listTheory mesonLib
      seqTheory limTheory transcTheory realLib topologyTheory;
 
-open wellorderTheory cardinalTheory;
+open wellorderTheory cardinalTheory util_probTheory;
 
 (* these two theories must be loaded at last, because they may have redefined
    something in real theories, e.g. "inf" *)
