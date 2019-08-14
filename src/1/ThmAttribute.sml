@@ -3,12 +3,25 @@ struct
 
   local open Symtab in end
   type attrfun = {name:string,attrname:string,thm:Thm.thm} -> unit
+  type attrfuns = {localf: attrfun, storedf : attrfun}
   structure Map = Symtab
 
-  val funstore = ref (Map.empty : attrfun Map.table)
+  val funstore = ref (Map.empty : attrfuns Map.table)
+
+  val reserved_attrnames = ["local", "private", "nocompute", "schematic"]
+
+  fun okchar c = Char.isAlphaNum c orelse c = #"_" orelse c = #"'"
+  fun illegal_attrname s = Lib.mem s reserved_attrnames orelse
+                           String.isPrefix "induction=" s orelse
+                           s = "" orelse
+                           not (Char.isAlpha (String.sub(s,0))) orelse
+                           not (CharVector.all okchar s)
 
   fun register_attribute (kv as (s, f)) =
       let
+        val _ = not (illegal_attrname s) orelse
+                raise Feedback.mk_HOL_ERR "ThmAttribute" "register_attribute"
+                      ("Illegal attribute name: \""^s^"\"")
         val oldm = !funstore
         val newm =
             case Map.lookup oldm s of
@@ -16,19 +29,20 @@ struct
               | SOME _ => (
                   Feedback.HOL_WARNING "ThmAttribute"
                     "register_attribute"
-                    ("Replacing existing attribute function for "^s);
+                    ("Replacing existing attribute functions for "^s);
                   Map.update kv oldm
                 )
       in
         funstore := newm
       end
 
-  fun store_at_attribute (arg as {name,attrname,thm}) =
+  fun at_attribute nm sel (arg as {name,attrname,thm}) =
       case Map.lookup (!funstore) attrname of
           NONE => raise Feedback.mk_HOL_ERR "ThmAttribute"
-                        "store_at_attribute"
-                        ("No such attribute: " ^ attrname)
-        | SOME f => f arg
+                        nm ("No such attribute: " ^ attrname)
+        | SOME a => sel a arg
+  val store_at_attribute = at_attribute "store_at_attribute" #storedf
+  val local_attribute = at_attribute "local_attribute" #localf
 
   fun extract_attributes s = let
     open Substring

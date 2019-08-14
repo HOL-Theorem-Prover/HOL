@@ -195,10 +195,14 @@ fun new_exporter {settype = name, efns = efns as {add, remove}} = let
     export_deltasexp data
   end
 
-  fun attrfun {attrname,name,thm} = export (mk_store_name_safe name,thm)
+  fun store_attrfun {attrname,name,thm} = export (mk_store_name_safe name,thm)
+  fun local_attrfun {attrname,name,thm} =
+    add {thy = current_theory(), named_thms = [(name,thm)]}
 in
   data_map := Symtab.update(name,(segdata, efns)) (!data_map);
-  ThmAttribute.register_attribute (name, attrfun);
+  ThmAttribute.register_attribute (
+    name, {storedf = store_attrfun, localf = local_attrfun}
+  );
   List.app onload (ancestry "-");
   {export = export_nameonly, delete = delete}
 end
