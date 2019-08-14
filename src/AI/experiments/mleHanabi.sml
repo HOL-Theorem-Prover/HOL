@@ -752,8 +752,8 @@ fun write_stats k scl player =
 fun random_player () =
   let
     val n = length (oh_board empty_obs (random_startboard ()))
-    val nne = random_nn (tanh,dtanh) [n, n, n, maxscore + 1]
-    val nnp = random_nn (tanh,dtanh) [n, n, n, length movel]
+    val nne = random_nn (tanh,dtanh) [n, maxscore + 1, maxscore + 1]
+    val nnp = random_nn (tanh,dtanh) [n, length movel, length movel]
   in
     (empty_obs,(nne,nnp))
   end
@@ -828,7 +828,7 @@ write_nn (hanabi_dir ^ "/run1_nnp") nnp;
 fun worker_play_game (obs,(nne,nnp)) _ =
   let
     val _ = print_endline "new_game"
-    val nsim = 1600
+    val nsim = 400
     fun loop acc board =
       if is_endboard board then (split acc, #score board) else
       let
@@ -1095,9 +1095,9 @@ val n1 = average_int l1;
 load "mleHanabi"; open mleHanabi;
 load "mlNeuralNetwork"; open mlNeuralNetwork;
 load "aiLib"; open aiLib;
-summary_dir := hanabi_dir ^ "/low_lr";
+summary_dir := hanabi_dir ^ "/scaleup";
 val ncore = 50;
-val ngen = 1000;
+val ngen = 500;
 learningrate_glob := 0.0002;
 val (player,scl) = rl_para ncore ngen;
 *)
