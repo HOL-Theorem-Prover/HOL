@@ -18,7 +18,7 @@
 open HolKernel Parse boolLib bossLib numLib unwindLib tautLib Arith
 prim_recTheory combinTheory quotientTheory arithmeticTheory hrealTheory
 realaxTheory realTheory realLib jrhUtils pairTheory seqTheory limTheory
-transcTheory listTheory mesonLib boolTheory pred_setTheory pred_setLib
+transcTheory listTheory mesonLib boolTheory pred_setTheory
 util_probTheory optionTheory numTheory sumTheory InductiveDefinition
 ind_typeTheory;
 
@@ -39,8 +39,6 @@ val DISC_RW_KILL = DISCH_TAC THEN ONCE_ASM_REWRITE_TAC [] THEN
                    POP_ASSUM K_TAC;
 
 fun ASSERT_TAC tm = SUBGOAL_THEN tm STRIP_ASSUME_TAC;
-
-val SET_RULE = SET_CONV; (* for backward compatibility *)
 
 val ASM_ARITH_TAC = REPEAT (POP_ASSUM MP_TAC) THEN ARITH_TAC;
 val ASM_REAL_ARITH_TAC = REPEAT (POP_ASSUM MP_TAC) THEN REAL_ARITH_TAC;

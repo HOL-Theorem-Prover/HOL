@@ -6,7 +6,7 @@
 
 open HolKernel Parse boolLib bossLib metisLib combinTheory seqTheory
      res_quanTools pairTheory arithmeticTheory realTheory realLib transcTheory
-     real_sigmaTheory pred_setTheory pred_setLib;
+     real_sigmaTheory pred_setTheory;
 
 val _ = new_theory "util_prob";
 val _ = ParseExtras.temp_loose_equality()

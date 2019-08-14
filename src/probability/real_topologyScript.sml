@@ -22,7 +22,7 @@ open HolKernel Parse boolLib bossLib;
 
 open numTheory numLib unwindLib tautLib Arith prim_recTheory
      combinTheory quotientTheory arithmeticTheory realaxTheory realTheory
-     jrhUtils pairTheory boolTheory pred_setTheory pred_setLib optionTheory
+     jrhUtils pairTheory boolTheory pred_setTheory optionTheory
      sumTheory InductiveDefinition ind_typeTheory listTheory mesonLib
      seqTheory limTheory transcTheory realLib topologyTheory;
 
@@ -43,8 +43,6 @@ val Reverse = Tactical.REVERSE;
 fun K_TAC _ = ALL_TAC;
 fun MESON ths tm = prove(tm,MESON_TAC ths);
 fun METIS ths tm = prove(tm,METIS_TAC ths);
-
-val SET_RULE = SET_CONV; (* for backward compatibility *)
 
 val DISC_RW_KILL = DISCH_TAC THEN ONCE_ASM_REWRITE_TAC [] THEN
                    POP_ASSUM K_TAC;
