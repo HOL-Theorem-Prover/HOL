@@ -459,8 +459,8 @@ fun apply_move move board = case move of
 fun is_applicable board move = case move of
     ColorClue _ => #clues board > 0
   | NumberClue _ => #clues board > 0
-  | Discard _ => #clues board > 0
-  | _ => true
+  | Discard _ => true
+  | Play _ => true
 
 (* -------------------------------------------------------------------------
    Play game (filter examples that are all zero ar all ones.
@@ -888,12 +888,12 @@ fun process_result r =
 
 fun train_player (obs,(nne,nnp)) (eex,pex) =
   let
-    val ncore = 1
-    val nepoch = 50
+    val ncore = 4
+    val nepoch = 16
     val bsize = 16
     val newnne = train_nn ncore nepoch nne bsize eex
     val newnnp = train_nn ncore nepoch nnp bsize pex
-  in  
+  in
     (obs,(newnne,newnnp)) 
   end
 
@@ -903,7 +903,7 @@ fun rl_para_once ncore k (player,scl) =
     val argl = (List.tabulate (100, fn _ => ()))
     val (eex,pex,scl_loc) = process_result 
       (smlParallel.parmap_queue_extern ncore extspec player argl)
-    val newplayer = train_player (random_player ()) (eex,pex)
+    val newplayer = train_player player (eex,pex)
     val newscl = first_n 1000 (scl_loc @ scl)
     val _ = summary "score" (its k ^ "," ^ (sr (average_int newscl)))
     val _ =
@@ -925,9 +925,105 @@ fun rl_para ncore n =
     loop (0,n) (player,[])
   end
 
+fun is_endgame board = #clues board = 0 andalso length (#deck board) = 1 
 
+fun collect_endgame () =
+  let fun loop board = 
+    if is_endgame board then board else
+    let 
+      fun test move = 
+        is_applicable board move andalso
+        not (is_endboard (apply_move move board))             
+      fun random_move () = random_elem (filter test movel)    
+      val newboard = apply_move (random_move ()) board 
+    in
+      if is_endboard newboard then loop board else loop newboard
+    end
+  in
+    loop (random_startboard ())
+  end
 
 (*
+load "mleHanabi"; open mleHanabi;
+load "mlNeuralNetwork"; open mlNeuralNetwork;
+load "aiLib"; open aiLib;  
+val boardl = List.tabulate (1000, fn _ => collect_endgame ());
+val boardl' = filter (fn x => #score x = 4) boardl;
+length boardl';
+
+
+fun random_player () =
+  let
+    val n = length (oh_board empty_obs (random_startboard ()))
+    val nne = random_nn (tanh,dtanh) [n,n,11]
+    val nnp = random_nn (tanh,dtanh) [n,n,20]
+  in
+    (empty_obs,(nne,nnp))
+  end
+
+val player = random_player ();
+
+fun collect_example_aux acc1 acc2 player boardl =
+  if null boardl then (acc1,acc2) else
+  let val (_,evalex,poliex) = lookahead 1600 player (hd boardl) in
+    print_endline (its (length boardl));
+    collect_example_aux (evalex :: acc1) (poliex :: acc2) player (tl boardl)
+  end
+
+fun collect_example player boardl = collect_example_aux [] [] player boardl;
+
+val (eex,pex) = collect_example player boardl';
+
+learningrate_glob := 0.0002;
+fun train_player (obs,(nne,nnp)) (eex,pex) =
+  let
+    val ncore = 4
+    val nepoch = 100
+    val bsize = 16
+    val newnne = train_nn ncore nepoch nne bsize eex
+    val newnnp = train_nn ncore nepoch nnp bsize pex
+  in  
+    (obs,(newnne,newnnp)) 
+  end
+
+val newplayer = train_player (random_player ()) (eex,pex);
+
+fun accuracy_pol player boardl =
+  let 
+    fun f board =
+      let val (move,_,_) = lookahead 1 player board in
+        #score (apply_move move board)
+      end
+  in
+    average_int (map f boardl)
+  end;
+
+fun accuracy_eval (obs,(nne,nnp)) l =
+  let 
+    fun f x = (normalize_proba o infer_nn nne o oh_board obs) x
+    val l1 = map f l
+    val l2 = list_combine l1
+  in
+    map average_real l2
+  end;
+  
+fun accuracy_poleval player boardl =
+  let 
+    fun f board =
+      let val (move,_,_) = lookahead 400 player board in
+        #score (apply_move move board)
+      end
+  in
+    average_int (map f boardl)
+  end;
+
+val sc1 = accuracy_pol newplayer boardl';
+val sc2 = accuracy_poleval newplayer boardl';
+val sc3 = accuracy_eval newplayer boardl';
+*)
+
+(*
+learningrate_glob := 0.0002;
 load "mleHanabi"; open mleHanabi;
 load "mlNeuralNetwork"; open mlNeuralNetwork;
 load "aiLib"; open aiLib;
@@ -935,6 +1031,7 @@ summary_dir := hanabi_dir ^ "/restart";
 val ncore = 50;
 val ngen = 100;
 val (player,scl) = rl_para ncore ngen;
+
 *)
 
 

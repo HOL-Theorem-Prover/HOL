@@ -76,4 +76,8 @@ sig
   val extspec : (player, unit, (ex list * ex list) * int) smlParallel.extspec
   val rl_para : int -> int -> player * int list
 
+  (* *)
+  val collect_endgame : unit -> board
+
+
 end
