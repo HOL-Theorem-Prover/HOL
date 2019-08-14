@@ -52,7 +52,7 @@ sig
   
   (* player *)
   val random_player : unit -> player
-  
+  val random_playerdict : unit -> (int * int, player) Redblackmap.dict
   (* guesses *)
   val guess_board : obsc_dict -> board -> board
   
@@ -65,6 +65,7 @@ sig
   val play_game : (obsc_dict * obs_dict) -> nn -> board -> int
   val play_ngame : (obsc_dict * obs_dict) -> nn -> int -> real
   val example_game : int -> player -> unit
+  val pd_play_game : (int * int, player) Redblackmap.dict -> int
 
   (* statistics *)
   val stats_player : int -> player -> unit
@@ -77,7 +78,10 @@ sig
   val rl_para : int -> int -> player * int list
 
   (* *)
-  val collect_endgame : unit -> board
-
+  val slice_board : board -> int * int
+  val collect_boardl_forced : unit -> board list
+  val pd_collect_example : (int * int, player) Redblackmap.dict -> board list 
+    -> (ex list * ex list)
+  val pd_train_player : player -> (ex list * ex list) -> player
 
 end

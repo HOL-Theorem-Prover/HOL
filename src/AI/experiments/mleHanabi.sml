@@ -456,7 +456,7 @@ fun apply_move move board = case move of
   | ColorClue c => apply_move_clue move (update_color c) board
   | NumberClue n => apply_move_clue move (update_number n) board
 
-fun is_applicable board move = case move of
+fun is_applicable (board:board) move = case move of
     ColorClue _ => #clues board > 0
   | NumberClue _ => #clues board > 0
   | Discard _ => true
@@ -752,8 +752,8 @@ fun write_stats k scl player =
 fun random_player () =
   let
     val n = length (oh_board empty_obs (random_startboard ()))
-    val nne = random_nn (tanh,dtanh) [n, 4 * (maxscore + 1), maxscore + 1]
-    val nnp = random_nn (tanh,dtanh) [n, 4 * (length movel), length movel]
+    val nne = random_nn (tanh,dtanh) [n, n, n, maxscore + 1]
+    val nnp = random_nn (tanh,dtanh) [n, n, n, length movel]
   in
     (empty_obs,(nne,nnp))
   end
@@ -828,7 +828,7 @@ write_nn (hanabi_dir ^ "/run1_nnp") nnp;
 fun worker_play_game (obs,(nne,nnp)) _ =
   let
     val _ = print_endline "new_game"
-    val nsim = 400
+    val nsim = 1600
     fun loop acc board =
       if is_endboard board then (split acc, #score board) else
       let
@@ -900,10 +900,10 @@ fun train_player (obs,(nne,nnp)) (eex,pex) =
 fun rl_para_once ncore k (player,scl) =
   let
     val _ = print_endline ("Generation " ^ its k)
-    val argl = (List.tabulate (100, fn _ => ()))
+    val argl = (List.tabulate (1000, fn _ => ()))
     val (eex,pex,scl_loc) = process_result 
       (smlParallel.parmap_queue_extern ncore extspec player argl)
-    val newplayer = train_player player (eex,pex)
+    val newplayer = train_player (random_player ()) (eex,pex)
     val newscl = first_n 1000 (scl_loc @ scl)
     val _ = summary "score" (its k ^ "," ^ (sr (average_int newscl)))
     val _ =
@@ -925,11 +925,16 @@ fun rl_para ncore n =
     loop (0,n) (player,[])
   end
 
-fun is_endgame board = #clues board = 0 andalso length (#deck board) = 1 
+(* -------------------------------------------------------------------------
+   Experiment: trying to learn each step backward from the endgame.
+   ------------------------------------------------------------------------- *)
 
-fun collect_endgame () =
+fun is_endgame (board:board) = 
+  #clues board = 0 andalso length (#deck board) = 1 
+
+fun collect_boardl_forced () =
   let fun loop board = 
-    if is_endgame board then board else
+    if is_endgame board then [board] else
     let 
       fun test move = 
         is_applicable board move andalso
@@ -937,45 +942,116 @@ fun collect_endgame () =
       fun random_move () = random_elem (filter test movel)    
       val newboard = apply_move (random_move ()) board 
     in
-      if is_endboard newboard then loop board else loop newboard
+      if is_endboard newboard then loop board else board :: loop newboard
     end
   in
     loop (random_startboard ())
   end
 
-(*
-load "mleHanabi"; open mleHanabi;
-load "mlNeuralNetwork"; open mlNeuralNetwork;
-load "aiLib"; open aiLib;  
-val boardl = List.tabulate (1000, fn _ => collect_endgame ());
-val boardl' = filter (fn x => #score x = 4) boardl;
-length boardl';
-
-
-fun random_player () =
-  let
-    val n = length (oh_board empty_obs (random_startboard ()))
-    val nne = random_nn (tanh,dtanh) [n,n,11]
-    val nnp = random_nn (tanh,dtanh) [n,n,20]
+fun random_playerdict () = 
+  let val l = cartesian_product 
+    (List.tabulate (16, fn x => x + 1)) (List.tabulate (9,I)) 
   in
-    (empty_obs,(nne,nnp))
+    dnew (cpl_compare Int.compare Int.compare) 
+    (map_assoc (fn x => random_player ()) l)
   end
 
-val player = random_player ();
+fun slice_board board = (length (#deck board), #clues board)
 
-fun collect_example_aux acc1 acc2 player boardl =
+fun pd_infer_eval playerdict board =
+  if is_endboard board 
+  then onehot (#score board,maxscore + 1)
+  else 
+    let val (obs,(nne,_)) =  dfind (slice_board board) playerdict in
+      (normalize_proba o infer_nn nne o oh_board obs) board
+    end
+
+fun pd_infer_poli playerdict board =
+  let val (obs,(_,nnp)) = dfind (slice_board board) playerdict in
+    normalize_proba (infer_nn nnp (oh_board obs board))
+  end
+
+fun pd_lookahead_once move playerdict board =
+  let 
+    val ((d1,_),_) = dfind (slice_board board) playerdict
+    val board1 = guess_board d1 board
+    val board2 = apply_move move board1 
+  in
+    pd_infer_eval playerdict board2
+  end
+
+fun pd_lookahead_loop nsim playerdict board 
+  (sumtot,vtot) pol rewarddisl =
+  if nsim <= 0 then ((sumtot,vtot),pol,rewarddisl) else
+  let 
+    val move = select_in_pol board vtot pol
+    val rewarddis = pd_lookahead_once move playerdict board 
+    val reward = eval_expectancy rewarddis / (Real.fromInt maxscore)
+    val (polv,sum,vis) = dfind move pol
+    val newpol = dadd move (polv, sum + reward, vis + 1.0) pol
+  in
+    pd_lookahead_loop (nsim - 1) playerdict board 
+    (sumtot + reward, vtot + 1.0) newpol (rewarddis :: rewarddisl)
+  end
+
+fun pd_lookahead_aux nsim playerdict board =
+  let
+    val (sumtot,vtot) = 
+      (eval_expectancy (pd_infer_eval playerdict board), 1.0)
+    val pol1 = combine (movel, pd_infer_poli playerdict board)
+    val pol2 = add_noise pol1
+    val pol3 = dnew compare_move (map (fn (a,b) => (a,(b,0.0,0.0))) pol2)
+  in
+    pd_lookahead_loop nsim playerdict board (sumtot,vtot) pol3 []
+  end
+
+fun pd_lookahead nsim playerdict board =
+  let 
+    val (_,pol,rewarddisl) =
+      pd_lookahead_aux nsim playerdict board
+    fun f m = #3 (dfind m pol)
+    val dis1 = combine (movel, normalize_proba (map f movel))
+    val dis2 = filter (fn (x,_) => is_applicable board x) dis1
+  in
+    (if random_int (0,9) = 0 
+     then select_in_distrib dis2
+     else best_in_distrib dis2,
+     extract_evalex empty_obs board rewarddisl,
+     extract_poliex empty_obs board pol)
+  end
+
+fun pd_collect_example_aux acc1 acc2 playerdict boardl =
   if null boardl then (acc1,acc2) else
-  let val (_,evalex,poliex) = lookahead 1600 player (hd boardl) in
+  let val (_,evalex,poliex) = pd_lookahead 400 playerdict (hd boardl) in
     print_endline (its (length boardl));
-    collect_example_aux (evalex :: acc1) (poliex :: acc2) player (tl boardl)
+    pd_collect_example_aux (evalex :: acc1) (poliex :: acc2) 
+      playerdict (tl boardl)
   end
 
-fun collect_example player boardl = collect_example_aux [] [] player boardl;
+fun pd_collect_example playerdict boardl = 
+  pd_collect_example_aux [] [] playerdict boardl;
 
-val (eex,pex) = collect_example player boardl';
 
-learningrate_glob := 0.0002;
-fun train_player (obs,(nne,nnp)) (eex,pex) =
+fun pd_play_game playerdict =
+  let
+    val _ = print_endline "new_game"
+    val nsim = 400
+    fun loop board =
+      if is_endboard board then #score board else
+      let
+        val (a,b) = slice_board board
+        val _ = print_endline (its a ^ " " ^ its b)
+        val (move,_,_) = pd_lookahead nsim playerdict board
+        val _ = print_endline (string_of_move move)
+        val newboard = apply_move move board 
+      in
+        loop newboard
+      end
+  in
+    loop (random_startboard ())
+  end
+
+fun pd_train_player (obs,(nne,nnp)) (eex,pex) =
   let
     val ncore = 4
     val nepoch = 100
@@ -986,52 +1062,44 @@ fun train_player (obs,(nne,nnp)) (eex,pex) =
     (obs,(newnne,newnnp)) 
   end
 
-val newplayer = train_player (random_player ()) (eex,pex);
 
-fun accuracy_pol player boardl =
+(*
+load "mleHanabi"; open mleHanabi;
+load "mlNeuralNetwork"; open mlNeuralNetwork;
+load "aiLib"; open aiLib;  
+val boardll = List.tabulate (1000, fn _ => collect_boardl_forced ());
+val boardl = List.concat boardll;
+val boardl1 = map (fn x => (slice_board x, x)) boardl;
+val boarddict = dregroup (cpl_compare Int.compare Int.compare) boardl1;
+learningrate_glob := 0.0002;
+
+fun update_playerdict ((a,b),playerdict) =
   let 
-    fun f board =
-      let val (move,_,_) = lookahead 1 player board in
-        #score (apply_move move board)
-      end
+    val boardl = dfind (a,b) boarddict
+    val (eex,pex) = pd_collect_example newplayerdict boardl
+    val newplayer = pd_train_player (random_player ()) (eex,pex)
   in
-    average_int (map f boardl)
+    dadd (a,b) newplayer playerdict
   end;
 
-fun accuracy_eval (obs,(nne,nnp)) l =
-  let 
-    fun f x = (normalize_proba o infer_nn nne o oh_board obs) x
-    val l1 = map f l
-    val l2 = list_combine l1
-  in
-    map average_real l2
-  end;
-  
-fun accuracy_poleval player boardl =
-  let 
-    fun f board =
-      let val (move,_,_) = lookahead 400 player board in
-        #score (apply_move move board)
-      end
-  in
-    average_int (map f boardl)
-  end;
+val splicel = cartesian_product 
+  (List.tabulate (16, fn x => x + 1)) (List.tabulate (9,I)) 
 
-val sc1 = accuracy_pol newplayer boardl';
-val sc2 = accuracy_poleval newplayer boardl';
-val sc3 = accuracy_eval newplayer boardl';
+val finalplayerdict = foldl update_playerdict playerdict splicel;
+
+val l1 = List.tabulate (100, fn _ => pd_play_game finalplayerdict);
+val n1 = average_int l1;
 *)
 
 (*
-learningrate_glob := 0.0002;
 load "mleHanabi"; open mleHanabi;
 load "mlNeuralNetwork"; open mlNeuralNetwork;
 load "aiLib"; open aiLib;
-summary_dir := hanabi_dir ^ "/restart";
+summary_dir := hanabi_dir ^ "/low_lr";
 val ncore = 50;
-val ngen = 100;
+val ngen = 1000;
+learningrate_glob := 0.0002;
 val (player,scl) = rl_para ncore ngen;
-
 *)
 
 
