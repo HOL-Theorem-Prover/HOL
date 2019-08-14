@@ -115,7 +115,7 @@ evaluations.")
         (goto-char (match-beginning 0)))))
 (defvar hol-beg-pos nil) ; ugh, global, but easiest this way
 (defvar hol-quoted-theorem-proof-re-begin
-  "Theorem[[:space:]]+[A-Za-z0-9'_]*\\(\\[[A-Za-z0-9_,]+\\]\\)?[[:space:]]*:")
+  "\\(Theorem\\|Triviality\\)[[:space:]]+[A-Za-z0-9'_]*\\(\\[[A-Za-z0-9_,]+\\]\\)?[[:space:]]*:")
 (defvar hol-quoted-definition-re-begin
   (concat "Definition[[:space:]]+[A-Za-z0-9'_]+"
           "\\(\\[[A-Za-z0-9_,=]+\\]\\)?[[:space:]]*:"
@@ -551,7 +551,7 @@ With a prefix ARG, uses `expandf' rather than `e'."
 (defun hol-string-contains-term-delimiters-p (s)
   (< 0 (count-text-match
         (concat "^Theorem\\|^Definition\\|^Proof\\|^\\(Co\\)?Inductive\\|"
-                "^Termination\\|^End\\|[“”‘’`]")
+                "^Termination\\|^End\\|[“”‘’`]\\|^Triviality")
         s)))
 
 
@@ -705,6 +705,8 @@ starts >%s%s<"
                 ((string= ms "‘") (remove-quoted-hol-term "‘" "’" m))
                 ((string-prefix-p "Theorem" ms)
                  (remove-quoted-hol-term ms "^Proof" m))
+                ((string-prefix-p "Triviality" ms)
+                 (remove-quoted-hol-term ms "^Proof" m))
                 ((string-prefix-p "Definition" ms)
                  (remove-quoted-hol-term ms "^\\(Termination\\|End\\)" m))
                 ((or (string-prefix-p "Inductive" ms)
@@ -725,7 +727,8 @@ starts >%s%s<"
               (word-list-to-regexp
                '("val" "fun" "in" "infix[lr]?" "open" "local" "type"
                  "datatype" "nonfix" "exception" "end" "structure"
-                 "Theorem" "Definition" "Inductive" "CoInductive"))))
+                 "Theorem" "Definition" "Inductive" "CoInductive"
+                 "Triviality"))))
 
 (setq sml-struct-id-regexp "[A-Za-z][A-Za-z0-9_]*")
 
@@ -1936,7 +1939,7 @@ second is to show the new term.
 (font-lock-add-keywords
  'sml-mode
  '("^Theorem\\>" "^Proof\\>" "^QED\\>" "^Definition\\>" "^\\(Co\\)?Inductive\\>"
-   "^Termination\\>" "^End\\>" "^Datatype\\>" "^Type\\>"))
+   "^Termination\\>" "^End\\>" "^Datatype\\>" "^Type\\>" "^Triviality\\>"))
 
 (defgroup hol-faces nil "Faces used in pretty-printing HOL values"
   :group 'faces

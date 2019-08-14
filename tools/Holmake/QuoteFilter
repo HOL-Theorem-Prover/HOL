@@ -43,10 +43,11 @@ fun resetstate (QFS{comdepth, pardepth, antiquote_stack, mltype_stack,...}) =
 fun ECHO (QFS _) s = s
 fun print (QFS _) s = s
 
-fun dest_ml_thm_binding bindname s =
+fun dest_ml_thm_binding s =
     let
-      val bsz = size bindname
-      val ss = Substring.dropl Char.isSpace (Substring.extract(s, bsz, NONE))
+      val ss = s |> Substring.full
+                 |> Substring.dropl Char.isAlpha
+                 |> Substring.dropl Char.isSpace
       val (nmss, attrs) = Substring.position "[" ss
     in
       (Substring.string nmss, Substring.string ss,
@@ -57,6 +58,21 @@ fun dest_ml_thm_binding bindname s =
                         |> String.fields (fn c => c = #",")
       )
     end
+
+fun dest_ml_thm_binding_triv s =
+    let
+      val (thmname, with_attrs, attrs) = dest_ml_thm_binding s
+      val (with_attrs, attrs) =
+          if String.isPrefix "Triviality" s then
+            if null attrs then (thmname ^ "[local]", ["local"])
+            else
+              (String.substring(with_attrs, 0, size with_attrs - 1) ^ ",local]",
+               attrs @ ["local"])
+          else (with_attrs,attrs)
+    in
+      (thmname, with_attrs, attrs)
+    end
+
 
 fun indthm_munge s =
     if String.isSuffix "_def" s then
@@ -144,7 +160,7 @@ fullquotebegin = "``" | "\226\128\156" ;
 fullquoteend = "``" | "\226\128\157";
 quotebegin = "`" | "\226\128\152";
 quoteend = "`" | "\226\128\153";
-Theorempfx = "Theorem"{ws}+{alphaMLid}("["{alphaMLid_list}"]")?;
+Theorempfx = ("Theorem"|"Triviality"){ws}+{alphaMLid}("["{alphaMLid_list}"]")?;
 Definitionpfx =
   "Definition"{ws}+{alphaMLid}("["{defn_attribute_list}"]")?{ws}*":";
 declforms = "val"|"fun"|"structure"|"signature"|"functor"|"abstype"|"datatype"|"exception"|"open"|";"|"infix"[lr]?|"local";
@@ -199,7 +215,7 @@ Inductivepfx = ("Co")?"Inductive"{ws}+{alphaMLid}{ws}*":";
        val s0 = String.substring(yytext,0,size yytext - 1) (* drop = *)
        val s = s0 |> Substring.full |> Substring.dropr Char.isSpace
                   |> Substring.string (* drop wspace after name *)
-       val (tyname, _, attrs) = dest_ml_thm_binding "Type" s
+       val (tyname, _, attrs) = dest_ml_thm_binding s
        val fnm = "type_abbrev" ^ String.concat (map (fn s => "_" ^ s) attrs)
      in
        mltype_stack := [];
@@ -220,12 +236,12 @@ Inductivepfx = ("Co")?"Inductive"{ws}+{alphaMLid}{ws}*":";
       val s0 = String.extract(yytext,0,SOME (size yytext - 1)) (* drop colon *)
       val s = s0 |> Substring.full |> Substring.dropr Char.isSpace
                  |> Substring.string (* drop wspace between name and lparen *)
-      val (thname,with_attrs_string,_) = dest_ml_thm_binding "Theorem" s
+       val (thmname,with_attrs,attrs) = dest_ml_thm_binding_triv s
     in
       mltype_stack := [];
       YYBEGIN quote;
       ECHO yyarg (pfx ^
-                  "val " ^ thname ^ " = Q.store_thm(\"" ^ with_attrs_string ^
+                  "val " ^ thmname ^ " = Q.store_thm(\"" ^ with_attrs ^
                   "\"," ^
                   "[QUOTE \""^locpragma yyarg (yytext,yypos) 0)
     end
@@ -244,8 +260,7 @@ Inductivepfx = ("Co")?"Inductive"{ws}+{alphaMLid}{ws}*":";
        val s0 = String.extract(yytext,0,SOME(size yytext - 1)) (* drop : *)
        val s = s0 |> Substring.full |> Substring.dropr Char.isSpace
                   |> Substring.string (* drop w/space between name and : *)
-       val (thname, with_attrs_string, attrs) =
-           dest_ml_thm_binding "Definition" s
+       val (thname, with_attrs_string, attrs) = dest_ml_thm_binding s
        val ind_thm =
            case List.find (String.isPrefix "induction=") attrs of
                NONE => indthm_munge thname
@@ -268,16 +283,16 @@ Inductivepfx = ("Co")?"Inductive"{ws}+{alphaMLid}{ws}*":";
      let
        infix |> fun x |> f = f x
        val pfx = case !mltype_stack of inTHMVAL :: _ => ");" | _ => ""
-       val s0 = String.extract(yytext,0,SOME (size yytext - 1)) (* drop lpar *)
+       val s0 = String.extract(yytext,0,SOME (size yytext - 1)) (* drop = *)
        val s = s0 |> Substring.full |> Substring.dropr Char.isSpace
                   |> Substring.string (* drop wspace between name and = *)
-       val (thmname,with_attrs_string,_) = dest_ml_thm_binding "Theorem" s
+       val (thmname,with_attrs,attrs) = dest_ml_thm_binding_triv s
      in
        YYBEGIN thmval;
        mltype_stack := [inTHMVAL];
        ECHO yyarg (
          pfx ^ "val " ^ thmname ^ " = " ^ "(fn rule => boolLib.save_thm(\"" ^
-         with_attrs_string ^ "\",rule)) ("
+         with_attrs ^ "\",rule)) ("
        )
      end else yytext
   )

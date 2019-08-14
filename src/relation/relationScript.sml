@@ -1224,23 +1224,27 @@ val approx_the_fun1 = ONCE_REWRITE_RULE [GSYM the_fun_def] approx_SELECT1;
 val approx_the_fun2 = SUBS [Q.SPECL[`R`,`M`,`x`,`the_fun R M x`] approx_ext]
                            approx_the_fun1;
 
-val the_fun_rw1 = Q.prove(
- `(?g:'a->'b. approx R M x g)
+Triviality the_fun_rw1:
+ (?g:'a->'b. approx R M x g)
       ==>
   !w. R w x
        ==>
-     (the_fun R M x w = M (RESTRICT (the_fun R M x) R w) w)`,
+     (the_fun R M x w = M (RESTRICT (the_fun R M x) R w) w)
+Proof
  DISCH_THEN (MP_TAC o MP approx_the_fun2) THEN
  DISCH_THEN (fn th => GEN_TAC THEN MP_TAC (SPEC_ALL th))
  THEN COND_CASES_TAC
- THEN ASM_REWRITE_TAC[]);
+ THEN ASM_REWRITE_TAC[]
+QED
 
-val the_fun_rw2 = Q.prove(
- `(?g:'a->'b. approx R M x g)  ==> !w. ~R w x ==> (the_fun R M x w = ARB)`,
-DISCH_THEN (MP_TAC o MP approx_the_fun2) THEN
+Triviality the_fun_rw2:
+   (?g:'a->'b. approx R M x g)  ==> !w. ~R w x ==> (the_fun R M x w = ARB)
+Proof
+ DISCH_THEN (MP_TAC o MP approx_the_fun2) THEN
  DISCH_THEN (fn th => GEN_TAC THEN MP_TAC (SPEC_ALL th))
  THEN COND_CASES_TAC
- THEN ASM_REWRITE_TAC[]);
+ THEN ASM_REWRITE_TAC[]
+QED
 
 (*---------------------------------------------------------------------------
  * Define a recursion operator for wellfounded relations. This takes the
@@ -1283,7 +1287,7 @@ REWRITE_TAC[approx_ext] THEN REPEAT GEN_TAC THEN STRIP_TAC
   THEN FIRST_ASSUM MATCH_MP_TAC
   THEN RES_TAC THEN ASM_REWRITE_TAC[]);
 
-val AGREE_BELOW =
+Triviality AGREE_BELOW =
    REWRITE_RULE[TAUT`A==>B==>C==>D <=> B/\C/\A==>D`]
     (CONV_RULE (DEPTH_CONV RIGHT_IMP_FORALL_CONV) APPROX_EQUAL_BELOW);
 
