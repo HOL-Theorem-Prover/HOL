@@ -412,13 +412,21 @@ Inductivepfx = ("Co")?"Inductive"{ws}+{alphaMLid}{ws}*":";
 <defncomment>"*)" => ((yypos, (dec comdepth;
                    if !comdepth < 1 then YYBEGIN defnquote else ();
                    ECHO yyarg yytext)));
+<datatypecomment>"*)" => (
+  (yypos, (
+     dec comdepth;
+     if !comdepth < 1 then YYBEGIN datatypecomment else ();
+     ECHO yyarg yytext
+   )
+  )
+);
 <comment>{newline} => ((yypos, (newline yyarg (yypos,yytext))));
-<tmcomment,tycomment,qcomment,defncomment>{newline} => ((yypos,
+<tmcomment,tycomment,qcomment,defncomment,datatypecomment>{newline} => ((yypos,
    (qnewline yyarg (yypos,yytext))));
-<tmcomment,tycomment,qcomment,defncomment>"\\" => ((yypos, (ECHO yyarg "\\\\")));
-<tmcomment,tycomment,qcomment,defncomment>"\"" => ((yypos, (ECHO yyarg "\\\"")));
-<tmcomment,tycomment,qcomment,defncomment>"\t" => ((yypos, (ECHO yyarg "\\t")));
-<tmcomment,tycomment,qcomment,defncomment>"^`" => ((yypos, (ECHO yyarg "`")));
+<tmcomment,tycomment,qcomment,defncomment,datatypecomment>"\\" => ((yypos, (ECHO yyarg "\\\\")));
+<tmcomment,tycomment,qcomment,defncomment,datatypecomment>"\"" => ((yypos, (ECHO yyarg "\\\"")));
+<tmcomment,tycomment,qcomment,defncomment,datatypecomment>"\t" => ((yypos, (ECHO yyarg "\\t")));
+<tmcomment,tycomment,qcomment,defncomment,datatypecomment>"^`" => ((yypos, (ECHO yyarg "`")));
 <tmcomment,tycomment>{fullquoteend} => ((yypos,
    (comdepth := 0;
     YYBEGIN (mlswitch (!mltype_stack) INITIAL TERMINATION_VAL thmval);
@@ -435,7 +443,17 @@ Inductivepfx = ("Co")?"Inductive"{ws}+{alphaMLid}{ws}*":";
    ECHO yyarg "\"]")));
 <tmcomment,tycomment,qcomment>[\128-\255] => ((yypos,
   (ECHO yyarg (bslash_escape yytext))));
-<comment,tmcomment,tycomment,qcomment,defncomment>. => ((yypos, (ECHO yyarg yytext)));
+<datatypecomment>{newline}"End" => (
+  (yypos,
+   (
+     comdepth := 0;
+     YYBEGIN INITIAL;
+     nextline yyarg (yypos + size yytext);
+     ECHO yyarg "\"\n];"
+   )
+  )
+);
+<comment,tmcomment,tycomment,qcomment,defncomment,datatypecomment>. => ((yypos, (ECHO yyarg yytext)));
 
 <quote,tmquote,tyquote,defnquote,datatypequote>"^"+{ws} => ((yypos, (ECHO yyarg yytext)));
 <quote,tmquote,tyquote,defnquote,datatypequote>"^"+{newline} => ((yypos,
