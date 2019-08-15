@@ -666,11 +666,12 @@ the region contains no term delimiters, then send region instead."
       (if (not done) (message "Incomplete comment in region given"))
       done))
 
-(defun remove-quoted-hol-term (bq eq end-marker)
+(defun remove-quoted-hol-term (bq eq end-marker &optional extra)
   (let ((start (point))
-        (bqsize (length bq)))
+        (bqsize (length bq))
+        (i (if extra extra 0)))
     (if (re-search-forward eq end-marker t)
-        (delete-region (- start bqsize) (point))
+        (delete-region (- start (- bqsize i)) (point))
       (error
        (format "Incomplete (%s...%s-quoted) HOL term in region given; \
 starts >%s%s<"
@@ -704,14 +705,15 @@ starts >%s%s<"
                 ((string= ms "“") (remove-quoted-hol-term "“" "”" m))
                 ((string= ms "‘") (remove-quoted-hol-term "‘" "’" m))
                 ((string-prefix-p "Theorem" ms)
-                 (remove-quoted-hol-term ms "^Proof" m))
+                 (remove-quoted-hol-term ms "^Proof" m 7))
                 ((string-prefix-p "Triviality" ms)
-                 (remove-quoted-hol-term ms "^Proof" m))
+                 (remove-quoted-hol-term ms "^Proof" m 10))
                 ((string-prefix-p "Definition" ms)
-                 (remove-quoted-hol-term ms "^\\(Termination\\|End\\)" m))
-                ((or (string-prefix-p "Inductive" ms)
-                     (string-prefix-p "CoInductive" ms))
-                 (remove-quoted-hol-term ms "^End" m))
+                 (remove-quoted-hol-term ms "^\\(Termination\\|End\\)" m 10))
+                ((string-prefix-p "Inductive" ms)
+                 (remove-quoted-hol-term ms "^End" m 9))
+                ((string-prefix-p "CoInductive" ms)
+                 (remove-quoted-hol-term ms "^End" m 11))
                 (t ; must be a back-tick
                  (if (not (looking-at "`"))
                      (remove-quoted-hol-term "`" "`" m)
@@ -728,7 +730,7 @@ starts >%s%s<"
                '("val" "fun" "in" "infix[lr]?" "open" "local" "type"
                  "datatype" "nonfix" "exception" "end" "structure"
                  "Theorem" "Definition" "Inductive" "CoInductive"
-                 "Triviality"))))
+                 "Triviality" "Datatype" "Type"))))
 
 (setq sml-struct-id-regexp "[A-Za-z][A-Za-z0-9_]*")
 
