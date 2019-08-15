@@ -39,8 +39,10 @@ sig
   (* encoding *)
   val compare_card : (card * card) -> order
   val random_startboard : unit -> board
+  val pretty_board : board -> string
   val oh_board : (obsc_dict * obs_dict) -> board -> real list
-  
+  val is_playable : card -> card vector -> bool
+
   (* observables *)
   val compare_obsc : (obsc * obsc) -> order
   val compare_obs : (obs * obs) -> order  
@@ -83,5 +85,13 @@ sig
   val pd_collect_example : (int * int, player) Redblackmap.dict -> board list 
     -> (ex list * ex list)
   val pd_train_player : player -> (ex list * ex list) -> player
+  
+
+  (* test *)
+  val oh_pile : card vector -> real list
+  val random_pile : unit -> card vector
+  val oh_card : card -> real list
+  val random_card : unit -> card
+
 
 end

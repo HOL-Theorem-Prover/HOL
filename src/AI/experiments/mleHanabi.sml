@@ -69,6 +69,13 @@ val full_deck =
   List.concat (map (fn x => [(1,x),(1,x),(1,x)]) colorl) @
   List.concat (map (fn x => [(2,x),(2,x)]) colorl)
 
+val possible_cards =
+  List.concat (map (fn x => [(1,x)]) colorl) @
+  List.concat (map (fn x => [(2,x)]) colorl) @
+  List.concat (map (fn x => [(3,x)]) colorl) @
+  List.concat (map (fn x => [(4,x)]) colorl) @
+  List.concat (map (fn x => [(5,x)]) colorl)
+
 val cardl_ext = 
   List.concat (map (fn x => [(1,x)]) colorl) @
   List.concat (map (fn x => [(2,x)]) colorl) @ [nocard]
@@ -152,6 +159,11 @@ fun random_startboard () =
     pile = Vector.fromList (map (fn x => (0,x)) colorl)
     }
   end
+
+fun random_pile () =
+  Vector.fromList (map (fn x => (random_int (0,4),x)) colorl)
+
+fun random_card () = random_elem possible_cards
 
 (* -------------------------------------------------------------------------
    Guessed hands conditionned on observables
@@ -752,8 +764,8 @@ fun write_stats k scl player =
 fun random_player () =
   let
     val n = length (oh_board empty_obs (random_startboard ()))
-    val nne = random_nn (tanh,dtanh) [n, maxscore + 1, maxscore + 1]
-    val nnp = random_nn (tanh,dtanh) [n, length movel, length movel]
+    val nne = random_nn (tanh,dtanh) [n, n, maxscore + 1]
+    val nnp = random_nn (tanh,dtanh) [n, n, length movel]
   in
     (empty_obs,(nne,nnp))
   end
@@ -889,7 +901,7 @@ fun process_result r =
 fun train_player (obs,(nne,nnp)) (eex,pex) =
   let
     val ncore = 4
-    val nepoch = 16
+    val nepoch = 2
     val bsize = 16
     val newnne = train_nn ncore nepoch nne bsize eex
     val newnnp = train_nn ncore nepoch nnp bsize pex
@@ -900,10 +912,10 @@ fun train_player (obs,(nne,nnp)) (eex,pex) =
 fun rl_para_once ncore k (player,scl) =
   let
     val _ = print_endline ("Generation " ^ its k)
-    val argl = (List.tabulate (1000, fn _ => ()))
+    val argl = (List.tabulate (100, fn _ => ()))
     val (eex,pex,scl_loc) = process_result 
       (smlParallel.parmap_queue_extern ncore extspec player argl)
-    val newplayer = train_player (random_player ()) (eex,pex)
+    val newplayer = train_player player (eex,pex)
     val newscl = first_n 1000 (scl_loc @ scl)
     val _ = summary "score" (its k ^ "," ^ (sr (average_int newscl)))
     val _ =
@@ -1069,6 +1081,41 @@ load "mlNeuralNetwork"; open mlNeuralNetwork;
 load "aiLib"; open aiLib;  
 val boardll = List.tabulate (1000, fn _ => collect_boardl_forced ());
 val boardl = List.concat boardll;
+val board = hd boardl;
+
+
+
+val b = is_playable card pile;
+
+fun mk_ex () =
+  let
+    val pile = random_pile ()
+    val card = random_card ()
+  in 
+    (oh_pile pile @ oh_card card, 
+     if is_playable card pile then [1.0] else [0.0])
+  end
+;
+
+fun compute_playable (board: board) =
+  let 
+    val opphand = if #p1turn board then #hand2 board else #hand1 board 
+    fun f card = if is_playable card (#pile board) then 1.0 else 0.0
+  in
+    (oh_board empty_obs board, map f (vector_to_list opphand))
+  end;
+
+
+val exl = List.tabulate (10000,fn _ => mk_ex ());
+val exl2 = 
+
+
+val n = length (oh_pile (random_pile ()) @ oh_card (random_card ()))
+val n2 = length (oh_board empty_obs (random_startboard ()));
+val nn = random_nn (tanh,dtanh) [n2, n2, 1];
+learning_rate := 0.02;
+val newnn = train_nn 4 100 nn 16 exl;
+
 val boardl1 = map (fn x => (slice_board x, x)) boardl;
 val boarddict = dregroup (cpl_compare Int.compare Int.compare) boardl1;
 learningrate_glob := 0.0002;
@@ -1095,10 +1142,10 @@ val n1 = average_int l1;
 load "mleHanabi"; open mleHanabi;
 load "mlNeuralNetwork"; open mlNeuralNetwork;
 load "aiLib"; open aiLib;
-summary_dir := hanabi_dir ^ "/scaleup";
+summary_dir := hanabi_dir ^ "/largenn";
 val ncore = 50;
 val ngen = 500;
-learningrate_glob := 0.0002;
+learningrate_glob := 0.02;
 val (player,scl) = rl_para ncore ngen;
 *)
 
