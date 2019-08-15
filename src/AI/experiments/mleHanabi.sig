@@ -62,10 +62,8 @@ sig
   val lookahead : int -> player -> board -> move * ex * ex
 
   (* playing a game *)    
-  val best_move : (obsc_dict * obs_dict) -> nn -> board -> move
+  val best_move : player -> board -> move
   val apply_move : move -> board -> board
-  val play_game : (obsc_dict * obs_dict) -> nn -> board -> int
-  val play_ngame : (obsc_dict * obs_dict) -> nn -> int -> real
   val example_game : int -> player -> unit
   val pd_play_game : (int * int, player) Redblackmap.dict -> int
 

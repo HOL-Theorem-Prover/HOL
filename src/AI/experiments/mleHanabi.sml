@@ -478,13 +478,15 @@ fun is_applicable (board:board) move = case move of
    Play game (filter examples that are all zero ar all ones.
    ------------------------------------------------------------------------- *)
 
-fun best_move (d1,d2) nn board =
-  let
-    val dis1 = combine (movel, infer_nn nn (oh_board (d1,d2) board))
-    val dis2 = filter (fn (x,_) => is_applicable board x) dis1
-    val dis3 = normalize_distrib dis2
+fun infer_poli (obs,(nne,nnp)) board =
+  normalize_proba (infer_nn nnp (oh_board obs board))
+
+fun best_move player board =
+  let 
+    val pol1 = combine (movel, infer_poli player board)
+    val pol2 = filter (fn x => is_applicable board (fst x)) pol1
   in
-    best_in_distrib dis3
+    best_in_distrib pol2
   end
 
 fun is_endboard board =
@@ -492,27 +494,15 @@ fun is_endboard board =
   #bombs board > maxbombs orelse
   #score board >= maxscore
 
-fun play_game (d1,d2) nn board =
-  if is_endboard board
-  then #score board
-  else play_game (d1,d2) nn (apply_move (best_move (d1,d2) nn board) board)
-
-fun play_ngame (d1,d2) nn ngame =
-  let
-    val boardl = List.tabulate (ngame, fn _ => random_startboard ())
-    val l = map (play_game (d1,d2) nn) boardl
-  in
-    average_real (map Real.fromInt l)
-  end
 
 (* -------------------------------------------------------------------------
    Evaluation
    ------------------------------------------------------------------------- *)
 
-fun infer_eval (d1,d2) nn board =
+fun infer_eval (obs,(nne,nnp)) board =
   if is_endboard board 
   then onehot (#score board,maxscore + 1)
-  else (normalize_proba o infer_nn nn o oh_board (d1,d2)) board
+  else (normalize_proba o infer_nn nne o oh_board obs) board
 
 fun eval_expectancy l =
   let fun f i x = Real.fromInt i * x in sum_real (mapi f l) end
@@ -553,8 +543,7 @@ fun guess_board d1 (board as
    Value of a choice in a policy according to PCUT formula.
    ------------------------------------------------------------------------- *)
 
-fun infer_poli (d1,d2) nn board =
-  normalize_proba (infer_nn nn (oh_board (d1,d2) board))
+
 
 fun value_choice vtot pol move =
   let
@@ -573,25 +562,25 @@ fun select_in_pol board vtot pol =
     best_in_distrib dis2
   end
 
-fun lookahead_once move (d1,d2) nne board =
+fun lookahead_once move player board =
   let 
-    val board1 = guess_board d1 board  
+    val board1 = guess_board (fst (fst player)) board  
     val board2 = apply_move move board1 
   in
-    infer_eval (d1,d2) nne board2
+    infer_eval player board2
   end
 
-fun lookahead_loop nsim (d1,d2) (nne,nnp) board 
+fun lookahead_loop nsim player board 
   (sumtot,vtot) pol rewarddisl =
   if nsim <= 0 then ((sumtot,vtot),pol,rewarddisl) else
   let 
     val move = select_in_pol board vtot pol
-    val rewarddis = lookahead_once move (d1,d2) nne board 
+    val rewarddis = lookahead_once move player board 
     val reward = eval_expectancy rewarddis / (Real.fromInt maxscore)
     val (polv,sum,vis) = dfind move pol
     val newpol = dadd move (polv, sum + reward, vis + 1.0) pol
   in
-    lookahead_loop (nsim - 1) (d1,d2) (nne,nnp) board 
+    lookahead_loop (nsim - 1) player board 
     (sumtot + reward, vtot + 1.0) newpol (rewarddis :: rewarddisl)
   end
 
@@ -604,14 +593,14 @@ fun add_noise pol =
     map f (combine (pol,noisel))
   end
 
-fun lookahead_aux nsim ((d1,d2),(nne,nnp)) board =
+fun lookahead_aux nsim player board =
   let
-    val (sumtot,vtot) = (eval_expectancy (infer_eval (d1,d2) nne board), 1.0)
-    val pol1 = combine (movel, infer_poli (d1,d2) nnp board)
+    val (sumtot,vtot) = (eval_expectancy (infer_eval player board), 1.0)
+    val pol1 = combine (movel, infer_poli player board)
     val pol2 = add_noise pol1
     val pol3 = dnew compare_move (map (fn (a,b) => (a,(b,0.0,0.0))) pol2)
   in
-    lookahead_loop nsim (d1,d2) (nne,nnp) board (sumtot,vtot) pol3 []
+    lookahead_loop nsim player board (sumtot,vtot) pol3 []
   end
 
 (* -------------------------------------------------------------------------
@@ -642,10 +631,9 @@ fun extract_poliex (d1,d2) board pol =
     (input, normalize_proba (map f movel))
   end
 
-fun lookahead nsim ((d1,d2),(nne,nnp)) board =
+fun lookahead nsim (player as ((d1,d2),_)) board =
   let 
-    val (_,pol,rewarddisl) =
-      lookahead_aux nsim ((d1,d2),(nne,nnp)) board
+    val (_,pol,rewarddisl) = lookahead_aux nsim player board
     fun f m = #3 (dfind m pol)
     val dis1 = combine (movel, normalize_proba (map f movel))
     val dis2 = filter (fn (x,_) => is_applicable board x) dis1
@@ -686,13 +674,13 @@ fun example_game k player =
    Statistics
    ------------------------------------------------------------------------- *)
 
-fun collect_boardl obs nnp board =
+fun collect_boardl player board =
   if is_endboard board then [] else 
   let 
-    val move = best_move obs nnp board
+    val move = best_move player board
     val newboard = apply_move move board 
   in
-    board :: collect_boardl obs nnp newboard
+    board :: collect_boardl player newboard
   end
 
 fun print_stats_ll b ol fi ll = 
@@ -710,12 +698,12 @@ fun print_stats_ll b ol fi ll =
     else ()
   end
 
-fun stats_player ngame (obs,(nne,nnp)) =
+fun stats_player ngame player =
   let
-    fun f _ = collect_boardl obs nnp (random_startboard ())
+    fun f _ = collect_boardl player (random_startboard ())
     val boardl = List.concat (List.tabulate (ngame,f))
-    val lle = map (infer_eval obs nne) boardl
-    val llp = map (infer_poli obs nnp) boardl
+    val lle = map (infer_eval player) boardl
+    val llp = map (infer_poli player) boardl
   in
     summary "stats" "eval"; 
     print_stats_ll true (List.tabulate (maxscore + 1,I)) its lle;
@@ -723,17 +711,17 @@ fun stats_player ngame (obs,(nne,nnp)) =
     print_stats_ll false movel string_of_move llp
   end
 
-fun symdiff_player ngame (obs1,(nne1,nnp1)) (obs2,(nne2,nnp2)) =
+fun symdiff_player ngame player1 player2 =
   let 
-    fun f1 _ = collect_boardl obs1 nnp1 (random_startboard ())
+    fun f1 _ = collect_boardl player1 (random_startboard ())
     val boardl1 = List.concat (List.tabulate (ngame div 2,f1))
-    fun f2 _ = collect_boardl obs2 nnp2 (random_startboard ())
+    fun f2 _ = collect_boardl player2 (random_startboard ())
     val boardl2 = List.concat (List.tabulate (ngame div 2,f2))
     val boardl = boardl1 @ boardl2
-    val lle1 = map (infer_eval obs1 nne1) boardl
-    val llp1 = map (infer_poli obs1 nnp1) boardl
-    val lle2 = map (infer_eval obs2 nne2) boardl
-    val llp2 = map (infer_poli obs2 nnp2) boardl
+    val lle1 = map (infer_eval player1) boardl
+    val llp1 = map (infer_poli player1) boardl
+    val lle2 = map (infer_eval player2) boardl
+    val llp2 = map (infer_poli player2) boardl
     fun dist (a,b) = Real.abs (a - b)
     fun diff (l1,l2) = average_real (map dist (combine (l1,l2)))
     val diffe = average_real (map diff (combine (lle1,lle2)))
@@ -837,14 +825,14 @@ write_nn (hanabi_dir ^ "/run1_nnp") nnp;
    Parallelization
    ------------------------------------------------------------------------- *)
 
-fun worker_play_game (obs,(nne,nnp)) _ =
+fun worker_play_game player _ =
   let
     val _ = print_endline "new_game"
     val nsim = 400
     fun loop acc board =
       if is_endboard board then (split acc, #score board) else
       let
-        val (move,evalex,poliex) = lookahead nsim (obs,(nne,nnp)) board
+        val (move,evalex,poliex) = lookahead nsim player board
         val _ = print_endline (string_of_move move)
         val newboard = apply_move move board 
       in
@@ -1079,13 +1067,7 @@ fun pd_train_player (obs,(nne,nnp)) (eex,pex) =
 load "mleHanabi"; open mleHanabi;
 load "mlNeuralNetwork"; open mlNeuralNetwork;
 load "aiLib"; open aiLib;  
-val boardll = List.tabulate (1000, fn _ => collect_boardl_forced ());
-val boardl = List.concat boardll;
-val board = hd boardl;
 
-
-
-val b = is_playable card pile;
 
 fun mk_ex () =
   let
@@ -1096,6 +1078,33 @@ fun mk_ex () =
      if is_playable card pile then [1.0] else [0.0])
   end
 ;
+
+fun score_pile pile = sum_int (map fst (vector_to_list pile));
+
+fun onehot (k,n) =
+  let fun f i = if i = k then 1.0 else 0.0 in List.tabulate (n,f) end
+
+fun mk_ex () =
+  let
+    val pile = random_pile ()
+    val score = score_pile pile
+  in 
+    (oh_pile pile, onehot (score,26))
+  end
+;
+
+val exl = List.tabulate (20000,fn _ => mk_ex ());
+
+val dimin = length (oh_pile (random_pile ()));
+val nn = random_nn (tanh,dtanh) [dimin, dimin, 26];
+learningrate_glob := 0.02;
+val newnn = train_nn 4 100 nn 16 exl;
+
+
+
+val boardll = List.tabulate (1000, fn _ => collect_boardl_forced ());
+val boardl = List.concat boardll;
+val board = hd boardl;
 
 fun compute_playable (board: board) =
   let 
