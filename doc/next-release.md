@@ -354,11 +354,13 @@ Incompatibilities:
 *   The `drule` family of tactics (and the underlying `mp_then`) now generalise the implicational theorem argument (with `GEN_ALL`) before looking for instantiations.
     If the old behaviour is desired, where free variables are fixed, replacing `drule` with `FREEZE_THEN drule` will stop generalisation of all the implicational theorem’s variables.
     Unfortunately, this may then prevent the matching from occurring at all.
-    In this situation (where some free variables need to be instantiated to make the match go through and the remainder have to be appear as new “local constants” serendipitously linking up with existing free variables in the goal), `drule` may need to be replaced with
+    In this situation (where some free variables need to be instantiated to make the match go through and the remainder have to be appear as new “local constants” serendipitously linking up with existing free variables in the goal, or if there are type variables that need to be instantiated), `drule` may need to be replaced with
 
            drule_then (qspecl_then [‘a’, ‘b’,...] mp_tac)
 
     where `‘a’`, `‘b’` *etc.* respecialise the original theorem.
+
+    Alternatively, there is a more involved code that more robustly reimplements the old behaviour [available as part of the CakeML project](https://github.com/CakeML/cakeml/blob/349c6adc73366d9c689a0c8bd11d85c75fd0f71b/misc/preamble.sml#L534-L572).
 
 * * * * *
 
