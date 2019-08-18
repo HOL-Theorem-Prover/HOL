@@ -377,9 +377,9 @@ fun apply_move_play move i
     lastmove2 = if not p1turn then SOME move else lastmove2,
     hand1 =  if p1turn then draw_card i newcard hand1  else hand1,
     hand2 =  if not p1turn then draw_card i newcard hand2 else hand2,
-    clues1 = hand1 
+    clues1 = if p1turn then draw_card i newcard hand1  else hand1
              (* if p1turn then draw_card i nocard clues1 else clues1 *),
-    clues2 = hand2 
+    clues2 = if not p1turn then draw_card i newcard hand2 else hand2
              (* if not p1turn then draw_card i nocard clues2 else clues2 *),
     clues = if playb andalso fst played = 5 andalso clues < maxclues 
             then clues + 1
@@ -410,9 +410,9 @@ fun apply_move_discard move i
     lastmove2 = if not p1turn then SOME move else lastmove2,
     hand1 =  if p1turn then draw_card i newcard hand1 else hand1,
     hand2 =  if not p1turn then draw_card i newcard hand2 else hand2,
-    clues1 = hand1
+    clues1 = if p1turn then draw_card i newcard hand1 else hand1
      (* if p1turn then draw_card i nocard clues1 else clues1 *),
-    clues2 = hand2
+    clues2 = if not p1turn then draw_card i newcard hand2 else hand2
      (* if not p1turn then draw_card i nocard clues2 else clues2 *),
     clues = if clues >= maxclues then maxclues else clues + 1,
     score = score,
@@ -546,8 +546,8 @@ fun guess_board d1 (board as
 fun value_choice vtot pol move =
   let
     val (prior,sum,vis) = dfind move pol
-    val exploitation = sum / (vis + 1.0)
-    val exploration  = (prior * Math.sqrt vtot) / (vis + 1.0)
+    val exploitation = sum  / (vis + 1.0)
+    val exploration  = prior * Math.sqrt vtot / (vis + 1.0)
   in
     exploitation + (!exploration_coeff) * exploration
   end
@@ -772,7 +772,7 @@ fun update_player (obs,(nne,nnp)) (evalex,poliex) =
 
 fun rl_loop_once k (player,board,scl) =
   let
-    val nsim = 400
+    val nsim = 800
     val (move,evalex,poliex) = lookahead nsim player board
     val newplayer = update_player player (evalex,poliex)
     val board1 = apply_move move board 
@@ -824,7 +824,7 @@ write_nn (hanabi_dir ^ "/run1_nnp") nnp;
 fun worker_play_game player _ =
   let
     val _ = print_endline "new_game"
-    val nsim = 400
+    val nsim = 800
     fun loop acc board =
       if is_endboard board then (split acc, #score board) else
       let
@@ -1144,7 +1144,7 @@ val n1 = average_int l1;
 load "mleHanabi"; open mleHanabi;
 load "mlNeuralNetwork"; open mlNeuralNetwork;
 load "aiLib"; open aiLib;
-summary_dir := hanabi_dir ^ "/largenn";
+summary_dir := hanabi_dir ^ "/looking";
 val ncore = 20;
 val ngen = 500;
 learningrate_glob := 0.002;
