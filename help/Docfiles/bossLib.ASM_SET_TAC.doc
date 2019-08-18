@@ -1,0 +1,27 @@
+\DOC ASM_SET_TAC
+
+\TYPE {ASM_SET_TAC : thm list -> tactic}
+
+\SYNOPSIS
+Tactic to automate some routine set theory by reduction to FOL,
+using the assumptions and the theorems given.
+
+\KEYWORDS
+decision procedure, tactic.
+
+\LIBRARY
+boss
+
+\DESCRIBE
+{ASM_SET_TAC} is identical in behaviour to {SET_TAC} except that
+it uses the assumptions of a goal as well as the provided theorems.
+
+\FAILURE
+Fails if the underlying resolution machinery ({METIS_TAC}) cannot
+prove the goal, or the supplied theorems (and the assumptions) are not
+enough for the FOL reduction.
+
+\SEEALSO
+bossLib.SET_TAC, bossLib.SET_RULE
+
+\ENDDOC
