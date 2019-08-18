@@ -543,8 +543,6 @@ fun guess_board d1 (board as
    Value of a choice in a policy according to PCUT formula.
    ------------------------------------------------------------------------- *)
 
-
-
 fun value_choice vtot pol move =
   let
     val (prior,sum,vis) = dfind move pol
@@ -570,17 +568,18 @@ fun lookahead_once move player board =
     infer_eval player board2
   end
 
-fun lookahead_loop nsim player board 
+fun lookahead_loop baseline nsim player board 
   (sumtot,vtot) pol rewarddisl =
   if nsim <= 0 then ((sumtot,vtot),pol,rewarddisl) else
   let 
     val move = select_in_pol board vtot pol
     val rewarddis = lookahead_once move player board 
-    val reward = eval_expectancy rewarddis / (Real.fromInt maxscore)
+    val reward = 
+      eval_expectancy rewarddis / (Real.fromInt maxscore) - baseline
     val (polv,sum,vis) = dfind move pol
     val newpol = dadd move (polv, sum + reward, vis + 1.0) pol
   in
-    lookahead_loop (nsim - 1) player board 
+    lookahead_loop baseline (nsim - 1) player board 
     (sumtot + reward, vtot + 1.0) newpol (rewarddis :: rewarddisl)
   end
 
@@ -595,12 +594,13 @@ fun add_noise pol =
 
 fun lookahead_aux nsim player board =
   let
-    val (sumtot,vtot) = (eval_expectancy (infer_eval player board), 1.0)
+    val (sumtot,vtot) = (eval_expectancy (infer_eval player board)
+      / (Real.fromInt maxscore), 1.0)
     val pol1 = combine (movel, infer_poli player board)
     val pol2 = add_noise pol1
     val pol3 = dnew compare_move (map (fn (a,b) => (a,(b,0.0,0.0))) pol2)
   in
-    lookahead_loop nsim player board (sumtot,vtot) pol3 []
+    lookahead_loop sumtot nsim player board (sumtot,vtot) pol3 []
   end
 
 (* -------------------------------------------------------------------------
@@ -815,8 +815,8 @@ fun rl_loop n =
 load "mleHanabi"; open mleHanabi;
 load "mlNeuralNetwork"; open mlNeuralNetwork;
 load "aiLib"; open aiLib;
-summary_file := hanabi_dir ^ "/run1";
-val ((nne,nnp),obs,board1,scl) = rl_loop 100000;
+summary_dir := hanabi_dir ^ "/runtest";
+val (player,board,scl) = rl_loop 100000;
 write_nn (hanabi_dir ^ "/run1_nne") nne;
 write_nn (hanabi_dir ^ "/run1_nnp") nnp;
 *)
@@ -1116,9 +1116,6 @@ fun compute_playable (board: board) =
 
 
 val exl = List.tabulate (10000,fn _ => mk_ex ());
-val exl2 = 
-
-
 val n = length (oh_pile (random_pile ()) @ oh_card (random_card ()))
 val n2 = length (oh_board empty_obs (random_startboard ()));
 val nn = random_nn (tanh,dtanh) [n2, n2, 1];
@@ -1154,7 +1151,7 @@ load "aiLib"; open aiLib;
 summary_dir := hanabi_dir ^ "/largenn";
 val ncore = 50;
 val ngen = 500;
-learningrate_glob := 0.02;
+learningrate_glob := 0.002;
 val (player,scl) = rl_para ncore ngen;
 *)
 
