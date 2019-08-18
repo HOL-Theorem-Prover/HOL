@@ -151,8 +151,8 @@ fun random_startboard () =
     p1turn = true,
     lastmove1 = NONE, lastmove2 = NONE,
     hand1 = Vector.fromList v1, hand2 = Vector.fromList v2,
-    clues1 = nohand,
-    clues2 = nohand,
+    clues1 = Vector.fromList v1,
+    clues2 = Vector.fromList v2,
     clues = maxclues, score = 0, bombs = 0,
     deck = d3 @ [nocard],
     disc = [],
@@ -314,19 +314,15 @@ fun oh_board (d1,d2)
   (board as {p1turn,lastmove1,lastmove2,hand1,hand2,clues1,clues2,clues,
   score,bombs,deck,disc,pile}) =
   let
-    val t1 = if p1turn then clues1 else clues2
-    val t2 = if p1turn then clues2 else clues1
-    val hand = if p1turn then hand2 else hand1
-    val lastmove = if p1turn then lastmove2 else lastmove1
+    val t1 = if p1turn then hand1 else hand2
+    val t2 = if p1turn then hand2 else hand1
   in
     (List.concat 
      [onehot (bombs,maxbombs + 1),
       onehot (clues,maxclues + 1),
       onehot (score,maxscore + 1),
-      oh_moveo lastmove, 
       oh_hand t1, 
-      oh_hand t2, 
-      oh_hand hand, 
+      oh_hand t2,
       oh_pile pile]
     )
   end
@@ -381,8 +377,10 @@ fun apply_move_play move i
     lastmove2 = if not p1turn then SOME move else lastmove2,
     hand1 =  if p1turn then draw_card i newcard hand1  else hand1,
     hand2 =  if not p1turn then draw_card i newcard hand2 else hand2,
-    clues1 = if p1turn then draw_card i nocard clues1 else clues1,
-    clues2 = if not p1turn then draw_card i nocard clues2 else clues2,
+    clues1 = hand1 
+             (* if p1turn then draw_card i nocard clues1 else clues1 *),
+    clues2 = hand2 
+             (* if not p1turn then draw_card i nocard clues2 else clues2 *),
     clues = if playb andalso fst played = 5 andalso clues < maxclues 
             then clues + 1
             else clues,
@@ -412,8 +410,10 @@ fun apply_move_discard move i
     lastmove2 = if not p1turn then SOME move else lastmove2,
     hand1 =  if p1turn then draw_card i newcard hand1 else hand1,
     hand2 =  if not p1turn then draw_card i newcard hand2 else hand2,
-    clues1 = if p1turn then draw_card i nocard clues1 else clues1,
-    clues2 = if not p1turn then draw_card i nocard clues2 else clues2,
+    clues1 = hand1
+     (* if p1turn then draw_card i nocard clues1 else clues1 *),
+    clues2 = hand2
+     (* if not p1turn then draw_card i nocard clues2 else clues2 *),
     clues = if clues >= maxclues then maxclues else clues + 1,
     score = score,
     bombs = bombs,
