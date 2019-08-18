@@ -568,19 +568,17 @@ fun lookahead_once move player board =
     infer_eval player board2
   end
 
-fun lookahead_loop baseline nsim player board 
-  (sumtot,vtot) pol rewarddisl =
-  if nsim <= 0 then ((sumtot,vtot),pol,rewarddisl) else
+fun lookahead_loop nsim player board vtot pol rewarddisl =
+  if nsim <= 0 then (pol,rewarddisl) else
   let 
     val move = select_in_pol board vtot pol
     val rewarddis = lookahead_once move player board 
-    val reward = 
-      eval_expectancy rewarddis / (Real.fromInt maxscore) - baseline
+    val reward = eval_expectancy rewarddis / (Real.fromInt maxscore)
     val (polv,sum,vis) = dfind move pol
     val newpol = dadd move (polv, sum + reward, vis + 1.0) pol
   in
-    lookahead_loop baseline (nsim - 1) player board 
-    (sumtot + reward, vtot + 1.0) newpol (rewarddis :: rewarddisl)
+    lookahead_loop (nsim - 1) player board 
+    (vtot + 1.0) newpol (rewarddis :: rewarddisl)
   end
 
 fun add_noise pol =
@@ -594,13 +592,11 @@ fun add_noise pol =
 
 fun lookahead_aux nsim player board =
   let
-    val (sumtot,vtot) = (eval_expectancy (infer_eval player board)
-      / (Real.fromInt maxscore), 1.0)
     val pol1 = combine (movel, infer_poli player board)
     val pol2 = add_noise pol1
     val pol3 = dnew compare_move (map (fn (a,b) => (a,(b,0.0,0.0))) pol2)
   in
-    lookahead_loop sumtot nsim player board (sumtot,vtot) pol3 []
+    lookahead_loop nsim player board 1.0 pol3 []
   end
 
 (* -------------------------------------------------------------------------
@@ -633,7 +629,7 @@ fun extract_poliex (d1,d2) board pol =
 
 fun lookahead nsim (player as ((d1,d2),_)) board =
   let 
-    val (_,pol,rewarddisl) = lookahead_aux nsim player board
+    val (pol,rewarddisl) = lookahead_aux nsim player board
     fun f m = #3 (dfind m pol)
     val dis1 = combine (movel, normalize_proba (map f movel))
     val dis2 = filter (fn (x,_) => is_applicable board x) dis1
@@ -1149,7 +1145,7 @@ load "mleHanabi"; open mleHanabi;
 load "mlNeuralNetwork"; open mlNeuralNetwork;
 load "aiLib"; open aiLib;
 summary_dir := hanabi_dir ^ "/largenn";
-val ncore = 50;
+val ncore = 20;
 val ngen = 500;
 learningrate_glob := 0.002;
 val (player,scl) = rl_para ncore ngen;
