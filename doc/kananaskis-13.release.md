@@ -1,11 +1,11 @@
-% Release notes for HOL4, ??????
+% Release notes for HOL4, Kananaskis-13
 
-<!-- search and replace ?????? strings corresponding to release name -->
+<!-- search and replace Kananaskis-13 strings corresponding to release name -->
 <!-- indent code within bulleted lists to column 11 -->
 
-(Released: ???)
+(Released: 20 August 2019)
 
-We are pleased to announce the ?????? release of HOL 4.
+We are pleased to announce the Kananaskis-13 release of HOL 4.
 
 Contents
 --------
@@ -376,7 +376,7 @@ Incompatibilities:
 * * * * *
 
 <div class="footer">
-*[HOL4, ??????](http://hol-theorem-prover.org)*
+*[HOL4, Kananaskis-13](http://hol-theorem-prover.org)*
 
 [Release notes for the previous version](kananaskis-12.release.html)
 
