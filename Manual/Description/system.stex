@@ -1738,6 +1738,10 @@ Thus, to indicate the \ml{simp} attribute (for which, see discussion of the stat
 \end{alltt}
 Multiple attributes can be listed between the square brackets, separated by commas.
 
+\index{local (theorem attribute)@\ml{local} (theorem attribute)}
+Another attribute, \ml{local}, can be used to create theorems that will \emph{not} be exported to disk, but which are important locally.
+Such local theorems can have other attributes attached to them, which will have their effect within the given session/script-file.
+
 \index{Theorem syntax@\ml{Theorem} syntax|(}
 \index{special syntactic forms for scripts!Theorem@\ml{Theorem}}
 \smallskip\noindent
@@ -1770,7 +1774,7 @@ Also as before, theorem attributes can be added to the name.
 
 \index{special syntactic forms for scripts!Theorem@\ml{Theorem}}
 \index{Theorem syntax@\ml{Theorem} syntax}
-Finally, for use in script files only, there is a \ml{Theorem} syntax to replace \ml{store\_thm}, reducing the need to write the same name twice, and giving a cleaner appearance.
+Finally, again for use in script files only, there is a \ml{Theorem} syntax to replace \ml{store\_thm}, reducing the need to write the same name twice, and giving a cleaner appearance.
 One can write %
 \index{Proof keyword@\ml{Proof} keyword}\index{QED keyword@\ml{QED} keyword}%
 \index{special syntactic forms for scripts!Proof@\ml{Proof}}
@@ -1793,7 +1797,11 @@ For example:
 \end{alltt}
 Note further that the \ml{Proof} and \ml{QED} keywords must occur in the leftmost column of the script file so that the parser can know when the term and tactic arguments terminate.
 
-The choice to use \ml{Theorem} syntax, or to use \ml{store\_thm} directly is a matter of users' aesthetic preference.
+\index{special syntactic forms for scripts!Triviality@\ml{Triviality}}
+One last special form is available to abbreviate the \ml{Theorem}-\ml{local} combination (with either the \ml{=} or \ml{:} following).
+Instead of writing \ml{Theorem~foo[local,\dots]}, one can write \ml{Triviality~foo[\dots]}.
+
+The choice to use \ml{Theorem} (or \ml{Triviality}) syntax, or to use \ml{store\_thm} or \ml{save\_thm} directly is a matter of users' aesthetic preference.
 But recall: if writing library code to prove and store theorems, the underlying \ml{store\_thm} must be used, as the special treatment of the \ml{Theorem} keyword is only available in script files.
 %
 \index{theorems, in HOL logic@theorems, in \HOL{} logic!saving of|)}%

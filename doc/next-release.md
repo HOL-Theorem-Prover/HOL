@@ -56,6 +56,11 @@ New features:
 
     These names can also be given attributes in the same way.
 
+    There is also a new `local` attribute available for use with `store_thm`, `save_thm` and the `Theorem` syntax above.
+    This attribute causes a theorem to not be exported when `export_theory` is called, making it local-only.
+    Use of `Theorem`-`local` is thus an alternative to using `prove` or `Q.prove`.
+    In addition, the `Theorem`-`local` combination can be abbreviated with `Triviality`; one can write `Triviality foo[...]` instead of `Theorem foo[local,...]`.
+
 -   Relatedly, there is a similar syntax for making definitions.
     The idiom is to write
 
