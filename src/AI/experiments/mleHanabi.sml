@@ -76,6 +76,8 @@ val possible_cards =
   List.concat (map (fn x => [(4,x)]) colorl) @
   List.concat (map (fn x => [(5,x)]) colorl)
 
+val cardl_glob = List.concat (map (fn x => [(1,x),(2,x)]) colorl)
+
 val cardl_ext = 
   List.concat (map (fn x => [(1,x)]) colorl) @
   List.concat (map (fn x => [(2,x)]) colorl) @ [nocard]
@@ -310,6 +312,15 @@ val empty_obs = (dempty compare_obsc, dempty compare_obs)
 fun nnin_of_obs obs board = 
   List.concat (map (nnin_of_obspos obs board) positionl)
 
+fun oh_disc disc =
+  let 
+    val d = count_dict (dempty compare_card) disc 
+    fun f n x = if (dfind x d = n) handle NotFound => false then 1.0 else 0.0 
+    fun g x = if fst x = 1 then [f 1 x, f 2 x, f 3 x] else [f 1 x, f 2 x]
+  in
+    List.concat (map g cardl_glob)
+  end
+
 fun oh_board (d1,d2) 
   (board as {p1turn,lastmove1,lastmove2,hand1,hand2,clues1,clues2,clues,
   score,bombs,deck,disc,pile}) =
@@ -317,13 +328,12 @@ fun oh_board (d1,d2)
     val t1 = if p1turn then hand1 else hand2
     val t2 = if p1turn then hand2 else hand1
   in
-    (List.concat 
-     [onehot (bombs,maxbombs + 1),
-      onehot (clues,maxclues + 1),
+    (
+    List.concat 
+     [onehot (bombs,maxbombs + 1), onehot (clues,maxclues + 1),
       onehot (score,maxscore + 1),
-      oh_hand t1, 
-      oh_hand t2,
-      oh_pile pile]
+      oh_hand t1, oh_hand t2,
+      oh_pile pile, oh_disc disc]
     )
   end
 
@@ -332,6 +342,7 @@ load "mleHanabi"; open mleHanabi;
 load "aiLib"; open aiLib;
 val board = random_startboard ();
 print_obs empty_obs board 0;
+oh_board empty_obs (random_startboard ());
 *)
 
 (* -------------------------------------------------------------------------
@@ -1125,7 +1136,7 @@ learningrate_glob := 0.0002;
 fun update_playerdict ((a,b),playerdict) =
   let 
     val boardl = dfind (a,b) boarddict
-    val (eex,pex) = pd_collect_example newplayerdict boardl
+    val (eex,pex) = pd_<collect_example newplayerdict boardl
     val newplayer = pd_train_player (random_player ()) (eex,pex)
   in
     dadd (a,b) newplayer playerdict
